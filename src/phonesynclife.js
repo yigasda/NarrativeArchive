@@ -189,7 +189,10 @@ export function zoneShift(at, from, to, year = new Date().getFullYear()) {
     try {
         const parts = (tz, d) => { const f = new Intl.DateTimeFormat('en-US', { timeZone: tz, hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).formatToParts(d), g = k => Number(f.find(x => x.type === k)?.value); return Date.UTC(g('year'), g('month') - 1, g('day'), g('hour') % 24, g('minute')); };
         const guess = new Date(Date.UTC(year, mt[1] - 1, mt[2], mt[3], mt[4]));
-        const utc = guess.getTime() - (parts(from, guess) - guess.getTime()), local = new Date(parts(to, new Date(utc)));
+        // the offset at the moment itself, not at the wall time read as UTC (a summer-time change between the two)
+        let utc = guess.getTime() - (parts(from, guess) - guess.getTime());
+        utc = guess.getTime() - (parts(from, new Date(utc)) - utc);
+        const local = new Date(parts(to, new Date(utc)));
         return `${pad(local.getUTCMonth() + 1)}-${pad(local.getUTCDate())} ${pad(local.getUTCHours())}:${pad(local.getUTCMinutes())}`;
     } catch { return at; }
 }

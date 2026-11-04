@@ -391,3 +391,81 @@ test('a fill reading up to the phone\'s clock goes by the phone\'s now, not an o
         assert.equal(data.storyNow(c.p), '10-24 08:00');
     });
 });
+
+// ---- 점검 3묶음: 시차 · 반영
+test('dates written day first (26.10., 26/10/2026, Mo, 26.10.) read as October 26, not as month 26', async () => {
+    for (const d of ['26.10.', '26.10.2026', '26/10/2026', 'Mo, 26.10.']) assert.deepEqual(data.monthDay(d), { mo: 10, d: 26 }, d);
+    assert.deepEqual(data.monthDay('30. Januar'), { mo: 1, d: 30 });
+    const c = setup([say('Ren', 'a'), say('Mara', 'b'), say('Ren', 'c')]);
+    c.p.now = '10-26 20:00'; c.p.country = 'DE';
+    await withTrackers([{ ...trk(2, '21:45', 'Frankfurt · Küche'), date: '26.10.' }], async () => assert.equal(data.statusMoment(c.p).at, '10-26 21:45'));
+});
+
+test('a city of two words ("New York · flat", "New York City") is the owner\'s; a station or a district alone is not guessed', async () => {
+    const c = setup([say('Ren', 'a'), say('Mara', 'b'), say('Ren', 'c')]);
+    c.p.now = '10-26 08:00'; c.p.year = 2026;
+    c.p.where = { at: 1, people: [{ name: 'Ren', city: 'New York', names: ['New York', '뉴욕'], lives: 'US', tz: 'America/New_York' },
+        { name: 'Mara', city: 'Seoul', names: ['Seoul', '서울'], lives: 'KR', tz: 'Asia/Seoul' }] };
+    for (const [place, home] of [["New York · Ren's flat", true], ["New York City · Ren's flat", true], ['뉴욕 맨해튼 · 집', true], ['Seoul Station · platform', null]])
+        await withTrackers([trk(2, '09:10', place)], async () => assert.equal(data.sceneHome(c.p, place, c.m), home, place));
+    // the owner's city from the weather app alone: its first word in a status line is the owner's
+    const q = { owner: 'Ren', now: '10-26 08:00', year: 2026, life: { weather: { here: { place: 'Frankfurt am Main' }, cities: [{ name: 'Frankfurt am Main', tz: 'Europe/Berlin' }, { name: 'Seoul', ko: '서울', tz: 'Asia/Seoul' }] } } };
+    await withTrackers([trk(2, '09:10', 'Frankfurt · Küche')], async () => assert.deepEqual([data.statusMoment(q).at, data.statusMoment(q).home], ['10-26 09:10', true]));
+});
+
+test('another phone\'s place reading tells where its owner is (Mara in Frankfurt with Ren, her phone set to KR)', async () => {
+    const c = setup([say('Ren', 'a'), say('Mara', 'b'), say('Ren', 'c')]);
+    c.p.now = '10-26 20:00'; c.p.year = 2026; c.p.country = 'DE'; c.p.where = { at: 1, people: [], failed: true };
+    c.m.phones.mara = { owner: 'Mara', country: 'KR', where: { at: 1, people: [{ name: 'Mara', city: 'Frankfurt am Main', names: ['Frankfurt am Main', 'Frankfurt'], lives: 'KR', tz: 'Europe/Berlin' }] } };
+    assert.ok(!/Mara.*ahead/.test(data.clockBlock(c.p, c.p.now, c.m)));
+    await withTrackers([trk(2, '20:10', 'Frankfurt · Bar')], async () => assert.equal(data.statusMoment(c.p, null, null, c.m).at, '10-26 20:10'));
+});
+
+test('an old place reading whose re-read fails is asked once, not every round', async () => {
+    const c = setup([say('Ren', 'a'), say('Mara', 'b'), say('Ren', 'c')]);
+    c.p.where = { at: 1, people: [{ name: 'Ren', city: 'Seoul', lives: 'KR', tz: 'Asia/Seoul' }] };
+    globalThis.__where = []; globalThis.__whereFail = true;
+    const warn = console.warn; console.warn = () => {};
+    try {
+        await run(c.m, { now: '10-26 09:30', events: [] });
+        T.chat.push(say('Mara', 'd')); await run(c.m, { now: '10-26 09:40', events: [] });
+        T.chat.push(say('Ren', 'e')); await run(c.m, { now: '10-26 09:50', events: [] });
+    } finally { console.warn = warn; globalThis.__whereFail = false; }
+    assert.equal(globalThis.__where.length, 1);
+    assert.equal(c.p.where.people[0].city, 'Seoul');
+});
+
+test('a scene in Paris (same hour as Frankfurt) is not the owner\'s: the weather app stays Frankfurt\'s', async () => {
+    const c = setup([say('Ren', 'a'), say('Varo', 'b'), say('Varo', 'sunny here in Paris')]);
+    c.p.now = '10-26 10:00'; c.p.year = 2026; c.p.country = 'DE';
+    c.p.where = { at: 1, people: [{ name: 'Ren', city: 'Frankfurt am Main', names: ['Frankfurt am Main', 'Frankfurt'], lives: 'DE', tz: 'Europe/Berlin' }, { name: 'Varo', city: 'Paris', names: ['Paris', '파리'], lives: 'FR', tz: 'Europe/Paris' }] };
+    c.p.life = { at: '10-26 10:00', clock: { alarms: [], timers: [], running: null }, health: { usual: {}, days: [] }, files: { folders: [], items: [] },
+        weather: { here: { place: 'Frankfurt am Main', date: '10-26', time: '10:00', cond: 'rain', temp: 6, hours: [], days: [], tiles: {} }, cities: [] } };
+    await withTrackers([trk(2, '10:30', "Paris · Varo's flat", '맑음 22°C')], async () => {
+        assert.equal(data.sceneHome(c.p, "Paris · Varo's flat", c.m), false);
+        await run(c.m, { now: '10-26 10:35', events: [] });
+    });
+    assert.deepEqual([c.p.life.weather.here.place, c.p.life.weather.here.cond], ['Frankfurt am Main', 'rain']);
+});
+
+test('a status line sets the clock back a day at most, not two', async () => {
+    const c = setup([say('Ren', 'a'), say('Mara', 'b'), say('Ren', 'c')]);
+    c.p.now = '10-27 23:50'; c.p.year = 2026; c.p.country = 'KR';
+    await withTrackers([{ ...trk(2, '00:10', '서울 · 집'), date: '10.26' }], async () => run(c.m, { now: '10-26 00:15', events: [] }));
+    assert.equal(c.p.now, '10-27 23:50');
+    // within a day: set back
+    T.chat.push(say('Mara', 'd'));
+    await withTrackers([{ ...trk(3, '08:00', '서울 · 집'), date: '10.27' }], async () => run(c.m, { now: '10-27 08:00', events: [] }));
+    assert.equal(c.p.now, '10-27 08:00');
+});
+
+test('an archive section after the read stretch is not sent as the story before it', async () => {
+    const S1 = '## #2–#3 — Bookstore\n- Ren went to the bookstore and bought the poetry book for 15000 won (#3).\n';
+    const S2 = '## #4–#5 — Cafe\n- Mara and Ren met at the cafe; Mara said she is moving to Busan (#5).\n';
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), hide(say('Ren', 'going to the bookstore')), hide(say('Mara', 'did you get it')), hide(say('Ren', 'at the cafe now')), hide(say('Mara', 'I am moving to Busan')), say('Ren', 'see you later')]);
+    c.m.text = S1.replace('\n- ', '\n- ' + 'x'.repeat(33000) + ' ') + S2;
+    await run(c.m, { now: '10-26 13:00', events: [] });
+    const i = T.input.indexOf('[ARCHIVE BEFORE]'), bf = i < 0 ? '' : T.input.slice(i, T.input.indexOf('\n\n[', i + 1) >>> 0 || undefined);
+    assert.ok(!bf.includes('Busan'));
+    assert.equal(data.syncLeft(c.p, c.m), 1);
+});

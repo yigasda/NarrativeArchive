@@ -689,3 +689,10 @@ test('a delivery from the story goes to the address home already has, whatever t
     assert.equal(o.left, 'Tür');
     assert.equal(o.noCutlery, true);
 });
+
+import { zoneShift } from '../src/phonesynclife.js';
+test('an hour near a clock change (summer time) moves to the other city by the right offset', () => {
+    assert.equal(zoneShift('11-01 03:00', 'America/New_York', 'Asia/Seoul', 2026), '11-01 17:00');
+    assert.equal(zoneShift('03-08 06:30', 'America/New_York', 'Europe/Berlin', 2026), '03-08 11:30');
+    assert.equal(zoneShift('10-25 02:30', 'Europe/Berlin', 'Asia/Seoul', 2026), '10-25 10:30');
+});

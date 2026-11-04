@@ -850,3 +850,22 @@ test('a phone whose reading starts anew: the old reading\'s unsaved rounds aren\
     await data.makePhone(c.m, 'Ren').catch(() => {});
     assert.deepEqual(journalRead('test').filter(r => r.owner === 'Ren'), []);
 });
+
+// ---- 점검 3묶음: 돈 단계
+test('a phone with no story year: the money stage gets no made-up year either', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Mara', 'I paid the taxi 12000 won'), say('Ren', 'thanks a lot for that')]);
+    c.p.noYear = true; T.moneyAnswers = [];
+    await run(c.m, { now: '10-26 13:00', events: [{ id: 'taxi', at: 2, quote: 'paid the taxi', summary: '택시', date: '10-26', time: '12:40', apps: ['money'], phone: {}, money: { moves: [{ account: '1111', amount: -12000, who: '택시', kind: 'card', occurrence: 'new' }] } }] });
+    assert.ok(!/\[STORY YEAR\]/.test(T.input));
+    assert.ok(!/\[STORY YEAR\]/.test(T.moneyInput));
+});
+
+test('the money stage answering one event twice: both payments kept, not the last only', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Mara', 'dinner was 30000 won and the taxi home 12000 won'), say('Ren', 'thanks a lot for that')]);
+    T.moneyAnswers = [{ events: [
+        { id: 'night', money: { moves: [{ account: '1111', amount: -30000, who: '식당', kind: 'card', occurrence: 'new' }] } },
+        { id: 'night', money: { moves: [{ account: '1111', amount: -12000, who: '택시', kind: 'card', occurrence: 'new' }] } }] }];
+    await run(c.m, { now: '10-26 23:00', events: [{ id: 'night', at: 2, quote: 'dinner was 30000 won', summary: '저녁과 택시', date: '10-26', time: '22:00', apps: ['money'], phone: {} }] });
+    assert.equal(c.bank(), 58000);
+    assert.deepEqual(c.p.money.tx.map(t => t.amount).sort((a, b) => a - b), [-30000, -12000]);
+});

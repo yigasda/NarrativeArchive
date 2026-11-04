@@ -11,7 +11,7 @@ const href = f => pathToFileURL(new URL(f, SRC).pathname).href;
 const stub = {
     './phonestory.js': encoded(`export const phoneChatScope=()=>'test';`),
     './wealth.js': encoded(`export const ensureWealth=async()=>null;export const wealthBlock=()=>'';export const wealthDate=()=> '2026-12-30';export const wealthCheck=()=>null;export const addWealthFX=()=>{};export const investmentWealthRows=()=>[];`),
-    './ai.js': encoded(`export const askDraft=async(input,o)=>{if(String(o.system).startsWith('GOAL\\nWork out where')){(globalThis.__where||=[]).push(input);return JSON.stringify(globalThis.__whereAnswer||{people:[]});}const M=globalThis.__menu;M.input=input;M.sys=o.system;(M.calls||=[]).push({input,sys:o.system});if(M.answers&&M.answers.length){const a=M.answers.shift();if(a instanceof Error)throw a;return a;}return M.answer;};export const askAI=async()=>'';`),
+    './ai.js': encoded(`export const askDraft=async(input,o)=>{if(String(o.system).startsWith('GOAL\\nWork out where')){(globalThis.__where||=[]).push(input);return JSON.stringify(globalThis.__whereAnswer||{people:[]});}const M=globalThis.__menu;M.input=input;M.sys=o.system;(M.calls||=[]).push({input,sys:o.system});if(M.answers&&M.answers.length){const a=M.answers.shift();if(a instanceof Error)throw a;return typeof a==='function'?a(input,o):a;}return M.answer;};export const askAI=async()=>'';`),
     './core.js': encoded(`export const ctx=()=>globalThis.__ctx||({chat:[],chatMetadata:{},characters:[]});export const globalSettings=()=>({});export const saveMeta=async()=>{};export const getMeta=()=>({});`),
     './calendar.js': encoded(`export const calendars=()=>({});export const headingDate=()=>({});`),
     './drift.js': encoded(`export const recentForCheck=n=>(globalThis.__rows||[]).slice(-n).map(r=>r.text);export const chatRows=()=>globalThis.__rows||[];`),
@@ -432,4 +432,51 @@ test('the bank\'s second turn cut off before its end counts as not read: the mar
     const first = globalThis.__menu.calls.filter(c => c.sys === data.AI_SYS_MONEY)[0];
     assert.equal(p.sync.marks.money.index, Math.max(...nums(first.input)));
     assert.deepEqual(p.money.tx.map(t => t.who), ['Bakery']);
+});
+
+// ---- 점검 3묶음: 채우기
+const syncMod = await import(href('phonesync.js'));
+const plainPhone = (extra = {}) => ({ owner: 'Ren', now: '10-26 12:00', country: 'DE', contacts: [], threads: [], calls: [], photos: [], notes: [], searches: [], events: [], posts: [], mails: [], diary: [], voice: [], ...extra });
+const emptyLife = () => JSON.stringify({ clock: { alarms: [] }, health: { usual: {}, days: [] }, files: { items: [] }, weather: null });
+
+test('an old phone with no reading record: the life fill leaves one, so the reflection doesn\'t read its talk again', async () => {
+    globalThis.__rows = rows(12);
+    const p = plainPhone(), mm = { ...m, phones: { ren: p } };
+    globalThis.__menu = { calls: [], answers: [emptyLife(), '{}'], answer: '{}' };
+    await life.fillLife(mm, p);
+    assert.equal(p.sync?.marks?.life?.index, 11);
+});
+
+test('a message written while a fill waits for its answer is not marked read', async () => {
+    for (const kind of ['life', 'delivery']) {
+        globalThis.__rows = rows(12);
+        const p = plainPhone(), mm = { ...m, phones: { ren: p } };
+        syncMod.syncOf(p, 'test');
+        const ans = kind === 'life' ? emptyLife() : JSON.stringify({ shops: [], orders: [], cart: null });
+        globalThis.__menu = { calls: [], answers: [() => { globalThis.__rows.push({ index: 12, user: true, hidden: false, text: '[#12] Ren: ordering pizza now' }); return ans; }], answer: '{}' };
+        await (kind === 'life' ? life.fillLife(mm, p) : life.fillDelivery(mm, p));
+        assert.equal(p.sync.marks[kind].index, 11, kind);
+    }
+});
+
+test('다시 만들기 on a phone with a clock reads no further than the clock, even across an archived section', async () => {
+    globalThis.__rows = rows(12).map(r => ({ ...r, hidden: r.index <= 3 || (r.index >= 5 && r.index <= 9) }));
+    const mm = { text: '## #0–#3 — Arrival\n- Ren came home.\n## #5–#9 — The trip\n- Ren wrote down the RE 7 at 08:12 (#8).\n' };
+    const p = plainPhone({ now: '10-26 08:00', sync: { ...syncMod.newSync('test'), marks: { base: data.markAfter(6) } } });
+    mm.phones = { ren: p };
+    globalThis.__menu = { calls: [], answers: [JSON.stringify({ notes: [{ title: 'RE 7 departure', text: 'train 08:12', time: '10-26 09:00' }] })], answer: '{}' };
+    await data.makePhone(mm, 'Ren', { apps: ['note'] });
+    assert.ok(!globalThis.__menu.calls[0].input.includes('Ren wrote down the RE 7'));
+});
+
+test('the delivery\'s second turn can empty the basket; one that says nothing of it keeps it', async () => {
+    globalThis.__rows = bigRows(40);
+    const dlv = cart => JSON.stringify({ shops: [{ name: 'Uno', cuisine: 'pizza', menu: [{ name: 'Margherita', price: 9 }] }], orders: [], ...(cart === undefined ? {} : { cart }) });
+    const basket = { shop: 'Uno', items: [{ name: 'Margherita', qty: 1 }] };
+    for (const [second, kept] of [[null, false], [undefined, true]]) {
+        const p = longPhone(), mm = { ...m, phones: { ren: p } };
+        globalThis.__menu = { calls: [], answers: [dlv(basket), dlv(second)], answer: '{}' };
+        await life.fillDelivery(mm, p);
+        assert.equal(!!p.delivery.cart?.items?.length, kept, String(second));
+    }
 });
