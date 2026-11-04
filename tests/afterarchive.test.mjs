@@ -174,35 +174,71 @@ test('told short only for messages a reflection read: otherwise there is nothing
     assert.equal(data.toldShort(p, 3, 20), null);
 });
 
-const lifeOf = (o = {}) => ({ clock: { alarms: [], timers: [], running: null }, health: { usual: {}, days: [] }, files: { folders: [], items: [] }, weather: null, ...o });
-test('a second life turn keeps the first turn\'s weather, nights and story days; its running timer is its own', () => {
-    const here = { place: 'Varo', date: '10-26', cond: 'snow' };
-    const a = lifeOf({ clock: { alarms: [], timers: [], running: { label: 'tea', ends: '10-20 08:05' } },
-        health: { usual: {}, days: [{ date: '10-24', from: 'story', ev: 'hike', steps: 21000, night: { bed: '01:00', sleep: '01:10', wake: '07:00' } }, { date: '10-25', from: 'pattern', steps: 6000, night: { bed: '23:00', sleep: '23:20', wake: '07:00' } }] },
-        weather: { here, cities: [{ name: 'Ivo', tz: 'Europe/Berlin' }] } });
-    const b = lifeOf({ health: { usual: {}, days: [{ date: '10-24', from: 'pattern', steps: 5000 }, { date: '10-25', from: 'pattern', steps: 7000, night: null }] }, weather: null });
-    const c = life.mergeLife(a, b);
-    assert.equal(c.weather.here.cond, 'snow');
-    const d24 = c.health.days.find(d => d.date === '10-24'), d25 = c.health.days.find(d => d.date === '10-25');
-    assert.deepEqual([d24.from, d24.steps, d24.ev], ['story', 21000, 'hike']);
-    assert.deepEqual([d25.steps, d25.night?.wake], [7000, '07:00']);
+// a turn as the app has it: the model's answer (raw) parsed the way the fill parses it
+const lifeTurn = (raw, now, lastDay) => ({ raw, now, got: life.parseLife(raw, now, lastDay) });
+const usual = { bed: '23:00', sleep: '23:20', wake: '07:00' };
+test('a second life turn keeps the nights, heart rates and story days the first wrote, where it wrote none of its own', () => {
+    const one = lifeTurn({ clock: { running: { label: 'tea', sec: 300, left: 120 } }, health: { usual, days: [
+        { date: '10-23', from: 'story', ev: 'party', steps: 9000, night: { bed: '02:30', sleep: '03:00', wake: '10:00' } },
+        { date: '10-24', from: 'pattern', steps: 3000, hr: [60, 120] }] } }, null, '10-24');
+    const two = lifeTurn({ health: { usual, days: [{ date: '10-24', from: 'pattern', steps: 3100 }, { date: '10-25', from: 'pattern', steps: 6000 }] } }, null, '10-25');
+    const c = life.mergeLife(one.got, two.got, two);
+    const d24 = c.health.days.find(d => d.date === '10-24');
+    // the night after the party is 10-24's: 03:00 to 10:00, a story night, never their usual
+    assert.deepEqual([d24.sleep, d24.wake, d24.from, d24.ev], ['03:00', '10:00', 'story', 'party']);
+    assert.deepEqual(d24.hr, [60, 120]);
+    assert.equal(d24.steps, 3000); // a story day: its own steps stay, not the second's guess
+    assert.ok(c.health.days.some(d => d.date === '10-25'));
+    // the timer running is the second's: none
     assert.equal(c.clock.running, null);
-    // a second turn that says where they are now: its weather, the saved cities joined by name
-    const e = life.mergeLife(a, lifeOf({ weather: { here: { place: 'Ivo', date: '10-27', cond: 'rain' }, cities: [{ name: 'ivo', tz: 'Europe/Berlin' }, { name: 'Mara Bay' }] } }));
-    assert.equal(e.weather.here.place, 'Ivo');
+    // the same, both days guessed, or both told by the story: what the second left out stays the first's
+    const p1 = lifeTurn({ health: { usual, days: [{ date: '10-23', steps: 8000, night: { bed: '00:40', sleep: '01:00', wake: '08:30' } }, { date: '10-24', steps: 3000, hr: [60, 120] }] } }, null, '10-24');
+    const p2 = lifeTurn({ health: { usual, days: [{ date: '10-24', steps: 3100 }] } }, null, '10-25');
+    const q = life.mergeLife(p1.got, p2.got, p2).health.days.find(d => d.date === '10-24');
+    assert.deepEqual([q.sleep, q.wake, q.steps, q.hr], ['01:00', '08:30', 3100, [60, 120]]);
+    const s2 = lifeTurn({ health: { usual, days: [{ date: '10-24', from: 'story', ev: 'hangover', steps: 2500 }] } }, null, '10-25');
+    const r = life.mergeLife(one.got, s2.got, s2).health.days.find(d => d.date === '10-24');
+    assert.deepEqual([r.sleep, r.wake, r.steps, r.ev], ['03:00', '10:00', 2500, 'hangover']);
+    // a second turn that gives the night itself: that one
+    const three = lifeTurn({ health: { usual, days: [{ date: '10-24', from: 'pattern', steps: 3100, night: { bed: '00:10', sleep: '00:30', wake: '08:00' } }] } }, null, '10-25');
+    const e = life.mergeLife(one.got, three.got, three);
+    assert.equal(e.health.days.find(d => d.date === '10-25').sleep, '00:30');
+});
+
+test('a second life turn that wrote no weather keeps the first\'s forecast, moved to its status line', () => {
+    const now1 = { date: '10-24', time: '09:00', place: 'Varo', weather: 'snow -2°C' }, now2 = { date: '10-26', time: '21:00', place: 'Varo', weather: 'snow -4°C' };
+    const one = lifeTurn({ weather: { here: { place: 'Varo', cond: 'snow', temp: -2, hi: 0, lo: -6, hours: [{ time: '10:00', cond: 'snow', temp: -1 }, { time: '11:00', cond: 'snow', temp: 0 }] }, cities: [{ name: 'Ivo', tz: 'Europe/Berlin' }] } }, now1, '10-24');
+    const two = lifeTurn({}, now2, '10-26');
+    const c = life.mergeLife(one.got, two.got, two);
+    assert.equal(c.weather.here.hours.length, 2);
+    assert.ok(Number.isFinite(c.weather.here.hi) && Number.isFinite(c.weather.here.lo));
+    assert.deepEqual([c.weather.here.date, c.weather.here.time, c.weather.here.temp], ['10-26', '21:00', -4]);
+    assert.deepEqual(c.weather.cities.map(x => x.name), ['Ivo']);
+    // one that wrote its own: that one, the cities joined by name
+    const three = lifeTurn({ weather: { here: { place: 'Ivo', cond: 'rain', temp: 8, hours: [{ time: '22:00', cond: 'rain', temp: 7 }] }, cities: [{ name: 'ivo', tz: 'Europe/Berlin' }, { name: 'Mara Bay' }] } }, null, '10-26');
+    const e = life.mergeLife(one.got, three.got, three);
+    assert.deepEqual([e.weather.here.place, e.weather.here.cond], ['Ivo', 'rain']);
     assert.deepEqual(e.weather.cities.map(x => x.name), ['ivo', 'Mara Bay']);
 });
 
-test('a second delivery turn: a shop by the fields it gives, a nearby shop ordered from moves up, an order by its event', () => {
-    const a = { shops: [{ name: 'Uno', cuisine: 'pizza', rating: 4.6, menu: [{ name: 'Margherita' }] }, { name: 'Tre', cuisine: 'ramen', nearby: true, menu: [{ name: 'Shoyu' }] }],
-        orders: [{ shop: 'Uno', time: '10-20 19:00', ev: 'pizza-night', items: [{ name: 'Margherita' }] }], cart: null };
-    const b = { shops: [{ name: 'Uno', cuisine: 'pizza', rating: null, menu: [] }, { name: 'Tre', cuisine: 'ramen', menu: [] }],
-        orders: [{ shop: 'Uno', time: '10-20 19:30', ev: 'pizza-night', items: [{ name: 'Margherita' }] }, { shop: 'Tre', time: '10-24 21:00', items: [{ name: 'Shoyu' }] }], cart: null };
-    const c = life.mergeDelivery(a, b);
-    assert.equal(c.shops.find(x => x.name === 'Uno').rating, 4.6);
-    assert.ok(!c.shops.find(x => x.name === 'Tre').nearby);
-    assert.deepEqual(c.shops.find(x => x.name === 'Tre').menu.map(x => x.name), ['Shoyu']);
-    assert.deepEqual(c.orders.map(o => o.time), ['10-20 19:30', '10-24 21:00']);
+test('a second delivery turn: only the shop fields it wrote, both orders of one scene kept, one order told twice is one', () => {
+    const turn = raw => ({ raw, got: life.parseDelivery(raw, [], [], '10-30 12:00') });
+    const it = name => [{ name, price: 9 }];
+    const one = turn({ shops: [{ name: 'Uno', cuisine: 'pizza', rating: 4.6, fee: 3000, fav: true, menu: it('Margherita') }, { name: 'Due', cuisine: 'chicken', menu: it('Wings') }],
+        orders: [{ shop: 'Uno', time: '10-20 19:00', ev: 'party', items: it('Margherita') }, { shop: 'Due', time: '10-20 19:05', ev: 'party', items: it('Wings') },
+            { shop: 'Uno', time: '10-22 12:00', items: it('Margherita') }] });
+    one.got.shops.push({ name: 'Tre', cuisine: 'ramen', nearby: true, menu: [{ name: 'Shoyu' }] }, { name: 'Quattro', cuisine: 'kebab', nearby: true, menu: [{ name: 'Doner' }] });
+    const two = turn({ shops: [{ name: 'Uno', rating: 4.7 }, { name: 'Tre', cuisine: 'ramen' }, { name: 'Quattro', cuisine: 'kebab' }],
+        orders: [{ shop: 'Due', time: '10-20 19:10', ev: 'party', items: it('Wings') }, { shop: 'Uno', time: '10-22 12:00', ev: 'lunch', items: it('Margherita') },
+            { shop: 'Tre', time: '10-24 21:00', items: it('Shoyu') }] });
+    const c = life.mergeDelivery(one.got, two.got, two);
+    const uno = c.shops.find(x => x.name === 'Uno');
+    assert.deepEqual([uno.rating, uno.fee, uno.fav, uno.cuisine], [4.7, 3000, true, 'pizza']);
+    assert.deepEqual(uno.menu.map(x => x.name), ['Margherita']);
+    // Tre was ordered from: no longer nearby; Quattro only listed again: still nearby, after the ones ordered from
+    assert.ok(!c.shops.find(x => x.name === 'Tre').nearby && c.shops.find(x => x.name === 'Quattro').nearby);
+    assert.equal(c.shops.at(-1).name, 'Quattro');
+    assert.deepEqual(c.orders.map(o => `${o.shop}@${o.time}`), ['Uno@10-20 19:00', 'Due@10-20 19:10', 'Uno@10-22 12:00', 'Tre@10-24 21:00']);
 });
 
 test('screen time counts back from where the life app reached, when that is later than its own read point', async () => {
@@ -212,4 +248,21 @@ test('screen time counts back from where the life app reached, when that is late
     await life.fillScreen({ ...m, phones: { ren: p } }, p).catch(() => {});
     const sent = globalThis.__menu.calls.find(c => c.sys === life.AI_SYS_SCREEN).input;
     assert.ok(sent.includes('"date":"10-24"') && sent.includes('"date":"10-25"'), sent.slice(0, 300));
+});
+
+test('screen time: a life app filled months back in the story is no today', async () => {
+    globalThis.__rows = rows(12);
+    const p = { owner: 'Ren', now: '10-01 12:00', life: { at: '03-01 09:00', health: { usual: {}, days: ['02-27', '02-28', '09-29', '09-30'].map(date => ({ date, sleep: '23:00', wake: '07:00', steps: 5000 })) } } };
+    globalThis.__menu = { calls: [], answer: '{}' };
+    await life.fillScreen({ ...m, phones: { ren: p } }, p).catch(() => {});
+    const sent = globalThis.__menu.calls.find(c => c.sys === life.AI_SYS_SCREEN).input;
+    assert.ok(sent.includes('"date":"09-30"') && !sent.includes('"date":"02-28"'), sent.slice(0, 300));
+});
+
+test('an archive longer than the chat (a branch, messages deleted) never moves the clock past the chat', async () => {
+    globalThis.__rows = rows(4).map(r => ({ ...r, hidden: false }));
+    const mm = { text: '## #0–#9 — Before the branch\n- Ren came home.\n' };
+    const p = { owner: 'Ren', sync: { marks: { base: { index: 2 } }, done: [], hiddenRead: {} } };
+    const g = data.windowOf(mm, p);
+    assert.equal(data.nowAt(g), 3);
 });

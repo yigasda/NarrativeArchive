@@ -464,8 +464,9 @@ export const archiveEnd = (m, upto = null) => Math.max(-1, ...parseSections(spli
 // upto: the phone's clock (phoneAt): a fill reads no further than the phone has; the reflection reads on from there
 // from: a turn that carries on another (after the message that one stopped at)
 export function chatAfterArchive(m, budget = CHAT_TOKENS.phone, upto0 = null, from = null) {
-    // a section that begins at or before the clock and runs past it is read whole: the clock moves to its end
-    const arEnd = archiveEnd(m, upto0), upto = upto0 == null ? null : Math.max(upto0, arEnd);
+    // a section that begins at or before the clock and runs past it is read whole: the clock moves to its end (never past
+    // the chat's last message: an archive longer than the chat, a branch or messages deleted, doesn't move it ahead)
+    const arEnd = archiveEnd(m, upto0), upto = upto0 == null ? null : Math.max(upto0, Math.min(arEnd, chatEnd()));
     const end = Math.max(arEnd, from ?? -1), all = syncRows().filter(r => r.index > end), rows = all.filter(r => upto == null || r.index <= upto), out = [];
     let size = 0;
     for (const r of rows) { const t = estTok(r.text); if (out.length && size + t > budget) break; out.push(r); size += t; }
@@ -670,8 +671,9 @@ export async function makePhone(m, owner, { update = false, apps = null } = {}) 
     // a fill; made anew: up to now, and that becomes its clock
     const cur = m.phones?.[key], keep = !!(apps && cur) || !!(cur?.sync?.marks?.base && ['money', 'invest', 'life', 'delivery'].some(g => cur.sync.marks[g]));
     const gap = windowOf(m, keep ? cur : null);
-    // nothing shown after the archive (all of it archived and hidden): it read up to the archive's end, not -1
-    const mark = readMark(gap) || (n => (n.index < archiveEnd(m) ? markAfter(archiveEnd(m)) : n))(markNow());
+    // nothing shown after the archive (all of it archived and hidden): it read up to the archive's end, not -1 (no further
+    // than the chat's last message: an archive longer than the chat leaves the messages written after for the reflection)
+    const mark = readMark(gap) || (n => (a => (n.index < a ? markAfter(a) : n))(Math.min(archiveEnd(m), chatEnd())))(markNow());
     const old = update ? m.phones?.[key] : null;
     const part = apps && m.phones?.[key] ? apps.flatMap(a => REMAKE[a] || []) : null;
     const binding=structuredClone(m.phones?.[key]?.financeProfile || m.phoneProfiles?.[key]);
@@ -725,6 +727,8 @@ export async function makePhone(m, owner, { update = false, apps = null } = {}) 
 
 // ---- 새로 일어난 일 반영
 // every message the phone may read, numbered (system messages and offstage ones left out)
+// the chat's last message, hidden or not (-1: none)
+const chatEnd = () => chatRows().at(-1)?.index ?? -1;
 export const syncRows = () => chatRows().filter(r => !r.hidden).map(({ index, text }) => ({ index, text }));
 export const markNow = () => { const rows = syncRows(); return makeMark(ctx().chat || [], rows.length ? rows[rows.length - 1].index : -1); };
 export const markAfter = index => makeMark(ctx().chat || [], index);

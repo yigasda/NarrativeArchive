@@ -178,3 +178,15 @@ test('a phone made when everything after the archive is hidden: its clock is the
     await data.makePhone(c.m, 'Ren').catch(() => {});
     assert.equal(c.m.phones.ren?.sync?.marks?.base?.index, 5);
 });
+
+test('a phone made on a chat shorter than its archive (a branch): its clock is the chat\'s last message', async () => {
+    const chat = [say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'off to work'), say('Mara', 'see you')];
+    const c = setup(chat);
+    c.m.text = '## #0–#9 — Before the branch\n- Ren went to work and came home late.\n';
+    delete c.m.phones.ren;
+    T.answers.push({ contacts: [], threads: [], now: '10-26 13:00' });
+    await data.makePhone(c.m, 'Ren').catch(() => {});
+    assert.equal(c.m.phones.ren?.sync?.marks?.base?.index, 3);
+    T.chat.push(say('Ren', 'back home'), say('Mara', 'welcome back'));
+    assert.equal(data.syncLeft(c.m.phones.ren, c.m), 2);
+});

@@ -191,6 +191,9 @@ export function zoneShift(at, from, to, year = new Date().getFullYear()) {
 }
 // the newest status line over the saved weather, for the screen alone (nothing is saved): a day or hours later than it
 export const overlayNow = (here, now) => fit(unline(overlay(structuredClone(here), now)));
+// a saved forecast moved on to a later status line (its hours and highs with the temperature): a fill's second turn that
+// wrote no weather of its own
+export const overlayFresh = (here, now) => fit(unko(overlay(structuredClone(here), now, true)));
 export function parseWeather(w, now) {
     return { here: fit(unko(overlay(hereOf(w?.here || {}), now, true))), cities: arr(w?.cities).map(cityOf).filter(c => c.name).slice(0, 5) };
 }

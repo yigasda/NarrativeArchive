@@ -11,7 +11,7 @@ import { headingPlaces } from './people.js';
 import { FOOD_IDS, dishPic } from './phonefood.js';
 import { arr, trackerWeather, readMark, turnsNote, toldShort, windowOf, nowAt, CHAT_TOKENS, COUNTRIES, byStory, ensureIds, giftOf, hhmm, jsonOf, ko, last4, line, markNow, num, pad, pick, rowDay, sideRequest, storyNow, when, withEv } from './phonedata.js';
 import { dlvTotal, payOrders, shopStats, unpayOrders } from './phonesyncmoney.js';
-import { alarmOf, cityAt, dayGap, fileOf, nightsToDays, parseWeather, screenOf, usualScreenOf, weatherFrom } from './phonesynclife.js';
+import { alarmOf, cityAt, dayGap, fileOf, nightsToDays, overlayFresh, parseWeather, screenOf, usualScreenOf, weatherFrom } from './phonesynclife.js';
 import { SCREEN_LIST } from './phonescreen.js';
 import { exclusive } from './phonesync.js';
 import { recentTrackers } from './scenes.js';
@@ -403,19 +403,36 @@ const soFarHead = (what, short) => `[${what} SO FAR — what you wrote from the 
 const byKey = (xs, ys, key) => [...xs.filter(x => !ys.some(y => key(y) === key(x))), ...ys];
 const given = o => Object.fromEntries(Object.entries(o || {}).filter(([, v]) => v !== null && v !== undefined && v !== ''));
 // what a second turn adds, put into what the first wrote. An alarm (time and label), file or folder it names is its new
-// telling; a day is merged field by field (a night the first wrote stays when the second leaves it out, and a day the
-// story told is never written over by a guessed one); a habit only where it says something. The weather stays the
-// first's unless the second gives a place, its saved cities joined by name; the timer running is the second's (at its now)
-function mergeDay(a, b) {
-    if (!a) return b;
-    return a.from === 'story' && b.from !== 'story' ? { ...b, ...given(a) } : { ...a, ...given(b) };
+// telling; a day only by the fields the model itself wrote there (the app fills a day's night it left out with their usual,
+// and that is no telling): a night the first wrote stays, and a day the story told is never written over by a guessed one;
+// a habit only where it says something. The weather is the second's when the model wrote one, else the first's with the
+// newest status line over it; the saved cities joined by name. The timer running is the second's (at its now)
+// what the model's own answer to a turn was (its raw JSON) and the status line it had: what merging tells apart by
+const said = new WeakMap();
+const filled = v => v !== null && v !== undefined && v !== '' && !(Array.isArray(v) && !v.length);
+const NIGHT = ['bed', 'sleep', 'wake', 'woke'];
+// a day's fields the model wrote (the night only when it gave one; "from" and "ev" when the story told it)
+function wrote(bare) {
+    if (!bare) return null;
+    const out = Object.fromEntries(Object.entries(bare).filter(([k, v]) => !NIGHT.includes(k) && !['date', 'from', 'ev'].includes(k) && filled(v)));
+    if (bare.sleep || bare.wake) for (const k of NIGHT) out[k] = bare[k];
+    if (bare.from === 'story') { out.from = 'story'; if (bare.ev) out.ev = bare.ev; }
+    return out;
 }
-export function mergeLife(a, b) {
+function mergeDay(a, b, patch) {
+    if (!a) return b;
+    if (a.from === 'story' && patch.from !== 'story') return { ...a, ...Object.fromEntries(Object.entries(patch).filter(([k]) => !filled(a[k]))) };
+    return { ...a, ...patch };
+}
+const wroteHere = h => !!h && typeof h === 'object' && (['place', 'cond', 'temp', 'line'].some(k => filled(h[k])) || arr(h.hours).length > 0 || arr(h.days).length > 0);
+export function mergeLife(a, b, { raw, now } = said.get(b) || {}) {
     const alarm = x => `${x.time}|${String(x.label || '').toLowerCase()}`;
     const days = new Map(a.health.days.map(d => [d.date, d]));
-    for (const d of b.health.days) days.set(d.date, mergeDay(days.get(d.date), d));
-    const wa = a.weather, wb = b.weather, gave = !!(wb?.here?.place || wb?.cities?.length);
-    const weather = !gave ? wa : { ...wa, ...wb, here: wb.here?.place ? wb.here : wa?.here, cities: byKey(wa?.cities || [], wb.cities || [], c => String(c.name || '').toLowerCase()) };
+    const bare = raw ? new Map(nightsToDays(raw?.health?.days).map(d => [d.date, d])) : null;
+    for (const d of b.health.days) days.set(d.date, mergeDay(days.get(d.date), d, bare ? wrote(bare.get(d.date)) || {} : wrote(d)));
+    const wa = a.weather, wb = b.weather, mine = raw ? wroteHere(raw.weather?.here) : arr(wb?.here?.hours).length > 0 || arr(wb?.here?.days).length > 0;
+    const here = mine || !wa?.here ? wb?.here : now ? overlayFresh(wa.here, now) : wa.here;
+    const weather = wa || wb ? { ...wa, ...wb, here, cities: byKey(wa?.cities || [], wb?.cities || [], c => String(c.name || '').toLowerCase()).slice(-8) } : null;
     return {
         clock: { alarms: byKey(a.clock.alarms, b.clock.alarms, alarm).slice(-12), timers: byKey(a.clock.timers, b.clock.timers, x => String(x.label).toLowerCase()).slice(-6), running: b.clock.running },
         health: { usual: { ...a.health.usual, ...given(b.health.usual) }, days: [...days.values()].sort((x, y) => dayGap(y.date, x.date)) },
@@ -436,7 +453,8 @@ export const fillLife = (m, p) => exclusive('fill', async () => {
             !soFar && Object.keys(body).length ? `[BODY ON THE PHONE NOW — keep it unless the story changed it]\n${JSON.stringify(body)}` : '',
             soFar ? `${soFarHead('LIFE', short)}\n${JSON.stringify(soFar)}` : '', short?.text || '',
             now ? `[WEATHER NOW]\n${JSON.stringify(now)}` : '', p.country ? `[PHONE COUNTRY]\n${COUNTRIES[p.country] || p.country}` : ''], { profile: p.financeProfile, story: CHAT_TOKENS.life, read: { gap } });
-        const next = parseLife(jsonOf(await askDraft(input, { force: true, system: AI_SYS_LIFE, maxTokens: 16000, effort: 'low' })), now, days.at(-1)?.day || '');
+        const raw = jsonOf(await askDraft(input, { force: true, system: AI_SYS_LIFE, maxTokens: 16000, effort: 'low' })), next = parseLife(raw, now, days.at(-1)?.day || '');
+        said.set(next, { raw, now });
         const at = storyNow(p, upto) || p.now || '';
         if (/^\d{2}-\d{2}/.test(at)) next.files.items = next.files.items.filter(x => !later(x.time, at));
         for (const x of next.files.items) if (x.ev && booked.has(x.ev)) x.preview = '';
@@ -490,9 +508,10 @@ export const fillScreen = (m, p, { again = false } = {}) => exclusive('fill', as
     const h = p.life?.health;
     if (!h) throw new Error('건강 앱을 먼저 채워 주세요');
     // the last week before today (today is counted as it goes, from their usual)
-    // today: where it reads up to, or where the life app reached when that is later (its health days go on to there)
+    // today: where it reads up to, or where the life app reached when that is a little later (its health days go on to
+    // there; one filled long ago, months back in the story, is no today)
     const read = { gap: windowOf(m, p) }, t0 = String(storyNow(p, nowAt(read.gap)) || p.now || '').slice(0, 5), la = String(p.life?.at || '').slice(0, 5);
-    const today = /^\d{2}-\d{2}$/.test(la) && /^\d{2}-\d{2}$/.test(t0) && dayGap(t0, la) > 0 ? la : t0, told = d => String(d.id || '').startsWith('sync:') && !!d.screen;
+    const today = /^\d{2}-\d{2}$/.test(la) && /^\d{2}-\d{2}$/.test(t0) && dayGap(t0, la) > 0 && dayGap(t0, la) <= 14 ? la : t0, told = d => String(d.id || '').startsWith('sync:') && !!d.screen;
     const days = (h.days || []).filter(d => d.date && d.date !== today && (again ? !told(d) : !d.screen) && (!today || dayGap(d.date, today) > 0 && dayGap(d.date, today) <= 7)).sort((a, b) => dayGap(b.date, a.date)).slice(-7);
     const input = await sideRequest(m, p.owner, [`[DAYS]\n${JSON.stringify(days.map(d => ({ date: d.date, sleep: d.sleep, wake: d.wake, steps: d.steps, ...(d.ev ? { ev: d.ev } : {}) })))}`,
         p.country ? `[PHONE COUNTRY]\n${COUNTRIES[p.country] || p.country}` : ''], { profile: p.financeProfile, story: CHAT_TOKENS.apps, read });
@@ -511,14 +530,22 @@ export const fillScreen = (m, p, { again = false } = {}) => exclusive('fill', as
     await saveMeta();
     return n;
 });
-// what a second turn adds to the delivery app: a shop by its name (only the fields it gives; its menu kept when it gives
-// none; a nearby shop it now orders from isn't "nearby" any more), the shops ordered from before the ones nearby; an order
-// by its story event, else its shop and time; the basket when it says one
-export function mergeDelivery(a, b) {
+// what a second turn adds to the delivery app: a shop by its name, only the fields the model wrote for it (the app's own
+// defaults, no fee and no favourite, are no telling; its menu kept when it gives none); a shop nearby that it now orders
+// from isn't "nearby" any more; the shops ordered from before the ones nearby. An order is the same one by its shop and
+// story event, or its shop and time; the basket when it says one
+const SHOP_KEYS = ['ko', 'cuisine', 'rating', 'reviews', 'fee', 'minOrder', 'eta', 'fav'];
+export function mergeDelivery(a, b, { raw } = said.get(b) || {}) {
     const named = new Map(a.shops.map(x => [x.name, x]));
-    for (const x of b.shops) { const o = named.get(x.name), n = { ...o, ...given(x), menu: x.menu?.length ? x.menu : o?.menu || [] }; delete n.nearby; named.set(x.name, n); }
-    const shops = [...named.values()], key = o => o.ev || `${o.shop}|${o.time}`;
-    return { shops: [...shops.filter(x => !x.nearby), ...shops.filter(x => x.nearby)], orders: byKey(a.orders, b.orders, key).sort(byStory(b.orders.at(-1)?.time || '')).slice(-16), cart: b.cart || a.cart };
+    for (const x of b.shops) {
+        const o = named.get(x.name), r = raw ? arr(raw.shops).find(y => line(y?.name, 60) === x.name) : null;
+        const patch = raw ? Object.fromEntries(SHOP_KEYS.filter(k => r && filled(r[k])).map(k => [k, x[k]])) : given(x);
+        const n = { ...o, ...patch, name: x.name, menu: x.menu?.length ? x.menu : o?.menu || [] };
+        if (b.orders.some(y => y.shop === x.name)) delete n.nearby;
+        named.set(x.name, n);
+    }
+    const shops = [...named.values()], same = (x, y) => x.shop === y.shop && (!!x.ev && x.ev === y.ev || x.time === y.time);
+    return { shops: [...shops.filter(x => !x.nearby), ...shops.filter(x => x.nearby)], orders: [...a.orders.filter(x => !b.orders.some(y => same(x, y))), ...b.orders].sort(byStory(b.orders.at(-1)?.time || '')).slice(-16), cart: b.cart || a.cart };
 }
 export const fillDelivery = (m, p) => exclusive('fill', async () => {
     const accounts = p.money?.bank?.accounts || [];
@@ -531,6 +558,7 @@ export const fillDelivery = (m, p) => exclusive('fill', async () => {
         const input = await sideRequest(m, p.owner, [`[PHONE NOW]\n${phoneNow(p, upto)}`, daysBlock(storyDays(m, p, upto)), `[LIVES IN]\n${COUNTRIES[livesIn(p)] || livesIn(p) || '(unknown)'}`, money,
             soFar ? `${soFarHead('DELIVERY', short)}\n${JSON.stringify(soFar)}` : '', short?.text || ''], { profile: p.financeProfile, story: CHAT_TOKENS.apps, read: { gap } });
         const got = jsonOf(await askDraft(input, { force: true, system: AI_SYS_DELIVERY, maxTokens: 12000, effort: 'low' })), next = parseDelivery(got, accounts, tx, at);
+        said.set(next, { raw: got });
         // the shops nearby go after the ones they order from (the app's 동네 인기 가게); the first turn sets them
         if (!soFar) next.shops = [...next.shops, ...nearbyShops(got, next.shops, (p.money?.currency || accounts[0]?.currency) === 'KRW')];
         // nothing after the story's now
