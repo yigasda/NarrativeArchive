@@ -1140,7 +1140,7 @@ async function updatePhone(m, owner) {
         const ownerWent = ownerMoved(p, raw.ownerCity);
         // someone else now in another city (a trip, a move): their row, from here on (read first: a status line's scene
         // named by that person, "Mara", is where these messages put her)
-        const ownerWentOthers = peopleMoved(p, raw.elsewhere);
+        const ownerWentOthers = peopleMoved(p, raw.elsewhere, round.rows.map(r => r.text).join('\n'));
         let named = null;
         if (askZone && (typeof raw.statusCity === 'string' || raw.statusCity && typeof raw.statusCity === 'object')) named = zoneNamed(p, raw.statusCity, m);
         if (ownerWent || ownerWentOthers || named) { st = statusMoment(p, roundEnd, named, m); if (tracker) sceneOwn = sceneHome(p, tracker.place, m, named); }
@@ -1159,7 +1159,7 @@ async function updatePhone(m, owner) {
             p.now = nowAt;
         }
         // the round's own: new days nobody told, the weather, and what the clock moving on does by itself
-        const days = [...applyDays(p, raw.days, rid), ...fillDays(p, p.now, rid)], sky = lifeAhead ? [] : applyWeather(p, askWeather ? raw.weather : null, sceneOwn === true ? homeTracker(p, tracker, raw.weather, m) : null, { archive: evidence.length + before.length > 0, today: String(p.now || '').slice(0, 5) });
+        const days = [...applyDays(p, raw.days, rid), ...fillDays(p, p.now, rid)], sky = lifeAhead ? [] : applyWeather(p, askWeather && !weatherElsewhere(p, raw.weather, named, m) ? raw.weather : null, sceneOwn === true ? homeTracker(p, tracker, raw.weather, m) : null, { archive: evidence.length + before.length > 0, today: String(p.now || '').slice(0, 5) });
         if (days.length) apps.add('건강');
         if (sky.length) apps.add('날씨');
         const roundFx = [...days, ...sky, ...lifeClock(p, p.now), ...dlvClock(p, p.now), ...cardClock(p, p.now)];
@@ -1274,6 +1274,7 @@ export async function dropStretch(m, p, k) {
     const d = s.dropped.find(x => x.key === (typeof k === 'string' ? k : was));
     if (!d) return { gone: 0, items: 0, kept: [] };
     const kept = [], stay = new Set(), out = new Set();
+    const pend = new Set(s.dropped.filter(x => x !== d).flatMap(x => [...x.events, ...(x.parts || [])]));
     let gone = 0;
     // an event living at another message: only what the gone ones gave it goes back (a later message's "delivered")
     for (const id of d.parts || []) {
@@ -1290,7 +1291,8 @@ export async function dropStretch(m, p, k) {
         const made = new Set((e.effects || []).filter(x => x.type === 'push' || x.type === 'entry').map(x => x.item?.id ?? x.id));
         // built on later: another event changed, corrected or counted one of its records as its own
         // (another event of this same stretch goes too: it holds nothing)
-        const leaving = o => o === id || d.events.includes(o);
+        // (nor does one whose message is gone too and that waits in the 빼기 list: taking either off first takes the order)
+        const leaving = o => o === id || d.events.includes(o) || s.events[o]?.at === null && pend.has(o);
         let tied = Object.entries(s.events).some(([o, x]) => !leaving(o) && ((x.effects || []).some(y => ['status', 'amend', 'amendEntry', 'change', 'seen'].includes(y.type) && made.has(y.id)) || (x.legs || []).some(l => l.state === 'included' && made.has(l.rec))));
         const trades = new Set((e.effects || []).filter(x => x.path === 'investment.trades').map(x => x.item.id));
         if (!tied && trades.size) { try { positions((p.investment?.trades || []).filter(t => !trades.has(t.id))); } catch { tied = true; } }
@@ -1318,7 +1320,8 @@ export async function dropStretch(m, p, k) {
     for (const t of p.threads) t.messages = t.messages.filter(keep('msg'));
     p.threads = p.threads.filter(t => t.messages.length); // a thread with nothing left in it goes too
     for (const x of p.posts || []) if (x.comments) x.comments = x.comments.filter(keep('comment'));
-    s.dropped.splice(s.dropped.indexOf(d), 1);
+    // what stayed because another stretch still waiting holds it is offered again with that one gone (else it stays for good)
+    if (stay.size && pend.size) d.events = d.events.filter(id => stay.has(id)); else s.dropped.splice(s.dropped.indexOf(d), 1);
     if (p.money) migrateBank(m, p);
     await saveMeta();
     if (p.inject) applyInjection();
@@ -1393,9 +1396,12 @@ export async function undoRound(m, p) {
     // items that were there before the round forget it as a source
     for (const { x } of phoneItems(p)) if (x.froms) x.froms = x.froms.filter(f => f.r !== u.round);
     // what can't be put back (changed since, or built on) stays, and so does its event, with only what stayed
-    const now = structuredClone(s.events), kept = [];
+    const now = structuredClone(s.events), kept = [], droppedNow = structuredClone(s.dropped || []);
     const left = new Set(revertEffects(m, p, u.effects).map(x => JSON.stringify(x)));
     Object.assign(s, structuredClone(u.sync));
+    // what 빼기 took off since the round stays off: the list as it is now, and an event's records only those still there
+    s.dropped = droppedNow;
+    for (const [id, e] of Object.entries(s.events)) if (now[id]) { const still = new Set((now[id].effects || []).map(x => JSON.stringify(x))); e.effects = (e.effects || []).filter(x => still.has(JSON.stringify(x))); }
     // an event 빼기 took off since stays off (the snapshot still had it)
     for (const id of Object.keys(s.events)) if (!(id in now)) delete s.events[id];
     for (const [id, effects] of u.byEvent || []) {
@@ -1638,29 +1644,43 @@ function ownerMoved(p, c) {
     if (!tz || !city) return false;
     const row = { ...whereOf(p, p.owner), name: p.owner, city, names: namesOf(c), tz };
     delete row.local;
-    p.where = { at: p.where?.at || Date.now(), people: [row, ...(p.where?.people || []).filter(x => nameKey(x.name) !== nameKey(p.owner))] };
+    p.where = { ...(p.where || {}), at: p.where?.at || Date.now(), people: [row, ...(p.where?.people || []).filter(x => nameKey(x.name) !== nameKey(p.owner))] };
     return true;
 }
 const whereOf = (p, name) => (p?.where?.people || []).find(x => nameKey(x.name) === nameKey(name));
+// the model's weather for a place the phone knows is another's (Busan for an owner in Seoul, the city the scene was just
+// named as): not the owner's
+function weatherElsewhere(p, w, named, m = null) {
+    const place = w && typeof w === 'object' ? line(w.place, 60) : '';
+    if (!place) return false;
+    return sceneHome(p, place, m) === false || !!named && named.own === false && pkey(named.name) === pkey(place);
+}
 // the owner's status line as the weather app takes it: a place that is no city the phone knows ("Mara's room", "Gangnam ·
 // cafe") leaves the app's own city as it is (the model's, else the one there); its sky, warmth and hour are the line's
 function homeTracker(p, t, w, m = null) {
     if (!t || sceneZone(p, t.place, m)) return t;
     const city = line(w?.place, 60), here = p?.life?.weather?.here?.place;
     // (the model's city when it names one: an owner gone somewhere new, "Rome · hotel", is in Rome)
-    const place = city && !/['’]s\b|\b(room|home|house|flat|cafe|office|kitchen|hotel)\b|방|집/i.test(city) ? city : here || city;
+    // (a room, a home, a cafe is no city — "방" or "집" only as the word's end, so 방콕 is Bangkok; the owner's own city or a
+    // saved one always is)
+    const own = ownerZone(p), known = !!city && ([own?.where, ...(own?.names || [])].some(n => pkey(n) === pkey(city)) || !!cityAt(city, p?.life?.weather?.cities));
+    const place = city && (known || !/\b(room|home|house|flat|apartment|dorm|place|cafe|office|kitchen|hotel)\b|(?:방|집)(?![가-힣])/i.test(city)) ? city : here || city;
     return place ? { ...t, place, city: place } : t;
 }
 // people other than the owner the reflection says are now in another city: their rows (where they live stays)
-function peopleMoved(p, list) {
+// (a person: one the phone knows, or a name these messages write as it is — never "everyone", "the courier")
+const NOT_A_PERSON = /^(everyone|everybody|they|them|someone|somebody|people|friends|family|all|the\b.*|모두|다들|사람들|가족|친구들)$/i;
+function peopleMoved(p, list, text = '') {
     let n = 0;
+    const known = new Set([...(p?.where?.people || []).map(x => x.name), ...(p?.contacts || []).map(x => x.name), ...(p?.threads || []).map(t => t.with)].filter(Boolean).map(nameKey));
     for (const c of arr(list).slice(0, 8)) {
         const name = line(c?.name, 60), tz = realTz(c?.tz), city = line(c?.city, 60);
-        if (!name || !tz || !city || nameKey(name) === nameKey(p.owner)) continue;
+        if (!name || !tz || !city || nameKey(name) === nameKey(p.owner) || NOT_A_PERSON.test(name.trim())) continue;
+        if (!known.has(nameKey(name)) && !(/^[\p{Lu}\p{Script=Hangul}]/u.test(name) && String(text).includes(name))) continue;
         const was = whereOf(p, name), row = { ...was, name: was?.name || name, city, names: namesOf(c), tz };
         delete row.local;
         if (was && was.city === row.city && was.tz === row.tz) continue;
-        p.where = { at: p.where?.at || Date.now(), people: [...(p.where?.people || []).filter(x => nameKey(x.name) !== nameKey(name)), row] };
+        p.where = { ...(p.where || {}), at: p.where?.at || Date.now(), people: [...(p.where?.people || []).filter(x => nameKey(x.name) !== nameKey(name)), row] };
         n++;
     }
     return n > 0;
@@ -1734,7 +1754,7 @@ export function sceneHome(p, place, m = null, named = null) {
     // its clock reads the same)
     // (and another city in the same zone, Busan for an owner in Seoul, is elsewhere too: its hour is theirs, its weather
     // isn't; an owner known only by the country takes any city of their zone)
-    if (own && z) return z.tz === own.tz && (z.own === true || z.own === undefined || !own.names?.length);
+    if (own && z) return z.tz === own.tz && (z.own === true || !own.names?.length);
     if (!own || !zonesOf(p, hm(p?.now) ? p.now : '01-01 12:00', m)) return true;
     return null;
 }
@@ -1757,12 +1777,22 @@ export function statusMoment(p, upto = null, named = null, m = null) {
 }
 // a city the reflection named for a status line: its zone (a saved city, someone's city, the owner's own)
 function zoneNamed(p, name, m = null) {
+    const own = ownerZone(p), ownNames = new Set([own?.where, ...(own?.names || [])].map(pkey).filter(Boolean));
+    // the owner's when it is the owner's own place, or a city by one of the owner's city names in their zone (Seoul, not
+    // Busan, for an owner in Seoul)
+    const mine = (tz, city) => !!own && tz === own.tz && ownNames.has(pkey(city));
     // another city the model names ({ "city", "tz" }): its zone, for this round
-    if (name && typeof name === 'object') { const tz = realTz(name.tz); return tz ? { tz, name: line(name.city, 60) || tz } : null; }
-    const own = ownerZone(p), k = pkey(name);
+    if (name && typeof name === 'object') { const tz = realTz(name.tz), city = line(name.city, 60); return tz ? { tz, name: city || tz, own: mine(tz, city) } : null; }
+    const k = pkey(name);
     if (!k) return null;
-    if (k === 'owner' && own) return { tz: own.tz, name: own.where };
-    for (const z of placesAround(p, m)) if (pkey(z.who) === k || z.names.some(n => pkey(n) === k)) return { tz: z.tz, name: z.name };
+    // ("owner", or the owner's own name)
+    if ((k === 'owner' || k === pkey(p?.owner)) && own) return { tz: own.tz, name: own.where, own: true };
+    const around = placesAround(p, m);
+    for (const z of around) if (pkey(z.who) === k || z.names.some(n => pkey(n) === k)) return { tz: z.tz, name: z.name, own: !!z.own || mine(z.tz, z.name) };
+    // a shorter name for a saved one ("New York" for "New York City"): only when every such city keeps one zone
+    const lead = n => { const w = String(n || '').toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean); return w.some((_, i) => w.slice(0, i + 1).join('') === k); };
+    const hits = around.filter(z => z.names.some(lead));
+    if (hits.length && hits.every(z => z.tz === hits[0].tz)) return { tz: hits[0].tz, name: hits[0].name, own: !!hits[0].own || mine(hits[0].tz, hits[0].name) };
     return null;
 }
 // ---- the places they have been: section headings that name a place, in sections the owner is in (no model).

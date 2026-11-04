@@ -1099,3 +1099,42 @@ test('빼기 of only the later message that moved an order on ("it arrived"): on
     assert.ok(!c.p.threads.some(t => t.messages.some(x => x.text === '목도리 왔어!')));
     assert.equal(c.p.sync.events.scarf.at, 3);
 });
+
+// ---- 점검 2차
+test('빼기 of a later message\'s part, then 되돌리기: what was taken off stays off; the order\'s own message taken off later takes it all', async () => {
+    const c = setup([say('Ren', 'start'), say('Mara', 'morning'), say('Ren', 'ok'), say('Mara', 'I ordered a lamp for 30000 won'), say('Ren', 'nice'), say('Mara', 'the lamp arrived today')]);
+    c.p.sync.limit = 2;
+    const order = (status, occurrence) => ({ shop: '램프샵', item: 'Lamp', price: 30000, qty: 1, status, occurrence });
+    await run(c.m, { now: '10-26 10:00', events: [{ id: 'lamp', at: 3, quote: 'ordered a lamp', summary: '램프 주문', date: '10-26', time: '09:00', phone: {}, money: { moves: [{ account: '1111', amount: -30000, who: '램프샵', occurrence: 'new' }], orders: [order('ordered', 'new')] } }] });
+    await run(c.m, { now: '10-27 10:00', events: [{ id: 'lamp', at: 5, quote: 'lamp arrived', summary: '램프 도착', date: '10-27', time: '09:00', phone: {}, money: { orders: [order('delivered', 'again')] } }] });
+    T.chat.push(say('Ren', 'great, enjoy the lamp tonight'));
+    await run(c.m, { now: '10-27 10:30', events: [] });
+    T.chat.splice(5, 1); T.chat.push(say('Ren', 'what a quiet evening at home'));
+    await run(c.m, { now: '10-27 11:00', events: [] });
+    await data.dropStretch(c.m, c.p, c.p.sync.dropped[0].key);
+    assert.equal(c.p.money.orders[0].status, 'ordered');
+    await data.undoRound(c.m, c.p);
+    assert.deepEqual(c.p.sync.dropped, []);
+    T.chat.splice(3, 1); T.chat.push(say('Ren', 'and a long night'));
+    T.answers.push({ now: '10-27 12:00', events: [] });
+    await data.makePhone(c.m, 'Ren', { update: true });
+    const r = await data.dropStretch(c.m, c.p, c.p.sync.dropped.findIndex(d => d.events.includes('lamp')));
+    assert.deepEqual([r.kept, c.p.money.orders.length, c.bank()], [[], 0, 100000]);
+});
+
+test('two messages both gone (an order and one telling it again): 빼기 in either order takes the order and its payment', async () => {
+    for (const first of ['lamp', 'still']) {
+        const c = setup([say('Ren', 'start'), say('Mara', 'morning'), say('Ren', 'ok'), say('Mara', 'I ordered a lamp for 30000 won'), say('Ren', 'nice'), say('Mara', 'the lamp I ordered is still coming'), say('Ren', 'good night then')]);
+        c.p.sync.limit = 2;
+        const order = occurrence => ({ shop: '램프샵', item: 'Lamp', price: 30000, qty: 1, status: 'ordered', occurrence });
+        await run(c.m, { now: '10-26 10:00', events: [{ id: 'lamp', at: 3, quote: 'ordered a lamp', summary: '램프 주문', date: '10-26', time: '09:00', phone: {}, money: { moves: [{ account: '1111', amount: -30000, who: '램프샵', occurrence: 'new' }], orders: [order('new')] } }] });
+        await run(c.m, { now: '10-26 11:00', events: [{ id: 'still', at: 5, quote: 'still coming', summary: '램프 아직', date: '10-26', time: '10:30', phone: {}, money: { orders: [order('again')] } }] });
+        T.chat.splice(5, 1); T.chat.splice(3, 1); T.chat.push(say('Ren', 'what a quiet evening at home'));
+        T.answers.push({ now: '10-26 12:00', events: [] });
+        await data.makePhone(c.m, 'Ren', { update: true });
+        const keys = c.p.sync.dropped.map(d => [d.key, d.events]);
+        const order2 = [keys.find(([, e]) => e.includes(first)), keys.find(([, e]) => !e.includes(first))];
+        for (const [k] of order2) await data.dropStretch(c.m, c.p, k);
+        assert.deepEqual([c.p.money.orders.length, c.p.money.tx.length, c.bank()], [0, 0, 100000], first);
+    }
+});

@@ -745,3 +745,27 @@ test('a leap day counts as a day of its own; a saved city is matched by whole wo
     assert.deepEqual(['LA', 'Ren', "Varo's", 'Frankfurt · Küche', 'Frankfurt', '서울역', '서울 강남 · 카페', 'Milano'].map(x => cityAt_(x, cities)?.name ?? null),
         [null, null, null, 'Frankfurt am Main', 'Frankfurt am Main', 'Seoul', 'Seoul', null]);
 });
+
+test('a delivery the same event moved on (its own "delivered"): taken back, the order and its payment go together', async () => {
+    const { m, p } = setup();
+    p.delivery = { shops: [], orders: [], cart: null };
+    const opts = { year: '2026', marks: { base: { index: 0 }, money: { index: 0 }, invest: { index: 0 }, delivery: { index: 0 } } };
+    const d = (status, occurrence) => ({ shop: 'Pasta Nostra', items: [{ name: 'Penne', qty: 1, price: 11.5 }], fee: 2, status, occurrence });
+    const r1 = applyMoney(m, p, { id: 'dinner', at: 9, date: '10-26', time: '20:00', money: { moves: [{ account: '2222', amount: -13.5, who: 'Pasta Nostra', kind: 'card', occurrence: 'new' }], deliveries: [d('on the way', 'new')] } }, opts);
+    const r2 = applyMoney(m, p, { id: 'dinner', at: 11, date: '10-26', time: '20:40', money: { deliveries: [d('delivered', 'again')] } }, opts);
+    revertEffects(m, p, [...r1.effects, ...r2.effects]);
+    assert.deepEqual([p.delivery.orders.length, p.money.tx.length], [0, 0]);
+});
+
+import { salvageJson as salvage2, byStory } from '../src/phoneparse.js';
+import { cityAt as cityAt2 } from '../src/phonesynclife.js';
+test('점검 2차: a list of numbers keeps them all; a city named after a comma; a minus before letters is no minus; leap order and 02-29 only in a leap year', () => {
+    const warn = console.warn; console.warn = () => {};
+    try { assert.deepEqual(salvage2('{"hr":[58, 124],"x":oops}'), { hr: [58, 124] }); assert.deepEqual(salvage2('{"hr":[58,124,130],"x":oops}'), { hr: [58, 124, 130] }); } finally { console.warn = warn; }
+    const cs = [{ name: 'Seoul', ko: '서울' }, { name: 'Berlin' }, { name: 'Busan', ko: '부산' }];
+    assert.deepEqual(['Gangnam, Seoul', 'Kreuzberg · Berlin', '강남구, 서울', "Mara's room", 'Paris Baguette, Gangnam, Seoul'].map(x => cityAt2(x, cs)?.name ?? null), ['Seoul', 'Berlin', 'Seoul', null, 'Seoul']);
+    assert.equal(num_('BTC-USD 65,000'), 65000);
+    const order = ['02-28 23:00', '02-29 01:00', '02-29 23:00', '03-01 08:00'];
+    assert.deepEqual([...order].reverse().sort(byStory('03-01 10:00', x => x)), order);
+    assert.deepEqual(nightsToDays([{ date: '02-28', steps: 5000, night: { sleep: '23:30', wake: '07:00' }, from: 'story' }], {}).map(x => x.date), ['02-28', '03-01']);
+});
