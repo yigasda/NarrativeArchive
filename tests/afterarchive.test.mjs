@@ -480,3 +480,14 @@ test('the delivery\'s second turn can empty the basket; one that says nothing of
         assert.equal(!!p.delivery.cart?.items?.length, kept, String(second));
     }
 });
+
+test('voice memos with a slip: quotes inside a text kept, a broken memo left out, the others go in', async () => {
+    globalThis.__rows = rows(8);
+    const p = plainPhone(), mm = { ...m, phones: { ren: p } };
+    globalThis.__menu = { calls: [], answers: ['{"memos":[{"title":"Groceries","text":"milk, eggs","time":"10-26 09:00","sec":12},'
+        + '{"title":"Idea","text":"call Mara about "the trip"", "time":"10-26 10:00"},{"title":"Broken","text": oops},{"title":"Train","text":"RE 7 at 08:12","time":"10-26 11:00","sec":8}]}'], answer: '{}' };
+    const warn = console.warn; console.warn = () => {};
+    try { await data.fillVoice(mm, p); } finally { console.warn = warn; }
+    assert.deepEqual(p.voice.map(x => x.title).sort(), ['Groceries', 'Idea', 'Train']);
+    assert.equal(p.voice.find(x => x.title === 'Idea').text, 'call Mara about "the trip"');
+});

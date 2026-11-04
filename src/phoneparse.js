@@ -121,19 +121,22 @@ export function salvageJson(t) {
         let d = 0, str = false, esc = false;
         for (i = from; i < s.length; i++) {
             const ch = s[i];
-            if (str) { if (esc) esc = false; else if (ch === '\\') esc = true; else if (ch === '"') str = false; continue; }
+            if (str) { if (esc) esc = false; else if (ch === '\\') esc = true; else if (ch === '"' && closes(i)) str = false; continue; }
             if (ch === '"') str = true;
             else if (ch === '{' || ch === '[') d++;
             else if (ch === '}' || ch === ']') { if (!d) return; d--; }
             else if (ch === ',' && !d) return;
         }
     };
+    // a quote ends a string only when what follows can come after one (a comma, a colon, a closer): "said "no" twice"
+    // keeps its inner quotes; a line break written as it is stays in it
+    const closes = j => { let k = j + 1; while (k < s.length && /\s/.test(s[k])) k++; return k >= s.length || /[,:}\]]/.test(s[k]); };
     const string = () => {
         if (s[i] !== '"') fail();
         let j = i + 1;
-        for (; j < s.length; j++) { if (s[j] === '\\') { j++; continue; } if (s[j] === '"') break; }
+        for (; j < s.length; j++) { if (s[j] === '\\') { j++; continue; } if (s[j] === '"' && closes(j)) break; }
         if (j >= s.length) fail();
-        const v = JSON.parse(s.slice(i, j + 1));
+        const v = JSON.parse(`"${s.slice(i + 1, j).replace(/(^|[^\\])"/g, '$1\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r').replace(/\t/g, '\\t')}"`);
         i = j + 1;
         return v;
     };
