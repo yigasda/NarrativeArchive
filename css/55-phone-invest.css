@@ -3,7 +3,7 @@
 .iv_app { --iv-ink: #0f1a17; --iv-mut: #7b8784; --iv-line: #e9edeb; --iv-brand: #1f8f6a; --iv-up: #12a26b; --iv-dn: #e5484d;
   position: absolute; inset: 0; display: flex; flex-direction: column; background: #f5f7f6; color: var(--iv-ink); --axfg: var(--iv-ink)}
 .iv_app .ax_scroll { flex: 1; min-height: 0; }
-.iv_up { color: var(--iv-up) !important; --axfg: var(--iv-up) !important} .iv_dn { color: var(--iv-dn) !important; --axfg: var(--iv-dn) !important} .iv_flat { color: var(--iv-mut); --axfg: var(--iv-mut)}
+.iv_up { color: var(--iv-up); --axfg: var(--iv-up)} .iv_dn { color: var(--iv-dn); --axfg: var(--iv-dn)} .iv_flat { color: var(--iv-mut); --axfg: var(--iv-mut)}
 .iv_app.iv_east { --iv-up: #e5484d; --iv-dn: #3b6fe0; }
 .iv_top { flex: none; height: 52px; display: flex; align-items: center; gap: 10px; padding: 0 16px; }
 .ax .iv_ib { --axbg: #fff; --axsh: 0 1px 2px rgba(15, 26, 23, 0.06), 0 6px 16px rgba(15, 26, 23, 0.06); width: 38px; height: 38px; border-radius: 50%; --axr: 50%; display: grid; place-items: center; flex: none; color: var(--iv-ink); --axfg: var(--iv-ink)}
@@ -610,7 +610,7 @@
 .ax .lf_tbtn2 svg { display: none; }
 /* the upgraded look (lf_up): icons, a softer cancel, the end time as a chip */
 /* 타이머: dial with minute ticks, digits with weight, saved timers on one line (or as chips) */
-.ax .lf_dig { display: flex; align-items: baseline; justify-content: center; gap: 2px; font: 300 60px/1 'Inter Tight', -apple-system, sans-serif !important; --axfs: 60px !important; --axff: 'Inter Tight', -apple-system, sans-serif !important; letter-spacing: -0.02em; --axls: -0.02em}
+.ax .lf_dig { display: flex; align-items: baseline; justify-content: center; gap: 2px; font: 300 60px/1 'Inter Tight', -apple-system, sans-serif !important; --axfs: 60px; --axff: 'Inter Tight', -apple-system, sans-serif; letter-spacing: -0.02em; --axls: -0.02em}
 .ax .lf_dig span { font-weight: 400; }
 .ax .lf_dig i { font-style: normal; color: #5c5f66; font-weight: 200; transform: translateY(-4px); }
 .ax .lf_dig em { font-style: normal; font-weight: 200; color: #d5d7dc; }

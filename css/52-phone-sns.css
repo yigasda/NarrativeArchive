@@ -85,7 +85,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup :is(
 .ax_dh small { font: 400 12.5px 'Noto Sans KR', sans-serif; color: #a48f78; margin-left: 6px; }
 .ax_dp { font-size: 13.5px; --axfs: 13.5px; line-height: 1.55; color: #6f5f50; --axfg: #6f5f50; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden}
 .ax_fab { position: absolute; right: 20px; bottom: 40px; width: 56px; height: 56px; border-radius: 50%; --axr: 50%; background: #3d3127; display: grid; place-items: center; box-shadow: 0 8px 20px rgba(60, 40, 20, 0.25)}
-.ax .ax_kobtn { padding: 0 !important; background: none !important; color: var(--axk, #8a6d4a) !important; --axfg: var(--axk, #8a6d4a) !important; font-size: 15px !important; --axfs: 15px !important; font-weight: 600 !important; opacity: 0.55}
+.ax .ax_kobtn { padding: 0 !important; background: none !important; color: var(--axk, #8a6d4a); --axfg: var(--axk, #8a6d4a); font-size: 15px; --axfs: 15px; font-weight: 600 !important; opacity: 0.55}
 .ax .ax_kobtn.on { opacity: 1; }
 .ax_paper { padding: 6px 26px 40px; }
 .ax_pdt { font-size: 13px; --axfs: 13px; color: #a48f78; --axfg: #a48f78; font-weight: 600; letter-spacing: 0.04em; --axls: 0.04em}

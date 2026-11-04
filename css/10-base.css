@@ -1033,7 +1033,7 @@ body.na_darkui :is(.na_diff_del, .na_diff_tr_del) .na_diff_hl { background: rgba
 .na_gl_info { font-size: 0.78em; --axfs: 0.78em}
 
 /* ---------- health check, token report */
-.na_health_warn { color: var(--na-warn) !important; --axfg: var(--na-warn) !important; --c-fg: var(--na-warn); opacity: 1 !important}
+.na_health_warn { color: var(--na-warn) !important; --axfg: var(--na-warn); --c-fg: var(--na-warn); opacity: 1 !important}
 .na_health_fix { flex-shrink: 0; }
 
 /* ---------- branches, linked logs */
@@ -1190,11 +1190,11 @@ body.na_darkui :is(.na_diff_del, .na_diff_tr_del) .na_diff_hl { background: rgba
 .na_sp_head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin: 4px 4px 0; }
 .na_sp_head b { font-size: 12.5px; font-weight: 700; color: var(--na-dim); }
 .na_sp_quick { display: flex; gap: 4px; flex-wrap: wrap; }
-body:is(.na_darkui, :not(.na_darkui)) .na_sp_quick .na_pchip { height: 28px; padding: 0 11px; border: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; border-radius: 999px; --axr: 999px; --c-r: 999px; font-size: 12px; --axfs: 12px; font-weight: 600; background: var(--na-card2) !important; --c-bg: var(--na-card2); color: var(--na-mute) !important; --axfg: var(--na-mute) !important; --c-fg: var(--na-mute)}
+body:is(.na_darkui, :not(.na_darkui)) .na_sp_quick .na_pchip { height: 28px; padding: 0 11px; border: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; border-radius: 999px; --axr: 999px; --c-r: 999px; font-size: 12px; --axfs: 12px; font-weight: 600; background: var(--na-card2) !important; --c-bg: var(--na-card2); color: var(--na-mute) !important; --axfg: var(--na-mute); --c-fg: var(--na-mute)}
 body:is(.na_darkui, :not(.na_darkui)) .na_sp_quick .na_pchip:hover { background: var(--na-fill); --c-bg: var(--na-fill); color: var(--na-onfill); --axfg: var(--na-onfill); --c-fg: var(--na-onfill)}
 body:not(.na_darkui) .na_sp_quick .na_pchip.na_pchip { background: #E6D6CA !important; --c-bg: #E6D6CA; }
 body.na_darkui .na_sp_quick .na_pchip.na_pchip { background: #2E2E34 !important; --c-bg: #2E2E34; }
-body:is(.na_darkui, :not(.na_darkui)) .na_sp_quick .na_pchip.na_pchip.on { background: var(--na-fill) !important; --c-bg: var(--na-fill); color: var(--na-onfill) !important; --axfg: var(--na-onfill) !important; --c-fg: var(--na-onfill)}
+body:is(.na_darkui, :not(.na_darkui)) .na_sp_quick .na_pchip.na_pchip.on { background: var(--na-fill) !important; --c-bg: var(--na-fill); color: var(--na-onfill) !important; --axfg: var(--na-onfill); --c-fg: var(--na-onfill)}
 .na_sp_secs { display: flex; flex-direction: column; max-height: 46vh; overflow-y: auto; overscroll-behavior: contain; border-radius: 18px; --axr: 18px; background: var(--na-card); box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07)}
 body.na_darkui .na_sp_secs { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
 .na_sp_sg { display: flex; flex-direction: column; }

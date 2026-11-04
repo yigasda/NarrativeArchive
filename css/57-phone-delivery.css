@@ -30,8 +30,8 @@
 .ax .dv_sheet { background: #fff; border-radius: 22px 22px 0 0; --axr: 22px 22px 0 0; padding-top: 6px}
 .ax .dv_tabs { display: flex; gap: 22px; padding: 12px 20px 0; font-size: 19px; --axfs: 19px; font-weight: 800; border-bottom: 1px solid #eef0f2; color: #b0b4ba; --axfg: #b0b4ba}
 .ax .dv_tabs .on { color: var(--ink); --axfg: var(--ink); border-bottom: 3px solid var(--ink); padding-bottom: 10px}
-.ax .dv_tabs .dv_kpb { margin: -10px 0 0 auto !important;align-self: center !important;height: 26px !important;padding: 0 10px !important;border-radius: 13px !important; --axr: 13px !important;--axbg: #eef1f2 !important;color: #8a929d !important; --axfg: #8a929d !important;font-size: 12px !important; --axfs: 12px !important;font-weight: 700 !important;--axsh: none !important; box-shadow: none !important}
-.ax .dv_tabs .dv_kpb.on { --axbg: #e6f8f6 !important;color: #1fa8a3 !important; --axfg: #1fa8a3 !important;--axsh: none !important; box-shadow: none !important}
+.ax .dv_tabs .dv_kpb { margin: -10px 0 0 auto !important;align-self: center !important;height: 26px !important;padding: 0 10px !important;border-radius: 13px; --axr: 13px;--axbg: #eef1f2 !important;color: #8a929d; --axfg: #8a929d;font-size: 12px; --axfs: 12px;font-weight: 700 !important;--axsh: none !important; box-shadow: none}
+.ax .dv_tabs .dv_kpb.on { --axbg: #e6f8f6 !important;color: #1fa8a3; --axfg: #1fa8a3;--axsh: none !important; box-shadow: none}
 .ax .dv_cats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px 6px; padding: 16px 12px 8px; text-align: center; font-size: 13px; --axfs: 13px}
 .ax .dv_cats > span > i { width: 60px; height: 60px; margin: 0 auto 5px; border-radius: 18px; background: #f3f4f6; display: grid; place-items: center; }
 .ax .dv_cats > span > i svg { width: 42px; height: 42px; }
@@ -68,7 +68,7 @@
 .ax .dv_uetop .a small { font-size: 12px; color: #6b7078; }
 .ax .dv_uetop .a b { font-size: 17px; display: flex; align-items: center; gap: 4px; }
 .ax .dv_uetop .r { margin-left: auto; display: flex; gap: 14px; align-items: center; }
-.ax .dv_uetop .r .dv_kpu { height: 32px !important;padding: 0 12px !important;margin-right: -4px !important;border-radius: 16px !important; --axr: 16px !important;--axbg: #f3f3f3 !important;color: #000 !important; --axfg: #000 !important;font-size: 13px !important; --axfs: 13px !important;font-weight: 600 !important;display: inline-flex !important;align-items: center !important;gap: 5px !important;--axsh: none !important; box-shadow: none !important}
+.ax .dv_uetop .r .dv_kpu { height: 32px !important;padding: 0 12px !important;margin-right: -4px !important;border-radius: 16px; --axr: 16px;--axbg: #f3f3f3 !important;color: #000; --axfg: #000;font-size: 13px; --axfs: 13px;font-weight: 600 !important;display: inline-flex !important;align-items: center !important;gap: 5px !important;--axsh: none !important; box-shadow: none}
 .ax .dv_uetop .r .dv_kpu i { width: 7px !important;height: 7px !important;border-radius: 50% !important;background: #b8bcc2 !important; }
 .ax .dv_uetop .r .dv_kpu.on i { background: #06c167 !important; }
 .ax .dv_uetop .a { flex: 1; min-width: 0; overflow: hidden; } .ax .dv_uetop .a b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ax .dv_uetop .r { flex: none; } .ax .dv_uetop .r .dv_kpu { flex: none; white-space: nowrap; } /* as Uber Eats: the address on one line with … when long; the 한국어 pill and icons never get squeezed into a column of letters */
@@ -370,14 +370,14 @@
 .ax .dv_card .dv_kv { padding: 0; }
 .ax .dv_card .dv_chk { margin-top: 12px; font-weight: 700; }
 /* 폰 만들기 카드의 작은 버튼들: the frame resets its buttons above, so these come after */
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_frame .na_ph_makeopts button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-width: 0; margin: 0; padding: 9px 4px 8px !important; border: 0 !important; border-radius: 14px !important; --axr: 14px !important; background: rgba(255, 255, 255, 0.16) !important; box-shadow: none !important; color: #fff !important; --axfg: #fff !important; font: inherit; --axfs: inherit; --axff: inherit; font-size: 11.5px; --axfs: 11.5px; font-weight: 500; line-height: 1.2; cursor: pointer}
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_frame .na_ph_makeopts button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-width: 0; margin: 0; padding: 9px 4px 8px !important; border: 0 !important; border-radius: 14px; --axr: 14px; background: rgba(255, 255, 255, 0.16) !important; box-shadow: none !important; color: #fff; --axfg: #fff; font: inherit; --axfs: inherit; --axff: inherit; font-size: 11.5px; --axfs: 11.5px; font-weight: 500; line-height: 1.2; cursor: pointer}
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_frame .na_ph_makeopts button:hover { background: rgba(255, 255, 255, 0.22) !important; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_frame .na_ph_maketip button { flex: none; margin: 0; padding: 8px 14px !important; border: 0 !important; border-radius: 999px !important; --axr: 999px !important; background: rgba(255, 255, 255, 0.9) !important; box-shadow: none !important; color: #2b2f63 !important; --axfg: #2b2f63 !important; font: inherit; --axfs: inherit; --axff: inherit; font-size: 12.5px; --axfs: 12.5px; font-weight: 700; cursor: pointer}
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_frame .na_ph_maketip button { flex: none; margin: 0; padding: 8px 14px !important; border: 0 !important; border-radius: 999px; --axr: 999px; background: rgba(255, 255, 255, 0.9) !important; box-shadow: none !important; color: #2b2f63; --axfg: #2b2f63; font: inherit; --axfs: inherit; --axff: inherit; font-size: 12.5px; --axfs: 12.5px; font-weight: 700; cursor: pointer}
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_frame :is(.na_ph_makebtn, .na_ph_makeopts button, .na_ph_maketip button):focus { outline: none !important; box-shadow: none !important; }
 /* 설정 › 날짜 및 시간: the year sits at the row's end, like a value */
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax .ax_in.na_ph_year { flex: none; width: 84px; height: auto; margin: 0 0 0 auto; padding: 0; color: #7c8592 !important; --axfg: #7c8592 !important; font-size: 14.5px; --axfs: 14.5px; line-height: inherit; text-align: right; -moz-appearance: textfield}
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax .ax_in.na_ph_year { flex: none; width: 84px; height: auto; margin: 0 0 0 auto; padding: 0; color: #7c8592; --axfg: #7c8592; font-size: 14.5px; --axfs: 14.5px; line-height: inherit; text-align: right; -moz-appearance: textfield}
 .na_ph_year::-webkit-outer-spin-button, .na_ph_year::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax .ax_in.na_ph_year:focus { color: #161b22 !important; --axfg: #161b22 !important}
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax .ax_in.na_ph_year:focus { color: #161b22; --axfg: #161b22}
 
 /* 폰 확인 창 › iOS action sheet inside the screen (board px): grey message + the action, a separate 취소 below. Opaque, not blurred
    (SillyTavern's no-blur setting turns backdrop-filter off, and a see-through sheet looked flat); glass edge, light on top, two shadows */
