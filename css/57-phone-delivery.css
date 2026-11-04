@@ -402,7 +402,7 @@ body.no-blur .na_ph_frame .pcf .pcf_card { background: linear-gradient(180deg, #
 .pcf_ok.safe, .pcf_no { color: #2c4a80; }
 .pcf_btns.v .pcf_ok { font-weight: 400; color: #161b22; font-size: 16px; --axfs: 16px; }
 .pcf_btns.v .pcf_no { font-weight: 600; }
-.pcf_sub { margin-right: 8px; font-size: 13.5px; --axfs: 13.5px; color: #7d8590; }
+.pcf_sub { margin-right: 8px; font-size: 13.5px; --axfs: 13.5px; color: #4f5763; }
 .pcf_ok:active, .pcf_no:active { background: rgba(60, 60, 67, 0.08); }
 /* nothing moves behind the glass while it is up (the clouds would make the blur redraw every frame) */
 .na_ph_frame:has(.pcf) :not(.pcf, .pcf *) { animation-play-state: paused; }
