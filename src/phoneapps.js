@@ -6,7 +6,7 @@ import { investmentDate } from './investdata.js';
 import { profileChoices, phoneDataInfo } from './phoneprofile.js';
 import { faceHtml, nameKey, nameRe, peopleData, peopleList, personLine } from './people.js';
 import { autopic, autopicPeople, drafting, drawing, looksOf, writing } from './phoneai.js';
-import { bigClock, byStory, clockOf, COUNTRIES, fmtDate, fmtTime, fullDate, gapDays, hasKo, koOn, lastTime, listTime, localeOf, loreOff, MOODS, pad, parts, phoneLore, placesOf, REMAKE, rowDay, savedName } from './phonedata.js';
+import { bigClock, byStory, clockOf, COUNTRIES, fmtDate, fmtTime, fullDate, gapDays, hasKo, koOn, lastTime, listTime, localeOf, loreOff, MOODS, pad, parts, phoneLore, placesOf, REMAKE, rowDay, savedName, dateOrderOf } from './phonedata.js';
 import { threadNew } from './phonehome.js';
 import { screenView } from './phonescreen.js';
 import { recentTrackers } from './scenes.js';
@@ -586,7 +586,7 @@ const dateLabel = (p, now, long = false) => {
     const y = !p.noYear && Number(p.year), d = y ? new Date(Date.UTC(y, mt[1] - 1, Number(mt[2]))) : null;
     return `${y ? fullDate(p, `${y}-${mt[1]}-${mt[2]}`) : fmtDate(p, `${mt[1]}-${mt[2]}`)}${long && d ? ` (${'일월화수목금토'[d.getUTCDay()]})` : ''}`;
 };
-export function setDate(p, now) {
+export function setDate(p, now, m = null) {
     const on = !p.noYear, mt = /^(\d{2})-(\d{2})/.exec(String(now || p.now || ''));
     const y = on && Number(p.year), d = y && mt ? new Date(Date.UTC(y, mt[1] - 1, Number(mt[2]))) : null;
     const day = mt ? `${fmtDate(p, `${mt[1]}-${mt[2]}`)}${d ? ` (${'일월화수목금토'[d.getUTCDay()]})` : ''}` : '';
@@ -601,6 +601,8 @@ export function setDate(p, now) {
         </div>
         <div class="ax_card"><button type="button" class="ax_rw ax_rwn na_ph_yearshow"><span class="ax_tx"><span class="ax_n">연도 표시</span></span><span class="ax_sw ${on ? 'on' : ''}"></span></button></div>
         <div class="ax_foot">끄면 날짜에 연도와 요일이 나오지 않아요.</div>
+        ${(o => `<div class="ax_sec">상태창</div><div class="ax_card"><div class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_n">날짜 순서</span></span><span class="ax_dseg">${[['md', '월.일'], ['dm', '일.월']].map(([v, t]) => `<span role="button" tabindex="0" class="na_ph_dord${o === v ? ' on' : ''}" data-v="${v}">${t}</span>`).join('')}</span></div></div>
+        <div class="ax_foot">상태창의 03.11. 을 ${o === 'dm' ? '11월 3일' : '3월 11일'}로 읽어요.</div>`)(dateOrderOf(m))}
       </div>
       ${axInd()}`;
 }

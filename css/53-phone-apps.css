@@ -236,4 +236,7 @@
 .ax .ax_btns > .na_ph_draw.ax_camdraw { --axbg: #ecc3ae; color: #4a2420; --axfg: #4a2420; position: static; width: auto !important; margin: 0 !important; display: flex !important; justify-content: center; border-radius: 16px; --axr: 16px; font-size: 14.5px; --axfs: 14.5px; padding: 11px 0 !important}
 /* ⋯ when its menu is open: the accent and an ✕ */
 .na_ph_more.on { border-color: var(--na-accent); color: var(--na-accent-fg, var(--na-accent)); --axfg: var(--na-accent-fg, var(--na-accent))}
-
+/* 상태창 날짜 순서 (설정 › 날짜 및 시간): a small two-way switch, the chosen side a white pill */
+.ax .ax_dseg { display: inline-flex; padding: 2px; border-radius: 9px; background: #e9ecf1; }
+.ax .ax_dseg > span { padding: 5px 12px; border-radius: 7px; font-size: 13px; --axfs: 13px; font-weight: 600; color: #7a828e; cursor: pointer; }
+.ax .ax_dseg > span.on { background: #fff; color: #161b22; box-shadow: 0 1px 3px rgba(22, 27, 34, 0.12); }
