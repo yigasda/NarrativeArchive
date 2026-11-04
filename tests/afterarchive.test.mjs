@@ -555,3 +555,15 @@ test('voice memos filled again: one the story already put there is not written t
     await data.fillVoice(mm, p);
     assert.deepEqual(p.voice.map(x => x.title).sort(), ['Late thought', 'Train times']);
 });
+
+test('a life fill that stops short of a stretch the reflection read ahead keeps what the reflection put in from there', async () => {
+    globalThis.__rows = bigRows(40);
+    const p = { owner: 'Ren', now: '10-26 12:00', country: 'DE', lives: 'DE',
+        life: { clock: { alarms: [{ id: 'sync:new-alarm:a0', time: '06:30', label: 'Gym with Ivo', days: ['mon'], on: true, ev: 'new-alarm', sourceIndex: 30 }], timers: [], running: null }, health: { usual: {}, days: [] }, files: { folders: [], items: [] }, weather: null },
+        sync: { order: 'newest', marks: { base: { index: 6 }, life: { index: 6 } }, done: [[7, 20], [25, 39]], hiddenRead: {}, failed: {}, events: { 'new-alarm': { at: 30, summary: 'gym alarm', quote: 'six thirty', effects: [] } } } };
+    const ans = JSON.stringify({ clock: { alarms: [{ time: '07:00', label: 'Work', days: ['mon'], on: true }] }, health: { usual: {}, days: [] }, files: { items: [] }, weather: null });
+    globalThis.__menu = { calls: [], answers: [ans, ans], answer: '{}' };
+    const warn = console.warn; console.warn = () => {};
+    try { await life.fillLife({ ...m, phones: { ren: p } }, p); } finally { console.warn = warn; }
+    assert.deepEqual(p.life.clock.alarms.map(a => a.label).sort(), ['Gym with Ivo', 'Work']);
+});
