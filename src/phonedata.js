@@ -76,7 +76,7 @@ const PHONE_TEST = `${PHONE_FACT}\n\n${PHONE_STYLE}`;
 const PHONE_ITEMS = `  "contacts": [{ "name": name in the story, "saved": how the owner saved them (a nickname, an emoji, or just the name) }],
   "threads": [{ "with": name, "messages": [{ "from": "me" or the sender's name, "text", "ko", "time" }],
                "draft": { "text", "ko", "time" } only when the archive or chat shows the owner wrote a text to them and didn't send it }],
-  "calls": [{ "with": name, "type": "in" | "out" | "missed", "time", "min": minutes talked }],
+  "calls": [{ "with": name, "type": "in" | "out" | "missed", "time", "min": minutes talked, "count": calls in a row (34 missed calls are one item) }],
   "photos": [{ "caption": what the photo shows, "ko", "time", "mood": one of ${MOODS.join(', ')} }],
   "notes": [{ "title", "kt": Korean title, "text", "ko", "time" }],
   "searches": [{ "q", "ko", "time", "tab": true if its page is still open on the phone, "mark": true if they bookmarked it }],
@@ -162,7 +162,7 @@ WHAT IS NEW
 - An event in EVENTS ON THE PHONE keeps its id; add only what the phone doesn't hold yet.
 - MESSAGES READ BEFORE, NOW CHANGED were already put on the phone: give their events the ids listed there${split ? '' : '; a payment in them is that same payment, its amount corrected if it changed'}.
 ${split ? `- A scene that only touches these apps (a taxi paid, a basket filled${invest ? ', a share price mentioned' : ''}) is still an event, with its "apps".\n` : ''}- Small things around an event are fine (how a text was worded, a photo of the place, a search they would make), and a scene may carry on in texts later (a fight, a date, a job given in person), in their own voices. Nothing the story contradicts, no new facts or plans.
-- EVERYDAY: in every answer, 0 to 2 records of the owner's ordinary life in the hours these messages cover, from their habits, in the top-level "everyday" (never in an event): any app, with people from the story or PEOPLE AROUND as they are and with what they feel, never someone the owner isn't in touch with now. No new facts, events, plans or secrets.
+- EVERYDAY: in every answer, a few records of the owner's ordinary life in the hours these messages cover, from their habits, in the top-level "everyday" (never in an event): any app, a little in each as a real phone gets it, texts and calls by the person, with people from the story or PEOPLE AROUND as they are and with what they feel, never someone the owner isn't in touch with now. No new facts, events, plans or secrets.
 - People: only people the story or PEOPLE AROUND has. A relationship word (girlfriend, ex, husband, boss) only if the messages or archive use it for them.
 - A diary entry holds what these messages show and what the owner feels about it, as the story and PEOPLE AROUND show them; no new secrets or events.
 
@@ -318,7 +318,7 @@ export function parsePhone(out, owner = '') {
         now: when(raw.now),
         contacts: arr(raw.contacts).map(x => ({ name: line(x?.name, 40), saved: line(x?.saved, 40) })).filter(x => x.name && !mine(x.name)).slice(0, CAP.contacts),
         threads: arr(raw.threads).map(t => { const d = t?.draft && str(t.draft.text, 600); return { with: line(t?.with, 40), messages: arr(t?.messages).map(x => msg(x, t)).filter(x => x.text), ...(d ? { draft: { text: d, ko: ko(t.draft.ko), time: when(t.draft.time), src: 'story' } } : {}) }; }).filter(t => t.with && !mine(t.with) && t.messages.length).slice(0, CAP.threads),
-        calls: arr(raw.calls).map(x => tag({ with: line(x?.with, 40), type: pick(x?.type, ['in', 'out', 'missed'], 'in'), time: when(x?.time), min: Math.max(0, Math.min(600, Math.round(num(x?.min) || 0))) }, x)).filter(x => x.with && !mine(x.with)),
+        calls: inARow(arr(raw.calls).map(x => tag({ with: line(x?.with, 40), type: pick(x?.type, ['in', 'out', 'missed'], 'in'), time: when(x?.time), min: Math.max(0, Math.min(600, Math.round(num(x?.min) || 0))), ...(callCount(x?.count) > 1 ? { count: callCount(x.count) } : {}) }, x)).filter(x => x.with && !mine(x.with))),
         photos: arr(raw.photos).map(x => tag({ caption: line(x?.caption, 200), ko: ko(x?.ko), time: when(x?.time), mood: pick(x?.mood, MOODS, 'warm') }, x)).filter(x => x.caption),
         notes: arr(raw.notes).map(x => tag({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 1500), ko: str(x?.ko, 1500), time: when(x?.time) }, x)).filter(x => x.title || x.text),
         searches: arr(raw.searches).map(x => tag({ q: line(x?.q, 120), ko: ko(x?.ko), time: when(x?.time), ...(truthy(x?.tab) ? { tab: true } : {}), ...(truthy(x?.mark) ? { mark: true } : {}) }, x)).filter(x => x.q),
@@ -333,6 +333,18 @@ export function parsePhone(out, owner = '') {
 }
 
 // what makes two items the same, list by list: an update that repeats what the phone holds adds nothing
+// calls one after another (34 missed from the same person, nothing between): one row with its count, at the last one
+const callCount = v => { const n = Math.round(num(v) || 0); return n > 0 ? Math.min(999, n) : 1; };
+function inARow(calls) {
+    const out = [];
+    for (const x of [...calls].sort((a, b) => String(a.time).localeCompare(String(b.time)))) {
+        const o = out.at(-1), gap = o && nearMin(o.time) !== null && nearMin(x.time) !== null ? nearMin(x.time) - nearMin(o.time) : null;
+        if (o && x.type === 'missed' && o.type === 'missed' && nameKey(o.with) === nameKey(x.with) && isGuess(o) === isGuess(x) && gap !== null && gap >= 0 && gap <= 180) {
+            o.count = (o.count || 1) + (x.count || 1); o.time = x.time;
+        } else out.push(x);
+    }
+    return out;
+}
 const SIG = {
     msg: x => [nameKey(x.from), x.text, x.time], calls: x => [nameKey(x.with), x.type, x.time], photos: x => [x.caption, x.time],
     notes: x => [x.title, x.text], searches: x => [x.q, x.time], events: x => [x.title, x.date, x.time], posts: x => [x.text, x.photo, x.time],
@@ -412,22 +424,24 @@ function everydayOn(raw, rows, textAt) {
 }
 // the people closest to the owner (위치 판독's "around"): who they are to the owner and how it stands, in the cards' own words
 export const aroundBlock = p => (p?.around?.people?.length ? `[PEOPLE AROUND]\n${p.around.people.map(x => `- ${x.name}${x.aka?.length ? ` (${x.aka.join(', ')})` : ''}: ${x.about}`).join('\n')}` : '');
-// 반영's everyday records (재구성, "everyday": true): two an answer, six a day at most (a slow day read in many rounds gets
-// some each round, not a pile)
+// 반영's everyday records (재구성, "everyday": true): so many an answer and a day in each app, texts and calls for each
+// person (a slow day read in many rounds gets some each round, not a pile). The story's own records have no limit
+const EVERYDAY_CAP = { threads: [3, 12], calls: [1, 3], photos: [2, 8], searches: [2, 8], notes: [1, 3], mails: [1, 3], posts: [1, 2], diary: [1, 3], voice: [1, 2], events: [1, 3] };
 const dayOfItem = x => when(String(x?.date || x?.time || '')).slice(0, 5);
 function everydayOnly(p, add, day, daily) {
-    const had = d => LISTS.reduce((n, k) => n + (p[k] || []).filter(x => isGuess(x) && (dayOfItem(x) || '') === d).length, 0)
-        + (p.threads || []).reduce((n, th) => n + (th.messages || []).filter(x => isGuess(x) && (dayOfItem(x) || '') === d).length, 0);
-    const ok = x => {
+    const who = (k, x, th) => (k === 'threads' ? nameKey(th?.with) : k === 'calls' ? nameKey(x.with) : '');
+    const had = (k, d, w) => (k === 'threads' ? (p.threads || []).filter(th => nameKey(th.with) === w).flatMap(th => th.messages || []) : (p[k] || []).filter(x => k !== 'calls' || nameKey(x.with) === w))
+        .filter(x => isGuess(x) && (dayOfItem(x) || '') === d).length;
+    const ok = (k, x, th) => {
         if (!isGuess(x)) return true;
-        const d = dayOfItem(x) || day || '';
-        if (!daily.has(d)) daily.set(d, had(d));
-        if ((daily.get('round') || 0) >= 2 || daily.get(d) >= 6) return false;
-        daily.set(d, daily.get(d) + 1); daily.set('round', (daily.get('round') || 0) + 1);
+        const [perRound, perDay] = EVERYDAY_CAP[k] || [0, 0], d = dayOfItem(x) || day || '', w = who(k, x, th), dk = `${k}|${w}|${d}`, rk = `round|${k}|${w}`;
+        if (!daily.has(dk)) daily.set(dk, had(k, d, w));
+        if ((daily.get(rk) || 0) >= perRound || daily.get(dk) >= perDay) return false;
+        daily.set(dk, daily.get(dk) + 1); daily.set(rk, (daily.get(rk) || 0) + 1);
         return true;
     };
-    for (const k of LISTS) if (Array.isArray(add[k])) add[k] = add[k].filter(ok);
-    if (Array.isArray(add.threads)) for (const th of add.threads) th.messages = (th.messages || []).filter(ok);
+    for (const k of LISTS) if (Array.isArray(add[k])) add[k] = add[k].filter(x => ok(k, x));
+    if (Array.isArray(add.threads)) for (const th of add.threads) th.messages = (th.messages || []).filter(x => ok('threads', x, th));
     if (Array.isArray(add.threads)) add.threads = add.threads.filter(th => th.messages.length || th.draft);
 }
 // a reflection keeps everything (keepAll); making a phone keeps each list to its size
@@ -735,7 +749,7 @@ const phoneForModel = p => ({
     country: p.country, now: p.now,
     contacts: p.contacts.map(({ name, saved }) => ({ name, saved })),
     threads: p.threads.map(t => ({ with: t.with, messages: real(t.messages).slice(-6).map(({ from, text, time }) => ({ from, text, time })) })),
-    calls: real(p.calls).slice(-5).map(x => ev(x, { with: x.with, type: x.type, time: x.time, min: x.min })),
+    calls: real(p.calls).slice(-5).map(x => ev(x, { with: x.with, type: x.type, time: x.time, min: x.min, ...(x.count > 1 ? { count: x.count } : {}) })),
     photos: real(p.photos).slice(-4).map(x => ev(x, { caption: x.caption, time: x.time })),
     notes: real(p.notes).slice(-3).map(x => ev(x, { title: x.title, text: x.text.slice(0, 200), time: x.time })),
     searches: real(p.searches).slice(-4).map(x => ev(x, { q: x.q, time: x.time })),
