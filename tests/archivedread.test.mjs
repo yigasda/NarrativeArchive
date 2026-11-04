@@ -80,3 +80,18 @@ test('a section message the phone read before it was archived is not taken again
     await run(m, { now: '10-26 13:00', events: [note(3, 'bought the poetry book', 'Book'), note(4, 'Ren went to the bookstore', 'Shelf')] });
     assert.deepEqual(p.notes.map(x => x.title), ['Shelf']);
 });
+
+test('whole sections only: past the limit a section waits for the next round, never cut', async () => {
+    const chat = [say('Ren', 'start of the day'), say('Mara', 'morning')];
+    let text = '';
+    for (let k = 0; k < 30; k++) { chat.push(hide(say('Ren', `stretch ${k} one`)), hide(say('Mara', `stretch ${k} two`))); text += `## #${2 + 2 * k}–#${3 + 2 * k} — Part ${k}\n- ${'Ren did a thing. '.repeat(150)}(#${2 + 2 * k}).\n`; }
+    const c = setup(chat);
+    c.m.text = text;
+    await run(c.m, { now: '10-26 13:00', events: [] });
+    const first = Object.keys(c.p.sync.arch).length;
+    assert.ok(first > 1 && first < 30, String(first));
+    // every section read whole: the next round starts where this one stopped
+    assert.equal(data.syncLeft(c.p, c.m), 30 - first);
+    await run(c.m, { now: '10-26 13:00', events: [] });
+    assert.ok(Object.keys(c.p.sync.arch).length > first);
+});
