@@ -240,3 +240,27 @@
 .ax .ax_dseg { display: inline-flex; padding: 2px; border-radius: 9px; background: #e9ecf1; }
 .ax .ax_dseg > span { padding: 5px 12px; border-radius: 7px; font-size: 13px; --axfs: 13px; font-weight: 600; color: #7a828e; cursor: pointer; }
 .ax .ax_dseg > span.on { background: #fff; color: #161b22; box-shadow: 0 1px 3px rgba(22, 27, 34, 0.12); }
+/* 설정 › 위치 정보 (docs/mockups/phone-place B): the owner on a navy card like the bank's head, the others as world-clock rows */
+.ax .ax_pl_warn { display: flex; align-items: center; gap: 8px; margin: 0 16px 12px; padding: 12px 14px; border-radius: 16px; background: #f6edd6; color: #7a5a12; font-size: 13px; --axfs: 13px; line-height: 1.4; box-shadow: 0 1px 2px rgba(22, 27, 34, 0.04); }
+.ax .ax_pl_hero { margin: 0 16px; padding: 18px 18px 16px; border-radius: 24px; background: linear-gradient(160deg, #24407a, #1d3461 55%, #172a4f); color: #fff; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 1px 2px rgba(22, 27, 34, 0.06), 0 12px 26px rgba(29, 52, 97, 0.24); }
+.ax .ax_pl_k { display: block; font-size: 12.5px; --axfs: 12.5px; color: rgba(255, 255, 255, 0.72); }
+.ax .ax_pl_city { display: flex; align-items: center; gap: 8px; margin-top: 4px; cursor: pointer; }
+.ax .ax_pl_city b { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; }
+.ax .ax_pl_chips { display: flex; gap: 8px; margin-top: 14px; }
+.ax .ax_pl_chip { position: relative; flex: 1; min-width: 0; padding: 10px 12px; border-radius: 14px; background: rgba(255, 255, 255, 0.12); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1); }
+.ax .ax_pl_chip > span { display: block; font-size: 12px; --axfs: 12px; color: rgba(255, 255, 255, 0.72); }
+.ax .ax_pl_chip > b { display: flex; align-items: center; gap: 6px; margin-top: 2px; font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ax .ax_pl_man { flex: none; padding: 1px 7px; border-radius: 999px; background: #eef1f6; color: #5a6474; font-size: 11px; font-weight: 600; font-style: normal; letter-spacing: 0; }
+.ax .ax_pl_hero .ax_pl_man { background: rgba(255, 255, 255, 0.18); color: #fff; }
+.ax .ax_pl_row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; position: relative; }
+.ax .ax_pl_row + .ax_pl_row::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; height: 0.5px; background: #e6e8ec; }
+.ax .ax_pl_row:active { background: #f4f5f8; }
+.ax .ax_pl_l { flex: 1; min-width: 0; }
+.ax .ax_pl_l b { display: block; font-size: 24px; font-weight: 600; letter-spacing: -0.02em; color: #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ax .ax_pl_l small, .ax .ax_pl_r small { display: flex; align-items: center; gap: 5px; margin-top: 1px; font-size: 13px; color: #8a919c; }
+.ax .ax_pl_r { flex: none; text-align: right; }
+.ax .ax_pl_r b { font-size: 17px; font-weight: 600; color: #000; }
+.ax .ax_pl_r small { justify-content: flex-end; }
+.ax .ax_pl_none { padding: 18px 16px; font-size: 14px; color: #8a919c; text-align: center; }
+.ax .ax_pl_btn { display: flex; align-items: center; justify-content: center; gap: 8px; height: 50px; margin: 16px 16px 0; border-radius: 16px; background: #fff; color: #2c4a80; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0 1px 2px rgba(22, 27, 34, 0.04), 0 8px 24px rgba(22, 27, 34, 0.05); }
+.ax .ax_pl_btn.on { color: #8a919c; cursor: default; }

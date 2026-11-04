@@ -401,6 +401,9 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax 
 .pcf_ok.safe, .pcf_no { color: #2c4a80; }
 .pcf_btns.v .pcf_ok { font-weight: 400; color: #161b22; font-size: 16px; --axfs: 16px; }
 .pcf_btns.v .pcf_no { font-weight: 600; }
+.pcf_btns.v .pcf_ok.pcf_bad { color: #d0453a; }
+.pcf_in { position: relative; padding: 0 16px 16px; }
+.pcf .pcf_field { box-sizing: border-box; width: 100%; height: 40px; margin: 0; padding: 0 12px; border: 0; border-radius: 12px; background: #fff; color: #161b22; font: inherit; font-size: 16px; box-shadow: inset 0 0 0 1px rgba(60, 60, 67, 0.16); outline: none; }
 .pcf_sub { margin-right: 8px; font-size: 13.5px; --axfs: 13.5px; color: #4f5763; }
 .pcf_ok:active, .pcf_no:active { background: rgba(60, 60, 67, 0.08); }
 @keyframes pcf_dim { from { background: rgba(15, 20, 28, 0); } }

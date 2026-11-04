@@ -6,7 +6,7 @@ import { investmentDate } from './investdata.js';
 import { profileChoices, phoneDataInfo } from './phoneprofile.js';
 import { faceHtml, nameKey, nameRe, peopleData, peopleList, personLine } from './people.js';
 import { autopic, autopicPeople, drafting, drawing, looksOf, writing } from './phoneai.js';
-import { bigClock, byStory, clockOf, COUNTRIES, fmtDate, fmtTime, fullDate, gapDays, hasKo, koOn, lastTime, listTime, localeOf, loreOff, MOODS, pad, parts, phoneLore, placesOf, REMAKE, rowDay, savedName, dateOrderOf } from './phonedata.js';
+import { bigClock, byStory, clockOf, COUNTRIES, fmtDate, fmtTime, fullDate, gapDays, hasKo, koOn, lastTime, listTime, localeOf, loreOff, MOODS, pad, parts, phoneLore, placesOf, REMAKE, rowDay, savedName, dateOrderOf, placeInfo } from './phonedata.js';
 import { threadNew } from './phonehome.js';
 import { screenView } from './phonescreen.js';
 import { recentTrackers } from './scenes.js';
@@ -557,6 +557,7 @@ export function setScreen(p, now, m, ui) {
         <div class="ax_sec">일반</div>
         <div class="ax_card">
           <label class="ax_rw">${si('#8faed1', 'globe')}<span class="ax_tx"><span class="ax_n">국적</span></span><span class="ax_v">${esc(COUNTRIES[p.country] || p.country || '')}</span>${axChev}<select class="na_ph_country ax_sel" aria-label="국적">${Object.entries(COUNTRIES).map(([k, v]) => `<option value="${k}" ${k === p.country ? 'selected' : ''}>${v}</option>`).join('')}${COUNTRIES[p.country] ? '' : `<option value="${esc(p.country)}" selected>${esc(p.country)}</option>`}</select></label>
+          <button type="button" class="ax_rw" data-go="setplace">${si('#7fa69c', 'pin')}<span class="ax_tx"><span class="ax_n">위치 정보</span></span><span class="ax_v">${esc((o => [COUNTRIES[o.lives] || o.lives, o.city].filter(Boolean).join(' · '))(placeInfo(p).owner))}</span>${axChev}</button>
           <button type="button" class="ax_rw" data-go="setdate">${si('#9aa7c0', 'clock')}<span class="ax_tx"><span class="ax_n">날짜 및 시간</span></span><span class="ax_v">${esc(dateLabel(p, now))}</span>${axChev}</button>
           <button type="button" class="ax_rw na_ph_looksbtn2">${si('#d89f98', 'user')}<span class="ax_tx"><span class="ax_n">외모</span></span><span class="ax_v">${nLooks ? `${nLooks}명` : ''}</span>${axChev}</button>
           <button type="button" class="ax_rw" data-go="setprofile">${si('#a2a7af', 'info')}<span class="ax_tx"><span class="ax_n">이 폰에 대해</span></span><span class="ax_v">${esc(p.financeProfile?.label || '연결 안 함')}</span>${axChev}</button>
@@ -603,6 +604,39 @@ export function setDate(p, now, m = null) {
         <div class="ax_foot">끄면 날짜에 연도와 요일이 나오지 않아요.</div>
         ${(o => `<div class="ax_sec">상태창</div><div class="ax_card"><div class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_n">날짜 순서</span></span><span class="ax_dseg">${[['md', '월.일'], ['dm', '일.월']].map(([v, t]) => `<span role="button" tabindex="0" class="na_ph_dord${o === v ? ' on' : ''}" data-v="${v}">${t}</span>`).join('')}</span></div></div>
         <div class="ax_foot">상태창의 03.11. 을 ${o === 'dm' ? '11월 3일' : '3월 11일'}로 읽어요.</div>`)(dateOrderOf(m))}
+      </div>
+      ${axInd()}`;
+}
+// 설정 › 위치 정보 (docs/mockups/phone-place B): the owner's place as a navy card (the city they are in, the country they
+// live in, the zone), then the others like the world clock — the city big, who is there small, the hours apart and their time
+const hoursText = h => (h === null || h === undefined ? '—' : !h ? '같음' : `${h > 0 ? '+' : '−'}${Math.floor(Math.abs(h))}시간${Math.abs(h) % 1 ? ` ${Math.round((Math.abs(h) % 1) * 60)}분` : ''}`);
+function placeClock(p, now, h) {
+    const t = /(\d{2}):(\d{2})$/.exec(String(now || p.now || ''));
+    if (!t || h === null || h === undefined) return { time: '', day: '' };
+    const min = Number(t[1]) * 60 + Number(t[2]) + Math.round(h * 60), d = Math.floor(min / 1440), mm = ((min % 1440) + 1440) % 1440;
+    return { time: clockOf(p, `${String(Math.floor(mm / 60)).padStart(2, '0')}:${String(mm % 60).padStart(2, '0')}`), day: d > 0 ? '내일' : d < 0 ? '어제' : '' };
+}
+export function setPlace(p, now, m, ui = {}) {
+    const info = placeInfo(p), o = info.owner, man = '<i class="ax_pl_man">수동</i>';
+    const opts = Object.entries(COUNTRIES).map(([k, v]) => `<option value="${k}" ${k === o.lives ? 'selected' : ''}>${esc(v)}</option>`).join('') + (o.lives && !COUNTRIES[o.lives] ? `<option value="${esc(o.lives)}" selected>${esc(o.lives)}</option>` : '');
+    const row = x => { const c = placeClock(p, now, x.hours); return `<div role="button" tabindex="0" class="ax_pl_row na_ph_plrow" data-n="${esc(x.name)}"><span class="ax_pl_l"><b>${esc(x.city || '모르는 곳')}</b><small>${esc(x.name)}${c.day ? ` · ${c.day}` : ''}${x.manual ? ` ${man}` : ''}</small></span><span class="ax_pl_r"><b class="cg_num">${hoursText(x.hours)}</b>${c.time ? `<small class="cg_num">${esc(c.time)}</small>` : ''}</span></div>`; };
+    return `${axBar(p, now)}
+      ${axTop(axCb('set'))}
+      <div class="ax_scroll">${axH1('위치 정보')}
+        ${info.failed ? `<div class="ax_pl_warn">${ax('info', 16, '#8a6a1f', 2.2)}<span>자동으로 못 읽었어요 · 직접 정하거나 다시 읽어 주세요</span></div>` : ''}
+        <div class="ax_pl_hero">
+          <span class="ax_pl_k">${esc(o.name || '')} · 지금 있는 곳</span>
+          <div role="button" tabindex="0" class="ax_pl_city na_ph_plcity" data-n="${esc(o.name || '')}"><b>${esc(o.city || '도시 정하기')}</b>${o.cityManual ? man : ''}${ax('pen', 16, 'rgba(255,255,255,.7)', 2.2)}</div>
+          <div class="ax_pl_chips">
+            <div class="ax_pl_chip"><span>사는 나라</span><b>${esc(COUNTRIES[o.lives] || o.lives || '정하기')}${o.livesManual ? man : ''}</b><select class="na_ph_plives ax_sel" aria-label="사는 나라">${o.lives ? '' : '<option value="" selected>정하기</option>'}${opts}</select></div>
+            <div class="ax_pl_chip"><span>시간대</span><b>${esc(o.tz || '—')}</b></div>
+          </div>
+        </div>
+        <div class="ax_sec">다른 사람</div>
+        ${info.people.length ? `<div class="ax_card ax_pl_list">${info.people.map(row).join('')}</div>` : '<div class="ax_card ax_pl_list"><div class="ax_pl_none">아직 읽은 사람이 없어요</div></div>'}
+        <div class="ax_foot">줄을 누르면 도시를 바꾸거나 목록에서 뺄 수 있어요. 사는 나라에 맞춰 배달 앱 · 스크린타임 앱이 정해져요.</div>
+        <div role="button" tabindex="0" class="ax_pl_btn na_ph_plread${ui.placeReading ? ' on' : ''}">${ui.placeReading ? `${busyHtml} 읽는 중` : `${ax('redo', 17, 'currentColor', 2.3)}AI로 다시 읽기`}</div>
+        <i class="ax_pad"></i>
       </div>
       ${axInd()}`;
 }
