@@ -500,6 +500,22 @@ export const turnsNote = (last, what, short = null) => {
     if (!last || last.all) return;
     globalThis.toastr?.warning(last.upto != null ? `${obj} #${last.to}까지만 채웠어요. 아카이브하고 다시 만들면 나머지도 들어가요.` : `${obj} #${last.to}까지 채웠어요. 나머지는 반영하면 들어가요.`, '캐릭터 휴대폰');
 };
+// a fill or a remake reads the story after the archive up to the phone's clock in two turns at most: the first reads
+// 70,000 tokens word for word and writes the whole app; what is left, the second reads (30,000 tokens more, word for
+// word) and writes only what it adds, in the voice of what the first wrote (LIFE SO FAR, PHONE SO FAR …), the code
+// putting it in. A stretch longer still goes along as the reflection's summaries (TOLD SHORT): nothing lost, that part
+// less detailed. A phone made anew needs no second turn: what it didn't read is after its clock, the reflection's
+export const MORE_TOKENS = 30_000;
+// the second turn's window: the rest word for word, and past that the summaries; cover: how far the two reach together
+export function secondTurn(m, p, first) {
+    if (!first || first.all) return null;
+    const more = windowOf(m, p, first.to, MORE_TOKENS);
+    if (!more?.n) return null;
+    const short = more.all ? null : toldShort(p, more.to, more.upto);
+    return { more, short, cover: short ? { ...more, all: true } : more };
+}
+// only: what this app's second turn writes, when it is less than the whole JSON
+export const soFarHead = (what, short, only = '') => `[${what} SO FAR — what you wrote from the story before RECENT CHAT. Write only what RECENT CHAT${short ? ' and TOLD SHORT' : ''} add or change, in the same JSON and in the same voice, language and naming as here; leave out what is already here${only ? `. ${only}` : ''}]`;
 // the story's "now" for a request that stopped short: the message it read up to (null: now is now). Its days, weather
 // and clock stand there too, so it never writes a day it didn't read; the reflection moves them on from there
 export const nowAt = g => (!g ? null : !g.all ? g.to : g.upto ?? null);
@@ -620,7 +636,8 @@ const blindBlock = (m, owner) => {
     const rows = knowledgeRows(m).flatMap(r => (r.unaware.some(me) ? [`- ${r.fact}`] : r.suspects.some(me) ? [`- ${r.fact} (only suspects)`] : []));
     return rows.length ? `[OWNER DOESN'T KNOW]\n${rows.join('\n')}` : '';
 };
-function phoneRequest(m, owner, p = null, lore = '', only = null, profile = '', gap = null) {
+// extra: a second turn's blocks (PHONE SO FAR, TOLD SHORT)
+function phoneRequest(m, owner, p = null, lore = '', only = null, profile = '', gap = null, extra = []) {
     const world = worldText(m), upto = nowAt(gap);
     const recent = chatUpto(recentForCheck(1e9), upto).slice(-6).join('\n\n').slice(-6000);
     const ar = archiveFor(m, p ? p.upto ?? -1 : -1, nowAt(gap));
@@ -636,6 +653,7 @@ function phoneRequest(m, owner, p = null, lore = '', only = null, profile = '', 
         `[OWNER]\n${owner}`,
         profile, blindBlock(m, owner),
         namesBlock(m),
+        ...extra,
         only ? onlyAsk(only) : '',
     ].filter(Boolean).join('\n\n');
 }
@@ -677,20 +695,34 @@ export async function makePhone(m, owner, { update = false, apps = null } = {}) 
     const old = update ? m.phones?.[key] : null;
     const part = apps && m.phones?.[key] ? apps.flatMap(a => REMAKE[a] || []) : null;
     const binding=structuredClone(m.phones?.[key]?.financeProfile || m.phoneProfiles?.[key]);
-    const out = await askDraft(phoneRequest(m, owner, old, await loreFor(m, owner), part, await ownerProfileBlock(ctx(),binding,owner), gap), { force: true, system: old ? AI_SYS_PHONE_UPDATE : AI_SYS_PHONE, maxTokens: 16000 });
+    const lore = await loreFor(m, owner), profile = await ownerProfileBlock(ctx(), binding, owner);
+    const ask = (g, extra = []) => askDraft(phoneRequest(m, owner, old, lore, part, profile, g, extra), { force: true, system: old ? AI_SYS_PHONE_UPDATE : AI_SYS_PHONE, maxTokens: 16000 });
+    const out = await ask(gap), got = parsePhone(out, owner);
+    // made again up to the clock and stopped short: a second turn adds the rest (one that fails keeps the first)
+    const two = keep && !old ? secondTurn(m, cur, gap) : null;
+    let got2 = null, last = gap, short = null;
+    if (two) {
+        try {
+            const was = jsonOf(out), soFar = part && was ? Object.fromEntries(part.filter(k => was[k] !== undefined).map(k => [k, was[k]])) : was;
+            got2 = parsePhone(await ask(two.cover, [`${soFarHead('PHONE', two.short)}\n${JSON.stringify(soFar)}`, two.short?.text || '']), owner);
+            last = two.cover; short = two.short;
+        } catch (err) { console.warn('[narrative-archive] phone, second turn', err); }
+    }
     if(JSON.stringify(binding)!==JSON.stringify(m.phones?.[key]?.financeProfile || m.phoneProfiles?.[key])) throw new Error('생성 중 연결한 인물 정보가 변경됐어요. 다시 시도해 주세요');
-    const got = parsePhone(out, owner);
     m.phones = m.phones && typeof m.phones === 'object' ? m.phones : {};
     if (part) {
         const p = m.phones[key];
         const was = Object.fromEntries(part.map(k => [k, p[k]]));
         for (const k of part) p[k] = k === 'profile' ? (got.profile || p.profile) : [];
-        mergePhone(p, { ...got, ...Object.fromEntries([...LISTS, 'threads', 'contacts'].filter(k => !part.includes(k)).map(k => [k, []])), profile: null, now: '' });
+        const only = g => ({ ...g, ...Object.fromEntries([...LISTS, 'threads', 'contacts'].filter(k => !part.includes(k)).map(k => [k, []])), now: '' });
+        mergePhone(p, { ...only(got), profile: null });
+        if (got2) mergePhone(p, { ...only(got2), profile: part.includes('profile') ? got2.profile : null });
         for (const k of part) if (k !== 'profile') carryOver(k, was[k], p[k]);
         ensureIds(p);
         p.at = Date.now();
         await saveMeta();
         if (p.inject) applyInjection();
+        turnsNote(last, '앱', short);
         return p;
     }
     if (old) mergePhone(old, got);
@@ -712,16 +744,17 @@ export async function makePhone(m, owner, { update = false, apps = null } = {}) 
         if (was?.sync?.marks?.base && ['money', 'invest', 'life', 'delivery'].some(g => was.sync.marks[g])) base.sync = was.sync;
         else { base.sync = newSync(phoneChatScope(ctx())); base.sync.marks.base = mark; }
         m.phones[key] = mergePhone(base, got);
+        if (got2) mergePhone(m.phones[key], got2);
     }
     const p = m.phones[key];
-    ensureYear(m, p, nowAt(gap));
+    ensureYear(m, p, nowAt(last));
     if(m.phoneProfiles) delete m.phoneProfiles[key];
     ensureIds(p);
     p.upto = lastEnd(m);
     p.at = Date.now();
     await saveMeta();
     if (p.inject) applyInjection();
-    readNote(gap);
+    if (two) turnsNote(last, '폰', short); else readNote(gap);
     return p;
 }
 
@@ -1499,13 +1532,28 @@ export function parseMoney(raw, country = '') {
         orders: arr(raw.orders).map(x => withEv({ shop: line(x?.shop, 60), item: line(x?.item, 80), ko: ko(x?.ko), option: line(x?.option, 60), qty: Math.max(1, Math.round(num(x?.qty) || 1)), price: num(x?.price), time: when(x?.time), status: pick(x?.status, ['ordered', 'shipped', 'on the way', 'delivered', 'unknown', 'cancelled', 'returning', 'returned', 'refunded'], 'unknown'), eta: when(x?.eta).slice(0, 5), arrived: when(x?.arrived).slice(0, 5), gift: giftOf(x?.gift) }, x)).filter(x => x.item).slice(-12),
     };
 }
+// what a money fill's second turn adds: history only, put after the first's (the same payment, pass or order told again is
+// that one). Its payments count as in the balance already (the first's balances are as of the story's now)
+const MORE_CAP = { cards: 6, tx: 40, passes: 14, orders: 16 };
+function moneyMore(m, p, n, tx) {
+    const k = { tx: x => `${x.account}|${x.time}|${x.amount}`, passes: x => `${x.kind}|${String(x.by).toLowerCase()}|${x.date}`, orders: x => `${String(x.shop).toLowerCase()}|${String(x.item).toLowerCase()}|${x.time}`, cards: x => x.account };
+    const add = list => { const have = new Set((p.money[list] || []).map(k[list])); const fresh = n[list].filter(x => !have.has(k[list](x))); const all = [...(p.money[list] || []), ...fresh]; p.money[list] = (list === 'tx' || list === 'orders' ? all.sort(byStory(p.now)) : all).slice(-MORE_CAP[list]); return fresh; };
+    add('cards'); add('passes'); add('orders');
+    const fresh = tx ? add('tx') : [];
+    ensureIds(p);
+    for (const t of fresh) {
+        const a = p.money.bank.accounts.find(x => x.last4 === t.account), ledger = a && finance(m).accounts[`${a.id}:${a.currency}`];
+        if (ledger && t.id && !ledger.included.includes(t.id)) ledger.included.push(t.id);
+    }
+}
 // what the phone already holds, so the money side reuses its event tags
 const moneyContext = (p, now = p.now) => JSON.stringify({ now, mails: (p.mails || []).slice(-8).map(x => ev(x, { from: x.from, subject: x.subject, time: x.time })), events: real(p.events).slice(-8).map(x => ev(x, { title: x.title, date: x.date, time: x.time })), searches: real(p.searches).slice(-6).map(x => ev(x, { q: x.q, time: x.time })),
     ...(p.delivery?.orders?.length ? { deliveries: p.delivery.orders.filter(o => o.status !== 'cancelled').slice(-12).map(o => ev(o, { shop: o.shop, time: o.time, total: dlvTotal(o) })) } : {}) });
 export const prepareWealth = (m,p,refresh=false) => ensureWealth(m,p,()=>sideRequest(m,p.owner,[`[OWNER COUNTRY]\n${p.country || ''}`,`[ACCOUNT CURRENCIES]\n${JSON.stringify((p.money?.bank?.accounts || []).map(a=>a.currency))}`],{profile:p.financeProfile,money:true}),{refresh});
 export const fillMoney = (m, p, opts = {}) => exclusive('fill', () => makeMoney(m, p, opts));
 async function makeMoney(m, p, { regenerateBalances = false, wealthPlan = null } = {}) {
-    let mark = markNow();
+    const mark0 = markNow();
+    let mark = mark0;
     // what it reads after the archive; its day is the story's where that stops (now, when it reads to the end), not
     // the phone's now from when it was made
     const read = { gap: windowOf(m, p) }, at = storyNow(p, nowAt(read.gap)) || p.now;
@@ -1517,7 +1565,8 @@ async function makeMoney(m, p, { regenerateBalances = false, wealthPlan = null }
     const before = accountState();
     const preserved = rebuild ? `[REBUILD ACCOUNTS]\n${JSON.stringify(old.bank.accounts.map(({id,kind,name,last4,currency})=>({id,kind,name,last4,currency})))}\n[MONEY ALREADY MOVED]\n${JSON.stringify(old.bank.accounts.map(a=>({id:a.id,currency:a.currency,entries:finance(m).accounts[`${a.id}:${a.currency}`]?.entries || {}})))}` : old ? `[EXISTING ACCOUNTS]\n${JSON.stringify(old.bank.accounts)}` : '';
     const system = AI_SYS_MONEY + (rebuild ? MONEY_REBUILD : '');
-    const input = await sideRequest(m,p.owner,[`[PHONE NOW]\n${moneyContext(p, at)}`,preserved,wealthBlock(plan,'deposits'),`[EVALUATION DATE]\n${date}`,`[SAVED RATES]\n${JSON.stringify(Object.fromEntries(Object.entries(finance(m).prices).filter(([k])=>k.startsWith('FX:')).map(([k,book])=>[k,book[date]])))}`],{profile:p.financeProfile,money:true,read});
+    const rates = () => `[SAVED RATES]\n${JSON.stringify(Object.fromEntries(Object.entries(finance(m).prices).filter(([k])=>k.startsWith('FX:')).map(([k,book])=>[k,book[date]])))}`;
+    const input = await sideRequest(m,p.owner,[`[PHONE NOW]\n${moneyContext(p, at)}`,preserved,wealthBlock(plan,'deposits'),`[EVALUATION DATE]\n${date}`,rates()],{profile:p.financeProfile,money:true,read});
     mark = readMark(read.gap) || mark;
     let correction='';
     for(let attempt=0;attempt<2;attempt++) {
@@ -1573,11 +1622,28 @@ async function makeMoney(m, p, { regenerateBalances = false, wealthPlan = null }
             if(correction) {if(attempt===0) {correction += '\n[PREVIOUS CANDIDATE]\n'+JSON.stringify(raw);continue;}throw new Error('예금 규모를 재력 기준에 맞추지 못했어요. 기존 금융 데이터는 유지돼요');}
         }
         p.money = updated.money; m.finance = staged.finance;
+        // stopped short of the phone's clock: a second turn adds the history the rest of the story has (cards, payments,
+        // passes, orders); the accounts and their balances stay the first's. One that fails keeps the first
+        const two = secondTurn(m, p, read.gap);
+        let last = read.gap, short = null;
+        if (two) {
+            try {
+                const at2 = storyNow(p, nowAt(two.cover)) || p.now, tx = !old || rebuild, soFar = { cards: raw.cards, ...(tx ? { tx: raw.tx } : {}), passes: raw.passes, orders: raw.orders };
+                const only = `The bank, its accounts and their balances stay as they are: leave "bank" and "fx" out${tx ? '' : ', and "tx" too (the bank keeps its own)'}`;
+                const input2 = await sideRequest(m, p.owner, [`[PHONE NOW]\n${moneyContext(p, at2)}`, `[EXISTING ACCOUNTS]\n${JSON.stringify(p.money.bank.accounts)}`, wealthBlock(plan, 'deposits'), `[EVALUATION DATE]\n${date}`, rates(),
+                    `${soFarHead('MONEY', two.short, only)}\n${JSON.stringify(soFar)}`, two.short?.text || ''], { profile: p.financeProfile, money: true, read: { gap: two.cover } });
+                const raw2 = jsonOf(await askDraft(input2, { force: true, system: AI_SYS_MONEY, maxTokens: 12000 }));
+                if (p.money !== updated.money) throw new Error('생성 중 계좌가 변경됐어요');
+                moneyMore(m, p, parseMoney({ ...raw2, currency: p.money.currency, bank: p.money.bank }, p.country), tx);
+                last = two.cover; short = two.short;
+            } catch (err) { console.warn('[narrative-archive] money, second turn', err); }
+        }
+        mark = readMark(last) || mark0;
         // the delivery app's orders are paid from the bank now there is one
         payOrders(m, p, String(date || p.money.asOf || '').slice(0, 4) || String(new Date().getFullYear()));
         syncOf(p, phoneChatScope(ctx())).marks.money = mark;
         await saveMeta();
-        readNote(read.gap);
+        if (two) turnsNote(last, '은행', short); else readNote(read.gap);
         return p.money;
     }
 }

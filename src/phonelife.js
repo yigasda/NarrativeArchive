@@ -9,7 +9,7 @@ import { calendars } from './calendar.js';
 import { ctx, saveMeta } from './core.js';
 import { headingPlaces } from './people.js';
 import { FOOD_IDS, dishPic } from './phonefood.js';
-import { arr, trackerWeather, readMark, turnsNote, toldShort, windowOf, nowAt, CHAT_TOKENS, COUNTRIES, byStory, ensureIds, giftOf, hhmm, jsonOf, ko, last4, line, markNow, num, pad, pick, rowDay, sideRequest, storyNow, when, withEv } from './phonedata.js';
+import { arr, trackerWeather, readMark, turnsNote, secondTurn, soFarHead, windowOf, nowAt, CHAT_TOKENS, COUNTRIES, byStory, ensureIds, giftOf, hhmm, jsonOf, ko, last4, line, markNow, num, pad, pick, rowDay, sideRequest, storyNow, when, withEv } from './phonedata.js';
 import { dlvTotal, payOrders, shopStats, unpayOrders } from './phonesyncmoney.js';
 import { alarmOf, cityAt, dayGap, fileOf, nightsToDays, overlayFresh, parseWeather, screenOf, usualScreenOf, weatherFrom } from './phonesynclife.js';
 import { SCREEN_LIST } from './phonescreen.js';
@@ -385,21 +385,7 @@ export { unpayOrders as unpayDeliveries };
 
 // a "MM-DD HH:MM" after another (across New Year the short way round)
 const later = (t, now) => { const g = dayGap(String(now).slice(0, 5), String(t).slice(0, 5)); return g > 0 || g === 0 && String(t).slice(6, 11) > String(now).slice(6, 11) && !!String(now).slice(6, 11); };
-// ---- the fills
-// a fill reads the story after the archive up to the phone's clock in two turns at most: the first reads 70,000 tokens
-// word for word and writes the whole app; what is left, the second reads (30,000 tokens more, word for word) and writes
-// only what it adds, in the voice of what the first wrote (LIFE SO FAR, DELIVERY SO FAR), the code putting it in. A
-// stretch longer still goes along as the reflection's summaries (TOLD SHORT): nothing lost, that part less detailed
-const MORE_TOKENS = 30_000;
-// the second turn's window: the rest word for word, and past that the summaries; cover: how far the two reach together
-function secondTurn(m, p, first) {
-    if (!first || first.all) return null;
-    const more = windowOf(m, p, first.to, MORE_TOKENS);
-    if (!more?.n) return null;
-    const short = more.all ? null : toldShort(p, more.to, more.upto);
-    return { more, short, cover: short ? { ...more, all: true } : more };
-}
-const soFarHead = (what, short) => `[${what} SO FAR — what you wrote from the story before RECENT CHAT. Write only what RECENT CHAT${short ? ' and TOLD SHORT' : ''} add or change, in the same JSON and in the same voice, language and naming as here; leave out what is already here]`;
+// ---- the fills: two turns at most (secondTurn, phonedata.js)
 const byKey = (xs, ys, key) => [...xs.filter(x => !ys.some(y => key(y) === key(x))), ...ys];
 const given = o => Object.fromEntries(Object.entries(o || {}).filter(([, v]) => v !== null && v !== undefined && v !== ''));
 // what a second turn adds, put into what the first wrote. An alarm (time and label), file or folder it names is its new

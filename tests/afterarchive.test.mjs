@@ -266,3 +266,53 @@ test('an archive longer than the chat (a branch, messages deleted) never moves t
     const g = data.windowOf(mm, p);
     assert.equal(data.nowAt(g), 3);
 });
+
+// ---- 기본 앱 다시 만들기도 두 턴
+const phoneOf = () => ({ ...longPhone(), contacts: [], threads: [], calls: [], photos: [], notes: [], searches: [], events: [], posts: [], mails: [], diary: [], voice: [] });
+const notesAnswer = title => JSON.stringify({ notes: [{ title, text: `${title} text`, time: '10-25 10:00' }] });
+test('an app made again over a long stretch: 70,000 tokens, then 30,000 more adding only what is new, then the summaries', async () => {
+    globalThis.__rows = bigRows(40);
+    const p = phoneOf(), mm = { ...m, phones: { ren: p } };
+    globalThis.__menu = { calls: [], answers: [notesAnswer('Shopping'), notesAnswer('Train times')], answer: '{}' };
+    await data.makePhone(mm, 'Ren', { apps: ['note'] });
+    const turns = globalThis.__menu.calls.filter(c => c.sys === data.AI_SYS_PHONE);
+    assert.equal(turns.length, 2);
+    const a = nums(turns[0].input), b = nums(turns[1].input);
+    assert.deepEqual([...a, ...b], Array.from({ length: a.length + b.length }, (_, i) => i + 4));
+    assert.ok(turns[1].input.includes('[PHONE SO FAR') && turns[1].input.includes('"Shopping"') && turns[1].input.includes('[TOLD SHORT'));
+    assert.ok(turns[1].input.includes('[ONLY THESE]'));
+    assert.deepEqual(p.notes.map(x => x.title), ['Shopping', 'Train times']);
+});
+
+test('a second turn that fails keeps the first; a phone made anew has none (the rest is the reflection\'s)', async () => {
+    globalThis.__rows = bigRows(40);
+    const p = phoneOf(), mm = { ...m, phones: { ren: p } };
+    globalThis.__menu = { calls: [], answers: [notesAnswer('Shopping'), new Error('quota')], answer: '{}' };
+    await data.makePhone(mm, 'Ren', { apps: ['note'] });
+    assert.deepEqual(p.notes.map(x => x.title), ['Shopping']);
+    globalThis.__menu = { calls: [], answers: [notesAnswer('Fresh')], answer: '{}' };
+    const fresh = { ...m, phones: {} };
+    await data.makePhone(fresh, 'Ren');
+    assert.equal(globalThis.__menu.calls.filter(c => c.sys === data.AI_SYS_PHONE).length, 1);
+});
+
+// ---- 은행 채우기도 두 턴: 두 번째는 기록만, 잔액은 첫 번째 그대로
+const moneyAnswer = (who, balance, time) => JSON.stringify({ currency: 'EUR', bank: { name: 'Varo Bank', accounts: [{ id: '', kind: 'checking', name: 'Main', last4: '1111', currency: 'EUR', balance }] },
+    cards: [{ account: '1111', exp: '09/29' }], tx: [{ account: '1111', who, amount: -12, time, kind: 'card' }], passes: [], orders: [{ shop: 'Ivo Books', item: who, price: 12, time, status: 'delivered' }] });
+test('the bank over a long stretch: the second turn adds history only, the balances stay the first\'s', async () => {
+    globalThis.__rows = bigRows(40);
+    const p = longPhone(), mm = { ...m, phones: { ren: p } };
+    globalThis.__menu = { calls: [], answers: [moneyAnswer('Bakery', 500, '10-20 09:00'), moneyAnswer('Cinema', 99999, '10-24 20:00')], answer: '{}' };
+    await data.fillMoney(mm, p);
+    const turns = globalThis.__menu.calls.filter(c => c.sys === data.AI_SYS_MONEY);
+    assert.equal(turns.length, 2);
+    assert.ok(turns[1].input.includes('[MONEY SO FAR') && turns[1].input.includes('leave "bank" and "fx" out') && turns[1].input.includes('[TOLD SHORT'));
+    assert.deepEqual(p.money.tx.map(t => t.who), ['Bakery', 'Cinema']);
+    assert.deepEqual(p.money.orders.map(o => o.item), ['Bakery', 'Cinema']);
+    assert.equal(p.money.cards.length, 1);
+    assert.equal(p.money.bank.accounts[0].balance, 500);
+    const a = p.money.bank.accounts[0], ledger = mm.finance.accounts[`${a.id}:${a.currency}`];
+    assert.equal(ledger.amount, 500);
+    assert.ok(p.money.tx.every(t => ledger.included.includes(t.id)));
+    assert.equal(p.sync.marks.money.index, 39);
+});
