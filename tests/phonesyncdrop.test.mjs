@@ -1056,3 +1056,27 @@ test('a delivery told again without its prices ("the chicken came") moves the or
     assert.deepEqual(c.p.delivery.orders.map(o => o.status), ['delivered']);
     assert.equal(c.bank(), 72000);
 });
+
+test('빼기 leaves an order the talk still there tells again', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'did you get a present for Ivo'), say('Mara', 'I ordered a wool scarf from Varo Knits for 20000 won'), say('Ren', 'nice, when does it come'), say('Mara', 'the scarf from Varo Knits arrives on Thursday')]);
+    const order = occ => ({ shop: 'Varo Knits', item: 'wool scarf', price: 20000, status: 'ordered', occurrence: occ });
+    await run(c.m, { now: '10-26 13:00', events: [
+        { id: 'buy', at: 3, quote: 'I ordered a wool scarf', summary: '목도리 주문', date: '10-26', time: '12:00', money: { moves: [{ account: '1111', amount: -20000, who: 'Varo Knits', occurrence: 'new' }], orders: [order('new')] } },
+        { id: 'eta', at: 5, quote: 'the scarf from Varo Knits arrives on Thursday', summary: '목도리 도착', date: '10-26', time: '12:10', money: { orders: [order('again')] } }] });
+    T.chat.splice(3, 1);
+    T.answers.push({ now: '10-26 14:00', events: [] });
+    await data.makePhone(c.m, 'Ren', { update: true });
+    const r = await data.dropStretch(c.m, c.p, 0);
+    assert.deepEqual([r.kept, c.p.money.orders.map(o => o.item)], [['목도리 주문'], ['wool scarf']]);
+});
+
+test('a round giving more than 40 events reads the rest\'s messages again, not lost', async () => {
+    const chat = [say('Ren', 'start'), say('Mara', 'morning')];
+    for (let i = 0; i < 44; i++) chat.push(say(i % 2 ? 'Mara' : 'Ren', `note number ${i} for the list today`));
+    const c = setup(chat);
+    c.p.sync.limit = 60;
+    const events = Array.from({ length: 44 }, (_, i) => ({ id: `n${i}`, at: i + 2, quote: `note number ${i} for`, summary: `Item ${i}`, date: '10-26', time: '12:00', phone: { notes: [{ title: `Item ${i}`, text: `Item ${i}` }] } }));
+    await run(c.m, { now: '10-26 13:00', events });
+    assert.equal(c.p.notes.length, 40);
+    assert.ok(c.p.syncLast.failed.some(f => f.at === 45));
+});

@@ -16,6 +16,17 @@ const named = v => {
     const hm = s.match(/(\d{1,2}):(\d{2})/), ok = hm && Number(hm[1]) < 24 && Number(hm[2]) < 60;
     return `${pad(mo)}-${pad(d)}${ok ? ` ${pad(hm[1])}:${hm[2]}` : ''}`;
 };
+// an answer cut off before its JSON ends (the model ran out of room): a bracket still open, or a string, at the end
+export const cutShort = out => {
+    const t = String(out || '').replace(/```(?:json)?/gi, ''), a = t.indexOf('{');
+    if (a < 0) return false;
+    let d = 0, str = false, esc = false;
+    for (const ch of t.slice(a)) {
+        if (str) { if (esc) esc = false; else if (ch === '\\') esc = true; else if (ch === '"') str = false; continue; }
+        if (ch === '"') str = true; else if (ch === '{' || ch === '[') d++; else if (ch === '}' || ch === ']') d = Math.max(0, d - 1);
+    }
+    return str || d > 0;
+};
 // "03.11." (a dot after the month) or "03.11.2026": day first
 export const dotsDayFirst = t => /^\d{1,2}\.\d{1,2}\.(?:\s?\d{4}|(?![\d]))/.test(t);
 export const when = v => {

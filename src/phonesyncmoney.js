@@ -304,6 +304,8 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
                 out.effects.push({ type: 'status', path: `money.${path}`, id: old.id, status: next, prev: was, ...((old.arrived ?? null) !== arrivedFrom ? { arrivedFrom, arrived: old.arrived } : {}) });
                 out.changes.push({ app: path === 'orders' ? '쇼핑' : '지갑', label: `${old.item || old.by} 상태`, amount: null });
             }
+            // told again by another event as it was: that event knows it too (빼기 of the first leaves it while this talk stays)
+            else if (old.ev !== e.id) out.effects.push({ type: 'seen', path: `money.${path}`, id: old.id });
             return;
         }
         const row = { ...make(x), id: sid(`sync:${e.id}:${path[0]}${k}`), ev: e.id, storyEvent: e.id, sourceIndex: e.at };
@@ -344,7 +346,7 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
                 old.status = status;
                 delete old.byClock;
                 out.changes.push({ app: '배달', label: `${old.shop} 상태`, amount: null });
-            }
+            } else if (old.ev !== e.id) out.effects.push({ type: 'seen', path: 'delivery.orders', id: old.id });
             return;
         }
         const time = when(x.time) || `${date}${hhmm(x.time) || e.time ? ` ${hhmm(x.time) || e.time}` : ''}`;

@@ -1031,6 +1031,9 @@ async function updatePhone(m, owner) {
         // an event's day when the model leaves it out: the day of the event before it, else the answer's now
         let lastDay = when(raw.now).slice(0, 5);
         const used = new Set(), wants = new Map();
+        // (past 40 events in one answer, the rest's messages are read again next round, not lost)
+        const over = arr(raw.events).slice(40), firstAt = new Set(arr(raw.events).slice(0, 40).map(e => Number(String(e?.at ?? '').replace(/^\s*#/, ''))));
+        for (const e of over) { const at = Number(String(e?.at ?? '').replace(/^\s*#/, '')); if (inRound.has(at) && !firstAt.has(at)) failed[at] ||= '한 번에 일이 너무 많아서 다음에 다시 읽어요'; else if (!inRound.has(at)) loose.push('한 번에 일이 너무 많아서 아카이브 구간의 일 하나를 넣지 못했어요'); }
         for (const e of arr(raw.events).slice(0, 40)) {
             if (!e || typeof e !== 'object') continue;
             // "#151" or "151" for the message number
@@ -1260,7 +1263,7 @@ export async function dropStretch(m, p, k) {
         // built on later: another event changed, corrected or counted one of its records as its own
         // (another event of this same stretch goes too: it holds nothing)
         const leaving = o => o === id || d.events.includes(o);
-        let tied = Object.entries(s.events).some(([o, x]) => !leaving(o) && ((x.effects || []).some(y => ['status', 'amend', 'amendEntry', 'change'].includes(y.type) && made.has(y.id)) || (x.legs || []).some(l => l.state === 'included' && made.has(l.rec))));
+        let tied = Object.entries(s.events).some(([o, x]) => !leaving(o) && ((x.effects || []).some(y => ['status', 'amend', 'amendEntry', 'change', 'seen'].includes(y.type) && made.has(y.id)) || (x.legs || []).some(l => l.state === 'included' && made.has(l.rec))));
         const trades = new Set((e.effects || []).filter(x => x.path === 'investment.trades').map(x => x.item.id));
         if (!tied && trades.size) { try { positions((p.investment?.trades || []).filter(t => !trades.has(t.id))); } catch { tied = true; } }
         // an account, share or shop it opened that something else still uses (a later payment into the account, a later
@@ -1988,7 +1991,9 @@ export async function fillVoice(m, p) {
     const out = await askDraft(await sideRequest(m, p.owner, [`[DIARY]\n${diary || '(none)'}`, clockBlock(p, p.now, m)], {story:CHAT_TOKENS.apps,profile:p.financeProfile}), { force: true, system: AI_SYS_VOICES, maxTokens: 6000 });
     const memos = arr(jsonOf(out, { salvage: 'whole' })?.memos).map(x => ({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), sec: secOf(x?.sec), place: line(x?.place, 60), src: 'guess' })).filter(x => x.text);
     if (!memos.length) throw new Error('모델 답에서 음성 메모를 찾지 못했어요');
-    p.voice = [...(p.voice || []).filter(x => x.src === 'story' || x.now), ...memos].sort(byStory(p.now)).slice(-CAP.voice);
+    // (one the story already put there, the same title at the same time, isn't written twice)
+    const keptVoice = (p.voice || []).filter(x => x.src === 'story' || x.now);
+    p.voice = [...keptVoice, ...fresh('voice', keptVoice, memos)].sort(byStory(p.now)).slice(-CAP.voice);
     p.voiceAt = Date.now();
     ensureIds(p);
     await saveMeta();

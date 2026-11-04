@@ -533,3 +533,25 @@ test('the delivery\'s second turn telling an order a few minutes off is the same
     await life.fillDelivery({ ...m, phones: { ren: q } }, q);
     assert.deepEqual(q.delivery.orders.map(o => o.items[0].name).sort(), ['Calzone', 'Margherita']);
 });
+
+test('a life or delivery turn cut off before its end is not taken: the mark stays where the read stopped', async () => {
+    for (const kind of ['life', 'delivery']) {
+        globalThis.__rows = bigRows(40);
+        const p = longPhone(), mm = { ...m, phones: { ren: p } };
+        const first = kind === 'life' ? lifeAnswer('A') : JSON.stringify({ shops: [{ name: 'Uno', cuisine: 'pizza', menu: [] }], orders: [{ shop: 'Uno', items: [{ name: 'Margherita', price: 9 }], time: '10-20 19:00', status: 'delivered', account: 'cash' }], cart: null });
+        const cut = kind === 'life' ? '{"clock": {"alarms": [{"time": "08:00", "label": "B"}]}, "health": {"days": [{"date": "10-2' : '{"shops": [{"name": "Due"}], "orders": [{"shop": "Due", "items": [{"name": "Pasta", "price": 8}], "time": "10-24 20:00"}, {"shop": "Tre", "items": [{"na';
+        globalThis.__menu = { calls: [], answers: [first, cut], answer: '{}' };
+        const warn = console.warn; console.warn = () => {};
+        try { await (kind === 'life' ? life.fillLife(mm, p) : life.fillDelivery(mm, p)); } finally { console.warn = warn; }
+        const turn1 = globalThis.__menu.calls[0];
+        assert.equal(p.sync.marks[kind].index, Math.max(...nums(turn1.input)), kind);
+    }
+});
+
+test('voice memos filled again: one the story already put there is not written twice', async () => {
+    globalThis.__rows = rows(8);
+    const p = plainPhone({ voice: [{ id: 'v1', title: 'Train times', text: 'RE 7 at 08:12', time: '10-24 08:00', sec: 12, src: 'story' }] }), mm = { ...m, phones: { ren: p } };
+    globalThis.__menu = { calls: [], answers: ['{"memos":[{"title":"Train times","text":"RE 7 at 08:12","time":"10-24 08:00","sec":12},{"title":"Late thought","text":"call Ivo","time":"10-25 23:00","sec":8}]}'], answer: '{}' };
+    await data.fillVoice(mm, p);
+    assert.deepEqual(p.voice.map(x => x.title).sort(), ['Late thought', 'Train times']);
+});
