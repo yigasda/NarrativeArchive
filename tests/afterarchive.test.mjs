@@ -321,7 +321,7 @@ test('the bank over a long stretch: the second turn adds history only, the balan
 
 test('every prompt that writes times has the owner\'s own clock (a messenger timestamp from another time zone is moved)', () => {
     const prompts = { phone: data.AI_SYS_PHONE, update: data.AI_SYS_PHONE_UPDATE, core: data.updateSystem({ split: true, life: true, delivery: true }), money: data.AI_SYS_MONEY, voices: data.AI_SYS_VOICES, life: life.AI_SYS_LIFE, delivery: life.AI_SYS_DELIVERY };
-    for (const [k, s] of Object.entries(prompts)) assert.ok(s.includes("on the owner's phone clock") && s.includes("OWNER'S CLOCK (sometimes)") && s.includes("A status line's time is its scene's city's") && !s.includes('undefined'), k);
+    for (const [k, s] of Object.entries(prompts)) assert.ok(s.includes("on the owner's phone clock") && s.includes("OWNER'S CLOCK (sometimes)") && s.includes("A status line's time is its scene's city's") && s.includes("whoever's screen or scene it is") && !s.includes('undefined'), k);
 });
 
 // the hours are the code's (summer time counted); the model only adds or takes them off

@@ -644,7 +644,7 @@ test('a slow day: each 반영 the same day writes today\'s totals so far, never 
     assert.equal(today().workout.kind, 'Yoga');
     assert.deepEqual(today().hr, [58, 140]);
     assert.match(T.sys, /"workouts": \[\{ "kind", "time", "min", "km" \}\]/);
-    assert.match(T.sys, /The day of "now" again every time, with its totals so far/);
+    assert.match(T.sys, /The day of "now" again every time, with its totals so far \(steps, workouts, coffee, water, "screen"\), even when nothing new happened/);
     assert.deepEqual([today().steps, today().coffee, today().screen.apps, today().screen.pickups], [3000, 3, { WhatsApp: 60, Instagram: 40 }, 45]);
     // (told in an event: more steps go in)
     T.chat.push(say('Ren', 'walked all the way home'));
@@ -674,7 +674,7 @@ test('반영\'s everyday records: two an answer, six a day, every app (texts and
     // (a voice memo may be an everyday one; a text with anyone from the story or PEOPLE AROUND)
     assert.ok(!T.sys.includes('only when the archive or chat shows the owner recorded one'));
     assert.ok(data.AI_SYS_PHONE.includes('only when the archive or chat shows the owner recorded one'));
-    assert.match(T.sys, /with people from the story or PEOPLE AROUND as they are, never someone the owner isn't in touch with now/);
+    assert.match(T.sys, /with people from the story or PEOPLE AROUND as they are and with what they feel, never someone the owner isn.t in touch with now/);
     assert.match(T.sys, /- PEOPLE AROUND \(sometimes\)/);
     assert.match(T.input, /\[PEOPLE AROUND\]\n- Ivo \(이보\): Ren's older brother/);
     // later the same day: its own records, a text to Ivo and a diary entry among them
