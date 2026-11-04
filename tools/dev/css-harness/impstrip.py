@@ -73,9 +73,12 @@ def load(label, th):
 
 def kebab(k): return re.sub(r'[A-Z]', lambda m: '-' + m.group(0).lower(), k)
 def diffs(label):
+    return diffs_between('base', label)
+
+def diffs_between(a_label, label):
     out = {}
     for th in ('off', 'on'):
-        A, B = load('base', th), load(label, th)
+        A, B = load(a_label, th), load(label, th)
         for tag, caps in B.items():
             base = {e['path']: e for e in A.get(tag, [])}
             for e in caps:
@@ -115,9 +118,16 @@ for it in range(int(opt('--iters', 6))):
                 if new != cur: keep[rid] = sorted(new); grew += 1
     json.dump(keep, open(KEEP, 'w'), indent=1)
     if not grew:
-        print('the changed elements are not reached by a rule of this file; giving those scenes every !important back')
-        for th in dd.values():
-            for tag in th: pass
+        # nothing of this file reaches them: capture the untouched file again; if the same elements move between two runs of
+        # the same css they are noise (timing), and what is kept so far stands; else every !important goes back
+        install(build({str(i): ['*'] for i in IMP}, False))
+        sc = sorted({t.split('__')[0] for th in dd.values() for t in th})
+        capture('base2', sc)
+        noise = {th: {tag: {p for p, _ in v} for tag, v in tags.items()} for th, tags in diffs_between('base', 'base2').items()}
+        left = [(th, tag, p) for th, tags in dd.items() for tag, items in tags.items() for p, _ in items if p not in noise.get(th, {}).get(tag, set())]
+        if not left:
+            print('the changed elements move between two runs of the same css too (noise); keeping the result'); break
+        print('the changed elements are not reached by a rule of this file and are not noise; giving every !important back', left[:5])
         keep = {str(i): ['*'] for i in IMP}; break
 final = build(keep, False); install(final)
 print('done:', orig.count('!important'), '→', final.count('!important'), flush=True)
