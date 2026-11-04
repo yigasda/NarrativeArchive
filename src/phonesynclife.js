@@ -168,7 +168,10 @@ const unko = h => { if (h.ko && h.line && h.ko.replace(/\s+/g, ' ').trim() === h
 const unline = h => { const l = String(h.line || '').replace(/(영하\s*)?[-−]?\d{1,3}(?:[.,]\d)?\s*(?:°\s*[CF]?|℃|℉|도(?![가-힣]))/gi, '').replace(/기온|temperature|temp\b|현재|지금|now|currently/gi, '').replace(/[\s,.·/|()~-]+/g, ' ').trim(); if (l && l.length <= 8 && condOf(l) === h.cond) { h.line = ''; h.ko = ''; } return h; };
 // the saved city a place names (by its name or its Korean name): two places in two different saved cities are apart,
 // and the status line (the scene's) doesn't stand over an owner the model puts in the other
-export const cityAt = (place, cities) => { const k = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ''), pk = k(place); return pk ? arr(cities).find(c => [c?.name, c?.ko].map(k).filter(Boolean).some(n => pk.includes(n) || n.includes(pk))) || null : null; };
+// (by whole words: "Frankfurt · Küche" is Frankfurt am Main, "서울역" Seoul; "LA" is not Milan, "Ren" not Florence)
+const wordsOf = v => String(v || '').toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean), leads = ws => ws.map((_, i) => ws.slice(0, i + 1).join(''));
+const sameCity = (place, name) => { const p = wordsOf(place), n = wordsOf(name), pj = p.join(''), nj = n.join(''), head = wordsOf(String(place || '').split(/\s*[·|,/→>]\s*/)[0]).join(''); return !!pj && !!nj && (leads(p).includes(nj) || leads(n).includes(pj) || !!head && leads(n).includes(head) || /^\p{Script=Hangul}/u.test(nj) && pj.startsWith(nj)); };
+export const cityAt = (place, cities) => { const pk = wordsOf(place).join(''); return pk ? arr(cities).find(c => [c?.name, c?.ko].filter(Boolean).some(n => sameCity(place, n))) || null : null; };
 // the saved city the owner is in carries the same weather as "here" (the model may leave it as it was)
 export function mirrorHome(w) {
     const h = w?.here, c = h && cityAt(h.place, w.cities);
@@ -206,8 +209,10 @@ export function parseWeather(w, now) {
 }
 
 // ---- story days: "MM-DD" without a year; a gap across New Year is taken the short way round
-const dnum = s => { const mt = /^(\d{2})-(\d{2})/.exec(String(s || '')); return mt ? Date.UTC(2001, mt[1] - 1, mt[2]) / 864e5 : NaN; };
-export const dayGap = (a, b) => { let g = dnum(b) - dnum(a); if (g < -180) g += 365; if (g > 180) g -= 365; return g; };
+// (02-29, a leap day, sits between 02-28 and 03-01: half a day from each, so it is neither of them; other years count as
+// 365 days)
+const dnum = s => { const mt = /^(\d{2})-(\d{2})/.exec(String(s || '')); return !mt ? NaN : mt[1] === '02' && mt[2] === '29' ? Date.UTC(2001, 2, 1) / 864e5 - 0.5 : Date.UTC(2001, mt[1] - 1, mt[2]) / 864e5; };
+export const dayGap = (a, b) => { let g = dnum(b) - dnum(a); if (g < -180) g += 365; if (g > 180) g -= 365; return Math.sign(g) * Math.ceil(Math.abs(g)); };
 
 // ---- effects on any record list of the phone, by path ("life.clock.alarms", "delivery.orders", "money.tx")
 const walk = (p, path, make) => {
@@ -261,7 +266,7 @@ export function applyLife(p, e, phone, on) {
     };
     const push = (path, row, app) => { boxAt(p, path, true).push(row); out.effects.push({ type: 'push', path, item: structuredClone(row) }); out.apps.add(app); };
     // ids unique on the phone: the same event told again in a later round adds its own records
-    const taken = new Set([...(L.clock?.alarms || []), ...(L.clock?.timers || []), ...(L.health?.days || []), ...(L.files?.items || [])].map(x => x?.id).filter(Boolean));
+    const taken = new Set([...(L.clock?.alarms || []), ...(L.clock?.timers || []), ...(L.health?.days || []), ...(L.files?.items || []), ...(L.files?.folders || [])].map(x => x?.id).filter(Boolean));
     const sid = base => { let id = base, n = 2; while (taken.has(id)) id = `${base}~${n++}`; taken.add(id); return id; };
     const tag = (row, k, c) => ({ ...row, id: sid(`sync:${e.id}:${c}${k}`), ev: e.id, sourceIndex: e.at });
     // only the fields the model wrote, cleaned as a whole record would be
@@ -436,12 +441,12 @@ const finiteNum = v => typeof v === 'number' && Number.isFinite(v);
 const hash = s => { let h = 2166136261; for (const c of String(s)) h = Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0; h ^= h >>> 15; h = Math.imul(h, 2246822507) >>> 0; h ^= h >>> 13; h = Math.imul(h, 3266489909) >>> 0; return (h ^ (h >>> 16)) >>> 0; };
 const shiftHm = (t, min) => { const mt = /^(\d{2}):(\d{2})$/.exec(t || ''); if (!mt) return ''; const v = ((mt[1] * 60 + Number(mt[2]) + min) % 1440 + 1440) % 1440; return `${pad(Math.floor(v / 60))}:${pad(v % 60)}`; };
 // year: the story's (a leap year has its February 29), else a common year
-const plusDay0 = (day, n, year = 2001) => { const mt = /^(\d{2})-(\d{2})$/.exec(day); const d = new Date(Date.UTC(Number(year) || 2001, mt[1] - 1, Number(mt[2]) + n)); return `${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`; };
+const plusDay0 = (day, n, year = 2000) => { const mt = /^(\d{2})-(\d{2})$/.exec(day); const d = new Date(Date.UTC(Number(year) || 2000, mt[1] - 1, Number(mt[2]) + n)); return `${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`; };
 const plusDay = (day, n) => plusDay0(day, n);
 export function fillDays(p, now, round) {
     const out = [], L = p.life, u = L?.health?.usual, today = String(now || '').slice(0, 5), hm = String(now || '').slice(6, 11);
     if (!u || !/^\d{2}-\d{2}$/.test(today)) return out;
-    const box = boxAt(p, 'life.health.days', true), Y = !p.noYear && p.year ? p.year : 2001, plusDay = (d, n) => plusDay0(d, n, Y);
+    const box = boxAt(p, 'life.health.days', true), Y = !p.noYear && p.year ? p.year : 2000, plusDay = (d, n) => plusDay0(d, n, Y);
     const end = hm && u.wake && hm < u.wake ? plusDay(today, -1) : today;
     // every day missing since the first one kept, gaps between days too (a story day told before the one between them);
     // a story that jumped ahead: only its last two weeks
@@ -593,7 +598,7 @@ export function dlvClock(p, now) {
         if (o.status !== 'on the way') continue;
         // an arrival time without its day ("21:30") is the order's day
         const arr2 = String(o.arrived || ''), at = /^\d{2}-\d{2}/.test(arr2) ? arr2 : /^\d{2}:\d{2}/.test(arr2) ? `${String(o.time || '').slice(0, 5)} ${arr2}` : String(o.time || ''), g = dayGap(at.slice(0, 5), today);
-        if (g > 0 || g === 0 && hm && at.slice(6, 11) && minutes(hm) - minutes(at.slice(6, 11)) >= 90) { out.push({ type: 'status', path: 'delivery.orders', id: o.id, status: 'delivered', prev: o.status }); o.status = 'delivered'; }
+        if (g > 0 || g === 0 && hm && at.slice(6, 11) && minutes(hm) - minutes(at.slice(6, 11)) >= 90) { out.push({ type: 'status', path: 'delivery.orders', id: o.id, status: 'delivered', prev: o.status }); o.status = 'delivered'; o.byClock = true; }
     }
     return out;
 }

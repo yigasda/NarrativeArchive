@@ -208,7 +208,10 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         // (its refund, a second shop), which is not the first one with another amount
         const key = `bank:${acct.id}:${amount < 0 ? '-' : '+'}:${plain(x.who)}`, lk = acct.kind === 'credit' ? '' : `${acct.id}:${acct.currency}`, label = `${acct.name || ''} ••••${acct.last4}`.trim();
         const tx = p.money.tx ||= [];
-        if (keep(key, amount, rec => { const t = tx.find(r => r.id === rec); if (t) amend(t, amount, lk, label, acct); })) return;
+        // (a payment the model calls new, on another day than the one this event paid before: the model gave a new event an
+        // old event's name, "taxi" for the next day's taxi; it is paid)
+        const leg0 = seen(key), day0 = leg0 && String(tx.find(r => r.id === leg0.rec)?.time || '').slice(0, 5), otherDay = x.occurrence === 'new' && /^\d{2}-\d{2}$/.test(day0 || '') && /^\d{2}-\d{2}/.test(String(date || '')) && day0 !== String(date).slice(0, 5);
+        if (!otherDay && keep(key, amount, rec => { const t = tx.find(r => r.id === rec); if (t) amend(t, amount, lk, label, acct); })) return;
         const pointed = x.already && tx.find(t => t.id === x.already);
         const match = t => t.account === acct.last4 && near(t.time, date, 0) && Math.sign(t.amount) === Math.sign(amount)
             && (Math.abs(t.amount - amount) < 0.01 && (!plain(t.who) || !plain(x.who) || samePlace(t.who, x.who)) || (guess || t.amountFrom === 'guess') && samePlace(t.who, x.who));
@@ -301,6 +304,8 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
                 out.effects.push({ type: 'status', path: `money.${path}`, id: old.id, status: next, prev: was, ...((old.arrived ?? null) !== arrivedFrom ? { arrivedFrom, arrived: old.arrived } : {}) });
                 out.changes.push({ app: path === 'orders' ? '쇼핑' : '지갑', label: `${old.item || old.by} 상태`, amount: null });
             }
+            // told again by another event as it was: that event knows it too (빼기 of the first leaves it while this talk stays)
+            else if (old.ev !== e.id) out.effects.push({ type: 'seen', path: `money.${path}`, id: old.id });
             return;
         }
         const row = { ...make(x), id: sid(`sync:${e.id}:${path[0]}${k}`), ev: e.id, storyEvent: e.id, sourceIndex: e.at };
@@ -327,7 +332,10 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         const items = list(x.items).map(d => { const optionKo = txt(d?.optionKo, 60), pic = dishPic(d?.pic, { name: txt(d?.name, 60), ko: txt(d?.ko, 60), option: txt(d?.option, 60), optionKo }); return { name: txt(d?.name, 60), ko: txt(d?.ko, 60), option: txt(d?.option, 60), ...(optionKo ? { optionKo } : {}), qty: Math.max(1, Math.round(Number(d?.qty) || 1)), price: finite(Number(d?.price)) ? Number(d.price) : 0, ...(pic ? { pic } : {}) }; }).filter(d => d.name).slice(0, 10);
         if (!txt(x.shop) || !items.length) fail('배달 주문의 가게나 메뉴를 확인하지 못했어요');
         const money = v => (finite(Number(v)) ? Math.abs(Number(v)) : 0), total = round(items.reduce((n, d) => n + d.qty * d.price, 0) + money(x.fee) + money(x.tip) - money(x.discount));
-        const old = x.already && box.find(o => o.id === x.already) || box.find(o => samePlace(o.shop, x.shop) && near(String(o.time).slice(0, 5), date, 0) && Math.abs(dlvTotal(o) - total) < 0.01 && (!fresh(x, o, e.at) || o.ev === e.id));
+        // (told again without its prices, "the chicken came": the order of that shop that day still on its way is that one)
+        const noPrice = items.every(d => !d.price), named = o => (o.items || []).some(a => items.some(b => samePlace(a.name, b.name)));
+        const old = x.already && box.find(o => o.id === x.already) || box.find(o => samePlace(o.shop, x.shop) && near(String(o.time).slice(0, 5), date, 0) && Math.abs(dlvTotal(o) - total) < 0.01 && (!fresh(x, o, e.at) || o.ev === e.id))
+            || noPrice && box.find(o => samePlace(o.shop, x.shop) && near(String(o.time).slice(0, 5), date, 0) && named(o) && o.status !== x.status && (x.status ? later(o.status, x.status) : o.status === 'on the way'));
         if (!old && x.occurrence === 'again') return;
         const status = ['on the way', 'delivered', 'cancelled', 'refunded'].includes(x.status) ? x.status : 'delivered';
         // one whose message is gone is tied to the message that tells it now
@@ -336,8 +344,9 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
             if (status !== old.status && later(old.status, status)) {
                 out.effects.push({ type: 'status', path: 'delivery.orders', id: old.id, status, prev: old.status });
                 old.status = status;
+                delete old.byClock;
                 out.changes.push({ app: '배달', label: `${old.shop} 상태`, amount: null });
-            }
+            } else if (old.ev !== e.id) out.effects.push({ type: 'seen', path: 'delivery.orders', id: old.id });
             return;
         }
         const time = when(x.time) || `${date}${hhmm(x.time) || e.time ? ` ${hhmm(x.time) || e.time}` : ''}`;
@@ -516,12 +525,17 @@ export function replayEffects(m, p, effects) {
 }
 const LOOSE = ['sourceIndex', 'delivery', 'account'];
 const unchanged = (path, now, was) => (/^(money|investment)\./.test(path) ? ['amount', 'price', 'qty', 'quantity', 'status'].every(k => now[k] === was[k])
-    : Object.keys({ ...was, ...now }).filter(k => !LOOSE.includes(k)).every(k => JSON.stringify(now[k] ?? null) === JSON.stringify(was[k] ?? null)));
+    // (a delivery the clock alone moved on, "on the way" to "delivered", is no change by hand)
+    : Object.keys({ ...was, ...now }).filter(k => !LOOSE.includes(k) && k !== 'byClock' && !(k === 'status' && now.byClock)).every(k => JSON.stringify(now[k] ?? null) === JSON.stringify(was[k] ?? null)));
 // 되돌리기 · 빼기: undo money changes, newest first. A record gone already is fine; one changed since is left as it is and
 // returned, so the caller can say what stayed
 export function revertEffects(m, p, effects) {
     const f = finance(m), left = [];
+    // a delivery order that stays (changed since: delivered, reviewed) keeps its payment with it
+    const dlvKept = new Set(effects.filter(x => x.type === 'push' && x.path === 'delivery.orders').map(x => (p.delivery?.orders || []).find(o => o.id === x.item?.id) && !unchanged(x.path, p.delivery.orders.find(o => o.id === x.item.id), x.item) ? x.item.id : null).filter(Boolean));
+    const paidFor = new Set(dlvKept.size ? [...effects.filter(x => x.type === 'push' && x.path === 'money.tx' && dlvKept.has(x.item?.delivery)).map(x => x.item.id), ...(p.money?.tx || []).filter(t => dlvKept.has(t.delivery)).map(t => t.id)] : []);
     for (const x of [...effects].reverse()) {
+        if (paidFor.size && (x.type === 'entry' || x.type === 'push' && x.path === 'money.tx') && paidFor.has(x.type === 'entry' ? x.id : x.item?.id)) { left.push(x); continue; }
         if (x.type === 'entry') { const L = f.accounts[x.key]; if (!L?.entries[x.id]) continue; if (L.entries[x.id].amount === x.amount) delete L.entries[x.id]; else left.push(x); continue; }
         if (x.type === 'amendEntry') { const line = f.accounts[x.key]?.entries[x.id]; if (!line) continue; if (line.amount === x.to) line.amount = x.from; else left.push(x); continue; }
         // a price the story gave: its row goes, the day's choice as it was
@@ -536,7 +550,7 @@ export function revertEffects(m, p, effects) {
         if (i < 0) continue;
         // a record changed since it went in (an amount, a status, a count; for the everyday apps, anything) is the user's now: it stays
         if (x.type === 'push') { if (unchanged(x.path, box[i], x.item)) box.splice(i, 1); else left.push(x); }
-        if (x.type === 'status') { if (box[i].status === x.status) { box[i].status = x.prev; if ('arrivedFrom' in x && box[i].arrived === x.arrived) { if (x.arrivedFrom === null) delete box[i].arrived; else box[i].arrived = x.arrivedFrom; } } else left.push(x); }
+        if (x.type === 'status') { if (box[i].status === x.status) { box[i].status = x.prev; delete box[i].byClock; if ('arrivedFrom' in x && box[i].arrived === x.arrived) { if (x.arrivedFrom === null) delete box[i].arrived; else box[i].arrived = x.arrivedFrom; } } else left.push(x); }
         if (x.type === 'amend') { if (box[i].amount === x.to) { box[i].amount = x.from; box[i].amountFrom = 'guess'; } else left.push(x); }
     }
     return left;

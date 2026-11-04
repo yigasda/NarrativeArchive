@@ -469,15 +469,16 @@ test('다시 만들기 on a phone with a clock reads no further than the clock, 
     assert.ok(!globalThis.__menu.calls[0].input.includes('Ren wrote down the RE 7'));
 });
 
-test('the delivery\'s second turn can empty the basket; one that says nothing of it keeps it', async () => {
+test('the delivery\'s second turn: "cart": null keeps the basket (no telling); an order from that shop empties it', async () => {
     globalThis.__rows = bigRows(40);
-    const dlv = cart => JSON.stringify({ shops: [{ name: 'Uno', cuisine: 'pizza', menu: [{ name: 'Margherita', price: 9 }] }], orders: [], ...(cart === undefined ? {} : { cart }) });
     const basket = { shop: 'Uno', items: [{ name: 'Margherita', qty: 1 }] };
-    for (const [second, kept] of [[null, false], [undefined, true]]) {
+    const dlv = (cart, orders = []) => JSON.stringify({ shops: [{ name: 'Uno', cuisine: 'pizza', menu: [{ name: 'Margherita', price: 9 }] }], orders, ...(cart === undefined ? {} : { cart }) });
+    const order = [{ shop: 'Uno', items: [{ name: 'Margherita', price: 9 }], time: '10-24 20:00', status: 'delivered', account: 'cash' }];
+    for (const [second, kept] of [[dlv(null), true], [dlv(undefined), true], [dlv(null, order), false]]) {
         const p = longPhone(), mm = { ...m, phones: { ren: p } };
-        globalThis.__menu = { calls: [], answers: [dlv(basket), dlv(second)], answer: '{}' };
+        globalThis.__menu = { calls: [], answers: [dlv(basket), second], answer: '{}' };
         await life.fillDelivery(mm, p);
-        assert.equal(!!p.delivery.cart?.items?.length, kept, String(second));
+        assert.equal(!!p.delivery.cart?.items?.length, kept, second);
     }
 });
 
@@ -490,4 +491,67 @@ test('voice memos with a slip: quotes inside a text kept, a broken memo left out
     try { await data.fillVoice(mm, p); } finally { console.warn = warn; }
     assert.deepEqual(p.voice.map(x => x.title).sort(), ['Groceries', 'Idea', 'Train']);
     assert.equal(p.voice.find(x => x.title === 'Idea').text, 'call Mara about "the trip"');
+});
+
+test('a fill answered with an error or a refusal leaves the apps as they were and reads nothing', async () => {
+    for (const answer of ['Sorry, I can\'t write that {policy}.', '{"error":{"code":529,"message":"Overloaded"}}']) {
+        globalThis.__rows = rows(12);
+        const p = plainPhone({ delivery: { shops: [{ id: 's1', name: 'Uno', cuisine: 'pizza', menu: [] }], orders: [{ id: 'o1', shop: 'Uno', items: [{ name: 'Margherita', qty: 1, price: 9 }], time: '10-20 19:00', status: 'delivered', account: 'cash' }], cart: null },
+            life: { clock: { alarms: [{ id: 'a1', time: '07:00', label: 'Work', days: ['mon'], on: true }], timers: [], running: null }, health: { usual: {}, days: [] }, files: { folders: [], items: [] }, weather: null } });
+        const mm = { ...m, phones: { ren: p } };
+        globalThis.__menu = { calls: [], answers: [answer, answer], answer: '{}' };
+        const warn = console.warn; console.warn = () => {};
+        try {
+            await assert.rejects(life.fillDelivery(mm, p));
+            await assert.rejects(life.fillLife(mm, p));
+        } finally { console.warn = warn; }
+        assert.deepEqual([p.delivery.orders.length, p.life.clock.alarms.length, p.sync?.marks?.delivery, p.sync?.marks?.life], [1, 1, undefined, undefined]);
+    }
+});
+
+test('the bank\'s second turn with a line after its JSON is read (only a JSON cut short is not)', async () => {
+    globalThis.__rows = bigRows(40);
+    const p = longPhone(), mm = { ...m, phones: { ren: p } };
+    globalThis.__menu = { calls: [], answers: [moneyAnswer('Bakery', 500, '10-20 09:00'), moneyAnswer('Kiosk', 500, '10-24 09:00') + '\nAll payments in the story are included.'], answer: '{}' };
+    await data.fillMoney(mm, p);
+    assert.deepEqual(p.money.tx.map(t => t.who).sort(), ['Bakery', 'Kiosk']);
+    assert.equal(p.sync.marks.money.index, 39);
+});
+
+test('the delivery\'s second turn telling an order a few minutes off is the same order; a fill keeps another meal of the same shop and day', async () => {
+    globalThis.__rows = bigRows(40);
+    const p = longPhone(), mm = { ...m, phones: { ren: p } };
+    const dlv = time => JSON.stringify({ shops: [{ name: 'Uno', cuisine: 'pizza', menu: [{ name: 'Margherita', price: 9 }] }], orders: [{ shop: 'Uno', items: [{ name: 'Margherita', price: 9, qty: 2 }], time, status: 'delivered', account: 'cash' }], cart: null });
+    globalThis.__menu = { calls: [], answers: [dlv('10-20 19:00'), dlv('10-20 19:10')], answer: '{}' };
+    await life.fillDelivery(mm, p);
+    assert.equal(p.delivery.orders.filter(o => o.shop === 'Uno').length, 1);
+    globalThis.__rows = rows(12);
+    const q = plainPhone({ delivery: { shops: [{ name: 'Uno', cuisine: 'pizza', menu: [] }], orders: [{ id: 'o1', shop: 'Uno', items: [{ name: 'Margherita', qty: 1, price: 9 }], time: '10-22 12:00', status: 'delivered', sync: true, ev: 'lunch' }], cart: null } });
+    const answer = JSON.stringify({ shops: [{ name: 'Uno', cuisine: 'pizza', menu: [{ name: 'Calzone', price: 11 }] }],
+        orders: [{ shop: 'Uno', items: [{ name: 'Margherita', price: 9 }], time: '10-22 12:00', status: 'delivered', ev: 'lunch' }, { shop: 'Uno', items: [{ name: 'Calzone', price: 11 }], time: '10-22 21:30', status: 'delivered', ev: 'late-night' }], cart: null });
+    globalThis.__menu = { calls: [], answers: [answer], answer: '{}' };
+    await life.fillDelivery({ ...m, phones: { ren: q } }, q);
+    assert.deepEqual(q.delivery.orders.map(o => o.items[0].name).sort(), ['Calzone', 'Margherita']);
+});
+
+test('a life or delivery turn cut off before its end is not taken: the mark stays where the read stopped', async () => {
+    for (const kind of ['life', 'delivery']) {
+        globalThis.__rows = bigRows(40);
+        const p = longPhone(), mm = { ...m, phones: { ren: p } };
+        const first = kind === 'life' ? lifeAnswer('A') : JSON.stringify({ shops: [{ name: 'Uno', cuisine: 'pizza', menu: [] }], orders: [{ shop: 'Uno', items: [{ name: 'Margherita', price: 9 }], time: '10-20 19:00', status: 'delivered', account: 'cash' }], cart: null });
+        const cut = kind === 'life' ? '{"clock": {"alarms": [{"time": "08:00", "label": "B"}]}, "health": {"days": [{"date": "10-2' : '{"shops": [{"name": "Due"}], "orders": [{"shop": "Due", "items": [{"name": "Pasta", "price": 8}], "time": "10-24 20:00"}, {"shop": "Tre", "items": [{"na';
+        globalThis.__menu = { calls: [], answers: [first, cut], answer: '{}' };
+        const warn = console.warn; console.warn = () => {};
+        try { await (kind === 'life' ? life.fillLife(mm, p) : life.fillDelivery(mm, p)); } finally { console.warn = warn; }
+        const turn1 = globalThis.__menu.calls[0];
+        assert.equal(p.sync.marks[kind].index, Math.max(...nums(turn1.input)), kind);
+    }
+});
+
+test('voice memos filled again: one the story already put there is not written twice', async () => {
+    globalThis.__rows = rows(8);
+    const p = plainPhone({ voice: [{ id: 'v1', title: 'Train times', text: 'RE 7 at 08:12', time: '10-24 08:00', sec: 12, src: 'story' }] }), mm = { ...m, phones: { ren: p } };
+    globalThis.__menu = { calls: [], answers: ['{"memos":[{"title":"Train times","text":"RE 7 at 08:12","time":"10-24 08:00","sec":12},{"title":"Late thought","text":"call Ivo","time":"10-25 23:00","sec":8}]}'], answer: '{}' };
+    await data.fillVoice(mm, p);
+    assert.deepEqual(p.voice.map(x => x.title).sort(), ['Late thought', 'Train times']);
 });

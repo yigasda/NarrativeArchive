@@ -712,3 +712,36 @@ test('a broken answer: a fill keeps every piece but the broken one; a reflection
         assert.throws(() => salvageJson('nothing here'));
     } finally { console.warn = warn; }
 });
+
+test('a broken answer read piece by piece never keeps a wrong value: 12,000 is not 12, a wrong bracket or a missing comma breaks its record', () => {
+    const warn = console.warn; console.warn = () => {};
+    try {
+        assert.deepEqual(salvageJson('{"x":[{"n":"a","price":12,000},{"n":"b","price":9}]}'), { x: [{ n: 'a' }, { n: 'b', price: 9 }] });
+        assert.deepEqual(salvageJson('{"x":[{"n":"a","price":12,000},{"n":"b","price":9}]}', { whole: true }), { x: [{ n: 'b', price: 9 }] });
+        assert.deepEqual(salvageJson('{"d":[{"app":"Maps","min":1 20},{"app":"Chat","min":45}]}'), { d: [{ app: 'Maps' }, { app: 'Chat', min: 45 }] });
+        assert.deepEqual(salvageJson('{"o":[{"shop":"Ivo Burger" "time":"13:00","total":15},{"shop":"Uno","account": cash},{"shop":"Due","total":9}]}', { whole: true }), { o: [{ shop: 'Due', total: 9 }] });
+        assert.deepEqual(salvageJson('{"s":[{"name":"Varo","fee":2] ,"eta":"30m"},{"name":"Ivo"}],"k":1}', { whole: true }).s.every(x => x && typeof x === 'object' && x.name !== 'Varo'), true);
+    } finally { console.warn = warn; }
+});
+
+import { when as when_, num as num_, dateOrderSource as dateOrderSource_ } from '../src/phoneparse.js';
+test('dates: two numbers that could both be the month go by the chat\'s 상태창 날짜 순서 (월.일 until chosen); "26th October 21:45" reads; a minus before ₩ stays', () => {
+    const both = [['03.11.', '03-11', '11-03'], ['11.03.', '11-03', '03-11'], ['Di, 03.11. 18:10', '03-11 18:10', '11-03 18:10'], ['11.03, 12:33', '11-03 12:33', '03-11 12:33'], ['03/11/2026', '03-11', '11-03'],
+        ['03-11', '03-11', '03-11'], ['2026.11.03', '11-03', '11-03'], ['26.10.', '10-26', '10-26'], ['10/26', '10-26', '10-26']];
+    try {
+        dateOrderSource_(() => undefined);
+        for (const [t, md] of both) assert.equal(when_(t), md, `md ${t}`);
+        dateOrderSource_(() => 'dm');
+        for (const [t, , dm] of both) assert.equal(when_(t), dm, `dm ${t}`);
+    } finally { dateOrderSource_(() => undefined); }
+    for (const [t, want] of [['26th October 21:45', '10-26 21:45'], ['26 October 21:45', '10-26 21:45'], ['October 26 21:45', '10-26 21:45']]) assert.equal(when_(t), want, t);
+    for (const [t, want] of [['-₩12,000', -12000], ['−₩12,000', -12000], ['- € 12,50', -12.5], ['₩-12,000', -12000], ['25–35', 25]]) assert.equal(num_(t), want, t);
+});
+
+import { dayGap as dayGap_, cityAt as cityAt_ } from '../src/phonesynclife.js';
+test('a leap day counts as a day of its own; a saved city is matched by whole words, not letters inside a name', () => {
+    assert.deepEqual([dayGap_('02-28', '02-29'), dayGap_('02-29', '03-01'), dayGap_('02-29', '02-29'), dayGap_('03-01', '02-29'), dayGap_('12-31', '01-01')], [1, 1, 0, -1, 1]);
+    const cities = [{ name: 'Milan', tz: 'Europe/Rome' }, { name: 'Florence', tz: 'Europe/Rome' }, { name: 'Frankfurt am Main', tz: 'Europe/Berlin' }, { name: 'Seoul', ko: '서울', tz: 'Asia/Seoul' }];
+    assert.deepEqual(['LA', 'Ren', "Varo's", 'Frankfurt · Küche', 'Frankfurt', '서울역', '서울 강남 · 카페', 'Milano'].map(x => cityAt_(x, cities)?.name ?? null),
+        [null, null, null, 'Frankfurt am Main', 'Frankfurt am Main', 'Seoul', 'Seoul', null]);
+});

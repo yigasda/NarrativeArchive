@@ -10,6 +10,7 @@ import { ctx, saveMeta } from './core.js';
 import { headingPlaces } from './people.js';
 import { FOOD_IDS, dishPic } from './phonefood.js';
 import { OWN_CLOCK, CLOCK_GET, clockBlock, sceneHome, statusAt, arr, trackerWeather, readMark, turnsNote, secondTurn, soFarHead, windowOf, nowAt, CHAT_TOKENS, COUNTRIES, byStory, ensureIds, giftOf, hhmm, jsonOf, ko, last4, line, markNow, num, pad, pick, rowDay, sideRequest, storyNow, when, withEv } from './phonedata.js';
+import { cutShort } from './phoneparse.js';
 import { dlvTotal, payOrders, shopStats, unpayOrders } from './phonesyncmoney.js';
 import { alarmOf, cityAt, dayGap, fileOf, nightsToDays, overlayFresh, parseWeather, screenOf, usualScreenOf, weatherFrom } from './phonesynclife.js';
 import { SCREEN_LIST } from './phonescreen.js';
@@ -161,7 +162,7 @@ Numbers are plain JSON numbers. "ev" is a word tag, never a number: the "ev" of 
 const DAY = 864e5;
 const md = s => { const mt = String(s || '').match(/^(\d{2})-(\d{2})/); return mt ? { mo: Number(mt[1]), d: Number(mt[2]) } : null; };
 // a story day moved by n days (MM-DD; the story's dates carry no year, so a leap year is assumed)
-export const shiftDay = (day, n) => { const x = md(day); if (!x) return ''; const t = new Date(Date.UTC(2001, x.mo - 1, x.d) + n * DAY); return `${pad(t.getUTCMonth() + 1)}-${pad(t.getUTCDate())}`; };
+export const shiftDay = (day, n) => { const x = md(day); if (!x) return ''; const t = new Date(Date.UTC(2000, x.mo - 1, x.d) + n * DAY); return `${pad(t.getUTCMonth() + 1)}-${pad(t.getUTCDate())}`; };
 // the last 14 story days, each with the places its archive sections name
 // upto: a request that read only up to that message sees the days up to its own (see nowAt)
 export function storyDays(m, p, upto = null) {
@@ -194,7 +195,9 @@ const day5 = v => when(v).slice(0, 5);
 export { parseWeather };
 // lastDay: the story's last day (a night after it hasn't ended yet)
 export function parseLife(raw, now, lastDay = '') {
-    if (!raw || typeof raw !== 'object') throw new Error('모델 답에서 시계 · 건강 · 파일 · 날씨 내용(JSON)을 찾지 못했어요');
+    // (an answer with something but none of the apps in it, {"error": …}, is no answer: what is there stays; an empty one
+    // is a second turn with nothing to add, and a first turn's is turned away by fillLife)
+    if (!raw || typeof raw !== 'object' || Object.keys(raw).length && !['clock', 'health', 'files', 'weather'].some(k => raw[k] && typeof raw[k] === 'object')) throw new Error('모델 답에서 시계 · 건강 · 파일 · 날씨 내용(JSON)을 찾지 못했어요');
     const c = raw.clock || {}, h = raw.health || {}, f = raw.files || {};
     const run = c.running && int(c.running.sec, 1, 86400) ? { label: line(c.running.label, 40), ko: ko(c.running.ko), sec: int(c.running.sec, 1, 86400), left: int(c.running.left, 0, 86400) ?? 0 } : null;
     return {
@@ -231,7 +234,7 @@ const dish = x => {
 // a shop's dishes as the model writes them, each with its picture
 const menuOf = (xs, n) => arr(xs).map(x => { const m = { name: line(x?.name, 60), ko: ko(x?.ko), desc: line(x?.desc, 100), price: num(x?.price) ?? 0, top: yes(x?.top) }, pic = dishPic(x?.pic, m, true); return pic ? { ...m, pic } : m; }).filter(x => x.name).slice(0, n);
 export function parseDelivery(raw, accounts = [], tx = [], now = '') {
-    if (!raw || typeof raw !== 'object') throw new Error('모델 답에서 배달 내용(JSON)을 찾지 못했어요');
+    if (!raw || typeof raw !== 'object' || Object.keys(raw).length && !Array.isArray(raw.shops) && !Array.isArray(raw.orders)) throw new Error('모델 답에서 배달 내용(JSON)을 찾지 못했어요');
     // a bank row it points at: that row is the payment, and its account is the order's
     const paidOf = v => { const t = tx.find(r => r.id === String(v ?? '') && r.amount < 0); return t ? { paidBy: t.id, account: t.account } : {}; };
     const acct = v => { const s = String(v ?? '').trim().toLowerCase(); if (s === 'cash') return 'cash'; const l4 = last4(v); return l4 && accounts.some(a => a.last4 === l4) ? l4 : 'card'; };
@@ -361,7 +364,7 @@ export async function refreshNearby(m, p, { read = false } = {}) {
     const input = [`[PLACE]\n${homeCity(p) || COUNTRIES[livesIn(p)] || livesIn(p) || '(unknown)'}${moved ? '\n[MOVED]\ntrue' : ''}`, `[CURRENCY]\n${cur}`,
         `[NEARBY]\n${JSON.stringify(near.map(s => ({ name: s.name, cuisine: s.cuisine })))}`, `[ORDERED]\n${JSON.stringify(ordered.map(s => s.name))}`].join('\n\n');
     const out = await askDraft(input, { force: true, system: AI_SYS_NEARBY, maxTokens: 9000, effort: 'low' });
-    const raw = jsonOf(out, { salvage: true });
+    const raw = jsonOf(out, { salvage: 'whole' });
     if (!raw || typeof raw !== 'object') throw new Error('모델 답에서 동네 가게를 찾지 못했어요');
     // the phone may have changed while it was asked (the app made again)
     if (p.delivery !== d) return 0;
@@ -450,7 +453,13 @@ export const fillLife = (m, p, { screenAgain = false } = {}) => exclusive('fill'
             !soFar && Object.keys(body).length ? `[BODY ON THE PHONE NOW — keep it unless the story changed it]\n${JSON.stringify(body)}` : '',
             soFar ? `${soFarHead('LIFE', short)}\n${JSON.stringify(soFar)}` : '', short?.text || '',
             w ? `[WEATHER NOW]\n${JSON.stringify(home ? w : { place: w.place, weather: w.weather })}` : '', clockBlock(p, storyNow(p, upto, m) || p.now, m, statusAt(p, upto, m)), p.country ? `[PHONE COUNTRY]\n${COUNTRIES[p.country] || p.country}` : ''], { profile: p.financeProfile, story: CHAT_TOKENS.life, read: { gap } });
-        const raw = jsonOf(await askDraft(input, { force: true, system: AI_SYS_LIFE, maxTokens: 16000, effort: 'low' }), { salvage: true }), next = parseLife(raw, now, days.at(-1)?.day || '');
+        // (an answer cut off before its end is not taken: what it read isn't all there, so the mark stays where it was)
+        const ans = await askDraft(input, { force: true, system: AI_SYS_LIFE, maxTokens: 16000, effort: 'low' });
+        if (cutShort(ans)) throw new Error('모델 답이 중간에 끊겼어요');
+        const raw = jsonOf(ans, { salvage: true });
+        // (a first turn with nothing in it is no life app: what the phone has stays)
+        if (!soFar && raw && typeof raw === 'object' && !Object.keys(raw).length) throw new Error('모델 답에서 시계 · 건강 · 파일 · 날씨 내용(JSON)을 찾지 못했어요');
+        const next = parseLife(raw, now, days.at(-1)?.day || '');
         said.set(next, { raw, now });
         const at = storyNow(p, upto) || p.now || '';
         if (/^\d{2}-\d{2}/.test(at)) next.files.items = next.files.items.filter(x => !later(x.time, at));
@@ -534,7 +543,8 @@ export const fillScreen = (m, p, { again = false } = {}) => exclusive('fill', as
 // what a second turn adds to the delivery app: a shop by its name, only the fields the model wrote for it (the app's own
 // defaults, no fee and no favourite, are no telling; its menu kept when it gives none); a shop nearby that it now orders
 // from isn't "nearby" any more; the shops ordered from before the ones nearby. An order is the same one by its shop and
-// story event, or its shop and time; the basket as it says it ("cart": null empties it; no "cart" keeps the old one)
+// story event, or its shop and time; a basket it names is the basket ("cart": null is no telling: the old one stays, unless
+// it orders from that shop)
 const SHOP_KEYS = ['ko', 'cuisine', 'rating', 'reviews', 'fee', 'minOrder', 'eta', 'fav'];
 export function mergeDelivery(a, b, { raw } = said.get(b) || {}) {
     const named = new Map(a.shops.map(x => [x.name, x]));
@@ -545,8 +555,12 @@ export function mergeDelivery(a, b, { raw } = said.get(b) || {}) {
         if (b.orders.some(y => y.shop === x.name)) delete n.nearby;
         named.set(x.name, n);
     }
-    const shops = [...named.values()], same = (x, y) => x.shop === y.shop && (!!x.ev && x.ev === y.ev || x.time === y.time);
-    return { shops: [...shops.filter(x => !x.nearby), ...shops.filter(x => x.nearby)], orders: [...a.orders.filter(x => !b.orders.some(y => same(x, y))), ...b.orders].sort(byStory(b.orders.at(-1)?.time || '')).slice(-16), cart: raw && 'cart' in raw ? b.cart || null : b.cart || a.cart };
+    // (the same shop and dishes within half an hour, told by the second turn a few minutes off, is the same order)
+    const mins = t => { const mt = /^(\d{2}-\d{2}) (\d{2}):(\d{2})/.exec(String(t || '')); return mt ? [mt[1], mt[2] * 60 + Number(mt[3])] : null; };
+    const close = (a, b) => { const x = mins(a), y = mins(b); return !!x && !!y && x[0] === y[0] && Math.abs(x[1] - y[1]) <= 30; };
+    const dishes = o => (o.items || []).map(d => String(d.name || '').toLowerCase()).sort().join('|');
+    const shops = [...named.values()], same = (x, y) => x.shop === y.shop && (!!x.ev && x.ev === y.ev || x.time === y.time || !(x.ev && y.ev && x.ev !== y.ev) && close(x.time, y.time) && dishes(x) === dishes(y));
+    return { shops: [...shops.filter(x => !x.nearby), ...shops.filter(x => x.nearby)], orders: [...a.orders.filter(x => !b.orders.some(y => same(x, y))), ...b.orders].sort(byStory(b.orders.at(-1)?.time || '')).slice(-16), cart: b.cart || (a.cart && b.orders.some(o => o.shop === a.cart.shop) ? null : a.cart) };
 }
 export const fillDelivery = (m, p) => exclusive('fill', async () => {
     const mark0 = markNow();
@@ -559,7 +573,11 @@ export const fillDelivery = (m, p) => exclusive('fill', async () => {
         const upto = nowAt(gap), at = storyNow(p, upto) || p.now || '';
         const input = await sideRequest(m, p.owner, [`[PHONE NOW]\n${phoneNow(p, upto)}`, daysBlock(storyDays(m, p, upto)), clockBlock(p, at, m, statusAt(p, upto, m)), `[LIVES IN]\n${COUNTRIES[livesIn(p)] || livesIn(p) || '(unknown)'}`, money,
             soFar ? `${soFarHead('DELIVERY', short)}\n${JSON.stringify(soFar)}` : '', short?.text || ''], { profile: p.financeProfile, story: CHAT_TOKENS.apps, read: { gap } });
-        const got = jsonOf(await askDraft(input, { force: true, system: AI_SYS_DELIVERY, maxTokens: 12000, effort: 'low' }), { salvage: true }), next = parseDelivery(got, accounts, tx, at);
+        const ans = await askDraft(input, { force: true, system: AI_SYS_DELIVERY, maxTokens: 12000, effort: 'low' });
+        if (cutShort(ans)) throw new Error('모델 답이 중간에 끊겼어요');
+        const got = jsonOf(ans, { salvage: 'whole' });
+        if (!soFar && got && typeof got === 'object' && !Object.keys(got).length) throw new Error('모델 답에서 배달 내용(JSON)을 찾지 못했어요');
+        const next = parseDelivery(got, accounts, tx, at);
         said.set(next, { raw: got });
         // the shops nearby go after the ones they order from (the app's 동네 인기 가게); the first turn sets them
         if (!soFar) next.shops = [...next.shops, ...nearbyShops(got, next.shops, (p.money?.currency || accounts[0]?.currency) === 'KRW')];
@@ -579,7 +597,9 @@ export const fillDelivery = (m, p) => exclusive('fill', async () => {
     // orders a reflection put in stay (their payments are the bank's own rows); the fill's own telling of the same order
     // (the same shop on the same day, or the same story event) is that one, not a second
     const kept = (p.delivery?.orders || []).filter(o => o.sync), plain = s => String(s || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
-    const twin = o => kept.some(k => (o.ev && k.ev === o.ev) || (plain(k.shop) === plain(o.shop) && dayGap(String(k.time).slice(0, 5), String(o.time).slice(0, 5)) === 0));
+    // (two story events are two orders, whatever the shop and day; the same shop within the hour is the same one)
+    const mins = t => { const mt = /(\d{2}):(\d{2})/.exec(String(t || '').slice(5)); return mt ? mt[1] * 60 + Number(mt[2]) : null; };
+    const twin = o => kept.some(k => (o.ev && k.ev === o.ev) || !(o.ev && k.ev && o.ev !== k.ev) && plain(k.shop) === plain(o.shop) && dayGap(String(k.time).slice(0, 5), String(o.time).slice(0, 5)) === 0 && (mins(k.time) === null || mins(o.time) === null || Math.abs(mins(k.time) - mins(o.time)) <= 60));
     p.delivery = { ...d, orders: [...d.orders.filter(o => !twin(o)), ...kept].sort(byStory(p.now)), look: deliveryLook(p), at, nearbyAt: String(at).slice(0, 5), city: homeCity(p) };
     delete p.syncUndo;
     syncOf(p, phoneChatScope(ctx())).marks.delivery = readMark(last) || mark0;

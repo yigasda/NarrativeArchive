@@ -10,18 +10,37 @@ const MONS = { jan: 1, feb: 2, mar: 3, mär: 3, apr: 4, may: 5, mai: 5, jun: 6, 
 const FULL = ['january', 'february', 'march', 'märz', 'april', 'may', 'mai', 'june', 'juni', 'july', 'juli', 'august', 'september', 'sept', 'october', 'oktober', 'november', 'december', 'dezember'];
 const month = w => { const s = String(w || '').toLowerCase(); return s.length >= 3 && FULL.some(f => f.startsWith(s)) ? MONS[s.slice(0, 3)] || 0 : 0; };
 const named = v => {
-    const s = String(v || ''), ko = s.match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일/), en = s.match(/\b([a-zä]{3,9})\.?\s+(\d{1,2})(?!\d)/i), de = s.match(/(?<!\d)(\d{1,2})\.?\s+([a-zä]{3,9})\b/i);
+    const s = String(v || ''), ko = s.match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일/), en = s.match(/\b([a-zä]{3,9})\.?\s+(\d{1,2})(?![\d:])/i), de = s.match(/(?<!\d)(\d{1,2})\.?\s+([a-zä]{3,9})\b/i);
     const [mo, d] = ko ? [Number(ko[1]), Number(ko[2])] : en && month(en[1]) ? [month(en[1]), Number(en[2])] : de && month(de[2]) ? [month(de[2]), Number(de[1])] : [0, 0];
     if (!(mo >= 1 && mo <= 12 && d >= 1 && d <= 31)) return '';
     const hm = s.match(/(\d{1,2}):(\d{2})/), ok = hm && Number(hm[1]) < 24 && Number(hm[2]) < 60;
     return `${pad(mo)}-${pad(d)}${ok ? ` ${pad(hm[1])}:${hm[2]}` : ''}`;
 };
+// an answer cut off before its JSON ends (the model ran out of room): a bracket still open, or a string, at the end
+export const cutShort = out => {
+    const t = String(out || '').replace(/```(?:json)?/gi, ''), a = t.indexOf('{');
+    if (a < 0) return false;
+    let d = 0, str = false, esc = false;
+    for (const ch of t.slice(a)) {
+        if (str) { if (esc) esc = false; else if (ch === '\\') esc = true; else if (ch === '"') str = false; continue; }
+        if (ch === '"') str = true; else if (ch === '{' || ch === '[') d++; else if (ch === '}' || ch === ']') d = Math.max(0, d - 1);
+    }
+    return str || d > 0;
+};
+// the order a chat's status lines write a date in when both numbers could be the month ("03.11."): month first unless
+// the user said day first (상태창 날짜 순서, kept per chat). Only for dates written with "." or "/": "MM-DD" with dashes is
+// always month first (the phone's own and the model's answers)
+let orderOf = () => '';
+export const dateOrderSource = f => { orderOf = f; };
+export const dayFirstChat = () => { try { return orderOf() === 'dm'; } catch { return false; } };
+export const swapDate = (a, b, sep) => Number(b) <= 12 && (Number(a) > 12 || sep !== '-' && Number(a) <= 31 && dayFirstChat());
 export const when = v => {
     // "10-25 21:00", or with the year in front ("2026-10-25 21:00", "2026/10/25T21:00") or after ("25.10.2026 21:00", "10/25/2026 9:00")
-    const mt = String(v || '').match(/(?:^|\D)(?:\d{4}[-/.])?(\d{1,2})[-/.](\d{1,2})(?:[-/.]\s?\d{4})?(?:[ T]+(\d{1,2}):(\d{2}))?/);
+    const mt = String(v || '').match(/(?:^|\D)(?:\d{4}[-/.])?(\d{1,2})[-/.](\d{1,2})(?:[-/.]\s?\d{4})?(?:\.?,?[ T]+(\d{1,2}):(\d{2}))?/);
     // the day first where the month can't come first ("26.10.", "26/10/2026"), unless a year led ("2026-10-26")
-    if (mt && !/^\d{4}/.test(mt[0].replace(/^\D/, '')) && Number(mt[1]) > 12 && Number(mt[2]) <= 12) [mt[1], mt[2]] = [mt[2], mt[1]];
-    if (!mt || !(Number(mt[1]) >= 1 && Number(mt[1]) <= 12) || !(Number(mt[2]) >= 1 && Number(mt[2]) <= 31)) return named(v);
+    // and when the chat writes day first (its 상태창 날짜 순서), any date of two numbers with dots or slashes
+    if (mt && !/^\d{4}/.test(mt[0].replace(/^\D/, '')) && swapDate(mt[1], mt[2], (/\d{1,2}([-/.])\d/.exec(mt[0]) || [])[1])) [mt[1], mt[2]] = [mt[2], mt[1]];
+    if (!mt || !(Number(mt[1]) >= 1 && Number(mt[1]) <= 12) || !(Number(mt[2]) >= 1 && Number(mt[2]) <= 31)) return named(String(v || '').replace(/(\d)(?:st|nd|rd|th)\b/gi, '$1'));
     // a clock that can't be ("25:99") is dropped, the day stays
     const ok = mt[3] && Number(mt[3]) < 24 && Number(mt[4]) < 60;
     return `${pad(mt[1])}-${pad(mt[2])}${ok ? ` ${pad(mt[3])}:${mt[4]}` : ''}`;
@@ -46,8 +65,9 @@ export const evOf = v => line(v, 40).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '
 export const withEv = (x, raw) => { const ev = evOf(raw?.ev); return ev && !/^\d+$/.test(ev) ? { ...x, ev } : x; };
 // story days ("MM-DD") carry no year: how many days from a to b, the short way round New Year (12-31 → 01-01 is 1, not
 // -364). Compare and sort story days with this, never as text
-const dnum = s => { const mt = /^(\d{2})-(\d{2})/.exec(String(s || '')); return mt ? Date.UTC(2001, mt[1] - 1, Number(mt[2])) / 864e5 : NaN; };
-export const gapDays = (a, b) => { let g = dnum(b) - dnum(a); if (!Number.isFinite(g)) return 0; if (g < -180) g += 365; if (g > 180) g -= 365; return g; };
+// (02-29 half a day from 02-28 and 03-01: a leap day of its own)
+const dnum = s => { const mt = /^(\d{2})-(\d{2})/.exec(String(s || '')); return !mt ? NaN : mt[1] === '02' && mt[2] === '29' ? Date.UTC(2001, 2, 1) / 864e5 - 0.5 : Date.UTC(2001, mt[1] - 1, Number(mt[2])) / 864e5; };
+export const gapDays = (a, b) => { let g = dnum(b) - dnum(a); if (!Number.isFinite(g)) return 0; if (g < -180) g += 365; if (g > 180) g -= 365; return Math.sign(g) * Math.ceil(Math.abs(g)); };
 // a record's time ("MM-DD HH:MM") as minutes from the story's now, for sorting in story order across New Year. Records
 // are mostly behind now: up to a month ahead stays ahead (an order due, a booking), the rest of the year is behind
 export const storyMin = (t, now) => {
@@ -143,24 +163,33 @@ export function salvageJson(t, { whole = false } = {}) {
         i = j + 1;
         return v;
     };
-    // how many of its pieces broke (one cut off at the end too)
-    const list = piece => {
+    // how many of its pieces broke (one cut off at the end, or closed with the wrong bracket, too)
+    const list = (piece, close) => {
         let bad = 0;
         i++;
         for (;;) {
             ws();
             if (i >= s.length) return bad + 1;
-            if (s[i] === '}' || s[i] === ']') { i++; return bad; }
+            if (s[i] === close) { i++; return bad; }
+            if (s[i] === '}' || s[i] === ']') { i++; lost++; return bad + 1; }
             const from = i;
-            try { piece(); ws(); if (i < s.length && !/[,}\]]/.test(s[i])) fail(); } catch { bad++; lost++; skip(from); }
+            try { piece(); } catch { bad++; lost++; skip(from); }
             if (s[i] === ',') i++;
         }
+    };
+    // a value is whole only when what follows can come after it; a number cut in two ("price": 12,000 or 1 20) is broken,
+    // not 12 or 1. Nothing is kept from a broken piece
+    const done = v => {
+        ws();
+        if (i < s.length && !/[,}\]]/.test(s[i])) fail();
+        if (typeof v === 'number' && /^,\s*\d{3}(?!\d)\s*[,}\]]/.test(s.slice(i, i + 20))) fail();
+        return v;
     };
     const value = () => {
         ws();
         const ch = s[i];
-        if (ch === '{') { const o = {}; if (list(() => { const k = string(); ws(); if (s[i] !== ':') fail(); i++; o[k] = value(); })) half.add(o); return o; }
-        if (ch === '[') { const a = []; list(() => { const v = value(); if (whole && half.has(v)) { lost++; return; } a.push(v); }); return a; }
+        if (ch === '{') { const o = {}; if (list(() => { const k = string(); ws(); if (s[i] !== ':') fail(); i++; o[k] = done(value()); }, '}')) half.add(o); return o; }
+        if (ch === '[') { const a = []; list(() => { const v = done(value()); if (whole && half.has(v)) { lost++; return; } a.push(v); }, ']'); return a; }
         if (ch === '"') return string();
         const lit = /^(?:true|false|null|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/.exec(s.slice(i, i + 40));
         if (!lit) fail();
@@ -179,7 +208,8 @@ export const num = v => {
     if (v === null || v === undefined || typeof v === 'object' || typeof v === 'boolean') return null;
     if (typeof v === 'number') return Number.isFinite(v) ? Math.round(v * 100) / 100 : null;
     // the first number written ("4.7/5" is 4.7, "25–35" is 25), never two run together
-    const mt = String(v).replace(/[−–](?=\s*\d)/g, '-').match(/-?\d[\d.,]*/);
+    // (a minus written before the currency sign or a space, "-₩12,000", "- € 12,50", is still the number's)
+    const mt = String(v).replace(/[−–](?=\s*(?:[^\d\s.,−–-]{1,3}\s*)?\d)/g, '-').replace(/-\s*(?:[^\d\s.,-]{1,3}\s*)?(?=\d)/, '-').match(/-?\d[\d.,]*/);
     if (!mt) return null;
     let t = mt[0].replace(/[.,]+$/, '');
     // "1.200,50" and "1,200.50": the last mark is the decimal one; "12,50" is 12.5; "1,200" and "1.200.000" are thousands

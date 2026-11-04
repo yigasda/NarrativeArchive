@@ -485,3 +485,30 @@ test('되돌리기 holds the screen clock where the phone was until the next 반
         assert.equal(data.storyNow(c.p), '10-26 09:10');
     });
 });
+
+test('a city in the owner\'s zone that isn\'t theirs (Busan for Seoul) keeps its hour but not their weather; a shop named after a far city is no proof', async () => {
+    const c = setup([say('Ren', 'a'), say('Ivo', 'b'), say('Ivo', 'c')]);
+    c.p.now = '10-26 18:00'; c.p.year = 2026; c.p.country = 'KR';
+    c.p.where = { at: 1, people: [{ name: 'Ren', city: 'Seoul', names: ['Seoul', '서울'], lives: 'KR', tz: 'Asia/Seoul' }, { name: 'Ivo', city: 'Busan', names: ['Busan', '부산'], lives: 'KR', tz: 'Asia/Seoul' },
+        { name: 'Varo', city: 'New York', names: ['New York', '뉴욕'], lives: 'US', tz: 'America/New_York' }] };
+    assert.equal(data.sceneHome(c.p, "부산 · Ivo's flat", c.m), false);
+    assert.equal(data.sceneHome(c.p, '서울 강남 · 카페', c.m), true);
+    await withTrackers([trk(2, '18:30', "부산 · Ivo's flat")], async () => assert.equal(data.statusMoment(c.p, null, null, c.m).at, '10-26 18:30'));
+    await withTrackers([trk(2, '19:00', 'New York Bagels, Gangnam')], async () => assert.notEqual(data.statusMoment(c.p, null, null, c.m).at, '10-27 08:00'));
+});
+
+test('상태창 날짜 순서: asked once per chat, month first until then; a chat set to 일.월 reads "03.11." as November 3', async () => {
+    const m = {};
+    assert.ok(data.needsDateOrder(m));
+    assert.equal(data.dateOrderOf(m), 'md');
+    await data.setDateOrder(m, 'dm');
+    assert.ok(!data.needsDateOrder(m));
+    assert.equal(data.dateOrderOf(m), 'dm');
+    T.meta = { narrative_archive: { dateOrder: 'dm' } };
+    try {
+        assert.deepEqual(data.monthDay('Di, 03.11. 18:10'), { mo: 11, d: 3 });
+        T.meta = { narrative_archive: { dateOrder: 'md' } };
+        assert.deepEqual(data.monthDay('11.03, 12:33'), { mo: 11, d: 3 });
+        assert.deepEqual(data.monthDay('03.11.'), { mo: 3, d: 11 });
+    } finally { T.meta = { integrity: 'main-mark' }; }
+});

@@ -294,3 +294,23 @@ test('빼기 only offers events still gone: undone ones and ones a new message t
     pruneDropped(s);
     assert.deepEqual(s.dropped, [{ label: '#20–29', events: ['a'], left: 0 }]);
 });
+
+// ---- 점검: 표시 · 같은 말
+import { realign as realign_, newSync as newSync_, addDone as addDone_, makeMark as makeMark_, findMark as findMark_ } from '../src/phonesync.js';
+test('the marked message edited (a group chat): the mark stays, the next one with the same words is still unread', () => {
+    const say = (who, mes) => ({ is_user: who === 'Ren', is_system: false, name: who, mes });
+    const chat = [say('Ren', 'Are you both coming tonight?'), say('Mara', '*nods*'), say('Ivo', '*nods*'), say('Varo', 'Me too.')];
+    const mk = makeMark_(chat, 1);
+    chat[1] = say('Mara', '*nods* Sure, I will bring wine.');
+    const r = findMark_(chat, mk);
+    assert.ok(!r.extra, JSON.stringify(r));
+});
+test('a read message deleted and the same words said again after the last one read: the new one is new, the old one offered to take off', () => {
+    const row = (i, who, t) => ({ index: i, hidden: false, text: `[#${i}] ${who}: ${t}` });
+    const s = newSync_('t'); s.marks.base = { index: -1, user: -1, fp: '' };
+    addDone_(s, [0, 1]);
+    realign_(s, [row(0, 'Ren', 'Did you pay the taxi to the airport already?'), row(1, 'Mara', 'I paid the taxi 12000 won for us')]);
+    const r = realign_(s, [row(0, 'Ren', 'Did you pay the taxi to the airport already?'), row(1, 'Ren', 'And what about the hotel for Ivo and Varo?'), row(2, 'Mara', 'I paid the taxi 12000 won for us')]);
+    assert.deepEqual(r.moved[1], undefined);
+    assert.deepEqual(r.dropped.map(d => [d.old, !!d.unsure]), [[1, false]]);
+});
