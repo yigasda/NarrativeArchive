@@ -740,13 +740,13 @@ test('일상 is its own request after the reflection\'s: it gets all the reflect
     assert.ok(c.p.sync.done.flat().includes(4));
 });
 
-test('일상\'s items are the reflection\'s own (each app\'s notes on its fields), without contacts or the profile; its rules for people and the diary too', () => {
+test('일상\'s items are the reflection\'s own (each app\'s notes on its fields), the contacts too, without the profile; its rules for people and the diary too', () => {
     const ev = data.AI_SYS_EVERYDAY, core = data.coreSystem({ life: true });
-    for (const k of ['threads', 'calls', 'photos', 'notes', 'searches', 'events', 'posts', 'mails', 'diary', 'voice']) {
+    for (const k of ['contacts', 'threads', 'calls', 'photos', 'notes', 'searches', 'events', 'posts', 'mails', 'diary', 'voice']) {
         const lineOf = s => s.split("\n").filter(l => l.trimStart().startsWith(`"${k}": [`)).at(-1)?.replace(/,$/, "");
         assert.equal(lineOf(ev), lineOf(core.split('Items in "phone":')[1]), k);
     }
-    assert.ok(!/"contacts": \[|"profile": \{/.test(ev));
+    assert.ok(!/"profile": \{/.test(ev));
     assert.match(ev, /"tab": true if its page is still open/);
     assert.match(ev, /"comments": \[/);
     assert.match(ev, /A relationship word \(girlfriend, ex, husband, boss\)/);
@@ -774,4 +774,16 @@ test('일상 on a phone with the everyday apps: an alarm, a timer and files too,
     assert.deepEqual(c.p.life.clock.alarms.map(a => a.label), ['Gym']);
     assert.deepEqual(c.p.life.files.items.map(f => f.name), ['Screenshot 21-10.png', 'a.pdf']);
     assert.match(globalThis.__everydayIn.at(-1), /\[LIFE NOW\]/);
+});
+
+test('일상 texting someone not saved yet saves them too (only someone it texts or calls); 되돌리기 takes the contact back', async () => {
+    assert.match(data.everydaySystem(), /"contacts": \[\{ "name": name in the story/);
+    assert.match(data.everydaySystem(), /Someone texted or called who isn't in the contacts yet goes in "contacts" too/);
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'thinking of Ivo'), say('Mara', 'call him')]);
+    c.p.now = '10-26 09:00'; c.p.year = 2026;
+    globalThis.__everyday = { everyday: { contacts: [{ name: 'Ivo', saved: 'Ivo 🙄' }, { name: 'Stranger', saved: 'x' }], threads: [{ with: 'Ivo', messages: [{ from: 'me', text: 'you up?', time: '10-26 09:20' }] }] } };
+    try { await run(c.m, { now: '10-26 09:30', events: [] }); } finally { delete globalThis.__everyday; }
+    assert.deepEqual(c.p.contacts.map(x => [x.name, x.saved]), [['Ivo', 'Ivo 🙄']]);
+    await data.undoRound(c.m, c.p);
+    assert.deepEqual(c.p.contacts, []);
 });

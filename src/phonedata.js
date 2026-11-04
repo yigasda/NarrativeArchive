@@ -408,7 +408,7 @@ function personIn(p, list, get, name) {
     const one = xs => (xs.length === 1 ? xs[0] : undefined);
     return one(list.filter(x => names.includes(nameKey(get(x))))) || one(list.filter(x => samePerson(get(x), name)));
 }
-const EVERYDAY_KEYS = ['threads', 'calls', 'photos', 'notes', 'searches', 'mails', 'posts', 'diary', 'voice', 'events', 'alarms', 'files', 'timers'];
+const EVERYDAY_KEYS = ['contacts', 'threads', 'calls', 'photos', 'notes', 'searches', 'mails', 'posts', 'diary', 'voice', 'events', 'alarms', 'files', 'timers'];
 // (the clock and files in an answer: an alarm and a timer, two files)
 const EVERYDAY_LIFE = { alarms: 1, timers: 1, files: 2 };
 function everydayOn(raw, rows, textAt) {
@@ -427,14 +427,18 @@ function everydayOn(raw, rows, textAt) {
         raw.events.push(host);
     }
     host.phone = host.phone && typeof host.phone === 'object' ? host.phone : {};
+    // (a contact only for someone these records text or call)
+    const talked = new Set([...arr(ed.threads).map(x => nameKey(x?.with)), ...arr(ed.calls).map(x => nameKey(x?.with))].filter(Boolean));
+    ed.contacts = arr(ed.contacts).filter(x => talked.has(nameKey(x?.name)));
     for (const k of EVERYDAY_KEYS) if (arr(ed[k]).length) host.phone[k] = [...arr(host.phone[k]), ...arr(ed[k]).slice(0, EVERYDAY_LIFE[k] ?? Infinity).map(mark)];
 }
 // ---- 일상 (반영의 다음 요청): the owner's ordinary life in the hours these messages cover, and the texts after a scene,
 // on its own (in the reflection's own request it was a line among many: run51–53 wrote none after a scene and kept making
 // up details). It gets all the reflection got, what the reflection put on the phone from these messages, and the people
 // the owner had a scene with
-// the apps' items as the reflection writes them, without the contacts and the profile (no one new, no SNS name changed)
-const EVERYDAY_ITEMS = PHONE_ITEMS.split('\n').filter(l => !/^\s*"(contacts|profile)"/.test(l)).join('\n').replace(VOICE_ONLY, '');
+// the apps' items as the reflection writes them, without the profile (no SNS name changed); the contacts in, so someone
+// texted who isn't saved yet is
+const EVERYDAY_ITEMS = PHONE_ITEMS.split('\n').filter(l => !/^\s*"profile"/.test(l)).join('\n').replace(VOICE_ONLY, '');
 export const everydaySystem = ({ life = false } = {}) => `GOAL
 Write the ordinary life on one character's phone in the hours a few new role-play messages cover: the small records a real phone gathers, and the texts people send after a scene with the owner.
 Another step already put the story's own events on the phone; you only add everyday life around them.
@@ -453,7 +457,7 @@ ${CLOCK_GET}
 EVERYDAY
 - A few records of the owner's ordinary life in these hours, from their habits: any app, a little in each as a real phone gets it; texts and calls by the person.
 - For each person in SCENES WITH: the texts the two would send each other later these hours, in their own voices (a fight may go on; a job given in person gets a short check).
-- People from the story or PEOPLE AROUND as they are and with what they feel; never someone the owner isn't in touch with now. A relationship word (girlfriend, ex, husband, boss) only if the messages, archive or PEOPLE AROUND use it for them.
+- People from the story or PEOPLE AROUND as they are and with what they feel; never someone the owner isn't in touch with now. Someone texted or called who isn't in the contacts yet goes in "contacts" too. A relationship word (girlfriend, ex, husband, boss) only if the messages, archive or PEOPLE AROUND use it for them.
 - A diary entry holds what these messages show and what the owner feels about it, as the story and PEOPLE AROUND show them; no new secrets or events.
 - Anything a later message could contradict is a new fact: what someone decided, said or wants, a time, a result. How they feel and small things around them are fine. No new facts, events, plans or secrets.
 - Times from the phone's last time up to the newest message, never later.
