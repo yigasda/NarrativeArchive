@@ -382,10 +382,10 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax 
 /* 폰 확인 창 › iOS action sheet inside the screen (board px): grey message + the action, a separate 취소 below. Opaque, not blurred
    (SillyTavern's no-blur setting turns backdrop-filter off, and a see-through sheet looked flat); glass edge, light on top, two shadows */
 .pcf { position: absolute; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center; padding: 0 24px; background: rgba(15, 20, 28, 0.38); font-family: -apple-system, 'SF Pro Text', 'Noto Sans KR', sans-serif; --axff: -apple-system, 'SF Pro Text', 'Noto Sans KR', sans-serif; letter-spacing: normal; --axls: normal; line-height: normal; animation: pcf_dim 0.25s ease; }
-/* the phone's alert (3.170.5x, docs/mockups/phone-sheet G3): frosted glass — a real blur
-   (src/phone.js frost: on even with SillyTavern's blur off), a sheen over the top half, a light edge, three soft shadows. Buttons are iOS alert cells */
+/* the phone's alert (3.170.5x, docs/mockups/phone-sheet G3): glass without a blur (a blur was slow on phones and
+   barely showed), a sheen over the top half, a light edge, three soft shadows. Buttons are iOS alert cells */
 .pcf_box { width: 100%; max-width: 290px; animation: pcf_in 0.28s cubic-bezier(0.2, 0.8, 0.2, 1); }
-.pcf_card { position: relative; overflow: hidden; border-radius: 26px; --axr: 26px; background: linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(236, 242, 250, 0.6)); box-shadow: 0 1px 1px rgba(10, 16, 28, 0.08), 0 10px 24px rgba(10, 16, 28, 0.18), 0 30px 70px rgba(10, 16, 28, 0.34); -webkit-backdrop-filter: blur(28px) saturate(190%); backdrop-filter: blur(28px) saturate(190%); }
+.pcf_card { position: relative; overflow: hidden; border-radius: 26px; --axr: 26px; background: linear-gradient(180deg, #fdfdfe, #eef2f7); box-shadow: 0 1px 1px rgba(10, 16, 28, 0.08), 0 10px 24px rgba(10, 16, 28, 0.18), 0 30px 70px rgba(10, 16, 28, 0.34); }
 .pcf_card::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 46%; background: linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0)); pointer-events: none; }
 .pcf_card::after { content: ""; position: absolute; inset: 0; z-index: 2; border-radius: inherit; padding: 1px; background: linear-gradient(160deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.25) 35%, rgba(255, 255, 255, 0.1) 65%, rgba(255, 255, 255, 0.7)); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
 .pcf_msg { position: relative; display: flex; flex-direction: column; gap: 5px; padding: 22px 20px 16px; text-align: center; }
@@ -403,8 +403,6 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax 
 .pcf_btns.v .pcf_no { font-weight: 600; }
 .pcf_sub { margin-right: 8px; font-size: 13.5px; --axfs: 13.5px; color: #4f5763; }
 .pcf_ok:active, .pcf_no:active { background: rgba(60, 60, 67, 0.08); }
-/* nothing moves behind the glass while it is up (the clouds would make the blur redraw every frame) */
-.na_ph_frame:has(.pcf) :not(.pcf, .pcf *) { animation-play-state: paused; }
 @keyframes pcf_dim { from { background: rgba(15, 20, 28, 0); } }
 @keyframes pcf_in { from { transform: scale(1.08); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .pcf, .pcf_box { animation: none; } }
