@@ -512,3 +512,26 @@ test('상태창 날짜 순서: asked once per chat, month first until then; a ch
         assert.deepEqual(data.monthDay('03.11.'), { mo: 3, d: 11 });
     } finally { T.meta = { integrity: 'main-mark' }; }
 });
+
+test('a phone that knows no other city: a scene not among the owner\'s places is asked about, and a named city keeps the owner\'s clock and weather', async () => {
+    const c = setup([say('Ren', 'a'), say('Mara', 'b'), say('Mara', 'c')]);
+    c.p.now = '10-26 10:50'; c.p.year = 2026; c.p.country = 'KR';
+    c.p.where = { at: 1, people: [{ name: 'Ren', city: 'Seoul', names: ['Seoul', '서울'], lives: 'KR', tz: 'Asia/Seoul' }] };
+    c.p.life = { at: '10-26 10:50', clock: { alarms: [], timers: [], running: null }, health: { usual: {}, days: [] }, files: { folders: [], items: [] },
+        weather: { here: { place: 'Seoul', date: '10-26', time: '10:50', cond: 'clear', temp: 15, hours: [], days: [], tiles: {} }, cities: [] } };
+    await withTrackers([trk(2, '03:00', "Frankfurt · Mara's hotel", '흐림 2°C')], async () => {
+        await run(c.m, { now: '10-26 03:05', statusCity: { city: 'Frankfurt am Main', tz: 'Europe/Berlin' }, events: [] });
+    });
+    assert.ok(T.sys.includes('"statusCity"'));
+    assert.equal(c.p.now, '10-26 11:00');
+    assert.deepEqual([c.p.life.weather.here.place, c.p.life.weather.here.cond], ['Seoul', 'clear']);
+});
+
+test('the reflection says someone else is now in another city: their row moves there', async () => {
+    const c = setup([say('Ren', 'a'), say('Mara', 'b'), say('Mara', 'I am staying in Frankfurt for a month now')]);
+    c.p.where = { at: 1, people: [{ name: 'Ren', city: 'Frankfurt am Main', names: ['Frankfurt am Main', 'Frankfurt'], lives: 'DE', tz: 'Europe/Berlin' }, { name: 'Mara', city: 'Seoul', names: ['Seoul', '서울'], lives: 'KR', tz: 'Asia/Seoul' }] };
+    await run(c.m, { now: '10-26 13:00', elsewhere: [{ name: 'Mara', city: 'Frankfurt am Main', names: ['Frankfurt', '프랑크푸르트'], tz: 'Europe/Berlin' }], events: [] });
+    const mara = c.p.where.people.find(x => x.name === 'Mara');
+    assert.deepEqual([mara.city, mara.tz, mara.lives], ['Frankfurt am Main', 'Europe/Berlin', 'KR']);
+    assert.ok(T.sys.includes('"elsewhere"'));
+});

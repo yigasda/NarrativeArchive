@@ -567,3 +567,14 @@ test('a life fill that stops short of a stretch the reflection read ahead keeps 
     try { await life.fillLife({ ...m, phones: { ren: p } }, p); } finally { console.warn = warn; }
     assert.deepEqual(p.life.clock.alarms.map(a => a.label).sort(), ['Gym with Ivo', 'Work']);
 });
+
+test('다시 만들기 keeps what a reflection put in from a section running past the clock (the remake can\'t see it)', async () => {
+    globalThis.__rows = rows(14).map(r => ({ ...r, hidden: r.index <= 9 }));
+    const mm = { text: '## #0–#4 — Arrival\n- Ren came home.\n## #5–#9 — The trip\n- Ren wrote the train times to Ivo in a note (#6). Ren met Varo (#9).\n' };
+    const p = plainPhone({ notes: [{ id: 'n1', title: 'Train times', text: '8:10 to Ivo', time: '10-24 07:50', ev: 'trip' }],
+        sync: { marks: { base: { index: 4 } }, done: [[5, 7]], hiddenRead: { 5: 'x', 6: 'y', 7: 'z' }, events: { trip: { at: 6, summary: 'train times', effects: [] } } } });
+    mm.phones = { ren: p };
+    globalThis.__menu = { calls: [], answers: [JSON.stringify({ notes: [{ title: 'Groceries', text: 'milk', time: '10-20 10:00' }] })], answer: '{}' };
+    await data.makePhone(mm, 'Ren', { apps: ['note'] });
+    assert.deepEqual(p.notes.map(n => n.title).sort(), ['Groceries', 'Train times']);
+});

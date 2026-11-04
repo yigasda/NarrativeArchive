@@ -166,7 +166,8 @@ WHERE IT COMES FROM
 - "date" and "time": when it happens in that message ("MM-DD", "HH:MM" if known). A plan for later happens when it is made; its later day goes only on the calendar item.
 - "now": the moment of the newest message, never a time something is only planned for.
 - "ownerCity": only when these messages take the owner to another city (a trip, a move, coming home): { "city": in English, "names": [each name the messages and status lines write it as, exactly, then its English and Korean names], "tz": its time zone like "Asia/Seoul" }; else null.
-${zone ? `- "statusCity": the newest status line in these messages is from a scene the app can't place. Whose clock does it show? A city or person in OWNER'S CLOCK, "owner" for the owner's own, or "" when the messages don't say.\n` : ''}${split ? `- "apps": "money" when the event has anything for the bank, cards, orders, tickets or the delivery app (its basket too)${invest ? '; "invest" for the brokerage (a trade, a share price the story gives, a share they start watching, a stake)' : ''}; else []. When unsure, include it.\n` : ''}${life ? `
+- "elsewhere": only people other than the owner whom these messages put in another city (a trip, a move, coming home): [{ "name", "city": in English, "names": [as for ownerCity], "tz" }]; else [].
+${zone ? `- "statusCity": the newest status line in these messages is from a scene the app can't place. Whose clock does it show? A city or person in OWNER'S CLOCK, "owner" for the owner's own, another city as { "city": in English, "tz" }, or "" when the messages don't say.\n` : ''}${split ? `- "apps": "money" when the event has anything for the bank, cards, orders, tickets or the delivery app (its basket too)${invest ? '; "invest" for the brokerage (a trade, a share price the story gives, a share they start watching, a stake)' : ''}; else []. When unsure, include it.\n` : ''}${life ? `
 LIFE
 - An alarm the owner sets, changes or switches on or off in these messages; a timer they set; a file they receive, save, scan or delete. Pictures the camera takes go to photos, not files.
 - An alarm for one occasion (a flight, an appointment) rings once: "days": [] and its "date". Only an alarm the owner keeps for every week has "days".
@@ -194,7 +195,7 @@ ${delivery ? `- A delivery paid in cash at the door has no move. "tip" only wher
 ${PHONE_STYLE.replace('; "now" is the newest moment of the story.', '.')}
 
 ANSWER — one JSON object, nothing else:
-{ "now": "MM-DD HH:MM", "ownerCity": null,${zone ? ' "statusCity": "",' : ''}
+{ "now": "MM-DD HH:MM", "ownerCity": null, "elsewhere": [],${zone ? ' "statusCity": "",' : ''}
   "events": [{ "id": an id from EVENTS ON THE PHONE, or a short new tag like "berlin-flight", "at": 123, "quote": "exact words",
                "date": "MM-DD", "time": "HH:MM" or "", "summary": "one short line",${split ? ` "apps": [] or ["money"${invest ? ', "invest"' : ''}],` : ''}
                "phone": { only the app items this event puts on the phone }${money ? `,
@@ -729,6 +730,12 @@ export async function makePhone(m, owner, { update = false, apps = null } = {}) 
         mergePhone(p, { ...only(got), profile: null });
         if (got2) mergePhone(p, { ...only(got2), profile: part.includes('profile') ? got2.profile : null });
         for (const k of part) if (k !== 'profile') carryOver(k, was[k], p[k]);
+        // an archive section that runs past the clock isn't sent (it would tell what comes after), and its messages are
+        // hidden: what a reflection put in from them, up to the clock, the remake never saw, so it stays
+        const clock = phoneAt(p), [body] = splitTail(String(m.text || ''));
+        const unseen = Number.isInteger(clock) ? parseSections(body).filter(s => !s.group && secFirst(s) <= clock && secEnd(s) > clock).map(s => [secFirst(s), clock]) : [];
+        const inUnseen = i => Number.isInteger(i) && unseen.some(([a, b]) => i >= a && i <= b);
+        if (unseen.length) for (const k of part) if (LISTS.includes(k)) p[k] = [...p[k], ...fresh(k, p[k], (was[k] || []).filter(x => x.froms?.length ? x.froms.every(f => inUnseen(f.at)) : !!x.ev && inUnseen(p.sync?.events?.[x.ev]?.at)))].slice(-CAP[k]);
         // the last round's 되돌리기 would put back the old app's records: no more
         delete p.syncUndo;
         ensureIds(p);
@@ -971,7 +978,9 @@ async function updatePhone(m, owner) {
         let sceneOwn = tracker ? sceneHome(p, tracker.place, m) : true;
         // a status line among these messages whose scene the phone can't place: the model says whose clock it shows
         const clock = clockBlock(p, hm(p.now) ? p.now : st?.raw, m, st);
-        const askZone = sceneOwn === null && round.rows.some(r => r.index === trackAt) && !!clock;
+        // (on a phone that knows no other city, a scene that isn't one of the owner's places is asked too: "Frankfurt"
+        // may be another country; it stays the owner's unless the model names another city)
+        const askZone = round.rows.some(r => r.index === trackAt) && (sceneOwn === null && !!clock || sceneOwn === true && !clock && !!tracker && !sceneZone(p, tracker.place, m));
         // a scene the owner isn't in (or may not be): the model gets its place and weather, never its hour
         const trackShown = tracker && sceneOwn !== true ? { place: tracker.place, weather: tracker.weather } : tracker;
         const trackDay = tracker ? when(tracker.date).slice(0, 5) : '';
@@ -1128,9 +1137,12 @@ async function updatePhone(m, owner) {
         // place: a "cafe" may be in either city next time)
         // the owner moved to another city in these messages: their clock is that city's from here on
         const ownerWent = ownerMoved(p, raw.ownerCity);
+        let ownerWentOthers = false;
         let named = null;
-        if (askZone && typeof raw.statusCity === 'string') named = zoneNamed(p, raw.statusCity, m);
-        if (ownerWent || named) { st = statusMoment(p, roundEnd, named, m); if (tracker) sceneOwn = sceneHome(p, tracker.place, m, named); }
+        if (askZone && (typeof raw.statusCity === 'string' || raw.statusCity && typeof raw.statusCity === 'object')) named = zoneNamed(p, raw.statusCity, m);
+        // someone else now in another city (a trip, a move): their row, from here on
+        if (peopleMoved(p, raw.elsewhere)) ownerWentOthers = true;
+        if (ownerWent || ownerWentOthers || named) { st = statusMoment(p, roundEnd, named, m); if (tracker) sceneOwn = sceneHome(p, tracker.place, m, named); }
         // a status line among these messages: now is never before it (a model that took another city's hour for the
         // owner's); later, the model's own. Its status line also sets back a now that ran ahead of it the day before
         const fresh = !!st?.at && round.rows.some(r => r.index === st.i);
@@ -1629,6 +1641,20 @@ function ownerMoved(p, c) {
     return true;
 }
 const whereOf = (p, name) => (p?.where?.people || []).find(x => nameKey(x.name) === nameKey(name));
+// people other than the owner the reflection says are now in another city: their rows (where they live stays)
+function peopleMoved(p, list) {
+    let n = 0;
+    for (const c of arr(list).slice(0, 8)) {
+        const name = line(c?.name, 60), tz = realTz(c?.tz), city = line(c?.city, 60);
+        if (!name || !tz || !city || nameKey(name) === nameKey(p.owner)) continue;
+        const was = whereOf(p, name), row = { ...was, name: was?.name || name, city, names: namesOf(c), tz };
+        delete row.local;
+        if (was && was.city === row.city && was.tz === row.tz) continue;
+        p.where = { at: p.where?.at || Date.now(), people: [...(p.where?.people || []).filter(x => nameKey(x.name) !== nameKey(name)), row] };
+        n++;
+    }
+    return n > 0;
+}
 const regionName = c => { try { return new Intl.DisplayNames(['en'], { type: 'region' }).of(c) || c; } catch { return c; } };
 // a zone with the names a status line may call its city by
 const zoneOfWhere = x => (!x ? null : x.tz ? { tz: x.tz, where: x.city || regionName(x.lives), names: namesOf(x) } : COUNTRY_TZ[x.lives] ? { tz: COUNTRY_TZ[x.lives], where: x.city || regionName(x.lives), names: namesOf(x) } : null);
@@ -1721,6 +1747,8 @@ export function statusMoment(p, upto = null, named = null, m = null) {
 }
 // a city the reflection named for a status line: its zone (a saved city, someone's city, the owner's own)
 function zoneNamed(p, name, m = null) {
+    // another city the model names ({ "city", "tz" }): its zone, for this round
+    if (name && typeof name === 'object') { const tz = realTz(name.tz); return tz ? { tz, name: line(name.city, 60) || tz } : null; }
     const own = ownerZone(p), k = pkey(name);
     if (!k) return null;
     if (k === 'owner' && own) return { tz: own.tz, name: own.where };
