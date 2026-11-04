@@ -264,3 +264,5 @@
 .ax .ax_pl_act { margin-top: 16px; }
 .ax .ax_pl_act .ax_rw { cursor: pointer; }
 .ax .ax_pl_act .ax_pl_busy { color: #8a919c; }
+.ax .ax_swp > .ax_pl_row { background: #fff; }
+.ax .ax_pl_list .ax_swp + .ax_swp > .ax_pl_row::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; height: 0.5px; border: 0; background: #e6e8ec; }

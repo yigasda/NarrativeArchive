@@ -619,7 +619,7 @@ function placeClock(p, now, h) {
 export function setPlace(p, now, m, ui = {}) {
     const info = placeInfo(p), o = info.owner, man = '<i class="ax_pl_man">수동</i>';
     const opts = Object.entries(COUNTRIES).map(([k, v]) => `<option value="${k}" ${k === o.lives ? 'selected' : ''}>${esc(v)}</option>`).join('') + (o.lives && !COUNTRIES[o.lives] ? `<option value="${esc(o.lives)}" selected>${esc(o.lives)}</option>` : '');
-    const row = x => { const c = placeClock(p, now, x.hours); return `<div role="button" tabindex="0" class="ax_pl_row na_ph_plrow" data-n="${esc(x.name)}"><span class="ax_pl_l"><b>${esc(x.city || '모르는 곳')}</b><small>${esc(x.name)}${c.day ? ` · ${c.day}` : ''}${x.manual ? ` ${man}` : ''}</small></span><span class="ax_pl_r"><b class="cg_num">${hoursText(x.hours)}</b>${c.time ? `<small class="cg_num">${esc(c.time)}</small>` : ''}</span></div>`; };
+    const row = x => { const c = placeClock(p, now, x.hours); return `<div class="ax_swp"><button type="button" class="ax_swdel na_ph_pldrop" data-n="${esc(x.name)}">${ax('trash2', 21, 'currentColor', 2)}<span>빼기</span></button><div role="button" tabindex="0" class="ax_rw ax_pl_row na_ph_plrow" data-n="${esc(x.name)}"><span class="ax_pl_l"><b>${esc(x.city || '모르는 곳')}</b><small>${esc(x.name)}${c.day ? ` · ${c.day}` : ''}${x.manual ? ` ${man}` : ''}</small></span><span class="ax_pl_r"><b class="cg_num">${hoursText(x.hours)}</b>${c.time ? `<small class="cg_num">${esc(c.time)}</small>` : ''}</span></div></div>`; };
     return `${axBar(p, now)}
       ${axTop(axCb('set'))}
       <div class="ax_scroll">${axH1('위치 정보')}
@@ -634,7 +634,7 @@ export function setPlace(p, now, m, ui = {}) {
         </div>
         <div class="ax_sec">다른 사람</div>
         ${info.people.length ? `<div class="ax_card ax_pl_list">${info.people.map(row).join('')}</div>` : '<div class="ax_card ax_pl_list"><div class="ax_pl_none">아직 읽은 사람이 없어요</div></div>'}
-        <div class="ax_foot">눌러서 도시를 바꾸거나 뺄 수 있어요.</div>
+        <div class="ax_foot">눌러서 도시를 바꾸고, 왼쪽으로 밀어서 뺄 수 있어요.</div>
         <div class="ax_card ax_pl_act"><div role="button" tabindex="0" class="ax_rw ax_rwn na_ph_plread${ui.placeReading ? ' on' : ''}"><span class="ax_tx"><span class="ax_n ${ui.placeReading ? 'ax_pl_busy' : 'ax_blue'}">${ui.placeReading ? `${busyHtml} 연동하는 중` : 'AI로 연동'}</span></span></div></div>
         <i class="ax_pad"></i>
       </div>

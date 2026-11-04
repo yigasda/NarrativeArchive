@@ -874,11 +874,10 @@ export async function openPhone(who = null) {
     $root.on('click', '.na_ph_plcity', async function (e) { e.stopPropagation(); if (placeLocked()) return; await placeCity(this.dataset.n, placeInfo(phone()).owner.city); });
     $root.on('click', '.na_ph_plrow', async function (e) {
         e.stopPropagation(); if (placeLocked()) return;
-        const name = this.dataset.n, x = placeInfo(phone()).people.find(r => r.name === name); if (!x) return;
-        const v = await askChoice(name, x.city || '', [{ v: 'city', label: '도시 바꾸기' }, { v: 'drop', label: '목록에서 빼기', danger: true }], '취소');
-        if (v === 'city') return placeCity(name, x.city);
-        if (v === 'drop' && await askSheet(`${name}을(를) 목록에서 뺄까요?`, '연동해도 돌아오지 않아요.', '빼기')) { await dropPlacePerson(m, phone(), name); drawPhone(true); }
+        const name = this.dataset.n, x = placeInfo(phone()).people.find(r => r.name === name); if (x) await placeCity(name, x.city);
     });
+    // 밀어서 빼기, like a message or a mail: the row slid open shows 빼기
+    $root.on('click', '.na_ph_pldrop', async function (e) { e.stopPropagation(); if (placeLocked()) return; await dropPlacePerson(m, phone(), this.dataset.n); drawPhone(true); });
     $root.on('click', '.na_ph_plread', async function (e) {
         e.stopPropagation(); if (placeLocked()) return;
         const v = await askChoice('위치를 연동할까요?', '모델을 한 번 불러요.', [{ v: 'keep', label: '수동 위치 제외하고 연동' }, { v: 'all', label: '전부 새로 연동' }], '취소');
