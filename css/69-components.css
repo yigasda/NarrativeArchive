@@ -83,22 +83,6 @@ body:is(.na_darkui, :not(.na_darkui)) :is(
 
 :is(dialog.popup:has(.na_popup, .na_phone), #na_settings) { --mainFontFamily: "Noto Sans", sans-serif; font-family: var(--mainFontFamily); } /* our windows keep ST's default font; a theme swapping --mainFontFamily (Blue Lemonade) stops here */
 dialog.popup:has(.na_popup, .na_phone):not(#na_x) .popup-content { line-height: normal; } /* Blue Lemonade sets 1.55 on every popup body; ours keep the browser's */
-/* ---- field shield: padding, min height, font size and line height of text fields come from --f-* (set next to every rule of ours
-   that sizes a field; tools/dev/css-harness/fieldvars.py). Themes size form fields with !important (Blue Lemonade: 36px, 12px sides,
-   15px, 1.55) — this one rule holds ours. Fallbacks are SillyTavern's / the browser's own. */
-@property --f-pt { syntax: "*"; inherits: false; }
-@property --f-pr { syntax: "*"; inherits: false; }
-@property --f-pb { syntax: "*"; inherits: false; }
-@property --f-pl { syntax: "*"; inherits: false; }
-@property --f-mh { syntax: "*"; inherits: false; }
-@property --f-fs { syntax: "*"; inherits: false; }
-@property --f-lh { syntax: "*"; inherits: false; }
-body:is(.na_darkui, :not(.na_darkui)) :is(dialog.popup:not(:has(.na_phone)) .na_popup :is(textarea, select, input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"], [type="button"], [type="submit"])), #na_settings :is(textarea, select, input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"], [type="button"], [type="submit"]))):not(#na_x):not(#na_y) {
-    padding: var(--f-pt, 0) var(--f-pr, 0) var(--f-pb, 0) var(--f-pl, 0) !important; min-height: var(--f-mh, auto) !important; font-size: var(--f-fs, var(--mainFontSize)) !important; line-height: var(--f-lh, normal) !important; }
-:where(dialog.popup .na_popup, #na_settings) :where(input) { --f-pt: 1px; --f-pr: 2px; --f-pb: 1px; --f-pl: 2px; }
-:where(dialog.popup .na_popup, #na_settings) :where(textarea) { --f-pt: 5px; --f-pr: 10px; --f-pb: 5px; --f-pl: 10px; }
-:where(dialog.popup .na_popup, #na_settings) :where(.text_pole) { --f-pt: 3px; --f-pr: 5px; --f-pb: 3px; --f-pl: 5px; }
-
 /* SillyTavern's own field look (1px edge in its border colour, 5px corners), at the lowest weight: any rule of ours wins over it */
 :where(dialog.popup .na_popup, #na_settings) :where(textarea, .text_pole) { --c-bw: 1px; --c-bs: solid; --c-bc: var(--SmartThemeBorderColor); --c-r: 5px; }
 

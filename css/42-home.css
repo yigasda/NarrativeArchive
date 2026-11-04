@@ -24,7 +24,7 @@ body.na_darkui #na_settings {
 #na_settings #na_meter .na_meter_state b.on { color: var(--hm-acc-ink); }
 #na_settings #na_meter .na_meter_state b.warn { color: var(--hm-warn); }
 #na_settings #na_meter .na_meter_state b.off { color: var(--hm-dim); }
-#na_settings #na_meter .na_hchip { height: 30px; padding: 0 11px; --f-pt: 0; --f-pr: 11px; --f-pb: 0; --f-pl: 11px; gap: 4px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 999px; font-size: 0.86em !important; --f-fs: 0.86em; --axfs: 0.86em; font-weight: 600; --c-bg: var(--hm-ok-soft); --c-fg: var(--hm-ok); }
+#na_settings #na_meter .na_hchip { height: 30px; padding: 0 11px; gap: 4px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 999px; font-size: 0.86em !important; --axfs: 0.86em; font-weight: 600; --c-bg: var(--hm-ok-soft); --c-fg: var(--hm-ok)}
 #na_settings #na_meter .na_hchip > span { font-size: 1em !important; --axfs: 1em}
 #na_settings #na_meter .na_hchip.na_health_warn { --c-bg: var(--hm-warn-soft); --c-fg: var(--na-warn); }
 #na_settings #na_meter #na_gear { width: 30px; height: 30px; opacity: 1; --c-fg: var(--hm-dim); }
@@ -42,7 +42,7 @@ body.na_darkui #na_settings {
 
 /* icon tabs */
 #na_settings .na_body > .na_nav { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 4px; border-radius: 18px; --axr: 18px; background: var(--hm-track)}
-#na_settings .na_body > .na_nav .na_nav_btn { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; padding: 7px 0 5px; --f-pt: 7px; --f-pr: 0; --f-pb: 5px; --f-pl: 0; --c-r: 14px; font-size: 0.8em !important; --f-fs: 0.8em; --axfs: 0.8em; line-height: 1.2; --f-lh: 1.2; opacity: 1; --c-fg: var(--hm-mute); }
+#na_settings .na_body > .na_nav .na_nav_btn { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; padding: 7px 0 5px; --c-r: 14px; font-size: 0.8em !important; --axfs: 0.8em; line-height: 1.2; opacity: 1; --c-fg: var(--hm-mute)}
 #na_settings .na_body > .na_nav .na_nav_btn > span { font-size: 1em !important; --axfs: 1em}
 #na_settings .na_body > .na_nav .na_nav_btn.active { --c-bg: var(--hm-card); --c-fg: var(--hm-acc-ink); font-weight: 600; --c-sh: 0 1px 3px var(--hm-shadow); }
 
@@ -50,7 +50,7 @@ body.na_darkui #na_settings {
 #na_settings .na_tab_pane[data-pane="home"] { gap: 12px; color: var(--hm-ink); --axfg: var(--hm-ink)}
 #na_settings #na_next:empty { display: none; }
 #na_settings .na_tab_pane[data-pane="home"] .na_quick { display: flex; gap: 8px; }
-#na_settings .na_tab_pane[data-pane="home"] .na_qbtn { flex: 1; min-width: 0; display: inline-flex; flex-direction: row; align-items: center; justify-content: center; gap: 6px; height: 42px; padding: 0 6px; --f-pt: 0; --f-pr: 6px; --f-pb: 0; --f-pl: 6px; --c-bw: 1px; --c-bs: solid; --c-bc: var(--hm-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--hm-line); --c-r: 14px; --c-bg: var(--hm-card); --c-fg: var(--hm-ink); font-size: 0.86em !important; --f-fs: 0.86em; --axfs: 0.86em; }
+#na_settings .na_tab_pane[data-pane="home"] .na_qbtn { flex: 1; min-width: 0; display: inline-flex; flex-direction: row; align-items: center; justify-content: center; gap: 6px; height: 42px; padding: 0 6px; --c-bw: 1px; --c-bs: solid; --c-bc: var(--hm-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--hm-line); --c-r: 14px; --c-bg: var(--hm-card); --c-fg: var(--hm-ink); font-size: 0.86em !important; --axfs: 0.86em}
 #na_settings .na_tab_pane[data-pane="home"] .na_qbtn > span { font-size: 1em !important; --axfs: 1em; white-space: nowrap}
 #na_settings .na_tab_pane[data-pane="home"] .na_qbtn .na_svg { flex: none; color: var(--hm-acc); --axfg: var(--hm-acc)}
 #na_settings .na_tab_pane[data-pane="home"] .na_qbtn:hover { --c-bc: var(--hm-acc); --c-bct: var(--hm-acc); }
@@ -59,7 +59,7 @@ body.na_darkui #na_settings {
 #na_settings .na_ai_head > b { font-size: 1.07em !important; font-weight: 700; }
 #na_settings .na_ai_status { display: inline-flex; align-items: center; gap: 5px; font-size: 0.82em !important; --axfs: 0.82em; color: var(--hm-ok); --axfg: var(--hm-ok)}
 #na_settings .na_ai_status > i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
-#na_settings .na_hrow { display: flex; align-items: center; gap: 12px; width: 100%; padding: 13px 14px; --f-pt: 13px; --f-pr: 14px; --f-pb: 13px; --f-pl: 14px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 16px; --c-bg: var(--hm-card); --c-fg: inherit; font: inherit; --axfs: inherit; --axff: inherit; text-align: left; cursor: pointer; }
+#na_settings .na_hrow { display: flex; align-items: center; gap: 12px; width: 100%; padding: 13px 14px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 16px; --c-bg: var(--hm-card); --c-fg: inherit; font: inherit; --axfs: inherit; --axff: inherit; text-align: left; cursor: pointer}
 #na_settings .na_hrow:hover { --c-sh: inset 0 0 0 1px var(--hm-line); }
 #na_settings .na_hrow_ic { flex: none; width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; --axr: 50%}
 #na_settings .na_hrow_ic.drift { background: var(--hm-acc-soft); color: var(--hm-acc); --axfg: var(--hm-acc)}
@@ -89,7 +89,7 @@ body.na_darkui #na_settings #na_next .na_next_card.warn { border-color: rgba(232
 body.na_darkui #na_settings #na_next .na_next_card.bad { border-color: rgba(236, 116, 104, 0.3); --c-bc: rgba(236, 116, 104, 0.3); --c-bct: rgba(236, 116, 104, 0.3); }
 body.na_darkui #na_settings #na_next .na_next_card.warn > i { background: var(--hm-warn-soft); color: var(--hm-warn); }
 body.na_darkui #na_settings #na_next .na_next_card.bad > i { background: var(--hm-bad-soft); color: var(--hm-bad); }
-body.na_darkui #na_settings #na_next .na_next_card .na_btn.na_primary { height: 34px; padding: 0 14px; --f-pt: 0; --f-pr: 14px; --f-pb: 0; --f-pl: 14px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 12px; font-weight: 600; --c-sh: none; }
+body.na_darkui #na_settings #na_next .na_next_card .na_btn.na_primary { height: 34px; padding: 0 14px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 12px; font-weight: 600; --c-sh: none; }
 body.na_darkui #na_settings #na_next .na_next_card.warn .na_btn.na_primary { --c-bg: var(--hm-warn-soft); --c-fg: #F0CC80; }
 body.na_darkui #na_settings #na_next .na_next_card.bad .na_btn.na_primary { --c-bg: var(--hm-bad-soft); --c-fg: #F29A90; }
 body.na_darkui #na_settings #na_next .na_next_card .na_btn.na_primary:hover { filter: brightness(1.15); }
@@ -123,13 +123,13 @@ body.na_darkui dialog.popup:has(#na_settings) { background: #17171A !important; 
 .na_launch_grp { display: flex; flex-direction: column; gap: 6px; }
 .na_launch .na_launch_lbl { padding: 0 2px; font-size: 0.8em !important; --axfs: 0.8em; font-weight: 600; color: var(--na-dim); --axfg: var(--na-dim)}
 .na_launch_grid { display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); gap: 8px; }
-.na_launch .na_launch_btn { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; padding: 12px 6px 10px; --f-pt: 12px; --f-pr: 6px; --f-pb: 10px; --f-pl: 6px; --c-bw: 1px; --c-bs: solid; --c-bc: var(--na-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line); --c-r: 16px; --c-bg: var(--na-card); --c-fg: inherit; font: inherit; --axfs: inherit; --axff: inherit; font-size: 0.86em !important; --f-fs: 0.86em; --axfs: 0.86em; line-height: 1.25; --f-lh: 1.25; text-align: center; cursor: pointer; }
+.na_launch .na_launch_btn { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; padding: 12px 6px 10px; --c-bw: 1px; --c-bs: solid; --c-bc: var(--na-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line); --c-r: 16px; --c-bg: var(--na-card); --c-fg: inherit; font: inherit; --axfs: inherit; --axff: inherit; font-size: 0.86em !important; --axfs: 0.86em; line-height: 1.25; text-align: center; cursor: pointer}
 .na_launch .na_launch_btn > span:last-child { font-size: 1em !important; --axfs: 1em}
 .na_launch .na_launch_btn:hover:not(:disabled) { --c-bc: var(--na-accent); --c-bct: var(--na-accent); }
 .na_launch .na_launch_btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .na_launch .na_launch_ic { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 12px; --axr: 12px; background: var(--na-accent-soft); color: var(--na-accent-fg, var(--na-accent)); --axfg: var(--na-accent-fg, var(--na-accent))}
 .na_launch_tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 16px; --axr: 16px; background: var(--na-softer, var(--na-card2))}
-.na_launch .na_launch_tab { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; padding: 7px 0 5px; --f-pt: 7px; --f-pr: 0; --f-pb: 5px; --f-pl: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 12px; --c-bg: none; --c-fg: var(--na-mute, inherit); font: inherit; --axfs: inherit; --axff: inherit; font-size: 0.78em !important; --f-fs: 0.78em; --axfs: 0.78em; line-height: 1.2; --f-lh: 1.2; cursor: pointer; }
+.na_launch .na_launch_tab { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; padding: 7px 0 5px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 12px; --c-bg: none; --c-fg: var(--na-mute, inherit); font: inherit; --axfs: inherit; --axff: inherit; font-size: 0.78em !important; --axfs: 0.78em; line-height: 1.2; cursor: pointer}
 .na_launch .na_launch_tab > span { font-size: 1em !important; --axfs: 1em}
 .na_launch .na_launch_tab:hover { --c-bg: var(--na-card); --c-fg: var(--na-accent-ink, var(--na-accent)); }
 
@@ -145,10 +145,6 @@ body.na_darkui .na_launch_tabs { background: #232328; }
     min-width: 0;
     margin: 0 !important;
     padding: 8px 0 !important;
-    --f-pt: 8px;
-    --f-pr: 0;
-    --f-pb: 8px;
-    --f-pl: 0;
     border: 0 !important;
     --c-bw: 0;
     --c-bs: none;
@@ -170,9 +166,7 @@ body.na_darkui .na_launch_tabs { background: #232328; }
     --c-fg: inherit;
     font: inherit;
     font-size: 14px !important;
-    --f-fs: 14px;
     line-height: 1.5 !important;
-    --f-lh: 1.5;
     -webkit-appearance: none;
     appearance: none;
 }
@@ -203,7 +197,7 @@ body.na_darkui .na_launch_tabs { background: #232328; }
 .na_fp_all { display: inline-flex; align-items: center; gap: 6px; margin: 0; cursor: pointer; }
 .na_fp_all input { margin: 0; accent-color: var(--na-accent); }
 .na_fp .na_fp_n { font-size: 0.86em !important; --axfs: 0.86em; font-weight: 600}
-.na_fp_make { font-size: 0.82em; --f-fs: 0.82em; --axfs: 0.82em; --c-fg: var(--na-accent-ink, var(--na-accent)); }
+.na_fp_make { font-size: 0.82em; --axfs: 0.82em; --c-fg: var(--na-accent-ink, var(--na-accent))}
 .na_fp_set button:disabled { opacity: 0.45; cursor: not-allowed; }
 
 /* 온도: the number never breaks ("+2", not "+" over "2"); the three-number box stays compact */
@@ -219,13 +213,13 @@ body.na_darkui .na_launch_tabs { background: #232328; }
 .na_peek { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border: 1px solid var(--na-accent-soft); border-radius: 16px; --axr: 16px; background: var(--na-card); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06)}
 .na_peek_head { display: flex; align-items: flex-start; gap: 8px; }
 .na_peek_head b { flex: 1; min-width: 0; font-size: 0.9em; line-height: 1.4; }
-.na_peek_x { flex: none; width: 28px; height: 28px; display: grid; place-items: center; padding: 0; --f-pt: 0; --f-pr: 0; --f-pb: 0; --f-pl: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 8px; --c-bg: none; --c-fg: var(--na-dim); font-size: 0.85em; --f-fs: 0.85em; --axfs: 0.85em; cursor: pointer; }
+.na_peek_x { flex: none; width: 28px; height: 28px; display: grid; place-items: center; padding: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 8px; --c-bg: none; --c-fg: var(--na-dim); font-size: 0.85em; --axfs: 0.85em; cursor: pointer}
 .na_peek_x:hover { --c-bg: var(--na-card2); }
 .na_peek_body { max-height: 42vh; overflow-y: auto; overscroll-behavior: contain; font-size: 0.88em; --axfs: 0.88em; line-height: 1.6}
 .na_peek_body p, .na_peek_body ul { margin: 0 0 6px; }
 .na_peek_body ul { padding-left: 1.1em; }
 .na_peek_foot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.na_peek_foot .na_linkbtn { font-size: 0.82em; --f-fs: 0.82em; --axfs: 0.82em; --c-fg: var(--na-accent-ink, var(--na-accent)); }
+.na_peek_foot .na_linkbtn { font-size: 0.82em; --axfs: 0.82em; --c-fg: var(--na-accent-ink, var(--na-accent))}
 .na_peek_foot .na_peek_go { margin-left: auto; --c-fg: var(--na-dim); }
 .na_peek_info { font-size: 0.76em; --axfs: 0.76em; color: var(--na-dim); --axfg: var(--na-dim)}
 .na_people :is(.na_tp_tile, .na_tp_turn, .na_tp_row).on { outline: 2px solid var(--na-accent); outline-offset: -2px; }
@@ -251,10 +245,6 @@ body.na_darkui .na_launch_tabs { background: #232328; }
     height: 36px;
     margin: 0 !important;
     padding: 0 !important;
-    --f-pt: 0;
-    --f-pr: 0;
-    --f-pb: 0;
-    --f-pl: 0;
     border: 0 !important;
     --c-bw: 0;
     --c-bs: none;
@@ -274,11 +264,10 @@ body.na_darkui .na_launch_tabs { background: #232328; }
     --c-fg: inherit;
     font: inherit;
     font-size: 14px !important;
-    --f-fs: 14px;
 }
 .na_popup .na_ly_ask input.na_ly_askq::placeholder { color: var(--na-dim) !important; opacity: 1 !important; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ly_ask input.na_ly_askq:is(*, :hover, :focus, :focus-visible):not(#na_x) { background: transparent !important; --c-bg: transparent; border: 0 !important; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; border-radius: 0 !important; --c-r: 0; box-shadow: none !important; --c-sh: none; outline: none !important; } /* the pill is the only box (3.169.69) */
-.na_ly_askgo { flex: none; width: 36px; height: 36px; display: grid; place-items: center; padding: 0; --f-pt: 0; --f-pr: 0; --f-pb: 0; --f-pl: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 13px; --c-bg: var(--na-accent); --c-fg: var(--na-onaccent, #fff); cursor: pointer; }
+.na_ly_askgo { flex: none; width: 36px; height: 36px; display: grid; place-items: center; padding: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 13px; --c-bg: var(--na-accent); --c-fg: var(--na-onaccent, #fff); cursor: pointer; }
 .na_ly_askgo:disabled { opacity: 0.7; cursor: wait; }
 
 
@@ -291,7 +280,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_
 .na_au_box > label.na_au_on .na_cp_txt { flex: 1; min-width: 0; }
 .na_au_box > label > small { color: var(--na-dim); font-size: 0.857em; }
 .na_au_box .text_pole { margin: 0; width: 100%; box-sizing: border-box; }
-.na_au_box textarea { resize: vertical; min-height: 3.2em; --f-mh: 3.2em; }
+.na_au_box textarea { resize: vertical; min-height: 3.2em; }
 .na_wz_austate { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 
 /* 제목 다시 짓기 */
@@ -301,7 +290,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_
 .na_rt_head b { flex: 1; }
 .na_rt_quick { display: flex; gap: 4px; }
 .na_rt_list { display: flex; flex-direction: column; border: 1px solid var(--na-line); border-radius: 14px; --axr: 14px; background: var(--na-card); overflow: hidden}
-.na_rt_row { display: flex; align-items: flex-start; gap: 10px; margin: 0; padding: 10px 12px; --f-pt: 10px; --f-pr: 12px; --f-pb: 10px; --f-pl: 12px; cursor: pointer; }
+.na_rt_row { display: flex; align-items: flex-start; gap: 10px; margin: 0; padding: 10px 12px; cursor: pointer; }
 .na_rt_row + .na_rt_row { --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line); }
 .na_rt_row > input[type=checkbox] { margin-top: 3px; flex: none; }
 .na_rt_row.same { opacity: 0.6; }
@@ -346,7 +335,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_
 .na_mg_rawrow.warn .na_cp_txt small { color: var(--na-accent-fg, var(--na-accent)); }
 .na_qc_gradebox { display: flex; align-items: flex-start; gap: 8px; margin-top: 12px; text-align: left; line-height: 1.45; }
 .na_qc_gradebox small { color: var(--na-dim, inherit); opacity: 0.85; }
-.na_mg_rawview { align-self: flex-start; margin-top: -4px; font-size: 0.86em; --f-fs: 0.86em; --axfs: 0.86em; }
+.na_mg_rawview { align-self: flex-start; margin-top: -4px; font-size: 0.86em; --axfs: 0.86em}
 .na_mg_rawpre { white-space: pre-wrap; word-break: break-word; font-size: 0.82em; --axfs: 0.82em; line-height: 1.5; margin: 0; padding: 10px 12px; border-radius: 12px; --axr: 12px; background: var(--na-softer); border: 1px solid var(--na-line)}
 
 /* 다이제스트 */
@@ -362,7 +351,7 @@ body.na_darkui .na_tag.dig { background: #2E2E34; color: #B9DDB0; --axfg: #B9DDB
 .na_dg_ihead { display: flex; align-items: center; gap: 10px; }
 .na_dg_ihead .na_rt_txt b { font-size: 0.95em; line-height: 1.4; }
 .na_dg_iact { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.86em; --axfs: 0.86em}
-.na_popup .na_dg_edit, .na_popup .na_dg_out { margin: 0; width: 100%; box-sizing: border-box; font-size: 0.88em; --f-fs: 0.88em; --axfs: 0.88em; line-height: 1.55; --f-lh: 1.55; resize: vertical; }
+.na_popup .na_dg_edit, .na_popup .na_dg_out { margin: 0; width: 100%; box-sizing: border-box; font-size: 0.88em; --axfs: 0.88em; line-height: 1.55; resize: vertical}
 .na_dg_target .na_cp_txt { display: flex; flex-direction: column; gap: 2px; }
 .na_dg_target .na_cp_txt small { color: var(--na-dim); font-size: 0.857em; }
 .na_dg_tok { display: inline-flex; align-items: center; gap: 6px; flex: none; }
@@ -370,7 +359,7 @@ body.na_darkui .na_tag.dig { background: #2E2E34; color: #B9DDB0; --axfg: #B9DDB
 .na_dg_res { display: flex; flex-direction: column; gap: 8px; }
 
 /* 이번 압축 메모 · 추가 창에서 이어서 고치기 */
-.na_qc_memo { display: block; width: 100%; box-sizing: border-box; margin: 12px 0 0; min-height: 3.4em; --f-mh: 3.4em; resize: vertical; font-size: 0.9em; --f-fs: 0.9em; --axfs: 0.9em; text-align: left; }
+.na_qc_memo { display: block; width: 100%; box-sizing: border-box; margin: 12px 0 0; min-height: 3.4em; resize: vertical; font-size: 0.9em; --axfs: 0.9em; text-align: left}
 .na_apf { display: flex; flex-direction: column; gap: 6px; }
 .na_apf_foot { display: flex; align-items: center; gap: 10px; font-size: 0.86em; --axfs: 0.86em}
 .na_apf_foot label { flex: 1; min-width: 0; margin: 0; }
@@ -387,15 +376,15 @@ body.na_darkui .na_tag.dig { background: #2E2E34; color: #B9DDB0; --axfg: #B9DDB
 .na_selbar_acts { display: flex; gap: 6px; overflow-x: auto; overscroll-behavior: contain; padding-bottom: 2px; scrollbar-width: none; }
 .na_selbar_acts::-webkit-scrollbar { display: none; }
 .na_selbar_acts > * { flex: none; white-space: nowrap; }
-.na_selbar_acts .na_sel_ver { width: auto; margin: 0; height: 32px; padding: 0 8px; --f-pt: 0; --f-pr: 8px; --f-pb: 0; --f-pl: 8px; font-size: 0.86em; --f-fs: 0.86em; --axfs: 0.86em; --c-r: 999px; }
+.na_selbar_acts .na_sel_ver { width: auto; margin: 0; height: 32px; padding: 0 8px; font-size: 0.86em; --axfs: 0.86em; --c-r: 999px}
 .na_selbar_acts button:disabled, .na_selbar_acts select:disabled { opacity: 0.45; }
 .na_selbar_acts .na_danger { --c-fg: var(--na-danger, #b3261e); }
 .na_dg_kotext { white-space: pre-wrap; padding: 10px 12px; border-radius: 12px; --axr: 12px; background: var(--na-softer); border: 1px solid var(--na-line); font-size: 0.88em; --axfs: 0.88em; line-height: 1.6}
-.na_dg_res .na_rt_head .na_dg_resko { flex: none; font-size: 0.86em; --f-fs: 0.86em; --axfs: 0.86em; }
+.na_dg_res .na_rt_head .na_dg_resko { flex: none; font-size: 0.86em; --axfs: 0.86em}
 
 /* 추가 창: STATE에서 사라진 줄 */
 .na_sl_list { display: flex; flex-direction: column; gap: 4px; margin: 6px 0 2px; max-height: 32vh; overflow-y: auto; overscroll-behavior: contain; }
-.na_sl_row { display: flex; align-items: flex-start; gap: 8px; margin: 0; font-size: 0.92em; --f-fs: 0.92em; --axfs: 0.92em; line-height: 1.45; --f-lh: 1.45; cursor: pointer; }
+.na_sl_row { display: flex; align-items: flex-start; gap: 8px; margin: 0; font-size: 0.92em; --axfs: 0.92em; line-height: 1.45; cursor: pointer}
 .na_sl_row > input { margin-top: 3px; flex: none; }
 .na_sl_row small { display: block; color: var(--na-dim); font-size: 0.82em; }
 .na_cp_row .na_cp_sel { flex: none; width: auto; max-width: 52%; margin: 0; }
@@ -420,14 +409,14 @@ body.na_darkui .na_tag.dig { background: #2E2E34; color: #B9DDB0; --axfg: #B9DDB
 .na_qc_row > b { flex: 1; min-width: 0; font-weight: 600; word-break: break-all; }
 .na_qc_row > b small { margin-left: 6px; font-weight: 400; color: var(--na-dim); word-break: keep-all; }
 .na_qc .na_qc_memo { margin: 0; }
-.na_qc_check { display: flex; align-items: flex-start; gap: 8px; margin: 0; line-height: 1.4; --f-lh: 1.4; }
+.na_qc_check { display: flex; align-items: flex-start; gap: 8px; margin: 0; line-height: 1.4; }
 .na_qc_check span { display: flex; flex-direction: column; }
 .na_qc_check small { color: var(--na-dim); font-size: 0.85em; }
 /* STATE · OPEN changes the model listed, to tick */
 .na_chg_head { display: flex; flex-direction: column; gap: 2px; margin-bottom: 2px; }
 .na_chg_head b { font-size: 13px; }
 .na_chg_head small { color: var(--na-dim); font-size: 11.5px; line-height: 1.4; }
-.na_chg_row { display: flex; align-items: flex-start; gap: 8px; margin: 0; padding: 7px 9px; --f-pt: 7px; --f-pr: 9px; --f-pb: 7px; --f-pl: 9px; --c-r: 10px; --c-bg: var(--na-soft); font-size: 12.5px; --f-fs: 12.5px; --axfs: 12.5px; line-height: 1.45; --f-lh: 1.45; cursor: pointer; }
+.na_chg_row { display: flex; align-items: flex-start; gap: 8px; margin: 0; padding: 7px 9px; --c-r: 10px; --c-bg: var(--na-soft); font-size: 12.5px; --axfs: 12.5px; line-height: 1.45; cursor: pointer}
 .na_chg_row.off { opacity: 0.72; }
 .na_chg_row input { margin-top: 3px; flex: none; }
 .na_chg_txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; word-break: break-word; }
@@ -444,12 +433,12 @@ body.na_darkui .na_tag.dig { background: #2E2E34; color: #B9DDB0; --axfg: #B9DDB
 .na_trk_re { width: 100%; box-sizing: border-box; margin-top: 6px; font-family: ui-monospace, var(--monoFontFamily, monospace); --axff: ui-monospace, var(--monoFontFamily, monospace); font-size: 11.5px; --axfs: 11.5px; min-height: 3.2em; resize: vertical}
 .na_trk_btns { display: flex; gap: 10px; align-items: baseline; margin-top: 4px; }
 .na_wn { gap: 10px; }
-.na_wn_ta { width: 100%; box-sizing: border-box; min-height: 24vh; --f-mh: 24vh; font-size: 13px; --f-fs: 13px; --axfs: 13px; line-height: 1.6; --f-lh: 1.6; resize: vertical; }
-.na_wn .na_wn_ta, .na_wn .na_wn_ta:is(:focus, :hover) { --c-bg: var(--na-paper); --c-bw: 1px; --c-bs: solid; --c-bc: var(--na-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line); --c-r: 12px; --c-sh: none; --c-fg: var(--na-ink); padding: 10px 12px; --f-pt: 10px; --f-pr: 12px; --f-pb: 10px; --f-pl: 12px; }
+.na_wn_ta { width: 100%; box-sizing: border-box; min-height: 24vh; font-size: 13px; --axfs: 13px; line-height: 1.6; resize: vertical}
+.na_wn .na_wn_ta, .na_wn .na_wn_ta:is(:focus, :hover) { --c-bg: var(--na-paper); --c-bw: 1px; --c-bs: solid; --c-bc: var(--na-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line); --c-r: 12px; --c-sh: none; --c-fg: var(--na-ink); padding: 10px 12px; }
 .na_wn .na_wn_ta::placeholder { color: var(--na-dim) !important; opacity: 1; }
-.na_wn_seg button { flex: 1; min-width: 0; flex-direction: row; justify-content: center; gap: 4px; padding: 6px 4px; --f-pt: 6px; --f-pr: 4px; --f-pb: 6px; --f-pl: 4px; }
+.na_wn_seg button { flex: 1; min-width: 0; flex-direction: row; justify-content: center; gap: 4px; padding: 6px 4px; }
 .na_wn_seg button small { font-size: 0.78em; opacity: 0.7; font-variant-numeric: tabular-nums; }
-.na_qc_sclabel { display: flex; flex-direction: column; gap: 2px; font-size: 0.92em; --f-fs: 0.92em; --axfs: 0.92em; font-weight: 600; margin: 0; }
+.na_qc_sclabel { display: flex; flex-direction: column; gap: 2px; font-size: 0.92em; --axfs: 0.92em; font-weight: 600; margin: 0}
 .na_qc_sclabel small { font-weight: 400; color: var(--na-dim); font-size: 0.85em; }
-.na_qc .na_qc_scenes { width: 100%; box-sizing: border-box; margin: 0; --c-ff: ui-monospace, var(--monoFontFamily, monospace); font-size: 12px; --f-fs: 12px; --axfs: 12px; line-height: 1.6; --f-lh: 1.6; resize: vertical; text-align: left; }
+.na_qc .na_qc_scenes { width: 100%; box-sizing: border-box; margin: 0; --c-ff: ui-monospace, var(--monoFontFamily, monospace); font-size: 12px; --axfs: 12px; line-height: 1.6; resize: vertical; text-align: left}
 

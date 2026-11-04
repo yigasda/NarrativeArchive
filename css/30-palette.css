@@ -68,7 +68,7 @@ body.na_darkui .na_v2, body.na_darkui #na_settings .na_tab_pane:where(:not([data
 .na_v2_title b { font-size: 1.4286em; font-weight: 700; letter-spacing: -0.01em; }
 .na_v2_title small, .na_v2 .na_v2_title small:not([class]) { font-size: 0.893em; color: var(--na-sub, var(--na-dim)); }
 /* buttons take line-height: normal through font: inherit and come out a few px short of the mockups */
-.na_v2 button, #na_settings .na_tab_pane:where(:not([data-pane="home"])) button { line-height: 1.5; --f-lh: 1.5; }
+.na_v2 button, #na_settings .na_tab_pane:where(:not([data-pane="home"])) button { line-height: 1.5; }
 .na_v2_label { font-size: 0.929em; --axfs: 0.929em; font-weight: 600; color: var(--na-mute, var(--na-dim)); --axfg: var(--na-mute, var(--na-dim)); margin: 2px 2px -6px}
 /* switches: 40×24, 18px knob, no shadow */
 .na_sw { width: 40px; height: 24px; }
@@ -78,7 +78,7 @@ body.na_darkui .na_v2, body.na_darkui #na_settings .na_tab_pane:where(:not([data
 .na_tgl_ui::after { box-shadow: none; }
 input.na_toggle:checked + .na_tgl_ui::after { transform: translateX(16px); }
 /* list rows */
-.na_cp_row { padding: 12px 14px; --f-pt: 12px; --f-pr: 14px; --f-pb: 12px; --f-pl: 14px; border-top-color: var(--na-line2, var(--na-line)); --c-bct: var(--na-line2, var(--na-line)); }
+.na_cp_row { padding: 12px 14px; border-top-color: var(--na-line2, var(--na-line)); --c-bct: var(--na-line2, var(--na-line)); }
 .na_wz2_sumrow { border-color: var(--na-line2, var(--na-line)); }
 .na_set_row { border-color: var(--na-line2, var(--na-line)); --c-bc: var(--na-line2, var(--na-line)); --c-bct: var(--na-line2, var(--na-line)); }
 .na_browser .na_card_actions { border-top-color: var(--na-line2, var(--na-line)); }
@@ -98,8 +98,8 @@ body.na_darkui .na_v2_tabs button.on, body.na_darkui .na_v2_seg button.on { colo
 /* text inputs inside the redesigned screens */
 body:not(.na_darkui) .na_v2 .text_pole, body:not(.na_darkui) #na_settings .text_pole { --c-bg: #F2E9E2; --c-bw: 1px; --c-bs: solid; --c-bc: var(--na-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line); --c-fg: var(--na-ink); --c-r: 12px; }
 body.na_darkui .na_v2 .text_pole, body.na_darkui #na_settings .text_pole { --c-bg: #2A2A30; --c-bw: 1px; --c-bs: solid; --c-bc: var(--na-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line); --c-fg: var(--na-ink); --c-r: 12px; }
-body:not(.na_darkui) :is(.na_v2, #na_settings) textarea.text_pole { padding: 10px 12px; --f-pt: 10px; --f-pr: 12px; --f-pb: 10px; --f-pl: 12px; }
-body.na_darkui :is(.na_v2, #na_settings) textarea.text_pole { padding: 10px 12px; --f-pt: 10px; --f-pr: 12px; --f-pb: 10px; --f-pl: 12px; }
+body:not(.na_darkui) :is(.na_v2, #na_settings) textarea.text_pole { padding: 10px 12px; }
+body.na_darkui :is(.na_v2, #na_settings) textarea.text_pole { padding: 10px 12px; }
 body:not(.na_darkui) :is(.na_v2, #na_settings) .text_pole::placeholder { color: #A99C92; opacity: 1; }
 body.na_darkui :is(.na_v2, #na_settings) .text_pole::placeholder { color: #85858E; opacity: 1; }
 
