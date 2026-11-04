@@ -606,3 +606,16 @@ test('위치 정보 › AI로 다시 읽기 › 전부 새로: what was set by h
     assert.deepEqual([info.owner.city, info.owner.lives, info.owner.cityManual, info.owner.livesManual], ['Seoul', 'KR', false, false]);
     assert.deepEqual(info.people.map(x => x.name), ['Ivo']);
 });
+
+test('위치 정보: one person by two names ("Somang Park" in the contacts, "Somang" in a thread) is asked and kept once', async () => {
+    globalThis.__rows = rows(8);
+    const p = plainPhone({ country: 'DE', threads: [{ with: 'Somang', messages: [] }, { with: 'Ivo Kim', messages: [] }], contacts: [{ name: 'Somang Park' }, { name: 'Ivo Park' }],
+        where: { at: 1, people: [{ name: 'Somang', city: 'Seoul', names: ['Seoul'], lives: 'KR', tz: 'Asia/Seoul' }, { name: 'Somang Park', city: 'Seoul', names: ['Seoul'], lives: 'KR', tz: 'Asia/Seoul' }] } });
+    globalThis.__where = [];
+    globalThis.__whereAnswer = { people: [{ name: 'Somang Park', city: 'Seoul', lives: 'KR', tz: 'Asia/Seoul' }, { name: 'Somang', city: 'Seoul', lives: 'KR', tz: 'Asia/Seoul' }] };
+    let info;
+    try { info = await data.rereadPlaces({ ...m, phones: { ren: p } }, p, { all: true }); } finally { delete globalThis.__whereAnswer; }
+    const asked = globalThis.__where.at(-1).split('[PEOPLE]\n')[1].split('\n\n')[0].split('\n');
+    assert.deepEqual(asked.sort(), ['Ivo Kim', 'Ivo Park', 'Somang Park']); // (the owner Ren and two Ivos who are not the same)
+    assert.deepEqual(info.people.map(x => x.name), ['Somang Park']);
+});

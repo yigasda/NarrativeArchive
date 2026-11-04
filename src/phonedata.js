@@ -1624,7 +1624,10 @@ function whereRequest(m, p) {
     const c = ctx(), g = c.groupId ? (c.groups || []).find(x => x.id === c.groupId) : null;
     const chars = g ? (g.members || []).map(a => (c.characters || []).find(x => x.avatar === a)).filter(Boolean) : [c.characters?.[c.characterId]].filter(Boolean);
     const persona = String(c.powerUserSettings?.persona_description || '').trim(), upto = phoneAt(p);
-    const people = [...new Set([...(p.threads || []).map(t => t.with), ...(p.contacts || []).map(x => x.name), ...Object.values(m.phones || {}).map(q => q?.owner)].filter(n => n && nameKey(n) !== nameKey(p.owner)))].slice(0, 16);
+    // (one person by two names, "Somang Park" in the contacts and "Somang" in a thread: once, by the longer name)
+    const names = [...new Set([...(p.threads || []).map(t => t.with), ...(p.contacts || []).map(x => x.name), ...Object.values(m.phones || {}).map(q => q?.owner)].filter(n => n && !samePerson(n, p.owner)))]
+        .sort((a, b) => String(b).length - String(a).length);
+    const people = names.filter((n, i) => !names.slice(0, i).some(o => samePerson(o, n))).slice(0, 16);
     const [, tail] = splitTail(String(m.text || ''));
     return { chars, persona, people, blocks: [
         ...chars.map(ch => `[CHARACTER CARD — ${ch.name || ch.data?.name || ''}]\n${cardText(ch) || '(empty)'}`),
@@ -1643,13 +1646,16 @@ export async function readWhere(m, p) {
     const lore = binding?.type === 'lore' ? await resolvePhoneProfile(ctx(), binding).catch(() => null) : null;
     const input = [...r.blocks.slice(0, -3), lore ? `[OWNER PROFILE — chosen by the user for ${p.owner}]\n${lore.text}` : '', ...r.blocks.slice(-3)].filter(Boolean).join('\n\n');
     const raw = jsonOf(await askDraft(input, { force: true, system: AI_SYS_WHERE, maxTokens: 2000, effort: 'low' }));
-    const known = new Set([p.owner, ...r.people].map(nameKey));
+    const known = [p.owner, ...r.people];
     // (someone the user took off stays off; what the user set by hand stays as they set it)
     const removed = new Set(p.where?.removed || []), oldRow = name => whereOf(p, name);
-    const got = arr(raw?.people).map(whereRow).filter(x => x.name && known.has(nameKey(x.name)) && !removed.has(nameKey(x.name)) && (x.tz || COUNTRY_TZ[x.lives])).slice(0, 16)
+    const got = arr(raw?.people).map(whereRow).filter(x => x.name && known.some(k => samePerson(k, x.name)) && ![...removed].some(k => samePerson(k, x.name)) && (x.tz || COUNTRY_TZ[x.lives]))
+        // (the name as the phone has it; one person answered twice under two names: once)
+        .map(x => ({ ...x, name: known.find(k => nameKey(k) === nameKey(x.name)) || known.find(k => samePerson(k, x.name)) }))
+        .filter((x, i, a) => !a.slice(0, i).some(o => samePerson(o.name, x.name))).slice(0, 16)
         .map(x => { const o = oldRow(x.name); return o?.manual ? { ...x, ...(o.manual.city ? { city: o.city, names: namesOf(o), tz: o.tz } : {}), ...(o.manual.lives ? { lives: o.lives } : {}), manual: o.manual } : x; });
     // read again: someone it leaves out keeps what was read before
-    const people = [...got, ...(p.where?.people || []).filter(o => !got.some(x => nameKey(x.name) === nameKey(o.name))).map(o => ({ ...o, names: namesOf(o) }))].slice(0, 16);
+    const people = [...got, ...(p.where?.people || []).filter(o => !got.some(x => samePerson(x.name, o.name))).map(o => ({ ...o, names: namesOf(o) }))].slice(0, 16);
     p.where = { at: Date.now(), people, ...(removed.size ? { removed: [...removed] } : {}) };
     syncLives(p);
     return people;
@@ -1666,7 +1672,11 @@ function ownerMoved(p, c) {
     p.where = { ...(p.where || {}), at: p.where?.at || Date.now(), people: [row, ...(p.where?.people || []).filter(x => nameKey(x.name) !== nameKey(p.owner))] };
     return true;
 }
-const whereOf = (p, name) => (p?.where?.people || []).find(x => nameKey(x.name) === nameKey(name));
+// one person by two names: the same, or one a single word that is the other's first ("Somang" and "Somang Park"; never
+// "Ren Kim" and "Ren Park")
+const samePerson = (a, b) => { const x = nameKey(a), y = nameKey(b); if (!x || !y) return false; if (x === y) return true; const [s, l] = x.length < y.length ? [x, y] : [y, x]; return !/\s/.test(s) && l.split(/\s+/)[0] === s; };
+// (by the short name only when it is one person's: "Ivo" with an Ivo Kim and an Ivo Park is neither)
+const whereOf = (p, name) => { const rows = p?.where?.people || [], same = rows.filter(x => samePerson(x.name, name)); return rows.find(x => nameKey(x.name) === nameKey(name)) || (same.length === 1 ? same[0] : undefined); };
 // ---- 설정 › 위치 정보: the phone's own country (p.lives) follows the reading of where the owner lives, unless set by hand
 function syncLives(p) { const l = whereOf(p, p?.owner)?.lives; if (l && !p.livesManual) p.lives = String(l).toUpperCase(); }
 // a city's time zone for one the user typed: a saved city, a zone named after it (Berlin, Seoul, New York), else the country's
