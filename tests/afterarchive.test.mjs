@@ -423,3 +423,13 @@ test('a payment told again a few minutes off in the bank\'s second turn is the o
     assert.equal(p.money.orders.length, 1);
     assert.ok(data.AI_SYS_WHERE.includes("OWNER DOESN'T KNOW (sometimes)") && data.AI_SYS_WHERE.includes('Someone whose whereabouts are in OWNER DOESN\'T KNOW: leave them out.'));
 });
+
+test('the bank\'s second turn cut off before its end counts as not read: the mark stays where the first turn stopped', async () => {
+    globalThis.__rows = bigRows(40);
+    const p = longPhone(), mm = { ...m, phones: { ren: p } };
+    globalThis.__menu = { calls: [], answers: [moneyAnswer('Bakery', 500, '10-20 09:00'), '{"cards": [ {"account": "1111", "exp": "09/29" }, {"tx": [ cut off here'], answer: '{}' };
+    await data.fillMoney(mm, p);
+    const first = globalThis.__menu.calls.filter(c => c.sys === data.AI_SYS_MONEY)[0];
+    assert.equal(p.sync.marks.money.index, Math.max(...nums(first.input)));
+    assert.deepEqual(p.money.tx.map(t => t.who), ['Bakery']);
+});

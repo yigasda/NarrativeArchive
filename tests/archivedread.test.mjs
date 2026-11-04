@@ -382,3 +382,12 @@ test('an English chat with Korean status lines: the city by any of its names, as
     c.p.where.people[1] = { name: 'Mara', city: 'Seoul', local: '서울', lives: 'KR', tz: 'Asia/Seoul' };
     await withTrackers([trk(2, '12:50', '서울 · 마라 방')], async () => assert.equal(data.statusMoment(c.p).at, '10-26 04:50'));
 });
+
+test('a fill reading up to the phone\'s clock goes by the phone\'s now, not an older status line', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'later')]);
+    c.p.now = '10-24 08:00'; c.p.year = 2026;
+    await withTrackers([{ i: 1, date: '10.20', min: 21 * 60 + 45, time: '21:45', place: 'Seoul', city: 'Seoul', weather: '' }], async () => {
+        assert.equal(data.storyNow(c.p, data.phoneAt(c.p)), '10-24 08:00');
+        assert.equal(data.storyNow(c.p), '10-24 08:00');
+    });
+});

@@ -22,16 +22,30 @@ export const syncOf = (p, scope) => (p.sync ||= newSync(scope));
 export function makeMark(chat, index) {
     let user = -1;
     for (let j = Math.min(index, chat.length - 1); j >= 0; j--) if (isUser(chat[j])) { user = j; break; }
-    return { index, user, fp: user >= 0 ? fp(chat[user].mes) : '' };
+    // the message at the mark itself too, when it isn't the user's (a group chat's reply): one deleted between the two moves it
+    return { index, user, fp: user >= 0 ? fp(chat[user].mes) : '', tail: index > user && chat[index] ? fp(chat[index].mes) : '' };
 }
 // 'ok', 'moved' (by `delta`), or 'lost'
 export function findMark(chat, mk) {
     if (!mk) return { state: 'lost' };
     if (mk.user < 0) return { state: 'ok', delta: 0 };
-    if (isUser(chat[mk.user]) && fp(chat[mk.user].mes) === mk.fp) return { state: 'ok', delta: 0 };
-    const hits = [];
-    for (let j = 0; j < chat.length; j++) if (isUser(chat[j]) && fp(chat[j].mes) === mk.fp) hits.push(j);
-    return hits.length === 1 ? { state: 'moved', delta: hits[0] - mk.user } : { state: 'lost' };
+    let r;
+    if (isUser(chat[mk.user]) && fp(chat[mk.user].mes) === mk.fp) r = { state: 'ok', delta: 0 };
+    else {
+        const hits = [];
+        for (let j = 0; j < chat.length; j++) if (isUser(chat[j]) && fp(chat[j].mes) === mk.fp) hits.push(j);
+        r = hits.length === 1 ? { state: 'moved', delta: hits[0] - mk.user } : { state: 'lost' };
+    }
+    // the marked message after the user's: still the same distance on, else found nearby (one between them deleted or added)
+    if (r.state !== 'lost' && mk.tail && mk.index > mk.user) {
+        const u = mk.user + r.delta, want = mk.index + r.delta;
+        if (!(chat[want] && fp(chat[want].mes) === mk.tail)) {
+            let best = null;
+            for (let j = u + 1; j < Math.min(chat.length, want + 6); j++) if (fp(chat[j].mes) === mk.tail && (best === null || Math.abs(j - want) < Math.abs(best - want))) best = j;
+            if (best !== null) return { state: 'moved', delta: r.delta, extra: best - want };
+        }
+    }
+    return r;
 }
 const shiftRanges = (rs, from, d) => rs.map(([a, b]) => (b < from ? [a, b] : [a < from ? a : a + d, b + d]));
 // marks that moved are moved, with what was read after them; returns the groups that need a new mark
@@ -42,6 +56,7 @@ export function settleMarks(s, chat, groups = SYNC_GROUPS) {
         if (!mk) { lost.push(g); continue; }
         const r = findMark(chat, mk);
         if (r.state === 'lost') { lost.push(g); continue; }
+        if (r.extra) mk.index += r.extra;
         if (r.state === 'moved' && r.delta) {
             const from = mk.user;
             mk.index += r.delta; mk.user += r.delta;
@@ -92,8 +107,9 @@ export function realign(s, all, { other = false } = {}) {
     const old = [...Object.entries(s.seen).map(([i, f]) => ({ old: Number(i), fp: f })), ...Object.entries(s.hiddenRead || {}).map(([i, f]) => ({ old: Number(i), fp: f }))].sort((a, b) => a.old - b.old);
     // a short line ("뭐 샀어?") said again somewhere is no anchor unless its neighbours match too
     const short = r => r.text.replace(/^\[#\d+[^\]]*\]\s*[^:]*:\s*/, '').length < 15;
-    const all_ = lcs(old.map(x => x.fp), cur.map(x => x.fp)), at = new Set(all_.map(([i, j]) => `${i},${j}`));
-    const pairs = all_.filter(([i, j]) => !short(cur[j]) || at.has(`${i - 1},${j - 1}`) || at.has(`${i + 1},${j + 1}`));
+    // (a neighbour in the old reading that also matched: a hidden or new message between them in the chat doesn't break it)
+    const all_ = lcs(old.map(x => x.fp), cur.map(x => x.fp)), atOld = new Set(all_.map(([i]) => i));
+    const pairs = all_.filter(([i, j]) => !short(cur[j]) || atOld.has(i - 1) || atOld.has(i + 1));
     const moved = {}, seen = {}, hiddenRead = {}, changed = [], dropped = [];
     for (const [i, j] of pairs) { moved[old[i].old] = cur[j].index; (cur[j].hidden ? hiddenRead : seen)[cur[j].index] = old[i].fp; }
     const anchors = [[-1, -1], ...pairs, [old.length, cur.length]], gaps = [];

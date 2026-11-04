@@ -247,7 +247,10 @@ export function applyLife(p, e, phone, on) {
         out.effects.push(fx); out.apps.add(app);
     };
     const push = (path, row, app) => { boxAt(p, path, true).push(row); out.effects.push({ type: 'push', path, item: structuredClone(row) }); out.apps.add(app); };
-    const tag = (row, k, c) => ({ ...row, id: `sync:${e.id}:${c}${k}`, ev: e.id, sourceIndex: e.at });
+    // ids unique on the phone: the same event told again in a later round adds its own records
+    const taken = new Set([...(L.clock?.alarms || []), ...(L.clock?.timers || []), ...(L.health?.days || []), ...(L.files?.items || [])].map(x => x?.id).filter(Boolean));
+    const sid = base => { let id = base, n = 2; while (taken.has(id)) id = `${base}~${n++}`; taken.add(id); return id; };
+    const tag = (row, k, c) => ({ ...row, id: sid(`sync:${e.id}:${c}${k}`), ev: e.id, sourceIndex: e.at });
     // only the fields the model wrote, cleaned as a whole record would be
     // what the model gave and the parser kept (a value it couldn't read never blanks the one there)
     const given = (raw, clean, keys) => Object.fromEntries(keys.filter(k => raw[k] !== undefined && raw[k] !== '' && raw[k] !== null && clean[k] !== '' && clean[k] !== undefined && clean[k] !== null).map(k => [k, clean[k]]));

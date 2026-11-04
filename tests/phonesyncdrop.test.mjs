@@ -673,3 +673,75 @@ test('run35: a plan written as called off with the same plan new on another day 
     assert.equal(c.p.events.length, 1);
     assert.deepEqual(live.map(e => [e.date, e.time]), [['02-07', '19:00']]);
 });
+
+// ---- 점검 1묶음: 돈 · 기록
+test('the same event told again in a later round: its new payment gets its own record, and undo takes back only that one', async () => {
+    const c = setup([say('Ren', 'start'), say('Mara', 'hi'), say('Mara', 'bought the book for 15000 won')]);
+    const pay = (at, quote, amount, who, time) => ({ id: 'book', at, quote, summary: '책', date: '10-26', time, phone: {}, money: { moves: [{ account: '1111', amount, who, occurrence: 'new' }] } });
+    await run(c.m, { now: '10-26 13:00', events: [pay(2, 'bought the book', -15000, '서점', '12:00')] });
+    T.chat.push(say('Mara', 'and a bookmark for 2000 at the same shop'));
+    await run(c.m, { now: '10-26 14:00', events: [pay(3, 'bookmark for 2000', -2000, '문구점', '12:10')] });
+    assert.equal(c.bank(), 83000);
+    assert.equal(new Set(c.p.money.tx.map(t => t.id)).size, 2);
+    await data.undoRound(c.m, c.p);
+    assert.equal(c.bank(), 85000);
+    assert.deepEqual(c.p.money.tx.map(t => t.amount), [-15000]);
+});
+
+test('a message read again after a failure doesn\'t pay what its neighbour already paid (the money step too)', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'how much was the taxi ride'), say('Mara', 'I paid the taxi 12000 won'), say('Ren', 'ok and what about dinner later')]);
+    const taxi = (id, at, quote) => ({ id, at, quote, summary: '택시', date: '10-26', time: '12:40', apps: ['money'], phone: {}, money: { moves: [{ account: '1111', amount: -12000, who: '택시', kind: 'card', occurrence: 'new' }] } });
+    await run(c.m, { now: '10-26 13:00', events: [taxi('taxi', 3, 'paid the taxi'), { id: 'dinner', at: 4, quote: 'NOT IN TEXT', summary: 'x', date: '10-26', time: '13:00', phone: { notes: [{ title: 'd', text: 'd' }] } }] });
+    T.chat.push(say('Mara', 'see you'));
+    await run(c.m, { now: '10-26 14:00', events: [taxi('taxi-again', 4, 'what about dinner')] });
+    assert.equal(c.bank(), 88000);
+});
+
+test('빼기 keeps an account another event still pays into, and the event that opened it', async () => {
+    const c = setup([say('Ren', 'start'), say('Mara', 'morning'), say('Mara', 'I opened a savings account ending 2222 today'), say('Ren', 'nice'), say('Mara', 'I moved 50000 won into the savings account')]);
+    c.p.sync.limit = 2;
+    await run(c.m, { now: '10-26 10:00', events: [{ id: 'open', at: 2, quote: 'opened a savings account', summary: '적금 개설', date: '10-26', time: '09:00', apps: ['money'], phone: {}, money: { newAccount: { kind: 'savings', last4: '2222', currency: 'KRW', name: '적금', balance: 0 } } }] });
+    await run(c.m, { now: '10-26 11:00', events: [{ id: 'move', at: 4, quote: 'moved 50000 won', summary: '적금 이체', date: '10-26', time: '10:30', apps: ['money'], phone: {}, money: { moves: [{ account: '1111', amount: -50000, who: '적금', kind: 'transfer', occurrence: 'new' }, { account: '2222', amount: 50000, who: '입출금', kind: 'transfer', occurrence: 'new' }] } }] });
+    T.chat.splice(2, 1);
+    await run(c.m, { now: '10-26 11:00', events: [] });
+    const r = await data.dropStretch(c.m, c.p, 0);
+    assert.deepEqual(r.kept, ['적금 개설']);
+    assert.deepEqual(c.p.money.bank.accounts.map(a => a.last4), ['1111', '2222']);
+});
+
+test('a short read reply next to a hidden message is not taken for edited or deleted', async () => {
+    const hide = x => ({ ...x, is_system: true });
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Mara', 'I paid the taxi 12000 won'), hide(say('Ren', '(OOC: brb, dinner)')), say('Ren', 'ok thanks!')]);
+    await run(c.m, { now: '10-26 13:00', events: [{ id: 'thanks', at: 4, quote: 'ok thanks', summary: '고마워', date: '10-26', time: '12:45', phone: { notes: [{ title: 'thanks', text: '고마워' }] } }] });
+    T.chat.push(say('Mara', 'see you tomorrow at nine then'));
+    await run(c.m, { now: '10-26 14:00', events: [] });
+    assert.ok(!T.input.includes('[#4] Ren: ok thanks!'));
+    assert.deepEqual(c.p.syncLast.notes, []);
+    assert.equal(c.p.sync.events.thanks.at, 4);
+});
+
+test('a message deleted earlier and the last round\'s message edited: numbers shift once, 빼기 of the payment\'s message still takes it', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'first talk long enough line here'), say('Mara', 'I paid the taxi 12000 won today')]);
+    await run(c.m, { now: '10-26 13:00', events: [{ id: 'taxi', at: 3, quote: 'paid the taxi', summary: '택시', date: '10-26', time: '12:40', apps: ['money'], phone: { notes: [{ title: 'taxi', text: '택시비' }] }, money: { moves: [{ account: '1111', amount: -12000, who: '택시', kind: 'card', occurrence: 'new' }] } }] });
+    T.chat.push(say('Ren', 'later line text here long enough'), say('Mara', 'see you at the cafe tomorrow ok'));
+    await run(c.m, { now: '10-26 14:00', events: [{ id: 'cafe', at: 5, quote: 'see you at the cafe', summary: '카페', date: '10-26', time: '13:50', phone: { notes: [{ title: 'cafe', text: 'cafe tomorrow' }] } }] });
+    T.chat.splice(2, 1);
+    T.chat[3].mes = 'see you at the bakery tomorrow instead';
+    await run(c.m, { now: '10-26 14:10', events: [] });
+    assert.deepEqual([c.p.sync.events.taxi.at, c.p.money.tx[0].sourceIndex], [2, 2]);
+    T.chat.splice(2, 1);
+    await run(c.m, { now: '10-26 14:20', events: [] });
+    await data.dropStretch(c.m, c.p, 0);
+    assert.equal(c.bank(), 100000);
+    assert.ok(!c.p.notes.some(n => n.title === 'taxi'));
+});
+
+test('a group chat: a reply deleted before the start moves the start with it, the next message is read', async () => {
+    const c = setup([say('Ren', 'hello both of you'), say('Mara', 'hi Ren, long day'), say('Ivo', 'hey there, what is up')]);
+    c.p.sync.marks.base = makeMark(T.chat, 2);
+    T.chat.splice(1, 1);
+    T.chat.push(say('Mara', 'I paid the taxi 12000 won'));
+    await run(c.m, { now: '10-26 13:00', events: [] });
+    assert.equal(c.p.syncLast.checked, 1);
+    assert.ok(T.input.includes('[#2] Mara: I paid the taxi 12000 won'));
+});

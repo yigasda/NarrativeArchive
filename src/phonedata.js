@@ -878,7 +878,7 @@ async function moneyStage(m, p, owner, targets, c) {
         if (c.reread?.has(t.at) && !c.reread.get(t.at).some(x => x.id === t.id)) { out.notes.push(`#${t.at} 바뀐 대화의 결제는 새로 넣지 않았어요`); continue; }
         const stage = structuredClone({ money: p.money, investment: p.investment, finance: m.finance, delivery: p.delivery });
         let paid;
-        try { paid = applyMoney(m, p, { id: t.id, at: t.at, date: t.date, time: t.time, summary: t.summary, money: mo }, { year: c.year, anchor: c.anchor, marks: s.marks, legs: s.events[t.id]?.legs || [], span: null, edited: !!c.reread?.has(t.at) }); }
+        try { paid = applyMoney(m, p, { id: t.id, at: t.at, date: t.date, time: t.time, summary: t.summary, money: mo }, { year: c.year, anchor: c.anchor, marks: s.marks, legs: s.events[t.id]?.legs || [], span: s.failed[t.at]?.span || null, edited: !!c.reread?.has(t.at) }); }
         catch (err) { p.money = stage.money; p.investment = stage.investment; m.finance = stage.finance; if (p.delivery) p.delivery = Object.assign(p.delivery, stage.delivery); owe(t, String(err?.message || err)); continue; }
         for (const ch of paid.changes) { out.apps.add(ch.app); if (ch.amount !== null) out.changes.push({ ...ch, what: line(t.summary, 60) }); }
         out.notes.push(...paid.notes);
@@ -898,17 +898,18 @@ async function updatePhone(m, owner) {
         const s = p.sync, swiped = [];
         // a read message edited or swiped since: if the last round read it, that round is undone and read again;
         // an older round's items stay, and the changed message is simply read again
-        let moved = realign(s, chatRows(), { other: otherChat(s) });
+        // an edit or swipe of a message the last round read: that round is undone first (what can be), on the reading as it
+        // was, then the chat is laid over it once: nothing is renumbered twice
+        const other = otherChat(s), probe = realign(structuredClone(s), chatRows(), { other });
+        let kept = null;
+        if (probe.changed.some(x => p.syncUndo?.readFp?.includes(x.fp)) && canUndo(p)) kept = await undoRound(m, p);
+        const moved = realign(s, chatRows(), { other });
         settleDropped(p, moved, swiped);
         s.readChat = chatMark() || s.readChat;
         renumber(m, p, moved);
-        // an edit or swipe of a message the last round read: that round is undone (what can be) and read again
-        if (moved.changed.some(x => p.syncUndo?.readFp?.includes(x.fp)) && canUndo(p)) {
-            const kept = await undoRound(m, p);
-            moved = realign(s, chatRows());
-            renumber(m, p, moved);
-            swiped.push('읽은 대화가 바뀌어서 지난 반영을 되돌리고 다시 읽었어요', ...kept.map(x => `${x}: 그 뒤 기록과 이어져 있거나 직접 바꾼 거라 남겨뒀어요`));
-        }
+        if (kept) swiped.push('읽은 대화가 바뀌어서 지난 반영을 되돌리고 다시 읽었어요', ...kept.map(x => `${x}: 그 뒤 기록과 이어져 있거나 직접 바꾼 거라 남겨뒀어요`));
+        // messages renumbered with no round after it: the last round's undo would put back the old numbers
+        const shifted = moved.changed.length || moved.dropped.length || Object.entries(moved.moved).some(([o, n]) => Number(o) !== n);
         // an older message changed: read again, tied to the events it already gave (no new payment from it)
         const reread = new Map(moved.changed.map(x => [x.at, Object.entries(s.events).filter(([, e]) => e.at === x.at || (e.effects || []).some(f => (f.item?.sourceIndex ?? f.sourceIndex) === x.at)).map(([id, e]) => ({ id, summary: e.summary }))]));
         if (reread.size) swiped.push(`바뀐 대화 ${reread.size}개를 다시 읽어요. 그 대화의 결제는 새로 넣지 않고 기존 기록만 고쳐요`);
@@ -920,7 +921,7 @@ async function updatePhone(m, owner) {
         // stretches archived before the phone read them go along as evidence, oldest first, a few at a time
         const archIn = [];
         for (const x of archivedUnread(s, sections, rows, chatRows())) { if (archIn.length && archIn.reduce((n, y) => n + estTok(y.text), 0) + estTok(x.text) > ARCH_TOKENS) break; archIn.push(x); }
-        if (!round.rows.length && !archIn.length) { p.syncLast = { checked: 0, remaining: 0, apps: [], failed: [], notes: swiped, at: Date.now() }; await saveMeta(); return p; }
+        if (!round.rows.length && !archIn.length) { if (shifted) delete p.syncUndo; p.syncLast = { checked: 0, remaining: 0, apps: [], failed: [], notes: swiped, at: Date.now() }; await saveMeta(); return p; }
         // read once for a phone that never had it, and once more for one read before the city's own name was kept ("서울")
         if (!p.where || !p.where.failed && (p.where.people || []).some(x => !('local' in x) && !('names' in x))) await tryWhere(m, p);
         const got = archiveRound(s, sections, rows, round.rows), background = got.background, evidence = [...archIn, ...got.evidence.filter(x => !archIn.some(y => y.key === x.key))];
@@ -1214,6 +1215,13 @@ export async function dropStretch(m, p, k) {
         let tied = Object.entries(s.events).some(([o, x]) => o !== id && ((x.effects || []).some(y => ['status', 'amend', 'amendEntry', 'change'].includes(y.type) && made.has(y.id)) || (x.legs || []).some(l => l.state === 'included' && made.has(l.rec))));
         const trades = new Set((e.effects || []).filter(x => x.path === 'investment.trades').map(x => x.item.id));
         if (!tied && trades.size) { try { positions((p.investment?.trades || []).filter(t => !trades.has(t.id))); } catch { tied = true; } }
+        // an account, share or shop it opened that something else still uses (a later payment into the account, a later
+        // trade of the share, a later order from the shop) stays, and so the event does
+        const pushed = path => (e.effects || []).filter(x => x.type === 'push' && x.path === path).map(x => x.item);
+        const others = Object.entries(s.events).filter(([o]) => o !== id).flatMap(([, x]) => x.effects || []);
+        if (!tied && pushed('money.bank.accounts').some(a => others.some(y => y.item?.account === a.last4 || String(y.key || '').startsWith(`${a.id}:`)) || (p.money?.tx || []).some(t => t.account === a.last4 && t.ev !== id))) tied = true;
+        if (!tied && pushed('investment.securities').some(x => (p.investment?.trades || []).some(t => t.symbol === x.symbol && !trades.has(t.id)))) tied = true;
+        if (!tied && pushed('delivery.shops').some(x => (p.delivery?.orders || []).some(o => o.shop === x.name && o.ev !== id))) tied = true;
         if (tied) { kept.push(e.summary || id); stay.add(id); continue; }
         revertEffects(m, p, e.effects || []);
         out.add(id);
@@ -1412,7 +1420,8 @@ export const trackerWeather = t => { const w = weatherFrom(t); if (w) { const d 
 export function storyNow(p, upto = null, m = null) {
     let at = '';
     try { at = statusMoment(p, upto, null, m)?.at || ''; } catch { /* no status window */ }
-    if (upto == null && at && hm(p?.now) && laterThan(p.now, at)) return p.now;
+    // (and read up to the phone's clock: a fill's now is the phone's own, not an older status line's)
+    if ((upto == null || upto >= (phoneAt(p) ?? Infinity)) && at && hm(p?.now) && laterThan(p.now, at)) return p.now;
     return at || p?.now || '';
 }
 
@@ -1827,7 +1836,10 @@ async function makeMoney(m, p, { regenerateBalances = false, wealthPlan = null }
                 const only = `The bank, its accounts and their balances stay as they are: leave "bank" and "fx" out${tx ? '' : ', and "tx" too (the bank keeps its own)'}`;
                 const input2 = await sideRequest(m, p.owner, [`[PHONE NOW]\n${moneyContext(p, at2)}`, clockBlock(p, at2, m), `[EXISTING ACCOUNTS]\n${JSON.stringify(p.money.bank.accounts)}`, `[EVALUATION DATE]\n${date}`, rates(),
                     `${soFarHead('MONEY', two.short, only)}\n${JSON.stringify(soFar)}`, two.short?.text || ''], { profile: p.financeProfile, money: true, read: { gap: two.cover } });
-                const raw2 = jsonOf(await askDraft(input2, { force: true, system: AI_SYS_MONEY, maxTokens: 12000 }));
+                const out2 = String(await askDraft(input2, { force: true, system: AI_SYS_MONEY, maxTokens: 12000 }) ?? ''), raw2 = jsonOf(out2);
+                // an answer that isn't the JSON, or one cut off before its end: what it read isn't all there, so the mark
+                // stays where the first turn stopped
+                if (!raw2 || typeof raw2 !== 'object' || !/\}\s*(?:```)?\s*$/.test(out2)) throw new Error('모델 답에서 은행 내용(JSON)을 끝까지 찾지 못했어요');
                 if (p.money !== updated.money) throw new Error('생성 중 계좌가 변경됐어요');
                 moneyMore(m, p, parseMoney({ ...raw2, currency: p.money.currency, bank: p.money.bank }, p.country), tx);
                 last = two.cover; short = two.short;
