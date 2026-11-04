@@ -730,3 +730,11 @@ test('dates: "03.11." and "03.11.2026" are day first, a Korean "11.03" month fir
         ['26th October 21:45', '10-26 21:45'], ['26 October 21:45', '10-26 21:45'], ['October 26 21:45', '10-26 21:45'], ['10/26', '10-26']]) assert.equal(when_(t), want, t);
     for (const [t, want] of [['-₩12,000', -12000], ['−₩12,000', -12000], ['- € 12,50', -12.5], ['₩-12,000', -12000], ['25–35', 25]]) assert.equal(num_(t), want, t);
 });
+
+import { dayGap as dayGap_, cityAt as cityAt_ } from '../src/phonesynclife.js';
+test('a leap day counts as a day of its own; a saved city is matched by whole words, not letters inside a name', () => {
+    assert.deepEqual([dayGap_('02-28', '02-29'), dayGap_('02-29', '03-01'), dayGap_('02-29', '02-29'), dayGap_('03-01', '02-29'), dayGap_('12-31', '01-01')], [1, 1, 0, -1, 1]);
+    const cities = [{ name: 'Milan', tz: 'Europe/Rome' }, { name: 'Florence', tz: 'Europe/Rome' }, { name: 'Frankfurt am Main', tz: 'Europe/Berlin' }, { name: 'Seoul', ko: '서울', tz: 'Asia/Seoul' }];
+    assert.deepEqual(['LA', 'Ren', "Varo's", 'Frankfurt · Küche', 'Frankfurt', '서울역', '서울 강남 · 카페', 'Milano'].map(x => cityAt_(x, cities)?.name ?? null),
+        [null, null, null, 'Frankfurt am Main', 'Frankfurt am Main', 'Seoul', 'Seoul', null]);
+});

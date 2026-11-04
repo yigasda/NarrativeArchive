@@ -1616,7 +1616,7 @@ export const ownerZone = p => zoneOfWhere(whereOf(p, p?.owner)) || zoneOfPhone(p
 function placesAround(p, m = null) {
     const out = [], own = ownerZone(p);
     // (the owner's own place as the weather app has it is one of their names too: a zone known only by the country)
-    if (own) out.push({ tz: own.tz, name: own.where, names: [own.where, ...own.names, p?.life?.weather?.here?.place] });
+    if (own) out.push({ tz: own.tz, name: own.where, names: [own.where, ...own.names, p?.life?.weather?.here?.place], own: true });
     for (const c of arr(p?.life?.weather?.cities)) if (c?.tz) out.push({ tz: c.tz, name: c.name, names: [c.name, c.ko] });
     for (const x of p?.where?.people || []) if (nameKey(x.name) !== nameKey(p.owner)) { const z = zoneOfWhere(x); if (z) out.push({ tz: z.tz, name: z.where, names: z.names, who: x.name }); }
     // another phone's owner: where that phone read them to be, else its own saved city or country
@@ -1655,12 +1655,13 @@ export function sceneZone(p, place, m = null) {
     for (const z of placesAround(p, m)) for (const raw of z.names.filter(Boolean)) {
         const n = pkey(raw);
         if (!n) continue;
-        // the whole scene, or a city of two words or more its first words are (no shop is named "New York ...")
-        if (n === whole || /\s/.test(String(raw).trim()) && leads.has(n)) return { tz: z.tz, name: z.name };
-        // the first word, the Korean name it starts with, or the scene the start of a longer city name ("Frankfurt")
-        if (!part && (n === first || whole.startsWith(n) && n.length >= 2 && /^[가-힣]/.test(n) || whole.length >= 4 && n.startsWith(whole))) part = z;
+        // the whole scene only: another zone's city is never guessed from the start of a name ("New York Bagels, Gangnam")
+        if (n === whole) return { tz: z.tz, name: z.name, own: !!z.own };
+        // its first words, the first word, the Korean name it starts with, or the scene the start of a longer city name
+        // ("New York City", "Frankfurt"): trusted only in the owner's own zone
+        if (!part && (leads.has(n) || n === first || whole.startsWith(n) && n.length >= 2 && /^[가-힣]/.test(n) || whole.length >= 4 && n.startsWith(whole))) part = z;
     }
-    return part && (!own || part.tz === own.tz) ? { tz: part.tz, name: part.name } : null;
+    return part && (!own || part.tz === own.tz) ? { tz: part.tz, name: part.name, own: !!part.own } : null;
 }
 // whose clock a status line's scene keeps: true the owner's, false another zone's, null unknown (on a phone that keeps
 // other zones). A phone with no zone of its own, or no other zone around, is the owner's
@@ -1668,7 +1669,9 @@ export function sceneHome(p, place, m = null, named = null) {
     const own = ownerZone(p), z = sceneZone(p, place, m) || named;
     // a known city is the owner's only when it is in their own zone (Paris for an owner in Frankfurt is elsewhere, though
     // its clock reads the same)
-    if (own && z) return z.tz === own.tz;
+    // (and another city in the same zone, Busan for an owner in Seoul, is elsewhere too: its hour is theirs, its weather
+    // isn't; an owner known only by the country takes any city of their zone)
+    if (own && z) return z.tz === own.tz && (z.own === true || z.own === undefined || !own.names?.length);
     if (!own || !zonesOf(p, hm(p?.now) ? p.now : '01-01 12:00', m)) return true;
     return null;
 }
@@ -1953,7 +1956,9 @@ async function makeMoney(m, p, { regenerateBalances = false, wealthPlan = null }
                 const out2 = String(await askDraft(input2, { force: true, system: AI_SYS_MONEY, maxTokens: 12000 }) ?? ''), raw2 = jsonOf(out2);
                 // an answer that isn't the JSON, or one cut off before its end: what it read isn't all there, so the mark
                 // stays where the first turn stopped
-                if (!raw2 || typeof raw2 !== 'object' || !/\}\s*(?:```)?\s*$/.test(out2)) throw new Error('모델 답에서 은행 내용(JSON)을 끝까지 찾지 못했어요');
+                // (a line after the JSON is fine: it is the JSON itself that must be whole)
+                const b2 = out2.lastIndexOf('}'), closed = (() => { try { JSON.parse(out2.slice(out2.indexOf('{'), b2 + 1)); return true; } catch { return false; } })();
+                if (!raw2 || typeof raw2 !== 'object' || !closed) throw new Error('모델 답에서 은행 내용(JSON)을 끝까지 찾지 못했어요');
                 if (p.money !== updated.money) throw new Error('생성 중 계좌가 변경됐어요');
                 moneyMore(m, p, parseMoney({ ...raw2, currency: p.money.currency, bank: p.money.bank }, p.country), tx);
                 last = two.cover; short = two.short;

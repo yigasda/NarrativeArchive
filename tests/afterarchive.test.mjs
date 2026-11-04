@@ -508,3 +508,12 @@ test('a fill answered with an error or a refusal leaves the apps as they were an
         assert.deepEqual([p.delivery.orders.length, p.life.clock.alarms.length, p.sync?.marks?.delivery, p.sync?.marks?.life], [1, 1, undefined, undefined]);
     }
 });
+
+test('the bank\'s second turn with a line after its JSON is read (only a JSON cut short is not)', async () => {
+    globalThis.__rows = bigRows(40);
+    const p = longPhone(), mm = { ...m, phones: { ren: p } };
+    globalThis.__menu = { calls: [], answers: [moneyAnswer('Bakery', 500, '10-20 09:00'), moneyAnswer('Kiosk', 500, '10-24 09:00') + '\nAll payments in the story are included.'], answer: '{}' };
+    await data.fillMoney(mm, p);
+    assert.deepEqual(p.money.tx.map(t => t.who).sort(), ['Bakery', 'Kiosk']);
+    assert.equal(p.sync.marks.money.index, 39);
+});

@@ -49,8 +49,9 @@ export const evOf = v => line(v, 40).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '
 export const withEv = (x, raw) => { const ev = evOf(raw?.ev); return ev && !/^\d+$/.test(ev) ? { ...x, ev } : x; };
 // story days ("MM-DD") carry no year: how many days from a to b, the short way round New Year (12-31 → 01-01 is 1, not
 // -364). Compare and sort story days with this, never as text
-const dnum = s => { const mt = /^(\d{2})-(\d{2})/.exec(String(s || '')); return mt ? Date.UTC(2001, mt[1] - 1, Number(mt[2])) / 864e5 : NaN; };
-export const gapDays = (a, b) => { let g = dnum(b) - dnum(a); if (!Number.isFinite(g)) return 0; if (g < -180) g += 365; if (g > 180) g -= 365; return g; };
+// (02-29 half a day from 02-28 and 03-01: a leap day of its own)
+const dnum = s => { const mt = /^(\d{2})-(\d{2})/.exec(String(s || '')); return !mt ? NaN : mt[1] === '02' && mt[2] === '29' ? Date.UTC(2001, 2, 1) / 864e5 - 0.5 : Date.UTC(2001, mt[1] - 1, Number(mt[2])) / 864e5; };
+export const gapDays = (a, b) => { let g = dnum(b) - dnum(a); if (!Number.isFinite(g)) return 0; if (g < -180) g += 365; if (g > 180) g -= 365; return Math.sign(g) * Math.ceil(Math.abs(g)); };
 // a record's time ("MM-DD HH:MM") as minutes from the story's now, for sorting in story order across New Year. Records
 // are mostly behind now: up to a month ahead stays ahead (an order due, a booking), the rest of the year is behind
 export const storyMin = (t, now) => {

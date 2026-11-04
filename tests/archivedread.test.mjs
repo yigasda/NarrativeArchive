@@ -485,3 +485,14 @@ test('되돌리기 holds the screen clock where the phone was until the next 반
         assert.equal(data.storyNow(c.p), '10-26 09:10');
     });
 });
+
+test('a city in the owner\'s zone that isn\'t theirs (Busan for Seoul) keeps its hour but not their weather; a shop named after a far city is no proof', async () => {
+    const c = setup([say('Ren', 'a'), say('Ivo', 'b'), say('Ivo', 'c')]);
+    c.p.now = '10-26 18:00'; c.p.year = 2026; c.p.country = 'KR';
+    c.p.where = { at: 1, people: [{ name: 'Ren', city: 'Seoul', names: ['Seoul', '서울'], lives: 'KR', tz: 'Asia/Seoul' }, { name: 'Ivo', city: 'Busan', names: ['Busan', '부산'], lives: 'KR', tz: 'Asia/Seoul' },
+        { name: 'Varo', city: 'New York', names: ['New York', '뉴욕'], lives: 'US', tz: 'America/New_York' }] };
+    assert.equal(data.sceneHome(c.p, "부산 · Ivo's flat", c.m), false);
+    assert.equal(data.sceneHome(c.p, '서울 강남 · 카페', c.m), true);
+    await withTrackers([trk(2, '18:30', "부산 · Ivo's flat")], async () => assert.equal(data.statusMoment(c.p, null, null, c.m).at, '10-26 18:30'));
+    await withTrackers([trk(2, '19:00', 'New York Bagels, Gangnam')], async () => assert.notEqual(data.statusMoment(c.p, null, null, c.m).at, '10-27 08:00'));
+});
