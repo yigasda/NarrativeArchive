@@ -623,7 +623,7 @@ export function setPlace(p, now, m, ui = {}) {
     return `${axBar(p, now)}
       ${axTop(axCb('set'))}
       <div class="ax_scroll">${axH1('위치 정보')}
-        ${info.failed ? `<div class="ax_pl_warn">${ax('info', 16, '#8a6a1f', 2.2)}<span>자동으로 못 읽었어요 · 직접 정하거나 다시 읽어 주세요</span></div>` : ''}
+        ${info.failed ? `<div class="ax_pl_warn">${ax('info', 16, '#8a6a1f', 2.2)}<span>자동으로 못 읽었어요 · 직접 정하거나 연동해 주세요</span></div>` : ''}
         <div class="ax_pl_hero">
           <span class="ax_pl_k">${esc(o.name || '')} · 지금 있는 곳</span>
           <div role="button" tabindex="0" class="ax_pl_city na_ph_plcity" data-n="${esc(o.name || '')}"><b>${esc(o.city || '도시 정하기')}</b>${o.cityManual ? man : ''}${ax('pen', 16, 'rgba(255,255,255,.7)', 2.2)}</div>
@@ -635,7 +635,7 @@ export function setPlace(p, now, m, ui = {}) {
         <div class="ax_sec">다른 사람</div>
         ${info.people.length ? `<div class="ax_card ax_pl_list">${info.people.map(row).join('')}</div>` : '<div class="ax_card ax_pl_list"><div class="ax_pl_none">아직 읽은 사람이 없어요</div></div>'}
         <div class="ax_foot">줄을 누르면 도시를 바꾸거나 목록에서 뺄 수 있어요. 사는 나라에 맞춰 배달 앱 · 스크린타임 앱이 정해져요.</div>
-        <div role="button" tabindex="0" class="ax_pl_btn na_ph_plread${ui.placeReading ? ' on' : ''}">${ui.placeReading ? `${busyHtml} 읽는 중` : `${ax('redo', 17, 'currentColor', 2.3)}AI로 다시 읽기`}</div>
+        <div role="button" tabindex="0" class="ax_pl_btn na_ph_plread${ui.placeReading ? ' on' : ''}">${ui.placeReading ? `${busyHtml} 연동하는 중` : `${ax('redo', 17, 'currentColor', 2.3)}AI로 연동`}</div>
         <i class="ax_pad"></i>
       </div>
       ${axInd()}`;

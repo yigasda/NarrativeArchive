@@ -877,15 +877,15 @@ export async function openPhone(who = null) {
         const name = this.dataset.n, x = placeInfo(phone()).people.find(r => r.name === name); if (!x) return;
         const v = await askChoice(name, x.city || '', [{ v: 'city', label: '도시 바꾸기' }, { v: 'drop', label: '목록에서 빼기', danger: true }], '취소');
         if (v === 'city') return placeCity(name, x.city);
-        if (v === 'drop' && await askSheet(`${name}을(를) 목록에서 뺄까요?`, '다시 읽어도 돌아오지 않아요.', '빼기')) { await dropPlacePerson(m, phone(), name); drawPhone(true); }
+        if (v === 'drop' && await askSheet(`${name}을(를) 목록에서 뺄까요?`, '연동해도 돌아오지 않아요.', '빼기')) { await dropPlacePerson(m, phone(), name); drawPhone(true); }
     });
     $root.on('click', '.na_ph_plread', async function (e) {
         e.stopPropagation(); if (placeLocked()) return;
-        const v = await askChoice('위치를 다시 읽을까요?', '모델을 한 번 불러요.', [{ v: 'keep', label: '직접 정한 건 두고 읽기' }, { v: 'all', label: '전부 새로 읽기' }], '취소');
+        const v = await askChoice('위치를 연동할까요?', '모델을 한 번 불러요.', [{ v: 'keep', label: '수동 위치 제외하고 연동' }, { v: 'all', label: '전부 새로 연동' }], '취소');
         if (v !== 'keep' && v !== 'all') return;
-        if (v === 'all' && !await askSheet('위치가 모두 바뀌어요', '직접 정한 것 · 뺀 사람도 다시 읽어요.', '새로 읽기')) return;
+        if (v === 'all' && !await askSheet('위치가 모두 바뀌어요', '수동 위치 · 뺀 사람도 다시 연동해요.', '새로 연동')) return;
         const p = phone(); placeReading = true; drawPhone(true);
-        try { await rereadPlaces(m, p, { all: v === 'all' }); toastr.success('위치를 다시 읽었어요', '위치 정보'); }
+        try { await rereadPlaces(m, p, { all: v === 'all' }); toastr.success('위치를 연동했어요', '위치 정보'); }
         catch (err) { toastr.error(String(err?.message || err), '위치 정보'); }
         finally { placeReading = false; if (!phoneClosed) drawPhone(true); }
     });
