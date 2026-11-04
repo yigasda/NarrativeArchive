@@ -555,3 +555,26 @@ test('voice memos filled again: one the story already put there is not written t
     await data.fillVoice(mm, p);
     assert.deepEqual(p.voice.map(x => x.title).sort(), ['Late thought', 'Train times']);
 });
+
+test('a life fill that stops short of a stretch the reflection read ahead keeps what the reflection put in from there', async () => {
+    globalThis.__rows = bigRows(40);
+    const p = { owner: 'Ren', now: '10-26 12:00', country: 'DE', lives: 'DE',
+        life: { clock: { alarms: [{ id: 'sync:new-alarm:a0', time: '06:30', label: 'Gym with Ivo', days: ['mon'], on: true, ev: 'new-alarm', sourceIndex: 30 }], timers: [], running: null }, health: { usual: {}, days: [] }, files: { folders: [], items: [] }, weather: null },
+        sync: { order: 'newest', marks: { base: { index: 6 }, life: { index: 6 } }, done: [[7, 20], [25, 39]], hiddenRead: {}, failed: {}, events: { 'new-alarm': { at: 30, summary: 'gym alarm', quote: 'six thirty', effects: [] } } } };
+    const ans = JSON.stringify({ clock: { alarms: [{ time: '07:00', label: 'Work', days: ['mon'], on: true }] }, health: { usual: {}, days: [] }, files: { items: [] }, weather: null });
+    globalThis.__menu = { calls: [], answers: [ans, ans], answer: '{}' };
+    const warn = console.warn; console.warn = () => {};
+    try { await life.fillLife({ ...m, phones: { ren: p } }, p); } finally { console.warn = warn; }
+    assert.deepEqual(p.life.clock.alarms.map(a => a.label).sort(), ['Gym with Ivo', 'Work']);
+});
+
+test('다시 만들기 keeps what a reflection put in from a section running past the clock (the remake can\'t see it)', async () => {
+    globalThis.__rows = rows(14).map(r => ({ ...r, hidden: r.index <= 9 }));
+    const mm = { text: '## #0–#4 — Arrival\n- Ren came home.\n## #5–#9 — The trip\n- Ren wrote the train times to Ivo in a note (#6). Ren met Varo (#9).\n' };
+    const p = plainPhone({ notes: [{ id: 'n1', title: 'Train times', text: '8:10 to Ivo', time: '10-24 07:50', ev: 'trip' }],
+        sync: { marks: { base: { index: 4 } }, done: [[5, 7]], hiddenRead: { 5: 'x', 6: 'y', 7: 'z' }, events: { trip: { at: 6, summary: 'train times', effects: [] } } } });
+    mm.phones = { ren: p };
+    globalThis.__menu = { calls: [], answers: [JSON.stringify({ notes: [{ title: 'Groceries', text: 'milk', time: '10-20 10:00' }] })], answer: '{}' };
+    await data.makePhone(mm, 'Ren', { apps: ['note'] });
+    assert.deepEqual(p.notes.map(n => n.title).sort(), ['Groceries', 'Train times']);
+});

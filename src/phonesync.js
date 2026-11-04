@@ -40,11 +40,16 @@ export function findMark(chat, mk) {
     // the marked message after the user's: still the same distance on, else found nearby (one between them deleted or added)
     if (r.state !== 'lost' && mk.tail && mk.index > mk.user) {
         const u = mk.user + r.delta, want = mk.index + r.delta;
-        const inPlace = Array.isArray(mk.mid) && mk.mid.every((f, k) => chat[u + 1 + k] && fp(chat[u + 1 + k].mes) === f);
+        // (the user's words said more than once, "ok", are no proof the place is the same one)
+        const once = chat.filter(x => isUser(x) && fp(x.mes) === mk.fp).length === 1;
+        const inPlace = once && Array.isArray(mk.mid) && mk.mid.every((f, k) => chat[u + 1 + k] && fp(chat[u + 1 + k].mes) === f);
         if (!(chat[want] && fp(chat[want].mes) === mk.tail) && !inPlace) {
             let best = null;
             for (let j = u + 1; j < Math.min(chat.length, want + 6); j++) if (fp(chat[j].mes) === mk.tail && (best === null || Math.abs(j - want) < Math.abs(best - want))) best = j;
             if (best !== null) return { state: 'moved', delta: r.delta, extra: best - want };
+            // nowhere near, and the user's words said more than once ("ok"): the mark can't be placed for sure (a swipe, the
+            // reply written again, has the user's words once)
+            if (!once) return { state: 'lost' };
         }
     }
     return r;
@@ -184,8 +189,9 @@ export const unreadCount = (s, rows) => { const base = s.marks.base?.index ?? -1
 // items: every app item on the phone ({ k, x }); one whose every source is gone still counts, even when a new message
 // took its event up again
 export function pruneDropped(s, items = []) {
-    s.dropped = (s.dropped || []).map(d => ({ ...d, events: d.events.filter(id => s.events[id] && s.events[id].at === null), left: items.filter(({ k, x }) => orphanOf(x, d.key) && !edited(k, x)).length }))
-        .filter(d => d.events.length || d.left);
+    // (parts: events living at another message that got something from the gone ones, still holding it)
+    s.dropped = (s.dropped || []).map(d => ({ ...d, events: d.events.filter(id => s.events[id] && s.events[id].at === null), ...(d.parts ? { parts: d.parts.filter(id => (s.events[id]?.effects || []).some(f => f.gone === d.key)) } : {}), left: items.filter(({ k, x }) => orphanOf(x, d.key) && !edited(k, x)).length }))
+        .filter(d => d.events.length || d.parts?.length || d.left);
 }
 
 // 출처: where an item on the phone came from — the message's number and its words (r: the round that saw it).

@@ -512,3 +512,87 @@ test('상태창 날짜 순서: asked once per chat, month first until then; a ch
         assert.deepEqual(data.monthDay('03.11.'), { mo: 3, d: 11 });
     } finally { T.meta = { integrity: 'main-mark' }; }
 });
+
+test('a phone that knows no other city: a scene not among the owner\'s places is asked about, and a named city keeps the owner\'s clock and weather', async () => {
+    const c = setup([say('Ren', 'a'), say('Mara', 'b'), say('Mara', 'c')]);
+    c.p.now = '10-26 10:50'; c.p.year = 2026; c.p.country = 'KR';
+    c.p.where = { at: 1, people: [{ name: 'Ren', city: 'Seoul', names: ['Seoul', '서울'], lives: 'KR', tz: 'Asia/Seoul' }] };
+    c.p.life = { at: '10-26 10:50', clock: { alarms: [], timers: [], running: null }, health: { usual: {}, days: [] }, files: { folders: [], items: [] },
+        weather: { here: { place: 'Seoul', date: '10-26', time: '10:50', cond: 'clear', temp: 15, hours: [], days: [], tiles: {} }, cities: [] } };
+    await withTrackers([trk(2, '03:00', "Frankfurt · Mara's hotel", '흐림 2°C')], async () => {
+        await run(c.m, { now: '10-26 03:05', statusCity: { city: 'Frankfurt am Main', tz: 'Europe/Berlin' }, events: [] });
+    });
+    assert.ok(T.sys.includes('"statusCity"'));
+    assert.equal(c.p.now, '10-26 11:00');
+    assert.deepEqual([c.p.life.weather.here.place, c.p.life.weather.here.cond], ['Seoul', 'clear']);
+});
+
+test('the reflection says someone else is now in another city: their row moves there', async () => {
+    const c = setup([say('Ren', 'a'), say('Mara', 'b'), say('Mara', 'I am staying in Frankfurt for a month now')]);
+    c.p.where = { at: 1, people: [{ name: 'Ren', city: 'Frankfurt am Main', names: ['Frankfurt am Main', 'Frankfurt'], lives: 'DE', tz: 'Europe/Berlin' }, { name: 'Mara', city: 'Seoul', names: ['Seoul', '서울'], lives: 'KR', tz: 'Asia/Seoul' }] };
+    await run(c.m, { now: '10-26 13:00', elsewhere: [{ name: 'Mara', city: 'Frankfurt am Main', names: ['Frankfurt', '프랑크푸르트'], tz: 'Europe/Berlin' }], events: [] });
+    const mara = c.p.where.people.find(x => x.name === 'Mara');
+    assert.deepEqual([mara.city, mara.tz, mara.lives], ['Frankfurt am Main', 'Europe/Berlin', 'KR']);
+    assert.ok(T.sys.includes('"elsewhere"'));
+});
+
+test('a scene the phone asks about (not yet placed) goes to the model with its place and weather only, no hour', async () => {
+    const c = setup([say('Ren', 'a'), say('Mara', 'b'), say('Mara', 'c')]);
+    c.p.now = '10-26 10:50'; c.p.year = 2026; c.p.country = 'KR';
+    c.p.where = { at: 1, people: [{ name: 'Ren', city: 'Seoul', names: ['Seoul', '서울'], lives: 'KR', tz: 'Asia/Seoul' }] };
+    c.p.life = { at: '10-26 10:50', clock: { alarms: [], timers: [], running: null }, health: { usual: {}, days: [] }, files: { folders: [], items: [] },
+        weather: { here: { place: 'Seoul', date: '10-25', time: '10:50', cond: 'clear', temp: 15, hours: [], days: [], tiles: {} }, cities: [] } };
+    await withTrackers([trk(2, '03:00', "Frankfurt · Mara's hotel", '흐림 2°C')], async () => run(c.m, { now: '10-26 11:00', events: [] }));
+    const w = (T.input.match(/\[WEATHER NOW\]\n(.*)/) || [])[1] || '';
+    assert.ok(w && !w.includes('"time"'), w);
+});
+
+test('the owner\'s scene at a place that is no city ("Mara\'s room", "Gangnam · cafe"): the weather app keeps its city, the line\'s sky goes in', async () => {
+    for (const [place, said, want] of [["Mara's room", 'Seoul', 'Seoul'], ['Gangnam · cafe', 'Seoul', 'Seoul'], ['Rome · hotel', 'Rome', 'Rome'], ["Mara's room", "Mara's room", 'Seoul']]) {
+        const c = setup([say('Ren', 'a'), say('Mara', 'b'), say('Mara', 'c')]);
+        c.p.now = '10-26 10:50'; c.p.year = 2026; c.p.country = 'KR';
+        c.p.where = { at: 1, people: [{ name: 'Ren', city: 'Seoul', names: ['Seoul', '서울'], lives: 'KR', tz: 'Asia/Seoul' }] };
+        c.p.life = { at: '10-26 10:50', clock: { alarms: [], timers: [], running: null }, health: { usual: {}, days: [] }, files: { folders: [], items: [] },
+            weather: { here: { place: 'Seoul', date: '10-26', time: '10:50', cond: 'clear', temp: 15, hours: [], days: [], tiles: {} }, cities: [] } };
+        await withTrackers([trk(2, '11:20', place, '비 12°C')], async () => run(c.m, { now: '10-26 11:20', statusCity: 'owner', weather: { place: said, date: '10-26', time: '11:20', cond: 'rain', temp: 12, from: 'chat' }, events: [] }));
+        assert.deepEqual([c.p.life.weather.here.place, c.p.life.weather.here.cond], [want, 'rain'], place + ' / ' + said);
+    }
+});
+
+test('a status line\'s scene named by a person the same answer says is in another city ("Mara", elsewhere: Frankfurt) is placed there', async () => {
+    const c = setup([say('Ren', 'a'), say('Mara', 'b'), say('Mara', 'c')]);
+    c.p.now = '10-26 10:50'; c.p.year = 2026; c.p.country = 'KR';
+    c.p.where = { at: 1, people: [{ name: 'Ren', city: 'Seoul', names: ['Seoul', '서울'], lives: 'KR', tz: 'Asia/Seoul' }] };
+    await withTrackers([trk(2, '03:00', "Hotel Ivo · lobby", '흐림 2°C')], async () =>
+        run(c.m, { now: '10-26 03:05', statusCity: 'Mara', elsewhere: [{ name: 'Mara', city: 'Frankfurt am Main', names: ['Frankfurt'], tz: 'Europe/Berlin' }], events: [] }));
+    assert.equal(c.p.now, '10-26 11:00');
+});
+
+// ---- 점검 2차: statusCity · elsewhere · 날씨 앱 도시
+const seoulPhone = c => {
+    c.p.now = '10-26 10:50'; c.p.year = 2026; c.p.country = 'KR';
+    c.p.where = { at: 1, failed: true, people: [{ name: 'Ren', city: 'Seoul', names: ['Seoul', '서울'], lives: 'KR', tz: 'Asia/Seoul' }, { name: 'Ivo', city: 'Busan', names: ['Busan', '부산'], lives: 'KR', tz: 'Asia/Seoul' }] };
+    c.p.life = { at: '10-26 10:50', clock: { alarms: [], timers: [], running: null }, health: { usual: {}, days: [] }, files: { folders: [], items: [] },
+        weather: { here: { place: 'Seoul', date: '10-26', time: '10:50', cond: 'clear', temp: 15, hours: [], days: [], tiles: {} }, cities: [{ name: 'New York City', tz: 'America/New_York' }] } };
+};
+test('statusCity: another person in the owner\'s zone (Ivo in Busan) is not the owner\'s weather; the owner\'s name is the owner; "New York" is the saved "New York City"', async () => {
+    let c = setup([say('Ren', 'a'), say('Ivo', 'b'), say('Ivo', 'c')]); seoulPhone(c);
+    await withTrackers([trk(2, '11:00', 'Haeundae beach', '비 12°C')], async () => run(c.m, { now: '10-26 11:00', statusCity: 'Ivo', weather: { place: 'Busan', cond: 'rain', temp: 12, from: 'chat' }, events: [] }));
+    assert.deepEqual([c.p.life.weather.here.place, c.p.life.weather.here.cond], ['Seoul', 'clear']);
+    c = setup([say('Ren', 'a'), say('Ivo', 'b'), say('Ren', 'c')]); seoulPhone(c);
+    await withTrackers([trk(2, '11:40', 'Strange Place', '맑음')], async () => run(c.m, { now: '10-26 11:10', statusCity: 'Ren', events: [] }));
+    assert.equal(c.p.now, '10-26 11:40');
+    c = setup([say('Ren', 'a'), say('Ivo', 'b'), say('Varo', 'c')]); seoulPhone(c);
+    await withTrackers([trk(2, '21:00', 'Somewhere Bar', '맑음')], async () => run(c.m, { now: '10-26 11:05', statusCity: 'New York', events: [] }));
+    assert.equal(c.p.now, '10-27 10:00');
+});
+
+test('elsewhere takes only people (not "everyone" or "the courier") and keeps the place reading\'s failed mark; the owner gone to Bangkok gets "방콕" in the weather app', async () => {
+    const c = setup([say('Ren', 'a'), say('Mara', 'b'), say('Mara', 'everyone landed in Paris, Varo too')]); seoulPhone(c);
+    await run(c.m, { now: '10-26 11:00', elsewhere: [{ name: 'everyone', city: 'Paris', tz: 'Europe/Paris' }, { name: 'the courier', city: 'Paris', tz: 'Europe/Paris' }, { name: 'Varo', city: 'Paris', tz: 'Europe/Paris' }], events: [] });
+    assert.deepEqual(c.p.where.people.map(x => x.name).sort(), ['Ivo', 'Ren', 'Varo']);
+    assert.equal(c.p.where.failed, true);
+    const d = setup([say('Ren', 'a'), say('Mara', 'b'), say('Ren', 'landed in Bangkok')]); seoulPhone(d);
+    await withTrackers([trk(2, '13:00', '방콕 · 호텔', '맑음 31°C')], async () => run(d.m, { now: '10-26 13:00', ownerCity: { city: 'Bangkok', names: ['방콕', 'Bangkok'], tz: 'Asia/Bangkok' }, weather: { place: '방콕', cond: 'clear', temp: 31, from: 'chat' }, events: [] }));
+    assert.equal(d.p.life.weather.here.place, '방콕');
+});

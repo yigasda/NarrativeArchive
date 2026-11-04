@@ -71,10 +71,12 @@ export const gapDays = (a, b) => { let g = dnum(b) - dnum(a); if (!Number.isFini
 // a record's time ("MM-DD HH:MM") as minutes from the story's now, for sorting in story order across New Year. Records
 // are mostly behind now: up to a month ahead stays ahead (an order due, a booking), the rest of the year is behind
 export const storyMin = (t, now) => {
-    const s = String(t || ''), d = dnum(s), n = dnum(String(now || ''));
+    // (whole days on a 366-day round, 02-29 between 02-28 and 03-01: a year without it keeps its order)
+    const day366 = v => { const mt = /^(\d{2})-(\d{2})/.exec(String(v || '')); return mt ? Date.UTC(2000, mt[1] - 1, Number(mt[2])) / 864e5 : NaN; };
+    const s = String(t || ''), d = day366(s), n = day366(String(now || ''));
     if (!Number.isFinite(d)) return -1e9;
     let g = Number.isFinite(n) ? d - n : d;
-    if (Number.isFinite(n)) { if (g > 31) g -= 365; else if (g < -334) g += 365; }
+    if (Number.isFinite(n)) { if (g > 31) g -= 366; else if (g < -335) g += 366; }
     const hm = /(\d{2}):(\d{2})/.exec(s.slice(5));
     return g * 1440 + (hm ? hm[1] * 60 + Number(hm[2]) : 0);
 };
@@ -179,17 +181,18 @@ export function salvageJson(t, { whole = false } = {}) {
     };
     // a value is whole only when what follows can come after it; a number cut in two ("price": 12,000 or 1 20) is broken,
     // not 12 or 1. Nothing is kept from a broken piece
-    const done = v => {
+    // (in a list, [58, 124] is two numbers: only three digits starting with 0, [12,000], are a number cut in two there)
+    const done = (v, inList = false) => {
         ws();
         if (i < s.length && !/[,}\]]/.test(s[i])) fail();
-        if (typeof v === 'number' && /^,\s*\d{3}(?!\d)\s*[,}\]]/.test(s.slice(i, i + 20))) fail();
+        if (typeof v === 'number' && (inList ? /^,\s*0\d{2}(?!\d)\s*[,}\]]/ : /^,\s*\d{3}(?!\d)\s*[,}\]]/).test(s.slice(i, i + 20))) fail();
         return v;
     };
     const value = () => {
         ws();
         const ch = s[i];
         if (ch === '{') { const o = {}; if (list(() => { const k = string(); ws(); if (s[i] !== ':') fail(); i++; o[k] = done(value()); }, '}')) half.add(o); return o; }
-        if (ch === '[') { const a = []; list(() => { const v = done(value()); if (whole && half.has(v)) { lost++; return; } a.push(v); }, ']'); return a; }
+        if (ch === '[') { const a = []; list(() => { const v = done(value(), true); if (whole && half.has(v)) { lost++; return; } a.push(v); }, ']'); return a; }
         if (ch === '"') return string();
         const lit = /^(?:true|false|null|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/.exec(s.slice(i, i + 40));
         if (!lit) fail();
@@ -208,14 +211,17 @@ export const num = v => {
     if (v === null || v === undefined || typeof v === 'object' || typeof v === 'boolean') return null;
     if (typeof v === 'number') return Number.isFinite(v) ? Math.round(v * 100) / 100 : null;
     // the first number written ("4.7/5" is 4.7, "25–35" is 25), never two run together
-    // (a minus written before the currency sign or a space, "-₩12,000", "- € 12,50", is still the number's)
-    const mt = String(v).replace(/[−–](?=\s*(?:[^\d\s.,−–-]{1,3}\s*)?\d)/g, '-').replace(/-\s*(?:[^\d\s.,-]{1,3}\s*)?(?=\d)/, '-').match(/-?\d[\d.,]*/);
+    // (a minus written before the currency sign or a space, "-₩12,000", "- € 12,50", is still the number's; a dash before
+    // letters, "BTC-USD 65,000", is no minus)
+    const mt = String(v).replace(/[−–](?=\s*(?:[^\p{L}\d\s.,−–-]{1,3}\s*)?\d)/gu, '-').replace(/-\s*(?:[^\p{L}\d\s.,-]{1,3}\s*)?(?=\d)/u, '-').match(/-?\d[\d.,]*/);
     if (!mt) return null;
     let t = mt[0].replace(/[.,]+$/, '');
     // "1.200,50" and "1,200.50": the last mark is the decimal one; "12,50" is 12.5; "1,200" and "1.200.000" are thousands
     if (t.includes('.') && t.includes(',')) { const d = Math.max(t.lastIndexOf('.'), t.lastIndexOf(',')); t = t.slice(0, d).replace(/[.,]/g, '') + '.' + t.slice(d + 1); }
     else if (t.includes(',')) t = /,\d{1,2}$/.test(t) && (t.match(/,/g) || []).length === 1 ? t.replace(',', '.') : t.replace(/,/g, '');
     else if ((t.match(/\./g) || []).length > 1) t = t.replace(/\./g, '');
+    // one dot with exactly three digits after it is thousands too ("1.200" euros is 1200, "12.50" is 12.5; "0.125" stays)
+    else if (/^-?[1-9]\d{0,2}\.\d{3}$/.test(t)) t = t.replace('.', '');
     const n = Number(t);
     return Number.isFinite(n) ? Math.round(n * 100) / 100 : null;
 };

@@ -171,7 +171,15 @@ const unline = h => { const l = String(h.line || '').replace(/(영하\s*)?[-−]
 // (by whole words: "Frankfurt · Küche" is Frankfurt am Main, "서울역" Seoul; "LA" is not Milan, "Ren" not Florence)
 const wordsOf = v => String(v || '').toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean), leads = ws => ws.map((_, i) => ws.slice(0, i + 1).join(''));
 const sameCity = (place, name) => { const p = wordsOf(place), n = wordsOf(name), pj = p.join(''), nj = n.join(''), head = wordsOf(String(place || '').split(/\s*[·|,/→>]\s*/)[0]).join(''); return !!pj && !!nj && (leads(p).includes(nj) || leads(n).includes(pj) || !!head && leads(n).includes(head) || /^\p{Script=Hangul}/u.test(nj) && pj.startsWith(nj)); };
-export const cityAt = (place, cities) => { const pk = wordsOf(place).join(''); return pk ? arr(cities).find(c => [c?.name, c?.ko].filter(Boolean).some(n => sameCity(place, n))) || null : null; };
+// (else a later piece of the place, "Gangnam, Seoul", "Kreuzberg · Berlin", when only one saved city is named there)
+export const cityAt = (place, cities) => {
+    const pk = wordsOf(place).join(''), of = t => arr(cities).find(c => [c?.name, c?.ko].filter(Boolean).some(n => sameCity(t, n))) || null;
+    if (!pk) return null;
+    const first = of(place);
+    if (first) return first;
+    const hits = [...new Set(String(place || '').split(/\s*[·|,/→>]\s*/).slice(1).map(of).filter(Boolean))];
+    return hits.length === 1 ? hits[0] : null;
+};
 // the saved city the owner is in carries the same weather as "here" (the model may leave it as it was)
 export function mirrorHome(w) {
     const h = w?.here, c = h && cityAt(h.place, w.cities);
@@ -441,12 +449,13 @@ const finiteNum = v => typeof v === 'number' && Number.isFinite(v);
 const hash = s => { let h = 2166136261; for (const c of String(s)) h = Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0; h ^= h >>> 15; h = Math.imul(h, 2246822507) >>> 0; h ^= h >>> 13; h = Math.imul(h, 3266489909) >>> 0; return (h ^ (h >>> 16)) >>> 0; };
 const shiftHm = (t, min) => { const mt = /^(\d{2}):(\d{2})$/.exec(t || ''); if (!mt) return ''; const v = ((mt[1] * 60 + Number(mt[2]) + min) % 1440 + 1440) % 1440; return `${pad(Math.floor(v / 60))}:${pad(v % 60)}`; };
 // year: the story's (a leap year has its February 29), else a common year
-const plusDay0 = (day, n, year = 2000) => { const mt = /^(\d{2})-(\d{2})$/.exec(day); const d = new Date(Date.UTC(Number(year) || 2000, mt[1] - 1, Number(mt[2]) + n)); return `${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`; };
+// (a year unknown: a common one, so 02-28 is followed by 03-01; a leap one only from 02-29 itself)
+const plusDay0 = (day, n, year = 0) => { const mt = /^(\d{2})-(\d{2})$/.exec(day); const d = new Date(Date.UTC(Number(year) || (day === '02-29' ? 2000 : 2001), mt[1] - 1, Number(mt[2]) + n)); return `${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`; };
 const plusDay = (day, n) => plusDay0(day, n);
 export function fillDays(p, now, round) {
     const out = [], L = p.life, u = L?.health?.usual, today = String(now || '').slice(0, 5), hm = String(now || '').slice(6, 11);
     if (!u || !/^\d{2}-\d{2}$/.test(today)) return out;
-    const box = boxAt(p, 'life.health.days', true), Y = !p.noYear && p.year ? p.year : 2000, plusDay = (d, n) => plusDay0(d, n, Y);
+    const box = boxAt(p, 'life.health.days', true), Y = !p.noYear && p.year ? p.year : 0, plusDay = (d, n) => plusDay0(d, n, Y);
     const end = hm && u.wake && hm < u.wake ? plusDay(today, -1) : today;
     // every day missing since the first one kept, gaps between days too (a story day told before the one between them);
     // a story that jumped ahead: only its last two weeks

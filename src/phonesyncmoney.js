@@ -49,7 +49,7 @@ function accountOf(p, x) {
     return pick1(as.filter(a => a.kind === 'checking')) || pick1(as);
 }
 // a story day n days on ("MM-DD", a leap February assumed)
-const plusDays = (day, n) => { const mt = /^(\d{2})-(\d{2})$/.exec(day || ''); if (!mt) return ''; const d = new Date(Date.UTC(2000, mt[1] - 1, Number(mt[2]) + n)); return `${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`; };
+const plusDays = (day, n) => { const mt = /^(\d{2})-(\d{2})$/.exec(day || ''); if (!mt) return ''; const d = new Date(Date.UTC(day === '02-29' ? 2000 : 2001, mt[1] - 1, Number(mt[2]) + n)); return `${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`; };
 const fullDay = (year, anchor, date) => {
     const a = /^(\d{4})-(\d{2})-(\d{2})$/.exec(anchor || '');
     if (!a || !/^\d{2}-\d{2}$/.test(date || '')) return `${year}-${date}`;
@@ -532,7 +532,9 @@ const unchanged = (path, now, was) => (/^(money|investment)\./.test(path) ? ['am
 export function revertEffects(m, p, effects) {
     const f = finance(m), left = [];
     // a delivery order that stays (changed since: delivered, reviewed) keeps its payment with it
-    const dlvKept = new Set(effects.filter(x => x.type === 'push' && x.path === 'delivery.orders').map(x => (p.delivery?.orders || []).find(o => o.id === x.item?.id) && !unchanged(x.path, p.delivery.orders.find(o => o.id === x.item.id), x.item) ? x.item.id : null).filter(Boolean));
+    // (compared as it will be once this list's own status changes are taken back: the same event's "delivered" is no hand)
+    const asAfter = o => { const c = structuredClone(o); for (const x of [...effects].reverse()) if (x.type === 'status' && x.path === 'delivery.orders' && x.id === c.id && c.status === x.status) { c.status = x.prev; delete c.byClock; if ('arrivedFrom' in x && c.arrived === x.arrived) { if (x.arrivedFrom === null) delete c.arrived; else c.arrived = x.arrivedFrom; } } return c; };
+    const dlvKept = new Set(effects.filter(x => x.type === 'push' && x.path === 'delivery.orders').map(x => { const o = (p.delivery?.orders || []).find(y => y.id === x.item?.id); return o && !unchanged(x.path, asAfter(o), x.item) ? x.item.id : null; }).filter(Boolean));
     const paidFor = new Set(dlvKept.size ? [...effects.filter(x => x.type === 'push' && x.path === 'money.tx' && dlvKept.has(x.item?.delivery)).map(x => x.item.id), ...(p.money?.tx || []).filter(t => dlvKept.has(t.delivery)).map(t => t.id)] : []);
     for (const x of [...effects].reverse()) {
         if (paidFor.size && (x.type === 'entry' || x.type === 'push' && x.path === 'money.tx') && paidFor.has(x.type === 'entry' ? x.id : x.item?.id)) { left.push(x); continue; }

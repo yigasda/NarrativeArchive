@@ -166,7 +166,8 @@ WHERE IT COMES FROM
 - "date" and "time": when it happens in that message ("MM-DD", "HH:MM" if known). A plan for later happens when it is made; its later day goes only on the calendar item.
 - "now": the moment of the newest message, never a time something is only planned for.
 - "ownerCity": only when these messages take the owner to another city (a trip, a move, coming home): { "city": in English, "names": [each name the messages and status lines write it as, exactly, then its English and Korean names], "tz": its time zone like "Asia/Seoul" }; else null.
-${zone ? `- "statusCity": the newest status line in these messages is from a scene the app can't place. Whose clock does it show? A city or person in OWNER'S CLOCK, "owner" for the owner's own, or "" when the messages don't say.\n` : ''}${split ? `- "apps": "money" when the event has anything for the bank, cards, orders, tickets or the delivery app (its basket too)${invest ? '; "invest" for the brokerage (a trade, a share price the story gives, a share they start watching, a stake)' : ''}; else []. When unsure, include it.\n` : ''}${life ? `
+- "elsewhere": only people other than the owner whom these messages put in another city (a trip, a move, coming home): [{ "name", "city": in English, "names": [as for ownerCity], "tz" }]; else [].
+${zone ? `- "statusCity": the newest status line in these messages is from a scene the app can't place. Whose clock does it show? A city or person in OWNER'S CLOCK, "owner" for the owner's own, another city as { "city": in English, "tz" }, or "" when the messages don't say.\n` : ''}${split ? `- "apps": "money" when the event has anything for the bank, cards, orders, tickets or the delivery app (its basket too)${invest ? '; "invest" for the brokerage (a trade, a share price the story gives, a share they start watching, a stake)' : ''}; else []. When unsure, include it.\n` : ''}${life ? `
 LIFE
 - An alarm the owner sets, changes or switches on or off in these messages; a timer they set; a file they receive, save, scan or delete. Pictures the camera takes go to photos, not files.
 - An alarm for one occasion (a flight, an appointment) rings once: "days": [] and its "date". Only an alarm the owner keeps for every week has "days".
@@ -194,7 +195,7 @@ ${delivery ? `- A delivery paid in cash at the door has no move. "tip" only wher
 ${PHONE_STYLE.replace('; "now" is the newest moment of the story.', '.')}
 
 ANSWER — one JSON object, nothing else:
-{ "now": "MM-DD HH:MM", "ownerCity": null,${zone ? ' "statusCity": "",' : ''}
+{ "now": "MM-DD HH:MM", "ownerCity": null, "elsewhere": [],${zone ? ' "statusCity": "",' : ''}
   "events": [{ "id": an id from EVENTS ON THE PHONE, or a short new tag like "berlin-flight", "at": 123, "quote": "exact words",
                "date": "MM-DD", "time": "HH:MM" or "", "summary": "one short line",${split ? ` "apps": [] or ["money"${invest ? ', "invest"' : ''}],` : ''}
                "phone": { only the app items this event puts on the phone }${money ? `,
@@ -729,6 +730,12 @@ export async function makePhone(m, owner, { update = false, apps = null } = {}) 
         mergePhone(p, { ...only(got), profile: null });
         if (got2) mergePhone(p, { ...only(got2), profile: part.includes('profile') ? got2.profile : null });
         for (const k of part) if (k !== 'profile') carryOver(k, was[k], p[k]);
+        // an archive section that runs past the clock isn't sent (it would tell what comes after), and its messages are
+        // hidden: what a reflection put in from them, up to the clock, the remake never saw, so it stays
+        const clock = phoneAt(p), [body] = splitTail(String(m.text || ''));
+        const unseen = Number.isInteger(clock) ? parseSections(body).filter(s => !s.group && secFirst(s) <= clock && secEnd(s) > clock).map(s => [secFirst(s), clock]) : [];
+        const inUnseen = i => Number.isInteger(i) && unseen.some(([a, b]) => i >= a && i <= b);
+        if (unseen.length) for (const k of part) if (LISTS.includes(k)) p[k] = [...p[k], ...fresh(k, p[k], (was[k] || []).filter(x => x.froms?.length ? x.froms.every(f => inUnseen(f.at)) : !!x.ev && inUnseen(p.sync?.events?.[x.ev]?.at)))].slice(-CAP[k]);
         // the last round's 되돌리기 would put back the old app's records: no more
         delete p.syncUndo;
         ensureIds(p);
@@ -903,6 +910,7 @@ async function moneyStage(m, p, owner, targets, c) {
         out.notes.push(...paid.notes);
         // the event keeps every record it gave, from both steps and every round (빼기 takes them all out together)
         const e0 = s.events[t.id] ||= { at: t.at, quote: t.quote || '', summary: t.summary || t.id, effects: [] };
+        if (e0.at !== t.at && Number.isInteger(t.at)) for (const f of paid.effects) f.src = t.at;
         e0.effects = [...(e0.effects || []), ...paid.effects];
         if (paid.legs.length) e0.legs = [...(e0.legs || []), ...paid.legs.filter(l => !(e0.legs || []).some(o => o.key === l.key))];
         out.late.push({ id: t.id, at: t.at, add: {}, effects: paid.effects, summary: t.summary, legs: paid.legs });
@@ -970,9 +978,12 @@ async function updatePhone(m, owner) {
         let sceneOwn = tracker ? sceneHome(p, tracker.place, m) : true;
         // a status line among these messages whose scene the phone can't place: the model says whose clock it shows
         const clock = clockBlock(p, hm(p.now) ? p.now : st?.raw, m, st);
-        const askZone = sceneOwn === null && round.rows.some(r => r.index === trackAt) && !!clock;
+        // (on a phone that knows no other city, a scene that isn't one of the owner's places is asked too: "Frankfurt"
+        // may be another country; it stays the owner's unless the model names another city)
+        const askZone = round.rows.some(r => r.index === trackAt) && (sceneOwn === null && !!clock || sceneOwn === true && !clock && !!tracker && !sceneZone(p, tracker.place, m));
         // a scene the owner isn't in (or may not be): the model gets its place and weather, never its hour
-        const trackShown = tracker && sceneOwn !== true ? { place: tracker.place, weather: tracker.weather } : tracker;
+        // (and one asked about, not yet placed: its place and weather only too)
+        const trackShown = tracker && (sceneOwn !== true || askZone) ? { place: tracker.place, weather: tracker.weather } : tracker;
         const trackDay = tracker ? when(tracker.date).slice(0, 5) : '';
         // the model writes the weather when no status line gives it, when the status line has no date or its day moved on
         // from the saved weather's, or when it puts the story somewhere else; a same-day, same-place line only stands over it
@@ -1087,6 +1098,8 @@ async function updatePhone(m, owner) {
             // an event told again from a later message (its order delivered, its amount stated) stays where it happened, so
             // deleting that message still offers everything it gave; one whose message is gone is taken up by the new one
             const at0 = s.events[id]?.at, home = Number.isInteger(at0) && inRound.has(at0) === false && rowText.has(at0) ? at0 : at;
+            // (what this later message gave is marked with it: deleting only this message takes only that back)
+            if (home !== at) for (const f of fx) f.src = at;
             s.events[id] = { at: home, quote: line(e.quote, 200), summary: line(e.summary, 160), effects: [...(s.events[id]?.effects || []), ...fx], ...(paid.legs.length || s.events[id]?.legs ? { legs: [...(s.events[id]?.legs || []), ...paid.legs.filter(l => !(s.events[id]?.legs || []).some(o => o.key === l.key))] } : {}) };
             added.push({ id, at, add: told, effects: fx, quote: line(e.quote, 200), summary: line(e.summary, 160), legs: paid.legs });
         }
@@ -1125,9 +1138,12 @@ async function updatePhone(m, owner) {
         // place: a "cafe" may be in either city next time)
         // the owner moved to another city in these messages: their clock is that city's from here on
         const ownerWent = ownerMoved(p, raw.ownerCity);
+        // someone else now in another city (a trip, a move): their row, from here on (read first: a status line's scene
+        // named by that person, "Mara", is where these messages put her)
+        const ownerWentOthers = peopleMoved(p, raw.elsewhere, round.rows.map(r => r.text).join('\n'));
         let named = null;
-        if (askZone && typeof raw.statusCity === 'string') named = zoneNamed(p, raw.statusCity, m);
-        if (ownerWent || named) { st = statusMoment(p, roundEnd, named, m); if (tracker) sceneOwn = sceneHome(p, tracker.place, m, named); }
+        if (askZone && (typeof raw.statusCity === 'string' || raw.statusCity && typeof raw.statusCity === 'object')) named = zoneNamed(p, raw.statusCity, m);
+        if (ownerWent || ownerWentOthers || named) { st = statusMoment(p, roundEnd, named, m); if (tracker) sceneOwn = sceneHome(p, tracker.place, m, named); }
         // a status line among these messages: now is never before it (a model that took another city's hour for the
         // owner's); later, the model's own. Its status line also sets back a now that ran ahead of it the day before
         const fresh = !!st?.at && round.rows.some(r => r.index === st.i);
@@ -1143,7 +1159,7 @@ async function updatePhone(m, owner) {
             p.now = nowAt;
         }
         // the round's own: new days nobody told, the weather, and what the clock moving on does by itself
-        const days = [...applyDays(p, raw.days, rid), ...fillDays(p, p.now, rid)], sky = lifeAhead ? [] : applyWeather(p, askWeather ? raw.weather : null, sceneOwn === true ? tracker : null, { archive: evidence.length + before.length > 0, today: String(p.now || '').slice(0, 5) });
+        const days = [...applyDays(p, raw.days, rid), ...fillDays(p, p.now, rid)], sky = lifeAhead ? [] : applyWeather(p, askWeather && !weatherElsewhere(p, raw.weather, named, m) ? raw.weather : null, sceneOwn === true ? homeTracker(p, tracker, raw.weather, m) : null, { archive: evidence.length + before.length > 0, today: String(p.now || '').slice(0, 5) });
         if (days.length) apps.add('건강');
         if (sky.length) apps.add('날씨');
         const roundFx = [...days, ...sky, ...lifeClock(p, p.now), ...dlvClock(p, p.now), ...cardClock(p, p.now)];
@@ -1236,12 +1252,15 @@ function settleDropped(p, { dropped }, notes) {
         const ids = Object.entries(s.events).filter(([, e]) => e.at >= r.from && e.at <= r.to).map(([id]) => id), label = r.from === r.to ? `#${r.from}` : `#${r.from}–${r.to}`;
         const key = Math.random().toString(36).slice(2, 10);
         for (const id of ids) s.events[id].at = null;
+        // what an event living at another message got from these ones (its order delivered here): offered on its own
+        const parts = Object.entries(s.events).filter(([id, e]) => !ids.includes(id) && (e.effects || []).some(f => Number.isInteger(f.src) && f.src >= r.from && f.src <= r.to)).map(([id]) => id);
+        for (const id of parts) for (const f of s.events[id].effects) if (Number.isInteger(f.src) && f.src >= r.from && f.src <= r.to) { f.src = null; f.gone = key; }
         // sources from these messages lose their number: a new message given the same number is not them
         let hit = false;
         for (const { x } of items) for (const f of x.froms || []) if (f.at !== null && f.at >= r.from && f.at <= r.to) { f.was = f.at; f.at = null; f.gone = key; hit = true; }
-        if (!ids.length && !hit) continue;
+        if (!ids.length && !hit && !parts.length) continue;
         if (r.unsure) { notes.push(`대화 ${label}가 바뀌었어요. 같은 말이 여럿이라 어느 것인지 몰라서, 거기서 넣은 내용은 그대로 뒀어요`); continue; }
-        s.dropped.push({ key, label, events: ids, at: Date.now() });
+        s.dropped.push({ key, label, events: ids, ...(parts.length ? { parts } : {}), at: Date.now() });
         notes.push(`대화 ${label}가 지워졌거나 바뀌었어요. 거기서 넣은 내용은 설정 › 대화 반영에서 뺄 수 있어요`);
     }
 }
@@ -1255,14 +1274,25 @@ export async function dropStretch(m, p, k) {
     const d = s.dropped.find(x => x.key === (typeof k === 'string' ? k : was));
     if (!d) return { gone: 0, items: 0, kept: [] };
     const kept = [], stay = new Set(), out = new Set();
+    const pend = new Set(s.dropped.filter(x => x !== d).flatMap(x => [...x.events, ...(x.parts || [])]));
     let gone = 0;
+    // an event living at another message: only what the gone ones gave it goes back (a later message's "delivered")
+    for (const id of d.parts || []) {
+        const e = s.events[id];
+        if (!e) continue;
+        const mine = (e.effects || []).filter(f => f.gone === d.key), left = revertEffects(m, p, mine);
+        const back = new Set(mine.filter(f => !left.some(l => l === f)).map(f => JSON.stringify(f)));
+        e.effects = e.effects.filter(f => !back.has(JSON.stringify(f)));
+        if (left.length) kept.push(e.summary || id); else gone++;
+    }
     for (const id of d.events) {
         const e = s.events[id];
         if (!e || e.at !== null) continue;
         const made = new Set((e.effects || []).filter(x => x.type === 'push' || x.type === 'entry').map(x => x.item?.id ?? x.id));
         // built on later: another event changed, corrected or counted one of its records as its own
         // (another event of this same stretch goes too: it holds nothing)
-        const leaving = o => o === id || d.events.includes(o);
+        // (nor does one whose message is gone too and that waits in the 빼기 list: taking either off first takes the order)
+        const leaving = o => o === id || d.events.includes(o) || s.events[o]?.at === null && pend.has(o);
         let tied = Object.entries(s.events).some(([o, x]) => !leaving(o) && ((x.effects || []).some(y => ['status', 'amend', 'amendEntry', 'change', 'seen'].includes(y.type) && made.has(y.id)) || (x.legs || []).some(l => l.state === 'included' && made.has(l.rec))));
         const trades = new Set((e.effects || []).filter(x => x.path === 'investment.trades').map(x => x.item.id));
         if (!tied && trades.size) { try { positions((p.investment?.trades || []).filter(t => !trades.has(t.id))); } catch { tied = true; } }
@@ -1290,7 +1320,8 @@ export async function dropStretch(m, p, k) {
     for (const t of p.threads) t.messages = t.messages.filter(keep('msg'));
     p.threads = p.threads.filter(t => t.messages.length); // a thread with nothing left in it goes too
     for (const x of p.posts || []) if (x.comments) x.comments = x.comments.filter(keep('comment'));
-    s.dropped.splice(s.dropped.indexOf(d), 1);
+    // what stayed because another stretch still waiting holds it is offered again with that one gone (else it stays for good)
+    if (stay.size && pend.size) d.events = d.events.filter(id => stay.has(id)); else s.dropped.splice(s.dropped.indexOf(d), 1);
     if (p.money) migrateBank(m, p);
     await saveMeta();
     if (p.inject) applyInjection();
@@ -1310,7 +1341,7 @@ function renumber(m, p, { moved, changed, dropped = [] }) {
     for (const f of Object.values(p.sync.failed)) if (f.span) f.span = [to(f.span[0]) ?? f.span[0], to(f.span[1]) ?? f.span[1]];
     for (const r of [...(p.money?.tx || []), ...(p.money?.orders || []), ...(p.money?.passes || []), ...(p.investment?.trades || []), ...(p.delivery?.orders || [])]) if (r.sourceIndex !== undefined) r.sourceIndex = to(r.sourceIndex);
     // the events' own copies of their records too (a changed message's events are found by them)
-    for (const e of Object.values(p.sync.events)) for (const f of e.effects || []) { if (f.item?.sourceIndex !== undefined) f.item.sourceIndex = to(f.item.sourceIndex); if (f.sourceIndex !== undefined) f.sourceIndex = to(f.sourceIndex); }
+    for (const e of Object.values(p.sync.events)) for (const f of e.effects || []) { if (f.item?.sourceIndex !== undefined) f.item.sourceIndex = to(f.item.sourceIndex); if (f.sourceIndex !== undefined) f.sourceIndex = to(f.sourceIndex); if (Number.isInteger(f.src)) f.src = to(f.src); }
     for (const a of Object.values(m.finance?.accounts || {})) if (a.owner === p.owner) for (const x of Object.values(a.entries)) if (x.sourceIndex !== undefined) x.sourceIndex = to(x.sourceIndex);
 }
 // 되돌리기: the last round only. What it added goes by its ids, its money comes back out, and those messages are unread again.
@@ -1365,9 +1396,12 @@ export async function undoRound(m, p) {
     // items that were there before the round forget it as a source
     for (const { x } of phoneItems(p)) if (x.froms) x.froms = x.froms.filter(f => f.r !== u.round);
     // what can't be put back (changed since, or built on) stays, and so does its event, with only what stayed
-    const now = structuredClone(s.events), kept = [];
+    const now = structuredClone(s.events), kept = [], droppedNow = structuredClone(s.dropped || []);
     const left = new Set(revertEffects(m, p, u.effects).map(x => JSON.stringify(x)));
     Object.assign(s, structuredClone(u.sync));
+    // what 빼기 took off since the round stays off: the list as it is now, and an event's records only those still there
+    s.dropped = droppedNow;
+    for (const [id, e] of Object.entries(s.events)) if (now[id]) { const still = new Set((now[id].effects || []).map(x => JSON.stringify(x))); e.effects = (e.effects || []).filter(x => still.has(JSON.stringify(x))); }
     // an event 빼기 took off since stays off (the snapshot still had it)
     for (const id of Object.keys(s.events)) if (!(id in now)) delete s.events[id];
     for (const [id, effects] of u.byEvent || []) {
@@ -1610,10 +1644,47 @@ function ownerMoved(p, c) {
     if (!tz || !city) return false;
     const row = { ...whereOf(p, p.owner), name: p.owner, city, names: namesOf(c), tz };
     delete row.local;
-    p.where = { at: p.where?.at || Date.now(), people: [row, ...(p.where?.people || []).filter(x => nameKey(x.name) !== nameKey(p.owner))] };
+    p.where = { ...(p.where || {}), at: p.where?.at || Date.now(), people: [row, ...(p.where?.people || []).filter(x => nameKey(x.name) !== nameKey(p.owner))] };
     return true;
 }
 const whereOf = (p, name) => (p?.where?.people || []).find(x => nameKey(x.name) === nameKey(name));
+// the model's weather for a place the phone knows is another's (Busan for an owner in Seoul, the city the scene was just
+// named as): not the owner's
+function weatherElsewhere(p, w, named, m = null) {
+    const place = w && typeof w === 'object' ? line(w.place, 60) : '';
+    if (!place) return false;
+    return sceneHome(p, place, m) === false || !!named && named.own === false && pkey(named.name) === pkey(place);
+}
+// the owner's status line as the weather app takes it: a place that is no city the phone knows ("Mara's room", "Gangnam ·
+// cafe") leaves the app's own city as it is (the model's, else the one there); its sky, warmth and hour are the line's
+function homeTracker(p, t, w, m = null) {
+    if (!t || sceneZone(p, t.place, m)) return t;
+    const city = line(w?.place, 60), here = p?.life?.weather?.here?.place;
+    // (the model's city when it names one: an owner gone somewhere new, "Rome · hotel", is in Rome)
+    // (a room, a home, a cafe is no city — "방" or "집" only as the word's end, so 방콕 is Bangkok; the owner's own city or a
+    // saved one always is)
+    const own = ownerZone(p), known = !!city && ([own?.where, ...(own?.names || [])].some(n => pkey(n) === pkey(city)) || !!cityAt(city, p?.life?.weather?.cities));
+    const place = city && (known || !/\b(room|home|house|flat|apartment|dorm|place|cafe|office|kitchen|hotel)\b|(?:방|집)(?![가-힣])/i.test(city)) ? city : here || city;
+    return place ? { ...t, place, city: place } : t;
+}
+// people other than the owner the reflection says are now in another city: their rows (where they live stays)
+// (a person: one the phone knows, or a name these messages write as it is — never "everyone", "the courier")
+const NOT_A_PERSON = /^(everyone|everybody|they|them|someone|somebody|people|friends|family|all|the\b.*|모두|다들|사람들|가족|친구들)$/i;
+function peopleMoved(p, list, text = '') {
+    let n = 0;
+    const known = new Set([...(p?.where?.people || []).map(x => x.name), ...(p?.contacts || []).map(x => x.name), ...(p?.threads || []).map(t => t.with)].filter(Boolean).map(nameKey));
+    for (const c of arr(list).slice(0, 8)) {
+        const name = line(c?.name, 60), tz = realTz(c?.tz), city = line(c?.city, 60);
+        if (!name || !tz || !city || nameKey(name) === nameKey(p.owner) || NOT_A_PERSON.test(name.trim())) continue;
+        if (!known.has(nameKey(name)) && !(/^[\p{Lu}\p{Script=Hangul}]/u.test(name) && String(text).includes(name))) continue;
+        const was = whereOf(p, name), row = { ...was, name: was?.name || name, city, names: namesOf(c), tz };
+        delete row.local;
+        if (was && was.city === row.city && was.tz === row.tz) continue;
+        p.where = { ...(p.where || {}), at: p.where?.at || Date.now(), people: [...(p.where?.people || []).filter(x => nameKey(x.name) !== nameKey(name)), row] };
+        n++;
+    }
+    return n > 0;
+}
 const regionName = c => { try { return new Intl.DisplayNames(['en'], { type: 'region' }).of(c) || c; } catch { return c; } };
 // a zone with the names a status line may call its city by
 const zoneOfWhere = x => (!x ? null : x.tz ? { tz: x.tz, where: x.city || regionName(x.lives), names: namesOf(x) } : COUNTRY_TZ[x.lives] ? { tz: COUNTRY_TZ[x.lives], where: x.city || regionName(x.lives), names: namesOf(x) } : null);
@@ -1683,7 +1754,7 @@ export function sceneHome(p, place, m = null, named = null) {
     // its clock reads the same)
     // (and another city in the same zone, Busan for an owner in Seoul, is elsewhere too: its hour is theirs, its weather
     // isn't; an owner known only by the country takes any city of their zone)
-    if (own && z) return z.tz === own.tz && (z.own === true || z.own === undefined || !own.names?.length);
+    if (own && z) return z.tz === own.tz && (z.own === true || !own.names?.length);
     if (!own || !zonesOf(p, hm(p?.now) ? p.now : '01-01 12:00', m)) return true;
     return null;
 }
@@ -1706,10 +1777,22 @@ export function statusMoment(p, upto = null, named = null, m = null) {
 }
 // a city the reflection named for a status line: its zone (a saved city, someone's city, the owner's own)
 function zoneNamed(p, name, m = null) {
-    const own = ownerZone(p), k = pkey(name);
+    const own = ownerZone(p), ownNames = new Set([own?.where, ...(own?.names || [])].map(pkey).filter(Boolean));
+    // the owner's when it is the owner's own place, or a city by one of the owner's city names in their zone (Seoul, not
+    // Busan, for an owner in Seoul)
+    const mine = (tz, city) => !!own && tz === own.tz && ownNames.has(pkey(city));
+    // another city the model names ({ "city", "tz" }): its zone, for this round
+    if (name && typeof name === 'object') { const tz = realTz(name.tz), city = line(name.city, 60); return tz ? { tz, name: city || tz, own: mine(tz, city) } : null; }
+    const k = pkey(name);
     if (!k) return null;
-    if (k === 'owner' && own) return { tz: own.tz, name: own.where };
-    for (const z of placesAround(p, m)) if (pkey(z.who) === k || z.names.some(n => pkey(n) === k)) return { tz: z.tz, name: z.name };
+    // ("owner", or the owner's own name)
+    if ((k === 'owner' || k === pkey(p?.owner)) && own) return { tz: own.tz, name: own.where, own: true };
+    const around = placesAround(p, m);
+    for (const z of around) if (pkey(z.who) === k || z.names.some(n => pkey(n) === k)) return { tz: z.tz, name: z.name, own: !!z.own || mine(z.tz, z.name) };
+    // a shorter name for a saved one ("New York" for "New York City"): only when every such city keeps one zone
+    const lead = n => { const w = String(n || '').toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean); return w.some((_, i) => w.slice(0, i + 1).join('') === k); };
+    const hits = around.filter(z => z.names.some(lead));
+    if (hits.length && hits.every(z => z.tz === hits[0].tz)) return { tz: hits[0].tz, name: hits[0].name, own: !!hits[0].own || mine(hits[0].tz, hits[0].name) };
     return null;
 }
 // ---- the places they have been: section headings that name a place, in sections the owner is in (no model).
