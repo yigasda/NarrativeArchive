@@ -157,9 +157,9 @@ YOU GET
 - IN THE GLOSSARY (sometimes): names already listed. Leave them out.
 
 WHAT TO LIST
-- People, places, groups, ships, shops, titles used as a name, made-up words: anything whose spelling must stay the same.
+- People, cities, countries, groups, the story's own places (a house, a bar the characters keep going to), titles used as a name, made-up words.
 - In any language or script, and made-up words written in lowercase too.
-- Not ordinary words, and not a word only because it starts a sentence. Not a name written only in Korean.
+- Not real brands, products, foods, chain shops, airlines or street names. Not ordinary words, and not a word only because it starts a sentence. Not a name written only in Korean.
 - Each once, as the story writes it. A full name and its short form are two lines only when the story uses both.
 
 KOREAN
@@ -197,6 +197,9 @@ export function glossaryFindInput(c, m, have = []) {
     }
     return [...head, rows.length ? `[RECENT CHAT]\n${rows.join('\n\n')}` : '', listed].filter(Boolean).join('\n\n');
 }
+// what the story keeps coming back to: a name the text sent writes once only (a street passed, a shop named in passing) is
+// left out
+export const glossaryKeep = (found, text) => { const low = String(text || '').toLowerCase(); return found.filter(x => { const k = x.src.toLowerCase(); let n = 0, i = -1; while (n < 2 && (i = low.indexOf(k, i + 1)) >= 0) n++; return n >= 2; }); };
 // the lines of an answer: "Name = 한국어" (a "-" or "*" in front is fine)
 export const glossaryLines = out => String(out || '').split('\n').map(l => l.match(/^\s*(?:[-*]\s*)?([^=→]+?)\s*(?:=|→)\s*(.+?)\s*$/)).filter(Boolean).map(x => ({ src: x[1].trim(), ko: x[2].trim() }));
 
@@ -228,9 +231,10 @@ export async function openGlossary() {
         // what is there already, with or without its Korean: never asked for or written again
         const have = [...new Set($ta.val().split('\n').map(l => l.split(/=|→/)[0].trim()).filter(Boolean))];
         const known = new Set(have.map(s => s.toLowerCase()));
-        const out = await withSpinner($(this), '찾는 중…', () => askTranslator(glossaryFindInput(c, m, have), { system: AI_SYS_GLOSSARY_FIND, maxTokens: 3000 }));
+        const input = glossaryFindInput(c, m, have);
+        const out = await withSpinner($(this), '찾는 중…', () => askTranslator(input, { system: AI_SYS_GLOSSARY_FIND, maxTokens: 3000 }));
         if (out === null) return;
-        const found = glossaryLines(out).filter(x => x.src.length <= 60 && !/[가-힯]/.test(x.src) && !known.has(x.src.toLowerCase()) && (known.add(x.src.toLowerCase()), true));
+        const found = glossaryKeep(glossaryLines(out), input.split('\n\n[IN THE GLOSSARY]')[0]).filter(x => x.src.length <= 60 && !/[가-힯]/.test(x.src) && !known.has(x.src.toLowerCase()) && (known.add(x.src.toLowerCase()), true));
         if (!found.length) return toastr.info('새로 넣을 이름이 없어요.');
         $ta.val(`${$ta.val().replace(/\s+$/, '')}${$ta.val().trim() ? '\n' : ''}${found.map(x => `${x.src} = ${x.ko}`).join('\n')}`);
         info();

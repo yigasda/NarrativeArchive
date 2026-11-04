@@ -44,3 +44,9 @@ test('the answer is read a line at a time, "Name = 한국어", a list mark in fr
     assert.deepEqual(tr.glossaryLines('Avalon = 아발론\n- Lighthouse Keeper = 등대지기\nnot a line\n* the veil → 베일'),
         [{ src: 'Avalon', ko: '아발론' }, { src: 'Lighthouse Keeper', ko: '등대지기' }, { src: 'the veil', ko: '베일' }]);
 });
+
+test('a name the story writes once only (a street passed, a shop in passing) is left out; one it comes back to stays', () => {
+    const text = 'Mara walked down Mainzer Landstraße to the Cafe Eifler. Later Mara and Ren met Ivo at the Cafe Eifler.';
+    assert.deepEqual(tr.glossaryKeep([{ src: 'Mara' }, { src: 'Mainzer Landstraße' }, { src: 'cafe eifler' }, { src: 'Ivo' }, { src: 'Varo' }], text).map(x => x.src), ['Mara', 'cafe eifler']);
+    assert.match(tr.AI_SYS_GLOSSARY_FIND, /Not real brands, products, foods, chain shops, airlines or street names/);
+});
