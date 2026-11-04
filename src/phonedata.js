@@ -486,16 +486,17 @@ export function toldShort(p, after, upto) {
 }
 // a fill read in two turns (see fillLife): what it says after. short: the part it took from the reflection's summaries
 export const turnsNote = (last, what, short = null) => {
-    if (short?.n !== undefined && last?.all) return globalThis.toastr?.info(`${what}: #${short.from}–#${short.to}은 원문이 길어서 반영 요약으로 채웠어요. 그 부분은 조금 덜 자세해요`, '캐릭터 휴대폰');
+    const obj = `${what}${/[가-힣]$/.test(what) && (what.charCodeAt(what.length - 1) - 0xac00) % 28 ? '을' : '를'}`;
+    if (short?.n !== undefined && last?.all) return globalThis.toastr?.info(`${obj} 채웠어요. 대화가 길어서 #${short.from}부터는 요약만 보고 채웠어요.`, '캐릭터 휴대폰');
     if (!last || last.all) return;
-    globalThis.toastr?.warning(last.upto != null ? `${what}: #${last.to + 1}부터는 이번에 못 넣었어요. 다시 만들어 주세요` : `${what}: #${last.to}까지 읽었어요. 나머지 ${last.left}개는 반영으로 이어서 채워져요`, '캐릭터 휴대폰');
+    globalThis.toastr?.warning(last.upto != null ? `${obj} #${last.to}까지만 채웠어요. 다시 만들면 나머지도 들어가요.` : `${obj} #${last.to}까지 채웠어요. 나머지는 반영하면 들어가요.`, '캐릭터 휴대폰');
 };
 // the story's "now" for a request that stopped short: the message it read up to (null: now is now). Its days, weather
 // and clock stand there too, so it never writes a day it didn't read; the reflection moves them on from there
 export const nowAt = g => (!g ? null : !g.all ? g.to : g.upto ?? null);
 // where a request read up to, when it stopped short of now: its app's mark (null: it read to now)
 export const readMark = g => { const i = nowAt(g); return i == null ? null : markAfter(i); };
-export const readNote = g => { if (g && !g.all) globalThis.toastr?.info(`아카이브 뒤 메시지가 많아서 #${g.from}–#${g.to}까지 읽었어요. 나머지 ${g.left}개는 반영으로 이어서 채워져요`, '캐릭터 휴대폰'); };
+export const readNote = g => { if (g && !g.all) globalThis.toastr?.info(`대화가 길어서 #${g.to}까지 읽었어요. 나머지는 반영하면 들어가요.`, '캐릭터 휴대폰'); };
 // the story's year: the phone's own (carried over New Year), else one written in a date in the archive, the newest status
 // lines or (no archive) the chat; none for a story that never dates itself (a fantasy calendar, an undated present)
 // upto: a request that read only up to that message takes the status lines up to it (see nowAt)
