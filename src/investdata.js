@@ -13,7 +13,7 @@ Fill one character's investment app in a long role-play: their brokerage cash, t
 The app works out holdings, totals and returns from your records; you write only the records.
 
 YOU GET
-- ARCHIVE, RECENT CHAT, OWNER, and sometimes WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW.
+- ARCHIVE, RECENT CHAT, OWNER, and sometimes STORY YEAR, WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW.
 - DATE: the story's day the app shows.
 - BANK: the owner's bank accounts. They are separate and stay as they are.
 - FINANCIAL SCALE: how much the investments, brokerage cash included, come to, worked out beforehand.
@@ -67,7 +67,7 @@ const MARKET_SYS = `GOAL
 Give the public market prices and exchange rates for DATE in a long role-play's world, for one phone's investment app.
 
 YOU GET
-- ARCHIVE, RECENT CHAT, and sometimes WORLD and LOREBOOK.
+- ARCHIVE, RECENT CHAT, OWNER, and sometimes STORY YEAR, WORLD, LOREBOOK and OWNER DOESN'T KNOW.
 - DATE, PUBLIC SECURITIES, EXISTING QUOTES and FX PAIRS.
 
 RULES
@@ -208,7 +208,7 @@ export const INVEST_NOTES_SYS = `GOAL
 Write one short note for TARGET in a character's investment app, in a long role-play: why they bought it, keep it or watch it, in their own words. It is not advice, and it adds no trade, money or ownership.
 
 YOU GET
-- ARCHIVE, RECENT CHAT, OWNER, and sometimes WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW.
+- ARCHIVE, RECENT CHAT, OWNER, and sometimes STORY YEAR, WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW.
 - AS OF: the story's day. TARGETS: the share or stake to write about; it proves nothing.
 - APP CONTEXT (sometimes): the app's own trades and watch notes for it. Ideas only, never evidence.
 
@@ -225,7 +225,7 @@ export const INVEST_RECORDS_SYS = `GOAL
 Find the dates ahead and the past changes for one character's investments in a long role-play: dividend days, shareholder meetings, when a sale restriction or a voting delegation ends, and how a family stake changed hands. The app shows them; they change no balance and no holding.
 
 YOU GET
-- ARCHIVE, RECENT CHAT, OWNER, and sometimes WORLD, LOREBOOK and OWNER DOESN'T KNOW.
+- ARCHIVE, RECENT CHAT, OWNER, and sometimes STORY YEAR, WORLD, LOREBOOK and OWNER DOESN'T KNOW.
 - AS OF: the story's day.
 - TARGETS: the shares and stakes, with their keys. They name the screen; they prove nothing.
 - EXISTING SCHEDULES: what the app already has. They stay; they are not evidence.
@@ -321,7 +321,7 @@ const CHART_SYS = `GOAL
 Fill the missing days of one share's price chart in a long role-play's world.
 
 YOU GET
-- ARCHIVE, RECENT CHAT, and sometimes WORLD and LOREBOOK.
+- ARCHIVE, RECENT CHAT, OWNER, and sometimes STORY YEAR, WORLD, LOREBOOK and OWNER DOESN'T KNOW.
 - SECURITY, REQUESTED DATES, and EXISTING QUOTES: the prices already saved. They stay.
 
 RULES

@@ -22,10 +22,11 @@ Fill four everyday apps on one character's phone in a long role-play: the clock,
 Write only what needs the story and the character. The app works out everything that follows from your numbers: totals, time left, charts, comparisons and the sentences under them.
 
 YOU GET
-- ARCHIVE, RECENT CHAT, OWNER, and sometimes WORLD, LOREBOOK and OWNER PROFILE.
+- ARCHIVE, RECENT CHAT, OWNER, and sometimes STORY YEAR, WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW. Nothing on the phone may show what the owner doesn't know.
 - PHONE NOW: what the phone already holds (events, mails, tickets, bookings), with their "ev" tags.
 - STORY DAYS: the last 14 days of the story, and where the owner was on each.
 - WEATHER NOW (sometimes): the date, time, place and weather from the chat's newest status line.
+- PHONE COUNTRY (sometimes): the country the phone is set to.
 
 STORY OR EVERYDAY
 - OWNER PROFILE is for habits and taste: when they get up, how tidy they are, how much they move. The archive and chat are for what happened.
@@ -101,7 +102,7 @@ Fill the food delivery app on one character's phone in a long role-play: the sho
 Write only what needs the story and the character. The app works out totals and records each payment in the bank.
 
 YOU GET
-- ARCHIVE, RECENT CHAT, OWNER, and sometimes WORLD, LOREBOOK and OWNER PROFILE.
+- ARCHIVE, RECENT CHAT, OWNER, and sometimes STORY YEAR, WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW. Nothing on the phone may show what the owner doesn't know.
 - PHONE NOW: what the phone already holds, with their "ev" tags.
 - STORY DAYS: the last 14 days of the story, and where the owner was on each.
 - LIVES IN: where the owner lives now.
@@ -414,7 +415,7 @@ export const AI_SYS_SCREEN = `GOAL
 Write the screen time on a character's phone in a long role-play: the apps they use and for how long, the way the phone's Screen Time shows it.
 
 YOU GET
-- ARCHIVE, RECENT CHAT, OWNER, and sometimes WORLD, LOREBOOK and OWNER PROFILE.
+- ARCHIVE, RECENT CHAT, OWNER, and sometimes STORY YEAR, WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW. Nothing on the phone may show what the owner doesn't know.
 - DAYS: their last days from the health app (when they slept and woke, their steps; "ev" when the story shows that day).
 - PHONE COUNTRY.
 

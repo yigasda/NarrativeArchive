@@ -39,8 +39,8 @@ export const AI_SYS_DEVICE = `GOAL
 Fill the device information in one character's phone settings.
 
 YOU GET
-- ARCHIVE, RECENT CHAT, OWNER, COUNTRY, and sometimes WORLD and LOREBOOK.
-- OWNER PROFILE (sometimes): the background selected for this phone's owner.
+- COUNTRY.
+- ARCHIVE, RECENT CHAT, OWNER, and sometimes STORY YEAR, WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW. Nothing on the phone may show what the owner doesn't know.
 
 RULES
 ${DEVICE_RULES}
@@ -93,7 +93,7 @@ YOU GET
 - WORLD (sometimes): the shared setting.
 - LOREBOOK (sometimes): setting notes the user picked.
 - RECENT CHAT: the newest messages, after the archive.
-- OWNER: whose phone it is.
+- OWNER: whose phone it is. STORY YEAR (sometimes): the story's year.
 - OWNER PROFILE (sometimes): the background the user chose for the owner.
 - OWNER DOESN'T KNOW (sometimes): facts the owner does not know, or only suspects. Nothing on the phone may show them as known.
 
@@ -141,7 +141,7 @@ YOU GET
 - DAYS (sometimes): the story's days from the day before these messages on, with their weekdays. A weekday the story names ("on Friday") is the next one there.
 - MESSAGES READ BEFORE, NOW CHANGED (sometimes): messages put on the phone before and edited since, with the events they gave.
 ${money ? `- MONEY NOW and INVESTMENTS NOW (sometimes): the bank, card, orders, tickets and brokerage, with record ids. WEALTH (sometimes): how much the owner has.\n` : ''}${delivery ? `- DELIVERY SHOPS: the shops the delivery app already has.\n` : ''}${life ? `- LIFE NOW: the alarms, files and health days the phone already holds, with record ids.\n` : ''}${weather && tracker ? `- WEATHER NOW: the date, time, place and weather from the chat's newest status line.\n` : ''}- PHONE NOW: the newest of what the phone holds.
-- OWNER, and sometimes WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW. Nothing on the phone may show what the owner doesn't know.
+- OWNER, and sometimes STORY YEAR, WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW. Nothing on the phone may show what the owner doesn't know.
 
 WHAT IS NEW
 - Only what happens in NEW MESSAGES or ARCHIVE FOR THESE MESSAGES. Guesses and memories of earlier days add nothing.
@@ -1287,7 +1287,7 @@ export const AI_SYS_MONEY = `GOAL
 Fill the money side of one character's phone in a long role-play: their bank, the cards and passes in their wallet, and their online orders. The user opens these apps to peek at the character's life.
 
 YOU GET
-- ARCHIVE, RECENT CHAT, OWNER, and sometimes WORLD, LOREBOOK and OWNER PROFILE.
+- ARCHIVE, RECENT CHAT, OWNER, and sometimes STORY YEAR, WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW. Nothing on the phone may show what the owner doesn't know.
 - PHONE NOW: what the phone already holds (mails, events, searches, food deliveries), with their "ev" tags. A delivery there is paid through the delivery app; the app puts it in the bank, so it gets no "tx".
 - FINANCIAL SCALE: how much the owner's bank deposits come to, worked out beforehand.
 - EVALUATION DATE: the story's day, for exchange rates. SAVED RATES: the rates the app already has for it.
@@ -1319,7 +1319,7 @@ JSON (one object, nothing before or after it)
 {
   "currency": three-letter code,
   "basis": what the story gave and what you invented,
-  "bank": { "name", "accounts": [{ "id": its id in EXISTING ACCOUNTS, or "", "kind": "checking" | "savings" | "credit", "name", "last4", "currency": three-letter code, "balance": number }] },
+  "bank": { "name", "accounts": [{ "id": its id in EXISTING ACCOUNTS or REBUILD ACCOUNTS, or "", "kind": "checking" | "savings" | "credit", "name", "last4", "currency": three-letter code, "balance": number }] },
   "cards": [{ "account": last4, "exp": "MM/YY" }],
   "tx": [{ "account": last4, "who": merchant or person, "ko", "amount": number (minus for money out), "time": "MM-DD HH:MM",
            "kind": "card" | "transfer" | "deposit" | "cash", "memo", "pending": true or false, "ev" }],
@@ -1348,9 +1348,8 @@ export const AI_SYS_VOICES = `GOAL
 Fill the voice memo app of one character's phone in a long role-play: memos they recorded to themselves at moments in the story so far.
 
 YOU GET
-- ARCHIVE, RECENT CHAT, OWNER, and sometimes WORLD and LOREBOOK.
+- ARCHIVE, RECENT CHAT, OWNER, and sometimes STORY YEAR, WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW. Nothing on the phone may show what the owner doesn't know.
 - DIARY: the owner's diary entries, so the memos are not the same moments told again.
-- OWNER PROFILE (sometimes): the background the user chose for the owner.
 
 RULES
 - 3 or 4 memos, each at a moment the archive has where the owner could plausibly talk into their phone alone: after a fight, on the way somewhere, late at night. Not the days the diary already covers, where possible.

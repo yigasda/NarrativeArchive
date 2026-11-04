@@ -269,7 +269,7 @@ const AI_SYS_SEARCH = `GOAL
 A character in a long role-play searched this on their phone. Write the results page the search showed.
 
 YOU GET
-- OWNER, QUERY, and when it was searched.
+- OWNER, QUERY, and SEARCHED: when it was searched.
 - WHERE: the country the phone is set to, and the places the owner was that day.
 - SHOPS: the shops and items in the owner's shopping app, if any.
 
@@ -297,7 +297,7 @@ const AI_SYS_PAGE = `GOAL
 A character in a long role-play opened a search result on their phone. Write the web page it opened, as that site would have it.
 
 YOU GET
-- OWNER, QUERY and when it was searched.
+- OWNER, QUERY and SEARCHED: when it was searched.
 - RESULT: the result that was opened (site, address, kind, colour, title, snippet).
 - WHERE: the country and the places the owner was that day.
 
