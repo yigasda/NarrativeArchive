@@ -50,3 +50,13 @@ test('a name the story writes once only (a street passed, a shop in passing) is 
     assert.deepEqual(tr.glossaryKeep([{ src: 'Mara' }, { src: 'Mainzer Landstraße' }, { src: 'cafe eifler' }, { src: 'Ivo' }, { src: 'Varo' }], text).map(x => x.src), ['Mara', 'cafe eifler']);
     assert.match(tr.AI_SYS_GLOSSARY_FIND, /only these kinds; anything else stays out/);
 });
+
+test('a place in Korea is never put in (a Korean reader knows it); a name that only ends alike stays', () => {
+    const kr = ['Gangseo-gu = 강서구', 'Seoul = 서울', 'Incheon = 인천', 'Yeouido = 여의도', 'Teheran-ro = 테헤란로', 'Yeoksamdong = 역삼동', 'Jeju-do = 제주도'];
+    const not = ['Pedro = 페드로', 'Toledo = 톨레도', 'Frankfurt = 프랑크푸르트', 'Oscar Weber = 오스카 베버', 'Doug = 더그', 'Hongkong = 홍콩'];
+    assert.deepEqual(tr.glossaryLines(kr.join('\n')).filter(x => !tr.krPlace(x)), []);
+    assert.deepEqual(tr.glossaryLines(not.join('\n')).filter(x => tr.krPlace(x)), []);
+    // (and the instruction asks for full names, and leaves out what general knowledge knows)
+    assert.match(tr.AI_SYS_GLOSSARY_FIND, /full name when the cards or story give one/);
+    assert.match(tr.AI_SYS_GLOSSARY_FIND, /Add nothing from general knowledge/);
+});

@@ -157,14 +157,15 @@ YOU GET
 - IN THE GLOSSARY (sometimes): names already listed. Leave them out.
 
 WHAT TO LIST — only these kinds; anything else stays out
-- PEOPLE: the characters and the people in their lives (family, friends, partners, coworkers), and their nicknames. Not someone who only passes through a scene.
-- PLACES: the places of someone's life: where they live, work or grew up, and the cities and countries the story is in.
-- GROUPS: a family, workplace, school or group someone belongs to.
-- TERMS: titles, made-up words and words with a meaning special to this story.
-- In any language or script. Not a name written only in Korean. Each once, as the story writes it; a full name and its short form are two lines only when the story uses both.
+- PEOPLE: the characters and the people in their lives (family, friends, partners, coworkers). Not someone who only passes through a scene. A person's full name when the cards or story give one, and the name they are called by on a line of its own ("Oscar Weber = 오스카 베버", "Oscar = 오스카").
+- PLACES: a place goes in only if it belongs to someone's life: they live, lived, work or grew up there.
+- GROUPS: a group goes in only if someone belongs to it: their family, workplace, school or group.
+- TERMS: titles, nicknames and words with a meaning special to this story. A person is not a term; a nickname for one is.
+- Add nothing from general knowledge: real brands, products, shops and other real things the story only mentions stay out. Not a place in Korea, and not a name written only in Korean.
+- In any language or script, each once, as the story writes it.
 
 KOREAN
-1. Real names with a usual Korean spelling (mythology, history, real places): use that spelling.
+1. A name with a usual Korean spelling (a real city, a well-known name): use that spelling.
 2. Other names: transliterate naturally, the way a Korean reader would say it.
 3. Titles and ordinary nouns used as names ("the Queen", "the Well"): natural Korean.
 4. Made-up words: transliterate, do not translate.
@@ -201,6 +202,15 @@ export function glossaryFindInput(c, m, have = []) {
 // what the story keeps coming back to: a name the text sent writes once only (a street passed, a shop named in passing) is
 // left out
 export const glossaryKeep = (found, text) => { const low = String(text || '').toLowerCase(); return found.filter(x => { const k = x.src.toLowerCase(); let n = 0, i = -1; while (n < 2 && (i = low.indexOf(k, i + 1)) >= 0) n++; return n >= 2; }); };
+// a place in Korea, which a Korean reader knows as it is (Seoul, Gangseo-gu, Yeouido, Teheran-ro): never in the glossary
+const KR_PLACE = new Set(['seoul', 'busan', 'incheon', 'daegu', 'daejeon', 'gwangju', 'ulsan', 'sejong', 'suwon', 'seongnam', 'goyang', 'yongin', 'bucheon', 'ansan', 'jeonju', 'cheongju', 'changwon', 'pohang', 'gimpo', 'paju', 'jeju', 'gangneung', 'sokcho', 'gyeongju', 'yeosu', 'chuncheon', 'gangnam', 'hongdae', 'itaewon', 'myeongdong', 'yeouido', 'jamsil', 'sinchon', 'insadong', 'apgujeong', 'cheongdam', 'seongsu', 'hannam', 'mapo', 'yongsan', 'jongno', 'songdo', 'pangyo', 'haeundae', 'korea', 'south korea']);
+// (or a word ending like a Korean district and its Korean the same: "Gangseogu = 강서구"; not -ro, which Pedro is too)
+const KR_END = { gu: '구', dong: '동', gil: '길', eup: '읍', myeon: '면' };
+export const krPlace = x => {
+    const s = String(x?.src || '').trim(), k = s.toLowerCase(), ko = String(x?.ko || '').trim();
+    if (KR_PLACE.has(k) || /-(?:gu|dong|si|ro|gil|eup|myeon|gun|do|ri)$/i.test(s)) return true;
+    return Object.entries(KR_END).some(([e, h]) => k.endsWith(e) && k.length > e.length + 2 && ko.endsWith(h));
+};
 // the lines of an answer: "Name = 한국어" (a "-" or "*" in front is fine)
 export const glossaryLines = out => String(out || '').split('\n').map(l => l.match(/^\s*(?:[-*]\s*)?([^=→]+?)\s*(?:=|→)\s*(.+?)\s*$/)).filter(Boolean).map(x => ({ src: x[1].trim(), ko: x[2].trim() }));
 
@@ -235,7 +245,7 @@ export async function openGlossary() {
         const input = glossaryFindInput(c, m, have);
         const out = await withSpinner($(this), '찾는 중…', () => askTranslator(input, { system: AI_SYS_GLOSSARY_FIND, maxTokens: 3000 }));
         if (out === null) return;
-        const found = glossaryKeep(glossaryLines(out), input.split('\n\n[IN THE GLOSSARY]')[0]).filter(x => x.src.length <= 60 && !/[가-힯]/.test(x.src) && !known.has(x.src.toLowerCase()) && (known.add(x.src.toLowerCase()), true));
+        const found = glossaryKeep(glossaryLines(out), input.split('\n\n[IN THE GLOSSARY]')[0]).filter(x => !krPlace(x) && x.src.length <= 60 && !/[가-힯]/.test(x.src) && !known.has(x.src.toLowerCase()) && (known.add(x.src.toLowerCase()), true));
         if (!found.length) return toastr.info('새로 넣을 이름이 없어요.');
         $ta.val(`${$ta.val().replace(/\s+$/, '')}${$ta.val().trim() ? '\n' : ''}${found.map(x => `${x.src} = ${x.ko}`).join('\n')}`);
         info();
