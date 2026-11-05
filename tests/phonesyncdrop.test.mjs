@@ -10,14 +10,14 @@ const encoded = s => 'data:text/javascript;base64,' + Buffer.from(s).toString('b
 const href = f => pathToFileURL(new URL(`../src/${f}`, import.meta.url).pathname).href;
 const T = (globalThis.__dropTest = { chat: [], answers: [] });
 const map = {
-    './phonesync.js': href('phonesync.js'), './phoneparse.js': href('phoneparse.js'), './phonesynclife.js': href('phonesynclife.js'), './phonesyncmoney.js': href('phonesyncmoney.js'), './finance.js': href('finance.js'),
+    './phonesync.js': href('phonesync.js'), './phoneparse.js': href('phoneparse.js'), './phoneclock.js': href('phoneclock.js'), './phonesynclife.js': href('phonesynclife.js'), './phonesyncmoney.js': href('phonesyncmoney.js'), './finance.js': href('finance.js'),
     './phoneprofile.js': href('phoneprofile.js'),
     './phonestory.js': encoded(`export const phoneTarget=()=>({scope:phoneChatScope(),check(){}});export const phoneChatScope=()=>globalThis.__dropTest.scope||'test';`),
     './wealth.js': encoded(`export const ensureWealth=async()=>null;export const wealthBlock=()=>'';export const wealthDate=()=> '2026-10-26';export const wealthCheck=()=>null;export const addWealthFX=()=>{};`),
-    './ai.js': encoded(`export const askDraft=async(input,o)=>{if(String(o.system).startsWith('GOAL\\nWrite the ordinary life')){(globalThis.__everydayIn||=[]).push(input);const e=globalThis.__everyday;return JSON.stringify(typeof e==='function'?e(input):e||{});}if(String(o.system).startsWith('GOAL\\nWork out where')){(globalThis.__where||=[]).push(input);return '{"people":[]}';}const T=globalThis.__dropTest;if(String(o.system).startsWith('STAGE: money')){T.moneyInput=input;T.moneySys=o.system;T.moneyCalls=(T.moneyCalls||0)+1;if(T.moneyAnswers&&T.moneyAnswers.length){const a=T.moneyAnswers.shift();return typeof a==='string'?a:JSON.stringify(a);}const core=(T.lastCore&&T.lastCore.events)||[];const out=[];for(const l of String(input).split('\\n')){const x=l.match(/^- (.+?): #(\\d+) .*?\\("(.*)"\\)(?: \\(changed\\))?$/)||l.match(/^- (.+?): #(\\d+) /);if(!x)continue;const e=core.find(e=>e&&e.money&&Number(String(e.at).replace('#',''))===Number(x[2])&&(x[3]===undefined||String(e.quote||'').slice(0,200)===x[3]));if(e)out.push({id:x[1],money:e.money});}return JSON.stringify({events:out});}T.sys=o.system;T.input=input;const a=T.answers.shift();T.lastCore=a&&typeof a==='object'?a:null;return typeof a==='string'?a:JSON.stringify(a);};`),
+    './ai.js': encoded(`export const askDraft=async(input,o)=>{if(String(o.system).startsWith('GOAL\\nWrite the ordinary life')){(globalThis.__everydayIn||=[]).push(input);const e=globalThis.__everyday;return JSON.stringify(typeof e==='function'?e(input):e||{});}if(String(o.system).startsWith('GOAL\\nWork out where')){(globalThis.__where||=[]).push(input);await globalThis.__dropTest.beforeWhere?.();return '{"people":[]}';}const T=globalThis.__dropTest;if(String(o.system).startsWith('STAGE: money')){T.moneyInput=input;T.moneySys=o.system;T.moneyCalls=(T.moneyCalls||0)+1;if(T.moneyAnswers&&T.moneyAnswers.length){const a=T.moneyAnswers.shift();return typeof a==='string'?a:JSON.stringify(a);}const core=(T.lastCore&&T.lastCore.events)||[];const out=[];for(const l of String(input).split('\\n')){const x=l.match(/^- (.+?): #(\\d+) .*?\\("(.*)"\\)(?: \\(changed\\))?$/)||l.match(/^- (.+?): #(\\d+) /);if(!x)continue;const e=core.find(e=>e&&e.money&&Number(String(e.at).replace('#',''))===Number(x[2])&&(x[3]===undefined||String(e.quote||'').slice(0,200)===x[3]));if(e)out.push({id:x[1],money:e.money});}return JSON.stringify({events:out});}T.sys=o.system;T.input=input;const a=T.answers.shift();T.lastCore=a&&typeof a==='object'?a:null;return typeof a==='string'?a:JSON.stringify(a);};`),
     './core.js': encoded(`export const ctx=()=>({chat:globalThis.__dropTest.chat,chatMetadata:globalThis.__dropTest.meta,loadWorldInfo:async()=>null,characters:[]});export const globalSettings=()=>({});export const saveMeta=async()=>{};`),
     './calendar.js': encoded(`export const calendars=()=>({});export const headingDate=()=>({});`),
-    './drift.js': encoded(`export const recentForCheck=()=>[];export const chatRows=()=>globalThis.__dropTest.chat.map((x,i)=>({index:i,user:x.is_user,hidden:!!x.is_system,text:'[#'+i+'] '+x.name+': '+x.mes}));`),
+    './drift.js': encoded(`export const recentForCheck=()=>[];export const chatRows=()=>globalThis.__dropTest.chat.map((x,i)=>({index:i,user:x.is_user,hidden:!!x.is_system,text:'[#'+i+'] '+x.name+': '+(globalThis.__dropTest.clean?globalThis.__dropTest.clean(x.mes):x.mes)}));`),
     './inject.js': encoded(`export const applyInjection=()=>{};`),
     './knowledge.js': encoded(`export const knowledgeRows=()=>[];`),
     './people.js': encoded(`export const nameKey=s=>String(s).toLowerCase();export const nameRe=s=>new RegExp(s,'i');export const headingPlaces=()=>[];`),
@@ -1416,4 +1416,124 @@ test('reflection offers no converted choices for malformed twelve-hour clocks', 
         const result = await data.reflectionClocks(p, [{ index: 2, text: `Mara: 11.05 ${clock}` }], { dateOrder: 'md' });
         assert.deepEqual(result.choices, [], clock);
     }
+});
+
+const { htmlClocks } = await import('../src/phoneparse.js');
+const extractSrc = await readFile(new URL('../src/extract.js', import.meta.url), 'utf8');
+const { cleanMessage } = await import(encoded(extractSrc.slice(extractSrc.indexOf('const REASONING ='), extractSrc.indexOf('export function formatExtract'))));
+const htmlRow = (index, raw) => ({ index, text: cleanMessage(raw, { stripTags: true }), htmlClocks: htmlClocks(raw) });
+test('bare HTML clocks supply date-free conditional reference information, not a dated answer', async () => {
+    const p = { owner: 'Ren' }; clockPhone(p);
+    const row = htmlRow(2, 'Mara reads her phone. <div class="chat-timestamp">08:30</div>');
+    const result = await data.reflectionClocks(p, [row], { phoneScreenHolder: 'Mara' });
+    const choice = result.choices.find(c => c.names[0] === 'Mara');
+    assert.equal(choice.date, null);
+    assert.equal(choice.ownerTime, undefined);
+    assert.equal(choice.local, undefined);
+    assert.equal(choice.reference.ownerClock, '00:30');
+    assert.equal(choice.reference.date, '2026-11-05');
+    assert.match(result.text, /calendar date unknown/);
+    assert.match(result.text, /Reference calculation only/);
+    assert.match(result.text, /Reference calculation only\. If the story shows a time jump, follow it instead\./);
+    assert.doesNotMatch(result.text, /On Mara's clock → owner's time:/);
+});
+test('dated HTML remains on the old path and cannot receive a duplicate bare hint', async () => {
+    const p = { owner: 'Ren' }; clockPhone(p);
+    for (const raw of ['Mara <div class="chat-timestamp" style="font-size:12px;line-height:1;gap:0;">11.05, 11:38</div>',
+        'Mara <span>11.05, </span><span class="chat-timestamp">11:38</span>']) {
+        const result = await data.reflectionClocks(p, [htmlRow(2, raw)], {});
+        assert.equal(result.choices.length, 2);
+        assert.ok(result.choices.every(c => c.ownerTime && !c.reference));
+        assert.doesNotMatch(result.text, /calendar date unknown/);
+    }
+});
+test('plain numbers and unusable saved anchors do not add references or displace dated choices', async () => {
+    const p = { owner: 'Ren' }; clockPhone(p);
+    const rows = [htmlRow(1, 'Mara 11.05 08:30'), ...Array.from({ length: 15 }, (_, i) => htmlRow(i + 2, 'Mara <span class="time">09:00</span>'))];
+    for (const bad of [{ ...p, year: undefined }, { ...p, now: '08:30' }, { ...p, noYear: true }]) {
+        const r = await data.reflectionClocks(bad, rows, {});
+        assert.equal(r.choices.length, 2);
+        assert.ok(r.choices.every(c => c.at === 1));
+    }
+    const plain = await data.reflectionClocks(p, [htmlRow(2, 'Mara ratio 12:30; video 12:30; <div style="--time:0">12:30</div>')], {});
+    assert.equal(plain.choices.length, 0);
+});
+test('dated and undated supplementary references share the existing twelve-stamp/six-person bound', async () => {
+    const p = { owner: 'Ren' }; clockPhone(p);
+    for (let i = 0; i < 8; i++) p.where.people.push({ name: `Person${i}`, city: 'Paris', tz: 'Europe/Paris' });
+    const names = p.where.people.map(x => x.name).join(' ');
+    const rows = Array.from({ length: 16 }, (_, i) => htmlRow(i, `${names} ${i % 2 ? '<time>08:30</time>' : '11.05 08:30'}`));
+    const r = await data.reflectionClocks(p, rows, {});
+    assert.equal(r.choices.length, 12 * 6);
+    assert.equal(Math.min(...r.choices.map(x => x.at)), 4);
+});
+test('real cleaned input retains vague months/days narrative and model dates are not pinned to references', async () => {
+    // Stub answers intentionally choose dates not specified by "several". This tests preservation, not model inference.
+    for (const [words, clock, answer, expectedYear, referenceDate] of [
+        ['몇 달 뒤', '12:13', '02-05 12:13', 2027, '2026-11-05'],
+        ['며칠 뒤', '05:21', '11-09 05:21', 2026, '2026-11-06'],
+        ['하루가 지났다. 아침이 됐다.', '06:27', '11-06 06:27', 2026, '2026-11-06'],
+    ]) {
+        const raw = `${words}. Ren checks the current messenger screen. <div class="chat-timestamp">${clock}</div>`;
+        const c = setup([say('Ren', 'start'), say('Mara', 'morning'), say('Ren', raw)]);
+        c.p.now = '11-05 08:12'; c.p.year = 2026; c.p.country = 'KR';
+        c.p.where = { at: 1, people: [{ name: 'Ren', city: 'Seoul', tz: 'Asia/Seoul', names: ['Seoul'] }] };
+        T.clean = mes => cleanMessage(mes, { stripTags: true });
+        try { await run(c.m, { now: answer, clock: { basis: words, screen: { owner: 'Ren', time: clock } }, events: [] }); }
+        finally { delete T.clean; }
+        assert.equal(c.p.now, answer);
+        assert.equal(c.p.year, expectedYear);
+        assert.ok(T.input.includes(words));
+        assert.match(T.input, /HTML time field; calendar date unknown/);
+        assert.ok(T.input.includes(`Reference date ${referenceDate}`));
+        assert.match(T.input, /Reference calculation only\. If the story shows a time jump, follow it instead\./);
+        assert.match(T.input, clock === '12:13' ? /same or later clock, same-day reference only/ : /earlier clock, next-day reference only/);
+        const body = T.input.split('[NEW MESSAGES]\n')[1].split('\n\n[')[0];
+        assert.ok(body.includes(cleanMessage(raw, { stripTags: true })));
+        assert.doesNotMatch(body, /<div|chat-timestamp/);
+    }
+});
+test('bare hints never set now themselves, and recent backwards model results keep the existing guard', async () => {
+    const c = setup([say('Ren', 'start'), say('Mara', 'morning'), say('Ren', '<time>06:27</time>')]);
+    c.p.now = '11-05 08:12'; c.p.year = 2026; c.p.country = 'KR';
+    c.p.where = { at: 1, people: [{ name: 'Ren', city: 'Seoul', tz: 'Asia/Seoul', names: ['Seoul'] }] };
+    await run(c.m, { now: '11-05 06:27', events: [] });
+    assert.match(T.input, /earlier clock, next-day reference only/);
+    assert.equal(c.p.now, '11-05 08:12');
+});
+test('a separate dated clock does not hide a present bare clock with the same HH:mm', async () => {
+    const p = { owner: 'Ren' }; clockPhone(p);
+    const raw = 'Mara recalls last month: 10.05 08:30. Three days later in the present she reads <time>08:30</time>.';
+    const r = await data.reflectionClocks(p, [htmlRow(2, raw)], {});
+    assert.ok(r.choices.some(c => c.sourceTime === '10.05 08:30' && c.ownerTime));
+    assert.ok(r.choices.some(c => c.sourceTime === '08:30' && c.date === null && c.reference));
+});
+test('explicit dates take priority over new bare references within one capped message', async () => {
+    const p = { owner: 'Ren' }; clockPhone(p);
+    const bare = Array.from({ length: 12 }, (_, i) => `<time>${String(i).padStart(2, '0')}:00</time>`).join(' ');
+    for (const raw of [`Mara ${bare} 11.05 23:59`, `Mara 11.05 23:59 ${bare}`]) {
+        const r = await data.reflectionClocks(p, [htmlRow(2, raw)], {});
+        assert.equal(r.choices.length, 24);
+        assert.ok(r.choices.some(c => c.sourceTime === '11.05 23:59' && c.ownerTime));
+    }
+});
+test('HTML snapshots only come from this visible round, never another or hidden message', async () => {
+    const c = setup([say('Ren', 'start'), say('Mara', 'morning'), { ...say('Ren', '<time>08:31</time>'), is_system: true }, say('Ren', 'hello')]);
+    clockPhone(c.p);
+    await run(c.m, { now: c.p.now, events: [] });
+    assert.doesNotMatch(T.input, /HTML time field/);
+    T.chat.push(say('Ren', '<time>22:22</time>'));
+    const r = await data.reflectionClocks(c.p, [{ index: 3, text: 'hello' }], c.m);
+    assert.equal(r.choices.length, 0);
+});
+test('raw HTML metadata is captured with the cleaned round before awaited preparation', async () => {
+    const c = setup([say('Ren', 'start'), say('Mara', 'morning'), say('Ren', '<time>08:30</time>')]);
+    c.p.now = '11-05 08:12'; c.p.year = 2026; c.p.country = 'KR';
+    T.clean = mes => cleanMessage(mes, { stripTags: true });
+    T.beforeWhere = () => { T.chat[2].mes = '<time>20:00</time>'; };
+    try { await assert.rejects(run(c.m, { now: '11-05 08:30', events: [] }), /대화가 바뀌었어요/); }
+    finally { delete T.beforeWhere; delete T.clean; }
+    assert.match(T.input, /Timestamp in #2: "08:30"/);
+    assert.doesNotMatch(T.input, /Timestamp in #2: "20:00"/);
+    assert.equal(c.p.now, '11-05 08:12');
 });

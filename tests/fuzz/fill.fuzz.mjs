@@ -20,7 +20,7 @@ const stub = {
     './translate.js': encoded(`export const glossaryEntries=()=>[];`), './world.js': encoded(`export const worldText=()=>'';`),
     './anniv.js': encoded(`export const datedRows=()=>[];`),
 };
-const real = ['phonesync.js', 'phoneparse.js', 'phonesynclife.js', 'phonesyncmoney.js', 'finance.js', 'phoneprofile.js', 'phonefood.js', 'phonescreen.js'];
+const real = ['phonesync.js', 'phoneparse.js', 'phoneclock.js', 'phonesynclife.js', 'phonesyncmoney.js', 'finance.js', 'phoneprofile.js', 'phonefood.js', 'phonescreen.js'];
 const map = { ...stub, ...Object.fromEntries(real.map(f => [`./${f}`, href(f)])) };
 const rewrite = async f => (await readFile(new URL(f, SRC), 'utf8')).replace(/from '([^']+)'/g, (all, k) => `from '${map[k] || k}'`);
 map['./phonedata.js'] = encoded(await rewrite('phonedata.js'));

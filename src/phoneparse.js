@@ -75,6 +75,174 @@ export function datedClocks(text) {
     }
     return out;
 }
+// Time-only HTML hints are read before the normal text cleaner removes the element names.
+// This is an inert tokenizer, not a DOM: no scripts, styles, URL fetching, or HTML execution.
+const HTML_CLOCK = new RegExp(String.raw`^(?:(${CLOCK_MERIDIEM})\s*)?(\d{1,2})[ \t]*:[ \t]*(\d{2})(?:\s*(${CLOCK_MERIDIEM}))?$`, 'iu');
+// Keep these boundaries aligned with cleanMessage in extract.js: time itself is a block there.
+const HTML_INLINE = /^(?:b|i|u|s|em|strong|span|a|small|big|sub|sup|mark|font|code|kbd|del|ins|q|abbr|ruby|rt|rp)$/;
+const HTML_REMOVED = /^(?:think|thinking|thought|reasoning|scene_plan)$/;
+const HTML_VOID = /^(?:area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/;
+const HTML_RAW = /^(?:script|style|textarea|title|xmp|iframe|noembed|noframes|plaintext)$/;
+const HTML_HIDDEN = /^(?:think|thinking|thought|reasoning|analysis|scene_plan|template|blockquote|q|pre|code)$/;
+const HTML_DURATION = /(?:^|[\s:_-])(?:duration|elapsed|countdown|timer)(?=$|[\s:_-])/i;
+const CLOCK_ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: '\u00a0', colon: ':', Tab: '\t', NewLine: '\n', ensp: '\u2002', emsp: '\u2003', thinsp: '\u2009' };
+const clockHtmlText = text => text.replace(/&(#x[\da-f]+|#\d+|[a-z]+);/gi, (all, key) => {
+    if (key[0] !== '#') return CLOCK_ENTITIES[key] ?? all;
+    const n = /^#x/i.test(key) ? parseInt(key.slice(2), 16) : Number(key.slice(1));
+    return n > 0 && n <= 0x10ffff && !(n >= 0xd800 && n <= 0xdfff) ? String.fromCodePoint(n) : all;
+});
+// Adjacent dated spans must use only the entities the existing cleaner actually decodes.
+const clockVisibleText = text => text.replace(/&(amp|lt|gt|quot|apos|nbsp|#39);/g, (_, key) => key === 'nbsp' ? ' ' : key === '#39' ? "'" : CLOCK_ENTITIES[key]);
+const htmlClockOnly = text => {
+    const hit = HTML_CLOCK.exec(text.trim());
+    if (!hit || hit[1] && hit[4]) return '';
+    let h = Number(hit[2]);
+    const m = Number(hit[3]), marker = hit[1] || hit[4];
+    if (h > 23 || m > 59 || marker && !(h >= 1 && h <= 12)) return '';
+    if (marker) { if (/^(?:p|오후|저녁|밤)/i.test(marker)) { if (h < 12) h += 12; } else if (h === 12) h = 0; }
+    return `${pad(h)}:${pad(m)}`;
+};
+// Code spans may use any equal-length backtick runs, even across one paragraph's line breaks.
+// Index the next same-sized run first, so unmatched backticks do not repeatedly scan the whole text.
+const htmlClockCode = text => text.split(/(\0|\r?\n[ \t]*\r?\n)/).map(part => {
+    const runs = [...part.matchAll(/`+/g)], next = new Map(), pieces = [];
+    for (let i = runs.length - 1; i >= 0; i--) {
+        runs[i].next = next.get(runs[i][0].length);
+        next.set(runs[i][0].length, i);
+    }
+    let from = 0;
+    for (let i = 0; i < runs.length; i++) {
+        const run = runs[i], end = runs[run.next];
+        let slash = run.index;
+        while (slash > 0 && part[slash - 1] === '\\') slash--;
+        if ((run.index - slash) % 2 || !end) continue;
+        pieces.push(part.slice(from, run.index), '\0');
+        from = end.index + end[0].length;
+        i = run.next;
+    }
+    pieces.push(part.slice(from));
+    return pieces.join('');
+}).join('');
+// Markdown quotes and sample code are not current-clock evidence. Keep a barrier at each omission.
+const htmlClockMarkup = raw => {
+    let fence = '';
+    const visible = String(raw || '').split('\n').map(line => {
+        const edge = /^[ \t]*(`{3,}|~{3,})([^\n]*)$/.exec(line);
+        if (fence) {
+            if (edge && edge[1][0] === fence[0] && edge[1].length >= fence.length && !edge[2].trim()) fence = '';
+            return '\0';
+        }
+        if (/^[ \t]*>/.test(line)) return '\0';
+        if (edge && (edge[1][0] !== '`' || !edge[2].includes('`'))) { fence = edge[1]; return '\0'; }
+        return line;
+    }).join('\n');
+    return htmlClockCode(visible);
+};
+export function htmlClocks(raw) {
+    const input = htmlClockMarkup(raw), root = { name: '', text: '', hints: [], blocked: false, removed: false }, stack = [root];
+    let visible = '';
+    const append = (text, expose = true) => {
+        const node = stack[stack.length - 1];
+        node.text += text;
+        if (expose && !node.removed) visible += text;
+    };
+    const finish = complete => {
+        const node = stack.pop(), parent = stack[stack.length - 1];
+        if (node.blocked || !complete) {
+            parent.text += '\0';
+            if (!complete || !node.removed && !HTML_INLINE.test(node.name)) visible = '';
+            return;
+        }
+        const sourceTime = clockHtmlText(node.text).trim(), clock = node.marked ? htmlClockOnly(sourceTime) : '';
+        const datedText = sourceTime.replace(/\s+/g, ' ');
+        const dated = node.marked && node.hints.length && datedClocks(datedText).some(x => x.sourceTime === datedText);
+        const tail = clock ? clockVisibleText(visible).trimEnd() : '';
+        // Only the dated span ending at this exact occurrence can own it. An earlier equal clock cannot.
+        const adjacent = clock && tail.endsWith(sourceTime.replace(/\u00a0/g, ' '))
+            && datedClocks(tail.slice(tail.lastIndexOf('\n') + 1)).some(x => tail.endsWith(x.sourceTime));
+        // Prefer the complete labelled element to a nested duplicate ("PM <span>8:30</span>").
+        // One dated stamp also owns its children; a timeline with separate date/time siblings does not.
+        if (clock) { if (!adjacent) parent.hints.push({ sourceTime, clock }); }
+        else if (!dated) for (const hint of node.hints) parent.hints.push(hint);
+        parent.text += node.text;
+        if (!HTML_INLINE.test(node.name)) visible = '';
+    };
+    let pos = 0;
+    while (pos < input.length) {
+        const start = input.indexOf('<', pos);
+        if (start < 0) { append(input.slice(pos)); break; }
+        append(input.slice(pos, start));
+        if (input.startsWith('<!--', start)) {
+            const end = input.indexOf('-->', start + 4);
+            pos = end < 0 ? input.length : end + 3;
+            continue;
+        }
+        if (input.startsWith('<![CDATA[', start)) {
+            const end = input.indexOf(']]>', start + 9);
+            append('\0'); pos = end < 0 ? input.length : end + 3;
+            continue;
+        }
+        const head = /^<(\/?)([a-z][\w:-]*)(?=[\s/>])/i.exec(input.slice(start));
+        if (!head && !/^<[!?]/.test(input.slice(start, start + 2))) { append('<'); pos = start + 1; continue; }
+        // A quoted > is an attribute value, never the end of its tag.
+        let end = start + (head?.[0].length || 2), quote = '';
+        for (; end < input.length; end++) {
+            const ch = input[end];
+            if (quote) { if (ch === quote) quote = ''; }
+            else if (ch === '"' || ch === "'") quote = ch;
+            else if (ch === '>') break;
+        }
+        if (end === input.length) break;
+        pos = end + 1;
+        if (!head) { append('\0'); continue; }
+        const name = head[2].toLowerCase();
+        if (head[1]) {
+            let at = stack.length - 1;
+            while (at > 0 && stack[at].name !== name) at--;
+            if (!at) {
+                // A message can start with the tail of reasoning, whose opening tag was not retained.
+                if (/^(?:think|thinking|thought|reasoning|analysis)$/.test(name)) { root.hints = []; root.text = ''; stack.splice(1); visible = ''; }
+                continue;
+            }
+            while (stack.length - 1 > at) finish(false);
+            finish(true);
+            continue;
+        }
+        const attrs = {};
+        for (const hit of input.slice(start + head[0].length, end).matchAll(/([^\s"'<>/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g)) {
+            const key = hit[1].toLowerCase();
+            if (!(key in attrs)) attrs[key] = clockHtmlText(hit[2] ?? hit[3] ?? hit[4] ?? '');
+        }
+        if (HTML_RAW.test(name)) {
+            // Raw text can contain apparent tags and quotes, so do not tokenize its contents.
+            const close = new RegExp(`</${name}\\s*>`, 'gi'); close.lastIndex = pos;
+            const hit = name === 'plaintext' ? null : close.exec(input);
+            append('\0', false);
+            if (!stack[stack.length - 1].removed && !/^(?:script|style)$/.test(name)) visible = '';
+            pos = hit ? close.lastIndex : input.length;
+            continue;
+        }
+        if (HTML_VOID.test(name)) {
+            append(name === 'br' || name === 'hr' ? '\n' : '\0', false);
+            if (!stack[stack.length - 1].removed) visible = '';
+            continue;
+        }
+        const labels = `${name} ${attrs.class || ''} ${attrs.id || ''}`;
+        const node = { name, text: '', hints: [], marked: /time/i.test(labels),
+            removed: stack[stack.length - 1].removed || HTML_REMOVED.test(name),
+            blocked: stack[stack.length - 1].blocked || HTML_HIDDEN.test(name)
+                || attrs.hidden !== undefined || /^true$/i.test(attrs['aria-hidden'] || '')
+                || HTML_DURATION.test(labels.replace(/([a-z\d])([A-Z])/g, '$1 $2'))
+                // Dated values and ISO durations belong to other readers, not bare-clock hints.
+                || attrs.datetime !== undefined && !htmlClockOnly(attrs.datetime) };
+        if (!node.removed && !HTML_INLINE.test(name)) visible = '';
+        stack.push(node);
+        if (/\/\s*$/.test(input.slice(start, end))) finish(true);
+    }
+    // An unclosed element is not enough evidence; do not leak its otherwise valid descendants.
+    while (stack.length > 1) finish(false);
+    return root.hints;
+}
 export const ko = v => line(v, 400);
 // who a gift went to: true is just "a gift"; false, "no", "none" and the like are no gift (never a person called "false")
 export const giftOf = v => (v === true ? '선물' : /^(false|true|no|none|null|nein|keine?|아니(요)?|없음|-)?$/i.test(line(v, 40)) ? '' : line(v, 40));

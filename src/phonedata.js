@@ -19,7 +19,8 @@ import { parseSections, RANGE_HEAD, sectionKey, splitTail } from './sections.js'
 import { glossaryEntries } from './translate.js';
 import { worldText } from './world.js';
 import { phoneChatScope, phoneTarget } from './phonestory.js';
-import { dateOrderSource, datedClocks, swapDate, withDateOrder, tidyKo, arr, evOf, gapDays, giftOf, hhmm, jsonOf, ko, parseJson, storyMin, byStory, yearIn, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
+import { dateOrderSource, datedClocks, htmlClocks, swapDate, withDateOrder, tidyKo, arr, evOf, gapDays, giftOf, hhmm, jsonOf, ko, parseJson, storyMin, byStory, yearIn, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
+import { clockFallback } from './phoneclock.js';
 export { tidyKo, arr, gapDays, giftOf, hhmm, jsonOf, ko, last4, line, num, pad, pick, storyMin, byStory, str, when, withEv };
 import { COUNTRY_TZ, applyDays, applyLife, applyWeather, cardClock, cityAt, dayGap, dlvClock, fillDays, lifeClock, lifeNow, weatherFrom, zoneShift } from './phonesynclife.js';
 import { applyMoney, dlvTotal, investNow, moneyNow, payOrders, replayEffects, revertEffects } from './phonesyncmoney.js';
@@ -1103,6 +1104,9 @@ async function updatePhone(m, owner) {
         const reread = new Map(moved.changed.map(x => [x.at, Object.entries(s.events).filter(([, e]) => e.at === x.at || (e.effects || []).some(f => (f.item?.sourceIndex ?? f.sourceIndex) === x.at)).map(([id, e]) => ({ id, summary: e.summary }))]));
         if (reread.size) swiped.push(`바뀐 대화 ${reread.size}개를 다시 읽어요. 그 대화의 결제는 새로 넣지 않고 기존 기록만 고쳐요`);
         const rows = syncRows(), round = pickRound(s, rows), clockBefore = phoneAt(p) ?? -1;
+        // Snapshot supplementary HTML hints with this round's visible messages, before any request can change the chat.
+        // Archive evidence keeps its own text; its source index is never a reason to reopen hidden raw messages.
+        const clockRows = round.rows.map(r => ({ ...r, htmlClocks: htmlClocks(ctx().chat?.[r.index]?.mes) }));
         // where everyone is: read once for a phone that never had it, and again below when the owner's city changes
         // the archive: sections covering this round are evidence; earlier ones are background; ones reaching unread messages stay out
         const [, tail] = splitTail(String(m.text || ''));
@@ -1141,7 +1145,7 @@ async function updatePhone(m, owner) {
         // whose scene the newest status line is (true the owner's, false elsewhere, null unknown); one with no time too
         let sceneOwn = tracker ? sceneHome(p, tracker.place, m) : true;
         // a status line among these messages whose scene the phone can't place: the model says whose clock it shows
-        const clockChoices = await reflectionClocks(p, [...round.rows, ...evidence.map(x => ({ index: x.first, text: x.text }))], m);
+        const clockChoices = await reflectionClocks(p, [...clockRows, ...evidence.map(x => ({ index: x.first, text: x.text }))], m);
         const baseClock = clockBlock(p, hm(p.now) ? p.now : st?.raw, m, st);
         const clock = [baseClock, clockChoices.text].filter(Boolean).join('\n');
         // (on a phone that knows no other city, a scene that isn't one of the owner's places is asked too: "Frankfurt"
@@ -2077,7 +2081,7 @@ export const clockBlock = (p, at = p?.now, m = null, st = null) => {
     const holder = screenHolderOf(m);
     return holder ? `${base || "[OWNER'S CLOCK]"}\nDefault screen viewpoint: ${JSON.stringify(holder)}.` : base;
 };
-// Reflection-only choices. No HTML class names and no guessed dates for bare hours.
+// Reflection-only choices. Explicit dates stay as written; marked HTML clocks can carry a labelled fallback date.
 // Keep the request's date order and locations in the choices, not mutable chat state after the call.
 export function reflectionClocks(p, rows, m = null) {
     return withDateOrder(dateOrderOf(m), () => reflectionClocks0(p, rows, m));
@@ -2098,16 +2102,47 @@ function reflectionClocks0(p, rows, m) {
     const identity = `Phone being updated: ${JSON.stringify(p.owner)} (${own.where}).${defaultZone === own.tz ? '\nThe default screen and this phone share a time zone; default screen times need no conversion.' : ''}`;
     const stamps = [];
     for (const r of [...arr(rows)].sort((a, b) => a.index - b.index)) {
-        for (const { sourceTime, local } of datedClocks(r.text)) {
+        const dated = datedClocks(r.text);
+        for (const { sourceTime, clock } of arr(r.htmlClocks)) {
+            // The extractor removes overlapping dated spans; the same clock elsewhere is not the same source.
+            if (stamps.some(x => x.at === r.index && x.sourceTime === sourceTime)) continue;
+            stamps.push({ at: r.index, sourceTime, clock });
+        }
+        // Within one message, keep explicit dates ahead of speculative references when the hint budget is full.
+        // Raw HTML and cleaned text have different offsets; this is evidence priority, not a claim of source order.
+        for (const { sourceTime, local } of dated) {
             if (!stamps.some(x => x.at === r.index && x.sourceTime === sourceTime)) stamps.push({ at: r.index, sourceTime, local });
         }
     }
-    // Bound supplementary hints only; the actual source messages are never shortened.
-    for (const stamp of stamps.slice(-12)) for (const who of people.slice(0, 6)) {
-        choices.push({ ...stamp, names: who.names, ownerTime: zoneShift(stamp.local, who.tz, own.tz, yearIn(stamp.sourceTime) || Number(p.year) || undefined) });
+    // Bound supplementary hints only; invalid bare hints cannot displace existing dated choices.
+    const eligible = [];
+    for (const stamp of [...stamps].reverse()) {
+        const before = choices.length;
+        for (const who of people.slice(0, 6)) {
+            if (stamp.clock) {
+                const fallback = clockFallback(p, own.tz, who.tz, stamp.clock);
+                if (fallback) {
+                    const source = new Date(`${fallback.localYear}-${fallback.local.slice(0, 5)}T00:00:00Z`), owner = new Date(`${fallback.ownerYear}-${fallback.ownerTime.slice(0, 5)}T00:00:00Z`);
+                    // A date-free source never becomes a dated answer choice. The dated calculation is only a reference.
+                    choices.push({ ...stamp, names: who.names, date: null, reference: { date: fallback.assumedDate,
+                        ownerClock: fallback.ownerTime.slice(6), dayShift: (owner - source) / 864e5,
+                        localAnchor: fallback.localAnchor, earlier: fallback.rolled } });
+                }
+            } else choices.push({ ...stamp, names: who.names, ownerTime: zoneShift(stamp.local, who.tz, own.tz, yearIn(stamp.sourceTime) || Number(p.year) || undefined) });
+        }
+        if (choices.length > before) eligible.push(stamp);
+        if (eligible.length === 12) break;
     }
     if (!choices.length) return { choices, text: identity };
-    const lines = stamps.slice(-12).map(t => `Timestamp in #${t.at}: ${JSON.stringify(t.sourceTime)}\n${choices.filter(c => c.at === t.at && c.sourceTime === t.sourceTime).map(c => `On ${c.names[0]}'s clock → owner's time: ${c.ownerTime}`).join('\n')}`);
+    const kept = eligible.reverse(), order = new Map(kept.map((t, i) => [JSON.stringify([t.at, t.sourceTime]), i]));
+    choices.sort((a, b) => order.get(JSON.stringify([a.at, a.sourceTime])) - order.get(JSON.stringify([b.at, b.sourceTime])));
+    const lines = kept.map(t => {
+        const cs = choices.filter(c => c.at === t.at && c.sourceTime === t.sourceTime);
+        if (!cs.length) return '';
+        return `Timestamp in #${t.at}: ${JSON.stringify(t.sourceTime)}${t.clock ? ' (HTML time field; calendar date unknown)\nReference calculation only. If the story shows a time jump, follow it instead.' : ''}\n${cs.map(c => c.reference
+            ? `${c.names[0]}: saved local ${c.reference.localAnchor}; ${c.reference.earlier ? 'earlier clock, next-day reference only' : 'same or later clock, same-day reference only'}. Reference date ${c.reference.date} → owner's clock ${c.reference.ownerClock} (${c.reference.dayShift > 0 ? '+' : ''}${c.reference.dayShift} days relative to screen).`
+            : `On ${c.names[0]}'s clock → owner's time: ${c.ownerTime}`).join('\n')}`;
+    }).filter(Boolean);
     return { choices, text: `${identity}\n${clockBlock(p, p.now, m) ? '' : `[OWNER'S CLOCK]\nThe owner is in ${own.where}, ${p.now || 'time unknown'} now.\n`}Time choices (not proof of whose screen, or which time is now). Date order: ${dateOrderOf(m) === 'dm' ? 'day.month' : 'month.day'}.\n${lines.join('\n')}` };
 }
 const pkey = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
