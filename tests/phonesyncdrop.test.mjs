@@ -1218,7 +1218,7 @@ test('elapsed time after the source clock survives reflection, everyday and stor
     const c=setup([say('Ren','start'),say('Mara','evening'),say('Mara','Mara reads Ren’s reply on her phone. 11.05, 08:30. Two hours pass.')]);
     clockPhone(c.p); c.m.dateOrder='md'; globalThis.__everydayIn=[];
     const oldVoice=structuredClone(c.p.voice), bankBefore=c.bank();
-    await run(c.m,{clock:{sender:'Ren',holder:'Mara',basis:'Mara reads on her phone, then two hours pass',sourceTime:'11.05, 08:30'},now:'11-05 02:30',events:[{id:'reply',at:2,quote:'Mara reads Ren’s reply',date:'11-05',time:'02:30',phone:{notes:[{title:'Reply',text:'Read it',time:'11-05 02:30'}]}}]});
+    await run(c.m,{clock:{basis:'Mara reads on her phone, then two hours pass',screen:{owner:'Mara',time:'11.05, 08:30'},messageSender:'Ren'},now:'11-05 02:30',events:[{id:'reply',at:2,quote:'Mara reads Ren’s reply',date:'11-05',time:'02:30',phone:{notes:[{title:'Reply',text:'Read it',time:'11-05 02:30'}]}}]});
     assert.match(T.input,/On Mara's clock → owner's time: 11-05 00:30/);
     assert.match(T.sys,/CLOCK FIRST/);
     assert.match(globalThis.__everydayIn.at(-1),/Owner-local window: 11-04 23:30 to 11-05 02:30/);
@@ -1228,7 +1228,7 @@ test('elapsed time after the source clock survives reflection, everyday and stor
 test('same-time scene without a new timestamp keeps the supplied moment', async()=>{
     const c=setup([say('Ren','start'),say('Mara','evening'),say('Ren','Meanwhile in Berlin, Ren sends a reply.')]);
     clockPhone(c.p);c.p.now='11-05 02:30';c.m.dateOrder='md';
-    await run(c.m,{clock:{sender:'Ren',holder:'Ren',basis:'Meanwhile in Berlin',sourceTime:null},now:'11-05 02:30',events:[]});
+    await run(c.m,{clock:{basis:'Meanwhile in Berlin',screen:{owner:'Ren',time:null},messageSender:'Ren'},now:'11-05 02:30',events:[]});
     assert.equal(c.p.now,'11-05 02:30');
 });
 
@@ -1259,7 +1259,7 @@ test('unnamed default gets clock candidates, while unknown location gets no inve
 test('default survives undo and reapply without preceding messages or their clock candidates', async () => {
     const c=setup([say('Ren','start'),say('Mara','Mara reads on her own phone. 11.05, 08:24.'),say('Ren','11.05, 08:26. Are you okay?')]);
     clockPhone(c.p); c.m.dateOrder='md'; await data.setScreenHolder(c.m,'Mara');
-    const answer={clock:{sender:'Ren',holder:'Mara',basis:'Default screen viewpoint',sourceTime:'11.05, 08:26'},now:'11-05 00:26',events:[{id:'reply',at:2,quote:'Are you okay',date:'11-05',time:'00:26',phone:{notes:[{title:'Reply',text:'Are you okay?',time:'11-05 00:26'}]}}]};
+    const answer={clock:{basis:'Default screen viewpoint',screen:{owner:'Mara',time:'11.05, 08:26'},messageSender:'Ren'},now:'11-05 00:26',events:[{id:'reply',at:2,quote:'Are you okay',date:'11-05',time:'00:26',phone:{notes:[{title:'Reply',text:'Are you okay?',time:'11-05 00:26'}]}}]};
     await run(c.m,answer);
     const first=T.input;
     assert.ok(!first.includes('[SCENE BEFORE]'));

@@ -143,8 +143,8 @@ const LIFE_TIMERS = `  "timers": [{ "label", "ko", "sec" }],`;
 const LIFE_ONCE = `- An alarm for one occasion (a flight, an appointment) rings once: "days": [] and its "date". Only an alarm the owner keeps for every week has "days".`;
 const LIFE_CHANGE = `- A record already in LIFE NOW is changed with "change": its id; write only the fields that changed. A deleted file is "deleted": true.`;
 const CLOCK_FIRST = `CLOCK FIRST
-- Follow the scene's viewpoint, not the sender. Keep it until the scene changes; when unclear, use the default screen viewpoint in OWNER'S CLOCK. Attachments have their own clocks.
-- In "clock", write sender (who sent the displayed message), holder (whose screen or scene), basis (brief evidence and time passed), and sourceTime (as written). Use null for absent sender or sourceTime.
+- Use the default screen viewpoint in OWNER'S CLOCK when set. Change it only when the text shows a switch to another person's screen or scene, not merely a sender's name. Attachments keep their own clocks.
+- In "clock", write basis (default used or narrative evidence for a switch; time passed), screen { owner (whose screen or scene), time (as written) }, and messageSender (who sent the displayed message). Use null for absent time or messageSender.
 - Convert the source time using OWNER'S CLOCK, then follow later time passing to set "now". A time choice is a starting point; "at the same time" adds no time.
 - The owner's present scene agrees with "now". Other scenes, memories and appointments keep their own times.`;
 export function updateSystem({ money = true, delivery = false, life = false, weather = false, tracker = false, split = false, invest = false, zone = false } = {}) {
@@ -212,7 +212,7 @@ ${delivery ? `- A delivery paid in cash at the door has no move. "tip" only wher
 ${PHONE_STYLE.replace('; "now" is the newest moment of the story.', '.')}
 
 ANSWER — one JSON object, nothing else:
-{ "clock": { "sender": null or "name", "holder": "name", "basis": "brief evidence", "sourceTime": null or "as written" },
+{ "clock": { "basis": "default used or switch evidence; time passed", "screen": { "owner": "name", "time": null or "as written" }, "messageSender": null or "name" },
   "now": "MM-DD HH:MM", "moved": [],${zone ? ' "statusCity": "",' : ''}
   "events": [{ "id": an id from EVENTS ON THE PHONE, or a short new tag like "berlin-flight", "at": 123, "quote": "exact words",
                "date": "MM-DD", "time": "HH:MM" or "", "summary": "one short line",${split ? ` "apps": [] or ["money"${invest ? ', "invest"' : ''}],` : ''}
