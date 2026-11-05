@@ -1772,9 +1772,22 @@ export async function ensureScreenHolder(m, c = ctx()) {
     const name = typeof c?.name1 === 'string' ? c.name1.trim() : '';
     await setScreenHolder(m, name);
 }
+// Use the place reader's exact-name / aka / unique first-name resolver, not a second name heuristic.
+function screenPerson(m, name) {
+    const rows = [];
+    for (const p of Object.values(m?.phones || {})) for (const r of p?.where?.people || []) {
+        if (!rows.some(x => nameKey(x.name) === nameKey(r.name))) rows.push(r);
+    }
+    return personIn({ where: { people: rows } }, rows, x => x.name, name);
+}
 export function screenHolderChoices(m, c = ctx()) {
     const out = [], seen = new Set();
-    const add = (name, sub) => { if (typeof name !== 'string' || !name.trim() || seen.has(nameKey(name))) return; seen.add(nameKey(name)); out.push({ name: name.trim(), sub }); };
+    const add = (name, sub) => {
+        if (typeof name !== 'string' || !name.trim()) return;
+        const row = screenPerson(m, name), key = nameKey(row?.name || name);
+        if (seen.has(key)) return;
+        seen.add(key); out.push({ name: name.trim(), sub });
+    };
     add(c?.name1, '사용자 페르소나');
     add(c?.characters?.[c.characterId]?.name, '현재 캐릭터');
     for (const p of Object.values(m?.phones || {})) {
@@ -1784,6 +1797,10 @@ export function screenHolderChoices(m, c = ctx()) {
     for (const name of Object.keys(m?.phoneProfiles || {})) add(name, '연결된 인물');
     add(screenHolderOf(m), '선택한 인물');
     return out;
+}
+export function screenHolderLabel(m, c = ctx()) {
+    const saved = screenHolderOf(m), key = nameKey(screenPerson(m, saved)?.name || saved);
+    return screenHolderChoices(m, c).find(x => nameKey(screenPerson(m, x.name)?.name || x.name) === key)?.name || saved;
 }
 // Only context before this round, never the most recently processed (possibly later) scene.
 export function sceneBefore(rows, start, budget = 1200) {
@@ -2057,7 +2074,7 @@ export function reflectionClocks(p, rows, m = null) {
     return withDateOrder(dateOrderOf(m), () => reflectionClocks0(p, rows, m));
 }
 function reflectionClocks0(p, rows, m) {
-    const own = ownerZone(p), choices = [], people = [], text = arr(rows).map(r => r.text).join('\n'), fallback = screenHolderOf(m);
+    const own = ownerZone(p), choices = [], people = [], text = arr(rows).map(r => r.text).join('\n'), fallback = screenPerson(m, screenHolderOf(m))?.name || screenHolderOf(m);
     if (!own) return { choices, text: '' };
     for (const z of placesAround(p, m)) {
         const names = [...new Set((z.own ? [p.owner, 'owner', ...(z.by || [])] : z.who ? [z.who, ...(z.by || [])] : []).filter(Boolean))];

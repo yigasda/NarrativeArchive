@@ -6,7 +6,7 @@ import { investmentDate } from './investdata.js';
 import { profileChoices, phoneDataInfo } from './phoneprofile.js';
 import { faceHtml, nameKey, nameRe, peopleData, peopleList, personLine } from './people.js';
 import { autopic, autopicPeople, drafting, drawing, looksOf, writing } from './phoneai.js';
-import { bigClock, byStory, clockOf, COUNTRIES, fmtDate, fmtTime, fullDate, gapDays, hasKo, koOn, lastTime, listTime, localeOf, loreOff, MOODS, pad, parts, phoneLore, placesOf, REMAKE, rowDay, savedName, dateOrderOf, placeInfo, screenHolderOf, screenHolderChoices } from './phonedata.js';
+import { bigClock, byStory, clockOf, COUNTRIES, fmtDate, fmtTime, fullDate, gapDays, hasKo, koOn, lastTime, listTime, localeOf, loreOff, MOODS, pad, parts, phoneLore, placesOf, REMAKE, rowDay, savedName, dateOrderOf, placeInfo, screenHolderLabel, screenHolderChoices } from './phonedata.js';
 import { threadNew } from './phonehome.js';
 import { screenView } from './phonescreen.js';
 import { recentTrackers } from './scenes.js';
@@ -604,7 +604,7 @@ export function setDate(p, now, m = null) {
         <div class="ax_card"><button type="button" class="ax_rw ax_rwn na_ph_yearshow"><span class="ax_tx"><span class="ax_n">연도 표시</span></span><span class="ax_sw ${on ? 'on' : ''}"></span></button>
           ${on ? row('연도', `<span class="ax_ys">${step(-1, '−')}<b class="cg_num na_ph_yval">${esc(String(p.year || ''))}</b>${step(1, '+')}</span>`) : ''}</div>
         <div class="ax_foot">연도를 알아야 요일이 맞게 나와요. 연도 없는 이야기만 꺼 주세요.</div>
-        <div class="ax_card"><button type="button" class="ax_rw ax_rwn" data-go="setscreenholder"><span class="ax_tx"><span class="ax_n">메신저 시간대</span></span><span class="ax_v">${esc(screenHolderOf(m) || '미설정')}</span>${ax('chev', 16, '#bfc2c7')}</button></div>
+        <div class="ax_card"><button type="button" class="ax_rw ax_rwn" data-go="setscreenholder"><span class="ax_tx"><span class="ax_n">메신저 시간대</span></span><span class="ax_v">${esc(screenHolderLabel(m) || '미설정')}</span>${ax('chev', 16, '#bfc2c7')}</button></div>
         <div class="ax_foot">캐릭터와 주고받는 메시지의 시간이 누구를 기준으로 하는지 골라 주세요.</div>
         ${(o => `<div class="ax_sec">날짜 읽는 법</div><div class="ax_card"><div class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_n">순서</span></span><span class="ax_dseg">${[['md', '월.일'], ['dm', '일.월']].map(([v, t]) => `<span role="button" tabindex="0" class="na_ph_dord${o === v ? ' on' : ''}" data-v="${v}">${t}</span>`).join('')}</span></div></div>
         <div class="ax_foot">03.11. → ${o === 'dm' ? '11월 3일' : '3월 11일'}</div>`)(dateOrderOf(m))}
@@ -612,7 +612,7 @@ export function setDate(p, now, m = null) {
       ${axInd()}`;
 }
 export function setScreenHolderView(p, now, m) {
-    const selected = screenHolderOf(m), options = [{ name: '', sub: '이야기 흐름으로 판단' }, ...screenHolderChoices(m)];
+    const selected = screenHolderLabel(m), options = [...screenHolderChoices(m), { name: '', sub: '시간을 잘못 해석할 수 있어요' }];
     return `${axBar(p, now)}${axTop(axCb('setdate'))}<div class="ax_scroll">${axH1('메신저 시간대')}
       <div class="ax_card">${options.map(x => `<button type="button" class="ax_rw ax_rwn na_ph_screenholder" data-n="${esc(x.name)}" aria-pressed="${nameKey(x.name) === nameKey(selected)}"><span class="ax_tx"><span class="ax_n">${esc(x.name || '미설정')}</span><span class="ax_p1">${esc(x.sub)}</span></span>${nameKey(x.name) === nameKey(selected) ? `<span class="ax_radio on">${ax('check', 14, '#fff', 3.4)}</span>` : ''}</button>`).join('')}</div>
       <div class="ax_foot">내가 메시지를 보내고 캐릭터에게 답장을 받았다면, <b>내 페르소나의 현지 시간</b>을 골라 주세요.<br><br>이야기에서 장면이 바뀌면 그 장면을 따라가요.</div></div>${axInd()}`;

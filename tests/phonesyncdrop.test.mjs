@@ -1298,3 +1298,21 @@ test('messenger time initializes once from the current persona, including an una
     await data.ensureScreenHolder(other,{name1:'Mara'}); assert.equal(other.phoneScreenHolder,'');
     const fresh={}; await data.ensureScreenHolder(fresh,{name1:'Ivo'}); assert.equal(fresh.phoneScreenHolder,'Ivo');
 });
+
+
+test('messenger choices reuse saved place aliases and unique short names, preserving an old selection', async () => {
+    const p={owner:'Ren'};clockPhone(p);
+    p.where.people[1]={name:'Mara Park',aka:['마라','Mara'],city:'Seoul',tz:'Asia/Seoul'};
+    const m={phones:{ren:p},phoneProfiles:{Mara:{}},phoneScreenHolder:'Mara Park',dateOrder:'md'};
+    const c={name1:'마라',characterId:0,characters:[{name:'Ren'}]};
+    assert.deepEqual(data.screenHolderChoices(m,c).map(x=>x.name),['마라','Ren']);
+    assert.equal(data.screenHolderLabel(m,c),'마라');
+    assert.equal(m.phoneScreenHolder,'Mara Park');
+    m.phoneScreenHolder='마라';
+    const result=await data.reflectionClocks(p,[{index:2,text:'Ren: 11.05, 08:26'}],m);
+    assert.equal(result.choices.find(x=>x.names[0]==='Mara Park').ownerTime,'11-05 00:26');
+});
+test('messenger choices do not combine two people with the same first name', () => {
+    const m={phones:{ren:{owner:'Ren',where:{people:[{name:'Mara Park',city:'Seoul',tz:'Asia/Seoul'},{name:'Mara Kim',city:'Berlin',tz:'Europe/Berlin'}]}}}};
+    assert.deepEqual(data.screenHolderChoices(m,{name1:'Mara'}).map(x=>x.name),['Mara','Ren','Mara Park','Mara Kim']);
+});
