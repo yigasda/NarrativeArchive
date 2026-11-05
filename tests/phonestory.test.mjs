@@ -65,3 +65,31 @@ test('cancelled archive phone choice leaves both archive and phone data intact',
  const {m,state}=setup();state.confirmed=false;const before=JSON.stringify(m);
  assert.equal(await importHarness(m,state)({text:'New',settings:{phones:{new:{}}}},'New'),false);assert.equal(JSON.stringify(m),before);
 });
+
+test('undo target rejects chat switches, same-name reloads, changed identity and stale phones', () => {
+ const {m,state}=setup();const p=m.phones.oscar;
+ state.context.chatMetadata={integrity:'room-a'};
+ m.phoneStoryScope=story.phoneChatScope(state.context);
+ const target=story.phoneTarget(m,p);target.check();
+ const original=state.context.chatMetadata;
+ state.chat='another';assert.throws(target.check,/채팅이나 폰/);state.chat='branch';
+ state.context.chatMetadata={...original};assert.throws(target.check,/채팅이나 폰/);state.context.chatMetadata=original;
+ original.integrity='room-b';assert.throws(target.check,/채팅이나 폰/);original.integrity='room-a';
+ m.phones.oscar=structuredClone(p);assert.throws(target.check,/채팅이나 폰/);m.phones.oscar=p;
+ state.meta=structuredClone(m);assert.throws(target.check,/채팅이나 폰/);state.meta=m;
+ m.phoneStoryScope='old-parent';assert.throws(target.check,/채팅이나 폰/);
+});
+
+test('continued branch can undo inherited rounds without touching source phone, undo history or finance', async () => {
+ const {m,state}=setup();state.context.chatMetadata={integrity:'child'};
+ const p=m.phones.oscar;
+ p.syncUndo={round:'r2',sync:{events:{r1:{effects:[]}}}};
+ p.syncUndos=[{round:'r1'}];p.voice=[{text:'keep'}];
+ const source={...m};const before=JSON.stringify(source);
+ m.phoneStoryScope='parent';
+ await story.ensurePhoneStory(m);
+ const child=m.phones.oscar;story.phoneTarget(m,child).check();
+ child.syncUndos.pop();child.syncUndo.sync.events.r1.effects.push({amount:-1});
+ child.voice[0].text='branch only';m.finance.accounts.a.amount=0;
+ assert.equal(JSON.stringify(source),before);
+});

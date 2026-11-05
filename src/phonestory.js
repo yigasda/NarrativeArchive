@@ -8,6 +8,21 @@ export function phoneChatScope(c) {
     const scope=c.groupId!=null && c.groupId!=='' ? ['group',c.groupId] : ['character',c.characters?.[c.characterId]?.avatar || (c.characterId ?? '')];
     return `narrativearchive:phone-owner:${JSON.stringify([...scope,String(chat)])}`;
 }
+// Capture the actual loaded room, not the provenance inherited from a branch.
+// Re-check after a confirmation/save: a dialog can outlive its chat.
+export function phoneTarget(m, p) {
+    const c = ctx(), metadata = c.chatMetadata, scope = phoneChatScope(c), integrity = metadata?.integrity;
+    const valid = () => {
+        const current = ctx();
+        return !!scope && phoneChatScope(current) === scope && current.chatMetadata === metadata
+            && current.chatMetadata?.integrity === integrity && getMeta() === m
+            && (!m.phoneStoryScope || m.phoneStoryScope === scope)
+            && Object.values(m.phones || {}).includes(p);
+    };
+    const check = () => { if (!valid()) throw new Error('채팅이나 폰이 바뀌었어요. 현재 방에서 폰을 다시 열어 주세요'); };
+    check();
+    return { scope, check };
+}
 export function clearPhoneSelection(scope,storage) {
     try { if(scope) (storage || globalThis.localStorage)?.removeItem(scope); } catch { /* Metadata still works without browser storage. */ }
 }

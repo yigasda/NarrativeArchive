@@ -7,7 +7,7 @@ const SRC = new URL('../../src/', import.meta.url);
 const encoded = s => 'data:text/javascript;base64,' + Buffer.from(s).toString('base64');
 const href = f => pathToFileURL(new URL(f, SRC).pathname).href;
 const stub = {
-    './phonestory.js': encoded(`export const phoneChatScope=()=>'test';`),
+    './phonestory.js': encoded(`export const phoneTarget=()=>({scope:phoneChatScope(),check(){}});export const phoneChatScope=()=>'test';`),
     './wealth.js': encoded(`export const ensureWealth=async()=>null;export const wealthBlock=()=>'';export const wealthDate=()=> '2026-12-30';export const wealthCheck=()=>null;export const addWealthFX=()=>{};`),
     './ai.js': encoded(`export const askDraft=async()=>'';export const askAI=async()=>'';`),
     './core.js': encoded(`export const ctx=()=>({chat:[],chatMetadata:{},characters:[]});export const globalSettings=()=>({});export const saveMeta=async()=>{};export const getMeta=()=>({});`),

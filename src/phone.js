@@ -4,7 +4,7 @@
 // m.phones = { [name key]: { owner, country, wall, accent, now, contacts, threads, calls, photos, notes, searches, events,
 //   upto (the last message number the archive held), at, inject } }
 
-import { phoneChatScope, ensurePhoneStory, resetPhoneStory } from './phonestory.js';
+import { phoneChatScope, phoneTarget, ensurePhoneStory, resetPhoneStory } from './phonestory.js';
 import { prepareWealth, dateOrderOf, needsDateOrder, setDateOrder, setScreenHolder, ensureScreenHolder, screenHolderChoices, setOwnerLives, setPlaceCity, dropPlacePerson, rereadPlaces, placeInfo } from './phonedata.js';
 import { profileEntries, resolvePhoneProfile, currentPersonaBinding } from './phoneprofile.js';
 import { investmentScreen } from './investui.js';
@@ -17,7 +17,7 @@ import { faceHtml, nameKey, peopleList } from './people.js';
 import { drafting, drawing, drawPhoto, drawPost, filling, makeDraft, paging, recording, recordVoice, searching, searchPage, shooting, takePhoto, webPage, writeEntry, writing } from './phoneai.js';
 import { APPS, AXB, AXB_C, busyHtml, setDate, setScreenHolderView, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setOwnerProfile, setWho, snsPost, snsScreen, statusBar, threadScreen, setPlace } from './phoneapps.js';
 import { dropStretch, ensureIds, ensureYear, hasDatedRecords, noArchive, setStoryYear, storyYear, fillDevice, fillMoney, fillVoice, koOn, loreOff, makePhone, tidyKo, markAfter, phoneLore, REMAKE, restoreRounds, retryMoney, showNow, storyNow, syncLeft, syncRows, syncState, tidyJournal, undoRound } from './phonedata.js';
-import { busy, journalRead, journalWrite, syncOf } from './phonesync.js';
+import { busy, exclusive, journalRead, journalWrite, syncOf } from './phonesync.js';
 import { syncPick, syncSettings } from './phonesyncui.js';
 import { CG_W, homeScreen, lastSig, lockScreen, threadNew } from './phonehome.js';
 import { bankDisplayCurrency, bankAcct, bankHome, bankTx, fixedScreen, bankNotes, bankSend, bankStmt, txDoc, bankMore, cardView, orderView, passView, trackView, shopScreen, voiceOne, voiceScreen, walletScreen } from './phonemoney.js';
@@ -80,10 +80,11 @@ export function rememberPhoneSelection(m, owner, key, storage) {
 // ---- the window
 export async function openPhone(who = null) {
     const c = ctx();
-    const m = getMeta();
-    if (!await ensurePhoneStory(m)) return;
+    const m = getMeta(), openingScope = phoneChatScope(c);
+    const stillHere = () => getMeta() === m && phoneChatScope(ctx()) === openingScope;
+    if (!await ensurePhoneStory(m) || !stillHere()) return;
     await ensureScreenHolder(m, c);
-    if (getMeta() !== m) return;
+    if (!stillHere()) return;
     // a round this browser made that the saved chat doesn't have: kept, and offered in 설정 › 대화 반영; the phone opens anyway
     let syncPending = 0;
     try { syncPending = tidyJournal(m, phoneChatScope(c)); } catch (err) { console.error('[narrative-archive] sync journal', err); }
@@ -98,11 +99,14 @@ export async function openPhone(who = null) {
     const selectionKey = phoneSelectionKey(c);
     let owner = selectedPhoneOwner(m, names, who, readPhoneSelection(selectionKey));
     if (owner) { rememberPhoneSelection(m,owner,selectionKey); await saveMeta(); }
+    if (!stillHere()) return;
     let investing = false, making = false, busyMake = null, placeReading = false;  // busyMake: 'sync' | 'make' while a reflection or a make runs
     for (const p of Object.values(m.phones)) migrateBank(m, p);
     // phones from before 날짜 및 시간 get their year (or none) once
     if (Object.values(m.phones).filter(p => p?.owner).map(p => ensureYear(m, p)).some(Boolean)) await saveMeta();
+    if (!stillHere()) return;
     if (Object.values(m.phones).some(p => p.money)) await saveMeta();
+    if (!stillHere()) return;
     let view = 'lock', contactBack = '', sheet = false, adding = false, loreOpen = false;
     let syncWhy = '', pickMore = 30;
     const profileStates = new Map();
@@ -833,10 +837,16 @@ export async function openPhone(who = null) {
         e.stopPropagation();
         // not while a reflection or a fill writes the same records
         if (making || busy.sync || busy.fill) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요');
-        const p = phone(), n = p.syncLast?.checked || 0;
-        if (!await askSheet('방금 반영을 되돌릴까요?', `대화 ${n}개를 다시 읽게 돼요.`, '되돌리기')) return;
-        if (making || busy.sync || busy.fill || phone() !== p) return;
-        try { const kept = await undoRound(m, p); drawPhone(); kept.length ? toastr.warning(`되돌렸어요. ${kept.join(', ')}은(는) 그 사이 바뀌어서 남겨뒀어요`, '캐릭터 휴대폰') : toastr.success('반영을 되돌렸어요', '캐릭터 휴대폰'); }
+        try {
+            const p = phone(), target = phoneTarget(m, p), round = p.syncUndo;
+            const n = p.syncLast?.checked || 0;
+            if (!await askSheet('방금 반영을 되돌릴까요?', `대화 ${n}개를 다시 읽게 돼요.`, '되돌리기')) return;
+            target.check();
+            if (making || busy.sync || busy.fill || phone() !== p || p.syncUndo !== round) return;
+            const kept = await exclusive('sync', () => undoRound(m, p));
+            drawPhone();
+            kept.length ? toastr.warning(`되돌렸어요. ${kept.join(', ')}은(는) 그 사이 바뀌어서 남겨뒀어요`, '캐릭터 휴대폰') : toastr.success('반영을 되돌렸어요', '캐릭터 휴대폰');
+        }
         catch (err) { toastr.error(String(err?.message || err), '되돌리기'); }
     });
     // 결제 다시 읽기: the money the last round couldn't put in, asked again and put on that round

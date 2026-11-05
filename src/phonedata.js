@@ -18,7 +18,7 @@ import { recentTrackers } from './scenes.js';
 import { parseSections, RANGE_HEAD, sectionKey, splitTail } from './sections.js';
 import { glossaryEntries } from './translate.js';
 import { worldText } from './world.js';
-import { phoneChatScope } from './phonestory.js';
+import { phoneChatScope, phoneTarget } from './phonestory.js';
 import { dateOrderSource, swapDate, withDateOrder, tidyKo, arr, evOf, gapDays, giftOf, hhmm, jsonOf, ko, parseJson, storyMin, byStory, yearIn, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
 export { tidyKo, arr, gapDays, giftOf, hhmm, jsonOf, ko, last4, line, num, pad, pick, storyMin, byStory, str, when, withEv };
 import { COUNTRY_TZ, applyDays, applyLife, applyWeather, cardClock, cityAt, dayGap, dlvClock, fillDays, lifeClock, lifeNow, weatherFrom, zoneShift } from './phonesynclife.js';
@@ -1573,6 +1573,7 @@ function restoreMerged(p, before, after) {
 const FX_APP = [[/^life\.weather/, '날씨'], [/^life\.health/, '건강'], [/^life\.clock/, '시계'], [/^life\.files/, '파일'], [/^delivery/, '배달'], [/^money\.(orders)/, '쇼핑'], [/^money\.passes/, '지갑'], [/^money/, '은행'], [/^investment/, '투자']];
 const fxApp = path => FX_APP.find(([re]) => re.test(String(path || '')))?.[1] || '';
 export async function undoRound(m, p) {
+    const target = phoneTarget(m, p);
     const u = p.syncUndo, s = p.sync;
     if (!u || s?.rounds?.[s.rounds.length - 1] !== u.round) throw new Error('되돌릴 반영이 없어요');
     if (!canUndo(p)) throw new Error('그 뒤에 은행이나 투자를 다시 만들어서 되돌릴 수 없어요');
@@ -1614,9 +1615,9 @@ export async function undoRound(m, p) {
     if (!p.syncUndos?.length) delete p.syncUndos;
     if (prev) { p.syncUndo = prev; if (prev.last) p.syncLast = structuredClone(prev.last); else delete p.syncLast; } else { delete p.syncLast; delete p.syncUndo; }
     if (p.money) migrateBank(m, p);
-    const scope = phoneChatScope(ctx());
-    journalWrite(scope, journalRead(scope).filter(r => r.round !== u.round));
+    journalWrite(target.scope, journalRead(target.scope).filter(r => r.round !== u.round));
     await saveMeta();
+    target.check();
     if (p.inject) applyInjection();
     return kept;
 }
