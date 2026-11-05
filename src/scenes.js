@@ -109,11 +109,12 @@ function readTracker(text, re) {
     return { date: String(gr.date || '').trim(), city: parts[0] || '', room: parts.slice(1).join(' → '), min: minutes(gr.time), time: String(gr.time || '').trim(), place, weather };
 }
 // 상태창 줄 in the settings: the last few status windows the cutter can read, newest first ([] = none found)
-export function recentTrackers(n = 5, { re = trackerRe(), chat = ctx().chat || [] } = {}) {
+export function recentTrackers(n = 5, { re = trackerRe(), chat = ctx().chat || [], visibleOnly = false } = {}) {
     let rx = null;
     try { rx = re ? new RegExp(re, 's') : null; } catch { rx = null; }
     const out = [];
     for (let i = chat.length - 1; i >= 0 && out.length < n; i--) {
+        if (visibleOnly && (!chat[i] || chat[i].is_system)) continue;
         const t = readTracker(chat[i]?.mes, rx);
         if (t && (t.date || t.place)) out.push({ i, ...t });
     }

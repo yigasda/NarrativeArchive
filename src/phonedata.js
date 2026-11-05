@@ -700,7 +700,7 @@ export function storyYear(m, p = null, upto = null) {
     if (p?.noYear) return '';
     if (p?.year) return String(p.year);
     let tracks = '';
-    try { tracks = recentTrackers(5, upto == null ? {} : { chat: (ctx().chat || []).slice(0, upto + 1) }).map(t => t.date || '').join('\n'); } catch { /* no status lines */ }
+    try { tracks = recentTrackers(5, { visibleOnly: true, ...(upto == null ? {} : { chat: (ctx().chat || []).slice(0, upto + 1) }) }).map(t => t.date || '').join('\n'); } catch { /* no status lines */ }
     return yearIn(m.text) || yearIn(tracks) || (noArchive(m) ? yearIn(recentForCheck(1e9).join('\n')) : '');
 }
 // a phone's year, once: one the story writes in a date, else none (설정 › 날짜 및 시간 changes it); true when it was set now
@@ -1136,7 +1136,7 @@ async function updatePhone(m, owner) {
         const roundEnd = reachesEnd(s, rows, round.rows) ? null : Math.max(-1, ...round.rows.map(r => r.index), ...archIn.map(x => x.last));
         const upChat = roundEnd == null ? {} : { chat: (ctx().chat || []).slice(0, roundEnd + 1) };
         let tracker = null, st = null, trackAt = -1;
-        try { const t = recentTrackers(1, upChat)[0]; tracker = trackerWeather(t); trackAt = Number.isInteger(t?.i) ? t.i : -1; st = statusMoment(p, roundEnd, null, m); } catch { /* no status lines */ }
+        try { const t = recentTrackers(1, { ...upChat, visibleOnly: true })[0]; tracker = trackerWeather(t); trackAt = Number.isInteger(t?.i) ? t.i : -1; st = statusMoment(p, roundEnd, null, m); } catch { /* no status lines */ }
         // whose scene the newest status line is (true the owner's, false elsewhere, null unknown); one with no time too
         let sceneOwn = tracker ? sceneHome(p, tracker.place, m) : true;
         // a status line among these messages whose scene the phone can't place: the model says whose clock it shows
@@ -2149,7 +2149,7 @@ const laterThan = (a, b) => { const g = dayGap(String(b).slice(0, 5), String(a).
 // the same, never throwing (no status window: null): for a fill's OWNER'S CLOCK
 export const statusAt = (p, upto = null, m = null) => { try { return statusMoment(p, upto, null, m); } catch { return null; } };
 export function statusMoment(p, upto = null, named = null, m = null) {
-    const t = recentTrackers(1, upto == null ? {} : { chat: (ctx().chat || []).slice(0, upto + 1) })[0];
+    const t = recentTrackers(1, { visibleOnly: true, ...(upto == null ? {} : { chat: (ctx().chat || []).slice(0, upto + 1) }) })[0];
     const d = t?.date ? monthDay(t.date) : null;
     if (!t || !Number.isFinite(t.min) || !d) return null;
     const raw = `${pad(d.mo)}-${pad(d.d)} ${pad(Math.floor(t.min / 60))}:${pad(t.min % 60)}`, place = t.city || t.place || '', base = { raw, place, i: t.i };

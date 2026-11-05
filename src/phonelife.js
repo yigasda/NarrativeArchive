@@ -176,7 +176,7 @@ export function storyDays(m, p, upto = null) {
 }
 // the chat's newest status line (date, time, place, weather), if any
 export function weatherNow(upto = null) {
-    try { return trackerWeather(recentTrackers(1, upto == null ? {} : { chat: (ctx().chat || []).slice(0, upto + 1) })[0]); } catch { return null; }
+    try { return trackerWeather(recentTrackers(1, { visibleOnly: true, ...(upto == null ? {} : { chat: (ctx().chat || []).slice(0, upto + 1) }) })[0]); } catch { return null; }
 }
 // where the owner lives: the profile's country (the delivery app is 배달의민족 there in Korea, Uber Eats elsewhere)
 // where the owner lives: set by hand or read (p.lives), else the place reading's row, else the phone's country

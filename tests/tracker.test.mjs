@@ -58,3 +58,25 @@ test('a fourth field that is not the weather (a mood) is passed over for the fie
     T.chat = [say('<tracker> 21:00 | 2월 2일 | 서울, 집 | 기분: 차분 </tracker>')];
     assert.equal(recentTrackers(1)[0].weather, '');
 });
+
+test('phone status ignores hidden messages while preserving source indices and archive reads', () => {
+    T.settings={};
+    T.chat=[say('🕗 08:00 AM | November 5, Thursday, 2026 | Frankfurt → Kitchen | ☀️ Clear, 9°C'),
+        {...say('🕗 08:28 AM | November 5, Thursday, 2026 | Frankfurt → Kitchen | 🌧️ Light Rain, 7°C'),is_system:true}];
+    assert.equal(recentTrackers(1)[0].i,1);
+    const [visible]=recentTrackers(1,{visibleOnly:true});
+    assert.equal(visible.i,0);assert.equal(visible.time,'08:00 AM');assert.match(visible.weather,/Clear/);
+    T.chat[0].is_system=true;assert.deepEqual(recentTrackers(1,{visibleOnly:true}),[]);
+    T.chat[1].is_system=false;assert.equal(recentTrackers(1,{visibleOnly:true})[0].i,1);
+});
+
+test('phone status uses edited body immediately and forgets deleted messages', () => {
+    T.settings={};
+    T.chat=[say('<tracker> 11:00 | November 5, 2026 | Seoul → Home | Clear, 9°C </tracker>'),
+        say('<tracker> 16:28 | November 5, 2026 | Seoul → Home | Rain, 7°C </tracker>')];
+    assert.equal(recentTrackers(1,{visibleOnly:true})[0].time,'16:28');
+    T.chat[1].mes='<tracker> 12:10 | November 5, 2026 | Seoul → Home | Snow, -2°C </tracker>';
+    const [edited]=recentTrackers(1,{visibleOnly:true});assert.equal(edited.time,'12:10');assert.match(edited.weather,/Snow/);
+    T.chat.pop();assert.equal(recentTrackers(1,{visibleOnly:true})[0].time,'11:00');
+    T.chat.length=0;assert.deepEqual(recentTrackers(1,{visibleOnly:true}),[]);
+});
