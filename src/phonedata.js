@@ -145,7 +145,7 @@ const LIFE_CHANGE = `- A record already in LIFE NOW is changed with "change": it
 const CLOCK_FIRST = `CLOCK FIRST
 - Use the default screen viewpoint in OWNER'S CLOCK when set. Change it only when the text shows a switch to another person's screen or scene, not merely a sender's name. Attachments keep their own clocks.
 - In "clock", write basis (max 20 words: default used or narrative evidence for a switch; time passed), screen { owner (whose screen or scene), time (as written) }, and messageSender (who sent the displayed message). Use null for absent time or messageSender.
-- Convert the source time using OWNER'S CLOCK, then follow later time passing to set "now". A time choice is a starting point; "at the same time" adds no time.
+- Use the time choice matching screen.owner and screen.time without converting it again; otherwise use OWNER'S CLOCK. Follow later time passing to set "now"; "at the same time" adds no time.
 - The owner's present scene agrees with "now". Other scenes, memories and appointments keep their own times.`;
 export function updateSystem({ money = true, delivery = false, life = false, weather = false, tracker = false, split = false, invest = false, zone = false } = {}) {
     const paid = delivery ? 'order, ticket or delivery' : 'order or ticket';
@@ -2079,6 +2079,8 @@ function reflectionClocks0(p, rows, m) {
     }
     // The chosen fallback must not be displaced by the hint's six-person limit.
     people.sort((a, b) => Number(b.names.some(n => nameKey(n) === nameKey(fallback))) - Number(a.names.some(n => nameKey(n) === nameKey(fallback))));
+    const defaultZone = people.find(x => x.names.some(n => nameKey(n) === nameKey(fallback)))?.tz;
+    const identity = `Phone being updated: ${JSON.stringify(p.owner)} (${own.where}).${defaultZone === own.tz ? '\nThe default screen and this phone share a time zone; default screen times need no conversion.' : ''}`;
     const stamps = [];
     for (const r of [...arr(rows)].sort((a, b) => a.index - b.index)) {
         const re = /(?<!\d)(?:\d{4}[-/.])?\d{1,2}[-/.]\d{1,2}(?:[-/.]\d{4})?\.?[,]?\s+[0-2]?\d:[0-5]\d(?!\d)/g;
@@ -2092,9 +2094,9 @@ function reflectionClocks0(p, rows, m) {
     for (const stamp of stamps.slice(-12)) for (const who of people.slice(0, 6)) {
         choices.push({ ...stamp, names: who.names, ownerTime: zoneShift(stamp.local, who.tz, own.tz, yearIn(stamp.sourceTime) || Number(p.year) || undefined) });
     }
-    if (!choices.length) return { choices, text: '' };
+    if (!choices.length) return { choices, text: identity };
     const lines = stamps.slice(-12).map(t => `Timestamp in #${t.at}: ${JSON.stringify(t.sourceTime)}\n${choices.filter(c => c.at === t.at && c.sourceTime === t.sourceTime).map(c => `On ${c.names[0]}'s clock → owner's time: ${c.ownerTime}`).join('\n')}`);
-    return { choices, text: `${clockBlock(p, p.now, m) ? '' : `[OWNER'S CLOCK]\nThe owner is in ${own.where}, ${p.now || 'time unknown'} now.\n`}Time choices (not proof of whose screen, or which time is now). Date order: ${dateOrderOf(m) === 'dm' ? 'day.month' : 'month.day'}.\n${lines.join('\n')}` };
+    return { choices, text: `${identity}\n${clockBlock(p, p.now, m) ? '' : `[OWNER'S CLOCK]\nThe owner is in ${own.where}, ${p.now || 'time unknown'} now.\n`}Time choices (not proof of whose screen, or which time is now). Date order: ${dateOrderOf(m) === 'dm' ? 'day.month' : 'month.day'}.\n${lines.join('\n')}` };
 }
 const pkey = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
 // a place that is someone's own: their name (or their first name) then 's · 의 · 네, or a room, a home after it

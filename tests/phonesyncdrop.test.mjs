@@ -1329,3 +1329,36 @@ test('clock display uses the selected alias without changing model data or other
     const ambiguous={...raw,screen:{owner:'Mara',time:'11.05, 11:38'}};
     assert.equal(data.clockForDisplay(ambiguous,m,c),ambiguous);
 });
+
+test('same source clock resolves for either phone owner, with no extra conversion on the default owner phone',async()=>{
+ const people=[{name:'Mara',aka:['Mara Park'],city:'Seoul',tz:'Asia/Seoul'},{name:'Ren',city:'Frankfurt',tz:'Europe/Berlin'}];
+ const mara={owner:'Mara',year:2026,now:'11-05 11:00',where:{people}},ren={...structuredClone(mara),owner:'Ren',now:'11-05 03:00'};
+ const m={dateOrder:'md',phoneScreenHolder:'Mara',phones:{mara,ren}};
+ const rows=[{index:155,text:'Ren: 11.05, 11:38'}];
+ const a=await data.reflectionClocks(mara,rows,m),b=await data.reflectionClocks(ren,rows,m);
+ const from=(r,n)=>r.choices.find(c=>c.names.includes(n)).ownerTime;
+ assert.equal(from(a,'Mara'),'11-05 11:38');assert.equal(from(b,'Mara'),'11-05 03:38');
+ assert.equal(from(a,'Ren'),'11-05 19:38');assert.equal(from(b,'Ren'),'11-05 11:38');
+ assert.match(a.text,/Phone being updated: "Mara" \(Seoul\)/);
+ assert.match(a.text,/default screen times need no conversion/);
+ assert.doesNotMatch(b.text,/default screen times need no conversion/);
+ const absent=await data.reflectionClocks(mara,[{index:156,text:'A quiet moment.'}],m);
+ assert.equal(absent.choices.length,0);assert.match(absent.text,/default screen times need no conversion/);
+ assert.equal(from(await data.reflectionClocks(mara,rows,{...m,phoneScreenHolder:'Mara Park'}),'Mara'),'11-05 11:38');
+});
+
+test('reflection sends the matching owner identity and choices for both phones without rewriting model now',async()=>{
+ for (const owner of ['Mara','Ren']) {
+  const c=setup([say('Ren','Start'),say('Mara','Morning'),say('Ren','11.05, 11:38 Are you okay?')]);
+  c.p.owner=owner;c.p.year=2026;c.p.now=owner==='Mara'?'11-05 11:00':'11-05 03:00';
+  c.p.where={at:1,people:[{name:'Mara',city:'Seoul',names:['Seoul'],local:'Seoul',tz:'Asia/Seoul'},{name:'Ren',city:'Frankfurt',names:['Frankfurt'],local:'Frankfurt',tz:'Europe/Berlin'}]};
+  delete c.p.money;delete c.m.finance;c.m.phones={[owner.toLowerCase()]:c.p};c.m.dateOrder='md';c.m.phoneScreenHolder='Mara';
+  const now=owner==='Mara'?'11-05 11:38':'11-05 03:38';
+  T.answers.push({clock:{basis:'Default used',screen:{owner:'Mara',time:'11.05, 11:38'},messageSender:'Ren'},now,events:[{id:'reply',at:2,quote:'Are you okay',date:'11-05',time:now.slice(6),phone:{notes:[{title:'Reply',text:'Are you okay?',time:now}]}}]});
+  await data.makePhone(c.m,owner,{update:true});
+  assert.match(T.input,new RegExp('Phone being updated: "'+owner+'"'));
+  assert.ok(T.input.includes("On Mara's clock → owner's time: "+now));
+  assert.match(T.sys,/without converting it again/);
+  assert.equal(c.p.now,now);assert.equal(c.p.notes[0].time,now);
+ }
+});
