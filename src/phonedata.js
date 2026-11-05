@@ -144,7 +144,7 @@ const LIFE_ONCE = `- An alarm for one occasion (a flight, an appointment) rings 
 const LIFE_CHANGE = `- A record already in LIFE NOW is changed with "change": its id; write only the fields that changed. A deleted file is "deleted": true.`;
 const CLOCK_FIRST = `CLOCK FIRST
 - Use the default screen viewpoint in OWNER'S CLOCK when set. Change it only when the text shows a switch to another person's screen or scene, not merely a sender's name. Attachments keep their own clocks.
-- In "clock", write basis (max 20 words: default used or narrative evidence for a switch; time passed), screen { owner (whose screen or scene), time (as written) }, and messageSender (who sent the displayed message). Use null for absent time or messageSender.
+- In "clock", write basis (max 20 words: default used or narrative evidence for a switch; time passed), screen { owner (whose screen or scene), time (copy from source; never estimate) }, and messageSender (who sent the displayed message). Use null for absent time or messageSender.
 - Use the time choice matching screen.owner and screen.time without converting it again; otherwise use OWNER'S CLOCK. Follow later time passing to set "now"; "at the same time" adds no time.
 - The owner's present scene agrees with "now". Other scenes, memories and appointments keep their own times.`;
 export function updateSystem({ money = true, delivery = false, life = false, weather = false, tracker = false, split = false, invest = false, zone = false } = {}) {
