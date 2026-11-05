@@ -146,7 +146,7 @@ const LIFE_ONCE = `- An alarm for one occasion (a flight, an appointment) rings 
 const LIFE_CHANGE = `- A record already in LIFE NOW is changed with "change": its id; write only the fields that changed. A deleted file is "deleted": true.`;
 const CLOCK_FIRST = `CLOCK FIRST
 First resolve "clock" and "now", then write events and app records using those times.
-- Viewpoint: use the default screen viewpoint in OWNER'S CLOCK when set. Change it only when the text shows a switch to another person's screen or scene, not merely a sender's name. Attachments keep their own clocks.
+- Viewpoint: use the default viewpoint in OWNER'S CLOCK when set. Change it only when the text shows a switch to another person's screen or scene, not merely a sender's name. Attachments keep their own clocks.
 - "clock": basis (max 20 words: default used or narrative evidence for a switch; time passed), screen { owner (whose screen or scene), time (copy the time from that screen or scene; never estimate) }, messageSender (who sent the displayed message). Use null for absent time or messageSender.
 - "now": convert that time to the owner's clock without adding time. Use the matching OWNER'S CLOCK choice without converting it again. Infer from context only when no exact time is given. Example: with a +8-hour offset, 12:32 becomes exactly 20:32.
 - App records: the owner's present scene agrees with "now". Other scenes, memories and appointments keep their own times.`;
@@ -2114,6 +2114,28 @@ export function zonesOf(p, at = p?.now, m = null) {
     }
     return others.length ? { own: { name: own.where, tz: own.tz }, at: t, others } : null;
 }
+// Display only: a person's city already labels that city's hours. Keep every person, and keep standalone cities
+// unless saved city names/aliases and time zones agree. A shared offset, a partial name or a country is not a city match.
+function clockRows(p, m, others) {
+    const places = placesAround(p, m), zones = new Map();
+    const zoneKey = tz => {
+        if (!zones.has(tz)) {
+            try { zones.set(tz, tz ? new Intl.DateTimeFormat('en', { timeZone: tz }).resolvedOptions().timeZone : ''); }
+            catch { zones.set(tz, ''); }
+        }
+        return zones.get(tz);
+    };
+    const rows = others.map(row => {
+        const person = 'where' in row;
+        const sources = places.filter(x => !x.own && (person ? x.who === row.name && x.name === row.where : !x.who && x.name === row.name));
+        const tz = zoneKey(sources[0]?.tz);
+        // Conflicting saved locations must not silently choose one for display merging.
+        const names = tz && sources.every(x => zoneKey(x.tz) === tz) ? sources.flatMap(x => x.names).map(pkey).filter(Boolean) : [];
+        return { row, person, tz, names };
+    });
+    return rows.filter(city => city.person || !rows.some(person => person.person && person.row.hours === city.row.hours &&
+        person.tz === city.tz && person.names.some(n => city.names.includes(n)))).map(x => x.row);
+}
 // what the model is told of them: it only adds or takes off the hours given (the code works them out)
 export const clockBlock = (p, at = p?.now, m = null, st = null, required = false) => {
     const z = zonesOf(p, at, m), holder = screenHolderOf(m);
@@ -2127,9 +2149,9 @@ export const clockBlock = (p, at = p?.now, m = null, st = null, required = false
     if (p?.now || required) lines.push(`Saved phone time: ${p?.now ? label(p.now) : 'unknown'}`);
     // Fills can use a story/status time instead of the saved phone time. Keep that reference distinct.
     if (z && z.at !== p?.now) lines.push(`Clock reference time: ${z.at}`);
-    if (holder) lines.push(`Default screen viewpoint: ${label(holder)}`);
+    if (holder) lines.push(`Default viewpoint: ${label(holder)}`);
     if (z) {
-        lines.push(`Time differences from ${label(location || "the owner's clock")}:`, ...z.others.map(c =>
+        lines.push(`Time differences from ${label(location || "the owner's clock")}:`, ...clockRows(p, m, z.others).map(c =>
             `- ${label(c.name || 'Unnamed location')}${c.where ? ` (${label(c.where)})` : ''}: ${c.hours > 0 ? '+' : ''}${c.hours} hour${Math.abs(c.hours) === 1 ? '' : 's'}`));
         if (st?.known && st.at && st.at !== st.raw) lines.push(`The newest status line, ${st.raw} in ${st.city}, is ${st.at} here.`);
     }
@@ -2190,7 +2212,7 @@ function reflectionClocks0(p, rows, m) {
         }
     }
     if (!choices.length) return { choices, text: identity };
-    const lines = [`Time text in #${stamp.at}: ${JSON.stringify(stamp.sourceTime)}${stamp.clock ? ' (HTML time field; calendar date unknown)' : ''}\n${choices.map(c => c.reference
+    const lines = [`Time text in #${stamp.at}: ${JSON.stringify(stamp.sourceTime)}${stamp.clock ? ' (HTML time field)\nNo date is shown; read the story to determine the date.' : ''}\n${choices.map(c => c.reference
             ? `On ${c.names[0]}'s clock → owner's clock: ${c.reference.ownerClock} (reference${c.reference.dayShift ? `; ${c.reference.dayShift > 0 ? '+' : ''}${c.reference.dayShift} day${Math.abs(c.reference.dayShift) === 1 ? '' : 's'} relative to screen` : ''}).`
             : `On ${c.names[0]}'s clock → owner's time: ${c.ownerTime}`).join('\n')}`];
     return { choices, text: `${identity}\n${clockBlock(p, p.now, m) ? '' : `${clockBlock(p, p.now, m, null, true)}\n`}Time choices (not proof of whose screen, or which time is now). Date order: ${dateOrderOf(m) === 'dm' ? 'day.month' : 'month.day'}.\n${lines.join('\n')}` };
