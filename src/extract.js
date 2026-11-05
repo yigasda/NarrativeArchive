@@ -47,17 +47,41 @@ const REASONING = 'think|thinking|thought|reasoning';
 const INLINE_TAGS = /^(?:b|i|u|s|em|strong|span|a|small|big|sub|sup|mark|font|code|kbd|del|ins|q|abbr|ruby|rt|rp)$/i;
 const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', '#39': "'" };
 // g.stripTags false (압축 → 설정 → 태그 지우기 off): the message goes as it is
-export function cleanMessage(text, g) {
-    if (g && g.stripTags === false) return String(text || '');
+export function cleanMessage(text, g, sourceOffsets = null) {
     let t = String(text || '');
+    // Optional provenance for clock hints: each cleaned character keeps its raw-message offset.
+    // The ordinary text and every cleaning rule stay identical, including inline tags and entities.
+    let offsets = sourceOffsets ? Array.from({ length: t.length }, (_, i) => i) : null;
+    const replace = (pattern, replacement) => {
+        if (!offsets) { t = t.replace(pattern, replacement); return; }
+        const next = [];
+        let from = 0;
+        t = t.replace(pattern, (...args) => {
+            const at = args[args.length - 2], value = typeof replacement === 'function' ? replacement(...args) : replacement;
+            for (let i = from; i < at; i++) next.push(offsets[i]);
+            for (let i = 0; i < value.length; i++) next.push(offsets[at]);
+            from = at + args[0].length;
+            return value;
+        });
+        for (let i = from; i < offsets.length; i++) next.push(offsets[i]);
+        offsets = next;
+    };
+    const result = () => {
+        if (sourceOffsets) { sourceOffsets.length = 0; for (const at of offsets) sourceOffsets.push(at); }
+        return t;
+    };
+    if (g && g.stripTags === false) return result();
     const close = new RegExp(`</(?:${REASONING})\\s*>`, 'i'), close1 = t.search(close);
-    if (close1 >= 0 && !new RegExp(`<(?:${REASONING})\\b`, 'i').test(t.slice(0, close1))) t = t.slice(close1).replace(close, '');
-    t = t.replace(new RegExp(`<(${REASONING}|scene_plan|style|script)\\b[^>]*>[\\s\\S]*?</\\1\\s*>`, 'gi'), '')
-        .replace(/<!--[\s\S]*?-->/g, '')
-        .replace(/data:[\w.+-]+\/[\w.+-]+;base64,[A-Za-z0-9+/=]+/g, '');
-    t = t.replace(/<\/?([a-zA-Z][\w:-]*)\b[^>\n]*\/?>/g, (tag, name) => (INLINE_TAGS.test(name) ? '' : '\n'))
-        .replace(/&(amp|lt|gt|quot|apos|nbsp|#39);/g, (e, k) => ENTITIES[k]);
-    return t.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+    if (close1 >= 0 && !new RegExp(`<(?:${REASONING})\\b`, 'i').test(t.slice(0, close1))) {
+        t = t.slice(close1); if (offsets) offsets = offsets.slice(close1); replace(close, '');
+    }
+    replace(new RegExp(`<(${REASONING}|scene_plan|style|script)\\b[^>]*>[\\s\\S]*?</\\1\\s*>`, 'gi'), '');
+    replace(/<!--[\s\S]*?-->/g, '');
+    replace(/data:[\w.+-]+\/[\w.+-]+;base64,[A-Za-z0-9+/=]+/g, '');
+    replace(/<\/?([a-zA-Z][\w:-]*)\b[^>\n]*\/?>/g, (tag, name) => (INLINE_TAGS.test(name) ? '' : '\n'));
+    replace(/&(amp|lt|gt|quot|apos|nbsp|#39);/g, (e, k) => ENTITIES[k]);
+    replace(/[ \t]+\n/g, '\n'); replace(/\n{3,}/g, '\n\n'); replace(/^\s+|\s+$/g, '');
+    return result();
 }
 
 export function formatExtract(items, g) {

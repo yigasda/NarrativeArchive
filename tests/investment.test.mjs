@@ -1,3 +1,4 @@
+import { cleanMessageURL } from './cleanmessage.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
@@ -60,7 +61,7 @@ if (process.env.INVEST_PREVIEW) {
  for(const view of ['ivnotes','ivschedule','ivhistory','invest','stock','ivactivity','ivwatch','ivstakes','ivcash','ivprices']) await writeFile(`${process.env.INVEST_PREVIEW}/${view}.html`,`<!doctype html><html lang="ko"><meta charset="UTF-8"><style>${css}\nbody{margin:0;background:#edf1ee}.cg_canvas{position:relative;transform:none}.na_phone{width:390px;margin:12px auto}.ax_canvas{height:844px}.iv_scroll{overflow:auto}</style><div class="na_phone"><div class="na_ph_scr app ax axb"><div class="cg_canvas ax_canvas">${ui.investmentScreen(m,p,'10-30',view,view==='stock'?'NYSE:X':'',false)}</div></div></div></html>`);
 }
 
-const phonedata=await load('phonedata.js',{'./wealth.js':wealthURL,
+const phonedata=await load('phonedata.js',{'./extract.js':cleanMessageURL,'./wealth.js':wealthURL,
  './phoneprofile.js':pathToFileURL(new URL('../src/phoneprofile.js',import.meta.url).pathname).href,
  './ai.js':ai,'./finance.js':financeURL,'./core.js':encoded(`export const ctx=()=>globalThis.__investTest.context||({loadWorldInfo:async()=>null});export const globalSettings=()=>({});export const saveMeta=async()=>{globalThis.__investTest.saved++};`),
  './calendar.js':encoded(`export const calendars=()=>({});export const headingDate=()=>({});`),

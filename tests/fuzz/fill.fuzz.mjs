@@ -1,3 +1,4 @@
+import { cleanMessageURL } from '../cleanmessage.mjs';
 // 폰 만들기 and 채우기 against many broken model answers: the parsers must keep only sound records (no "[object Object]",
 // no NaN, dates in their shape) and never crash. node tests/fuzz/fill.fuzz.mjs   (no model calls)
 import { readFile } from 'node:fs/promises';
@@ -21,7 +22,7 @@ const stub = {
     './anniv.js': encoded(`export const datedRows=()=>[];`),
 };
 const real = ['phonesync.js', 'phoneparse.js', 'phoneclock.js', 'phonesynclife.js', 'phonesyncmoney.js', 'finance.js', 'phoneprofile.js', 'phonefood.js', 'phonescreen.js'];
-const map = { ...stub, ...Object.fromEntries(real.map(f => [`./${f}`, href(f)])) };
+const map = { './extract.js': cleanMessageURL, ...stub, ...Object.fromEntries(real.map(f => [`./${f}`, href(f)])) };
 const rewrite = async f => (await readFile(new URL(f, SRC), 'utf8')).replace(/from '([^']+)'/g, (all, k) => `from '${map[k] || k}'`);
 map['./phonedata.js'] = encoded(await rewrite('phonedata.js'));
 const data = await import(map['./phonedata.js']);

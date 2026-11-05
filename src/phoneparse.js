@@ -64,14 +64,14 @@ const CLOCK_DATE = String.raw`(?:\d{4}[-/.])?\d{1,2}[-/.]\d{1,2}(?:[-/.][ \t]?\d
 const CLOCK_MERIDIEM = String.raw`(?:[ap](?:\.m\b\.?|m\b)|(?:오전|오후|새벽|아침|저녁|밤)(?!\p{L}))`;
 const DATED_CLOCK = new RegExp(String.raw`(?<![\p{L}\p{N}])(${CLOCK_DATE})\.?[,]?(?:[ \t]+|T)((?:${CLOCK_MERIDIEM}[ \t]*)?\d{1,2}[ \t]*:[ \t]*\d{2}(?:[ \t]*${CLOCK_MERIDIEM})?)(?![\p{L}\p{N}:])`, 'giu');
 const HAS_MERIDIEM = new RegExp(CLOCK_MERIDIEM, 'iu');
-export function datedClocks(text) {
+export function datedClocks(text, { positions = false } = {}) {
     const out = [];
     for (const hit of String(text || '').matchAll(DATED_CLOCK)) {
         // Reflection hints must not turn an invalid twelve-hour clock into a plausible time.
         const hour = Number(/(\d{1,2})[ \t]*:/.exec(hit[2])?.[1]);
         if (HAS_MERIDIEM.test(hit[2]) && !(hour >= 1 && hour <= 12)) continue;
         const day = when(hit[1]).slice(0, 5), clock = hhmm(hit[2]);
-        if (day && clock) out.push({ sourceTime: hit[0], local: `${day} ${clock}` });
+        if (day && clock) out.push({ sourceTime: hit[0], local: `${day} ${clock}`, ...(positions ? { position: hit.index } : {}) });
     }
     return out;
 }
@@ -104,6 +104,8 @@ const htmlClockOnly = text => {
 };
 // Code spans may use any equal-length backtick runs, even across one paragraph's line breaks.
 // Index the next same-sized run first, so unmatched backticks do not repeatedly scan the whole text.
+// One barrier per omitted line keeps offsets without creating a tokenizer chunk for every hidden character.
+const clockMask = text => text.replace(/[^\n]+/g, line => '\0' + ' '.repeat(line.length - 1));
 const htmlClockCode = (text, preserve = false) => text.split(/(\0|\r?\n[ \t]*\r?\n)/).map(part => {
     const runs = [...part.matchAll(/`+/g)], next = new Map(), pieces = [];
     for (let i = runs.length - 1; i >= 0; i--) {
@@ -116,7 +118,8 @@ const htmlClockCode = (text, preserve = false) => text.split(/(\0|\r?\n[ \t]*\r?
         let slash = run.index;
         while (slash > 0 && part[slash - 1] === '\\') slash--;
         if ((run.index - slash) % 2 || !end) continue;
-        pieces.push(part.slice(from, run.index), preserve ? part.slice(run.index, end.index + end[0].length).replace(/[^\n]/g, ' ') : '\0');
+        const omitted = part.slice(run.index, end.index + end[0].length);
+        pieces.push(part.slice(from, run.index), preserve === 'offsets' ? clockMask(omitted) : preserve ? omitted.replace(/[^\n]/g, ' ') : '\0');
         from = end.index + end[0].length;
         i = run.next;
     }
@@ -127,7 +130,7 @@ const htmlClockCode = (text, preserve = false) => text.split(/(\0|\r?\n[ \t]*\r?
 const htmlClockMarkup = (raw, preserve = false) => {
     let fence = '';
     const visible = String(raw || '').split('\n').map(line => {
-        const edge = /^[ \t]*(`{3,}|~{3,})([^\n]*)$/.exec(line), omitted = preserve ? ' '.repeat(line.length) : '\0';
+        const edge = /^[ \t]*(`{3,}|~{3,})([^\n]*)$/.exec(line), omitted = preserve === 'offsets' ? clockMask(line) : preserve ? ' '.repeat(line.length) : '\0';
         if (fence) {
             if (edge && edge[1][0] === fence[0] && edge[1].length >= fence.length && !edge[2].trim()) fence = '';
             return omitted;
@@ -138,8 +141,8 @@ const htmlClockMarkup = (raw, preserve = false) => {
     }).join('\n');
     return htmlClockCode(visible, preserve);
 };
-export function htmlClocks(raw) {
-    return readHtmlClocks(htmlClockMarkup(raw));
+export function htmlClocks(raw, { positions = false } = {}) {
+    return readHtmlClocks(htmlClockMarkup(raw, positions ? 'offsets' : false), false, null, positions);
 }
 // Context fields retain their written meaning. They are not current-clock candidates or conversions.
 const HTML_TIME_FIELD = new RegExp(String.raw`^(?:(?:${CLOCK_DATE})\.?[,]?[ \t]*[T ]?)?((?:${CLOCK_MERIDIEM}\s*)?\d{1,2}[ \t]*:[ \t]*\d{2}(?:\s*${CLOCK_MERIDIEM})?)(?:[ \t]+(?:(?!(?:AM|PM)\b)[A-Z]{2,5}|(?:UTC|GMT)[+-]\d{1,2}(?::\d{2})?))?$`, 'iu');
@@ -193,7 +196,7 @@ export function htmlTimeContext(raw) {
         return `[${heading}]\n${group.fields.map(x => `${x.label}: ${x.sourceTime.replace(/\s+/g, ' ')}`).join('\n')}`;
     }).join('\n');
 }
-function readHtmlClocks(input, fields = false, excluded = null) {
+function readHtmlClocks(input, fields = false, excluded = null, positions = false) {
     const root = { name: '', text: '', hints: [], blocked: false, removed: false }, stack = [root];
     let visible = '';
     const append = (text, expose = true) => {
@@ -226,7 +229,7 @@ function readHtmlClocks(input, fields = false, excluded = null) {
             && datedClocks(tail.slice(tail.lastIndexOf('\n') + 1)).some(x => tail.endsWith(x.sourceTime));
         // Prefer the complete labelled element to a nested duplicate ("PM <span>8:30</span>").
         // One dated stamp also owns its children; a timeline with separate date/time siblings does not.
-        if (clock) { if (!adjacent) parent.hints.push({ sourceTime, clock }); }
+        if (clock) { if (!adjacent) parent.hints.push({ sourceTime, clock, ...(positions ? { position: node.start } : {}) }); }
         else if (!dated) for (const hint of node.hints) parent.hints.push(hint);
         parent.text += node.text;
         if (!HTML_INLINE.test(node.name)) visible = '';

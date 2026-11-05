@@ -1,3 +1,4 @@
+import { cleanMessageURL } from './cleanmessage.mjs';
 // 반영 전에 아카이브된 구간: its messages are hidden, so the round reads the archive section in their place
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -9,7 +10,7 @@ import { makeMark, newSync, readBefore, bodyMark } from '../src/phonesync.js';
 const encoded = s => 'data:text/javascript;base64,' + Buffer.from(s).toString('base64');
 const href = f => pathToFileURL(new URL(`../src/${f}`, import.meta.url).pathname).href;
 const T = (globalThis.__archTest = { chat: [], answers: [] });
-const map = {
+const map = { './extract.js': cleanMessageURL,
     './phonesync.js': href('phonesync.js'), './phoneparse.js': href('phoneparse.js'), './phoneclock.js': href('phoneclock.js'), './phonesynclife.js': href('phonesynclife.js'), './phonesyncmoney.js': href('phonesyncmoney.js'), './finance.js': href('finance.js'),
     './phoneprofile.js': href('phoneprofile.js'),
     './phonestory.js': encoded(`export const phoneTarget=()=>({scope:phoneChatScope(),check(){}});export const phoneChatScope=()=>globalThis.__archTest.scope||'test';`),
@@ -837,4 +838,22 @@ test('일상 is not asked for when the reflection\'s own answer can\'t be read (
     globalThis.__everydayIn = [];
     await assert.rejects(run(c.m, 'not json at all'));
     assert.equal(globalThis.__everydayIn.length, 0);
+});
+
+test('latest clock selection reads supplied archive evidence without reopening hidden raw messages', async () => {
+    for (const visibleHasClock of [false, true]) {
+        const c = archived();
+        c.p.country = 'DE'; c.p.year = 2026; c.p.now = '11-05 03:38';
+        c.p.where = { at: 1, people: [{ name: 'Ren', city: 'Berlin', tz: 'Europe/Berlin' }, { name: 'Mara', city: 'Seoul', tz: 'Asia/Seoul' }] };
+        c.m.phoneScreenHolder = 'Mara'; c.m.dateOrder = 'md';
+        c.m.text = SECTION.replace('- Ren', '- Mara: 11.05 12:27, then a flashback: 10.05 01:00.\n- Ren');
+        for (const i of [2, 3, 4, 5]) T.chat[i].mes += ' <time>23:59</time>';
+        if (visibleHasClock) T.chat[6].mes += ' Mara 11.05 13:27';
+        await run(c.m, { now: '11-05 05:27', events: [] });
+        assert.equal((T.input.match(/Time text in #/g) || []).length, 1);
+        assert.match(T.input, visibleHasClock ? /Time text in #6: "11\.05 13:27"/ : /Time text in #2: "10\.05 01:00"/);
+        assert.doesNotMatch(T.input, /23:59/);
+        assert.match(T.input, /11-05 03:38 now/);
+        assert.match(T.input, /not proof of whose screen, or which time is now/);
+    }
 });

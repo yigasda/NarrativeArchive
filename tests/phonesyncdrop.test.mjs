@@ -1,3 +1,4 @@
+import { cleanMessageURL } from './cleanmessage.mjs';
 // 빼기 with sources: a whole reflection round against a fake chat and a fake model answer
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -9,7 +10,7 @@ import { makeMark, newSync, journalRead, journalWrite } from '../src/phonesync.j
 const encoded = s => 'data:text/javascript;base64,' + Buffer.from(s).toString('base64');
 const href = f => pathToFileURL(new URL(`../src/${f}`, import.meta.url).pathname).href;
 const T = (globalThis.__dropTest = { chat: [], answers: [] });
-const map = {
+const map = { './extract.js': cleanMessageURL,
     './phonesync.js': href('phonesync.js'), './phoneparse.js': href('phoneparse.js'), './phoneclock.js': href('phoneclock.js'), './phonesynclife.js': href('phonesynclife.js'), './phonesyncmoney.js': href('phonesyncmoney.js'), './finance.js': href('finance.js'),
     './phoneprofile.js': href('phoneprofile.js'),
     './phonestory.js': encoded(`export const phoneTarget=()=>({scope:phoneChatScope(),check(){}});export const phoneChatScope=()=>globalThis.__dropTest.scope||'test';`),
@@ -1396,7 +1397,7 @@ test('reflection uses a trailing numeric year for the actual DST transition date
     const result = await data.reflectionClocks(p, [{ index: 2, text: 'Mara: 31.03.2024 01:30' }], { dateOrder: 'dm' });
     assert.equal(result.choices.find(x => x.names[0] === 'Mara').ownerTime, '03-30 17:30');
 });
-test('reflection bounds supplemental clocks but keeps the full PM source in the model request', async () => {
+test('reflection keeps the full PM source but converts only the latest source', async () => {
     const raw = 'Mara reads Ren’s reply on her phone. 11.05, 8:30 PM. Two hours pass.';
     const c = setup([say('Ren', 'start'), say('Mara', 'evening'), say('Mara', raw)]);
     clockPhone(c.p); c.m.dateOrder = 'md';
@@ -1406,8 +1407,8 @@ test('reflection bounds supplemental clocks but keeps the full PM source in the 
     assert.equal(c.p.now, '11-05 14:30');
     const rows = Array.from({ length: 14 }, (_, i) => ({ index: i, text: `Mara: November 5, 2026 ${String(i).padStart(2, '0')}:30` }));
     const result = await data.reflectionClocks(c.p, rows, c.m);
-    assert.equal(result.choices.filter(x => x.names[0] === 'Mara').length, 12);
-    assert.equal(Math.min(...result.choices.map(x => x.at)), 2);
+    assert.equal(result.choices.filter(x => x.names[0] === 'Mara').length, 1);
+    assert.ok(result.choices.every(x => x.at === 13));
 });
 
 test('reflection offers no converted choices for malformed twelve-hour clocks', async () => {
@@ -1421,7 +1422,7 @@ test('reflection offers no converted choices for malformed twelve-hour clocks', 
 const { htmlClocks } = await import('../src/phoneparse.js');
 const extractSrc = await readFile(new URL('../src/extract.js', import.meta.url), 'utf8');
 const { cleanMessage } = await import(encoded(extractSrc.slice(extractSrc.indexOf('const REASONING ='), extractSrc.indexOf('export function formatExtract'))));
-const htmlRow = (index, raw) => ({ index, text: cleanMessage(raw, { stripTags: true }), htmlClocks: htmlClocks(raw) });
+const htmlRow = (index, raw) => ({ index, text: cleanMessage(raw, { stripTags: true }), clockSource: raw });
 test('bare HTML clocks supply date-free conditional reference information, not a dated answer', async () => {
     const p = { owner: 'Ren' }; clockPhone(p);
     const row = htmlRow(2, 'Mara reads her phone. <div class="chat-timestamp">08:30</div>');
@@ -1447,25 +1448,25 @@ test('dated HTML remains on the old path and cannot receive a duplicate bare hin
         assert.doesNotMatch(result.text, /calendar date unknown/);
     }
 });
-test('plain numbers and unusable saved anchors do not add references or displace dated choices', async () => {
+test('an unusable latest bare source does not resurrect earlier dated choices', async () => {
     const p = { owner: 'Ren' }; clockPhone(p);
     const rows = [htmlRow(1, 'Mara 11.05 08:30'), ...Array.from({ length: 15 }, (_, i) => htmlRow(i + 2, 'Mara <span class="time">09:00</span>'))];
     for (const bad of [{ ...p, year: undefined }, { ...p, now: '08:30' }, { ...p, noYear: true }]) {
         const r = await data.reflectionClocks(bad, rows, {});
-        assert.equal(r.choices.length, 2);
-        assert.ok(r.choices.every(c => c.at === 1));
+        assert.equal(r.choices.length, 0);
+        assert.doesNotMatch(r.text, /Time text in #/);
     }
     const plain = await data.reflectionClocks(p, [htmlRow(2, 'Mara ratio 12:30; video 12:30; <div style="--time:0">12:30</div>')], {});
     assert.equal(plain.choices.length, 0);
 });
-test('dated and undated supplementary references share the existing twelve-stamp/six-person bound', async () => {
+test('only the latest source generates alternatives, retaining the existing six-person bound', async () => {
     const p = { owner: 'Ren' }; clockPhone(p);
     for (let i = 0; i < 8; i++) p.where.people.push({ name: `Person${i}`, city: 'Paris', tz: 'Europe/Paris' });
     const names = p.where.people.map(x => x.name).join(' ');
     const rows = Array.from({ length: 16 }, (_, i) => htmlRow(i, `${names} ${i % 2 ? '<time>08:30</time>' : '11.05 08:30'}`));
     const r = await data.reflectionClocks(p, rows, {});
-    assert.equal(r.choices.length, 12 * 6);
-    assert.equal(Math.min(...r.choices.map(x => x.at)), 4);
+    assert.equal(r.choices.length, 6);
+    assert.ok(r.choices.every(x => x.at === 15));
 });
 test('real cleaned input retains vague months/days narrative and model dates are not pinned to references', async () => {
     // Stub answers intentionally choose dates not specified by "several". This tests preservation, not model inference.
@@ -1506,16 +1507,17 @@ test('a separate dated clock does not hide a present bare clock with the same HH
     const p = { owner: 'Ren' }; clockPhone(p);
     const raw = 'Mara recalls last month: 10.05 08:30. Three days later in the present she reads <time>08:30</time>.';
     const r = await data.reflectionClocks(p, [htmlRow(2, raw)], {});
-    assert.ok(r.choices.some(c => c.sourceTime === '10.05 08:30' && c.ownerTime));
+    assert.ok(!r.choices.some(c => c.sourceTime === '10.05 08:30'));
     assert.ok(r.choices.some(c => c.sourceTime === '08:30' && c.date === null && c.reference));
 });
-test('explicit dates take priority over new bare references within one capped message', async () => {
+test('source position decides between dated and bare clocks within one message', async () => {
     const p = { owner: 'Ren' }; clockPhone(p);
     const bare = Array.from({ length: 12 }, (_, i) => `<time>${String(i).padStart(2, '0')}:00</time>`).join(' ');
     for (const raw of [`Mara ${bare} 11.05 23:59`, `Mara 11.05 23:59 ${bare}`]) {
         const r = await data.reflectionClocks(p, [htmlRow(2, raw)], {});
-        assert.equal(r.choices.length, 24);
-        assert.ok(r.choices.some(c => c.sourceTime === '11.05 23:59' && c.ownerTime));
+        assert.equal(r.choices.length, 2);
+        const datedLast = raw.endsWith('11.05 23:59');
+        assert.ok(r.choices.every(c => datedLast ? c.sourceTime === '11.05 23:59' && c.ownerTime : c.sourceTime === '11:00' && c.reference));
     }
 });
 test('HTML snapshots only come from this visible round, never another or hidden message', async () => {
@@ -1539,47 +1541,43 @@ test('raw HTML metadata is captured with the cleaned round before awaited prepar
     assert.equal(c.p.now, '11-05 08:12');
 });
 
-test('configured screen holder limits only bare HTML references in a five-message round', async () => {
+test('configured screen holder still allows other people for the latest dated source', async () => {
     const p = { owner: 'Ren' }; clockPhone(p);
     const m = { phoneScreenHolder: 'Mara', dateOrder: 'md', phones: { ren: p } };
     const rows = [htmlRow(1, 'Mara <span class="time">08:30</span>'),
         ...Array.from({ length: 4 }, (_, i) => htmlRow(i + 2, `Mara 11.05 ${String(i + 9).padStart(2, '0')}:00`))];
     const result = await data.reflectionClocks(p, rows, m);
-    assert.deepEqual([...new Set(result.choices.map(c => c.at))], [1, 2, 3, 4, 5]);
-    assert.deepEqual(result.choices.filter(c => c.at === 1).map(c => c.names[0]), ['Mara']);
-    assert.equal(result.choices[0].date, null);
-    assert.equal(result.choices[0].ownerTime, undefined);
-    assert.equal(result.choices[0].reference.ownerClock, '00:30');
-    for (const at of [2, 3, 4, 5]) assert.deepEqual(result.choices.filter(c => c.at === at).map(c => c.names[0]), ['Mara', 'Ren']);
-    assert.equal(result.choices.length, 9);
-    assert.match(result.text, /Reference calculation only\. If the story shows a time jump, follow it instead\./);
+    assert.deepEqual([...new Set(result.choices.map(c => c.at))], [5]);
+    assert.deepEqual(result.choices.map(c => c.names[0]), ['Mara', 'Ren']);
+    assert.equal(result.choices.length, 2);
+    assert.ok(result.choices.every(c => c.ownerTime && !c.reference));
     const block = [data.clockBlock(p, p.now, m), result.text].filter(Boolean).join('\n');
     assert.equal((block.match(/\[OWNER'S CLOCK\]/g) || []).length, 1);
-    assert.equal((block.match(/Time text in #/g) || []).length, 5);
+    assert.equal((block.match(/Time text in #/g) || []).length, 1);
 });
 
 test('bare screen references resolve aliases and do not substitute an unknown configured holder', async () => {
     const p = { owner: 'Ren' }; clockPhone(p);
-    const row = htmlRow(1, 'Mara <time>08:30</time> 11.05 09:00');
+    const row = htmlRow(1, 'Mara 11.05 09:00 <time>08:30</time>');
     for (const holder of ['Mara', '마라']) {
         const result = await data.reflectionClocks(p, [row], { phoneScreenHolder: holder, phones: { ren: p } });
         assert.deepEqual(result.choices.filter(c => c.reference).map(c => c.names[0]), ['Mara']);
-        assert.equal(result.choices.filter(c => c.ownerTime).length, 2);
+        assert.equal(result.choices.filter(c => c.ownerTime).length, 0);
     }
     const unknown = await data.reflectionClocks(p, [row], { phoneScreenHolder: 'Unknown', phones: { ren: p } });
     assert.equal(unknown.choices.filter(c => c.reference).length, 0);
-    assert.equal(unknown.choices.filter(c => c.ownerTime).length, 2);
+    assert.equal(unknown.choices.filter(c => c.ownerTime).length, 0);
     const unset = await data.reflectionClocks(p, [row], { phoneScreenHolder: '', phones: { ren: p } });
     assert.equal(unset.choices.filter(c => c.reference).length, 2);
 });
 
-test('configured bare references retain latest-twelve stamp cap and per-message deduplication', async () => {
+test('configured bare references use just the latest occurrence in the latest source message', async () => {
     const p = { owner: 'Ren' }; clockPhone(p);
     const m = { phoneScreenHolder: 'Mara', phones: { ren: p } };
     const rows = Array.from({ length: 16 }, (_, i) => htmlRow(i, 'Mara <time>08:30</time><time>08:30</time>'));
     const result = await data.reflectionClocks(p, rows, m);
-    assert.equal(result.choices.length, 12);
-    assert.deepEqual(result.choices.map(c => c.at), Array.from({ length: 12 }, (_, i) => i + 4));
+    assert.equal(result.choices.length, 1);
+    assert.deepEqual(result.choices.map(c => c.at), [15]);
     assert.ok(result.choices.every(c => c.names[0] === 'Mara' && c.date === null));
 });
 
@@ -1638,4 +1636,115 @@ test('core and money input share HTML labels even when only a class changes duri
     assert.match(T.input, /reservation-time: 11\.03, 18:30/);
     assert.match(T.moneyInput, /reservation-time: 11\.03, 18:30/);
     assert.doesNotMatch(T.moneyInput, /status-bar/);
+});
+
+for (let repeat = 1; repeat <= 5; repeat++) {
+    test(`latest-source five-message request preserves saved 03:38 and every message, repeat ${repeat}`, async () => {
+        const clocks = ['04:52', '06:34', '07:29', '08:36', '12:27'];
+        for (const format of ['dated HTML', 'bare HTML', 'status', 'narrative']) {
+            const raw = clocks.map((clock, i) => {
+                const stamp = format === 'dated HTML' ? `<div class="chat-timestamp">11.05, ${clock}</div>`
+                    : format === 'bare HTML' ? `<time>${clock}</time>`
+                    : format === 'status' ? `【11.05 ${clock}｜Seoul｜Clear】` : `On November 5, 2026 ${clock}, Mara reads her phone.`;
+                return `Mara: message ${i + 1} begins.\n${stamp}\nThe whole story for message ${i + 1} remains here.`;
+            });
+            const c = setup([say('Ren', 'start'), say('Mara', 'before reflection'), ...raw.map(x => say('Mara', x))]);
+            clockPhone(c.p); c.p.now = '11-05 03:38'; c.m.dateOrder = 'md'; c.m.phoneScreenHolder = 'Mara';
+            const before = structuredClone(c.p), rows = raw.map((x, i) => htmlRow(i + 2, x));
+            const choices = await data.reflectionClocks(c.p, rows, c.m);
+            assert.deepEqual(c.p, before, format);
+            assert.ok(choices.choices.every(x => x.at === 6 && x.sourceTime.includes('12:27')), format);
+            assert.equal(choices.choices.length, format === 'bare HTML' ? 1 : 2, format);
+            assert.equal((choices.text.match(/Time text in #/g) || []).length, 1);
+            for (const earlier of clocks.slice(0, -1)) assert.ok(!choices.text.includes(earlier), format);
+            T.clean = mes => cleanMessage(mes, { stripTags: true });
+            T.beforeCore = () => assert.equal(c.p.now, '11-05 03:38', 'saved clock must not be replaced before the model sees the request');
+            try { await run(c.m, { now: '11-05 04:27', events: [] }); }
+            finally { delete T.clean; delete T.beforeCore; }
+            const body = T.input.split('[NEW MESSAGES]\n')[1];
+            let previous = -1;
+            for (const source of raw) {
+                const cleaned = cleanMessage(source, { stripTags: true }), at = body.indexOf(cleaned);
+                assert.ok(at > previous, `${format}: entire message remains in order`);
+                previous = at;
+            }
+            assert.match(T.input, /11-05 03:38 now/);
+            assert.equal((T.input.match(/Time text in #/g) || []).length, 1);
+            assert.match(T.input, /Time text in #6:/);
+            assert.match(globalThis.__everydayIn.at(-1), /Owner-local window: 11-05 03:38 to 11-05 04:27/);
+            assert.equal(c.p.now, '11-05 04:27');
+            assert.deepEqual(c.p.voice, before.voice);
+            assert.equal(c.bank(), 100000);
+        }
+    });
+}
+
+test('mixed sources use actual original positions, including duplicate text, markup and omitted content', async () => {
+    const p = { owner: 'Ren' }; clockPhone(p);
+    const huge = 'x'.repeat(2000);
+    const cases = [
+        ['Mara <time>08:30</time> 11.05 09:00 <time>08:30</time>', '08:30', true],
+        ['Mara 11.05 08:30 <time>09:00</time> 11.05 08:30', '11.05 08:30', false],
+        [`Mara <time title="${huge}">23:59</time> 11.05 01:00`, '11.05 01:00', false],
+        ['Mara <time>23:59</time> <span>11</span>.05&nbsp;<b>01:00</b>', '11.05 01:00', false],
+        [`<think>${huge} 11.05 23:59</think>Mara 11.05 09:00 <time>08&#58;30</time>`, '08:30', true],
+        [`${huge}</think>Mara <time>08:30</time> 11.05 09:00`, '11.05 09:00', false],
+        ['```html\n<time>23:59</time>\n```\nMara 11.05 09:00 <time>08:30</time>', '08:30', true],
+        ['Mara <time>08:30</time>\n```html\n<span class="time">11.05 09:00</span>\n```', '11.05 09:00', false],
+        ['Mara 11.05 09:00 <time>08:30</time> <time>08`not a clock`:59</time>', '08:30', true],
+        ['Mara <span class="time">PM <span class="time">8:30</span></span> 11.05 09:00', '11.05 09:00', false],
+        ['Mara 11.05 09:00 <span class="time">PM <span class="time">8:30</span></span>', 'PM 8:30', true],
+    ];
+    for (const [raw, expected, bare] of cases) {
+        const result = await data.reflectionClocks(p, [htmlRow(2, raw)], { dateOrder: 'md' });
+        assert.equal(result.choices.length, 2, raw.slice(-100));
+        assert.ok(result.choices.every(c => c.sourceTime === expected && !!c.reference === bare), raw.slice(-100));
+    }
+});
+
+test('source chronology is neither numeric clock order nor proof of narrative now', async () => {
+    const p = { owner: 'Ren' }; clockPhone(p);
+    const rows = [htmlRow(9, 'Mara remembers 10.05 01:00. Several months later, the present continues.'),
+        htmlRow(2, 'Mara 11.05 23:59'), htmlRow(10, 'No timestamp in this message.')];
+    const r = await data.reflectionClocks(p, rows, { dateOrder: 'md' });
+    assert.ok(r.choices.every(c => c.at === 9 && c.sourceTime === '10.05 01:00'));
+    assert.match(r.text, /not proof of whose screen, or which time is now/);
+    assert.equal(p.now, '11-04 23:30');
+});
+
+test('missing and unrecognized dates do not fabricate a source or overwrite the saved phone clock', async () => {
+    const p = { owner: 'Ren' }; clockPhone(p);
+    for (const raw of ['Mara at 12:27', 'November 5, 2026', '<time>25:99</time>', '<time>13:30 PM</time>', '11.05 25:99', 'No clock.']) {
+        const result = await data.reflectionClocks(p, [htmlRow(2, raw)], {});
+        assert.equal(result.choices.length, 0, raw);
+        assert.equal(p.now, '11-04 23:30');
+    }
+    const earlier = htmlRow(2, 'Mara 11.05 08:30');
+    for (const raw of ['No clock.', '<time>25:99</time>', 'November 6, 2026']) {
+        const result = await data.reflectionClocks(p, [earlier, htmlRow(3, raw)], {});
+        assert.ok(result.choices.every(c => c.at === 2));
+        assert.equal(result.choices.length, 2);
+    }
+});
+
+test('a latest source with unknown screen location or ambiguous DST fallback never revives older candidates', async () => {
+    const p = { owner: 'Ren' }; clockPhone(p);
+    const rows = [htmlRow(2, 'Mara 11.05 08:30'), htmlRow(3, 'Mara <time>09:00</time>')];
+    assert.deepEqual((await data.reflectionClocks(p, rows, { phoneScreenHolder: 'Unknown' })).choices, []);
+    assert.deepEqual((await data.reflectionClocks({ ...p, country: '', where: {} }, rows, {})).choices, []);
+    for (const now of ['03-29 01:30', '10-25 01:30']) {
+        p.now = now;
+        const result = await data.reflectionClocks(p, [htmlRow(2, 'Ren 03.28 20:00'), htmlRow(3, 'Ren <time>02:30</time>')], { phoneScreenHolder: 'Ren' });
+        assert.deepEqual(result.choices, [], now);
+    }
+});
+
+test('archive hint ordering retains the existing supplied first-index convention', async () => {
+    const p = { owner: 'Ren' }; clockPhone(p);
+    // updatePhone supplies this summary as index=section.first, not an invented per-stamp message index.
+    const archive = { index: 10, text: '## #10–#20\nMara at 11.05 23:59.' };
+    const raw = htmlRow(15, 'Mara at 11.05 08:30');
+    const r = await data.reflectionClocks(p, [raw, archive], {});
+    assert.ok(r.choices.every(c => c.at === 15 && c.sourceTime === '11.05 08:30'));
+    assert.equal(r.choices.length, 2);
 });

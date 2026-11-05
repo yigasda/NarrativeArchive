@@ -10,6 +10,7 @@ import { migrateBank, finance, finite, cash, reviseBaseline, positions } from '.
 import { calendars, headingDate } from './calendar.js';
 import { ctx, globalSettings, saveMeta } from './core.js';
 import { chatRows, recentForCheck } from './drift.js';
+import { cleanMessage } from './extract.js';
 import { applyInjection } from './inject.js';
 import { knowledgeRows } from './knowledge.js';
 import { headingPlaces, nameKey, nameRe } from './people.js';
@@ -1137,7 +1138,7 @@ async function updatePhone(m, owner) {
         // Archive evidence keeps its own text; its source index is never a reason to reopen hidden raw messages.
         const clockRows = round.rows.map(r => {
             const raw = rawRows.get(r.index);
-            return { ...r, htmlClocks: htmlClocks(raw), htmlTimeContext: htmlTimeContext(raw) };
+            return { ...r, clockSource: raw, htmlTimeContext: htmlTimeContext(raw) };
         });
         // where everyone is: read once for a phone that never had it, and again below when the owner's city changes
         // the archive: sections covering this round are evidence; earlier ones are background; ones reaching unread messages stay out
@@ -2126,6 +2127,22 @@ export const clockBlock = (p, at = p?.now, m = null, st = null) => {
 export function reflectionClocks(p, rows, m = null) {
     return withDateOrder(dateOrderOf(m), () => reflectionClocks0(p, rows, m));
 }
+// Select the newest recognized source before making any person's conversion choices. Newest means
+// message order, then position in that message, not the largest date or proof of the story's present.
+// Only visible round messages have raw snapshots; archive rows keep their own supplied text.
+function latestClock(rows) {
+    for (const r of [...arr(rows)].sort((a, b) => b.index - a.index)) {
+        let stamps;
+        if (typeof r.clockSource === 'string') {
+            const offsets = [], text = cleanMessage(r.clockSource, { stripTags: true }, offsets);
+            stamps = [...datedClocks(text, { positions: true }).map(x => ({ ...x, position: offsets[x.position] })),
+                ...htmlClocks(r.clockSource, { positions: true })];
+        } else stamps = datedClocks(r.text, { positions: true });
+        const latest = stamps.sort((a, b) => b.position - a.position)[0];
+        if (latest) { const { position, ...stamp } = latest; return { at: r.index, ...stamp }; }
+    }
+    return null;
+}
 function reflectionClocks0(p, rows, m) {
     const own = ownerZone(p), choices = [], people = [], text = arr(rows).map(r => r.text).join('\n'), fallback = screenPerson(m, screenHolderOf(m))?.name || screenHolderOf(m);
     if (!own) return { choices, text: '' };
@@ -2141,24 +2158,8 @@ function reflectionClocks0(p, rows, m) {
     const defaultPerson = people.find(x => x.names.some(n => nameKey(n) === nameKey(fallback)));
     const defaultZone = defaultPerson?.tz;
     const identity = `Phone being updated: ${JSON.stringify(p.owner)} (${own.where}).${defaultZone === own.tz ? '\nThe default screen and this phone share a time zone; default screen times need no conversion.' : ''}`;
-    const stamps = [];
-    for (const r of [...arr(rows)].sort((a, b) => a.index - b.index)) {
-        const dated = datedClocks(r.text);
-        for (const { sourceTime, clock } of arr(r.htmlClocks)) {
-            // The extractor removes overlapping dated spans; the same clock elsewhere is not the same source.
-            if (stamps.some(x => x.at === r.index && x.sourceTime === sourceTime)) continue;
-            stamps.push({ at: r.index, sourceTime, clock });
-        }
-        // Within one message, keep explicit dates ahead of speculative references when the hint budget is full.
-        // Raw HTML and cleaned text have different offsets; this is evidence priority, not a claim of source order.
-        for (const { sourceTime, local } of dated) {
-            if (!stamps.some(x => x.at === r.index && x.sourceTime === sourceTime)) stamps.push({ at: r.index, sourceTime, local });
-        }
-    }
-    // Bound supplementary hints only; invalid bare hints cannot displace existing dated choices.
-    const eligible = [];
-    for (const stamp of [...stamps].reverse()) {
-        const before = choices.length;
+    const stamp = latestClock(rows);
+    if (stamp) {
         // Bare HTML clocks use the configured screen person's reference only; dated evidence keeps all choices.
         // An unresolved configured person is not evidence for a different person's screen.
         const candidates = stamp.clock && fallback ? (defaultPerson ? [defaultPerson] : []) : people.slice(0, 6);
@@ -2174,19 +2175,11 @@ function reflectionClocks0(p, rows, m) {
                 }
             } else choices.push({ ...stamp, names: who.names, ownerTime: zoneShift(stamp.local, who.tz, own.tz, yearIn(stamp.sourceTime) || Number(p.year) || undefined) });
         }
-        if (choices.length > before) eligible.push(stamp);
-        if (eligible.length === 12) break;
     }
     if (!choices.length) return { choices, text: identity };
-    const kept = eligible.reverse(), order = new Map(kept.map((t, i) => [JSON.stringify([t.at, t.sourceTime]), i]));
-    choices.sort((a, b) => order.get(JSON.stringify([a.at, a.sourceTime])) - order.get(JSON.stringify([b.at, b.sourceTime])));
-    const lines = kept.map(t => {
-        const cs = choices.filter(c => c.at === t.at && c.sourceTime === t.sourceTime);
-        if (!cs.length) return '';
-        return `Time text in #${t.at}: ${JSON.stringify(t.sourceTime)}${t.clock ? ' (HTML time field; calendar date unknown)\nReference calculation only. If the story shows a time jump, follow it instead.' : ''}\n${cs.map(c => c.reference
+    const lines = [`Time text in #${stamp.at}: ${JSON.stringify(stamp.sourceTime)}${stamp.clock ? ' (HTML time field; calendar date unknown)\nReference calculation only. If the story shows a time jump, follow it instead.' : ''}\n${choices.map(c => c.reference
             ? `${c.names[0]}: saved local ${c.reference.localAnchor}; ${c.reference.earlier ? 'earlier clock, next-day reference only' : 'same or later clock, same-day reference only'}. Reference date ${c.reference.date} → owner's clock ${c.reference.ownerClock} (${c.reference.dayShift > 0 ? '+' : ''}${c.reference.dayShift} days relative to screen).`
-            : `On ${c.names[0]}'s clock → owner's time: ${c.ownerTime}`).join('\n')}`;
-    }).filter(Boolean);
+            : `On ${c.names[0]}'s clock → owner's time: ${c.ownerTime}`).join('\n')}`];
     return { choices, text: `${identity}\n${clockBlock(p, p.now, m) ? '' : `[OWNER'S CLOCK]\nThe owner is in ${own.where}, ${p.now || 'time unknown'} now.\n`}Time choices (not proof of whose screen, or which time is now). Date order: ${dateOrderOf(m) === 'dm' ? 'day.month' : 'month.day'}.\n${lines.join('\n')}` };
 }
 const pkey = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');

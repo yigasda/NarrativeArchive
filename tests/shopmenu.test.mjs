@@ -1,3 +1,4 @@
+import { cleanMessageURL } from './cleanmessage.mjs';
 // 동네 가게 메뉴: asked once for a shop nearby, its known dish kept first
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -22,7 +23,7 @@ const stub = {
     './anniv.js': encoded(`export const datedRows=()=>[];`),
 };
 const real = ['phonesync.js', 'phoneparse.js', 'phoneclock.js', 'phonesynclife.js', 'phonesyncmoney.js', 'finance.js', 'phoneprofile.js', 'phonefood.js', 'phonescreen.js'];
-const map = { ...stub, ...Object.fromEntries(real.map(f => [`./${f}`, href(f)])) };
+const map = { './extract.js': cleanMessageURL, ...stub, ...Object.fromEntries(real.map(f => [`./${f}`, href(f)])) };
 const rewrite = async f => (await readFile(new URL(f, SRC), 'utf8')).replace(/from '([^']+)'/g, (all, k) => `from '${map[k] || k}'`);
 map['./phonedata.js'] = encoded(await rewrite('phonedata.js'));
 const life = await import(encoded(await rewrite('phonelife.js')));

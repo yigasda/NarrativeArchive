@@ -1,6 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { htmlClocks } from '../src/phoneparse.js';
+import { htmlClocks as readClocks } from '../src/phoneparse.js';
+// Every existing parsing case must behave identically with optional source positions enabled.
+const htmlClocks = raw => {
+    const normal = readClocks(raw), positioned = readClocks(raw, { positions: true });
+    assert.deepEqual(positioned.map(({ position, ...clock }) => clock), normal);
+    for (const clock of positioned) {
+        assert.ok(Number.isInteger(clock.position) && clock.position >= 0);
+        assert.equal(String(raw)[clock.position], '<');
+    }
+    return normal;
+};
 
 const hint = (sourceTime, clock = sourceTime) => ({ sourceTime, clock });
 const wrap = text => `<span class="chat-timestamp">${text}</span>`;
