@@ -321,3 +321,18 @@ test('the start mark after a repeated "ok": two messages before it deleted, it c
     chat.splice(1, 2);
     assert.equal(findMark_(chat, mk).state, 'lost');
 });
+
+test('reflection status survives view replacement and clears on request failure for retry', async () => {
+    const { watchBusy } = await import('../src/phonesync.js');
+    const seen = [];const stop = watchBusy(() => seen.push({...busy}));
+    let fail;
+    const pending = exclusive('sync', () => new Promise((_, reject) => { fail=reject; }), {operation:'reflect',owner:'Mara',scope:'room'});
+    assert.equal(busy.owner,'Mara');assert.equal(busy.operation,'reflect');
+    await assert.rejects(exclusive('sync',async()=>0),/반영하는 중/);
+    fail(new Error('503'));
+    await assert.rejects(pending,/503/);
+    assert.equal(busy.sync,false);assert.equal(busy.owner,null);assert.equal(busy.scope,null);
+    assert.deepEqual(seen.map(x=>x.sync),[true,false]);
+    stop();assert.equal(await exclusive('sync',async()=>7),7);
+    assert.equal(seen.length,2);
+});

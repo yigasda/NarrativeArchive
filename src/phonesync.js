@@ -5,11 +5,18 @@
 // be found again (or matches twice) is asked for once more.
 export const SYNC_GROUPS = ['base', 'money', 'invest'];
 // one job at a time: a reflection, or making the bank or the investment (checked in the jobs themselves, not only the buttons)
-export const busy = { sync: false, fill: 0 };
-export async function exclusive(kind, job) {
+export const busy = { sync: false, fill: 0, operation: null, owner: null, scope: null };
+const busyListeners = new Set();
+export function watchBusy(fn) { busyListeners.add(fn); return () => busyListeners.delete(fn); }
+const busyChanged = () => { for (const fn of busyListeners) { try { fn(); } catch (err) { console.error('[narrative-archive] busy view', err); } } };
+export async function exclusive(kind, job, detail = {}) {
     if (busy.sync || (kind === 'sync' && busy.fill)) throw new Error(busy.sync ? '새로 일어난 일을 반영하는 중이에요' : '은행·투자를 만드는 중이에요. 끝난 뒤 다시 해 주세요');
-    if (kind === 'sync') busy.sync = true; else busy.fill++;
-    try { return await job(); } finally { if (kind === 'sync') busy.sync = false; else busy.fill--; }
+    if (kind === 'sync') Object.assign(busy, { sync: true, operation: detail.operation || null, owner: detail.owner || null, scope: detail.scope || null }); else busy.fill++;
+    busyChanged();
+    try { return await job(); } finally {
+        if (kind === 'sync') Object.assign(busy, { sync: false, operation: null, owner: null, scope: null }); else busy.fill--;
+        busyChanged();
+    }
 }
 export const LIMIT = 12;
 const fp = s => { let h = 5381; const t = String(s ?? ''); for (let i = 0; i < t.length; i++) h = (h * 33 + t.charCodeAt(i)) >>> 0; return `${h.toString(36)}.${t.length}`; };

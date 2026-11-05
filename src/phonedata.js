@@ -1374,7 +1374,7 @@ async function updatePhone(m, owner) {
         await saveMeta();
         if (p.inject) applyInjection();
         return p;
-    });
+    }, { operation: 'reflect', owner, scope: phoneChatScope(ctx()) });
 }
 // 복구: rounds this browser made that the saved chat doesn't have; only what is missing is added, nothing is overwritten
 export const pendingRounds = (m, scope) => {

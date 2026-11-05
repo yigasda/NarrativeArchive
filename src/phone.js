@@ -17,7 +17,7 @@ import { faceHtml, nameKey, peopleList } from './people.js';
 import { drafting, drawing, drawPhoto, drawPost, filling, makeDraft, paging, recording, recordVoice, searching, searchPage, shooting, takePhoto, webPage, writeEntry, writing } from './phoneai.js';
 import { APPS, AXB, AXB_C, busyHtml, setDate, setScreenHolderView, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setOwnerProfile, setWho, snsPost, snsScreen, statusBar, threadScreen, setPlace } from './phoneapps.js';
 import { dropStretch, ensureIds, ensureYear, hasDatedRecords, noArchive, setStoryYear, storyYear, fillDevice, fillMoney, fillVoice, koOn, loreOff, makePhone, tidyKo, markAfter, phoneLore, REMAKE, restoreRounds, retryMoney, showNow, storyNow, syncLeft, syncRows, syncState, tidyJournal, undoRound } from './phonedata.js';
-import { busy, exclusive, journalRead, journalWrite, syncOf } from './phonesync.js';
+import { busy, watchBusy, exclusive, journalRead, journalWrite, syncOf } from './phonesync.js';
 import { syncPick, syncSettings } from './phonesyncui.js';
 import { CG_W, homeScreen, lastSig, lockScreen, threadNew } from './phonehome.js';
 import { bankDisplayCurrency, bankAcct, bankHome, bankTx, fixedScreen, bankNotes, bankSend, bankStmt, txDoc, bankMore, cardView, orderView, passView, trackView, shopScreen, voiceOne, voiceScreen, walletScreen } from './phonemoney.js';
@@ -245,7 +245,7 @@ export async function openPhone(who = null) {
         if (keep) $root.find('.na_ph_body, .ax_scroll').scrollTop(top);
         if (making && view === 'setremake') $root.find('.na_ph_setremake .ax_n').html(`${busyHtml} 다시 만드는 중`);
         // a redraw mid-reflection (or mid-make) keeps saying so: withSpinner only dressed the button that was there
-        if (busyMake === 'sync') $root.find('.na_ph_setupd .ax_v').html(`${busyHtml} 반영하는 중`);
+        if (busyMake === 'sync' || busy.sync && busy.operation === 'reflect' && busy.scope === openingScope && nameKey(busy.owner) === nameKey(owner)) $root.find('.na_ph_setupd .ax_v').html(`${busyHtml} 반영하는 중`);
         if (busyMake === 'make') $root.find('.na_ph_makebtn:not(.na_ph_addok)').prop('disabled', true).html(`${busyHtml} 폰 만드는 중`);
         queueMicrotask(() => { autoChart(); autoMenu(); });
     };
@@ -282,7 +282,7 @@ export async function openPhone(who = null) {
         await askDateOrder();
         busyMake = update ? 'sync' : 'make';
         let p;
-        try { p = await withSpinner($btn, update ? '반영하는 중' : '폰 만드는 중', () => makePhone(m, owner, { update })); } finally { busyMake = null; }
+        try { p = await withSpinner($btn, update ? '반영하는 중' : '폰 만드는 중', () => makePhone(m, owner, { update })); } finally { busyMake = null; if (!phoneClosed && stillHere()) drawPhone(true); }
         if (!p) return;
         if (!update) view = 'lock';
         draw();
@@ -804,7 +804,7 @@ export async function openPhone(who = null) {
     });
     // 설정's rows: the busy text goes where the row's value is
     // one at a time: reflecting and making the bank or investment never overlap
-    const makeFrom = async ($at, update) => { if (making) return; if (investing || filling.size || busy.fill) return toastr.info('은행·투자를 만드는 중이에요. 끝난 뒤 눌러 주세요'); making = true; try { await make($at, update); } finally { making = false; } };
+    const makeFrom = async ($at, update) => { if (making || busy.sync) return toastr.info('폰 작업이 진행 중이에요. 끝나면 다시 눌러 주세요', '캐릭터 휴대폰'); if (investing || filling.size || busy.fill) return toastr.info('은행·투자를 만드는 중이에요. 끝난 뒤 눌러 주세요'); making = true; try { await make($at, update); } finally { making = false; } };
     $root.on('click', '.na_ph_setupd', function (e) { e.stopPropagation(); makeFrom($(this).find('.ax_v'), true); });
     // 설정 › 대화 반영
     $root.on('click', '.na_sync_order', async function (e) { e.stopPropagation(); syncOf(phone(), phoneChatScope(ctx())).order = this.dataset.v; drawPhone(true); await saveMeta(); });
@@ -995,6 +995,7 @@ export async function openPhone(who = null) {
     if (!toasts) { toasts = document.createElement('div'); toasts.id = 'toast-container'; if (toastr.options?.positionClass) toasts.classList.add(toastr.options.positionClass); }
     dlg.append(toasts);
     dlg.showModal();
+    const stopBusy = watchBusy(() => { if (!phoneClosed && stillHere() && (view === 'set' || view === 'setsync')) drawPhone(true); });
     await new Promise(done => {
         const close = () => { if (dlg.open) dlg.close(); };
         // ✕, Esc, or a tap on the dark around the phone (the sheet closes first)
@@ -1003,6 +1004,7 @@ export async function openPhone(who = null) {
         dlg.addEventListener('cancel', e => { e.preventDefault(); if (ask) ask.done(false); else if (sheetOpen) setSheet(false); else close(); });
         dlg.addEventListener('close', () => { phoneClosed = true; ask?.done(false); done(); }, { once: true });
     });
+    stopBusy();
     ro.disconnect();
     const t = dlg.querySelector('#toast-container');
     if (t) { if (t.childNodes.length) document.body.append(t); else t.remove(); }
