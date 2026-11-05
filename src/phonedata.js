@@ -1201,7 +1201,8 @@ async function updatePhone(m, owner) {
         if (!raw || !Array.isArray(raw.events)) throw new Error('모델 답에서 반영할 내용을 찾지 못했어요. 다시 해 주세요');
         // Temporary diagnostic: unify only the selected person's display alias; keep the model answer intact.
         if (typeof toastr !== 'undefined') {
-            const toast = toastr.info(JSON.stringify({ clock: clockForDisplay(raw.clock, m) ?? null, now: raw.now ?? null }, null, 2), '시간 판독 · 테스트', {
+            const diagnostic = `${clock || '(OWNER’S CLOCK 입력 없음)'}\n\n[MODEL RESPONSE]\n${JSON.stringify({ clock: clockForDisplay(raw.clock, m) ?? null, now: raw.now ?? null }, null, 2)}`;
+            const toast = toastr.info(diagnostic, '시간 판독 · 테스트', {
                 escapeHtml: true, timeOut: 0, extendedTimeOut: 0, closeButton: true, tapToDismiss: false,
             });
             toast?.find?.('.toast-message')?.css?.({ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' });
