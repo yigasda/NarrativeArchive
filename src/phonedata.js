@@ -143,10 +143,11 @@ const LIFE_TIMERS = `  "timers": [{ "label", "ko", "sec" }],`;
 const LIFE_ONCE = `- An alarm for one occasion (a flight, an appointment) rings once: "days": [] and its "date". Only an alarm the owner keeps for every week has "days".`;
 const LIFE_CHANGE = `- A record already in LIFE NOW is changed with "change": its id; write only the fields that changed. A deleted file is "deleted": true.`;
 const CLOCK_FIRST = `CLOCK FIRST
-- Use the default screen viewpoint in OWNER'S CLOCK when set. Change it only when the text shows a switch to another person's screen or scene, not merely a sender's name. Attachments keep their own clocks.
-- In "clock", write basis (max 20 words: default used or narrative evidence for a switch; time passed), screen { owner (whose screen or scene), time (copy the time from that screen or scene; never estimate) }, and messageSender (who sent the displayed message). Use null for absent time or messageSender.
-- Use the time choice matching screen.owner and screen.time without converting it again; otherwise use OWNER'S CLOCK. Use the last exact time stated in the text, converted to the owner's clock. Add only an explicit elapsed duration after it. If no exact time is given, infer from context. "At the same time" adds no time.
-- The owner's present scene agrees with "now". Other scenes, memories and appointments keep their own times.`;
+First resolve "clock" and "now", then write events and app records using those times.
+- Viewpoint: use the default screen viewpoint in OWNER'S CLOCK when set. Change it only when the text shows a switch to another person's screen or scene, not merely a sender's name. Attachments keep their own clocks.
+- "clock": basis (max 20 words: default used or narrative evidence for a switch; time passed), screen { owner (whose screen or scene), time (copy the time from that screen or scene; never estimate) }, messageSender (who sent the displayed message). Use null for absent time or messageSender.
+- "now": convert that time to the owner's clock without adding time. Use the matching OWNER'S CLOCK choice without converting it again. Infer from context only when no exact time is given. Example: with a +8-hour offset, 12:32 becomes exactly 20:32.
+- App records: the owner's present scene agrees with "now". Other scenes, memories and appointments keep their own times.`;
 export function updateSystem({ money = true, delivery = false, life = false, weather = false, tracker = false, split = false, invest = false, zone = false } = {}) {
     const paid = delivery ? 'order, ticket or delivery' : 'order or ticket';
     return `${split ? 'STAGE: core\n' : ''}GOAL
@@ -182,7 +183,7 @@ WHERE IT COMES FROM
 - "at": the number of the message the event happens in. For an archive section, the message in its range it belongs to.
 - "quote": a few words copied exactly as written in that message or section, not reworded.
 - "date" and "time": when it happens in that message ("MM-DD", "HH:MM" if known). A plan for later happens when it is made; its later day goes only on the calendar item.
-- "now": the moment of the newest message, never a time something is only planned for.
+- "now": the time resolved in CLOCK FIRST.
 - "moved": only people these messages put in another city (a trip, a move, coming home), the owner too: [{ "name": as in OWNER or the messages, "city": in English, "names": [each name the messages and status lines write it as, exactly, then its English and Korean names], "tz": its time zone like "Asia/Seoul" }]; else [].
 ${zone ? `- "statusCity": whose clock the newest status line here shows (the app can't place its scene): a city or person in OWNER'S CLOCK, "owner" for the owner's own, another city as { "city": in English, "tz" }, or "" when the messages don't say.\n` : ''}${split ? `- "apps": "money" when the event has anything for the bank, cards, orders, tickets or the delivery app (its basket too)${invest ? '; "invest" for the brokerage (a trade, a share price the story gives, a share they start watching, a stake)' : ''}; else []. When unsure, include it.\n` : ''}${life ? `
 LIFE
