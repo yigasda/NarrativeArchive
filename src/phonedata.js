@@ -19,7 +19,7 @@ import { parseSections, RANGE_HEAD, sectionKey, splitTail } from './sections.js'
 import { glossaryEntries } from './translate.js';
 import { worldText } from './world.js';
 import { phoneChatScope, phoneTarget } from './phonestory.js';
-import { dateOrderSource, swapDate, withDateOrder, tidyKo, arr, evOf, gapDays, giftOf, hhmm, jsonOf, ko, parseJson, storyMin, byStory, yearIn, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
+import { dateOrderSource, datedClocks, swapDate, withDateOrder, tidyKo, arr, evOf, gapDays, giftOf, hhmm, jsonOf, ko, parseJson, storyMin, byStory, yearIn, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
 export { tidyKo, arr, gapDays, giftOf, hhmm, jsonOf, ko, last4, line, num, pad, pick, storyMin, byStory, str, when, withEv };
 import { COUNTRY_TZ, applyDays, applyLife, applyWeather, cardClock, cityAt, dayGap, dlvClock, fillDays, lifeClock, lifeNow, weatherFrom, zoneShift } from './phonesynclife.js';
 import { applyMoney, dlvTotal, investNow, moneyNow, payOrders, replayEffects, revertEffects } from './phonesyncmoney.js';
@@ -1923,13 +1923,33 @@ const whereOf = (p, name) => { const rows = p?.where?.people || [], same = rows.
 export const homeCountry = p => String(p?.lives || whereOf(p, p?.owner)?.lives || p?.country || '').toUpperCase();
 // ---- 설정 › 위치 정보: the phone's own country (p.lives) follows the reading of where the owner lives, unless set by hand
 function syncLives(p) { const l = whereOf(p, p?.owner)?.lives; if (l && !p.livesManual) p.lives = String(l).toUpperCase(); }
-// a city's time zone for one the user typed: a saved city, a zone named after it (Berlin, Seoul, New York), else the country's
+// a city's time zone for one the user typed: a saved city/alias or a known city, never a guess from their residence.
+// A country can span zones, and the person may be travelling; an unknown city must not lock in the owner's clock.
 const ZONES = (() => { try { return Intl.supportedValuesOf('timeZone'); } catch { return []; } })();
-export function tzForCity(p, text, lives = '') {
-    const c = cityAt(text, p?.life?.weather?.cities);
-    if (c?.tz) return c.tz;
-    const k = pkey(text), z = ZONES.find(t => pkey(t.split('/').pop().replace(/_/g, ' ')) === k);
-    return z || COUNTRY_TZ[String(lives || '').toUpperCase()] || ownerZone(p)?.tz || '';
+const CITY_ZONES = [
+    ['America/Los_Angeles', ['San Francisco', '샌프란시스코', 'Seattle', '시애틀', '로스앤젤레스', 'Los Angeles']],
+    ['America/Vancouver', ['Vancouver', '밴쿠버', '벤쿠버']],
+    ['America/New_York', ['New York', 'New York City', '뉴욕', 'Boston', '보스턴', 'Washington DC', 'Washington D.C.', '워싱턴 DC']],
+    ['America/Chicago', ['Chicago', '시카고']], ['America/Denver', ['Denver', '덴버']],
+    ['America/Phoenix', ['Phoenix', '피닉스']], ['Pacific/Honolulu', ['Honolulu', '호놀룰루']],
+    ['America/Toronto', ['Toronto', '토론토', 'Ottawa', '오타와', 'Montreal', '몬트리올']],
+    ['America/Edmonton', ['Edmonton', '에드먼턴', 'Calgary', '캘거리']], ['America/Winnipeg', ['Winnipeg', '위니펙']],
+    ['Europe/Berlin', ['Frankfurt', 'Frankfurt am Main', '프랑크푸르트']],
+];
+export function tzForCity(p, text) {
+    const k = pkey(text);
+    if (!k) return '';
+    // Manual text must match a whole saved name. "Berlin, New Hampshire" is not the saved Berlin.
+    // Check every source together so two different places sharing an alias never pick the first one.
+    const known = [...arr(p?.life?.weather?.cities).map(c => ({ tz: c.tz, names: [c.name, c.ko, ...arr(c.names)] })),
+        ...arr(p?.where?.people).map(r => ({ tz: r.tz, names: namesOf(r) }))];
+    const saved = [...new Set(known.filter(r => r.names.some(n => pkey(n) === k)).map(r => realTz(r.tz)).filter(Boolean))];
+    if (saved.length) return saved.length === 1 ? saved[0] : '';
+    const explicit = realTz(text);
+    if (explicit) return explicit;
+    const z = ZONES.filter(t => pkey(t.split('/').pop().replace(/_/g, ' ')) === k);
+    if (z.length) return z.length === 1 ? z[0] : '';
+    return CITY_ZONES.find(([, names]) => names.some(n => pkey(n) === k))?.[0] || '';
 }
 // what 위치 정보 shows: the owner (where they live, the city they are in) and the others with how far their clock is
 export function placeInfo(p) {
@@ -1952,8 +1972,9 @@ export async function setOwnerLives(m, p, code) {
 export async function setPlaceCity(m, p, name, text) {
     const city = line(text, 60);
     if (!city || !name) return;
-    const r = rowFor(p, name), tz = tzForCity(p, city, r.lives || (nameKey(name) === nameKey(p.owner) ? p.lives : ''));
+    const tz = tzForCity(p, city);
     if (!tz) throw new Error('그 도시의 시간대를 찾지 못했어요');
+    const r = rowFor(p, name);
     Object.assign(r, { city, names: [city], tz, manual: { ...(r.manual || {}), city: true } });
     delete r.local;
     if (p.where) p.where.removed = (p.where.removed || []).filter(k => k !== nameKey(name));
@@ -2077,10 +2098,7 @@ function reflectionClocks0(p, rows, m) {
     const identity = `Phone being updated: ${JSON.stringify(p.owner)} (${own.where}).${defaultZone === own.tz ? '\nThe default screen and this phone share a time zone; default screen times need no conversion.' : ''}`;
     const stamps = [];
     for (const r of [...arr(rows)].sort((a, b) => a.index - b.index)) {
-        const re = /(?<!\d)(?:\d{4}[-/.])?\d{1,2}[-/.]\d{1,2}(?:[-/.]\d{4})?\.?[,]?\s+[0-2]?\d:[0-5]\d(?!\d)/g;
-        for (const hit of String(r.text || '').matchAll(re)) {
-            const sourceTime = hit[0], local = when(sourceTime);
-            if (!/^\d{2}-\d{2} \d{2}:\d{2}$/.test(local)) continue;
+        for (const { sourceTime, local } of datedClocks(r.text)) {
             if (!stamps.some(x => x.at === r.index && x.sourceTime === sourceTime)) stamps.push({ at: r.index, sourceTime, local });
         }
     }

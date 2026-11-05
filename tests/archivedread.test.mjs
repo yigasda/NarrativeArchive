@@ -632,6 +632,42 @@ test('what the user set in 위치 정보 a reflection doesn\'t undo: the owner\'
     assert.deepEqual(by, { Ren: 'Frankfurt', Mara: 'Rome' });
 });
 
+test('manual city lookup resolves known aliases without a country or owner-zone fallback', async () => {
+    const { m, p } = setup([]);
+    p.country = 'KR'; p.lives = 'US'; p.year = 2026;
+    p.where = { at: 1, people: [{ name: 'Ren', city: 'Seoul', names: ['Seoul', '서울'], tz: 'Asia/Seoul', lives: 'US' },
+        { name: 'Mara', city: 'Frankfurt am Main', names: ['Frankfurt', '프랑크푸르트'], tz: 'Europe/Berlin', lives: 'DE' }] };
+    for (const [city, country, tz] of [['San Francisco', 'US', 'America/Los_Angeles'], ['샌프란시스코', 'US', 'America/Los_Angeles'],
+        ['밴쿠버', 'CA', 'America/Vancouver'], ['Los Angeles', 'US', 'America/Los_Angeles'], ['Toronto', 'CA', 'America/Toronto'],
+        ['프랑크푸르트', 'DE', 'Europe/Berlin'], ['서울', 'KR', 'Asia/Seoul'], ['America/Chicago', 'US', 'America/Chicago']]) {
+        assert.equal(data.tzForCity(p, city, country), tz, city);
+    }
+    for (const country of ['US', 'CA', 'KR', '']) assert.equal(data.tzForCity(p, 'Unknown City', country), '');
+    const before = structuredClone(p);
+    await assert.rejects(() => data.setPlaceCity(m, p, 'New Person', 'Unknown City'), /시간대를 찾지 못/);
+    assert.deepEqual(p, before, 'an unresolved city leaves no partial person or manual setting');
+    await data.setPlaceCity(m, p, 'Ren', 'San Francisco');
+    assert.equal(p.where.people[0].tz, 'America/Los_Angeles');
+    assert.equal(p.where.people[0].manual.city, true);
+    assert.equal(p.where.people[0].lives, 'US');
+});
+
+test('manual city lookup respects saved city zones and refuses conflicting saved aliases', () => {
+    const p = { owner: 'Ren', country: 'US', life: { weather: { cities: [{ name: 'Vancouver', ko: '밴쿠버', tz: 'America/Vancouver' }] } },
+        where: { people: [{ name: 'Ren', city: 'Springfield', tz: 'America/Chicago' }, { name: 'Mara', city: 'Springfield', tz: 'America/New_York' }] } };
+    assert.equal(data.tzForCity(p, '밴쿠버', 'CA'), 'America/Vancouver');
+    assert.equal(data.tzForCity(p, 'Springfield', 'US'), '');
+    p.life.weather.cities = [{ name: 'Springfield', tz: 'America/Chicago' }, { name: 'Springfield', tz: 'America/New_York' }];
+    p.where.people = [];
+    assert.equal(data.tzForCity(p, 'Springfield'), '', 'weather cities must not choose the first conflicting match');
+    p.life.weather.cities = [{ name: 'Berlin', tz: 'Europe/Berlin' }];
+    assert.equal(data.tzForCity(p, 'Berlin, New Hampshire'), '', 'a place qualifier cannot be discarded');
+    p.where.people = [{ name: 'Ren', city: 'Berlin', tz: 'America/New_York' }];
+    assert.equal(data.tzForCity(p, 'Berlin'), '', 'conflicts across weather and people are ambiguous too');
+    p.where.people = [{ name: 'Ren', city: 'Berlin', tz: 'Europe/Berlin' }];
+    assert.equal(data.tzForCity(p, 'Berlin'), 'Europe/Berlin', 'agreement across sources is safe');
+});
+
 test('a slow day: each 반영 the same day writes today\'s totals so far, never lower than what was there; 되돌리기 takes it back', async () => {
     const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'still at the office'), say('Mara', 'coffee?')]);
     c.p.now = '10-26 12:00'; c.p.year = 2026;

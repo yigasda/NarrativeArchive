@@ -1362,3 +1362,58 @@ test('reflection sends the matching owner identity and choices for both phones w
   assert.equal(c.p.now,now);assert.equal(c.p.notes[0].time,now);
  }
 });
+
+
+test('reflection clock spans retain meridiem and accepted dated formats verbatim', async () => {
+    const p = { owner: 'Ren' }; clockPhone(p);
+    const samples = [
+        ['11.05, 8:30 PM', '11-05 20:30', '11-05 12:30'],
+        ['11.05, 12:30 AM', '11-05 00:30', '11-04 16:30'],
+        ['11.05 8:30 오후', '11-05 20:30', '11-05 12:30'],
+        ['11.05 12:30 오전', '11-05 00:30', '11-04 16:30'],
+        ['11.05 PM 8:30', '11-05 20:30', '11-05 12:30'],
+        ['11.05 AM 12:30', '11-05 00:30', '11-04 16:30'],
+        ['November 5, 2026 08:30', '11-05 08:30', '11-05 00:30'],
+        ['2026-11-05T08:30', '11-05 08:30', '11-05 00:30'],
+        ['11월 5일 08:30', '11-05 08:30', '11-05 00:30'],
+        ['2026년 11월 5일 오후 8:30', '11-05 20:30', '11-05 12:30'],
+        ['5. November 2026 08:30', '11-05 08:30', '11-05 00:30'],
+    ];
+    for (const [sourceTime, local, ownerTime] of samples) {
+        const rows = [{ index: 2, text: `Mara: ${sourceTime}. Then the scene continues.` }];
+        const before = structuredClone(rows);
+        const result = await data.reflectionClocks(p, rows, { dateOrder: 'md' });
+        const choice = result.choices.find(x => x.names[0] === 'Mara');
+        assert.equal(choice?.sourceTime, sourceTime);
+        assert.equal(choice.local, local);
+        assert.equal(choice.ownerTime, ownerTime);
+        assert.deepEqual(rows, before);
+        assert.ok(result.text.includes(JSON.stringify(sourceTime)));
+    }
+});
+test('reflection uses a trailing numeric year for the actual DST transition date', async () => {
+    const p = { owner: 'Ren' }; clockPhone(p); // 2026 fallback must not replace explicit 2024.
+    const result = await data.reflectionClocks(p, [{ index: 2, text: 'Mara: 31.03.2024 01:30' }], { dateOrder: 'dm' });
+    assert.equal(result.choices.find(x => x.names[0] === 'Mara').ownerTime, '03-30 17:30');
+});
+test('reflection bounds supplemental clocks but keeps the full PM source in the model request', async () => {
+    const raw = 'Mara reads Ren’s reply on her phone. 11.05, 8:30 PM. Two hours pass.';
+    const c = setup([say('Ren', 'start'), say('Mara', 'evening'), say('Mara', raw)]);
+    clockPhone(c.p); c.m.dateOrder = 'md';
+    await run(c.m, { clock: { basis: 'Mara reads, then two hours pass', screen: { owner: 'Mara', time: '11.05, 8:30 PM' } }, now: '11-05 14:30', events: [] });
+    assert.ok(T.input.includes(raw));
+    assert.match(T.input, /On Mara's clock → owner's time: 11-05 12:30/);
+    assert.equal(c.p.now, '11-05 14:30');
+    const rows = Array.from({ length: 14 }, (_, i) => ({ index: i, text: `Mara: November 5, 2026 ${String(i).padStart(2, '0')}:30` }));
+    const result = await data.reflectionClocks(c.p, rows, c.m);
+    assert.equal(result.choices.filter(x => x.names[0] === 'Mara').length, 12);
+    assert.equal(Math.min(...result.choices.map(x => x.at)), 2);
+});
+
+test('reflection offers no converted choices for malformed twelve-hour clocks', async () => {
+    const p = { owner: 'Ren' }; clockPhone(p);
+    for (const clock of ['13:30 PM', '0:30 PM', 'PM 13:30', 'AM 0:30', '13:30 오후', '0:30 오전', '오후 13:30', '오전 0:30']) {
+        const result = await data.reflectionClocks(p, [{ index: 2, text: `Mara: 11.05 ${clock}` }], { dateOrder: 'md' });
+        assert.deepEqual(result.choices, [], clock);
+    }
+});

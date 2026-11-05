@@ -8,7 +8,7 @@ import { AX, ax, axBar, axCb, axH1, axInd, axKp, axTint, axTop, busyHtml } from 
 import { filling } from './phoneai.js';
 import { byStory, clockHeld, clockNum, clockOf, fmtDate, halfOf, hourOf, koOn, ownerZone, pad, phoneAt, sceneHome, storyNow } from './phonedata.js';
 import { shiftDay, weatherNow } from './phonelife.js';
-import { COUNTRY_TZ, apart, cityAt as cityOfPlace, mirrorHome, overlayNow } from './phonesynclife.js';
+import { timerLeft, COUNTRY_TZ, apart, cityAt as cityOfPlace, mirrorHome, overlayNow } from './phonesynclife.js';
 import { decimalOf, fmtMoney, localeOf } from './phonemoney.js';
 import { nameKey } from './people.js';
 import { getMeta } from './core.js';
@@ -81,7 +81,15 @@ const n0 = v => (v === null || v === undefined ? '—' : Number(v).toLocaleStrin
 const md = s => { const mt = String(s || '').match(/^(\d{2})-(\d{2})/); return mt ? { mo: Number(mt[1]), d: Number(mt[2]) } : null; };
 // a story day as a real date: the story's year, and a day across New Year from its now in the year before or after
 const dayGap = (a, b) => { const A = md(a), B = md(b); if (!A || !B) return 0; let g = (Date.UTC(2001, B.mo - 1, B.d) - Date.UTC(2001, A.mo - 1, A.d)) / 864e5; if (g < -180) g += 365; if (g > 180) g -= 365; return g; };
-const realDate = (day, h = 0) => { const x = md(day), n = md(STORY.now); if (!x) return null; if (!n) return new Date(Date.UTC(STORY.year, x.mo - 1, x.d, h)); return new Date(Date.UTC(STORY.year, n.mo - 1, n.d + dayGap(STORY.now, day), h)); };
+const realDate = (day, h = 0) => {
+    const x = md(day), n = md(STORY.now); if (!x) return null;
+    let y = STORY.year;
+    if (n) {
+        const gap = (Date.UTC(y, x.mo - 1, x.d) - Date.UTC(y, n.mo - 1, n.d)) / 864e5;
+        if (gap < -180) y++; else if (gap > 180) y--;
+    }
+    return new Date(Date.UTC(y, x.mo - 1, x.d, h));
+};
 const weekday = day => realDate(day)?.getUTCDay() ?? 0;
 // a day's weekday to show, or alt when the story's year is unknown
 const wdk = (day, alt = '') => (STORY.known ? WDK[WD[weekday(day)]] : alt);
@@ -106,7 +114,8 @@ function nextRing(a, now) {
     const day = now.slice(0, 5), t = toMin(now.slice(6)) ?? 0, at = toMin(a.time);
     if (!a.on || at === null || !md(day)) return null;
     for (let k = 0; k < 8; k++) {
-        const d = shiftDay(day, k);
+        const date = realDate(day); date.setUTCDate(date.getUTCDate() + k);
+        const d = `${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
         if (k === 0 && at <= t) continue;
         if (a.days.length ? a.days.includes(WD[weekday(d)]) : (a.date ? a.date === d : true)) return { day: d, min: k * 1440 + at - t };
         if (!a.days.length && !a.date) return null;
@@ -155,12 +164,8 @@ export function timerScreen(p, now) {
     const lf = L(p);
     if (!lf) return lifeEmpty(p, now, '시계', 'life', 'home2', true);
     const r = lf.clock.running, ts = lf.clock.timers;
-    // time left: what was left when the phone was filled, less the story time since
-    let left = r ? (Number(r.left) || 0) : 0;
-    // (a timer from another story day has long run out)
-    const at = r?.at || lf.at;
-    if (r && at && now5(p)) left = at.slice(0, 5) === now5(p).slice(0, 5) ? left - ((toMin(now5(p).slice(6)) ?? 0) - (toMin(at.slice(6)) ?? 0)) * 60 : dayGap(at.slice(0, 5), now5(p).slice(0, 5)) > 0 ? 0 : left;
-    left = Math.max(0, left);
+    // The display and storage cleanup use the same elapsed story time across midnight.
+    const left = timerLeft(p, now5(p));
     const C = 2 * Math.PI * 115, frac = r && r.sec > 0 ? Math.min(1, left / r.sec) : 0, ring = r ? `${(toMin(now5(p).slice(6)) ?? 0) + Math.ceil(left / 60)}` : '';
     return `${axBar(p, now, '#f2f2f4')}
       ${axTop(axCb('home2'))}

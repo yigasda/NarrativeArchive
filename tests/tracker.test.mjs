@@ -80,3 +80,51 @@ test('phone status uses edited body immediately and forgets deleted messages', (
     T.chat.pop();assert.equal(recentTrackers(1,{visibleOnly:true})[0].time,'11:00');
     T.chat.length=0;assert.deepEqual(recentTrackers(1,{visibleOnly:true}),[]);
 });
+
+test('tracker clocks honor prefix and suffix AM/PM including midnight and noon', () => {
+    T.settings = {};
+    for (const [clock, min] of [
+        ['오전 12:30', 30], ['12:30 오전', 30], ['AM 12:30', 30], ['12:30 am', 30],
+        ['오후 12:30', 750], ['12:30 오후', 750], ['pm 12:30', 750], ['12:30 PM', 750],
+        ['오전 1:15', 75], ['AM 1:15', 75], ['오후 1:15', 795], ['1:15 pM', 795],
+        ['12:30AM', 30], ['PM12:30', 750], ['1:15PM', 795], ['00:30', 30], ['23:59', 1439], ['저녁 8:15', 1215],
+    ]) {
+        for (const body of [
+            `<tracker> ${clock} | 3월 2일 | 집 | 맑음 </tracker>`,
+            `시간: ${clock}\n장소: 집\n날씨: 맑음`,
+            `[ ${clock} · 3월 2일 · 집 · 맑음 ]`,
+        ]) {
+            const [t] = recentTrackers(1, { chat: [say(body)] });
+            assert.equal(t.min, min, body);
+            assert.equal(t.place, '집');
+            assert.equal(t.weather, '맑음');
+        }
+    }
+});
+
+test('invalid clocks and nonnumeric time labels remain safe without invented minutes', () => {
+    T.settings = {};
+    for (const clock of ['24:00', '25:10', '12:60', '13:30 PM', '오전 0:30', '123:45', '12:345', '-1:30', '저녁', '미정']) {
+        for (const body of [
+            `<tracker> ${clock} | 3월 2일 | 집 | 흐림 </tracker>`,
+            `시간: ${clock}\n장소: 집\n날씨: 흐림`,
+        ]) {
+            const [t] = recentTrackers(1, { chat: [say(body)] });
+            assert.equal(t.min, null, body);
+            assert.equal(t.place, '집');
+            assert.equal(t.weather, '흐림');
+        }
+    }
+    const [t] = recentTrackers(1, { chat: [say('시간: 저녁\n장소: 집')] });
+    assert.equal(t.time, '저녁');
+    assert.equal(t.min, null);
+});
+
+test('custom tracker regex keeps its named fields while reading prefix midnight', () => {
+    const re = String.raw`Clock=(?<time>[^;]+);Date=(?<date>[^;]+);Place=(?<place>[^;]+);Weather=(?<weather>.+)`;
+    const [t] = recentTrackers(1, { re, chat: [say('Clock=AM 12:30;Date=3월 2일;Place=집;Weather=맑음')] });
+    assert.equal(t.min, 30);
+    assert.equal(t.date, '3월 2일');
+    assert.equal(t.place, '집');
+    assert.equal(t.weather, '맑음');
+});

@@ -56,6 +56,25 @@ export const hhmm = v => {
     if (pm && h < 12) h += 12; else if (am && h === 12) h = 0;
     return h < 24 && m < 60 ? `${pad(h)}:${pad(m)}` : '';
 };
+// Dated clock spans for reflection hints: never borrow a bare hour from another line or sentence.
+// Keep the exact span for the model; normalize only the separate date and clock captures.
+const MONTH_WORD = [...new Set(FULL.flatMap(w => Array.from({ length: w.length - 2 }, (_, i) => w.slice(0, i + 3))))].sort((a, b) => b.length - a.length).join('|');
+const CLOCK_DATE = String.raw`(?:\d{4}[-/.])?\d{1,2}[-/.]\d{1,2}(?:[-/.][ \t]?\d{4})?|(?:\d{4}년[ \t]*)?\d{1,2}[ \t]*월[ \t]*\d{1,2}[ \t]*일|(?:${MONTH_WORD})\.?[ \t]+\d{1,2}(?:st|nd|rd|th)?(?:,?[ \t]+\d{4})?|\d{1,2}(?:st|nd|rd|th)?\.?[ \t]+(?:${MONTH_WORD})\.?(?:,?[ \t]+\d{4})?`;
+// Meridiem belongs to this clock on either side, never to another sentence or line.
+const CLOCK_MERIDIEM = String.raw`(?:[ap](?:\.m\b\.?|m\b)|(?:오전|오후|새벽|아침|저녁|밤)(?!\p{L}))`;
+const DATED_CLOCK = new RegExp(String.raw`(?<![\p{L}\p{N}])(${CLOCK_DATE})\.?[,]?(?:[ \t]+|T)((?:${CLOCK_MERIDIEM}[ \t]*)?\d{1,2}[ \t]*:[ \t]*\d{2}(?:[ \t]*${CLOCK_MERIDIEM})?)(?![\p{L}\p{N}:])`, 'giu');
+const HAS_MERIDIEM = new RegExp(CLOCK_MERIDIEM, 'iu');
+export function datedClocks(text) {
+    const out = [];
+    for (const hit of String(text || '').matchAll(DATED_CLOCK)) {
+        // Reflection hints must not turn an invalid twelve-hour clock into a plausible time.
+        const hour = Number(/(\d{1,2})[ \t]*:/.exec(hit[2])?.[1]);
+        if (HAS_MERIDIEM.test(hit[2]) && !(hour >= 1 && hour <= 12)) continue;
+        const day = when(hit[1]).slice(0, 5), clock = hhmm(hit[2]);
+        if (day && clock) out.push({ sourceTime: hit[0], local: `${day} ${clock}` });
+    }
+    return out;
+}
 export const ko = v => line(v, 400);
 // who a gift went to: true is just "a gift"; false, "no", "none" and the like are no gift (never a person called "false")
 export const giftOf = v => (v === true ? '선물' : /^(false|true|no|none|null|nein|keine?|아니(요)?|없음|-)?$/i.test(line(v, 40)) ? '' : line(v, 40));
@@ -85,11 +104,11 @@ export const storyMin = (t, now) => {
 // a sort comparator in story order (oldest first): byStory(p.now) or byStory(p.now, x => x.opened); flip a, b for newest
 export const byStory = (now, get = x => x?.time) => (a, b) => storyMin(get(a), now) - storyMin(get(b), now) || String(get(a) ?? '').localeCompare(String(get(b) ?? ''));
 // the story's year: only where it stands in a date ("2026-11-07", "2026.11.07", "2026년 11월", "Nov 7, 2026",
-// "7. November 2026"), the last one written. A bare number is never a year: 2050원 is money, "2019년에 헤어졌다" is the past,
+// "7. November 2026", "31.03.2024"), the last one written. A bare number is never a year: 2050원 is money, "2019년에 헤어졌다" is the past,
 // a fantasy calendar's 1247 is its own
 const MON = 'jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|januar|februar|märz|maerz|mai|juni|juli|okt|dez';
-const DATED = new RegExp(`(?<!\\d)((?:19|20)\\d{2})[-./](?:0?[1-9]|1[0-2])[-./](?:0?[1-9]|[12]\\d|3[01])(?!\\d)|(?<!\\d)((?:19|20)\\d{2})년\\s*(?:0?[1-9]|1[0-2])월|\\b(?:${MON})[a-zä]*\\.?\\s+\\d{1,2}(?:st|nd|rd|th)?,?\\s+((?:19|20)\\d{2})(?!\\d)|(?<!\\d)\\d{1,2}\\.?\\s+(?:${MON})[a-zä]*\\.?,?\\s+((?:19|20)\\d{2})(?!\\d)`, 'gi');
-export const yearIn = text => { let y = ''; for (const mt of String(text || '').matchAll(DATED)) y = mt[1] || mt[2] || mt[3] || mt[4]; return y; };
+const DATED = new RegExp(`(?<!\\d)((?:19|20)\\d{2})[-./](?:0?[1-9]|1[0-2])[-./](?:0?[1-9]|[12]\\d|3[01])(?!\\d)|(?<!\\d)((?:19|20)\\d{2})년\\s*(?:0?[1-9]|1[0-2])월|\\b(?:${MON})[a-zä]*\\.?\\s+\\d{1,2}(?:st|nd|rd|th)?,?\\s+((?:19|20)\\d{2})(?!\\d)|(?<!\\d)\\d{1,2}\\.?\\s+(?:${MON})[a-zä]*\\.?,?\\s+((?:19|20)\\d{2})(?!\\d)|(?<!\\d)(?:(?:0?[1-9]|1[0-2])[-./](?:0?[1-9]|[12]\\d|3[01])|(?:0?[1-9]|[12]\\d|3[01])[-./](?:0?[1-9]|1[0-2]))[-./]\\s?((?:19|20)\\d{2})(?!\\d)`, 'gi');
+export const yearIn = text => { let y = ''; for (const mt of String(text || '').matchAll(DATED)) y = mt[1] || mt[2] || mt[3] || mt[4] || mt[5]; return y; };
 // a model's JSON with a slip mended: a bracket closed with the wrong kind ("profile": { … ]), a comma before a closer,
 // closers missing at the end. Strings are left as they are
 export function mendJson(t) {

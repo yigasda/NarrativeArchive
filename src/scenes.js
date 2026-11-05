@@ -29,12 +29,14 @@ const OLD_TRACKER_RES = [String.raw`<tracker>[^|]*?(?<time>\d{1,2}:\d{2}\s*(?:�
 export const trackerRe = () => { const v = globalSettings().trackerRe; return v === undefined || v === null || OLD_TRACKER_RES.includes(v) ? DEFAULT_TRACKER_RE : String(v); };
 const minutes = t => {
     const str = String(t || '');
-    const mt = str.match(/(\d{1,2})\s*:\s*(\d{2})\s*(오전|오후|AM|PM|am|pm)?/);
+    const mt = str.match(/(?<![\d:.-])(\d{1,2})\s*:\s*(\d{2})(?![\d:])/);
     if (!mt) return null;
-    if (!mt[3] && /오후|저녁|밤|PM|pm/.test(str)) mt[3] = 'PM';
-    let h = Number(mt[1]) % 12;
-    if (/오후|PM|pm/.test(mt[3] || '')) h += 12; else if (!mt[3]) h = Number(mt[1]);
-    return h * 60 + Number(mt[2]);
+    const marker = str.match(/오전|오후|저녁|밤|(?<![a-z])(?:AM|PM)(?![a-z])/i)?.[0];
+    let h = Number(mt[1]);
+    const m = Number(mt[2]);
+    if (m > 59 || h > 23 || (marker && (h < 1 || h > 12))) return null;
+    if (marker) h = h % 12 + (/오후|저녁|밤|PM/i.test(marker) ? 12 : 0);
+    return h * 60 + m;
 };
 // a status window that is not <tracker>: one short line of fields ("[ 🌙 오후 8:15 · 12월 9일 (목) · 성 → 병동 · ❄️ -1°C ]")
 // or a few "label: value" lines (📅 날짜: … / 📍 장소: …). It needs a time or a date; story prose has long parts and full stops
@@ -54,7 +56,13 @@ function stFields(parts) {
         const kind = lab ? lab[0] : /→|->|📍/.test(raw) ? 'place' : ST_CLOCK.test(p) ? 'time' : ST_DATE.test(p) ? 'date' : ST_WEATHER.test(raw) ? 'weather' : '';
         // the weather keeps its emoji (a sky may be told by one alone) and every field that names it ("맑음 / 3°C")
         if (kind === 'weather') { const w = lab ? p : String(raw).replace(/\*\*|__|`|\uFE0F/g, '').replace(/\s+/g, ' ').trim(); f.weather = [f.weather, w].filter(Boolean).join(', '); continue; }
-        if (kind === 'time') { const c = (p.match(/(?:오전|오후|새벽|아침|낮|저녁|밤|AM|PM)?\s*\d{1,2}\s*:\s*\d{2}\s*(?:AM|PM|오전|오후)?/i) || p.match(ST_CLOCK))[0].trim(); f.time ||= c; const d = p.replace(c, '').trim(); if (ST_DATE.test(d)) f.date ||= d; }
+        if (kind === 'time') {
+            const match = p.match(/(?:오전|오후|새벽|아침|낮|저녁|밤|AM|PM)?\s*(?<![\d:.-])\d{1,2}\s*:\s*\d{2}(?![\d:])\s*(?:AM|PM|오전|오후)?/i) || (!p.includes(':') ? p.match(ST_CLOCK) : null);
+            const c = match ? match[0].trim() : p;
+            f.time ||= c;
+            const d = p.replace(c, '').trim();
+            if (ST_DATE.test(d)) f.date ||= d;
+        }
         else if (kind === 'date') f.date ||= p;
         else if (kind === 'place') f.place ||= p.replace(/\s*(?:->|⇒)\s*/g, ' → ');
         else if (!kind) rest.push(p);

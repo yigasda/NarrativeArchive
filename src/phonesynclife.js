@@ -584,6 +584,24 @@ export function applyWeather(p, w, now, { archive = true, today = '' } = {}) {
 }
 
 // ---- the story's clock moved on (now: "MM-DD HH:MM"): what that does by itself
+// Timers keep the remaining seconds at their saved story timestamp. Dates have no year: use the
+// phone's current year, correcting December/January timestamps at the New Year boundary.
+// A backwards or incomplete clock must not add time or discard a running timer.
+export function timerLeft(p, now) {
+    const r = p.life?.clock?.running, left = Math.max(0, Number(r?.left) || 0);
+    if (!r) return 0;
+    const parse = s => /^(\d{2})-(\d{2}) (\d{2}):(\d{2})$/.exec(String(s || ''))?.slice(1).map(Number);
+    const a = parse(r.at || p.life.at), b = parse(now);
+    if (!a || !b) return left;
+    const year = Number(p.year) || Number(String(p.money?.asOf || p.investment?.date || '').slice(0, 4)) || new Date().getFullYear();
+    const stamp = (x, y) => Date.UTC(y, x[0] - 1, x[1], x[2], x[3]);
+    const end = stamp(b, year);
+    let start = stamp(a, year);
+    if (a[0] === 12 && b[0] === 1) start = stamp(a, year - 1);
+    else if (a[0] === 1 && b[0] === 12) start = stamp(a, year + 1);
+    return Math.max(0, left - Math.max(0, (end - start) / 1000));
+}
+
 // a one-time alarm that has rung goes off; a timer that would have run out is gone; a trash older than 30 days is
 // emptied; the forecast's past hours fall away; health keeps 60 days
 export function lifeClock(p, now) {
@@ -593,7 +611,7 @@ export function lifeClock(p, now) {
     const change = (path, r, vals) => { const keys = Object.keys(vals).filter(k => !same(r[k] ?? null, vals[k])); if (!keys.length) return; const fx = { type: 'change', path, id: r.id, from: fields(r, keys), to: fields(vals, keys) }; setFields(r, fx.to); out.push(fx); };
     for (const a of L.clock?.alarms || []) if (a.on && a.date && !a.days?.length && (dayGap(a.date, today) > 0 || a.date === today && hm && a.time && hm > a.time)) change('life.clock.alarms', a, { on: false });
     if (L.clock?.running) {
-        const at = String(L.clock.running.at || L.at || ''), gone = at.slice(0, 5) !== today || (hm && at.slice(6, 11) && minutes(hm) - minutes(at.slice(6, 11)) >= (L.clock.running.left || 0) / 60);
+        const gone = timerLeft(p, now) <= 0;
         if (gone) { out.push({ type: 'set', path: 'life.clock.running', from: structuredClone(L.clock.running), to: null }); L.clock.running = null; }
     }
     // a night told while it went on: its waking is their usual, once that time has come
