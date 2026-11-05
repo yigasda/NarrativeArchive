@@ -143,11 +143,10 @@ const LIFE_TIMERS = `  "timers": [{ "label", "ko", "sec" }],`;
 const LIFE_ONCE = `- An alarm for one occasion (a flight, an appointment) rings once: "days": [] and its "date". Only an alarm the owner keeps for every week has "days".`;
 const LIFE_CHANGE = `- A record already in LIFE NOW is changed with "change": its id; write only the fields that changed. A deleted file is "deleted": true.`;
 const CLOCK_FIRST = `CLOCK FIRST
-- Before writing events, read OWNER'S CLOCK with the scenes. A time belongs to whoever's screen or scene it is, not necessarily the message sender.
-- Keep the scene's viewpoint until it changes. Attached or quoted screens have their own clocks.
-- In "clock", write sender (null if none), holder (whose screen or scene), basis (brief evidence), and sourceTime (as written, null if absent).
-- Use OWNER'S CLOCK to write "now" on the owner's clock. "At the same time" keeps the same moment.
-- Events and their app records follow their own scene's clock, converted to the owner's. A later appointment keeps its intended time.`;
+- Read OWNER'S CLOCK with the scenes. Follow whose screen or scene it is, not the sender; attachments have their own clocks.
+- In "clock", write sender, holder (whose screen or scene), basis (brief evidence and time passed), and sourceTime (as written). Use null for absent sender or sourceTime.
+- Convert the source time using OWNER'S CLOCK, then follow later time passing to set "now". A time choice is a starting point; "at the same time" adds no time.
+- The owner's present scene agrees with "now". Other scenes, memories and appointments keep their own times.`;
 export function updateSystem({ money = true, delivery = false, life = false, weather = false, tracker = false, split = false, invest = false, zone = false } = {}) {
     const paid = delivery ? 'order, ticket or delivery' : 'order or ticket';
     return `${split ? 'STAGE: core\n' : ''}GOAL
@@ -1198,7 +1197,6 @@ async function updatePhone(m, owner) {
         if (round.rows.some(r => nowText.get(r.index) !== r.text)) throw new Error('반영하는 사이 대화가 바뀌었어요. 다시 해 주세요');
         const raw = core0;
         if (!raw || !Array.isArray(raw.events)) throw new Error('모델 답에서 반영할 내용을 찾지 못했어요. 다시 해 주세요');
-        resolveReflectionClock(raw, clockChoices, p);
         const everyday = round.rows.length ? await askEveryday(inputParts, raw, p, round.rows, !!life) : null;
         if (phoneChatScope(ctx()) !== scope || m.phones?.[key] !== p || p.money?.at !== made.money || p.investment?.at !== made.invest || p.life !== made.life || p.delivery !== made.delivery) throw new Error('반영하는 사이 폰이 바뀌었어요. 다시 해 주세요');
         const afterEveryday = new Map(syncRows().map(r => [r.index, r.text]));
@@ -2031,18 +2029,6 @@ function reflectionClocks0(p, rows, m) {
     if (!choices.length) return { choices, text: '' };
     const lines = stamps.slice(-12).map(t => `Timestamp in #${t.at}: ${JSON.stringify(t.sourceTime)}\n${choices.filter(c => c.at === t.at && c.sourceTime === t.sourceTime).map(c => `On ${c.names[0]}'s clock → owner's time: ${c.ownerTime}`).join('\n')}`);
     return { choices, text: `${clockBlock(p, p.now, m) ? '' : `[OWNER'S CLOCK]\nThe owner is in ${own.where}, ${p.now || 'time unknown'} now.\n`}Time choices (not proof of whose screen, or which time is now). Date order: ${dateOrderOf(m) === 'dm' ? 'day.month' : 'month.day'}.\n${lines.join('\n')}` };
-}
-export function resolveReflectionClock(raw, candidates, p) {
-    const c = raw?.clock;
-    if (!c || typeof c.sourceTime !== 'string' || !c.sourceTime.trim() || !c.holder) return false;
-    // A move in this answer can invalidate saved locations: never correct from those stale choices.
-    const moved = [...arr(raw.moved), ...arr(raw.elsewhere)];
-    if (raw.ownerCity || moved.some(x => ['owner', 'the owner'].includes(nameKey(x?.name)) || samePerson(x?.name, p.owner) || samePerson(x?.name, c.holder))) return false;
-    const hits = arr(candidates?.choices).filter(x => x.sourceTime.trim() === c.sourceTime.trim() && x.names.some(n => nameKey(n) === nameKey(c.holder)));
-    const times = [...new Set(hits.map(x => x.ownerTime))];
-    if (times.length !== 1) return false;
-    raw.now = times[0];
-    return true;
 }
 const pkey = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
 // a place that is someone's own: their name (or their first name) then 's · 의 · 네, or a room, a home after it

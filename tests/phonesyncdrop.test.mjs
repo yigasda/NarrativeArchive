@@ -1210,37 +1210,23 @@ test('clock candidates honor date order, aliases, DST and midnight without choos
     const early = await data.reflectionClocks(p, [{index: 3, text:'Mara 11.05, 02:00'}], {dateOrder:'md'});
     assert.equal(early.choices.find(x => x.names[0] === 'Mara').ownerTime, '11-04 18:00');
     assert.match(md.text, /not proof of whose screen/);
-    const raw = {clock:{sender:'Ren',holder:'마라',basis:'reads on her phone',sourceTime:'11.05, 08:30'},now:'05-11 08:30'};
-    assert.equal(data.resolveReflectionClock(raw, md, p), true);
-    assert.equal(raw.now,'11-05 00:30'); // sender does not decide the conversion
-    assert.equal(data.resolveReflectionClock(raw, md, p), true);
-    assert.equal(raw.now,'11-05 00:30'); // no second shift
-});
-test('unknown, absent, unattested times and newly moved people are not guessed', async () => {
-    const p = {owner:'Ren'}; clockPhone(p);
-    const c = await data.reflectionClocks(p,[{index:2,text:'Mara 11.05, 08:30'}],{dateOrder:'md'});
-    for (const extra of [{clock:{holder:'Unknown',sourceTime:'11.05, 08:30'}}, {clock:{holder:'Mara',sourceTime:null}}, {clock:{holder:'Mara',sourceTime:'11.06, 08:30'}}, {clock:{holder:'Mara',sourceTime:'11.05, 08:30'},moved:[{name:'Mara',city:'Berlin',tz:'Europe/Berlin'}]}]) {
-        const raw={now:'11-05 01:00',...extra}; assert.equal(data.resolveReflectionClock(raw,c,p),false); assert.equal(raw.now,'11-05 01:00');
-    }
     assert.equal((await data.reflectionClocks(p,[{index:2,text:'Mara at 08:30'}],{dateOrder:'md'})).choices.length,0);
     assert.equal((await data.reflectionClocks({owner:'Unknown'},[],{})).choices.length,0);
 });
-test('reflection corrects selected time before everyday and stores it without changing app timestamps', async () => {
-    const c=setup([say('Ren','start'),say('Mara','evening'),say('Mara','Mara reads Ren’s reply on her phone. 11.05, 08:30')]);
+test('elapsed time after the source clock survives reflection, everyday and storage', async () => {
+    const c=setup([say('Ren','start'),say('Mara','evening'),say('Mara','Mara reads Ren’s reply on her phone. 11.05, 08:30. Two hours pass.')]);
     clockPhone(c.p); c.m.dateOrder='md'; globalThis.__everydayIn=[];
     const oldVoice=structuredClone(c.p.voice), bankBefore=c.bank();
-    await run(c.m,{clock:{sender:'Ren',holder:'Mara',basis:'Mara reads on her phone',sourceTime:'11.05, 08:30'},now:'11-05 08:30',events:[{id:'reply',at:2,quote:'Mara reads Ren’s reply',date:'11-05',time:'00:30',phone:{notes:[{title:'Reply',text:'Read it',time:'11-05 00:30'}]}}]});
+    await run(c.m,{clock:{sender:'Ren',holder:'Mara',basis:'Mara reads on her phone, then two hours pass',sourceTime:'11.05, 08:30'},now:'11-05 02:30',events:[{id:'reply',at:2,quote:'Mara reads Ren’s reply',date:'11-05',time:'02:30',phone:{notes:[{title:'Reply',text:'Read it',time:'11-05 02:30'}]}}]});
     assert.match(T.input,/On Mara's clock → owner's time: 11-05 00:30/);
     assert.match(T.sys,/CLOCK FIRST/);
-    assert.match(globalThis.__everydayIn.at(-1),/Owner-local window: 11-04 23:30 to 11-05 00:30/);
-    assert.equal(c.p.now,'11-05 00:30'); assert.equal(c.p.notes.at(-1).time,'11-05 00:30');
+    assert.match(globalThis.__everydayIn.at(-1),/Owner-local window: 11-04 23:30 to 11-05 02:30/);
+    assert.equal(c.p.now,'11-05 02:30'); assert.equal(c.p.notes.at(-1).time,'11-05 02:30');
     assert.deepEqual(c.p.voice,oldVoice); assert.equal(c.bank(),bankBefore);
 });
-test('same-time scene selection and attached timestamps do not automatically advance now', async()=>{
-    const p={owner:'Ren'};clockPhone(p);
-    const c=await data.reflectionClocks(p,[{index:2,text:'Mara 11.05, 08:30. Attached old page: 11.03, 11:03'}],{dateOrder:'md'});
-    const raw={clock:{sender:'Ren',holder:'Mara',basis:'outer screen',sourceTime:'11.05, 08:30'},now:'11-05 00:30'};
-    data.resolveReflectionClock(raw,c,p);assert.equal(raw.now,'11-05 00:30');
-    const same={clock:{sender:'Ren',holder:'Ren',basis:'meanwhile in Berlin',sourceTime:null},now:raw.now};
-    data.resolveReflectionClock(same,c,p);assert.equal(same.now,raw.now);
+test('same-time scene without a new timestamp keeps the supplied moment', async()=>{
+    const c=setup([say('Ren','start'),say('Mara','evening'),say('Ren','Meanwhile in Berlin, Ren sends a reply.')]);
+    clockPhone(c.p);c.p.now='11-05 02:30';c.m.dateOrder='md';
+    await run(c.m,{clock:{sender:'Ren',holder:'Ren',basis:'Meanwhile in Berlin',sourceTime:null},now:'11-05 02:30',events:[]});
+    assert.equal(c.p.now,'11-05 02:30');
 });
