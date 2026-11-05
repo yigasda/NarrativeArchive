@@ -1312,3 +1312,20 @@ test('messenger choices do not combine two people with the same first name', () 
     const m={phones:{ren:{owner:'Ren',where:{people:[{name:'Mara Park',city:'Seoul',tz:'Asia/Seoul'},{name:'Mara Kim',city:'Berlin',tz:'Europe/Berlin'}]}}}};
     assert.deepEqual(data.screenHolderChoices(m,{name1:'Mara'}).map(x=>x.name),['Mara','Ren','Mara Park','Mara Kim']);
 });
+
+
+test('clock display uses the selected alias without changing model data or other scene owners', () => {
+    const m={phoneScreenHolder:'마라',phones:{ren:{owner:'Ren',where:{people:[{name:'Mara Park',aka:['마라','Mara'],city:'Seoul'},{name:'Ren',city:'Berlin'}]}}}};
+    const c={name1:'마라'},raw={basis:'Default used',screen:{owner:'Mara Park',time:'11.05, 11:38'},messageSender:'Ren'};
+    const before=structuredClone(raw),shown=data.clockForDisplay(raw,m,c);
+    assert.equal(shown.screen.owner,'마라');assert.equal(shown.screen.time,raw.screen.time);
+    assert.equal(shown.messageSender,'Ren');assert.equal(shown.basis,raw.basis);assert.deepEqual(raw,before);
+    const switched={...raw,screen:{owner:'Ren',time:'11.05, 03:38'}};
+    assert.equal(data.clockForDisplay(switched,m,c),switched);
+    assert.equal(data.clockForDisplay(raw,{...m,phoneScreenHolder:''},c),raw);
+    assert.equal(data.clockForDisplay(null,m,c),null);
+    m.phones.ren.where.people.push({name:'Mara Kim',city:'Berlin'});
+    m.phones.ren.where.people[0].aka=['마라'];
+    const ambiguous={...raw,screen:{owner:'Mara',time:'11.05, 11:38'}};
+    assert.equal(data.clockForDisplay(ambiguous,m,c),ambiguous);
+});

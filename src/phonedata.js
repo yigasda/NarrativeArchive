@@ -1199,9 +1199,9 @@ async function updatePhone(m, owner) {
         if (round.rows.some(r => nowText.get(r.index) !== r.text)) throw new Error('반영하는 사이 대화가 바뀌었어요. 다시 해 주세요');
         const raw = core0;
         if (!raw || !Array.isArray(raw.events)) throw new Error('모델 답에서 반영할 내용을 찾지 못했어요. 다시 해 주세요');
-        // Temporary on-device diagnostic: the model's clock, before any later clock handling.
+        // Temporary diagnostic: unify only the selected person's display alias; keep the model answer intact.
         if (typeof toastr !== 'undefined') {
-            const toast = toastr.info(JSON.stringify({ clock: raw.clock ?? null, now: raw.now ?? null }, null, 2), '시간 판독 · 테스트', {
+            const toast = toastr.info(JSON.stringify({ clock: clockForDisplay(raw.clock, m) ?? null, now: raw.now ?? null }, null, 2), '시간 판독 · 테스트', {
                 escapeHtml: true, timeOut: 0, extendedTimeOut: 0, closeButton: true, tapToDismiss: false,
             });
             toast?.find?.('.toast-message')?.css?.({ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' });
@@ -1798,6 +1798,14 @@ export function screenHolderChoices(m, c = ctx()) {
 export function screenHolderLabel(m, c = ctx()) {
     const saved = screenHolderOf(m), key = nameKey(screenPerson(m, saved)?.name || saved);
     return screenHolderChoices(m, c).find(x => nameKey(screenPerson(m, x.name)?.name || x.name) === key)?.name || saved;
+}
+// Display aliases only. Never change the model's time, sender, explanation or a different scene owner.
+export function clockForDisplay(clock, m, c = ctx()) {
+    const selected = screenHolderLabel(m, c), owner = clock?.screen?.owner;
+    if (!selected || typeof owner !== 'string') return clock;
+    const key = name => nameKey(screenPerson(m, name)?.name || name);
+    if (key(owner) !== key(selected)) return clock;
+    return { ...clock, screen: { ...clock.screen, owner: selected } };
 }
 export const dateOrderOf = m => (m?.dateOrder === 'dm' ? 'dm' : 'md');
 export const needsDateOrder = m => !m?.dateOrder;
