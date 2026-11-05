@@ -143,7 +143,7 @@ const LIFE_TIMERS = `  "timers": [{ "label", "ko", "sec" }],`;
 const LIFE_ONCE = `- An alarm for one occasion (a flight, an appointment) rings once: "days": [] and its "date". Only an alarm the owner keeps for every week has "days".`;
 const LIFE_CHANGE = `- A record already in LIFE NOW is changed with "change": its id; write only the fields that changed. A deleted file is "deleted": true.`;
 const CLOCK_FIRST = `CLOCK FIRST
-- Read OWNER'S CLOCK with the scenes. Follow whose screen or scene it is, not the sender; attachments have their own clocks.
+- Follow the scene's viewpoint, not the sender. Keep it until the scene changes; when unclear, use the default screen viewpoint in OWNER'S CLOCK. Attachments have their own clocks.
 - In "clock", write sender, holder (whose screen or scene), basis (brief evidence and time passed), and sourceTime (as written). Use null for absent sender or sourceTime.
 - Convert the source time using OWNER'S CLOCK, then follow later time passing to set "now". A time choice is a starting point; "at the same time" adds no time.
 - The owner's present scene agrees with "now". Other scenes, memories and appointments keep their own times.`;
@@ -155,6 +155,7 @@ An app adds your JSON to the phone; you only write what is new.${split ? ' Money
 
 YOU GET
 - NEW MESSAGES: the messages to read now, each with its number (#123).
+- SCENE BEFORE (sometimes): nearby earlier messages for viewpoint only; no new events.
 - ARCHIVE FOR THESE MESSAGES (sometimes): summary sections covering them, or a stretch archived before the phone read it (its messages are not in NEW MESSAGES). They count as evidence, like the messages.
 - ARCHIVE BEFORE (sometimes): what happened earlier. Background; nothing in it is new.
 - STORY NOW (sometimes): where the story stands after these messages. Background.
@@ -455,7 +456,7 @@ Another step already put the story's own events on the phone; you only add every
 
 YOU GET
 - NEW MESSAGES: the messages these hours come from, each with its number (#123).
-- ARCHIVE FOR THESE MESSAGES, ARCHIVE BEFORE, STORY NOW (sometimes): the story around them. Background.
+- ARCHIVE FOR THESE MESSAGES, ARCHIVE BEFORE, STORY NOW, SCENE BEFORE (sometimes): the story around them. Background.
 - EVENTS ON THE PHONE, PHONE NOW, LIFE NOW (sometimes: the alarms, files and health days, with record ids), WEATHER NOW (sometimes), DAYS (sometimes): what the phone holds.
 ${CLOCK_GET}
 - PEOPLE AROUND (sometimes): people in the owner's life, close or not, from the cards, persona, profile and lorebook, with where things stand now.
@@ -852,6 +853,7 @@ const phoneForModel = p => ({
 // apps: some of REMAKE's names, made again from the whole story while the rest of the phone stays as it is
 export function makePhone(m, owner, opts = {}) { return withDateOrder(dateOrderOf(m), () => makePhone0(m, owner, opts)); }
 async function makePhone0(m, owner, { update = false, apps = null } = {}) {
+    await ensureScreenHolder(m);
     const key = nameKey(owner);
     if (update && m.phones?.[key]) return updatePhone(m, owner);
     if (busy.sync || busy.fill) throw new Error('다른 폰 작업이 끝난 뒤 다시 해 주세요');
@@ -1139,12 +1141,14 @@ async function updatePhone(m, owner) {
         // whose scene the newest status line is (true the owner's, false elsewhere, null unknown); one with no time too
         let sceneOwn = tracker ? sceneHome(p, tracker.place, m) : true;
         // a status line among these messages whose scene the phone can't place: the model says whose clock it shows
-        const clockChoices = await reflectionClocks(p, [...round.rows, ...evidence.map(x => ({ index: x.first, text: x.text }))], m);
+        const preceding = sceneBefore(rows, Math.min(...round.rows.map(r => r.index), ...evidence.map(x => x.first)));
+        const clockChoices = await reflectionClocks(p, [...preceding.rows, ...round.rows, ...evidence.map(x => ({ index: x.first, text: x.text }))], m);
         const baseClock = clockBlock(p, hm(p.now) ? p.now : st?.raw, m, st);
         const clock = [baseClock, clockChoices.text].filter(Boolean).join('\n');
         // (on a phone that knows no other city, a scene that isn't one of the owner's places is asked too: "Frankfurt"
         // may be another country; it stays the owner's unless the model names another city)
-        const askZone = round.rows.some(r => r.index === trackAt) && (sceneOwn === null && !!baseClock || sceneOwn === true && !baseClock && !!tracker && !sceneZone(p, tracker.place, m));
+        const hasZoneOffsets = !!zonesOf(p, hm(p.now) ? p.now : st?.raw, m);
+        const askZone = round.rows.some(r => r.index === trackAt) && (sceneOwn === null && hasZoneOffsets || sceneOwn === true && !hasZoneOffsets && !!tracker && !sceneZone(p, tracker.place, m));
         // a scene the owner isn't in (or may not be): the model gets its place and weather, never its hour
         // (and one asked about, not yet placed: its place and weather only too)
         const trackShown = tracker && (sceneOwn !== true || askZone) ? { place: tracker.place, weather: tracker.weather } : tracker;
@@ -1167,6 +1171,7 @@ async function updatePhone(m, owner) {
             return `${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getUTCDay()]}`;
         }) : [];
         const inputParts = [
+            preceding.text,
             `[NEW MESSAGES]\n${round.rows.map(r => r.text).join('\n\n') || '(none: this round reads only stretches archived before the phone read them)'}`,
             evidence.length ? `[ARCHIVE FOR THESE MESSAGES]\n${evidence.map(x => x.text).join('\n\n')}` : '',
             before.length ? `[ARCHIVE BEFORE]\n${before.join('\n\n')}` : '',
@@ -1753,6 +1758,45 @@ export const trackerWeather = t => { const w = weatherFrom(t); if (w) { const d 
 export const clockHeld = p => !!p?.clockHold;
 // 상태창 날짜 순서 (per chat): 'md' 월.일 (11.03), 'dm' 일.월 (03.11.). Asked once before the chat's first 폰 만들기 or
 // 반영 (needsDateOrder), month first until then; changed any time in the phone's settings
+// One explicit screen fallback per chat, independent of which phone is open.
+export const screenHolderOf = m => typeof m?.phoneScreenHolder === 'string' ? m.phoneScreenHolder.trim() : '';
+export async function setScreenHolder(m, name) {
+    if (!m || typeof name !== 'string') return;
+    const value = name.trim();
+    m.phoneScreenHolder = value; // an explicit unset stays unset too
+    await saveMeta();
+}
+// Initialize once per chat. Later persona changes and an explicit unset do not replace this choice.
+export async function ensureScreenHolder(m, c = ctx()) {
+    if (!m || Object.hasOwn(m, 'phoneScreenHolder')) return;
+    const name = typeof c?.name1 === 'string' ? c.name1.trim() : '';
+    await setScreenHolder(m, name);
+}
+export function screenHolderChoices(m, c = ctx()) {
+    const out = [], seen = new Set();
+    const add = (name, sub) => { if (typeof name !== 'string' || !name.trim() || seen.has(nameKey(name))) return; seen.add(nameKey(name)); out.push({ name: name.trim(), sub }); };
+    add(c?.name1, '사용자 페르소나');
+    add(c?.characters?.[c.characterId]?.name, '현재 캐릭터');
+    for (const p of Object.values(m?.phones || {})) {
+        add(p?.owner, '연결된 인물');
+        for (const x of p?.where?.people || []) add(x.name, '연결된 인물');
+    }
+    for (const name of Object.keys(m?.phoneProfiles || {})) add(name, '연결된 인물');
+    add(screenHolderOf(m), '선택한 인물');
+    return out;
+}
+// Only context before this round, never the most recently processed (possibly later) scene.
+export function sceneBefore(rows, start, budget = 1200) {
+    const selected = arr(rows).filter(r => r.index < start).sort((a, b) => a.index - b.index).slice(-2);
+    const kept = [];
+    for (const r of selected.reverse()) {
+        if (budget < 80) break;
+        let text = String(r.text || '');
+        if (estTok(text) > budget) text = `[#${r.index}, end excerpt] ${text.slice(-Math.floor(budget * 0.7))}`;
+        budget -= estTok(text); kept.unshift({ index: r.index, text });
+    }
+    return { rows: kept, text: kept.length ? `[SCENE BEFORE]\n${kept.map(r => r.text).join('\n\n')}` : '' };
+}
 export const dateOrderOf = m => (m?.dateOrder === 'dm' ? 'dm' : 'md');
 export const needsDateOrder = m => !m?.dateOrder;
 export async function setDateOrder(m, order) { if (!m || !['md', 'dm'].includes(order)) return; m.dateOrder = order; await saveMeta(); }
@@ -2003,7 +2047,9 @@ export function zonesOf(p, at = p?.now, m = null) {
 export const clockBlock = (p, at = p?.now, m = null, st = null) => {
     const z = zonesOf(p, at, m);
     const hrs = h => `${Math.abs(h)} hour${Math.abs(h) === 1 ? '' : 's'} ${h > 0 ? 'ahead' : 'behind'}`;
-    return z ? `[OWNER'S CLOCK]\nThe owner is in ${z.own.name}, ${z.at} now.\n${z.others.map(c => (c.where ? `${c.name} (in ${c.where}) is ${hrs(c.hours)}` : `${c.name} is ${hrs(c.hours)}`)).join(', ')}.${st?.known && st.at && st.at !== st.raw ? `\nThe newest status line, ${st.raw} in ${st.city}, is ${st.at} here.` : ''}` : '';
+    const base = z ? `[OWNER'S CLOCK]\nThe owner is in ${z.own.name}, ${z.at} now.\n${z.others.map(c => (c.where ? `${c.name} (in ${c.where}) is ${hrs(c.hours)}` : `${c.name} is ${hrs(c.hours)}`)).join(', ')}.${st?.known && st.at && st.at !== st.raw ? `\nThe newest status line, ${st.raw} in ${st.city}, is ${st.at} here.` : ''}` : '';
+    const holder = screenHolderOf(m);
+    return holder ? `${base || "[OWNER'S CLOCK]"}\nDefault screen viewpoint: ${JSON.stringify(holder)}.` : base;
 };
 // Reflection-only choices. No HTML class names and no guessed dates for bare hours.
 // Keep the request's date order and locations in the choices, not mutable chat state after the call.
@@ -2011,15 +2057,17 @@ export function reflectionClocks(p, rows, m = null) {
     return withDateOrder(dateOrderOf(m), () => reflectionClocks0(p, rows, m));
 }
 function reflectionClocks0(p, rows, m) {
-    const own = ownerZone(p), choices = [], people = [], text = arr(rows).map(r => r.text).join('\n');
+    const own = ownerZone(p), choices = [], people = [], text = arr(rows).map(r => r.text).join('\n'), fallback = screenHolderOf(m);
     if (!own) return { choices, text: '' };
     for (const z of placesAround(p, m)) {
         const names = [...new Set((z.own ? [p.owner, 'owner', ...(z.by || [])] : z.who ? [z.who, ...(z.by || [])] : []).filter(Boolean))];
-        if (!names.length || !z.own && !names.some(n => text.toLowerCase().includes(String(n).toLowerCase()))) continue;
+        if (!names.length || !z.own && !names.some(n => nameKey(n) === nameKey(fallback) || text.toLowerCase().includes(String(n).toLowerCase()))) continue;
         if (people.some(x => x.names[0] === names[0])) continue;
         try { new Intl.DateTimeFormat('en', { timeZone: z.tz }); } catch { continue; }
         people.push({ names, tz: z.tz });
     }
+    // The chosen fallback must not be displaced by the hint's six-person limit.
+    people.sort((a, b) => Number(b.names.some(n => nameKey(n) === nameKey(fallback))) - Number(a.names.some(n => nameKey(n) === nameKey(fallback))));
     const stamps = [];
     for (const r of [...arr(rows)].sort((a, b) => a.index - b.index)) {
         const re = /(?<!\d)(?:\d{4}[-/.])?\d{1,2}[-/.]\d{1,2}(?:[-/.]\d{4})?\.?[,]?\s+[0-2]?\d:[0-5]\d(?!\d)/g;

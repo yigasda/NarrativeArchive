@@ -720,7 +720,8 @@ test('a short read reply next to a hidden message is not taken for edited or del
     await run(c.m, { now: '10-26 13:00', events: [{ id: 'thanks', at: 4, quote: 'ok thanks', summary: '고마워', date: '10-26', time: '12:45', phone: { notes: [{ title: 'thanks', text: '고마워' }] } }] });
     T.chat.push(say('Mara', 'see you tomorrow at nine then'));
     await run(c.m, { now: '10-26 14:00', events: [] });
-    assert.ok(!T.input.includes('[#4] Ren: ok thanks!'));
+    assert.ok(!T.input.split('[NEW MESSAGES]')[1].split('\n[')[0].includes('[#4] Ren: ok thanks!'));
+    assert.ok(T.input.split('[NEW MESSAGES]')[0].includes('[#4] Ren: ok thanks!')); // viewpoint background, not unread
     assert.deepEqual(c.p.syncLast.notes, []);
     assert.equal(c.p.sync.events.thanks.at, 4);
 });
@@ -1229,4 +1230,71 @@ test('same-time scene without a new timestamp keeps the supplied moment', async(
     clockPhone(c.p);c.p.now='11-05 02:30';c.m.dateOrder='md';
     await run(c.m,{clock:{sender:'Ren',holder:'Ren',basis:'Meanwhile in Berlin',sourceTime:null},now:'11-05 02:30',events:[]});
     assert.equal(c.p.now,'11-05 02:30');
+});
+
+
+test('screen default is explicit, chat-local, and independent of active persona or open phone', async () => {
+    const m={phones:{ren:{owner:'Ren',where:{people:[{name:'Mara'},{name:'Ivo'}]}}}}, other={};
+    const context={name1:'Mara',characterId:0,characters:[{name:'Ren'}]};
+    assert.equal(data.screenHolderOf(m),'');
+    assert.deepEqual(data.screenHolderChoices(m,context).map(x=>x.name),['Mara','Ren','Ivo']);
+    await data.setScreenHolder(m,' Mara ');
+    assert.equal(data.screenHolderOf(m),'Mara'); assert.equal(data.screenHolderOf(other),'');
+    context.name1='Ivo'; data.screenHolderChoices(m,context);
+    assert.equal(data.screenHolderOf(m),'Mara');
+    await data.setScreenHolder(m,''); assert.equal(m.phoneScreenHolder,'');
+});
+test('unnamed default gets clock candidates, while unknown location gets no invented conversion', async () => {
+    const p={owner:'Ren'}; clockPhone(p);
+    const rows=[{index:125,text:'Ren: 11.05, 08:26. Are you okay?'}];
+    const m={dateOrder:'md',phoneScreenHolder:'Mara'};
+    const r=await data.reflectionClocks(p,rows,m);
+    assert.equal(r.choices.find(x=>x.names[0]==='Mara').ownerTime,'11-05 00:26');
+    assert.match(data.clockBlock(p,p.now,m),/Default screen viewpoint: "Mara"/);
+    const unknown={dateOrder:'md',phoneScreenHolder:'Ivo'};
+    assert.match(data.clockBlock(p,p.now,unknown),/Default screen viewpoint: "Ivo"/);
+    assert.ok(!(await data.reflectionClocks(p,rows,unknown)).choices.some(x=>x.names[0]==='Ivo'));
+    assert.equal(data.clockBlock({owner:'Unknown'},'',m),'[OWNER\'S CLOCK]\nDefault screen viewpoint: "Mara".');
+});
+test('viewpoint context is bounded and comes only before the selected range', () => {
+    const rows=Array.from({length:50},(_,index)=>({index,text:`[#${index}] scene ${index}`}));
+    assert.deepEqual(data.sceneBefore(rows,20).rows.map(r=>r.index),[18,19]);
+    assert.equal(data.sceneBefore(rows,0).text,'');
+    const long=data.sceneBefore([{index:1,text:'old scene '.repeat(10000)}],2);
+    assert.match(long.text,/end excerpt/); assert.ok(long.text.length<1500);
+    assert.ok(!data.sceneBefore(rows,20).text.includes('scene 49'));
+});
+test('default and nearby scene survive undo and reapply; background cannot create a new event', async () => {
+    const c=setup([say('Ren','start'),say('Mara','Mara reads on her own phone. 11.05, 08:24.'),say('Ren','11.05, 08:26. Are you okay?')]);
+    clockPhone(c.p); c.m.dateOrder='md'; await data.setScreenHolder(c.m,'Mara');
+    const answer={clock:{sender:'Ren',holder:'Mara',basis:'Default and preceding reading scene',sourceTime:'11.05, 08:26'},now:'11-05 00:26',events:[{id:'reply',at:2,quote:'Are you okay',date:'11-05',time:'00:26',phone:{notes:[{title:'Reply',text:'Are you okay?',time:'11-05 00:26'}]}}]};
+    await run(c.m,answer);
+    const first=T.input;
+    assert.match(first,/\[SCENE BEFORE\]/);
+    assert.match(first,/Default screen viewpoint: "Mara"/);
+    assert.match(first,/On Mara's clock → owner's time: 11-05 00:26/);
+    await data.undoRound(c.m,c.p);
+    assert.equal(c.m.phoneScreenHolder,'Mara'); assert.equal(c.p.notes.length,0);
+    await run(c.m,answer);
+    assert.equal(c.m.phoneScreenHolder,'Mara'); assert.equal(c.p.notes.length,1);
+    assert.equal(c.p.now,'11-05 00:26');
+    assert.match(T.input,/Default screen viewpoint: "Mara"/);
+    T.chat.push(say('Ren','A quiet evening continues.'));
+    await run(c.m,{now:'11-05 00:30',events:[{id:'past',at:1,quote:'Mara reads on her own phone',date:'11-05',time:'00:24',phone:{notes:[{title:'Wrong background',text:'Not a new event'}]}}]});
+    assert.ok(!c.p.notes.some(x=>x.title==='Wrong background'));
+});
+
+
+test('messenger time initializes once from the current persona, including an unavailable persona or explicit unset', async () => {
+    const m={}, other={};
+    await data.ensureScreenHolder(m,{name1:' Mara '});
+    assert.equal(m.phoneScreenHolder,'Mara');
+    await data.ensureScreenHolder(m,{name1:'Ivo'}); assert.equal(m.phoneScreenHolder,'Mara');
+    await data.setScreenHolder(m,'Ren');
+    await data.ensureScreenHolder(m,{name1:'Ivo'}); assert.equal(m.phoneScreenHolder,'Ren');
+    await data.setScreenHolder(m,'');
+    await data.ensureScreenHolder(m,{name1:'Ivo'}); assert.equal(m.phoneScreenHolder,'');
+    await data.ensureScreenHolder(other,{}); assert.equal(other.phoneScreenHolder,'');
+    await data.ensureScreenHolder(other,{name1:'Mara'}); assert.equal(other.phoneScreenHolder,'');
+    const fresh={}; await data.ensureScreenHolder(fresh,{name1:'Ivo'}); assert.equal(fresh.phoneScreenHolder,'Ivo');
 });

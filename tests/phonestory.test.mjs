@@ -6,7 +6,7 @@ const core=enc(`export const ctx=()=>globalThis.storyTest.context;export const g
 const src=await readFile(new URL('../src/phonestory.js',import.meta.url),'utf8');
 const story=await import(enc(src.replace("'./core.js'",JSON.stringify(core))));
 function setup(){
- const m={text:'Story archive',phoneProfiles:{newPerson:{type:'character',id:'new.png'}},phones:{oscar:{owner:'Oscar',wealthPlan:{currency:'EUR'}}},finance:{accounts:{a:{amount:42}},prices:{},transfers:{}},lastPhoneOwner:'Oscar',phoneLore:['old'],phoneLoreOff:{old:[1]}};
+ const m={text:'Story archive',phoneScreenHolder:'Mara',phoneProfiles:{newPerson:{type:'character',id:'new.png'}},phones:{oscar:{owner:'Oscar',wealthPlan:{currency:'EUR'}}},finance:{accounts:{a:{amount:42}},prices:{},transfers:{}},lastPhoneOwner:'Oscar',phoneLore:['old'],phoneLoreOff:{old:[1]}};
  const state=globalThis.storyTest={meta:m,saves:0,prompts:0,choice:'keep',confirmed:true};
  state.context={characterId:0,characters:[{avatar:'oscar.png'}],getCurrentChatId:()=>state.chat || 'branch',POPUP_TYPE:{CONFIRM:1},POPUP_RESULT:{AFFIRMATIVE:1},callGenericPopup:async()=>{state.prompts++;return state.confirmed}};
  globalThis.$=()=>({find:()=>({val:()=>state.choice})});
@@ -16,12 +16,12 @@ test('branched phones ask once, keep a detached copy, and preserve the source',a
  const {m,state}=setup();m.phoneStoryScope='parent';const source=structuredClone(m),oldPhone=m.phones.oscar;
  assert.equal(await story.ensurePhoneStory(m),true);assert.equal(state.prompts,1);assert.notEqual(m.phones.oscar,oldPhone);
  m.phones.oscar.owner='Changed';assert.equal(source.phones.oscar.owner,'Oscar');assert.equal(oldPhone.owner,'Oscar');
- await story.ensurePhoneStory(m);assert.equal(state.prompts,1);
+ await story.ensurePhoneStory(m);assert.equal(state.prompts,1);assert.equal(m.phoneScreenHolder,'Mara');
 });
 test('fresh story clears phones and financial records together, not the archive or source',async()=>{
  const {m,state}=setup();const source=structuredClone(m);m.phoneStoryScope='parent';state.choice='fresh';
  await story.ensurePhoneStory(m);
- assert.deepEqual(m.phones,{});for(const key of ['finance','phoneProfiles','lastPhoneOwner','phoneLore','phoneLoreOff'])assert.equal(m[key],undefined);
+ assert.deepEqual(m.phones,{});for(const key of ['finance','phoneProfiles','lastPhoneOwner','phoneLore','phoneLoreOff','phoneScreenHolder'])assert.equal(m[key],undefined);
  assert.equal(m.text,'Story archive');assert.equal(source.finance.accounts.a.amount,42);assert.equal(m.phoneStoryScope,story.phoneChatScope(state.context));
 });
 test('cancel and switching chats during choice leave saved phone data untouched',async()=>{
@@ -57,8 +57,8 @@ test('archive import offers a fresh story without copying phones or finance',asy
  assert.equal(m.text,'Imported story');assert.equal(m.worldOn,true);assert.deepEqual(m.phones,{});assert.equal(m.finance,undefined);assert.ok(source.settings.phones.other);
 });
 test('archive continuation copies phones and ledger together and never retains unrelated target cash',async()=>{
- const {m,state}=setup();const source={text:'Continuation',settings:{phones:{other:{owner:'Other',wealthPlan:{currency:'USD'}}},finance:{accounts:{foreign:{amount:99}}},lastPhoneOwner:'Other'}};
- await importHarness(m,state)(source,'Other story');assert.equal(m.finance.accounts.foreign.amount,99);assert.equal(m.finance.accounts.a,undefined);assert.notEqual(m.phones,source.settings.phones);assert.equal(m.phoneStoryScope,story.phoneChatScope(state.context));
+ const {m,state}=setup();const source={text:'Continuation',settings:{phoneScreenHolder:'Ivo',phones:{other:{owner:'Other',wealthPlan:{currency:'USD'}}},finance:{accounts:{foreign:{amount:99}}},lastPhoneOwner:'Other'}};
+ await importHarness(m,state)(source,'Other story');assert.equal(m.phoneScreenHolder,'Ivo');assert.equal(m.finance.accounts.foreign.amount,99);assert.equal(m.finance.accounts.a,undefined);assert.notEqual(m.phones,source.settings.phones);assert.equal(m.phoneStoryScope,story.phoneChatScope(state.context));
  delete source.settings.finance;await importHarness(m,state)(source,'Legacy');assert.equal(m.finance,undefined);
 });
 test('cancelled archive phone choice leaves both archive and phone data intact',async()=>{
