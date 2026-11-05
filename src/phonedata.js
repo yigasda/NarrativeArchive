@@ -2177,8 +2177,8 @@ function reflectionClocks0(p, rows, m) {
         }
     }
     if (!choices.length) return { choices, text: identity };
-    const lines = [`Time text in #${stamp.at}: ${JSON.stringify(stamp.sourceTime)}${stamp.clock ? ' (HTML time field; calendar date unknown)\nReference calculation only. If the story shows a time jump, follow it instead.' : ''}\n${choices.map(c => c.reference
-            ? `${c.names[0]}: saved local ${c.reference.localAnchor}; ${c.reference.earlier ? 'earlier clock, next-day reference only' : 'same or later clock, same-day reference only'}. Reference date ${c.reference.date} → owner's clock ${c.reference.ownerClock} (${c.reference.dayShift > 0 ? '+' : ''}${c.reference.dayShift} days relative to screen).`
+    const lines = [`Time text in #${stamp.at}: ${JSON.stringify(stamp.sourceTime)}${stamp.clock ? ' (HTML time field; calendar date unknown)' : ''}\n${choices.map(c => c.reference
+            ? `On ${c.names[0]}'s clock → owner's clock: ${c.reference.ownerClock} (reference${c.reference.dayShift ? `; ${c.reference.dayShift > 0 ? '+' : ''}${c.reference.dayShift} day${Math.abs(c.reference.dayShift) === 1 ? '' : 's'} relative to screen` : ''}).`
             : `On ${c.names[0]}'s clock → owner's time: ${c.ownerTime}`).join('\n')}`];
     return { choices, text: `${identity}\n${clockBlock(p, p.now, m) ? '' : `[OWNER'S CLOCK]\nThe owner is in ${own.where}, ${p.now || 'time unknown'} now.\n`}Time choices (not proof of whose screen, or which time is now). Date order: ${dateOrderOf(m) === 'dm' ? 'day.month' : 'month.day'}.\n${lines.join('\n')}` };
 }
