@@ -144,7 +144,7 @@ const LIFE_ONCE = `- An alarm for one occasion (a flight, an appointment) rings 
 const LIFE_CHANGE = `- A record already in LIFE NOW is changed with "change": its id; write only the fields that changed. A deleted file is "deleted": true.`;
 const CLOCK_FIRST = `CLOCK FIRST
 - Follow the scene's viewpoint, not the sender. Keep it until the scene changes; when unclear, use the default screen viewpoint in OWNER'S CLOCK. Attachments have their own clocks.
-- In "clock", write sender, holder (whose screen or scene), basis (brief evidence and time passed), and sourceTime (as written). Use null for absent sender or sourceTime.
+- In "clock", write sender (who sent the displayed message), holder (whose screen or scene), basis (brief evidence and time passed), and sourceTime (as written). Use null for absent sender or sourceTime.
 - Convert the source time using OWNER'S CLOCK, then follow later time passing to set "now". A time choice is a starting point; "at the same time" adds no time.
 - The owner's present scene agrees with "now". Other scenes, memories and appointments keep their own times.`;
 export function updateSystem({ money = true, delivery = false, life = false, weather = false, tracker = false, split = false, invest = false, zone = false } = {}) {
