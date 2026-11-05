@@ -721,7 +721,7 @@ test('a short read reply next to a hidden message is not taken for edited or del
     T.chat.push(say('Mara', 'see you tomorrow at nine then'));
     await run(c.m, { now: '10-26 14:00', events: [] });
     assert.ok(!T.input.split('[NEW MESSAGES]')[1].split('\n[')[0].includes('[#4] Ren: ok thanks!'));
-    assert.ok(T.input.split('[NEW MESSAGES]')[0].includes('[#4] Ren: ok thanks!')); // viewpoint background, not unread
+    assert.ok(!T.input.includes('[#4] Ren: ok thanks!'));
     assert.deepEqual(c.p.syncLast.notes, []);
     assert.equal(c.p.sync.events.thanks.at, 4);
 });
@@ -1256,21 +1256,17 @@ test('unnamed default gets clock candidates, while unknown location gets no inve
     assert.ok(!(await data.reflectionClocks(p,rows,unknown)).choices.some(x=>x.names[0]==='Ivo'));
     assert.equal(data.clockBlock({owner:'Unknown'},'',m),'[OWNER\'S CLOCK]\nDefault screen viewpoint: "Mara".');
 });
-test('viewpoint context is bounded and comes only before the selected range', () => {
-    const rows=Array.from({length:50},(_,index)=>({index,text:`[#${index}] scene ${index}`}));
-    assert.deepEqual(data.sceneBefore(rows,20).rows.map(r=>r.index),[18,19]);
-    assert.equal(data.sceneBefore(rows,0).text,'');
-    const long=data.sceneBefore([{index:1,text:'old scene '.repeat(10000)}],2);
-    assert.match(long.text,/end excerpt/); assert.ok(long.text.length<1500);
-    assert.ok(!data.sceneBefore(rows,20).text.includes('scene 49'));
-});
-test('default and nearby scene survive undo and reapply; background cannot create a new event', async () => {
+test('default survives undo and reapply without preceding messages or their clock candidates', async () => {
     const c=setup([say('Ren','start'),say('Mara','Mara reads on her own phone. 11.05, 08:24.'),say('Ren','11.05, 08:26. Are you okay?')]);
     clockPhone(c.p); c.m.dateOrder='md'; await data.setScreenHolder(c.m,'Mara');
-    const answer={clock:{sender:'Ren',holder:'Mara',basis:'Default and preceding reading scene',sourceTime:'11.05, 08:26'},now:'11-05 00:26',events:[{id:'reply',at:2,quote:'Are you okay',date:'11-05',time:'00:26',phone:{notes:[{title:'Reply',text:'Are you okay?',time:'11-05 00:26'}]}}]};
+    const answer={clock:{sender:'Ren',holder:'Mara',basis:'Default screen viewpoint',sourceTime:'11.05, 08:26'},now:'11-05 00:26',events:[{id:'reply',at:2,quote:'Are you okay',date:'11-05',time:'00:26',phone:{notes:[{title:'Reply',text:'Are you okay?',time:'11-05 00:26'}]}}]};
     await run(c.m,answer);
     const first=T.input;
-    assert.match(first,/\[SCENE BEFORE\]/);
+    assert.ok(!first.includes('[SCENE BEFORE]'));
+    assert.ok(!first.includes('Mara reads on her own phone'));
+    assert.ok(!first.includes('08:24'));
+    assert.ok(!T.sys.includes('SCENE BEFORE'));
+    assert.ok(!data.everydaySystem().includes('SCENE BEFORE'));
     assert.match(first,/Default screen viewpoint: "Mara"/);
     assert.match(first,/On Mara's clock → owner's time: 11-05 00:26/);
     await data.undoRound(c.m,c.p);

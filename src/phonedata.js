@@ -155,7 +155,6 @@ An app adds your JSON to the phone; you only write what is new.${split ? ' Money
 
 YOU GET
 - NEW MESSAGES: the messages to read now, each with its number (#123).
-- SCENE BEFORE (sometimes): nearby earlier messages for viewpoint only; no new events.
 - ARCHIVE FOR THESE MESSAGES (sometimes): summary sections covering them, or a stretch archived before the phone read it (its messages are not in NEW MESSAGES). They count as evidence, like the messages.
 - ARCHIVE BEFORE (sometimes): what happened earlier. Background; nothing in it is new.
 - STORY NOW (sometimes): where the story stands after these messages. Background.
@@ -456,7 +455,7 @@ Another step already put the story's own events on the phone; you only add every
 
 YOU GET
 - NEW MESSAGES: the messages these hours come from, each with its number (#123).
-- ARCHIVE FOR THESE MESSAGES, ARCHIVE BEFORE, STORY NOW, SCENE BEFORE (sometimes): the story around them. Background.
+- ARCHIVE FOR THESE MESSAGES, ARCHIVE BEFORE, STORY NOW (sometimes): the story around them. Background.
 - EVENTS ON THE PHONE, PHONE NOW, LIFE NOW (sometimes: the alarms, files and health days, with record ids), WEATHER NOW (sometimes), DAYS (sometimes): what the phone holds.
 ${CLOCK_GET}
 - PEOPLE AROUND (sometimes): people in the owner's life, close or not, from the cards, persona, profile and lorebook, with where things stand now.
@@ -1141,8 +1140,7 @@ async function updatePhone(m, owner) {
         // whose scene the newest status line is (true the owner's, false elsewhere, null unknown); one with no time too
         let sceneOwn = tracker ? sceneHome(p, tracker.place, m) : true;
         // a status line among these messages whose scene the phone can't place: the model says whose clock it shows
-        const preceding = sceneBefore(rows, Math.min(...round.rows.map(r => r.index), ...evidence.map(x => x.first)));
-        const clockChoices = await reflectionClocks(p, [...preceding.rows, ...round.rows, ...evidence.map(x => ({ index: x.first, text: x.text }))], m);
+        const clockChoices = await reflectionClocks(p, [...round.rows, ...evidence.map(x => ({ index: x.first, text: x.text }))], m);
         const baseClock = clockBlock(p, hm(p.now) ? p.now : st?.raw, m, st);
         const clock = [baseClock, clockChoices.text].filter(Boolean).join('\n');
         // (on a phone that knows no other city, a scene that isn't one of the owner's places is asked too: "Frankfurt"
@@ -1171,7 +1169,6 @@ async function updatePhone(m, owner) {
             return `${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getUTCDay()]}`;
         }) : [];
         const inputParts = [
-            preceding.text,
             `[NEW MESSAGES]\n${round.rows.map(r => r.text).join('\n\n') || '(none: this round reads only stretches archived before the phone read them)'}`,
             evidence.length ? `[ARCHIVE FOR THESE MESSAGES]\n${evidence.map(x => x.text).join('\n\n')}` : '',
             before.length ? `[ARCHIVE BEFORE]\n${before.join('\n\n')}` : '',
@@ -1801,18 +1798,6 @@ export function screenHolderChoices(m, c = ctx()) {
 export function screenHolderLabel(m, c = ctx()) {
     const saved = screenHolderOf(m), key = nameKey(screenPerson(m, saved)?.name || saved);
     return screenHolderChoices(m, c).find(x => nameKey(screenPerson(m, x.name)?.name || x.name) === key)?.name || saved;
-}
-// Only context before this round, never the most recently processed (possibly later) scene.
-export function sceneBefore(rows, start, budget = 1200) {
-    const selected = arr(rows).filter(r => r.index < start).sort((a, b) => a.index - b.index).slice(-2);
-    const kept = [];
-    for (const r of selected.reverse()) {
-        if (budget < 80) break;
-        let text = String(r.text || '');
-        if (estTok(text) > budget) text = `[#${r.index}, end excerpt] ${text.slice(-Math.floor(budget * 0.7))}`;
-        budget -= estTok(text); kept.unshift({ index: r.index, text });
-    }
-    return { rows: kept, text: kept.length ? `[SCENE BEFORE]\n${kept.map(r => r.text).join('\n\n')}` : '' };
 }
 export const dateOrderOf = m => (m?.dateOrder === 'dm' ? 'dm' : 'md');
 export const needsDateOrder = m => !m?.dateOrder;
