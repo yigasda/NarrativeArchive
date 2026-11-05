@@ -1251,11 +1251,11 @@ test('unnamed default gets clock candidates, while unknown location gets no inve
     const m={dateOrder:'md',phoneScreenHolder:'Mara'};
     const r=await data.reflectionClocks(p,rows,m);
     assert.equal(r.choices.find(x=>x.names[0]==='Mara').ownerTime,'11-05 00:26');
-    assert.match(data.clockBlock(p,p.now,m),/Default screen viewpoint: "Mara"/);
+    assert.match(data.clockBlock(p,p.now,m),/Default screen viewpoint: Mara/);
     const unknown={dateOrder:'md',phoneScreenHolder:'Ivo'};
-    assert.match(data.clockBlock(p,p.now,unknown),/Default screen viewpoint: "Ivo"/);
+    assert.match(data.clockBlock(p,p.now,unknown),/Default screen viewpoint: Ivo/);
     assert.ok(!(await data.reflectionClocks(p,rows,unknown)).choices.some(x=>x.names[0]==='Ivo'));
-    assert.equal(data.clockBlock({owner:'Unknown'},'',m),'[OWNER\'S CLOCK]\nDefault screen viewpoint: "Mara".');
+    assert.equal(data.clockBlock({owner:'Unknown'},'',m),'[OWNER\'S CLOCK]\nPhone owner: Unknown\nDefault screen viewpoint: Mara');
 });
 test('default survives undo and reapply without preceding messages or their clock candidates', async () => {
     const c=setup([say('Ren','start'),say('Mara','Mara reads on her own phone. 11.05, 08:24.'),say('Ren','11.05, 08:26. Are you okay?')]);
@@ -1268,14 +1268,14 @@ test('default survives undo and reapply without preceding messages or their cloc
     assert.ok(!first.includes('08:24'));
     assert.ok(!T.sys.includes('SCENE BEFORE'));
     assert.ok(!data.everydaySystem().includes('SCENE BEFORE'));
-    assert.match(first,/Default screen viewpoint: "Mara"/);
+    assert.match(first,/Default screen viewpoint: Mara/);
     assert.match(first,/On Mara's clock → owner's time: 11-05 00:26/);
     await data.undoRound(c.m,c.p);
     assert.equal(c.m.phoneScreenHolder,'Mara'); assert.equal(c.p.notes.length,0);
     await run(c.m,answer);
     assert.equal(c.m.phoneScreenHolder,'Mara'); assert.equal(c.p.notes.length,1);
     assert.equal(c.p.now,'11-05 00:26');
-    assert.match(T.input,/Default screen viewpoint: "Mara"/);
+    assert.match(T.input,/Default screen viewpoint: Mara/);
     T.chat.push(say('Ren','A quiet evening continues.'));
     await run(c.m,{now:'11-05 00:30',events:[{id:'past',at:1,quote:'Mara reads on her own phone',date:'11-05',time:'00:24',phone:{notes:[{title:'Wrong background',text:'Not a new event'}]}}]});
     assert.ok(!c.p.notes.some(x=>x.title==='Wrong background'));
@@ -1346,6 +1346,31 @@ test('same source clock resolves for either phone owner, with no extra conversio
  const absent=await data.reflectionClocks(mara,[{index:156,text:'A quiet moment.'}],m);
  assert.equal(absent.choices.length,0);assert.match(absent.text,/default screen times need no conversion/);
  assert.equal(from(await data.reflectionClocks(mara,rows,{...m,phoneScreenHolder:'Mara Park'}),'Mara'),'11-05 11:38');
+});
+
+test('reflection fallback uses the same OWNER\'S CLOCK labels without changing its candidate text', async () => {
+    const p = { owner: 'Ren', year: 2026, country: 'KR', now: '11-05 11:00' };
+    const m = { dateOrder: 'md', phoneScreenHolder: '', phones: { ren: p } };
+    const rows = [{ index: 2, text: 'Ren: 11.05 11:38' }];
+    assert.equal(data.clockBlock(p, p.now, m), '');
+    const r = await data.reflectionClocks(p, rows, m);
+    assert.equal(r.text, `Phone being updated: "Ren" (South Korea).
+[OWNER'S CLOCK]
+Phone owner: Ren
+Location: South Korea
+Saved phone time: 11-05 11:00
+Time choices (not proof of whose screen, or which time is now). Date order: month.day.
+Time text in #2: "11.05 11:38"
+On Ren's clock → owner's time: 11-05 11:38`);
+    assert.equal(r.choices[0].ownerTime, '11-05 11:38');
+    assert.doesNotMatch(r.text, /Default screen viewpoint:|Time differences from|The owner is in/);
+    delete p.now;
+    const unknown = await data.reflectionClocks(p, rows, m);
+    assert.match(unknown.text, /Saved phone time: unknown\nTime choices/);
+    assert.deepEqual(unknown.choices, r.choices);
+    assert.equal(unknown.text.split('Time choices')[1], r.text.split('Time choices')[1]);
+    delete p.country;
+    assert.deepEqual(await data.reflectionClocks(p, rows, m), { choices: [], text: '' });
 });
 
 test('reflection sends the matching owner identity and choices for both phones without rewriting model now',async()=>{
@@ -1450,9 +1475,12 @@ test('concise bare choices retain saved time, offsets, date order and candidates
         assert.deepEqual(result.choices, [{ at: 2, sourceTime: clock, clock, names: ['Mara', '마라'], date: null,
             reference: { date: referenceDate, ownerClock, dayShift: earlier ? -1 : 0, localAnchor: '2026-11-05 08:30', earlier } }]);
         assert.equal([data.clockBlock(p, p.now, m), result.text].join('\n'), `[OWNER'S CLOCK]
-The owner is in Berlin, 11-05 00:30 now.
-Mara (in Seoul) is 8 hours ahead.
-Default screen viewpoint: "Mara".
+Phone owner: Ren
+Location: Berlin
+Saved phone time: 11-05 00:30
+Default screen viewpoint: Mara
+Time differences from Berlin:
+- Mara (Seoul): +8 hours
 Phone being updated: "Ren" (Berlin).
 Time choices (not proof of whose screen, or which time is now). Date order: day.month.
 Time text in #2: "${clock}" (HTML time field; calendar date unknown)
@@ -1487,7 +1515,7 @@ test('concise bare references still use DST at the calculated instant and omit g
         p.now = now;
         const m = { phoneScreenHolder: 'Mara' };
         const result = await data.reflectionClocks(p, [htmlRow(2, 'Mara <time>03:30</time>')], m);
-        assert.ok(data.clockBlock(p, p.now, m).includes(`${savedOffset} hours behind`));
+        assert.ok(data.clockBlock(p, p.now, m).includes(`-${savedOffset} hours`));
         assert.equal(result.choices[0].reference.ownerClock, ownerClock);
         assert.ok(result.text.endsWith(`On Mara's clock → owner's clock: ${ownerClock} (reference).`));
         const ambiguous = await data.reflectionClocks(p, [htmlRow(2, 'Mara <time>02:30</time>')], m);
@@ -1504,7 +1532,7 @@ test('a story jump across DST keeps the model date and time instead of pinning t
     // A canned answer checks request/output preservation, not an actual model's inference.
     try { await run(c.m, { now: '07-05 05:13', clock: { basis: 'Several months later, in July', screen: { owner: 'Mara', time: '12:13' } }, events: [] }); }
     finally { delete T.clean; }
-    assert.ok(T.input.includes(`The owner is in Berlin, ${saved} now.`));
+    assert.ok(T.input.includes(`Location: Berlin\nSaved phone time: ${saved}`));
     assert.match(T.input, /On Mara's clock → owner's clock: 04:13 \(reference\)\./);
     assert.ok(T.input.includes(cleanMessage(raw, { stripTags: true })));
     assert.equal(c.p.now, '07-05 05:13');
@@ -1743,7 +1771,7 @@ for (let repeat = 1; repeat <= 5; repeat++) {
                 assert.ok(at > previous, `${format}: entire message remains in order`);
                 previous = at;
             }
-            assert.match(T.input, /11-05 03:38 now/);
+            assert.match(T.input, /Saved phone time: 11-05 03:38/);
             assert.equal((T.input.match(/Time text in #/g) || []).length, 1);
             assert.match(T.input, /Time text in #6:/);
             assert.match(globalThis.__everydayIn.at(-1), /Owner-local window: 11-05 03:38 to 11-05 04:27/);

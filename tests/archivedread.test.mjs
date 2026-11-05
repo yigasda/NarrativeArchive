@@ -263,7 +263,7 @@ test('the owner\'s place not a city name, or no weather app: the zone still come
         assert.equal(c.p.life.weather.here.place, "Ren's flat");
         const bare = { owner: 'Ren', now: '10-26 03:00', year: 2026, where: c.p.where };
         assert.equal(data.storyNow(bare), '10-26 04:50');
-        assert.match(data.clockBlock(bare, data.storyNow(bare)), /The owner is in Frankfurt am Main, 10-26 04:50 now/);
+        assert.match(data.clockBlock(bare, data.storyNow(bare)), /Location: Frankfurt am Main\nSaved phone time: 10-26 03:00\nClock reference time: 10-26 04:50/);
     });
 });
 
@@ -290,7 +290,7 @@ test('another character\'s phone is a zone too: a scene the phone can\'t place i
     c.p.where = { at: 1, people: [{ name: 'Ren', city: 'Frankfurt am Main', local: '', lives: 'DE', tz: 'Europe/Berlin' }] };
     c.m.phones.mara = { owner: 'Mara', country: 'KR' };
     await withTrackers([trk(2, '12:50', 'the cafe')], async () => {
-        assert.match(data.clockBlock(c.p, c.p.now, c.m), /Mara \(in South Korea\) is 8 hours ahead/);
+        assert.match(data.clockBlock(c.p, c.p.now, c.m), /Mara \(South Korea\): \+8 hours/);
         assert.equal(data.statusMoment(c.p, null, null, c.m).at, '');
         await run(c.m, { now: '10-26 04:52', statusCity: '', events: [] });
         assert.equal(c.p.now, '10-26 04:52');
@@ -433,7 +433,7 @@ test('another phone\'s place reading tells where its owner is (Mara in Frankfurt
     const c = setup([say('Ren', 'a'), say('Mara', 'b'), say('Ren', 'c')]);
     c.p.now = '10-26 20:00'; c.p.year = 2026; c.p.country = 'DE'; c.p.where = { at: 1, people: [], failed: true };
     c.m.phones.mara = { owner: 'Mara', country: 'KR', where: { at: 1, people: [{ name: 'Mara', city: 'Frankfurt am Main', names: ['Frankfurt am Main', 'Frankfurt'], lives: 'KR', tz: 'Europe/Berlin' }] } };
-    assert.ok(!/Mara.*ahead/.test(data.clockBlock(c.p, c.p.now, c.m)));
+    assert.ok(!/^- Mara.*: [+-]/m.test(data.clockBlock(c.p, c.p.now, c.m)));
     await withTrackers([trk(2, '20:10', 'Frankfurt · Bar')], async () => assert.equal(data.statusMoment(c.p, null, null, c.m).at, '10-26 20:10'));
 });
 
@@ -853,7 +853,7 @@ test('latest clock selection reads supplied archive evidence without reopening h
         assert.equal((T.input.match(/Time text in #/g) || []).length, 1);
         assert.match(T.input, visibleHasClock ? /Time text in #6: "11\.05 13:27"/ : /Time text in #2: "10\.05 01:00"/);
         assert.doesNotMatch(T.input, /23:59/);
-        assert.match(T.input, /11-05 03:38 now/);
+        assert.match(T.input, /Saved phone time: 11-05 03:38/);
         assert.match(T.input, /not proof of whose screen, or which time is now/);
     }
 });

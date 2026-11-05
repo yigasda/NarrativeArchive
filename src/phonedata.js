@@ -842,7 +842,7 @@ function phoneRequest(m, owner, p = null, lore = '', only = null, profile = '', 
     const ar = archiveFor(m, p ? p.upto ?? -1 : -1, nowAt(gap), !gap?.cut);
     const now = p ? JSON.stringify(phoneForModel(p)) : '';
     return [
-        p ? `[PHONE NOW]\n${now}` : '', clockBlock(p || m.phones?.[nameKey(owner)], upto == null ? undefined : storyNow(p || m.phones?.[nameKey(owner)] || {}, upto, m) || undefined, m, statusAt(p || m.phones?.[nameKey(owner)] || {}, upto, m)),
+        p ? `[PHONE NOW]\n${now}` : '', clockBlock(p || m.phones?.[nameKey(owner)] || { owner }, upto == null ? undefined : storyNow(p || m.phones?.[nameKey(owner)] || {}, upto, m) || undefined, m, statusAt(p || m.phones?.[nameKey(owner)] || {}, upto, m)),
         !p && m.phones?.[nameKey(owner)]?.device ? `[DEVICE — locked]\n${JSON.stringify(m.phones[nameKey(owner)].device)}` : '',
         archiveBlock(m, ar.text || '(nothing new)', `ARCHIVE${p ? ' — the sections since PHONE NOW' : ''}`, CHAT_TOKENS.phone, upto),
         world ? `[WORLD]\n${world}` : '',
@@ -2115,12 +2115,25 @@ export function zonesOf(p, at = p?.now, m = null) {
     return others.length ? { own: { name: own.where, tz: own.tz }, at: t, others } : null;
 }
 // what the model is told of them: it only adds or takes off the hours given (the code works them out)
-export const clockBlock = (p, at = p?.now, m = null, st = null) => {
-    const z = zonesOf(p, at, m);
-    const hrs = h => `${Math.abs(h)} hour${Math.abs(h) === 1 ? '' : 's'} ${h > 0 ? 'ahead' : 'behind'}`;
-    const base = z ? `[OWNER'S CLOCK]\nThe owner is in ${z.own.name}, ${z.at} now.\n${z.others.map(c => (c.where ? `${c.name} (in ${c.where}) is ${hrs(c.hours)}` : `${c.name} is ${hrs(c.hours)}`)).join(', ')}.${st?.known && st.at && st.at !== st.raw ? `\nThe newest status line, ${st.raw} in ${st.city}, is ${st.at} here.` : ''}` : '';
-    const holder = screenHolderOf(m);
-    return holder ? `${base || "[OWNER'S CLOCK]"}\nDefault screen viewpoint: ${JSON.stringify(holder)}.` : base;
+export const clockBlock = (p, at = p?.now, m = null, st = null, required = false) => {
+    const z = zonesOf(p, at, m), holder = screenHolderOf(m);
+    // Keep the same presence rule; the reflection's existing fallback can require this same format.
+    if (!z && !holder && !required) return '';
+    const label = v => /[\r\n]/.test(v) ? JSON.stringify(v) : v;
+    const location = z?.own.name || ownerZone(p)?.where;
+    const lines = ["[OWNER'S CLOCK]"];
+    if (p?.owner) lines.push(`Phone owner: ${label(p.owner)}`);
+    if (location) lines.push(`Location: ${label(location)}`);
+    if (p?.now || required) lines.push(`Saved phone time: ${p?.now ? label(p.now) : 'unknown'}`);
+    // Fills can use a story/status time instead of the saved phone time. Keep that reference distinct.
+    if (z && z.at !== p?.now) lines.push(`Clock reference time: ${z.at}`);
+    if (holder) lines.push(`Default screen viewpoint: ${label(holder)}`);
+    if (z) {
+        lines.push(`Time differences from ${label(location || "the owner's clock")}:`, ...z.others.map(c =>
+            `- ${label(c.name || 'Unnamed location')}${c.where ? ` (${label(c.where)})` : ''}: ${c.hours > 0 ? '+' : ''}${c.hours} hour${Math.abs(c.hours) === 1 ? '' : 's'}`));
+        if (st?.known && st.at && st.at !== st.raw) lines.push(`The newest status line, ${st.raw} in ${st.city}, is ${st.at} here.`);
+    }
+    return lines.join('\n');
 };
 // Reflection-only choices. Explicit dates stay as written; marked HTML clocks can carry a labelled fallback date.
 // Keep the request's date order and locations in the choices, not mutable chat state after the call.
@@ -2180,7 +2193,7 @@ function reflectionClocks0(p, rows, m) {
     const lines = [`Time text in #${stamp.at}: ${JSON.stringify(stamp.sourceTime)}${stamp.clock ? ' (HTML time field; calendar date unknown)' : ''}\n${choices.map(c => c.reference
             ? `On ${c.names[0]}'s clock → owner's clock: ${c.reference.ownerClock} (reference${c.reference.dayShift ? `; ${c.reference.dayShift > 0 ? '+' : ''}${c.reference.dayShift} day${Math.abs(c.reference.dayShift) === 1 ? '' : 's'} relative to screen` : ''}).`
             : `On ${c.names[0]}'s clock → owner's time: ${c.ownerTime}`).join('\n')}`];
-    return { choices, text: `${identity}\n${clockBlock(p, p.now, m) ? '' : `[OWNER'S CLOCK]\nThe owner is in ${own.where}, ${p.now || 'time unknown'} now.\n`}Time choices (not proof of whose screen, or which time is now). Date order: ${dateOrderOf(m) === 'dm' ? 'day.month' : 'month.day'}.\n${lines.join('\n')}` };
+    return { choices, text: `${identity}\n${clockBlock(p, p.now, m) ? '' : `${clockBlock(p, p.now, m, null, true)}\n`}Time choices (not proof of whose screen, or which time is now). Date order: ${dateOrderOf(m) === 'dm' ? 'day.month' : 'month.day'}.\n${lines.join('\n')}` };
 }
 const pkey = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
 // a place that is someone's own: their name (or their first name) then 's · 의 · 네, or a room, a home after it
