@@ -104,7 +104,7 @@ const htmlClockOnly = text => {
 };
 // Code spans may use any equal-length backtick runs, even across one paragraph's line breaks.
 // Index the next same-sized run first, so unmatched backticks do not repeatedly scan the whole text.
-const htmlClockCode = text => text.split(/(\0|\r?\n[ \t]*\r?\n)/).map(part => {
+const htmlClockCode = (text, preserve = false) => text.split(/(\0|\r?\n[ \t]*\r?\n)/).map(part => {
     const runs = [...part.matchAll(/`+/g)], next = new Map(), pieces = [];
     for (let i = runs.length - 1; i >= 0; i--) {
         runs[i].next = next.get(runs[i][0].length);
@@ -116,7 +116,7 @@ const htmlClockCode = text => text.split(/(\0|\r?\n[ \t]*\r?\n)/).map(part => {
         let slash = run.index;
         while (slash > 0 && part[slash - 1] === '\\') slash--;
         if ((run.index - slash) % 2 || !end) continue;
-        pieces.push(part.slice(from, run.index), '\0');
+        pieces.push(part.slice(from, run.index), preserve ? part.slice(run.index, end.index + end[0].length).replace(/[^\n]/g, ' ') : '\0');
         from = end.index + end[0].length;
         i = run.next;
     }
@@ -124,36 +124,100 @@ const htmlClockCode = text => text.split(/(\0|\r?\n[ \t]*\r?\n)/).map(part => {
     return pieces.join('');
 }).join('');
 // Markdown quotes and sample code are not current-clock evidence. Keep a barrier at each omission.
-const htmlClockMarkup = raw => {
+const htmlClockMarkup = (raw, preserve = false) => {
     let fence = '';
     const visible = String(raw || '').split('\n').map(line => {
-        const edge = /^[ \t]*(`{3,}|~{3,})([^\n]*)$/.exec(line);
+        const edge = /^[ \t]*(`{3,}|~{3,})([^\n]*)$/.exec(line), omitted = preserve ? ' '.repeat(line.length) : '\0';
         if (fence) {
             if (edge && edge[1][0] === fence[0] && edge[1].length >= fence.length && !edge[2].trim()) fence = '';
-            return '\0';
+            return omitted;
         }
-        if (/^[ \t]*>/.test(line)) return '\0';
-        if (edge && (edge[1][0] !== '`' || !edge[2].includes('`'))) { fence = edge[1]; return '\0'; }
+        if (/^[ \t]*>/.test(line)) return omitted;
+        if (edge && (edge[1][0] !== '`' || !edge[2].includes('`'))) { fence = edge[1]; return omitted; }
         return line;
     }).join('\n');
-    return htmlClockCode(visible);
+    return htmlClockCode(visible, preserve);
 };
 export function htmlClocks(raw) {
-    const input = htmlClockMarkup(raw), root = { name: '', text: '', hints: [], blocked: false, removed: false }, stack = [root];
+    return readHtmlClocks(htmlClockMarkup(raw));
+}
+// Context fields retain their written meaning. They are not current-clock candidates or conversions.
+const HTML_TIME_FIELD = new RegExp(String.raw`^(?:(?:${CLOCK_DATE})\.?[,]?[ \t]*[T ]?)?((?:${CLOCK_MERIDIEM}\s*)?\d{1,2}[ \t]*:[ \t]*\d{2}(?:\s*${CLOCK_MERIDIEM})?)(?:[ \t]+(?:(?!(?:AM|PM)\b)[A-Z]{2,5}|(?:UTC|GMT)[+-]\d{1,2}(?::\d{2})?))?$`, 'iu');
+const htmlTimeField = text => {
+    const hit = HTML_TIME_FIELD.exec(text.replace(/\s+/g, ' '));
+    return !!hit && !!htmlClockOnly(hit[1]);
+};
+const htmlFieldLabel = (name, attrs) => {
+    // Original names only: never style, title, event handlers, URLs, or entire HTML.
+    const cls = String(attrs.class || '').trim().replace(/\s+/g, ' '), id = String(attrs.id || '').trim().replace(/\s+/g, ' ');
+    return [cls && cls.slice(0, 96), id && `#${id.slice(0, 64)}`].filter(Boolean).join(' ') || '';
+};
+export function htmlTimeFields(raw) {
+    const excluded = [], source = String(raw || '');
+    // Preserve hidden/inert ancestry before separating fenced sources.
+    readHtmlClocks(htmlClockMarkup(source, true), true, excluded);
+    let at = 0;
+    const pieces = [];
+    for (const [start, end] of excluded.sort((a, b) => a[0] - b[0])) {
+        if (end <= at) continue;
+        pieces.push(source.slice(at, Math.max(at, start)), source.slice(Math.max(at, start), end).replace(/[^\n]/g, ' '));
+        at = end;
+    }
+    pieces.push(source.slice(at));
+    const input = pieces.join(''), groups = [], outside = [];
+    let fence = '', body = [], language = '', number = 0;
+    for (const line of input.split('\n')) {
+        const edge = /^[ \t]*(`{3,}|~{3,})([^\n]*)$/.exec(line);
+        if (fence) {
+            if (edge && edge[1][0] === fence[0] && edge[1].length >= fence.length && !edge[2].trim()) {
+                if (/^(?:html?|xhtml)?$/i.test(language)) {
+                    const fields = readHtmlClocks(body.join('\n'), true);
+                    if (fields.length) groups.push({ scope: 'fenced', block: ++number, fields });
+                }
+                fence = ''; body = [];
+            } else body.push(line);
+            outside.push('\0');
+        } else if (edge && (edge[1][0] !== '`' || !edge[2].includes('`'))) {
+            fence = edge[1]; language = edge[2].trim(); outside.push('\0');
+        } else outside.push(line);
+    }
+    // A closed fence proves a separate embedded source, not what the displayed time means.
+    const fields = readHtmlClocks(htmlClockMarkup(outside.join('\n')), true);
+    if (fields.length) groups.unshift({ scope: groups.length ? 'outside' : 'html', fields });
+    return groups;
+}
+export function htmlTimeContext(raw) {
+    return htmlTimeFields(raw).map(group => {
+        const heading = group.scope === 'outside' ? '바깥 메시지의 HTML' : group.scope === 'fenced'
+            ? `메시지 안쪽 HTML (코드 블록 ${group.block})` : '메시지의 HTML';
+        return `[${heading}]\n${group.fields.map(x => `${x.label}: ${x.sourceTime.replace(/\s+/g, ' ')}`).join('\n')}`;
+    }).join('\n');
+}
+function readHtmlClocks(input, fields = false, excluded = null) {
+    const root = { name: '', text: '', hints: [], blocked: false, removed: false }, stack = [root];
     let visible = '';
     const append = (text, expose = true) => {
         const node = stack[stack.length - 1];
         node.text += text;
         if (expose && !node.removed) visible += text;
     };
-    const finish = complete => {
+    const finish = (complete, end = input.length) => {
         const node = stack.pop(), parent = stack[stack.length - 1];
         if (node.blocked || !complete) {
+            if (excluded) excluded.push([node.start, end]);
             parent.text += '\0';
             if (!complete || !node.removed && !HTML_INLINE.test(node.name)) visible = '';
             return;
         }
         const sourceTime = clockHtmlText(node.text).trim(), clock = node.marked ? htmlClockOnly(sourceTime) : '';
+        if (fields) {
+            // Keep the smallest complete field; a parent can add an AM/PM marker or a date.
+            if (htmlTimeField(sourceTime) && (!node.hints.length || node.hints.length === 1)) {
+                parent.hints.push(node.hints[0]?.sourceTime === sourceTime ? node.hints[0] : { sourceTime, label: node.label || node.originalName });
+            } else parent.hints.push(...node.hints);
+            parent.text += node.text;
+            return;
+        }
         const datedText = sourceTime.replace(/\s+/g, ' ');
         const dated = node.marked && node.hints.length && datedClocks(datedText).some(x => x.sourceTime === datedText);
         const tail = clock ? clockVisibleText(visible).trimEnd() : '';
@@ -175,11 +239,13 @@ export function htmlClocks(raw) {
         if (input.startsWith('<!--', start)) {
             const end = input.indexOf('-->', start + 4);
             pos = end < 0 ? input.length : end + 3;
+            if (excluded) excluded.push([start, pos]);
             continue;
         }
         if (input.startsWith('<![CDATA[', start)) {
             const end = input.indexOf(']]>', start + 9);
             append('\0'); pos = end < 0 ? input.length : end + 3;
+            if (excluded) excluded.push([start, pos]);
             continue;
         }
         const head = /^<(\/?)([a-z][\w:-]*)(?=[\s/>])/i.exec(input.slice(start));
@@ -201,11 +267,11 @@ export function htmlClocks(raw) {
             while (at > 0 && stack[at].name !== name) at--;
             if (!at) {
                 // A message can start with the tail of reasoning, whose opening tag was not retained.
-                if (/^(?:think|thinking|thought|reasoning|analysis)$/.test(name)) { root.hints = []; root.text = ''; stack.splice(1); visible = ''; }
+                if (/^(?:think|thinking|thought|reasoning|analysis)$/.test(name)) { root.hints = []; root.text = ''; stack.splice(1); visible = ''; if (excluded) excluded.push([0, pos]); }
                 continue;
             }
-            while (stack.length - 1 > at) finish(false);
-            finish(true);
+            while (stack.length - 1 > at) finish(false, pos);
+            finish(true, pos);
             continue;
         }
         const attrs = {};
@@ -220,24 +286,26 @@ export function htmlClocks(raw) {
             append('\0', false);
             if (!stack[stack.length - 1].removed && !/^(?:script|style)$/.test(name)) visible = '';
             pos = hit ? close.lastIndex : input.length;
+            if (excluded) excluded.push([start, pos]);
             continue;
         }
         if (HTML_VOID.test(name)) {
-            append(name === 'br' || name === 'hr' ? '\n' : '\0', false);
+            append(!fields && (name === 'br' || name === 'hr') ? '\n' : '\0', false);
             if (!stack[stack.length - 1].removed) visible = '';
             continue;
         }
         const labels = `${name} ${attrs.class || ''} ${attrs.id || ''}`;
-        const node = { name, text: '', hints: [], marked: /time/i.test(labels),
+        const node = { name, start, originalName: head[2], label: htmlFieldLabel(head[2], attrs) || stack[stack.length - 1].label || '', text: '', hints: [], marked: /time/i.test(labels),
             removed: stack[stack.length - 1].removed || HTML_REMOVED.test(name),
             blocked: stack[stack.length - 1].blocked || HTML_HIDDEN.test(name)
                 || attrs.hidden !== undefined || /^true$/i.test(attrs['aria-hidden'] || '')
-                || HTML_DURATION.test(labels.replace(/([a-z\d])([A-Z])/g, '$1 $2'))
+                || fields && /(?:^|;)\s*(?:display\s*:\s*none|visibility\s*:\s*(?:hidden|collapse))\s*(?:!important\s*)?(?:;|$)/i.test(attrs.style || '')
+                || !fields && HTML_DURATION.test(labels.replace(/([a-z\d])([A-Z])/g, '$1 $2'))
                 // Dated values and ISO durations belong to other readers, not bare-clock hints.
-                || attrs.datetime !== undefined && !htmlClockOnly(attrs.datetime) };
+                || !fields && attrs.datetime !== undefined && !htmlClockOnly(attrs.datetime) };
         if (!node.removed && !HTML_INLINE.test(name)) visible = '';
         stack.push(node);
-        if (/\/\s*$/.test(input.slice(start, end))) finish(true);
+        if (/\/\s*$/.test(input.slice(start, end))) finish(true, pos);
     }
     // An unclosed element is not enough evidence; do not leak its otherwise valid descendants.
     while (stack.length > 1) finish(false);

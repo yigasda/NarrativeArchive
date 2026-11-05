@@ -14,7 +14,7 @@ const map = {
     './phoneprofile.js': href('phoneprofile.js'),
     './phonestory.js': encoded(`export const phoneTarget=()=>({scope:phoneChatScope(),check(){}});export const phoneChatScope=()=>globalThis.__dropTest.scope||'test';`),
     './wealth.js': encoded(`export const ensureWealth=async()=>null;export const wealthBlock=()=>'';export const wealthDate=()=> '2026-10-26';export const wealthCheck=()=>null;export const addWealthFX=()=>{};`),
-    './ai.js': encoded(`export const askDraft=async(input,o)=>{if(String(o.system).startsWith('GOAL\\nWrite the ordinary life')){(globalThis.__everydayIn||=[]).push(input);const e=globalThis.__everyday;return JSON.stringify(typeof e==='function'?e(input):e||{});}if(String(o.system).startsWith('GOAL\\nWork out where')){(globalThis.__where||=[]).push(input);await globalThis.__dropTest.beforeWhere?.();return '{"people":[]}';}const T=globalThis.__dropTest;if(String(o.system).startsWith('STAGE: money')){T.moneyInput=input;T.moneySys=o.system;T.moneyCalls=(T.moneyCalls||0)+1;if(T.moneyAnswers&&T.moneyAnswers.length){const a=T.moneyAnswers.shift();return typeof a==='string'?a:JSON.stringify(a);}const core=(T.lastCore&&T.lastCore.events)||[];const out=[];for(const l of String(input).split('\\n')){const x=l.match(/^- (.+?): #(\\d+) .*?\\("(.*)"\\)(?: \\(changed\\))?$/)||l.match(/^- (.+?): #(\\d+) /);if(!x)continue;const e=core.find(e=>e&&e.money&&Number(String(e.at).replace('#',''))===Number(x[2])&&(x[3]===undefined||String(e.quote||'').slice(0,200)===x[3]));if(e)out.push({id:x[1],money:e.money});}return JSON.stringify({events:out});}T.sys=o.system;T.input=input;const a=T.answers.shift();T.lastCore=a&&typeof a==='object'?a:null;return typeof a==='string'?a:JSON.stringify(a);};`),
+    './ai.js': encoded(`export const askDraft=async(input,o)=>{if(String(o.system).startsWith('GOAL\\nWrite the ordinary life')){(globalThis.__everydayIn||=[]).push(input);const e=globalThis.__everyday;return JSON.stringify(typeof e==='function'?e(input):e||{});}if(String(o.system).startsWith('GOAL\\nWork out where')){(globalThis.__where||=[]).push(input);await globalThis.__dropTest.beforeWhere?.();return '{"people":[]}';}const T=globalThis.__dropTest;if(String(o.system).startsWith('STAGE: money')){T.moneyInput=input;T.moneySys=o.system;T.moneyCalls=(T.moneyCalls||0)+1;if(T.moneyAnswers&&T.moneyAnswers.length){const a=T.moneyAnswers.shift();return typeof a==='string'?a:JSON.stringify(a);}const core=(T.lastCore&&T.lastCore.events)||[];const out=[];for(const l of String(input).split('\\n')){const x=l.match(/^- (.+?): #(\\d+) .*?\\("(.*)"\\)(?: \\(changed\\))?$/)||l.match(/^- (.+?): #(\\d+) /);if(!x)continue;const e=core.find(e=>e&&e.money&&Number(String(e.at).replace('#',''))===Number(x[2])&&(x[3]===undefined||String(e.quote||'').slice(0,200)===x[3]));if(e)out.push({id:x[1],money:e.money});}return JSON.stringify({events:out});}T.sys=o.system;T.input=input;await T.beforeCore?.();const a=T.answers.shift();T.lastCore=a&&typeof a==='object'?a:null;return typeof a==='string'?a:JSON.stringify(a);};`),
     './core.js': encoded(`export const ctx=()=>({chat:globalThis.__dropTest.chat,chatMetadata:globalThis.__dropTest.meta,loadWorldInfo:async()=>null,characters:[]});export const globalSettings=()=>({});export const saveMeta=async()=>{};`),
     './calendar.js': encoded(`export const calendars=()=>({});export const headingDate=()=>({});`),
     './drift.js': encoded(`export const recentForCheck=()=>[];export const chatRows=()=>globalThis.__dropTest.chat.map((x,i)=>({index:i,user:x.is_user,hidden:!!x.is_system,text:'[#'+i+'] '+x.name+': '+(globalThis.__dropTest.clean?globalThis.__dropTest.clean(x.mes):x.mes)}));`),
@@ -1490,7 +1490,8 @@ test('real cleaned input retains vague months/days narrative and model dates are
         assert.match(T.input, clock === '12:13' ? /same or later clock, same-day reference only/ : /earlier clock, next-day reference only/);
         const body = T.input.split('[NEW MESSAGES]\n')[1].split('\n\n[')[0];
         assert.ok(body.includes(cleanMessage(raw, { stripTags: true })));
-        assert.doesNotMatch(body, /<div|chat-timestamp/);
+        assert.doesNotMatch(body, /<div|style=/);
+        assert.ok(body.includes(`chat-timestamp: ${clock}`));
     }
 });
 test('bare hints never set now themselves, and recent backwards model results keep the existing guard', async () => {
@@ -1533,7 +1534,108 @@ test('raw HTML metadata is captured with the cleaned round before awaited prepar
     T.beforeWhere = () => { T.chat[2].mes = '<time>20:00</time>'; };
     try { await assert.rejects(run(c.m, { now: '11-05 08:30', events: [] }), /대화가 바뀌었어요/); }
     finally { delete T.beforeWhere; delete T.clean; }
-    assert.match(T.input, /Timestamp in #2: "08:30"/);
-    assert.doesNotMatch(T.input, /Timestamp in #2: "20:00"/);
+    assert.match(T.input, /Time text in #2: "08:30"/);
+    assert.doesNotMatch(T.input, /Time text in #2: "20:00"/);
     assert.equal(c.p.now, '11-05 08:12');
+});
+
+test('configured screen holder limits only bare HTML references in a five-message round', async () => {
+    const p = { owner: 'Ren' }; clockPhone(p);
+    const m = { phoneScreenHolder: 'Mara', dateOrder: 'md', phones: { ren: p } };
+    const rows = [htmlRow(1, 'Mara <span class="time">08:30</span>'),
+        ...Array.from({ length: 4 }, (_, i) => htmlRow(i + 2, `Mara 11.05 ${String(i + 9).padStart(2, '0')}:00`))];
+    const result = await data.reflectionClocks(p, rows, m);
+    assert.deepEqual([...new Set(result.choices.map(c => c.at))], [1, 2, 3, 4, 5]);
+    assert.deepEqual(result.choices.filter(c => c.at === 1).map(c => c.names[0]), ['Mara']);
+    assert.equal(result.choices[0].date, null);
+    assert.equal(result.choices[0].ownerTime, undefined);
+    assert.equal(result.choices[0].reference.ownerClock, '00:30');
+    for (const at of [2, 3, 4, 5]) assert.deepEqual(result.choices.filter(c => c.at === at).map(c => c.names[0]), ['Mara', 'Ren']);
+    assert.equal(result.choices.length, 9);
+    assert.match(result.text, /Reference calculation only\. If the story shows a time jump, follow it instead\./);
+    const block = [data.clockBlock(p, p.now, m), result.text].filter(Boolean).join('\n');
+    assert.equal((block.match(/\[OWNER'S CLOCK\]/g) || []).length, 1);
+    assert.equal((block.match(/Time text in #/g) || []).length, 5);
+});
+
+test('bare screen references resolve aliases and do not substitute an unknown configured holder', async () => {
+    const p = { owner: 'Ren' }; clockPhone(p);
+    const row = htmlRow(1, 'Mara <time>08:30</time> 11.05 09:00');
+    for (const holder of ['Mara', '마라']) {
+        const result = await data.reflectionClocks(p, [row], { phoneScreenHolder: holder, phones: { ren: p } });
+        assert.deepEqual(result.choices.filter(c => c.reference).map(c => c.names[0]), ['Mara']);
+        assert.equal(result.choices.filter(c => c.ownerTime).length, 2);
+    }
+    const unknown = await data.reflectionClocks(p, [row], { phoneScreenHolder: 'Unknown', phones: { ren: p } });
+    assert.equal(unknown.choices.filter(c => c.reference).length, 0);
+    assert.equal(unknown.choices.filter(c => c.ownerTime).length, 2);
+    const unset = await data.reflectionClocks(p, [row], { phoneScreenHolder: '', phones: { ren: p } });
+    assert.equal(unset.choices.filter(c => c.reference).length, 2);
+});
+
+test('configured bare references retain latest-twelve stamp cap and per-message deduplication', async () => {
+    const p = { owner: 'Ren' }; clockPhone(p);
+    const m = { phoneScreenHolder: 'Mara', phones: { ren: p } };
+    const rows = Array.from({ length: 16 }, (_, i) => htmlRow(i, 'Mara <time>08:30</time><time>08:30</time>'));
+    const result = await data.reflectionClocks(p, rows, m);
+    assert.equal(result.choices.length, 12);
+    assert.deepEqual(result.choices.map(c => c.at), Array.from({ length: 12 }, (_, i) => i + 4));
+    assert.ok(result.choices.every(c => c.names[0] === 'Mara' && c.date === null));
+});
+
+test('configured screen references retain DST conversion and leave inferred elapsed days untouched', async () => {
+    for (const [now, clock, ownerClock] of [['07-04 23:30', '08:30', '01:30'], ['11-04 23:30', '08:30', '00:30']]) {
+        const p = { owner: 'Ren' }; clockPhone(p); p.now = now;
+        const result = await data.reflectionClocks(p, [htmlRow(2, `Mara <time>${clock}</time>`)], { phoneScreenHolder: 'Mara', phones: { ren: p } });
+        assert.equal(result.choices.length, 1);
+        assert.equal(result.choices[0].reference.ownerClock, ownerClock);
+    }
+    const c = setup([say('Ren', 'start'), say('Mara', 'morning'), say('Ren', 'Several days later. Mara reads <time>08:30</time>.')]);
+    clockPhone(c.p); c.m.phoneScreenHolder = 'Mara';
+    await run(c.m, { now: '11-09 00:30', clock: { basis: 'Several days later', screen: { owner: 'Mara', time: '08:30' } }, events: [] });
+    assert.equal(c.p.now, '11-09 00:30');
+    assert.match(T.input, /Mara: saved local/);
+    assert.doesNotMatch(T.input, /Ren: saved local/);
+    assert.match(T.input, /Several days later/);
+});
+
+test('reflection keeps cleaned story and adds concise structural HTML time labels, with fixed prompts unchanged', async () => {
+    const raw = '<div class="chat-timestamp" style="font-size:12px;color:red;">11.03, 11:03</div>\nMara opens a ticket.\n```html\n<!DOCTYPE html><html><head><style>.status-bar { color: red; }</style></head><body><div class="status-bar"><span>03:03 CET</span><span>50%</span></div><div class="ticket"><span class="reservation-time">18:30</span></div></body></html>\n```\nSeveral days later, the story continues.';
+    const c = setup([say('Ren', 'start'), say('Mara', 'morning'), say('Ren', raw)]);
+    clockPhone(c.p); c.m.phoneScreenHolder = 'Mara';
+    T.clean = mes => cleanMessage(mes, { stripTags: true });
+    try { await run(c.m, { now: '11-09 08:30', events: [] }); }
+    finally { delete T.clean; }
+    const body = T.input.split('[NEW MESSAGES]\n')[1].split('\n\n[')[0];
+    assert.ok(body.includes(cleanMessage(raw, { stripTags: true })));
+    assert.match(body, /\[바깥 메시지의 HTML\]\nchat-timestamp: 11\.03, 11:03/);
+    assert.match(body, /\[메시지 안쪽 HTML \(코드 블록 1\)\]\nstatus-bar: 03:03 CET\nreservation-time: 18:30/);
+    assert.match(body, /Several days later, the story continues/);
+    assert.doesNotMatch(body, /color:red|color: red|font-size|class=|<html|<div/);
+    assert.doesNotMatch(T.input, /Timestamp in #/);
+    assert.equal(c.p.now, '11-09 08:30');
+});
+
+test('the money reflection stage retains compact HTML labels on its selected source messages', async () => {
+    const raw = 'I bought the book for 15000 won. <span class="reservation-time">11.03, 18:30</span>';
+    const c = setup([say('Ren', 'start'), say('Mara', 'morning'), say('Mara', raw)]);
+    T.clean = mes => cleanMessage(mes, { stripTags: true });
+    try { await run(c.m, { now: '11-03 19:00', events: [book(2, 'bought the book', [], 'new')] }); }
+    finally { delete T.clean; }
+    assert.match(T.moneyInput, /\[메시지의 HTML\]\nreservation-time: 11\.03, 18:30/);
+    assert.doesNotMatch(T.moneyInput, /class=/);
+    assert.equal(c.bank(), 85000);
+});
+
+
+test('core and money input share HTML labels even when only a class changes during the core await', async () => {
+    const raw = 'I bought the book for 15000 won. <span class="reservation-time">11.03, 18:30</span>';
+    const c = setup([say('Ren', 'start'), say('Mara', 'morning'), say('Mara', raw)]);
+    T.clean = mes => cleanMessage(mes, { stripTags: true });
+    T.beforeCore = () => { T.chat[2].mes = raw.replace('reservation-time', 'status-bar'); };
+    try { await run(c.m, { now: '11-03 19:00', events: [book(2, 'bought the book', [], 'new')] }); }
+    finally { delete T.clean; delete T.beforeCore; }
+    assert.match(T.input, /reservation-time: 11\.03, 18:30/);
+    assert.match(T.moneyInput, /reservation-time: 11\.03, 18:30/);
+    assert.doesNotMatch(T.moneyInput, /status-bar/);
 });

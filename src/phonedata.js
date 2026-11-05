@@ -19,7 +19,7 @@ import { parseSections, RANGE_HEAD, sectionKey, splitTail } from './sections.js'
 import { glossaryEntries } from './translate.js';
 import { worldText } from './world.js';
 import { phoneChatScope, phoneTarget } from './phonestory.js';
-import { dateOrderSource, datedClocks, htmlClocks, swapDate, withDateOrder, tidyKo, arr, evOf, gapDays, giftOf, hhmm, jsonOf, ko, parseJson, storyMin, byStory, yearIn, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
+import { dateOrderSource, datedClocks, htmlClocks, htmlTimeContext, swapDate, withDateOrder, tidyKo, arr, evOf, gapDays, giftOf, hhmm, jsonOf, ko, parseJson, storyMin, byStory, yearIn, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
 import { clockFallback } from './phoneclock.js';
 export { tidyKo, arr, gapDays, giftOf, hhmm, jsonOf, ko, last4, line, num, pad, pick, storyMin, byStory, str, when, withEv };
 import { COUNTRY_TZ, applyDays, applyLife, applyWeather, cardClock, cityAt, dayGap, dlvClock, fillDays, lifeClock, lifeNow, weatherFrom, zoneShift } from './phonesynclife.js';
@@ -618,9 +618,34 @@ export const CHAT_TOKENS = { phone: 70_000, life: 40_000, apps: 30_000 };
 // the chat from the newest message back (upto: from the phone's clock back, see phoneAt)
 const atOf = t => Number((String(t).match(/^\[#(\d+)/) || [])[1] ?? NaN);
 const chatUpto = (rows, upto) => (upto == null ? rows : rows.filter(t => !(atOf(t) > upto)));
+// Model-only context: keep source rows and sync fingerprints on the ordinary cleaned text.
+// Read raw HTML only for a message this request already selected, never archive summaries by index.
+const phoneMessageText = (text, index = atOf(text)) => {
+    const message = Number.isInteger(index) ? ctx().chat?.[index] : null;
+    const context = message && !message.is_system ? htmlTimeContext(message.mes) : '';
+    return context ? `${text}\n${context}` : text;
+};
+const recentPhoneRows = (n, { upto = null, ...options } = {}) => chatUpto(recentForCheck(upto == null ? n : 1e9, options), upto).slice(-n);
+export function recentPhoneText(n, { maxChars = Infinity, ...options } = {}) {
+    const rows = recentPhoneRows(n, options), out = [];
+    let room = Math.max(0, maxChars);
+    for (let i = rows.length - 1; i >= 0; i--) {
+        if (out.length) room -= 2;
+        if (room <= 0) break;
+        const full = phoneMessageText(rows[i]);
+        if (full.length > room) {
+            // Keep the original tail behavior, but never a detached labels-only fragment.
+            // A partially retained source cannot prove which of its HTML fields remain visible.
+            out.unshift(rows[i].slice(-room));
+            break;
+        }
+        out.unshift(full); room -= full.length;
+    }
+    return out.join('\n\n');
+}
 function chatStory(budget, upto = null) {
-    const rows = chatUpto(recentForCheck(1e9), upto), out = [];
-    for (let i = rows.length - 1, size = 0; i >= 0; i--) { const t = estTok(rows[i]); if (out.length && size + t > budget) break; out.unshift(rows[i]); size += t; }
+    const rows = recentPhoneRows(1e9, { upto }), out = [];
+    for (let i = rows.length - 1, size = 0; i >= 0; i--) { const text = phoneMessageText(rows[i]), t = estTok(text); if (out.length && size + t > budget) break; out.unshift(text); size += t; }
     return out.join('\n\n');
 }
 export const noArchive = m => !archiveFor(m, -1).text.trim();
@@ -641,8 +666,8 @@ export function chatAfterArchive(m, budget = CHAT_TOKENS.phone, upto0 = null, fr
     const arEnd = archiveEnd(m, upto0, whole), upto = upto0 == null ? null : whole ? Math.max(upto0, Math.min(arEnd, chatEnd())) : upto0;
     const end = Math.max(arEnd, from ?? -1), all = syncRows().filter(r => r.index > end), rows = all.filter(r => upto == null || r.index <= upto), out = [];
     let size = 0;
-    for (const r of rows) { const t = estTok(r.text); if (out.length && size + t > budget) break; out.push(r); size += t; }
-    return { text: out.map(r => r.text).join('\n\n'), from: out[0]?.index ?? null, to: out.at(-1)?.index ?? end, n: out.length, all: out.length === rows.length, left: rows.length - out.length,
+    for (const r of rows) { const text = phoneMessageText(r.text, r.index), t = estTok(text); if (out.length && size + t > budget) break; out.push({ ...r, modelText: text }); size += t; }
+    return { text: out.map(r => r.modelText).join('\n\n'), from: out[0]?.index ?? null, to: out.at(-1)?.index ?? end, n: out.length, all: out.length === rows.length, left: rows.length - out.length,
         upto, later: all.length > rows.length, ...(whole ? {} : { cut: true }) };
 }
 // where the phone has read up to, its clock: the last message its making or a reflection read. Filling an app, or making
@@ -812,7 +837,7 @@ const blindBlock = (m, owner) => {
 // extra: a second turn's blocks (PHONE SO FAR, TOLD SHORT)
 function phoneRequest(m, owner, p = null, lore = '', only = null, profile = '', gap = null, extra = []) {
     const world = worldText(m), upto = nowAt(gap);
-    const recent = chatUpto(recentForCheck(1e9), upto).slice(-6).join('\n\n').slice(-6000);
+    const recent = recentPhoneText(6, { upto, maxChars: 6000 });
     const ar = archiveFor(m, p ? p.upto ?? -1 : -1, nowAt(gap), !gap?.cut);
     const now = p ? JSON.stringify(phoneForModel(p)) : '';
     return [
@@ -1021,6 +1046,9 @@ async function moneyStage(m, p, owner, targets, c) {
         else { out.owed.push({ id: t.id, at: t.at, date: t.date, time: t.time, tries, ...(t.invest ? { invest: true } : {}) }); out.notes.push(`${t.summary || t.id}: 결제는 다음 반영 때 다시 넣어요 (${why})`); }
     };
     const text = new Map(c.rows.map(r => [r.index, r.text])), near = new Set();
+    // Source HTML is snapshotted with the cleaned rows, not reread after the core request.
+    const sourceHtml = c.raw || new Map(c.rows.map(r => [r.index, ctx().chat?.[r.index]?.mes]));
+    const modelText = i => { const context = htmlTimeContext(sourceHtml.get(i)); return context ? `${text.get(i)}\n${context}` : text.get(i); };
     // two messages either side: the event is often put on the message next to the one with the amount ("gets out of the
     // taxi" at #1, "I paid 12000 won" at #3)
     // (only ones read already or in this round: the next round's own amount isn't this event's, nor one from before the phone)
@@ -1036,7 +1064,7 @@ async function moneyStage(m, p, owner, targets, c) {
     }) : [];
     const input = [
         `[EVENTS]\n${targets.map(t => `- ${t.id}: #${t.at} ${t.date || ''}${t.time ? ` ${t.time}` : ''} ${t.summary || ''}${t.quote ? ` ("${t.quote}")` : ''}${t.changed ? ' (changed)' : ''}`).join('\n')}`,
-        `[MESSAGES]\n${[...near].sort((a, b) => a - b).map(i => text.get(i)).join('\n\n')}`,
+        `[MESSAGES]\n${[...near].sort((a, b) => a - b).map(modelText).join('\n\n')}`,
         archive.length ? `[ARCHIVE FOR THESE MESSAGES]\n${archive.join('\n\n')}` : '',
         money ? `[MONEY NOW]\n${JSON.stringify(money)}` : '', invest ? `[INVESTMENTS NOW]\n${JSON.stringify(invest)}` : '',
         money && p.delivery ? `[DELIVERY SHOPS]\n${(p.delivery.shops || []).map(x => x.name).join('\n') || '(none yet)'}${p.delivery.cart?.items?.length ? `\nCART (in the basket, not ordered): ${p.delivery.cart.shop}: ${p.delivery.cart.items.map(x => `${x.qty || 1}× ${x.name}`).join(', ')}` : ''}` : '',
@@ -1104,9 +1132,13 @@ async function updatePhone(m, owner) {
         const reread = new Map(moved.changed.map(x => [x.at, Object.entries(s.events).filter(([, e]) => e.at === x.at || (e.effects || []).some(f => (f.item?.sourceIndex ?? f.sourceIndex) === x.at)).map(([id, e]) => ({ id, summary: e.summary }))]));
         if (reread.size) swiped.push(`바뀐 대화 ${reread.size}개를 다시 읽어요. 그 대화의 결제는 새로 넣지 않고 기존 기록만 고쳐요`);
         const rows = syncRows(), round = pickRound(s, rows), clockBefore = phoneAt(p) ?? -1;
+        const rawRows = new Map(rows.map(r => [r.index, ctx().chat?.[r.index]?.mes]));
         // Snapshot supplementary HTML hints with this round's visible messages, before any request can change the chat.
         // Archive evidence keeps its own text; its source index is never a reason to reopen hidden raw messages.
-        const clockRows = round.rows.map(r => ({ ...r, htmlClocks: htmlClocks(ctx().chat?.[r.index]?.mes) }));
+        const clockRows = round.rows.map(r => {
+            const raw = rawRows.get(r.index);
+            return { ...r, htmlClocks: htmlClocks(raw), htmlTimeContext: htmlTimeContext(raw) };
+        });
         // where everyone is: read once for a phone that never had it, and again below when the owner's city changes
         // the archive: sections covering this round are evidence; earlier ones are background; ones reaching unread messages stay out
         const [, tail] = splitTail(String(m.text || ''));
@@ -1174,7 +1206,7 @@ async function updatePhone(m, owner) {
             return `${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getUTCDay()]}`;
         }) : [];
         const inputParts = [
-            `[NEW MESSAGES]\n${round.rows.map(r => r.text).join('\n\n') || '(none: this round reads only stretches archived before the phone read them)'}`,
+            `[NEW MESSAGES]\n${clockRows.map(r => [r.text, r.htmlTimeContext].filter(Boolean).join('\n')).join('\n\n') || '(none: this round reads only stretches archived before the phone read them)'}`,
             evidence.length ? `[ARCHIVE FOR THESE MESSAGES]\n${evidence.map(x => x.text).join('\n\n')}` : '',
             before.length ? `[ARCHIVE BEFORE]\n${before.join('\n\n')}` : '',
             reachesEnd(s, rows, round.rows) && tail.trim() ? `[STORY NOW]\n${tail.trim()}` : '',
@@ -1302,7 +1334,7 @@ async function updatePhone(m, owner) {
             for (const t of targets) t.tries = owedBefore.find(o => o.id === t.id)?.tries || 0;
             for (const o of owedBefore) { const e0 = s.events[o.id]; if (!wants.has(o.id) && e0 && Number.isInteger(e0.at)) targets.push({ id: o.id, at: e0.at, date: o.date || '', time: o.time || '', summary: e0.summary || o.id, quote: e0.quote || '', changed: false, tries: o.tries || 0, invest: !!o.invest }); }
             const check = () => (phoneChatScope(ctx()) !== scope || m.phones?.[key] !== p ? '반영하는 사이 채팅이나 폰이 바뀌었어요' : p.money?.at !== made.money || p.investment?.at !== made.invest ? '반영하는 사이 은행이나 투자가 새로 만들어졌어요' : '');
-            const st = await moneyStage(m, p, owner, targets, { rows, sections, reread, year, known, anchor, profile, check, inRound });
+            const st = await moneyStage(m, p, owner, targets, { rows, raw: rawRows, sections, reread, year, known, anchor, profile, check, inRound });
             s.owed = { ...(s.owed || {}), money: st.owed };
             late = st.late;
             for (const a of st.apps) apps.add(a);
@@ -1877,7 +1909,7 @@ function whereRequest(m, p) {
         ...chars.map(ch => `[CHARACTER CARD — ${ch.name || ch.data?.name || ''}]\n${cardText(ch) || '(empty)'}`),
         persona ? `[PERSONA — ${c.name1 || 'user'}]\n${persona}` : '',
         tail.trim() ? `[STORY NOW]\n${tail.trim()}` : '',
-        `[RECENT CHAT]\n${chatUpto(recentForCheck(1e9), upto).slice(-8).join('\n\n').slice(-8000) || '(none yet)'}`,
+        `[RECENT CHAT]\n${recentPhoneText(8, { upto, maxChars: 8000 }) || '(none yet)'}`,
         `[OWNER]\n${p.owner}`, `[PEOPLE]\n${people.join('\n') || '(none)'}`, blindBlock(m, p.owner),
     ] };
 }
@@ -2106,7 +2138,8 @@ function reflectionClocks0(p, rows, m) {
     }
     // The chosen fallback must not be displaced by the hint's six-person limit.
     people.sort((a, b) => Number(b.names.some(n => nameKey(n) === nameKey(fallback))) - Number(a.names.some(n => nameKey(n) === nameKey(fallback))));
-    const defaultZone = people.find(x => x.names.some(n => nameKey(n) === nameKey(fallback)))?.tz;
+    const defaultPerson = people.find(x => x.names.some(n => nameKey(n) === nameKey(fallback)));
+    const defaultZone = defaultPerson?.tz;
     const identity = `Phone being updated: ${JSON.stringify(p.owner)} (${own.where}).${defaultZone === own.tz ? '\nThe default screen and this phone share a time zone; default screen times need no conversion.' : ''}`;
     const stamps = [];
     for (const r of [...arr(rows)].sort((a, b) => a.index - b.index)) {
@@ -2126,7 +2159,10 @@ function reflectionClocks0(p, rows, m) {
     const eligible = [];
     for (const stamp of [...stamps].reverse()) {
         const before = choices.length;
-        for (const who of people.slice(0, 6)) {
+        // Bare HTML clocks use the configured screen person's reference only; dated evidence keeps all choices.
+        // An unresolved configured person is not evidence for a different person's screen.
+        const candidates = stamp.clock && fallback ? (defaultPerson ? [defaultPerson] : []) : people.slice(0, 6);
+        for (const who of candidates) {
             if (stamp.clock) {
                 const fallback = clockFallback(p, own.tz, who.tz, stamp.clock);
                 if (fallback) {
@@ -2147,7 +2183,7 @@ function reflectionClocks0(p, rows, m) {
     const lines = kept.map(t => {
         const cs = choices.filter(c => c.at === t.at && c.sourceTime === t.sourceTime);
         if (!cs.length) return '';
-        return `Timestamp in #${t.at}: ${JSON.stringify(t.sourceTime)}${t.clock ? ' (HTML time field; calendar date unknown)\nReference calculation only. If the story shows a time jump, follow it instead.' : ''}\n${cs.map(c => c.reference
+        return `Time text in #${t.at}: ${JSON.stringify(t.sourceTime)}${t.clock ? ' (HTML time field; calendar date unknown)\nReference calculation only. If the story shows a time jump, follow it instead.' : ''}\n${cs.map(c => c.reference
             ? `${c.names[0]}: saved local ${c.reference.localAnchor}; ${c.reference.earlier ? 'earlier clock, next-day reference only' : 'same or later clock, same-day reference only'}. Reference date ${c.reference.date} → owner's clock ${c.reference.ownerClock} (${c.reference.dayShift > 0 ? '+' : ''}${c.reference.dayShift} days relative to screen).`
             : `On ${c.names[0]}'s clock → owner's time: ${c.ownerTime}`).join('\n')}`;
     }).filter(Boolean);
@@ -2352,7 +2388,7 @@ export async function sideRequest(m, owner, blocks, { profile, money = false, st
     const world = worldText(m), lore = await loreFor(m, owner);
     const profileText = await ownerProfileBlock(ctx(),profile,owner,{money});
     const ph = m.phones?.[nameKey(owner)] || null, gap = read && 'gap' in read ? read.gap : windowOf(m, ph), upto = nowAt(gap);
-    const recent = chatUpto(recentForCheck(1e9), upto).slice(-6).join('\n\n').slice(-6000);
+    const recent = recentPhoneText(6, { upto, maxChars: 6000 });
     if (read) read.gap = gap;
     return [
         archiveBlock(m, archiveFor(m, -1, upto).text || '(empty)', 'ARCHIVE', story, upto),

@@ -658,3 +658,123 @@ test('위치 판독 also gives the people closest to the owner, from the cards a
     assert.match(data.AI_SYS_WHERE, /the people in the owner's life these texts tell of \(family, people at work, friends, past partners, anyone with a part in it\), never the owner; up to 5/);
     assert.match(data.AI_SYS_WHERE, /everything these texts say of that person and the owner, wherever it is in them/);
 });
+
+// HTML context is shared by phone creation, app fills and direct phone writing, not sync identities.
+const htmlExtractSource = await readFile(new URL('extract.js', SRC), 'utf8');
+const { cleanMessage: htmlClean } = await import(encoded(htmlExtractSource.slice(htmlExtractSource.indexOf('const REASONING ='), htmlExtractSource.indexOf('export function formatExtract'))));
+const htmlStory = '<div class="chat-timestamp" style="font-size:12px;color:red;">11.03, 11:03</div>\nMara opens a ticket.\n```html\n<!DOCTYPE html><html><head><style>.status-bar{color:red}</style></head><body><div class="status-bar"><span>03:03 CET</span><span>50%</span></div><span class="reservation-time">18:30</span></body></html>\n```\nThe story continues.';
+function htmlPhoneFixture(archive = true) {
+    const chat = Array.from({ length: 7 }, (_, i) => ({ name: 'Ren', is_user: false, is_system: i < 4,
+        mes: i < 4 ? '<time class="hidden-clock">07:07</time>' : i === 4 ? htmlStory : i === 5 ? 'An ordinary message without HTML.' : '<time id="future-clock">22:59</time>' }));
+    globalThis.__ctx = { chat, chatMetadata: {}, characters: [] };
+    globalThis.__rows = chat.map((x, index) => ({ index, hidden: x.is_system, user: false, text: `[#${index}] Ren: ${htmlClean(x.mes, { stripTags: true })}` }));
+    const p = plainPhone({ year: 2026, now: '11-03 03:03', sync: { marks: { base: { index: 5 } }, done: [], hiddenRead: {} } });
+    return { p, m: { text: archive ? m.text : '', phoneScreenHolder: 'Mara', phones: { ren: p } } };
+}
+const assertHtmlPhoneInput = input => {
+    assert.ok(input.includes(htmlClean(htmlStory, { stripTags: true })));
+    assert.match(input, /\[바깥 메시지의 HTML\]\nchat-timestamp: 11\.03, 11:03/);
+    assert.match(input, /\[메시지 안쪽 HTML \(코드 블록 1\)\]\nstatus-bar: 03:03 CET\nreservation-time: 18:30/);
+    assert.doesNotMatch(input, /font-size|color:red|class=|hidden-clock/);
+};
+
+test('initial phone creation sends the same compact HTML context with and without an archive', async () => {
+    try {
+        for (const archived of [true, false]) {
+            const { m: mm } = htmlPhoneFixture(archived); mm.phones = {};
+            globalThis.__menu = { calls: [], answer: notesAnswer('Ticket') };
+            await data.makePhone(mm, 'Ren');
+            const call = globalThis.__menu.calls.find(x => x.sys === data.AI_SYS_PHONE);
+            assertHtmlPhoneInput(call.input);
+            assert.equal((call.input.match(/chat-timestamp: 11\.03, 11:03/g) || []).length, 1);
+        }
+    } finally { delete globalThis.__ctx; }
+});
+
+test('side requests keep HTML context in recent-only, full-story and after-archive inputs within the phone clock', async () => {
+    try {
+        for (const [archived, story] of [[true, 0], [false, 0], [false, data.CHAT_TOKENS.apps]]) {
+            const { m: mm } = htmlPhoneFixture(archived);
+            const input = await data.sideRequest(mm, 'Ren', [], { story });
+            assertHtmlPhoneInput(input);
+            assert.doesNotMatch(input, /future-clock|22:59/);
+        }
+    } finally { delete globalThis.__ctx; }
+});
+
+test('app fills and app regeneration receive compact HTML labels through their real request paths', async () => {
+    const cases = [
+        ['life', (mm, p) => life.fillLife(mm, p), lifeAnswer('Wake'), life.AI_SYS_LIFE],
+        ['delivery', (mm, p) => life.fillDelivery(mm, p), '{}', life.AI_SYS_DELIVERY],
+        ['screen', (mm, p) => { p.life = { at: p.now, health: { usual: {}, days: [{ date: '11-03', sleep: '23:00', wake: '07:00', steps: 5000 }] } }; return life.fillScreen(mm, p); }, '{}', life.AI_SYS_SCREEN],
+        ['money', (mm, p) => data.fillMoney(mm, p), moneyAnswer('Ticket', 500, '11-03 03:03'), data.AI_SYS_MONEY],
+        ['voice', (mm, p) => data.fillVoice(mm, p), '{"memos":[]}', data.AI_SYS_VOICES],
+        ['device', (mm, p) => data.fillDevice(mm, p), '{"model":"Example Phone"}', data.AI_SYS_DEVICE],
+        ['app remake', (mm, p) => data.makePhone(mm, p.owner, { apps: ['note'] }), notesAnswer('Ticket'), data.AI_SYS_PHONE],
+        ['investment', (mm, p) => invest.fillInvestment(mm, p, '2026-11-03'), '{}', null],
+    ];
+    try {
+        for (const [name, run, answer, system] of cases) {
+            const { p, m: mm } = htmlPhoneFixture();
+            globalThis.__menu = { calls: [], answer };
+            // Some intentionally minimal replies are rejected after capture; this test checks their actual inputs.
+            try { await run(mm, p); } catch { /* reply validation is covered by each app's tests */ }
+            const call = system ? globalThis.__menu.calls.find(x => x.sys === system) : globalThis.__menu.calls[0];
+            assert.ok(call, `${name} must reach its model request`);
+            assertHtmlPhoneInput(call.input);
+            assert.doesNotMatch(call.input, /future-clock|22:59/, name);
+        }
+    } finally { delete globalThis.__ctx; }
+});
+
+test('HTML metadata counts toward archive window budgets and never changes sync rows or archived evidence', async () => {
+    try {
+        const { m: mm } = htmlPhoneFixture(), before = structuredClone(globalThis.__rows);
+        const plainSize = globalThis.__rows[4].text.length / 4;
+        const window = data.chatAfterArchive(mm, plainSize + 5, 5);
+        assert.equal(window.to, 4);
+        assert.equal(window.left, 1);
+        assertHtmlPhoneInput(window.text);
+        assert.deepEqual(data.syncRows(), before.filter(r => !r.hidden).map(({ index, text }) => ({ index, text })));
+        assert.deepEqual(globalThis.__rows, before);
+        const ar = { ...mm, text: '## #0–#6 — Archived\n- The ticket was recorded.\n' };
+        // Archived/hidden raw messages must not be reopened for labels, even when old recent fallback text exists.
+        globalThis.__ctx.chat.forEach(x => { x.is_system = true; });
+        globalThis.__rows.forEach(x => { x.hidden = true; });
+        const input = await data.sideRequest(ar, 'Ren', []);
+        assert.doesNotMatch(input, /chat-timestamp|status-bar|reservation-time|hidden-clock|future-clock/);
+    } finally { delete globalThis.__ctx; }
+});
+
+test('recent phone input clips only story text, never detached HTML labels', () => {
+    try {
+        htmlPhoneFixture(false);
+        const original = globalThis.__rows[4].text;
+        const short = data.recentPhoneText(1, { upto: 4, maxChars: 80 });
+        assert.equal(short, original.slice(-80));
+        assert.doesNotMatch(short, /메시지의 HTML|바깥 메시지의 HTML|코드 블록/);
+        const full = data.recentPhoneText(1, { upto: 4, maxChars: 6000 });
+        assert.ok(full.startsWith('[#4] Ren: '));
+        assertHtmlPhoneInput(full);
+        assert.doesNotMatch(full, /future-clock|22:59/);
+    } finally { delete globalThis.__ctx; }
+});
+
+test('location reading and all four direct phone writing paths share the same compact context', async () => {
+    const overrides = { ...map,
+        './ai.js': encoded(`export const askAI=async(input,o)=>{globalThis.__htmlDirect.push({input,system:o.system});return JSON.stringify({title:'Today',text:'A quiet moment.',caption:'A room'});};`),
+        './people.js': encoded(`export const headingPlaces=()=>[];export const nameKey=s=>String(s).toLowerCase();export const peopleList=()=>[];`),
+    };
+    const direct = await import(encoded((await readFile(new URL('phoneai.js', SRC), 'utf8')).replace(/from '([^']+)'/g, (_, k) => `from '${overrides[k] || k}'`)));
+    try {
+        const { p, m: mm } = htmlPhoneFixture(); p.threads = [{ with: 'Mara', messages: [] }];
+        globalThis.__where = [];
+        await data.readWhere(mm, p);
+        assertHtmlPhoneInput(globalThis.__where.at(-1));
+        globalThis.__htmlDirect = [];
+        for (const run of [() => direct.takePhoto(mm, p), () => direct.writeEntry(mm, p, 'note'), () => direct.makeDraft(mm, p, 0), () => direct.recordVoice(mm, p)]) {
+            await run();
+            assertHtmlPhoneInput(globalThis.__htmlDirect.at(-1).input);
+        }
+    } finally { delete globalThis.__ctx; delete globalThis.__htmlDirect; }
+});

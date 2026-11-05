@@ -6,9 +6,8 @@ import { num, parseJson } from './phoneparse.js';
 import { datedRows } from './anniv.js';
 import { calendars } from './calendar.js';
 import { ctx, globalSettings, saveMeta } from './core.js';
-import { recentForCheck } from './drift.js';
 import { headingPlaces, nameKey, peopleList } from './people.js';
-import { arr, CAP, COUNTRIES, homeCountry, ensureIds, gapDays, secOf, ko, line, MOODS, namesBlock, pad, parts, pick, rowDay, storyNow, str } from './phonedata.js';
+import { recentPhoneText, arr, CAP, COUNTRIES, homeCountry, ensureIds, gapDays, secOf, ko, line, MOODS, namesBlock, pad, parts, pick, rowDay, storyNow, str } from './phonedata.js';
 
 // ---- 사진 그리기: the AI 기능 모델 turns a caption into image tags, one line for the picture and one per person. With
 // AutoPic in 직접 생성 mode the picture goes through AutoPic (its model, vibes, registered looks; only the people in the
@@ -203,7 +202,7 @@ export const shooting = new Set(); // owner keys taking a photo now
 export async function takePhoto(m, p) {
     const prompt = [
         `[OWNER]\n${p.owner}`, `[NOW]\n${storyNow(p) || p.now || ''}`,
-        `[RECENT CHAT]\n${recentForCheck(12).join('\n\n').slice(-9000)}`,
+        `[RECENT CHAT]\n${recentPhoneText(12, { maxChars: 9000 })}`,
         `[PHOTOS SO FAR]\n${p.photos.slice(-3).map(x => `- ${x.caption}`).join('\n') || '(none)'}`,
         namesBlock(m),
     ].filter(Boolean).join('\n\n');
@@ -244,7 +243,7 @@ export async function writeEntry(m, p, kind) {
     const prompt = [
         await ownerProfileBlock(ctx(),p.financeProfile,p.owner),
         `[OWNER]\n${p.owner}${p.country ? ` (phone set to ${p.country})` : ''}`, `[NOW]\n${storyNow(p) || p.now || ''}`, `[WRITE]\n${diary ? 'a diary entry' : 'a note'}`,
-        `[RECENT CHAT]\n${recentForCheck(12).join('\n\n').slice(-9000)}`,
+        `[RECENT CHAT]\n${recentPhoneText(12, { maxChars: 9000 })}`,
         `[SO FAR]\n${list.slice(-3).map(x => `- ${x.title ? `${x.title}: ` : ''}${x.text.slice(0, 300)}`).join('\n') || '(none)'}`,
         namesBlock(m),
     ].filter(Boolean).join('\n\n');
@@ -352,7 +351,7 @@ export async function makeDraft(m, p, i) {
         await ownerProfileBlock(ctx(),p.financeProfile,p.owner),
         `[OWNER]\n${p.owner}`, `[TO]\n${t.with}`,
         `[THREAD]\n${t.messages.filter(x => x.src !== 'guess').slice(-12).map(x => `${said(x)} (${x.time}): ${x.text}`).join('\n')}`,
-        `[RECENT CHAT]\n${recentForCheck(8).join('\n\n').slice(-7000)}`,
+        `[RECENT CHAT]\n${recentPhoneText(8, { maxChars: 7000 })}`,
         namesBlock(m),
     ].filter(Boolean).join('\n\n');
     const out = String(await askAI(prompt, { force: true, system: AI_SYS_DRAFT, maxTokens: 1200 }) || '').replace(/```(?:json)?/gi, '');
@@ -390,7 +389,7 @@ export async function recordVoice(m, p) {
     const prompt = [
         await ownerProfileBlock(ctx(),p.financeProfile,p.owner),
         `[OWNER]\n${p.owner}${p.country ? ` (phone set to ${p.country})` : ''}`, `[NOW]\n${storyNow(p) || p.now || ''}`,
-        `[RECENT CHAT]\n${recentForCheck(12).join('\n\n').slice(-9000)}`,
+        `[RECENT CHAT]\n${recentPhoneText(12, { maxChars: 9000 })}`,
         `[SO FAR]\n${(p.voice || []).slice(-3).map(x => `- ${x.title}: ${x.text.slice(0, 200)}`).join('\n') || '(none)'}`,
         namesBlock(m),
     ].filter(Boolean).join('\n\n');
