@@ -1197,6 +1197,13 @@ async function updatePhone(m, owner) {
         if (round.rows.some(r => nowText.get(r.index) !== r.text)) throw new Error('반영하는 사이 대화가 바뀌었어요. 다시 해 주세요');
         const raw = core0;
         if (!raw || !Array.isArray(raw.events)) throw new Error('모델 답에서 반영할 내용을 찾지 못했어요. 다시 해 주세요');
+        // Temporary on-device diagnostic: the model's clock, before any later clock handling.
+        if (typeof toastr !== 'undefined') {
+            const toast = toastr.info(JSON.stringify({ clock: raw.clock ?? null, now: raw.now ?? null }, null, 2), '시간 판독 · 테스트', {
+                escapeHtml: true, timeOut: 0, extendedTimeOut: 0, closeButton: true, tapToDismiss: false,
+            });
+            toast?.find?.('.toast-message')?.css?.({ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' });
+        }
         const everyday = round.rows.length ? await askEveryday(inputParts, raw, p, round.rows, !!life) : null;
         if (phoneChatScope(ctx()) !== scope || m.phones?.[key] !== p || p.money?.at !== made.money || p.investment?.at !== made.invest || p.life !== made.life || p.delivery !== made.delivery) throw new Error('반영하는 사이 폰이 바뀌었어요. 다시 해 주세요');
         const afterEveryday = new Map(syncRows().map(r => [r.index, r.text]));
