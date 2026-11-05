@@ -1190,3 +1190,57 @@ test('a text to a name the phone has under another of that person\'s names goes 
         [['Ivo', ['hey Ivo']], ['Ivo Kim', []], ['Ivo Park', []], ['Somang Park', ['안녕', 'hi']]].sort());
     assert.deepEqual(c.p.contacts.map(x => x.name).sort(), ['Ivo', 'Somang Park']);
 });
+
+// Clock candidates use real parsers/conversion and the same reflection pipeline as the other tests.
+function clockPhone(p) {
+    p.country = 'DE'; p.year = 2026; p.now = '11-04 23:30';
+    p.where = { at: 1, people: [
+        { name: 'Ren', city: 'Berlin', tz: 'Europe/Berlin', names: ['Berlin'], aka: ['렌'] },
+        { name: 'Mara', city: 'Seoul', tz: 'Asia/Seoul', names: ['Seoul'], aka: ['마라'] }
+    ] };
+}
+test('clock candidates honor date order, aliases, DST and midnight without choosing a screen', async () => {
+    const p = { owner: 'Ren' }; clockPhone(p);
+    const rows = [{index: 125, text: '마라 reads Ren’s message: 11.05, 08:30'}];
+    const md = await data.reflectionClocks(p, rows, { dateOrder: 'md' });
+    assert.equal(md.choices.find(x => x.names[0] === 'Mara').ownerTime, '11-05 00:30');
+    assert.equal(md.choices.find(x => x.names[0] === 'Ren').ownerTime, '11-05 08:30');
+    const dm = await data.reflectionClocks(p, rows, { dateOrder: 'dm' });
+    assert.equal(dm.choices.find(x => x.names[0] === 'Mara').ownerTime, '05-11 01:30');
+    const early = await data.reflectionClocks(p, [{index: 3, text:'Mara 11.05, 02:00'}], {dateOrder:'md'});
+    assert.equal(early.choices.find(x => x.names[0] === 'Mara').ownerTime, '11-04 18:00');
+    assert.match(md.text, /not proof of whose screen/);
+    const raw = {clock:{sender:'Ren',holder:'마라',basis:'reads on her phone',sourceTime:'11.05, 08:30'},now:'05-11 08:30'};
+    assert.equal(data.resolveReflectionClock(raw, md, p), true);
+    assert.equal(raw.now,'11-05 00:30'); // sender does not decide the conversion
+    assert.equal(data.resolveReflectionClock(raw, md, p), true);
+    assert.equal(raw.now,'11-05 00:30'); // no second shift
+});
+test('unknown, absent, unattested times and newly moved people are not guessed', async () => {
+    const p = {owner:'Ren'}; clockPhone(p);
+    const c = await data.reflectionClocks(p,[{index:2,text:'Mara 11.05, 08:30'}],{dateOrder:'md'});
+    for (const extra of [{clock:{holder:'Unknown',sourceTime:'11.05, 08:30'}}, {clock:{holder:'Mara',sourceTime:null}}, {clock:{holder:'Mara',sourceTime:'11.06, 08:30'}}, {clock:{holder:'Mara',sourceTime:'11.05, 08:30'},moved:[{name:'Mara',city:'Berlin',tz:'Europe/Berlin'}]}]) {
+        const raw={now:'11-05 01:00',...extra}; assert.equal(data.resolveReflectionClock(raw,c,p),false); assert.equal(raw.now,'11-05 01:00');
+    }
+    assert.equal((await data.reflectionClocks(p,[{index:2,text:'Mara at 08:30'}],{dateOrder:'md'})).choices.length,0);
+    assert.equal((await data.reflectionClocks({owner:'Unknown'},[],{})).choices.length,0);
+});
+test('reflection corrects selected time before everyday and stores it without changing app timestamps', async () => {
+    const c=setup([say('Ren','start'),say('Mara','evening'),say('Mara','Mara reads Ren’s reply on her phone. 11.05, 08:30')]);
+    clockPhone(c.p); c.m.dateOrder='md'; globalThis.__everydayIn=[];
+    const oldVoice=structuredClone(c.p.voice), bankBefore=c.bank();
+    await run(c.m,{clock:{sender:'Ren',holder:'Mara',basis:'Mara reads on her phone',sourceTime:'11.05, 08:30'},now:'11-05 08:30',events:[{id:'reply',at:2,quote:'Mara reads Ren’s reply',date:'11-05',time:'00:30',phone:{notes:[{title:'Reply',text:'Read it',time:'11-05 00:30'}]}}]});
+    assert.match(T.input,/On Mara's clock → owner's time: 11-05 00:30/);
+    assert.match(T.sys,/CLOCK FIRST/);
+    assert.match(globalThis.__everydayIn.at(-1),/Owner-local window: 11-04 23:30 to 11-05 00:30/);
+    assert.equal(c.p.now,'11-05 00:30'); assert.equal(c.p.notes.at(-1).time,'11-05 00:30');
+    assert.deepEqual(c.p.voice,oldVoice); assert.equal(c.bank(),bankBefore);
+});
+test('same-time scene selection and attached timestamps do not automatically advance now', async()=>{
+    const p={owner:'Ren'};clockPhone(p);
+    const c=await data.reflectionClocks(p,[{index:2,text:'Mara 11.05, 08:30. Attached old page: 11.03, 11:03'}],{dateOrder:'md'});
+    const raw={clock:{sender:'Ren',holder:'Mara',basis:'outer screen',sourceTime:'11.05, 08:30'},now:'11-05 00:30'};
+    data.resolveReflectionClock(raw,c,p);assert.equal(raw.now,'11-05 00:30');
+    const same={clock:{sender:'Ren',holder:'Ren',basis:'meanwhile in Berlin',sourceTime:null},now:raw.now};
+    data.resolveReflectionClock(same,c,p);assert.equal(same.now,raw.now);
+});

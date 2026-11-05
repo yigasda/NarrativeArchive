@@ -142,6 +142,12 @@ const LIFE_FILES = `  "files": [{ "change": an id or "", "name", "kind", "folder
 const LIFE_TIMERS = `  "timers": [{ "label", "ko", "sec" }],`;
 const LIFE_ONCE = `- An alarm for one occasion (a flight, an appointment) rings once: "days": [] and its "date". Only an alarm the owner keeps for every week has "days".`;
 const LIFE_CHANGE = `- A record already in LIFE NOW is changed with "change": its id; write only the fields that changed. A deleted file is "deleted": true.`;
+const CLOCK_FIRST = `CLOCK FIRST
+- Before writing events, read OWNER'S CLOCK with the scenes. A time belongs to whoever's screen or scene it is, not necessarily the message sender.
+- Keep the scene's viewpoint until it changes. Attached or quoted screens have their own clocks.
+- In "clock", write sender (null if none), holder (whose screen or scene), basis (brief evidence), and sourceTime (as written, null if absent).
+- Use OWNER'S CLOCK to write "now" on the owner's clock. "At the same time" keeps the same moment.
+- Events and their app records follow their own scene's clock, converted to the owner's. A later appointment keeps its intended time.`;
 export function updateSystem({ money = true, delivery = false, life = false, weather = false, tracker = false, split = false, invest = false, zone = false } = {}) {
     const paid = delivery ? 'order, ticket or delivery' : 'order or ticket';
     return `${split ? 'STAGE: core\n' : ''}GOAL
@@ -160,6 +166,8 @@ ${money ? `- MONEY NOW and INVESTMENTS NOW (sometimes): the bank, card, orders, 
 ${CLOCK_GET}
 - PEOPLE AROUND (sometimes): people in the owner's life, close or not, from the cards, persona, profile and lorebook, with where things stand now.
 - OWNER, and sometimes STORY YEAR, WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW. Nothing on the phone may show what the owner doesn't know.
+
+${CLOCK_FIRST}
 
 WHAT IS NEW
 - Only what happens in NEW MESSAGES or ARCHIVE FOR THESE MESSAGES. Guesses and memories of earlier days add nothing.
@@ -205,7 +213,8 @@ ${delivery ? `- A delivery paid in cash at the door has no move. "tip" only wher
 ${PHONE_STYLE.replace('; "now" is the newest moment of the story.', '.')}
 
 ANSWER — one JSON object, nothing else:
-{ "now": "MM-DD HH:MM", "moved": [],${zone ? ' "statusCity": "",' : ''}
+{ "clock": { "sender": null or "name", "holder": "name", "basis": "brief evidence", "sourceTime": null or "as written" },
+  "now": "MM-DD HH:MM", "moved": [],${zone ? ' "statusCity": "",' : ''}
   "events": [{ "id": an id from EVENTS ON THE PHONE, or a short new tag like "berlin-flight", "at": 123, "quote": "exact words",
                "date": "MM-DD", "time": "HH:MM" or "", "summary": "one short line",${split ? ` "apps": [] or ["money"${invest ? ', "invest"' : ''}],` : ''}
                "phone": { only the app items this event puts on the phone }${money ? `,
@@ -461,7 +470,7 @@ EVERYDAY
 - People from the story or PEOPLE AROUND as they are and with what they feel; never someone the owner isn't in touch with now. PEOPLE AROUND are part of the owner's life whether or not they are in touch: they turn up wherever they would on a real phone. Someone texted or called who isn't in the contacts yet goes in "contacts" too. A relationship word (girlfriend, ex, husband, boss) only if the messages, archive or PEOPLE AROUND use it for them.
 - A diary entry holds what these messages show and what the owner feels about it, as the story and PEOPLE AROUND show them; no new secrets or events.
 - Anything a later message could contradict is a new fact: what someone decided, said or wants, a time, a result; a task and its deadline ("check the moodboards by 18:00"), a thing done ("uploaded it"), a plan for later ("ramyeon tonight?"). What these messages already say is no new fact: a text may say it again ("the deck is for Friday"). How they feel and small things around them are fine. No new facts, events, plans or secrets.
-- Times from the phone's last time up to the newest message, never later.
+- Times stay within the owner-local window in PUT ON THE PHONE NOW; do not read its end again from other screens.
 - Never a booking, a trip or a purchase the story doesn't have (a ticket mail, an order confirmation).${life ? `
 - Their clock and files too: an alarm they set for tomorrow, a timer for the pasta, a file they download, save or screenshot. Pictures the camera takes go to photos, not files.
 ${LIFE_ONCE}
@@ -497,7 +506,7 @@ export const everydayParts = parts => arr(parts).filter(b => !String(b).startsWi
 async function askEveryday(parts, raw, p, rows, life = false) {
     const text = rows.map(r => r.text).join('\n'), who = scenesWith(p, text);
     const mine = everydayParts(parts).join('\n\n');
-    const blocks = [mine, `[PUT ON THE PHONE NOW]\n${arr(raw?.events).map(putLine).join('\n') || '(nothing)'}`, who.length ? `[SCENES WITH]\n${who.join('\n')}` : ''].filter(Boolean).join('\n\n');
+    const blocks = [mine, `[PUT ON THE PHONE NOW]\n${arr(raw?.events).map(putLine).join('\n') || '(nothing)'}\nOwner-local window: ${p.now || "unknown"} to ${raw?.now || p.now || "unknown"}.`, who.length ? `[SCENES WITH]\n${who.join('\n')}` : ''].filter(Boolean).join('\n\n');
     try { const got = jsonOf(await askDraft(blocks, { force: true, system: everydaySystem({ life }), maxTokens: 6000, effort: 'low' })); return got?.everyday && typeof got.everyday === 'object' ? got.everyday : null; }
     catch (err) { console.warn('[narrative-archive] everyday', err); return null; }
 }
@@ -1131,10 +1140,12 @@ async function updatePhone(m, owner) {
         // whose scene the newest status line is (true the owner's, false elsewhere, null unknown); one with no time too
         let sceneOwn = tracker ? sceneHome(p, tracker.place, m) : true;
         // a status line among these messages whose scene the phone can't place: the model says whose clock it shows
-        const clock = clockBlock(p, hm(p.now) ? p.now : st?.raw, m, st);
+        const clockChoices = await reflectionClocks(p, [...round.rows, ...evidence.map(x => ({ index: x.first, text: x.text }))], m);
+        const baseClock = clockBlock(p, hm(p.now) ? p.now : st?.raw, m, st);
+        const clock = [baseClock, clockChoices.text].filter(Boolean).join('\n');
         // (on a phone that knows no other city, a scene that isn't one of the owner's places is asked too: "Frankfurt"
         // may be another country; it stays the owner's unless the model names another city)
-        const askZone = round.rows.some(r => r.index === trackAt) && (sceneOwn === null && !!clock || sceneOwn === true && !clock && !!tracker && !sceneZone(p, tracker.place, m));
+        const askZone = round.rows.some(r => r.index === trackAt) && (sceneOwn === null && !!baseClock || sceneOwn === true && !baseClock && !!tracker && !sceneZone(p, tracker.place, m));
         // a scene the owner isn't in (or may not be): the model gets its place and weather, never its hour
         // (and one asked about, not yet placed: its place and weather only too)
         const trackShown = tracker && (sceneOwn !== true || askZone) ? { place: tracker.place, weather: tracker.weather } : tracker;
@@ -1178,15 +1189,20 @@ async function updatePhone(m, owner) {
         const out = await askDraft(input, { force: true, system: split ? coreSystem({ life: !!life, weather: askWeather, tracker: !!tracker, invest: !!invest, zone: askZone }) : updateSystem({ money: false, life: !!life, weather: askWeather, tracker: !!tracker, zone: askZone }), maxTokens: 16000, effort: 'low' });
         // then the everyday life of these hours, on its own (it fails alone: the round goes in without it)
         // (only on an answer the round can use: a broken one fails the round, and its 일상 would be paid for nothing)
-        const core0 = jsonOf(out), everyday = round.rows.length && Array.isArray(core0?.events) ? await askEveryday(inputParts, core0, p, round.rows, !!life) : null;
+        const core0 = jsonOf(out);
         // the answer is for the chat and messages it was asked about
         if (phoneChatScope(ctx()) !== scope || m.phones?.[key] !== p) throw new Error('반영하는 사이 채팅이나 폰이 바뀌었어요. 다시 해 주세요');
         if (p.money?.at !== made.money || p.investment?.at !== made.invest) throw new Error('반영하는 사이 은행이나 투자가 새로 만들어졌어요. 다시 해 주세요');
         if (p.life !== made.life || p.delivery !== made.delivery) throw new Error('반영하는 사이 생활 앱이나 배달 앱이 새로 만들어졌어요. 다시 해 주세요');
         const nowText = new Map(syncRows().map(r => [r.index, r.text]));
         if (round.rows.some(r => nowText.get(r.index) !== r.text)) throw new Error('반영하는 사이 대화가 바뀌었어요. 다시 해 주세요');
-        const raw = jsonOf(out);
+        const raw = core0;
         if (!raw || !Array.isArray(raw.events)) throw new Error('모델 답에서 반영할 내용을 찾지 못했어요. 다시 해 주세요');
+        resolveReflectionClock(raw, clockChoices, p);
+        const everyday = round.rows.length ? await askEveryday(inputParts, raw, p, round.rows, !!life) : null;
+        if (phoneChatScope(ctx()) !== scope || m.phones?.[key] !== p || p.money?.at !== made.money || p.investment?.at !== made.invest || p.life !== made.life || p.delivery !== made.delivery) throw new Error('반영하는 사이 폰이 바뀌었어요. 다시 해 주세요');
+        const afterEveryday = new Map(syncRows().map(r => [r.index, r.text]));
+        if (round.rows.some(r => afterEveryday.get(r.index) !== r.text)) throw new Error('반영하는 사이 대화가 바뀌었어요. 다시 해 주세요');
         if (everyday) raw.everyday = everyday;
         const inRound = new Set(round.rows.map(r => r.index)), textAt = new Map(round.rows.map(r => [r.index, r.text])), start = s.marks.base.index;
         const rid = Math.random().toString(36).slice(2, 10), rowText = new Map(rows.map(r => [r.index, r.text]));
@@ -1984,6 +2000,50 @@ export const clockBlock = (p, at = p?.now, m = null, st = null) => {
     const hrs = h => `${Math.abs(h)} hour${Math.abs(h) === 1 ? '' : 's'} ${h > 0 ? 'ahead' : 'behind'}`;
     return z ? `[OWNER'S CLOCK]\nThe owner is in ${z.own.name}, ${z.at} now.\n${z.others.map(c => (c.where ? `${c.name} (in ${c.where}) is ${hrs(c.hours)}` : `${c.name} is ${hrs(c.hours)}`)).join(', ')}.${st?.known && st.at && st.at !== st.raw ? `\nThe newest status line, ${st.raw} in ${st.city}, is ${st.at} here.` : ''}` : '';
 };
+// Reflection-only choices. No HTML class names and no guessed dates for bare hours.
+// Keep the request's date order and locations in the choices, not mutable chat state after the call.
+export function reflectionClocks(p, rows, m = null) {
+    return withDateOrder(dateOrderOf(m), () => reflectionClocks0(p, rows, m));
+}
+function reflectionClocks0(p, rows, m) {
+    const own = ownerZone(p), choices = [], people = [], text = arr(rows).map(r => r.text).join('\n');
+    if (!own) return { choices, text: '' };
+    for (const z of placesAround(p, m)) {
+        const names = [...new Set((z.own ? [p.owner, 'owner', ...(z.by || [])] : z.who ? [z.who, ...(z.by || [])] : []).filter(Boolean))];
+        if (!names.length || !z.own && !names.some(n => text.toLowerCase().includes(String(n).toLowerCase()))) continue;
+        if (people.some(x => x.names[0] === names[0])) continue;
+        try { new Intl.DateTimeFormat('en', { timeZone: z.tz }); } catch { continue; }
+        people.push({ names, tz: z.tz });
+    }
+    const stamps = [];
+    for (const r of [...arr(rows)].sort((a, b) => a.index - b.index)) {
+        const re = /(?<!\d)(?:\d{4}[-/.])?\d{1,2}[-/.]\d{1,2}(?:[-/.]\d{4})?\.?[,]?\s+[0-2]?\d:[0-5]\d(?!\d)/g;
+        for (const hit of String(r.text || '').matchAll(re)) {
+            const sourceTime = hit[0], local = when(sourceTime);
+            if (!/^\d{2}-\d{2} \d{2}:\d{2}$/.test(local)) continue;
+            if (!stamps.some(x => x.at === r.index && x.sourceTime === sourceTime)) stamps.push({ at: r.index, sourceTime, local });
+        }
+    }
+    // Bound supplementary hints only; the actual source messages are never shortened.
+    for (const stamp of stamps.slice(-12)) for (const who of people.slice(0, 6)) {
+        choices.push({ ...stamp, names: who.names, ownerTime: zoneShift(stamp.local, who.tz, own.tz, yearIn(stamp.sourceTime) || Number(p.year) || undefined) });
+    }
+    if (!choices.length) return { choices, text: '' };
+    const lines = stamps.slice(-12).map(t => `Timestamp in #${t.at}: ${JSON.stringify(t.sourceTime)}\n${choices.filter(c => c.at === t.at && c.sourceTime === t.sourceTime).map(c => `On ${c.names[0]}'s clock → owner's time: ${c.ownerTime}`).join('\n')}`);
+    return { choices, text: `${clockBlock(p, p.now, m) ? '' : `[OWNER'S CLOCK]\nThe owner is in ${own.where}, ${p.now || 'time unknown'} now.\n`}Time choices (not proof of whose screen, or which time is now). Date order: ${dateOrderOf(m) === 'dm' ? 'day.month' : 'month.day'}.\n${lines.join('\n')}` };
+}
+export function resolveReflectionClock(raw, candidates, p) {
+    const c = raw?.clock;
+    if (!c || typeof c.sourceTime !== 'string' || !c.sourceTime.trim() || !c.holder) return false;
+    // A move in this answer can invalidate saved locations: never correct from those stale choices.
+    const moved = [...arr(raw.moved), ...arr(raw.elsewhere)];
+    if (raw.ownerCity || moved.some(x => ['owner', 'the owner'].includes(nameKey(x?.name)) || samePerson(x?.name, p.owner) || samePerson(x?.name, c.holder))) return false;
+    const hits = arr(candidates?.choices).filter(x => x.sourceTime.trim() === c.sourceTime.trim() && x.names.some(n => nameKey(n) === nameKey(c.holder)));
+    const times = [...new Set(hits.map(x => x.ownerTime))];
+    if (times.length !== 1) return false;
+    raw.now = times[0];
+    return true;
+}
 const pkey = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
 // a place that is someone's own: their name (or their first name) then 's · 의 · 네, or a room, a home after it
 const OWNED = /^(?:'s|’s|s'|’|의|네|\s*(?:방|집|사무실|작업실|차)(?![가-힣])|\s+(?:room|bedroom|house|home|flat|apartment|place|office|studio|car)\b)/i;
