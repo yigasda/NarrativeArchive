@@ -826,8 +826,8 @@ function htmlPhoneFixture(archive = true) {
 }
 const assertHtmlPhoneInput = input => {
     assert.ok(input.includes(htmlClean(htmlStory, { stripTags: true })));
-    assert.match(input, /\[바깥 메시지의 HTML\]\nchat-timestamp: 11\.03, 11:03/);
-    assert.match(input, /\[메시지 안쪽 HTML \(코드 블록 1\)\]\nstatus-bar: 03:03 CET\nreservation-time: 18:30/);
+    assert.doesNotMatch(input, /바깥 메시지의 HTML|chat-timestamp:/);
+    assert.match(input, /\[첨부파일 \(메시지 내부의 HTML\)\]\nstatus-bar: 03:03 CET\nreservation-time: 18:30/);
     assert.doesNotMatch(input, /font-size|color:red|class=|hidden-clock/);
 };
 
@@ -839,7 +839,7 @@ test('initial phone creation sends the same compact HTML context with and withou
             await data.makePhone(mm, 'Ren');
             const call = globalThis.__menu.calls.find(x => x.sys === data.AI_SYS_PHONE);
             assertHtmlPhoneInput(call.input);
-            assert.equal((call.input.match(/chat-timestamp: 11\.03, 11:03/g) || []).length, 1);
+            assert.equal((call.input.match(/chat-timestamp: 11\.03, 11:03/g) || []).length, 0);
             assert.match(call.input, /\[OWNER'S CLOCK\]\nPhone owner: Ren\nDefault screen viewpoint: Mara\n\n/);
             assert.doesNotMatch(call.input, /Location:|Saved phone time:|Time differences from|The owner is in/);
         }

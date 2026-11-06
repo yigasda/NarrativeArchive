@@ -17,7 +17,7 @@ test('outer chat time and a full fenced HTML screen keep original field names an
         { scope: 'outside', fields: [{ sourceTime: '11.03, 11:03', label: 'chat-timestamp' }] },
         { scope: 'fenced', block: 1, fields: [{ sourceTime: '03:03 CET', label: 'status-bar' }, { sourceTime: '11.04, 18:30', label: 'reservation-time' }] },
     ]);
-    assert.equal(htmlTimeContext(example), '[바깥 메시지의 HTML]\nchat-timestamp: 11.03, 11:03\n[메시지 안쪽 HTML (코드 블록 1)]\nstatus-bar: 03:03 CET\nreservation-time: 11.04, 18:30');
+    assert.equal(htmlTimeContext(example), '[첨부파일 (메시지 내부의 HTML)]\nstatus-bar: 03:03 CET\nreservation-time: 11.04, 18:30');
     assert.doesNotMatch(htmlTimeContext(example), /Timestamp|style|color|DOCTYPE|<|>/);
     // A separate descriptive path must not turn fenced screen fields into current-clock references.
     assert.deepEqual(htmlClocks(example), []);
@@ -42,8 +42,8 @@ test('without a structural fence no outer or inner screen boundary is invented',
     assert.deepEqual(htmlTimeFields(raw), [{ scope: 'html', fields: [
         { sourceTime: '11.03,11:03', label: 'chat-timestamp' }, { sourceTime: '03:03 CET', label: 'status-bar' },
     ] }]);
-    assert.doesNotMatch(htmlTimeContext(raw), /바깥|안쪽|코드 블록/);
-    assert.doesNotMatch(htmlTimeContext('<html><body><time>08:30</time></body></html>'), /바깥|안쪽/);
+    assert.equal(htmlTimeContext(raw), '');
+    assert.equal(htmlTimeContext('<html><body><time>08:30</time></body></html>'), '');
 });
 
 test('multiple nested sources preserve separate equal time occurrences and matched fence lengths', () => {

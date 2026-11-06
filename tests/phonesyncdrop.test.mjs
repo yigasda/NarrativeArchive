@@ -1599,7 +1599,8 @@ test('real cleaned input retains vague months/days narrative and model dates are
         const body = T.input.split('[NEW MESSAGES]\n')[1].split('\n\n[')[0];
         assert.ok(body.includes(cleanMessage(raw, { stripTags: true })));
         assert.doesNotMatch(body, /<div|style=/);
-        assert.ok(body.includes(`chat-timestamp: ${clock}`));
+        assert.ok(body.includes(clock));
+        assert.doesNotMatch(body, /chat-timestamp:/);
     }
 });
 test('bare hints never set now themselves, and recent backwards model results keep the existing guard', async () => {
@@ -1714,35 +1715,38 @@ test('reflection keeps cleaned story and adds concise structural HTML time label
     finally { delete T.clean; }
     const body = T.input.split('[NEW MESSAGES]\n')[1].split('\n\n[')[0];
     assert.ok(body.includes(cleanMessage(raw, { stripTags: true })));
-    assert.match(body, /\[바깥 메시지의 HTML\]\nchat-timestamp: 11\.03, 11:03/);
-    assert.match(body, /\[메시지 안쪽 HTML \(코드 블록 1\)\]\nstatus-bar: 03:03 CET\nreservation-time: 18:30/);
+    assert.doesNotMatch(body, /바깥 메시지의 HTML|chat-timestamp:/);
+    assert.match(body, /\[첨부파일 \(메시지 내부의 HTML\)\]\nstatus-bar: 03:03 CET\nreservation-time: 18:30/);
     assert.match(body, /Several days later, the story continues/);
     assert.doesNotMatch(body, /color:red|color: red|font-size|class=|<html|<div/);
     assert.doesNotMatch(T.input, /Timestamp in #/);
     assert.equal(c.p.now, '11-09 08:30');
 });
 
-test('the money reflection stage retains compact HTML labels on its selected source messages', async () => {
+test('the money reflection stage omits outer HTML labels but retains message content', async () => {
     const raw = 'I bought the book for 15000 won. <span class="reservation-time">11.03, 18:30</span>';
     const c = setup([say('Ren', 'start'), say('Mara', 'morning'), say('Mara', raw)]);
     T.clean = mes => cleanMessage(mes, { stripTags: true });
     try { await run(c.m, { now: '11-03 19:00', events: [book(2, 'bought the book', [], 'new')] }); }
     finally { delete T.clean; }
-    assert.match(T.moneyInput, /\[메시지의 HTML\]\nreservation-time: 11\.03, 18:30/);
+    assert.doesNotMatch(T.moneyInput, /\[메시지의 HTML\]|reservation-time:/);
+    assert.match(T.moneyInput, /11\.03, 18:30/);
     assert.doesNotMatch(T.moneyInput, /class=/);
     assert.equal(c.bank(), 85000);
 });
 
 
-test('core and money input share HTML labels even when only a class changes during the core await', async () => {
+test('core and money omit outer HTML labels even when a class changes during the core await', async () => {
     const raw = 'I bought the book for 15000 won. <span class="reservation-time">11.03, 18:30</span>';
     const c = setup([say('Ren', 'start'), say('Mara', 'morning'), say('Mara', raw)]);
     T.clean = mes => cleanMessage(mes, { stripTags: true });
     T.beforeCore = () => { T.chat[2].mes = raw.replace('reservation-time', 'status-bar'); };
     try { await run(c.m, { now: '11-03 19:00', events: [book(2, 'bought the book', [], 'new')] }); }
     finally { delete T.clean; delete T.beforeCore; }
-    assert.match(T.input, /reservation-time: 11\.03, 18:30/);
-    assert.match(T.moneyInput, /reservation-time: 11\.03, 18:30/);
+    assert.doesNotMatch(T.input, /reservation-time:/);
+    assert.match(T.input, /11\.03, 18:30/);
+    assert.doesNotMatch(T.moneyInput, /reservation-time:/);
+    assert.match(T.moneyInput, /11\.03, 18:30/);
     assert.doesNotMatch(T.moneyInput, /status-bar/);
 });
 

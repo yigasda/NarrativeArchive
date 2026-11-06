@@ -190,11 +190,9 @@ export function htmlTimeFields(raw) {
     return groups;
 }
 export function htmlTimeContext(raw) {
-    return htmlTimeFields(raw).map(group => {
-        const heading = group.scope === 'outside' ? '바깥 메시지의 HTML' : group.scope === 'fenced'
-            ? `메시지 안쪽 HTML (코드 블록 ${group.block})` : '메시지의 HTML';
-        return `[${heading}]\n${group.fields.map(x => `${x.label}: ${x.sourceTime.replace(/\s+/g, ' ')}`).join('\n')}`;
-    }).join('\n');
+    return htmlTimeFields(raw).filter(group => group.scope === 'fenced').map(group =>
+        `[첨부파일 (메시지 내부의 HTML)]\n${group.fields.map(x => `${x.label}: ${x.sourceTime.replace(/\s+/g, ' ')}`).join('\n')}`
+    ).join('\n');
 }
 function readHtmlClocks(input, fields = false, excluded = null, positions = false) {
     const root = { name: '', text: '', hints: [], blocked: false, removed: false }, stack = [root];
