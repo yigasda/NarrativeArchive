@@ -148,7 +148,12 @@ const CLOCK_FIRST = `CLOCK FIRST
 First resolve "clock" and "now" for the latest scene, then write events and app records using those times.
 
 - Viewpoint: use the default viewpoint in OWNER'S CLOCK when set. Change it only when the surrounding narration shifts to another person's scene, not merely a sender's name. A time or date alone does NOT identify whose clock it is. Attachments keep their own clocks.
-- Given exact time: first identify from last message's context what moment the stated time refers to. If it represents the present, use it. If reaching the present requires adding elapsed time, add only the stated duration. The result must represent the present, not the past or future.
+- Given exact time:
+  1. In the last message, identify the stated time relevant to the present.
+  2-1. If current, use it unchanged.
+  2-2. Otherwise, add only stated elapsed time to reach the present (e.g., "three hours ago", "about ten minutes", "a few weeks later").
+  3. The result must represent the present, not the past or future.
+  WARNING: Actions that take time ≠ explicitly stated elapsed time
 - No exact time: your task is to infer the current time. The last message may mix present, past, and future. Identify the story's current point within it, then infer its time from context.
 
 - "clock":
