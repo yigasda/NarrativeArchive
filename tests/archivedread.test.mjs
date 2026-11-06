@@ -15,7 +15,7 @@ const map = { './extract.js': cleanMessageURL,
     './phoneprofile.js': href('phoneprofile.js'),
     './phonestory.js': encoded(`export const phoneTarget=()=>({scope:phoneChatScope(),check(){}});export const phoneChatScope=()=>globalThis.__archTest.scope||'test';`),
     './wealth.js': encoded(`export const ensureWealth=async()=>null;export const wealthBlock=()=>'';export const wealthDate=()=> '2026-10-26';export const wealthCheck=()=>null;export const addWealthFX=()=>{};`),
-    './ai.js': encoded(`import { reflectionFixture } from '${new URL('./reflectionfixture.mjs', import.meta.url).href}'; export const askDraft=async(input,o)=>{globalThis.__archTest.clockAuditCalls?.push({input,system:o.system});if(String(o.system).startsWith('GOAL\\nWrite the ordinary life')){(globalThis.__everydayIn||=[]).push(input);await globalThis.__archTest.beforeEveryday?.();const e=globalThis.__everyday;return JSON.stringify(typeof e==='function'?e(input):e||{});}if(String(o.system).startsWith('GOAL\\nWork out where')){(globalThis.__where||=[]).push(input);if(globalThis.__whereFail)throw new Error('quota');return '{"people":[]}';}const T=globalThis.__archTest;if(String(o.system).startsWith('STAGE: money')){T.moneyInput=input;T.moneySys=o.system;T.moneyCalls=(T.moneyCalls||0)+1;if(T.moneyAnswers&&T.moneyAnswers.length){const a=T.moneyAnswers.shift();return typeof a==='string'?a:JSON.stringify(a);}const core=(T.lastCore&&T.lastCore.events)||[];const out=[];for(const l of String(input).split('\\n')){const x=l.match(/^- (.+?): #(\\d+) .*?\\("(.*)"\\)(?: \\(changed\\))?$/)||l.match(/^- (.+?): #(\\d+) /);if(!x)continue;const e=core.find(e=>e&&e.money&&Number(String(e.at).replace('#',''))===Number(x[2])&&(x[3]===undefined||String(e.quote||'').slice(0,200)===x[3]));if(e)out.push({id:x[1],money:e.money});}return JSON.stringify({events:out});}T.sys=o.system;T.input=input;const a=T.answers.shift();T.lastCore=a&&typeof a==='object'?a:null;return typeof a==='string'?a:JSON.stringify(reflectionFixture(a,input));};`),
+    './ai.js': encoded(`import { reflectionFixture } from '${new URL('./reflectionfixture.mjs', import.meta.url).href}'; export const askDraft=async(input,o)=>{globalThis.__archTest.clockAuditCalls?.push({input,system:o.system});if(String(o.system).startsWith('GOAL\\nWrite the ordinary life')){(globalThis.__everydayIn||=[]).push(input);await globalThis.__archTest.beforeEveryday?.();const e=globalThis.__everyday;return JSON.stringify(typeof e==='function'?e(input):e||{});}if(String(o.system).startsWith('GOAL\\nWork out where')){(globalThis.__where||=[]).push(input);if(globalThis.__whereFail)throw new Error('quota');return JSON.stringify(globalThis.__whereAnswer||{people:[]});}const T=globalThis.__archTest;if(String(o.system).startsWith('STAGE: money')){T.moneyInput=input;T.moneySys=o.system;T.moneyCalls=(T.moneyCalls||0)+1;if(T.moneyAnswers&&T.moneyAnswers.length){const a=T.moneyAnswers.shift();return typeof a==='string'?a:JSON.stringify(a);}const core=(T.lastCore&&T.lastCore.events)||[];const out=[];for(const l of String(input).split('\\n')){const x=l.match(/^- (.+?): #(\\d+) .*?\\("(.*)"\\)(?: \\(changed\\))?$/)||l.match(/^- (.+?): #(\\d+) /);if(!x)continue;const e=core.find(e=>e&&e.money&&Number(String(e.at).replace('#',''))===Number(x[2])&&(x[3]===undefined||String(e.quote||'').slice(0,200)===x[3]));if(e)out.push({id:x[1],money:e.money});}return JSON.stringify({events:out});}T.sys=o.system;T.input=input;const a=T.answers.shift();T.lastCore=a&&typeof a==='object'?a:null;return typeof a==='string'?a:JSON.stringify(reflectionFixture(a,input));};`),
     './core.js': encoded(`export const ctx=()=>({chat:globalThis.__archTest.chat,chatMetadata:globalThis.__archTest.meta,loadWorldInfo:async()=>null,characters:[]});export const globalSettings=()=>({});export const saveMeta=async()=>{};`),
     './calendar.js': encoded(`export const calendars=()=>({});export const headingDate=()=>({});`),
     './drift.js': encoded(`export const recentForCheck=()=>[];export const chatRows=()=>globalThis.__archTest.chat.map((x,i)=>({index:i,user:x.is_user,hidden:!!x.is_system,text:'[#'+i+'] '+x.name+': '+x.mes}));`),
@@ -998,4 +998,31 @@ test('[SCENES WITH] also finds someone the phone doesn\'t know yet: a person the
     const who = globalThis.__everydayIn.at(-1).split('[SCENES WITH]\n')[1].split('\n\n')[0].split('\n');
     // (Miller from the reflection's own call, Hanna by the glossary's first name; a name these messages don't have is no scene)
     assert.deepEqual(who.sort(), ['Hanna Vogel', 'Miller']);
+});
+
+test('되돌리기 after the place reading was asked again (AI로 연동) keeps the new reading; one the round itself moved is taken back', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'landed in Rome'), say('Mara', 'nice')]);
+    c.p.now = '10-26 08:00'; c.p.year = 2026;
+    const where0 = { at: 1, people: [{ name: 'Ren', city: 'Frankfurt am Main', names: ['Frankfurt am Main'], lives: 'DE', tz: 'Europe/Berlin' }, { name: 'Mara', city: 'Seoul', names: ['Seoul'], lives: 'KR', tz: 'Asia/Seoul' }] };
+    c.p.where = structuredClone(where0);
+    await run(c.m, { now: '10-26 13:00', moved: [{ name: 'Ren', city: 'Rome', names: ['Rome'], tz: 'Europe/Rome' }], events: [] });
+    assert.equal(c.p.where.people.find(x => x.name === 'Ren').city, 'Rome');
+    // undone right away: the round's move goes
+    await data.undoRound(c.m, c.p);
+    assert.equal(c.p.where.people.find(x => x.name === 'Ren').city, 'Frankfurt am Main');
+    // read again after the round, then undone: the new reading stays
+    T.chat.push(say('Ren', 'still in Rome'));
+    await run(c.m, { now: '10-26 14:00', moved: [{ name: 'Ren', city: 'Rome', names: ['Rome'], tz: 'Europe/Rome' }], events: [] });
+    globalThis.__whereAnswer = { people: [{ name: 'Ren', city: 'Milan', lives: 'DE', tz: 'Europe/Rome' }] };
+    try { await data.rereadPlaces(c.m, c.p, { all: true }); } finally { delete globalThis.__whereAnswer; }
+    await data.undoRound(c.m, c.p);
+    assert.equal(c.p.where.people.find(x => x.name === 'Ren').city, 'Milan');
+    // (a phone with no reading before the round, read after it: not wiped)
+    const d = setup([say('Ren', 'a'), say('Mara', 'b'), say('Ren', 'c')]);
+    d.p.now = '10-26 08:00'; d.p.where = { at: 1, failed: true, people: [] };
+    await run(d.m, { now: '10-26 09:00', events: [] });
+    globalThis.__whereAnswer = { people: [{ name: 'Ren', city: 'Seoul', lives: 'KR', tz: 'Asia/Seoul' }] };
+    try { await data.rereadPlaces(d.m, d.p); } finally { delete globalThis.__whereAnswer; }
+    await data.undoRound(d.m, d.p);
+    assert.equal(d.p.where.people[0].city, 'Seoul');
 });

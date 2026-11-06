@@ -1465,7 +1465,7 @@ async function updatePhone(m, owner) {
         const below = p.syncUndo && s.rounds.at(-2) === p.syncUndo.round && p.money?.at === p.syncUndo.moneyAt && p.investment?.at === p.syncUndo.investAt;
         p.syncUndos = below ? [...(p.syncUndos || []), p.syncUndo].slice(-4) : [];
         if (!p.syncUndos.length) delete p.syncUndos;
-        p.syncUndo = { ...undo, round: id, last: structuredClone(p.syncLast), read: [...inRound], readFp: round.rows.map(r => bodyMark(r.text)), comments: undo.comments,
+        p.syncUndo = { ...undo, round: id, last: structuredClone(p.syncLast), read: [...inRound], readFp: round.rows.map(r => bodyMark(r.text)), comments: undo.comments, whereAfter: JSON.stringify(p.where ?? null),
             items: ITEM_KEYS.flatMap(k => (p[k] || []).filter(x => x.id && !had.has(x.id)).map(x => [k, x.id])),
             msgs: p.threads.filter(t => msgs.has(t.id)).map(t => [t.id, t.messages.map(msgSig).filter(sg => !msgs.get(t.id).has(sg))]).filter(([, xs]) => xs.length),
             effects: [...added.flatMap(x => x.effects || []), ...late.flatMap(x => x.effects || []), ...roundFx], byEvent: byEvent([...added, ...late]), after: structuredClone(mergedState(p)) };
@@ -1709,7 +1709,10 @@ export async function undoRound(m, p) {
     p.now = u.now;
     p.clockHold = true;
     if (u.year !== undefined) p.year = u.year;
-    if (u.where !== undefined) { if (u.where) p.where = u.where; else delete p.where; }
+    // the place reading as it was before the round, unless it changed since (AI로 연동, a city set by hand): what the user
+    // did after the round stays. (An older undo without the reading after it: kept unless it is still the one from before)
+    const whereLater = u.whereAfter !== undefined ? JSON.stringify(p.where ?? null) !== u.whereAfter : !!p.where && p.where.at !== u.where?.at;
+    if (u.where !== undefined && !whereLater) { if (u.where) p.where = u.where; else delete p.where; }
     // the round before comes up to be undone next, with its result
     const prev = (p.syncUndos || []).pop();
     if (!p.syncUndos?.length) delete p.syncUndos;
