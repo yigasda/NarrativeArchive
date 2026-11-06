@@ -24,7 +24,7 @@ const map = { './extract.js': cleanMessageURL,
     './people.js': encoded(`export const nameKey=s=>String(s).toLowerCase();export const nameRe=s=>new RegExp(s,'i');export const headingPlaces=()=>[];`),
     './recall.js': encoded(`export const estTok=s=>s.length/4;`), './scenes.js': encoded(`export const recentTrackers=(n,o={})=>{const T=globalThis.__archTest;const len=(o.chat||T.chat).length;(T.trackLens||=[]).push(len);return (T.trackers||[]).filter(t=>!Number.isInteger(t.i)||t.i<len);};`),
     './sections.js': encoded(`export const RANGE_HEAD=/^(?:(\\S{1,12})\\s)?#(\\d+)\\s*([–—~-])\\s*#?(\\d+)(.*)$/;export const parseSections=t=>[...String(t).matchAll(/^## (.+)\\n[^#]*/gm)].map(x=>({title:x[1],start:x.index,end:x.index+x[0].length,group:false}));export const sectionKey=s=>s.title;export const splitTail=s=>[s,''];`),
-    './translate.js': encoded(`export const glossaryEntries=()=>[];`), './world.js': encoded(`export const worldText=()=>'';`),
+    './translate.js': encoded(`export const glossaryEntries=()=>[];export const glossaryPeople=()=>globalThis.__glossaryPeople||[];`), './world.js': encoded(`export const worldText=()=>'';`),
 };
 const src = await readFile(new URL('../src/phonedata.js', import.meta.url), 'utf8');
 const data = await import(encoded(src.replace(/from '([^']+)'/g, (all, k) => `from '${map[k] || k}'`)));
@@ -984,4 +984,18 @@ test('mixed archive and visible messages still require the new clock response', 
     await assert.rejects(()=>run(c.m,JSON.stringify({now:'10-26 13:00',events:[]})),e=>e.code==='CLOCK_INVALID');
     assert.match(T.sys,/CLOCK FIRST/);assert.match(T.input,/\[ARCHIVE FOR THESE MESSAGES\]/);
     assert.equal(c.p.now,before);
+});
+
+test('[SCENES WITH] also finds someone the phone doesn\'t know yet: a person the reflection wrote into these events, or one of the glossary\'s people', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'Miller brought the coffee and I sent him for the car'), say('Mara', 'Hanna from the bakery waved')]);
+    c.p.now = '10-26 08:00'; c.p.year = 2026;
+    globalThis.__everydayIn = [];
+    globalThis.__glossaryPeople = ['Hanna Vogel'];
+    try {
+        await run(c.m, { now: '10-26 09:45', events: [{ id: 'car', at: 2, quote: 'Miller brought the coffee', summary: 'Miller, the butler, sent for the car', date: '10-26', time: '09:00',
+            phone: { calls: [{ with: 'Miller', type: 'out', time: '10-26 09:05', min: 1 }] } }] });
+    } finally { delete globalThis.__glossaryPeople; }
+    const who = globalThis.__everydayIn.at(-1).split('[SCENES WITH]\n')[1].split('\n\n')[0].split('\n');
+    // (Miller from the reflection's own call, Hanna by the glossary's first name; a name these messages don't have is no scene)
+    assert.deepEqual(who.sort(), ['Hanna Vogel', 'Miller']);
 });

@@ -70,7 +70,7 @@ const phonedata=await load('phonedata.js',{'./extract.js':cleanMessageURL,'./wea
  './people.js':encoded(`export const nameKey=s=>String(s).toLowerCase();export const nameRe=s=>new RegExp(s,'i');export const headingPlaces=()=>[];`),
  './recall.js':encoded(`export const estTok=s=>s.length/4;`), './scenes.js':encoded(`export const recentTrackers=()=>[];`),
  './sections.js':encoded(`export const parseSections=()=>[];export const RANGE_HEAD=/#(\\d+)–#(\\d+)/;export const sectionKey=()=>'';export const splitTail=s=>[s,''];`),
- './translate.js':encoded(`export const glossaryEntries=()=>[];`), './world.js':encoded(`export const worldText=()=>'';`)
+ './translate.js':encoded(`export const glossaryEntries=()=>[];export const glossaryPeople=()=>globalThis.__glossaryPeople||[];`), './world.js':encoded(`export const worldText=()=>'';`)
 });
 test('bank regeneration preserves baseline, actual cash, old transactions and independent investments',async()=>{
  const {m,p}=setup();p.money={currency:'EUR',bank:{name:'Old',accounts:[{id:'bank',kind:'checking',last4:'1234',name:'Cash',balance:1000,currency:'EUR'}]},tx:[{id:'history',account:'1234',amount:-50}],orders:[],passes:[],cards:[],basis:'original',displayCurrency:'KRW',fxDate:'2026-10-30'};

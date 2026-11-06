@@ -72,3 +72,10 @@ test('the answer comes part by part: a person\'s full name and the name they go 
     assert.deepEqual(tr.glossaryKeep(rows, text).map(x => x.src), ['Oscar Weber', 'Oscar', 'Leo', 'Westend', 'Albrecht Bank', 'Sugar']);
     for (const k of ['"people"', '"places"', '"groups"', '"terms"', '"whose"', '"means"', '"called"']) assert.ok(tr.AI_SYS_GLOSSARY_FIND.includes(k), k);
 });
+
+test('the glossary keeps which of its names are people (이름 찾기\'s people part), only while those lines are still in it', () => {
+    const rows = tr.glossaryFound(JSON.stringify({ people: [{ name: 'Albrecht Sinclair', ko: '알브레히트 싱클레어', called: 'Albrecht', calledKo: '알브레히트' }], places: [{ name: 'Westend', ko: '베스텐트', whose: 'Oscar lives there' }] }));
+    assert.deepEqual(rows.map(x => [x.src, x.kind]), [['Albrecht Sinclair', 'people'], ['Albrecht', 'people'], ['Westend', 'places']]);
+    assert.deepEqual(tr.glossaryPeople({ glossary: 'Albrecht Sinclair = 알브레히트 싱클레어\nWestend = 베스텐트', glossaryPeople: ['Albrecht Sinclair', 'Albrecht'] }), ['Albrecht Sinclair']);
+    assert.deepEqual(tr.glossaryPeople({ glossary: 'X = 엑스' }), []);
+});

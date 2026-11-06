@@ -17,7 +17,7 @@ import { headingPlaces, nameKey, nameRe } from './people.js';
 import { estTok } from './recall.js';
 import { recentTrackers } from './scenes.js';
 import { parseSections, RANGE_HEAD, sectionKey, splitTail } from './sections.js';
-import { glossaryEntries } from './translate.js';
+import { glossaryEntries, glossaryPeople } from './translate.js';
 import { worldText } from './world.js';
 import { phoneChatScope, phoneTarget } from './phonestory.js';
 import { dateOrderSource, datedClocks, htmlClocks, htmlTimeContext, swapDate, withDateOrder, tidyKo, arr, evOf, gapDays, giftOf, hhmm, jsonOf, ko, parseJson, storyMin, byStory, yearIn, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
@@ -504,21 +504,25 @@ ${LIFE_TIMERS}` : ''}
 export const AI_SYS_EVERYDAY = everydaySystem();
 // the people the owner had a scene with in these messages: any the phone knows (PEOPLE AROUND, contacts, texts, the place
 // reading) named in them
-function scenesWith(p, text) {
+// (and the people the reflection itself wrote into these messages' events, and the glossary's people)
+function scenesWith(p, text, more = []) {
     const low = String(text || '').toLowerCase(), seen = new Map();
     const add = (name, names) => { if (!name || samePerson(name, p.owner)) return; const k = nameKey(name); if (seen.has(k)) return; if (names.filter(Boolean).some(n => String(n).length >= 2 && new RegExp(`(^|[^\\p{L}])${String(n).toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'u').test(low))) seen.set(k, name); };
     for (const x of p.around?.people || []) add(x.name, [x.name, String(x.name).split(/\s+/)[0], ...arr(x.aka)]);
     for (const x of p.where?.people || []) add(x.name, [x.name, ...arr(x.aka)]);
     for (const x of p.contacts || []) add(x.name, [x.name]);
     for (const x of p.threads || []) add(x.with, [x.with]);
+    for (const n of more) add(n, [n, String(n).split(/\s+/)[0]]);
     return [...seen.values()].slice(0, 6);
 }
 // what the reflection put on the phone from these messages, one line an event
 const putLine = e => { const ph = e?.phone && typeof e.phone === 'object' ? e.phone : {}; const bits = Object.entries(ph).filter(([, v]) => Array.isArray(v) && v.length).map(([k, v]) => (k === 'threads' ? `texts with ${v.map(t => t?.with).filter(Boolean).join(', ')}` : `${k} ${v.length}`)); return `- #${e?.at ?? '?'} ${line(e?.summary, 120)}${bits.length ? ` (${bits.join('; ')})` : ''}`; };
 // the reflection's own blocks, but the messages read before and changed since (they only match its events' ids)
 export const everydayParts = parts => arr(parts).filter(b => !String(b).startsWith('[MESSAGES READ BEFORE, NOW CHANGED]'));
-async function askEveryday(parts, raw, p, rows, life = false) {
-    const text = rows.map(r => r.text).join('\n'), who = scenesWith(p, text);
+// the people the reflection put in these messages' events: whom texts, calls and contacts are with
+const eventPeople = raw => arr(raw?.events).flatMap(e => { const ph = e?.phone && typeof e.phone === 'object' ? e.phone : {}; return [...arr(ph.threads).map(x => x?.with), ...arr(ph.calls).map(x => x?.with), ...arr(ph.contacts).map(x => x?.name)]; }).map(n => line(n, 40)).filter(Boolean);
+async function askEveryday(parts, raw, p, rows, life = false, m = null) {
+    const text = rows.map(r => r.text).join('\n'), who = scenesWith(p, text, [...eventPeople(raw), ...(m ? glossaryPeople(m) : [])]);
     const mine = everydayParts(parts).join('\n\n');
     const blocks = [mine, `[PUT ON THE PHONE NOW]\n${arr(raw?.events).map(putLine).join('\n') || '(nothing)'}\nOwner-local window: ${p.now || "unknown"} to ${raw?.now || p.now || "unknown"}.`, who.length ? `[SCENES WITH]\n${who.join('\n')}` : ''].filter(Boolean).join('\n\n');
     try { const got = jsonOf(await askDraft(blocks, { force: true, system: everydaySystem({ life }), maxTokens: 6000, effort: 'low' })); return got?.everyday && typeof got.everyday === 'object' ? got.everyday : null; }
@@ -1328,7 +1332,7 @@ async function updatePhone(m, owner) {
             });
             toast?.find?.('.toast-message')?.css?.({ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' });
         }
-        const everyday = round.rows.length ? await askEveryday(inputParts, raw, p, round.rows, !!life) : null;
+        const everyday = round.rows.length ? await askEveryday(inputParts, raw, p, round.rows, !!life, m) : null;
         if (phoneChatScope(ctx()) !== scope || m.phones?.[key] !== p || p.money?.at !== made.money || p.investment?.at !== made.invest || p.life !== made.life || p.delivery !== made.delivery) throw new Error('반영하는 사이 폰이 바뀌었어요. 다시 해 주세요');
         const afterEveryday = new Map(syncRows().map(r => [r.index, r.text]));
         if (round.rows.some(r => afterEveryday.get(r.index) !== r.text)) throw new Error('반영하는 사이 대화가 바뀌었어요. 다시 해 주세요');

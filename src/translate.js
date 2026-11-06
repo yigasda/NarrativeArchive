@@ -207,6 +207,8 @@ export const krPlace = x => {
 };
 // the answer, part by part, as glossary lines: a person's full name and the name they go by; a place, a group or a term
 // only with whose it is or what it means (what the model can't say that for is no name of the story's)
+// the glossary's people (the names 이름 찾기 found as people, still in it): who a name in a message is, for 반영's 일상
+export const glossaryPeople = m => { const have = new Set(glossaryEntries(m).map(e => e.src.toLowerCase())); return (Array.isArray(m?.glossaryPeople) ? m.glossaryPeople : []).filter(n => have.has(String(n).toLowerCase())); };
 export function glossaryFound(out) {
     const s = String(out || '').replace(/```(?:json)?/gi, ''), a = s.indexOf('{'), b = s.lastIndexOf('}');
     let o = null;
@@ -215,7 +217,7 @@ export function glossaryFound(out) {
     const str = v => (typeof v === 'string' ? v.trim() : ''), list = k => (Array.isArray(o[k]) ? o[k] : []).filter(x => x && typeof x === 'object');
     const rows = [];
     // (a full name counts by the name they go by: "Oscar Weber" in the card once, "Oscar" all through the story)
-    for (const x of list('people')) { if (str(x.name) && str(x.ko)) rows.push({ src: str(x.name), ko: str(x.ko), key: str(x.called) || str(x.name).split(/\s+/)[0] }); if (str(x.called) && str(x.calledKo) && str(x.called) !== str(x.name)) rows.push({ src: str(x.called), ko: str(x.calledKo) }); }
+    for (const x of list('people')) { if (str(x.name) && str(x.ko)) rows.push({ src: str(x.name), ko: str(x.ko), key: str(x.called) || str(x.name).split(/\s+/)[0], kind: 'people' }); if (str(x.called) && str(x.calledKo) && str(x.called) !== str(x.name)) rows.push({ src: str(x.called), ko: str(x.calledKo), kind: 'people' }); }
     for (const [k, why] of [['places', 'whose'], ['groups', 'whose'], ['terms', 'means']]) for (const x of list(k)) if (str(x.name) && str(x.ko) && str(x[why])) rows.push({ src: str(x.name), ko: str(x.ko), kind: k });
     return rows;
 }
@@ -238,7 +240,7 @@ export async function openGlossary() {
         </div>
         <small class="na_dim na_gl_info"></small>
       </div>`);
-    const $ta = $root.find('.na_gl_ta').val(m.glossary || '');
+    const $ta = $root.find('.na_gl_ta').val(m.glossary || ''), people = [...glossaryPeople(m)];
     const info = () => {
         const lines = $ta.val().split('\n').filter(l => l.trim());
         const empty = lines.filter(l => !/(=|→)\s*\S/.test(l)).length;
@@ -258,6 +260,8 @@ export async function openGlossary() {
         const found = glossaryKeep(rows, input.split('\n\n[IN THE GLOSSARY]')[0]).filter(x => !krPlace(x) && x.src.length <= 60 && !/[가-힯]/.test(x.src) && !known.has(x.src.toLowerCase()) && (known.add(x.src.toLowerCase()), true));
         if (!found.length) return toastr.info('새로 넣을 이름이 없어요.');
         $ta.val(`${$ta.val().replace(/\s+$/, '')}${$ta.val().trim() ? '\n' : ''}${found.map(x => `${x.src} = ${x.ko}`).join('\n')}`);
+        // (which of them are people, kept with the chat once saved)
+        people.push(...found.filter(x => x.kind === 'people').map(x => x.src));
         info();
         toastr.success(`${found.length}개 넣었어요. 틀린 건 고쳐 주세요.`);
     });
@@ -279,6 +283,8 @@ export async function openGlossary() {
     const r = await c.callGenericPopup($root, c.POPUP_TYPE.CONFIRM, '', { wide: true, allowVerticalScrolling: true, okButton: '저장', cancelButton: '취소' });
     if (r !== c.POPUP_RESULT.AFFIRMATIVE && r !== true) return;
     m.glossary = $ta.val().split('\n').map(l => l.trimEnd()).filter(l => l.trim()).join('\n');
+    m.glossaryPeople = [...new Set(people)];
+    m.glossaryPeople = glossaryPeople(m);
     await saveMeta();
     toastr.success(`용어집 저장 · ${glossaryEntries(m).length}개`);
 }
