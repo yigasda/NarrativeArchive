@@ -940,3 +940,78 @@ test('location reading and all four direct phone writing paths share the same co
         }
     } finally { delete globalThis.__ctx; delete globalThis.__htmlDirect; }
 });
+
+// ---- OWNER'S CLOCK, one for every request: the hours and the time choices from the same time, the newest message read
+const clockFixture = (newest, { system = false, now = '11-03 03:03' } = {}) => {
+    const chat = Array.from({ length: 7 }, (_, i) => ({ name: 'Ren', is_user: false, is_system: i === 5 ? system : i < 4,
+        mes: i < 4 ? 'Earlier.' : i === 4 ? 'Mara texts. <span class="time">11월 2일 09시 00분</span>' : i === 5 ? newest : '<time id="future-clock">22:59</time>' }));
+    globalThis.__ctx = { chat, chatMetadata: {}, characters: [] };
+    globalThis.__rows = chat.map((x, index) => ({ index, hidden: x.is_system, user: false, text: `[#${index}] Ren: ${htmlClean(x.mes, { stripTags: true })}` }));
+    const p = plainPhone({ year: 2026, now, where: { at: 1, people: [{ name: 'Ren', city: 'Frankfurt am Main', tz: 'Europe/Berlin', names: ['Frankfurt'] }, { name: 'Mara', city: 'Seoul', tz: 'Asia/Seoul', names: ['Seoul'] }] },
+        sync: { marks: { base: { index: 5 } }, done: [], hiddenRead: {} } });
+    return { p, m: { text: m.text, phoneScreenHolder: 'Mara', phones: { ren: p } } };
+};
+
+test('every fill, making a phone again and its apps get the time choices of the newest message they read, as the reflection does', async () => {
+    const cases = [
+        ['life', (mm, p) => life.fillLife(mm, p), lifeAnswer('Wake'), life.AI_SYS_LIFE],
+        ['delivery', (mm, p) => life.fillDelivery(mm, p), '{}', life.AI_SYS_DELIVERY],
+        ['money', (mm, p) => data.fillMoney(mm, p), moneyAnswer('Ticket', 500, '11-03 03:03'), data.AI_SYS_MONEY],
+        ['voice', (mm, p) => data.fillVoice(mm, p), '{"memos":[]}', data.AI_SYS_VOICES],
+        ['app remake', (mm, p) => data.makePhone(mm, p.owner, { apps: ['note'] }), notesAnswer('Ticket'), data.AI_SYS_PHONE],
+    ];
+    try {
+        for (const [name, run, answer, system] of cases) {
+            const { p, m: mm } = clockFixture('Mara looks at her phone. <span class="time">11월 3일 오후 4시 15분</span>');
+            globalThis.__menu = { calls: [], answer };
+            try { await run(mm, p); } catch { /* the inputs are what this checks */ }
+            const call = globalThis.__menu.calls.find(x => x.sys === system);
+            assert.ok(call, name);
+            assert.match(call.input, /\[OWNER'S CLOCK\]\nPhone owner: Ren\n[\s\S]*Time differences from Frankfurt am Main:\n- Mara \(Seoul\): \+8 hours[\s\S]*Time choices\./, name);
+            // (11-03 16:15 in Seoul is 08:15 in Frankfurt; never the older message's, never one past the phone's clock)
+            assert.match(call.input, /On Mara's clock → owner's time: 11-03 08:15/, name);
+            assert.doesNotMatch(call.input, /11-02 01:00|22:59 →/, name);
+            assert.equal((call.input.match(/\[OWNER'S CLOCK\]/g) || []).length, 1, name);
+        }
+        // the reflection's own request: the same block, the same choice
+        const { p, m: mm } = clockFixture('Mara looks at her phone. <span class="time">11월 3일 오후 4시 15분</span>');
+        const rowsNow = [{ index: 5, text: globalThis.__rows[5].text, clockSource: globalThis.__ctx.chat[5].mes }];
+        assert.equal(data.ownerClock(p, p.now, mm, null, rowsNow), [data.clockBlock(p, p.now, mm), (await data.reflectionClocks(p, rowsNow, mm)).text].join('\n\n'));
+        assert.equal(data.fillClock(mm, p, p.now, null, data.windowOf(mm, p)), data.ownerClock(p, p.now, mm, null, rowsNow));
+    } finally { delete globalThis.__ctx; }
+});
+
+test('a fill\'s choices are worked out from the time its hours are (Frankfurt\'s summer time ends between the saved clock and the read one)', () => {
+    try {
+        const { p, m: mm } = clockFixture('Mara looks at her phone. <span class="time">16시 15분</span>', { now: '10-24 03:38' });
+        const g = data.windowOf(mm, p), late = data.fillClock(mm, p, '10-26 03:38', null, g), early = data.fillClock(mm, p, '10-24 03:38', null, g);
+        assert.match(late, /Clock reference time: 10-26 03:38[\s\S]*- Mara \(Seoul\): \+8 hours[\s\S]*owner's clock: 08:15/);
+        assert.match(early, /- Mara \(Seoul\): \+7 hours[\s\S]*owner's clock: 09:15/);
+    } finally { delete globalThis.__ctx; }
+});
+
+test('a fill\'s choices: never a system message\'s HTML, a timer, a hidden part or a quote; with TOLD SHORT its last lines, the later of one number', () => {
+    try {
+        for (const [newest, system] of [['<span class="timer">16시 15분</span>', true], ['<span class="timer">16시 15분</span>', false], ['<span class="timer">11월 3일 16시 15분</span>', false],
+            ['<span style="display:none">11월 3일 16시 15분</span> Mara waits.', false], ['<blockquote>11.03 16:15</blockquote> Mara waits.', false], ['Mara waits. 16시 15분', false]]) {
+            const { p, m: mm } = clockFixture(newest, { system });
+            const text = data.fillClock(mm, p, p.now, null, data.windowOf(mm, p));
+            // (a system message isn't read: the newest one read is #4, and its clock is the one)
+            if (system) assert.match(text, /owner's time: 11-02 01:00/, newest);
+            else assert.doesNotMatch(text, /Time choices|On .*clock/, newest);
+            assert.doesNotMatch(text, /08:15/, newest);
+        }
+        const { p, m: mm } = clockFixture('No clock.');
+        const short = { text: '[TOLD SHORT — messages #6–#9, after RECENT CHAT: …]\n#7 · lunch — "11.03 12:00"\n#9 · met — "11.03 12:30"\n#9 · left — "11.03 16:15"' };
+        assert.deepEqual(data.fillClockRows(mm, p, data.windowOf(mm, p), short).map(r => r.index), [7, 9, 9]);
+        assert.match(data.fillClock(mm, p, p.now, null, data.windowOf(mm, p), short), /On Mara's clock → owner's time: 11-03 08:15/);
+    } finally { delete globalThis.__ctx; }
+});
+
+test('two rows of one number (two summaries of one message): the later one\'s clock is the newest', async () => {
+    const { p, m: mm } = clockFixture('No clock.');
+    try {
+        const r = await data.reflectionClocks(p, [{ index: 5, text: '#5 · lunch — 11.03 12:00' }, { index: 5, text: '#5 · left — 11.03 16:15' }, { index: 4, text: '11.03 23:00' }], mm);
+        assert.ok(r.choices.length && r.choices.every(c => c.sourceTime === '11.03 16:15'));
+    } finally { delete globalThis.__ctx; }
+});

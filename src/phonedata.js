@@ -20,7 +20,7 @@ import { parseSections, RANGE_HEAD, sectionKey, splitTail } from './sections.js'
 import { glossaryEntries, glossaryPeople } from './translate.js';
 import { worldText } from './world.js';
 import { phoneChatScope, phoneTarget } from './phonestory.js';
-import { dateOrderSource, datedClocks, htmlClocks, htmlTimeContext, swapDate, withDateOrder, tidyKo, arr, evOf, gapDays, giftOf, hhmm, jsonOf, ko, parseJson, storyMin, byStory, yearIn, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
+import { clockQuiet, dateOrderSource, datedClocks, htmlClocks, htmlTimeContext, swapDate, withDateOrder, withDateOrderSync, tidyKo, arr, evOf, gapDays, giftOf, hhmm, jsonOf, ko, parseJson, storyMin, byStory, yearIn, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
 import { clockFallback, exactClockShift } from './phoneclock.js';
 export { tidyKo, arr, gapDays, giftOf, hhmm, jsonOf, ko, last4, line, num, pad, pick, storyMin, byStory, str, when, withEv };
 import { COUNTRY_TZ, applyDays, applyLife, applyWeather, cardClock, cityAt, dayGap, dlvClock, fillDays, lifeClock, lifeNow, weatherFrom, zoneShift } from './phonesynclife.js';
@@ -858,7 +858,7 @@ function phoneRequest(m, owner, p = null, lore = '', only = null, profile = '', 
     const ar = archiveFor(m, p ? p.upto ?? -1 : -1, nowAt(gap), !gap?.cut);
     const now = p ? JSON.stringify(phoneForModel(p)) : '';
     return [
-        p ? `[PHONE NOW]\n${now}` : '', clockBlock(p || m.phones?.[nameKey(owner)] || { owner }, upto == null ? undefined : storyNow(p || m.phones?.[nameKey(owner)] || {}, upto, m) || undefined, m, statusAt(p || m.phones?.[nameKey(owner)] || {}, upto, m)),
+        p ? `[PHONE NOW]\n${now}` : '', ((q, at) => fillClock(m, q, at === undefined ? q.now : at, statusAt(q, upto, m), gap, { text: extra.find(x => String(x).startsWith('[TOLD SHORT')) || '' }))(p || m.phones?.[nameKey(owner)] || { owner }, upto == null ? undefined : storyNow(p || m.phones?.[nameKey(owner)] || {}, upto, m) || undefined),
         !p && m.phones?.[nameKey(owner)]?.device ? `[DEVICE — locked]\n${JSON.stringify(m.phones[nameKey(owner)].device)}` : '',
         archiveBlock(m, ar.text || '(nothing new)', `ARCHIVE${p ? ' — the sections since PHONE NOW' : ''}`, CHAT_TOKENS.phone, upto),
         world ? `[WORLD]\n${world}` : '',
@@ -1264,7 +1264,7 @@ async function updatePhone(m, owner) {
         // Archive-only rounds use the pre-CLOCK-FIRST request (3.171.16): no viewpoint or time choices.
         // With visible messages, only their latest message can supply choices; archive summaries are background for time.
         const clock = archiveOnly ? archiveClockBlock(p, hm(p.now) ? p.now : st?.raw, m, st)
-            : [clockBlock(p, hm(p.now) ? p.now : st?.raw, m, st), (await reflectionClocks(p, clockRows, m)).text].filter(Boolean).join('\n\n');
+            : ownerClock(p, hm(p.now) ? p.now : st?.raw, m, st, clockRows);
         // (on a phone that knows no other city, a scene that isn't one of the owner's places is asked too: "Frankfurt"
         // may be another country; it stays the owner's unless the model names another city)
         const hasZoneOffsets = !!zonesOf(p, hm(p.now) ? p.now : st?.raw, m);
@@ -2230,18 +2230,38 @@ const archiveClockBlock = (p, at = p?.now, m = null, st = null) => {
 };
 // Reflection-only choices. Explicit dates stay as written; marked HTML clocks can carry a labelled fallback date.
 // Keep the request's date order and locations in the choices, not mutable chat state after the call.
-export function reflectionClocks(p, rows, m = null) {
-    return withDateOrder(dateOrderOf(m), () => reflectionClocks0(p, rows, m));
+// at: the time the clock stands at (the request's own, as the hours above it): every choice is worked out from it too
+export function reflectionClocks(p, rows, m = null, at = p?.now) {
+    return withDateOrder(dateOrderOf(m), () => reflectionClocks0(p, rows, m, at));
 }
+// OWNER'S CLOCK, one for every request (a reflection, making a phone or its apps again, every app's fill): the hours to
+// the other places and, from the newest message the request reads, the time choices, both from the same time (at)
+export function ownerClock(p, at, m = null, st = null, rows = []) {
+    return [clockBlock(p, at, m, st), withDateOrderSync(dateOrderOf(m), () => reflectionClocks0(p, rows, m, at)).text].filter(Boolean).join('\n\n');
+}
+// the newest message a fill (or making a phone, or making its apps again) reads, for its time choices, as the request
+// shows it: with TOLD SHORT, its last lines (one row each, in order); else the last message it reads word for word (with
+// its HTML, as RECENT CHAT shows it: never a system message's, never one cut short)
+export function fillClockRows(m, p, gap = null, short = null) {
+    if (short?.text) return String(short.text).split('\n').flatMap(l => { const mt = /^#(\d+) · /.exec(l); return mt ? [{ index: Number(mt[1]), text: l }] : []; });
+    const upto = nowAt(gap), row = gap?.n ? syncRows().find(r => r.index === gap.to) : null;
+    const text = row ? row.text : recentPhoneRows(1, { upto }).at(-1), index = row ? row.index : atOf(text);
+    if (!text || !Number.isInteger(index)) return [];
+    const msg = ctx().chat?.[index], full = phoneMessageText(text, index);
+    return [{ index, text, ...(msg && !msg.is_system && typeof msg.mes === 'string' && (row || full.length <= 6000) ? { clockSource: msg.mes } : {}) }];
+}
+export const fillClock = (m, p, at, st = null, gap = null, short = null) => ownerClock(p, at, m, st, fillClockRows(m, p, gap, short));
 // Only the newest supplied message can provide conversion choices. If its clock is not
 // recognized, leave time inference to the model instead of reviving an earlier message's clock.
 // Within that message, use source position, not the largest date. Archive rows use supplied indices.
+// (two rows with one number, two summaries of one message: the later one is the newer)
 function latestClock(rows) {
-    const r = [...arr(rows)].sort((a, b) => b.index - a.index)[0];
+    const r = arr(rows).reduce((a, b) => (!a || b.index >= a.index ? b : a), null);
     if (!r) return null;
     let stamps;
     if (typeof r.clockSource === 'string') {
-        const offsets = [], text = cleanMessage(r.clockSource, { stripTags: true }, offsets);
+        // (what no reader sees as the time now, a hidden part, a quote or a timer, gives no dated reading either)
+        const offsets = [], text = cleanMessage(clockQuiet(r.clockSource), { stripTags: true }, offsets);
         stamps = [...datedClocks(text, { positions: true }).map(x => ({ ...x, position: offsets[x.position] })),
             ...htmlClocks(r.clockSource, { positions: true })];
     } else stamps = datedClocks(r.text, { positions: true });
@@ -2250,7 +2270,7 @@ function latestClock(rows) {
     const { position, ...stamp } = latest;
     return { at: r.index, ...stamp };
 }
-function reflectionClocks0(p, rows, m) {
+function reflectionClocks0(p, rows, m, at = p?.now) {
     const own = ownerZone(p), choices = [], people = [], text = arr(rows).map(r => r.text).join('\n'), fallback = screenPerson(m, screenHolderOf(m))?.name || screenHolderOf(m);
     if (!own) return { choices, text: '' };
     for (const z of placesAround(p, m)) {
@@ -2272,7 +2292,7 @@ function reflectionClocks0(p, rows, m) {
         const candidates = fallback ? (defaultPerson ? [defaultPerson] : []) : people.slice(0, 6);
         for (const who of candidates) {
             if (stamp.clock) {
-                const fallback = clockFallback(p, own.tz, who.tz, stamp.clock);
+                const fallback = clockFallback({ ...p, now: at }, own.tz, who.tz, stamp.clock);
                 if (fallback) {
                     const source = new Date(`${fallback.localYear}-${fallback.local.slice(0, 5)}T00:00:00Z`), owner = new Date(`${fallback.ownerYear}-${fallback.ownerTime.slice(0, 5)}T00:00:00Z`);
                     // A date-free source never becomes a dated answer choice. The dated calculation is only a reference.
@@ -2287,7 +2307,7 @@ function reflectionClocks0(p, rows, m) {
     const lines = [`${stamp.clock ? 'No date is shown; read the story to determine the date.\n\n' : '\n'}${choices.map(c => c.reference
             ? `On ${c.names[0]}'s clock → owner's clock: ${c.reference.ownerClock}${c.reference.dayShift ? ` (${c.reference.dayShift > 0 ? '+' : ''}${c.reference.dayShift} day${Math.abs(c.reference.dayShift) === 1 ? '' : 's'} relative to screen)` : ''}.`
             : `On ${c.names[0]}'s clock → owner's time: ${c.ownerTime}`).join('\n')}`];
-    return { choices, text: `${identity}\n\n${clockBlock(p, p.now, m) ? '' : `${clockBlock(p, p.now, m, null, true)}\n\n`}Time choices.\nTime alone does not identify the viewpoint.\nKeep the default viewpoint unless the surrounding narration shifts to another screen or scene.\n\nDate order: ${dateOrderOf(m) === 'dm' ? 'day.month' : 'month.day'}.\n${lines.join('\n')}` };
+    return { choices, text: `${identity}\n\n${clockBlock(p, at, m) ? '' : `${clockBlock(p, at, m, null, true)}\n\n`}Time choices.\nTime alone does not identify the viewpoint.\nKeep the default viewpoint unless the surrounding narration shifts to another screen or scene.\n\nDate order: ${dateOrderOf(m) === 'dm' ? 'day.month' : 'month.day'}.\n${lines.join('\n')}` };
 }
 const pkey = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
 // a place that is someone's own: their name (or their first name) then 's · 의 · 네, or a room, a home after it
@@ -2557,7 +2577,7 @@ async function makeMoney(m, p, { regenerateBalances = false, wealthPlan = null }
     const preserved = rebuild ? `[REBUILD ACCOUNTS]\n${JSON.stringify(old.bank.accounts.map(({id,kind,name,last4,currency})=>({id,kind,name,last4,currency})))}\n[MONEY ALREADY MOVED]\n${JSON.stringify(old.bank.accounts.map(a=>({id:a.id,currency:a.currency,entries:finance(m).accounts[`${a.id}:${a.currency}`]?.entries || {}})))}` : old ? `[EXISTING ACCOUNTS]\n${JSON.stringify(old.bank.accounts)}` : '';
     const system = AI_SYS_MONEY + (rebuild ? MONEY_REBUILD : '');
     const rates = () => `[SAVED RATES]\n${JSON.stringify(Object.fromEntries(Object.entries(finance(m).prices).filter(([k])=>k.startsWith('FX:')).map(([k,book])=>[k,book[date]])))}`;
-    const input = await sideRequest(m,p.owner,[`[PHONE NOW]\n${moneyContext(p, at)}`,clockBlock(p, at, m, statusAt(p, nowAt(read.gap), m)),preserved,wealthBlock(plan,'deposits'),`[EVALUATION DATE]\n${date}`,rates()],{profile:p.financeProfile,money:true,read});
+    const input = await sideRequest(m,p.owner,[`[PHONE NOW]\n${moneyContext(p, at)}`,fillClock(m, p, at, statusAt(p, nowAt(read.gap), m), read.gap),preserved,wealthBlock(plan,'deposits'),`[EVALUATION DATE]\n${date}`,rates()],{profile:p.financeProfile,money:true,read});
     mark = readMark(read.gap) || mark;
     let correction='';
     for(let attempt=0;attempt<2;attempt++) {
@@ -2621,7 +2641,7 @@ async function makeMoney(m, p, { regenerateBalances = false, wealthPlan = null }
             try {
                 const at2 = storyNow(p, nowAt(two.cover)) || p.now, tx = !old || rebuild, soFar = { cards: raw.cards, ...(tx ? { tx: raw.tx } : {}), passes: raw.passes, orders: raw.orders };
                 const only = `The bank, its accounts and their balances stay as they are: leave "bank" and "fx" out${tx ? '' : ', and "tx" too (the bank keeps its own)'}`;
-                const input2 = await sideRequest(m, p.owner, [`[PHONE NOW]\n${moneyContext(p, at2)}`, clockBlock(p, at2, m, statusAt(p, nowAt(two.cover), m)), `[EXISTING ACCOUNTS]\n${JSON.stringify(p.money.bank.accounts)}`, `[EVALUATION DATE]\n${date}`, rates(),
+                const input2 = await sideRequest(m, p.owner, [`[PHONE NOW]\n${moneyContext(p, at2)}`, fillClock(m, p, at2, statusAt(p, nowAt(two.cover), m), two.cover, two.short), `[EXISTING ACCOUNTS]\n${JSON.stringify(p.money.bank.accounts)}`, `[EVALUATION DATE]\n${date}`, rates(),
                     `${soFarHead('MONEY', two.short, only)}\n${JSON.stringify(soFar)}`, two.short?.text || ''], { profile: p.financeProfile, money: true, read: { gap: two.cover } });
                 const out2 = String(await askDraft(input2, { force: true, system: AI_SYS_MONEY, maxTokens: 12000 }) ?? ''), raw2 = jsonOf(out2);
                 // an answer that isn't the JSON, or one cut off before its end: what it read isn't all there, so the mark
@@ -2652,7 +2672,7 @@ export const secOf = v => {
 };
 export async function fillVoice(m, p) {
     const diary = (p.diary || []).slice(-6).map(d => `- ${d.date} ${d.title}`).join('\n');
-    const out = await askDraft(await sideRequest(m, p.owner, [`[DIARY]\n${diary || '(none)'}`, clockBlock(p, p.now, m)], {story:CHAT_TOKENS.apps,profile:p.financeProfile}), { force: true, system: AI_SYS_VOICES, maxTokens: 6000 });
+    const out = await askDraft(await sideRequest(m, p.owner, [`[DIARY]\n${diary || '(none)'}`, fillClock(m, p, p.now, null, windowOf(m, p))], {story:CHAT_TOKENS.apps,profile:p.financeProfile}), { force: true, system: AI_SYS_VOICES, maxTokens: 6000 });
     const memos = arr(jsonOf(out, { salvage: 'whole' })?.memos).map(x => ({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), sec: secOf(x?.sec), place: line(x?.place, 60), src: 'guess' })).filter(x => x.text);
     if (!memos.length) throw new Error('모델 답에서 음성 메모를 찾지 못했어요');
     // (one the story already put there, the same title at the same time, isn't written twice)

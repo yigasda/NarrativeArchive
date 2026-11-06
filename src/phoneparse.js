@@ -37,6 +37,7 @@ export const dayFirstChat = () => { try { return (held ?? orderOf()) === 'dm'; }
 // (runs can overlap, an app filled while another is: each keeps its place in a list and leaves only itself, so a run
 // ending first never puts back an order another run set; with none running, the chat's own setting)
 const runs = [];
+export function withDateOrderSync(order, fn) { const me = { order }; runs.push(me); held = order; try { return fn(); } finally { const i = runs.indexOf(me); if (i >= 0) runs.splice(i, 1); held = runs.length ? runs[runs.length - 1].order : null; } }
 export async function withDateOrder(order, fn) { const me = { order }; runs.push(me); held = order; try { return await fn(); } finally { const i = runs.indexOf(me); if (i >= 0) runs.splice(i, 1); held = runs.length ? runs[runs.length - 1].order : null; } }
 // the story's own blocks in a request (what "evidence" may quote): never the app's records, the code's OWNER'S CLOCK or
 // time choices, or anything else made for the model
@@ -104,10 +105,10 @@ export const hhmm = v => {
 // Dated clock spans for reflection hints: never borrow a bare hour from another line or sentence.
 // Keep the exact span for the model; normalize only the separate date and clock captures.
 const MONTH_WORD = [...new Set(FULL.flatMap(w => Array.from({ length: w.length - 2 }, (_, i) => w.slice(0, i + 3))))].sort((a, b) => b.length - a.length).join('|');
-const CLOCK_DATE = String.raw`(?:\d{4}[-/.])?\d{1,2}[-/.]\d{1,2}(?:[-/.][ \t]?\d{4})?|(?:\d{4}년[ \t]*)?\d{1,2}[ \t]*월[ \t]*\d{1,2}[ \t]*일|(?:${MONTH_WORD})\.?[ \t]+\d{1,2}(?:st|nd|rd|th)?(?:,?[ \t]+\d{4})?|\d{1,2}(?:st|nd|rd|th)?\.?[ \t]+(?:${MONTH_WORD})\.?(?:,?[ \t]+\d{4})?`;
+const CLOCK_DATE = String.raw`(?:\d{4}[-/.])?\d{1,2}[-/.]\d{1,2}(?:[-/.][ \t\u00a0]?\d{4})?|(?:\d{4}년[ \t\u00a0]*)?\d{1,2}[ \t\u00a0]*월[ \t\u00a0]*\d{1,2}[ \t\u00a0]*일|(?:${MONTH_WORD})\.?[ \t\u00a0]+\d{1,2}(?:st|nd|rd|th)?(?:,?[ \t\u00a0]+\d{4})?|\d{1,2}(?:st|nd|rd|th)?\.?[ \t\u00a0]+(?:${MONTH_WORD})\.?(?:,?[ \t\u00a0]+\d{4})?`;
 // Meridiem belongs to this clock on either side, never to another sentence or line.
 const CLOCK_MERIDIEM = String.raw`(?:[ap](?:\.m\b\.?|m\b)|(?:오전|오후|새벽|아침|저녁|밤)(?!\p{L}))`;
-const DATED_CLOCK = new RegExp(String.raw`(?<![\p{L}\p{N}])(${CLOCK_DATE})\.?[,]?(?:[ \t]+|T)((?:${CLOCK_MERIDIEM}[ \t]*)?\d{1,2}[ \t]*:[ \t]*\d{2}(?:[ \t]*${CLOCK_MERIDIEM})?)(?![\p{L}\p{N}:])`, 'giu');
+const DATED_CLOCK = new RegExp(String.raw`(?<![\p{L}\p{N}])(${CLOCK_DATE})\.?[,]?(?:[ \t\u00a0]+|T)((?:${CLOCK_MERIDIEM}[ \t\u00a0]*)?\d{1,2}[ \t\u00a0]*:[ \t\u00a0]*\d{2}(?:[ \t\u00a0]*${CLOCK_MERIDIEM})?)(?![\p{L}\p{N}:])`, 'giu');
 const HAS_MERIDIEM = new RegExp(CLOCK_MERIDIEM, 'iu');
 const realDay = (md, year) => { const [mo, d] = md.split('-').map(Number), y = Number(year) || 2000; return mo >= 1 && mo <= 12 && d >= 1 && d <= new Date(Date.UTC(y, mo, 0)).getUTCDate(); };
 export function datedClocks(text, { positions = false } = {}) {
@@ -137,7 +138,7 @@ export function datedClocks(text, { positions = false } = {}) {
     return positions ? out.sort((a, b) => a.position - b.position) : out;
 }
 const DATE_HEAD = new RegExp(String.raw`(?<![\p{L}\p{N}])(${CLOCK_DATE})\.?(?:[ \t\u00a0]*[(（][^)）\n]{1,4}[)）])?(?:에|엔)?[ \t\u00a0]*[,，]?[ \t\u00a0]*`, 'giu');
-const COLON_HEAD = new RegExp(String.raw`^((?:${CLOCK_MERIDIEM}[ \t]*)?\d{1,2}[ \t]*:[ \t]*\d{2}(?:[ \t]*${CLOCK_MERIDIEM})?)(?![\p{L}\p{N}:])`, 'iu');
+const COLON_HEAD = new RegExp(String.raw`^((?:${CLOCK_MERIDIEM}[ \t\u00a0]*)?\d{1,2}[ \t\u00a0]*:[ \t\u00a0]*\d{2}(?:[ \t\u00a0]*${CLOCK_MERIDIEM})?)(?![\p{L}\p{N}:])`, 'iu');
 // Time-only HTML hints are read before the normal text cleaner removes the element names.
 // This is an inert tokenizer, not a DOM: no scripts, styles, URL fetching, or HTML execution.
 const HTML_CLOCK = new RegExp(String.raw`^(?:(${CLOCK_MERIDIEM})\s*)?(\d{1,2})[ \t]*:[ \t]*(\d{2})(?:\s*(${CLOCK_MERIDIEM}))?$`, 'iu');
@@ -207,6 +208,18 @@ const htmlClockMarkup = (raw, preserve = false) => {
     }).join('\n');
     return htmlClockCode(visible, preserve);
 };
+// the message with what no reader sees as the time now blanked out, every other character where it was (an HTML part
+// that is hidden, a quote, code or a timer; Markdown is left as it was, a fenced block of HTML is shown): the text's own
+// dated readings (datedClocks) read only the rest
+// (an inline part leaves spaces, a block a line break, so text on either side never joins into one reading)
+export function clockQuiet(raw) {
+    const marked = String(raw || ''), quiet = [];
+    readHtmlClocks(marked, false, null, false, quiet);
+    if (!quiet.length) return marked;
+    const out = marked.split('');
+    for (const [start, end, inline] of quiet) for (let i = start; i < end && i < out.length; i++) if (out[i] !== '\n') out[i] = !inline && i === start ? '\n' : ' ';
+    return out.join('');
+}
 export function htmlClocks(raw, { positions = false } = {}) {
     return readHtmlClocks(htmlClockMarkup(raw, positions ? 'offsets' : false), false, null, positions);
 }
@@ -263,7 +276,7 @@ export function htmlTimeContext(raw) {
         `[첨부파일 (메시지 내부의 HTML)]\n${group.fields.map(x => `${x.label}: ${x.sourceTime.replace(/\s+/g, ' ')}`).join('\n')}`
     ).join('\n');
 }
-function readHtmlClocks(input, fields = false, excluded = null, positions = false) {
+function readHtmlClocks(input, fields = false, excluded = null, positions = false, quiet = null) {
     const root = { name: '', text: '', seen: '', hints: [], blocked: false, removed: false }, stack = [root];
     let visible = '';
     const append = (text, expose = true) => {
@@ -275,6 +288,7 @@ function readHtmlClocks(input, fields = false, excluded = null, positions = fals
     };
     const finish = (complete, end = input.length) => {
         const node = stack.pop(), parent = stack[stack.length - 1];
+        if (quiet && node.quiet && !parent.quiet) quiet.push([node.start, end, HTML_INLINE.test(node.name)]);
         if (node.blocked || !complete) {
             if (excluded) excluded.push([node.start, end]);
             parent.text += '\0';
@@ -373,6 +387,9 @@ function readHtmlClocks(input, fields = false, excluded = null, positions = fals
         const labels = `${name} ${attrs.class || ''} ${attrs.id || ''}`;
         const node = { name, start, originalName: head[2], label: htmlFieldLabel(head[2], attrs) || stack[stack.length - 1].label || '', text: '', seen: '', hints: [], marked: /time/i.test(labels),
             hiddenStyle: !!stack[stack.length - 1].hiddenStyle || HIDDEN_STYLE.test(attrs.style || '') || attrs.hidden !== undefined,
+            // (what no reader sees as the time now, for the text's own readings: a hidden part, a quote, code, a timer)
+            quiet: !!stack[stack.length - 1].quiet || HTML_HIDDEN.test(name) || attrs.hidden !== undefined || /^true$/i.test(attrs['aria-hidden'] || '')
+                || HIDDEN_STYLE.test(attrs.style || '') || HTML_DURATION.test(labels.replace(/([a-z\d])([A-Z])/g, '$1 $2')),
             removed: stack[stack.length - 1].removed || HTML_REMOVED.test(name),
             blocked: stack[stack.length - 1].blocked || HTML_HIDDEN.test(name)
                 || attrs.hidden !== undefined || /^true$/i.test(attrs['aria-hidden'] || '')
