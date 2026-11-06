@@ -147,7 +147,7 @@ const LIFE_CHANGE = `- A record already in LIFE NOW is changed with "change": it
 const CLOCK_FIRST = `CLOCK FIRST
 First resolve "clock" and "now", then write events and app records using those times.
 - Viewpoint: use the default viewpoint in OWNER'S CLOCK when set. Change it only when the text shows a switch to another person's screen or scene, not merely a sender's name. Attachments keep their own clocks.
-- "clock": basis (max 20 words: default used or narrative evidence for a switch; time passed), viewpoint { owner (whose screen or scene), time (copy the time from that screen or scene; never estimate) }, messageSender (who sent the displayed message). Use null for absent time or messageSender.
+- "clock": basis (max 20 words: default used or narrative evidence for a switch; time passed), screen { owner (whose screen or scene), time (copy the time from that screen or scene; never estimate) }, messageSender (who sent the displayed message). Use null for absent time or messageSender.
 - "now": convert that time to the owner's clock without adding time. Use the matching OWNER'S CLOCK choice without converting it again. Infer from context only when no exact time is given. Example: with a +8-hour offset, 12:32 becomes exactly 20:32.
 - App records: the owner's present scene agrees with "now". Other scenes, memories and appointments keep their own times.`;
 export function updateSystem({ money = true, delivery = false, life = false, weather = false, tracker = false, split = false, invest = false, zone = false } = {}) {
@@ -215,7 +215,7 @@ ${delivery ? `- A delivery paid in cash at the door has no move. "tip" only wher
 ${PHONE_STYLE.replace('; "now" is the newest moment of the story.', '.')}
 
 ANSWER — one JSON object, nothing else:
-{ "clock": { "basis": "default used or switch evidence; time passed", "viewpoint": { "owner": "name", "time": null or "as written" }, "messageSender": null or "name" },
+{ "clock": { "basis": "default used or switch evidence; time passed", "screen": { "owner": "name", "time": null or "as written" }, "messageSender": null or "name" },
   "now": "MM-DD HH:MM", "moved": [],${zone ? ' "statusCity": "",' : ''}
   "events": [{ "id": an id from EVENTS ON THE PHONE, or a short new tag like "berlin-flight", "at": 123, "quote": "exact words",
                "date": "MM-DD", "time": "HH:MM" or "", "summary": "one short line",${split ? ` "apps": [] or ["money"${invest ? ', "invest"' : ''}],` : ''}
@@ -1841,13 +1841,11 @@ export function screenHolderLabel(m, c = ctx()) {
 }
 // Display aliases only. Never change the model's time, sender, explanation or a different scene owner.
 export function clockForDisplay(clock, m, c = ctx()) {
-    // Older responses used screen. Prefer viewpoint when present, even when it is null.
-    const field = clock && Object.hasOwn(clock, 'viewpoint') ? 'viewpoint' : 'screen';
-    const selected = screenHolderLabel(m, c), owner = clock?.[field]?.owner;
+    const selected = screenHolderLabel(m, c), owner = clock?.screen?.owner;
     if (!selected || typeof owner !== 'string') return clock;
     const key = name => nameKey(screenPerson(m, name)?.name || name);
     if (key(owner) !== key(selected)) return clock;
-    return { ...clock, [field]: { ...clock[field], owner: selected } };
+    return { ...clock, screen: { ...clock.screen, owner: selected } };
 }
 export const dateOrderOf = m => (m?.dateOrder === 'dm' ? 'dm' : 'md');
 export const needsDateOrder = m => !m?.dateOrder;
