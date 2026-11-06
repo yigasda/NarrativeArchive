@@ -15,7 +15,7 @@ const map = { './extract.js': cleanMessageURL,
     './phoneprofile.js': href('phoneprofile.js'),
     './phonestory.js': encoded(`export const phoneTarget=()=>({scope:phoneChatScope(),check(){}});export const phoneChatScope=()=>globalThis.__archTest.scope||'test';`),
     './wealth.js': encoded(`export const ensureWealth=async()=>null;export const wealthBlock=()=>'';export const wealthDate=()=> '2026-10-26';export const wealthCheck=()=>null;export const addWealthFX=()=>{};`),
-    './ai.js': encoded(`export const askDraft=async(input,o)=>{if(String(o.system).startsWith('GOAL\\nWrite the ordinary life')){(globalThis.__everydayIn||=[]).push(input);const e=globalThis.__everyday;return JSON.stringify(typeof e==='function'?e(input):e||{});}if(String(o.system).startsWith('GOAL\\nWork out where')){(globalThis.__where||=[]).push(input);if(globalThis.__whereFail)throw new Error('quota');return '{"people":[]}';}const T=globalThis.__archTest;if(String(o.system).startsWith('STAGE: money')){T.moneyInput=input;T.moneySys=o.system;T.moneyCalls=(T.moneyCalls||0)+1;if(T.moneyAnswers&&T.moneyAnswers.length){const a=T.moneyAnswers.shift();return typeof a==='string'?a:JSON.stringify(a);}const core=(T.lastCore&&T.lastCore.events)||[];const out=[];for(const l of String(input).split('\\n')){const x=l.match(/^- (.+?): #(\\d+) .*?\\("(.*)"\\)(?: \\(changed\\))?$/)||l.match(/^- (.+?): #(\\d+) /);if(!x)continue;const e=core.find(e=>e&&e.money&&Number(String(e.at).replace('#',''))===Number(x[2])&&(x[3]===undefined||String(e.quote||'').slice(0,200)===x[3]));if(e)out.push({id:x[1],money:e.money});}return JSON.stringify({events:out});}T.sys=o.system;T.input=input;const a=T.answers.shift();T.lastCore=a&&typeof a==='object'?a:null;return typeof a==='string'?a:JSON.stringify(a);};`),
+    './ai.js': encoded(`import { reflectionFixture } from '${new URL('./reflectionfixture.mjs', import.meta.url).href}'; export const askDraft=async(input,o)=>{globalThis.__archTest.clockAuditCalls?.push({input,system:o.system});if(String(o.system).startsWith('GOAL\\nWrite the ordinary life')){(globalThis.__everydayIn||=[]).push(input);await globalThis.__archTest.beforeEveryday?.();const e=globalThis.__everyday;return JSON.stringify(typeof e==='function'?e(input):e||{});}if(String(o.system).startsWith('GOAL\\nWork out where')){(globalThis.__where||=[]).push(input);if(globalThis.__whereFail)throw new Error('quota');return '{"people":[]}';}const T=globalThis.__archTest;if(String(o.system).startsWith('STAGE: money')){T.moneyInput=input;T.moneySys=o.system;T.moneyCalls=(T.moneyCalls||0)+1;if(T.moneyAnswers&&T.moneyAnswers.length){const a=T.moneyAnswers.shift();return typeof a==='string'?a:JSON.stringify(a);}const core=(T.lastCore&&T.lastCore.events)||[];const out=[];for(const l of String(input).split('\\n')){const x=l.match(/^- (.+?): #(\\d+) .*?\\("(.*)"\\)(?: \\(changed\\))?$/)||l.match(/^- (.+?): #(\\d+) /);if(!x)continue;const e=core.find(e=>e&&e.money&&Number(String(e.at).replace('#',''))===Number(x[2])&&(x[3]===undefined||String(e.quote||'').slice(0,200)===x[3]));if(e)out.push({id:x[1],money:e.money});}return JSON.stringify({events:out});}T.sys=o.system;T.input=input;const a=T.answers.shift();T.lastCore=a&&typeof a==='object'?a:null;return typeof a==='string'?a:JSON.stringify(reflectionFixture(a,input));};`),
     './core.js': encoded(`export const ctx=()=>({chat:globalThis.__archTest.chat,chatMetadata:globalThis.__archTest.meta,loadWorldInfo:async()=>null,characters:[]});export const globalSettings=()=>({});export const saveMeta=async()=>{};`),
     './calendar.js': encoded(`export const calendars=()=>({});export const headingDate=()=>({});`),
     './drift.js': encoded(`export const recentForCheck=()=>[];export const chatRows=()=>globalThis.__archTest.chat.map((x,i)=>({index:i,user:x.is_user,hidden:!!x.is_system,text:'[#'+i+'] '+x.name+': '+x.mes}));`),
@@ -857,4 +857,112 @@ test('latest visible message alone supplies candidates without falling back to e
         assert.match(T.input, /Saved phone time: 11-05 03:38/);
         if (visibleHasClock) assert.match(T.input, /Time alone does not identify the viewpoint/);
     }
+});
+
+
+test('all 1152 reflection routing combinations select legacy archive-only or current visible-message clocks', async () => {
+const result={runs:0,coreConflicts:0,everyday:0,money:0,archiveOnly:0,failures:[],samples:[]};
+const bad=s=>s.includes('"screen": { "owner": "name", "time":');
+try {
+for(let bits=0;bits<16;bits++)for(const order of ['oldest','newest'])for(const source of ['visible','mixed','archive'])for(const style of ['dated','bare','narrative'])for(const tracker of ['none','own','other','unknown']){
+ const label={bits,order,source,style,tracker};
+ try{
+  const stamp=style==='dated'?'<div class="chat-timestamp">10.26, 14:12</div>':style==='bare'?'<div class="chat-timestamp">14:12</div>':'Ren walks outside under a dark sky.';
+  const chat=[say('Ren','start'),say('Mara','hello'),...Array.from({length:5},(_,i)=>say('Ren',`message ${i+2}: ${stamp} I paid for tea.`))];
+  if(source!=='visible')for(let i=2;i<=5;i++)chat[i].is_system=true;
+  if(source==='archive')chat.pop();
+  const {m,p}=setup(chat);T.trackers=[];T.moneyAnswers=[];T.moneyCalls=0;T.clockAuditCalls=[];globalThis.__everyday={};store.clear();
+  if(source!=='visible')m.text=`## #2–#5 — Tea\nRen paid for tea. ${style==='dated'?'10.26, 14:12':style==='bare'?'14:12':'A dark sky.'}\n`;
+  if(!(bits&1))delete p.money;
+  if(bits&2)p.investment={base:'KRW',at:1,date:'2026-10-20',accounts:[],securities:[],trades:[],watch:[]};
+  if(bits&4)p.life={at:'10-26 03:38',clock:{alarms:[],timers:[],running:null},health:{usual:{},days:[]},files:{folders:[],items:[]},weather:{here:{place:'Berlin',date:'10-26',time:'03:38',cond:'clear',temp:10,hours:[],days:[],tiles:{}},cities:[]}};
+  if(bits&8)p.delivery={shops:[],orders:[],cart:{items:[]}};
+  p.now='10-26 03:38';p.year=2026;p.where={at:1,people:[{name:'Ren',city:'Berlin',local:'Berlin',lives:'DE',tz:'Europe/Berlin'},{name:'Mara',city:'Seoul',local:'Seoul',lives:'KR',tz:'Asia/Seoul'}]};
+  await data.setScreenHolder(m,'Mara');p.sync.order=order;p.sync.limit=2;
+  const end=source==='archive'?5:source==='mixed'?6:order==='oldest'?3:6;
+  if(tracker!=='none')T.trackers=[{i:end,date:'10.26',min:480,time:'08:00',place:tracker==='own'?'Berlin':tracker==='other'?'Seoul':'Unknownburg',city:tracker==='own'?'Berlin':tracker==='other'?'Seoul':'Unknownburg',weather:'Clear 10°C'}];
+  const answer={clock:{basis:'audit fixture',screenOwner:'Ren',sceneTime:'10-26 12:00',messageSender:null},now:'10-26 12:00',events:[{id:'tea',at:end,quote:source==='archive'?'paid for tea':'I paid for tea',summary:'Tea',date:'10-26',time:'12:00',apps:[...(bits&1?['money']:[]),...(bits&2?['invest']:[])],invest:!!(bits&2),phone:{}}]};
+  if(source==='archive')delete answer.clock;
+  await run(m,source==='archive'?JSON.stringify(answer):answer);
+  const calls=T.clockAuditCalls, core=calls.filter(x=>x.system.includes('WHAT IS NEW\n'));assert.equal(core.length,1);
+  assert.equal(core[0].system.startsWith('STAGE: core'),!!(bits&3));
+  assert.ok(!bad(core[0].system));
+  if(source==='archive') {
+   assert.doesNotMatch(core[0].system,/CLOCK FIRST|screenOwner|sceneTime/);
+   assert.match(core[0].system,/- "now": the moment of the newest message, never a time something is only planned for\./);
+   assert.doesNotMatch(core[0].input,/Time choices\.|Default screen viewpoint|Phone being updated/);
+  } else {
+   assert.ok(core[0].system.includes('"now": convert "clock.sceneTime"'));
+   assert.ok(core[0].system.includes('"screenOwner": "name", "sceneTime": "MM-DD HH:MM"'));
+   if(style==='dated')assert.ok(core[0].input.includes("On Mara's clock →"));
+  }
+  assert.equal(core[0].input.includes('[MONEY NOW]'),false);assert.ok(!core[0].input.includes("On Ren's clock →"));if(style==='narrative')assert.ok(!core[0].input.includes('Time choices.'));
+  const ed=calls.filter(x=>x.system.startsWith('GOAL\nWrite the ordinary life'));
+  assert.equal(ed.length,source==='archive'?0:1);
+  if(ed.length){assert.ok(ed[0].input.includes('Owner-local window: 10-26 03:38 to 10-26 12:00.'));assert.ok(!ed[0].system.includes('CLOCK FIRST'));}
+  const mo=calls.filter(x=>x.system.startsWith('STAGE: money'));
+  assert.equal(mo.length,!!(bits&3)?1:0);
+  if(mo.length){assert.equal(mo[0].input.includes('[INVESTMENTS NOW]'),!!(bits&2));assert.equal(mo[0].input.includes('[DELIVERY SHOPS]'),!!((bits&1)&&(bits&8)));assert.ok(mo[0].input.includes('10-26 12:00'));assert.ok(!mo[0].system.includes('CLOCK FIRST'));}
+  assert.equal(p.now,'10-26 12:00');
+  result.runs++;result.coreConflicts+=Number(bad(core[0].system));result.everyday+=ed.length;result.money+=mo.length;result.archiveOnly+=Number(source==='archive');
+  if(result.samples.length<4)result.samples.push({...label,split:core[0].system.startsWith('STAGE: core'),stages:calls.map(x=>x.system.split('\n')[0])});
+ }catch(e){result.failures.push({...label,error:e.message.slice(0,400)});}
+}
+
+assert.deepEqual(result.failures,[]);assert.equal(result.runs,1152);assert.equal(result.coreConflicts,0);assert.equal(result.everyday,768);assert.equal(result.money,864);assert.equal(result.archiveOnly,384);
+} finally { T.clockAuditCalls=null;T.trackers=null;globalThis.__everyday={}; }
+});
+
+test('everyday and saved clock share the status-adjusted or guarded end; explicit event times stay intact', async () => {
+    for (const kind of ['status','backwards','dateOnly']) {
+        const c=setup([say('Ren','start'),say('Mara','hello'),say('Ren','Tea at eleven')]);
+        frankfurtPhone(c,{cities:false});c.p.now=kind==='backwards'?'10-26 12:00':'10-26 03:00';
+        const savedBefore=c.p.now;
+        T.trackers=kind==='status'?[trk(2,'13:00','Frankfurt am Main')]:[];
+        const modelNow=kind==='dateOnly'?'10-27':'10-26 11:24';
+        const expected=kind==='status'?'10-26 13:00':kind==='backwards'?'10-26 12:00':'10-27 12:00';
+        globalThis.__everydayIn=[];let during;
+        T.beforeEveryday=()=>{during=c.p.now;};
+        try {
+            await run(c.m,{now:modelNow,events:[{id:'tea',at:2,quote:'Tea at eleven',date:'10-26',time:'11:00',phone:{notes:[{title:'Tea',text:'Tea at eleven',time:'10-26 11:00'}]}}]});
+            assert.equal(during,savedBefore,'clock must stay saved until all requests succeed');
+            assert.ok(globalThis.__everydayIn.at(-1).includes(`Owner-local window: ${savedBefore} to ${expected}.`));
+            assert.equal(c.p.now,expected);assert.equal(c.p.notes[0].time,'10-26 11:00');
+            await data.undoRound(c.m,c.p);assert.equal(c.p.now,savedBefore);
+        } finally {T.beforeEveryday=null;T.trackers=null;}
+    }
+});
+
+test('a changed chat during everyday does not commit the clock or moved locations preview', async () => {
+    const c=setup([say('Ren','start'),say('Mara','hello'),say('Ren','Leaving now')]);frankfurtPhone(c,{cities:false});
+    const before={now:c.p.now,year:c.p.year,where:structuredClone(c.p.where)};let during;
+    T.beforeEveryday=()=>{during={now:c.p.now,where:structuredClone(c.p.where)};T.chat[2].mes='Changed while waiting';};
+    try {
+        await assert.rejects(()=>run(c.m,{clock:{screenOwner:'Ren',sceneTime:'10-26 11:24'},now:'10-26 11:24',moved:[{name:'Ren',city:'Seoul',tz:'Asia/Seoul'}],events:[]}),/대화가 바뀌었어요/);
+        assert.deepEqual(during,{now:before.now,where:before.where});
+        assert.equal(c.p.now,before.now);assert.equal(c.p.year,before.year);assert.deepEqual(c.p.where,before.where);
+    } finally {T.beforeEveryday=null;}
+});
+
+test('archive-only reflection accepts legacy now without clock metadata, updates the clock, and undoes it', async () => {
+    const c=archived();T.chat.pop();frankfurtPhone(c,{cities:false});c.m.phoneScreenHolder='Mara';
+    const before=c.p.now;T.clockAuditCalls=[];globalThis.__everydayIn=[];
+    const previousToast=globalThis.toastr, toasts=[];globalThis.toastr={info:(...args)=>toasts.push(args)};
+    try {
+        await run(c.m,JSON.stringify({now:'10-26 13:00',events:[note(3,'bought the poetry book','Book')]}));
+        const core=T.clockAuditCalls.find(x=>x.system.includes('WHAT IS NEW\n'));
+        assert.doesNotMatch(core.system,/CLOCK FIRST|screenOwner|sceneTime/);
+        assert.match(core.input,/The owner is in Frankfurt am Main, 10-26 03:00 now\./);
+        assert.doesNotMatch(core.input,/Time choices\.|Default screen viewpoint/);
+        assert.equal(c.p.now,'10-26 13:00');assert.equal(c.p.notes[0].time,'10-26 12:00');
+        assert.equal(globalThis.__everydayIn.length,0);assert.equal(toasts.length,0);
+        await data.undoRound(c.m,c.p);assert.equal(c.p.now,before);
+    } finally {T.clockAuditCalls=null;globalThis.toastr=previousToast;}
+});
+
+test('mixed archive and visible messages still require the new clock response', async () => {
+    const c=archived();frankfurtPhone(c,{cities:false});const before=c.p.now;
+    await assert.rejects(()=>run(c.m,JSON.stringify({now:'10-26 13:00',events:[]})),e=>e.code==='CLOCK_INVALID');
+    assert.match(T.sys,/CLOCK FIRST/);assert.match(T.input,/\[ARCHIVE FOR THESE MESSAGES\]/);
+    assert.equal(c.p.now,before);
 });

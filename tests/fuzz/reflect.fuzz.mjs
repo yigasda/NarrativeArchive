@@ -14,7 +14,7 @@ const map = { './extract.js': cleanMessageURL,
     './phoneprofile.js': href('phoneprofile.js'), './phonefood.js': href('phonefood.js'),
     './phonestory.js': encoded(`export const phoneTarget=()=>({scope:phoneChatScope(),check(){}});export const phoneChatScope=()=>'test';`),
     './wealth.js': encoded(`export const ensureWealth=async()=>null;export const wealthBlock=()=>'';export const wealthDate=()=> '2026-12-30';export const wealthCheck=()=>null;export const addWealthFX=()=>{};`),
-    './ai.js': encoded(`export const askDraft=async(input,o)=>{if(String(o.system).startsWith('GOAL\\nWork out where')){(globalThis.__where||=[]).push(input);return '{"people":[]}';}const T=globalThis.__dropTest;if(String(o.system).startsWith('STAGE: money')){T.moneyInput=input;T.moneySys=o.system;T.moneyCalls=(T.moneyCalls||0)+1;if(T.moneyAnswers&&T.moneyAnswers.length){const a=T.moneyAnswers.shift();return typeof a==='string'?a:JSON.stringify(a);}const core=(T.lastCore&&T.lastCore.events)||[];const out=[];for(const l of String(input).split('\\n')){const x=l.match(/^- (.+?): #(\\d+) .*?\\("(.*)"\\)(?: \\(changed\\))?$/)||l.match(/^- (.+?): #(\\d+) /);if(!x)continue;const e=core.find(e=>e&&e.money&&Number(String(e.at).replace('#',''))===Number(x[2])&&(x[3]===undefined||String(e.quote||'').slice(0,200)===x[3]));if(e)out.push({id:x[1],money:e.money});}return JSON.stringify({events:out});}T.sys=o.system;T.input=input;const a=T.answers.shift();T.lastCore=a&&typeof a==='object'?a:null;return typeof a==='string'?a:JSON.stringify(a);};`),
+    './ai.js': encoded(`import { reflectionFixture } from '${new URL('../reflectionfixture.mjs', import.meta.url).href}'; export const askDraft=async(input,o)=>{if(String(o.system).includes('Write the ordinary life'))return '{}';if(String(o.system).startsWith('GOAL\\nWork out where')){(globalThis.__where||=[]).push(input);return '{"people":[]}';}const T=globalThis.__dropTest;if(String(o.system).startsWith('STAGE: money')){T.moneyInput=input;T.moneySys=o.system;T.moneyCalls=(T.moneyCalls||0)+1;if(T.moneyAnswers&&T.moneyAnswers.length){const a=T.moneyAnswers.shift();return typeof a==='string'?a:JSON.stringify(a);}const core=(T.lastCore&&T.lastCore.events)||[];const out=[];for(const l of String(input).split('\\n')){const x=l.match(/^- (.+?): #(\\d+) .*?\\("(.*)"\\)(?: \\(changed\\))?$/)||l.match(/^- (.+?): #(\\d+) /);if(!x)continue;const e=core.find(e=>e&&e.money&&Number(String(e.at).replace('#',''))===Number(x[2])&&(x[3]===undefined||String(e.quote||'').slice(0,200)===x[3]));if(e)out.push({id:x[1],money:e.money});}return JSON.stringify({events:out});}T.sys=o.system;T.input=input;const a=T.answers.shift();T.lastCore=a&&typeof a==='object'?a:null;return typeof a==='string'?a:JSON.stringify(reflectionFixture(a,input));};`),
     './core.js': encoded(`export const ctx=()=>({chat:globalThis.__dropTest.chat,chatMetadata:globalThis.__dropTest.meta,loadWorldInfo:async()=>null,characters:[]});export const globalSettings=()=>({});export const saveMeta=async()=>{};`),
     './calendar.js': encoded(`export const calendars=()=>({});export const headingDate=()=>({});`),
     './drift.js': encoded(`export const recentForCheck=()=>[];export const chatRows=()=>globalThis.__dropTest.chat.map((x,i)=>({index:i,user:x.is_user,hidden:!!x.is_system,text:'[#'+i+'] '+x.name+': '+x.mes}));`),
@@ -54,6 +54,7 @@ function setup() {
 }
 // a full, plausible answer touching every part
 const BASE = {
+    clock: { basis: 'Resolved story time', screenOwner: 'Ren', sceneTime: '01-02 21:10', messageSender: null },
     now: '01-02 21:10',
     events: [
         { id: 'pizza', at: 3, quote: 'I ordered', summary: 'pizza', date: '12-31', time: '19:40',
@@ -128,7 +129,7 @@ async function one(answer, path, v) {
     const { m, p } = setup(); T.answers = [BASE]; await data.makePhone(m, 'Ren', { update: true });
     const got = { failed: p.sync.failed, notes: p.syncLast?.notes, trades: p.investment.trades.length, tx: p.money.tx.length, orders: p.money.orders.length, passes: p.money.passes.length, dlv: p.delivery.orders.length, health: p.life.health.days.length, files: p.life.files.items.length, looks: p.life.files.items.map(f => f.look).join(','), weight: p.life.health.usual.weight, now: p.now, year: p.year, weather: p.life.weather.here.cond, texts: p.threads.length, voice: p.voice.length, dlvAccount: p.delivery.orders[0]?.account };
     if (process.env.SHOW) console.log(JSON.stringify(got));
-    if (Object.keys(got.failed || {}).length || got.trades !== 3 || got.dlv !== 1 || got.dlvAccount !== '1111' || got.looks !== 'receipt,snow' || got.notes?.length || got.now !== '01-02 21:10' || got.year !== 2027) console.log('BASE DID NOT LAND', JSON.stringify(got));
+    if (Object.keys(got.failed || {}).length || got.trades !== 3 || got.dlv !== 1 || got.dlvAccount !== '1111' || got.looks !== 'receipt,snow' || got.notes?.length || got.now !== '01-02 21:10' || got.year !== 2027) throw new Error('BASE DID NOT LAND ' + JSON.stringify(got));
 }
 await one(BASE, ['(base)'], null);
 for (const path of paths(BASE)) {

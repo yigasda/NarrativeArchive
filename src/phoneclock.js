@@ -36,3 +36,14 @@ export function clockFallback(p, ownerZone, screenZone, clock) {
             assumedDate: local.toISOString().slice(0, 10), rolled, anchor: `${year}-${p.now}`, localAnchor: `${localNow.getUTCFullYear()}-${short(localNow)}` };
     } catch { return null; }
 }
+
+// An exact conversion used to validate a model's resolved clock, never to infer story time.
+// No known year, a missing wall time or a DST fold: there is no unique conversion to check.
+export function exactClockShift(time, from, to, year) {
+    const mt = /^(\d{2})-(\d{2}) (\d{2}):(\d{2})$/.exec(String(time || ''));
+    if (!mt || !Number.isInteger(Number(year)) || Number(year) < 1900 || Number(year) > 2100) return null;
+    const [mo, day, h, min] = mt.slice(1).map(Number), wall = Date.UTC(Number(year), mo - 1, day, h, min), d = new Date(wall);
+    if (d.getUTCMonth() + 1 !== mo || d.getUTCDate() !== day || h > 23 || min > 59) return null;
+    try { const at = instant(wall, formatter(from)); return at === null ? null : short(new Date(formatter(to)(at))); }
+    catch { return null; }
+}
