@@ -145,19 +145,24 @@ const LIFE_TIMERS = `  "timers": [{ "label", "ko", "sec" }],`;
 const LIFE_ONCE = `- An alarm for one occasion (a flight, an appointment) rings once: "days": [] and its "date". Only an alarm the owner keeps for every week has "days".`;
 const LIFE_CHANGE = `- A record already in LIFE NOW is changed with "change": its id; write only the fields that changed. A deleted file is "deleted": true.`;
 const CLOCK_FIRST = `CLOCK FIRST
-First resolve "clock" and "now" for the latest scene, then write events and app records using those times.
+
+Your FIRST task is to identify the story's current point in the last message. WARNING: that message may mix present, past, and future. Resolve "clock" and "now" before writing events and app records.
+
 - Viewpoint: use the default viewpoint in OWNER'S CLOCK when set. Change it only when the surrounding narration shifts to another person's scene, not merely a sender's name. A time or date alone does NOT identify whose clock it is. Attachments keep their own clocks.
-- No exact time: your task is to infer the current time. The last message may mix present, past, and future. Identify the story's current point within it, then infer its time from context.
+
+- Exact time: use the stated time. If elapsed time is also specified, add it to get the current time. Never add unstated time.
+
+- No exact time: infer the current time from context, keeping past and future separate.
+
 - "clock":
   - basis (max 20 words: default used or narrative evidence for a switch; time passed)
-  - screen {
-      owner (the final viewpoint determined for the last message),
-      time (copy the last message's explicit current scene time; null if absent, never estimate)
-    }
-  - messageSender (who sent the displayed message).
-  Use null for absent time or messageSender.
-- "now": convert that time to the owner's clock without adding unstated time. Use the matching OWNER'S CLOCK choice without converting it again. Infer from context only when no exact time is given. Example: with a +8-hour offset, 12:32 becomes exactly 20:32.
-- App records: the owner's present scene agrees with "now". Other scenes, memories and appointments keep their own times.`;
+  - screenOwner (the final viewpoint determined for the last message)
+  - sceneTime (the current time resolved above, before time-zone conversion)
+  - messageSender (sender of the message displayed in the current scene; null if absent).
+
+- "now": convert "clock.sceneTime" to the owner's time zone. If OWNER'S CLOCK already provides that conversion, use it as-is. If the time zones match, keep the time unchanged. Example: no elapsed time, +8h offset: 12:32 → 20:32 exactly.
+
+- App records: the owner's present scene agrees with "now". Events from earlier messages, other scenes, memories and appointments keep their own times.`;
 export function updateSystem({ money = true, delivery = false, life = false, weather = false, tracker = false, split = false, invest = false, zone = false } = {}) {
     const paid = delivery ? 'order, ticket or delivery' : 'order or ticket';
     return `${split ? 'STAGE: core\n' : ''}GOAL
@@ -1849,11 +1854,12 @@ export function screenHolderLabel(m, c = ctx()) {
 }
 // Display aliases only. Never change the model's time, sender, explanation or a different scene owner.
 export function clockForDisplay(clock, m, c = ctx()) {
-    const selected = screenHolderLabel(m, c), owner = clock?.screen?.owner;
+    const flat = typeof clock?.screenOwner === 'string';
+    const selected = screenHolderLabel(m, c), owner = flat ? clock.screenOwner : clock?.screen?.owner;
     if (!selected || typeof owner !== 'string') return clock;
     const key = name => nameKey(screenPerson(m, name)?.name || name);
     if (key(owner) !== key(selected)) return clock;
-    return { ...clock, screen: { ...clock.screen, owner: selected } };
+    return flat ? { ...clock, screenOwner: selected } : { ...clock, screen: { ...clock.screen, owner: selected } };
 }
 export const dateOrderOf = m => (m?.dateOrder === 'dm' ? 'dm' : 'md');
 export const needsDateOrder = m => !m?.dateOrder;

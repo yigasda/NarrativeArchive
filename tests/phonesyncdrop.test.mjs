@@ -1388,11 +1388,11 @@ test('reflection sends the matching owner identity and choices for both phones w
   c.p.where={at:1,people:[{name:'Mara',city:'Seoul',names:['Seoul'],local:'Seoul',tz:'Asia/Seoul'},{name:'Ren',city:'Frankfurt',names:['Frankfurt'],local:'Frankfurt',tz:'Europe/Berlin'}]};
   delete c.p.money;delete c.m.finance;c.m.phones={[owner.toLowerCase()]:c.p};c.m.dateOrder='md';c.m.phoneScreenHolder='Mara';
   const now=owner==='Mara'?'11-05 11:38':'11-05 03:38';
-  T.answers.push({clock:{basis:'Default used',screen:{owner:'Mara',time:'11.05, 11:38'},messageSender:'Ren'},now,events:[{id:'reply',at:2,quote:'Are you okay',date:'11-05',time:now.slice(6),phone:{notes:[{title:'Reply',text:'Are you okay?',time:now}]}}]});
+  T.answers.push({clock:{basis:'Default used',screenOwner:'Mara',sceneTime:'11-05 11:38',messageSender:'Ren'},now,events:[{id:'reply',at:2,quote:'Are you okay',date:'11-05',time:now.slice(6),phone:{notes:[{title:'Reply',text:'Are you okay?',time:now}]}}]});
   await data.makePhone(c.m,owner,{update:true});
   assert.match(T.input,new RegExp('Phone being updated: "'+owner+'"'));
   assert.ok(T.input.includes("On Mara's clock → owner's time: "+now));
-  assert.match(T.sys,/without converting it again/);
+  assert.match(T.sys,/If OWNER'S CLOCK already provides that conversion, use it as-is/);
   assert.equal(c.p.now,now);assert.equal(c.p.notes[0].time,now);
  }
 });
@@ -1898,4 +1898,19 @@ test('latest narrative without a parsed clock sends no earlier HTML candidate an
         assert.match(T.input, /Phone being updated: "Ren"/);
         assert.equal(c.p.now, '11-05 08:24');
     } finally { delete T.clean; }
+});
+
+
+test('flat clock display preserves resolved sceneTime and model data while normalizing only the selected owner alias', () => {
+    const m = { phoneScreenHolder: '마라', phones: { ren: { owner: 'Ren', where: { people: [
+        { name: 'Mara Park', aka: ['마라', 'Mara'], city: 'Seoul' }, { name: 'Ren', city: 'Berlin' }
+    ] } } } };
+    const c = { name1: '마라' };
+    const raw = { basis: 'Default used', screenOwner: 'Mara Park', sceneTime: '11-05 11:24', messageSender: 'Ren' };
+    const before = structuredClone(raw);
+    assert.deepEqual(data.clockForDisplay(raw, m, c), { ...raw, screenOwner: '마라' });
+    assert.deepEqual(raw, before);
+    const switched = { ...raw, screenOwner: 'Ren' };
+    assert.equal(data.clockForDisplay(switched, m, c), switched);
+    assert.equal(data.clockForDisplay(raw, { ...m, phoneScreenHolder: '' }, c), raw);
 });
