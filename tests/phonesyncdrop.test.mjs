@@ -1201,22 +1201,27 @@ function clockPhone(p) {
         { name: 'Mara', city: 'Seoul', tz: 'Asia/Seoul', names: ['Seoul'], aka: ['마라'] }
     ] };
 }
+// a dated stamp is a choice only as the screen shows it, in an HTML time field (the story's own text never is one)
+const tf = s => `<span class="time">${s}</span>`;
+const fieldRow = (index, before, stamp, after = '') => ({ index, text: `${before}${stamp}${after}`, clockSource: `${before}${tf(stamp)}${after}` });
 test('clock candidates honor date order, aliases, DST and midnight without choosing a screen', async () => {
     const p = { owner: 'Ren' }; clockPhone(p);
-    const rows = [{index: 125, text: '마라 reads Ren’s message: 11.05, 08:30'}];
+    const rows = [fieldRow(125, '마라 reads Ren’s message: ', '11.05, 08:30')];
+    // (the same words in the story's text: no choice)
+    assert.deepEqual((await data.reflectionClocks(p, [{ index: 125, text: '마라 reads Ren’s message: 11.05, 08:30', clockSource: '마라 reads Ren’s message: 11.05, 08:30' }], { dateOrder: 'md' })).choices, []);
     const md = await data.reflectionClocks(p, rows, { dateOrder: 'md' });
     assert.equal(md.choices.find(x => x.names[0] === 'Mara').ownerTime, '11-05 00:30');
     assert.equal(md.choices.find(x => x.names[0] === 'Ren').ownerTime, '11-05 08:30');
     const dm = await data.reflectionClocks(p, rows, { dateOrder: 'dm' });
     assert.equal(dm.choices.find(x => x.names[0] === 'Mara').ownerTime, '05-11 01:30');
-    const early = await data.reflectionClocks(p, [{index: 3, text:'Mara 11.05, 02:00'}], {dateOrder:'md'});
+    const early = await data.reflectionClocks(p, [fieldRow(3, 'Mara ', '11.05, 02:00')], {dateOrder:'md'});
     assert.equal(early.choices.find(x => x.names[0] === 'Mara').ownerTime, '11-04 18:00');
     assert.match(md.text, /Time alone does not identify the viewpoint/);
     assert.equal((await data.reflectionClocks(p,[{index:2,text:'Mara at 08:30'}],{dateOrder:'md'})).choices.length,0);
     assert.equal((await data.reflectionClocks({owner:'Unknown'},[],{})).choices.length,0);
 });
 test('elapsed time after the source clock survives reflection, everyday and storage', async () => {
-    const c=setup([say('Ren','start'),say('Mara','evening'),say('Mara','Mara reads Ren’s reply on her phone. 11.05, 08:30. Two hours pass.')]);
+    const c=setup([say('Ren','start'),say('Mara','evening'),say('Mara',`Mara reads Ren’s reply on her phone. ${tf('11.05, 08:30')}. Two hours pass.`)]);
     clockPhone(c.p); c.m.dateOrder='md'; globalThis.__everydayIn=[];
     const oldVoice=structuredClone(c.p.voice), bankBefore=c.bank();
     await run(c.m,{clock:{basis:'Mara reads on her phone, then two hours pass',finalViewpoint:'Mara',elapsedTime:'2 hours',sceneTime:'11-05 10:30',messageSender:'Ren'},now:'11-05 02:30',events:[{id:'reply',at:2,quote:'Mara reads Ren’s reply',date:'11-05',time:'02:30',phone:{notes:[{title:'Reply',text:'Read it',time:'11-05 02:30'}]}}]});
@@ -1248,7 +1253,7 @@ test('screen default is explicit, chat-local, and independent of active persona 
 });
 test('unnamed default gets clock candidates, while unknown location gets no invented conversion', async () => {
     const p={owner:'Ren'}; clockPhone(p);
-    const rows=[{index:125,text:'Ren: 11.05, 08:26. Are you okay?'}];
+    const rows=[fieldRow(125,'Ren: ','11.05, 08:26','. Are you okay?')];
     const m={dateOrder:'md',phoneScreenHolder:'Mara'};
     const r=await data.reflectionClocks(p,rows,m);
     assert.equal(r.choices.find(x=>x.names[0]==='Mara').ownerTime,'11-05 00:26');
@@ -1259,7 +1264,7 @@ test('unnamed default gets clock candidates, while unknown location gets no inve
     assert.equal(data.clockBlock({owner:'Unknown'},'',m),'[OWNER\'S CLOCK]\nPhone owner: Unknown\nDefault screen viewpoint: Mara');
 });
 test('default survives undo and reapply without preceding messages or their clock candidates', async () => {
-    const c=setup([say('Ren','start'),say('Mara','Mara reads on her own phone. 11.05, 08:24.'),say('Ren','11.05, 08:26. Are you okay?')]);
+    const c=setup([say('Ren','start'),say('Mara',`Mara reads on her own phone. ${tf('11.05, 08:24')}.`),say('Ren',`${tf('11.05, 08:26')}. Are you okay?`)]);
     clockPhone(c.p); c.m.dateOrder='md'; await data.setScreenHolder(c.m,'Mara');
     const answer={clock:{basis:'Default screen viewpoint',finalViewpoint:'Mara',elapsedTime: null,sceneTime:'11-05 08:26',messageSender:'Ren'},now:'11-05 00:26',events:[{id:'reply',at:2,quote:'Are you okay',date:'11-05',time:'00:26',phone:{notes:[{title:'Reply',text:'Are you okay?',time:'11-05 00:26'}]}}]};
     await run(c.m,answer);
@@ -1307,7 +1312,7 @@ test('messenger choices reuse saved place aliases and unique short names, preser
     assert.equal(data.screenHolderLabel(m,c),'마라');
     assert.equal(m.phoneScreenHolder,'Mara Park');
     m.phoneScreenHolder='마라';
-    const result=await data.reflectionClocks(p,[{index:2,text:'Ren: 11.05, 08:26'}],m);
+    const result=await data.reflectionClocks(p,[fieldRow(2,'Ren: ','11.05, 08:26')],m);
     assert.equal(result.choices.find(x=>x.names[0]==='Mara Park').ownerTime,'11-05 00:26');
 });
 test('messenger choices do not combine two people with the same first name', () => {
@@ -1336,7 +1341,7 @@ test('same source clock resolves for either phone owner, with no extra conversio
  const people=[{name:'Mara',aka:['Mara Park'],city:'Seoul',tz:'Asia/Seoul'},{name:'Ren',city:'Frankfurt',tz:'Europe/Berlin'}];
  const mara={owner:'Mara',year:2026,now:'11-05 11:00',where:{people}},ren={...structuredClone(mara),owner:'Ren',now:'11-05 03:00'};
  const m={dateOrder:'md',phoneScreenHolder:'Mara',phones:{mara,ren}};
- const rows=[{index:155,text:'Ren: 11.05, 11:38'}];
+ const rows=[fieldRow(155,'Ren: ','11.05, 11:38')];
  const a=await data.reflectionClocks(mara,rows,m),b=await data.reflectionClocks(ren,rows,m);
  const from=(r,n)=>r.choices.find(c=>c.names.includes(n)).ownerTime;
  assert.equal(from(a,'Mara'),'11-05 11:38');assert.equal(from(b,'Mara'),'11-05 03:38');
@@ -1353,7 +1358,7 @@ test('same source clock resolves for either phone owner, with no extra conversio
 test('reflection fallback uses the same OWNER\'S CLOCK labels without changing its candidate text', async () => {
     const p = { owner: 'Ren', year: 2026, country: 'KR', now: '11-05 11:00' };
     const m = { dateOrder: 'md', phoneScreenHolder: '', phones: { ren: p } };
-    const rows = [{ index: 2, text: 'Ren: 11.05 11:38' }];
+    const rows = [fieldRow(2, 'Ren: ', '11.05 11:38')];
     assert.equal(data.clockBlock(p, p.now, m), '');
     const r = await data.reflectionClocks(p, rows, m);
     assert.equal(r.text, `Phone being updated: "Ren" (South Korea).
@@ -1383,7 +1388,7 @@ On Ren's clock → owner's time: 11-05 11:38`);
 
 test('reflection sends the matching owner identity and choices for both phones without rewriting model now',async()=>{
  for (const owner of ['Mara','Ren']) {
-  const c=setup([say('Ren','Start'),say('Mara','Morning'),say('Ren','11.05, 11:38 Are you okay?')]);
+  const c=setup([say('Ren','Start'),say('Mara','Morning'),say('Ren',`${tf('11.05, 11:38')} Are you okay?`)]);
   c.p.owner=owner;c.p.year=2026;c.p.now=owner==='Mara'?'11-05 11:00':'11-05 03:00';
   c.p.where={at:1,people:[{name:'Mara',city:'Seoul',names:['Seoul'],local:'Seoul',tz:'Asia/Seoul'},{name:'Ren',city:'Frankfurt',names:['Frankfurt'],local:'Frankfurt',tz:'Europe/Berlin'}]};
   delete c.p.money;delete c.m.finance;c.m.phones={[owner.toLowerCase()]:c.p};c.m.dateOrder='md';c.m.phoneScreenHolder='Mara';
@@ -1414,7 +1419,7 @@ test('reflection clock spans retain meridiem and accepted dated formats verbatim
         ['5. November 2026 08:30', '11-05 08:30', '11-05 00:30'],
     ];
     for (const [sourceTime, local, ownerTime] of samples) {
-        const rows = [{ index: 2, text: `Mara: ${sourceTime}. Then the scene continues.` }];
+        const rows = [fieldRow(2, 'Mara: ', sourceTime, '. Then the scene continues.')];
         const before = structuredClone(rows);
         const result = await data.reflectionClocks(p, rows, { dateOrder: 'md' });
         const choice = result.choices.find(x => x.names[0] === 'Mara');
@@ -1428,18 +1433,18 @@ test('reflection clock spans retain meridiem and accepted dated formats verbatim
 });
 test('reflection uses a trailing numeric year for the actual DST transition date', async () => {
     const p = { owner: 'Ren' }; clockPhone(p); // 2026 fallback must not replace explicit 2024.
-    const result = await data.reflectionClocks(p, [{ index: 2, text: 'Mara: 31.03.2024 01:30' }], { dateOrder: 'dm' });
+    const result = await data.reflectionClocks(p, [fieldRow(2, 'Mara: ', '31.03.2024 01:30')], { dateOrder: 'dm' });
     assert.equal(result.choices.find(x => x.names[0] === 'Mara').ownerTime, '03-30 17:30');
 });
 test('reflection keeps the full PM source but converts only the latest source', async () => {
-    const raw = 'Mara reads Ren’s reply on her phone. 11.05, 8:30 PM. Two hours pass.';
+    const raw = `Mara reads Ren’s reply on her phone. ${tf('11.05, 8:30 PM')}. Two hours pass.`;
     const c = setup([say('Ren', 'start'), say('Mara', 'evening'), say('Mara', raw)]);
     clockPhone(c.p); c.m.dateOrder = 'md';
     await run(c.m, { clock: { basis: 'Mara reads, then two hours pass', finalViewpoint: 'Mara', elapsedTime: '2 hours', sceneTime: '11-05 22:30' }, now: '11-05 14:30', events: [] });
-    assert.ok(T.input.includes(raw));
+    assert.ok(T.input.includes('11.05, 8:30 PM') && T.input.includes('Two hours pass.'));
     assert.match(T.input, /On Mara's clock → owner's time: 11-05 12:30/);
     assert.equal(c.p.now, '11-05 14:30');
-    const rows = Array.from({ length: 14 }, (_, i) => ({ index: i, text: `Mara: November 5, 2026 ${String(i).padStart(2, '0')}:30` }));
+    const rows = Array.from({ length: 14 }, (_, i) => fieldRow(i, 'Mara: ', `November 5, 2026 ${String(i).padStart(2, '0')}:30`));
     const result = await data.reflectionClocks(c.p, rows, c.m);
     assert.equal(result.choices.filter(x => x.names[0] === 'Mara').length, 1);
     assert.ok(result.choices.every(x => x.at === 13));
@@ -1448,7 +1453,7 @@ test('reflection keeps the full PM source but converts only the latest source', 
 test('reflection offers no converted choices for malformed twelve-hour clocks', async () => {
     const p = { owner: 'Ren' }; clockPhone(p);
     for (const clock of ['13:30 PM', '0:30 PM', 'PM 13:30', 'AM 0:30', '13:30 오후', '0:30 오전', '오후 13:30', '오전 0:30']) {
-        const result = await data.reflectionClocks(p, [{ index: 2, text: `Mara: 11.05 ${clock}` }], { dateOrder: 'md' });
+        const result = await data.reflectionClocks(p, [fieldRow(2, 'Mara: ', `11.05 ${clock}`)], { dateOrder: 'md' });
         assert.deepEqual(result.choices, [], clock);
     }
 });
@@ -1637,10 +1642,10 @@ test('a separate dated clock does not hide a present bare clock with the same HH
 test('source position decides between dated and bare clocks within one message', async () => {
     const p = { owner: 'Ren' }; clockPhone(p);
     const bare = Array.from({ length: 12 }, (_, i) => `<time>${String(i).padStart(2, '0')}:00</time>`).join(' ');
-    for (const raw of [`Mara ${bare} 11.05 23:59`, `Mara 11.05 23:59 ${bare}`]) {
+    for (const raw of [`Mara ${bare} ${tf('11.05 23:59')}`, `Mara ${tf('11.05 23:59')} ${bare}`]) {
         const r = await data.reflectionClocks(p, [htmlRow(2, raw)], {});
         assert.equal(r.choices.length, 2);
-        const datedLast = raw.endsWith('11.05 23:59');
+        const datedLast = raw.endsWith(tf('11.05 23:59'));
         assert.ok(r.choices.every(c => datedLast ? c.sourceTime === '11.05 23:59' && c.ownerTime : c.sourceTime === '11:00' && c.reference));
     }
 });
@@ -1670,7 +1675,7 @@ test('configured screen holder is the only candidate for the latest dated source
     const p = { owner: 'Ren' }; clockPhone(p);
     const m = { phoneScreenHolder: 'Mara', dateOrder: 'md', phones: { ren: p } };
     const rows = [htmlRow(1, 'Mara <span class="time">08:30</span>'),
-        ...Array.from({ length: 4 }, (_, i) => htmlRow(i + 2, `Mara 11.05 ${String(i + 9).padStart(2, '0')}:00`))];
+        ...Array.from({ length: 4 }, (_, i) => htmlRow(i + 2, `Mara ${tf(`11.05 ${String(i + 9).padStart(2, '0')}:00`)}`))];
     const result = await data.reflectionClocks(p, rows, m);
     assert.deepEqual([...new Set(result.choices.map(c => c.at))], [5]);
     assert.deepEqual(result.choices.map(c => c.names[0]), ['Mara']);
@@ -1783,8 +1788,10 @@ for (let repeat = 1; repeat <= 5; repeat++) {
             const before = structuredClone(c.p), rows = raw.map((x, i) => htmlRow(i + 2, x));
             const choices = await data.reflectionClocks(c.p, rows, c.m);
             assert.deepEqual(c.p, before, format);
+            // (a status line or the story's text: no choice; the status line has its own line in OWNER'S CLOCK)
+            const screen = format.endsWith('HTML');
             assert.ok(choices.choices.every(x => x.at === 6 && x.sourceTime.includes('12:27')), format);
-            assert.equal(choices.choices.length, 1, format);
+            assert.equal(choices.choices.length, screen ? 1 : 0, format);
             assert.equal((choices.text.match(/Time text in #/g) || []).length, 0);
             for (const earlier of clocks.slice(0, -1)) assert.ok(!choices.text.includes(earlier), format);
             T.clean = mes => cleanMessage(mes, { stripTags: true });
@@ -1800,7 +1807,8 @@ for (let repeat = 1; repeat <= 5; repeat++) {
             }
             assert.match(T.input, /Saved phone time: 11-05 03:38/);
             assert.equal((T.input.match(/Time text in #/g) || []).length, 0);
-            assert.match(T.input, /On Mara's clock → owner's (?:time: 11-05 |clock: )04:27/);
+            if (screen) assert.match(T.input, /On Mara's clock → owner's (?:time: 11-05 |clock: )04:27/);
+            else assert.doesNotMatch(T.input, /On Mara's clock/, format);
             assert.match(globalThis.__everydayIn.at(-1), /Owner-local window: 11-05 03:38 to 11-05 04:27/);
             assert.equal(c.p.now, '11-05 04:27');
             assert.deepEqual(c.p.voice, before.voice);
@@ -1813,17 +1821,19 @@ test('mixed sources use actual original positions, including duplicate text, mar
     const p = { owner: 'Ren' }; clockPhone(p);
     const huge = 'x'.repeat(2000);
     const cases = [
-        ['Mara <time>08:30</time> 11.05 09:00 <time>08:30</time>', '08:30', true],
-        ['Mara 11.05 08:30 <time>09:00</time> 11.05 08:30', '11.05 08:30', false],
-        [`Mara <time title="${huge}">23:59</time> 11.05 01:00`, '11.05 01:00', false],
-        ['Mara <time>23:59</time> <span>11</span>.05&nbsp;<b>01:00</b>', '11.05 01:00', false],
-        [`<think>${huge} 11.05 23:59</think>Mara 11.05 09:00 <time>08&#58;30</time>`, '08:30', true],
-        [`${huge}</think>Mara <time>08:30</time> 11.05 09:00`, '11.05 09:00', false],
+        [`Mara <time>08:30</time> ${tf('11.05 09:00')} <time>08:30</time>`, '08:30', true],
+        [`Mara ${tf('11.05 08:30')} <time>09:00</time> ${tf('11.05 08:30')}`, '11.05 08:30', false],
+        [`Mara <time title="${huge}">23:59</time> ${tf('11.05 01:00')}`, '11.05 01:00', false],
+        // (a date and a clock in the story's text, split over spans with no time in their names: none; the clock before is the one)
+        ['Mara <time>23:59</time> <span>11</span>.05&nbsp;<b>01:00</b>', '23:59', true],
+        [`<think>${huge} ${tf('11.05 23:59')}</think>Mara ${tf('11.05 09:00')} <time>08&#58;30</time>`, '08:30', true],
+        [`${huge}</think>Mara <time>08:30</time> ${tf('11.05 09:00')}`, '11.05 09:00', false],
         ['```html\n<time>23:59</time>\n```\nMara 11.05 09:00 <time>08:30</time>', '08:30', true],
-        ['Mara <time>08:30</time>\n```html\n<span class="time">11.05 09:00</span>\n```', '11.05 09:00', false],
-        ['Mara 11.05 09:00 <time>08:30</time> <time>08`not a clock`:59</time>', '08:30', true],
-        ['Mara <span class="time">PM <span class="time">8:30</span></span> 11.05 09:00', '11.05 09:00', false],
-        ['Mara 11.05 09:00 <span class="time">PM <span class="time">8:30</span></span>', 'PM 8:30', true],
+        // (a fenced block of HTML is the attachment's, as for a clock alone)
+        ['Mara <time>08:30</time>\n```html\n<span class="time">11.05 09:00</span>\n```', '08:30', true],
+        [`Mara ${tf('11.05 09:00')} <time>08:30</time> <time>08\`not a clock\`:59</time>`, '08:30', true],
+        [`Mara <span class="time">PM <span class="time">8:30</span></span> ${tf('11.05 09:00')}`, '11.05 09:00', false],
+        [`Mara ${tf('11.05 09:00')} <span class="time">PM <span class="time">8:30</span></span>`, 'PM 8:30', true],
     ];
     for (const [raw, expected, bare] of cases) {
         const result = await data.reflectionClocks(p, [htmlRow(2, raw)], { dateOrder: 'md' });
@@ -1834,8 +1844,8 @@ test('mixed sources use actual original positions, including duplicate text, mar
 
 test('source chronology is neither numeric clock order nor proof of narrative now', async () => {
     const p = { owner: 'Ren' }; clockPhone(p);
-    const rows = [htmlRow(9, 'Mara remembers 10.05 01:00. Several months later, the present continues.'),
-        htmlRow(2, 'Mara 11.05 23:59')];
+    const rows = [htmlRow(9, `Mara remembers ${tf('10.05 01:00')}. Several months later, the present continues.`),
+        htmlRow(2, `Mara ${tf('11.05 23:59')}`)];
     const r = await data.reflectionClocks(p, rows, { dateOrder: 'md' });
     assert.ok(r.choices.every(c => c.at === 9 && c.sourceTime === '10.05 01:00'));
     assert.match(r.text, /Time alone does not identify the viewpoint/);
@@ -1874,7 +1884,7 @@ test('archive hint ordering retains the existing supplied first-index convention
     const p = { owner: 'Ren' }; clockPhone(p);
     // updatePhone supplies this summary as index=section.first, not an invented per-stamp message index.
     const archive = { index: 10, text: '## #10–#20\nMara at 11.05 23:59.' };
-    const raw = htmlRow(15, 'Mara at 11.05 08:30');
+    const raw = htmlRow(15, `Mara at ${tf('11.05 08:30')}`);
     const r = await data.reflectionClocks(p, [raw, archive], {});
     assert.ok(r.choices.every(c => c.at === 15 && c.sourceTime === '11.05 08:30'));
     assert.equal(r.choices.length, 2);

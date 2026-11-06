@@ -208,20 +208,15 @@ const htmlClockMarkup = (raw, preserve = false) => {
     }).join('\n');
     return htmlClockCode(visible, preserve);
 };
-// the message with what no reader sees as the time now blanked out, every other character where it was (an HTML part
-// that is hidden, a quote, code or a timer; Markdown is left as it was, a fenced block of HTML is shown): the text's own
-// dated readings (datedClocks) read only the rest
-// (an inline part leaves spaces, a block a line break, so text on either side never joins into one reading)
-export function clockQuiet(raw) {
-    const marked = String(raw || ''), quiet = [];
-    readHtmlClocks(marked, false, null, false, quiet);
-    if (!quiet.length) return marked;
-    const out = marked.split('');
-    for (const [start, end, inline] of quiet) for (let i = start; i < end && i < out.length; i++) if (out[i] !== '\n') out[i] = !inline && i === start ? '\n' : ' ';
-    return out.join('');
-}
 export function htmlClocks(raw, { positions = false } = {}) {
     return readHtmlClocks(htmlClockMarkup(raw, positions ? 'offsets' : false), false, null, positions);
+}
+// the HTML time fields that show a date with their clock ("<span class="time">11.05 16:15</span>", "11월 5일 16시 15분",
+// a clock right after its date on the screen): { sourceTime, local } (the story's own text is never read for these)
+export function htmlDatedClocks(raw, { positions = false } = {}) {
+    const stamps = [];
+    readHtmlClocks(htmlClockMarkup(raw, positions ? 'offsets' : false), false, null, positions, stamps);
+    return stamps;
 }
 // Context fields retain their written meaning. They are not current-clock candidates or conversions.
 const HTML_TIME_FIELD = new RegExp(String.raw`^(?:(?:${CLOCK_DATE})\.?[,]?[ \t]*[T ]?)?((?:${CLOCK_MERIDIEM}\s*)?\d{1,2}[ \t]*:[ \t]*\d{2}(?:\s*${CLOCK_MERIDIEM})?)(?:[ \t]+(?:(?!(?:AM|PM)\b)[A-Z]{2,5}|(?:UTC|GMT)[+-]\d{1,2}(?::\d{2})?))?$`, 'iu');
@@ -276,7 +271,8 @@ export function htmlTimeContext(raw) {
         `[첨부파일 (메시지 내부의 HTML)]\n${group.fields.map(x => `${x.label}: ${x.sourceTime.replace(/\s+/g, ' ')}`).join('\n')}`
     ).join('\n');
 }
-function readHtmlClocks(input, fields = false, excluded = null, positions = false, quiet = null) {
+const wholeDated = node => { if (!node.marked || node.hiddenStyle) return null; const t = clockHtmlText(node.seen).replace(/\s+/g, ' ').trim(), d = datedClocks(t).find(x => x.sourceTime === t); return d ? { sourceTime: d.sourceTime, local: d.local } : null; };
+function readHtmlClocks(input, fields = false, excluded = null, positions = false, stamps = null) {
     const root = { name: '', text: '', seen: '', hints: [], blocked: false, removed: false }, stack = [root];
     let visible = '';
     const append = (text, expose = true) => {
@@ -288,8 +284,9 @@ function readHtmlClocks(input, fields = false, excluded = null, positions = fals
     };
     const finish = (complete, end = input.length) => {
         const node = stack.pop(), parent = stack[stack.length - 1];
-        if (quiet && node.quiet && !parent.quiet) quiet.push([node.start, end, HTML_INLINE.test(node.name)]);
         if (node.blocked || !complete) {
+            // (a <time> whose datetime is a date: what it shows, a date and a clock, is still its stamp)
+            if (stamps && node.dateOnly && complete) { const w = wholeDated(node); if (w) stamps.push({ ...w, ...(positions ? { position: node.start } : {}) }); }
             if (excluded) excluded.push([node.start, end]);
             parent.text += '\0';
             if (!complete || !node.removed && !HTML_INLINE.test(node.name)) visible = '';
@@ -312,12 +309,16 @@ function readHtmlClocks(input, fields = false, excluded = null, positions = fals
         const dated = node.marked && node.hints.length && datedClocks(datedText).some(x => x.sourceTime === datedText);
         const tail = clock ? clockVisibleText(visible).trimEnd() : '';
         // Only the dated span ending at this exact occurrence can own it. An earlier equal clock cannot.
-        const adjacent = clock && tail.endsWith(sourceTime.replace(/\u00a0/g, ' '))
-            && datedClocks(tail.slice(tail.lastIndexOf('\n') + 1)).some(x => tail.endsWith(x.sourceTime));
+        const near = clock && tail.endsWith(sourceTime.replace(/\u00a0/g, ' '))
+            ? datedClocks(tail.slice(tail.lastIndexOf('\n') + 1)).filter(x => tail.endsWith(x.sourceTime)).pop() : null;
+        // a time field that is a date and a clock ("11.05 16:15", "11월 5일 16시 15분"), or a clock right after its date on
+        // the screen ("<span>11월 5일 </span><span class="time">16:15</span>"): a dated stamp (the story's text alone never is one)
+        const whole = !clock ? wholeDated(node) : null, at = positions ? { position: node.start } : {};
         // Prefer the complete labelled element to a nested duplicate ("PM <span>8:30</span>").
         // One dated stamp also owns its children; a timeline with separate date/time siblings does not.
-        if (clock) { if (!adjacent) parent.hints.push({ sourceTime: korean ? seenTime : sourceTime, clock, ...(positions ? { position: node.start } : {}) }); }
-        else if (!dated) for (const hint of node.hints) parent.hints.push(hint);
+        if (whole && stamps) stamps.push({ ...whole, ...at });
+        if (clock) { if (near) stamps?.push({ sourceTime: near.sourceTime, local: near.local, ...at }); else parent.hints.push({ sourceTime: korean ? seenTime : sourceTime, clock, ...at }); }
+        else if (!dated && !whole) for (const hint of node.hints) parent.hints.push(hint);
         parent.text += node.text; parent.seen += node.hiddenStyle ? '' : node.seen;
         if (!HTML_INLINE.test(node.name)) visible = '';
     };
@@ -387,9 +388,6 @@ function readHtmlClocks(input, fields = false, excluded = null, positions = fals
         const labels = `${name} ${attrs.class || ''} ${attrs.id || ''}`;
         const node = { name, start, originalName: head[2], label: htmlFieldLabel(head[2], attrs) || stack[stack.length - 1].label || '', text: '', seen: '', hints: [], marked: /time/i.test(labels),
             hiddenStyle: !!stack[stack.length - 1].hiddenStyle || HIDDEN_STYLE.test(attrs.style || '') || attrs.hidden !== undefined,
-            // (what no reader sees as the time now, for the text's own readings: a hidden part, a quote, code, a timer)
-            quiet: !!stack[stack.length - 1].quiet || HTML_HIDDEN.test(name) || attrs.hidden !== undefined || /^true$/i.test(attrs['aria-hidden'] || '')
-                || HIDDEN_STYLE.test(attrs.style || '') || HTML_DURATION.test(labels.replace(/([a-z\d])([A-Z])/g, '$1 $2')),
             removed: stack[stack.length - 1].removed || HTML_REMOVED.test(name),
             blocked: stack[stack.length - 1].blocked || HTML_HIDDEN.test(name)
                 || attrs.hidden !== undefined || /^true$/i.test(attrs['aria-hidden'] || '')
@@ -397,6 +395,8 @@ function readHtmlClocks(input, fields = false, excluded = null, positions = fals
                 || !fields && HTML_DURATION.test(labels.replace(/([a-z\d])([A-Z])/g, '$1 $2'))
                 // Dated values and ISO durations belong to other readers, not bare-clock hints.
                 || !fields && attrs.datetime !== undefined && !htmlClockOnly(attrs.datetime) };
+        node.dateOnly = !fields && node.blocked && !stack[stack.length - 1].blocked && !HTML_HIDDEN.test(name) && attrs.hidden === undefined && !/^true$/i.test(attrs['aria-hidden'] || '')
+            && !HTML_DURATION.test(labels.replace(/([a-z\d])([A-Z])/g, '$1 $2')) && !node.hiddenStyle;
         if (!node.removed && !HTML_INLINE.test(name)) visible = '';
         stack.push(node);
         if (/\/\s*$/.test(input.slice(start, end))) finish(true, pos);

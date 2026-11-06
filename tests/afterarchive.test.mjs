@@ -369,7 +369,7 @@ test('OWNER\'S CLOCK combines a city with its people only in the output, keeping
         { name: 'Ivo Park', city: 'Seoul', tz: 'Asia/Seoul' },
     ] };
     const m = { phoneScreenHolder: '소망', phones: { ren: p } };
-    const rows = [{ index: 2, text: 'Somang Park, Ivo Kim and Ivo Park: 11.05 12:38' }];
+    const rows = [{ index: 2, text: 'Somang Park, Ivo Kim and Ivo Park: 11.05 12:38', clockSource: 'Somang Park, Ivo Kim and Ivo Park: <span class="time">11.05 12:38</span>' }];
     const before = structuredClone({ p, m });
     const candidates = await data.reflectionClocks(p, rows, m);
     const offsets = data.zonesOf(p, p.now, m);
@@ -993,7 +993,8 @@ test('a fill\'s choices are worked out from the time its hours are (Frankfurt\'s
 test('a fill\'s choices: never a system message\'s HTML, a timer, a hidden part or a quote; with TOLD SHORT its last lines, the later of one number', () => {
     try {
         for (const [newest, system] of [['<span class="timer">16시 15분</span>', true], ['<span class="timer">16시 15분</span>', false], ['<span class="timer">11월 3일 16시 15분</span>', false],
-            ['<span style="display:none">11월 3일 16시 15분</span> Mara waits.', false], ['<blockquote>11.03 16:15</blockquote> Mara waits.', false], ['Mara waits. 16시 15분', false]]) {
+            ['<span style="display:none">11월 3일 16시 15분</span> Mara waits.', false], ['<blockquote>11.03 16:15</blockquote> Mara waits.', false], ['Mara waits. 16시 15분', false],
+            ['11월 3일 16시 15분, Mara waits.', false], ['Mara waits. 11.03 16:15', false], ['<span class="time" style="display:none">11월 3일 16시 15분</span>', false]]) {
             const { p, m: mm } = clockFixture(newest, { system });
             const text = data.fillClock(mm, p, p.now, null, data.windowOf(mm, p));
             // (a system message isn't read: the newest one read is #4, and its clock is the one)
@@ -1004,14 +1005,16 @@ test('a fill\'s choices: never a system message\'s HTML, a timer, a hidden part 
         const { p, m: mm } = clockFixture('No clock.');
         const short = { text: '[TOLD SHORT — messages #6–#9, after RECENT CHAT: …]\n#7 · lunch — "11.03 12:00"\n#9 · met — "11.03 12:30"\n#9 · left — "11.03 16:15"' };
         assert.deepEqual(data.fillClockRows(mm, p, data.windowOf(mm, p), short).map(r => r.index), [7, 9, 9]);
-        assert.match(data.fillClock(mm, p, p.now, null, data.windowOf(mm, p), short), /On Mara's clock → owner's time: 11-03 08:15/);
+        // (summaries are the story's text, never a screen: no choice, and never the older message's either)
+        assert.doesNotMatch(data.fillClock(mm, p, p.now, null, data.windowOf(mm, p), short), /Time choices|On .*clock/);
     } finally { delete globalThis.__ctx; }
 });
 
 test('two rows of one number (two summaries of one message): the later one\'s clock is the newest', async () => {
     const { p, m: mm } = clockFixture('No clock.');
     try {
-        const r = await data.reflectionClocks(p, [{ index: 5, text: '#5 · lunch — 11.03 12:00' }, { index: 5, text: '#5 · left — 11.03 16:15' }, { index: 4, text: '11.03 23:00' }], mm);
+        const tf = s => `<span class="time">${s}</span>`;
+        const r = await data.reflectionClocks(p, [{ index: 5, text: '', clockSource: tf('11.03 12:00') }, { index: 5, text: '', clockSource: tf('11.03 16:15') }, { index: 4, text: '', clockSource: tf('11.03 23:00') }], mm);
         assert.ok(r.choices.length && r.choices.every(c => c.sourceTime === '11.03 16:15'));
     } finally { delete globalThis.__ctx; }
 });

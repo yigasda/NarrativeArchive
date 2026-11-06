@@ -1,7 +1,7 @@
 // 한국어 시각: one reader for the app's answers, status lines, time choices and HTML time fields
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { clockQuiet, datedClocks, hhmm, htmlClocks, koClockText } from '../src/phoneparse.js';
+import { datedClocks, hhmm, htmlClocks, htmlDatedClocks, koClockText } from '../src/phoneparse.js';
 
 test('a Korean clock in its many shapes, with what a sentence puts after it', () => {
     for (const [s, want] of [
@@ -21,7 +21,7 @@ test('the app\'s answers: a colon clock reads as before, a Korean one now whole'
     for (const [s, want] of [['7:00 PM', '19:00'], ['오후 7:00', '19:00'], ['7pm', '19:00'], ['19시', '19:00'], ['19시 30분', '19:30'], ['오후 4시 15분', '16:15'], ['4시 반', '04:30']]) assert.equal(hhmm(s), want, s);
 });
 
-test('time choices: a date with a Korean clock (with its year, a weekday, a comma, 에); a day no calendar has, or a length of time, none', () => {
+test('dated readings (an HTML time field\'s): a date with a Korean clock (with its year, a weekday, a comma, 에); a day no calendar has, or a length of time, none', () => {
     for (const [s, want] of [
         ['2026년 11월 5일 16시 15분', '11-05 16:15'], ['11월 5일 오후 4시 15분', '11-05 16:15'], ['11월 5일(목) 16시 15분', '11-05 16:15'], ['11월 5일,16시 15분', '11-05 16:15'],
         ['11월 5일에 16시 15분', '11-05 16:15'], ['11월 5일(목) 16:15', '11-05 16:15'], ['Nov 5 16시 15분', '11-05 16:15'], ['11.05 오후 4시', '11-05 16:00'],
@@ -45,15 +45,15 @@ test('HTML time fields: a Korean clock counts only by what is shown (a hidden pa
     assert.deepEqual(at('<span class="time">16:15</span>'), ['16:15']);
 });
 
-test('the text\'s own dated readings: never in a timer, a hidden part or an HTML quote; a no-break space, a class with "time" in it, split spans, a fenced block of HTML as before', () => {
-    const strip = t => t.replace(/<\/?([a-z][\w-]*)\b[^>]*>/gi, (all, n) => /^(?:span|b|i|em|strong|a|small|font)$/i.test(n) ? '' : '\n');
-    const at = raw => { const q = clockQuiet(raw); assert.equal(q.length, raw.length); return datedClocks(strip(q).replace(/&nbsp;/g, ' ')).map(x => x.local); };
-    for (const raw of ['<span class="timer">11월 5일 16시 15분</span>', '<span class="countdown">11.05 16:15</span>', '<span style="display:none">11월 5일 16시 15분</span> 보이는 글',
-        '<span hidden>11.05 16:15</span>', '<span aria-hidden="true">11.05 16:15</span>', '<blockquote>11.05 16:15</blockquote>', '<q>11월 5일 16시 15분</q>', '11월 5일<blockquote>x</blockquote>16시 15분']) assert.deepEqual(at(raw), [], raw);
-    for (const [raw, want] of [['<div class="timeline">11월 5일 16시 15분, 그는 문을 열었다.</div>', '11-05 16:15'], ['<div class="sometimes">11월 5일 16시 15분, 그는 문을 열었다.</div>', '11-05 16:15'],
-        ['<span>11월 5일 </span><span>16시 15분</span>', '11-05 16:15'], ['<span class="time">11월&nbsp;5일&nbsp;16시&nbsp;15분</span>', '11-05 16:15'], ['11월\u00a05일\u00a016시\u00a015분', '11-05 16:15'],
-        ['11.05\u00a016:15', '11-05 16:15'], ['11월 5일 <span hidden>x</span>16시 15분', '11-05 16:15'], ['<time datetime="2026-11-05T16:15">11월 5일 16시 15분</time>', '11-05 16:15'],
-        ['```html\n<span class="time">11.05 09:00</span>\n```', '11-05 09:00'], ['> 11.05 16:15 인용', '11-05 16:15'], ['😀 <span hidden>a</span> 11.05 16:15', '11-05 16:15']]) assert.deepEqual(at(raw), [want], raw);
-    // (the archive's text, plain: the same)
-    assert.deepEqual(datedClocks('11월 5일 16시 15분').map(x => x.local), ['11-05 16:15']);
+test('a dated choice only as the screen shows it, an HTML time field: never the story\'s text, a timer, a hidden part, a quote or a fenced block', () => {
+    const at = raw => htmlDatedClocks(raw).map(x => x.local);
+    for (const [raw, want] of [['<span class="time">11.05 16:15</span>', '11-05 16:15'], ['<span class="time">11월 5일 16시 15분</span>', '11-05 16:15'], ['<div class="chat-timestamp">11월 5일(목) 오후 4시 15분</div>', '11-05 16:15'],
+        ['<span class="time">11월&nbsp;5일&nbsp;16시&nbsp;15분</span>', '11-05 16:15'], ['<span class="time">11.05,\u00a016:15</span>', '11-05 16:15'], ['<time datetime="2026-11-05T16:15">11월 5일 16시 15분</time>', '11-05 16:15'],
+        ['<span>11월 5일 </span><span class="time">16:15</span>', '11-05 16:15'], ['<span class="time">11월 5일 <span hidden>x</span>16시 15분</span>', '11-05 16:15']]) assert.deepEqual(at(raw), [want], raw);
+    for (const raw of ['11월 5일 16시 15분', 'Mara 11.05 16:15', '<div class="timeline">11월 5일 16시 15분, 그는 문을 열었다.</div>', '<span>11월 5일 16시 15분</span>',
+        '<span class="timer">11월 5일 16시 15분</span>', '<span class="time" style="display:none">11.05 16:15</span>', '<span class="time" hidden>11.05 16:15</span>', '<blockquote><span class="time">11.05 16:15</span></blockquote>',
+        '```html\n<span class="time">11.05 16:15</span>\n```', '<span class="time">13월 5일 16시 15분</span>', '<span class="time">11월 5일 16시 15분 전</span>']) assert.deepEqual(at(raw), [], raw);
+    // (a clock alone stays htmlClocks', as before)
+    assert.deepEqual(htmlDatedClocks('<span class="time">16:15</span>'), []);
+    assert.deepEqual(htmlClocks('<span class="time">11.05 16:15</span>'), []);
 });

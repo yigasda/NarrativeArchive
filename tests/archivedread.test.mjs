@@ -848,7 +848,7 @@ test('latest visible message alone supplies candidates without falling back to e
         c.m.phoneScreenHolder = 'Mara'; c.m.dateOrder = 'md';
         c.m.text = SECTION.replace('- Ren', '- Mara: 11.05 12:27, then a flashback: 10.05 01:00.\n- Ren');
         for (const i of [2, 3, 4, 5]) T.chat[i].mes += ' <time>23:59</time>';
-        if (visibleHasClock) T.chat[6].mes += ' Mara 11.05 13:27';
+        if (visibleHasClock) T.chat[6].mes += ' Mara <span class="time">11.05 13:27</span>';
         await run(c.m, { now: '11-05 05:27', events: [] });
         assert.equal((T.input.match(/Time text in #/g) || []).length, 0);
         if (visibleHasClock) assert.match(T.input, /On Mara's clock → owner's time: 11-05 05:27/);

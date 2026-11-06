@@ -10,7 +10,6 @@ import { migrateBank, finance, finite, cash, reviseBaseline, positions } from '.
 import { calendars, headingDate } from './calendar.js';
 import { ctx, globalSettings, saveMeta } from './core.js';
 import { chatRows, recentForCheck } from './drift.js';
-import { cleanMessage } from './extract.js';
 import { applyInjection } from './inject.js';
 import { knowledgeRows } from './knowledge.js';
 import { headingPlaces, nameKey, nameRe } from './people.js';
@@ -20,7 +19,7 @@ import { parseSections, RANGE_HEAD, sectionKey, splitTail } from './sections.js'
 import { glossaryEntries, glossaryPeople } from './translate.js';
 import { worldText } from './world.js';
 import { phoneChatScope, phoneTarget } from './phonestory.js';
-import { clockQuiet, dateOrderSource, datedClocks, htmlClocks, htmlTimeContext, swapDate, withDateOrder, withDateOrderSync, tidyKo, arr, evOf, gapDays, giftOf, hhmm, jsonOf, ko, parseJson, storyMin, byStory, yearIn, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
+import { dateOrderSource, htmlClocks, htmlDatedClocks, htmlTimeContext, swapDate, withDateOrder, withDateOrderSync, tidyKo, arr, evOf, gapDays, giftOf, hhmm, jsonOf, ko, parseJson, storyMin, byStory, yearIn, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
 import { clockFallback, exactClockShift } from './phoneclock.js';
 export { tidyKo, arr, gapDays, giftOf, hhmm, jsonOf, ko, last4, line, num, pad, pick, storyMin, byStory, str, when, withEv };
 import { COUNTRY_TZ, applyDays, applyLife, applyWeather, cardClock, cityAt, dayGap, dlvClock, fillDays, lifeClock, lifeNow, weatherFrom, zoneShift } from './phonesynclife.js';
@@ -2258,13 +2257,9 @@ export const fillClock = (m, p, at, st = null, gap = null, short = null) => owne
 function latestClock(rows) {
     const r = arr(rows).reduce((a, b) => (!a || b.index >= a.index ? b : a), null);
     if (!r) return null;
-    let stamps;
-    if (typeof r.clockSource === 'string') {
-        // (what no reader sees as the time now, a hidden part, a quote or a timer, gives no dated reading either)
-        const offsets = [], text = cleanMessage(clockQuiet(r.clockSource), { stripTags: true }, offsets);
-        stamps = [...datedClocks(text, { positions: true }).map(x => ({ ...x, position: offsets[x.position] })),
-            ...htmlClocks(r.clockSource, { positions: true })];
-    } else stamps = datedClocks(r.text, { positions: true });
+    // only a clock the screen shows (an HTML time field, with its date or without): a date and a time in the story's text
+    // may be any time (one remembered, one planned), so the model reads it from the story with OWNER'S CLOCK's hours
+    const stamps = typeof r.clockSource === 'string' ? [...htmlDatedClocks(r.clockSource, { positions: true }), ...htmlClocks(r.clockSource, { positions: true })] : [];
     const latest = stamps.sort((a, b) => b.position - a.position)[0];
     if (!latest) return null;
     const { position, ...stamp } = latest;
