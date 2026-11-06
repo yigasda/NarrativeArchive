@@ -1219,7 +1219,7 @@ test('elapsed time after the source clock survives reflection, everyday and stor
     const c=setup([say('Ren','start'),say('Mara','evening'),say('Mara','Mara reads Ren’s reply on her phone. 11.05, 08:30. Two hours pass.')]);
     clockPhone(c.p); c.m.dateOrder='md'; globalThis.__everydayIn=[];
     const oldVoice=structuredClone(c.p.voice), bankBefore=c.bank();
-    await run(c.m,{clock:{basis:'Mara reads on her phone, then two hours pass',screen:{owner:'Mara',time:'11.05, 08:30'},messageSender:'Ren'},now:'11-05 02:30',events:[{id:'reply',at:2,quote:'Mara reads Ren’s reply',date:'11-05',time:'02:30',phone:{notes:[{title:'Reply',text:'Read it',time:'11-05 02:30'}]}}]});
+    await run(c.m,{clock:{basis:'Mara reads on her phone, then two hours pass',viewpoint:{owner:'Mara',time:'11.05, 08:30'},messageSender:'Ren'},now:'11-05 02:30',events:[{id:'reply',at:2,quote:'Mara reads Ren’s reply',date:'11-05',time:'02:30',phone:{notes:[{title:'Reply',text:'Read it',time:'11-05 02:30'}]}}]});
     assert.match(T.input,/On Mara's clock → owner's time: 11-05 00:30/);
     assert.match(T.sys,/CLOCK FIRST/);
     assert.match(T.sys,/Viewpoint: use the default viewpoint in OWNER'S CLOCK when set\./);
@@ -1230,7 +1230,7 @@ test('elapsed time after the source clock survives reflection, everyday and stor
 test('same-time scene without a new timestamp keeps the supplied moment', async()=>{
     const c=setup([say('Ren','start'),say('Mara','evening'),say('Ren','Meanwhile in Berlin, Ren sends a reply.')]);
     clockPhone(c.p);c.p.now='11-05 02:30';c.m.dateOrder='md';
-    await run(c.m,{clock:{basis:'Meanwhile in Berlin',screen:{owner:'Ren',time:null},messageSender:'Ren'},now:'11-05 02:30',events:[]});
+    await run(c.m,{clock:{basis:'Meanwhile in Berlin',viewpoint:{owner:'Ren',time:null},messageSender:'Ren'},now:'11-05 02:30',events:[]});
     assert.equal(c.p.now,'11-05 02:30');
 });
 
@@ -1261,7 +1261,7 @@ test('unnamed default gets clock candidates, while unknown location gets no inve
 test('default survives undo and reapply without preceding messages or their clock candidates', async () => {
     const c=setup([say('Ren','start'),say('Mara','Mara reads on her own phone. 11.05, 08:24.'),say('Ren','11.05, 08:26. Are you okay?')]);
     clockPhone(c.p); c.m.dateOrder='md'; await data.setScreenHolder(c.m,'Mara');
-    const answer={clock:{basis:'Default viewpoint',screen:{owner:'Mara',time:'11.05, 08:26'},messageSender:'Ren'},now:'11-05 00:26',events:[{id:'reply',at:2,quote:'Are you okay',date:'11-05',time:'00:26',phone:{notes:[{title:'Reply',text:'Are you okay?',time:'11-05 00:26'}]}}]};
+    const answer={clock:{basis:'Default viewpoint',viewpoint:{owner:'Mara',time:'11.05, 08:26'},messageSender:'Ren'},now:'11-05 00:26',events:[{id:'reply',at:2,quote:'Are you okay',date:'11-05',time:'00:26',phone:{notes:[{title:'Reply',text:'Are you okay?',time:'11-05 00:26'}]}}]};
     await run(c.m,answer);
     const first=T.input;
     assert.ok(!first.includes('[SCENE BEFORE]'));
@@ -1318,18 +1318,79 @@ test('messenger choices do not combine two people with the same first name', () 
 
 test('clock display uses the selected alias without changing model data or other scene owners', () => {
     const m={phoneScreenHolder:'마라',phones:{ren:{owner:'Ren',where:{people:[{name:'Mara Park',aka:['마라','Mara'],city:'Seoul'},{name:'Ren',city:'Berlin'}]}}}};
-    const c={name1:'마라'},raw={basis:'Default used',screen:{owner:'Mara Park',time:'11.05, 11:38'},messageSender:'Ren'};
+    const c={name1:'마라'},raw={basis:'Default used',viewpoint:{owner:'Mara Park',time:'11.05, 11:38'},messageSender:'Ren'};
     const before=structuredClone(raw),shown=data.clockForDisplay(raw,m,c);
-    assert.equal(shown.screen.owner,'마라');assert.equal(shown.screen.time,raw.screen.time);
+    assert.equal(shown.viewpoint.owner,'마라');assert.equal(shown.viewpoint.time,raw.viewpoint.time);
     assert.equal(shown.messageSender,'Ren');assert.equal(shown.basis,raw.basis);assert.deepEqual(raw,before);
-    const switched={...raw,screen:{owner:'Ren',time:'11.05, 03:38'}};
+    const switched={...raw,viewpoint:{owner:'Ren',time:'11.05, 03:38'}};
     assert.equal(data.clockForDisplay(switched,m,c),switched);
     assert.equal(data.clockForDisplay(raw,{...m,phoneScreenHolder:''},c),raw);
     assert.equal(data.clockForDisplay(null,m,c),null);
     m.phones.ren.where.people.push({name:'Mara Kim',city:'Berlin'});
     m.phones.ren.where.people[0].aka=['마라'];
-    const ambiguous={...raw,screen:{owner:'Mara',time:'11.05, 11:38'}};
+    const ambiguous={...raw,viewpoint:{owner:'Mara',time:'11.05, 11:38'}};
     assert.equal(data.clockForDisplay(ambiguous,m,c),ambiguous);
+});
+
+test('clock display accepts legacy screen and gives an explicit viewpoint precedence', () => {
+    const m = { phoneScreenHolder: 'Mara', phones: { ren: { owner: 'Ren', where: { people: [
+        { name: 'Mara', aka: ['마라'] }, { name: 'Ren' },
+    ] } } } };
+    const legacy = { basis: 'Default used', screen: { owner: '마라', time: '11.05, 08:30' }, messageSender: 'Ren' };
+    const before = structuredClone(legacy);
+    assert.deepEqual(data.clockForDisplay(legacy, m), { ...legacy, screen: { ...legacy.screen, owner: 'Mara' } });
+    assert.deepEqual(legacy, before);
+    const both = { ...legacy, viewpoint: { owner: '마라', time: null } };
+    const shown = data.clockForDisplay(both, m);
+    assert.deepEqual(shown.viewpoint, { owner: 'Mara', time: null });
+    assert.deepEqual(shown.screen, legacy.screen);
+    assert.equal(shown.messageSender, 'Ren');
+    for (const viewpoint of [null, {}, { owner: 'Ren', time: '11.05, 00:30' }]) {
+        const clock = { ...legacy, viewpoint };
+        assert.equal(data.clockForDisplay(clock, m), clock, 'do not fall back to a conflicting legacy screen');
+    }
+    for (const clock of [undefined, null, {}, { viewpoint: null }, { viewpoint: { owner: null, time: null }, messageSender: null }]) {
+        assert.equal(data.clockForDisplay(clock, m), clock);
+    }
+});
+
+test('reflection requests viewpoint and preserves new or legacy clock responses through display and storage', async () => {
+    const oldToast = globalThis.toastr;
+    try {
+        for (const split of [false, true]) for (const field of ['viewpoint', 'screen']) {
+            const c = setup([say('Ren', 'start'), say('Mara', 'morning'), say('Mara', 'Mara reads Ren’s reply. 11.05, 08:30.')]);
+            clockPhone(c.p); c.m.dateOrder = 'md'; c.m.phoneScreenHolder = 'Mara';
+            if (!split) { delete c.p.money; delete c.m.finance; }
+            const bankBefore = split ? c.bank() : null, messages = [];
+            globalThis.toastr = { info: text => { messages.push(text); } };
+            const answer = { clock: { basis: 'Default used', [field]: { owner: '마라', time: '11.05, 08:30' }, messageSender: 'Ren' },
+                now: '11-05 00:30', events: [{ id: 'reply', at: 2, quote: 'Mara reads Ren’s reply', date: '11-05', time: '00:30',
+                    phone: { notes: [{ title: 'Reply', text: 'Read it', time: '11-05 00:30' }] } }] };
+            const before = structuredClone(answer);
+            await run(c.m, answer);
+            assert.equal(T.sys.startsWith('STAGE: core'), split);
+            assert.match(T.sys, /viewpoint \{ owner \(whose screen or scene\), time \(copy the time from that screen or scene; never estimate\) \}/);
+            assert.match(T.sys, /"viewpoint": \{ "owner": "name", "time": null or "as written" \}/);
+            assert.doesNotMatch(T.sys, /(?:"screen":|\bscreen) \{ (?:"owner"|owner)/);
+            assert.match(T.sys, /not merely a sender's name\. Attachments keep their own clocks\./);
+            assert.match(T.input, /Default viewpoint: Mara/);
+            assert.match(T.input, /On Mara's clock → owner's time: 11-05 00:30/);
+            const diagnostic = messages.find(text => text.includes('[MODEL RESPONSE]'));
+            assert.ok(diagnostic);
+            assert.deepEqual(JSON.parse(diagnostic.split('[MODEL RESPONSE]\n')[1]), {
+                clock: { ...answer.clock, [field]: { ...answer.clock[field], owner: 'Mara' } }, now: answer.now,
+            });
+            assert.deepEqual(answer, before, 'display must not rewrite the raw response');
+            assert.equal(c.p.now, answer.now); assert.equal(c.p.notes[0].time, answer.now);
+            assert.match(globalThis.__everydayIn.at(-1), /Owner-local window: 11-04 23:30 to 11-05 00:30/);
+            assert.equal(Object.hasOwn(c.p, 'clock'), false);
+            const saved = journalRead('test').find(row => row.round === c.p.sync.rounds.at(-1));
+            assert.equal(saved.now, answer.now); assert.equal(Object.hasOwn(saved, 'clock'), false);
+            if (split) assert.equal(c.bank(), bankBefore);
+        }
+    } finally {
+        if (oldToast === undefined) delete globalThis.toastr; else globalThis.toastr = oldToast;
+    }
 });
 
 test('same source clock resolves for either phone owner, with no extra conversion on the default owner phone',async()=>{
@@ -1381,7 +1442,7 @@ test('reflection sends the matching owner identity and choices for both phones w
   c.p.where={at:1,people:[{name:'Mara',city:'Seoul',names:['Seoul'],local:'Seoul',tz:'Asia/Seoul'},{name:'Ren',city:'Frankfurt',names:['Frankfurt'],local:'Frankfurt',tz:'Europe/Berlin'}]};
   delete c.p.money;delete c.m.finance;c.m.phones={[owner.toLowerCase()]:c.p};c.m.dateOrder='md';c.m.phoneScreenHolder='Mara';
   const now=owner==='Mara'?'11-05 11:38':'11-05 03:38';
-  T.answers.push({clock:{basis:'Default used',screen:{owner:'Mara',time:'11.05, 11:38'},messageSender:'Ren'},now,events:[{id:'reply',at:2,quote:'Are you okay',date:'11-05',time:now.slice(6),phone:{notes:[{title:'Reply',text:'Are you okay?',time:now}]}}]});
+  T.answers.push({clock:{basis:'Default used',viewpoint:{owner:'Mara',time:'11.05, 11:38'},messageSender:'Ren'},now,events:[{id:'reply',at:2,quote:'Are you okay',date:'11-05',time:now.slice(6),phone:{notes:[{title:'Reply',text:'Are you okay?',time:now}]}}]});
   await data.makePhone(c.m,owner,{update:true});
   assert.match(T.input,new RegExp('Phone being updated: "'+owner+'"'));
   assert.ok(T.input.includes("On Mara's clock → owner's time: "+now));
@@ -1427,7 +1488,7 @@ test('reflection keeps the full PM source but converts only the latest source', 
     const raw = 'Mara reads Ren’s reply on her phone. 11.05, 8:30 PM. Two hours pass.';
     const c = setup([say('Ren', 'start'), say('Mara', 'evening'), say('Mara', raw)]);
     clockPhone(c.p); c.m.dateOrder = 'md';
-    await run(c.m, { clock: { basis: 'Mara reads, then two hours pass', screen: { owner: 'Mara', time: '11.05, 8:30 PM' } }, now: '11-05 14:30', events: [] });
+    await run(c.m, { clock: { basis: 'Mara reads, then two hours pass', viewpoint: { owner: 'Mara', time: '11.05, 8:30 PM' } }, now: '11-05 14:30', events: [] });
     assert.ok(T.input.includes(raw));
     assert.match(T.input, /On Mara's clock → owner's time: 11-05 12:30/);
     assert.equal(c.p.now, '11-05 14:30');
@@ -1533,7 +1594,7 @@ test('a story jump across DST keeps the model date and time instead of pinning t
     const saved = c.p.now;
     T.clean = mes => cleanMessage(mes, { stripTags: true });
     // A canned answer checks request/output preservation, not an actual model's inference.
-    try { await run(c.m, { now: '07-05 05:13', clock: { basis: 'Several months later, in July', screen: { owner: 'Mara', time: '12:13' } }, events: [] }); }
+    try { await run(c.m, { now: '07-05 05:13', clock: { basis: 'Several months later, in July', viewpoint: { owner: 'Mara', time: '12:13' } }, events: [] }); }
     finally { delete T.clean; }
     assert.ok(T.input.includes(`Location: Berlin\nSaved phone time: ${saved}`));
     assert.match(T.input, /On Mara's clock → owner's clock: 04:13 \(reference\)\./);
@@ -1585,7 +1646,7 @@ test('real cleaned input retains vague months/days narrative and model dates are
         c.p.now = '11-05 08:12'; c.p.year = 2026; c.p.country = 'KR';
         c.p.where = { at: 1, people: [{ name: 'Ren', city: 'Seoul', tz: 'Asia/Seoul', names: ['Seoul'] }] };
         T.clean = mes => cleanMessage(mes, { stripTags: true });
-        try { await run(c.m, { now: answer, clock: { basis: words, screen: { owner: 'Ren', time: clock } }, events: [] }); }
+        try { await run(c.m, { now: answer, clock: { basis: words, viewpoint: { owner: 'Ren', time: clock } }, events: [] }); }
         finally { delete T.clean; }
         assert.equal(c.p.now, answer);
         assert.equal(c.p.year, expectedYear);
@@ -1698,7 +1759,7 @@ test('configured screen references retain DST conversion and leave inferred elap
     }
     const c = setup([say('Ren', 'start'), say('Mara', 'morning'), say('Ren', 'Several days later. Mara reads <time>08:30</time>.')]);
     clockPhone(c.p); c.m.phoneScreenHolder = 'Mara';
-    await run(c.m, { now: '11-09 00:30', clock: { basis: 'Several days later', screen: { owner: 'Mara', time: '08:30' } }, events: [] });
+    await run(c.m, { now: '11-09 00:30', clock: { basis: 'Several days later', viewpoint: { owner: 'Mara', time: '08:30' } }, events: [] });
     assert.equal(c.p.now, '11-09 00:30');
     assert.match(T.input, /On Mara's clock → owner's clock: 00:30 \(reference\)\./);
     assert.doesNotMatch(T.input, /On Ren's clock → owner's clock:/);
