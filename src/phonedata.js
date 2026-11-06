@@ -145,28 +145,21 @@ const LIFE_TIMERS = `  "timers": [{ "label", "ko", "sec" }],`;
 const LIFE_ONCE = `- An alarm for one occasion (a flight, an appointment) rings once: "days": [] and its "date". Only an alarm the owner keeps for every week has "days".`;
 const LIFE_CHANGE = `- A record already in LIFE NOW is changed with "change": its id; write only the fields that changed. A deleted file is "deleted": true.`;
 const CLOCK_FIRST = `CLOCK FIRST
+First resolve "clock" and "now" for the latest scene, then write events and app records using those times.
 
-Your FIRST task is to identify the story's current point in the last message. WARNING: that message may mix present, past, and future.
+- Viewpoint: use the default viewpoint in OWNER'S CLOCK when set. Change it only when the surrounding narration shifts to another person's scene, not merely a sender's name. A time or date alone does NOT identify whose clock it is. Attachments keep their own clocks.
+- Given exact time: first identify from context what moment the stated time refers to. If it represents the present, use it. If elapsed time must be added to determine the current time, add only the explicitly stated interval. The result must represent the present, not the past or future.
+- No exact time: your task is to infer the current time. The last message may mix present, past, and future. Identify the story's current point within it, then infer its time from context.
 
-Resolve "clock" and "now" before events and app records.
+- "clock":
+  - basis (max 20 words: default used or narrative evidence for a switch; time passed)
+  - finalViewpoint (the final viewpoint determined for the last message)
+  - elapsedTime (the explicitly stated elapsed time used in the calculation; null if absent)
+  - sceneTime (the resulting current scene time before conversion, already including elapsedTime)
+  - messageSender (who sent the displayed message; null if absent).
 
-- Viewpoint: use the default in OWNER'S CLOCK when set. Change it only when surrounding narration shifts to another person's scene, not merely a sender's name. A time or date alone does NOT identify whose clock it is. Attachments keep their own clocks.
-
-- Scene time — determine the current time:
-  1. Identify the story's current point within the last message.
-  2. Select the explicit time relevant to the current scene.
-  3. If you find explicitly stated elapsed time, add it to the selected time. You must NOT infer elapsed time from actions.
-  4. If the current time cannot be determined exactly, infer it from context. Do not confuse present, past, and future scenes.
-
-- "clock": record without recalculating:
-  - basis (max 20 words: default used or switch evidence; time passed)
-  - finalViewpoint (based only on the last message: switch only if its narration shifts to another person's scene; otherwise keep the default)
-  - sceneTime (the resolved current time before conversion)
-  - messageSender (sender of the displayed message; null if absent).
-
-- "now": use the matching converted OWNER'S CLOCK value as-is; otherwise convert sceneTime to the owner's time zone. Same zone: unchanged. Example: no elapsed time, +8h: 12:32 → 20:32 exactly.
-
-- App records: the owner's present scene agrees with "now". Earlier events, other scenes, memories and appointments keep their own times.`;
+- "now": use the matching converted OWNER'S CLOCK value as-is; otherwise convert "clock.sceneTime" to the owner's time zone. This step only converts time zones; never add elapsed time. Same zone: unchanged. Example: +8h: 12:32 → 20:32 exactly.
+- App records: the owner's present scene agrees with "now". Other scenes, memories and appointments keep their own times.`;
 export function updateSystem({ money = true, delivery = false, life = false, weather = false, tracker = false, split = false, invest = false, zone = false, archiveOnly = false } = {}) {
     const paid = delivery ? 'order, ticket or delivery' : 'order or ticket';
     return `${split ? 'STAGE: core\n' : ''}GOAL
@@ -230,7 +223,7 @@ ${delivery ? `- A delivery paid in cash at the door has no move. "tip" only wher
 ${PHONE_STYLE.replace('; "now" is the newest moment of the story.', '.')}
 
 ANSWER — one JSON object, nothing else:
-{ ${archiveOnly ? '' : '"clock": { "basis": "default used or switch evidence; time passed", "finalViewpoint": "name", "sceneTime": "MM-DD HH:MM", "messageSender": null or "name" },\n  '}"now": "MM-DD HH:MM", "moved": [],${zone ? ' "statusCity": "",' : ''}
+{ ${archiveOnly ? '' : '"clock": { "basis": "default used or switch evidence; time passed", "finalViewpoint": "name", "elapsedTime": null or "3 hours", "sceneTime": "MM-DD HH:MM", "messageSender": null or "name" },\n  '}"now": "MM-DD HH:MM", "moved": [],${zone ? ' "statusCity": "",' : ''}
   "events": [{ "id": an id from EVENTS ON THE PHONE, or a short new tag like "berlin-flight", "at": 123, "quote": "exact words",
                "date": "MM-DD", "time": "HH:MM" or "", "summary": "one short line",${split ? ` "apps": [] or ["money"${invest ? ', "invest"' : ''}],` : ''}
                "phone": { only the app items this event puts on the phone }${money ? `,
@@ -1166,6 +1159,8 @@ function validateReflectionClock(raw, p, m, now) {
     const c = raw.clock, scene = when(c?.sceneTime);
     const fail = why => { const e = new Error(`시간 판독 답이 맞지 않아요 (${why}). 이번 답은 반영하지 않았어요. 다시 시도해 주세요`); e.code = 'CLOCK_INVALID'; throw e; };
     if (!c || typeof c !== 'object' || typeof c.finalViewpoint !== 'string' || !c.finalViewpoint.trim() || !hm(scene) || !hm(now)) fail('finalViewpoint·sceneTime·now 확인 필요');
+    // Diagnostic evidence only: sceneTime already includes this interval. Never add it again here.
+    if (c.elapsedTime !== null && (typeof c.elapsedTime !== 'string' || !c.elapsedTime.trim())) fail('elapsedTime은 명시된 경과 시간 또는 null이어야 해요');
     const statedYear = Number(yearIn(raw.now)) || null, gap = p.now ? dayGap(p.now.slice(0, 5), now.slice(0, 5)) : 0;
     let ownerYear = statedYear || (!p.noYear && Number(p.year)) || null;
     if (!statedYear && ownerYear && p.now) {

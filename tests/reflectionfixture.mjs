@@ -11,5 +11,5 @@ export function reflectionFixture(answer, input) {
         const saved = phone ? JSON.parse(phone).now : '';
         time += ' ' + (events.at(-1) || (String(saved).slice(0, 5) === time ? String(saved).slice(6) : '') || '12:00');
     }
-    return { ...answer, clock: { basis: 'App test fixture', finalViewpoint: owner, sceneTime: time, messageSender: null } };
+    return { ...answer, clock: { basis: 'App test fixture', finalViewpoint: owner, elapsedTime: null, sceneTime: time, messageSender: null } };
 }

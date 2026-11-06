@@ -1219,10 +1219,10 @@ test('elapsed time after the source clock survives reflection, everyday and stor
     const c=setup([say('Ren','start'),say('Mara','evening'),say('Mara','Mara reads Ren’s reply on her phone. 11.05, 08:30. Two hours pass.')]);
     clockPhone(c.p); c.m.dateOrder='md'; globalThis.__everydayIn=[];
     const oldVoice=structuredClone(c.p.voice), bankBefore=c.bank();
-    await run(c.m,{clock:{basis:'Mara reads on her phone, then two hours pass',finalViewpoint:'Mara',sceneTime:'11-05 10:30',messageSender:'Ren'},now:'11-05 02:30',events:[{id:'reply',at:2,quote:'Mara reads Ren’s reply',date:'11-05',time:'02:30',phone:{notes:[{title:'Reply',text:'Read it',time:'11-05 02:30'}]}}]});
+    await run(c.m,{clock:{basis:'Mara reads on her phone, then two hours pass',finalViewpoint:'Mara',elapsedTime:'2 hours',sceneTime:'11-05 10:30',messageSender:'Ren'},now:'11-05 02:30',events:[{id:'reply',at:2,quote:'Mara reads Ren’s reply',date:'11-05',time:'02:30',phone:{notes:[{title:'Reply',text:'Read it',time:'11-05 02:30'}]}}]});
     assert.match(T.input,/On Mara's clock → owner's time: 11-05 00:30/);
     assert.match(T.sys,/CLOCK FIRST/);
-    assert.match(T.sys,/Viewpoint: use the default in OWNER'S CLOCK when set\./);
+    assert.match(T.sys,/Viewpoint: use the default viewpoint in OWNER'S CLOCK when set\./);
     assert.match(globalThis.__everydayIn.at(-1),/Owner-local window: 11-04 23:30 to 11-05 02:30/);
     assert.equal(c.p.now,'11-05 02:30'); assert.equal(c.p.notes.at(-1).time,'11-05 02:30');
     assert.deepEqual(c.p.voice,oldVoice); assert.equal(c.bank(),bankBefore);
@@ -1230,7 +1230,7 @@ test('elapsed time after the source clock survives reflection, everyday and stor
 test('same-time scene without a new timestamp keeps the supplied moment', async()=>{
     const c=setup([say('Ren','start'),say('Mara','evening'),say('Ren','Meanwhile in Berlin, Ren sends a reply.')]);
     clockPhone(c.p);c.p.now='11-05 02:30';c.m.dateOrder='md';
-    await run(c.m,{clock:{basis:'Meanwhile in Berlin',finalViewpoint:'Ren',sceneTime:'11-05 02:30',messageSender:'Ren'},now:'11-05 02:30',events:[]});
+    await run(c.m,{clock:{basis:'Meanwhile in Berlin',finalViewpoint:'Ren',elapsedTime: null,sceneTime:'11-05 02:30',messageSender:'Ren'},now:'11-05 02:30',events:[]});
     assert.equal(c.p.now,'11-05 02:30');
 });
 
@@ -1261,7 +1261,7 @@ test('unnamed default gets clock candidates, while unknown location gets no inve
 test('default survives undo and reapply without preceding messages or their clock candidates', async () => {
     const c=setup([say('Ren','start'),say('Mara','Mara reads on her own phone. 11.05, 08:24.'),say('Ren','11.05, 08:26. Are you okay?')]);
     clockPhone(c.p); c.m.dateOrder='md'; await data.setScreenHolder(c.m,'Mara');
-    const answer={clock:{basis:'Default screen viewpoint',finalViewpoint:'Mara',sceneTime:'11-05 08:26',messageSender:'Ren'},now:'11-05 00:26',events:[{id:'reply',at:2,quote:'Are you okay',date:'11-05',time:'00:26',phone:{notes:[{title:'Reply',text:'Are you okay?',time:'11-05 00:26'}]}}]};
+    const answer={clock:{basis:'Default screen viewpoint',finalViewpoint:'Mara',elapsedTime: null,sceneTime:'11-05 08:26',messageSender:'Ren'},now:'11-05 00:26',events:[{id:'reply',at:2,quote:'Are you okay',date:'11-05',time:'00:26',phone:{notes:[{title:'Reply',text:'Are you okay?',time:'11-05 00:26'}]}}]};
     await run(c.m,answer);
     const first=T.input;
     assert.ok(!first.includes('[SCENE BEFORE]'));
@@ -1388,7 +1388,7 @@ test('reflection sends the matching owner identity and choices for both phones w
   c.p.where={at:1,people:[{name:'Mara',city:'Seoul',names:['Seoul'],local:'Seoul',tz:'Asia/Seoul'},{name:'Ren',city:'Frankfurt',names:['Frankfurt'],local:'Frankfurt',tz:'Europe/Berlin'}]};
   delete c.p.money;delete c.m.finance;c.m.phones={[owner.toLowerCase()]:c.p};c.m.dateOrder='md';c.m.phoneScreenHolder='Mara';
   const now=owner==='Mara'?'11-05 11:38':'11-05 03:38';
-  T.answers.push({clock:{basis:'Default used',finalViewpoint:'Mara',sceneTime:'11-05 11:38',messageSender:'Ren'},now,events:[{id:'reply',at:2,quote:'Are you okay',date:'11-05',time:now.slice(6),phone:{notes:[{title:'Reply',text:'Are you okay?',time:now}]}}]});
+  T.answers.push({clock:{basis:'Default used',finalViewpoint:'Mara',elapsedTime: null,sceneTime:'11-05 11:38',messageSender:'Ren'},now,events:[{id:'reply',at:2,quote:'Are you okay',date:'11-05',time:now.slice(6),phone:{notes:[{title:'Reply',text:'Are you okay?',time:now}]}}]});
   await data.makePhone(c.m,owner,{update:true});
   assert.match(T.input,new RegExp('Phone being updated: "'+owner+'"'));
   assert.ok(T.input.includes("On Mara's clock → owner's time: "+now));
@@ -1435,7 +1435,7 @@ test('reflection keeps the full PM source but converts only the latest source', 
     const raw = 'Mara reads Ren’s reply on her phone. 11.05, 8:30 PM. Two hours pass.';
     const c = setup([say('Ren', 'start'), say('Mara', 'evening'), say('Mara', raw)]);
     clockPhone(c.p); c.m.dateOrder = 'md';
-    await run(c.m, { clock: { basis: 'Mara reads, then two hours pass', finalViewpoint: 'Mara', sceneTime: '11-05 22:30' }, now: '11-05 14:30', events: [] });
+    await run(c.m, { clock: { basis: 'Mara reads, then two hours pass', finalViewpoint: 'Mara', elapsedTime: '2 hours', sceneTime: '11-05 22:30' }, now: '11-05 14:30', events: [] });
     assert.ok(T.input.includes(raw));
     assert.match(T.input, /On Mara's clock → owner's time: 11-05 12:30/);
     assert.equal(c.p.now, '11-05 14:30');
@@ -1548,7 +1548,7 @@ test('a story jump across DST keeps the model date and time instead of pinning t
     const saved = c.p.now;
     T.clean = mes => cleanMessage(mes, { stripTags: true });
     // A canned answer checks request/output preservation, not an actual model's inference.
-    try { await run(c.m, { now: '07-05 05:13', clock: { basis: 'Several months later, in July', finalViewpoint: 'Mara', sceneTime: '07-05 12:13' }, events: [] }); }
+    try { await run(c.m, { now: '07-05 05:13', clock: { basis: 'Several months later, in July', finalViewpoint: 'Mara', elapsedTime: null, sceneTime: '07-05 12:13' }, events: [] }); }
     finally { delete T.clean; }
     assert.ok(T.input.includes(`Location: Berlin\nSaved phone time: ${saved}`));
     assert.match(T.input, /On Mara's clock → owner's clock: 04:13\./);
@@ -1600,7 +1600,7 @@ test('real cleaned input retains vague months/days narrative and model dates are
         c.p.now = '11-05 08:12'; c.p.year = 2026; c.p.country = 'KR';
         c.p.where = { at: 1, people: [{ name: 'Ren', city: 'Seoul', tz: 'Asia/Seoul', names: ['Seoul'] }] };
         T.clean = mes => cleanMessage(mes, { stripTags: true });
-        try { await run(c.m, { now: answer, clock: { basis: words, finalViewpoint: 'Ren', sceneTime: answer }, events: [] }); }
+        try { await run(c.m, { now: answer, clock: { basis: words, finalViewpoint: 'Ren', elapsedTime: null, sceneTime: answer }, events: [] }); }
         finally { delete T.clean; }
         assert.equal(c.p.now, answer);
         assert.equal(c.p.year, expectedYear);
@@ -1717,7 +1717,7 @@ test('configured screen references retain DST conversion and leave inferred elap
     }
     const c = setup([say('Ren', 'start'), say('Mara', 'morning'), say('Ren', 'Several days later. Mara reads <time>08:30</time>.')]);
     clockPhone(c.p); c.m.phoneScreenHolder = 'Mara';
-    await run(c.m, { now: '11-09 00:30', clock: { basis: 'Several days later', finalViewpoint: 'Mara', sceneTime: '11-09 08:30' }, events: [] });
+    await run(c.m, { now: '11-09 00:30', clock: { basis: 'Several days later', finalViewpoint: 'Mara', elapsedTime: null, sceneTime: '11-09 08:30' }, events: [] });
     assert.equal(c.p.now, '11-09 00:30');
     assert.match(T.input, /On Mara's clock → owner's clock: 00:30\./);
     assert.doesNotMatch(T.input, /On Ren's clock → owner's clock:/);
@@ -1890,7 +1890,7 @@ test('latest narrative without a parsed clock sends no earlier HTML candidate an
     const { cleanMessage } = await import(cleanMessageURL);
     T.clean = raw => cleanMessage(raw, { stripTags: true });
     try {
-        await run(c.m, { clock: { basis: 'Narration shifts to Ren in Berlin', finalViewpoint: 'Ren', sceneTime: '11-05 08:24', messageSender: null },
+        await run(c.m, { clock: { basis: 'Narration shifts to Ren in Berlin', finalViewpoint: 'Ren', elapsedTime: null, sceneTime: '11-05 08:24', messageSender: null },
             now: '11-05 08:24', events: [] });
         assert.doesNotMatch(T.input, /Time choices|On Mara's clock|06:12/);
         assert.match(T.input, /14:12/);
@@ -1906,7 +1906,7 @@ test('flat clock display preserves resolved sceneTime and model data while norma
         { name: 'Mara Park', aka: ['마라', 'Mara'], city: 'Seoul' }, { name: 'Ren', city: 'Berlin' }
     ] } } } };
     const c = { name1: '마라' };
-    const raw = { basis: 'Default used', finalViewpoint: 'Mara Park', sceneTime: '11-05 11:24', messageSender: 'Ren' };
+    const raw = { basis: 'Default used', finalViewpoint: 'Mara Park', elapsedTime: '3 hours', sceneTime: '11-05 11:24', messageSender: 'Ren' };
     const before = structuredClone(raw);
     assert.deepEqual(data.clockForDisplay(raw, m, c), { ...raw, finalViewpoint: '마라' });
     assert.deepEqual(raw, before);
@@ -1920,27 +1920,33 @@ test('256 prompt options agree on the new clock schema and their archive-only va
     for (let mask = 0; mask < 256; mask++) {
         const flags = Object.fromEntries(['money','delivery','life','weather','tracker','split','invest','zone'].map((key, i) => [key, !!(mask & (1 << i))]));
         systems.push(data.updateSystem(flags));
-        if (flags.split) systems.push(data.coreSystem(flags));
+        systems.push(data.coreSystem(flags));
         for (const legacy of [data.updateSystem({...flags,archiveOnly:true}),data.coreSystem({...flags,archiveOnly:true})]) {
-            assert.doesNotMatch(legacy,/CLOCK FIRST|finalViewpoint|sceneTime/);
+            assert.doesNotMatch(legacy,/CLOCK FIRST|finalViewpoint|elapsedTime|sceneTime/);
             assert.match(legacy,/- "now": the moment of the newest message, never a time something is only planned for\./);
             const example=legacy.split('ANSWER — one JSON object, nothing else:')[1].split('\n')[1];
             assert.match(example,/^\{ "now": "MM-DD HH:MM", "moved":/);
             assert.doesNotMatch(example,/"clock"/);
         }
     }
+    const clockBlock = src.match(/const CLOCK_FIRST = `([\s\S]*?)`;/)[1];
     for (const system of systems) {
-        assert.match(system, /finalViewpoint \(based only on the last message: switch only if its narration shifts to another person's scene; otherwise keep the default\)/);
-        assert.match(system, /sceneTime \(the resolved current time before conversion\)/);
+        assert.equal(system.split(clockBlock).length, 2);
+        assert.match(system, /elapsedTime \(the explicitly stated elapsed time used in the calculation; null if absent\)/);
+        assert.match(system, /This step only converts time zones; never add elapsed time/);
+        assert.match(system, /finalViewpoint \(the final viewpoint determined for the last message\)/);
+        assert.match(system, /sceneTime \(the resulting current scene time before conversion, already including elapsedTime\)/);
         const example = system.split('ANSWER — one JSON object, nothing else:')[1].split('\n')[1];
-        assert.match(example, /"finalViewpoint": "name", "sceneTime": "MM-DD HH:MM"/);
+        assert.match(example, /"finalViewpoint": "name", "elapsedTime": null or "3 hours", "sceneTime": "MM-DD HH:MM"/);
         assert.doesNotMatch(example, /"screen"|"screenOwner"|"owner"|"time"/);
     }
 });
 
 test('invalid or inconsistent model clocks stop before everyday, money or app writes; retry remains possible', async () => {
-    const bad = [undefined, null, {screen:{owner:'Ren',time:'08:24'}}, {screenOwner:'Ren',sceneTime:'11-05 11:24'}, {finalViewpoint:'Ren',sceneTime:null},
-        {finalViewpoint:'Ren',sceneTime:'11-05 10:00'}, {finalViewpoint:'Mara',sceneTime:'11-05 12:00'}, {finalViewpoint:'Ren',sceneTime:'02-31 12:00'}];
+    const bad = [undefined, null, {screen:{owner:'Ren',time:'08:24'}}, {screenOwner:'Ren',sceneTime:'11-05 11:24'}, {finalViewpoint:'Ren',elapsedTime: null,sceneTime:null},
+        {finalViewpoint:'Ren',elapsedTime: null,sceneTime:'11-05 10:00'}, {finalViewpoint:'Mara',elapsedTime: null,sceneTime:'11-05 12:00'}, {finalViewpoint:'Ren',elapsedTime: null,sceneTime:'02-31 12:00'},
+        {finalViewpoint:'Ren',sceneTime:'11-05 11:24'},
+        ...['', ' ', 3, false, [], {}].map(elapsedTime=>({finalViewpoint:'Ren',elapsedTime,sceneTime:'11-05 11:24'}))];
     for (const clock of bad) {
         const c = setup([say('Ren','start'),say('Mara','hello'),say('Ren','I paid for tea')]);
         clockPhone(c.p); c.p.now='11-05 03:38'; c.m.dateOrder='md';
@@ -1952,14 +1958,14 @@ test('invalid or inconsistent model clocks stop before everyday, money or app wr
         await assert.rejects(()=>run(c.m,JSON.stringify(response)), e=>e.code==='CLOCK_INVALID');
         assert.equal(c.p.now,'11-05 03:38');assert.deepEqual(c.p.where,before);assert.deepEqual(c.p.sync.done,done);
         assert.equal(c.p.notes.length,0);assert.equal(c.bank(),cashBefore);assert.equal(T.moneyCalls,0);assert.equal(globalThis.__everydayIn.length,0);
-        await run(c.m,{clock:{basis:'Three hours after 08:24',finalViewpoint:'Ren',sceneTime:'11-05 11:24',messageSender:null},now:'11-05 11:24',events:[]});
+        await run(c.m,{clock:{basis:'Three hours after 08:24',finalViewpoint:'Ren',elapsedTime:'3 hours',sceneTime:'11-05 11:24',messageSender:null},now:'11-05 11:24',events:[]});
         assert.equal(c.p.now,'11-05 11:24');
     }
 });
 
 test('clock validation respects aliases, offsets, elapsed time, year rollover and unknown locations', () => {
     const p={owner:'Ren'};clockPhone(p);const m={phones:{ren:p}};
-    const plan=(finalViewpoint,sceneTime,now)=>data.reflectionClockPlan({clock:{finalViewpoint,sceneTime},now,events:[]},p,m,{round:{rows:[]}});
+    const plan=(finalViewpoint,sceneTime,now)=>data.reflectionClockPlan({clock:{finalViewpoint,elapsedTime:null,sceneTime},now,events:[]},p,m,{round:{rows:[]}});
     assert.equal(plan('마라','11-05 12:24','11-05 04:24').now,'11-05 04:24');
     assert.throws(()=>plan('마라','11-05 12:24','11-05 04:25'),/시차 불일치/);
     assert.throws(()=>plan('마라','11-05 12:24','2026-11-05 04:25'),/시차 불일치/);
@@ -1972,4 +1978,33 @@ test('clock validation respects aliases, offsets, elapsed time, year rollover an
     p.now='12-31 10:00';
     assert.equal(plan('Mara','01-01 00:24','12-31 16:24').now,'12-31 16:24');
     assert.equal(p.now,'12-31 10:00');assert.equal(p.year,2026);
+});
+
+
+test('elapsedTime is preserved as evidence and never added again to sceneTime or now', async () => {
+    for (const [viewpoint, elapsedTime, sceneTime, now] of [
+        ['Ren', '3 hours', '11-05 11:24', '11-05 11:24'],
+        ['Mara', '3 hours', '11-05 11:24', '11-05 03:24'],
+        ['Mara', '2 days and 5 minutes', '11-07 08:29', '11-07 00:29'],
+        ['Ren', null, '11-05 08:24', '11-05 08:24'],
+    ]) {
+        const c=setup([say('Ren','start'),say('Mara','hello'),say('Ren','Three hours ago the screen read 08:24. Ren calls Mara.')]);
+        clockPhone(c.p);c.m.dateOrder='md';c.p.now='11-04 23:30';
+        const clock={basis:'Explicit interval already included',finalViewpoint:viewpoint,elapsedTime,sceneTime,messageSender:null};
+        const response={clock,now,events:[]}, before=structuredClone(response);
+        const previousToastr=globalThis.toastr, diagnostics=[];
+        globalThis.toastr={...previousToastr,info:(text,title)=>{if(title==='시간 판독 · 테스트')diagnostics.push(text);}};
+        globalThis.__everydayIn=[];
+        try {
+            await run(c.m,JSON.stringify(response));
+            assert.equal(c.p.now,now);
+            assert.match(globalThis.__everydayIn.at(-1),new RegExp('to '+now+'\\.'));
+            assert.deepEqual(response,before);
+            assert.deepEqual(data.clockForDisplay(clock,c.m),clock);
+            assert.equal(diagnostics.length,1);
+            const displayed=JSON.parse(diagnostics[0].split('[MODEL RESPONSE]\n')[1]);
+            assert.deepEqual(displayed.clock,clock);assert.equal(displayed.now,now);
+            await data.undoRound(c.m,c.p);assert.equal(c.p.now,'11-04 23:30');
+        } finally { globalThis.toastr=previousToastr; }
+    }
 });

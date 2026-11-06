@@ -881,19 +881,19 @@ for(let bits=0;bits<16;bits++)for(const order of ['oldest','newest'])for(const s
   await data.setScreenHolder(m,'Mara');p.sync.order=order;p.sync.limit=2;
   const end=source==='archive'?5:source==='mixed'?6:order==='oldest'?3:6;
   if(tracker!=='none')T.trackers=[{i:end,date:'10.26',min:480,time:'08:00',place:tracker==='own'?'Berlin':tracker==='other'?'Seoul':'Unknownburg',city:tracker==='own'?'Berlin':tracker==='other'?'Seoul':'Unknownburg',weather:'Clear 10°C'}];
-  const answer={clock:{basis:'audit fixture',finalViewpoint:'Ren',sceneTime:'10-26 12:00',messageSender:null},now:'10-26 12:00',events:[{id:'tea',at:end,quote:source==='archive'?'paid for tea':'I paid for tea',summary:'Tea',date:'10-26',time:'12:00',apps:[...(bits&1?['money']:[]),...(bits&2?['invest']:[])],invest:!!(bits&2),phone:{}}]};
+  const answer={clock:{basis:'audit fixture',finalViewpoint:'Ren',elapsedTime: null,sceneTime:'10-26 12:00',messageSender:null},now:'10-26 12:00',events:[{id:'tea',at:end,quote:source==='archive'?'paid for tea':'I paid for tea',summary:'Tea',date:'10-26',time:'12:00',apps:[...(bits&1?['money']:[]),...(bits&2?['invest']:[])],invest:!!(bits&2),phone:{}}]};
   if(source==='archive')delete answer.clock;
   await run(m,source==='archive'?JSON.stringify(answer):answer);
   const calls=T.clockAuditCalls, core=calls.filter(x=>x.system.includes('WHAT IS NEW\n'));assert.equal(core.length,1);
   assert.equal(core[0].system.startsWith('STAGE: core'),!!(bits&3));
   assert.ok(!bad(core[0].system));
   if(source==='archive') {
-   assert.doesNotMatch(core[0].system,/CLOCK FIRST|finalViewpoint|sceneTime/);
+   assert.doesNotMatch(core[0].system,/CLOCK FIRST|finalViewpoint|elapsedTime|sceneTime/);
    assert.match(core[0].system,/- "now": the moment of the newest message, never a time something is only planned for\./);
    assert.doesNotMatch(core[0].input,/Time choices\.|Default screen viewpoint|Phone being updated/);
   } else {
-   assert.ok(core[0].system.includes('"now": use the matching converted OWNER\'S CLOCK value as-is; otherwise convert sceneTime to the owner\'s time zone.'));
-   assert.ok(core[0].system.includes('"finalViewpoint": "name", "sceneTime": "MM-DD HH:MM"'));
+   assert.ok(core[0].system.includes('"now": use the matching converted OWNER\'S CLOCK value as-is; otherwise convert "clock.sceneTime" to the owner\'s time zone.'));
+   assert.ok(core[0].system.includes('"finalViewpoint": "name", "elapsedTime": null or "3 hours", "sceneTime": "MM-DD HH:MM"'));
    if(style==='dated')assert.ok(core[0].input.includes("On Mara's clock →"));
   }
   assert.equal(core[0].input.includes('[MONEY NOW]'),false);assert.ok(!core[0].input.includes("On Ren's clock →"));if(style==='narrative')assert.ok(!core[0].input.includes('Time choices.'));
@@ -938,7 +938,7 @@ test('a changed chat during everyday does not commit the clock or moved location
     const before={now:c.p.now,year:c.p.year,where:structuredClone(c.p.where)};let during;
     T.beforeEveryday=()=>{during={now:c.p.now,where:structuredClone(c.p.where)};T.chat[2].mes='Changed while waiting';};
     try {
-        await assert.rejects(()=>run(c.m,{clock:{finalViewpoint:'Ren',sceneTime:'10-26 11:24'},now:'10-26 11:24',moved:[{name:'Ren',city:'Seoul',tz:'Asia/Seoul'}],events:[]}),/대화가 바뀌었어요/);
+        await assert.rejects(()=>run(c.m,{clock:{finalViewpoint:'Ren',elapsedTime: null,sceneTime:'10-26 11:24'},now:'10-26 11:24',moved:[{name:'Ren',city:'Seoul',tz:'Asia/Seoul'}],events:[]}),/대화가 바뀌었어요/);
         assert.deepEqual(during,{now:before.now,where:before.where});
         assert.equal(c.p.now,before.now);assert.equal(c.p.year,before.year);assert.deepEqual(c.p.where,before.where);
     } finally {T.beforeEveryday=null;}
@@ -951,7 +951,7 @@ test('archive-only reflection accepts legacy now without clock metadata, updates
     try {
         await run(c.m,JSON.stringify({now:'10-26 13:00',events:[note(3,'bought the poetry book','Book')]}));
         const core=T.clockAuditCalls.find(x=>x.system.includes('WHAT IS NEW\n'));
-        assert.doesNotMatch(core.system,/CLOCK FIRST|finalViewpoint|sceneTime/);
+        assert.doesNotMatch(core.system,/CLOCK FIRST|finalViewpoint|elapsedTime|sceneTime/);
         assert.match(core.input,/The owner is in Frankfurt am Main, 10-26 03:00 now\./);
         assert.doesNotMatch(core.input,/Time choices\.|Default screen viewpoint/);
         assert.equal(c.p.now,'10-26 13:00');assert.equal(c.p.notes[0].time,'10-26 12:00');
@@ -972,7 +972,7 @@ test('archive-only missing event dates use the legacy model now, not the guarded
         await run(c.m,JSON.stringify({...(modelNow ? {now:modelNow} : {}),events:[event]}));
         assert.equal(c.p.now,'10-27 09:00');
         assert.equal(c.p.notes[0].time,modelNow ? '10-26 12:00' : '');
-        assert.doesNotMatch(T.sys,/CLOCK FIRST|finalViewpoint|sceneTime/);
+        assert.doesNotMatch(T.sys,/CLOCK FIRST|finalViewpoint|elapsedTime|sceneTime/);
         await data.undoRound(c.m,c.p);
         assert.equal(c.p.now,'10-27 09:00');
         assert.equal(c.p.notes.length,0);
