@@ -146,23 +146,27 @@ const LIFE_ONCE = `- An alarm for one occasion (a flight, an appointment) rings 
 const LIFE_CHANGE = `- A record already in LIFE NOW is changed with "change": its id; write only the fields that changed. A deleted file is "deleted": true.`;
 const CLOCK_FIRST = `CLOCK FIRST
 
-Your FIRST task is to identify the story's current point in the last message. WARNING: that message may mix present, past, and future. Resolve "clock" and "now" before writing events and app records.
+Your FIRST task is to identify the story's current point in the last message. WARNING: that message may mix present, past, and future.
 
-- Viewpoint: use the default viewpoint in OWNER'S CLOCK when set. Change it only when the surrounding narration shifts to another person's scene, not merely a sender's name. A time or date alone does NOT identify whose clock it is. Attachments keep their own clocks.
+Resolve "clock" and "now" before events and app records.
 
-- Exact time: first identify the explicit time relevant to the current scene. Use that identified time as the current time. If elapsed time is explicitly stated, add it to get the current time. Never infer elapsed time from actions.
+- Viewpoint: use the default in OWNER'S CLOCK when set. Change it only when surrounding narration shifts to another person's scene, not merely a sender's name. A time or date alone does NOT identify whose clock it is. Attachments keep their own clocks.
 
-- No exact time: infer the current time from context, keeping past and future separate.
+- Scene time — determine the current time:
+  1. Identify the story's current point within the last message.
+  2. Select the explicit time relevant to the current scene.
+  3. If you find explicitly stated elapsed time, add it to the selected time. You must NOT infer elapsed time from actions.
+  4. If the current time cannot be determined exactly, infer it from context. Do not confuse present, past, and future scenes.
 
-- "clock":
-  - basis (max 20 words: default used or narrative evidence for a switch; time passed)
-  - screenOwner (the final viewpoint determined for the last message)
-  - sceneTime (the current time resolved above, before time-zone conversion)
-  - messageSender (sender of the message displayed in the current scene; null if absent).
+- "clock": record without recalculating:
+  - basis (max 20 words: default used or switch evidence; time passed)
+  - finalViewpoint (based only on the last message: switch only if its narration shifts to another person's scene; otherwise keep the default)
+  - sceneTime (the resolved current time before conversion)
+  - messageSender (sender of the displayed message; null if absent).
 
-- "now": convert "clock.sceneTime" to the owner's time zone. If OWNER'S CLOCK already provides that conversion, use it as-is. If the time zones match, keep the time unchanged. Example: no elapsed time, +8h offset: 12:32 → 20:32 exactly.
+- "now": use the matching converted OWNER'S CLOCK value as-is; otherwise convert sceneTime to the owner's time zone. Same zone: unchanged. Example: no elapsed time, +8h: 12:32 → 20:32 exactly.
 
-- App records: the owner's present scene agrees with "now". Events from earlier messages, other scenes, memories and appointments keep their own times.`;
+- App records: the owner's present scene agrees with "now". Earlier events, other scenes, memories and appointments keep their own times.`;
 export function updateSystem({ money = true, delivery = false, life = false, weather = false, tracker = false, split = false, invest = false, zone = false, archiveOnly = false } = {}) {
     const paid = delivery ? 'order, ticket or delivery' : 'order or ticket';
     return `${split ? 'STAGE: core\n' : ''}GOAL
@@ -226,7 +230,7 @@ ${delivery ? `- A delivery paid in cash at the door has no move. "tip" only wher
 ${PHONE_STYLE.replace('; "now" is the newest moment of the story.', '.')}
 
 ANSWER — one JSON object, nothing else:
-{ ${archiveOnly ? '' : '"clock": { "basis": "default used or switch evidence; time passed", "screenOwner": "name", "sceneTime": "MM-DD HH:MM", "messageSender": null or "name" },\n  '}"now": "MM-DD HH:MM", "moved": [],${zone ? ' "statusCity": "",' : ''}
+{ ${archiveOnly ? '' : '"clock": { "basis": "default used or switch evidence; time passed", "finalViewpoint": "name", "sceneTime": "MM-DD HH:MM", "messageSender": null or "name" },\n  '}"now": "MM-DD HH:MM", "moved": [],${zone ? ' "statusCity": "",' : ''}
   "events": [{ "id": an id from EVENTS ON THE PHONE, or a short new tag like "berlin-flight", "at": 123, "quote": "exact words",
                "date": "MM-DD", "time": "HH:MM" or "", "summary": "one short line",${split ? ` "apps": [] or ["money"${invest ? ', "invest"' : ''}],` : ''}
                "phone": { only the app items this event puts on the phone }${money ? `,
@@ -1161,7 +1165,7 @@ export function reflectionClockPlan(raw, original, m, { round, roundEnd = null, 
 function validateReflectionClock(raw, p, m, now) {
     const c = raw.clock, scene = when(c?.sceneTime);
     const fail = why => { const e = new Error(`시간 판독 답이 맞지 않아요 (${why}). 이번 답은 반영하지 않았어요. 다시 시도해 주세요`); e.code = 'CLOCK_INVALID'; throw e; };
-    if (!c || typeof c !== 'object' || typeof c.screenOwner !== 'string' || !c.screenOwner.trim() || !hm(scene) || !hm(now)) fail('screenOwner·sceneTime·now 확인 필요');
+    if (!c || typeof c !== 'object' || typeof c.finalViewpoint !== 'string' || !c.finalViewpoint.trim() || !hm(scene) || !hm(now)) fail('finalViewpoint·sceneTime·now 확인 필요');
     const statedYear = Number(yearIn(raw.now)) || null, gap = p.now ? dayGap(p.now.slice(0, 5), now.slice(0, 5)) : 0;
     let ownerYear = statedYear || (!p.noYear && Number(p.year)) || null;
     if (!statedYear && ownerYear && p.now) {
@@ -1171,7 +1175,7 @@ function validateReflectionClock(raw, p, m, now) {
     const sceneYear = Number(yearIn(c.sceneTime)) || (ownerYear ? ownerYear + (now.startsWith('01-01') && scene.startsWith('12-31') ? -1 : now.startsWith('12-31') && scene.startsWith('01-01') ? 1 : 0) : null);
     if (!exactClockShift(scene, 'UTC', 'UTC', sceneYear || 2000) || !exactClockShift(now, 'UTC', 'UTC', ownerYear || 2000)) fail('유효하지 않은 날짜');
     // Compare only identities and zones we actually know. Unknown places and ambiguous DST clocks stay with the model.
-    const person = screenPerson(m, c.screenOwner), name = person?.name || c.screenOwner;
+    const person = screenPerson(m, c.finalViewpoint), name = person?.name || c.finalViewpoint;
     const zones = placesAround(p, m).filter(z => (z.own ? [p.owner, ...arr(z.by)] : [z.who, ...arr(z.by)]).some(n => n && nameKey(n) === nameKey(name)));
     const own = ownerZone(p), tz = [...new Set(zones.map(z => z.tz))];
     let expected = null;
@@ -1894,12 +1898,12 @@ export function screenHolderLabel(m, c = ctx()) {
 }
 // Display aliases only. Never change the model's time, sender, explanation or a different scene owner.
 export function clockForDisplay(clock, m, c = ctx()) {
-    const flat = typeof clock?.screenOwner === 'string';
-    const selected = screenHolderLabel(m, c), owner = flat ? clock.screenOwner : clock?.screen?.owner;
+    const flat = typeof clock?.finalViewpoint === 'string';
+    const selected = screenHolderLabel(m, c), owner = flat ? clock.finalViewpoint : clock?.screen?.owner;
     if (!selected || typeof owner !== 'string') return clock;
     const key = name => nameKey(screenPerson(m, name)?.name || name);
     if (key(owner) !== key(selected)) return clock;
-    return flat ? { ...clock, screenOwner: selected } : { ...clock, screen: { ...clock.screen, owner: selected } };
+    return flat ? { ...clock, finalViewpoint: selected } : { ...clock, screen: { ...clock.screen, owner: selected } };
 }
 export const dateOrderOf = m => (m?.dateOrder === 'dm' ? 'dm' : 'md');
 export const needsDateOrder = m => !m?.dateOrder;

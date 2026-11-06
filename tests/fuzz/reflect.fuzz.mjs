@@ -54,7 +54,7 @@ function setup() {
 }
 // a full, plausible answer touching every part
 const BASE = {
-    clock: { basis: 'Resolved story time', screenOwner: 'Ren', sceneTime: '01-02 21:10', messageSender: null },
+    clock: { basis: 'Resolved story time', finalViewpoint: 'Ren', sceneTime: '01-02 21:10', messageSender: null },
     now: '01-02 21:10',
     events: [
         { id: 'pizza', at: 3, quote: 'I ordered', summary: 'pizza', date: '12-31', time: '19:40',
