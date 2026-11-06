@@ -150,7 +150,7 @@ Your FIRST task is to identify the story's current point in the last message. WA
 
 - Viewpoint: use the default viewpoint in OWNER'S CLOCK when set. Change it only when the surrounding narration shifts to another person's scene, not merely a sender's name. A time or date alone does NOT identify whose clock it is. Attachments keep their own clocks.
 
-- Exact time: select the stated time tied to the current scene. Keep it unchanged unless elapsed time is explicitly stated; then add it. Never infer elapsed time from actions.
+- Exact time: first identify the explicit time relevant to the current scene. Use that identified time as the current time. If elapsed time is explicitly stated, add it to get the current time. Never infer elapsed time from actions.
 
 - No exact time: infer the current time from context, keeping past and future separate.
 
