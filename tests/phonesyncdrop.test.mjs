@@ -1835,7 +1835,7 @@ test('mixed sources use actual original positions, including duplicate text, mar
 test('source chronology is neither numeric clock order nor proof of narrative now', async () => {
     const p = { owner: 'Ren' }; clockPhone(p);
     const rows = [htmlRow(9, 'Mara remembers 10.05 01:00. Several months later, the present continues.'),
-        htmlRow(2, 'Mara 11.05 23:59'), htmlRow(10, 'No timestamp in this message.')];
+        htmlRow(2, 'Mara 11.05 23:59')];
     const r = await data.reflectionClocks(p, rows, { dateOrder: 'md' });
     assert.ok(r.choices.every(c => c.at === 9 && c.sourceTime === '10.05 01:00'));
     assert.match(r.text, /Time alone does not identify the viewpoint/);
@@ -1852,8 +1852,9 @@ test('missing and unrecognized dates do not fabricate a source or overwrite the 
     const earlier = htmlRow(2, 'Mara 11.05 08:30');
     for (const raw of ['No clock.', '<time>25:99</time>', 'November 6, 2026']) {
         const result = await data.reflectionClocks(p, [earlier, htmlRow(3, raw)], {});
-        assert.ok(result.choices.every(c => c.at === 2));
-        assert.equal(result.choices.length, 2);
+        assert.deepEqual(result.choices, []);
+        assert.doesNotMatch(result.text, /Time choices|On .*clock/);
+        assert.equal(p.now, '11-04 23:30');
     }
 });
 
@@ -1877,4 +1878,24 @@ test('archive hint ordering retains the existing supplied first-index convention
     const r = await data.reflectionClocks(p, [raw, archive], {});
     assert.ok(r.choices.every(c => c.at === 15 && c.sourceTime === '11.05 08:30'));
     assert.equal(r.choices.length, 2);
+});
+
+
+test('latest narrative without a parsed clock sends no earlier HTML candidate and keeps both messages', async () => {
+    const narrative = '아침 8시 24분. 베를린에서 Ren은 출근 준비를 했다.';
+    const c = setup([say('Ren', 'start'), say('Mara', 'morning'),
+        say('Mara', '<div class="chat-timestamp">14:12</div> See you soon.'), say('Ren', narrative)]);
+    clockPhone(c.p);
+    c.m.phoneScreenHolder = 'Mara'; c.m.dateOrder = 'md';
+    const { cleanMessage } = await import(cleanMessageURL);
+    T.clean = raw => cleanMessage(raw, { stripTags: true });
+    try {
+        await run(c.m, { clock: { basis: 'Narration shifts to Ren in Berlin', screen: { owner: 'Ren', time: '08:24' }, messageSender: null },
+            now: '11-05 08:24', events: [] });
+        assert.doesNotMatch(T.input, /Time choices|On Mara's clock|06:12/);
+        assert.match(T.input, /14:12/);
+        assert.ok(T.input.includes(narrative));
+        assert.match(T.input, /Phone being updated: "Ren"/);
+        assert.equal(c.p.now, '11-05 08:24');
+    } finally { delete T.clean; }
 });

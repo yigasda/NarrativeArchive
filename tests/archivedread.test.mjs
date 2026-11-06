@@ -840,7 +840,7 @@ test('일상 is not asked for when the reflection\'s own answer can\'t be read (
     assert.equal(globalThis.__everydayIn.length, 0);
 });
 
-test('latest clock selection reads supplied archive evidence without reopening hidden raw messages', async () => {
+test('latest visible message alone supplies candidates without falling back to earlier archive evidence', async () => {
     for (const visibleHasClock of [false, true]) {
         const c = archived();
         c.p.country = 'DE'; c.p.year = 2026; c.p.now = '11-05 03:38';
@@ -851,9 +851,10 @@ test('latest clock selection reads supplied archive evidence without reopening h
         if (visibleHasClock) T.chat[6].mes += ' Mara 11.05 13:27';
         await run(c.m, { now: '11-05 05:27', events: [] });
         assert.equal((T.input.match(/Time text in #/g) || []).length, 0);
-        assert.match(T.input, visibleHasClock ? /On Mara's clock → owner's time: 11-05 05:27/ : /On Mara's clock → owner's time: 10-04 18:00/);
+        if (visibleHasClock) assert.match(T.input, /On Mara's clock → owner's time: 11-05 05:27/);
+        else assert.doesNotMatch(T.input, /Time choices|On Mara's clock/);
         assert.doesNotMatch(T.input, /23:59/);
         assert.match(T.input, /Saved phone time: 11-05 03:38/);
-        assert.match(T.input, /Time alone does not identify the viewpoint/);
+        if (visibleHasClock) assert.match(T.input, /Time alone does not identify the viewpoint/);
     }
 });

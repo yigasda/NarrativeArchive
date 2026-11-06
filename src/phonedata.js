@@ -2162,21 +2162,22 @@ export const clockBlock = (p, at = p?.now, m = null, st = null, required = false
 export function reflectionClocks(p, rows, m = null) {
     return withDateOrder(dateOrderOf(m), () => reflectionClocks0(p, rows, m));
 }
-// Select the newest recognized source before making any person's conversion choices. Newest means
-// message order, then position in that message, not the largest date or proof of the story's present.
-// Only visible round messages have raw snapshots; archive rows keep their own supplied text.
+// Only the newest supplied message can provide conversion choices. If its clock is not
+// recognized, leave time inference to the model instead of reviving an earlier message's clock.
+// Within that message, use source position, not the largest date. Archive rows use supplied indices.
 function latestClock(rows) {
-    for (const r of [...arr(rows)].sort((a, b) => b.index - a.index)) {
-        let stamps;
-        if (typeof r.clockSource === 'string') {
-            const offsets = [], text = cleanMessage(r.clockSource, { stripTags: true }, offsets);
-            stamps = [...datedClocks(text, { positions: true }).map(x => ({ ...x, position: offsets[x.position] })),
-                ...htmlClocks(r.clockSource, { positions: true })];
-        } else stamps = datedClocks(r.text, { positions: true });
-        const latest = stamps.sort((a, b) => b.position - a.position)[0];
-        if (latest) { const { position, ...stamp } = latest; return { at: r.index, ...stamp }; }
-    }
-    return null;
+    const r = [...arr(rows)].sort((a, b) => b.index - a.index)[0];
+    if (!r) return null;
+    let stamps;
+    if (typeof r.clockSource === 'string') {
+        const offsets = [], text = cleanMessage(r.clockSource, { stripTags: true }, offsets);
+        stamps = [...datedClocks(text, { positions: true }).map(x => ({ ...x, position: offsets[x.position] })),
+            ...htmlClocks(r.clockSource, { positions: true })];
+    } else stamps = datedClocks(r.text, { positions: true });
+    const latest = stamps.sort((a, b) => b.position - a.position)[0];
+    if (!latest) return null;
+    const { position, ...stamp } = latest;
+    return { at: r.index, ...stamp };
 }
 function reflectionClocks0(p, rows, m) {
     const own = ownerZone(p), choices = [], people = [], text = arr(rows).map(r => r.text).join('\n'), fallback = screenPerson(m, screenHolderOf(m))?.name || screenHolderOf(m);
