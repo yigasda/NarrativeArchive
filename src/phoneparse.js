@@ -34,7 +34,14 @@ let orderOf = () => '', held = null;
 export const dateOrderSource = f => { orderOf = f; };
 export const dayFirstChat = () => { try { return (held ?? orderOf()) === 'dm'; } catch { return false; } };
 // one 폰 만들기 or 반영 reads every date by the order it started with (the setting changed meanwhile counts from the next)
-export async function withDateOrder(order, fn) { const was = held; held = order; try { return await fn(); } finally { held = was; } }
+// (runs can overlap, an app filled while another is: each keeps its place in a list and leaves only itself, so a run
+// ending first never puts back an order another run set; with none running, the chat's own setting)
+const runs = [];
+export async function withDateOrder(order, fn) { const me = { order }; runs.push(me); held = order; try { return await fn(); } finally { const i = runs.indexOf(me); if (i >= 0) runs.splice(i, 1); held = runs.length ? runs[runs.length - 1].order : null; } }
+// the story's own blocks in a request (what "evidence" may quote): never the app's records, the code's OWNER'S CLOCK or
+// time choices, or anything else made for the model
+const STORY_BLOCKS = /^\[(?:ARCHIVE|RECENT CHAT|TOLD SHORT|STORY NOW|WORLD|LOREBOOK|OWNER PROFILE|NEW MESSAGES|ARCHIVE FOR THESE MESSAGES|ARCHIVE BEFORE|CHARACTER CARD|PERSONA)\b/;
+export const storyText = input => String(input || '').split(/\n\n(?=\[[A-Z][A-Z'’ ]+[^\]\n]*\]\n)/).filter((b, i) => STORY_BLOCKS.test(b) || i === 0 && !/^\[[A-Z]/.test(b)).join('\n\n');
 export const swapDate = (a, b, sep) => Number(b) <= 12 && (Number(a) > 12 || sep !== '-' && Number(a) <= 31 && dayFirstChat());
 export const when = v => {
     // "10-25 21:00", or with the year in front ("2026-10-25 21:00", "2026/10/25T21:00") or after ("25.10.2026 21:00", "10/25/2026 9:00")
@@ -64,6 +71,7 @@ const CLOCK_DATE = String.raw`(?:\d{4}[-/.])?\d{1,2}[-/.]\d{1,2}(?:[-/.][ \t]?\d
 const CLOCK_MERIDIEM = String.raw`(?:[ap](?:\.m\b\.?|m\b)|(?:오전|오후|새벽|아침|저녁|밤)(?!\p{L}))`;
 const DATED_CLOCK = new RegExp(String.raw`(?<![\p{L}\p{N}])(${CLOCK_DATE})\.?[,]?(?:[ \t]+|T)((?:${CLOCK_MERIDIEM}[ \t]*)?\d{1,2}[ \t]*:[ \t]*\d{2}(?:[ \t]*${CLOCK_MERIDIEM})?)(?![\p{L}\p{N}:])`, 'giu');
 const HAS_MERIDIEM = new RegExp(CLOCK_MERIDIEM, 'iu');
+const realDay = (md, year) => { const [mo, d] = md.split('-').map(Number), y = Number(year) || 2000; return mo >= 1 && mo <= 12 && d >= 1 && d <= new Date(Date.UTC(y, mo, 0)).getUTCDate(); };
 export function datedClocks(text, { positions = false } = {}) {
     const out = [];
     for (const hit of String(text || '').matchAll(DATED_CLOCK)) {
@@ -71,6 +79,8 @@ export function datedClocks(text, { positions = false } = {}) {
         const hour = Number(/(\d{1,2})[ \t]*:/.exec(hit[2])?.[1]);
         if (HAS_MERIDIEM.test(hit[2]) && !(hour >= 1 && hour <= 12)) continue;
         const day = when(hit[1]).slice(0, 5), clock = hhmm(hit[2]);
+        // a day no calendar has (02-30, 04-31, 02-29 of a year that isn't a leap year) is no clock reading
+        if (day && !realDay(day, yearIn(hit[1]))) continue;
         if (day && clock) out.push({ sourceTime: hit[0], local: `${day} ${clock}`, ...(positions ? { position: hit.index } : {}) });
     }
     return out;
