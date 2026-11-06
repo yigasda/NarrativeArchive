@@ -1313,7 +1313,9 @@ async function updatePhone(m, owner) {
         if (round.rows.some(r => nowText.get(r.index) !== r.text)) throw new Error('반영하는 사이 대화가 바뀌었어요. 다시 해 주세요');
         if (!core0 || !Array.isArray(core0.events)) throw new Error('모델 답에서 반영할 내용을 찾지 못했어요. 다시 해 주세요');
         const clockPlan = reflectionClockPlan(core0, p, m, { round, roundEnd, tracker, st, sceneOwn, askZone, archiveOnly });
-        const raw = { ...core0, now: clockPlan.now };
+        // Archive-only records keep the 3.171.16 date fallback from the model's original now.
+        // The separately guarded clockPlan still decides the phone's saved time.
+        const raw = archiveOnly ? { ...core0 } : { ...core0, now: clockPlan.now };
         // Temporary diagnostic: unify only the selected person's display alias; keep the model answer intact.
         if (!archiveOnly && typeof toastr !== 'undefined') {
             const diagnostic = `${clock || '(OWNER’S CLOCK 입력 없음)'}\n\n[MODEL RESPONSE]\n${JSON.stringify({ clock: clockForDisplay(core0.clock, m) ?? null, now: core0.now ?? null, ...(clockPlan.now !== when(core0.now) ? { appliedNow: clockPlan.now } : {}) }, null, 2)}`;

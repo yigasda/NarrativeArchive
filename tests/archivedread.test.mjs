@@ -960,6 +960,25 @@ test('archive-only reflection accepts legacy now without clock metadata, updates
     } finally {T.clockAuditCalls=null;globalThis.toastr=previousToast;}
 });
 
+test('archive-only missing event dates use the legacy model now, not the guarded phone date', async () => {
+    for (const money of [false, true]) for (const modelNow of ['10-26 13:00', undefined]) {
+        const c=archived();T.chat.pop();T.trackers=[];T.moneyAnswers=[];
+        if (!money) delete c.p.money;
+        c.p.now='10-27 09:00';
+        const event=note(3,'bought the poetry book','Book');
+        delete event.date;
+        event.phone.notes[0].time='12:00';
+        // Raw JSON exercises the archive contract without the clock fixture helper.
+        await run(c.m,JSON.stringify({...(modelNow ? {now:modelNow} : {}),events:[event]}));
+        assert.equal(c.p.now,'10-27 09:00');
+        assert.equal(c.p.notes[0].time,modelNow ? '10-26 12:00' : '');
+        assert.doesNotMatch(T.sys,/CLOCK FIRST|screenOwner|sceneTime/);
+        await data.undoRound(c.m,c.p);
+        assert.equal(c.p.now,'10-27 09:00');
+        assert.equal(c.p.notes.length,0);
+    }
+});
+
 test('mixed archive and visible messages still require the new clock response', async () => {
     const c=archived();frankfurtPhone(c,{cities:false});const before=c.p.now;
     await assert.rejects(()=>run(c.m,JSON.stringify({now:'10-26 13:00',events:[]})),e=>e.code==='CLOCK_INVALID');
