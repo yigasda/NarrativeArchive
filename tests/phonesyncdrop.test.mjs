@@ -1340,7 +1340,8 @@ test('same source clock resolves for either phone owner, with no extra conversio
  const a=await data.reflectionClocks(mara,rows,m),b=await data.reflectionClocks(ren,rows,m);
  const from=(r,n)=>r.choices.find(c=>c.names.includes(n)).ownerTime;
  assert.equal(from(a,'Mara'),'11-05 11:38');assert.equal(from(b,'Mara'),'11-05 03:38');
- assert.equal(from(a,'Ren'),'11-05 19:38');assert.equal(from(b,'Ren'),'11-05 11:38');
+ assert.equal(a.choices.length,1);assert.equal(b.choices.length,1);
+ assert.doesNotMatch(a.text,/On Ren's clock/);assert.doesNotMatch(b.text,/On Ren's clock/);
  assert.match(a.text,/Phone being updated: "Mara" \(Seoul\)/);
  assert.match(a.text,/default screen times need no conversion/);
  assert.doesNotMatch(b.text,/default screen times need no conversion/);
@@ -1665,15 +1666,17 @@ test('raw HTML metadata is captured with the cleaned round before awaited prepar
     assert.equal(c.p.now, '11-05 08:12');
 });
 
-test('configured screen holder still allows other people for the latest dated source', async () => {
+test('configured screen holder is the only candidate for the latest dated source', async () => {
     const p = { owner: 'Ren' }; clockPhone(p);
     const m = { phoneScreenHolder: 'Mara', dateOrder: 'md', phones: { ren: p } };
     const rows = [htmlRow(1, 'Mara <span class="time">08:30</span>'),
         ...Array.from({ length: 4 }, (_, i) => htmlRow(i + 2, `Mara 11.05 ${String(i + 9).padStart(2, '0')}:00`))];
     const result = await data.reflectionClocks(p, rows, m);
     assert.deepEqual([...new Set(result.choices.map(c => c.at))], [5]);
-    assert.deepEqual(result.choices.map(c => c.names[0]), ['Mara', 'Ren']);
-    assert.equal(result.choices.length, 2);
+    assert.deepEqual(result.choices.map(c => c.names[0]), ['Mara']);
+    assert.equal(result.choices.length, 1);
+    assert.doesNotMatch(result.text, /On Ren's clock/);
+    assert.equal(result.choices[0].ownerTime, '11-05 04:00');
     assert.ok(result.choices.every(c => c.ownerTime && !c.reference));
     const block = [data.clockBlock(p, p.now, m), result.text].filter(Boolean).join('\n');
     assert.equal((block.match(/\[OWNER'S CLOCK\]/g) || []).length, 1);
@@ -1781,7 +1784,7 @@ for (let repeat = 1; repeat <= 5; repeat++) {
             const choices = await data.reflectionClocks(c.p, rows, c.m);
             assert.deepEqual(c.p, before, format);
             assert.ok(choices.choices.every(x => x.at === 6 && x.sourceTime.includes('12:27')), format);
-            assert.equal(choices.choices.length, format === 'bare HTML' ? 1 : 2, format);
+            assert.equal(choices.choices.length, 1, format);
             assert.equal((choices.text.match(/Time text in #/g) || []).length, 0);
             for (const earlier of clocks.slice(0, -1)) assert.ok(!choices.text.includes(earlier), format);
             T.clean = mes => cleanMessage(mes, { stripTags: true });

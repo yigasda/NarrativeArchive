@@ -2195,9 +2195,9 @@ function reflectionClocks0(p, rows, m) {
     const identity = `Phone being updated: ${JSON.stringify(p.owner)} (${own.where}).${defaultZone === own.tz ? '\nThe default screen and this phone share a time zone; default screen times need no conversion.' : ''}`;
     const stamp = latestClock(rows);
     if (stamp) {
-        // Bare HTML clocks use the configured screen person's reference only; dated evidence keeps all choices.
+        // Both dated and bare clocks offer only the configured screen person when set.
         // An unresolved configured person is not evidence for a different person's screen.
-        const candidates = stamp.clock && fallback ? (defaultPerson ? [defaultPerson] : []) : people.slice(0, 6);
+        const candidates = fallback ? (defaultPerson ? [defaultPerson] : []) : people.slice(0, 6);
         for (const who of candidates) {
             if (stamp.clock) {
                 const fallback = clockFallback(p, own.tz, who.tz, stamp.clock);
