@@ -1222,7 +1222,7 @@ test('elapsed time after the source clock survives reflection, everyday and stor
     await run(c.m,{clock:{basis:'Mara reads on her phone, then two hours pass',screen:{owner:'Mara',time:'11.05, 08:30'},messageSender:'Ren'},now:'11-05 02:30',events:[{id:'reply',at:2,quote:'Mara reads Ren’s reply',date:'11-05',time:'02:30',phone:{notes:[{title:'Reply',text:'Read it',time:'11-05 02:30'}]}}]});
     assert.match(T.input,/On Mara's clock → owner's time: 11-05 00:30/);
     assert.match(T.sys,/CLOCK FIRST/);
-    assert.match(T.sys,/Viewpoint — keep: use the default screen viewpoint in OWNER'S CLOCK when set\./);
+    assert.match(T.sys,/Viewpoint: use the default viewpoint in OWNER'S CLOCK when set\./);
     assert.match(globalThis.__everydayIn.at(-1),/Owner-local window: 11-04 23:30 to 11-05 02:30/);
     assert.equal(c.p.now,'11-05 02:30'); assert.equal(c.p.notes.at(-1).time,'11-05 02:30');
     assert.deepEqual(c.p.voice,oldVoice); assert.equal(c.bank(),bankBefore);
