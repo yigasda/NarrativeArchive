@@ -148,7 +148,7 @@ const CLOCK_FIRST = `CLOCK FIRST
 First resolve "clock" and "now" for the latest scene, then write events and app records using those times.
 - Viewpoint: use the default viewpoint in OWNER'S CLOCK when set. Change it only when the surrounding narration shifts to another person's scene, not merely a sender's name. A time or date alone does NOT identify whose clock it is. Attachments keep their own clocks.
 - No exact time: your task is to infer the current time. The last message may mix present, past, and future. Identify the story's current point within it, then infer its time from context.
-- "clock": basis (max 20 words: default used or narrative evidence for a switch; time passed), screen { owner (whose screen or scene in the latest message), time (copy the time from that screen or scene; never estimate) }, messageSender (who sent the displayed message). Use null for absent time or messageSender.
+- "clock": basis (max 20 words: default used or narrative evidence for a switch; time passed), screen { owner (the final viewpoint determined for the last message), time (copy the time from that screen or scene; never estimate) }, messageSender (who sent the displayed message). Use null for absent time or messageSender.
 - "now": convert that time to the owner's clock without adding time. Use the matching OWNER'S CLOCK choice without converting it again. Infer from context only when no exact time is given. Example: with a +8-hour offset, 12:32 becomes exactly 20:32.
 - App records: the owner's present scene agrees with "now". Other scenes, memories and appointments keep their own times.`;
 export function updateSystem({ money = true, delivery = false, life = false, weather = false, tracker = false, split = false, invest = false, zone = false } = {}) {
