@@ -1932,7 +1932,7 @@ test('256 prompt options agree on the new clock schema and their archive-only va
     const clockBlock = src.match(/const CLOCK_FIRST = `([\s\S]*?)`;/)[1];
     for (const system of systems) {
         assert.equal(system.split(clockBlock).length, 2);
-        assert.match(system, /elapsedTime \(the explicitly stated elapsed time used in the calculation; null if absent\)/);
+        assert.match(system, /elapsedTime \(stated elapsed time used; null if absent\)/);
         assert.match(system, /This step only converts time zones; never add elapsed time/);
         assert.match(system, /finalViewpoint \(the final viewpoint determined for the last message\)/);
         assert.match(system, /sceneTime \(the resulting current scene time before conversion, already including elapsedTime\)/);

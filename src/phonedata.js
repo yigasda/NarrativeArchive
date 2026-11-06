@@ -159,7 +159,7 @@ First resolve "clock" and "now" for the latest scene, then write events and app 
 - "clock":
   - basis (max 20 words: default used or narrative evidence for a switch; time passed)
   - finalViewpoint (the final viewpoint determined for the last message)
-  - elapsedTime (the explicitly stated elapsed time used in the calculation; null if absent)
+  - elapsedTime (stated elapsed time used; null if absent)
   - sceneTime (the resulting current scene time before conversion, already including elapsedTime)
   - messageSender (who sent the displayed message; null if absent).
 
