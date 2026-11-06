@@ -329,7 +329,9 @@ test('every prompt that writes times has the owner\'s own clock (a messenger tim
 const zonePhone = now => ({ owner: 'Ren', year: 2026, now, life: { weather: { here: { place: 'Frankfurt am Main' }, cities: [{ name: 'Frankfurt am Main', tz: 'Europe/Berlin' },
     { name: 'Seoul', ko: '서울', tz: 'Asia/Seoul' }, { name: 'London', tz: 'Europe/London' }, { name: 'New York', tz: 'America/New_York' }] } } });
 test('OWNER\'S CLOCK: where the owner is, their time, and the other saved cities\' hours on that day', () => {
-    assert.equal(data.clockBlock(zonePhone('11-03 04:33')), "[OWNER'S CLOCK]\nPhone owner: Ren\nLocation: Frankfurt am Main\nSaved phone time: 11-03 04:33\n\nTime differences from Frankfurt am Main:\n- Seoul: +8 hours\n- London: -1 hour\n- New York: -6 hours");
+    assert.equal(data.clockBlock(zonePhone('11-03 04:33')), "[OWNER'S CLOCK]\nPhone owner: Ren\nLocation: Frankfurt am Main\nSaved phone time: 11-03 04:33\n\nTime differences from Frankfurt am Main:\n- Seoul: +8 hours\n- London: -1 hour\n- New York: -6 hours (DST: -5 hours before 11-01 07:00)");
+    // (no change of summer time within a week either way: the hours alone)
+    assert.match(data.clockBlock(zonePhone('12-10 12:00')), /- Seoul: \+8 hours\n- London: -1 hour\n- New York: -6 hours$/);
     // October: Germany on summer time, Korea never
     assert.match(data.clockBlock(zonePhone('10-20 12:00')), /Seoul: \+7 hours/);
     // all in one zone, or no saved city of its own: no block, nothing to move
@@ -352,7 +354,7 @@ Default screen viewpoint: 마라
 
 Time differences from Frankfurt am Main:
 - London: -1 hour
-- New York: -6 hours
+- New York: -6 hours (DST: -5 hours before 11-01 07:00)
 - Mara Park (Seoul): +8 hours
 The newest status line, 11-05 12:50 in Seoul, is 11-05 04:50 here.`);
     assert.deepEqual({ p, m, st }, before);
@@ -393,12 +395,12 @@ test('OWNER\'S CLOCK keeps different cities with the same zone or current offset
     assert.doesNotMatch(block, /^- Seoul:/m);
     for (const name of ['Busan', 'Tokyo', 'Somang Park (Seoul)']) assert.ok(block.includes(`- ${name}: +8 hours`));
     p.where.people.push({ name: 'Mara', city: 'New York City', tz: 'America/New_York' });
-    assert.match(data.clockBlock(p), /^- New York: -6 hours$/m);
-    assert.match(data.clockBlock(p), /^- Mara \(New York City\): -6 hours$/m);
+    assert.match(data.clockBlock(p), /^- New York: -6 hours \(DST: -5 hours before 11-01 07:00\)$/m);
+    assert.match(data.clockBlock(p), /^- Mara \(New York City\): -6 hours \(DST: -5 hours before 11-01 07:00\)$/m);
     // An explicitly saved alias, unlike a shared first word, establishes that these are the same city.
     p.where.people.at(-1).names = ['New York'];
     assert.doesNotMatch(data.clockBlock(p), /^- New York:/m);
-    assert.match(data.clockBlock(p), /^- Mara \(New York City\): -6 hours$/m);
+    assert.match(data.clockBlock(p), /^- Mara \(New York City\): -6 hours \(DST: -5 hours before 11-01 07:00\)$/m);
 });
 
 test('OWNER\'S CLOCK does not merge unknown or conflicting locations even when their hours agree', () => {
@@ -443,15 +445,28 @@ test('OWNER\'S CLOCK combines known cities from other phones without losing thei
 test('OWNER\'S CLOCK city merging preserves DST, supplied reference dates and standalone cities', () => {
     const p = zonePhone('10-20 12:00');
     p.where = { people: [{ name: 'Somang Park', city: 'Seoul', tz: 'Asia/Seoul' }] };
-    assert.match(data.clockBlock(p), /^- Somang Park \(Seoul\): \+7 hours$/m);
+    assert.match(data.clockBlock(p), /^- Somang Park \(Seoul\): \+7 hours \(DST: \+8 hours from 10-25 03:00\)$/m);
     assert.doesNotMatch(data.clockBlock(p), /^- Seoul:/m);
     const november = data.clockBlock(p, '11-05 03:38');
     assert.match(november, /Saved phone time: 10-20 12:00\nClock reference time: 11-05 03:38/);
     assert.match(november, /^- Somang Park \(Seoul\): \+8 hours$/m);
     assert.match(november, /^- London: -1 hour$/m);
-    assert.match(november, /^- New York: -6 hours$/m);
+    assert.match(november, /^- New York: -6 hours \(DST: -5 hours before 11-01 07:00\)$/m);
     delete p.where;
-    assert.match(data.clockBlock(p), /^- Seoul: \+7 hours$/m);
+    assert.match(data.clockBlock(p), /^- Seoul: \+7 hours \(DST: \+8 hours from 10-25 03:00\)$/m);
+});
+
+test('OWNER\'S CLOCK names a summer-time change within a week of its time, on the owner\'s clock, either place\'s', () => {
+    // (Frankfurt's ends 10-25 at 03:00 its own time; New York's 11-01 at 02:00 there, 07:00 in Frankfurt; London's with Frankfurt's)
+    const block = at => data.clockBlock(zonePhone(at), at);
+    assert.match(block('10-24 12:00'), /- Seoul: \+7 hours \(DST: \+8 hours from 10-25 03:00\)\n- London: -1 hour\n- New York: -6 hours \(DST: -5 hours from 10-25 03:00\)$/);
+    assert.match(block('10-26 12:00'), /- Seoul: \+8 hours \(DST: \+7 hours before 10-25 03:00\)\n- London: -1 hour\n- New York: -5 hours \(DST: -6 hours before 10-25 03:00; -6 hours from 11-01 07:00\)$/);
+    assert.match(block('11-08 06:00'), /- New York: -6 hours \(DST: -5 hours before 11-01 07:00\)$/);
+    assert.match(block('11-08 08:00'), /- New York: -6 hours$/);
+    // (spring: Frankfurt's begins 03-29 at 02:00, New York's 03-08)
+    assert.match(block('03-27 12:00'), /- Seoul: \+8 hours \(DST: \+7 hours from 03-29 02:00\)\n- London: -1 hour\n- New York: -5 hours \(DST: -6 hours from 03-29 02:00\)$/);
+    assert.deepEqual(data.dstNear('10-26 12:00', 'Europe/Berlin', 'Europe/London', 2026), []);
+    assert.deepEqual(data.dstNear('nonsense', 'Europe/Berlin', 'Asia/Seoul', 2026), []);
 });
 
 test('OWNER\'S CLOCK never invents missing names, locations, saved times or viewpoints', () => {

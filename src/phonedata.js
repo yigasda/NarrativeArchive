@@ -2165,6 +2165,39 @@ function placesAround(p, m = null) {
     for (const q of Object.values(phonesOf(m) || {})) if (q && q !== p && q.owner && !whereOf(p, q.owner)) { const z = ownerZone(q); if (z) out.push({ tz: z.tz, name: z.where, names: z.names, who: q.owner, by: [q.owner, ...arr(whereOf(q, q.owner)?.aka)] }); }
     return out;
 }
+// a summer-time change within a week of the owner's time t (theirs or the other place's): each as the owner's clock
+// shows it ("10-25 03:00", the clock just as it changes) with the hours before and after
+const tzFormat = new Map();
+const wallOf = (tz, ms) => {
+    let f = tzFormat.get(tz);
+    if (!f) { f = new Intl.DateTimeFormat('en-US', { timeZone: tz, hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }); tzFormat.set(tz, f); }
+    const g = f.formatToParts(new Date(ms)), k = n => Number(g.find(x => x.type === n)?.value);
+    return Date.UTC(k('year'), k('month') - 1, k('day'), k('hour') % 24, k('minute'));
+};
+const dstSeen = new Map();
+export function dstNear(t, ownTz, tz, year = new Date().getFullYear()) {
+    const key = `${t}|${ownTz}|${tz}|${year}`;
+    if (!dstSeen.has(key)) { if (dstSeen.size > 500) dstSeen.clear(); dstSeen.set(key, dstFind(t, ownTz, tz, year)); }
+    return structuredClone(dstSeen.get(key));
+}
+function dstFind(t, ownTz, tz, year) {
+    const mt = /^(\d{2})-(\d{2}) (\d{2}):(\d{2})$/.exec(String(t || ''));
+    if (!mt || !ownTz || !tz || ownTz === tz) return [];
+    try {
+        const guess = Date.UTC(Number(year), mt[1] - 1, mt[2], mt[3], mt[4]), MIN = 6e4, H = 36e5, W = 7 * 24 * H;
+        let now = guess - (wallOf(ownTz, guess) - guess); now = guess - (wallOf(ownTz, now) - now);
+        const hrs = ms => (wallOf(tz, ms) - wallOf(ownTz, ms)) / H, out = [];
+        for (let a = now - W; a < now + W; a += H) {
+            const before = hrs(a), after = hrs(a + H);
+            if (before === after) continue;
+            let lo = a, hi = a + H;
+            while (hi - lo > MIN) { const mid = lo + Math.max(1, Math.round((hi - lo) / MIN / 2)) * MIN; if (hrs(mid) === before) lo = mid; else hi = mid; }
+            const w = new Date(wallOf(ownTz, hi - MIN) + MIN);
+            out.push({ at: `${pad(w.getUTCMonth() + 1)}-${pad(w.getUTCDate())} ${pad(w.getUTCHours())}:${pad(w.getUTCMinutes())}`, before, after, past: hi <= now });
+        }
+        return out;
+    } catch { return []; }
+}
 export function zonesOf(p, at = p?.now, m = null) {
     const own = ownerZone(p), t = String(at || '');
     if (!own || !/^\d{2}-\d{2} \d{2}:\d{2}$/.test(t)) return null;
@@ -2173,8 +2206,8 @@ export function zonesOf(p, at = p?.now, m = null) {
     for (const z of placesAround(p, m).slice(1)) {
         const name = z.who || z.name;
         if (z.tz === own.tz || others.some(o => nameKey(o.name) === nameKey(name))) continue;
-        const h = hours(z.tz);
-        if (h) others.push(z.who ? { name: z.who, where: z.name, hours: h } : { name: z.name, hours: h });
+        const h = hours(z.tz), dst = dstNear(t, own.tz, z.tz, Number(p.year) || undefined), more = dst.length ? { dst } : {};
+        if (h) others.push(z.who ? { name: z.who, where: z.name, hours: h, ...more } : { name: z.name, hours: h, ...more });
     }
     return others.length ? { own: { name: own.where, tz: own.tz }, at: t, others } : null;
 }
@@ -2200,7 +2233,9 @@ function clockRows(p, m, others) {
     return rows.filter(city => city.person || !rows.some(person => person.person && person.row.hours === city.row.hours &&
         person.tz === city.tz && person.names.some(n => city.names.includes(n)))).map(x => x.row);
 }
+const hoursText = h => `${h > 0 ? '+' : ''}${h} hour${Math.abs(h) === 1 ? '' : 's'}`;
 // what the model is told of them: it only adds or takes off the hours given (the code works them out)
+// (a summer-time change within a week of the clock's time: the hours on its other side, and from when)
 export const clockBlock = (p, at = p?.now, m = null, st = null, required = false) => {
     const z = zonesOf(p, at, m), holder = screenHolderOf(m);
     // Keep the same presence rule; the reflection's existing fallback can require this same format.
@@ -2216,7 +2251,7 @@ export const clockBlock = (p, at = p?.now, m = null, st = null, required = false
     if (holder) lines.push(`Default screen viewpoint: ${label(holder)}`);
     if (z) {
         lines.push('', `Time differences from ${label(location || "the owner's clock")}:`, ...clockRows(p, m, z.others).map(c =>
-            `- ${label(c.name || 'Unnamed location')}${c.where ? ` (${label(c.where)})` : ''}: ${c.hours > 0 ? '+' : ''}${c.hours} hour${Math.abs(c.hours) === 1 ? '' : 's'}`));
+            `- ${label(c.name || 'Unnamed location')}${c.where ? ` (${label(c.where)})` : ''}: ${hoursText(c.hours)}${c.dst ? ` (DST: ${c.dst.map(d => d.past ? `${hoursText(d.before)} before ${d.at}` : `${hoursText(d.after)} from ${d.at}`).join('; ')})` : ''}`));
         if (st?.known && st.at && st.at !== st.raw) lines.push(`The newest status line, ${st.raw} in ${st.city}, is ${st.at} here.`);
     }
     return lines.join('\n');
