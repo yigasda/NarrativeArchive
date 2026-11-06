@@ -48,7 +48,7 @@ test('HTML clock content must be exactly one valid minute clock', () => {
         '', 'sent at 08:30', '시간: 08:30', '08:30 later', '08:30 (local)', '08:30 / 09:30',
         '11:38:00', '08:30.50', '12:30 minutes', '12:30분', 'PT12M30S', '12분 30초',
         '-1:30', '+1:30', '24:00', '25:00', '23:60', '8:3', '008:30', '08:300',
-        '오후에 8:30', '08:30 PMs', 'AM 8:30 PM', 'PM 8:30 PM', '19시 30분', '7pm',
+        '오후에 8:30', '08:30 PMs', 'AM 8:30 PM', 'PM 8:30 PM', '7pm',
         '08\n:30', '08:\n30', '08&unknown;:30', '08&#0;:30',
     ]) assert.deepEqual(htmlClocks(wrap(text)), [], text);
     for (const text of ['0:00', '00:00', '13:30', '23:59']) {

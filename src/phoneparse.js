@@ -62,22 +62,55 @@ const MONTH_WORD = [...new Set(FULL.flatMap(w => Array.from({ length: w.length -
 const CLOCK_DATE = String.raw`(?:\d{4}[-/.])?\d{1,2}[-/.]\d{1,2}(?:[-/.][ \t]?\d{4})?|(?:\d{4}년[ \t]*)?\d{1,2}[ \t]*월[ \t]*\d{1,2}[ \t]*일|(?:${MONTH_WORD})\.?[ \t]+\d{1,2}(?:st|nd|rd|th)?(?:,?[ \t]+\d{4})?|\d{1,2}(?:st|nd|rd|th)?\.?[ \t]+(?:${MONTH_WORD})\.?(?:,?[ \t]+\d{4})?`;
 // Meridiem belongs to this clock on either side, never to another sentence or line.
 const CLOCK_MERIDIEM = String.raw`(?:[ap](?:\.m\b\.?|m\b)|(?:오전|오후|새벽|아침|저녁|밤)(?!\p{L}))`;
+const CLOCK_COLON = String.raw`\d{1,2}[ \t]*:[ \t]*\d{2}`;
+// Require both units: 시 alone is not enough, and 시간 is a duration, never a clock.
+const CLOCK_KOREAN = String.raw`\d{1,2}[ \t]*시[ \t]*\d{1,2}[ \t]*분`;
+const CLOCK_SPAN = String.raw`(?:${CLOCK_MERIDIEM}[ \t]*)?(?:${CLOCK_COLON}|${CLOCK_KOREAN})(?:[ \t]*${CLOCK_MERIDIEM})?`;
+// Korean particles belong to the sentence, not the copied time. Do not accept arbitrary word suffixes.
+const CLOCK_END = String.raw`(?:(?![\p{L}\p{N}:])|(?<=분)(?=(?:(?:에|부터|까지|쯤|경)(?:는|도|야|였다|이었다|이다)?|이었다|이다|입니다)(?![\p{L}\p{N}])))(?![ \t]*\d+[ \t]*초)`;
+// Preserve the existing colon reader verbatim; Korean clocks add a separate strict branch.
 const DATED_CLOCK = new RegExp(String.raw`(?<![\p{L}\p{N}])(${CLOCK_DATE})\.?[,]?(?:[ \t]+|T)((?:${CLOCK_MERIDIEM}[ \t]*)?\d{1,2}[ \t]*:[ \t]*\d{2}(?:[ \t]*${CLOCK_MERIDIEM})?)(?![\p{L}\p{N}:])`, 'giu');
 const HAS_MERIDIEM = new RegExp(CLOCK_MERIDIEM, 'iu');
+const DATED_KOREAN_CLOCK = new RegExp(String.raw`(?<![\p{L}\p{N}])(${CLOCK_DATE})\.?[,]?(?:[ \t]+|T)((?:${CLOCK_MERIDIEM}[ \t]*)?${CLOCK_KOREAN}(?:[ \t]*${CLOCK_MERIDIEM})?)${CLOCK_END}`, 'giu');
+// One strict normalizer for source evidence; leave the more permissive answer helper hhmm unchanged.
+const SOURCE_CLOCK = new RegExp(String.raw`^(?:(${CLOCK_MERIDIEM})\s*)?(\d{1,2})[ \t]*(?::[ \t]*(\d{2})|시[ \t]*(\d{1,2})[ \t]*분)(?:\s*(${CLOCK_MERIDIEM}))?$`, 'iu');
+const sourceClock = text => {
+    const hit = SOURCE_CLOCK.exec(text.trim());
+    if (!hit || hit[1] && hit[5]) return '';
+    let h = Number(hit[2]);
+    const m = Number(hit[3] ?? hit[4]), marker = hit[1] || hit[5];
+    if (h > 23 || m > 59 || marker && !(h >= 1 && h <= 12)) return '';
+    if (marker) { if (/^(?:p|오후|저녁|밤)/i.test(marker)) { if (h < 12) h += 12; } else if (h === 12) h = 0; }
+    return `${pad(h)}:${pad(m)}`;
+};
 export function datedClocks(text, { positions = false } = {}) {
-    const out = [];
-    for (const hit of String(text || '').matchAll(DATED_CLOCK)) {
-        // Reflection hints must not turn an invalid twelve-hour clock into a plausible time.
+    const input = String(text || ''), out = [];
+    const hits = [...input.matchAll(DATED_CLOCK), ...input.matchAll(DATED_KOREAN_CLOCK)].sort((a, b) => a.index - b.index);
+    for (const hit of hits) {
+        const korean = hit[2].includes('시');
         const hour = Number(/(\d{1,2})[ \t]*:/.exec(hit[2])?.[1]);
-        if (HAS_MERIDIEM.test(hit[2]) && !(hour >= 1 && hour <= 12)) continue;
-        const day = when(hit[1]).slice(0, 5), clock = hhmm(hit[2]);
+        if (!korean && HAS_MERIDIEM.test(hit[2]) && !(hour >= 1 && hour <= 12)) continue;
+        const day = when(hit[1]).slice(0, 5), clock = korean ? sourceClock(hit[2]) : hhmm(hit[2]);
         if (day && clock) out.push({ sourceTime: hit[0], local: `${day} ${clock}`, ...(positions ? { position: hit.index } : {}) });
+    }
+    return out;
+}
+const KOREAN_CLOCK = new RegExp(String.raw`(?<![\p{L}\p{N}.+\-])(?:${CLOCK_MERIDIEM}[ \t]*)?${CLOCK_KOREAN}(?:[ \t]*${CLOCK_MERIDIEM})?${CLOCK_END}`, 'giu');
+// Wider digit shapes are suppression only: an invalid written date must not donate a bare clock.
+const KOREAN_DATED_SPAN = new RegExp(String.raw`(?:${CLOCK_DATE.replaceAll('\\d{1,2}', '\\d+')})\.?[,]?(?:[ \t]+|T)${CLOCK_SPAN}${CLOCK_END}`, 'giu');
+export function koreanClocks(text, { positions = false } = {}) {
+    const input = String(text || ''), out = [];
+    // Even an invalid dated source owns its clock: never turn its rejected date into a bare reference.
+    const dated = [...input.matchAll(KOREAN_DATED_SPAN)].map(hit => [hit.index, hit.index + hit[0].length]);
+    for (const hit of input.matchAll(KOREAN_CLOCK)) {
+        if (dated.some(([start, end]) => hit.index >= start && hit.index < end)) continue;
+        const clock = sourceClock(hit[0]);
+        if (clock) out.push({ sourceTime: hit[0], clock, narrative: true, ...(positions ? { position: hit.index } : {}) });
     }
     return out;
 }
 // Time-only HTML hints are read before the normal text cleaner removes the element names.
 // This is an inert tokenizer, not a DOM: no scripts, styles, URL fetching, or HTML execution.
-const HTML_CLOCK = new RegExp(String.raw`^(?:(${CLOCK_MERIDIEM})\s*)?(\d{1,2})[ \t]*:[ \t]*(\d{2})(?:\s*(${CLOCK_MERIDIEM}))?$`, 'iu');
 // Keep these boundaries aligned with cleanMessage in extract.js: time itself is a block there.
 const HTML_INLINE = /^(?:b|i|u|s|em|strong|span|a|small|big|sub|sup|mark|font|code|kbd|del|ins|q|abbr|ruby|rt|rp)$/;
 const HTML_REMOVED = /^(?:think|thinking|thought|reasoning|scene_plan)$/;
@@ -93,15 +126,7 @@ const clockHtmlText = text => text.replace(/&(#x[\da-f]+|#\d+|[a-z]+);/gi, (all,
 });
 // Adjacent dated spans must use only the entities the existing cleaner actually decodes.
 const clockVisibleText = text => text.replace(/&(amp|lt|gt|quot|apos|nbsp|#39);/g, (_, key) => key === 'nbsp' ? ' ' : key === '#39' ? "'" : CLOCK_ENTITIES[key]);
-const htmlClockOnly = text => {
-    const hit = HTML_CLOCK.exec(text.trim());
-    if (!hit || hit[1] && hit[4]) return '';
-    let h = Number(hit[2]);
-    const m = Number(hit[3]), marker = hit[1] || hit[4];
-    if (h > 23 || m > 59 || marker && !(h >= 1 && h <= 12)) return '';
-    if (marker) { if (/^(?:p|오후|저녁|밤)/i.test(marker)) { if (h < 12) h += 12; } else if (h === 12) h = 0; }
-    return `${pad(h)}:${pad(m)}`;
-};
+const htmlClockOnly = sourceClock;
 // Code spans may use any equal-length backtick runs, even across one paragraph's line breaks.
 // Index the next same-sized run first, so unmatched backticks do not repeatedly scan the whole text.
 // One barrier per omitted line keeps offsets without creating a tokenizer chunk for every hidden character.
@@ -144,8 +169,17 @@ const htmlClockMarkup = (raw, preserve = false) => {
 export function htmlClocks(raw, { positions = false } = {}) {
     return readHtmlClocks(htmlClockMarkup(raw, positions ? 'offsets' : false), false, null, positions);
 }
+// Mask only the new plain-narrative path. Keep original UTF-16 offsets for source ordering.
+// Marked HTML fields have their own reader; hidden, quoted and duration fields cannot leak through cleaning.
+export function narrativeClockText(raw, { dated = false } = {}) {
+    const input = htmlClockMarkup(raw, 'offsets'), excluded = [];
+    readHtmlClocks(input, false, excluded, false, dated ? 'dated' : 'plain');
+    const chars = input.split('');
+    for (const [start, end] of excluded) for (let i = start; i < end; i++) if (chars[i] !== '\n') chars[i] = '\0';
+    return chars.join('');
+}
 // Context fields retain their written meaning. They are not current-clock candidates or conversions.
-const HTML_TIME_FIELD = new RegExp(String.raw`^(?:(?:${CLOCK_DATE})\.?[,]?[ \t]*[T ]?)?((?:${CLOCK_MERIDIEM}\s*)?\d{1,2}[ \t]*:[ \t]*\d{2}(?:\s*${CLOCK_MERIDIEM})?)(?:[ \t]+(?:(?!(?:AM|PM)\b)[A-Z]{2,5}|(?:UTC|GMT)[+-]\d{1,2}(?::\d{2})?))?$`, 'iu');
+const HTML_TIME_FIELD = new RegExp(String.raw`^(?:(?:${CLOCK_DATE})\.?[,]?[ \t]*[T ]?)?(${CLOCK_SPAN})(?:[ \t]+(?:(?!(?:AM|PM)\b)[A-Z]{2,5}|(?:UTC|GMT)[+-]\d{1,2}(?::\d{2})?))?$`, 'iu');
 const htmlTimeField = text => {
     const hit = HTML_TIME_FIELD.exec(text.replace(/\s+/g, ' '));
     return !!hit && !!htmlClockOnly(hit[1]);
@@ -196,7 +230,7 @@ export function htmlTimeContext(raw) {
         return `[${heading}]\n${group.fields.map(x => `${x.label}: ${x.sourceTime.replace(/\s+/g, ' ')}`).join('\n')}`;
     }).join('\n');
 }
-function readHtmlClocks(input, fields = false, excluded = null, positions = false) {
+function readHtmlClocks(input, fields = false, excluded = null, positions = false, narrative = false) {
     const root = { name: '', text: '', hints: [], blocked: false, removed: false }, stack = [root];
     let visible = '';
     const append = (text, expose = true) => {
@@ -212,7 +246,11 @@ function readHtmlClocks(input, fields = false, excluded = null, positions = fals
             if (!complete || !node.removed && !HTML_INLINE.test(node.name)) visible = '';
             return;
         }
-        const sourceTime = clockHtmlText(node.text).trim(), clock = node.marked ? htmlClockOnly(sourceTime) : '';
+        if (narrative === 'plain' && node.marked) excluded.push([node.start, end]);
+        const sourceTime = clockHtmlText(node.text).trim();
+        // New Korean candidates obey style visibility without changing legacy colon-clock behavior.
+        if (!fields && node.hiddenStyle) node.hints = node.hints.filter(x => !x.sourceTime.includes('시'));
+        const clock = node.marked && !(node.hiddenStyle && sourceTime.includes('시')) ? htmlClockOnly(sourceTime) : '';
         if (fields) {
             // Keep the smallest complete field; a parent can add an AM/PM marker or a date.
             if (htmlTimeField(sourceTime) && (!node.hints.length || node.hints.length === 1)) {
@@ -261,8 +299,9 @@ function readHtmlClocks(input, fields = false, excluded = null, positions = fals
             else if (ch === '"' || ch === "'") quote = ch;
             else if (ch === '>') break;
         }
-        if (end === input.length) break;
+        if (end === input.length) { if (narrative) excluded.push([start, input.length]); break; }
         pos = end + 1;
+        if (narrative) excluded.push([start, pos]);
         if (!head) { append('\0'); continue; }
         const name = head[2].toLowerCase();
         if (head[1]) {
@@ -298,14 +337,15 @@ function readHtmlClocks(input, fields = false, excluded = null, positions = fals
             continue;
         }
         const labels = `${name} ${attrs.class || ''} ${attrs.id || ''}`;
-        const node = { name, start, originalName: head[2], label: htmlFieldLabel(head[2], attrs) || stack[stack.length - 1].label || '', text: '', hints: [], marked: /time/i.test(labels),
+        const hiddenStyle = stack[stack.length - 1].hiddenStyle || /(?:^|;)\s*(?:display\s*:\s*none|visibility\s*:\s*(?:hidden|collapse))\s*(?:!important\s*)?(?:;|$)/i.test(attrs.style || '');
+        const node = { name, start, hiddenStyle, originalName: head[2], label: htmlFieldLabel(head[2], attrs) || stack[stack.length - 1].label || '', text: '', hints: [], marked: /time/i.test(labels),
             removed: stack[stack.length - 1].removed || HTML_REMOVED.test(name),
             blocked: stack[stack.length - 1].blocked || HTML_HIDDEN.test(name)
                 || attrs.hidden !== undefined || /^true$/i.test(attrs['aria-hidden'] || '')
-                || fields && /(?:^|;)\s*(?:display\s*:\s*none|visibility\s*:\s*(?:hidden|collapse))\s*(?:!important\s*)?(?:;|$)/i.test(attrs.style || '')
+                || (fields || narrative) && hiddenStyle
                 || !fields && HTML_DURATION.test(labels.replace(/([a-z\d])([A-Z])/g, '$1 $2'))
                 // Dated values and ISO durations belong to other readers, not bare-clock hints.
-                || !fields && attrs.datetime !== undefined && !htmlClockOnly(attrs.datetime) };
+                || !fields && narrative !== 'dated' && attrs.datetime !== undefined && !htmlClockOnly(attrs.datetime) };
         if (!node.removed && !HTML_INLINE.test(name)) visible = '';
         stack.push(node);
         if (/\/\s*$/.test(input.slice(start, end))) finish(true, pos);

@@ -1917,3 +1917,123 @@ test('archive hint ordering retains the existing supplied first-index convention
     assert.ok(r.choices.every(c => c.at === 15 && c.sourceTime === '11.05 08:30'));
     assert.equal(r.choices.length, 2);
 });
+
+test('Korean narrative and HTML clocks provide exact references without inventing a date or viewpoint', async () => {
+    const p = { owner: 'Ren' }; clockPhone(p); p.now = '11-05 03:38';
+    const m = { phoneScreenHolder: 'Mara', phones: { ren: p }, dateOrder: 'md' };
+    for (const sourceTime of ['16시 15분', '오후 4시 15분']) {
+        for (const html of [false, true]) {
+            const raw = html ? `<span class="time">${sourceTime}</span>` : sourceTime;
+            const r = await data.reflectionClocks(p, [htmlRow(2, raw)], m);
+            assert.equal(r.choices.length, 1, raw);
+            const [c] = r.choices;
+            assert.equal(c.sourceTime, sourceTime); assert.equal(c.clock, '16:15');
+            assert.equal(c.date, null); assert.equal(c.ownerTime, undefined);
+            assert.equal(c.reference.ownerClock, '08:15'); assert.equal(c.names[0], 'Mara');
+            assert.ok(r.text.includes(`Time text in #2: "${sourceTime}"`));
+            assert.equal(r.text.includes('(HTML time field)'), html);
+            assert.match(r.text, /No date is shown; read the story to determine the date/);
+            assert.equal(p.now, '11-05 03:38');
+        }
+        const r = await data.reflectionClocks(p, [{ index: 2, text: `Ren says ${sourceTime}.` }], m);
+        assert.deepEqual(r.choices.map(c => c.names[0]), ['Mara'], 'speaker must not replace configured viewpoint');
+        const none = await data.reflectionClocks(p, [htmlRow(2, `Mara ${sourceTime}`)], { ...m, phoneScreenHolder: '' });
+        assert.equal(none.choices.length, 2, 'unset viewpoint retains alternatives, not a guessed owner');
+        const unknown = await data.reflectionClocks(p, [htmlRow(2, `Mara ${sourceTime}`)], { ...m, phoneScreenHolder: 'Unknown' });
+        assert.deepEqual(unknown.choices, []);
+    }
+});
+
+test('dated Korean narrative and split markup keep one dated source with all viewpoint alternatives', async () => {
+    const p = { owner: 'Ren' }; clockPhone(p);
+    const m = { phoneScreenHolder: 'Mara', phones: { ren: p }, dateOrder: 'md' };
+    for (const raw of [
+        '2026년 11월 5일 16시 15분', '<span class="time">2026년 11월 5일 16시 15분</span>',
+        '<span>2026년 11월 5일 </span><span class="time">16시 15분</span>',
+        '<span>2026년 11월 5일 </span><span>16시 15분</span>',
+        '2026년 <b>11월 5일</b> <b>16시</b> 15분',
+    ]) {
+        const r = await data.reflectionClocks(p, [htmlRow(2, raw)], m);
+        assert.equal(r.choices.length, 2, raw);
+        assert.ok(r.choices.every(c => c.sourceTime === '2026년 11월 5일 16시 15분' && c.local === '11-05 16:15' && !c.reference), raw);
+        assert.equal(r.choices.find(c => c.names[0] === 'Mara').ownerTime, '11-05 08:15');
+        assert.equal(r.choices.find(c => c.names[0] === 'Ren').ownerTime, '11-05 16:15');
+    }
+});
+
+test('Korean clocks join original source ordering without multiplying sources or reviving an older one', async () => {
+    const p = { owner: 'Ren' }; clockPhone(p);
+    const m = { phoneScreenHolder: 'Mara', phones: { ren: p } };
+    for (const [raw, expected] of [
+        ['11.05 12:00. 그 뒤 16시 15분.', '16시 15분'],
+        ['16시 15분. 그 뒤 11.05 12:00.', '11.05 12:00'],
+        ['<time>12:00</time> 그 뒤 오후 4시 15분.', '오후 4시 15분'],
+        ['16시 15분 뒤에 <time>12:00</time>', '12:00'],
+        ['16시 15분. 2026년 11월 5일 오후 4시 25분.', '2026년 11월 5일 오후 4시 25분'],
+        ['🙂 <span>16시 15분</span> 17시 25분', '17시 25분'],
+    ]) {
+        const r = await data.reflectionClocks(p, [htmlRow(1, '11.05 23:59'), htmlRow(2, raw)], m);
+        assert.ok(r.choices.length > 0, raw);
+        assert.ok(r.choices.every(c => c.at === 2 && c.sourceTime === expected), raw);
+        assert.equal((r.text.match(/Time text in #/g) || []).length, 1);
+    }
+    const rows = [htmlRow(1, '11.05 12:00'), htmlRow(2, '16시 15분')];
+    for (const q of [{ ...p, year: undefined }, { ...p, noYear: true }, { ...p, now: '03:38' }]) {
+        assert.deepEqual((await data.reflectionClocks(q, rows, m)).choices, []);
+    }
+});
+
+test('Korean plain extraction keeps hidden and sample content out for raw and archive rows', async () => {
+    const p = { owner: 'Ren' }; clockPhone(p);
+    const m = { phoneScreenHolder: 'Mara', phones: { ren: p } };
+    for (const raw of ['3시간 15분', '오후 16시 15분', '13월 5일 16시 15분',
+        '<span hidden>16시 15분</span>', '<span class="timer">16시 15분</span>',
+        '<span title="a > 16시 15분">nothing</span>', '<span title="16시 15분', '`16시 15분`', '> 16시 15분',
+        '<time style="display:none">16시 15분</time>', '<span hidden>2026년 11월 5일 16시 15분</span>',
+        '<blockquote>2026년 11월 5일 16시 15분</blockquote>', '> 2026년 11월 5일 16시 15분',
+        '`2026년 11월 5일 16시 15분`', '<span class="timer">2026년 11월 5일 16시 15분</span>']) {
+        for (const r of [htmlRow(2, raw), { index: 2, text: raw }]) {
+            assert.deepEqual((await data.reflectionClocks(p, [r], m)).choices, [], raw);
+        }
+    }
+});
+
+test('actual Korean reflection requests keep the story, conversion candidates and model-selected current moment', async () => {
+    for (const [raw, copied, dated] of [
+        ['16시 15분', '16시 15분', false], ['오후 4시 15분', '오후 4시 15분', false],
+        ['2026년 11월 5일 16시 15분', '2026년 11월 5일 16시 15분', true],
+        ['<span class="time">16시 15분</span>', '16시 15분', false],
+        ['<span class="time">오후 4시 15분</span>', '오후 4시 15분', false],
+        ['<span class="time">2026년 11월 5일 16시 15분</span>', '2026년 11월 5일 16시 15분', true],
+    ]) {
+        const c = setup([say('Ren', 'start'), say('Mara', 'morning'), say('Ren', raw)]);
+        clockPhone(c.p); c.p.now = '11-05 03:38'; c.m.phoneScreenHolder = 'Mara'; c.m.dateOrder = 'md';
+        T.clean = mes => cleanMessage(mes, { stripTags: true });
+        try { await run(c.m, { now: '11-05 08:15', clock: { basis: 'Default used', viewpoint: { owner: 'Mara', time: copied }, messageSender: 'Ren' }, events: [] }); }
+        finally { delete T.clean; }
+        assert.ok(T.input.includes(`[#2] Ren: ${copied}`), raw);
+        assert.ok(T.input.includes(`Time text in #2: "${copied}"`), raw);
+        assert.ok(T.input.includes(dated ? "On Mara's clock → owner's time: 11-05 08:15" : "On Mara's clock → owner's clock: 08:15 (reference)."), raw);
+        assert.equal(c.p.now, '11-05 08:15');
+    }
+    // A future appointment remains narrative evidence, not a command to advance the saved phone clock.
+    // The canned answer checks preservation, not real-model interpretation of the appointment.
+    const raw = '지금은 오전이다. 내일 오후 4시 15분에 만나자는 약속을 확인했다.';
+    const c = setup([say('Ren', 'start'), say('Mara', 'morning'), say('Ren', raw)]);
+    clockPhone(c.p); c.p.now = '11-05 00:30'; c.m.phoneScreenHolder = 'Mara';
+    await run(c.m, { now: '11-05 00:30', clock: { basis: 'Future appointment, current scene stays in the morning', viewpoint: { owner: 'Mara', time: null } }, events: [] });
+    assert.ok(T.input.includes(raw)); assert.match(T.input, /not proof of whose screen, or which time is now/);
+    assert.equal(c.p.now, '11-05 00:30');
+});
+
+
+test('Korean inline meridiems stay attached through source visibility filtering', async () => {
+    const p = { owner: 'Ren' }; clockPhone(p);
+    const m = { phoneScreenHolder: 'Mara', phones: { ren: p } };
+    for (const raw of ['오후 <b>4시 15분</b>', '<span>오후</span> 4시 15분']) {
+        const r = await data.reflectionClocks(p, [htmlRow(2, raw)], m);
+        assert.equal(r.choices.length, 1); assert.equal(r.choices[0].clock, '16:15');
+        assert.equal(r.choices[0].sourceTime, '오후 4시 15분');
+    }
+    assert.deepEqual((await data.reflectionClocks(p, [htmlRow(2, '<span>오후</span> 16시 15분')], m)).choices, []);
+});
