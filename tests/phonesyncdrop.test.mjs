@@ -1211,7 +1211,7 @@ test('clock candidates honor date order, aliases, DST and midnight without choos
     assert.equal(dm.choices.find(x => x.names[0] === 'Mara').ownerTime, '05-11 01:30');
     const early = await data.reflectionClocks(p, [{index: 3, text:'Mara 11.05, 02:00'}], {dateOrder:'md'});
     assert.equal(early.choices.find(x => x.names[0] === 'Mara').ownerTime, '11-04 18:00');
-    assert.match(md.text, /not proof of whose screen/);
+    assert.match(md.text, /Time alone does not identify the viewpoint/);
     assert.equal((await data.reflectionClocks(p,[{index:2,text:'Mara at 08:30'}],{dateOrder:'md'})).choices.length,0);
     assert.equal((await data.reflectionClocks({owner:'Unknown'},[],{})).choices.length,0);
 });
@@ -1360,7 +1360,7 @@ test('reflection fallback uses the same OWNER\'S CLOCK labels without changing i
 Phone owner: Ren
 Location: South Korea
 Saved phone time: 11-05 11:00
-Time choices (not proof of whose screen, or which time is now). Date order: month.day.
+Time choices. Time alone does not identify the viewpoint. Keep the default viewpoint unless the surrounding narration shifts to another screen or scene. Date order: month.day.
 Time text in #2: "11.05 11:38"
 On Ren's clock → owner's time: 11-05 11:38`);
     assert.equal(r.choices[0].ownerTime, '11-05 11:38');
@@ -1484,7 +1484,7 @@ Default screen viewpoint: Mara
 Time differences from Berlin:
 - Mara (Seoul): +8 hours
 Phone being updated: "Ren" (Berlin).
-Time choices (not proof of whose screen, or which time is now). Date order: day.month.
+Time choices. Time alone does not identify the viewpoint. Keep the default viewpoint unless the surrounding narration shifts to another screen or scene. Date order: day.month.
 Time text in #2: "${clock}" (HTML time field)
 No date is shown; read the story to determine the date.
 On Mara's clock → owner's clock: ${ownerClock}${earlier ? ' (-1 day relative to screen)' : ''}.`);
@@ -1820,7 +1820,7 @@ test('source chronology is neither numeric clock order nor proof of narrative no
         htmlRow(2, 'Mara 11.05 23:59'), htmlRow(10, 'No timestamp in this message.')];
     const r = await data.reflectionClocks(p, rows, { dateOrder: 'md' });
     assert.ok(r.choices.every(c => c.at === 9 && c.sourceTime === '10.05 01:00'));
-    assert.match(r.text, /not proof of whose screen, or which time is now/);
+    assert.match(r.text, /Time alone does not identify the viewpoint/);
     assert.equal(p.now, '11-04 23:30');
 });
 

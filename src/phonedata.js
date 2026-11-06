@@ -146,7 +146,7 @@ const LIFE_ONCE = `- An alarm for one occasion (a flight, an appointment) rings 
 const LIFE_CHANGE = `- A record already in LIFE NOW is changed with "change": its id; write only the fields that changed. A deleted file is "deleted": true.`;
 const CLOCK_FIRST = `CLOCK FIRST
 First resolve "clock" and "now", then write events and app records using those times.
-- Viewpoint: use the default viewpoint in OWNER'S CLOCK when set. Change it only when the text shows a switch to another person's screen or scene, not merely a sender's name. A time or date alone does NOT identify whose clock it is. Attachments keep their own clocks.
+- Viewpoint: use the default viewpoint in OWNER'S CLOCK when set. Change it only when the surrounding narration shifts to another person's screen or scene, not merely a sender's name. A time or date alone does NOT identify whose clock it is. Attachments keep their own clocks.
 - "clock": basis (max 20 words: default used or narrative evidence for a switch; time passed), screen { owner (whose screen or scene), time (copy the time from that screen or scene; never estimate) }, messageSender (who sent the displayed message). Use null for absent time or messageSender.
 - "now": convert that time to the owner's clock without adding time. Use the matching OWNER'S CLOCK choice without converting it again. Infer from context only when no exact time is given. Example: with a +8-hour offset, 12:32 becomes exactly 20:32.
 - App records: the owner's present scene agrees with "now". Other scenes, memories and appointments keep their own times.`;
@@ -2215,7 +2215,7 @@ function reflectionClocks0(p, rows, m) {
     const lines = [`Time text in #${stamp.at}: ${JSON.stringify(stamp.sourceTime)}${stamp.clock ? ' (HTML time field)\nNo date is shown; read the story to determine the date.' : ''}\n${choices.map(c => c.reference
             ? `On ${c.names[0]}'s clock → owner's clock: ${c.reference.ownerClock}${c.reference.dayShift ? ` (${c.reference.dayShift > 0 ? '+' : ''}${c.reference.dayShift} day${Math.abs(c.reference.dayShift) === 1 ? '' : 's'} relative to screen)` : ''}.`
             : `On ${c.names[0]}'s clock → owner's time: ${c.ownerTime}`).join('\n')}`];
-    return { choices, text: `${identity}\n${clockBlock(p, p.now, m) ? '' : `${clockBlock(p, p.now, m, null, true)}\n`}Time choices (not proof of whose screen, or which time is now). Date order: ${dateOrderOf(m) === 'dm' ? 'day.month' : 'month.day'}.\n${lines.join('\n')}` };
+    return { choices, text: `${identity}\n${clockBlock(p, p.now, m) ? '' : `${clockBlock(p, p.now, m, null, true)}\n`}Time choices. Time alone does not identify the viewpoint. Keep the default viewpoint unless the surrounding narration shifts to another screen or scene. Date order: ${dateOrderOf(m) === 'dm' ? 'day.month' : 'month.day'}.\n${lines.join('\n')}` };
 }
 const pkey = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
 // a place that is someone's own: their name (or their first name) then 's · 의 · 네, or a room, a home after it
