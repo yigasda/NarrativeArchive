@@ -348,7 +348,7 @@ test('OWNER\'S CLOCK labels keep cities, people, viewpoint aliases and status co
 Phone owner: Ren
 Location: Frankfurt am Main
 Saved phone time: 11-05 03:38
-Default viewpoint: 마라
+Default screen viewpoint: 마라
 Time differences from Frankfurt am Main:
 - London: -1 hour
 - New York: -6 hours
@@ -375,7 +375,7 @@ test('OWNER\'S CLOCK combines a city with its people only in the output, keeping
     const block = data.clockBlock(p, p.now, m);
     assert.doesNotMatch(block, /^- Seoul:/m);
     for (const label of ['Somang Park (서울)', 'Ivo Kim (Seoul)', 'Ivo Park (Seoul)']) assert.ok(block.includes(`- ${label}: +8 hours`));
-    assert.match(block, /Default viewpoint: 소망/);
+    assert.match(block, /Default screen viewpoint: 소망/);
     assert.ok(offsets.others.some(x => x.name === 'Seoul' && x.hours === 8));
     assert.deepEqual(data.zonesOf(p, p.now, m), offsets);
     assert.deepEqual(await data.reflectionClocks(p, rows, m), candidates);
@@ -455,15 +455,15 @@ test('OWNER\'S CLOCK city merging preserves DST, supplied reference dates and st
 
 test('OWNER\'S CLOCK never invents missing names, locations, saved times or viewpoints', () => {
     const m = { phoneScreenHolder: 'Mara' };
-    assert.equal(data.clockBlock(undefined, undefined, m), "[OWNER'S CLOCK]\nDefault viewpoint: Mara");
-    assert.equal(data.clockBlock({ owner: 'Ren' }, '', m), "[OWNER'S CLOCK]\nPhone owner: Ren\nDefault viewpoint: Mara");
+    assert.equal(data.clockBlock(undefined, undefined, m), "[OWNER'S CLOCK]\nDefault screen viewpoint: Mara");
+    assert.equal(data.clockBlock({ owner: 'Ren' }, '', m), "[OWNER'S CLOCK]\nPhone owner: Ren\nDefault screen viewpoint: Mara");
     assert.equal(data.clockBlock({ owner: 'Ren', now: '11-05 03:38' }, undefined, m),
-        "[OWNER'S CLOCK]\nPhone owner: Ren\nSaved phone time: 11-05 03:38\nDefault viewpoint: Mara");
+        "[OWNER'S CLOCK]\nPhone owner: Ren\nSaved phone time: 11-05 03:38\nDefault screen viewpoint: Mara");
     const p = zonePhone('11-05 03:38'); delete p.owner;
-    assert.doesNotMatch(data.clockBlock(p, p.now, { phoneScreenHolder: '' }), /Phone owner:|Default viewpoint:|undefined|null/);
+    assert.doesNotMatch(data.clockBlock(p, p.now, { phoneScreenHolder: '' }), /Phone owner:|Default screen viewpoint:|undefined|null/);
     p.life.weather.cities = p.life.weather.cities.slice(0, 1);
     assert.equal(data.clockBlock(p, p.now, { phoneScreenHolder: '' }), '');
-    assert.equal(data.clockBlock(p, p.now, m), "[OWNER'S CLOCK]\nLocation: Frankfurt am Main\nSaved phone time: 11-05 03:38\nDefault viewpoint: Mara");
+    assert.equal(data.clockBlock(p, p.now, m), "[OWNER'S CLOCK]\nLocation: Frankfurt am Main\nSaved phone time: 11-05 03:38\nDefault screen viewpoint: Mara");
 });
 
 test('OWNER\'S CLOCK separates a supplied clock reference from the saved phone time', () => {
@@ -484,7 +484,7 @@ test('OWNER\'S CLOCK preserves fractional offsets and quotes multiline labels lo
     p.life.weather.cities.push({ name: 'Kathmandu', tz: 'Asia/Kathmandu' }, { name: 'Kolkata', tz: 'Asia/Kolkata' });
     const block = data.clockBlock(p, p.now, { phoneScreenHolder: 'Mara "M" Park' });
     assert.match(block, /Phone owner: "Ren\\nKim"/);
-    assert.match(block, /Default viewpoint: Mara "M" Park/);
+    assert.match(block, /Default screen viewpoint: Mara "M" Park/);
     assert.match(block, /- Kathmandu: \+4.75 hours/);
     assert.match(block, /- Kolkata: \+4.5 hours/);
     assert.doesNotMatch(block, /NaN|undefined|null/);
@@ -840,7 +840,7 @@ test('initial phone creation sends the same compact HTML context with and withou
             const call = globalThis.__menu.calls.find(x => x.sys === data.AI_SYS_PHONE);
             assertHtmlPhoneInput(call.input);
             assert.equal((call.input.match(/chat-timestamp: 11\.03, 11:03/g) || []).length, 1);
-            assert.match(call.input, /\[OWNER'S CLOCK\]\nPhone owner: Ren\nDefault viewpoint: Mara\n\n/);
+            assert.match(call.input, /\[OWNER'S CLOCK\]\nPhone owner: Ren\nDefault screen viewpoint: Mara\n\n/);
             assert.doesNotMatch(call.input, /Location:|Saved phone time:|Time differences from|The owner is in/);
         }
     } finally { delete globalThis.__ctx; }
@@ -881,7 +881,7 @@ test('app fills and app regeneration receive compact HTML labels through their r
             if (['life', 'delivery', 'money', 'voice', 'app remake'].includes(name)) {
                 assert.match(call.input, /\[OWNER'S CLOCK\]\nPhone owner: Ren\n/);
                 assert.match(call.input, /Saved phone time: 11-03 03:03\n/);
-                assert.match(call.input, /Default viewpoint: Mara/);
+                assert.match(call.input, /Default screen viewpoint: Mara/);
                 assert.doesNotMatch(call.input, /The owner is in/);
             }
         }

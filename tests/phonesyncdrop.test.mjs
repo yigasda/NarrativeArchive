@@ -1222,7 +1222,7 @@ test('elapsed time after the source clock survives reflection, everyday and stor
     await run(c.m,{clock:{basis:'Mara reads on her phone, then two hours pass',screen:{owner:'Mara',time:'11.05, 08:30'},messageSender:'Ren'},now:'11-05 02:30',events:[{id:'reply',at:2,quote:'Mara reads Ren’s reply',date:'11-05',time:'02:30',phone:{notes:[{title:'Reply',text:'Read it',time:'11-05 02:30'}]}}]});
     assert.match(T.input,/On Mara's clock → owner's time: 11-05 00:30/);
     assert.match(T.sys,/CLOCK FIRST/);
-    assert.match(T.sys,/Viewpoint: use the default viewpoint in OWNER'S CLOCK when set\./);
+    assert.match(T.sys,/Viewpoint: use the default screen viewpoint in OWNER'S CLOCK when set\./);
     assert.match(globalThis.__everydayIn.at(-1),/Owner-local window: 11-04 23:30 to 11-05 02:30/);
     assert.equal(c.p.now,'11-05 02:30'); assert.equal(c.p.notes.at(-1).time,'11-05 02:30');
     assert.deepEqual(c.p.voice,oldVoice); assert.equal(c.bank(),bankBefore);
@@ -1252,16 +1252,16 @@ test('unnamed default gets clock candidates, while unknown location gets no inve
     const m={dateOrder:'md',phoneScreenHolder:'Mara'};
     const r=await data.reflectionClocks(p,rows,m);
     assert.equal(r.choices.find(x=>x.names[0]==='Mara').ownerTime,'11-05 00:26');
-    assert.match(data.clockBlock(p,p.now,m),/Default viewpoint: Mara/);
+    assert.match(data.clockBlock(p,p.now,m),/Default screen viewpoint: Mara/);
     const unknown={dateOrder:'md',phoneScreenHolder:'Ivo'};
-    assert.match(data.clockBlock(p,p.now,unknown),/Default viewpoint: Ivo/);
+    assert.match(data.clockBlock(p,p.now,unknown),/Default screen viewpoint: Ivo/);
     assert.ok(!(await data.reflectionClocks(p,rows,unknown)).choices.some(x=>x.names[0]==='Ivo'));
-    assert.equal(data.clockBlock({owner:'Unknown'},'',m),'[OWNER\'S CLOCK]\nPhone owner: Unknown\nDefault viewpoint: Mara');
+    assert.equal(data.clockBlock({owner:'Unknown'},'',m),'[OWNER\'S CLOCK]\nPhone owner: Unknown\nDefault screen viewpoint: Mara');
 });
 test('default survives undo and reapply without preceding messages or their clock candidates', async () => {
     const c=setup([say('Ren','start'),say('Mara','Mara reads on her own phone. 11.05, 08:24.'),say('Ren','11.05, 08:26. Are you okay?')]);
     clockPhone(c.p); c.m.dateOrder='md'; await data.setScreenHolder(c.m,'Mara');
-    const answer={clock:{basis:'Default viewpoint',screen:{owner:'Mara',time:'11.05, 08:26'},messageSender:'Ren'},now:'11-05 00:26',events:[{id:'reply',at:2,quote:'Are you okay',date:'11-05',time:'00:26',phone:{notes:[{title:'Reply',text:'Are you okay?',time:'11-05 00:26'}]}}]};
+    const answer={clock:{basis:'Default screen viewpoint',screen:{owner:'Mara',time:'11.05, 08:26'},messageSender:'Ren'},now:'11-05 00:26',events:[{id:'reply',at:2,quote:'Are you okay',date:'11-05',time:'00:26',phone:{notes:[{title:'Reply',text:'Are you okay?',time:'11-05 00:26'}]}}]};
     await run(c.m,answer);
     const first=T.input;
     assert.ok(!first.includes('[SCENE BEFORE]'));
@@ -1269,14 +1269,14 @@ test('default survives undo and reapply without preceding messages or their cloc
     assert.ok(!first.includes('08:24'));
     assert.ok(!T.sys.includes('SCENE BEFORE'));
     assert.ok(!data.everydaySystem().includes('SCENE BEFORE'));
-    assert.match(first,/Default viewpoint: Mara/);
+    assert.match(first,/Default screen viewpoint: Mara/);
     assert.match(first,/On Mara's clock → owner's time: 11-05 00:26/);
     await data.undoRound(c.m,c.p);
     assert.equal(c.m.phoneScreenHolder,'Mara'); assert.equal(c.p.notes.length,0);
     await run(c.m,answer);
     assert.equal(c.m.phoneScreenHolder,'Mara'); assert.equal(c.p.notes.length,1);
     assert.equal(c.p.now,'11-05 00:26');
-    assert.match(T.input,/Default viewpoint: Mara/);
+    assert.match(T.input,/Default screen viewpoint: Mara/);
     T.chat.push(say('Ren','A quiet evening continues.'));
     await run(c.m,{now:'11-05 00:30',events:[{id:'past',at:1,quote:'Mara reads on her own phone',date:'11-05',time:'00:24',phone:{notes:[{title:'Wrong background',text:'Not a new event'}]}}]});
     assert.ok(!c.p.notes.some(x=>x.title==='Wrong background'));
@@ -1364,7 +1364,7 @@ Time choices (not proof of whose screen, or which time is now). Date order: mont
 Time text in #2: "11.05 11:38"
 On Ren's clock → owner's time: 11-05 11:38`);
     assert.equal(r.choices[0].ownerTime, '11-05 11:38');
-    assert.doesNotMatch(r.text, /Default viewpoint:|Time differences from|The owner is in/);
+    assert.doesNotMatch(r.text, /Default screen viewpoint:|Time differences from|The owner is in/);
     delete p.now;
     const unknown = await data.reflectionClocks(p, rows, m);
     assert.match(unknown.text, /Saved phone time: unknown\nTime choices/);
@@ -1460,8 +1460,8 @@ test('bare HTML clocks supply date-free conditional reference information, not a
     assert.equal(choice.reference.ownerClock, '00:30');
     assert.equal(choice.reference.date, '2026-11-05');
     assert.match(result.text, /\(HTML time field\)\nNo date is shown; read the story to determine the date\./);
-    assert.doesNotMatch(result.text, /calendar date unknown/);
-    assert.match(result.text, /On Mara's clock → owner's clock: 00:30 \(reference\)\./);
+    assert.doesNotMatch(result.text, /calendar date unknown|\(reference/);
+    assert.match(result.text, /On Mara's clock → owner's clock: 00:30\./);
     assert.doesNotMatch(result.text, /saved local|same-day|next-day|Reference date|Reference calculation only|If the story shows a time jump/);
     assert.doesNotMatch(result.text, /On Mara's clock → owner's time:/);
 });
@@ -1480,14 +1480,14 @@ test('concise bare choices retain saved time, offsets, date order and candidates
 Phone owner: Ren
 Location: Berlin
 Saved phone time: 11-05 00:30
-Default viewpoint: Mara
+Default screen viewpoint: Mara
 Time differences from Berlin:
 - Mara (Seoul): +8 hours
 Phone being updated: "Ren" (Berlin).
 Time choices (not proof of whose screen, or which time is now). Date order: day.month.
 Time text in #2: "${clock}" (HTML time field)
 No date is shown; read the story to determine the date.
-On Mara's clock → owner's clock: ${ownerClock} (reference${earlier ? '; -1 day relative to screen' : ''}).`);
+On Mara's clock → owner's clock: ${ownerClock}${earlier ? ' (-1 day relative to screen)' : ''}.`);
         assert.equal(p.now, '11-05 00:30');
     }
 });
@@ -1504,8 +1504,8 @@ test('concise bare references retain nonzero timezone day shifts without assigni
         assert.equal(choice.reference.dayShift, shift);
         assert.equal(choice.date, null);
         assert.equal(choice.ownerTime, undefined);
-        assert.ok(result.text.endsWith(`On Mara's clock → owner's clock: ${ownerClock} (reference; ${shift > 0 ? '+' : ''}${shift} day relative to screen).`));
-        assert.doesNotMatch(result.text, /saved local|Reference date|same-day|next-day|0 days/);
+        assert.ok(result.text.endsWith(`On Mara's clock → owner's clock: ${ownerClock} (${shift > 0 ? '+' : ''}${shift} day relative to screen).`));
+        assert.doesNotMatch(result.text, /\(reference|saved local|Reference date|same-day|next-day|0 days/);
     }
 });
 test('concise bare references still use DST at the calculated instant and omit gaps and folds', async () => {
@@ -1520,7 +1520,7 @@ test('concise bare references still use DST at the calculated instant and omit g
         const result = await data.reflectionClocks(p, [htmlRow(2, 'Mara <time>03:30</time>')], m);
         assert.ok(data.clockBlock(p, p.now, m).includes(`-${savedOffset} hours`));
         assert.equal(result.choices[0].reference.ownerClock, ownerClock);
-        assert.ok(result.text.endsWith(`On Mara's clock → owner's clock: ${ownerClock} (reference).`));
+        assert.ok(result.text.endsWith(`On Mara's clock → owner's clock: ${ownerClock}.`));
         const ambiguous = await data.reflectionClocks(p, [htmlRow(2, 'Mara <time>02:30</time>')], m);
         assert.deepEqual(ambiguous.choices, []);
         assert.doesNotMatch(ambiguous.text, /Time text|owner's clock:/);
@@ -1536,7 +1536,7 @@ test('a story jump across DST keeps the model date and time instead of pinning t
     try { await run(c.m, { now: '07-05 05:13', clock: { basis: 'Several months later, in July', screen: { owner: 'Mara', time: '12:13' } }, events: [] }); }
     finally { delete T.clean; }
     assert.ok(T.input.includes(`Location: Berlin\nSaved phone time: ${saved}`));
-    assert.match(T.input, /On Mara's clock → owner's clock: 04:13 \(reference\)\./);
+    assert.match(T.input, /On Mara's clock → owner's clock: 04:13\./);
     assert.match(T.input, /No date is shown; read the story to determine the date\./);
     assert.doesNotMatch(T.sys, /No date is shown; read the story to determine the date\./);
     assert.ok(T.input.includes(cleanMessage(raw, { stripTags: true })));
@@ -1591,7 +1591,7 @@ test('real cleaned input retains vague months/days narrative and model dates are
         assert.equal(c.p.year, expectedYear);
         assert.ok(T.input.includes(words));
         assert.match(T.input, /\(HTML time field\)\nNo date is shown; read the story to determine the date\./);
-        assert.ok(T.input.includes(`On Ren's clock → owner's clock: ${clock} (reference).`));
+        assert.ok(T.input.includes(`On Ren's clock → owner's clock: ${clock}.`));
         assert.doesNotMatch(T.input, /saved local|same-day|next-day|Reference date|Reference calculation only|If the story shows a time jump/);
         const { choices: [choice] } = await data.reflectionClocks({ ...c.p, now: '11-05 08:12', year: 2026 }, [htmlRow(2, raw)], c.m);
         assert.equal(choice.reference.date, referenceDate);
@@ -1607,7 +1607,7 @@ test('bare hints never set now themselves, and recent backwards model results ke
     c.p.now = '11-05 08:12'; c.p.year = 2026; c.p.country = 'KR';
     c.p.where = { at: 1, people: [{ name: 'Ren', city: 'Seoul', tz: 'Asia/Seoul', names: ['Seoul'] }] };
     await run(c.m, { now: '11-05 06:27', events: [] });
-    assert.match(T.input, /On Ren's clock → owner's clock: 06:27 \(reference\)\./);
+    assert.match(T.input, /On Ren's clock → owner's clock: 06:27\./);
     assert.doesNotMatch(T.input, /same-day|next-day|Reference date/);
     assert.equal(c.p.now, '11-05 08:12');
 });
@@ -1700,7 +1700,7 @@ test('configured screen references retain DST conversion and leave inferred elap
     clockPhone(c.p); c.m.phoneScreenHolder = 'Mara';
     await run(c.m, { now: '11-09 00:30', clock: { basis: 'Several days later', screen: { owner: 'Mara', time: '08:30' } }, events: [] });
     assert.equal(c.p.now, '11-09 00:30');
-    assert.match(T.input, /On Mara's clock → owner's clock: 00:30 \(reference\)\./);
+    assert.match(T.input, /On Mara's clock → owner's clock: 00:30\./);
     assert.doesNotMatch(T.input, /On Ren's clock → owner's clock:/);
     assert.match(T.input, /Several days later/);
 });
