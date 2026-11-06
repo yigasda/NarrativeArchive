@@ -850,8 +850,8 @@ test('latest clock selection reads supplied archive evidence without reopening h
         for (const i of [2, 3, 4, 5]) T.chat[i].mes += ' <time>23:59</time>';
         if (visibleHasClock) T.chat[6].mes += ' Mara 11.05 13:27';
         await run(c.m, { now: '11-05 05:27', events: [] });
-        assert.equal((T.input.match(/Time text in #/g) || []).length, 1);
-        assert.match(T.input, visibleHasClock ? /Time text in #6: "11\.05 13:27"/ : /Time text in #2: "10\.05 01:00"/);
+        assert.equal((T.input.match(/Time text in #/g) || []).length, 0);
+        assert.match(T.input, visibleHasClock ? /On Mara's clock → owner's time: 11-05 05:27/ : /On Mara's clock → owner's time: 10-04 18:00/);
         assert.doesNotMatch(T.input, /23:59/);
         assert.match(T.input, /Saved phone time: 11-05 03:38/);
         assert.match(T.input, /Time alone does not identify the viewpoint/);

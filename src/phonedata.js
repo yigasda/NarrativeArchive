@@ -2212,7 +2212,7 @@ function reflectionClocks0(p, rows, m) {
         }
     }
     if (!choices.length) return { choices, text: identity };
-    const lines = [`Time text in #${stamp.at}: ${JSON.stringify(stamp.sourceTime)}${stamp.clock ? ' (HTML time field)\nNo date is shown; read the story to determine the date.' : ''}\n\n${choices.map(c => c.reference
+    const lines = [`${stamp.clock ? 'No date is shown; read the story to determine the date.\n\n' : '\n'}${choices.map(c => c.reference
             ? `On ${c.names[0]}'s clock → owner's clock: ${c.reference.ownerClock}${c.reference.dayShift ? ` (${c.reference.dayShift > 0 ? '+' : ''}${c.reference.dayShift} day${Math.abs(c.reference.dayShift) === 1 ? '' : 's'} relative to screen)` : ''}.`
             : `On ${c.names[0]}'s clock → owner's time: ${c.ownerTime}`).join('\n')}`];
     return { choices, text: `${identity}\n\n${clockBlock(p, p.now, m) ? '' : `${clockBlock(p, p.now, m, null, true)}\n\n`}Time choices.\nTime alone does not identify the viewpoint.\nKeep the default viewpoint unless the surrounding narration shifts to another screen or scene.\n\nDate order: ${dateOrderOf(m) === 'dm' ? 'day.month' : 'month.day'}.\n${lines.join('\n')}` };

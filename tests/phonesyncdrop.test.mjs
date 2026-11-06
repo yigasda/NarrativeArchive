@@ -1367,7 +1367,6 @@ Time alone does not identify the viewpoint.
 Keep the default viewpoint unless the surrounding narration shifts to another screen or scene.
 
 Date order: month.day.
-Time text in #2: "11.05 11:38"
 
 On Ren's clock → owner's time: 11-05 11:38`);
     assert.equal(r.choices[0].ownerTime, '11-05 11:38');
@@ -1422,7 +1421,8 @@ test('reflection clock spans retain meridiem and accepted dated formats verbatim
         assert.equal(choice.local, local);
         assert.equal(choice.ownerTime, ownerTime);
         assert.deepEqual(rows, before);
-        assert.ok(result.text.includes(JSON.stringify(sourceTime)));
+        assert.doesNotMatch(result.text, /Time text in #/);
+        assert.ok(result.text.includes(`On Mara's clock → owner's time: ${ownerTime}`));
     }
 });
 test('reflection uses a trailing numeric year for the actual DST transition date', async () => {
@@ -1466,7 +1466,7 @@ test('bare HTML clocks supply date-free conditional reference information, not a
     assert.equal(choice.local, undefined);
     assert.equal(choice.reference.ownerClock, '00:30');
     assert.equal(choice.reference.date, '2026-11-05');
-    assert.match(result.text, /\(HTML time field\)\nNo date is shown; read the story to determine the date\./);
+    assert.match(result.text, /No date is shown; read the story to determine the date\./);
     assert.doesNotMatch(result.text, /calendar date unknown|\(reference/);
     assert.match(result.text, /On Mara's clock → owner's clock: 00:30\./);
     assert.doesNotMatch(result.text, /saved local|same-day|next-day|Reference date|Reference calculation only|If the story shows a time jump/);
@@ -1499,7 +1499,6 @@ Time alone does not identify the viewpoint.
 Keep the default viewpoint unless the surrounding narration shifts to another screen or scene.
 
 Date order: day.month.
-Time text in #2: "${clock}" (HTML time field)
 No date is shown; read the story to determine the date.
 
 On Mara's clock → owner's clock: ${ownerClock}${earlier ? ' (-1 day relative to screen)' : ''}.`);
@@ -1605,7 +1604,7 @@ test('real cleaned input retains vague months/days narrative and model dates are
         assert.equal(c.p.now, answer);
         assert.equal(c.p.year, expectedYear);
         assert.ok(T.input.includes(words));
-        assert.match(T.input, /\(HTML time field\)\nNo date is shown; read the story to determine the date\./);
+        assert.match(T.input, /No date is shown; read the story to determine the date\./);
         assert.ok(T.input.includes(`On Ren's clock → owner's clock: ${clock}.`));
         assert.doesNotMatch(T.input, /saved local|same-day|next-day|Reference date|Reference calculation only|If the story shows a time jump/);
         const { choices: [choice] } = await data.reflectionClocks({ ...c.p, now: '11-05 08:12', year: 2026 }, [htmlRow(2, raw)], c.m);
@@ -1660,8 +1659,9 @@ test('raw HTML metadata is captured with the cleaned round before awaited prepar
     T.beforeWhere = () => { T.chat[2].mes = '<time>20:00</time>'; };
     try { await assert.rejects(run(c.m, { now: '11-05 08:30', events: [] }), /대화가 바뀌었어요/); }
     finally { delete T.beforeWhere; delete T.clean; }
-    assert.match(T.input, /Time text in #2: "08:30"/);
-    assert.doesNotMatch(T.input, /Time text in #2: "20:00"/);
+    assert.match(T.input, /On Ren's clock → owner's clock: 08:30/);
+    assert.doesNotMatch(T.input, /Time text in #/);
+    assert.doesNotMatch(T.input, /On Ren's clock → owner's clock: 20:00/);
     assert.equal(c.p.now, '11-05 08:12');
 });
 
@@ -1677,7 +1677,7 @@ test('configured screen holder still allows other people for the latest dated so
     assert.ok(result.choices.every(c => c.ownerTime && !c.reference));
     const block = [data.clockBlock(p, p.now, m), result.text].filter(Boolean).join('\n');
     assert.equal((block.match(/\[OWNER'S CLOCK\]/g) || []).length, 1);
-    assert.equal((block.match(/Time text in #/g) || []).length, 1);
+    assert.equal((block.match(/Time text in #/g) || []).length, 0);
 });
 
 test('bare screen references resolve aliases and do not substitute an unknown configured holder', async () => {
@@ -1782,7 +1782,7 @@ for (let repeat = 1; repeat <= 5; repeat++) {
             assert.deepEqual(c.p, before, format);
             assert.ok(choices.choices.every(x => x.at === 6 && x.sourceTime.includes('12:27')), format);
             assert.equal(choices.choices.length, format === 'bare HTML' ? 1 : 2, format);
-            assert.equal((choices.text.match(/Time text in #/g) || []).length, 1);
+            assert.equal((choices.text.match(/Time text in #/g) || []).length, 0);
             for (const earlier of clocks.slice(0, -1)) assert.ok(!choices.text.includes(earlier), format);
             T.clean = mes => cleanMessage(mes, { stripTags: true });
             T.beforeCore = () => assert.equal(c.p.now, '11-05 03:38', 'saved clock must not be replaced before the model sees the request');
@@ -1796,8 +1796,8 @@ for (let repeat = 1; repeat <= 5; repeat++) {
                 previous = at;
             }
             assert.match(T.input, /Saved phone time: 11-05 03:38/);
-            assert.equal((T.input.match(/Time text in #/g) || []).length, 1);
-            assert.match(T.input, /Time text in #6:/);
+            assert.equal((T.input.match(/Time text in #/g) || []).length, 0);
+            assert.match(T.input, /On Mara's clock → owner's (?:time: 11-05 |clock: )04:27/);
             assert.match(globalThis.__everydayIn.at(-1), /Owner-local window: 11-05 03:38 to 11-05 04:27/);
             assert.equal(c.p.now, '11-05 04:27');
             assert.deepEqual(c.p.voice, before.voice);
