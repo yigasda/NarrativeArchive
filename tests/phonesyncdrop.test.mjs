@@ -1356,18 +1356,25 @@ test('reflection fallback uses the same OWNER\'S CLOCK labels without changing i
     assert.equal(data.clockBlock(p, p.now, m), '');
     const r = await data.reflectionClocks(p, rows, m);
     assert.equal(r.text, `Phone being updated: "Ren" (South Korea).
+
 [OWNER'S CLOCK]
 Phone owner: Ren
 Location: South Korea
 Saved phone time: 11-05 11:00
-Time choices. Time alone does not identify the viewpoint. Keep the default viewpoint unless the surrounding narration shifts to another screen or scene. Date order: month.day.
+
+Time choices.
+Time alone does not identify the viewpoint.
+Keep the default viewpoint unless the surrounding narration shifts to another screen or scene.
+
+Date order: month.day.
 Time text in #2: "11.05 11:38"
+
 On Ren's clock → owner's time: 11-05 11:38`);
     assert.equal(r.choices[0].ownerTime, '11-05 11:38');
     assert.doesNotMatch(r.text, /Default screen viewpoint:|Time differences from|The owner is in/);
     delete p.now;
     const unknown = await data.reflectionClocks(p, rows, m);
-    assert.match(unknown.text, /Saved phone time: unknown\nTime choices/);
+    assert.match(unknown.text, /Saved phone time: unknown\n\nTime choices/);
     assert.deepEqual(unknown.choices, r.choices);
     assert.equal(unknown.text.split('Time choices')[1], r.text.split('Time choices')[1]);
     delete p.country;
@@ -1476,17 +1483,25 @@ test('concise bare choices retain saved time, offsets, date order and candidates
         const result = await data.reflectionClocks(p, [htmlRow(2, `Mara <time>${clock}</time>`)], m);
         assert.deepEqual(result.choices, [{ at: 2, sourceTime: clock, clock, names: ['Mara', '마라'], date: null,
             reference: { date: referenceDate, ownerClock, dayShift: earlier ? -1 : 0, localAnchor: '2026-11-05 08:30', earlier } }]);
-        assert.equal([data.clockBlock(p, p.now, m), result.text].join('\n'), `[OWNER'S CLOCK]
+        assert.equal([data.clockBlock(p, p.now, m), result.text].join('\n\n'), `[OWNER'S CLOCK]
 Phone owner: Ren
 Location: Berlin
 Saved phone time: 11-05 00:30
 Default screen viewpoint: Mara
+
 Time differences from Berlin:
 - Mara (Seoul): +8 hours
+
 Phone being updated: "Ren" (Berlin).
-Time choices. Time alone does not identify the viewpoint. Keep the default viewpoint unless the surrounding narration shifts to another screen or scene. Date order: day.month.
+
+Time choices.
+Time alone does not identify the viewpoint.
+Keep the default viewpoint unless the surrounding narration shifts to another screen or scene.
+
+Date order: day.month.
 Time text in #2: "${clock}" (HTML time field)
 No date is shown; read the story to determine the date.
+
 On Mara's clock → owner's clock: ${ownerClock}${earlier ? ' (-1 day relative to screen)' : ''}.`);
         assert.equal(p.now, '11-05 00:30');
     }

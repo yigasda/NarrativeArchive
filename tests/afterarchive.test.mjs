@@ -329,7 +329,7 @@ test('every prompt that writes times has the owner\'s own clock (a messenger tim
 const zonePhone = now => ({ owner: 'Ren', year: 2026, now, life: { weather: { here: { place: 'Frankfurt am Main' }, cities: [{ name: 'Frankfurt am Main', tz: 'Europe/Berlin' },
     { name: 'Seoul', ko: '서울', tz: 'Asia/Seoul' }, { name: 'London', tz: 'Europe/London' }, { name: 'New York', tz: 'America/New_York' }] } } });
 test('OWNER\'S CLOCK: where the owner is, their time, and the other saved cities\' hours on that day', () => {
-    assert.equal(data.clockBlock(zonePhone('11-03 04:33')), "[OWNER'S CLOCK]\nPhone owner: Ren\nLocation: Frankfurt am Main\nSaved phone time: 11-03 04:33\nTime differences from Frankfurt am Main:\n- Seoul: +8 hours\n- London: -1 hour\n- New York: -6 hours");
+    assert.equal(data.clockBlock(zonePhone('11-03 04:33')), "[OWNER'S CLOCK]\nPhone owner: Ren\nLocation: Frankfurt am Main\nSaved phone time: 11-03 04:33\n\nTime differences from Frankfurt am Main:\n- Seoul: +8 hours\n- London: -1 hour\n- New York: -6 hours");
     // October: Germany on summer time, Korea never
     assert.match(data.clockBlock(zonePhone('10-20 12:00')), /Seoul: \+7 hours/);
     // all in one zone, or no saved city of its own: no block, nothing to move
@@ -349,6 +349,7 @@ Phone owner: Ren
 Location: Frankfurt am Main
 Saved phone time: 11-05 03:38
 Default screen viewpoint: 마라
+
 Time differences from Frankfurt am Main:
 - London: -1 hour
 - New York: -6 hours
@@ -550,7 +551,7 @@ test('where everyone is: the whole card and the persona as they are, only known 
         assert.ok(input.includes('[CHARACTER CARD — Ren]') && input.includes('[PERSONA — Mara]\nMara lives in Seoul with her cat.') && input.includes('[PEOPLE]\nMara\nIvo') && !input.includes('[OWNER PROFILE'));
         // Varo is on nobody's phone; Ivo's zone isn't one, but his country gives one
         assert.deepEqual(got.map(x => [x.name, x.tz || x.lives]), [['Ren', 'Europe/Berlin'], ['Mara', 'Asia/Seoul'], ['Ivo', 'GB']]);
-        assert.equal(data.clockBlock(p, p.now, mm), "[OWNER'S CLOCK]\nPhone owner: Ren\nLocation: Frankfurt am Main\nSaved phone time: 11-03 04:33\nTime differences from Frankfurt am Main:\n- Mara (Seoul): +8 hours\n- Ivo (United Kingdom): -1 hour");
+        assert.equal(data.clockBlock(p, p.now, mm), "[OWNER'S CLOCK]\nPhone owner: Ren\nLocation: Frankfurt am Main\nSaved phone time: 11-03 04:33\n\nTime differences from Frankfurt am Main:\n- Mara (Seoul): +8 hours\n- Ivo (United Kingdom): -1 hour");
     } finally { globalThis.__ctx = null; globalThis.__whereAnswer = null; }
 });
 

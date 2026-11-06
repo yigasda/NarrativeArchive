@@ -1180,7 +1180,7 @@ async function updatePhone(m, owner) {
         // a status line among these messages whose scene the phone can't place: the model says whose clock it shows
         const clockChoices = await reflectionClocks(p, [...clockRows, ...evidence.map(x => ({ index: x.first, text: x.text }))], m);
         const baseClock = clockBlock(p, hm(p.now) ? p.now : st?.raw, m, st);
-        const clock = [baseClock, clockChoices.text].filter(Boolean).join('\n');
+        const clock = [baseClock, clockChoices.text].filter(Boolean).join('\n\n');
         // (on a phone that knows no other city, a scene that isn't one of the owner's places is asked too: "Frankfurt"
         // may be another country; it stays the owner's unless the model names another city)
         const hasZoneOffsets = !!zonesOf(p, hm(p.now) ? p.now : st?.raw, m);
@@ -2151,7 +2151,7 @@ export const clockBlock = (p, at = p?.now, m = null, st = null, required = false
     if (z && z.at !== p?.now) lines.push(`Clock reference time: ${z.at}`);
     if (holder) lines.push(`Default screen viewpoint: ${label(holder)}`);
     if (z) {
-        lines.push(`Time differences from ${label(location || "the owner's clock")}:`, ...clockRows(p, m, z.others).map(c =>
+        lines.push('', `Time differences from ${label(location || "the owner's clock")}:`, ...clockRows(p, m, z.others).map(c =>
             `- ${label(c.name || 'Unnamed location')}${c.where ? ` (${label(c.where)})` : ''}: ${c.hours > 0 ? '+' : ''}${c.hours} hour${Math.abs(c.hours) === 1 ? '' : 's'}`));
         if (st?.known && st.at && st.at !== st.raw) lines.push(`The newest status line, ${st.raw} in ${st.city}, is ${st.at} here.`);
     }
@@ -2212,10 +2212,10 @@ function reflectionClocks0(p, rows, m) {
         }
     }
     if (!choices.length) return { choices, text: identity };
-    const lines = [`Time text in #${stamp.at}: ${JSON.stringify(stamp.sourceTime)}${stamp.clock ? ' (HTML time field)\nNo date is shown; read the story to determine the date.' : ''}\n${choices.map(c => c.reference
+    const lines = [`Time text in #${stamp.at}: ${JSON.stringify(stamp.sourceTime)}${stamp.clock ? ' (HTML time field)\nNo date is shown; read the story to determine the date.' : ''}\n\n${choices.map(c => c.reference
             ? `On ${c.names[0]}'s clock → owner's clock: ${c.reference.ownerClock}${c.reference.dayShift ? ` (${c.reference.dayShift > 0 ? '+' : ''}${c.reference.dayShift} day${Math.abs(c.reference.dayShift) === 1 ? '' : 's'} relative to screen)` : ''}.`
             : `On ${c.names[0]}'s clock → owner's time: ${c.ownerTime}`).join('\n')}`];
-    return { choices, text: `${identity}\n${clockBlock(p, p.now, m) ? '' : `${clockBlock(p, p.now, m, null, true)}\n`}Time choices. Time alone does not identify the viewpoint. Keep the default viewpoint unless the surrounding narration shifts to another screen or scene. Date order: ${dateOrderOf(m) === 'dm' ? 'day.month' : 'month.day'}.\n${lines.join('\n')}` };
+    return { choices, text: `${identity}\n\n${clockBlock(p, p.now, m) ? '' : `${clockBlock(p, p.now, m, null, true)}\n\n`}Time choices.\nTime alone does not identify the viewpoint.\nKeep the default viewpoint unless the surrounding narration shifts to another screen or scene.\n\nDate order: ${dateOrderOf(m) === 'dm' ? 'day.month' : 'month.day'}.\n${lines.join('\n')}` };
 }
 const pkey = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
 // a place that is someone's own: their name (or their first name) then 's · 의 · 네, or a room, a home after it
