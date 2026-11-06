@@ -8,6 +8,7 @@ const T = (globalThis.__trackerTest = { chat: [], settings: {} });
 const map = {
     './util.js': encoded('export const esc=s=>String(s);'), './sections.js': encoded('export const RANGE_HEAD=/#(\\d+)–#(\\d+)/;export const headingRanges=()=>[];export const parseSections=()=>[];export const splitTail=s=>[s,""];export const trimEnd=s=>s;'),
     './lore.js': encoded('export const loreBlock=async()=>"";'),
+    './phoneparse.js': new URL('../src/phoneparse.js', import.meta.url).href,
     './ai.js': encoded('export const SECTION_GUARD="";export const aiLabel=()=>"";export const askAI=async()=>"";export const askCompress=async()=>"";export const drLabel=()=>"";'),
     './core.js': encoded('export const ctx=()=>({chat:globalThis.__trackerTest.chat});export const getMeta=()=>({});export const globalSettings=()=>globalThis.__trackerTest.settings;export const saveMeta=async()=>{};'),
     './extract.js': encoded('export const formatExtract=()=>"";'),

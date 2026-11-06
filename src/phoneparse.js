@@ -54,9 +54,47 @@ export const when = v => {
     const ok = mt[3] && Number(mt[3]) < 24 && Number(mt[4]) < 60;
     return `${pad(mt[1])}-${pad(mt[2])}${ok ? ` ${pad(mt[3])}:${mt[4]}` : ''}`;
 };
+// ---- 한국어 시각: "16시 15분", "오후 4시 15분", "오후에 4시 15분", "4시 15분 PM", "4시 반", "밤 11시", "16시15분을", "16시
+// 15분이야", "16시 15분쯤". One reader for the app's answers, status lines, time choices and HTML time fields. Never a
+// length of time ("2시간 15분", "15분 뒤", "3시 15분 전" is 2:45), never seconds alone. Only where no colon clock is
+// read: every colon clock is read as before
+const KO_SP = String.raw`[ \t\u00a0]`;
+const KO_MER = String.raw`(?:오전|오후|새벽|아침|낮|저녁|밤|[aApP]\.?[mM]\.?)`;
+const KO_CLOCK_SRC = String.raw`(?<![\p{N}.:])(?:(${KO_MER})(?:에|의)?${KO_SP}*)?(\d{1,2})${KO_SP}*시(?!간)(?:${KO_SP}*(?:(\d{1,2})${KO_SP}*분|(반))(?:${KO_SP}*\d{1,2}${KO_SP}*초)?)?(?:${KO_SP}*(${KO_MER})(?:에|엔|의)?(?![\p{L}]))?(?!${KO_SP}*(?:(?:전|후|뒤)(?:에|엔|로|부터|까지|이|인|쯤)?|동안(?:에)?|만에|지나서?|넘게|가량|간)(?![\p{L}]))`;
+const KO_CLOCK_ALL = new RegExp(KO_CLOCK_SRC, 'gu');
+// (a reading that left its minutes behind to get past a guard, "3시" of "3시 15분 전", is none)
+const KO_MORE = new RegExp(String.raw`^${KO_SP}*(?:\d{1,2}${KO_SP}*분|반)`, 'u');
+// every Korean reading in a text, in order, with where it is: { index, text, h, m }
+export function koClocks(text) {
+    const s = String(text || ''), out = [];
+    for (const hit of s.matchAll(KO_CLOCK_ALL)) {
+        if (!hit[3] && !hit[4] && KO_MORE.test(s.slice(hit.index + hit[0].length))) continue;
+        const c = koClock(hit);
+        if (c) out.push({ index: hit.index, text: hit[0], ...c });
+    }
+    return out;
+}
+// a Korean reading's hour and minute, or null (an hour that can't be on a twelve-hour clock with 오전 · 오후 and the like)
+export function koClock(hit) {
+    if (!hit) return null;
+    const mer = hit[1] || hit[5] || '', h0 = Number(hit[2]), m = hit[4] ? 30 : Number(hit[3] || 0);
+    if (hit[1] && hit[5] || m > 59) return null;
+    let h = h0;
+    if (mer) {
+        if (!(h0 >= 1 && h0 <= 12)) return null;
+        if (/^(?:오후|저녁|[pP])/.test(mer)) h = h0 % 12 + 12;
+        else if (/^낮/.test(mer)) h = h0 === 12 ? 12 : h0 <= 6 ? h0 + 12 : h0;
+        else if (/^밤/.test(mer)) h = h0 === 12 ? 0 : h0 >= 6 ? h0 + 12 : h0;
+        else h = h0 % 12;
+    } else if (h0 > 23) return null;
+    return { h, m };
+}
+export const koClockText = text => { const c = koClocks(text)[0]; return c ? `${pad(c.h)}:${pad(c.m)}` : ''; };
 // "HH:MM", and the ways a model or a status line may write a clock: "7:00 PM", "오후 7:00", "7pm", "19시", "19시 30분"
 export const hhmm = v => {
-    const s = String(v || ''), mt = s.match(/(\d{1,2})\s*:\s*(\d{2})/) || s.match(/(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?/) || s.match(/(\d{1,2})\s*(?=[ap]\.?m\b)/i);
+    const s = String(v || '');
+    if (!/(\d{1,2})\s*:\s*(\d{2})/.test(s)) { const ko = koClockText(s); if (ko) return ko; }
+    const mt = s.match(/(\d{1,2})\s*:\s*(\d{2})/) || s.match(/(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?/) || s.match(/(\d{1,2})\s*(?=[ap]\.?m\b)/i);
     if (!mt) return '';
     let h = Number(mt[1]);
     const m = Number(mt[2] || 0), pm = /(?<![a-z])[pP]\.?[mM]\b|오후|저녁|밤/.test(s), am = /(?<![a-z])[aA]\.?[mM]\b|오전|새벽|아침/.test(s);
@@ -83,8 +121,23 @@ export function datedClocks(text, { positions = false } = {}) {
         if (day && !realDay(day, yearIn(hit[1]))) continue;
         if (day && clock) out.push({ sourceTime: hit[0], local: `${day} ${clock}`, ...(positions ? { position: hit.index } : {}) });
     }
-    return out;
+    // and a date with a Korean clock after it ("11월 5일 16시 15분", "2026년 11월 5일 오후 4시 15분", "11월 5일(목) 16시 15분",
+    // "11월 5일,16시 15분"), or a colon clock after a weekday in brackets ("11월 5일(목) 16:15") the reading above can't see
+    const s = String(text || ''), taken = new Set(out.map(x => s.indexOf(x.sourceTime)));
+    for (const hit of s.matchAll(DATE_HEAD)) {
+        if (taken.has(hit.index)) continue;
+        const rest = s.slice(hit.index + hit[0].length), day = when(hit[1]).slice(0, 5);
+        if (!day || !realDay(day, yearIn(hit[1]))) continue;
+        const ko = koClocks(rest)[0];
+        let clock = '', span = '';
+        if (ko && ko.index === 0) { clock = `${pad(ko.h)}:${pad(ko.m)}`; span = ko.text; }
+        else if (/[(（]/.test(hit[0])) { const c = COLON_HEAD.exec(rest); if (c) { const hour = Number(/(\d{1,2})[ \t]*:/.exec(c[1])[1]); if (!(HAS_MERIDIEM.test(c[1]) && !(hour >= 1 && hour <= 12))) { clock = hhmm(c[1]); span = c[1]; } } }
+        if (clock) out.push({ sourceTime: hit[0] + span, local: `${day} ${clock}`, ...(positions ? { position: hit.index } : {}) });
+    }
+    return positions ? out.sort((a, b) => a.position - b.position) : out;
 }
+const DATE_HEAD = new RegExp(String.raw`(?<![\p{L}\p{N}])(${CLOCK_DATE})\.?(?:[ \t\u00a0]*[(（][^)）\n]{1,4}[)）])?(?:에|엔)?[ \t\u00a0]*[,，]?[ \t\u00a0]*`, 'giu');
+const COLON_HEAD = new RegExp(String.raw`^((?:${CLOCK_MERIDIEM}[ \t]*)?\d{1,2}[ \t]*:[ \t]*\d{2}(?:[ \t]*${CLOCK_MERIDIEM})?)(?![\p{L}\p{N}:])`, 'iu');
 // Time-only HTML hints are read before the normal text cleaner removes the element names.
 // This is an inert tokenizer, not a DOM: no scripts, styles, URL fetching, or HTML execution.
 const HTML_CLOCK = new RegExp(String.raw`^(?:(${CLOCK_MERIDIEM})\s*)?(\d{1,2})[ \t]*:[ \t]*(\d{2})(?:\s*(${CLOCK_MERIDIEM}))?$`, 'iu');
@@ -112,6 +165,9 @@ const htmlClockOnly = text => {
     if (marker) { if (/^(?:p|오후|저녁|밤)/i.test(marker)) { if (h < 12) h += 12; } else if (h === 12) h = 0; }
     return `${pad(h)}:${pad(m)}`;
 };
+// a field that is a Korean clock and nothing else ("오후 4시 15분", "16시 15분")
+const htmlKoOnly = text => { const s = String(text || '').trim(), c = koClocks(s)[0]; return c && c.index === 0 && c.text.trim() === s ? `${pad(c.h)}:${pad(c.m)}` : ''; };
+const HIDDEN_STYLE = /(?:^|;)\s*(?:display\s*:\s*none|visibility\s*:\s*(?:hidden|collapse))\s*(?:!important\s*)?(?:;|$)/i;
 // Code spans may use any equal-length backtick runs, even across one paragraph's line breaks.
 // Index the next same-sized run first, so unmatched backticks do not repeatedly scan the whole text.
 // One barrier per omitted line keeps offsets without creating a tokenizer chunk for every hidden character.
@@ -158,7 +214,10 @@ export function htmlClocks(raw, { positions = false } = {}) {
 const HTML_TIME_FIELD = new RegExp(String.raw`^(?:(?:${CLOCK_DATE})\.?[,]?[ \t]*[T ]?)?((?:${CLOCK_MERIDIEM}\s*)?\d{1,2}[ \t]*:[ \t]*\d{2}(?:\s*${CLOCK_MERIDIEM})?)(?:[ \t]+(?:(?!(?:AM|PM)\b)[A-Z]{2,5}|(?:UTC|GMT)[+-]\d{1,2}(?::\d{2})?))?$`, 'iu');
 const htmlTimeField = text => {
     const hit = HTML_TIME_FIELD.exec(text.replace(/\s+/g, ' '));
-    return !!hit && !!htmlClockOnly(hit[1]);
+    if (hit) return !!htmlClockOnly(hit[1]);
+    // (or a Korean one, after a date or alone: "11월 5일 오후 4시 15분")
+    const s = text.replace(/\s+/g, ' ').trim(), d = datedClocks(s)[0];
+    return !!htmlKoOnly(s) || !!d && d.sourceTime === s && /시/.test(s);
 };
 const htmlFieldLabel = (name, attrs) => {
     // Original names only: never style, title, event handlers, URLs, or entire HTML.
@@ -205,11 +264,13 @@ export function htmlTimeContext(raw) {
     ).join('\n');
 }
 function readHtmlClocks(input, fields = false, excluded = null, positions = false) {
-    const root = { name: '', text: '', hints: [], blocked: false, removed: false }, stack = [root];
+    const root = { name: '', text: '', seen: '', hints: [], blocked: false, removed: false }, stack = [root];
     let visible = '';
     const append = (text, expose = true) => {
         const node = stack[stack.length - 1];
         node.text += text;
+        // (what a reader sees: a part hidden by its style is left out, for the Korean readings)
+        if (!node.hiddenStyle) node.seen += text;
         if (expose && !node.removed) visible += text;
     };
     const finish = (complete, end = input.length) => {
@@ -220,13 +281,17 @@ function readHtmlClocks(input, fields = false, excluded = null, positions = fals
             if (!complete || !node.removed && !HTML_INLINE.test(node.name)) visible = '';
             return;
         }
-        const sourceTime = clockHtmlText(node.text).trim(), clock = node.marked ? htmlClockOnly(sourceTime) : '';
+        const seenTime = clockHtmlText(node.seen).trim();
+        const sourceTime = clockHtmlText(node.text).trim(), korean = node.marked && !node.hiddenStyle && !htmlClockOnly(sourceTime) ? htmlKoOnly(seenTime) : '';
+        const clock = node.marked ? htmlClockOnly(sourceTime) || korean : '';
+        // (a hidden Korean clock gives no hint, and one inside a hidden part reaches no parent)
+        if (node.hiddenStyle && !fields) node.hints = node.hints.filter(x => !/시/.test(x.sourceTime));
         if (fields) {
             // Keep the smallest complete field; a parent can add an AM/PM marker or a date.
             if (htmlTimeField(sourceTime) && (!node.hints.length || node.hints.length === 1)) {
                 parent.hints.push(node.hints[0]?.sourceTime === sourceTime ? node.hints[0] : { sourceTime, label: node.label || node.originalName });
             } else parent.hints.push(...node.hints);
-            parent.text += node.text;
+            parent.text += node.text; parent.seen += node.hiddenStyle ? '' : node.seen;
             return;
         }
         const datedText = sourceTime.replace(/\s+/g, ' ');
@@ -237,9 +302,9 @@ function readHtmlClocks(input, fields = false, excluded = null, positions = fals
             && datedClocks(tail.slice(tail.lastIndexOf('\n') + 1)).some(x => tail.endsWith(x.sourceTime));
         // Prefer the complete labelled element to a nested duplicate ("PM <span>8:30</span>").
         // One dated stamp also owns its children; a timeline with separate date/time siblings does not.
-        if (clock) { if (!adjacent) parent.hints.push({ sourceTime, clock, ...(positions ? { position: node.start } : {}) }); }
+        if (clock) { if (!adjacent) parent.hints.push({ sourceTime: korean ? seenTime : sourceTime, clock, ...(positions ? { position: node.start } : {}) }); }
         else if (!dated) for (const hint of node.hints) parent.hints.push(hint);
-        parent.text += node.text;
+        parent.text += node.text; parent.seen += node.hiddenStyle ? '' : node.seen;
         if (!HTML_INLINE.test(node.name)) visible = '';
     };
     let pos = 0;
@@ -306,7 +371,8 @@ function readHtmlClocks(input, fields = false, excluded = null, positions = fals
             continue;
         }
         const labels = `${name} ${attrs.class || ''} ${attrs.id || ''}`;
-        const node = { name, start, originalName: head[2], label: htmlFieldLabel(head[2], attrs) || stack[stack.length - 1].label || '', text: '', hints: [], marked: /time/i.test(labels),
+        const node = { name, start, originalName: head[2], label: htmlFieldLabel(head[2], attrs) || stack[stack.length - 1].label || '', text: '', seen: '', hints: [], marked: /time/i.test(labels),
+            hiddenStyle: !!stack[stack.length - 1].hiddenStyle || HIDDEN_STYLE.test(attrs.style || '') || attrs.hidden !== undefined,
             removed: stack[stack.length - 1].removed || HTML_REMOVED.test(name),
             blocked: stack[stack.length - 1].blocked || HTML_HIDDEN.test(name)
                 || attrs.hidden !== undefined || /^true$/i.test(attrs['aria-hidden'] || '')
