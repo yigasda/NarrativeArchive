@@ -552,7 +552,7 @@ export function setScreen(p, now, m, ui) {
           <button type="button" class="ax_rw na_ph_kochip ax_koline">${si('#89b892', 'lang')}<span class="ax_tx"><span class="ax_n">한국어 보기</span></span><span class="ax_sw ${koOn() ? 'on' : ''}"></span></button>
           <button type="button" class="ax_rw na_ph_gloss">${si('#dcc680', 'pen')}<span class="ax_tx"><span class="ax_n">번역 용어집</span></span><span class="ax_v">${(n => (n ? `${n}개` : ''))(glossaryEntries(m).length)}</span>${axChev}</button>
         </div>
-        <div class="ax_foot">한국어 보기를 켜면 외국어 글 밑에 한국어가 붙어요. 용어집에 적어 두면 다음에 만들 때부터 이름이 늘 같게 나와요.</div>
+        <div class="ax_foot">한국어 보기를 켜면 외국어 글 밑에 번역이 붙어요. 용어집에 적어 두면 다음에 만들 때부터 이름이 적은 그대로 나와요.</div>
         ${(v => (v || p.life?.health ? `<div class="ax_sec">스크린타임</div><div class="ax_card"><button type="button" class="ax_rw" data-go="stime">${si('#79b5ee', 'sandglass')}<span class="ax_tx"><span class="ax_n">스크린타임</span></span><span class="ax_v">${v?.avg != null ? `하루 ${(n => `${Math.floor(n / 60) ? `${Math.floor(n / 60)}시간 ` : ''}${n % 60}분`)(v.avg)}` : ''}</span>${axChev}</button></div>` : ''))(screenView(p, now))}
         <div class="ax_sec">일반</div>
         <div class="ax_card">
