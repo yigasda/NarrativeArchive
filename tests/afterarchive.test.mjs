@@ -1195,3 +1195,17 @@ test('위치 정보 before a phone is made: read once and kept, checked and set 
 test('making a phone (and some apps again) takes its people from the story or PEOPLE AROUND, as the reflection does', () => {
     for (const s of [data.AI_SYS_PHONE, data.AI_SYS_PHONE_APPS, data.updateSystem({ split: true })]) assert.ok(s.includes('- People: only people the story or PEOPLE AROUND has.'), s.slice(0, 40));
 });
+
+test('the bank and voice memo fills get PEOPLE AROUND, and take their people from the story or it; life and delivery do not', async () => {
+    for (const s of [data.AI_SYS_MONEY, data.AI_SYS_VOICES]) assert.ok(s.includes('- PEOPLE AROUND (sometimes):') && s.includes('only people the story or PEOPLE AROUND has'), s.slice(0, 60));
+    for (const s of [life.AI_SYS_LIFE, life.AI_SYS_DELIVERY]) assert.ok(!s.includes('PEOPLE AROUND'));
+    try {
+        for (const [name, run, answer, system] of [['money', (mm, p) => data.fillMoney(mm, p), moneyAnswer('Ticket', 500, '11-03 03:03'), data.AI_SYS_MONEY], ['voice', (mm, p) => data.fillVoice(mm, p), '{"memos":[]}', data.AI_SYS_VOICES]]) {
+            const { p, m: mm } = clockFixture('No clock.');
+            p.around = { at: 1, people: [{ name: 'Mara', aka: [], about: 'Ren sends her money every month.' }] };
+            globalThis.__menu = { calls: [], answer };
+            try { await run(mm, p); } catch { /* the input is what this checks */ }
+            assert.match(globalThis.__menu.calls.find(x => x.sys === system).input, /\[PEOPLE AROUND\]\n- Mara: Ren sends her money every month\./, name);
+        }
+    } finally { delete globalThis.__ctx; }
+});
