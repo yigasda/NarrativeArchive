@@ -2617,7 +2617,7 @@ export function placesOf(m, owner) {
         for (const place of pl) {
             const k = nameKey(place), had = seen.get(k);
             if (had) had.n++;
-            else seen.set(k, { place, n: 1, day, date: d.date?.label || '', time: d.time || '', scene: name, key: sectionKey(s) });
+            else seen.set(k, { place, n: 1, day, date: d.date?.label || '', time: d.time || '', scene: name, key: sectionKey(s), at: [s.start, s.end] });
         }
     }
     return [...seen.values()].slice(0, 40);

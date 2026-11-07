@@ -798,17 +798,44 @@ export function camScreen(p, now, k, busy) {
       ${modes}${bar}${axInd('#fff')}`;
 }
 
-// 지도: the places in the archive's headings where the owner was, newest first (no AI)
+// 지도: where the owner was, newest first — the archive's headings (placesOf) and the visits the making and the reflections
+// read (p.visits), one row a place (nameKey): how many times, and who was there (a visit's "with"; for a section, the
+// people the phone knows named in it). No AI here
+// 과 / 와 after a name: by its Korean spelling (the glossary's, if there is one); a Latin name ending in l, m, n reads with
+// a final consonant (Ren → 렌과), the others without (Ivo → 이보와)
+const waOf = (m, n) => { const ko = glossaryEntries(m).find(e => e.src.toLowerCase() === String(n).toLowerCase())?.ko || String(n), c = ko.charCodeAt(ko.length - 1);
+    return (c >= 0xac00 && c <= 0xd7a3 ? (c - 0xac00) % 28 : /[lmn]$|ng$/i.test(ko)) ? '과' : '와'; };
+function mapPlaces(m, p) {
+    const gone = new Set(p.hiddenPlaces || []), rows = new Map(), owner = nameKey(p.owner);
+    const known = [...new Set([...(p.contacts || []).map(c => c.name), ...(p.where?.people || []).map(x => x.name)].filter(n => n && nameKey(n) !== owner))];
+    const row = place => { const k = nameKey(place); if (!rows.has(k)) rows.set(k, { place, an: 0, vn: 0, with: [], last: '', day: '', time: '', date: '' }); return rows.get(k); };
+    const meet = (r, names) => { for (const n of names) if (!r.with.some(w => nameKey(w) === nameKey(n))) r.with.push(n); };
+    for (const x of placesOf(m, p.owner)) {
+        if (gone.has(nameKey(x.place))) continue;
+        const r = row(x.place), text = x.at ? m.text.slice(x.at[0], x.at[1]) : '';
+        r.an += x.n; meet(r, known.filter(n => nameRe(n).test(text)));
+        if (!r.last || (x.day || '') > r.last) Object.assign(r, { last: x.day || '', day: x.day, date: x.date, time: x.time });
+    }
+    for (const v of p.visits || []) {
+        if (!v?.place || gone.has(nameKey(v.place))) continue;
+        const r = row(v.place); r.vn++; meet(r, v.with || []);
+        const t = String(v.time || '');
+        if (!r.last || t > r.last) Object.assign(r, { last: t, day: t.slice(0, 5), date: '', time: fmtTime(p, t) });
+    }
+    // (the archive and the reflections can tell the same visit: the larger count, not both added)
+    return [...rows.values()].map(r => ({ ...r, n: Math.max(r.an, r.vn) })).sort((a, b) => (b.last || '').localeCompare(a.last || ''));
+}
 export function mapScreen(p, now, m) {
-    const gone = new Set(p.hiddenPlaces || []), pl = placesOf(m, p.owner).filter(x => !gone.has(nameKey(x.place)));
+    const pl = mapPlaces(m, p);
     const pin = ax('pindot', 22, 'var(--axd)', 2.2, 'var(--axc)');
+    const who = r => (r.with.length ? ` · ${esc(r.with.length > 2 ? `${r.with[0]} 외 ${r.with.length - 1}명` : r.with.join(' · '))}${r.with.length > 2 ? '과' : waOf(m, r.with[r.with.length - 1])}` : '');
     return `${axBar(p, now)}
       ${axTop(axCb('home'))}
       <div class="ax_scroll">
         ${axH1('다녀간 곳', pl.length ? `${pl.length}곳` : '')}
         ${pl.length ? `<div class="ax_card ax_mapart" aria-hidden="true">${pl.slice(0, 5).map((_, k) => `<i style="left: ${[18, 62, 38, 80, 28][k]}%; top: ${[34, 26, 58, 64, 80][k]}%">${pin}</i>`).join('')}</div>
         <div class="ax_card">${pl.map(x => swipeRow('place', nameKey(x.place), `
-          <div class="ax_rw ax_place"><span class="ax_si" style="background: var(--axc)">${ax('pindot', 17, 'var(--axd)', 2.2)}</span><span class="ax_tx"><span class="ax_n">${esc(x.place)}</span><span class="ax_p1">${x.n > 1 ? `${x.n}번 · 마지막 ` : ''}${esc(x.scene)}</span></span><small>${esc(x.day ? fmtDate(p, x.day, true) : x.date)}${x.time ? `<br>${esc(x.time)}` : ''}</small></div>`)).join('')}</div>` : '<div class="ax_empty">방문 기록 없음</div>'}
+          <div class="ax_rw ax_place"><span class="ax_si" style="background: var(--axc)">${ax('pindot', 17, 'var(--axd)', 2.2)}</span><span class="ax_tx"><span class="ax_n">${esc(x.place)}</span><span class="ax_p1">${x.n > 1 ? `${x.n}번` : '처음'}${who(x)}</span></span><small>${esc(x.day ? fmtDate(p, x.day, true) : x.date)}${x.time ? `<br>${esc(x.time)}` : ''}</small></div>`)).join('')}</div>` : '<div class="ax_empty">방문 기록 없음</div>'}
         <i class="ax_pad"></i>
       </div>
       ${axInd()}`;
