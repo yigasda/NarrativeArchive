@@ -545,7 +545,7 @@ export function setScreen(p, now, m, ui) {
       ${axTop(axCb('home'))}
       <div class="ax_scroll">
         ${axH1('설정')}
-        <div class="ax_card"><button type="button" class="ax_rw ax_me" data-go="setwho">${axFace(p.owner, 56)}<span class="ax_tx"><b>${esc(p.owner)}</b><span class="ax_p">${esc([p.profile?.handle, COUNTRIES[p.country] || p.country].filter(Boolean).join(' · '))}</span></span><span class="ax_v">인물 바꾸기</span>${axChev}</button></div>
+        <div class="ax_card"><button type="button" class="ax_rw ax_me" data-go="setwho">${axFace(p.owner, 56)}<span class="ax_tx"><b>${esc(p.owner)}</b><span class="ax_p">${esc(p.profile?.handle || '')}</span></span><span class="ax_v">인물 바꾸기</span>${axChev}</button></div>
         <div class="ax_sec">화면</div>
         <div class="ax_card">
           <button type="button" class="ax_rw" data-go="settheme">${si('#a699c9', 'palette')}<span class="ax_tx"><span class="ax_n">테마</span></span><span class="ax_v">${p.theme === 'gray' ? '화이트 그레이' : '컬러 젤'}</span>${axChev}</button>
@@ -557,10 +557,10 @@ export function setScreen(p, now, m, ui) {
         <div class="ax_sec">일반</div>
         <div class="ax_card">
           <label class="ax_rw">${si('#8faed1', 'globe')}<span class="ax_tx"><span class="ax_n">국적</span></span><span class="ax_v">${esc(COUNTRIES[p.country] || p.country || '')}</span>${axChev}<select class="na_ph_country ax_sel" aria-label="국적">${Object.entries(COUNTRIES).map(([k, v]) => `<option value="${k}" ${k === p.country ? 'selected' : ''}>${v}</option>`).join('')}${COUNTRIES[p.country] ? '' : `<option value="${esc(p.country)}" selected>${esc(p.country)}</option>`}</select></label>
-          <button type="button" class="ax_rw" data-go="setplace">${si('#7fa69c', 'pin')}<span class="ax_tx"><span class="ax_n">위치 정보</span></span><span class="ax_v">${esc((o => [COUNTRIES[o.lives] || o.lives, o.city].filter(Boolean).join(' · '))(placeInfo(p).owner))}</span>${axChev}</button>
+          <button type="button" class="ax_rw" data-go="setplace">${si('#7fa69c', 'pin')}<span class="ax_tx"><span class="ax_n">위치 정보</span></span><span class="ax_v">${esc((o => o.city || COUNTRIES[o.lives] || o.lives || '')(placeInfo(p).owner))}</span>${axChev}</button>
           <button type="button" class="ax_rw" data-go="setdate">${si('#9aa7c0', 'clock')}<span class="ax_tx"><span class="ax_n">날짜 및 시간</span></span><span class="ax_v">${esc(dateLabel(p, now))}</span>${axChev}</button>
           <button type="button" class="ax_rw na_ph_looksbtn2">${si('#d89f98', 'user')}<span class="ax_tx"><span class="ax_n">외모</span></span><span class="ax_v">${nLooks ? `${nLooks}명` : ''}</span>${axChev}</button>
-          <button type="button" class="ax_rw" data-go="setprofile">${si('#a2a7af', 'info')}<span class="ax_tx"><span class="ax_n">이 폰에 대해</span></span><span class="ax_v">${esc(p.financeProfile?.label || '연결 안 함')}</span>${axChev}</button>
+          <button type="button" class="ax_rw" data-go="setprofile">${si('#a2a7af', 'info')}<span class="ax_tx"><span class="ax_n">이 폰에 대해</span></span><span class="ax_v">${esc(PROFILE_SOURCES.find(x => x[0] === p.financeProfile?.type)?.[1] || '연결 안 함')}</span>${axChev}</button>
         </div>
         <div class="ax_sec">아카이브</div>
         <div class="ax_card">
