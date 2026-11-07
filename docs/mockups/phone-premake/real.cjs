@@ -14,7 +14,7 @@ const { open } = require('/home/user/NarrativeArchive/tools/dev/probe.cjs');
   const A1 = `${head}
     <div class="ax_sec">1 · 인물 정보</div><div class="ax_card">${rw('프로필 연동', val('캐릭터 카드'))}</div>
     <div class="ax_sec">2 · 참고 로어북 (선택)</div><div class="ax_card">${rw('참고 로어북', val('없음'))}</div>
-    <div class="ax_foot">안 고르면 아카이브만 읽어요.</div>
+    <div class="ax_foot">안 고르면 아카이브와 본문만 읽어요.</div>
     <div class="ax_sec">3 · 용어집 (선택)</div><div class="ax_card">${rw('번역 용어집', val('3개'))}</div>
     <div class="ax_sec">4 · 날짜</div><div class="ax_card">${rw('날짜 읽는 법', seg)}${rw('메신저 시간대', val('Mara'))}</div>
     <div class="ax_foot">위치는 1~4를 읽어서 정해요.</div>
