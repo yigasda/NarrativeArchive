@@ -98,6 +98,10 @@ const SCENES = [
     { name: 'phone-files', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phone(p); await h.phoneFill(p, 'life', 'clock'); await h.phoneTo(p, 'files'); } },
     { name: 'phone-stime', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phone(p); await h.phoneFill(p, 'life', 'clock'); await h.phoneTo(p, 'stime'); } },
     { name: 'phone-dlv', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phone(p); await h.phoneFill(p, 'delivery', 'dlv'); } },
+    // before a phone: the make card and 폰 만들기 준비; and the phone's own alert (.pcf), asked by 이 폰 지우기 and left open
+    { name: 'phone-make', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phoneBlank(p); } },
+    { name: 'phone-prep', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phoneBlank(p); await p.$eval('.na_ph_makebtn', e => e.click()); await p.waitForSelector('.na_ph_preplink', { timeout: 8000 }); await p.waitForTimeout(500); } },
+    { name: 'phone-ask', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phone(p); await h.phoneTo(p, 'set'); await p.$eval('.na_ph_setdel', e => e.click()); await p.waitForSelector('.pcf', { timeout: 8000 }); await p.waitForTimeout(500); } },
 ];
 // block owner (as tools/dev/css-harness/blocks.cjs names them) → the scenes that show it; `capture.cjs --owner 섹션 버전` expands to these
 const OWNERS = {
