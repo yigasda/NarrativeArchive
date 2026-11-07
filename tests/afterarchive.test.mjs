@@ -1228,3 +1228,17 @@ test('a name and its other form in 용어집 ("Ivo = 이보") are one person: as
         assert.ok(row && row.aka.includes('Ivo'));
     } finally { delete globalThis.__ctx; delete globalThis.__whereAnswer; delete globalThis.__glossaryPeople; delete globalThis.__glossaryEntries; }
 });
+
+test('PEOPLE AROUND goes by the name 위치 정보 has for a person (용어집 other form or aka): one person, one name', async () => {
+    try {
+        const { m: mm } = htmlPhoneFixture(); mm.phones = {};
+        globalThis.__ctx.characters = [{ name: 'Mara' }]; globalThis.__ctx.characterId = 0;
+        globalThis.__glossaryPeople = ['Ivo']; globalThis.__glossaryEntries = [{ src: 'Ivo', ko: '이보' }];
+        globalThis.__where = [];
+        globalThis.__whereAnswer = { people: [{ name: 'Ren', city: 'Frankfurt am Main', tz: 'Europe/Berlin', lives: 'DE' }, { name: '이보', city: 'Frankfurt am Main', tz: 'Europe/Berlin', lives: 'DE' }],
+            around: [{ name: 'Ivo', about: 'Ren\'s friend from university.' }] };
+        const pre = await data.preparePhone(mm, 'Ren');
+        assert.deepEqual(pre.around.people.map(x => [x.name, x.aka]), [['이보', ['Ivo']]]);
+        assert.ok(pre.where.people.find(x => x.name === '이보').aka.includes('Ivo'));
+    } finally { delete globalThis.__ctx; delete globalThis.__whereAnswer; delete globalThis.__glossaryPeople; delete globalThis.__glossaryEntries; }
+});

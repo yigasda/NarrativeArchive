@@ -562,9 +562,10 @@ export const AI_SYS_EVERYDAY = everydaySystem();
 // the people the owner had a scene with in these messages: any the phone knows (PEOPLE AROUND, contacts, texts, the place
 // reading) named in them
 // (and the people the reflection itself wrote into these messages' events, and the glossary's people)
-function scenesWith(p, text, more = []) {
+function scenesWith(p, text, more = [], m = null) {
     const low = String(text || '').toLowerCase(), seen = new Map();
-    const add = (name, names) => { if (!name || samePerson(name, p.owner)) return; const k = nameKey(name); if (seen.has(k)) return; if (names.filter(Boolean).some(n => String(n).length >= 2 && new RegExp(`(^|[^\\p{L}])${String(n).toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'u').test(low))) seen.set(k, name); };
+    // (one person once, by whichever of their names: "Ivo" and "이보" are one, shown by their 위치 정보 name)
+    const add = (name0, names0) => { const who = personOf(p, m, name0); if (!who || sameName(m, name0, p.owner)) return; const k = who.key, name = who.name, names = withTwins(m, names0.filter(Boolean)); if (seen.has(k)) return; if (names.filter(Boolean).some(n => String(n).length >= 2 && new RegExp(`(^|[^\\p{L}])${String(n).toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'u').test(low))) seen.set(k, name); };
     for (const x of p.around?.people || []) add(x.name, [x.name, String(x.name).split(/\s+/)[0], ...arr(x.aka)]);
     for (const x of p.where?.people || []) add(x.name, [x.name, ...arr(x.aka)]);
     for (const x of p.contacts || []) add(x.name, [x.name]);
@@ -579,7 +580,7 @@ export const everydayParts = parts => arr(parts).filter(b => !String(b).startsWi
 // the people the reflection put in these messages' events: whom texts, calls and contacts are with
 const eventPeople = raw => arr(raw?.events).flatMap(e => { const ph = e?.phone && typeof e.phone === 'object' ? e.phone : {}; return [...arr(ph.threads).map(x => x?.with), ...arr(ph.calls).map(x => x?.with), ...arr(ph.contacts).map(x => x?.name)]; }).map(n => line(n, 40)).filter(Boolean);
 async function askEveryday(parts, raw, p, rows, life = false, m = null) {
-    const text = rows.map(r => r.text).join('\n'), who = scenesWith(p, text, [...eventPeople(raw), ...(m ? glossaryPeople(m) : [])]);
+    const text = rows.map(r => r.text).join('\n'), who = scenesWith(p, text, [...eventPeople(raw), ...(m ? glossaryPeople(m) : [])], m);
     const mine = everydayParts(parts).join('\n\n');
     const blocks = [mine, `[PUT ON THE PHONE NOW]\n${arr(raw?.events).map(putLine).join('\n') || '(nothing)'}\nOwner-local window: ${p.now || "unknown"} to ${raw?.now || p.now || "unknown"}.`, who.length ? `[SCENES WITH]\n${who.join('\n')}` : ''].filter(Boolean).join('\n\n');
     try { const got = jsonOf(await askDraft(blocks, { force: true, system: everydaySystem({ life }), maxTokens: 6000, effort: 'low' })); return got?.everyday && typeof got.everyday === 'object' ? got.everyday : null; }
@@ -608,11 +609,19 @@ function everydayOnly(p, add, day, daily) {
     if (Array.isArray(add.threads)) add.threads = add.threads.filter(th => th.messages.length || th.draft);
 }
 // a reflection keeps everything (keepAll); making a phone keeps each list to its size
+// (the city they live in, by any of its names, a part of one too: "Frankfurt" for "Frankfurt am Main"; never a place in it,
+// "Frankfurt Hauptbahnhof")
+const homeCity = (p, v) => {
+    const k = pkey(v), own = ownerZone(p), row = whereOf(p, p.owner), home = [own?.where, ...arr(own?.names), row?.city, ...arr(row?.names)].map(pkey).filter(Boolean);
+    return !!k && home.some(n => n === k || k.length >= Math.max(4, n.length * 0.6) && n.startsWith(k));
+};
 const visitOk = (p, x) => {
     if (new Set(p.hiddenPlaces || []).has(nameKey(x.place))) return false;
-    const own = ownerZone(p), row = whereOf(p, p.owner), home = [own?.where, ...arr(own?.names), row?.city, ...arr(row?.names)].map(pkey).filter(Boolean);
-    return !(home.includes(pkey(x.place)) && (!x.city || pkey(x.city) === pkey(x.place) || home.includes(pkey(x.city))));
+    // a city alone: no city given, or the place is that city (as written, or a shorter form of it)
+    const cityAlone = !x.city || pkey(x.city) === pkey(x.place) || pkey(x.city).startsWith(pkey(x.place));
+    return !(cityAlone && homeCity(p, x.place));
 };
+const visitWith = (p, x) => { const out = []; for (const n of arr(x.with)) { const who = personOf(p, null, n); if (who && !samePerson(who.name, p.owner) && !out.some(o => personOf(p, null, o)?.key === who.key)) out.push(who.name); } return { ...x, with: out }; };
 function mergePhone(p, add, { keepAll = false } = {}) {
     if (!p.device && add.device) p.device = add.device;
     const keep = (list, n) => (keepAll ? list : list.slice(-n));
@@ -668,7 +677,7 @@ function mergePhone(p, add, { keepAll = false } = {}) {
     // row for as long as it is their home: a new one only when they live somewhere else)
     if (add.visits?.length) {
         const homes = (p.visits || []).filter(x => x.home).map(x => nameKey(x.place));
-        add.visits = add.visits.filter(x => visitOk(p, x) && !(x.home && (homes.includes(nameKey(x.place)) || !homes.push(nameKey(x.place)))));
+        add.visits = add.visits.filter(x => visitOk(p, x) && !(x.home && (homes.includes(nameKey(x.place)) || !homes.push(nameKey(x.place))))).map(x => visitWith(p, x));
     }
     for (const k of LISTS) p[k] = keep([...(p[k] || []), ...fresh(k, p[k] || [], add[k] || [])], CAP[k]);
     if (add.profile?.handle || add.profile?.bio) p.profile = { ...(p.profile || {}), ...Object.fromEntries(Object.entries(add.profile).filter(([, v]) => v)) };
@@ -981,7 +990,7 @@ export async function preparePhone(m, owner, { again = false } = {}) {
     const key = nameKey(owner);
     await ensureScreenHolder(m);
     const binding = m.phones?.[key]?.financeProfile || m.phoneProfiles?.[key], kept = phonePre(m, owner);
-    if (kept && !again && sameBinding(kept, binding, m)) return kept;
+    if (kept && !again && sameBinding(kept, binding, m)) { glossAka(m, kept); return kept; }
     const pre = { owner, making: true, lore: loreKey(m), ...(binding ? { financeProfile: structuredClone(binding) } : {}) }, asked = { known: true };
     ensureYear(m, pre, nowAt(windowOf(m, null)));
     await tryWhere(m, pre, asked);
@@ -1023,7 +1032,8 @@ async function makePhone0(m, owner, { update = false, apps = null } = {}) {
     // the one the user checked in 위치 정보 (preparePhone), else read now; its year too, from the start
     const firstMade = !part && !old && !cur?.where, kept = firstMade ? phonePre(m, owner) : null, asked = {};
     let pre = null;
-    if (kept && sameBinding(kept, binding, m)) { pre = structuredClone(kept); asked.asked = kept.asked || []; }
+    if (cur) glossAka(m, cur);
+    if (kept && sameBinding(kept, binding, m)) { pre = structuredClone(kept); glossAka(m, pre); asked.asked = kept.asked || []; }
     else if (firstMade) { pre = { owner, making: true, ...(binding ? { financeProfile: structuredClone(binding) } : {}) }; ensureYear(m, pre, nowAt(gap)); asked.known = true; await tryWhere(m, pre, asked); }
     const ask = (g, extra = []) => askDraft(phoneRequest(m, owner, old, lore, part, profile, g, extra, pre), { force: true, system: old ? AI_SYS_PHONE_UPDATE : part ? AI_SYS_PHONE_APPS : AI_SYS_PHONE, maxTokens: 16000 });
     const out = await ask(gap), got = parsePhone(out, owner);
@@ -1332,6 +1342,8 @@ async function updatePhone(m, owner) {
     return exclusive('sync', async () => {
         const key = nameKey(owner), p = m.phones[key], scope = phoneChatScope(ctx());
         if (syncState(p) !== 'ok') { const e = new Error('먼저 반영 시작 위치를 골라 주세요'); e.code = 'SYNC_PICK'; throw e; }
+        // (용어집's other forms of names on 위치 정보 rows first: before anything reads or keeps them)
+        glossAka(m, p);
         const s = p.sync, swiped = [];
         // a read message edited or swiped since: if the last round read it, that round is undone and read again;
         // an older round's items stay, and the changed message is simply read again
@@ -2156,6 +2168,9 @@ export async function readWhere(m, p, opts = {}) {
     // read again: someone it leaves out keeps what was read before
     const people = [...got, ...(p.where?.people || []).filter(o => !got.some(x => nameKey(x.name) === nameKey(o.name)) && !merged.includes(nameKey(o.name)) && !got.some(x => here(o, x) && String(x.name).length > String(o.name).length)).map(o => ({ ...o, names: namesOf(o) }))].slice(0, 16);
     p.where = { at: Date.now(), people, ...(removed.size ? { removed: [...removed] } : {}) };
+    glossAka(m, p);
+    // (PEOPLE AROUND by the name 위치 정보 has for them: one person, one name, on the map and in the texts alike)
+    if (p.around?.people) p.around.people = p.around.people.map(x => { const who = personOf(p, m, x.name); if (!who || nameKey(who.name) === nameKey(x.name)) return x; return { ...x, name: who.name, aka: [...new Set([...arr(x.aka), x.name])].filter(a => nameKey(a) !== nameKey(who.name)).slice(0, 6) }; });
     syncLives(p);
     return people;
 }
@@ -2177,6 +2192,24 @@ const samePerson = (a, b) => { const x = nameKey(a), y = nameKey(b); if (!x || !
 // a name and its other form in 번역 용어집 ("Ivo = 이보"): the same person. glossTwin gives the other form, as written
 const glossTwin = (m, n) => { const k = nameKey(n); if (!k) return ''; for (const e of glossaryEntries(m)) { if (nameKey(e.src) === k) return e.ko; if (nameKey(e.ko) === k) return e.src; } return ''; };
 const sameName = (m, a, b) => samePerson(a, b) || (t => !!t && samePerson(t, b))(glossTwin(m, a));
+// names with their 용어집 other forms added (each once)
+const withTwins = (m, names) => { const out = []; for (const n of [...names, ...(m ? names.map(x => glossTwin(m, x)) : [])]) if (n && !out.some(x => nameKey(x) === nameKey(n))) out.push(n); return out; };
+// one person by any of their names: the 위치 정보 row they are on (by its name or an aka, or the 용어집 other form of
+// one), else the name itself; { key, name } with the row's name as the one to show
+function personOf(p, m, n) {
+    const k = nameKey(n);
+    if (!k) return null;
+    const keys = withTwins(m, [n]).map(nameKey), row = (p?.where?.people || []).find(r => [r.name, ...arr(r.aka)].some(x => keys.includes(nameKey(x))));
+    return row ? { key: nameKey(row.name), name: row.name } : { key: keys.slice().sort()[0], name: n };
+}
+// 용어집 forms not yet on a 위치 정보 row are put on it as its aka ("Ivo = 이보" added after it was read), so every place
+// that finds a person by their aka (texts, the clock, the default screen) finds them by both. Code only, no request
+function glossAka(m, p) {
+    for (const r of p?.where?.people || []) {
+        const add = withTwins(m, [r.name, ...arr(r.aka)]).filter(n => nameKey(n) !== nameKey(r.name) && !arr(r.aka).some(a => nameKey(a) === nameKey(n)));
+        if (add.length) r.aka = [...arr(r.aka), ...add].slice(0, 8);
+    }
+}
 // (by the short name only when it is one person's: "Ivo" with an Ivo Kim and an Ivo Park is neither)
 const whereOf = (p, name) => { const rows = p?.where?.people || [], same = rows.filter(x => samePerson(x.name, name)); return rows.find(x => nameKey(x.name) === nameKey(name)) || (same.length === 1 ? same[0] : undefined); };
 // where the owner lives (설정 › 위치 정보's 사는 나라: by hand or read), else the phone's 국적: what the bank, the money,
@@ -2311,11 +2344,11 @@ export const ownerZone = p => zoneOfWhere(whereOf(p, p?.owner)) || zoneOfPhone(p
 function placesAround(p, m = null) {
     const out = [], own = ownerZone(p);
     // (the owner's own place as the weather app has it is one of their names too: a zone known only by the country)
-    if (own) out.push({ tz: own.tz, name: own.where, names: [own.where, ...own.names, p?.life?.weather?.here?.place], own: true, by: [p?.owner, ...arr(whereOf(p, p?.owner)?.aka)] });
+    if (own) out.push({ tz: own.tz, name: own.where, names: [own.where, ...own.names, p?.life?.weather?.here?.place], own: true, by: withTwins(m, [p?.owner, ...arr(whereOf(p, p?.owner)?.aka)]) });
     for (const c of arr(p?.life?.weather?.cities)) if (c?.tz) out.push({ tz: c.tz, name: c.name, names: [c.name, c.ko] });
-    for (const x of p?.where?.people || []) if (nameKey(x.name) !== nameKey(p.owner)) { const z = zoneOfWhere(x); if (z) out.push({ tz: z.tz, name: z.where, names: z.names, who: x.name, by: [x.name, ...arr(x.aka)] }); }
+    for (const x of p?.where?.people || []) if (nameKey(x.name) !== nameKey(p.owner)) { const z = zoneOfWhere(x); if (z) out.push({ tz: z.tz, name: z.where, names: z.names, who: x.name, by: withTwins(m, [x.name, ...arr(x.aka)]) }); }
     // another phone's owner: where that phone read them to be, else its own saved city or country
-    for (const q of Object.values(phonesOf(m) || {})) if (q && q !== p && q.owner && !whereOf(p, q.owner)) { const z = ownerZone(q); if (z) out.push({ tz: z.tz, name: z.where, names: z.names, who: q.owner, by: [q.owner, ...arr(whereOf(q, q.owner)?.aka)] }); }
+    for (const q of Object.values(phonesOf(m) || {})) if (q && q !== p && q.owner && !whereOf(p, q.owner)) { const z = ownerZone(q); if (z) out.push({ tz: z.tz, name: z.where, names: z.names, who: q.owner, by: withTwins(m, [q.owner, ...arr(whereOf(q, q.owner)?.aka)]) }); }
     return out;
 }
 const tzFormat = new Map();

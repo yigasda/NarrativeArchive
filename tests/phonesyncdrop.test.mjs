@@ -24,7 +24,7 @@ const map = { './extract.js': cleanMessageURL,
     './people.js': encoded(`export const nameKey=s=>String(s).toLowerCase();export const nameRe=s=>new RegExp(s,'i');export const headingPlaces=()=>[];`),
     './recall.js': encoded(`export const estTok=s=>s.length/4;`), './scenes.js': encoded(`export const recentTrackers=()=>[];`),
     './sections.js': encoded(`export const parseSections=()=>[];export const RANGE_HEAD=/#(\\d+)–#(\\d+)/;export const sectionKey=()=>'';export const splitTail=s=>[s,''];`),
-    './translate.js': encoded(`export const glossaryEntries=()=>[];export const glossaryPeople=()=>globalThis.__glossaryPeople||[];`), './world.js': encoded(`export const worldText=()=>'';`),
+    './translate.js': encoded(`export const glossaryEntries=()=>globalThis.__glossaryEntries||[];export const glossaryPeople=()=>globalThis.__glossaryPeople||[];`), './world.js': encoded(`export const worldText=()=>'';`),
 };
 const src = await readFile(new URL('../src/phonedata.js', import.meta.url), 'utf8');
 const data = await import(encoded(src.replace(/from '([^']+)'/g, (all, k) => `from '${map[k] || k}'`)));
@@ -2068,4 +2068,30 @@ test('다녀간 곳: the owner\'s home is one row for as long as it is their hom
     assert.deepEqual(c.p.visits.filter(x => x.home).map(x => x.place), ['flat in Sachsenhausen', 'Wohnung in Mitte']);
     await data.undoRound(c.m, c.p);
     assert.deepEqual(c.p.visits.filter(x => x.home).map(x => x.place), ['flat in Sachsenhausen']);
+});
+
+test('용어집 two forms of one name, everywhere a person is found: 위치 정보 (an older row gets the other form), texts, the clock\'s choices, SCENES WITH, the map\'s "with"', async () => {
+    globalThis.__glossaryEntries = [{ src: 'Ivo', ko: '이보' }];
+    try {
+        const chat = [say('Ren', 'start'), say('Mara', 'morning'), say('Ren', '이보와 Blue Note에 갔다. <span class="time">21:40</span>')];
+        const c = setup(chat);
+        clockPhone(c.p);
+        // a row read before 용어집 had the pair: no aka of its other form
+        c.p.where.people.push({ name: 'Ivo', city: 'Chicago', tz: 'America/Chicago', names: ['Chicago'] });
+        c.p.where.people.find(x => x.name === 'Ren').city = 'Frankfurt am Main';
+        c.p.where.people.find(x => x.name === 'Ren').names = ['Frankfurt am Main'];
+        c.p.threads = [{ with: 'Ivo', messages: [{ from: 'Ivo', text: 'Bist du da?', time: '11-04 20:00' }] }];
+        c.m.phoneScreenHolder = '이보';
+        globalThis.__everydayIn = [];
+        await run(c.m, { now: '11-04 23:30', events: [{ id: 'blue-note', at: 2, quote: '이보와 Blue Note에 갔다', date: '11-04', time: '23:00', summary: 'Blue Note with Ivo',
+            phone: { threads: [{ with: '이보', messages: [{ from: '이보', text: '재밌었다', time: '11-04 23:20' }] }], contacts: [{ name: '이보' }],
+                visits: [{ place: 'Blue Note', city: 'Chicago', with: ['이보', 'Ivo'], time: '11-04 21:40' }, { place: 'Frankfurt', city: '', with: [], time: '11-04 08:00' }, { place: 'Frankfurt Hauptbahnhof', city: 'Frankfurt', with: [], time: '11-04 09:00' }] } }] });
+        const ivo = c.p.where.people.find(x => x.name === 'Ivo');
+        assert.ok(ivo.aka.includes('이보'), 'the older row has the other form now');
+        assert.equal(c.p.threads.filter(t => ['Ivo', '이보'].includes(t.with)).length, 1, 'one thread for one person');
+        assert.match(T.input, /On 이보's clock|On Ivo's clock/, 'the default screen 이보 found on the row Ivo');
+        const scenes = (globalThis.__everydayIn.at(-1) || '').split('[SCENES WITH]\n')[1]?.split('\n\n')[0].split('\n') || [];
+        assert.equal(scenes.filter(n => n === 'Ivo' || n === '이보').length, 1, 'SCENES WITH: once');
+        assert.deepEqual(c.p.visits.map(x => [x.place, x.with]), [['Blue Note', ['Ivo']], ['Frankfurt Hauptbahnhof', []]], 'the home city alone, by a shorter form, is no visit; a place in it is');
+    } finally { delete globalThis.__glossaryEntries; }
 });
