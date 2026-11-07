@@ -46,10 +46,10 @@ export const wealthBlock = (plan,kind) => `[FINANCIAL SCALE]\n${JSON.stringify({
 export function wealthDate(m,p,now=p?.now) {
     const date=p.money?.fxDate || p.investment?.date;
     if (/^\d{4}-\d{2}-\d{2}$/.test(date || '')) return date;
-    // the year only from a date the archive writes (yearIn): a bare number may be money or the past
-    const full=[...String(m.text || '').matchAll(/(?<!\d)((?:19|20)\d{2})[-/.](\d{2})[-/.](\d{2})(?!\d)/g)].at(-1);
-    const year=p.noYear ? '' : p.year ? String(p.year) : yearIn(m.text);
-    return year && /^\d{2}-\d{2}/.test(now || '') ? `${year}-${now.slice(0,5)}` : full ? `${full[1]}-${full[2]}-${full[3]}` : '';
+    // (the phone's year: set when it was made, from a status line or the reading of the story, or by the user; never a
+    // guess from the dates the archive writes)
+    const year=p.noYear ? '' : p.year ? String(p.year) : '';
+    return year && /^\d{2}-\d{2}/.test(now || '') ? `${year}-${now.slice(0,5)}` : '';
 }
 export function addWealthFX(m,rows,date) {
     for(const x of (Array.isArray(rows)?rows:[]).slice(0,30)) {

@@ -42,8 +42,13 @@ export async function withDateOrder(order, fn) { const me = { order }; runs.push
 // what "evidence" may quote in a request: everything but the blocks the code makes for the model (OWNER'S CLOCK and its
 // time choices, the app's records, dates, rates, names). A block it doesn't make stays: the story's own, and a part of the
 // story that only looks like one ("[BREAKING NEWS]", "[A text from Mina]" in a message)
-const CODE_BLOCKS = /^\[(?:OWNER'S CLOCK|PHONE NOW|MONEY NOW|INVESTMENTS NOW|LIFE NOW|WEATHER NOW|EXISTING [A-Z ]+|EVALUATION DATE|FX PAIRS|SAVED RATES|CURRENCY|ACCOUNT CURRENCIES|PUBLIC SECURITIES|WEALTH[A-Z ]*|BANK|REBUILD[A-Z ]*|MONEY ALREADY MOVED|ORDERED|DAYS|STORY DAYS|DATE|LIVES IN|COUNTRY|OWNER COUNTRY|PHONE COUNTRY|STORY YEAR|NAMES|ONLY THESE|[A-Z ]+ SO FAR|EVENTS ON THE PHONE|DELIVERY SHOPS|SHOPS|NEARBY|PUT ON THE PHONE NOW|SCENES WITH|DEVICE|BODY ON THE PHONE NOW|DIARY|PEOPLE AROUND)(?=[\]\s—–-])/;
-export const storyText = input => String(input || '').split(/\n\n(?=\[[A-Z][A-Z'’ ]+[^\]\n]*\]\n)/).filter(b => !CODE_BLOCKS.test(b)).join('\n\n');
+// (by their whole names, each ending its header or followed by " —": "[DATE NIGHT]", "[DIARY ENTRY]", "[BANK ALERT]",
+// "[DAYS LATER]" are the story's)
+const CODE_BLOCKS = /^\[(?:OWNER'S CLOCK|PHONE NOW|MONEY NOW|INVESTMENTS NOW|LIFE NOW|WEATHER NOW|EXISTING (?:ACCOUNTS|PUBLIC PRICES|QUOTES|ARCHIVE|SCHEDULES)|EVALUATION DATE|FX PAIRS|SAVED RATES|CURRENCY|ACCOUNT CURRENCIES|PUBLIC SECURITIES|WEALTH|FINANCIAL SCALE|BANK|REBUILD(?: ACCOUNTS)?|MONEY ALREADY MOVED|ORDERED|DAYS|STORY DAYS|DATE|LIVES IN|COUNTRY|OWNER COUNTRY|PHONE COUNTRY|STORY YEAR|NAMES|ONLY THESE|[A-Z ]+ SO FAR|EVENTS ON THE PHONE|DELIVERY SHOPS|SHOPS|NEARBY|PUT ON THE PHONE NOW|SCENES WITH|DEVICE|BODY ON THE PHONE NOW|DIARY|PEOPLE AROUND)(?=\]|\s+—)/;
+// (a part of a message that starts like one, "[BANK]\n…" with the chat's messages after it, "[#13] Mina: …", is the
+// story's: no block the code makes holds a chat message or an archive section)
+const IN_STORY = /\n(?:\[#\d+\]|## )/;
+export const storyText = input => String(input || '').split(/\n\n(?=\[[A-Z][A-Z'’ ]+[^\]\n]*\]\n)/).filter(b => !CODE_BLOCKS.test(b) || IN_STORY.test(b)).join('\n\n');
 export const swapDate = (a, b, sep) => Number(b) <= 12 && (Number(a) > 12 || sep !== '-' && Number(a) <= 31 && dayFirstChat());
 export const when = v => {
     // "10-25 21:00", or with the year in front ("2026-10-25 21:00", "2026/10/25T21:00") or after ("25.10.2026 21:00", "10/25/2026 9:00")
@@ -61,19 +66,27 @@ export const when = v => {
 // length of time ("2시간 15분", "15분 뒤", "3시 15분 전" is 2:45), never seconds alone. Only where no colon clock is
 // read: every colon clock is read as before
 const KO_SP = String.raw`[ \t\u00a0]`;
-const KO_MER = String.raw`(?:오전|오후|새벽|아침|낮|저녁|밤|[aApP]\.?[mM]\.?)`;
-const KO_CLOCK_SRC = String.raw`(?<![\p{N}.:])(?:(${KO_MER})(?:에|의)?${KO_SP}*)?(\d{1,2})${KO_SP}*시(?!간)(?:${KO_SP}*(?:(\d{1,2})${KO_SP}*분|(반))(?:${KO_SP}*\d{1,2}${KO_SP}*초)?)?(?:(?:에|엔)?${KO_SP}*((?:오전|오후|새벽|아침|낮|저녁|밤)(?:에|엔|의)?(?![\p{L}])|[aApP]\.?[mM]\.?(?![A-Za-z])))?(?!${KO_SP}*(?:(?:전|후|뒤)(?:(?:이|인|일|입|였)\p{L}*|(?:에|엔|로|부터|까지|쯤|만|도|은|는)*(?![\p{L}]))|(?:이전|이후|직전|직후|방향|넘어)\p{L}*|동안\p{L}*|만에|지나\p{L}*|넘게|가량|간(?![\p{L}])|(?:쯤|경)${KO_SP}*(?:전|후|뒤|이전|이후)))`;
+// (how far past it: "3시가 조금 넘은", "3시가 훌쩍 지난", "3시가 한참이나 지났다")
+// ("지난" as the time gone past, never "지난번", "지난주", "지난달", "지난해": the last one of something)
+const KO_PAST_NOUN = String.raw`지난(?!번|주|달|해|날|밤|봄|여름|가을|겨울|학기|시즌|회|번째|분기|정권)`;
+const KO_PAST_ADV = String.raw`(?:조금|좀|막|살짝|훨씬|훌쩍|한참|이미|벌써|약간|꽤|거의|이제|금방|좀더|조금더)(?:이나|나|은|는)?`;
+// ("am" · "pm" never the end of a word: "Liam 12시", "Team 12시 회의")
+const KO_MER = String.raw`(?:오전|오후|새벽|아침|낮|저녁|밤|(?<![A-Za-z])[aApP]\.?[mM]\.?)`;
+const KO_CLOCK_SRC = String.raw`(?<![\p{N}.:])(?:(${KO_MER})(?:에|의)?${KO_SP}*)?(\d{1,2})${KO_SP}*시(?!간|즌|리즈)(?:${KO_SP}*(?:(\d{1,2})${KO_SP}*분|(반))(?:${KO_SP}*\d{1,2}${KO_SP}*초)?)?(?:(?:에|엔)?${KO_SP}*((?:오전|오후|새벽|아침|낮|저녁|밤)(?:에|엔|의)?(?![\p{L}])|(?<![A-Za-z])[aApP]\.?[mM]\.?(?![A-Za-z])))?(?!${KO_SP}*(?:(?:전|후|뒤)(?:(?:이|인|일|입|였)\p{L}*|(?:에|엔|으로|로|부터|까지|쯤|만|도|은|는|의|과|와|보다|가|을|를|라서|라|이라)*(?![\p{L}]))|(?:이전|이후|직전|직후|방향)\p{L}*|(?:가|를|이|을|은|는|도|만)${KO_SP}*(?:${KO_PAST_ADV}${KO_SP}*)?(?:넘|지나|지났|${KO_PAST_NOUN}|지날|지남)\p{L}*|(?:${KO_PAST_ADV}${KO_SP}*)?(?:넘(?!버)|지나(?!가(?:던|는))|지났|${KO_PAST_NOUN}|지날|지남)\p{L}*|동안\p{L}*|만에|가량|간(?![\p{L}])|(?:쯤|경)${KO_SP}*(?:전|후|뒤|이전|이후)))`;
 const KO_CLOCK_ALL = new RegExp(KO_CLOCK_SRC, 'gu');
 // (a meridiem after it: a Korean one never as the start of a word, "4시 낮잠"; "PM" with whatever follows, "4시 PM이야",
 // "4시에 pm")
 // (never a time before or after one, "3시 이후", "3시쯤 전", "그건 3시 전이었다", nor "3시 방향"; "3시 15분 전화" is a clock)
 // (a reading that left its minutes behind to get past a guard, "3시" of "3시 15분 전", is none)
 const KO_MORE = new RegExp(String.raw`^${KO_SP}*(?:\d{1,2}${KO_SP}*분|반)`, 'u');
+// (nor one that left its seconds behind, "4시 15분" of "4시 15분 30초 전")
+const KO_SECONDS = new RegExp(String.raw`^${KO_SP}*\d{1,2}${KO_SP}*초`, 'u');
 // every Korean reading in a text, in order, with where it is: { index, text, h, m }
 export function koClocks(text) {
     const s = String(text || ''), out = [];
     for (const hit of s.matchAll(KO_CLOCK_ALL)) {
-        if (!hit[3] && !hit[4] && KO_MORE.test(s.slice(hit.index + hit[0].length))) continue;
+        const after = s.slice(hit.index + hit[0].length);
+        if (!hit[3] && !hit[4] && KO_MORE.test(after) || KO_SECONDS.test(after)) continue;
         const c = koClock(hit);
         if (c) out.push({ index: hit.index, text: hit[0], ...c });
     }
@@ -86,6 +99,8 @@ export function koClock(hit) {
     if (hit[1] && hit[5] || m > 59) return null;
     let h = h0;
     if (mer) {
+        // (0시: 오전 · 새벽 · 밤 0시 is midnight, 오후 · 낮 0시 noon)
+        if (h0 === 0) return /^(?:오전|새벽|밤|[aA])/.test(mer) ? { h: 0, m } : /^(?:오후|낮|[pP])/.test(mer) ? { h: 12, m } : null;
         if (!(h0 >= 1 && h0 <= 12)) return null;
         if (/^(?:오후|저녁|[pP])/.test(mer)) h = h0 % 12 + 12;
         else if (/^낮/.test(mer)) h = h0 === 12 ? 12 : h0 <= 6 ? h0 + 12 : h0;
@@ -100,11 +115,11 @@ export const hhmm = v => {
     const s = String(v || '');
     // (a Korean clock the reader turns down, "3시 이후", "3시 15분 전", "12시간", "오후 16시", is no time at all: never its
     // first numbers read the old way)
-    if (!/(\d{1,2})\s*:\s*(\d{2})/.test(s)) { const ko = koClockText(s); if (ko) return ko; if (/\d\s*시/.test(s)) return ''; }
-    const mt = s.match(/(\d{1,2})\s*:\s*(\d{2})/) || s.match(/(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?/) || s.match(/(\d{1,2})\s*(?=[ap]\.?m\b)/i);
+    if (!/(\d{1,2})\s*:\s*(\d{2})/.test(s)) { const ko = koClockText(s); if (ko) return ko; if (/\d\s*시(?!간|즌|리즈)/.test(s)) return ''; }
+    const mt = s.match(/(\d{1,2})\s*:\s*(\d{2})/) || s.match(/(\d{1,2})\s*시(?!간|즌|리즈)(?:\s*(\d{1,2})\s*분)?/) || s.match(/(\d{1,2})\s*(?=[ap]\.?m\b)/i);
     if (!mt) return '';
     let h = Number(mt[1]);
-    const m = Number(mt[2] || 0), pm = /(?<![a-z])[pP]\.?[mM]\b|오후|저녁|밤/.test(s), am = /(?<![a-z])[aA]\.?[mM]\b|오전|새벽|아침/.test(s);
+    const m = Number(mt[2] || 0), pm = /(?<![A-Za-z])[pP]\.?[mM]\b|오후|저녁|밤/.test(s), am = /(?<![A-Za-z])[aA]\.?[mM]\b|오전|새벽|아침/.test(s);
     if (pm && h < 12) h += 12; else if (am && h === 12) h = 0;
     return h < 24 && m < 60 ? `${pad(h)}:${pad(m)}` : '';
 };
@@ -294,7 +309,8 @@ function readHtmlClocks(input, fields = false, excluded = null, positions = fals
         node.text += text;
         // (what a reader sees: a part hidden by its style is left out, for the Korean readings)
         if (!node.hiddenStyle) node.seen += text;
-        if (expose && !node.removed) { visible += text; if (!node.hiddenStyle) shown += text; }
+        // (nor, for a date by a clock, what a quote, code or a timer shows: "<q>11월 5일</q> <span class="time">16:15</span>")
+        if (expose && !node.removed) { visible += text; if (!node.hiddenStyle && !stack.some(x => x.blocked && !(x.inDate && !x.ownBlock))) shown += text; }
     };
     const finish = (complete, end = input.length) => {
         const node = stack.pop(), parent = stack[stack.length - 1];
@@ -304,10 +320,18 @@ function readHtmlClocks(input, fields = false, excluded = null, positions = fals
             if (excluded) excluded.push([node.start, end]);
             // (inside a <time> whose datetime is a date, a part with no reason of its own to be left out is what it shows)
             if (node.inDate && !node.ownBlock && complete) { parent.text += node.text; parent.seen += node.hiddenStyle ? '' : node.seen; return; }
-            parent.text += '\0';
-            // (a part shown but not read, a quote, code or a timer, keeps the text on either side apart, as for a colon clock)
-            if (!node.hiddenStyle) parent.seen += '\0';
-            if (!complete || !node.removed && !HTML_INLINE.test(node.name)) visible = shown = '';
+            // (a part shown but not read, a quote, code or a timer, keeps the text on either side apart, as for a colon clock;
+            // an empty one, or one of spaces only, keeps nothing apart: "11월 5일 <code></code>16:15" is still one stamp, inside
+            // a time field too)
+            const inner = node.text.replace(/\0/g, ''), empty = !node.removed && !/[^\s\u00a0]/.test(clockHtmlText(inner)), sep = empty ? inner : '\0';
+            parent.text += sep;
+            if (!node.hiddenStyle) {
+                parent.seen += sep;
+                // (a <time> whose datetime is a date shows that date: a clock right after it is dated by it)
+                if (complete && !node.removed) shown += node.dateOnly ? node.seen : sep;
+            }
+            // (a <time> that shows a date runs on into what follows it, as a span does)
+            if (!complete || !node.removed && !HTML_INLINE.test(node.name) && !(node.dateOnly && complete)) visible = shown = '';
             return;
         }
         const seenTime = clockHtmlText(node.seen).trim();
@@ -325,13 +349,15 @@ function readHtmlClocks(input, fields = false, excluded = null, positions = fals
         }
         const datedText = sourceTime.replace(/\s+/g, ' ');
         const dated = node.marked && node.hints.length && datedText.length <= 60 && datedClocks(datedText).some(x => x.sourceTime === datedText);
-        const tail = clock ? clockVisibleText(visible).trimEnd() : '', seenTail = clock ? clockVisibleText(shown).trimEnd() : '';
-        // the last line's end only (a stamp fits in 60 characters; cut at a space, so no date is cut in two)
-        const lastLine = t => { const l = t.slice(t.lastIndexOf('\n') + 1); return l.length > 80 ? l.slice(l.indexOf(' ', l.length - 80) + 1) : l; };
+        // the stamps ending the last line (a stamp fits in 60 characters: its last 80, cut at a space)
+        const endStamps = t => { const l0 = t.slice(t.lastIndexOf('\n') + 1), l = l0.length > 80 ? l0.slice(l0.indexOf(' ', l0.length - 80) + 1) : l0; return datedClocks(l).filter(x => t.endsWith(x.sourceTime)); };
+        const own = sourceTime.replace(/\u00a0/g, ' ');
         // Only the dated span ending at this exact occurrence can own it. An earlier equal clock cannot.
-        const adjacent = clock && tail.endsWith(sourceTime.replace(/\u00a0/g, ' ')) && datedClocks(lastLine(tail)).some(x => tail.endsWith(x.sourceTime));
-        // (its date as a reader sees it: never one its style hides, and never a clock that is hidden itself)
-        const near = adjacent && !node.hiddenStyle && seenTail.endsWith(sourceTime.replace(/\u00a0/g, ' ')) ? datedClocks(lastLine(seenTail)).filter(x => seenTail.endsWith(x.sourceTime)).pop() || null : null;
+        // (a shown clock goes by what a reader sees: a date its style hides is none, and hidden letters between a date and it
+        // keep nothing apart; a hidden clock by all there is, so a date beside it still owns it and it gives no hint)
+        const tail = clock ? clockVisibleText(node.hiddenStyle ? visible : shown).trimEnd() : '';
+        const hits = clock && tail.endsWith(own) ? endStamps(tail) : [], adjacent = hits.length > 0;
+        const near = adjacent && !node.hiddenStyle ? hits.pop() : null;
         // a time field that is a date and a clock ("11.05 16:15", "11월 5일 16시 15분"), or a clock right after its date on
         // the screen ("<span>11월 5일 </span><span class="time">16:15</span>"): a dated stamp (the story's text alone never is one)
         const whole = !clock ? wholeDated(node) : null, at = positions ? { position: node.start } : {};

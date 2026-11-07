@@ -645,7 +645,7 @@ test('manual city lookup resolves known aliases without a country or owner-zone 
     }
     for (const country of ['US', 'CA', 'KR', '']) assert.equal(data.tzForCity(p, 'Unknown City', country), '');
     const before = structuredClone(p);
-    await assert.rejects(() => data.setPlaceCity(m, p, 'New Person', 'Unknown City'), /시간대를 찾지 못/);
+    await assert.rejects(() => data.setPlaceCity(m, p, 'New Person', 'Unknown City'), err => /어느 나라 도시인지/.test(err.message) && err.askCountry === true);
     assert.deepEqual(p, before, 'an unresolved city leaves no partial person or manual setting');
     await data.setPlaceCity(m, p, 'Ren', 'San Francisco');
     assert.equal(p.where.people[0].tz, 'America/Los_Angeles');

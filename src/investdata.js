@@ -109,9 +109,9 @@ function stopAt(m, p) {
 }
 export function investmentDate(m, p) {
     if (validDate(p.investment?.date)) return p.investment.date;
-    // the year only from a date the archive writes, never a bare number (it may be money or the past)
-    // the story's day where an investment fill would stop reading (now, when it reads to the end)
-    const day = storyNow(p, stopAt(m, p)).slice(0, 5), year = p.noYear ? '' : p.year ? String(p.year) : yearIn(m.text);
+    // the phone's year (never a guess from the dates the archive writes), on the story's day where an investment fill would
+    // stop reading (now, when it reads to the end)
+    const day = storyNow(p, stopAt(m, p)).slice(0, 5), year = p.noYear ? '' : p.year ? String(p.year) : '';
     const date = year && day ? `${year}-${day}` : '';
     return validDate(date) ? date : '';
 }

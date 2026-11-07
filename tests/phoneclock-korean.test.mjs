@@ -99,3 +99,43 @@ test('the app\'s answers: a Korean clock the reader turns down is no time (never
     for (const s of ['3시 이후', '3시 이전', '3시 15분 전', '2시간 15분', '12시간', '오후 16시', '3시 방향']) assert.equal(hhmm(s), '', s);
     for (const [s, want] of [['7:00 PM', '19:00'], ['7pm', '19:00'], ['19시', '19:00'], ['오후 3시', '15:00'], ['3시쯤', '03:00'], ['15:00 이후', '15:00']]) assert.equal(hhmm(s), want, s);
 });
+
+test('점검 수정: "am" · "pm" never the end of a word; more ways a time before or after one is written; 0시 with 오전 · 오후', () => {
+    for (const s of ['Liam 12시', 'Team 12시 회의', 'SPAM 3시', 'Pam 4시 15분']) assert.equal(koClockText(s), s.startsWith('Liam') || s.startsWith('Team') ? '12:00' : s.startsWith('SPAM') ? '03:00' : '04:15', s);
+    assert.equal(koClockText('12시 pm'), '12:00');
+    assert.equal(hhmm('Liam 12시'), '12:00');
+    for (const s of ['3시 15분 전으로', '3시 전의 일', '3시 후가 좋아', '3시 넘었어', '3시가 지나서', '3시를 넘겨', '4시 15분 30초 전', '3시 뒤라서', '3시 전과 같다', '3시 전보다']) assert.equal(koClockText(s), '', s);
+    for (const [s, want] of [['16시 15분 전화가 왔다', '16:15'], ['16시 15분 30초', '16:15'], ['오전 0시', '00:00'], ['새벽 0시 30분', '00:30'], ['밤 0시', '00:00'], ['오후 0시', '12:00'], ['0시', '00:00']]) assert.equal(koClockText(s), want, s);
+});
+
+test('점검 수정: a date in a quote, code or a timer is no date of the clock beside it', () => {
+    assert.deepEqual(htmlDatedClocks('<q>11월 5일</q> <span class="time">16:15</span>'), []);
+    assert.deepEqual(htmlDatedClocks('<code>11.05</code> <span class="time">16:15</span>'), []);
+    assert.deepEqual(htmlDatedClocks('<span>11.05 </span><span class="time">16:15</span>').map(x => x.local), ['11-05 16:15']);
+});
+
+test('점검 수정 2: 넘다 · 지나다 after a time, however written, is no clock; an empty quote or code keeps a date and its clock together', () => {
+    for (const s of ['3시가 조금 넘은 시각', '3시 넘자', '3시 넘으면', '오전 3시가 막 지났다', '3시가 지나가자', '3시를 훨씬 넘겨서', '오후 3시가 넘은 시각']) assert.equal(koClockText(s), '', s);
+    for (const [s, want] of [['3시가 됐다', '03:00'], ['3시를 가리켰다', '03:00'], ['3시 전화', '03:00'], ['3시 지점에서', '03:00']]) assert.equal(koClockText(s), want, s);
+    assert.deepEqual(htmlDatedClocks('11월 5일 <code></code><span class="time">16:15</span>').map(x => x.local), ['11-05 16:15']);
+    assert.deepEqual(htmlDatedClocks('11월 5일<span class="timer"> </span><span class="time">16:15</span>').map(x => x.local), ['11-05 16:15']);
+    assert.deepEqual(htmlDatedClocks('11월 5일 <code>x</code> <span class="time">16:15</span>'), []);
+});
+
+test('점검 3: past a time however written (지난 · 지날 · 지남, 은 · 는 · 도 · 만, 훌쩍 · 한참이나) is no clock; 넘버원 · 지나가던 · 7시간 · 2시즌 read as they are', () => {
+    for (const s of ['3시가 지난 시각', '오후 3시가 조금 지난 시각이었다', '3시는 넘었다', '3시도 지났다', '3시만 넘으면', '3시가 훌쩍 넘었다', '3시가 한참이나 지난', '3시가 꽤나 지난', '3시가 거의 넘은', '11월 5일 2시즌', '3시리즈']) assert.equal(koClockText(s), '', s);
+    for (const s of ['3시 넘버원 카페에서 만나', '3시 지나가던 버스', '3시는 회의', '3시만 기다려', '3시 막 시작했다']) assert.equal(koClockText(s), '03:00', s);
+    assert.equal(hhmm('11 pm (7시간 수면)'), '23:00');
+    assert.equal(hhmm('7시간'), '');
+});
+
+test('점검 3: an empty code inside a time field, a non-breaking space in one, hidden letters between a date and its clock keep them one stamp; a <time> that shows a date dates the clock after it', () => {
+    for (const t of ['<span class="time">11월 5일 <code></code>16:15</span>', '11월 5일 <code>&nbsp;</code><span class="time">16:15</span>', '<b>11월 5일</b><span style="display:none">zz</span> <span class="time">16:15</span>',
+        '<time datetime="2026-11-05">11월 5일</time> <span class="time">16:15</span>']) assert.deepEqual(htmlDatedClocks(t).map(x => x.local), ['11-05 16:15'], t);
+    for (const t of ['<q>11월 5일</q> <span class="time">16:15</span>', '<span style="display:none">11월 5일 </span><span class="time">16:15</span>']) assert.deepEqual(htmlDatedClocks(t), [], t);
+});
+
+test('점검 4: "지난번 · 지난주 · 지난달" after a time is the time; "지나가면 · 지나가지고" is past it', () => {
+    for (const [s, want] of [['오늘 3시 지난번 그 카페에서 보자', '03:00'], ['내일 오후 3시 지난주 거기서', '15:00'], ['3시 지난달처럼', '03:00'], ['3시 지나가던 버스', '03:00'], ['3시 지나가는 길에', '03:00'],
+        ['3시 지나가면 전화해', ''], ['3시 지나가지고 연락할게', ''], ['3시가 지난 시각', ''], ['3시 지난 시점', '']]) assert.equal(koClockText(s), want, s);
+});
