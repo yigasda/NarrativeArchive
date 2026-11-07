@@ -93,6 +93,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax 
 .mp_key i { width: 12px; height: 12px; border-radius: 3px; }
 .mp_th { display: flex; align-items: baseline; gap: 8px; padding: 6px 26px 8px; flex: none; }
 .mp_th b { font-size: 20px; --axfs: 20px; font-weight: 600; }
+.mp_th .mq_flag { align-self: center; }
 .mp_th span { font-size: 13px; --axfs: 13px; color: #6b7380; --axfg: #6b7380; }
 .mp_pl { font-size: 12px; font-weight: 600; fill: #161b22; stroke: #f2efe8; stroke-width: 3px; paint-order: stroke; }
 .mp_pl.dk { fill: #fff; stroke: #1f2630; }
@@ -749,10 +750,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .mq_in:empty::before { content: attr(data-ph); color: #8a929d; pointer-events: none; }
 .ax .mq_x { width: 22px; height: 22px; border-radius: 50%; --axr: 50%; --axbg: #b9bfc8; --axsh: none; display: none; place-items: center; padding: 0; flex: none; }
 .ax .mq_x.on { display: grid; }
-.ax .mq_go { width: auto; margin: 0 16px 6px; --axbg: #fff; --axsh: 0 1px 2px rgba(22, 27, 34, 0.05), 0 6px 16px rgba(22, 27, 34, 0.06); --axr: 14px; color: #8a929d; --axfg: #8a929d; font-size: 15px; --axfs: 15px; }
 .mq_ph { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mq_lv { display: flex; align-items: center; gap: 8px; padding: 2px 26px 10px; font-size: 13px; --axfs: 13px; color: #6b7380; --axfg: #6b7380; }
-.ax .mq_sm .mq_chip { height: 28px; padding: 0 10px; font-size: 12px; --axfs: 12px; --axsh: 0 1px 2px rgba(22, 27, 34, 0.05); }
 .mq_kh { display: flex; align-items: center; gap: 8px; padding: 2px 26px 6px; }
 .mq_kh b { font-size: 18px; --axfs: 18px; font-weight: 600; }
 .ax .mq_res { flex: 1; min-height: 0; overflow-y: auto; }

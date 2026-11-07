@@ -9,7 +9,9 @@ import { autopic, autopicPeople, drafting, drawing, looksOf, writing } from './p
 import { bigClock, byStory, clockOf, COUNTRIES, fmtDate, fmtTime, fullDate, gapDays, hasKo, koOn, lastTime, listTime, localeOf, loreOff, MOODS, pad, parts, phoneLore, placesOf, REMAKE, rowDay, savedName, dateOrderOf, placeInfo, screenHolderLabel, screenHolderChoices } from './phonedata.js';
 import { threadNew } from './phonehome.js';
 import { screenView } from './phonescreen.js';
-import { BUSY, pinSpots, pinSvg, STAY, stripSvg, townKinds, townSvg } from './phonemapart.js';
+import { BUSY, pinSpots, pinSvg, STAY, stripSvg, townKinds, townPlace, townSvg } from './phonemapart.js';
+import { PLACE } from './phonemapcity.js';
+import { flagSvg } from './phoneflags.js';
 import { recentTrackers } from './scenes.js';
 import { sectionKey } from './sections.js';
 import { glossaryEntries } from './translate.js';
@@ -916,6 +918,8 @@ export function mapTowns(p, m) {
 }
 // a town's night: they were last there between 21 and 5
 export const mapNight = (g, now) => { const cmp = storyCmp(now), lastR = [...g.rows].sort((a, b) => cmp(b.last || '', a.last || ''))[0], hr = Number((/^\d{2}-\d{2} (\d{2})/.exec(lastR?.last || '') || [0, 12])[1]); return hr >= 21 || hr < 5; };
+// the town's flag before its name (a town the city table knows)
+const townFlag = city => { const i = city ? townPlace(city) : -1; return i >= 0 && PLACE[i][3] ? flagSvg(PLACE[i][3], 22) : ''; };
 export function mapScreen(p, now, m, pick = '') {
     const { pl, groups, kinds } = mapTowns(p, m);
     const who = r => (r.with.length ? ` · ${esc(r.with.length > 2 ? `${r.with[0]} 외 ${r.with.length - 1}명` : r.with.join(' · '))}${r.with.length > 2 ? '과' : waOf(m, r.with[r.with.length - 1])}` : '');
@@ -935,7 +939,7 @@ export function mapScreen(p, now, m, pick = '') {
     return `<div class="mp_wx${dark ? ' mp_dark' : ''}"><div class="mp_bg">${art}</div>${axBar(p, now, dark ? '#fff' : '#111')}${axTop(axCb('home'), `<button type="button" class="ax_cb" data-go="mapq" aria-label="도시 찾기">${ax('search', 18, 'currentColor', 2.3)}</button>`)}
       <div class="ax_scroll"><i class="mp_gap"></i><div class="mp_sheet"><i class="mp_grab"></i>
         ${mapStrip(p, now, m, pl, g.k)}
-        <div class="mp_th"><b>${esc(g.city || '그 밖의 곳')}</b><span>${g.rows.length}곳${lastDay ? ` · 마지막 ${esc(fmtDate(p, lastDay))}` : ''}</span></div>
+        <div class="mp_th">${townFlag(g.city)}<b>${esc(g.city || '그 밖의 곳')}</b><span>${g.rows.length}곳${lastDay ? ` · 마지막 ${esc(fmtDate(p, lastDay))}` : ''}</span></div>
         <div class="ax_card">${g.rows.map(rowHtml).join('')}</div>${other}<i class="ax_pad"></i></div></div>
       ${axInd()}</div>`;
 }

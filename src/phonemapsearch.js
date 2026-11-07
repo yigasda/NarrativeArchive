@@ -123,13 +123,11 @@ export function mapEmptyScreen(p, now, m) {
     const st = stripSvg({ days, today: nowP?.d || 0, blocks: [] }), c = st.cell;
     const ghost = [[3, 5], [11, 12], [18, 21]].map(([a, b]) => `<rect x="${(a - 1) * c + 1}" y="${st.top + 2}" width="${(b - a + 1) * c - 2}" height="14" rx="5" fill="none" stroke="#c9cfd8" stroke-width="1.2" stroke-dasharray="3 3"/>`).join('');
     const strip = `<div class="ax_card mp_month"><div class="mp_mh"><span class="mp_lbl">${mo}월에 다닌 곳</span><span class="mp_big"><b class="cg_num">0</b><u>곳</u><span>이야기에서 어딘가 가면 여기 쌓여요</span></span></div><div class="mp_st">${st.svg.replace('</svg>', `${ghost}</svg>`)}</div></div>`;
-    // where they live (a city, never the country written as one): one small line under the strip (the strip is the screen's one big thing)
-    const where = v ? `${esc(v.ko)}에 살아요` : own.city && !countryOf(own.city) ? `${esc(own.city)}에 살아요` : '사는 도시를 정하면 그 도시 지도가 나와요';
-    const head = `<div class="mq_lv">${cc ? flagSvg(cc, 20) : ''}<span>${cc && FLAG_NAME[cc] ? `${esc(FLAG_NAME[cc])} · ` : ''}${where}</span></div>`;
-    const field = `<button type="button" class="mq_field mq_go" data-go="mapq">${ax('search', 17, '#8a929d', 2.2)}<span class="mq_ph">도시 · 동네 찾기 (東京, Berlin, 홍대 …)</span></button>`;
-    const hoods = v && v.hoods.length ? `<div class="mq_chips mq_sm">${v.hoods.map(h => `<button type="button" class="mq_chip" data-go="mapc" data-i="${at(i, h)}">${esc(HINT[h][3])}</button>`).join('')}</div>` : '';
-    return `<div class="mp_wx"><div class="mp_bg">${art}</div>${axBar(p, now)}${axTop(axCb('home'))}
+    // then the same town heading as a visited town's: the flag and the town they live in (a city, never the country written as one)
+    const name = v ? v.ko : own.city && !countryOf(own.city) ? own.city : '', flag = cc || (i >= 0 ? PLACE[i][3] : '');
+    const head = name || flag ? `<div class="mp_th">${flag ? flagSvg(flag, 22) : ''}<b>${esc(name || FLAG_NAME[flag] || '')}</b></div>` : '';
+    return `<div class="mp_wx"><div class="mp_bg">${art}</div>${axBar(p, now)}${axTop(axCb('home'), findBtn())}
       <div class="ax_scroll"><i class="mp_gap"></i><div class="mp_sheet"><i class="mp_grab"></i>
-        ${strip}${head}${field}${hoods}<i class="ax_pad"></i></div></div>
+        ${strip}${head}<i class="ax_pad"></i></div></div>
       ${axInd()}</div>`;
 }
