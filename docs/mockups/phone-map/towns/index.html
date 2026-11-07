@@ -1,0 +1,23 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>도시 지도 24가지</title><style>
+:root{--axd:#2f6bff}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#d9dce2;font-family:-apple-system,'Noto Sans KR',sans-serif;color:#161b22;padding:28px;width:1720px}
+h1{font-size:22px;margin:0 0 6px}p.s{font-size:13.5px;color:#555;margin:0 0 20px}
+.g{display:grid;grid-template-columns:repeat(4,390px);gap:26px 30px}
+.it b{display:block;font-size:16px;margin:0 0 3px}.it small{display:block;font-size:12px;color:#666;margin:0 0 8px}
+.m{width:390px;height:330px;border-radius:26px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.08),0 10px 26px rgba(0,0,0,.14);position:relative}
+.m svg{display:block}
+.pl{font-size:12px;font-weight:600;fill:#161b22;stroke:#f3f0ea;stroke-width:3px;paint-order:stroke}.pl.dk{fill:#fff;stroke:#1d232c}
+</style></head><body><h1>다녀간 곳 · 도시 지도 46가지 (채택)</h1><p class="s">한 장씩 통째로 그린 지도. 같은 종류도 도시 이름으로 방향 · 좌우 · 물 위치 · 크기가 바뀌어요. 아래는 같은 생김새를 다른 이름으로, 그리고 밤 지도. 도시별 후보는 citytable.md.</p>
+<div class="g" id="o"></div><h1 style="display:none"></h1><h1 style="margin-top:34px">같은 생김새, 다른 이름</h1><div class="g" id="o2"></div><h1 style="margin-top:34px">밤 지도</h1><div class="g" id="o3"></div>
+<script src="towns.js"></script><script>
+const PIN = 'M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z';
+const pin = (x, y, t, dk) => `<g transform="translate(${x - 18} ${y - 34}) scale(1.5)"><path d="${PIN}" fill="var(--axd)" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.4" fill="#fff"/></g><text x="${x + 13}" y="${y - 18}" class="pl${dk ? ' dk' : ''}">${t}</text>`;
+const KEEP = ['gridLake', 'star', 'bay', 'island', 'octagon', 'suburb', 'confluence', 'hillPort', 'fjordVillage', 'canalGrid', 'deltaCity', 'oasis', 'farmVillage', 'lakeResort', 'riverIslands', 'alpineValley', 'interchange', 'portDocks', 'bigRiver', 'apartments', 'alleys', 'downtown', 'atoll', 'stiltVillage', 'riceTerraces', 'canyon', 'usTown', 'euroSquare', 'beachTown', 'campus', 'strait', 'archipelago', 'polarPort', 'pivotFarms', 'mountainCity', 'hillside', 'ruralTown', 'stationFront', 'castleMoat', 'templeRuins', 'crater', 'saltFlats', 'caveTown', 'savanna', 'tropicalResort', 'airportTown'];
+const NAMES = ['Chicago', 'Paris', 'Porto', 'Capri', 'Barcelona', 'Maplewood', 'Lyon', 'Positano', 'Geiranger', 'Suzhou', 'Rotterdam', 'Siwa', 'Bibury', 'Annecy', 'Bordeaux', 'Zermatt', 'Songdo', 'Hamburg', 'Seoul', 'Ilsan', 'Koenji', 'Manhattan', 'Maldives', 'Ganvie', 'Banaue', 'Ronda', 'Hawkins', 'Rothenburg', 'Santa Cruz', 'Seika', 'Istanbul', 'Tongyeong', 'Ilulissat', 'Garden City', 'Bukhansan', 'Gamcheon', 'Boseong', 'Shinjuku', 'Himeji', 'Angkor', 'Santorini', 'Sinan', 'Goreme', 'Serengeti', 'Phuket', 'Incheon'];
+const card = (k, name, dk = false) => { const W = 390, H = 330, h = TOWN3.hsh(name); const pins = [0, 1, 2].map(i => pin(70 + ((h >>> (i * 5)) % 200), 90 + i * 80, ['Café am Fluss', "Ivo's workshop", 'Bahnhof'][i], dk)).join('');
+  return `<div class="it"><b>${TOWN3.KO[k]}</b><small>${k} · ${name}</small><div class="m"><svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${TOWN3.draw(k, W, H, name, dk)}${pins}</svg></div></div>`; };
+document.getElementById('o').innerHTML = KEEP.map((k, i) => card(k, NAMES[i])).join('');
+document.getElementById('o2').innerHTML = ['oldRiver', 'bay', 'star', 'canals'].map((k, i) => card(k, ['Bergen', 'Nice', 'Sintra', 'Delft'][i])).join('');
+document.getElementById('o3').innerHTML = ['gridLake', 'bay', 'walled', 'railHub'].map((k, i) => card(k, ['Chicago', 'Porto', 'Naarden', 'Leipzig'][i], true)).join('');
+</script></body></html>
