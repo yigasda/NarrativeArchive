@@ -2048,3 +2048,10 @@ test('다녀간 곳: making a phone asks for the newest visits; the prompts that
     const got = data.parsePhone(JSON.stringify({ visits: [{ place: 'Café Moka', city: 'Seoul', with: ['Mara', 'Mara', ''], time: '10-25 15:00' }, { place: ' ', city: 'Seoul' }] }), 'Ren');
     assert.deepEqual(got.visits.map(x => [x.place, x.city, x.with, x.time]), [['Café Moka', 'Seoul', ['Mara'], '10-25 15:00']]);
 });
+
+test('messenger choices write a profile-linked person as the story writes them, not as the lowercase key', () => {
+    const c={name1:'User',characterId:0,characters:[{name:'Seraphina'}]};
+    assert.deepEqual(data.screenHolderChoices({phoneProfiles:{mara:{}},text:'Mara finds Ren at the garage.'},c).map(x=>x.name),['User','Seraphina','Mara']);
+    assert.deepEqual(data.screenHolderChoices({phoneProfiles:{mara:{}},phonePre:{mara:{owner:'Mara'}}},c).map(x=>x.name),['User','Seraphina','Mara']);
+    assert.deepEqual(data.screenHolderChoices({phoneProfiles:{mara:{}},people:['Mara']},c).map(x=>x.name),['User','Seraphina','Mara']);
+});

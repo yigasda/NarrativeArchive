@@ -5,7 +5,7 @@
 //   upto (the last message number the archive held), at, inject } }
 
 import { phoneChatScope, phoneTarget, ensurePhoneStory, resetPhoneStory } from './phonestory.js';
-import { prepareWealth, dateOrderOf, needsDateOrder, setDateOrder, setScreenHolder, ensureScreenHolder, screenHolderChoices, setOwnerLives, setPlaceCity, dropPlacePerson, rereadPlaces, placeInfo } from './phonedata.js';
+import { prepareWealth, dateOrderOf, needsDateOrder, setDateOrder, setScreenHolder, ensureScreenHolder, screenHolderChoices, setOwnerLives, setPlaceCity, dropPlacePerson, rereadPlaces, placeInfo, phonePre, preparePhone, setPreYear, screenHolderLabel } from './phonedata.js';
 import { profileEntries, resolvePhoneProfile, currentPersonaBinding } from './phoneprofile.js';
 import { investmentScreen } from './investui.js';
 import { collectInvestmentRecords, fillInvestment, fillChartHistory, refreshMarket, refreshBankFX, investmentDate, validDate } from './investdata.js';
@@ -15,7 +15,7 @@ import { ctx, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
 import { applyInjection } from './inject.js';
 import { faceHtml, nameKey, peopleList } from './people.js';
 import { drafting, drawing, drawPhoto, drawPost, filling, makeDraft, paging, recording, recordVoice, searching, searchPage, shooting, takePhoto, webPage, writeEntry, writing } from './phoneai.js';
-import { APPS, AXB, AXB_C, busyHtml, setDate, setScreenHolderView, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setOwnerProfile, setWho, snsPost, snsScreen, statusBar, threadScreen, setPlace } from './phoneapps.js';
+import { APPS, AXB, AXB_C, busyHtml, setDate, setScreenHolderView, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setOwnerProfile, setWho, snsPost, snsScreen, statusBar, threadScreen, setPlace, prepScreen } from './phoneapps.js';
 import { dropStretch, ensureIds, ensureYear, hasDatedRecords, noArchive, setStoryYear, storyYear, fillDevice, fillMoney, fillVoice, koOn, loreOff, makePhone, tidyKo, markAfter, phoneLore, REMAKE, restoreRounds, retryMoney, showNow, storyNow, syncLeft, syncRows, syncState, tidyJournal, undoRound } from './phonedata.js';
 import { busy, watchBusy, exclusive, journalRead, journalWrite, syncOf } from './phonesync.js';
 import { syncPick, syncSettings } from './phonesyncui.js';
@@ -25,7 +25,7 @@ import { marksScreen, pageView, searchOne, searchScreen, tabsScreen } from './ph
 import { fillDelivery, fillLife, fillScreen, fillShopMenus, menuWanted, refreshNearby } from './phonelife.js';
 import { alarmScreen, setStory, cartScreen, cityList, cityScreen, clockScreen, compareScreen, dlvScreen, fileScreen, filesScreen, folderScreen, healthScreen, heartScreen, hereWidget, itemScreen, orderScreen, ordersScreen, payScreen, rateScreen, shopScreen2, sleepScreen, stepsScreen, timerScreen, waterScreen, weatherScreen, weightScreen, workScreen, worldScreen } from './phonelifeapps.js';
 import { screenTimeScreen } from './phonestime.js';
-import { openGlossary } from './translate.js';
+import { glossaryEntries, openGlossary } from './translate.js';
 // 을 / 를 after a word: by its last syllable's final consonant (a Latin ending, like SNS, reads as 를)
 const josa = w => { const c = w.charCodeAt(w.length - 1) - 0xac00; return c >= 0 && c < 11172 && c % 28 ? '을' : '를'; };
 import { confirm, esc } from './util.js';
@@ -49,7 +49,7 @@ function screen(p, view, m, roster, ui) {
         : v === 'note' ? noteScreen(p, now) : v === 'noteone' ? noteOne(p, now, Number(i)) : v === 'search' ? searchScreen(p, now) : v === 'page' ? pageView(p, now, i || '', paging.has(`${nameKey(p.owner)}:${i}`)) : v === 'tabs' ? tabsScreen(p, now) : v === 'marks' || v === 'history' ? marksScreen(p, now, v === 'history') : v === 'searchone' ? searchOne(p, now, Number(i), searching.has(`${nameKey(p.owner)}:${i}`))
         : v === 'cal' ? calScreen(p, now, m, i || '') : v === 'calone' ? calOne(p, now, Number(i), m) : v === 'map' ? mapScreen(p, now, m)
         : v === 'sns' ? snsScreen(p, now) : v === 'snspost' ? snsPost(p, now, Number(i)) : v === 'mail' ? mailScreen(p, now) : v === 'mailone' ? mailOne(p, now, Number(i))
-        : v === 'diary' ? diaryScreen(p, now, i || '') : v === 'diaryone' ? diaryOne(p, now, Number(i)) : v === 'setsync' ? syncSettings(p, now, ui) : v === 'setsyncpick' ? syncPick(p, now, ui) : v === 'set' ? setScreen(p, now, m, ui) : v === 'stime' ? screenTimeScreen(p, now, i || '') : v === 'settheme' ? setTheme(p, now) : v === 'setscreenholder' ? setScreenHolderView(p, now, m) : v === 'setdate' ? setDate(p, now, m) : v === 'setplace' ? setPlace(p, now, m, ui) : v === 'setremake' ? setRemake(p, now, ui, m) : v === 'setprofile' ? setOwnerProfile(p,now,ui.profileState) : v === 'setwho' ? setWho(p, now, m) : v === 'setlore' ? setLore(p, now, m, ui)
+        : v === 'diary' ? diaryScreen(p, now, i || '') : v === 'diaryone' ? diaryOne(p, now, Number(i)) : v === 'setsync' ? syncSettings(p, now, ui) : v === 'setsyncpick' ? syncPick(p, now, ui) : v === 'set' ? setScreen(p, now, m, ui) : v === 'stime' ? screenTimeScreen(p, now, i || '') : v === 'settheme' ? setTheme(p, now) : v === 'setscreenholder' ? setScreenHolderView(p, now, m, ui.holderBack) : v === 'setdate' ? setDate(p, now, m) : v === 'setplace' ? setPlace(p, now, m, ui) : v === 'prep' ? prepScreen(p, now, m, ui.prep) : v === 'setremake' ? setRemake(p, now, ui, m) : v === 'setprofile' ? setOwnerProfile(p,now,ui.profileState) : v === 'setwho' ? setWho(p, now, m) : v === 'setlore' ? setLore(p, now, m, ui)
         : v === 'cam' ? camScreen(p, now, i === undefined ? -1 : Number(i), shooting.has(nameKey(p.owner))) : homeScreen(p, now, m);
     // the home is the design board itself, at its own size, scaled to the screen (--k)
     // every app: drawn at the boards' size too, each its own app look
@@ -100,7 +100,8 @@ export async function openPhone(who = null) {
     let owner = selectedPhoneOwner(m, names, who, readPhoneSelection(selectionKey));
     if (owner) { rememberPhoneSelection(m,owner,selectionKey); await saveMeta(); }
     if (!stillHere()) return;
-    let investing = false, making = false, busyMake = null, placeReading = false;  // busyMake: 'sync' | 'make' while a reflection or a make runs
+    let investing = false, making = false, busyMake = null, placeReading = false, prepLinking = false, prepOpen = false, prepFrom = false;  // 폰 만들기 준비: linking, 1~4 shown again, 인물 정보 opened from it
+     // busyMake: 'sync' | 'make' while a reflection or a make runs
     for (const p of Object.values(m.phones)) migrateBank(m, p);
     // phones from before 날짜 및 시간 get their year (or none) once
     if (Object.values(m.phones).filter(p => p?.owner).map(p => ensureYear(m, p)).some(Boolean)) await saveMeta();
@@ -165,6 +166,16 @@ export async function openPhone(who = null) {
             if (el.isConnected) el.querySelector('.pcf_no').focus({ preventScroll: true });
         });
     };
+    // the same sheet with two answers side by side, same weight (the first one's colour leads): resolves 'a' or 'b', or false
+    const askPair = (title, text, a, b) => {
+        ask?.done(false);
+        return new Promise(done => {
+            const el = $(`<div class="pcf" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="pcf_box"><div class="pcf_card"><div class="pcf_msg"><b>${esc(title)}</b>${text ? `<span>${esc(text)}</span>` : ''}</div><div class="pcf_btns even"><div role="button" tabindex="0" class="pcf_ok safe pcf_lead" data-v="a">${esc(a)}</div><div role="button" tabindex="0" class="pcf_ok safe" data-v="b">${esc(b)}</div></div></div></div></div>`)[0];
+            ask = { el, done: v => { ask = null; el.remove(); done(v); } };
+            placeAsk();
+            if (el.isConnected) el.querySelector('.pcf_ok').focus({ preventScroll: true });
+        });
+    };
     // the same sheet with a line to type (a city): resolves the text, or false
     const askInput = (title, text, value = '', ok = '저장') => {
         ask?.done(false);
@@ -202,6 +213,16 @@ export async function openPhone(who = null) {
                     </div>
                   </div>
                 </div></div>`);
+            return;
+        }
+        // 메신저 시간대 opened from 폰 만들기 준비: the settings screen itself, back to the prep screen
+        if (!p && view === 'setscreenholder') { $root.find('.na_ph_frame').html(screen(phonePre(m, owner) || pendingProfile(), view, m, roster, { holderBack: 'prep' })); return; }
+        if (!p && view === 'prep') {
+            const pre = phonePre(m, owner), key = nameKey(owner), bound = m.phoneProfiles?.[key], n = phoneLore(m).length;
+            const stale = !pre ? '' : JSON.stringify(pre.financeProfile ?? null) !== JSON.stringify(bound ?? null) ? 'profile' : (pre.lore ?? loreKey()) !== loreKey() ? 'lore' : '';
+            const top = keep ? $root.find('.ax_scroll').scrollTop() : 0;
+            $root.find('.na_ph_frame').html(screen(pre || pendingProfile(), 'prep', m, roster, { prep: { pre: !!pre, open: !pre || prepOpen, profile: bound?.label || '', lore: n ? `${n}권` : '없음', loreN: n, gloss: glossaryEntries(m).length, order: dateOrderOf(m), holder: screenHolderLabel(m), stale, linking: prepLinking, making: busyMake === 'make' } }));
+            if (keep) $root.find('.ax_scroll').scrollTop(top);
             return;
         }
         if (!p && view==='setprofile') {
@@ -251,7 +272,9 @@ export async function openPhone(who = null) {
     };
     // 참고 로어북: each book with its switch; › opens its entries, each with its own (a book with some left out shows −)
     const LCK = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path class="na_ck_v" d="M5 12.5l4.5 4.5L19 7.5"/><path class="na_ck_p" d="M6 12h12"/></svg>';
-    const loreSum = () => { const on = phoneLore(m); return on.length ? on.map(b => (loreOff(m, b).size ? `${b} (일부)` : b)).join(', ') : '없음 · 아카이브만 읽어요'; };
+    const loreSum = () => { const on = phoneLore(m); return on.length ? on.map(b => (loreOff(m, b).size ? `${b} (일부)` : b)).join(', ') : '없음 · 아카이브와 본문만 읽어요'; };
+    // what 폰 만들기 준비's reading read of the lorebooks (phonedata's own key): a change asks for 위치 연동 again
+    const loreKey = () => JSON.stringify(phoneLore(m).slice().sort().map(b => [b, [...loreOff(m, b)].sort()]));
     const loreRow = () => {
         const on = phoneLore(m);
         const all = loreOpen ? (ctx().getWorldInfoNames?.() || []) : [];
@@ -276,10 +299,12 @@ export async function openPhone(who = null) {
         $root.find('.na_ph_ctrl').html(owner && !p ? loreRow() : '');
     };
     const draw = () => { drawOwners(); drawPhone(); drawCtrl(); };
-    const make = async ($btn, update) => {
+    const make = async ($btn, update, prepared = false) => {
         // an older phone has no start yet, and a start whose message is gone is asked for again
         if (update) { const st = syncState(phone()); if (st !== 'ok') { syncWhy = st; pickMore = 30; view = 'setsyncpick'; drawPhone(); return; } }
-        await askDateOrder();
+        // a first phone is made from 폰 만들기 준비 (its date order is on it)
+        if (!update && !phone() && !prepared) { prepOpen = false; view = 'prep'; await ensureScreenHolder(m); if (!phoneClosed && stillHere()) drawPhone(); return; }
+        if (!prepared) await askDateOrder();
         busyMake = update ? 'sync' : 'make';
         let p;
         try { p = await withSpinner($btn, update ? '반영하는 중' : '폰 만드는 중', () => makePhone(m, owner, { update })); } finally { busyMake = null; if (!phoneClosed && stillHere()) drawPhone(true); }
@@ -408,7 +433,7 @@ export async function openPhone(who = null) {
         if(state.binding.type==='lore') {state.openBooks.add(state.binding.book);loadProfileBook(p,state,state.binding.book);}
         drawPhone();
     });
-    $root.on('click','.fp_back',()=>{if(profilePhone()?.profileDraft){view='lock';drawPhone();}else editProfile();});
+    $root.on('click','.fp_back',()=>{if(profilePhone()?.profileDraft){view=prepFrom?'prep':'lock';prepFrom=false;drawPhone();}else editProfile();});
     $root.on('click','.fp_content',function(){
         const p=profilePhone(),state=profileStates.get(nameKey(p.owner)); if(!state) return;
         state.pane='content';drawPhone();
@@ -453,11 +478,11 @@ export async function openPhone(who = null) {
         const p=profilePhone(),state=profileStates.get(nameKey(p.owner));
         if(!state || state.busy || !state.resolved || state.binding.type==='none') return;
         p.financeProfile={...state.binding,label:state.resolved.label};
-        if(p.profileDraft) {(m.phoneProfiles ||= {})[nameKey(p.owner)]=structuredClone(p.financeProfile);view='lock';}
+        if(p.profileDraft) {(m.phoneProfiles ||= {})[nameKey(p.owner)]=structuredClone(p.financeProfile);view=prepFrom?'prep':'lock';prepFrom=false;}
         else state.pane='about';
         drawPhone();await saveMeta();
     });
-    $root.on('click','.na_ph_makeprofile',()=>{view='setprofile';editProfile();drawPhone();});
+    $root.on('click','.na_ph_makeprofile',()=>{prepFrom=false;view='setprofile';editProfile();drawPhone();});
     $root.on('click', '.na_ph_pick:not(.na_ph_addp), .ax_whopick', async function (e) { e.stopPropagation(); const same = owner === this.dataset.n; owner = this.dataset.n; rememberPhoneSelection(m,owner,selectionKey); if (!same) { view = 'lock'; sheet = false; draw(); setSheet(false); } await saveMeta(); });
     $root.on('click', '.na_ph_makewho', () => { loreOpen = false; drawCtrl(); setSheet(true); });
     // a person only the lorebook knows: into the same list as 인물 도감's +
@@ -486,7 +511,7 @@ export async function openPhone(who = null) {
     const showOpened = sel => setTimeout(() => $root.find(sel)[0]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 0);
     $root.on('click', '.na_ph_lorebtn', () => { loreOpen = !loreOpen; drawCtrl(); if (loreOpen) setTimeout(() => $root.find('.na_ph_lorelist')[0]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 0); });
     // the list is drawn again on every switch; where it was scrolled to stays
-    const redrawLore = () => { const top = $root.find('.na_ph_lorescroll').scrollTop(); drawCtrl(); $root.find('.na_ph_lorescroll').scrollTop(top); if (view === 'setlore') drawPhone(true); };
+    const redrawLore = () => { const top = $root.find('.na_ph_lorescroll').scrollTop(); drawCtrl(); $root.find('.na_ph_lorescroll').scrollTop(top); if (view === 'setlore' || view === 'prep') drawPhone(true); };
     const setOff = (b, uids) => { m.phoneLoreOff = m.phoneLoreOff && typeof m.phoneLoreOff === 'object' ? m.phoneLoreOff : {}; if (uids.size) m.phoneLoreOff[b] = [...uids]; else delete m.phoneLoreOff[b]; };
     const setOn = (b, yes) => { const set = new Set(phoneLore(m)); if (yes) set.add(b); else set.delete(b); m.phoneLore = [...set]; };
     // a whole book: on with every entry, or off
@@ -609,6 +634,35 @@ export async function openPhone(who = null) {
     });
     $root.on('click', '.na_ph_kochip:not(.na_ph_looksbtn)', e => { e.stopPropagation(); const g = globalSettings(); g.phoneKo = !koOn(); drawPhone(); if (view.startsWith('thread')) $root.find('.ax_scroll').scrollTop(1e6); saveGlobal(); });
     $root.on('click', '.na_ph_makebtn', function () { make($(this), false); });
+    // 폰 만들기 준비
+    const prepBusy = () => { if (!(making || busyMake || investing || filling.size || busy.fill || busy.sync || placeReading || prepLinking)) return false; toastr.info('하던 일이 끝난 뒤 해 주세요', '캐릭터 휴대폰'); return true; };
+    $root.on('click', '.na_ph_prepclose', e => { e.stopPropagation(); prepOpen = false; view = 'lock'; drawPhone(); });
+    $root.on('click', '.na_ph_prepopen', e => { e.stopPropagation(); prepOpen = !prepOpen; drawPhone(true); });
+    $root.on('click', '.na_ph_prepprofile', e => { e.stopPropagation(); if (prepBusy()) return; prepFrom = true; view = 'setprofile'; editProfile(); drawPhone(); });
+    $root.on('click', '.na_ph_prepholder', e => { e.stopPropagation(); if (prepBusy()) return; view = 'setscreenholder'; drawPhone(); });
+    // 위치 연동: the model once (the reading of where everyone is and the year), again when asked
+    $root.on('click', '.na_ph_preplink', async e => {
+        e.stopPropagation(); if (prepBusy()) return;
+        if (needsDateOrder(m)) await setDateOrder(m, dateOrderOf(m));
+        prepLinking = true; drawPhone(true);
+        try { await preparePhone(m, owner, { again: !!phonePre(m, owner) }); prepOpen = false; }
+        catch (err) { toastr.error(String(err?.message || err), '위치 연동'); }
+        finally { prepLinking = false; if (!phoneClosed && stillHere()) drawPhone(true); }
+    });
+    $root.on('click', '.na_ph_prepmake', async function (e) {
+        e.stopPropagation(); if (prepBusy()) return;
+        const pre = phonePre(m, owner); if (!pre) return;
+        const o = placeInfo(pre).owner;
+        // no city or no zone: the phone would have no hours apart
+        if (!o.city || !o.tz) {
+            const v = await askPair('폰 주인 위치 없이 만들까요?', '시차 없이 만들어져요.', '위치 적기', '이대로 만들기');
+            if (v === 'a') return placeCity(o.name || owner, '');
+            if (v !== 'b') return;
+        }
+        if (needsDateOrder(m)) await setDateOrder(m, dateOrderOf(m));
+        prepOpen = false;
+        await make($(this), false, true);
+    });
     // the screen can change while it writes; the new entry opens if its app is still showing
     $root.on('click', '.na_ph_write', async function (e) {
         e.stopPropagation();
@@ -658,13 +712,13 @@ export async function openPhone(who = null) {
     $root.on('pointermove', e => {
         if (!sw) return;
         const dx = e.clientX - sw.x, dy = e.clientY - sw.y;
-        if (!sw.on) { if (Math.abs(dy) > 10) { sw = null; return; } if (Math.abs(dx) < 8) return; sw.on = true; swMoved = true; sw.el.style.transition = 'none'; sw.el.setPointerCapture?.(e.pointerId); }
+        if (!sw.on) { if (Math.abs(dy) > 10) { sw = null; return; } if (Math.abs(dx) < 8) return; sw.on = true; swMoved = true; sw.el.parentElement.classList.add('drag'); sw.el.style.transition = 'none'; sw.el.setPointerCapture?.(e.pointerId); }
         sw.dx = dx;
         sw.el.style.transform = `translateX(${Math.max(-120, Math.min(0, sw.base + dx))}px)`;
     });
     $root.on('pointerup pointercancel', () => {
         if (!sw) return;
-        if (sw.on) { $(sw.el).parent().toggleClass('open', sw.base + sw.dx < -43); sw.el.style.transition = ''; sw.el.style.transform = ''; }
+        if (sw.on) { $(sw.el).parent().toggleClass('open', sw.base + sw.dx < -43).removeClass('drag'); sw.el.style.transition = ''; sw.el.style.transform = ''; }
         sw = null;
     });
     $root[0].addEventListener('click', e => {
@@ -869,7 +923,8 @@ export async function openPhone(who = null) {
     // the story's year: − / + a year at a time, held down it runs (faster after a moment), like a phone's own steppers;
     // the number changes in place while held, the year is set once on letting go
     const commitYear = async y => {
-        const p = phone();
+        const p = phone(), pre = !p && view === 'prep' ? phonePre(m, owner) : null;
+        if (pre) { if (y >= 1900 && y <= 2100 && y !== pre.year) await setPreYear(m, owner, y); drawPhone(true); return; }
         if (!p || !(y >= 1900 && y <= 2100) || y === p.year) { drawPhone(true); return; }
         // the bank's and investments' dates move with it (the whole chat's), so their order holds
         if (p.year && hasDatedRecords(m) && !await askSheet(`${y}년으로 바꿀까요?`, '기록 날짜와 다른 폰도 같이 바뀌어요.', '바꾸기', true)) { drawPhone(true); return; }
@@ -877,10 +932,12 @@ export async function openPhone(who = null) {
         drawPhone(true); await saveMeta();
     };
     let yHold = null;
+    // the phone, or before it is made the one 폰 만들기 준비 is reading (위치 · 연도 are set on it the same way)
+    const tgt = () => phone() || (view === 'prep' ? phonePre(m, owner) : null);
     const yStop = () => { if (!yHold) return; clearTimeout(yHold.t); const y = yHold.y; yHold = null; commitYear(y); };
     $root.on('pointerdown', '.na_ph_ystep', function (e) {
         e.preventDefault(); e.stopPropagation(); if (yHold) return;
-        const p = phone(); if (!p) return;
+        const p = tgt(); if (!p) return;
         const d = Number(this.dataset.d), $v = $root.find('.na_ph_yval');
         yHold = { y: Number(p.year) || new Date().getFullYear(), t: 0, n: 0 };
         const tick = () => { if (!yHold) return; yHold.y = Math.max(1900, Math.min(2100, yHold.y + d)); yHold.n++; $v.text(String(yHold.y)); yHold.t = setTimeout(tick, yHold.n < 2 ? 420 : yHold.n < 12 ? 110 : 45); };
@@ -888,23 +945,23 @@ export async function openPhone(who = null) {
         this.setPointerCapture?.(e.pointerId);
     });
     $root.on('pointerup pointercancel lostpointercapture', '.na_ph_ystep', e => { e.stopPropagation(); yStop(); });
-    $root.on('keydown', '.na_ph_ystep', function (e) { if (e.key !== 'Enter' && e.key !== ' ') return; e.preventDefault(); const p = phone(); if (p) commitYear((Number(p.year) || new Date().getFullYear()) + Number(this.dataset.d)); });
+    $root.on('keydown', '.na_ph_ystep', function (e) { if (e.key !== 'Enter' && e.key !== ' ') return; e.preventDefault(); const p = tgt(); if (p) commitYear((Number(p.year) || new Date().getFullYear()) + Number(this.dataset.d)); });
     // 설정 › 위치 정보: locked while the phone is being made, reflected or filled, like the date order
-    const placeLocked = () => { if (!(making || busyMake || investing || filling.size || busy.fill || busy.sync || placeReading)) return false; toastr.info('반영이 끝난 뒤 바꿔 주세요', '캐릭터 휴대폰'); return true; };
+    const placeLocked = () => { if (!(making || busyMake || investing || filling.size || busy.fill || busy.sync || placeReading || prepLinking)) return false; toastr.info('반영이 끝난 뒤 바꿔 주세요', '캐릭터 휴대폰'); return true; };
     const placeCity = async (name, now) => {
         const v = await askInput(`${name}의 도시`, '시간대는 도시 이름으로 찾아요.', now || '');
         if (!v || v === now) return;
-        try { await setPlaceCity(m, phone(), name, v); } catch (err) { toastr.warning(String(err?.message || err), '위치 정보'); }
+        try { await setPlaceCity(m, tgt(), name, v); } catch (err) { toastr.warning(String(err?.message || err), '위치 정보'); }
         drawPhone(true);
     };
-    $root.on('change', '.na_ph_plives', async function (e) { e.stopPropagation(); if (placeLocked()) return drawPhone(true); if (this.value) await setOwnerLives(m, phone(), this.value); drawPhone(true); });
-    $root.on('click', '.na_ph_plcity', async function (e) { e.stopPropagation(); if (placeLocked()) return; await placeCity(this.dataset.n, placeInfo(phone()).owner.city); });
+    $root.on('change', '.na_ph_plives', async function (e) { e.stopPropagation(); if (placeLocked()) return drawPhone(true); if (this.value) await setOwnerLives(m, tgt(), this.value); drawPhone(true); });
+    $root.on('click', '.na_ph_plcity', async function (e) { e.stopPropagation(); if (placeLocked()) return; await placeCity(this.dataset.n, placeInfo(tgt()).owner.city); });
     $root.on('click', '.na_ph_plrow', async function (e) {
         e.stopPropagation(); if (placeLocked()) return;
-        const name = this.dataset.n, x = placeInfo(phone()).people.find(r => r.name === name); if (x) await placeCity(name, x.city);
+        const name = this.dataset.n, x = placeInfo(tgt()).people.find(r => r.name === name); if (x) await placeCity(name, x.city);
     });
     // 밀어서 빼기, like a message or a mail: the row slid open shows 빼기
-    $root.on('click', '.na_ph_pldrop', async function (e) { e.stopPropagation(); if (placeLocked()) return; await dropPlacePerson(m, phone(), this.dataset.n); drawPhone(true); });
+    $root.on('click', '.na_ph_pldrop', async function (e) { e.stopPropagation(); if (placeLocked()) return; await dropPlacePerson(m, tgt(), this.dataset.n); drawPhone(true); });
     $root.on('click', '.na_ph_plread', async function (e) {
         e.stopPropagation(); if (placeLocked()) return;
         const v = await askChoice('위치를 연동할까요?', '모델을 한 번 불러요.', [{ v: 'keep', label: '수동 위치 제외하고 연동' }, { v: 'all', label: '전부 새로 연동' }], '취소');
@@ -922,10 +979,14 @@ export async function openPhone(who = null) {
         if (value !== '' && !screenHolderChoices(m).some(x => x.name === value)) return;
         if (getMeta() !== m) return;
         await setScreenHolder(m, value);
-        if (!phoneClosed && getMeta() === m) { view = 'setdate'; drawPhone(); }
+        if (!phoneClosed && getMeta() === m) { view = phone() ? 'setdate' : 'prep'; drawPhone(); }
     });
     $root.on('click', '.na_ph_dord', async function (e) { e.stopPropagation(); if (making || busyMake || investing || filling.size || busy.fill || busy.sync) return toastr.info('반영이 끝난 뒤 바꿔 주세요', '캐릭터 휴대폰'); const v = this.dataset.v; if (v !== 'md' && v !== 'dm' || dateOrderOf(m) === v && !needsDateOrder(m)) return; await setDateOrder(m, v); drawPhone(true); });
-    $root.on('click', '.na_ph_yearshow', async e => { e.stopPropagation(); const p = phone(); if (!p) return; p.noYear = !p.noYear; if (!p.noYear && !p.year) p.year = Number(storyYear(m, { ...p, year: 0 })) || new Date().getFullYear(); drawPhone(true); await saveMeta(); });
+    $root.on('click', '.na_ph_yearshow', async e => {
+        e.stopPropagation();
+        const pre = !phone() && view === 'prep' ? phonePre(m, owner) : null;
+        if (pre) { await setPreYear(m, owner, pre.noYear ? Number(storyYear(m, { ...pre, year: 0 })) || new Date().getFullYear() : null); return drawPhone(true); }
+        const p = phone(); if (!p) return; p.noYear = !p.noYear; if (!p.noYear && !p.year) p.year = Number(storyYear(m, { ...p, year: 0 })) || new Date().getFullYear(); drawPhone(true); await saveMeta(); });
     $root.on('click', '.na_ph_setinj', async e => { e.stopPropagation(); const p = phone(); p.inject = !p.inject; drawPhone(true); await saveMeta(); applyInjection(); });
     // what opens under the phone scrolls into sight, so the tap visibly does something
     $root.on('change', '.na_ph_country', async function () { phone().country = this.value; drawPhone(); await saveMeta(); });

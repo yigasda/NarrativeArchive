@@ -2,7 +2,7 @@
 // (Mara in Varo). Run: node tools/dev/fakeph.mjs
 import http from 'node:http';
 const FIRST = {
-  country: 'DE', wallpaper: 'dusk', accent: 'blue', now: '10-25 17:42',
+  country: 'DE', wallpaper: 'dusk', accent: 'blue', now: '10-25 17:42', clock: { finalViewpoint: 'Mara', sceneTime: '10-25 17:42', elapsedTime: null },
   contacts: [{ name: 'Ren', saved: 'Ren ♥' }, { name: 'Ivo', saved: 'Ivo (Werkstatt)' }],
   threads: [
     { with: 'Ivo', messages: [
@@ -33,7 +33,7 @@ const FIRST = {
            { from: 'Ivo', subject: 'Schlüssel', ks: '열쇠', text: 'Brauche ihn bis Samstag. Danke.', ko: '토요일까지 필요해. 고마워.', time: '10-24 08:12', unread: true } ],
   diary: [ { date: '10-24', title: 'Die Garage', kt: '창고', text: 'Ren war da. Wir haben gestritten. Ich hab nichts gesagt.', ko: 'Ren이 와 있었다. 우리는 싸웠다. 나는 아무 말도 안 했다.' } ],
 };
-const UPD = { now: '10-25 19:05', threads: [ { with: 'Ren', messages: [ { from: 'Ren', text: 'Danke, dass du gekommen bist.', ko: '와 줘서 고마워.', time: '10-25 19:02' } ] } ], calls: [], photos: [ { caption: 'Zwei Kaffeebecher auf dem Garagendach', ko: '창고 지붕 위 커피잔 두 개', time: '10-25 18:20', mood: 'warm' } ], notes: [], searches: [], events: [] };
+const UPD = { now: '10-25 19:05', clock: { finalViewpoint: 'Mara', sceneTime: '10-25 19:05', elapsedTime: null }, threads: [ { with: 'Ren', messages: [ { from: 'Ren', text: 'Danke, dass du gekommen bist.', ko: '와 줘서 고마워.', time: '10-25 19:02' } ] } ], calls: [], photos: [ { caption: 'Zwei Kaffeebecher auf dem Garagendach', ko: '창고 지붕 위 커피잔 두 개', time: '10-25 18:20', mood: 'warm' } ], notes: [], searches: [], events: [] };
 let last = '';
 
 const SERP = {

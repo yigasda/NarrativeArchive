@@ -24,7 +24,7 @@ PLOT:
 ## Ivo
 - Runs the workshop; wants his key back.
 `;
-async function open(theme = 'light', { width = 412, out = 'shots', video = '' } = {}) {
+async function open(theme = 'light', { width = 412, out = 'shots', video = '', make = true } = {}) {
     const b = await chromium.launch();
     const ctx = await b.newContext({ viewport: { width, height: 1100 }, deviceScaleFactor: 2, ...(video ? { recordVideo: { dir: video, size: { width, height: 1100 } } } : {}) });
     const p = await ctx.newPage();
@@ -42,8 +42,15 @@ async function open(theme = 'light', { width = 412, out = 'shots', video = '' } 
         (await import(B + 'phone.js')).openPhone('Mara');
     }, { B, ARCH });
     await p.waitForTimeout(800);
-    await p.click('.na_ph_makebtn'); await p.waitForSelector('.cg_lock', { timeout: 15000 }); await p.waitForTimeout(1500);
-    await p.click('.cg_lkopen'); await p.waitForTimeout(300);
+    // 폰 만들기 → 폰 만들기 준비: 위치 연동, then 이대로 폰 만들기 (make: false stops on the prep screen)
+    await p.click('.na_ph_makebtn'); await p.waitForSelector('.na_ph_preplink', { timeout: 15000 });
+    if (make) {
+        await p.click('.na_ph_preplink'); await p.waitForSelector('.na_ph_prepmake:not([disabled])', { timeout: 30000 }); await p.waitForTimeout(300);
+        await p.click('.na_ph_prepmake'); await p.waitForTimeout(400);
+        if (await p.$('.pcf_ok[data-v="b"]')) await p.click('.pcf_ok[data-v="b"]');
+        await p.waitForSelector('.cg_lock', { timeout: 30000 }); await p.waitForTimeout(1500);
+        await p.click('.cg_lkopen'); await p.waitForTimeout(300);
+    }
     fs.mkdirSync(out, { recursive: true });
     const s = {
         p, errs,
