@@ -87,3 +87,10 @@ test('a long message with many dates is read in a moment', () => {
     htmlDatedClocks(`<div><div><ul>${Array.from({ length: 2000 }, (_, i) => `<li><span class="date">${i % 12 + 1}월 ${i % 28 + 1}일</span> 메모</li>`).join('\n')}</ul></div></div>`);
     assert.ok(performance.now() - t0 < 3000, `${Math.round(performance.now() - t0)} ms`);
 });
+
+test('never a time before or after one in any wording, nor a direction; a clock with a word after it still is one', () => {
+    for (const s of ['3시 이후', '5시 이전', '그건 3시 전이었다', '3시 전이다', '3시쯤 전', '3시 반쯤 전', '3시 넘어서', '3시 직전', '3시 직후', '3시 방향', '3시 방향으로', '3시 경 이후', '3시 이후에', '3시 이후로', '3시 전엔', '3시 후에도', '3시 전부터'])
+        assert.equal(koClockText(s), '', s);
+    for (const [s, want] of [['16시 15분 전화가 왔다', '16:15'], ['3시 무렵', '03:00'], ['3시쯤', '03:00'], ['3시경', '03:00'], ['3시까지 와', '03:00'], ['3시에 갔다', '03:00']]) assert.equal(koClockText(s), want, s);
+    assert.deepEqual(datedClocks('11월 5일 3시 방향'), []);
+});

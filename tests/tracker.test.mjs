@@ -140,3 +140,9 @@ test('a status line reads a Korean clock, never a time before or after one or a 
         assert.equal(recentTrackers(1)[0]?.min ?? null, null, line);
     }
 });
+test('a status line part that is a time before or after one, or a direction, is no clock', () => {
+    for (const line of ['[ 3시 이후 · 12월 9일 · 집 ]', '[ 3시 방향 · 12월 9일 · 집 ]', '[ 3시쯤 전 · 12월 9일 · 집 ]']) {
+        T.chat = [say(`${line}\n\n본문`)];
+        assert.equal(recentTrackers(1)[0]?.min ?? null, null, line);
+    }
+});
