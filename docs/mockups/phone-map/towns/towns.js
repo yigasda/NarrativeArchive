@@ -12,8 +12,14 @@ const PAL = {
   light: { land: '#f3f0ea', built: '#ebe7df', park: '#d4e8c9', forest: '#c3dcb5', water: '#b6d4ef', sand: '#f2e6c4', road: '#ffffff', edge: '#dad4c9', major: '#fde7a3', majorEdge: '#e3c77c', rail: '#a9a49b', wall: '#d9c8a7', contour: '#e2dccd', label: '#7b818c', plaza: '#efe6d2', bld: '#e0dbd0', vine: '#e3e6c8' },
   dark: { land: '#1d232c', built: '#232a34', park: '#1f3529', forest: '#1c3124', water: '#173149', sand: '#33302a', road: '#384250', edge: '#141920', major: '#5a5030', majorEdge: '#3d3620', rail: '#59606b', wall: '#4b4232', contour: '#262d37', label: '#8b93a0', plaza: '#2c2f33', bld: '#2b323d', vine: '#262f27' },
 };
+// the four snowy Norwegian maps picked by hand: a town's name picks one of them
+const NO6 = ['Bergen', 'Bodo', 'Hammerfest', 'Kirkenes'];
+const SNOW = {
+  light: { land: '#f8fafc', built: '#eef2f6', park: '#e3ece8', forest: '#d6e3dc', road: '#ffffff', edge: '#d3dbe4', contour: '#e4eaf0', water: '#b7d0e8', plaza: '#f1efea', sand: '#eef0f2' },
+  dark: { land: '#262d36', built: '#2c343e', park: '#26322e', forest: '#22302a', road: '#46505e', edge: '#161b22', contour: '#303843', water: '#173149', plaza: '#30353c', sand: '#2c3138' },
+};
 function draw(kind, W, H, seed, dark = false) {
-  const c = PAL[dark ? 'dark' : 'light'], r = rng(`${kind}|${seed}`), o = [];
+  const c = { ...PAL[dark ? 'dark' : 'light'], ...(kind === 'noSnow' ? SNOW[dark ? 'dark' : 'light'] : {}) }, r = rng(`${kind}|${kind === 'noSnow' ? (NO6.includes(seed) ? seed : NO6[hsh(seed) % NO6.length]) : seed}`), o = [];
   const mirror = r() < 0.5, tilt = Math.round((r() - 0.5) * 24);
   const way = (d, w = 4) => `<path d="${d}" fill="none" stroke="${c.edge}" stroke-width="${f(w + 2.6)}" stroke-linecap="round" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="${c.road}" stroke-width="${f(w)}" stroke-linecap="round" stroke-linejoin="round"/>`;
   const big = (d, w = 7) => `<path d="${d}" fill="none" stroke="${c.majorEdge}" stroke-width="${f(w + 2.6)}" stroke-linecap="round" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="${c.major}" stroke-width="${f(w)}" stroke-linecap="round" stroke-linejoin="round"/>`;
@@ -794,6 +800,293 @@ function draw(kind, W, H, seed, dark = false) {
     for (let i = 0; i < 8; i++) for (let j = 0; j < 2; j++) T.push(`<rect x="${f(cx + 4 + i * 19)}" y="${f(cy + 104 + j * 12)}" width="16" height="9" rx="1" fill="${c.contour}"/>`);
     T.push(big(`M${f(cx + 75)} ${f(cy + 98)}V${f(cy + 600)}`, 5.4));
     o.push(`<g transform="rotate(${f(ga)} ${f(cx)} ${f(cy)})">${T.join('')}</g>`);
+  } else if (kind === 'villaTown') { // 한국 빌라촌: 삐뚤한 블록마다 빽빽이 들어선 다세대 빌라, 골목에 줄지어 선 차, 작은 놀이터, 교회 십자가, 모퉁이 편의점, 버스 다니는 큰길과 길가 상가
+    const sp = 54 + r() * 8, ga = (r() - 0.5) * 36, N = Math.ceil(Math.max(W, H) * 1.7 / sp), P = [], C = W / 2, D = H / 2, ca = Math.cos(ga / 57.3), sa = Math.sin(ga / 57.3);
+    const car = dark ? ['#4a5260', '#5a5040', '#3e4a5a', '#56565c'] : ['#cfd5de', '#e3d8c2', '#c3cfe0', '#dcdcde'];
+    o.push(`<rect x="${X0}" y="${Y0}" width="${X1 - X0}" height="${Y1 - Y0}" fill="${c.road}"/>`);
+    for (let i = 0; i <= N; i++) { P.push([]); for (let j = 0; j <= N; j++) { const u = (i - N / 2) * sp + (r() - 0.5) * sp * 0.35, v = (j - N / 2) * sp * 0.8 + (r() - 0.5) * sp * 0.3; P[i].push([C + u * ca - v * sa, D + u * sa + v * ca]); } }
+    const B = [];
+    for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) { const q = [P[i][j], P[i + 1][j], P[i + 1][j + 1], P[i][j + 1]], mx = q.reduce((s, p) => s + p[0], 0) / 4, my = q.reduce((s, p) => s + p[1], 0) / 4, t = (i * 7 + j * 11) % 23;
+      const sh = k => `M${q.map(([x, y]) => `${f(mx + (x - mx) * k)} ${f(my + (y - my) * k)}`).join('L')}Z`;
+      if (t === 3 || t === 15) { B.push(`<path d="${sh(0.84)}" fill="${c.park}"/><circle cx="${f(mx)}" cy="${f(my)}" r="5" fill="${c.sand}"/>`); for (let k = 0; k < 4; k++) B.push(`<circle cx="${f(mx + (k % 2 ? 1 : -1) * sp * 0.25)}" cy="${f(my + (k > 1 ? 1 : -1) * sp * 0.2)}" r="3" fill="${c.forest}"/>`); continue; }
+      if (t === 19) { B.push(`<path d="${sh(0.84)}" fill="${c.plaza}"/>`); for (let k = -2; k <= 2; k++) B.push(`<path d="M${f(mx + k * 6 * ca - 8 * -sa)} ${f(my + k * 6 * sa - 8 * ca)}l${f(16 * -sa)} ${f(16 * ca)}" stroke="${c.road}" stroke-width="1"/>`); continue; }
+      B.push(`<path d="${sh(0.88)}" fill="${c.built}"/>`);
+      for (let a = 0; a < 2; a++) for (let b = 0; b < 2; b++) { if (r() < 0.22) continue; const u = (a - 0.5) * sp * 0.44, v = (b - 0.5) * sp * 0.38, x = mx + u * ca - v * sa, y = my + u * sa + v * ca; B.push(`<rect x="${f(x - 7.5 + r())}" y="${f(y - 4.5)}" width="${f(13 + r() * 3)}" height="${f(8 + r() * 2)}" rx="1" fill="${c.bld}" stroke="${c.edge}" stroke-width="0.6" transform="rotate(${f(ga)} ${f(x)} ${f(y)})"/>`); }
+      if (t === 7) B.push(`<path d="M${f(mx - 3)} ${f(my)}h6M${f(mx)} ${f(my - 4)}v8" stroke="${c.wall}" stroke-width="1.6"/>`);
+      if (t === 12) B.push(`<rect x="${f(mx - 6)}" y="${f(my - 4)}" width="12" height="8" rx="1" fill="${c.plaza}" stroke="${c.wall}" stroke-width="1"/>`); }
+    o.push(B.join(''));
+    for (let i = 0; i <= N; i++) for (let j = 0; j < N; j++) if (r() < 0.35) { const a = P[i][j], b = P[i][j + 1]; for (let k = 1; k < 4; k++) { const x = a[0] + (b[0] - a[0]) * k / 4 + 2.6, y = a[1] + (b[1] - a[1]) * k / 4; o.push(`<rect x="${f(x - 1.6)}" y="${f(y - 3)}" width="3.2" height="6" rx="1" fill="${car[(i + j + k) % 4]}" transform="rotate(${f(ga)} ${f(x)} ${f(y)})"/>`); } }
+    const m = Math.floor(N / 2) + Math.floor((r() - 0.5) * 3), row = P.map(rw => rw[m]);
+    o.push(`<path d="${curve(row)}" fill="none" stroke="${c.plaza}" stroke-width="20"/>`);
+    for (let k = 0; k < N * 3; k++) { const t = k / (N * 3), i = Math.floor(t * N), u = t * N - i, x = row[i][0] + (row[i + 1][0] - row[i][0]) * u, y = row[i][1] + (row[i + 1][1] - row[i][1]) * u; for (const s of [-1, 1]) o.push(`<rect x="${f(x - 3)}" y="${f(y + s * 8 - 2.5)}" width="6" height="5" fill="${c.bld}" stroke="${c.wall}" stroke-width="0.5" transform="rotate(${f(ga)} ${f(x)} ${f(y)})"/>`); }
+    o.push(big(curve(row), 5.4), way(curve(P[Math.floor(N / 2) + 2].map(p => p)), 3.6));
+  } else if (kind === 'jpHouses') { // 일본 단독주택가: 좁은 길 바둑판(동네마다 방향이 살짝 달라요), 작은 마당 딸린 집들이 촘촘, 동네 작은 공원, 신사 숲, 모퉁이 편의점, 한쪽을 지나는 전철과 작은 역, 둑길 낀 개천
+    const ga = (r() - 0.5) * 30, ga2 = ga + 12 + r() * 14, cut = [[X0, H * (0.3 + r() * 0.2)], [W * 0.5, H * 0.5], [X1, H * (0.6 + r() * 0.2)]];
+    const hood = (d, a, cx, cy) => { const id = `${cidBase}_${nClip++}`, T = [], sx = 30, sy = 24; for (let i = -14; i <= 14; i++) for (let j = -16; j <= 16; j++) { const x = cx + i * sx, y = cy + j * sy, t = ((i * 13 + j * 7) % 31 + 31) % 31;
+        if (t === 5) { T.push(`<rect x="${f(x + 2)}" y="${f(y + 2)}" width="${sx - 4}" height="${sy - 4}" rx="2" fill="${c.park}"/><circle cx="${f(x + 10)}" cy="${f(y + 10)}" r="3" fill="${c.sand}"/>`); continue; }
+        if (t === 17) { T.push(`<rect x="${f(x + 2)}" y="${f(y + 2)}" width="${sx - 4}" height="${sy - 4}" rx="2" fill="${c.forest}"/><path d="M${f(x + 11)} ${f(y + 15)}h8M${f(x + 12)} ${f(y + 13)}v5M${f(x + 18)} ${f(y + 13)}v5" stroke="${c.majorEdge}" stroke-width="1.3"/>`); continue; }
+        for (const [dx, dy] of [[3, 3], [16, 3], [3, 13], [16, 13]]) { if (r() < 0.1) continue; const w = 8 + r() * 2.4, h = 6.5 + r() * 2; T.push(`<rect x="${f(x + dx)}" y="${f(y + dy)}" width="${f(w)}" height="${f(h)}" rx="0.8" fill="${c.bld}" stroke="${c.edge}" stroke-width="0.5"/>`); if (r() < 0.3) T.push(`<circle cx="${f(x + dx + w + 1)}" cy="${f(y + dy + h)}" r="1.6" fill="${c.forest}"/>`); }
+        if (t === 11) T.push(`<rect x="${f(x + 3)}" y="${f(y + 3)}" width="12" height="8" rx="1" fill="${c.plaza}" stroke="${c.wall}" stroke-width="0.8"/>`); }
+      for (let i = -14; i <= 14; i++) T.push(way(`M${f(cx + i * sx)} ${f(cy - 420)}V${f(cy + 420)}`, 1.9)); for (let j = -16; j <= 16; j++) T.push(way(`M${f(cx - 440)} ${f(cy + j * sy)}H${f(cx + 440)}`, 1.9));
+      return `<clipPath id="${id}"><path d="${d}"/></clipPath><g clip-path="url(#${id})"><path d="${d}" fill="${c.built}"/><g transform="rotate(${f(a)} ${f(cx)} ${f(cy)})">${T.join('')}</g></g>`; };
+    o.push(hood(`${curve(cut)}L${X1} ${Y0}L${X0} ${Y0}Z`, ga, W * 0.5, H * 0.2), hood(`${curve(cut)}L${X1} ${Y1}L${X0} ${Y1}Z`, ga2, W * 0.5, H * 0.8));
+    o.push(`<path d="${curve(cut)}" fill="none" stroke="${c.park}" stroke-width="30"/>`, `<path d="${curve(cut)}" fill="none" stroke="${c.water}" stroke-width="12"/>`, way(curve(cut.map(([x, y]) => [x, y - 12])), 2.6));
+    const rl = [[X0, H * (0.08 + r() * 0.1)], [X1, H * (0.14 + r() * 0.1)]];
+    o.push(`<path d="M${f(rl[0][0])} ${f(rl[0][1])}L${f(rl[1][0])} ${f(rl[1][1])}" stroke="${c.land}" stroke-width="12"/>`, rail(`M${f(rl[0][0])} ${f(rl[0][1])}L${f(rl[1][0])} ${f(rl[1][1])}`));
+    { const sx = W * (0.3 + r() * 0.4), sy = rl[0][1] + (rl[1][1] - rl[0][1]) * (sx - X0) / (X1 - X0), a = Math.atan2(rl[1][1] - rl[0][1], rl[1][0] - rl[0][0]) * 57.3; o.push(`<rect x="${f(sx - 26)}" y="${f(sy + 6)}" width="52" height="10" rx="2" fill="${c.bld}" stroke="${c.wall}" stroke-width="1" transform="rotate(${f(a)} ${f(sx)} ${f(sy)})"/><path d="M${f(sx)} ${f(sy + 16)}L${f(sx + 10)} ${Y1}" stroke="${c.plaza}" stroke-width="8"/>`, way(`M${f(sx)} ${f(sy + 16)}L${f(sx + 10)} ${Y1}`, 3)); }
+  } else if (kind === 'terraces') { // 영국 테라스 하우스 동네: 살짝 휘며 나란히 가는 거리마다 양쪽으로 길게 붙은 집 줄, 집 뒤 좁고 긴 뒷마당 띠와 뒷골목, 모퉁이 펍, 동네 공원, 교회, 가게 늘어선 하이 스트리트
+    const ga = (r() - 0.5) * 30, sp = 52 + r() * 6, bend = 10 + r() * 20, cx = W * 0.5, cy = H * 0.5, T = [];
+    T.push(`<rect x="${f(cx - 700)}" y="${f(cy - 700)}" width="1400" height="1400" fill="${c.park}"/>`);
+    const st = y => curve(Array.from({ length: 9 }, (_, k) => [cx - 500 + k * 125, cy + y + Math.sin(k * 0.8 + y / 90) * bend]));
+    const pk = Math.floor(r() * 4) - 2, ys = []; for (let y = -sp * 7; y <= sp * 7; y += sp) ys.push(y);
+    for (const y of ys) for (const s of [-1, 1]) T.push(`<path d="${st(y + s * 16)}" fill="none" stroke="${c.vine}" stroke-width="13" stroke-dasharray="6 1.4"/>`);
+    for (const y of ys) T.push(way(st(y + sp / 2), 1.4));
+    for (const y of ys) for (const s of [-1, 1]) T.push(`<path d="${st(y + s * 7.5)}" fill="none" stroke="${c.wall}" stroke-width="9.4"/><path d="${st(y + s * 7.5)}" fill="none" stroke="${c.bld}" stroke-width="8" stroke-dasharray="5.4 0.9"/>`);
+    for (const y of ys) T.push(way(st(y), 3));
+    for (let x = -480; x <= 480; x += 150 + r() * 40) T.push(way(`M${f(cx + x)} ${f(cy - 700)}V${f(cy + 700)}`, 3));
+    T.push(`<rect x="${f(cx - 60 + pk * 40)}" y="${f(cy + sp * 1 - 2)}" width="100" height="${f(sp * 2 + 4)}" fill="${c.park}"/><path d="M${f(cx - 60 + pk * 40)} ${f(cy + sp)}L${f(cx + 40 + pk * 40)} ${f(cy + sp * 3)}M${f(cx + 40 + pk * 40)} ${f(cy + sp)}L${f(cx - 60 + pk * 40)} ${f(cy + sp * 3)}" stroke="${c.road}" stroke-width="2"/>`);
+    for (let k = 0; k < 10; k++) T.push(`<circle cx="${f(cx - 50 + pk * 40 + (k % 5) * 20)}" cy="${f(cy + sp + 10 + Math.floor(k / 5) * (sp * 2 - 20))}" r="4" fill="${c.forest}"/>`);
+    for (let k = 0; k < 3; k++) { const x = cx - 300 + k * 260 + r() * 40, y = ys[2 + k * 3] ?? 0; T.push(`<rect x="${f(x - 7)}" y="${f(cy + y - 7)}" width="14" height="14" rx="2" fill="${c.wall}"/>`); }
+    T.push(`<rect x="${f(cx - 22 - pk * 60)}" y="${f(cy - sp * 2 - 18)}" width="44" height="16" rx="1.5" fill="${c.bld}" stroke="${c.wall}" stroke-width="1"/><rect x="${f(cx + 16 - pk * 60)}" y="${f(cy - sp * 2 - 24)}" width="9" height="9" rx="1" fill="${c.wall}"/>`);
+    const hs = `M${f(cx - 700)} ${f(cy - sp * 4.5)}L${f(cx + 700)} ${f(cy - sp * 4.5 + 60)}`;
+    T.push(`<path d="${hs}" stroke="${c.plaza}" stroke-width="24"/>`, `<path d="${hs}" stroke="${c.wall}" stroke-width="22" stroke-dasharray="6 1" opacity=".35"/>`, big(hs, 5.4));
+    o.push(`<g transform="rotate(${f(ga)} ${f(cx)} ${f(cy)})">${T.join('')}</g>`);
+  } else if (kind === 'courtyardBlocks') { // 독일 중정 블록 시가지: 가운데 마당을 두른 네모 건물 블록(마당엔 나무), 가로수 줄 선 넓은 거리, 가운데 트램 다니는 큰길, 블록 하나 비운 작은 광장과 분수, 사선으로 가로지르는 대로, 고가 철길 호
+    const ga = (r() - 0.5) * 20, bw = 70 + r() * 10, bh = 56 + r() * 8, cx = W * 0.5, cy = H * 0.5, ox = r() * bw, oy = r() * bh, T = [];
+    T.push(`<rect x="${f(cx - 700)}" y="${f(cy - 700)}" width="1400" height="1400" fill="${c.road}"/>`);
+    const sqI = Math.floor(r() * 2), sqJ = Math.floor(r() * 2);
+    for (let i = -7; i <= 7; i++) for (let j = -9; j <= 9; j++) { const x = cx + i * bw - ox, y = cy + j * bh - oy, p = 7, w = bw - p * 2, h = bh - p * 2;
+      if (i === sqI && j === sqJ) { T.push(`<rect x="${f(x + p)}" y="${f(y + p)}" width="${f(w)}" height="${f(h)}" rx="2" fill="${c.plaza}" stroke="${c.edge}" stroke-width="0.8"/><circle cx="${f(x + bw / 2)}" cy="${f(y + bh / 2)}" r="6" fill="${c.water}" stroke="${c.road}" stroke-width="2"/>`); for (let k = 0; k < 8; k++) T.push(`<circle cx="${f(x + p + 5 + (k % 4) * (w - 10) / 3)}" cy="${f(y + p + 5 + Math.floor(k / 4) * (h - 10))}" r="3" fill="${c.forest}"/>`); continue; }
+      if ((i * 5 + j * 3 + 40) % 17 === 0) { T.push(`<rect x="${f(x + p)}" y="${f(y + p)}" width="${f(w)}" height="${f(h)}" rx="2" fill="${c.park}"/>`); for (let k = 0; k < 6; k++) T.push(`<circle cx="${f(x + p + 6 + r() * (w - 12))}" cy="${f(y + p + 6 + r() * (h - 12))}" r="${f(3 + r() * 2)}" fill="${c.forest}"/>`); continue; }
+      T.push(`<rect x="${f(x + p)}" y="${f(y + p)}" width="${f(w)}" height="${f(h)}" rx="1.5" fill="${c.bld}" stroke="${c.wall}" stroke-width="0.7"/><rect x="${f(x + p + 10)}" y="${f(y + p + 9)}" width="${f(w - 20)}" height="${f(h - 18)}" rx="1" fill="${(i + j) % 3 ? c.park : c.plaza}"/>`);
+      if ((i + j) % 3) T.push(`<circle cx="${f(x + bw / 2 + (r() - 0.5) * 10)}" cy="${f(y + bh / 2)}" r="3.4" fill="${c.forest}"/>`);
+      for (let k = 1; k < 4; k++) T.push(`<path d="M${f(x + p + k * w / 4)} ${f(y + p)}v${f(h)}" stroke="${c.wall}" stroke-width="0.4" opacity=".4"/>`); }
+    for (let i = -7; i <= 8; i++) for (let k = 0; k < 18; k++) T.push(`<circle cx="${f(cx + i * bw - ox)}" cy="${f(cy - 9 * bh - oy + k * bh + bh / 4)}" r="2.4" fill="${c.forest}" opacity=".8"/>`);
+    const ty = cy + (Math.floor(r() * 3) - 1) * bh - oy; T.push(big(`M${f(cx - 700)} ${f(ty)}H${f(cx + 700)}`, 9), rail(`M${f(cx - 700)} ${f(ty)}H${f(cx + 700)}`));
+    T.push(big(`M${f(cx - 600)} ${f(cy + 500)}L${f(cx + 600)} ${f(cy - 400)}`, 6));
+    o.push(`<g transform="rotate(${f(ga)} ${f(cx)} ${f(cy)})">${T.join('')}</g>`);
+    const ar = [[X0, H * (0.9 + r() * 0.1)], [W * 0.4, H * 0.72], [W * 0.8, H * 0.8], [X1, H * (0.95 + r() * 0.1)]];
+    o.push(`<path d="${curve(ar)}" fill="none" stroke="${c.contour}" stroke-width="12"/>`, rail(curve(ar)));
+  } else if (kind === 'jpSuburb') { // 일본 교외 역세권: 가로지르는 철길과 작은 역, 역 앞 작은 로터리와 지붕 덮인 상점가, 역 가까이 맨션 몇 동, 멀어질수록 띄엄띄엄 집과 밭 · 비닐하우스, 큰 슈퍼와 주차장, 학교 운동장, 개천
+    const ga = (r() - 0.5) * 20, cx = W * (0.42 + r() * 0.16), cy = H * 0.5, T = [];
+    T.push(`<rect x="${f(cx - 700)}" y="${f(cy - 700)}" width="1400" height="1400" fill="${c.built}"/>`);
+    const crop = [c.vine, c.park, dark ? '#2a3328' : '#e6ecd0'];
+    for (let i = -14; i <= 14; i++) for (let j = -14; j <= 14; j++) { const x = cx + i * 28, y = cy + j * 24, d = Math.hypot(i * 28, j * 24 * 1.3), t = ((i * 13 + j * 7) % 29 + 29) % 29;
+      if (Math.abs(j) <= 1) continue;
+      if (d > 150 && r() < Math.min(0.7, (d - 150) / 200)) { T.push(`<rect x="${f(x + 1)}" y="${f(y + 1)}" width="26" height="22" fill="${crop[t % 3]}"/>`); if (t % 5 === 0) for (let k = 0; k < 3; k++) T.push(`<rect x="${f(x + 3)}" y="${f(y + 3 + k * 6.5)}" width="22" height="4.5" rx="1" fill="${c.road}" stroke="${c.edge}" stroke-width="0.4"/>`); continue; }
+      if (d < 120 && t % 4 === 0) { T.push(`<rect x="${f(x + 3)}" y="${f(y + 4)}" width="22" height="9" rx="1" fill="${c.bld}" stroke="${c.wall}" stroke-width="0.8"/><rect x="${f(x + 3)}" y="${f(y + 15)}" width="22" height="5" rx="1" fill="${c.plaza}"/>`); continue; }
+      for (const [dx, dy] of [[3, 3], [16, 3], [3, 13], [16, 13]]) if (r() < (d < 200 ? 0.85 : 0.5)) T.push(`<rect x="${f(x + dx)}" y="${f(y + dy)}" width="${f(8 + r() * 2)}" height="${f(6.5 + r() * 2)}" rx="0.8" fill="${c.bld}" stroke="${c.edge}" stroke-width="0.5"/>`); }
+    for (let i = -14; i <= 14; i++) T.push(way(`M${f(cx + i * 28)} ${f(cy - 400)}V${f(cy + 400)}`, i % 4 ? 1.8 : 3)); for (let j = -14; j <= 14; j++) if (Math.abs(j) > 1) T.push(way(`M${f(cx - 420)} ${f(cy + j * 24)}H${f(cx + 420)}`, j % 4 ? 1.8 : 3));
+    T.push(`<path d="M${f(cx - 700)} ${f(cy)}H${f(cx + 700)}" stroke="${c.land}" stroke-width="30"/>`, rail(`M${f(cx - 700)} ${f(cy - 4)}H${f(cx + 700)}`), rail(`M${f(cx - 700)} ${f(cy + 4)}H${f(cx + 700)}`));
+    T.push(`<rect x="${f(cx - 30)}" y="${f(cy - 12)}" width="60" height="24" rx="3" fill="${c.bld}" stroke="${c.wall}" stroke-width="1.2"/>`);
+    T.push(`<circle cx="${f(cx)}" cy="${f(cy - 34)}" r="14" fill="${c.plaza}" stroke="${c.edge}"/><circle cx="${f(cx)}" cy="${f(cy - 34)}" r="5" fill="${c.park}"/>`);
+    T.push(`<path d="M${f(cx)} ${f(cy - 48)}V${f(cy - 220)}" stroke="${c.plaza}" stroke-width="12"/><path d="M${f(cx)} ${f(cy - 48)}V${f(cy - 220)}" stroke="${c.wall}" stroke-width="1.4" stroke-dasharray="2 3"/>`);
+    T.push(`<rect x="${f(cx + 60)}" y="${f(cy + 26)}" width="56" height="44" rx="2" fill="${c.plaza}"/><rect x="${f(cx + 64)}" y="${f(cy + 30)}" width="48" height="16" rx="1" fill="${c.bld}" stroke="${c.wall}" stroke-width="0.8"/>${[0, 1, 2, 3, 4].map(k => `<path d="M${f(cx + 66 + k * 10)} ${f(cy + 50)}v16" stroke="${c.road}" stroke-width="1"/>`).join('')}`);
+    T.push(`<rect x="${f(cx - 150)}" y="${f(cy + 60)}" width="70" height="48" rx="3" fill="${c.sand}"/><ellipse cx="${f(cx - 115)}" cy="${f(cy + 84)}" rx="24" ry="14" fill="${c.park}" stroke="${c.road}" stroke-width="1.2"/><rect x="${f(cx - 150)}" y="${f(cy + 44)}" width="40" height="12" rx="1" fill="${c.bld}" stroke="${c.wall}" stroke-width="0.8"/>`);
+    o.push(`<g transform="rotate(${f(ga)} ${f(cx)} ${f(cy)})">${T.join('')}</g>`);
+    const rv = [[X0, H * (0.82 + r() * 0.1)], [W * 0.4, H * 0.76], [W * 0.75, H * (0.86 + r() * 0.06)], [X1, H * 0.8]];
+    o.push(`<path d="${curve(rv)}" fill="none" stroke="${c.park}" stroke-width="26"/>`, `<path d="${curve(rv)}" fill="none" stroke="${c.water}" stroke-width="10"/>`);
+    o.push(big(`M${f(cx + 180)} ${Y0}L${f(cx + 220)} ${Y1}`, 5));
+  } else if (kind === 'krTown') { // 한국 지방 소도시 시내: 가운데 로터리 네거리, 큰길 따라 빽빽한 상가, 지붕 덮인 전통시장, 앞마당 넓은 군청, 버스터미널, 가장자리 아파트 몇 동, 둑길 낀 하천과 다리, 둘레 논밭과 뒷산
+    const cx = W * (0.44 + r() * 0.12), cy = H * (0.44 + r() * 0.1), ga = (r() - 0.5) * 24, pd = [dark ? '#23382a' : '#cfe5bf', dark ? '#1d3848' : '#cde5f3', dark ? '#2a3b25' : '#dcebc4'], T = [];
+    for (let i = -14; i < 14; i++) for (let j = -14; j < 14; j++) T.push(`<rect x="${f(cx + i * 30 + 1.2)}" y="${f(cy + j * 22 + 1.2)}" width="27.6" height="19.6" fill="${pd[((i * 7 + j * 3) % 3 + 3) % 3]}"/>`);
+    T.push(`<path d="${blob(cx, cy, 150, 110, 10, 0.1)}" fill="${c.built}"/>`);
+    o.push(`<g transform="rotate(${f(ga)} ${f(cx)} ${f(cy)})">${T.join('')}</g>`);
+    o.push(grid(blob(cx, cy, 146, 106, 10, 0.1), ga + 4, cx, cy, 30, 24, 2));
+    o.push(fill(blob(X1 - 20, Y0 + 20, 150, 100, 10, 0.2), c.forest));
+    for (let k = 1; k <= 3; k++) o.push(`<path d="${blob(X1 - 10, Y0 + 10, 150 - k * 34, 100 - k * 24, 9, 0.12)}" fill="none" stroke="${c.park}" stroke-width="1.2"/>`);
+    const at = (u, v) => [cx + u * Math.cos(ga / 57.3) - v * Math.sin(ga / 57.3), cy + u * Math.sin(ga / 57.3) + v * Math.cos(ga / 57.3)], ang = ga;
+    const shops = (u0, u1, v, horiz) => { for (let u = u0; u < u1; u += 8) for (const s of [-1, 1]) { const [x, y] = horiz ? at(u, v + s * 9) : at(v + s * 9, u); o.push(`<rect x="${f(x - 3.6)}" y="${f(y - 3.4)}" width="7.2" height="6.8" fill="${c.bld}" stroke="${c.wall}" stroke-width="0.8" transform="rotate(${f(ang)} ${f(x)} ${f(y)})"/>`); } };
+    shops(-140, -20, 0, true); shops(20, 140, 0, true); shops(-110, -20, 0, false); shops(20, 110, 0, false);
+    { const [x, y] = at(-60, -50); o.push(`<rect x="${f(x - 34)}" y="${f(y - 20)}" width="68" height="40" rx="2" fill="${c.plaza}" stroke="${c.wall}" stroke-width="1" transform="rotate(${f(ang)} ${f(x)} ${f(y)})"/>`, ...[-1, 0, 1].map(k => `<path d="M${f(x - 30)} ${f(y + k * 11)}h60" stroke="${c.wall}" stroke-width="1.2" stroke-dasharray="5 2" transform="rotate(${f(ang)} ${f(x)} ${f(y)})"/>`)); }
+    { const [x, y] = at(60, -56); o.push(`<rect x="${f(x - 30)}" y="${f(y - 22)}" width="60" height="44" rx="2" fill="${c.park}" transform="rotate(${f(ang)} ${f(x)} ${f(y)})"/><rect x="${f(x - 20)}" y="${f(y - 20)}" width="40" height="12" rx="1.5" fill="${c.bld}" stroke="${c.wall}" stroke-width="1" transform="rotate(${f(ang)} ${f(x)} ${f(y)})"/><rect x="${f(x - 12)}" y="${f(y - 4)}" width="24" height="18" rx="1" fill="${c.plaza}" transform="rotate(${f(ang)} ${f(x)} ${f(y)})"/>`); }
+    { const [x, y] = at(70, 52); o.push(`<rect x="${f(x - 26)}" y="${f(y - 16)}" width="52" height="32" rx="2" fill="${c.plaza}" stroke="${c.edge}" transform="rotate(${f(ang)} ${f(x)} ${f(y)})"/>`, ...[0, 1, 2, 3].map(k => `<path d="M${f(x - 20 + k * 12)} ${f(y - 12)}v12" stroke="${c.road}" stroke-width="2.2" transform="rotate(${f(ang)} ${f(x)} ${f(y)})"/>`)); }
+    for (let k = 0; k < 4; k++) { const [x, y] = at(-150 + k * 22, 70 + (k % 2) * 16); o.push(`<rect x="${f(x - 8)}" y="${f(y - 4)}" width="16" height="30" rx="1.5" fill="${c.bld}" stroke="${c.edge}" stroke-width="0.7" transform="rotate(${f(ang + 90)} ${f(x)} ${f(y)})"/>`); }
+    const ck = [[X0, cy + 140 + r() * 20], [cx - 60, cy + 124], [cx + 80, cy + 150], [X1, cy + 120]];
+    o.push(`<path d="${curve(ck)}" fill="none" stroke="${c.park}" stroke-width="34"/>`, `<path d="${curve(ck)}" fill="none" stroke="${c.water}" stroke-width="14"/>`);
+    { const e = at(-600, 0), e2 = at(600, 0), e3 = at(0, -600), e4 = at(0, 600); o.push(big(`M${f(e[0])} ${f(e[1])}L${f(e2[0])} ${f(e2[1])}`, 5.4), big(`M${f(e3[0])} ${f(e3[1])}L${f(e4[0])} ${f(e4[1])}`, 5.4)); }
+    o.push(`<circle cx="${f(cx)}" cy="${f(cy)}" r="18" fill="${c.majorEdge}"/><circle cx="${f(cx)}" cy="${f(cy)}" r="16" fill="${c.major}"/><circle cx="${f(cx)}" cy="${f(cy)}" r="9" fill="${c.park}"/>`);
+  } else if (kind === 'haussmann') { // 프랑스 오스만 블록 시가지: 건물이 꽉 찬 블록(작은 안마당), 구역마다 다른 결의 거리, 비스듬히 가로지르는 가로수 대로, 대로가 만나는 둥근 광장, 정원 광장과 성당
+    const cx = W * (0.42 + r() * 0.16), cy = H * (0.42 + r() * 0.16), a1 = r() * 3.1416, a2 = a1 + 0.9 + r() * 0.6, a3 = a1 - 0.8 - r() * 0.5;
+    o.push(`<rect x="${X0}" y="${Y0}" width="${X1 - X0}" height="${Y1 - Y0}" fill="${c.bld}"/>`);
+    const ray = a => [cx + Math.cos(a) * 900, cy + Math.sin(a) * 900], angs = [a1, a2, a1 + 3.1416, a3 + 3.1416, a3, a2 + 3.1416].sort((a, b) => a - b);
+    for (let k = 0; k < angs.length; k++) { const b0 = angs[k], b1 = angs[(k + 1) % angs.length] + (k === angs.length - 1 ? 6.283 : 0), mid = (b0 + b1) / 2, id = `${cidBase}_${nClip++}`, d = `M${f(cx)} ${f(cy)}L${ray(b0).map(f).join(' ')}L${ray(mid).map(v => f(v)).join(' ')}L${ray(b1).map(f).join(' ')}Z`;
+      const g = (mid * 57.3) + (r() - 0.5) * 30, sx = 38 + r() * 12, sy = 30 + r() * 10, L = [];
+      for (let i = -14; i <= 14; i++) for (let j = -16; j <= 16; j++) L.push(`<rect x="${f(cx + i * sx + sx * 0.36)}" y="${f(cy + j * sy + sy * 0.34)}" width="${f(sx * 0.28)}" height="${f(sy * 0.3)}" rx="1" fill="${c.plaza}"/>`);
+      for (let i = -14; i <= 14; i++) L.push(way(`M${f(cx + i * sx)} ${f(cy - 600)}V${f(cy + 600)}`, 2.6)); for (let j = -16; j <= 16; j++) L.push(way(`M${f(cx - 600)} ${f(cy + j * sy)}H${f(cx + 600)}`, 2.6));
+      o.push(`<clipPath id="${id}"><path d="${d}"/></clipPath><g clip-path="url(#${id})"><g transform="rotate(${f(g)} ${f(cx)} ${f(cy)})">${L.join('')}</g></g>`); }
+    for (const a of [a1, a2, a3]) { const p = ray(a), q = ray(a + 3.1416), d = `M${f(q[0])} ${f(q[1])}L${f(p[0])} ${f(p[1])}`; o.push(way(d, 7)); for (const s of [-1, 1]) o.push(`<path d="${d}" stroke="${c.forest}" stroke-width="3.4" stroke-dasharray="0.1 9" stroke-linecap="round" transform="translate(${f(-Math.sin(a) * s * 2.4)} ${f(Math.cos(a) * s * 2.4)})"/>`); }
+    o.push(big(`M${f(ray(a1 + 3.1416)[0])} ${f(ray(a1 + 3.1416)[1])}L${f(ray(a1)[0])} ${f(ray(a1)[1])}`, 5.6));
+    o.push(`<circle cx="${f(cx)}" cy="${f(cy)}" r="26" fill="${c.edge}"/><circle cx="${f(cx)}" cy="${f(cy)}" r="24.5" fill="${c.road}"/><circle cx="${f(cx)}" cy="${f(cy)}" r="12" fill="${c.park}"/><rect x="${f(cx - 4)}" y="${f(cy - 3)}" width="8" height="6" rx="1" fill="${c.wall}"/>`);
+    { const a = a2 + 0.4, d = 130, x = cx + Math.cos(a) * d, y = cy + Math.sin(a) * d; o.push(`<rect x="${f(x - 30)}" y="${f(y - 22)}" width="60" height="44" rx="3" fill="${c.park}" stroke="${c.road}" stroke-width="3"/><circle cx="${f(x)}" cy="${f(y)}" r="5" fill="${c.water}"/>`, ...[[-20, -14], [20, -14], [-20, 14], [20, 14]].map(([u, v]) => `<circle cx="${f(x + u)}" cy="${f(y + v)}" r="3.4" fill="${c.forest}"/>`)); }
+    { const a = a3 - 0.5, d = 150, x = cx + Math.cos(a) * d, y = cy + Math.sin(a) * d; o.push(`<g transform="translate(${f(x)} ${f(y)}) rotate(${f(a * 57.3)})"><rect x="-22" y="-7" width="44" height="14" rx="1.5" fill="${c.wall}"/><rect x="-6" y="-15" width="12" height="30" rx="1.5" fill="${c.wall}"/><circle cx="18" cy="0" r="5" fill="${c.wall}"/></g>`); }
+  } else if (kind === 'auSuburb') { // 호주 넓은 교외: 굽은 큰길에서 갈라진 굽은 동네길과 막다른 둥근 길, 넓은 마당 집마다 뒤뜰 수영장, 유칼립투스 나무 많이, 큰 주차장 낀 쇼핑센터, 크리켓 오벌, 개울 따라 초록 띠
+    const grass = dark ? '#263022' : '#e6edd4', pool = dark ? '#2a6a8a' : '#8fd3f0', gum = dark ? '#2e4a34' : '#a9c99b';
+    o.push(`<rect x="${X0}" y="${Y0}" width="${X1 - X0}" height="${Y1 - Y0}" fill="${grass}"/>`);
+    const ck = [[X0, H * (0.6 + r() * 0.2)], [W * 0.3, H * 0.66], [W * 0.6, H * (0.5 + r() * 0.2)], [X1, H * 0.56]];
+    o.push(`<path d="${curve(ck)}" fill="none" stroke="${c.park}" stroke-width="46"/>`, `<path d="${curve(ck)}" fill="none" stroke="${c.water}" stroke-width="4"/>`);
+    const art = [[W * (0.2 + r() * 0.2), Y0], [W * 0.35, H * 0.4], [W * 0.3, H * 0.75], [W * 0.38, Y1]];
+    const streets = [];
+    for (let k = 0; k < 9; k++) { const t = 0.08 + k * 0.1, i = Math.min(2, Math.floor(t * 3)), u = t * 3 - i, x = art[i][0] + (art[i + 1][0] - art[i][0]) * u, y = art[i][1] + (art[i + 1][1] - art[i][1]) * u, sd = k % 2 ? 1 : -1, len = 90 + r() * 80, b = (sd > 0 ? 0 : 3.1416) + (r() - 0.5) * 0.6;
+      const p1 = [x + Math.cos(b) * len * 0.5 + (r() - 0.5) * 20, y + Math.sin(b) * len * 0.5 + 14], p2 = [x + Math.cos(b) * len, y + Math.sin(b) * len + (r() - 0.5) * 40]; streets.push([[x, y], p1, p2]); }
+    const qb = (a, b, e, t) => [(1 - t) * (1 - t) * a[0] + 2 * t * (1 - t) * b[0] + t * t * e[0], (1 - t) * (1 - t) * a[1] + 2 * t * (1 - t) * b[1] + t * t * e[1]];
+    for (const [a, b, e] of streets) for (let k = 1; k <= 7; k++) { const t = k / 8.2, [x, y] = qb(a, b, e, t), [x2, y2] = qb(a, b, e, t + 0.01), an = Math.atan2(y2 - y, x2 - x); for (const sd of [-1, 1]) { const hx = x - Math.sin(an) * sd * 14, hy = y + Math.cos(an) * sd * 14; o.push(`<rect x="${f(hx - 6)}" y="${f(hy - 4.5)}" width="12" height="9" rx="1.2" fill="${c.bld}" stroke="${c.edge}" stroke-width="0.6" transform="rotate(${f(an * 57.3)} ${f(hx)} ${f(hy)})"/>`); if (r() < 0.3) { const px = x - Math.sin(an) * sd * 25, py = y + Math.cos(an) * sd * 25; o.push(`<rect x="${f(px - 3.5)}" y="${f(py - 2)}" width="7" height="4" rx="1.6" fill="${pool}" stroke="${c.road}" stroke-width="0.8" transform="rotate(${f(an * 57.3)} ${f(px)} ${f(py)})"/>`); } } }
+    for (let k = 0; k < 50; k++) o.push(`<circle cx="${f(W * (-0.05 + r() * 1.1))}" cy="${f(H * (-0.05 + r() * 1.1))}" r="${f(3 + r() * 3)}" fill="${gum}"/>`);
+    for (const [a, b, e] of streets) o.push(way(`M${f(a[0])} ${f(a[1])}Q${f(b[0])} ${f(b[1])} ${f(e[0])} ${f(e[1])}`, 3), `<circle cx="${f(e[0])}" cy="${f(e[1])}" r="8" fill="${c.road}" stroke="${c.edge}" stroke-width="1.3"/>`);
+    const sx = W * (0.72 + r() * 0.12), sy = H * (0.22 + r() * 0.1); o.push(`<rect x="${f(sx - 60)}" y="${f(sy - 40)}" width="120" height="80" rx="4" fill="${c.plaza}"/>`, `<rect x="${f(sx - 54)}" y="${f(sy - 34)}" width="60" height="34" rx="2" fill="${c.bld}" stroke="${c.wall}" stroke-width="1"/>`);
+    for (let k = 0; k < 9; k++) o.push(`<path d="M${f(sx - 52 + k * 12)} ${f(sy + 6)}v28" stroke="${c.road}" stroke-width="1"/>`);
+    const ox = W * (0.62 + r() * 0.2), oy = H * (0.82 + r() * 0.08); o.push(`<ellipse cx="${f(ox)}" cy="${f(oy)}" rx="40" ry="30" fill="${c.park}" stroke="${c.road}" stroke-width="2"/><rect x="${f(ox - 2)}" y="${f(oy - 7)}" width="4" height="14" fill="${c.sand}"/>`);
+    o.push(big(curve(art), 5.4), way(`M${f(sx - 60)} ${f(sy)}L${f(art[1][0])} ${f(art[1][1])}`, 4));
+  } else if (kind === 'cnSuperblock') { // 중국 대로 사이 큰 단지: 가운데 초록 띠 있는 넓은 대로, 담장 두른 큰 단지마다 줄지은 고층 아파트와 정원 · 굽은 산책길 · 정문, 대로변 상가 띠, 호수 공원 블록, 큰 쇼핑몰 광장
+    const ga = (r() - 0.5) * 16, bw = 150 + r() * 20, bh = 118 + r() * 16, cx = W * 0.5, cy = H * 0.5, ox = r() * bw, oy = r() * bh, T = [];
+    T.push(`<rect x="${f(cx - 700)}" y="${f(cy - 700)}" width="1400" height="1400" fill="${c.road}"/>`);
+    for (let i = -4; i <= 4; i++) for (let j = -5; j <= 5; j++) { const x = cx + i * bw - ox, y = cy + j * bh - oy, p = 14, w = bw - p * 2, h = bh - p * 2, t = ((i * 5 + j * 3) % 11 + 11) % 11;
+      if (t === 4) { T.push(`<rect x="${f(x + p)}" y="${f(y + p)}" width="${f(w)}" height="${f(h)}" rx="4" fill="${c.park}"/>`, fill(blob(x + bw / 2, y + bh / 2, w * 0.32, h * 0.28, 9, 0.2), c.water)); for (let k = 0; k < 12; k++) T.push(`<circle cx="${f(x + p + 6 + r() * (w - 12))}" cy="${f(y + p + 6 + r() * (h - 12))}" r="3" fill="${c.forest}"/>`); continue; }
+      if (t === 8) { T.push(`<rect x="${f(x + p)}" y="${f(y + p)}" width="${f(w)}" height="${f(h)}" rx="3" fill="${c.plaza}"/><rect x="${f(x + p + 10)}" y="${f(y + p + 10)}" width="${f(w * 0.6)}" height="${f(h * 0.5)}" rx="6" fill="${c.bld}" stroke="${c.wall}" stroke-width="1.2"/>`); for (let k = 0; k < 8; k++) T.push(`<path d="M${f(x + p + 10 + k * 12)} ${f(y + p + h * 0.66)}v${f(h * 0.26)}" stroke="${c.road}" stroke-width="1"/>`); continue; }
+      T.push(`<rect x="${f(x + p)}" y="${f(y + p)}" width="${f(w)}" height="${f(h)}" rx="3" fill="${c.park}" stroke="${c.wall}" stroke-width="1.2"/>`, `<path d="${curve([[x + p + 8, y + bh / 2], [x + bw * 0.4, y + bh * 0.3], [x + bw * 0.6, y + bh * 0.7], [x + bw - p - 8, y + bh / 2]])}" fill="none" stroke="${c.road}" stroke-width="2"/>`);
+      const slab = t % 2, nx = slab ? 3 : 4, ny = slab ? 4 : 3;
+      for (let a = 0; a < nx; a++) for (let b = 0; b < ny; b++) { const hx = x + p + 10 + (a + 0.5) * (w - 20) / nx, hy = y + p + 8 + (b + 0.5) * (h - 16) / ny, ww = slab ? 26 : 12, hh = slab ? 8 : 12; T.push(`<rect x="${f(hx - ww / 2 + 2.5)}" y="${f(hy - hh / 2 + 2.5)}" width="${ww}" height="${hh}" rx="1" fill="${c.edge}" opacity=".5"/><rect x="${f(hx - ww / 2)}" y="${f(hy - hh / 2)}" width="${ww}" height="${hh}" rx="1" fill="${c.bld}" stroke="${c.wall}" stroke-width="0.6"/>`); }
+      T.push(`<rect x="${f(x + bw / 2 - 6)}" y="${f(y + bh - p - 2)}" width="12" height="4" fill="${c.wall}"/>`);
+      for (let k = 0; k < Math.floor(w / 10); k++) T.push(`<rect x="${f(x + p + k * 10 + 1)}" y="${f(y + p - 6)}" width="8" height="5" fill="${c.plaza}" stroke="${c.edge}" stroke-width="0.4"/>`); }
+    for (let i = -4; i <= 5; i++) { const d = `M${f(cx + i * bw - ox)} ${f(cy - 700)}V${f(cy + 700)}`; T.push(i % 2 ? way(d, 5) : big(d, 8), i % 2 ? '' : `<path d="${d}" stroke="${c.park}" stroke-width="2.4"/>`); }
+    for (let j = -5; j <= 6; j++) { const d = `M${f(cx - 700)} ${f(cy + j * bh - oy)}H${f(cx + 700)}`; T.push(j % 2 ? way(d, 5) : big(d, 8), j % 2 ? '' : `<path d="${d}" stroke="${c.park}" stroke-width="2.4"/>`); }
+    o.push(`<g transform="rotate(${f(ga)} ${f(cx)} ${f(cy)})">${T.join('')}</g>`);
+  } else if (kind === 'nordicWood') { // 북유럽 목조 주택 교외: 숲 사이 굽은 길 따라 띄엄띄엄 나무집(빨강 · 노랑 · 하양 지붕), 집 둘레 작은 풀밭, 숲 속 호수와 작은 섬 · 선착장, 하얀 교회, 숲길 점선, 학교 운동장
+    const roof = dark ? ['#6e4040', '#6e6343', '#4f5560', '#5a4f44'] : ['#e8a49a', '#efd894', '#f4f4f2', '#d9c2a8'];
+    o.push(`<rect x="${X0}" y="${Y0}" width="${X1 - X0}" height="${Y1 - Y0}" fill="${c.forest}"/>`);
+    for (let k = 0; k < 340; k++) o.push(`<circle cx="${f(W * (-0.1 + r() * 1.2))}" cy="${f(H * (-0.1 + r() * 1.2))}" r="${f(3 + r() * 4)}" fill="${c.park}" opacity=".45"/>`);
+    const lx = W * (r() < 0.5 ? 0.22 : 0.74), ly = H * (0.62 + r() * 0.2);
+    const roads = [];
+    roads.push([[X0, H * (0.3 + r() * 0.1)], [W * 0.3, H * 0.36], [W * 0.55, H * (0.26 + r() * 0.1)], [X1, H * 0.34]]);
+    for (let k = 0; k < 3; k++) { const x0 = W * (0.15 + k * 0.32 + r() * 0.08), y0 = yOn(roads[0], x0); roads.push([[x0, y0], [x0 + (r() - 0.5) * 80, y0 + 70], [x0 + (r() - 0.5) * 120, y0 + 150], [x0 + (r() - 0.5) * 100, Y1]]); }
+    roads.push([[roads[1][1][0], roads[1][1][1]], [W * 0.5, H * 0.1], [W * 0.6, Y0]]);
+    for (const rd of roads) for (let t = 0.06; t < 0.96; t += 0.07) { if (r() < 0.25) continue; const n = rd.length - 1, i = Math.min(n - 1, Math.floor(t * n)), u = t * n - i, x = rd[i][0] + (rd[i + 1][0] - rd[i][0]) * u, y = rd[i][1] + (rd[i + 1][1] - rd[i][1]) * u, sd = r() < 0.5 ? -1 : 1, hx = x + sd * 16, hy = y + (r() - 0.5) * 8;
+      o.push(fill(blob(hx, hy, 15, 11, 7, 0.25), c.park), `<rect x="${f(hx - 5)}" y="${f(hy - 4)}" width="10" height="8" rx="1" fill="${roof[Math.floor(r() * 4)]}" stroke="${c.edge}" stroke-width="0.6"/>`); if (r() < 0.4) o.push(`<rect x="${f(hx + 6)}" y="${f(hy)}" width="5" height="4" rx="0.6" fill="${roof[2]}" stroke="${c.edge}" stroke-width="0.5"/>`); }
+    for (const rd of roads) o.push(way(curve(rd), 2.8));
+    o.push(fill(blob(lx, ly, 104, 64, 11, 0.3), c.water), fill(blob(lx + 20, ly - 6, 16, 10, 7, 0.3), c.forest), `<path d="M${f(lx - 60)} ${f(ly - 46)}l14 12" stroke="${c.wall}" stroke-width="3" stroke-linecap="round"/>`);
+    { const [x, y] = roads[0][1]; o.push(fill(blob(x, y - 26, 22, 14, 7, 0.2), c.park), `<rect x="${f(x - 8)}" y="${f(y - 30)}" width="16" height="9" rx="1" fill="${roof[2]}" stroke="${c.wall}" stroke-width="1"/><rect x="${f(x + 6)}" y="${f(y - 33)}" width="5" height="5" fill="${c.wall}"/>`); }
+    { const [x, y] = roads[0][2]; o.push(`<rect x="${f(x + 16)}" y="${f(y - 52)}" width="44" height="30" rx="3" fill="${c.park}" stroke="${c.road}" stroke-width="1.2"/><rect x="${f(x + 18)}" y="${f(y - 60)}" width="22" height="7" rx="1" fill="${c.bld}" stroke="${c.wall}" stroke-width="0.8"/>`); }
+    o.push(`<path d="${curve([[X0, H * 0.8], [W * 0.3, H * 0.9], [lx, ly + 80], [X1, H * 0.95]])}" fill="none" stroke="${c.wall}" stroke-width="1.4" stroke-dasharray="3 4"/>`);
+    o.push(big(curve(roads[0]), 4.4));
+  } else if (kind === 'itOldNew') { // 이탈리아 옛 시내 + 새 시내: 촘촘한 옛 블록 시내(두오모 광장 · 종탑), 옛 성벽 자리 가로수 고리길, 바깥은 반듯한 블록마다 떨어져 선 아파트 몇 동, 역과 철길, 강과 다리
+    const cx = W * (0.44 + r() * 0.12), cy = H * (0.42 + r() * 0.1), ga = (r() - 0.5) * 30, g2 = ga + 20 + r() * 20, R = 92 + r() * 14;
+    const T = [], bw = 46, bh = 36, ca2 = Math.cos(g2 / 57.3), sa2 = Math.sin(g2 / 57.3);
+    T.push(`<rect x="${X0}" y="${Y0}" width="${X1 - X0}" height="${Y1 - Y0}" fill="${c.built}"/>`);
+    for (let i = -9; i <= 9; i++) for (let j = -10; j <= 10; j++) { const u = i * bw, v = j * bh, p = (a, b) => [cx + a * ca2 - b * sa2, cy + a * sa2 + b * ca2], [x, y] = p(u + bw / 2, v + bh / 2), t = ((i * 7 + j * 5) % 13 + 13) % 13;
+      if (t === 6) { T.push(`<rect x="${f(x - bw / 2 + 4)}" y="${f(y - bh / 2 + 4)}" width="${bw - 8}" height="${bh - 8}" rx="2" fill="${c.park}" transform="rotate(${f(g2)} ${f(x)} ${f(y)})"/>`); continue; }
+      for (const [dx, dy] of [[-11, -7], [11, -7], [-11, 7], [11, 7]]) if (r() < 0.8) { const [hx, hy] = p(u + bw / 2 + dx, v + bh / 2 + dy); T.push(`<rect x="${f(hx - 7)}" y="${f(hy - 4.5)}" width="14" height="9" rx="1" fill="${c.bld}" stroke="${c.edge}" stroke-width="0.6" transform="rotate(${f(g2)} ${f(hx)} ${f(hy)})"/>`); } }
+    o.push(T.join(''));
+    o.push(grid(`M${X0} ${Y0}H${X1}V${Y1}H${X0}Z`, g2, cx, cy, bw, bh, 2.4).replace(`fill="${c.built}"`, 'fill="none"'));
+    const old = blob(cx, cy, R, R * 0.82, 10, 0.08), id = `${cidBase}_${nClip++}`, sp = 20, N = 14, P = [], ca = Math.cos(ga / 57.3), sa = Math.sin(ga / 57.3);
+    for (let i = 0; i <= N; i++) { P.push([]); for (let j = 0; j <= N; j++) { const u = (i - N / 2) * sp + (r() - 0.5) * sp * 0.5, v = (j - N / 2) * sp * 0.82 + (r() - 0.5) * sp * 0.45; P[i].push([cx + u * ca - v * sa, cy + u * sa + v * ca]); } }
+    const B = [`<path d="${old}" fill="${c.road}"/>`], m = N / 2 - 1;
+    for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) { if (i >= m && i < m + 2 && j >= m && j < m + 2) continue; const q = [P[i][j], P[i + 1][j], P[i + 1][j + 1], P[i][j + 1]], mx = q.reduce((s, p) => s + p[0], 0) / 4, my = q.reduce((s, p) => s + p[1], 0) / 4; B.push(`<path d="M${q.map(([x, y]) => `${f(mx + (x - mx) * 0.8)} ${f(my + (y - my) * 0.8)}`).join('L')}Z" fill="${c.plaza}" stroke="${c.wall}" stroke-width="0.5"/>`); }
+    const sq = [P[m][m], P[m + 2][m], P[m + 2][m + 2], P[m][m + 2]], sx = sq.reduce((s, p) => s + p[0], 0) / 4, sy = sq.reduce((s, p) => s + p[1], 0) / 4;
+    B.push(`<path d="M${sq.map(([x, y]) => `${f(sx + (x - sx) * 0.92)} ${f(sy + (y - sy) * 0.92)}`).join('L')}Z" fill="${c.sand}"/>`, `<g transform="translate(${f(sx)} ${f(sy - 4)}) rotate(${f(ga)})"><rect x="-16" y="-6" width="32" height="12" rx="1.5" fill="${c.wall}"/><circle cx="-10" cy="0" r="6" fill="${c.wall}" stroke="${c.sand}" stroke-width="1.2"/><rect x="18" y="-4" width="6" height="6" fill="${c.wall}"/></g>`);
+    o.push(`<clipPath id="${id}"><path d="${old}"/></clipPath><g clip-path="url(#${id})">${B.join('')}</g>`);
+    o.push(way(old, 6), `<path d="${blob(cx, cy, R + 9, R * 0.82 + 8, 10, 0.08)}" fill="none" stroke="${c.forest}" stroke-width="3" stroke-dasharray="0.1 9" stroke-linecap="round"/>`);
+    const rl = [[X0, cy + R + 60], [X1, cy + R + 20]]; o.push(`<path d="M${f(rl[0][0])} ${f(rl[0][1])}L${f(rl[1][0])} ${f(rl[1][1])}" stroke="${c.land}" stroke-width="16"/>`, rail(`M${f(rl[0][0])} ${f(rl[0][1] - 3)}L${f(rl[1][0])} ${f(rl[1][1] - 3)}`), rail(`M${f(rl[0][0])} ${f(rl[0][1] + 3)}L${f(rl[1][0])} ${f(rl[1][1] + 3)}`));
+    { const x = cx + 30, y = rl[0][1] + (rl[1][1] - rl[0][1]) * (x - X0) / (X1 - X0); o.push(`<rect x="${f(x - 30)}" y="${f(y - 20)}" width="60" height="12" rx="2" fill="${c.bld}" stroke="${c.wall}" stroke-width="1"/>`, big(`M${f(x)} ${f(y - 20)}L${f(cx + 10)} ${f(cy + R * 0.82)}`, 4.6)); }
+    const rv = [[X0, cy - R - 50], [W * 0.4, cy - R - 30], [W * 0.75, cy - R - 60], [X1, cy - R - 40]];
+    o.push(`<path d="${curve(rv)}" fill="none" stroke="${c.park}" stroke-width="36"/>`, `<path d="${curve(rv)}" fill="none" stroke="${c.water}" stroke-width="20"/>`);
+    for (const t of [0.3, 0.7]) { const x = W * t, y = yOn(rv, x); o.push(way(`M${f(x)} ${f(y - 20)}L${f(x + 2)} ${f(y + 20)}`, 4.4)); }
+  } else if (kind === 'usStrip') { // 미국 큰길 상가 교외: 1마일마다 넓은 간선도로, 길가엔 ㄱ자 상가와 넓은 주차장 · 큰 마트 · 주유소 · 드라이브스루, 뒤쪽은 굽은 주택가, 학교 운동장 · 야구장, 한쪽 고속도로 나들목
+    const ga = (r() - 0.5) * 10, cx = W * 0.5, cy = H * 0.5, M = 260, T = [];
+    T.push(`<rect x="${f(cx - 700)}" y="${f(cy - 700)}" width="1400" height="1400" fill="${c.built}"/>`);
+    const ax = cx - M / 2 + (r() - 0.5) * 60, ay = cy - M / 2 + (r() - 0.5) * 60;
+    for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) { const x0 = ax + i * M, y0 = ay + j * M;
+      for (let k = 0; k < 7; k++) { const y = y0 + 50 + k * 26 + (k % 2) * 4; T.push(way(`M${f(x0 + 46)} ${f(y)}Q${f(x0 + M / 2)} ${f(y + (k % 2 ? 14 : -14))} ${f(x0 + M - 46)} ${f(y)}`, 2)); for (let h = 0; h < 14; h++) { const x = x0 + 56 + h * 12; for (const s of [-1, 1]) T.push(`<rect x="${f(x - 4)}" y="${f(y + s * 8 - 3 + (k % 2 ? 14 : -14) * 4 * ((h + 0.5) / 14) * (1 - (h + 0.5) / 14))}" width="8" height="6" rx="0.8" fill="${c.bld}" stroke="${c.edge}" stroke-width="0.4"/>`); } }
+      T.push(way(`M${f(x0 + 46)} ${f(y0 + 40)}V${f(y0 + M - 40)}`, 2.4), way(`M${f(x0 + M - 46)} ${f(y0 + 40)}V${f(y0 + M - 40)}`, 2.4));
+      T.push(`<path d="M${f(x0 + 4)} ${f(y0 + 4)}h${M - 8}v40h${-(M - 8)}z" fill="${c.plaza}"/>`);
+      const lay = (i * 3 + j * 5 + 20) % 4;
+      if (lay === 0) T.push(`<path d="M${f(x0 + 10)} ${f(y0 + 8)}h90v10h-80v18h-10z" fill="${c.bld}" stroke="${c.wall}" stroke-width="0.8"/>`, ...[0, 1, 2, 3, 4, 5].map(k => `<path d="M${f(x0 + 28 + k * 12)} ${f(y0 + 22)}v16" stroke="${c.road}" stroke-width="1"/>`));
+      if (lay === 1) T.push(`<rect x="${f(x0 + 120)}" y="${f(y0 + 8)}" width="70" height="20" rx="1" fill="${c.bld}" stroke="${c.wall}" stroke-width="0.8"/>`, ...[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(k => `<path d="M${f(x0 + 100 + k * 11)} ${f(y0 + 30)}v10" stroke="${c.road}" stroke-width="1"/>`));
+      if (lay === 2) T.push(`<rect x="${f(x0 + 14)}" y="${f(y0 + 12)}" width="22" height="16" rx="1" fill="${c.road}" stroke="${c.wall}" stroke-width="1"/><rect x="${f(x0 + 21)}" y="${f(y0 + 17)}" width="8" height="6" fill="${c.wall}"/>`, `<rect x="${f(x0 + 60)}" y="${f(y0 + 12)}" width="14" height="10" rx="1" fill="${c.bld}" stroke="${c.wall}" stroke-width="0.8"/><path d="M${f(x0 + 54)} ${f(y0 + 30)}h26v-24h-26" fill="none" stroke="${c.road}" stroke-width="2"/>`);
+      if (lay === 3) T.push(`<rect x="${f(x0 + 60)}" y="${f(y0 + 60)}" width="${M - 120}" height="${M - 120}" rx="4" fill="${c.park}"/><path d="M${f(x0 + 100)} ${f(y0 + 180)}l-20 -20a28 28 0 0 1 40 0z" fill="${c.sand}"/><rect x="${f(x0 + 140)}" y="${f(y0 + 74)}" width="50" height="16" rx="1" fill="${c.bld}" stroke="${c.wall}" stroke-width="0.8"/><ellipse cx="${f(x0 + 165)}" cy="${f(y0 + 150)}" rx="26" ry="16" fill="${c.sand}"/><ellipse cx="${f(x0 + 165)}" cy="${f(y0 + 150)}" rx="18" ry="10" fill="${c.park}"/>`);
+    }
+    for (let i = -2; i <= 3; i++) T.push(big(`M${f(ax + i * M)} ${f(cy - 700)}V${f(cy + 700)}`, 7));
+    for (let j = -2; j <= 3; j++) T.push(big(`M${f(cx - 700)} ${f(ay + j * M)}H${f(cx + 700)}`, 7));
+    o.push(`<g transform="rotate(${f(ga)} ${f(cx)} ${f(cy)})">${T.join('')}</g>`);
+    const fx = W * (r() < 0.5 ? 0.9 : 0.1); o.push(big(`M${f(fx)} ${Y0}L${f(fx + 10)} ${Y1}`, 10), `<path d="M${f(fx)} ${f(H * 0.5 - 30)}q30 30 0 60" fill="none" stroke="${c.major}" stroke-width="4"/>`);
+  } else if (kind === 'caLake') { // 캐나다 호숫가 교외 도시: 한쪽을 차지한 큰 호수와 모래 해변 · 호숫가 산책길 · 요트 선착장, 물가 따라 철길, 작은 시내 바둑판, 단풍나무 많은 주택가, 큰 공원에 아이스링크와 야구장
+    const ga = (r() - 0.5) * 16, sh = [[X0, H * (0.68 + r() * 0.08)], [W * 0.35, H * 0.74], [W * 0.7, H * (0.66 + r() * 0.08)], [X1, H * 0.72]];
+    const maple = dark ? ['#5a3a30', '#5a5030', '#2e4a34'] : ['#f0b48f', '#f2d27a', '#a9c99b'];
+    o.push(rowsGrid(`${curve(sh.map(([x, y]) => [x, y - 40]))}L${X1} ${Y0}L${X0} ${Y0}Z`, ga, W * 0.5, H * 0.3, 44, 26));
+    for (let k = 0; k < 70; k++) { const x = W * (-0.05 + r() * 1.1), y = H * (-0.05 + r() * 0.75); if (y > yOn(sh, Math.max(X0, Math.min(X1, x))) - 46) continue; o.push(`<circle cx="${f(x)}" cy="${f(y)}" r="${f(2.6 + r() * 2)}" fill="${maple[k % 3]}"/>`); }
+    const px = W * (0.15 + r() * 0.5), py = H * (0.2 + r() * 0.15); o.push(`<rect x="${f(px - 50)}" y="${f(py - 34)}" width="100" height="68" rx="4" fill="${c.park}" stroke="${c.road}" stroke-width="2" transform="rotate(${f(ga)} ${f(px)} ${f(py)})"/><rect x="${f(px - 40)}" y="${f(py - 24)}" width="34" height="20" rx="8" fill="${c.road}" stroke="${c.water}" stroke-width="1.4" transform="rotate(${f(ga)} ${f(px)} ${f(py)})"/><path d="M${f(px + 30)} ${f(py + 24)}l-18 -18a25 25 0 0 1 36 0z" fill="${c.sand}" transform="rotate(${f(ga)} ${f(px)} ${f(py)})"/>`);
+    o.push(fill(`${curve(sh.map(([x, y]) => [x, y - 40]))}L${X1} ${Y1}L${X0} ${Y1}Z`, c.park));
+    o.push(`<path d="${curve(sh.map(([x, y]) => [x, y - 30]))}" fill="none" stroke="${c.land}" stroke-width="10"/>`, rail(curve(sh.map(([x, y]) => [x, y - 30]))));
+    o.push(fill(`${curve(sh.map(([x, y]) => [x, y - 8]))}L${X1} ${Y1}L${X0} ${Y1}Z`, c.sand), fill(`${curve(sh)}L${X1} ${Y1}L${X0} ${Y1}Z`, c.water));
+    o.push(`<path d="${curve(sh.map(([x, y]) => [x, y - 18]))}" fill="none" stroke="${c.road}" stroke-width="1.6" stroke-dasharray="1 3" stroke-linecap="round"/>`);
+    const mx = W * (0.7 + r() * 0.15), my = yOn(sh, mx); o.push(`<path d="${curve([[mx - 40, my], [mx - 50, my + 40], [mx + 10, my + 56]])}" fill="none" stroke="${c.contour}" stroke-width="6" stroke-linecap="round"/>`);
+    for (let k = 0; k < 4; k++) o.push(`<path d="M${f(mx - 34 + k * 12)} ${f(my + 4)}v24" stroke="${c.road}" stroke-width="1.6"/>`);
+    o.push(big(curve(sh.map(([x, y]) => [x, y - 48])), 4.8), big(`M${f(W * 0.45)} ${Y0}L${f(W * 0.5)} ${f(yOn(sh, W * 0.5) - 48)}`, 4.4));
+  } else if (kind === 'krUniv') { // 한국 대학가 · 원룸촌: 언덕 위 대학 정문과 캠퍼스 건물, 정문에서 내려오는 큰길 양옆 빽빽한 가게, 그 뒤 골목마다 작은 원룸 건물이 촘촘, 큰길 끝 지하철역, 뒷산
+    const ga = (r() - 0.5) * 24, cx = W * (0.44 + r() * 0.12), gy = H * (0.22 + r() * 0.06), T = [];
+    T.push(`<rect x="${X0}" y="${Y0}" width="${X1 - X0}" height="${Y1 - Y0}" fill="${c.road}"/>`);
+    const sp = 30, N = 22, P = []; for (let i = 0; i <= N; i++) { P.push([]); for (let j = 0; j <= N; j++) P[i].push([cx + (i - N / 2) * sp + (r() - 0.5) * 10, gy + 4 + j * sp * 0.7 + (r() - 0.5) * 6]); }
+    for (let i = 0; i < N; i++) for (let j = 0; j < N - 6; j++) { const q = [P[i][j], P[i + 1][j], P[i + 1][j + 1], P[i][j + 1]], mx = q.reduce((s, p) => s + p[0], 0) / 4, my = q.reduce((s, p) => s + p[1], 0) / 4; T.push(`<path d="M${q.map(([x, y]) => `${f(mx + (x - mx) * 0.86)} ${f(my + (y - my) * 0.86)}`).join('L')}Z" fill="${c.built}"/>`); for (const [dx, dy] of [[-6, -3.5], [6, -3.5], [-6, 3.5], [6, 3.5]]) if (r() < 0.85) T.push(`<rect x="${f(mx + dx - 4.5)}" y="${f(my + dy - 3)}" width="9" height="6" rx="0.8" fill="${c.bld}" stroke="${c.edge}" stroke-width="0.5"/>`); }
+    for (let i = 0; i <= N; i++) T.push(way(curve(P[i].slice(0, N - 5)), 1.8)); for (let j = 0; j <= N - 6; j++) T.push(way(curve(P.map(rw => rw[j])), 1.8));
+    T.push(`<path d="M${f(cx)} ${f(gy)}V${f(Y1 + 50)}" stroke="${c.plaza}" stroke-width="26"/>`);
+    for (let k = 0; k < 40; k++) for (const s of [-1, 1]) T.push(`<rect x="${f(cx + s * 9.5 - 3.5)}" y="${f(gy + 6 + k * 8)}" width="7" height="6.6" fill="${c.bld}" stroke="${c.wall}" stroke-width="0.6"/>`);
+    T.push(fill(`M${X0} ${Y0}H${X1}V${f(gy)}${curve([[X1, gy], [cx + 120, gy - 10], [cx, gy + 2], [cx - 120, gy - 6], [X0, gy]]).replace('M', 'L')}Z`, c.park));
+    for (let k = 0; k < 7; k++) { const x = cx - 150 + k * 50 + (r() - 0.5) * 16, y = gy - 40 - (k % 3) * 22; T.push(`<rect x="${f(x - 16)}" y="${f(y - 9)}" width="${f(26 + r() * 12)}" height="${f(14 + r() * 6)}" rx="1.5" fill="${c.bld}" stroke="${c.wall}" stroke-width="1"/>`); }
+    T.push(`<rect x="${f(cx - 14)}" y="${f(gy - 6)}" width="28" height="7" rx="1.5" fill="${c.wall}"/>`, way(`M${f(cx)} ${f(gy - 4)}L${f(cx + 20)} ${f(gy - 60)}L${f(cx - 30)} ${f(gy - 110)}`, 2.6));
+    T.push(fill(blob(X0 + 40, Y0 + 10, 140, 60, 9, 0.2), c.forest), fill(blob(X1 - 30, Y0, 120, 50, 9, 0.2), c.forest));
+    T.push(big(`M${f(cx)} ${f(gy)}V${f(Y1 + 50)}`, 4.8));
+    const sy = gy + 40 * 8 + 6; T.push(big(`M${f(X0 - 50)} ${f(sy)}H${f(X1 + 50)}`, 5.6), `<circle cx="${f(cx)}" cy="${f(sy)}" r="7" fill="${c.road}" stroke="${dark ? '#8fb3d4' : '#3f8fd8'}" stroke-width="2.6"/>`);
+    o.push(`<g transform="rotate(${f(ga)} ${f(W / 2)} ${f(H / 2)})">${T.join('')}</g>`);
+  } else if (kind === 'deDorf') { // 독일 들판 마을: 굽은 마을길 가운데 잔디 마당과 교회, 길 따라 ㄷ자 농가(마당 품은 집 셋), 집 뒤 길쭉한 텃밭 띠, 바깥은 길쭉길쭉한 줄 밭이 방향 바꿔 가며 퍼지고, 개울과 숲 가장자리, 밭길
+    const crop = [c.vine, c.park, c.sand, dark ? '#2a3328' : '#e6ecd0'], cx = W * (0.44 + r() * 0.12), cy = H * (0.46 + r() * 0.1);
+    o.push(`<rect x="${X0}" y="${Y0}" width="${X1 - X0}" height="${Y1 - Y0}" fill="${crop[3]}"/>`);
+    for (let g = 0; g < 9; g++) { const gx = W * (-0.1 + (g % 3) * 0.45 + r() * 0.1), gy = H * (-0.1 + Math.floor(g / 3) * 0.5 + r() * 0.1), a = r() * 180, T = []; for (let k = 0; k < 14; k++) T.push(`<rect x="${f(-120 + k * 17)}" y="-90" width="15.4" height="180" fill="${crop[(k * 3 + g + Math.floor(r() * 2)) % 4]}"/>`); o.push(`<g transform="translate(${f(gx)} ${f(gy)}) rotate(${f(a)})">${T.join('')}<path d="M-122 -92h240v184h-240z" fill="none" stroke="${c.road}" stroke-width="2.4"/></g>`); }
+    o.push(fill(blob(X1 - 10, Y0 + 30, 160, 90, 10, 0.2), c.forest), fill(blob(X0, Y1, 140, 70, 10, 0.2), c.forest));
+    const ms = [[X0, cy + 30], [cx - 110, cy + 10], [cx, cy + 22], [cx + 110, cy - 6], [X1, cy + 14]];
+    o.push(`<path d="${curve(ms)}" fill="none" stroke="${c.built}" stroke-width="120"/>`);
+    for (let x = X0 + 10; x < X1; x += 22) for (const s of [-1, 1]) { const y = yOn(ms, Math.max(X0, Math.min(X1, x))); if (Math.abs(x - cx) < 34) continue; o.push(`<rect x="${f(x - 9)}" y="${f(s < 0 ? y - 56 : y + 22)}" width="18" height="34" fill="${crop[(Math.floor(x) + s) % 2 ? 1 : 0]}" opacity=".8"/>`); const hy = y + s * 13, d = s < 0 ? -1 : 1; o.push(`<path d="M${f(x - 8)} ${f(hy)}v${f(d * 10)}h16v${f(-d * 10)}" fill="none" stroke="${c.bld}" stroke-width="4.4" stroke-linejoin="round"/><path d="M${f(x - 8)} ${f(hy)}v${f(d * 10)}h16v${f(-d * 10)}" fill="none" stroke="${c.wall}" stroke-width="0.6"/>`); }
+    o.push(fill(blob(cx, yOn(ms, cx) - 4, 30, 18, 8, 0.15), c.park), `<g transform="translate(${f(cx)} ${f(yOn(ms, cx) - 6)})"><rect x="-12" y="-4" width="24" height="8" rx="1" fill="${c.wall}"/><rect x="6" y="-7" width="7" height="7" rx="1" fill="${c.wall}"/></g>`);
+    for (let k = 0; k < 6; k++) o.push(`<circle cx="${f(cx - 24 + k * 10)}" cy="${f(yOn(ms, cx) + (k % 2 ? 10 : -14))}" r="3" fill="${c.forest}"/>`);
+    const ck = [[X0, cy + 110 + r() * 30], [cx - 40, cy + 90], [cx + 80, cy + 130], [X1, cy + 100]];
+    o.push(`<path d="${curve(ck)}" fill="none" stroke="${c.forest}" stroke-width="10" stroke-dasharray="0.1 7" stroke-linecap="round"/>`, `<path d="${curve(ck)}" fill="none" stroke="${c.water}" stroke-width="4"/>`);
+    o.push(way(curve(ms), 3.6), way(`M${f(cx + 60)} ${f(yOn(ms, cx + 60))}L${f(cx + 120)} ${Y0}`, 2), way(`M${f(cx - 70)} ${f(yOn(ms, cx - 70))}L${f(cx - 140)} ${Y1}`, 2), big(`M${X0} ${f(H * 0.12)}L${X1} ${f(H * 0.06)}`, 4.6));
+  } else if (kind === 'jpDanchi') { // 일본 단지(団地): 같은 방향으로 엇갈려 선 긴 판상 아파트 줄, 동 사이 넓은 잔디 · 놀이터 · 벚나무, 단지 가운데 작은 상가 · 버스 회차로, 둘레는 단독주택 바둑판, 뒤쪽 숲 언덕
+    const ga = (r() - 0.5) * 30, cx = W * (0.46 + r() * 0.1), cy = H * (0.46 + r() * 0.1), T = [];
+    o.push(rowsGrid(`M${X0} ${Y0}H${X1}V${Y1}H${X0}Z`, ga + 10, cx, cy, 30, 22, 5));
+    const site = blob(cx, cy, 160, 118, 10, 0.08); o.push(fill(site, c.park), `<path d="${site}" fill="none" stroke="${c.road}" stroke-width="4"/>`);
+    const id = `${cidBase}_${nClip++}`;
+    for (let j = -5; j <= 5; j++) for (let i = -4; i <= 4; i++) { if (Math.abs(i) <= 0 && Math.abs(j) <= 1) continue; const x = cx + i * 46 + (j % 2) * 18, y = cy + j * 24; T.push(`<rect x="${f(x - 18 + 2)}" y="${f(y - 4 + 2)}" width="36" height="8" rx="1" fill="${c.edge}" opacity=".45"/><rect x="${f(x - 18)}" y="${f(y - 4)}" width="36" height="8" rx="1" fill="${c.bld}" stroke="${c.wall}" stroke-width="0.6"/>`); if ((i + j) % 4 === 0) T.push(`<circle cx="${f(x + 23)}" cy="${f(y + 12)}" r="3.4" fill="${dark ? '#5a3a46' : '#f3c6d0'}"/>`); if ((i * 3 + j) % 7 === 0) T.push(`<rect x="${f(x - 10)}" y="${f(y + 7)}" width="16" height="8" rx="2" fill="${c.sand}"/>`); }
+    T.push(`<rect x="${f(cx - 24)}" y="${f(cy - 14)}" width="48" height="16" rx="2" fill="${c.plaza}" stroke="${c.wall}" stroke-width="1"/><circle cx="${f(cx + 6)}" cy="${f(cy + 18)}" r="11" fill="${c.road}" stroke="${c.edge}"/><circle cx="${f(cx + 6)}" cy="${f(cy + 18)}" r="4" fill="${c.park}"/>`);
+    o.push(`<clipPath id="${id}"><path d="${site}"/></clipPath><g clip-path="url(#${id})"><g transform="rotate(${f(ga)} ${f(cx)} ${f(cy)})">${T.join('')}</g></g>`);
+    o.push(fill(blob(X1 - 30, Y0 + 20, 140, 80, 10, 0.2), c.forest), fill(blob(X0 + 10, Y0, 120, 60, 9, 0.2), c.forest));
+    o.push(big(curve([[X0, cy + 140], [cx - 120, cy + 120], [cx + 60, cy + 136], [X1, cy + 110]]), 5), way(`M${f(cx + 6)} ${f(cy + 30)}L${f(cx + 10)} ${f(cy + 126)}`, 3.4));
+  } else if (kind === 'noSnow') { // 눈 덮인 노르웨이 도시: 이름 따라 세 생김새(해협 건너 시내 · 섬 위 시내 · 피오르 끝 시내) × 네 방향, 눈 지붕 나무집 바둑판, 눈 속 침엽수, 다리, 뾰족한 하얀 교회, 케이블카, 스키 길, 부두
+    const wallc = dark ? ['#6a4646', '#6a6040', '#44566e', '#56606a', '#56606a', '#56606a'] : ['#e3a49c', '#ead38c', '#a9c3e3', '#c9cfd6', '#c9cfd6', '#d8b8a0'], pine = dark ? '#1f3a2a' : '#5f8f6f';
+    const v = Math.floor(r() * 3), turn = Math.floor(r() * 4) * 90, ga = (r() - 0.5) * 24, S0 = o.length;
+    o.push(`<rect x="${X0}" y="${Y0}" width="${X1 - X0}" height="${Y1 - Y0}" fill="${c.land}"/>`);
+    let townD, waterD, edges = [], bridge = null;
+    if (v === 0) { const ch = [[X0, H * (0.44 + r() * 0.1)], [W * 0.35, H * 0.5], [W * 0.65, H * (0.42 + r() * 0.1)], [X1, H * 0.48]];
+      townD = `${curve(ch.map(([x, y]) => [x, y + 40]))}L${X1} ${Y1}L${X0} ${Y1}Z`; waterD = `${curve(ch.map(([x, y]) => [x, y - 34]))}${curve([...ch].reverse().map(([x, y]) => [x, y + 40])).replace('M', 'L')}Z`; edges = [ch.map(([x, y]) => [x, y + 52]), ch.map(([x, y]) => [x, y - 46])]; const bx = W * (0.3 + r() * 0.4), by = yOn(ch, bx); bridge = [[bx - 6, by - 44], [bx + 6, by + 48]]; }
+    else if (v === 1) { const ix = W * (0.45 + r() * 0.1), iy = H * (0.5 + r() * 0.08), isl = blob(ix, iy, 120 + r() * 20, 78 + r() * 12, 11, 0.15);
+      townD = isl; waterD = `${blob(ix, iy, 190, 130, 11, 0.12)}`; edges = [[[ix - 100, iy], [ix, iy - 50], [ix + 100, iy]]]; bridge = [[ix + 120, iy - 10], [ix + 205, iy - 30]]; }
+    else { const fx = W * (0.45 + r() * 0.15), fy = H * (0.52 + r() * 0.08), fj = [[X0, fy + 40], [W * 0.2, fy + 10], [fx - 40, fy + 20], [fx, fy]];
+      townD = `${blob(fx + 30, fy, 150, 110, 11, 0.12)}`; waterD = `${curve([...fj.map(([x, y]) => [x, y - 26]), [fx + 26, fy + 6], ...[...fj].reverse().map(([x, y]) => [x, y + 26])], false)}Z`; edges = [[[fx - 120, fy + 60], [fx + 30, fy + 70], [fx + 170, fy + 30]]]; bridge = [[W * 0.2, fy - 20], [W * 0.2 + 4, fy + 40]]; }
+    for (let k = 1; k < 16; k++) o.push(`<path d="${blob(W * 0.5, H * 0.5, 120 + k * 26, 90 + k * 20, 12, 0.06)}" fill="none" stroke="${c.contour}" stroke-width="${k % 4 ? 0.9 : 1.6}"/>`);
+    { let g = ''; for (let k = 0; k < 220; k++) { const x = W * (-0.15 + r() * 1.3), y = H * (-0.15 + r() * 1.3); g += `M${f(x)} ${f(y - 5)}l3.4 7h-6.8z`; } o.push(`<path d="${g}" fill="${pine}" opacity=".85"/>`); }
+    { const id = `${cidBase}_${nClip++}`, T = [], cx = W * 0.5, cy = H * 0.6;
+      for (let i = -16; i <= 16; i++) for (let j = -14; j <= 14; j++) { const x = cx + i * 30, y = cy + j * 22, t = ((i * 7 + j * 3) % 19 + 19) % 19; if (t === 9) { for (let k = 0; k < 5; k++) T.push(`<path d="M${f(x + 6 + k * 4)} ${f(y + 6 + (k % 2) * 6)}l3 6h-6z" fill="${pine}"/>`); continue; }
+        for (const [dx, dy] of [[3, 3], [16, 3], [3, 12], [16, 12]]) if (r() < 0.68) T.push(`<rect x="${f(x + dx)}" y="${f(y + dy)}" width="9.4" height="7" rx="1.2" fill="${c.road}" stroke="${wallc[Math.floor(r() * 6)]}" stroke-width="1.4"/>`); }
+      for (let i = -16; i <= 16; i++) T.push(way(`M${f(cx + i * 30)} ${f(cy - 400)}V${f(cy + 400)}`, 2.2)); for (let j = -14; j <= 14; j++) T.push(way(`M${f(cx - 500)} ${f(cy + j * 22)}H${f(cx + 500)}`, 2.2));
+      if (v === 1) o.push(fill(waterD, c.water));
+      o.push(`<clipPath id="${id}"><path d="${townD}"/></clipPath><g clip-path="url(#${id})"><path d="${townD}" fill="${c.built}"/><g transform="rotate(${f(ga)} ${f(cx)} ${f(cy)})">${T.join('')}</g></g>`); }
+    if (v !== 1) o.push(fill(waterD, c.water)); else o.push(`<path d="${townD}" fill="none" stroke="${c.sand}" stroke-width="3"/>`);
+    for (let k = 0; k < 0; k++) { const x = W * (0.05 + r() * 0.9), y = H * (0.05 + r() * 0.9); o.push(`<path d="${blob(x, y, 4 + r() * 6, 3 + r() * 3, 6, 0.4)}" fill="${c.land}" opacity=".9"/>`); }
+    if (bridge) { const [[x1, y1], [x2, y2]] = bridge; o.push(`<path d="M${f(x1)} ${f(y1)}L${f(x2)} ${f(y2)}" stroke="${c.edge}" stroke-width="8"/><path d="M${f(x1)} ${f(y1)}L${f(x2)} ${f(y2)}" stroke="${c.road}" stroke-width="5.6"/>`); }
+    const tx = W * (0.1 + r() * 0.8), ty = H * (0.1 + r() * 0.2); o.push(`<path d="M${f(tx - 10)} ${f(ty + 8)}L${f(tx)} ${f(ty - 12)}L${f(tx + 10)} ${f(ty + 8)}Z" fill="${c.road}" stroke="${c.wall}" stroke-width="1.4" stroke-linejoin="round"/>`);
+    const cb = [W * (0.2 + r() * 0.6), H * 0.3], ce = [cb[0] - 60 + r() * 120, H * -0.02], ln = dark ? '#aeb5c0' : '#6b717b';
+    o.push(`<path d="M${f(cb[0])} ${f(cb[1])}L${f(ce[0])} ${f(ce[1])}" stroke="${ln}" stroke-width="1.3"/>`, ...[cb, ce].map(([x, y]) => `<rect x="${f(x - 6)}" y="${f(y - 4)}" width="12" height="8" rx="2" fill="${c.wall}"/>`));
+    for (let k = 0; k < 2; k++) { const x0 = W * (0.15 + k * 0.5 + r() * 0.1); o.push(`<path d="${curve([[x0, H * -0.05], [x0 + 30, H * 0.08], [x0 - 10, H * 0.18], [x0 + 20, H * 0.28]])}" fill="none" stroke="${dark ? '#8fb3d4' : '#7fa9d8'}" stroke-width="1.4" stroke-dasharray="4 3"/>`); }
+    edges.forEach((e, k) => o.push(k ? way(curve(e), 3.6) : big(curve(e), 4.6)));
+    const body = o.splice(S0).join(''); o.push(`<g transform="rotate(${turn} ${f(W / 2)} ${f(H / 2)})">${body}</g>`);
   } else { // railHub: 큰 종착역에서 철길이 부채처럼 퍼지고 셋으로 갈라져 나가요, 역 앞 고리 큰길 안 옛 동네, 밖은 바둑판
     const cx = W * (0.4 + r() * 0.2), cy = H * (0.62 + r() * 0.06), st = [cx + (r() - 0.5) * 40, cy - 112];
     o.push(grid(`M${X0} ${Y0}H${X1}V${Y1}H${X0}Z`, (r() - 0.5) * 24, W * 0.5, H * 0.5, 32, 26));
@@ -815,8 +1108,8 @@ function draw(kind, W, H, seed, dark = false) {
   const tr = `translate(${W / 2} ${H / 2}) rotate(${tilt}) scale(${mirror ? -1 : 1} 1) translate(${-W / 2} ${-H / 2})`;
   return `<g transform="${tr}">${o.join('')}</g>`;
 }
-const KINDS = ['oldRiver', 'gridLake', 'star', 'bay', 'island', 'mountain', 'canals', 'octagon', 'suburb', 'confluence', 'walled', 'railHub', 'hillPort', 'fjordVillage', 'canalGrid', 'deltaCity', 'oasis', 'farmVillage', 'medina', 'lakeResort', 'riverIslands', 'collegeTown', 'alpineValley', 'hilltop', 'interchange', 'portDocks', 'bigRiver', 'apartments', 'alleys', 'downtown', 'atoll', 'stiltVillage', 'riceTerraces', 'canyon', 'usTown', 'euroSquare', 'beachTown', 'campus', 'strait', 'archipelago', 'polarPort', 'pivotFarms', 'mountainCity', 'hillside', 'ruralTown', 'stationFront', 'castleMoat', 'templeRuins', 'crater', 'saltFlats', 'caveTown', 'savanna', 'tropicalResort', 'airportTown'];
-const KO = { oldRiver: '강가 구시가지', gridLake: '바둑판 + 호수', star: '방사형 광장', bay: '만 · 해안', island: '섬', mountain: '산골 마을', canals: '반원 운하', octagon: '사선 바둑판 + 바다', suburb: '교외 고리길', confluence: '두 강이 만나는 곳', walled: '별 모양 성곽', railHub: '철길이 모이는 역', hillPort: '계단식 언덕 항구', fjordVillage: '피오르 마을', canalGrid: '운하 바둑판', deltaCity: '삼각주 도시', oasis: '사막 오아시스', farmVillage: '논밭 사이 마을', medina: '성벽 안 미로 골목', lakeResort: '호숫가 휴양지', riverIslands: '강 가운데 섬', collegeTown: '대학 도시', alpineValley: '알프스 골짜기', hilltop: '언덕 꼭대기 마을', interchange: '신도시 나들목', portDocks: '컨테이너 항구', bigRiver: '큰 강 대도시', apartments: '아파트 단지', alleys: '골목 주택가', downtown: '도심 업무지구', atoll: '산호섬 환초', stiltVillage: '수상가옥 마을', riceTerraces: '계단식 논', canyon: '협곡 도시', usTown: '미국 소도시', euroSquare: '유럽 소도시 광장', beachTown: '해변 소도시', campus: '학교 캠퍼스 동네', strait: '해협 도시', archipelago: '다도해', polarPort: '극지 항구', pivotFarms: '원형 농장 사막', mountainCity: '산 아래 도시', hillside: '언덕 주택가', ruralTown: '시골 읍내', stationFront: '역 앞 번화가', castleMoat: '해자 두른 성 마을', templeRuins: '사원 유적', crater: '화산 분화구 마을', saltFlats: '염전 · 갯벌 마을', caveTown: '동굴 · 바위 마을', savanna: '사바나 마을', tropicalResort: '열대 해변 리조트', airportTown: '공항 옆 동네' };
+const KINDS = ['oldRiver', 'gridLake', 'star', 'bay', 'island', 'mountain', 'canals', 'octagon', 'suburb', 'confluence', 'walled', 'railHub', 'hillPort', 'fjordVillage', 'canalGrid', 'deltaCity', 'oasis', 'farmVillage', 'medina', 'lakeResort', 'riverIslands', 'collegeTown', 'alpineValley', 'hilltop', 'interchange', 'portDocks', 'bigRiver', 'apartments', 'alleys', 'downtown', 'atoll', 'stiltVillage', 'riceTerraces', 'canyon', 'usTown', 'euroSquare', 'beachTown', 'campus', 'strait', 'archipelago', 'polarPort', 'pivotFarms', 'mountainCity', 'hillside', 'ruralTown', 'stationFront', 'castleMoat', 'templeRuins', 'crater', 'saltFlats', 'caveTown', 'savanna', 'tropicalResort', 'airportTown', 'villaTown', 'jpHouses', 'terraces', 'courtyardBlocks', 'jpSuburb', 'krTown', 'haussmann', 'auSuburb', 'cnSuperblock', 'nordicWood', 'itOldNew', 'usStrip', 'caLake', 'krUniv', 'deDorf', 'jpDanchi', 'noSnow'];
+const KO = { oldRiver: '강가 구시가지', gridLake: '바둑판 + 호수', star: '방사형 광장', bay: '만 · 해안', island: '섬', mountain: '산골 마을', canals: '반원 운하', octagon: '사선 바둑판 + 바다', suburb: '교외 고리길', confluence: '두 강이 만나는 곳', walled: '별 모양 성곽', railHub: '철길이 모이는 역', hillPort: '계단식 언덕 항구', fjordVillage: '피오르 마을', canalGrid: '운하 바둑판', deltaCity: '삼각주 도시', oasis: '사막 오아시스', farmVillage: '논밭 사이 마을', medina: '성벽 안 미로 골목', lakeResort: '호숫가 휴양지', riverIslands: '강 가운데 섬', collegeTown: '대학 도시', alpineValley: '알프스 골짜기', hilltop: '언덕 꼭대기 마을', interchange: '신도시 나들목', portDocks: '컨테이너 항구', bigRiver: '큰 강 대도시', apartments: '아파트 단지', alleys: '골목 주택가', downtown: '도심 업무지구', atoll: '산호섬 환초', stiltVillage: '수상가옥 마을', riceTerraces: '계단식 논', canyon: '협곡 도시', usTown: '미국 소도시', euroSquare: '유럽 소도시 광장', beachTown: '해변 소도시', campus: '학교 캠퍼스 동네', strait: '해협 도시', archipelago: '다도해', polarPort: '극지 항구', pivotFarms: '원형 농장 사막', mountainCity: '산 아래 도시', hillside: '언덕 주택가', ruralTown: '시골 읍내', stationFront: '역 앞 번화가', castleMoat: '해자 두른 성 마을', templeRuins: '사원 유적', crater: '화산 분화구 마을', saltFlats: '염전 · 갯벌 마을', caveTown: '동굴 · 바위 마을', savanna: '사바나 마을', tropicalResort: '열대 해변 리조트', airportTown: '공항 옆 동네', villaTown: '빌라촌', jpHouses: '단독주택 주택가', terraces: '테라스 하우스 동네', courtyardBlocks: '중정 블록 시가지', jpSuburb: '교외 역세권', krTown: '지방 소도시 시내', haussmann: '오스만 블록 시가지', auSuburb: '넓은 교외', cnSuperblock: '대로 사이 큰 단지', nordicWood: '목조 주택 교외', itOldNew: '옛 시내 + 새 시내', usStrip: '큰길 상가 교외', caLake: '호숫가 교외 도시', krUniv: '대학가 · 원룸촌', deDorf: '들판 마을', jpDanchi: '단지(団地)', noSnow: '눈 덮인 노르웨이 도시' };
 return { draw, KINDS, KO, hsh };
 })();
 if (typeof module !== 'undefined') module.exports = TOWN3;
