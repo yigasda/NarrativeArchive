@@ -118,7 +118,10 @@ test('글 안 이름: "하고" as a verb is no name; 로 · 에 · 에서 · 보
     assert.equal(data.namedIn('나는 소망하고 싶다', '소망'), false);
     assert.equal(data.namedIn('소망하고 있었다', '소망'), false);
     assert.equal(data.namedIn('소망하고 밥을 먹었다', '소망'), true);
-    for (const t of ['이보로 정했다', '이보에 맞췄다', '소망에게 줬다', '마라에서 끝났다', '이보보다 크다', '이보였다', '소망으로 했다']) assert.equal(data.namedIn(t, t.slice(0, 2)), true, t);
+    // (after a name of three letters or more; a short Korean name may be that word, "가을에", "하늘로")
+    for (const t of ['마리아로 정했다', '마리아에 맞췄다', '마리아에서 끝났다', '마리아보다 크다', '마리아였다', '마리아으로 했다', 'Ivo에서 만났다']) assert.equal(data.namedIn(t, t.startsWith('Ivo') ? 'Ivo' : '마리아'), true, t);
+    for (const [t, n] of [['가을에 단풍', '가을'], ['하늘로 날아갔다', '하늘'], ['바다에서 수영', '바다'], ['하나였다', '하나'], ['나라보다 크다', '나라'], ['유리로 만든 컵', '유리']]) assert.equal(data.namedIn(t, n), false, t);
+    assert.equal(data.namedIn('소망에게 줬다', '소망'), true);
     assert.equal(data.namedIn('이보다 크다', '이보'), false);
 });
 
@@ -171,7 +174,8 @@ test('점검 수정 2: "Ren Kim" moving or read never moves the owner Ren nor ta
 
 test('점검 수정 2: new endings after a name only end a word ("소망에너지", "이보로봇" are no name); one cafe twice two hours apart, or in two cities, is two visits', () => {
     for (const t of ['소망에너지 주식', '이보로봇', '이보에스프레소']) assert.equal(data.namedIn(t, t.slice(0, 2)), false, t);
-    for (const t of ['이보에서는', '이보로는', '이보였는데', '이보보다도']) assert.equal(data.namedIn(t, '이보'), true, t);
+    for (const t of ['마리아에서는', '마리아로는', '마리아였는데', '마리아보다도']) assert.equal(data.namedIn(t, '마리아'), true, t);
+    for (const t of ['마리아에너지', '마리아로봇']) assert.equal(data.namedIn(t, '마리아'), false, t);
     const p = plainPhone({ where: { at: 1, people: [row('Ren', 'Frankfurt', 'Europe/Berlin')] } });
     const visit = (time, city = 'Frankfurt') => data.__mergePhone(p, { threads: [], posts: [], contacts: [], visits: [{ place: 'Bar X', city, time, with: [] }] });
     visit('10-26 11:00'); visit('10-26 11:40'); visit('10-26 13:00'); visit('10-26 13:10', 'Paris');

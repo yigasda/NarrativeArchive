@@ -19,7 +19,7 @@ import { parseSections, RANGE_HEAD, sectionKey, splitTail } from './sections.js'
 import { glossaryEntries, glossaryPeople } from './translate.js';
 import { worldText } from './world.js';
 import { phoneChatScope, phoneTarget } from './phonestory.js';
-import { dateOrderSource, htmlClocks, htmlDatedClocks, htmlTimeContext, swapDate, withDateOrder, withDateOrderSync, tidyKo, arr, evOf, gapDays, giftOf, hhmm, jsonOf, ko, parseJson, storyMin, byStory, yearIn, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
+import { dateOrderSource, htmlClocks, htmlDatedClocks, htmlTimeContext, swapDate, withDateOrder, withDateOrderSync, tidyKo, arr, evOf, gapDays, giftOf, hhmm, jsonOf, ko, parseJson, storyMin, byStory, yearIn, storyYearIn, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
 import { clockFallback, exactClockShift } from './phoneclock.js';
 export { tidyKo, arr, gapDays, giftOf, hhmm, jsonOf, ko, last4, line, num, pad, pick, storyMin, byStory, str, when, withEv };
 import { COUNTRY_TZ, applyDays, applyLife, applyWeather, cardClock, cityAt, dayGap, dlvClock, fillDays, lifeClock, lifeNow, weatherFrom, zoneShift } from './phonesynclife.js';
@@ -830,7 +830,8 @@ export function storyYear(m, p = null, upto = null) {
     if (p?.year) return String(p.year);
     let tracks = '';
     try { tracks = recentTrackers(5, { visibleOnly: true, ...(upto == null ? {} : { chat: (ctx().chat || []).slice(0, upto + 1) }) }).map(t => t.date || '').join('\n'); } catch { /* no status lines */ }
-    return yearIn(m.text) || yearIn(tracks) || (noArchive(m) ? yearIn(recentForCheck(1e9).join('\n')) : '');
+    // (the newest status line's first: it is the story's now; then the archive's, then (no archive) the chat's)
+    return yearIn(tracks) || storyYearIn(m.text) || (noArchive(m) ? storyYearIn(recentForCheck(1e9).join('\n')) : '');
 }
 // a phone's year, once: one the story writes in a date, else none (설정 › 날짜 및 시간 changes it); true when it was set now
 export function ensureYear(m, p, upto = null) {
@@ -2304,7 +2305,10 @@ const isOwnerName = (p, m, n) => {
 // 이보네), never in another word ("이보다", "장미꽃", "소망하다", "그건 소망이다"); a name in Latin letters may take a Korean
 // ending ("Ivo가")
 // ("하고" not as a verb: "소망하고 있다", "소망하고 싶다")
-const KO_AFTER = String.raw`(?:이(?!다)(?:가|는|를|랑|와|하고|한테|에게|도|만|네|야|의|여|요)?|가|는|은|를|을|와|과|랑|하고(?!\s*(?:있|싶))|한테|에게|께|의|도|만|네|야|아|여|씨|님|요|부터|까지|처럼|보고|더러|(?:에서|에|으로|로|보다)(?:는|도|만|의|요|부터|까지|라도|선)?(?![\p{L}])|였(?:다|어|고|지|는데|던|으면|을|음)?(?![\p{L}]))`;
+const KO_AFTER = String.raw`(?:이(?!다)(?:가|는|를|랑|와|하고|한테|에게|도|만|네|야|의|여|요)?|가|는|은|를|을|와|과|랑|하고(?!\s*(?:있|싶))|한테|에게|께|의|도|만|네|야|아|여|씨|님|요|부터|까지|처럼|보고|더러)`;
+// (endings a place or a thing takes as well: "가을에", "하늘로", "바다에서", "하나였다", "나라보다": after a Korean name of
+// three letters or more only; a short one, "가을", "하늘", may be that word, and is found by the other endings)
+const KO_WEAK = String.raw`(?:(?:에서|에|으로|로|보다)(?:는|도|만|의|요|부터|까지|라도|선)?(?![\p{L}])|였(?:다|어|고|지|는데|던|으면|을|음)?(?![\p{L}]))`;
 const nameRes = new Map();
 export function namedIn(text, name) {
     const n = String(name || '').trim();
@@ -2314,8 +2318,9 @@ export function namedIn(text, name) {
     if (!low.includes(n.toLowerCase())) return false;
     let re = nameRes.get(n);
     if (!re) {
-        const esc = n.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), ko = /\p{Script=Hangul}$/u.test(n);
-        re = new RegExp(String.raw`(?:^|[^\p{L}\p{N}])${esc}(?=$|[^\p{L}\p{N}]|${ko ? KO_AFTER : String.raw`\p{Script=Hangul}`})`, 'u');
+        const esc = n.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), ko = /\p{Script=Hangul}$/u.test(n), short = ko && [...n].length <= 2;
+        const at = after => new RegExp(String.raw`(?:^|[^\p{L}\p{N}])${esc}(?=$|[^\p{L}\p{N}]|${after})`, 'u');
+        re = at(ko ? (short ? KO_AFTER : `${KO_AFTER}|${KO_WEAK}`) : String.raw`\p{Script=Hangul}`);
         if (nameRes.size > 2000) nameRes.clear();
         nameRes.set(n, re);
     }

@@ -480,6 +480,15 @@ export const byStory = (now, get = x => x?.time) => (a, b) => storyMin(get(a), n
 const MON = 'jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|januar|februar|märz|maerz|mai|juni|juli|okt|dez';
 const DATED = new RegExp(`(?<!\\d)((?:19|20)\\d{2})[-./](?:0?[1-9]|1[0-2])[-./](?:0?[1-9]|[12]\\d|3[01])(?!\\d)|(?<!\\d)((?:19|20)\\d{2})년\\s*(?:0?[1-9]|1[0-2])월|\\b(?:${MON})[a-zä]*\\.?\\s+\\d{1,2}(?:st|nd|rd|th)?,?\\s+((?:19|20)\\d{2})(?!\\d)|(?<!\\d)\\d{1,2}\\.?\\s+(?:${MON})[a-zä]*\\.?,?\\s+((?:19|20)\\d{2})(?!\\d)|(?<!\\d)(?:(?:0?[1-9]|1[0-2])[-./](?:0?[1-9]|[12]\\d|3[01])|(?:0?[1-9]|[12]\\d|3[01])[-./](?:0?[1-9]|1[0-2]))[-./]\\s?((?:19|20)\\d{2})(?!\\d)`, 'gi');
 export const yearIn = text => { let y = ''; for (const mt of String(text || '').matchAll(DATED)) y = mt[1] || mt[2] || mt[3] || mt[4] || mt[5]; return y; };
+// the story's year in an archive or a chat: the newest section heading that dates itself, else the latest year its dates
+// give ("born 1990-07-15", "they first met in 2019" are the past, never the story's now)
+export function storyYearIn(text) {
+    const t = String(text || ''), heads = t.split('\n').filter(l => /^#{1,6}\s/.test(l));
+    for (let i = heads.length - 1; i >= 0; i--) { const y = yearIn(heads[i]); if (y) return y; }
+    let best = '';
+    for (const mt of t.matchAll(DATED)) { const y = mt[1] || mt[2] || mt[3] || mt[4] || mt[5]; if (y && (!best || Number(y) > Number(best))) best = y; }
+    return best;
+}
 // a model's JSON with a slip mended: a bracket closed with the wrong kind ("profile": { … ]), a comma before a closer,
 // closers missing at the end. Strings are left as they are
 export function mendJson(t) {
