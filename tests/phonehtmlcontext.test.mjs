@@ -73,12 +73,12 @@ test('hidden, inert, quoted, malformed, and inline-code regions supply no contex
 });
 
 test('time fields preserve dates, zones and markers but do not join unrelated siblings', () => {
-    for (const value of ['11.03,11:03', '11.03, 11:03', '03:03 CET', '8:30 PM', '오후 8:30', '2026-11-03T03:03 UTC+1']) {
+    for (const value of ['11.03,11:03', '11.03, 11:03', '03:03 CET', '8:30 PM', '오후 8:30', '2026-11-03T03:03 UTC+1', '0:30 AM', '08:30:00']) {
         assert.equal(htmlTimeFields(`<time>${value}</time>`)[0]?.fields[0].sourceTime, value);
     }
     const fields = htmlTimeFields('<div class="ticket"><time>08:30</time><time>09:30</time></div>')[0].fields;
     assert.deepEqual(fields.map(x => x.sourceTime), ['08:30', '09:30']);
-    for (const value of ['25:70', '13:30 PM', '0:30 AM', '08:30 / 09:30', '08:30:00', 'Meet at 08:30', '08<br>:30']) {
+    for (const value of ['25:70', '13:30 PM', '08:30 / 09:30', 'Meet at 08:30', '08<br>:30']) {
         assert.deepEqual(htmlTimeFields(`<time>${value}</time>`), [], value);
     }
 });

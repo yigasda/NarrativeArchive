@@ -4,7 +4,7 @@ import { datedClocks, yearIn, withDateOrder } from '../src/phoneparse.js';
 
 test('dated clock extraction is bounded to adjacent dates and clocks', () => {
     for (const text of ['08:30 PM', 'Mara 5 08:30', '11.05\n08:30', '11.05. Later 08:30',
-        '111.05 08:30', 'x11.05 08:30', '11.05 008:30', '11.05 08:300', '11.05 08:30:59',
+        '111.05 08:30', 'x11.05 08:30', '11.05 008:30', '11.05 08:300', '11.05 08:30:99',
         '11.05 25:30', '11.05 08:99', 'November 555 08:30', 'Notnovember 5 08:30']) {
         assert.deepEqual(datedClocks(text), [], text);
     }
@@ -12,6 +12,8 @@ test('dated clock extraction is bounded to adjacent dates and clocks', () => {
         { sourceTime: '11.05 08:30 AM', local: '11-05 08:30' },
         { sourceTime: '11.05 08:30 PM', local: '11-05 20:30' },
     ]);
+    // (with its seconds too)
+    assert.deepEqual(datedClocks('11.05 08:30:59'), [{ sourceTime: '11.05 08:30:59', local: '11-05 08:30' }]);
 });
 test('dated clocks preserve per-request date order and explicit year-first order', async () => {
     await withDateOrder('dm', () => {

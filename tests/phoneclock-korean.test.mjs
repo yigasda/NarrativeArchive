@@ -136,3 +136,25 @@ test('점검 6 (시각 읽기): a time field with its date, clock and a mark (a 
     assert.equal(hhmm('제3시장'), '');
     assert.equal(koClockText('[ 11월 5일 (목) | 제3시장 | ☀️ 맑음 ]'), '');
 });
+
+test('점검 7 (시각): one reader for every field — a zone, an ISO date, seconds, 7pm, a date beside a Korean clock; 오전 · 오후 words the same for colon and Korean', () => {
+    for (const [s, want] of [['19:30 GMT+09:00', '19:30'], ['2026-11-07T19:30', '19:30'], ['15:30 (UTC+05:30)', '15:30'], ['11월 7일 오후 3시', '15:00'], ['2026-11-07 15시', '15:00'],
+        ['19:30:15', '19:30'], ['7pm', '19:00'], ['⏰ 19:30', '19:30'], ['시간: 19:30', '19:30']]) assert.equal(hhmm(s), want, s);
+    for (const [colon, ko, want] of [['밤 1:00', '밤 1시', '01:00'], ['밤 12:30', '밤 12시 30분', '00:30'], ['낮 1:30', '낮 1시 30분', '13:30'], ['새벽 12:30', '새벽 12시 30분', '00:30'],
+        ['저녁 12:00', '저녁 12시', '00:00'], ['저녁 6:00', '저녁 6시', '18:00'], ['PM 0:30', '오후 0시 30분', '12:30'], ['7:30 p.m.', '7시 30분 p.m.', '19:30']]) {
+        assert.equal(hhmm(colon), want, colon);
+        assert.equal(hhmm(ko), want, ko);
+    }
+    // (a sky word only as a word of its own: "Mister", "구름다리", "Rainbow" are words)
+    for (const raw of ['<span class="time">11.05 16:15 Mister</span>', '<span class="time">11.05 16:15 구름다리</span>', '<span class="time">11.05 16:15 Rainbow</span>']) assert.deepEqual(htmlDatedClocks(raw), [], raw);
+    for (const raw of ['<span class="time">11.05 16:15 구름 많음</span>', '<span class="time">11.05 16:15 비가 옴</span>', '<span class="time">11.05 16:15 partly cloudy</span>']) assert.deepEqual(htmlDatedClocks(raw).map(x => x.local), ['11-05 16:15'], raw);
+});
+
+test('점검 7 (시각): HTML — a clock alone with a mark, a weekday-only date, seconds, a <time> whose datetime dates the clock it shows', () => {
+    for (const [raw, want] of [['<span class="time">⏰ 19:30</span>', '19:30'], ['<span class="time">19:30 KST</span>', '19:30'], ['<span class="time">⏰ 오후 3시</span>', '15:00'], ['<span class="time">낮 1:30</span>', '13:30'], ['<span class="time">7pm</span>', '19:00']])
+        assert.deepEqual(htmlClocks(raw).map(x => x.clock), [want], raw);
+    for (const raw of ['<span class="time">2026년 11월 5일 토요일 16:15</span>', '<span class="time">2026-11-05 16:15:30</span>', '<span class="time">11월 5일 16:15:30</span>', '<time datetime="2026-11-05T16:15">4:15 PM</time>'])
+        assert.deepEqual(htmlDatedClocks(raw).map(x => x.local), ['11-05 16:15'], raw);
+    // (a datetime that says another clock than the one shown dates nothing)
+    assert.deepEqual(htmlDatedClocks('<time datetime="2026-11-05T16:15">5:15 PM</time>'), []);
+});

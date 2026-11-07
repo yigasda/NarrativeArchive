@@ -45,14 +45,18 @@ test('HTML hints retain clock text only, without manufacturing a date or changin
 
 test('HTML clock content must be exactly one valid minute clock', () => {
     for (const text of [
-        '', 'sent at 08:30', '시간: 08:30', '08:30 later', '08:30 (local)', '08:30 / 09:30',
-        '11:38:00', '08:30.50', '12:30 minutes', '12:30분', 'PT12M30S', '12분 30초',
+        '', 'sent at 08:30', '08:30 later', '08:30 (local)', '08:30 / 09:30',
+        '08:30.50', '12:30 minutes', '12:30분', 'PT12M30S', '12분 30초',
         '-1:30', '+1:30', '24:00', '25:00', '23:60', '8:3', '008:30', '08:300',
-        '오후에 8:30', '08:30 PMs', 'AM 8:30 PM', 'PM 8:30 PM', '7pm',
+        '오후에 8:30', '08:30 PMs', 'AM 8:30 PM', 'PM 8:30 PM',
         '08\n:30', '08:\n30', '08&unknown;:30', '08&#0;:30',
     ]) assert.deepEqual(htmlClocks(wrap(text)), [], text);
     for (const text of ['0:00', '00:00', '13:30', '23:59']) {
         assert.deepEqual(htmlClocks(wrap(text)), [hint(text, text.padStart(5, '0'))], text);
+    }
+    // (a field is the clock with only a label, a weekday, a zone or a mark beside it, as a status line's; its seconds, "7pm")
+    for (const [text, clock] of [['시간: 08:30', '08:30'], ['⏰ 19:30', '19:30'], ['19:30 KST', '19:30'], ['Sat 19:30', '19:30'], ['11:38:00', '11:38'], ['7pm', '19:00'], ['오늘 19:30', '19:30']]) {
+        assert.deepEqual(htmlClocks(wrap(text)), [hint(text, clock)], text);
     }
     // (since 한국어 시각: a Korean clock alone is one too; a length of time or seconds alone never)
     assert.deepEqual(htmlClocks(wrap('19시 30분')), [hint('19시 30분', '19:30')]);
@@ -65,15 +69,20 @@ test('HTML clocks support the existing English and Korean markers with strict tw
         ['AM', '08:30'], ['a.m.', '08:30'], ['오전', '08:30'], ['새벽', '08:30'], ['아침', '08:30'],
     ]) {
         for (const text of [`${marker} 8:30`, `8:30 ${marker}`]) assert.deepEqual(htmlClocks(wrap(text)), [hint(text, expected)]);
-        for (const hour of ['0', '00', '13', '23', '24']) {
+        for (const hour of ['13', '23', '24']) {
             for (const text of [`${marker} ${hour}:30`, `${hour}:30 ${marker}`]) assert.deepEqual(htmlClocks(wrap(text)), [], text);
+        }
+        // (0 as the Korean clock reads it: 오전 · 새벽 · 밤 · AM 0 is midnight, 오후 · PM 0 noon, 아침 · 저녁 0 none)
+        const zero = /^(?:PM|p\.m\.|오후)$/.test(marker) ? '12:30' : /^(?:AM|a\.m\.|오전|새벽|밤)$/.test(marker) ? '00:30' : '';
+        for (const hour of ['0', '00']) {
+            for (const text of [`${marker} ${hour}:30`, `${hour}:30 ${marker}`]) assert.deepEqual(htmlClocks(wrap(text)), zero ? [hint(text, zero)] : [], text);
         }
     }
     assert.deepEqual(htmlClocks('<time>12:30 AM</time><time>12:30 PM</time>'), [hint('12:30 AM', '00:30'), hint('12:30 PM', '12:30')]);
 });
 
 test('HTML hints do not read explicit durations or dates from datetime attributes', () => {
-    for (const value of ['PT12M30S', 'P1DT12H', '2026-11-05T08:30', '11.05 08:30', '08:30:00', 'not-a-time', '']) {
+    for (const value of ['PT12M30S', 'P1DT12H', '2026-11-05T08:30', '11.05 08:30', 'not-a-time', '']) {
         assert.deepEqual(htmlClocks(`<time datetime="${value}">08:30</time>`), [], value);
         assert.deepEqual(htmlClocks(`<time datetime="${value}"><span class="time">08:30</span></time>`), [], value);
     }
@@ -81,6 +90,7 @@ test('HTML hints do not read explicit durations or dates from datetime attribute
         assert.deepEqual(htmlClocks(`<span class="${cls}">12:30</span>`), [], cls);
     }
     assert.deepEqual(htmlClocks('<time datetime="08:30">08:30</time>'), [hint('08:30')]);
+    assert.deepEqual(htmlClocks('<time datetime="08:30:00">08:30</time>'), [hint('08:30')]);
     // Without any duration evidence, a time-labelled 12:30 can only be a candidate, not proof of meaning.
     assert.deepEqual(htmlClocks(wrap('12:30')), [hint('12:30')]);
 });
