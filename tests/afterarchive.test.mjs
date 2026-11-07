@@ -1149,3 +1149,37 @@ test('making a phone for the first time: where everyone is first (the people the
         }
     } finally { delete globalThis.__ctx; delete globalThis.__whereAnswer; delete globalThis.__glossaryPeople; }
 });
+
+test('위치 정보 before a phone is made: read once and kept, checked and set by the user (a city, the year), then the phone made from it, a make asked again reading nothing again', async () => {
+    try {
+        const { m: mm } = htmlPhoneFixture(); mm.phones = {};
+        globalThis.__ctx.characters = [{ name: 'Mara' }]; globalThis.__ctx.characterId = 0; globalThis.__ctx.name1 = '소망';
+        mm.phoneScreenHolder = 'Mara';
+        globalThis.__where = [];
+        globalThis.__whereAnswer = { people: [{ name: 'Mara', city: 'Seoul', tz: 'Asia/Seoul', lives: 'KR' }], around: [{ name: 'Mara', about: 'Ren\'s mother.' }] };
+        const pre = await data.preparePhone(mm, 'Ren');
+        assert.equal(globalThis.__where.length, 1);
+        assert.equal(await data.preparePhone(mm, 'Ren'), pre, 'kept: not read again');
+        // the reading didn't place the owner: the user does, and the year
+        assert.equal(data.placeInfo(pre).owner.city, '');
+        await data.setPlaceCity(mm, pre, 'Ren', 'Frankfurt');
+        await data.setOwnerLives(mm, pre, 'DE');
+        await data.setPreYear(mm, 'Ren', 2026);
+        assert.equal(data.placeInfo(pre).people.find(x => x.name === 'Mara').hours, 8);
+        const at = { basis: 'Default used', finalViewpoint: 'Mara', elapsedTime: null, sceneTime: '11-03 11:10', messageSender: null };
+        const made = now => JSON.stringify({ country: 'KR', now, clock: at, contacts: [{ name: 'Mara' }], notes: [] });
+        // a clock its check doesn't pass: not made, and asked again reads no place again
+        globalThis.__menu = { calls: [], answers: [made('11-03 11:10')] };
+        await assert.rejects(data.makePhone(mm, 'Ren'), /시간 판독 답이 맞지 않아요/);
+        assert.ok(data.phonePre(mm, 'Ren'));
+        globalThis.__menu = { calls: [], answers: [made('11-03 03:10')] };
+        const p = await data.makePhone(mm, 'Ren');
+        assert.equal(globalThis.__where.length, 1, 'no reading but the first');
+        assert.match(globalThis.__menu.calls[0].input, /Location: Frankfurt\n[\s\S]*- Mara \(Seoul\): \+8 hours/);
+        assert.equal(p.year, 2026);
+        assert.equal(p.country, 'DE', 'the country it lives in, as checked');
+        assert.equal(p.where.people.find(x => x.name === 'Ren').city, 'Frankfurt');
+        assert.equal(data.phonePre(mm, 'Ren'), null, 'gone once the phone is made');
+        assert.ok(!('making' in p) && !('asked' in p));
+    } finally { delete globalThis.__ctx; delete globalThis.__whereAnswer; }
+});

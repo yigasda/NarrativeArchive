@@ -953,6 +953,33 @@ const phoneForModel = p => ({
     voice: real(p.voice || []).slice(-3).map(x => ev(x, { title: x.title, time: x.time })),
 });
 
+// 폰 만들기 전 위치 정보: for a phone not made yet, where everyone is (asked of the people the chat already names), the
+// story's year and PEOPLE AROUND, read first and kept in the chat until the phone is made: the user checks them in 위치
+// 정보 (setOwnerLives, setPlaceCity, dropPlacePerson and rereadPlaces take it as a phone) and the year (setPreYear), and
+// a make asked again (a clock check it didn't pass) reads none of it again. again: read anew
+const sameBinding = (pre, binding) => JSON.stringify(pre?.financeProfile ?? null) === JSON.stringify(binding ?? null);
+export const phonePre = (m, owner) => m?.phonePre?.[nameKey(owner)] || null;
+export async function preparePhone(m, owner, { again = false } = {}) {
+    const key = nameKey(owner);
+    await ensureScreenHolder(m);
+    const binding = m.phones?.[key]?.financeProfile || m.phoneProfiles?.[key], kept = phonePre(m, owner);
+    if (kept && !again && sameBinding(kept, binding)) return kept;
+    const pre = { owner, making: true, ...(binding ? { financeProfile: structuredClone(binding) } : {}) }, asked = { known: true };
+    ensureYear(m, pre, nowAt(windowOf(m, null)));
+    await tryWhere(m, pre, asked);
+    pre.asked = asked.asked || [];
+    (m.phonePre ||= {})[key] = pre;
+    await saveMeta();
+    return pre;
+}
+// the story's year for a phone not made yet (null or none: no year)
+export async function setPreYear(m, owner, year) {
+    const pre = phonePre(m, owner);
+    if (!pre) return;
+    const y = Number(year);
+    if (Number.isInteger(y) && y >= 1900 && y <= 2100) { pre.year = y; pre.noYear = false; } else { delete pre.year; pre.noYear = true; }
+    await saveMeta();
+}
 // apps: some of REMAKE's names, made again from the whole story while the rest of the phone stays as it is
 export function makePhone(m, owner, opts = {}) { return withDateOrder(dateOrderOf(m), () => makePhone0(m, owner, opts)); }
 async function makePhone0(m, owner, { update = false, apps = null } = {}) {
@@ -974,10 +1001,12 @@ async function makePhone0(m, owner, { update = false, apps = null } = {}) {
     const binding=structuredClone(m.phones?.[key]?.financeProfile || m.phoneProfiles?.[key]);
     const lore = await loreFor(m, owner), profile = await ownerProfileBlock(ctx(), binding, owner);
     // a phone made for the first time (no reading of where everyone is): that reading first, so its OWNER'S CLOCK has the
-    // hours and the time choices and its check knows the places, as a reflection's does (and PEOPLE AROUND goes along)
-    const firstMade = !part && !old && !cur?.where, pre = firstMade ? { owner, ...(binding ? { financeProfile: structuredClone(binding) } : {}) } : null, asked = {};
-    // (its year too, from the start: the hours, the time choices and the check go by it, and the phone keeps it)
-    if (firstMade) { ensureYear(m, pre, nowAt(gap)); asked.known = true; await tryWhere(m, pre, asked); }
+    // hours and the time choices and its check knows the places, as a reflection's does (and PEOPLE AROUND goes along):
+    // the one the user checked in 위치 정보 (preparePhone), else read now; its year too, from the start
+    const firstMade = !part && !old && !cur?.where, kept = firstMade ? phonePre(m, owner) : null, asked = {};
+    let pre = null;
+    if (kept && sameBinding(kept, binding)) { pre = structuredClone(kept); asked.asked = kept.asked || []; }
+    else if (firstMade) { pre = { owner, making: true, ...(binding ? { financeProfile: structuredClone(binding) } : {}) }; ensureYear(m, pre, nowAt(gap)); asked.known = true; await tryWhere(m, pre, asked); }
     const ask = (g, extra = []) => askDraft(phoneRequest(m, owner, old, lore, part, profile, g, extra, pre), { force: true, system: old ? AI_SYS_PHONE_UPDATE : part ? AI_SYS_PHONE_APPS : AI_SYS_PHONE, maxTokens: 16000 });
     const out = await ask(gap), got = parsePhone(out, owner);
     // a phone made sets its clock as a reflection does, by the same check, and like a reflection is not saved when it
@@ -1034,7 +1063,9 @@ async function makePhone0(m, owner, { update = false, apps = null } = {}) {
         // owner set: the year, hidden contacts and places, where they live
         for (const k of ['life', 'delivery', 'voiceAt', 'year', 'noYear', 'hiddenContacts', 'hiddenPlaces', 'lives', 'where']) if (was?.[k] !== undefined) base[k] = was[k];
         // (made for the first time: where everyone is and PEOPLE AROUND, as read before it)
-        if (pre) for (const k of ['where', 'around', 'lives', 'year', 'noYear']) if (pre[k] !== undefined) base[k] = pre[k];
+        if (pre) for (const k of ['where', 'around', 'lives', 'livesManual', 'year', 'noYear']) if (pre[k] !== undefined) base[k] = structuredClone(pre[k]);
+        // (the phone is set to the country its owner lives in, as read and checked, over the one the answer gave)
+        if (pre?.lives && COUNTRIES[pre.lives]) base.country = pre.lives;
         if (binding) base.financeProfile = structuredClone(binding);
         // the phone's own apps start reading again from here. With a bank, investments or the everyday apps kept (they
         // weren't made again), the reading state stays as it was: messages they haven't read yet are still theirs to read
@@ -1049,6 +1080,7 @@ async function makePhone0(m, owner, { update = false, apps = null } = {}) {
         if (got2) mergePhone(m.phones[key], got2);
     }
     const p = m.phones[key];
+    if (pre && m.phonePre) { delete m.phonePre[key]; if (!Object.keys(m.phonePre).length) delete m.phonePre; }
     ensureYear(m, p, nowAt(last));
     if(m.phoneProfiles) delete m.phoneProfiles[key];
     ensureIds(p);
@@ -2056,7 +2088,7 @@ function whereRequest(m, p, { known = false } = {}) {
     const c = ctx(), g = c.groupId ? (c.groups || []).find(x => x.id === c.groupId) : null;
     const chars = g ? (g.members || []).map(a => (c.characters || []).find(x => x.avatar === a)).filter(Boolean) : [c.characters?.[c.characterId]].filter(Boolean);
     const persona = String(c.powerUserSettings?.persona_description || '').trim(), upto = phoneAt(p);
-    const more = known ? [...chars.map(ch => ch.name || ch.data?.name), c.name1, screenHolderOf(m), ...glossaryPeople(m)] : [];
+    const more = known || p.making ? [...chars.map(ch => ch.name || ch.data?.name), c.name1, screenHolderOf(m), ...glossaryPeople(m)] : [];
     const seen = new Set(), people = [...(p.threads || []).map(t => t.with), ...(p.contacts || []).map(x => x.name), ...Object.values(m.phones || {}).map(q => q?.owner), ...more]
         .map(n => line(n, 60)).filter(n => n && !samePerson(n, p.owner) && !seen.has(nameKey(n)) && seen.add(nameKey(n))).slice(0, 16);
     const [, tail] = splitTail(String(m.text || ''));
@@ -2076,6 +2108,7 @@ const whereRow = x => ({ name: line(x?.name, 60), ...(akaOf(x).length ? { aka: a
 export async function readWhere(m, p, opts = {}) {
     const r = whereRequest(m, p, opts), binding = p.financeProfile;
     opts.asked = r.people;
+    if (p.making) p.asked = r.people;
     // a profile that is a lorebook entry is the one thing the cards and the persona don't already hold
     const lore = binding?.type === 'lore' ? await resolvePhoneProfile(ctx(), binding).catch(() => null) : null;
     const book = await loreFor(m, p.owner).catch(() => '');
@@ -2154,7 +2187,8 @@ export function tzForCity(p, text) {
 }
 // what 위치 정보 shows: the owner (where they live, the city they are in) and the others with how far their clock is
 export function placeInfo(p) {
-    const rows = p?.where?.people || [], own = whereOf(p, p?.owner), t = hm(p?.now) ? p.now : '', base = ownerZone(p);
+    // (a phone not made yet has no time: its hours by today's)
+    const rows = p?.where?.people || [], own = whereOf(p, p?.owner), t = hm(p?.now) ? p.now : p?.making ? todayWall() : '', base = ownerZone(p);
     const hours = tz => { if (!t || !base || !tz) return null; const a = zoneShift(t, base.tz, tz, Number(p.year) || undefined), d = dayGap(t.slice(0, 5), a.slice(0, 5)); return (d * 1440 + (Number(a.slice(6, 8)) * 60 + Number(a.slice(9, 11))) - (Number(t.slice(6, 8)) * 60 + Number(t.slice(9, 11)))) / 60; };
     return { owner: { name: p?.owner, lives: p?.lives || own?.lives || p?.country || '', livesManual: !!p?.livesManual, city: own?.city || base?.where || '', tz: own?.tz || base?.tz || '', cityManual: !!own?.manual?.city },
         people: rows.filter(x => nameKey(x.name) !== nameKey(p?.owner)).map(x => ({ name: x.name, city: x.city || '', lives: x.lives || '', tz: x.tz || '', hours: hours(x.tz || COUNTRY_TZ[x.lives]), manual: !!x.manual?.city })),
