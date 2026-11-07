@@ -816,7 +816,7 @@ function mapPlaces(m, p) {
     }
     for (const v of p.visits || []) {
         if (!v?.place || gone.has(nameKey(v.place))) continue;
-        const r = row(v.place); r.vn++;
+        const r = row(v.place); r.vn++; if (v.home) r.home = true;
         for (const n of v.with || []) if (!r.with.some(w => nameKey(w) === nameKey(n))) r.with.push(n);
         const t = String(v.time || '');
         if (v.city && (!r.city || t >= r.last)) r.city = v.city;
@@ -829,11 +829,17 @@ function mapPlaces(m, p) {
     for (const r of all) if (!r.city && cities.has(nameKey(r.place))) r.city = cities.get(nameKey(r.place));
     const always = all.length > 1 ? new Set(all[0].with.map(nameKey).filter(k => all.every(r => r.with.some(w => nameKey(w) === k)))) : new Set();
     for (const r of all) r.with = r.with.filter(w => !always.has(nameKey(w)));
+    // the owner's home: one row a home, never counted — the one they live in now is the newest home visit, a home they
+    // moved out of stays as 예전 집
+    const now = nameKey(homeOf(p)?.place || '');
+    for (const r of all) r.home = r.home ? (nameKey(r.place) === now ? 'now' : 'old') : '';
     return all;
 }
-// the month's outings, one a place a day: the visits (their day) and the archive's headings (their newest day)
+const homeOf = p => (p.visits || []).filter(x => x?.home && x.place).at(-1);
+// the month's outings, one a place a day: the visits (their day) and the archive's headings (their newest day); a day
+// at home is no outing
 function mapDays(m, p, pl) {
-    const gone = new Set(p.hiddenPlaces || []), seen = new Set(), out = [], city = new Map(pl.map(r => [nameKey(r.place), r.city]));
+    const gone = new Set([...(p.hiddenPlaces || []), ...(p.visits || []).filter(x => x?.home && x.place).map(x => nameKey(x.place))]), seen = new Set(), out = [], city = new Map(pl.map(r => [nameKey(r.place), r.city]));
     const add = (place, c, day) => { const k = `${nameKey(place)}|${day}`; if (!/^\d{2}-\d{2}$/.test(day) || seen.has(k) || gone.has(nameKey(place))) return; seen.add(k); out.push({ place, city: c || city.get(nameKey(place)) || '', day }); };
     for (const v of p.visits || []) if (v?.place) add(v.place, v.city, String(v.time || '').slice(0, 5));
     for (const r of pl) add(r.place, r.city, r.day || '');
@@ -896,11 +902,13 @@ export function mapScreen(p, now, m, pick = '') {
     // by city, the newest city first; the city alone ("Chicago") is its group's name, a row only when nothing closer there
     const groups = [];
     for (const r of pl) { const k = nameKey(r.city); let g = groups.find(x => x.k === k); if (!g) groups.push(g = { k, city: r.city, rows: [] }); g.rows.push(r); }
-    for (const g of groups) if (g.city && g.rows.length > 1) g.rows = g.rows.filter(r => nameKey(r.place) !== g.k);
+    for (const g of groups) if (g.city && g.rows.length > 1) g.rows = g.rows.filter(r => r.home || nameKey(r.place) !== g.k);
+    // the home they live in now: first in its town
+    for (const g of groups) g.rows.sort((a, b) => (b.home === 'now') - (a.home === 'now'));
     groups.sort((a, b) => !a.city - !b.city);
     const who = r => (r.with.length ? ` · ${esc(r.with.length > 2 ? `${r.with[0]} 외 ${r.with.length - 1}명` : r.with.join(' · '))}${r.with.length > 2 ? '과' : waOf(m, r.with[r.with.length - 1])}` : '');
     const rowHtml = x => swipeRow('place', nameKey(x.place), `
-          <div class="ax_rw ax_place"><span class="ax_si" style="background: var(--axc)">${ax('pindot', 17, 'var(--axd)', 2.2)}</span><span class="ax_tx"><span class="ax_n">${esc(x.place)}</span><span class="ax_p1">${x.n > 1 ? `${x.n}번` : '처음'}${who(x)}</span></span><small>${esc(x.day ? fmtDate(p, x.day, true) : x.date)}${x.time ? `<br>${esc(x.time)}` : ''}</small></div>`);
+          <div class="ax_rw ax_place"><span class="ax_si" style="background: var(--axc)">${ax(x.home ? 'home' : 'pindot', 17, 'var(--axd)', 2.2)}</span><span class="ax_tx"><span class="ax_n">${esc(x.place)}</span><span class="ax_p1">${x.home === 'now' ? '집' : x.home ? '예전 집' : x.n > 1 ? `${x.n}번` : '처음'}${who(x)}</span></span><small>${esc(x.day ? fmtDate(p, x.day, true) : x.date)}${x.time ? `<br>${esc(x.time)}` : ''}</small></div>`);
     if (!groups.length) return `${axBar(p, now)}${axTop(axCb('home'))}<div class="ax_scroll">${axH1('다녀간 곳')}<div class="ax_empty">방문 기록 없음</div><i class="ax_pad"></i></div>${axInd()}`;
     // the town on the map: the one picked (a stay on the strip, a row under "다른 곳"), else where they were last
     const g = groups.find(x => x.k === pick) || groups[0];
