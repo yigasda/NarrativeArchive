@@ -37,3 +37,13 @@ test('a day no calendar has is no clock reading (02-30, 04-31, 02-29 of a year t
     assert.deepEqual(datedClocks('2026-02-30 16:15 / 04.31 16:15 / 2026-02-29 16:15').map(x => x.local), []);
     assert.deepEqual(datedClocks('2028-02-29 16:15 · 02-29 16:15 · 11-05 16:15').map(x => x.local), ['02-29 16:15', '02-29 16:15', '11-05 16:15']);
 });
+
+test('evidence: a part of the story that only looks like a block stays; every block the code makes goes', () => {
+    const input = ['[ARCHIVE]\n## #0–#3 — Start\n- Mara said hello.', '[RECENT CHAT]\n[#4] Ren opens the news app.',
+        '[BREAKING NEWS]\nHanbit Corp shares closed at 81,200 won today.', '[A text from Mina]\nI bought 5% of Hanbit.', '[MEMO TO SHAREHOLDERS]\nA dividend of 300 won a share on 12-20.',
+        "[OWNER'S CLOCK]\nPhone owner: Mara\nSaved phone time: 11-05 03:38", '[INVESTMENTS NOW]\n{"base":"KRW"}', '[EXISTING QUOTES]\n[]', '[EVALUATION DATE]\n2026-11-05',
+        '[INVESTMENTS SO FAR — what you wrote]\n{}', '[NAMES]\n- Mina = 미나'].join('\n\n');
+    const s = storyText(input);
+    for (const kept of ['Mara said hello.', 'Ren opens the news app.', 'closed at 81,200 won today', 'I bought 5% of Hanbit.', 'A dividend of 300 won']) assert.ok(s.includes(kept), kept);
+    for (const gone of ['Saved phone time', '"base":"KRW"', 'EXISTING QUOTES', '2026-11-05', 'what you wrote', '미나']) assert.ok(!s.includes(gone), gone);
+});

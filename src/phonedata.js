@@ -65,6 +65,14 @@ Could this be on the owner's phone, given what the archive, lorebook and chat sh
 // every time on the phone is the owner's own clock: a time written on the other side of the world is moved to theirs
 export const OWN_CLOCK = `Every time is on the owner's phone clock, where the owner is now. A time on a screen or in a scene goes by the city of whoever's screen or scene it is: the owner's city, or no OWNER'S CLOCK, keeps it; another city in OWNER'S CLOCK moves it by its hours there (a messenger timestamp on the other side's screen). A status line's time is the clock of the city its scene is in; OWNER'S CLOCK gives the newest one on the owner's clock when that is another city.`;
 export const CLOCK_GET = `- OWNER'S CLOCK (sometimes): where the owner is, their time now, and how many hours the other saved cities and the people elsewhere are ahead or behind.`;
+// a request that doesn't set the phone's clock (an app's fill, making some apps again) or makes a phone: the block may hold
+// the newest message's screen time converted, as the reflection's does, and is read by the reflection's own rules
+export const FILL_CLOCK_GET = `- OWNER'S CLOCK (sometimes): where the owner is, their time now, and how many hours the other saved cities and the people elsewhere are ahead or behind; sometimes the newest message's screen time already converted to the owner's clock (Time choices).`;
+const CLOCK_VIEW = `- Viewpoint: use the default viewpoint in OWNER'S CLOCK when set. Change it only when the surrounding narration shifts to another person's scene, not merely a sender's name. A time or date alone does NOT identify whose clock it is. Attachments keep their own clocks.`;
+// (the reflection's CLOCK FIRST without what only setting the clock needs: whose screen, how a screen's time is moved)
+export const FILL_CLOCK = `${CLOCK_VIEW}
+- A screen's time: use the matching converted OWNER'S CLOCK value as-is; otherwise convert it to the owner's time zone. This step only converts time zones; never add elapsed time. Same zone: unchanged. Example: +8h: 12:32 → 20:32 exactly.
+- Other scenes, memories and appointments keep their own times.`;
 const PHONE_STYLE = `LANGUAGE
 - Each text is in the language its writer would really use on a phone: from their nationality and where they live; between two people, the language they share.
 - A text that is not in Korean gets "ko": a natural Korean translation. A Korean text gets no "ko".
@@ -93,6 +101,29 @@ const VOICE_ONLY = ' only when the archive or chat shows the owner recorded one'
 const PHONE_LAST = `Any item may carry "ev": a short tag for one story event, the same on every item that comes from it (the flight's mail, its event and its photo all "ev": "berlin-flight").
 A booking the story has carries the details a real one would (a booking number, a seat, a gate), made up to fit. Never a booking, a trip or a purchase the story doesn't have.`;
 
+const CLOCK_FIRST = `CLOCK FIRST
+First resolve "clock" and "now" for the latest scene, then write events and app records using those times.
+
+${CLOCK_VIEW}
+- Given exact time:
+  1. In the last message, identify the stated time relevant to the present.
+  2-1. If current, use it unchanged.
+  2-2. Otherwise, add only stated elapsed time to reach the present (e.g., "three hours ago", "about ten minutes", "a few weeks later").
+  3. The result must represent the present, not the past or future.
+  WARNING: Actions that take time ≠ explicitly stated elapsed time
+- No exact time: your task is to infer the current time. The last message may mix present, past, and future. Identify the story's current point within it, then infer its time from context.
+
+- "clock":
+  - basis (max 20 words: default used or narrative evidence for a switch; time passed)
+  - finalViewpoint (the final viewpoint determined for the last message)
+  - elapsedTime (stated elapsed time used; null if absent)
+  - sceneTime (the resulting current scene time before conversion, already including elapsedTime)
+  - messageSender (who sent the displayed message; null if absent).
+
+- "now": use the matching converted OWNER'S CLOCK value as-is; otherwise convert "clock.sceneTime" to the owner's time zone. This step only converts time zones; never add elapsed time. Same zone: unchanged. Example: +8h: 12:32 → 20:32 exactly.
+- App records: the owner's present scene agrees with "now". Other scenes, memories and appointments keep their own times.`;
+// making a phone sets its clock, as a reflection does: CLOCK FIRST and its "clock"; making some apps again doesn't
+// (its clock stays): only how a time is read
 export const AI_SYS_PHONE = `GOAL
 Show what one character's phone holds right now, in a long role-play. The user opens it to peek at the story from the phone's side.
 An app draws the screens from your JSON; you only write the content.
@@ -106,9 +137,50 @@ YOU GET
 - OWNER PROFILE (sometimes): the background the user chose for the owner.
 - OWNER DOESN'T KNOW (sometimes): facts the owner does not know, or only suspects. Nothing on the phone may show them as known.
 - DEVICE — locked (sometimes): the phone they already have. Keep it as it is.
-${CLOCK_GET}
+${FILL_CLOCK_GET}
+
+${CLOCK_FIRST}
 
 ${PHONE_TEST}
+
+EVERYDAY
+- Besides the story, a few plain records of the owner's daily life, from their profile, job and habits as the archive shows them: a shopping list, a recipe search, a newsletter, a photo of the sky, a reminder for the dentist. Each has "everyday": true.
+- No more than a third of any list. No event, person, place or feeling the story doesn't have in them.
+
+DEVICE
+${DEVICE_RULES}
+
+JSON (one object, nothing before or after it)
+{
+  "country": two-letter code of the country the owner lives in and their phone is set to, like "KR", "US", "DE",
+  "wallpaper": one of ${WALLS.join(', ')}, the one that suits the owner,
+  "accent": one of ${ACCENTS.join(', ')},
+  "clock": { "basis": "default used or switch evidence; time passed", "finalViewpoint": "name", "elapsedTime": null or "3 hours", "sceneTime": "MM-DD HH:MM", "messageSender": null or "name" },
+  "now": "MM-DD HH:MM",
+  "device": { "name": device name, "model": model name, "os": OS and version, "storage": capacity with GB or TB, "serial": invented serial number },
+${PHONE_ITEMS}
+}
+At most 6 threads of up to 12 messages, 10 calls, 8 photos, 5 notes, 8 searches (3 open at most), 6 events, 5 posts with up to 4 comments,
+6 mails, 5 diary entries. Fewer is fine; an empty list is fine. The diary has no "everyday" entries.
+Oldest first in every list.
+${PHONE_LAST}`;
+export const AI_SYS_PHONE_APPS = `GOAL
+Show what one character's phone holds right now, in a long role-play. The user opens it to peek at the story from the phone's side.
+An app draws the screens from your JSON; you only write the content.
+
+YOU GET
+- ARCHIVE: the story so far, in sections (#numbers are chat messages), with the current state at the end.
+- WORLD (sometimes): the shared setting.
+- LOREBOOK (sometimes): setting notes the user picked.
+- RECENT CHAT: the messages after the archive, oldest first.
+- OWNER: whose phone it is. STORY YEAR (sometimes): the story's year.
+- OWNER PROFILE (sometimes): the background the user chose for the owner.
+- OWNER DOESN'T KNOW (sometimes): facts the owner does not know, or only suspects. Nothing on the phone may show them as known.
+- DEVICE — locked (sometimes): the phone they already have. Keep it as it is.
+${FILL_CLOCK_GET}
+
+${PHONE_TEST}
+${FILL_CLOCK}
 
 EVERYDAY
 - Besides the story, a few plain records of the owner's daily life, from their profile, job and habits as the archive shows them: a shopping list, a recipe search, a newsletter, a photo of the sky, a reminder for the dentist. Each has "everyday": true.
@@ -143,27 +215,6 @@ const LIFE_FILES = `  "files": [{ "change": an id or "", "name", "kind", "folder
 const LIFE_TIMERS = `  "timers": [{ "label", "ko", "sec" }],`;
 const LIFE_ONCE = `- An alarm for one occasion (a flight, an appointment) rings once: "days": [] and its "date". Only an alarm the owner keeps for every week has "days".`;
 const LIFE_CHANGE = `- A record already in LIFE NOW is changed with "change": its id; write only the fields that changed. A deleted file is "deleted": true.`;
-const CLOCK_FIRST = `CLOCK FIRST
-First resolve "clock" and "now" for the latest scene, then write events and app records using those times.
-
-- Viewpoint: use the default viewpoint in OWNER'S CLOCK when set. Change it only when the surrounding narration shifts to another person's scene, not merely a sender's name. A time or date alone does NOT identify whose clock it is. Attachments keep their own clocks.
-- Given exact time:
-  1. In the last message, identify the stated time relevant to the present.
-  2-1. If current, use it unchanged.
-  2-2. Otherwise, add only stated elapsed time to reach the present (e.g., "three hours ago", "about ten minutes", "a few weeks later").
-  3. The result must represent the present, not the past or future.
-  WARNING: Actions that take time ≠ explicitly stated elapsed time
-- No exact time: your task is to infer the current time. The last message may mix present, past, and future. Identify the story's current point within it, then infer its time from context.
-
-- "clock":
-  - basis (max 20 words: default used or narrative evidence for a switch; time passed)
-  - finalViewpoint (the final viewpoint determined for the last message)
-  - elapsedTime (stated elapsed time used; null if absent)
-  - sceneTime (the resulting current scene time before conversion, already including elapsedTime)
-  - messageSender (who sent the displayed message; null if absent).
-
-- "now": use the matching converted OWNER'S CLOCK value as-is; otherwise convert "clock.sceneTime" to the owner's time zone. This step only converts time zones; never add elapsed time. Same zone: unchanged. Example: +8h: 12:32 → 20:32 exactly.
-- App records: the owner's present scene agrees with "now". Other scenes, memories and appointments keep their own times.`;
 export function updateSystem({ money = true, delivery = false, life = false, weather = false, tracker = false, split = false, invest = false, zone = false, archiveOnly = false } = {}) {
     const paid = delivery ? 'order, ticket or delivery' : 'order or ticket';
     return `${split ? 'STAGE: core\n' : ''}GOAL
@@ -857,7 +908,7 @@ function phoneRequest(m, owner, p = null, lore = '', only = null, profile = '', 
     const ar = archiveFor(m, p ? p.upto ?? -1 : -1, nowAt(gap), !gap?.cut);
     const now = p ? JSON.stringify(phoneForModel(p)) : '';
     return [
-        p ? `[PHONE NOW]\n${now}` : '', ((q, at) => fillClock(m, q, at === undefined ? q.now : at, statusAt(q, upto, m), gap, { text: extra.find(x => String(x).startsWith('[TOLD SHORT')) || '' }))(p || m.phones?.[nameKey(owner)] || { owner }, upto == null ? undefined : storyNow(p || m.phones?.[nameKey(owner)] || {}, upto, m) || undefined),
+        p ? `[PHONE NOW]\n${now}` : '', ((q, at) => fillClock(m, q, at === undefined ? q.now : at, statusAt(q, upto, m), gap, { text: extra.find(x => String(x).startsWith('[TOLD SHORT')) || '' }, { story: true }))(p || m.phones?.[nameKey(owner)] || { owner }, upto == null ? undefined : storyNow(p || m.phones?.[nameKey(owner)] || {}, upto, m) || undefined),
         !p && m.phones?.[nameKey(owner)]?.device ? `[DEVICE — locked]\n${JSON.stringify(m.phones[nameKey(owner)].device)}` : '',
         archiveBlock(m, ar.text || '(nothing new)', `ARCHIVE${p ? ' — the sections since PHONE NOW' : ''}`, CHAT_TOKENS.phone, upto),
         world ? `[WORLD]\n${world}` : '',
@@ -912,8 +963,15 @@ async function makePhone0(m, owner, { update = false, apps = null } = {}) {
     const part = apps && m.phones?.[key] ? apps.flatMap(a => REMAKE[a] || []) : null;
     const binding=structuredClone(m.phones?.[key]?.financeProfile || m.phoneProfiles?.[key]);
     const lore = await loreFor(m, owner), profile = await ownerProfileBlock(ctx(), binding, owner);
-    const ask = (g, extra = []) => askDraft(phoneRequest(m, owner, old, lore, part, profile, g, extra), { force: true, system: old ? AI_SYS_PHONE_UPDATE : AI_SYS_PHONE, maxTokens: 16000 });
+    const ask = (g, extra = []) => askDraft(phoneRequest(m, owner, old, lore, part, profile, g, extra), { force: true, system: old ? AI_SYS_PHONE_UPDATE : part ? AI_SYS_PHONE_APPS : AI_SYS_PHONE, maxTokens: 16000 });
     const out = await ask(gap), got = parsePhone(out, owner);
+    // a phone made sets its clock as a reflection does, by the same check: a "now" the scene's time doesn't give is put
+    // right (the phone isn't lost over it); an answer with no "clock" keeps its "now"
+    if (!part && !old && got.now) {
+        const q = cur || m.phones?.[key] || { owner, country: got.country };
+        const r = withDateOrderSync(dateOrderOf(m), () => clockCheck(jsonOf(out, { salvage: true }), { ...q, country: q.country || got.country }, m, got.now));
+        if (r.expected && r.expected !== got.now) got.now = r.expected;
+    }
     // made again up to the clock and stopped short: a second turn adds the rest (one that fails keeps the first)
     const two = keep && !old ? secondTurn(m, cur, gap, false) : null;
     let got2 = null, last = gap, short = null;
@@ -1164,8 +1222,17 @@ export function reflectionClockPlan(raw, original, m, { round, roundEnd = null, 
 }
 
 function validateReflectionClock(raw, p, m, now) {
-    const c = raw.clock, scene = when(c?.sceneTime);
-    const fail = why => { const e = new Error(`시간 판독 답이 맞지 않아요 (${why}). 이번 답은 반영하지 않았어요. 다시 시도해 주세요`); e.code = 'CLOCK_INVALID'; throw e; };
+    const r = clockCheck(raw, p, m, now);
+    if (r.why) { const e = new Error(`시간 판독 답이 맞지 않아요 (${r.why}). 이번 답은 반영하지 않았어요. 다시 시도해 주세요`); e.code = 'CLOCK_INVALID'; throw e; }
+}
+// the reflection's check of its "clock" and "now": { why } when they don't hold, { expected } with the now the scene's
+// time gives (null when the places aren't known)
+function clockCheck(raw, p, m, now) {
+    const c = raw?.clock, scene = when(c?.sceneTime);
+    const fail = why => { throw Object.assign(new Error(why), { clockWhy: why }); };
+    try { return { expected: clockExpected(raw, p, m, now, c, scene, fail) }; } catch (err) { if (err?.clockWhy) return { why: err.clockWhy, expected: err.expected ?? null }; throw err; }
+}
+function clockExpected(raw, p, m, now, c, scene, fail) {
     if (!c || typeof c !== 'object' || typeof c.finalViewpoint !== 'string' || !c.finalViewpoint.trim() || !hm(scene) || !hm(now)) fail('finalViewpoint·sceneTime·now 확인 필요');
     // Diagnostic evidence only: sceneTime already includes this interval. Never add it again here.
     if (c.elapsedTime !== null && (typeof c.elapsedTime !== 'string' || !c.elapsedTime.trim())) fail('elapsedTime은 명시된 경과 시간 또는 null이어야 해요');
@@ -1189,7 +1256,8 @@ function validateReflectionClock(raw, p, m, now) {
             expected = exactClockShift(scene, tz[0], own.tz, sceneYear);
         }
     }
-    if (expected && expected !== now) fail('sceneTime과 now의 시차 불일치');
+    if (expected && expected !== now) { try { fail('sceneTime과 now의 시차 불일치'); } catch (err) { err.expected = expected; throw err; } }
+    return expected;
 }
 
 async function updatePhone(m, owner) {
@@ -2165,8 +2233,6 @@ function placesAround(p, m = null) {
     for (const q of Object.values(phonesOf(m) || {})) if (q && q !== p && q.owner && !whereOf(p, q.owner)) { const z = ownerZone(q); if (z) out.push({ tz: z.tz, name: z.where, names: z.names, who: q.owner, by: [q.owner, ...arr(whereOf(q, q.owner)?.aka)] }); }
     return out;
 }
-// a summer-time change within a week of the owner's time t (theirs or the other place's): each as the owner's clock
-// shows it ("10-25 03:00", the clock just as it changes) with the hours before and after
 const tzFormat = new Map();
 const wallOf = (tz, ms) => {
     let f = tzFormat.get(tz);
@@ -2174,28 +2240,55 @@ const wallOf = (tz, ms) => {
     const g = f.formatToParts(new Date(ms)), k = n => Number(g.find(x => x.type === n)?.value);
     return Date.UTC(k('year'), k('month') - 1, k('day'), k('hour') % 24, k('minute'));
 };
-const dstSeen = new Map();
-export function dstNear(t, ownTz, tz, year = new Date().getFullYear()) {
-    const key = `${t}|${ownTz}|${tz}|${year}`;
-    if (!dstSeen.has(key)) { if (dstSeen.size > 500) dstSeen.clear(); dstSeen.set(key, dstFind(t, ownTz, tz, year)); }
-    return structuredClone(dstSeen.get(key));
+// every change of a zone's own offset in a year (a day at a time, then to the minute; a zone changes at most once a day),
+// found once and kept
+const zoneYears = new Map();
+const wallText = ms => { const w = new Date(ms); return `${pad(w.getUTCMonth() + 1)}-${pad(w.getUTCDate())} ${pad(w.getUTCHours())}:${pad(w.getUTCMinutes())}`; };
+function zoneChanges(tz, year) {
+    const key = `${tz}|${year}`;
+    if (zoneYears.has(key)) return zoneYears.get(key);
+    const MIN = 6e4, D = 864e5, off = ms => wallOf(tz, ms) - ms, out = [];
+    try {
+        for (let a = Date.UTC(year, 0, 1) - D, end = Date.UTC(year + 1, 0, 1) + D; a < end; a += D) {
+            const o = off(a);
+            if (o === off(a + D)) continue;
+            let lo = a, hi = a + D;
+            while (hi - lo > MIN) { const mid = lo + Math.max(1, Math.round((hi - lo) / MIN / 2)) * MIN; if (off(mid) === o) lo = mid; else hi = mid; }
+            out.push(hi);
+        }
+    } catch { out.length = 0; }
+    if (zoneYears.size > 400) zoneYears.clear();
+    zoneYears.set(key, out);
+    return out;
 }
-function dstFind(t, ownTz, tz, year) {
+// every change of the hours between two zones: { ms, before, after, at } with "at" the owner's clock as it changes
+// ("10-25 03:00→02:00", "03-29 02:00→03:00", or one time when only the other place's clock changes)
+function dstYear(ownTz, tz, year) {
+    const H = 36e5, MIN = 6e4, hrs = ms => (wallOf(tz, ms) - wallOf(ownTz, ms)) / H;
+    return [...new Set([...zoneChanges(ownTz, year), ...zoneChanges(tz, year)])].sort((a, b) => a - b).flatMap(ms => {
+        const before = hrs(ms - MIN), after = hrs(ms);
+        if (before === after) return [];
+        const was = wallText(wallOf(ownTz, ms - MIN) + MIN), is = wallText(wallOf(ownTz, ms));
+        return [{ ms, before, after, at: was === is ? was : was.slice(0, 5) === is.slice(0, 5) ? `${was}→${is.slice(6)}` : `${was}→${is}` }];
+    });
+}
+// a summer-time change within a week of the owner's time t (theirs or the other place's), as the hours now (h) read it:
+// one that brought h ("before": the hours before it) or one that ends it ("from": the hours from it). The owner's time
+// is read on their clock as written, as the hours are (a time a change skips or repeats reads as zoneShift reads it)
+export function dstNear(t, ownTz, tz, year = new Date().getFullYear(), h = null) {
     const mt = /^(\d{2})-(\d{2}) (\d{2}):(\d{2})$/.exec(String(t || ''));
     if (!mt || !ownTz || !tz || ownTz === tz) return [];
     try {
-        const guess = Date.UTC(Number(year), mt[1] - 1, mt[2], mt[3], mt[4]), MIN = 6e4, H = 36e5, W = 7 * 24 * H;
-        let now = guess - (wallOf(ownTz, guess) - guess); now = guess - (wallOf(ownTz, now) - now);
-        const hrs = ms => (wallOf(tz, ms) - wallOf(ownTz, ms)) / H, out = [];
-        for (let a = now - W; a < now + W; a += H) {
-            const before = hrs(a), after = hrs(a + H);
-            if (before === after) continue;
-            let lo = a, hi = a + H;
-            while (hi - lo > MIN) { const mid = lo + Math.max(1, Math.round((hi - lo) / MIN / 2)) * MIN; if (hrs(mid) === before) lo = mid; else hi = mid; }
-            const w = new Date(wallOf(ownTz, hi - MIN) + MIN);
-            out.push({ at: `${pad(w.getUTCMonth() + 1)}-${pad(w.getUTCDate())} ${pad(w.getUTCHours())}:${pad(w.getUTCMinutes())}`, before, after, past: hi <= now });
-        }
-        return out;
+        const y = Number(year), guess = Date.UTC(y, mt[1] - 1, mt[2], mt[3], mt[4]), W = 7 * 24 * 36e5;
+        const now = guess - (wallOf(ownTz, guess) - guess), near = [...new Set([new Date(now - W).getUTCFullYear(), new Date(now + W).getUTCFullYear()])].flatMap(v => dstYear(ownTz, tz, v)).filter(x => x.ms > now - W && x.ms <= now + W);
+        const seen = new Set(), list = near.filter(x => !seen.has(x.ms) && seen.add(x.ms)).sort((a, b) => a.ms - b.ms);
+        const h0 = h ?? (wallOf(tz, now) - wallOf(ownTz, now)) / 36e5, past = [], ahead = [];
+        // (from the hours now, back change by change and on change by change: two in a row stay in order)
+        let cur = h0;
+        for (const x of list.filter(x => x.ms <= now).reverse()) if (x.after === cur) { past.unshift({ at: x.at, hours: x.before, past: true }); cur = x.before; }
+        cur = h0;
+        for (const x of list.filter(x => x.ms > now)) if (x.before === cur) { ahead.push({ at: x.at, hours: x.after, past: false }); cur = x.after; }
+        return [...past, ...ahead];
     } catch { return []; }
 }
 export function zonesOf(p, at = p?.now, m = null) {
@@ -2206,10 +2299,11 @@ export function zonesOf(p, at = p?.now, m = null) {
     for (const z of placesAround(p, m).slice(1)) {
         const name = z.who || z.name;
         if (z.tz === own.tz || others.some(o => nameKey(o.name) === nameKey(name))) continue;
-        const h = hours(z.tz), dst = dstNear(t, own.tz, z.tz, Number(p.year) || undefined), more = dst.length ? { dst } : {};
-        if (h) others.push(z.who ? { name: z.who, where: z.name, hours: h, ...more } : { name: z.name, hours: h, ...more });
+        const h = hours(z.tz), dst = dstNear(t, own.tz, z.tz, Number(p.year) || undefined, h), more = dst.length ? { dst } : {};
+        // (a place on the owner's hours now is no row, unless its hours change within the week: "0 hours (DST: +1 hour from …)")
+        if (h || dst.length) others.push(z.who ? { name: z.who, where: z.name, hours: h, ...more } : { name: z.name, hours: h, ...more });
     }
-    return others.length ? { own: { name: own.where, tz: own.tz }, at: t, others } : null;
+    return others.some(o => o.hours) ? { own: { name: own.where, tz: own.tz }, at: t, others } : null;
 }
 // Display only: a person's city already labels that city's hours. Keep every person, and keep standalone cities
 // unless saved city names/aliases and time zones agree. A shared offset, a partial name or a country is not a city match.
@@ -2251,7 +2345,7 @@ export const clockBlock = (p, at = p?.now, m = null, st = null, required = false
     if (holder) lines.push(`Default screen viewpoint: ${label(holder)}`);
     if (z) {
         lines.push('', `Time differences from ${label(location || "the owner's clock")}:`, ...clockRows(p, m, z.others).map(c =>
-            `- ${label(c.name || 'Unnamed location')}${c.where ? ` (${label(c.where)})` : ''}: ${hoursText(c.hours)}${c.dst ? ` (DST: ${c.dst.map(d => d.past ? `${hoursText(d.before)} before ${d.at}` : `${hoursText(d.after)} from ${d.at}`).join('; ')})` : ''}`));
+            `- ${label(c.name || 'Unnamed location')}${c.where ? ` (${label(c.where)})` : ''}: ${hoursText(c.hours)}${c.dst ? ` (DST: ${c.dst.map(d => `${hoursText(d.hours)} ${d.past ? 'before' : 'from'} ${d.at}`).join('; ')})` : ''}`));
         if (st?.known && st.at && st.at !== st.raw) lines.push(`The newest status line, ${st.raw} in ${st.city}, is ${st.at} here.`);
     }
     return lines.join('\n');
@@ -2260,7 +2354,7 @@ export const clockBlock = (p, at = p?.now, m = null, st = null, required = false
 const archiveClockBlock = (p, at = p?.now, m = null, st = null) => {
     const z = zonesOf(p, at, m);
     const hrs = h => `${Math.abs(h)} hour${Math.abs(h) === 1 ? '' : 's'} ${h > 0 ? 'ahead' : 'behind'}`;
-    return z ? `[OWNER'S CLOCK]\nThe owner is in ${z.own.name}, ${z.at} now.\n${z.others.map(c => (c.where ? `${c.name} (in ${c.where}) is ${hrs(c.hours)}` : `${c.name} is ${hrs(c.hours)}`)).join(', ')}.${st?.known && st.at && st.at !== st.raw ? `\nThe newest status line, ${st.raw} in ${st.city}, is ${st.at} here.` : ''}` : '';
+    return z ? `[OWNER'S CLOCK]\nThe owner is in ${z.own.name}, ${z.at} now.\n${z.others.filter(c => c.hours).map(c => (c.where ? `${c.name} (in ${c.where}) is ${hrs(c.hours)}` : `${c.name} is ${hrs(c.hours)}`)).join(', ')}.${st?.known && st.at && st.at !== st.raw ? `\nThe newest status line, ${st.raw} in ${st.city}, is ${st.at} here.` : ''}` : '';
 };
 // Reflection-only choices. Explicit dates stay as written; marked HTML clocks can carry a labelled fallback date.
 // Keep the request's date order and locations in the choices, not mutable chat state after the call.
@@ -2270,21 +2364,28 @@ export function reflectionClocks(p, rows, m = null, at = p?.now) {
 }
 // OWNER'S CLOCK, one for every request (a reflection, making a phone or its apps again, every app's fill): the hours to
 // the other places and, from the newest message the request reads, the time choices, both from the same time (at)
-export function ownerClock(p, at, m = null, st = null, rows = []) {
-    return [clockBlock(p, at, m, st), withDateOrderSync(dateOrderOf(m), () => reflectionClocks0(p, rows, m, at)).text].filter(Boolean).join('\n\n');
+// fill: a request that doesn't set the phone's clock (an app's fill, making a phone or its apps again): the phone's name
+// and the choices only when there are choices, and always inside the block (the reflection's as it has been)
+export function ownerClock(p, at, m = null, st = null, rows = [], { fill = false } = {}) {
+    const r = withDateOrderSync(dateOrderOf(m), () => reflectionClocks0(p, rows, m, at)), block = clockBlock(p, at, m, st);
+    if (!fill) return [block, r.text].filter(Boolean).join('\n\n');
+    return r.choices.length ? [block || clockBlock(p, at, m, null, true), r.identity, r.body].join('\n\n') : block;
 }
 // the newest message a fill (or making a phone, or making its apps again) reads, for its time choices, as the request
 // shows it: with TOLD SHORT, its last lines (one row each, in order); else the last message it reads word for word (with
 // its HTML, as RECENT CHAT shows it: never a system message's, never one cut short)
-export function fillClockRows(m, p, gap = null, short = null) {
+// story: a request whose chat with no archive goes whole in place of the archive (sideRequest's story, making a phone):
+// its newest message is never cut short there
+export function fillClockRows(m, p, gap = null, short = null, { story = false } = {}) {
     if (short?.text) return String(short.text).split('\n').flatMap(l => { const mt = /^#(\d+) · /.exec(l); return mt ? [{ index: Number(mt[1]), text: l }] : []; });
     const upto = nowAt(gap), row = gap?.n ? syncRows().find(r => r.index === gap.to) : null;
     const text = row ? row.text : recentPhoneRows(1, { upto }).at(-1), index = row ? row.index : atOf(text);
     if (!text || !Number.isInteger(index)) return [];
     const msg = ctx().chat?.[index], full = phoneMessageText(text, index);
-    return [{ index, text, ...(msg && !msg.is_system && typeof msg.mes === 'string' && (row || full.length <= 6000) ? { clockSource: msg.mes } : {}) }];
+    const whole = row || full.length <= 6000 || story && noArchive(m);
+    return [{ index, text, ...(msg && !msg.is_system && typeof msg.mes === 'string' && whole ? { clockSource: msg.mes } : {}) }];
 }
-export const fillClock = (m, p, at, st = null, gap = null, short = null) => ownerClock(p, at, m, st, fillClockRows(m, p, gap, short));
+export const fillClock = (m, p, at, st = null, gap = null, short = null, opts = {}) => ownerClock(p, at, m, st, fillClockRows(m, p, gap, short, opts), { fill: true });
 // Only the newest supplied message can provide conversion choices. If its clock is not
 // recognized, leave time inference to the model instead of reviving an earlier message's clock.
 // Within that message, use source position, not the largest date. Archive rows use supplied indices.
@@ -2315,7 +2416,10 @@ function reflectionClocks0(p, rows, m, at = p?.now) {
     const defaultPerson = people.find(x => x.names.some(n => nameKey(n) === nameKey(fallback)));
     const defaultZone = defaultPerson?.tz;
     const identity = `Phone being updated: ${JSON.stringify(p.owner)} (${own.where}).${defaultZone === own.tz ? '\nThe default screen and this phone share a time zone; default screen times need no conversion.' : ''}`;
-    const stamp = latestClock(rows);
+    let stamp = latestClock(rows);
+    // (a 02-29 with no year of its own in a story year that has none: no such day)
+    const leap = y => new Date(Date.UTC(y, 1, 29)).getUTCMonth() === 1, year0 = Number(yearIn(stamp?.sourceTime)) || Number(p.year);
+    if (stamp?.local?.startsWith('02-29') && year0 && !leap(year0)) stamp = null;
     if (stamp) {
         // Both dated and bare clocks offer only the configured screen person when set.
         // An unresolved configured person is not evidence for a different person's screen.
@@ -2337,7 +2441,8 @@ function reflectionClocks0(p, rows, m, at = p?.now) {
     const lines = [`${stamp.clock ? 'No date is shown; read the story to determine the date.\n\n' : '\n'}${choices.map(c => c.reference
             ? `On ${c.names[0]}'s clock → owner's clock: ${c.reference.ownerClock}${c.reference.dayShift ? ` (${c.reference.dayShift > 0 ? '+' : ''}${c.reference.dayShift} day${Math.abs(c.reference.dayShift) === 1 ? '' : 's'} relative to screen)` : ''}.`
             : `On ${c.names[0]}'s clock → owner's time: ${c.ownerTime}`).join('\n')}`];
-    return { choices, text: `${identity}\n\n${clockBlock(p, at, m) ? '' : `${clockBlock(p, at, m, null, true)}\n\n`}Time choices.\nTime alone does not identify the viewpoint.\nKeep the default viewpoint unless the surrounding narration shifts to another screen or scene.\n\nDate order: ${dateOrderOf(m) === 'dm' ? 'day.month' : 'month.day'}.\n${lines.join('\n')}` };
+    const body = `Time choices.\nTime alone does not identify the viewpoint.\nKeep the default viewpoint unless the surrounding narration shifts to another screen or scene.\n\nDate order: ${dateOrderOf(m) === 'dm' ? 'day.month' : 'month.day'}.\n${lines.join('\n')}`;
+    return { choices, identity, body, text: `${identity}\n\n${clockBlock(p, at, m) ? '' : `${clockBlock(p, at, m, null, true)}\n\n`}${body}` };
 }
 const pkey = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
 // a place that is someone's own: their name (or their first name) then 's · 의 · 네, or a room, a home after it
@@ -2455,7 +2560,7 @@ YOU GET
 - PHONE NOW: what the phone already holds (mails, events, searches, food deliveries), with their "ev" tags. A delivery there is paid through the delivery app; the app puts it in the bank, so it gets no "tx".
 - FINANCIAL SCALE (sometimes): how much the owner's bank deposits come to, worked out beforehand.
 - EVALUATION DATE: the story's day, for exchange rates. SAVED RATES: the rates the app already has for it.
-${CLOCK_GET}
+${FILL_CLOCK_GET}
 - EXISTING ACCOUNTS (sometimes): the accounts the bank already has.
 
 STORY OR INVENTED
@@ -2479,6 +2584,7 @@ A purchase is in "orders" or "passes" and once in "tx", with the same amount, da
 
 TIMES
 - ${OWN_CLOCK}
+${FILL_CLOCK}
 
 LANGUAGE
 Banks, shops, merchants and items named as they would be in the owner's country. A name not in Korean gets "ko"; a Korean one gets none.
@@ -2518,10 +2624,11 @@ Fill the voice memo app of one character's phone in a long role-play: memos they
 YOU GET
 - ARCHIVE, RECENT CHAT, OWNER, and sometimes STORY YEAR, WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW. Nothing on the phone may show what the owner doesn't know.
 - DIARY: the owner's diary entries, so the memos are not the same moments told again.
-${CLOCK_GET}
+${FILL_CLOCK_GET}
 
 RULES
 - ${OWN_CLOCK}
+${FILL_CLOCK}
 - 3 or 4 memos, each at a moment the archive has where the owner could plausibly talk into their phone alone: after a fight, on the way somewhere, late at night. Not the days the diary already covers, where possible.
 - Spoken, not written: the way the owner talks in the archive and chat, with pauses (…), restarts and half sentences. Not a diary entry.
 - Only what the archive shows happened and what the owner felt about it; no new events, no new secrets.
@@ -2702,7 +2809,7 @@ export const secOf = v => {
 };
 export async function fillVoice(m, p) {
     const diary = (p.diary || []).slice(-6).map(d => `- ${d.date} ${d.title}`).join('\n');
-    const out = await askDraft(await sideRequest(m, p.owner, [`[DIARY]\n${diary || '(none)'}`, fillClock(m, p, p.now, null, windowOf(m, p))], {story:CHAT_TOKENS.apps,profile:p.financeProfile}), { force: true, system: AI_SYS_VOICES, maxTokens: 6000 });
+    const out = await askDraft(await sideRequest(m, p.owner, [`[DIARY]\n${diary || '(none)'}`, fillClock(m, p, p.now, null, windowOf(m, p), null, { story: true })], {story:CHAT_TOKENS.apps,profile:p.financeProfile}), { force: true, system: AI_SYS_VOICES, maxTokens: 6000 });
     const memos = arr(jsonOf(out, { salvage: 'whole' })?.memos).map(x => ({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), sec: secOf(x?.sec), place: line(x?.place, 60), src: 'guess' })).filter(x => x.text);
     if (!memos.length) throw new Error('모델 답에서 음성 메모를 찾지 못했어요');
     // (one the story already put there, the same title at the same time, isn't written twice)

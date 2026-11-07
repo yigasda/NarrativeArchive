@@ -1441,7 +1441,7 @@ test('reflection keeps the full PM source but converts only the latest source', 
     const c = setup([say('Ren', 'start'), say('Mara', 'evening'), say('Mara', raw)]);
     clockPhone(c.p); c.m.dateOrder = 'md';
     await run(c.m, { clock: { basis: 'Mara reads, then two hours pass', finalViewpoint: 'Mara', elapsedTime: '2 hours', sceneTime: '11-05 22:30' }, now: '11-05 14:30', events: [] });
-    assert.ok(T.input.includes('11.05, 8:30 PM') && T.input.includes('Two hours pass.'));
+    assert.ok(T.input.includes(raw));
     assert.match(T.input, /On Mara's clock → owner's time: 11-05 12:30/);
     assert.equal(c.p.now, '11-05 14:30');
     const rows = Array.from({ length: 14 }, (_, i) => fieldRow(i, 'Mara: ', `November 5, 2026 ${String(i).padStart(2, '0')}:30`));
@@ -1575,8 +1575,10 @@ test('dated HTML remains on the old path and cannot receive a duplicate bare hin
 });
 test('an unusable latest bare source does not resurrect earlier dated choices', async () => {
     const p = { owner: 'Ren' }; clockPhone(p);
-    const rows = [htmlRow(1, 'Mara 11.05 08:30'), ...Array.from({ length: 15 }, (_, i) => htmlRow(i + 2, 'Mara <span class="time">09:00</span>'))];
+    const rows = [htmlRow(1, `Mara ${tf('11.05 08:30')}`), ...Array.from({ length: 15 }, (_, i) => htmlRow(i + 2, 'Mara <span class="time">09:00</span>'))];
     for (const bad of [{ ...p, year: undefined }, { ...p, now: '08:30' }, { ...p, noYear: true }]) {
+        // (the earlier dated source alone is a choice on this phone: so none below is one coming back)
+        assert.ok((await data.reflectionClocks(bad, rows.slice(0, 1), {})).choices.length > 0);
         const r = await data.reflectionClocks(bad, rows, {});
         assert.equal(r.choices.length, 0);
         assert.doesNotMatch(r.text, /Time text in #/);
@@ -1588,7 +1590,7 @@ test('only the latest source generates alternatives, retaining the existing six-
     const p = { owner: 'Ren' }; clockPhone(p);
     for (let i = 0; i < 8; i++) p.where.people.push({ name: `Person${i}`, city: 'Paris', tz: 'Europe/Paris' });
     const names = p.where.people.map(x => x.name).join(' ');
-    const rows = Array.from({ length: 16 }, (_, i) => htmlRow(i, `${names} ${i % 2 ? '<time>08:30</time>' : '11.05 08:30'}`));
+    const rows = Array.from({ length: 16 }, (_, i) => htmlRow(i, `${names} ${i % 2 ? '<time>08:30</time>' : tf('11.05 08:30')}`));
     const r = await data.reflectionClocks(p, rows, {});
     assert.equal(r.choices.length, 6);
     assert.ok(r.choices.every(x => x.at === 15));
@@ -1939,7 +1941,8 @@ test('256 prompt options agree on the new clock schema and their archive-only va
             assert.doesNotMatch(example,/"clock"/);
         }
     }
-    const clockBlock = src.match(/const CLOCK_FIRST = `([\s\S]*?)`;/)[1];
+    // (CLOCK FIRST's viewpoint line is the one the fills share)
+    const clockBlock = src.match(/const CLOCK_FIRST = `([\s\S]*?)`;/)[1].replace('${CLOCK_VIEW}', src.match(/const CLOCK_VIEW = `([^`]*)`;/)[1]);
     for (const system of systems) {
         assert.equal(system.split(clockBlock).length, 2);
         assert.match(system, /elapsedTime \(stated elapsed time used; null if absent\)/);

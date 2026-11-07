@@ -42,7 +42,9 @@ const minutes = t => {
 };
 // a status window that is not <tracker>: one short line of fields ("[ 🌙 오후 8:15 · 12월 9일 (목) · 성 → 병동 · ❄️ -1°C ]")
 // or a few "label: value" lines (📅 날짜: … / 📍 장소: …). It needs a time or a date; story prose has long parts and full stops
-const ST_CLOCK = /\d{1,2}\s*:\s*\d{2}|(?:오전|오후|새벽|아침|낮|저녁|밤)\s*\d{1,2}\s*시|\d{1,2}\s*시(?!간)\s*(?:\d{1,2}\s*분|반)|\b\d{1,2}\s*(?:am|pm)\b/i;
+const ST_CLOCK = /\d{1,2}\s*:\s*\d{2}|(?:오전|오후|새벽|아침|낮|저녁|밤)\s*\d{1,2}\s*시|\b\d{1,2}\s*(?:am|pm)\b/i;
+// (or a Korean clock the reader takes: "16시 15분", never "3시 15분 전" or "2시간 15분")
+const stClock = p => ST_CLOCK.test(p) || koClocks(p).length > 0;
 const ST_DATE = /\d{1,4}\s*년|\d{1,2}\s*월\s*\d{1,2}\s*일|\b\d{4}[-./]\d{1,2}[-./]\d{1,2}\b|[(（][월화수목금토일][)）]|[월화수목금토일]요일|\d+\s*일\s*(?:째|차)|\bday\s*\d+\b|\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2}\b|\b\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/i;
 // a field that names the weather: an emoji, a temperature, a sky word (Korean "비" and "눈" only as words of their own)
 const ST_WEATHER = /[☀🌤⛅🌥☁🌦🌧⛈🌩🌨❄☃🌫🌪☔💨🌬🌞]|(?:영하\s*)?[-−]?\d+(?:[.,]\d+)?\s*(?:°\s*[CF]?|℃|℉|도(?![가-힣]))|맑|흐림|흐린|흐려|구름|눈발|눈보라|폭설|함박눈|소나기|장대비|폭우|장마|이슬비|가랑비|보슬비|진눈깨비|안개|천둥|번개|뇌우|강풍|돌풍|바람(?:이|\s)*(?:세|강|많|쌩)|폭염|한파|무더|쌀쌀|습(?:도|함|한)|(?<![가-힣])(?:비|눈)(?:(?![가-힣])|(?=[가이옴와]))|\b(?:sunny|cloudy|overcast|rain\w*|snow\w*|fog\w*|mist\w*|clear|storm\w*|thunder\w*|drizzl\w*|hail|windy|humid|sonnig|regen|schnee|bewölkt|nebel|gewitter|pluie|neige|nuageux|soleil|lluvia|nieve|nublado)\b|晴|雨|雪|曇|霧|多云|阴/iu;
@@ -55,13 +57,14 @@ function stFields(parts) {
     for (const raw of parts) {
         const lab = stLabel(raw), p = lab ? lab[1] : stClean(raw);
         if (!p && !ST_WEATHER.test(raw)) continue;
-        const kind = lab ? lab[0] : /→|->|📍/.test(raw) ? 'place' : ST_CLOCK.test(p) ? 'time' : ST_DATE.test(p) ? 'date' : ST_WEATHER.test(raw) ? 'weather' : '';
+        const kind = lab ? lab[0] : /→|->|📍/.test(raw) ? 'place' : stClock(p) ? 'time' : ST_DATE.test(p) ? 'date' : ST_WEATHER.test(raw) ? 'weather' : '';
         // the weather keeps its emoji (a sky may be told by one alone) and every field that names it ("맑음 / 3°C")
         if (kind === 'weather') { const w = lab ? p : String(raw).replace(/\*\*|__|`|\uFE0F/g, '').replace(/\s+/g, ' ').trim(); f.weather = [f.weather, w].filter(Boolean).join(', '); continue; }
         if (kind === 'time') {
-            // (a Korean clock whole, "오후 4시 15분", not just its "오후 4시")
+            // (a Korean clock whole, "오후 4시 15분", not just its "오후 4시"; one the reader turns down, "오후 3시 15분 전", is no
+            // clock: the field stays as written, with no minutes)
             const ko = !p.includes(':') ? koClocks(p)[0] : null;
-            const match = p.match(/(?:오전|오후|새벽|아침|낮|저녁|밤|AM|PM)?\s*(?<![\d:.-])\d{1,2}\s*:\s*\d{2}(?![\d:])\s*(?:AM|PM|오전|오후)?/i) || (ko ? [ko.text] : !p.includes(':') ? p.match(ST_CLOCK) : null);
+            const match = p.match(/(?:오전|오후|새벽|아침|낮|저녁|밤|AM|PM)?\s*(?<![\d:.-])\d{1,2}\s*:\s*\d{2}(?![\d:])\s*(?:AM|PM|오전|오후)?/i) || (ko ? [ko.text] : null);
             const c = match ? match[0].trim() : p;
             f.time ||= c;
             const d = p.replace(c, '').trim();
@@ -91,7 +94,7 @@ function autoTracker(text) {
         const wrap = t.match(/^[[【〔(（]\s*([\s\S]+?)\s*[\]】〕)）]$/);
         const parts = (wrap ? wrap[1] : t).split(/\s*[|·•｜ㆍ]\s*|\s+\/\s+/).map(x => x.trim()).filter(Boolean);
         if (parts.length < 2 || parts.length > 10 || parts.some(x => x.length > 60)) continue;
-        const has = [ST_CLOCK, ST_DATE, ST_WEATHER, /→|->|📍/].map(re => parts.some(x => re.test(x)));
+        const has = [{ test: stClock }, ST_DATE, ST_WEATHER, /→|->|📍/].map(re => parts.some(x => re.test(x)));
         if (!has[0] && !has[1]) continue;
         const score = has.filter(Boolean).length;
         if (wrap ? score < 2 : score < 3 || parts.length < 3) continue;
