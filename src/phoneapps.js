@@ -801,14 +801,14 @@ export function camScreen(p, now, k, busy) {
 // 지도: the places in the archive's headings where the owner was, newest first (no AI)
 export function mapScreen(p, now, m) {
     const gone = new Set(p.hiddenPlaces || []), pl = placesOf(m, p.owner).filter(x => !gone.has(nameKey(x.place)));
-    const pin = ax('pin', 22, 'var(--axd)', 2.2, 'var(--axc)');
+    const pin = ax('pindot', 22, 'var(--axd)', 2.2, 'var(--axc)');
     return `${axBar(p, now)}
       ${axTop(axCb('home'))}
       <div class="ax_scroll">
         ${axH1('다녀간 곳', pl.length ? `${pl.length}곳` : '')}
         ${pl.length ? `<div class="ax_card ax_mapart" aria-hidden="true">${pl.slice(0, 5).map((_, k) => `<i style="left: ${[18, 62, 38, 80, 28][k]}%; top: ${[34, 26, 58, 64, 80][k]}%">${pin}</i>`).join('')}</div>
         <div class="ax_card">${pl.map(x => `
-          <div class="ax_rw ax_place"><span class="ax_si" style="background: var(--axc)">${ax('pin', 17, 'var(--axd)', 2.2)}</span><span class="ax_tx"><span class="ax_n">${esc(x.place)}</span><span class="ax_p1">${x.n > 1 ? `${x.n}번 · 마지막 ` : ''}${esc(x.scene)}</span></span><small>${esc(x.day ? fmtDate(p, x.day, true) : x.date)}${x.time ? `<br>${esc(x.time)}` : ''}</small>${delBtn('place', nameKey(x.place), 'ax_plx', ax('x', 14, 'currentColor', 2.4))}</div>`).join('')}</div>` : '<div class="ax_empty">방문 기록 없음</div>'}
+          <div class="ax_rw ax_place"><span class="ax_si" style="background: var(--axc)">${ax('pindot', 17, 'var(--axd)', 2.2)}</span><span class="ax_tx"><span class="ax_n">${esc(x.place)}</span><span class="ax_p1">${x.n > 1 ? `${x.n}번 · 마지막 ` : ''}${esc(x.scene)}</span></span><small>${esc(x.day ? fmtDate(p, x.day, true) : x.date)}${x.time ? `<br>${esc(x.time)}` : ''}</small>${delBtn('place', nameKey(x.place), 'ax_plx', ax('x', 14, 'currentColor', 2.4))}</div>`).join('')}</div>` : '<div class="ax_empty">방문 기록 없음</div>'}
         <i class="ax_pad"></i>
       </div>
       ${axInd()}`;
