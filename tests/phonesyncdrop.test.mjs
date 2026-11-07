@@ -2022,13 +2022,6 @@ test('elapsedTime is preserved as evidence and never added again to sceneTime or
     }
 });
 
-test('messenger choices write a profile-linked person as the story writes them, not as the lowercase key', () => {
-    const c={name1:'User',characterId:0,characters:[{name:'Seraphina'}]};
-    assert.deepEqual(data.screenHolderChoices({phoneProfiles:{mara:{}},text:'Mara finds Ren at the garage.'},c).map(x=>x.name),['User','Seraphina','Mara']);
-    assert.deepEqual(data.screenHolderChoices({phoneProfiles:{mara:{}},phonePre:{mara:{owner:'Mara'}}},c).map(x=>x.name),['User','Seraphina','Mara']);
-    assert.deepEqual(data.screenHolderChoices({phoneProfiles:{mara:{}},people:['Mara']},c).map(x=>x.name),['User','Seraphina','Mara']);
-});
-
 test('다녀간 곳 (the map): a reflection puts the places the owner went to on the phone, with whom and when; swiped-off places and the home city alone never; 되돌리기 takes them off', async () => {
     const chat = [say('Ren', 'start'), say('Mara', 'morning'), say('Ren', 'Ren takes Mara to the Blue Note in Chicago, then back to the hotel.')];
     const c = setup(chat);
@@ -2054,4 +2047,11 @@ test('다녀간 곳: making a phone asks for the newest visits; the prompts that
     assert.ok(!data.everydaySystem().includes('"visits"') && !data.everydaySystem({ life: true }).includes('"visits"'));
     const got = data.parsePhone(JSON.stringify({ visits: [{ place: 'Café Moka', city: 'Seoul', with: ['Mara', 'Mara', ''], time: '10-25 15:00' }, { place: ' ', city: 'Seoul' }] }), 'Ren');
     assert.deepEqual(got.visits.map(x => [x.place, x.city, x.with, x.time]), [['Café Moka', 'Seoul', ['Mara'], '10-25 15:00']]);
+});
+
+test('messenger choices write a profile-linked person as the story writes them, not as the lowercase key', () => {
+    const c={name1:'User',characterId:0,characters:[{name:'Seraphina'}]};
+    assert.deepEqual(data.screenHolderChoices({phoneProfiles:{mara:{}},text:'Mara finds Ren at the garage.'},c).map(x=>x.name),['User','Seraphina','Mara']);
+    assert.deepEqual(data.screenHolderChoices({phoneProfiles:{mara:{}},phonePre:{mara:{owner:'Mara'}}},c).map(x=>x.name),['User','Seraphina','Mara']);
+    assert.deepEqual(data.screenHolderChoices({phoneProfiles:{mara:{}},people:['Mara']},c).map(x=>x.name),['User','Seraphina','Mara']);
 });
