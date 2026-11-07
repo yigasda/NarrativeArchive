@@ -749,6 +749,8 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .mq_in:empty::before { content: attr(data-ph); color: #8a929d; pointer-events: none; }
 .ax .mq_x { width: 22px; height: 22px; border-radius: 50%; --axr: 50%; --axbg: #b9bfc8; --axsh: none; display: none; place-items: center; padding: 0; flex: none; }
 .ax .mq_x.on { display: grid; }
+.ax .mq_go { width: auto; margin: 0 16px 6px; --axbg: #fff; --axsh: 0 1px 2px rgba(22, 27, 34, 0.05), 0 6px 16px rgba(22, 27, 34, 0.06); --axr: 14px; color: #8a929d; --axfg: #8a929d; font-size: 15px; --axfs: 15px; }
+.mq_ph { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mq_kh { display: flex; align-items: center; gap: 8px; padding: 2px 26px 6px; }
 .mq_kh b { font-size: 18px; --axfs: 18px; font-weight: 600; }
 .ax .mq_res { flex: 1; min-height: 0; overflow-y: auto; }

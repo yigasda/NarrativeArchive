@@ -4,13 +4,14 @@
 // The field is an editable div, not an input: SillyTavern themes paint every input (with !important), never a div.
 // Routes: mapq (the sheet; mapq:@kind lists the towns a kind of map suits), mapc:place~hood~kind~night.
 import { AX, ax, axBar, axCb, axChev, axInd, axTop, mapNight, mapTowns } from './phoneapps.js';
-import { pinSpots, pinSvg, townPlace, townSvg } from './phonemapart.js';
+import { pinSpots, pinSvg, stripSvg, townCandidates, townPlace, townSvg } from './phonemapart.js';
 import { findTowns, hoodTown, kindTowns, placeNames, placeView } from './phonemapfind.js';
 import { HINT, PLACE } from './phonemapcity.js';
 import { TOWN_KO } from './phonemaptowns.js';
 import { flagSvg, FLAG_NAME } from './phoneflags.js';
 import { nameKey } from './people.js';
 import { esc } from './util.js';
+import { parts, placeInfo } from './phonedata.js';
 
 // a folded map (a kind of map) and two arrows (another map)
 // (added on first use: this file can load while phoneapps.js is still loading)
@@ -109,5 +110,28 @@ export function mapCityScreen(p, now, m, i = '') {
         <div class="mq_ths">${thumbs}</div>
         ${hoodChips ? `<div class="ax_sec">동네</div><div class="mq_chips">${hoodChips}</div>` : ''}
         <i class="ax_pad"></i></div></div>
+      ${axInd()}</div>`;
+}
+
+// 다녀간 곳 with nothing visited yet (시안 docs/mockups/phone-map/empty): the month strip still on top, empty (what will
+// fill it), then the town they live in (flag, names, the search field, its neighbourhoods) and the towns looked at lately
+export function mapEmptyScreen(p, now, m) {
+    const own = placeInfo(p).owner, cc = String(own.lives || '').toLowerCase(), i = townPlace(own.city), v = i >= 0 ? placeView(i) : null;
+    const k = v ? townCandidates(v.ko)[0] : 'gridLake', dark = false;
+    const art = `<svg class="mp_art" viewBox="0 0 ${W} 430" width="100%" aria-hidden="true">${townSvg(k, W, 430, v ? nameKey(v.ko) : p.owner, dark, v ? v.names.all.join(' ') : '')}</svg>`;
+    const nowP = parts(now), mo = nowP?.mo || 1, days = new Date(Date.UTC(Number(p.year) || 2001, mo, 0)).getUTCDate();
+    const st = stripSvg({ days, today: nowP?.d || 0, blocks: [] }), c = st.cell;
+    const ghost = [[3, 5], [11, 12], [18, 21]].map(([a, b]) => `<rect x="${(a - 1) * c + 1}" y="${st.top + 2}" width="${(b - a + 1) * c - 2}" height="14" rx="5" fill="none" stroke="#c9cfd8" stroke-width="1.2" stroke-dasharray="3 3"/>`).join('');
+    const strip = `<div class="ax_card mp_month"><div class="mp_mh"><span class="mp_lbl">${mo}월에 다닌 곳</span><span class="mp_big"><b class="cg_num">0</b><u>곳</u><span>이야기에서 어딘가 가면 여기 쌓여요</span></span></div><div class="mp_st">${st.svg.replace('</svg>', `${ghost}</svg>`)}</div></div>`;
+    const n = v?.names, nameLine = n ? [n.lat, n.cjk].filter(Boolean).join(' · ') : '';
+    const head = `<div class="mq_hd">${cc ? `<span class="mq_ct">${flagSvg(cc, 22)}<span>${esc(FLAG_NAME[cc] || own.lives)} · ${v ? '사는 도시' : '사는 나라'}</span></span>` : ''}
+        <div class="mq_tl"><b>${esc(v ? v.ko : FLAG_NAME[cc] || own.city || '사는 곳')}</b></div>${nameLine ? `<span class="mq_nm">${esc(nameLine)}</span>` : !v ? '<span class="mq_nm">사는 도시를 정하면 그 도시 지도가 나와요</span>' : ''}</div>`;
+    const field = `<button type="button" class="mq_field mq_go" data-go="mapq">${ax('search', 17, '#8a929d', 2.2)}<span class="mq_ph">도시 · 동네 찾기 (東京, Berlin, 홍대 …)</span></button>`;
+    const hoods = v && v.hoods.length ? `<div class="ax_sec">${esc(v.ko)}의 동네</div><div class="mq_chips">${v.hoods.map(h => `<button type="button" class="mq_chip" data-go="mapc" data-i="${at(i, h)}">${esc(HINT[h][3])}</button>`).join('')}</div>` : '';
+    const recent = (p.mapSeen || []).map(townPlace).filter(x => x >= 0).slice(0, 3);
+    const seen = recent.length ? `<div class="ax_sec">최근 본 도시</div><div class="ax_card">${recent.map(x => townRow(x, '', sub(x))).join('')}</div>` : '';
+    return `<div class="mp_wx"><div class="mp_bg">${art}</div>${axBar(p, now)}${axTop(axCb('home'))}
+      <div class="ax_scroll"><i class="mp_gap"></i><div class="mp_sheet"><i class="mp_grab"></i>
+        ${strip}${head}${field}${hoods}${seen}<i class="ax_pad"></i></div></div>
       ${axInd()}</div>`;
 }
