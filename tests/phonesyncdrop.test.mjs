@@ -2055,3 +2055,17 @@ test('messenger choices write a profile-linked person as the story writes them, 
     assert.deepEqual(data.screenHolderChoices({phoneProfiles:{mara:{}},phonePre:{mara:{owner:'Mara'}}},c).map(x=>x.name),['User','Seraphina','Mara']);
     assert.deepEqual(data.screenHolderChoices({phoneProfiles:{mara:{}},people:['Mara']},c).map(x=>x.name),['User','Seraphina','Mara']);
 });
+
+test('다녀간 곳: the owner\'s home is one row for as long as it is their home; a new home when they move', async () => {
+    const chat = [say('Ren', 'start'), say('Mara', 'morning'), say('Ren', 'Ren goes home.'), say('Ren', 'Home again.'), say('Ren', 'Ren moves to Berlin.')];
+    const c = setup(chat.slice(0, 3));
+    const home = (at, place, time) => ({ now: time, events: [{ id: `home-${at}`, at, quote: chat[at].mes, date: time.slice(0, 5), time: time.slice(6), summary: 'home', phone: { visits: [{ place, city: 'Frankfurt', home: true, with: [], time }, { place: 'Café Moka', city: 'Frankfurt', with: [], time }] } }] });
+    await run(c.m, home(2, 'flat in Sachsenhausen', '10-26 20:00'));
+    T.chat.push(chat[3]); await run(c.m, home(3, 'Flat in Sachsenhausen', '10-27 20:00'));
+    assert.equal(c.p.visits.filter(x => x.home).length, 1);
+    assert.equal(c.p.visits.filter(x => x.place === 'Café Moka').length, 2, 'every other place, each visit');
+    T.chat.push(chat[4]); await run(c.m, home(4, 'Wohnung in Mitte', '10-28 20:00'));
+    assert.deepEqual(c.p.visits.filter(x => x.home).map(x => x.place), ['flat in Sachsenhausen', 'Wohnung in Mitte']);
+    await data.undoRound(c.m, c.p);
+    assert.deepEqual(c.p.visits.filter(x => x.home).map(x => x.place), ['flat in Sachsenhausen']);
+});

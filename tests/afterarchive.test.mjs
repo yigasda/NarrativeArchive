@@ -20,7 +20,7 @@ const stub = {
     './people.js': encoded(`export const nameKey=s=>String(s).toLowerCase();export const nameRe=s=>new RegExp(s,'i');export const headingPlaces=()=>[];`),
     './recall.js': encoded(`export const estTok=s=>s.length/4;`), './scenes.js': encoded(`export const recentTrackers=()=>[];`),
     './sections.js': encoded(`export const RANGE_HEAD=/^(?:(\\S{1,12})\\s)?#(\\d+)\\s*([–—~-])\\s*#?(\\d+)(.*)$/;export const parseSections=t=>[...String(t).matchAll(/^## (.+)\\n[^#]*/gm)].map(x=>({title:x[1],start:x.index,end:x.index+x[0].length,group:false}));export const sectionKey=s=>s.title;export const splitTail=s=>[s,''];`),
-    './translate.js': encoded(`export const glossaryEntries=()=>[];export const glossaryPeople=()=>globalThis.__glossaryPeople||[];`), './world.js': encoded(`export const worldText=()=>'';`),
+    './translate.js': encoded(`export const glossaryEntries=()=>globalThis.__glossaryEntries||[];export const glossaryPeople=()=>globalThis.__glossaryPeople||[];`), './world.js': encoded(`export const worldText=()=>'';`),
     './anniv.js': encoded(`export const datedRows=()=>[];`),
 };
 const real = ['phonesync.js', 'phoneparse.js', 'phoneclock.js', 'phonesynclife.js', 'phonesyncmoney.js', 'finance.js', 'phoneprofile.js', 'phonefood.js', 'phonescreen.js'];
@@ -1208,4 +1208,23 @@ test('the bank and voice memo fills get PEOPLE AROUND, and take their people fro
             assert.match(globalThis.__menu.calls.find(x => x.sys === system).input, /\[PEOPLE AROUND\]\n- Mara: Ren sends her money every month\./, name);
         }
     } finally { delete globalThis.__ctx; }
+});
+
+test('a name and its other form in 용어집 ("Ivo = 이보") are one person: asked once, never read again for it, its row keeping both forms', async () => {
+    try {
+        const { m: mm } = htmlPhoneFixture(); mm.phones = {};
+        globalThis.__ctx.characters = [{ name: 'Mara' }]; globalThis.__ctx.characterId = 0; globalThis.__ctx.name1 = 'Lio';
+        mm.phoneScreenHolder = 'Mara';
+        globalThis.__glossaryPeople = ['Ivo']; globalThis.__glossaryEntries = [{ src: 'Ivo', ko: '이보' }];
+        globalThis.__where = [];
+        globalThis.__whereAnswer = { people: [{ name: 'Ren', city: 'Frankfurt am Main', tz: 'Europe/Berlin', lives: 'DE' }, { name: '이보', city: 'Frankfurt am Main', tz: 'Europe/Berlin', lives: 'DE' }] };
+        const at = { basis: 'Ren', finalViewpoint: 'Ren', elapsedTime: null, sceneTime: '11-03 03:10', messageSender: null };
+        globalThis.__menu = { calls: [], answers: [JSON.stringify({ country: 'DE', now: '11-03 03:10', clock: at, contacts: [{ name: '이보' }], threads: [{ with: '이보', messages: [{ from: '이보', text: 'Hallo', time: '11-03 03:00' }] }], notes: [] })] };
+        const p = await data.makePhone(mm, 'Ren');
+        const people = globalThis.__where[0].split('[PEOPLE]\n')[1].split('\n\n')[0].split('\n');
+        assert.equal(people.filter(n => n === 'Ivo' || n === '이보').length, 1, 'asked once');
+        assert.equal(globalThis.__where.length, 1, 'not read again for 이보');
+        const row = p.where.people.find(x => x.name === '이보');
+        assert.ok(row && row.aka.includes('Ivo'));
+    } finally { delete globalThis.__ctx; delete globalThis.__whereAnswer; delete globalThis.__glossaryPeople; delete globalThis.__glossaryEntries; }
 });
