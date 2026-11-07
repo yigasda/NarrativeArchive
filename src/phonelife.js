@@ -188,7 +188,8 @@ const phoneNow = (p, upto = null) => JSON.stringify({
     now: storyNow(p, upto) || p.now,
     events: (p.events || []).slice(-10).map(x => ({ title: x.title, date: x.date, time: x.time, ...(x.ev ? { ev: x.ev } : {}) })),
     mails: (p.mails || []).slice(-8).map(x => ({ from: x.from, subject: x.subject, time: x.time, ...(x.ev ? { ev: x.ev } : {}) })),
-    tickets: (p.money?.passes || []).map(x => ({ kind: x.kind, by: x.by, from: x.from, to: x.to, date: x.date, time: x.time, ...(x.ev ? { ev: x.ev } : {}) })),
+    // (a ticket told of before its day was known: its date is only the day it was told on)
+    tickets: (p.money?.passes || []).map(x => ({ kind: x.kind, by: x.by, from: x.from, to: x.to, date: x.date, ...(x.dayUnknown ? { dayUnknown: true } : {}), time: x.time, ...(x.ev ? { ev: x.ev } : {}) })),
     orders: (p.money?.orders || []).slice(-6).map(x => ({ shop: x.shop, item: x.item, time: x.time, ...(x.ev ? { ev: x.ev } : {}) })),
 });
 const daysBlock = days => `[STORY DAYS]\n${days.map(d => `${d.day}${d.places.length ? `: ${d.places.join(', ')}` : ''}`).join('\n') || '(unknown)'}`;

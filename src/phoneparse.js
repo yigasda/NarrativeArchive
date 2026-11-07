@@ -49,6 +49,12 @@ const CODE_BLOCKS = /^\[(?:OWNER'S CLOCK|PHONE NOW|MONEY NOW|INVESTMENTS NOW|LIF
 // story's: no block the code makes holds a chat message or an archive section)
 const IN_STORY = /\n(?:\[#\d+[^\]\n]*\]|## )/;
 export const storyText = input => String(input || '').split(/\n\n(?=\[[A-Z][A-Z'’ ]+[^\]\n]*\]\n)/).filter(b => !CODE_BLOCKS.test(b) || IN_STORY.test(b)).join('\n\n');
+// a request built by the app (sideRequest) knows its story part exactly: the archive, the chat, the world, the lorebook and the
+// owner's profile as they went in, a "[BANK]" paragraph closing the last message too. Evidence goes by that; any other text
+// by storyText
+const STORY_OF = new Map();
+export const rememberStory = (input, story) => { STORY_OF.delete(input); STORY_OF.set(input, story); while (STORY_OF.size > 24) STORY_OF.delete(STORY_OF.keys().next().value); return input; };
+export const storyPart = input => STORY_OF.get(input) ?? storyText(input);
 export const swapDate = (a, b, sep) => Number(b) <= 12 && (Number(a) > 12 || sep !== '-' && Number(a) <= 31 && dayFirstChat());
 export const when = v => {
     // "10-25 21:00", or with the year in front ("2026-10-25 21:00", "2026/10/25T21:00") or after ("25.10.2026 21:00", "10/25/2026 9:00")

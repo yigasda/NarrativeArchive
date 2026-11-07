@@ -515,3 +515,21 @@ test('점검 6: a story with no year of its own values its money and investments
     assert.equal(W.wealthDate({ text: '## #0–#1 — 2025-03-14 Berlin\n' }, { now: '03-14 10:00' }), '');
     assert.equal(dataMod.investmentDate({ text: '' }, { noYear: true, now: '03-14 10:00' }), today);
 });
+
+test('점검 7: a story with no year keeps the day its money was first valued (tomorrow finds the same rates); evidence goes by the story part as sent, a [BANK] paragraph closing the last message too', async () => {
+    const W = await import(wealthURL), today = new Date().toISOString().slice(0, 10);
+    const p = { noYear: true, now: '03-14 10:00', money: { bank: { accounts: [] } } };
+    assert.equal(W.wealthDate({ text: '' }, p), today);
+    assert.equal(p.money.fxDate, today);
+    p.money.fxDate = '2026-01-02';
+    assert.equal(W.wealthDate({ text: '' }, p), '2026-01-02');
+    const q = { noYear: true, now: '03-14 10:00', investment: { trades: [] } };
+    assert.equal(dataMod.investmentDate({ text: '' }, q), today);
+    assert.equal(q.investment.date, today);
+    const { rememberStory, storyPart } = await import('../src/phoneparse.js');
+    const story = '[RECENT CHAT]\n[#5] Mara: 오늘 주식 샀어.\n\n[BANK]\nSAP 10주 매수 (주당 182.4)\n\n[DIARY]\n긴 하루였다.';
+    const input = rememberStory(`${story}\n\n[OWNER]\nMara\n\n[BANK]\n{"accounts":[]}`, story);
+    assert.ok(storyPart(input).includes('SAP 10주 매수 (주당 182.4)'));
+    assert.ok(storyPart(input).includes('긴 하루였다.'));
+    assert.ok(!storyPart(input).includes('{"accounts":[]}'));
+});

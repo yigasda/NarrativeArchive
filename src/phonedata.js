@@ -19,7 +19,7 @@ import { parseSections, RANGE_HEAD, sectionKey, splitTail } from './sections.js'
 import { glossaryEntries, glossaryPeople } from './translate.js';
 import { worldText } from './world.js';
 import { phoneChatScope, phoneTarget } from './phonestory.js';
-import { dateOrderSource, htmlClocks, htmlDatedClocks, htmlTimeContext, swapDate, withDateOrder, withDateOrderSync, tidyKo, arr, evOf, gapDays, giftOf, hhmm, jsonOf, ko, parseJson, storyMin, byStory, yearIn, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
+import { rememberStory, dateOrderSource, htmlClocks, htmlDatedClocks, htmlTimeContext, swapDate, withDateOrder, withDateOrderSync, tidyKo, arr, evOf, gapDays, giftOf, hhmm, jsonOf, ko, parseJson, storyMin, byStory, yearIn, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
 import { clockFallback, exactClockShift } from './phoneclock.js';
 import { PLACE } from './phonemapcity.js';
 export { tidyKo, arr, gapDays, giftOf, hhmm, jsonOf, ko, last4, line, num, pad, pick, storyMin, byStory, str, when, withEv };
@@ -353,7 +353,7 @@ MONEY
 - A cancelled order${delivery ? ' or delivery' : ''} moves no money; if it was already paid, its refund is a plus move.
 ${delivery ? `- A delivery paid in cash at the door has no move. "tip" only where tipping is the custom; elsewhere 0.
 - A delivery from a shop not in DELIVERY SHOPS also gives "newShop" with 2 to 4 dishes: the one ordered and others it would have.
-` : ''}- A ticket or booking the story has carries the details a real one would (a booking number, a seat, a gate), made up to fit.
+` : ''}- A ticket or booking the story has carries the details a real one would (a booking number, a seat, a gate), made up to fit; one told of "again" has only what the story says of it, the rest "".
 - People: only people the story has.
 
 LANGUAGE
@@ -1427,7 +1427,7 @@ async function moneyStage(m, p, owner, targets, c) {
         if (c.reread?.has(t.at) && !c.reread.get(t.at).some(x => x.id === t.id)) { out.notes.push(`#${t.at} 바뀐 대화의 결제는 새로 넣지 않았어요`); continue; }
         const stage = structuredClone({ money: p.money, investment: p.investment, finance: m.finance, delivery: p.delivery });
         let paid;
-        try { paid = applyMoney(m, p, { id: t.id, at: t.at, date: t.date, time: t.time, summary: t.summary, money: mo }, { placeZone: v => tzForCity(null, v), year: c.year, anchor: c.anchor, marks: s.marks, legs: s.events[t.id]?.legs || [], span: s.failed[t.at]?.span || null, edited: !!c.reread?.has(t.at) }); }
+        try { paid = applyMoney(m, p, { id: t.id, at: t.at, date: t.date, time: t.time, summary: t.summary, money: mo }, { placeCity: cityIds, year: c.year, anchor: c.anchor, marks: s.marks, legs: s.events[t.id]?.legs || [], span: s.failed[t.at]?.span || null, edited: !!c.reread?.has(t.at) }); }
         catch (err) { p.money = stage.money; p.investment = stage.investment; m.finance = stage.finance; if (p.delivery) p.delivery = Object.assign(p.delivery, stage.delivery); owe(t, String(err?.message || err)); continue; }
         for (const ch of paid.changes) { out.apps.add(ch.app); if (ch.amount !== null) out.changes.push({ ...ch, what: line(t.summary, 60) }); }
         out.notes.push(...paid.notes);
@@ -1720,7 +1720,7 @@ async function updatePhone(m, owner) {
             const stage = structuredClone({ money: p.money, investment: p.investment, finance: m.finance, delivery: p.delivery });
             let paid;
             if (day) lastDay = day;
-            try { paid = applyMoney(m, p, { id, at, date: day, time: hhmm(e.time), summary: line(e.summary, 160), money: e.money }, { placeZone: v => tzForCity(null, v), year, anchor, marks: s.marks, legs: s.events[id]?.legs || [], span: s.failed[at]?.span || null, edited: reread.has(at) }); }
+            try { paid = applyMoney(m, p, { id, at, date: day, time: hhmm(e.time), summary: line(e.summary, 160), money: e.money }, { placeCity: cityIds, year, anchor, marks: s.marks, legs: s.events[id]?.legs || [], span: s.failed[at]?.span || null, edited: reread.has(at) }); }
             catch (err) { p.money = stage.money; p.investment = stage.investment; m.finance = stage.finance; if (p.delivery) p.delivery = Object.assign(p.delivery, stage.delivery); fail(String(err?.message || err)); continue; }
             for (const c of paid.changes) { apps.add(c.app); if (c.amount !== null) changes.push({ ...c, what: line(e.summary, 60) }); }
             notes.push(...paid.notes);
@@ -3224,12 +3224,11 @@ export async function sideRequest(m, owner, blocks, { profile, money = false, st
     const ph = m.phones?.[nameKey(owner)] || null, gap = read && 'gap' in read ? read.gap : windowOf(m, ph), upto = nowAt(gap);
     const recent = recentPhoneText(6, { upto, maxChars: 6000 });
     if (read) read.gap = gap;
-    return [
-        archiveBlock(m, archiveFor(m, -1, upto).text || '(empty)', 'ARCHIVE', story, upto),
-        world ? `[WORLD]\n${world}` : '', lore ? `[LOREBOOK]\n${lore}` : '',
-        afterBlock(gap) || (recent && !(story && noArchive(m)) ? `[RECENT CHAT]\n${recent}` : ''),
-        yearBlock(m, ph, upto), `[OWNER]\n${owner}`, profileText, blindBlock(m, owner), ...blocks, namesBlock(m),
-    ].filter(Boolean).join('\n\n');
+    const arch = archiveBlock(m, archiveFor(m, -1, upto).text || '(empty)', 'ARCHIVE', story, upto), chat = afterBlock(gap) || (recent && !(story && noArchive(m)) ? `[RECENT CHAT]\n${recent}` : '');
+    const tales = [arch, world ? `[WORLD]\n${world}` : '', lore ? `[LOREBOOK]\n${lore}` : '', chat];
+    const input = [...tales, yearBlock(m, ph, upto), `[OWNER]\n${owner}`, profileText, blindBlock(m, owner), ...blocks, namesBlock(m)].filter(Boolean).join('\n\n');
+    // (the story part as it went in, for evidence: storyPart)
+    return rememberStory(input, [...tales, profileText].filter(Boolean).join('\n\n'));
 }
 // an answer without a currency takes the owner's country's, not a guess at euros
 const HOME_CUR = { KR: 'KRW', US: 'USD', GB: 'GBP', DE: 'EUR', FR: 'EUR', IT: 'EUR', ES: 'EUR', JP: 'JPY', CN: 'CNY', TW: 'TWD', CA: 'CAD', AU: 'AUD', RU: 'RUB', BR: 'BRL' };
