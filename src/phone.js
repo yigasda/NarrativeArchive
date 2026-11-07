@@ -221,12 +221,14 @@ export async function openPhone(who = null) {
         return `지금 ${Math.floor(w / 60)}:${String(w % 60).padStart(2, '0')}`;
     };
     // a place's flag by the country its label starts with ("영국 케임브리지"), else by its zone's area
+    // a long list of cities under a zone: its first three, so the line fits ("LA · 샌프란시스코 · 시애틀")
+    const fewCities = t => { const xs = String(t || '').split(' · '); return xs.length > 3 && t.length > 18 ? xs.slice(0, 3).join(' · ') : t; };
     const flagOfLabel = label => Object.entries(FLAG_NAME).find(([, n]) => String(label).startsWith(`${n} `))?.[0] || '';
     // which zone a typed city is in, when the app can't tell: which of the places that name goes by, or which country (and
     // where in it, for a country with many clocks); resolves a zone, or '' (asked and answered nothing)
     const askZone = async (p, name, city, err) => {
         if (err.choices) {
-            const v = await askPick(`어느 ${city}예요?`, `${name}의 도시`, err.choices.map(c => { const sp = /^(.*?) \((.*)\)$/.exec(c.label); return { v: c.tz, label: sp ? sp[1] : c.label, sub: sp?.[2] || '', time: clockIn(p, c.tz), flag: flagOfLabel(c.label) }; }));
+            const v = await askPick(`어느 ${city}예요?`, `${name}의 도시`, err.choices.map(c => { const sp = /^(.*?) \((.*)\)$/.exec(c.label); return { v: c.tz, label: sp ? sp[1] : c.label, sub: fewCities(sp?.[2] || ''), time: clockIn(p, c.tz), flag: flagOfLabel(c.label) }; }));
             return v || '';
         }
         let code = await askCountry('어느 나라 도시예요?', `"${city}"는 모르는 도시예요`);
@@ -236,7 +238,7 @@ export async function openPhone(who = null) {
         if (!zs.length) { await askSheet('시간대를 찾지 못했어요', '다른 도시 이름이나 나라로 다시 적어 주세요.', '확인', true); return ''; }
         if (zs.length === 1) return zs[0].tz;
         const cc = code.toLowerCase(), country = FLAG_NAME[cc] || code;
-        const v = await askPick(`${country} 어디쯤이에요?`, '시간대가 여러 개인 나라예요', zs.map(z => { const sp = /^(.*?) \((.*)\)$/.exec(z.label); return { v: z.tz, label: sp ? sp[1] : z.label, sub: sp?.[2] || '', time: clockIn(p, z.tz) }; }), FLAG_NAME[cc] ? cc : '');
+        const v = await askPick(`${country} 어디쯤이에요?`, '시간대가 여러 개인 나라예요', zs.map(z => { const sp = /^(.*?) \((.*)\)$/.exec(z.label); return { v: z.tz, label: sp ? sp[1] : z.label, sub: fewCities(sp?.[2] || ''), time: clockIn(p, z.tz) }; }), FLAG_NAME[cc] ? cc : '');
         return v || '';
     };
     // 상태창 날짜 순서: asked once per chat before the first make or reflection (closing it reads 월.일 and asks again next time)
