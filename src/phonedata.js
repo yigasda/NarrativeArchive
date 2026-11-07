@@ -240,6 +240,7 @@ ${CLOCK_GET}
 
 ${archiveOnly ? '' : `${CLOCK_FIRST}\n\n`}WHAT IS NEW
 - Only what happens in NEW MESSAGES or ARCHIVE FOR THESE MESSAGES. Guesses and memories of earlier days add nothing.
+- Something done before that the phone would hold, first told of here (an order already placed, a ticket already bought): an event in that message${split ? ', with its "apps"' : '; its money says "again"'}.
 - A plan made in these messages goes in the calendar; what is planned hasn't happened yet (no payment, no photo).
 - Each message's own replies, orders and payments belong to the event in that message, not folded into an earlier one.
 - An event in EVENTS ON THE PHONE keeps its id; add only what the phone doesn't hold yet.
@@ -270,6 +271,7 @@ MONEY (only with MONEY NOW or INVESTMENTS NOW)
 - An amount the story gives stays as it is. A real one with no amount gets a plausible amount for the owner, the place and MONEY NOW: "amountFrom": "guess".
 - A payment the scene plainly implies (eating out, a taxi ride) counts; one someone else may have paid does not. Never invent a payment the scene doesn't show or imply.
 - Every move, trade and order says "occurrence": "new" when it happens in this message, "again" when the message only talks about one made before.
+- An order or ticket made before and not in MONEY NOW yet ("I already ordered you a scarf") is still written, "again": the app puts it in with no payment. Its shop or price may be "" or null when the story doesn't say.
 - Already in MONEY NOW or INVESTMENTS NOW: its id as "already"; it is not paid again.
 - A card purchase goes on the card account; a refund is plus; paying the card off is a transfer from the bank.
 - No money is made up to cover a payment; a balance may go below zero.
@@ -341,6 +343,7 @@ MONEY
 - An amount the story gives stays as it is. A real one with no amount gets a plausible amount for the owner, the place and MONEY NOW: "amountFrom": "guess".
 - A payment the scene plainly implies (eating out, a taxi ride) counts; one someone else may have paid does not. Never invent a payment the scene doesn't show or imply.
 - Every move${invest ? ', trade' : ''} and order says "occurrence": "new" when it happens in this message, "again" when the message only talks about one made before.
+- An order or ticket made before and not in MONEY NOW yet ("I already ordered you a scarf") is still written, "again": the app puts it in with no payment. Its shop or price may be "" or null when the story doesn't say.
 - Already in MONEY NOW${invest ? ' or INVESTMENTS NOW' : ''}: its id as "already"; it is not paid again. A "changed" event's payment is that same payment, its amount corrected if it changed.
 - A card purchase goes on the card account; a refund is plus; paying the card off is a transfer from the bank.
 - No money is made up to cover a payment; a balance may go below zero.
