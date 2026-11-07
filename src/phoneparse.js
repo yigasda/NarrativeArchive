@@ -45,7 +45,10 @@ export async function withDateOrder(order, fn) { const me = { order }; runs.push
 // (by their whole names, each ending its header or followed by " —": "[DATE NIGHT]", "[DIARY ENTRY]", "[BANK ALERT]",
 // "[DAYS LATER]" are the story's)
 const CODE_BLOCKS = /^\[(?:OWNER'S CLOCK|PHONE NOW|MONEY NOW|INVESTMENTS NOW|LIFE NOW|WEATHER NOW|EXISTING (?:ACCOUNTS|PUBLIC PRICES|QUOTES|ARCHIVE|SCHEDULES)|EVALUATION DATE|FX PAIRS|SAVED RATES|CURRENCY|ACCOUNT CURRENCIES|PUBLIC SECURITIES|WEALTH|FINANCIAL SCALE|BANK|REBUILD(?: ACCOUNTS)?|MONEY ALREADY MOVED|ORDERED|DAYS|STORY DAYS|DATE|LIVES IN|COUNTRY|OWNER COUNTRY|PHONE COUNTRY|STORY YEAR|NAMES|ONLY THESE|[A-Z ]+ SO FAR|EVENTS ON THE PHONE|DELIVERY SHOPS|SHOPS|NEARBY|PUT ON THE PHONE NOW|SCENES WITH|DEVICE|BODY ON THE PHONE NOW|DIARY|PEOPLE AROUND)(?=\]|\s+—)/;
-export const storyText = input => String(input || '').split(/\n\n(?=\[[A-Z][A-Z'’ ]+[^\]\n]*\]\n)/).filter(b => !CODE_BLOCKS.test(b)).join('\n\n');
+// (a part of a message that starts like one, "[BANK]\n…" with the chat's messages after it, "[#13] Mina: …", is the
+// story's: no block the code makes holds a chat message or an archive section)
+const IN_STORY = /\n(?:\[#\d+\]|## )/;
+export const storyText = input => String(input || '').split(/\n\n(?=\[[A-Z][A-Z'’ ]+[^\]\n]*\]\n)/).filter(b => !CODE_BLOCKS.test(b) || IN_STORY.test(b)).join('\n\n');
 export const swapDate = (a, b, sep) => Number(b) <= 12 && (Number(a) > 12 || sep !== '-' && Number(a) <= 31 && dayFirstChat());
 export const when = v => {
     // "10-25 21:00", or with the year in front ("2026-10-25 21:00", "2026/10/25T21:00") or after ("25.10.2026 21:00", "10/25/2026 9:00")
@@ -63,9 +66,13 @@ export const when = v => {
 // length of time ("2시간 15분", "15분 뒤", "3시 15분 전" is 2:45), never seconds alone. Only where no colon clock is
 // read: every colon clock is read as before
 const KO_SP = String.raw`[ \t\u00a0]`;
+// (how far past it: "3시가 조금 넘은", "3시가 훌쩍 지난", "3시가 한참이나 지났다")
+// ("지난" as the time gone past, never "지난번", "지난주", "지난달", "지난해": the last one of something)
+const KO_PAST_NOUN = String.raw`지난(?!번|주|달|해|날|밤|봄|여름|가을|겨울|학기|시즌|회|번째|분기|정권)`;
+const KO_PAST_ADV = String.raw`(?:조금|좀|막|살짝|훨씬|훌쩍|한참|이미|벌써|약간|꽤|거의|이제|금방|좀더|조금더)(?:이나|나|은|는)?`;
 // ("am" · "pm" never the end of a word: "Liam 12시", "Team 12시 회의")
 const KO_MER = String.raw`(?:오전|오후|새벽|아침|낮|저녁|밤|(?<![A-Za-z])[aApP]\.?[mM]\.?)`;
-const KO_CLOCK_SRC = String.raw`(?<![\p{N}.:])(?:(${KO_MER})(?:에|의)?${KO_SP}*)?(\d{1,2})${KO_SP}*시(?!간)(?:${KO_SP}*(?:(\d{1,2})${KO_SP}*분|(반))(?:${KO_SP}*\d{1,2}${KO_SP}*초)?)?(?:(?:에|엔)?${KO_SP}*((?:오전|오후|새벽|아침|낮|저녁|밤)(?:에|엔|의)?(?![\p{L}])|(?<![A-Za-z])[aApP]\.?[mM]\.?(?![A-Za-z])))?(?!${KO_SP}*(?:(?:전|후|뒤)(?:(?:이|인|일|입|였)\p{L}*|(?:에|엔|으로|로|부터|까지|쯤|만|도|은|는|의|과|와|보다|가|을|를|라서|라|이라)*(?![\p{L}]))|(?:이전|이후|직전|직후|방향)\p{L}*|(?:(?:가|를|이|을)${KO_SP}*)?(?:(?:조금|좀|막|살짝|훨씬|한참|이미|벌써|약간|꽤)${KO_SP}*)?(?:넘|지나|지났)\p{L}*|동안\p{L}*|만에|가량|간(?![\p{L}])|(?:쯤|경)${KO_SP}*(?:전|후|뒤|이전|이후)))`;
+const KO_CLOCK_SRC = String.raw`(?<![\p{N}.:])(?:(${KO_MER})(?:에|의)?${KO_SP}*)?(\d{1,2})${KO_SP}*시(?!간|즌|리즈)(?:${KO_SP}*(?:(\d{1,2})${KO_SP}*분|(반))(?:${KO_SP}*\d{1,2}${KO_SP}*초)?)?(?:(?:에|엔)?${KO_SP}*((?:오전|오후|새벽|아침|낮|저녁|밤)(?:에|엔|의)?(?![\p{L}])|(?<![A-Za-z])[aApP]\.?[mM]\.?(?![A-Za-z])))?(?!${KO_SP}*(?:(?:전|후|뒤)(?:(?:이|인|일|입|였)\p{L}*|(?:에|엔|으로|로|부터|까지|쯤|만|도|은|는|의|과|와|보다|가|을|를|라서|라|이라)*(?![\p{L}]))|(?:이전|이후|직전|직후|방향)\p{L}*|(?:가|를|이|을|은|는|도|만)${KO_SP}*(?:${KO_PAST_ADV}${KO_SP}*)?(?:넘|지나|지났|${KO_PAST_NOUN}|지날|지남)\p{L}*|(?:${KO_PAST_ADV}${KO_SP}*)?(?:넘(?!버)|지나(?!가(?:던|는))|지났|${KO_PAST_NOUN}|지날|지남)\p{L}*|동안\p{L}*|만에|가량|간(?![\p{L}])|(?:쯤|경)${KO_SP}*(?:전|후|뒤|이전|이후)))`;
 const KO_CLOCK_ALL = new RegExp(KO_CLOCK_SRC, 'gu');
 // (a meridiem after it: a Korean one never as the start of a word, "4시 낮잠"; "PM" with whatever follows, "4시 PM이야",
 // "4시에 pm")
@@ -108,8 +115,8 @@ export const hhmm = v => {
     const s = String(v || '');
     // (a Korean clock the reader turns down, "3시 이후", "3시 15분 전", "12시간", "오후 16시", is no time at all: never its
     // first numbers read the old way)
-    if (!/(\d{1,2})\s*:\s*(\d{2})/.test(s)) { const ko = koClockText(s); if (ko) return ko; if (/\d\s*시/.test(s)) return ''; }
-    const mt = s.match(/(\d{1,2})\s*:\s*(\d{2})/) || s.match(/(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?/) || s.match(/(\d{1,2})\s*(?=[ap]\.?m\b)/i);
+    if (!/(\d{1,2})\s*:\s*(\d{2})/.test(s)) { const ko = koClockText(s); if (ko) return ko; if (/\d\s*시(?!간|즌|리즈)/.test(s)) return ''; }
+    const mt = s.match(/(\d{1,2})\s*:\s*(\d{2})/) || s.match(/(\d{1,2})\s*시(?!간|즌|리즈)(?:\s*(\d{1,2})\s*분)?/) || s.match(/(\d{1,2})\s*(?=[ap]\.?m\b)/i);
     if (!mt) return '';
     let h = Number(mt[1]);
     const m = Number(mt[2] || 0), pm = /(?<![A-Za-z])[pP]\.?[mM]\b|오후|저녁|밤/.test(s), am = /(?<![A-Za-z])[aA]\.?[mM]\b|오전|새벽|아침/.test(s);
@@ -313,11 +320,18 @@ function readHtmlClocks(input, fields = false, excluded = null, positions = fals
             if (excluded) excluded.push([node.start, end]);
             // (inside a <time> whose datetime is a date, a part with no reason of its own to be left out is what it shows)
             if (node.inDate && !node.ownBlock && complete) { parent.text += node.text; parent.seen += node.hiddenStyle ? '' : node.seen; return; }
-            parent.text += '\0';
-            // (a part shown but not read, a quote, code or a timer, keeps the text on either side apart, as for a colon clock)
-            // (an empty one, or one of spaces only, keeps nothing apart: "11월 5일 <code></code>16:15" is still one stamp)
-            if (!node.hiddenStyle) { parent.seen += '\0'; if (complete && !node.removed) { const inner = node.text.replace(/\0/g, ''); shown += /\S/.test(inner) ? '\0' : inner; } }
-            if (!complete || !node.removed && !HTML_INLINE.test(node.name)) visible = shown = '';
+            // (a part shown but not read, a quote, code or a timer, keeps the text on either side apart, as for a colon clock;
+            // an empty one, or one of spaces only, keeps nothing apart: "11월 5일 <code></code>16:15" is still one stamp, inside
+            // a time field too)
+            const inner = node.text.replace(/\0/g, ''), empty = !node.removed && !/[^\s\u00a0]/.test(clockHtmlText(inner)), sep = empty ? inner : '\0';
+            parent.text += sep;
+            if (!node.hiddenStyle) {
+                parent.seen += sep;
+                // (a <time> whose datetime is a date shows that date: a clock right after it is dated by it)
+                if (complete && !node.removed) shown += node.dateOnly ? node.seen : sep;
+            }
+            // (a <time> that shows a date runs on into what follows it, as a span does)
+            if (!complete || !node.removed && !HTML_INLINE.test(node.name) && !(node.dateOnly && complete)) visible = shown = '';
             return;
         }
         const seenTime = clockHtmlText(node.seen).trim();
@@ -335,22 +349,15 @@ function readHtmlClocks(input, fields = false, excluded = null, positions = fals
         }
         const datedText = sourceTime.replace(/\s+/g, ' ');
         const dated = node.marked && node.hints.length && datedText.length <= 60 && datedClocks(datedText).some(x => x.sourceTime === datedText);
-        const tail = clock ? clockVisibleText(visible).trimEnd() : '';
-        // the stamps ending the last line (a stamp fits in 60 characters: its last 80, cut at a space; read wider when one
-        // starts right at the cut, its start maybe cut off)
-        const endStamps = t => {
-            const line0 = t.slice(t.lastIndexOf('\n') + 1);
-            for (const n of [80, 240, Infinity]) {
-                const l = line0.length > n ? line0.slice(line0.indexOf(' ', line0.length - n) + 1) : line0, hits = datedClocks(l).filter(x => t.endsWith(x.sourceTime));
-                if (!hits.length || l === line0 || !l.startsWith(hits.at(-1).sourceTime)) return hits;
-            }
-            return [];
-        };
+        // the stamps ending the last line (a stamp fits in 60 characters: its last 80, cut at a space)
+        const endStamps = t => { const l0 = t.slice(t.lastIndexOf('\n') + 1), l = l0.length > 80 ? l0.slice(l0.indexOf(' ', l0.length - 80) + 1) : l0; return datedClocks(l).filter(x => t.endsWith(x.sourceTime)); };
+        const own = sourceTime.replace(/\u00a0/g, ' ');
         // Only the dated span ending at this exact occurrence can own it. An earlier equal clock cannot.
-        const adjacent = clock && tail.endsWith(sourceTime.replace(/\u00a0/g, ' ')) && endStamps(tail).length > 0;
-        // (its date as a reader sees it: never one its style hides, and never a clock that is hidden itself)
-        const seenTail = adjacent && !node.hiddenStyle ? clockVisibleText(shown).trimEnd() : '';
-        const near = seenTail && seenTail.endsWith(sourceTime.replace(/\u00a0/g, ' ')) ? endStamps(seenTail).pop() || null : null;
+        // (a shown clock goes by what a reader sees: a date its style hides is none, and hidden letters between a date and it
+        // keep nothing apart; a hidden clock by all there is, so a date beside it still owns it and it gives no hint)
+        const tail = clock ? clockVisibleText(node.hiddenStyle ? visible : shown).trimEnd() : '';
+        const hits = clock && tail.endsWith(own) ? endStamps(tail) : [], adjacent = hits.length > 0;
+        const near = adjacent && !node.hiddenStyle ? hits.pop() : null;
         // a time field that is a date and a clock ("11.05 16:15", "11월 5일 16시 15분"), or a clock right after its date on
         // the screen ("<span>11월 5일 </span><span class="time">16:15</span>"): a dated stamp (the story's text alone never is one)
         const whole = !clock ? wholeDated(node) : null, at = positions ? { position: node.start } : {};
@@ -480,15 +487,6 @@ export const byStory = (now, get = x => x?.time) => (a, b) => storyMin(get(a), n
 const MON = 'jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|januar|februar|märz|maerz|mai|juni|juli|okt|dez';
 const DATED = new RegExp(`(?<!\\d)((?:19|20)\\d{2})[-./](?:0?[1-9]|1[0-2])[-./](?:0?[1-9]|[12]\\d|3[01])(?!\\d)|(?<!\\d)((?:19|20)\\d{2})년\\s*(?:0?[1-9]|1[0-2])월|\\b(?:${MON})[a-zä]*\\.?\\s+\\d{1,2}(?:st|nd|rd|th)?,?\\s+((?:19|20)\\d{2})(?!\\d)|(?<!\\d)\\d{1,2}\\.?\\s+(?:${MON})[a-zä]*\\.?,?\\s+((?:19|20)\\d{2})(?!\\d)|(?<!\\d)(?:(?:0?[1-9]|1[0-2])[-./](?:0?[1-9]|[12]\\d|3[01])|(?:0?[1-9]|[12]\\d|3[01])[-./](?:0?[1-9]|1[0-2]))[-./]\\s?((?:19|20)\\d{2})(?!\\d)`, 'gi');
 export const yearIn = text => { let y = ''; for (const mt of String(text || '').matchAll(DATED)) y = mt[1] || mt[2] || mt[3] || mt[4] || mt[5]; return y; };
-// the story's year in an archive or a chat: the newest section heading that dates itself, else the latest year its dates
-// give ("born 1990-07-15", "they first met in 2019" are the past, never the story's now)
-export function storyYearIn(text) {
-    const t = String(text || ''), heads = t.split('\n').filter(l => /^#{1,6}\s/.test(l));
-    for (let i = heads.length - 1; i >= 0; i--) { const y = yearIn(heads[i]); if (y) return y; }
-    let best = '';
-    for (const mt of t.matchAll(DATED)) { const y = mt[1] || mt[2] || mt[3] || mt[4] || mt[5]; if (y && (!best || Number(y) > Number(best))) best = y; }
-    return best;
-}
 // a model's JSON with a slip mended: a bracket closed with the wrong kind ("profile": { … ]), a comma before a closer,
 // closers missing at the end. Strings are left as they are
 export function mendJson(t) {

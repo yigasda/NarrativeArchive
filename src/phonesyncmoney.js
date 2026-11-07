@@ -32,6 +32,10 @@ let together = null;
 const fresh = (x, twin, at) => x.occurrence === 'new' && twin.sourceIndex !== at
     && !(together && twin.sourceIndex >= together[0] && twin.sourceIndex <= together[1]);
 const plain = s => String(s || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+// an order that is over (cancelled, returned, refunded), a ticket that is (used, cancelled, refunded, checked out, expired;
+// never "미사용", "사용 전", "unused": not used yet)
+const ORDER_OVER = s => ['cancelled', 'returned', 'refunded'].includes(s);
+const PASS_OVER = v => { const s = String(v || '').toLowerCase().trim(); return !/미사용|사용\s*전|unused|not used/.test(s) && /\bused\b|cancel|refund|checked out|expired|사용\s*(?:완료|됨|함)|취소|환불|만료/.test(s); };
 const samePlace = (a, b) => !!plain(a) && plain(a) === plain(b);
 // (an order's shop: the same, or one or both not named)
 const shopOf = (a, b) => !plain(a) || !plain(b) || samePlace(a, b);
@@ -296,8 +300,12 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         const box = p.money[path] ||= [];
         // the same event's own record told again (its message rewritten and read anew) is that one, not a second
         const old = x.already && box.find(o => o.id === x.already) || box.find(o => !madeNow.has(o) && same(o, x) && (!fresh(x, o, e.at) || o.ev === e.id))
-            || x.occurrence === 'again' && box.find(o => !madeNow.has(o) && loose(o, x)) || null;
+            // (the newest that fits: an order bought again weeks later is the one "on its way" now)
+            // (one still open first: "it was cancelled" ends the order still open, else it is the one already cancelled)
+            || x.occurrence === 'again' && ((rs => rs.find(o => !(path === 'passes' ? PASS_OVER(o.status) : ORDER_OVER(o.status))) || rs[0])([...box].reverse().filter(o => !madeNow.has(o) && loose(o, x, box)))) || null;
         if (old && old.sourceIndex == null) old.sourceIndex = e.at;
+        // (an order put in with no shop, told of again with its shop: the shop now; 되돌리기 takes it back)
+        if (old && path === 'orders' && !txt(old.shop) && txt(x.shop)) { const to = txt(x.shop, 60); out.effects.push({ type: 'field', path: 'money.orders', id: old.id, field: 'shop', from: old.shop ?? null, to }); old.shop = to; }
         if (old) {
             // an order's status only moves forward; a pass's is free text ("used", "checked in", "cancelled"): whatever it says now
             const next = path === 'passes' ? txt(x.status, 30) : x.status;
@@ -328,12 +336,35 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         if (!txt(x.item)) fail('주문의 물건을 확인하지 못했어요');
         return { shop: txt(x.shop, 60), item: txt(x.item), ko: txt(x.ko), option: txt(x.option, 60), qty: Math.max(1, Math.round(Number(x.qty) || 1)), price: finite(price) ? price : null, time: date, status: ORDER.includes(x.status) ? x.status : 'ordered', eta: when(x.eta).slice(0, 5) || (['ordered', 'shipped', 'on the way'].includes(x.status) || !ORDER.includes(x.status) ? plusDays(date, 2 + [...txt(x.shop)].reduce((n, c) => (n + c.charCodeAt(0)) % 3, 0)) : ''), arrived: '', gift: giftOf(x.gift), ...(x.paid === false ? { paid: false } : {}), ...(guess ? { amountFrom: 'guess' } : {}) };
     }, (o, x) => shopOf(o.shop, x.shop) && samePlace(o.item, x.item) && near(o.time, date) && !(o.option && txt(x.option, 60) && !samePlace(o.option, txt(x.option, 60))),
-    (o, x) => shopOf(o.shop, x.shop) && samePlace(o.item, x.item) && !['cancelled', 'returned', 'refunded'].includes(o.status));
+    // (told of again: the same item from the same shop, for the same person; one already ended, cancelled or returned, only
+    // when this tells it ended. "ordered" is what the model writes when the story doesn't say how far it is: any order still
+    // on its way, and one delivered only by the same shop for the same person, never a scarf delivered a month ago for no one)
+    (o, x) => {
+        if (!shopOf(o.shop, x.shop) || !samePlace(o.item, x.item)) return false;
+        const og = giftOf(o.gift), xg = giftOf(x.gift);
+        if (og && xg && !samePlace(og, xg)) return false;
+        if (ORDER_OVER(x.status)) return true;
+        if (ORDER_OVER(o.status)) return false;
+        if (x.status === 'ordered' || !ORDER.includes(x.status)) return o.status !== 'delivered' || samePlace(o.shop, x.shop) && (og ? samePlace(og, xg) : !xg);
+        return o.status === x.status || later(o.status, x.status);
+    });
     records('passes', list(mo.passes), x => {
         if (!txt(x.by)) fail('티켓 정보를 확인하지 못했어요');
         return { kind: ['flight', 'train', 'hotel', 'event', 'other'].includes(x.kind) ? x.kind : 'other', by: txt(x.by, 60), from: txt(x.from, 40), to: txt(x.to, 40), date: when(x.date).slice(0, 5) || date, time: hhmm(x.time), seat: txt(x.seat, 12), gate: txt(x.gate, 12), no: txt(x.no, 24), status: txt(x.status, 30) };
     }, (o, x) => samePlace(o.by, x.by) && o.kind === x.kind && (o.no && o.no === txt(x.no, 24) || o.date === (when(x.date).slice(0, 5) || date)),
-    (o, x) => samePlace(o.by, x.by) && o.kind === x.kind && (!o.no || !txt(x.no, 24) || o.no === txt(x.no, 24)) && (!when(x.date) || o.date === when(x.date).slice(0, 5)));
+    // (told of again: the same booking, by its number, else by what both name of its route and its day; one already used or
+    // cancelled only when this says nothing new of it, or that it was. A flight or a train its route names otherwise ("ICN"
+    // for "인천"), with no day or number: the one such booking still to come, when there is only one)
+    (o, x, box) => {
+        if (!samePlace(o.by, x.by) || o.kind !== x.kind) return false;
+        if (PASS_OVER(o.status) && txt(x.status) && !PASS_OVER(x.status)) return false;
+        if (o.no && txt(x.no, 24)) return o.no === txt(x.no, 24);
+        if (when(x.date) && o.date !== when(x.date).slice(0, 5)) return false;
+        const both = (a, b) => !plain(a) || !plain(b) || plain(a) === plain(b);
+        if (both(o.from, txt(x.from, 40)) && both(o.to, txt(x.to, 40))) return true;
+        const open = box.filter(r => samePlace(r.by, x.by) && r.kind === x.kind && !PASS_OVER(r.status));
+        return ['flight', 'train'].includes(x.kind) && !when(x.date) && !txt(x.no, 24) && !PASS_OVER(o.status) && open.length === 1 && open[0] === o;
+    });
     // 배달: an order in the delivery app. Its payment is a move of the same event (the card or bank row it made, or one
     // already there), tied to it here; with no paying move it was paid in cash at the door
     const dlvOn = !!p.delivery && e.at > (marks.delivery?.index ?? -1);
@@ -519,13 +550,15 @@ export function payOrders(m, p, year) {
 }
 
 // 복구: put back what a lost save dropped; something already there stays as it is
+// the object a "field" effect set: the one at its path, or (with an id) that record in the list there
+const fieldAt = (p, x) => { const at = boxAt(p, x.path); return x.id ? (Array.isArray(at) ? at.find(r => r?.id === x.id) : null) : at; };
 export function replayEffects(m, p, effects) {
     const f = finance(m);
     for (const x of effects) {
         if (x.type === 'entry') { const L = f.accounts[x.key]; if (L && !L.entries[x.id]) L.entries[x.id] = { amount: x.amount, date: x.date, ...(x.sourceIndex !== undefined ? { sourceIndex: x.sourceIndex } : {}) }; continue; }
         if (x.type === 'amendEntry') { const line = f.accounts[x.key]?.entries[x.id]; if (line && line.amount === x.from) line.amount = x.to; continue; }
         if (x.type === 'price') { const slot = (f.prices[x.key] ||= {})[x.date] ||= { rows: [], selected: null, conflict: false }; if (!slot.rows.some(r => r.id === x.id)) { slot.rows.push(structuredClone(x.row)); slot.selected ??= x.id; } continue; }
-        if (x.type === 'field') { const o = boxAt(p, x.path); if (o && (o[x.field] ?? null) === x.from) o[x.field] = x.to; continue; }
+        if (x.type === 'field') { const o = fieldAt(p, x); if (o && (o[x.field] ?? null) === x.from) o[x.field] = x.to; continue; }
         if (lifeReplay(p, x) !== null) continue;
         if (!p[x.path.split('.')[0]]) continue;
         const box = boxAt(p, x.path, true), idKey = x.idKey || 'id';
@@ -554,7 +587,7 @@ export function revertEffects(m, p, effects) {
         // a price the story gave: its row goes, the day's choice as it was
         if (x.type === 'price') { const slot = f.prices[x.key]?.[x.date]; if (!slot) continue; slot.rows = slot.rows.filter(r => r.id !== x.id); if (!slot.rows.length) { delete f.prices[x.key][x.date]; if (!Object.keys(f.prices[x.key]).length) delete f.prices[x.key]; } else if (x.prev) Object.assign(slot, x.prev); continue; }
         // a field set on a record (the brokerage's valuation day): back, unless changed since
-        if (x.type === 'field') { const o = boxAt(p, x.path); if (o && (o[x.field] ?? null) === x.to) { if (x.from === null) delete o[x.field]; else o[x.field] = x.from; } else if (o) left.push(x); continue; }
+        if (x.type === 'field') { const o = fieldAt(p, x); if (o && (o[x.field] ?? null) === x.to) { if (x.from === null) delete o[x.field]; else o[x.field] = x.from; } else if (o) left.push(x); continue; }
         const back = lifeRevert(p, x);
         if (back !== null) { if (!back) left.push(x); continue; }
         const box = boxAt(p, x.path);

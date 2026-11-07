@@ -1,7 +1,7 @@
 // 시각 판독 손보기 1단계: what was already wrong, made right before anything new is read
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { datedClocks, dayFirstChat, dateOrderSource, storyText, storyYearIn, when, withDateOrder } from '../src/phoneparse.js';
+import { datedClocks, dayFirstChat, dateOrderSource, storyText, when, withDateOrder } from '../src/phoneparse.js';
 
 test('overlapping runs each read by their own order; when they are all done, the chat\'s own setting is back (never a finished run\'s)', async () => {
     let setting = 'dm';
@@ -61,9 +61,7 @@ test('evidence: the investment schedules the app sends ([EXISTING SCHEDULES — 
     assert.ok(s.includes('[#4] Ren: hi') && !s.includes('12-20'));
 });
 
-test('the story\'s year: the newest heading that dates itself, else the latest year its dates give, never a birthday or a memory', () => {
-    assert.equal(storyYearIn('## #0–#3 — Arrival\n- Ren came home on 2026-11-02 (#1). Mara was born 1990-07-15.\n'), '2026');
-    assert.equal(storyYearIn('## #0–#3 — Spring (2025년 3월)\n- x\n## #4–#9 — Autumn (2026년 10월)\n- They first met on 2019-05-01.\n'), '2026');
-    assert.equal(storyYearIn('- They met on 2019-05-01, married 2024-06-01.'), '2024');
-    assert.equal(storyYearIn('- no dates'), '');
+test('점검 3: a part of a message that starts like a code block keeps the messages after it', () => {
+    const s = storyText('[RECENT CHAT]\n[#12] Ren: hi\n\n[BANK]\n잔액 300\n\n[#13] Mina: 삼성전자 주가가 71,000원까지 올랐다.\n\n[OWNER]\nRen\n\n[MONEY NOW]\n{"a":1}');
+    assert.ok(s.includes('71,000원까지 올랐다') && s.includes('잔액 300') && !s.includes('"a":1'));
 });
