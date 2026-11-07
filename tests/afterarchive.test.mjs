@@ -1191,3 +1191,7 @@ test('위치 정보 before a phone is made: read once and kept, checked and set 
         assert.ok(!('making' in p) && !('asked' in p));
     } finally { delete globalThis.__ctx; delete globalThis.__whereAnswer; }
 });
+
+test('making a phone (and some apps again) takes its people from the story or PEOPLE AROUND, as the reflection does', () => {
+    for (const s of [data.AI_SYS_PHONE, data.AI_SYS_PHONE_APPS, data.updateSystem({ split: true })]) assert.ok(s.includes('- People: only people the story or PEOPLE AROUND has.'), s.slice(0, 40));
+});

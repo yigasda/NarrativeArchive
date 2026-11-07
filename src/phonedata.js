@@ -60,7 +60,7 @@ Could this be on the owner's phone, given what the archive, lorebook and chat sh
 - The lorebook counts as fact like the archive; where the two disagree, the archive wins.
 - Events (a meeting, a fight, a confession, a trip, a loss) only if the archive or lorebook has them.
 - Small everyday things around those events are fine: how a text was worded, a photo of a place they were, a search they would make.
-- People: only people the story has. A relationship word (girlfriend, ex, husband, boss) only if the archive or chat uses it for them.
+- People: only people the story or PEOPLE AROUND has. A relationship word (girlfriend, ex, husband, boss) only if the archive or chat uses it for them.
 - Nothing later than the newest moment of the story.
 - The diary holds only what the archive shows happened and what the owner felt about it; no new secrets, no new feelings.`;
 // every time on the phone is the owner's own clock: a time written on the other side of the world is moved to theirs
