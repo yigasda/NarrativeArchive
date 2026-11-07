@@ -23,8 +23,8 @@ const { open } = require('/home/user/NarrativeArchive/tools/dev/probe.cjs');
     <div class="ax_sec">6 · 이야기 연도</div>${wait('연도', '위치 다음에 정해요')}
     <div style="height:14px"></div>${blue('이대로 폰 만들기', true)}<i class="ax_pad"></i>`;
   const A2 = `${head}
-    <div class="ax_card">${rw('인물 정보 · 로어북 · 용어집 · 날짜', val('카드 · 없음 · 3개 · 월.일'))}</div>
-    <div class="ax_foot">바꾸면 위치를 다시 연동해요.</div>
+    <div class="ax_card">${rw('1~4 단계', val('다시 보기'))}</div>
+    <div class="ax_foot">캐릭터 카드 · 로어북 없음 · 용어 3개 · 월.일 · Mara<br>바꾸면 위치를 다시 연동해요.</div>
     <div class="ax_sec">5 · 위치</div>
     <div class="ax_pl_hero"><span class="ax_pl_k">Oscar · 지금 있는 곳</span><div class="ax_pl_city"><b>Frankfurt am Main</b></div>
       <div class="ax_pl_chips"><div class="ax_pl_chip"><span>사는 나라</span><b>독일</b></div><div class="ax_pl_chip"><span>시간대</span><b>Europe/Berlin</b></div></div></div>
@@ -35,7 +35,8 @@ const { open } = require('/home/user/NarrativeArchive/tools/dev/probe.cjs');
     <div class="ax_sec">6 · 이야기 연도</div><div class="ax_card">${rw('연도 표시', '<span class="ax_sw on"></span>')}${rw('연도', ys)}</div>
     <div style="height:14px"></div>${blue('이대로 폰 만들기')}<i class="ax_pad"></i>`;
   const A3 = `${head}
-    <div class="ax_card">${rw('인물 정보 · 로어북 · 용어집 · 날짜', val('카드 · 없음 · 3개 · 월.일'))}</div>
+    <div class="ax_card">${rw('1~4 단계', val('다시 보기'))}</div>
+    <div class="ax_foot">캐릭터 카드 · 로어북 없음 · 용어 3개 · 월.일 · Mara</div>
     <div class="ax_sec">5 · 위치</div>
     <div class="ax_pl_warn"><span>폰 주인이 어디 있는지 정해 주세요. 비워 두면 시차 없이 만들어져요.</span></div>
     <div class="ax_pl_hero"><span class="ax_pl_k">Oscar · 지금 있는 곳</span><div class="ax_pl_city"><b style="color:#8a919c">도시 정하기</b></div>
