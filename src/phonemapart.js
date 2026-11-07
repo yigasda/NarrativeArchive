@@ -87,6 +87,8 @@ export function pinSvg(x, y, label, dark) {
     return `<g class="mp_pin" data-x="${x.toFixed(1)}" data-y="${y.toFixed(1)}"><g transform="translate(${(x - 18).toFixed(1)} ${(y - 34).toFixed(1)}) scale(1.5)"><path d="${PIN}" fill="var(--axd)" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.4" fill="#fff"/></g>`
         + (t ? `<text x="${(x + 13).toFixed(1)}" y="${(y - 18).toFixed(1)}" class="mp_pl${dark ? ' dk' : ''}">${esc(t)}</text>` : '') + '</g>';
 }
+// the pins over the map in a layer of their own (the map under them zooms, they don't)
+export const pinLayer = (W, H, pins) => pins ? `<svg class="mp_pins" viewBox="0 0 ${W} ${H}" width="100%" aria-hidden="true">${pins}</svg>` : '';
 // pins down the visible land in order (newest on top), sideways by the place's name; a coast keeps them off the sea
 export function pinSpots(names, W, top, bottom) {
     return names.map((n, k) => [36 + (hsh(n) % 1000) / 1000 * (W - 170), names.length > 1 ? top + (bottom - top) * k / (names.length - 1) : (top + bottom) / 2]);

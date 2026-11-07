@@ -4,7 +4,7 @@
 // The field is an editable div, not an input: SillyTavern themes paint every input (with !important), never a div.
 // Routes: mapq (the sheet; mapq:@kind lists the towns a kind of map suits), mapc:place~hood~kind~night.
 import { AX, ax, axBar, axCb, axChev, axInd, axTop, mapFindBtn, mapFindRow, mapNight, mapTowns } from './phoneapps.js';
-import { pinSpots, pinSvg, stripSvg, townCandidates, townPlace, townSvg } from './phonemapart.js';
+import { pinLayer, pinSpots, pinSvg, stripSvg, townCandidates, townPlace, townSvg } from './phonemapart.js';
 import { findTowns, hoodTown, kindTowns, placeNames, placeView } from './phonemapfind.js';
 import { HINT, PLACE } from './phonemapcity.js';
 import { TOWN_KO } from './phonemaptowns.js';
@@ -64,7 +64,7 @@ export function mapResults(p, m, query = '', kind = '') {
 export function mapSearchScreen(p, now, m, i = '', query = '') {
     const { groups, kinds } = mapTowns(p, m), g = groups[0], kind = i.startsWith('@') ? i.slice(1) : '';
     const dark = g ? mapNight(g, p.now) : false, k = g ? kinds.get(g.k || `~${p.owner}`) : 'bigRiver';
-    const art = `<svg class="mp_art" viewBox="0 0 ${W} 430" width="100%" aria-hidden="true">${townSvg(k, W, 430, g ? g.k || p.owner : p.owner, dark, g ? g.rows.map(r => r.place).join(' ') : '')}</svg>`;
+    const art = `<svg class="mp_art" viewBox="0 0 ${W} 430" width="100%" aria-hidden="true" data-z="${esc(`${k}~q`)}">${townSvg(k, W, 430, g ? g.k || p.owner : p.owner, dark, g ? g.rows.map(r => r.place).join(' ') : '')}</svg>`;
     const full = kind || String(query).trim();
     return `<div class="mp_wx mq_wx${dark ? ' mp_dark' : ''}"><div class="mp_bg">${art}</div>${axBar(p, now, dark && !full ? '#fff' : '#111')}${axTop(axCb(kind ? 'mapq' : 'map'))}
       <div class="mq_sheet${full ? ' mq_full' : ''}"><i class="mp_grab"></i>
@@ -80,7 +80,7 @@ export function mapCityScreen(p, now, m, i = '') {
     const L = look(p, m, place, hood, kind, night), { g, v, k, dark } = L;
     const H = v.hood ? 844 : 470;
     const pins = g ? (() => { const shown = g.rows.slice(0, 6); return pinSpots(shown.map(r => r.place), W, v.hood ? 220 : 150, v.hood ? 560 : 340).map(([x, y], n) => pinSvg(x, y, shown[n].place, dark)).join(''); })() : '';
-    const art = `<svg class="mp_art" viewBox="0 0 ${W} ${H}" width="100%" aria-hidden="true" data-z="${esc(`${k}~${L.seed}~${H}~${dark}`)}"><g class="mp_zm">${townSvg(k, W, H, L.seed, dark, L.hint)}</g>${pins}</svg>`;
+    const art = `<svg class="mp_art" viewBox="0 0 ${W} ${H}" width="100%" aria-hidden="true" data-z="${esc(`${k}~${L.seed}~${H}~${dark}`)}">${townSvg(k, W, H, L.seed, dark, L.hint)}</svg>${pinLayer(W, H, pins)}`;
     const names = [v.names.lat, v.names.cjk, ...v.names.all.slice(1).filter(n => n !== v.names.lat.toLowerCase() && n !== v.names.cjk && !/^[a-z]/.test(n))].filter(Boolean);
     const nameLine = [...new Set(names)].slice(0, 4).join(' · ');
     const flip = at(place, hood, k, dark ? '0' : '1');
@@ -117,7 +117,7 @@ export function mapCityScreen(p, now, m, i = '') {
 export function mapEmptyScreen(p, now, m) {
     const own = placeInfo(p).owner, cc = String(own.lives || '').toLowerCase(), i = townPlace(own.city), v = i >= 0 ? placeView(i) : null;
     const k = v ? townCandidates(v.ko)[0] : 'gridLake', dark = false;
-    const art = `<svg class="mp_art" viewBox="0 0 ${W} 430" width="100%" aria-hidden="true" data-z="${esc(`${k}~empty`)}"><g class="mp_zm">${townSvg(k, W, 430, v ? nameKey(v.ko) : p.owner, dark, v ? v.names.all.join(' ') : '')}</g></svg>`;
+    const art = `<svg class="mp_art" viewBox="0 0 ${W} 430" width="100%" aria-hidden="true" data-z="${esc(`${k}~empty`)}">${townSvg(k, W, 430, v ? nameKey(v.ko) : p.owner, dark, v ? v.names.all.join(' ') : '')}</svg>`;
     const nowP = parts(now), mo = nowP?.mo || 1, days = new Date(Date.UTC(Number(p.year) || 2001, mo, 0)).getUTCDate();
     const st = stripSvg({ days, today: nowP?.d || 0, blocks: [] }), c = st.cell;
     const ghost = [[3, 5], [11, 12], [18, 21]].map(([a, b]) => `<rect x="${(a - 1) * c + 1}" y="${st.top + 2}" width="${(b - a + 1) * c - 2}" height="14" rx="5" fill="none" stroke="#c9cfd8" stroke-width="1.2" stroke-dasharray="3 3"/>`).join('');
