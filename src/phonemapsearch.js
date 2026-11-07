@@ -17,7 +17,6 @@ import { countryOf, parts, placeInfo } from './phonedata.js';
 // (added on first use: this file can load while phoneapps.js is still loading)
 const icon = (...a) => { if (!AX.mqmap) Object.assign(AX, { mqmap: 'M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14', mqswap: 'M4 9h13l-3-3M20 15H7l3 3' }); return ax(...a); };
 const W = 390;
-const findBtn = () => `<button type="button" class="ax_cb" data-go="mapq" aria-label="도시 찾기">${ax('search', 18, 'currentColor', 2.3)}</button>`;
 const kindName = k => TOWN_KO[k] || '';
 // a town's map as drawn: a visited town keeps the map and the look 다녀간 곳 gives it
 function look(p, m, i, hood, kind, night) {
@@ -90,7 +89,7 @@ export function mapCityScreen(p, now, m, i = '') {
     const hoodChips = v.hoods.length ? v.hoods.map(h => `<button type="button" class="mq_chip${v.hood?.k === h ? ' on' : ''}" data-go="mapc" data-i="${v.hood?.k === h ? at(place) : at(place, h)}">${esc(HINT[h][3])}</button>`).join('') : '';
     if (v.hood) {
         const next = L.maps[(L.maps.indexOf(k) + 1) % L.maps.length];
-        return `<div class="mp_wx mq_wx mq_one${dark ? ' mp_dark' : ''}"><div class="mp_bg mq_bgfull">${art}</div>${axBar(p, now, dark ? '#fff' : '#111')}${axTop(axCb('mapc', 'back').replace('data-go="mapc"', `data-go="mapc" data-i="${at(place)}"`), findBtn())}
+        return `<div class="mp_wx mq_wx mq_one${dark ? ' mp_dark' : ''}"><div class="mp_bg mq_bgfull">${art}</div>${axBar(p, now, dark ? '#fff' : '#111')}${axTop(axCb('mapc', 'back').replace('data-go="mapc"', `data-go="mapc" data-i="${at(place)}"`), mapFindBtn())}
           <div class="mq_hc">${hoodChips}</div>
           <div class="mq_fc">${country}
             <div class="mq_tl"><b>${esc(v.hood.label)}</b>${dark ? '<span class="mq_pill">밤 지도</span>' : ''}</div>
@@ -99,7 +98,7 @@ export function mapCityScreen(p, now, m, i = '') {
           </div>${axInd(dark ? '#fff' : '#111')}</div>`;
     }
     const thumbs = L.maps.slice(0, 8).map(x => `<button type="button" class="mq_th${x === k ? ' on' : ''}" data-go="mapc" data-i="${at(place, -1, x, night || '')}" aria-label="${esc(kindName(x))}"><svg viewBox="0 0 ${W} 430" width="96" height="78" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${townSvg(x, W, 430, L.seed, dark, L.hint)}</svg><span>${esc(kindName(x))}</span></button>`).join('');
-    return `<div class="mp_wx mq_wx${dark ? ' mp_dark' : ''}"><div class="mp_bg mq_bgcity">${art}</div>${axBar(p, now, dark ? '#fff' : '#111')}${axTop(axCb('mapq'), findBtn())}
+    return `<div class="mp_wx mq_wx${dark ? ' mp_dark' : ''}"><div class="mp_bg mq_bgcity">${art}</div>${axBar(p, now, dark ? '#fff' : '#111')}${axTop(axCb('mapq'), mapFindBtn())}
       <div class="ax_scroll"><i class="mp_gap mq_gap"></i><div class="mp_sheet"><i class="mp_grab"></i>
         <div class="mq_hd">${country}
           <div class="mq_tl"><b>${esc(v.ko)}</b><button type="button" class="mq_dn" data-go="mapc" data-i="${flip}">${dark ? '☾ 밤 · ☀ 낮으로' : '☀ 낮 · ☾ 밤으로'}</button></div>
