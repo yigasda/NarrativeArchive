@@ -799,43 +799,55 @@ export function camScreen(p, now, k, busy) {
 }
 
 // 지도: where the owner was, newest first — the archive's headings (placesOf) and the visits the making and the reflections
-// read (p.visits), one row a place (nameKey): how many times, and who was there (a visit's "with"; for a section, the
-// people the phone knows named in it). No AI here
+// read (p.visits), one row a place (nameKey), grouped by the city it is in: how many times, and who was there (the
+// visits' "with"; a name with them at every place says nothing and is left out). No AI here
 // 과 / 와 after a name: by its Korean spelling (the glossary's, if there is one); a Latin name ending in l, m, n reads with
 // a final consonant (Ren → 렌과), the others without (Ivo → 이보와)
 const waOf = (m, n) => { const ko = glossaryEntries(m).find(e => e.src.toLowerCase() === String(n).toLowerCase())?.ko || String(n), c = ko.charCodeAt(ko.length - 1);
     return (c >= 0xac00 && c <= 0xd7a3 ? (c - 0xac00) % 28 : /[lmn]$|ng$/i.test(ko)) ? '과' : '와'; };
 function mapPlaces(m, p) {
-    const gone = new Set(p.hiddenPlaces || []), rows = new Map(), owner = nameKey(p.owner);
-    const known = [...new Set([...(p.contacts || []).map(c => c.name), ...(p.where?.people || []).map(x => x.name)].filter(n => n && nameKey(n) !== owner))];
-    const row = place => { const k = nameKey(place); if (!rows.has(k)) rows.set(k, { place, an: 0, vn: 0, with: [], last: '', day: '', time: '', date: '' }); return rows.get(k); };
-    const meet = (r, names) => { for (const n of names) if (!r.with.some(w => nameKey(w) === nameKey(n))) r.with.push(n); };
+    const gone = new Set(p.hiddenPlaces || []), rows = new Map();
+    const row = place => { const k = nameKey(place); if (!rows.has(k)) rows.set(k, { place, an: 0, vn: 0, with: [], city: '', last: '', day: '', time: '', date: '' }); return rows.get(k); };
     for (const x of placesOf(m, p.owner)) {
         if (gone.has(nameKey(x.place))) continue;
-        const r = row(x.place), text = x.at ? m.text.slice(x.at[0], x.at[1]) : '';
-        r.an += x.n; meet(r, known.filter(n => nameRe(n).test(text)));
+        const r = row(x.place); r.an += x.n;
         if (!r.last || (x.day || '') > r.last) Object.assign(r, { last: x.day || '', day: x.day, date: x.date, time: x.time });
     }
     for (const v of p.visits || []) {
         if (!v?.place || gone.has(nameKey(v.place))) continue;
-        const r = row(v.place); r.vn++; meet(r, v.with || []);
+        const r = row(v.place); r.vn++;
+        for (const n of v.with || []) if (!r.with.some(w => nameKey(w) === nameKey(n))) r.with.push(n);
         const t = String(v.time || '');
+        if (v.city && (!r.city || t >= r.last)) r.city = v.city;
         if (!r.last || t > r.last) Object.assign(r, { last: t, day: t.slice(0, 5), date: '', time: fmtTime(p, t) });
     }
     // (the archive and the reflections can tell the same visit: the larger count, not both added)
-    return [...rows.values()].map(r => ({ ...r, n: Math.max(r.an, r.vn) })).sort((a, b) => (b.last || '').localeCompare(a.last || ''));
+    const all = [...rows.values()].map(r => ({ ...r, n: Math.max(r.an, r.vn) })).sort((a, b) => (b.last || '').localeCompare(a.last || ''));
+    // a place with no city of its own: the city it is, when it is one the visits name
+    const cities = new Map(all.filter(r => r.city).map(r => [nameKey(r.city), r.city]));
+    for (const r of all) if (!r.city && cities.has(nameKey(r.place))) r.city = cities.get(nameKey(r.place));
+    const always = all.length > 1 ? new Set(all[0].with.map(nameKey).filter(k => all.every(r => r.with.some(w => nameKey(w) === k)))) : new Set();
+    for (const r of all) r.with = r.with.filter(w => !always.has(nameKey(w)));
+    return all;
 }
 export function mapScreen(p, now, m) {
     const pl = mapPlaces(m, p);
+    // by city, the newest city first; the city alone ("Chicago") is its group's name, a row only when nothing closer there
+    const groups = [];
+    for (const r of pl) { const k = nameKey(r.city); let g = groups.find(x => x.k === k); if (!g) groups.push(g = { k, city: r.city, rows: [] }); g.rows.push(r); }
+    for (const g of groups) if (g.city && g.rows.length > 1) g.rows = g.rows.filter(r => nameKey(r.place) !== g.k);
+    groups.sort((a, b) => !a.city - !b.city);
     const pin = ax('pindot', 22, 'var(--axd)', 2.2, 'var(--axc)');
     const who = r => (r.with.length ? ` · ${esc(r.with.length > 2 ? `${r.with[0]} 외 ${r.with.length - 1}명` : r.with.join(' · '))}${r.with.length > 2 ? '과' : waOf(m, r.with[r.with.length - 1])}` : '');
+    const rowHtml = x => swipeRow('place', nameKey(x.place), `
+          <div class="ax_rw ax_place"><span class="ax_si" style="background: var(--axc)">${ax('pindot', 17, 'var(--axd)', 2.2)}</span><span class="ax_tx"><span class="ax_n">${esc(x.place)}</span><span class="ax_p1">${x.n > 1 ? `${x.n}번` : '처음'}${who(x)}</span></span><small>${esc(x.day ? fmtDate(p, x.day, true) : x.date)}${x.time ? `<br>${esc(x.time)}` : ''}</small></div>`);
+    const n = groups.reduce((a, g) => a + g.rows.length, 0);
     return `${axBar(p, now)}
       ${axTop(axCb('home'))}
       <div class="ax_scroll">
-        ${axH1('다녀간 곳', pl.length ? `${pl.length}곳` : '')}
-        ${pl.length ? `<div class="ax_card ax_mapart" aria-hidden="true">${pl.slice(0, 5).map((_, k) => `<i style="left: ${[18, 62, 38, 80, 28][k]}%; top: ${[34, 26, 58, 64, 80][k]}%">${pin}</i>`).join('')}</div>
-        <div class="ax_card">${pl.map(x => swipeRow('place', nameKey(x.place), `
-          <div class="ax_rw ax_place"><span class="ax_si" style="background: var(--axc)">${ax('pindot', 17, 'var(--axd)', 2.2)}</span><span class="ax_tx"><span class="ax_n">${esc(x.place)}</span><span class="ax_p1">${x.n > 1 ? `${x.n}번` : '처음'}${who(x)}</span></span><small>${esc(x.day ? fmtDate(p, x.day, true) : x.date)}${x.time ? `<br>${esc(x.time)}` : ''}</small></div>`)).join('')}</div>` : '<div class="ax_empty">방문 기록 없음</div>'}
+        ${axH1('다녀간 곳', n ? `${n}곳` : '')}
+        ${n ? `<div class="ax_card ax_mapart" aria-hidden="true">${groups.flatMap(g => g.rows).slice(0, 5).map((_, k) => `<i style="left: ${[18, 62, 38, 80, 28][k]}%; top: ${[34, 26, 58, 64, 80][k]}%">${pin}</i>`).join('')}</div>
+        ${groups.map(g => `${groups.length > 1 || g.city ? `<div class="ax_sec">${esc(g.city || '그 밖의 곳')} · ${g.rows.length}곳</div>` : ''}<div class="ax_card">${g.rows.map(rowHtml).join('')}</div>`).join('')}` : '<div class="ax_empty">방문 기록 없음</div>'}
         <i class="ax_pad"></i>
       </div>
       ${axInd()}`;
