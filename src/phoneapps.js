@@ -920,7 +920,7 @@ export function mapTowns(p, m) {
 export const mapNight = (g, now) => { const cmp = storyCmp(now), lastR = [...g.rows].sort((a, b) => cmp(b.last || '', a.last || ''))[0], hr = Number((/^\d{2}-\d{2} (\d{2})/.exec(lastR?.last || '') || [0, 12])[1]); return hr >= 21 || hr < 5; };
 // finding a town, always in sight: the blue button top right, and a blue row at the end of the list
 export const mapFindBtn = () => `<button type="button" class="ax_cb mq_cb" data-go="mapq" aria-label="도시 찾기">${ax('search', 18, 'currentColor', 2.4)}</button>`;
-export const mapFindRow = () => `<button type="button" class="ax_rw ax_place" data-go="mapq"><span class="ax_si" style="background: var(--axd)">${ax('search', 17, '#fff', 2.4)}</span><span class="ax_tx"><span class="ax_n ax_blue">다른 도시 · 동네 찾기</span><span class="ax_p1">東京, Berlin, 홍대 … 어느 말로든</span></span>${axChev}</button>`;
+export const mapFindRow = () => `<button type="button" class="ax_rw ax_place" data-go="mapq"><span class="ax_si" style="background: var(--axd)">${ax('search', 17, '#fff', 2.4)}</span><span class="ax_tx"><span class="ax_n" style="color: var(--axd); --axfg: var(--axd)">다른 도시 · 동네 찾기</span><span class="ax_p1">東京, Berlin, 홍대 … 어느 말로든</span></span>${axChev}</button>`;
 // the town's flag before its name (a town the city table knows)
 const townFlag = city => { const i = city ? townPlace(city) : -1; return i >= 0 && PLACE[i][3] ? flagSvg(PLACE[i][3], 22) : ''; };
 export function mapScreen(p, now, m, pick = '') {

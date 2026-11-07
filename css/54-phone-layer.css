@@ -71,7 +71,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax 
 .mp_art { display: block; }
 .ax .mp_wx > .ax_sb, .ax .mp_wx > .ax_top, .ax .mp_wx > .ax_scroll { position: relative; z-index: 2; }
 .ax .mp_dark .ax_cb { --axbg: rgba(255, 255, 255, 0.2); --axsh: none; color: #fff; --axfg: #fff; }
-.ax .ax_cb.mq_cb, .ax .mp_dark .ax_cb.mq_cb { --axbg: #2f6bff; --axsh: 0 1px 2px rgba(22, 27, 34, 0.08), 0 4px 12px rgba(47, 107, 255, 0.35); color: #fff; --axfg: #fff; }
+.ax .ax_cb.mq_cb, .ax .mp_dark .ax_cb.mq_cb { --axbg: var(--axd); --axsh: 0 1px 2px rgba(22, 27, 34, 0.08), 0 4px 12px color-mix(in srgb, var(--axd) 35%, transparent); color: #fff; --axfg: #fff; }
 .mp_gap { display: block; height: 266px; flex: none; }
 .mp_sheet { flex: 1 0 auto; padding-top: 8px; background: #f4f5f7; border-radius: 22px 22px 0 0; box-shadow: 0 -6px 24px rgba(22, 27, 34, 0.14); display: flex; flex-direction: column; }
 .mp_grab { display: block; width: 38px; height: 5px; border-radius: 3px; background: #cfd4dc; margin: 0 auto 12px; flex: none; }
