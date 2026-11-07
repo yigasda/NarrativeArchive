@@ -3,7 +3,7 @@
 // its names, the maps that suit it, its neighbourhoods, day ↔ night) and a neighbourhood (its map, full screen).
 // The field is an editable div, not an input: SillyTavern themes paint every input (with !important), never a div.
 // Routes: mapq (the sheet; mapq:@kind lists the towns a kind of map suits), mapc:place~hood~kind~night.
-import { AX, ax, axBar, axCb, axChev, axInd, axTop, mapNight, mapTowns } from './phoneapps.js';
+import { AX, ax, axBar, axCb, axChev, axInd, axTop, mapFindBtn, mapFindRow, mapNight, mapTowns } from './phoneapps.js';
 import { pinSpots, pinSvg, stripSvg, townCandidates, townPlace, townSvg } from './phonemapart.js';
 import { findTowns, hoodTown, kindTowns, placeNames, placeView } from './phonemapfind.js';
 import { HINT, PLACE } from './phonemapcity.js';
@@ -128,9 +128,9 @@ export function mapEmptyScreen(p, now, m) {
     const head = name || flag ? `<div class="mp_th mq_eh">${flag ? flagSvg(flag, 22) : ''}<b>${esc(name || FLAG_NAME[flag] || '')}</b>${name ? '<span>사는 곳</span>' : ''}</div>` : '';
     // then the same list card as a visited town's: two of its neighbourhoods, and last, finding another town (always in sight)
     const hood = h => `<button type="button" class="ax_rw ax_place" data-go="mapc" data-i="${at(i, h)}"><span class="ax_si" style="background: var(--axc)">${ax('pindot', 17, 'var(--axd)', 2.2)}</span><span class="ax_tx"><span class="ax_n">${esc(HINT[h][3])}</span><span class="ax_p1">동네 지도 보기</span></span>${axChev}</button>`;
-    const find = `<button type="button" class="ax_rw ax_place" data-go="mapq"><span class="ax_si" style="background: var(--axd)">${ax('search', 17, '#fff', 2.4)}</span><span class="ax_tx"><span class="ax_n ax_blue">다른 도시 · 동네 찾기</span><span class="ax_p1">東京, Berlin, 홍대 … 어느 말로든</span></span>${axChev}</button>`;
+    const find = mapFindRow();
     const list = `<div class="ax_card">${(v ? v.hoods.slice(0, 2) : []).map(hood).join('')}${find}</div>`;
-    return `<div class="mp_wx"><div class="mp_bg">${art}</div>${axBar(p, now)}${axTop(axCb('home'), findBtn())}
+    return `<div class="mp_wx"><div class="mp_bg">${art}</div>${axBar(p, now)}${axTop(axCb('home'), mapFindBtn())}
       <div class="ax_scroll"><i class="mp_gap"></i><div class="mp_sheet"><i class="mp_grab"></i>
         ${strip}${head}${list}<i class="ax_pad"></i></div></div>
       ${axInd()}</div>`;
