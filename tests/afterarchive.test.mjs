@@ -12,7 +12,7 @@ const href = f => pathToFileURL(new URL(f, SRC).pathname).href;
 const stub = {
     './phonestory.js': encoded(`export const phoneTarget=()=>({scope:phoneChatScope(),check(){}});export const phoneChatScope=()=>'test';`),
     './wealth.js': encoded(`export const ensureWealth=async()=>null;export const wealthBlock=()=>'';export const wealthDate=()=> '2026-12-30';export const wealthCheck=()=>null;export const addWealthFX=()=>{};export const investmentWealthRows=()=>[];`),
-    './ai.js': encoded(`import { phoneMadeFixture as __pmf } from '${new URL('./reflectionfixture.mjs', import.meta.url).href}'; const askDraft0=async(input,o)=>{if(String(o.system).startsWith('GOAL\\nWrite the ordinary life')){(globalThis.__everydayIn||=[]).push(input);const e=globalThis.__everyday;return JSON.stringify(typeof e==='function'?e(input):e||{});}if(String(o.system).startsWith('GOAL\\nWork out where')){(globalThis.__where||=[]).push(input);return JSON.stringify(globalThis.__whereAnswer||{people:[]});}const M=globalThis.__menu;M.input=input;M.sys=o.system;(M.calls||=[]).push({input,sys:o.system});if(M.answers&&M.answers.length){const a=M.answers.shift();if(a instanceof Error)throw a;return typeof a==='function'?a(input,o):a;}return M.answer;};export const askAI=async()=>'';;export const askDraft=async(i,o)=>__pmf(await askDraft0(i,o),i,o?.system);`),
+    './ai.js': encoded(`import { phoneMadeFixture as __pmf } from '${new URL('./reflectionfixture.mjs', import.meta.url).href}'; const askDraft0=async(input,o)=>{if(String(o.system).startsWith('GOAL\\nWrite the ordinary life')){(globalThis.__everydayIn||=[]).push(input);const e=globalThis.__everyday;return JSON.stringify(typeof e==='function'?e(input):e||{});}if(String(o.system).startsWith('GOAL\\nWork out where')){(globalThis.__where||=[]).push(input);if(globalThis.__whereWait)await globalThis.__whereWait;return JSON.stringify(globalThis.__whereAnswer||{people:[]});}const M=globalThis.__menu;M.input=input;M.sys=o.system;(M.calls||=[]).push({input,sys:o.system});if(M.answers&&M.answers.length){const a=M.answers.shift();if(a instanceof Error)throw a;return typeof a==='function'?a(input,o):a;}return M.answer;};export const askAI=async()=>'';;export const askDraft=async(i,o)=>__pmf(await askDraft0(i,o),i,o?.system);`),
     './core.js': encoded(`export const ctx=()=>globalThis.__ctx||({chat:[],chatMetadata:{},characters:[]});export const globalSettings=()=>({});export const saveMeta=async()=>{};export const getMeta=()=>({});`),
     './calendar.js': encoded(`export const calendars=()=>({});export const headingDate=()=>({});`),
     './drift.js': encoded(`export const recentForCheck=n=>(globalThis.__rows||[]).slice(-n).map(r=>r.text);export const chatRows=()=>globalThis.__rows||[];`),
@@ -23,7 +23,7 @@ const stub = {
     './translate.js': encoded(`export const glossaryEntries=()=>globalThis.__glossaryEntries||[];export const glossaryPeople=()=>globalThis.__glossaryPeople||[];`), './world.js': encoded(`export const worldText=()=>'';`),
     './anniv.js': encoded(`export const datedRows=()=>[];`),
 };
-const real = ['phonesync.js', 'phoneparse.js', 'phoneclock.js', 'phonesynclife.js', 'phonesyncmoney.js', 'finance.js', 'phoneprofile.js', 'phonefood.js', 'phonescreen.js'];
+const real = ['phonesync.js', 'phoneparse.js', 'phoneclock.js', 'phonemapcity.js', 'phonesynclife.js', 'phonesyncmoney.js', 'finance.js', 'phoneprofile.js', 'phonefood.js', 'phonescreen.js'];
 const map = { './extract.js': cleanMessageURL, ...stub, ...Object.fromEntries(real.map(f => [`./${f}`, href(f)])) };
 const rewrite = async f => (await readFile(new URL(f, SRC), 'utf8')).replace(/from '([^']+)'/g, (all, k) => `from '${map[k] || k}'`);
 map['./phonedata.js'] = encoded(await rewrite('phonedata.js'));
@@ -1562,4 +1562,49 @@ test('점검 6 (폰 만들기): read anew after 인물 정보 or 로어북 chang
         p = await data.makePhone(mm, 'Ren');
         assert.match(input(), /\[STORY YEAR\]\n2019/);
     } finally { delete globalThis.__ctx; delete globalThis.__whereAnswer; delete globalThis.__trackers; }
+});
+
+test('점검 7 (폰 만들기): 날짜 및 시간 on another phone moves the year the phone is made in; 새로 시작 while the reading waits puts nothing in; a remake whole keeps PEOPLE AROUND and where they live set by hand', async () => {
+    const setup = () => {
+        const { m: mm } = htmlPhoneFixture();
+        globalThis.__ctx.characters = [{ name: 'Mara' }]; globalThis.__ctx.characterId = 0;
+        mm.phones = {}; mm.phoneScreenHolder = 'Mara'; mm.text = '## #0–#3 — Arrival\n- Ren came home (#1).\n';
+        globalThis.__where = [];
+        globalThis.__whereAnswer = { people: [{ name: 'Ren', city: 'Frankfurt am Main', tz: 'Europe/Berlin', lives: 'DE' }, { name: 'Mara', city: 'Seoul', tz: 'Asia/Seoul', lives: 'KR' }], year: 2026 };
+        return mm;
+    };
+    const made = (now, scene) => JSON.stringify({ country: 'DE', now, clock: { basis: 'Default used', finalViewpoint: 'Mara', elapsedTime: null, sceneTime: scene, messageSender: null }, contacts: [{ name: 'Mara' }], notes: [] });
+    const input = () => globalThis.__menu.calls.find(x => x.sys === data.AI_SYS_PHONE).input;
+    try {
+        // Ivo's phone moved to 2024 while Ren's is being readied: Ren's is made in 2024, its request too
+        let mm = setup();
+        mm.phones = { ivo: plainPhone({ owner: 'Ivo', year: 2026 }) };
+        await data.preparePhone(mm, 'Ren');
+        data.setStoryYear(mm, mm.phones.ivo, 2024);
+        globalThis.__menu = { calls: [], answers: [made('11-03 03:10', '11-03 11:10')] };
+        let p = await data.makePhone(mm, 'Ren');
+        assert.match(input(), /\[STORY YEAR\]\n2024/);
+        assert.equal(p.year, 2024);
+        // 새로 시작 while the reading waits: nothing of the old story put in
+        mm = setup();
+        const was = globalThis.__whereAnswer;
+        let release;
+        globalThis.__whereWait = new Promise(r => { release = r; });
+        const going = data.preparePhone(mm, 'Ren').catch(e => e);
+        await new Promise(r => setTimeout(r, 0));
+        mm.phones = {}; delete mm.phonePre; mm.phoneStoryRun = (mm.phoneStoryRun || 0) + 1;
+        release(); delete globalThis.__whereWait;
+        const end = await going;
+        assert.ok(end instanceof Error || !mm.phonePre?.ren, 'the old reading is not kept');
+        assert.equal(mm.phonePre?.ren, undefined);
+        globalThis.__whereAnswer = was;
+        // made again whole: PEOPLE AROUND and where they live set by hand stay when the reading gives none
+        mm = setup();
+        globalThis.__whereAnswer = { people: [{ name: 'Ren', city: 'Frankfurt am Main', tz: 'Europe/Berlin', lives: 'DE' }], year: 2026 };
+        mm.phones = { ren: plainPhone({ year: 2026, lives: 'FR', livesManual: true, around: { at: 1, people: [{ name: 'Mara', about: 'Ren\'s sister' }] }, where: { at: 1, people: [{ name: 'Ren', city: 'Frankfurt am Main', names: ['Frankfurt am Main'], lives: 'DE', tz: 'Europe/Berlin' }] } }) };
+        globalThis.__menu = { calls: [], answers: [made('11-03 03:10', '11-03 11:10')] };
+        p = await data.makePhone(mm, 'Ren');
+        assert.deepEqual(p.around?.people?.map(x => x.name), ['Mara']);
+        assert.equal(p.livesManual, true);
+    } finally { delete globalThis.__ctx; delete globalThis.__whereAnswer; delete globalThis.__whereWait; }
 });
