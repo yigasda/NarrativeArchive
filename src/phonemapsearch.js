@@ -23,7 +23,7 @@ function look(p, m, i, hood, kind, night) {
     const { groups, kinds } = mapTowns(p, m), g = groups.find(x => x.city && townPlace(x.city) === i), v = placeView(i, hood);
     const own = g && hood < 0 ? kinds.get(g.k) : '';
     const k = kind && TOWN_KO[kind] ? kind : own || v.maps[0];
-    const dark = night === '1' ? true : night === '0' ? false : g ? mapNight(g) : false;
+    const dark = night === '1' ? true : night === '0' ? false : g ? mapNight(g, p.now) : false;
     const seed = v.hood ? `${v.ko}|${v.hood.label}` : g ? g.k : nameKey(v.ko);
     // the same hint 다녀간 곳 gives a visited town (its places), else the town's names (an Egypt sheet picks itself by them)
     const hint = v.hood ? HINT[hood][1].join(' ') : g ? g.rows.map(r => r.place).join(' ') : v.names.all.join(' ');
@@ -63,7 +63,7 @@ export function mapResults(p, m, query = '', kind = '') {
 // ① ② the search sheet over the map they were last in
 export function mapSearchScreen(p, now, m, i = '', query = '') {
     const { groups, kinds } = mapTowns(p, m), g = groups[0], kind = i.startsWith('@') ? i.slice(1) : '';
-    const dark = g ? mapNight(g) : false, k = g ? kinds.get(g.k || `~${p.owner}`) : 'bigRiver';
+    const dark = g ? mapNight(g, p.now) : false, k = g ? kinds.get(g.k || `~${p.owner}`) : 'bigRiver';
     const art = `<svg class="mp_art" viewBox="0 0 ${W} 430" width="100%" aria-hidden="true">${townSvg(k, W, 430, g ? g.k || p.owner : p.owner, dark, g ? g.rows.map(r => r.place).join(' ') : '')}</svg>`;
     const full = kind || String(query).trim();
     return `<div class="mp_wx mq_wx${dark ? ' mp_dark' : ''}"><div class="mp_bg">${art}</div>${axBar(p, now, dark && !full ? '#fff' : '#111')}${axTop(axCb(kind ? 'mapq' : 'map'))}

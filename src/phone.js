@@ -998,7 +998,7 @@ export async function openPhone(who = null) {
     $root.on('click', '.na_ph_yearshow', async e => {
         e.stopPropagation();
         const pre = !phone() && view === 'prep' ? phonePre(m, owner) : null;
-        if (pre) { await setPreYear(m, owner, pre.noYear ? Number(storyYear(m, { ...pre, year: 0 })) || new Date().getFullYear() : null); return drawPhone(true); }
+        if (pre) { await setPreYear(m, owner, pre.noYear ? Number(storyYear(m, { ...pre, year: 0, noYear: false })) || new Date().getFullYear() : null); return drawPhone(true); }
         const p = phone(); if (!p) return; p.noYear = !p.noYear; if (!p.noYear && !p.year) p.year = Number(storyYear(m, { ...p, year: 0 })) || new Date().getFullYear(); drawPhone(true); await saveMeta(); });
     $root.on('click', '.na_ph_setinj', async e => { e.stopPropagation(); const p = phone(); p.inject = !p.inject; drawPhone(true); await saveMeta(); applyInjection(); });
     // what opens under the phone scrolls into sight, so the tap visibly does something

@@ -806,24 +806,26 @@ export function camScreen(p, now, k, busy) {
 // a final consonant (Ren → 렌과), the others without (Ivo → 이보와)
 const waOf = (m, n) => { const ko = glossaryEntries(m).find(e => e.src.toLowerCase() === String(n).toLowerCase())?.ko || String(n), c = ko.charCodeAt(ko.length - 1);
     return (c >= 0xac00 && c <= 0xd7a3 ? (c - 0xac00) % 28 : /[lmn]$|ng$/i.test(ko)) ? '과' : '와'; };
+// story times ("MM-DD HH:MM") in story order, not as text: 01-02 after 12-30 once the year turns (byStory, as axNewest)
+const storyCmp = now => byStory(now, x => x);
 function mapPlaces(m, p) {
-    const gone = new Set(p.hiddenPlaces || []), rows = new Map();
+    const gone = new Set(p.hiddenPlaces || []), rows = new Map(), cmp = storyCmp(p.now);
     const row = place => { const k = nameKey(place); if (!rows.has(k)) rows.set(k, { place, an: 0, vn: 0, with: [], city: '', last: '', day: '', time: '', date: '' }); return rows.get(k); };
     for (const x of placesOf(m, p.owner)) {
         if (gone.has(nameKey(x.place))) continue;
         const r = row(x.place); r.an += x.n;
-        if (!r.last || (x.day || '') > r.last) Object.assign(r, { last: x.day || '', day: x.day, date: x.date, time: x.time });
+        if (!r.last || cmp(x.day || '', r.last) > 0) Object.assign(r, { last: x.day || '', day: x.day, date: x.date, time: x.time });
     }
     for (const v of p.visits || []) {
         if (!v?.place || gone.has(nameKey(v.place))) continue;
         const r = row(v.place); r.vn++; if (v.home) r.home = true;
         for (const n of v.with || []) if (!r.with.some(w => nameKey(w) === nameKey(n))) r.with.push(n);
         const t = String(v.time || '');
-        if (v.city && (!r.city || t >= r.last)) r.city = v.city;
-        if (!r.last || t > r.last) Object.assign(r, { last: t, day: t.slice(0, 5), date: '', time: fmtTime(p, t) });
+        if (v.city && (!r.city || cmp(t, r.last) >= 0)) r.city = v.city;
+        if (!r.last || cmp(t, r.last) > 0) Object.assign(r, { last: t, day: t.slice(0, 5), date: '', time: fmtTime(p, t) });
     }
     // (the archive and the reflections can tell the same visit: the larger count, not both added)
-    const all = [...rows.values()].map(r => ({ ...r, n: Math.max(r.an, r.vn) })).sort((a, b) => (b.last || '').localeCompare(a.last || ''));
+    const all = [...rows.values()].map(r => ({ ...r, n: Math.max(r.an, r.vn) })).sort((a, b) => cmp(b.last || '', a.last || ''));
     // a place with no city of its own: the city it is, when it is one the visits name
     const cities = new Map(all.filter(r => r.city).map(r => [nameKey(r.city), r.city]));
     for (const r of all) if (!r.city && cities.has(nameKey(r.place))) r.city = cities.get(nameKey(r.place));
@@ -850,7 +852,7 @@ function mapDays(m, p, pl) {
 function mapStrip(p, now, m, pl, sel) {
     const all = mapDays(m, p, pl);
     if (!all.length) return '';
-    const nowP = parts(now), latest = all.map(x => x.day).sort().at(-1);
+    const nowP = parts(now), latest = all.map(x => x.day).sort(storyCmp(p.now)).at(-1);
     const mo = all.some(x => nowP && Number(x.day.slice(0, 2)) === nowP.mo) ? nowP.mo : Number(latest.slice(0, 2));
     const month = all.filter(x => Number(x.day.slice(0, 2)) === mo), d = x => Number(x.day.slice(3));
     const days = new Date(Date.UTC(Number(p.year) || 2001, mo, 0)).getUTCDate(), today = nowP && nowP.mo === mo ? nowP.d : 0;
@@ -913,7 +915,7 @@ export function mapTowns(p, m) {
     return { pl, groups, kinds };
 }
 // a town's night: they were last there between 21 and 5
-export const mapNight = g => { const lastR = [...g.rows].sort((a, b) => (b.last || '').localeCompare(a.last || ''))[0], hr = Number((/^\d{2}-\d{2} (\d{2})/.exec(lastR?.last || '') || [0, 12])[1]); return hr >= 21 || hr < 5; };
+export const mapNight = (g, now) => { const cmp = storyCmp(now), lastR = [...g.rows].sort((a, b) => cmp(b.last || '', a.last || ''))[0], hr = Number((/^\d{2}-\d{2} (\d{2})/.exec(lastR?.last || '') || [0, 12])[1]); return hr >= 21 || hr < 5; };
 export function mapScreen(p, now, m, pick = '') {
     const { pl, groups, kinds } = mapTowns(p, m);
     const who = r => (r.with.length ? ` · ${esc(r.with.length > 2 ? `${r.with[0]} 외 ${r.with.length - 1}명` : r.with.join(' · '))}${r.with.length > 2 ? '과' : waOf(m, r.with[r.with.length - 1])}` : '');
@@ -923,11 +925,11 @@ export function mapScreen(p, now, m, pick = '') {
     // the town on the map: the one picked (a stay on the strip, a row under "다른 곳"), else where they were last
     const g = groups.find(x => x.k === pick) || groups[0];
     // a night map when they were last there at night
-    const kind = kinds.get(g.k || `~${p.owner}`), dark = mapNight(g);
+    const kind = kinds.get(g.k || `~${p.owner}`), dark = mapNight(g, p.now);
     const shown = g.rows.slice(0, 7), W = 390, H = 430;
     const pins = pinSpots(shown.map(r => r.place), W, 150, 340).map(([x, y], k) => pinSvg(x, y, shown[k].place, dark)).join('');
     const art = `<svg class="mp_art" viewBox="0 0 ${W} ${H}" width="100%" aria-hidden="true">${townSvg(kind, W, H, g.k || p.owner, dark, g.rows.map(r => r.place).join(' '))}${pins}</svg>`;
-    const lastDay = g.rows.map(r => r.day).filter(Boolean).sort().at(-1);
+    const lastDay = g.rows.map(r => r.day).filter(Boolean).sort(storyCmp(p.now)).at(-1);
     const others = groups.filter(x => x !== g);
     const other = others.length ? `<div class="ax_sec">다른 곳</div><div class="ax_card">${others.map(x => `<button type="button" class="ax_rw ax_place" data-go="map" data-i="${esc(x.k)}"><span class="ax_si" style="background: var(--axc)">${ax('pindot', 17, 'var(--axd)', 2.2)}</span><span class="ax_tx"><span class="ax_n">${esc(x.city || '그 밖의 곳')}</span><span class="ax_p1">${x.rows.length}곳</span></span>${axChev}</button>`).join('')}</div>` : '';
     return `<div class="mp_wx${dark ? ' mp_dark' : ''}"><div class="mp_bg">${art}</div>${axBar(p, now, dark ? '#fff' : '#111')}${axTop(axCb('home'), `<button type="button" class="ax_cb" data-go="mapq" aria-label="도시 찾기">${ax('search', 18, 'currentColor', 2.3)}</button>`)}
