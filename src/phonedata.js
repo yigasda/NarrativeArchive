@@ -571,10 +571,11 @@ function scenesWith(p, text, more = [], m = null) {
     const add = (name0, names0) => { const who = personOf(p, m, name0); if (!who || isOwnerName(p, m, name0) || isOwnerName(p, m, who.name)) return; const k = who.key, name = who.name, names = peopleTwins(m, names0.filter(Boolean)); if (seen.has(k)) return; if (names.some(n => namedIn(low, n))) seen.set(k, name); };
     // (a first name stands for a person only when it is theirs alone: never the owner's, "Ren" of "Ren Kim" for an owner
     // Ren, nor one two people share)
+    // (counted by person: "Mara Lee" in PEOPLE AROUND and in the events is one)
     const firsts = new Map();
-    for (const n of [...(p.around?.people || []).map(x => x.name), ...more]) { const f = nameKey(String(n).split(/\s+/)[0]); if (f && f !== nameKey(n)) firsts.set(f, (firsts.get(f) || 0) + 1); }
+    for (const n of [...(p.around?.people || []).map(x => x.name), ...more]) { const f = nameKey(String(n).split(/\s+/)[0]), who = personOf(p, m, n)?.key; if (f && who && f !== nameKey(n)) firsts.set(f, new Set([...(firsts.get(f) || []), who])); }
     const known = [...(p.where?.people || []).map(x => x.name), ...(p.contacts || []).map(x => x.name), ...(p.threads || []).map(t => t.with)].map(nameKey);
-    const first = n => { const f = String(n).split(/\s+/)[0]; return nameKey(f) !== nameKey(n) && firsts.get(nameKey(f)) === 1 && !known.includes(nameKey(f)) && !isOwnerName(p, m, f) ? f : ''; };
+    const first = n => { const f = String(n).split(/\s+/)[0]; return nameKey(f) !== nameKey(n) && firsts.get(nameKey(f))?.size === 1 && !known.includes(nameKey(f)) && !isOwnerName(p, m, f) ? f : ''; };
     for (const x of p.around?.people || []) add(x.name, [x.name, first(x.name), ...arr(x.aka)]);
     for (const x of p.where?.people || []) add(x.name, [x.name, ...arr(x.aka)]);
     for (const x of p.contacts || []) add(x.name, [x.name]);
@@ -1045,6 +1046,11 @@ export const phonePre = (m, owner) => m?.phonePre?.[nameKey(owner)] || null;
 const preClock = (m, pre) => { const upto = nowAt(windowOf(m, null)), st = statusAt(pre, upto, m), t = stTime(st); if (t) return t; const day = storyDayOf(m, upto, st); return day ? `${day} 12:00` : ''; };
 // a status line's time on the owner's clock (one it can't place: as written)
 const stTime = st => (st?.known && hm(st.at) ? st.at : hm(st?.raw) ? st.raw : '');
+// what a phone being made is checked on: where it was read to be; an owner the reading placed nowhere, by the country
+// the answer gives when that country has one clock (Germany, Korea), never one with many (an owner in LA is not checked by
+// New York's)
+const MANY_ZONES = new Set(['US', 'CA', 'AU', 'RU', 'BR', 'MX', 'ID', 'KZ', 'MN', 'CL', 'EC', 'PT', 'ES', 'CD', 'KI', 'FM', 'PF', 'NZ', 'GL', 'UM', 'AQ']);
+const checkOn = (q, country) => { const c = String(country || '').toUpperCase(); return ownerZone(q) || !COUNTRY_TZ[c] || MANY_ZONES.has(c) ? q : { ...q, country: c }; };
 // (an old phone made again whole, one with no 위치 정보: its year and where it lives, as the owner left them)
 const seedPre = (m, owner, binding) => {
     const cur = m.phones?.[nameKey(owner)], pre = { owner, making: true, lore: loreKey(m), base: !!cur, ...(binding ? { financeProfile: structuredClone(binding) } : {}) };
@@ -1059,7 +1065,12 @@ function keepPre(m, owner, binding) {
     const kept = phonePre(m, owner), base = !!m?.phones?.[nameKey(owner)];
     if (!kept) return null;
     if (sameBinding(kept, binding, m)) return kept;
-    if (!!kept.base !== base && preEdited(kept) && sameBinding({ ...kept, base }, binding, m)) { kept.base = base; return kept; }
+    if (!!kept.base !== base && preEdited(kept) && sameBinding({ ...kept, base }, binding, m)) {
+        // (a year that came from the phone gone since, not the user's: worked out again for this one)
+        if (kept.base && !kept.yearSet) { delete kept.year; delete kept.noYear; ensureYear(m, kept, nowAt(windowOf(m, null))); }
+        kept.base = base;
+        return kept;
+    }
     return null;
 }
 export async function preparePhone(m, owner, { again = false } = {}) {
@@ -1137,8 +1148,7 @@ async function makePhone0(m, owner, { update = false, apps = null } = {}) {
     // doesn't hold (never asked again on its own)
     if (!part && !old) {
         const q = pre || cur || { owner };
-        // (by what the request showed: an owner it placed nowhere is checked by no zone, never the country the answer gave)
-        withDateOrderSync(dateOrderOf(m), () => validateReflectionClock(jsonOf(out, { salvage: true }) || {}, anew ? { ...q, now: '' } : q, m, got.now));
+        withDateOrderSync(dateOrderOf(m), () => validateReflectionClock(jsonOf(out, { salvage: true }) || {}, checkOn(anew ? { ...q, now: '' } : q, got.country), m, got.now));
     }
     // made again up to the clock and stopped short: a second turn adds the rest (one that fails keeps the first)
     const two = keep && !old ? secondTurn(m, cur, gap, false) : null;
@@ -1149,7 +1159,7 @@ async function makePhone0(m, owner, { update = false, apps = null } = {}) {
             const out2 = await ask(two.cover, [`${soFarHead('PHONE', two.short)}\n${JSON.stringify(soFar)}`, two.short?.text || '']), g2 = parsePhone(out2, owner);
             // (made again whole: its clock checked as the first turn's; one that doesn't hold is left out, the first kept)
             // (a second answer with no "now" leaves the clock as the first set it: nothing to check)
-            if (!part && g2.now) { const q = pre || cur || { owner }; withDateOrderSync(dateOrderOf(m), () => validateReflectionClock(jsonOf(out2, { salvage: true }) || {}, q, m, g2.now)); }
+            if (!part && g2.now) { const q = pre || cur || { owner }; withDateOrderSync(dateOrderOf(m), () => validateReflectionClock(jsonOf(out2, { salvage: true }) || {}, checkOn(q, g2.country), m, g2.now)); }
             got2 = g2; last = two.cover; short = two.short;
         } catch (err) { console.warn('[narrative-archive] phone, second turn', err); }
     }
@@ -2441,12 +2451,7 @@ const whereOf = (p, name) => {
     if (exact || !k) return exact;
     if (k === own) {
         const hits = rows.filter(x => arr(x.aka).some(a => nameKey(a) === k));
-        if (hits.length) return hits.length === 1 ? hits[0] : undefined;
-        // (an older reading that named the owner by their full name, "Ren Park" for Ren: theirs, when it is the one such row
-        // and no one on the phone goes by it; "Ren Kim" in the contacts is someone else)
-        const others = new Set([...(p?.contacts || []).map(x => nameKey(x.name)), ...(p?.threads || []).map(t => nameKey(t.with))]);
-        const full = rows.filter(x => samePerson(x.name, name) && !others.has(nameKey(x.name)));
-        return full.length === 1 && rows.filter(x => samePerson(x.name, name)).length === 1 ? full[0] : undefined;
+        return hits.length === 1 ? hits[0] : undefined;
     }
     const same = rows.filter(x => nameKey(x.name) !== own && samePerson(x.name, name));
     return same.length === 1 ? same[0] : undefined;
@@ -2468,7 +2473,8 @@ const CITY_ZONES = [
     ['America/Toronto', ['Toronto', '토론토', 'Ottawa', '오타와', 'Montreal', '몬트리올']],
     ['America/Edmonton', ['Edmonton', '에드먼턴', 'Calgary', '캘거리']], ['America/Winnipeg', ['Winnipeg', '위니펙']],
     ['Europe/Berlin', ['Frankfurt', 'Frankfurt am Main', '프랑크푸르트', 'Berlin', '베를린', 'Munich', 'München', 'Muenchen', '뮌헨', 'Hamburg', '함부르크', 'Cologne', 'Köln', 'Koeln', '쾰른', 'Düsseldorf', 'Duesseldorf', '뒤셀도르프', 'Stuttgart', '슈투트가르트', 'Leipzig', '라이프치히', 'Dresden', '드레스덴', 'Heidelberg', '하이델베르크', 'Nuremberg', 'Nürnberg', '뉘른베르크', 'Bonn', '본']],
-    // (the cities most chats write, in English, the local name and Korean: a city typed in 위치 정보 by any of them)
+    // (the cities most chats write, in English, the local name and Korean: a city typed in 위치 정보 by any of them; a name
+    // two cities share, Cambridge, Portland, is left out: the user is asked for another)
     ['Asia/Seoul', ['Seoul', '서울', 'Busan', 'Pusan', '부산', 'Incheon', '인천', 'Daegu', '대구', 'Daejeon', '대전', 'Gwangju', '광주', 'Ulsan', '울산', 'Suwon', '수원', 'Seongnam', '성남', 'Pangyo', '판교', 'Bundang', '분당', 'Ilsan', '일산', 'Goyang', '고양', 'Yongin', '용인', 'Jeju', '제주', 'Jeonju', '전주', 'Gangneung', '강릉', 'Sejong', '세종', 'Pohang', '포항', 'Changwon', '창원', 'Cheongju', '청주', 'Chuncheon', '춘천', 'Gyeongju', '경주', 'Yeosu', '여수', 'Sokcho', '속초']],
     ['Asia/Tokyo', ['Tokyo', '東京', '도쿄', 'Osaka', '大阪', '오사카', 'Kyoto', '京都', '교토', 'Yokohama', '横浜', '요코하마', 'Nagoya', '名古屋', '나고야', 'Sapporo', '札幌', '삿포로', 'Fukuoka', '福岡', '후쿠오카', 'Kobe', '神戸', '고베', 'Okinawa', 'Naha', '沖縄', '오키나와', 'Nara', '奈良', '나라', 'Hiroshima', '広島', '히로시마', 'Sendai', '仙台', '센다이']],
     ['Asia/Shanghai', ['Shanghai', '上海', '상하이', 'Beijing', '北京', '베이징', 'Shenzhen', '深圳', '선전', 'Guangzhou', '广州', '광저우', 'Chengdu', '成都', '청두', 'Hangzhou', '杭州', '항저우', 'Qingdao', '青岛', '칭다오']],
@@ -2478,7 +2484,7 @@ const CITY_ZONES = [
     ['Asia/Manila', ['Manila', '마닐라', 'Cebu', '세부']], ['Asia/Jakarta', ['Jakarta', '자카르타']], ['Asia/Makassar', ['Bali', 'Denpasar', '발리']],
     ['Asia/Kuala_Lumpur', ['Kuala Lumpur', '쿠알라룸푸르']], ['Asia/Kolkata', ['Mumbai', '뭄바이', 'Delhi', 'New Delhi', '델리', '뉴델리', 'Bangalore', 'Bengaluru', '벵갈루루']],
     ['Asia/Dubai', ['Dubai', '두바이', 'Abu Dhabi', '아부다비']], ['Europe/Istanbul', ['Istanbul', '이스탄불']], ['Asia/Tehran', ['Tehran', '테헤란']],
-    ['Europe/London', ['London', '런던', 'Manchester', '맨체스터', 'Liverpool', '리버풀', 'Edinburgh', '에든버러', 'Oxford', '옥스퍼드', 'Cambridge', '케임브리지']],
+    ['Europe/London', ['London', '런던', 'Manchester', '맨체스터', 'Liverpool', '리버풀', 'Edinburgh', '에든버러', 'Oxford', '옥스퍼드']],
     ['Europe/Dublin', ['Dublin', '더블린']], ['Europe/Paris', ['Paris', '파리', 'Lyon', '리옹', 'Nice', '니스', 'Marseille', '마르세유']],
     ['Europe/Rome', ['Rome', 'Roma', '로마', 'Milan', 'Milano', '밀라노', 'Venice', 'Venezia', '베네치아', 'Florence', 'Firenze', '피렌체', 'Naples', 'Napoli', '나폴리']],
     ['Europe/Madrid', ['Madrid', '마드리드', 'Barcelona', '바르셀로나', 'Seville', 'Sevilla', '세비야']], ['Europe/Lisbon', ['Lisbon', 'Lisboa', '리스본', 'Porto', '포르투']],
@@ -2491,7 +2497,7 @@ const CITY_ZONES = [
     ['Australia/Perth', ['Perth', '퍼스']], ['Australia/Adelaide', ['Adelaide', '애들레이드']], ['Australia/Lord_Howe', ['Lord Howe Island', 'Lord Howe', '로드하우']],
     ['Pacific/Auckland', ['Auckland', '오클랜드', 'Wellington', '웰링턴']], ['America/Mexico_City', ['Mexico City', '멕시코시티']],
     ['America/Sao_Paulo', ['São Paulo', 'Sao Paulo', '상파울루', 'Rio de Janeiro', '리우데자네이루']], ['America/Argentina/Buenos_Aires', ['Buenos Aires', '부에노스아이레스']],
-    ['America/Los_Angeles', ['San Diego', '샌디에이고', 'Las Vegas', '라스베이거스', 'Portland', '포틀랜드', 'LA']], ['America/New_York', ['Philadelphia', '필라델피아', 'Miami', '마이애미', 'Atlanta', '애틀랜타']],
+    ['America/Los_Angeles', ['San Diego', '샌디에이고', 'Las Vegas', '라스베이거스']], ['America/New_York', ['Philadelphia', '필라델피아', 'Miami', '마이애미', 'Atlanta', '애틀랜타']],
     ['America/Chicago', ['Dallas', '댈러스', 'Houston', '휴스턴', 'Austin', '오스틴']], ['Africa/Cairo', ['Cairo', '카이로']], ['Africa/Johannesburg', ['Johannesburg', '요하네스버그', 'Cape Town', '케이프타운']],
 ];
 export function tzForCity(p, text) {
@@ -2515,7 +2521,7 @@ export function placeInfo(p) {
     const rows = p?.where?.people || [], own = whereOf(p, p?.owner), t = hm(p?.now) ? p.now : p?.making ? (hm(p.clockAt) ? p.clockAt : todayWall()) : '', base = ownerZone(p);
     const hours = tz => { if (!t || !base || !tz) return null; const a = zoneShift(t, base.tz, tz, yearOr(t, p.year)), d = dayGap(t.slice(0, 5), a.slice(0, 5)); return (d * 1440 + (Number(a.slice(6, 8)) * 60 + Number(a.slice(9, 11))) - (Number(t.slice(6, 8)) * 60 + Number(t.slice(9, 11)))) / 60; };
     return { owner: { name: p?.owner, lives: p?.lives || own?.lives || p?.country || '', livesManual: !!p?.livesManual, city: own?.city || base?.where || '', tz: own?.tz || base?.tz || '', cityManual: !!own?.manual?.city },
-        people: rows.filter(x => nameKey(x.name) !== nameKey(p?.owner)).map(x => ({ name: x.name, city: x.city || '', lives: x.lives || '', tz: x.tz || '', hours: hours(x.tz || COUNTRY_TZ[x.lives]), manual: !!x.manual?.city })),
+        people: rows.filter(x => x !== own && nameKey(x.name) !== nameKey(p?.owner)).map(x => ({ name: x.name, city: x.city || '', lives: x.lives || '', tz: x.tz || '', hours: hours(x.tz || COUNTRY_TZ[x.lives]), manual: !!x.manual?.city })),
         failed: !!p?.where?.failed, at: p?.where?.at || null };
 }
 const rowFor = (p, name) => { const r = whereOf(p, name); if (r) return r; const row = { name }; p.where = { ...(p.where || {}), at: p.where?.at || Date.now(), people: [...(p.where?.people || []), row] }; return row; };

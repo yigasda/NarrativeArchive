@@ -509,3 +509,30 @@ test('an order made before and first told of now ("I already ordered you a scarf
     applyMoney(m, p, ev('rent-told', 13, '11-10', { moves: [{ account: '1111', amount: -500, who: 'Landlord', occurrence: 'again' }] }), opts());
     assert.equal(bank(), 1000);
 });
+
+test('점검 4: an order or ticket told of again goes to the newest that fits, never one already over or further along, nor one for someone else; a cancellation ends the one still open', () => {
+    const bean = { shop: 'Coffee Circle', item: 'Espresso beans 1kg', qty: 1, price: 24 };
+    let { m, p } = setup();
+    applyMoney(m, p, ev('o1', 5, '10-01', { orders: [{ ...bean, status: 'delivered', occurrence: 'new' }] }), opts());
+    applyMoney(m, p, ev('o2', 20, '10-25', { orders: [{ ...bean, status: 'ordered', occurrence: 'new' }] }), opts());
+    applyMoney(m, p, ev('s', 21, '10-27', { orders: [{ ...bean, status: 'shipped', occurrence: 'again' }] }), opts());
+    assert.deepEqual(p.money.orders.map(o => [o.time, o.status]), [['10-01', 'delivered'], ['10-25', 'shipped']]);
+    // a scarf "already ordered" for Mara is no scarf delivered a month ago
+    ({ m, p } = setup());
+    applyMoney(m, p, ev('h', 5, '09-20', { orders: [{ shop: 'Hermès', item: 'Scarf', qty: 1, price: 400, status: 'delivered', occurrence: 'new' }] }), opts());
+    applyMoney(m, p, ev('t', 30, '10-26', { orders: [{ shop: '', item: 'Scarf', qty: 1, price: null, status: 'ordered', gift: 'Mara', occurrence: 'again' }] }), opts());
+    assert.equal(p.money.orders.length, 2);
+    // "it was cancelled", weeks later: the open one ends; one already cancelled takes it, no second
+    ({ m, p } = setup());
+    applyMoney(m, p, ev('o', 5, '10-01', { orders: [{ ...bean, status: 'ordered', occurrence: 'new' }] }), opts());
+    applyMoney(m, p, ev('c', 30, '10-26', { orders: [{ ...bean, status: 'cancelled', occurrence: 'again' }] }), opts());
+    applyMoney(m, p, ev('c2', 40, '11-02', { orders: [{ ...bean, status: 'cancelled', occurrence: 'again' }] }), opts());
+    assert.deepEqual(p.money.orders.map(o => o.status), ['cancelled']);
+    // a ticket told of again: never the one already used, nor another route
+    ({ m, p } = setup());
+    applyMoney(m, p, ev('f1', 5, '09-20', { passes: [{ kind: 'event', by: 'Interpark', to: 'IU 콘서트', date: '09-27', status: 'used', occurrence: 'new' }] }), opts());
+    applyMoney(m, p, ev('f2', 30, '10-26', { passes: [{ kind: 'event', by: 'Interpark', to: '뮤지컬 위키드', date: '', status: '', occurrence: 'again' }] }), opts());
+    assert.equal(p.money.passes.length, 2);
+    applyMoney(m, p, ev('f3', 31, '10-27', { passes: [{ kind: 'event', by: 'Interpark', to: '뮤지컬 위키드', date: '', status: '', occurrence: 'again' }] }), opts());
+    assert.equal(p.money.passes.length, 2);
+});

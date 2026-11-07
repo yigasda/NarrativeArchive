@@ -1479,3 +1479,36 @@ test('점검 3: making a phone — a status line\'s year on the owner\'s clock a
         assert.equal(pre.year, 2021);
     } finally { delete globalThis.__ctx; delete globalThis.__whereAnswer; delete globalThis.__trackers; }
 });
+
+test('점검 4: an owner the reading placed nowhere is checked by the answer\'s country when it has one clock (Germany), never one with many (the US); a pre read for a phone gone since keeps the user\'s change, its year worked out anew', async () => {
+    const setup = () => {
+        const { m: mm } = htmlPhoneFixture();
+        globalThis.__ctx.characters = [{ name: 'Mara' }]; globalThis.__ctx.characterId = 0;
+        mm.phones = {}; mm.phoneScreenHolder = 'Mara'; mm.text = '## #0–#3 — Summer\n- 2026-07-10 Ren came home (#1).\n';
+        globalThis.__where = [];
+        globalThis.__whereAnswer = { people: [{ name: 'Mara', city: 'Seoul', tz: 'Asia/Seoul', lives: 'KR' }] };
+        return mm;
+    };
+    const made = (now, country) => JSON.stringify({ country, now, clock: { basis: 'Default used', finalViewpoint: 'Mara', elapsedTime: null, sceneTime: '07-10 11:10', messageSender: null }, contacts: [{ name: 'Mara' }], notes: [] });
+    try {
+        let mm = setup();
+        globalThis.__menu = { calls: [], answers: [made('07-10 11:10', 'DE')] };
+        await assert.rejects(data.makePhone(mm, 'Ren'));
+        mm = setup();
+        globalThis.__menu = { calls: [], answers: [made('07-10 04:10', 'DE')] };
+        assert.equal((await data.makePhone(mm, 'Ren')).now, '07-10 04:10');
+        mm = setup();
+        globalThis.__menu = { calls: [], answers: [made('07-09 19:10', 'US')] };
+        assert.equal((await data.makePhone(mm, 'Ren')).now, '07-09 19:10');
+        // read for an old phone (2019), a city changed by hand, the phone gone since: the change stays, the year is the story's
+        mm = setup();
+        globalThis.__whereAnswer = { people: [{ name: 'Ren', city: 'Frankfurt am Main', tz: 'Europe/Berlin', lives: 'DE' }, { name: 'Mara', city: 'Seoul', tz: 'Asia/Seoul', lives: 'KR' }] };
+        mm.phones = { ren: plainPhone({ year: 2019 }) };
+        let pre = await data.preparePhone(mm, 'Ren');
+        await data.setPlaceCity(mm, pre, 'Mara', 'Tokyo');
+        delete mm.phones.ren;
+        pre = await data.preparePhone(mm, 'Ren');
+        assert.deepEqual([pre.where.people.find(x => x.name === 'Mara').city, pre.year], ['Tokyo', 2026]);
+        assert.equal(globalThis.__where.length, 1);
+    } finally { delete globalThis.__ctx; delete globalThis.__whereAnswer; }
+});

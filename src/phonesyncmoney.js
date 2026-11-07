@@ -32,6 +32,8 @@ let together = null;
 const fresh = (x, twin, at) => x.occurrence === 'new' && twin.sourceIndex !== at
     && !(together && twin.sourceIndex >= together[0] && twin.sourceIndex <= together[1]);
 const plain = s => String(s || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+// an order or a ticket that is over: cancelled, returned, refunded, used
+const ENDED = /^(?:cancelled|returned|refunded)$|used|cancel|refund|checked out|사용|취소|환불/i;
 const samePlace = (a, b) => !!plain(a) && plain(a) === plain(b);
 // (an order's shop: the same, or one or both not named)
 const shopOf = (a, b) => !plain(a) || !plain(b) || samePlace(a, b);
@@ -296,7 +298,9 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         const box = p.money[path] ||= [];
         // the same event's own record told again (its message rewritten and read anew) is that one, not a second
         const old = x.already && box.find(o => o.id === x.already) || box.find(o => !madeNow.has(o) && same(o, x) && (!fresh(x, o, e.at) || o.ev === e.id))
-            || x.occurrence === 'again' && box.find(o => !madeNow.has(o) && loose(o, x)) || null;
+            // (the newest that fits: an order bought again weeks later is the one "on its way" now)
+            // (one still open first: "it was cancelled" ends the order still open, else it is the one already cancelled)
+            || x.occurrence === 'again' && ((rs => rs.find(o => !ENDED.test(o.status || '')) || rs[0])([...box].reverse().filter(o => !madeNow.has(o) && loose(o, x)))) || null;
         if (old && old.sourceIndex == null) old.sourceIndex = e.at;
         if (old) {
             // an order's status only moves forward; a pass's is free text ("used", "checked in", "cancelled"): whatever it says now
@@ -328,12 +332,28 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         if (!txt(x.item)) fail('주문의 물건을 확인하지 못했어요');
         return { shop: txt(x.shop, 60), item: txt(x.item), ko: txt(x.ko), option: txt(x.option, 60), qty: Math.max(1, Math.round(Number(x.qty) || 1)), price: finite(price) ? price : null, time: date, status: ORDER.includes(x.status) ? x.status : 'ordered', eta: when(x.eta).slice(0, 5) || (['ordered', 'shipped', 'on the way'].includes(x.status) || !ORDER.includes(x.status) ? plusDays(date, 2 + [...txt(x.shop)].reduce((n, c) => (n + c.charCodeAt(0)) % 3, 0)) : ''), arrived: '', gift: giftOf(x.gift), ...(x.paid === false ? { paid: false } : {}), ...(guess ? { amountFrom: 'guess' } : {}) };
     }, (o, x) => shopOf(o.shop, x.shop) && samePlace(o.item, x.item) && near(o.time, date) && !(o.option && txt(x.option, 60) && !samePlace(o.option, txt(x.option, 60))),
-    (o, x) => shopOf(o.shop, x.shop) && samePlace(o.item, x.item) && !['cancelled', 'returned', 'refunded'].includes(o.status));
+    // (told of again: the same item from the same shop, for the same person; one already ended, cancelled or returned, only
+    // when this tells it ended; never one further along than this says, a scarf "ordered" is no scarf delivered a month ago)
+    (o, x) => {
+        if (!shopOf(o.shop, x.shop) || !samePlace(o.item, x.item)) return false;
+        if (giftOf(o.gift) && giftOf(x.gift) && !samePlace(giftOf(o.gift), giftOf(x.gift))) return false;
+        const end = s => ['cancelled', 'returned', 'refunded'].includes(s);
+        if (end(x.status)) return true;
+        return !end(o.status) && (!ORDER.includes(x.status) || o.status === x.status || later(o.status, x.status));
+    });
     records('passes', list(mo.passes), x => {
         if (!txt(x.by)) fail('티켓 정보를 확인하지 못했어요');
         return { kind: ['flight', 'train', 'hotel', 'event', 'other'].includes(x.kind) ? x.kind : 'other', by: txt(x.by, 60), from: txt(x.from, 40), to: txt(x.to, 40), date: when(x.date).slice(0, 5) || date, time: hhmm(x.time), seat: txt(x.seat, 12), gate: txt(x.gate, 12), no: txt(x.no, 24), status: txt(x.status, 30) };
     }, (o, x) => samePlace(o.by, x.by) && o.kind === x.kind && (o.no && o.no === txt(x.no, 24) || o.date === (when(x.date).slice(0, 5) || date)),
-    (o, x) => samePlace(o.by, x.by) && o.kind === x.kind && (!o.no || !txt(x.no, 24) || o.no === txt(x.no, 24)) && (!when(x.date) || o.date === when(x.date).slice(0, 5)));
+    // (told of again: the same booking, by its number, or its route and day; never one already used or cancelled, unless
+    // this tells it was)
+    (o, x) => {
+        if (!samePlace(o.by, x.by) || o.kind !== x.kind) return false;
+        const done = v => /used|cancel|refund|checked out|사용|취소|환불/i.test(String(v || ''));
+        if (done(o.status) && !done(x.status)) return false;
+        if (o.no && txt(x.no, 24)) return o.no === txt(x.no, 24);
+        return plain(o.from) === plain(txt(x.from, 40)) && plain(o.to) === plain(txt(x.to, 40)) && (!when(x.date) || o.date === when(x.date).slice(0, 5));
+    });
     // 배달: an order in the delivery app. Its payment is a move of the same event (the card or bank row it made, or one
     // already there), tied to it here; with no paying move it was paid in cash at the door
     const dlvOn = !!p.delivery && e.at > (marks.delivery?.index ?? -1);

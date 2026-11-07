@@ -192,8 +192,8 @@ test('점검 3: a first name stands for a person only when it is theirs alone, n
     let p = plainPhone({ around: { people: [{ name: 'Ren Kim', about: 'x' }, { name: 'Mara Lee', about: 'y' }] }, where: { at: 1, people: [row('Ren', 'Frankfurt', 'Europe/Berlin')] } });
     assert.deepEqual(data.__scenesWith(p, 'Ren went home alone.', [], mText()), []);
     assert.deepEqual(data.__scenesWith(p, 'Mara called.', [], mText()), ['Mara Lee']);
-    // an old reading: the owner's row as "Ren Park", with or without "Ren" as its aka
-    for (const aka of [undefined, ['Ren']]) {
+    // an old reading: the owner's row as "Ren Park", "Ren" its aka
+    for (const aka of [['Ren']]) {
         p = plainPhone({ where: { at: 1, people: [row('Ren Park', 'Seoul', 'Asia/Seoul', aka ? { aka } : {}), row('Mara', 'Paris', 'Europe/Paris')] } });
         assert.equal(data.ownerZone(p).tz, 'Asia/Seoul');
         assert.ok(data.__isOwnerName(p, null, 'Ren Park'));
@@ -202,9 +202,12 @@ test('점검 3: a first name stands for a person only when it is theirs alone, n
         data.__mergePhone(p, { threads: [], posts: [], contacts: [], visits: [v] });
         assert.deepEqual(p.visits[0].with, ['Mara']);
     }
-    // "Ren Kim" in the contacts is someone else, never the owner's row
-    p = plainPhone({ contacts: [{ name: 'Ren Kim' }], where: { at: 1, people: [row('Ren Kim', 'Seoul', 'Asia/Seoul')] } });
-    assert.notEqual(data.ownerZone(p)?.tz, 'Asia/Seoul');
+    // a row that only shares the owner's first name is someone else's, in the contacts or not ("Ren Kim", the father)
+    for (const contacts of [[{ name: 'Ren Kim' }], []]) {
+        p = plainPhone({ contacts, where: { at: 1, people: [row('Ren Kim', 'New York', 'America/New_York'), row('Mara', 'Seoul', 'Asia/Seoul')] } });
+        assert.notEqual(data.ownerZone(p)?.tz, 'America/New_York');
+        assert.ok(!data.__isOwnerName(p, null, 'Ren Kim'));
+    }
 });
 
 test('점검 3: a place at 0 hours with a summer-time change near is a line; a city typed by its Korean, German or Japanese name has its zone', () => {
@@ -212,4 +215,21 @@ test('점검 3: a place at 0 hours with a summer-time change near is a line; a c
     const z = data.zonesOf(p, '04-06 12:00', mText());
     assert.deepEqual(z.others.map(o => [o.name, o.hours, !!o.dst?.length]), [['Mara', 0, true]]);
     for (const [c, tz] of [['부산', 'Asia/Seoul'], ['Busan', 'Asia/Seoul'], ['München', 'Europe/Berlin'], ['뮌헨', 'Europe/Berlin'], ['오사카', 'Asia/Tokyo'], ['인천', 'Asia/Seoul'], ['Lord Howe Island', 'Australia/Lord_Howe'], ['서울', 'Asia/Seoul']]) assert.equal(data.tzForCity(plainPhone(), c), tz, c);
+});
+
+test('점검 4: one person in PEOPLE AROUND and in the events is one for their first name; an old owner row by the full name is shown once in 위치 정보', () => {
+    let p = plainPhone({ around: { people: [{ name: 'Mara Lee', about: 'x' }] }, where: { at: 1, people: [row('Ren', 'Frankfurt', 'Europe/Berlin')] } });
+    assert.deepEqual(data.__scenesWith(p, 'Mara called.', ['Mara Lee'], mText()), ['Mara Lee']);
+    // two people by that first name: neither by it alone
+    p = plainPhone({ around: { people: [{ name: 'Mara Lee', about: 'x' }, { name: 'Mara Kim', about: 'y' }] }, where: { at: 1, people: [row('Ren', 'Frankfurt', 'Europe/Berlin')] } });
+    assert.deepEqual(data.__scenesWith(p, 'Mara called.', [], mText()), []);
+    assert.deepEqual(data.__scenesWith(p, 'Mara Kim called.', [], mText()), ['Mara Kim']);
+    p = plainPhone({ where: { at: 1, people: [row('Ren Park', 'Seoul', 'Asia/Seoul', { aka: ['Ren'] }), row('Mara', 'Paris', 'Europe/Paris')] } });
+    const info = data.placeInfo(p);
+    assert.equal(info.owner.city, 'Seoul');
+    assert.deepEqual(info.people.map(x => x.name), ['Mara']);
+});
+
+test('점검 4: a city name two places share is not guessed', () => {
+    for (const c of ['Cambridge', 'Portland', 'LA']) assert.equal(data.tzForCity(plainPhone(), c), '', c);
 });

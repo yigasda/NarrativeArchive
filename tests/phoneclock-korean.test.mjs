@@ -134,3 +134,8 @@ test('점검 3: an empty code inside a time field, a non-breaking space in one, 
         '<time datetime="2026-11-05">11월 5일</time> <span class="time">16:15</span>']) assert.deepEqual(htmlDatedClocks(t).map(x => x.local), ['11-05 16:15'], t);
     for (const t of ['<q>11월 5일</q> <span class="time">16:15</span>', '<span style="display:none">11월 5일 </span><span class="time">16:15</span>']) assert.deepEqual(htmlDatedClocks(t), [], t);
 });
+
+test('점검 4: "지난번 · 지난주 · 지난달" after a time is the time; "지나가면 · 지나가지고" is past it', () => {
+    for (const [s, want] of [['오늘 3시 지난번 그 카페에서 보자', '03:00'], ['내일 오후 3시 지난주 거기서', '15:00'], ['3시 지난달처럼', '03:00'], ['3시 지나가던 버스', '03:00'], ['3시 지나가는 길에', '03:00'],
+        ['3시 지나가면 전화해', ''], ['3시 지나가지고 연락할게', ''], ['3시가 지난 시각', ''], ['3시 지난 시점', '']]) assert.equal(koClockText(s), want, s);
+});

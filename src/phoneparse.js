@@ -67,10 +67,12 @@ export const when = v => {
 // read: every colon clock is read as before
 const KO_SP = String.raw`[ \t\u00a0]`;
 // (how far past it: "3시가 조금 넘은", "3시가 훌쩍 지난", "3시가 한참이나 지났다")
+// ("지난" as the time gone past, never "지난번", "지난주", "지난달", "지난해": the last one of something)
+const KO_PAST_NOUN = String.raw`지난(?!번|주|달|해|날|밤|봄|여름|가을|겨울|학기|시즌|회|번째|분기|정권)`;
 const KO_PAST_ADV = String.raw`(?:조금|좀|막|살짝|훨씬|훌쩍|한참|이미|벌써|약간|꽤|거의|이제|금방|좀더|조금더)(?:이나|나|은|는)?`;
 // ("am" · "pm" never the end of a word: "Liam 12시", "Team 12시 회의")
 const KO_MER = String.raw`(?:오전|오후|새벽|아침|낮|저녁|밤|(?<![A-Za-z])[aApP]\.?[mM]\.?)`;
-const KO_CLOCK_SRC = String.raw`(?<![\p{N}.:])(?:(${KO_MER})(?:에|의)?${KO_SP}*)?(\d{1,2})${KO_SP}*시(?!간|즌|리즈)(?:${KO_SP}*(?:(\d{1,2})${KO_SP}*분|(반))(?:${KO_SP}*\d{1,2}${KO_SP}*초)?)?(?:(?:에|엔)?${KO_SP}*((?:오전|오후|새벽|아침|낮|저녁|밤)(?:에|엔|의)?(?![\p{L}])|(?<![A-Za-z])[aApP]\.?[mM]\.?(?![A-Za-z])))?(?!${KO_SP}*(?:(?:전|후|뒤)(?:(?:이|인|일|입|였)\p{L}*|(?:에|엔|으로|로|부터|까지|쯤|만|도|은|는|의|과|와|보다|가|을|를|라서|라|이라)*(?![\p{L}]))|(?:이전|이후|직전|직후|방향)\p{L}*|(?:가|를|이|을|은|는|도|만)${KO_SP}*(?:${KO_PAST_ADV}${KO_SP}*)?(?:넘|지나|지났|지난|지날|지남)\p{L}*|(?:${KO_PAST_ADV}${KO_SP}*)?(?:넘(?!버)|지나(?!가)|지났|지난|지날|지남)\p{L}*|동안\p{L}*|만에|가량|간(?![\p{L}])|(?:쯤|경)${KO_SP}*(?:전|후|뒤|이전|이후)))`;
+const KO_CLOCK_SRC = String.raw`(?<![\p{N}.:])(?:(${KO_MER})(?:에|의)?${KO_SP}*)?(\d{1,2})${KO_SP}*시(?!간|즌|리즈)(?:${KO_SP}*(?:(\d{1,2})${KO_SP}*분|(반))(?:${KO_SP}*\d{1,2}${KO_SP}*초)?)?(?:(?:에|엔)?${KO_SP}*((?:오전|오후|새벽|아침|낮|저녁|밤)(?:에|엔|의)?(?![\p{L}])|(?<![A-Za-z])[aApP]\.?[mM]\.?(?![A-Za-z])))?(?!${KO_SP}*(?:(?:전|후|뒤)(?:(?:이|인|일|입|였)\p{L}*|(?:에|엔|으로|로|부터|까지|쯤|만|도|은|는|의|과|와|보다|가|을|를|라서|라|이라)*(?![\p{L}]))|(?:이전|이후|직전|직후|방향)\p{L}*|(?:가|를|이|을|은|는|도|만)${KO_SP}*(?:${KO_PAST_ADV}${KO_SP}*)?(?:넘|지나|지났|${KO_PAST_NOUN}|지날|지남)\p{L}*|(?:${KO_PAST_ADV}${KO_SP}*)?(?:넘(?!버)|지나(?!가(?:던|는))|지났|${KO_PAST_NOUN}|지날|지남)\p{L}*|동안\p{L}*|만에|가량|간(?![\p{L}])|(?:쯤|경)${KO_SP}*(?:전|후|뒤|이전|이후)))`;
 const KO_CLOCK_ALL = new RegExp(KO_CLOCK_SRC, 'gu');
 // (a meridiem after it: a Korean one never as the start of a word, "4시 낮잠"; "PM" with whatever follows, "4시 PM이야",
 // "4시에 pm")
@@ -485,25 +487,19 @@ export const byStory = (now, get = x => x?.time) => (a, b) => storyMin(get(a), n
 const MON = 'jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|januar|februar|märz|maerz|mai|juni|juli|okt|dez';
 const DATED = new RegExp(`(?<!\\d)((?:19|20)\\d{2})[-./](?:0?[1-9]|1[0-2])[-./](?:0?[1-9]|[12]\\d|3[01])(?!\\d)|(?<!\\d)((?:19|20)\\d{2})년\\s*(?:0?[1-9]|1[0-2])월|\\b(?:${MON})[a-zä]*\\.?\\s+\\d{1,2}(?:st|nd|rd|th)?,?\\s+((?:19|20)\\d{2})(?!\\d)|(?<!\\d)\\d{1,2}\\.?\\s+(?:${MON})[a-zä]*\\.?,?\\s+((?:19|20)\\d{2})(?!\\d)|(?<!\\d)(?:(?:0?[1-9]|1[0-2])[-./](?:0?[1-9]|[12]\\d|3[01])|(?:0?[1-9]|[12]\\d|3[01])[-./](?:0?[1-9]|1[0-2]))[-./]\\s?((?:19|20)\\d{2})(?!\\d)`, 'gi');
 export const yearIn = text => { let y = ''; for (const mt of String(text || '').matchAll(DATED)) y = mt[1] || mt[2] || mt[3] || mt[4] || mt[5]; return y; };
-// the story's year in an archive or a chat: the newest section heading that dates itself, else the year its dates write
-// most often (the story's days come again and again; a birthday, a memory or a plan is written once), the later in the
-// text when two are as often. A date a birth, a death, a deadline or a plan is told by ("born 1990-07-15", "until
-// 2031-12-31", "2030년 5월 만기", "예정") counts only when nothing else does
-const NOT_NOW = /\b(?:born|birth(?:day)?|died|since|until|till|expir\w*|due|ago|planned|scheduled|graduat\w*|lease|contract)\b|태어|출생|생일|년생|사망|돌아가|만기|까지|예정|계약|졸업|입학/i;
+// the story's year in an archive or a chat, a guess the reading of where everyone is goes before: the newest year a date
+// at the start of a line gives (the archive's own timeline: "- 2026년 10월 25일, …", "## 2026-10-25 — …"; a memory, a
+// birthday or a plan is written inside a line), else the last one written
 export function storyYearIn(text) {
-    const t = String(text || ''), heads = t.split('\n').filter(l => /^#{1,6}\s/.test(l));
-    for (let i = heads.length - 1; i >= 0; i--) { const y = yearIn(heads[i]); if (y) return y; }
-    const all = [];
-    for (const mt of t.matchAll(DATED)) { const y = mt[1] || mt[2] || mt[3] || mt[4] || mt[5]; if (y) all.push({ y, at: mt.index, told: NOT_NOW.test(lineAround(t, mt.index, mt[0].length)) }); }
-    const pick = rows => { const seen = new Map(); for (const r of rows) seen.set(r.y, { n: (seen.get(r.y)?.n || 0) + 1, at: r.at }); let best = '', top = null; for (const [y, v] of seen) if (!top || v.n > top.n || v.n === top.n && v.at > top.at) { best = y; top = v; } return best; };
-    return pick(all.filter(r => !r.told)) || pick(all);
+    const t = String(text || ''), lead = [], any = [];
+    for (const mt of t.matchAll(DATED)) {
+        const y = Number(mt[1] || mt[2] || mt[3] || mt[4] || mt[5]);
+        if (!y) continue;
+        any.push(y);
+        if (/^\s*(?:#{1,6}\s*|[-*•]\s*)?(?:on\s+)?$/i.test(t.slice(t.lastIndexOf('\n', mt.index - 1) + 1, mt.index))) lead.push(y);
+    }
+    return lead.length ? String(Math.max(...lead)) : any.length ? String(any.at(-1)) : '';
 }
-// the words just around a date, in its own sentence (30 letters before it, 15 after)
-const lineAround = (t, at, len) => {
-    const before = t.slice(Math.max(0, at - 30), at), after = t.slice(at + len, at + len + 15);
-    const b = before.split(/[\n.!?。]\s/).pop().split('\n').pop(), e = after.split(/(?<=\D)[.!?。](?:\s|$)|\n/)[0];
-    return b + t.slice(at, at + len) + e;
-};
 // a model's JSON with a slip mended: a bracket closed with the wrong kind ("profile": { … ]), a comma before a closer,
 // closers missing at the end. Strings are left as they are
 export function mendJson(t) {
