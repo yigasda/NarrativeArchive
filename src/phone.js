@@ -578,10 +578,12 @@ export async function openPhone(who = null) {
         if (go === 'setprofile') editProfile();
     });
     // 도시 찾기: the results follow the typing (only the results are drawn again, so the field keeps its focus)
-    const mapType = el => { mapQ = el.value; const p = phone(); if (!p) return; $root.find('.mq_res').html(mapResults(p, m, mapQ)).scrollTop(0); $root.find('.mq_sheet').toggleClass('mq_full', !!mapQ.trim()); $root.find('.mq_x').toggleClass('on', !!mapQ); };
+    const mapType = el => { mapQ = el.textContent.replace(/\s+/g, ' '); const p = phone(); if (!p) return; $root.find('.mq_res').html(mapResults(p, m, mapQ)).scrollTop(0); $root.find('.mq_sheet').toggleClass('mq_full', !!mapQ.trim()); $root.find('.mq_x').toggleClass('on', !!mapQ); };
     $root.on('input', '.mq_in', function () { mapType(this); });
     $root.on('keydown', '.mq_in', function (e) { e.stopPropagation(); if (e.key === 'Enter' && !e.originalEvent?.isComposing && e.keyCode !== 229) { e.preventDefault(); $root.find('.mq_res [data-go]').first().trigger('click'); } });
-    $root.on('click', '.mq_x', function (e) { e.stopPropagation(); const f = $root.find('.mq_in')[0]; if (!f) return; f.value = ''; mapType(f); f.focus(); });
+    $root.on('click', '.mq_x', function (e) { e.stopPropagation(); const f = $root.find('.mq_in')[0]; if (!f) return; f.textContent = ''; mapType(f); f.focus(); });
+    // a paste is plain text on one line (the field is an editable div)
+    $root.on('paste', '.mq_in', function (e) { e.preventDefault(); const t = (e.originalEvent?.clipboardData?.getData('text/plain') || '').replace(/\s+/g, ' '); document.execCommand('insertText', false, t); });
     // the page is made once, the first time a search is opened; the screen can change while it loads
     const loadSearch = async k => {
         const p = phone(), id = `${nameKey(p.owner)}:${k}`;

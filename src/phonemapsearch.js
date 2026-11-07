@@ -1,6 +1,7 @@
 // 캐릭터 휴대폰 · 다녀간 곳 › 도시 찾기 (mq_, the approved flow docs/mockups/phone-map/search): the search sheet over the
 // map (recent towns, the towns visited), the results while typing (towns · neighbourhoods · kinds of map), a town (its map,
 // its names, the maps that suit it, its neighbourhoods, day ↔ night) and a neighbourhood (its map, full screen).
+// The field is an editable div, not an input: SillyTavern themes paint every input (with !important), never a div.
 // Routes: mapq (the sheet; mapq:@kind lists the towns a kind of map suits), mapc:place~hood~kind~night.
 import { AX, ax, axBar, axCb, axChev, axInd, axTop, mapNight, mapTowns } from './phoneapps.js';
 import { pinSpots, pinSvg, townPlace, townSvg } from './phonemapart.js';
@@ -67,7 +68,7 @@ export function mapSearchScreen(p, now, m, i = '', query = '') {
     const full = kind || String(query).trim();
     return `<div class="mp_wx mq_wx${dark ? ' mp_dark' : ''}"><div class="mp_bg">${art}</div>${axBar(p, now, dark && !full ? '#fff' : '#111')}${axTop(axCb(kind ? 'mapq' : 'map'))}
       <div class="mq_sheet${full ? ' mq_full' : ''}"><i class="mp_grab"></i>
-        ${kind ? `<div class="mq_kh">${icon('mqmap', 16, 'var(--axd)', 2.2)}<b>${esc(kindName(kind))}</b></div>` : `<div class="mq_field">${ax('search', 17, '#8a929d', 2.2)}<input class="mq_in" type="text" value="${esc(query)}" placeholder="도시 · 동네 찾기 (東京, Berlin, 홍대 …)" enterkeyhint="search" autocomplete="off" spellcheck="false" aria-label="도시 찾기"><button type="button" class="mq_x${query ? ' on' : ''}" aria-label="지우기">${ax('x', 12, '#fff', 3)}</button></div>`}
+        ${kind ? `<div class="mq_kh">${icon('mqmap', 16, 'var(--axd)', 2.2)}<b>${esc(kindName(kind))}</b></div>` : `<div class="mq_field">${ax('search', 17, '#8a929d', 2.2)}<div class="mq_in" contenteditable="true" role="searchbox" enterkeyhint="search" spellcheck="false" aria-label="도시 찾기" data-ph="도시 · 동네 찾기 (東京, Berlin, 홍대 …)">${esc(query)}</div><button type="button" class="mq_x${query ? ' on' : ''}" aria-label="지우기">${ax('x', 12, '#fff', 3)}</button></div>`}
         <div class="ax_scroll mq_res">${mapResults(p, m, query, kind)}</div>
       </div>${axInd(dark && !full ? '#fff' : '#111')}</div>`;
 }

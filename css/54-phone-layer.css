@@ -739,14 +739,14 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax .wb_seg button.on { --axbg: #fff; --axsh: 0 1px 3px rgba(22, 27, 34, 0.1); }
 
 /* 다녀간 곳 › 도시 찾기 (mq_, docs/mockups/phone-map/search): the search sheet over the map, a town, a neighbourhood.
-   Buttons take --axbg / --axsh (the phone's theme guard paints every button with them); the field's input is bare and the
-   wrapper draws the field */
+   Buttons take --axbg / --axsh (the phone's theme guard paints every button with them); the field is an editable div (themes
+   paint every input) and the wrapper draws the field */
 .ax .mq_wx > .mq_sheet { position: absolute; left: 0; right: 0; bottom: 0; top: 330px; z-index: 3; display: flex; flex-direction: column; background: #f4f5f7; border-radius: 22px 22px 0 0; box-shadow: 0 -6px 24px rgba(22, 27, 34, 0.14); padding-top: 8px; transition: top 0.25s ease; }
 .ax .mq_wx > .mq_sheet.mq_full { top: 96px; }
 .mq_sheet .mp_grab { margin-bottom: 10px; }
 .mq_field { display: flex; align-items: center; gap: 8px; height: 44px; margin: 0 16px 6px; padding: 0 8px 0 12px; border-radius: 14px; background: #e9ecf0; flex: none; }
-.ax .mq_field .mq_in { flex: 1; min-width: 0; height: 40px; margin: 0; padding: 0; border: 0; outline: none; background: transparent; box-shadow: none; color: #161b22; font: inherit; font-size: 16px; }
-.mq_field .mq_in::placeholder { color: #8a929d; }
+.mq_in { flex: 1; min-width: 0; height: 40px; line-height: 40px; outline: none; color: #161b22; font-size: 16px; white-space: nowrap; overflow: hidden; cursor: text; -webkit-user-select: text; user-select: text; }
+.mq_in:empty::before { content: attr(data-ph); color: #8a929d; pointer-events: none; }
 .ax .mq_x { width: 22px; height: 22px; border-radius: 50%; --axr: 50%; --axbg: #b9bfc8; --axsh: none; display: none; place-items: center; padding: 0; flex: none; }
 .ax .mq_x.on { display: grid; }
 .mq_kh { display: flex; align-items: center; gap: 8px; padding: 2px 26px 6px; }
