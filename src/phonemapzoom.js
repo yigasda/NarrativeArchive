@@ -1,7 +1,8 @@
 // 캐릭터 휴대폰 · 다녀간 곳 지도 확대: two fingers pinch the map (1× to 3×), one finger moves it once it is bigger,
 // a double tap zooms in or back; on a computer ctrl + wheel (a trackpad pinch) and dragging with the mouse.
 // How it stays quick on a phone (the way a game map does it):
-//  - a little after a map is shown, it is copied once into a picture kept off the page (about the screen's sharpness);
+//  - right after a map is shown, it is copied once into a picture kept off the page (the screen's own sharpness;
+//    the last few maps keep theirs); fingers down before it is ready and the map waits for it, never the slow way;
 //  - while fingers move, nothing on the page changes: the part in view is painted from that picture into one canvas,
 //    and the pins are painted on it too. (Changing anything on the page each move — a style, an attribute — makes the
 //    browser work out the whole phone's styles again, because of the :has() rules the theme guard needs: 40 ms a
@@ -26,12 +27,29 @@ const box = svg => { const W = svg._W || (svg._W = svg.viewBox.baseVal.width), H
 const st = svg => svg._z || (svg._z = { s: 1, tx: 0, ty: 0 });
 const clamp = (svg, s, tx, ty) => { const { W, H } = box(svg); s = Math.min(MAX, Math.max(1, s)); return { s, tx: Math.min(0, Math.max(W - W * s, tx)), ty: Math.min(0, Math.max(H - H * s, ty)) }; };
 
-// the picture (off the page) and the canvas it is painted into (on the page, shown only mid-gesture)
+// the picture (off the page, kept for the last few maps) and the canvas it is painted into (on the page, mid-gesture)
+const PICS = new Map(); // data-z → canvas
 function prepare(svg) {
-    if (svg._src || svg._making || !svg.isConnected) return;
+    if (svg._view || svg._making || !svg.isConnected) return;
     svg._making = true;
     const { W, H, r } = box(svg), dpr = window.devicePixelRatio || 1;
-    const R = Math.min(r.width / W * dpr * 1.5, 1600 / W), w = Math.round(W * R), h = Math.round(H * R);
+    const done = src => {
+        if (!svg.isConnected) return;
+        PICS.delete(svg.dataset.z); PICS.set(svg.dataset.z, src);
+        while (PICS.size > 6) PICS.delete(PICS.keys().next().value);
+        const view = document.createElement('canvas');
+        view.width = Math.round(r.width * dpr); view.height = Math.round(r.width * dpr * H / W);
+        view.className = 'mp_pic';
+        view.setAttribute('aria-hidden', 'true');
+        view.style.cssText = 'position: absolute; left: 0; top: 0; width: 100%; height: auto; visibility: hidden; pointer-events: none;';
+        svg.after(view);
+        svg._src = src; svg._view = view;
+        if (svg._gest) live(svg); // fingers were already on it: it moves from now on
+    };
+    const kept = PICS.get(svg.dataset.z);
+    if (kept) return done(kept);
+    // the screen's own sharpness (zoomed in it is a little soft only while moving; let go and the real map is sharp)
+    const R = Math.min(r.width / W * dpr, 1400 / W), w = Math.round(W * R), h = Math.round(H * R);
     const url = URL.createObjectURL(new Blob([`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${w}" height="${h}">${svg.innerHTML}</svg>`], { type: 'image/svg+xml' }));
     const img = new Image();
     img.onload = () => {
@@ -40,18 +58,13 @@ function prepare(svg) {
         const src = document.createElement('canvas');
         src.width = w; src.height = h;
         src.getContext('2d').drawImage(img, 0, 0, w, h);
-        const view = document.createElement('canvas');
-        view.width = Math.round(r.width * dpr); view.height = Math.round(r.width * dpr * H / W);
-        view.className = 'mp_pic';
-        view.setAttribute('aria-hidden', 'true');
-        view.style.cssText = 'position: absolute; left: 0; top: 0; width: 100%; height: auto; visibility: hidden; pointer-events: none;';
-        svg.after(view);
-        svg._src = src; svg._view = view;
+        done(src);
     };
     img.onerror = () => { URL.revokeObjectURL(url); svg._making = false; };
     img.src = url;
 }
-const soon = svg => (window.requestIdleCallback || (f => setTimeout(f, 400)))(() => prepare(svg), { timeout: 1500 });
+// right after the map shows, as soon as the phone has a moment
+const soon = svg => (window.requestIdleCallback || (f => setTimeout(f, 120)))(() => prepare(svg), { timeout: 250 });
 
 // the pins as they are on the page, read once a gesture
 function pinList(svg) {
@@ -92,21 +105,27 @@ function place(svg, { s, tx, ty }) {
     svg.closest('.mp_wx')?.classList.toggle('mp_zoomed', s > 1);
 }
 const pinsLayer = svg => svg.parentElement.querySelector('.mp_pins');
-function begin(svg) {
-    if (!svg._view || svg._live) return;
+function live(svg) {
     svg._live = true; svg._pins = pinList(svg);
     paint(svg, st(svg));
     svg._view.style.visibility = 'visible'; svg.style.visibility = 'hidden';
     const pl = pinsLayer(svg); if (pl) pl.style.visibility = 'hidden';
 }
+// fingers down: the picture moves; if it is not made yet, the map waits for it (never the slow page moves)
+function begin(svg) {
+    if (svg._gest) return;
+    svg._gest = true;
+    if (svg._view) live(svg); else prepare(svg);
+}
 function move(svg, s, tx, ty) {
     const z = clamp(svg, s, tx, ty);
     Object.assign(st(svg), z);
     last = { z: svg.dataset.z, ...z };
-    if (svg._live) paint(svg, z); else place(svg, z);
+    if (svg._live) paint(svg, z); else if (!svg._gest) place(svg, z);
 }
 // let go: the page is put where the picture was, once; the canvas goes away the frame after
 function settle(svg) {
+    svg._gest = false;
     place(svg, st(svg));
     if (!svg._live) return;
     svg._live = false;
@@ -129,7 +148,6 @@ export function mapZoom(root) {
         const t = e.touches;
         const svg = g?.svg || [...t].map(x => onMap(x.clientX, x.clientY, x.target)).find(Boolean);
         if (!svg) return;
-        prepare(svg);
         if (t.length >= 2) { const [cx, cy] = mid(t); g = { svg, mode: 'pinch', d0: dist(t), cx, cy, from: { ...st(svg) }, k: box(svg).W / box(svg).r.width, r: box(svg).r }; begin(svg); e.preventDefault(); }
         else if (st(svg).s > 1) { g = { svg, mode: 'pan', x: t[0].clientX, y: t[0].clientY, from: { ...st(svg) }, k: box(svg).W / box(svg).r.width }; begin(svg); e.preventDefault(); }
         else g = { svg, mode: 'wait' };
@@ -166,7 +184,7 @@ export function mapZoom(root) {
         const svg = onMap(e.clientX, e.clientY, e.target);
         if (!svg) return;
         e.preventDefault();
-        prepare(svg); begin(svg);
+        begin(svg);
         zoomAt(svg, st(svg).s * Math.exp(-e.deltaY / 200), e.clientX, e.clientY);
         clearTimeout(still); still = setTimeout(() => settle(svg), 200);
     }, { passive: false });
