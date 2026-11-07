@@ -30,6 +30,13 @@ test('townCandidates: the town\'s own row, its neighbourhoods first, a neighbour
     assert.equal(townCandidates('Hongdae', ['카페'])[0], 'alleys');
     assert.equal(townCandidates('Cairo', ['Khan el-Khalili'])[0], 'egypt');
     assert.equal(townCandidates('Brighton', ['beach hut'])[0], 'beachTown');
+    // Korean, Japanese, Chinese, English and local names find the same town
+    for (const n of ['東京', '东京', 'Tokyo', '도쿄']) assert.deepEqual(townCandidates(n).slice(0, 3), townCandidates('도쿄').slice(0, 3), n);
+    for (const n of ['München', 'Munich', 'ミュンヘン', '慕尼黑']) assert.deepEqual(townCandidates(n).slice(0, 3), townCandidates('뮌헨').slice(0, 3), n);
+    for (const n of ['Москва', '莫斯科', 'Moscow']) assert.deepEqual(townCandidates(n).slice(0, 3), townCandidates('모스크바').slice(0, 3), n);
+    for (const n of ['القاهرة', 'カイロ', '开罗']) assert.equal(townCandidates(n)[0], 'egypt', n);
+    assert.deepEqual(townCandidates('東京都').slice(0, 3), townCandidates('東京').slice(0, 3));
+    assert.notDeepEqual(townCandidates('東京都').slice(0, 3), townCandidates('京都').slice(0, 3));
     // a short name only whole, a Korean name only from the start
     assert.notEqual(townCandidates('Laval')[0], townCandidates('LA')[0]);
     assert.notEqual(townCandidates('베니스')[0], townCandidates('니스')[0]);

@@ -13,8 +13,9 @@ const has = (text, w) => /^[a-z]/.test(w) ? new RegExp(`(^|[^a-z\u00c0-\u024f])$
 function cityRow(city) {
     let best = null, len = 0;
     for (const row of CITY) for (const n of row[0]) {
-        // a Korean name from the start ("서울특별시", not "베니스" for 니스), a longer Latin name from a word start, a short one whole
-        const hit = city === n || (/^[a-z]/.test(n) ? n.length >= 4 && has(city, n) : /^[가-힣]/.test(n) ? city.startsWith(n) : city.includes(n));
+        // a Latin name (4 letters or more) from a word start, a short one whole, any other script from the start
+        // ("서울특별시" → 서울, "東京都" → 東京 and not 京都, "베니스" not 니스)
+        const hit = city === n || (/^[a-z]/.test(n) ? n.length >= 4 && has(city, n) : city.startsWith(n));
         if (hit && n.length > len) { best = row; len = n.length; }
     }
     return best;
