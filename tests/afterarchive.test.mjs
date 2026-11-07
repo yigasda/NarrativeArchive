@@ -1487,7 +1487,7 @@ test('점검 3: making a phone — a status line\'s year on the owner\'s clock a
     } finally { delete globalThis.__ctx; delete globalThis.__whereAnswer; delete globalThis.__trackers; }
 });
 
-test('점검 4: an owner the reading placed nowhere is checked by the answer\'s country when it has one clock (Germany), never one with many (the US); a pre read for a phone gone since keeps the user\'s change, its year worked out anew', async () => {
+test('점검 4: an owner the reading placed nowhere is checked by no zone (the answer\'s country is where they live; away in Paris they are still right); a pre read for a phone gone since keeps the user\'s change, its year worked out anew', async () => {
     const setup = () => {
         const { m: mm } = htmlPhoneFixture();
         globalThis.__ctx.characters = [{ name: 'Mara' }]; globalThis.__ctx.characterId = 0;
@@ -1499,10 +1499,8 @@ test('점검 4: an owner the reading placed nowhere is checked by the answer\'s 
     const made = (now, country) => JSON.stringify({ country, now, clock: { basis: 'Default used', finalViewpoint: 'Mara', elapsedTime: null, sceneTime: '07-10 11:10', messageSender: null }, contacts: [{ name: 'Mara' }], notes: [] });
     try {
         let mm = setup();
-        globalThis.__menu = { calls: [], answers: [made('07-10 11:10', 'DE')] };
-        await assert.rejects(data.makePhone(mm, 'Ren'));
-        mm = setup();
-        globalThis.__menu = { calls: [], answers: [made('07-10 04:10', 'DE')] };
+        // (lives in Korea, in Paris now: Paris's time for Mara's 11:10 in Seoul)
+        globalThis.__menu = { calls: [], answers: [made('07-10 04:10', 'KR')] };
         assert.equal((await data.makePhone(mm, 'Ren')).now, '07-10 04:10');
         mm = setup();
         globalThis.__menu = { calls: [], answers: [made('07-09 19:10', 'US')] };

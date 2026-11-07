@@ -1047,10 +1047,6 @@ export const phonePre = (m, owner) => m?.phonePre?.[nameKey(owner)] || null;
 const preClock = (m, pre) => { const upto = nowAt(windowOf(m, null)), st = statusAt(pre, upto, m), t = stTime(st); if (t) return t; const day = storyDayOf(m, upto, st); return day ? `${day} 12:00` : ''; };
 // a status line's time on the owner's clock (one it can't place: as written)
 const stTime = st => (st?.known && hm(st.at) ? st.at : hm(st?.raw) ? st.raw : '');
-// what a phone being made is checked on: where it was read to be; an owner the reading placed nowhere, by the country
-// the answer gives when that country has one clock (Germany, Korea), never one with many (an owner in LA is not checked by
-// New York's)
-const checkOn = (q, country) => { const c = String(country || '').toUpperCase(); return ownerZone(q) || !COUNTRY_TZ[c] || COUNTRY_ZONES[c] ? q : { ...q, country: c }; };
 // (an old phone made again whole, one with no 위치 정보: its year and where it lives, as the owner left them)
 const seedPre = (m, owner, binding) => {
     const cur = m.phones?.[nameKey(owner)], pre = { owner, making: true, lore: loreKey(m), base: !!cur, ...(binding ? { financeProfile: structuredClone(binding) } : {}) };
@@ -1148,7 +1144,9 @@ async function makePhone0(m, owner, { update = false, apps = null } = {}) {
     // doesn't hold (never asked again on its own)
     if (!part && !old) {
         const q = pre || cur || { owner };
-        withDateOrderSync(dateOrderOf(m), () => validateReflectionClock(jsonOf(out, { salvage: true }) || {}, checkOn(anew ? { ...q, now: '' } : q, got.country), m, got.now));
+        // (by what the request showed: an owner the reading placed nowhere is checked by no zone; the answer's country is
+        // where they live, and they may be away, so 위치 정보 asks the user where they are)
+        withDateOrderSync(dateOrderOf(m), () => validateReflectionClock(jsonOf(out, { salvage: true }) || {}, anew ? { ...q, now: '' } : q, m, got.now));
     }
     // made again up to the clock and stopped short: a second turn adds the rest (one that fails keeps the first)
     const two = keep && !old ? secondTurn(m, cur, gap, false) : null;
@@ -1159,7 +1157,7 @@ async function makePhone0(m, owner, { update = false, apps = null } = {}) {
             const out2 = await ask(two.cover, [`${soFarHead('PHONE', two.short)}\n${JSON.stringify(soFar)}`, two.short?.text || '']), g2 = parsePhone(out2, owner);
             // (made again whole: its clock checked as the first turn's; one that doesn't hold is left out, the first kept)
             // (a second answer with no "now" leaves the clock as the first set it: nothing to check)
-            if (!part && g2.now) { const q = pre || cur || { owner }; withDateOrderSync(dateOrderOf(m), () => validateReflectionClock(jsonOf(out2, { salvage: true }) || {}, checkOn(q, g2.country), m, g2.now)); }
+            if (!part && g2.now) { const q = pre || cur || { owner }; withDateOrderSync(dateOrderOf(m), () => validateReflectionClock(jsonOf(out2, { salvage: true }) || {}, q, m, g2.now)); }
             got2 = g2; last = two.cover; short = two.short;
         } catch (err) { console.warn('[narrative-archive] phone, second turn', err); }
     }

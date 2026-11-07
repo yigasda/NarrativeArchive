@@ -555,3 +555,30 @@ test('점검 5: an order put in with no shop gets its shop when told of again wi
     assert.equal(p.money.orders[0].shop, 'My Shop');
     assert.deepEqual(p.money.orders.map(o => o.shop), ['My Shop', 'Other']);
 });
+
+test('점검 6: told of again — "ordered" (the default) is an order still on its way, a delivered one only by the same shop for the same person; a ticket "미사용 · 사용 전 · unused" is not used yet, a route named in part or otherwise is the same booking, a cancelled one mentioned again stays one', () => {
+    const bean = { shop: 'Coffee Circle', item: 'Espresso beans 1kg', qty: 1, price: 24 };
+    const run = steps => { const { m, p } = setup(); steps.forEach(([id, at, date, money]) => applyMoney(m, p, ev(id, at, date, money), opts())); return p; };
+    let p = run([['o', 5, '10-20', { orders: [{ ...bean, status: 'ordered', occurrence: 'new' }] }], ['s', 6, '10-22', { orders: [{ ...bean, status: 'shipped', occurrence: 'again' }] }], ['t', 9, '10-26', { orders: [{ ...bean, status: 'ordered', occurrence: 'again' }] }]]);
+    assert.deepEqual(p.money.orders.map(o => o.status), ['shipped']);
+    p = run([['o', 5, '10-10', { orders: [{ shop: 'Zalando', item: 'Scarf', qty: 1, price: 40, status: 'ordered', gift: 'Mara', occurrence: 'new' }] }], ['d', 6, '10-13', { orders: [{ shop: 'Zalando', item: 'Scarf', status: 'delivered', gift: 'Mara', occurrence: 'again' }] }], ['t', 9, '10-26', { orders: [{ shop: 'Zalando', item: 'Scarf', status: 'ordered', gift: 'Mara', occurrence: 'again' }] }]]);
+    assert.deepEqual(p.money.orders.map(o => o.status), ['delivered']);
+    const ktx = { kind: 'train', by: 'KTX', from: '서울', to: '부산' };
+    for (const st of ['사용 전', '미사용', 'unused']) {
+        p = run([['b', 5, '10-20', { passes: [{ ...ktx, date: '11-02', status: st, occurrence: 'new' }] }], ['t', 9, '10-26', { passes: [{ ...ktx, date: '', status: '', seat: '7A', occurrence: 'again' }] }]]);
+        assert.equal(p.money.passes.length, 1, st);
+    }
+    p = run([['b', 5, '10-20', { passes: [{ kind: 'flight', by: 'Lufthansa', from: 'FRA', to: 'ICN', date: '11-02', status: '', occurrence: 'new' }] }], ['t', 9, '10-26', { passes: [{ kind: 'flight', by: 'Lufthansa', from: '', to: 'ICN', date: '', status: 'checked in', occurrence: 'again' }] }]]);
+    assert.deepEqual(p.money.passes.map(x => x.status), ['checked in']);
+    p = run([['b', 5, '10-20', { passes: [{ kind: 'flight', by: '대한항공', from: '인천', to: '프랑크푸르트', date: '11-02', status: '', occurrence: 'new' }] }], ['t', 9, '10-26', { passes: [{ kind: 'flight', by: '대한항공', from: 'ICN', to: 'FRA', date: '', status: '체크인 완료', occurrence: 'again' }] }]]);
+    assert.equal(p.money.passes.length, 1);
+    p = run([['b', 5, '10-20', { passes: [{ kind: 'hotel', by: 'Hilton', to: 'Berlin', date: '11-02', status: '', occurrence: 'new' }] }], ['t', 9, '10-26', { passes: [{ kind: 'hotel', by: 'Hilton', to: '', date: '', status: '', occurrence: 'again' }] }]]);
+    assert.equal(p.money.passes.length, 1);
+    p = run([['b', 5, '10-20', { passes: [{ kind: 'event', by: 'Interpark', to: 'IU 콘서트', date: '11-02', status: '', occurrence: 'new' }] }], ['t', 9, '10-26', { passes: [{ kind: 'event', by: 'Interpark', to: 'IU 콘서트', status: '취소됨', occurrence: 'again' }] }], ['t2', 12, '10-28', { passes: [{ kind: 'event', by: 'Interpark', to: 'IU 콘서트', status: '', occurrence: 'again' }] }]]);
+    assert.deepEqual(p.money.passes.map(x => x.status), ['취소됨']);
+    // another show by the same seller, or another flight when two are to come, is another booking
+    p = run([['b', 5, '10-20', { passes: [{ kind: 'event', by: 'Interpark', to: 'IU 콘서트', date: '11-02', status: '', occurrence: 'new' }] }], ['t', 9, '10-26', { passes: [{ kind: 'event', by: 'Interpark', to: '뮤지컬 위키드', status: '', occurrence: 'again' }] }]]);
+    assert.equal(p.money.passes.length, 2);
+    p = run([['a', 5, '10-20', { passes: [{ kind: 'flight', by: 'Lufthansa', from: 'FRA', to: 'ICN', date: '11-02', status: '', occurrence: 'new' }] }], ['b', 6, '10-20', { passes: [{ kind: 'flight', by: 'Lufthansa', from: 'FRA', to: 'LIS', date: '11-20', status: '', occurrence: 'new' }] }], ['t', 9, '10-26', { passes: [{ kind: 'flight', by: 'Lufthansa', from: 'Frankfurt', to: 'Tokyo', status: '', occurrence: 'again' }] }]]);
+    assert.equal(p.money.passes.length, 3);
+});
