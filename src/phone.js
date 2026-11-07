@@ -712,13 +712,13 @@ export async function openPhone(who = null) {
     $root.on('pointermove', e => {
         if (!sw) return;
         const dx = e.clientX - sw.x, dy = e.clientY - sw.y;
-        if (!sw.on) { if (Math.abs(dy) > 10) { sw = null; return; } if (Math.abs(dx) < 8) return; sw.on = true; swMoved = true; sw.el.style.transition = 'none'; sw.el.setPointerCapture?.(e.pointerId); }
+        if (!sw.on) { if (Math.abs(dy) > 10) { sw = null; return; } if (Math.abs(dx) < 8) return; sw.on = true; swMoved = true; sw.el.parentElement.classList.add('drag'); sw.el.style.transition = 'none'; sw.el.setPointerCapture?.(e.pointerId); }
         sw.dx = dx;
         sw.el.style.transform = `translateX(${Math.max(-120, Math.min(0, sw.base + dx))}px)`;
     });
     $root.on('pointerup pointercancel', () => {
         if (!sw) return;
-        if (sw.on) { $(sw.el).parent().toggleClass('open', sw.base + sw.dx < -43); sw.el.style.transition = ''; sw.el.style.transform = ''; }
+        if (sw.on) { $(sw.el).parent().toggleClass('open', sw.base + sw.dx < -43).removeClass('drag'); sw.el.style.transition = ''; sw.el.style.transform = ''; }
         sw = null;
     });
     $root[0].addEventListener('click', e => {

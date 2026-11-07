@@ -2014,7 +2014,10 @@ export function screenHolderChoices(m, c = ctx()) {
         add(p?.owner, '연결된 인물');
         for (const x of p?.where?.people || []) add(x.name, '연결된 인물');
     }
-    for (const name of Object.keys(m?.phoneProfiles || {})) add(name, '연결된 인물');
+    // (phoneProfiles is keyed by nameKey: the name as it is written — the phone being made, the chat's people, or as the archive writes it)
+    const written = key => m.phonePre?.[key]?.owner || (Array.isArray(m.people) ? m.people : []).find(n => nameKey(n) === key)
+        || String(m.text || '').match(new RegExp(`(?<![\\p{L}\\p{N}])${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\p{L}\\p{N}])`, 'iu'))?.[0] || key;
+    for (const key of Object.keys(m?.phoneProfiles || {})) add(written(key), '연결된 인물');
     add(screenHolderOf(m), '선택한 인물');
     return out;
 }

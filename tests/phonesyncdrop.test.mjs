@@ -2021,3 +2021,10 @@ test('elapsedTime is preserved as evidence and never added again to sceneTime or
         } finally { globalThis.toastr=previousToastr; }
     }
 });
+
+test('messenger choices write a profile-linked person as the story writes them, not as the lowercase key', () => {
+    const c={name1:'User',characterId:0,characters:[{name:'Seraphina'}]};
+    assert.deepEqual(data.screenHolderChoices({phoneProfiles:{mara:{}},text:'Mara finds Ren at the garage.'},c).map(x=>x.name),['User','Seraphina','Mara']);
+    assert.deepEqual(data.screenHolderChoices({phoneProfiles:{mara:{}},phonePre:{mara:{owner:'Mara'}}},c).map(x=>x.name),['User','Seraphina','Mara']);
+    assert.deepEqual(data.screenHolderChoices({phoneProfiles:{mara:{}},people:['Mara']},c).map(x=>x.name),['User','Seraphina','Mara']);
+});

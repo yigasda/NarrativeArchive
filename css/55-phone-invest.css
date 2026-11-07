@@ -261,6 +261,9 @@
 .ax_swp { position: relative; overflow: hidden; }
 .ax .ax_swp > .ax_rw { --axbg: #fff; z-index: 1; transition: transform 0.22s ease; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
 .ax_swp.open > .ax_rw { transform: translateX(-86px); }
+/* the red 빼기 only while the row slides: shut, its edge would show past the row's (it goes once the row is back) */
+.ax_swp > .ax_swdel { visibility: hidden; transition: visibility 0s linear 0.22s; }
+.ax_swp.open > .ax_swdel, .ax_swp.drag > .ax_swdel { visibility: visible; transition-delay: 0s; }
 .ax_swp + .ax_swp > .ax_rw::before { content: ''; position: absolute; top: 0; left: 76px; right: 14px; border-top: 1px solid #eef0f3; }
 .ax .ax_swdel { --axbg: #f57d76; --axsh: none; position: absolute; top: 0; right: 0; bottom: 0; width: 86px; border-radius: 0; --axr: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #fff; --axfg: #fff; font-size: 12.5px; --axfs: 12.5px; font-weight: 600}
 .wb_rqw { position: relative; }
