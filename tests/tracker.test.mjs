@@ -149,11 +149,11 @@ test('a status line part that is a time before or after one, or a direction, is 
 
 test('a status line part is a clock only as one of its shapes with nothing else: Korean words too, a label, a weekday and marks around it', () => {
     T.settings = {};
-    for (const [line, min] of [['[ 오후 세시 · 12월 9일 · 집 ]', 15 * 60], ['[ 밤 열한 시 반 · 12월 9일 · 집 ]', 23 * 60 + 30], ['[ ⏰ 12월 9일 (목) 08:15 · 집 · ☀️ 맑음 ]', 8 * 60 + 15]]) {
+    for (const [line, min] of [['[ 오후 세시 · 12월 9일 · 집 ]', 15 * 60], ['[ 밤 열한 시 반 · 12월 9일 · 집 ]', 23 * 60 + 30], ['[ ⏰ 12월 9일 (목) 08:15 · 집 · ☀️ 맑음 ]', 8 * 60 + 15], ['[ 11.05 16:15 ☁️ 12°C · 집 ]', 16 * 60 + 15], ['[ Day 3 · 오늘 08:15 · 숲 → 오두막 ]', 8 * 60 + 15]]) {
         T.chat = [say(`${line}\n\n본문`)];
         assert.equal(recentTrackers(1)[0]?.min, min, line);
     }
-    for (const line of ['[ 오후 3시 넘 졸려 · 12월 9일 · 집 ]', '[ 3시쯤 · 12월 9일 · 집 ]', '[ 08:15 넘어서 · 12월 9일 · 집 ]', '[ 3시 지나랑 · 12월 9일 · 집 ]']) {
+    for (const line of ['[ 오후 3시 넘 졸려 · 12월 9일 · 집 ]', '[ 3시쯤 · 12월 9일 · 집 ]', '[ 08:15 넘어서 · 12월 9일 · 집 ]', '[ 3시 지나랑 · 12월 9일 · 집 ]', '[ D+3 08:15 · 12월 9일 · 집 ]']) {
         T.chat = [say(`${line}\n\n본문`)];
         assert.equal(recentTrackers(1)[0]?.min ?? null, null, line);
     }

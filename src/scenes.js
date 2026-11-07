@@ -5,7 +5,7 @@
 // STATE · OPEN are updated once at the end, from the new sections, as change lists.
 
 import { loreBlock } from './lore.js';
-import { fieldClock, koClockText } from './phoneparse.js';
+import { WEATHER as ST_WEATHER, fieldClock, koClockText } from './phoneparse.js';
 import { SECTION_GUARD, aiLabel, askAI, askCompress, drLabel } from './ai.js';
 import { ctx, getMeta, globalSettings, saveMeta } from './core.js';
 import { formatExtract } from './extract.js';
@@ -45,8 +45,6 @@ const minutes = t => {
 // (a part that is a clock, maybe with its date, and nothing else: "오후 8:15", "16시 15분 (목)"; never "3시 넘어서")
 const stClock = p => !!fieldClock(p);
 const ST_DATE = /\d{1,4}\s*년|\d{1,2}\s*월\s*\d{1,2}\s*일|\b\d{4}[-./]\d{1,2}[-./]\d{1,2}\b|[(（][월화수목금토일][)）]|[월화수목금토일]요일|\d+\s*일\s*(?:째|차)|\bday\s*\d+\b|\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2}\b|\b\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/i;
-// a field that names the weather: an emoji, a temperature, a sky word (Korean "비" and "눈" only as words of their own)
-const ST_WEATHER = /[☀🌤⛅🌥☁🌦🌧⛈🌩🌨❄☃🌫🌪☔💨🌬🌞]|(?:영하\s*)?[-−]?\d+(?:[.,]\d+)?\s*(?:°\s*[CF]?|℃|℉|도(?![가-힣]))|맑|흐림|흐린|흐려|구름|눈발|눈보라|폭설|함박눈|소나기|장대비|폭우|장마|이슬비|가랑비|보슬비|진눈깨비|안개|천둥|번개|뇌우|강풍|돌풍|바람(?:이|\s)*(?:세|강|많|쌩)|폭염|한파|무더|쌀쌀|습(?:도|함|한)|(?<![가-힣])(?:비|눈)(?:(?![가-힣])|(?=[가이옴와]))|\b(?:sunny|cloudy|overcast|rain\w*|snow\w*|fog\w*|mist\w*|clear|storm\w*|thunder\w*|drizzl\w*|hail|windy|humid|sonnig|regen|schnee|bewölkt|nebel|gewitter|pluie|neige|nuageux|soleil|lluvia|nieve|nublado)\b|晴|雨|雪|曇|霧|多云|阴/iu;
 const ST_LABELS = [[/^(날짜|일자|요일|일시|date|day)$/i, 'date'], [/^(시간|시각|time)$/i, 'time'], [/^(장소|위치|location|place)$/i, 'place'], [/^(날씨|기온|weather)$/i, 'weather']];
 const stClean = t => String(t || '').replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu, '').replace(/\*\*|__|`/g, '').replace(/\s+/g, ' ').trim();
 const stLabel = l => { const mt = stClean(l).match(/^([^:：]{1,12})\s*[:：]\s*(.+)$/); const kind = mt && (ST_LABELS.find(([re]) => re.test(mt[1].trim())) || [])[1]; return kind ? [kind, mt[2].trim()] : null; };

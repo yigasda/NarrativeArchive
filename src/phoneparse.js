@@ -105,7 +105,14 @@ export function koClock(hit) {
 const FIELD_LABEL = /(?:현재[ \t ]*)?(?:시간|시각|일시|날짜|time|date)[ \t ]*[:：]/giu;
 const FIELD_WEEKDAY = /[(（][ \t ]*[월화수목금토일](?:요일)?[ \t ]*[)）]|(?<!\p{L})[월화수목금토일]요일(?!\p{L})|(?<![A-Za-z])(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tues?|wed|thur?s?|fri|sat|sun)\.?(?![A-Za-z])/giu;
 const FIELD_ZONE = /(?<![A-Za-z])(?:(?:UTC|GMT)(?:[ \t ]*[+-][ \t ]*\d{1,2}(?::?\d{2})?)?|KST|JST|HKT|SGT|CST|EST|EDT|CDT|MST|MDT|PST|PDT|AKST|AKDT|HST|BST|IST|CET|CEST|EET|EEST|WET|WEST|MSK|AEST|AEDT|ACST|AWST|NZST|NZDT|ICT|WIB|PHT)(?![A-Za-z])/gu;
-const fieldRest = t => String(t || '').replace(FIELD_LABEL, ' ').replace(FIELD_WEEKDAY, ' ').replace(FIELD_ZONE, ' ').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+// (and what a status window shows beside them: today, a day count, the weather: "오늘", "Day 3", "3일째", "☁️ 12°C", "맑음")
+// a field that names the weather: an emoji, a temperature, a sky word (Korean "비" and "눈" only as words of their own)
+export const WEATHER = /[☀🌤⛅🌥☁🌦🌧⛈🌩🌨❄☃🌫🌪☔💨🌬🌞]|(?:영하\s*)?[-−]?\d+(?:[.,]\d+)?\s*(?:°\s*[CF]?|℃|℉|도(?![가-힣]))|맑|흐림|흐린|흐려|구름|눈발|눈보라|폭설|함박눈|소나기|장대비|폭우|장마|이슬비|가랑비|보슬비|진눈깨비|안개|천둥|번개|뇌우|강풍|돌풍|바람(?:이|\s)*(?:세|강|많|쌩)|폭염|한파|무더|쌀쌀|습(?:도|함|한)|(?<![가-힣])(?:비|눈)(?:(?![가-힣])|(?=[가이옴와]))|\b(?:sunny|cloudy|overcast|rain\w*|snow\w*|fog\w*|mist\w*|clear|storm\w*|thunder\w*|drizzl\w*|hail|windy|humid|sonnig|regen|schnee|bewölkt|nebel|gewitter|pluie|neige|nuageux|soleil|lluvia|nieve|nublado)\b|晴|雨|雪|曇|霧|多云|阴/iu;
+const FIELD_TODAY = /(?<!\p{L})(?:오늘|today)(?!\p{L})/giu;
+const FIELD_DAYS = /(?<![A-Za-z])day[ \t\u00a0]*\d{1,4}(?!\p{N})|(?<![\p{L}\p{N}])\d{1,4}[ \t\u00a0]*일[ \t\u00a0]*(?:째|차)(?!\p{L})/giu;
+const FIELD_TEMP = /(?:영하[ \t\u00a0]*)?[-−]?\d+(?:[.,]\d+)?[ \t\u00a0]*(?:°[ \t\u00a0]*[CF]?|℃|℉|도(?!\p{L}))/giu;
+const fieldRest = t => String(t || '').replace(FIELD_LABEL, ' ').replace(FIELD_WEEKDAY, ' ').replace(FIELD_ZONE, ' ').replace(FIELD_TODAY, ' ').replace(FIELD_DAYS, ' ').replace(FIELD_TEMP, ' ')
+    .split(/[^\p{L}\p{N}]+/u).filter(w => w && !WEATHER.test(w)).join(' ');
 // a field that is one Korean clock and nothing else (fieldRest): "HH:MM", or ''
 export const koClockText = text => {
     const s = String(text || ''), all = koClocks(s), c = all[0];
@@ -161,15 +168,15 @@ export function datedClocks(text, { positions = false } = {}) {
     return positions ? out.sort((a, b) => a.position - b.position) : out;
 }
 // a status line's field that is a clock: one clock (a colon one, or a Korean one) and maybe its date, with nothing else but
-// a label, a weekday, a zone and marks: { clock, date } (the date as the field writes it, with its weekday), or null
+// what fieldRest lets be: { clock, date } (the date as the field writes it, with its weekday), or null
 const FIELD_COLON = new RegExp(String.raw`(?<![\p{L}\p{N}.:-])(?:${KO_MER}[ \t\u00a0]*)?\d{1,2}[ \t\u00a0]*:[ \t\u00a0]*\d{2}(?::\d{2})?(?![\p{N}:])(?:[ \t\u00a0]*${KO_MER})?(?![\p{L}\p{N}])`, 'gu');
 const FIELD_DATE = new RegExp(String.raw`(?<![\p{L}\p{N}])(?:${CLOCK_DATE})(?![\p{L}\p{N}])`, 'giu');
 export function fieldClock(text) {
     const s = String(text || ''), hits = [...[...s.matchAll(FIELD_COLON)].map(x => ({ index: x.index, text: x[0] })), ...koClocks(s)];
     if (hits.length !== 1) return null;
-    const { index, text: clock } = hits[0], rest = `${s.slice(0, index)} ${s.slice(index + clock.length)}`, dates = rest.match(FIELD_DATE) || [];
+    const { index, text: clock } = hits[0], rest = `${s.slice(0, index)} ${s.slice(index + clock.length)}`.replace(FIELD_TEMP, ' '), dates = rest.match(FIELD_DATE) || [];
     if (dates.length > 1 || fieldRest(dates.length ? rest.replace(dates[0], ' ') : rest)) return null;
-    return { clock: clock.trim(), date: dates.length ? rest.replace(FIELD_LABEL, ' ').replace(/[ \t\u00a0]+/g, ' ').replace(/^[\s,|·/]+|[\s,|·/]+$/g, '').trim() : '' };
+    return { clock: clock.trim(), date: dates.length ? [dates[0], ...(rest.match(FIELD_WEEKDAY) || [])].map(x => x.trim()).join(' ') : '' };
 }
 const DATE_HEAD = new RegExp(String.raw`(?<![\p{L}\p{N}])(${CLOCK_DATE})\.?(?:[ \t\u00a0]*[(（][^)）\n]{1,4}[)）])?[ \t\u00a0]*[,，]?[ \t\u00a0]*`, 'giu');
 const COLON_HEAD = new RegExp(String.raw`^((?:${CLOCK_MERIDIEM}[ \t\u00a0]*)?\d{1,2}[ \t\u00a0]*:[ \t\u00a0]*\d{2}(?:[ \t\u00a0]*${CLOCK_MERIDIEM})?)(?![\p{L}\p{N}:])`, 'iu');

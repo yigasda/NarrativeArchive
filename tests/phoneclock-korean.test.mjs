@@ -10,7 +10,7 @@ test('a Korean clock in its shapes: digits or Korean words, 오전 · 오후 and
         ['밤 11시', '23:00'], ['밤 1시', '01:00'], ['낮 2시', '14:00'], ['새벽 12시', '00:00'], ['오전 12시 5분', '00:05'], ['오후 12시', '12:00'], ['아침 7시 30분', '07:30'], ['저녁 6시', '18:00'],
         ['오후 세시', '15:00'], ['세시', '03:00'], ['세 시 반', '03:30'], ['열두 시 십오 분', '12:15'], ['밤 열한 시', '23:00'], ['한 시', '01:00'], ['열 시 삼십 분', '10:30'], ['두 시 오십구 분', '02:59'], ['네시 오분', '04:05'], ['다섯 시 20분', '05:20'],
         // (with a label, a weekday, a zone and marks around it)
-        ['⏰ 시간: 오후 4시 15분 (목) KST', '16:15'], ['시각: 16시', '16:00'], ['[16시 15분]', '16:15'],
+        ['⏰ 시간: 오후 4시 15분 (목) KST', '16:15'], ['오늘 3시', '03:00'], ['3일째 오후 세시', '15:00'], ['Day 3 · 16시', '16:00'], ['16시 · 맑음 · 12°C', '16:00'], ['시각: 16시', '16:00'], ['[16시 15분]', '16:15'],
     ]) assert.equal(koClockText(s), want, s);
 });
 
@@ -91,7 +91,7 @@ test('a long message with many dates is read in a moment', () => {
 
 test('a field with any word besides its clock is no clock, whatever the word: no list of words decides it', () => {
     for (const s of ['3시 이후', '5시 이전', '3시 전', '3시 15분 전', '3시쯤', '3시경', '3시 무렵', '3시 넘어서', '3시 넘었다', '3시가 지난 시각', '3시 방향', '3시까지 와', '3시에',
-        '오후 3시 넘 졸려', '오후 3시 지나랑 카페에서', '16시 15분 전화가 왔다', '16시 15분이야', '16시 15분 동안', '1시 15분 만에', '오늘 3시', 'Liam 12시', 'Team 12시 회의', '3시 넘버원 카페',
+        '오후 3시 넘 졸려', '오후 3시 지나랑 카페에서', '16시 15분 전화가 왔다', '16시 15분이야', '16시 15분 동안', '1시 15분 만에', 'D+3 3시', 'Liam 12시', 'Team 12시 회의', '3시 넘버원 카페',
         '오후에 4시 15분', '16시를 가리켰다', '4시 15분 30초 전']) {
         assert.equal(koClockText(s), '', s);
         assert.equal(hhmm(s), '', s);
@@ -129,9 +129,9 @@ test('점검 3: an empty code inside a time field, a non-breaking space in one, 
 });
 
 test('점검 6 (시각 읽기): a time field with its date, clock and a mark (a weekday, a zone, an icon), never a word more; a reasoning tail\'s stamp is none; aria-hidden shown; one space in a stamp', () => {
-    for (const raw of ['<span class="time">⏰ 11.05 16:15</span>', '<span class="time">📅 11월 5일 16:15</span>', '<span class="time">Thu, Nov 5 16:15</span>', '<span class="time">11월 5일 16:15 KST</span>', '<span class="time">11월 5일 16:15 (목)</span>',
+    for (const raw of ['<span class="time">⏰ 11.05 16:15</span>', '<span class="time">📅 11월 5일 16:15</span>', '<span class="time">Thu, Nov 5 16:15</span>', '<span class="time">11월 5일 16:15 KST</span>', '<span class="time">11월 5일 16:15 (목)</span>', '<span class="time">오늘 11월 5일 16:15</span>', '<span class="time">Day 3 · 11월 5일 16:15</span>', '<span class="time">11월 5일 16:15 · 맑음</span>', '<span class="time">11.05 16:15 ☁️ 12°C</span>',
         '<span class="date">11월 5일</span> <span class="time" aria-hidden="true">16:15</span>', '<span class="date">11월 5일</span> <i class="fa fa-clock" aria-hidden="true"></i> <span class="time">16:15</span>']) assert.deepEqual(htmlDatedClocks(raw).map(x => x.local), ['11-05 16:15'], raw);
-    for (const raw of ['<div class="timeline">11월 5일 16시 15분, 그는 문을 열었다.</div>', '<span class="time">11월 5일 16시 15분 전</span>', '<span class="time">오늘 11월 5일 16:15</span>', '<span class="time">11월 5일 16:15 넘 졸려</span>', 'Plan: <div class="status"><span class="date">11월 4일</span> <span class="time">23:00</span></div>\n</thinking>\n그는 창밖을 바라보았다.']) assert.deepEqual(htmlDatedClocks(raw), [], raw);
+    for (const raw of ['<div class="timeline">11월 5일 16시 15분, 그는 문을 열었다.</div>', '<span class="time">11월 5일 16시 15분 전</span>', '<span class="time">D+3 11월 5일 16:15</span>', '<span class="time">11월 5일 16:15 비가 왔다</span>', '<span class="time">11월 5일 16:15 넘 졸려</span>', 'Plan: <div class="status"><span class="date">11월 4일</span> <span class="time">23:00</span></div>\n</thinking>\n그는 창밖을 바라보았다.']) assert.deepEqual(htmlDatedClocks(raw), [], raw);
     assert.deepEqual(htmlDatedClocks('<span class="date">11월 5일</span>  <span class="time">16:15</span>').map(x => x.sourceTime), ['11월 5일 16:15']);
     assert.equal(hhmm('제3시장'), '');
     assert.equal(koClockText('[ 11월 5일 (목) | 제3시장 | ☀️ 맑음 ]'), '');
