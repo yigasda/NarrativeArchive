@@ -281,7 +281,6 @@
 .ax .ax_vmdel { --axbg: none; width: 36px; height: 36px; border-radius: 50%; --axr: 50%; display: grid; place-items: center; color: var(--axd); --axfg: var(--axd); margin-left: -8px}
 .ax_delcard { padding: 0; }
 .ax .ax_delrow { --axbg: none; display: block; width: 100%; padding: 15px 18px; text-align: center; font-size: 15.5px; --axfs: 15.5px; font-weight: 500; color: #d4483f; --axfg: #d4483f}
-.ax .ax_plx { --axbg: #f1f3f5; flex: none; width: 26px; height: 26px; border-radius: 50%; --axr: 50%; display: grid; place-items: center; color: #8a929d; --axfg: #8a929d; margin-left: 4px}
 /* 설정 › 대화 반영: the round's size */
 .ax_step { display: flex; align-items: center; gap: 10px; margin-left: auto; }
 .ax_step b { min-width: 22px; text-align: center; font-size: 15px; font-weight: 600; }
