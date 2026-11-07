@@ -11,7 +11,7 @@ import { TOWN_KO } from './phonemaptowns.js';
 import { flagSvg, FLAG_NAME } from './phoneflags.js';
 import { nameKey } from './people.js';
 import { esc } from './util.js';
-import { parts, placeInfo } from './phonedata.js';
+import { countryOf, parts, placeInfo } from './phonedata.js';
 
 // a folded map (a kind of map) and two arrows (another map)
 // (added on first use: this file can load while phoneapps.js is still loading)
@@ -114,7 +114,7 @@ export function mapCityScreen(p, now, m, i = '') {
 }
 
 // 다녀간 곳 with nothing visited yet (시안 docs/mockups/phone-map/empty): the month strip still on top, empty (what will
-// fill it), then the town they live in (flag, names, the search field, its neighbourhoods) and the towns looked at lately
+// fill it), then one small line for where they live, the search field and the town's neighbourhoods (small)
 export function mapEmptyScreen(p, now, m) {
     const own = placeInfo(p).owner, cc = String(own.lives || '').toLowerCase(), i = townPlace(own.city), v = i >= 0 ? placeView(i) : null;
     const k = v ? townCandidates(v.ko)[0] : 'gridLake', dark = false;
@@ -123,15 +123,13 @@ export function mapEmptyScreen(p, now, m) {
     const st = stripSvg({ days, today: nowP?.d || 0, blocks: [] }), c = st.cell;
     const ghost = [[3, 5], [11, 12], [18, 21]].map(([a, b]) => `<rect x="${(a - 1) * c + 1}" y="${st.top + 2}" width="${(b - a + 1) * c - 2}" height="14" rx="5" fill="none" stroke="#c9cfd8" stroke-width="1.2" stroke-dasharray="3 3"/>`).join('');
     const strip = `<div class="ax_card mp_month"><div class="mp_mh"><span class="mp_lbl">${mo}월에 다닌 곳</span><span class="mp_big"><b class="cg_num">0</b><u>곳</u><span>이야기에서 어딘가 가면 여기 쌓여요</span></span></div><div class="mp_st">${st.svg.replace('</svg>', `${ghost}</svg>`)}</div></div>`;
-    const n = v?.names, nameLine = n ? [n.lat, n.cjk].filter(Boolean).join(' · ') : '';
-    const head = `<div class="mq_hd">${cc ? `<span class="mq_ct">${flagSvg(cc, 22)}<span>${esc(FLAG_NAME[cc] || own.lives)} · ${v ? '사는 도시' : '사는 나라'}</span></span>` : ''}
-        <div class="mq_tl"><b>${esc(v ? v.ko : FLAG_NAME[cc] || own.city || '사는 곳')}</b></div>${nameLine ? `<span class="mq_nm">${esc(nameLine)}</span>` : !v ? '<span class="mq_nm">사는 도시를 정하면 그 도시 지도가 나와요</span>' : ''}</div>`;
+    // where they live (a city, never the country written as one): one small line under the strip (the strip is the screen's one big thing)
+    const where = v ? `${esc(v.ko)}에 살아요` : own.city && !countryOf(own.city) ? `${esc(own.city)}에 살아요` : '사는 도시를 정하면 그 도시 지도가 나와요';
+    const head = `<div class="mq_lv">${cc ? flagSvg(cc, 20) : ''}<span>${cc && FLAG_NAME[cc] ? `${esc(FLAG_NAME[cc])} · ` : ''}${where}</span></div>`;
     const field = `<button type="button" class="mq_field mq_go" data-go="mapq">${ax('search', 17, '#8a929d', 2.2)}<span class="mq_ph">도시 · 동네 찾기 (東京, Berlin, 홍대 …)</span></button>`;
-    const hoods = v && v.hoods.length ? `<div class="ax_sec">${esc(v.ko)}의 동네</div><div class="mq_chips">${v.hoods.map(h => `<button type="button" class="mq_chip" data-go="mapc" data-i="${at(i, h)}">${esc(HINT[h][3])}</button>`).join('')}</div>` : '';
-    const recent = (p.mapSeen || []).map(townPlace).filter(x => x >= 0).slice(0, 3);
-    const seen = recent.length ? `<div class="ax_sec">최근 본 도시</div><div class="ax_card">${recent.map(x => townRow(x, '', sub(x))).join('')}</div>` : '';
+    const hoods = v && v.hoods.length ? `<div class="mq_chips mq_sm">${v.hoods.map(h => `<button type="button" class="mq_chip" data-go="mapc" data-i="${at(i, h)}">${esc(HINT[h][3])}</button>`).join('')}</div>` : '';
     return `<div class="mp_wx"><div class="mp_bg">${art}</div>${axBar(p, now)}${axTop(axCb('home'))}
       <div class="ax_scroll"><i class="mp_gap"></i><div class="mp_sheet"><i class="mp_grab"></i>
-        ${strip}${head}${field}${hoods}${seen}<i class="ax_pad"></i></div></div>
+        ${strip}${head}${field}${hoods}<i class="ax_pad"></i></div></div>
       ${axInd()}</div>`;
 }
