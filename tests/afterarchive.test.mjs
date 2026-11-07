@@ -1049,17 +1049,26 @@ test('two rows of one number (two summaries of one message): the later one\'s cl
     } finally { delete globalThis.__ctx; }
 });
 
-test('a fill with no choices sends OWNER\'S CLOCK as before (no headless line); with choices, the phone\'s name and them inside the block', async () => {
+test('every request sends OWNER\'S CLOCK alike: the block, the phone\'s name in it, then the choices when there are any', async () => {
     try {
         for (const [newest, choices] of [['No clock.', false], ['Mara looks. <span class="time">11월 3일 오후 4시 15분</span>', true]]) {
             const { p, m: mm } = clockFixture(newest);
             globalThis.__menu = { calls: [], answer: '{"memos":[]}' };
             try { await data.fillVoice(mm, p); } catch { /* the input is what this checks */ }
             const input = globalThis.__menu.calls.find(x => x.sys === data.AI_SYS_VOICES).input;
-            assert.equal((input.match(/Phone being updated/g) || []).length, choices ? 1 : 0, newest);
-            if (choices) assert.match(input, /\[OWNER'S CLOCK\]\n[^[]*\n\nPhone being updated: "Ren" \(Frankfurt am Main\)\.\n\nTime choices\./);
+            assert.equal((input.match(/Phone being updated/g) || []).length, 1, newest);
+            assert.match(input, /\[OWNER'S CLOCK\]\n[^[]*\n\nPhone being updated: "Ren" \(Frankfurt am Main\)\./, newest);
+            if (choices) assert.match(input, /Phone being updated: "Ren" \(Frankfurt am Main\)\.\n\nTime choices\./);
             else assert.doesNotMatch(input, /Time choices/);
+            // (the reflection's the same)
+            const rows = [{ index: 5, text: globalThis.__rows[5].text, clockSource: globalThis.__ctx.chat[5].mes }];
+            assert.ok(input.includes(data.ownerClock(p, p.now, mm, null, rows)), newest);
         }
+        // a phone with no other place and no screen of its own: the block's first lines, then its name (never a line alone)
+        const solo = { owner: 'Ren', year: 2026, now: '11-03 03:03', country: 'KR' };
+        assert.equal(data.ownerClock(solo, solo.now, {}, null, []), "[OWNER'S CLOCK]\nPhone owner: Ren\nLocation: South Korea\nSaved phone time: 11-03 03:03\n\nPhone being updated: \"Ren\" (South Korea).");
+        // (no place at all: nothing, as before)
+        assert.equal(data.ownerClock({ owner: 'Ren' }, '', {}, null, []), '');
     } finally { delete globalThis.__ctx; }
 });
 

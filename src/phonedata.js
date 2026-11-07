@@ -2364,12 +2364,13 @@ export function reflectionClocks(p, rows, m = null, at = p?.now) {
 }
 // OWNER'S CLOCK, one for every request (a reflection, making a phone or its apps again, every app's fill): the hours to
 // the other places and, from the newest message the request reads, the time choices, both from the same time (at)
-// fill: a request that doesn't set the phone's clock (an app's fill, making a phone or its apps again): the phone's name
-// and the choices only when there are choices, and always inside the block (the reflection's as it has been)
-export function ownerClock(p, at, m = null, st = null, rows = [], { fill = false } = {}) {
+// the same for every request (a reflection, an app's fill, making a phone or its apps again): the block, the phone's
+// name, then the choices when there are any; all inside the block (a phone with no other place and no screen of its own
+// gets the block's first lines, so the name never goes along with no block)
+export function ownerClock(p, at, m = null, st = null, rows = []) {
     const r = withDateOrderSync(dateOrderOf(m), () => reflectionClocks0(p, rows, m, at)), block = clockBlock(p, at, m, st);
-    if (!fill) return [block, r.text].filter(Boolean).join('\n\n');
-    return r.choices.length ? [block || clockBlock(p, at, m, null, true), r.identity, r.body].join('\n\n') : block;
+    if (!r.identity) return block;
+    return [block || clockBlock(p, at, m, null, true), r.identity, r.body].filter(Boolean).join('\n\n');
 }
 // the newest message a fill (or making a phone, or making its apps again) reads, for its time choices, as the request
 // shows it: with TOLD SHORT, its last lines (one row each, in order); else the last message it reads word for word (with
@@ -2385,7 +2386,7 @@ export function fillClockRows(m, p, gap = null, short = null, { story = false } 
     const whole = row || full.length <= 6000 || story && noArchive(m);
     return [{ index, text, ...(msg && !msg.is_system && typeof msg.mes === 'string' && whole ? { clockSource: msg.mes } : {}) }];
 }
-export const fillClock = (m, p, at, st = null, gap = null, short = null, opts = {}) => ownerClock(p, at, m, st, fillClockRows(m, p, gap, short, opts), { fill: true });
+export const fillClock = (m, p, at, st = null, gap = null, short = null, opts = {}) => ownerClock(p, at, m, st, fillClockRows(m, p, gap, short, opts));
 // Only the newest supplied message can provide conversion choices. If its clock is not
 // recognized, leave time inference to the model instead of reviving an earlier message's clock.
 // Within that message, use source position, not the largest date. Archive rows use supplied indices.
@@ -2437,7 +2438,7 @@ function reflectionClocks0(p, rows, m, at = p?.now) {
             } else choices.push({ ...stamp, names: who.names, ownerTime: zoneShift(stamp.local, who.tz, own.tz, yearIn(stamp.sourceTime) || Number(p.year) || undefined) });
         }
     }
-    if (!choices.length) return { choices, text: identity };
+    if (!choices.length) return { choices, identity, body: '', text: identity };
     const lines = [`${stamp.clock ? 'No date is shown; read the story to determine the date.\n\n' : '\n'}${choices.map(c => c.reference
             ? `On ${c.names[0]}'s clock → owner's clock: ${c.reference.ownerClock}${c.reference.dayShift ? ` (${c.reference.dayShift > 0 ? '+' : ''}${c.reference.dayShift} day${Math.abs(c.reference.dayShift) === 1 ? '' : 's'} relative to screen)` : ''}.`
             : `On ${c.names[0]}'s clock → owner's time: ${c.ownerTime}`).join('\n')}`];
