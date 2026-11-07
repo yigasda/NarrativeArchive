@@ -5,7 +5,7 @@
 // STATE · OPEN are updated once at the end, from the new sections, as change lists.
 
 import { loreBlock } from './lore.js';
-import { koClocks } from './phoneparse.js';
+import { fieldClock, koClockText } from './phoneparse.js';
 import { SECTION_GUARD, aiLabel, askAI, askCompress, drLabel } from './ai.js';
 import { ctx, getMeta, globalSettings, saveMeta } from './core.js';
 import { formatExtract } from './extract.js';
@@ -31,8 +31,8 @@ export const trackerRe = () => { const v = globalSettings().trackerRe; return v 
 const minutes = t => {
     const str = String(t || '');
     const mt = str.match(/(?<![\d:.-])(\d{1,2})\s*:\s*(\d{2})(?![\d:])/);
-    // (no colon clock: a Korean one, "오후 4시 15분", "16시 15분")
-    if (!mt) { const ko = koClocks(str)[0]; return ko ? ko.h * 60 + ko.m : null; }
+    // (no colon clock: a Korean one, "오후 4시 15분", "16시 15분", with nothing else in the field)
+    if (!mt) { const ko = koClockText(str); return ko ? Number(ko.slice(0, 2)) * 60 + Number(ko.slice(3)) : null; }
     const marker = str.match(/오전|오후|저녁|밤|(?<![a-z])(?:AM|PM)(?![a-z])/i)?.[0];
     let h = Number(mt[1]);
     const m = Number(mt[2]);
@@ -42,9 +42,8 @@ const minutes = t => {
 };
 // a status window that is not <tracker>: one short line of fields ("[ 🌙 오후 8:15 · 12월 9일 (목) · 성 → 병동 · ❄️ -1°C ]")
 // or a few "label: value" lines (📅 날짜: … / 📍 장소: …). It needs a time or a date; story prose has long parts and full stops
-const ST_CLOCK = /\d{1,2}\s*:\s*\d{2}|(?:오전|오후|새벽|아침|낮|저녁|밤)\s*\d{1,2}\s*시|\b\d{1,2}\s*(?:am|pm)\b/i;
-// (or a Korean clock the reader takes: "16시 15분", never "3시 15분 전" or "2시간 15분")
-const stClock = p => ST_CLOCK.test(p) || koClocks(p).length > 0;
+// (a part that is a clock, maybe with its date, and nothing else: "오후 8:15", "16시 15분 (목)"; never "3시 넘어서")
+const stClock = p => !!fieldClock(p);
 const ST_DATE = /\d{1,4}\s*년|\d{1,2}\s*월\s*\d{1,2}\s*일|\b\d{4}[-./]\d{1,2}[-./]\d{1,2}\b|[(（][월화수목금토일][)）]|[월화수목금토일]요일|\d+\s*일\s*(?:째|차)|\bday\s*\d+\b|\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2}\b|\b\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/i;
 // a field that names the weather: an emoji, a temperature, a sky word (Korean "비" and "눈" only as words of their own)
 const ST_WEATHER = /[☀🌤⛅🌥☁🌦🌧⛈🌩🌨❄☃🌫🌪☔💨🌬🌞]|(?:영하\s*)?[-−]?\d+(?:[.,]\d+)?\s*(?:°\s*[CF]?|℃|℉|도(?![가-힣]))|맑|흐림|흐린|흐려|구름|눈발|눈보라|폭설|함박눈|소나기|장대비|폭우|장마|이슬비|가랑비|보슬비|진눈깨비|안개|천둥|번개|뇌우|강풍|돌풍|바람(?:이|\s)*(?:세|강|많|쌩)|폭염|한파|무더|쌀쌀|습(?:도|함|한)|(?<![가-힣])(?:비|눈)(?:(?![가-힣])|(?=[가이옴와]))|\b(?:sunny|cloudy|overcast|rain\w*|snow\w*|fog\w*|mist\w*|clear|storm\w*|thunder\w*|drizzl\w*|hail|windy|humid|sonnig|regen|schnee|bewölkt|nebel|gewitter|pluie|neige|nuageux|soleil|lluvia|nieve|nublado)\b|晴|雨|雪|曇|霧|多云|阴/iu;
@@ -61,14 +60,12 @@ function stFields(parts) {
         // the weather keeps its emoji (a sky may be told by one alone) and every field that names it ("맑음 / 3°C")
         if (kind === 'weather') { const w = lab ? p : String(raw).replace(/\*\*|__|`|\uFE0F/g, '').replace(/\s+/g, ' ').trim(); f.weather = [f.weather, w].filter(Boolean).join(', '); continue; }
         if (kind === 'time') {
-            // (a Korean clock whole, "오후 4시 15분", not just its "오후 4시"; one the reader turns down, "오후 3시 15분 전", is no
-            // clock: the field stays as written, with no minutes)
-            const ko = !p.includes(':') ? koClocks(p)[0] : null;
-            const match = p.match(/(?:오전|오후|새벽|아침|낮|저녁|밤|AM|PM)?\s*(?<![\d:.-])\d{1,2}\s*:\s*\d{2}(?![\d:])\s*(?:AM|PM|오전|오후)?/i) || (ko ? [ko.text] : null);
-            const c = match ? match[0].trim() : p;
-            f.time ||= c;
-            const d = p.replace(c, '').trim();
-            if (ST_DATE.test(d)) f.date ||= d;
+            // (the clock as written and the date beside it; a "시간:" field that is no clock alone, "3시 넘어서", is none)
+            // (it stays as written, "저녁", with no minutes)
+            const fc = fieldClock(p);
+            if (!fc) { if (!f.time) { f.time = p; f.noClock = true; } continue; }
+            if (!f.time) { f.time = fc.clock; f.noClock = false; }
+            if (fc.date) f.date ||= fc.date;
         }
         else if (kind === 'date') f.date ||= p;
         else if (kind === 'place') f.place ||= p.replace(/\s*(?:->|⇒)\s*/g, ' → ');
@@ -121,7 +118,7 @@ function readTracker(text, re) {
         const whole = (String(text).slice(mt.index).match(/^[\s\S]*?(?:<\/tracker>|\n|$)/) || [mt[0]])[0];
         weather = whole.replace(/<[^>]*>/g, '').split('|').map(x => x.replace(/\*\*|__|`|\uFE0F/g, '').replace(/\s+/g, ' ').trim()).filter(x => x && ST_WEATHER.test(x) && !known.some(k => x.includes(k) || k.includes(stClean(x)))).join(', ');
     }
-    return { date: String(gr.date || '').trim(), city: parts[0] || '', room: parts.slice(1).join(' → '), min: minutes(gr.time), time: String(gr.time || '').trim(), place, weather };
+    return { date: String(gr.date || '').trim(), city: parts[0] || '', room: parts.slice(1).join(' → '), min: gr.noClock ? null : minutes(gr.time), time: String(gr.time || '').trim(), place, weather };
 }
 // 상태창 줄 in the settings: the last few status windows the cutter can read, newest first ([] = none found)
 export function recentTrackers(n = 5, { re = trackerRe(), chat = ctx().chat || [], visibleOnly = false } = {}) {
