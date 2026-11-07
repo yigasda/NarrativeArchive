@@ -30,8 +30,9 @@ export const WALLS = ['dusk', 'ocean', 'forest', 'rose', 'night', 'sand', 'mono'
 export const ACCENTS = ['blue', 'green', 'orange', 'pink', 'purple', 'red'];
 export const MOODS = ['warm', 'cool', 'green', 'dark', 'bright', 'pink'];
 export const COUNTRIES = { KR: '한국', US: '미국', GB: '영국', DE: '독일', FR: '프랑스', IT: '이탈리아', ES: '스페인', JP: '일본', CN: '중국', TW: '대만', CA: '캐나다', AU: '호주', RU: '러시아', BR: '브라질' };
-export const CAP = { threads: 12, messages: 40, calls: 30, photos: 24, notes: 12, searches: 20, events: 16, contacts: 30, posts: 20, comments: 8, mails: 20, diary: 20, voice: 12 };
-const LISTS = ['calls', 'photos', 'notes', 'searches', 'events', 'posts', 'mails', 'diary', 'voice'];
+export const CAP = { threads: 12, messages: 40, calls: 30, photos: 24, notes: 12, searches: 20, events: 16, contacts: 30, posts: 20, comments: 8, mails: 20, diary: 20, voice: 12, visits: 60 };
+// visits: the places the owner went to (the map app), each visit its own record
+const LISTS = ['calls', 'photos', 'notes', 'searches', 'events', 'posts', 'mails', 'diary', 'voice', 'visits'];
 
 const DEVICE_RULES = `- Use the device described in the story when there is one.
 - Otherwise choose a phone that suits the owner's means, work and habits, in the story's time. Choose the model and storage together; no fixed default capacity.
@@ -95,6 +96,7 @@ const PHONE_ITEMS = `  "contacts": [{ "name": name in the story, "saved": how th
               "comments": [{ "from": name, "text", "ko" }] }],
   "mails": [{ "from": sender, "subject", "ks": Korean subject, "text", "ko", "time", "unread": true or false }],
   "diary": [{ "date": "MM-DD", "title", "kt": Korean title, "text", "ko" }],
+  "visits": [{ "place": a place the owner really went to, as the story writes it (a room, a shop, a house; a city alone when the story names nothing closer there, never the city they live in alone), "city": the city it is in, or "", "with": [the people there with them], "time" }],
   "voice": [{ "title", "kt", "text", "ko", "time", "sec", "place" }] only when the archive or chat shows the owner recorded one`;
 // (반영: a voice memo may be an everyday one too, so the 폰 만들기 limit is left off there)
 const VOICE_ONLY = ' only when the archive or chat shows the owner recorded one';
@@ -162,7 +164,7 @@ JSON (one object, nothing before or after it)
 ${PHONE_ITEMS}
 }
 At most 6 threads of up to 12 messages, 10 calls, 8 photos, 5 notes, 8 searches (3 open at most), 6 events, 5 posts with up to 4 comments,
-6 mails, 5 diary entries. Fewer is fine; an empty list is fine. The diary has no "everyday" entries.
+6 mails, 5 diary entries, the 12 newest visits. Fewer is fine; an empty list is fine. The diary has no "everyday" entries.
 Oldest first in every list.
 ${PHONE_LAST}`;
 export const AI_SYS_PHONE_APPS = `GOAL
@@ -201,7 +203,7 @@ JSON (one object, nothing before or after it)
 ${PHONE_ITEMS}
 }
 At most 6 threads of up to 12 messages, 10 calls, 8 photos, 5 notes, 8 searches (3 open at most), 6 events, 5 posts with up to 4 comments,
-6 mails, 5 diary entries. Fewer is fine; an empty list is fine. The diary has no "everyday" entries.
+6 mails, 5 diary entries, the 12 newest visits. Fewer is fine; an empty list is fine. The diary has no "everyday" entries.
 Oldest first in every list.
 ${PHONE_LAST}`;
 
@@ -408,6 +410,7 @@ export function parsePhone(out, owner = '') {
             comments: arr(x?.comments).map(c => ({ from: line(c?.from, 40), text: line(c?.text, 300), ko: ko(c?.ko) })).filter(c => c.from && c.text).slice(0, CAP.comments) }, x)).filter(x => x.text || x.photo),
         mails: arr(raw.mails).map(x => tag({ from: line(x?.from, 60), subject: line(x?.subject, 120), ks: line(x?.ks, 120), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), unread: truthy(x?.unread) }, x)).filter(x => x.from && (x.subject || x.text)),
         diary: arr(raw.diary).map(x => tag({ date: when(x?.date).slice(0, 5), title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000) }, x)).filter(x => x.date && x.text),
+        visits: arr(raw.visits).map(x => tag({ place: line(x?.place, 60), city: line(x?.city, 60), with: [...new Set(arr(x?.with).map(n => line(n, 40)).filter(n => n && !mine(n)))].slice(0, 6), time: when(x?.time), src: 'story' }, x)).filter(x => x.place).slice(-CAP.visits),
         voice: arr(raw.voice).map(x => tag({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), sec: secOf(x?.sec), place: line(x?.place, 60), src: 'story' }, x)).filter(x => x.text),
     });
 }
@@ -429,6 +432,7 @@ const SIG = {
     msg: x => [nameKey(x.from), x.text, x.time], calls: x => [nameKey(x.with), x.type, x.time], photos: x => [x.caption, x.time],
     notes: x => [x.title, x.text], searches: x => [x.q, x.time], events: x => [x.title, x.date, x.time], posts: x => [x.text, x.photo, x.time],
     mails: x => [x.from, x.subject, x.time], diary: x => [x.date, x.title, x.text], voice: x => [x.title, x.time],
+    visits: x => [nameKey(x.place), x.time],
 };
 const sigOf = (k, x) => JSON.stringify(SIG[k](x)).toLowerCase();
 // the same record told again with its clock a little off ("21:00" then "21:02"): the one there, not a second
@@ -515,7 +519,8 @@ function everydayOn(raw, rows, textAt) {
 // the owner had a scene with
 // the apps' items as the reflection writes them, without the profile (no SNS name changed); the contacts in, so someone
 // texted who isn't saved yet is
-const EVERYDAY_ITEMS = PHONE_ITEMS.split('\n').filter(l => !/^\s*"profile"/.test(l)).join('\n').replace(VOICE_ONLY, '');
+// (no visit: a place is gone to in the story, never made up for an ordinary day)
+const EVERYDAY_ITEMS = PHONE_ITEMS.split('\n').filter(l => !/^\s*"(?:profile|visits)"/.test(l)).join('\n').replace(VOICE_ONLY, '');
 export const everydaySystem = ({ life = false } = {}) => `GOAL
 Write the ordinary life on one character's phone in the hours a few new role-play messages cover: the small records a real phone gathers, and the texts people send after a scene with the owner.
 Another step already put the story's own events on the phone; you only add everyday life around them.
@@ -603,6 +608,11 @@ function everydayOnly(p, add, day, daily) {
     if (Array.isArray(add.threads)) add.threads = add.threads.filter(th => th.messages.length || th.draft);
 }
 // a reflection keeps everything (keepAll); making a phone keeps each list to its size
+const visitOk = (p, x) => {
+    if (new Set(p.hiddenPlaces || []).has(nameKey(x.place))) return false;
+    const own = ownerZone(p), row = whereOf(p, p.owner), home = [own?.where, ...arr(own?.names), row?.city, ...arr(row?.names)].map(pkey).filter(Boolean);
+    return !(home.includes(pkey(x.place)) && (!x.city || pkey(x.city) === pkey(x.place) || home.includes(pkey(x.city))));
+};
 function mergePhone(p, add, { keepAll = false } = {}) {
     if (!p.device && add.device) p.device = add.device;
     const keep = (list, n) => (keepAll ? list : list.slice(-n));
@@ -654,6 +664,8 @@ function mergePhone(p, add, { keepAll = false } = {}) {
         if (e.cancelled) o.cancelled = true; else { if (e.date) o.date = e.date; if (e.time) o.time = e.time; }
         return false;
     });
+    // (a place the user swiped off the map never comes back; the city they live in alone is no visit)
+    if (add.visits?.length) add.visits = add.visits.filter(x => visitOk(p, x));
     for (const k of LISTS) p[k] = keep([...(p[k] || []), ...fresh(k, p[k] || [], add[k] || [])], CAP[k]);
     if (add.profile?.handle || add.profile?.bio) p.profile = { ...(p.profile || {}), ...Object.fromEntries(Object.entries(add.profile).filter(([, v]) => v)) };
     for (const c of add.contacts) {
@@ -1154,7 +1166,7 @@ function tagItems(p, add, src) {
         for (const c of a.comments || []) tag('comment', own?.comments?.find(x => ckey(x) === ckey(c)), c);
     }
 }
-const APP_NAME = { threads: '문자', contacts: '연락처', calls: '통화', photos: '사진', notes: '메모', searches: '검색', events: '캘린더', posts: 'SNS', mails: '메일', diary: '일기', voice: '음성 메모' };
+const APP_NAME = { threads: '문자', contacts: '연락처', calls: '통화', photos: '사진', notes: '메모', searches: '검색', events: '캘린더', posts: 'SNS', mails: '메일', diary: '일기', voice: '음성 메모', visits: '지도' };
 // ---- 2단계 돈 (docs/REFLECT-2STAGE-PLAN.md): the events core marked "money", and the ones owed from before, asked on
 // their own with only their messages (and the ones next to them). A payment that can't be placed leaves that event's
 // money owed, not the event: its texts and photos stay. Owed twice: skipped, and said so.

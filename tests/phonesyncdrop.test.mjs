@@ -2021,3 +2021,30 @@ test('elapsedTime is preserved as evidence and never added again to sceneTime or
         } finally { globalThis.toastr=previousToastr; }
     }
 });
+
+test('다녀간 곳 (the map): a reflection puts the places the owner went to on the phone, with whom and when; swiped-off places and the home city alone never; 되돌리기 takes them off', async () => {
+    const chat = [say('Ren', 'start'), say('Mara', 'morning'), say('Ren', 'Ren takes Mara to the Blue Note in Chicago, then back to the hotel.')];
+    const c = setup(chat);
+    c.p.where = { at: 1, people: [{ name: 'Ren', city: 'Frankfurt', names: ['Frankfurt', '프랑크푸르트'], lives: 'DE', tz: 'Europe/Berlin' }] };
+    c.p.hiddenPlaces = ['hotel atlantic']; // (as the map keeps it: the place's nameKey)
+    const visits = [{ place: 'Chicago', city: 'Chicago', with: [], time: '10-26 18:00' }, { place: 'Blue Note', city: 'Chicago', with: ['Mara', 'Ren'], time: '10-26 21:40' },
+        { place: 'Hotel Atlantic', city: 'Chicago', with: ['Mara'], time: '10-26 23:30' }, { place: 'Frankfurt', city: 'Frankfurt', with: [], time: '10-26 08:00' }, { place: '', city: 'Chicago' }];
+    await run(c.m, { now: '10-26 23:40', events: [{ id: 'chicago-night', at: 2, quote: 'Blue Note in Chicago', date: '10-26', time: '21:40', summary: 'A night out in Chicago', phone: { visits } }] });
+    assert.deepEqual(c.p.visits.map(x => [x.place, x.city, x.with, x.time, x.ev]), [
+        ['Chicago', 'Chicago', [], '10-26 18:00', 'chicago-night'], ['Blue Note', 'Chicago', ['Mara'], '10-26 21:40', 'chicago-night']]);
+    assert.ok(c.p.visits.every(x => x.id));
+    // the same place again is a visit of its own
+    T.chat.push(say('Ren', 'The next night, the Blue Note again.'));
+    await run(c.m, { now: '10-27 22:10', events: [{ id: 'again', at: 3, quote: 'the Blue Note again', date: '10-27', time: '22:00', summary: 'Back at the Blue Note', phone: { visits: [{ place: 'Blue Note', city: 'Chicago', with: [], time: '10-27 22:00' }] } }] });
+    assert.equal(c.p.visits.filter(x => x.place === 'Blue Note').length, 2);
+    await data.undoRound(c.m, c.p);
+    assert.equal(c.p.visits.filter(x => x.place === 'Blue Note').length, 1);
+});
+
+test('다녀간 곳: making a phone asks for the newest visits; the prompts that make up an ordinary day never do', () => {
+    for (const s of [data.AI_SYS_PHONE, data.AI_SYS_PHONE_APPS, data.updateSystem({ split: true })]) assert.ok(s.includes('"visits": [{ "place": a place the owner really went to'), s.slice(0, 40));
+    assert.ok(data.AI_SYS_PHONE.includes('the 12 newest visits'));
+    assert.ok(!data.everydaySystem().includes('"visits"') && !data.everydaySystem({ life: true }).includes('"visits"'));
+    const got = data.parsePhone(JSON.stringify({ visits: [{ place: 'Café Moka', city: 'Seoul', with: ['Mara', 'Mara', ''], time: '10-25 15:00' }, { place: ' ', city: 'Seoul' }] }), 'Ren');
+    assert.deepEqual(got.visits.map(x => [x.place, x.city, x.with, x.time]), [['Café Moka', 'Seoul', ['Mara'], '10-25 15:00']]);
+});
