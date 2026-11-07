@@ -1242,3 +1242,33 @@ test('PEOPLE AROUND goes by the name 위치 정보 has for a person (용어집 o
         assert.ok(pre.where.people.find(x => x.name === '이보').aka.includes('Ivo'));
     } finally { delete globalThis.__ctx; delete globalThis.__whereAnswer; delete globalThis.__glossaryPeople; delete globalThis.__glossaryEntries; }
 });
+
+test('reading where everyone is again: a person read back by the other form of their name is one row (its city set by hand kept); one taken off stays off by either form; two around entries of one person are one', async () => {
+    const base = () => {
+        const { m: mm } = htmlPhoneFixture();
+        globalThis.__glossaryEntries = [{ src: 'Ivo', ko: '이보' }, { src: 'Yu', ko: '유우' }];
+        const p = mm.phones.ren;
+        p.contacts = [{ name: 'Ivo' }, { name: 'Yu' }];
+        p.where = { at: 1, people: [{ name: 'Ren', city: 'Frankfurt am Main', names: ['Frankfurt am Main'], tz: 'Europe/Berlin' },
+            { name: 'Ivo', city: 'Seoul', names: ['Seoul'], tz: 'Asia/Seoul', aka: ['이보'], manual: { city: true } }] };
+        return { mm, p };
+    };
+    try {
+        let { mm, p } = base();
+        globalThis.__whereAnswer = { people: [{ name: '이보', city: 'Rome', tz: 'Europe/Rome' }, { name: 'Yu', city: 'Tokyo', tz: 'Asia/Tokyo' }, { name: '유우', city: 'Tokyo', tz: 'Asia/Tokyo' }],
+            around: [{ name: 'Ivo', about: 'brother' }, { name: '이보', about: 'coworker' }] };
+        await data.rereadPlaces(mm, p);
+        const ivo = p.where.people.filter(x => ['Ivo', '이보'].includes(x.name));
+        assert.equal(ivo.length, 1, JSON.stringify(p.where.people));
+        assert.equal(ivo[0].city, 'Seoul', 'the city set by hand stays');
+        assert.equal(p.where.people.filter(x => ['Yu', '유우'].includes(x.name)).length, 1, 'two forms the same length: one row');
+        for (const r of p.where.people) assert.ok(!arr(r.aka).some(a => a.toLowerCase() === r.name.toLowerCase()), 'no row has its own name as an aka');
+        assert.equal(p.around.people.length, 1);
+        ({ mm, p } = base());
+        p.where.people = p.where.people.filter(x => x.name !== 'Ivo'); p.where.removed = ['ivo'];
+        globalThis.__whereAnswer = { people: [{ name: '이보', city: 'Rome', tz: 'Europe/Rome' }] };
+        await data.rereadPlaces(mm, p);
+        assert.ok(!p.where.people.some(x => ['Ivo', '이보'].includes(x.name)), 'taken off as Ivo, stays off as 이보');
+    } finally { delete globalThis.__ctx; delete globalThis.__whereAnswer; delete globalThis.__glossaryEntries; }
+});
+const arr = v => (Array.isArray(v) ? v : []);

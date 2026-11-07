@@ -2095,3 +2095,30 @@ test('용어집 two forms of one name, everywhere a person is found: 위치 정�
         assert.deepEqual(c.p.visits.map(x => [x.place, x.with]), [['Blue Note', ['Ivo']], ['Frankfurt Hauptbahnhof', []]], 'the home city alone, by a shorter form, is no visit; a place in it is');
     } finally { delete globalThis.__glossaryEntries; }
 });
+
+test('용어집 names put on the reading before a round keep 되돌리기 as it was: the reading before the last round comes back', async () => {
+    const chat = [say('Ren', 'start'), say('Mara', 'morning'), say('Ren', 'Ren flies to Rome.')];
+    const c = setup(chat);
+    c.p.where = { at: 1, people: [{ name: 'Ren', city: 'Frankfurt am Main', names: ['Frankfurt am Main'], tz: 'Europe/Berlin', lives: 'DE' }, { name: 'Mara', city: 'Seoul', names: ['Seoul'], tz: 'Asia/Seoul' }] };
+    await run(c.m, { now: '10-26 20:00', moved: [{ name: 'Ren', city: 'Rome', names: ['Rome'], tz: 'Europe/Rome' }], events: [] });
+    assert.equal(c.p.where.people.find(x => x.name === 'Ren').city, 'Rome');
+    globalThis.__glossaryEntries = [{ src: 'Mara', ko: '마라' }];
+    try {
+        // (반영 with nothing new to read: 용어집's names go on the reading, no round)
+        try { await data.makePhone(c.m, 'Ren', { update: true }); } catch { /* nothing to read */ }
+        assert.ok(c.p.where.people.find(x => x.name === 'Mara').aka.includes('마라'));
+        await data.undoRound(c.m, c.p);
+        assert.equal(c.p.where.people.find(x => x.name === 'Ren').city, 'Frankfurt am Main');
+    } finally { delete globalThis.__glossaryEntries; }
+});
+
+test('다녀간 곳: "with" keeps a person whose first name is the owner\'s; a short name two rows share is no one\'s; the home city by its leading words or its Korean short name; another city that starts the same is a trip', async () => {
+    const chat = [say('Ren', 'start'), say('Mara', 'morning'), say('Ren', 'Out with Ren Kim and Ivo.')];
+    const c = setup(chat);
+    c.p.where = { at: 1, people: [{ name: 'Ren', city: 'Frankfurt am Main', names: ['Frankfurt am Main', '서울특별시'], tz: 'Europe/Berlin' }, { name: 'Ren Kim', city: 'Frankfurt am Main', tz: 'Europe/Berlin' },
+        { name: 'Ivo Kim', aka: ['Ivo'], city: 'Seoul', tz: 'Asia/Seoul' }, { name: 'Ivo Park', aka: ['Ivo'], city: 'Seoul', tz: 'Asia/Seoul' }] };
+    const v = (place, city, w = []) => ({ place, city, with: w, time: '10-26 20:00' });
+    await run(c.m, { now: '10-26 21:00', events: [{ id: 'out', at: 2, quote: 'Out with Ren Kim', date: '10-26', time: '20:00', summary: 'out', phone: { visits: [
+        v('Apfelwein Wagner', 'Frankfurt am Main', ['Ren Kim', 'Ivo']), v('Frankfurt', 'Frankfurt am Main'), v('서울', ''), v('Frankfurt', 'Frankfurt (Oder)'), v('Los Ang', '')] } }] });
+    assert.deepEqual(c.p.visits.map(x => [x.place, x.city, x.with]), [['Apfelwein Wagner', 'Frankfurt am Main', ['Ren Kim', 'Ivo']], ['Frankfurt', 'Frankfurt (Oder)', []], ['Los Ang', '', []]]);
+});

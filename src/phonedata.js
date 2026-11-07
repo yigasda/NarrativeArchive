@@ -611,17 +611,24 @@ function everydayOnly(p, add, day, daily) {
 // a reflection keeps everything (keepAll); making a phone keeps each list to its size
 // (the city they live in, by any of its names, a part of one too: "Frankfurt" for "Frankfurt am Main"; never a place in it,
 // "Frankfurt Hauptbahnhof")
+// (its first whole words count, "Frankfurt" of "Frankfurt am Main", and a Korean name without 특별시 · 광역시 · 시, "서울" of
+// "서울특별시"; never part of a word, "Los Ang", nor another city that starts the same, "Frankfurt (Oder)")
 const homeCity = (p, v) => {
-    const k = pkey(v), own = ownerZone(p), row = whereOf(p, p.owner), home = [own?.where, ...arr(own?.names), row?.city, ...arr(row?.names)].map(pkey).filter(Boolean);
-    return !!k && home.some(n => n === k || k.length >= Math.max(4, n.length * 0.6) && n.startsWith(k));
+    const k = pkey(v), own = ownerZone(p), row = whereOf(p, p.owner);
+    if (!k) return false;
+    return [own?.where, ...arr(own?.names), row?.city, ...arr(row?.names)].filter(Boolean).some(n0 => {
+        const n = String(n0), words = n.trim().split(/\s+/), leads = words.map((_, i) => pkey(words.slice(0, i + 1).join(' ')));
+        return leads.includes(k) || /^[가-힣]+$/.test(n) && n.startsWith(String(v).trim()) && /^(?:특별시|광역시|특별자치시|시)$/.test(n.slice(String(v).trim().length));
+    });
 };
 const visitOk = (p, x) => {
     if (new Set(p.hiddenPlaces || []).has(nameKey(x.place))) return false;
-    // a city alone: no city given, or the place is that city (as written, or a shorter form of it)
-    const cityAlone = !x.city || pkey(x.city) === pkey(x.place) || pkey(x.city).startsWith(pkey(x.place));
+    // a city alone: no city given, the place is that city, or both are the city they live in by its names
+    const cityAlone = !x.city || pkey(x.city) === pkey(x.place) || homeCity(p, x.city);
     return !(cityAlone && homeCity(p, x.place));
 };
-const visitWith = (p, x) => { const out = []; for (const n of arr(x.with)) { const who = personOf(p, null, n); if (who && !samePerson(who.name, p.owner) && !out.some(o => personOf(p, null, o)?.key === who.key)) out.push(who.name); } return { ...x, with: out }; };
+// (the owner is never one of "with": only by their own name or an aka of theirs, so "Ren Kim" stays for an owner Ren)
+const visitWith = (p, x) => { const out = [], own = new Set([p.owner, ...arr(whereOf(p, p.owner)?.aka)].map(nameKey)); for (const n of arr(x.with)) { const who = personOf(p, null, n); if (who && !own.has(nameKey(who.name)) && !own.has(nameKey(n)) && !out.some(o => personOf(p, null, o)?.key === who.key)) out.push(who.name); } return { ...x, with: out }; };
 function mergePhone(p, add, { keepAll = false } = {}) {
     if (!p.device && add.device) p.device = add.device;
     const keep = (list, n) => (keepAll ? list : list.slice(-n));
@@ -2154,23 +2161,39 @@ export async function readWhere(m, p, opts = {}) {
     if (around.length) p.around = { at: Date.now(), people: around };
     const known = [p.owner, ...r.people];
     // (someone the user took off stays off; what the user set by hand stays as they set it)
-    const removed = new Set(p.where?.removed || []), oldRow = name => whereOf(p, name);
+    // (by any form of their name: one taken off as "Ivo" stays off as "이보"; one set by hand as "Ivo" stays so as "이보")
+    const removed = new Set(p.where?.removed || []), formsOf = x => withTwins(m, [x.name, ...arr(x.aka)]).map(nameKey), gone = x => formsOf(x).some(k => removed.has(k));
+    const oldRow = x => { const ks = formsOf(x), rows = p.where?.people || []; return rows.find(r => nameKey(r.name) === nameKey(x.name)) || (hits => (hits.length === 1 ? hits[0] : null))(rows.filter(r => rowForms(m, r).some(k => ks.includes(k)))) || whereOf(p, x.name); };
     // (a row by the other form of a name asked about, "이보" for "Ivo", is that person's; and it keeps that form as a name of theirs)
-    const read = arr(raw?.people).map(whereRow).filter(x => x.name && known.some(k => nameKey(k) === nameKey(x.name) || nameKey(glossTwin(m, k)) === nameKey(x.name)) && !removed.has(nameKey(x.name)) && (x.tz || COUNTRY_TZ[x.lives]))
+    const read = arr(raw?.people).map(whereRow).filter(x => x.name && known.some(k => nameKey(k) === nameKey(x.name) || nameKey(glossTwin(m, k)) === nameKey(x.name)) && !gone(x) && (x.tz || COUNTRY_TZ[x.lives]))
         .map(x => { const t = glossTwin(m, x.name); return t && !arr(x.aka).some(a => nameKey(a) === nameKey(t)) ? { ...x, aka: [...arr(x.aka), t].slice(0, 6) } : x; })
-        .map(x => { const o = oldRow(x.name); return o?.manual ? { ...x, ...(o.manual.city ? { city: o.city, names: namesOf(o), tz: o.tz } : {}), ...(o.manual.lives ? { lives: o.lives } : {}), manual: o.manual } : x; });
+        .map(x => { const o = oldRow(x); return o?.manual ? { ...x, ...(o.manual.city ? { city: o.city, names: namesOf(o), tz: o.tz } : {}), ...(o.manual.lives ? { lives: o.lives } : {}), manual: o.manual } : x; });
     // one person by two names ("Somang Park" in the contacts, "Somang" in a thread) in the same city: once, by the longer
     // name. In two cities they are two people (two named alike) and both stay
     const here = (a, b) => sameName(m, a.name, b.name) && nameKey(a.name) !== nameKey(b.name) && pkey(a.city) === pkey(b.city) && (a.tz || '') === (b.tz || '');
-    const twin = x => read.some(y => here(x, y) && String(y.name).length > String(x.name).length);
-    const got = read.filter(x => !twin(x)).slice(0, 16).map(x => { const more = read.filter(y => here(y, x) && twin(y)).flatMap(y => [y.name, ...arr(y.aka)]); return more.length ? { ...x, aka: [...new Set([...arr(x.aka), ...more])].slice(0, 6) } : x; }),
+    // (two forms the same length, "Yu" and "유우": the one first in order stays)
+    const longer = (y, x) => String(y.name).length > String(x.name).length || String(y.name).length === String(x.name).length && nameKey(y.name) < nameKey(x.name);
+    const twin = x => read.some(y => here(x, y) && longer(y, x));
+    const got = read.filter(x => !twin(x)).slice(0, 16).map(x => { const more = read.filter(y => here(y, x) && twin(y)).flatMap(y => [y.name, ...arr(y.aka)]).filter(n => nameKey(n) !== nameKey(x.name)); return more.length ? { ...x, aka: [...new Set([...arr(x.aka), ...more])].slice(0, 6) } : x; }),
         merged = read.filter(twin).map(x => nameKey(x.name));
+    // (an old row of a person read now by another form of their name is that person's: one row, its names kept)
+    const samePersonRow = (o, x) => formsOf(o).some(k => formsOf(x).includes(k));
+    for (const x of got) for (const o of p.where?.people || []) if (nameKey(o.name) !== nameKey(x.name) && samePersonRow(o, x)) x.aka = [...new Set([...arr(x.aka), o.name, ...arr(o.aka)])].filter(n => nameKey(n) !== nameKey(x.name)).slice(0, 8);
     // read again: someone it leaves out keeps what was read before
-    const people = [...got, ...(p.where?.people || []).filter(o => !got.some(x => nameKey(x.name) === nameKey(o.name)) && !merged.includes(nameKey(o.name)) && !got.some(x => here(o, x) && String(x.name).length > String(o.name).length)).map(o => ({ ...o, names: namesOf(o) }))].slice(0, 16);
+    const people = [...got, ...(p.where?.people || []).filter(o => !got.some(x => nameKey(x.name) === nameKey(o.name) || samePersonRow(o, x)) && !merged.includes(nameKey(o.name)) && !got.some(x => here(o, x) && longer(x, o))).map(o => ({ ...o, names: namesOf(o) }))].slice(0, 16);
     p.where = { at: Date.now(), people, ...(removed.size ? { removed: [...removed] } : {}) };
     glossAka(m, p);
     // (PEOPLE AROUND by the name 위치 정보 has for them: one person, one name, on the map and in the texts alike)
-    if (p.around?.people) p.around.people = p.around.people.map(x => { const who = personOf(p, m, x.name); if (!who || nameKey(who.name) === nameKey(x.name)) return x; return { ...x, name: who.name, aka: [...new Set([...arr(x.aka), x.name])].filter(a => nameKey(a) !== nameKey(who.name)).slice(0, 6) }; });
+    // (two entries that turn out one person: the first, with the other's names)
+    if (p.around?.people) {
+        const out = [];
+        for (const x0 of p.around.people) {
+            const who = personOf(p, m, x0.name), x = !who || nameKey(who.name) === nameKey(x0.name) ? x0 : { ...x0, name: who.name, aka: [...new Set([...arr(x0.aka), x0.name])].filter(a => nameKey(a) !== nameKey(who.name)).slice(0, 6) };
+            const had = out.find(y => nameKey(y.name) === nameKey(x.name));
+            if (had) had.aka = [...new Set([...arr(had.aka), ...arr(x.aka)])].filter(a => nameKey(a) !== nameKey(had.name)).slice(0, 6); else out.push(x);
+        }
+        p.around.people = out;
+    }
     syncLives(p);
     return people;
 }
@@ -2190,7 +2213,15 @@ function ownerMoved(p, c) {
 // "Ren Kim" and "Ren Park")
 const samePerson = (a, b) => { const x = nameKey(a), y = nameKey(b); if (!x || !y) return false; if (x === y) return true; const [s, l] = x.length < y.length ? [x, y] : [y, x]; return !/\s/.test(s) && l.split(/\s+/)[0] === s; };
 // a name and its other form in 번역 용어집 ("Ivo = 이보"): the same person. glossTwin gives the other form, as written
-const glossTwin = (m, n) => { const k = nameKey(n); if (!k) return ''; for (const e of glossaryEntries(m)) { if (nameKey(e.src) === k) return e.ko; if (nameKey(e.ko) === k) return e.src; } return ''; };
+// (the pairs read once per 용어집 text: a long one is not read again for every name)
+let glossMemo = { text: null, map: new Map() };
+const glossMap = m => {
+    const text = String(m?.glossary ?? '');
+    // (an empty one is read each time: nothing to read, and nothing kept that a later one could miss)
+    if (glossMemo.text !== text || !text) { const map = new Map(); for (const e of glossaryEntries(m)) { const a = nameKey(e.src), b = nameKey(e.ko); if (a && b && a !== b) { if (!map.has(a)) map.set(a, e.ko); if (!map.has(b)) map.set(b, e.src); } } glossMemo = { text, map }; }
+    return glossMemo.map;
+};
+const glossTwin = (m, n) => { const k = nameKey(n); return k && m ? glossMap(m).get(k) || '' : ''; };
 const sameName = (m, a, b) => samePerson(a, b) || (t => !!t && samePerson(t, b))(glossTwin(m, a));
 // names with their 용어집 other forms added (each once)
 const withTwins = (m, names) => { const out = []; for (const n of [...names, ...(m ? names.map(x => glossTwin(m, x)) : [])]) if (n && !out.some(x => nameKey(x) === nameKey(n))) out.push(n); return out; };
@@ -2199,15 +2230,31 @@ const withTwins = (m, names) => { const out = []; for (const n of [...names, ...
 function personOf(p, m, n) {
     const k = nameKey(n);
     if (!k) return null;
-    const keys = withTwins(m, [n]).map(nameKey), row = (p?.where?.people || []).find(r => [r.name, ...arr(r.aka)].some(x => keys.includes(nameKey(x))));
+    // (a row by its own name first; else the one row that has it as an aka: a short name two rows share is no one's)
+    const keys = withTwins(m, [n]).map(nameKey), rows = p?.where?.people || [];
+    const row = rows.find(r => keys.includes(nameKey(r.name))) || (hits => (hits.length === 1 ? hits[0] : null))(rows.filter(r => arr(r.aka).some(x => keys.includes(nameKey(x)))));
     return row ? { key: nameKey(row.name), name: row.name } : { key: keys.slice().sort()[0], name: n };
 }
+// every form of one row's person: its name, its aka, their 용어집 other forms
+const rowForms = (m, r) => withTwins(m, [r?.name, ...arr(r?.aka)].filter(Boolean)).map(nameKey);
 // 용어집 forms not yet on a 위치 정보 row are put on it as its aka ("Ivo = 이보" added after it was read), so every place
 // that finds a person by their aka (texts, the clock, the default screen) finds them by both. Code only, no request
-function glossAka(m, p) {
-    for (const r of p?.where?.people || []) {
+const glossRows = (m, rows) => {
+    let changed = false;
+    for (const r of rows || []) {
         const add = withTwins(m, [r.name, ...arr(r.aka)]).filter(n => nameKey(n) !== nameKey(r.name) && !arr(r.aka).some(a => nameKey(a) === nameKey(n)));
-        if (add.length) r.aka = [...arr(r.aka), ...add].slice(0, 8);
+        if (add.length) { r.aka = [...arr(r.aka), ...add].slice(0, 8); changed = true; }
+    }
+    return changed;
+};
+// (the last rounds' 되돌리기 keep the reading as it was: their copies get the same names, so 되돌리기 still sees the reading
+// it left, and puts back the one before it)
+function glossAka(m, p) {
+    if (!m || !glossRows(m, p?.where?.people)) return;
+    for (const u of [p.syncUndo, ...arr(p.syncUndos)]) {
+        if (!u) continue;
+        if (u.where?.people) glossRows(m, u.where.people);
+        if (typeof u.whereAfter === 'string') { try { const w = JSON.parse(u.whereAfter); if (w?.people) { glossRows(m, w.people); u.whereAfter = JSON.stringify(w); } } catch { /* an old copy */ } }
     }
 }
 // (by the short name only when it is one person's: "Ivo" with an Ivo Kim and an Ivo Park is neither)
