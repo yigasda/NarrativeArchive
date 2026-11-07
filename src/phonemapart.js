@@ -8,9 +8,12 @@ import { CITY, CLUE, COMMON, HINT } from './phonemapcity.js';
 export const hsh = s => [...String(s)].reduce((n, c) => (Math.imul(n, 31) + c.charCodeAt(0)) >>> 0, 7);
 const norm = s => String(s || '').normalize('NFC').toLowerCase().replace(/\s+/g, ' ').trim();
 // a word in a text: Latin words from a word start (so "port" finds "Portsmouth harbour" but not "airport"), the rest anywhere
-const has = (text, w) => /^[a-z]/.test(w) ? new RegExp(`(^|[^a-z\u00c0-\u024f])${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`).test(text) : text.includes(w);
+const RX = new Map(), rx = w => { if (!RX.has(w)) RX.set(w, new RegExp(`(^|[^a-z\u00c0-\u024f])${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`)); return RX.get(w); };
+const has = (text, w) => /^[a-z]/.test(w) ? rx(w).test(text) : text.includes(w);
 // the city table's row for a town: its own name, or the longest of the row's names in it ("서울특별시" → 서울)
+const ROWS = new Map();
 function cityRow(city) {
+    if (ROWS.has(city)) return ROWS.get(city);
     let best = null, len = 0;
     for (const row of CITY) for (const n of row[0]) {
         // a Latin name (4 letters or more) from a word start, a short one whole, any other script from the start
@@ -18,12 +21,16 @@ function cityRow(city) {
         const hit = city === n || (/^[a-z]/.test(n) ? n.length >= 4 && has(city, n) : city.startsWith(n));
         if (hit && n.length > len) { best = row; len = n.length; }
     }
+    if (ROWS.size > 200) ROWS.clear();
+    ROWS.set(city, best);
     return best;
 }
 // the maps that suit a town, best first: the neighbourhoods its places name (most named first), words that suit a map
 // wherever they are (a beach, a station, a castle), the town's own row, then the everyday maps
+const PICKED = new Map();
 export function townCandidates(city, places = []) {
-    const c = norm(city), texts = places.map(norm);
+    const c = norm(city), texts = places.map(norm), memo = `${c}\u0001${texts.join('\u0002')}`;
+    if (PICKED.has(memo)) return PICKED.get(memo);
     const own = cityRow(c);
     let row = own;
     const score = new Map(), bump = (ks, n) => ks.forEach((k, i) => score.set(k, (score.get(k) || 0) + n * (1 - i * 0.04)));
@@ -39,7 +46,10 @@ export function townCandidates(city, places = []) {
     }
     for (const [words, ks] of CLUE) { const n = texts.filter(t => words.some(w => has(t, w))).length; if (n) bump(ks, n * 0.6); }
     const first = [...score].sort((a, b) => b[1] - a[1]).map(([k]) => k), turn = hsh(c) % COMMON.length;
-    return [...new Set([...first, ...(row ? row[1] : []), ...COMMON.slice(turn), ...COMMON.slice(0, turn)])];
+    const out = [...new Set([...first, ...(row ? row[1] : []), ...COMMON.slice(turn), ...COMMON.slice(0, turn)])];
+    if (PICKED.size > 100) PICKED.clear();
+    PICKED.set(memo, out);
+    return out;
 }
 // each town its own map: the best one no other town has taken; `towns` ({ key, city, places }) in the order they were
 // first visited, so an older town keeps its map when a new town comes
