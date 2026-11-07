@@ -79,7 +79,7 @@ export function townSvg(kind, W, H, seed, dark = false, hint = '') {
     if (!drawn.has(key)) { if (drawn.size >= 24) drawn.delete(drawn.keys().next().value); drawn.set(key, townDraw(kind, W, H, seed, dark, hint)); }
     return drawn.get(key);
 }
-const PIN = 'M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z';
+export const PIN = 'M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z';
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 export function pinSvg(x, y, label, dark) {
     const t = label.length > 20 ? `${label.slice(0, 19)}…` : label;

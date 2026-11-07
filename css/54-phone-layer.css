@@ -69,7 +69,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax 
 .ax .mp_wx { position: absolute; inset: 0; display: flex; flex-direction: column; overflow: hidden; }
 .mp_bg { position: absolute; left: 0; right: 0; top: 0; height: 430px; overflow: hidden; touch-action: pan-y; }
 .mq_one .mp_bg, .mp_zoomed :is(.mp_bg, .mp_gap) { touch-action: none; }
-.mp_art { display: block; transform-origin: 0 0; will-change: transform; }
+.mp_art { display: block; }
 .mp_pins { position: absolute; left: 0; top: 0; width: 100%; pointer-events: none; }
 .ax .mp_wx > .ax_sb, .ax .mp_wx > .ax_top, .ax .mp_wx > .ax_scroll { position: relative; z-index: 2; }
 .ax .mp_dark .ax_cb { --axbg: rgba(255, 255, 255, 0.2); --axsh: none; color: #fff; --axfg: #fff; }
