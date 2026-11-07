@@ -1517,3 +1517,49 @@ test('점검 4: an owner the reading placed nowhere is checked by no zone (the a
         assert.equal(globalThis.__where.length, 1);
     } finally { delete globalThis.__ctx; delete globalThis.__whereAnswer; }
 });
+
+test('점검 6 (폰 만들기): read anew after 인물 정보 or 로어북 changed, what the user set stays; 새로 시작 clears it; a status line\'s year at the make goes over one read before; a remake keeping its reading keeps its time; the request has the phone\'s year; 날짜 및 시간 moves a pre\'s year', async () => {
+    const setup = () => {
+        const { m: mm } = htmlPhoneFixture();
+        globalThis.__ctx.characters = [{ name: 'Mara' }]; globalThis.__ctx.characterId = 0;
+        mm.phones = {}; mm.phoneScreenHolder = 'Mara'; mm.text = '## #0–#3 — Arrival\n- Ren came home (#1).\n';
+        globalThis.__where = [];
+        globalThis.__whereAnswer = { people: [{ name: 'Ren', city: 'Frankfurt am Main', tz: 'Europe/Berlin', lives: 'DE' }, { name: 'Mara', city: 'Seoul', tz: 'Asia/Seoul', lives: 'KR' }], year: 2026 };
+        return mm;
+    };
+    const made = (now, scene) => JSON.stringify({ country: 'DE', now, clock: { basis: 'Default used', finalViewpoint: 'Mara', elapsedTime: null, sceneTime: scene, messageSender: null }, contacts: [{ name: 'Mara' }], notes: [] });
+    const input = () => globalThis.__menu.calls.find(x => x.sys === data.AI_SYS_PHONE).input;
+    try {
+        // a city and the year set, then a 로어북 turned on: read anew, both kept
+        let mm = setup();
+        let pre = await data.preparePhone(mm, 'Ren');
+        await data.setPlaceCity(mm, pre, 'Mara', 'Tokyo');
+        await data.setPreYear(mm, 'Ren', 2019);
+        mm.phoneLore = ['Book A'];
+        pre = await data.preparePhone(mm, 'Ren');
+        assert.equal(globalThis.__where.length, 2);
+        assert.deepEqual([pre.where.people.find(x => x.name === 'Mara').city, pre.year], ['Tokyo', 2019]);
+        // 날짜 및 시간 on another phone: a pre's year set by the user stays; one read moves
+        mm = setup();
+        mm.phones = { ivo: plainPhone({ owner: 'Ivo', year: 2026 }) };
+        pre = await data.preparePhone(mm, 'Ren');
+        data.setStoryYear(mm, mm.phones.ivo, 2024);
+        assert.equal(data.phonePre(mm, 'Ren').year, 2024);
+        // a status line crossing New Year after the reading: its year at the make, the request's too
+        mm = setup();
+        globalThis.__trackers = [{ i: 5, date: '2026-12-31', min: 1200, place: 'Frankfurt' }];
+        await data.preparePhone(mm, 'Ren');
+        globalThis.__trackers = [{ i: 6, date: '2027-01-01', min: 540, place: 'Frankfurt' }];
+        globalThis.__menu = { calls: [], answers: [made('01-01 09:00', '01-01 17:00')] };
+        let p = await data.makePhone(mm, 'Ren');
+        assert.match(input(), /\[STORY YEAR\]\n2027/);
+        assert.equal(p.year, 2027);
+        delete globalThis.__trackers;
+        // a phone with 위치 정보 made again whole: its own year in the request
+        mm = setup();
+        mm.phones = { ren: plainPhone({ year: 2019, where: { at: 1, people: [{ name: 'Ren', city: 'Frankfurt am Main', names: ['Frankfurt am Main'], lives: 'DE', tz: 'Europe/Berlin' }, { name: 'Mara', city: 'Seoul', names: ['Seoul'], lives: 'KR', tz: 'Asia/Seoul' }] } }) };
+        globalThis.__menu = { calls: [], answers: [made('11-03 03:10', '11-03 11:10')] };
+        p = await data.makePhone(mm, 'Ren');
+        assert.match(input(), /\[STORY YEAR\]\n2019/);
+    } finally { delete globalThis.__ctx; delete globalThis.__whereAnswer; delete globalThis.__trackers; }
+});

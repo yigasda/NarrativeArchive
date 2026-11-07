@@ -558,7 +558,9 @@ test('점검 5: an order put in with no shop gets its shop when told of again wi
 
 test('점검 6: told of again — "ordered" (the default) is an order still on its way, a delivered one only by the same shop for the same person; a ticket "미사용 · 사용 전 · unused" is not used yet, a route named in part or otherwise is the same booking, a cancelled one mentioned again stays one', () => {
     const bean = { shop: 'Coffee Circle', item: 'Espresso beans 1kg', qty: 1, price: 24 };
-    const run = steps => { const { m, p } = setup(); steps.forEach(([id, at, date, money]) => applyMoney(m, p, ev(id, at, date, money), opts())); return p; };
+    // (the phone's own lookup of a city's zone, as the reflection passes it)
+    const zones = { 인천: 'Asia/Seoul', 서울: 'Asia/Seoul', 프랑크푸르트: 'Europe/Berlin', Frankfurt: 'Europe/Berlin', Seoul: 'Asia/Seoul' };
+    const run = steps => { const { m, p } = setup(); steps.forEach(([id, at, date, money]) => applyMoney(m, p, ev(id, at, date, money), { ...opts(), placeZone: v => zones[v] || '' })); return p; };
     let p = run([['o', 5, '10-20', { orders: [{ ...bean, status: 'ordered', occurrence: 'new' }] }], ['s', 6, '10-22', { orders: [{ ...bean, status: 'shipped', occurrence: 'again' }] }], ['t', 9, '10-26', { orders: [{ ...bean, status: 'ordered', occurrence: 'again' }] }]]);
     assert.deepEqual(p.money.orders.map(o => o.status), ['shipped']);
     p = run([['o', 5, '10-10', { orders: [{ shop: 'Zalando', item: 'Scarf', qty: 1, price: 40, status: 'ordered', gift: 'Mara', occurrence: 'new' }] }], ['d', 6, '10-13', { orders: [{ shop: 'Zalando', item: 'Scarf', status: 'delivered', gift: 'Mara', occurrence: 'again' }] }], ['t', 9, '10-26', { orders: [{ shop: 'Zalando', item: 'Scarf', status: 'ordered', gift: 'Mara', occurrence: 'again' }] }]]);
@@ -581,4 +583,37 @@ test('점검 6: told of again — "ordered" (the default) is an order still on i
     assert.equal(p.money.passes.length, 2);
     p = run([['a', 5, '10-20', { passes: [{ kind: 'flight', by: 'Lufthansa', from: 'FRA', to: 'ICN', date: '11-02', status: '', occurrence: 'new' }] }], ['b', 6, '10-20', { passes: [{ kind: 'flight', by: 'Lufthansa', from: 'FRA', to: 'LIS', date: '11-20', status: '', occurrence: 'new' }] }], ['t', 9, '10-26', { passes: [{ kind: 'flight', by: 'Lufthansa', from: 'Frankfurt', to: 'Tokyo', status: '', occurrence: 'again' }] }]]);
     assert.equal(p.money.passes.length, 3);
+});
+
+test('점검 6 (돈): a ticket told of before its day keeps the day it was told on, marked, and gets the real day and number later; a return trip is its own ticket; a size is its own order; a price told later fills in; one told of with nothing to know it by leaves the event\'s other money as it is', () => {
+    const zones = { 인천: 'Asia/Seoul', 서울: 'Asia/Seoul', Seoul: 'Asia/Seoul', 프랑크푸르트: 'Europe/Berlin', Frankfurt: 'Europe/Berlin' };
+    const o = () => ({ ...opts(), placeZone: v => zones[v] || '' });
+    let { m, p, bank } = setup();
+    applyMoney(m, p, ev('a', 5, '10-20', { passes: [{ kind: 'flight', by: 'Korean Air', from: 'FRA', to: 'ICN', date: '', status: '', occurrence: 'again' }] }), o());
+    assert.deepEqual([p.money.passes[0].date, p.money.passes[0].dayUnknown], ['10-20', true]);
+    const r = applyMoney(m, p, ev('b', 9, '10-26', { passes: [{ kind: 'flight', by: 'Korean Air', from: 'FRA', to: 'ICN', date: '11-02', no: 'KE906', status: '', occurrence: 'again' }] }), o());
+    assert.deepEqual(p.money.passes.map(x => [x.date, x.no, x.dayUnknown]), [['11-02', 'KE906', undefined]]);
+    revertEffects(m, p, r.effects);
+    assert.deepEqual([p.money.passes[0].date, p.money.passes[0].no, p.money.passes[0].dayUnknown], ['10-20', '', true]);
+    // the way back: its own ticket
+    ({ m, p, bank } = setup());
+    applyMoney(m, p, ev('a', 5, '10-20', { passes: [{ kind: 'flight', by: '대한항공', from: '인천', to: '프랑크푸르트', date: '11-02', no: 'KE905', status: '', occurrence: 'new' }] }), o());
+    applyMoney(m, p, ev('b', 9, '10-26', { passes: [{ kind: 'flight', by: '대한항공', from: 'ICN', to: 'FRA', date: '', status: 'checked in', occurrence: 'again' }] }), o());
+    applyMoney(m, p, ev('c', 10, '10-26', { passes: [{ kind: 'flight', by: '대한항공', from: 'Frankfurt', to: 'Seoul', date: '', status: 'confirmed', occurrence: 'again' }] }), o());
+    assert.deepEqual(p.money.passes.map(x => [x.from, x.status]), [['인천', 'checked in'], ['Frankfurt', 'confirmed']]);
+    // M then L of one shirt; a price told later
+    ({ m, p, bank } = setup());
+    applyMoney(m, p, ev('a', 5, '10-01', { orders: [{ shop: 'Zara', item: 'Shirt', option: 'M', qty: 1, price: 30, status: 'ordered', occurrence: 'new' }] }), o());
+    applyMoney(m, p, ev('b', 9, '10-26', { orders: [{ shop: 'Zara', item: 'Shirt', option: 'L', qty: 1, price: 30, status: 'ordered', occurrence: 'again' }] }), o());
+    assert.deepEqual(p.money.orders.map(x => x.option), ['M', 'L']);
+    applyMoney(m, p, ev('c', 12, '10-27', { orders: [{ shop: '', item: 'Scarf', qty: 1, price: null, status: 'ordered', occurrence: 'again' }] }), o());
+    applyMoney(m, p, ev('d', 13, '10-28', { orders: [{ shop: 'Zalando', item: 'Scarf', qty: 1, price: 39.9, status: 'shipped', occurrence: 'again' }] }), o());
+    assert.deepEqual(p.money.orders.filter(x => x.item === 'Scarf').map(x => [x.shop, x.price]), [['Zalando', 39.9]]);
+    // a ticket with no seller told of, beside a payment: the payment goes in
+    ({ m, p, bank } = setup());
+    const res = applyMoney(m, p, ev('e', 5, '10-26', { moves: [{ account: '1111', amount: -18, who: 'Cafe', occurrence: 'new' }], passes: [{ kind: 'event', by: '', to: 'IU 콘서트', status: '', occurrence: 'again' }], orders: [{ shop: '', item: '', occurrence: 'again' }] }), o());
+    migrateBank(m, p);
+    assert.equal(bank(), 982);
+    assert.equal(p.money.passes.length + p.money.orders.length, 0);
+    assert.ok(res.notes.length >= 2);
 });

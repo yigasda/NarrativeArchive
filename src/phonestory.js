@@ -1,7 +1,7 @@
 // Phone content and its financial ledger travel together, only by explicit choice.
 import { ctx, getMeta, saveMeta } from './core.js';
 
-export const PHONE_STORY_KEYS = ['phones','phoneProfiles','phoneScreenHolder','finance','lastPhoneOwner','phoneLore','phoneLoreOff','phoneStoryScope'];
+export const PHONE_STORY_KEYS = ['phones','phoneProfiles','phoneScreenHolder','finance','lastPhoneOwner','phoneLore','phoneLoreOff','phonePre','phoneStoryScope'];
 export function phoneChatScope(c) {
     const chat=c.getCurrentChatId?.() || c.chatId;
     if(chat===undefined || chat===null || chat==='') return null;
@@ -29,6 +29,8 @@ export function clearPhoneSelection(scope,storage) {
 export function resetPhoneStory(m,scope) {
     m.phones={};delete m.phoneProfiles;delete m.finance;delete m.lastPhoneOwner;
     delete m.phoneLore;delete m.phoneLoreOff;delete m.phoneScreenHolder;
+    // (what was read before a phone was made goes with the phones)
+    delete m.phonePre;
     m.phoneStoryScope=scope;
     clearPhoneSelection(scope);
 }

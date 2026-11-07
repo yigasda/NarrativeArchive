@@ -507,3 +507,11 @@ test('the money fill dates its balances at the story\'s moment it read up to, no
     // a date the owner set stays
     assert.equal(w.wealthDate({ text: '' }, { ...p, money: { fxDate: '2026-09-01' } }, '10-26 12:00'), '2026-09-01');
 });
+
+test('점검 6: a story with no year of its own values its money and investments at today\'s date; one with a year on the story\'s day; none known, none', async () => {
+    const W = await import(wealthURL), today = new Date().toISOString().slice(0, 10);
+    assert.equal(W.wealthDate({ text: '' }, { noYear: true, now: '03-14 10:00' }), today);
+    assert.equal(W.wealthDate({ text: '' }, { year: 2026, now: '03-14 10:00' }), '2026-03-14');
+    assert.equal(W.wealthDate({ text: '## #0–#1 — 2025-03-14 Berlin\n' }, { now: '03-14 10:00' }), '');
+    assert.equal(dataMod.investmentDate({ text: '' }, { noYear: true, now: '03-14 10:00' }), today);
+});

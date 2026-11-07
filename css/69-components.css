@@ -16,37 +16,37 @@ body:not(.na_darkui) dialog.popup:has(.na_popup) .popup-input { background-color
 body.na_darkui dialog.popup:has(.na_popup) .popup-input { background-color: #2A2A30 !important; border-color: #45454D !important; color: #ECEAE6 !important; --axfg: #ECEAE6}
 
 /* ---- fields: one fill, no edge, rounded corners; fields drawn on a card or see-through stay that way */
-body:not(.na_darkui) dialog.popup:has(.na_popup) .na_popup .text_pole { background-color: #F2E9E2 !important; --c-bg: #F2E9E2; background-image: none !important; border-color: #E5D5C9 !important; --c-bc: #E5D5C9; --c-bct: #E5D5C9; color: #463428 !important; --axfg: #463428; --c-fg: #463428}
-body.na_darkui dialog.popup:has(.na_popup) .na_popup .text_pole { background-color: #1D1D21 !important; --c-bg: #1D1D21; background-image: none !important; border-color: #3A3A41 !important; --c-bc: #3A3A41; --c-bct: #3A3A41; color: #ECEAE6 !important; --axfg: #ECEAE6; --c-fg: #ECEAE6}
+body:not(.na_darkui) dialog.popup:has(.na_popup) .na_popup .text_pole { background-color: #F2E9E2; --c-bg: #F2E9E2; background-image: none; border-color: #E5D5C9; --c-bc: #E5D5C9; --c-bct: #E5D5C9; color: #463428; --axfg: #463428; --c-fg: #463428}
+body.na_darkui dialog.popup:has(.na_popup) .na_popup .text_pole { background-color: #1D1D21; --c-bg: #1D1D21; background-image: none; border-color: #3A3A41; --c-bc: #3A3A41; --c-bct: #3A3A41; color: #ECEAE6; --axfg: #ECEAE6; --c-fg: #ECEAE6}
 /* inputs the extension draws on a card (세계관 칸) or see-through (inside a pill, a stepper, a dashed name line):
    stronger than the fill above, so a forced theme colour doesn't box them in */
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup :is(.na_wd_slot .text_pole) { background-color: var(--na-card2) !important; --c-bg: var(--na-card2); background-image: none !important; border-color: transparent !important; --c-bc: transparent; --c-bct: transparent; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup :is(.na_wd_rename, .na_wd_text, .na_wd_row .text_pole, .na_ly_pane textarea, .na_ask2_input textarea, .na_wz2_range input, .na_uh2_range input, .na_fd_step input, .na_ap2_end input, .na_ly_ask input.na_ly_askq) { background-color: transparent !important; --c-bg: transparent; background-image: none !important; box-shadow: none !important; --c-sh: none; border-color: transparent !important; --c-bc: transparent; --c-bct: transparent; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup :is(.na_wd_slot .text_pole, .na_wd_row .text_pole):focus { border-color: var(--na-accent) !important; --c-bc: var(--na-accent); --c-bct: var(--na-accent); }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_wd_rename.text_pole { border-color: var(--na-line) !important; --c-bc: var(--na-line); --c-bct: var(--na-line); }
-body:not(.na_darkui) dialog.popup:not(:has(.na_phone)) .na_popup :is(input.text_pole, textarea.text_pole, select.text_pole):not(#na_x) { border-color: transparent !important; --c-bc: transparent; --c-bct: transparent; background-color: #FBF7F3 !important; --c-bg: #FBF7F3; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.08) !important; --c-sh: 0 1px 2px rgba(70, 52, 40, 0.08); outline: none; }
-body.na_darkui dialog.popup:not(:has(.na_phone)) .na_popup :is(input.text_pole, textarea.text_pole, select.text_pole):not(#na_x) { border-color: transparent !important; --c-bc: transparent; --c-bct: transparent; background-color: #2E2E34 !important; --c-bg: #2E2E34; box-shadow: none !important; --c-sh: none; outline: none; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:not(:has(.na_phone)) .na_popup :is(input.text_pole, textarea.text_pole, select.text_pole):focus:not(#na_x) { box-shadow: 0 0 0 2px color-mix(in srgb, var(--na-accent) 35%, transparent) !important; --c-sh: 0 0 0 2px color-mix(in srgb, var(--na-accent) 35%, transparent); }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:not(:has(.na_phone)) .na_popup :is(input.text_pole, select.text_pole, input[type="text"], input[type="number"], input[type="search"]):not(.na_toggle):not([type="checkbox"]):not(#na_x) { border-radius: 12px !important; --c-r: 12px; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:not(:has(.na_phone)) .na_popup textarea:not(#na_x) { border-radius: 14px !important; --c-r: 14px; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup :is(.na_wd_slot .text_pole) { background-color: var(--na-card2); --c-bg: var(--na-card2); background-image: none; border-color: transparent; --c-bc: transparent; --c-bct: transparent; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup :is(.na_wd_rename, .na_wd_text, .na_wd_row .text_pole, .na_ly_pane textarea, .na_ask2_input textarea, .na_wz2_range input, .na_uh2_range input, .na_fd_step input, .na_ap2_end input, .na_ly_ask input.na_ly_askq) { background-color: transparent; --c-bg: transparent; background-image: none; box-shadow: none; --c-sh: none; border-color: transparent; --c-bc: transparent; --c-bct: transparent; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup :is(.na_wd_slot .text_pole, .na_wd_row .text_pole):focus { border-color: var(--na-accent); --c-bc: var(--na-accent); --c-bct: var(--na-accent); }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_wd_rename.text_pole { border-color: var(--na-line); --c-bc: var(--na-line); --c-bct: var(--na-line); }
+body:not(.na_darkui) dialog.popup:not(:has(.na_phone)) .na_popup :is(input.text_pole, textarea.text_pole, select.text_pole):not(#na_x) { border-color: transparent; --c-bc: transparent; --c-bct: transparent; background-color: #FBF7F3; --c-bg: #FBF7F3; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.08); --c-sh: 0 1px 2px rgba(70, 52, 40, 0.08); outline: none; }
+body.na_darkui dialog.popup:not(:has(.na_phone)) .na_popup :is(input.text_pole, textarea.text_pole, select.text_pole):not(#na_x) { border-color: transparent; --c-bc: transparent; --c-bct: transparent; background-color: #2E2E34; --c-bg: #2E2E34; box-shadow: none; --c-sh: none; outline: none; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:not(:has(.na_phone)) .na_popup :is(input.text_pole, textarea.text_pole, select.text_pole):focus:not(#na_x) { box-shadow: 0 0 0 2px color-mix(in srgb, var(--na-accent) 35%, transparent); --c-sh: 0 0 0 2px color-mix(in srgb, var(--na-accent) 35%, transparent); }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:not(:has(.na_phone)) .na_popup :is(input.text_pole, select.text_pole, input[type="text"], input[type="number"], input[type="search"]):not(.na_toggle):not([type="checkbox"]):not(#na_x) { border-radius: 12px; --c-r: 12px; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:not(:has(.na_phone)) .na_popup textarea:not(#na_x) { border-radius: 14px; --c-r: 14px; }
 body:is(.na_darkui, :not(.na_darkui)) #na_settings :is(input.text_pole, select.text_pole, input[type="text"], input[type="number"]):not(.na_toggle):not(#na_x) { --c-r: 12px; }
 body:is(.na_darkui, :not(.na_darkui)) #na_settings textarea:not(#na_x) { --c-r: 14px; }
 
 /* ---- buttons and chips: filled shapes with a soft shadow, never a 1px line; picked ones keep their accent edge */
-body:not(.na_darkui) dialog.popup:not(:has(.na_phone)) .na_popup :is(.na_v2_btn:not(.primary):not(.danger), .na_v2_pillbtn:not(.danger), .na_btn:not(.na_primary)):not(.on):not(.active):not(#na_x) { border-color: transparent !important; --c-bc: transparent; --c-bct: transparent; background: #F7EEE7 !important; --c-bg: #F7EEE7; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.1) !important; --c-sh: 0 1px 2px rgba(70, 52, 40, 0.1); }
-body.na_darkui dialog.popup:not(:has(.na_phone)) .na_popup :is(.na_v2_btn:not(.primary):not(.danger), .na_v2_pillbtn:not(.danger), .na_btn:not(.na_primary)):not(.on):not(.active):not(#na_x) { border-color: transparent !important; --c-bc: transparent; --c-bct: transparent; background: #2E2E34 !important; --c-bg: #2E2E34; box-shadow: none !important; --c-sh: none; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:not(:has(.na_phone)) .na_popup .na_v2_pillbtn.danger:not(#na_x) { border-color: transparent !important; --c-bc: transparent; --c-bct: transparent; }
-body:not(.na_darkui) dialog.popup:not(:has(.na_phone)) .na_popup :is(.na_v2_chips button, .na_pchip):not(.on):not(#na_x) { border-color: transparent !important; --c-bc: transparent; --c-bct: transparent; background: #E9DCD1 !important; --c-bg: #E9DCD1; color: #6B5A50 !important; --c-fg: #6B5A50; }
-body.na_darkui dialog.popup:not(:has(.na_phone)) .na_popup :is(.na_v2_chips button, .na_pchip):not(.on):not(#na_x) { border-color: transparent !important; --c-bc: transparent; --c-bct: transparent; background: #2E2E34 !important; --c-bg: #2E2E34; color: #B9B7BD !important; --c-fg: #B9B7BD; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:not(:has(.na_phone)) .na_popup :is(.na_v2_chips button, .na_pchip).on:not(.na_pchip_broad):not(#na_x) { border-color: transparent !important; --c-bc: transparent; --c-bct: transparent; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_popup :is(.na_v2_btn, .na_v2_pillbtn, .na_btn):is(.on, .active):not(.primary):not(#na_x) { border: 1px solid var(--na-accent) !important; --c-bw: 1px; --c-bs: solid; --c-bc: var(--na-accent); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-accent); }
+body:not(.na_darkui) dialog.popup:not(:has(.na_phone)) .na_popup :is(.na_v2_btn:not(.primary):not(.danger), .na_v2_pillbtn:not(.danger), .na_btn:not(.na_primary)):not(.on):not(.active):not(#na_x) { border-color: transparent; --c-bc: transparent; --c-bct: transparent; background: #F7EEE7; --c-bg: #F7EEE7; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.1); --c-sh: 0 1px 2px rgba(70, 52, 40, 0.1); }
+body.na_darkui dialog.popup:not(:has(.na_phone)) .na_popup :is(.na_v2_btn:not(.primary):not(.danger), .na_v2_pillbtn:not(.danger), .na_btn:not(.na_primary)):not(.on):not(.active):not(#na_x) { border-color: transparent; --c-bc: transparent; --c-bct: transparent; background: #2E2E34; --c-bg: #2E2E34; box-shadow: none; --c-sh: none; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:not(:has(.na_phone)) .na_popup .na_v2_pillbtn.danger:not(#na_x) { border-color: transparent; --c-bc: transparent; --c-bct: transparent; }
+body:not(.na_darkui) dialog.popup:not(:has(.na_phone)) .na_popup :is(.na_v2_chips button, .na_pchip):not(.on):not(#na_x) { border-color: transparent; --c-bc: transparent; --c-bct: transparent; background: #E9DCD1; --c-bg: #E9DCD1; color: #6B5A50; --c-fg: #6B5A50; }
+body.na_darkui dialog.popup:not(:has(.na_phone)) .na_popup :is(.na_v2_chips button, .na_pchip):not(.on):not(#na_x) { border-color: transparent; --c-bc: transparent; --c-bct: transparent; background: #2E2E34; --c-bg: #2E2E34; color: #B9B7BD; --c-fg: #B9B7BD; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:not(:has(.na_phone)) .na_popup :is(.na_v2_chips button, .na_pchip).on:not(.na_pchip_broad):not(#na_x) { border-color: transparent; --c-bc: transparent; --c-bct: transparent; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_popup :is(.na_v2_btn, .na_v2_pillbtn, .na_btn):is(.on, .active):not(.primary):not(#na_x) { border: 1px solid var(--na-accent); --c-bw: 1px; --c-bs: solid; --c-bc: var(--na-accent); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-accent); }
 
 /* ---- cards */
 body.na_darkui dialog.popup:has(.na_popup) .na_popup .na_v2_card { border-color: transparent; --c-bc: transparent; --c-bct: transparent; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 8px 20px rgba(0, 0, 0, 0.35); --c-sh: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 8px 20px rgba(0, 0, 0, 0.35); }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:not(:has(.na_phone)) .na_popup .na_v2_card:not(.na_bn2_find):not(.on):not(.active):not(#na_x) { border-color: transparent !important; --c-bc: transparent; --c-bct: transparent; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:not(:has(.na_phone)) .na_popup .na_v2_card:not(.na_bn2_find):not(.on):not(.active):not(#na_x) { border-color: transparent; --c-bc: transparent; --c-bct: transparent; }
 body:not(.na_darkui) dialog.popup:not(:has(.na_phone)) .na_popup .na_v2_card:not(#na_x) { box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); --c-sh: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
-body:not(.na_darkui) dialog.popup .na_popup .na_v2_card.na_wd.on:not(#na_x) { border: 1px solid color-mix(in srgb, var(--na-accent) 45%, transparent) !important; --c-bw: 1px; --c-bs: solid; --c-bc: color-mix(in srgb, var(--na-accent) 45%, transparent); --c-bwt: 1px; --c-bst: solid; --c-bct: color-mix(in srgb, var(--na-accent) 45%, transparent); }
-body.na_darkui dialog.popup .na_popup .na_v2_card.na_wd.on:not(#na_x) { border: 1px solid #8A7A55 !important; --c-bw: 1px; --c-bs: solid; --c-bc: #8A7A55; --c-bwt: 1px; --c-bst: solid; --c-bct: #8A7A55; }
+body:not(.na_darkui) dialog.popup .na_popup .na_v2_card.na_wd.on:not(#na_x) { border: 1px solid color-mix(in srgb, var(--na-accent) 45%, transparent); --c-bw: 1px; --c-bs: solid; --c-bc: color-mix(in srgb, var(--na-accent) 45%, transparent); --c-bwt: 1px; --c-bst: solid; --c-bct: color-mix(in srgb, var(--na-accent) 45%, transparent); }
+body.na_darkui dialog.popup .na_popup .na_v2_card.na_wd.on:not(#na_x) { border: 1px solid #8A7A55; --c-bw: 1px; --c-bs: solid; --c-bc: #8A7A55; --c-bwt: 1px; --c-bst: solid; --c-bct: #8A7A55; }
 
 /* ---- control shield: a theme may paint button / label / input / select / textarea with !important (the user's theme does).
    In the windows listed here a control takes its paint only from its own variables, which no theme sets:
@@ -110,17 +110,17 @@ body:not(.na_darkui) .na_popup input[type="checkbox"]:not(.na_toggle):not(:check
 
 /* ---- dark charcoal: near-black switch knobs, panel cards with depth, no tinted see-through fills (the colour stays in text, icon or edge) */
 body.na_darkui input.na_toggle:checked + .na_tgl_ui::after, body.na_darkui .na_sw.on::after { background: #1B1B1F; }
-body.na_darkui .na_kn3_tag.k i, body.na_darkui .na_kn3_leg span.k i { background: #1B1B1F !important; }
+body.na_darkui .na_kn3_tag.k i, body.na_darkui .na_kn3_leg span.k i { background: #1B1B1F; }
 body.na_darkui .na_sw.on span { background: #1B1B1F; }
 /* the panel in charcoal has the popups' depth: cards lifted off the near-black base with a faint top light */
 body.na_darkui #na_settings :is(.na_v2_card, .na_card, .na_hrow, .na_cfg_box) { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 6px 16px rgba(0, 0, 0, 0.3); --c-sh: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 6px 16px rgba(0, 0, 0, 0.3); }
 /* no dark "cellophane": tinted see-through fills become the neutral field; the colour stays in the text, icon or a thin edge */
-body.na_darkui :is(.na_chip_warn, .na_check_warn, .na_br_filters .na_hc_status.bad) { background: #2E2E34 !important; --c-bg: #2E2E34; }
-body.na_darkui #na_settings #na_next .na_next_card.warn { background: #232328 !important; }
-body.na_darkui #na_settings #na_next .na_next_card.bad { background: #232328 !important; --c-bg: #232328; }
+body.na_darkui :is(.na_chip_warn, .na_check_warn, .na_br_filters .na_hc_status.bad) { background: #2E2E34; --c-bg: #2E2E34; }
+body.na_darkui #na_settings #na_next .na_next_card.warn { background: #232328; }
+body.na_darkui #na_settings #na_next .na_next_card.bad { background: #232328; --c-bg: #232328; }
 body.na_darkui .na_next_card.warn { border-color: #3A3A41 !important; }
-body.na_darkui :is(.na_whole, .na_fp3_row.picked, .na_cp3_row.on, .na_ck.part) { background: #2E2E34 !important; --c-bg: #2E2E34; }
-body.na_darkui .na_sp_s:hover, body.na_darkui .na_cc_row:focus-within { background: #2B2B31 !important; --c-bg: #2B2B31; }
-body.na_darkui :is(.na_wd_icon, .na_wd_slot_ico, .na_wd.on .na_wd_icon) { background: #2E2E34 !important; }
-body.na_darkui .na_wd.on .na_wd_icon, body.na_darkui .na_wd_slot_ico { color: var(--na-accent-fg) !important; --axfg: var(--na-accent-fg)}
-body.na_darkui .na_pv2_code { background: #232328 !important; color: #ECEAE6 !important; --axfg: #ECEAE6}
+body.na_darkui :is(.na_whole, .na_fp3_row.picked, .na_cp3_row.on, .na_ck.part) { background: #2E2E34; --c-bg: #2E2E34; }
+body.na_darkui .na_sp_s:hover, body.na_darkui .na_cc_row:focus-within { background: #2B2B31; --c-bg: #2B2B31; }
+body.na_darkui :is(.na_wd_icon, .na_wd_slot_ico, .na_wd.on .na_wd_icon) { background: #2E2E34; }
+body.na_darkui .na_wd.on .na_wd_icon, body.na_darkui .na_wd_slot_ico { color: var(--na-accent-fg); --axfg: var(--na-accent-fg)}
+body.na_darkui .na_pv2_code { background: #232328; color: #ECEAE6; --axfg: #ECEAE6}
