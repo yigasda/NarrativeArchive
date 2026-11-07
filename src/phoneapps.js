@@ -678,7 +678,7 @@ export function prepScreen(p, now, m, ui = {}) {
     if (!ui.pre) {
         body = `${steps}
         <div class="ax_foot">위치는 1~4를 읽어서 정해요.</div>
-        ${blue(link || '다음 · 위치 연동', 'na_ph_preplink', ui.linking)}
+        <div class="ax_prep_gap"></div>${blue(link || '다음 · 위치 연동', 'na_ph_preplink', ui.linking)}
         <div class="ax_sec">5 · 위치</div>${wait('위치', '위 단계를 마치면 열려요 · 연동한 뒤 직접 고칠 수 있어요')}
         <div class="ax_sec">6 · 이야기 연도</div>${wait('연도', '위치 다음에 정해요')}
         <div class="ax_prep_gap"></div>${blue('이대로 폰 만들기', 'na_ph_prepmake', true)}`;
