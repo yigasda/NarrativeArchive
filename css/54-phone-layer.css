@@ -747,7 +747,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .mq_field { display: flex; align-items: center; gap: 8px; height: 44px; margin: 0 16px 6px; padding: 0 8px 0 12px; border-radius: 14px; background: #e9ecf0; flex: none; }
 .ax .mq_field .mq_in { flex: 1; min-width: 0; height: 40px; margin: 0; padding: 0; border: 0; outline: none; background: transparent; box-shadow: none; color: #161b22; font: inherit; font-size: 16px; }
 .mq_field .mq_in::placeholder { color: #8a929d; }
-.ax .mq_x { width: 22px; height: 22px; border-radius: 50%; --axbg: #b9bfc8; --axsh: none; display: none; place-items: center; padding: 0; flex: none; }
+.ax .mq_x { width: 22px; height: 22px; border-radius: 50%; --axr: 50%; --axbg: #b9bfc8; --axsh: none; display: none; place-items: center; padding: 0; flex: none; }
 .ax .mq_x.on { display: grid; }
 .mq_kh { display: flex; align-items: center; gap: 8px; padding: 2px 26px 6px; }
 .mq_kh b { font-size: 18px; --axfs: 18px; font-weight: 600; }
@@ -757,7 +757,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .mq_flag { display: block; border-radius: 3px; box-shadow: 0 0 0 0.5px rgba(22, 27, 34, 0.14); flex: none; }
 .mq_hl { font-weight: 700; color: var(--axd); --axfg: var(--axd); }
 .mq_chips { display: flex; flex-wrap: wrap; gap: 7px; padding: 0 16px 6px; }
-.ax .mq_chip { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 999px; --axbg: #fff; --axsh: 0 1px 2px rgba(22, 27, 34, 0.05), 0 3px 10px rgba(22, 27, 34, 0.07); font-size: 13px; --axfs: 13px; font-weight: 500; color: #161b22; --axfg: #161b22; white-space: nowrap; }
+.ax .mq_chip { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 999px; --axr: 999px; --axbg: #fff; --axsh: 0 1px 2px rgba(22, 27, 34, 0.05), 0 3px 10px rgba(22, 27, 34, 0.07); font-size: 13px; --axfs: 13px; font-weight: 500; color: #161b22; --axfg: #161b22; white-space: nowrap; }
 .ax .mq_chip.on { --axbg: var(--axd); color: #fff; --axfg: #fff; }
 /* a town: its map behind a sheet */
 .mq_bgcity { height: 470px; }
@@ -766,11 +766,11 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .mq_ct { display: flex; align-items: center; gap: 8px; font-size: 13px; --axfs: 13px; color: #6b7380; --axfg: #6b7380; }
 .mq_tl { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 3px; }
 .mq_tl b { font-size: 28px; --axfs: 28px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.2; }
-.ax .mq_dn { height: 32px; padding: 0 12px; border-radius: 999px; --axbg: #e9ecf0; --axsh: none; font-size: 12.5px; --axfs: 12.5px; font-weight: 600; color: #2a313b; --axfg: #2a313b; white-space: nowrap; flex: none; }
+.ax .mq_dn { height: 32px; padding: 0 12px; border-radius: 999px; --axr: 999px; --axbg: #e9ecf0; --axsh: none; font-size: 12.5px; --axfs: 12.5px; font-weight: 600; color: #2a313b; --axfg: #2a313b; white-space: nowrap; flex: none; }
 .mq_nm { font-size: 12.5px; --axfs: 12.5px; color: #7b818c; --axfg: #7b818c; }
 .mq_ths { display: flex; gap: 10px; padding: 4px 16px 10px; overflow-x: auto; scrollbar-width: none; }
 .mq_ths::-webkit-scrollbar { display: none; }
-.ax .mq_th { position: relative; width: 96px; height: 78px; padding: 0; border-radius: 14px; overflow: hidden; flex: none; --axbg: #e9ecf0; --axsh: 0 1px 2px rgba(22, 27, 34, 0.05), 0 6px 16px rgba(22, 27, 34, 0.1); }
+.ax .mq_th { position: relative; width: 96px; height: 78px; padding: 0; border-radius: 14px; --axr: 14px; overflow: hidden; flex: none; --axbg: #e9ecf0; --axsh: 0 1px 2px rgba(22, 27, 34, 0.05), 0 6px 16px rgba(22, 27, 34, 0.1); }
 .mq_th svg { display: block; }
 .mq_th span { position: absolute; left: 0; right: 0; bottom: 0; padding: 16px 7px 5px; background: linear-gradient(transparent, rgba(0, 0, 0, 0.5)); color: #fff; --axfg: #fff; font-size: 10.5px; --axfs: 10.5px; font-weight: 600; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ax .mq_th.on { outline: 2.5px solid var(--axd); outline-offset: 2px; }
@@ -781,6 +781,6 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .mq_fc { position: absolute; left: 16px; right: 16px; bottom: 34px; z-index: 3; padding: 16px 18px; border-radius: 22px; background: rgba(255, 255, 255, 0.97); box-shadow: 0 1px 2px rgba(22, 27, 34, 0.08), 0 12px 30px rgba(22, 27, 34, 0.25); display: flex; flex-direction: column; gap: 3px; }
 .mq_pill { height: 26px; padding: 0 10px; border-radius: 999px; background: var(--axc); color: var(--axd); --axfg: var(--axd); font-size: 12.5px; --axfs: 12.5px; font-weight: 600; display: inline-flex; align-items: center; flex: none; }
 .mq_btns { display: flex; gap: 8px; margin-top: 10px; }
-.ax .mq_b1, .ax .mq_b2 { flex: 1; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 14px; --axfs: 14px; font-weight: 600; }
+.ax .mq_b1, .ax .mq_b2 { flex: 1; height: 40px; border-radius: 999px; --axr: 999px; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 14px; --axfs: 14px; font-weight: 600; }
 .ax .mq_b2 { --axbg: #e9ecf0; --axsh: none; color: #161b22; --axfg: #161b22; }
 .ax .mq_b1 { --axbg: var(--axd); --axsh: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 4px 12px rgba(47, 107, 255, 0.28); color: #fff; --axfg: #fff; }
