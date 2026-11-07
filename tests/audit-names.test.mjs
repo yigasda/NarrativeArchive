@@ -141,3 +141,45 @@ test('02-29 with no year: converted in a leap year, never the 1st of March', asy
     const r = 'Mara texted.', got = await data.reflectionClocks(p, [{ index: 2, text: r, clockSource: `${r} <span class="time">02.29 12:00</span>` }], mText());
     assert.deepEqual(got.choices.map(c => [c.names[0], c.ownerTime]).sort(), [['Mara', '02-29 04:00'], ['Ren', '02-29 12:00']]);
 });
+
+test('점검 수정 2: "Ren Kim" moving or read never moves the owner Ren nor takes the city the owner set by hand; the owner\'s full name, given as their aka, is the owner everywhere; a name two rows share moves no one and makes no third row', async () => {
+    globalThis.__rows = [];
+    // moved: the owner stays
+    let p = plainPhone({ contacts: [{ name: 'Ren Kim' }], where: { at: 1, people: [row('Ren', 'Frankfurt', 'Europe/Berlin')] } });
+    assert.equal(data.__peopleMoved(p, [{ name: 'Ren Kim', city: 'Seoul', tz: 'Asia/Seoul' }], '', mText()), true);
+    assert.deepEqual(p.where.people.map(x => [x.name, x.city]).sort(), [['Ren Kim', 'Seoul'], ['Ren', 'Frankfurt']]);
+    // read: no city of the owner's
+    p = plainPhone({ contacts: [{ name: 'Ren Kim' }], where: { at: 1, people: [row('Ren', 'Frankfurt', 'Europe/Berlin', { manual: { city: true } })] } });
+    await read(mText(), p, [{ name: 'Ren Kim', city: 'Seoul', lives: 'KR', tz: 'Asia/Seoul' }]);
+    const kim = p.where.people.find(x => x.name === 'Ren Kim');
+    assert.deepEqual([kim.city, kim.tz, kim.manual], ['Seoul', 'Asia/Seoul', undefined]);
+    assert.equal(p.where.people.find(x => x.name === 'Ren').city, 'Frankfurt');
+    // the owner's full name in the contacts, the reading giving it as the owner's aka (and a row of its own too)
+    p = plainPhone({ contacts: [{ name: 'Ren Park' }, { name: 'Mara' }], where: { at: 1, people: [row('Ren', 'Frankfurt', 'Europe/Berlin')] } });
+    globalThis.__where = []; globalThis.__whereAnswer = { people: [{ name: 'Ren', aka: ['Ren Park'], city: 'Frankfurt', lives: 'DE', tz: 'Europe/Berlin' }, { name: 'Ren Park', city: 'Frankfurt', lives: 'DE', tz: 'Europe/Berlin' }, { name: 'Mara', city: 'Seoul', lives: 'KR', tz: 'Asia/Seoul' }],
+        around: [{ name: 'Ren Park', about: 'the owner' }, { name: 'Mara', about: 'Ren\'s mother' }] };
+    try { await data.readWhere(mText(), p); } finally { delete globalThis.__whereAnswer; }
+    assert.deepEqual(p.where.people.map(x => x.name).sort(), ['Mara', 'Ren']);
+    assert.deepEqual(p.around.people.map(x => x.name), ['Mara']);
+    assert.deepEqual(data.__scenesWith(p, 'Ren Park met Mara.', [], mText()), ['Mara']);
+    // a name two rows share
+    p = plainPhone({ where: { at: 1, people: [row('Ren', 'Frankfurt', 'Europe/Berlin'), row('Ivo Kim', 'Paris', 'Europe/Paris', { aka: ['Ivo'] }), row('Ivo Park', 'Seoul', 'Asia/Seoul', { aka: ['Ivo'] })] } });
+    assert.equal(data.__peopleMoved(p, [{ name: 'Ivo', city: 'Tokyo', tz: 'Asia/Tokyo' }], '', mText()), false);
+    await read(mText(), p, [{ name: 'Ivo', city: 'Tokyo', lives: 'JP', tz: 'Asia/Tokyo' }]);
+    assert.deepEqual(p.where.people.map(x => [x.name, x.city]).sort(), [['Ivo Kim', 'Paris'], ['Ivo Park', 'Seoul'], ['Ren', 'Frankfurt']]);
+});
+
+test('점검 수정 2: new endings after a name only end a word ("소망에너지", "이보로봇" are no name); one cafe twice two hours apart, or in two cities, is two visits', () => {
+    for (const t of ['소망에너지 주식', '이보로봇', '이보에스프레소']) assert.equal(data.namedIn(t, t.slice(0, 2)), false, t);
+    for (const t of ['이보에서는', '이보로는', '이보였는데', '이보보다도']) assert.equal(data.namedIn(t, '이보'), true, t);
+    const p = plainPhone({ where: { at: 1, people: [row('Ren', 'Frankfurt', 'Europe/Berlin')] } });
+    const visit = (time, city = 'Frankfurt') => data.__mergePhone(p, { threads: [], posts: [], contacts: [], visits: [{ place: 'Bar X', city, time, with: [] }] });
+    visit('10-26 11:00'); visit('10-26 11:40'); visit('10-26 13:00'); visit('10-26 13:10', 'Paris');
+    assert.deepEqual(p.visits.map(x => [x.time, x.city]), [['10-26 11:00', 'Frankfurt'], ['10-26 13:00', 'Frankfurt'], ['10-26 13:10', 'Paris']]);
+});
+
+test('점검 수정 2: 02-29 in a year with none is converted in the next leap year, its hours and its summer-time notes alike', () => {
+    const p = plainPhone({ now: '02-29 12:00', year: 2026, where: { at: 1, people: [row('Ren', 'Berlin', 'Europe/Berlin'), row('Mara', 'New York', 'America/New_York')] } });
+    const z = data.zonesOf(p, p.now, mText());
+    assert.deepEqual(z.others.map(o => [o.name, o.hours, o.dst]), [['Mara', -6, undefined]]);
+});

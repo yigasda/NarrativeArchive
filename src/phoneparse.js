@@ -44,7 +44,7 @@ export async function withDateOrder(order, fn) { const me = { order }; runs.push
 // story that only looks like one ("[BREAKING NEWS]", "[A text from Mina]" in a message)
 // (by their whole names, each ending its header or followed by " —": "[DATE NIGHT]", "[DIARY ENTRY]", "[BANK ALERT]",
 // "[DAYS LATER]" are the story's)
-const CODE_BLOCKS = /^\[(?:OWNER'S CLOCK|PHONE NOW|MONEY NOW|INVESTMENTS NOW|LIFE NOW|WEATHER NOW|EXISTING (?:ACCOUNTS|PUBLIC PRICES|QUOTES|ARCHIVE)|EVALUATION DATE|FX PAIRS|SAVED RATES|CURRENCY|ACCOUNT CURRENCIES|PUBLIC SECURITIES|WEALTH|FINANCIAL SCALE|BANK|REBUILD(?: ACCOUNTS)?|MONEY ALREADY MOVED|ORDERED|DAYS|STORY DAYS|DATE|LIVES IN|COUNTRY|OWNER COUNTRY|PHONE COUNTRY|STORY YEAR|NAMES|ONLY THESE|[A-Z ]+ SO FAR|EVENTS ON THE PHONE|DELIVERY SHOPS|SHOPS|NEARBY|PUT ON THE PHONE NOW|SCENES WITH|DEVICE|BODY ON THE PHONE NOW|DIARY|PEOPLE AROUND)(?=\]|\s+—)/;
+const CODE_BLOCKS = /^\[(?:OWNER'S CLOCK|PHONE NOW|MONEY NOW|INVESTMENTS NOW|LIFE NOW|WEATHER NOW|EXISTING (?:ACCOUNTS|PUBLIC PRICES|QUOTES|ARCHIVE|SCHEDULES)|EVALUATION DATE|FX PAIRS|SAVED RATES|CURRENCY|ACCOUNT CURRENCIES|PUBLIC SECURITIES|WEALTH|FINANCIAL SCALE|BANK|REBUILD(?: ACCOUNTS)?|MONEY ALREADY MOVED|ORDERED|DAYS|STORY DAYS|DATE|LIVES IN|COUNTRY|OWNER COUNTRY|PHONE COUNTRY|STORY YEAR|NAMES|ONLY THESE|[A-Z ]+ SO FAR|EVENTS ON THE PHONE|DELIVERY SHOPS|SHOPS|NEARBY|PUT ON THE PHONE NOW|SCENES WITH|DEVICE|BODY ON THE PHONE NOW|DIARY|PEOPLE AROUND)(?=\]|\s+—)/;
 export const storyText = input => String(input || '').split(/\n\n(?=\[[A-Z][A-Z'’ ]+[^\]\n]*\]\n)/).filter(b => !CODE_BLOCKS.test(b)).join('\n\n');
 export const swapDate = (a, b, sep) => Number(b) <= 12 && (Number(a) > 12 || sep !== '-' && Number(a) <= 31 && dayFirstChat());
 export const when = v => {
@@ -65,7 +65,7 @@ export const when = v => {
 const KO_SP = String.raw`[ \t\u00a0]`;
 // ("am" · "pm" never the end of a word: "Liam 12시", "Team 12시 회의")
 const KO_MER = String.raw`(?:오전|오후|새벽|아침|낮|저녁|밤|(?<![A-Za-z])[aApP]\.?[mM]\.?)`;
-const KO_CLOCK_SRC = String.raw`(?<![\p{N}.:])(?:(${KO_MER})(?:에|의)?${KO_SP}*)?(\d{1,2})${KO_SP}*시(?!간)(?:${KO_SP}*(?:(\d{1,2})${KO_SP}*분|(반))(?:${KO_SP}*\d{1,2}${KO_SP}*초)?)?(?:(?:에|엔)?${KO_SP}*((?:오전|오후|새벽|아침|낮|저녁|밤)(?:에|엔|의)?(?![\p{L}])|(?<![A-Za-z])[aApP]\.?[mM]\.?(?![A-Za-z])))?(?!${KO_SP}*(?:(?:전|후|뒤)(?:(?:이|인|일|입|였)\p{L}*|(?:에|엔|으로|로|부터|까지|쯤|만|도|은|는|의|과|와|보다|가|을|를|라서|라|이라)*(?![\p{L}]))|(?:이전|이후|직전|직후|방향)\p{L}*|넘(?:어|었|게|긴|겼|는|은|을)\p{L}*|(?:가|를|이|을)${KO_SP}*(?:넘|지나)\p{L}*|동안\p{L}*|만에|지나\p{L}*|가량|간(?![\p{L}])|(?:쯤|경)${KO_SP}*(?:전|후|뒤|이전|이후)))`;
+const KO_CLOCK_SRC = String.raw`(?<![\p{N}.:])(?:(${KO_MER})(?:에|의)?${KO_SP}*)?(\d{1,2})${KO_SP}*시(?!간)(?:${KO_SP}*(?:(\d{1,2})${KO_SP}*분|(반))(?:${KO_SP}*\d{1,2}${KO_SP}*초)?)?(?:(?:에|엔)?${KO_SP}*((?:오전|오후|새벽|아침|낮|저녁|밤)(?:에|엔|의)?(?![\p{L}])|(?<![A-Za-z])[aApP]\.?[mM]\.?(?![A-Za-z])))?(?!${KO_SP}*(?:(?:전|후|뒤)(?:(?:이|인|일|입|였)\p{L}*|(?:에|엔|으로|로|부터|까지|쯤|만|도|은|는|의|과|와|보다|가|을|를|라서|라|이라)*(?![\p{L}]))|(?:이전|이후|직전|직후|방향)\p{L}*|(?:(?:가|를|이|을)${KO_SP}*)?(?:(?:조금|좀|막|살짝|훨씬|한참|이미|벌써|약간|꽤)${KO_SP}*)?(?:넘|지나|지났)\p{L}*|동안\p{L}*|만에|가량|간(?![\p{L}])|(?:쯤|경)${KO_SP}*(?:전|후|뒤|이전|이후)))`;
 const KO_CLOCK_ALL = new RegExp(KO_CLOCK_SRC, 'gu');
 // (a meridiem after it: a Korean one never as the start of a word, "4시 낮잠"; "PM" with whatever follows, "4시 PM이야",
 // "4시에 pm")
@@ -315,7 +315,8 @@ function readHtmlClocks(input, fields = false, excluded = null, positions = fals
             if (node.inDate && !node.ownBlock && complete) { parent.text += node.text; parent.seen += node.hiddenStyle ? '' : node.seen; return; }
             parent.text += '\0';
             // (a part shown but not read, a quote, code or a timer, keeps the text on either side apart, as for a colon clock)
-            if (!node.hiddenStyle) { parent.seen += '\0'; if (complete && !node.removed) shown += '\0'; }
+            // (an empty one, or one of spaces only, keeps nothing apart: "11월 5일 <code></code>16:15" is still one stamp)
+            if (!node.hiddenStyle) { parent.seen += '\0'; if (complete && !node.removed) { const inner = node.text.replace(/\0/g, ''); shown += /\S/.test(inner) ? '\0' : inner; } }
             if (!complete || !node.removed && !HTML_INLINE.test(node.name)) visible = shown = '';
             return;
         }

@@ -437,9 +437,9 @@ const SIG = {
 const sigOf = (k, x) => JSON.stringify(SIG[k](x)).toLowerCase();
 // the same record told again with its clock a little off ("21:00" then "21:02"): the one there, not a second
 // (a short text like "ㅋㅋ" or "ok" may really come twice, so only a longer one is matched this way)
-const NEAR = { msg: x => [nameKey(x.from), x.text], calls: x => [nameKey(x.with), x.type], photos: x => [x.caption], mails: x => [x.from, x.subject], searches: x => [x.q], voice: x => [x.title], visits: x => [nameKey(x.place)] };
+const NEAR = { msg: x => [nameKey(x.from), x.text], calls: x => [nameKey(x.with), x.type], photos: x => [x.caption], mails: x => [x.from, x.subject], searches: x => [x.q], voice: x => [x.title], visits: x => [nameKey(x.place), pkey(x.city)] };
 // how far the clock may be off, in minutes, before it is another record (a call back an hour later is a second call)
-const NEAR_MIN = { msg: 15, calls: 10, photos: 30, mails: 120, searches: 15, voice: 30, visits: 90 };
+const NEAR_MIN = { msg: 15, calls: 10, photos: 30, mails: 120, searches: 15, voice: 30, visits: 60 };
 const nearMin = t => { const x = parts(t); return x && x.h !== null ? storyMin(t, '') : null; };
 const twinOf = (k, list, a) => {
     const sig = sigOf(k, a), exact = list.find(x => sigOf(k, x) === sig);
@@ -864,6 +864,8 @@ export function setStoryYear(m, p, year) {
             if (q.syncUndos) q.syncUndos = q.syncUndos.map(u => { const v = shiftAll(u, n); if (v.year) v.year += n; return v; });
             for (const e of Object.values(q.sync?.events || {})) if (e?.effects) e.effects = shiftAll(e.effects, n);
         }
+        // (a phone being made again: the year read for it before moves with the rest)
+        for (const q of Object.values(m.phonePre || {})) if (q?.base && q.year && !q.noYear) q.year += n;
         // this browser's record of unsaved rounds (복구) too
         try {
             const scope = phoneChatScope(ctx()), owners = new Set(Object.values(m.phones || {}).map(q => q?.owner));
@@ -938,19 +940,25 @@ const blindBlock = (m, owner) => {
 };
 // extra: a second turn's blocks (PHONE SO FAR, TOLD SHORT)
 // pre: a phone being made, as far as it is read before (where everyone is, PEOPLE AROUND): its OWNER'S CLOCK goes by it
-// a day the story is on (MM-DD), for a phone with no time yet: the newest status line's date, else the newest archive
-// section's heading date, else the last full date its text writes
+// a day the story is on (MM-DD), for a phone with no time yet: the newest status line's date only (a date in the archive
+// may be a memory, "they first met on 2025-07-01", a heading a stretch of days or another calendar's: with none, the
+// hours go with every change in the year)
 function storyDayOf(m, upto = null, st = null) {
     const d0 = monthDay(st?.date || '');
     if (d0) return `${pad(d0.mo)}-${pad(d0.d)}`;
     try { const t = recentTrackers(1, { visibleOnly: true, ...(upto == null ? {} : { chat: (ctx().chat || []).slice(0, upto + 1) }) })[0], d = monthDay(t?.date || ''); if (d) return `${pad(d.mo)}-${pad(d.d)}`; } catch { /* no status lines */ }
-    const cals = calendars(), [body] = splitTail(String(m?.text || ''));
-    for (const sec of parseSections(body).filter(x => !x.group).reverse()) { const d = headingDate(sec.title, cals).date; if (d?.d && cals[d.cal]?.length === 12) return `${pad(d.m + 1)}-${pad(d.d)}`; }
-    const iso = [...body.matchAll(/(?<!\d)\d{4}-(\d{2})-(\d{2})(?!\d)/g)].at(-1);
-    return iso && Number(iso[1]) >= 1 && Number(iso[1]) <= 12 && Number(iso[2]) >= 1 && Number(iso[2]) <= 31 ? `${iso[1]}-${iso[2]}` : '';
+    return '';
 }
-// the year a time is converted in: the story's, else this one; a 02-29 with no year, in a leap year (never the 1st of March)
-const yearOr = (t, y) => { const n = Number(y); if (n) return n; const now = new Date().getFullYear(); return String(t || '').startsWith('02-29') ? now + (4 - now % 4) % 4 : undefined; };
+// the year a time is converted in: the story's, else this one; a 02-29 in a leap year, the next one from the story's (never
+// the 1st of March, never a day's hours off)
+const isLeap = y => new Date(Date.UTC(y, 1, 29)).getUTCMonth() === 1;
+const yearOr = (t, y) => {
+    const n = Number(y) || 0;
+    if (!String(t || '').startsWith('02-29')) return n || undefined;
+    let v = n || new Date().getFullYear();
+    while (!isLeap(v)) v++;
+    return v;
+};
 const todayWall = () => { const d = new Date(); return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
 function phoneRequest(m, owner, p = null, lore = '', only = null, profile = '', gap = null, extra = [], pre = null) {
     const q = p || pre || m.phones?.[nameKey(owner)] || { owner };
@@ -1007,11 +1015,15 @@ const phoneForModel = p => ({
 // a make asked again (a clock check it didn't pass) reads none of it again. again: read anew
 // (kept while what the reading read is the same: the owner's 인물 정보, the 참고 로어북 picked and the entries left out)
 const loreKey = m => JSON.stringify(phoneLore(m).slice().sort().map(b => [b, [...loreOff(m, b)].sort()]));
-const sameBinding = (pre, binding, m) => JSON.stringify(pre?.financeProfile ?? null) === JSON.stringify(binding ?? null) && (pre?.lore ?? loreKey(m)) === loreKey(m);
+// (and while the phone it was read for is the same: one read for an old phone, gone since, is not the new one's)
+const sameBinding = (pre, binding, m) => JSON.stringify(pre?.financeProfile ?? null) === JSON.stringify(binding ?? null) && (pre?.lore ?? loreKey(m)) === loreKey(m) && !!pre?.base === !!m?.phones?.[nameKey(pre?.owner)];
 export const phonePre = (m, owner) => m?.phonePre?.[nameKey(owner)] || null;
+// the time 위치 정보 shows a phone not made yet its hours at: the one its request will go by (the newest status line's
+// time, else its day at noon), else '' (today's, as the request's then)
+const preClock = (m, pre) => { const upto = nowAt(windowOf(m, null)), st = statusAt(pre, upto, m); if (hm(st?.raw)) return st.raw; const day = storyDayOf(m, upto, st); return day ? `${day} 12:00` : ''; };
 // (an old phone made again whole, one with no 위치 정보: its year and where it lives, as the owner left them)
 const seedPre = (m, owner, binding) => {
-    const cur = m.phones?.[nameKey(owner)], pre = { owner, making: true, lore: loreKey(m), ...(binding ? { financeProfile: structuredClone(binding) } : {}) };
+    const cur = m.phones?.[nameKey(owner)], pre = { owner, making: true, lore: loreKey(m), base: !!cur, ...(binding ? { financeProfile: structuredClone(binding) } : {}) };
     if (cur) for (const k of ['year', 'noYear', 'lives', 'livesManual', 'country']) if (cur[k] !== undefined) pre[k] = cur[k];
     return pre;
 };
@@ -1019,11 +1031,11 @@ export async function preparePhone(m, owner, { again = false } = {}) {
     const key = nameKey(owner);
     await ensureScreenHolder(m);
     const binding = m.phones?.[key]?.financeProfile || m.phoneProfiles?.[key], kept = phonePre(m, owner);
-    if (kept && !again && sameBinding(kept, binding, m)) { glossAka(m, kept); return kept; }
+    if (kept && !again && sameBinding(kept, binding, m)) { glossAka(m, kept); kept.clockAt = preClock(m, kept); return kept; }
     const pre = seedPre(m, owner, binding), asked = { known: true };
     ensureYear(m, pre, nowAt(windowOf(m, null)));
     await tryWhere(m, pre, asked);
-    pre.asked = asked.asked || [];
+    pre.asked = asked.asked || []; pre.clockAt = preClock(m, pre);
     (m.phonePre ||= {})[key] = pre;
     await saveMeta();
     return pre;
@@ -1062,8 +1074,11 @@ async function makePhone0(m, owner, { update = false, apps = null } = {}) {
     const firstMade = !part && !old && !cur?.where, kept = firstMade ? phonePre(m, owner) : null, asked = {};
     let pre = null;
     if (cur) glossAka(m, cur);
-    if (kept && sameBinding(kept, binding, m)) { pre = structuredClone(kept); glossAka(m, pre); asked.asked = kept.asked || []; }
-    else if (firstMade) {
+    if (kept && sameBinding(kept, binding, m)) {
+        pre = structuredClone(kept); glossAka(m, pre); asked.asked = kept.asked || [];
+        // (a reading that failed is read again: what the user set by hand, and who they took off, stay)
+        if (pre.where?.failed) { delete pre.where.failed; asked.known = true; await tryWhere(m, pre, asked); pre.asked = asked.asked || []; m.phonePre[key] = structuredClone(pre); await saveMeta(); }
+    } else if (firstMade) {
         pre = seedPre(m, owner, binding); ensureYear(m, pre, nowAt(gap)); asked.known = true; await tryWhere(m, pre, asked);
         // (kept as preparePhone keeps it: a make asked again, after a clock check it didn't pass, reads none of it again)
         pre.asked = asked.asked || []; (m.phonePre ||= {})[key] = structuredClone(pre); await saveMeta();
@@ -1084,7 +1099,8 @@ async function makePhone0(m, owner, { update = false, apps = null } = {}) {
             const was = jsonOf(out, { salvage: true }), soFar = part && was ? Object.fromEntries(part.filter(k => was[k] !== undefined).map(k => [k, was[k]])) : was;
             const out2 = await ask(two.cover, [`${soFarHead('PHONE', two.short)}\n${JSON.stringify(soFar)}`, two.short?.text || '']), g2 = parsePhone(out2, owner);
             // (made again whole: its clock checked as the first turn's; one that doesn't hold is left out, the first kept)
-            if (!part) { const q = pre || cur || { owner }; withDateOrderSync(dateOrderOf(m), () => validateReflectionClock(jsonOf(out2, { salvage: true }) || {}, { ...q, country: q.country || g2.country }, m, g2.now)); }
+            // (a second answer with no "now" leaves the clock as the first set it: nothing to check)
+            if (!part && g2.now) { const q = pre || cur || { owner }; withDateOrderSync(dateOrderOf(m), () => validateReflectionClock(jsonOf(out2, { salvage: true }) || {}, { ...q, country: q.country || g2.country }, m, g2.now)); }
             got2 = g2; last = two.cover; short = two.short;
         } catch (err) { console.warn('[narrative-archive] phone, second turn', err); }
     }
@@ -1143,7 +1159,8 @@ async function makePhone0(m, owner, { update = false, apps = null } = {}) {
         if (got2) mergePhone(m.phones[key], got2, { m });
     }
     const p = m.phones[key];
-    if (pre && m.phonePre) { delete m.phonePre[key]; if (!Object.keys(m.phonePre).length) delete m.phonePre; }
+    // (made whole: what was read before it for this owner is done with, whichever way it was made)
+    if (m.phonePre?.[key]) { delete m.phonePre[key]; if (!Object.keys(m.phonePre).length) delete m.phonePre; }
     ensureYear(m, p, nowAt(last));
     if(m.phoneProfiles) delete m.phoneProfiles[key];
     ensureIds(p);
@@ -1154,7 +1171,7 @@ async function makePhone0(m, owner, { update = false, apps = null } = {}) {
     if (two) turnsNote(last, '폰', short); else readNote(gap);
     // made for the first time: read again only for someone on it the reading before didn't ask about; made again: as before
     // (a reading that failed before it is not asked again: the clock goes by the phones and the countries, as for a reflection)
-    const later = pre?.where?.failed ? [] : pre ? [...p.threads.map(t => t.with), ...p.contacts.map(x => x.name)].filter(n => n && !isOwnerName(p, m, n) && !(asked.asked || []).some(a => strictSame(m, a, n))) : null;
+    const later = pre?.where?.failed ? [] : pre ? [...p.threads.map(t => t.with), ...p.contacts.map(x => x.name)].filter(n => n && !isOwnerName(p, m, n) && !(asked.asked || []).some(a => strictSame(m, a, n)) && !hasRow(p, m, n)) : null;
     if (!later || later.length) await tryWhere(m, p);
     await saveMeta();
     return p;
@@ -2133,6 +2150,7 @@ WHERE
 - "lives": the country they live in now, not where they were born or their nationality. Born in Germany, living in Korea: "KR".
 - "tz": the time zone of "city", like "Asia/Seoul".
 - "aka": the other names the same person goes by here, as the chat writes them: a first name, a nickname, the name in Korean or English ("소망" for "Somang Park").
+- A name in PEOPLE that is the owner by another name (their full name, a nickname): no row of its own; it goes in the owner's "aka". Someone else who shares the owner's first name is someone else.
 - The newest of the story wins over a card: a card that says Berlin, a story that has moved them to Seoul: Seoul.
 - Someone nothing here places: leave them out. Never guess from a name or a language.
 - Someone whose whereabouts are in OWNER DOESN'T KNOW: leave them out. The owner's phone may not know them.
@@ -2186,23 +2204,34 @@ export async function readWhere(m, p, opts = {}) {
     const raw = jsonOf(await askDraft(input, { force: true, system: AI_SYS_WHERE, maxTokens: 4500, effort: 'low' }));
     // the people closest to the owner, as the cards, the persona, the profile and the lorebook tell them (반영 reads these,
     // never the texts themselves); a reading that gives none keeps the ones there
-    const around = arr(raw?.around).map(x => ({ name: line(x?.name, 60), aka: akaOf(x), about: str(x?.about, 1600) })).filter(x => x.name && x.about && !isOwnerName(p, m, x.name)).slice(0, 5);
+    // (the owner by a name of theirs, as before, or as this reading gives it: their full name in the contacts, "Ren Park",
+    // is the owner's aka here, never a person of its own)
+    const ownRead = arr(raw?.people).find(x => nameKey(x?.name) === nameKey(p.owner)), ownAka = new Set(withTwins(m, akaOf(ownRead || {})).map(nameKey));
+    const isOwn = n => isOwnerName(p, m, n) || withTwins(m, [n]).some(x => ownAka.has(nameKey(x)));
+    const around = arr(raw?.around).map(x => ({ name: line(x?.name, 60), aka: akaOf(x), about: str(x?.about, 1600) })).filter(x => x.name && x.about && !isOwn(x.name)).slice(0, 5);
     if (around.length) p.around = { at: Date.now(), people: around };
     const known = [p.owner, ...r.people];
     // (someone the user took off stays off; what the user set by hand stays as they set it)
     // (by any form of their name: one taken off as "Ivo" stays off as "이보"; one set by hand as "Ivo" stays so as "이보")
     const removed = new Set(p.where?.removed || []), formsOf = x => withTwins(m, [x.name, ...arr(x.aka)]).map(nameKey), gone = x => formsOf(x).some(k => removed.has(k));
+    const olds = p.where?.people || [], strong = x => withTwins(m, [x.name]).map(nameKey);
+    const shared = x => !olds.some(o => strong(o).some(k => strong(x).includes(k))) && olds.filter(o => formsOf(o).some(k => strong(x).includes(k))).length > 1;
     const oldRow = x => { const ks = formsOf(x), rows = p.where?.people || []; return rows.find(r => nameKey(r.name) === nameKey(x.name)) || (hits => (hits.length === 1 ? hits[0] : null))(rows.filter(r => rowForms(m, r).some(k => ks.includes(k)))) || whereOf(p, x.name); };
     // (a row by the other form of a name asked about, "이보" for "Ivo", is that person's; and it keeps that form as a name of theirs)
     const read = arr(raw?.people).map(whereRow).filter(x => x.name && known.some(k => nameKey(k) === nameKey(x.name) || nameKey(glossTwin(m, k)) === nameKey(x.name)) && !gone(x) && (x.tz || COUNTRY_TZ[x.lives]))
         // (the owner read by another name of theirs, "렌" for Ren: their row, by the owner's name, that one kept as an aka)
-        .map(x => (nameKey(x.name) !== nameKey(p.owner) && isOwnerName(p, m, x.name) ? { ...x, name: p.owner, aka: [...new Set([x.name, ...arr(x.aka)])].filter(a => nameKey(a) !== nameKey(p.owner)).slice(0, 6) } : x))
+        .map(x => (nameKey(x.name) !== nameKey(p.owner) && isOwn(x.name) ? { ...x, name: p.owner, aka: [...new Set([x.name, ...arr(x.aka)])].filter(a => nameKey(a) !== nameKey(p.owner)).slice(0, 6), byOther: true } : x))
+        // (the row read by the owner's own name first: one by another name of theirs only when there is none)
+        .sort((a, b) => Number(!!a.byOther) - Number(!!b.byOther))
         .filter((x, i, all) => all.findIndex(y => nameKey(y.name) === nameKey(x.name)) === i)
+        .map(({ byOther, ...x }) => x)
         .map(x => { const t = glossTwin(m, x.name); return t && !arr(x.aka).some(a => nameKey(a) === nameKey(t)) ? { ...x, aka: [...arr(x.aka), t].slice(0, 6) } : x; })
-        .map(x => { const o = oldRow(x); return o?.manual ? { ...x, ...(o.manual.city ? { city: o.city, names: namesOf(o), tz: o.tz } : {}), ...(o.manual.lives ? { lives: o.lives } : {}), manual: o.manual } : x; });
+        .map(x => { const o = oldRow(x); return o?.manual ? { ...x, ...(o.manual.city ? { city: o.city, names: namesOf(o), tz: o.tz } : {}), ...(o.manual.lives ? { lives: o.lives } : {}), manual: o.manual } : x; })
+        // (a name that is only an aka two rows share, "Ivo" of Ivo Kim and Ivo Park, is neither of them: left out)
+        .filter(x => !shared(x));
     // one person by two names ("Somang Park" in the contacts, "Somang" in a thread) in the same city: once, by the longer
     // name. In two cities they are two people (two named alike) and both stay
-    const here = (a, b) => sameName(m, a.name, b.name) && nameKey(a.name) !== nameKey(b.name) && isOwnerName(p, m, a.name) === isOwnerName(p, m, b.name) && pkey(a.city) === pkey(b.city) && (a.tz || '') === (b.tz || '');
+    const here = (a, b) => sameName(m, a.name, b.name) && nameKey(a.name) !== nameKey(b.name) && isOwn(a.name) === isOwn(b.name) && pkey(a.city) === pkey(b.city) && (a.tz || '') === (b.tz || '');
     // (two forms the same length, "Yu" and "유우": the one first in order stays)
     const longer = (y, x) => String(y.name).length > String(x.name).length || String(y.name).length === String(x.name).length && nameKey(y.name) < nameKey(x.name);
     const twin = x => read.some(y => here(x, y) && longer(y, x));
@@ -2210,7 +2239,7 @@ export async function readWhere(m, p, opts = {}) {
         merged = read.filter(twin).map(x => nameKey(x.name));
     // (an old row of a person read now by another form of their name is that person's: one row, its names kept)
     // (by a row's own name or its 용어집 form, never an aka alone: "Ivo" an aka of both Ivo Kim and Ivo Park is neither)
-    const strong = x => withTwins(m, [x.name]).map(nameKey), samePersonRow = (o, x) => strong(o).some(k => formsOf(x).includes(k)) || strong(x).some(k => formsOf(o).includes(k));
+    const samePersonRow = (o, x) => strong(o).some(k => formsOf(x).includes(k)) || strong(x).some(k => formsOf(o).includes(k)) && olds.filter(r => formsOf(r).some(k => strong(x).includes(k))).length === 1;
     for (const x of got) for (const o of p.where?.people || []) if (nameKey(o.name) !== nameKey(x.name) && samePersonRow(o, x)) x.aka = [...new Set([...arr(x.aka), o.name, ...arr(o.aka)])].filter(n => nameKey(n) !== nameKey(x.name)).slice(0, 8);
     // read again: someone it leaves out keeps what was read before
     const people = [...got, ...(p.where?.people || []).filter(o => !got.some(x => nameKey(x.name) === nameKey(o.name) || samePersonRow(o, x)) && !merged.includes(nameKey(o.name)) && !got.some(x => here(o, x) && longer(x, o))).map(o => ({ ...o, names: namesOf(o) }))].slice(0, 16);
@@ -2259,6 +2288,9 @@ const sameName = (m, a, b) => samePerson(a, b) || (t => !!t && samePerson(t, b))
 // one person by the very same name only: equal, or one the 용어집 other form of the other ("Ren" and "렌"; never "Ren"
 // and "Ren Kim", who may be someone else)
 const strictSame = (m, a, b) => { const x = nameKey(a), y = nameKey(b); return !!x && !!y && (x === y || nameKey(glossTwin(m, a)) === y || nameKey(glossTwin(m, b)) === x); };
+// a 위치 정보 row for this name: by the row's name, an aka, a 용어집 form, or the one row whose first name it is ("Mara
+// Lee" for a row Mara): no reading needed for them
+const hasRow = (p, m, n) => { const who = personOf(p, m, n); return !!(who && (p?.where?.people || []).some(r => nameKey(r.name) === who.key)) || !!whereOf(p, n); };
 // the owner by a name of theirs: their own, their 위치 정보 row's aka, the 용어집 other form of either; never another
 // whose first name is theirs ("Ren Kim" for an owner Ren is asked about, kept, and with them)
 const ownerRow = p => (p?.where?.people || []).find(r => nameKey(r.name) === nameKey(p?.owner));
@@ -2272,7 +2304,7 @@ const isOwnerName = (p, m, n) => {
 // 이보네), never in another word ("이보다", "장미꽃", "소망하다", "그건 소망이다"); a name in Latin letters may take a Korean
 // ending ("Ivo가")
 // ("하고" not as a verb: "소망하고 있다", "소망하고 싶다")
-const KO_AFTER = String.raw`(?:이(?!다)(?:가|는|를|랑|와|하고|한테|에게|도|만|네|야|의|여|요)?|가|는|은|를|을|와|과|랑|하고(?!\s*(?:있|싶))|한테|에게|에서|에|께|의|도|만|네|야|아|여|였|씨|님|요|으로|로|보다|부터|까지|처럼|보고|더러)`;
+const KO_AFTER = String.raw`(?:이(?!다)(?:가|는|를|랑|와|하고|한테|에게|도|만|네|야|의|여|요)?|가|는|은|를|을|와|과|랑|하고(?!\s*(?:있|싶))|한테|에게|께|의|도|만|네|야|아|여|씨|님|요|부터|까지|처럼|보고|더러|(?:에서|에|으로|로|보다)(?:는|도|만|의|요|부터|까지|라도|선)?(?![\p{L}])|였(?:다|어|고|지|는데|던|으면|을|음)?(?![\p{L}]))`;
 const nameRes = new Map();
 export function namedIn(text, name) {
     const n = String(name || '').trim();
@@ -2340,7 +2372,15 @@ function glossAka(m, p) {
     }
 }
 // (by the short name only when it is one person's: "Ivo" with an Ivo Kim and an Ivo Park is neither)
-const whereOf = (p, name) => { const rows = p?.where?.people || [], same = rows.filter(x => samePerson(x.name, name)); return rows.find(x => nameKey(x.name) === nameKey(name)) || (same.length === 1 ? same[0] : undefined); };
+// (the owner's row: by their own name or one of its aka, never another's who shares their first name ("Ren Kim"), and
+// no one else's row is the owner's)
+const whereOf = (p, name) => {
+    const rows = p?.where?.people || [], k = nameKey(name), own = nameKey(p?.owner), exact = rows.find(x => nameKey(x.name) === k);
+    if (exact || !k) return exact;
+    if (k === own) { const hits = rows.filter(x => arr(x.aka).some(a => nameKey(a) === k)); return hits.length === 1 ? hits[0] : undefined; }
+    const same = rows.filter(x => nameKey(x.name) !== own && samePerson(x.name, name));
+    return same.length === 1 ? same[0] : undefined;
+};
 // where the owner lives (설정 › 위치 정보's 사는 나라: by hand or read), else the phone's 국적: what the bank, the money,
 // the parcels and the web go by (a Korean living in Germany banks in euros)
 export const homeCountry = p => String(p?.lives || whereOf(p, p?.owner)?.lives || p?.country || '').toUpperCase();
@@ -2377,7 +2417,7 @@ export function tzForCity(p, text) {
 // what 위치 정보 shows: the owner (where they live, the city they are in) and the others with how far their clock is
 export function placeInfo(p) {
     // (a phone not made yet has no time: its hours by today's)
-    const rows = p?.where?.people || [], own = whereOf(p, p?.owner), t = hm(p?.now) ? p.now : p?.making ? todayWall() : '', base = ownerZone(p);
+    const rows = p?.where?.people || [], own = whereOf(p, p?.owner), t = hm(p?.now) ? p.now : p?.making ? (hm(p.clockAt) ? p.clockAt : todayWall()) : '', base = ownerZone(p);
     const hours = tz => { if (!t || !base || !tz) return null; const a = zoneShift(t, base.tz, tz, yearOr(t, p.year)), d = dayGap(t.slice(0, 5), a.slice(0, 5)); return (d * 1440 + (Number(a.slice(6, 8)) * 60 + Number(a.slice(9, 11))) - (Number(t.slice(6, 8)) * 60 + Number(t.slice(9, 11)))) / 60; };
     return { owner: { name: p?.owner, lives: p?.lives || own?.lives || p?.country || '', livesManual: !!p?.livesManual, city: own?.city || base?.where || '', tz: own?.tz || base?.tz || '', cityManual: !!own?.manual?.city },
         people: rows.filter(x => nameKey(x.name) !== nameKey(p?.owner)).map(x => ({ name: x.name, city: x.city || '', lives: x.lives || '', tz: x.tz || '', hours: hours(x.tz || COUNTRY_TZ[x.lives]), manual: !!x.manual?.city })),
@@ -2453,6 +2493,8 @@ function peopleMoved(p, list, text = '', m = null) {
         if (!name0 || !tz || !city || isOwnerName(p, m, name0) || NOT_A_PERSON.test(name0.trim())) continue;
         if (!known.has(nameKey(name0)) && !(/^[\p{Lu}\p{Script=Hangul}]/u.test(name0) && peopleTwins(m, [name0]).some(x => namedIn(text, x)))) continue;
         const was = rowOf(name0), name = was?.name || name0;
+        // (no row of their own and a name two rows share, "Ivo" of Ivo Kim and Ivo Park: neither is moved, and no third row)
+        if (!was) { const ks = withTwins(m, [name0]).map(nameKey), rows = p?.where?.people || []; if (rows.filter(r => rowForms(m, r).some(k => ks.includes(k)) || samePerson(r.name, name0)).length > 1) continue; }
         // (one the user took off, by any name of theirs, or whose city they set by hand, stays as they left it)
         if ((was ? rowForms(m, was) : withTwins(m, [name0]).map(nameKey)).some(k => removed.has(k)) || was?.manual?.city) continue;
         const row = { ...was, name, city, names: namesOf(c), tz };
@@ -2554,8 +2596,8 @@ export function zonesOf(p, at = p?.now, m = null, { wholeYear = false } = {}) {
         const name = z.who || z.name;
         if (z.tz === own.tz || others.some(o => nameKey(o.name) === nameKey(name))) continue;
         // (wholeYear: a time that is no story time, today's: every change in the year, the hours from each)
-        const year = Number(p.year) || new Date().getFullYear();
-        const h = hours(z.tz), dst = wholeYear ? dstYear(own.tz, z.tz, year).map(x => ({ at: x.at, hours: x.after, past: false })) : dstNear(t, own.tz, z.tz, Number(p.year) || undefined, h), more = dst.length ? { dst } : {};
+        const year = yearOr(t, p.year) || new Date().getFullYear();
+        const h = hours(z.tz), dst = wholeYear ? dstYear(own.tz, z.tz, year).map(x => ({ at: x.at, hours: x.after, past: false })) : dstNear(t, own.tz, z.tz, yearOr(t, p.year), h), more = dst.length ? { dst } : {};
         // (a place on the owner's hours now is no row, unless its hours change within the week: "0 hours (DST: +1 hour from …)")
         if (h || dst.length) others.push(z.who ? { name: z.who, where: z.name, hours: h, ...more } : { name: z.name, hours: h, ...more });
     }

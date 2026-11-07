@@ -55,3 +55,8 @@ test('evidence: the story\'s own bracket headers that start like a code block\'s
     for (const kept of ['Ren and Mara at the bar.', 'sold my Hanbit shares', 'Dividend 300 won received.', 'Mara bought 10 shares.', '[#9] Ren: after']) assert.ok(s.includes(kept), kept);
     for (const gone of ['2026-11-05', '(none)', '"x":1', '["11-05"]', '"scale":9', '"w":2', '"r":3', '"d":4']) assert.ok(!s.includes(gone), gone);
 });
+
+test('evidence: the investment schedules the app sends ([EXISTING SCHEDULES — …]) are no story', () => {
+    const s = storyText(['[RECENT CHAT]\n[#4] Ren: hi', '[EXISTING SCHEDULES — app data, not evidence]\n[{"pay":"12-20"}]'].join('\n\n'));
+    assert.ok(s.includes('[#4] Ren: hi') && !s.includes('12-20'));
+});

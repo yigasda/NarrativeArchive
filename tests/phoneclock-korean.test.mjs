@@ -115,3 +115,11 @@ test('점검 수정: a date in a quote, code or a timer is no date of the clock 
     // (a stamp the last 80 letters cut into, after a long run with no space: read whole, its year too)
     assert.deepEqual(htmlDatedClocks(`<span>${'가'.repeat(70)}—2026년 11월 5일 </span><span class="time">16:15</span>`).map(x => x.sourceTime), ['2026년 11월 5일 16:15']);
 });
+
+test('점검 수정 2: 넘다 · 지나다 after a time, however written, is no clock; an empty quote or code keeps a date and its clock together', () => {
+    for (const s of ['3시가 조금 넘은 시각', '3시 넘자', '3시 넘으면', '오전 3시가 막 지났다', '3시가 지나가자', '3시를 훨씬 넘겨서', '오후 3시가 넘은 시각']) assert.equal(koClockText(s), '', s);
+    for (const [s, want] of [['3시가 됐다', '03:00'], ['3시를 가리켰다', '03:00'], ['3시 전화', '03:00'], ['3시 지점에서', '03:00']]) assert.equal(koClockText(s), want, s);
+    assert.deepEqual(htmlDatedClocks('11월 5일 <code></code><span class="time">16:15</span>').map(x => x.local), ['11-05 16:15']);
+    assert.deepEqual(htmlDatedClocks('11월 5일<span class="timer"> </span><span class="time">16:15</span>').map(x => x.local), ['11-05 16:15']);
+    assert.deepEqual(htmlDatedClocks('11월 5일 <code>x</code> <span class="time">16:15</span>'), []);
+});
