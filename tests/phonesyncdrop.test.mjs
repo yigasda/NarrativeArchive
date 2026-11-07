@@ -2122,3 +2122,28 @@ test('다녀간 곳: "with" keeps a person whose first name is the owner\'s; a s
         v('Apfelwein Wagner', 'Frankfurt am Main', ['Ren Kim', 'Ivo']), v('Frankfurt', 'Frankfurt am Main'), v('서울', ''), v('Frankfurt', 'Frankfurt (Oder)'), v('Los Ang', '')] } }] });
     assert.deepEqual(c.p.visits.map(x => [x.place, x.city, x.with]), [['Apfelwein Wagner', 'Frankfurt am Main', ['Ren Kim', 'Ivo']], ['Frankfurt', 'Frankfurt (Oder)', []], ['Los Ang', '', []]]);
 });
+
+test('a name in a text: as a name is written, never part of another word (Korean endings after a Korean name, a Korean ending after a Latin one)', () => {
+    for (const t of ['소망', '소망.', '소망이', '소망이가 왔다', '소망이랑', '소망이네', '소망아', '소망 씨', '소망씨', '소망님', '소망한테', '소망은', '소망을', '소망과', '소망의', '소망도', '소망이야', '어제 소망이를 봤다'])
+        assert.ok(data.namedIn(t, '소망'), t);
+    for (const t of ['소망하다', '소망했다', '소망스럽다', '소망대로', '그건 소망이다', '희소망']) assert.ok(!data.namedIn(t, '소망'), t);
+    for (const t of ['이보가 왔다', '이보는', '이보랑', '이보야', '이보네 집']) assert.ok(data.namedIn(t, '이보'), t);
+    for (const t of ['이보다 낫다', '그 이보다']) assert.ok(!data.namedIn(t, '이보'), t);
+    for (const t of ['Mara said hi', 'with Mara.', 'Mara가 왔다', 'Mara한테']) assert.ok(data.namedIn(t, 'Mara'), t);
+    for (const t of ['Maradona', 'Samara', 'Mara2']) assert.ok(!data.namedIn(t, 'Mara'), t);
+    assert.ok(data.namedIn('(Dr. K) came', 'Dr. K') && !data.namedIn('x', 'a'));
+});
+
+test('everyday SCENES WITH: a name only as a name; a 용어집 other form only when 용어집 marks it a person ("Rose = 장미" may be a flower)', async () => {
+    globalThis.__glossaryEntries = [{ src: 'Rose', ko: '장미' }, { src: 'Ivo', ko: '이보' }];
+    globalThis.__glossaryPeople = ['Ivo'];
+    try {
+        const chat = [say('Ren', 'start'), say('Mara', 'morning'), say('Ren', '장미가 활짝 핀 꽃집에서 장미꽃을 사 들고 이보네 집에 갔다. 이보다 늦게 도착했다.')];
+        const c = setup(chat);
+        c.p.where = { at: 1, people: [{ name: 'Ren', city: 'Frankfurt', tz: 'Europe/Berlin' }, { name: 'Rose', city: 'Frankfurt', tz: 'Europe/Berlin' }, { name: 'Ivo', city: 'Frankfurt', tz: 'Europe/Berlin' }] };
+        globalThis.__everydayIn = [];
+        await run(c.m, { now: '10-26 20:00', events: [{ id: 'visit', at: 2, quote: '이보네 집에 갔다', date: '10-26', time: '19:00', summary: 'At Ivo\'s', phone: { notes: [{ title: 'x', text: 'y', time: '10-26 19:00' }] } }] });
+        const scenes = (globalThis.__everydayIn.at(-1) || '').split('[SCENES WITH]\n')[1]?.split('\n\n')[0].split('\n') || [];
+        assert.deepEqual(scenes, ['Ivo']);
+    } finally { delete globalThis.__glossaryEntries; delete globalThis.__glossaryPeople; }
+});

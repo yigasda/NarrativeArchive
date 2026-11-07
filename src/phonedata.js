@@ -565,7 +565,7 @@ export const AI_SYS_EVERYDAY = everydaySystem();
 function scenesWith(p, text, more = [], m = null) {
     const low = String(text || '').toLowerCase(), seen = new Map();
     // (one person once, by whichever of their names: "Ivo" and "이보" are one, shown by their 위치 정보 name)
-    const add = (name0, names0) => { const who = personOf(p, m, name0); if (!who || sameName(m, name0, p.owner)) return; const k = who.key, name = who.name, names = withTwins(m, names0.filter(Boolean)); if (seen.has(k)) return; if (names.filter(Boolean).some(n => String(n).length >= 2 && new RegExp(`(^|[^\\p{L}])${String(n).toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'u').test(low))) seen.set(k, name); };
+    const add = (name0, names0) => { const who = personOf(p, m, name0); if (!who || sameName(m, name0, p.owner)) return; const k = who.key, name = who.name, names = peopleTwins(m, names0.filter(Boolean)); if (seen.has(k)) return; if (names.some(n => namedIn(low, n))) seen.set(k, name); };
     for (const x of p.around?.people || []) add(x.name, [x.name, String(x.name).split(/\s+/)[0], ...arr(x.aka)]);
     for (const x of p.where?.people || []) add(x.name, [x.name, ...arr(x.aka)]);
     for (const x of p.contacts || []) add(x.name, [x.name]);
@@ -2223,6 +2223,32 @@ const glossMap = m => {
 };
 const glossTwin = (m, n) => { const k = nameKey(n); return k && m ? glossMap(m).get(k) || '' : ''; };
 const sameName = (m, a, b) => samePerson(a, b) || (t => !!t && samePerson(t, b))(glossTwin(m, a));
+// a person named in a text, as a name is written there, never as a part of another word: "Mara" not in "Maradona"; a
+// Korean name alone or with what Korean puts after a name (소망이 · 소망이가 · 소망이랑 · 소망아 · 소망 씨 · 소망한테 · 이보는 ·
+// 이보네), never in another word ("이보다", "장미꽃", "소망하다", "그건 소망이다"); a name in Latin letters may take a Korean
+// ending ("Ivo가")
+const KO_AFTER = String.raw`(?:이(?!다)(?:가|는|를|랑|와|하고|한테|에게|도|만|네|야|의|여|요)?|가|는|은|를|을|와|과|랑|하고|한테|에게|께|의|도|만|네|야|아|여|씨|님|요|부터|까지|처럼|보고|더러)`;
+const nameRes = new Map();
+export function namedIn(text, name) {
+    const n = String(name || '').trim();
+    if (n.length < 2) return false;
+    let re = nameRes.get(n);
+    if (!re) {
+        const esc = n.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), ko = /\p{Script=Hangul}$/u.test(n);
+        re = new RegExp(String.raw`(?:^|[^\p{L}\p{N}])${esc}(?=$|[^\p{L}\p{N}]|${ko ? KO_AFTER : String.raw`\p{Script=Hangul}`})`, 'u');
+        if (nameRes.size > 2000) nameRes.clear();
+        nameRes.set(n, re);
+    }
+    return re.test(String(text || '').toLowerCase());
+}
+// the 용어집 other forms a text may be searched for: only those 용어집 marks as people (a "Rose = 장미" there may be a
+// flower); the rows themselves (위치 정보, texts) take every pair, as a whole name only
+// (an aka that is only another name's 용어집 form, put there by glossAka, counts by the same rule)
+const peopleTwins = (m, names) => {
+    const ok = new Set((m ? glossaryPeople(m) : []).map(nameKey)), people = n => ok.has(nameKey(n)) || ok.has(nameKey(glossTwin(m, n)));
+    const own = names.filter(n => !names.some(x => x !== n && nameKey(glossTwin(m, x)) === nameKey(n)) || people(n));
+    return withTwins(m, own).filter(n => own.includes(n) || people(n));
+};
 // names with their 용어집 other forms added (each once)
 const withTwins = (m, names) => { const out = []; for (const n of [...names, ...(m ? names.map(x => glossTwin(m, x)) : [])]) if (n && !out.some(x => nameKey(x) === nameKey(n))) out.push(n); return out; };
 // one person by any of their names: the 위치 정보 row they are on (by its name or an aka, or the 용어집 other form of
@@ -2366,7 +2392,7 @@ function peopleMoved(p, list, text = '') {
     for (const c of arr(list).slice(0, 8)) {
         const name = line(c?.name, 60), tz = realTz(c?.tz), city = line(c?.city, 60);
         if (!name || !tz || !city || nameKey(name) === nameKey(p.owner) || NOT_A_PERSON.test(name.trim())) continue;
-        if (!known.has(nameKey(name)) && !(/^[\p{Lu}\p{Script=Hangul}]/u.test(name) && String(text).includes(name))) continue;
+        if (!known.has(nameKey(name)) && !(/^[\p{Lu}\p{Script=Hangul}]/u.test(name) && namedIn(text, name))) continue;
         // (one the user took off, or whose city they set by hand, stays as they left it)
         if ((p.where?.removed || []).includes(nameKey(name)) || whereOf(p, name)?.manual?.city) continue;
         const was = whereOf(p, name), row = { ...was, name: was?.name || name, city, names: namesOf(c), tz };
@@ -2574,7 +2600,7 @@ function reflectionClocks0(p, rows, m, at = p?.now) {
     if (!own) return { choices, text: '' };
     for (const z of placesAround(p, m)) {
         const names = [...new Set((z.own ? [p.owner, 'owner', ...(z.by || [])] : z.who ? [z.who, ...(z.by || [])] : []).filter(Boolean))];
-        if (!names.length || !z.own && !names.some(n => nameKey(n) === nameKey(fallback) || text.toLowerCase().includes(String(n).toLowerCase()))) continue;
+        if (!names.length || !z.own && !names.some(n => nameKey(n) === nameKey(fallback) || namedIn(text, n))) continue;
         if (people.some(x => x.names[0] === names[0])) continue;
         try { new Intl.DateTimeFormat('en', { timeZone: z.tz }); } catch { continue; }
         people.push({ names, tz: z.tz });
