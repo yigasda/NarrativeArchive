@@ -12,7 +12,7 @@ const href = f => pathToFileURL(new URL(f, SRC).pathname).href;
 const stub = {
     './phonestory.js': encoded(`export const phoneTarget=()=>({scope:phoneChatScope(),check(){}});export const phoneChatScope=()=>'test';`),
     './wealth.js': encoded(`export const ensureWealth=async()=>null;export const wealthBlock=()=>'';export const wealthDate=()=> '2026-12-30';export const wealthCheck=()=>null;export const addWealthFX=()=>{};export const investmentWealthRows=()=>[];`),
-    './ai.js': encoded(`export const askDraft=async(input,o)=>{if(String(o.system).startsWith('GOAL\\nWrite the ordinary life')){(globalThis.__everydayIn||=[]).push(input);const e=globalThis.__everyday;return JSON.stringify(typeof e==='function'?e(input):e||{});}if(String(o.system).startsWith('GOAL\\nWork out where')){(globalThis.__where||=[]).push(input);return JSON.stringify(globalThis.__whereAnswer||{people:[]});}const M=globalThis.__menu;M.input=input;M.sys=o.system;(M.calls||=[]).push({input,sys:o.system});if(M.answers&&M.answers.length){const a=M.answers.shift();if(a instanceof Error)throw a;return typeof a==='function'?a(input,o):a;}return M.answer;};export const askAI=async()=>'';`),
+    './ai.js': encoded(`import { phoneMadeFixture as __pmf } from '${new URL('./reflectionfixture.mjs', import.meta.url).href}'; const askDraft0=async(input,o)=>{if(String(o.system).startsWith('GOAL\\nWrite the ordinary life')){(globalThis.__everydayIn||=[]).push(input);const e=globalThis.__everyday;return JSON.stringify(typeof e==='function'?e(input):e||{});}if(String(o.system).startsWith('GOAL\\nWork out where')){(globalThis.__where||=[]).push(input);return JSON.stringify(globalThis.__whereAnswer||{people:[]});}const M=globalThis.__menu;M.input=input;M.sys=o.system;(M.calls||=[]).push({input,sys:o.system});if(M.answers&&M.answers.length){const a=M.answers.shift();if(a instanceof Error)throw a;return typeof a==='function'?a(input,o):a;}return M.answer;};export const askAI=async()=>'';;export const askDraft=async(i,o)=>__pmf(await askDraft0(i,o),i,o?.system);`),
     './core.js': encoded(`export const ctx=()=>globalThis.__ctx||({chat:[],chatMetadata:{},characters:[]});export const globalSettings=()=>({});export const saveMeta=async()=>{};export const getMeta=()=>({});`),
     './calendar.js': encoded(`export const calendars=()=>({});export const headingDate=()=>({});`),
     './drift.js': encoded(`export const recentForCheck=n=>(globalThis.__rows||[]).slice(-n).map(r=>r.text);export const chatRows=()=>globalThis.__rows||[];`),
@@ -278,7 +278,7 @@ test('an app made again over a long stretch: 70,000 tokens, then 30,000 more add
     const p = phoneOf(), mm = { ...m, phones: { ren: p } };
     globalThis.__menu = { calls: [], answers: [notesAnswer('Shopping'), notesAnswer('Train times')], answer: '{}' };
     await data.makePhone(mm, 'Ren', { apps: ['note'] });
-    const turns = globalThis.__menu.calls.filter(c => c.sys === data.AI_SYS_PHONE);
+    const turns = globalThis.__menu.calls.filter(c => c.sys === data.AI_SYS_PHONE_APPS);
     assert.equal(turns.length, 2);
     const a = nums(turns[0].input), b = nums(turns[1].input);
     assert.deepEqual([...a, ...b], Array.from({ length: a.length + b.length }, (_, i) => i + 4));
@@ -445,7 +445,7 @@ test('OWNER\'S CLOCK combines known cities from other phones without losing thei
 test('OWNER\'S CLOCK city merging preserves DST, supplied reference dates and standalone cities', () => {
     const p = zonePhone('10-20 12:00');
     p.where = { people: [{ name: 'Somang Park', city: 'Seoul', tz: 'Asia/Seoul' }] };
-    assert.match(data.clockBlock(p), /^- Somang Park \(Seoul\): \+7 hours \(DST: \+8 hours from 10-25 03:00\)$/m);
+    assert.match(data.clockBlock(p), /^- Somang Park \(Seoul\): \+7 hours \(DST: \+8 hours from 10-25 03:00→02:00\)$/m);
     assert.doesNotMatch(data.clockBlock(p), /^- Seoul:/m);
     const november = data.clockBlock(p, '11-05 03:38');
     assert.match(november, /Saved phone time: 10-20 12:00\nClock reference time: 11-05 03:38/);
@@ -453,19 +453,34 @@ test('OWNER\'S CLOCK city merging preserves DST, supplied reference dates and st
     assert.match(november, /^- London: -1 hour$/m);
     assert.match(november, /^- New York: -6 hours \(DST: -5 hours before 11-01 07:00\)$/m);
     delete p.where;
-    assert.match(data.clockBlock(p), /^- Seoul: \+7 hours \(DST: \+8 hours from 10-25 03:00\)$/m);
+    assert.match(data.clockBlock(p), /^- Seoul: \+7 hours \(DST: \+8 hours from 10-25 03:00→02:00\)$/m);
 });
 
 test('OWNER\'S CLOCK names a summer-time change within a week of its time, on the owner\'s clock, either place\'s', () => {
     // (Frankfurt's ends 10-25 at 03:00 its own time; New York's 11-01 at 02:00 there, 07:00 in Frankfurt; London's with Frankfurt's)
     const block = at => data.clockBlock(zonePhone(at), at);
-    assert.match(block('10-24 12:00'), /- Seoul: \+7 hours \(DST: \+8 hours from 10-25 03:00\)\n- London: -1 hour\n- New York: -6 hours \(DST: -5 hours from 10-25 03:00\)$/);
-    assert.match(block('10-26 12:00'), /- Seoul: \+8 hours \(DST: \+7 hours before 10-25 03:00\)\n- London: -1 hour\n- New York: -5 hours \(DST: -6 hours before 10-25 03:00; -6 hours from 11-01 07:00\)$/);
+    assert.match(block('10-24 12:00'), /- Seoul: \+7 hours \(DST: \+8 hours from 10-25 03:00→02:00\)\n- London: -1 hour\n- New York: -6 hours \(DST: -5 hours from 10-25 03:00→02:00\)$/);
+    assert.match(block('10-26 12:00'), /- Seoul: \+8 hours \(DST: \+7 hours before 10-25 03:00→02:00\)\n- London: -1 hour\n- New York: -5 hours \(DST: -6 hours before 10-25 03:00→02:00; -6 hours from 11-01 07:00\)$/);
     assert.match(block('11-08 06:00'), /- New York: -6 hours \(DST: -5 hours before 11-01 07:00\)$/);
     assert.match(block('11-08 08:00'), /- New York: -6 hours$/);
     // (spring: Frankfurt's begins 03-29 at 02:00, New York's 03-08)
-    assert.match(block('03-27 12:00'), /- Seoul: \+8 hours \(DST: \+7 hours from 03-29 02:00\)\n- London: -1 hour\n- New York: -5 hours \(DST: -6 hours from 03-29 02:00\)$/);
+    assert.match(block('03-27 12:00'), /- Seoul: \+8 hours \(DST: \+7 hours from 03-29 02:00→03:00\)\n- London: -1 hour\n- New York: -5 hours \(DST: -6 hours from 03-29 02:00→03:00\)$/);
     assert.deepEqual(data.dstNear('10-26 12:00', 'Europe/Berlin', 'Europe/London', 2026), []);
+    // (a place on the owner's hours now, but not in a week: its row stays, with the change; never in the archive's block)
+    const lagos = { owner: 'Ren', year: 2026, now: '10-24 12:00', life: { weather: { here: { place: 'London' }, cities: [{ name: 'London', tz: 'Europe/London' }, { name: 'Lagos', tz: 'Africa/Lagos' }, { name: 'Seoul', tz: 'Asia/Seoul' }] } } };
+    assert.match(data.clockBlock(lagos, lagos.now), /- Lagos: 0 hours \(DST: \+1 hour from 10-25 02:00→01:00\)/);
+    // (two changes an hour apart, one while the owner's clock repeats an hour: told apart)
+    const ny = { owner: 'Ren', year: 2026, now: '10-30 12:00', life: { weather: { here: { place: 'New York' }, cities: [{ name: 'New York', tz: 'America/New_York' }, { name: 'Chicago', tz: 'America/Chicago' }, { name: 'Seoul', tz: 'Asia/Seoul' }] } } };
+    assert.match(data.clockBlock(ny, ny.now), /- Chicago: -1 hour \(DST: 0 hours from 11-01 02:00→01:00; -1 hour from 11-01 02:00\)/);
+    // (a time the change skips or repeats: the line never contradicts the hours it gives)
+    for (const at of ['03-29 02:30', '10-25 02:30']) {
+        const line = data.clockBlock(zonePhone(at), at).split('\n').find(l => l.startsWith('- Seoul'));
+        const [, now, then] = /: ([+-]?[\d.]+) hours?(?: \(DST: ([+-]?[\d.]+))?/.exec(line);
+        assert.ok(then === undefined || then !== now, line);
+    }
+    // (the same day gives the same line, whatever its minute)
+    const adelaide = mm => { const x = { owner: 'Ren', year: 2026, now: `10-02 12:${mm}`, life: { weather: { here: { place: 'Sydney' }, cities: [{ name: 'Sydney', tz: 'Australia/Sydney' }, { name: 'Adelaide', tz: 'Australia/Adelaide' }, { name: 'Seoul', tz: 'Asia/Seoul' }] } } }; return data.clockBlock(x, x.now).split('\n').find(l => l.startsWith('- Adelaide')); };
+    assert.equal(adelaide('15'), adelaide('45'));
     assert.deepEqual(data.dstNear('nonsense', 'Europe/Berlin', 'Asia/Seoul', 2026), []);
 });
 
@@ -881,7 +896,7 @@ test('app fills and app regeneration receive compact HTML labels through their r
         ['money', (mm, p) => data.fillMoney(mm, p), moneyAnswer('Ticket', 500, '11-03 03:03'), data.AI_SYS_MONEY],
         ['voice', (mm, p) => data.fillVoice(mm, p), '{"memos":[]}', data.AI_SYS_VOICES],
         ['device', (mm, p) => data.fillDevice(mm, p), '{"model":"Example Phone"}', data.AI_SYS_DEVICE],
-        ['app remake', (mm, p) => data.makePhone(mm, p.owner, { apps: ['note'] }), notesAnswer('Ticket'), data.AI_SYS_PHONE],
+        ['app remake', (mm, p) => data.makePhone(mm, p.owner, { apps: ['note'] }), notesAnswer('Ticket'), data.AI_SYS_PHONE_APPS],
         ['investment', (mm, p) => invest.fillInvestment(mm, p, '2026-11-03'), '{}', null],
     ];
     try {
@@ -973,7 +988,7 @@ test('every fill, making a phone again and its apps get the time choices of the 
         ['delivery', (mm, p) => life.fillDelivery(mm, p), '{}', life.AI_SYS_DELIVERY],
         ['money', (mm, p) => data.fillMoney(mm, p), moneyAnswer('Ticket', 500, '11-03 03:03'), data.AI_SYS_MONEY],
         ['voice', (mm, p) => data.fillVoice(mm, p), '{"memos":[]}', data.AI_SYS_VOICES],
-        ['app remake', (mm, p) => data.makePhone(mm, p.owner, { apps: ['note'] }), notesAnswer('Ticket'), data.AI_SYS_PHONE],
+        ['app remake', (mm, p) => data.makePhone(mm, p.owner, { apps: ['note'] }), notesAnswer('Ticket'), data.AI_SYS_PHONE_APPS],
     ];
     try {
         for (const [name, run, answer, system] of cases) {
@@ -1032,4 +1047,147 @@ test('two rows of one number (two summaries of one message): the later one\'s cl
         const r = await data.reflectionClocks(p, [{ index: 5, text: '', clockSource: tf('11.03 12:00') }, { index: 5, text: '', clockSource: tf('11.03 16:15') }, { index: 4, text: '', clockSource: tf('11.03 23:00') }], mm);
         assert.ok(r.choices.length && r.choices.every(c => c.sourceTime === '11.03 16:15'));
     } finally { delete globalThis.__ctx; }
+});
+
+test('every request sends OWNER\'S CLOCK alike: the block, the phone\'s name in it, then the choices when there are any', async () => {
+    try {
+        for (const [newest, choices] of [['No clock.', false], ['Mara looks. <span class="time">11월 3일 오후 4시 15분</span>', true]]) {
+            const { p, m: mm } = clockFixture(newest);
+            globalThis.__menu = { calls: [], answer: '{"memos":[]}' };
+            try { await data.fillVoice(mm, p); } catch { /* the input is what this checks */ }
+            const input = globalThis.__menu.calls.find(x => x.sys === data.AI_SYS_VOICES).input;
+            assert.equal((input.match(/Phone being updated/g) || []).length, 1, newest);
+            assert.match(input, /\[OWNER'S CLOCK\]\n[^[]*\n\nPhone being updated: "Ren" \(Frankfurt am Main\)\./, newest);
+            if (choices) assert.match(input, /Phone being updated: "Ren" \(Frankfurt am Main\)\.\n\nTime choices\./);
+            else assert.doesNotMatch(input, /Time choices/);
+            // (the reflection's the same)
+            const rows = [{ index: 5, text: globalThis.__rows[5].text, clockSource: globalThis.__ctx.chat[5].mes }];
+            assert.ok(input.includes(data.ownerClock(p, p.now, mm, null, rows)), newest);
+        }
+        // a phone with no other place and no screen of its own: the block's first lines, then its name (never a line alone)
+        const solo = { owner: 'Ren', year: 2026, now: '11-03 03:03', country: 'KR' };
+        assert.equal(data.ownerClock(solo, solo.now, {}, null, []), "[OWNER'S CLOCK]\nPhone owner: Ren\nLocation: South Korea\nSaved phone time: 11-03 03:03\n\nPhone being updated: \"Ren\" (South Korea).");
+        // (no place at all: nothing, as before)
+        assert.equal(data.ownerClock({ owner: 'Ren' }, '', {}, null, []), '');
+    } finally { delete globalThis.__ctx; }
+});
+
+test('a long newest message the request shows whole (no archive: the chat in its place) still gives its choices', async () => {
+    try {
+        const long = `${'Mara waits. '.repeat(600)}<span class="time">11월 3일 오후 4시 15분</span>`;
+        const { p, m: mm } = clockFixture(long);
+        mm.text = '';
+        globalThis.__menu = { calls: [], answer: '{"memos":[]}' };
+        try { await data.fillVoice(mm, p); } catch { /* the input is what this checks */ }
+        const input = globalThis.__menu.calls.find(x => x.sys === data.AI_SYS_VOICES).input;
+        assert.ok(input.includes('Mara waits. Mara waits.') && long.length > 6000);
+        assert.match(input, /On Mara's clock → owner's time: 11-03 08:15/);
+    } finally { delete globalThis.__ctx; }
+});
+
+test('a 02-29 with no year of its own is no choice in a story year without one', async () => {
+    try {
+        const { p, m: mm } = clockFixture('No clock.');
+        const row = [{ index: 5, text: '', clockSource: '<span class="time">02-29 10:00</span>' }];
+        assert.deepEqual((await data.reflectionClocks({ ...p, year: 2027 }, row, mm)).choices, []);
+        assert.ok((await data.reflectionClocks({ ...p, year: 2028 }, row, mm)).choices.length > 0);
+    } finally { delete globalThis.__ctx; }
+});
+
+test('making a phone sets its clock as a reflection does (CLOCK FIRST, "clock", the same check); making some apps again and the fills read times by its rules', async () => {
+    assert.ok(data.AI_SYS_PHONE.includes('CLOCK FIRST') && data.AI_SYS_PHONE.includes('"clock": { "basis"'));
+    for (const [name, s] of [['apps', data.AI_SYS_PHONE_APPS], ['money', data.AI_SYS_MONEY], ['voices', data.AI_SYS_VOICES], ['life', life.AI_SYS_LIFE], ['delivery', life.AI_SYS_DELIVERY]]) {
+        assert.ok(!s.includes('CLOCK FIRST') && !s.includes('finalViewpoint'), name);
+        assert.ok(s.includes(data.FILL_CLOCK) && s.includes(data.FILL_CLOCK_GET), name);
+        assert.ok(s.includes('Attachments keep their own clocks.') && s.includes('use the matching converted OWNER\'S CLOCK value as-is'), name);
+    }
+    // (the reflection's own wording, unchanged: its viewpoint line is the one the fills share)
+    assert.ok(data.updateSystem({ split: true }).includes(data.FILL_CLOCK.split('\n')[0]));
+});
+
+test('making a phone for the first time: where everyone is first (the people the chat already names, each once), then the phone, its OWNER\'S CLOCK and PEOPLE AROUND from it; the clock checked as a reflection\'s', async () => {
+    const setup = () => {
+        const { m: mm } = htmlPhoneFixture();
+        globalThis.__ctx.characters = [{ name: 'Mara' }]; globalThis.__ctx.characterId = 0; globalThis.__ctx.name1 = '소망';
+        mm.phones = { lio: { owner: 'Lio', country: 'KR' } }; mm.phoneScreenHolder = 'Mara';
+        globalThis.__glossaryPeople = ['Ivo', '마라'];
+        mm.text = '## #0–#3 — Arrival\n- Ren came home on 2026-11-02 (#1).\n';
+        globalThis.__where = [];
+        globalThis.__whereAnswer = { people: [{ name: 'Ren', city: 'Frankfurt am Main', tz: 'Europe/Berlin', lives: 'DE' }, { name: 'Mara', city: 'Seoul', tz: 'Asia/Seoul', lives: 'KR' }],
+            around: [{ name: 'Mara', about: 'Ren\'s mother, in Seoul; they text every day.' }] };
+        return mm;
+    };
+    const made = (now, clock, contacts = ['Mara']) => JSON.stringify({ country: 'DE', now, clock, contacts: contacts.map(name => ({ name })), notes: [] });
+    const at = { basis: 'Default used', finalViewpoint: 'Mara', elapsedTime: null, sceneTime: '11-03 11:10', messageSender: null };
+    try {
+        let mm = setup(), seenWhere = -1;
+        globalThis.__menu = { calls: [], answers: [() => { seenWhere = globalThis.__where.length; return made('11-03 03:10', at); }] };
+        const p = await data.makePhone(mm, 'Ren');
+        assert.equal(seenWhere, 1, 'where is read before the phone');
+        const people = globalThis.__where[0].split('[PEOPLE]\n')[1].split('\n\n')[0].split('\n');
+        assert.deepEqual([...people].sort(), ['Ivo', 'Lio', 'Mara', '마라', '소망'].sort());
+        const input = globalThis.__menu.calls[0].input;
+        assert.match(input, /Time differences from Frankfurt am Main:\n[^[]*- Mara \(Seoul\): \+8 hours/);
+        assert.match(input, /\[PEOPLE AROUND\]\n- Mara: Ren's mother/);
+        assert.equal(p.now, '11-03 03:10');
+        assert.equal(p.where.people.find(x => x.name === 'Mara').tz, 'Asia/Seoul');
+        assert.equal(p.around.people[0].name, 'Mara');
+        // (its year from the start: the phone keeps the one the check went by)
+        assert.equal(p.year, 2026);
+        assert.equal(globalThis.__where.length, 1, 'no second reading: no one new on it');
+        // someone new on it: read again for them
+        mm = setup();
+        globalThis.__menu = { calls: [], answers: [made('11-03 03:10', at, ['Mara', 'Varo'])] };
+        await data.makePhone(mm, 'Ren');
+        assert.equal(globalThis.__where.length, 2);
+        // a "now" its scene's time doesn't give, or no "clock": not saved, as a reflection's
+        for (const answer of [made('11-03 11:10', at), made('11-03 03:10', null)]) {
+            mm = setup();
+            globalThis.__menu = { calls: [], answers: [answer] };
+            await assert.rejects(data.makePhone(mm, 'Ren'), /시간 판독 답이 맞지 않아요/);
+            assert.equal(mm.phones.ren, undefined);
+        }
+    } finally { delete globalThis.__ctx; delete globalThis.__whereAnswer; delete globalThis.__glossaryPeople; }
+});
+
+test('위치 정보 before a phone is made: read once and kept, checked and set by the user (a city, the year), then the phone made from it, a make asked again reading nothing again', async () => {
+    try {
+        const { m: mm } = htmlPhoneFixture(); mm.phones = {};
+        globalThis.__ctx.characters = [{ name: 'Mara' }]; globalThis.__ctx.characterId = 0; globalThis.__ctx.name1 = '소망';
+        mm.phoneScreenHolder = 'Mara';
+        globalThis.__where = [];
+        globalThis.__whereAnswer = { people: [{ name: 'Mara', city: 'Seoul', tz: 'Asia/Seoul', lives: 'KR' }], around: [{ name: 'Mara', about: 'Ren\'s mother.' }] };
+        const pre = await data.preparePhone(mm, 'Ren');
+        assert.equal(globalThis.__where.length, 1);
+        assert.equal(await data.preparePhone(mm, 'Ren'), pre, 'kept: not read again');
+        // (참고 로어북 changed after it was read: read again; back as it was: the new reading stays)
+        mm.phoneLore = ['Atlas'];
+        const again = await data.preparePhone(mm, 'Ren');
+        assert.notEqual(again, pre); assert.equal(globalThis.__where.length, 2);
+        mm.phoneLore = [];
+        const pre2 = await data.preparePhone(mm, 'Ren');
+        assert.equal(globalThis.__where.length, 3);
+        assert.equal(await data.preparePhone(mm, 'Ren'), pre2);
+        // the reading didn't place the owner: the user does, and the year
+        assert.equal(data.placeInfo(pre).owner.city, '');
+        await data.setPlaceCity(mm, pre2, 'Ren', 'Frankfurt');
+        await data.setOwnerLives(mm, pre2, 'DE');
+        await data.setPreYear(mm, 'Ren', 2026);
+        assert.equal(data.placeInfo(pre2).people.find(x => x.name === 'Mara').hours, 8);
+        const at = { basis: 'Default used', finalViewpoint: 'Mara', elapsedTime: null, sceneTime: '11-03 11:10', messageSender: null };
+        const made = now => JSON.stringify({ country: 'KR', now, clock: at, contacts: [{ name: 'Mara' }], notes: [] });
+        // a clock its check doesn't pass: not made, and asked again reads no place again
+        globalThis.__menu = { calls: [], answers: [made('11-03 11:10')] };
+        await assert.rejects(data.makePhone(mm, 'Ren'), /시간 판독 답이 맞지 않아요/);
+        assert.ok(data.phonePre(mm, 'Ren'));
+        globalThis.__menu = { calls: [], answers: [made('11-03 03:10')] };
+        const p = await data.makePhone(mm, 'Ren');
+        assert.equal(globalThis.__where.length, 3, 'no reading but those before');
+        assert.match(globalThis.__menu.calls[0].input, /Location: Frankfurt\n[\s\S]*- Mara \(Seoul\): \+8 hours/);
+        assert.equal(p.year, 2026);
+        assert.equal(p.country, 'DE', 'the country it lives in, as checked');
+        assert.equal(p.where.people.find(x => x.name === 'Ren').city, 'Frankfurt');
+        assert.equal(data.phonePre(mm, 'Ren'), null, 'gone once the phone is made');
+        assert.ok(!('making' in p) && !('asked' in p));
+    } finally { delete globalThis.__ctx; delete globalThis.__whereAnswer; }
 });

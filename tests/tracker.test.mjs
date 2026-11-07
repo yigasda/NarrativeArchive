@@ -129,3 +129,20 @@ test('custom tracker regex keeps its named fields while reading prefix midnight'
     assert.equal(t.place, '집');
     assert.equal(t.weather, '맑음');
 });
+test('a status line reads a Korean clock, never a time before or after one or a length of time', () => {
+    for (const [line, min] of [['[ 오후 4시 15분 · 12월 9일 · 집 ]', 16 * 60 + 15], ['[ 16시 15분 · 12월 9일 · 집 ]', 16 * 60 + 15], ['[ 4시 반 · 12월 9일 · 집 ]', 4 * 60 + 30]]) {
+        T.chat = [say(`${line}\n\n본문`)];
+        assert.equal(recentTrackers(1)[0]?.min, min, line);
+    }
+    for (const line of ['[ 3시 15분 전 · 12월 9일 · 집 ]', '[ 16시 15분 전에 · 12월 9일 · 집 ]', '[ 10시 반 뒤 · 12월 9일 · 집 ]', '[ 약속 2시 30분 후 · 12월 9일 · 집 ]',
+        '[ 16시 15분 동안 · 12월 9일 · 집 ]', '[ 1시 15분 만에 · 12월 9일 · 집 ]', '[ 오후 3시 15분 전 · 12월 9일 · 집 ]']) {
+        T.chat = [say(`${line}\n\n본문`)];
+        assert.equal(recentTrackers(1)[0]?.min ?? null, null, line);
+    }
+});
+test('a status line part that is a time before or after one, or a direction, is no clock', () => {
+    for (const line of ['[ 3시 이후 · 12월 9일 · 집 ]', '[ 3시 방향 · 12월 9일 · 집 ]', '[ 3시쯤 전 · 12월 9일 · 집 ]']) {
+        T.chat = [say(`${line}\n\n본문`)];
+        assert.equal(recentTrackers(1)[0]?.min ?? null, null, line);
+    }
+});

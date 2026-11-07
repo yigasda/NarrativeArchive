@@ -39,10 +39,11 @@ export const dayFirstChat = () => { try { return (held ?? orderOf()) === 'dm'; }
 const runs = [];
 export function withDateOrderSync(order, fn) { const me = { order }; runs.push(me); held = order; try { return fn(); } finally { const i = runs.indexOf(me); if (i >= 0) runs.splice(i, 1); held = runs.length ? runs[runs.length - 1].order : null; } }
 export async function withDateOrder(order, fn) { const me = { order }; runs.push(me); held = order; try { return await fn(); } finally { const i = runs.indexOf(me); if (i >= 0) runs.splice(i, 1); held = runs.length ? runs[runs.length - 1].order : null; } }
-// the story's own blocks in a request (what "evidence" may quote): never the app's records, the code's OWNER'S CLOCK or
-// time choices, or anything else made for the model
-const STORY_BLOCKS = /^\[(?:ARCHIVE|RECENT CHAT|TOLD SHORT|STORY NOW|WORLD|LOREBOOK|OWNER PROFILE|NEW MESSAGES|ARCHIVE FOR THESE MESSAGES|ARCHIVE BEFORE|CHARACTER CARD|PERSONA)\b/;
-export const storyText = input => String(input || '').split(/\n\n(?=\[[A-Z][A-Z'’ ]+[^\]\n]*\]\n)/).filter((b, i) => STORY_BLOCKS.test(b) || i === 0 && !/^\[[A-Z]/.test(b)).join('\n\n');
+// what "evidence" may quote in a request: everything but the blocks the code makes for the model (OWNER'S CLOCK and its
+// time choices, the app's records, dates, rates, names). A block it doesn't make stays: the story's own, and a part of the
+// story that only looks like one ("[BREAKING NEWS]", "[A text from Mina]" in a message)
+const CODE_BLOCKS = /^\[(?:OWNER'S CLOCK|PHONE NOW|MONEY NOW|INVESTMENTS NOW|LIFE NOW|WEATHER NOW|EXISTING [A-Z ]+|EVALUATION DATE|FX PAIRS|SAVED RATES|CURRENCY|ACCOUNT CURRENCIES|PUBLIC SECURITIES|WEALTH[A-Z ]*|BANK|REBUILD[A-Z ]*|MONEY ALREADY MOVED|ORDERED|DAYS|STORY DAYS|DATE|LIVES IN|COUNTRY|OWNER COUNTRY|PHONE COUNTRY|STORY YEAR|NAMES|ONLY THESE|[A-Z ]+ SO FAR|EVENTS ON THE PHONE|DELIVERY SHOPS|SHOPS|NEARBY|PUT ON THE PHONE NOW|SCENES WITH|DEVICE|BODY ON THE PHONE NOW|DIARY|PEOPLE AROUND)(?=[\]\s—–-])/;
+export const storyText = input => String(input || '').split(/\n\n(?=\[[A-Z][A-Z'’ ]+[^\]\n]*\]\n)/).filter(b => !CODE_BLOCKS.test(b)).join('\n\n');
 export const swapDate = (a, b, sep) => Number(b) <= 12 && (Number(a) > 12 || sep !== '-' && Number(a) <= 31 && dayFirstChat());
 export const when = v => {
     // "10-25 21:00", or with the year in front ("2026-10-25 21:00", "2026/10/25T21:00") or after ("25.10.2026 21:00", "10/25/2026 9:00")
@@ -61,8 +62,11 @@ export const when = v => {
 // read: every colon clock is read as before
 const KO_SP = String.raw`[ \t\u00a0]`;
 const KO_MER = String.raw`(?:오전|오후|새벽|아침|낮|저녁|밤|[aApP]\.?[mM]\.?)`;
-const KO_CLOCK_SRC = String.raw`(?<![\p{N}.:])(?:(${KO_MER})(?:에|의)?${KO_SP}*)?(\d{1,2})${KO_SP}*시(?!간)(?:${KO_SP}*(?:(\d{1,2})${KO_SP}*분|(반))(?:${KO_SP}*\d{1,2}${KO_SP}*초)?)?(?:${KO_SP}*(${KO_MER})(?:에|엔|의)?(?![\p{L}]))?(?!${KO_SP}*(?:(?:전|후|뒤)(?:에|엔|로|부터|까지|이|인|쯤)?|동안(?:에)?|만에|지나서?|넘게|가량|간)(?![\p{L}]))`;
+const KO_CLOCK_SRC = String.raw`(?<![\p{N}.:])(?:(${KO_MER})(?:에|의)?${KO_SP}*)?(\d{1,2})${KO_SP}*시(?!간)(?:${KO_SP}*(?:(\d{1,2})${KO_SP}*분|(반))(?:${KO_SP}*\d{1,2}${KO_SP}*초)?)?(?:(?:에|엔)?${KO_SP}*((?:오전|오후|새벽|아침|낮|저녁|밤)(?:에|엔|의)?(?![\p{L}])|[aApP]\.?[mM]\.?(?![A-Za-z])))?(?!${KO_SP}*(?:(?:전|후|뒤)(?:(?:이|인|일|입|였)\p{L}*|(?:에|엔|로|부터|까지|쯤|만|도|은|는)*(?![\p{L}]))|(?:이전|이후|직전|직후|방향|넘어)\p{L}*|동안\p{L}*|만에|지나\p{L}*|넘게|가량|간(?![\p{L}])|(?:쯤|경)${KO_SP}*(?:전|후|뒤|이전|이후)))`;
 const KO_CLOCK_ALL = new RegExp(KO_CLOCK_SRC, 'gu');
+// (a meridiem after it: a Korean one never as the start of a word, "4시 낮잠"; "PM" with whatever follows, "4시 PM이야",
+// "4시에 pm")
+// (never a time before or after one, "3시 이후", "3시쯤 전", "그건 3시 전이었다", nor "3시 방향"; "3시 15분 전화" is a clock)
 // (a reading that left its minutes behind to get past a guard, "3시" of "3시 15분 전", is none)
 const KO_MORE = new RegExp(String.raw`^${KO_SP}*(?:\d{1,2}${KO_SP}*분|반)`, 'u');
 // every Korean reading in a text, in order, with where it is: { index, text, h, m }
@@ -129,7 +133,8 @@ export function datedClocks(text, { positions = false } = {}) {
         if (taken.has(hit.index)) continue;
         const rest = s.slice(hit.index + hit[0].length), day = when(hit[1]).slice(0, 5);
         if (!day || !realDay(day, yearIn(hit[1]))) continue;
-        const ko = koClocks(rest)[0];
+        // (only right after the date: the clock and what may follow it fit in 60 characters)
+        const ko = koClocks(rest.slice(0, 60))[0];
         let clock = '', span = '';
         if (ko && ko.index === 0) { clock = `${pad(ko.h)}:${pad(ko.m)}`; span = ko.text; }
         else if (/[(（]/.test(hit[0])) { const c = COLON_HEAD.exec(rest); if (c) { const hour = Number(/(\d{1,2})[ \t]*:/.exec(c[1])[1]); if (!(HAS_MERIDIEM.test(c[1]) && !(hour >= 1 && hour <= 12))) { clock = hhmm(c[1]); span = c[1]; } } }
@@ -215,8 +220,11 @@ export function htmlClocks(raw, { positions = false } = {}) {
 // a clock right after its date on the screen): { sourceTime, local } (the story's own text is never read for these)
 export function htmlDatedClocks(raw, { positions = false } = {}) {
     const stamps = [];
-    readHtmlClocks(htmlClockMarkup(raw, positions ? 'offsets' : false), false, null, positions, stamps);
-    return stamps;
+    readHtmlClocks(htmlClockMarkup(raw, 'offsets'), false, null, true, stamps);
+    // (one stamp once: a time field inside another gives it twice, the inner one first, from further on; two equal fields
+    // side by side stay two)
+    const out = stamps.filter((x, i) => { const y = stamps[i + 1]; return !(y && y.local === x.local && y.sourceTime === x.sourceTime && y.position < x.position); });
+    return positions ? out : out.map(({ position, ...x }) => x);
 }
 // Context fields retain their written meaning. They are not current-clock candidates or conversions.
 const HTML_TIME_FIELD = new RegExp(String.raw`^(?:(?:${CLOCK_DATE})\.?[,]?[ \t]*[T ]?)?((?:${CLOCK_MERIDIEM}\s*)?\d{1,2}[ \t]*:[ \t]*\d{2}(?:\s*${CLOCK_MERIDIEM})?)(?:[ \t]+(?:(?!(?:AM|PM)\b)[A-Z]{2,5}|(?:UTC|GMT)[+-]\d{1,2}(?::\d{2})?))?$`, 'iu');
@@ -224,7 +232,10 @@ const htmlTimeField = text => {
     const hit = HTML_TIME_FIELD.exec(text.replace(/\s+/g, ' '));
     if (hit) return !!htmlClockOnly(hit[1]);
     // (or a Korean one, after a date or alone: "11월 5일 오후 4시 15분")
-    const s = text.replace(/\s+/g, ' ').trim(), d = datedClocks(s)[0];
+    // (a field longer than 60 characters is never one: a big block around the message is not read through)
+    const s = text.replace(/\s+/g, ' ').trim();
+    if (s.length > 60) return false;
+    const d = datedClocks(s)[0];
     return !!htmlKoOnly(s) || !!d && d.sourceTime === s && /시/.test(s);
 };
 const htmlFieldLabel = (name, attrs) => {
@@ -271,16 +282,17 @@ export function htmlTimeContext(raw) {
         `[첨부파일 (메시지 내부의 HTML)]\n${group.fields.map(x => `${x.label}: ${x.sourceTime.replace(/\s+/g, ' ')}`).join('\n')}`
     ).join('\n');
 }
-const wholeDated = node => { if (!node.marked || node.hiddenStyle) return null; const t = clockHtmlText(node.seen).replace(/\s+/g, ' ').trim(), d = datedClocks(t).find(x => x.sourceTime === t); return d ? { sourceTime: d.sourceTime, local: d.local } : null; };
+const wholeDated = node => { if (!node.marked || node.hiddenStyle) return null; const t = clockHtmlText(node.seen).replace(/\s+/g, ' ').trim(), d = t.length <= 60 && datedClocks(t).find(x => x.sourceTime === t); return d ? { sourceTime: d.sourceTime, local: d.local } : null; };
 function readHtmlClocks(input, fields = false, excluded = null, positions = false, stamps = null) {
     const root = { name: '', text: '', seen: '', hints: [], blocked: false, removed: false }, stack = [root];
-    let visible = '';
+    // visible: the text since the last block, as before; shown: the same without what its style hides (a date for a clock)
+    let visible = '', shown = '';
     const append = (text, expose = true) => {
         const node = stack[stack.length - 1];
         node.text += text;
         // (what a reader sees: a part hidden by its style is left out, for the Korean readings)
         if (!node.hiddenStyle) node.seen += text;
-        if (expose && !node.removed) visible += text;
+        if (expose && !node.removed) { visible += text; if (!node.hiddenStyle) shown += text; }
     };
     const finish = (complete, end = input.length) => {
         const node = stack.pop(), parent = stack[stack.length - 1];
@@ -288,8 +300,12 @@ function readHtmlClocks(input, fields = false, excluded = null, positions = fals
             // (a <time> whose datetime is a date: what it shows, a date and a clock, is still its stamp)
             if (stamps && node.dateOnly && complete) { const w = wholeDated(node); if (w) stamps.push({ ...w, ...(positions ? { position: node.start } : {}) }); }
             if (excluded) excluded.push([node.start, end]);
+            // (inside a <time> whose datetime is a date, a part with no reason of its own to be left out is what it shows)
+            if (node.inDate && !node.ownBlock && complete) { parent.text += node.text; parent.seen += node.hiddenStyle ? '' : node.seen; return; }
             parent.text += '\0';
-            if (!complete || !node.removed && !HTML_INLINE.test(node.name)) visible = '';
+            // (a part shown but not read, a quote, code or a timer, keeps the text on either side apart, as for a colon clock)
+            if (!node.hiddenStyle) parent.seen += '\0';
+            if (!complete || !node.removed && !HTML_INLINE.test(node.name)) visible = shown = '';
             return;
         }
         const seenTime = clockHtmlText(node.seen).trim();
@@ -306,21 +322,24 @@ function readHtmlClocks(input, fields = false, excluded = null, positions = fals
             return;
         }
         const datedText = sourceTime.replace(/\s+/g, ' ');
-        const dated = node.marked && node.hints.length && datedClocks(datedText).some(x => x.sourceTime === datedText);
-        const tail = clock ? clockVisibleText(visible).trimEnd() : '';
+        const dated = node.marked && node.hints.length && datedText.length <= 60 && datedClocks(datedText).some(x => x.sourceTime === datedText);
+        const tail = clock ? clockVisibleText(visible).trimEnd() : '', seenTail = clock ? clockVisibleText(shown).trimEnd() : '';
+        // the last line's end only (a stamp fits in 60 characters; cut at a space, so no date is cut in two)
+        const lastLine = t => { const l = t.slice(t.lastIndexOf('\n') + 1); return l.length > 80 ? l.slice(l.indexOf(' ', l.length - 80) + 1) : l; };
         // Only the dated span ending at this exact occurrence can own it. An earlier equal clock cannot.
-        const near = clock && tail.endsWith(sourceTime.replace(/\u00a0/g, ' '))
-            ? datedClocks(tail.slice(tail.lastIndexOf('\n') + 1)).filter(x => tail.endsWith(x.sourceTime)).pop() : null;
+        const adjacent = clock && tail.endsWith(sourceTime.replace(/\u00a0/g, ' ')) && datedClocks(lastLine(tail)).some(x => tail.endsWith(x.sourceTime));
+        // (its date as a reader sees it: never one its style hides, and never a clock that is hidden itself)
+        const near = adjacent && !node.hiddenStyle && seenTail.endsWith(sourceTime.replace(/\u00a0/g, ' ')) ? datedClocks(lastLine(seenTail)).filter(x => seenTail.endsWith(x.sourceTime)).pop() || null : null;
         // a time field that is a date and a clock ("11.05 16:15", "11월 5일 16시 15분"), or a clock right after its date on
         // the screen ("<span>11월 5일 </span><span class="time">16:15</span>"): a dated stamp (the story's text alone never is one)
         const whole = !clock ? wholeDated(node) : null, at = positions ? { position: node.start } : {};
         // Prefer the complete labelled element to a nested duplicate ("PM <span>8:30</span>").
         // One dated stamp also owns its children; a timeline with separate date/time siblings does not.
         if (whole && stamps) stamps.push({ ...whole, ...at });
-        if (clock) { if (near) stamps?.push({ sourceTime: near.sourceTime, local: near.local, ...at }); else parent.hints.push({ sourceTime: korean ? seenTime : sourceTime, clock, ...at }); }
+        if (clock) { if (near) stamps?.push({ sourceTime: near.sourceTime, local: near.local, ...at }); else if (!adjacent || !node.hiddenStyle) parent.hints.push({ sourceTime: korean ? seenTime : sourceTime, clock, ...at }); }
         else if (!dated && !whole) for (const hint of node.hints) parent.hints.push(hint);
         parent.text += node.text; parent.seen += node.hiddenStyle ? '' : node.seen;
-        if (!HTML_INLINE.test(node.name)) visible = '';
+        if (!HTML_INLINE.test(node.name)) visible = shown = '';
     };
     let pos = 0;
     while (pos < input.length) {
@@ -358,7 +377,7 @@ function readHtmlClocks(input, fields = false, excluded = null, positions = fals
             while (at > 0 && stack[at].name !== name) at--;
             if (!at) {
                 // A message can start with the tail of reasoning, whose opening tag was not retained.
-                if (/^(?:think|thinking|thought|reasoning|analysis)$/.test(name)) { root.hints = []; root.text = ''; stack.splice(1); visible = ''; if (excluded) excluded.push([0, pos]); }
+                if (/^(?:think|thinking|thought|reasoning|analysis)$/.test(name)) { root.hints = []; root.text = ''; stack.splice(1); visible = shown = ''; if (excluded) excluded.push([0, pos]); }
                 continue;
             }
             while (stack.length - 1 > at) finish(false, pos);
@@ -375,29 +394,30 @@ function readHtmlClocks(input, fields = false, excluded = null, positions = fals
             const close = new RegExp(`</${name}\\s*>`, 'gi'); close.lastIndex = pos;
             const hit = name === 'plaintext' ? null : close.exec(input);
             append('\0', false);
-            if (!stack[stack.length - 1].removed && !/^(?:script|style)$/.test(name)) visible = '';
+            if (!stack[stack.length - 1].removed && !/^(?:script|style)$/.test(name)) visible = shown = '';
             pos = hit ? close.lastIndex : input.length;
             if (excluded) excluded.push([start, pos]);
             continue;
         }
         if (HTML_VOID.test(name)) {
             append(!fields && (name === 'br' || name === 'hr') ? '\n' : '\0', false);
-            if (!stack[stack.length - 1].removed) visible = '';
+            if (!stack[stack.length - 1].removed) visible = shown = '';
             continue;
         }
         const labels = `${name} ${attrs.class || ''} ${attrs.id || ''}`;
         const node = { name, start, originalName: head[2], label: htmlFieldLabel(head[2], attrs) || stack[stack.length - 1].label || '', text: '', seen: '', hints: [], marked: /time/i.test(labels),
             hiddenStyle: !!stack[stack.length - 1].hiddenStyle || HIDDEN_STYLE.test(attrs.style || '') || attrs.hidden !== undefined,
             removed: stack[stack.length - 1].removed || HTML_REMOVED.test(name),
-            blocked: stack[stack.length - 1].blocked || HTML_HIDDEN.test(name)
+            ownBlock: HTML_HIDDEN.test(name)
                 || attrs.hidden !== undefined || /^true$/i.test(attrs['aria-hidden'] || '')
                 || fields && /(?:^|;)\s*(?:display\s*:\s*none|visibility\s*:\s*(?:hidden|collapse))\s*(?:!important\s*)?(?:;|$)/i.test(attrs.style || '')
-                || !fields && HTML_DURATION.test(labels.replace(/([a-z\d])([A-Z])/g, '$1 $2'))
-                // Dated values and ISO durations belong to other readers, not bare-clock hints.
-                || !fields && attrs.datetime !== undefined && !htmlClockOnly(attrs.datetime) };
-        node.dateOnly = !fields && node.blocked && !stack[stack.length - 1].blocked && !HTML_HIDDEN.test(name) && attrs.hidden === undefined && !/^true$/i.test(attrs['aria-hidden'] || '')
-            && !HTML_DURATION.test(labels.replace(/([a-z\d])([A-Z])/g, '$1 $2')) && !node.hiddenStyle;
-        if (!node.removed && !HTML_INLINE.test(name)) visible = '';
+                || !fields && HTML_DURATION.test(labels.replace(/([a-z\d])([A-Z])/g, '$1 $2')),
+            // Dated values and ISO durations belong to other readers, not bare-clock hints.
+            datetime: !fields && attrs.datetime !== undefined && !htmlClockOnly(attrs.datetime) };
+        node.blocked = !!stack[stack.length - 1].blocked || node.ownBlock || node.datetime;
+        node.inDate = !node.ownBlock && !node.datetime && !!(stack[stack.length - 1].dateOnly || stack[stack.length - 1].inDate);
+        node.dateOnly = node.datetime && !node.ownBlock && !stack[stack.length - 1].blocked && !node.hiddenStyle;
+        if (!node.removed && !HTML_INLINE.test(name)) visible = shown = '';
         stack.push(node);
         if (/\/\s*$/.test(input.slice(start, end))) finish(true, pos);
     }

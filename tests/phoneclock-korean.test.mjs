@@ -57,3 +57,40 @@ test('a dated choice only as the screen shows it, an HTML time field: never the 
     assert.deepEqual(htmlDatedClocks('<span class="time">16:15</span>'), []);
     assert.deepEqual(htmlClocks('<span class="time">11.05 16:15</span>'), []);
 });
+
+test('a PM after the clock with whatever follows it; a Korean meridiem never as the start of a word', () => {
+    for (const [s, want] of [['4시 PM이야', '16:00'], ['4시 PM쯤', '16:00'], ['4시 pm쯤', '16:00'], ['4시에 pm', '16:00'], ['4시 p.m.', '16:00'], ['4시 오후에', '16:00'], ['4시 낮잠', '04:00'], ['7시 저녁밥', '07:00']]) {
+        assert.equal(hhmm(s), want, s);
+        assert.equal(koClockText(s), want, s);
+    }
+});
+
+test('HTML: a hidden date never dates a clock; a quote, code or timer keeps Korean apart; a <time datetime> shows its stamp; one stamp once', () => {
+    const at = raw => [htmlDatedClocks(raw).map(x => x.local), htmlClocks(raw).map(x => x.clock)];
+    assert.deepEqual(at('<span style="display:none">11월 5일 </span><span class="time">16시 15분</span>'), [[], ['16:15']]);
+    assert.deepEqual(at('<span style="display:none">11.05, </span><span class="time">08:30</span>'), [[], ['08:30']]);
+    assert.deepEqual(at('<div style="display:none"><span>11월 5일 </span><span class="time">16:15</span></div>'), [[], []]);
+    assert.deepEqual(at('<span>11.05, </span><span class="time">08:30</span>'), [['11-05 08:30'], []]);
+    for (const raw of ['<span class="time">16시 <q>2시간</q> 15분</span>', '<span class="time">오후<blockquote>인용</blockquote> 4시</span>', '<span class="time">16시<code>x</code> 15분</span>', '<span class="time">11월 5일<code>코드</code> 16:15</span>']) assert.deepEqual(at(raw), [[], []], raw);
+    assert.deepEqual(at('<span class="time"><span hidden>오후 </span>4시 15분</span>'), [[], ['04:15']]);
+    for (const raw of ['<time datetime="2026-11-05"><b>11월 5일</b> <i>16:15</i></time>', '<time datetime="2026-11-05">11월 5일 16:15</time>']) assert.deepEqual(at(raw), [['11-05 16:15'], []], raw);
+    assert.deepEqual(at('<time datetime="2026-11-05"><span class="time">11월 5일 16시</span></time>'), [['11-05 16:00'], []]);
+    for (const raw of ['<div class="time"><span class="time">11월 5일 16시 15분</span></div>', '<div class="timeinfo"><span class="date">11월 5일</span> <span class="time">16:15</span></div>']) assert.deepEqual(at(raw), [['11-05 16:15'], []], raw);
+    // (two equal fields side by side stay two)
+    assert.equal(htmlDatedClocks('<span class="time">11.05 08:30</span> <time>09:00</time> <span class="time">11.05 08:30</span>').length, 2);
+});
+
+test('a long message with many dates is read in a moment', () => {
+    const t0 = performance.now();
+    datedClocks('11월 5일 '.repeat(28571));
+    htmlClocks(`<span class="time">${'11월 5일 '.repeat(28571)}</span>`);
+    htmlDatedClocks(`<div><div><ul>${Array.from({ length: 2000 }, (_, i) => `<li><span class="date">${i % 12 + 1}월 ${i % 28 + 1}일</span> 메모</li>`).join('\n')}</ul></div></div>`);
+    assert.ok(performance.now() - t0 < 3000, `${Math.round(performance.now() - t0)} ms`);
+});
+
+test('never a time before or after one in any wording, nor a direction; a clock with a word after it still is one', () => {
+    for (const s of ['3시 이후', '5시 이전', '그건 3시 전이었다', '3시 전이다', '3시쯤 전', '3시 반쯤 전', '3시 넘어서', '3시 직전', '3시 직후', '3시 방향', '3시 방향으로', '3시 경 이후', '3시 이후에', '3시 이후로', '3시 전엔', '3시 후에도', '3시 전부터'])
+        assert.equal(koClockText(s), '', s);
+    for (const [s, want] of [['16시 15분 전화가 왔다', '16:15'], ['3시 무렵', '03:00'], ['3시쯤', '03:00'], ['3시경', '03:00'], ['3시까지 와', '03:00'], ['3시에 갔다', '03:00']]) assert.equal(koClockText(s), want, s);
+    assert.deepEqual(datedClocks('11월 5일 3시 방향'), []);
+});
