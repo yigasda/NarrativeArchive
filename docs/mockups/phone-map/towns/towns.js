@@ -14,12 +14,20 @@ const PAL = {
 };
 // the four snowy Norwegian maps picked by hand: a town's name picks one of them
 const NO6 = ['Bergen', 'Bodo', 'Hammerfest', 'Kirkenes'];
+// Egypt: twelve maps drawn one by one; a town's name picks one (the names below pick their own)
+const EG12 = ['Cairo', 'Giza', 'Luxor', 'Valley of the Kings', 'Aswan', 'Alexandria', 'Siwa', 'Hurghada', 'Tanta', 'Port Said', 'Old Cairo', 'Abu Simbel'];
+// names (English, Korean, Arabic spelling) that pick their own Egypt map, in EG12 order
+const EG_NAMES = [['cairo', '카이로', 'zamalek', '자말렉', 'downtown cairo'], ['giza', '기자', 'pyramid', '피라미드'], ['luxor', '룩소르', 'karnak', '카르나크'], ['valley of the kings', '왕가의 계곡', 'deir el', '데이르'], ['aswan', '아스완', 'nubia', '누비아', 'philae', '필레'], ['alexandria', '알렉산드리아', 'iskandariya'], ['siwa', '시와', 'bahariya', '바하리야', 'farafra', '파라프라', 'dakhla', '다클라', 'kharga', '카르가', 'oasis', '오아시스'], ['hurghada', '후르가다', 'sharm', '샤름', 'dahab', '다합', 'gouna', '구나', 'marsa alam', '마르사알람', 'red sea', '홍해'], ['tanta', '탄타', 'mansoura', '만수라', 'zagazig', '자가지그', 'delta', '삼각주', 'fayoum', '파이윰'], ['port said', '포트사이드', 'suez', '수에즈', 'ismailia', '이스마일리아'], ['old cairo', '옛 카이로', 'islamic cairo', '이슬람 카이로', 'khan el', '칸 엘', 'coptic', '콥트'], ['abu simbel', '아부심벨', 'lake nasser', '나세르']];
+const EGY = {
+  light: { land: '#f4e7c8', built: '#eee2c9', park: '#d3e4b4', forest: '#9fc285', vine: '#e2e9bf', sand: '#ead7a8', road: '#fffaf0', edge: '#dccaa3', contour: '#e5d2a6', plaza: '#f2e6cd', bld: '#e6d5b4', wall: '#cdb68a' },
+  dark: { land: '#2e2a24', built: '#332e27', park: '#26321f', forest: '#2b4a2c', vine: '#2e3424', sand: '#3a3429', road: '#4a4438', edge: '#1c1914', contour: '#38322a', plaza: '#3a352d', bld: '#3d372e', wall: '#5a4d38' },
+};
 const SNOW = {
   light: { land: '#f8fafc', built: '#eef2f6', park: '#e3ece8', forest: '#d6e3dc', road: '#ffffff', edge: '#d3dbe4', contour: '#e4eaf0', water: '#b7d0e8', plaza: '#f1efea', sand: '#eef0f2' },
   dark: { land: '#262d36', built: '#2c343e', park: '#26322e', forest: '#22302a', road: '#46505e', edge: '#161b22', contour: '#303843', water: '#173149', plaza: '#30353c', sand: '#2c3138' },
 };
 function draw(kind, W, H, seed, dark = false) {
-  const c = { ...PAL[dark ? 'dark' : 'light'], ...(kind === 'noSnow' ? SNOW[dark ? 'dark' : 'light'] : {}) }, r = rng(`${kind}|${kind === 'noSnow' ? (NO6.includes(seed) ? seed : NO6[hsh(seed) % NO6.length]) : seed}`), o = [];
+  const c = { ...PAL[dark ? 'dark' : 'light'], ...(kind === 'noSnow' ? SNOW[dark ? 'dark' : 'light'] : kind === 'egypt' ? EGY[dark ? 'dark' : 'light'] : {}) }, r = rng(`${kind}|${kind === 'noSnow' ? (NO6.includes(seed) ? seed : NO6[hsh(seed) % NO6.length]) : seed}`), o = [];
   const mirror = r() < 0.5, tilt = Math.round((r() - 0.5) * 24);
   const way = (d, w = 4) => `<path d="${d}" fill="none" stroke="${c.edge}" stroke-width="${f(w + 2.6)}" stroke-linecap="round" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="${c.road}" stroke-width="${f(w)}" stroke-linecap="round" stroke-linejoin="round"/>`;
   const big = (d, w = 7) => `<path d="${d}" fill="none" stroke="${c.majorEdge}" stroke-width="${f(w + 2.6)}" stroke-linecap="round" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="${c.major}" stroke-width="${f(w)}" stroke-linecap="round" stroke-linejoin="round"/>`;
@@ -1087,6 +1095,105 @@ function draw(kind, W, H, seed, dark = false) {
     for (let k = 0; k < 2; k++) { const x0 = W * (0.15 + k * 0.5 + r() * 0.1); o.push(`<path d="${curve([[x0, H * -0.05], [x0 + 30, H * 0.08], [x0 - 10, H * 0.18], [x0 + 20, H * 0.28]])}" fill="none" stroke="${dark ? '#8fb3d4' : '#7fa9d8'}" stroke-width="1.4" stroke-dasharray="4 3"/>`); }
     edges.forEach((e, k) => o.push(k ? way(curve(e), 3.6) : big(curve(e), 4.6)));
     const body = o.splice(S0).join(''); o.push(`<g transform="rotate(${turn} ${f(W / 2)} ${f(H / 2)})">${body}</g>`);
+  } else if (kind === 'egypt') { // 이집트: 이름이 열두 장 중 하나를 골라요 — 장마다 생김새가 통째로 달라요
+    const low = String(seed).toLowerCase(); let hit = -1, best = 0; EG_NAMES.forEach((ns, k) => { for (const n of ns) if (low.includes(n) && n.length > best) { best = n.length; hit = k; } }); const pick = hit >= 0 ? hit : hsh(seed) % EG12.length;
+    const palm = (x, y, s = 1) => { let g = ''; for (let j = 0; j < 6; j++) { const a = j / 6 * 6.283 + 0.3; g += `M${f(x)} ${f(y)}l${f(Math.cos(a) * 5 * s)} ${f(Math.sin(a) * 5 * s)}`; } return `<path d="${g}" stroke="${c.forest}" stroke-width="${f(2 * s)}" stroke-linecap="round"/>`; };
+    const palms = (x, y, n, rx, ry) => { let g = ''; for (let k = 0; k < n; k++) g += palm(x + (r() - 0.5) * 2 * rx, y + (r() - 0.5) * 2 * ry, 0.8 + r() * 0.4); return g; };
+    const dunes = (n = 40) => { let g = ''; for (let k = 0; k < n; k++) { const x = W * (-0.1 + r() * 1.2), y = H * (-0.1 + r() * 1.2), w = 30 + r() * 50; g += `M${f(x - w)} ${f(y)}q${f(w)} ${f(-8 - r() * 8)} ${f(w * 2)} 0`; } return `<path d="${g}" fill="none" stroke="${c.contour}" stroke-width="1.6" stroke-linecap="round"/>`; };
+    const pyr = (x, y, s) => `<path d="M${f(x)} ${f(y - s)}L${f(x + s)} ${f(y)}L${f(x)} ${f(y)}Z" fill="${c.wall}"/><path d="M${f(x)} ${f(y - s)}L${f(x)} ${f(y)}L${f(x - s)} ${f(y)}Z" fill="${c.sand}"/><path d="M${f(x - s)} ${f(y)}L${f(x)} ${f(y + s)}L${f(x)} ${f(y)}Z" fill="${c.bld}"/><path d="M${f(x)} ${f(y)}L${f(x)} ${f(y + s)}L${f(x + s)} ${f(y)}Z" fill="${c.wall}" opacity=".75"/><path d="M${f(x)} ${f(y - s)}L${f(x + s)} ${f(y)}L${f(x)} ${f(y + s)}L${f(x - s)} ${f(y)}Z" fill="none" stroke="${c.edge}" stroke-width="0.8"/>`;
+    const mosque = (x, y, s = 1) => `<rect x="${f(x - 9 * s)}" y="${f(y - 7 * s)}" width="${f(18 * s)}" height="${f(14 * s)}" rx="1.5" fill="${c.plaza}" stroke="${c.wall}" stroke-width="0.8"/><circle cx="${f(x)}" cy="${f(y)}" r="${f(5 * s)}" fill="${c.bld}" stroke="${c.wall}" stroke-width="1"/><circle cx="${f(x + 11 * s)}" cy="${f(y - 9 * s)}" r="${f(2 * s)}" fill="${c.wall}"/>`;
+    const boat = (x, y, a) => `<g transform="translate(${f(x)} ${f(y)}) rotate(${f(a)})"><path d="M-6 0Q0 3 6 0Z" fill="${c.wall}"/><path d="M0 -0.5L0 -8L5 -1Z" fill="${c.road}" stroke="${c.edge}" stroke-width="0.5"/></g>`;
+    const river = (pts, w, green = 0) => (green ? `<path d="${curve(pts)}" fill="none" stroke="${c.park}" stroke-width="${w + green}" stroke-linecap="round"/>` : '') + `<path d="${curve(pts)}" fill="none" stroke="${c.water}" stroke-width="${w}" stroke-linecap="round"/>`;
+    const fields = (d, ang, cx, cy, s = 18) => { const id = `${cidBase}_${nClip++}`, T = []; for (let i = -18; i <= 18; i++) for (let j = -18; j <= 18; j++) T.push(`<rect x="${f(cx + i * s + 0.8)}" y="${f(cy + j * s * 0.8 + 0.8)}" width="${f(s - 1.6)}" height="${f(s * 0.8 - 1.6)}" fill="${[c.park, c.forest, c.vine, c.park][((i * 7 + j * 3) % 4 + 4) % 4]}"/>`); return `<clipPath id="${id}"><path d="${d}"/></clipPath><g clip-path="url(#${id})"><g transform="rotate(${f(ang)} ${f(cx)} ${f(cy)})">${T.join('')}</g></g>`; };
+    o.push(`<rect x="${X0}" y="${Y0}" width="${X1 - X0}" height="${Y1 - Y0}" fill="${c.land}"/>`);
+    if (pick === 0) { // 카이로: 강 가운데 길쭉한 섬 둘, 양쪽 강변 빽빽한 시가지와 다리 여럿, 강변 고층 줄
+      const rv = [[W * 0.42, Y0], [W * 0.5, H * 0.3], [W * 0.46, H * 0.7], [W * 0.54, Y1]];
+      o.push(rowsGrid(`${curve(rv)}L${X0} ${Y1}L${X0} ${Y0}Z`, 18, W * 0.2, H * 0.5, 34, 20), rowsGrid(`${curve(rv)}L${X1} ${Y1}L${X1} ${Y0}Z`, -12, W * 0.8, H * 0.5, 26, 22));
+      o.push(river(rv, 70, 14));
+      for (const [t, L] of [[0.3, 60], [0.68, 44]]) { const y = H * t, x = W * 0.48; o.push(grid(blob(x, y, 14, L, 9, 0.12), 80, x, y, 14, 10, 1.6), fill(blob(x, y + L * 0.6, 10, L * 0.3, 7, 0.2), c.park)); }
+      for (const t of [0.15, 0.45, 0.85]) o.push(way(`M${f(W * 0.3)} ${f(H * t)}L${f(W * 0.68)} ${f(H * t + 6)}`, 4.6));
+      for (let k = 0; k < 10; k++) o.push(`<rect x="${f(W * 0.38 + (k % 2) * 4)}" y="${f(H * (0.05 + k * 0.09))}" width="8" height="10" rx="1" fill="${c.bld}" stroke="${c.wall}" stroke-width="0.8"/>`);
+      o.push(big(curve([[X0, H * 0.6], [W * 0.3, H * 0.52], [W * 0.7, H * 0.56], [X1, H * 0.48]]), 5.4), boat(W * 0.5, H * 0.52, 80), boat(W * 0.47, H * 0.9, 100));
+    } else if (pick === 1) { // 기자: 사막 고원에 큰 피라미드 셋과 작은 피라미드 줄, 스핑크스, 고원 끝에서 갑자기 시작되는 빽빽한 시가지
+      o.push(dunes(36));
+      const ex = [[X0, H * 0.78], [W * 0.4, H * 0.72], [W * 0.7, H * 0.8], [X1, H * 0.74]];
+      o.push(rowsGrid(`${curve(ex)}L${X1} ${Y1}L${X0} ${Y1}Z`, 6, W * 0.5, H * 0.9, 30, 18));
+      const px = W * (0.35 + r() * 0.1), py = H * 0.38; o.push(pyr(px, py, 46), pyr(px + 70, py + 44, 40), pyr(px + 128, py + 80, 22));
+      for (let k = 0; k < 3; k++) o.push(pyr(px + 160 + k * 16, py + 110, 6));
+      o.push(`<path d="M${f(px - 40)} ${f(py + 110)}h20v6h-20z" fill="${c.wall}"/><circle cx="${f(px - 18)}" cy="${f(py + 113)}" r="4" fill="${c.wall}"/>`);
+      o.push(`<path d="M${f(px - 10)} ${f(py + 50)}L${f(px - 30)} ${f(py + 110)}M${f(px + 70)} ${f(py + 86)}L${f(px - 20)} ${f(py + 112)}" stroke="${c.sand}" stroke-width="3"/>`, big(`M${f(px - 30)} ${f(py + 118)}L${f(px - 50)} ${Y1}`, 4.6), way(curve(ex.map(([x, y]) => [x, y + 6])), 3.4));
+    } else if (pick === 2) { // 룩소르: 강 동쪽 기둥 숲 큰 신전과 스핑크스 길, 서쪽 초록 들판 너머 사막 절벽, 강 위 돛배
+      const rv = [[W * 0.36, Y0], [W * 0.4, H * 0.5], [W * 0.34, Y1]];
+      o.push(fields(`${curve(rv.map(([x, y]) => [x - 10, y]))}L${X0} ${Y1}L${X0} ${Y0}Z`, 4, W * 0.15, H * 0.5), `<path d="${curve([[W * 0.05, Y0], [W * 0.1, H * 0.5], [W * 0.04, Y1]])}" fill="none" stroke="${c.wall}" stroke-width="16" stroke-dasharray="3 3"/>`);
+      o.push(grid(`${curve(rv.map(([x, y]) => [x + 14, y]))}L${X1} ${Y1}L${X1} ${Y0}Z`, 0, W * 0.7, H * 0.5, 32, 26));
+      o.push(river(rv, 34, 18));
+      const tx = W * 0.62, ty = H * 0.3; o.push(`<rect x="${f(tx - 40)}" y="${f(ty - 30)}" width="110" height="70" fill="${c.sand}" stroke="${c.wall}" stroke-width="2"/>`);
+      for (let i = 0; i < 9; i++) for (let j = 0; j < 5; j++) o.push(`<circle cx="${f(tx - 30 + i * 10)}" cy="${f(ty - 20 + j * 11)}" r="2.6" fill="${c.wall}"/>`);
+      o.push(`<rect x="${f(tx + 52)}" y="${f(ty - 24)}" width="12" height="58" fill="${c.wall}"/>`);
+      for (let k = 0; k < 16; k++) for (const s of [-1, 1]) o.push(`<rect x="${f(tx + 6 + s * 7 - 2)}" y="${f(ty + 46 + k * 9)}" width="4" height="5" fill="${c.wall}"/>`);
+      o.push(`<path d="M${f(tx + 6)} ${f(ty + 42)}V${Y1}" stroke="${c.plaza}" stroke-width="6"/>`, boat(W * 0.39, H * 0.4, 90), boat(W * 0.38, H * 0.7, 95), big(`M${f(W * 0.52)} ${Y0}L${f(W * 0.5)} ${Y1}`, 4.6));
+    } else if (pick === 3) { // 왕가의 계곡: 메마른 바위 산줄기 사이 굽이굽이 마른 골짜기, 골짜기 벽마다 무덤 입구, 구불구불한 길과 작은 주차장, 능선 등고선
+      for (let k = 0; k < 22; k++) o.push(`<path d="${curve([[X0, H * (k * 0.06) - 20], [W * 0.3, H * (k * 0.06) + Math.sin(k) * 20], [W * 0.6, H * (k * 0.06) - 10], [X1, H * (k * 0.06) + 14]])}" fill="none" stroke="${c.wall}" stroke-width="${k % 3 ? 0.8 : 1.6}" opacity=".5"/>`);
+      const va = [[X0, H * 0.7], [W * 0.25, H * 0.62], [W * 0.45, H * 0.4], [W * 0.62, H * 0.46], [W * 0.78, H * 0.24], [X1, H * 0.2]];
+      o.push(`<path d="${curve(va)}" fill="none" stroke="${c.sand}" stroke-width="56" stroke-linecap="round"/>`, `<path d="${curve([[W * 0.45, H * 0.4], [W * 0.42, H * 0.18], [W * 0.5, Y0]])}" fill="none" stroke="${c.sand}" stroke-width="36" stroke-linecap="round"/>`);
+      for (let k = 0; k < 16; k++) { const t = r(), i = Math.min(4, Math.floor(t * 5)), u = t * 5 - i, x = va[i][0] + (va[i + 1][0] - va[i][0]) * u, y = va[i][1] + (va[i + 1][1] - va[i][1]) * u + (k % 2 ? -22 : 22); o.push(`<rect x="${f(x - 3)}" y="${f(y - 2.5)}" width="6" height="5" rx="1" fill="${c.wall}"/>`); }
+      o.push(way(curve(va), 2.6), `<rect x="${f(W * 0.6)}" y="${f(H * 0.52)}" width="40" height="22" rx="3" fill="${c.plaza}" stroke="${c.edge}"/>`, big(curve([[X0, H * 0.95], [W * 0.15, H * 0.75], va[1]]), 4));
+    } else if (pick === 4) { // 아스완: 바위섬 흩어진 넓은 강, 사구가 강물에 바로 닿는 서쪽 기슭, 알록달록 누비아 마을, 동쪽 강변 시가지와 돛배 떼
+      const rv = [[W * 0.5, Y0], [W * 0.46, H * 0.5], [W * 0.54, Y1]], nub = dark ? ['#5a4a6a', '#3e5a7a', '#6a4646', '#6a6040'] : ['#c9b6e6', '#9fc4ec', '#f0b0a8', '#f2d98a'];
+      o.push(dunes(30), grid(`${curve(rv.map(([x, y]) => [x + 40, y]))}L${X1} ${Y1}L${X1} ${Y0}Z`, -8, W * 0.8, H * 0.5, 26, 20));
+      o.push(river(rv, 130, 0));
+      for (let k = 0; k < 14; k++) { const x = W * (0.38 + r() * 0.2), y = H * (0.05 + r() * 0.9), s = 4 + r() * 12; o.push(fill(blob(x, y, s, s * 0.7, 7, 0.35), c.wall), r() < 0.4 ? palms(x, y, 2, s * 0.5, s * 0.3) : ''); }
+      const vx = W * 0.22, vy = H * 0.55; for (let k = 0; k < 40; k++) o.push(`<rect x="${f(vx + (r() - 0.5) * 90)}" y="${f(vy + (r() - 0.5) * 80)}" width="8" height="7" rx="1" fill="${nub[k % 4]}" stroke="${c.edge}" stroke-width="0.5"/>`);
+      for (let k = 0; k < 6; k++) o.push(boat(W * (0.45 + r() * 0.12), H * (0.1 + r() * 0.8), 80 + r() * 20));
+      o.push(big(curve(rv.map(([x, y]) => [x + 74, y])), 4.6));
+    } else if (pick === 5) { // 알렉산드리아: 둥글게 휜 지중해 만과 길게 이어진 해안 큰길, 만 끝 곶 위 요새, 바둑판 시가지, 방파제와 항구, 둥근 도서관
+      const bay = [[X0, H * 0.2], [W * 0.2, H * 0.36], [W * 0.5, H * 0.42], [W * 0.8, H * 0.34], [X1, H * 0.18]];
+      o.push(grid(`${curve(bay.map(([x, y]) => [x, y + 24]))}L${X1} ${Y1}L${X0} ${Y1}Z`, 4, W * 0.5, H * 0.7, 28, 22));
+      o.push(fill(`${curve(bay)}L${X1} ${Y0}L${X0} ${Y0}Z`, c.water), `<path d="${curve(bay.map(([x, y]) => [x, y + 6]))}" fill="none" stroke="${c.sand}" stroke-width="10"/>`);
+      o.push(fill(blob(W * 0.86, H * 0.2, 30, 16, 8, 0.2), c.built), `<rect x="${f(W * 0.86 - 10)}" y="${f(H * 0.2 - 8)}" width="20" height="16" rx="2" fill="${c.wall}" stroke="${c.edge}"/>`);
+      o.push(`<path d="${curve([[W * 0.08, H * 0.3], [W * 0.12, H * 0.12], [W * 0.3, H * 0.06]])}" fill="none" stroke="${c.contour}" stroke-width="7" stroke-linecap="round"/>`, `<circle cx="${f(W * 0.55)}" cy="${f(H * 0.56)}" r="12" fill="${c.bld}" stroke="${c.wall}" stroke-width="1.4"/><path d="M${f(W * 0.55 - 12)} ${f(H * 0.56)}h24" stroke="${c.wall}" stroke-width="1"/>`);
+      o.push(big(curve(bay.map(([x, y]) => [x, y + 18])), 5.6), boat(W * 0.4, H * 0.24, 0));
+    } else if (pick === 6) { // 시와 같은 사막 오아시스: 하얗게 빛나는 소금 호수, 둘레 빽빽한 야자 숲, 언덕 위 무너진 흙 요새 마을, 샘, 모래 언덕
+      o.push(dunes(50));
+      const lx = W * (0.55 + r() * 0.2), ly = H * 0.42, salt = dark ? '#3c4650' : '#eef4f7';
+      o.push(fill(blob(lx, ly, 120, 54, 11, 0.3), salt), fill(blob(lx, ly, 96, 40, 11, 0.3), c.water));
+      o.push(fill(blob(W * 0.3, H * 0.6, 110, 70, 10, 0.25), c.park), palms(W * 0.3, H * 0.6, 70, 100, 60));
+      const fx = W * 0.32, fy = H * 0.58; o.push(fill(blob(fx, fy, 34, 26, 9, 0.2), c.wall)); for (let k = 0; k < 24; k++) o.push(`<rect x="${f(fx + (r() - 0.5) * 50)}" y="${f(fy + (r() - 0.5) * 40)}" width="6" height="5" rx="0.6" fill="${c.bld}" stroke="${c.edge}" stroke-width="0.5"/>`);
+      o.push(`<circle cx="${f(W * 0.2)}" cy="${f(H * 0.74)}" r="6" fill="${c.water}" stroke="${c.road}" stroke-width="2"/>`, way(curve([[X0, H * 0.9], [W * 0.25, H * 0.75], [fx, fy + 30], [lx - 100, ly + 40], [X1, H * 0.8]]), 3.4));
+    } else if (pick === 7) { // 홍해 리조트: 붉은 바위 산 아래 해안, 옥빛 산호 얕은 바다와 짙은 바다, 해안 따라 수영장 딸린 리조트 줄, 작은 만 마리나, 사막 큰길
+      const sh = [[W * 0.62, Y0], [W * 0.56, H * 0.3], [W * 0.66, H * 0.55], [W * 0.58, H * 0.8], [W * 0.64, Y1]], lag = dark ? '#1d4a5a' : '#bfe8ea', pool = dark ? '#2a6a8a' : '#8fd3f0';
+      for (let k = 0; k < 14; k++) o.push(`<path d="${blob(W * 0.15, H * 0.5, 30 + k * 14, 40 + k * 18, 10, 0.1)}" fill="none" stroke="${c.wall}" stroke-width="1" opacity=".5"/>`);
+      o.push(fill(`${curve(sh)}L${X1} ${Y1}L${X1} ${Y0}Z`, lag), fill(`${curve(sh.map(([x, y]) => [x + 50, y]))}L${X1} ${Y1}L${X1} ${Y0}Z`, c.water));
+      for (let k = 0; k < 6; k++) { const y = H * (0.08 + k * 0.16), x = sh[0][0] + (r() - 0.5) * 20 - 30; o.push(`<rect x="${f(x - 24)}" y="${f(y - 14)}" width="30" height="26" rx="3" fill="${c.park}"/><rect x="${f(x - 20)}" y="${f(y - 10)}" width="12" height="8" rx="1" fill="${c.bld}" stroke="${c.wall}" stroke-width="0.8"/>`, `<path d="${blob(x - 4, y + 4, 8, 4, 7, 0.3)}" fill="${pool}" stroke="${c.road}" stroke-width="1.2"/>`, palms(x - 8, y, 3, 12, 10)); }
+      o.push(big(curve(sh.map(([x, y]) => [x - 80, y])), 4.8), way(`M${f(W * 0.1)} ${Y0}L${f(W * 0.3)} ${f(H * 0.5)}L${f(sh[2][0] - 80)} ${f(sh[2][1])}`, 2.6));
+    } else if (pick === 8) { // 나일 삼각주 마을: 사방 초록 들판 조각, 곧은 관개 수로 그물, 수로 따라 늘어선 흙집 마을, 야자 줄, 비둘기 탑
+      o.push(fields(`M${X0} ${Y0}H${X1}V${Y1}H${X0}Z`, 8 + r() * 10, W * 0.5, H * 0.5, 22));
+      for (let k = 0; k < 4; k++) { const y = H * (0.1 + k * 0.28); o.push(river([[X0, y], [W * 0.5, y + (r() - 0.5) * 30], [X1, y + (r() - 0.5) * 20]], 5, 0)); }
+      for (let k = 0; k < 3; k++) { const x = W * (0.15 + k * 0.35); o.push(river([[x, Y0], [x + (r() - 0.5) * 40, H * 0.5], [x + (r() - 0.5) * 40, Y1]], 4, 0)); }
+      for (let v = 0; v < 3; v++) { const vx = W * (0.2 + v * 0.3 + r() * 0.05), vy = H * (0.25 + (v % 2) * 0.45); o.push(fill(blob(vx, vy, 40, 22, 8, 0.25), c.built)); for (let k = 0; k < 22; k++) o.push(`<rect x="${f(vx + (r() - 0.5) * 66)}" y="${f(vy + (r() - 0.5) * 34)}" width="6" height="5" rx="0.6" fill="${c.bld}" stroke="${c.edge}" stroke-width="0.4"/>`); o.push(`<circle cx="${f(vx + 30)}" cy="${f(vy - 14)}" r="4" fill="${c.wall}"/>`, palms(vx, vy + 26, 6, 40, 4)); }
+      o.push(big(`M${X0} ${f(H * 0.55)}L${X1} ${f(H * 0.45)}`, 4.6));
+    } else if (pick === 9) { // 수에즈 운하 도시: 곧게 뻗은 운하와 줄지어 지나는 큰 배, 운하 어귀 항구 도시 바둑판, 맞은편 사막, 운하 옆 철길과 큰길, 짧은 우회 수로
+      const cx = W * (0.5 + (r() - 0.5) * 0.2);
+      o.push(dunes(30), rowsGrid(`M${X0} ${Y0}H${f(cx - 20)}V${f(H * 0.55)}H${X0}Z`, 0, W * 0.2, H * 0.3, 30, 22));
+      o.push(`<path d="M${f(cx)} ${Y0}V${Y1}" stroke="${c.water}" stroke-width="30"/>`, `<path d="M${f(cx + 40)} ${f(H * 0.3)}Q${f(cx + 46)} ${f(H * 0.5)} ${f(cx)} ${f(H * 0.7)}M${f(cx)} ${f(H * 0.3)}L${f(cx + 40)} ${f(H * 0.3)}" fill="none" stroke="${c.water}" stroke-width="16"/>`);
+      for (let k = 0; k < 4; k++) o.push(`<rect x="${f(cx - 4)}" y="${f(H * (0.05 + k * 0.24))}" width="8" height="28" rx="3" fill="${c.wall}" stroke="${c.edge}" stroke-width="0.8"/>`);
+      o.push(fill(`M${X0} ${Y0}H${f(cx - 16)}V${f(H * 0.08)}H${X0}Z`, c.water), rail(`M${f(cx - 26)} ${Y0}V${Y1}`), big(`M${f(cx - 40)} ${Y0}V${Y1}`, 5), way(`M${f(cx + 30)} ${Y0}V${Y1}`, 3));
+    } else if (pick === 10) { // 옛 카이로 골목: 빽빽한 미로 골목, 둥근 지붕과 첨탑 사원 여럿, 언덕 위 성채, 지붕 덮인 시장 길, 성문
+      const sp = 22, N = 22, P = []; for (let i = 0; i <= N; i++) { P.push([]); for (let j = 0; j <= N; j++) P[i].push([W / 2 + (i - N / 2) * sp + (r() - 0.5) * 12, H / 2 + (j - N / 2) * sp * 0.8 + (r() - 0.5) * 10]); }
+      o.push(fill(`M${X0} ${Y0}H${X1}V${Y1}H${X0}Z`, c.bld)); let d = ''; for (let i = 0; i <= N; i++) for (let j = 0; j <= N; j++) { const a = P[i][j]; if (i < N && r() > 0.35) d += `M${f(a[0])} ${f(a[1])}L${f(P[i + 1][j][0])} ${f(P[i + 1][j][1])}`; if (j < N && r() > 0.45) d += `M${f(a[0])} ${f(a[1])}L${f(P[i][j + 1][0])} ${f(P[i][j + 1][1])}`; }
+      o.push(way(d, 1.8));
+      for (let k = 0; k < 7; k++) { const i = 2 + Math.floor(r() * (N - 4)), j = 2 + Math.floor(r() * (N - 4)), [x, y] = P[i][j]; o.push(mosque(x, y, 1 + r() * 0.4)); }
+      const sm = P.map(rw => rw[Math.floor(N / 2)]); o.push(`<path d="${curve(sm)}" fill="none" stroke="${c.plaza}" stroke-width="8"/>`, `<path d="${curve(sm)}" fill="none" stroke="${c.wall}" stroke-width="1.2" stroke-dasharray="2 3"/>`);
+      const cx = W * 0.82, cy = H * 0.2; o.push(fill(blob(cx, cy, 50, 36, 8, 0.15), c.sand), `<path d="${blob(cx, cy, 40, 28, 8, 0.1)}" fill="${c.plaza}" stroke="${c.wall}" stroke-width="3"/>`, mosque(cx, cy, 1.5));
+      o.push(big(`M${X0} ${f(H * 0.92)}L${X1} ${f(H * 0.86)}`, 5));
+    } else { // 아부심벨: 넓은 호수와 들쭉날쭉 메마른 바위 기슭, 기슭 바위에 새긴 큰 신전 둘, 작은 마을과 비행장, 사막 길
+      const lake = blob(W * 0.65, H * 0.55, 220, 180, 14, 0.35);
+      o.push(dunes(30), fill(lake, c.water));
+      for (let k = 0; k < 10; k++) o.push(fill(blob(W * (0.35 + r() * 0.6), H * (0.1 + r() * 0.8), 6 + r() * 14, 4 + r() * 8, 7, 0.4), c.land));
+      const tx = W * 0.32, ty = H * 0.42; o.push(`<path d="M${f(tx - 30)} ${f(ty - 24)}h40v48h-40z" fill="${c.wall}"/>`, ...[0, 1, 2, 3].map(k => `<rect x="${f(tx - 26 + k * 9)}" y="${f(ty - 16)}" width="6" height="18" rx="2" fill="${c.sand}"/>`), `<path d="M${f(tx - 26)} ${f(ty + 34)}h24v20h-24z" fill="${c.wall}"/>`);
+      o.push(fill(blob(W * 0.15, H * 0.7, 36, 20, 8, 0.2), c.built), palms(W * 0.15, H * 0.6, 8, 30, 8));
+      o.push(`<path d="M${f(W * 0.05)} ${f(H * 0.18)}L${f(W * 0.3)} ${f(H * 0.08)}" stroke="${c.contour}" stroke-width="12"/><path d="M${f(W * 0.05)} ${f(H * 0.18)}L${f(W * 0.3)} ${f(H * 0.08)}" stroke="${c.road}" stroke-width="1.2" stroke-dasharray="6 5"/>`, way(curve([[X0, H * 0.9], [W * 0.15, H * 0.7], [tx - 40, ty], [W * 0.2, H * 0.15]]), 3), big(`M${X0} ${f(H * 0.4)}L${f(W * 0.15)} ${f(H * 0.68)}`, 4.4));
+    }
   } else { // railHub: 큰 종착역에서 철길이 부채처럼 퍼지고 셋으로 갈라져 나가요, 역 앞 고리 큰길 안 옛 동네, 밖은 바둑판
     const cx = W * (0.4 + r() * 0.2), cy = H * (0.62 + r() * 0.06), st = [cx + (r() - 0.5) * 40, cy - 112];
     o.push(grid(`M${X0} ${Y0}H${X1}V${Y1}H${X0}Z`, (r() - 0.5) * 24, W * 0.5, H * 0.5, 32, 26));
@@ -1108,8 +1215,8 @@ function draw(kind, W, H, seed, dark = false) {
   const tr = `translate(${W / 2} ${H / 2}) rotate(${tilt}) scale(${mirror ? -1 : 1} 1) translate(${-W / 2} ${-H / 2})`;
   return `<g transform="${tr}">${o.join('')}</g>`;
 }
-const KINDS = ['oldRiver', 'gridLake', 'star', 'bay', 'island', 'mountain', 'canals', 'octagon', 'suburb', 'confluence', 'walled', 'railHub', 'hillPort', 'fjordVillage', 'canalGrid', 'deltaCity', 'oasis', 'farmVillage', 'medina', 'lakeResort', 'riverIslands', 'collegeTown', 'alpineValley', 'hilltop', 'interchange', 'portDocks', 'bigRiver', 'apartments', 'alleys', 'downtown', 'atoll', 'stiltVillage', 'riceTerraces', 'canyon', 'usTown', 'euroSquare', 'beachTown', 'campus', 'strait', 'archipelago', 'polarPort', 'pivotFarms', 'mountainCity', 'hillside', 'ruralTown', 'stationFront', 'castleMoat', 'templeRuins', 'crater', 'saltFlats', 'caveTown', 'savanna', 'tropicalResort', 'airportTown', 'villaTown', 'jpHouses', 'terraces', 'courtyardBlocks', 'jpSuburb', 'krTown', 'haussmann', 'auSuburb', 'cnSuperblock', 'nordicWood', 'itOldNew', 'usStrip', 'caLake', 'krUniv', 'deDorf', 'jpDanchi', 'noSnow'];
-const KO = { oldRiver: '강가 구시가지', gridLake: '바둑판 + 호수', star: '방사형 광장', bay: '만 · 해안', island: '섬', mountain: '산골 마을', canals: '반원 운하', octagon: '사선 바둑판 + 바다', suburb: '교외 고리길', confluence: '두 강이 만나는 곳', walled: '별 모양 성곽', railHub: '철길이 모이는 역', hillPort: '계단식 언덕 항구', fjordVillage: '피오르 마을', canalGrid: '운하 바둑판', deltaCity: '삼각주 도시', oasis: '사막 오아시스', farmVillage: '논밭 사이 마을', medina: '성벽 안 미로 골목', lakeResort: '호숫가 휴양지', riverIslands: '강 가운데 섬', collegeTown: '대학 도시', alpineValley: '알프스 골짜기', hilltop: '언덕 꼭대기 마을', interchange: '신도시 나들목', portDocks: '컨테이너 항구', bigRiver: '큰 강 대도시', apartments: '아파트 단지', alleys: '골목 주택가', downtown: '도심 업무지구', atoll: '산호섬 환초', stiltVillage: '수상가옥 마을', riceTerraces: '계단식 논', canyon: '협곡 도시', usTown: '미국 소도시', euroSquare: '유럽 소도시 광장', beachTown: '해변 소도시', campus: '학교 캠퍼스 동네', strait: '해협 도시', archipelago: '다도해', polarPort: '극지 항구', pivotFarms: '원형 농장 사막', mountainCity: '산 아래 도시', hillside: '언덕 주택가', ruralTown: '시골 읍내', stationFront: '역 앞 번화가', castleMoat: '해자 두른 성 마을', templeRuins: '사원 유적', crater: '화산 분화구 마을', saltFlats: '염전 · 갯벌 마을', caveTown: '동굴 · 바위 마을', savanna: '사바나 마을', tropicalResort: '열대 해변 리조트', airportTown: '공항 옆 동네', villaTown: '빌라촌', jpHouses: '단독주택 주택가', terraces: '테라스 하우스 동네', courtyardBlocks: '중정 블록 시가지', jpSuburb: '교외 역세권', krTown: '지방 소도시 시내', haussmann: '오스만 블록 시가지', auSuburb: '넓은 교외', cnSuperblock: '대로 사이 큰 단지', nordicWood: '목조 주택 교외', itOldNew: '옛 시내 + 새 시내', usStrip: '큰길 상가 교외', caLake: '호숫가 교외 도시', krUniv: '대학가 · 원룸촌', deDorf: '들판 마을', jpDanchi: '단지(団地)', noSnow: '눈 덮인 노르웨이 도시' };
+const KINDS = ['oldRiver', 'gridLake', 'star', 'bay', 'island', 'mountain', 'canals', 'octagon', 'suburb', 'confluence', 'walled', 'railHub', 'hillPort', 'fjordVillage', 'canalGrid', 'deltaCity', 'oasis', 'farmVillage', 'medina', 'lakeResort', 'riverIslands', 'collegeTown', 'alpineValley', 'hilltop', 'interchange', 'portDocks', 'bigRiver', 'apartments', 'alleys', 'downtown', 'atoll', 'stiltVillage', 'riceTerraces', 'canyon', 'usTown', 'euroSquare', 'beachTown', 'campus', 'strait', 'archipelago', 'polarPort', 'pivotFarms', 'mountainCity', 'hillside', 'ruralTown', 'stationFront', 'castleMoat', 'templeRuins', 'crater', 'saltFlats', 'caveTown', 'savanna', 'tropicalResort', 'airportTown', 'villaTown', 'jpHouses', 'terraces', 'courtyardBlocks', 'jpSuburb', 'krTown', 'haussmann', 'auSuburb', 'cnSuperblock', 'nordicWood', 'itOldNew', 'usStrip', 'caLake', 'krUniv', 'deDorf', 'jpDanchi', 'noSnow', 'egypt'];
+const KO = { oldRiver: '강가 구시가지', gridLake: '바둑판 + 호수', star: '방사형 광장', bay: '만 · 해안', island: '섬', mountain: '산골 마을', canals: '반원 운하', octagon: '사선 바둑판 + 바다', suburb: '교외 고리길', confluence: '두 강이 만나는 곳', walled: '별 모양 성곽', railHub: '철길이 모이는 역', hillPort: '계단식 언덕 항구', fjordVillage: '피오르 마을', canalGrid: '운하 바둑판', deltaCity: '삼각주 도시', oasis: '사막 오아시스', farmVillage: '논밭 사이 마을', medina: '성벽 안 미로 골목', lakeResort: '호숫가 휴양지', riverIslands: '강 가운데 섬', collegeTown: '대학 도시', alpineValley: '알프스 골짜기', hilltop: '언덕 꼭대기 마을', interchange: '신도시 나들목', portDocks: '컨테이너 항구', bigRiver: '큰 강 대도시', apartments: '아파트 단지', alleys: '골목 주택가', downtown: '도심 업무지구', atoll: '산호섬 환초', stiltVillage: '수상가옥 마을', riceTerraces: '계단식 논', canyon: '협곡 도시', usTown: '미국 소도시', euroSquare: '유럽 소도시 광장', beachTown: '해변 소도시', campus: '학교 캠퍼스 동네', strait: '해협 도시', archipelago: '다도해', polarPort: '극지 항구', pivotFarms: '원형 농장 사막', mountainCity: '산 아래 도시', hillside: '언덕 주택가', ruralTown: '시골 읍내', stationFront: '역 앞 번화가', castleMoat: '해자 두른 성 마을', templeRuins: '사원 유적', crater: '화산 분화구 마을', saltFlats: '염전 · 갯벌 마을', caveTown: '동굴 · 바위 마을', savanna: '사바나 마을', tropicalResort: '열대 해변 리조트', airportTown: '공항 옆 동네', villaTown: '빌라촌', jpHouses: '단독주택 주택가', terraces: '테라스 하우스 동네', courtyardBlocks: '중정 블록 시가지', jpSuburb: '교외 역세권', krTown: '지방 소도시 시내', haussmann: '오스만 블록 시가지', auSuburb: '넓은 교외', cnSuperblock: '대로 사이 큰 단지', nordicWood: '목조 주택 교외', itOldNew: '옛 시내 + 새 시내', usStrip: '큰길 상가 교외', caLake: '호숫가 교외 도시', krUniv: '대학가 · 원룸촌', deDorf: '들판 마을', jpDanchi: '단지(団地)', noSnow: '눈 덮인 노르웨이 도시', egypt: '이집트' };
 return { draw, KINDS, KO, hsh };
 })();
 if (typeof module !== 'undefined') module.exports = TOWN3;
