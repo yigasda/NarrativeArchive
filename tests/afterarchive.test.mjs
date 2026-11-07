@@ -12,7 +12,7 @@ const href = f => pathToFileURL(new URL(f, SRC).pathname).href;
 const stub = {
     './phonestory.js': encoded(`export const phoneTarget=()=>({scope:phoneChatScope(),check(){}});export const phoneChatScope=()=>'test';`),
     './wealth.js': encoded(`export const ensureWealth=async()=>null;export const wealthBlock=()=>'';export const wealthDate=()=> '2026-12-30';export const wealthCheck=()=>null;export const addWealthFX=()=>{};export const investmentWealthRows=()=>[];`),
-    './ai.js': encoded(`export const askDraft=async(input,o)=>{if(String(o.system).startsWith('GOAL\\nWrite the ordinary life')){(globalThis.__everydayIn||=[]).push(input);const e=globalThis.__everyday;return JSON.stringify(typeof e==='function'?e(input):e||{});}if(String(o.system).startsWith('GOAL\\nWork out where')){(globalThis.__where||=[]).push(input);return JSON.stringify(globalThis.__whereAnswer||{people:[]});}const M=globalThis.__menu;M.input=input;M.sys=o.system;(M.calls||=[]).push({input,sys:o.system});if(M.answers&&M.answers.length){const a=M.answers.shift();if(a instanceof Error)throw a;return typeof a==='function'?a(input,o):a;}return M.answer;};export const askAI=async()=>'';`),
+    './ai.js': encoded(`import { phoneMadeFixture as __pmf } from '${new URL('./reflectionfixture.mjs', import.meta.url).href}'; const askDraft0=async(input,o)=>{if(String(o.system).startsWith('GOAL\\nWrite the ordinary life')){(globalThis.__everydayIn||=[]).push(input);const e=globalThis.__everyday;return JSON.stringify(typeof e==='function'?e(input):e||{});}if(String(o.system).startsWith('GOAL\\nWork out where')){(globalThis.__where||=[]).push(input);return JSON.stringify(globalThis.__whereAnswer||{people:[]});}const M=globalThis.__menu;M.input=input;M.sys=o.system;(M.calls||=[]).push({input,sys:o.system});if(M.answers&&M.answers.length){const a=M.answers.shift();if(a instanceof Error)throw a;return typeof a==='function'?a(input,o):a;}return M.answer;};export const askAI=async()=>'';;export const askDraft=async(i,o)=>__pmf(await askDraft0(i,o),i,o?.system);`),
     './core.js': encoded(`export const ctx=()=>globalThis.__ctx||({chat:[],chatMetadata:{},characters:[]});export const globalSettings=()=>({});export const saveMeta=async()=>{};export const getMeta=()=>({});`),
     './calendar.js': encoded(`export const calendars=()=>({});export const headingDate=()=>({});`),
     './drift.js': encoded(`export const recentForCheck=n=>(globalThis.__rows||[]).slice(-n).map(r=>r.text);export const chatRows=()=>globalThis.__rows||[];`),
@@ -1103,15 +1103,47 @@ test('making a phone sets its clock as a reflection does (CLOCK FIRST, "clock", 
     }
     // (the reflection's own wording, unchanged: its viewpoint line is the one the fills share)
     assert.ok(data.updateSystem({ split: true }).includes(data.FILL_CLOCK.split('\n')[0]));
+});
+
+test('making a phone for the first time: where everyone is first (the people the chat already names, each once), then the phone, its OWNER\'S CLOCK and PEOPLE AROUND from it; the clock checked as a reflection\'s', async () => {
+    const setup = () => {
+        const { m: mm } = htmlPhoneFixture();
+        globalThis.__ctx.characters = [{ name: 'Mara' }]; globalThis.__ctx.characterId = 0; globalThis.__ctx.name1 = '소망';
+        mm.phones = { lio: { owner: 'Lio', country: 'KR' } }; mm.phoneScreenHolder = 'Mara';
+        globalThis.__glossaryPeople = ['Ivo', '마라'];
+        mm.text = '## #0–#3 — Arrival\n- Ren came home on 2026-11-02 (#1).\n';
+        globalThis.__where = [];
+        globalThis.__whereAnswer = { people: [{ name: 'Ren', city: 'Frankfurt am Main', tz: 'Europe/Berlin', lives: 'DE' }, { name: 'Mara', city: 'Seoul', tz: 'Asia/Seoul', lives: 'KR' }],
+            around: [{ name: 'Mara', about: 'Ren\'s mother, in Seoul; they text every day.' }] };
+        return mm;
+    };
+    const made = (now, clock, contacts = ['Mara']) => JSON.stringify({ country: 'DE', now, clock, contacts: contacts.map(name => ({ name })), notes: [] });
+    const at = { basis: 'Default used', finalViewpoint: 'Mara', elapsedTime: null, sceneTime: '11-03 11:10', messageSender: null };
     try {
-        const { m: mm } = htmlPhoneFixture(); mm.phones = {};
-        const made = clock => JSON.stringify({ country: 'DE', now: '11-03 05:00', clock, notes: [] });
-        globalThis.__menu = { calls: [], answer: made({ basis: 'Ren in Frankfurt', finalViewpoint: 'Ren', elapsedTime: null, sceneTime: '11-03 03:10', messageSender: null }) };
+        let mm = setup(), seenWhere = -1;
+        globalThis.__menu = { calls: [], answers: [() => { seenWhere = globalThis.__where.length; return made('11-03 03:10', at); }] };
         const p = await data.makePhone(mm, 'Ren');
+        assert.equal(seenWhere, 1, 'where is read before the phone');
+        const people = globalThis.__where[0].split('[PEOPLE]\n')[1].split('\n\n')[0].split('\n');
+        assert.deepEqual([...people].sort(), ['Ivo', 'Lio', 'Mara', '마라', '소망'].sort());
+        const input = globalThis.__menu.calls[0].input;
+        assert.match(input, /Time differences from Frankfurt am Main:\n[^[]*- Mara \(Seoul\): \+8 hours/);
+        assert.match(input, /\[PEOPLE AROUND\]\n- Mara: Ren's mother/);
         assert.equal(p.now, '11-03 03:10');
-        // (an answer with no "clock" keeps its "now": the phone isn't lost over it)
-        mm.phones = {};
-        globalThis.__menu = { calls: [], answer: made(undefined) };
-        assert.equal((await data.makePhone(mm, 'Ren')).now, '11-03 05:00');
-    } finally { delete globalThis.__ctx; }
+        assert.equal(p.where.people.find(x => x.name === 'Mara').tz, 'Asia/Seoul');
+        assert.equal(p.around.people[0].name, 'Mara');
+        assert.equal(globalThis.__where.length, 1, 'no second reading: no one new on it');
+        // someone new on it: read again for them
+        mm = setup();
+        globalThis.__menu = { calls: [], answers: [made('11-03 03:10', at, ['Mara', 'Varo'])] };
+        await data.makePhone(mm, 'Ren');
+        assert.equal(globalThis.__where.length, 2);
+        // a "now" its scene's time doesn't give, or no "clock": not saved, as a reflection's
+        for (const answer of [made('11-03 11:10', at), made('11-03 03:10', null)]) {
+            mm = setup();
+            globalThis.__menu = { calls: [], answers: [answer] };
+            await assert.rejects(data.makePhone(mm, 'Ren'), /시간 판독 답이 맞지 않아요/);
+            assert.equal(mm.phones.ren, undefined);
+        }
+    } finally { delete globalThis.__ctx; delete globalThis.__whereAnswer; delete globalThis.__glossaryPeople; }
 });

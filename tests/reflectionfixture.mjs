@@ -13,3 +13,12 @@ export function reflectionFixture(answer, input) {
     }
     return { ...answer, clock: { basis: 'App test fixture', finalViewpoint: owner, elapsedTime: null, sceneTime: time, messageSender: null } };
 }
+// The same for making a phone (its prompt has CLOCK FIRST since 3.171.88): an answer with no "clock" gets the owner's
+// own, at its "now" (or the test's usual moment). A raw answer that isn't JSON, or one with a clock, stays as it is.
+export function phoneMadeFixture(out, input, system) {
+    if (typeof out !== 'string' || !String(system || '').includes('CLOCK FIRST') || String(system).includes('STAGE: core') || !String(system).startsWith('GOAL\nShow what one character')) return out;
+    let o; try { o = JSON.parse(out); } catch { return out; }
+    if (!o || typeof o !== 'object' || Array.isArray(o) || Object.hasOwn(o, 'clock')) return out;
+    const owner = /\[OWNER\]\n([^\n]+)/.exec(input)?.[1] || 'Ren', now = /^\d{2}-\d{2} \d{2}:\d{2}$/.test(when(o.now)) ? when(o.now) : '10-26 12:00';
+    return JSON.stringify({ ...o, now, clock: { basis: 'App test fixture', finalViewpoint: owner, elapsedTime: null, sceneTime: now, messageSender: null } });
+}
