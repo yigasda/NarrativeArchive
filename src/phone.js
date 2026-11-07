@@ -193,7 +193,7 @@ export async function openPhone(who = null) {
     const askPick = (title, text, opts, flag = '', no = '나중에') => {
         ask?.done(false);
         return new Promise(done => {
-            const el = $(`<div class="pcf" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="pcf_box"><div class="pcf_card"><div class="pcf_msg"><b>${flag ? `${flagSvg(flag, 22)} ` : ''}${esc(title)}</b>${text ? `<span>${esc(text)}</span>` : ''}</div><div class="pcf_btns v">${opts.map(o => `<div role="button" tabindex="0" class="pcf_ok safe pcf_pick" data-v="${esc(o.v)}">${o.flag ? flagSvg(o.flag, 26) : ''}<span class="pcf_pt"><span>${esc(o.label)}</span>${o.sub ? `<small>${esc(o.sub)}</small>` : ''}</span></div>`).join('')}<div role="button" tabindex="0" class="pcf_no">${esc(no)}</div></div></div></div></div>`)[0];
+            const el = $(`<div class="pcf" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="pcf_box"><div class="pcf_card"><div class="pcf_msg"><b>${flag ? `${flagSvg(flag, 22)} ` : ''}${esc(title)}</b>${text ? `<span>${esc(text)}</span>` : ''}</div><div class="pcf_btns v">${opts.map(o => `<div role="button" tabindex="0" class="pcf_ok safe pcf_pick" data-v="${esc(o.v)}">${o.flag ? flagSvg(o.flag, 26) : ''}<span class="pcf_pt"><span>${esc(o.label)}</span>${o.sub || o.time ? `<small>${esc(o.sub || '')}${o.sub && o.time ? ' · ' : ''}${o.time ? `<span class="pcf_tm">${esc(o.time)}</span>` : ''}</small>` : ''}</span></div>`).join('')}<div role="button" tabindex="0" class="pcf_no">${esc(no)}</div></div></div></div></div>`)[0];
             ask = { el, done: v => { ask = null; el.remove(); done(v); } };
             placeAsk();
             if (el.isConnected) el.querySelector('.pcf_no').focus({ preventScroll: true });
@@ -226,7 +226,7 @@ export async function openPhone(who = null) {
     // where in it, for a country with many clocks); resolves a zone, or '' (asked and answered nothing)
     const askZone = async (p, name, city, err) => {
         if (err.choices) {
-            const v = await askPick(`어느 ${city}예요?`, `${name}의 도시`, err.choices.map(c => { const sp = /^(.*?) \((.*)\)$/.exec(c.label); return { v: c.tz, label: sp ? sp[1] : c.label, sub: [sp?.[2], clockIn(p, c.tz)].filter(Boolean).join(' · '), flag: flagOfLabel(c.label) }; }));
+            const v = await askPick(`어느 ${city}예요?`, `${name}의 도시`, err.choices.map(c => { const sp = /^(.*?) \((.*)\)$/.exec(c.label); return { v: c.tz, label: sp ? sp[1] : c.label, sub: sp?.[2] || '', time: clockIn(p, c.tz), flag: flagOfLabel(c.label) }; }));
             return v || '';
         }
         let code = await askCountry('어느 나라 도시예요?', `"${city}"는 모르는 도시예요`);
@@ -236,7 +236,7 @@ export async function openPhone(who = null) {
         if (!zs.length) { await askSheet('시간대를 찾지 못했어요', '다른 도시 이름이나 나라로 다시 적어 주세요.', '확인', true); return ''; }
         if (zs.length === 1) return zs[0].tz;
         const cc = code.toLowerCase(), country = FLAG_NAME[cc] || code;
-        const v = await askPick(`${country} 어디쯤이에요?`, '시간대가 여러 개인 나라예요', zs.map(z => { const sp = /^(.*?) \((.*)\)$/.exec(z.label); return { v: z.tz, label: sp ? sp[1] : z.label, sub: [sp?.[2], clockIn(p, z.tz)].filter(Boolean).join(' · ') }; }), FLAG_NAME[cc] ? cc : '');
+        const v = await askPick(`${country} 어디쯤이에요?`, '시간대가 여러 개인 나라예요', zs.map(z => { const sp = /^(.*?) \((.*)\)$/.exec(z.label); return { v: z.tz, label: sp ? sp[1] : z.label, sub: sp?.[2] || '', time: clockIn(p, z.tz) }; }), FLAG_NAME[cc] ? cc : '');
         return v || '';
     };
     // 상태창 날짜 순서: asked once per chat before the first make or reflection (closing it reads 월.일 and asks again next time)
