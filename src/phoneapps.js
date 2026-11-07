@@ -611,9 +611,9 @@ export function setDate(p, now, m = null) {
       </div>
       ${axInd()}`;
 }
-export function setScreenHolderView(p, now, m) {
+export function setScreenHolderView(p, now, m, back = 'setdate') {
     const selected = screenHolderLabel(m), options = [...screenHolderChoices(m), { name: '', sub: '시간을 잘못 해석할 수 있어요' }];
-    return `${axBar(p, now)}${axTop(axCb('setdate'))}<div class="ax_scroll">${axH1('메신저 시간대')}
+    return `${axBar(p, now)}${axTop(axCb(back))}<div class="ax_scroll">${axH1('메신저 시간대')}
       <div class="ax_card">${options.map(x => `<button type="button" class="ax_rw ax_rwn na_ph_screenholder" data-n="${esc(x.name)}" aria-pressed="${nameKey(x.name) === nameKey(selected)}"><span class="ax_tx"><span class="ax_n">${esc(x.name || '미설정')}</span><span class="ax_p1">${esc(x.sub)}</span></span>${nameKey(x.name) === nameKey(selected) ? `<span class="ax_radio on">${ax('check', 14, '#fff', 3.4)}</span>` : ''}</button>`).join('')}</div>
       <div class="ax_foot">내가 메시지를 보내고 캐릭터에게 답장을 받았다면, <b>내 페르소나의 현지 시간</b>을 골라 주세요.<br><br>이야기에서 장면이 바뀌면 그 장면을 따라가요.</div></div>${axInd()}`;
 }
