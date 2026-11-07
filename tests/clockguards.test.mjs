@@ -65,3 +65,8 @@ test('점검 3: a part of a message that starts like a code block keeps the mess
     const s = storyText('[RECENT CHAT]\n[#12] Ren: hi\n\n[BANK]\n잔액 300\n\n[#13] Mina: 삼성전자 주가가 71,000원까지 올랐다.\n\n[OWNER]\nRen\n\n[MONEY NOW]\n{"a":1}');
     assert.ok(s.includes('71,000원까지 올랐다') && s.includes('잔액 300') && !s.includes('"a":1'));
 });
+
+test('점검 6: a part of a message before the user\'s message ("[#14 · USER] Ren: …") is the story\'s', () => {
+    const s = storyText('[RECENT CHAT]\n[#13] Mina: 휴대폰이 울렸다.\n\n[BANK]\n입금 3,000,000원\n\n[#14 · USER] Ren: 오 월급 들어왔다. 삼성전자 10주 사야지\n\n[OWNER]\nRen');
+    assert.ok(s.includes('입금 3,000,000원') && s.includes('삼성전자 10주 사야지'));
+});

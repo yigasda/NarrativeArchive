@@ -104,11 +104,13 @@ test('markup inside inert, reasoning, and comment regions cannot become clocks',
     for (const tag of ['style', 'script', 'template', 'think', 'thinking', 'thought', 'reasoning', 'analysis', 'scene_plan', 'textarea', 'title', 'xmp', 'iframe', 'noembed', 'noframes']) {
         assert.deepEqual(htmlClocks(`<${tag} class="time">${clock}</${tag}>${wrap('09:30')}`), [hint('09:30')], tag);
     }
-    for (const attribute of ['hidden', 'hidden="until-found"', 'aria-hidden="true"', "ARIA-HIDDEN='TRUE'"]) {
+    for (const attribute of ['hidden', 'hidden="until-found"']) {
         assert.deepEqual(htmlClocks(`<span class="time" ${attribute}>08:30</span>${wrap('09:30')}`), [hint('09:30')], attribute);
         assert.deepEqual(htmlClocks(`<div ${attribute}>${clock}</div>${wrap('09:30')}`), [hint('09:30')], attribute);
     }
     assert.deepEqual(htmlClocks('<time aria-hidden="false">08:30</time>'), [hint('08:30')]);
+    // (aria-hidden is for screen readers: the screen shows it, so its clock is read)
+    assert.deepEqual(htmlClocks('<span class="time" aria-hidden="true">08:30</span>'), [hint('08:30')]);
     assert.deepEqual(htmlClocks(`<template><template>${clock}</template>${clock}</template>${wrap('09:30')}`), [hint('09:30')]);
     assert.deepEqual(htmlClocks(`<!-- ${clock} -->${wrap('09:30')}`), [hint('09:30')]);
     assert.deepEqual(htmlClocks(`<![CDATA[${clock}]]>${wrap('09:30')}`), [hint('09:30')]);

@@ -32,6 +32,13 @@ let together = null;
 const fresh = (x, twin, at) => x.occurrence === 'new' && twin.sourceIndex !== at
     && !(together && twin.sourceIndex >= together[0] && twin.sourceIndex <= together[1]);
 const plain = s => String(s || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+// the airports a ticket's route is often written by, by the zone of their city
+const AIRPORTS = { ICN: 'Asia/Seoul', GMP: 'Asia/Seoul', PUS: 'Asia/Seoul', CJU: 'Asia/Seoul', NRT: 'Asia/Tokyo', HND: 'Asia/Tokyo', KIX: 'Asia/Tokyo', ITM: 'Asia/Tokyo', FUK: 'Asia/Tokyo', CTS: 'Asia/Tokyo', OKA: 'Asia/Tokyo',
+    PEK: 'Asia/Shanghai', PVG: 'Asia/Shanghai', SHA: 'Asia/Shanghai', CAN: 'Asia/Shanghai', HKG: 'Asia/Hong_Kong', TPE: 'Asia/Taipei', SIN: 'Asia/Singapore', BKK: 'Asia/Bangkok', SGN: 'Asia/Ho_Chi_Minh', HAN: 'Asia/Ho_Chi_Minh', DAD: 'Asia/Ho_Chi_Minh', MNL: 'Asia/Manila', CEB: 'Asia/Manila', DPS: 'Asia/Makassar', KUL: 'Asia/Kuala_Lumpur', DXB: 'Asia/Dubai', DEL: 'Asia/Kolkata', BOM: 'Asia/Kolkata', IST: 'Europe/Istanbul',
+    FRA: 'Europe/Berlin', MUC: 'Europe/Berlin', BER: 'Europe/Berlin', TXL: 'Europe/Berlin', HAM: 'Europe/Berlin', DUS: 'Europe/Berlin', CGN: 'Europe/Berlin', STR: 'Europe/Berlin', LHR: 'Europe/London', LGW: 'Europe/London', STN: 'Europe/London', MAN: 'Europe/London', EDI: 'Europe/London', DUB: 'Europe/Dublin', CDG: 'Europe/Paris', ORY: 'Europe/Paris', NCE: 'Europe/Paris',
+    AMS: 'Europe/Amsterdam', BRU: 'Europe/Brussels', ZRH: 'Europe/Zurich', GVA: 'Europe/Zurich', VIE: 'Europe/Vienna', PRG: 'Europe/Prague', BUD: 'Europe/Budapest', WAW: 'Europe/Warsaw', CPH: 'Europe/Copenhagen', ARN: 'Europe/Stockholm', OSL: 'Europe/Oslo', HEL: 'Europe/Helsinki', FCO: 'Europe/Rome', MXP: 'Europe/Rome', VCE: 'Europe/Rome', MAD: 'Europe/Madrid', BCN: 'Europe/Madrid', LIS: 'Europe/Lisbon', ATH: 'Europe/Athens',
+    JFK: 'America/New_York', EWR: 'America/New_York', LGA: 'America/New_York', BOS: 'America/New_York', IAD: 'America/New_York', MIA: 'America/New_York', ATL: 'America/New_York', ORD: 'America/Chicago', DFW: 'America/Chicago', IAH: 'America/Chicago', DEN: 'America/Denver', PHX: 'America/Phoenix', LAX: 'America/Los_Angeles', SFO: 'America/Los_Angeles', SEA: 'America/Los_Angeles', LAS: 'America/Los_Angeles', HNL: 'Pacific/Honolulu',
+    YYZ: 'America/Toronto', YUL: 'America/Toronto', YVR: 'America/Vancouver', MEX: 'America/Mexico_City', GRU: 'America/Sao_Paulo', SYD: 'Australia/Sydney', MEL: 'Australia/Melbourne', BNE: 'Australia/Brisbane', PER: 'Australia/Perth', AKL: 'Pacific/Auckland' };
 // an order that is over (cancelled, returned, refunded), a ticket that is (used, cancelled, refunded, checked out, expired;
 // never "미사용", "사용 전", "unused": not used yet)
 const ORDER_OVER = s => ['cancelled', 'returned', 'refunded'].includes(s);
@@ -91,7 +98,8 @@ export function investNow(m, p) {
 // edited: the message was changed by the user after it was read, so its amounts may be corrected even when stated
 // anchor: the day ("YYYY-MM-DD") the year was read from; an event's day is taken as the one nearest it, so a story going
 // past New Year books January in the next year
-export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior = [], span = null, edited = false } = {}) {
+// placeZone: a city's zone by any of its names (the phone's own lookup), for a ticket's route told as "인천" or "ICN"
+export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior = [], span = null, edited = false, placeZone = null } = {}) {
     together = span;
     const out = { effects: [], changes: [], notes: [], legs: [] };
     const mo = e.money;
@@ -298,6 +306,8 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
     const records = (path, rows, make, same, loose) => rows.forEach((x, k) => {
         if (!bankOn) return;
         const box = p.money[path] ||= [];
+        // (one made before with nothing to know it by, no item, no seller: left out with a note; the event's other money stays)
+        if (x.occurrence === 'again' && !txt(path === 'orders' ? x.item : x.by)) { out.notes.push(path === 'orders' ? '물건 이름 없는 주문 이야기는 넣지 않았어요' : '판매처 없는 표 이야기는 넣지 않았어요'); return; }
         // the same event's own record told again (its message rewritten and read anew) is that one, not a second
         const old = x.already && box.find(o => o.id === x.already) || box.find(o => !madeNow.has(o) && same(o, x) && (!fresh(x, o, e.at) || o.ev === e.id))
             // (the newest that fits: an order bought again weeks later is the one "on its way" now)
@@ -305,7 +315,12 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
             || x.occurrence === 'again' && ((rs => rs.find(o => !(path === 'passes' ? PASS_OVER(o.status) : ORDER_OVER(o.status))) || rs[0])([...box].reverse().filter(o => !madeNow.has(o) && loose(o, x, box)))) || null;
         if (old && old.sourceIndex == null) old.sourceIndex = e.at;
         // (an order put in with no shop, told of again with its shop: the shop now; 되돌리기 takes it back)
-        if (old && path === 'orders' && !txt(old.shop) && txt(x.shop)) { const to = txt(x.shop, 60); out.effects.push({ type: 'field', path: 'money.orders', id: old.id, field: 'shop', from: old.shop ?? null, to }); old.shop = to; }
+        const fill = (field, to) => { out.effects.push({ type: 'field', path: `money.${path}`, id: old.id, field, from: old[field] ?? null, to }); if (to === null) delete old[field]; else old[field] = to; };
+        if (old && path === 'orders' && !txt(old.shop) && txt(x.shop)) fill('shop', txt(x.shop, 60));
+        if (old && path === 'orders' && old.price == null && x.price !== null && x.price !== undefined && x.price !== '' && finite(Number(x.price))) fill('price', Number(x.price));
+        // (a ticket told of before its day was known has the day it was told on, marked: the real one when it comes)
+        if (old && path === 'passes' && old.dayUnknown && when(x.date)) { fill('date', when(x.date).slice(0, 5)); fill('dayUnknown', null); }
+        if (old && path === 'passes' && !txt(old.no) && txt(x.no, 24)) fill('no', txt(x.no, 24));
         if (old) {
             // an order's status only moves forward; a pass's is free text ("used", "checked in", "cancelled"): whatever it says now
             const next = path === 'passes' ? txt(x.status, 30) : x.status;
@@ -323,7 +338,7 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         }
         const row = { ...make(x), id: sid(`sync:${e.id}:${path[0]}${k}`), ev: e.id, storyEvent: e.id, sourceIndex: e.at };
         // (one made before these messages, told of now: its payment was before, not here)
-        if (x.occurrence === 'again') row.told = true;
+        if (x.occurrence === 'again') { row.told = true; if (path === 'passes' && !when(x.date)) row.dayUnknown = true; }
         else if (path === 'orders' && row.status !== 'cancelled' && row.price && x.paid !== false && !x.gift && !list(mo.moves).some(y => Number(y.amount) < 0)) out.notes.push(`${row.item}: 주문은 넣었지만 결제가 없었어요`);
         box.push(row); madeNow.add(row);
         out.effects.push({ type: 'push', path: `money.${path}`, item: structuredClone(row) });
@@ -341,6 +356,7 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
     // on its way, and one delivered only by the same shop for the same person, never a scarf delivered a month ago for no one)
     (o, x) => {
         if (!shopOf(o.shop, x.shop) || !samePlace(o.item, x.item)) return false;
+        if (o.option && txt(x.option, 60) && !samePlace(o.option, txt(x.option, 60))) return false;
         const og = giftOf(o.gift), xg = giftOf(x.gift);
         if (og && xg && !samePlace(og, xg)) return false;
         if (ORDER_OVER(x.status)) return true;
@@ -352,18 +368,19 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         if (!txt(x.by)) fail('티켓 정보를 확인하지 못했어요');
         return { kind: ['flight', 'train', 'hotel', 'event', 'other'].includes(x.kind) ? x.kind : 'other', by: txt(x.by, 60), from: txt(x.from, 40), to: txt(x.to, 40), date: when(x.date).slice(0, 5) || date, time: hhmm(x.time), seat: txt(x.seat, 12), gate: txt(x.gate, 12), no: txt(x.no, 24), status: txt(x.status, 30) };
     }, (o, x) => samePlace(o.by, x.by) && o.kind === x.kind && (o.no && o.no === txt(x.no, 24) || o.date === (when(x.date).slice(0, 5) || date)),
-    // (told of again: the same booking, by its number, else by what both name of its route and its day; one already used or
-    // cancelled only when this says nothing new of it, or that it was. A flight or a train its route names otherwise ("ICN"
-    // for "인천"), with no day or number: the one such booking still to come, when there is only one)
-    (o, x, box) => {
+    // (told of again: the same booking, by its number, else by its route and its day; one already used or cancelled only
+    // when this says nothing new of it, or that it was. A route's places by their names or their cities' zones ("인천",
+    // "ICN", "Seoul"); a return trip, its places the other way round, is its own ticket)
+    (o, x) => {
         if (!samePlace(o.by, x.by) || o.kind !== x.kind) return false;
         if (PASS_OVER(o.status) && txt(x.status) && !PASS_OVER(x.status)) return false;
         if (o.no && txt(x.no, 24)) return o.no === txt(x.no, 24);
-        if (when(x.date) && o.date !== when(x.date).slice(0, 5)) return false;
-        const both = (a, b) => !plain(a) || !plain(b) || plain(a) === plain(b);
-        if (both(o.from, txt(x.from, 40)) && both(o.to, txt(x.to, 40))) return true;
-        const open = box.filter(r => samePlace(r.by, x.by) && r.kind === x.kind && !PASS_OVER(r.status));
-        return ['flight', 'train'].includes(x.kind) && !when(x.date) && !txt(x.no, 24) && !PASS_OVER(o.status) && open.length === 1 && open[0] === o;
+        if (when(x.date) && !o.dayUnknown && o.date !== when(x.date).slice(0, 5)) return false;
+        const zone = v => AIRPORTS[String(v || '').trim().toUpperCase()] || (placeZone ? placeZone(v) : '') || '';
+        const at = (a, b) => !plain(a) || !plain(b) || plain(a) === plain(b) || !!zone(a) && zone(a) === zone(b);
+        const xf = txt(x.from, 40), xt = txt(x.to, 40);
+        if (plain(o.from) && plain(o.to) && plain(xf) && plain(xt) && at(o.from, xt) && at(o.to, xf) && !at(o.from, o.to) && !(at(o.from, xf) && at(o.to, xt))) return false;
+        return at(o.from, xf) && at(o.to, xt);
     });
     // 배달: an order in the delivery app. Its payment is a move of the same event (the card or bank row it made, or one
     // already there), tied to it here; with no paying move it was paid in cash at the door
@@ -558,7 +575,7 @@ export function replayEffects(m, p, effects) {
         if (x.type === 'entry') { const L = f.accounts[x.key]; if (L && !L.entries[x.id]) L.entries[x.id] = { amount: x.amount, date: x.date, ...(x.sourceIndex !== undefined ? { sourceIndex: x.sourceIndex } : {}) }; continue; }
         if (x.type === 'amendEntry') { const line = f.accounts[x.key]?.entries[x.id]; if (line && line.amount === x.from) line.amount = x.to; continue; }
         if (x.type === 'price') { const slot = (f.prices[x.key] ||= {})[x.date] ||= { rows: [], selected: null, conflict: false }; if (!slot.rows.some(r => r.id === x.id)) { slot.rows.push(structuredClone(x.row)); slot.selected ??= x.id; } continue; }
-        if (x.type === 'field') { const o = fieldAt(p, x); if (o && (o[x.field] ?? null) === x.from) o[x.field] = x.to; continue; }
+        if (x.type === 'field') { const o = fieldAt(p, x); if (o && (o[x.field] ?? null) === x.from) { if (x.to === null) delete o[x.field]; else o[x.field] = x.to; } continue; }
         if (lifeReplay(p, x) !== null) continue;
         if (!p[x.path.split('.')[0]]) continue;
         const box = boxAt(p, x.path, true), idKey = x.idKey || 'id';

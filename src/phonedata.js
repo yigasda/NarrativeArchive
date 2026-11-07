@@ -270,7 +270,7 @@ MONEY (only with MONEY NOW or INVESTMENTS NOW)
 - A payment, transfer, refund, order, ticket or trade that happens in these messages goes in the event's "money".
 - An amount the story gives stays as it is. A real one with no amount gets a plausible amount for the owner, the place and MONEY NOW: "amountFrom": "guess".
 - A payment the scene plainly implies (eating out, a taxi ride) counts; one someone else may have paid does not. Never invent a payment the scene doesn't show or imply.
-- Every move, trade and order says "occurrence": "new" when it happens in this message, "again" when the message only talks about one made before.
+- Every move, trade, order and ticket says "occurrence": "new" when it happens in this message, "again" when the message only talks about one made before.
 - An order or ticket made before and not in MONEY NOW yet ("I already ordered you a scarf") is still written, "again": the app puts it in with no payment. Its shop or price may be "" or null when the story doesn't say.
 - Already in MONEY NOW or INVESTMENTS NOW: its id as "already"; it is not paid again.
 - A card purchase goes on the card account; a refund is plus; paying the card off is a transfer from the bank.
@@ -292,7 +292,7 @@ ANSWER — one JSON object, nothing else:
                           "moves": [{ "account": a bank account's last 4 digits or "broker:EUR", "amount": minus for money out, "currency", "who", "ko", "memo": what it was for, "kind": "card" | "transfer" | "deposit" | "cash" (taken out as cash), "fee": a transfer fee charged on top of "amount", on the sending move, "occurrence": "new" | "again", "already": "" }],
                           "trades": [{ "kind": "buy" | "sell" | "dividend", "symbol", "name", "ko" and "currency" (a share not in INVESTMENTS NOW), "quantity", "price", "fee", "amount": dividend only, "occurrence": "new" | "again", "already": "" }],
                           "orders": [{ "shop", "item", "ko", "option", "qty", "price": unit price, "status": "ordered" (the default) | "shipped" | "on the way" | "delivered" | "cancelled" | "returning" | "returned" | "refunded", "eta": "MM-DD" or "", "gift", "paid": false only when someone else pays or it is paid on delivery, "occurrence": "new" | "again", "already": "" }],
-                          "passes": [{ "kind": "flight" | "train" | "hotel" | "event" | "other", "by", "from", "to", "date": "MM-DD", "time", "seat", "gate", "no", "status", "already": "" }]${delivery ? `,
+                          "passes": [{ "kind": "flight" | "train" | "hotel" | "event" | "other", "by", "from", "to", "date": "MM-DD", "time", "seat", "gate", "no", "status", "occurrence": "new" | "again", "already": "" }]${delivery ? `,
                           "deliveries": [{ "shop", "items": [{ "name", "ko", "option", "optionKo", "qty", "price": unit price, "pic": { "base": the dish in 1 to 3 English words, "with": [up to 3 main ingredients, like "beef"], "size": "regular" | "large", "set": [a set's sides or drinks] } }], "fee", "tip", "discount", "mode": "delivery" | "pickup", "time": "MM-DD HH:MM", "arrived": "MM-DD HH:MM" or "", "to": "home" | "work" | a person's name, "address", "left": where the courier left it, or "", "noteShop", "noteShopKo", "noteRider", "noteRiderKo", "noCutlery", "for": how many people, "status": "on the way" | "delivered" | "cancelled" | "refunded", "gift", "occurrence": "new" | "again", "already": "",
                                           "newShop": { "name": the same as "shop", "ko", "cuisine", "menu": [{ "name", "ko", "desc", "price", "top": true for its best-known dish, "pic" }] } or null }]` : ''} }` : ''} }],
 ${life ? `,
@@ -342,7 +342,7 @@ MONEY
 - A payment, transfer, refund, order${invest ? ', ticket or trade' : ' or ticket'} that happens in an event goes in that event's "money", under its id. An event with no money is left out.
 - An amount the story gives stays as it is. A real one with no amount gets a plausible amount for the owner, the place and MONEY NOW: "amountFrom": "guess".
 - A payment the scene plainly implies (eating out, a taxi ride) counts; one someone else may have paid does not. Never invent a payment the scene doesn't show or imply.
-- Every move${invest ? ', trade' : ''} and order says "occurrence": "new" when it happens in this message, "again" when the message only talks about one made before.
+- Every move${invest ? ', trade' : ''}, order and ticket says "occurrence": "new" when it happens in this message, "again" when the message only talks about one made before.
 - An order or ticket made before and not in MONEY NOW yet ("I already ordered you a scarf") is still written, "again": the app puts it in with no payment. Its shop or price may be "" or null when the story doesn't say.
 - Already in MONEY NOW${invest ? ' or INVESTMENTS NOW' : ''}: its id as "already"; it is not paid again. A "changed" event's payment is that same payment, its amount corrected if it changed.
 - A card purchase goes on the card account; a refund is plus; paying the card off is a transfer from the bank.
@@ -364,7 +364,7 @@ ANSWER — one JSON object, nothing else:
                           "moves": [{ "account": a bank account's last 4 digits${invest ? ' or "broker:EUR"' : ''}, "amount": minus for money out, "currency", "who", "ko", "memo": what it was for, "kind": "card" | "transfer" | "deposit" | "cash" (taken out as cash), "fee": a transfer fee charged on top of "amount", on the sending move, "occurrence": "new" | "again", "already": "" }],
 ${invest ? `                          "trades": [{ "kind": "buy" | "sell" | "dividend", "symbol", "name", "ko" and "currency" (a share not in INVESTMENTS NOW), "quantity", "price", "fee", "amount": dividend only, "occurrence": "new" | "again", "already": "" }],
 ` : ''}                          "orders": [{ "shop", "item", "ko", "option", "qty", "price": unit price, "status": "ordered" (the default) | "shipped" | "on the way" | "delivered" | "cancelled" | "returning" | "returned" | "refunded", "eta": "MM-DD" or "", "gift", "paid": false only when someone else pays or it is paid on delivery, "occurrence": "new" | "again", "already": "" }],
-                          "passes": [{ "kind": "flight" | "train" | "hotel" | "event" | "other", "by", "from", "to", "date": "MM-DD", "time", "seat", "gate", "no", "status", "already": "" }]${delivery ? `,
+                          "passes": [{ "kind": "flight" | "train" | "hotel" | "event" | "other", "by", "from", "to", "date": "MM-DD", "time", "seat", "gate", "no", "status", "occurrence": "new" | "again", "already": "" }]${delivery ? `,
                           "deliveries": [{ "shop", "items": [{ "name", "ko", "option", "optionKo", "qty", "price": unit price, "pic": { "base": the dish in 1 to 3 English words, "with": [up to 3 main ingredients, like "beef"], "size": "regular" | "large", "set": [a set's sides or drinks] } }], "fee", "tip", "discount", "mode": "delivery" | "pickup", "time": "MM-DD HH:MM", "arrived": "MM-DD HH:MM" or "", "to": "home" | "work" | a person's name, "address", "left": where the courier left it, or "", "noteShop", "noteShopKo", "noteRider", "noteRiderKo", "noCutlery", "for": how many people, "status": "on the way" | "delivered" | "cancelled" | "refunded", "gift", "occurrence": "new" | "again", "already": "",
                                           "newShop": { "name": the same as "shop", "ko", "cuisine", "menu": [{ "name", "ko", "desc", "price", "top": true for its best-known dish, "pic" }] } or null }]` : ''} } }] }
 Also in "money" when the messages show them: "newAccount": { "kind": "checking" | "savings" | "credit", "name", "last4", "currency", "balance" } (an account or card the owner opens), "newCard": { "account": last4, "exp": "MM/YY" }${delivery ? `, "cart": { "shop", "items": [like a delivery's] } (dishes put in the basket and not ordered)` : ''}${invest ? `, "watch": [{ "symbol", "name", "currency", "note", "ko" }] (a share they start watching), "quotes": [{ "symbol", "date", "value", "evidence": exact words }] (a price the story gives), "stakes": [{ "company", "listed", "percent", "holder", "voter", "beneficiary", "restriction", "value", "currency", "evidence": exact words }] (a stake the story says they now hold).` : '.'}
@@ -440,15 +440,17 @@ const SIG = {
 const sigOf = (k, x) => JSON.stringify(SIG[k](x)).toLowerCase();
 // the same record told again with its clock a little off ("21:00" then "21:02"): the one there, not a second
 // (a short text like "ㅋㅋ" or "ok" may really come twice, so only a longer one is matched this way)
-const NEAR = { msg: x => [nameKey(x.from), x.text], calls: x => [nameKey(x.with), x.type], photos: x => [x.caption], mails: x => [x.from, x.subject], searches: x => [x.q], voice: x => [x.title], visits: x => [nameKey(x.place), pkey(x.city)] };
+const NEAR = { msg: x => [nameKey(x.from), x.text], calls: x => [nameKey(x.with), x.type], photos: x => [x.caption], mails: x => [x.from, x.subject], searches: x => [x.q], voice: x => [x.title], visits: x => [nameKey(x.place)] };
 // how far the clock may be off, in minutes, before it is another record (a call back an hour later is a second call)
 const NEAR_MIN = { msg: 15, calls: 10, photos: 30, mails: 120, searches: 15, voice: 30, visits: 60 };
 const nearMin = t => { const x = parts(t); return x && x.h !== null ? storyMin(t, '') : null; };
+// (a visit's city: none given is any; two names of one city, "부산" and "Busan", one; Seoul and Paris two)
+const sameCity = (a, b) => { const x = pkey(a), y = pkey(b); if (!x || !y || x === y) return true; const z = tzForCity(null, a); return !!z && z === tzForCity(null, b); };
 const twinOf = (k, list, a) => {
-    const sig = sigOf(k, a), exact = list.find(x => sigOf(k, x) === sig);
+    const sig = sigOf(k, a), exact = list.find(x => sigOf(k, x) === sig && (k !== 'visits' || sameCity(x.city, a.city)));
     if (exact || !NEAR[k] || (k === 'msg' && String(a.text || '').trim().length < 6)) return exact || null;
     const key = JSON.stringify(NEAR[k](a)).toLowerCase(), t = nearMin(a.time);
-    return t === null ? null : list.find(x => JSON.stringify(NEAR[k](x)).toLowerCase() === key && nearMin(x.time) !== null && Math.abs(nearMin(x.time) - t) <= NEAR_MIN[k]) || null;
+    return t === null ? null : list.find(x => JSON.stringify(NEAR[k](x)).toLowerCase() === key && (k !== 'visits' || sameCity(x.city, a.city)) && nearMin(x.time) !== null && Math.abs(nearMin(x.time) - t) <= NEAR_MIN[k]) || null;
 };
 const fresh = (k, old, add) => { const out = []; for (const x of add) if (!twinOf(k, old, x) && !twinOf(k, out, x)) out.push(x); return out; };
 // an update's new items go after the old ones; every list keeps its newest, the threads the ones written in last
@@ -623,10 +625,15 @@ function everydayOnly(p, add, day, daily) {
 // "Frankfurt Hauptbahnhof")
 // (its first whole words count, "Frankfurt" of "Frankfurt am Main", and a Korean name without 특별시 · 광역시 · 시, "서울" of
 // "서울특별시"; never part of a word, "Los Ang", nor another city that starts the same, "Frankfurt (Oder)")
+// (their home as the visits have it; the city they are in only while it is in the country they live in: away in Tokyo,
+// Tokyo is a visit)
 const homeCity = (p, v) => {
     const k = pkey(v), own = ownerZone(p), row = whereOf(p, p.owner);
     if (!k) return false;
-    return [own?.where, ...arr(own?.names), row?.city, ...arr(row?.names)].filter(Boolean).some(n0 => {
+    const home = (p.visits || []).filter(x => x?.home).at(-1), lives = homeCountry(p);
+    const zones = COUNTRY_ZONES[lives] ? COUNTRY_ZONES[lives].map(([z]) => z) : COUNTRY_TZ[lives] ? [COUNTRY_TZ[lives]] : [];
+    const atHome = !own?.tz || !zones.length || zones.includes(own.tz);
+    return [home?.city, ...(atHome ? [own?.where, ...arr(own?.names), row?.city, ...arr(row?.names)] : [])].filter(Boolean).some(n0 => {
         const n = String(n0), words = n.trim().split(/\s+/), leads = words.map((_, i) => pkey(words.slice(0, i + 1).join(' ')));
         return leads.includes(k) || /^[가-힣]+$/.test(n) && n.startsWith(String(v).trim()) && /^(?:특별시|광역시|특별자치시|시)$/.test(n.slice(String(v).trim().length));
     });
@@ -639,7 +646,9 @@ const visitOk = (p, x) => {
 };
 // (the owner is never one of "with": only by a name of theirs, so "Ren Kim" stays for an owner Ren)
 // (the visit itself is kept, its "with" set on it: where it came from and its 빼기 go by the very item)
-const visitWith = (p, x, m = null) => { const out = []; for (const n of arr(x.with)) { const who = personOf(p, m, n); if (who && !isOwnerName(p, m, n) && !isOwnerName(p, m, who.name) && !out.some(o => personOf(p, m, o)?.key === who.key)) out.push(who.name); } x.with = out; return x; };
+// (a first name alone, "Mara", is the one row it starts: "Mara Lee", as a person moving is)
+const withWho = (p, m, n) => { const who = personOf(p, m, n); if (!who || (p?.where?.people || []).some(r => nameKey(r.name) === who.key)) return who; const r = whereOf(p, n); return r ? { key: nameKey(r.name), name: r.name } : who; };
+const visitWith = (p, x, m = null) => { const out = []; for (const n of arr(x.with)) { const who = withWho(p, m, n); if (who && !isOwnerName(p, m, n) && !isOwnerName(p, m, who.name) && !out.some(o => withWho(p, m, o)?.key === who.key)) out.push(who.name); } x.with = out; return x; };
 function mergePhone(p, add, { keepAll = false, m = null } = {}) {
     if (!p.device && add.device) p.device = add.device;
     const keep = (list, n) => (keepAll ? list : list.slice(-n));
@@ -842,7 +851,7 @@ export function storyYear(m, p = null, upto = null) {
     // of where everyone is read from the story; else none: never guessed from the dates a text writes, a birthday, a memory
     // or a plan; the user sets it before the phone is made, or in 날짜 및 시간)
     const st = trackerYear(upto);
-    if (st) return String(acrossNewYear(st.y, st.day, p?.now));
+    if (st) return String(acrossNewYear(st.y, st.day, p?.now || p?.clockAt));
     return p?.readYear ? String(p.readYear) : '';
 }
 // the newest status line that writes a year: { y, day: "MM-DD" } (the status lines come newest first)
@@ -887,8 +896,8 @@ export function setStoryYear(m, p, year) {
             if (q.syncUndos) q.syncUndos = q.syncUndos.map(u => { const v = shiftAll(u, n); if (v.year) v.year += n; return v; });
             for (const e of Object.values(q.sync?.events || {})) if (e?.effects) e.effects = shiftAll(e.effects, n);
         }
-        // (a phone being made again: the year read for it before moves with the rest)
-        for (const q of Object.values(m.phonePre || {})) if (q?.base && q.year && !q.noYear) q.year += n;
+        // (a phone being made, its year read before and not set by the user: it moves with the rest)
+        for (const q of Object.values(m.phonePre || {})) if (q?.year && !q.noYear && !q.yearSet) q.year += n;
         // this browser's record of unsaved rounds (복구) too
         try {
             const scope = phoneChatScope(ctx()), owners = new Set(Object.values(m.phones || {}).map(q => q?.owner));
@@ -984,7 +993,8 @@ const yearOr = (t, y) => {
 };
 const todayWall = () => { const d = new Date(); return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
 function phoneRequest(m, owner, p = null, lore = '', only = null, profile = '', gap = null, extra = [], pre = null, { anew = false } = {}) {
-    const q0 = p || pre || m.phones?.[nameKey(owner)] || { owner }, q = anew && q0.now ? { ...q0, now: '' } : q0;
+    // (made again keeping its reading, a phone with no 위치 정보 read before it: its own time still)
+    const cur0 = m.phones?.[nameKey(owner)], q0 = p || (pre ? (!anew && cur0?.now ? { ...pre, now: cur0.now } : pre) : cur0) || { owner }, q = anew && q0.now ? { ...q0, now: '' } : q0;
     const world = worldText(m), upto = nowAt(gap);
     const recent = recentPhoneText(6, { upto, maxChars: 6000 });
     const ar = archiveFor(m, p ? p.upto ?? -1 : -1, nowAt(gap), !gap?.cut);
@@ -1004,7 +1014,7 @@ function phoneRequest(m, owner, p = null, lore = '', only = null, profile = '', 
         lore ? `[LOREBOOK]\n${lore}` : '',
         aroundBlock(q),
         afterBlock(gap) || (recent && !noArchive(m) ? `[RECENT CHAT]\n${recent}` : ''),
-        yearBlock(m, p || pre, upto),
+        yearBlock(m, q, upto),
         `[OWNER]\n${owner}`,
         profile, blindBlock(m, owner),
         namesBlock(m),
@@ -1053,6 +1063,16 @@ const seedPre = (m, owner, binding) => {
     if (cur) for (const k of ['year', 'noYear', 'lives', 'livesManual', 'country']) if (cur[k] !== undefined) pre[k] = cur[k];
     return pre;
 };
+// what the user set on what was read before (a city by hand, someone taken off, the year, the country) goes on what is read
+// anew when it can't be kept as it is (the owner's 인물 정보 or 참고 로어북 changed)
+const carryEdits = (pre, old) => {
+    if (!old) return pre;
+    const manual = arr(old.where?.people).filter(r => r?.manual), removed = arr(old.where?.removed);
+    if (manual.length || removed.length) pre.where = { at: old.where?.at || Date.now(), people: structuredClone(manual), ...(removed.length ? { removed: [...removed] } : {}) };
+    if (old.yearSet) { delete pre.year; delete pre.noYear; if (old.year) pre.year = old.year; if (old.noYear) pre.noYear = true; pre.yearSet = true; }
+    if (old.livesManual) { pre.lives = old.lives; pre.livesManual = true; }
+    return pre;
+};
 // what was read before for this owner, while it is still theirs (see sameBinding). Read for an old phone gone since, it
 // is the new phone's all the same when the user changed it (a city by hand, someone taken off, the country, the year):
 // what they set is kept, never read over
@@ -1075,13 +1095,14 @@ export async function preparePhone(m, owner, { again = false } = {}) {
     const binding = m.phones?.[key]?.financeProfile || m.phoneProfiles?.[key], kept = keepPre(m, owner, binding);
     if (kept && !again) { glossAka(m, kept); kept.clockAt = preClock(m, kept); return kept; }
     // (read again, 다시 연동: what the user set by hand, who they took off and the year they chose stay, as for a phone)
-    const pre = kept ? Object.assign(structuredClone(kept), { lore: loreKey(m) }) : seedPre(m, owner, binding), asked = { known: true };
+    const pre = kept ? Object.assign(structuredClone(kept), { lore: loreKey(m) }) : carryEdits(seedPre(m, owner, binding), phonePre(m, owner)), asked = { known: true };
     if (pre.where) delete pre.where.failed;
     if (kept && !pre.yearSet && !pre.base) { delete pre.year; delete pre.noYear; }
-    // (where everyone is first: its reading tells the year too)
+    // (where everyone is first: its reading tells the year too, on the clock the phone will be at)
     await tryWhere(m, pre, asked);
+    pre.clockAt = preClock(m, pre);
     ensureYear(m, pre, nowAt(windowOf(m, null)));
-    pre.asked = asked.asked || []; pre.clockAt = preClock(m, pre);
+    pre.asked = asked.asked || [];
     (m.phonePre ||= {})[key] = pre;
     await saveMeta();
     return pre;
@@ -1123,15 +1144,20 @@ async function makePhone0(m, owner, { update = false, apps = null } = {}) {
     if (cur) glossAka(m, cur);
     if (kept) {
         pre = structuredClone(kept); glossAka(m, pre); asked.asked = kept.asked || [];
+        // (a year read before, not set by the user nor taken from an old phone: worked out again now, a status line that
+        // has crossed New Year since goes)
+        pre.clockAt = preClock(m, pre);
+        if (!pre.yearSet && !pre.base) { delete pre.year; delete pre.noYear; ensureYear(m, pre, nowAt(gap)); }
         // (a reading that failed is read again: what the user set by hand, and who they took off, stay)
         if (pre.where?.failed) {
             delete pre.where.failed; asked.known = true; await tryWhere(m, pre, asked); pre.asked = asked.asked || [];
             // (a year guessed while the reading had failed is worked out again; one the user or the old phone set stays)
+            pre.clockAt = preClock(m, pre);
             if (!pre.yearSet && !pre.base) { delete pre.year; delete pre.noYear; ensureYear(m, pre, nowAt(gap)); }
             m.phonePre[key] = structuredClone(pre); await saveMeta();
         }
     } else if (firstMade) {
-        pre = seedPre(m, owner, binding); asked.known = true; await tryWhere(m, pre, asked); ensureYear(m, pre, nowAt(gap));
+        pre = carryEdits(seedPre(m, owner, binding), phonePre(m, owner)); asked.known = true; await tryWhere(m, pre, asked); pre.clockAt = preClock(m, pre); ensureYear(m, pre, nowAt(gap));
         // (kept as preparePhone keeps it: a make asked again, after a clock check it didn't pass, reads none of it again)
         pre.asked = asked.asked || []; (m.phonePre ||= {})[key] = structuredClone(pre); await saveMeta();
     }
@@ -1143,7 +1169,7 @@ async function makePhone0(m, owner, { update = false, apps = null } = {}) {
     // a phone made sets its clock as a reflection does, by the same check, and like a reflection is not saved when it
     // doesn't hold (never asked again on its own)
     if (!part && !old) {
-        const q = pre || cur || { owner };
+        const q = pre ? (!anew && cur?.now ? { ...pre, now: cur.now } : pre) : cur || { owner };
         // (by what the request showed: an owner the reading placed nowhere is checked by no zone; the answer's country is
         // where they live, and they may be away, so 위치 정보 asks the user where they are)
         withDateOrderSync(dateOrderOf(m), () => validateReflectionClock(jsonOf(out, { salvage: true }) || {}, anew ? { ...q, now: '' } : q, m, got.now));
@@ -1157,7 +1183,7 @@ async function makePhone0(m, owner, { update = false, apps = null } = {}) {
             const out2 = await ask(two.cover, [`${soFarHead('PHONE', two.short)}\n${JSON.stringify(soFar)}`, two.short?.text || '']), g2 = parsePhone(out2, owner);
             // (made again whole: its clock checked as the first turn's; one that doesn't hold is left out, the first kept)
             // (a second answer with no "now" leaves the clock as the first set it: nothing to check)
-            if (!part && g2.now) { const q = pre || cur || { owner }; withDateOrderSync(dateOrderOf(m), () => validateReflectionClock(jsonOf(out2, { salvage: true }) || {}, q, m, g2.now)); }
+            if (!part && g2.now) { const q = pre ? (!anew && cur?.now ? { ...pre, now: cur.now } : pre) : cur || { owner }; withDateOrderSync(dateOrderOf(m), () => validateReflectionClock(jsonOf(out2, { salvage: true }) || {}, q, m, g2.now)); }
             got2 = g2; last = two.cover; short = two.short;
         } catch (err) { console.warn('[narrative-archive] phone, second turn', err); }
     }
@@ -1359,7 +1385,7 @@ async function moneyStage(m, p, owner, targets, c) {
         if (c.reread?.has(t.at) && !c.reread.get(t.at).some(x => x.id === t.id)) { out.notes.push(`#${t.at} 바뀐 대화의 결제는 새로 넣지 않았어요`); continue; }
         const stage = structuredClone({ money: p.money, investment: p.investment, finance: m.finance, delivery: p.delivery });
         let paid;
-        try { paid = applyMoney(m, p, { id: t.id, at: t.at, date: t.date, time: t.time, summary: t.summary, money: mo }, { year: c.year, anchor: c.anchor, marks: s.marks, legs: s.events[t.id]?.legs || [], span: s.failed[t.at]?.span || null, edited: !!c.reread?.has(t.at) }); }
+        try { paid = applyMoney(m, p, { id: t.id, at: t.at, date: t.date, time: t.time, summary: t.summary, money: mo }, { placeZone: v => tzForCity(null, v), year: c.year, anchor: c.anchor, marks: s.marks, legs: s.events[t.id]?.legs || [], span: s.failed[t.at]?.span || null, edited: !!c.reread?.has(t.at) }); }
         catch (err) { p.money = stage.money; p.investment = stage.investment; m.finance = stage.finance; if (p.delivery) p.delivery = Object.assign(p.delivery, stage.delivery); owe(t, String(err?.message || err)); continue; }
         for (const ch of paid.changes) { out.apps.add(ch.app); if (ch.amount !== null) out.changes.push({ ...ch, what: line(t.summary, 60) }); }
         out.notes.push(...paid.notes);
@@ -1526,7 +1552,8 @@ async function updatePhone(m, owner) {
             : ownerClock(p, hm(p.now) ? p.now : st?.raw, m, st, clockRows);
         // (on a phone that knows no other city, a scene that isn't one of the owner's places is asked too: "Frankfurt"
         // may be another country; it stays the owner's unless the model names another city)
-        const hasZoneOffsets = !!zonesOf(p, hm(p.now) ? p.now : st?.raw, m);
+        // (a city on the owner's hours, its summer-time change near, is no other clock for a status line's scene)
+        const hasZoneOffsets = !!zonesOf(p, hm(p.now) ? p.now : st?.raw, m)?.others.some(o => o.hours);
         const askZone = round.rows.some(r => r.index === trackAt) && (sceneOwn === null && hasZoneOffsets || sceneOwn === true && !hasZoneOffsets && !!tracker && !sceneZone(p, tracker.place, m));
         // a scene the owner isn't in (or may not be): the model gets its place and weather, never its hour
         // (and one asked about, not yet placed: its place and weather only too)
@@ -1633,6 +1660,8 @@ async function updatePhone(m, owner) {
             const day = when(e.date).slice(0, 5) || lastDay, phone = e.phone && typeof e.phone === 'object' ? structuredClone(e.phone) : {};
             // a time without its day ("15:10") takes the event's day
             const dated = x => { if (x && typeof x === 'object' && /^\s*\d{1,2}:\d{2}\s*$/.test(String(x.time || '')) && day) x.time = `${day} ${hhmm(x.time)}`; };
+            // (a visit with no time at all is on the event's day: another day's visit to the same place is another visit)
+            for (const x of arr(phone.visits)) if (x && typeof x === 'object' && !String(x.time || '').trim() && day) x.time = day;
             for (const k of [...LISTS, 'threads']) for (const x of arr(phone[k])) { dated(x); for (const msg of arr(x?.messages)) dated(msg); if (x?.draft) dated(x.draft); }
             try { add = parsePhone(JSON.stringify(phone), owner); } catch { fail('앱 내용 형식이 잘못됐어요'); continue; }
             everydayOnly(p, add, day, daily);
@@ -1649,7 +1678,7 @@ async function updatePhone(m, owner) {
             const stage = structuredClone({ money: p.money, investment: p.investment, finance: m.finance, delivery: p.delivery });
             let paid;
             if (day) lastDay = day;
-            try { paid = applyMoney(m, p, { id, at, date: day, time: hhmm(e.time), summary: line(e.summary, 160), money: e.money }, { year, anchor, marks: s.marks, legs: s.events[id]?.legs || [], span: s.failed[at]?.span || null, edited: reread.has(at) }); }
+            try { paid = applyMoney(m, p, { id, at, date: day, time: hhmm(e.time), summary: line(e.summary, 160), money: e.money }, { placeZone: v => tzForCity(null, v), year, anchor, marks: s.marks, legs: s.events[id]?.legs || [], span: s.failed[at]?.span || null, edited: reread.has(at) }); }
             catch (err) { p.money = stage.money; p.investment = stage.investment; m.finance = stage.finance; if (p.delivery) p.delivery = Object.assign(p.delivery, stage.delivery); fail(String(err?.message || err)); continue; }
             for (const c of paid.changes) { apps.add(c.app); if (c.amount !== null) changes.push({ ...c, what: line(e.summary, 60) }); }
             notes.push(...paid.notes);
@@ -2282,16 +2311,26 @@ export async function readWhere(m, p, opts = {}) {
     const removed = new Set(p.where?.removed || []), formsOf = x => withTwins(m, [x.name, ...arr(x.aka)]).map(nameKey), gone = x => formsOf(x).some(k => removed.has(k));
     const olds = p.where?.people || [], strong = x => withTwins(m, [x.name]).map(nameKey);
     const shared = x => !olds.some(o => strong(o).some(k => strong(x).includes(k))) && olds.filter(o => formsOf(o).some(k => strong(x).includes(k))).length > 1;
-    const oldRow = x => { const ks = formsOf(x), rows = p.where?.people || []; return rows.find(r => nameKey(r.name) === nameKey(x.name)) || (hits => (hits.length === 1 ? hits[0] : null))(rows.filter(r => rowForms(m, r).some(k => ks.includes(k)))) || whereOf(p, x.name); };
+    // (the owner's row is only the owner's: never someone else's old row, nor theirs the owner's)
+    // (nor the row of someone this reading reads apart: "Mara Kim" is never Mara's old row while Mara is read too)
+    const oldRow = x => {
+        const ks = formsOf(x), mine = r => isOwn(r.name) === isOwn(x.name) && !(readNames.has(nameKey(r.name)) && nameKey(r.name) !== nameKey(x.name));
+        const rows = (p.where?.people || []).filter(mine);
+        return rows.find(r => nameKey(r.name) === nameKey(x.name)) || (hits => (hits.length === 1 ? hits[0] : null))(rows.filter(r => rowForms(m, r).some(k => ks.includes(k)))) || (r => (r && mine(r) ? r : null))(whereOf(p, x.name));
+    };
     // (a row by the other form of a name asked about, "이보" for "Ivo", is that person's; and it keeps that form as a name of theirs)
-    const read = arr(raw?.people).map(whereRow).filter(x => x.name && known.some(k => nameKey(k) === nameKey(x.name) || nameKey(glossTwin(m, k)) === nameKey(x.name)) && !gone(x) && (x.tz || COUNTRY_TZ[x.lives]))
+    // (an aka the reading gives that is the owner's name, on someone else ("Ren" for Ren Kim), or the name of another row it
+    // reads ("Mara" for Mara Kim, with a Mara of her own), is no name of theirs: never a way to someone else's row)
+    const readNames = new Set(arr(raw?.people).map(x => nameKey(line(x?.name, 60))).filter(Boolean));
+    // (the owner's own aka as the reading gives it stays theirs: "Ren Park" read as a row too is the owner's)
+    const ownAkaOnly = x => ({ ...x, ...(arr(x.aka).length ? { aka: arr(x.aka).filter(a => isOwn(x.name) && ownAka.has(nameKey(a)) || !readNames.has(nameKey(a)) && (isOwn(x.name) || !isOwn(a))) } : {}) });
+    const read = arr(raw?.people).map(whereRow).map(ownAkaOnly).filter(x => x.name && known.some(k => nameKey(k) === nameKey(x.name) || nameKey(glossTwin(m, k)) === nameKey(x.name)) && !gone(x) && (x.tz || COUNTRY_TZ[x.lives]))
         // (the owner read by another name of theirs, "렌" for Ren: their row, by the owner's name, that one kept as an aka)
         .map(x => (nameKey(x.name) !== nameKey(p.owner) && isOwn(x.name) ? { ...x, name: p.owner, aka: [...new Set([x.name, ...arr(x.aka)])].filter(a => nameKey(a) !== nameKey(p.owner)).slice(0, 6), byOther: true } : x))
         // (the row read by the owner's own name first: one by another name of theirs only when there is none)
         .sort((a, b) => Number(!!a.byOther) - Number(!!b.byOther))
         .filter((x, i, all) => all.findIndex(y => nameKey(y.name) === nameKey(x.name)) === i)
         .map(({ byOther, ...x }) => x)
-        .map(x => { const t = glossTwin(m, x.name); return t && !arr(x.aka).some(a => nameKey(a) === nameKey(t)) ? { ...x, aka: [...arr(x.aka), t].slice(0, 6) } : x; })
         .map(x => { const o = oldRow(x); return o?.manual ? { ...x, ...(o.manual.city ? { city: o.city, names: namesOf(o), tz: o.tz } : {}), ...(o.manual.lives ? { lives: o.lives } : {}), manual: o.manual } : x; })
         // (a name that is only an aka two rows share, "Ivo" of Ivo Kim and Ivo Park, is neither of them: left out)
         .filter(x => !shared(x));
@@ -2305,8 +2344,17 @@ export async function readWhere(m, p, opts = {}) {
         merged = read.filter(twin).map(x => nameKey(x.name));
     // (an old row of a person read now by another form of their name is that person's: one row, its names kept)
     // (by a row's own name or its 용어집 form, never an aka alone: "Ivo" an aka of both Ivo Kim and Ivo Park is neither)
-    const samePersonRow = (o, x) => strong(o).some(k => formsOf(x).includes(k)) || strong(x).some(k => formsOf(o).includes(k)) && olds.filter(r => formsOf(r).some(k => strong(x).includes(k))).length === 1;
-    for (const x of got) for (const o of p.where?.people || []) if (nameKey(o.name) !== nameKey(x.name) && samePersonRow(o, x)) x.aka = [...new Set([...arr(x.aka), o.name, ...arr(o.aka)])].filter(n => nameKey(n) !== nameKey(x.name)).slice(0, 8);
+    const samePersonRow = (o, x) => isOwn(o.name) === isOwn(x.name) && (strong(o).some(k => formsOf(x).includes(k)) || strong(x).some(k => formsOf(o).includes(k)) && olds.filter(r => formsOf(r).some(k => strong(x).includes(k))).length === 1);
+    // (read again: the names a person's row had before stay theirs, by the same name too, "Ren Park" the owner's; never a
+    // name that is now another row's own, nor the owner's on someone else)
+    const gotNames = new Set(got.map(x => nameKey(x.name)));
+    for (const x of got) for (const o of p.where?.people || []) {
+        const same = nameKey(o.name) === nameKey(x.name);
+        if (!same && !samePersonRow(o, x)) continue;
+        const more = [...(same ? [] : [o.name]), ...arr(o.aka)].filter(n => nameKey(n) !== nameKey(x.name) && !(gotNames.has(nameKey(n)) && nameKey(n) !== nameKey(o.name)) && (isOwn(x.name) || !isOwn(n)));
+        if (more.length) x.aka = [...new Set([...arr(x.aka), ...more])].filter(n => nameKey(n) !== nameKey(x.name)).slice(0, 8);
+        if (same && arr(o.glossAka).length) x.glossAka = [...new Set([...arr(x.glossAka), ...arr(o.glossAka)])];
+    }
     // read again: someone it leaves out keeps what was read before
     const people = [...got, ...(p.where?.people || []).filter(o => !got.some(x => nameKey(x.name) === nameKey(o.name) || samePersonRow(o, x)) && !merged.includes(nameKey(o.name)) && !got.some(x => here(o, x) && longer(x, o))).map(o => ({ ...o, names: namesOf(o) }))].slice(0, 16);
     p.where = { at: Date.now(), people, ...(removed.size ? { removed: [...removed] } : {}) };
@@ -2332,9 +2380,11 @@ function ownerMoved(p, c) {
     const tz = realTz(c?.tz), city = line(c?.city, 60);
     // (a city the user set by hand stays)
     if (!tz || !city || whereOf(p, p.owner)?.manual?.city) return false;
-    const row = { ...whereOf(p, p.owner), name: p.owner, city, names: namesOf(c), tz };
+    // (their row by a name of theirs too, an older reading's "Ren Park": that one moves, no second row left behind)
+    const was = whereOf(p, p.owner), row = { ...was, name: p.owner, city, names: namesOf(c), tz };
+    if (was && nameKey(was.name) !== nameKey(p.owner)) row.aka = [...new Set([was.name, ...arr(was.aka)])].filter(n => nameKey(n) !== nameKey(p.owner)).slice(0, 8);
     delete row.local;
-    p.where = { ...(p.where || {}), at: p.where?.at || Date.now(), people: [row, ...(p.where?.people || []).filter(x => nameKey(x.name) !== nameKey(p.owner))] };
+    p.where = { ...(p.where || {}), at: p.where?.at || Date.now(), people: [row, ...(p.where?.people || []).filter(x => x !== was && nameKey(x.name) !== nameKey(p.owner))] };
     return true;
 }
 // one person by two names: the same, or one a single word that is the other's first ("Somang" and "Somang Park"; never
@@ -2370,7 +2420,8 @@ const isOwnerName = (p, m, n) => {
 // 이보네), never in another word ("이보다", "장미꽃", "소망하다", "그건 소망이다"); a name in Latin letters may take a Korean
 // ending ("Ivo가")
 // ("하고" not as a verb: "소망하고 있다", "소망하고 싶다")
-const KO_AFTER = String.raw`(?:이(?!다)(?:가|는|를|랑|와|하고|한테|에게|도|만|네|야|의|여|요)?|가|는|은|를|을|와|과|랑|하고(?!\s*(?:있|싶))|한테|에게|께|의|도|만|네|야|아|여|씨|님|요|부터|까지|처럼|보고|더러)`;
+// ("민지라고", "민지로부터", "마리아조차", "지훈이라면", "민지밖에", "민지뿐", "민지인데")
+const KO_AFTER = String.raw`(?:이(?!다)(?:가|는|를|랑|와|하고|한테|에게|도|만|네|야|의|여|요|라고|라면|라도|마저|조차)?|가|는|은|를|을|와|과|랑|하고(?!\s*(?:있|싶))|한테|에게|께|의|도|만|네|야|아|여|씨|님|요|부터|까지|처럼|보고|더러|라고|라면|라도|로부터|으로부터|에게서|한테서|조차|마저|밖에|뿐|인데)`;
 // (endings a place or a thing takes as well: "가을에", "하늘로", "바다에서", "하나였다", "나라보다": after a Korean name of
 // three letters or more only; a short one, "가을", "하늘", may be that word, and is found by the other endings)
 const KO_WEAK = String.raw`(?:(?:에서|에|으로|로|보다)(?:는|도|만|의|요|부터|까지|라도|선)?(?![\p{L}])|였(?:다|어|고|지|는데|던|으면|을|음)?(?![\p{L}]))`;
@@ -2420,14 +2471,17 @@ function personOf(p, m, n) {
 const rowForms = (m, r) => withTwins(m, [r?.name, ...arr(r?.aka)].filter(Boolean)).map(nameKey);
 // 용어집 forms not yet on a 위치 정보 row are put on it as its aka ("Ivo = 이보" added after it was read), so every place
 // that finds a person by their aka (texts, the clock, the default screen) finds them by both. Code only, no request
+// (the forms it puts there are marked, glossAka: when 용어집 changes, "Rose = 장미" to "Rose = 로즈", "장미" goes)
 const glossRows = (m, rows) => {
     let changed = false;
     for (const r of rows || []) {
         if (!r || typeof r !== 'object' || !r.name) continue;
-        const add = withTwins(m, [r.name, ...arr(r.aka)]).filter(n => nameKey(n) !== nameKey(r.name) && !arr(r.aka).some(a => nameKey(a) === nameKey(n)));
-        // (changed only when a name is really added: an aka list already full stays as it is)
-        const aka = [...arr(r.aka), ...add].slice(0, 8);
-        if (aka.length !== arr(r.aka).length) { r.aka = aka; changed = true; }
+        const marked = new Set(arr(r.glossAka).map(nameKey)), own = arr(r.aka).filter(a => !marked.has(nameKey(a)));
+        const twins = withTwins(m, [r.name, ...own]).filter(n => nameKey(n) !== nameKey(r.name) && !own.some(a => nameKey(a) === nameKey(n)));
+        // (changed only when a name really comes or goes: an aka list already full stays as it is)
+        const aka = [...own, ...twins].slice(0, 8), g = twins.filter(n => aka.includes(n));
+        if (JSON.stringify(aka) !== JSON.stringify(arr(r.aka))) { r.aka = aka; changed = true; }
+        if (JSON.stringify(g) !== JSON.stringify(arr(r.glossAka))) { if (g.length) r.glossAka = g; else delete r.glossAka; changed = true; }
     }
     return changed;
 };
@@ -2805,7 +2859,7 @@ export const clockBlock = (p, at = p?.now, m = null, st = null, required = false
 const archiveClockBlock = (p, at = p?.now, m = null, st = null) => {
     const z = zonesOf(p, at, m);
     const hrs = h => `${Math.abs(h)} hour${Math.abs(h) === 1 ? '' : 's'} ${h > 0 ? 'ahead' : 'behind'}`;
-    return z ? `[OWNER'S CLOCK]\nThe owner is in ${z.own.name}, ${z.at} now.\n${z.others.filter(c => c.hours).map(c => (c.where ? `${c.name} (in ${c.where}) is ${hrs(c.hours)}` : `${c.name} is ${hrs(c.hours)}`)).join(', ')}.${st?.known && st.at && st.at !== st.raw ? `\nThe newest status line, ${st.raw} in ${st.city}, is ${st.at} here.` : ''}` : '';
+    return z && z.others.some(c => c.hours) ? `[OWNER'S CLOCK]\nThe owner is in ${z.own.name}, ${z.at} now.\n${z.others.filter(c => c.hours).map(c => (c.where ? `${c.name} (in ${c.where}) is ${hrs(c.hours)}` : `${c.name} is ${hrs(c.hours)}`)).join(', ')}.${st?.known && st.at && st.at !== st.raw ? `\nThe newest status line, ${st.raw} in ${st.city}, is ${st.at} here.` : ''}` : '';
 };
 // Reflection-only choices. Explicit dates stay as written; marked HTML clocks can carry a labelled fallback date.
 // Keep the request's date order and locations in the choices, not mutable chat state after the call.
@@ -2937,7 +2991,7 @@ export function sceneHome(p, place, m = null, named = null) {
     // (and another city in the same zone, Busan for an owner in Seoul, is elsewhere too: its hour is theirs, its weather
     // isn't; an owner known only by the country takes any city of their zone)
     if (own && z) return !!z.moved || z.tz === own.tz && (z.own === true || !own.names?.length);
-    if (!own || !zonesOf(p, hm(p?.now) ? p.now : '01-01 12:00', m)) return true;
+    if (!own || !zonesOf(p, hm(p?.now) ? p.now : '01-01 12:00', m)?.others.some(o => o.hours)) return true;
     return null;
 }
 // the newest status line up to upto, on the owner's clock: at '' when its scene's zone is unknown (it may be someone
