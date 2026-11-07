@@ -47,3 +47,11 @@ test('evidence: a part of the story that only looks like a block stays; every bl
     for (const kept of ['Mara said hello.', 'Ren opens the news app.', 'closed at 81,200 won today', 'I bought 5% of Hanbit.', 'A dividend of 300 won']) assert.ok(s.includes(kept), kept);
     for (const gone of ['Saved phone time', '"base":"KRW"', 'EXISTING QUOTES', '2026-11-05', 'what you wrote', '미나']) assert.ok(!s.includes(gone), gone);
 });
+
+test('evidence: the story\'s own bracket headers that start like a code block\'s name stay ([DATE NIGHT], [DIARY ENTRY], [BANK ALERT], [DAYS LATER]); the code\'s own go', () => {
+    const story = ['[DATE NIGHT]\nRen and Mara at the bar.', '[DIARY ENTRY]\nToday I sold my Hanbit shares.', '[BANK ALERT]\nDividend 300 won received.', '[DAYS LATER]\nMara bought 10 shares.'];
+    const code = ['[DATE]\n2026-11-05', '[DIARY]\n(none)', '[BANK — separate locked balances]\n{"x":1}', '[DAYS]\n["11-05"]', '[FINANCIAL SCALE]\n{"scale":9}', '[WEALTH]\n{"w":2}', '[REBUILD ACCOUNTS]\n{"r":3}', '[DEVICE — locked]\n{"d":4}'];
+    const s = storyText(['[RECENT CHAT]\n[#4] Ren: hi', ...story, ...code, '[RECENT CHAT]\n[#9] Ren: after'].join('\n\n'));
+    for (const kept of ['Ren and Mara at the bar.', 'sold my Hanbit shares', 'Dividend 300 won received.', 'Mara bought 10 shares.', '[#9] Ren: after']) assert.ok(s.includes(kept), kept);
+    for (const gone of ['2026-11-05', '(none)', '"x":1', '["11-05"]', '"scale":9', '"w":2', '"r":3', '"d":4']) assert.ok(!s.includes(gone), gone);
+});

@@ -99,3 +99,19 @@ test('the app\'s answers: a Korean clock the reader turns down is no time (never
     for (const s of ['3시 이후', '3시 이전', '3시 15분 전', '2시간 15분', '12시간', '오후 16시', '3시 방향']) assert.equal(hhmm(s), '', s);
     for (const [s, want] of [['7:00 PM', '19:00'], ['7pm', '19:00'], ['19시', '19:00'], ['오후 3시', '15:00'], ['3시쯤', '03:00'], ['15:00 이후', '15:00']]) assert.equal(hhmm(s), want, s);
 });
+
+test('점검 수정: "am" · "pm" never the end of a word; more ways a time before or after one is written; 0시 with 오전 · 오후', () => {
+    for (const s of ['Liam 12시', 'Team 12시 회의', 'SPAM 3시', 'Pam 4시 15분']) assert.equal(koClockText(s), s.startsWith('Liam') || s.startsWith('Team') ? '12:00' : s.startsWith('SPAM') ? '03:00' : '04:15', s);
+    assert.equal(koClockText('12시 pm'), '12:00');
+    assert.equal(hhmm('Liam 12시'), '12:00');
+    for (const s of ['3시 15분 전으로', '3시 전의 일', '3시 후가 좋아', '3시 넘었어', '3시가 지나서', '3시를 넘겨', '4시 15분 30초 전', '3시 뒤라서', '3시 전과 같다', '3시 전보다']) assert.equal(koClockText(s), '', s);
+    for (const [s, want] of [['16시 15분 전화가 왔다', '16:15'], ['16시 15분 30초', '16:15'], ['오전 0시', '00:00'], ['새벽 0시 30분', '00:30'], ['밤 0시', '00:00'], ['오후 0시', '12:00'], ['0시', '00:00']]) assert.equal(koClockText(s), want, s);
+});
+
+test('점검 수정: a date in a quote, code or a timer is no date of the clock beside it; a long line still finds the stamp that ends it', () => {
+    assert.deepEqual(htmlDatedClocks('<q>11월 5일</q> <span class="time">16:15</span>'), []);
+    assert.deepEqual(htmlDatedClocks('<code>11.05</code> <span class="time">16:15</span>'), []);
+    assert.deepEqual(htmlDatedClocks('<span>11.05 </span><span class="time">16:15</span>').map(x => x.local), ['11-05 16:15']);
+    // (a stamp the last 80 letters cut into, after a long run with no space: read whole, its year too)
+    assert.deepEqual(htmlDatedClocks(`<span>${'가'.repeat(70)}—2026년 11월 5일 </span><span class="time">16:15</span>`).map(x => x.sourceTime), ['2026년 11월 5일 16:15']);
+});
