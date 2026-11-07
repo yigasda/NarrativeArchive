@@ -81,7 +81,7 @@ export function mapCityScreen(p, now, m, i = '') {
     const L = look(p, m, place, hood, kind, night), { g, v, k, dark } = L;
     const H = v.hood ? 844 : 470;
     const pins = g ? (() => { const shown = g.rows.slice(0, 6); return pinSpots(shown.map(r => r.place), W, v.hood ? 220 : 150, v.hood ? 560 : 340).map(([x, y], n) => pinSvg(x, y, shown[n].place, dark)).join(''); })() : '';
-    const art = `<svg class="mp_art" viewBox="0 0 ${W} ${H}" width="100%" aria-hidden="true">${townSvg(k, W, H, L.seed, dark, L.hint)}${pins}</svg>`;
+    const art = `<svg class="mp_art" viewBox="0 0 ${W} ${H}" width="100%" aria-hidden="true" data-z="${esc(`${k}~${L.seed}~${H}~${dark}`)}"><g class="mp_zm">${townSvg(k, W, H, L.seed, dark, L.hint)}</g>${pins}</svg>`;
     const names = [v.names.lat, v.names.cjk, ...v.names.all.slice(1).filter(n => n !== v.names.lat.toLowerCase() && n !== v.names.cjk && !/^[a-z]/.test(n))].filter(Boolean);
     const nameLine = [...new Set(names)].slice(0, 4).join(' · ');
     const flip = at(place, hood, k, dark ? '0' : '1');
@@ -118,7 +118,7 @@ export function mapCityScreen(p, now, m, i = '') {
 export function mapEmptyScreen(p, now, m) {
     const own = placeInfo(p).owner, cc = String(own.lives || '').toLowerCase(), i = townPlace(own.city), v = i >= 0 ? placeView(i) : null;
     const k = v ? townCandidates(v.ko)[0] : 'gridLake', dark = false;
-    const art = `<svg class="mp_art" viewBox="0 0 ${W} 430" width="100%" aria-hidden="true">${townSvg(k, W, 430, v ? nameKey(v.ko) : p.owner, dark, v ? v.names.all.join(' ') : '')}</svg>`;
+    const art = `<svg class="mp_art" viewBox="0 0 ${W} 430" width="100%" aria-hidden="true" data-z="${esc(`${k}~empty`)}"><g class="mp_zm">${townSvg(k, W, 430, v ? nameKey(v.ko) : p.owner, dark, v ? v.names.all.join(' ') : '')}</g></svg>`;
     const nowP = parts(now), mo = nowP?.mo || 1, days = new Date(Date.UTC(Number(p.year) || 2001, mo, 0)).getUTCDate();
     const st = stripSvg({ days, today: nowP?.d || 0, blocks: [] }), c = st.cell;
     const ghost = [[3, 5], [11, 12], [18, 21]].map(([a, b]) => `<rect x="${(a - 1) * c + 1}" y="${st.top + 2}" width="${(b - a + 1) * c - 2}" height="14" rx="5" fill="none" stroke="#c9cfd8" stroke-width="1.2" stroke-dasharray="3 3"/>`).join('');

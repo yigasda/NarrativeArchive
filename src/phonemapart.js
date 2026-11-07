@@ -83,8 +83,9 @@ const PIN = 'M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z';
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 export function pinSvg(x, y, label, dark) {
     const t = label.length > 20 ? `${label.slice(0, 19)}…` : label;
-    return `<g transform="translate(${(x - 18).toFixed(1)} ${(y - 34).toFixed(1)}) scale(1.5)"><path d="${PIN}" fill="var(--axd)" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.4" fill="#fff"/></g>`
-        + (t ? `<text x="${(x + 13).toFixed(1)}" y="${(y - 18).toFixed(1)}" class="mp_pl${dark ? ' dk' : ''}">${esc(t)}</text>` : '');
+    // a pin keeps its size when the map is pinched (phonemapzoom.js moves the whole group to where its spot went)
+    return `<g class="mp_pin" data-x="${x.toFixed(1)}" data-y="${y.toFixed(1)}"><g transform="translate(${(x - 18).toFixed(1)} ${(y - 34).toFixed(1)}) scale(1.5)"><path d="${PIN}" fill="var(--axd)" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.4" fill="#fff"/></g>`
+        + (t ? `<text x="${(x + 13).toFixed(1)}" y="${(y - 18).toFixed(1)}" class="mp_pl${dark ? ' dk' : ''}">${esc(t)}</text>` : '') + '</g>';
 }
 // pins down the visible land in order (newest on top), sideways by the place's name; a coast keeps them off the sea
 export function pinSpots(names, W, top, bottom) {

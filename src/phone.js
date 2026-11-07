@@ -28,6 +28,7 @@ import { screenTimeScreen } from './phonestime.js';
 import { mapCityScreen, mapEmptyScreen, mapResults, mapSearchScreen } from './phonemapsearch.js';
 import { placeNames } from './phonemapfind.js';
 import { FLAG_NAME, flagSvg } from './phoneflags.js';
+import { mapZoom } from './phonemapzoom.js';
 import { glossaryEntries, openGlossary } from './translate.js';
 // 을 / 를 after a word: by its last syllable's final consonant (a Latin ending, like SNS, reads as 를)
 const josa = w => { const c = w.charCodeAt(w.length - 1) - 0xac00; return c >= 0 && c < 11172 && c % 28 ? '을' : '를'; };
@@ -787,6 +788,7 @@ export async function openPhone(who = null) {
         if (sw.on) { $(sw.el).parent().toggleClass('open', sw.base + sw.dx < -43).removeClass('drag'); sw.el.style.transition = ''; sw.el.style.transform = ''; }
         sw = null;
     });
+    mapZoom($root[0]);
     $root[0].addEventListener('click', e => {
         const r = e.target.closest?.('.ax_swp > .ax_rw');
         if (!r) { if (!e.target.closest?.('.ax_swdel')) swClose(); swMoved = false; return; }
