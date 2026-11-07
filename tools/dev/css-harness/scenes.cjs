@@ -101,6 +101,8 @@ const SCENES = [
     // before a phone: the make card and 폰 만들기 준비; and the phone's own alert (.pcf), asked by 이 폰 지우기 and left open
     { name: 'phone-make', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phoneBlank(p); } },
     { name: 'phone-prep', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phoneBlank(p); await p.$eval('.na_ph_makebtn', e => e.click()); await p.waitForSelector('.na_ph_preplink', { timeout: 8000 }); await p.waitForTimeout(500); } },
+    { name: 'phone-photoone', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phone(p); await h.phoneTo(p, 'photo'); await p.evaluate(() => { const x = document.createElement('button'); x.dataset.go = 'photoone'; x.dataset.i = '0'; x.style.display = 'none'; document.querySelector('.na_ph_frame .na_ph_scr').append(x); x.click(); x.remove(); }); await p.waitForTimeout(700); } },
+    { name: 'phone-looks', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phone(p); await h.phoneTo(p, 'photo'); await p.$eval('.na_ph_looksbtn', e => e.click()); await p.waitForSelector('.na_ph_lta, .na_ph_lrow', { timeout: 8000 }); await p.waitForTimeout(500); } },
     { name: 'phone-ask', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phone(p); await h.phoneTo(p, 'set'); await p.$eval('.na_ph_setdel', e => e.click()); await p.waitForSelector('.pcf', { timeout: 8000 }); await p.waitForTimeout(500); } },
 ];
 // block owner (as tools/dev/css-harness/blocks.cjs names them) → the scenes that show it; `capture.cjs --owner 섹션 버전` expands to these
