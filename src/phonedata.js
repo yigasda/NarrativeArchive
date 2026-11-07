@@ -851,7 +851,7 @@ export function storyYear(m, p = null, upto = null) {
     // of where everyone is read from the story; else none: never guessed from the dates a text writes, a birthday, a memory
     // or a plan; the user sets it before the phone is made, or in 날짜 및 시간)
     const st = trackerYear(upto);
-    if (st) return String(acrossNewYear(st.y, st.day, p?.now));
+    if (st) return String(acrossNewYear(st.y, st.day, p?.now || p?.clockAt));
     return p?.readYear ? String(p.readYear) : '';
 }
 // the newest status line that writes a year: { y, day: "MM-DD" } (the status lines come newest first)
@@ -896,8 +896,8 @@ export function setStoryYear(m, p, year) {
             if (q.syncUndos) q.syncUndos = q.syncUndos.map(u => { const v = shiftAll(u, n); if (v.year) v.year += n; return v; });
             for (const e of Object.values(q.sync?.events || {})) if (e?.effects) e.effects = shiftAll(e.effects, n);
         }
-        // (a phone being made again: the year read for it before moves with the rest)
-        for (const q of Object.values(m.phonePre || {})) if (q?.base && q.year && !q.noYear) q.year += n;
+        // (a phone being made, its year read before and not set by the user: it moves with the rest)
+        for (const q of Object.values(m.phonePre || {})) if (q?.year && !q.noYear && !q.yearSet) q.year += n;
         // this browser's record of unsaved rounds (복구) too
         try {
             const scope = phoneChatScope(ctx()), owners = new Set(Object.values(m.phones || {}).map(q => q?.owner));
@@ -993,7 +993,8 @@ const yearOr = (t, y) => {
 };
 const todayWall = () => { const d = new Date(); return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
 function phoneRequest(m, owner, p = null, lore = '', only = null, profile = '', gap = null, extra = [], pre = null, { anew = false } = {}) {
-    const q0 = p || pre || m.phones?.[nameKey(owner)] || { owner }, q = anew && q0.now ? { ...q0, now: '' } : q0;
+    // (made again keeping its reading, a phone with no 위치 정보 read before it: its own time still)
+    const cur0 = m.phones?.[nameKey(owner)], q0 = p || (pre ? (!anew && cur0?.now ? { ...pre, now: cur0.now } : pre) : cur0) || { owner }, q = anew && q0.now ? { ...q0, now: '' } : q0;
     const world = worldText(m), upto = nowAt(gap);
     const recent = recentPhoneText(6, { upto, maxChars: 6000 });
     const ar = archiveFor(m, p ? p.upto ?? -1 : -1, nowAt(gap), !gap?.cut);
@@ -1013,7 +1014,7 @@ function phoneRequest(m, owner, p = null, lore = '', only = null, profile = '', 
         lore ? `[LOREBOOK]\n${lore}` : '',
         aroundBlock(q),
         afterBlock(gap) || (recent && !noArchive(m) ? `[RECENT CHAT]\n${recent}` : ''),
-        yearBlock(m, p || pre, upto),
+        yearBlock(m, q, upto),
         `[OWNER]\n${owner}`,
         profile, blindBlock(m, owner),
         namesBlock(m),
@@ -1062,6 +1063,16 @@ const seedPre = (m, owner, binding) => {
     if (cur) for (const k of ['year', 'noYear', 'lives', 'livesManual', 'country']) if (cur[k] !== undefined) pre[k] = cur[k];
     return pre;
 };
+// what the user set on what was read before (a city by hand, someone taken off, the year, the country) goes on what is read
+// anew when it can't be kept as it is (the owner's 인물 정보 or 참고 로어북 changed)
+const carryEdits = (pre, old) => {
+    if (!old) return pre;
+    const manual = arr(old.where?.people).filter(r => r?.manual), removed = arr(old.where?.removed);
+    if (manual.length || removed.length) pre.where = { at: old.where?.at || Date.now(), people: structuredClone(manual), ...(removed.length ? { removed: [...removed] } : {}) };
+    if (old.yearSet) { delete pre.year; delete pre.noYear; if (old.year) pre.year = old.year; if (old.noYear) pre.noYear = true; pre.yearSet = true; }
+    if (old.livesManual) { pre.lives = old.lives; pre.livesManual = true; }
+    return pre;
+};
 // what was read before for this owner, while it is still theirs (see sameBinding). Read for an old phone gone since, it
 // is the new phone's all the same when the user changed it (a city by hand, someone taken off, the country, the year):
 // what they set is kept, never read over
@@ -1084,13 +1095,14 @@ export async function preparePhone(m, owner, { again = false } = {}) {
     const binding = m.phones?.[key]?.financeProfile || m.phoneProfiles?.[key], kept = keepPre(m, owner, binding);
     if (kept && !again) { glossAka(m, kept); kept.clockAt = preClock(m, kept); return kept; }
     // (read again, 다시 연동: what the user set by hand, who they took off and the year they chose stay, as for a phone)
-    const pre = kept ? Object.assign(structuredClone(kept), { lore: loreKey(m) }) : seedPre(m, owner, binding), asked = { known: true };
+    const pre = kept ? Object.assign(structuredClone(kept), { lore: loreKey(m) }) : carryEdits(seedPre(m, owner, binding), phonePre(m, owner)), asked = { known: true };
     if (pre.where) delete pre.where.failed;
     if (kept && !pre.yearSet && !pre.base) { delete pre.year; delete pre.noYear; }
-    // (where everyone is first: its reading tells the year too)
+    // (where everyone is first: its reading tells the year too, on the clock the phone will be at)
     await tryWhere(m, pre, asked);
+    pre.clockAt = preClock(m, pre);
     ensureYear(m, pre, nowAt(windowOf(m, null)));
-    pre.asked = asked.asked || []; pre.clockAt = preClock(m, pre);
+    pre.asked = asked.asked || [];
     (m.phonePre ||= {})[key] = pre;
     await saveMeta();
     return pre;
@@ -1132,15 +1144,20 @@ async function makePhone0(m, owner, { update = false, apps = null } = {}) {
     if (cur) glossAka(m, cur);
     if (kept) {
         pre = structuredClone(kept); glossAka(m, pre); asked.asked = kept.asked || [];
+        // (a year read before, not set by the user nor taken from an old phone: worked out again now, a status line that
+        // has crossed New Year since goes)
+        pre.clockAt = preClock(m, pre);
+        if (!pre.yearSet && !pre.base) { delete pre.year; delete pre.noYear; ensureYear(m, pre, nowAt(gap)); }
         // (a reading that failed is read again: what the user set by hand, and who they took off, stay)
         if (pre.where?.failed) {
             delete pre.where.failed; asked.known = true; await tryWhere(m, pre, asked); pre.asked = asked.asked || [];
             // (a year guessed while the reading had failed is worked out again; one the user or the old phone set stays)
+            pre.clockAt = preClock(m, pre);
             if (!pre.yearSet && !pre.base) { delete pre.year; delete pre.noYear; ensureYear(m, pre, nowAt(gap)); }
             m.phonePre[key] = structuredClone(pre); await saveMeta();
         }
     } else if (firstMade) {
-        pre = seedPre(m, owner, binding); asked.known = true; await tryWhere(m, pre, asked); ensureYear(m, pre, nowAt(gap));
+        pre = carryEdits(seedPre(m, owner, binding), phonePre(m, owner)); asked.known = true; await tryWhere(m, pre, asked); pre.clockAt = preClock(m, pre); ensureYear(m, pre, nowAt(gap));
         // (kept as preparePhone keeps it: a make asked again, after a clock check it didn't pass, reads none of it again)
         pre.asked = asked.asked || []; (m.phonePre ||= {})[key] = structuredClone(pre); await saveMeta();
     }
@@ -1152,7 +1169,7 @@ async function makePhone0(m, owner, { update = false, apps = null } = {}) {
     // a phone made sets its clock as a reflection does, by the same check, and like a reflection is not saved when it
     // doesn't hold (never asked again on its own)
     if (!part && !old) {
-        const q = pre || cur || { owner };
+        const q = pre ? (!anew && cur?.now ? { ...pre, now: cur.now } : pre) : cur || { owner };
         // (by what the request showed: an owner the reading placed nowhere is checked by no zone; the answer's country is
         // where they live, and they may be away, so 위치 정보 asks the user where they are)
         withDateOrderSync(dateOrderOf(m), () => validateReflectionClock(jsonOf(out, { salvage: true }) || {}, anew ? { ...q, now: '' } : q, m, got.now));
@@ -1166,7 +1183,7 @@ async function makePhone0(m, owner, { update = false, apps = null } = {}) {
             const out2 = await ask(two.cover, [`${soFarHead('PHONE', two.short)}\n${JSON.stringify(soFar)}`, two.short?.text || '']), g2 = parsePhone(out2, owner);
             // (made again whole: its clock checked as the first turn's; one that doesn't hold is left out, the first kept)
             // (a second answer with no "now" leaves the clock as the first set it: nothing to check)
-            if (!part && g2.now) { const q = pre || cur || { owner }; withDateOrderSync(dateOrderOf(m), () => validateReflectionClock(jsonOf(out2, { salvage: true }) || {}, q, m, g2.now)); }
+            if (!part && g2.now) { const q = pre ? (!anew && cur?.now ? { ...pre, now: cur.now } : pre) : cur || { owner }; withDateOrderSync(dateOrderOf(m), () => validateReflectionClock(jsonOf(out2, { salvage: true }) || {}, q, m, g2.now)); }
             got2 = g2; last = two.cover; short = two.short;
         } catch (err) { console.warn('[narrative-archive] phone, second turn', err); }
     }
@@ -1535,7 +1552,8 @@ async function updatePhone(m, owner) {
             : ownerClock(p, hm(p.now) ? p.now : st?.raw, m, st, clockRows);
         // (on a phone that knows no other city, a scene that isn't one of the owner's places is asked too: "Frankfurt"
         // may be another country; it stays the owner's unless the model names another city)
-        const hasZoneOffsets = !!zonesOf(p, hm(p.now) ? p.now : st?.raw, m);
+        // (a city on the owner's hours, its summer-time change near, is no other clock for a status line's scene)
+        const hasZoneOffsets = !!zonesOf(p, hm(p.now) ? p.now : st?.raw, m)?.others.some(o => o.hours);
         const askZone = round.rows.some(r => r.index === trackAt) && (sceneOwn === null && hasZoneOffsets || sceneOwn === true && !hasZoneOffsets && !!tracker && !sceneZone(p, tracker.place, m));
         // a scene the owner isn't in (or may not be): the model gets its place and weather, never its hour
         // (and one asked about, not yet placed: its place and weather only too)
@@ -2841,7 +2859,7 @@ export const clockBlock = (p, at = p?.now, m = null, st = null, required = false
 const archiveClockBlock = (p, at = p?.now, m = null, st = null) => {
     const z = zonesOf(p, at, m);
     const hrs = h => `${Math.abs(h)} hour${Math.abs(h) === 1 ? '' : 's'} ${h > 0 ? 'ahead' : 'behind'}`;
-    return z ? `[OWNER'S CLOCK]\nThe owner is in ${z.own.name}, ${z.at} now.\n${z.others.filter(c => c.hours).map(c => (c.where ? `${c.name} (in ${c.where}) is ${hrs(c.hours)}` : `${c.name} is ${hrs(c.hours)}`)).join(', ')}.${st?.known && st.at && st.at !== st.raw ? `\nThe newest status line, ${st.raw} in ${st.city}, is ${st.at} here.` : ''}` : '';
+    return z && z.others.some(c => c.hours) ? `[OWNER'S CLOCK]\nThe owner is in ${z.own.name}, ${z.at} now.\n${z.others.filter(c => c.hours).map(c => (c.where ? `${c.name} (in ${c.where}) is ${hrs(c.hours)}` : `${c.name} is ${hrs(c.hours)}`)).join(', ')}.${st?.known && st.at && st.at !== st.raw ? `\nThe newest status line, ${st.raw} in ${st.city}, is ${st.at} here.` : ''}` : '';
 };
 // Reflection-only choices. Explicit dates stay as written; marked HTML clocks can carry a labelled fallback date.
 // Keep the request's date order and locations in the choices, not mutable chat state after the call.
@@ -2973,7 +2991,7 @@ export function sceneHome(p, place, m = null, named = null) {
     // (and another city in the same zone, Busan for an owner in Seoul, is elsewhere too: its hour is theirs, its weather
     // isn't; an owner known only by the country takes any city of their zone)
     if (own && z) return !!z.moved || z.tz === own.tz && (z.own === true || !own.names?.length);
-    if (!own || !zonesOf(p, hm(p?.now) ? p.now : '01-01 12:00', m)) return true;
+    if (!own || !zonesOf(p, hm(p?.now) ? p.now : '01-01 12:00', m)?.others.some(o => o.hours)) return true;
     return null;
 }
 // the newest status line up to upto, on the owner's clock: at '' when its scene's zone is unknown (it may be someone

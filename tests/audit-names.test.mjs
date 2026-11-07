@@ -26,7 +26,7 @@ const stub = {
 const real = ['phonesync.js', 'phoneparse.js', 'phoneclock.js', 'phonesynclife.js', 'phonesyncmoney.js', 'finance.js', 'phoneprofile.js', 'phonefood.js', 'phonescreen.js'];
 const map = { './extract.js': cleanMessageURL, ...stub, ...Object.fromEntries(real.map(f => [`./${f}`, href(f)])) };
 const rewrite = async f => (await readFile(new URL(f, SRC), 'utf8')).replace(/from '([^']+)'/g, (all, k) => `from '${map[k] || k}'`);
-map['./phonedata.js'] = encoded(await rewrite('phonedata.js') + '\nexport { mergePhone as __mergePhone, peopleMoved as __peopleMoved, scenesWith as __scenesWith, isOwnerName as __isOwnerName, glossAka as __glossAka };');
+map['./phonedata.js'] = encoded(await rewrite('phonedata.js') + '\nexport { mergePhone as __mergePhone, peopleMoved as __peopleMoved, scenesWith as __scenesWith, isOwnerName as __isOwnerName, glossAka as __glossAka, archiveClockBlock as __archiveClockBlock };');
 const data = await import(map['./phonedata.js']);
 const life = await import(encoded(await rewrite('phonelife.js')));
 
@@ -288,4 +288,12 @@ test('점검 6 (글 안 이름 · 용어집 · 다녀간 곳): what Korean puts 
     for (const [city, time] of [['부산', '10-26 11:00'], ['Busan', '10-26 11:20'], ['', '10-26 11:30'], ['Paris', '10-26 11:40']]) data.__mergePhone(p, { threads: [], posts: [], contacts: [], visits: [{ place: '카페 루멘', city, time, with: ['Mara'] }] });
     assert.deepEqual(p.visits.map(x => x.city), ['부산', 'Paris']);
     assert.deepEqual(p.visits[0].with, ['Mara Lee']);
+});
+
+test('점검 6 (시차): only a city on the owner\'s hours, its summer-time change near, is no other clock: no old-style block, an unnamed place is the owner\'s', () => {
+    const p = plainPhone({ owner: 'Ren', now: '04-06 09:00', year: 2026, where: { at: 1, people: [row('Ren', 'Sydney', 'Australia/Sydney'), row('Mara', 'Brisbane', 'Australia/Brisbane')] } });
+    assert.equal(data.__archiveClockBlock(p, p.now, mText()), '');
+    assert.equal(data.sceneHome(p, 'Cafe Luna', mText()), true);
+    // a day with other hours: the block, as before
+    assert.match(data.__archiveClockBlock({ ...p, now: '04-03 09:00' }, '04-03 09:00', mText()), /Mara \(in Brisbane\) is 1 hour behind/);
 });
