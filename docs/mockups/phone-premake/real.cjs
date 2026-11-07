@@ -54,7 +54,7 @@ const { open } = require('/home/user/NarrativeArchive/tools/dev/probe.cjs');
   await s.to('set'); await s.p.waitForTimeout(250);
   await s.p.evaluate(h => { const sc = document.querySelector('.na_ph_frame .ax_scroll'); sc.innerHTML = h; sc.scrollTop = 0;
     const host = document.querySelector('.na_ph_frame .cg_canvas') || document.querySelector('.na_ph_frame .na_ph_scr');
-    host.insertAdjacentHTML('beforeend', '<div class="pcf" role="dialog"><div class="pcf_box"><div class="pcf_card"><div class="pcf_msg"><b>폰 주인 위치 없이 만들까요?</b><span>시차 없이 만들어져요.</span></div><div class="pcf_btns"><div role="button" class="pcf_no">위치 적기</div><div role="button" class="pcf_ok safe">이대로 만들기</div></div></div></div></div>'); }, A3);
+    host.insertAdjacentHTML('beforeend', '<div class="pcf" role="dialog"><div class="pcf_box"><div class="pcf_card"><div class="pcf_msg"><b>폰 주인 위치 없이 만들까요?</b><span>시차 없이 만들어져요.</span></div><div class="pcf_btns"><div role="button" class="pcf_no" style="font-weight:600;color:#2c4a80">위치 적기</div><div role="button" class="pcf_ok safe" style="font-weight:600;color:#6b7380">이대로 만들기</div></div></div></div></div>'); }, A3);
   await s.p.waitForTimeout(500); await s.shot('prep_5_ask');
   console.log(s.errors()); await s.close();
 })();
