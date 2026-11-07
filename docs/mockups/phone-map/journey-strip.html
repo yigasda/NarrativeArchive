@@ -1,0 +1,50 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>여정 날짜 띠</title><style>
+:root{--d:#2f6bff;--c:#e1e9ff;--ink:#161b22;--dim:#6b7380;--hair:#eef0f3}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#d9dce2;font-family:-apple-system,'SF Pro Text','Noto Sans KR',sans-serif;color:var(--ink);padding:28px;width:1320px}
+.row{display:flex;gap:28px;align-items:flex-start}
+.lab{font-weight:700;font-size:18px;margin:0 0 4px}.lab small{display:block;font-weight:400;color:#555;font-size:13px;margin-top:3px;width:390px;line-height:1.45}
+.col{width:390px;background:#f4f5f7;border-radius:28px;padding:16px 0 2px}
+.card{margin:0 14px 14px;border-radius:22px;background:#fff;box-shadow:0 1px 2px rgba(22,27,34,.04),0 8px 24px rgba(22,27,34,.05);overflow:hidden}
+.num{font-family:'Inter Tight','Inter',-apple-system,sans-serif;font-variant-numeric:tabular-nums}
+.lbl{font-size:12px;color:var(--dim)}.big{font-size:34px;font-weight:600;letter-spacing:-.02em;line-height:1.1}.big u{text-decoration:none;font-size:17px;font-weight:600;margin:0 7px 0 3px}
+.sub{font-size:13px;color:var(--dim);font-weight:400;letter-spacing:0;font-family:-apple-system,'Noto Sans KR',sans-serif}
+.chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 18px 16px}.chip{display:inline-flex;align-items:baseline;gap:5px;height:28px;align-items:center;padding:0 11px;border-radius:999px;background:#f1f3f6;font-size:12.5px;font-weight:500}.chip b{font-weight:600;color:var(--d)}
+</style></head><body><div class="row" id="out"></div><script>
+const TODAY = 25, W = 326, cell = W / 31;
+const SHADE = ['#eef0f3', '#cfdcfd', '#9db9fa', '#6a95f6', '#2f6bff']; // 0, 1, 2, 3, 4+ places that day
+const CITY = ['#b9cdfb', '#9db9fa', '#7fa6f7', '#5a8bf3', '#2f6bff']; // a city each (first → now), one family of blue
+const head = (n, sub) => `<div style="padding:18px 18px 0"><div class="lbl">10월에 다닌 곳</div><div class="big num">${n}<u>곳</u><span class="sub">${sub}</span></div></div>`;
+// the 31 days as one track; a stay (days in a row) is one rounded block on it; today a small dot under the track
+const runsOf = days => { const ds = [...days].sort((a, b) => a - b), out = []; for (const d of ds) { const r = out.at(-1); if (r && d === r[1] + 1) r[1] = d; else out.push([d, d]); } return out; };
+function strip(blocks, { above = [], below = [] } = {}) { let s = `<rect x="0" y="28" width="${W}" height="18" rx="6" fill="#eef0f3"/><rect x="${TODAY * cell}" y="28" width="${W - TODAY * cell}" height="18" rx="6" fill="#f6f7f9"/><rect x="${TODAY * cell}" y="28" width="6" height="18" fill="#f6f7f9"/>`;
+  for (const [a, b, fill] of blocks) { let x = (a - 1) * cell + 1, w = (b - a + 1) * cell - 2; if (w < cell * 1.6) { x -= (cell * 1.6 - w) / 2; w = cell * 1.6; } s += `<rect x="${x.toFixed(1)}" y="29.5" width="${w.toFixed(1)}" height="15" rx="5" fill="${fill}"/>`; }
+  s += `<circle cx="${(TODAY - .5) * cell}" cy="53" r="2.4" fill="var(--ink)"/>`;
+  for (const [d, t, on] of above) s += `<text x="${(d - .5) * cell}" y="20" text-anchor="middle" font-size="11.5" font-weight="${on ? 700 : 600}" fill="${on ? 'var(--d)' : 'var(--ink)'}">${t}</text>`;
+  for (const [d, t] of below) s += `<text x="${(d - .5) * cell}" y="66" text-anchor="middle" font-size="11.5" font-weight="600" fill="var(--ink)">${t}</text>`;
+  const ay = below.length ? 84 : 70; for (const d of [1, 10, 20, 31]) s += `<text x="${(d - .5) * cell}" y="${ay}" text-anchor="middle" font-size="10" fill="#a3a8b0" font-family="Inter">${d}${d === 1 ? '일' : ''}</text>`;
+  const up = above.length ? 0 : 20, hh = (below.length ? 90 : 76) - up; return `<svg width="${W}" height="${hh}" viewBox="0 ${up} ${W} ${hh}" style="display:block;margin:12px 18px 14px;overflow:visible">${s}</svg>`; }
+const mid = (a, b) => (a + b) / 2;
+
+// 1. 여러 도시: 도시마다 그 도시에 있던 날을 칠하고, 위 · 아래로 번갈아 도시 이름
+const C1 = [['Paris', 12, 13], ['Chicago', 19, 20], ['Varo', 23, 25]];
+const one = strip(C1.map(([, a, b], k) => [a, b, CITY[k + 2]]), { above: C1.map(([c, a, b]) => [mid(a, b), c, c === 'Varo']) });
+const C5 = [['Seoul', 2, 6], ['Tokyo', 8, 10], ['Paris', 12, 14], ['Chicago', 19, 20], ['Varo', 23, 25]];
+const five = strip(C5.map(([, a, b], k) => [a, b, CITY[k]]), { above: C5.filter((_, k) => k % 2 === 0).map(([c, a, b]) => [mid(a, b), c, c === 'Varo']), below: C5.filter((_, k) => k % 2).map(([c, a, b]) => [mid(a, b), c]) });
+const A = `<div class="card">${head(6, '3도시')}${one}</div><div class="card">${head(14, '5도시')}${five}</div>`;
+
+// 2. 한 도시 안에서: 진하기가 그날 간 곳 수. 가장 많이 다닌 날 두셋에 그날 대표 장소
+const N2 = { 3: 1, 4: 2, 8: 2, 9: 3, 10: 1, 14: 2, 16: 1, 17: 4, 18: 1, 21: 1, 23: 2, 24: 2, 25: 3 };
+const two = strip(runsOf(Object.keys(N2).map(Number)).map(([a, b]) => { let m = 0; for (let d = a; d <= b; d++) m = Math.max(m, N2[d] || 0); return [a, b, SHADE[Math.min(4, m)]]; }), { above: [[9, 'Altmarkt', false], [24, 'Café am Fluss', true]], below: [[17, 'Kunsthalle']] });
+const B = `<div class="card">${head(11, 'Varo 안에서')}${two}<div style="display:flex;align-items:center;gap:6px;padding:0 18px 16px;font-size:11.5px;color:var(--dim)">적게 ${SHADE.slice(1).map(c => `<i style="width:12px;height:12px;border-radius:3px;background:${c}"></i>`).join('')} 많이 · 그날 간 곳 수</div></div>`;
+
+// 3. 같은 곳만: 띠는 그대로(나간 날), 아래에 자주 간 곳과 횟수
+const N3 = { 1: 1, 2: 2, 3: 2, 4: 1, 6: 1, 15: 1, 19: 2, 20: 3, 21: 2, 22: 1, 24: 2, 25: 1 };
+const three = strip((runsOf(Object.keys(N3).map(Number)).map(([a, b]) => { let m = 0; for (let d = a; d <= b; d++) m = Math.max(m, N3[d] || 0); return [a, b, SHADE[Math.min(4, m)]]; })), { below: [[10.5, '9일 동안 안 나감']] });
+const Cc = `<div class="card">${head(3, '자주 간 곳')}${three}<div class="chips">${[['Café am Fluss', 7], ["Ivo's workshop", 4], ['Bäckerei Holm', 2]].map(([n, c]) => `<span class="chip">${n} <b class="num">${c}번</b></span>`).join('')}</div></div>`;
+
+const OPT = [['1. 여러 도시', '도시마다 머문 기간이 블록 하나. 이름은 블록 위(많으면 위 · 아래 번갈아), 지금 도시는 파란 글자. 먼저 간 도시일수록 옅어요', A],
+  ['2. 한 도시 안에서', '연달아 나간 날이 블록 하나, 진하기는 그 며칠 중 가장 많이 다닌 날. 바쁜 블록 두세 개에 대표 장소 이름. 머리는 "11곳 · Varo 안에서"', B],
+  ['3. 같은 곳만', '연달아 나간 날이 블록 하나, 가장 길게 안 나간 때에 한 줄("9일 동안 안 나감"), 아래에 자주 간 곳과 횟수. 머리는 "3곳 · 자주 간 곳"', Cc]];
+document.getElementById('out').innerHTML = OPT.map(([t, n, h]) => `<div><div class="lab">${t}<small>${n}</small></div><div class="col">${h}</div></div>`).join('');
+</script></body></html>

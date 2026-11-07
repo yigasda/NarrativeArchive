@@ -9,6 +9,7 @@ import { autopic, autopicPeople, drafting, drawing, looksOf, writing } from './p
 import { bigClock, byStory, clockOf, COUNTRIES, fmtDate, fmtTime, fullDate, gapDays, hasKo, koOn, lastTime, listTime, localeOf, loreOff, MOODS, pad, parts, phoneLore, placesOf, REMAKE, rowDay, savedName, dateOrderOf, placeInfo, screenHolderLabel, screenHolderChoices } from './phonedata.js';
 import { threadNew } from './phonehome.js';
 import { screenView } from './phonescreen.js';
+import { BUSY, pinSpots, pinSvg, STAY, stripSvg, townKinds, townSvg } from './phonemapart.js';
 import { recentTrackers } from './scenes.js';
 import { sectionKey } from './sections.js';
 import { glossaryEntries } from './translate.js';
@@ -830,27 +831,94 @@ function mapPlaces(m, p) {
     for (const r of all) r.with = r.with.filter(w => !always.has(nameKey(w)));
     return all;
 }
-export function mapScreen(p, now, m) {
+// the month's outings, one a place a day: the visits (their day) and the archive's headings (their newest day)
+function mapDays(m, p, pl) {
+    const gone = new Set(p.hiddenPlaces || []), seen = new Set(), out = [], city = new Map(pl.map(r => [nameKey(r.place), r.city]));
+    const add = (place, c, day) => { const k = `${nameKey(place)}|${day}`; if (!/^\d{2}-\d{2}$/.test(day) || seen.has(k) || gone.has(nameKey(place))) return; seen.add(k); out.push({ place, city: c || city.get(nameKey(place)) || '', day }); };
+    for (const v of p.visits || []) if (v?.place) add(v.place, v.city, String(v.time || '').slice(0, 5));
+    for (const r of pl) add(r.place, r.city, r.day || '');
+    return out;
+}
+// the month strip card: several towns (a block a stay, the town's name on it), one town (a block for days out in a
+// row, darker the busier, the busiest named by their place), or the same few places (with the longest stay-in named)
+function mapStrip(p, now, m, pl, sel) {
+    const all = mapDays(m, p, pl);
+    if (!all.length) return '';
+    const nowP = parts(now), latest = all.map(x => x.day).sort().at(-1);
+    const mo = all.some(x => nowP && Number(x.day.slice(0, 2)) === nowP.mo) ? nowP.mo : Number(latest.slice(0, 2));
+    const month = all.filter(x => Number(x.day.slice(0, 2)) === mo), d = x => Number(x.day.slice(3));
+    const days = new Date(Date.UTC(Number(p.year) || 2001, mo, 0)).getUTCDate(), today = nowP && nowP.mo === mo ? nowP.d : 0;
+    const places = [...new Map(month.map(x => [nameKey(x.place), x.place])).values()];
+    const towns = []; for (const x of [...month].sort((a, b) => d(a) - d(b))) if (x.city && !towns.some(t => nameKey(t) === nameKey(x.city))) towns.push(x.city);
+    const byDay = new Map(); for (const x of month) { if (!byDay.has(d(x))) byDay.set(d(x), []); byDay.get(d(x)).push(x); }
+    // days out in a row (a town's run may skip up to two quiet days)
+    const runs = (keep, skip = 0) => { const out = []; for (const day of [...byDay.keys()].sort((a, b) => a - b)) { const k = keep(day), r = out.at(-1); if (r && r.k === k && day - r.b <= skip + 1) r.b = day; else out.push({ a: day, b: day, k }); } return out; };
+    let blocks, labels = [], sub, extra = '';
+    if (towns.length > 1) {
+        const tk = day => nameKey(byDay.get(day).at(-1).city || ''), rs = runs(tk, 2).filter(r => r.k);
+        const col = t => STAY[Math.max(0, STAY.length - towns.length + towns.findIndex(x => nameKey(x) === t))];
+        blocks = rs.map(r => [r.a, r.b, col(r.k)]);
+        towns.forEach((t, k) => { const r = rs.filter(x => x.k === nameKey(t)).at(-1); if (r) labels.push([(r.a + r.b) / 2, t, nameKey(t) === sel, towns.length > 3 && k % 2 ? 'down' : 'up']); });
+        sub = `${towns.length}도시`;
+    } else {
+        const rs = runs(() => 1), many = day => new Set(byDay.get(day).map(x => nameKey(x.place))).size;
+        blocks = rs.map(r => { let n = 0; for (let x = r.a; x <= r.b; x++) if (byDay.has(x)) n = Math.max(n, many(x)); return [r.a, r.b, BUSY[Math.min(4, n)]]; });
+        if (places.length <= 3) {
+            // the longest stretch with no outing, from the first day to today (or the month's last outing)
+            const end = today || Math.max(...byDay.keys()), ds = [...byDay.keys()].sort((a, b) => a - b).filter(x => x <= end);
+            let best = [0, 0]; for (let k = 1; k < ds.length; k++) if (ds[k] - ds[k - 1] - 1 > best[1]) best = [ds[k - 1], ds[k] - ds[k - 1] - 1];
+            if (best[1] >= 5) labels.push([best[0] + (best[1] + 1) / 2, `${best[1]}일 동안 안 나감`, false, 'down']);
+            const n = new Map(); for (const x of month) n.set(nameKey(x.place), (n.get(nameKey(x.place)) || 0) + 1);
+            extra = `<div class="mp_chips">${places.sort((a, b) => n.get(nameKey(b)) - n.get(nameKey(a))).map(x => `<span>${esc(x)} <b class="cg_num">${n.get(nameKey(x))}번</b></span>`).join('')}</div>`;
+            sub = '자주 간 곳';
+        } else {
+            // the busiest runs (most places), named by their most visited place; names that would touch are left off
+            const name = r => { const n = new Map(); for (let x = r.a; x <= r.b; x++) for (const v of byDay.get(x) || []) n.set(v.place, (n.get(v.place) || 0) + 1); return [...n].sort((a, b) => b[1] - a[1])[0][0]; };
+            const busy = rs.map(r => { let n = 0; for (let x = r.a; x <= r.b; x++) n += (byDay.get(x) || []).length; return { ...r, n }; }).sort((a, b) => b.n - a.n || b.b - a.b).slice(0, 3);
+            const lastRun = rs.at(-1), placed = { up: [], down: [] };
+            for (const r of busy.sort((a, b) => a.a - b.a)) {
+                const t = name(r), mid = (r.a + r.b) / 2, w = t.length * 0.62 * 11.5 / (326 / days) / 2;
+                const side = placed.up.some(([x, h]) => Math.abs(x - mid) < h + w + 0.6) ? 'down' : 'up';
+                if (placed[side].some(([x, h]) => Math.abs(x - mid) < h + w + 0.6)) continue;
+                placed[side].push([mid, w]); labels.push([mid, t, r === lastRun || r.b === lastRun.b, side]);
+            }
+            sub = towns.length ? `${towns[0]} 안에서` : '';
+            extra = `<div class="mp_key">적게 ${BUSY.slice(1).map(c => `<i style="background: ${c}"></i>`).join('')} 많이 · 그날 간 곳 수</div>`;
+        }
+    }
+    const st = stripSvg({ days, today, blocks, labels });
+    // a stay of another town can be tapped: its map comes up
+    const hits = towns.length > 1 ? blocks.map(([a, b], k) => { const t = runs(day => nameKey(byDay.get(day).at(-1).city || ''), 2).filter(r => r.k)[k]?.k; return t ? `<button type="button" class="mp_hit" style="left: ${((a - 1.3) / days * 100).toFixed(1)}%; width: ${((b - a + 1.6) / days * 100).toFixed(1)}%; top: ${(st.top - 22) / st.H * 100}%; height: ${(60 / st.H * 100).toFixed(1)}%" data-go="map" data-i="${esc(t)}" aria-label="${esc(t)}"></button>` : ''; }).join('') : '';
+    return `<div class="ax_card mp_month"><div class="mp_mh"><span class="mp_lbl">${mo}월에 다닌 곳</span><span class="mp_big"><b class="cg_num">${places.length}</b><u>곳</u>${sub ? `<span>${esc(sub)}</span>` : ''}</span></div><div class="mp_st">${st.svg}${hits}</div>${extra}</div>`;
+}
+export function mapScreen(p, now, m, pick = '') {
     const pl = mapPlaces(m, p);
     // by city, the newest city first; the city alone ("Chicago") is its group's name, a row only when nothing closer there
     const groups = [];
     for (const r of pl) { const k = nameKey(r.city); let g = groups.find(x => x.k === k); if (!g) groups.push(g = { k, city: r.city, rows: [] }); g.rows.push(r); }
     for (const g of groups) if (g.city && g.rows.length > 1) g.rows = g.rows.filter(r => nameKey(r.place) !== g.k);
     groups.sort((a, b) => !a.city - !b.city);
-    const pin = ax('pindot', 22, 'var(--axd)', 2.2, 'var(--axc)');
     const who = r => (r.with.length ? ` · ${esc(r.with.length > 2 ? `${r.with[0]} 외 ${r.with.length - 1}명` : r.with.join(' · '))}${r.with.length > 2 ? '과' : waOf(m, r.with[r.with.length - 1])}` : '');
     const rowHtml = x => swipeRow('place', nameKey(x.place), `
           <div class="ax_rw ax_place"><span class="ax_si" style="background: var(--axc)">${ax('pindot', 17, 'var(--axd)', 2.2)}</span><span class="ax_tx"><span class="ax_n">${esc(x.place)}</span><span class="ax_p1">${x.n > 1 ? `${x.n}번` : '처음'}${who(x)}</span></span><small>${esc(x.day ? fmtDate(p, x.day, true) : x.date)}${x.time ? `<br>${esc(x.time)}` : ''}</small></div>`);
-    const n = groups.reduce((a, g) => a + g.rows.length, 0);
-    return `${axBar(p, now)}
-      ${axTop(axCb('home'))}
-      <div class="ax_scroll">
-        ${axH1('다녀간 곳', n ? `${n}곳` : '')}
-        ${n ? `<div class="ax_card ax_mapart" aria-hidden="true">${groups.flatMap(g => g.rows).slice(0, 5).map((_, k) => `<i style="left: ${[18, 62, 38, 80, 28][k]}%; top: ${[34, 26, 58, 64, 80][k]}%">${pin}</i>`).join('')}</div>
-        ${groups.map(g => `${groups.length > 1 || g.city ? `<div class="ax_sec">${esc(g.city || '그 밖의 곳')} · ${g.rows.length}곳</div>` : ''}<div class="ax_card">${g.rows.map(rowHtml).join('')}</div>`).join('')}` : '<div class="ax_empty">방문 기록 없음</div>'}
-        <i class="ax_pad"></i>
-      </div>
-      ${axInd()}`;
+    if (!groups.length) return `${axBar(p, now)}${axTop(axCb('home'))}<div class="ax_scroll">${axH1('다녀간 곳')}<div class="ax_empty">방문 기록 없음</div><i class="ax_pad"></i></div>${axInd()}`;
+    // the town on the map: the one picked (a stay on the strip, a row under "다른 곳"), else where they were last
+    const g = groups.find(x => x.k === pick) || groups[0];
+    // the town's streets: by its name, never the same as another town's; a night map when they were last there at night
+    const kinds = townKinds([...groups].reverse().map(x => x.k || `~${p.owner}`)), kind = kinds.get(g.k || `~${p.owner}`);
+    const lastR = [...g.rows].sort((a, b) => (b.last || '').localeCompare(a.last || ''))[0], hr = Number((/^\d{2}-\d{2} (\d{2})/.exec(lastR?.last || '') || [0, 12])[1]), dark = hr >= 21 || hr < 5;
+    const shown = g.rows.slice(0, 7), W = 390, H = 430;
+    const pins = pinSpots(shown.map(r => r.place), kind, W, 150, 340).map(([x, y], k) => pinSvg(x, y, shown[k].place, dark)).join('');
+    const art = `<svg class="mp_art" viewBox="0 0 ${W} ${H}" width="100%" aria-hidden="true">${townSvg(kind, W, H, g.k || p.owner, dark)}${pins}</svg>`;
+    const lastDay = g.rows.map(r => r.day).filter(Boolean).sort().at(-1);
+    const others = groups.filter(x => x !== g);
+    const other = others.length ? `<div class="ax_sec">다른 곳</div><div class="ax_card">${others.map(x => `<button type="button" class="ax_rw ax_place" data-go="map" data-i="${esc(x.k)}"><span class="ax_si" style="background: var(--axc)">${ax('pindot', 17, 'var(--axd)', 2.2)}</span><span class="ax_tx"><span class="ax_n">${esc(x.city || '그 밖의 곳')}</span><span class="ax_p1">${x.rows.length}곳</span></span>${axChev}</button>`).join('')}</div>` : '';
+    return `<div class="mp_wx${dark ? ' mp_dark' : ''}"><div class="mp_bg">${art}</div>${axBar(p, now, dark ? '#fff' : '#111')}${axTop(axCb('home'))}
+      <div class="ax_scroll"><i class="mp_gap"></i><div class="mp_sheet"><i class="mp_grab"></i>
+        ${mapStrip(p, now, m, pl, g.k)}
+        <div class="mp_th"><b>${esc(g.city || '그 밖의 곳')}</b><span>${g.rows.length}곳${lastDay ? ` · 마지막 ${esc(fmtDate(p, lastDay))}` : ''}</span></div>
+        <div class="ax_card">${g.rows.map(rowHtml).join('')}</div>${other}<i class="ax_pad"></i></div></div>
+      ${axInd()}</div>`;
 }
 
 const PROFILE_SOURCES = [
