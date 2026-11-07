@@ -1132,6 +1132,8 @@ test('making a phone for the first time: where everyone is first (the people the
         assert.equal(p.now, '11-03 03:10');
         assert.equal(p.where.people.find(x => x.name === 'Mara').tz, 'Asia/Seoul');
         assert.equal(p.around.people[0].name, 'Mara');
+        // (its year from the start: the phone keeps the one the check went by)
+        assert.equal(p.year, 2026);
         assert.equal(globalThis.__where.length, 1, 'no second reading: no one new on it');
         // someone new on it: read again for them
         mm = setup();

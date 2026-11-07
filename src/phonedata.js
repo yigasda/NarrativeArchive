@@ -976,15 +976,15 @@ async function makePhone0(m, owner, { update = false, apps = null } = {}) {
     // a phone made for the first time (no reading of where everyone is): that reading first, so its OWNER'S CLOCK has the
     // hours and the time choices and its check knows the places, as a reflection's does (and PEOPLE AROUND goes along)
     const firstMade = !part && !old && !cur?.where, pre = firstMade ? { owner, ...(binding ? { financeProfile: structuredClone(binding) } : {}) } : null, asked = {};
-    if (firstMade) { asked.known = true; await tryWhere(m, pre, asked); }
+    // (its year too, from the start: the hours, the time choices and the check go by it, and the phone keeps it)
+    if (firstMade) { ensureYear(m, pre, nowAt(gap)); asked.known = true; await tryWhere(m, pre, asked); }
     const ask = (g, extra = []) => askDraft(phoneRequest(m, owner, old, lore, part, profile, g, extra, pre), { force: true, system: old ? AI_SYS_PHONE_UPDATE : part ? AI_SYS_PHONE_APPS : AI_SYS_PHONE, maxTokens: 16000 });
     const out = await ask(gap), got = parsePhone(out, owner);
     // a phone made sets its clock as a reflection does, by the same check, and like a reflection is not saved when it
     // doesn't hold (never asked again on its own)
     if (!part && !old) {
-        // (its year as the story writes one: a phone made has none of its own yet)
-        const q = pre || cur || { owner }, year = q.year || q.noYear ? {} : (y => (y ? { year: y } : {}))(Number(storyYear(m, q, nowAt(gap))));
-        withDateOrderSync(dateOrderOf(m), () => validateReflectionClock(jsonOf(out, { salvage: true }) || {}, { ...q, ...year, country: q.country || got.country }, m, got.now));
+        const q = pre || cur || { owner };
+        withDateOrderSync(dateOrderOf(m), () => validateReflectionClock(jsonOf(out, { salvage: true }) || {}, { ...q, country: q.country || got.country }, m, got.now));
     }
     // made again up to the clock and stopped short: a second turn adds the rest (one that fails keeps the first)
     const two = keep && !old ? secondTurn(m, cur, gap, false) : null;
@@ -1034,7 +1034,7 @@ async function makePhone0(m, owner, { update = false, apps = null } = {}) {
         // owner set: the year, hidden contacts and places, where they live
         for (const k of ['life', 'delivery', 'voiceAt', 'year', 'noYear', 'hiddenContacts', 'hiddenPlaces', 'lives', 'where']) if (was?.[k] !== undefined) base[k] = was[k];
         // (made for the first time: where everyone is and PEOPLE AROUND, as read before it)
-        if (pre) for (const k of ['where', 'around', 'lives']) if (pre[k] !== undefined) base[k] = pre[k];
+        if (pre) for (const k of ['where', 'around', 'lives', 'year', 'noYear']) if (pre[k] !== undefined) base[k] = pre[k];
         if (binding) base.financeProfile = structuredClone(binding);
         // the phone's own apps start reading again from here. With a bank, investments or the everyday apps kept (they
         // weren't made again), the reading state stays as it was: messages they haven't read yet are still theirs to read
