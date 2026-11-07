@@ -139,3 +139,15 @@ test('점검 4: "지난번 · 지난주 · 지난달" after a time is the time; 
     for (const [s, want] of [['오늘 3시 지난번 그 카페에서 보자', '03:00'], ['내일 오후 3시 지난주 거기서', '15:00'], ['3시 지난달처럼', '03:00'], ['3시 지나가던 버스', '03:00'], ['3시 지나가는 길에', '03:00'],
         ['3시 지나가면 전화해', ''], ['3시 지나가지고 연락할게', ''], ['3시가 지난 시각', ''], ['3시 지난 시점', '']]) assert.equal(koClockText(s), want, s);
 });
+
+test('점검 6 (시각 읽기): a time field with its date, clock and a mark or two; a reasoning tail\'s stamp is none; 지난 번 apart; 쯤 · 경 전 · 후 as whole words; 넘 · 지나 as verbs only; 시장 · 시청; aria-hidden shown; one space in a stamp', () => {
+    for (const raw of ['<span class="time">⏰ 11.05 16:15</span>', '<span class="time">📅 11월 5일 16:15</span>', '<span class="time">Thu, Nov 5 16:15</span>', '<span class="time">11월 5일 16:15 KST</span>', '<span class="time">11월 5일 16:15 (목)</span>', '<span class="time">오늘 11월 5일 16:15</span>',
+        '<span class="date">11월 5일</span> <span class="time" aria-hidden="true">16:15</span>', '<span class="date">11월 5일</span> <i class="fa fa-clock" aria-hidden="true"></i> <span class="time">16:15</span>']) assert.deepEqual(htmlDatedClocks(raw).map(x => x.local), ['11-05 16:15'], raw);
+    for (const raw of ['<div class="timeline">11월 5일 16시 15분, 그는 문을 열었다.</div>', '<span class="time">11월 5일 16시 15분 전</span>', 'Plan: <div class="status"><span class="date">11월 4일</span> <span class="time">23:00</span></div>\n</thinking>\n그는 창밖을 바라보았다.']) assert.deepEqual(htmlDatedClocks(raw), [], raw);
+    assert.deepEqual(htmlDatedClocks('<span class="date">11월 5일</span>  <span class="time">16:15</span>').map(x => x.sourceTime), ['11월 5일 16:15']);
+    for (const [s, want] of [['오후 3시 지난 번 그 카페에서 보자', '15:00'], ['오후 3시 지난 주에 갔던 카페', '15:00'], ['밤 11시 지난 주말 사진', '23:00'], ['3시쯤 전화할게', '03:00'], ['오후 2시경 전시회에 들렀다', '14:00'], ['3시쯤 후배를 만났다', '03:00'],
+        ['새벽 3시 넘 졸려', '03:00'], ['오후 3시 지나랑 카페에서', '15:00'], ['새벽 3시 지나치게 조용한', '03:00'], ['3시 지나가는 길에', '03:00'],
+        ['3시쯤 전에', ''], ['3시경 이후로', ''], ['3시 지나 있었다', ''], ['3시 금방 지나', ''], ['3시 지나간 일', ''], ['3시 지나쳐', ''], ['3시 넘었다', ''], ['3시 지나가면 전화해', '']]) assert.equal(koClockText(s), want, s);
+    assert.equal(hhmm('제3시장'), '');
+    assert.equal(koClockText('[ 11월 5일 (목) | 제3시장 | ☀️ 맑음 ]'), '');
+});
