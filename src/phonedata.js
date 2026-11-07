@@ -957,14 +957,16 @@ const phoneForModel = p => ({
 // story's year and PEOPLE AROUND, read first and kept in the chat until the phone is made: the user checks them in 위치
 // 정보 (setOwnerLives, setPlaceCity, dropPlacePerson and rereadPlaces take it as a phone) and the year (setPreYear), and
 // a make asked again (a clock check it didn't pass) reads none of it again. again: read anew
-const sameBinding = (pre, binding) => JSON.stringify(pre?.financeProfile ?? null) === JSON.stringify(binding ?? null);
+// (kept while what the reading read is the same: the owner's 인물 정보, the 참고 로어북 picked and the entries left out)
+const loreKey = m => JSON.stringify(phoneLore(m).slice().sort().map(b => [b, [...loreOff(m, b)].sort()]));
+const sameBinding = (pre, binding, m) => JSON.stringify(pre?.financeProfile ?? null) === JSON.stringify(binding ?? null) && (pre?.lore ?? loreKey(m)) === loreKey(m);
 export const phonePre = (m, owner) => m?.phonePre?.[nameKey(owner)] || null;
 export async function preparePhone(m, owner, { again = false } = {}) {
     const key = nameKey(owner);
     await ensureScreenHolder(m);
     const binding = m.phones?.[key]?.financeProfile || m.phoneProfiles?.[key], kept = phonePre(m, owner);
-    if (kept && !again && sameBinding(kept, binding)) return kept;
-    const pre = { owner, making: true, ...(binding ? { financeProfile: structuredClone(binding) } : {}) }, asked = { known: true };
+    if (kept && !again && sameBinding(kept, binding, m)) return kept;
+    const pre = { owner, making: true, lore: loreKey(m), ...(binding ? { financeProfile: structuredClone(binding) } : {}) }, asked = { known: true };
     ensureYear(m, pre, nowAt(windowOf(m, null)));
     await tryWhere(m, pre, asked);
     pre.asked = asked.asked || [];
@@ -1005,7 +1007,7 @@ async function makePhone0(m, owner, { update = false, apps = null } = {}) {
     // the one the user checked in 위치 정보 (preparePhone), else read now; its year too, from the start
     const firstMade = !part && !old && !cur?.where, kept = firstMade ? phonePre(m, owner) : null, asked = {};
     let pre = null;
-    if (kept && sameBinding(kept, binding)) { pre = structuredClone(kept); asked.asked = kept.asked || []; }
+    if (kept && sameBinding(kept, binding, m)) { pre = structuredClone(kept); asked.asked = kept.asked || []; }
     else if (firstMade) { pre = { owner, making: true, ...(binding ? { financeProfile: structuredClone(binding) } : {}) }; ensureYear(m, pre, nowAt(gap)); asked.known = true; await tryWhere(m, pre, asked); }
     const ask = (g, extra = []) => askDraft(phoneRequest(m, owner, old, lore, part, profile, g, extra, pre), { force: true, system: old ? AI_SYS_PHONE_UPDATE : part ? AI_SYS_PHONE_APPS : AI_SYS_PHONE, maxTokens: 16000 });
     const out = await ask(gap), got = parsePhone(out, owner);

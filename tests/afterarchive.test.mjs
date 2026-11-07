@@ -1160,12 +1160,20 @@ test('위치 정보 before a phone is made: read once and kept, checked and set 
         const pre = await data.preparePhone(mm, 'Ren');
         assert.equal(globalThis.__where.length, 1);
         assert.equal(await data.preparePhone(mm, 'Ren'), pre, 'kept: not read again');
+        // (참고 로어북 changed after it was read: read again; back as it was: the new reading stays)
+        mm.phoneLore = ['Atlas'];
+        const again = await data.preparePhone(mm, 'Ren');
+        assert.notEqual(again, pre); assert.equal(globalThis.__where.length, 2);
+        mm.phoneLore = [];
+        const pre2 = await data.preparePhone(mm, 'Ren');
+        assert.equal(globalThis.__where.length, 3);
+        assert.equal(await data.preparePhone(mm, 'Ren'), pre2);
         // the reading didn't place the owner: the user does, and the year
         assert.equal(data.placeInfo(pre).owner.city, '');
-        await data.setPlaceCity(mm, pre, 'Ren', 'Frankfurt');
-        await data.setOwnerLives(mm, pre, 'DE');
+        await data.setPlaceCity(mm, pre2, 'Ren', 'Frankfurt');
+        await data.setOwnerLives(mm, pre2, 'DE');
         await data.setPreYear(mm, 'Ren', 2026);
-        assert.equal(data.placeInfo(pre).people.find(x => x.name === 'Mara').hours, 8);
+        assert.equal(data.placeInfo(pre2).people.find(x => x.name === 'Mara').hours, 8);
         const at = { basis: 'Default used', finalViewpoint: 'Mara', elapsedTime: null, sceneTime: '11-03 11:10', messageSender: null };
         const made = now => JSON.stringify({ country: 'KR', now, clock: at, contacts: [{ name: 'Mara' }], notes: [] });
         // a clock its check doesn't pass: not made, and asked again reads no place again
@@ -1174,7 +1182,7 @@ test('위치 정보 before a phone is made: read once and kept, checked and set 
         assert.ok(data.phonePre(mm, 'Ren'));
         globalThis.__menu = { calls: [], answers: [made('11-03 03:10')] };
         const p = await data.makePhone(mm, 'Ren');
-        assert.equal(globalThis.__where.length, 1, 'no reading but the first');
+        assert.equal(globalThis.__where.length, 3, 'no reading but those before');
         assert.match(globalThis.__menu.calls[0].input, /Location: Frankfurt\n[\s\S]*- Mara \(Seoul\): \+8 hours/);
         assert.equal(p.year, 2026);
         assert.equal(p.country, 'DE', 'the country it lives in, as checked');
