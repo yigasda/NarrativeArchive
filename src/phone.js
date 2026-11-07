@@ -5,7 +5,7 @@
 //   upto (the last message number the archive held), at, inject } }
 
 import { phoneChatScope, phoneTarget, ensurePhoneStory, resetPhoneStory } from './phonestory.js';
-import { prepareWealth, dateOrderOf, needsDateOrder, setDateOrder, setScreenHolder, ensureScreenHolder, screenHolderChoices, setOwnerLives, setPlaceCity, dropPlacePerson, rereadPlaces, placeInfo, phonePre, preparePhone, setPreYear, screenHolderLabel } from './phonedata.js';
+import { prepareWealth, dateOrderOf, needsDateOrder, setDateOrder, setScreenHolder, ensureScreenHolder, screenHolderChoices, setOwnerLives, setPlaceCity, dropPlacePerson, rereadPlaces, placeInfo, countryOf, countryZones, phonePre, preparePhone, setPreYear, screenHolderLabel } from './phonedata.js';
 import { profileEntries, resolvePhoneProfile, currentPersonaBinding } from './phoneprofile.js';
 import { investmentScreen } from './investui.js';
 import { collectInvestmentRecords, fillInvestment, fillChartHistory, refreshMarket, refreshBankFX, investmentDate, validDate } from './investdata.js';
@@ -25,6 +25,9 @@ import { marksScreen, pageView, searchOne, searchScreen, tabsScreen } from './ph
 import { fillDelivery, fillLife, fillScreen, fillShopMenus, menuWanted, refreshNearby } from './phonelife.js';
 import { alarmScreen, setStory, cartScreen, cityList, cityScreen, clockScreen, compareScreen, dlvScreen, fileScreen, filesScreen, folderScreen, healthScreen, heartScreen, hereWidget, itemScreen, orderScreen, ordersScreen, payScreen, rateScreen, shopScreen2, sleepScreen, stepsScreen, timerScreen, waterScreen, weatherScreen, weightScreen, workScreen, worldScreen } from './phonelifeapps.js';
 import { screenTimeScreen } from './phonestime.js';
+import { mapCityScreen, mapResults, mapSearchScreen } from './phonemapsearch.js';
+import { placeNames } from './phonemapfind.js';
+import { FLAG_NAME, flagSvg } from './phoneflags.js';
 import { glossaryEntries, openGlossary } from './translate.js';
 // 을 / 를 after a word: by its last syllable's final consonant (a Latin ending, like SNS, reads as 를)
 const josa = w => { const c = w.charCodeAt(w.length - 1) - 0xac00; return c >= 0 && c < 11172 && c % 28 ? '을' : '를'; };
@@ -47,7 +50,7 @@ function screen(p, view, m, roster, ui) {
         : v === 'thread' ? threadScreen(p, now, Number(i), roster) : v === 'draft' ? draftView(p, now, Number(i), roster) : v === 'call' || v === 'callmiss' ? callScreen(p, now, roster, v === 'callmiss') : v === 'callwho' ? callWho(p, now, Number(i), roster) : v === 'contacts' ? contactsScreen(p, now, roster) : v === 'contact' ? contactOne(p, now, decodeURIComponent(i || ''), roster, m, ui.contactBack)
         : v === 'photo' ? photoScreen(p, now) : v === 'photoone' ? photoView(p, now, Number(i))
         : v === 'note' ? noteScreen(p, now) : v === 'noteone' ? noteOne(p, now, Number(i)) : v === 'search' ? searchScreen(p, now) : v === 'page' ? pageView(p, now, i || '', paging.has(`${nameKey(p.owner)}:${i}`)) : v === 'tabs' ? tabsScreen(p, now) : v === 'marks' || v === 'history' ? marksScreen(p, now, v === 'history') : v === 'searchone' ? searchOne(p, now, Number(i), searching.has(`${nameKey(p.owner)}:${i}`))
-        : v === 'cal' ? calScreen(p, now, m, i || '') : v === 'calone' ? calOne(p, now, Number(i), m) : v === 'map' ? mapScreen(p, now, m, i || '')
+        : v === 'cal' ? calScreen(p, now, m, i || '') : v === 'calone' ? calOne(p, now, Number(i), m) : v === 'map' ? mapScreen(p, now, m, i || '') : v === 'mapq' ? mapSearchScreen(p, now, m, i || '', ui.mapQ || '') : v === 'mapc' ? mapCityScreen(p, now, m, i || '')
         : v === 'sns' ? snsScreen(p, now) : v === 'snspost' ? snsPost(p, now, Number(i)) : v === 'mail' ? mailScreen(p, now) : v === 'mailone' ? mailOne(p, now, Number(i))
         : v === 'diary' ? diaryScreen(p, now, i || '') : v === 'diaryone' ? diaryOne(p, now, Number(i)) : v === 'setsync' ? syncSettings(p, now, ui) : v === 'setsyncpick' ? syncPick(p, now, ui) : v === 'set' ? setScreen(p, now, m, ui) : v === 'stime' ? screenTimeScreen(p, now, i || '') : v === 'settheme' ? setTheme(p, now) : v === 'setscreenholder' ? setScreenHolderView(p, now, m, ui.holderBack) : v === 'setdate' ? setDate(p, now, m) : v === 'setplace' ? setPlace(p, now, m, ui) : v === 'prep' ? prepScreen(p, now, m, ui.prep) : v === 'setremake' ? setRemake(p, now, ui, m) : v === 'setprofile' ? setOwnerProfile(p,now,ui.profileState) : v === 'setwho' ? setWho(p, now, m) : v === 'setlore' ? setLore(p, now, m, ui)
         : v === 'cam' ? camScreen(p, now, i === undefined ? -1 : Number(i), shooting.has(nameKey(p.owner))) : homeScreen(p, now, m);
@@ -108,7 +111,7 @@ export async function openPhone(who = null) {
     if (!stillHere()) return;
     if (Object.values(m.phones).some(p => p.money)) await saveMeta();
     if (!stillHere()) return;
-    let view = 'lock', contactBack = '', sheet = false, adding = false, loreOpen = false;
+    let view = 'lock', mapQ = '', contactBack = '', sheet = false, adding = false, loreOpen = false;
     let syncWhy = '', pickMore = 30;
     const profileStates = new Map();
     const loreExp = new Set(), loreEnts = new Map(); // books opened to their entries, and their entries once read
@@ -186,6 +189,58 @@ export async function openPhone(who = null) {
             if (el.isConnected) { const f = el.querySelector('.pcf_field'); f.focus({ preventScroll: true }); f.select(); }
         });
     };
+    // the same sheet, a row a place: its flag, a name, a line under it (시안 B, docs/mockups/phone-place-ask); title may carry a flag
+    const askPick = (title, text, opts, flag = '', no = '나중에') => {
+        ask?.done(false);
+        return new Promise(done => {
+            const el = $(`<div class="pcf" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="pcf_box"><div class="pcf_card"><div class="pcf_msg"><b>${flag ? `${flagSvg(flag, 22)} ` : ''}${esc(title)}</b>${text ? `<span>${esc(text)}</span>` : ''}</div><div class="pcf_btns v">${opts.map(o => `<div role="button" tabindex="0" class="pcf_ok safe pcf_pick" data-v="${esc(o.v)}">${o.flag ? flagSvg(o.flag, 26) : ''}<span class="pcf_pt"><span>${esc(o.label)}</span>${o.sub || o.time ? `<small>${esc(o.sub || '')}${o.sub && o.time ? ' · ' : ''}${o.time ? `<span class="pcf_tm">${esc(o.time)}</span>` : ''}</small>` : ''}</span></div>`).join('')}<div role="button" tabindex="0" class="pcf_no">${esc(no)}</div></div></div></div></div>`)[0];
+            ask = { el, done: v => { ask = null; el.remove(); done(v); } };
+            placeAsk();
+            if (el.isConnected) el.querySelector('.pcf_no').focus({ preventScroll: true });
+        });
+    };
+    // which country: the twelve the stories go to most as flags, "다른 나라" to type one; resolves a code, 'other', or false
+    const PLACE_FLAGS = ['kr', 'jp', 'cn', 'us', 'gb', 'de', 'fr', 'it', 'es', 'ca', 'au', 'ru'];
+    const askCountry = (title, text) => {
+        ask?.done(false);
+        return new Promise(done => {
+            const el = $(`<div class="pcf" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="pcf_box"><div class="pcf_card"><div class="pcf_msg"><b>${esc(title)}</b>${text ? `<span>${esc(text)}</span>` : ''}</div><div class="pcf_grid">${PLACE_FLAGS.map(c => `<div role="button" tabindex="0" class="pcf_ok pcf_cty" data-v="${c.toUpperCase()}">${flagSvg(c, 26)}<span>${esc(FLAG_NAME[c])}</span></div>`).join('')}</div><div class="pcf_btns"><div role="button" tabindex="0" class="pcf_no">나중에</div><div role="button" tabindex="0" class="pcf_ok safe" data-v="other">다른 나라</div></div></div></div></div>`)[0];
+            ask = { el, done: v => { ask = null; el.remove(); done(v); } };
+            placeAsk();
+            if (el.isConnected) el.querySelector('.pcf_no').focus({ preventScroll: true });
+        });
+    };
+    // the clock in a zone now: the story's time where the owner is, moved by the zones' gap (today's)
+    const zoneOff = tz => { try { const d = new Date(), q = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).formatToParts(d).map(x => [x.type, x.value])); return Math.round((Date.UTC(q.year, q.month - 1, q.day, q.hour % 24, q.minute) - d.getTime()) / 6e4); } catch { return null; } };
+    const clockIn = (p, tz) => {
+        const base = placeInfo(p).owner.tz, a = zoneOff(tz), b = base ? zoneOff(base) : null, t = /(\d{2}):(\d{2})/.exec(String(p?.now || ''));
+        if (a === null) return '';
+        const mins = t && b !== null ? Number(t[1]) * 60 + Number(t[2]) + a - b : null;
+        if (mins === null) { const d = new Date(Date.now() + a * 6e4); return `지금 ${d.getUTCHours()}:${String(d.getUTCMinutes()).padStart(2, '0')}`; }
+        const w = ((mins % 1440) + 1440) % 1440;
+        return `지금 ${Math.floor(w / 60)}:${String(w % 60).padStart(2, '0')}`;
+    };
+    // a place's flag by the country its label starts with ("영국 케임브리지"), else by its zone's area
+    // a long list of cities under a zone: its first three, so the line fits ("LA · 샌프란시스코 · 시애틀")
+    const fewCities = t => { const xs = String(t || '').split(' · '); return xs.length > 3 && t.length > 18 ? xs.slice(0, 3).join(' · ') : t; };
+    const flagOfLabel = label => Object.entries(FLAG_NAME).find(([, n]) => String(label).startsWith(`${n} `))?.[0] || '';
+    // which zone a typed city is in, when the app can't tell: which of the places that name goes by, or which country (and
+    // where in it, for a country with many clocks); resolves a zone, or '' (asked and answered nothing)
+    const askZone = async (p, name, city, err) => {
+        if (err.choices) {
+            const v = await askPick(`어느 ${city}예요?`, `${name}의 도시`, err.choices.map(c => { const sp = /^(.*?) \((.*)\)$/.exec(c.label); return { v: c.tz, label: sp ? sp[1] : c.label, sub: fewCities(sp?.[2] || ''), time: clockIn(p, c.tz), flag: flagOfLabel(c.label) }; }));
+            return v || '';
+        }
+        let code = await askCountry('어느 나라 도시예요?', `"${city}"는 모르는 도시예요`);
+        if (!code) return '';
+        if (code === 'other') { const t = await askInput('어느 나라예요?', '한국어 · 영어 · 두 글자 (독일, Germany, DE)'); if (!t) return ''; code = countryOf(t); }
+        const zs = code ? countryZones(code) : [];
+        if (!zs.length) { await askSheet('시간대를 찾지 못했어요', '다른 도시 이름이나 나라로 다시 적어 주세요.', '확인', true); return ''; }
+        if (zs.length === 1) return zs[0].tz;
+        const cc = code.toLowerCase(), country = FLAG_NAME[cc] || code;
+        const v = await askPick(`${country} 어디쯤이에요?`, '시간대가 여러 개인 나라예요', zs.map(z => { const sp = /^(.*?) \((.*)\)$/.exec(z.label); return { v: z.tz, label: sp ? sp[1] : z.label, sub: fewCities(sp?.[2] || ''), time: clockIn(p, z.tz) }; }), FLAG_NAME[cc] ? cc : '');
+        return v || '';
+    };
     // 상태창 날짜 순서: asked once per chat before the first make or reflection (closing it reads 월.일 and asks again next time)
     const askDateOrder = async () => {
         if (!needsDateOrder(m)) return;
@@ -254,7 +309,7 @@ export async function openPhone(who = null) {
         // a screen that can't be drawn says why (and in the console), instead of leaving the phone blank or on another screen
         let html;
         tidyKo(p);
-        try { html = screen(p, view, m, roster, { syncN: view === 'set' ? syncLeft(p, m) : null, syncRows: view.startsWith('setsync') ? syncRows() : [], syncWhy, syncPending, pickMore, loreExp, loreEnts, remake, contactBack, investing, profileState:profileStates.get(nameKey(p.owner)), placeReading }); }
+        try { html = screen(p, view, m, roster, { syncN: view === 'set' ? syncLeft(p, m) : null, syncRows: view.startsWith('setsync') ? syncRows() : [], syncWhy, syncPending, pickMore, loreExp, loreEnts, remake, contactBack, investing, profileState:profileStates.get(nameKey(p.owner)), placeReading, mapQ }); }
         catch (err) {
             console.error('[narrative-archive] phone screen', view, err);
             toastr.error(`${view} 화면을 그리지 못했어요: ${err?.message || err}`, '캐릭터 휴대폰');
@@ -554,7 +609,7 @@ export async function openPhone(who = null) {
         if (go === 'contact' && !view.startsWith('contact')) contactBack = view;
         // picking another payment on 고정 지출 keeps the list where it was
         const stay = ['fixed', 'banksend', 'stmt', 'wallet', 'stime', 'map'].includes(go) && view.split(':')[0] === go ? $root.find('.ax_scroll').scrollTop() : null;
-        view = ['ivnotes', 'ivschedule', 'ivhistory', 'stock', 'ivprices', 'thread', 'draft', 'page', 'acct', 'tx', 'txdoc', 'card', 'pass', 'order', 'track', 'voiceone', 'callwho', 'contact', 'noteone', 'photoone', 'searchone', 'calone', 'mailone', 'diaryone', 'snspost', 'alarm', 'hsteps', 'hsleep', 'hwork', 'hheart', 'hwater', 'hweight', 'folder', 'file', 'wcity', 'dshop', 'dorder', 'ditem', 'drate'].includes(go) || (['cal', 'diary', 'shop', 'voice', 'invest', 'health', 'fixed', 'banksend', 'stmt', 'wallet', 'stime', 'map'].includes(go) && this.dataset.i) ? `${go}:${['ivnotes', 'ivschedule', 'ivhistory', 'stock', 'ivprices'].includes(go) ? encodeURIComponent(this.dataset.i || '') : this.dataset.i}` : go;
+        view = ['ivnotes', 'ivschedule', 'ivhistory', 'stock', 'ivprices', 'thread', 'draft', 'page', 'acct', 'tx', 'txdoc', 'card', 'pass', 'order', 'track', 'voiceone', 'callwho', 'contact', 'noteone', 'photoone', 'searchone', 'calone', 'mailone', 'diaryone', 'snspost', 'alarm', 'hsteps', 'hsleep', 'hwork', 'hheart', 'hwater', 'hweight', 'folder', 'file', 'wcity', 'dshop', 'dorder', 'ditem', 'drate', 'mapc'].includes(go) || (['cal', 'diary', 'shop', 'voice', 'invest', 'health', 'fixed', 'banksend', 'stmt', 'wallet', 'stime', 'map', 'mapq'].includes(go) && this.dataset.i) ? `${go}:${['ivnotes', 'ivschedule', 'ivhistory', 'stock', 'ivprices'].includes(go) ? encodeURIComponent(this.dataset.i || '') : this.dataset.i}` : go;
         const mail = go === 'mailone' ? phone()?.mails?.[Number(this.dataset.i)] : null;
         if (mail?.unread) { mail.unread = false; saveMeta(); }
         const p0 = phone();
@@ -564,13 +619,24 @@ export async function openPhone(who = null) {
         if (calls.length) { calls.forEach(c => { c.seen = true; }); saveMeta(); }
         const posts = go === 'sns' ? (p0?.posts || []).filter(x => !x.seen) : [];
         if (posts.length) { posts.forEach(x => { x.seen = true; }); saveMeta(); }
+        // 도시 찾기: a fresh search from the map; a town opened goes first among the recent ones
+        if (go === 'mapq' && !view.startsWith('mapq:') && this.closest('.mq_wx') === null) mapQ = '';
+        if (go === 'mapc' && p0) { const n = placeNames(Number(String(this.dataset.i).split('~')[0]))?.ko; if (n && p0.mapSeen?.[0] !== n) { p0.mapSeen = [n, ...(p0.mapSeen || []).filter(x => x !== n)].slice(0, 5); saveMeta(); } }
         sheet = false;
         drawPhone();
         $root.find('.na_ph_body, .ax_scroll').scrollTop(view.startsWith('thread') ? 1e6 : stay ?? 0);
+        if (view === 'mapq' && !mapQ) $root.find('.mq_in').trigger('focus');
         if (go === 'searchone' && !phone()?.searches?.[Number(this.dataset.i)]?.results?.length) loadSearch(Number(this.dataset.i));
         if (go === 'page') openWeb(String(this.dataset.i));
         if (go === 'setprofile') editProfile();
     });
+    // 도시 찾기: the results follow the typing (only the results are drawn again, so the field keeps its focus)
+    const mapType = el => { mapQ = el.textContent.replace(/\s+/g, ' '); const p = phone(); if (!p) return; $root.find('.mq_res').html(mapResults(p, m, mapQ)).scrollTop(0); $root.find('.mq_sheet').toggleClass('mq_full', !!mapQ.trim()); $root.find('.mq_x').toggleClass('on', !!mapQ); };
+    $root.on('input', '.mq_in', function () { mapType(this); });
+    $root.on('keydown', '.mq_in', function (e) { e.stopPropagation(); if (e.key === 'Enter' && !e.originalEvent?.isComposing && e.keyCode !== 229) { e.preventDefault(); $root.find('.mq_res [data-go]').first().trigger('click'); } });
+    $root.on('click', '.mq_x', function (e) { e.stopPropagation(); const f = $root.find('.mq_in')[0]; if (!f) return; f.textContent = ''; mapType(f); f.focus(); });
+    // a paste is plain text on one line (the field is an editable div)
+    $root.on('paste', '.mq_in', function (e) { e.preventDefault(); const t = (e.originalEvent?.clipboardData?.getData('text/plain') || '').replace(/\s+/g, ' '); document.execCommand('insertText', false, t); });
     // the page is made once, the first time a search is opened; the screen can change while it loads
     const loadSearch = async k => {
         const p = phone(), id = `${nameKey(p.owner)}:${k}`;
@@ -951,7 +1017,11 @@ export async function openPhone(who = null) {
     const placeCity = async (name, now) => {
         const v = await askInput(`${name}의 도시`, '시간대는 도시 이름으로 찾아요.', now || '');
         if (!v || v === now) return;
-        try { await setPlaceCity(m, tgt(), name, v); } catch (err) { toastr.warning(String(err?.message || err), '위치 정보'); }
+        try { await setPlaceCity(m, tgt(), name, v); } catch (err) {
+            if (!err?.choices && !err?.askCountry) { toastr.warning(String(err?.message || err), '위치 정보'); return drawPhone(true); }
+            const tz = await askZone(tgt(), name, v, err);
+            if (tz) { try { await setPlaceCity(m, tgt(), name, v, tz); } catch (e2) { toastr.warning(String(e2?.message || e2), '위치 정보'); } }
+        }
         drawPhone(true);
     };
     $root.on('change', '.na_ph_plives', async function (e) { e.stopPropagation(); if (placeLocked()) return drawPhone(true); if (this.value) await setOwnerLives(m, tgt(), this.value); drawPhone(true); });
@@ -985,7 +1055,7 @@ export async function openPhone(who = null) {
     $root.on('click', '.na_ph_yearshow', async e => {
         e.stopPropagation();
         const pre = !phone() && view === 'prep' ? phonePre(m, owner) : null;
-        if (pre) { await setPreYear(m, owner, pre.noYear ? Number(storyYear(m, { ...pre, year: 0 })) || new Date().getFullYear() : null); return drawPhone(true); }
+        if (pre) { await setPreYear(m, owner, pre.noYear ? Number(storyYear(m, { ...pre, year: 0, noYear: false })) || new Date().getFullYear() : null); return drawPhone(true); }
         const p = phone(); if (!p) return; p.noYear = !p.noYear; if (!p.noYear && !p.year) p.year = Number(storyYear(m, { ...p, year: 0 })) || new Date().getFullYear(); drawPhone(true); await saveMeta(); });
     $root.on('click', '.na_ph_setinj', async e => { e.stopPropagation(); const p = phone(); p.inject = !p.inject; drawPhone(true); await saveMeta(); applyInjection(); });
     // what opens under the phone scrolls into sight, so the tap visibly does something

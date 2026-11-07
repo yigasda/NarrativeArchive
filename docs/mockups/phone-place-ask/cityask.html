@@ -1,0 +1,87 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>도시 고르기 시안</title><style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#d9dce2;font-family:-apple-system,'SF Pro Text','Noto Sans KR',sans-serif;color:#161b22;padding:28px;width:1340px}
+h1{font-size:22px;margin:0 0 6px}p.s{font-size:13.5px;color:#555;margin:0 0 20px}
+.var{margin-bottom:30px}.var>b{display:block;font-size:17px;margin:0 0 4px}.var>small{display:block;font-size:12.5px;color:#666;margin:0 0 12px}
+.row{display:flex;gap:26px}
+.ph{width:390px;height:844px;border-radius:44px;border:9px solid #111;background:#f2f2f7;position:relative;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+.ph>small{position:absolute;top:-24px;left:0;font-size:12px;color:#555}
+.cap{font-size:12.5px;color:#555;margin:0 0 6px;height:18px}
+.bar{height:50px;display:flex;justify-content:space-between;align-items:center;padding:6px 30px 0;font-weight:600;font-size:15px}
+.h1{padding:18px 22px 10px;font-size:28px;font-weight:700}
+.sec{font-size:12.5px;color:#7b818c;margin:14px 30px 6px}
+.card{background:#fff;border-radius:16px;margin:0 16px}
+.r{display:flex;justify-content:space-between;padding:13px 16px;font-size:15px;border-top:.5px solid #e5e5ea}.r:first-child{border:0}.r i{font-style:normal;color:#8a929d}
+.flag{display:inline-block;vertical-align:-3px;border-radius:3px;box-shadow:0 0 0 .5px rgba(0,0,0,.14)}
+.opt{display:flex;flex-direction:column;align-items:center;gap:2px}.opt .sub{font-size:12.5px;color:#7b818c;font-weight:400}
+.optf{display:flex;align-items:center;gap:10px;padding:0 18px;justify-content:flex-start}
+.optf .t{display:flex;flex-direction:column;align-items:flex-start;gap:1px;font-size:16px}.optf .t small{font-size:12px;color:#7b818c}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:0 16px 14px;position:relative}
+.cty{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 0;border-radius:12px;background:rgba(255,255,255,.7);font-size:11.5px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+/* bottom sheet (C) */
+.dim{position:absolute;inset:0;background:rgba(15,20,28,.38)}
+.bs{position:absolute;left:0;right:0;bottom:0;top:120px;background:#f4f5f7;border-radius:22px 22px 0 0;box-shadow:0 -6px 24px rgba(0,0,0,.14);display:flex;flex-direction:column}
+.grab{width:38px;height:5px;border-radius:3px;background:#cfd4dc;margin:8px auto 10px}
+.bst{display:flex;justify-content:space-between;align-items:center;padding:0 20px 10px}.bst b{font-size:18px}.bst span{color:#2f6bff;font-size:15px}
+.fld{height:44px;margin:0 16px 8px;border-radius:14px;background:#e9ecf0;display:flex;align-items:center;gap:8px;padding:0 12px;font-size:16px;color:#8a929d}
+.rw{display:flex;align-items:center;gap:12px;padding:12px 16px;border-top:1px solid #eef0f3;font-size:15px}.rw:first-child{border:0}.rw small{display:block;font-size:12.5px;color:#7b818c}
+.rw .ck{margin-left:auto;color:#2f6bff;font-weight:700}
+.sbtn{margin:10px 16px 26px;height:48px;border-radius:999px;background:#2f6bff;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 4px 12px rgba(47,107,255,.3)}
+.pcf { position: absolute; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center; padding: 0 24px; background: rgba(15, 20, 28, 0.38); font-family: -apple-system, 'SF Pro Text', 'Noto Sans KR', sans-serif; --axff: -apple-system, 'SF Pro Text', 'Noto Sans KR', sans-serif; letter-spacing: normal; --axls: normal; line-height: normal; animation: pcf_dim 0.25s ease; }
+/* the phone's alert (3.170.5x, docs/mockups/phone-sheet G3): glass without a blur (a blur was slow on phones and
+   barely showed), a sheen over the top half, a light edge, three soft shadows. Buttons are iOS alert cells */
+.pcf_box { width: 100%; max-width: 290px; animation: pcf_in 0.28s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.pcf_card { position: relative; overflow: hidden; border-radius: 26px; --axr: 26px; background: linear-gradient(180deg, #ffffff 0%, #ebeff7 41.5%, #d6deea 100%); box-shadow: inset 0 -15px 25px -12px rgba(40, 60, 90, 0.26), inset 0 1px 0 #fff, 0 1px 1px rgba(10, 16, 28, 0.08), 0 10px 24px rgba(10, 16, 28, 0.18), 0 30px 70px rgba(10, 16, 28, 0.34); }
+.pcf_card::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 51.4%; background: linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(255, 255, 255, 0)); pointer-events: none; }
+.pcf_card::after { content: ""; position: absolute; inset: 0; z-index: 2; border-radius: inherit; padding: 1px; background: linear-gradient(160deg, #fff, rgba(255, 255, 255, 0.47) 35%, rgba(255, 255, 255, 0.19) 65%, rgba(255, 255, 255, 0.96)); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
+.pcf_msg { position: relative; display: flex; flex-direction: column; gap: 5px; padding: 22px 20px 16px; text-align: center; }
+.pcf_msg b { font-size: 17px; font-weight: 600; color: #161b22; }
+.pcf_msg span { font-size: 13.5px; --axfs: 13.5px; line-height: 1.4; color: #4f5763; }
+.pcf_btns { position: relative; display: flex; border-top: 0.5px solid rgba(60, 60, 67, 0.2); }
+.pcf_btns > div + div { border-left: 0.5px solid rgba(60, 60, 67, 0.2); }
+.pcf_btns.v { flex-direction: column; }
+.pcf_btns.v > div + div { border-left: 0; border-top: 0.5px solid rgba(60, 60, 67, 0.2); }
+.pcf_ok, .pcf_no { flex: 1; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 17px; --axfs: 17px; cursor: pointer; outline: none; }
+.pcf_btns.v > div { flex: none; height: 50px; }
+.pcf_ok { color: #d0453a; font-weight: 600; }
+.pcf_ok.safe, .pcf_no { color: #2c4a80; }
+.pcf_btns.v .pcf_ok { font-weight: 400; color: #161b22; font-size: 16px; --axfs: 16px; }
+.pcf_btns.v .pcf_no { font-weight: 600; }
+.pcf_btns.v .pcf_ok.pcf_bad { color: #d0453a; }
+.pcf_btns.even .pcf_ok:not(.pcf_lead) { color: #6b7380; --axfg: #6b7380; }
+.pcf_in { position: relative; padding: 0 16px 16px; }
+.pcf .pcf_field { box-sizing: border-box; width: 100%; height: 40px; margin: 0; padding: 0 12px; border: 0; border-radius: 12px; background: #fff; color: #161b22; font: inherit; font-size: 16px; box-shadow: inset 0 0 0 1px rgba(60, 60, 67, 0.16); outline: none; }
+.pcf_sub { margin-right: 8px; font-size: 13.5px; --axfs: 13.5px; color: #4f5763; }
+.pcf_ok:active, .pcf_no:active { background: rgba(60, 60, 67, 0.08); }
+@keyframes pcf_dim { from { background: rgba(15, 20, 28, 0); } }
+@keyframes pcf_in { from { transform: scale(1.08); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .pcf, .pcf_box { animation: none; } }
+.pcf{animation:none}.pcf_box{animation:none}
+</style></head><body><h1>위치 정보 › 도시 고르기 · 시안 3가지</h1><p class="s">"케임브리지"처럼 두 곳이 같은 이름일 때 ①, 모르는 도시라 나라를 물을 때 ②, 시간대가 여러 개인 나라(미국)일 때 ③</p><div id="o"></div>
+<script src="../phone-map/search/flags.js"></script><script>
+const fl=(c,w=22)=>`<svg class="flag" viewBox="0 0 30 20" width="${w}" height="${(w*2/3).toFixed(1)}">${FLAGS.F[c]}</svg>`;
+const back=`<div class="bar"><span>9:41</span><span>●●● ▮</span></div><div style="padding:0 16px"><span style="display:inline-grid;place-items:center;width:38px;height:38px;border-radius:50%;background:#fff">‹</span></div><div class="h1">위치 정보</div>
+<div class="sec">폰 주인</div><div class="card"><div class="r">Mara<i>사는 도시 · Varo ›</i></div><div class="r">시간대<i>Europe/Berlin</i></div></div>
+<div class="sec">주변 사람</div><div class="card"><div class="r">Ren<i>Cambridge ›</i></div><div class="r">Ivo<i>Varo ›</i></div><div class="r">Anja<i>Lisboa ›</i></div></div>`;
+const pcf=(inner)=>`<div class="pcf"><div class="pcf_box"><div class="pcf_card">${inner}</div></div></div>`;
+const msg=(t,s)=>`<div class="pcf_msg"><b>${t}</b>${s?`<span>${s}</span>`:''}</div>`;
+const ph=(cap,inner)=>`<div><div class="cap">${cap}</div><div class="ph">${back}${inner}</div></div>`;
+const V=[];
+// A
+V.push(['A. 지금 확인 시트 그대로 (글자만)','가운데 유리 카드, 줄마다 이름 + 작은 설명. 나라는 글로 적어요(한국어 · 영어 · 두 글자 다 받아요)',[
+ ph('① 겹치는 이름',pcf(msg('어느 케임브리지예요?','Ren이 사는 곳')+`<div class="pcf_btns v"><div class="pcf_ok opt">영국 케임브리지<span class="sub">런던 시간</span></div><div class="pcf_ok opt">미국 케임브리지<span class="sub">매사추세츠 · 뉴욕 시간</span></div><div class="pcf_no">나중에</div></div>`)),
+ ph('② 나라 묻기',pcf(msg('어느 나라 도시예요?','"Varo"는 모르는 도시예요. 나라를 알면 시간대를 맞출게요.')+`<div class="pcf_in"><input class="pcf_field" value="독일" style="font-size:16px"></div><div class="pcf_btns"><div class="pcf_no">나중에</div><div class="pcf_ok safe">찾기</div></div>`)),
+ ph('③ 시간대 고르기',pcf(msg('미국 어디쯤이에요?','시간대가 여러 개인 나라예요')+`<div class="pcf_btns v"><div class="pcf_ok opt">동부<span class="sub">뉴욕 · 보스턴 · 마이애미</span></div><div class="pcf_ok opt">중부<span class="sub">시카고 · 휴스턴 · 댈러스</span></div><div class="pcf_ok opt">산악<span class="sub">덴버 · 피닉스</span></div><div class="pcf_ok opt">서부<span class="sub">LA · 샌프란시스코 · 시애틀</span></div><div class="pcf_no">나중에</div></div>`))]]);
+// B
+V.push(['B. 같은 카드 + 국기','A와 같은 카드에 국기를 붙여요. 나라는 자주 나오는 나라 12개를 국기 칸으로, 없으면 "다른 나라"에서 적어요',[
+ ph('① 겹치는 이름',pcf(msg('어느 케임브리지예요?','Ren이 사는 곳')+`<div class="pcf_btns v"><div class="pcf_ok optf">${fl('gb',26)}<span class="t">영국 케임브리지<small>런던 시간 · 지금 17:42</small></span></div><div class="pcf_ok optf">${fl('us',26)}<span class="t">미국 케임브리지<small>매사추세츠 · 지금 12:42</small></span></div><div class="pcf_no">나중에</div></div>`)),
+ ph('② 나라 묻기',pcf(msg('어느 나라 도시예요?','"Varo"는 모르는 도시예요')+`<div class="grid">${['kr','jp','cn','us','gb','de','fr','it','es','ca','au','ru'].map(c=>`<span class="cty"${c=='de'?' style="background:#2f6bff;color:#fff"':''}>${fl(c,26)}${FLAGS.NAME[c]}</span>`).join('')}</div><div class="pcf_btns"><div class="pcf_no">나중에</div><div class="pcf_ok safe">다른 나라</div></div>`)),
+ ph('③ 시간대 고르기',pcf(msg(`${fl('us',22)} 미국 어디쯤이에요?`,'시간대가 여러 개인 나라예요')+`<div class="pcf_btns v"><div class="pcf_ok optf"><span class="t">동부<small>뉴욕 · 보스턴 · 마이애미 · 지금 12:42</small></span></div><div class="pcf_ok optf"><span class="t">중부<small>시카고 · 휴스턴 · 지금 11:42</small></span></div><div class="pcf_ok optf"><span class="t">산악<small>덴버 · 피닉스 · 지금 10:42</small></span></div><div class="pcf_ok optf"><span class="t">서부<small>LA · 샌프란시스코 · 지금 9:42</small></span></div><div class="pcf_no">나중에</div></div>`))]]);
+// C
+const rows=a=>a.map(([c,t,s,on])=>`<div class="rw">${c?fl(c,26):''}<span>${t}<small>${s}</small></span>${on?'<span class="ck">✓</span>':''}</div>`).join('');
+V.push(['C. 아래에서 올라오는 시트 (도시 찾기와 같은 모양)','아래 시트에 국기 줄. 나라 묻기는 검색칸 + 전체 나라 목록(78개, 치면 좁혀져요). 고르고 아래 큰 버튼으로 저장',[
+ ph('① 겹치는 이름',`<div class="dim"></div><div class="bs" style="top:470px"><i class="grab"></i><div class="bst"><b>어느 케임브리지예요?</b><span>나중에</span></div><div class="card" style="margin:0 16px">${rows([['gb','영국 케임브리지','런던 시간 · 지금 17:42',1],['us','미국 케임브리지','매사추세츠 · 지금 12:42']])}</div><div class="sbtn">이 도시로</div></div>`),
+ ph('② 나라 묻기',`<div class="dim"></div><div class="bs"><i class="grab"></i><div class="bst"><b>"Varo"는 어느 나라예요?</b><span>나중에</span></div><div class="fld">⌕ 나라 찾기 (독일, Germany, DE …)</div><div class="card" style="margin:0 16px;overflow:hidden">${rows([['kr','한국','Asia/Seoul'],['jp','일본','Asia/Tokyo'],['de','독일','Europe/Berlin',1],['us','미국','시간대 4개'],['gb','영국','Europe/London'],['fr','프랑스','Europe/Paris'],['it','이탈리아','Europe/Rome']])}</div><div class="sbtn">이 나라로</div></div>`),
+ ph('③ 시간대 고르기',`<div class="dim"></div><div class="bs" style="top:330px"><i class="grab"></i><div class="bst"><b>${fl('us',22)} 미국 어디쯤이에요?</b><span>‹ 나라</span></div><div class="card" style="margin:0 16px">${rows([['','동부','뉴욕 · 보스턴 · 마이애미 · 지금 12:42',1],['','중부','시카고 · 휴스턴 · 댈러스 · 지금 11:42'],['','산악','덴버 · 피닉스 · 지금 10:42'],['','서부','LA · 샌프란시스코 · 시애틀 · 지금 9:42']])}</div><div class="sbtn">이 시간대로</div></div>`)]]);
+document.getElementById('o').innerHTML=V.map(([t,s,ps])=>`<div class="var"><b>${t}</b><small>${s}</small><div class="row">${ps.join('')}</div></div>`).join('');
+</script></body></html>

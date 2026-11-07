@@ -201,7 +201,7 @@ const delRow = (kind, i, label) => `<div class="ax_card ax_delcard"><button type
 // a list row that slides left to show 삭제 (메시지 · 메일 · 통화)
 const swipeRow = (kind, i, row) => `<div class="ax_swp"><button type="button" class="na_ph_rm ax_swdel" data-kind="${kind}" data-i="${esc(String(i))}">${ax('trash2', 21, 'currentColor', 2)}<span>삭제</span></button>${row}</div>`;
 const delBtn = (kind, i, cls, inner) => `<button type="button" class="na_ph_rm ${cls}" data-kind="${kind}" data-i="${esc(String(i))}" aria-label="지우기">${inner}</button>`;
-export const AXB = { clock: 'clockc', timer: 'clockc', wclock: 'clockc', alarm: 'clockc', health: 'health', hsteps: 'health', hsleep: 'health', hcmp: 'health', hwork: 'health', hheart: 'health', hwater: 'health', hweight: 'health', files: 'files', folder: 'files', file: 'files', weather: 'sky', wcity: 'sky', wlist: 'sky', dlv: 'dlv', delivery: 'dlv', dshop: 'dlv', dcart: 'dlv', dorders: 'dlv', dorder: 'dlv', ditem: 'dlv', dpay: 'dlv', drate: 'dlv', setprofile: 'slate', ivnotes: 'invest', ivschedule: 'invest', ivhistory: 'invest', invest: 'invest', stock: 'invest', ivactivity: 'invest', ivwatch: 'invest', ivstakes: 'invest', ivcash: 'invest', ivprices: 'invest', msg: 'blue', thread: 'blue', call: 'blue', callmiss: 'blue', callwho: 'blue', contacts: 'blue', contact: 'blue', draft: 'blue', page: 'sky', tabs: 'sky', marks: 'sky', history: 'sky', bank: 'bank', acct: 'bank', tx: 'bank', fixed: 'bank', banknote: 'bank', banksend: 'bank', stmt: 'bank', txdoc: 'bank', bankmore: 'bank', wallet: 'wallet', card: 'wallet', pass: 'wallet', shop: 'shop', order: 'shop', track: 'shop', voice: 'voice', voiceone: 'voice', photo: 'apri', photoone: 'apri', note: 'butter', noteone: 'butter', search: 'sky', searchone: 'sky', cal: 'brick', calone: 'brick', mail: 'sky', mailone: 'sky', set: 'slate', settheme: 'slate', setdate: 'slate', setscreenholder: 'slate', setplace: 'slate', prep: 'slate', setlore: 'slate', setwho: 'slate', setremake: 'slate', setsync: 'slate', setsyncpick: 'slate', stime: 'stime', cam: 'apri', map: 'blue' };
+export const AXB = { clock: 'clockc', timer: 'clockc', wclock: 'clockc', alarm: 'clockc', health: 'health', hsteps: 'health', hsleep: 'health', hcmp: 'health', hwork: 'health', hheart: 'health', hwater: 'health', hweight: 'health', files: 'files', folder: 'files', file: 'files', weather: 'sky', wcity: 'sky', wlist: 'sky', dlv: 'dlv', delivery: 'dlv', dshop: 'dlv', dcart: 'dlv', dorders: 'dlv', dorder: 'dlv', ditem: 'dlv', dpay: 'dlv', drate: 'dlv', setprofile: 'slate', ivnotes: 'invest', ivschedule: 'invest', ivhistory: 'invest', invest: 'invest', stock: 'invest', ivactivity: 'invest', ivwatch: 'invest', ivstakes: 'invest', ivcash: 'invest', ivprices: 'invest', msg: 'blue', thread: 'blue', call: 'blue', callmiss: 'blue', callwho: 'blue', contacts: 'blue', contact: 'blue', draft: 'blue', page: 'sky', tabs: 'sky', marks: 'sky', history: 'sky', bank: 'bank', acct: 'bank', tx: 'bank', fixed: 'bank', banknote: 'bank', banksend: 'bank', stmt: 'bank', txdoc: 'bank', bankmore: 'bank', wallet: 'wallet', card: 'wallet', pass: 'wallet', shop: 'shop', order: 'shop', track: 'shop', voice: 'voice', voiceone: 'voice', photo: 'apri', photoone: 'apri', note: 'butter', noteone: 'butter', search: 'sky', searchone: 'sky', cal: 'brick', calone: 'brick', mail: 'sky', mailone: 'sky', set: 'slate', settheme: 'slate', setdate: 'slate', setscreenholder: 'slate', setplace: 'slate', prep: 'slate', setlore: 'slate', setwho: 'slate', setremake: 'slate', setsync: 'slate', setsyncpick: 'slate', stime: 'stime', cam: 'apri', map: 'blue', mapq: 'blue', mapc: 'blue' };
 export const AXB_C = { clockc: ['#f5a524', '#3a3220'], health: ['#e0405f', '#fbe3e8'], files: ['#2f6fbf', '#dfeaf8'], dlv: ['#1fa8a3', '#d9f4f3'], invest: ['#17695d', '#d9eee5'], blue: ['#2f6bff', '#e1e9ff'], apri: ['#a65a4e', '#f7e3d7'], butter: ['#7f6a22', '#f6edcf'], sky: ['#3f6a9e', '#dde8f4'], brick: ['#a14a42', '#f3dcd9'], slate: ['#454d5a', '#e6e8ec'], bank: ['#2c4a80', '#e2e9f5'], wallet: ['#3d4a66', '#e3e7ef'], shop: ['#2f7d74', '#d9efec'], voice: ['#8a5a2e', '#f2e7d6'], stime: ['#3f8fd8', '#e3f1fd'] };
 // people outside the archive get a letter on one of the home icons' colours
 const AX_AV = ['#8faed1', '#a699c9', '#d89f98', '#89b892', '#d494a7', '#a2a7af', '#dcc680'];
@@ -806,24 +806,26 @@ export function camScreen(p, now, k, busy) {
 // a final consonant (Ren → 렌과), the others without (Ivo → 이보와)
 const waOf = (m, n) => { const ko = glossaryEntries(m).find(e => e.src.toLowerCase() === String(n).toLowerCase())?.ko || String(n), c = ko.charCodeAt(ko.length - 1);
     return (c >= 0xac00 && c <= 0xd7a3 ? (c - 0xac00) % 28 : /[lmn]$|ng$/i.test(ko)) ? '과' : '와'; };
+// story times ("MM-DD HH:MM") in story order, not as text: 01-02 after 12-30 once the year turns (byStory, as axNewest)
+const storyCmp = now => byStory(now, x => x);
 function mapPlaces(m, p) {
-    const gone = new Set(p.hiddenPlaces || []), rows = new Map();
+    const gone = new Set(p.hiddenPlaces || []), rows = new Map(), cmp = storyCmp(p.now);
     const row = place => { const k = nameKey(place); if (!rows.has(k)) rows.set(k, { place, an: 0, vn: 0, with: [], city: '', last: '', day: '', time: '', date: '' }); return rows.get(k); };
     for (const x of placesOf(m, p.owner)) {
         if (gone.has(nameKey(x.place))) continue;
         const r = row(x.place); r.an += x.n;
-        if (!r.last || (x.day || '') > r.last) Object.assign(r, { last: x.day || '', day: x.day, date: x.date, time: x.time });
+        if (!r.last || cmp(x.day || '', r.last) > 0) Object.assign(r, { last: x.day || '', day: x.day, date: x.date, time: x.time });
     }
     for (const v of p.visits || []) {
         if (!v?.place || gone.has(nameKey(v.place))) continue;
         const r = row(v.place); r.vn++; if (v.home) r.home = true;
         for (const n of v.with || []) if (!r.with.some(w => nameKey(w) === nameKey(n))) r.with.push(n);
         const t = String(v.time || '');
-        if (v.city && (!r.city || t >= r.last)) r.city = v.city;
-        if (!r.last || t > r.last) Object.assign(r, { last: t, day: t.slice(0, 5), date: '', time: fmtTime(p, t) });
+        if (v.city && (!r.city || cmp(t, r.last) >= 0)) r.city = v.city;
+        if (!r.last || cmp(t, r.last) > 0) Object.assign(r, { last: t, day: t.slice(0, 5), date: '', time: fmtTime(p, t) });
     }
     // (the archive and the reflections can tell the same visit: the larger count, not both added)
-    const all = [...rows.values()].map(r => ({ ...r, n: Math.max(r.an, r.vn) })).sort((a, b) => (b.last || '').localeCompare(a.last || ''));
+    const all = [...rows.values()].map(r => ({ ...r, n: Math.max(r.an, r.vn) })).sort((a, b) => cmp(b.last || '', a.last || ''));
     // a place with no city of its own: the city it is, when it is one the visits name
     const cities = new Map(all.filter(r => r.city).map(r => [nameKey(r.city), r.city]));
     for (const r of all) if (!r.city && cities.has(nameKey(r.place))) r.city = cities.get(nameKey(r.place));
@@ -850,7 +852,7 @@ function mapDays(m, p, pl) {
 function mapStrip(p, now, m, pl, sel) {
     const all = mapDays(m, p, pl);
     if (!all.length) return '';
-    const nowP = parts(now), latest = all.map(x => x.day).sort().at(-1);
+    const nowP = parts(now), latest = all.map(x => x.day).sort(storyCmp(p.now)).at(-1);
     const mo = all.some(x => nowP && Number(x.day.slice(0, 2)) === nowP.mo) ? nowP.mo : Number(latest.slice(0, 2));
     const month = all.filter(x => Number(x.day.slice(0, 2)) === mo), d = x => Number(x.day.slice(3));
     const days = new Date(Date.UTC(Number(p.year) || 2001, mo, 0)).getUTCDate(), today = nowP && nowP.mo === mo ? nowP.d : 0;
@@ -897,7 +899,9 @@ function mapStrip(p, now, m, pl, sel) {
     const hits = towns.length > 1 ? blocks.map(([a, b], k) => { const t = runs(day => nameKey(byDay.get(day).at(-1).city || ''), 2).filter(r => r.k)[k]?.k; return t ? `<button type="button" class="mp_hit" style="left: ${((a - 1.3) / days * 100).toFixed(1)}%; width: ${((b - a + 1.6) / days * 100).toFixed(1)}%; top: ${(st.top - 22) / st.H * 100}%; height: ${(60 / st.H * 100).toFixed(1)}%" data-go="map" data-i="${esc(t)}" aria-label="${esc(t)}"></button>` : ''; }).join('') : '';
     return `<div class="ax_card mp_month"><div class="mp_mh"><span class="mp_lbl">${mo}월에 다닌 곳</span><span class="mp_big"><b class="cg_num">${places.length}</b><u>곳</u>${sub ? `<span>${esc(sub)}</span>` : ''}</span></div><div class="mp_st">${st.svg}${hits}</div>${extra}</div>`;
 }
-export function mapScreen(p, now, m, pick = '') {
+// the owner's towns (by city, the newest first, each its places) and the map each one wears — also for the search's
+// "다녀간 도시" and a visited town's look there
+export function mapTowns(p, m) {
     const pl = mapPlaces(m, p);
     // by city, the newest city first; the city alone ("Chicago") is its group's name, a row only when nothing closer there
     const groups = [];
@@ -906,22 +910,29 @@ export function mapScreen(p, now, m, pick = '') {
     // the home they live in now: first in its town
     for (const g of groups) g.rows.sort((a, b) => (b.home === 'now') - (a.home === 'now'));
     groups.sort((a, b) => !a.city - !b.city);
+    // the town's streets: by its name, never the same as another town's
+    const kinds = townKinds([...groups].reverse().map(x => ({ key: x.k || `~${p.owner}`, city: x.city || '', places: x.rows.map(r => r.place) })));
+    return { pl, groups, kinds };
+}
+// a town's night: they were last there between 21 and 5
+export const mapNight = (g, now) => { const cmp = storyCmp(now), lastR = [...g.rows].sort((a, b) => cmp(b.last || '', a.last || ''))[0], hr = Number((/^\d{2}-\d{2} (\d{2})/.exec(lastR?.last || '') || [0, 12])[1]); return hr >= 21 || hr < 5; };
+export function mapScreen(p, now, m, pick = '') {
+    const { pl, groups, kinds } = mapTowns(p, m);
     const who = r => (r.with.length ? ` · ${esc(r.with.length > 2 ? `${r.with[0]} 외 ${r.with.length - 1}명` : r.with.join(' · '))}${r.with.length > 2 ? '과' : waOf(m, r.with[r.with.length - 1])}` : '');
     const rowHtml = x => swipeRow('place', nameKey(x.place), `
           <div class="ax_rw ax_place"><span class="ax_si" style="background: var(--axc)">${ax(x.home ? 'home' : 'pindot', 17, 'var(--axd)', 2.2)}</span><span class="ax_tx"><span class="ax_n">${esc(x.place)}</span><span class="ax_p1">${x.home === 'now' ? '집' : x.home ? '예전 집' : x.n > 1 ? `${x.n}번` : '처음'}${who(x)}</span></span><small>${esc(x.day ? fmtDate(p, x.day, true) : x.date)}${x.time ? `<br>${esc(x.time)}` : ''}</small></div>`);
-    if (!groups.length) return `${axBar(p, now)}${axTop(axCb('home'))}<div class="ax_scroll">${axH1('다녀간 곳')}<div class="ax_empty">방문 기록 없음</div><i class="ax_pad"></i></div>${axInd()}`;
+    if (!groups.length) return `${axBar(p, now)}${axTop(axCb('home'), `<button type="button" class="ax_cb" data-go="mapq" aria-label="도시 찾기">${ax('search', 18, 'currentColor', 2.3)}</button>`)}<div class="ax_scroll">${axH1('다녀간 곳')}<div class="ax_empty">방문 기록 없음</div><i class="ax_pad"></i></div>${axInd()}`;
     // the town on the map: the one picked (a stay on the strip, a row under "다른 곳"), else where they were last
     const g = groups.find(x => x.k === pick) || groups[0];
-    // the town's streets: by its name, never the same as another town's; a night map when they were last there at night
-    const kinds = townKinds([...groups].reverse().map(x => ({ key: x.k || `~${p.owner}`, city: x.city || '', places: x.rows.map(r => r.place) }))), kind = kinds.get(g.k || `~${p.owner}`);
-    const lastR = [...g.rows].sort((a, b) => (b.last || '').localeCompare(a.last || ''))[0], hr = Number((/^\d{2}-\d{2} (\d{2})/.exec(lastR?.last || '') || [0, 12])[1]), dark = hr >= 21 || hr < 5;
+    // a night map when they were last there at night
+    const kind = kinds.get(g.k || `~${p.owner}`), dark = mapNight(g, p.now);
     const shown = g.rows.slice(0, 7), W = 390, H = 430;
     const pins = pinSpots(shown.map(r => r.place), W, 150, 340).map(([x, y], k) => pinSvg(x, y, shown[k].place, dark)).join('');
     const art = `<svg class="mp_art" viewBox="0 0 ${W} ${H}" width="100%" aria-hidden="true">${townSvg(kind, W, H, g.k || p.owner, dark, g.rows.map(r => r.place).join(' '))}${pins}</svg>`;
-    const lastDay = g.rows.map(r => r.day).filter(Boolean).sort().at(-1);
+    const lastDay = g.rows.map(r => r.day).filter(Boolean).sort(storyCmp(p.now)).at(-1);
     const others = groups.filter(x => x !== g);
     const other = others.length ? `<div class="ax_sec">다른 곳</div><div class="ax_card">${others.map(x => `<button type="button" class="ax_rw ax_place" data-go="map" data-i="${esc(x.k)}"><span class="ax_si" style="background: var(--axc)">${ax('pindot', 17, 'var(--axd)', 2.2)}</span><span class="ax_tx"><span class="ax_n">${esc(x.city || '그 밖의 곳')}</span><span class="ax_p1">${x.rows.length}곳</span></span>${axChev}</button>`).join('')}</div>` : '';
-    return `<div class="mp_wx${dark ? ' mp_dark' : ''}"><div class="mp_bg">${art}</div>${axBar(p, now, dark ? '#fff' : '#111')}${axTop(axCb('home'))}
+    return `<div class="mp_wx${dark ? ' mp_dark' : ''}"><div class="mp_bg">${art}</div>${axBar(p, now, dark ? '#fff' : '#111')}${axTop(axCb('home'), `<button type="button" class="ax_cb" data-go="mapq" aria-label="도시 찾기">${ax('search', 18, 'currentColor', 2.3)}</button>`)}
       <div class="ax_scroll"><i class="mp_gap"></i><div class="mp_sheet"><i class="mp_grab"></i>
         ${mapStrip(p, now, m, pl, g.k)}
         <div class="mp_th"><b>${esc(g.city || '그 밖의 곳')}</b><span>${g.rows.length}곳${lastDay ? ` · 마지막 ${esc(fmtDate(p, lastDay))}` : ''}</span></div>
