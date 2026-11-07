@@ -492,3 +492,20 @@ test('run36: two orders of the same item in one answer (two scarves, two colours
     assert.equal(p.money.orders.length, 2);
     assert.equal(p.money.orders[1].status, 'shipped');
 });
+
+test('an order made before and first told of now ("I already ordered you a scarf"): put in once, with no payment; no shop or price is fine; told again later, the same one', () => {
+    const { m, p, bank } = setup();
+    const scarf = { shop: '', item: 'Pale grey cashmere scarf', ko: '연회색 캐시미어 스카프', qty: 1, price: null, status: 'ordered', gift: 'Mara', occurrence: 'again' };
+    const r = applyMoney(m, p, ev('scarf', 7, '11-07', { orders: [scarf] }), opts());
+    assert.equal(p.money.orders.length, 1);
+    assert.deepEqual([p.money.orders[0].item, p.money.orders[0].shop, p.money.orders[0].price, p.money.orders[0].told], ['Pale grey cashmere scarf', '', null, true]);
+    assert.ok(!r.notes.some(n => /결제가 없었어요/.test(n)));
+    assert.equal(bank(), 1000);
+    // told of again days later, now with its shop: still one
+    applyMoney(m, p, ev('scarf-2', 12, '11-10', { orders: [{ ...scarf, shop: 'Lounge Boutique', status: 'delivered' }] }), opts());
+    assert.equal(p.money.orders.length, 1);
+    assert.equal(p.money.orders[0].status, 'delivered');
+    // a payment told of again moves nothing, as before
+    applyMoney(m, p, ev('rent-told', 13, '11-10', { moves: [{ account: '1111', amount: -500, who: 'Landlord', occurrence: 'again' }] }), opts());
+    assert.equal(bank(), 1000);
+});

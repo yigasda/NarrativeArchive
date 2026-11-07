@@ -2,7 +2,9 @@
 // the brokerage, the shop and the wallet. The model reads the story; the numbers are worked out here.
 // - an app made after the event's message already holds it; nothing moves
 // - a record the model points at ("already") already holds it
-// - "again" means the message only talks about money moved before: it moves nothing. Without "new", a record with the
+// - "again" means the message only talks about money moved before: it moves nothing. An order or a ticket told of that
+//   the phone doesn't hold yet ("I already ordered you a scarf") is put in as a record all the same, with no payment: the
+//   owner's shopping app or wallet has it. Without "new", a record with the
 //   same account, same day and amount (and the same place when both name one; for a guessed amount, the same place) is that one.
 // - "new" means it happens in this message: it goes in even beside a same-day twin, as long as the twin came from another
 //   message (the same payment twice in one message is one). Another day, another place or another price is another payment.
@@ -31,6 +33,8 @@ const fresh = (x, twin, at) => x.occurrence === 'new' && twin.sourceIndex !== at
     && !(together && twin.sourceIndex >= together[0] && twin.sourceIndex <= together[1]);
 const plain = s => String(s || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
 const samePlace = (a, b) => !!plain(a) && plain(a) === plain(b);
+// (an order's shop: the same, or one or both not named)
+const shopOf = (a, b) => !plain(a) || !plain(b) || samePlace(a, b);
 const fail = why => { throw new Error(why); };
 // a later state only: delivered never goes back to shipped; a cancellation or return can come at any point
 const later = (was, now) => !(was in STEP && now in STEP && STEP[now] < STEP[was]) && !(['cancelled', 'returned', 'refunded'].includes(was) && now in STEP);
@@ -286,12 +290,13 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
 
     // two orders or tickets in one answer are two (two scarves, two seats), never the second taken for the first
     const madeNow = new Set();
-    const records = (path, rows, make, same) => rows.forEach((x, k) => {
+    // loose: the same record told of again, whatever day (an "again" order or ticket is the one there, never a second)
+    const records = (path, rows, make, same, loose) => rows.forEach((x, k) => {
         if (!bankOn) return;
         const box = p.money[path] ||= [];
         // the same event's own record told again (its message rewritten and read anew) is that one, not a second
-        const old = x.already && box.find(o => o.id === x.already) || box.find(o => !madeNow.has(o) && same(o, x) && (!fresh(x, o, e.at) || o.ev === e.id));
-        if (!old && x.occurrence === 'again') return;
+        const old = x.already && box.find(o => o.id === x.already) || box.find(o => !madeNow.has(o) && same(o, x) && (!fresh(x, o, e.at) || o.ev === e.id))
+            || x.occurrence === 'again' && box.find(o => !madeNow.has(o) && loose(o, x)) || null;
         if (old && old.sourceIndex == null) old.sourceIndex = e.at;
         if (old) {
             // an order's status only moves forward; a pass's is free text ("used", "checked in", "cancelled"): whatever it says now
@@ -309,20 +314,26 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
             return;
         }
         const row = { ...make(x), id: sid(`sync:${e.id}:${path[0]}${k}`), ev: e.id, storyEvent: e.id, sourceIndex: e.at };
-        if (path === 'orders' && row.status !== 'cancelled' && row.price && x.paid !== false && !x.gift && !list(mo.moves).some(y => Number(y.amount) < 0)) out.notes.push(`${row.item}: 주문은 넣었지만 결제가 없었어요`);
+        // (one made before these messages, told of now: its payment was before, not here)
+        if (x.occurrence === 'again') row.told = true;
+        else if (path === 'orders' && row.status !== 'cancelled' && row.price && x.paid !== false && !x.gift && !list(mo.moves).some(y => Number(y.amount) < 0)) out.notes.push(`${row.item}: 주문은 넣었지만 결제가 없었어요`);
         box.push(row); madeNow.add(row);
         out.effects.push({ type: 'push', path: `money.${path}`, item: structuredClone(row) });
         out.changes.push({ app: path === 'orders' ? '쇼핑' : '지갑', label: row.item || row.by, amount: null });
     });
     records('orders', list(mo.orders), x => {
-        const price = Number(x.price);
-        if (!txt(x.item) || !txt(x.shop)) fail('주문의 가게나 물건을 확인하지 못했어요');
+        // (a price the story doesn't give, null or "", is none, never 0)
+        const price = x.price === null || x.price === undefined || x.price === '' ? NaN : Number(x.price);
+        // (the item is what an order is; a shop the story doesn't name stays empty)
+        if (!txt(x.item)) fail('주문의 물건을 확인하지 못했어요');
         return { shop: txt(x.shop, 60), item: txt(x.item), ko: txt(x.ko), option: txt(x.option, 60), qty: Math.max(1, Math.round(Number(x.qty) || 1)), price: finite(price) ? price : null, time: date, status: ORDER.includes(x.status) ? x.status : 'ordered', eta: when(x.eta).slice(0, 5) || (['ordered', 'shipped', 'on the way'].includes(x.status) || !ORDER.includes(x.status) ? plusDays(date, 2 + [...txt(x.shop)].reduce((n, c) => (n + c.charCodeAt(0)) % 3, 0)) : ''), arrived: '', gift: giftOf(x.gift), ...(x.paid === false ? { paid: false } : {}), ...(guess ? { amountFrom: 'guess' } : {}) };
-    }, (o, x) => samePlace(o.shop, x.shop) && samePlace(o.item, x.item) && near(o.time, date) && !(o.option && txt(x.option, 60) && !samePlace(o.option, txt(x.option, 60))));
+    }, (o, x) => shopOf(o.shop, x.shop) && samePlace(o.item, x.item) && near(o.time, date) && !(o.option && txt(x.option, 60) && !samePlace(o.option, txt(x.option, 60))),
+    (o, x) => shopOf(o.shop, x.shop) && samePlace(o.item, x.item) && !['cancelled', 'returned', 'refunded'].includes(o.status));
     records('passes', list(mo.passes), x => {
         if (!txt(x.by)) fail('티켓 정보를 확인하지 못했어요');
         return { kind: ['flight', 'train', 'hotel', 'event', 'other'].includes(x.kind) ? x.kind : 'other', by: txt(x.by, 60), from: txt(x.from, 40), to: txt(x.to, 40), date: when(x.date).slice(0, 5) || date, time: hhmm(x.time), seat: txt(x.seat, 12), gate: txt(x.gate, 12), no: txt(x.no, 24), status: txt(x.status, 30) };
-    }, (o, x) => samePlace(o.by, x.by) && o.kind === x.kind && (o.no && o.no === txt(x.no, 24) || o.date === (when(x.date).slice(0, 5) || date)));
+    }, (o, x) => samePlace(o.by, x.by) && o.kind === x.kind && (o.no && o.no === txt(x.no, 24) || o.date === (when(x.date).slice(0, 5) || date)),
+    (o, x) => samePlace(o.by, x.by) && o.kind === x.kind && (!o.no || !txt(x.no, 24) || o.no === txt(x.no, 24)) && (!when(x.date) || o.date === when(x.date).slice(0, 5)));
     // 배달: an order in the delivery app. Its payment is a move of the same event (the card or bank row it made, or one
     // already there), tied to it here; with no paying move it was paid in cash at the door
     const dlvOn = !!p.delivery && e.at > (marks.delivery?.index ?? -1);

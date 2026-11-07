@@ -2,7 +2,7 @@
 import { askDraft as askDraftAny } from './ai.js';
 // (gives up after 5 minutes, like the phone's other requests)
 const askDraft = (input, o = {}) => askDraftAny(input, { timeout: 300000, ...o });
-import { num, parseJson, yearIn } from './phoneparse.js';
+import { num, parseJson, yearIn, storyYearIn } from './phoneparse.js';
 import { saveMeta } from './core.js';
 import { currency, finite, fx, price, positions, cash, addPrice, finance, quoteKey } from './finance.js';
 
@@ -48,7 +48,7 @@ export function wealthDate(m,p,now=p?.now) {
     if (/^\d{4}-\d{2}-\d{2}$/.test(date || '')) return date;
     // the year only from a date the archive writes (yearIn): a bare number may be money or the past
     const full=[...String(m.text || '').matchAll(/(?<!\d)((?:19|20)\d{2})[-/.](\d{2})[-/.](\d{2})(?!\d)/g)].at(-1);
-    const year=p.noYear ? '' : p.year ? String(p.year) : yearIn(m.text);
+    const year=p.noYear ? '' : p.year ? String(p.year) : storyYearIn(m.text);
     return year && /^\d{2}-\d{2}/.test(now || '') ? `${year}-${now.slice(0,5)}` : full ? `${full[1]}-${full[2]}-${full[3]}` : '';
 }
 export function addWealthFX(m,rows,date) {

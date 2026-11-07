@@ -1,7 +1,7 @@
 // 시각 판독 손보기 1단계: what was already wrong, made right before anything new is read
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { datedClocks, dayFirstChat, dateOrderSource, storyText, when, withDateOrder } from '../src/phoneparse.js';
+import { datedClocks, dayFirstChat, dateOrderSource, storyText, storyYearIn, when, withDateOrder } from '../src/phoneparse.js';
 
 test('overlapping runs each read by their own order; when they are all done, the chat\'s own setting is back (never a finished run\'s)', async () => {
     let setting = 'dm';
@@ -46,4 +46,24 @@ test('evidence: a part of the story that only looks like a block stays; every bl
     const s = storyText(input);
     for (const kept of ['Mara said hello.', 'Ren opens the news app.', 'closed at 81,200 won today', 'I bought 5% of Hanbit.', 'A dividend of 300 won']) assert.ok(s.includes(kept), kept);
     for (const gone of ['Saved phone time', '"base":"KRW"', 'EXISTING QUOTES', '2026-11-05', 'what you wrote', '미나']) assert.ok(!s.includes(gone), gone);
+});
+
+test('evidence: the story\'s own bracket headers that start like a code block\'s name stay ([DATE NIGHT], [DIARY ENTRY], [BANK ALERT], [DAYS LATER]); the code\'s own go', () => {
+    const story = ['[DATE NIGHT]\nRen and Mara at the bar.', '[DIARY ENTRY]\nToday I sold my Hanbit shares.', '[BANK ALERT]\nDividend 300 won received.', '[DAYS LATER]\nMara bought 10 shares.'];
+    const code = ['[DATE]\n2026-11-05', '[DIARY]\n(none)', '[BANK — separate locked balances]\n{"x":1}', '[DAYS]\n["11-05"]', '[FINANCIAL SCALE]\n{"scale":9}', '[WEALTH]\n{"w":2}', '[REBUILD ACCOUNTS]\n{"r":3}', '[DEVICE — locked]\n{"d":4}'];
+    const s = storyText(['[RECENT CHAT]\n[#4] Ren: hi', ...story, ...code, '[RECENT CHAT]\n[#9] Ren: after'].join('\n\n'));
+    for (const kept of ['Ren and Mara at the bar.', 'sold my Hanbit shares', 'Dividend 300 won received.', 'Mara bought 10 shares.', '[#9] Ren: after']) assert.ok(s.includes(kept), kept);
+    for (const gone of ['2026-11-05', '(none)', '"x":1', '["11-05"]', '"scale":9', '"w":2', '"r":3', '"d":4']) assert.ok(!s.includes(gone), gone);
+});
+
+test('evidence: the investment schedules the app sends ([EXISTING SCHEDULES — …]) are no story', () => {
+    const s = storyText(['[RECENT CHAT]\n[#4] Ren: hi', '[EXISTING SCHEDULES — app data, not evidence]\n[{"pay":"12-20"}]'].join('\n\n'));
+    assert.ok(s.includes('[#4] Ren: hi') && !s.includes('12-20'));
+});
+
+test('the story\'s year: the newest heading that dates itself, else the latest year its dates give, never a birthday or a memory', () => {
+    assert.equal(storyYearIn('## #0–#3 — Arrival\n- Ren came home on 2026-11-02 (#1). Mara was born 1990-07-15.\n'), '2026');
+    assert.equal(storyYearIn('## #0–#3 — Spring (2025년 3월)\n- x\n## #4–#9 — Autumn (2026년 10월)\n- They first met on 2019-05-01.\n'), '2026');
+    assert.equal(storyYearIn('- They met on 2019-05-01, married 2024-06-01.'), '2024');
+    assert.equal(storyYearIn('- no dates'), '');
 });

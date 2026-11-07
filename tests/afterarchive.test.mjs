@@ -1272,3 +1272,156 @@ test('reading where everyone is again: a person read back by the other form of t
     } finally { delete globalThis.__ctx; delete globalThis.__whereAnswer; delete globalThis.__glossaryEntries; }
 });
 const arr = v => (Array.isArray(v) ? v : []);
+
+test('making a phone for the first time (점검 수정): its hours on the story\'s day, the year checked before, an old phone\'s own year and country, a failed reading not asked again, a reading kept for a make asked again', async () => {
+    const setup = (text, extra = {}) => {
+        const { m: mm } = htmlPhoneFixture();
+        globalThis.__ctx.characters = [{ name: 'Mara' }]; globalThis.__ctx.characterId = 0;
+        mm.phones = {}; mm.phoneScreenHolder = 'Mara'; mm.text = text; Object.assign(mm, extra);
+        globalThis.__where = [];
+        globalThis.__whereAnswer = { people: [{ name: 'Ren', city: 'Frankfurt am Main', tz: 'Europe/Berlin', lives: 'DE' }, { name: 'Mara', city: 'Seoul', tz: 'Asia/Seoul', lives: 'KR' }] };
+        return mm;
+    };
+    const made = (now, scene, year = 2026) => JSON.stringify({ country: 'DE', now, clock: { basis: 'Default used', finalViewpoint: 'Mara', elapsedTime: null, sceneTime: scene, messageSender: null }, contacts: [{ name: 'Mara' }], notes: [] });
+    const input = () => globalThis.__menu.calls.find(x => x.sys === data.AI_SYS_PHONE).input;
+    try {
+        // a July story with no status line: a date in the archive may be a memory ("first met on 2025-07-01"), so the hours
+        // go with every change in the year, and the answer worked out by July's (+7) holds
+        let mm = setup('## #0–#3 — Summer\n- Ren came home on 2026-07-10 (#1). They first met on 2026-01-03, and Ren came home on 2026-07-10 again.\n');
+        globalThis.__menu = { calls: [], answers: [made('07-10 04:10', '07-10 11:10')] };
+        let p = await data.makePhone(mm, 'Ren');
+        assert.match(input(), /- Mara \(Seoul\): \+[78] hours \(DST: \+7 hours from 03-29 02:00→03:00; \+8 hours from 10-25 03:00→02:00\)/);
+        assert.doesNotMatch(input(), /Clock reference time/);
+        assert.equal(p.now, '07-10 04:10');
+        // no day at all: the hours with every change in the year
+        mm = setup('## #0–#3 — Arrival\n- Ren came home.\n');
+        globalThis.__menu = { calls: [], answers: [made('07-10 04:10', '07-10 11:10')] };
+        await data.makePhone(mm, 'Ren').catch(() => null);
+        assert.match(input(), /- Mara \(Seoul\): \+[78] hours \(DST: \+7 hours from 03-\d\d 02:00→03:00; \+8 hours from 10-\d\d 03:00→02:00\)/);
+        // the year set before the make is the one the request has
+        mm = setup('## #0–#3 — Summer\n- Ren came home on 2026-07-10 (#1).\n');
+        await data.preparePhone(mm, 'Ren');
+        await data.setPreYear(mm, 'Ren', 2019);
+        globalThis.__menu = { calls: [], answers: [made('07-10 04:10', '07-10 11:10')] };
+        p = await data.makePhone(mm, 'Ren');
+        assert.match(input(), /\[STORY YEAR\]\n2019/);
+        assert.equal(p.year, 2019);
+        // an old phone with no 위치 정보, made again whole: its own year and where it lives
+        mm = setup('## #0–#3 — Summer\n- Ren came home on 2026-07-10 (#1).\n');
+        mm.phones = { ren: plainPhone({ year: 2019, lives: 'DE', livesManual: true }) };
+        globalThis.__menu = { calls: [], answers: [made('07-10 04:10', '07-10 11:10')] };
+        p = await data.makePhone(mm, 'Ren');
+        assert.match(input(), /\[STORY YEAR\]\n2019/);
+        assert.deepEqual([p.year, p.lives, p.livesManual], [2019, 'DE', true]);
+        // a reading that failed: the phone is made without it, and it is not asked again after
+        mm = setup('## #0–#3 — Summer\n- Ren came home on 2026-07-10 (#1).\n');
+        globalThis.__whereAnswer = { toJSON() { throw new Error('no answer'); } };
+        globalThis.__menu = { calls: [], answers: [JSON.stringify({ country: 'DE', now: '07-10 11:10', clock: { basis: 'Default used', finalViewpoint: 'Mara', elapsedTime: null, sceneTime: '07-10 11:10', messageSender: null }, contacts: [{ name: 'Mara' }, { name: 'Varo' }], notes: [] })] };
+        p = await data.makePhone(mm, 'Ren');
+        assert.ok(p.where.failed);
+        assert.equal(globalThis.__where.length, 1);
+        // a make whose clock check fails keeps what it read: asked again, it reads none of it again
+        mm = setup('## #0–#3 — Summer\n- Ren came home on 2026-07-10 (#1).\n');
+        globalThis.__menu = { calls: [], answers: [made('07-10 11:10', '07-10 11:10')] };
+        await assert.rejects(data.makePhone(mm, 'Ren'));
+        assert.ok(data.phonePre(mm, 'Ren')?.where?.people?.length);
+        globalThis.__menu = { calls: [], answers: [made('07-10 04:10', '07-10 11:10')] };
+        await data.makePhone(mm, 'Ren');
+        assert.equal(globalThis.__where.length, 1);
+        assert.equal(data.phonePre(mm, 'Ren'), null);
+    } finally { delete globalThis.__ctx; delete globalThis.__whereAnswer; }
+});
+
+test('점검 수정 2: a failed reading is read again on the next make; "Mara Lee" for a Mara read before needs no second reading; a reading kept for a phone gone since is not used; the year it read moves with 날짜 및 시간; a second turn with no "now" keeps its records', async () => {
+    const setup = text => {
+        const { m: mm } = htmlPhoneFixture();
+        globalThis.__ctx.characters = [{ name: 'Mara' }]; globalThis.__ctx.characterId = 0;
+        mm.phones = {}; mm.phoneScreenHolder = 'Mara'; mm.text = text;
+        globalThis.__where = [];
+        globalThis.__whereAnswer = { people: [{ name: 'Ren', city: 'Frankfurt am Main', tz: 'Europe/Berlin', lives: 'DE' }, { name: 'Mara', city: 'Seoul', tz: 'Asia/Seoul', lives: 'KR' }] };
+        return mm;
+    };
+    const cl = scene => ({ basis: 'Default used', finalViewpoint: 'Mara', elapsedTime: null, sceneTime: scene, messageSender: null });
+    const made = (now, scene, contacts = ['Mara']) => JSON.stringify({ country: 'DE', now, clock: cl(scene), contacts: contacts.map(name => ({ name })), notes: [] });
+    const text = '## #0–#3 — Arrival\n- Ren came home on 2026-11-02 (#1).\n';
+    try {
+        // the reading fails, the make fails too; asked again (the network back), it is read again
+        let mm = setup(text);
+        const good = globalThis.__whereAnswer;
+        globalThis.__whereAnswer = { toJSON() { throw new Error('offline'); } };
+        globalThis.__menu = { calls: [], answers: [new Error('quota')] };
+        await assert.rejects(data.makePhone(mm, 'Ren'));
+        assert.ok(data.phonePre(mm, 'Ren').where.failed);
+        globalThis.__whereAnswer = good;
+        globalThis.__menu = { calls: [], answers: [made('11-03 03:10', '11-03 11:10')] };
+        let p = await data.makePhone(mm, 'Ren');
+        assert.equal(globalThis.__where.length, 2);
+        assert.ok(!p.where.failed && p.where.people.some(x => x.name === 'Mara'));
+        // "Mara Lee" on the phone, Mara read before: no second reading
+        mm = setup(text);
+        globalThis.__menu = { calls: [], answers: [made('11-03 03:10', '11-03 11:10', ['Mara Lee'])] };
+        await data.makePhone(mm, 'Ren');
+        assert.equal(globalThis.__where.length, 1);
+        // read for an old phone, then the phone is gone: a new one reads anew; the year read moves with 날짜 및 시간
+        mm = setup(text);
+        mm.phones = { ren: plainPhone({ year: 2019 }) };
+        await data.preparePhone(mm, 'Ren');
+        data.setStoryYear(mm, mm.phones.ren, 2024);
+        assert.equal(data.phonePre(mm, 'Ren').year, 2024);
+        delete mm.phones.ren;
+        globalThis.__menu = { calls: [], answers: [made('11-03 03:10', '11-03 11:10')] };
+        p = await data.makePhone(mm, 'Ren');
+        assert.equal(globalThis.__where.length, 2);
+        assert.equal(p.year, 2026);
+        assert.equal(data.phonePre(mm, 'Ren'), null);
+    } finally { delete globalThis.__ctx; delete globalThis.__whereAnswer; }
+    // a phone made again whole with its reading kept, in two turns: a second answer with no "now" is added, not dropped
+    const bigRows = n => Array.from({ length: n }, (_, i) => ({ index: i, user: i % 2 === 0, hidden: i <= 3, text: `[#${i}] Ren: ${'word '.repeat(4000)}${i}` }));
+    const ans = o => JSON.stringify({ country: 'DE', contacts: [{ name: 'Mara' }], ...o });
+    try {
+        globalThis.__rows = bigRows(40); globalThis.__ctx = { chat: [], chatMetadata: {}, characters: [{ name: 'Mara' }], characterId: 0 };
+        const cur = plainPhone({ now: '10-26 12:00', year: 2026, life: { clock: { alarms: [] } }, sync: { marks: { base: { index: 6 }, life: { index: 30 } }, done: [[7, 39]], hiddenRead: {}, events: { a: { at: 30, summary: 'Ren called Mara' } } } });
+        const mm = { text: '## #0–#3 — Arrival\n- Ren came home (#1).\n', phones: { ren: cur }, phoneScreenHolder: 'Mara' };
+        globalThis.__where = [];
+        globalThis.__whereAnswer = { people: [{ name: 'Ren', city: 'Frankfurt am Main', tz: 'Europe/Berlin', lives: 'DE' }, { name: 'Mara', city: 'Seoul', tz: 'Asia/Seoul', lives: 'KR' }] };
+        globalThis.__menu = { calls: [], answers: [ans({ now: '10-26 03:10', clock: cl('10-26 11:10'), notes: [{ title: 'First', text: 'a', time: '10-25 10:00' }] }), ans({ clock: cl('10-27 11:10'), notes: [{ title: 'Second', text: 'b', time: '10-27 10:00' }] })] };
+        const p = await data.makePhone(mm, 'Ren');
+        assert.equal(globalThis.__menu.calls.filter(c => c.sys === data.AI_SYS_PHONE).length, 2);
+        assert.deepEqual(p.notes.map(x => x.title), ['First', 'Second']);
+        assert.equal(p.now, '10-26 03:10');
+    } finally { delete globalThis.__ctx; delete globalThis.__whereAnswer; }
+});
+
+test('the story\'s year for a phone being made: the reading of where everyone is tells it (before a guess from the dates); none read, the guess; one the user set stays through a reading again', async () => {
+    const setup = (year, text = '## #0–#3 — Arrival\n- Ren came home on 2026-11-02 (#1). The wedding is set for 2027-05-01.\n') => {
+        const { m: mm } = htmlPhoneFixture();
+        globalThis.__ctx.characters = [{ name: 'Mara' }]; globalThis.__ctx.characterId = 0;
+        mm.phones = {}; mm.phoneScreenHolder = 'Mara'; mm.text = text;
+        globalThis.__where = [];
+        globalThis.__whereAnswer = { people: [{ name: 'Ren', city: 'Frankfurt am Main', tz: 'Europe/Berlin', lives: 'DE' }], year };
+        return mm;
+    };
+    try {
+        let mm = setup(2026);
+        assert.equal((await data.preparePhone(mm, 'Ren')).year, 2026);
+        // none read: the guess (the latest year the dates give)
+        mm = setup(null);
+        assert.equal((await data.preparePhone(mm, 'Ren')).year, 2027);
+        // read again (다시 연동): the year with it, unless the user set it
+        globalThis.__whereAnswer.year = 2026;
+        let pre = data.phonePre(mm, 'Ren');
+        await data.rereadPlaces(mm, pre);
+        assert.equal(pre.year, 2026);
+        await data.setPreYear(mm, 'Ren', 2019);
+        globalThis.__whereAnswer.year = 2031;
+        await data.rereadPlaces(mm, pre);
+        assert.equal(pre.year, 2019);
+        // the request goes by it
+        mm = setup(2026);
+        globalThis.__menu = { calls: [], answers: [JSON.stringify({ country: 'DE', now: '11-03 03:10', clock: { basis: 'Default used', finalViewpoint: 'Mara', elapsedTime: null, sceneTime: '11-03 03:10', messageSender: null }, contacts: [], notes: [] })] };
+        const p = await data.makePhone(mm, 'Ren');
+        assert.match(globalThis.__menu.calls.find(x => x.sys === data.AI_SYS_PHONE).input, /\[STORY YEAR\]\n2026/);
+        assert.equal(p.year, 2026);
+        assert.equal(p.readYear, undefined);
+    } finally { delete globalThis.__ctx; delete globalThis.__whereAnswer; }
+});
