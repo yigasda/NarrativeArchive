@@ -1,0 +1,65 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body{margin:0;background:#2a2d33;font-family:-apple-system,'SF Pro Text','Noto Sans KR',sans-serif;display:flex;gap:28px;padding:28px;align-items:flex-start}
+.col{display:flex;flex-direction:column;align-items:center;gap:10px}.lab{color:#ffb3cf;font:700 15px sans-serif}
+.ph{width:390px;height:844px;border-radius:44px;border:10px solid #111;position:relative;overflow:hidden;box-sizing:content-box}
+.slate{background:#f2f3f6}.dusk{background:linear-gradient(170deg,#3b4b85 0%,#5a4a8a 45%,#a35f86 100%)}
+.sb{height:47px;display:flex;justify-content:space-between;align-items:flex-end;padding:0 30px 6px;font:600 15px 'Inter Tight',sans-serif}
+.top{height:48px;display:flex;align-items:center;padding:0 16px}.cb{width:38px;height:38px;border-radius:999px;background:#fff;box-shadow:0 1px 2px rgba(22,27,34,.08),0 4px 12px rgba(22,27,34,.06);display:flex;align-items:center;justify-content:center}
+.h1{margin:4px 20px 4px;font-size:28px;font-weight:700;letter-spacing:-.02em;color:#000}.h1s{margin:0 20px 14px;font-size:14px;color:#6d7480}
+.sec{margin:14px 32px 7px;font-size:13px;color:#6d7480}
+.card{margin:0 16px;background:#fff;border-radius:22px;box-shadow:0 1px 2px rgba(22,27,34,.04),0 8px 24px rgba(22,27,34,.05);overflow:hidden}
+.rw{display:flex;align-items:center;gap:12px;min-height:50px;padding:0 16px;position:relative}.rw+.rw::before{content:"";position:absolute;top:0;left:16px;right:0;height:.5px;background:#e6e8ec}
+.n{flex:1;font-size:16px;color:#000}.v{font-size:15px;color:#8a919c}
+.hero{margin:0 16px;padding:16px 16px 14px;border-radius:22px;background:#fff;box-shadow:0 1px 2px rgba(22,27,34,.04),0 8px 24px rgba(22,27,34,.05)}
+.k{font-size:12.5px;color:#8a919c}.city{margin-top:3px;font-size:22px;font-weight:700;letter-spacing:-.02em}.city.empty{color:#b8573a}
+.chips{display:flex;gap:8px;margin-top:12px}.chip{flex:1;padding:9px 12px;border-radius:14px;background:#f4f5f8}.chip span{display:block;font-size:12px;color:#8a919c}.chip b{font-size:15px}
+.pr{display:flex;align-items:center;padding:11px 16px;position:relative}.pr+.pr::before{content:"";position:absolute;top:0;left:16px;right:0;height:.5px;background:#e6e8ec}
+.pr .l{flex:1}.pr .l b{display:block;font-size:18px;font-weight:600}.pr small{font-size:13px;color:#8a919c}.pr .r{text-align:right}.pr .r b{font-size:15px;font-weight:500;color:#59616d}
+.warn{margin:0 16px 12px;padding:12px 14px;border-radius:16px;background:#f6edd6;color:#7a5a12;font-size:13.5px;line-height:1.4;display:flex;gap:8px;align-items:flex-start}
+.ys{display:inline-flex;align-items:center;gap:14px}.st{width:30px;height:30px;border-radius:999px;background:#f1f3f6;display:flex;align-items:center;justify-content:center;color:#2c4a80;font-size:20px}.ys b{font:600 17px 'Inter Tight',sans-serif}
+.sw{width:51px;height:31px;border-radius:999px;background:#7fb38a;position:relative}.sw::after{content:"";position:absolute;right:2px;top:2px;width:27px;height:27px;border-radius:999px;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.15)}
+.cta{position:absolute;left:0;right:0;bottom:0;padding:12px 16px 34px;background:linear-gradient(rgba(242,243,246,0),#f2f3f6 30%)}
+.go{height:52px;border-radius:16px;background:#1d3461;color:#fff;font-size:16px;font-weight:600;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 8px 20px rgba(29,52,97,.25)}
+.no{margin-top:8px;text-align:center;font-size:15px;color:#59616d;font-weight:600;height:30px;line-height:30px}
+.blue{color:#2c4a80}
+.glass{margin:0 18px;border-radius:28px;padding:20px 18px 16px;background:linear-gradient(180deg,rgba(255,255,255,.92),rgba(240,243,250,.86));box-shadow:inset 0 1px 0 #fff,0 20px 50px rgba(10,16,28,.3)}
+.av{width:56px;height:56px;border-radius:999px;background:#b07a5a;color:#fff;font:700 24px sans-serif;display:flex;align-items:center;justify-content:center;margin:0 auto}
+.sheet{position:absolute;left:0;right:0;bottom:0;border-radius:28px 28px 0 0;background:#f2f3f6;padding:10px 0 34px;box-shadow:0 -10px 34px rgba(22,27,34,.25)}
+.grab{width:38px;height:5px;border-radius:3px;background:#d6d9df;margin:0 auto 12px}
+
+.step{display:flex;align-items:center;gap:8px;margin:16px 32px 7px;font-size:13px;color:#6d7480}.num{width:20px;height:20px;border-radius:999px;background:#1d3461;color:#fff;font:600 11.5px 'Inter Tight',sans-serif;display:flex;align-items:center;justify-content:center}.num.ok{background:#3f7d50}.num.opt{background:#c4c8cf}
+.seg{display:inline-flex;padding:2px;border-radius:9px;background:#e9ecf1;font-size:13px;font-weight:600}.seg span{padding:5px 12px;border-radius:7px;color:#7a828e}.seg span.on{background:#fff;color:#161b22;box-shadow:0 1px 3px rgba(22,27,34,.12)}
+.note{margin:6px 32px 0;font-size:12.5px;color:#8a929d;line-height:1.45}
+.blank{margin:0 16px;padding:18px 16px;border-radius:22px;border:1.5px dashed #d3d7de;text-align:center;font-size:13.5px;color:#8a919c}
+.btnrow{margin:0 16px;height:48px;border-radius:16px;background:#fff;box-shadow:0 1px 2px rgba(22,27,34,.04),0 8px 24px rgba(22,27,34,.05);display:flex;align-items:center;justify-content:center;gap:8px;font-size:15.5px;font-weight:600;color:#2c4a80}
+.scroll{position:absolute;top:95px;left:0;right:0;bottom:120px;overflow:hidden}
+.num.ok{color:#fff}.chk{display:flex;align-items:center;gap:12px;min-height:58px;padding:0 16px;position:relative}.chk+.chk::before{content:"";position:absolute;top:0;left:52px;right:0;height:.5px;background:#e6e8ec}
+.chk .t{flex:1}.chk .t b{display:block;font-size:16px;font-weight:500}.chk .t small{font-size:12.5px;color:#8a919c}
+.bar{margin:0 20px 6px;height:6px;border-radius:999px;background:#e3e6eb;overflow:hidden}.bar i{display:block;height:100%;width:40%;background:#1d3461;border-radius:999px}
+
+.lock{opacity:.42;filter:grayscale(.3);pointer-events:none}
+.lk{margin-left:auto;font-size:12px;color:#8a919c}
+.done{margin-left:auto;font-size:12px;color:#3f7d50;font-weight:600}
+.next{margin:10px 16px 0;height:44px;border-radius:14px;background:#1d3461;color:#fff;font-size:15px;font-weight:600;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
+.go.off{background:#c9ced8;box-shadow:none}
+</style></head><body><div class="col"><div class="lab">A+ ① 처음: 1~3만 열림, 4·5는 잠김</div><div class="ph slate"><div class="sb"><span>17:42</span><span>●●● ▮</span></div><div class="top"><div class="cb">‹</div><span style="margin-left:12px;font-size:17px;font-weight:700">Oscar의 폰 만들기</span></div>
+ <div class="scroll">
+ <div class="step"><span class="num">1</span>인물 정보</div><div class="card"><div class="rw"><span class="n">프로필 연동</span><span class="v">캐릭터 카드 ›</span></div></div>
+ <div class="step"><span class="num opt">2</span>용어집 · 선택</div><div class="card"><div class="rw"><span class="n">번역 용어집</span><span class="v">3개 ›</span></div></div>
+ <div class="step"><span class="num">3</span>날짜</div><div class="card"><div class="rw"><span class="n">상태창 날짜 순서</span><span class="seg"><span class="on">월.일</span><span>일.월</span></span></div><div class="rw"><span class="n">메신저 시간</span><span class="v">Mara의 화면 ›</span></div></div>
+ <div class="next">1~3 확인했어요 · 위치로</div>
+ <div class="lock"><div class="step"><span class="num">4</span>위치<span class="lk">🔒 1~3을 먼저</span></div><div class="blank">위치 연동</div>
+ <div class="step"><span class="num">5</span>이야기 연도<span class="lk">🔒 위치 다음</span></div><div class="card"><div class="rw"><span class="n">연도</span><span class="v">—</span></div></div></div>
+ </div>
+ <div class="cta"><div class="go off">이대로 폰 만들기</div><div class="no">닫기</div></div>
+</div></div><div class="col"><div class="lab">A+ ② 위치 연동 뒤: 1~3은 접힘, 바꾸면 다시 연동</div><div class="ph slate"><div class="sb"><span>17:42</span><span>●●● ▮</span></div><div class="top"><div class="cb">‹</div><span style="margin-left:12px;font-size:17px;font-weight:700">Oscar의 폰 만들기</span></div>
+ <div class="scroll">
+ <div class="card"><div class="rw"><span class="num ok">1</span><span class="n">인물 정보 · 날짜</span><span class="v">캐릭터 카드 · 월.일 · Mara ›</span></div></div>
+ <div class="note" style="margin-top:6px">바꾸면 위치를 다시 연동해야 해요.</div>
+ <div class="step"><span class="num">4</span>위치<span class="done">연동함</span></div>
+ <div class="hero"><div class="k">Oscar · 지금 있는 곳</div><div class="city">Frankfurt am Main ✎</div><div class="chips"><div class="chip"><span>사는 나라</span><b>독일</b></div><div class="chip"><span>시간대</span><b>Europe/Berlin</b></div></div></div>
+ <div class="card" style="margin-top:10px"><div class="pr"><span class="l"><b>Seoul</b><small>Ren</small></span><span class="r"><b>+8시간</b></span></div><div class="pr"><span class="l"><b>Paris</b><small>Ivo</small></span><span class="r"><b>같음</b></span></div></div>
+ <div class="step"><span class="num">5</span>이야기 연도</div><div class="card"><div class="rw"><span class="n">연도</span><span class="ys"><span class="st">−</span><b>2026</b><span class="st">+</span></span></div></div>
+ </div>
+ <div class="cta"><div class="go">이대로 폰 만들기</div><div class="no">닫기</div></div>
+</div></div></body></html>
