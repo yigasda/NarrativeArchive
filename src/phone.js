@@ -25,6 +25,8 @@ import { marksScreen, pageView, searchOne, searchScreen, tabsScreen } from './ph
 import { fillDelivery, fillLife, fillScreen, fillShopMenus, menuWanted, refreshNearby } from './phonelife.js';
 import { alarmScreen, setStory, cartScreen, cityList, cityScreen, clockScreen, compareScreen, dlvScreen, fileScreen, filesScreen, folderScreen, healthScreen, heartScreen, hereWidget, itemScreen, orderScreen, ordersScreen, payScreen, rateScreen, shopScreen2, sleepScreen, stepsScreen, timerScreen, waterScreen, weatherScreen, weightScreen, workScreen, worldScreen } from './phonelifeapps.js';
 import { screenTimeScreen } from './phonestime.js';
+import { mapCityScreen, mapResults, mapSearchScreen } from './phonemapsearch.js';
+import { placeNames } from './phonemapfind.js';
 import { glossaryEntries, openGlossary } from './translate.js';
 // 을 / 를 after a word: by its last syllable's final consonant (a Latin ending, like SNS, reads as 를)
 const josa = w => { const c = w.charCodeAt(w.length - 1) - 0xac00; return c >= 0 && c < 11172 && c % 28 ? '을' : '를'; };
@@ -47,7 +49,7 @@ function screen(p, view, m, roster, ui) {
         : v === 'thread' ? threadScreen(p, now, Number(i), roster) : v === 'draft' ? draftView(p, now, Number(i), roster) : v === 'call' || v === 'callmiss' ? callScreen(p, now, roster, v === 'callmiss') : v === 'callwho' ? callWho(p, now, Number(i), roster) : v === 'contacts' ? contactsScreen(p, now, roster) : v === 'contact' ? contactOne(p, now, decodeURIComponent(i || ''), roster, m, ui.contactBack)
         : v === 'photo' ? photoScreen(p, now) : v === 'photoone' ? photoView(p, now, Number(i))
         : v === 'note' ? noteScreen(p, now) : v === 'noteone' ? noteOne(p, now, Number(i)) : v === 'search' ? searchScreen(p, now) : v === 'page' ? pageView(p, now, i || '', paging.has(`${nameKey(p.owner)}:${i}`)) : v === 'tabs' ? tabsScreen(p, now) : v === 'marks' || v === 'history' ? marksScreen(p, now, v === 'history') : v === 'searchone' ? searchOne(p, now, Number(i), searching.has(`${nameKey(p.owner)}:${i}`))
-        : v === 'cal' ? calScreen(p, now, m, i || '') : v === 'calone' ? calOne(p, now, Number(i), m) : v === 'map' ? mapScreen(p, now, m, i || '')
+        : v === 'cal' ? calScreen(p, now, m, i || '') : v === 'calone' ? calOne(p, now, Number(i), m) : v === 'map' ? mapScreen(p, now, m, i || '') : v === 'mapq' ? mapSearchScreen(p, now, m, i || '', ui.mapQ || '') : v === 'mapc' ? mapCityScreen(p, now, m, i || '')
         : v === 'sns' ? snsScreen(p, now) : v === 'snspost' ? snsPost(p, now, Number(i)) : v === 'mail' ? mailScreen(p, now) : v === 'mailone' ? mailOne(p, now, Number(i))
         : v === 'diary' ? diaryScreen(p, now, i || '') : v === 'diaryone' ? diaryOne(p, now, Number(i)) : v === 'setsync' ? syncSettings(p, now, ui) : v === 'setsyncpick' ? syncPick(p, now, ui) : v === 'set' ? setScreen(p, now, m, ui) : v === 'stime' ? screenTimeScreen(p, now, i || '') : v === 'settheme' ? setTheme(p, now) : v === 'setscreenholder' ? setScreenHolderView(p, now, m, ui.holderBack) : v === 'setdate' ? setDate(p, now, m) : v === 'setplace' ? setPlace(p, now, m, ui) : v === 'prep' ? prepScreen(p, now, m, ui.prep) : v === 'setremake' ? setRemake(p, now, ui, m) : v === 'setprofile' ? setOwnerProfile(p,now,ui.profileState) : v === 'setwho' ? setWho(p, now, m) : v === 'setlore' ? setLore(p, now, m, ui)
         : v === 'cam' ? camScreen(p, now, i === undefined ? -1 : Number(i), shooting.has(nameKey(p.owner))) : homeScreen(p, now, m);
@@ -108,7 +110,7 @@ export async function openPhone(who = null) {
     if (!stillHere()) return;
     if (Object.values(m.phones).some(p => p.money)) await saveMeta();
     if (!stillHere()) return;
-    let view = 'lock', contactBack = '', sheet = false, adding = false, loreOpen = false;
+    let view = 'lock', mapQ = '', contactBack = '', sheet = false, adding = false, loreOpen = false;
     let syncWhy = '', pickMore = 30;
     const profileStates = new Map();
     const loreExp = new Set(), loreEnts = new Map(); // books opened to their entries, and their entries once read
@@ -254,7 +256,7 @@ export async function openPhone(who = null) {
         // a screen that can't be drawn says why (and in the console), instead of leaving the phone blank or on another screen
         let html;
         tidyKo(p);
-        try { html = screen(p, view, m, roster, { syncN: view === 'set' ? syncLeft(p, m) : null, syncRows: view.startsWith('setsync') ? syncRows() : [], syncWhy, syncPending, pickMore, loreExp, loreEnts, remake, contactBack, investing, profileState:profileStates.get(nameKey(p.owner)), placeReading }); }
+        try { html = screen(p, view, m, roster, { syncN: view === 'set' ? syncLeft(p, m) : null, syncRows: view.startsWith('setsync') ? syncRows() : [], syncWhy, syncPending, pickMore, loreExp, loreEnts, remake, contactBack, investing, profileState:profileStates.get(nameKey(p.owner)), placeReading, mapQ }); }
         catch (err) {
             console.error('[narrative-archive] phone screen', view, err);
             toastr.error(`${view} 화면을 그리지 못했어요: ${err?.message || err}`, '캐릭터 휴대폰');
@@ -554,7 +556,7 @@ export async function openPhone(who = null) {
         if (go === 'contact' && !view.startsWith('contact')) contactBack = view;
         // picking another payment on 고정 지출 keeps the list where it was
         const stay = ['fixed', 'banksend', 'stmt', 'wallet', 'stime', 'map'].includes(go) && view.split(':')[0] === go ? $root.find('.ax_scroll').scrollTop() : null;
-        view = ['ivnotes', 'ivschedule', 'ivhistory', 'stock', 'ivprices', 'thread', 'draft', 'page', 'acct', 'tx', 'txdoc', 'card', 'pass', 'order', 'track', 'voiceone', 'callwho', 'contact', 'noteone', 'photoone', 'searchone', 'calone', 'mailone', 'diaryone', 'snspost', 'alarm', 'hsteps', 'hsleep', 'hwork', 'hheart', 'hwater', 'hweight', 'folder', 'file', 'wcity', 'dshop', 'dorder', 'ditem', 'drate'].includes(go) || (['cal', 'diary', 'shop', 'voice', 'invest', 'health', 'fixed', 'banksend', 'stmt', 'wallet', 'stime', 'map'].includes(go) && this.dataset.i) ? `${go}:${['ivnotes', 'ivschedule', 'ivhistory', 'stock', 'ivprices'].includes(go) ? encodeURIComponent(this.dataset.i || '') : this.dataset.i}` : go;
+        view = ['ivnotes', 'ivschedule', 'ivhistory', 'stock', 'ivprices', 'thread', 'draft', 'page', 'acct', 'tx', 'txdoc', 'card', 'pass', 'order', 'track', 'voiceone', 'callwho', 'contact', 'noteone', 'photoone', 'searchone', 'calone', 'mailone', 'diaryone', 'snspost', 'alarm', 'hsteps', 'hsleep', 'hwork', 'hheart', 'hwater', 'hweight', 'folder', 'file', 'wcity', 'dshop', 'dorder', 'ditem', 'drate', 'mapc'].includes(go) || (['cal', 'diary', 'shop', 'voice', 'invest', 'health', 'fixed', 'banksend', 'stmt', 'wallet', 'stime', 'map', 'mapq'].includes(go) && this.dataset.i) ? `${go}:${['ivnotes', 'ivschedule', 'ivhistory', 'stock', 'ivprices'].includes(go) ? encodeURIComponent(this.dataset.i || '') : this.dataset.i}` : go;
         const mail = go === 'mailone' ? phone()?.mails?.[Number(this.dataset.i)] : null;
         if (mail?.unread) { mail.unread = false; saveMeta(); }
         const p0 = phone();
@@ -564,13 +566,22 @@ export async function openPhone(who = null) {
         if (calls.length) { calls.forEach(c => { c.seen = true; }); saveMeta(); }
         const posts = go === 'sns' ? (p0?.posts || []).filter(x => !x.seen) : [];
         if (posts.length) { posts.forEach(x => { x.seen = true; }); saveMeta(); }
+        // 도시 찾기: a fresh search from the map; a town opened goes first among the recent ones
+        if (go === 'mapq' && !view.startsWith('mapq:') && this.closest('.mq_wx') === null) mapQ = '';
+        if (go === 'mapc' && p0) { const n = placeNames(Number(String(this.dataset.i).split('~')[0]))?.ko; if (n && p0.mapSeen?.[0] !== n) { p0.mapSeen = [n, ...(p0.mapSeen || []).filter(x => x !== n)].slice(0, 5); saveMeta(); } }
         sheet = false;
         drawPhone();
         $root.find('.na_ph_body, .ax_scroll').scrollTop(view.startsWith('thread') ? 1e6 : stay ?? 0);
+        if (view === 'mapq' && !mapQ) $root.find('.mq_in').trigger('focus');
         if (go === 'searchone' && !phone()?.searches?.[Number(this.dataset.i)]?.results?.length) loadSearch(Number(this.dataset.i));
         if (go === 'page') openWeb(String(this.dataset.i));
         if (go === 'setprofile') editProfile();
     });
+    // 도시 찾기: the results follow the typing (only the results are drawn again, so the field keeps its focus)
+    const mapType = el => { mapQ = el.value; const p = phone(); if (!p) return; $root.find('.mq_res').html(mapResults(p, m, mapQ)).scrollTop(0); $root.find('.mq_sheet').toggleClass('mq_full', !!mapQ.trim()); $root.find('.mq_x').toggleClass('on', !!mapQ); };
+    $root.on('input', '.mq_in', function () { mapType(this); });
+    $root.on('keydown', '.mq_in', function (e) { e.stopPropagation(); if (e.key === 'Enter' && !e.originalEvent?.isComposing && e.keyCode !== 229) { e.preventDefault(); $root.find('.mq_res [data-go]').first().trigger('click'); } });
+    $root.on('click', '.mq_x', function (e) { e.stopPropagation(); const f = $root.find('.mq_in')[0]; if (!f) return; f.value = ''; mapType(f); f.focus(); });
     // the page is made once, the first time a search is opened; the screen can change while it loads
     const loadSearch = async k => {
         const p = phone(), id = `${nameKey(p.owner)}:${k}`;

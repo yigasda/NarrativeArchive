@@ -3,7 +3,7 @@
 // Everything is picked by names, never at random, so a town looks the same every time it opens.
 // Plain SVG strings: phoneapps.js draws the screen around them.
 import { TOWN_KINDS, townDraw } from './phonemaptowns.js';
-import { CITY, CLUE, COMMON, HINT } from './phonemapcity.js';
+import { CITY, CLUE, COMMON, HINT, PLACE } from './phonemapcity.js';
 
 export const hsh = s => [...String(s)].reduce((n, c) => (Math.imul(n, 31) + c.charCodeAt(0)) >>> 0, 7);
 const norm = s => String(s || '').normalize('NFC').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -24,6 +24,15 @@ function cityRow(city) {
     if (ROWS.size > 200) ROWS.clear();
     ROWS.set(city, best);
     return best;
+}
+// the city table's place for a town name (its own name or one of its others), else the first place of its row; -1 if none
+export function townPlace(city) {
+    const c = norm(city);
+    if (!c) return -1;
+    const own = PLACE.findIndex(([ko, al]) => norm(ko) === c || al.some(n => norm(n) === c));
+    if (own >= 0) return own;
+    const row = cityRow(c);
+    return row ? PLACE.findIndex(x => CITY[x[2]] === row) : -1;
 }
 // the maps that suit a town, best first: the neighbourhoods its places name (most named first), words that suit a map
 // wherever they are (a beach, a station, a castle), the town's own row, then the everyday maps
@@ -67,7 +76,7 @@ export function townKinds(towns) {
 const drawn = new Map();
 export function townSvg(kind, W, H, seed, dark = false, hint = '') {
     const key = `${kind}|${W}|${H}|${seed}|${dark}|${hint}`;
-    if (!drawn.has(key)) { if (drawn.size >= 12) drawn.delete(drawn.keys().next().value); drawn.set(key, townDraw(kind, W, H, seed, dark, hint)); }
+    if (!drawn.has(key)) { if (drawn.size >= 24) drawn.delete(drawn.keys().next().value); drawn.set(key, townDraw(kind, W, H, seed, dark, hint)); }
     return drawn.get(key);
 }
 const PIN = 'M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z';

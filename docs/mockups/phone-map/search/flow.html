@@ -1,0 +1,102 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>도시 검색 시안</title><style>
+:root{--axd:#2f6bff;--axc:#e1e9ff}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#d9dce2;font-family:-apple-system,'SF Pro Text','Noto Sans KR',sans-serif;color:#161b22;padding:28px;width:1880px}
+h1{font-size:22px;margin:0 0 6px}p.s{font-size:13.5px;color:#555;margin:0 0 18px}
+.row{display:grid;grid-template-columns:repeat(4,440px);gap:28px}
+.col>b{display:block;font-size:17px;margin:0 0 4px}.col>small{display:block;font-size:12.5px;color:#666;margin:0 0 10px;min-height:32px}
+.pair{display:flex;flex-direction:column;gap:22px}
+.ph{width:390px;height:844px;border-radius:44px;border:9px solid #111;background:#f4f5f7;position:relative;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+.bar{position:absolute;top:0;left:0;right:0;height:50px;display:flex;justify-content:space-between;align-items:center;padding:6px 30px 0;font-weight:600;font-size:15px;z-index:5}
+.ind{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:#111;z-index:5}
+.cb{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.92);box-shadow:0 1px 2px rgba(0,0,0,.08),0 4px 12px rgba(0,0,0,.12);display:grid;place-items:center}
+.card{background:#fff;border-radius:22px;box-shadow:0 1px 2px rgba(22,27,34,.04),0 8px 24px rgba(22,27,34,.05);margin:0 14px 12px}
+.sec{font-size:12.5px;color:#7b818c;font-weight:600;margin:14px 28px 8px}
+.rw{display:flex;align-items:center;gap:12px;padding:11px 16px;position:relative}
+.rw+.rw::before{content:'';position:absolute;left:60px;right:16px;top:0;height:1px;background:#eef0f3}
+.si{width:34px;height:34px;border-radius:11px;background:var(--axc);display:grid;place-items:center;flex:none}
+.tx{flex:1;min-width:0}.tx>b{display:block;font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tx>span{display:block;font-size:12.5px;color:#7b818c;margin-top:1px}
+.rt{font-size:12px;color:#9aa0a8;text-align:right}
+.srch{height:44px;border-radius:14px;background:#eceef2;display:flex;align-items:center;gap:8px;padding:0 12px;font-size:15.5px;color:#161b22}
+.srch i{font-style:normal;color:#9aa0a8}
+.caret{display:inline-block;width:2px;height:18px;background:var(--axd);margin-left:-6px;animation:none}
+.chips{display:flex;gap:7px;flex-wrap:wrap;padding:0 16px}
+.chip{white-space:nowrap;flex:none;height:30px;padding:0 12px;border-radius:999px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.05),0 3px 10px rgba(0,0,0,.06);font-size:13px;display:flex;align-items:center;gap:5px}
+.chip.on{background:var(--axd);color:#fff}
+.map{position:absolute;inset:0;height:430px}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:#f4f5f7;border-radius:22px 22px 0 0;box-shadow:0 -4px 20px rgba(0,0,0,.08)}
+.grab{width:38px;height:5px;border-radius:3px;background:#d4d7dc;margin:8px auto 10px}
+.mk{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 10px;border-radius:999px;background:var(--axc);color:var(--axd);font-size:12.5px;font-weight:600}
+.big{font-size:28px;font-weight:700;letter-spacing:-.01em}
+.thumb{border-radius:16px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.05),0 8px 20px rgba(0,0,0,.1);position:relative;background:#eee}
+.thumb .lb{position:absolute;left:0;right:0;bottom:0;padding:22px 10px 8px;background:linear-gradient(transparent,rgba(0,0,0,.45));color:#fff;font-size:13px;font-weight:600}
+.thumb .lb small{display:block;font-size:11px;font-weight:500;opacity:.85}
+.pin path{fill:var(--axd)}
+.dots{display:flex;gap:5px;justify-content:center;margin:8px 0 2px}.dots i{width:6px;height:6px;border-radius:50%;background:#cfd3da}.dots i.on{background:var(--axd);width:16px;border-radius:3px}
+.flag{width:22px;height:16px;border-radius:3px;overflow:hidden;flex:none;box-shadow:0 0 0 1px rgba(0,0,0,.06)}
+.hl{color:var(--axd)}
+</style></head><body>
+<h1>도시 검색 · 합친 흐름 (국기 넣음)</h1><p class="s">① 돋보기 → 검색 시트(A) ② 치는 중: 도시 · 동네 · 지도 종류로 묶어서(D) ③ 도시 골랐을 때(C + A의 넘기기 · 동네 칩 + D의 낮 ↔ 밤) ④ 동네를 누르면 그 동네 지도 · 밤으로 보기</p><div class="row" id="row" style="grid-template-columns:repeat(4,410px)"></div>
+<script src="../towns/towns.js"></script><script src="flags.js"></script><script>
+const T=TOWN3;
+const svg=(k,w,h,seed,dark=false)=>`<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" style="display:block">${T.draw(k,w,h,seed,dark)}</svg>`;
+const PIN='M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z';
+const I={back:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>',
+search:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#9aa0a8" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>',
+searchD:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>',
+pin:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2f6bff" stroke-width="2.2" stroke-linejoin="round"><path d="'+PIN+'"/><circle cx="12" cy="10" r="2.2" fill="#2f6bff" stroke="none"/></svg>',
+clock:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7b818c" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>',
+x:'<svg width="16" height="16" viewBox="0 0 24 24" fill="#c2c7ce"><circle cx="12" cy="12" r="10"/><path d="M8.5 8.5l7 7M15.5 8.5l-7 7" stroke="#fff" stroke-width="2"/></svg>',
+chev:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c2c7ce" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>',
+map:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2f6bff" stroke-width="2.2" stroke-linejoin="round"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/></svg>',
+swap:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h13l-3-3M20 15H7l3 3"/></svg>'};
+const pin=(x,y,t,dk)=>`<g transform="translate(${x-18} ${y-34}) scale(1.5)"><path d="${PIN}" fill="#2f6bff" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.4" fill="#fff"/></g>${t?`<text x="${x+13}" y="${y-18}" font-size="12" font-weight="600" fill="${dk?'#fff':'#161b22'}" stroke="${dk?'#1d232c':'#f3f0ea'}" stroke-width="3" paint-order="stroke">${t}</text>`:''}`;
+const bar=(dk)=>`<div class="bar" style="color:${dk?'#fff':'#111'}"><span>17:42</span><span>●●● ▮</span></div>`;
+const topRow=(right='')=>`<div style="position:absolute;top:56px;left:16px;right:16px;display:flex;justify-content:space-between;z-index:4"><div class="cb">${I.back}</div>${right}</div>`;
+const row=(ic,b,s,r='')=>`<div class="rw"><span class="si"${ic.includes('viewBox="0 0 30 20"')?' style="background:#f1f2f5"':''}>${ic}</span><span class="tx"><b>${b}</b><span>${s}</span></span>${r}</div>`;
+const flag=c=>FLAGS.svg(c,22);
+const ph=(inner,dk)=>`<div class="ph" style="${dk?'background:#1d232c':''}">${bar(dk)}${inner}<div class="ind" style="${dk?'background:#fff':''}"></div></div>`;
+
+
+
+const nm=(a,b)=>`<b>${a}</b>`;
+const s1=ph(`<div class="map">${svg('alleys',390,430,'tokyo')}</div><svg style="position:absolute;inset:0;pointer-events:none" width="390" height="430">${pin(150,200,'시모키타자와 카페',false)}${pin(250,290,'고엔지역',false)}</svg>${topRow('<div class="cb">'+I.searchD+'</div>')}
+ <div class="sheet" style="top:330px"><div class="grab"></div>
+  <div style="padding:0 16px 12px"><div class="srch">${I.search}<i>도시 · 동네 찾기 (東京, Berlin, 홍대 …)</i></div></div>
+  <div class="sec">최근 본 도시</div>
+  <div class="card">${row(flag('eg'),'카이로','이집트 · 옛 카이로 골목','<span class="rt">'+I.chev+'</span>')}${row(flag('no'),'트롬쇠','노르웨이 · 눈 덮인 도시','<span class="rt">'+I.chev+'</span>')}${row(flag('fr'),'파리','프랑스 · 방사형 광장','<span class="rt">'+I.chev+'</span>')}</div>
+  <div class="sec">다녀간 도시</div>
+  <div class="chips">${[['jp','도쿄'],['kr','서울'],['de','베를린'],['gb','브라이턴']].map(([c,n])=>`<span class="chip">${flag(c)}${n}</span>`).join('')}</div>
+ </div>`);
+const s2=ph(`<div style="position:absolute;inset:0;background:#f4f5f7"></div>${topRow()}
+ <div style="position:absolute;top:104px;left:0;right:0">
+  <div style="padding:0 16px 10px"><div class="srch" style="background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.05),0 8px 24px rgba(0,0,0,.08);height:48px;font-size:16.5px">${I.search}<span>베르</span><span class="caret"></span><span style="flex:1"></span>${I.x}</div></div>
+  <div class="sec">도시</div>
+  <div class="card">${row(flag('no'),'<span class="hl">베르</span>겐 · Bergen · ベルゲン','노르웨이 · 눈 덮인 노르웨이 도시')}${row(flag('de'),'<span class="hl">베르</span>히테스가덴','독일 · 알프스 골짜기')}${row(flag('it'),'<span class="hl">베로</span>나 · Verona','이탈리아 · 옛 시내 + 새 시내')}</div>
+  <div class="sec">동네</div>
+  <div class="card">${row(flag('de'),'프렌츨라우어<span class="hl">베르</span>크','베를린의 동네 · 중정 블록 시가지')}${row(flag('fr'),'몽마르트르 · <span class="hl">베르</span>사유','파리의 동네 · 언덕 주택가')}</div>
+  <div class="sec">지도 종류</div>
+  <div class="chips">${['눈 덮인 도시','피오르 마을','목조 주택 교외'].map(c=>`<span class="chip">${I.map} ${c}</span>`).join('')}</div>
+ </div>`);
+const s3=ph(`<div class="map" style="height:460px">${svg('egypt',390,460,'Cairo Khan el-Khalili')}</div>${topRow('<div class="cb">'+I.searchD+'</div>')}
+ <div class="sheet" style="top:400px"><div class="grab"></div>
+  <div style="padding:0 22px 4px"><div style="display:flex;align-items:center;gap:8px">${flag('eg')}<span style="font-size:13px;color:#7b818c">이집트</span></div>
+   <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:4px"><div class="big">카이로</div><div style="height:32px;padding:0 12px;border-radius:999px;background:#eceef2;display:flex;align-items:center;gap:5px;font-size:13px;font-weight:600">☀ 낮 · ☾ 밤</div></div>
+   <div style="font-size:12.5px;color:#7b818c;margin-top:3px">Cairo · القاهرة · カイロ · 开罗</div></div>
+  <div class="card" style="margin-top:10px">${row(I.map,'옛 카이로 골목','이 도시 지도 · 이집트 12장 중','<span class="rt">'+I.chev+'</span>')}${row(I.pin,'다녀간 곳 2','Al-Azhar Park · Khan el-Khalili','<span class="rt">'+I.chev+'</span>')}</div>
+  <div class="sec">어울리는 지도 · 11</div>
+  <div style="display:flex;gap:9px;padding:0 16px;overflow:hidden">${['egypt','bigRiver','riverIslands','downtown'].map((k,i)=>`<div class="thumb" style="width:96px;height:78px;flex:none;${i==0?'outline:2.5px solid #2f6bff;outline-offset:2px':''}">${svg(k,96,78,'cairo'+i)}<div class="lb" style="font-size:11px">${i==0?'옛 카이로':T.KO[k]}</div></div>`).join('')}</div>
+  <div class="sec">동네</div><div class="chips">${['칸 엘칼릴리','자말렉','기자','다운타운'].map(c=>`<span class="chip">${c}</span>`).join('')}</div>
+ </div>`);
+const s4=ph(`<div class="map" style="height:844px">${svg('alleys',390,844,'Seoul hongdae',true)}</div><svg style="position:absolute;inset:0" width="390" height="844">${pin(190,330,'연남동 카페',true)}${pin(130,450,'망원 시장',true)}</svg>${topRow('<div class="cb">'+I.searchD+'</div>')}
+ <div style="position:absolute;left:14px;right:14px;top:104px;z-index:4" class="chips"><span class="chip">강남</span><span class="chip on">홍대 · 연남</span><span class="chip">성수</span><span class="chip">북촌</span></div>
+ <div style="position:absolute;left:16px;right:16px;bottom:30px;z-index:4">
+  <div style="background:rgba(255,255,255,.97);border-radius:22px;padding:16px 18px;box-shadow:0 1px 2px rgba(0,0,0,.08),0 12px 30px rgba(0,0,0,.25)">
+   <div style="display:flex;align-items:center;gap:8px">${flag('kr')}<span style="font-size:13px;color:#7b818c">한국 · 서울 · Seoul · ソウル · 首尔</span></div>
+   <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:4px"><div class="big">홍대 · 연남</div><span class="mk">밤 지도</span></div>
+   <div style="font-size:13px;color:#5b616b;margin-top:6px">골목 주택가 · 다녀간 곳 3</div>
+   <div style="display:flex;gap:8px;margin-top:12px"><div style="flex:1;height:40px;border-radius:12px;background:#eceef2;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600">☀ 낮으로</div><div style="flex:1;height:40px;border-radius:12px;background:#2f6bff;color:#fff;display:flex;align-items:center;justify-content:center;gap:6px;font-size:14px;font-weight:600;box-shadow:inset 0 1px 0 rgba(255,255,255,.2)">${I.swap} 다른 지도</div></div>
+  </div></div>`,true);
+const cols=[['① 돋보기를 누르면','지도는 그대로, 아래 검색 시트 · 최근 본 도시 · 다녀간 도시',s1],['② 치는 중','도시 · 동네 · 지도 종류로 묶어서. 한국어 · 영어 · 일본어 · 중국어 · 현지 이름',s2],['③ 도시를 고르면','큰 지도 + 여러 언어 이름 + 이 도시 지도 · 다녀간 곳 + 어울리는 지도 넘기기 + 동네 칩 + 낮/밤',s3],['④ 동네를 누르면','그 동네 지도로 바뀌어요. 밤으로 보기 · 다른 지도로 넘기기',s4]];
+document.getElementById('row').innerHTML=cols.map(([t,s,a])=>`<div class="col"><b>${t}</b><small>${s}</small>${a}</div>`).join('');
+</script></body></html>
