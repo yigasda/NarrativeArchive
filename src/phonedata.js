@@ -830,8 +830,9 @@ export function storyYear(m, p = null, upto = null) {
     if (p?.year) return String(p.year);
     let tracks = '';
     try { tracks = recentTrackers(5, { visibleOnly: true, ...(upto == null ? {} : { chat: (ctx().chat || []).slice(0, upto + 1) }) }).map(t => t.date || '').join('\n'); } catch { /* no status lines */ }
-    // (the newest status line's first: it is the story's now; then the archive's, then (no archive) the chat's)
-    return yearIn(tracks) || storyYearIn(m.text) || (noArchive(m) ? storyYearIn(recentForCheck(1e9).join('\n')) : '');
+    // (the newest status line's first: it is the story's now; then, for a phone being made, the year the reading of where
+    // everyone is read from the story; then a guess from the archive's dates, or (no archive) the chat's)
+    return yearIn(tracks) || (p?.readYear ? String(p.readYear) : '') || storyYearIn(m.text) || (noArchive(m) ? storyYearIn(recentForCheck(1e9).join('\n')) : '');
 }
 // a phone's year, once: one the story writes in a date, else none (설정 › 날짜 및 시간 changes it); true when it was set now
 export function ensureYear(m, p, upto = null) {
@@ -1034,8 +1035,9 @@ export async function preparePhone(m, owner, { again = false } = {}) {
     const binding = m.phones?.[key]?.financeProfile || m.phoneProfiles?.[key], kept = phonePre(m, owner);
     if (kept && !again && sameBinding(kept, binding, m)) { glossAka(m, kept); kept.clockAt = preClock(m, kept); return kept; }
     const pre = seedPre(m, owner, binding), asked = { known: true };
-    ensureYear(m, pre, nowAt(windowOf(m, null)));
+    // (where everyone is first: its reading tells the year too)
     await tryWhere(m, pre, asked);
+    ensureYear(m, pre, nowAt(windowOf(m, null)));
     pre.asked = asked.asked || []; pre.clockAt = preClock(m, pre);
     (m.phonePre ||= {})[key] = pre;
     await saveMeta();
@@ -1047,6 +1049,7 @@ export async function setPreYear(m, owner, year) {
     if (!pre) return;
     const y = Number(year);
     if (Number.isInteger(y) && y >= 1900 && y <= 2100) { pre.year = y; pre.noYear = false; } else { delete pre.year; pre.noYear = true; }
+    pre.yearSet = true;
     await saveMeta();
 }
 // apps: some of REMAKE's names, made again from the whole story while the rest of the phone stays as it is
@@ -1078,9 +1081,14 @@ async function makePhone0(m, owner, { update = false, apps = null } = {}) {
     if (kept && sameBinding(kept, binding, m)) {
         pre = structuredClone(kept); glossAka(m, pre); asked.asked = kept.asked || [];
         // (a reading that failed is read again: what the user set by hand, and who they took off, stay)
-        if (pre.where?.failed) { delete pre.where.failed; asked.known = true; await tryWhere(m, pre, asked); pre.asked = asked.asked || []; m.phonePre[key] = structuredClone(pre); await saveMeta(); }
+        if (pre.where?.failed) {
+            delete pre.where.failed; asked.known = true; await tryWhere(m, pre, asked); pre.asked = asked.asked || [];
+            // (a year guessed while the reading had failed is worked out again; one the user or the old phone set stays)
+            if (!pre.yearSet && !pre.base) { delete pre.year; delete pre.noYear; ensureYear(m, pre, nowAt(gap)); }
+            m.phonePre[key] = structuredClone(pre); await saveMeta();
+        }
     } else if (firstMade) {
-        pre = seedPre(m, owner, binding); ensureYear(m, pre, nowAt(gap)); asked.known = true; await tryWhere(m, pre, asked);
+        pre = seedPre(m, owner, binding); asked.known = true; await tryWhere(m, pre, asked); ensureYear(m, pre, nowAt(gap));
         // (kept as preparePhone keeps it: a make asked again, after a clock check it didn't pass, reads none of it again)
         pre.asked = asked.asked || []; (m.phonePre ||= {})[key] = structuredClone(pre); await saveMeta();
     }
@@ -2157,12 +2165,16 @@ WHERE
 - Someone whose whereabouts are in OWNER DOESN'T KNOW: leave them out. The owner's phone may not know them.
 - "evidence": the few words that show it.
 
+YEAR
+- "year": the year the story is happening in now, as these texts tell it (a date, a status line, a card that sets it), a number. A year that only a memory, a birth, a past event or a plan names is not it ("born in 1990", "they met in 2019", "the wedding next year"). null when nothing tells it (an undated present, a calendar of its own).
+
 PEOPLE AROUND
 - "around": the people in the owner's life these texts tell of (family, people at work, friends, past partners, anyone with a part in it), never the owner; up to 5 (with more, the ones with the biggest part in the owner's life).
 - "about": everything these texts say of that person and the owner, wherever it is in them: who they are to each other, what happened between them, how each feels about the other, how they talk and text, and last where things stand now (together, apart, not in touch). Compress the texts' own words and keep their details; do not sum up. At most 300 tokens; shorter when the texts say less. Nothing invented, nothing from OWNER DOESN'T KNOW.
 
 JSON (one object, nothing before or after it)
 { "people": [{ "name": as in OWNER or PEOPLE, "aka": [], "city": in English, "names": [], "lives": two-letter country code, "tz", "evidence" }],
+  "year": a number or null,
   "around": [{ "name", "aka": [], "about" }] }`;
 const realTz = v => { const z = String(v || '').trim(); if (!/^[A-Za-z]+(?:\/[A-Za-z_+-]+){1,2}$/.test(z)) return ''; try { new Intl.DateTimeFormat('en-US', { timeZone: z }); return z; } catch { return ''; } };
 // the cards as they are: every field the story can say where someone is in, nothing summed up
@@ -2211,6 +2223,9 @@ export async function readWhere(m, p, opts = {}) {
     const isOwn = n => isOwnerName(p, m, n) || withTwins(m, [n]).some(x => ownAka.has(nameKey(x)));
     const around = arr(raw?.around).map(x => ({ name: line(x?.name, 60), aka: akaOf(x), about: str(x?.about, 1600) })).filter(x => x.name && x.about && !isOwn(x.name)).slice(0, 5);
     if (around.length) p.around = { at: Date.now(), people: around };
+    // (a phone being made: the story's year as the reading tells it, for its year before a guess from the dates)
+    const y = Number(raw?.year);
+    if (p.making) { if (Number.isInteger(y) && y >= 1900 && y <= 2100) p.readYear = y; else delete p.readYear; }
     const known = [p.owner, ...r.people];
     // (someone the user took off stays off; what the user set by hand stays as they set it)
     // (by any form of their name: one taken off as "Ivo" stays off as "이보"; one set by hand as "Ivo" stays so as "이보")
@@ -2462,6 +2477,8 @@ export async function rereadPlaces(m, p, { all = false } = {}) {
     if (all && p.where) { p.where = { ...p.where, people: (p.where.people || []).map(({ manual, ...x }) => x) }; delete p.where.removed; delete p.livesManual; }
     try { await readWhere(m, p); }
     catch (err) { p.where = was.where ?? undefined; if (!was.where) delete p.where; p.lives = was.lives; if (was.livesManual) p.livesManual = true; throw err; }
+    // (a phone not made yet: its year read again with it, unless the user or the old phone set it)
+    if (p.making && !p.yearSet && !p.base) { delete p.year; delete p.noYear; ensureYear(m, p, nowAt(windowOf(m, null))); }
     await saveMeta();
     return placeInfo(p);
 }

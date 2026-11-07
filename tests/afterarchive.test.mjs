@@ -1391,3 +1391,37 @@ test('점검 수정 2: a failed reading is read again on the next make; "Mara Le
         assert.equal(p.now, '10-26 03:10');
     } finally { delete globalThis.__ctx; delete globalThis.__whereAnswer; }
 });
+
+test('the story\'s year for a phone being made: the reading of where everyone is tells it (before a guess from the dates); none read, the guess; one the user set stays through a reading again', async () => {
+    const setup = (year, text = '## #0–#3 — Arrival\n- Ren came home on 2026-11-02 (#1). The wedding is set for 2027-05-01.\n') => {
+        const { m: mm } = htmlPhoneFixture();
+        globalThis.__ctx.characters = [{ name: 'Mara' }]; globalThis.__ctx.characterId = 0;
+        mm.phones = {}; mm.phoneScreenHolder = 'Mara'; mm.text = text;
+        globalThis.__where = [];
+        globalThis.__whereAnswer = { people: [{ name: 'Ren', city: 'Frankfurt am Main', tz: 'Europe/Berlin', lives: 'DE' }], year };
+        return mm;
+    };
+    try {
+        let mm = setup(2026);
+        assert.equal((await data.preparePhone(mm, 'Ren')).year, 2026);
+        // none read: the guess (the latest year the dates give)
+        mm = setup(null);
+        assert.equal((await data.preparePhone(mm, 'Ren')).year, 2027);
+        // read again (다시 연동): the year with it, unless the user set it
+        globalThis.__whereAnswer.year = 2026;
+        let pre = data.phonePre(mm, 'Ren');
+        await data.rereadPlaces(mm, pre);
+        assert.equal(pre.year, 2026);
+        await data.setPreYear(mm, 'Ren', 2019);
+        globalThis.__whereAnswer.year = 2031;
+        await data.rereadPlaces(mm, pre);
+        assert.equal(pre.year, 2019);
+        // the request goes by it
+        mm = setup(2026);
+        globalThis.__menu = { calls: [], answers: [JSON.stringify({ country: 'DE', now: '11-03 03:10', clock: { basis: 'Default used', finalViewpoint: 'Mara', elapsedTime: null, sceneTime: '11-03 03:10', messageSender: null }, contacts: [], notes: [] })] };
+        const p = await data.makePhone(mm, 'Ren');
+        assert.match(globalThis.__menu.calls.find(x => x.sys === data.AI_SYS_PHONE).input, /\[STORY YEAR\]\n2026/);
+        assert.equal(p.year, 2026);
+        assert.equal(p.readYear, undefined);
+    } finally { delete globalThis.__ctx; delete globalThis.__whereAnswer; }
+});
