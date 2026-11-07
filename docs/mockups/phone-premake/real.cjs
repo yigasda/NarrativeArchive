@@ -38,7 +38,7 @@ const { open } = require('/home/user/NarrativeArchive/tools/dev/probe.cjs');
     <div class="ax_card">${rw('1~4 단계', val('다시 보기'))}</div>
     <div class="ax_foot">캐릭터 카드 · 로어북 없음 · 용어 3개 · 월.일 · Mara</div>
     <div class="ax_sec">5 · 위치</div>
-    <div class="ax_pl_warn"><span>폰 주인이 어디 있는지 정해 주세요. 비워 두면 시차 없이 만들어져요.</span></div>
+    <div class="ax_pl_warn"><span>이야기에서 불러오지 못했어요. 폰 주인의 위치를 적어 주세요.</span></div>
     <div class="ax_pl_hero"><span class="ax_pl_k">Oscar · 지금 있는 곳</span><div class="ax_pl_city"><b style="color:#8a919c">도시 정하기</b></div>
       <div class="ax_pl_chips"><div class="ax_pl_chip"><span>사는 나라</span><b>독일</b></div><div class="ax_pl_chip"><span>시간대</span><b>—</b></div></div></div>
     <div style="height:12px"></div>${blue('다시 연동')}
@@ -50,5 +50,11 @@ const { open } = require('/home/user/NarrativeArchive/tools/dev/probe.cjs');
     await s.p.evaluate(h => { const sc = document.querySelector('.na_ph_frame .ax_scroll'); sc.innerHTML = h; sc.scrollTop = 0; }, h);
     await s.p.waitForTimeout(300); await s.shot('prep_' + k);
   }
+  // pressing 이대로 폰 만들기 with the owner's place empty: the phone's own alert asks once
+  await s.to('set'); await s.p.waitForTimeout(250);
+  await s.p.evaluate(h => { const sc = document.querySelector('.na_ph_frame .ax_scroll'); sc.innerHTML = h; sc.scrollTop = 0;
+    const host = document.querySelector('.na_ph_frame .cg_canvas') || document.querySelector('.na_ph_frame .na_ph_scr');
+    host.insertAdjacentHTML('beforeend', '<div class="pcf" role="dialog"><div class="pcf_box"><div class="pcf_card"><div class="pcf_msg"><b>폰 주인 위치 없이 만들까요?</b><span>시차 없이 만들어져요.</span></div><div class="pcf_btns"><div role="button" class="pcf_no">위치 적기</div><div role="button" class="pcf_ok safe">이대로 만들기</div></div></div></div></div>'); }, A3);
+  await s.p.waitForTimeout(500); await s.shot('prep_5_ask');
   console.log(s.errors()); await s.close();
 })();
