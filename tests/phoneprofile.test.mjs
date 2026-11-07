@@ -28,7 +28,7 @@ test('profile navigation preserves saved binding until connect and supports inli
  const chunk=src.slice(src.indexOf('    const profilePhone ='),src.indexOf("    $root.on('click', '.na_ph_pick"));
  const init=new Function('$root','profileStates','phone','ctx','resolvePhoneProfile','profileEntries','saveMeta','fillDevice','currentPersonaBinding',`
  const m={};
- const nameKey=s=>s.toLowerCase();let phoneClosed=false,view='setprofile';const drawPhone=()=>{};
+ const nameKey=s=>s.toLowerCase();let phoneClosed=false,view='setprofile',prepFrom=false;const drawPhone=()=>{};
  ${chunk}
  return editProfile;
  `);
@@ -74,7 +74,7 @@ test('pre-generation source picker saves a chat-scoped binding without generatin
  const chunk=src.slice(src.indexOf('    const profilePhone ='),src.indexOf("    $root.on('click', '.na_ph_pick"));
  const handlers=new Map(),states=new Map(),draft={owner:'Alex',profileDraft:true},m={};let deviceCalls=0;
  const init=new Function('$root','profileStates','phone','pendingProfile','ctx','resolvePhoneProfile','profileEntries','saveMeta','fillDevice','currentPersonaBinding','m',`
- const nameKey=s=>s.toLowerCase();let phoneClosed=false,view='setprofile';const drawPhone=()=>{};
+ const nameKey=s=>s.toLowerCase();let phoneClosed=false,view='setprofile',prepFrom=false;const drawPhone=()=>{};
  ${chunk}
  return editProfile;
  `);

@@ -242,6 +242,11 @@
 .ax .ax_dseg > span.on { background: #fff; color: #161b22; box-shadow: 0 1px 3px rgba(22, 27, 34, 0.12); }
 /* 설정 › 위치 정보 (docs/mockups/phone-place B): the owner on a white card like the settings app's, the others as world-clock rows */
 .ax .ax_pl_warn { display: flex; align-items: center; gap: 8px; margin: 0 16px 12px; padding: 12px 14px; border-radius: 16px; background: #f6edd6; color: #7a5a12; font-size: 13px; --axfs: 13px; line-height: 1.4; box-shadow: 0 1px 2px rgba(22, 27, 34, 0.04); }
+/* 폰 만들기 준비 (docs/mockups/phone-premake): the steps not open yet in grey, the lead line under the title */
+.ax .ax_prep_lead { margin: -6px 28px 6px; }
+.ax .ax_n.ax_prep_wait { color: #a8aeb7; --axfg: #a8aeb7; }
+.ax .ax_p.ax_prep_sub, .ax .ax_n.ax_prep_off { color: #b4bac3; --axfg: #b4bac3; }
+.ax .ax_prep_gap { height: 14px; }
 .ax .ax_pl_hero { margin: 0 16px; padding: 16px 16px 14px; border-radius: 22px; background: #fff; color: #000; box-shadow: 0 1px 2px rgba(22, 27, 34, 0.04), 0 8px 24px rgba(22, 27, 34, 0.05); }
 .ax .ax_pl_k { display: block; font-size: 12.5px; --axfs: 12.5px; color: #8a919c; }
 .ax .ax_pl_city { display: flex; align-items: center; gap: 7px; margin-top: 3px; cursor: pointer; }
