@@ -98,7 +98,9 @@ export const koClockText = text => { const c = koClocks(text)[0]; return c ? `${
 // "HH:MM", and the ways a model or a status line may write a clock: "7:00 PM", "오후 7:00", "7pm", "19시", "19시 30분"
 export const hhmm = v => {
     const s = String(v || '');
-    if (!/(\d{1,2})\s*:\s*(\d{2})/.test(s)) { const ko = koClockText(s); if (ko) return ko; }
+    // (a Korean clock the reader turns down, "3시 이후", "3시 15분 전", "12시간", "오후 16시", is no time at all: never its
+    // first numbers read the old way)
+    if (!/(\d{1,2})\s*:\s*(\d{2})/.test(s)) { const ko = koClockText(s); if (ko) return ko; if (/\d\s*시/.test(s)) return ''; }
     const mt = s.match(/(\d{1,2})\s*:\s*(\d{2})/) || s.match(/(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?/) || s.match(/(\d{1,2})\s*(?=[ap]\.?m\b)/i);
     if (!mt) return '';
     let h = Number(mt[1]);
