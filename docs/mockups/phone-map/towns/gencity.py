@@ -66,13 +66,18 @@ CLUE=[
  ('farm · 농장 · 과수원 · 목장', '논밭 사이 마을 · 들판 마을'),
 ]
 for w,k in CLUE: GEN.append([[x.strip().lower() for x in w.split(' · ')],kinds(k)])
-js="""// 캐릭터 휴대폰 · 다녀간 곳: which town drawing suits a town. Made from docs/mockups/phone-map/towns/citytable.md
-// (CITY: a town's names → the maps that suit it; HINT: a neighbourhood's words in a place's name → the maps to try first;
-// CLUE: words that suit a map wherever they are; COMMON: for a town nobody listed). Regenerate it when the table changes.
+ORDER=json.loads(re.search(r"export const TOWN_KINDS = (\[[^\]]*\])", src).group(1).replace("'", '"'))
+ix=lambda ks: [ORDER.index(k) for k in ks]
+js="""// 캐릭터 휴대폰 · 다녀간 곳: which town drawing suits a town. Made by docs/mockups/phone-map/towns/gencity.py from
+// citytable.md and alias.py there (CITY: a town's names → the maps that suit it; HINT: a neighbourhood's words in a place's
+// name → the maps to try first; CLUE: words that suit a map wherever they are; COMMON: for a town nobody listed).
+// The maps are written as their place in TOWN_KINDS (smaller), and turned back into names here. Regenerate, never edit.
+import { TOWN_KINDS } from './phonemaptowns.js';
+const K = ks => ks.map(i => TOWN_KINDS[i]);
 """
-js+="export const CITY = "+json.dumps(CITY,ensure_ascii=False,separators=(',',':'))+";\n"
-js+="export const HINT = "+json.dumps(HINT,ensure_ascii=False,separators=(',',':'))+";\n"
-js+="export const CLUE = "+json.dumps(GEN,ensure_ascii=False,separators=(',',':'))+";\n"
-js+="export const COMMON = "+json.dumps(COMMON,ensure_ascii=False)+";\n"
+js+="export const CITY = "+json.dumps([[n,ix(k)] for n,k in CITY],ensure_ascii=False,separators=(',',':'))+".map(([n, k]) => [n, K(k)]);\n"
+js+="export const HINT = "+json.dumps([[t,w,ix(k)] for t,w,k in HINT],ensure_ascii=False,separators=(',',':'))+".map(([t, w, k]) => [t, w, K(k)]);\n"
+js+="export const CLUE = "+json.dumps([[w,ix(k)] for w,k in GEN],ensure_ascii=False,separators=(',',':'))+".map(([w, k]) => [w, K(k)]);\n"
+js+="export const COMMON = K("+json.dumps(ix(COMMON))+");\n"
 open(os.path.join(ROOT,'src','phonemapcity.js'),'w',encoding='utf8').write(js)
 print(len(CITY),len(HINT),len(GEN),len(js))
