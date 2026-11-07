@@ -19,7 +19,7 @@ import { parseSections, RANGE_HEAD, sectionKey, splitTail } from './sections.js'
 import { glossaryEntries, glossaryPeople } from './translate.js';
 import { worldText } from './world.js';
 import { phoneChatScope, phoneTarget } from './phonestory.js';
-import { dateOrderSource, htmlClocks, htmlDatedClocks, htmlTimeContext, swapDate, withDateOrder, withDateOrderSync, tidyKo, arr, evOf, gapDays, giftOf, hhmm, jsonOf, ko, parseJson, storyMin, byStory, yearIn, storyYearIn, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
+import { dateOrderSource, htmlClocks, htmlDatedClocks, htmlTimeContext, swapDate, withDateOrder, withDateOrderSync, tidyKo, arr, evOf, gapDays, giftOf, hhmm, jsonOf, ko, parseJson, storyMin, byStory, yearIn, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
 import { clockFallback, exactClockShift } from './phoneclock.js';
 export { tidyKo, arr, gapDays, giftOf, hhmm, jsonOf, ko, last4, line, num, pad, pick, storyMin, byStory, str, when, withEv };
 import { COUNTRY_TZ, applyDays, applyLife, applyWeather, cardClock, cityAt, dayGap, dlvClock, fillDays, lifeClock, lifeNow, weatherFrom, zoneShift } from './phonesynclife.js';
@@ -838,11 +838,12 @@ export function storyYear(m, p = null, upto = null) {
     // the owner's own choice in 날짜 및 시간: this year, or none
     if (p?.noYear) return '';
     if (p?.year) return String(p.year);
-    // (the newest status line that writes a year first: it is the story's now; then, for a phone being made, the year the
-    // reading of where everyone is read from the story; then a guess from the archive's dates, or (no archive) the chat's)
+    // (the newest status line that writes a year: it is the story's now; else, for a phone being made, the year the reading
+    // of where everyone is read from the story; else none: never guessed from the dates a text writes, a birthday, a memory
+    // or a plan; the user sets it before the phone is made, or in 날짜 및 시간)
     const st = trackerYear(upto);
     if (st) return String(acrossNewYear(st.y, st.day, p?.now));
-    return (p?.readYear ? String(p.readYear) : '') || storyYearIn(m.text) || (noArchive(m) ? storyYearIn(recentForCheck(1e9).join('\n')) : '');
+    return p?.readYear ? String(p.readYear) : '';
 }
 // the newest status line that writes a year: { y, day: "MM-DD" } (the status lines come newest first)
 function trackerYear(upto = null) {
@@ -1049,8 +1050,7 @@ const stTime = st => (st?.known && hm(st.at) ? st.at : hm(st?.raw) ? st.raw : ''
 // what a phone being made is checked on: where it was read to be; an owner the reading placed nowhere, by the country
 // the answer gives when that country has one clock (Germany, Korea), never one with many (an owner in LA is not checked by
 // New York's)
-const MANY_ZONES = new Set(['US', 'CA', 'AU', 'RU', 'BR', 'MX', 'ID', 'KZ', 'MN', 'CL', 'EC', 'PT', 'ES', 'CD', 'KI', 'FM', 'PF', 'NZ', 'GL', 'UM', 'AQ']);
-const checkOn = (q, country) => { const c = String(country || '').toUpperCase(); return ownerZone(q) || !COUNTRY_TZ[c] || MANY_ZONES.has(c) ? q : { ...q, country: c }; };
+const checkOn = (q, country) => { const c = String(country || '').toUpperCase(); return ownerZone(q) || !COUNTRY_TZ[c] || COUNTRY_ZONES[c] ? q : { ...q, country: c }; };
 // (an old phone made again whole, one with no 위치 정보: its year and where it lives, as the owner left them)
 const seedPre = (m, owner, binding) => {
     const cur = m.phones?.[nameKey(owner)], pre = { owner, making: true, lore: loreKey(m), base: !!cur, ...(binding ? { financeProfile: structuredClone(binding) } : {}) };
@@ -2474,7 +2474,7 @@ const CITY_ZONES = [
     ['America/Edmonton', ['Edmonton', '에드먼턴', 'Calgary', '캘거리']], ['America/Winnipeg', ['Winnipeg', '위니펙']],
     ['Europe/Berlin', ['Frankfurt', 'Frankfurt am Main', '프랑크푸르트', 'Berlin', '베를린', 'Munich', 'München', 'Muenchen', '뮌헨', 'Hamburg', '함부르크', 'Cologne', 'Köln', 'Koeln', '쾰른', 'Düsseldorf', 'Duesseldorf', '뒤셀도르프', 'Stuttgart', '슈투트가르트', 'Leipzig', '라이프치히', 'Dresden', '드레스덴', 'Heidelberg', '하이델베르크', 'Nuremberg', 'Nürnberg', '뉘른베르크', 'Bonn', '본']],
     // (the cities most chats write, in English, the local name and Korean: a city typed in 위치 정보 by any of them; a name
-    // two cities share, Cambridge, Portland, is left out: the user is asked for another)
+    // two cities share, Cambridge, Portland, is asked: CITY_TWINS)
     ['Asia/Seoul', ['Seoul', '서울', 'Busan', 'Pusan', '부산', 'Incheon', '인천', 'Daegu', '대구', 'Daejeon', '대전', 'Gwangju', '광주', 'Ulsan', '울산', 'Suwon', '수원', 'Seongnam', '성남', 'Pangyo', '판교', 'Bundang', '분당', 'Ilsan', '일산', 'Goyang', '고양', 'Yongin', '용인', 'Jeju', '제주', 'Jeonju', '전주', 'Gangneung', '강릉', 'Sejong', '세종', 'Pohang', '포항', 'Changwon', '창원', 'Cheongju', '청주', 'Chuncheon', '춘천', 'Gyeongju', '경주', 'Yeosu', '여수', 'Sokcho', '속초']],
     ['Asia/Tokyo', ['Tokyo', '東京', '도쿄', 'Osaka', '大阪', '오사카', 'Kyoto', '京都', '교토', 'Yokohama', '横浜', '요코하마', 'Nagoya', '名古屋', '나고야', 'Sapporo', '札幌', '삿포로', 'Fukuoka', '福岡', '후쿠오카', 'Kobe', '神戸', '고베', 'Okinawa', 'Naha', '沖縄', '오키나와', 'Nara', '奈良', '나라', 'Hiroshima', '広島', '히로시마', 'Sendai', '仙台', '센다이']],
     ['Asia/Shanghai', ['Shanghai', '上海', '상하이', 'Beijing', '北京', '베이징', 'Shenzhen', '深圳', '선전', 'Guangzhou', '广州', '광저우', 'Chengdu', '成都', '청두', 'Hangzhou', '杭州', '항저우', 'Qingdao', '青岛', '칭다오']],
@@ -2497,9 +2497,51 @@ const CITY_ZONES = [
     ['Australia/Perth', ['Perth', '퍼스']], ['Australia/Adelaide', ['Adelaide', '애들레이드']], ['Australia/Lord_Howe', ['Lord Howe Island', 'Lord Howe', '로드하우']],
     ['Pacific/Auckland', ['Auckland', '오클랜드', 'Wellington', '웰링턴']], ['America/Mexico_City', ['Mexico City', '멕시코시티']],
     ['America/Sao_Paulo', ['São Paulo', 'Sao Paulo', '상파울루', 'Rio de Janeiro', '리우데자네이루']], ['America/Argentina/Buenos_Aires', ['Buenos Aires', '부에노스아이레스']],
-    ['America/Los_Angeles', ['San Diego', '샌디에이고', 'Las Vegas', '라스베이거스']], ['America/New_York', ['Philadelphia', '필라델피아', 'Miami', '마이애미', 'Atlanta', '애틀랜타']],
+    ['America/Los_Angeles', ['San Diego', '샌디에이고', 'Las Vegas', '라스베이거스', 'LA']], ['America/New_York', ['Philadelphia', '필라델피아', 'Miami', '마이애미', 'Atlanta', '애틀랜타']],
     ['America/Chicago', ['Dallas', '댈러스', 'Houston', '휴스턴', 'Austin', '오스틴']], ['Africa/Cairo', ['Cairo', '카이로']], ['Africa/Johannesburg', ['Johannesburg', '요하네스버그', 'Cape Town', '케이프타운']],
 ];
+// a city name two places go by, each with its zone: the user is asked which (cityChoices)
+const CITY_TWINS = [
+    [['Cambridge', '케임브리지'], [['Europe/London', '영국 케임브리지'], ['America/New_York', '미국 케임브리지 (매사추세츠)']]],
+    [['Portland', '포틀랜드'], [['America/Los_Angeles', '미국 포틀랜드 (오리건)'], ['America/New_York', '미국 포틀랜드 (메인)']]],
+    [['Birmingham', '버밍엄', '버밍햄'], [['Europe/London', '영국 버밍엄'], ['America/Chicago', '미국 버밍햄 (앨라배마)']]],
+    [['San Jose', '산호세'], [['America/Los_Angeles', '미국 산호세 (캘리포니아)'], ['America/Costa_Rica', '코스타리카 산호세']]],
+    [['Santiago', '산티아고'], [['America/Santiago', '칠레 산티아고'], ['Europe/Madrid', '스페인 산티아고데콤포스텔라']]],
+    [['Perth', '퍼스'], [['Australia/Perth', '호주 퍼스'], ['Europe/London', '영국 퍼스 (스코틀랜드)']]],
+    [['Valencia', '발렌시아'], [['Europe/Madrid', '스페인 발렌시아'], ['America/Caracas', '베네수엘라 발렌시아']]],
+];
+const cityTwin = k => CITY_TWINS.find(([names]) => names.some(n => pkey(n) === k));
+// a country with more than one clock: its zones, for the user to pick one (a city the app doesn't know, in that country)
+const COUNTRY_ZONES = {
+    US: [['America/New_York', '동부 (뉴욕 · 보스턴 · 마이애미 · 애틀랜타)'], ['America/Chicago', '중부 (시카고 · 댈러스 · 휴스턴)'], ['America/Denver', '산악 (덴버 · 솔트레이크시티)'], ['America/Phoenix', '애리조나 (피닉스)'], ['America/Los_Angeles', '서부 (LA · 샌프란시스코 · 시애틀 · 라스베이거스)'], ['America/Anchorage', '알래스카'], ['Pacific/Honolulu', '하와이']],
+    CA: [['America/St_Johns', '뉴펀들랜드'], ['America/Halifax', '대서양 (핼리팩스)'], ['America/Toronto', '동부 (토론토 · 몬트리올 · 오타와)'], ['America/Winnipeg', '중부 (위니펙)'], ['America/Regina', '서스캐처원'], ['America/Edmonton', '산악 (캘거리 · 에드먼턴)'], ['America/Vancouver', '태평양 (밴쿠버)']],
+    AU: [['Australia/Sydney', '시드니 · 멜버른 · 캔버라'], ['Australia/Brisbane', '퀸즐랜드 (브리즈번)'], ['Australia/Adelaide', '남호주 (애들레이드)'], ['Australia/Darwin', '노던 준주 (다윈)'], ['Australia/Perth', '서호주 (퍼스)'], ['Australia/Hobart', '태즈메이니아 (호바트)'], ['Australia/Lord_Howe', '로드하우섬']],
+    RU: [['Europe/Kaliningrad', '칼리닌그라드'], ['Europe/Moscow', '모스크바 · 상트페테르부르크'], ['Europe/Samara', '사마라'], ['Asia/Yekaterinburg', '예카테린부르크'], ['Asia/Omsk', '옴스크'], ['Asia/Novosibirsk', '노보시비르스크'], ['Asia/Krasnoyarsk', '크라스노야르스크'], ['Asia/Irkutsk', '이르쿠츠크'], ['Asia/Yakutsk', '야쿠츠크'], ['Asia/Vladivostok', '블라디보스토크'], ['Asia/Magadan', '마가단'], ['Asia/Kamchatka', '캄차카']],
+    BR: [['America/Sao_Paulo', '브라질리아 · 상파울루 · 리우'], ['America/Manaus', '아마조나스 (마나우스)'], ['America/Rio_Branco', '아크리'], ['America/Noronha', '페르난두지노로냐']],
+    MX: [['America/Mexico_City', '중부 (멕시코시티)'], ['America/Cancun', '킨타나로오 (칸쿤)'], ['America/Chihuahua', '치와와'], ['America/Hermosillo', '소노라'], ['America/Tijuana', '바하칼리포르니아 (티후아나)']],
+    ID: [['Asia/Jakarta', '서부 (자카르타)'], ['Asia/Makassar', '중부 (발리 · 마카사르)'], ['Asia/Jayapura', '동부 (자야푸라)']],
+    NZ: [['Pacific/Auckland', '본토 (오클랜드 · 웰링턴)'], ['Pacific/Chatham', '채텀 제도']],
+    CL: [['America/Santiago', '본토 (산티아고)'], ['Pacific/Easter', '이스터섬']],
+    PT: [['Europe/Lisbon', '본토 · 마데이라 (리스본)'], ['Atlantic/Azores', '아조레스']],
+    ES: [['Europe/Madrid', '본토 (마드리드 · 바르셀로나)'], ['Atlantic/Canary', '카나리아 제도']],
+    MN: [['Asia/Ulaanbaatar', '울란바토르'], ['Asia/Hovd', '호브드']],
+    EC: [['America/Guayaquil', '본토 (키토 · 과야킬)'], ['Pacific/Galapagos', '갈라파고스']],
+};
+// a city typed in 위치 정보: its zone ({ tz }), the places that name goes by ({ choices: [{ tz, label }] }), or, one the
+// app doesn't know, { askCountry: true } (then countryZones)
+export function cityChoices(p, text) {
+    const tz = tzForCity(p, text);
+    if (tz) return { tz };
+    const twin = cityTwin(pkey(text));
+    return twin ? { choices: twin[1].map(([z, label]) => ({ tz: z, label })) } : { askCountry: true };
+}
+// a country's zones to pick from: one, or (a country with many) each with the cities in it
+export function countryZones(code) {
+    const c = countryOf(code);
+    if (!c) return [];
+    if (COUNTRY_ZONES[c]) return COUNTRY_ZONES[c].map(([tz, label]) => ({ tz, label }));
+    return COUNTRY_TZ[c] ? [{ tz: COUNTRY_TZ[c], label: COUNTRIES[c] || c }] : [];
+}
 export function tzForCity(p, text) {
     const k = pkey(text);
     if (!k) return '';
@@ -2509,6 +2551,8 @@ export function tzForCity(p, text) {
         ...arr(p?.where?.people).map(r => ({ tz: r.tz, names: namesOf(r) }))];
     const saved = [...new Set(known.filter(r => r.names.some(n => pkey(n) === k)).map(r => realTz(r.tz)).filter(Boolean))];
     if (saved.length) return saved.length === 1 ? saved[0] : '';
+    // (a name two places go by is asked: cityChoices)
+    if (cityTwin(k)) return '';
     const explicit = realTz(text);
     if (explicit) return explicit;
     const z = ZONES.filter(t => pkey(t.split('/').pop().replace(/_/g, ' ')) === k);
@@ -2534,11 +2578,17 @@ export async function setOwnerLives(m, p, code) {
     await saveMeta();
 }
 // someone's city, by hand: its zone found for it; neither the reading nor a reflection changes it after
-export async function setPlaceCity(m, p, name, text) {
+// tz: the zone the user picked for it (cityChoices' choices, countryZones). Without one, a city the app can't place on its
+// own throws, with what to ask: err.choices (which of the places that name goes by), or err.askCountry (which country)
+export async function setPlaceCity(m, p, name, text, tz0 = '') {
     const city = line(text, 60);
     if (!city || !name) return;
-    const tz = tzForCity(p, city);
-    if (!tz) throw new Error('그 도시의 시간대를 찾지 못했어요');
+    const tz = realTz(tz0) || tzForCity(p, city);
+    if (!tz) {
+        const c = cityChoices(p, city), err = new Error(c.choices ? '어느 도시인지 골라 주세요' : '어느 나라 도시인지 골라 주세요');
+        if (c.choices) err.choices = c.choices; else err.askCountry = true;
+        throw err;
+    }
     const r = rowFor(p, name);
     Object.assign(r, { city, names: [city], tz, manual: { ...(r.manual || {}), city: true } });
     delete r.local;

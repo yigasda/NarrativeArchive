@@ -230,6 +230,22 @@ test('점검 4: one person in PEOPLE AROUND and in the events is one for their f
     assert.deepEqual(info.people.map(x => x.name), ['Mara']);
 });
 
-test('점검 4: a city name two places share is not guessed', () => {
-    for (const c of ['Cambridge', 'Portland', 'LA']) assert.equal(data.tzForCity(plainPhone(), c), '', c);
+test('점검 5: a city name two places go by is asked, which one; a city the app doesn\'t know, which country, then that country\'s zones; the zone picked is the one kept', async () => {
+    for (const c of ['Cambridge', 'Portland', '케임브리지']) assert.equal(data.tzForCity(plainPhone(), c), '', c);
+    assert.equal(data.tzForCity(plainPhone(), 'LA'), 'America/Los_Angeles');
+    assert.deepEqual(data.cityChoices(plainPhone(), 'Cambridge'), { choices: [{ tz: 'Europe/London', label: '영국 케임브리지' }, { tz: 'America/New_York', label: '미국 케임브리지 (매사추세츠)' }] });
+    assert.deepEqual(data.cityChoices(plainPhone(), 'Busan'), { tz: 'Asia/Seoul' });
+    assert.deepEqual(data.cityChoices(plainPhone(), 'Gimhae-si Daedong'), { askCountry: true });
+    assert.deepEqual(data.countryZones('DE'), [{ tz: 'Europe/Berlin', label: data.COUNTRIES.DE }]);
+    assert.ok(data.countryZones('US').some(z => z.tz === 'America/Chicago') && data.countryZones('US').length === 7);
+    assert.deepEqual(data.countryZones(''), []);
+    // a saved Cambridge (a weather city of the phone's) is that one, not asked
+    assert.equal(data.tzForCity(plainPhone({ life: { weather: { cities: [{ name: 'Cambridge', tz: 'America/New_York' }] } } }), 'Cambridge'), 'America/New_York');
+    // asked, then picked
+    const p = plainPhone({ where: { at: 1, people: [row('Ren', 'Seoul', 'Asia/Seoul'), row('Mara', 'Paris', 'Europe/Paris')] } });
+    await assert.rejects(data.setPlaceCity(mText(), p, 'Mara', 'Portland'), err => err.choices?.length === 2);
+    await data.setPlaceCity(mText(), p, 'Mara', 'Portland', 'America/New_York');
+    assert.deepEqual([p.where.people[1].city, p.where.people[1].tz, p.where.people[1].manual.city], ['Portland', 'America/New_York', true]);
+    await data.setPlaceCity(mText(), p, 'Mara', '김해', 'Asia/Seoul');
+    assert.equal(p.where.people[1].tz, 'Asia/Seoul');
 });

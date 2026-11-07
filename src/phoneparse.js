@@ -487,19 +487,6 @@ export const byStory = (now, get = x => x?.time) => (a, b) => storyMin(get(a), n
 const MON = 'jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|januar|februar|märz|maerz|mai|juni|juli|okt|dez';
 const DATED = new RegExp(`(?<!\\d)((?:19|20)\\d{2})[-./](?:0?[1-9]|1[0-2])[-./](?:0?[1-9]|[12]\\d|3[01])(?!\\d)|(?<!\\d)((?:19|20)\\d{2})년\\s*(?:0?[1-9]|1[0-2])월|\\b(?:${MON})[a-zä]*\\.?\\s+\\d{1,2}(?:st|nd|rd|th)?,?\\s+((?:19|20)\\d{2})(?!\\d)|(?<!\\d)\\d{1,2}\\.?\\s+(?:${MON})[a-zä]*\\.?,?\\s+((?:19|20)\\d{2})(?!\\d)|(?<!\\d)(?:(?:0?[1-9]|1[0-2])[-./](?:0?[1-9]|[12]\\d|3[01])|(?:0?[1-9]|[12]\\d|3[01])[-./](?:0?[1-9]|1[0-2]))[-./]\\s?((?:19|20)\\d{2})(?!\\d)`, 'gi');
 export const yearIn = text => { let y = ''; for (const mt of String(text || '').matchAll(DATED)) y = mt[1] || mt[2] || mt[3] || mt[4] || mt[5]; return y; };
-// the story's year in an archive or a chat, a guess the reading of where everyone is goes before: the newest year a date
-// at the start of a line gives (the archive's own timeline: "- 2026년 10월 25일, …", "## 2026-10-25 — …"; a memory, a
-// birthday or a plan is written inside a line), else the last one written
-export function storyYearIn(text) {
-    const t = String(text || ''), lead = [], any = [];
-    for (const mt of t.matchAll(DATED)) {
-        const y = Number(mt[1] || mt[2] || mt[3] || mt[4] || mt[5]);
-        if (!y) continue;
-        any.push(y);
-        if (/^\s*(?:#{1,6}\s*|[-*•]\s*)?(?:on\s+)?$/i.test(t.slice(t.lastIndexOf('\n', mt.index - 1) + 1, mt.index))) lead.push(y);
-    }
-    return lead.length ? String(Math.max(...lead)) : any.length ? String(any.at(-1)) : '';
-}
 // a model's JSON with a slip mended: a bracket closed with the wrong kind ("profile": { … ]), a comma before a closer,
 // closers missing at the end. Strings are left as they are
 export function mendJson(t) {

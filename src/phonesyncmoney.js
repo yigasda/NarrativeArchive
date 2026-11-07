@@ -302,6 +302,8 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
             // (one still open first: "it was cancelled" ends the order still open, else it is the one already cancelled)
             || x.occurrence === 'again' && ((rs => rs.find(o => !ENDED.test(o.status || '')) || rs[0])([...box].reverse().filter(o => !madeNow.has(o) && loose(o, x)))) || null;
         if (old && old.sourceIndex == null) old.sourceIndex = e.at;
+        // (an order put in with no shop, told of again with its shop: the shop now; 되돌리기 takes it back)
+        if (old && path === 'orders' && !txt(old.shop) && txt(x.shop)) { const to = txt(x.shop, 60); out.effects.push({ type: 'field', path: 'money.orders', id: old.id, field: 'shop', from: old.shop ?? null, to }); old.shop = to; }
         if (old) {
             // an order's status only moves forward; a pass's is free text ("used", "checked in", "cancelled"): whatever it says now
             const next = path === 'passes' ? txt(x.status, 30) : x.status;
@@ -539,13 +541,15 @@ export function payOrders(m, p, year) {
 }
 
 // 복구: put back what a lost save dropped; something already there stays as it is
+// the object a "field" effect set: the one at its path, or (with an id) that record in the list there
+const fieldAt = (p, x) => { const at = boxAt(p, x.path); return x.id ? (Array.isArray(at) ? at.find(r => r?.id === x.id) : null) : at; };
 export function replayEffects(m, p, effects) {
     const f = finance(m);
     for (const x of effects) {
         if (x.type === 'entry') { const L = f.accounts[x.key]; if (L && !L.entries[x.id]) L.entries[x.id] = { amount: x.amount, date: x.date, ...(x.sourceIndex !== undefined ? { sourceIndex: x.sourceIndex } : {}) }; continue; }
         if (x.type === 'amendEntry') { const line = f.accounts[x.key]?.entries[x.id]; if (line && line.amount === x.from) line.amount = x.to; continue; }
         if (x.type === 'price') { const slot = (f.prices[x.key] ||= {})[x.date] ||= { rows: [], selected: null, conflict: false }; if (!slot.rows.some(r => r.id === x.id)) { slot.rows.push(structuredClone(x.row)); slot.selected ??= x.id; } continue; }
-        if (x.type === 'field') { const o = boxAt(p, x.path); if (o && (o[x.field] ?? null) === x.from) o[x.field] = x.to; continue; }
+        if (x.type === 'field') { const o = fieldAt(p, x); if (o && (o[x.field] ?? null) === x.from) o[x.field] = x.to; continue; }
         if (lifeReplay(p, x) !== null) continue;
         if (!p[x.path.split('.')[0]]) continue;
         const box = boxAt(p, x.path, true), idKey = x.idKey || 'id';
@@ -574,7 +578,7 @@ export function revertEffects(m, p, effects) {
         // a price the story gave: its row goes, the day's choice as it was
         if (x.type === 'price') { const slot = f.prices[x.key]?.[x.date]; if (!slot) continue; slot.rows = slot.rows.filter(r => r.id !== x.id); if (!slot.rows.length) { delete f.prices[x.key][x.date]; if (!Object.keys(f.prices[x.key]).length) delete f.prices[x.key]; } else if (x.prev) Object.assign(slot, x.prev); continue; }
         // a field set on a record (the brokerage's valuation day): back, unless changed since
-        if (x.type === 'field') { const o = boxAt(p, x.path); if (o && (o[x.field] ?? null) === x.to) { if (x.from === null) delete o[x.field]; else o[x.field] = x.from; } else if (o) left.push(x); continue; }
+        if (x.type === 'field') { const o = fieldAt(p, x); if (o && (o[x.field] ?? null) === x.to) { if (x.from === null) delete o[x.field]; else o[x.field] = x.from; } else if (o) left.push(x); continue; }
         const back = lifeRevert(p, x);
         if (back !== null) { if (!back) left.push(x); continue; }
         const box = boxAt(p, x.path);

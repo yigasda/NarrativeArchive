@@ -3,7 +3,7 @@ import { wealthBlock, wealthCheck, investmentWealthRows } from './wealth.js';
 import { askDraft as askDraftAny } from './ai.js';
 // (gives up after 5 minutes, like the phone's other requests)
 const askDraft = (input, o = {}) => askDraftAny(input, { timeout: 300000, ...o });
-import { num, parseJson, storyText, yearIn, storyYearIn } from './phoneparse.js';
+import { num, parseJson, storyText, yearIn } from './phoneparse.js';
 import { ctx, saveMeta } from './core.js';
 import { sideRequest, storyNow, prepareWealth, readMark, readNote, turnsNote, secondTurn, soFarHead, windowOf, nowAt } from './phonedata.js';
 import { syncOf, makeMark, exclusive } from './phonesync.js';
@@ -109,9 +109,9 @@ function stopAt(m, p) {
 }
 export function investmentDate(m, p) {
     if (validDate(p.investment?.date)) return p.investment.date;
-    // the year only from a date the archive writes, never a bare number (it may be money or the past)
-    // the story's day where an investment fill would stop reading (now, when it reads to the end)
-    const day = storyNow(p, stopAt(m, p)).slice(0, 5), year = p.noYear ? '' : p.year ? String(p.year) : storyYearIn(m.text);
+    // the phone's year (never a guess from the dates the archive writes), on the story's day where an investment fill would
+    // stop reading (now, when it reads to the end)
+    const day = storyNow(p, stopAt(m, p)).slice(0, 5), year = p.noYear ? '' : p.year ? String(p.year) : '';
     const date = year && day ? `${year}-${day}` : '';
     return validDate(date) ? date : '';
 }

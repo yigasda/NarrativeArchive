@@ -536,3 +536,22 @@ test('점검 4: an order or ticket told of again goes to the newest that fits, n
     applyMoney(m, p, ev('f3', 31, '10-27', { passes: [{ kind: 'event', by: 'Interpark', to: '뮤지컬 위키드', date: '', status: '', occurrence: 'again' }] }), opts());
     assert.equal(p.money.passes.length, 2);
 });
+
+test('점검 5: an order put in with no shop gets its shop when told of again with it; 되돌리기 takes the shop back, replay puts it again', () => {
+    const { m, p } = setup();
+    applyMoney(m, p, ev('t', 7, '11-07', { orders: [{ shop: '', item: 'Cashmere scarf', qty: 1, price: null, status: 'ordered', occurrence: 'again' }] }), opts());
+    const r = applyMoney(m, p, ev('t2', 12, '11-09', { orders: [{ shop: 'Lounge Boutique', item: 'Cashmere scarf', qty: 1, price: null, status: 'shipped', occurrence: 'again' }] }), opts());
+    assert.deepEqual([p.money.orders.length, p.money.orders[0].shop, p.money.orders[0].status], [1, 'Lounge Boutique', 'shipped']);
+    assert.deepEqual(revertEffects(m, p, r.effects), []);
+    assert.deepEqual([p.money.orders[0].shop, p.money.orders[0].status], ['', 'ordered']);
+    replayEffects(m, p, r.effects);
+    assert.deepEqual([p.money.orders[0].shop, p.money.orders[0].status], ['Lounge Boutique', 'shipped']);
+    // a shop the user wrote since stays through 되돌리기
+    p.money.orders[0].shop = 'My Shop';
+    assert.equal(revertEffects(m, p, r.effects).length, 1);
+    assert.equal(p.money.orders[0].shop, 'My Shop');
+    // a shop already there is never written over: another shop's is another order
+    applyMoney(m, p, ev('t3', 14, '11-10', { orders: [{ shop: 'Other', item: 'Cashmere scarf', qty: 1, price: null, status: 'delivered', occurrence: 'again' }] }), opts());
+    assert.equal(p.money.orders[0].shop, 'My Shop');
+    assert.deepEqual(p.money.orders.map(o => o.shop), ['My Shop', 'Other']);
+});

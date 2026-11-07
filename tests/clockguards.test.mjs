@@ -1,7 +1,7 @@
 // 시각 판독 손보기 1단계: what was already wrong, made right before anything new is read
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { datedClocks, dayFirstChat, dateOrderSource, storyText, storyYearIn, when, withDateOrder } from '../src/phoneparse.js';
+import { datedClocks, dayFirstChat, dateOrderSource, storyText, when, withDateOrder } from '../src/phoneparse.js';
 
 test('overlapping runs each read by their own order; when they are all done, the chat\'s own setting is back (never a finished run\'s)', async () => {
     let setting = 'dm';
@@ -59,26 +59,6 @@ test('evidence: the story\'s own bracket headers that start like a code block\'s
 test('evidence: the investment schedules the app sends ([EXISTING SCHEDULES — …]) are no story', () => {
     const s = storyText(['[RECENT CHAT]\n[#4] Ren: hi', '[EXISTING SCHEDULES — app data, not evidence]\n[{"pay":"12-20"}]'].join('\n\n'));
     assert.ok(s.includes('[#4] Ren: hi') && !s.includes('12-20'));
-});
-
-test('the story\'s year (a guess, the reading of where everyone is goes first): the newest a date at the start of an archive line gives, else the last one written', () => {
-    for (const [t, y] of [
-        ['## 1장 — 도착\n- 2026년 10월 25일, 렌은 베를린에 도착했다.\n- 2026년 10월 26일 아침 마라와 만났다.\n- 렌의 생일은 1998년 3월 2일이다.\n- 2024년 5월에 처음 만났던 카페를 다시 찾았다.', '2026'],
-        ['## 1장\n- 2026년 10월 25일 밤늦게까지 이야기했다.\n- 2026년 10월 26일까지 보고서를 내야 했다.\n- 2019년 3월 처음 만났다.', '2026'],
-        ['## Ch1\n- 2026-10-25 Ren landed.\n- Ren remembered 2019-04-11 and 2019-06-01, the summer they first met.', '2026'],
-        ['## Ch1\n- 2026-10-25: flight delayed due to fog.\n- Memory: 2024-07-02 at the beach.', '2026'],
-        ['## 1장\n- 2026년 3월 2일 입학식 날이었다.\n- 2025년 12월 합격 소식.', '2026'],
-        ['## 1장\n- 2026년 10월 25일은 렌의 생일이었다. 마라가 케이크를 샀다.\n- 2023년 5월 이사.', '2026'],
-        ['## 1장\n- 2026년 10월 25일 새벽 3시까지 술을 마셨다.\n- 2022년 6월 처음 독일에 왔다.', '2026'],
-        ['## 2026년 10월 25일 — 도착\n- 렌의 생일 1998년 3월 2일.\n## 2027년 1월 1일 — 새해', '2027'],
-        ['## 1장 — 2019년 3월 회상\n- 처음 만났다.\n## 2장\n- 2026년 10월 25일 다시 만났다.', '2026'],
-        ['## Ch1\n- Ren has lived in Berlin since 2019-04-01.\n- 2026-10-25: Ren met Mara.', '2026'],
-        ['## Ch1\n- 2026-10-25 Ren talked about retiring in 2045년 1월에.', '2026'],
-        ['- 2024-05-02 Ren signs a lease to 2030-01-31.\n- 2024-05-03 Ren unpacks.', '2024'],
-        ['대출 만기는 2030년 5월이다.\n오늘은 2026년 11월 5일.', '2026'],
-        ['Contract until Dec 31, 2031. It was Nov 5, 2026.', '2026'], ['결혼식은 2027년 5월 1일 예정. 2026년 11월 2일 Ren이 돌아왔다.', '2026'],
-        ['Mara was born 1990-07-15. Ren came home on 2026-11-02.', '2026'], ['- 2030-01-31 만기', '2030'], ['- no dates', ''],
-    ]) assert.equal(storyYearIn(t), y, t);
 });
 
 test('점검 3: a part of a message that starts like a code block keeps the messages after it', () => {
