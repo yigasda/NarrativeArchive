@@ -913,11 +913,11 @@ export function mapScreen(p, now, m, pick = '') {
     // the town on the map: the one picked (a stay on the strip, a row under "다른 곳"), else where they were last
     const g = groups.find(x => x.k === pick) || groups[0];
     // the town's streets: by its name, never the same as another town's; a night map when they were last there at night
-    const kinds = townKinds([...groups].reverse().map(x => x.k || `~${p.owner}`)), kind = kinds.get(g.k || `~${p.owner}`);
+    const kinds = townKinds([...groups].reverse().map(x => ({ key: x.k || `~${p.owner}`, city: x.city || '', places: x.rows.map(r => r.place) }))), kind = kinds.get(g.k || `~${p.owner}`);
     const lastR = [...g.rows].sort((a, b) => (b.last || '').localeCompare(a.last || ''))[0], hr = Number((/^\d{2}-\d{2} (\d{2})/.exec(lastR?.last || '') || [0, 12])[1]), dark = hr >= 21 || hr < 5;
     const shown = g.rows.slice(0, 7), W = 390, H = 430;
-    const pins = pinSpots(shown.map(r => r.place), kind, W, 150, 340).map(([x, y], k) => pinSvg(x, y, shown[k].place, dark)).join('');
-    const art = `<svg class="mp_art" viewBox="0 0 ${W} ${H}" width="100%" aria-hidden="true">${townSvg(kind, W, H, g.k || p.owner, dark)}${pins}</svg>`;
+    const pins = pinSpots(shown.map(r => r.place), W, 150, 340).map(([x, y], k) => pinSvg(x, y, shown[k].place, dark)).join('');
+    const art = `<svg class="mp_art" viewBox="0 0 ${W} ${H}" width="100%" aria-hidden="true">${townSvg(kind, W, H, g.k || p.owner, dark, g.rows.map(r => r.place).join(' '))}${pins}</svg>`;
     const lastDay = g.rows.map(r => r.day).filter(Boolean).sort().at(-1);
     const others = groups.filter(x => x !== g);
     const other = others.length ? `<div class="ax_sec">다른 곳</div><div class="ax_card">${others.map(x => `<button type="button" class="ax_rw ax_place" data-go="map" data-i="${esc(x.k)}"><span class="ax_si" style="background: var(--axc)">${ax('pindot', 17, 'var(--axd)', 2.2)}</span><span class="ax_tx"><span class="ax_n">${esc(x.city || '그 밖의 곳')}</span><span class="ax_p1">${x.rows.length}곳</span></span>${axChev}</button>`).join('')}</div>` : '';
