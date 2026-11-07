@@ -94,6 +94,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax 
 .mp_th { display: flex; align-items: baseline; gap: 8px; padding: 6px 26px 8px; flex: none; }
 .mp_th b { font-size: 20px; --axfs: 20px; font-weight: 600; }
 .mp_th .mq_flag { align-self: center; }
+.mp_th.mq_eh { padding-top: 18px; padding-bottom: 12px; }
 .mp_th span { font-size: 13px; --axfs: 13px; color: #6b7380; --axfg: #6b7380; }
 .mp_pl { font-size: 12px; font-weight: 600; fill: #161b22; stroke: #f2efe8; stroke-width: 3px; paint-order: stroke; }
 .mp_pl.dk { fill: #fff; stroke: #1f2630; }

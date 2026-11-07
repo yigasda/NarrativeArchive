@@ -125,9 +125,13 @@ export function mapEmptyScreen(p, now, m) {
     const strip = `<div class="ax_card mp_month"><div class="mp_mh"><span class="mp_lbl">${mo}월에 다닌 곳</span><span class="mp_big"><b class="cg_num">0</b><u>곳</u><span>이야기에서 어딘가 가면 여기 쌓여요</span></span></div><div class="mp_st">${st.svg.replace('</svg>', `${ghost}</svg>`)}</div></div>`;
     // then the same town heading as a visited town's: the flag and the town they live in (a city, never the country written as one)
     const name = v ? v.ko : own.city && !countryOf(own.city) ? own.city : '', flag = cc || (i >= 0 ? PLACE[i][3] : '');
-    const head = name || flag ? `<div class="mp_th">${flag ? flagSvg(flag, 22) : ''}<b>${esc(name || FLAG_NAME[flag] || '')}</b></div>` : '';
+    const head = name || flag ? `<div class="mp_th mq_eh">${flag ? flagSvg(flag, 22) : ''}<b>${esc(name || FLAG_NAME[flag] || '')}</b>${name ? '<span>사는 곳</span>' : ''}</div>` : '';
+    // then the same list card as a visited town's: two of its neighbourhoods, and last, finding another town (always in sight)
+    const hood = h => `<button type="button" class="ax_rw ax_place" data-go="mapc" data-i="${at(i, h)}"><span class="ax_si" style="background: var(--axc)">${ax('pindot', 17, 'var(--axd)', 2.2)}</span><span class="ax_tx"><span class="ax_n">${esc(HINT[h][3])}</span><span class="ax_p1">동네 지도 보기</span></span>${axChev}</button>`;
+    const find = `<button type="button" class="ax_rw ax_place" data-go="mapq"><span class="ax_si" style="background: var(--axd)">${ax('search', 17, '#fff', 2.4)}</span><span class="ax_tx"><span class="ax_n ax_blue">다른 도시 · 동네 찾기</span><span class="ax_p1">東京, Berlin, 홍대 … 어느 말로든</span></span>${axChev}</button>`;
+    const list = `<div class="ax_card">${(v ? v.hoods.slice(0, 2) : []).map(hood).join('')}${find}</div>`;
     return `<div class="mp_wx"><div class="mp_bg">${art}</div>${axBar(p, now)}${axTop(axCb('home'), findBtn())}
       <div class="ax_scroll"><i class="mp_gap"></i><div class="mp_sheet"><i class="mp_grab"></i>
-        ${strip}${head}<i class="ax_pad"></i></div></div>
+        ${strip}${head}${list}<i class="ax_pad"></i></div></div>
       ${axInd()}</div>`;
 }
