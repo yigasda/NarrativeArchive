@@ -67,3 +67,11 @@ test('the story\'s year: the newest heading that dates itself, else the latest y
     assert.equal(storyYearIn('- They met on 2019-05-01, married 2024-06-01.'), '2024');
     assert.equal(storyYearIn('- no dates'), '');
 });
+
+test('점검 3: the story\'s year is the one its dates write most, a birth, a deadline or a plan only when nothing else; a part of a message that starts like a code block keeps the messages after it', () => {
+    for (const [t, y] of [['- Ren came home on 2026-11-02 (#1). Mara was born 1990-07-15.', '2026'], ['Mara was born 1990-07-15. Ren came home on 2026-11-02.', '2026'],
+        ['오늘은 2026년 11월 5일. 대출 만기는 2030년 5월이다.', '2026'], ['Contract until Dec 31, 2031. It was Nov 5, 2026.', '2026'],
+        ['- 2024-05-02 Ren signs a lease to 2030-01-31.\n- 2024-05-03 Ren unpacks.', '2024'], ['결혼식은 2027년 5월 1일 예정. 2026년 11월 2일 Ren이 돌아왔다.', '2026'], ['- 2030-01-31 만기', '2030']]) assert.equal(storyYearIn(t), y, t);
+    const s = storyText('[RECENT CHAT]\n[#12] Ren: hi\n\n[BANK]\n잔액 300\n\n[#13] Mina: 삼성전자 주가가 71,000원까지 올랐다.\n\n[OWNER]\nRen\n\n[MONEY NOW]\n{"a":1}');
+    assert.ok(s.includes('71,000원까지 올랐다') && s.includes('잔액 300') && !s.includes('"a":1'));
+});

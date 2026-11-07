@@ -18,7 +18,7 @@ const stub = {
     './drift.js': encoded(`export const recentForCheck=n=>(globalThis.__rows||[]).slice(-n).map(r=>r.text);export const chatRows=()=>globalThis.__rows||[];`),
     './inject.js': encoded(`export const applyInjection=()=>{};`), './knowledge.js': encoded(`export const knowledgeRows=()=>[];`),
     './people.js': encoded(`export const nameKey=s=>String(s).toLowerCase();export const nameRe=s=>new RegExp(s,'i');export const headingPlaces=()=>[];`),
-    './recall.js': encoded(`export const estTok=s=>s.length/4;`), './scenes.js': encoded(`export const recentTrackers=()=>[];`),
+    './recall.js': encoded(`export const estTok=s=>s.length/4;`), './scenes.js': encoded(`export const recentTrackers=()=>globalThis.__trackers||[];`),
     './sections.js': encoded(`export const RANGE_HEAD=/^(?:(\\S{1,12})\\s)?#(\\d+)\\s*([–—~-])\\s*#?(\\d+)(.*)$/;export const parseSections=t=>[...String(t).matchAll(/^## (.+)\\n[^#]*/gm)].map(x=>({title:x[1],start:x.index,end:x.index+x[0].length,group:false}));export const sectionKey=s=>s.title;export const splitTail=s=>[s,''];`),
     './translate.js': encoded(`export const glossaryEntries=()=>globalThis.__glossaryEntries||[];export const glossaryPeople=()=>globalThis.__glossaryPeople||[];`), './world.js': encoded(`export const worldText=()=>'';`),
     './anniv.js': encoded(`export const datedRows=()=>[];`),
@@ -186,4 +186,30 @@ test('점검 수정 2: 02-29 in a year with none is converted in the next leap y
     const p = plainPhone({ now: '02-29 12:00', year: 2026, where: { at: 1, people: [row('Ren', 'Berlin', 'Europe/Berlin'), row('Mara', 'New York', 'America/New_York')] } });
     const z = data.zonesOf(p, p.now, mText());
     assert.deepEqual(z.others.map(o => [o.name, o.hours, o.dst]), [['Mara', -6, undefined]]);
+});
+
+test('점검 3: a first name stands for a person only when it is theirs alone, never the owner\'s; an old phone\'s owner row by their full name is the owner\'s', () => {
+    let p = plainPhone({ around: { people: [{ name: 'Ren Kim', about: 'x' }, { name: 'Mara Lee', about: 'y' }] }, where: { at: 1, people: [row('Ren', 'Frankfurt', 'Europe/Berlin')] } });
+    assert.deepEqual(data.__scenesWith(p, 'Ren went home alone.', [], mText()), []);
+    assert.deepEqual(data.__scenesWith(p, 'Mara called.', [], mText()), ['Mara Lee']);
+    // an old reading: the owner's row as "Ren Park", with or without "Ren" as its aka
+    for (const aka of [undefined, ['Ren']]) {
+        p = plainPhone({ where: { at: 1, people: [row('Ren Park', 'Seoul', 'Asia/Seoul', aka ? { aka } : {}), row('Mara', 'Paris', 'Europe/Paris')] } });
+        assert.equal(data.ownerZone(p).tz, 'Asia/Seoul');
+        assert.ok(data.__isOwnerName(p, null, 'Ren Park'));
+        assert.deepEqual(data.__scenesWith(p, 'Ren Park met Mara.', [], mText()), ['Mara']);
+        const v = { place: 'Cafe', city: 'Seoul', time: '10-26 11:00', with: ['Ren Park', 'Mara'] };
+        data.__mergePhone(p, { threads: [], posts: [], contacts: [], visits: [v] });
+        assert.deepEqual(p.visits[0].with, ['Mara']);
+    }
+    // "Ren Kim" in the contacts is someone else, never the owner's row
+    p = plainPhone({ contacts: [{ name: 'Ren Kim' }], where: { at: 1, people: [row('Ren Kim', 'Seoul', 'Asia/Seoul')] } });
+    assert.notEqual(data.ownerZone(p)?.tz, 'Asia/Seoul');
+});
+
+test('점검 3: a place at 0 hours with a summer-time change near is a line; a city typed by its Korean, German or Japanese name has its zone', () => {
+    const p = plainPhone({ owner: 'Ren', year: 2026, where: { at: 1, people: [row('Ren', 'Sydney', 'Australia/Sydney'), row('Mara', 'Brisbane', 'Australia/Brisbane')] } });
+    const z = data.zonesOf(p, '04-06 12:00', mText());
+    assert.deepEqual(z.others.map(o => [o.name, o.hours, !!o.dst?.length]), [['Mara', 0, true]]);
+    for (const [c, tz] of [['부산', 'Asia/Seoul'], ['Busan', 'Asia/Seoul'], ['München', 'Europe/Berlin'], ['뮌헨', 'Europe/Berlin'], ['오사카', 'Asia/Tokyo'], ['인천', 'Asia/Seoul'], ['Lord Howe Island', 'Australia/Lord_Howe'], ['서울', 'Asia/Seoul']]) assert.equal(data.tzForCity(plainPhone(), c), tz, c);
 });
