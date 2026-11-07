@@ -1,0 +1,204 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>다녀간 곳 리디자인</title>
+<style>
+:root{--d:#2f6bff;--c:#e1e9ff;--ink:#161b22;--dim:#6b7380;--hair:#eef0f3}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#d9dce2;font-family:-apple-system,'SF Pro Text','Noto Sans KR',sans-serif;color:var(--ink);padding:28px}
+.row{display:flex;gap:34px;margin-bottom:40px}.row h2{font-size:22px;margin:0 0 14px;width:100%}
+.col{display:flex;flex-direction:column;gap:10px}.lab{font-weight:700;font-size:17px}.lab small{display:block;font-weight:400;color:#555;font-size:13px;margin:3px 0 0;width:390px}
+.ph{width:390px;height:844px;border-radius:48px;border:10px solid #111;overflow:hidden;position:relative;background:#f4f5f7;display:flex;flex-direction:column}
+.sb{height:54px;flex:none;display:flex;justify-content:space-between;align-items:center;padding:4px 30px 0 36px;font-weight:600;font-size:16px}
+.top{height:50px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 16px}
+.cb{width:38px;height:38px;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:0 1px 2px rgba(22,27,34,.06),0 4px 12px rgba(22,27,34,.08)}
+.h1{padding:4px 22px 12px;display:flex;align-items:baseline;gap:8px}.h1 b{font-size:27px;font-weight:600;letter-spacing:-.02em}.h1 span{font-size:13.5px;color:var(--dim)}
+.scroll{flex:1;overflow:hidden;position:relative}
+.card{margin:0 14px 12px;border-radius:22px;background:#fff;box-shadow:0 1px 2px rgba(22,27,34,.04),0 8px 24px rgba(22,27,34,.05);overflow:hidden}
+.sec{margin:14px 26px 8px;font-size:12.5px;font-weight:600;color:var(--dim);letter-spacing:.02em}
+.num{font-family:'Inter Tight',-apple-system,sans-serif}
+.rw{display:flex;align-items:center;gap:12px;padding:12px 16px;position:relative}.rw+.rw::before{content:"";position:absolute;top:0;left:62px;right:16px;border-top:1px solid var(--hair)}
+.si{width:34px;height:34px;border-radius:11px;background:var(--c);display:grid;place-items:center;flex:none}
+.tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.tx b{font-weight:500;font-size:15px}.tx small{font-size:12.5px;color:var(--dim)}
+.rt{font-size:12.5px;color:var(--dim);text-align:right;line-height:1.35}
+.ind{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:#111}
+.chip{display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 12px;border-radius:999px;background:#fff;font-size:13px;font-weight:500;box-shadow:0 1px 2px rgba(22,27,34,.05),0 4px 12px rgba(22,27,34,.07);white-space:nowrap}
+.chip.on{background:var(--d);color:#fff;box-shadow:0 4px 12px rgba(47,107,255,.3),inset 0 1px 0 rgba(255,255,255,.2)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 18px 16px}.chip2{display:inline-flex;gap:5px;height:28px;align-items:center;padding:0 11px;border-radius:999px;background:#f1f3f6;font-size:12.5px;font-weight:500}.chip2 b{font-weight:600;color:var(--d)}.lbl{font-size:12px;color:var(--dim)}.big{font-size:34px;font-weight:600;letter-spacing:-.02em;line-height:1.1}.big u{text-decoration:none;font-size:17px;font-weight:600;margin:0 7px 0 3px}.sub{font-size:13px;color:var(--dim);font-weight:400;letter-spacing:0;font-family:-apple-system,'Noto Sans KR',sans-serif}</style></head><body>
+<div id="out"></div>
+<script>
+const V = [ // the visits, newest first: place, city, with, day, time
+ ['Café am Fluss','Varo',['Ren','Ivo'],'10-25','20:30',2],['Ivo\'s workshop','Varo',['Ivo'],'10-25','18:00',1],['The old garage','Varo',['Ren'],'10-24','19:30',1],
+ ['Hotel Atlantic','Chicago',[],'10-20','23:30',1],['Blue Note','Chicago',['Anja'],'10-20','21:40',1],['Gare du Nord','Paris',[],'10-12','09:10',1]];
+const D = d => `${+d.slice(3)}일`, M = d => `${+d.slice(0,2)}월 ${+d.slice(3)}일`, WD = {'10-25':'토','10-24':'금','10-20':'월','10-12':'일'};
+const wa = n => /[lmn]$/i.test(n) ? '과' : '와';
+const who = w => w.length ? ` · ${w.join(' · ')}${wa(w[w.length-1])}` : '';
+const pinI = (z=17,c='var(--d)') => `<svg width="${z}" height="${z}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.2" stroke-linejoin="round"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.1" fill="${c}" stroke="none"/></svg>`;
+const back = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#161b22" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>';
+const sb = (c='#111') => `<div class="sb" style="color:${c}"><span class="num">21:58</span><span style="display:flex;gap:6px"><svg width="18" height="12" fill="${c}"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg><svg width="27" height="13" fill="none"><rect x=".5" y=".5" width="23" height="12" rx="3.8" stroke="${c}" stroke-opacity=".4"/><rect x="2.5" y="2.5" width="16" height="8" rx="2" fill="${c}"/></svg></span></div>`;
+const phone = (inner, bg='#f4f5f7') => `<div class="ph" style="background:${bg}">${inner}<div class="ind"></div></div>`;
+const head = (t='다녀간 곳', s='6곳 · 3도시') => `${sb()}<div class="top"><span class="cb">${back}</span></div><div class="h1"><b>${t}</b><span>${s}</span></div>`;
+let sd = 1; const seed = s => { sd = [...s].reduce((n,ch)=>(n*31+ch.charCodeAt(0))%233280,7); }; const r = () => (sd = (sd*9301+49297)%233280)/233280;
+
+// ---- maps that look like different towns: a street pattern each (old town curves, grid, rings and spokes, a coast)
+function map(kind, W, H, pins = [], opt = {}) {
+  seed(kind + W + H); const o = [];
+  const land = opt.dark ? '#1f2630' : '#f2efe8', blk = opt.dark ? '#28303b' : '#e9e5dc', park = opt.dark ? '#233a2f' : '#d5e8cc', water = opt.dark ? '#1c3550' : '#c4daee', road = opt.dark ? '#3a4452' : '#fff', edge = opt.dark ? '#151a21' : '#ddd8ce';
+  o.push(`<rect width="${W}" height="${H}" fill="${land}"/>`);
+  const roadP = (d, w) => `<path d="${d}" fill="none" stroke="${edge}" stroke-width="${w+3}" stroke-linecap="round"/><path d="${d}" fill="none" stroke="${road}" stroke-width="${w}" stroke-linecap="round"/>`;
+  if (kind === 'old') { // a river town: blocks are soft blobs between bending lanes
+    for (let i = 0; i < 46; i++) { const x = r()*W, y = r()*H, w = 30+r()*46, h = 22+r()*34; o.push(`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${8+r()*8}" fill="${r()<.18?park:blk}" transform="rotate(${(r()*40-20).toFixed(0)} ${x} ${y})"/>`); }
+    o.push(`<path d="M-20 ${H*.62} C${W*.25} ${H*.45} ${W*.45} ${H*.85} ${W*.7} ${H*.6} S${W+20} ${H*.5} ${W+20} ${H*.55}" stroke="${water}" stroke-width="26" fill="none"/>`);
+    for (let i = 0; i < 7; i++) { const y = r()*H; o.push(roadP(`M-20 ${y} C${W*.3} ${y+(r()-.5)*90} ${W*.6} ${y+(r()-.5)*90} ${W+20} ${y+(r()-.5)*60}`, 4+r()*3)); }
+    for (let i = 0; i < 5; i++) { const x = r()*W; o.push(roadP(`M${x} -20 C${x+(r()-.5)*80} ${H*.4} ${x+(r()-.5)*80} ${H*.7} ${x+(r()-.5)*60} ${H+20}`, 4)); }
+    o.push(`<path d="M${W*.42} ${H*.5} l14 46" stroke="#cfc7b8" stroke-width="9"/>`);
+  } else if (kind === 'grid') { // a grid city by a lake: long avenues, short streets, one park block
+    const cw = 58, ch = 26;
+    for (let x = -10; x < W; x += cw) for (let y = -10; y < H; y += ch) o.push(`<rect x="${x+4}" y="${y+3}" width="${cw-8}" height="${ch-6}" rx="3" fill="${(Math.abs(x-106)<1&&y>40&&y<130)?park:blk}"/>`);
+    o.push(`<path d="M${W*.78} -10 Q${W*.7} ${H*.5} ${W*.82} ${H+10} H${W+10} V-10Z" fill="${water}"/>`);
+    o.push(roadP(`M-10 ${H*.3} L${W*.74} ${H*.18}`, 7));
+  } else if (kind === 'ring') { // rings and spokes around a square
+    const cx = W*.45, cy = H*.48;
+    for (let i = 0; i < 70; i++) { const a = r()*6.28, d = 30+r()*Math.max(W,H)*.7, x = cx+Math.cos(a)*d, y = cy+Math.sin(a)*d; o.push(`<rect x="${x-14}" y="${y-10}" width="${22+r()*18}" height="${14+r()*14}" rx="4" fill="${r()<.12?park:blk}" transform="rotate(${(a*57).toFixed(0)} ${x} ${y})"/>`); }
+    o.push(`<path d="M-20 ${H*.86} C${W*.3} ${H*.78} ${W*.6} ${H*.98} ${W+20} ${H*.82}" stroke="${water}" stroke-width="20" fill="none"/>`);
+    for (const rr of [44, 96, 160]) o.push(`<circle cx="${cx}" cy="${cy}" r="${rr}" fill="none" stroke="${edge}" stroke-width="${rr<50?9:7}"/><circle cx="${cx}" cy="${cy}" r="${rr}" fill="none" stroke="${road}" stroke-width="${rr<50?6:4.5}"/>`);
+    for (let k = 0; k < 8; k++) { const a = k*.785+.2; o.push(roadP(`M${cx} ${cy} L${cx+Math.cos(a)*420} ${cy+Math.sin(a)*420}`, 5)); }
+    o.push(`<circle cx="${cx}" cy="${cy}" r="18" fill="${park}"/>`);
+  } else if (kind === 'coast') { // a bay: the sea takes one side, the streets bend with the shore
+    for (let i = 0; i < 60; i++) { const x = r()*W, y = r()*H; o.push(`<rect x="${x}" y="${y}" width="${24+r()*30}" height="${16+r()*20}" rx="4" fill="${r()<.15?park:blk}"/>`); }
+    o.push(`<path d="M-10 ${H*.66} C${W*.3} ${H*.5} ${W*.55} ${H*.9} ${W+10} ${H*.42} V${H+10} H-10Z" fill="${water}"/>`);
+    o.push(`<path d="M-10 ${H*.62} C${W*.3} ${H*.46} ${W*.55} ${H*.86} ${W+10} ${H*.38}" stroke="#efe2c4" stroke-width="7" fill="none" opacity=".9"/>`);
+    for (let i = 0; i < 4; i++) o.push(roadP(`M-10 ${H*(.12+i*.12)} C${W*.3} ${H*(.02+i*.12)} ${W*.55} ${H*(.32+i*.12)} ${W+10} ${H*(.0+i*.1)}`, i ? 4 : 7));
+    for (let i = 0; i < 5; i++) { const x = W*(.1+i*.2); o.push(roadP(`M${x} -10 L${x+20} ${H*.6}`, 4)); }
+  }
+  pins.forEach(([x, y, n, lab]) => o.push(`<g transform="translate(${x} ${y})"><path d="M0 0 C-9 -12 -13 -17 -13 -24 a13 13 0 0 1 26 0 c0 7 -4 12 -13 24z" fill="var(--d)" stroke="#fff" stroke-width="2.5" style="filter:drop-shadow(0 3px 4px rgba(22,27,34,.25))"/>${n?`<text x="0" y="-19" text-anchor="middle" fill="#fff" font-size="12" font-weight="700" font-family="Inter Tight,sans-serif">${n}</text>`:'<circle cx="0" cy="-24" r="4" fill="#fff"/>'}${lab?`<text x="17" y="-20" font-size="12" font-weight="600" fill="${opt.dark?'#fff':'#161b22'}" stroke="${opt.dark?'#1f2630':'#f2efe8'}" stroke-width="3" paint-order="stroke">${lab}</text>`:''}</g>`));
+  return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="display:block">${o.join('')}</svg>`;
+}
+// ---- flat city art for the cards: sky, then a silhouette by the town (sea, skyline, hills)
+const SKY = { Varo: ['#f6d9c4', '#e7a98f', '#c88a77'], Chicago: ['#cfdcef', '#8fa8cf', '#5f789f'], Paris: ['#efe1d2', '#c9b3c9', '#9b8aa8'] };
+function art(city, W, H) {
+  const [a, b, c] = SKY[city]; const o = [`<rect width="${W}" height="${H}" fill="${a}"/>`, `<circle cx="${W*.78}" cy="${H*.32}" r="${H*.16}" fill="#fff" opacity=".55"/>`];
+  if (city === 'Varo') o.push(`<path d="M0 ${H*.62} Q${W*.3} ${H*.48} ${W*.6} ${H*.6} T${W} ${H*.55} V${H} H0Z" fill="${b}"/><path d="M0 ${H*.74} Q${W*.4} ${H*.66} ${W} ${H*.76} V${H} H0Z" fill="${c}"/><path d="M0 ${H*.86} H${W} V${H} H0Z" fill="#8fb3c9"/><path d="M0 ${H*.88} q20 -4 40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0" stroke="#fff" stroke-width="2" fill="none" opacity=".6"/>`);
+  if (city === 'Chicago') { let x = 8; while (x < W) { const w = 18+((x*7)%22), h = H*(.3+((x*13)%40)/100); o.push(`<rect x="${x}" y="${H-h}" width="${w}" height="${h}" fill="${(x/10)%2<1?b:c}"/>`); x += w+3; } o.push(`<rect y="${H*.9}" width="${W}" height="${H*.1}" fill="#7f97bf"/>`); }
+  if (city === 'Paris') o.push(`<path d="M0 ${H*.72} Q${W*.5} ${H*.6} ${W} ${H*.72} V${H} H0Z" fill="${b}"/><path d="M${W*.32} ${H} L${W*.4} ${H*.2} L${W*.48} ${H}Z M${W*.35} ${H*.7} H${W*.45}" fill="${c}" stroke="${c}" stroke-width="3"/><path d="M0 ${H*.84} H${W} V${H} H0Z" fill="${c}"/>`);
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" style="display:block">${o.join('')}</svg>`;
+}
+const cities = [['Varo', 3, '10-25'], ['Chicago', 2, '10-20'], ['Paris', 1, '10-12']];
+const rowsOf = c => V.filter(v => v[1] === c);
+const placeRow = v => `<div class="rw"><span class="si">${pinI()}</span><span class="tx"><b>${v[0]}</b><small>${v[5]>1?`${v[5]}번`:'처음'}${who(v[2])}</small></span><span class="rt num">${v[3].slice(3)}.${v[3].slice(0,2)}.<br>${v[4]}</span></div>`;
+
+const S = {};
+// ===== 1. 타임라인
+S['1A'] = ['세로 타임라인', '날짜마다 점과 선으로 이어요', phone(`${head()}<div class="scroll">
+  ${['10-25','10-24','10-20','10-12'].map(d => `<div class="sec">${M(d)} ${WD[d]} · ${V.find(v=>v[3]===d)[1]}</div><div class="card" style="padding:6px 0">${V.filter(v=>v[3]===d).map((v,k,a)=>`
+    <div style="display:flex;gap:12px;padding:10px 16px;position:relative"><span class="num" style="width:40px;font-size:12.5px;color:var(--dim);padding-top:2px">${v[4]}</span>
+    <span style="position:relative;width:14px;display:flex;justify-content:center"><i style="width:12px;height:12px;border-radius:50%;background:#fff;border:3px solid var(--d);margin-top:3px;z-index:1"></i>${k<a.length-1?'<i style="position:absolute;top:16px;bottom:-24px;width:2px;background:var(--c)"></i>':''}</span>
+    <span class="tx"><b>${v[0]}</b><small>${v[2].length?v[2].join(' · ')+wa(v[2][v[2].length-1])+' 함께':'혼자'}</small></span></div>`).join('')}</div>`).join('')}</div>`)];
+S['1B'] = ['하루 카드', '하루가 카드 하나, 위에 그날의 길', phone(`${head()}<div class="scroll">
+  ${['10-25','10-20'].map((d,i) => { const vs = V.filter(v=>v[3]===d).slice().reverse(); return `<div class="sec">${M(d)} ${WD[d]}</div><div class="card"><div style="height:120px;overflow:hidden;position:relative">${map(i?'grid':'old',362,120,vs.map((v,k)=>[60+k*120,82-((k*37)%40),k+1]))}<svg style="position:absolute;inset:0" width="362" height="120"><path d="M60 58 ${vs.slice(1).map((v,k)=>`L${180+k*120} ${58-((k+1)*37)%40}`).join(' ')}" stroke="var(--d)" stroke-width="3" fill="none" stroke-dasharray="1 6" stroke-linecap="round"/></svg></div>
+    ${vs.map((v,k)=>`<div class="rw"><span class="si num" style="background:var(--d);color:#fff;font-weight:700;font-size:14px;width:28px;height:28px;border-radius:50%;margin:3px">${k+1}</span><span class="tx"><b>${v[0]}</b><small>${v[4]}${who(v[2])}</small></span></div>`).join('')}</div>`; }).join('')}
+  <div class="sec">10월 12일 일</div><div class="card">${placeRow(V[5])}</div></div>`)];
+S['1C'] = ['여정 한 줄', '도시 사이를 잇는 여정 + 짧은 목록', phone(`${head('다녀간 곳','이번 달')}<div class="scroll">
+  <div class="card" style="padding:18px 18px 16px"><div style="font-size:12.5px;color:var(--dim)">10월에 다닌 곳</div><div style="display:flex;align-items:baseline;gap:6px;margin:2px 0 14px"><b class="num" style="font-size:36px;font-weight:600;letter-spacing:-.02em">6</b><span style="font-size:15px">곳</span><span style="color:var(--dim);font-size:13px;margin-left:6px">3도시 · 4일</span></div>
+   <div style="position:relative;height:70px"><svg width="326" height="70" style="position:absolute;inset:0"><path d="M40 40 C90 0 140 0 163 40 S240 80 286 40" stroke="var(--c)" stroke-width="4" fill="none"/><path d="M40 40 C90 0 140 0 163 40 S240 80 286 40" stroke="var(--d)" stroke-width="2" fill="none" stroke-dasharray="2 6" stroke-linecap="round"/></svg>
+   ${[['Paris','12일',40],['Chicago','20일',163],['Varo','25일',286]].map(([c,d,x],k)=>`<span style="position:absolute;left:${x-40}px;width:80px;top:${k===1?28:28}px;text-align:center"><i style="display:block;margin:0 auto 6px;width:${k===2?18:12}px;height:${k===2?18:12}px;border-radius:50%;background:${k===2?'var(--d)':'#fff'};border:3px solid var(--d)"></i></span><span style="position:absolute;left:${x-40}px;width:80px;top:${k===1?-2:58}px;text-align:center;font-size:12px"><b style="font-weight:600">${c}</b> <span style="color:var(--dim)">${d}</span></span>`).join('')}</div></div>
+  <div class="sec">최근</div><div class="card">${V.slice(0,4).map(v=>`<div class="rw"><span class="tx"><b>${v[0]}</b><small>${v[1]} · ${v[5]>1?`${v[5]}번`:'처음'}${who(v[2])}</small></span><span class="rt num">${v[3].slice(3)}.${v[3].slice(0,2)}.<br>${v[4]}</span></div>`).join('')}</div></div>`)];
+// ===== 2. 도시 카드
+S['2A'] = ['도시 덱', '지갑처럼 겹친 도시 카드, 맨 위가 펼쳐져요', phone(`${head()}<div class="scroll" style="padding-top:4px">
+  <div style="margin:0 14px;position:relative">${cities.slice().reverse().map(([c,n,d],k)=>{ const top = k===2; return `<div style="position:relative;${k?'margin-top:-150px;':''}height:${top?200:206}px;border-radius:22px;overflow:hidden;box-shadow:0 -3px 12px rgba(22,27,34,.12),0 10px 24px rgba(22,27,34,.16),inset 0 1px 0 rgba(255,255,255,.2)">${art(c,362,206)}<div style="position:absolute;left:18px;top:14px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.25)"><b style="font-size:22px;font-weight:700">${c}</b><div style="font-size:12.5px;opacity:.9">${n}곳 · ${M(d)}</div></div></div>`;}).join('')}</div>
+  <div class="sec" style="margin-top:16px">Varo에서</div><div class="card">${rowsOf('Varo').map(placeRow).join('')}</div></div>`)];
+S['2B'] = ['도시 타일', '두 칸 타일 + 아래에 최근 장소', phone(`${head()}<div class="scroll">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 14px 14px">${cities.map(([c,n,d],k)=>`<div style="${k===0?'grid-column:1/3;height:150px':'height:150px'};border-radius:20px;overflow:hidden;position:relative;box-shadow:0 1px 2px rgba(22,27,34,.05),0 8px 22px rgba(22,27,34,.1)">${art(c,k?175:362,150)}<div style="position:absolute;left:14px;bottom:12px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.3)"><b style="font-size:18px;font-weight:700">${c}</b><div style="font-size:12px;opacity:.92">${n}곳 · 마지막 ${D(d)}</div></div></div>`).join('')}</div>
+  <div class="sec">최근 간 곳</div><div class="card">${V.slice(0,4).map(placeRow).join('')}</div></div>`)];
+S['2C'] = ['도시 넘기기', '위에서 도시를 넘기고, 아래는 그 도시만', phone(`${head()}<div class="scroll">
+  <div style="display:flex;gap:12px;padding:0 14px;overflow:hidden">${cities.map(([c,n,d],k)=>`<div style="flex:none;width:${k?120:230}px;height:250px;border-radius:22px;overflow:hidden;position:relative;box-shadow:0 1px 2px rgba(22,27,34,.05),0 10px 24px rgba(22,27,34,.14);${k?'opacity:.95':''}">${art(c,k?120:230,250)}<div style="position:absolute;left:16px;top:16px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.3)"><b style="font-size:${k?16:24}px;font-weight:700">${c}</b>${k?'':`<div style="font-size:12.5px;opacity:.92">${n}곳 · ${M(d)}</div>`}</div></div>`).join('')}</div>
+  <div style="display:flex;justify-content:center;gap:6px;margin:12px 0 4px">${[1,0,0].map(o=>`<i style="width:${o?16:6}px;height:6px;border-radius:3px;background:${o?'var(--d)':'#cfd4dc'}"></i>`).join('')}</div>
+  <div class="sec">Varo · 3곳</div><div class="card">${rowsOf('Varo').map(placeRow).join('')}</div></div>`)];
+// ===== 3. 큰 지도 + 시트
+const sheet = (inner, top) => `<div style="position:absolute;left:0;right:0;bottom:0;top:${top}px;background:#f4f5f7;border-radius:22px 22px 0 0;box-shadow:0 -6px 24px rgba(22,27,34,.14)"><i style="display:block;width:38px;height:5px;border-radius:3px;background:#cfd4dc;margin:8px auto 10px"></i>${inner}</div>`;
+const floatTop = (dark, sel = 0) => `<div style="position:absolute;left:0;right:0;top:0">${sb(dark?'#fff':'#111')}<div class="top"><span class="cb">${back}</span><span style="display:flex;gap:8px">${cities.map(([c],k)=>`<span class="chip ${k===sel?'on':''}">${c}</span>`).join('')}</span></div></div>`;
+S['3A'] = ['구시가지 지도', '구불구불한 길 · 강, 아래 시트에 목록', phone(`<div style="position:absolute;inset:0">${map('old',390,844,[[130,330,0,'Café am Fluss'],[250,250,0,'Ivo\'s workshop'],[90,470,0,'The old garage']])}</div>${floatTop()}
+  ${sheet(`<div style="padding:0 22px 10px;display:flex;align-items:baseline;gap:8px"><b style="font-size:22px;font-weight:600">Varo</b><span style="color:var(--dim);font-size:13px">3곳 · 마지막 10월 25일</span></div><div class="card">${rowsOf('Varo').map(placeRow).join('')}</div>`, 520)}`)];
+S['3B'] = ['바둑판 도시', '곧은 길 · 호수, 번호 핀 + 고른 곳 카드', phone(`<div style="position:absolute;inset:0">${map('grid',390,844,[[170,300,1,''],[250,420,2,'']])}</div>${floatTop(false,1)}
+  <div style="position:absolute;left:0;right:0;top:118px"><div style="margin:0 14px;display:flex;gap:8px">${['Chicago'].map(()=>'')}</div></div>
+  ${sheet(`<div class="card" style="padding:16px 18px"><div style="display:flex;gap:12px;align-items:center"><span class="si num" style="background:var(--d);color:#fff;font-weight:700;border-radius:50%;width:32px;height:32px">2</span><span class="tx"><b style="font-size:18px;font-weight:600">Blue Note</b><small>Chicago · 10월 20일 21:40</small></span></div>
+    <div style="display:flex;gap:8px;margin-top:14px">${[['방문','처음'],['함께','Anja'],['머문 때','밤']].map(([k,v])=>`<div style="flex:1;background:#f4f5f7;border-radius:14px;padding:10px 12px"><div style="font-size:11.5px;color:var(--dim)">${k}</div><b style="font-size:15px;font-weight:600">${v}</b></div>`).join('')}</div></div>
+    <div class="sec">Chicago · 2곳</div><div class="card">${rowsOf('Chicago').map((v,k)=>placeRow(v).replace(`<span class="si">${pinI()}</span>`,`<span class="si num" style="font-weight:700;color:var(--d)">${k?2:1}</span>`)).join('')}</div>`, 470)}`)];
+S['3C'] = ['방사형 밤 지도', '광장에서 뻗는 길 · 어두운 지도, 아래 가로 카드', phone(`<div style="position:absolute;inset:0">${map('ring',390,844,[[176,404,0,'Gare du Nord']],{dark:true})}</div>${floatTop(true,2)}
+  <div style="position:absolute;left:0;right:0;bottom:34px"><div style="margin:0 18px 10px;display:flex;align-items:baseline;gap:8px;color:#fff"><b style="font-size:22px;font-weight:600">Paris</b><span style="opacity:.75;font-size:13px">1곳 · 10월 12일</span></div>
+  <div style="display:flex;gap:12px;padding:0 14px">${[V[5],V[0]].map((v,k)=>`<div style="flex:none;width:${k?120:260}px;background:#fff;border-radius:20px;padding:14px 16px;box-shadow:0 10px 24px rgba(0,0,0,.3);${k?'opacity:.6':''}"><div style="display:flex;gap:10px;align-items:center"><span class="si">${pinI()}</span><span class="tx"><b>${v[0]}</b><small>${k?'':'처음 · 09:10'}</small></span></div>${k?'':`<div style="margin-top:12px;font-size:12.5px;color:var(--dim)">10월 12일 일요일 아침 · 혼자</div>`}</div>`).join('')}</div></div>`, '#1f2630')];
+
+// ===================== 3 + 1C 섞기 =====================
+// a town's look comes from its name (the same every time): old town · grid · rings · coast; a place last seen late at night shows the night map
+const KINDS = ['old', 'grid', 'ring', 'coast'];
+const hsh = s => [...s].reduce((n, c) => (n * 31 + c.charCodeAt(0)) >>> 0, 7);
+// each city its own look: the name picks, and a look another city already has moves on to the next free one
+const KIND = {}; cities.slice().reverse().forEach(([c]) => { let k = hsh(c) % 4; for (let t = 0; t < 4 && Object.values(KIND).includes(KINDS[k]); t++) k = (k + 1) % 4; KIND[c] = KINDS[k]; });
+const kindOf = c => KIND[c] || KINDS[hsh(c) % 4];
+const lastOf = c => V.filter(v => v[1] === c)[0];
+const night = c => { const l = lastOf(c); if (!l) return false; const h = +l[4].slice(0, 2); return h >= 21 || h < 5; };
+// pins: the chosen pindot (the app's pin with a small filled dot), filled blue on the map
+const PIN = 'M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z';
+const mapPin = (x, y, lab, dark, n) => `<g transform="translate(${x - 18} ${y - 34}) scale(1.5)"><path d="${PIN}" fill="var(--d)" stroke="#fff" stroke-width="1.6" stroke-linejoin="round" style="filter:drop-shadow(0 2px 3px rgba(22,27,34,.3))"/>${n ? `<text x="12" y="13.2" text-anchor="middle" font-size="8.5" font-weight="700" fill="#fff" font-family="Inter Tight,sans-serif">${n}</text>` : '<circle cx="12" cy="10" r="2.4" fill="#fff"/>'}</g>${lab ? `<text x="${x + 13}" y="${y - 18}" font-size="12" font-weight="600" fill="${dark ? '#fff' : '#161b22'}" stroke="${dark ? '#1f2630' : '#f2efe8'}" stroke-width="3" paint-order="stroke">${lab}</text>` : ''}`;
+// pin spots: from the place's name, kept inside the visible map
+// pins: spread down the visible land in order, sideways by the place's name (coast towns keep them off the sea)
+const spot = (name, k, n, W, top, bottom) => { const h = hsh(name); return [36 + (h % 1000) / 1000 * (W - 150), n > 1 ? top + (bottom - top) * k / (n - 1) : (top + bottom) / 2]; };
+const townMap = (c, W, H, top, bottom, labels = true, numbered = false) => { const dark = night(c); const rs = rowsOf(c), b2 = kindOf(c) === 'coast' ? Math.min(bottom, H * .52) : bottom; const pins = rs.map((v, k) => { const [x, y] = spot(v[0], k, rs.length, W, top, b2); return mapPin(x, y, labels ? v[0] : '', dark, numbered ? k + 1 : 0); }).join(''); return map(kindOf(c), W, H, [], { dark }).replace('</svg>', pins + '</svg>'); };
+// the journey (1C): cities in the order they were first visited, joined by a dotted curve; the picked city's dot filled
+const journey = (sel, { dark = false, tight = false } = {}) => { const cs = cities.slice().reverse(), xs = [40, 163, 286]; const ink = dark ? '#fff' : 'var(--ink)', dim = dark ? 'rgba(255,255,255,.7)' : 'var(--dim)';
+  return `<div style="font-size:12.5px;color:${dim}">10월에 다닌 곳</div><div style="display:flex;align-items:baseline;gap:6px;margin:2px 0 ${tight ? 8 : 14}px;color:${ink}"><b class="num" style="font-size:${tight ? 30 : 36}px;font-weight:600;letter-spacing:-.02em">6</b><span style="font-size:15px">곳</span><span style="color:${dim};font-size:13px;margin-left:6px">3도시 · 4일</span></div>
+  <div style="position:relative;height:70px;color:${ink}"><svg width="326" height="70" style="position:absolute;inset:0"><path d="M40 40 C90 0 140 0 163 40 S240 80 286 40" stroke="${dark ? 'rgba(255,255,255,.18)' : 'var(--c)'}" stroke-width="4" fill="none"/><path d="M40 40 C90 0 140 0 163 40 S240 80 286 40" stroke="var(--d)" stroke-width="2" fill="none" stroke-dasharray="2 6" stroke-linecap="round"/></svg>
+  ${cs.map(([c, n, d], k) => { const on = c === sel; return `<span style="position:absolute;left:${xs[k] - 40}px;width:80px;top:28px;text-align:center"><i style="display:block;margin:0 auto;width:${on ? 18 : 12}px;height:${on ? 18 : 12}px;margin-top:${on ? -3 : 0}px;border-radius:50%;background:${on ? 'var(--d)' : (dark ? '#2a323e' : '#fff')};border:3px solid var(--d);${on ? 'box-shadow:0 0 0 5px rgba(47,107,255,.18)' : ''}"></i></span><span style="position:absolute;left:${xs[k] - 40}px;width:80px;top:${k === 1 ? -2 : 56}px;text-align:center;font-size:12px"><b style="font-weight:${on ? 700 : 600};color:${on ? 'var(--d)' : ink}">${c}</b> <span style="color:${dim}">${D(d)}</span></span>`; }).join('')}</div>`; };
+const cityHead = (c, dark) => { const [, n, d] = cities.find(x => x[0] === c); return `<div style="padding:0 26px 8px;display:flex;align-items:baseline;gap:8px;${dark ? 'color:#fff' : ''}"><b style="font-size:20px;font-weight:600">${c}</b><span style="color:${dark ? 'rgba(255,255,255,.7)' : 'var(--dim)'};font-size:13px">${n}곳 · 마지막 ${M(d)}</span></div>`; };
+const backOnly = (dark) => `<div style="position:absolute;left:0;right:0;top:0">${sb(dark ? '#fff' : '#111')}<div class="top"><span class="cb">${back}</span></div></div>`;
+const TODAY = 25, W = 306, cell = W / 31;
+const SHADE = ['#eef0f3', '#cfdcfd', '#9db9fa', '#6a95f6', '#2f6bff']; // 0, 1, 2, 3, 4+ places that day
+const CITY = ['#b9cdfb', '#9db9fa', '#7fa6f7', '#5a8bf3', '#2f6bff']; // a city each (first → now), one family of blue
+const sHead = (n, sub) => `<div style="padding:18px 18px 0"><div class="lbl">10월에 다닌 곳</div><div class="big num">${n}<u>곳</u><span class="sub">${sub}</span></div></div>`;
+// the 31 days as one track; a stay (days in a row) is one rounded block on it; today a small dot under the track
+const runsOf = days => { const ds = [...days].sort((a, b) => a - b), out = []; for (const d of ds) { const r = out.at(-1); if (r && d === r[1] + 1) r[1] = d; else out.push([d, d]); } return out; };
+function strip(blocks, { above = [], below = [] } = {}) { let s = `<rect x="0" y="28" width="${W}" height="18" rx="6" fill="#eef0f3"/><rect x="${TODAY * cell}" y="28" width="${W - TODAY * cell}" height="18" rx="6" fill="#f6f7f9"/><rect x="${TODAY * cell}" y="28" width="6" height="18" fill="#f6f7f9"/>`;
+  for (const [a, b, fill] of blocks) { let x = (a - 1) * cell + 1, w = (b - a + 1) * cell - 2; if (w < cell * 1.6) { x -= (cell * 1.6 - w) / 2; w = cell * 1.6; } s += `<rect x="${x.toFixed(1)}" y="29.5" width="${w.toFixed(1)}" height="15" rx="5" fill="${fill}"/>`; }
+  s += `<circle cx="${(TODAY - .5) * cell}" cy="53" r="2.4" fill="var(--ink)"/>`;
+  for (const [d, t, on] of above) s += `<text x="${(d - .5) * cell}" y="20" text-anchor="middle" font-size="11.5" font-weight="${on ? 700 : 600}" fill="${on ? 'var(--d)' : 'var(--ink)'}">${t}</text>`;
+  for (const [d, t] of below) s += `<text x="${(d - .5) * cell}" y="66" text-anchor="middle" font-size="11.5" font-weight="600" fill="var(--ink)">${t}</text>`;
+  const ay = below.length ? 84 : 70; for (const d of [1, 10, 20, 31]) s += `<text x="${(d - .5) * cell}" y="${ay}" text-anchor="middle" font-size="10" fill="#a3a8b0" font-family="Inter">${d}${d === 1 ? '일' : ''}</text>`;
+  const up = above.length ? 0 : 20, hh = (below.length ? 90 : 76) - up; return `<svg width="${W}" height="${hh}" viewBox="0 ${up} ${W} ${hh}" style="display:block;margin:12px 18px 14px;overflow:visible">${s}</svg>`; }
+const mid = (a, b) => (a + b) / 2;
+
+// 1. 여러 도시: 도시마다 그 도시에 있던 날을 칠하고, 위 · 아래로 번갈아 도시 이름
+const C1 = [['Paris', 12, 13], ['Chicago', 19, 20], ['Varo', 23, 25]];
+const one = strip(C1.map(([, a, b], k) => [a, b, CITY[k + 2]]), { above: C1.map(([c, a, b]) => [mid(a, b), c, c === 'Varo']) });
+const C5 = [['Seoul', 2, 6], ['Tokyo', 8, 10], ['Paris', 12, 14], ['Chicago', 19, 20], ['Varo', 23, 25]];
+const five = strip(C5.map(([, a, b], k) => [a, b, CITY[k]]), { above: C5.filter((_, k) => k % 2 === 0).map(([c, a, b]) => [mid(a, b), c, c === 'Varo']), below: C5.filter((_, k) => k % 2).map(([c, a, b]) => [mid(a, b), c]) });
+const A = `<div class="card">${sHead(6, '3도시')}${one}</div><div class="card">${sHead(14, '5도시')}${five}</div>`;
+
+// 2. 한 도시 안에서: 진하기가 그날 간 곳 수. 가장 많이 다닌 날 두셋에 그날 대표 장소
+const N2 = { 3: 1, 4: 2, 8: 2, 9: 3, 10: 1, 14: 2, 16: 1, 17: 4, 18: 1, 21: 1, 23: 2, 24: 2, 25: 3 };
+const two = strip(runsOf(Object.keys(N2).map(Number)).map(([a, b]) => { let m = 0; for (let d = a; d <= b; d++) m = Math.max(m, N2[d] || 0); return [a, b, SHADE[Math.min(4, m)]]; }), { above: [[9, 'Altmarkt', false], [24, 'Café am Fluss', true]], below: [[17, 'Kunsthalle']] });
+const B = `<div class="card">${sHead(11, 'Sintra 안에서')}${two}<div style="display:flex;align-items:center;gap:6px;padding:0 18px 16px;font-size:11.5px;color:var(--dim)">적게 ${SHADE.slice(1).map(c => `<i style="width:12px;height:12px;border-radius:3px;background:${c}"></i>`).join('')} 많이 · 그날 간 곳 수</div></div>`;
+
+// 3. 같은 곳만: 띠는 그대로(나간 날), 아래에 자주 간 곳과 횟수
+const N3 = { 1: 1, 2: 2, 3: 2, 4: 1, 6: 1, 15: 1, 19: 2, 20: 3, 21: 2, 22: 1, 24: 2, 25: 1 };
+const three = strip((runsOf(Object.keys(N3).map(Number)).map(([a, b]) => { let m = 0; for (let d = a; d <= b; d++) m = Math.max(m, N3[d] || 0); return [a, b, SHADE[Math.min(4, m)]]; })), { below: [[10.5, '9일 동안 안 나감']] });
+const Cc = `<div class="card">${sHead(3, '자주 간 곳')}${three}<div class="chips">${[['Café am Fluss', 7], ["Ivo's workshop", 4], ['Bäckerei Holm', 2]].map(([n, c]) => `<span class="chip2">${n} <b class="num">${c}번</b></span>`).join('')}</div></div>`;
+
+
+// ---- the strip card and the map together
+// one city's places (case 2) and the same few places (case 3)
+const V2raw = [['Café am Fluss', 'Sintra', ['Ren'], '10-25', '20:30', 3], ['Kunsthalle', 'Varo', ['Ivo'], '10-17', '14:00', 1], ['Altmarkt', 'Varo', [], '10-09', '10:20', 2], ["Ivo's workshop", 'Varo', ['Ivo'], '10-24', '18:00', 2], ['Stadtbad', 'Varo', [], '10-23', '07:40', 1], ['Bäckerei Holm', 'Varo', [], '10-21', '08:10', 2]];
+const V3raw = [['Café am Fluss', 'Varo', ['Ren'], '10-25', '20:30', 7], ["Ivo's workshop", 'Varo', ['Ivo'], '10-24', '18:00', 4], ['Bäckerei Holm', 'Varo', [], '10-21', '08:10', 2]];
+const V2 = V2raw.map(v => [v[0], 'Sintra', ...v.slice(2)]), V3 = V3raw.map(v => [v[0], 'Bergen', ...v.slice(2)]);
+const pinsOn = (vs, c, W, H, top, bottom, label = true) => { const dark = night(c), b2 = kindOf(c) === 'coast' ? Math.min(bottom, H * .52) : bottom; return map(kindOf(c), W, H, [], { dark }).replace('</svg>', vs.map((v, k) => { const [x, y] = spot(v[0], k, vs.length, W, top, b2); return mapPin(x, y, label ? v[0] : '', dark); }).join('') + '</svg>'); };
+const rowsCard = vs => `<div class="card">${vs.map(placeRow).join('')}</div>`;
+// the strip cards as built (sHead + strip), 1 = several cities, 2 = one city, 3 = the same places
+const K1 = `<div class="card" style="margin-bottom:12px">${sHead(6, '3도시')}${one}</div>`;
+const K2 = `<div class="card" style="margin-bottom:12px">${sHead(11, 'Sintra 안에서')}${two}</div>`;
+const K3 = `<div class="card" style="margin-bottom:12px">${sHead(3, '자주 간 곳')}${three}<div class="chips">${[['Café am Fluss', 7], ["Ivo's workshop", 4], ['Bäckerei Holm', 2]].map(([n, c]) => `<span class="chip2">${n} <b class="num">${c}번</b></span>`).join('')}</div></div>`;
+const P = {};
+P.A = ['시트 맨 위에 띠 카드', '여러 도시. 큰 지도는 지금 도시(Varo). 띠의 도시 블록을 누르면 위 지도가 그 도시로 바뀌어요', phone(`<div style="position:absolute;inset:0">${townMap('Varo', 390, 844, 150, 320)}</div>${backOnly()}
+  ${sheet(`${K1}${cityHead('Varo')}${rowsCard(rowsOf('Varo'))}`, 380)}`)];
+P.B = ['지도 위에 띠 카드', '한 도시 안에서. 띠는 지도 위에 떠 있고, 블록을 누르면 그 며칠에 간 곳만 지도에 남아요', phone(`<div style="position:absolute;inset:0">${pinsOn(V2.slice(0, 5), 'Sintra', 390, 844, 330, 540)}</div>${backOnly()}
+  <div style="position:absolute;left:0;right:0;top:104px">${K2.replace('margin-bottom:12px', 'margin-bottom:0;box-shadow:0 1px 2px rgba(22,27,34,.08),0 12px 30px rgba(22,27,34,.22)')}</div>
+  ${sheet(`<div class="sec" style="margin-top:2px">최근</div>${rowsCard(V2.slice(0, 4))}`, 580)}`)];
+P.D = ['띠 카드 + 지도 카드', '같은 곳만. 스크롤 화면에 띠 카드 → 지도 카드 → 목록. 지도가 작아서 핀도 셋뿐이에요', phone(`${head('다녀간 곳', '3곳')}<div class="scroll">${K3}
+  <div class="card" style="height:190px;position:relative">${pinsOn(V3, 'Bergen', 342, 190, 40, 170)}</div>${rowsCard(V3)}</div>`)];
+document.getElementById('out').innerHTML = `<div class="row">${['A', 'B', 'D'].map(k => `<div class="col"><div class="lab">${k}. ${P[k][0]}<small>${P[k][1]}</small></div>${P[k][2]}</div>`).join('')}</div><div style="font-size:13px;color:#444;margin-top:-20px">길 모양: Varo ${kindOf('Varo')} · Sintra ${kindOf('Sintra')} · Bergen ${kindOf('Bergen')}</div>`;
+</script></body></html>

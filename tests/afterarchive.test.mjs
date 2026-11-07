@@ -20,7 +20,7 @@ const stub = {
     './people.js': encoded(`export const nameKey=s=>String(s).toLowerCase();export const nameRe=s=>new RegExp(s,'i');export const headingPlaces=()=>[];`),
     './recall.js': encoded(`export const estTok=s=>s.length/4;`), './scenes.js': encoded(`export const recentTrackers=()=>[];`),
     './sections.js': encoded(`export const RANGE_HEAD=/^(?:(\\S{1,12})\\s)?#(\\d+)\\s*([–—~-])\\s*#?(\\d+)(.*)$/;export const parseSections=t=>[...String(t).matchAll(/^## (.+)\\n[^#]*/gm)].map(x=>({title:x[1],start:x.index,end:x.index+x[0].length,group:false}));export const sectionKey=s=>s.title;export const splitTail=s=>[s,''];`),
-    './translate.js': encoded(`export const glossaryEntries=()=>[];export const glossaryPeople=()=>globalThis.__glossaryPeople||[];`), './world.js': encoded(`export const worldText=()=>'';`),
+    './translate.js': encoded(`export const glossaryEntries=()=>globalThis.__glossaryEntries||[];export const glossaryPeople=()=>globalThis.__glossaryPeople||[];`), './world.js': encoded(`export const worldText=()=>'';`),
     './anniv.js': encoded(`export const datedRows=()=>[];`),
 };
 const real = ['phonesync.js', 'phoneparse.js', 'phoneclock.js', 'phonesynclife.js', 'phonesyncmoney.js', 'finance.js', 'phoneprofile.js', 'phonefood.js', 'phonescreen.js'];
@@ -1191,3 +1191,84 @@ test('위치 정보 before a phone is made: read once and kept, checked and set 
         assert.ok(!('making' in p) && !('asked' in p));
     } finally { delete globalThis.__ctx; delete globalThis.__whereAnswer; }
 });
+
+test('making a phone (and some apps again) takes its people from the story or PEOPLE AROUND, as the reflection does', () => {
+    for (const s of [data.AI_SYS_PHONE, data.AI_SYS_PHONE_APPS, data.updateSystem({ split: true })]) assert.ok(s.includes('- People: only people the story or PEOPLE AROUND has.'), s.slice(0, 40));
+});
+
+test('the bank and voice memo fills get PEOPLE AROUND, and take their people from the story or it; life and delivery do not', async () => {
+    for (const s of [data.AI_SYS_MONEY, data.AI_SYS_VOICES]) assert.ok(s.includes('- PEOPLE AROUND (sometimes):') && s.includes('only people the story or PEOPLE AROUND has'), s.slice(0, 60));
+    for (const s of [life.AI_SYS_LIFE, life.AI_SYS_DELIVERY]) assert.ok(!s.includes('PEOPLE AROUND'));
+    try {
+        for (const [name, run, answer, system] of [['money', (mm, p) => data.fillMoney(mm, p), moneyAnswer('Ticket', 500, '11-03 03:03'), data.AI_SYS_MONEY], ['voice', (mm, p) => data.fillVoice(mm, p), '{"memos":[]}', data.AI_SYS_VOICES]]) {
+            const { p, m: mm } = clockFixture('No clock.');
+            p.around = { at: 1, people: [{ name: 'Mara', aka: [], about: 'Ren sends her money every month.' }] };
+            globalThis.__menu = { calls: [], answer };
+            try { await run(mm, p); } catch { /* the input is what this checks */ }
+            assert.match(globalThis.__menu.calls.find(x => x.sys === system).input, /\[PEOPLE AROUND\]\n- Mara: Ren sends her money every month\./, name);
+        }
+    } finally { delete globalThis.__ctx; }
+});
+
+test('a name and its other form in 용어집 ("Ivo = 이보") are one person: asked once, never read again for it, its row keeping both forms', async () => {
+    try {
+        const { m: mm } = htmlPhoneFixture(); mm.phones = {};
+        globalThis.__ctx.characters = [{ name: 'Mara' }]; globalThis.__ctx.characterId = 0; globalThis.__ctx.name1 = 'Lio';
+        mm.phoneScreenHolder = 'Mara';
+        globalThis.__glossaryPeople = ['Ivo']; globalThis.__glossaryEntries = [{ src: 'Ivo', ko: '이보' }];
+        globalThis.__where = [];
+        globalThis.__whereAnswer = { people: [{ name: 'Ren', city: 'Frankfurt am Main', tz: 'Europe/Berlin', lives: 'DE' }, { name: '이보', city: 'Frankfurt am Main', tz: 'Europe/Berlin', lives: 'DE' }] };
+        const at = { basis: 'Ren', finalViewpoint: 'Ren', elapsedTime: null, sceneTime: '11-03 03:10', messageSender: null };
+        globalThis.__menu = { calls: [], answers: [JSON.stringify({ country: 'DE', now: '11-03 03:10', clock: at, contacts: [{ name: '이보' }], threads: [{ with: '이보', messages: [{ from: '이보', text: 'Hallo', time: '11-03 03:00' }] }], notes: [] })] };
+        const p = await data.makePhone(mm, 'Ren');
+        const people = globalThis.__where[0].split('[PEOPLE]\n')[1].split('\n\n')[0].split('\n');
+        assert.equal(people.filter(n => n === 'Ivo' || n === '이보').length, 1, 'asked once');
+        assert.equal(globalThis.__where.length, 1, 'not read again for 이보');
+        const row = p.where.people.find(x => x.name === '이보');
+        assert.ok(row && row.aka.includes('Ivo'));
+    } finally { delete globalThis.__ctx; delete globalThis.__whereAnswer; delete globalThis.__glossaryPeople; delete globalThis.__glossaryEntries; }
+});
+
+test('PEOPLE AROUND goes by the name 위치 정보 has for a person (용어집 other form or aka): one person, one name', async () => {
+    try {
+        const { m: mm } = htmlPhoneFixture(); mm.phones = {};
+        globalThis.__ctx.characters = [{ name: 'Mara' }]; globalThis.__ctx.characterId = 0;
+        globalThis.__glossaryPeople = ['Ivo']; globalThis.__glossaryEntries = [{ src: 'Ivo', ko: '이보' }];
+        globalThis.__where = [];
+        globalThis.__whereAnswer = { people: [{ name: 'Ren', city: 'Frankfurt am Main', tz: 'Europe/Berlin', lives: 'DE' }, { name: '이보', city: 'Frankfurt am Main', tz: 'Europe/Berlin', lives: 'DE' }],
+            around: [{ name: 'Ivo', about: 'Ren\'s friend from university.' }] };
+        const pre = await data.preparePhone(mm, 'Ren');
+        assert.deepEqual(pre.around.people.map(x => [x.name, x.aka]), [['이보', ['Ivo']]]);
+        assert.ok(pre.where.people.find(x => x.name === '이보').aka.includes('Ivo'));
+    } finally { delete globalThis.__ctx; delete globalThis.__whereAnswer; delete globalThis.__glossaryPeople; delete globalThis.__glossaryEntries; }
+});
+
+test('reading where everyone is again: a person read back by the other form of their name is one row (its city set by hand kept); one taken off stays off by either form; two around entries of one person are one', async () => {
+    const base = () => {
+        const { m: mm } = htmlPhoneFixture();
+        globalThis.__glossaryEntries = [{ src: 'Ivo', ko: '이보' }, { src: 'Yu', ko: '유우' }];
+        const p = mm.phones.ren;
+        p.contacts = [{ name: 'Ivo' }, { name: 'Yu' }];
+        p.where = { at: 1, people: [{ name: 'Ren', city: 'Frankfurt am Main', names: ['Frankfurt am Main'], tz: 'Europe/Berlin' },
+            { name: 'Ivo', city: 'Seoul', names: ['Seoul'], tz: 'Asia/Seoul', aka: ['이보'], manual: { city: true } }] };
+        return { mm, p };
+    };
+    try {
+        let { mm, p } = base();
+        globalThis.__whereAnswer = { people: [{ name: '이보', city: 'Rome', tz: 'Europe/Rome' }, { name: 'Yu', city: 'Tokyo', tz: 'Asia/Tokyo' }, { name: '유우', city: 'Tokyo', tz: 'Asia/Tokyo' }],
+            around: [{ name: 'Ivo', about: 'brother' }, { name: '이보', about: 'coworker' }] };
+        await data.rereadPlaces(mm, p);
+        const ivo = p.where.people.filter(x => ['Ivo', '이보'].includes(x.name));
+        assert.equal(ivo.length, 1, JSON.stringify(p.where.people));
+        assert.equal(ivo[0].city, 'Seoul', 'the city set by hand stays');
+        assert.equal(p.where.people.filter(x => ['Yu', '유우'].includes(x.name)).length, 1, 'two forms the same length: one row');
+        for (const r of p.where.people) assert.ok(!arr(r.aka).some(a => a.toLowerCase() === r.name.toLowerCase()), 'no row has its own name as an aka');
+        assert.equal(p.around.people.length, 1);
+        ({ mm, p } = base());
+        p.where.people = p.where.people.filter(x => x.name !== 'Ivo'); p.where.removed = ['ivo'];
+        globalThis.__whereAnswer = { people: [{ name: '이보', city: 'Rome', tz: 'Europe/Rome' }] };
+        await data.rereadPlaces(mm, p);
+        assert.ok(!p.where.people.some(x => ['Ivo', '이보'].includes(x.name)), 'taken off as Ivo, stays off as 이보');
+    } finally { delete globalThis.__ctx; delete globalThis.__whereAnswer; delete globalThis.__glossaryEntries; }
+});
+const arr = v => (Array.isArray(v) ? v : []);

@@ -24,7 +24,7 @@ const map = { './extract.js': cleanMessageURL,
     './people.js': encoded(`export const nameKey=s=>String(s).toLowerCase();export const nameRe=s=>new RegExp(s,'i');export const headingPlaces=()=>[];`),
     './recall.js': encoded(`export const estTok=s=>s.length/4;`), './scenes.js': encoded(`export const recentTrackers=()=>[];`),
     './sections.js': encoded(`export const parseSections=()=>[];export const RANGE_HEAD=/#(\\d+)–#(\\d+)/;export const sectionKey=()=>'';export const splitTail=s=>[s,''];`),
-    './translate.js': encoded(`export const glossaryEntries=()=>[];export const glossaryPeople=()=>globalThis.__glossaryPeople||[];`), './world.js': encoded(`export const worldText=()=>'';`),
+    './translate.js': encoded(`export const glossaryEntries=()=>globalThis.__glossaryEntries||[];export const glossaryPeople=()=>globalThis.__glossaryPeople||[];`), './world.js': encoded(`export const worldText=()=>'';`),
 };
 const src = await readFile(new URL('../src/phonedata.js', import.meta.url), 'utf8');
 const data = await import(encoded(src.replace(/from '([^']+)'/g, (all, k) => `from '${map[k] || k}'`)));
@@ -2054,4 +2054,96 @@ test('messenger choices write a profile-linked person as the story writes them, 
     assert.deepEqual(data.screenHolderChoices({phoneProfiles:{mara:{}},text:'Mara finds Ren at the garage.'},c).map(x=>x.name),['User','Seraphina','Mara']);
     assert.deepEqual(data.screenHolderChoices({phoneProfiles:{mara:{}},phonePre:{mara:{owner:'Mara'}}},c).map(x=>x.name),['User','Seraphina','Mara']);
     assert.deepEqual(data.screenHolderChoices({phoneProfiles:{mara:{}},people:['Mara']},c).map(x=>x.name),['User','Seraphina','Mara']);
+});
+
+test('다녀간 곳: the owner\'s home is one row for as long as it is their home; a new home when they move', async () => {
+    const chat = [say('Ren', 'start'), say('Mara', 'morning'), say('Ren', 'Ren goes home.'), say('Ren', 'Home again.'), say('Ren', 'Ren moves to Berlin.')];
+    const c = setup(chat.slice(0, 3));
+    const home = (at, place, time) => ({ now: time, events: [{ id: `home-${at}`, at, quote: chat[at].mes, date: time.slice(0, 5), time: time.slice(6), summary: 'home', phone: { visits: [{ place, city: 'Frankfurt', home: true, with: [], time }, { place: 'Café Moka', city: 'Frankfurt', with: [], time }] } }] });
+    await run(c.m, home(2, 'flat in Sachsenhausen', '10-26 20:00'));
+    T.chat.push(chat[3]); await run(c.m, home(3, 'Flat in Sachsenhausen', '10-27 20:00'));
+    assert.equal(c.p.visits.filter(x => x.home).length, 1);
+    assert.equal(c.p.visits.filter(x => x.place === 'Café Moka').length, 2, 'every other place, each visit');
+    T.chat.push(chat[4]); await run(c.m, home(4, 'Wohnung in Mitte', '10-28 20:00'));
+    assert.deepEqual(c.p.visits.filter(x => x.home).map(x => x.place), ['flat in Sachsenhausen', 'Wohnung in Mitte']);
+    await data.undoRound(c.m, c.p);
+    assert.deepEqual(c.p.visits.filter(x => x.home).map(x => x.place), ['flat in Sachsenhausen']);
+});
+
+test('용어집 two forms of one name, everywhere a person is found: 위치 정보 (an older row gets the other form), texts, the clock\'s choices, SCENES WITH, the map\'s "with"', async () => {
+    globalThis.__glossaryEntries = [{ src: 'Ivo', ko: '이보' }];
+    try {
+        const chat = [say('Ren', 'start'), say('Mara', 'morning'), say('Ren', '이보와 Blue Note에 갔다. <span class="time">21:40</span>')];
+        const c = setup(chat);
+        clockPhone(c.p);
+        // a row read before 용어집 had the pair: no aka of its other form
+        c.p.where.people.push({ name: 'Ivo', city: 'Chicago', tz: 'America/Chicago', names: ['Chicago'] });
+        c.p.where.people.find(x => x.name === 'Ren').city = 'Frankfurt am Main';
+        c.p.where.people.find(x => x.name === 'Ren').names = ['Frankfurt am Main'];
+        c.p.threads = [{ with: 'Ivo', messages: [{ from: 'Ivo', text: 'Bist du da?', time: '11-04 20:00' }] }];
+        c.m.phoneScreenHolder = '이보';
+        globalThis.__everydayIn = [];
+        await run(c.m, { now: '11-04 23:30', events: [{ id: 'blue-note', at: 2, quote: '이보와 Blue Note에 갔다', date: '11-04', time: '23:00', summary: 'Blue Note with Ivo',
+            phone: { threads: [{ with: '이보', messages: [{ from: '이보', text: '재밌었다', time: '11-04 23:20' }] }], contacts: [{ name: '이보' }],
+                visits: [{ place: 'Blue Note', city: 'Chicago', with: ['이보', 'Ivo'], time: '11-04 21:40' }, { place: 'Frankfurt', city: '', with: [], time: '11-04 08:00' }, { place: 'Frankfurt Hauptbahnhof', city: 'Frankfurt', with: [], time: '11-04 09:00' }] } }] });
+        const ivo = c.p.where.people.find(x => x.name === 'Ivo');
+        assert.ok(ivo.aka.includes('이보'), 'the older row has the other form now');
+        assert.equal(c.p.threads.filter(t => ['Ivo', '이보'].includes(t.with)).length, 1, 'one thread for one person');
+        assert.match(T.input, /On 이보's clock|On Ivo's clock/, 'the default screen 이보 found on the row Ivo');
+        const scenes = (globalThis.__everydayIn.at(-1) || '').split('[SCENES WITH]\n')[1]?.split('\n\n')[0].split('\n') || [];
+        assert.equal(scenes.filter(n => n === 'Ivo' || n === '이보').length, 1, 'SCENES WITH: once');
+        assert.deepEqual(c.p.visits.map(x => [x.place, x.with]), [['Blue Note', ['Ivo']], ['Frankfurt Hauptbahnhof', []]], 'the home city alone, by a shorter form, is no visit; a place in it is');
+    } finally { delete globalThis.__glossaryEntries; }
+});
+
+test('용어집 names put on the reading before a round keep 되돌리기 as it was: the reading before the last round comes back', async () => {
+    const chat = [say('Ren', 'start'), say('Mara', 'morning'), say('Ren', 'Ren flies to Rome.')];
+    const c = setup(chat);
+    c.p.where = { at: 1, people: [{ name: 'Ren', city: 'Frankfurt am Main', names: ['Frankfurt am Main'], tz: 'Europe/Berlin', lives: 'DE' }, { name: 'Mara', city: 'Seoul', names: ['Seoul'], tz: 'Asia/Seoul' }] };
+    await run(c.m, { now: '10-26 20:00', moved: [{ name: 'Ren', city: 'Rome', names: ['Rome'], tz: 'Europe/Rome' }], events: [] });
+    assert.equal(c.p.where.people.find(x => x.name === 'Ren').city, 'Rome');
+    globalThis.__glossaryEntries = [{ src: 'Mara', ko: '마라' }];
+    try {
+        // (반영 with nothing new to read: 용어집's names go on the reading, no round)
+        try { await data.makePhone(c.m, 'Ren', { update: true }); } catch { /* nothing to read */ }
+        assert.ok(c.p.where.people.find(x => x.name === 'Mara').aka.includes('마라'));
+        await data.undoRound(c.m, c.p);
+        assert.equal(c.p.where.people.find(x => x.name === 'Ren').city, 'Frankfurt am Main');
+    } finally { delete globalThis.__glossaryEntries; }
+});
+
+test('다녀간 곳: "with" keeps a person whose first name is the owner\'s; a short name two rows share is no one\'s; the home city by its leading words or its Korean short name; another city that starts the same is a trip', async () => {
+    const chat = [say('Ren', 'start'), say('Mara', 'morning'), say('Ren', 'Out with Ren Kim and Ivo.')];
+    const c = setup(chat);
+    c.p.where = { at: 1, people: [{ name: 'Ren', city: 'Frankfurt am Main', names: ['Frankfurt am Main', '서울특별시'], tz: 'Europe/Berlin' }, { name: 'Ren Kim', city: 'Frankfurt am Main', tz: 'Europe/Berlin' },
+        { name: 'Ivo Kim', aka: ['Ivo'], city: 'Seoul', tz: 'Asia/Seoul' }, { name: 'Ivo Park', aka: ['Ivo'], city: 'Seoul', tz: 'Asia/Seoul' }] };
+    const v = (place, city, w = []) => ({ place, city, with: w, time: '10-26 20:00' });
+    await run(c.m, { now: '10-26 21:00', events: [{ id: 'out', at: 2, quote: 'Out with Ren Kim', date: '10-26', time: '20:00', summary: 'out', phone: { visits: [
+        v('Apfelwein Wagner', 'Frankfurt am Main', ['Ren Kim', 'Ivo']), v('Frankfurt', 'Frankfurt am Main'), v('서울', ''), v('Frankfurt', 'Frankfurt (Oder)'), v('Los Ang', '')] } }] });
+    assert.deepEqual(c.p.visits.map(x => [x.place, x.city, x.with]), [['Apfelwein Wagner', 'Frankfurt am Main', ['Ren Kim', 'Ivo']], ['Frankfurt', 'Frankfurt (Oder)', []], ['Los Ang', '', []]]);
+});
+
+test('a name in a text: as a name is written, never part of another word (Korean endings after a Korean name, a Korean ending after a Latin one)', () => {
+    for (const t of ['소망', '소망.', '소망이', '소망이가 왔다', '소망이랑', '소망이네', '소망아', '소망 씨', '소망씨', '소망님', '소망한테', '소망은', '소망을', '소망과', '소망의', '소망도', '소망이야', '어제 소망이를 봤다'])
+        assert.ok(data.namedIn(t, '소망'), t);
+    for (const t of ['소망하다', '소망했다', '소망스럽다', '소망대로', '그건 소망이다', '희소망']) assert.ok(!data.namedIn(t, '소망'), t);
+    for (const t of ['이보가 왔다', '이보는', '이보랑', '이보야', '이보네 집']) assert.ok(data.namedIn(t, '이보'), t);
+    for (const t of ['이보다 낫다', '그 이보다']) assert.ok(!data.namedIn(t, '이보'), t);
+    for (const t of ['Mara said hi', 'with Mara.', 'Mara가 왔다', 'Mara한테']) assert.ok(data.namedIn(t, 'Mara'), t);
+    for (const t of ['Maradona', 'Samara', 'Mara2']) assert.ok(!data.namedIn(t, 'Mara'), t);
+    assert.ok(data.namedIn('(Dr. K) came', 'Dr. K') && !data.namedIn('x', 'a'));
+});
+
+test('everyday SCENES WITH: a name only as a name; a 용어집 other form only when 용어집 marks it a person ("Rose = 장미" may be a flower)', async () => {
+    globalThis.__glossaryEntries = [{ src: 'Rose', ko: '장미' }, { src: 'Ivo', ko: '이보' }];
+    globalThis.__glossaryPeople = ['Ivo'];
+    try {
+        const chat = [say('Ren', 'start'), say('Mara', 'morning'), say('Ren', '장미가 활짝 핀 꽃집에서 장미꽃을 사 들고 이보네 집에 갔다. 이보다 늦게 도착했다.')];
+        const c = setup(chat);
+        c.p.where = { at: 1, people: [{ name: 'Ren', city: 'Frankfurt', tz: 'Europe/Berlin' }, { name: 'Rose', city: 'Frankfurt', tz: 'Europe/Berlin' }, { name: 'Ivo', city: 'Frankfurt', tz: 'Europe/Berlin' }] };
+        globalThis.__everydayIn = [];
+        await run(c.m, { now: '10-26 20:00', events: [{ id: 'visit', at: 2, quote: '이보네 집에 갔다', date: '10-26', time: '19:00', summary: 'At Ivo\'s', phone: { notes: [{ title: 'x', text: 'y', time: '10-26 19:00' }] } }] });
+        const scenes = (globalThis.__everydayIn.at(-1) || '').split('[SCENES WITH]\n')[1]?.split('\n\n')[0].split('\n') || [];
+        assert.deepEqual(scenes, ['Ivo']);
+    } finally { delete globalThis.__glossaryEntries; delete globalThis.__glossaryPeople; }
 });

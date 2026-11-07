@@ -94,3 +94,8 @@ test('never a time before or after one in any wording, nor a direction; a clock 
     for (const [s, want] of [['16시 15분 전화가 왔다', '16:15'], ['3시 무렵', '03:00'], ['3시쯤', '03:00'], ['3시경', '03:00'], ['3시까지 와', '03:00'], ['3시에 갔다', '03:00']]) assert.equal(koClockText(s), want, s);
     assert.deepEqual(datedClocks('11월 5일 3시 방향'), []);
 });
+
+test('the app\'s answers: a Korean clock the reader turns down is no time (never its first numbers); a colon clock and "7pm" as before', () => {
+    for (const s of ['3시 이후', '3시 이전', '3시 15분 전', '2시간 15분', '12시간', '오후 16시', '3시 방향']) assert.equal(hhmm(s), '', s);
+    for (const [s, want] of [['7:00 PM', '19:00'], ['7pm', '19:00'], ['19시', '19:00'], ['오후 3시', '15:00'], ['3시쯤', '03:00'], ['15:00 이후', '15:00']]) assert.equal(hhmm(s), want, s);
+});

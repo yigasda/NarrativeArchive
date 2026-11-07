@@ -60,7 +60,7 @@ Could this be on the owner's phone, given what the archive, lorebook and chat sh
 - The lorebook counts as fact like the archive; where the two disagree, the archive wins.
 - Events (a meeting, a fight, a confession, a trip, a loss) only if the archive or lorebook has them.
 - Small everyday things around those events are fine: how a text was worded, a photo of a place they were, a search they would make.
-- People: only people the story has. A relationship word (girlfriend, ex, husband, boss) only if the archive or chat uses it for them.
+- People: only people the story or PEOPLE AROUND has. A relationship word (girlfriend, ex, husband, boss) only if the archive or chat uses it for them.
 - Nothing later than the newest moment of the story.
 - The diary holds only what the archive shows happened and what the owner felt about it; no new secrets, no new feelings.`;
 // every time on the phone is the owner's own clock: a time written on the other side of the world is moved to theirs
@@ -96,7 +96,7 @@ const PHONE_ITEMS = `  "contacts": [{ "name": name in the story, "saved": how th
               "comments": [{ "from": name, "text", "ko" }] }],
   "mails": [{ "from": sender, "subject", "ks": Korean subject, "text", "ko", "time", "unread": true or false }],
   "diary": [{ "date": "MM-DD", "title", "kt": Korean title, "text", "ko" }],
-  "visits": [{ "place": a place the owner really went to, as the story writes it (a room, a shop, a house; a city alone when the story names nothing closer there, never the city they live in alone), "city": the city it is in, or "", "with": [the people there with them], "time" }],
+  "visits": [{ "place": a place the owner really went to, as the story writes it (a room, a shop, a house; a city alone when the story names nothing closer there, never the city they live in alone), "city": the city it is in, or "", "home": true when it is the owner's own home, "with": [the people there with them], "time" }],
   "voice": [{ "title", "kt", "text", "ko", "time", "sec", "place" }] only when the archive or chat shows the owner recorded one`;
 // (반영: a voice memo may be an everyday one too, so the 폰 만들기 limit is left off there)
 const VOICE_ONLY = ' only when the archive or chat shows the owner recorded one';
@@ -410,7 +410,7 @@ export function parsePhone(out, owner = '') {
             comments: arr(x?.comments).map(c => ({ from: line(c?.from, 40), text: line(c?.text, 300), ko: ko(c?.ko) })).filter(c => c.from && c.text).slice(0, CAP.comments) }, x)).filter(x => x.text || x.photo),
         mails: arr(raw.mails).map(x => tag({ from: line(x?.from, 60), subject: line(x?.subject, 120), ks: line(x?.ks, 120), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), unread: truthy(x?.unread) }, x)).filter(x => x.from && (x.subject || x.text)),
         diary: arr(raw.diary).map(x => tag({ date: when(x?.date).slice(0, 5), title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000) }, x)).filter(x => x.date && x.text),
-        visits: arr(raw.visits).map(x => tag({ place: line(x?.place, 60), city: line(x?.city, 60), with: [...new Set(arr(x?.with).map(n => line(n, 40)).filter(n => n && !mine(n)))].slice(0, 6), time: when(x?.time), src: 'story' }, x)).filter(x => x.place).slice(-CAP.visits),
+        visits: arr(raw.visits).map(x => tag({ place: line(x?.place, 60), city: line(x?.city, 60), ...(x?.home === true ? { home: true } : {}), with: [...new Set(arr(x?.with).map(n => line(n, 40)).filter(n => n && !mine(n)))].slice(0, 6), time: when(x?.time), src: 'story' }, x)).filter(x => x.place).slice(-CAP.visits),
         voice: arr(raw.voice).map(x => tag({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), sec: secOf(x?.sec), place: line(x?.place, 60), src: 'story' }, x)).filter(x => x.text),
     });
 }
@@ -562,9 +562,10 @@ export const AI_SYS_EVERYDAY = everydaySystem();
 // the people the owner had a scene with in these messages: any the phone knows (PEOPLE AROUND, contacts, texts, the place
 // reading) named in them
 // (and the people the reflection itself wrote into these messages' events, and the glossary's people)
-function scenesWith(p, text, more = []) {
+function scenesWith(p, text, more = [], m = null) {
     const low = String(text || '').toLowerCase(), seen = new Map();
-    const add = (name, names) => { if (!name || samePerson(name, p.owner)) return; const k = nameKey(name); if (seen.has(k)) return; if (names.filter(Boolean).some(n => String(n).length >= 2 && new RegExp(`(^|[^\\p{L}])${String(n).toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'u').test(low))) seen.set(k, name); };
+    // (one person once, by whichever of their names: "Ivo" and "이보" are one, shown by their 위치 정보 name)
+    const add = (name0, names0) => { const who = personOf(p, m, name0); if (!who || sameName(m, name0, p.owner)) return; const k = who.key, name = who.name, names = peopleTwins(m, names0.filter(Boolean)); if (seen.has(k)) return; if (names.some(n => namedIn(low, n))) seen.set(k, name); };
     for (const x of p.around?.people || []) add(x.name, [x.name, String(x.name).split(/\s+/)[0], ...arr(x.aka)]);
     for (const x of p.where?.people || []) add(x.name, [x.name, ...arr(x.aka)]);
     for (const x of p.contacts || []) add(x.name, [x.name]);
@@ -579,7 +580,7 @@ export const everydayParts = parts => arr(parts).filter(b => !String(b).startsWi
 // the people the reflection put in these messages' events: whom texts, calls and contacts are with
 const eventPeople = raw => arr(raw?.events).flatMap(e => { const ph = e?.phone && typeof e.phone === 'object' ? e.phone : {}; return [...arr(ph.threads).map(x => x?.with), ...arr(ph.calls).map(x => x?.with), ...arr(ph.contacts).map(x => x?.name)]; }).map(n => line(n, 40)).filter(Boolean);
 async function askEveryday(parts, raw, p, rows, life = false, m = null) {
-    const text = rows.map(r => r.text).join('\n'), who = scenesWith(p, text, [...eventPeople(raw), ...(m ? glossaryPeople(m) : [])]);
+    const text = rows.map(r => r.text).join('\n'), who = scenesWith(p, text, [...eventPeople(raw), ...(m ? glossaryPeople(m) : [])], m);
     const mine = everydayParts(parts).join('\n\n');
     const blocks = [mine, `[PUT ON THE PHONE NOW]\n${arr(raw?.events).map(putLine).join('\n') || '(nothing)'}\nOwner-local window: ${p.now || "unknown"} to ${raw?.now || p.now || "unknown"}.`, who.length ? `[SCENES WITH]\n${who.join('\n')}` : ''].filter(Boolean).join('\n\n');
     try { const got = jsonOf(await askDraft(blocks, { force: true, system: everydaySystem({ life }), maxTokens: 6000, effort: 'low' })); return got?.everyday && typeof got.everyday === 'object' ? got.everyday : null; }
@@ -608,11 +609,26 @@ function everydayOnly(p, add, day, daily) {
     if (Array.isArray(add.threads)) add.threads = add.threads.filter(th => th.messages.length || th.draft);
 }
 // a reflection keeps everything (keepAll); making a phone keeps each list to its size
+// (the city they live in, by any of its names, a part of one too: "Frankfurt" for "Frankfurt am Main"; never a place in it,
+// "Frankfurt Hauptbahnhof")
+// (its first whole words count, "Frankfurt" of "Frankfurt am Main", and a Korean name without 특별시 · 광역시 · 시, "서울" of
+// "서울특별시"; never part of a word, "Los Ang", nor another city that starts the same, "Frankfurt (Oder)")
+const homeCity = (p, v) => {
+    const k = pkey(v), own = ownerZone(p), row = whereOf(p, p.owner);
+    if (!k) return false;
+    return [own?.where, ...arr(own?.names), row?.city, ...arr(row?.names)].filter(Boolean).some(n0 => {
+        const n = String(n0), words = n.trim().split(/\s+/), leads = words.map((_, i) => pkey(words.slice(0, i + 1).join(' ')));
+        return leads.includes(k) || /^[가-힣]+$/.test(n) && n.startsWith(String(v).trim()) && /^(?:특별시|광역시|특별자치시|시)$/.test(n.slice(String(v).trim().length));
+    });
+};
 const visitOk = (p, x) => {
     if (new Set(p.hiddenPlaces || []).has(nameKey(x.place))) return false;
-    const own = ownerZone(p), row = whereOf(p, p.owner), home = [own?.where, ...arr(own?.names), row?.city, ...arr(row?.names)].map(pkey).filter(Boolean);
-    return !(home.includes(pkey(x.place)) && (!x.city || pkey(x.city) === pkey(x.place) || home.includes(pkey(x.city))));
+    // a city alone: no city given, the place is that city, or both are the city they live in by its names
+    const cityAlone = !x.city || pkey(x.city) === pkey(x.place) || homeCity(p, x.city);
+    return !(cityAlone && homeCity(p, x.place));
 };
+// (the owner is never one of "with": only by their own name or an aka of theirs, so "Ren Kim" stays for an owner Ren)
+const visitWith = (p, x) => { const out = [], own = new Set([p.owner, ...arr(whereOf(p, p.owner)?.aka)].map(nameKey)); for (const n of arr(x.with)) { const who = personOf(p, null, n); if (who && !own.has(nameKey(who.name)) && !own.has(nameKey(n)) && !out.some(o => personOf(p, null, o)?.key === who.key)) out.push(who.name); } return { ...x, with: out }; };
 function mergePhone(p, add, { keepAll = false } = {}) {
     if (!p.device && add.device) p.device = add.device;
     const keep = (list, n) => (keepAll ? list : list.slice(-n));
@@ -664,8 +680,12 @@ function mergePhone(p, add, { keepAll = false } = {}) {
         if (e.cancelled) o.cancelled = true; else { if (e.date) o.date = e.date; if (e.time) o.time = e.time; }
         return false;
     });
-    // (a place the user swiped off the map never comes back; the city they live in alone is no visit)
-    if (add.visits?.length) add.visits = add.visits.filter(x => visitOk(p, x));
+    // (a place the user swiped off the map never comes back; the city they live in alone is no visit; their home is one
+    // row for as long as it is their home: a new one only when they live somewhere else)
+    if (add.visits?.length) {
+        const homes = (p.visits || []).filter(x => x.home).map(x => nameKey(x.place));
+        add.visits = add.visits.filter(x => visitOk(p, x) && !(x.home && (homes.includes(nameKey(x.place)) || !homes.push(nameKey(x.place))))).map(x => visitWith(p, x));
+    }
     for (const k of LISTS) p[k] = keep([...(p[k] || []), ...fresh(k, p[k] || [], add[k] || [])], CAP[k]);
     if (add.profile?.handle || add.profile?.bio) p.profile = { ...(p.profile || {}), ...Object.fromEntries(Object.entries(add.profile).filter(([, v]) => v)) };
     for (const c of add.contacts) {
@@ -977,7 +997,7 @@ export async function preparePhone(m, owner, { again = false } = {}) {
     const key = nameKey(owner);
     await ensureScreenHolder(m);
     const binding = m.phones?.[key]?.financeProfile || m.phoneProfiles?.[key], kept = phonePre(m, owner);
-    if (kept && !again && sameBinding(kept, binding, m)) return kept;
+    if (kept && !again && sameBinding(kept, binding, m)) { glossAka(m, kept); return kept; }
     const pre = { owner, making: true, lore: loreKey(m), ...(binding ? { financeProfile: structuredClone(binding) } : {}) }, asked = { known: true };
     ensureYear(m, pre, nowAt(windowOf(m, null)));
     await tryWhere(m, pre, asked);
@@ -1019,7 +1039,8 @@ async function makePhone0(m, owner, { update = false, apps = null } = {}) {
     // the one the user checked in 위치 정보 (preparePhone), else read now; its year too, from the start
     const firstMade = !part && !old && !cur?.where, kept = firstMade ? phonePre(m, owner) : null, asked = {};
     let pre = null;
-    if (kept && sameBinding(kept, binding, m)) { pre = structuredClone(kept); asked.asked = kept.asked || []; }
+    if (cur) glossAka(m, cur);
+    if (kept && sameBinding(kept, binding, m)) { pre = structuredClone(kept); glossAka(m, pre); asked.asked = kept.asked || []; }
     else if (firstMade) { pre = { owner, making: true, ...(binding ? { financeProfile: structuredClone(binding) } : {}) }; ensureYear(m, pre, nowAt(gap)); asked.known = true; await tryWhere(m, pre, asked); }
     const ask = (g, extra = []) => askDraft(phoneRequest(m, owner, old, lore, part, profile, g, extra, pre), { force: true, system: old ? AI_SYS_PHONE_UPDATE : part ? AI_SYS_PHONE_APPS : AI_SYS_PHONE, maxTokens: 16000 });
     const out = await ask(gap), got = parsePhone(out, owner);
@@ -1104,7 +1125,7 @@ async function makePhone0(m, owner, { update = false, apps = null } = {}) {
     if (p.inject) applyInjection();
     if (two) turnsNote(last, '폰', short); else readNote(gap);
     // made for the first time: read again only for someone on it the reading before didn't ask about; made again: as before
-    const later = pre && !pre.where?.failed ? [...p.threads.map(t => t.with), ...p.contacts.map(x => x.name)].filter(n => n && !samePerson(n, owner) && !(asked.asked || []).some(a => samePerson(a, n))) : null;
+    const later = pre && !pre.where?.failed ? [...p.threads.map(t => t.with), ...p.contacts.map(x => x.name)].filter(n => n && !sameName(m, n, owner) && !(asked.asked || []).some(a => sameName(m, a, n))) : null;
     if (!later || later.length) await tryWhere(m, p);
     await saveMeta();
     return p;
@@ -1328,6 +1349,8 @@ async function updatePhone(m, owner) {
     return exclusive('sync', async () => {
         const key = nameKey(owner), p = m.phones[key], scope = phoneChatScope(ctx());
         if (syncState(p) !== 'ok') { const e = new Error('먼저 반영 시작 위치를 골라 주세요'); e.code = 'SYNC_PICK'; throw e; }
+        // (용어집's other forms of names on 위치 정보 rows first: before anything reads or keeps them)
+        glossAka(m, p);
         const s = p.sync, swiped = [];
         // a read message edited or swiped since: if the last round read it, that round is undone and read again;
         // an older round's items stay, and the changed message is simply read again
@@ -2106,8 +2129,9 @@ function whereRequest(m, p, { known = false } = {}) {
     const chars = g ? (g.members || []).map(a => (c.characters || []).find(x => x.avatar === a)).filter(Boolean) : [c.characters?.[c.characterId]].filter(Boolean);
     const persona = String(c.powerUserSettings?.persona_description || '').trim(), upto = phoneAt(p);
     const more = known || p.making ? [...chars.map(ch => ch.name || ch.data?.name), c.name1, screenHolderOf(m), ...glossaryPeople(m)] : [];
-    const seen = new Set(), people = [...(p.threads || []).map(t => t.with), ...(p.contacts || []).map(x => x.name), ...Object.values(m.phones || {}).map(q => q?.owner), ...more]
-        .map(n => line(n, 60)).filter(n => n && !samePerson(n, p.owner) && !seen.has(nameKey(n)) && seen.add(nameKey(n))).slice(0, 16);
+    // (each person once: two forms of one name in 용어집, "Ivo" and "이보", are one)
+    const seen = [], people = [...(p.threads || []).map(t => t.with), ...(p.contacts || []).map(x => x.name), ...Object.values(m.phones || {}).map(q => q?.owner), ...more]
+        .map(n => line(n, 60)).filter(n => n && !sameName(m, n, p.owner) && !seen.some(x => nameKey(x) === nameKey(n) || nameKey(glossTwin(m, x)) === nameKey(n)) && seen.push(n)).slice(0, 16);
     const [, tail] = splitTail(String(m.text || ''));
     return { chars, persona, people, blocks: [
         ...chars.map(ch => `[CHARACTER CARD — ${ch.name || ch.data?.name || ''}]\n${cardText(ch) || '(empty)'}`),
@@ -2137,18 +2161,39 @@ export async function readWhere(m, p, opts = {}) {
     if (around.length) p.around = { at: Date.now(), people: around };
     const known = [p.owner, ...r.people];
     // (someone the user took off stays off; what the user set by hand stays as they set it)
-    const removed = new Set(p.where?.removed || []), oldRow = name => whereOf(p, name);
-    const read = arr(raw?.people).map(whereRow).filter(x => x.name && known.some(k => nameKey(k) === nameKey(x.name)) && !removed.has(nameKey(x.name)) && (x.tz || COUNTRY_TZ[x.lives]))
-        .map(x => { const o = oldRow(x.name); return o?.manual ? { ...x, ...(o.manual.city ? { city: o.city, names: namesOf(o), tz: o.tz } : {}), ...(o.manual.lives ? { lives: o.lives } : {}), manual: o.manual } : x; });
+    // (by any form of their name: one taken off as "Ivo" stays off as "이보"; one set by hand as "Ivo" stays so as "이보")
+    const removed = new Set(p.where?.removed || []), formsOf = x => withTwins(m, [x.name, ...arr(x.aka)]).map(nameKey), gone = x => formsOf(x).some(k => removed.has(k));
+    const oldRow = x => { const ks = formsOf(x), rows = p.where?.people || []; return rows.find(r => nameKey(r.name) === nameKey(x.name)) || (hits => (hits.length === 1 ? hits[0] : null))(rows.filter(r => rowForms(m, r).some(k => ks.includes(k)))) || whereOf(p, x.name); };
+    // (a row by the other form of a name asked about, "이보" for "Ivo", is that person's; and it keeps that form as a name of theirs)
+    const read = arr(raw?.people).map(whereRow).filter(x => x.name && known.some(k => nameKey(k) === nameKey(x.name) || nameKey(glossTwin(m, k)) === nameKey(x.name)) && !gone(x) && (x.tz || COUNTRY_TZ[x.lives]))
+        .map(x => { const t = glossTwin(m, x.name); return t && !arr(x.aka).some(a => nameKey(a) === nameKey(t)) ? { ...x, aka: [...arr(x.aka), t].slice(0, 6) } : x; })
+        .map(x => { const o = oldRow(x); return o?.manual ? { ...x, ...(o.manual.city ? { city: o.city, names: namesOf(o), tz: o.tz } : {}), ...(o.manual.lives ? { lives: o.lives } : {}), manual: o.manual } : x; });
     // one person by two names ("Somang Park" in the contacts, "Somang" in a thread) in the same city: once, by the longer
     // name. In two cities they are two people (two named alike) and both stay
-    const here = (a, b) => samePerson(a.name, b.name) && nameKey(a.name) !== nameKey(b.name) && pkey(a.city) === pkey(b.city) && (a.tz || '') === (b.tz || '');
-    const twin = x => read.some(y => here(x, y) && String(y.name).length > String(x.name).length);
-    const got = read.filter(x => !twin(x)).slice(0, 16).map(x => { const more = read.filter(y => here(y, x) && twin(y)).flatMap(y => [y.name, ...arr(y.aka)]); return more.length ? { ...x, aka: [...new Set([...arr(x.aka), ...more])].slice(0, 6) } : x; }),
+    const here = (a, b) => sameName(m, a.name, b.name) && nameKey(a.name) !== nameKey(b.name) && pkey(a.city) === pkey(b.city) && (a.tz || '') === (b.tz || '');
+    // (two forms the same length, "Yu" and "유우": the one first in order stays)
+    const longer = (y, x) => String(y.name).length > String(x.name).length || String(y.name).length === String(x.name).length && nameKey(y.name) < nameKey(x.name);
+    const twin = x => read.some(y => here(x, y) && longer(y, x));
+    const got = read.filter(x => !twin(x)).slice(0, 16).map(x => { const more = read.filter(y => here(y, x) && twin(y)).flatMap(y => [y.name, ...arr(y.aka)]).filter(n => nameKey(n) !== nameKey(x.name)); return more.length ? { ...x, aka: [...new Set([...arr(x.aka), ...more])].slice(0, 6) } : x; }),
         merged = read.filter(twin).map(x => nameKey(x.name));
+    // (an old row of a person read now by another form of their name is that person's: one row, its names kept)
+    const samePersonRow = (o, x) => formsOf(o).some(k => formsOf(x).includes(k));
+    for (const x of got) for (const o of p.where?.people || []) if (nameKey(o.name) !== nameKey(x.name) && samePersonRow(o, x)) x.aka = [...new Set([...arr(x.aka), o.name, ...arr(o.aka)])].filter(n => nameKey(n) !== nameKey(x.name)).slice(0, 8);
     // read again: someone it leaves out keeps what was read before
-    const people = [...got, ...(p.where?.people || []).filter(o => !got.some(x => nameKey(x.name) === nameKey(o.name)) && !merged.includes(nameKey(o.name)) && !got.some(x => here(o, x) && String(x.name).length > String(o.name).length)).map(o => ({ ...o, names: namesOf(o) }))].slice(0, 16);
+    const people = [...got, ...(p.where?.people || []).filter(o => !got.some(x => nameKey(x.name) === nameKey(o.name) || samePersonRow(o, x)) && !merged.includes(nameKey(o.name)) && !got.some(x => here(o, x) && longer(x, o))).map(o => ({ ...o, names: namesOf(o) }))].slice(0, 16);
     p.where = { at: Date.now(), people, ...(removed.size ? { removed: [...removed] } : {}) };
+    glossAka(m, p);
+    // (PEOPLE AROUND by the name 위치 정보 has for them: one person, one name, on the map and in the texts alike)
+    // (two entries that turn out one person: the first, with the other's names)
+    if (p.around?.people) {
+        const out = [];
+        for (const x0 of p.around.people) {
+            const who = personOf(p, m, x0.name), x = !who || nameKey(who.name) === nameKey(x0.name) ? x0 : { ...x0, name: who.name, aka: [...new Set([...arr(x0.aka), x0.name])].filter(a => nameKey(a) !== nameKey(who.name)).slice(0, 6) };
+            const had = out.find(y => nameKey(y.name) === nameKey(x.name));
+            if (had) had.aka = [...new Set([...arr(had.aka), ...arr(x.aka)])].filter(a => nameKey(a) !== nameKey(had.name)).slice(0, 6); else out.push(x);
+        }
+        p.around.people = out;
+    }
     syncLives(p);
     return people;
 }
@@ -2167,6 +2212,77 @@ function ownerMoved(p, c) {
 // one person by two names: the same, or one a single word that is the other's first ("Somang" and "Somang Park"; never
 // "Ren Kim" and "Ren Park")
 const samePerson = (a, b) => { const x = nameKey(a), y = nameKey(b); if (!x || !y) return false; if (x === y) return true; const [s, l] = x.length < y.length ? [x, y] : [y, x]; return !/\s/.test(s) && l.split(/\s+/)[0] === s; };
+// a name and its other form in 번역 용어집 ("Ivo = 이보"): the same person. glossTwin gives the other form, as written
+// (the pairs read once per 용어집 text: a long one is not read again for every name)
+let glossMemo = { text: null, map: new Map() };
+const glossMap = m => {
+    const text = String(m?.glossary ?? '');
+    // (an empty one is read each time: nothing to read, and nothing kept that a later one could miss)
+    if (glossMemo.text !== text || !text) { const map = new Map(); for (const e of glossaryEntries(m)) { const a = nameKey(e.src), b = nameKey(e.ko); if (a && b && a !== b) { if (!map.has(a)) map.set(a, e.ko); if (!map.has(b)) map.set(b, e.src); } } glossMemo = { text, map }; }
+    return glossMemo.map;
+};
+const glossTwin = (m, n) => { const k = nameKey(n); return k && m ? glossMap(m).get(k) || '' : ''; };
+const sameName = (m, a, b) => samePerson(a, b) || (t => !!t && samePerson(t, b))(glossTwin(m, a));
+// a person named in a text, as a name is written there, never as a part of another word: "Mara" not in "Maradona"; a
+// Korean name alone or with what Korean puts after a name (소망이 · 소망이가 · 소망이랑 · 소망아 · 소망 씨 · 소망한테 · 이보는 ·
+// 이보네), never in another word ("이보다", "장미꽃", "소망하다", "그건 소망이다"); a name in Latin letters may take a Korean
+// ending ("Ivo가")
+const KO_AFTER = String.raw`(?:이(?!다)(?:가|는|를|랑|와|하고|한테|에게|도|만|네|야|의|여|요)?|가|는|은|를|을|와|과|랑|하고|한테|에게|께|의|도|만|네|야|아|여|씨|님|요|부터|까지|처럼|보고|더러)`;
+const nameRes = new Map();
+export function namedIn(text, name) {
+    const n = String(name || '').trim();
+    if (n.length < 2) return false;
+    let re = nameRes.get(n);
+    if (!re) {
+        const esc = n.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), ko = /\p{Script=Hangul}$/u.test(n);
+        re = new RegExp(String.raw`(?:^|[^\p{L}\p{N}])${esc}(?=$|[^\p{L}\p{N}]|${ko ? KO_AFTER : String.raw`\p{Script=Hangul}`})`, 'u');
+        if (nameRes.size > 2000) nameRes.clear();
+        nameRes.set(n, re);
+    }
+    return re.test(String(text || '').toLowerCase());
+}
+// the 용어집 other forms a text may be searched for: only those 용어집 marks as people (a "Rose = 장미" there may be a
+// flower); the rows themselves (위치 정보, texts) take every pair, as a whole name only
+// (an aka that is only another name's 용어집 form, put there by glossAka, counts by the same rule)
+const peopleTwins = (m, names) => {
+    const ok = new Set((m ? glossaryPeople(m) : []).map(nameKey)), people = n => ok.has(nameKey(n)) || ok.has(nameKey(glossTwin(m, n)));
+    const own = names.filter(n => !names.some(x => x !== n && nameKey(glossTwin(m, x)) === nameKey(n)) || people(n));
+    return withTwins(m, own).filter(n => own.includes(n) || people(n));
+};
+// names with their 용어집 other forms added (each once)
+const withTwins = (m, names) => { const out = []; for (const n of [...names, ...(m ? names.map(x => glossTwin(m, x)) : [])]) if (n && !out.some(x => nameKey(x) === nameKey(n))) out.push(n); return out; };
+// one person by any of their names: the 위치 정보 row they are on (by its name or an aka, or the 용어집 other form of
+// one), else the name itself; { key, name } with the row's name as the one to show
+function personOf(p, m, n) {
+    const k = nameKey(n);
+    if (!k) return null;
+    // (a row by its own name first; else the one row that has it as an aka: a short name two rows share is no one's)
+    const keys = withTwins(m, [n]).map(nameKey), rows = p?.where?.people || [];
+    const row = rows.find(r => keys.includes(nameKey(r.name))) || (hits => (hits.length === 1 ? hits[0] : null))(rows.filter(r => arr(r.aka).some(x => keys.includes(nameKey(x)))));
+    return row ? { key: nameKey(row.name), name: row.name } : { key: keys.slice().sort()[0], name: n };
+}
+// every form of one row's person: its name, its aka, their 용어집 other forms
+const rowForms = (m, r) => withTwins(m, [r?.name, ...arr(r?.aka)].filter(Boolean)).map(nameKey);
+// 용어집 forms not yet on a 위치 정보 row are put on it as its aka ("Ivo = 이보" added after it was read), so every place
+// that finds a person by their aka (texts, the clock, the default screen) finds them by both. Code only, no request
+const glossRows = (m, rows) => {
+    let changed = false;
+    for (const r of rows || []) {
+        const add = withTwins(m, [r.name, ...arr(r.aka)]).filter(n => nameKey(n) !== nameKey(r.name) && !arr(r.aka).some(a => nameKey(a) === nameKey(n)));
+        if (add.length) { r.aka = [...arr(r.aka), ...add].slice(0, 8); changed = true; }
+    }
+    return changed;
+};
+// (the last rounds' 되돌리기 keep the reading as it was: their copies get the same names, so 되돌리기 still sees the reading
+// it left, and puts back the one before it)
+function glossAka(m, p) {
+    if (!m || !glossRows(m, p?.where?.people)) return;
+    for (const u of [p.syncUndo, ...arr(p.syncUndos)]) {
+        if (!u) continue;
+        if (u.where?.people) glossRows(m, u.where.people);
+        if (typeof u.whereAfter === 'string') { try { const w = JSON.parse(u.whereAfter); if (w?.people) { glossRows(m, w.people); u.whereAfter = JSON.stringify(w); } } catch { /* an old copy */ } }
+    }
+}
 // (by the short name only when it is one person's: "Ivo" with an Ivo Kim and an Ivo Park is neither)
 const whereOf = (p, name) => { const rows = p?.where?.people || [], same = rows.filter(x => samePerson(x.name, name)); return rows.find(x => nameKey(x.name) === nameKey(name)) || (same.length === 1 ? same[0] : undefined); };
 // where the owner lives (설정 › 위치 정보's 사는 나라: by hand or read), else the phone's 국적: what the bank, the money,
@@ -2276,7 +2392,7 @@ function peopleMoved(p, list, text = '') {
     for (const c of arr(list).slice(0, 8)) {
         const name = line(c?.name, 60), tz = realTz(c?.tz), city = line(c?.city, 60);
         if (!name || !tz || !city || nameKey(name) === nameKey(p.owner) || NOT_A_PERSON.test(name.trim())) continue;
-        if (!known.has(nameKey(name)) && !(/^[\p{Lu}\p{Script=Hangul}]/u.test(name) && String(text).includes(name))) continue;
+        if (!known.has(nameKey(name)) && !(/^[\p{Lu}\p{Script=Hangul}]/u.test(name) && namedIn(text, name))) continue;
         // (one the user took off, or whose city they set by hand, stays as they left it)
         if ((p.where?.removed || []).includes(nameKey(name)) || whereOf(p, name)?.manual?.city) continue;
         const was = whereOf(p, name), row = { ...was, name: was?.name || name, city, names: namesOf(c), tz };
@@ -2301,11 +2417,11 @@ export const ownerZone = p => zoneOfWhere(whereOf(p, p?.owner)) || zoneOfPhone(p
 function placesAround(p, m = null) {
     const out = [], own = ownerZone(p);
     // (the owner's own place as the weather app has it is one of their names too: a zone known only by the country)
-    if (own) out.push({ tz: own.tz, name: own.where, names: [own.where, ...own.names, p?.life?.weather?.here?.place], own: true, by: [p?.owner, ...arr(whereOf(p, p?.owner)?.aka)] });
+    if (own) out.push({ tz: own.tz, name: own.where, names: [own.where, ...own.names, p?.life?.weather?.here?.place], own: true, by: withTwins(m, [p?.owner, ...arr(whereOf(p, p?.owner)?.aka)]) });
     for (const c of arr(p?.life?.weather?.cities)) if (c?.tz) out.push({ tz: c.tz, name: c.name, names: [c.name, c.ko] });
-    for (const x of p?.where?.people || []) if (nameKey(x.name) !== nameKey(p.owner)) { const z = zoneOfWhere(x); if (z) out.push({ tz: z.tz, name: z.where, names: z.names, who: x.name, by: [x.name, ...arr(x.aka)] }); }
+    for (const x of p?.where?.people || []) if (nameKey(x.name) !== nameKey(p.owner)) { const z = zoneOfWhere(x); if (z) out.push({ tz: z.tz, name: z.where, names: z.names, who: x.name, by: withTwins(m, [x.name, ...arr(x.aka)]) }); }
     // another phone's owner: where that phone read them to be, else its own saved city or country
-    for (const q of Object.values(phonesOf(m) || {})) if (q && q !== p && q.owner && !whereOf(p, q.owner)) { const z = ownerZone(q); if (z) out.push({ tz: z.tz, name: z.where, names: z.names, who: q.owner, by: [q.owner, ...arr(whereOf(q, q.owner)?.aka)] }); }
+    for (const q of Object.values(phonesOf(m) || {})) if (q && q !== p && q.owner && !whereOf(p, q.owner)) { const z = ownerZone(q); if (z) out.push({ tz: z.tz, name: z.where, names: z.names, who: q.owner, by: withTwins(m, [q.owner, ...arr(whereOf(q, q.owner)?.aka)]) }); }
     return out;
 }
 const tzFormat = new Map();
@@ -2484,7 +2600,7 @@ function reflectionClocks0(p, rows, m, at = p?.now) {
     if (!own) return { choices, text: '' };
     for (const z of placesAround(p, m)) {
         const names = [...new Set((z.own ? [p.owner, 'owner', ...(z.by || [])] : z.who ? [z.who, ...(z.by || [])] : []).filter(Boolean))];
-        if (!names.length || !z.own && !names.some(n => nameKey(n) === nameKey(fallback) || text.toLowerCase().includes(String(n).toLowerCase()))) continue;
+        if (!names.length || !z.own && !names.some(n => nameKey(n) === nameKey(fallback) || namedIn(text, n))) continue;
         if (people.some(x => x.names[0] === names[0])) continue;
         try { new Intl.DateTimeFormat('en', { timeZone: z.tz }); } catch { continue; }
         people.push({ names, tz: z.tz });
@@ -2640,6 +2756,7 @@ YOU GET
 - EVALUATION DATE: the story's day, for exchange rates. SAVED RATES: the rates the app already has for it.
 ${FILL_CLOCK_GET}
 - EXISTING ACCOUNTS (sometimes): the accounts the bank already has.
+- PEOPLE AROUND (sometimes): people in the owner's life, close or not, from the cards, persona, profile and lorebook, with where things stand now.
 
 STORY OR INVENTED
 - Trips, bookings, gifts and big purchases: only what the story shows or plainly implies. Give each the "ev" tag the phone's mail or event for it already has.
@@ -2649,6 +2766,7 @@ STORY OR INVENTED
 - An amount the story gives stays as it is: whose it is, its currency, its date and what it was for. A company's value, a transfer or an old balance is not what the owner has in the bank now.
 - Balances, last four digits, card expiry dates, everyday payments (coffee, groceries, transit), and amounts the story doesn't give: invent them, fitting the owner's life, job and country. The deposits together fall within FINANCIAL SCALE.
 - Company money, family money and an inheritance still to come are not the owner's cash. Don't invent a trust or a restriction to explain a small balance.
+- People (who money goes to or comes from): only people the story or PEOPLE AROUND has, or a shop, a landlord, an employer the owner's life plainly has.
 - A booking the story has carries the details a real one would (a booking number, a seat, a gate, a delivery date), made up to fit.
 - Orders stand as of the story's now: with no sign it arrived, it is not "delivered".
 - "basis": a line or two on what the story gave and what you invented. Invented amounts are for the app only, never new facts in the role-play.
@@ -2703,6 +2821,7 @@ YOU GET
 - ARCHIVE, RECENT CHAT, OWNER, and sometimes STORY YEAR, WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW. Nothing on the phone may show what the owner doesn't know.
 - DIARY: the owner's diary entries, so the memos are not the same moments told again.
 ${FILL_CLOCK_GET}
+- PEOPLE AROUND (sometimes): people in the owner's life, close or not, from the cards, persona, profile and lorebook, with where things stand now.
 
 RULES
 - ${OWN_CLOCK}
@@ -2710,6 +2829,7 @@ ${FILL_CLOCK}
 - 3 or 4 memos, each at a moment the archive has where the owner could plausibly talk into their phone alone: after a fight, on the way somewhere, late at night. Not the days the diary already covers, where possible.
 - Spoken, not written: the way the owner talks in the archive and chat, with pauses (…), restarts and half sentences. Not a diary entry.
 - Only what the archive shows happened and what the owner felt about it; no new events, no new secrets.
+- People: only people the story or PEOPLE AROUND has.
 - In the owner's own language. Speech not in Korean gets "ko"; Korean speech gets none.
 - 20 to 90 seconds of speech each.
 
@@ -2792,7 +2912,7 @@ async function makeMoney(m, p, { regenerateBalances = false, wealthPlan = null }
     const preserved = rebuild ? `[REBUILD ACCOUNTS]\n${JSON.stringify(old.bank.accounts.map(({id,kind,name,last4,currency})=>({id,kind,name,last4,currency})))}\n[MONEY ALREADY MOVED]\n${JSON.stringify(old.bank.accounts.map(a=>({id:a.id,currency:a.currency,entries:finance(m).accounts[`${a.id}:${a.currency}`]?.entries || {}})))}` : old ? `[EXISTING ACCOUNTS]\n${JSON.stringify(old.bank.accounts)}` : '';
     const system = AI_SYS_MONEY + (rebuild ? MONEY_REBUILD : '');
     const rates = () => `[SAVED RATES]\n${JSON.stringify(Object.fromEntries(Object.entries(finance(m).prices).filter(([k])=>k.startsWith('FX:')).map(([k,book])=>[k,book[date]])))}`;
-    const input = await sideRequest(m,p.owner,[`[PHONE NOW]\n${moneyContext(p, at)}`,fillClock(m, p, at, statusAt(p, nowAt(read.gap), m), read.gap),preserved,wealthBlock(plan,'deposits'),`[EVALUATION DATE]\n${date}`,rates()],{profile:p.financeProfile,money:true,read});
+    const input = await sideRequest(m,p.owner,[`[PHONE NOW]\n${moneyContext(p, at)}`,fillClock(m, p, at, statusAt(p, nowAt(read.gap), m), read.gap),aroundBlock(p),preserved,wealthBlock(plan,'deposits'),`[EVALUATION DATE]\n${date}`,rates()],{profile:p.financeProfile,money:true,read});
     mark = readMark(read.gap) || mark;
     let correction='';
     for(let attempt=0;attempt<2;attempt++) {
@@ -2856,7 +2976,7 @@ async function makeMoney(m, p, { regenerateBalances = false, wealthPlan = null }
             try {
                 const at2 = storyNow(p, nowAt(two.cover)) || p.now, tx = !old || rebuild, soFar = { cards: raw.cards, ...(tx ? { tx: raw.tx } : {}), passes: raw.passes, orders: raw.orders };
                 const only = `The bank, its accounts and their balances stay as they are: leave "bank" and "fx" out${tx ? '' : ', and "tx" too (the bank keeps its own)'}`;
-                const input2 = await sideRequest(m, p.owner, [`[PHONE NOW]\n${moneyContext(p, at2)}`, fillClock(m, p, at2, statusAt(p, nowAt(two.cover), m), two.cover, two.short), `[EXISTING ACCOUNTS]\n${JSON.stringify(p.money.bank.accounts)}`, `[EVALUATION DATE]\n${date}`, rates(),
+                const input2 = await sideRequest(m, p.owner, [`[PHONE NOW]\n${moneyContext(p, at2)}`, fillClock(m, p, at2, statusAt(p, nowAt(two.cover), m), two.cover, two.short), aroundBlock(p), `[EXISTING ACCOUNTS]\n${JSON.stringify(p.money.bank.accounts)}`, `[EVALUATION DATE]\n${date}`, rates(),
                     `${soFarHead('MONEY', two.short, only)}\n${JSON.stringify(soFar)}`, two.short?.text || ''], { profile: p.financeProfile, money: true, read: { gap: two.cover } });
                 const out2 = String(await askDraft(input2, { force: true, system: AI_SYS_MONEY, maxTokens: 12000 }) ?? ''), raw2 = jsonOf(out2);
                 // an answer that isn't the JSON, or one cut off before its end: what it read isn't all there, so the mark
@@ -2887,7 +3007,7 @@ export const secOf = v => {
 };
 export async function fillVoice(m, p) {
     const diary = (p.diary || []).slice(-6).map(d => `- ${d.date} ${d.title}`).join('\n');
-    const out = await askDraft(await sideRequest(m, p.owner, [`[DIARY]\n${diary || '(none)'}`, fillClock(m, p, p.now, null, windowOf(m, p), null, { story: true })], {story:CHAT_TOKENS.apps,profile:p.financeProfile}), { force: true, system: AI_SYS_VOICES, maxTokens: 6000 });
+    const out = await askDraft(await sideRequest(m, p.owner, [`[DIARY]\n${diary || '(none)'}`, fillClock(m, p, p.now, null, windowOf(m, p), null, { story: true }), aroundBlock(p)], {story:CHAT_TOKENS.apps,profile:p.financeProfile}), { force: true, system: AI_SYS_VOICES, maxTokens: 6000 });
     const memos = arr(jsonOf(out, { salvage: 'whole' })?.memos).map(x => ({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), sec: secOf(x?.sec), place: line(x?.place, 60), src: 'guess' })).filter(x => x.text);
     if (!memos.length) throw new Error('모델 답에서 음성 메모를 찾지 못했어요');
     // (one the story already put there, the same title at the same time, isn't written twice)

@@ -1,0 +1,57 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>여정 시안</title><style>
+:root{--d:#2f6bff;--c:#e1e9ff;--ink:#161b22;--dim:#6b7380;--hair:#eef0f3}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#d9dce2;font-family:-apple-system,'SF Pro Text','Noto Sans KR',sans-serif;color:var(--ink);padding:28px;width:1720px}
+.row{display:flex;gap:28px;margin-bottom:34px;align-items:flex-start}
+.lab{font-weight:700;font-size:18px;margin:0 0 4px}.lab small{display:block;font-weight:400;color:#555;font-size:13px;margin-top:3px}
+.col{width:390px;background:#f4f5f7;border-radius:28px;padding:16px 0 4px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+.tag{font-size:11.5px;color:var(--dim);margin:0 26px 8px;font-weight:600}
+.card{margin:0 14px 14px;border-radius:22px;background:#fff;box-shadow:0 1px 2px rgba(22,27,34,.04),0 8px 24px rgba(22,27,34,.05);overflow:hidden}
+.num{font-family:'Inter Tight','Inter',-apple-system,sans-serif;font-variant-numeric:tabular-nums}
+.lbl{font-size:12px;color:var(--dim)}.big{font-size:34px;font-weight:600;letter-spacing:-.02em;line-height:1.1}.big u{text-decoration:none;font-size:17px;font-weight:600;margin:0 6px 0 3px;letter-spacing:0}
+.sub{font-size:12.5px;color:var(--dim)}
+</style></head><body><div id="out"></div><script>
+// 도시 · 처음 간 날 · 마지막 날 · 몇 곳
+const T3 = [['Paris', '10-12', '10-12', 1], ['Chicago', '10-20', '10-20', 2], ['Varo', '10-24', '10-25', 3]];
+const T5 = [['Seoul', '10-02', '10-06', 4], ['Tokyo', '10-08', '10-10', 3], ['Paris', '10-12', '10-14', 2], ['Chicago', '10-20', '10-21', 2], ['Varo', '10-24', '10-25', 3]];
+const D = d => `${+d.slice(3)}일`, R = (a, b) => (a === b ? D(a) : `${+a.slice(3)}–${+b.slice(3)}일`);
+const tot = t => t.reduce((n, c) => n + c[3], 0);
+const head = (t, pad = '18px 18px 0') => `<div style="padding:${pad}"><div class="lbl">10월에 다닌 곳</div><div class="big num">${tot(t)}<u>곳</u><span class="sub" style="font-family:-apple-system,'Noto Sans KR',sans-serif;font-size:13px;font-weight:400;letter-spacing:0">${t.length}도시</span></div></div>`;
+const sel = t => t.length - 1; // 지금 있는 도시 = 마지막
+
+// A. 노선도: 곧은 선 위 역, 지금 도시만 크게. 이름은 위, 날짜는 아래
+function A(t) { const W = 326, x0 = 24, x1 = W - 24, xs = t.map((_, k) => x0 + (x1 - x0) * k / Math.max(1, t.length - 1));
+  return `<div class="card">${head(t)}<div style="position:relative;height:86px;margin:6px 18px 8px"><svg width="${W}" height="86" style="position:absolute;inset:0">
+   <line x1="${x0}" x2="${xs[sel(t)]}" y1="44" y2="44" stroke="var(--d)" stroke-width="5" stroke-linecap="round"/>
+   ${xs.map((x, k) => { const on = k === sel(t); return `<circle cx="${x}" cy="44" r="${on ? 9 : 6.5}" fill="#fff" stroke="var(--d)" stroke-width="${on ? 4.5 : 3.5}"/>${on ? `<circle cx="${x}" cy="44" r="3.6" fill="var(--d)"/>` : ''}`; }).join('')}</svg>
+   ${t.map(([c, a, b, n], k) => { const on = k === sel(t), al = k === 0 ? 'left' : k === t.length - 1 ? 'right' : 'center', l = k === 0 ? xs[k] - 10 : k === t.length - 1 ? xs[k] - 90 : xs[k] - 50; return `<div style="position:absolute;left:${l}px;width:${k === 0 || k === t.length - 1 ? 100 : 100}px;text-align:${al};top:8px;font-size:${t.length > 4 ? 12 : 13}px;font-weight:${on ? 700 : 600};color:${on ? 'var(--d)' : 'var(--ink)'}">${c}</div><div class="num" style="position:absolute;left:${l}px;width:100px;text-align:${al};top:60px;font-size:11.5px;color:var(--dim)">${R(a, b)}</div>`; }).join('')}</div></div>`; }
+
+// B. 탑승권: 도시 코드 크게, 사이에 작은 비행기. 카드 위쪽에 파란 띠
+const code = c => c.slice(0, 3).toUpperCase();
+const plane = `<svg width="16" height="16" viewBox="0 0 24 24" fill="#9aa3b0"><path d="M21 15.5v-2l-8-5V3.8a1.5 1.5 0 0 0-3 0V8.5l-8 5v2l8-2.5v5l-2.5 2v1.5L11 20.5l3.5 1v-1.5L12 18v-5z" transform="rotate(90 12 12)"/></svg>`;
+function B(t) { const many = t.length > 3, show = many ? [t[0], t[t.length - 2], t[t.length - 1]] : t;
+  return `<div class="card"><div style="height:6px;background:var(--d)"></div>${head(t, '16px 18px 0')}<div style="display:flex;align-items:flex-end;justify-content:space-between;padding:14px 18px 6px">
+   ${show.map(([c, a, b, n], k) => `${k ? `<div style="flex:1;display:flex;align-items:center;gap:4px;padding:0 6px 22px"><i style="flex:1;border-top:1.6px dashed #cfd4dc"></i>${many && k === 1 ? `<span class="num" style="font-size:11px;color:var(--dim);background:#f1f2f4;border-radius:999px;padding:1px 7px">+${t.length - 3}</span><i style="flex:1;border-top:1.6px dashed #cfd4dc"></i>` : ''}${plane}<i style="flex:1;border-top:1.6px dashed #cfd4dc"></i></div>` : ''}
+    <div style="text-align:${k === 0 ? 'left' : k === show.length - 1 ? 'right' : 'center'}"><div class="num" style="font-size:24px;font-weight:700;letter-spacing:.04em;color:${k === show.length - 1 ? 'var(--d)' : 'var(--ink)'}">${code(c)}</div><div style="font-size:11.5px;color:var(--dim);margin-top:1px;white-space:nowrap">${many ? R(a, b) : `${c} · ${R(a, b)}`}</div></div>`).join('')}</div>
+   <div style="margin:10px 18px 14px;padding-top:10px;border-top:1px dashed #e3e6ea;display:flex;gap:18px">${[['처음', D(t[0][1])], ['마지막', D(t[t.length - 1][2])], ['지금', t[t.length - 1][0]]].map(([k, v]) => `<div><div style="font-size:10.5px;color:var(--dim);letter-spacing:.06em">${k}</div><b style="font-size:14px;font-weight:600">${v}</b></div>`).join('')}</div></div>`; }
+
+// C. 세로 여정: 배달 추적처럼 위에서 아래로, 지금 도시가 맨 아래 진하게. 오른쪽에 몇 곳
+function C(t) { return `<div class="card">${head(t)}<div style="padding:12px 18px 10px">${t.map(([c, a, b, n], k) => { const on = k === sel(t), last = k === t.length - 1; return `<div style="display:flex;gap:12px;align-items:flex-start;position:relative;padding-bottom:${last ? 0 : 14}px">
+   <span style="position:relative;width:16px;display:flex;justify-content:center;flex:none"><i style="width:${on ? 14 : 10}px;height:${on ? 14 : 10}px;margin-top:${on ? 3 : 5}px;border-radius:50%;background:${on ? 'var(--d)' : '#fff'};border:2.5px solid ${on ? 'var(--d)' : '#c5cbd4'};${on ? 'box-shadow:0 0 0 4px rgba(47,107,255,.16)' : ''};z-index:1"></i>${last ? '' : `<i style="position:absolute;top:16px;bottom:-4px;width:2px;background:${k === t.length - 2 ? 'linear-gradient(#e3e6ea,var(--c))' : '#e3e6ea'}"></i>`}</span>
+   <span style="flex:1;display:flex;align-items:baseline;gap:8px"><b style="font-size:15px;font-weight:${on ? 700 : 500};color:${on ? 'var(--d)' : 'var(--ink)'}">${c}</b><span class="num" style="font-size:12px;color:var(--dim)">${R(a, b)}</span></span><span class="num" style="font-size:12.5px;color:var(--dim)">${n}곳</span></div>`; }).join('')}</div></div>`; }
+
+// D. 날짜 띠: 그 달 31칸 위에 도시마다 머문 날을 칠해요. 칠한 칸 위에 도시 이름
+const PAL = ['#c9dafd', '#a9c3fb', '#7fa6f7', '#5a8bf3', '#2f6bff'];
+function Dd(t) { const W = 326, cell = W / 31; let s = '';
+  for (let d = 1; d <= 31; d++) s += `<rect x="${(d - 1) * cell + .6}" y="30" width="${cell - 1.2}" height="16" rx="2.4" fill="#eef0f3"/>`;
+  t.forEach(([c, a, b], k) => { const s1 = +a.slice(3), s2 = +b.slice(3), col = PAL[PAL.length - t.length + k], x = (s1 - 1) * cell, w = (s2 - s1 + 1) * cell;
+    s += `<rect x="${x + .6}" y="30" width="${w - 1.2}" height="16" rx="3" fill="${col}"/><text x="${x + w / 2}" y="${k % 2 ? 66 : 20}" text-anchor="middle" font-size="11.5" font-weight="${k === sel(t) ? 700 : 600}" fill="${k === sel(t) ? 'var(--d)' : 'var(--ink)'}">${c}</text>`; });
+  for (const d of [1, 10, 20, 31]) s += `<text x="${(d - .5) * cell}" y="86" text-anchor="middle" font-size="10" fill="#a3a8b0" font-family="Inter">${d}</text>`;
+  return `<div class="card">${head(t)}<svg width="${W}" height="90" style="display:block;margin:10px 18px 12px;overflow:visible">${s}</svg></div>`; }
+
+const OPT = [['A. 노선도', '지하철 노선처럼 곧은 선 위에 도시. 지나온 길만 파랗게, 지금 도시가 가장 커요', A],
+  ['B. 탑승권', '도시 코드를 크게, 사이에 비행기. 아래에 처음 · 마지막 · 지금', B],
+  ['C. 세로 여정', '택배 추적처럼 위에서 아래로. 도시 옆에 날짜, 오른쪽에 몇 곳', C],
+  ['D. 날짜 띠', '그 달 31칸에 도시마다 머문 날을 칠해요. 언제 어디 있었는지 한눈에', Dd]];
+document.getElementById('out').innerHTML = `<div class="row">${OPT.map(([t, n, f]) => `<div><div class="lab">${t}<small style="width:390px">${n}</small></div><div class="col"><div class="tag">3도시</div>${f(T3)}<div class="tag">5도시</div>${f(T5)}</div></div>`).join('')}</div>`;
+</script></body></html>
