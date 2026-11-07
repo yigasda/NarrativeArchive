@@ -112,7 +112,8 @@ export function investmentDate(m, p) {
     // the phone's year (never a guess from the dates the archive writes), on the story's day where an investment fill would
     // stop reading (now, when it reads to the end)
     const day = storyNow(p, stopAt(m, p)).slice(0, 5), year = p.noYear ? '' : p.year ? String(p.year) : '';
-    const date = year && day ? `${year}-${day}` : '';
+    // (a story with no year of its own: valued at today's prices)
+    const date = p.noYear ? new Date().toISOString().slice(0, 10) : year && day ? `${year}-${day}` : '';
     return validDate(date) ? date : '';
 }
 function ingestQuotes(m, raw, input, date, securities) {
