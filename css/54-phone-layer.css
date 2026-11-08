@@ -1,6 +1,6 @@
 /* ============ 캐릭터 휴대폰 · 한 겹: the phone over the whole screen (a dialog of its own), the people on top, ⚙ for the rest */
 body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl {
-    position: fixed !important; inset: 0 !important; width: 100vw !important; height: 100dvh !important; max-width: none !important; max-height: none !important; min-width: 0 !important; min-height: 0 !important;
+    position: fixed !important; inset: 0 !important; width: 100vw !important; height: var(--na-phh, 100dvh) !important; max-width: none !important; max-height: none !important; min-width: 0 !important; min-height: 0 !important;
     margin: 0 !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; overflow: hidden; transform: none !important;
     background: rgba(12, 10, 9, 0.95) !important; color: #fff !important; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
 }
@@ -67,11 +67,14 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax 
 /* 지도 · 다시 만들기 (v3.122) */
 /* 다녀간 곳 (mp_): the town's map behind, a sheet over it — the month strip card, the town's places, the other towns */
 .ax .mp_wx { position: absolute; inset: 0; display: flex; flex-direction: column; overflow: hidden; }
-.mp_bg { position: absolute; left: 0; right: 0; top: 0; height: 430px; }
+.mp_bg { position: absolute; left: 0; right: 0; top: 0; height: 430px; overflow: hidden; touch-action: pan-y; }
+.mq_one .mp_bg, .mp_zoomed :is(.mp_bg, .mp_gap) { touch-action: none; }
 .mp_art { display: block; }
+.mp_pins { position: absolute; left: 0; top: 0; width: 100%; pointer-events: none; }
 .ax .mp_wx > .ax_sb, .ax .mp_wx > .ax_top, .ax .mp_wx > .ax_scroll { position: relative; z-index: 2; }
 .ax .mp_dark .ax_cb { --axbg: rgba(255, 255, 255, 0.2); --axsh: none; color: #fff; --axfg: #fff; }
-.mp_gap { display: block; height: 266px; flex: none; }
+.ax .ax_cb.mq_cb, .ax .mp_dark .ax_cb.mq_cb { --axbg: var(--axd); --axsh: 0 1px 2px rgba(22, 27, 34, 0.08), 0 4px 12px color-mix(in srgb, var(--axd) 35%, transparent); color: #fff; --axfg: #fff; }
+.mp_gap { display: block; height: 266px; flex: none; touch-action: pan-y; }
 .mp_sheet { flex: 1 0 auto; padding-top: 8px; background: #f4f5f7; border-radius: 22px 22px 0 0; box-shadow: 0 -6px 24px rgba(22, 27, 34, 0.14); display: flex; flex-direction: column; }
 .mp_grab { display: block; width: 38px; height: 5px; border-radius: 3px; background: #cfd4dc; margin: 0 auto 12px; flex: none; }
 .mp_month { padding: 16px 18px 0; }
@@ -93,6 +96,8 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax 
 .mp_key i { width: 12px; height: 12px; border-radius: 3px; }
 .mp_th { display: flex; align-items: baseline; gap: 8px; padding: 6px 26px 8px; flex: none; }
 .mp_th b { font-size: 20px; --axfs: 20px; font-weight: 600; }
+.mp_th .mq_flag { align-self: center; }
+.mp_th.mq_eh { padding-top: 18px; padding-bottom: 12px; }
 .mp_th span { font-size: 13px; --axfs: 13px; color: #6b7380; --axfg: #6b7380; }
 .mp_pl { font-size: 12px; font-weight: 600; fill: #161b22; stroke: #f2efe8; stroke-width: 3px; paint-order: stroke; }
 .mp_pl.dk { fill: #fff; stroke: #1f2630; }
@@ -104,7 +109,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax 
 .ax_igtop .ax_igback { margin: 0 6px 0 -6px; display: grid; place-items: center; }
 .ax_igtop > .ax_sp { flex: 1; }
 /* the phone has the whole height; the bar at the bottom of the home and lock screens closes it, with 닫기 over it */
-.na_phl .na_ph_frame { width: min(calc(100vw - 20px), calc((100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 390 / 844 + 14px), 470px); }
+.na_phl .na_ph_frame { width: min(calc(100vw - 20px), calc((var(--na-phh, 100dvh) - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 390 / 844 + 14px), 470px); }
 .cg .cg_ind.na_ph_quit { height: 38px; flex-direction: column; gap: 4px; justify-content: flex-end; padding-bottom: 9px; cursor: pointer; }
 .cg_ind.na_ph_quit small { font-size: 11px; font-weight: 600; color: rgba(22, 27, 34, 0.55); letter-spacing: 0.04em; }
 /* 도구 › 이야기: 캐릭터 휴대폰이 맨 위 큰 카드 */

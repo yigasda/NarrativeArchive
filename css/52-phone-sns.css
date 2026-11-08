@@ -4,7 +4,7 @@
 .ax_canvas { display: flex; flex-direction: column; background: #fff; color: #111; --axfg: #111; font-family: -apple-system, 'SF Pro Text', 'Noto Sans KR', sans-serif; --axff: -apple-system, 'SF Pro Text', 'Noto Sans KR', sans-serif; font-size: 16px; --axfs: 16px; line-height: normal; letter-spacing: normal; --axls: normal}
 .ax :where(button, label) { font: inherit; color: inherit; cursor: pointer; padding: 0; margin: 0; border: 0; background: var(--axbg, none); box-shadow: var(--axsh, none); text-align: left; width: auto; height: auto; min-height: 0; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax :is(button, label) { background: var(--axbg, transparent) !important; background-image: none; box-shadow: var(--axsh, none) !important; border-color: transparent !important; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax :is(.ax_tile, .ax_cthumb) { background: var(--axbg) !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax :is(.ax_tile, .ax_cthumb) { background: var(--axbg); }
 /* text and corners of phone buttons, labels and spans: a theme may set colour, font, size, spacing, case or corners on every
    button / label / span with !important (the user's sizes every span). They come only from these variables, which no theme sets:
    --axfg (colour) · --axff (font) · --axfs (size) · --axls (letter spacing) · --axtt (case) · --axr (corners). Not inherited.
@@ -30,7 +30,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup :is(
 .ax_ko { display: block; color: #8e8e93; --axfg: #8e8e93; font-size: 0.88em; --axfs: 0.88em; margin-top: 2px; font-weight: 400}
 .ax_empty { padding: 50px 20px; text-align: center; color: #8e8e93; --axfg: #8e8e93; font-size: 15px; --axfs: 15px}
 .ax_face { display: inline-grid; place-items: center; flex: none; border-radius: 50%; --axr: 50%; overflow: hidden}
-.ax_face > * { width: 100% !important; height: 100% !important; }
+.ax_face > * { width: 100%; height: 100%; }
 /* SNS */
 .ax_igtop { height: 44px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; }
 .ax_igtop b { font-size: 21px; font-weight: 700; display: flex; align-items: center; gap: 4px; letter-spacing: -0.01em; }
@@ -85,7 +85,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup :is(
 .ax_dh small { font: 400 12.5px 'Noto Sans KR', sans-serif; color: #a48f78; margin-left: 6px; }
 .ax_dp { font-size: 13.5px; --axfs: 13.5px; line-height: 1.55; color: #6f5f50; --axfg: #6f5f50; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden}
 .ax_fab { position: absolute; right: 20px; bottom: 40px; width: 56px; height: 56px; border-radius: 50%; --axr: 50%; background: #3d3127; display: grid; place-items: center; box-shadow: 0 8px 20px rgba(60, 40, 20, 0.25)}
-.ax .ax_kobtn { padding: 0 !important; background: none !important; color: var(--axk, #8a6d4a); --axfg: var(--axk, #8a6d4a); font-size: 15px; --axfs: 15px; font-weight: 600 !important; opacity: 0.55}
+.ax .ax_kobtn { padding: 0; background: none; color: var(--axk, #8a6d4a); --axfg: var(--axk, #8a6d4a); font-size: 15px; --axfs: 15px; font-weight: 600; opacity: 0.55}
 .ax .ax_kobtn.on { opacity: 1; }
 .ax_paper { padding: 6px 26px 40px; }
 .ax_pdt { font-size: 13px; --axfs: 13px; color: #a48f78; --axfg: #a48f78; font-weight: 600; letter-spacing: 0.04em; --axls: 0.04em}

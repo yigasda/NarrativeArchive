@@ -9,7 +9,9 @@ import { autopic, autopicPeople, drafting, drawing, looksOf, writing } from './p
 import { bigClock, byStory, clockOf, COUNTRIES, fmtDate, fmtTime, fullDate, gapDays, hasKo, koOn, lastTime, listTime, localeOf, loreOff, MOODS, pad, parts, phoneLore, placesOf, REMAKE, rowDay, savedName, dateOrderOf, placeInfo, screenHolderLabel, screenHolderChoices } from './phonedata.js';
 import { threadNew } from './phonehome.js';
 import { screenView } from './phonescreen.js';
-import { BUSY, pinSpots, pinSvg, STAY, stripSvg, townKinds, townSvg } from './phonemapart.js';
+import { BUSY, pinLayer, pinSpots, pinSvg, STAY, stripSvg, townKinds, townPlace, townSvg } from './phonemapart.js';
+import { PLACE } from './phonemapcity.js';
+import { flagSvg } from './phoneflags.js';
 import { recentTrackers } from './scenes.js';
 import { sectionKey } from './sections.js';
 import { glossaryEntries } from './translate.js';
@@ -168,7 +170,7 @@ export function diaryScreen(p, now, pick = '') {
     const yr = (!p.noYear && Number(p.year)) || 2001; // the story's year when it has one, so a leap day counts
     if (x0) for (let n = 6; n >= 0; n--) { const d = new Date(yr, x0.mo - 1, x0.d - n); days.push(`${pad(d.getMonth() + 1)}-${pad(d.getDate())}`); }
     return `${axBar(p, now, '#3d3127')}
-      <div class="ax_dytop"><button type="button" class="ax_back" data-go="home">${ax('back', 22, '#8a6d4a', 2.4)}</button>${ax('search', 22, '#8a6d4a')}</div>
+      <div class="ax_dytop"><button type="button" class="ax_back" data-go="home">${ax('back', 22, '#8a6d4a', 2.4)}</button><button type="button" class="ax_dyfind na_ph_dyfind" aria-label="검색">${ax('search', 22, '#8a6d4a')}</button></div>
       <div class="ax_scroll">
         <div class="ax_dymonth"><b>${x0 ? `${x0.mo}월` : '일기'}</b><span>${pick ? `${esc(fmtDate(p, pick))} · ${ds.length}편` : `${all.length}편`}</span></div>
         ${days.length ? `<div class="ax_strip">${days.map(d => dayBtn('diary', d, pick, `${d === (pick || String(now).slice(0, 5)) ? 'on' : ''} ${have.has(d) ? 'd' : ''}`, Number(d.slice(3)))).join('')}</div>` : ''}
@@ -213,7 +215,9 @@ export const axCb = (go, k = 'back') => `<button type="button" class="ax_cb" dat
 export const axKp = p => (hasKo(p) ? `<button type="button" class="na_ph_kochip ax_kp ${koOn() ? 'on' : ''}">가 한국어</button>` : '');
 export const axTop = (left, right = '') => `<div class="ax_top">${left}<span class="ax_topr">${right}</span></div>`;
 export const axH1 = (t, sub = '') => `<div class="ax_h1"><b>${esc(t)}</b>${sub ? `<span>${esc(sub)}</span>` : ''}</div>`;
-export const axFind = (t = '검색') => `<div class="ax_find">${ax('search', 16, 'currentColor', 2.2)}${t}</div>`;
+// 검색: a line to type in (an editable div, as 도시 찾기's: a theme that paints every input can't reach it); the list under it
+// is filtered as it is typed (phone.js applyFind), no AI
+export const axFind = (t = '검색') => `<div class="ax_find">${ax('search', 16, 'currentColor', 2.2)}<div class="ax_findq" contenteditable="true" role="searchbox" enterkeyhint="search" spellcheck="false" aria-label="${esc(t)}" data-ph="${esc(t)}"></div><button type="button" class="ax_findx" aria-label="지우기">${ax('x', 11, '#fff', 3)}</button></div>`;
 export const axChev = ax('chev', 15, '#b7bdc6', 2.4);
 const axNewest = (xs, now) => { const c = byStory(now); return xs.map((x, k) => [x, k]).sort((a, b) => c(b[0], a[0])); };
 export const axDay = (p, now, v) => (String(v).slice(0, 5) === String(now).slice(0, 5) ? '오늘' : fmtDate(p, v));
@@ -916,27 +920,32 @@ export function mapTowns(p, m) {
 }
 // a town's night: they were last there between 21 and 5
 export const mapNight = (g, now) => { const cmp = storyCmp(now), lastR = [...g.rows].sort((a, b) => cmp(b.last || '', a.last || ''))[0], hr = Number((/^\d{2}-\d{2} (\d{2})/.exec(lastR?.last || '') || [0, 12])[1]); return hr >= 21 || hr < 5; };
+// finding a town, always in sight: the blue button top right, and a blue row at the end of the list
+export const mapFindBtn = () => `<button type="button" class="ax_cb mq_cb" data-go="mapq" aria-label="도시 찾기">${ax('search', 18, 'currentColor', 2.4)}</button>`;
+export const mapFindRow = () => `<button type="button" class="ax_rw ax_place" data-go="mapq"><span class="ax_si" style="background: var(--axd)">${ax('search', 17, '#fff', 2.4)}</span><span class="ax_tx"><span class="ax_n" style="color: var(--axd); --axfg: var(--axd)">다른 도시 · 동네 찾기</span><span class="ax_p1">東京, Berlin, 홍대 … 어느 말로든</span></span>${axChev}</button>`;
+// the town's flag before its name (a town the city table knows)
+const townFlag = city => { const i = city ? townPlace(city) : -1; return i >= 0 && PLACE[i][3] ? flagSvg(PLACE[i][3], 22) : ''; };
 export function mapScreen(p, now, m, pick = '') {
     const { pl, groups, kinds } = mapTowns(p, m);
     const who = r => (r.with.length ? ` · ${esc(r.with.length > 2 ? `${r.with[0]} 외 ${r.with.length - 1}명` : r.with.join(' · '))}${r.with.length > 2 ? '과' : waOf(m, r.with[r.with.length - 1])}` : '');
     const rowHtml = x => swipeRow('place', nameKey(x.place), `
           <div class="ax_rw ax_place"><span class="ax_si" style="background: var(--axc)">${ax(x.home ? 'home' : 'pindot', 17, 'var(--axd)', 2.2)}</span><span class="ax_tx"><span class="ax_n">${esc(x.place)}</span><span class="ax_p1">${x.home === 'now' ? '집' : x.home ? '예전 집' : x.n > 1 ? `${x.n}번` : '처음'}${who(x)}</span></span><small>${esc(x.day ? fmtDate(p, x.day, true) : x.date)}${x.time ? `<br>${esc(x.time)}` : ''}</small></div>`);
-    if (!groups.length) return `${axBar(p, now)}${axTop(axCb('home'), `<button type="button" class="ax_cb" data-go="mapq" aria-label="도시 찾기">${ax('search', 18, 'currentColor', 2.3)}</button>`)}<div class="ax_scroll">${axH1('다녀간 곳')}<div class="ax_empty">방문 기록 없음</div><i class="ax_pad"></i></div>${axInd()}`;
+    if (!groups.length) return `${axBar(p, now)}${axTop(axCb('home'), mapFindBtn())}<div class="ax_scroll">${axH1('다녀간 곳')}<div class="ax_empty">방문 기록 없음</div><i class="ax_pad"></i></div>${axInd()}`;
     // the town on the map: the one picked (a stay on the strip, a row under "다른 곳"), else where they were last
     const g = groups.find(x => x.k === pick) || groups[0];
     // a night map when they were last there at night
     const kind = kinds.get(g.k || `~${p.owner}`), dark = mapNight(g, p.now);
     const shown = g.rows.slice(0, 7), W = 390, H = 430;
     const pins = pinSpots(shown.map(r => r.place), W, 150, 340).map(([x, y], k) => pinSvg(x, y, shown[k].place, dark)).join('');
-    const art = `<svg class="mp_art" viewBox="0 0 ${W} ${H}" width="100%" aria-hidden="true">${townSvg(kind, W, H, g.k || p.owner, dark, g.rows.map(r => r.place).join(' '))}${pins}</svg>`;
+    const art = `<svg class="mp_art" viewBox="0 0 ${W} ${H}" width="100%" aria-hidden="true" data-z="${esc(`${kind}~${g.k}`)}">${townSvg(kind, W, H, g.k || p.owner, dark, g.rows.map(r => r.place).join(' '))}</svg>${pinLayer(W, H, pins)}`;
     const lastDay = g.rows.map(r => r.day).filter(Boolean).sort(storyCmp(p.now)).at(-1);
     const others = groups.filter(x => x !== g);
     const other = others.length ? `<div class="ax_sec">다른 곳</div><div class="ax_card">${others.map(x => `<button type="button" class="ax_rw ax_place" data-go="map" data-i="${esc(x.k)}"><span class="ax_si" style="background: var(--axc)">${ax('pindot', 17, 'var(--axd)', 2.2)}</span><span class="ax_tx"><span class="ax_n">${esc(x.city || '그 밖의 곳')}</span><span class="ax_p1">${x.rows.length}곳</span></span>${axChev}</button>`).join('')}</div>` : '';
-    return `<div class="mp_wx${dark ? ' mp_dark' : ''}"><div class="mp_bg">${art}</div>${axBar(p, now, dark ? '#fff' : '#111')}${axTop(axCb('home'), `<button type="button" class="ax_cb" data-go="mapq" aria-label="도시 찾기">${ax('search', 18, 'currentColor', 2.3)}</button>`)}
+    return `<div class="mp_wx${dark ? ' mp_dark' : ''}"><div class="mp_bg">${art}</div>${axBar(p, now, dark ? '#fff' : '#111')}${axTop(axCb('home'), mapFindBtn())}
       <div class="ax_scroll"><i class="mp_gap"></i><div class="mp_sheet"><i class="mp_grab"></i>
         ${mapStrip(p, now, m, pl, g.k)}
-        <div class="mp_th"><b>${esc(g.city || '그 밖의 곳')}</b><span>${g.rows.length}곳${lastDay ? ` · 마지막 ${esc(fmtDate(p, lastDay))}` : ''}</span></div>
-        <div class="ax_card">${g.rows.map(rowHtml).join('')}</div>${other}<i class="ax_pad"></i></div></div>
+        <div class="mp_th">${townFlag(g.city)}<b>${esc(g.city || '그 밖의 곳')}</b><span>${g.rows.length}곳${lastDay ? ` · 마지막 ${esc(fmtDate(p, lastDay))}` : ''}</span></div>
+        <div class="ax_card">${g.rows.map(rowHtml).join('')}</div>${other}<div class="ax_card">${mapFindRow()}</div><i class="ax_pad"></i></div></div>
       ${axInd()}</div>`;
 }
 

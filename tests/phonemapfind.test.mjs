@@ -36,3 +36,16 @@ test('every town has a country with a flag, and the names show capitalised', () 
     for (const [n, , , cc] of PLACE) { assert.ok(FLAG_NAME[cc], `${n}: ${cc}`); assert.match(flagSvg(cc), /^<svg/); }
     assert.equal(placeNames(findTowns('뉘른').towns[0]).lat, 'Nürnberg');
 });
+
+test('findCountries: a country by its Korean, English, Japanese, Chinese or own name, then its towns and neighbourhoods', async () => {
+    const { findCountries, countryTowns, countryHoods } = await import('../src/phonemapfind.js');
+    for (const q of ['일본', 'Japan', '日本', 'japan']) assert.deepEqual(findCountries(q)[0], { cc: 'jp', exact: true }, q);
+    for (const [q, cc] of [['Deutschland', 'de'], ['ドイツ', 'de'], ['美国', 'us'], ['England', 'gb'], ['Россия', 'ru'], ['مصر', 'eg'], ['노르웨이', 'no']]) assert.equal(findCountries(q)[0]?.cc, cc, q);
+    assert.equal(findCountries('일')[0]?.exact, false);
+    assert.equal(findCountries('Hogwarts').length, 0);
+    // every country a town is in can be found, and shows towns
+    const { PLACE } = await import('../src/phonemapcity.js');
+    for (const cc of new Set(PLACE.map(x => x[3]))) { assert.ok(findCountries(FLAG_NAME[cc]).some(c => c.cc === cc && c.exact), cc); assert.ok(countryTowns(cc).length, cc); }
+    assert.ok(countryHoods('jp').length >= 10);
+    assert.equal(new Set(countryTowns('jp').map(i => PLACE[i][2])).size, countryTowns('jp').length);
+});
