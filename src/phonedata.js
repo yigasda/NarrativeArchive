@@ -393,7 +393,7 @@ DELIVERY
 - A shop not in DELIVERY SHOPS: "newShop" with 2 to 4 dishes, the one ordered among them.` : ''}
 
 LANGUAGE
-Names fit the owner's country. A name not in Korean gets "ko". Someone money goes to or comes from may be made up (a friend, a coworker); never a new family member, partner or other tie the owner doesn't have in the story.
+Names fit the owner's country. A name not in Korean gets "ko". Payees may be made up; never a new relative or partner.
 
 JSON (one object, nothing before or after it)
 { "records": [{
