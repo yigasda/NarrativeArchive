@@ -853,3 +853,9 @@ test('run59: the clock never pays a regular on a day the bank\'s balance already
     regularClock(m, p, '11-19 09:00', '2026');
     assert.deepEqual(p.money.tx.map(t => t.day), ['2026-11-18']);
 });
+
+test('run60: an asset with no day the owner got it keeps none (the message\'s day is not it)', () => {
+    const { m, p } = setup();
+    applyMoney(m, p, ev('t', 5, '11-03', { assets: [{ kind: 'deposit', names: ['Trust'], value: 5000, status: 'blocked', occurrence: 'again', refersBack: false }, { kind: 'vehicle', names: ['Car'], value: 9000, since: '03-02', occurrence: 'again', refersBack: false }] }), opts());
+    assert.deepEqual(p.money.assets.map(a => a.since), ['', '03-02']);
+});
