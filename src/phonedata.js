@@ -379,7 +379,7 @@ THE APPS
 IN THEIR OWN WORDS (notes, the diary, voice memos)
 - The phone's most personal records: written out in full as this owner would write or say them, never a summary of the day.
 - Notes: in the shape a real note has, short or long as they are, with their own shorthand, spelling and mix of languages.
-- The diary: one entry for each story day that ends in these messages, the whole day, its earlier scenes in EVENTS ON THE PHONE too; as long as this owner would write that day; not the day's events in order. A day the story shows: what happened and what they feel about it; another day: that day of their life. No new secrets or story events.
+- The diary: an entry when a story day ends in these messages or a scene stays with them, as long as this owner would write it; not the day's events in order. A day the story shows: what happened and what they feel about it; another day: that day of their life. No new secrets or story events.
 - Voice memos: about one every few days; spoken, not written: the way the owner talks in the archive and chat, with pauses (…), restarts and half sentences, at a moment they could talk into the phone alone, for instance after a fight, on the way somewhere or late at night. 20 to 90 seconds of speech, "sec" to fit, "place" where they were. Not the diary told again; no new secrets or story events.${life ? `
 
 HEALTH
@@ -794,18 +794,16 @@ export const aroundBlock = p => (p?.around?.people?.length ? `[PEOPLE AROUND]\n$
 // 반영's own-life records (재구성, "everyday": true): so many a day in each app, by the person (or group chat) for texts and
 // calls; a day, not a reflection (3.180~), so each day a long gap covers gets its own. Texts: two exchanges a person a day
 // (a text record each), of up to 8 texts. The story's own records have no limit
-const EVERYDAY_CAP = { threads: 16, calls: 2, photos: 5, searches: 5, notes: 2, mails: 3, posts: 1, diary: 1, voice: 2, events: 2 };
+const EVERYDAY_CAP = { threads: 16, calls: 2, photos: 5, searches: 5, notes: 2, mails: 3, posts: 1, voice: 2, events: 2 };
 const BUNDLE_LINES = 8, BUNDLES = 2;
 const dayOfItem = x => when(String(x?.date || x?.time || '')).slice(0, 5);
 // (the day of "now" so far: its share of the waking hours, 07:00 to 23:00, gone by; a morning round leaves the rest of
 // the day its own. At least one, and one exchange of texts)
-const WAKE_FROM = 7, WAKE_HOURS = 16, DIARY_FROM = 18;
+const WAKE_FROM = 7, WAKE_HOURS = 16;
 const capSoFar = (k, d, now) => {
     const all = EVERYDAY_CAP[k] || 0, t = String(now || '');
     if (!d || t.slice(0, 5) !== d || !hm(t)) return all;
     const [h, m] = hhmm(t.slice(6)).split(':').map(Number), part = Math.min(1, Math.max(0, (h + m / 60 - WAKE_FROM) / WAKE_HOURS));
-    // (the diary: the day's from 18:00, when most of it is told; a round before that leaves it to a later one)
-    if (k === 'diary') return h >= DIARY_FROM ? all : 0;
     return Math.min(all, Math.max(k === 'threads' ? BUNDLE_LINES : 1, Math.ceil(all * part)));
 };
 function everydayOnly(p, add, day, daily, now = '') {
@@ -816,8 +814,8 @@ function everydayOnly(p, add, day, daily, now = '') {
         .filter(x => isGuess(x) && (dayOfItem(x) || '') === d).length;
     const ok = (k, x, th) => {
         if (!isGuess(x)) return true;
-        // (a scene's own: kept, the day's count never filled by it; the diary is one a day all the same)
-        if (x.onScene && k !== 'diary') return true;
+        // (a scene's own: kept, the day's count never filled by it; the diary: as many as the answer writes)
+        if (x.onScene || k === 'diary') return true;
         const d = dayOfItem(x) || day || '', w = who(k, x, th), dk = `${k}|${w}|${d}`;
         if (!daily.has(dk)) daily.set(dk, had(k, d, w));
         if (daily.get(dk) >= capSoFar(k, d, now)) return false;
