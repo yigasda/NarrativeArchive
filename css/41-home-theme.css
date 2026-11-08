@@ -52,23 +52,23 @@ body.na_darkui .na_tlb_menu .na_hc_status.ok { color: #74C292; --axfg: #74C292; 
 /* every search field (archive cards, quote bank, editor find bar): the wrap is the box,
    the input inside stays see-through even when a theme or theme extension paints inputs */
 :is(#na_settings, .na_popup) :is(.na_search_wrap, .na_find_field) input, :is(#na_settings, .na_popup) :is(.na_search_wrap, .na_find_field) input:is(:focus, :hover) {
-    background: transparent !important;
+    background: transparent;
     --c-bg: transparent;
-    background-color: transparent !important;
+    background-color: transparent;
     --c-bg: transparent;
-    background-image: none !important;
-    border: 0 !important;
+    background-image: none;
+    border: 0;
     --c-bw: 0;
     --c-bs: none;
     --c-bc: currentcolor;
     --c-bwt: 0;
     --c-bst: none;
     --c-bct: currentcolor;
-    border-radius: 0 !important;
+    border-radius: 0;
     --c-r: 0;
-    box-shadow: none !important;
+    box-shadow: none;
     --c-sh: none;
-    outline: none !important;
+    outline: none;
     -webkit-appearance: none;
     appearance: none;
 }
@@ -158,8 +158,8 @@ button.na_pb_quote:hover { --c-bg: var(--na-card2); }
 .na_cc_row + .na_cc_row { border-top: 1px solid var(--na-line2, var(--na-line)); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line2, var(--na-line)); }
 .na_cc_row:focus-within { background: color-mix(in srgb, var(--na-accent) 6%, transparent); --c-bg: color-mix(in srgb, var(--na-accent) 6%, transparent); }
 .na_cc_lbl { flex: none; width: 4.2em; font-size: 0.86em; --axfs: 0.86em; color: var(--na-dim); --axfg: var(--na-dim)}
-#na_settings .na_cc_row input.text_pole { flex: 1; width: auto !important; min-width: 0; height: 40px; margin: 0 !important; padding: 0 !important; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 0; --c-bg: transparent; --c-sh: none; outline: none; --c-fg: inherit}
-#na_settings .na_cc_row select.na_cc_sel { flex: 1; width: auto !important; min-width: 0; height: 40px; margin: 0 !important; padding: 0 !important; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 0; --c-bg: transparent; --c-sh: none; --c-fg: inherit; cursor: pointer}
+#na_settings .na_cc_row input.text_pole { flex: 1; width: auto; min-width: 0; height: 40px; margin: 0; padding: 0 !important; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 0; --c-bg: transparent; --c-sh: none; outline: none; --c-fg: inherit}
+#na_settings .na_cc_row select.na_cc_sel { flex: 1; width: auto; min-width: 0; height: 40px; margin: 0; padding: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 0; --c-bg: transparent; --c-sh: none; --c-fg: inherit; cursor: pointer}
 .na_cc_hint { display: block; padding: 2px 4px; font-size: 0.78em; --axfs: 0.78em; line-height: 1.45; color: var(--hm-warn, var(--na-warn)); --axfg: var(--hm-warn, var(--na-warn))}
 .na_cc_hint[hidden] { display: none; }
 .na_cc_eye { flex: none; width: 32px; height: 32px; display: grid; place-items: center; padding: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 8px; --c-bg: none; --c-fg: var(--na-dim); cursor: pointer; }
