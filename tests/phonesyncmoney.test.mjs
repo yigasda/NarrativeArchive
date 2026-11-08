@@ -460,7 +460,8 @@ test('a payment in another currency is booked in the account\'s at the day\'s ra
     migrateBank(m, p);
     assert.equal(bank(), 910);
     assert.equal(p.money.tx[0].amount, -90); assert.match(p.money.tx[0].memo, /USD 100/);
-    assert.match(p.money.orders[0].eta, /^10-(28|29|30)$/);
+    // (점검 9: the arrival day is the model's; none given, none: the code makes up nothing)
+    assert.equal(p.money.orders[0].eta, '');
     // (점검 7: no rate at all — that payment left out with a note, the event's other money in; a rate of an earlier day — that
     // one, its day in the memo)
     const r = applyMoney(m, p, ev('tokyo', 6, '10-26', { moves: [{ account: '1111', amount: -5000, currency: 'JPY', who: 'Konbini' }, { account: '1111', amount: -10, who: 'Cafe' }] }), opts());
@@ -517,7 +518,7 @@ test('점검 8 (돈): an order made before, first told of now, goes in once with
     const { m, p, bank } = setup();
     const scarf = { shop: '', item: 'Pale grey cashmere scarf', ko: '연회색 캐시미어 스카프', qty: 1, price: null, status: 'ordered', occurrence: 'again' };
     const r = applyMoney(m, p, ev('scarf', 7, '11-07', { orders: [scarf] }), opts());
-    assert.deepEqual([p.money.orders.length, p.money.orders[0].shop, p.money.orders[0].price, p.money.orders[0].told, p.money.orders[0].etaGuess], [1, '', null, true, true]);
+    assert.deepEqual([p.money.orders.length, p.money.orders[0].shop, p.money.orders[0].price, p.money.orders[0].told, p.money.orders[0].etaGuess], [1, '', null, true, undefined]);
     assert.ok(!r.notes.some(n => /결제가 없었어요/.test(n)));
     assert.equal(bank(), 1000);
     const r2 = applyMoney(m, p, ev('scarf-2', 12, '11-10', { orders: [{ ...scarf, already: idOf(p, 'orders'), shop: 'Lounge Boutique', price: 89, option: 'grey', gift: 'Mara', eta: '11-12', status: 'shipped' }] }), opts());
@@ -528,9 +529,12 @@ test('점검 8 (돈): an order made before, first told of now, goes in once with
     assert.deepEqual([p.money.orders[0].shop, p.money.orders[0].price, p.money.orders[0].status], ['', null, 'ordered']);
     revertEffects(m, p, r.effects);
     assert.equal(p.money.orders.length, 0);
-    // without the model's id, a mention of one made before is its own record: the code doesn't decide two scarves are one
+    // (점검 9) without the model's id: one the story told of before is the one its names are; one the story first tells of
+    // here ("refersBack": false) is its own, whatever its name
     applyMoney(m, p, ev('scarf', 7, '11-07', { orders: [scarf] }), opts());
-    applyMoney(m, p, ev('scarf-3', 14, '11-12', { orders: [{ ...scarf, shop: 'Other' }] }), opts());
+    applyMoney(m, p, ev('scarf-3', 14, '11-12', { orders: [{ ...scarf, shop: 'Lounge Boutique', status: 'shipped', refersBack: true }] }), opts());
+    assert.deepEqual(p.money.orders.map(o => [o.shop, o.status]), [['Lounge Boutique', 'shipped']]);
+    applyMoney(m, p, ev('scarf-4', 15, '11-13', { orders: [{ ...scarf, refersBack: false }] }), opts());
     assert.equal(p.money.orders.length, 2);
     // a payment told of again moves nothing, as before
     applyMoney(m, p, ev('rent-told', 13, '11-10', { moves: [{ account: '1111', amount: -500, who: 'Landlord', occurrence: 'again' }] }), opts());
@@ -559,11 +563,13 @@ test('점검 8 (돈): a ticket\'s made-up details are shown, never proof of anot
     migrateBank(m, p);
     assert.equal(bank(), 880);
     assert.deepEqual(p.money.passes.map(x => [x.by, x.to]), [['', 'IU 콘서트']]);
-    // one with nothing to know it by: a note, the other money stays
-    const res = applyMoney(m, p, ev('e', 6, '10-26', { moves: [{ account: '1111', amount: -18, who: 'Cafe', occurrence: 'new' }], passes: [{ kind: 'event', by: '', to: '', status: '', occurrence: 'again' }], orders: [{ shop: '', item: '', occurrence: 'again' }] }), opts());
+    // one with nothing to know it by: the one of its kind still open when there is just one (the show ticket), else a note;
+    // the other money stays
+    const res = applyMoney(m, p, ev('e', 6, '10-26', { moves: [{ account: '1111', amount: -18, who: 'Cafe', occurrence: 'new' }], passes: [{ kind: 'event', by: '', to: '', status: 'used', occurrence: 'again' }], orders: [{ shop: '', item: '', occurrence: 'again' }] }), opts());
     migrateBank(m, p);
     assert.equal(bank(), 862);
-    assert.ok(res.notes.length >= 2);
+    assert.deepEqual([p.money.passes.length, p.money.passes[0].status, p.money.orders.length], [1, 'used', 0]);
+    assert.ok(res.notes.length >= 1);
 });
 
 test('점검 8 (돈): a ticket told of again with no day the story gives keeps the day it was told on, marked, and the model is told so; "non-refundable" is no used ticket; MONEY NOW lists every ticket and order still to come', () => {
@@ -578,4 +584,82 @@ test('점검 8 (돈): a ticket told of again with no day the story gives keeps t
     // twelve used tickets after one still to come: that one is still in MONEY NOW for the model to point at
     for (let i = 0; i < 12; i++) applyMoney(m, p, ev(`u${i}`, 20 + i, '10-27', { passes: [{ kind: 'event', by: 'CGV', to: `Film ${i}`, date: '10-27', status: 'used', occurrence: 'new' }] }), opts());
     assert.ok(moneyNow(p).passes.some(x => x.no === 'KE906'));
+});
+
+// (점검 9: the town table's ids, as phonedata cityIds gives them)
+const TOWN = { 인천: 'incheon', Incheon: 'incheon', 서울: 'seoul', Seoul: 'seoul', 도쿄: 'tokyo', Tokyo: 'tokyo', 부산: 'busan', Busan: 'busan' };
+const placeCity = v => new Set(TOWN[String(v || '').trim()] ? [TOWN[String(v || '').trim()]] : []);
+
+test('점검 9 (기록 맞추기): by its names in any language; two it may be, none changed; the way back is not the way out; an id that doesn\'t fit is passed over; one first told of here is its own', () => {
+    const o = () => opts({ placeCity });
+    let { m, p } = setup();
+    applyMoney(m, p, ev('a', 5, '10-20', { passes: [{ kind: 'flight', names: ['대한항공', 'Korean Air'], from: 'ICN', to: 'NRT', date: '11-09', occurrence: 'new' }, { kind: 'flight', names: ['대한항공', 'Korean Air'], from: 'NRT', to: 'ICN', date: '11-14', made: ['date'], occurrence: 'new' }] }), o());
+    // "my flight" with no route: either of the two; nothing changes, a note says why
+    let r = applyMoney(m, p, ev('b', 9, '11-09', { passes: [{ kind: 'flight', names: ['Korean Air'], status: 'checked in', occurrence: 'again', refersBack: true }] }), o());
+    assert.deepEqual(p.money.passes.map(x => x.status), ['', '']);
+    assert.ok(r.notes.some(n => /어느 기록인지/.test(n)));
+    // "the flight back from Tokyo": the way back by its route (도쿄 · Seoul by the town table, NRT by its code), never the way out
+    applyMoney(m, p, ev('c', 10, '11-14', { passes: [{ kind: 'flight', names: ['Korean Air'], from: '도쿄', to: 'Seoul', status: 'checked in', occurrence: 'again', refersBack: true }] }), o());
+    assert.deepEqual(p.money.passes.map(x => x.status), ['', 'checked in']);
+    // two scarves, for Mara and for Lio: an id given for Mara's while the mention is Lio's is passed over; the one by its names
+    // that fits is Lio's
+    ({ m, p } = setup());
+    applyMoney(m, p, ev('a', 5, '10-20', { orders: [{ names: ['Scarf', '스카프'], shop: 'Zalando', qty: 1, price: 40, gift: 'Mara', occurrence: 'new' }, { names: ['Scarf', '스카프'], shop: 'Zalando', qty: 1, price: 40, gift: 'Lio', occurrence: 'new' }] }), o());
+    applyMoney(m, p, ev('b', 9, '10-24', { orders: [{ names: ['스카프'], gift: 'Lio', status: 'delivered', occurrence: 'again', refersBack: true, already: p.money.orders[0].id }] }), o());
+    assert.deepEqual(p.money.orders.map(x => [x.gift, x.status]), [['Mara', 'ordered'], ['Lio', 'delivered']]);
+    // "I booked one more place": its own, though a hotel is open
+    ({ m, p } = setup());
+    applyMoney(m, p, ev('a', 5, '10-20', { passes: [{ kind: 'hotel', names: ['롯데호텔 서울', 'Lotte Hotel Seoul'], to: 'Seoul', date: '11-02', occurrence: 'new' }] }), o());
+    applyMoney(m, p, ev('b', 9, '10-24', { passes: [{ kind: 'hotel', names: ['해운대 비즈니스호텔'], made: ['names', 'no'], no: 'H123', to: '', date: '11-05', occurrence: 'again', refersBack: false }] }), o());
+    assert.equal(p.money.passes.length, 2);
+    // "checked in at the hotel" with no name: two open, none picked; the made-up name is no proof either
+    r = applyMoney(m, p, ev('c', 10, '11-02', { passes: [{ kind: 'hotel', names: ['그 호텔'], made: ['names'], status: 'checked in', occurrence: 'again', refersBack: true }] }), o());
+    assert.deepEqual(p.money.passes.map(x => x.status), ['', '']);
+    // its own names later: that one, its made-up name giving way to the story's
+    applyMoney(m, p, ev('d', 11, '11-05', { passes: [{ kind: 'hotel', names: ['해운대 그랜드호텔', 'Haeundae Grand Hotel'], to: 'Busan', status: 'checked in', occurrence: 'again', refersBack: true, already: p.money.passes[1].id }] }), o());
+    assert.deepEqual([p.money.passes[1].names, p.money.passes[1].status, p.money.passes[1].made], [['해운대 그랜드호텔', 'Haeundae Grand Hotel'], 'checked in', ['no']]);
+});
+
+test('점검 9 (결제 연결): a payment for one already paid is not paid again; one only told of, paid later, is paid once; a debt paid back shrinks to paid; an asset sold; an account blocked holds its money; 되돌리기 takes each back', () => {
+    const o = () => opts({ placeCity });
+    let { m, p, bank } = setup();
+    applyMoney(m, p, ev('a', 5, '10-20', { moves: [{ account: '1111', amount: -40, who: 'Zalando', for: 'Scarf', occurrence: 'new' }], orders: [{ names: ['Scarf'], shop: 'Zalando', qty: 1, price: 40, occurrence: 'new' }] }), o());
+    migrateBank(m, p);
+    assert.equal(bank(), 960);
+    assert.ok(p.money.orders[0].paidBy);
+    // told of again, the model writing its payment as new once more: not paid twice
+    let r = applyMoney(m, p, ev('b', 9, '10-24', { moves: [{ account: '1111', amount: -40, who: 'Zalando', for: 'Scarf', occurrence: 'new' }], orders: [{ names: ['Scarf'], status: 'shipped', occurrence: 'again', refersBack: true }] }), o());
+    migrateBank(m, p);
+    assert.deepEqual([bank(), p.money.orders.length, p.money.orders[0].status], [960, 1, 'shipped']);
+    assert.ok(r.notes.some(n => /이미 결제된/.test(n)));
+    // told of before it was paid ("I booked the concert"), paid later: paid once, no longer only told of
+    applyMoney(m, p, ev('c', 10, '10-25', { passes: [{ kind: 'event', names: ['IU 콘서트', 'IU Concert'], date: '11-30', occurrence: 'again', refersBack: false }] }), o());
+    applyMoney(m, p, ev('d', 11, '10-26', { moves: [{ account: '1111', amount: -120, who: 'Interpark', for: 'IU Concert', occurrence: 'new' }], passes: [{ kind: 'event', names: ['IU Concert'], occurrence: 'new', refersBack: true }] }), o());
+    migrateBank(m, p);
+    assert.deepEqual([bank(), p.money.passes.length, p.money.passes[0].told, !!p.money.passes[0].paidBy], [840, 1, undefined, true]);
+    // a loan: in, paid back in two parts, paid; 되돌리기 of the last part puts it back
+    ({ m, p, bank } = setup());
+    applyMoney(m, p, ev('l', 5, '10-01', { moves: [{ account: '1111', amount: 500, who: 'Bank', kind: 'deposit', for: 'Student loan', occurrence: 'new' }], debts: [{ kind: 'loan', names: ['Student loan', '학자금 대출'], lender: 'KfW', amount: 500, amountFrom: 'story', occurrence: 'new' }] }), o());
+    applyMoney(m, p, ev('l2', 6, '10-15', { moves: [{ account: '1111', amount: -200, who: 'KfW', kind: 'transfer', for: '학자금 대출', occurrence: 'new' }], debts: [{ names: ['학자금 대출'], occurrence: 'again', refersBack: true }] }), o());
+    assert.deepEqual([p.money.debts[0].amount, p.money.debts[0].status], [300, 'open']);
+    const last = applyMoney(m, p, ev('l3', 7, '10-30', { moves: [{ account: '1111', amount: -300, who: 'KfW', kind: 'transfer', for: 'Student loan', occurrence: 'new' }], debts: [{ names: ['Student loan'], occurrence: 'again', refersBack: true }] }), o());
+    migrateBank(m, p);
+    assert.deepEqual([bank(), p.money.debts[0].amount, p.money.debts[0].status], [1000, 0, 'paid']);
+    revertEffects(m, p, last.effects);
+    migrateBank(m, p);
+    assert.deepEqual([bank(), p.money.debts[0].amount, p.money.debts[0].status], [1300, 300, 'open']);
+    // a flat inherited, later sold
+    ({ m, p, bank } = setup());
+    applyMoney(m, p, ev('h', 5, '10-01', { assets: [{ kind: 'property', names: ['할머니 집', "Grandma's flat"], value: 300000, valueFrom: 'guess', whose: 'owner', status: 'held', occurrence: 'again', refersBack: false }] }), o());
+    applyMoney(m, p, ev('h2', 6, '10-20', { moves: [{ account: '1111', amount: 310000, who: 'Buyer', kind: 'transfer', for: '할머니 집', occurrence: 'new' }], assets: [{ names: ['할머니 집'], value: 310000, status: 'sold', occurrence: 'new', refersBack: true }] }), o());
+    migrateBank(m, p);
+    assert.deepEqual([bank(), p.money.assets.length, p.money.assets[0].status, p.money.assets[0].value], [311000, 1, 'sold', 310000]);
+    // an account blocked: marked, its money where it was; 되돌리기 frees it
+    const b = applyMoney(m, p, ev('x', 7, '10-21', { access: [{ account: '1111', blocked: true, reason: '압류' }] }), o());
+    migrateBank(m, p);
+    assert.deepEqual([bank(), p.money.bank.accounts[0].blocked?.reason], [311000, '압류']);
+    revertEffects(m, p, b.effects);
+    assert.equal(p.money.bank.accounts[0].blocked, undefined);
+    // MONEY NOW tells the model what is owned and owed, with ids
+    assert.deepEqual(moneyNow(p).assets.map(x => [x.names[0], x.status]), [['할머니 집', 'sold']]);
 });

@@ -1406,7 +1406,7 @@ async function moneyStage(m, p, owner, targets, c) {
         if (c.reread?.has(t.at) && !c.reread.get(t.at).some(x => x.id === t.id)) { out.notes.push(`#${t.at} 바뀐 대화의 결제는 새로 넣지 않았어요`); continue; }
         const stage = structuredClone({ money: p.money, investment: p.investment, finance: m.finance, delivery: p.delivery });
         let paid;
-        try { paid = applyMoney(m, p, { id: t.id, at: t.at, date: t.date, time: t.time, summary: t.summary, money: mo }, { year: c.year, anchor: c.anchor, marks: s.marks, legs: s.events[t.id]?.legs || [], span: s.failed[t.at]?.span || null, edited: !!c.reread?.has(t.at) }); }
+        try { paid = applyMoney(m, p, { id: t.id, at: t.at, date: t.date, time: t.time, summary: t.summary, money: mo }, { placeCity: cityIds, year: c.year, anchor: c.anchor, marks: s.marks, legs: s.events[t.id]?.legs || [], span: s.failed[t.at]?.span || null, edited: !!c.reread?.has(t.at) }); }
         catch (err) { p.money = stage.money; p.investment = stage.investment; m.finance = stage.finance; if (p.delivery) p.delivery = Object.assign(p.delivery, stage.delivery); owe(t, String(err?.message || err)); continue; }
         for (const ch of paid.changes) { out.apps.add(ch.app); if (ch.amount !== null) out.changes.push({ ...ch, what: line(t.summary, 60) }); }
         out.notes.push(...paid.notes);
@@ -1699,7 +1699,7 @@ async function updatePhone(m, owner) {
             const stage = structuredClone({ money: p.money, investment: p.investment, finance: m.finance, delivery: p.delivery });
             let paid;
             if (day) lastDay = day;
-            try { paid = applyMoney(m, p, { id, at, date: day, time: hhmm(e.time), summary: line(e.summary, 160), money: e.money }, { year, anchor, marks: s.marks, legs: s.events[id]?.legs || [], span: s.failed[at]?.span || null, edited: reread.has(at) }); }
+            try { paid = applyMoney(m, p, { id, at, date: day, time: hhmm(e.time), summary: line(e.summary, 160), money: e.money }, { placeCity: cityIds, year, anchor, marks: s.marks, legs: s.events[id]?.legs || [], span: s.failed[at]?.span || null, edited: reread.has(at) }); }
             catch (err) { p.money = stage.money; p.investment = stage.investment; m.finance = stage.finance; if (p.delivery) p.delivery = Object.assign(p.delivery, stage.delivery); fail(String(err?.message || err)); continue; }
             for (const c of paid.changes) { apps.add(c.app); if (c.amount !== null) changes.push({ ...c, what: line(e.summary, 60) }); }
             notes.push(...paid.notes);
