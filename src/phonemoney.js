@@ -111,13 +111,19 @@ function emptyApp(p, now, title, kind, what) {
 const tab = on => `<div class="ax_btab">${[['homeS', '홈', 'bank'], ['send2', '송금', 'banksend'], ['card2', '카드', 'wallet'], ['menu', '더보기', 'bankmore']].map(([k, l, go]) => (go ? `<button type="button" class="${k === on ? 'on' : ''}" data-go="${go}">${ax(k, 24, 'currentColor')}${l}</button>` : `<span>${ax(k, 24, 'currentColor')}${l}</span>`)).join('')}</div>`;
 // how a record moved: a card bill (its two halves), a transfer, a card payment, cash, money in
 // a balance adjustment has no payee: its name is 잔액 조정, the model's reason only in the record (사유)
-const txName = x => (x.adjust ? '잔액 조정' : x.who);
+// in the bank's own language, like every other record (a German bank: Saldokorrektur, the Korean as its ko line)
+const ADJ = [[/^(DE|AT|CH|LI|LU)$/, 'Saldokorrektur'], [/^KR$/, '잔액 조정'], [/^JP$/, '残高調整'], [/^(CN|TW|HK|MO|SG)$/, '余额调整'], [/^(FR|BE|MC)$/, 'Correction de solde'],
+    [/^(ES|MX|AR|CL|CO|PE|BO|CU|PR)$/, 'Ajuste de saldo'], [/^(PT|BR)$/, 'Ajuste de saldo'], [/^IT$/, 'Rettifica saldo'], [/^NL$/, 'Saldocorrectie'], [/^(SE)$/, 'Saldojustering'], [/^(NO|DK)$/, 'Saldojustering'], [/^PL$/, 'Korekta salda']];
+let adjName = 'Balance adjustment';
+const txName = x => (x.adjust ? adjName : x.who);
+const adjFor = p => { const c = homeCountry(p); adjName = (ADJ.find(([re]) => re.test(c)) || [null, 'Balance adjustment'])[1]; };
 const txWay = x => (x.cardBill ? '카드 대금' : x.adjust ? '' : x.kind === 'card' ? '카드' : x.kind === 'transfer' ? '송금' : x.kind === 'cash' ? '현금 인출' : '입금');
 // a record the clock put in (a salary, a rent) says 자동; a line that only makes the balance what the story said says 추정
 const txMarks = x => `${x.auto ? ' · 자동이체' : ''}`;
 const txRow = (p, x) => `<button type="button" class="ax_rw" data-go="tx" data-i="${x.id}">${fi(txName(x), 38)}<span class="ax_tx"><b class="ax_n">${esc(txName(x))}${x.pending ? '<span class="ax_pend">대기</span>' : ''}${x.ev && (mo(p).orders.some(o => o.ev === x.ev) || mo(p).passes.some(o => o.ev === x.ev)) ? `<span class="ax_lnk">${ax('link', 10, 'currentColor', 2.4)} ${mo(p).orders.some(o => o.ev === x.ev) ? '쇼핑' : '지갑'}</span>` : ''}</b><span class="ax_p">${esc(fmtDate(p, x.time, true))}${txWay(x) ? ` · ${txWay(x)}` : ''}${txMarks(x)}${x.memo && !(x.adjust && x.memo === '잔액 맞춤') ? ` · ${esc(memoOf(p, x))}` : ''}</span></span><span class="ax_amt ${x.amount > 0 ? 'p' : ''} cg_num">${esc(txMoney(p, x, true))}</span></button>`;
 const newestTx = p => [...(mo(p)?.tx || [])].sort(byStory(p.now)).reverse();
 export function bankHome(p, now) {
+    adjFor(p);
     const M = mo(p);
     if (!M) return emptyApp(p, now, '은행', 'money', '아직 계좌가 없어요. 채우면 은행 · 지갑 · 쇼핑이 함께 생겨요.');
     const sum = bankSum(p);
@@ -139,6 +145,7 @@ export function bankHome(p, now) {
       ${tab('homeS')}</div>${axInd()}`;
 }
 export function bankAcct(p, now, key) {
+    adjFor(p);
     const [i, f = 'all'] = String(key).split('.'), a = mo(p)?.bank?.accounts?.[Number(i)];
     if (!a) return bankHome(p, now);
     migrateBank(getMeta(), p);
@@ -164,6 +171,7 @@ export function bankAcct(p, now, key) {
 const reg = (p, x) => (mo(p)?.regulars || []).find(r => r.id === x.regular);
 const regWhen = (p, r) => (r.frequency === 'weekly' ? `매주 ${'일월화수목금토'[Number(r.day)] ?? ''}요일` : r.frequency === 'yearly' ? `매년 ${fmtDate(p, String(r.day || ''), true)}` : `매달 ${Number(r.day) || ''}일`);
 export function bankTx(p, now, id) {
+    adjFor(p);
     const x = mo(p)?.tx?.find(t => t.id === id);
     if (!x) return bankHome(p, now);
     const a = acctOf(p, x.account), ai = mo(p).bank.accounts.indexOf(a);
@@ -172,7 +180,7 @@ export function bankTx(p, now, id) {
         <div class="ax_bkr"><button type="button" class="ax_bkc" data-go="${ai >= 0 ? `acct:${ai}` : 'bank'}" aria-label="뒤로">${ax('back', 18, '#fff', 2.3)}</button><span class="ax_bkt">거래 상세</span><button type="button" class="ax_bkc" data-go="txdoc" data-i="${x.id}" aria-label="확인증">${ax('share', 17, '#fff')}</button></div>
       </div>
       <div class="ax_bks ax_bkso"><div class="ax_scroll">
-        <div class="ax_rcpt"><div class="ax_rch">${fi(txName(x), 56, axTint(txName(x)), 18)}<b>${esc(txName(x))}</b>${x.ko && koOn() ? `<small>${esc(x.ko)}</small>` : ''}<strong class="cg_num">${esc(txMoney(p, x, true))}</strong><span class="ax_rok ${x.pending ? 'pend' : ''}">${x.pending ? '대기 중' : '완료'}</span></div>
+        <div class="ax_rcpt"><div class="ax_rch">${fi(txName(x), 56, axTint(txName(x)), 18)}<b>${esc(txName(x))}</b>${x.adjust ? (adjName !== '잔액 조정' && koOn() ? '<small>잔액 조정</small>' : '') : x.ko && koOn() ? `<small>${esc(x.ko)}</small>` : ''}<strong class="cg_num">${esc(txMoney(p, x, true))}</strong><span class="ax_rok ${x.pending ? 'pend' : ''}">${x.pending ? '대기 중' : '완료'}</span></div>
           <div class="ax_rln"><span>날짜</span><span class="cg_num">${esc(fmtDate(p, x.time))} ${esc(fmtTime(p, x.time))}</span></div>
           <div class="ax_rln"><span>계좌</span><span>${a ? `${kindName[a.kind]} •••• ${esc(a.last4)}` : '—'}</span></div>
           <div class="ax_rln"><span>방식</span><span>${x.adjust ? '잔액 조정' : x.kind === 'card' && !x.cardBill ? '카드 결제' : txWay(x)}${x.auto ? ' · 자동이체' : ''}</span></div>
@@ -248,6 +256,7 @@ export function fixedCosts(p) {
 // money that comes in on its own (p.money.regulars with + amounts: a salary, a rent paid to them)
 const incoming = p => (mo(p)?.regulars || []).filter(r => r && finite(r.amount) && r.amount > 0 && r.status !== 'stopped');
 export function fixedScreen(p, now, arg = '') {
+    adjFor(p);
     const M = mo(p); if (!M) return bankHome(p, now);
     // 'a~key': a is the account (from its screen, only its payments), key the one opened
     const [af, key] = String(arg).includes('~') ? String(arg).split('~') : ['', String(arg)], fa = af !== '' ? M.bank.accounts[Number(af)] : null;
@@ -303,6 +312,7 @@ const txWhat = x => x.amount > 0 ? '입금' : x.kind === 'card' ? (x.pending ? '
 // one look per kind of note: a soft tile with the line icon, like the accounts'
 const NOTE_K = { in: ['down2', '#dcefdf', '#3f7d50', '입금'], card: ['card2', '#e2e9f5', '#2c4a80', '카드 승인'], wait: ['clock', '#f6ecd2', '#8a6a1f', '승인 대기'], send: ['send2', '#f6e7e1', '#b8573a', '이체'], out: ['send2', '#eceef2', '#4d5562', '출금'] };
 export function bankNotes(p, now) {
+    adjFor(p);
     const M = mo(p); if (!M) return bankHome(p, now);
     const bal = balancesAfter(p), xs = newestTx(p).slice(0, 24), today = String(storyNow(p) || p.now || ''), td = Number(today.slice(3, 5)) || 1;
     // within a week, the first days of next month too (the 2nd, read on the 28th)
@@ -324,6 +334,7 @@ export function bankNotes(p, now) {
 }
 // 송금: who the owner sends money to and gets it from (rent and the like stay on 고정 지출)
 export function bankSend(p, now, arg = '') {
+    adjFor(p);
     const M = mo(p); if (!M) return bankHome(p, now);
     const [af, key] = String(arg).includes('~') ? String(arg).split('~') : ['', String(arg)], fa = af !== '' ? M.bank.accounts[Number(af)] : null;
     const fixed = new Set(fixedCosts(p).flatMap(f => [f.key, payee({ who: f.who, ko: f.ko })])), groups = new Map();
@@ -357,6 +368,7 @@ export function bankSend(p, now, arg = '') {
 const kindOf = x => { const w = `${x.who} ${x.memo || ''} ${x.ko || ''}`; const f = FIXED.find(([re]) => re.test(w)); if (f) return f[4]; const s2 = SPEND.find(([, , re]) => re.test(w)); return s2 ? s2[0] : '그 밖'; };
 // 명세서: one account, one month, on paper
 export function bankStmt(p, now, arg = '') {
+    adjFor(p);
     const M = mo(p); if (!M) return bankHome(p, now);
     const [ai0, m0] = String(arg).split('.'), from = ai0 !== '' && ai0 !== undefined;
     const ai = from ? Number(ai0) : Math.max(0, M.bank.accounts.findIndex(a => a.kind !== 'credit')), a = M.bank.accounts[ai];
@@ -387,6 +399,7 @@ export function bankStmt(p, now, arg = '') {
 }
 // 공유: the paper that goes with a record (a transfer's confirmation, a card slip, a deposit note), with the bank's stamp
 export function txDoc(p, now, id) {
+    adjFor(p);
     const M = mo(p), x = M?.tx?.find(t => t.id === id); if (!x) return bankHome(p, now);
     const a = acctOf(p, x.account), card = x.kind === 'card' && x.amount < 0, inn = x.amount > 0, h = hashOf(`${x.id}${x.who}`);
     const title = card ? '카드 매출전표' : inn ? '입금확인증' : '이체확인증';
