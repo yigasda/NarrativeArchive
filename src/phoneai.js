@@ -365,6 +365,45 @@ export async function makeDraft(m, p, i) {
     await saveMeta();
     return t.draft;
 }
+// 재번역 (메시지 › 꾹 누르기): the Korean line of the texts the user picked, written again. The text itself never changes
+const AI_SYS_RETRANSLATE = `GOAL
+Translate again into Korean some texts on a phone in a role-play, whose Korean line reads badly.
+
+YOU GET
+- OWNER and WITH: whose phone it is, and who the texts are with (a person, or a group chat's name).
+- THREAD: the texts around them, oldest first, each as [number] sender: text.
+- REDO: the numbers of the texts to translate again, each with the Korean it has now.
+
+KOREAN
+- Natural Korean, the way a Korean would text it: the same meaning, tone, slang, emoji and length. Nothing added or explained.
+- Read THREAD for who says what to whom; a reply follows the text it answers.
+- Names as NAMES writes them in Korean, else as Korean readers write them.
+- Not a word-for-word line, and not the Korean it has now if that reads badly.
+
+JSON (one object, nothing before or after it)
+{ "ko": [{ "n": number, "ko": "..." }] }`;
+export const retranslating = new Set(); // "owner:thread" being translated again
+export async function retranslate(m, p, i, ks) {
+    const t = p.threads[i];
+    if (!t || !ks.length) return 0;
+    const said = x => (x.from === 'me' ? p.owner : x.from), lo = Math.max(0, Math.min(...ks) - 6), hi = Math.min(t.messages.length, Math.max(...ks) + 4);
+    const around = t.messages.map((x, n) => [x, n]).slice(lo, hi).filter(([x]) => !x.deleted);
+    const prompt = [
+        `[OWNER]\n${p.owner}`, `[WITH]\n${t.with}${t.group ? ` (group chat: ${(t.members || []).join(', ')})` : ''}`,
+        `[THREAD]\n${around.map(([x, n]) => `[${n}] ${said(x)}: ${x.text}`).join('\n')}`,
+        `[REDO]\n${ks.map(n => `[${n}] ${t.messages[n]?.ko || '(none)'}`).join('\n')}`,
+        namesBlock(m),
+    ].filter(Boolean).join('\n\n');
+    const out = String(await askAI(prompt, { force: true, system: AI_SYS_RETRANSLATE, maxTokens: 400 + ks.length * 160 }) || '').replace(/```(?:json)?/gi, '');
+    const a = out.indexOf('{'), b = out.lastIndexOf('}');
+    let raw = null;
+    try { raw = a >= 0 && b > a ? parseJson(out.slice(a, b + 1)) : null; } catch { raw = null; }
+    let n = 0;
+    for (const r of arr(raw?.ko)) { const k = Number(r?.n), v = ko(r?.ko); if (ks.includes(k) && v && t.messages[k]) { t.messages[k].ko = v; n++; } }
+    if (!n) throw new Error('모델 답에서 번역을 찾지 못했어요');
+    await saveMeta();
+    return n;
+}
 // 음성 메모 떠올리기 (the red button): one memo the owner records right now, spoken rather than written
 const AI_SYS_VOICE = `GOAL
 The owner of a phone in a long role-play records a short voice memo to themselves right now. Write what they say.
