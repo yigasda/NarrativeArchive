@@ -100,7 +100,7 @@ const fullDay = (year, anchor, date) => {
 };
 // this month's money in and out (the phone's now's month), by currency: payments and deposits; a card bill is counted once,
 // as the card's spending
-function monthSoFar(p) {
+export function monthSoFar(p) {
     const mo = p.money, today = String(p.now || '').slice(0, 5), year = p.year && !p.noYear ? String(p.year) : '';
     if (!/^\d{2}-\d{2}$/.test(today)) return [];
     const by = new Map();
@@ -192,7 +192,7 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
     if (!mo || typeof mo !== 'object') return out;
     // a record's id: the event's, unique on the phone and in the ledgers (the same event told again in a later round adds
     // its own records, never one with an id already taken)
-    const taken = new Set([...['tx', 'orders', 'passes'].flatMap(k => (p.money?.[k] || []).map(x => x.id)), ...(p.investment?.trades || []).map(x => x.id),
+    const taken = new Set([...['tx', 'orders', 'passes', 'assets', 'debts', 'regulars'].flatMap(k => (p.money?.[k] || []).map(x => x.id)), ...(p.investment?.trades || []).map(x => x.id),
         ...(p.delivery?.orders || []).map(x => x.id), ...(p.delivery?.shops || []).map(x => x.id), ...Object.values(finance(m).accounts || {}).flatMap(a => Object.keys(a.entries || {}))]);
     const sid = base => { let id = base, n = 2; while (taken.has(id)) id = `${base}~${n++}`; taken.add(id); return id; };
     // numbers as the model may write them ("-32,000", "₩4,000", "12,50"): read once, before anything uses them
@@ -208,7 +208,7 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
     // (a record's own "amountFrom" when it has one (the money step's records), else the event's)
     const gOf = x => (x?.amountFrom === 'guess' || x?.amountFrom === 'story' ? x.amountFrom === 'guess' : guess);
     const bankOn = !!p.money && e.at > (marks.money?.index ?? -1), investOn = !!p.investment && e.at > (marks.invest?.index ?? -1);
-    if ((list(mo.moves).length || list(mo.trades).length || list(mo.orders).length || list(mo.passes).length || list(mo.assets).length || list(mo.debts).length || list(mo.deliveries).length) && !/^\d{2}-\d{2}$/.test(date || '')) fail('돈이 움직인 날짜를 확인하지 못했어요');
+    if ((list(mo.moves).length || list(mo.trades).length || list(mo.orders).length || list(mo.passes).length || list(mo.assets).length || list(mo.debts).length || list(mo.deliveries).length || list(mo.regulars).length || list(mo.accounts).length) && !/^\d{2}-\d{2}$/.test(date || '')) fail('돈이 움직인 날짜를 확인하지 못했어요');
     const seen = key => prior.find(l => l.key === key);
     // a guessed amount the story now states: the record and its ledger line change by the difference
     const amend = (t, amount, lk, label, acct) => {
