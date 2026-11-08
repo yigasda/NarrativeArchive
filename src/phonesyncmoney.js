@@ -483,7 +483,9 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
     const STATES = { assets: ['held', 'expected', 'blocked', 'sold', 'lost', 'settled'], debts: ['open', 'paid', 'overdue', 'forgiven'] };
     const WHOSE = ['owner', 'shared', 'family', 'company'];
     const hangul = v => /\p{Script=Hangul}/u.test(v || '');
-    // (an asset's day the owner got it is the story's or the model's, never this message's day put in its place: none when not given)
+    // (an asset's day the owner got it is the story's or the model's, never this message's day put in its place: none when not given;
+    // for one there before ("again"), the message's day itself, written by the model, is none either, run66 · 67)
+    const sinceFor = x => { const v = sinceOf(x.since); return x.occurrence !== 'new' && v && (v === date || v === full) ? '' : v; };
     const make = {
         // (a price the story doesn't give, null or "", is none, never 0; the arrival day is the model's, made up when the story
         // gives none)
@@ -495,16 +497,16 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
             return { kind: KINDS.passes.includes(x.kind) ? x.kind : 'other', by, names, from: txt(x.from, 40), to: txt(x.to, 40), date: when(x.date).slice(0, 5) || date, time: hhmm(x.time), seat: txt(x.seat, 12), gate: txt(x.gate, 12), no: txt(x.no, 24), status: txt(x.status, 30), ...(when(x.until) ? { until: when(x.until).slice(0, 5) } : {}) }; },
         assets: x => { const names = allNames('assets', x);
             if (!names.length) return null;
-            return { kind: KINDS.assets.includes(x.kind) ? x.kind : 'other', name: names[0], names, value: finite(Number(x.value)) ? round(Number(x.value)) : null, currency: currency(String(x.currency || '').toUpperCase()) ? String(x.currency).toUpperCase() : p.money.currency, valueFrom: x.valueFrom === 'story' ? 'story' : 'guess', whose: WHOSE.includes(x.whose) ? x.whose : 'owner', status: STATES.assets.includes(x.status) ? x.status : 'held', since: sinceOf(x.since), conditions: txt(x.conditions, 200) }; },
+            return { kind: KINDS.assets.includes(x.kind) ? x.kind : 'other', name: names[0], names, value: finite(Number(x.value)) ? round(Number(x.value)) : null, currency: currency(String(x.currency || '').toUpperCase()) ? String(x.currency).toUpperCase() : p.money.currency, valueFrom: x.valueFrom === 'story' ? 'story' : 'guess', whose: WHOSE.includes(x.whose) ? x.whose : 'owner', status: STATES.assets.includes(x.status) ? x.status : 'held', since: sinceFor(x), conditions: txt(x.conditions, 200) }; },
         debts: x => { const names = allNames('debts', x);
             if (!names.length && !txt(x.lender)) return null;
-            return { kind: KINDS.debts.includes(x.kind) ? x.kind : 'other', name: names[0] || txt(x.lender, 60), names, lender: txt(x.lender, 60), amount: finite(Number(x.amount)) ? round(Math.abs(Number(x.amount))) : null, currency: currency(String(x.currency || '').toUpperCase()) ? String(x.currency).toUpperCase() : p.money.currency, amountFrom: x.amountFrom === 'story' ? 'story' : 'guess', whose: WHOSE.includes(x.whose) ? x.whose : 'owner', ...(sinceOf(x.since) ? { since: sinceOf(x.since) } : {}), due: when(x.due).slice(0, 5), status: STATES.debts.includes(x.status) ? x.status : 'open', conditions: txt(x.conditions, 200) }; },
+            return { kind: KINDS.debts.includes(x.kind) ? x.kind : 'other', name: names[0] || txt(x.lender, 60), names, lender: txt(x.lender, 60), amount: finite(Number(x.amount)) ? round(Math.abs(Number(x.amount))) : null, currency: currency(String(x.currency || '').toUpperCase()) ? String(x.currency).toUpperCase() : p.money.currency, amountFrom: x.amountFrom === 'story' ? 'story' : 'guess', whose: WHOSE.includes(x.whose) ? x.whose : 'owner', ...(sinceFor(x) ? { since: sinceFor(x) } : {}), due: when(x.due).slice(0, 5), status: STATES.debts.includes(x.status) ? x.status : 'open', conditions: txt(x.conditions, 200) }; },
     };
     // what a mention gives, field by field: { field: [value, made] }
     const VALUES = {
         orders: x => ({ shop: txt(x.shop, 60), option: txt(x.option, 60), gift: giftOf(x.gift), sender: txt(x.sender, 60), eta: when(x.eta).slice(0, 5), price: x.price === null || x.price === undefined || x.price === '' || !finite(Number(x.price)) ? '' : Number(x.price) }),
         passes: x => ({ no: txt(x.no, 24), from: txt(x.from, 40), to: txt(x.to, 40), seat: txt(x.seat, 12), gate: txt(x.gate, 12), date: when(x.date).slice(0, 5), time: hhmm(x.time), until: when(x.until).slice(0, 5) }),
-        assets: x => ({ value: finite(Number(x.value)) ? round(Number(x.value)) : '', whose: WHOSE.includes(x.whose) ? x.whose : '', since: sinceOf(x.since), conditions: txt(x.conditions, 200) }),
+        assets: x => ({ value: finite(Number(x.value)) ? round(Number(x.value)) : '', whose: WHOSE.includes(x.whose) ? x.whose : '', since: sinceFor(x), conditions: txt(x.conditions, 200) }),
         debts: x => ({ lender: txt(x.lender, 60), amount: finite(Number(x.amount)) ? round(Math.abs(Number(x.amount))) : '', whose: WHOSE.includes(x.whose) ? x.whose : '', due: when(x.due).slice(0, 5), conditions: txt(x.conditions, 200) }),
     };
     const APP = { orders: '쇼핑', passes: '지갑', assets: '자산', debts: '빚' };
@@ -617,7 +619,8 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         // (its first day: one going on already ("again") began on or before this message's day, never next year)
         const sinceDay = when(x.date).slice(0, 5) || date;
         let since = fullDay(year, anchor, sinceDay);
-        if (x.occurrence !== 'new' && since > full) since = `${Number(since.slice(0, 4)) - 1}${since.slice(4)}`;
+        // (a first day within a month after this one is its next day, "the bill goes out on the 10th", not last year's)
+        if (x.occurrence !== 'new' && since > full && dayGap(date, sinceDay) > 31) since = `${Number(since.slice(0, 4)) - 1}${since.slice(4)}`;
         if (d === null || d === -1 || d === '') d = freq === 'weekly' ? new Date(`${since}T00:00:00Z`).getUTCDay() : freq === 'yearly' ? sinceDay : Number(sinceDay.slice(3, 5));
         const xm = madeOf(x), row = { id: sid(`sync:${e.id}:r${k}`), name: names[0], names, amount: round(amount), currency: a.currency, frequency: freq, day: d, account: a.last4, who: txt(x.who, 60), ko: txt(x.ko, 60),
             ...(txt(x.for) ? { for: txt(x.for, 80) } : {}), status: x.status === 'stopped' ? 'stopped' : 'active', since, paidThrough: shiftDay(full, -1), ...(xm.length ? { made: xm } : {}), ...(gOf(x) ? { amountFrom: 'guess' } : {}),

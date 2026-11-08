@@ -374,6 +374,7 @@ WHICH TYPE
 - One thing may need two types, like a new order and the payment for it.
 
 PAYMENTS
+- Paying more for a stay or a booking already on the phone (an extension, a change): write that ticket again with its new dates, besides the payment.
 - Bank and card movements go in "payment". What the owner pays for now (an order, a ticket${delivery ? `, a delivery` : ''}, an asset, a debt, a regular paid by hand) has its payment in the same message, its "for" naming that record; money got back from a loan the owner gave too.
 - The owner's share only: the stated split, or a plausible one. Paid by someone else, or with cash already in hand: no payment.
 - A card purchase goes on the card's account; a refund is plus. A card's bill is paid by the app on its bill day: never write it as a payment. No money is made up to cover a payment; a balance may go below zero.
@@ -410,7 +411,7 @@ JSON (one object, nothing before or after it)
 
     payment: "amount": the money moved, minus for money out; "date": when it moved; "account": last 4 digits${invest ? ` or "broker:EUR"` : ''}, "kind": "card" | "mobile" | "transfer" | "deposit" | "cash" (taken out of the account as cash): abroad is a card or mobile payment in its "currency"; a refund is plus, the way it was paid; savings and money sent or received are transfers; "who", "ko", "memo", "fee": on top, on money sent, "rate": for a currency other than the account's, "for": a name of the record it pays, or ""
     regular: "amount": each time, minus for money out; "date": its first day; "frequency": "monthly" | "weekly" | "yearly"; "day": the day of the month or the weekday; "account": last 4 digits; "who": who pays it or is paid, "ko"; "for": the debt it pays, or ""; "status": "active" | "stopped"
-    order: "amount": one item's price; "date": when ordered; "shop", "option", "qty", "status": "ordered" | "shipped" | "on the way" | "delivered" | "cancelled" | "returning" | "returned" | "refunded", "eta": "MM-DD", "gift": who it is for, "sender": who sent it to the owner, "payer": "owner" | "someone else" | "on delivery"
+    order: "amount": one item's price; "date", "time": when ordered, made up to fit when not told; "shop", "option", "qty", "status": "ordered" | "shipped" | "on the way" | "delivered" | "cancelled" | "returning" | "returned" | "refunded", "eta": "MM-DD", "gift": who it is for, "sender": who sent it to the owner, "payer": "owner" | "someone else" | "on delivery"
     ticket: no "amount" (its price is the payment); "date": the day of travel, the event or check-in; "until": "MM-DD", the last day of a stay or membership (a stay extended moves it); "status": "booked" | "used" | "cancelled"; "kind": "flight" | "train" | "hotel" | "event" | "membership" | "other", "by": airline, line, hotel, venue or club, "from", "to", "seat", "gate", "no"
     asset: "amount": its whole value now; "date": when the owner got it, made up to fit when not told, never the day it is mentioned; "year": that year; "kind": "property" | "vehicle" | "business" | "valuable" | "deposit" (money in another bank or a trust) | "receivable" (money someone owes the owner) | "investment" | "other", "whose": "owner" | "shared" | "family" | "company", "status": "held" | "expected" | "blocked" | "sold" | "lost", "conditions"
     debt: "amount": what is owed now; "date": when it was taken on, made up to fit when not told, never the day it is mentioned; "year": that year; "kind": "loan" | "mortgage" | "personal" | "tax" | "other", "lender", "whose", "due": "MM-DD", "status": "open" | "paid" | "overdue" | "forgiven", "conditions"
@@ -1430,7 +1431,9 @@ function daysPassed(was, now, known, events, last) {
     // (how many, as a number, the way the bank's fill asks: with none, the model wrote a month of nothing, run61 · 63)
     // (one number, not a range: with a range the model took its low end, one a day, run64)
     const about = Math.min(Math.round(gap * 1.5), 90);
-    return { text: [`${gap} day${gap > 1 ? 's' : ''}: about ${about} records in all; most days one to three, some none; where, what and how money moves are this owner's (for instance card, mobile pay, money sent or received, cash taken out, payment abroad, refund, savings, currency exchange).`, ...lines].join('\n'), span };
+    // (and how many not by card, as a number too: told only in words, every one was a card, run66 · 67)
+    const other = Math.max(1, Math.round(about / 3));
+    return { text: [`${gap} day${gap > 1 ? 's' : ''}: about ${about} records in all, about ${other} of them not by card; most days one to three, some none; where, what and how money moves are this owner's (for instance card, mobile pay, money sent or received, cash taken out, payment abroad, refund, savings, currency exchange).`, ...lines].join('\n'), span };
 }
 async function moneyStage(m, p, owner, c) {
     const s = p.sync, out = { late: [], owed: [], notes: [], changes: [], apps: new Set() };
@@ -1518,6 +1521,8 @@ async function moneyStage(m, p, owner, c) {
             if (!r || typeof r !== 'object') continue;
             const at = Number(String(r.at ?? '').replace(/^\s*#/, ''));
             if (!Number.isInteger(at) || !allowed(at)) { bad++; continue; }
+            // (an estimated price is the newest day's: the brokerage moves on to it)
+            if (String(r.type || '').toLowerCase() === 'quote' && r.amountFrom === 'guess' && /^\d{2}-\d{2}$/.test(c.nowDay || '')) r.date = c.nowDay;
             if (!byAt.has(at)) byAt.set(at, []);
             byAt.get(at).push(r);
         }
@@ -3304,7 +3309,7 @@ STORY OR INVENTED
 - Rent, wages, bills and subscriptions: invent them, fitting the owner's job and life, unless the story gives them.
 - Besides the story's, 2 to 4 everyday online orders fitting the owner (household things, books, clothes), with no "ev".
 - An amount the story gives stays as it is: whose it is, its currency, its date and what it was for. A company's value, a transfer or an old balance is not what the owner has in the bank now.
-- Balances, last four digits, card expiry dates, everyday payments (coffee, groceries, transit), and amounts the story doesn't give: invent them, fitting the owner's life, job and country. The deposits together fall within FINANCIAL SCALE.
+- Balances, last four digits, card expiry dates, everyday payments (coffee, groceries, transit), and amounts the story doesn't give: invent them, fitting the owner's life, job and country. Paid the ways this owner pays, not all by card (mobile pay, money sent to people, cash taken out). The deposits together fall within FINANCIAL SCALE.
 - Company money, family money and an inheritance still to come are not the owner's cash. Don't invent a trust or a restriction to explain a small balance.
 - People (who money goes to or comes from): only people the story or PEOPLE AROUND has, or a shop, a landlord, an employer the owner's life plainly has.
 - A booking the story has carries the details a real one would (a booking number, a seat, a gate, a delivery date), made up to fit.
@@ -3332,7 +3337,7 @@ JSON (one object, nothing before or after it)
   "bank": { "name", "accounts": [{ "id": its id in EXISTING ACCOUNTS or REBUILD ACCOUNTS, or "", "kind": "checking" | "savings" | "credit", "name", "last4", "currency": three-letter code, "balance": number }] },
   "cards": [{ "account": last4, "exp": "MM/YY" }],
   "tx": [{ "account": last4, "who": merchant or person, "ko", "amount": number (minus for money out), "time": "MM-DD HH:MM",
-           "kind": "card" | "transfer" | "deposit" | "cash", "memo", "pending": true or false, "ev" }],
+           "kind": "card" | "mobile" | "transfer" | "deposit" | "cash", "memo", "pending": true or false, "ev" }],
   "passes": [{ "kind": "flight" | "train" | "hotel" | "event" | "other", "by": airline, line, hotel or venue, "from", "to",
                "date": "MM-DD", "time": "HH:MM", "seat", "gate", "no", "status", "made": [the fields made up to fit, like "no", "seat"], "ev" }],
   "orders": [{ "shop", "item", "ko", "option", "qty", "price": number, "time", "status": "ordered" | "shipped" | "on the way" | "delivered" | "unknown",
@@ -3407,7 +3412,7 @@ export function parseMoney(raw, country = '') {
         bank: { name: line(raw.bank?.name, 40) || 'Bank', accounts },
         cards: arr(raw.cards).map(c => ({ account: acctOf(c?.account), exp: line(c?.exp, 5) })).filter(c => accounts.some(a => a.last4 === c.account)).slice(0, 6),
         // a record on no account the bank has is shown nowhere: left out; money in with no kind is a deposit
-        tx: arr(raw.tx).map(x => withEv({ account: acctOf(x?.account), who: line(x?.who, 60), ko: ko(x?.ko), amount: num(x?.amount), time: when(x?.time), kind: pick(x?.kind, ['card', 'transfer', 'deposit', 'cash'], num(x?.amount) > 0 ? 'deposit' : 'card'), memo: line(x?.memo, 80), pending: x?.pending === true }, x)).filter(x => x.who && x.amount !== null && x.amount !== 0 && x.account).slice(-30),
+        tx: arr(raw.tx).map(x => withEv({ account: acctOf(x?.account), who: line(x?.who, 60), ko: ko(x?.ko), amount: num(x?.amount), time: when(x?.time), kind: x?.kind === 'mobile' ? 'card' : pick(x?.kind, ['card', 'transfer', 'deposit', 'cash'], num(x?.amount) > 0 ? 'deposit' : 'card'), ...(x?.kind === 'mobile' ? { mobile: true } : {}), memo: line(x?.memo, 80), pending: x?.pending === true }, x)).filter(x => x.who && x.amount !== null && x.amount !== 0 && x.account).slice(-30),
         passes: arr(raw.passes).map(x => withEv({ kind: pick(x?.kind, ['flight', 'train', 'hotel', 'event', 'other'], 'other'), by: line(x?.by, 60), from: line(x?.from, 40), to: line(x?.to, 40), date: when(x?.date).slice(0, 5), time: hhmm(x?.time), seat: line(x?.seat, 12), gate: line(x?.gate, 12), no: line(x?.no, 24), status: line(x?.status, 30), ...(madeOf(x).length ? { made: madeOf(x) } : {}) }, x)).filter(x => x.by).slice(-10),
         orders: arr(raw.orders).map(x => withEv({ shop: line(x?.shop, 60), item: line(x?.item, 80), ko: ko(x?.ko), option: line(x?.option, 60), qty: Math.max(1, Math.round(num(x?.qty) || 1)), price: num(x?.price), time: when(x?.time), status: pick(x?.status, ['ordered', 'shipped', 'on the way', 'delivered', 'unknown', 'cancelled', 'returning', 'returned', 'refunded'], 'unknown'), eta: when(x?.eta).slice(0, 5), arrived: when(x?.arrived).slice(0, 5), gift: giftOf(x?.gift) }, x)).filter(x => x.item).slice(-12),
     };

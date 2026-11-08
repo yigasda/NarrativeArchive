@@ -889,3 +889,13 @@ test('run66: a mobile pay payment is a card payment for the counts, marked as on
     assert.deepEqual(p.money.tx.map(t => [t.account, t.kind, t.mobile]), [['2222', 'card', true], ['1111', 'card', true]]);
     assert.equal(bank(), 970);
 });
+
+test('run67: an asset or debt there before, given this message\'s day as the day it began, keeps none; a regular\'s first day a week ahead is its next day, not last year\'s', () => {
+    const { m, p } = setup();
+    applyMoney(m, p, ev('x', 5, '11-03', { debts: [{ kind: 'loan', names: ['Family loan'], amount: 1000, since: '2026-11-03', occurrence: 'again', refersBack: false }, { kind: 'loan', names: ['New loan'], amount: 500, since: '11-03', occurrence: 'new', refersBack: false }],
+        assets: [{ kind: 'deposit', names: ['Trust'], value: 9, since: '11-03', occurrence: 'again', refersBack: false }],
+        regulars: [{ names: ['Phone'], amount: -55, frequency: 'monthly', day: 10, date: '11-10', account: '1111', occurrence: 'again', refersBack: false }, { names: ['Pay'], amount: 2000, frequency: 'monthly', day: 25, date: '01-25', account: '1111', occurrence: 'again', refersBack: false }] }), opts());
+    assert.deepEqual(p.money.debts.map(d => d.since ?? ''), ['', '11-03']);
+    assert.equal(p.money.assets[0].since, '');
+    assert.deepEqual(p.money.regulars.map(r => r.since), ['2026-11-10', '2026-01-25']);
+});
