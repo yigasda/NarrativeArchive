@@ -361,7 +361,7 @@ ${archiveOnly ? '' : `${CORE_CLOCK_FIRST}\n\n`}READING THE STORY
 - Ask what the owner's phone would show after these scenes. Scenes leave a trail on a phone without saying so: a text after a fight, a photo of dinner, a search before a trip, a missed call in a meeting, a note of what someone asked for.
 - Each person the owner knows (not a stranger) they had a scene with and then parted from, when these hours go on after they part: at least one text between the two later, in their own voices, as a "life" record (a fight may go on; a job given in person gets a short check).
 - A plan made in these messages goes in the calendar; what is planned hasn't happened yet (no photo of it).${wallet ? `
-- A ticket the wallet holds (a flight, a train, a hotel stay, a show, a membership) shows on the calendar from there: no calendar record for it. A reservation or an appointment is still one.` : ''}
+- A ticket (a flight, a train, a hotel stay, a show, a membership) goes in the wallet, and the calendar shows it from there: never a calendar record for it. A reservation or an appointment is still one.` : ''}
 
 THE OWNER'S LIFE
 - The phone is lived in even when the story says nothing about it. The owner's life runs through it every waking hour, from who they are: their job or school, habits, tastes, moods, money, city and the people in their life.
@@ -378,13 +378,13 @@ ONE DAY ON EVERY APP
 - Not every app every day: a day leans on the apps this owner reaches for, and routines repeat.
 
 THE APPS
-- Texts: real chats wander, for instance a reply hours later, a question left unanswered, a laugh, a link, a plan that fizzles. The owner sounds different with each person (careful with a boss, blunt with a sibling).
+- Texts: real chats wander, for instance a reply hours later, a question left unanswered, a laugh, a link, a plan that fizzles. The owner sounds different with each person, the way they are with them.
 - Group chats: several people talk over each other, and the owner joins in or just reads, as they would; for instance a birthday, something funny, a vote on where to eat.
 - Calls: for instance a short call, a missed call returned later, a long call at night with someone close; work hours and sleep shape them.
 - Photos: what they would really take, for instance food, the sky, a pet, a screenshot, a receipt, the same shot twice; their eye shows in it.
 - Searches: what is on their mind at that hour, for instance a symptom at night, a recipe, a word they heard, a price, a place, a name they are curious about.
-- Mails: from the people and the places in their life, for instance a coworker, a professor, family abroad, receipts, newsletters, bills, shipping notices, offers left unread.
-- Calendar: the fixed things of their week (a class, a shift, an appointment, a birthday); never each small thing they do.
+- Mails: from the people and the places in their life, for instance a coworker, a professor, receipts, newsletters, bills, shipping notices, offers left unread.
+- Calendar: the fixed things of their week, for instance a class, a shift, an appointment, a birthday; never each small thing they do.
 - Posts: only if this owner posts, the kind they post, with likes that fit their following and comments from people in their life. The diary and voice memos too only if this owner would keep them.${life ? `
 - Alarms: they move with life, for instance one more before an early day, one switched off after a trip.
 - Files: what piles up, for instance downloads, screenshots, a work or school document, a ticket or a receipt.` : ''}
@@ -393,7 +393,7 @@ IN THEIR OWN WORDS (notes, the diary, voice memos)
 - The phone's most personal records: written out in full as this owner would write or say them, never a summary of the day.
 - Notes: in the shape a real note has, for instance a list with items ticked or crossed out, a half-sentence to remember, a draft of something hard to say, an address and a number, a line they liked. Short or long as they are, with their own shorthand, spelling and mix of languages.
 - The diary: at most one entry a day, in the first person and their own voice; a few lines on a quiet day, a few paragraphs on a big one. What happened as they saw it, what they felt and wouldn't say aloud, a thought that keeps coming back, a question to themselves; not the day's events in order. A day the story shows: what happened and what they feel about it; another day: that day of their life. No new secrets or story events.
-- Voice memos: spoken, not written: the way the owner talks in the archive and chat, with pauses (…), restarts and half sentences. A moment they could talk into the phone alone (after a fight, on the way somewhere, late at night), for instance an idea, a reminder to self, a tune, words for someone they can't say yet. 20 to 90 seconds of speech, "sec" to fit, "place" where they were. Not the diary told again; no new secrets or story events.${life ? `
+- Voice memos: spoken, not written: the way the owner talks in the archive and chat, with pauses (…), restarts and half sentences. A moment they could talk into the phone alone, for instance after a fight, on the way somewhere or late at night; for instance an idea, a reminder to self, a tune, words for someone they can't say yet. 20 to 90 seconds of speech, "sec" to fit, "place" where they were. Not the diary told again; no new secrets or story events.${life ? `
 
 HEALTH
 - A "health" record for every story day these messages move into, and for a day in LIFE NOW the story now shows. The day of "now" again every time, with its totals so far (steps, workouts, coffee, water, "screen"), even when nothing new happened.
@@ -420,7 +420,7 @@ KEEPING IN STEP
 - Never a booking, a trip or a purchase the story doesn't have. A booking the story has carries the details a real one would (a booking number, a seat, a gate), made up to fit.
 
 TIME PASSING
-- About ${LIFE_A_DAY} records of the owner's life for a whole waking day, in step with the hours these messages cover (an hour: one or two; a few minutes: often none). Days these messages skip or spend away from the owner (from PHONE NOW's "now" to the answer's "now") were lived too: about ${LIFE_A_DAY} for each, at most ${LIFE_MAX} in all${life ? ' ("health" records not counted)' : ''}. What happens each day decides its records; most days leave some, a few none; routines recur. Each record is dated on its own day.${life && weather ? `
+- About ${LIFE_A_DAY} records of the owner's life for a whole waking day, in step with the hours these messages cover (an hour: about one; a few minutes: often none). Days these messages skip or spend away from the owner (from PHONE NOW's "now" to the answer's "now") were lived too: about ${LIFE_A_DAY} for each, at most ${LIFE_MAX} in all${life ? ' ("health" records not counted)' : ''}. What happens each day decides its records; most days leave some, a few none; routines recur. Each record is dated on its own day.${life && weather ? `
 - "weather": ${weatherRule(tracker)}
 - With new weather, also each saved city's "cond", "temp", "hi" and "lo".` : ''}
 

@@ -788,7 +788,7 @@ test('일상 comes in the reflection\'s own answer (no request of its own); who 
 test('the reflection\'s own instructions: one list of records, the story\'s and the owner\'s own life; so many a day', () => {
     const on = data.coreSystem({ life: true }), plain = data.coreSystem();
     for (const k of ['READING THE STORY', 'THE OWNER\'S LIFE', 'KEEPING IN STEP', 'TIME PASSING', 'WHICH TYPE', 'LANGUAGE', 'TIMES']) assert.ok(on.includes(`\n${k}\n`), k);
-    assert.match(on, /About 11 records of the owner's life for a whole waking day, in step with the hours these messages cover \(an hour: one or two; a few minutes: often none\)\./);
+    assert.match(on, /About 11 records of the owner's life for a whole waking day, in step with the hours these messages cover \(an hour: about one; a few minutes: often none\)\./);
     assert.match(on, /for a record of the owner's life, the message whose hours it falls in/);
     assert.match(on, /new texts in a chat already there are new records/);
     assert.match(on, /texts and calls from others still come in/);
