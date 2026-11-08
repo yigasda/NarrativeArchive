@@ -771,7 +771,7 @@ test('일상 comes in the reflection\'s own answer (no request of its own); who 
     assert.ok(!sys.includes('SCENES WITH') && !sys.includes('PUT ON THE PHONE NOW'));
     // (no forced text after a scene: a text after a fight is part of the story's trail)
     assert.ok(!sys.includes('parted from'));
-    assert.match(sys, /Scenes leave a trail on a phone without saying so: a text after a fight/);
+    assert.match(sys, /Scenes may leave a trail on a phone without saying so, for instance a text after a fight/);
     assert.match(sys, /The phone is lived in even when the story says nothing about it\./);
     assert.match(sys, /What the messages already say may come up again\./);
     assert.match(sys, /PEOPLE AROUND turn up wherever they would on a real phone, whether or not they are in the scenes\./);

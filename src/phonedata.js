@@ -358,26 +358,26 @@ ${life ? `- LIFE NOW: the alarms, files and health days the phone holds, with re
 ${archiveOnly ? '' : `${CORE_CLOCK_FIRST}\n\n`}READING THE STORY
 - The story comes first: every scene and its trail on the phone are written before any record of the owner's own life. A life record never takes a story record's place.
 - Everything that happens in these messages is a "scene"; a scene that would leave anything on the phone gets those records too.
-- Ask what the owner's phone would show after these scenes. Scenes leave a trail on a phone without saying so: a text after a fight, a photo of dinner, a search before a trip, a missed call in a meeting, a note of what someone asked for.
+- Ask what the owner's phone would show after these scenes. Scenes may leave a trail on a phone without saying so, for instance a text after a fight, a photo of dinner, a search before a trip, a missed call in a meeting, a note of what someone asked for.
 - A plan made in these messages goes in the calendar; what is planned hasn't happened yet (no photo of it).${wallet ? `
 - A ticket (a flight, a train, a hotel stay, a show, a membership) goes in the wallet, and the calendar shows it from there: never a calendar record for it. A reservation or an appointment is still one.` : ''}
 
 THE OWNER'S LIFE
 - The phone is lived in even when the story says nothing about it. The owner's life runs through it every waking hour, from who they are: their job or school, habits, tastes, moods, money, city and the people in their life.
-- The owner reaches out, not only answers: for instance they text a friend, send something funny, complain about their day, call someone back.
-- The people in their life have lives of their own and bring them to the phone: news, a question, a photo, a favour. Group chats they share go on without the owner too.
+- The owner may reach out, not only answer, if they are someone who would: for instance text a friend, send something funny, complain about their day, call someone back.
+- The people in their life have lives of their own and may bring them to the phone, for instance news, a question, a photo, a favour. A group chat the owner is in may go on without them.
 - Their own interests show: what they look up, save, note down, photograph and post; mails from the shops, services, school or work they deal with; reminders they keep.
 - How these hours feel to the owner colours it all, for instance late-night searches and an unsent draft after a bad day, photos and a post after a good one.
 - Habits come back, for instance the same morning chat or the usual order.
 - PEOPLE AROUND turn up wherever they would on a real phone, whether or not they are in the scenes. Never someone the owner isn't in touch with now.
 
 ONE DAY ON EVERY APP
-- Every app tells the same day. Texts at 3am mean a late last look at the phone, short sleep and a slow morning; a run means a workout, steps and maybe a photo; a fight means hours in the chat app and many pickups; a day out means maps, photos and many steps; a sick day means searches, few steps and long videos.
+- Every app tells the same day, the way this owner lives it. For instance texts at 3am and a late last look at the phone go with short sleep; a run with a workout and steps; a day out with maps and many steps.
 - Times hang together: the owner does nothing on the phone while they sleep or while a scene keeps their hands busy, unless the story shows it; texts and calls from others still come in.
 - Not every app every day: a day leans on the apps this owner reaches for, and routines repeat.
 
 THE APPS
-- Texts: real chats wander, for instance a reply hours later, a question left unanswered, a laugh, a link, a plan that fizzles. The owner sounds different with each person, the way they are with them.
+- Texts: as these people really text, for instance a reply hours later, a question left unanswered, a laugh, a link, a plan that fizzles. The owner sounds different with each person, the way they are with them.
 - Group chats: several people talk over each other, and the owner joins in or just reads, as they would; for instance a birthday, something funny, a vote on where to eat.
 - Calls: for instance a short call, a missed call returned later, a long call at night with someone close; work hours and sleep shape them.
 - Photos: what they would really take, for instance food, the sky, a pet, a screenshot, a receipt, the same shot twice; their eye shows in it.
@@ -391,7 +391,7 @@ THE APPS
 IN THEIR OWN WORDS (notes, the diary, voice memos)
 - The phone's most personal records: written out in full as this owner would write or say them, never a summary of the day.
 - Notes: in the shape a real note has, for instance a list with items ticked or crossed out, a half-sentence to remember, a draft of something hard to say, an address and a number, a line they liked. Short or long as they are, with their own shorthand, spelling and mix of languages.
-- The diary: at most one entry a day, in the first person and their own voice; a few lines on a quiet day, a few paragraphs on a big one. What happened as they saw it, what they felt and wouldn't say aloud, a thought that keeps coming back, a question to themselves; not the day's events in order. A day the story shows: what happened and what they feel about it; another day: that day of their life. No new secrets or story events.
+- The diary: at most one entry a day, in the first person and their own voice; as long as this owner would write that day. What happened as they saw it, what they felt and wouldn't say aloud, a thought that keeps coming back, a question to themselves; not the day's events in order. A day the story shows: what happened and what they feel about it; another day: that day of their life. No new secrets or story events.
 - Voice memos: spoken, not written: the way the owner talks in the archive and chat, with pauses (…), restarts and half sentences. A moment they could talk into the phone alone, for instance after a fight, on the way somewhere or late at night; for instance an idea, a reminder to self, a tune, words for someone they can't say yet. 20 to 90 seconds of speech, "sec" to fit, "place" where they were. Not the diary told again; no new secrets or story events.${life ? `
 
 HEALTH
@@ -403,7 +403,7 @@ HEALTH
 - Numbers only: no diagnosis, no mood, no reason.
 
 SCREEN TIME
-- "screen" on each "health" record: that day's phone use. It shows who they really are, habits they would never admit (a game they can't put down, texting all night, barely touching the phone), from their character, not their polite profile.
+- "screen" on each "health" record: that day's phone use, from their character, not their polite profile; it may show habits they would never admit, for instance a game they can't put down, texting all night, barely touching the phone.
 - Each day follows what happened and how they felt, in their own habits (LIFE NOW's usual), plus any other app that day called for (a trip: maps, a translator).
 - It agrees with the other apps that day: hours of texts are hours in the chat app; the last text or search is no later than "late".
 - The apps people use where the owner lives, by their real names.
