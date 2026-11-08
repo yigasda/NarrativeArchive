@@ -1014,7 +1014,7 @@ export async function openPhone(who = null) {
         try {
             const r = await withSpinner($(e.currentTarget), '결제 읽는 중', () => retryMoney(m, owner));
             if (phone() === p) drawPhone();
-            r.owed ? toastr.warning(`결제 ${r.paid}개를 넣었어요. ${r.owed}개는 다음 반영 때 다시 해요`, '캐릭터 휴대폰') : toastr.success(r.paid ? `결제 ${r.paid}개를 넣었어요` : '넣을 결제가 없었어요', '캐릭터 휴대폰');
+            r.owed ? toastr.warning(`메시지 ${r.paid}개의 결제를 넣었어요. ${r.owed}개는 다음 반영 때 다시 해요`, '캐릭터 휴대폰') : toastr.success(r.paid ? `메시지 ${r.paid}개의 결제를 넣었어요` : '넣을 결제가 없었어요', '캐릭터 휴대폰');
         } catch (err) { toastr.error(String(err?.message || err), '결제 다시 읽기'); }
     });
     $root.on('click', '.na_sync_forget', async e => {
