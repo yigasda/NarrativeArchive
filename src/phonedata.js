@@ -360,7 +360,10 @@ YOU GET
 ${archiveOnly ? `TIMES\n${CORE_TIMES}` : `${CORE_CLOCK_FIRST}\n${CORE_TIMES}`}
 
 THE STORY IS CANON
-- The story is canon. Never get ahead of anything tied to its events. Make up no future the story hasn't stated; what it has stated, only as far as it states. No exceptions. A made-up future belongs only to everyday life outside the story.
+- The story is canon. Your work is one of two things: find the events in the story and write within what it tells, or write the everyday life outside it.
+- Never get ahead of anything tied to the story's events. Never make up the story's future because it would fit. Make up no secret, new fact, reason or full account of an event, outcome or completion of one, or plan.
+- When writing about the story, only what it states, only as far as it states. A made-up future belongs only to everyday life outside the story.
+- In a record about the story's people or events, anything a later message could contradict is a new fact. What the messages already say may be said again.
 
 THE STORY
 - Every scene in these messages ("scene" records) and its trail on the phone. "everyday" never replaces a story record.
@@ -371,7 +374,6 @@ THE OWNER'S LIFE
 - The phone is lived in every waking hour, from who the owner is. Contact goes both ways; a group chat may go on without them.
 - "everyday": the owner's ordinary life in these hours and each day the story skips, from their habits: it fills most lists as these hours call for, for example a photo of lunch, a search, a note, a mail, a post, texts and calls by the person, a voice memo, and a diary entry when these hours end the day${life ? ', an alarm for tomorrow, a timer for the pasta, a file saved or screenshotted' : ''}. A list with nothing in these hours stays empty.
 - For each person the owner had a scene with in NEW MESSAGES: at least one text between the two later these hours, in their own voices (a fight may go on; a job given in person gets a short check).
-- Anything a later message could contradict is a new fact: what someone decided, said or wants, a time, a result; a task and its deadline ("check the moodboards by 18:00"), a thing done ("uploaded it"), a plan for later ("ramyeon tonight?"). What these messages already say is no new fact: a text may say it again ("the deck is for Friday"). How they feel and small things around them are fine. No new facts, events, plans or secrets.
 - How many: about ${LIFE_A_DAY} life records for each waking day, about one an hour; each day the story skips gets its own (at most ${LIFE_MAX} in all${life ? ', "health" not counted' : ''}), dated on that day. Routines recur.
 - Every app tells the same day, the way this owner lives it: late-night texts go with ${life ? 'a late "late" and short sleep' : 'a late night'}. The owner does nothing on the phone while asleep or busy in a scene; others' texts and calls still come in.
 - People: the story's, PEOPLE AROUND (wherever they would turn up; never someone the owner isn't in touch with now), and made-up people of their own life, named for where they live; never a new relative or partner. Relationship words only as the story uses them. Someone new texted or called gets a "contact".
@@ -384,8 +386,8 @@ THE APPS
 IN THEIR OWN WORDS (notes, the diary, voice memos)
 - The phone's most personal records: written out in full as this owner would write or say them, never a summary of the day.
 - Notes: in the shape a real note has, short or long as they are, with their own shorthand, spelling and mix of languages.
-- The diary: an entry when a story day ends in these messages or a scene stays with them, as long as this owner would write it; not the day's events in order. A day the story shows: what happened and what they feel about it; another day: that day of their life. No new secrets or story events.
-- Voice memos: about one every few days; spoken, not written: the way the owner talks in the archive and chat, with pauses (…), restarts and half sentences, at a moment they could talk into the phone alone, for instance after a fight, on the way somewhere or late at night. 20 to 90 seconds of speech, "sec" to fit, "place" where they were. Not the diary told again; no new secrets or story events.${life ? `
+- The diary: an entry when a story day ends in these messages or a scene stays with them, as long as this owner would write it; not the day's events in order. A day the story shows: what happened and what they feel about it; another day: that day of their life.
+- Voice memos: about one every few days; spoken, not written: the way the owner talks in the archive and chat, with pauses (…), restarts and half sentences, at a moment they could talk into the phone alone, for instance after a fight, on the way somewhere or late at night. 20 to 90 seconds of speech, "sec" to fit, "place" where they were. Not the diary told again.${life ? `
 
 HEALTH
 - A "health" record for each story day these messages reach and for a LIFE NOW day the story now shows; the day of "now" every time, with its totals so far (steps, workouts, coffee, water, "screen"), even with nothing new.
