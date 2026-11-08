@@ -170,7 +170,7 @@ export function diaryScreen(p, now, pick = '') {
     const yr = (!p.noYear && Number(p.year)) || 2001; // the story's year when it has one, so a leap day counts
     if (x0) for (let n = 6; n >= 0; n--) { const d = new Date(yr, x0.mo - 1, x0.d - n); days.push(`${pad(d.getMonth() + 1)}-${pad(d.getDate())}`); }
     return `${axBar(p, now, '#3d3127')}
-      <div class="ax_dytop"><button type="button" class="ax_back" data-go="home">${ax('back', 22, '#8a6d4a', 2.4)}</button>${ax('search', 22, '#8a6d4a')}</div>
+      <div class="ax_dytop"><button type="button" class="ax_back" data-go="home">${ax('back', 22, '#8a6d4a', 2.4)}</button><button type="button" class="ax_dyfind na_ph_dyfind" aria-label="검색">${ax('search', 22, '#8a6d4a')}</button></div>
       <div class="ax_scroll">
         <div class="ax_dymonth"><b>${x0 ? `${x0.mo}월` : '일기'}</b><span>${pick ? `${esc(fmtDate(p, pick))} · ${ds.length}편` : `${all.length}편`}</span></div>
         ${days.length ? `<div class="ax_strip">${days.map(d => dayBtn('diary', d, pick, `${d === (pick || String(now).slice(0, 5)) ? 'on' : ''} ${have.has(d) ? 'd' : ''}`, Number(d.slice(3)))).join('')}</div>` : ''}
@@ -215,7 +215,9 @@ export const axCb = (go, k = 'back') => `<button type="button" class="ax_cb" dat
 export const axKp = p => (hasKo(p) ? `<button type="button" class="na_ph_kochip ax_kp ${koOn() ? 'on' : ''}">가 한국어</button>` : '');
 export const axTop = (left, right = '') => `<div class="ax_top">${left}<span class="ax_topr">${right}</span></div>`;
 export const axH1 = (t, sub = '') => `<div class="ax_h1"><b>${esc(t)}</b>${sub ? `<span>${esc(sub)}</span>` : ''}</div>`;
-export const axFind = (t = '검색') => `<div class="ax_find">${ax('search', 16, 'currentColor', 2.2)}${t}</div>`;
+// 검색: a line to type in (an editable div, as 도시 찾기's: a theme that paints every input can't reach it); the list under it
+// is filtered as it is typed (phone.js applyFind), no AI
+export const axFind = (t = '검색') => `<div class="ax_find">${ax('search', 16, 'currentColor', 2.2)}<div class="ax_findq" contenteditable="true" role="searchbox" enterkeyhint="search" spellcheck="false" aria-label="${esc(t)}" data-ph="${esc(t)}"></div><button type="button" class="ax_findx" aria-label="지우기">${ax('x', 11, '#fff', 3)}</button></div>`;
 export const axChev = ax('chev', 15, '#b7bdc6', 2.4);
 const axNewest = (xs, now) => { const c = byStory(now); return xs.map((x, k) => [x, k]).sort((a, b) => c(b[0], a[0])); };
 export const axDay = (p, now, v) => (String(v).slice(0, 5) === String(now).slice(0, 5) ? '오늘' : fmtDate(p, v));

@@ -15,7 +15,7 @@ import { ctx, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
 import { applyInjection } from './inject.js';
 import { faceHtml, nameKey, peopleList } from './people.js';
 import { drafting, drawing, drawPhoto, drawPost, filling, makeDraft, paging, recording, recordVoice, searching, searchPage, shooting, takePhoto, webPage, writeEntry, writing } from './phoneai.js';
-import { APPS, AXB, AXB_C, busyHtml, setDate, setScreenHolderView, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, mapTowns, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setOwnerProfile, setWho, snsPost, snsScreen, statusBar, threadScreen, setPlace, prepScreen } from './phoneapps.js';
+import { axFind, APPS, AXB, AXB_C, busyHtml, setDate, setScreenHolderView, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, mapTowns, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setOwnerProfile, setWho, snsPost, snsScreen, statusBar, threadScreen, setPlace, prepScreen } from './phoneapps.js';
 import { dropStretch, ensureIds, ensureYear, hasDatedRecords, noArchive, setStoryYear, storyYear, fillDevice, fillMoney, fillVoice, koOn, loreOff, makePhone, tidyKo, markAfter, phoneLore, REMAKE, restoreRounds, retryMoney, showNow, storyNow, syncLeft, syncRows, syncState, tidyJournal, undoRound } from './phonedata.js';
 import { busy, watchBusy, exclusive, journalRead, journalWrite, syncOf } from './phonesync.js';
 import { syncPick, syncSettings } from './phonesyncui.js';
@@ -324,8 +324,43 @@ export async function openPhone(who = null) {
         // a redraw mid-reflection (or mid-make) keeps saying so: withSpinner only dressed the button that was there
         if (busyMake === 'sync' || busy.sync && busy.operation === 'reflect' && busy.scope === openingScope && nameKey(busy.owner) === nameKey(owner)) $root.find('.na_ph_setupd .ax_v').html(`${busyHtml} 반영하는 중`);
         if (busyMake === 'make') $root.find('.na_ph_makebtn:not(.na_ph_addok)').prop('disabled', true).html(`${busyHtml} 폰 만드는 중`);
+        restoreFind();
         queueMicrotask(() => { autoChart(); autoMenu(); });
     };
+    // 검색 in 메시지 · 메모 · 메일 · 음성 메모 · 일기: what is typed hides the rows (and the cards, and their titles) that don't
+    // have it; kept while the screen is redrawn, gone when another screen opens
+    let find = { v: '', q: '', open: false };
+    const applyFind = () => {
+        const sc = $root.find('.ax_scroll')[0], f = sc?.querySelector('.ax_find');
+        if (!sc || !f) return;
+        const q = find.q.trim().toLowerCase();
+        f.querySelector('.ax_findx')?.classList.toggle('on', !!q);
+        let shown = 0;
+        for (const it of sc.querySelectorAll(':scope > .ax_card > *, :scope > .ax_dcard')) { const off = !!q && !it.textContent.toLowerCase().includes(q); it.style.display = off ? 'none' : ''; if (!off) shown++; }
+        for (const c of sc.querySelectorAll(':scope > .ax_card')) if (!c.classList.contains('ax_mapart')) c.style.display = [...c.children].some(x => x.style.display !== 'none') ? '' : 'none';
+        for (const s of sc.querySelectorAll(':scope > .ax_sec')) { const c = s.nextElementSibling; s.style.display = c?.classList.contains('ax_card') && c.style.display === 'none' ? 'none' : ''; }
+        sc.querySelector('.ax_findnone')?.remove();
+        if (q && !shown) f.insertAdjacentHTML('afterend', '<div class="ax_empty ax_findnone">찾는 게 없어요</div>');
+    };
+    const diaryFind = () => { const sc = $root.find('.ax_scroll')[0]; if (!sc || sc.querySelector('.ax_find')) return; const at = sc.querySelector('.ax_strip') || sc.querySelector('.ax_dymonth'); at?.insertAdjacentHTML('afterend', axFind('일기 검색')); };
+    const restoreFind = () => {
+        if (find.v !== view) find = { v: view, q: '', open: false };
+        if (find.open && view === 'diary') diaryFind();
+        const fq = $root.find('.ax_findq')[0];
+        if (fq && find.q && fq.textContent !== find.q) fq.textContent = find.q;
+        applyFind();
+    };
+    $root.on('input', '.ax_findq', function () { find = { ...find, v: view, q: this.textContent.replace(/\s+/g, ' ') }; applyFind(); });
+    $root.on('keydown', '.ax_findq', function (e) { e.stopPropagation(); if (e.key === 'Enter' && !e.originalEvent?.isComposing && e.keyCode !== 229) { e.preventDefault(); this.blur(); } });
+    $root.on('paste', '.ax_findq', function (e) { e.preventDefault(); const t = (e.originalEvent?.clipboardData?.getData('text/plain') || '').replace(/\s+/g, ' '); document.execCommand('insertText', false, t); });
+    $root.on('click', '.ax_find', function (e) { if (e.target.closest('.ax_findx, .ax_findq')) return; e.stopPropagation(); this.querySelector('.ax_findq')?.focus(); });
+    $root.on('click', '.ax_findx', function (e) { e.stopPropagation(); const f = $root.find('.ax_findq')[0]; if (!f) return; f.textContent = ''; find = { ...find, q: '' }; applyFind(); f.focus(); });
+    $root.on('click', '.na_ph_dyfind', e => {
+        e.stopPropagation();
+        find = { v: view, q: '', open: !find.open };
+        if (find.open) { diaryFind(); $root.find('.ax_findq').trigger('focus'); } else { $root.find('.ax_scroll .ax_find, .ax_findnone').remove(); applyFind(); }
+        if (!find.open) for (const x of $root.find('.ax_scroll .ax_dcard')) x.style.display = '';
+    });
     // 참고 로어북: each book with its switch; › opens its entries, each with its own (a book with some left out shows −)
     const LCK = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path class="na_ck_v" d="M5 12.5l4.5 4.5L19 7.5"/><path class="na_ck_p" d="M6 12h12"/></svg>';
     const loreSum = () => { const on = phoneLore(m); return on.length ? on.map(b => (loreOff(m, b).size ? `${b} (일부)` : b)).join(', ') : '없음 · 아카이브와 본문만 읽어요'; };
