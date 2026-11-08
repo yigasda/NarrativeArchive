@@ -13,7 +13,7 @@
 // - balances may go below zero; no money is made up to cover a payment
 // Every change is listed in `effects` (a copy of each record as it went in), so 복구 can add back what a save lost, and
 // 되돌리기 can tell a record the user changed since, without touching anything else.
-import { addPrice, baseline, cash, currency, finance, finite, fx, migrateBank, positions, round, uid } from './finance.js';
+import { addPrice, baseline, cash, currency, finance, finite, fx, migrateBank, positions, price, round, uid } from './finance.js';
 import { boxAt, dayGap, lifeReplay, lifeRevert } from './phonesynclife.js';
 import { dishPic } from './phonefood.js';
 import { byStory, giftOf, hhmm, num, when } from './phoneparse.js';
@@ -63,6 +63,14 @@ const nameHit = (a, b) => a.some(u => b.some(v => { const x = NAME(u), y = NAME(
 const OPEN = { orders: o => !ORDER_OVER(o.status) && o.status !== 'delivered', passes: o => !PASS_OVER(o.status), assets: o => ['held', 'expected', 'blocked'].includes(o.status || 'held'), debts: o => ['open', 'overdue'].includes(o.status || 'open') };
 export const PASS_OVER = v => { const s = String(v || '').toLowerCase().trim().replace(/(?:환불|취소)\s*(?:불가|가능|안\s*됨)|non-?refundable|free\s+cancel\w*|cancel\w*\s+(?:allowed|possible)|refundable/g, ' '); return !/미사용|사용\s*전|사용\s*예정|unused|not\s+(?:yet\s+)?used/.test(s) && /\bused\b|cancel|refund|checked out|expired|사용\s*(?:완료|됨|함)|취소|환불|만료/.test(s); };
 const samePlace = (a, b) => !!plain(a) && plain(a) === plain(b);
+// 정기 입출금: how often, and on which day (monthly: the day of the month; weekly: the weekday 0–6; yearly: "MM-DD")
+const REG_FREQ = ['monthly', 'weekly', 'yearly'];
+const WEEK = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6, 일: 0, 월: 1, 화: 2, 수: 3, 목: 4, 금: 5, 토: 6 };
+const weekday = v => { const s = String(v ?? '').trim().toLowerCase(); if (/^[0-6]$/.test(s)) return Number(s); const w = WEEK[s.slice(0, 3)] ?? WEEK[s.slice(0, 1)]; return w ?? -1; };
+const ymdDate = s => { const mt = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s || '')); return mt ? new Date(Date.UTC(Number(mt[1]), mt[2] - 1, Number(mt[3]))) : null; };
+const isoDay = d => d.toISOString().slice(0, 10);
+const shiftDay = (s, n) => { const d = ymdDate(s); if (!d) return ''; d.setUTCDate(d.getUTCDate() + n); return isoDay(d); };
+const monthLen = d => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
 // (an order's shop: the same, or one or both not named)
 const shopOf = (a, b) => !plain(a) || !plain(b) || samePlace(a, b);
 const fail = why => { throw new Error(why); };
@@ -90,6 +98,22 @@ const fullDay = (year, anchor, date) => {
     const d = new Date(Date.UTC(Number(a[1]), a[2] - 1, Number(a[3]) + dayGap(`${a[2]}-${a[3]}`, date)));
     return `${d.getUTCFullYear()}-${date}`;
 };
+// this month's money in and out (the phone's now's month), by currency: payments and deposits; a card bill is counted once,
+// as the card's spending
+function monthSoFar(p) {
+    const mo = p.money, today = String(p.now || '').slice(0, 5), year = p.year && !p.noYear ? String(p.year) : '';
+    if (!/^\d{2}-\d{2}$/.test(today)) return [];
+    const by = new Map();
+    for (const t of mo.tx || []) {
+        const d = year ? rowDay(t, year, today) : '', md = d ? d.slice(5, 7) : String(t.time || '').slice(0, 2);
+        const acct = mo.bank.accounts.find(a => a.last4 === t.account);
+        if (!finite(t.amount) || t.cardBill || acct?.kind === 'credit' && t.kind === 'transfer' || (year ? d.slice(0, 7) !== `${year}-${today.slice(0, 2)}` : md !== today.slice(0, 2))) continue;
+        const cur = acct?.currency || mo.currency, x = by.get(cur) || { currency: cur, in: 0, out: 0 };
+        if (t.amount > 0) x.in = round(x.in + t.amount); else x.out = round(x.out - t.amount);
+        by.set(cur, x);
+    }
+    return [...by.values()];
+}
 // what the model sees of the money apps
 const newestAndOpen = (xs, n, open) => { const all = xs || [], last = all.slice(-n); return [...all.slice(0, -n || all.length).filter(open).slice(-12), ...last]; };
 export function moneyNow(p) {
@@ -104,16 +128,23 @@ export function moneyNow(p) {
         passes: newestAndOpen(mo.passes, 6, x => !PASS_OVER(x.status)).map(x => ({ id: x.id, kind: x.kind, by: x.by, from: x.from || undefined, to: x.to || undefined, no: x.no || undefined, date: x.date, ...(x.until ? { until: x.until } : {}), ...(x.dayUnknown ? { dayUnknown: true } : {}), status: x.status })),
         // (what the owner owns and owes beyond the accounts: every one still held or owed, and the newest)
         ...((mo.assets || []).length ? { assets: newestAndOpen(mo.assets, 6, OPEN.assets).map(x => ({ id: x.id, kind: x.kind, names: x.names, value: x.value, currency: x.currency, whose: x.whose, status: x.status })) } : {}),
+        // (every regular income and bill still going, and this month's money in and out so far, worked out here: what the
+        // owner's month looks like, so the spending a story day adds fits it)
+        ...((mo.regulars || []).some(r => r.status !== 'stopped') ? { regulars: mo.regulars.filter(r => r.status !== 'stopped').map(r => ({ id: r.id, names: r.names, amount: r.amount, currency: r.currency, frequency: r.frequency, day: r.frequency === 'weekly' ? ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'][r.day] : r.day, account: r.account })) } : {}),
+        ...(month => (month.length ? { thisMonth: month } : {}))(monthSoFar(p)),
         ...((mo.debts || []).length ? { debts: newestAndOpen(mo.debts, 6, OPEN.debts).map(x => ({ id: x.id, kind: x.kind, names: x.names, lender: x.lender, amount: x.amount, currency: x.currency, ...(x.whose && x.whose !== 'owner' ? { whose: x.whose } : {}), due: x.due || undefined, status: x.status })) } : {}),
     };
 }
 export function investNow(m, p) {
     const inv = p.investment;
     if (!inv) return null;
-    const f = finance(m);
+    const f = finance(m), day = String(inv.date || '').slice(0, 10);
+    // (its valuation day, and each holding's price that day: the next day's prices move on from these)
+    const last = sym => (/^\d{4}-\d{2}-\d{2}$/.test(day) ? price(m, `STOCK:${sym}`, day)?.value ?? null : null);
     return {
+        ...(day ? { date: day } : {}),
         accounts: inv.accounts.map(a => ({ account: `broker:${a.currency}`, currency: a.currency, cash: f.accounts[a.key] ? cash(f.accounts[a.key]) : null })),
-        holdings: positions(inv.trades || []).filter(h => h.quantity > 0).map(h => ({ symbol: h.symbol, name: inv.securities.find(s => s.symbol === h.symbol)?.name || '', quantity: h.quantity, currency: h.currency })),
+        holdings: positions(inv.trades || []).filter(h => h.quantity > 0).map(h => ({ symbol: h.symbol, name: inv.securities.find(s => s.symbol === h.symbol)?.name || '', quantity: h.quantity, currency: h.currency, price: last(h.symbol) })),
         trades: (inv.trades || []).slice(-10).map(t => ({ id: t.id, date: t.date, kind: t.kind, symbol: t.symbol, quantity: t.quantity, price: t.price })),
         watch: (inv.watch || []).map(w => ({ symbol: w.symbol, name: inv.securities.find(s => s.symbol === w.symbol)?.name || '' })),
     };
@@ -171,6 +202,7 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
     for (const x of list(mo.orders)) nums(x, ['price', 'qty']);
     for (const x of list(mo.assets)) nums(x, ['value']);
     for (const x of list(mo.debts)) nums(x, ['amount']);
+    for (const x of list(mo.regulars)) nums(x, ['amount']);
     for (const x of list(mo.deliveries)) { nums(x, ['fee', 'tip', 'discount', 'for']); for (const d of list(x.items)) nums(d, ['price', 'qty']); if (x.newShop && typeof x.newShop === 'object') { nums(x.newShop, ['rating', 'reviews', 'fee', 'minOrder']); for (const d of list(x.newShop.menu)) nums(d, ['price']); } }
     const f = finance(m), guess = mo.amountFrom === 'guess', date = e.date, full = fullDay(year, anchor, date);
     // (a record's own "amountFrom" when it has one (the money step's records), else the event's)
@@ -293,12 +325,15 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
     // (a payment's "for": the order, ticket or asset of this event it pays, by one of its names)
     const forOf = v => { if (!txt(v)) return null; for (const path of ['orders', 'passes', 'assets', 'debts']) for (const x of list(mo[path])) if (nameHit(allNames(path, x), [txt(v, 80)])) return { path, x, res: resolved.get(x) }; return null; };
     const paidAlready = r => !!r.paidBy || !r.told && !!r.ev && r.ev !== e.id;
+    // (a payment for a regular income or bill the phone has, paid by hand: that month's, never paid again by the clock)
+    const regOf = v => { if (!txt(v)) return null; const rs = (p.money?.regulars || []).filter(r => nameHit(r.names || [r.name], [txt(v, 80)])); return rs.length === 1 ? rs[0] : null; };
     list(mo.moves).forEach((x, k) => {
         let amount = Number(x.amount);
         const broker = /^broker:/i.test(String(x.account || '')), g = gOf(x), from = g ? 'guess' : 'story';
         if (voided.has(k)) { out.legs.push({ key: `void:${k}`, amount, state: 'cancelled' }); return; }
         // (a payment for an order, ticket or asset the phone already holds as paid: told of again, never paid twice)
         x._for = forOf(x.for);
+        x._reg = x._for ? null : regOf(x.for);
         if (x._for?.res?.rec && x._for.path !== 'debts' && amount < 0 && x.occurrence !== 'again' && paidAlready(x._for.res.rec)) { out.legs.push({ key: `paid:${k}`, amount, state: 'paid' }); out.notes.push(`${txt(x.who, 40) || txt(x.for, 40)} ${round(amount)}: 이미 결제된 것이라 다시 빼지 않았어요`); return; }
         if (amount === 0) { out.legs.push({ key: `zero:${k}`, amount: 0, state: 'zero' }); return; }
         if (!finite(amount)) fail('금액을 확인하지 못했어요');
@@ -364,7 +399,7 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         const id = sid(`sync:${e.id}:m${k}`);
         const row = { id, account: acct.last4, who: txt(x.who, 60), ko: txt(x.ko, 60), amount: round(amount), time: `${date}${(hhmm(x.time) || e.time) ? ` ${hhmm(x.time) || e.time}` : ''}`, day: full,
             // on the card everything is a card row (a refund is plus), except paying the card off: a transfer, which the month's count leaves out
-            kind: acct.kind === 'credit' ? (x.kind === 'transfer' ? 'transfer' : 'card') : ['card', 'transfer', 'deposit', 'cash'].includes(x.kind) ? x.kind : amount > 0 ? 'deposit' : 'card', memo: txt(x.memo), pending: false, ev: e.id, storyEvent: e.id, sourceIndex: e.at, ...(g ? { amountFrom: 'guess' } : {}) };
+            kind: acct.kind === 'credit' ? (x.kind === 'transfer' ? 'transfer' : 'card') : ['card', 'transfer', 'deposit', 'cash'].includes(x.kind) ? x.kind : amount > 0 ? 'deposit' : 'card', memo: txt(x.memo), pending: false, ev: e.id, storyEvent: e.id, sourceIndex: e.at, ...(x._reg ? { regular: x._reg.id } : {}), ...(g ? { amountFrom: 'guess' } : {}) };
         // a card payment just made waits for approval through its day (the clock settles it the next)
         const nowDay = String(p.now || '').slice(0, 5);
         row.pending = row.kind === 'card' && row.amount < 0 && !(/^\d{2}-\d{2}$/.test(nowDay) && /^\d{2}-\d{2}$/.test(date) && dayGap(date, nowDay) > 0);
@@ -526,6 +561,50 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         out.changes.push({ app: APP[path], label: label(path, row), amount: null });
     });
     for (const path of ['orders', 'passes', 'assets', 'debts']) records(path);
+    // 정기: money that comes in or goes out again and again (pay, rent, a subscription), one record; the clock pays it on its
+    // days (regularClock), from this message's day on: never back over the days before the phone heard of it
+    list(mo.regulars).forEach((x, k) => {
+        if (!bankOn) return;
+        const box = p.money.regulars ||= [], names = allNames('regulars', x).length ? allNames('regulars', x) : [txt(x.who, 60)].filter(Boolean);
+        if (!names.length) { out.notes.push('정기 입출금: 무엇인지 몰라서 넣지 않았어요'); return; }
+        const pointed = x.already && box.find(r => r.id === x.already), hits = pointed ? [pointed] : x.refersBack === false ? [] : box.filter(r => nameHit(r.names || [r.name], names));
+        if (hits.length > 1) { out.notes.push(`${names[0]}: 어느 정기 입출금인지 몰라서 넣지 않았어요`); return; }
+        const old = hits[0] || null, amount = Number(x.amount), freq = REG_FREQ.includes(x.frequency) ? x.frequency : '';
+        const dayOf = f => (f === 'weekly' ? weekday(x.day) : f === 'yearly' ? (/^\d{2}-\d{2}$/.test(String(x.day || '')) ? String(x.day) : '') : (n => (n >= 1 && n <= 31 ? n : null))(Math.round(Number(x.day))));
+        const acct = txt(x.account) ? accountOf(p, x) : null;
+        if (old) {
+            const set = (field, to) => { if (sameValue(old[field] ?? null, to)) return; out.effects.push({ type: 'field', path: 'money.regulars', id: old.id, field, from: structuredClone(old[field] ?? null), ...(Object.hasOwn(old, field) ? { had: true } : {}), to: structuredClone(to) }); if (to === null) delete old[field]; else old[field] = to; };
+            const xm = madeOf(x), om = madeOf(old);
+            let made = [...om];
+            // (a new amount the story gives, or a change this message tells of; a made-up one told again keeps the one there)
+            if (finite(amount) && amount && (x.occurrence === 'new' || !xm.includes('amount'))) { set('amount', round(amount)); made = xm.includes('amount') ? [...new Set([...made, 'amount'])] : made.filter(f => f !== 'amount'); }
+            if (freq) { set('frequency', freq); const d = dayOf(freq); if (d !== null && d !== '' && d !== -1) set('day', d); }
+            if (acct) set('account', acct.last4);
+            if (['active', 'stopped'].includes(x.status)) set('status', x.status);
+            if (txt(x.for)) set('for', txt(x.for, 80));
+            if (made.join() !== om.join()) set('made', made.length ? made : null);
+            if (old.ev !== e.id) out.effects.push({ type: 'seen', path: 'money.regulars', id: old.id });
+            out.changes.push({ app: '은행', label: `${old.name} 정기`, amount: null });
+            return;
+        }
+        if (!finite(amount) || !amount || !freq) { out.notes.push(`${names[0]}: 정기 입출금의 금액이나 주기를 몰라서 넣지 않았어요`); return; }
+        const a = acct || accountOf(p, { account: '', kind: '' });
+        if (!a) { out.notes.push(`${names[0]}: 정기 입출금의 계좌를 몰라서 넣지 않았어요`); return; }
+        let d = dayOf(freq);
+        const sinceDay = when(x.date).slice(0, 5) || date, since = fullDay(year, anchor, sinceDay);
+        if (d === null || d === -1 || d === '') d = freq === 'weekly' ? new Date(`${since}T00:00:00Z`).getUTCDay() : freq === 'yearly' ? sinceDay : Number(sinceDay.slice(3, 5));
+        const xm = madeOf(x), row = { id: sid(`sync:${e.id}:r${k}`), name: names[0], names, amount: round(amount), currency: a.currency, frequency: freq, day: d, account: a.last4, who: txt(x.who, 60), ko: txt(x.ko, 60),
+            ...(txt(x.for) ? { for: txt(x.for, 80) } : {}), status: x.status === 'stopped' ? 'stopped' : 'active', since, paidThrough: shiftDay(full, -1), ...(xm.length ? { made: xm } : {}), ...(gOf(x) ? { amountFrom: 'guess' } : {}),
+            ev: e.id, storyEvent: e.id, sourceIndex: e.at };
+        box.push(row);
+        out.effects.push({ type: 'push', path: 'money.regulars', item: structuredClone(row) });
+        out.changes.push({ app: '은행', label: `${row.name} 정기`, amount: null });
+        // (paid by hand in this same message: that payment is this one's, the clock leaves its period)
+        for (const y of list(mo.moves)) if (y._tx && !y._reg && !y._for && txt(y.for) && nameHit(names, [txt(y.for, 80)])) {
+            const t = p.money.tx.find(r => r.id === y._tx);
+            if (t && !t.regular) { t.regular = row.id; const f0 = out.effects.find(f => f.type === 'push' && f.path === 'money.tx' && f.item.id === t.id); if (f0) f0.item.regular = row.id; }
+        }
+    });
     // an account the story says is blocked or freed: marked, its money where it was (blocked is no withdrawal)
     for (const x of list(mo.access)) {
         if (!bankOn) break;
@@ -688,6 +767,82 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
     }
     return out;
 }
+// ---- what time does by itself, once a round moves the story's day on (its effects go with the round: 되돌리기 takes them)
+// a bank row's full day: its own, else its "MM-DD" in the year that puts it on or before today
+const rowDay = (t, year, today) => { if (/^\d{4}-\d{2}-\d{2}$/.test(String(t.day || ''))) return t.day; const md = String(t.time || '').slice(0, 5); return /^\d{2}-\d{2}$/.test(md) ? `${md > today ? Number(year) - 1 : year}-${md}` : ''; };
+const periodOf = (r, day) => { if (r.frequency === 'yearly') return day.slice(0, 4); if (r.frequency !== 'weekly') return day.slice(0, 7); const d = ymdDate(day); d.setUTCDate(d.getUTCDate() - d.getUTCDay()); return isoDay(d); };
+const dueOn = (r, d) => (r.frequency === 'weekly' ? d.getUTCDay() === r.day : r.frequency === 'yearly' ? isoDay(d).slice(5) === r.day : d.getUTCDate() === Math.min(Number(r.day), monthLen(d)));
+// 정기 입출금 on their days up to now, and each card's bill on its day (the month's card spending, from the account it is
+// paid from). A period already paid by hand (a payment "for" it) is left; a stopped one, a closed account, none.
+// From where each left off (its "paidThrough"; a card's "billThrough", set the first time it is seen); at most 400 days
+export function regularClock(m, p, now, year) {
+    const out = [], mo = p.money, today = String(now || '').slice(0, 5);
+    if (!mo?.bank || !/^\d{2}-\d{2}$/.test(today) || !/^\d{4}$/.test(String(year || ''))) return out;
+    const f = finance(m), tx = mo.tx ||= [], end = `${year}-${today}`, stop = ymdDate(end);
+    if (!stop) return out;
+    const set = (path, rec, field, to) => { if (sameValue(rec[field] ?? null, to)) return; out.push({ type: 'field', path, id: rec.id, field, from: structuredClone(rec[field] ?? null), ...(Object.hasOwn(rec, field) ? { had: true } : {}), to: structuredClone(to) }); if (to === null) delete rec[field]; else rec[field] = to; };
+    const book = (acct, row) => {
+        if (tx.some(t => t.id === row.id)) return false;
+        tx.push(row); out.push({ type: 'push', path: 'money.tx', item: structuredClone(row) });
+        if (acct.kind !== 'credit') { const lk = `${acct.id}:${acct.currency}`, L = f.accounts[lk]; if (L) { L.entries[row.id] = { amount: row.amount, date: row.day }; out.push({ type: 'entry', key: lk, id: row.id, amount: row.amount, date: row.day }); } }
+        return true;
+    };
+    const from = (after, first) => { let d = ymdDate(after) ? ymdDate(shiftDay(after, 1)) : ymdDate(first); const s0 = ymdDate(first); if (s0 && d && s0 > d) d = s0; if (d && (stop - d) / 864e5 > 400) d = new Date(stop.getTime() - 400 * 864e5); return d; };
+    for (const r of mo.regulars || []) {
+        if (r.status === 'stopped' || !REG_FREQ.includes(r.frequency) || !finite(r.amount) || !r.amount) continue;
+        const acct = mo.bank.accounts.find(a => a.last4 === r.account);
+        if (!acct || acct.closed) continue;
+        const start = from(r.paidThrough, r.since);
+        if (!start || start > stop) continue;
+        for (const d = new Date(start); d <= stop; d.setUTCDate(d.getUTCDate() + 1)) {
+            if (!dueOn(r, d)) continue;
+            const day = isoDay(d), per = periodOf(r, day);
+            if (tx.some(t => t.regular === r.id && periodOf(r, rowDay(t, year, today) || '0000-00-00') === per)) continue;
+            const row = { id: `reg:${r.id}:${day}`, account: acct.last4, who: r.who || r.name, ko: r.ko || '', amount: r.amount, time: day.slice(5), day, kind: acct.kind === 'credit' ? 'card' : r.amount > 0 ? 'deposit' : 'transfer', memo: r.name, pending: false, regular: r.id, auto: true };
+            if (!book(acct, row)) continue;
+            // (a repayment of a debt: what is left of it, as a payment for it would)
+            const debt = r.for && r.amount < 0 ? (mo.debts || []).filter(x => OPEN.debts(x) && nameHit(allNames('debts', x), [r.for])) : [];
+            if (debt.length === 1 && finite(debt[0].amount) && (debt[0].currency || mo.currency) === acct.currency) { const left = round(Math.max(0, debt[0].amount + r.amount)); set('money.debts', debt[0], 'amount', left); if (left === 0) set('money.debts', debt[0], 'status', 'paid'); }
+        }
+        // (a story clock set back a little never moves it back: those days are paid)
+        if (!r.paidThrough || end > r.paidThrough) set('money.regulars', r, 'paidThrough', end);
+    }
+    for (const a of mo.bank.accounts) {
+        if (a.kind !== 'credit' || !(a.billDay >= 1 && a.billDay <= 31) || !a.paidFrom || a.closed) continue;
+        const payer = mo.bank.accounts.find(x => x.last4 === a.paidFrom && x.kind !== 'credit' && !x.closed);
+        if (!payer) continue;
+        // (first seen: its bills from now on, none for the months before)
+        if (!a.billThrough) { set('money.bank.accounts', a, 'billThrough', end); continue; }
+        const start = from(a.billThrough, a.billThrough);
+        for (const d = new Date(start); d <= stop; d.setUTCDate(d.getUTCDate() + 1)) {
+            if (d.getUTCDate() !== Math.min(a.billDay, monthLen(d))) continue;
+            const day = isoDay(d), prev = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - 1, 1)); prev.setUTCDate(Math.min(a.billDay, monthLen(prev)));
+            const lo = isoDay(prev), inside = t => { const td = rowDay(t, year, today); return td > lo && td <= day; };
+            // (paid off by hand in that month: nothing more)
+            if (tx.some(t => t.account === a.last4 && t.kind === 'transfer' && t.amount > 0 && !t.auto && inside(t))) continue;
+            const net = round(-tx.filter(t => t.account === a.last4 && t.kind === 'card' && inside(t)).reduce((n, t) => n + (finite(t.amount) ? t.amount : 0), 0));
+            if (!(net > 0)) continue;
+            if (!book(payer, { id: `bill:${a.id}:${day}`, account: payer.last4, who: `${a.name || '카드'} 대금`, ko: '', amount: -net, time: day.slice(5), day, kind: 'transfer', memo: '카드 대금', pending: false, auto: true, cardBill: a.id })) continue;
+            book(a, { id: `bill:${a.id}:${day}:in`, account: a.last4, who: payer.name || '입출금', ko: '', amount: net, time: day.slice(5), day, kind: 'transfer', memo: '카드 대금', pending: false, auto: true, cardBill: a.id });
+        }
+        if (end > a.billThrough) set('money.bank.accounts', a, 'billThrough', end);
+    }
+    if (out.length) for (const a of mo.bank.accounts) if (a.kind !== 'credit') { const L = f.accounts[`${a.id}:${a.currency}`]; if (L) a.balance = cash(L); }
+    return out;
+}
+// a parcel past the day it was to come, the story telling nothing since: come (the clock's, 되돌리기 takes it back)
+export function orderClock(p, now) {
+    const out = [], today = String(now || '').slice(0, 5);
+    if (!p.money?.orders || !/^\d{2}-\d{2}$/.test(today)) return out;
+    for (const o of p.money.orders) {
+        if (!['ordered', 'shipped', 'on the way'].includes(o.status) || !/^\d{2}-\d{2}$/.test(o.eta || '') || dayGap(o.eta, today) <= 0) continue;
+        const arrivedFrom = o.arrived ?? null;
+        out.push({ type: 'status', path: 'money.orders', id: o.id, status: 'delivered', prev: o.status, arrivedFrom, arrived: o.eta });
+        o.status = 'delivered'; o.arrived = o.eta; o.byClock = true;
+    }
+    return out;
+}
+
 // what a delivery order came to (the model never writes it)
 export const dlvTotal = o => round((o.items || []).reduce((n, x) => n + x.qty * x.price, 0) + (o.fee || 0) + (o.tip || 0) - (o.discount || 0));
 
@@ -775,7 +930,8 @@ export function replayEffects(m, p, effects) {
 }
 const LOOSE = ['sourceIndex', 'delivery', 'account'];
 // (a field put back as none, a price filled in and taken back, is the none it was: never "changed by hand")
-const unchanged = (path, now, was) => (/^(money|investment)\./.test(path) ? ['amount', 'price', 'qty', 'quantity', 'value', 'status'].every(k => (now[k] ?? null) === (was[k] ?? null))
+// (an order the clock alone moved on, past its arrival day, is no change by hand either)
+const unchanged = (path, now, was) => (/^(money|investment)\./.test(path) ? ['amount', 'price', 'qty', 'quantity', 'value', 'status'].every(k => (k === 'status' && now.byClock) || (now[k] ?? null) === (was[k] ?? null))
     // (a delivery the clock alone moved on, "on the way" to "delivered", is no change by hand)
     : Object.keys({ ...was, ...now }).filter(k => !LOOSE.includes(k) && k !== 'byClock' && !(k === 'status' && now.byClock)).every(k => JSON.stringify(now[k] ?? null) === JSON.stringify(was[k] ?? null)));
 // 되돌리기 · 빼기: undo money changes, newest first. A record gone already is fine; one changed since is left as it is and

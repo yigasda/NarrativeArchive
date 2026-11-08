@@ -601,6 +601,32 @@ test('money records: one message\'s records on two days are booked on each; a pa
     assert.ok(c.p.sync.events['money-3'].effects.some(x => x.path === 'money.orders'));
 });
 
+test('time passing through a reflection: the days the story moved past go to the money step with the message each ended in; a skipped day\'s spending is on its day; a regular bill is paid by the round\'s clock on its day; 되돌리기 takes it all back', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'three days later: rent day again'), say('Mara', 'ugh, rent')]);
+    T.moneyCalls = 0; T.lastCore = null;
+    T.moneyAnswers = [{ records: [
+        { type: 'payment', at: 2, date: '10-27', account: '1111', amount: -8000, who: '편의점', kind: 'card', occurrence: 'new', amountFrom: 'guess' },
+        { type: 'regular', at: 2, names: ['Rent', '월세'], amount: -50000, frequency: 'monthly', day: 29, account: '1111', who: '집주인', occurrence: 'again', refersBack: false, made: ['amount'] },
+    ] }];
+    await run(c.m, { now: '10-29 20:00', events: [{ id: 'rent-day', at: 2, quote: 'rent day again', summary: '월세 날', date: '10-29', time: '19:00', phone: {} }] });
+    assert.match(T.moneyInput, /\[DAYS PASSED\]\n- 10-26 Mon \(ended in #2\)\n- 10-27 Tue \(ended in #2\)\n- 10-28 Wed \(ended in #2\)/);
+    assert.deepEqual(c.p.money.tx.map(t => [t.who, t.time.slice(0, 5), t.amount]), [['편의점', '10-27', -8000], ['집주인', '10-29', -50000]]);
+    assert.equal(c.bank(), 100000 - 8000 - 50000);
+    assert.equal(c.p.money.regulars[0].paidThrough, '2026-10-29');
+    assert.ok(c.p.syncUndo.effects.some(x => x.item?.regular === c.p.money.regulars[0].id));
+    await data.undoRound(c.m, c.p);
+    assert.equal(c.bank(), 100000);
+    assert.deepEqual([c.p.money.tx.length, (c.p.money.regulars || []).length], [0, 0]);
+});
+
+test('a long skip: the days before the last seven go as one span', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'a month went by')]);
+    T.moneyAnswers = [{ records: [] }];
+    await run(c.m, { now: '11-26 10:00', events: [] });
+    assert.match(T.moneyInput, /\[DAYS PASSED\]\n- 10-26 to 11-18 \(24 days, ended by #2\)\n- 11-19 Thu \(ended in #2\)/);
+    assert.match(T.moneyInput, /- 11-25 Wed \(ended in #2\)\n\n/);
+});
+
 // ---- 반영 in two steps: money asked after core, owed when it can't go in (docs/REFLECT-2STAGE-PLAN.md)
 function taxiSetup() {
     const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Mara', 'I paid the taxi 12000 won'), say('Ren', 'thanks')]);

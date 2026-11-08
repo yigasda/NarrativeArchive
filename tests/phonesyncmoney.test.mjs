@@ -746,3 +746,86 @@ test('점검 9-4: account records: blocked, freed and closed; a card\'s bill day
     revertEffects(m, p, r1.effects);
     assert.deepEqual([karte.billDay, bank(), p.money.tx.some(t => t.adjust)], [undefined, 1000, false]);
 });
+
+test('점검 9-5 (정기): a regular income and bill are paid on their days from the message on, never back; a month paid by hand is left; stopped, none; a set-back clock pays nothing twice; 되돌리기 takes them back', async () => {
+    const { regularClock } = await import('../src/phonesyncmoney.js');
+    const { m, p, bank } = setup();
+    const r = applyMoney(m, p, ev('job', 5, '10-26', { regulars: [
+        { names: ['Salary', '월급'], amount: 2500, frequency: 'monthly', day: 25, account: '1111', who: 'Varo GmbH', since: '', date: '01-25', occurrence: 'again', refersBack: false, made: ['amount', 'day'] },
+        { names: ['Rent', '월세'], amount: -900, frequency: 'monthly', day: 1, account: '1111', who: 'Landlord', occurrence: 'again', refersBack: false },
+        { names: ['Gym'], amount: -10, frequency: 'weekly', day: 'Mon', account: '2222', occurrence: 'again', refersBack: false },
+        { names: ['Nothing'], amount: 0, frequency: 'monthly', occurrence: 'again' },
+    ] }), opts());
+    assert.deepEqual(p.money.regulars.map(x => [x.name, x.day, x.paidThrough]), [['Salary', 25, '2026-10-25'], ['Rent', 1, '2026-10-25'], ['Gym', 1, '2026-10-25']]);
+    assert.ok(r.notes.some(n => n.includes('금액이나 주기')));
+    // the round's day (a Monday: the gym is due): no back pay of January's salary though its first day was then
+    regularClock(m, p, '10-26 20:00', '2026');
+    assert.deepEqual(p.money.tx.map(t => [t.who, t.day]), [['Gym', '2026-10-26']]);
+    // a week on: the rent on 11-01, the gym on Monday 11-02 (on the card)
+    const fx = regularClock(m, p, '11-03 09:00', '2026');
+    assert.deepEqual(p.money.tx.slice(1).map(t => [t.who, t.day, t.amount, t.kind]), [['Landlord', '2026-11-01', -900, 'transfer'], ['Gym', '2026-11-02', -10, 'card']]);
+    assert.equal(bank(), 100);
+    // set back a little, then on again: nothing twice
+    regularClock(m, p, '11-02 09:00', '2026'); regularClock(m, p, '11-03 09:00', '2026');
+    assert.equal(p.money.tx.length, 3);
+    // the November salary paid by hand (a payment for it): the clock leaves that month
+    applyMoney(m, p, ev('pay', 9, '11-20', { moves: [{ account: '1111', amount: 2500, who: 'Varo GmbH', kind: 'deposit', occurrence: 'new', for: '월급' }] }), opts());
+    assert.equal(p.money.tx.at(-1).regular, p.money.regulars[0].id);
+    regularClock(m, p, '11-30 09:00', '2026');
+    assert.equal(p.money.tx.filter(t => t.who === 'Varo GmbH').length, 1);
+    // the gym stopped: no more
+    applyMoney(m, p, ev('gym-stop', 10, '11-30', { regulars: [{ names: ['Gym'], status: 'stopped', occurrence: 'new', refersBack: true }] }), opts());
+    const before = p.money.tx.length;
+    regularClock(m, p, '12-10 09:00', '2026');
+    assert.deepEqual(p.money.tx.slice(before).map(t => t.who), ['Landlord']);
+    revertEffects(m, p, fx);
+    assert.ok(!p.money.tx.some(t => t.day === '2026-11-01'));
+});
+
+test('점검 9-5 (카드 대금): on its bill day the month\'s card spending goes from the account paying it, once; paid off by hand, none; first seen, nothing for the months before', async () => {
+    const { regularClock } = await import('../src/phonesyncmoney.js');
+    const { m, p, bank } = setup();
+    const card = p.money.bank.accounts[1];
+    applyMoney(m, p, ev('cc', 5, '10-20', { accounts: [{ account: '2222', billDay: 15, paidFrom: '1111', occurrence: 'again' }] }), opts());
+    regularClock(m, p, '10-20 09:00', '2026');
+    assert.equal(card.billThrough, '2026-10-20');
+    applyMoney(m, p, ev('d1', 6, '10-26', { moves: [{ account: '2222', amount: -80, who: 'Trattoria', kind: 'card', occurrence: 'new' }] }), opts());
+    applyMoney(m, p, ev('d2', 7, '11-02', { moves: [{ account: '2222', amount: -20, who: 'Kino', kind: 'card', occurrence: 'new' }, { account: '2222', amount: 5, who: 'Kino', kind: 'card', occurrence: 'new' }] }), opts());
+    regularClock(m, p, '11-16 09:00', '2026');
+    // (10-15, 11-15]: 80 + 20 − 5 = 95, from the giro; the card's side a transfer the month's count leaves out
+    const bills = p.money.tx.filter(t => t.cardBill);
+    assert.deepEqual(bills.map(t => [t.account, t.amount, t.day]), [['1111', -95, '2026-11-15'], ['2222', 95, '2026-11-15']]);
+    assert.equal(bank(), 905);
+    regularClock(m, p, '11-17 09:00', '2026');
+    assert.equal(p.money.tx.filter(t => t.cardBill).length, 2);
+    // December's paid off by hand: nothing more
+    applyMoney(m, p, ev('d3', 8, '11-20', { moves: [{ account: '2222', amount: -40, who: 'Shop', kind: 'card', occurrence: 'new' }] }), opts());
+    applyMoney(m, p, ev('d4', 9, '12-10', { moves: [{ account: '1111', amount: -40, who: 'Karte', kind: 'transfer', occurrence: 'new' }, { account: '2222', amount: 40, who: 'Giro', kind: 'transfer', occurrence: 'new' }] }), opts());
+    regularClock(m, p, '12-16 09:00', '2026');
+    assert.equal(p.money.tx.filter(t => t.cardBill).length, 2);
+});
+
+test('점검 9-5: a parcel past its arrival day has come, by the clock (되돌리기 takes it back, 빼기 of its talk still takes it); MONEY NOW tells the regular ones and the month so far; INVESTMENTS NOW its day and prices', async () => {
+    const { orderClock } = await import('../src/phonesyncmoney.js');
+    const { addPrice } = await import('../src/finance.js');
+    const { m, p } = setup();
+    const r = applyMoney(m, p, ev('o', 5, '10-26', { orders: [{ names: ['Lamp'], shop: 'Lumo', price: 30, eta: '10-28', status: 'shipped', occurrence: 'again', refersBack: false }] }), opts());
+    assert.deepEqual(orderClock(p, '10-28 22:00'), []);
+    const fx = orderClock(p, '10-29 08:00');
+    assert.deepEqual([p.money.orders[0].status, p.money.orders[0].arrived], ['delivered', '10-28']);
+    revertEffects(m, p, fx);
+    assert.deepEqual([p.money.orders[0].status, p.money.orders[0].arrived], ['shipped', '']);
+    orderClock(p, '10-29 08:00');
+    // (the clock's delivery is no change by hand: the order goes with its talk)
+    assert.deepEqual(revertEffects(m, p, r.effects), []);
+    assert.equal(p.money.orders.length, 0);
+    p.year = 2026; p.now = '10-26 12:00';
+    applyMoney(m, p, ev('x', 6, '10-26', { moves: [{ account: '1111', amount: -30, who: 'A', occurrence: 'new' }, { account: '1111', amount: 100, who: 'B', kind: 'deposit', occurrence: 'new' }, { account: '2222', amount: -12, who: 'C', kind: 'card', occurrence: 'new' }],
+        regulars: [{ names: ['Rent'], amount: -900, frequency: 'monthly', day: 1, account: '1111', occurrence: 'again', refersBack: false }] }), opts());
+    const now = moneyNow(p);
+    assert.deepEqual(now.thisMonth, [{ currency: 'EUR', in: 100, out: 42 }]);
+    assert.deepEqual(now.regulars.map(x => [x.names[0], x.amount, x.day]), [['Rent', -900, 1]]);
+    addPrice(m, 'STOCK:XETRA:SAP', '2026-10-20', { value: 120, source: 'guess' });
+    const { investNow } = await import('../src/phonesyncmoney.js');
+    assert.equal(investNow(m, p).date, '2026-10-20');
+});

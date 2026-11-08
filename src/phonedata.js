@@ -24,7 +24,7 @@ import { clockFallback, exactClockShift } from './phoneclock.js';
 import { PLACE } from './phonemapcity.js';
 export { tidyKo, arr, gapDays, giftOf, hhmm, jsonOf, ko, last4, line, num, pad, pick, storyMin, byStory, str, when, withEv };
 import { COUNTRY_TZ, applyDays, applyLife, applyWeather, cardClock, cityAt, dayGap, dlvClock, fillDays, lifeClock, lifeNow, weatherFrom, zoneShift } from './phonesynclife.js';
-import { applyMoney, dlvTotal, investNow, moneyNow, payOrders, recordsMoney, replayEffects, revertEffects } from './phonesyncmoney.js';
+import { applyMoney, dlvTotal, investNow, moneyNow, orderClock, payOrders, recordsMoney, regularClock, replayEffects, revertEffects } from './phonesyncmoney.js';
 import { isDone, pruneDropped, srcOf, addFrom, orphanOf, itemMark, edited, busy, exclusive, joinComments, realign, bodyMark, newSync, syncOf, makeMark, settleMarks, pickRound, unreadCount, addDone, settleRound, archiveRound, archivedUnread, readBefore, reachesEnd, quoted, journalAdd, journalRead, journalWrite } from './phonesync.js';
 
 export const WALLS = ['dusk', 'ocean', 'forest', 'rose', 'night', 'sand', 'mono', 'aurora'];
@@ -1402,6 +1402,24 @@ const OWED_TRIES = 2;
 // one list of records per event, its two steps together (되돌리기 keeps an event's records that can't go back)
 const byEvent = xs => { const out = new Map(); for (const x of xs) out.set(x.id, [...(out.get(x.id) || []), ...(x.effects || [])]); return [...out]; };
 const MONEY_PATH = /^(money|investment|delivery)\./;
+// DAYS PASSED: the story days these messages moved past (from the phone's day before the round to the day before its new
+// one), each with the message it ended in (the first whose event is on a later day, else the round's last): the latest
+// seven one by one, a longer stretch before them as one span
+const WEEKDAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+function daysPassed(was, now, known, events, last) {
+    const a = String(was || '').slice(0, 5), b = String(now || '').slice(0, 5);
+    if (!/^\d{2}-\d{2}$/.test(a) || !/^\d{2}-\d{2}$/.test(b) || !Number.isInteger(last) || last < 0) return '';
+    const gap = dayGap(a, b);
+    if (!(gap > 0)) return '';
+    const y = Number(known) || 2000, start = new Date(Date.UTC(y, Number(a.slice(0, 2)) - 1, Number(a.slice(3, 5))));
+    const day = k => { const d = new Date(start); d.setUTCDate(d.getUTCDate() + k); return { md: `${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`, wd: known ? ` ${WEEKDAY[d.getUTCDay()]}` : '' }; };
+    const dated = arr(events).filter(e => Number.isInteger(e.at) && /^\d{2}-\d{2}$/.test(e.date || '')).sort((x, z) => x.at - z.at);
+    const endedIn = md => dated.find(e => dayGap(md, e.date) > 0)?.at ?? last;
+    const lines = [], each = Math.min(gap, 7);
+    if (gap > each) { const f = day(0), t = day(gap - each - 1); lines.push(`- ${f.md} to ${t.md} (${gap - each} days, ended by #${endedIn(t.md)})`); }
+    for (let k = gap - each; k < gap; k++) { const d = day(k); lines.push(`- ${d.md}${d.wd} (ended in #${endedIn(d.md)})`); }
+    return lines.join('\n');
+}
 async function moneyStage(m, p, owner, c) {
     const s = p.sync, out = { late: [], owed: [], notes: [], changes: [], apps: new Set() };
     const owedBefore = arr(s.owed?.money).filter(o => Number.isInteger(o?.at));
@@ -1840,7 +1858,7 @@ async function updatePhone(m, owner) {
         if (split) {
             const targets = [...wants.values()];
             const check = () => (phoneChatScope(ctx()) !== scope || m.phones?.[key] !== p ? '반영하는 사이 채팅이나 폰이 바뀌었어요' : p.money?.at !== made.money || p.investment?.at !== made.invest ? '반영하는 사이 은행이나 투자가 새로 만들어졌어요' : '');
-            const st = await moneyStage(m, p, owner, { targets, rows, raw: rawRows, sections, evidence, reread, year, known, anchor, profile, check, inRound, nowDay: String(clockPlan.now || p.now || '').slice(0, 5) });
+            const st = await moneyStage(m, p, owner, { targets, rows, raw: rawRows, sections, evidence, reread, year, known, anchor, profile, check, inRound, nowDay: String(clockPlan.now || p.now || '').slice(0, 5), passed: daysPassed(p.now, clockPlan.now, known, targets, Math.max(-1, ...inRound, ...evidence.map(x => x.last))) });
             s.owed = { ...(s.owed || {}), money: st.owed };
             late = st.late;
             for (const a of st.apps) apps.add(a);
@@ -1867,7 +1885,8 @@ async function updatePhone(m, owner) {
         const days = [...applyDays(p, raw.days, rid), ...fillDays(p, p.now, rid)], sky = lifeAhead ? [] : applyWeather(p, askWeather && !weatherElsewhere(p, raw.weather, named, m) ? raw.weather : null, sceneOwn === true ? homeTracker(p, tracker, raw.weather, m) : null, { archive: evidence.length + before.length > 0, today: String(p.now || '').slice(0, 5) });
         if (days.length) apps.add('건강');
         if (sky.length) apps.add('날씨');
-        const roundFx = [...days, ...sky, ...lifeClock(p, p.now), ...dlvClock(p, p.now), ...cardClock(p, p.now)];
+        // (and the money time pays by itself: regular income and bills on their days, card bills, parcels past their day)
+        const roundFx = [...days, ...sky, ...lifeClock(p, p.now), ...dlvClock(p, p.now), ...cardClock(p, p.now), ...orderClock(p, p.now), ...(p.money ? regularClock(m, p, p.now, p.year && !p.noYear ? String(p.year) : year) : [])];
         // after the clock moves: the card's month is counted up to the story's now
         if (p.money) migrateBank(m, p);
         const id = rid;
