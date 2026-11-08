@@ -801,7 +801,7 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.ok(arch.includes('\nTIMES\n- Times are "MM-DD HH:MM"') && !arch.includes('CLOCK FIRST'));
     assert.match(on, /How many: about 11 life records for each waking day, about one an hour; each day the story skips gets its own \(at most 70 in all, "health" not counted\), dated on that day\./);
     assert.match(on, /- "everyday": the owner's ordinary life in these hours and each day the story skips, from their habits: any app, a little in each as a real phone gets it;/);
-    assert.match(on, /The diary: one entry for each story day that ends in these messages/);
+    assert.match(on, /The diary: one entry for each story day that ends in these messages, the whole day, its earlier scenes in EVENTS ON THE PHONE too; as long as/);
     assert.match(on, /Voice memos: about one every few days/);
     assert.match(on, /but NEVER a new fact, event, secret, later plan, promise or deadline the story hasn't mentioned\./);
     assert.ok(!on.includes('talk over each other') && on.includes('Contact goes both ways; a group chat may go on without them.'));
