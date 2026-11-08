@@ -582,7 +582,9 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
             if (!inv.securities.some(x => x.symbol === symbol) || !finite(value) || value <= 0 || !/^\d{4}-\d{2}-\d{2}$/.test(d || '')) continue;
             try {
                 const before = finance(m).prices[`STOCK:${symbol}`]?.[d], had = new Set((before?.rows || []).map(r => r.id)), prev = before ? { selected: before.selected, conflict: before.conflict } : null;
-                const slot = addPrice(m, `STOCK:${symbol}`, d, { value, source: 'story', ref: txt(q.evidence, 200) }), row = slot.rows.find(r => !had.has(r.id));
+                // (a price the story gives, by its words; one estimated to show a change the story implies, a guess)
+                const story = q.source !== 'guess' && !!txt(q.evidence);
+                const slot = addPrice(m, `STOCK:${symbol}`, d, { value, source: story ? 'story' : 'guess', ...(story ? { ref: txt(q.evidence, 200) } : {}) }), row = slot.rows.find(r => !had.has(r.id));
                 if (row) out.effects.push({ type: 'price', key: `STOCK:${symbol}`, date: d, id: row.id, row: structuredClone(row), prev });
                 if (d > (inv.date || '')) { out.effects.push({ type: 'field', path: 'investment', field: 'date', from: inv.date ?? null, to: d }); inv.date = d; }
                 out.changes.push({ app: '투자', label: `${inv.securities.find(x => x.symbol === symbol)?.name || symbol} 시세`, amount: null }); } catch { /* a price the ledger refuses */ }

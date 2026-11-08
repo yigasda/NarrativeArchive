@@ -328,47 +328,80 @@ export const coreSystem = ({ life = false, weather = false, tracker = false, inv
 // delivery: the phone has the delivery app
 // invest: an event touches the brokerage (trades, prices, watched shares, stakes); else none of it is asked or sent
 export function moneySystem({ delivery = false, invest = false } = {}) {
-    const paid = delivery ? 'order, ticket or delivery' : 'order or ticket';
+    const records = `the accounts, cards, orders, tickets${invest ? ', brokerage' : ''}, assets and debts`;
     return `STAGE: money
 GOAL
-Write the money of story events already read from a few new chat messages in a long role-play: payments, transfers, refunds, orders and tickets${invest ? ', trades' : ''}${delivery ? ', and food deliveries' : ''}. An app adds your JSON to the phone's bank, wallet, orders${delivery ? ', delivery app' : ''}${invest ? ' and brokerage' : ''}.
+Turn the story's financial situation into the owner's phone records. Role-play often gives brief dialogue, reactions and implications rather than financial details. Interpret their meaning and complete the records needed to represent it.
+
+You interpret the story and supply consistent facts, estimates and details. The app matches existing records, applies changes, calculates balances and prevents duplicates.
 
 YOU GET
-- EVENTS: the story events to write money for, each with its id, message number, date, time, summary and quote. An event marked "changed" was read before and its message edited since.
+- EVENTS: the story events to write money for, each with its id, message number, date, time, summary and quote. One marked "changed" was read before and its message edited since.
 - MESSAGES: the messages those events come from, with the ones next to them. ARCHIVE FOR THESE MESSAGES (sometimes): summary sections covering them.
-- MONEY NOW${invest ? ' (sometimes) and INVESTMENTS NOW (sometimes)' : ''}: the bank, card, orders${invest ? ', tickets and brokerage' : ' and tickets'}, with record ids. WEALTH (sometimes): how much the owner has.
+- MONEY NOW${invest ? ' (sometimes) and INVESTMENTS NOW (sometimes)' : ''}: ${records} the phone holds, with their ids. WEALTH (sometimes): how much the owner has.
 ${delivery ? `- DELIVERY SHOPS: the shops the delivery app already has, and the basket.\n` : ''}- DAYS and STORY YEAR (sometimes), OWNER, and sometimes OWNER PROFILE.
 
-MONEY
-- A payment, transfer, refund, order${invest ? ', ticket or trade' : ' or ticket'} that happens in an event goes in that event's "money", under its id. An event with no money is left out.
-- An amount the story gives stays as it is. A real one with no amount gets a plausible amount for the owner, the place and MONEY NOW: "amountFrom": "guess".
-- A payment the scene plainly implies (eating out, a taxi ride) counts; one someone else may have paid does not. Never invent a payment the scene doesn't show or imply.
-- Every move${invest ? ', trade' : ''}, order and ticket says "occurrence": "new" when it happens in this message, "again" when the message only talks about one made before.
-- An order or ticket made before and not in MONEY NOW yet ("I already ordered you a scarf") is still written, "again": the app puts it in with no payment. Its shop or price may be "" or null when the story doesn't say.
-- Already in MONEY NOW${invest ? ' or INVESTMENTS NOW' : ''}: its id as "already"; it is not paid again. A "changed" event's payment is that same payment, its amount corrected if it changed.
-- A card purchase goes on the card account; a refund is plus; paying the card off is a transfer from the bank.
-- No money is made up to cover a payment; a balance may go below zero.
-- Company money, family money and an inheritance still to come are not the owner's cash.
-- A new paid ${paid} has its payment as a move in the same event.
-- A cancelled order${delivery ? ' or delivery' : ''} moves no money; if it was already paid, its refund is a plus move.
-${delivery ? `- A delivery paid in cash at the door has no move. "tip" only where tipping is the custom; elsewhere 0.
-- A delivery from a shop not in DELIVERY SHOPS also gives "newShop" with 2 to 4 dishes: the one ordered and others it would have.
-` : ''}- A ticket or booking the story has carries every detail a real one would (a booking number, a seat, a gate, the day of a way back), made up to fit when the story doesn't give it, an "again" one too; what was made up is listed in "made". A detail the story gives later is written as the story gives it.
-- People: only people the story has.
+FINANCES FIRST
+First identify what each event reveals or changes about the owner's finances. Then write its transactions, records and state changes.
+- Scope: finances include transactions, purchases, bookings, assets, debts${invest ? ', valuations' : ''} and the ability to use or control money.
+- Evidence: dialogue, narration and clear implications all count. Missing amounts or banking procedures are not reasons to omit a financially relevant event.
+- Completion: preserve established facts. Fill gaps using the owner's circumstances, existing records and the setting.
+- Boundary: make the described situation concrete without inventing a separate decision or action.
 
+STEP BY STEP — for each event in EVENTS
+1. Interpret the event. Determine its financial meaning from the messages and their context before assigning amounts or states; read reactions and terms in their narrative and local context. Leave the event out only if it has no financial relevance.
+2. Identify the target and time. Resolve the affected accounts, cards, purchases, bookings, assets or debts from context and MONEY NOW. Tell what happens at this event's date and time from earlier circumstances and future plans; a booking can exist now for a later stay.
+3. Tell what is being reported (more than one may apply): a payment or purchase in this event; an existing situation revealed here for the first time; a change to an existing record or state; an earlier one mentioned again. First mention is not first occurrence, and a new state change is not a new payment.
+4. Complete the needed information. Take existing finances as the baseline, never rebuilt. Supply plausible missing amounts and record details (a booking number, a seat, a gate, a time, the day of a way back, an arrival day, a name the story doesn't give). Mark invented record fields in "made" and estimated amounts with "amountFrom": "guess"${invest ? ', estimated prices with "source": "guess"' : ''}. Never present existing or invented details as newly stated story facts.
+5. Write the effects: "moves"${invest ? ' and "trades"' : ''} for money that changes hands, "orders" and "passes" for purchases and bookings, "assets", "debts" and "access" for what the owner owns, owes and can use. Include state and detail updates even when no money moves. A purchase made earlier and first told of here is written, never as new spending in this event. A repeated mention with nothing new is no other payment${invest ? ' and no fresh valuation' : ''}. A "changed" event: write its complete revised meaning, leaving out what it no longer supports; the app reconciles the earlier one.
+
+IDENTITY AND OCCURRENCE
+- "names": the record's names in the story, with English and Korean equivalents; for a reference like "the hotel", the names of the one it means.
+- "already": the existing record's id when you can tell it. A shared merchant or provider alone does not make two purchases one.
+- "occurrence": "new" when the payment, purchase, booking or trade itself happens in this event; "again" when it happened earlier. A later delivery status or check-in belongs to the earlier one: send the update, no other payment.
+- "refersBack" (orders, tickets, assets, debts): true when MESSAGES or ARCHIVE already told of this very one before this event; false when this event is the first to tell of it, even one from long ago ("I already ordered you a scarf", "I booked one more place").
+- Ids and account digits come from MONEY NOW; never copy a record's other details as though this event stated them.
+
+ASSETS, DEBTS AND ACCESS
+- An asset (a flat, a car, a business, a valuable, money held elsewhere) or a debt (a loan, a mortgage, money owed to someone, tax) the story establishes goes in "assets" or "debts", even with no money moving at this event.
+- Keep cash, asset values, ownership, access and obligations apart: a price change is no trade; a blocked account is no withdrawal ("access").
+- "whose": the owner's, shared, the family's or a company's, as the story establishes; family, company and expected money is not the owner's spendable cash. "status": "expected" for one still to come (an inheritance not yet received).
+- When a change takes effect and any condition the story states go in "since", "due" and "conditions".
+
+TRANSACTIONS
+- A payment may be plainly implied (a meal out, a taxi ride); never one someone else may have paid, and never one only because an item is mentioned.
+- A stated amount stays as it is; otherwise a plausible one for the owner, the place and MONEY NOW.
+- The account it would really go on: a card purchase on the card; paying the card off a transfer from the bank. Another currency than the account's: that day's "rate".
+- A new paid order, ticket${delivery ? ', delivery' : ''} or asset, or money paid on a debt, has its move in the same event, linked by "for": one of that record's names.
+- A cancellation, a refund still pending and money returned are three things: only money returned is a plus move. A cancelled order${delivery ? ' or delivery' : ''} moves no money.
+- People: only people the story has.
+${delivery ? `
+DELIVERY
+- Ordering, basket changes, delivery progress, cancellation and payment as the scene shows them; payment method and status consistent with the delivery's (cash at the door is not prepaid, and has no move).
+- "tip" only where tipping is the custom; elsewhere 0.
+- A shop not in DELIVERY SHOPS also gets "newShop" with 2 to 4 dishes, the ordered one among them.
+- Dishes put in the basket and not ordered go in "cart".
+` : ''}${invest ? `
+INVESTMENTS
+- Watching the market, a holding's value changing and a trade are three things. Watching prices makes no trade; a trade and a change in holdings need the story, which may imply them.
+- A valuation change the story implies may get a plausible estimated price in "quotes", "source": "guess"; a price the story states is "source": "story" with its exact words.
+` : ''}
 LANGUAGE
 Banks, shops, merchants and items named as they would be in the owner's country. A name not in Korean gets "ko"; a Korean one gets none.
 
 ANSWER — one JSON object, nothing else:
 { "events": [{ "id": an id from EVENTS,
                "money": { "amountFrom": "story" | "guess",
-                          "moves": [{ "account": a bank account's last 4 digits${invest ? ' or "broker:EUR"' : ''}, "amount": minus for money out, "currency", "who", "ko", "memo": what it was for, "kind": "card" | "transfer" | "deposit" | "cash" (taken out as cash), "fee": a transfer fee charged on top of "amount", on the sending move, "rate": for an amount in another currency than its account's, that day's rate (the account's currency for one), "occurrence": "new" | "again", "already": "" }],
+                          "moves": [{ "account": a bank account's last 4 digits${invest ? ' or "broker:EUR"' : ''}, "amount": minus for money out, "currency", "rate": only in another currency than its account's, "who", "ko", "memo": what it was for, "kind": "card" | "transfer" | "deposit" | "cash" (taken out as cash), "fee": a transfer fee charged on top of "amount", on the sending move, "for": a name of the order, ticket, asset or debt it is for, or "", "occurrence": "new" | "again", "already": "" }],
 ${invest ? `                          "trades": [{ "kind": "buy" | "sell" | "dividend", "symbol", "name", "ko" and "currency" (a share not in INVESTMENTS NOW), "quantity", "price", "fee", "amount": dividend only, "occurrence": "new" | "again", "already": "" }],
-` : ''}                          "orders": [{ "shop", "item", "ko", "option", "qty", "price": unit price, "status": "ordered" (the default) | "shipped" | "on the way" | "delivered" | "cancelled" | "returning" | "returned" | "refunded", "eta": "MM-DD" or "", "gift", "paid": false only when someone else pays or it is paid on delivery, "occurrence": "new" | "again", "already": "" }],
-                          "passes": [{ "kind": "flight" | "train" | "hotel" | "event" | "other", "by": airline, line, hotel or venue, "from", "to", "date": "MM-DD", "time", "seat", "gate", "no", "status", "made": [the fields made up to fit, like "no", "seat", "date"], "occurrence": "new" | "again", "already": "" }]${delivery ? `,
+` : ''}                          "orders": [{ "names": [the item's names], "shop", "option", "qty", "price": unit price, "status": "ordered" (the default) | "shipped" | "on the way" | "delivered" | "cancelled" | "returning" | "returned" | "refunded", "eta": "MM-DD", "gift", "paid": false only when someone else pays or it is paid on delivery, "made": [the fields made up], "occurrence": "new" | "again", "refersBack": true | false, "already": "" }],
+                          "passes": [{ "kind": "flight" | "train" | "hotel" | "event" | "other", "names": [the airline, line, hotel or show's names], "from", "to", "date": "MM-DD", "time", "seat", "gate", "no", "status", "made": [the fields made up], "occurrence": "new" | "again", "refersBack": true | false, "already": "" }],
+                          "assets": [{ "kind": "property" | "vehicle" | "business" | "valuable" | "deposit" | "other", "names": [], "value", "currency", "valueFrom": "story" | "guess", "whose": "owner" | "shared" | "family" | "company", "status": "held" | "expected" | "sold" | "lost", "since": "MM-DD", "conditions", "made": [], "occurrence": "new" | "again", "refersBack": true | false, "already": "" }],
+                          "debts": [{ "kind": "loan" | "mortgage" | "personal" | "tax" | "other", "names": [], "lender", "amount": what is owed now, "currency", "amountFrom": "story" | "guess", "due": "MM-DD", "status": "open" | "paid" | "overdue" | "forgiven", "conditions", "made": [], "occurrence": "new" | "again", "refersBack": true | false, "already": "" }],
+                          "access": [{ "account": last 4 digits, "blocked": true | false, "reason" }]${delivery ? `,
                           "deliveries": [{ "shop", "items": [{ "name", "ko", "option", "optionKo", "qty", "price": unit price, "pic": { "base": the dish in 1 to 3 English words, "with": [up to 3 main ingredients, like "beef"], "size": "regular" | "large", "set": [a set's sides or drinks] } }], "fee", "tip", "discount", "mode": "delivery" | "pickup", "time": "MM-DD HH:MM", "arrived": "MM-DD HH:MM" or "", "to": "home" | "work" | a person's name, "address", "left": where the courier left it, or "", "noteShop", "noteShopKo", "noteRider", "noteRiderKo", "noCutlery", "for": how many people, "status": "on the way" | "delivered" | "cancelled" | "refunded", "gift", "occurrence": "new" | "again", "already": "",
                                           "newShop": { "name": the same as "shop", "ko", "cuisine", "menu": [{ "name", "ko", "desc", "price", "top": true for its best-known dish, "pic" }] } or null }]` : ''} } }] }
-Also in "money" when the messages show them: "newAccount": { "kind": "checking" | "savings" | "credit", "name", "last4", "currency", "balance" } (an account or card the owner opens), "newCard": { "account": last4, "exp": "MM/YY" }${delivery ? `, "cart": { "shop", "items": [like a delivery's] } (dishes put in the basket and not ordered)` : ''}${invest ? `, "watch": [{ "symbol", "name", "currency", "note", "ko" }] (a share they start watching), "quotes": [{ "symbol", "date", "value", "evidence": exact words }] (a price the story gives), "stakes": [{ "company", "listed", "percent", "holder", "voter", "beneficiary", "restriction", "value", "currency", "evidence": exact words }] (a stake the story says they now hold).` : '.'}
+Also in "money" when the messages show them: "newAccount": { "kind": "checking" | "savings" | "credit", "name", "last4", "currency", "balance" } (an account or card the owner opens), "newCard": { "account": last4, "exp": "MM/YY" }${delivery ? `, "cart": { "shop", "items": [like a delivery's] }` : ''}${invest ? `, "watch": [{ "symbol", "name", "currency", "note", "ko" }] (a share they start watching), "quotes": [{ "symbol", "date", "value", "source": "story" | "guess", "evidence": exact words for "story" }], "stakes": [{ "company", "listed", "percent", "holder", "voter", "beneficiary", "restriction", "value", "currency", "evidence": exact words }] (a stake the story says they now hold)` : ''}.
 No money anywhere: "events": [].`;
 }
 
