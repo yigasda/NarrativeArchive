@@ -899,3 +899,13 @@ test('run67: an asset or debt there before, given this message\'s day as the day
     assert.equal(p.money.assets[0].since, '');
     assert.deepEqual(p.money.regulars.map(r => r.since), ['2026-11-10', '2026-01-25']);
 });
+
+test('run68: a stay told twice in one answer (booked, then extended) is one ticket with the new last day; another place is another', () => {
+    const { m, p } = setup();
+    applyMoney(m, p, ev('stay', 5, '11-07', { passes: [
+        { kind: 'hotel', by: 'Airbnb', names: ['Airbnb'], date: '11-07', until: '11-21', status: 'booked', occurrence: 'new', refersBack: false },
+        { kind: 'hotel', by: 'Airbnb', names: ['Airbnb'], date: '11-07', until: '12-03', status: 'used', occurrence: 'again' },
+        { kind: 'hotel', by: 'Glad Hotel', names: ['Glad Hotel'], date: '11-02', until: '11-07', occurrence: 'again' },
+    ] }), opts());
+    assert.deepEqual(p.money.passes.map(x => [x.by, x.until, x.status]), [['Airbnb', '12-03', 'used'], ['Glad Hotel', '11-07', '']]);
+});

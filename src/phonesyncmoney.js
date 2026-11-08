@@ -340,6 +340,13 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
             res = sn.length ? pick(box.filter(o => nameHit(storyNames(path, o), sn) && ok(o)))
                 : pick(box.filter(o => OPEN[path](o) && (path === 'orders' || o.kind === x.kind) && ok(o)));
         }
+        // (none on the phone yet, but told of earlier in this same answer, by its names: that one, not a second record, run68's
+        // stay told twice; a different place or the way back is still another)
+        if (!res.rec && !res.ambiguous) {
+            const xs = list(mo[path]), xn = allNames(path, x);
+            const prev = xs.slice(0, xs.indexOf(x)).find(y => { const r = resolved.get(y); return r && !r.rec && !r.ambiguous && !r.same && (path === 'orders' || y.kind === x.kind) && nameHit(allNames(path, y), xn) && !conflict(path, y, x); });
+            if (prev) res = { rec: null, same: prev };
+        }
         resolved.set(x, res);
     }
     // (a payment's "for": the order, ticket or asset of this event it pays, by one of its names)
@@ -518,7 +525,7 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         const box = p.money[path] ||= [], res = resolved.get(x) || { rec: null };
         // (more than one it may be: the code doesn't pick one; nothing changes, a note says why)
         if (res.ambiguous) { out.notes.push(`${allNames(path, x)[0] || x.kind || APP[path]}: 어느 기록인지 몰라서 넣지 않았어요`); return; }
-        const old = res.rec;
+        const old = res.rec || (res.same && res.same._row) || null;
         if (!old && x.occurrence === 'again' && !allNames(path, x).length && !txt(x.to) && !txt(x.lender)) { out.notes.push(`${APP[path]}: 무엇인지 모르는 이야기는 넣지 않았어요`); return; }
         if (old) {
             if (old.sourceIndex == null) old.sourceIndex = e.at;
@@ -582,6 +589,7 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         if (x.occurrence === 'again' && (path === 'orders' || path === 'passes')) { row.told = true; if (path === 'passes' && !when(x.date) && !xm.includes('date')) row.dayUnknown = true; }
         else if (path === 'orders' && row.status !== 'cancelled' && row.price && x.paid !== false && !x.gift && !pay && !list(mo.moves).some(y => Number(y.amount) < 0)) out.notes.push(`${row.item}: 주문은 넣었지만 결제가 없었어요`);
         box.push(row);
+        x._row = row;
         out.effects.push({ type: 'push', path: `money.${path}`, item: structuredClone(row) });
         out.changes.push({ app: APP[path], label: label(path, row), amount: null });
     });
