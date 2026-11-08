@@ -97,7 +97,7 @@ const PHONE_ITEMS = `  "contacts": [{ "name": name in the story, "saved": how th
               "comments": [{ "from": name, "text", "ko" }] }],
   "mails": [{ "from": sender, "subject", "ks": Korean subject, "text", "ko", "time", "unread": true or false }],
   "diary": [{ "date": "MM-DD", "title", "kt": Korean title, "text", "ko" }],
-  "visits": [{ "place": a place the owner really went to, as the story writes it (a room, a shop, a house; a city alone when the story names nothing closer there, never the city they live in alone), "city": the city it is in, or "", "home": true when it is the owner's own home, "with": [the people there with them], "time" }],
+  "visits": [{ "place": a place the owner really went to, as the story writes it (a room, a shop, a house; a city alone when the story names nothing closer there, never the city they live in alone), "city": the city it is in, or "", "home": true when it is the owner's own home, "with": [the people there with them], "time", "already": the id of that same visit in PHONE NOW, else "" }],
   "voice": [{ "title", "kt", "text", "ko", "time", "sec", "place" }] only when the archive or chat shows the owner recorded one`;
 // (반영: a voice memo may be an everyday one too, so the 폰 만들기 limit is left off there)
 const VOICE_ONLY = ' only when the archive or chat shows the owner recorded one';
@@ -414,7 +414,7 @@ export function parsePhone(out, owner = '') {
             comments: arr(x?.comments).map(c => ({ from: line(c?.from, 40), text: line(c?.text, 300), ko: ko(c?.ko) })).filter(c => c.from && c.text).slice(0, CAP.comments) }, x)).filter(x => x.text || x.photo),
         mails: arr(raw.mails).map(x => tag({ from: line(x?.from, 60), subject: line(x?.subject, 120), ks: line(x?.ks, 120), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), unread: truthy(x?.unread) }, x)).filter(x => x.from && (x.subject || x.text)),
         diary: arr(raw.diary).map(x => tag({ date: when(x?.date).slice(0, 5), title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000) }, x)).filter(x => x.date && x.text),
-        visits: arr(raw.visits).map(x => tag({ place: line(x?.place, 60), city: line(x?.city, 60), ...(x?.home === true ? { home: true } : {}), with: [...new Set(arr(x?.with).map(n => line(n, 40)).filter(n => n && !mine(n)))].slice(0, 6), time: when(x?.time), src: 'story' }, x)).filter(x => x.place).slice(-CAP.visits),
+        visits: arr(raw.visits).map(x => tag({ place: line(x?.place, 60), city: line(x?.city, 60), ...(line(x?.already, 40) ? { already: line(x.already, 40) } : {}), ...(x?.home === true ? { home: true } : {}), with: [...new Set(arr(x?.with).map(n => line(n, 40)).filter(n => n && !mine(n)))].slice(0, 6), time: when(x?.time), src: 'story' }, x)).filter(x => x.place).slice(-CAP.visits),
         voice: arr(raw.voice).map(x => tag({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), sec: secOf(x?.sec), place: line(x?.place, 60), src: 'story' }, x)).filter(x => x.text),
     });
 }
@@ -445,21 +445,24 @@ const NEAR = { msg: x => [nameKey(x.from), x.text], calls: x => [nameKey(x.with)
 // how far the clock may be off, in minutes, before it is another record (a call back an hour later is a second call)
 const NEAR_MIN = { msg: 15, calls: 10, photos: 30, mails: 120, searches: 15, voice: 30, visits: 60 };
 const nearMin = t => { const x = parts(t); return x && x.h !== null ? storyMin(t, '') : null; };
-// (a visit's city: none given is any; two names of one city in the town table, "부산" · "Busan" · "Pusan", one; Seoul and
-// Busan two, though one clock; a city the table doesn't know is itself only)
+// a city's ids in the town table by any of its names ("부산" · "Busan" · "Pusan"), for the data the table holds (a ticket's
+// route, the country a city is in); a city the table doesn't know has none
 let townIds = null;
 export const cityIds = v => {
     if (!townIds) { townIds = new Map(); for (const [ko, al, , cc] of PLACE) for (const n of [ko, ...al]) { const k = pkey(n); if (k) (townIds.get(k) || townIds.set(k, new Set()).get(k)).add(`${ko}|${cc}`); } }
     return townIds.get(pkey(v)) || new Set();
 };
-export const sameCity = (a, b) => { const x = pkey(a), y = pkey(b); if (!x || !y || x === y) return true; const A = cityIds(a), B = cityIds(b); return [...A].some(k => B.has(k)); };
+// (a visit the model says is one in PHONE NOW, by its id, is that one; else one written the same, its city too when both give
+// one: the model, not the code, tells "부산" and "Busan" the same)
+const sameCityText = (a, b) => !pkey(a) || !pkey(b) || pkey(a) === pkey(b);
 const twinOf = (k, list, a) => {
-    const sig = sigOf(k, a), exact = list.find(x => sigOf(k, x) === sig && (k !== 'visits' || sameCity(x.city, a.city)));
+    if (k === 'visits' && a.already) { const was = list.find(x => x.id === a.already); if (was) return was; }
+    const sig = sigOf(k, a), exact = list.find(x => sigOf(k, x) === sig && (k !== 'visits' || sameCityText(x.city, a.city)));
     if (exact || !NEAR[k] || (k === 'msg' && String(a.text || '').trim().length < 6)) return exact || null;
     const key = JSON.stringify(NEAR[k](a)).toLowerCase(), t = nearMin(a.time);
-    return t === null ? null : list.find(x => JSON.stringify(NEAR[k](x)).toLowerCase() === key && (k !== 'visits' || sameCity(x.city, a.city)) && nearMin(x.time) !== null && Math.abs(nearMin(x.time) - t) <= NEAR_MIN[k]) || null;
+    return t === null ? null : list.find(x => JSON.stringify(NEAR[k](x)).toLowerCase() === key && (k !== 'visits' || sameCityText(x.city, a.city)) && nearMin(x.time) !== null && Math.abs(nearMin(x.time) - t) <= NEAR_MIN[k]) || null;
 };
-const fresh = (k, old, add) => { const out = []; for (const x of add) if (!twinOf(k, old, x) && !twinOf(k, out, x)) out.push(x); return out; };
+const fresh = (k, old, add) => { const out = []; for (const x of add) if (!twinOf(k, old, x) && !twinOf(k, out, x)) { delete x.already; out.push(x); } return out; };
 // an update's new items go after the old ones; every list keeps its newest, the threads the ones written in last
 // every record gets the app's own id (not the model's): links between apps point at it, and it survives trimming and 다시 만들기.
 // Phones saved before ids get theirs when next opened or made
@@ -544,12 +547,11 @@ YOU GET
 ${CLOCK_GET}
 - PEOPLE AROUND (sometimes): people in the owner's life, close or not, from the cards, persona, profile and lorebook, with where things stand now.
 - PUT ON THE PHONE NOW: what the other step wrote from these messages. Never again.
-- SCENES WITH (sometimes): the people the owner had a scene with in these messages.
 - OWNER, and sometimes STORY YEAR, WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW. Nothing on the phone may show what the owner doesn't know.
 
 EVERYDAY
 - The owner's ordinary life in these hours, from their habits: each answer fills most lists as these hours call for, for example a photo of lunch, a search, a note, a mail, a post, texts and calls by the person, a voice memo, and a diary entry when these hours end the day. A list with nothing in these hours stays empty.
-- For each person in SCENES WITH: at least one text between the two later these hours, in their own voices (a fight may go on; a job given in person gets a short check).
+- For each person the owner had a scene with in NEW MESSAGES: at least one text between the two later these hours, in their own voices (a fight may go on; a job given in person gets a short check).
 - People from the story or PEOPLE AROUND as they are and with what they feel; never someone the owner isn't in touch with now. PEOPLE AROUND are part of the owner's life whether or not they are in touch: they turn up wherever they would on a real phone. Someone texted or called who isn't in the contacts yet goes in "contacts" too. A relationship word (girlfriend, ex, husband, boss) only if the messages, archive or PEOPLE AROUND use it for them.
 - A diary entry holds what these messages show and what the owner feels about it, as the story and PEOPLE AROUND show them; no new secrets or events.
 - Anything a later message could contradict is a new fact: what someone decided, said or wants, a time, a result; a task and its deadline ("check the moodboards by 18:00"), a thing done ("uploaded it"), a plan for later ("ramyeon tonight?"). What these messages already say is no new fact: a text may say it again ("the deck is for Friday"). How they feel and small things around them are fine. No new facts, events, plans or secrets.
@@ -571,37 +573,13 @@ ${LIFE_FILES}
 ${LIFE_TIMERS}` : ''}
 }`;
 export const AI_SYS_EVERYDAY = everydaySystem();
-// the people the owner had a scene with in these messages: any the phone knows (PEOPLE AROUND, contacts, texts, the place
-// reading) named in them
-// (and the people the reflection itself wrote into these messages' events, and the glossary's people)
-function scenesWith(p, text, more = [], m = null) {
-    const low = String(text || '').toLowerCase(), seen = new Map();
-    // (one person once, by whichever of their names: "Ivo" and "이보" are one, shown by their 위치 정보 name)
-    const add = (name0, names0) => { const who = personOf(p, m, name0); if (!who || isOwnerName(p, m, name0) || isOwnerName(p, m, who.name)) return; const k = who.key, name = who.name, names = peopleTwins(m, names0.filter(Boolean)); if (seen.has(k)) return; if (names.some(n => namedIn(low, n))) seen.set(k, name); };
-    // (a first name stands for a person only when it is theirs alone: never the owner's, "Ren" of "Ren Kim" for an owner
-    // Ren, nor one two people share)
-    // (counted by person: "Mara Lee" in PEOPLE AROUND and in the events is one)
-    const firsts = new Map();
-    for (const n of [...(p.around?.people || []).map(x => x.name), ...more]) { const f = nameKey(String(n).split(/\s+/)[0]), who = personOf(p, m, n)?.key; if (f && who && f !== nameKey(n)) firsts.set(f, new Set([...(firsts.get(f) || []), who])); }
-    const known = [...(p.where?.people || []).map(x => x.name), ...(p.contacts || []).map(x => x.name), ...(p.threads || []).map(t => t.with)].map(nameKey);
-    const first = n => { const f = String(n).split(/\s+/)[0]; return nameKey(f) !== nameKey(n) && firsts.get(nameKey(f))?.size === 1 && !known.includes(nameKey(f)) && !isOwnerName(p, m, f) ? f : ''; };
-    for (const x of p.around?.people || []) add(x.name, [x.name, first(x.name), ...arr(x.aka)]);
-    for (const x of p.where?.people || []) add(x.name, [x.name, ...arr(x.aka)]);
-    for (const x of p.contacts || []) add(x.name, [x.name]);
-    for (const x of p.threads || []) add(x.with, [x.with]);
-    for (const n of more) add(n, [n, first(n)]);
-    return [...seen.values()].slice(0, 6);
-}
 // what the reflection put on the phone from these messages, one line an event
 const putLine = e => { const ph = e?.phone && typeof e.phone === 'object' ? e.phone : {}; const bits = Object.entries(ph).filter(([, v]) => Array.isArray(v) && v.length).map(([k, v]) => (k === 'threads' ? `texts with ${v.map(t => t?.with).filter(Boolean).join(', ')}` : `${k} ${v.length}`)); return `- #${e?.at ?? '?'} ${line(e?.summary, 120)}${bits.length ? ` (${bits.join('; ')})` : ''}`; };
 // the reflection's own blocks, but the messages read before and changed since (they only match its events' ids)
 export const everydayParts = parts => arr(parts).filter(b => !String(b).startsWith('[MESSAGES READ BEFORE, NOW CHANGED]'));
-// the people the reflection put in these messages' events: whom texts, calls and contacts are with
-const eventPeople = raw => arr(raw?.events).flatMap(e => { const ph = e?.phone && typeof e.phone === 'object' ? e.phone : {}; return [...arr(ph.threads).map(x => x?.with), ...arr(ph.calls).map(x => x?.with), ...arr(ph.contacts).map(x => x?.name)]; }).map(n => line(n, 40)).filter(Boolean);
 async function askEveryday(parts, raw, p, rows, life = false, m = null) {
-    const text = rows.map(r => r.text).join('\n'), who = scenesWith(p, text, [...eventPeople(raw), ...(m ? glossaryPeople(m) : [])], m);
     const mine = everydayParts(parts).join('\n\n');
-    const blocks = [mine, `[PUT ON THE PHONE NOW]\n${arr(raw?.events).map(putLine).join('\n') || '(nothing)'}\nOwner-local window: ${p.now || "unknown"} to ${raw?.now || p.now || "unknown"}.`, who.length ? `[SCENES WITH]\n${who.join('\n')}` : ''].filter(Boolean).join('\n\n');
+    const blocks = [mine, `[PUT ON THE PHONE NOW]\n${arr(raw?.events).map(putLine).join('\n') || '(nothing)'}\nOwner-local window: ${p.now || "unknown"} to ${raw?.now || p.now || "unknown"}.`].filter(Boolean).join('\n\n');
     try { const got = jsonOf(await askDraft(blocks, { force: true, system: everydaySystem({ life }), maxTokens: 6000, effort: 'low' })); return got?.everyday && typeof got.everyday === 'object' ? got.everyday : null; }
     catch (err) { console.warn('[narrative-archive] everyday', err); return null; }
 }
@@ -1075,6 +1053,8 @@ const phoneForModel = p => ({
     diary: real(p.diary).slice(-2).map(x => ev(x, { date: x.date, title: x.title, text: x.text.slice(0, 300) })),
     // so a memo already there isn't recorded again
     voice: real(p.voice || []).slice(-3).map(x => ev(x, { title: x.title, time: x.time })),
+    // (the newest visits with their ids: the same visit told again is one of these, "already")
+    visits: real(p.visits || []).slice(-4).map(x => ev(x, { id: x.id, place: x.place, city: x.city, time: x.time })),
 });
 
 // 폰 만들기 전 위치 정보: for a phone not made yet, where everyone is (asked of the people the chat already names), the
@@ -2763,7 +2743,8 @@ function peopleMoved(p, list, text = '', m = null) {
     for (const c of arr(list).slice(0, 8)) {
         const name0 = line(c?.name, 60), tz = realTz(c?.tz), city = line(c?.city, 60);
         if (!name0 || !tz || !city || isOwnerName(p, m, name0) || NOT_A_PERSON.test(name0.trim())) continue;
-        if (!known.has(nameKey(name0)) && !(/^[\p{Lu}\p{Script=Hangul}]/u.test(name0) && peopleTwins(m, [name0]).some(x => namedIn(text, x)))) continue;
+        // (someone the phone doesn't know yet, as the model read them from the messages: a name, never a word like "someone")
+        if (!known.has(nameKey(name0)) && !/^[\p{Lu}\p{Script=Hangul}]/u.test(name0)) continue;
         const was = rowOf(name0), name = was?.name || name0;
         // (no row of their own and a name two rows share, "Ivo" of Ivo Kim and Ivo Park: neither is moved, and no third row)
         if (!was) { const ks = withTwins(m, [name0]).map(nameKey), rows = p?.where?.people || []; if (rows.filter(r => rowForms(m, r).some(k => ks.includes(k)) || samePerson(r.name, name0)).length > 1) continue; }

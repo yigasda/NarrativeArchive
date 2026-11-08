@@ -26,7 +26,7 @@ const stub = {
 const real = ['phonesync.js', 'phoneparse.js', 'phoneclock.js', 'phonemapcity.js', 'phonesynclife.js', 'phonesyncmoney.js', 'finance.js', 'phoneprofile.js', 'phonefood.js', 'phonescreen.js'];
 const map = { './extract.js': cleanMessageURL, ...stub, ...Object.fromEntries(real.map(f => [`./${f}`, href(f)])) };
 const rewrite = async f => (await readFile(new URL(f, SRC), 'utf8')).replace(/from '([^']+)'/g, (all, k) => `from '${map[k] || k}'`);
-map['./phonedata.js'] = encoded(await rewrite('phonedata.js') + '\nexport { mergePhone as __mergePhone, peopleMoved as __peopleMoved, scenesWith as __scenesWith, isOwnerName as __isOwnerName, glossAka as __glossAka, archiveClockBlock as __archiveClockBlock, trackerYear as __trackerYear };');
+map['./phonedata.js'] = encoded(await rewrite('phonedata.js') + '\nexport { mergePhone as __mergePhone, peopleMoved as __peopleMoved, isOwnerName as __isOwnerName, glossAka as __glossAka, archiveClockBlock as __archiveClockBlock, trackerYear as __trackerYear };');
 const data = await import(map['./phonedata.js']);
 const life = await import(encoded(await rewrite('phonelife.js')));
 
@@ -77,7 +77,6 @@ test('the owner by a name of theirs only: "Ren Kim" for an owner Ren is asked ab
     assert.deepEqual(globalThis.__where.at(-1).split('[PEOPLE]\n')[1].split('\n\n')[0].split('\n').sort(), ['Mara', 'Ren Kim']);
     assert.deepEqual(p.where.people.map(x => x.name).sort(), ['Ren', 'Ren Kim']);
     assert.ok(!arr0(p.where.people.find(x => x.name === 'Ren').aka).includes('Ren Kim'));
-    assert.deepEqual(data.__scenesWith(p, 'Ren met Ren Kim at the station.', [], mText()), ['Ren Kim']);
     assert.ok(data.__isOwnerName(p, null, 'ren') && !data.__isOwnerName(p, null, 'Ren Kim'));
 });
 const arr0 = v => (Array.isArray(v) ? v : []);
@@ -107,8 +106,6 @@ test('time choices: a 용어집 other form is searched for only when 용어집 m
         assert.ok(!(await of('장미를 한 송이 샀다.')).includes('Rose'));
         assert.ok((await of('Rose texted at noon.')).includes('Rose'));
         // (a row with both forms is still searched for by its own name: SCENES WITH too)
-        assert.deepEqual(data.__scenesWith(p, 'Rose came by.', [], mm), ['Rose']);
-        assert.deepEqual(data.__scenesWith(p, '장미를 샀다.', [], mm), []);
         globalThis.__glossaryPeople = ['Rose']; mm.glossaryPeople = ['Rose'];
         assert.ok((await of('장미가 문자를 보냈다.')).includes('Rose'));
     } finally { unGloss(); }
@@ -164,7 +161,6 @@ test('점검 수정 2: "Ren Kim" moving or read never moves the owner Ren nor ta
     try { await data.readWhere(mText(), p); } finally { delete globalThis.__whereAnswer; }
     assert.deepEqual(p.where.people.map(x => x.name).sort(), ['Mara', 'Ren']);
     assert.deepEqual(p.around.people.map(x => x.name), ['Mara']);
-    assert.deepEqual(data.__scenesWith(p, 'Ren Park met Mara.', [], mText()), ['Mara']);
     // a name two rows share
     p = plainPhone({ where: { at: 1, people: [row('Ren', 'Frankfurt', 'Europe/Berlin'), row('Ivo Kim', 'Paris', 'Europe/Paris', { aka: ['Ivo'] }), row('Ivo Park', 'Seoul', 'Asia/Seoul', { aka: ['Ivo'] })] } });
     assert.equal(data.__peopleMoved(p, [{ name: 'Ivo', city: 'Tokyo', tz: 'Asia/Tokyo' }], '', mText()), false);
@@ -190,14 +186,11 @@ test('점검 수정 2: 02-29 in a year with none is converted in the next leap y
 
 test('점검 3: a first name stands for a person only when it is theirs alone, never the owner\'s; an old phone\'s owner row by their full name is the owner\'s', () => {
     let p = plainPhone({ around: { people: [{ name: 'Ren Kim', about: 'x' }, { name: 'Mara Lee', about: 'y' }] }, where: { at: 1, people: [row('Ren', 'Frankfurt', 'Europe/Berlin')] } });
-    assert.deepEqual(data.__scenesWith(p, 'Ren went home alone.', [], mText()), []);
-    assert.deepEqual(data.__scenesWith(p, 'Mara called.', [], mText()), ['Mara Lee']);
     // an old reading: the owner's row as "Ren Park", "Ren" its aka
     for (const aka of [['Ren']]) {
         p = plainPhone({ where: { at: 1, people: [row('Ren Park', 'Seoul', 'Asia/Seoul', aka ? { aka } : {}), row('Mara', 'Paris', 'Europe/Paris')] } });
         assert.equal(data.ownerZone(p).tz, 'Asia/Seoul');
         assert.ok(data.__isOwnerName(p, null, 'Ren Park'));
-        assert.deepEqual(data.__scenesWith(p, 'Ren Park met Mara.', [], mText()), ['Mara']);
         const v = { place: 'Cafe', city: 'Seoul', time: '10-26 11:00', with: ['Ren Park', 'Mara'] };
         data.__mergePhone(p, { threads: [], posts: [], contacts: [], visits: [v] });
         assert.deepEqual(p.visits[0].with, ['Mara']);
@@ -219,11 +212,8 @@ test('점검 3: a place at 0 hours with a summer-time change near is a line; a c
 
 test('점검 4: one person in PEOPLE AROUND and in the events is one for their first name; an old owner row by the full name is shown once in 위치 정보', () => {
     let p = plainPhone({ around: { people: [{ name: 'Mara Lee', about: 'x' }] }, where: { at: 1, people: [row('Ren', 'Frankfurt', 'Europe/Berlin')] } });
-    assert.deepEqual(data.__scenesWith(p, 'Mara called.', ['Mara Lee'], mText()), ['Mara Lee']);
     // two people by that first name: neither by it alone
     p = plainPhone({ around: { people: [{ name: 'Mara Lee', about: 'x' }, { name: 'Mara Kim', about: 'y' }] }, where: { at: 1, people: [row('Ren', 'Frankfurt', 'Europe/Berlin')] } });
-    assert.deepEqual(data.__scenesWith(p, 'Mara called.', [], mText()), []);
-    assert.deepEqual(data.__scenesWith(p, 'Mara Kim called.', [], mText()), ['Mara Kim']);
     p = plainPhone({ where: { at: 1, people: [row('Ren Park', 'Seoul', 'Asia/Seoul', { aka: ['Ren'] }), row('Mara', 'Paris', 'Europe/Paris')] } });
     const info = data.placeInfo(p);
     assert.equal(info.owner.city, 'Seoul');
@@ -280,16 +270,22 @@ test('점검 6 (글 안 이름 · 용어집 · 다녀간 곳): what Korean puts 
     gloss([['Rose', '로즈']], ['Rose']);
     data.__glossAka(mText({ glossary: 'Rose = 로즈' }), p);
     assert.deepEqual(p.where.people[1].aka, ['로즈']);
-    assert.deepEqual(data.__scenesWith(p, '꽃집에서 장미 한 다발을 샀다', [], mText({ glossary: 'Rose = 로즈' })), []);
     unGloss();
     // living in Korea, in Tokyo now: Tokyo is a visit
     p = plainPhone({ lives: 'KR', where: { at: 1, people: [row('Ren', 'Tokyo', 'Asia/Tokyo', { lives: 'KR' })] } });
     data.__mergePhone(p, { threads: [], posts: [], contacts: [], visits: [{ place: '도쿄', city: '도쿄', time: '10-26 11:00', with: [] }] });
     assert.equal(p.visits.length, 1);
-    // the same cafe as "부산", "Busan" and no city, minutes apart: one visit; another city's same-named cafe: another
+    // (점검 8) the same cafe told again as "Busan": the one the model points at by its id; no city, minutes apart: the same as
+    // written; another city's same-named cafe: another
     p = plainPhone({ where: { at: 1, people: [row('Ren', 'Seoul', 'Asia/Seoul'), row('Mara Lee', 'Seoul', 'Asia/Seoul')] } });
-    for (const [city, time] of [['부산', '10-26 11:00'], ['Busan', '10-26 11:20'], ['', '10-26 11:30'], ['Paris', '10-26 11:40']]) data.__mergePhone(p, { threads: [], posts: [], contacts: [], visits: [{ place: '카페 루멘', city, time, with: ['Mara'] }] });
+    data.__mergePhone(p, { threads: [], posts: [], contacts: [], visits: [{ place: '카페 루멘', city: '부산', time: '10-26 11:00', with: ['Mara'] }] });
+    data.ensureIds(p);
+    const first = p.visits[0].id;
+    for (const [city, time, already] of [['Busan', '10-26 11:20', first], ['', '10-26 11:30', ''], ['Paris', '10-26 11:40', '']]) data.__mergePhone(p, { threads: [], posts: [], contacts: [], visits: [{ place: '카페 루멘', city, time, with: ['Mara'], ...(already ? { already } : {}) }] });
     assert.deepEqual(p.visits.map(x => x.city), ['부산', 'Paris']);
+    // (without the model's id, "Busan" is written another way: the code doesn't decide it is 부산)
+    data.__mergePhone(p, { threads: [], posts: [], contacts: [], visits: [{ place: '카페 루멘', city: 'Busan', time: '10-26 11:50', with: [] }] });
+    assert.equal(p.visits.length, 3);
     assert.deepEqual(p.visits[0].with, ['Mara Lee']);
 });
 

@@ -2090,8 +2090,6 @@ test('용어집 two forms of one name, everywhere a person is found: 위치 정�
         assert.ok(ivo.aka.includes('이보'), 'the older row has the other form now');
         assert.equal(c.p.threads.filter(t => ['Ivo', '이보'].includes(t.with)).length, 1, 'one thread for one person');
         assert.match(T.input, /On 이보's clock|On Ivo's clock/, 'the default screen 이보 found on the row Ivo');
-        const scenes = (globalThis.__everydayIn.at(-1) || '').split('[SCENES WITH]\n')[1]?.split('\n\n')[0].split('\n') || [];
-        assert.equal(scenes.filter(n => n === 'Ivo' || n === '이보').length, 1, 'SCENES WITH: once');
         assert.deepEqual(c.p.visits.map(x => [x.place, x.with]), [['Blue Note', ['Ivo']], ['Frankfurt Hauptbahnhof', []]], 'the home city alone, by a shorter form, is no visit; a place in it is');
     } finally { delete globalThis.__glossaryEntries; }
 });
@@ -2132,18 +2130,4 @@ test('a name in a text: as a name is written, never part of another word (Korean
     for (const t of ['Mara said hi', 'with Mara.', 'Mara가 왔다', 'Mara한테']) assert.ok(data.namedIn(t, 'Mara'), t);
     for (const t of ['Maradona', 'Samara', 'Mara2']) assert.ok(!data.namedIn(t, 'Mara'), t);
     assert.ok(data.namedIn('(Dr. K) came', 'Dr. K') && !data.namedIn('x', 'a'));
-});
-
-test('everyday SCENES WITH: a name only as a name; a 용어집 other form only when 용어집 marks it a person ("Rose = 장미" may be a flower)', async () => {
-    globalThis.__glossaryEntries = [{ src: 'Rose', ko: '장미' }, { src: 'Ivo', ko: '이보' }];
-    globalThis.__glossaryPeople = ['Ivo'];
-    try {
-        const chat = [say('Ren', 'start'), say('Mara', 'morning'), say('Ren', '장미가 활짝 핀 꽃집에서 장미꽃을 사 들고 이보네 집에 갔다. 이보다 늦게 도착했다.')];
-        const c = setup(chat);
-        c.p.where = { at: 1, people: [{ name: 'Ren', city: 'Frankfurt', tz: 'Europe/Berlin' }, { name: 'Rose', city: 'Frankfurt', tz: 'Europe/Berlin' }, { name: 'Ivo', city: 'Frankfurt', tz: 'Europe/Berlin' }] };
-        globalThis.__everydayIn = [];
-        await run(c.m, { now: '10-26 20:00', events: [{ id: 'visit', at: 2, quote: '이보네 집에 갔다', date: '10-26', time: '19:00', summary: 'At Ivo\'s', phone: { notes: [{ title: 'x', text: 'y', time: '10-26 19:00' }] } }] });
-        const scenes = (globalThis.__everydayIn.at(-1) || '').split('[SCENES WITH]\n')[1]?.split('\n\n')[0].split('\n') || [];
-        assert.deepEqual(scenes, ['Ivo']);
-    } finally { delete globalThis.__glossaryEntries; delete globalThis.__glossaryPeople; }
 });
