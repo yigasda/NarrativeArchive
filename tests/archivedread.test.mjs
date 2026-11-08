@@ -1299,3 +1299,21 @@ test('recordsCore: a scene named in "scene" (no "id") is that scene; a record po
     assert.deepEqual(ph.visits[0].with, ['Ren']);
     assert.deepEqual(ph.threads[0].members, ['Ivo']);
 });
+
+test('a record about a story matter rests on words of the messages ("said"): found, it goes in; not found, it stays out and is shown', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'the boiler broke, so I am at the hotel this week')]);
+    c.p.now = '10-26 18:00'; c.p.year = 2026;
+    await run(c.m, { now: '10-26 22:00', story: [{ matter: 'boiler works', stands: 'at the hotel this week', at: 2 }], records: [
+        { type: 'scene', id: 'hotel', at: 2, quote: 'the boiler broke', date: '10-26', time: '20:00' },
+        { type: 'search', at: 2, scene: 'hotel', matter: 'boiler works', said: 'the boiler broke', q: 'boiler repair how long', time: '10-26 20:10' }],
+    everyday: {
+        notes: [{ title: 'Boiler', text: 'technician Saturday 10:00', time: '10-26 21:00', matter: 'boiler works', said: 'the technician comes on Saturday' }],
+        photos: [{ caption: 'sunset', time: '10-26 18:30' }] } });
+    assert.deepEqual(c.p.searches.map(x => x.q), ['boiler repair how long']);
+    assert.deepEqual(c.p.notes, []);
+    assert.deepEqual(c.p.photos.map(x => x.caption), ['sunset']);
+    assert.deepEqual(c.p.syncLast.unsaid, [{ type: 'note', matter: 'boiler works', what: 'technician Saturday 10:00', said: 'the technician comes on Saturday' }]);
+    // (the two fields are the answer's only)
+    assert.ok(c.p.searches.every(x => !('matter' in x) && !('said' in x)));
+    assert.match(T.sys, /  4\. Every record about a matter names it in "matter" and copies in "said" a few exact words of the message it rests on\. No words to copy: no record\./);
+});

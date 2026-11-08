@@ -366,6 +366,7 @@ After ${archiveOnly ? '"now"' : '"clock" and "now"'}, resolve "story"; only then
   1. List each matter the story is following in NEW MESSAGES and ARCHIVE BEFORE (a fight, a debt, a move, a parcel, a job, a plan).
   2. For each, find the last thing the messages say about it. That is where it stands.
   3. Every record about it stops there: feelings about it, talk about it, and what the messages already say. Nothing past it.
+  4. Every record about a matter names it in "matter" and copies in "said" a few exact words of the message it rests on. No words to copy: no record.
   WARNING: The natural next step ≠ told. Going to sort it out, a document for it, a call about it, the day it ends, why it happened, who pays: none of these unless the messages say so.
 - The owner's everyday life outside these matters is free, its future too.
 
@@ -424,7 +425,7 @@ JSON (one object, nothing before or after it)
   "story": [{ "matter", "stands", "at" }],
   "records": [{ only the fields it needs:
     "type": "scene" | "contact" | "text" | "call" | "photo" | "note" | "search" | "calendar" | "post" | "profile" | "mail" | "diary" | "visit" | "voice"${lifeTypes},
-    "at": its message number (every record has one), "scene": its scene's id or "",${life ? ' "already": a LIFE NOW id or "",' : ''}
+    "at": its message number (every record has one), "scene": its scene's id or "", "matter": its "story" matter or "", "said": exact words it rests on (with "matter"),${life ? ' "already": a LIFE NOW id or "",' : ''}
     scene: "id" (from EVENTS ON THE PHONE or a new tag like "berlin-flight"), "quote": a few exact words of its message, "date", "time": "HH:MM", "summary"
     contact: "name", "saved"
     text: "with": the person or the group chat's name (always the same), "group", "members": [all but the owner, as in the contacts], "messages": [{ "from": "me" or the sender, "text", "ko", "time", "deleted" }], "draft": an unsent { "text", "ko", "time" }
@@ -443,7 +444,7 @@ JSON (one object, nothing before or after it)
     timer: "label", "ko", "sec"
     file: "name", "kind", "folder", "size": KB, "time", "from", "pages", "length", "tag", "private", "preview": its first page in a line, "look": sea | city | night | food | hills | pet | sunset | mountain | snow | flower | interior | concert | paper | screenshot | map | ticket | receipt | invoice | cv | letter | certificate | recipe | medical | menu | contract | notes | voice | music, "ko", "opened", "deleted"` : ''}
   }],
-  "everyday": { the owner's own life, each app a list (an empty one when nothing), each item with "scene" when it answers one:
+  "everyday": { the owner's own life, each app a list (an empty one when nothing), each item with "scene" when it answers one, and "matter" and "said" when it is about a matter:
     "texts": [{ "with", "group", "members", "messages": [{ "from", "text", "ko", "time" }] }], "calls": [{ "with", "kind", "time", "min" }],
     "photos": [{ "caption", "ko", "time", "mood" }], "searches": [{ "q", "ko", "time" }], "notes": [{ "title", "kt", "text", "ko", "time" }],
     "mails": [{ "sender", "subject", "ks", "text", "ko", "time", "unread" }], "posts": [{ "text", "ko", "photo", "pko", "time", "likes", "comments" }],
@@ -724,7 +725,7 @@ function everydayOn(raw, rows, textAt) {
 // (else the one scene of its message, else one made for that message); a record of the owner's own life goes in
 // "everyday" (재구성: marked, on the round's last event, so many a day). textOf: a message's text, for a made event's quote
 const REC_KEY = { contact: 'contacts', text: 'threads', call: 'calls', photo: 'photos', note: 'notes', search: 'searches', calendar: 'events', post: 'posts', mail: 'mails', diary: 'diary', visit: 'visits', voice: 'voice', alarm: 'alarms', timer: 'timers', file: 'files', health: 'health' };
-const REC_META = ['type', 'at', 'from', 'scene', 'already', 'made', 'kind', 'sender'];
+const REC_META = ['type', 'at', 'from', 'scene', 'already', 'made', 'kind', 'sender', 'matter', 'said'];
 // an "everyday" item as it is, without what has no time (a text's texts one by one; the diary and the calendar by their
 // date; a contact, an alarm, a timer or a file needs none); null when nothing is left
 const hasTime = y => !!String(y?.time ?? '').trim();
@@ -752,7 +753,9 @@ export function homeScreens(raw, away, usual) {
 // the answer's "story" (the matters it read and where each stands): kept for a look, never used to judge a record
 const storyOf = a => { const xs = arr(a?.story).filter(x => x && typeof x === 'object').map(x => ({ matter: line(x.matter, 80), stands: line(x.stands, 160), at: x.at ?? '' })).filter(x => x.matter).slice(0, 20); return xs.length ? xs : null; };
 export const recordCount = (recs, ed) => { const own = ed && typeof ed === 'object' && !Array.isArray(ed) ? Object.keys(EVERYDAY_TYPE).flatMap(k => arr(ed[k]).map(x => ({ ...x, from: 'life' }))) : [], xs = [...arr(recs), ...own].filter(r => r && typeof r === 'object'), untimed = untimedLife(ed); return { scenes: xs.filter(r => r.type === 'scene').length, story: xs.filter(r => r.type !== 'scene' && r.from !== 'life').length, life: xs.filter(r => r.type !== 'scene' && r.from === 'life').length, ...(untimed ? { untimed } : {}) }; };
-export function recordsCore(raw, textOf = () => '') {
+// saidOk: whether a record's "said" is in the messages or archive it read; a record about a story matter whose words aren't
+// there is left out, kept in "_unsaid" for a look (the model's own claim checked, nothing judged)
+export function recordsCore(raw, textOf = () => '', saidOk = null) {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw) || !Array.isArray(raw.records)) return raw;
     // (the owner's own life comes in "everyday", a list for each app: a life record each, as the old answer's "from": "life")
     const { records, everyday: own, ...rest } = raw, ed = own && typeof own === 'object' && !Array.isArray(own) ? own : {};
@@ -762,7 +765,11 @@ export function recordsCore(raw, textOf = () => '') {
     const obj = x => x && typeof x === 'object' && !Array.isArray(x);
     const health = arr(rest.health).filter(obj).map(x => ({ ...x, type: 'health', from: 'life' })), usual = obj(rest.usual) ? [{ ...rest.usual, type: 'usual' }] : [];
     delete rest.health; delete rest.usual; delete rest.story;
-    const recs = [...records.filter(r => r && typeof r === 'object' && !Array.isArray(r)), ...lives, ...health, ...usual];
+    const all = [...records.filter(r => r && typeof r === 'object' && !Array.isArray(r)), ...lives, ...health, ...usual];
+    const about = r => r.type !== 'scene' && typeof r.matter === 'string' && r.matter.trim();
+    const unsaid = saidOk ? all.filter(r => about(r) && !saidOk(String(r.said ?? '').trim())) : [];
+    const recs = all.filter(r => !unsaid.includes(r));
+    const gist = r => line(r.text ?? r.messages?.map?.(m => m?.text).join(' / ') ?? r.q ?? r.title ?? r.caption ?? r.subject ?? r.place ?? r.with ?? '', 60);
     const events = [], byId = new Map(), made = new Map(), everyday = {}, days = [];
     for (const r of recs) if (r.type === 'scene') {
         // (its name in "id", or in "scene" as the records' shared field has it)
@@ -826,7 +833,7 @@ export function recordsCore(raw, textOf = () => '') {
     // (in the apps' own names, as the list of reflected events shows it: "메모 · 문자")
     const named = k => APP_NAME[k] || { health: '건강', usual: '건강', alarms: '시계', timers: '시계', files: '파일', profile: 'SNS' }[k] || k;
     for (const e of events) if (!e.summary) e.summary = [...new Set(Object.keys(e.phone).map(named))].join(' · ') || e.id;
-    return { ...rest, events, ...(Object.keys(everyday).length ? { everyday } : {}), ...(days.length ? { days: [...arr(rest.days), ...days] } : {}) };
+    return { ...rest, events, ...(Object.keys(everyday).length ? { everyday } : {}), ...(days.length ? { days: [...arr(rest.days), ...days] } : {}), ...(unsaid.length ? { _unsaid: unsaid.map(r => ({ type: r.type, matter: line(r.matter, 80), what: gist(r), said: line(r.said, 120) })) } : {}) };
 }
 // ---- 일상: the owner's ordinary life in the hours these messages cover comes in the reflection's own answer, its top-level
 // "everyday" (3.179.1~, as the money step writes story and everyday payments together; 3.171.9–3.179.0 asked it apart)
@@ -2005,7 +2012,11 @@ async function updatePhone(m, owner) {
         const out = await askDraft(input, { force: true, system: coreSystem({ life: !!life, weather: askWeather, tracker: !!tracker, zone: askZone, archiveOnly, wallet: !!money, split }), maxTokens: 16000, effort: 'low' });
         // (the everyday life of these hours comes in the same answer, its top-level "everyday")
         const coreText = new Map(round.rows.map(r => [r.index, r.text]));
-        const answer0 = jsonOf(out), core0 = recordsCore(answer0, i => coreText.get(i));
+        // (a record about a story matter rests on words of these messages or the archive given: copied, so found there)
+        const saidPool = [...round.rows.map(r => r.text), ...evidence.map(x => x.text), ...before];
+        const answer0 = jsonOf(out), core0 = recordsCore(answer0, i => coreText.get(i), w => !!w && saidPool.some(t => quoted(w, t || '')));
+        const unsaid = arr(core0?._unsaid);
+        if (core0 && typeof core0 === 'object') delete core0._unsaid;
         // (how many scenes, story and life records the answer had: for checking the story isn't crowded out)
         const recCount = Array.isArray(answer0?.records) ? recordCount(answer0.records, answer0.everyday) : null;
         // (no app only Korea has on a phone whose owner lives elsewhere, as the screen time's fill)
@@ -2149,7 +2160,7 @@ async function updatePhone(m, owner) {
         if (p.money) migrateBank(m, p);
         const id = rid;
         s.rounds = [...(s.rounds || []).slice(-19), id];
-        p.syncLast = { checked: inRound.size + archIn.length, remaining: unreadCount(s, rows) + archivedUnread(s, sections, rows, chatRows()).length, apps: [...apps], failed: [...Object.entries(failed).map(([at, why]) => ({ at: Number(at), why, skipped: s.failed[at]?.tries >= 2 })), ...loose.map(why => ({ at: null, why }))], changes, notes, ...(recCount ? { records: recCount, ...(storyOf(answer0) ? { story: storyOf(answer0) } : {}) } : {}), at: Date.now() };
+        p.syncLast = { checked: inRound.size + archIn.length, remaining: unreadCount(s, rows) + archivedUnread(s, sections, rows, chatRows()).length, apps: [...apps], failed: [...Object.entries(failed).map(([at, why]) => ({ at: Number(at), why, skipped: s.failed[at]?.tries >= 2 })), ...loose.map(why => ({ at: null, why }))], changes, notes, ...(recCount ? { records: recCount, ...(storyOf(answer0) ? { story: storyOf(answer0) } : {}), ...(unsaid.length ? { unsaid } : {}) } : {}), at: Date.now() };
         ensureIds(p);
         p.at = Date.now();
         pruneDropped(s, phoneItems(p));
