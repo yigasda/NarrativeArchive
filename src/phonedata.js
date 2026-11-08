@@ -405,7 +405,7 @@ HEALTH
 SCREEN TIME
 - "screen" on each "health" record: that day's phone use, from their character, not their polite profile; it may show habits they would never admit, for instance a game they can't put down, texting all night, barely touching the phone.
 - Each day follows what happened and how they felt, in their own habits (LIFE NOW's usual).
-- Each day's "apps": most of their everyday apps from LIFE NOW's usual and a few of their now-and-then ones that day called for, for instance the weather on a rainy day, the bank on payday, maps and photos on a day out; more than 10 apps, like a real phone's day.
+- Each day's "apps": as many as this owner really uses, from LIFE NOW's usual and what that day called for, for instance the weather on a rainy day, the bank on payday, maps on a day out. The apps differ from day to day, so over the days many kinds show up (chat, social, video, music, game, work or study, reading or news, shopping, money, maps or travel, health).
 - A new app they start using, of any kind (chat, social, video, music, game, work or study, reading or news, shopping, money, maps or travel, health), when the story or their life gives a reason, for instance a translator for a trip: a "usual" record with it in "screen"."add".
 - It agrees with the other apps that day: hours of texts are hours in the chat app; the last text or search is no later than "late".
 - Mostly the apps people use where the owner lives, by their real names; another country's app only when the story shows them using it.
