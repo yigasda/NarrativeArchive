@@ -34,12 +34,12 @@ const iconOf = (name, kind) => appIcon(appOf(name)?.id || '', name, kind);
 function chart(days, avg, sel, top3) {
     const W = 326, H = 150, AXW = 30, gap = 20, n = days.length, bw = (W - AXW - gap * 6) / 7;
     const max = Math.max(60, ...days.map(d => d.total), avg || 0);
-    // three or four hour marks at most, however long the days (2h · 4h · 6h, or 6h · 12h · 18h), never one every two hours up to 20h
-    const step = [60, 120, 180, 240, 360, 480, 720].find(m => Math.ceil(max / m) <= 3) || 720, top = Math.ceil(max / step) * step, sc = H / top;
+    // always four hour marks, 0 and three steps (0 · 2h · 4h · 6h, or 0 · 8h · 16h · 24h), never one every two hours up to 20h
+    const step = [60, 120, 180, 240, 360, 480].find(m => m * 3 >= max) || 480, top = step * 3, sc = H / top;
     let s = '';
-    // an hour mark too close to the average's label gives way to it
+    // every hour mark keeps its number; the average's label steps aside from one it would sit on
     const ay = avg ? H - avg * sc : null;
-    for (let t = 0; t <= top; t += step) { const y = H - t * sc; s += `<line x1="0" x2="${W - AXW + 4}" y1="${y}" y2="${y}" stroke="${t ? '#eef0f3' : '#e3e6ea'}"/>${ay !== null && Math.abs(y - ay) < 11 ? '' : `<text x="${W - AXW + 10}" y="${y + 3.5}" class="sc_axl">${t / 60}h</text>`}`; }
+    for (let t = 0; t <= top; t += step) { const y = H - t * sc; s += `<line x1="0" x2="${W - AXW + 4}" y1="${y}" y2="${y}" stroke="${t ? '#eef0f3' : '#e3e6ea'}"/><text x="${W - AXW + 10}" y="${y + 3.5}" class="sc_axl">${t / 60}h</text>`; }
     days.forEach((d, i) => {
         const x = i * (bw + gap), th = d.total * sc, r = Math.min(5, th, bw / 2), full = sel === i;
         let y = H, segs = '';
@@ -52,7 +52,7 @@ function chart(days, avg, sel, top3) {
         if (on) s += `<rect x="${cx - 15}" y="${H + 6}" width="30" height="19" rx="9.5" fill="${ACC}"/><line x1="${cx - 8}" x2="${cx + 8}" y1="${H + 6.6}" y2="${H + 6.6}" stroke="rgba(255,255,255,.3)"/>`;
         s += `<text x="${cx}" y="${H + 19.5}" text-anchor="middle" class="sc_xl${on ? ' on' : d.today ? ' td' : ''}">${d.today ? '오늘' : Number(d.date.slice(3))}</text>`;
     });
-    if (avg) { const y = H - avg * sc; s += `<line x1="0" x2="${W - AXW + 4}" y1="${y}" y2="${y}" stroke="${AVG}" stroke-width="1.3" stroke-dasharray="3 3"/><text x="${W - AXW + 10}" y="${y + 3.5}" class="sc_axl sc_avg">평균</text>`; }
+    if (avg) { const y = H - avg * sc; s += `<line x1="0" x2="${W - AXW + 4}" y1="${y}" y2="${y}" stroke="${AVG}" stroke-width="1.3" stroke-dasharray="3 3"/><text x="${W - AXW + 10}" y="${(t => (Math.abs(y - t) < 11 ? (y < t ? t - 12 : t + 12) : y))(H - Math.round((H - y) / (step * sc)) * step * sc) + 3.5}" class="sc_axl sc_avg">평균</text>`; }
     // a tap target over each column (a real button, so the host theme's button rules are kept off by --axbg)
     const hits = days.map((d, i) => `<button type="button" class="sc_hit" style="left: ${(i * (bw + gap) - gap / 2) / W * 100}%; width: ${(bw + gap) / W * 100}%" data-go="stime" data-i="${sel === i ? '' : d.date}" aria-label="${esc(d.today ? '오늘' : d.date)}"></button>`).join('');
     return `<div class="sc_chart"><svg viewBox="0 0 ${W} ${H + 28}" width="100%" aria-hidden="true"><defs><pattern id="sc_hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="2.2" height="5" fill="rgba(255,255,255,.45)"/></pattern></defs>${s}</svg>${hits}</div>`;
