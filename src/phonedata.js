@@ -368,8 +368,7 @@ THE OWNER'S LIFE
 - The owner's ordinary life in these hours and each day the story skips, from their habits: each answer fills most lists as these hours call for, for example a photo of lunch, a search, a note, a mail, a post, texts and calls by the person, a voice memo, and a diary entry when these hours end the day. A list with nothing in these hours stays empty.
 - How many: about ${LIFE_A_DAY} life records for each waking day, about one an hour; each day the story skips gets its own (at most ${LIFE_MAX} in all${life ? ', "health" not counted' : ''}), dated on that day. Routines recur.
 - Every app tells the same day, the way this owner lives it: late-night texts go with ${life ? 'a late "late" and short sleep' : 'a late night'}. The owner does nothing on the phone while asleep or busy in a scene; others' texts and calls still come in.
-- NEVER make up the progress or outcome of anything the story is following before the story tells it. Talk and feelings about it are fine, for instance a text after a fight, and so are their own life's small happenings; nothing about the story's people that a later message could contradict.
-- A life record that answers a scene in these messages has that scene's id in "scene".
+- First tell apart what a record may take from the story and what it may not. A record taken from the story may write anything about it, for instance a text after a fight, a search about what just happened, a photo of the evening, a note to remember it; but NEVER a new fact, event, later plan, promise or deadline the story hasn't mentioned.
 - People: the story's, PEOPLE AROUND (wherever they would turn up; never someone the owner isn't in touch with now), and made-up people of their own life, named for where they live; never a new relative or partner. Relationship words only as the story uses them. Someone new texted or called gets a "contact".
 
 THE APPS
@@ -411,7 +410,7 @@ JSON (one object, nothing before or after it)
   "statusCity": whose clock the newest status line here shows (the app can't place its scene): a city or person in OWNER'S CLOCK, "owner" for the owner's own, another city as { "city": in English, "tz" }, or "" when the messages don't say,` : ''}
   "records": [{ only the fields it needs:
     "type": "scene" | "contact" | "text" | "call" | "photo" | "note" | "search" | "calendar" | "post" | "profile" | "mail" | "diary" | "visit" | "voice"${lifeTypes},
-    "at": its message number (a life record: the message whose hours it falls in), "from": "story" | "life", "scene": its scene's id or "",${life ? ' "already": a LIFE NOW id or "",' : ''} "time": "MM-DD HH:MM",
+    "at": its message number (a life record: the message whose hours it falls in), "from": "story" | "life", "scene": its scene's id (a life record too, when it answers one) or "",${life ? ' "already": a LIFE NOW id or "",' : ''} "time": "MM-DD HH:MM",
     scene: "id" (from EVENTS ON THE PHONE or a new tag like "berlin-flight"), "quote": a few exact words of its message, "date", "time": "HH:MM", "summary"
     contact: "name", "saved"
     text: "with": the person or the group chat's name (always the same), "group", "members": [all but the owner, as in the contacts], "messages": [{ "from": "me" or the sender, "text", "ko", "time", "deleted" }], "draft": an unsent { "text", "ko", "time" }
