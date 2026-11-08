@@ -769,7 +769,7 @@ test('일상 comes in the reflection\'s own answer (no request of its own); who 
     // (점검 8: no list of names the code found in the text: the model reads the messages)
     assert.ok(!got.includes('[SCENES WITH]') && !got.includes('[PUT ON THE PHONE NOW]'));
     assert.ok(!sys.includes('SCENES WITH') && !sys.includes('PUT ON THE PHONE NOW'));
-    assert.match(sys, /Each person the owner knows \\(not a stranger\\) they had a scene with and then parted from: at least one text between the two later these hours/);
+    assert.match(sys, /Each person the owner knows \(not a stranger\) they had a scene with and then parted from: at least one text between the two later these hours/);
     assert.match(sys, /The phone is lived in even when the story says nothing about it\./);
     assert.match(sys, /What the messages already say may come up again\./);
     assert.match(sys, /PEOPLE AROUND turn up wherever they would on a real phone, whether or not they are in the scenes\./);
