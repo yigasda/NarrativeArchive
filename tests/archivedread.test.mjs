@@ -1260,3 +1260,11 @@ test('recordsCore: a text record\'s times alone take its own day, not its scene\
     ] });
     assert.deepEqual(got.everyday.threads[0].messages.map(m => m.time), ['11-04 17:35', '11-04 17:40', '11-05 08:00']);
 });
+
+test('반영 본체 gets the orders and tickets (no money), so a mail or text about one agrees with the phone', () => {
+    const got = data.ordersBlock({ orders: [{ id: 'o1', shop: 'Wohnwerk', item: 'wool rug 160x230', price: 189, status: 'cancelled', time: '10-28 20:00' }], passes: [{ id: 't1', kind: 'hotel', by: 'Hotel Lio', no: 'HB-2231', date: '11-02', until: '11-08', status: 'booked' }] });
+    assert.equal(got, '[ORDERS AND TICKETS]\n{"orders":[{"shop":"Wohnwerk","item":"wool rug 160x230","status":"cancelled","time":"10-28 20:00"}],"tickets":[{"kind":"hotel","by":"Hotel Lio","no":"HB-2231","date":"11-02","until":"11-08","status":"booked"}]}');
+    assert.equal(data.ordersBlock({ orders: [], passes: [] }), '');
+    assert.match(data.coreSystem({ wallet: true }), /- ORDERS AND TICKETS \(sometimes\): the owner's orders and tickets as the phone has them; a record about one keeps its item, dates and status\./);
+    assert.ok(!data.coreSystem().includes('ORDERS AND TICKETS'));
+});

@@ -50,6 +50,7 @@
     - run75 뒤: 옛 최종 에브리데이(3.179.1)의 새 사실 줄을 글자 그대로 THE OWNER'S LIFE에 되돌림("Anything a later message could contradict is a new fact: … a task and its deadline, a thing done, a plan for later … No new facts, events, plans or secrets."). "everyday는 이야기가 따라가는 일 밖의 삶" 줄은 뺌(run75에서 안 먹힘).
     - 양도 옛 최종대로: 몸통 줄("it fills most lists as these hours call for, for example …"), 장면 사람과 문자 줄("at least one text between the two later these hours"), JSON everyday는 앱마다 항목 칸이 보이게(빈 [] 대신). 약 +150토큰.
     - run76 뒤: ONE TEST 칸을 빼고 CLOCK FIRST 바로 아래에 THE STORY IS CANON 칸("The story is canon. Never get ahead of anything tied to its events. Make up no future the story hasn't stated; what it has stated, only as far as it states. No exceptions. A made-up future belongs only to everyday life outside the story."). 폰 만들기의 ONE TEST는 그대로.
+    - 본체 입력에 `[ORDERS AND TICKETS]`(`ordersBlock`): 돈 단계의 MONEY NOW 중 주문(가게 · 상품 · 옵션 · 선물 · 보낸 사람 · 상태 · 시각)과 티켓(종류 · 곳 · 출발/도착 · 번호 · 날짜 · until · 상태)만, 돈 없이. 메일 · 문자 · 일정이 폰의 주문 · 예약과 맞게(run76: 러그 이름, 스카프 배송일, 체크아웃 날짜가 어긋남). YOU GET 한 줄(+약 25토큰), 입력은 주문 · 티켓 수만큼.
       - 지시문: 본체 15,553자(생활 앱 19,427, +날씨 20,484).
     - 3.180~: **반영 본체도 돈 단계처럼 기록 목록 하나(`records`)로 써요**(`coreRecordsSystem`, `AI_SYS` 칸: READING THE STORY · THE OWNER'S LIFE · KEEPING IN STEP · TIME PASSING · WHICH TYPE).
       - 기록마다 `type`(scene · contact · text · call · photo · note · search · calendar · post · profile · mail · diary · visit · voice, 생활 앱 폰은 alarm · timer · file · health · usual) · `at` · `from`("story" | "life") · `scene`(이야기 기록의 장면 id) · `made`.

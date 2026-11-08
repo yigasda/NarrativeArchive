@@ -352,7 +352,8 @@ YOU GET
 - Background only (sometimes): ARCHIVE BEFORE (the section just before), STORY NOW, WORLD, OWNER PROFILE, STORY YEAR, and DAYS (the days ahead with weekdays: "on Friday" is the next one there).
 - The phone: PHONE NOW (its "now": when it was last read), EVENTS ON THE PHONE (its latest scenes, with ids)${life ? ', LIFE NOW (alarms, files and health days, with ids)' : ''}, and sometimes MESSAGES READ BEFORE, NOW CHANGED (edited messages, with the scenes they gave).${weather && tracker ? `
 - WEATHER NOW: the date, time, place and weather from the chat's last status line (a scene the owner isn't in: its place and weather only).` : ''}
-- OWNER'S CLOCK (sometimes): where the owner is, their time now, and the hours to other cities and people.
+- OWNER'S CLOCK (sometimes): where the owner is, their time now, and the hours to other cities and people.${wallet ? `
+- ORDERS AND TICKETS (sometimes): the owner's orders and tickets as the phone has them; a record about one keeps its item, dates and status.` : ''}
 - PEOPLE AROUND (sometimes): people in the owner's life and where things stand now.
 - OWNER, and OWNER DOESN'T KNOW (sometimes): nothing on the phone may show it.
 
@@ -810,6 +811,13 @@ export function recordsCore(raw, textOf = () => '') {
 }
 // ---- 일상: the owner's ordinary life in the hours these messages cover comes in the reflection's own answer, its top-level
 // "everyday" (3.179.1~, as the money step writes story and everyday payments together; 3.171.9–3.179.0 asked it apart)
+// the owner's orders and tickets for 반영 본체 (the money step has them all): what a mail, text or calendar about one says
+// agrees with the phone (its item, its dates, its status); no money
+export const ordersBlock = money => {
+    const orders = arr(money?.orders).map(o => ({ shop: o.shop, item: o.item, ...(o.option ? { option: o.option } : {}), ...(o.gift ? { gift: o.gift } : {}), ...(o.sender ? { sender: o.sender } : {}), status: o.status, time: o.time }));
+    const tickets = arr(money?.passes).map(x => ({ kind: x.kind, by: x.by, ...(x.from ? { from: x.from } : {}), ...(x.to ? { to: x.to } : {}), ...(x.no ? { no: x.no } : {}), date: x.date, ...(x.until ? { until: x.until } : {}), status: x.status }));
+    return orders.length || tickets.length ? `[ORDERS AND TICKETS]\n${JSON.stringify({ ...(orders.length ? { orders } : {}), ...(tickets.length ? { tickets } : {}) })}` : '';
+};
 // the people closest to the owner (위치 판독's "around"): who they are to the owner and how it stands, in the cards' own words
 export const aroundBlock = p => (p?.around?.people?.length ? `[PEOPLE AROUND]\n${p.around.people.map(x => `- ${x.name}${x.aka?.length ? ` (${x.aka.join(', ')})` : ''}: ${x.about}`).join('\n')}` : '');
 // 반영's own-life records (재구성, "everyday": true): so many a day in each app, by the person (or group chat) for texts and
@@ -1963,6 +1971,7 @@ async function updatePhone(m, owner) {
             reread.size ? `[MESSAGES READ BEFORE, NOW CHANGED]\n${[...reread].map(([at, evs]) => `- #${at}: ${evs.length ? evs.map(e => `${e.id} (${e.summary})`).join('; ') : 'nothing on the phone yet'}`).join('\n')}` : '',
             `[PHONE NOW]\n${JSON.stringify(phoneForModel(p))}`,
             !split && money ? `[MONEY NOW]\n${JSON.stringify(money)}` : '', !split && invest ? `[INVESTMENTS NOW]\n${JSON.stringify(invest)}` : '',
+            split && money ? ordersBlock(money) : '',
             !split && money && p.delivery ? `[DELIVERY SHOPS]\n${(p.delivery.shops || []).map(x => x.name).join('\n') || '(none yet)'}${p.delivery.cart?.items?.length ? `\nCART (in the basket, not ordered): ${p.delivery.cart.shop}: ${p.delivery.cart.items.map(x => `${x.name} ×${x.qty}`).join(', ')}` : ''}` : '',
             life ? `[LIFE NOW]\n${JSON.stringify(life)}` : '', askWeather && tracker ? `[WEATHER NOW]\n${JSON.stringify(trackShown)}` : '', clock,
             !split && (money || invest) && p.wealthPlan ? `[WEALTH]\n${JSON.stringify({ currency: p.wealthPlan.currency, deposits: p.wealthPlan.deposits, investments: p.wealthPlan.investments, basis: p.wealthPlan.basis })}` : '',
