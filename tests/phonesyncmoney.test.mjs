@@ -683,6 +683,8 @@ test('점검 9-4 (records): the money step\'s one list goes in the lists the mon
     assert.deepEqual(mo.quotes.map(q => [q.value, q.source]), [[130, 'guess'], [131, 'story']]);
     assert.deepEqual([mo.deliveries[0].for, mo.deliveries[0].time], [2, '10-26 19:30']);
     assert.equal(mo.newCard.exp, '10/29');
+    // (a ticket takes only a ticket's status)
+    assert.deepEqual(recordsMoney([{ type: 'ticket', by: 'Inn', status: 'delivered' }, { type: 'ticket', by: 'Inn', status: 'Used' }]).passes.map(x => x.status), ['', 'used']);
 });
 
 test('점검 9-4: a debt of the household is theirs; a ticket\'s last day and a membership; a parcel sent to the owner; a value the story says changed is the new one, a mention of it as it was keeps the story\'s', () => {

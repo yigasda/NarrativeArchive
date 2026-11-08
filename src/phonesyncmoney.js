@@ -180,7 +180,8 @@ export function recordsMoney(recs) {
         else if (type === 'regular') add('regulars', x);
         // (who pays: the owner, someone else, or the courier at the door; a parcel sent to the owner is never theirs to pay)
         else if (type === 'order') { const { amount, ...o } = x; add('orders', { ...o, price: amount ?? o.price ?? null, ...(o.sender || ['someone else', 'on delivery'].includes(String(o.payer || '').toLowerCase()) ? { paid: false } : {}) }); }
-        else if (type === 'ticket') add('passes', x);
+        // (a ticket's status is one of its own: an order's "delivered" on it is none)
+        else if (type === 'ticket') { const st = String(x.status ?? '').toLowerCase().trim(); add('passes', { ...x, status: ['booked', 'used', 'cancelled'].includes(st) ? st : '' }); }
         // (an asset's "date" is when the owner got it)
         else if (type === 'asset') { const { amount, amountFrom, date, ...o } = x; add('assets', { ...o, value: amount ?? o.value ?? null, ...(amountFrom ? { valueFrom: amountFrom } : {}), ...(o.since || date ? { since: o.since || date } : {}) }); }
         else if (type === 'debt') add('debts', x);
