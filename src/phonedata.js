@@ -365,21 +365,22 @@ THE STORY
 
 THE OWNER'S LIFE
 - The phone is lived in every waking hour, shaped by their job or school, habits, tastes, moods, money, city and relationships. The owner may reach out; others bring their own lives (news, questions, favours); a group chat may go on without them.
-- About ${LIFE_A_DAY} life records a waking day, about one an hour; days the story skips were lived too (at most ${LIFE_MAX} in all${life ? ', "health" not counted' : ''}), each dated on its day. Not every app every day; routines recur.
+- The owner's ordinary life in these hours and each day the story skips, from their habits: each answer fills most lists as these hours call for, for example a photo of lunch, a search, a note, a mail, a post, texts and calls by the person, a voice memo, and a diary entry when these hours end the day. A list with nothing in these hours stays empty.
+- How many: about ${LIFE_A_DAY} life records for each waking day, about one an hour; each day the story skips gets its own (at most ${LIFE_MAX} in all${life ? ', "health" not counted' : ''}), dated on that day. Routines recur.
 - Every app tells the same day, the way this owner lives it: late-night texts go with ${life ? 'a late "late" and short sleep' : 'a late night'}. The owner does nothing on the phone while asleep or busy in a scene; others' texts and calls still come in.
-- Small happenings of that life are fine; nothing that moves the story (a decision, promise, plan, meeting, secret or change with the story's people).
+- Small happenings of that life are fine; nothing that moves the story: a decision, promise, plan, meeting, secret or change with the story's people, or how something in the story turns out (how a debt was settled, when the work ends, a parcel arriving).
 - People: the story's, PEOPLE AROUND (wherever they would turn up; never someone the owner isn't in touch with now), and made-up people of their own life, named for where they live; never a new relative or partner. Relationship words only as the story uses them. Someone new texted or called gets a "contact".
 
 THE APPS
 - Texts: as these people really text, for instance late replies, unanswered questions, plans that fizzle; the owner sounds different with each person. A text record is one exchange; in a group chat people talk over each other.
 - Calls, photos, searches, mails and the calendar fit their relationships, their eye, what is on their mind and what they have to do; the calendar holds fixed things, never each small thing.
-- Posts, the diary and voice memos only if this owner keeps them.${life ? ' Alarms and files change with life.' : ''}
+- Posts only if this owner posts.${life ? ' Alarms and files change with life.' : ''}
 
 IN THEIR OWN WORDS (notes, the diary, voice memos)
 - The phone's most personal records: written out in full as this owner would write or say them, never a summary of the day.
 - Notes: in the shape a real note has, for instance a list with items ticked or crossed out, a half-sentence to remember, a draft of something hard to say, an address and a number, a line they liked. Short or long as they are, with their own shorthand, spelling and mix of languages.
-- The diary: at most one entry a day, in the first person and their own voice; as long as this owner would write that day. What happened as they saw it, what they felt and wouldn't say aloud, a thought that keeps coming back, a question to themselves; not the day's events in order. A day the story shows: what happened and what they feel about it; another day: that day of their life. No new secrets or story events.
-- Voice memos: spoken, not written: the way the owner talks in the archive and chat, with pauses (…), restarts and half sentences. A moment they could talk into the phone alone, for instance after a fight, on the way somewhere or late at night; for instance an idea, a reminder to self, a tune, words for someone they can't say yet. 20 to 90 seconds of speech, "sec" to fit, "place" where they were. Not the diary told again; no new secrets or story events.${life ? `
+- The diary: one entry for each story day that ends in these messages, in the first person and their own voice; as long as this owner would write that day. What happened as they saw it, what they felt and wouldn't say aloud, a thought that keeps coming back, a question to themselves; not the day's events in order. A day the story shows: what happened and what they feel about it; another day: that day of their life. No new secrets or story events.
+- Voice memos: about one every few days; spoken, not written: the way the owner talks in the archive and chat, with pauses (…), restarts and half sentences. A moment they could talk into the phone alone, for instance after a fight, on the way somewhere or late at night; for instance an idea, a reminder to self, a tune, words for someone they can't say yet. 20 to 90 seconds of speech, "sec" to fit, "place" where they were. Not the diary told again; no new secrets or story events.${life ? `
 
 HEALTH
 - A "health" record for each story day these messages reach and for a LIFE NOW day the story now shows; the day of "now" every time, with its totals so far (steps, workouts, coffee, water, "screen"), even with nothing new.

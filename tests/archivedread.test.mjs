@@ -775,7 +775,7 @@ test('일상 comes in the reflection\'s own answer (no request of its own); who 
     assert.match(sys, /The phone is lived in every waking hour/);
     assert.match(sys, /Someone new texted or called gets a "contact"/);
     assert.match(sys, /PEOPLE AROUND \(wherever they would turn up; never someone the owner isn't in touch with now\)/);
-    assert.match(sys, /nothing that moves the story \(a decision, promise, plan, meeting, secret or change with the story's people\)/);
+    assert.match(sys, /nothing that moves the story: a decision, promise, plan, meeting, secret or change with the story's people, or how something in the story turns out \(how a debt was settled, when the work ends, a parcel arriving\)/);
     assert.match(sys, /"from": "story" \| "life"/);
     const guess = [...c.p.threads.flatMap(th => th.messages.filter(x => x.src === 'guess').map(x => `${th.with}:${x.text}`)), ...c.p.searches.filter(x => x.src === 'guess').map(x => x.q)];
     assert.deepEqual(guess.sort(), ['Ivo:whatever', 'Ivo:you started it', 'Mittagstisch Seongsu']);
@@ -794,7 +794,11 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.ok(!on.includes('\nTIMES\n') && on.includes('Every record\'s time is on the owner\'s clock'));
     const arch = data.coreSystem({ life: true, archiveOnly: true });
     assert.ok(arch.includes('\nTIMES\n- Times are "MM-DD HH:MM"') && !arch.includes('CLOCK FIRST'));
-    assert.match(on, /About 11 life records a waking day, about one an hour; days the story skips were lived too \(at most 70 in all, "health" not counted\), each dated on its day\./);
+    assert.match(on, /How many: about 11 life records for each waking day, about one an hour; each day the story skips gets its own \(at most 70 in all, "health" not counted\), dated on that day\./);
+    assert.match(on, /each answer fills most lists as these hours call for, for example a photo of lunch, a search, a note, a mail, a post, texts and calls by the person, a voice memo, and a diary entry when these hours end the day\./);
+    assert.match(on, /The diary: one entry for each story day that ends in these messages/);
+    assert.match(on, /Voice memos: about one every few days/);
+    assert.ok(on.includes('Posts only if this owner posts.') && !on.includes('Not every app every day') && !on.includes('only if this owner keeps them'));
     assert.match(on, /"at": its message number \(a life record: the message whose hours it falls in\)/);
     assert.match(on, /new texts in a chat are new/);
     assert.match(on, /others' texts and calls still come in/);
@@ -815,7 +819,7 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.match(on, /never a new relative or partner/);
     // (said once)
     assert.match(on, /Relationship words only as the story uses them/);
-    assert.equal(on.split('The diary: at most one entry a day').length, 2);
+    assert.equal(on.split('The diary: one entry for each story day').length, 2);
     // (the story first; the apps written as a real phone holds them)
     assert.match(on, /The story comes first: every scene in these messages \("scene" records\) and its trail on the phone, before any record of the owner's own life\./);
     assert.match(on, /"records": scenes and story records first, then the owner's own life\./);
