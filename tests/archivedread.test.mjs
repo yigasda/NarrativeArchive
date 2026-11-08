@@ -824,7 +824,7 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.ok(!data.coreSystem().includes('"health" not counted'));
     assert.ok(!on.includes('Numbers only'));
     assert.ok(!on.includes('ONE DAY ON EVERY APP') && !on.includes('TIME PASSING') && !on.includes('WHICH TYPE'));
-    assert.match(on, /"type": "scene" \| "contact" \| "text" \| "call" \| "photo" \| "note" \| "search" \| "calendar" \| "post" \| "profile" \| "mail" \| "diary" \| "visit" \| "voice" \| "alarm" \| "timer" \| "file" \| "health" \| "usual"/);
+    assert.match(on, /"type": "scene" \| "contact" \| "text" \| "call" \| "photo" \| "note" \| "search" \| "calendar" \| "post" \| "profile" \| "mail" \| "diary" \| "visit" \| "voice" \| "alarm" \| "timer" \| "file"/);
     assert.ok(!plain.includes('"alarm" | "timer"') && !plain.includes('LIFE NOW'));
     assert.match(on, /Never a booking, trip or purchase the story doesn't have/);
     assert.match(on, /Records of the owner's life fall between PHONE NOW's "now" and the answer's "now"\./);
@@ -835,8 +835,10 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.match(on, /Relationship words only as the story uses them/);
     assert.equal(on.split('The diary: an entry when a story day ends').length, 2);
     // (the story first; the apps written as a real phone holds them)
-    assert.match(on, /The story comes first: every scene in these messages \("scene" records\) and its trail on the phone, before the owner's own life\. "everyday" never replaces a story record\./);
-    assert.match(on, /"records": scenes and story records, and "health" and "usual"; the owner's own life goes in "everyday"\./);
+    assert.match(on, /"records": scenes and story records; the owner's own life goes in "everyday"\./);
+    // (the days' health and a habit after "everyday", on their own)
+    assert.ok(on.indexOf('\n  "health": [{ "date": the day they woke, "already"') > on.indexOf('\n  "everyday": {') && on.includes('\n  "usual": { "weight"'));
+    assert.match(on, /- Every scene in these messages \("scene" records\) and its trail on the phone\. "everyday" never replaces a story record\./);
     assert.ok(!data.coreSystem({ life: true }).includes('\nWEATHER\n'));
     assert.ok(!plain.includes('\nHEALTH\n') && !plain.includes('\nSCREEN TIME\n') && plain.includes('\nIN THEIR OWN WORDS'));
     // (no old shape left in it)
@@ -1267,4 +1269,18 @@ test('반영 본체 gets the orders and tickets (no money), so a mail or text ab
     assert.equal(data.ordersBlock({ orders: [], passes: [] }), '');
     assert.match(data.coreSystem({ wallet: true }), /- ORDERS AND TICKETS \(sometimes\): the owner's orders and tickets as the phone has them; a record about one keeps its item, dates and status\./);
     assert.ok(!data.coreSystem().includes('ORDERS AND TICKETS'));
+});
+
+test('"health" after "everyday": a past day guessed from their usual becomes the one written; 되돌리기 takes it back', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'two quiet days later')]);
+    c.p.now = '10-24 09:00'; c.p.year = 2026;
+    c.p.life = { at: '10-24 09:00', clock: { alarms: [], timers: [], running: null }, files: { folders: [], items: [] },
+        health: { usual: { steps: 8000 }, days: [{ id: 'sync:r1:g0', date: '10-25', steps: 8050, km: 5.8, hr: [], from: 'pattern' }, { id: 'h0', date: '10-24', steps: 4000, km: 2.9, hr: [], from: 'story' }] } };
+    await run(c.m, { now: '10-26 20:00', records: [], everyday: { searches: [{ q: 'soup', time: '10-26 12:00' }] },
+        health: [{ date: '10-25', steps: 6100 }, { date: '10-24', steps: 9999 }, { date: '10-26', steps: 3000 }] });
+    const day = d => c.p.life.health.days.find(x => x.date === d);
+    // (the guessed day: what the model wrote; a told day stays; a new day goes in)
+    assert.deepEqual([day('10-25').steps, day('10-24').steps, day('10-26')?.steps], [6100, 4000, 3000]);
+    await data.undoRound(c.m, c.p);
+    assert.equal(day('10-25').steps, 8050);
 });

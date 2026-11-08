@@ -464,6 +464,17 @@ export function applyDays(p, days, round) {
             out.push(fx);
             return;
         }
+        // (a day only guessed from their usual, by the app or a fill, is the model's now: what it wrote replaces it)
+        if (was && was.id && was.from === 'pattern' && !/:d\d+$/.test(String(was.id))) {
+            const keys = [...GROWS, 'bed', 'sleep', 'wake', 'woke', 'weight', 'screen', 'workout', 'workouts', 'hr'].filter(k => d?.[k] !== undefined && d[k] !== null && d[k] !== '' && clean[k] !== undefined && clean[k] !== null);
+            if (finiteNum(clean.steps) && !keys.includes('km') && d?.km === undefined) { clean.km = Math.round(clean.steps * 0.00072 * 10) / 10; keys.push('km'); }
+            const ch = [...new Set(keys)].filter(k => JSON.stringify(was[k] ?? null) !== JSON.stringify(clean[k] ?? null));
+            if (!ch.length) return;
+            const fx = { type: 'change', path: 'life.health.days', id: was.id, from: fields(was, ch), to: fields(clean, ch) };
+            setFields(was, fx.to);
+            out.push(fx);
+            return;
+        }
         if (was) return;
         delete clean.ev;
         // what the model leaves off a pattern day is their usual (a day is never half told)

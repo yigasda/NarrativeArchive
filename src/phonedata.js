@@ -342,7 +342,7 @@ const CORE_TIMES = `- Times are "MM-DD HH:MM"; a year only as STORY YEAR or the 
 - Every record's time is on the owner's clock: a time from another city's screen or scene moves by its hours in OWNER'S CLOCK.
 - Records of the owner's life fall between PHONE NOW's "now" and the answer's "now".`;
 export function coreRecordsSystem({ life = false, weather = false, tracker = false, zone = false, archiveOnly = false, wallet = false, split = true } = {}) {
-    const lifeTypes = life ? ' | "alarm" | "timer" | "file" | "health" | "usual"' : '';
+    const lifeTypes = life ? ' | "alarm" | "timer" | "file"' : '';
     return `${split ? 'STAGE: core\n' : ''}GOAL
 Keep the owner's phone in step with the story. Role-play rarely says what the owner texted, searched, photographed or saved. Write the story's trail and the owner's own life on their phone, details made up to fit. The app links records to their messages and keeps what is already there.
 
@@ -363,7 +363,7 @@ THE STORY IS CANON
 - The story is canon. Never get ahead of anything tied to its events. Make up no future the story hasn't stated; what it has stated, only as far as it states. No exceptions. A made-up future belongs only to everyday life outside the story.
 
 THE STORY
-- The story comes first: every scene in these messages ("scene" records) and its trail on the phone, before the owner's own life. "everyday" never replaces a story record.
+- Every scene in these messages ("scene" records) and its trail on the phone. "everyday" never replaces a story record.
 - Scenes leave a trail without saying so, for instance a text after a fight, a photo of dinner, a search before a trip. A story record holds what the messages show or plainly imply, details made up to fit.
 - A plan goes in the calendar and hasn't happened yet.${wallet ? ' A ticket goes in the wallet, never in the calendar; a reservation or an appointment still goes in the calendar.' : ''} Never a booking, trip or purchase the story doesn't have.
 
@@ -432,9 +432,7 @@ JSON (one object, nothing before or after it)
     voice: "title", "kt", "text", "ko", "time", "sec", "place"${life ? `
     alarm: "time": "HH:MM", "label", "ko", "days": [weekdays], or [] and "date" for one occasion, "on", "wake", "then", "snooze", "snoozeCount", "sound"
     timer: "label", "ko", "sec"
-    file: "name", "kind", "folder", "size": KB, "time", "from", "pages", "length", "tag", "private", "preview": its first page in a line, "look": sea | city | night | food | hills | pet | sunset | mountain | snow | flower | interior | concert | paper | screenshot | map | ticket | receipt | invoice | cv | letter | certificate | recipe | medical | menu | contract | notes | voice | music, "ko", "opened", "deleted"
-    health: "date": the day they woke, "sleep", "wake", "woke", "steps", "km", "floors", "hr": [low, high], "workouts": [{ "kind", "time", "min", "km" }], "coffee", "coffeeKind", "water", "weight", "screen": { "apps": { app: minutes }, "pickups", "late" }
-    usual: "weight", "height", "coffee", "coffeeKind", "coffeeKo", "water", "bed", "sleep", "wake", "steps", "workouts", "rest", "screen": { "add": [{ "app", "kind": chat | social | game | video | music | work | reading | shopping | money | maps | health | other, "min" }], "drop", "pickups", "late" }` : ''}
+    file: "name", "kind", "folder", "size": KB, "time", "from", "pages", "length", "tag", "private", "preview": its first page in a line, "look": sea | city | night | food | hills | pet | sunset | mountain | snow | flower | interior | concert | paper | screenshot | map | ticket | receipt | invoice | cv | letter | certificate | recipe | medical | menu | contract | notes | voice | music, "ko", "opened", "deleted"` : ''}
   }],
   "everyday": { the owner's own life, each app a list (an empty one when nothing), each item with "scene" when it answers one:
     "texts": [{ "with", "group", "members", "messages": [{ "from", "text", "ko", "time" }] }], "calls": [{ "with", "kind", "time", "min" }],
@@ -442,8 +440,10 @@ JSON (one object, nothing before or after it)
     "mails": [{ "sender", "subject", "ks", "text", "ko", "time", "unread" }], "posts": [{ "text", "ko", "photo", "pko", "time", "likes", "comments" }],
     "calendar": [{ "title", "ko", "date", "time" }], "diary": [{ "date", "title", "kt", "text", "ko" }], "voice": [{ "title", "kt", "text", "ko", "time", "sec", "place" }],
     "contacts": [{ "name", "saved" }]${life ? `,
-    "alarms": [{ "time", "label", "ko", "days", "date" }], "timers": [{ "label", "ko", "sec" }], "files": [{ "name", "kind", "folder", "time", "look", "preview", "ko" }]` : ''} }${life && weather ? `,\n${WEATHER_JSON}` : ''} }
-"records": scenes and story records${life ? ', and "health" and "usual"' : ''}; the owner's own life goes in "everyday". Numbers are plain JSON numbers. Nothing new: "records": [].`;
+    "alarms": [{ "time", "label", "ko", "days", "date" }], "timers": [{ "label", "ko", "sec" }], "files": [{ "name", "kind", "folder", "time", "look", "preview", "ko" }]` : ''} }${life ? `,
+  "health": [{ "date": the day they woke, "already": a LIFE NOW id or "", "sleep", "wake", "woke", "steps", "km", "floors", "hr": [low, high], "workouts": [{ "kind", "time", "min", "km" }], "coffee", "coffeeKind", "water", "weight", "screen": { "apps": { app: minutes }, "pickups", "late" } }],
+  "usual": { "weight", "height", "coffee", "coffeeKind", "coffeeKo", "water", "bed", "sleep", "wake", "steps", "workouts", "rest", "screen": { "add": [{ "app", "kind": chat | social | game | video | music | work | reading | shopping | money | maps | health | other, "min" }], "drop", "pickups", "late" } } or null` : ''}${life && weather ? `,\n${WEATHER_JSON}` : ''} }
+"records": scenes and story records; the owner's own life goes in "everyday". Numbers are plain JSON numbers. Nothing new: "records": [].`;
 }
 export const coreSystem = ({ life = false, weather = false, tracker = false, zone = false, archiveOnly = false, wallet = false, split = true } = {}) => coreRecordsSystem({ life, weather, tracker, zone, archiveOnly, wallet, split });
 // 돈 단계 (3.176~): every round's messages, read for what the owner's phone would now show. One list of records.
@@ -744,7 +744,11 @@ export function recordsCore(raw, textOf = () => '') {
     const { records, everyday: own, ...rest } = raw, ed = own && typeof own === 'object' && !Array.isArray(own) ? own : {};
     // (one written without its time is left out: the model's to say when, never the app's; see untimedLife)
     const lives = Object.entries(EVERYDAY_TYPE).flatMap(([k, type]) => arr(ed[k]).filter(x => x && typeof x === 'object' && !Array.isArray(x)).map(x => timedLife(x, type)).filter(Boolean).map(x => ({ ...x, type, from: 'life' })));
-    const recs = [...records.filter(r => r && typeof r === 'object' && !Array.isArray(r)), ...lives];
+    // (the days' health and a habit's change come on their own, after "everyday": a record each, as before)
+    const obj = x => x && typeof x === 'object' && !Array.isArray(x);
+    const health = arr(rest.health).filter(obj).map(x => ({ ...x, type: 'health', from: 'life' })), usual = obj(rest.usual) ? [{ ...rest.usual, type: 'usual' }] : [];
+    delete rest.health; delete rest.usual;
+    const recs = [...records.filter(r => r && typeof r === 'object' && !Array.isArray(r)), ...lives, ...health, ...usual];
     const events = [], byId = new Map(), made = new Map(), everyday = {}, days = [];
     for (const r of recs) if (r.type === 'scene') {
         const e = { id: line(r.id, 60) || `scene-${atNum(r.at)}`, at: r.at, quote: r.quote ?? '', date: r.date ?? '', time: r.time ?? '', summary: r.summary ?? '', phone: {} };
