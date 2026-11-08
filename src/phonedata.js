@@ -749,7 +749,8 @@ export function recordsCore(raw, textOf = () => '') {
         const key = REC_KEY[r.type];
         if (r.type === 'scene' || (!key && r.type !== 'usual' && r.type !== 'profile')) continue;
         const life = r.from === 'life', x = itemOf(r);
-        if (r.type === 'health') { const host = life ? null : byId.get(String(r.scene ?? '').trim()) || (Number.isInteger(atNum(r.at)) ? events.find(e => atNum(e.at) === atNum(r.at)) : null); if (host) host.phone.health = [...arr(host.phone.health), x]; else days.push(x); continue; }
+        // (a day already in LIFE NOW, "already", is rewritten on an event: "days" only adds days the phone doesn't have)
+        if (r.type === 'health') { const host = life && !r.already ? null : byId.get(String(r.scene ?? '').trim()) || (Number.isInteger(atNum(r.at)) ? events.find(e => atNum(e.at) === atNum(r.at)) : null) || (r.already ? hostOf(r) : null); if (host) host.phone.health = [...arr(host.phone.health), x]; else days.push(x); continue; }
         // (a habit or the SNS profile is one thing, on its scene or the last)
         if (r.type === 'usual' || r.type === 'profile') { const host = hostOf(r); if (host) host.phone[r.type] = { ...(host.phone[r.type] || {}), ...x }; continue; }
         // (no visit made up: a place is gone to in the story)

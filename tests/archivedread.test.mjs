@@ -1163,3 +1163,14 @@ test('the reflection reads less around it: its 15 latest scenes, no lorebook', a
     assert.ok(block.includes('old-29') && !block.includes('old-10:'));
     assert.ok(!T.input.includes('[LOREBOOK]') && !T.sys.includes('LOREBOOK'));
 });
+
+test('recordsCore: a health day already on the phone ("already") is rewritten on an event, never left to "days"', () => {
+    const got = data.recordsCore({ now: '11-06 09:20', records: [
+        { type: 'scene', id: 'hotel', at: 5, quote: 'hotel', summary: 'hotel' },
+        { type: 'health', at: 3, from: 'life', already: 'd1', date: '11-03', steps: 7450 },
+        { type: 'health', at: 5, from: 'life', date: '11-04', steps: 6800 },
+    ] }, i => (i === 3 ? '[#3] Mara: late night' : ''));
+    const onEvent = got.events.flatMap(e => e.phone.health || []).map(x => x.date);
+    assert.deepEqual(onEvent, ['11-03']);
+    assert.deepEqual(got.days.map(x => x.date), ['11-04']);
+});
