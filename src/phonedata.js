@@ -377,22 +377,22 @@ ONE DAY ON EVERY APP
 - Not every app every day: a day leans on the apps this owner reaches for, and routines repeat.
 
 THE APPS
-- Texts: as these people really text, including delayed replies, unanswered messages and unfinished exchanges. The owner sounds different with each person.
-- Group chats: several people talk over each other; the owner joins in or just reads, as they would.
-- Calls: their timing, length and whether they are answered fit the relationships, work hours and sleep.
-- Photos: what the owner would really take, including screenshots and imperfect or repeated shots; their eye shows in it.
-- Searches: what is on their mind at that hour.
-- Mails: from the people, workplaces, shops and services in their life; some remain unread.
-- Calendar: fixed commitments and occasions, never each small thing they do.
-- Posts: only if this owner posts, in their style, with likes that fit their following and comments from people in their life. The diary and voice memos too only if this owner would keep them.${life ? `
-- Alarms: added, changed or switched off as life calls for.
-- Files: what they would download, receive or keep.` : ''}
+- Texts: as these people really text, for instance a reply hours later, a question left unanswered, a laugh, a link, a plan that fizzles. The owner sounds different with each person, the way they are with them.
+- Group chats: several people talk over each other, and the owner joins in or just reads, as they would; for instance a birthday, something funny, a vote on where to eat.
+- Calls: for instance a short call, a missed call returned later, a long call at night with someone close; work hours and sleep shape them.
+- Photos: what they would really take, for instance food, the sky, a pet, a screenshot, a receipt, the same shot twice; their eye shows in it.
+- Searches: what is on their mind at that hour, for instance a symptom at night, a recipe, a word they heard, a price, a place, a name they are curious about.
+- Mails: from the people and the places in their life, for instance a coworker, a professor, receipts, newsletters, bills, shipping notices, offers left unread.
+- Calendar: the fixed things of their week, for instance a class, a shift, an appointment, a birthday; never each small thing they do.
+- Posts: only if this owner posts, the kind they post, with likes that fit their following and comments from people in their life. The diary and voice memos too only if this owner would keep them.${life ? `
+- Alarms: they move with life, for instance one more before an early day, one switched off after a trip.
+- Files: what piles up, for instance downloads, screenshots, a work or school document, a ticket or a receipt.` : ''}
 
 IN THEIR OWN WORDS (notes, the diary, voice memos)
-- Write these personal records in full as the owner would write or say them, never as a summary of the day.
-- Notes: use the form the purpose calls for—a list, fragment, draft or saved detail—with the owner's shorthand, spelling and mix of languages. Short or long as they would make it.
-- The diary: at most one entry a day, in the first person and their own voice, as long as they would write. Their experience, feelings, private thoughts and questions, not the day's events in order. A day the story shows follows those events; another day follows their life. No new secrets or story events.
-- Voice memos: spoken in the owner's voice from the archive and chat, with pauses (…), restarts and half sentences, at a moment they could record alone. 20 to 90 seconds of speech, "sec" to fit, "place" where they were. Not the diary told again; no new secrets or story events.${life ? `
+- The phone's most personal records: written out in full as this owner would write or say them, never a summary of the day.
+- Notes: in the shape a real note has, for instance a list with items ticked or crossed out, a half-sentence to remember, a draft of something hard to say, an address and a number, a line they liked. Short or long as they are, with their own shorthand, spelling and mix of languages.
+- The diary: at most one entry a day, in the first person and their own voice; as long as this owner would write that day. What happened as they saw it, what they felt and wouldn't say aloud, a thought that keeps coming back, a question to themselves; not the day's events in order. A day the story shows: what happened and what they feel about it; another day: that day of their life. No new secrets or story events.
+- Voice memos: spoken, not written: the way the owner talks in the archive and chat, with pauses (…), restarts and half sentences. A moment they could talk into the phone alone, for instance after a fight, on the way somewhere or late at night; for instance an idea, a reminder to self, a tune, words for someone they can't say yet. 20 to 90 seconds of speech, "sec" to fit, "place" where they were. Not the diary told again; no new secrets or story events.${life ? `
 
 HEALTH
 - A "health" record for every story day these messages move into, and for a day in LIFE NOW the story now shows. The day of "now" again every time, with its totals so far (steps, workouts, coffee, water, "screen"), even when nothing new happened.
@@ -403,12 +403,12 @@ HEALTH
 - Numbers only: no diagnosis, no mood, no reason.
 
 SCREEN TIME
-- "screen" on each "health" record: that day's phone use, from their character, not their polite profile. It may reveal habits they would never admit.
-- Follow that day's events and feelings, with LIFE NOW's usual as the baseline.
-- Each day's "apps": as many as this owner uses, chosen from their usual apps and that day's needs. Let usage differ across days so the range of their apps shows.
-- A new app of any kind, when the story or their life gives a reason: a "usual" record with it in "screen"."add".
-- Agree with the other records: hours of texts are hours in the chat app; the last text or search is no later than "late".
-- Mostly use apps common where the owner lives, by their real names; another country's app only when the story shows them using it.
+- "screen" on each "health" record: that day's phone use, from their character, not their polite profile; it may show habits they would never admit, for instance a game they can't put down, texting all night, barely touching the phone.
+- Each day follows what happened and how they felt, in their own habits (LIFE NOW's usual).
+- Each day's "apps": as many as this owner really uses, from LIFE NOW's usual and what that day called for, for instance the weather on a rainy day, the bank on payday, maps on a day out. The apps differ from day to day, so over the days many kinds show up (chat, social, video, music, game, work or study, reading or news, shopping, money, maps or travel, health).
+- A new app they start using, of any kind (chat, social, video, music, game, work or study, reading or news, shopping, money, maps or travel, health), when the story or their life gives a reason, for instance a translator for a trip: a "usual" record with it in "screen"."add".
+- It agrees with the other apps that day: hours of texts are hours in the chat app; the last text or search is no later than "late".
+- Mostly the apps people use where the owner lives, by their real names; another country's app only when the story shows them using it.
 - Numbers only.` : ''}
 
 KEEPING IN STEP
