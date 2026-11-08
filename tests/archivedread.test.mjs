@@ -799,7 +799,12 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.match(on, /never a new relative or partner/);
     // (said once)
     assert.equal(on.split('A relationship word (girlfriend, ex, husband, boss)').length, 2);
-    assert.equal(on.split('A diary entry holds what these messages show').length, 2);
+    assert.equal(on.split('The diary: at most one entry a day').length, 2);
+    // (the story first; the apps written as a real phone holds them)
+    assert.match(on, /The story comes first: every scene and its trail on the phone are written before any record of the owner's own life\./);
+    assert.match(on, /In "records": the scenes and their story records first, then the owner's own life\./);
+    for (const k of ['ONE DAY ON EVERY APP', 'THE APPS', 'IN THEIR OWN WORDS (notes, the diary, voice memos)', 'HEALTH', 'SCREEN TIME']) assert.ok(on.includes(`\n${k}\n`), k);
+    assert.ok(!plain.includes('\nHEALTH\n') && !plain.includes('\nSCREEN TIME\n') && plain.includes('\nIN THEIR OWN WORDS'));
     // (no old shape left in it)
     assert.ok(!on.includes('"events": [{') && !on.includes('"everyday"') && !on.includes('Items in "phone"'));
 });
@@ -1039,6 +1044,8 @@ test('a records answer: scenes are events, story records on their scene, the own
     // (a contact only for someone texted or called: Lio only texted in the group, so none)
     assert.deepEqual(c.p.contacts.map(x => x.name), []);
     assert.ok(c.p.sync.done.flat().includes(3));
+    // (the round says how many scenes, story and life records the answer had)
+    assert.deepEqual(c.p.syncLast.records, { scenes: 1, story: 2, life: 4 });
     await data.undoRound(c.m, c.p);
     assert.equal(c.p.photos.length + c.p.searches.length, 0);
     assert.ok(!c.p.threads.some(t => t.messages.length));
