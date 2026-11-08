@@ -358,7 +358,7 @@ ${life ? `- LIFE NOW: the alarms, files and health days the phone holds, with re
 ${archiveOnly ? '' : `${CORE_CLOCK_FIRST}\n\n`}READING THE STORY
 - The story comes first: every scene and its trail on the phone are written before any record of the owner's own life. A life record never takes a story record's place.
 - Everything that happens in these messages is a "scene"; a scene that would leave anything on the phone gets those records too.
-- Ask what the owner's phone would show after these scenes. Scenes may leave a trail on a phone without saying so, for instance a text after a fight, a photo of dinner, a search before a trip, a missed call in a meeting, a note of what someone asked for.
+- Ask what the owner's phone would show after these scenes. Scenes leave a trail on a phone without saying so, for instance a text after a fight, a photo of dinner, a search before a trip, a missed call in a meeting, a note of what someone asked for.
 - A plan made in these messages goes in the calendar; what is planned hasn't happened yet (no photo of it).${wallet ? `
 - A ticket (a flight, a train, a hotel stay, a show, a membership) goes in the wallet, and the calendar shows it from there: never a calendar record for it. A reservation or an appointment is still one.` : ''}
 
