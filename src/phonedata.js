@@ -359,7 +359,7 @@ KEEPING IN STEP
 
 TIME PASSING
 - What recurs (pay, an allowance, support, rent, bills, subscriptions, a membership, a loan repayment) is one "regular" record, written once when the story or the owner's life shows it; the app pays it on its days. A rent day or a payday is that regular, not a one-off payment. A change to it is the same record with the new "amount" or "status".
-- DAYS PASSED: the owner lived through those days too. Fill in the life the scenes left out, shaped by this owner's tastes, habits, moods, circumstances and experiences in the story. Write the financial records that follow, beyond those already shown or handled by regular records. What happens each day determines the kinds and number of records, their amounts, timing and how money moves. Some days leave no financial records; familiar routines may recur. Each record is dated on its own day.
+- DAYS PASSED: the owner lived through those days too. Fill in the life the scenes left out, shaped by this owner's tastes, habits, moods, circumstances and experiences in the story. Write the financial records that follow, beyond those already shown or handled by regular records. What happens each day determines the kinds and number of records, their amounts, timing and how money moves. Most days leave some records; a few leave none; familiar routines may recur. Each record is dated on its own day.
 - Write any missing "regular" records that the owner's life plainly has (pay or an allowance, rent, a phone bill, subscriptions), using OWNER PROFILE and MONEY NOW; a card account with no "billDay" gets one.
 
 WHICH TYPE
@@ -375,7 +375,7 @@ WHICH TYPE
 PAYMENTS
 - Bank and card movements go in "payment". What the owner pays for now (an order, a ticket${delivery ? `, a delivery` : ''}, an asset, a debt, a regular paid by hand) has its payment in the same message, its "for" naming that record; money got back from a loan the owner gave too.
 - The owner's share only: the stated split, or a plausible one. Paid by someone else, or with cash already in hand: no payment.
-- A card purchase goes on the card's account; a refund is plus. No money is made up to cover a payment; a balance may go below zero.
+- A card purchase goes on the card's account; a refund is plus. A card's bill is paid by the app on its bill day: never write it as a payment. No money is made up to cover a payment; a balance may go below zero.
 - Family, company and expected money is not the owner's cash: "whose" and "status": "expected" say so.
 - A cancelled paid order normally gets a refund. Infer its amount and timing from context and existing records unless the story indicates otherwise.${invest ? `
 
@@ -411,7 +411,7 @@ JSON (one object, nothing before or after it)
     regular: "amount": each time, minus for money out; "date": its first day; "frequency": "monthly" | "weekly" | "yearly"; "day": the day of the month or the weekday; "account": last 4 digits; "who": who pays it or is paid, "ko"; "for": the debt it pays, or ""; "status": "active" | "stopped"
     order: "amount": one item's price; "date": when ordered; "shop", "option", "qty", "status": "ordered" | "shipped" | "on the way" | "delivered" | "cancelled" | "returning" | "returned" | "refunded", "eta": "MM-DD", "gift": who it is for, "sender": who sent it to the owner, "payer": "owner" | "someone else" | "on delivery"
     ticket: no "amount" (its price is the payment); "date": the day of travel, the event or check-in; "until": "MM-DD", the last day of a stay or membership; "kind": "flight" | "train" | "hotel" | "event" | "membership" | "other", "by": airline, line, hotel, venue or club, "from", "to", "seat", "gate", "no"
-    asset: "amount": its whole value now; "date": when the owner got it; "kind": "property" | "vehicle" | "business" | "valuable" | "deposit" | "receivable" (money owed to the owner) | "investment" | "other", "whose": "owner" | "shared" | "family" | "company", "status": "held" | "expected" | "blocked" | "sold" | "lost", "conditions"
+    asset: "amount": its whole value now; "date": when the owner got it; "kind": "property" | "vehicle" | "business" | "valuable" | "deposit" (money in another bank or a trust) | "receivable" (money someone owes the owner) | "investment" | "other", "whose": "owner" | "shared" | "family" | "company", "status": "held" | "expected" | "blocked" | "sold" | "lost", "conditions"
     debt: "amount": what is owed now; "date": when it was taken on; "kind": "loan" | "mortgage" | "personal" | "tax" | "other", "lender", "whose", "due": "MM-DD", "status": "open" | "paid" | "overdue" | "forgiven", "conditions"
     account: "amount": the money in it when opened, none for a card account; "date": when opened; "kind": "checking" | "savings" | "credit", "last4" when known, for a card "billDay": the day of the month its bill is paid and "paidFrom": the account it is paid from, "balance": for one already on the phone, when the story implies it, the account's resulting balance at this point in the story, including payments reported up to that point, with "memo": the story context behind this balance, in a few words; "status": "open" | "blocked" | "closed", "reason"
     card: "account": last 4 digits, "exp": "MM/YY"${invest ? `

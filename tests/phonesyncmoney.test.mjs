@@ -833,12 +833,16 @@ test('점검 9-5: a parcel past its arrival day has come, by the clock (되돌�
 test('run58: what the phone lacks is said only while it lacks it (no regular yet, a card with no bill day); an order keeps the time it was made', async () => {
     const { moneyMissing } = await import('../src/phonesyncmoney.js');
     const { m, p } = setup();
-    assert.match(moneyMissing(p), /No "regular" yet/);
+    assert.match(moneyMissing(p), /No regular income yet/);
+    assert.match(moneyMissing(p), /No regular bill yet/);
     assert.match(moneyMissing(p), /Cards with no "billDay": 2222\./);
     applyMoney(m, p, ev('o', 5, '11-03', { orders: [{ names: ['Scarf'], price: 45000, time: '20:30', occurrence: 'again', refersBack: false }],
         regulars: [{ names: ['Rent'], amount: -650, frequency: 'monthly', day: 1, account: '1111', occurrence: 'again', refersBack: false }],
         accounts: [{ account: '2222', billDay: 15, paidFrom: '1111', occurrence: 'again' }] }), opts());
     assert.equal(p.money.orders[0].time, '11-03 20:30');
+    // (a bill but no income yet: the income is still asked for)
+    assert.equal(moneyMissing(p), '- No regular income yet (pay, an allowance or support): write the one the owner\'s life has, whatever the messages are about.');
+    applyMoney(m, p, ev('pay', 6, '11-04', { regulars: [{ names: ['Salary'], amount: 2000, frequency: 'monthly', day: 25, account: '1111', occurrence: 'again', refersBack: false }] }), opts());
     assert.equal(moneyMissing(p), '');
 });
 
@@ -858,4 +862,16 @@ test('run60: an asset with no day the owner got it keeps none (the message\'s da
     const { m, p } = setup();
     applyMoney(m, p, ev('t', 5, '11-03', { assets: [{ kind: 'deposit', names: ['Trust'], value: 5000, status: 'blocked', occurrence: 'again', refersBack: false }, { kind: 'vehicle', names: ['Car'], value: 9000, since: '03-02', occurrence: 'again', refersBack: false }] }), opts());
     assert.deepEqual(p.money.assets.map(a => a.since), ['', '03-02']);
+});
+
+test('run61: a card bill the model wrote by hand, from the paying account to the card by its name, is that month\'s: the clock pays no second one', async () => {
+    const { regularClock } = await import('../src/phonesyncmoney.js');
+    const { m, p, bank } = setup();
+    applyMoney(m, p, ev('cc', 5, '10-20', { accounts: [{ account: '2222', billDay: 14, paidFrom: '1111', occurrence: 'again' }] }), opts());
+    regularClock(m, p, '10-20 09:00', '2026');
+    applyMoney(m, p, ev('d', 6, '10-26', { moves: [{ account: '2222', amount: -80, who: 'Trattoria', kind: 'card', occurrence: 'new' }] }), opts());
+    applyMoney(m, p, ev('bill', 7, '11-14', { moves: [{ account: '1111', amount: -80, who: 'Karte', kind: 'transfer', memo: '카드 대금', occurrence: 'new' }] }), opts());
+    regularClock(m, p, '11-20 09:00', '2026');
+    assert.equal(p.money.tx.filter(t => t.cardBill).length, 0);
+    assert.equal(bank(), 920);
 });

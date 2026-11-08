@@ -120,7 +120,10 @@ export function moneyMissing(p) {
     const mo = p.money;
     if (!mo?.bank) return '';
     const out = [];
-    if (!(mo.regulars || []).length) out.push('- No "regular" yet: write the ones the owner\'s life has now (pay or an allowance, rent, a phone bill, subscriptions), whatever the messages are about.');
+    // (what the code can tell: money coming in again and again, and money going out again and again)
+    const going = (mo.regulars || []).filter(r => r.status !== 'stopped');
+    if (!going.some(r => r.amount > 0)) out.push('- No regular income yet (pay, an allowance or support): write the one the owner\'s life has, whatever the messages are about.');
+    if (!going.some(r => r.amount < 0)) out.push('- No regular bill yet (rent, a phone bill, a subscription): write the ones the owner\'s life has.');
     const cards = mo.bank.accounts.filter(a => a.kind === 'credit' && !a.closed && !a.billDay).map(a => a.last4);
     if (cards.length) out.push(`- Cards with no "billDay": ${cards.join(', ')}. Give each an "account" record with its "billDay" and "paidFrom".`);
     return out.join('\n');
@@ -837,8 +840,10 @@ export function regularClock(m, p, now, year) {
             if (d.getUTCDate() !== Math.min(a.billDay, monthLen(d))) continue;
             const day = isoDay(d), prev = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - 1, 1)); prev.setUTCDate(Math.min(a.billDay, monthLen(prev)));
             const lo = isoDay(prev), inside = t => { const td = rowDay(t, year, today); return td > lo && td <= day; };
-            // (paid off by hand in that month: nothing more)
-            if (tx.some(t => t.account === a.last4 && t.kind === 'transfer' && t.amount > 0 && !t.auto && inside(t))) continue;
+            // (paid off by hand in that month: nothing more; on the card's side, or as money gone from the paying account to
+            // the card by its name or number)
+            const named = t => { const w = plain(t.who); return !!w && (plain(a.name) && (w.includes(plain(a.name)) || plain(a.name).includes(w)) || String(t.who || '').includes(a.last4)); };
+            if (tx.some(t => !t.auto && inside(t) && (t.account === a.last4 && t.kind === 'transfer' && t.amount > 0 || t.account === payer.last4 && t.amount < 0 && t.kind === 'transfer' && named(t)))) continue;
             const net = round(-tx.filter(t => t.account === a.last4 && t.kind === 'card' && inside(t)).reduce((n, t) => n + (finite(t.amount) ? t.amount : 0), 0));
             if (!(net > 0)) continue;
             if (!book(payer, { id: `bill:${a.id}:${day}`, account: payer.last4, who: `${a.name || '카드'} 대금`, ko: '', amount: -net, time: day.slice(5), day, kind: 'transfer', memo: '카드 대금', pending: false, auto: true, cardBill: a.id })) continue;

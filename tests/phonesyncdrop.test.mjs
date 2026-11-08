@@ -626,7 +626,7 @@ test('a long skip: at most 60 records for the span of skipped days, the rest lef
     const many = Array.from({ length: 66 }, (_, k) => ({ type: 'payment', at: 2, date: `11-${String(k % 18 + 1).padStart(2, '0')}`, account: '1111', amount: -1000 - k, who: `Shop ${k}`, kind: 'card', occurrence: 'new', amountFrom: 'guess' }));
     T.moneyAnswers = [{ records: [...many, { type: 'payment', at: 2, date: '11-25', account: '1111', amount: -5000, who: 'Last week', kind: 'card', occurrence: 'new' }] }];
     await run(c.m, { now: '11-26 10:00', events: [] });
-    assert.match(T.moneyInput, /\[MISSING ON THE PHONE\]\n- No "regular" yet/);
+    assert.match(T.moneyInput, /\[MISSING ON THE PHONE\]\n- No regular income yet .*\n- No regular bill yet/);
     assert.equal(c.p.money.tx.filter(t => t.who.startsWith('Shop')).length, 60);
     assert.ok(c.p.money.tx.some(t => t.who === 'Last week'));
     assert.ok(c.p.syncLast.notes.some(n => n.includes('6개는 너무 많아서')));
