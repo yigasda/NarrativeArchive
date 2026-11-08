@@ -60,7 +60,7 @@ const allNames = (path, x) => [...new Set([...(Array.isArray(x?.names) ? x.names
 const storyNames = (path, x) => (madeOf(x).includes('names') ? [] : allNames(path, x));
 // (the same name: equal, or one holding the other when the shorter has 3 letters or more; "IU 콘서트" in "IU 콘서트 티켓")
 const nameHit = (a, b) => a.some(u => b.some(v => { const x = NAME(u), y = NAME(v); if (!x || !y) return false; if (x === y) return true; const [s, l] = x.length < y.length ? [x, y] : [y, x]; return s.length >= 3 && l.includes(s); }));
-const OPEN = { orders: o => !ORDER_OVER(o.status) && o.status !== 'delivered', passes: o => !PASS_OVER(o.status), assets: o => ['held', 'expected'].includes(o.status || 'held'), debts: o => ['open', 'overdue'].includes(o.status || 'open') };
+const OPEN = { orders: o => !ORDER_OVER(o.status) && o.status !== 'delivered', passes: o => !PASS_OVER(o.status), assets: o => ['held', 'expected', 'blocked'].includes(o.status || 'held'), debts: o => ['open', 'overdue'].includes(o.status || 'open') };
 export const PASS_OVER = v => { const s = String(v || '').toLowerCase().trim().replace(/(?:환불|취소)\s*(?:불가|가능|안\s*됨)|non-?refundable|free\s+cancel\w*|cancel\w*\s+(?:allowed|possible)|refundable/g, ' '); return !/미사용|사용\s*전|사용\s*예정|unused|not\s+(?:yet\s+)?used/.test(s) && /\bused\b|cancel|refund|checked out|expired|사용\s*(?:완료|됨|함)|취소|환불|만료/.test(s); };
 const samePlace = (a, b) => !!plain(a) && plain(a) === plain(b);
 // (an order's shop: the same, or one or both not named)
@@ -96,15 +96,15 @@ export function moneyNow(p) {
     const mo = p.money;
     if (!mo) return null;
     return {
-        accounts: mo.bank.accounts.map(a => ({ account: a.last4, kind: a.kind, name: a.name, currency: a.currency, ...(a.kind === 'credit' ? {} : { balance: a.balance }), ...(a.blocked ? { blocked: true } : {}) })),
+        accounts: mo.bank.accounts.map(a => ({ account: a.last4, kind: a.kind, name: a.name, currency: a.currency, ...(a.kind === 'credit' ? { ...(a.billDay ? { billDay: a.billDay } : {}), ...(a.paidFrom ? { paidFrom: a.paidFrom } : {}) } : { balance: a.balance }), ...(a.blocked ? { status: 'blocked' } : a.closed ? { status: 'closed' } : {}) })),
         tx: (mo.tx || []).slice(-15).map(t => ({ id: t.id, account: t.account, time: t.time, who: t.who, amount: t.amount })),
         // (the newest, and every one still open however old: the model points at the one a message tells of again)
-        orders: newestAndOpen(mo.orders, 8, o => !ORDER_OVER(o.status) && o.status !== 'delivered').map(o => ({ id: o.id, shop: o.shop, item: o.item, ...(o.option ? { option: o.option } : {}), ...(o.gift ? { gift: o.gift } : {}), price: o.price, status: o.status, time: o.time })),
+        orders: newestAndOpen(mo.orders, 8, o => !ORDER_OVER(o.status) && o.status !== 'delivered').map(o => ({ id: o.id, shop: o.shop, item: o.item, ...(o.option ? { option: o.option } : {}), ...(o.gift ? { gift: o.gift } : {}), ...(o.sender ? { sender: o.sender } : {}), price: o.price, status: o.status, time: o.time })),
         // (a ticket told of before its day was known says so: its date is only the day it was told on)
-        passes: newestAndOpen(mo.passes, 6, x => !PASS_OVER(x.status)).map(x => ({ id: x.id, kind: x.kind, by: x.by, from: x.from || undefined, to: x.to || undefined, no: x.no || undefined, date: x.date, ...(x.dayUnknown ? { dayUnknown: true } : {}), status: x.status })),
+        passes: newestAndOpen(mo.passes, 6, x => !PASS_OVER(x.status)).map(x => ({ id: x.id, kind: x.kind, by: x.by, from: x.from || undefined, to: x.to || undefined, no: x.no || undefined, date: x.date, ...(x.until ? { until: x.until } : {}), ...(x.dayUnknown ? { dayUnknown: true } : {}), status: x.status })),
         // (what the owner owns and owes beyond the accounts: every one still held or owed, and the newest)
         ...((mo.assets || []).length ? { assets: newestAndOpen(mo.assets, 6, OPEN.assets).map(x => ({ id: x.id, kind: x.kind, names: x.names, value: x.value, currency: x.currency, whose: x.whose, status: x.status })) } : {}),
-        ...((mo.debts || []).length ? { debts: newestAndOpen(mo.debts, 6, OPEN.debts).map(x => ({ id: x.id, kind: x.kind, names: x.names, lender: x.lender, amount: x.amount, currency: x.currency, due: x.due || undefined, status: x.status })) } : {}),
+        ...((mo.debts || []).length ? { debts: newestAndOpen(mo.debts, 6, OPEN.debts).map(x => ({ id: x.id, kind: x.kind, names: x.names, lender: x.lender, amount: x.amount, currency: x.currency, ...(x.whose && x.whose !== 'owner' ? { whose: x.whose } : {}), due: x.due || undefined, status: x.status })) } : {}),
     };
 }
 export function investNow(m, p) {
@@ -199,6 +199,15 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         return true;
     };
 
+    // the money step's "account" records: one on the phone (by its last 4 digits, else its name), else one the owner opens
+    // (never the one current account by default: a record that names no account is no account)
+    const acctFor = x => { const as = p.money?.bank?.accounts || [], d4 = String(x.last4 ?? x.account ?? x.already ?? '').replace(/\D/g, '').slice(-4), ns = allNames('accounts', x);
+        return (d4.length === 4 && as.find(a => a.last4 === d4)) || (ns.length && as.find(a => plain(a.name) && nameHit([a.name], ns))) || null; };
+    for (const x of list(mo.accounts)) {
+        x._acct = acctFor(x);
+        const d4 = String(x.last4 ?? x.account ?? '').replace(/\D/g, '').slice(-4);
+        if (!x._acct && bankOn && !mo.newAccount && d4.length === 4 && ['checking', 'savings', 'credit'].includes(x.kind)) { mo.newAccount = { kind: x.kind, name: allNames('accounts', x)[0] || '', last4: d4, currency: x.currency || p.money.currency, balance: x.amount }; x._opens = d4; }
+    }
     // an account the owner opens comes first, so a move into it in the same event lands there (not on the one current
     // account), and its opening deposit is only what those moves don't already bring in
     if (bankOn && mo.newAccount && typeof mo.newAccount === 'object') {
@@ -412,31 +421,33 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
 
     // ---- orders, tickets, assets and debts: the record each mention was found to be (above) takes what it adds; one none was
     // found for goes in as new
-    const KINDS = { passes: ['flight', 'train', 'hotel', 'event', 'other'], assets: ['property', 'vehicle', 'business', 'valuable', 'deposit', 'other'], debts: ['loan', 'mortgage', 'personal', 'tax', 'other'] };
-    const STATES = { assets: ['held', 'expected', 'sold', 'lost'], debts: ['open', 'paid', 'overdue', 'forgiven'] };
+    const KINDS = { passes: ['flight', 'train', 'hotel', 'event', 'membership', 'other'], assets: ['property', 'vehicle', 'business', 'valuable', 'deposit', 'receivable', 'investment', 'other'], debts: ['loan', 'mortgage', 'personal', 'tax', 'other'] };
+    // ("settled": money owed to the owner, paid back in full; the app's own word)
+    const STATES = { assets: ['held', 'expected', 'blocked', 'sold', 'lost', 'settled'], debts: ['open', 'paid', 'overdue', 'forgiven'] };
+    const WHOSE = ['owner', 'shared', 'family', 'company'];
     const hangul = v => /\p{Script=Hangul}/u.test(v || '');
     const make = {
         // (a price the story doesn't give, null or "", is none, never 0; the arrival day is the model's, made up when the story
         // gives none)
         orders: x => { const names = allNames('orders', x), item = txt(x.item) || names[0] || '', price = x.price === null || x.price === undefined || x.price === '' ? NaN : Number(x.price);
             if (!item) return null;
-            return { shop: txt(x.shop, 60), item, ko: txt(x.ko) || (hangul(item) ? '' : names.find(n => hangul(n)) || ''), names, option: txt(x.option, 60), qty: Math.max(1, Math.round(Number(x.qty) || 1)), price: finite(price) ? price : null, time: date, status: ORDER.includes(x.status) ? x.status : 'ordered', eta: when(x.eta).slice(0, 5), arrived: '', gift: giftOf(x.gift), ...(x.paid === false ? { paid: false } : {}), ...(gOf(x) ? { amountFrom: 'guess' } : {}) }; },
+            return { shop: txt(x.shop, 60), item, ko: txt(x.ko) || (hangul(item) ? '' : names.find(n => hangul(n)) || ''), names, option: txt(x.option, 60), qty: Math.max(1, Math.round(Number(x.qty) || 1)), price: finite(price) ? price : null, time: date, status: ORDER.includes(x.status) ? x.status : 'ordered', eta: when(x.eta).slice(0, 5), arrived: '', gift: giftOf(x.gift), ...(txt(x.sender) ? { sender: txt(x.sender, 60) } : {}), ...(['owner', 'someone else', 'on delivery'].includes(x.payer) ? { payer: x.payer } : {}), ...(x.paid === false ? { paid: false } : {}), ...(gOf(x) ? { amountFrom: 'guess' } : {}) }; },
         passes: x => { const names = allNames('passes', x), by = txt(x.by, 60) || (Array.isArray(x.names) ? txt(x.names[0], 60) : '');
             if (!by && !txt(x.to)) return null;
-            return { kind: KINDS.passes.includes(x.kind) ? x.kind : 'other', by, names, from: txt(x.from, 40), to: txt(x.to, 40), date: when(x.date).slice(0, 5) || date, time: hhmm(x.time), seat: txt(x.seat, 12), gate: txt(x.gate, 12), no: txt(x.no, 24), status: txt(x.status, 30) }; },
+            return { kind: KINDS.passes.includes(x.kind) ? x.kind : 'other', by, names, from: txt(x.from, 40), to: txt(x.to, 40), date: when(x.date).slice(0, 5) || date, time: hhmm(x.time), seat: txt(x.seat, 12), gate: txt(x.gate, 12), no: txt(x.no, 24), status: txt(x.status, 30), ...(when(x.until) ? { until: when(x.until).slice(0, 5) } : {}) }; },
         assets: x => { const names = allNames('assets', x);
             if (!names.length) return null;
-            return { kind: KINDS.assets.includes(x.kind) ? x.kind : 'other', name: names[0], names, value: finite(Number(x.value)) ? round(Number(x.value)) : null, currency: currency(String(x.currency || '').toUpperCase()) ? String(x.currency).toUpperCase() : p.money.currency, valueFrom: x.valueFrom === 'story' ? 'story' : 'guess', whose: ['owner', 'shared', 'family', 'company'].includes(x.whose) ? x.whose : 'owner', status: STATES.assets.includes(x.status) ? x.status : 'held', since: when(x.since).slice(0, 5) || date, conditions: txt(x.conditions, 200) }; },
+            return { kind: KINDS.assets.includes(x.kind) ? x.kind : 'other', name: names[0], names, value: finite(Number(x.value)) ? round(Number(x.value)) : null, currency: currency(String(x.currency || '').toUpperCase()) ? String(x.currency).toUpperCase() : p.money.currency, valueFrom: x.valueFrom === 'story' ? 'story' : 'guess', whose: WHOSE.includes(x.whose) ? x.whose : 'owner', status: STATES.assets.includes(x.status) ? x.status : 'held', since: when(x.since).slice(0, 5) || date, conditions: txt(x.conditions, 200) }; },
         debts: x => { const names = allNames('debts', x);
             if (!names.length && !txt(x.lender)) return null;
-            return { kind: KINDS.debts.includes(x.kind) ? x.kind : 'other', name: names[0] || txt(x.lender, 60), names, lender: txt(x.lender, 60), amount: finite(Number(x.amount)) ? round(Math.abs(Number(x.amount))) : null, currency: currency(String(x.currency || '').toUpperCase()) ? String(x.currency).toUpperCase() : p.money.currency, amountFrom: x.amountFrom === 'story' ? 'story' : 'guess', due: when(x.due).slice(0, 5), status: STATES.debts.includes(x.status) ? x.status : 'open', conditions: txt(x.conditions, 200) }; },
+            return { kind: KINDS.debts.includes(x.kind) ? x.kind : 'other', name: names[0] || txt(x.lender, 60), names, lender: txt(x.lender, 60), amount: finite(Number(x.amount)) ? round(Math.abs(Number(x.amount))) : null, currency: currency(String(x.currency || '').toUpperCase()) ? String(x.currency).toUpperCase() : p.money.currency, amountFrom: x.amountFrom === 'story' ? 'story' : 'guess', whose: WHOSE.includes(x.whose) ? x.whose : 'owner', due: when(x.due).slice(0, 5), status: STATES.debts.includes(x.status) ? x.status : 'open', conditions: txt(x.conditions, 200) }; },
     };
     // what a mention gives, field by field: { field: [value, made] }
     const VALUES = {
-        orders: x => ({ shop: txt(x.shop, 60), option: txt(x.option, 60), gift: giftOf(x.gift), eta: when(x.eta).slice(0, 5), price: x.price === null || x.price === undefined || x.price === '' || !finite(Number(x.price)) ? '' : Number(x.price) }),
-        passes: x => ({ no: txt(x.no, 24), from: txt(x.from, 40), to: txt(x.to, 40), seat: txt(x.seat, 12), gate: txt(x.gate, 12), date: when(x.date).slice(0, 5), time: hhmm(x.time) }),
-        assets: x => ({ value: finite(Number(x.value)) ? round(Number(x.value)) : '', whose: ['owner', 'shared', 'family', 'company'].includes(x.whose) ? x.whose : '', since: when(x.since).slice(0, 5), conditions: txt(x.conditions, 200) }),
-        debts: x => ({ lender: txt(x.lender, 60), amount: finite(Number(x.amount)) ? round(Math.abs(Number(x.amount))) : '', due: when(x.due).slice(0, 5), conditions: txt(x.conditions, 200) }),
+        orders: x => ({ shop: txt(x.shop, 60), option: txt(x.option, 60), gift: giftOf(x.gift), sender: txt(x.sender, 60), eta: when(x.eta).slice(0, 5), price: x.price === null || x.price === undefined || x.price === '' || !finite(Number(x.price)) ? '' : Number(x.price) }),
+        passes: x => ({ no: txt(x.no, 24), from: txt(x.from, 40), to: txt(x.to, 40), seat: txt(x.seat, 12), gate: txt(x.gate, 12), date: when(x.date).slice(0, 5), time: hhmm(x.time), until: when(x.until).slice(0, 5) }),
+        assets: x => ({ value: finite(Number(x.value)) ? round(Number(x.value)) : '', whose: WHOSE.includes(x.whose) ? x.whose : '', since: when(x.since).slice(0, 5), conditions: txt(x.conditions, 200) }),
+        debts: x => ({ lender: txt(x.lender, 60), amount: finite(Number(x.amount)) ? round(Math.abs(Number(x.amount))) : '', whose: WHOSE.includes(x.whose) ? x.whose : '', due: when(x.due).slice(0, 5), conditions: txt(x.conditions, 200) }),
     };
     const APP = { orders: '쇼핑', passes: '지갑', assets: '자산', debts: '빚' };
     const label = (path, r) => r.item || r.name || r.by || r.to;
@@ -458,8 +469,13 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
             let made = [...om];
             for (const [f, v] of Object.entries(val)) {
                 if (v === '' || v === null || v === undefined || sameValue(v, old[f])) continue;
-                const was = old[f], oldMade = om.includes(f) || f === 'date' && old.dayUnknown || f === 'eta' && old.etaGuess, newMade = xm.includes(f);
-                if (was === null || was === undefined || was === '' || oldMade || !newMade) { fill(f, v); made = newMade ? [...new Set([...made, f])] : made.filter(y => y !== f); }
+                // (a told day kept for a ticket whose day wasn't known, or an arrival day the app guessed, is only a placeholder)
+                const was = old[f], placeholder = f === 'date' && old.dayUnknown || f === 'eta' && old.etaGuess, newMade = xm.includes(f);
+                // (what an asset is worth and a debt comes to change with time: a change this message tells of, estimated or not,
+                // is the new value)
+                const moved = x.occurrence === 'new' && (path === 'assets' && f === 'value' || path === 'debts' && f === 'amount');
+                // (a made-up value there is kept against another made-up one: told again, a record doesn't drift)
+                if (was === null || was === undefined || was === '' || placeholder || !newMade || moved) { fill(f, v); made = newMade ? [...new Set([...made, f])] : made.filter(y => y !== f); }
             }
             // (its names: the story's join the ones there; made-up ones there give way to the story's)
             const sn = storyNames(path, x);
@@ -471,14 +487,22 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
             const pay = linked(x).find(y => y._new);
             if (pay && path !== 'debts') { if (!old.paidBy) fill('paidBy', pay._tx); if (old.told) fill('told', null); }
             // (a debt paid back: what is left, by the money that went out for it in its own currency; nothing left, paid)
+            let settledNow = false;
             if (path === 'debts') {
                 const back = linked(x).filter(y => y._new && Number(y.amount) < 0 && String(y.currency || p.money.currency).toUpperCase() === (old.currency || p.money.currency)).reduce((n, y) => n + Math.abs(Number(y.amount)), 0);
-                if (back > 0 && finite(old.amount)) { const left = round(Math.max(0, old.amount - back)); fill('amount', left); if (left === 0 && old.status !== 'paid') fill('status', 'paid'); }
+                if (back > 0 && finite(old.amount)) { const left = round(Math.max(0, old.amount - back)); fill('amount', left); if (left === 0 && old.status !== 'paid') { fill('status', 'paid'); settledNow = true; } }
                 else if (back > 0) out.notes.push(`${label(path, old)}: 갚은 돈은 넣었지만 남은 빚을 몰라서 줄이지 않았어요`);
+            }
+            // (money owed to the owner, paid back: what is left by the money that came in for it; nothing left, settled)
+            if (path === 'assets' && old.kind === 'receivable') {
+                const back = linked(x).filter(y => y._new && Number(y.amount) > 0 && String(y.currency || p.money.currency).toUpperCase() === (old.currency || p.money.currency)).reduce((n, y) => n + Number(y.amount), 0);
+                if (back > 0 && finite(old.value)) { const left = round(Math.max(0, old.value - back)); fill('value', left); if (left === 0 && old.status !== 'settled') { fill('status', 'settled'); settledNow = true; } }
+                else if (back > 0) out.notes.push(`${label(path, old)}: 돌려받은 돈은 넣었지만 남은 금액을 몰라서 줄이지 않았어요`);
             }
             // a status: an order's only moves forward; the others' as the story now tells it
             const next = path === 'passes' ? txt(x.status, 30) : path === 'orders' ? x.status : STATES[path].includes(x.status) ? x.status : '';
-            if (next && next !== old.status && (path !== 'orders' || ORDER.includes(next) && later(old.status, next))) {
+            // (one just paid back in full stays so, whatever status the mention still carries)
+            if (next && next !== old.status && !settledNow && (path !== 'orders' || ORDER.includes(next) && later(old.status, next))) {
                 const was = old.status, arrivedFrom = old.arrived ?? null;
                 old.status = next;
                 if (path === 'orders' && next === 'delivered' && /^\d{2}-\d{2}$/.test(date || '')) old.arrived ||= date;
@@ -513,6 +537,38 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         if (to) acct.blocked = to; else delete acct.blocked;
         out.changes.push({ app: '은행', label: `${acct.name || ''} ••••${acct.last4} ${to ? '막힘' : '풀림'}`.trim(), amount: null });
     }
+    // the money step's "account" records on accounts the phone has: blocked, freed or closed; a card's bill day and the
+    // account it is paid from; and what the story implies an account holds now (after this message's payments): the
+    // difference is one row, marked as estimated, so the list adds up to the balance
+    list(mo.accounts).forEach((x, k) => {
+        if (!bankOn) return;
+        const acct = x._acct || (x._opens && p.money.bank.accounts.find(a => a.last4 === x._opens));
+        if (!acct) { out.notes.push(`${allNames('accounts', x)[0] || '계좌'}: 어느 계좌인지 몰라서 넣지 않았어요`); return; }
+        const set = (field, to, what) => { if (sameValue(acct[field] ?? null, to)) return; out.effects.push({ type: 'field', path: 'money.bank.accounts', id: acct.id, field, from: structuredClone(acct[field] ?? null), ...(Object.hasOwn(acct, field) ? { had: true } : {}), to: structuredClone(to) }); if (to === null) delete acct[field]; else acct[field] = to; if (what) out.changes.push({ app: acct.kind === 'credit' ? '카드' : '은행', label: `${acct.name || ''} ••••${acct.last4} ${what}`.trim(), amount: null }); };
+        const st = String(x.status || '').toLowerCase();
+        if (st === 'blocked' && !acct.blocked) set('blocked', { since: date, reason: txt(x.reason, 120) }, '막힘');
+        if (st === 'open') { if (acct.blocked) set('blocked', null, '풀림'); if (acct.closed) set('closed', null, '다시 열림'); }
+        if (st === 'closed' && !acct.closed) set('closed', { since: date, reason: txt(x.reason, 120) }, '해지');
+        if (acct.kind === 'credit') {
+            const bd = Math.round(Number(x.billDay));
+            if (bd >= 1 && bd <= 31) set('billDay', bd);
+            const from = String(x.paidFrom ?? '').replace(/\D/g, '').slice(-4), payer = from.length === 4 && p.money.bank.accounts.find(a => a.last4 === from && a.kind !== 'credit');
+            if (payer) set('paidFrom', payer.last4);
+        }
+        const bal = x.balance === null || x.balance === undefined || x.balance === '' ? NaN : Number(typeof x.balance === 'string' ? num(x.balance) : x.balance);
+        if (!finite(bal) || x._opens) return;
+        if (acct.kind === 'credit') { out.notes.push(`${acct.name || ''} ••••${acct.last4}: 카드는 잔액을 맞추지 않아요`.trim()); return; }
+        const lk = `${acct.id}:${acct.currency}`, L = f.accounts[lk];
+        if (!L) fail('계좌 장부를 찾지 못했어요');
+        const diff = round(bal - cash(L));
+        if (Math.abs(diff) < 0.01) return;
+        const id = sid(`sync:${e.id}:b${k}`), row = { id, account: acct.last4, who: txt(x.memo, 60) || '잔액 조정', ko: '', amount: diff, time: `${date}${e.time ? ` ${e.time}` : ''}`, day: full,
+            kind: diff > 0 ? 'deposit' : 'transfer', memo: '잔액 맞춤', pending: false, ev: e.id, storyEvent: e.id, sourceIndex: e.at, amountFrom: 'guess', adjust: true };
+        (p.money.tx ||= []).push(row);
+        L.entries[id] = { amount: diff, date: full, sourceIndex: e.at };
+        out.effects.push({ type: 'push', path: 'money.tx', item: structuredClone(row) }, { type: 'entry', key: lk, id, amount: diff, date: full, sourceIndex: e.at });
+        out.changes.push({ app: '은행', label: `${acct.name || ''} ••••${acct.last4} 잔액`.trim(), amount: diff, currency: acct.currency });
+    });
     // 배달: an order in the delivery app. Its payment is a move of the same event (the card or bank row it made, or one
     // already there), tied to it here; with no paying move it was paid in cash at the door
     const dlvOn = !!p.delivery && e.at > (marks.delivery?.index ?? -1);

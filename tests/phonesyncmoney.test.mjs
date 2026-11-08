@@ -663,3 +663,86 @@ test('점검 9 (결제 연결): a payment for one already paid is not paid again
     // MONEY NOW tells the model what is owned and owed, with ids
     assert.deepEqual(moneyNow(p).assets.map(x => [x.names[0], x.status]), [['할머니 집', 'sold']]);
 });
+
+test('점검 9-4 (records): the money step\'s one list goes in the lists the money engine reads, names only changed', async () => {
+    const { recordsMoney } = await import('../src/phonesyncmoney.js');
+    const mo = recordsMoney([
+        { type: 'payment', at: 3, account: '1111', amount: -25, who: 'Blumen Koch' },
+        { type: 'order', at: 3, names: ['Scarf'], amount: 30, sender: 'Mara' },
+        { type: 'order', at: 3, names: ['Lamp'], amount: 40, payer: 'on delivery' },
+        { type: 'asset', at: 3, kind: 'deposit', names: ['Trust'], amount: 50000, amountFrom: 'guess', status: 'blocked' },
+        { type: 'quote', at: 3, symbol: 'XETRA:SAP', amount: 130, amountFrom: 'guess' },
+        { type: 'quote', at: 3, symbol: 'XETRA:SAP', amount: 131, evidence: 'SAP hit 131' },
+        { type: 'delivery', at: 3, shop: 'BBQ', items: [{ name: 'Chicken', qty: 1, price: 20 }], people: 2, date: '10-26', time: '19:30' },
+        { type: 'card', at: 3, account: '2222', exp: '10/29' },
+        { type: 'nothing', at: 3 }, null, 'text',
+    ]);
+    assert.equal(mo.moves[0].amount, -25);
+    assert.deepEqual(mo.orders.map(o => [o.price, o.paid, 'amount' in o]), [[30, false, false], [40, false, false]]);
+    assert.deepEqual([mo.assets[0].value, mo.assets[0].valueFrom, 'amount' in mo.assets[0]], [50000, 'guess', false]);
+    assert.deepEqual(mo.quotes.map(q => [q.value, q.source]), [[130, 'guess'], [131, 'story']]);
+    assert.deepEqual([mo.deliveries[0].for, mo.deliveries[0].time], [2, '10-26 19:30']);
+    assert.equal(mo.newCard.exp, '10/29');
+});
+
+test('점검 9-4: a debt of the household is theirs; a ticket\'s last day and a membership; a parcel sent to the owner; a value the story says changed is the new one, a mention of it as it was keeps the story\'s', () => {
+    const { m, p } = setup();
+    applyMoney(m, p, ev('d', 5, '10-26', { debts: [{ kind: 'loan', names: ['Family loan'], lender: 'Bank', amount: 20000, amountFrom: 'story', whose: 'family', occurrence: 'new' }],
+        passes: [{ kind: 'membership', by: 'Iron Gym', date: '10-26', until: '10-25', occurrence: 'new' }, { kind: 'hotel', by: 'Varo Inn', date: '10-30', until: '11-02', occurrence: 'new' }],
+        orders: [{ names: ['Wool scarf'], shop: 'Varo Knits', price: 30, sender: 'Mara', payer: 'someone else', paid: false, status: 'shipped', occurrence: 'again', refersBack: false }] }), opts());
+    const debt = p.money.debts[0];
+    assert.deepEqual([debt.whose, debt.amount], ['family', 20000]);
+    assert.deepEqual(p.money.passes.map(x => [x.kind, x.until]), [['membership', '10-25'], ['hotel', '11-02']]);
+    const o = p.money.orders[0];
+    assert.deepEqual([o.sender, o.payer, o.paid, o.told], ['Mara', 'someone else', false, true]);
+    const now = moneyNow(p);
+    assert.equal(now.debts[0].whose, 'family');
+    assert.equal(now.passes[1].until, '11-02');
+    assert.equal(now.orders[0].sender, 'Mara');
+    // "the debt grew" (no figure): the model's new estimate is the debt now, though the old one was the story's
+    applyMoney(m, p, ev('d2', 6, '10-27', { debts: [{ kind: 'loan', names: ['Family loan'], amount: 26000, amountFrom: 'guess', made: ['amount'], occurrence: 'new', refersBack: true, already: debt.id }] }), opts());
+    assert.equal(debt.amount, 26000);
+    // told of as it is, an estimate never takes the place of the story's
+    applyMoney(m, p, ev('d3', 7, '10-28', { debts: [{ kind: 'loan', names: ['Family loan'], amount: 31000, amountFrom: 'guess', made: ['amount'], occurrence: 'again', refersBack: true, already: debt.id }] }), opts());
+    assert.equal(debt.amount, 26000);
+});
+
+test('점검 9-4: money lent is owed to the owner and shrinks as it comes back, then settled; an asset blocked stays the owner\'s and is still shown', () => {
+    const { m, p, bank } = setup();
+    applyMoney(m, p, ev('lent', 5, '10-26', { moves: [{ account: '1111', amount: -50, who: 'Ivo', kind: 'transfer', occurrence: 'new', for: 'Loan to Ivo' }],
+        assets: [{ kind: 'receivable', names: ['Loan to Ivo'], value: 50, valueFrom: 'story', occurrence: 'new', refersBack: false }, { kind: 'deposit', names: ['Trust fund'], value: 90000, status: 'blocked', whose: 'family', occurrence: 'again', refersBack: false }] }), opts());
+    assert.equal(bank(), 950);
+    const [loan, trust] = p.money.assets;
+    assert.deepEqual([loan.kind, loan.value, trust.status, trust.whose], ['receivable', 50, 'blocked', 'family']);
+    applyMoney(m, p, ev('back1', 6, '10-27', { moves: [{ account: '1111', amount: 20, who: 'Ivo', kind: 'deposit', occurrence: 'new', for: 'Loan to Ivo' }], assets: [{ kind: 'receivable', names: ['Loan to Ivo'], occurrence: 'new', refersBack: true, already: loan.id }] }), opts());
+    assert.equal(loan.value, 30);
+    applyMoney(m, p, ev('back2', 7, '10-28', { moves: [{ account: '1111', amount: 30, who: 'Ivo', kind: 'deposit', occurrence: 'new', for: 'Loan to Ivo' }], assets: [{ kind: 'receivable', names: ['Loan to Ivo'], status: 'held', occurrence: 'new', refersBack: true, already: loan.id }] }), opts());
+    assert.deepEqual([loan.value, loan.status, bank()], [0, 'settled', 1000]);
+    assert.ok(moneyNow(p).assets.some(x => x.id === trust.id && x.status === 'blocked'));
+});
+
+test('점검 9-4: account records: blocked, freed and closed; a card\'s bill day and the account paying it; a balance the story implies is one estimated row after the message\'s own payments; a new one opened; 되돌리기 takes each back', () => {
+    const { m, p, bank } = setup();
+    const r1 = applyMoney(m, p, ev('a', 5, '10-26', { moves: [{ account: '1111', amount: -30, who: 'Lunch', occurrence: 'new' }],
+        accounts: [{ names: ['Giro'], last4: '1111', status: 'blocked', reason: 'fraud check', balance: 400, memo: 'a bad month', occurrence: 'new' },
+            { names: ['Karte'], account: '2222', billDay: 15, paidFrom: '1111', occurrence: 'again' },
+            { names: ['Nowhere'], occurrence: 'again' },
+            { names: ['Tagesgeld'], kind: 'savings', last4: '3333', amount: 200, currency: 'EUR', occurrence: 'new' }] }), opts());
+    const [giro, karte] = p.money.bank.accounts;
+    assert.deepEqual([giro.blocked?.reason, karte.billDay, karte.paidFrom], ['fraud check', 15, '1111']);
+    // 1000 − 30 = 970; the story says 400 now: one row of −570, marked estimated
+    assert.equal(bank(), 400);
+    const adj = p.money.tx.find(t => t.adjust);
+    assert.deepEqual([adj.amount, adj.who, adj.amountFrom], [-570, 'a bad month', 'guess']);
+    assert.ok(r1.notes.some(n => n.includes('어느 계좌인지 몰라서')));
+    const sav = p.money.bank.accounts.find(a => a.last4 === '3333');
+    assert.equal(cash(m.finance.accounts[`${sav.id}:EUR`]), 200);
+    assert.deepEqual(moneyNow(p).accounts.slice(0, 2).map(a => [a.status, a.billDay]), [['blocked', undefined], [undefined, 15]]);
+    // the same balance told again: nothing more
+    applyMoney(m, p, ev('a2', 6, '10-27', { accounts: [{ last4: '1111', balance: 400, occurrence: 'again' }] }), opts());
+    assert.equal(p.money.tx.filter(t => t.adjust).length, 1);
+    applyMoney(m, p, ev('a3', 7, '10-28', { accounts: [{ last4: '1111', status: 'open', occurrence: 'new' }, { last4: '2222', balance: 5, occurrence: 'again' }] }), opts());
+    assert.equal(giro.blocked, undefined);
+    revertEffects(m, p, r1.effects);
+    assert.deepEqual([karte.billDay, bank(), p.money.tx.some(t => t.adjust)], [undefined, 1000, false]);
+});

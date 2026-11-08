@@ -2051,7 +2051,7 @@ function renumber(m, p, { moved, changed, dropped = [] }) {
     for (const f of Object.values(p.sync.failed)) if (f.span) f.span = [to(f.span[0]) ?? f.span[0], to(f.span[1]) ?? f.span[1]];
     // (a message still owed its money: by its new number; one gone owes nothing)
     if (p.sync.owed?.money) p.sync.owed.money = p.sync.owed.money.map(o => (Number.isInteger(o?.at) ? { ...o, at: to(o.at) } : o)).filter(o => o && o.at !== null);
-    for (const r of [...(p.money?.tx || []), ...(p.money?.orders || []), ...(p.money?.passes || []), ...(p.investment?.trades || []), ...(p.delivery?.orders || [])]) if (r.sourceIndex !== undefined) r.sourceIndex = to(r.sourceIndex);
+    for (const r of [...(p.money?.tx || []), ...(p.money?.orders || []), ...(p.money?.passes || []), ...(p.money?.assets || []), ...(p.money?.debts || []), ...(p.money?.regulars || []), ...(p.investment?.trades || []), ...(p.delivery?.orders || [])]) if (r.sourceIndex !== undefined) r.sourceIndex = to(r.sourceIndex);
     // the events' own copies of their records too (a changed message's events are found by them)
     for (const e of Object.values(p.sync.events)) for (const f of e.effects || []) { if (f.item?.sourceIndex !== undefined) f.item.sourceIndex = to(f.item.sourceIndex); if (f.sourceIndex !== undefined) f.sourceIndex = to(f.sourceIndex); if (Number.isInteger(f.src)) f.src = to(f.src); }
     for (const a of Object.values(m.finance?.accounts || {})) if (a.owner === p.owner) for (const x of Object.values(a.entries)) if (x.sourceIndex !== undefined) x.sourceIndex = to(x.sourceIndex);
