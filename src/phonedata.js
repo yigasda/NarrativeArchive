@@ -359,10 +359,17 @@ YOU GET
 
 ${archiveOnly ? `TIMES\n${CORE_TIMES}` : `${CORE_CLOCK_FIRST}\n${CORE_TIMES}`}
 
-THE STORY IS CANON
-- The story is canon: write within what it tells, or the everyday life outside it.
-- Never get ahead of its events: make up no event, outcome, ending, secret, new fact, reason, full account or plan of theirs; only what it states, as far as it states. A made-up future belongs to everyday life only.
-- About the story's people or events, anything a later message could contradict is a new fact: a task and its deadline ("check the moodboards by 18:00"), a thing done ("uploaded it"), a plan for later ("ramyeon tonight?"). What the messages already say may be said again.
+STORY NEXT
+After ${archiveOnly ? '"now"' : '"clock" and "now"'}, resolve "story"; only then write the records, within it.
+
+- Steps:
+  1. List each matter the story is following in NEW MESSAGES and ARCHIVE BEFORE (a fight, a debt, a move, a parcel, a job, a plan).
+  2. For each, find the last thing the messages say about it. That is where it stands.
+  3. Every record about it stops there: feelings about it, talk about it, and what the messages already say. Nothing past it.
+  WARNING: The natural next step ≠ told. Going to sort it out, a document for it, a call about it, the day it ends, why it happened, who pays: none of these unless the messages say so.
+- The owner's everyday life outside these matters is free, its future too.
+
+- "story": [{ "matter" (max 8 words), "stands" (max 15 words: the last thing the messages say about it), "at" (that message's number) }]
 
 THE STORY
 - Every scene in these messages ("scene" records) and its trail on the phone. "everyday" never replaces a story record.
@@ -414,6 +421,7 @@ JSON (one object, nothing before or after it)
 { ${archiveOnly ? '' : '"clock": { "basis": "default used or switch evidence; time passed", "finalViewpoint": "name", "elapsedTime": null or "3 hours", "sceneTime": "MM-DD HH:MM", "messageSender": null or "name" },\n  '}"now": "MM-DD HH:MM"${archiveOnly ? ' (the moment of the newest message, never a time something is only planned for)' : ''},
   "moved": [{ "name", "city": in English, "names": [as the messages write it, then in English and Korean], "tz", "in": its country code }] (people these messages put in another city, the owner too),${zone ? `
   "statusCity": whose clock the newest status line here shows (the app can't place its scene): a city or person in OWNER'S CLOCK, "owner" for the owner's own, another city as { "city": in English, "tz" }, or "" when the messages don't say,` : ''}
+  "story": [{ "matter", "stands", "at" }],
   "records": [{ only the fields it needs:
     "type": "scene" | "contact" | "text" | "call" | "photo" | "note" | "search" | "calendar" | "post" | "profile" | "mail" | "diary" | "visit" | "voice"${lifeTypes},
     "at": its message number (every record has one), "scene": its scene's id or "",${life ? ' "already": a LIFE NOW id or "",' : ''}
@@ -741,6 +749,8 @@ export function homeScreens(raw, away, usual) {
     for (const e of arr(raw.events)) { if (!e?.phone || typeof e.phone !== 'object') continue; arr(e.phone.health).forEach(day); habit(e.phone.usual); }
     arr(raw.days).forEach(day);
 }
+// the answer's "story" (the matters it read and where each stands): kept for a look, never used to judge a record
+const storyOf = a => { const xs = arr(a?.story).filter(x => x && typeof x === 'object').map(x => ({ matter: line(x.matter, 80), stands: line(x.stands, 160), at: x.at ?? '' })).filter(x => x.matter).slice(0, 20); return xs.length ? xs : null; };
 export const recordCount = (recs, ed) => { const own = ed && typeof ed === 'object' && !Array.isArray(ed) ? Object.keys(EVERYDAY_TYPE).flatMap(k => arr(ed[k]).map(x => ({ ...x, from: 'life' }))) : [], xs = [...arr(recs), ...own].filter(r => r && typeof r === 'object'), untimed = untimedLife(ed); return { scenes: xs.filter(r => r.type === 'scene').length, story: xs.filter(r => r.type !== 'scene' && r.from !== 'life').length, life: xs.filter(r => r.type !== 'scene' && r.from === 'life').length, ...(untimed ? { untimed } : {}) }; };
 export function recordsCore(raw, textOf = () => '') {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw) || !Array.isArray(raw.records)) return raw;
@@ -751,7 +761,7 @@ export function recordsCore(raw, textOf = () => '') {
     // (the days' health and a habit's change come on their own, after "everyday": a record each, as before)
     const obj = x => x && typeof x === 'object' && !Array.isArray(x);
     const health = arr(rest.health).filter(obj).map(x => ({ ...x, type: 'health', from: 'life' })), usual = obj(rest.usual) ? [{ ...rest.usual, type: 'usual' }] : [];
-    delete rest.health; delete rest.usual;
+    delete rest.health; delete rest.usual; delete rest.story;
     const recs = [...records.filter(r => r && typeof r === 'object' && !Array.isArray(r)), ...lives, ...health, ...usual];
     const events = [], byId = new Map(), made = new Map(), everyday = {}, days = [];
     for (const r of recs) if (r.type === 'scene') {
@@ -2139,7 +2149,7 @@ async function updatePhone(m, owner) {
         if (p.money) migrateBank(m, p);
         const id = rid;
         s.rounds = [...(s.rounds || []).slice(-19), id];
-        p.syncLast = { checked: inRound.size + archIn.length, remaining: unreadCount(s, rows) + archivedUnread(s, sections, rows, chatRows()).length, apps: [...apps], failed: [...Object.entries(failed).map(([at, why]) => ({ at: Number(at), why, skipped: s.failed[at]?.tries >= 2 })), ...loose.map(why => ({ at: null, why }))], changes, notes, ...(recCount ? { records: recCount } : {}), at: Date.now() };
+        p.syncLast = { checked: inRound.size + archIn.length, remaining: unreadCount(s, rows) + archivedUnread(s, sections, rows, chatRows()).length, apps: [...apps], failed: [...Object.entries(failed).map(([at, why]) => ({ at: Number(at), why, skipped: s.failed[at]?.tries >= 2 })), ...loose.map(why => ({ at: null, why }))], changes, notes, ...(recCount ? { records: recCount, ...(storyOf(answer0) ? { story: storyOf(answer0) } : {}) } : {}), at: Date.now() };
         ensureIds(p);
         p.at = Date.now();
         pruneDropped(s, phoneItems(p));

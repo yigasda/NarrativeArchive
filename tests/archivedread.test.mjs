@@ -782,7 +782,7 @@ test('일상 comes in the reflection\'s own answer (no request of its own); who 
     assert.match(sys, /The phone is lived in every waking hour/);
     assert.match(sys, /Someone new texted or called gets a "contact"/);
     assert.match(sys, /PEOPLE AROUND \(wherever they would turn up; never someone the owner isn't in touch with now\)/);
-    assert.ok(!sys.includes("ONE TEST FOR EVERY ITEM") && sys.indexOf("THE STORY IS CANON") > sys.indexOf("CLOCK FIRST"));
+    assert.ok(!sys.includes("THE STORY IS CANON") && sys.indexOf("\nSTORY NEXT\nAfter \"clock\" and \"now\", resolve \"story\"; only then write the records, within it.") > sys.indexOf("CLOCK FIRST"));
     assert.match(sys, /"everyday": \{ the owner's own life, each app a list \(an empty one when nothing\)/);
     const guess = [...c.p.threads.flatMap(th => th.messages.filter(x => x.src === 'guess').map(x => `${th.with}:${x.text}`)), ...c.p.searches.filter(x => x.src === 'guess').map(x => x.q)];
     assert.deepEqual(guess.sort(), ['Ivo:whatever', 'Ivo:you started it', 'Mittagstisch Seongsu']);
@@ -807,7 +807,8 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.match(on, /"photos": \[\{ "caption", "ko", "time", "mood" \}\]/);
     assert.match(on, /The diary: an entry when a story day ends in these messages or a scene stays with them, as long as this owner would write it;/);
     assert.match(on, /Voice memos: about one every few days/);
-    assert.match(on, /\nTHE STORY IS CANON\n- The story is canon: write within what it tells, or the everyday life outside it\.\n- Never get ahead of its events: make up no event, outcome, ending, secret, new fact, reason, full account or plan of theirs;/);
+    assert.match(on, /WARNING: The natural next step ≠ told\. Going to sort it out, a document for it, a call about it, the day it ends, why it happened, who pays: none of these unless the messages say so\./);
+    assert.match(on, /"story": \[\{ "matter", "stands", "at" \}\],\n  "records": \[/);
     assert.match(on, /photo: "caption", "ko", "time", "mood"/);
     assert.ok(!on.includes('talk over each other') && on.includes('Contact goes both ways; a group chat may go on without them.'));
     assert.ok(on.includes('Posts only if this owner posts.') && !on.includes('Not every app every day') && !on.includes('only if this owner keeps them'));
@@ -1059,7 +1060,7 @@ test('되돌리기 after the place reading was asked again (AI로 연동) keeps 
 test('a records answer: scenes are events, story records on their scene, the owner\'s own life marked apart; 되돌리기 takes it all', async () => {
     const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'dinner with Mara at Pho 24'), say('Mara', 'that was nice')]);
     c.p.now = '10-26 18:00'; c.p.year = 2026;
-    await run(c.m, { now: '10-26 22:00', records: [
+    await run(c.m, { now: '10-26 22:00', story: [{ matter: 'dinner with Mara', stands: 'they ate at Pho 24', at: 2 }], records: [
         { type: 'scene', id: 'pho', at: 2, quote: 'dinner with Mara', date: '10-26', time: '19:00', summary: 'dinner with Mara' },
         { type: 'photo', at: 2, from: 'story', scene: 'pho', caption: 'pho bowls', time: '10-26 19:10', mood: 'warm' },
         // (a story record with no scene: the one scene of its message)
@@ -1082,6 +1083,8 @@ test('a records answer: scenes are events, story records on their scene, the own
     assert.ok(c.p.sync.done.flat().includes(3));
     // (the round says how many scenes, story and life records the answer had)
     assert.deepEqual(c.p.syncLast.records, { scenes: 1, story: 2, life: 4 });
+    // (the answer's "story", for a look: never judges a record)
+    assert.deepEqual(c.p.syncLast.story, [{ matter: 'dinner with Mara', stands: 'they ate at Pho 24', at: 2 }]);
     await data.undoRound(c.m, c.p);
     assert.equal(c.p.photos.length + c.p.searches.length, 0);
     assert.ok(!c.p.threads.some(t => t.messages.length));
@@ -1145,7 +1148,7 @@ test('life records that answer a scene ("scene" its id) go on it and the day\'s 
     // (they are the scene's: on its event)
     assert.ok(c.p.sync.events.bar);
     assert.match(T.sys, /each item with "scene" when it answers one/);
-    assert.match(T.sys, /- About the story's people or events, anything a later message could contradict is a new fact: a task and its deadline \("check the moodboards by 18:00"\), a thing done \("uploaded it"\), a plan for later \("ramyeon tonight\?"\)\. What the messages already say may be said again\./);
+    assert.match(T.sys, /- "story": \[\{ "matter" \(max 8 words\), "stands" \(max 15 words: the last thing the messages say about it\), "at" \(that message's number\) \}\]/);
 });
 
 test('the answer\'s "everyday" lists: each app the owner\'s own life, on its scene when it answers one; counted as life', async () => {
