@@ -159,8 +159,16 @@ test('점검 수정 2: "Ren Kim" moving or read never moves the owner Ren nor ta
     globalThis.__where = []; globalThis.__whereAnswer = { people: [{ name: 'Ren', aka: ['Ren Park'], city: 'Frankfurt', lives: 'DE', tz: 'Europe/Berlin' }, { name: 'Ren Park', city: 'Frankfurt', lives: 'DE', tz: 'Europe/Berlin' }, { name: 'Mara', city: 'Seoul', lives: 'KR', tz: 'Asia/Seoul' }],
         around: [{ name: 'Ren Park', about: 'the owner' }, { name: 'Mara', about: 'Ren\'s mother' }] };
     try { await data.readWhere(mText(), p); } finally { delete globalThis.__whereAnswer; }
+    // (점검 8: the reading said both; the code doesn't pick: its own row, and the user is asked)
+    assert.deepEqual(p.where.people.map(x => x.name).sort(), ['Mara', 'Ren', 'Ren Park']);
+    assert.deepEqual(p.where.ask, ['Ren Park']);
+    // "yes, the owner": the owner's name from then on, read again too
+    await data.answerOwnerAsk(mText(), p, 'Ren Park', true);
     assert.deepEqual(p.where.people.map(x => x.name).sort(), ['Mara', 'Ren']);
-    assert.deepEqual(p.around.people.map(x => x.name), ['Mara']);
+    assert.ok(p.where.people.find(x => x.name === 'Ren').aka.includes('Ren Park'));
+    globalThis.__whereAnswer = { people: [{ name: 'Ren', aka: ['Ren Park'], city: 'Frankfurt', lives: 'DE', tz: 'Europe/Berlin' }, { name: 'Ren Park', city: 'Frankfurt', lives: 'DE', tz: 'Europe/Berlin' }, { name: 'Mara', city: 'Seoul', lives: 'KR', tz: 'Asia/Seoul' }] };
+    try { await data.readWhere(mText(), p); } finally { delete globalThis.__whereAnswer; }
+    assert.deepEqual([p.where.people.map(x => x.name).sort(), p.where.ask], [['Mara', 'Ren'], undefined]);
     // a name two rows share
     p = plainPhone({ where: { at: 1, people: [row('Ren', 'Frankfurt', 'Europe/Berlin'), row('Ivo Kim', 'Paris', 'Europe/Paris', { aka: ['Ivo'] }), row('Ivo Park', 'Seoul', 'Asia/Seoul', { aka: ['Ivo'] })] } });
     assert.equal(data.__peopleMoved(p, [{ name: 'Ivo', city: 'Tokyo', tz: 'Asia/Tokyo' }], '', mText()), false);
@@ -340,4 +348,21 @@ test('점검 7 (도시 · 연도): a name two places go by is always asked when 
     globalThis.__trackers = [{ date: '11-06' }, { date: '10-01' }, { date: '2026-11-05' }];
     assert.deepEqual(data.__trackerYear(), { y: 2026, day: '11-06' });
     delete globalThis.__trackers;
+});
+
+test('점검 8 (위치): at home or away by the country the reading says the city is in ("in"); a move carries the model\'s country, never the old city\'s', () => {
+    // in Detroit, the reading saying it is in the US, living in the US: home, no visit
+    let p = plainPhone({ lives: 'US', where: { at: 1, people: [row('Ren', 'Detroit', 'America/Detroit', { lives: 'US', in: 'US' })] } });
+    data.__mergePhone(p, { threads: [], posts: [], contacts: [], visits: [{ place: 'Detroit', city: 'Detroit', time: '10-26 11:00', with: [] }] });
+    assert.equal(p.visits.length, 0);
+    // living in Korea, the reading saying Osaka is in Japan: Osaka is a visit
+    p = plainPhone({ lives: 'KR', where: { at: 1, people: [row('Ren', 'Osaka', 'Asia/Tokyo', { lives: 'KR', in: 'JP' })] } });
+    data.__mergePhone(p, { threads: [], posts: [], contacts: [], visits: [{ place: 'Osaka', city: 'Osaka', time: '10-26 11:00', with: [] }] });
+    assert.equal(p.visits.length, 1);
+    // Mara moves to Tokyo: her row's country is what the model gave, the old one's gone
+    p = plainPhone({ contacts: [{ name: 'Mara' }], where: { at: 1, people: [row('Ren', 'Seoul', 'Asia/Seoul'), row('Mara', 'Seoul', 'Asia/Seoul', { in: 'KR' })] } });
+    data.__peopleMoved(p, [{ name: 'Mara', city: 'Tokyo', tz: 'Asia/Tokyo', in: 'JP' }], '', mText());
+    assert.equal(p.where.people.find(x => x.name === 'Mara').in, 'JP');
+    data.__peopleMoved(p, [{ name: 'Mara', city: 'Busan', tz: 'Asia/Seoul' }], '', mText());
+    assert.equal(p.where.people.find(x => x.name === 'Mara').in, undefined);
 });
