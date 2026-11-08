@@ -1267,6 +1267,8 @@ test('반영 본체 gets the orders and tickets (no money), so a mail or text ab
     const got = data.ordersBlock({ orders: [{ id: 'o1', shop: 'Wohnwerk', item: 'wool rug 160x230', price: 189, status: 'cancelled', time: '10-28 20:00' }], passes: [{ id: 't1', kind: 'hotel', by: 'Hotel Lio', no: 'HB-2231', date: '11-02', until: '11-08', status: 'booked' }] });
     assert.equal(got, '[ORDERS AND TICKETS]\n{"orders":[{"shop":"Wohnwerk","item":"wool rug 160x230","status":"cancelled","time":"10-28 20:00"}],"tickets":[{"kind":"hotel","by":"Hotel Lio","no":"HB-2231","date":"11-02","until":"11-08","status":"booked"}]}');
     assert.equal(data.ordersBlock({ orders: [], passes: [] }), '');
+    // (an order's arrival day, from the phone's own order)
+    assert.match(data.ordersBlock({ orders: [{ id: 'o2', shop: 'Lio Shop', item: 'scarf', status: 'on the way', time: '11-03 14:00' }] }, { money: { orders: [{ id: 'o2', eta: '11-05' }] } }), /"status":"on the way","time":"11-03 14:00","eta":"11-05"/);
     assert.match(data.coreSystem({ wallet: true }), /- ORDERS AND TICKETS \(sometimes\): the owner's orders and tickets as the phone has them; a record about one keeps its item, dates and status\./);
     assert.ok(!data.coreSystem().includes('ORDERS AND TICKETS'));
 });

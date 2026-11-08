@@ -818,8 +818,10 @@ export function recordsCore(raw, textOf = () => '') {
 // "everyday" (3.179.1~, as the money step writes story and everyday payments together; 3.171.9–3.179.0 asked it apart)
 // the owner's orders and tickets for 반영 본체 (the money step has them all): what a mail, text or calendar about one says
 // agrees with the phone (its item, its dates, its status); no money
-export const ordersBlock = money => {
-    const orders = arr(money?.orders).map(o => ({ shop: o.shop, item: o.item, ...(o.option ? { option: o.option } : {}), ...(o.gift ? { gift: o.gift } : {}), ...(o.sender ? { sender: o.sender } : {}), status: o.status, time: o.time }));
+export const ordersBlock = (money, p = null) => {
+    // (its arrival day, from the phone's own order: MONEY NOW leaves it out)
+    const etaOf = id => arr(p?.money?.orders).find(x => x?.id === id)?.eta || '';
+    const orders = arr(money?.orders).map(o => ({ shop: o.shop, item: o.item, ...(o.option ? { option: o.option } : {}), ...(o.gift ? { gift: o.gift } : {}), ...(o.sender ? { sender: o.sender } : {}), status: o.status, time: o.time, ...(etaOf(o.id) ? { eta: etaOf(o.id) } : {}) }));
     const tickets = arr(money?.passes).map(x => ({ kind: x.kind, by: x.by, ...(x.from ? { from: x.from } : {}), ...(x.to ? { to: x.to } : {}), ...(x.no ? { no: x.no } : {}), date: x.date, ...(x.until ? { until: x.until } : {}), status: x.status }));
     return orders.length || tickets.length ? `[ORDERS AND TICKETS]\n${JSON.stringify({ ...(orders.length ? { orders } : {}), ...(tickets.length ? { tickets } : {}) })}` : '';
 };
@@ -1976,7 +1978,7 @@ async function updatePhone(m, owner) {
             reread.size ? `[MESSAGES READ BEFORE, NOW CHANGED]\n${[...reread].map(([at, evs]) => `- #${at}: ${evs.length ? evs.map(e => `${e.id} (${e.summary})`).join('; ') : 'nothing on the phone yet'}`).join('\n')}` : '',
             `[PHONE NOW]\n${JSON.stringify(phoneForModel(p))}`,
             !split && money ? `[MONEY NOW]\n${JSON.stringify(money)}` : '', !split && invest ? `[INVESTMENTS NOW]\n${JSON.stringify(invest)}` : '',
-            split && money ? ordersBlock(money) : '',
+            split && money ? ordersBlock(money, p) : '',
             !split && money && p.delivery ? `[DELIVERY SHOPS]\n${(p.delivery.shops || []).map(x => x.name).join('\n') || '(none yet)'}${p.delivery.cart?.items?.length ? `\nCART (in the basket, not ordered): ${p.delivery.cart.shop}: ${p.delivery.cart.items.map(x => `${x.name} ×${x.qty}`).join(', ')}` : ''}` : '',
             life ? `[LIFE NOW]\n${JSON.stringify(life)}` : '', askWeather && tracker ? `[WEATHER NOW]\n${JSON.stringify(trackShown)}` : '', clock,
             !split && (money || invest) && p.wealthPlan ? `[WEALTH]\n${JSON.stringify({ currency: p.wealthPlan.currency, deposits: p.wealthPlan.deposits, investments: p.wealthPlan.investments, basis: p.wealthPlan.basis })}` : '',
