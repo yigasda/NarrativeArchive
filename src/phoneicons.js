@@ -185,6 +185,9 @@ const PAL = {
     work: [['#2e6be6', '#5a8cf0'], ['#ffffff', '#f4f5f7', '#2e6be6'], ['#24262b', '#3b3e45']],
     reading: [['#11c26b', '#3fd98a'], ['#13213d', '#24375f'], ['#f2652d', '#ff8a52']],
     shopping: [['#ff6a13', '#ff8f45'], ['#18c2b0', '#45d8c8'], ['#ef3b4f', '#ff6676']],
+    money: [['#1d3461', '#2f4f8a'], ['#2f7d5a', '#3fa874'], ['#2a2c31', '#43464d', '#e2c26a']],
+    maps: [['#2f9a6a', '#4cc28a'], ['#e9eef3', '#ffffff', '#2f8cff'], ['#3b6fd8', '#5f8ff0']],
+    health: [['#ff5a6a', '#ff8a8f'], ['#ffffff', '#f6f7f9', '#ff4d6a'], ['#13b3a0', '#3fd0bf']],
     other: [['#8e949e', '#b7bcc4'], ['#2f8cff', '#58a8ff']],
 };
 const GLYPH = {
@@ -196,6 +199,9 @@ const GLYPH = {
     work: c => `<rect x="12" y="21" width="36" height="24" rx="5" fill="${c}"/><path d="M23 21v-3.5a2.5 2.5 0 0 1 2.5-2.5h9a2.5 2.5 0 0 1 2.5 2.5V21" fill="none" stroke="${c}" stroke-width="3.4"/>`,
     reading: c => `<path d="M30 20c-4-3-10-4-17-3v25c7-1 13 0 17 3 4-3 10-4 17-3V17c-7-1-13 0-17 3z" fill="${c}"/><path d="M30 20v25" stroke="rgba(0,0,0,.18)" stroke-width="2"/>`,
     shopping: (c, b) => `<path d="M15 22h30l-2.4 22a3 3 0 0 1-3 2.6H20.4a3 3 0 0 1-3-2.6z" fill="${c}"/><path d="M23.5 27v-5a6.5 6.5 0 0 1 13 0v5" fill="none" stroke="${b}" stroke-width="3" stroke-linecap="round"/>`,
+    money: (c, b) => `<rect x="11" y="18" width="38" height="25" rx="5" fill="${c}"/><rect x="11" y="23.5" width="38" height="5" fill="${b}"/><rect x="16" y="34" width="10" height="3.4" rx="1.7" fill="${b}"/>`,
+    maps: (c, b) => `<path d="M30 12c-7.5 0-13 5.6-13 12.6C17 34 30 48 30 48s13-14 13-23.4C43 17.6 37.5 12 30 12z" fill="${c}"/><circle cx="30" cy="25" r="5" fill="${b}"/>`,
+    health: c => `<path d="M30 45s-15.5-9.2-15.5-20.2c0-5.1 3.8-9.3 8.9-9.3 3 0 5.3 1.4 6.6 3.6 1.3-2.2 3.6-3.6 6.6-3.6 5.1 0 8.9 4.2 8.9 9.3C45.5 35.8 30 45 30 45z" fill="${c}"/><path d="M19 29h6l2.5-4 4 8 2.5-4H41" fill="none" stroke="#fff" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>`,
     other: c => [[17, 17], [33, 17], [17, 33], [33, 33]].map(([x, y]) => `<rect x="${x}" y="${y}" width="11" height="11" rx="3.4" fill="${c}"/>`).join(''),
 };
 const hash = s => { let h = 2166136261; for (const c of String(s)) h = Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0; h ^= h >>> 15; h = Math.imul(h, 2246822507) >>> 0; h ^= h >>> 13; h = Math.imul(h, 3266489909) >>> 0; h ^= h >>> 16; return h >>> 0; };

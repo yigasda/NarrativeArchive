@@ -4,7 +4,7 @@ import {readFile} from 'node:fs/promises';
 const enc=s=>'data:text/javascript;base64,'+Buffer.from(s).toString('base64');
 const core=enc(`export const ctx=()=>globalThis.storyTest.context;export const getMeta=()=>globalThis.storyTest.meta;export const saveMeta=async()=>{globalThis.storyTest.saves++};`);
 const src=await readFile(new URL('../src/phonestory.js',import.meta.url),'utf8');
-const story=await import(enc(src.replace("'./core.js'",JSON.stringify(core))));
+const story=await import(enc(src.replace("'./core.js'",JSON.stringify(core)).replace("'./phonesync.js'",JSON.stringify(new URL('../src/phonesync.js',import.meta.url).href))));
 function setup(){
  const m={text:'Story archive',phoneScreenHolder:'Mara',phoneProfiles:{newPerson:{type:'character',id:'new.png'}},phones:{oscar:{owner:'Oscar',wealthPlan:{currency:'EUR'}}},finance:{accounts:{a:{amount:42}},prices:{},transfers:{}},lastPhoneOwner:'Oscar',phoneLore:['old'],phoneLoreOff:{old:[1]}};
  const state=globalThis.storyTest={meta:m,saves:0,prompts:0,choice:'keep',confirmed:true};
@@ -92,4 +92,16 @@ test('continued branch can undo inherited rounds without touching source phone, 
  child.syncUndos.pop();child.syncUndo.sync.events.r1.effects.push({amount:-1});
  child.voice[0].text='branch only';m.finance.accounts.a.amount=0;
  assert.equal(JSON.stringify(source),before);
+});
+
+test('점검 7: 새로 시작 takes this browser\'s record of rounds to put back (복구) with the old story, and tells a waiting reading the story changed', () => {
+ const {m}=setup(),store=new Map(),was=globalThis.localStorage;
+ globalThis.localStorage={getItem:k=>store.get(k)??null,setItem:(k,v)=>store.set(k,v),removeItem:k=>store.delete(k)};
+ try {
+  store.set('narrativearchive:sync:scope-x','[{"owner":"Ivo"}]');store.set('scope-x','ivo');
+  const run=m.phoneStoryRun||0;
+  story.resetPhoneStory(m,'scope-x');
+  assert.equal(store.has('narrativearchive:sync:scope-x'),false);
+  assert.equal(m.phoneStoryRun,run+1);
+ } finally { globalThis.localStorage=was; }
 });

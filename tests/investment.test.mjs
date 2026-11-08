@@ -11,7 +11,7 @@ const data = encoded(`export const homeCountry=p=>String(p?.lives||p?.country||'
 const apps = encoded(`export const AX={}; export const ax=()=>''; export const axBar=()=>'';export const axCb=()=>'';export const axH1=t=>'<h1>'+t+'</h1>';export const axInd=()=>'';export const axTop=()=>'';export const axDay=(p,n,d)=>d;export const axFind=()=>'';export const axKp=()=>'';export const axLetter=()=>'';export const axTint=()=> '#ffffff';export const busyHtml='';`);
 const util=encoded(`export const esc=s=>String(s??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');`);
 const financeURL=pathToFileURL(new URL('../src/finance.js',import.meta.url).pathname).href;
-async function load(file, map) { map={'./phonesync.js':new URL('../src/phonesync.js',import.meta.url).href,'./phoneparse.js':new URL('../src/phoneparse.js',import.meta.url).href,'./phoneclock.js':new URL('../src/phoneclock.js',import.meta.url).href,'./phonesynclife.js':new URL('../src/phonesynclife.js',import.meta.url).href,'./phonesyncmoney.js':new URL('../src/phonesyncmoney.js',import.meta.url).href,'./phonestory.js':encoded(`export const phoneTarget=()=>({scope:phoneChatScope(),check(){}});export const phoneChatScope=()=>'test';`),...map}; const src=await readFile(new URL('../src/'+file,import.meta.url),'utf8');return import(encoded(src.replace(/from '([^']+)'/g,(all,k)=>`from '${map[k]||k}'`))); }
+async function load(file, map) { map={'./phonesync.js':new URL('../src/phonesync.js',import.meta.url).href,'./phoneparse.js':new URL('../src/phoneparse.js',import.meta.url).href,'./phoneclock.js':new URL('../src/phoneclock.js',import.meta.url).href,'./phonemapcity.js':new URL('../src/phonemapcity.js',import.meta.url).href,'./phonesynclife.js':new URL('../src/phonesynclife.js',import.meta.url).href,'./phonesyncmoney.js':new URL('../src/phonesyncmoney.js',import.meta.url).href,'./phonestory.js':encoded(`export const phoneTarget=()=>({scope:phoneChatScope(),check(){}});export const phoneChatScope=()=>'test';`),...map}; const src=await readFile(new URL('../src/'+file,import.meta.url),'utf8');return import(encoded(src.replace(/from '([^']+)'/g,(all,k)=>`from '${map[k]||k}'`))); }
 const wealthSource=await readFile(new URL('../src/wealth.js',import.meta.url),'utf8');
 const wealthURL=encoded(wealthSource.replace("'./ai.js'",JSON.stringify(ai)).replace("'./core.js'",JSON.stringify(core)).replace("'./finance.js'",JSON.stringify(financeURL)).replace("'./phoneparse.js'",JSON.stringify(new URL('../src/phoneparse.js',import.meta.url).href)));
 const dataMod=await load('investdata.js',{'./wealth.js':wealthURL,'./ai.js':ai,'./core.js':core,'./phonedata.js':data,'./finance.js':financeURL});
@@ -514,4 +514,22 @@ test('점검 6: a story with no year of its own values its money and investments
     assert.equal(W.wealthDate({ text: '' }, { year: 2026, now: '03-14 10:00' }), '2026-03-14');
     assert.equal(W.wealthDate({ text: '## #0–#1 — 2025-03-14 Berlin\n' }, { now: '03-14 10:00' }), '');
     assert.equal(dataMod.investmentDate({ text: '' }, { noYear: true, now: '03-14 10:00' }), today);
+});
+
+test('점검 7: a story with no year keeps the day its money was first valued (tomorrow finds the same rates); evidence goes by the story part as sent, a [BANK] paragraph closing the last message too', async () => {
+    const W = await import(wealthURL), today = new Date().toISOString().slice(0, 10);
+    const p = { noYear: true, now: '03-14 10:00', money: { bank: { accounts: [] } } };
+    assert.equal(W.wealthDate({ text: '' }, p), today);
+    assert.equal(p.money.fxDate, today);
+    p.money.fxDate = '2026-01-02';
+    assert.equal(W.wealthDate({ text: '' }, p), '2026-01-02');
+    const q = { noYear: true, now: '03-14 10:00', investment: { trades: [] } };
+    assert.equal(dataMod.investmentDate({ text: '' }, q), today);
+    assert.equal(q.investment.date, today);
+    const { rememberStory, storyPart } = await import('../src/phoneparse.js');
+    const story = '[RECENT CHAT]\n[#5] Mara: 오늘 주식 샀어.\n\n[BANK]\nSAP 10주 매수 (주당 182.4)\n\n[DIARY]\n긴 하루였다.';
+    const input = rememberStory(`${story}\n\n[OWNER]\nMara\n\n[BANK]\n{"accounts":[]}`, story);
+    assert.ok(storyPart(input).includes('SAP 10주 매수 (주당 182.4)'));
+    assert.ok(storyPart(input).includes('긴 하루였다.'));
+    assert.ok(!storyPart(input).includes('{"accounts":[]}'));
 });

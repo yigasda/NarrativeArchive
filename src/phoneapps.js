@@ -203,13 +203,18 @@ const delRow = (kind, i, label) => `<div class="ax_card ax_delcard"><button type
 // a list row that slides left to show 삭제 (메시지 · 메일 · 통화)
 const swipeRow = (kind, i, row) => `<div class="ax_swp"><button type="button" class="na_ph_rm ax_swdel" data-kind="${kind}" data-i="${esc(String(i))}">${ax('trash2', 21, 'currentColor', 2)}<span>삭제</span></button>${row}</div>`;
 const delBtn = (kind, i, cls, inner) => `<button type="button" class="na_ph_rm ${cls}" data-kind="${kind}" data-i="${esc(String(i))}" aria-label="지우기">${inner}</button>`;
-export const AXB = { clock: 'clockc', timer: 'clockc', wclock: 'clockc', alarm: 'clockc', health: 'health', hsteps: 'health', hsleep: 'health', hcmp: 'health', hwork: 'health', hheart: 'health', hwater: 'health', hweight: 'health', files: 'files', folder: 'files', file: 'files', weather: 'sky', wcity: 'sky', wlist: 'sky', dlv: 'dlv', delivery: 'dlv', dshop: 'dlv', dcart: 'dlv', dorders: 'dlv', dorder: 'dlv', ditem: 'dlv', dpay: 'dlv', drate: 'dlv', setprofile: 'slate', ivnotes: 'invest', ivschedule: 'invest', ivhistory: 'invest', invest: 'invest', stock: 'invest', ivactivity: 'invest', ivwatch: 'invest', ivstakes: 'invest', ivcash: 'invest', ivprices: 'invest', msg: 'blue', thread: 'blue', call: 'blue', callmiss: 'blue', callwho: 'blue', contacts: 'blue', contact: 'blue', draft: 'blue', page: 'sky', tabs: 'sky', marks: 'sky', history: 'sky', bank: 'bank', acct: 'bank', tx: 'bank', fixed: 'bank', banknote: 'bank', banksend: 'bank', stmt: 'bank', txdoc: 'bank', bankmore: 'bank', wallet: 'wallet', card: 'wallet', pass: 'wallet', shop: 'shop', order: 'shop', track: 'shop', voice: 'voice', voiceone: 'voice', photo: 'apri', photoone: 'apri', note: 'butter', noteone: 'butter', search: 'sky', searchone: 'sky', cal: 'brick', calone: 'brick', mail: 'sky', mailone: 'sky', set: 'slate', settheme: 'slate', setdate: 'slate', setscreenholder: 'slate', setplace: 'slate', prep: 'slate', setlore: 'slate', setwho: 'slate', setremake: 'slate', setsync: 'slate', setsyncpick: 'slate', stime: 'stime', cam: 'apri', map: 'blue', mapq: 'blue', mapc: 'blue' };
+export const AXB = { clock: 'clockc', timer: 'clockc', wclock: 'clockc', alarm: 'clockc', health: 'health', hsteps: 'health', hsleep: 'health', hcmp: 'health', hwork: 'health', hheart: 'health', hwater: 'health', hweight: 'health', files: 'files', folder: 'files', file: 'files', weather: 'sky', wcity: 'sky', wlist: 'sky', dlv: 'dlv', delivery: 'dlv', dshop: 'dlv', dcart: 'dlv', dorders: 'dlv', dorder: 'dlv', ditem: 'dlv', dpay: 'dlv', drate: 'dlv', setprofile: 'slate', ivnotes: 'invest', ivschedule: 'invest', ivhistory: 'invest', invest: 'invest', stock: 'invest', ivactivity: 'invest', ivwatch: 'invest', ivstakes: 'invest', ivcash: 'invest', ivprices: 'invest', msg: 'blue', thread: 'blue', call: 'blue', callmiss: 'blue', callwho: 'blue', contacts: 'blue', contact: 'blue', draft: 'blue', groupinfo: 'blue', page: 'sky', tabs: 'sky', marks: 'sky', history: 'sky', bank: 'bank', acct: 'bank', tx: 'bank', fixed: 'bank', banknote: 'bank', banksend: 'bank', stmt: 'bank', txdoc: 'bank', bankmore: 'bank', wallet: 'wallet', card: 'wallet', pass: 'wallet', shop: 'shop', order: 'shop', track: 'shop', voice: 'voice', voiceone: 'voice', photo: 'apri', photoone: 'apri', note: 'butter', noteone: 'butter', search: 'sky', searchone: 'sky', cal: 'brick', calone: 'brick', mail: 'sky', mailone: 'sky', set: 'slate', settheme: 'slate', setdate: 'slate', setscreenholder: 'slate', setplace: 'slate', prep: 'slate', setlore: 'slate', setwho: 'slate', setremake: 'slate', setsync: 'slate', setsyncpick: 'slate', stime: 'stime', cam: 'apri', map: 'blue', mapq: 'blue', mapc: 'blue' };
 export const AXB_C = { clockc: ['#f5a524', '#3a3220'], health: ['#e0405f', '#fbe3e8'], files: ['#2f6fbf', '#dfeaf8'], dlv: ['#1fa8a3', '#d9f4f3'], invest: ['#17695d', '#d9eee5'], blue: ['#2f6bff', '#e1e9ff'], apri: ['#a65a4e', '#f7e3d7'], butter: ['#7f6a22', '#f6edcf'], sky: ['#3f6a9e', '#dde8f4'], brick: ['#a14a42', '#f3dcd9'], slate: ['#454d5a', '#e6e8ec'], bank: ['#2c4a80', '#e2e9f5'], wallet: ['#3d4a66', '#e3e7ef'], shop: ['#2f7d74', '#d9efec'], voice: ['#8a5a2e', '#f2e7d6'], stime: ['#3f8fd8', '#e3f1fd'] };
 // people outside the archive get a letter on one of the home icons' colours
 const AX_AV = ['#8faed1', '#a699c9', '#d89f98', '#89b892', '#d494a7', '#a2a7af', '#dcc680'];
 export const axTint = n => AX_AV[[...String(n)].reduce((h, ch) => (h * 31 + ch.codePointAt(0)) % 9973, 7) % AX_AV.length];
 export const axLetter = (n, z) => `<span class="ax_avc" style="width: ${z}px; height: ${z}px; font-size: ${Math.round(z * 0.4)}px; --axfs: ${Math.round(z * 0.4)}px; background: ${axTint(n)}">${esc([...String(n).trim()][0] || '?')}</span>`;
 const axAv = (n, z, roster) => (roster.has(nameKey(n)) ? axFace(n, z) : axLetter(n, z));
+// 단톡 (p.threads with group: true, members without the owner; with is the room's name). docs/mockups/phone-groupchat: the list as D
+// (the room's letter, how many are in it), the room as A (three faces, the name, N명 › to the members, a name over each run)
+export const groupOf = (t) => (t?.group ? [...new Set((Array.isArray(t.members) && t.members.length ? t.members : t.messages.filter(x => x.from && x.from !== 'me').map(x => x.from)).filter(Boolean))] : null);
+const groupAv = (t, z) => `<span class="ax_gav">${axLetter(t.with, z)}<i class="cg_num">${groupOf(t).length + 1}</i></span>`;
+const groupStack = (t, roster) => `<span class="ax_gstk">${groupOf(t).slice(0, 3).map(n => axAv(n, 26, roster)).join('')}</span>`;
 export const axFlat = mood => (AX_MOOD[mood] || AX_MOOD.warm).split(', ')[1];
 export const axCb = (go, k = 'back') => `<button type="button" class="ax_cb" data-go="${go}" aria-label="${k === 'x' ? '닫기' : '뒤로'}">${ax(k, 18, 'currentColor', 2.3)}</button>`;
 export const axKp = p => (hasKo(p) ? `<button type="button" class="na_ph_kochip ax_kp ${koOn() ? 'on' : ''}">가 한국어</button>` : '');
@@ -233,9 +238,9 @@ export function msgList(p, now, roster) {
         ${axH1('메시지', ts.length ? `${ts.length}개 대화` : '')}
         ${axFind()}
         ${ts.length ? `<div class="ax_card">${ts.map(t => { const x = t.messages.filter(y => !y.deleted).at(-1) || t.messages[t.messages.length - 1]; return swipeRow('thread', p.threads.indexOf(t), `
-          <button type="button" class="ax_rw" data-go="thread" data-i="${p.threads.indexOf(t)}">${threadNew(t) ? '<i class="ax_dot"></i>' : ''}${axAv(t.with, 48, roster)}<span class="ax_tx">
+          <button type="button" class="ax_rw" data-go="thread" data-i="${p.threads.indexOf(t)}">${threadNew(t) ? '<i class="ax_dot"></i>' : ''}${t.group ? groupAv(t, 48) : axAv(t.with, 48, roster)}<span class="ax_tx">
             <span class="ax_h"><b>${esc(savedName(p, t.with))}</b><small class="cg_num">${esc(listTime(p, x?.time || ''))}</small></span>
-            <span class="ax_p">${t.draft ? `<span class="ax_draftw">초안</span>${esc(t.draft.text)}` : `${esc(x?.text || '')}${x?.ko && koOn() ? `<span class="ax_ko">${esc(x.ko)}</span>` : ''}`}</span></span></button>`); }).join('')}</div>` : '<div class="ax_empty">메시지가 없어요</div>'}
+            <span class="ax_p1">${t.draft ? `<span class="ax_draftw">초안</span>${esc(t.draft.text)}` : `${t.group && x?.from ? `${esc(x.from === 'me' ? '나' : savedName(p, x.from))}: ` : ''}${esc(x?.text || '')}${x?.ko && koOn() ? `<span class="ax_ko">${esc(x.ko)}</span>` : ''}`}</span></span></button>`); }).join('')}</div>` : '<div class="ax_empty">메시지가 없어요</div>'}
         <i class="ax_pad"></i>
       </div>
       ${axInd()}`;
@@ -260,10 +265,14 @@ export function draftView(p, now, i, roster) {
       </div>
       ${axInd()}`;
 }
-export function threadScreen(p, now, i, roster) {
+// 꾹 누르기 (docs/mockups/phone-msgpress D): a bubble held shows a bar of four under it — 복사 · 재번역 · 선택 · 삭제;
+// 선택 picks many (a circle on the left), and the head becomes ✕ · N개 선택 with 복사 · 재번역 · 삭제
+Object.assign(AX, { mqcopy: 'M9 9h10v10H9zM5 15V5h10', mqtrans: 'M3.5 5h9M8 3v2M5.5 5c.6 2.6 2.4 5 5 6M10.5 5c-.6 2.8-2.6 5.4-6 7M11.5 20l4-9 4 9M12.9 17h5.2', mqpick: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM8 12l3 3 5-6', mqbin: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13' });
+export function threadScreen(p, now, i, roster, ui = {}) {
     const t = p.threads[i];
     if (!t) return msgList(p, now, roster);
-    const ms = t.messages.filter(x => !x.deleted), group = new Set(ms.filter(x => x.from !== 'me').map(x => nameKey(x.from))).size > 1, saved = savedName(p, t.with);
+    const pick = ui.msgPick?.i === i ? ui.msgPick.ks : null, held = !pick && ui.msgHeld?.i === i ? ui.msgHeld.k : null;
+    const ms = t.messages.filter(x => !x.deleted), group = !!t.group || new Set(ms.filter(x => x.from !== 'me').map(x => nameKey(x.from))).size > 1, saved = savedName(p, t.with);
     let day = '';
     const rows = ms.map((x, n) => {
         let out = '';
@@ -272,17 +281,40 @@ export function threadScreen(p, now, i, roster) {
         else if (prev && prev.from !== x.from) out += '<i class="ax_gap"></i>';
         if (!me && group && (!prev || prev.from !== x.from || d !== prev.time.slice(0, 5))) out += `<div class="ax_who">${esc(savedName(p, x.from))}</div>`;
         const tail = !next || next.from !== x.from || next.time.slice(0, 5) !== d;
-        out += `<div class="ax_bb ${me ? 'ax_bm' : 'ax_bt'} ${tail ? 'tail' : ''}">${esc(x.text)}${x.ko && koOn() ? `<span class="ax_k">${esc(x.ko)}</span>` : ''}</div>`;
+        const k = t.messages.indexOf(x), on = pick?.has(k), busy = ui.retr?.has(k);
+        const bb = `<div class="ax_bb ${me ? 'ax_bm' : 'ax_bt'} ${tail ? 'tail' : ''}${on ? ' ax_bpk' : ''} na_ph_bb" data-k="${k}">${esc(x.text)}${x.ko && koOn() ? `<span class="ax_k">${busy ? `${busyHtml} 번역하는 중` : esc(x.ko)}</span>` : busy ? `<span class="ax_k">${busyHtml} 번역하는 중</span>` : ''}</div>`;
+        if (pick) out += `<div class="ax_mrow${me ? ' me' : ''}"><i class="ax_mck${on ? ' on' : ''}">${on ? ax('check', 13, '#fff', 3) : ''}</i>${bb}</div>`;
+        else if (held === k) out += `<div class="ax_mheld${me ? ' me' : ''}">${bb}<div class="ax_mbar">${[['mqcopy', '복사', 'na_ph_mcopy', ''], ['mqtrans', '재번역', 'na_ph_mretr', ''], ['mqpick', '선택', 'na_ph_mpick', ''], ['mqbin', '삭제', 'na_ph_mdel', ' red']].map(([ic, l, c, r]) => `<button type="button" class="${c}${r}" data-k="${k}">${ax(ic, 19, 'currentColor', 2)}<small>${l}</small></button>`).join('')}</div></div>`;
+        else out += bb;
         if (me && !next && x.time.length > 5) out += `<div class="ax_read">읽음 ${esc(fmtTime(p, x.time))}</div>`;
         return out;
     }).join('');
+    if (pick) return `${axBar(p, now)}
+      <div class="ax_top ax_mtop"><button type="button" class="ax_cb na_ph_mquit" aria-label="그만 고르기">${ax('x', 17, 'currentColor', 2.4)}</button><b>${pick.size}개 선택</b><button type="button" class="ax_cb na_ph_mcopy" aria-label="복사" ${pick.size ? '' : 'disabled'}>${ax('mqcopy', 17, 'currentColor', 2.2)}</button><button type="button" class="ax_cb na_ph_mretr" aria-label="재번역" ${pick.size ? '' : 'disabled'}>${ax('mqtrans', 17, 'currentColor', 2.2)}</button><button type="button" class="ax_cb na_ph_mdel red" aria-label="삭제" ${pick.size ? '' : 'disabled'}>${ax('mqbin', 17, 'currentColor', 2.2)}</button></div>
+      <div class="ax_scroll ax_msgs ax_mpicking">${rows}<i class="ax_pad big"></i></div>
+      ${axInd()}`;
     return `${axBar(p, now)}
-      ${axTop(`${axCb('msg')}<button type="button" class="ax_who2" data-go="contact" data-i="${encodeURIComponent(nameKey(t.with))}">${axAv(t.with, 38, roster)}<span><b>${esc(saved)}</b><small>연락처 보기 ›</small></span></button>`, axKp(p))}
-      <div class="ax_scroll ax_msgs">${rows}<i class="ax_pad big"></i></div>
+      ${axTop(`${axCb('msg')}${t.group ? `<button type="button" class="ax_who2" data-go="groupinfo" data-i="${i}">${groupStack(t, roster)}<span><b>${esc(t.with)}</b><small>${groupOf(t).length + 1}명 ›</small></span></button>` : `<button type="button" class="ax_who2" data-go="contact" data-i="${encodeURIComponent(nameKey(t.with))}">${axAv(t.with, 38, roster)}<span><b>${esc(saved)}</b><small>연락처 보기 ›</small></span></button>`}`, axKp(p))}
+      <div class="ax_scroll ax_msgs${held !== null ? ' ax_mholding' : ''}">${rows}<i class="ax_pad big"></i></div>
       ${draftBar(p, t, i)}
       ${axInd()}`;
 }
 
+// 단톡 › 멤버: who is in the room (a name not in the contacts still shows by its name), the owner first
+export function groupInfo(p, now, i, roster) {
+    const t = p.threads[i];
+    if (!groupOf(t)) return threadScreen(p, now, i, roster);
+    const ms = groupOf(t);
+    return `${axBar(p, now)}
+      ${axTop(axCb(`thread:${i}`))}
+      <div class="ax_scroll">
+        ${axH1(t.with, `${ms.length + 1}명`)}
+        <div class="ax_card"><div class="ax_rw">${axAv(p.owner, 44, roster)}<span class="ax_tx"><b>나 · ${esc(p.owner)}</b></span></div>
+        ${ms.map(n => `<button type="button" class="ax_rw" data-go="contact" data-i="${encodeURIComponent(nameKey(n))}">${axAv(n, 44, roster)}<span class="ax_tx"><b>${esc(savedName(p, n))}</b><span class="ax_p">${esc(p.threads.filter(x => x !== t && !x.group && nameKey(x.with) === nameKey(n)).length ? '1:1 대화도 있어요' : '연락처 보기')}</span></span>${axChev}</button>`).join('')}</div>
+        <i class="ax_pad"></i>
+      </div>
+      ${axInd()}`;
+}
 // 전화: one row per run of the same person and kind on one day, newest first
 function callRuns(p, onlyMissed) {
     const runs = [];
@@ -316,7 +348,7 @@ export function contactList(p) {
     const seen = new Map();
     const gone = new Set(p.hiddenContacts || []);
     const add = n => { const k = nameKey(n); if (k && k !== 'me' && k !== nameKey(p.owner) && !gone.has(k) && !seen.has(k)) seen.set(k, n); };
-    p.contacts.forEach(c => add(c.name)); p.threads.forEach(t => add(t.with)); p.calls.forEach(c => add(c.with));
+    p.contacts.forEach(c => add(c.name)); p.threads.forEach(t => (t.group ? groupOf(t).forEach(add) : add(t.with))); p.calls.forEach(c => add(c.with));
     return [...seen.values()].sort((a, b) => savedName(p, a).localeCompare(savedName(p, b)));
 }
 export function contactsScreen(p, now, roster) {
@@ -477,24 +509,37 @@ export function calScreen(p, now, m, pick = '') {
     const an = annivList(m, p.owner);
     // a plan called off stays in the data (되돌리기) but not on the calendar
     const evs = p.events.map((e, k) => ({ e, k })).filter(x => !x.e.cancelled);
-    const marked = new Set([...evs.map(x => x.e.date), ...an.map(a => a.date)]);
+    // the wallet's passes, read as they are now (never copied): on their day, a stay or membership on every day to its last
+    const md = (d, n) => { const t = new Date(Date.UTC(2001, Number(d.slice(0, 2)) - 1, Number(d.slice(3, 5)) + n)); return `${pad(t.getUTCMonth() + 1)}-${pad(t.getUTCDate())}`; };
+    const pss = (p.money?.passes || []).filter(x => !x.dayUnknown && /^\d{2}-\d{2}/.test(String(x.date || ''))).map(x => {
+        const d0 = String(x.date).slice(0, 5), u = /^\d{2}-\d{2}/.test(String(x.until || '')) ? String(x.until).slice(0, 5) : '', n = u ? gapDays(d0, u) : 0;
+        // a stay marks each of its days; something longer (a membership) only its first and last, and runs under 오늘
+        return { x, d0, u, end: u && n > 0 ? u : d0, days: n > 0 && n <= 31 ? Array.from({ length: n + 1 }, (_, k) => md(d0, k)) : u && n > 0 ? [d0, u] : [d0] };
+    });
+    const runs = (q, d) => gapDays(q.d0, d) >= 0 && gapDays(d, q.end) >= 0;
+    const passOn = d => pss.filter(q => runs(q, d));
+    const pRow = (q, when = '') => `<button type="button" class="ax_ev" data-go="pass" data-i="${esc(q.x.id)}"><i style="background: #6b84a8"></i><span class="ax_tx"><b>${esc(q.x.by || q.x.to || '표')}</b><span class="ax_p">지갑${q.u ? ` · ${esc(fmtDate(p, q.d0, true))} ~ ${esc(fmtDate(p, q.u, true))}` : q.x.by && q.x.to ? ` · ${esc(q.x.to)}` : ''}</span></span><small class="cg_num">${q.x.time ? esc(clockOf(p, q.x.time)) : '하루 종일'}${when ? `<br>${esc(when)}` : ''}</small></button>`;
+    const marked = new Set([...evs.map(x => x.e.date), ...an.map(a => a.date), ...pss.flatMap(q => q.days)]);
     const len = new Date((!p.noYear && Number(p.year)) || 2000, x0.mo, 0).getDate(); // February: 29 days unless the story's year says 28
     const grid = Array.from({ length: len }, (_, n) => { const d = `${pad(x0.mo)}-${pad(n + 1)}`; return dayBtn('cal', d, pick, `${d === (pick || day) ? 't' : ''} ${marked.has(d) ? 'e' : ''}`, n + 1); }).join('');
     const row = ({ e, k }, when = '') => `<button type="button" class="ax_ev" data-go="calone" data-i="${k}"><i style="background: ${AX_EVC[k % AX_EVC.length]}"></i><span class="ax_tx"><b>${esc(e.title)}</b>${e.ko && koOn() ? `<span class="ax_p">${esc(e.ko)}</span>` : ''}</span><small class="cg_num">${e.time ? esc(fmtTime(p, `${e.date} ${e.time}`)) : '하루 종일'}${when ? `<br>${esc(when)}` : ''}</small></button>`;
     const anRow = a => `<div class="ax_ev"><i style="background: #d494a7"></i><span class="ax_tx"><b>♥ ${esc(a.name)}</b><span class="ax_p">기념일 · 매년 ${esc(fmtDate(p, a.date))}</span></span></div>`;
     // ahead or past the short way round New Year (an event on 01-02 is ahead of 12-30)
-    const soon = [...new Set(evs.filter(x => gapDays(day, x.e.date) >= 0).map(x => x.e.date))].sort((a, b) => gapDays(day, a) - gapDays(day, b));
+    // a pass shows under the day it starts (or today, while a stay runs)
+    const pStart = q => (runs(q, day) ? day : q.d0);
+    const soon = [...new Set([...evs.filter(x => gapDays(day, x.e.date) >= 0).map(x => x.e.date), ...pss.filter(q => gapDays(day, q.end) >= 0).map(pStart)])].sort((a, b) => gapDays(day, a) - gapDays(day, b));
     if (an.some(a => a.date === day) && !soon.includes(day)) soon.unshift(day);
     const past = evs.filter(x => gapDays(day, x.e.date) < 0).sort((a, b) => gapDays(day, b.e.date) - gapDays(day, a.e.date));
+    const pastP = pss.filter(q => gapDays(day, q.end) < 0).sort((a, b) => gapDays(day, b.d0) - gapDays(day, a.d0));
     return `${axBar(p, now)}
       ${axTop(axCb('home'), axKp(p))}
       <div class="ax_scroll">
-        ${axH1(`${x0.mo}월`, evs.length ? `일정 ${evs.length}` : '')}${p.investment?.schedules?.length ? `<button type="button" class="ax_card" data-go="ivschedule">투자 · 배당·권리 일정 ${p.investment.schedules.length}건 보기</button>` : ''}
+        ${axH1(`${x0.mo}월`, evs.length + pss.length ? `일정 ${evs.length + pss.length}` : '')}${p.investment?.schedules?.length ? `<button type="button" class="ax_card" data-go="ivschedule">투자 · 배당·권리 일정 ${p.investment.schedules.length}건 보기</button>` : ''}
         <div class="ax_card"><div class="ax_cal7">${grid}</div></div>
-        ${pick ? `<div class="ax_sec">${esc(fmtDate(p, pick))}${pick === day ? ' · 오늘' : ''}</div>${(list => (list ? `<div class="ax_card">${list}</div>` : '<div class="ax_empty">이날 일정이 없어요</div>'))(`${an.filter(a => a.date === pick).map(anRow).join('')}${evs.filter(x => x.e.date === pick).map(x => row(x)).join('')}`)}` : `${soon.map(d => `<div class="ax_sec">${esc(fmtDate(p, d))}${d === day ? ' · 오늘' : ''}</div><div class="ax_card">${d === day ? an.filter(a => a.date === d).map(anRow).join('') : ''}${evs.filter(x => x.e.date === d).map(x => row(x)).join('')}</div>`).join('')}
+        ${pick ? `<div class="ax_sec">${esc(fmtDate(p, pick))}${pick === day ? ' · 오늘' : ''}</div>${(list => (list ? `<div class="ax_card">${list}</div>` : '<div class="ax_empty">이날 일정이 없어요</div>'))(`${an.filter(a => a.date === pick).map(anRow).join('')}${evs.filter(x => x.e.date === pick).map(x => row(x)).join('')}${passOn(pick).map(q => pRow(q)).join('')}`)}` : `${soon.map(d => `<div class="ax_sec">${esc(fmtDate(p, d))}${d === day ? ' · 오늘' : ''}</div><div class="ax_card">${d === day ? an.filter(a => a.date === d).map(anRow).join('') : ''}${evs.filter(x => x.e.date === d).map(x => row(x)).join('')}${pss.filter(q => gapDays(day, q.end) >= 0 && pStart(q) === d).map(q => pRow(q)).join('')}</div>`).join('')}
         ${soon.length ? '' : '<div class="ax_sec">다가오는 일정 없음</div>'}
         ${an.length ? `<div class="ax_sec">기념일</div><div class="ax_card">${an.map(anRow).join('')}</div>` : ''}
-        ${past.length ? `<div class="ax_sec">지난 일정</div><div class="ax_card">${past.map(x => row(x, fmtDate(p, x.e.date, true))).join('')}</div>` : ''}`}
+        ${past.length || pastP.length ? `<div class="ax_sec">지난 일정</div><div class="ax_card">${past.map(x => row(x, fmtDate(p, x.e.date, true))).join('')}${pastP.map(q => pRow(q, fmtDate(p, q.d0, true))).join('')}</div>` : ''}`}
         <i class="ax_pad"></i>
       </div>
       ${axInd()}`;
@@ -638,6 +683,7 @@ function placeBody(p, now, warn = '') {
     const info = placeInfo(p), o = info.owner, man = '<i class="ax_pl_man">수동</i>';
     const opts = Object.entries(COUNTRIES).map(([k, v]) => `<option value="${k}" ${k === o.lives ? 'selected' : ''}>${esc(v)}</option>`).join('') + (o.lives && !COUNTRIES[o.lives] ? `<option value="${esc(o.lives)}" selected>${esc(o.lives)}</option>` : '');
     const row = x => { const c = placeClock(p, now, x.hours); return `<div class="ax_swp"><button type="button" class="ax_swdel na_ph_pldrop" data-n="${esc(x.name)}">${ax('trash2', 21, 'currentColor', 2)}<span>빼기</span></button><div role="button" tabindex="0" class="ax_rw ax_pl_row na_ph_plrow" data-n="${esc(x.name)}"><span class="ax_pl_l"><b>${esc(x.city || '모르는 곳')}</b><small>${esc(x.name)}${c.day ? ` · ${c.day}` : ''}${x.manual ? ` ${man}` : ''}</small></span><span class="ax_pl_r"><b class="cg_num">${hoursText(x.hours)}</b>${c.time ? `<small class="cg_num">${esc(c.time)}</small>` : ''}</span></div></div>`; };
+    const asks = Array.isArray(p.where?.ask) ? p.where.ask.filter(Boolean) : [];
     const w = warn || (info.failed ? '자동으로 못 읽었어요 · 직접 정하거나 연동해 주세요' : '');
     return `${w ? `<div class="ax_pl_warn">${ax('info', 16, '#8a6a1f', 2.2)}<span>${esc(w)}</span></div>` : ''}
         <div class="ax_pl_hero">
@@ -648,6 +694,7 @@ function placeBody(p, now, warn = '') {
             <div class="ax_pl_chip"><span>시간대</span><b>${esc(o.tz || '—')}</b></div>
           </div>
         </div>
+        ${asks.length ? `<div class="ax_sec">주인인지 몰라요</div><div class="ax_card">${asks.map(n => `<div role="button" tabindex="0" class="ax_rw na_ph_plask" data-n="${esc(n)}"><span class="ax_si" style="background: #f3e8c9">${ax('info', 17, '#8a6a1f', 2.2)}</span><span class="ax_tx"><span class="ax_n">${esc(n)}</span><span class="ax_p1">${esc(o.name || p.owner)}인가요? · 눌러서 답하기</span></span>${axChev}</div>`).join('')}</div>` : ''}
         <div class="ax_sec">다른 사람</div>
         ${info.people.length ? `<div class="ax_card ax_pl_list">${info.people.map(row).join('')}</div>` : '<div class="ax_card ax_pl_list"><div class="ax_pl_none">아직 읽은 사람이 없어요</div></div>'}
         <div class="ax_foot">눌러서 도시를 바꾸고, 왼쪽으로 밀어서 뺄 수 있어요.</div>`;

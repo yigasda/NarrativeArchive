@@ -2,8 +2,8 @@
 // day's use from what happened (life.health.usual.screen, life.health.days[].screen); a day it left out is worked out
 // here from their usual, that day's texts, calls and photos, and how they slept. The screens read screenView() only.
 
-const KINDS = ['chat', 'social', 'game', 'video', 'music', 'work', 'reading', 'shopping', 'other'];
-export const KIND_KO = { chat: '메신저', social: '소셜', game: '게임', video: '동영상', music: '음악', work: '업무', reading: '읽기', shopping: '쇼핑', other: '기타' };
+const KINDS = ['chat', 'social', 'game', 'video', 'music', 'work', 'reading', 'shopping', 'money', 'maps', 'health', 'other'];
+export const KIND_KO = { chat: '메신저', social: '소셜', game: '게임', video: '동영상', music: '음악', work: '업무', reading: '읽기', shopping: '쇼핑', money: '금융', maps: '지도 · 교통', health: '건강', other: '기타' };
 // the apps the phone knows (each has its icon): [id, the name the screen shows, kind, other names people write for it].
 // The fill picks from these; a name written another way ("인스타", "카톡") is this app
 const CATALOG = [
@@ -18,7 +18,7 @@ const CATALOG = [
     ['brawlstars', 'Brawl Stars', 'game', '브롤스타즈 브롤'], ['clashroyale', 'Clash Royale', 'game', '클래시로얄 클래시로열'], ['candycrush', 'Candy Crush', 'game', 'candycrushsaga 캔디크러시 캔디크러쉬'],
     ['minecraft', 'Minecraft', 'game', '마인크래프트 마크'], ['roblox', 'Roblox', 'game', '로블록스'], ['pokemongo', 'Pokémon GO', 'game', '포켓몬고'], ['genshin', 'Genshin Impact', 'game', 'genshin 원신'],
     ['lol', 'League of Legends', 'game', 'lol 롤 리그오브레전드 leagueoflegendswildrift wildrift 와일드리프트'], ['pubg', 'PUBG', 'game', 'pubgmobile 배그 배틀그라운드 배그모바일'],
-    ['chrome', 'Chrome', 'other', 'googlechrome 크롬'], ['safari', 'Safari', 'other', '사파리'], ['google', 'Google', 'other', '구글'], ['dbnavigator', 'DB Navigator', 'other', 'db'],
+    ['chrome', 'Chrome', 'other', 'googlechrome 크롬'], ['safari', 'Safari', 'other', '사파리'], ['google', 'Google', 'other', '구글'], ['dbnavigator', 'DB Navigator', 'maps', 'db'],
     ['phone', '전화', 'other', 'phone 전화 통화 telefon'], ['camera', '카메라', 'other', 'camera kamera'],
     ['naver', 'NAVER', 'reading', '네이버'], ['kindle', 'Kindle', 'reading', '킨들'], ['webtoon', 'WEBTOON', 'reading', '웹툰 네이버웹툰 naverwebtoon linewebtoon'], ['kakaopage', '카카오페이지', 'reading', 'kakaopage 카카페'],
     ['ridi', 'RIDI', 'reading', 'ridibooks 리디 리디북스'], ['spiegel', 'SPIEGEL', 'reading', 'derspiegel spiegelonline 슈피겔'],
@@ -30,19 +30,19 @@ const CATALOG = [
 // the apps the phone knows by name and icon but the fill isn't offered (its list stays short): the phone's own apps, and
 // ones a day calls for (a trip, a payment, a date). A bank's app goes by any name (see appOf)
 const MORE = [
-    ['notes', '메모', 'other', 'notes memo memos notizen 노트'], ['maps', '지도', 'other', 'maps map karten'], ['calendar', '캘린더', 'work', 'calendar kalender 달력'],
+    ['notes', '메모', 'other', 'notes memo memos notizen 노트'], ['maps', '지도', 'maps', 'maps map karten'], ['calendar', '캘린더', 'work', 'calendar kalender 달력'],
     ['photos', '사진', 'other', 'photos gallery 갤러리 fotos'], ['clock', '시계', 'other', 'clock uhr 알람'], ['weather', '날씨', 'other', 'weather wetter'],
-    ['health', '건강', 'other', 'health 헬스 gesundheit'], ['files', '파일', 'other', 'files dateien'], ['wallet', '지갑', 'other', 'wallet 월렛'],
-    ['bank', '은행', 'other', 'bank banking'], ['voicememo', '음성 메모', 'other', 'voicememos voicememo 녹음 음성메모 sprachmemos'], ['settings', '설정', 'other', 'settings einstellungen'],
-    ['googlemaps', 'Google Maps', 'other', '구글맵 구글지도'], ['applemaps', 'Apple 지도', 'other', 'applemaps 애플지도'], ['navermap', '네이버 지도', 'other', 'navermap navermaps 네이버맵'], ['kakaomap', '카카오맵', 'other', 'kakaomap 카카오지도'],
+    ['health', '건강', 'health', 'health 헬스 gesundheit'], ['files', '파일', 'other', 'files dateien'], ['wallet', '지갑', 'money', 'wallet 월렛'],
+    ['bank', '은행', 'money', 'bank banking'], ['voicememo', '음성 메모', 'other', 'voicememos voicememo 녹음 음성메모 sprachmemos'], ['settings', '설정', 'other', 'settings einstellungen'],
+    ['googlemaps', 'Google Maps', 'maps', '구글맵 구글지도'], ['applemaps', 'Apple 지도', 'maps', 'applemaps 애플지도'], ['navermap', '네이버 지도', 'maps', 'navermap navermaps 네이버맵'], ['kakaomap', '카카오맵', 'maps', 'kakaomap 카카오지도'],
     ['papago', 'Papago', 'other', '파파고'], ['googletranslate', 'Google 번역', 'other', 'googletranslate 구글번역 translate 번역'], ['deepl', 'DeepL', 'other', '딥엘'], ['duolingo', 'Duolingo', 'reading', '듀오링고'],
-    ['kakaot', '카카오 T', 'other', 'kakaot 카카오택시 카카오t'], ['uber', 'Uber', 'other', '우버'], ['grab', 'Grab', 'other', '그랩'], ['didi', 'DiDi', 'other', '滴滴 디디'], ['korail', '코레일톡', 'other', 'korail korailtalk 코레일'],
-    ['trainline', 'Trainline', 'other', ''], ['flixbus', 'FlixBus', 'other', '플릭스버스'], ['bvg', 'BVG', 'other', 'bvgfahrinfo'], ['tfl', 'TfL Go', 'other', 'tfl tflgo'],
+    ['kakaot', '카카오 T', 'maps', 'kakaot 카카오택시 카카오t'], ['uber', 'Uber', 'maps', '우버'], ['grab', 'Grab', 'maps', '그랩'], ['didi', 'DiDi', 'maps', '滴滴 디디'], ['korail', '코레일톡', 'maps', 'korail korailtalk 코레일'],
+    ['trainline', 'Trainline', 'maps', ''], ['flixbus', 'FlixBus', 'maps', '플릭스버스'], ['bvg', 'BVG', 'maps', 'bvgfahrinfo'], ['tfl', 'TfL Go', 'maps', 'tfl tflgo'],
     ['airbnb', 'Airbnb', 'other', '에어비앤비'], ['booking', 'Booking.com', 'other', 'booking 부킹닷컴'], ['agoda', 'Agoda', 'other', '아고다'], ['expedia', 'Expedia', 'other', '익스피디아'],
     ['skyscanner', 'Skyscanner', 'other', '스카이스캐너'], ['lufthansa', 'Lufthansa', 'other', '루프트한자'], ['koreanair', '대한항공', 'other', 'koreanair'],
-    ['toss', '토스', 'other', 'toss'], ['kakaopay', '카카오페이', 'other', 'kakaopay'], ['paypal', 'PayPal', 'other', '페이팔'], ['venmo', 'Venmo', 'other', ''], ['alipay', 'Alipay', 'other', '支付宝 알리페이'],
-    ['paypay', 'PayPay', 'other', '페이페이'], ['applepay', 'Apple Wallet', 'other', 'applepay 애플페이 애플월렛'],
-    ['robinhood', 'Robinhood', 'other', '로빈후드'], ['upbit', '업비트', 'other', 'upbit'], ['binance', 'Binance', 'other', '바이낸스'],
+    ['toss', '토스', 'money', 'toss'], ['kakaopay', '카카오페이', 'money', 'kakaopay'], ['paypal', 'PayPal', 'money', '페이팔'], ['venmo', 'Venmo', 'money', ''], ['alipay', 'Alipay', 'money', '支付宝 알리페이'],
+    ['paypay', 'PayPay', 'money', '페이페이'], ['applepay', 'Apple Wallet', 'money', 'applepay 애플페이 애플월렛'],
+    ['robinhood', 'Robinhood', 'money', '로빈후드'], ['upbit', '업비트', 'money', 'upbit'], ['binance', 'Binance', 'money', '바이낸스'],
     ['doordash', 'DoorDash', 'shopping', '도어대시'], ['deliveroo', 'Deliveroo', 'shopping', ''], ['lieferando', 'Lieferando', 'shopping', ''], ['meituan', '美团', 'shopping', 'meituan 메이퇀'],
     ['starbucks', 'Starbucks', 'shopping', '스타벅스 스벅'], ['mcdonalds', "McDonald's", 'shopping', '맥도날드 맥날'],
     ['ebay', 'eBay', 'shopping', '이베이'], ['shein', 'SHEIN', 'shopping', '쉬인'], ['ikea', 'IKEA', 'shopping', '이케아'], ['oliveyoung', '올리브영', 'shopping', 'oliveyoung 올영'], ['kurly', '컬리', 'shopping', 'kurly 마켓컬리'],
@@ -54,7 +54,7 @@ const MORE = [
     ['podcasts', '팟캐스트', 'music', 'podcasts podcast applepodcasts'],
     ['kakaowebtoon', '카카오웹툰', 'reading', 'kakaowebtoon'], ['millie', '밀리의 서재', 'reading', 'millie 밀리'], ['wattpad', 'Wattpad', 'reading', '왓패드'], ['nytimes', 'NYT', 'reading', 'nytimes newyorktimes'],
     ['bbc', 'BBC News', 'reading', 'bbc bbcnews'], ['yahoo', 'Yahoo! ニュース', 'reading', 'yahoo yahoonews yahoojapan 야후'], ['daum', 'Daum', 'reading', '다음'],
-    ['myfitnesspal', 'MyFitnessPal', 'other', '마이피트니스팔'], ['flo_health', 'Flo', 'other', 'flohealth flo생리 플로'],
+    ['myfitnesspal', 'MyFitnessPal', 'health', '마이피트니스팔'], ['flo_health', 'Flo', 'health', 'flohealth flo생리 플로'],
     ['outlook', 'Outlook', 'work', '아웃룩'], ['googledrive', 'Google Drive', 'work', 'drive 구글드라이브'], ['word', 'Word', 'work', 'microsoftword 워드'], ['powerpoint', 'PowerPoint', 'work', 'ppt 파워포인트'],
     ['lightroom', 'Lightroom', 'other', '라이트룸'], ['capcut', 'CapCut', 'other', '캡컷'],
     ['amongus', 'Among Us', 'game', '어몽어스'], ['umamusume', '우마무스메', 'game', 'umamusume ウマ娘 우마'], ['fgo', 'Fate/GO', 'game', 'fgo fategrandorder 페그오'], ['cookierun', '쿠키런', 'game', 'cookierun 쿠키런킹덤 cookierunkingdom'],
@@ -67,7 +67,7 @@ for (const [id, name, kind, also] of [...CATALOG, ...MORE]) for (const k of [nam
 // the app a name is ({ id for its icon, the name to show, kind }), or null for one the phone doesn't know
 // a bank's own app ("Sparkasse", "신한 SOL", "Chase") is the bank icon under its own name
 const BANK = /bank|banking|뱅크|은행|뱅킹|sparkasse|volksbank|commerzbank|deutschebank|\bing\b|chase|barclays|santander|hsbc|wellsfargo|wells fargo|citi\b|monzo|revolut|n26|신한|국민|우리|하나|농협|\bsol\b|쏠/i;
-export const appOf = name => BY_NAME.get(norm(name)) || (BANK.test(String(name || '')) ? { id: 'bank', name: String(name).trim(), kind: 'other' } : null);
+export const appOf = name => BY_NAME.get(norm(name)) || (BANK.test(String(name || '')) ? { id: 'bank', name: String(name).trim(), kind: 'money' } : null);
 // the list the screen time fill picks from, a line for each kind (the phone's own apps come from the phone itself)
 const OWN = new Set(['phone', 'camera', 'messages', 'notes', 'maps', 'calendar', 'photos', 'clock', 'weather', 'health', 'files', 'wallet', 'bank', 'voicememo', 'settings']);
 export const SCREEN_LIST = KINDS.map(k => [k, [...CATALOG, ...MORE].filter(a => a[2] === k && !OWN.has(a[0])).map(a => a[1])]).filter(([, xs]) => xs.length).map(([k, xs]) => `${k}: ${xs.join(', ')}`).join('\n');
@@ -81,8 +81,12 @@ const GUESS = [
     ['work', /slack|notion|노션|teams|outlook|gmail|메일|mail|zoom|calendar|캘린더|excel|word|docs|sheets|jira|figma/i],
     ['reading', /webtoon|웹툰|kindle|리디|ridi|밀리|millie|kakaopage|카카오페이지|news|뉴스|naver|네이버|medium/i],
     ['shopping', /coupang|쿠팡|amazon|zalando|무신사|musinsa|29cm|ably|에이블리|11번가|g마켓|taobao|aliexpress|배민|baemin|uber ?eats|요기요/i],
+    ['money', /bank|banking|뱅크|은행|뱅킹|pay\b|페이|wallet|월렛|toss|토스|n26|revolut|monzo|wise\b|sparkasse|trade republic|scalable|robinhood|upbit|업비트|binance|coinbase|증권|주식/i],
+    ['maps', /maps?\b|지도|맵|navi|uber\b|bolt\b|taxi|택시|bahn|db navigator|bvg|mvg|metro|subway|지하철|버스|korail|코레일|trainline|flixbus|citymapper|transit|tfl|grab|lyft/i],
+    ['health', /health|헬스|건강|fitness|피트니스|strava|nike run|runtastic|garmin|fitbit|samsung health|myfitnesspal|calm\b|headspace|sleep|수면|flo\b|clue\b|yoga|요가/i],
 ];
-export const kindOfApp = (name, usual = []) => usual.find(a => a.app === name)?.kind || appOf(name)?.kind || GUESS.find(([, re]) => re.test(name))?.[0] || 'other';
+// an app's kind: what the phone was told, unless that is only 'other' and the phone knows better (Google Maps → maps)
+export const kindOfApp = (name, usual = []) => { const told = usual.find(a => a.app === name)?.kind; return (told && told !== 'other' ? told : '') || appOf(name)?.kind || GUESS.find(([, re]) => re.test(name))?.[0] || told || 'other'; };
 
 const md = s => { const mt = String(s || '').match(/^(\d{2})-(\d{2})/); return mt ? { mo: Number(mt[1]), d: Number(mt[2]) } : null; };
 const gap = (a, b) => { const A = md(a), B = md(b); if (!A || !B) return 0; let g = (Date.UTC(2001, B.mo - 1, B.d) - Date.UTC(2001, A.mo - 1, A.d)) / 864e5; if (g < -180) g += 365; if (g > 180) g -= 365; return g; };
@@ -110,14 +114,14 @@ function recordApps(p, day, usual) {
     // payments (under the bank's own name), the calendar with an event, files received, a ticket's day (the airline's or
     // the trains' app when the phone knows it, else the wallet, and the map), the clock on a day an alarm rang
     const tx = (p.money?.tx || []).filter(t => on(t.time) && !String(t.id).startsWith('dlv-') && !t.delivery).length;
-    put(own('other', /bank|뱅크|은행|sparkasse|toss|토스/i, line(p.money?.bank?.name) || '은행'), tx ? Math.min(10, 2 + tx) : 0);
+    put(own('money', /bank|뱅크|은행|sparkasse|toss|토스/i, line(p.money?.bank?.name) || '은행'), tx ? Math.min(10, 2 + tx) : 0);
     put('캘린더', Math.min(6, (p.events || []).filter(e => e.date === day).length * 2));
     put('파일', Math.min(6, n(p.life?.files?.items) * 2));
     const trips = (p.money?.passes || []).filter(x => x.date === day && /flight|train/.test(x.kind));
     for (const t of trips) {
         const rail = { KR: '코레일톡', DE: 'DB Navigator', GB: 'Trainline' }[p.lives || p.country];
         put(t.kind === 'flight' ? appOf(t.by)?.name || '지갑' : rail || '지갑', 5);
-        put(own('other', /maps|지도|맵/i, kr ? '네이버 지도' : 'Google Maps'), 6);
+        put(own('maps', /maps|지도|맵/i, kr ? '네이버 지도' : 'Google Maps'), 6);
     }
     const wd = weekday(p, day), rang = (p.life?.clock?.alarms || []).some(a => a.on !== false && (a.date === day || (a.days || []).includes(WD[wd])));
     put('시계', rang ? 1 : 0);

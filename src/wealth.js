@@ -49,8 +49,9 @@ export function wealthDate(m,p,now=p?.now) {
     // (the phone's year: set when it was made, from a status line or the reading of the story, or by the user; never a
     // guess from the dates the archive writes)
     const year=p.noYear ? '' : p.year ? String(p.year) : '';
-    // (a story with no year of its own, by the user's choice: its money is valued at today's rates)
-    if (p.noYear) return new Date().toISOString().slice(0,10);
+    // (a story with no year of its own, by the user's choice: its money is valued at the rates of the day it was first valued,
+    // that day kept on the bank, so tomorrow's look finds the same rates)
+    if (p.noYear) { const d=new Date().toISOString().slice(0,10); if (p.money) p.money.fxDate=d; return d; }
     return year && /^\d{2}-\d{2}/.test(now || '') ? `${year}-${now.slice(0,5)}` : '';
 }
 export function addWealthFX(m,rows,date) {

@@ -105,7 +105,7 @@ test('tracker clocks honor prefix and suffix AM/PM including midnight and noon',
 
 test('invalid clocks and nonnumeric time labels remain safe without invented minutes', () => {
     T.settings = {};
-    for (const clock of ['24:00', '25:10', '12:60', '13:30 PM', '오전 0:30', '123:45', '12:345', '-1:30', '저녁', '미정']) {
+    for (const clock of ['24:00', '25:10', '12:60', '13:30 PM', '아침 0:30', '123:45', '12:345', '-1:30', '저녁', '미정']) {
         for (const body of [
             `<tracker> ${clock} | 3월 2일 | 집 | 흐림 </tracker>`,
             `시간: ${clock}\n장소: 집\n날씨: 흐림`,
@@ -163,4 +163,35 @@ test('a status line part is a clock only as one of its shapes with nothing else:
     assert.equal(t.min, null);
     const [u] = recentTrackers(1, { chat: [say('시간: 오후 세시\n장소: 집')] });
     assert.equal(u.min, 15 * 60);
+});
+
+test('점검 7 (시각): every status field goes by one clock reader — a zone, an ISO date, seconds, 7pm, a <tracker> in Korean; a part that is no clock keeps the line', () => {
+    T.settings = {};
+    const one = body => recentTrackers(1, { chat: [say(body)] })[0];
+    for (const [body, min] of [['[ 19:30 GMT+09:00 | 11월 7일 | 서울 → 카페 ]', 1170], ['시간: 2026-11-07T19:30\n장소: 집', 1170], ['[ 2026-11-07T19:30 · 서울 → 카페 · ☁️ 12°C ]', 1170],
+        ['[ 7pm · Nov 7 · Seoul → Cafe · Rain ]', 1140], ['<tracker> 오후 3시 40분 | 3월 2일 | 집 </tracker>', 940], ['[ 19:30:15 | 11월 7일 | 카페 ]', 1170],
+        ['[ 밤 1:00 · 12월 9일 · 집 ]', 60], ['[ 저녁 12시 · 12월 9일 · 집 ]', 0], ['[ 낮 1:30 · 12월 9일 · 집 ]', 810]]) assert.equal(one(body)?.min, min, body);
+    // (a part that holds a clock with a word more is no time, but the line is still read: its date and place)
+    for (const body of ['[ 08:15 넘어서 · 12월 9일 · 집 ]', '[ 오후 3시 넘 졸려 · 12월 9일 · 집 ]']) {
+        const t = one(body);
+        assert.equal(t?.min, null, body);
+        assert.equal(t?.date, '12월 9일', body);
+        assert.equal(t?.place, '집', body);
+    }
+    const u = one('<tracker> 15:00 넘어서 | 3월 2일 | 집 </tracker>');
+    assert.equal(u.min, null);
+    assert.equal(u.place, '집');
+    // (a "일시:" line with its clock is the time; a later real clock over an earlier "시간: 저녁")
+    const d = one('일시: 2026-11-07 19:30\n장소: 집');
+    assert.equal(d.min, 1170);
+    assert.equal(d.date, '2026-11-07');
+    assert.equal(one('시간: 저녁\n시각: 19:30\n장소: 집').min, 1170);
+});
+
+test('점검 7 (시각): a line far longer than a status window is not read through', () => {
+    T.settings = {};
+    const t0 = performance.now();
+    recentTrackers(1, { chat: [say(`${' '.repeat(40000)}x\n\n본문`)] });
+    recentTrackers(1, { chat: [say(`${'*_ '.repeat(20000)}x\n\n본문`)] });
+    assert.ok(performance.now() - t0 < 300, `${Math.round(performance.now() - t0)} ms`);
 });

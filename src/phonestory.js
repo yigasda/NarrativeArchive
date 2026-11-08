@@ -1,5 +1,6 @@
 // Phone content and its financial ledger travel together, only by explicit choice.
 import { ctx, getMeta, saveMeta } from './core.js';
+import { journalWrite } from './phonesync.js';
 
 export const PHONE_STORY_KEYS = ['phones','phoneProfiles','phoneScreenHolder','finance','lastPhoneOwner','phoneLore','phoneLoreOff','phonePre','phoneStoryScope'];
 export function phoneChatScope(c) {
@@ -31,12 +32,17 @@ export function resetPhoneStory(m,scope) {
     delete m.phoneLore;delete m.phoneLoreOff;delete m.phoneScreenHolder;
     // (what was read before a phone was made goes with the phones)
     delete m.phonePre;
+    // (a reading or a making still waiting sees the story changed, and puts nothing in: phonedata stillRun)
+    m.phoneStoryRun=(Number(m.phoneStoryRun)||0)+1;
     m.phoneStoryScope=scope;
     clearPhoneSelection(scope);
+    // (and this browser's record of rounds to put back (복구): the old story's, none of the new one's)
+    journalWrite(scope,[]);
 }
 export function adoptPhoneStory(m,scope) {
     // Detach copied metadata from its source even if the host supplied shared objects.
     for(const k of PHONE_STORY_KEYS) if(k!=='phoneStoryScope' && Object.hasOwn(m,k)) m[k]=structuredClone(m[k]);
+    m.phoneStoryRun=(Number(m.phoneStoryRun)||0)+1;
     m.phoneStoryScope=scope;
 }
 // two tiles answering one question (같은 이야기인가요?): keep the phone, or start this room's phone records afresh

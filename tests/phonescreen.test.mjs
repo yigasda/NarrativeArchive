@@ -116,7 +116,7 @@ test('what the phone holds that day shows as its apps: a told day keeps its own 
 
 test('apps they open now and then: kept apart, on some days only; one they now use daily moves up', () => {
     const u = usualScreenOf({ apps: [{ app: 'Signal', kind: 'chat', min: 60 }], sometimes: [{ app: 'DB Navigator', min: 10 }, { app: 'Signal', min: 5 }, { app: 'Zalando', min: 15 }] });
-    assert.deepEqual(u.sometimes.map(a => [a.app, a.kind]), [['Zalando', 'shopping'], ['DB Navigator', 'other']]);
+    assert.deepEqual(u.sometimes.map(a => [a.app, a.kind]), [['Zalando', 'shopping'], ['DB Navigator', 'maps']]);
     const days = Array.from({ length: 20 }, (_, k) => ({ date: `10-${String(k + 1).padStart(2, '0')}`, sleep: '23:30', wake: '07:00' }));
     const p = phone(days); p.life.health.usual.screen = u;
     const seen = screenView(p, '10-26 12:00').days.filter(d => d.apps.some(([a]) => a === 'Zalando')).length;
@@ -132,7 +132,7 @@ test('apps known by name and icon beyond the fill list: the phone\'s own, a day\
     assert.equal(appOf('구글맵').id, 'googlemaps');
     assert.equal(appOf('抖音').id, 'douyin');
     assert.equal(appOf('TikTok').id, 'tiktok');
-    assert.deepEqual(appOf('Sparkasse'), { id: 'bank', name: 'Sparkasse', kind: 'other' });
+    assert.deepEqual(appOf('Sparkasse'), { id: 'bank', name: 'Sparkasse', kind: 'money' });
     assert.equal(appOf('Blue Archive'), null);
     assert.ok(SCREEN_LIST.includes('Google Maps') && !SCREEN_LIST.includes('메모') && !SCREEN_LIST.includes('은행'));
     assert.deepEqual(screenOf({ apps: { '스벅': 5, Starbucks: 3 } }), { apps: { Starbucks: 8 } });

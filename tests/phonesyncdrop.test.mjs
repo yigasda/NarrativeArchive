@@ -11,7 +11,7 @@ const encoded = s => 'data:text/javascript;base64,' + Buffer.from(s).toString('b
 const href = f => pathToFileURL(new URL(`../src/${f}`, import.meta.url).pathname).href;
 const T = (globalThis.__dropTest = { chat: [], answers: [] });
 const map = { './extract.js': cleanMessageURL,
-    './phonesync.js': href('phonesync.js'), './phoneparse.js': href('phoneparse.js'), './phoneclock.js': href('phoneclock.js'), './phonesynclife.js': href('phonesynclife.js'), './phonesyncmoney.js': href('phonesyncmoney.js'), './finance.js': href('finance.js'),
+    './phonesync.js': href('phonesync.js'), './phoneparse.js': href('phoneparse.js'), './phoneclock.js': href('phoneclock.js'), './phonemapcity.js': href('phonemapcity.js'), './phonesynclife.js': href('phonesynclife.js'), './phonesyncmoney.js': href('phonesyncmoney.js'), './finance.js': href('finance.js'),
     './phoneprofile.js': href('phoneprofile.js'),
     './phonestory.js': encoded(`export const phoneTarget=()=>({scope:phoneChatScope(),check(){}});export const phoneChatScope=()=>globalThis.__dropTest.scope||'test';`),
     './wealth.js': encoded(`export const ensureWealth=async()=>null;export const wealthBlock=()=>'';export const wealthDate=()=> '2026-10-26';export const wealthCheck=()=>null;export const addWealthFX=()=>{};`),
@@ -229,7 +229,9 @@ test('after the update, a phone already read in its branch, a renamed chat, or a
 
 test('a phone with a bank but without the everyday or delivery apps: core then money, each with only its own', async () => {
     const c = await bookCase();
-    assert.equal(T.sys, data.coreSystem());
+    assert.equal(T.sys, data.coreSystem({ wallet: true }));
+    // (a phone with the wallet: its tickets are the calendar's from there, core writes no calendar item for one)
+    assert.ok(T.sys.includes('A ticket the wallet holds') && T.sys.includes('A reservation or an appointment is still a calendar item') && !data.coreSystem().includes('the wallet holds'));
     assert.ok(!T.sys.includes('LIFE') && !T.sys.includes('deliveries'));
     assert.ok(!T.input.includes('[MONEY NOW]'));
     assert.equal(T.moneySys, data.moneySystem());
@@ -262,7 +264,7 @@ test('the everyday and delivery apps through a reflection: asked for, put in, an
     await run(c.m, lifeAnswer());
     assert.ok(T.sys.includes('LIFE\n') && !T.sys.includes('"deliveries"') && T.sys.includes('"weather"'));
     assert.ok(T.input.includes('[LIFE NOW]') && !T.input.includes('[DELIVERY SHOPS]'));
-    assert.ok(T.moneySys.includes('"deliveries"') && T.moneyInput.includes('[DELIVERY SHOPS]'));
+    assert.ok(T.moneySys.includes('delivery: no "amount"') && T.moneyInput.includes('[DELIVERY SHOPS]'));
     const L = c.p.life;
     assert.deepEqual(L.clock.alarms.map(a => a.label), ['Aufstehen', 'Flughafen']);
     assert.equal(L.health.days.length, 1);
@@ -518,24 +520,155 @@ test('a Korean line that only says its original again is not drawn twice; a real
     assert.equal(p.events[0].ko, '');
 });
 
-test('reflection in two steps: core keeps the life apps and marks money; money holds the money only; each names its step', () => {
+test('reflection in two steps: core keeps the life apps and holds no money at all; money reads every round in one list of records; each names its step', () => {
     const core = data.coreSystem({ life: true, weather: true, tracker: true, invest: true }), money = data.moneySystem({ delivery: true, invest: true });
     assert.equal(core.split('\n')[0], 'STAGE: core');
     assert.equal(money.split('\n')[0], 'STAGE: money');
-    assert.match(core, /"apps": \[\] or \["money", "invest"\]/);
-    assert.match(core, /only touches these apps .*a share price mentioned.* is still an event/);
-    assert.match(core, /its basket too/);
-    assert.match(core, /a share price the story gives, a share they start watching, a stake/);
     for (const k of ['"alarms"', '"health"', '"days"', '"weather"', '"cities"', 'LIFE NOW']) assert.ok(core.includes(k), `core lacks ${k}`);
-    for (const k of ['"moves"', '"deliveries"', 'MONEY NOW', 'a payment in them is that same payment']) assert.ok(!core.includes(k), `core holds ${k}`);
-    for (const k of ['"moves"', '"deliveries"', '"newShop"', '"stakes"']) assert.ok(money.includes(k), `money lacks ${k}`);
-    assert.ok(!data.moneySystem().includes('"deliveries"'));
-    // the brokerage only when asked: a meal or a taxi doesn't carry trades, prices or stakes
-    for (const k of ['"trades"', 'INVESTMENTS NOW', '"stakes"', 'broker']) assert.ok(!data.moneySystem({ delivery: true }).includes(k), `money without invest holds ${k}`);
-    assert.ok(!data.coreSystem({ life: true }).includes('"invest"'));
+    // (core marks nothing for money: the money step reads every round itself)
+    for (const k of ['"apps": [] or', '"money" when the event', '"moves"', '"deliveries"', 'MONEY NOW', 'a payment in them is that same payment', 'second step', 'an order already placed']) assert.ok(!core.includes(k), `core holds ${k}`);
+    for (const k of ['{ "records": [{', '"type": "payment" | "regular" | "order"', 'DAYS PASSED', 'CALENDAR', 'TIME PASSING', 'delivery: no "amount"', '"newShop"', 'stake:', 'INVESTMENTS NOW', 'broker:EUR']) assert.ok(money.includes(k), `money lacks ${k}`);
+    // the apps the phone doesn't have aren't named
+    const plain = data.moneySystem();
+    for (const k of ['DELIVERY SHOPS', '"newShop"', 'delivery: no', 'INVESTMENTS', 'broker', 'stake:', 'quote:']) assert.ok(!plain.includes(k), `money without delivery or brokerage holds ${k}`);
+    assert.ok(plain.includes('What happens each day determines the kinds and number of records') && plain.includes('Each record is dated on its own day.'));
+    // no marker of the template left over, no doubled space before a comma
+    for (const t of [plain, money, data.moneySystem({ delivery: true }), data.moneySystem({ invest: true })]) { assert.ok(!/배달|투자|\$\{| ,/.test(t)); }
     // the one-step instructions are unchanged
     assert.ok(!data.updateSystem({ money: true }).startsWith('STAGE'));
     assert.ok(!data.updateSystem({ money: true }).includes('"apps"'));
+});
+
+// ---- 돈 단계 3.176: every round, one list of records by message number
+test('money every round, by message number: core\'s one event takes its message\'s money, a message with none gets a money event of its own; 되돌리기 and 빼기 take them', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Mara', 'I paid the taxi'), say('Ren', 'grabbed a coffee on the way'), say('Ren', 'see you')]);
+    T.moneyCalls = 0; T.lastCore = null;
+    T.moneyAnswers = [{ records: [
+        { type: 'payment', at: 2, account: '1111', amount: -12000, who: '택시', kind: 'card', occurrence: 'new', amountFrom: 'guess' },
+        // (a message core gave no event: its own money event)
+        { type: 'payment', at: 3, account: '1111', amount: -4500, who: 'Cafe Ivo', kind: 'card', occurrence: 'new', amountFrom: 'guess' },
+        // (a message number not in this round: left out, said)
+        { type: 'payment', at: 40, account: '1111', amount: -1, who: 'nowhere', occurrence: 'new' },
+        { type: 'nothing', at: 3 },
+    ] }];
+    // (core marks nothing: the money step goes all the same)
+    await run(c.m, { now: '10-26 13:00', events: [{ id: 'taxi', at: 2, quote: 'paid the taxi', summary: '택시', date: '10-26', time: '12:40', phone: {} }] });
+    assert.equal(T.moneyCalls, 1);
+    assert.match(T.moneyInput, /\[MESSAGES\]\n\[#2\] Mara: I paid the taxi\n\n\[#3\] Ren: grabbed a coffee on the way\n\n\[#4\] Ren: see you/);
+    assert.match(T.moneyInput, /\[EVENTS\]\n- taxi: #2 10-26 12:40 택시 \("paid the taxi"\)/);
+    assert.match(T.moneyInput, /\[CALENDAR\]\n/);
+    assert.ok(!/\[DAYS\]/.test(T.moneyInput));
+    assert.equal(c.bank(), 100000 - 12000 - 4500);
+    const ev = c.p.sync.events;
+    assert.ok(ev.taxi.effects.some(x => x.item?.who === '택시'));
+    assert.deepEqual([ev['money-3']?.at, ev['money-3']?.summary], [3, '돈: Cafe Ivo']);
+    assert.ok(ev['money-3'].effects.some(x => x.item?.who === 'Cafe Ivo'));
+    assert.ok(!Object.keys(ev).some(k => k === 'money-4'));
+    assert.ok(c.p.syncLast.notes.some(n => n.includes('어느 메시지인지 몰라서')));
+    assert.deepEqual(c.p.money.tx.map(t => t.amountFrom), ['guess', 'guess']);
+    // 되돌리기: both go, the money event too
+    await data.undoRound(c.m, c.p);
+    assert.equal(c.bank(), 100000);
+    assert.ok(!c.p.sync.events['money-3']);
+    // read again, then the coffee message deleted: 빼기 takes the coffee only
+    T.moneyAnswers = [{ records: [{ type: 'payment', at: 2, account: '1111', amount: -12000, who: '택시', kind: 'card', occurrence: 'new' }, { type: 'payment', at: 3, account: '1111', amount: -4500, who: 'Cafe Ivo', kind: 'card', occurrence: 'new' }] }];
+    await run(c.m, { now: '10-26 13:00', events: [{ id: 'taxi', at: 2, quote: 'paid the taxi', summary: '택시', date: '10-26', time: '12:40', phone: {} }] });
+    assert.equal(c.bank(), 83500);
+    T.chat.splice(3, 1);
+    T.moneyAnswers = [{ records: [] }];
+    await nextRound(c, 'good night');
+    const d = c.p.sync.dropped;
+    assert.deepEqual(d.map(x => x.events), [['money-3']]);
+    await data.dropStretch(c.m, c.p, 0);
+    assert.equal(c.bank(), 88000);
+    assert.deepEqual(c.p.money.tx.map(t => t.who), ['택시']);
+});
+
+test('money records: one message\'s records on two days are booked on each; a payment and its order linked by "for"; an order sent to the owner is never theirs to pay', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'a week went by; I bought a lamp today'), say('Mara', 'sent you a scarf, check it')]);
+    T.moneyAnswers = [{ records: [
+        { type: 'payment', at: 2, date: '10-22', account: '1111', amount: -6000, who: '마트', kind: 'card', occurrence: 'new', amountFrom: 'guess' },
+        { type: 'order', at: 2, names: ['Desk lamp', '스탠드'], shop: 'Lumo', amount: 30000, qty: 1, status: 'ordered', occurrence: 'new', refersBack: false, made: ['shop'] },
+        { type: 'payment', at: 2, account: '1111', amount: -30000, who: 'Lumo', kind: 'card', occurrence: 'new', for: 'Desk lamp' },
+        { type: 'order', at: 3, names: ['Wool scarf', '목도리'], shop: 'Varo Knits', amount: 20000, status: 'shipped', sender: 'Mara', occurrence: 'again', refersBack: false, made: ['shop', 'amount'] },
+    ] }];
+    await run(c.m, { now: '10-26 20:00', events: [{ id: 'lamp', at: 2, quote: 'I bought a lamp today', summary: '스탠드', date: '10-26', time: '18:00', phone: {} }] });
+    assert.equal(c.bank(), 100000 - 6000 - 30000);
+    assert.deepEqual(c.p.money.tx.map(t => [t.who, t.time.slice(0, 5)]), [['마트', '10-22'], ['Lumo', '10-26']]);
+    const [lamp, scarf] = c.p.money.orders;
+    assert.equal(lamp.price, 30000);
+    assert.equal(lamp.paidBy, c.p.money.tx[1].id);
+    assert.deepEqual([scarf.item, scarf.paid, scarf.status, scarf.told], ['Wool scarf', false, 'shipped', true]);
+    assert.ok(!c.p.syncLast.notes.some(n => n.includes('결제가 없었어요')));
+    assert.ok(c.p.sync.events['money-3'].effects.some(x => x.path === 'money.orders'));
+});
+
+test('time passing through a reflection: the days the story moved past go to the money step with the message each ended in; a skipped day\'s spending is on its day; a regular bill is paid by the round\'s clock on its day; 되돌리기 takes it all back', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'three days later: rent day again'), say('Mara', 'ugh, rent')]);
+    T.moneyCalls = 0; T.lastCore = null;
+    T.moneyAnswers = [{ records: [
+        { type: 'payment', at: 2, date: '10-27', account: '1111', amount: -8000, who: '편의점', kind: 'card', occurrence: 'new', amountFrom: 'guess' },
+        { type: 'regular', at: 2, names: ['Rent', '월세'], amount: -50000, frequency: 'monthly', day: 29, account: '1111', who: '집주인', occurrence: 'again', refersBack: false, made: ['amount'] },
+    ] }];
+    await run(c.m, { now: '10-29 20:00', events: [{ id: 'rent-day', at: 2, quote: 'rent day again', summary: '월세 날', date: '10-29', time: '19:00', phone: {} }] });
+    assert.match(T.moneyInput, /\[DAYS PASSED\]\n3 days: about 5 records in all, about 2 of them not by card; most days one to three, some none; where, what and how money moves are this owner's \(for instance card, mobile pay, money sent or received, cash taken out, payment abroad, refund, savings, currency exchange\)\.\n- 10-26 Mon \(ended in #2\)\n- 10-27 Tue \(ended in #2\)\n- 10-28 Wed \(ended in #2\)/);
+    assert.deepEqual(c.p.money.tx.map(t => [t.who, t.time.slice(0, 5), t.amount]), [['편의점', '10-27', -8000], ['집주인', '10-29', -50000]]);
+    assert.equal(c.bank(), 100000 - 8000 - 50000);
+    assert.equal(c.p.money.regulars[0].paidThrough, '2026-10-29');
+    assert.ok(c.p.syncUndo.effects.some(x => x.item?.regular === c.p.money.regulars[0].id));
+    await data.undoRound(c.m, c.p);
+    assert.equal(c.bank(), 100000);
+    assert.deepEqual([c.p.money.tx.length, (c.p.money.regulars || []).length], [0, 0]);
+});
+
+test('a long skip: at most 60 records for the span of skipped days, the rest left out and said; the phone\'s missing regulars and bill days are asked for', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'a month went by')]);
+    const many = Array.from({ length: 66 }, (_, k) => ({ type: 'payment', at: 2, date: ['10-26', '10-28', '10-30', '11-01', '11-03'][k % 5], account: '1111', amount: -1000 - k, who: `Shop ${k}`, kind: 'card', occurrence: 'new', amountFrom: 'guess' }));
+    T.moneyAnswers = [{ records: [...many, { type: 'payment', at: 2, date: '11-25', account: '1111', amount: -5000, who: 'Last week', kind: 'card', occurrence: 'new' }] }];
+    await run(c.m, { now: '12-05 10:00', events: [] });
+    assert.match(T.moneyInput, /\[MISSING ON THE PHONE\]\n- No regular income yet .*\n- No regular bill yet/);
+    assert.equal(c.p.money.tx.filter(t => t.who.startsWith('Shop')).length, 60);
+    assert.ok(c.p.money.tx.some(t => t.who === 'Last week'));
+    assert.ok(c.p.syncLast.notes.some(n => n.includes('6개는 너무 많아서')));
+});
+
+test('a long skip: a month goes one day a line; only the days before the last 31 go as one span', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'a month went by')]);
+    T.moneyAnswers = [{ records: [] }];
+    await run(c.m, { now: '11-26 10:00', events: [] });
+    // (31 days: each on its own line, no span)
+    assert.match(T.moneyInput, /\[DAYS PASSED\]\n31 days: about 47 records in all, about 16 of them not by card; most days one to three, some none; where, what and how money moves are this owner's \(for instance card, mobile pay, money sent or received, cash taken out, payment abroad, refund, savings, currency exchange\)\.\n- 10-26 Mon \(ended in #2\)\n- 10-27 Tue \(ended in #2\)/);
+    assert.match(T.moneyInput, /- 11-25 Wed \(ended in #2\)\n\n/);
+    assert.equal((T.moneyInput.match(/^- \d{2}-\d{2} \w{3} \(ended in #2\)$/gm) || []).length, 31);
+    assert.ok(!/ to \d{2}-\d{2} \(/.test(T.moneyInput));
+    // longer: the days before the last 31 on one line
+    T.chat.push(say('Mara', 'two more months went by'));
+    T.moneyAnswers = [{ records: [] }];
+    await run(c.m, { now: '01-15 10:00', events: [] });
+    assert.match(T.moneyInput, /\[DAYS PASSED\]\n50 days: about 75 records in all, about 25 of them not by card; most days one to three, some none; where, what and how money moves are this owner's \(for instance card, mobile pay, money sent or received, cash taken out, payment abroad, refund, savings, currency exchange\)\.\n- 11-26 to 12-14 \(19 days, ended by #3\)\n- 12-15 Tue \(ended in #3\)/);
+});
+
+test('run59: a regular\'s "date" is its first day, not the day it was heard of: it goes on its message\'s day, and the clock pays nothing before that (the rent already paid this month is not paid again)', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'rent went out on the 21st as always')]);
+    c.p.money.tx.push({ id: 'old-rent', account: '1111', who: '집주인', amount: -50000, time: '10-21 09:00', day: '2026-10-21', kind: 'transfer' });
+    T.moneyAnswers = [{ records: [
+        { type: 'regular', at: 2, names: ['Rent', '월세'], amount: -50000, frequency: 'monthly', day: 21, date: '10-21', account: '1111', who: '집주인', occurrence: 'again', refersBack: false },
+        { type: 'regular', at: 2, names: ['Salary', '월급'], amount: 300000, frequency: 'monthly', day: 25, date: '01-25', account: '1111', who: 'Varo', occurrence: 'again', refersBack: false },
+        { type: 'asset', at: 2, kind: 'vehicle', names: ['Car'], amount: 9000000, date: '03-02', occurrence: 'again', refersBack: false },
+    ] }];
+    await run(c.m, { now: '10-26 20:00', events: [{ id: 'rent', at: 2, quote: 'rent went out', summary: '월세', date: '10-26', time: '19:00', phone: {} }] });
+    assert.deepEqual(c.p.money.regulars.map(r => [r.name, r.since, r.paidThrough]), [['Rent', '2026-10-21', '2026-10-26'], ['Salary', '2026-01-25', '2026-10-26']]);
+    // (no second rent on 10-21, no back pay of the salary on 10-25: both before the day they were told of)
+    assert.deepEqual(c.p.money.tx.map(t => t.id), ['old-rent']);
+    assert.equal(c.p.money.assets[0].since, '03-02');
+});
+
+test('run67: an estimated share price is the newest story day\'s, whatever day the model put on it', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'my shares are doing great')]);
+    c.p.investment = { base: 'KRW', date: '2026-10-20', accounts: [{ key: 'brk:KRW', currency: 'KRW' }], securities: [{ symbol: 'KRX:005930', name: '삼성전자', currency: 'KRW' }], trades: [], watch: [] };
+    T.moneyAnswers = [{ records: [{ type: 'quote', at: 2, symbol: 'KRX:005930', amount: 75000, date: '10-25', amountFrom: 'guess' }] }];
+    await run(c.m, { now: '10-26 20:00', events: [] });
+    assert.equal(c.p.investment.date, '2026-10-26');
 });
 
 // ---- 반영 in two steps: money asked after core, owed when it can't go in (docs/REFLECT-2STAGE-PLAN.md)
@@ -568,7 +701,8 @@ test('the money step failing: core\'s texts stay, the money is owed and asked ag
     await run(c.m, taxiCore());
     assert.deepEqual(texts(c.p), ['택시비 냈어']);
     assert.equal(c.bank(), 100000);
-    assert.deepEqual(c.p.sync.owed.money.map(x => [x.id, x.tries]), [['taxi', 1]]);
+    // (owed by message: every message of the round, read again next round)
+    assert.deepEqual(c.p.sync.owed.money.map(x => [x.at, x.tries]), [[2, 1], [3, 1]]);
     assert.ok(c.p.syncLast.notes.some(n => n.includes('다음 반영 때 다시')));
     // the next round marks nothing; the owed money is asked for all the same, and goes on the same event
     T.moneyAnswers.push(taxiPaid);
@@ -580,7 +714,7 @@ test('the money step failing: core\'s texts stay, the money is owed and asked ag
     // 되돌리기 of that round: the payment goes, and it is owed again (not lost); core's texts from the round before stay
     await data.undoRound(c.m, c.p);
     assert.equal(c.bank(), 100000);
-    assert.deepEqual(c.p.sync.owed.money.map(x => [x.id, x.tries]), [['taxi', 1]]);
+    assert.deepEqual(c.p.sync.owed.money.map(x => [x.at, x.tries]), [[2, 1], [3, 1]]);
     assert.deepEqual(texts(c.p), ['택시비 냈어']);
 });
 
@@ -600,7 +734,8 @@ test('money that fails two rounds running is skipped, with a note', async () => 
     T.moneyAnswers.push('broken', 'broken again');
     await run(c.m, taxiCore());
     await nextRound(c, 'see you tomorrow');
-    assert.deepEqual(c.p.sync.owed.money, []);
+    // the round's messages failed twice: skipped; the new message failed once: owed
+    assert.deepEqual(c.p.sync.owed.money.map(x => [x.at, x.tries]), [[4, 1]]);
     assert.ok(c.p.syncLast.notes.some(n => n.includes('두 번 못 넣어서 건너뛰었어요')));
     assert.deepEqual(texts(c.p), ['택시비 냈어']);
 });
@@ -632,7 +767,7 @@ test('복구 of a round whose money step failed brings back what it owes', async
     c.m.phones.ren = was;
     const perf = globalThis.performance; globalThis.performance = { timeOrigin: Date.now() + 1e6 };
     try { assert.equal(await data.restoreRounds(c.m, 'test'), 1); } finally { globalThis.performance = perf; }
-    assert.deepEqual(was.sync.owed.money.map(x => x.id), ['taxi']);
+    assert.deepEqual(was.sync.owed.money.map(x => x.at), [2, 3]);
     assert.deepEqual(texts(was), ['택시비 냈어']);
 });
 
@@ -1045,11 +1180,16 @@ test('money: an old event\'s name on the next day\'s new payment pays it; an owe
     T.chat.push(say('Ren', 'and a coffee for 4500 won'), say('Mara', 'nice'));
     T.moneyAnswers = ['not json at all'];
     await run(c.m, { now: '10-27 11:00', events: [{ id: 'coffee', at: 4, quote: 'a coffee for 4500 won', summary: '커피', date: '10-27', time: '10:30', apps: ['money'], phone: {} }] });
-    assert.equal(c.p.sync.owed.money.length, 1);
+    assert.deepEqual(c.p.sync.owed.money.map(x => x.at), [4, 5]);
+    // the owed messages are read again with the next round's (the coffee event with them); an answer with nothing for
+    // them is the money step's reading: nothing owed after it
     T.chat.push(say('Ren', 'lunch for 9000 won'));
     T.moneyAnswers = [{ events: [{ id: 'lunch', money: { moves: [{ account: '1111', amount: -9000, who: '점심', kind: 'card', occurrence: 'new' }] } }] }];
     await run(c.m, { now: '10-27 13:00', events: [{ id: 'lunch', at: 6, quote: 'lunch for 9000 won', summary: '점심', date: '10-27', time: '12:30', apps: ['money'], phone: {} }] });
-    assert.ok(c.p.syncLast.notes.some(n => n.includes('커피')));
+    assert.match(T.moneyInput, /\[#4\] Ren: and a coffee for 4500 won/);
+    assert.match(T.moneyInput, /- coffee: #4 10-27 10:30 커피/);
+    assert.deepEqual(c.p.sync.owed.money, []);
+    assert.equal(c.bank(), 64000);
 });
 
 test('a delivery told again without its prices ("the chicken came") moves the order on, no second order', async () => {
@@ -2090,8 +2230,6 @@ test('용어집 two forms of one name, everywhere a person is found: 위치 정�
         assert.ok(ivo.aka.includes('이보'), 'the older row has the other form now');
         assert.equal(c.p.threads.filter(t => ['Ivo', '이보'].includes(t.with)).length, 1, 'one thread for one person');
         assert.match(T.input, /On 이보's clock|On Ivo's clock/, 'the default screen 이보 found on the row Ivo');
-        const scenes = (globalThis.__everydayIn.at(-1) || '').split('[SCENES WITH]\n')[1]?.split('\n\n')[0].split('\n') || [];
-        assert.equal(scenes.filter(n => n === 'Ivo' || n === '이보').length, 1, 'SCENES WITH: once');
         assert.deepEqual(c.p.visits.map(x => [x.place, x.with]), [['Blue Note', ['Ivo']], ['Frankfurt Hauptbahnhof', []]], 'the home city alone, by a shorter form, is no visit; a place in it is');
     } finally { delete globalThis.__glossaryEntries; }
 });
@@ -2132,18 +2270,4 @@ test('a name in a text: as a name is written, never part of another word (Korean
     for (const t of ['Mara said hi', 'with Mara.', 'Mara가 왔다', 'Mara한테']) assert.ok(data.namedIn(t, 'Mara'), t);
     for (const t of ['Maradona', 'Samara', 'Mara2']) assert.ok(!data.namedIn(t, 'Mara'), t);
     assert.ok(data.namedIn('(Dr. K) came', 'Dr. K') && !data.namedIn('x', 'a'));
-});
-
-test('everyday SCENES WITH: a name only as a name; a 용어집 other form only when 용어집 marks it a person ("Rose = 장미" may be a flower)', async () => {
-    globalThis.__glossaryEntries = [{ src: 'Rose', ko: '장미' }, { src: 'Ivo', ko: '이보' }];
-    globalThis.__glossaryPeople = ['Ivo'];
-    try {
-        const chat = [say('Ren', 'start'), say('Mara', 'morning'), say('Ren', '장미가 활짝 핀 꽃집에서 장미꽃을 사 들고 이보네 집에 갔다. 이보다 늦게 도착했다.')];
-        const c = setup(chat);
-        c.p.where = { at: 1, people: [{ name: 'Ren', city: 'Frankfurt', tz: 'Europe/Berlin' }, { name: 'Rose', city: 'Frankfurt', tz: 'Europe/Berlin' }, { name: 'Ivo', city: 'Frankfurt', tz: 'Europe/Berlin' }] };
-        globalThis.__everydayIn = [];
-        await run(c.m, { now: '10-26 20:00', events: [{ id: 'visit', at: 2, quote: '이보네 집에 갔다', date: '10-26', time: '19:00', summary: 'At Ivo\'s', phone: { notes: [{ title: 'x', text: 'y', time: '10-26 19:00' }] } }] });
-        const scenes = (globalThis.__everydayIn.at(-1) || '').split('[SCENES WITH]\n')[1]?.split('\n\n')[0].split('\n') || [];
-        assert.deepEqual(scenes, ['Ivo']);
-    } finally { delete globalThis.__glossaryEntries; delete globalThis.__glossaryPeople; }
 });

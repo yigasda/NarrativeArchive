@@ -3,7 +3,7 @@ import { wealthBlock, wealthCheck, investmentWealthRows } from './wealth.js';
 import { askDraft as askDraftAny } from './ai.js';
 // (gives up after 5 minutes, like the phone's other requests)
 const askDraft = (input, o = {}) => askDraftAny(input, { timeout: 300000, ...o });
-import { num, parseJson, storyText, yearIn } from './phoneparse.js';
+import { num, parseJson, storyPart, yearIn } from './phoneparse.js';
 import { ctx, saveMeta } from './core.js';
 import { sideRequest, storyNow, prepareWealth, readMark, readNote, turnsNote, secondTurn, soFarHead, windowOf, nowAt } from './phonedata.js';
 import { syncOf, makeMark, exclusive } from './phonesync.js';
@@ -112,8 +112,9 @@ export function investmentDate(m, p) {
     // the phone's year (never a guess from the dates the archive writes), on the story's day where an investment fill would
     // stop reading (now, when it reads to the end)
     const day = storyNow(p, stopAt(m, p)).slice(0, 5), year = p.noYear ? '' : p.year ? String(p.year) : '';
-    // (a story with no year of its own: valued at today's prices)
+    // (a story with no year of its own: valued at the prices of the day it was first valued, that day kept on the brokerage)
     const date = p.noYear ? new Date().toISOString().slice(0, 10) : year && day ? `${year}-${day}` : '';
+    if (p.noYear && p.investment && validDate(date)) p.investment.date = date;
     return validDate(date) ? date : '';
 }
 function ingestQuotes(m, raw, input, date, securities) {
@@ -121,7 +122,7 @@ function ingestQuotes(m, raw, input, date, securities) {
     const push = (key, x) => {
         if (!validDate(x.date) || x.date > date || !finite(x.value) || x.value <= 0) return;
         const evidence = text(x.evidence, 2000), story = x.source === 'story';
-        if (story && (!evidence || !storyText(input).includes(evidence))) return;
+        if (story && (!evidence || !storyPart(input).includes(evidence))) return;
         const existing = finance(m).prices[quoteKey(key)]?.[x.date];
         if (!story && existing?.rows.length) return;
         addPrice(m, key, x.date, { value: x.value, time: /^([01]\d|2[0-3]):[0-5]\d$/.test(x.time || '') ? x.time : '', source: story ? 'story' : 'guess', ref: evidence });
@@ -133,7 +134,7 @@ function ingestQuotes(m, raw, input, date, securities) {
 const securityOf = s => ({ symbol: text(s.symbol, 80), name: text(s.name, 100), ko: text(s.ko, 100), currency: currency(s.currency) });
 const tradeOf = t => ({ id: uid(), kind: t.kind, symbol: text(t.symbol, 80), currency: t.currency, date: t.date, quantity: t.quantity, price: t.price, fee: finite(t.fee) ? t.fee : t.kind === 'dividend' ? undefined : 0, amount: t.amount, source: 'guess' });
 const moved = t => (t.kind === 'buy' ? -(t.quantity * t.price + t.fee) : t.kind === 'sell' ? t.quantity * t.price - t.fee : t.amount);
-const stakesOf = (raw, input) => list(raw.stakes).slice(0, 8).filter(s => s.evidence && storyText(input).includes(String(s.evidence))).map(s => ({ id: uid(), company: text(s.company, 100), listed: typeof s.listed === 'boolean' ? s.listed : null, percent: finite(s.percent) && s.percent >= 0 && s.percent <= 100 ? s.percent : null, holder: text(s.holder), voter: text(s.voter), beneficiary: text(s.beneficiary), restriction: text(s.restriction), value: finite(s.value) && s.value >= 0 ? s.value : null, currency: currency(s.currency), evidence: text(s.evidence, 2000), source: 'story' }));
+const stakesOf = (raw, input) => list(raw.stakes).slice(0, 8).filter(s => s.evidence && storyPart(input).includes(String(s.evidence))).map(s => ({ id: uid(), company: text(s.company, 100), listed: typeof s.listed === 'boolean' ? s.listed : null, percent: finite(s.percent) && s.percent >= 0 && s.percent <= 100 ? s.percent : null, holder: text(s.holder), voter: text(s.voter), beneficiary: text(s.beneficiary), restriction: text(s.restriction), value: finite(s.value) && s.value >= 0 ? s.value : null, currency: currency(s.currency), evidence: text(s.evidence, 2000), source: 'story' }));
 const watchOf = (raw, securities) => list(raw.watch).slice(0, 8).filter(w => securities.some(s => s.symbol === w.symbol)).map(w => ({ symbol: w.symbol, note: text(w.note), ko: text(w.ko), query: text(w.query, 120), source: 'guess' }));
 // the day a second turn reads up to, after the first's DATE (across New Year the short way round); DATE when unknown
 function laterDate(p, gap, date) {
@@ -330,7 +331,7 @@ export function investmentTargets(inv) {
 // This checks provenance text and structure, not whether an excerpt semantically entails every claim.
 export function parseInvestmentRecords(raw, inv, source, mode, target = '') {
     const allowed = new Set(investmentTargets(inv).map(t => t.key));
-    const proof = x => typeof x.evidence === 'string' && x.evidence.trim().length >= 8 && storyText(source).includes(x.evidence.trim());
+    const proof = x => typeof x.evidence === 'string' && x.evidence.trim().length >= 8 && storyPart(source).includes(x.evidence.trim());
     const common = x => ({ target: x.target, evidence: text(x.evidence, 2000), ref: text(x.ref, 120), source: 'story' });
     const out = { notes: [], schedules: [], history: [] };
     if (mode === 'notes') {

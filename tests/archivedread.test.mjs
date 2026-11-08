@@ -11,7 +11,7 @@ const encoded = s => 'data:text/javascript;base64,' + Buffer.from(s).toString('b
 const href = f => pathToFileURL(new URL(`../src/${f}`, import.meta.url).pathname).href;
 const T = (globalThis.__archTest = { chat: [], answers: [] });
 const map = { './extract.js': cleanMessageURL,
-    './phonesync.js': href('phonesync.js'), './phoneparse.js': href('phoneparse.js'), './phoneclock.js': href('phoneclock.js'), './phonesynclife.js': href('phonesynclife.js'), './phonesyncmoney.js': href('phonesyncmoney.js'), './finance.js': href('finance.js'),
+    './phonesync.js': href('phonesync.js'), './phoneparse.js': href('phoneparse.js'), './phoneclock.js': href('phoneclock.js'), './phonemapcity.js': href('phonemapcity.js'), './phonesynclife.js': href('phonesynclife.js'), './phonesyncmoney.js': href('phonesyncmoney.js'), './finance.js': href('finance.js'),
     './phoneprofile.js': href('phoneprofile.js'),
     './phonestory.js': encoded(`export const phoneTarget=()=>({scope:phoneChatScope(),check(){}});export const phoneChatScope=()=>globalThis.__archTest.scope||'test';`),
     './wealth.js': encoded(`export const ensureWealth=async()=>null;export const wealthBlock=()=>'';export const wealthDate=()=> '2026-10-26';export const wealthCheck=()=>null;export const addWealthFX=()=>{};`),
@@ -752,7 +752,7 @@ test('calls one after another from the same person (34 missed) are one row with 
     assert.match(T.sys, /"count": calls in a row \(34 missed calls are one item\)/);
 });
 
-test('일상 is its own request after the reflection\'s: it gets all the reflection got, what it put on the phone and who the owner had a scene with', async () => {
+test('일상 is its own request after the reflection\'s: it gets all the reflection got and what it put on the phone; who the owner had a scene with it reads from the messages itself', async () => {
     const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'Varo gave me the cafe job at my desk'), say('Mara', 'then Ivo came by and we fought')]);
     c.p.now = '10-26 08:00'; c.p.year = 2026;
     c.p.around = { at: 1, people: [{ name: 'Ivo', aka: ['이보'], about: 'Ren\'s older brother; they fight and text short and sharp.' }, { name: 'Varo Lind', about: 'Ren\'s boss; texts only a file name and a date.' }, { name: 'Lio', about: 'ex; not in touch.' }] };
@@ -762,13 +762,15 @@ test('일상 is its own request after the reflection\'s: it gets all the reflect
         await run(c.m, { now: '10-26 09:45', events: [{ id: 'job', at: 2, quote: 'Varo gave me the cafe job', summary: 'Varo gave the cafe job', date: '10-26', time: '09:00', phone: { notes: [{ title: 'Cafe job', text: 'from Varo', time: '10-26 09:05' }] } }] });
     } finally { delete globalThis.__everyday; }
     const got = globalThis.__everydayIn.at(-1);
-    for (const b of ['[NEW MESSAGES]', '[PHONE NOW]', '[PEOPLE AROUND]', '[OWNER]', '[PUT ON THE PHONE NOW]\n- #2 Varo gave the cafe job (notes 1)', '[SCENES WITH]']) assert.ok(got.includes(b), b);
-    assert.deepEqual(got.split('[SCENES WITH]\n')[1].split('\n'), ['Ivo', 'Varo Lind']);
+    for (const b of ['[NEW MESSAGES]', '[PHONE NOW]', '[PEOPLE AROUND]', '[OWNER]', '[PUT ON THE PHONE NOW]\n- #2 Varo gave the cafe job (notes 1)']) assert.ok(got.includes(b), b);
+    // (점검 8: no list of names the code found in the text: the model reads the messages)
+    assert.ok(!got.includes('[SCENES WITH]'));
     // (not what only the reflection uses; nothing it doesn't get is named)
     assert.ok(!data.AI_SYS_EVERYDAY.includes('MONEY NOW') && !data.AI_SYS_EVERYDAY.includes('INVESTMENTS NOW') && !data.AI_SYS_EVERYDAY.includes('MESSAGES READ BEFORE'));
     // its blocks are the ones it says it gets
-    for (const b of ['NEW MESSAGES', 'PHONE NOW', 'PEOPLE AROUND', 'PUT ON THE PHONE NOW', 'SCENES WITH', 'OWNER']) assert.ok(data.AI_SYS_EVERYDAY.includes(`${b}`), b);
-    assert.match(data.AI_SYS_EVERYDAY, /For each person in SCENES WITH: at least one text between the two later these hours/);
+    for (const b of ['NEW MESSAGES', 'PHONE NOW', 'PEOPLE AROUND', 'PUT ON THE PHONE NOW', 'OWNER']) assert.ok(data.AI_SYS_EVERYDAY.includes(`${b}`), b);
+    assert.ok(!data.AI_SYS_EVERYDAY.includes('SCENES WITH'));
+    assert.match(data.AI_SYS_EVERYDAY, /For each person the owner had a scene with in NEW MESSAGES: at least one text between the two later these hours/);
     assert.match(data.AI_SYS_EVERYDAY, /each answer fills most lists as these hours call for, for example a photo of lunch, a search, a note, a mail, a post, texts and calls by the person, a voice memo, and a diary entry when these hours end the day\. A list with nothing in these hours stays empty\./);
     assert.match(data.AI_SYS_EVERYDAY, /What these messages already say is no new fact: a text may say it again/);
     assert.match(data.AI_SYS_EVERYDAY, /PEOPLE AROUND are part of the owner's life whether or not they are in touch: they turn up wherever they would on a real phone\./);
@@ -984,20 +986,6 @@ test('mixed archive and visible messages still require the new clock response', 
     await assert.rejects(()=>run(c.m,JSON.stringify({now:'10-26 13:00',events:[]})),e=>e.code==='CLOCK_INVALID');
     assert.match(T.sys,/CLOCK FIRST/);assert.match(T.input,/\[ARCHIVE FOR THESE MESSAGES\]/);
     assert.equal(c.p.now,before);
-});
-
-test('[SCENES WITH] also finds someone the phone doesn\'t know yet: a person the reflection wrote into these events, or one of the glossary\'s people', async () => {
-    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'Miller brought the coffee and I sent him for the car'), say('Mara', 'Hanna from the bakery waved')]);
-    c.p.now = '10-26 08:00'; c.p.year = 2026;
-    globalThis.__everydayIn = [];
-    globalThis.__glossaryPeople = ['Hanna Vogel'];
-    try {
-        await run(c.m, { now: '10-26 09:45', events: [{ id: 'car', at: 2, quote: 'Miller brought the coffee', summary: 'Miller, the butler, sent for the car', date: '10-26', time: '09:00',
-            phone: { calls: [{ with: 'Miller', type: 'out', time: '10-26 09:05', min: 1 }] } }] });
-    } finally { delete globalThis.__glossaryPeople; }
-    const who = globalThis.__everydayIn.at(-1).split('[SCENES WITH]\n')[1].split('\n\n')[0].split('\n');
-    // (Miller from the reflection's own call, Hanna by the glossary's first name; a name these messages don't have is no scene)
-    assert.deepEqual(who.sort(), ['Hanna Vogel', 'Miller']);
 });
 
 test('되돌리기 after the place reading was asked again (AI로 연동) keeps the new reading; one the round itself moved is taken back', async () => {

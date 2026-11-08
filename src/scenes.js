@@ -5,7 +5,7 @@
 // STATE · OPEN are updated once at the end, from the new sections, as change lists.
 
 import { loreBlock } from './lore.js';
-import { WEATHER as ST_WEATHER, fieldClock, koClockText } from './phoneparse.js';
+import { WEATHER as ST_WEATHER, clockTokens, fieldClock } from './phoneparse.js';
 import { SECTION_GUARD, aiLabel, askAI, askCompress, drLabel } from './ai.js';
 import { ctx, getMeta, globalSettings, saveMeta } from './core.js';
 import { formatExtract } from './extract.js';
@@ -28,23 +28,17 @@ export const DEFAULT_TRACKER_RE = String.raw`<tracker>[^|\d]*(?<time>\d{1,2}:\d{
 const OLD_TRACKER_RES = [String.raw`<tracker>[^|]*?(?<time>\d{1,2}:\d{2}\s*(?:오전|오후|AM|PM|am|pm)?)?[^|]*\|\s*(?<date>[^|]+?)\s*\|\s*(?<place>[^|<]+?)\s*(?:\||</tracker>)`,
     String.raw`<tracker>[^|\d]*(?<time>\d{1,2}:\d{2}\s*(?:오전|오후|AM|PM|am|pm)?)?[^|]*\|\s*(?<date>[^|]+?)\s*\|\s*(?<place>[^|<]+?)\s*(?:\||</tracker>)`];
 export const trackerRe = () => { const v = globalSettings().trackerRe; return v === undefined || v === null || OLD_TRACKER_RES.includes(v) ? DEFAULT_TRACKER_RE : String(v); };
-const minutes = t => {
-    const str = String(t || '');
-    const mt = str.match(/(?<![\d:.-])(\d{1,2})\s*:\s*(\d{2})(?![\d:])/);
-    // (no colon clock: a Korean one, "오후 4시 15분", "16시 15분", with nothing else in the field)
-    if (!mt) { const ko = koClockText(str); return ko ? Number(ko.slice(0, 2)) * 60 + Number(ko.slice(3)) : null; }
-    const marker = str.match(/오전|오후|저녁|밤|(?<![a-z])(?:AM|PM)(?![a-z])/i)?.[0];
-    let h = Number(mt[1]);
-    const m = Number(mt[2]);
-    if (m > 59 || h > 23 || (marker && (h < 1 || h > 12))) return null;
-    if (marker) h = h % 12 + (/오후|저녁|밤|PM/i.test(marker) ? 12 : 0);
-    return h * 60 + m;
-};
+// a time field's minutes: the one clock reader every field goes by (phoneparse fieldClock), null when the field is no clock
+// alone ("15:00 넘어서", "저녁")
+const minutes = t => { const c = fieldClock(String(t || '')); return c ? c.h * 60 + c.m : null; };
 // a status window that is not <tracker>: one short line of fields ("[ 🌙 오후 8:15 · 12월 9일 (목) · 성 → 병동 · ❄️ -1°C ]")
 // or a few "label: value" lines (📅 날짜: … / 📍 장소: …). It needs a time or a date; story prose has long parts and full stops
 // (a part that is a clock, maybe with its date, and nothing else: "오후 8:15", "16시 15분 (목)"; never "3시 넘어서")
 const stClock = p => !!fieldClock(p);
-const ST_DATE = /\d{1,4}\s*년|\d{1,2}\s*월\s*\d{1,2}\s*일|\b\d{4}[-./]\d{1,2}[-./]\d{1,2}\b|[(（][월화수목금토일][)）]|[월화수목금토일]요일|\d+\s*일\s*(?:째|차)|\bday\s*\d+\b|\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2}\b|\b\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/i;
+// (and a part that holds a clock at all, "08:15 넘어서": the line is still a status window, its date and place read, only that
+// part no time)
+const stClockShape = p => clockTokens(p).length > 0;
+const ST_DATE = /\d{1,4}\s*년|\d{1,2}\s*월\s*\d{1,2}\s*일|(?<!\d)\d{4}[-./]\d{1,2}[-./]\d{1,2}(?!\d)|[(（][월화수목금토일][)）]|[월화수목금토일]요일|\d+\s*일\s*(?:째|차)|\bday\s*\d+\b|\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2}\b|\b\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/i;
 const ST_LABELS = [[/^(날짜|일자|요일|일시|date|day)$/i, 'date'], [/^(시간|시각|time)$/i, 'time'], [/^(장소|위치|location|place)$/i, 'place'], [/^(날씨|기온|weather)$/i, 'weather']];
 const stClean = t => String(t || '').replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu, '').replace(/\*\*|__|`/g, '').replace(/\s+/g, ' ').trim();
 const stLabel = l => { const mt = stClean(l).match(/^([^:：]{1,12})\s*[:：]\s*(.+)$/); const kind = mt && (ST_LABELS.find(([re]) => re.test(mt[1].trim())) || [])[1]; return kind ? [kind, mt[2].trim()] : null; };
@@ -57,14 +51,15 @@ function stFields(parts) {
         const kind = lab ? lab[0] : /→|->|📍/.test(raw) ? 'place' : stClock(p) ? 'time' : ST_DATE.test(p) ? 'date' : ST_WEATHER.test(raw) ? 'weather' : '';
         // the weather keeps its emoji (a sky may be told by one alone) and every field that names it ("맑음 / 3°C")
         if (kind === 'weather') { const w = lab ? p : String(raw).replace(/\*\*|__|`|\uFE0F/g, '').replace(/\s+/g, ' ').trim(); f.weather = [f.weather, w].filter(Boolean).join(', '); continue; }
-        if (kind === 'time') {
-            // (the clock as written and the date beside it; a "시간:" field that is no clock alone, "3시 넘어서", is none)
-            // (it stays as written, "저녁", with no minutes)
-            const fc = fieldClock(p);
-            if (!fc) { if (!f.time) { f.time = p; f.noClock = true; } continue; }
-            if (!f.time) { f.time = fc.clock; f.noClock = false; }
+        // (a "일시:" or "날짜:" line with a clock in it is the time too: "일시: 2026-11-07 19:30")
+        const fc = kind === 'time' || kind === 'date' && lab ? fieldClock(p) : null;
+        if (fc) {
+            // (the clock as written and the date beside it; a later line's real clock over an earlier "시간: 저녁")
+            if (!f.time || f.noClock) { f.time = fc.clock; f.noClock = false; }
             if (fc.date) f.date ||= fc.date;
         }
+        // (a "시간:" line that is no clock alone, "3시 넘어서", "저녁", stays as written, with no minutes)
+        else if (kind === 'time') { if (!f.time) { f.time = p; f.noClock = true; } }
         else if (kind === 'date') f.date ||= p;
         else if (kind === 'place') f.place ||= p.replace(/\s*(?:->|⇒)\s*/g, ' → ');
         else if (!kind) rest.push(p);
@@ -76,6 +71,8 @@ function stFields(parts) {
 function autoTracker(text) {
     const lines = String(text || '').replace(/<[^>]+>/g, '\n').split('\n');
     for (let i = 0; i < lines.length; i++) {
+        // (a line far longer than a status window, a run of spaces or a block of text, is never read)
+        if (lines[i].length > 600) continue;
         const t = lines[i].trim().replace(/^[>*_#\s]+|[*_\s]+$/g, '');
         // "label: value" lines in a row
         if (stLabel(t)) {
@@ -89,7 +86,7 @@ function autoTracker(text) {
         const wrap = t.match(/^[[【〔(（]\s*([\s\S]+?)\s*[\]】〕)）]$/);
         const parts = (wrap ? wrap[1] : t).split(/\s*[|·•｜ㆍ]\s*|\s+\/\s+/).map(x => x.trim()).filter(Boolean);
         if (parts.length < 2 || parts.length > 10 || parts.some(x => x.length > 60)) continue;
-        const has = [{ test: stClock }, ST_DATE, ST_WEATHER, /→|->|📍/].map(re => parts.some(x => re.test(x)));
+        const has = [{ test: stClockShape }, ST_DATE, ST_WEATHER, /→|->|📍/].map(re => parts.some(x => re.test(x)));
         if (!has[0] && !has[1]) continue;
         const score = has.filter(Boolean).length;
         if (wrap ? score < 2 : score < 3 || parts.length < 3) continue;
@@ -103,7 +100,10 @@ function readTracker(text, re) {
     let gr = mt ? { ...(mt.groups || {}) } : autoTracker(text);
     if (!gr) return null;
     // "<tracker> 오후 3:40 | …": the time group holds "3:40", the 오후 sits before it in the same field
-    if (mt && gr.time) { const first = stClean(mt[0].split('|')[0].replace(/<[^>]*>/g, '')); if (first.includes(gr.time.trim())) gr.time = first; }
+    // (its first field is read the way every time field is: "<tracker> 오후 3시 40분 | …" is 15:40, "<tracker> 15:00 넘어서 | …" no
+    // minutes)
+    // (a regex with no "|" fields, "Clock=…;Date=…", keeps its own time group)
+    if (mt && mt[0].includes('|')) { const first = stClean(mt[0].split('|')[0].replace(/<[^>]*>/g, '')); if (gr.time ? first.includes(gr.time.trim()) : fieldClock(first)) gr.time = first; }
     const place = String(gr.place || '').trim();
     const parts = place.split(/\s*(?:→|->|>|\/|·)\s*/).filter(Boolean);
     // the weather: its own group, or any other field of the tracker that names a sky or a temperature
