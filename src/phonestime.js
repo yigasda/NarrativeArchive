@@ -18,7 +18,7 @@ Object.assign(AX, {
 
 // the week's three biggest kinds, first to third: sky · pink · tangerine, everything else one grey. Every bar wears
 // them pale; the picked day wears them full. Text a shade darker for white cards; the average is a sky dashed line.
-const ORDER = ['chat', 'social', 'video', 'game', 'music', 'work', 'reading', 'shopping', 'other'];
+const ORDER = ['chat', 'social', 'video', 'game', 'music', 'work', 'reading', 'shopping', 'money', 'maps', 'health', 'other'];
 const RANK = ['#6cb4f5', '#f4a3bd', '#ffad5c'], RANK_PALE = ['#d3e8fc', '#fcdce7', '#ffe5c6'], RANK_T = ['#3f8fd8', '#d9708f', '#e08a2a'];
 const REST = '#e6e8ec', REST_PALE = '#eef0f3', ACC = '#3f8fd8', AVG = '#3f8fd8';
 
@@ -88,7 +88,7 @@ export function screenTimeScreen(p, now, i = '') {
     const pk = d ? d.pickups : v.pickupsAvg;
     const pick = pk !== null && pk !== undefined ? `<div class="ax_card sc_pick"><span class="sc_pki">${ax('scphone', 20, ACC, 1.9)}</span><div class="sc_pkt"><div class="sc_lbl">${d ? (d.today ? '오늘 지금까지' : fmtDate(p, d.date)) : '하루 평균'} 집어든 횟수</div><b>${feel(pk)}</b></div><div class="sc_pkn"><div class="cg_num">${pk}<u>번</u></div><span class="sc_lvl">${[1, 2, 3, 4].map(n => `<i class="${n <= level(pk) ? 'on' : ''}"></i>`).join('')}</span></div></div>` : '';
     // the apps: the week's daily average, or what that day held
-    const allRows = d ? d.apps.map(([name, m]) => { const kind = appOf(name)?.kind || v.top.find(t => t.app === name)?.kind || 'other'; return { name, kind, m }; })
+    const allRows = d ? d.apps.map(([name, m]) => { const kind = v.top.find(t => t.app === name)?.kind || appOf(name)?.kind || 'other'; return { name, kind, m }; })
         : v.top.map(t => ({ name: t.app, kind: t.kind, m: t.avg }));
     // every app the day held (up to twenty), the whole list
     const rows = allRows.slice(0, 20);
