@@ -229,7 +229,9 @@ test('after the update, a phone already read in its branch, a renamed chat, or a
 
 test('a phone with a bank but without the everyday or delivery apps: core then money, each with only its own', async () => {
     const c = await bookCase();
-    assert.equal(T.sys, data.coreSystem());
+    assert.equal(T.sys, data.coreSystem({ wallet: true }));
+    // (a phone with the wallet: its tickets are the calendar's from there, core writes no calendar item for one)
+    assert.ok(T.sys.includes("is the wallet's, and the calendar shows it from there") && !data.coreSystem().includes("is the wallet's"));
     assert.ok(!T.sys.includes('LIFE') && !T.sys.includes('deliveries'));
     assert.ok(!T.input.includes('[MONEY NOW]'));
     assert.equal(T.moneySys, data.moneySystem());

@@ -101,7 +101,7 @@ const PHONE_ITEMS = `  "contacts": [{ "name": name in the story, "saved": how th
   "voice": [{ "title", "kt", "text", "ko", "time", "sec", "place" }] only when the archive or chat shows the owner recorded one`;
 // (반영: a voice memo may be an everyday one too, so the 폰 만들기 limit is left off there)
 const VOICE_ONLY = ' only when the archive or chat shows the owner recorded one';
-const PHONE_LAST = `Any item may carry "ev": a short tag for one story event, the same on every item that comes from it (the flight's mail, its event and its photo all "ev": "berlin-flight").
+const PHONE_LAST = `Any item may carry "ev": a short tag for one story event, the same on every item that comes from it (the flight's mail and its photo both "ev": "berlin-flight").
 A booking the story has carries the details a real one would (a booking number, a seat, a gate), made up to fit. Never a booking, a trip or a purchase the story doesn't have.`;
 
 const CLOCK_FIRST = `CLOCK FIRST
@@ -220,7 +220,8 @@ const LIFE_FILES = `  "files": [{ "change": an id or "", "name", "kind", "folder
 const LIFE_TIMERS = `  "timers": [{ "label", "ko", "sec" }],`;
 const LIFE_ONCE = `- An alarm for one occasion (a flight, an appointment) rings once: "days": [] and its "date". Only an alarm the owner keeps for every week has "days".`;
 const LIFE_CHANGE = `- A record already in LIFE NOW is changed with "change": its id; write only the fields that changed. A deleted file is "deleted": true.`;
-export function updateSystem({ money = true, delivery = false, life = false, weather = false, tracker = false, split = false, invest = false, zone = false, archiveOnly = false } = {}) {
+// wallet: the phone has the bank's wallet, whose tickets the calendar shows (core then writes none of them)
+export function updateSystem({ money = true, delivery = false, life = false, weather = false, tracker = false, split = false, invest = false, zone = false, archiveOnly = false, wallet = false } = {}) {
     const paid = delivery ? 'order, ticket or delivery' : 'order or ticket';
     return `${split ? 'STAGE: core\n' : ''}GOAL
 Add to one character's phone what a few new chat messages put on it, in a long role-play. The user opens the phone to peek at the story from the phone's side.
@@ -243,7 +244,8 @@ ${archiveOnly ? '' : `${CLOCK_FIRST}\n\n`}WHAT IS NEW
 - Only what happens in NEW MESSAGES or ARCHIVE FOR THESE MESSAGES. Guesses and memories of earlier days add nothing.
 ${split ? '' : `- Something done before that the phone would hold, first told of here (an order already placed, a ticket already bought): an event in that message; its money says "again".
 `}- A plan made in these messages goes in the calendar; what is planned hasn't happened yet (no payment, no photo).
-- Each message's own replies, orders and payments belong to the event in that message, not folded into an earlier one.
+${wallet ? `- A ticket, a booking or a stay (a flight, a train, a hotel, a show, a membership) is the wallet's, and the calendar shows it from there: no calendar item for it.
+` : ''}- Each message's own replies, orders and payments belong to the event in that message, not folded into an earlier one.
 - An event in EVENTS ON THE PHONE keeps its id; add only what the phone doesn't hold yet.
 - MESSAGES READ BEFORE, NOW CHANGED were already put on the phone: give their events the ids listed there${split ? '' : '; a payment in them is that same payment, its amount corrected if it changed'}.
 - Small things around an event are fine (how a text was worded, a photo of the place, a search they would make). Nothing the story contradicts, no new facts or plans.
@@ -324,7 +326,7 @@ export const AI_SYS_PHONE_UPDATE = updateSystem();
 // line names the step (the test harness files each answer under it)
 // core: the old one-step instructions without money (life, files, health and the weather stay: they read the whole
 // messages anyway); the money step reads every round on its own
-export const coreSystem = ({ life = false, weather = false, tracker = false, invest = false, zone = false, archiveOnly = false } = {}) => updateSystem({ money: false, delivery: false, life, weather, tracker, split: true, invest, zone, archiveOnly });
+export const coreSystem = ({ life = false, weather = false, tracker = false, invest = false, zone = false, archiveOnly = false, wallet = false } = {}) => updateSystem({ money: false, delivery: false, life, weather, tracker, split: true, invest, zone, archiveOnly, wallet });
 // 돈 단계 (3.176~): every round's messages, read for what the owner's phone would now show. One list of records.
 // delivery: the phone has the delivery app; invest: it has the brokerage
 export function moneySystem({ delivery = false, invest = false } = {}) {
@@ -1745,7 +1747,7 @@ async function updatePhone(m, owner) {
         const input = inputParts.join('\n\n');
         const made = { money: p.money?.at, invest: p.investment?.at, life: p.life, delivery: p.delivery };
         // low thinking: tested against medium on Vertex, the same payments, ids and amounts, without the thinking cost
-        const out = await askDraft(input, { force: true, system: split ? coreSystem({ life: !!life, weather: askWeather, tracker: !!tracker, invest: !!invest, zone: askZone, archiveOnly }) : updateSystem({ money: false, life: !!life, weather: askWeather, tracker: !!tracker, zone: askZone, archiveOnly }), maxTokens: 16000, effort: 'low' });
+        const out = await askDraft(input, { force: true, system: split ? coreSystem({ life: !!life, weather: askWeather, tracker: !!tracker, invest: !!invest, zone: askZone, archiveOnly, wallet: !!money }) : updateSystem({ money: false, life: !!life, weather: askWeather, tracker: !!tracker, zone: askZone, archiveOnly }), maxTokens: 16000, effort: 'low' });
         // then the everyday life of these hours, on its own (it fails alone: the round goes in without it)
         // (only on an answer the round can use: a broken one fails the round, and its 일상 would be paid for nothing)
         const core0 = jsonOf(out);
@@ -2189,7 +2191,8 @@ export async function retryMoney(m, owner) {
         p.at = Date.now();
         await saveMeta();
         if (p.inject) applyInjection();
-        return { paid: st.late.length, owed: st.owed.length, notes: st.notes };
+        // (by message, as it is owed: the messages whose money went in, the ones still owed)
+        return { paid: new Set(st.late.filter(x => (x.effects || []).length).map(x => x.at)).size, owed: st.owed.length, notes: st.notes };
     });
 }
 
