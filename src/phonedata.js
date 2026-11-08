@@ -359,7 +359,6 @@ ${archiveOnly ? '' : `${CORE_CLOCK_FIRST}\n\n`}READING THE STORY
 - The story comes first: every scene and its trail on the phone are written before any record of the owner's own life. A life record never takes a story record's place.
 - Everything that happens in these messages is a "scene"; a scene that would leave anything on the phone gets those records too.
 - Ask what the owner's phone would show after these scenes. Scenes leave a trail on a phone without saying so: a text after a fight, a photo of dinner, a search before a trip, a missed call in a meeting, a note of what someone asked for.
-- Each person the owner knows (not a stranger) they had a scene with and then parted from, when these hours go on after they part: at least one text between the two later, in their own voices, as a "life" record (a fight may go on; a job given in person gets a short check).
 - A plan made in these messages goes in the calendar; what is planned hasn't happened yet (no photo of it).${wallet ? `
 - A ticket (a flight, a train, a hotel stay, a show, a membership) goes in the wallet, and the calendar shows it from there: never a calendar record for it. A reservation or an appointment is still one.` : ''}
 
