@@ -775,7 +775,7 @@ test('일상 comes in the reflection\'s own answer (no request of its own); who 
     assert.match(sys, /The phone is lived in every waking hour/);
     assert.match(sys, /Someone new texted or called gets a "contact"/);
     assert.match(sys, /PEOPLE AROUND \(wherever they would turn up; never someone the owner isn't in touch with now\)/);
-    assert.match(sys, /Nothing that moves the story: anything a later message could contradict is a new fact, such as what someone decided, promised, said or wants, a meeting or a change between the owner and the story's people, a time, a result, how something turned out \(a debt settled, work ending on Friday, a parcel arriving\)/);
+    assert.match(sys, /Nothing that moves the story: anything a later message could contradict is a new fact, such as what someone decided, promised, said or wants, a meeting or a change between the owner and the story's people, a time, a result, how something the story is following turned out \(the debt it tells of settled, the repair it mentions done, the parcel it waits for arriving\)/);
     assert.match(sys, /"from": "story" \| "life"/);
     const guess = [...c.p.threads.flatMap(th => th.messages.filter(x => x.src === 'guess').map(x => `${th.with}:${x.text}`)), ...c.p.searches.filter(x => x.src === 'guess').map(x => x.q)];
     assert.deepEqual(guess.sort(), ['Ivo:whatever', 'Ivo:you started it', 'Mittagstisch Seongsu']);
