@@ -267,7 +267,7 @@ export function draftView(p, now, i, roster) {
 }
 // 꾹 누르기 (docs/mockups/phone-msgpress D): a bubble held shows a bar of four under it — 복사 · 재번역 · 선택 · 삭제;
 // 선택 picks many (a circle on the left), and the head becomes ✕ · N개 선택 with 복사 · 재번역 · 삭제
-Object.assign(AX, { mqcopy: 'M9 9h10v10H9zM5 15V5h10', mqtrans: 'M4 6h8M8 4v2M5 10c2 0 5-1 6-4M14 8l4 10M15 15h5', mqpick: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM8 12l3 3 5-6', mqbin: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13' });
+Object.assign(AX, { mqcopy: 'M9 9h10v10H9zM5 15V5h10', mqtrans: 'M3.5 5h9M8 3v2M5.5 5c.6 2.6 2.4 5 5 6M10.5 5c-.6 2.8-2.6 5.4-6 7M11.5 20l4-9 4 9M12.9 17h5.2', mqpick: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM8 12l3 3 5-6', mqbin: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13' });
 export function threadScreen(p, now, i, roster, ui = {}) {
     const t = p.threads[i];
     if (!t) return msgList(p, now, roster);
