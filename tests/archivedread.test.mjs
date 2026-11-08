@@ -798,6 +798,7 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.match(on, /each answer fills most lists as these hours call for, for example a photo of lunch, a search, a note, a mail, a post, texts and calls by the person, a voice memo, and a diary entry when these hours end the day\./);
     assert.match(on, /The diary: one entry for each story day that ends in these messages/);
     assert.match(on, /Voice memos: about one every few days/);
+    assert.match(on, /a task and its deadline \("check the moodboards by 18:00"\), a thing done \("uploaded it"\), a plan for later \("ramyeon tonight\?"\)/);
     assert.ok(on.includes('Posts only if this owner posts.') && !on.includes('Not every app every day') && !on.includes('only if this owner keeps them'));
     assert.match(on, /"at": its message number \(a life record: the message whose hours it falls in\)/);
     assert.match(on, /new texts in a chat are new/);
