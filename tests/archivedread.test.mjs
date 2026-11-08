@@ -803,7 +803,7 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.match(on, /each answer fills most lists as these hours call for, for example a photo of lunch, a search, a note, a mail, a post, texts and calls by the person, a voice memo, and a diary entry when these hours end the day\./);
     assert.match(on, /The diary: one entry for each story day that ends in these messages/);
     assert.match(on, /Voice memos: about one every few days/);
-    assert.match(on, /but NEVER a new fact, event, later plan, promise or deadline the story hasn't mentioned\./);
+    assert.match(on, /but NEVER a new fact, event, secret, later plan, promise or deadline the story hasn't mentioned\./);
     assert.ok(!on.includes('talk over each other') && on.includes('Contact goes both ways; a group chat may go on without them.'));
     assert.ok(on.includes('Posts only if this owner posts.') && !on.includes('Not every app every day') && !on.includes('only if this owner keeps them'));
     assert.match(on, /"at": its message number \(a life record: the message whose hours it falls in\)/);
