@@ -359,7 +359,7 @@ KEEPING IN STEP
 
 TIME PASSING
 - What recurs (pay, an allowance, support, rent, bills, subscriptions, a membership, a loan repayment) is one "regular" record, written once when the story or the owner's life shows it; the app pays it on its days. A rent day or a payday is that regular, not a one-off payment. A change to it is the same record with the new "amount" or "status".
-- DAYS PASSED: the owner lived each of those days too. Besides what the scenes show and the regular ones, the phone would show what fits their life that day: one or two payments${delivery ? `, orders or deliveries` : ''}${!delivery ? ` or orders` : ''} a day, as the owner's life would have them (coffee, a meal, getting around, groceries). A span of many days the same, about as many as its line says, each dated within it.
+- DAYS PASSED: the owner lived each of those days too. Besides what the scenes show and the regular ones, the phone would show what fits their life that day: one or two payments${delivery ? `, orders or deliveries` : ''}${!delivery ? ` or orders` : ''} a day, the way this owner lives: their tastes, habits, moods and what the story put them through (a late taxi after a long night, the book they wanted, a gift, a game top-up, a hair appointment, a stress order at 2 a.m.). Days differ; never the same few things every day. A span of many days the same, about as many as its line says, each dated within it.
 - Write any missing "regular" records that the owner's life plainly has (pay or an allowance, rent, a phone bill, subscriptions), using OWNER PROFILE and MONEY NOW; a card account with no "billDay" gets one.
 
 WHICH TYPE
