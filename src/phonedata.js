@@ -364,15 +364,15 @@ THE STORY
 - A plan goes in the calendar and hasn't happened yet.${wallet ? ' A ticket goes in the wallet, never in the calendar; a reservation or an appointment still goes in the calendar.' : ''} Never a booking, trip or purchase the story doesn't have.
 
 THE OWNER'S LIFE
-- The phone is lived in every waking hour, shaped by their job or school, habits, tastes, moods, money, city and relationships. The owner may reach out; others bring their own lives (news, questions, favours); a group chat may go on without them.
+- The phone is lived in every waking hour, from who the owner is. Contact goes both ways; a group chat may go on without them.
 - The owner's ordinary life in these hours and each day the story skips, from their habits: each answer fills most lists as these hours call for, for example a photo of lunch, a search, a note, a mail, a post, texts and calls by the person, a voice memo, and a diary entry when these hours end the day. A list with nothing in these hours stays empty.
 - How many: about ${LIFE_A_DAY} life records for each waking day, about one an hour; each day the story skips gets its own (at most ${LIFE_MAX} in all${life ? ', "health" not counted' : ''}), dated on that day. Routines recur.
 - Every app tells the same day, the way this owner lives it: late-night texts go with ${life ? 'a late "late" and short sleep' : 'a late night'}. The owner does nothing on the phone while asleep or busy in a scene; others' texts and calls still come in.
-- Small happenings of that life are fine, and how they feel. Nothing that moves the story: anything a later message could contradict is a new fact, such as what someone decided, promised, said or wants, a meeting or a change between the owner and the story's people, a time, a result, how something the story is following turned out, a task and its deadline ("check the moodboards by 18:00"), a thing done ("uploaded it"), a plan for later ("ramyeon tonight?"). What these messages already say may come up again ("the deck is for Friday"). No new facts, events, plans or secrets about the story.
+- Their own life's small happenings are fine. Nothing about the story that a later message could contradict: what someone in it decided, promised, said or wants, a meeting or a change between them and the owner, how a story matter turned out, a task or plan tied to the story. What the messages already say may come up again.
 - People: the story's, PEOPLE AROUND (wherever they would turn up; never someone the owner isn't in touch with now), and made-up people of their own life, named for where they live; never a new relative or partner. Relationship words only as the story uses them. Someone new texted or called gets a "contact".
 
 THE APPS
-- Texts: as these people really text, for instance late replies, unanswered questions, plans that fizzle; the owner sounds different with each person. A text record is one exchange; in a group chat people talk over each other.
+- Texts: as these people really text, for instance late replies, unanswered questions, plans that fizzle; the owner sounds different with each person. A text record is one exchange.
 - Calls, photos, searches, mails and the calendar fit their relationships, their eye, what is on their mind and what they have to do; the calendar holds fixed things, never each small thing.
 - Posts only if this owner posts.${life ? ' Alarms and files change with life.' : ''}
 

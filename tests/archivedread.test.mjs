@@ -775,7 +775,7 @@ test('일상 comes in the reflection\'s own answer (no request of its own); who 
     assert.match(sys, /The phone is lived in every waking hour/);
     assert.match(sys, /Someone new texted or called gets a "contact"/);
     assert.match(sys, /PEOPLE AROUND \(wherever they would turn up; never someone the owner isn't in touch with now\)/);
-    assert.match(sys, /Nothing that moves the story: anything a later message could contradict is a new fact, such as what someone decided, promised, said or wants, a meeting or a change between the owner and the story's people, a time, a result, how something the story is following turned out, a task/);
+    assert.match(sys, /Their own life's small happenings are fine\. Nothing about the story that a later message could contradict: what someone in it decided, promised, said or wants/);
     assert.match(sys, /"from": "story" \| "life"/);
     const guess = [...c.p.threads.flatMap(th => th.messages.filter(x => x.src === 'guess').map(x => `${th.with}:${x.text}`)), ...c.p.searches.filter(x => x.src === 'guess').map(x => x.q)];
     assert.deepEqual(guess.sort(), ['Ivo:whatever', 'Ivo:you started it', 'Mittagstisch Seongsu']);
@@ -798,7 +798,8 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.match(on, /each answer fills most lists as these hours call for, for example a photo of lunch, a search, a note, a mail, a post, texts and calls by the person, a voice memo, and a diary entry when these hours end the day\./);
     assert.match(on, /The diary: one entry for each story day that ends in these messages/);
     assert.match(on, /Voice memos: about one every few days/);
-    assert.match(on, /a task and its deadline \("check the moodboards by 18:00"\), a thing done \("uploaded it"\), a plan for later \("ramyeon tonight\?"\)/);
+    assert.match(on, /a task or plan tied to the story\. What the messages already say may come up again\./);
+    assert.ok(!on.includes('talk over each other') && on.includes('Contact goes both ways; a group chat may go on without them.'));
     assert.ok(on.includes('Posts only if this owner posts.') && !on.includes('Not every app every day') && !on.includes('only if this owner keeps them'));
     assert.match(on, /"at": its message number \(a life record: the message whose hours it falls in\)/);
     assert.match(on, /new texts in a chat are new/);
