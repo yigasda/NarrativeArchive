@@ -2082,8 +2082,10 @@ test('256 prompt options agree on the new clock schema and their archive-only va
     }
     // (CLOCK FIRST's viewpoint line is the one the fills share)
     const clockBlock = src.match(/const CLOCK_FIRST = `([\s\S]*?)`;/)[1].replace('${CLOCK_VIEW}', src.match(/const CLOCK_VIEW = `([^`]*)`;/)[1]);
+    // (the records answer says "write the records")
+    const coreBlock = clockBlock.replace('then write events and app records using those times', 'then write the records using those times');
     for (const system of systems) {
-        assert.equal(system.split(clockBlock).length, 2);
+        assert.equal(system.split(system.includes('"records": [{') ? coreBlock : clockBlock).length, 2);
         assert.match(system, /elapsedTime \(stated elapsed time used; null if absent\)/);
         assert.match(system, /This step only converts time zones; never add elapsed time/);
         assert.match(system, /finalViewpoint \(the final viewpoint determined for the last message\)/);

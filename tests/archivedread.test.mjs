@@ -769,7 +769,7 @@ test('일상 comes in the reflection\'s own answer (no request of its own); who 
     // (점검 8: no list of names the code found in the text: the model reads the messages)
     assert.ok(!got.includes('[SCENES WITH]') && !got.includes('[PUT ON THE PHONE NOW]'));
     assert.ok(!sys.includes('SCENES WITH') && !sys.includes('PUT ON THE PHONE NOW'));
-    assert.match(sys, /Each person the owner had a scene with: at least one text between the two later these hours/);
+    assert.match(sys, /Each person the owner had a scene with and then parted from: at least one text between the two later these hours/);
     assert.match(sys, /The phone is lived in even when the story says nothing about it\./);
     assert.match(sys, /What the messages already say may come up again\./);
     assert.match(sys, /PEOPLE AROUND turn up wherever they would on a real phone, whether or not they are in the scenes\./);
@@ -788,7 +788,12 @@ test('일상 comes in the reflection\'s own answer (no request of its own); who 
 test('the reflection\'s own instructions: one list of records, the story\'s and the owner\'s own life; so many a day', () => {
     const on = data.coreSystem({ life: true }), plain = data.coreSystem();
     for (const k of ['READING THE STORY', 'THE OWNER\'S LIFE', 'KEEPING IN STEP', 'TIME PASSING', 'WHICH TYPE', 'LANGUAGE', 'TIMES']) assert.ok(on.includes(`\n${k}\n`), k);
-    assert.match(on, /About 11 records of the owner's life for a whole waking day, fewer for a few hours\./);
+    assert.match(on, /About 11 records of the owner's life for a whole waking day, in step with the hours these messages cover \(an hour: one or two; a few minutes: often none\)\./);
+    assert.match(on, /for a record of the owner's life, the message whose hours it falls in/);
+    assert.match(on, /new texts in a chat already there are new records/);
+    assert.match(on, /texts and calls from others still come in/);
+    assert.ok(!on.includes('write events and app records'));
+    assert.equal(on.split('\n- Posts').length, 2);
     assert.match(on, /about 11 for each, at most 70 in all/);
     assert.match(on, /"type": "scene" \| "contact" \| "text" \| "call" \| "photo" \| "note" \| "search" \| "calendar" \| "post" \| "profile" \| "mail" \| "diary" \| "visit" \| "voice" \| "alarm" \| "timer" \| "file" \| "health" \| "usual"/);
     assert.ok(!plain.includes('"alarm" | "timer"') && !plain.includes('LIFE NOW'));

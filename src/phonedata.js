@@ -335,6 +335,8 @@ export const AI_SYS_PHONE_UPDATE = updateSystem();
 const inner = line => line.slice(line.indexOf('[{ ') + 3, line.lastIndexOf(' }]')).replace(/^"change": an id or "", /, '');
 // a day's own life records, at most (재구성; the story's own have no limit): see EVERYDAY_CAP
 export const LIFE_A_DAY = 11, LIFE_MAX = 70;
+// (CLOCK FIRST as the records answer says it)
+const CORE_CLOCK_FIRST = CLOCK_FIRST.replace('then write events and app records using those times', 'then write the records using those times');
 export function coreRecordsSystem({ life = false, weather = false, tracker = false, zone = false, archiveOnly = false, wallet = false, split = true } = {}) {
     const lifeTypes = life ? ' | "alarm" | "timer" | "file" | "health" | "usual"' : '';
     return `${split ? 'STAGE: core\n' : ''}GOAL
@@ -353,11 +355,11 @@ ${life ? `- LIFE NOW: the alarms, files and health days the phone holds, with re
 - PEOPLE AROUND (sometimes): people in the owner's life, close or not, from the cards, persona, profile and lorebook, with where things stand now.
 - OWNER, and sometimes STORY YEAR, WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW. Nothing on the phone may show what the owner doesn't know.
 
-${archiveOnly ? '' : `${CLOCK_FIRST}\n\n`}READING THE STORY
+${archiveOnly ? '' : `${CORE_CLOCK_FIRST}\n\n`}READING THE STORY
 - The story comes first: every scene and its trail on the phone are written before any record of the owner's own life. A life record never takes a story record's place.
 - Everything that happens in these messages is a "scene"; a scene that would leave anything on the phone gets those records too (a photo, a text, a call, a search, a calendar item).
 - Ask what the owner's phone would show after these scenes. Scenes leave a trail on a phone without saying so: a text after a fight, a photo of dinner, a search before a trip, a missed call in a meeting, a note of what someone asked for.
-- Each person the owner had a scene with: at least one text between the two later these hours, in their own voices (a fight may go on; a job given in person gets a short check).
+- Each person the owner had a scene with and then parted from: at least one text between the two later these hours, in their own voices (a fight may go on; a job given in person gets a short check).
 - A plan made in these messages goes in the calendar; what is planned hasn't happened yet (no photo of it).${wallet ? `
 - A ticket the wallet holds (a flight, a train, a hotel stay, a show, a membership) shows on the calendar from there: no calendar record for it. A reservation or an appointment is still one.` : ''}
 
@@ -372,7 +374,7 @@ THE OWNER'S LIFE
 
 ONE DAY ON EVERY APP
 - Every app tells the same day. Texts at 3am mean a late last look at the phone, short sleep and a slow morning; a run means a workout, steps and maybe a photo; a fight means hours in the chat app and many pickups; a day out means maps, photos and many steps; a sick day means searches, few steps and long videos.
-- Times hang together: nothing on the phone while they sleep or while a scene keeps their hands busy, unless the story shows it.
+- Times hang together: the owner does nothing on the phone while they sleep or while a scene keeps their hands busy, unless the story shows it; texts and calls from others still come in.
 - Not every app every day: a day leans on the apps this owner reaches for, and routines repeat.
 
 THE APPS
@@ -383,8 +385,7 @@ THE APPS
 - Searches: what is on their mind at that hour, for instance a symptom at night, a recipe, a word they heard, a price, a place, a name they are curious about.
 - Mails: from the people and the places in their life, for instance a coworker, a professor, family abroad, receipts, newsletters, bills, shipping notices, offers left unread.
 - Calendar: the fixed things of their week (a class, a shift, an appointment, a birthday); never each small thing they do.
-- Posts: the kind they post, with likes that fit their following and comments from people in their life.
-- Posts, the diary and voice memos only if this owner would keep them.${life ? `
+- Posts: only if this owner posts, the kind they post, with likes that fit their following and comments from people in their life. The diary and voice memos too only if this owner would keep them.${life ? `
 - Alarms: they move with life, for instance one more before an early day, one switched off after a trip.
 - Files: what piles up, for instance downloads, screenshots, a work or school document, a ticket or a receipt.` : ''}
 
@@ -410,8 +411,8 @@ SCREEN TIME
 - Numbers only.` : ''}
 
 KEEPING IN STEP
-- Only what happens in NEW MESSAGES or ARCHIVE FOR THESE MESSAGES is new. Background and memories of earlier days add nothing.
-- Already in PHONE NOW${life ? ' or LIFE NOW' : ''}: never written again${life ? '; an alarm or file there is changed with its id as "already" and only what changed (a deleted file: "deleted": true)' : ''}.
+- A story record is only what happens in NEW MESSAGES or ARCHIVE FOR THESE MESSAGES. Background and memories of earlier days add nothing.
+- A record already in PHONE NOW${life ? ' or LIFE NOW' : ''} is never written again (new texts in a chat already there are new records)${life ? '; an alarm or file there is changed with its id as "already" and only what changed (a deleted file: "deleted": true)' : ''}.
 - A scene in EVENTS ON THE PHONE keeps its id. MESSAGES READ BEFORE, NOW CHANGED: their scenes as the edited text now has them, with the ids listed there.
 - A record from the story holds what the messages say.
 - A record of the owner's life may carry the small happenings of that life (a friend's news, a coworker's question, a sale, a parcel notice), but nothing that moves the story: no decision, promise, plan, meeting, secret or change between the owner and the story's people that a later message could contradict. What the messages already say may come up again.
@@ -419,7 +420,7 @@ KEEPING IN STEP
 - Never a booking, a trip or a purchase the story doesn't have. A booking the story has carries the details a real one would (a booking number, a seat, a gate), made up to fit.
 
 TIME PASSING
-- About ${LIFE_A_DAY} records of the owner's life for a whole waking day, fewer for a few hours. Days these messages skip or spend away from the owner (from PHONE NOW's "now" to the answer's "now") were lived too: about ${LIFE_A_DAY} for each, at most ${LIFE_MAX} in all. What happens each day decides its records; most days leave some, a few none; routines recur. Each record is dated on its own day.${life && weather ? `
+- About ${LIFE_A_DAY} records of the owner's life for a whole waking day, in step with the hours these messages cover (an hour: one or two; a few minutes: often none). Days these messages skip or spend away from the owner (from PHONE NOW's "now" to the answer's "now") were lived too: about ${LIFE_A_DAY} for each, at most ${LIFE_MAX} in all. What happens each day decides its records; most days leave some, a few none; routines recur. Each record is dated on its own day.${life && weather ? `
 - "weather": ${weatherRule(tracker)}
 - With new weather, also each saved city's "cond", "temp", "hi" and "lo".` : ''}
 
@@ -447,7 +448,7 @@ JSON (one object, nothing before or after it)
   "records": [{
     Include only fields applicable to this record; the fields below are not all required.
     "type": "scene" | "contact" | "text" | "call" | "photo" | "note" | "search" | "calendar" | "post" | "profile" | "mail" | "diary" | "visit" | "voice"${lifeTypes},
-    "at": the message number it comes from; for an archive section, the message in its range it belongs to; for a skipped day, the message that moved past it,
+    "at": the message number it comes from; for an archive section, the message in its range it belongs to; for a record of the owner's life, the message whose hours it falls in; for a skipped day, the message that moved past it,
     "from": "story" | "life",
     "scene": the "id" of its scene, or "",
     ${life ? '"already": an id from LIFE NOW, or "",\n    ' : ''}"time": "MM-DD HH:MM",
