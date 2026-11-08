@@ -35,13 +35,13 @@ function chart(days, avg, sel, top3) {
     const W = 326, H = 150, AXW = 30, gap = 20, n = days.length, bw = (W - AXW - gap * 6) / 7;
     const max = Math.max(60, ...days.map(d => d.total), avg || 0);
     // always four hour marks, 0 and three steps (0 · 2h · 4h · 6h, or 0 · 8h · 16h · 24h), never one every two hours up to 20h
-    // the step whose marks keep clear of 평균's label (it stays on its line), else the first that fits
-    const fits = [60, 120, 180, 240, 360, 480, 720].filter(m => m * 3 >= max), clear = m => !avg || [0, 1, 2, 3].every(k => Math.abs(avg - k * m) * H / (m * 3) >= 11);
-    const step = fits.find(clear) || fits[0] || 720, top = step * 3, sc = H / top;
+    // four hour marks at most (0 and up to three steps), the top as near the tallest day as that allows: 0 · 2h · 4h · 6h for a
+    // usual week, 0 · 8h · 16h · 24h for a very long one — never a mark every two hours up to 20h
+    const step = [120, 180, 240, 360, 480, 720].find(m => Math.ceil(max / m) <= 3) || 720, top = Math.ceil(max / step) * step, sc = H / top;
     let s = '';
-    // four hour marks, all with their numbers, and 평균 on its own line
+    // an hour mark too close to the average's label gives way to it (평균 stays on its line)
     const ay = avg ? H - avg * sc : null;
-    for (let t = 0; t <= top; t += step) { const y = H - t * sc; s += `<line x1="0" x2="${W - AXW + 4}" y1="${y}" y2="${y}" stroke="${t ? '#eef0f3' : '#e3e6ea'}"/><text x="${W - AXW + 10}" y="${y + 3.5}" class="sc_axl">${t / 60}h</text>`; }
+    for (let t = 0; t <= top; t += step) { const y = H - t * sc; s += `<line x1="0" x2="${W - AXW + 4}" y1="${y}" y2="${y}" stroke="${t ? '#eef0f3' : '#e3e6ea'}"/>${ay !== null && Math.abs(y - ay) < 11 ? '' : `<text x="${W - AXW + 10}" y="${y + 3.5}" class="sc_axl">${t / 60}h</text>`}`; }
     days.forEach((d, i) => {
         const x = i * (bw + gap), th = d.total * sc, r = Math.min(5, th, bw / 2), full = sel === i;
         let y = H, segs = '';
