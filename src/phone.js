@@ -1128,6 +1128,12 @@ export async function openPhone(who = null) {
     if (!toasts) { toasts = document.createElement('div'); toasts.id = 'toast-container'; if (toastr.options?.positionClass) toasts.classList.add(toastr.options.positionClass); }
     dlg.append(toasts);
     dlg.showModal();
+    // the phone's height is the screen's, but not while typing: a keyboard that shrinks the page (some phones' browsers)
+    // would shrink the whole phone, so the height taken before the keyboard stays and the keyboard covers the bottom
+    const typing = () => { const a = document.activeElement; return !!a && dlg.contains(a) && (a.matches('input, textarea, select') || a.isContentEditable); };
+    const setH = () => { if (!typing()) dlg.style.setProperty('--na-phh', `${window.innerHeight}px`); };
+    const afterType = () => setTimeout(setH, 350);
+    setH(); window.addEventListener('resize', setH); dlg.addEventListener('focusout', afterType);
     const stopBusy = watchBusy(() => { if (!phoneClosed && stillHere() && (view === 'set' || view === 'setsync')) drawPhone(true); });
     await new Promise(done => {
         const close = () => { if (dlg.open) dlg.close(); };
@@ -1138,6 +1144,7 @@ export async function openPhone(who = null) {
         dlg.addEventListener('close', () => { phoneClosed = true; ask?.done(false); done(); }, { once: true });
     });
     stopBusy();
+    window.removeEventListener('resize', setH);
     ro.disconnect();
     const t = dlg.querySelector('#toast-container');
     if (t) { if (t.childNodes.length) document.body.append(t); else t.remove(); }

@@ -1,6 +1,6 @@
 /* ============ 캐릭터 휴대폰 · 한 겹: the phone over the whole screen (a dialog of its own), the people on top, ⚙ for the rest */
 body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl {
-    position: fixed !important; inset: 0 !important; width: 100vw !important; height: 100dvh !important; max-width: none !important; max-height: none !important; min-width: 0 !important; min-height: 0 !important;
+    position: fixed !important; inset: 0 !important; width: 100vw !important; height: var(--na-phh, 100dvh) !important; max-width: none !important; max-height: none !important; min-width: 0 !important; min-height: 0 !important;
     margin: 0 !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; overflow: hidden; transform: none !important;
     background: rgba(12, 10, 9, 0.95) !important; color: #fff !important; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
 }
@@ -109,7 +109,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax 
 .ax_igtop .ax_igback { margin: 0 6px 0 -6px; display: grid; place-items: center; }
 .ax_igtop > .ax_sp { flex: 1; }
 /* the phone has the whole height; the bar at the bottom of the home and lock screens closes it, with 닫기 over it */
-.na_phl .na_ph_frame { width: min(calc(100vw - 20px), calc((100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 390 / 844 + 14px), 470px); }
+.na_phl .na_ph_frame { width: min(calc(100vw - 20px), calc((var(--na-phh, 100dvh) - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 390 / 844 + 14px), 470px); }
 .cg .cg_ind.na_ph_quit { height: 38px; flex-direction: column; gap: 4px; justify-content: flex-end; padding-bottom: 9px; cursor: pointer; }
 .cg_ind.na_ph_quit small { font-size: 11px; font-weight: 600; color: rgba(22, 27, 34, 0.55); letter-spacing: 0.04em; }
 /* 도구 › 이야기: 캐릭터 휴대폰이 맨 위 큰 카드 */
