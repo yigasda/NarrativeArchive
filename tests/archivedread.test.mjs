@@ -782,7 +782,7 @@ test('일상 comes in the reflection\'s own answer (no request of its own); who 
     assert.match(sys, /The phone is lived in every waking hour/);
     assert.match(sys, /Someone new texted or called gets a "contact"/);
     assert.match(sys, /PEOPLE AROUND \(wherever they would turn up; never someone the owner isn't in touch with now\)/);
-    assert.match(sys, /\nONE TEST FOR EVERY ITEM\nCould this be on the owner's phone, given what the messages and archive show\? If not, leave it out\./);
+    assert.ok(!sys.includes("ONE TEST FOR EVERY ITEM") && sys.indexOf("THE STORY IS CANON") > sys.indexOf("CLOCK FIRST"));
     assert.match(sys, /"everyday": \{ the owner's own life, each app a list \(an empty one when nothing\)/);
     const guess = [...c.p.threads.flatMap(th => th.messages.filter(x => x.src === 'guess').map(x => `${th.with}:${x.text}`)), ...c.p.searches.filter(x => x.src === 'guess').map(x => x.q)];
     assert.deepEqual(guess.sort(), ['Ivo:whatever', 'Ivo:you started it', 'Mittagstisch Seongsu']);
@@ -807,7 +807,7 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.match(on, /"photos": \[\{ "caption", "ko", "time", "mood" \}\]/);
     assert.match(on, /The diary: an entry when a story day ends in these messages or a scene stays with them, as long as this owner would write it;/);
     assert.match(on, /Voice memos: about one every few days/);
-    assert.match(on, /- Events \(a meeting, a confession, a trip, a loss, how something turned out or will go\) only if the messages or archive have them\./);
+    assert.match(on, /\nTHE STORY IS CANON\n- The story is canon\. Never get ahead of anything tied to its events\. Make up no future the story hasn't stated; what it has stated, only as far as it states\. No exceptions\. A made-up future belongs only to everyday life outside the story\.\n\nTHE STORY\n/);
     assert.match(on, /photo: "caption", "ko", "time", "mood"/);
     assert.ok(!on.includes('talk over each other') && on.includes('Contact goes both ways; a group chat may go on without them.'));
     assert.ok(on.includes('Posts only if this owner posts.') && !on.includes('Not every app every day') && !on.includes('only if this owner keeps them'));

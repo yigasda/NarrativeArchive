@@ -358,10 +358,8 @@ YOU GET
 
 ${archiveOnly ? `TIMES\n${CORE_TIMES}` : `${CORE_CLOCK_FIRST}\n${CORE_TIMES}`}
 
-ONE TEST FOR EVERY ITEM
-Could this be on the owner's phone, given what the messages and archive show? If not, leave it out.
-- Events (a meeting, a confession, a trip, a loss, how something turned out or will go) only if the messages or archive have them.
-- Small everyday things around those events are fine: how a text was worded, a photo of a place they were, a search they would make.
+THE STORY IS CANON
+- The story is canon. Never get ahead of anything tied to its events. Make up no future the story hasn't stated; what it has stated, only as far as it states. No exceptions. A made-up future belongs only to everyday life outside the story.
 
 THE STORY
 - The story comes first: every scene in these messages ("scene" records) and its trail on the phone, before the owner's own life. "everyday" never replaces a story record.
