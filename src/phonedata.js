@@ -369,6 +369,7 @@ THE OWNER'S LIFE
 - How many: about ${LIFE_A_DAY} life records for each waking day, about one an hour; each day the story skips gets its own (at most ${LIFE_MAX} in all${life ? ', "health" not counted' : ''}), dated on that day. Routines recur.
 - Every app tells the same day, the way this owner lives it: late-night texts go with ${life ? 'a late "late" and short sleep' : 'a late night'}. The owner does nothing on the phone while asleep or busy in a scene; others' texts and calls still come in.
 - NEVER make up the progress or outcome of anything the story is following before the story tells it. Talk and feelings about it are fine, for instance a text after a fight, and so are their own life's small happenings; nothing about the story's people that a later message could contradict.
+- A life record that answers a scene in these messages has that scene's id in "scene".
 - People: the story's, PEOPLE AROUND (wherever they would turn up; never someone the owner isn't in touch with now), and made-up people of their own life, named for where they live; never a new relative or partner. Relationship words only as the story uses them. Someone new texted or called gets a "contact".
 
 THE APPS
@@ -554,9 +555,10 @@ export function parsePhone(out, owner = '') {
     let raw;
     try { raw = parseJson(s.slice(a, b + 1), { salvage: true }); } catch { throw new Error('모델 답의 JSON이 깨져 있어요. 다시 해 보세요'); }
     // an everyday record the model made up from the owner's habits stays apart from the story (재구성)
-    const tag = (x, raw) => (raw?.everyday === true ? { ...withEv(x, raw), src: 'guess' } : withEv(x, raw));
+    // (one that answers a scene of these messages, "onScene", is kept whatever the day's count: see everydayOnly)
+    const tag = (x, raw) => (raw?.everyday === true ? { ...withEv(x, raw), src: 'guess', ...(raw.onScene === true ? { onScene: true } : {}) } : withEv(x, raw));
     const self = owner ? nameKey(owner) : '', mine = v => !!self && nameKey(line(v, 40)) === self;
-    const msg = (x, t) => ({ from: mine(x?.from) ? 'me' : line(x?.from, 40) || 'me', text: str(x?.text, 600), ko: ko(x?.ko), time: when(x?.time), ...(x?.deleted === true ? { deleted: true } : {}), ...(x?.everyday === true || t?.everyday === true ? { src: 'guess' } : {}) });
+    const msg = (x, t) => ({ from: mine(x?.from) ? 'me' : line(x?.from, 40) || 'me', text: str(x?.text, 600), ko: ko(x?.ko), time: when(x?.time), ...(x?.deleted === true ? { deleted: true } : {}), ...(x?.everyday === true || t?.everyday === true ? { src: 'guess', ...(x?.onScene === true || t?.onScene === true ? { onScene: true } : {}) } : {}) });
     // a translation that only repeats its text (a Korean text given the same "ko") is none: it would show twice
     const same = (a, b) => !!a && !!b && a.replace(/\s+/g, ' ').trim() === b.replace(/\s+/g, ' ').trim();
     const PAIRS = [['text', 'ko'], ['caption', 'ko'], ['q', 'ko'], ['title', 'ko'], ['title', 'kt'], ['subject', 'ks'], ['photo', 'pko'], ['bio', 'ko']];
@@ -762,7 +764,14 @@ export function recordsCore(raw, textOf = () => '') {
         // (a habit or the SNS profile is one thing, on its scene or the last)
         if (r.type === 'usual' || r.type === 'profile') { const host = hostOf(r); if (host) host.phone[r.type] = { ...(host.phone[r.type] || {}), ...x }; continue; }
         // (no visit made up: a place is gone to in the story)
-        if (life) { if (key !== 'visits') everyday[key] = [...arr(everyday[key]), x]; continue; }
+        // (one that answers a scene of these messages, its id in "scene", goes on that scene, marked: the day's count leaves
+        // it out, so a big scene late in a day still gets its texts and searches; a contact stays with the others)
+        if (life) {
+            if (key === 'visits') continue;
+            const own = key !== 'contacts' && byId.get(String(r.scene ?? '').trim());
+            if (own) { own.phone[key] = [...arr(own.phone[key]), { ...x, everyday: true, onScene: true, ...(Array.isArray(x.messages) ? { messages: x.messages.map(y => (y && typeof y === 'object' ? { ...y, everyday: true, onScene: true } : y)) } : {}) }]; continue; }
+            everyday[key] = [...arr(everyday[key]), x]; continue;
+        }
         const host = hostOf(r);
         if (host) host.phone[key] = [...arr(host.phone[key]), x];
     }
@@ -782,7 +791,16 @@ export const aroundBlock = p => (p?.around?.people?.length ? `[PEOPLE AROUND]\n$
 const EVERYDAY_CAP = { threads: 16, calls: 2, photos: 5, searches: 5, notes: 2, mails: 3, posts: 1, diary: 1, voice: 2, events: 2 };
 const BUNDLE_LINES = 8, BUNDLES = 2;
 const dayOfItem = x => when(String(x?.date || x?.time || '')).slice(0, 5);
-function everydayOnly(p, add, day, daily) {
+// (the day of "now" so far: its share of the waking hours, 07:00 to 23:00, gone by; a morning round leaves the rest of
+// the day its own. At least one, and one exchange of texts)
+const WAKE_FROM = 7, WAKE_HOURS = 16;
+const capSoFar = (k, d, now) => {
+    const all = EVERYDAY_CAP[k] || 0, t = String(now || '');
+    if (!d || t.slice(0, 5) !== d || !hm(t)) return all;
+    const [h, m] = hhmm(t.slice(6)).split(':').map(Number), part = Math.min(1, Math.max(0, (h + m / 60 - WAKE_FROM) / WAKE_HOURS));
+    return Math.min(all, Math.max(k === 'threads' ? BUNDLE_LINES : 1, Math.ceil(all * part)));
+};
+function everydayOnly(p, add, day, daily, now = '') {
     // (a group chat is a room of its own, never the person it may be named like)
     const room = th => `${th?.group ? 'group:' : ''}${nameKey(th?.with)}`;
     const who = (k, x, th) => (k === 'threads' ? room(th) : k === 'calls' ? nameKey(x.with) : '');
@@ -790,9 +808,11 @@ function everydayOnly(p, add, day, daily) {
         .filter(x => isGuess(x) && (dayOfItem(x) || '') === d).length;
     const ok = (k, x, th) => {
         if (!isGuess(x)) return true;
+        // (a scene's own: kept, the day's count never filled by it)
+        if (x.onScene) return true;
         const d = dayOfItem(x) || day || '', w = who(k, x, th), dk = `${k}|${w}|${d}`;
         if (!daily.has(dk)) daily.set(dk, had(k, d, w));
-        if (daily.get(dk) >= (EVERYDAY_CAP[k] || 0)) return false;
+        if (daily.get(dk) >= capSoFar(k, d, now)) return false;
         daily.set(dk, daily.get(dk) + 1);
         return true;
     };
@@ -801,13 +821,17 @@ function everydayOnly(p, add, day, daily) {
         // (one exchange: its first 8 texts; past two exchanges with them that day, none)
         let n = 0;
         const own = (th.messages || []).filter(x => !isGuess(x) || ++n <= BUNDLE_LINES), first = own.find(isGuess);
-        if (first) {
+        // (a scene's own exchange: its first 8, never one of the day's two)
+        if (first?.onScene) th.messages = own;
+        else if (first) {
             const bk = `bundle|${room(th)}|${dayOfItem(first) || day || ''}`, b = daily.get(bk) || 0;
             daily.set(bk, b + 1);
             th.messages = b >= BUNDLES ? own.filter(x => !isGuess(x)) : own.filter(x => ok('threads', x, th));
         } else th.messages = own;
     }
     if (Array.isArray(add.threads)) add.threads = add.threads.filter(th => th.messages.length || th.draft);
+    // (the mark is this round's only)
+    for (const k of [...LISTS, 'threads']) for (const x of arr(add[k])) { if (x && typeof x === 'object') delete x.onScene; for (const y of arr(x?.messages)) if (y && typeof y === 'object') delete y.onScene; }
 }
 // a reflection keeps everything (keepAll); making a phone keeps each list to its size
 // (the city they live in, by any of its names, a part of one too: "Frankfurt" for "Frankfurt am Main"; never a place in it,
@@ -1991,7 +2015,7 @@ async function updatePhone(m, owner) {
             for (const x of arr(phone.visits)) if (x && typeof x === 'object' && !String(x.time || '').trim() && day) x.time = day;
             for (const k of [...LISTS, 'threads']) for (const x of arr(phone[k])) { dated(x); for (const msg of arr(x?.messages)) dated(msg); if (x?.draft) dated(x.draft); }
             try { add = parsePhone(JSON.stringify(phone), owner); } catch { fail('앱 내용 형식이 잘못됐어요'); continue; }
-            everydayOnly(p, add, day, daily);
+            everydayOnly(p, add, day, daily, when(raw.now));
             // a bare number is no event id (a model counting its events would take an old event's number again)
             const tagOf = v => { const t = evOf(v); return /^\d+$/.test(t) ? '' : t; };
             // one id for two new events in one answer would take the second for the first (its payment kept out as the same one)

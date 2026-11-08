@@ -704,8 +704,8 @@ test('반영\'s everyday records: so many an answer and a day in each app, texts
         // (the story's own texts: all of them)
         searches: [{ q: 'Ren train times', time: '10-26 09:00' }] } }] });
     const guess = k => (k === 'threads' ? c.p.threads.flatMap(th => th.messages.filter(x => x.src === 'guess').map(x => x.text)) : c.p[k].filter(x => x.src === 'guess').map(x => x.title || x.caption || x.with));
-    // (a day, not a reflection: two notes, each exchange whole)
-    assert.deepEqual(guess('notes'), ['Einkaufsliste', 'Zahnarzt anrufen']);
+    // (a day so far, not a reflection: at 09:30 one note of the day's two, each exchange whole)
+    assert.deepEqual(guess('notes'), ['Einkaufsliste']);
     assert.deepEqual(guess('threads').sort(), ['Ivo 09:0', 'Ivo 09:1', 'Ivo 09:2', 'Ivo 09:3', 'Lena 09:0', 'Lena 09:1']);
     assert.ok(c.p.searches.some(x => x.q === 'Ren train times' && x.src !== 'guess'));
     // (the reflection writes them itself, in the same answer)
@@ -719,6 +719,11 @@ test('반영\'s everyday records: so many an answer and a day in each app, texts
         T.chat.push(say('Ren', `later ${i}`));
         await run(c.m, { now: `10-26 ${h}:40`, events: [{ id: `e${i}`, at: i, quote: `later ${i}`, summary: 's', date: '10-26', time: `${h}:00`, phone: { threads: [txt('Ivo', 3, h)], notes: [note(`Notiz ${i}`, { time: `10-26 ${h}:05` })] } }] });
     }
+    // (by 17:40 the day so far: 11 texts with Ivo, both notes)
+    assert.equal(guess('threads').filter(x => x.startsWith('Ivo')).length, 11);
+    assert.equal(guess('notes').length, 2);
+    T.chat.push(say('Ren', 'late'));
+    await run(c.m, { now: '10-26 23:10', events: [{ id: 'e8', at: 8, quote: 'late', summary: 's', date: '10-26', time: '23:00', phone: { threads: [txt('Ivo', 8, '23')], notes: [note('Notiz 8', { time: '10-26 23:05' })] } }] });
     assert.equal(guess('threads').filter(x => x.startsWith('Ivo')).length, 16);
     assert.equal(guess('notes').length, 2);
 });
@@ -1099,6 +1104,33 @@ test('texts of the owner\'s own life: an exchange keeps its first 8, two exchang
     T.chat.push(say('Ren', 'still boring'));
     await run(c.m, { now: '10-26 23:50', records: [ex('23', 8)] });
     assert.equal(c.p.threads.find(t => t.with === 'Ivo' && !t.group).messages.length, 16);
+});
+
+test('life records that answer a scene ("scene" its id) go on it and the day\'s count leaves them out; the morning leaves the day its own', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'a quiet morning'), say('Mara', 'later')]);
+    c.p.now = '10-26 07:30'; c.p.year = 2026;
+    const srch = (q, h, x = {}) => ({ type: 'search', at: 2, from: 'life', q, time: `10-26 ${h}`, ...x });
+    // (09:00: one search of the day's five so far)
+    await run(c.m, { now: '10-26 09:00', records: [srch('weather', '08:10'), srch('bus', '08:20'), srch('news', '08:30')] });
+    assert.deepEqual(c.p.searches.map(x => x.q), ['weather']);
+    T.chat.push(say('Ren', 'Ivo and Ren have it out at the bar'));
+    const ex = (h, n) => ({ type: 'text', at: 4, from: 'life', scene: 'bar', with: 'Lio', messages: Array.from({ length: n }, (_, i) => ({ from: i % 2 ? 'me' : 'Lio', text: `${h}:${i}`, time: `10-26 ${h}:${String(10 + i).padStart(2, '0')}` })) });
+    await run(c.m, { now: '10-26 23:40', records: [
+        { type: 'scene', id: 'bar', at: 4, quote: 'Ivo and Ren have it out', date: '10-26', time: '22:00', summary: 'the fight' },
+        ...['a', 'b', 'c', 'd', 'e', 'f'].map((q, i) => srch(`after ${q}`, `23:0${i}`, { at: 4, scene: 'bar' })),
+        srch('plain', '23:20', { at: 4 }),
+        ex('22', 10), ex('23', 3), { ...ex('21', 2), scene: '' }] });
+    const s = c.p.searches.filter(x => x.src === 'guess').map(x => x.q);
+    // (all six of the scene's, and the plain one: the day's count is the plain ones' only)
+    assert.deepEqual(s, ['weather', 'after a', 'after b', 'after c', 'after d', 'after e', 'after f', 'plain']);
+    assert.ok(c.p.searches.every(x => !('onScene' in x)));
+    // (the scene's exchanges: 8 of the first, all 3 of the second, never one of the day's two; the plain one too)
+    const lio = c.p.threads.find(t => t.with === 'Lio');
+    assert.equal(lio.messages.length, 8 + 3 + 2);
+    assert.ok(lio.messages.every(x => x.src === 'guess' && !('onScene' in x)));
+    // (they are the scene's: on its event)
+    assert.ok(c.p.sync.events.bar);
+    assert.match(T.sys, /A life record that answers a scene in these messages has that scene's id in "scene"\./);
 });
 
 test('the owner\'s own life a day, not a reflection: a skipped week fills each day, photos 5 and the diary 1 a day', async () => {
