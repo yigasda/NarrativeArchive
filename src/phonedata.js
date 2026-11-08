@@ -358,6 +358,11 @@ YOU GET
 
 ${archiveOnly ? `TIMES\n${CORE_TIMES}` : `${CORE_CLOCK_FIRST}\n${CORE_TIMES}`}
 
+ONE TEST FOR EVERY ITEM
+Could this be on the owner's phone, given what the messages and archive show? If not, leave it out.
+- Events (a meeting, a confession, a trip, a loss, how something turned out or will go) only if the messages or archive have them.
+- Small everyday things around those events are fine: how a text was worded, a photo of a place they were, a search they would make.
+
 THE STORY
 - The story comes first: every scene in these messages ("scene" records) and its trail on the phone, before the owner's own life. "everyday" never replaces a story record.
 - Scenes leave a trail without saying so, for instance a text after a fight, a photo of dinner, a search before a trip. A story record holds what the messages show or plainly imply, details made up to fit.
@@ -369,7 +374,6 @@ THE OWNER'S LIFE
 - "everyday" is the owner's life outside what the story follows. A record about a matter the story follows is a story record in "records", only as the messages show it.
 - How many: about ${LIFE_A_DAY} life records for each waking day, about one an hour; each day the story skips gets its own (at most ${LIFE_MAX} in all${life ? ', "health" not counted' : ''}), dated on that day. Routines recur.
 - Every app tells the same day, the way this owner lives it: late-night texts go with ${life ? 'a late "late" and short sleep' : 'a late night'}. The owner does nothing on the phone while asleep or busy in a scene; others' texts and calls still come in.
-- First tell apart what a record may take from the story and what it may not. A record taken from the story may write anything about it, for instance a text after a fight, a search about what just happened, a photo of the evening, a note to remember it; but NEVER a new fact, event, secret, later plan, promise or deadline the story hasn't mentioned.
 - People: the story's, PEOPLE AROUND (wherever they would turn up; never someone the owner isn't in touch with now), and made-up people of their own life, named for where they live; never a new relative or partner. Relationship words only as the story uses them. Someone new texted or called gets a "contact".
 
 THE APPS
@@ -411,28 +415,28 @@ JSON (one object, nothing before or after it)
   "statusCity": whose clock the newest status line here shows (the app can't place its scene): a city or person in OWNER'S CLOCK, "owner" for the owner's own, another city as { "city": in English, "tz" }, or "" when the messages don't say,` : ''}
   "records": [{ only the fields it needs:
     "type": "scene" | "contact" | "text" | "call" | "photo" | "note" | "search" | "calendar" | "post" | "profile" | "mail" | "diary" | "visit" | "voice"${lifeTypes},
-    "at": its message number, "scene": its scene's id or "",${life ? ' "already": a LIFE NOW id or "",' : ''} "time": "MM-DD HH:MM",
+    "at": its message number, "scene": its scene's id or "",${life ? ' "already": a LIFE NOW id or "",' : ''}
     scene: "id" (from EVENTS ON THE PHONE or a new tag like "berlin-flight"), "quote": a few exact words of its message, "date", "time": "HH:MM", "summary"
     contact: "name", "saved"
     text: "with": the person or the group chat's name (always the same), "group", "members": [all but the owner, as in the contacts], "messages": [{ "from": "me" or the sender, "text", "ko", "time", "deleted" }], "draft": an unsent { "text", "ko", "time" }
-    call: "with", "kind": "in" | "out" | "missed", "min", "count": calls in a row
-    photo: "caption", "ko", "mood": ${MOODS.join(' | ')}
-    note: "title", "kt", "text", "ko"
-    search: "q", "ko", "tab": still open, "mark": bookmarked
+    call: "with", "kind": "in" | "out" | "missed", "time", "min", "count": calls in a row
+    photo: "caption", "ko", "time", "mood": ${MOODS.join(' | ')}
+    note: "title", "kt", "text", "ko", "time"
+    search: "q", "ko", "time", "tab": still open, "mark": bookmarked
     calendar: "title", "ko", "date", "time": "HH:MM", "was": its old date, "cancelled"
-    post: "text", "ko", "photo", "pko", "likes", "comments": [{ "from", "text", "ko" }]
+    post: "text", "ko", "photo", "pko", "time", "likes", "comments": [{ "from", "text", "ko" }]
     profile: "handle", "bio", "ko", "followers", "following"
-    mail: "sender", "subject", "ks", "text", "ko", "unread"
+    mail: "sender", "subject", "ks", "text", "ko", "time", "unread"
     diary: "date", "title", "kt", "text", "ko"
-    visit: "place": where they really went, as the story writes it (never just their own city), "city", "home", "with", "already": that visit's id in PHONE NOW
-    voice: "title", "kt", "text", "ko", "sec", "place"${life ? `
+    visit: "place": where they really went, as the story writes it (never just their own city), "city", "home", "with", "time", "already": that visit's id in PHONE NOW
+    voice: "title", "kt", "text", "ko", "time", "sec", "place"${life ? `
     alarm: "time": "HH:MM", "label", "ko", "days": [weekdays], or [] and "date" for one occasion, "on", "wake", "then", "snooze", "snoozeCount", "sound"
     timer: "label", "ko", "sec"
     file: "name", "kind", "folder", "size": KB, "time", "from", "pages", "length", "tag", "private", "preview": its first page in a line, "look": sea | city | night | food | hills | pet | sunset | mountain | snow | flower | interior | concert | paper | screenshot | map | ticket | receipt | invoice | cv | letter | certificate | recipe | medical | menu | contract | notes | voice | music, "ko", "opened", "deleted"
     health: "date": the day they woke, "sleep", "wake", "woke", "steps", "km", "floors", "hr": [low, high], "workouts": [{ "kind", "time", "min", "km" }], "coffee", "coffeeKind", "water", "weight", "screen": { "apps": { app: minutes }, "pickups", "late" }
     usual: "weight", "height", "coffee", "coffeeKind", "coffeeKo", "water", "bed", "sleep", "wake", "steps", "workouts", "rest", "screen": { "add": [{ "app", "kind": chat | social | game | video | music | work | reading | shopping | money | maps | health | other, "min" }], "drop", "pickups", "late" }` : ''}
   }],
-  "everyday": { the owner's own life, a list for each app ([] when nothing), each item: "time": "MM-DD HH:MM" (the diary "date"), "scene" when it answers one, then its own fields as above:
+  "everyday": { the owner's own life, a list for each app ([] when nothing), each item with its fields as above, "scene" when it answers one:
     "texts": [], "calls": [], "photos": [], "searches": [], "notes": [], "mails": [], "posts": [], "calendar": [], "diary": [], "voice": [], "contacts": []${life ? ', "alarms": [], "timers": [], "files": []' : ''} }${life && weather ? `,\n${WEATHER_JSON}` : ''} }
 "records": scenes and story records${life ? ', and "health" and "usual"' : ''}; the owner's own life goes in "everyday". Numbers are plain JSON numbers. Nothing new: "records": [].`;
 }

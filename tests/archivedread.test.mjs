@@ -780,7 +780,7 @@ test('일상 comes in the reflection\'s own answer (no request of its own); who 
     assert.match(sys, /The phone is lived in every waking hour/);
     assert.match(sys, /Someone new texted or called gets a "contact"/);
     assert.match(sys, /PEOPLE AROUND \(wherever they would turn up; never someone the owner isn't in touch with now\)/);
-    assert.match(sys, /First tell apart what a record may take from the story and what it may not\. A record taken from the story may write anything about it, for instance a text after a fight/);
+    assert.match(sys, /\nONE TEST FOR EVERY ITEM\nCould this be on the owner's phone, given what the messages and archive show\? If not, leave it out\./);
     assert.match(sys, /"everyday": \{ the owner's own life, a list for each app \(\[\] when nothing\)/);
     const guess = [...c.p.threads.flatMap(th => th.messages.filter(x => x.src === 'guess').map(x => `${th.with}:${x.text}`)), ...c.p.searches.filter(x => x.src === 'guess').map(x => x.q)];
     assert.deepEqual(guess.sort(), ['Ivo:whatever', 'Ivo:you started it', 'Mittagstisch Seongsu']);
@@ -803,7 +803,8 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.match(on, /- "everyday": the owner's ordinary life in these hours and each day the story skips, from their habits: any app, a little in each as a real phone gets it;/);
     assert.match(on, /The diary: an entry when a story day ends in these messages or a scene stays with them, as long as this owner would write it;/);
     assert.match(on, /Voice memos: about one every few days/);
-    assert.match(on, /but NEVER a new fact, event, secret, later plan, promise or deadline the story hasn't mentioned\./);
+    assert.match(on, /- Events \(a meeting, a confession, a trip, a loss, how something turned out or will go\) only if the messages or archive have them\./);
+    assert.match(on, /photo: "caption", "ko", "time", "mood"/);
     assert.ok(!on.includes('talk over each other') && on.includes('Contact goes both ways; a group chat may go on without them.'));
     assert.ok(on.includes('Posts only if this owner posts.') && !on.includes('Not every app every day') && !on.includes('only if this owner keeps them'));
     assert.match(on, /"at": its message number, "scene": its scene's id or "",/);
@@ -1137,7 +1138,7 @@ test('life records that answer a scene ("scene" its id) go on it and the day\'s 
     assert.ok(lio.messages.every(x => x.src === 'guess' && !('onScene' in x)));
     // (they are the scene's: on its event)
     assert.ok(c.p.sync.events.bar);
-    assert.match(T.sys, /each item: "time": "MM-DD HH:MM" \(the diary "date"\), "scene" when it answers one, then its own fields as above/);
+    assert.match(T.sys, /each item with its fields as above, "scene" when it answers one/);
     assert.match(T.sys, /- "everyday" is the owner's life outside what the story follows\. A record about a matter the story follows is a story record in "records", only as the messages show it\./);
 });
 
