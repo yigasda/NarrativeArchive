@@ -368,7 +368,7 @@ THE OWNER'S LIFE
 - The owner's ordinary life in these hours and each day the story skips, from their habits: each answer fills most lists as these hours call for, for example a photo of lunch, a search, a note, a mail, a post, texts and calls by the person, a voice memo, and a diary entry when these hours end the day. A list with nothing in these hours stays empty.
 - How many: about ${LIFE_A_DAY} life records for each waking day, about one an hour; each day the story skips gets its own (at most ${LIFE_MAX} in all${life ? ', "health" not counted' : ''}), dated on that day. Routines recur.
 - Every app tells the same day, the way this owner lives it: late-night texts go with ${life ? 'a late "late" and short sleep' : 'a late night'}. The owner does nothing on the phone while asleep or busy in a scene; others' texts and calls still come in.
-- NEVER write how anything the story is following turns out, or what comes next for it: the story will tell. Their own life's small happenings are fine; nothing about the story's people that a later message could contradict.
+- NEVER make up the progress or outcome of anything the story is following before the story tells it. Talk and feelings about it are fine, for instance a text after a fight, and so are their own life's small happenings; nothing about the story's people that a later message could contradict.
 - People: the story's, PEOPLE AROUND (wherever they would turn up; never someone the owner isn't in touch with now), and made-up people of their own life, named for where they live; never a new relative or partner. Relationship words only as the story uses them. Someone new texted or called gets a "contact".
 
 THE APPS
