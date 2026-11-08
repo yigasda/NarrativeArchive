@@ -110,10 +110,12 @@ function emptyApp(p, now, title, kind, what) {
 // ---- 은행
 const tab = on => `<div class="ax_btab">${[['homeS', '홈', 'bank'], ['send2', '송금', 'banksend'], ['card2', '카드', 'wallet'], ['menu', '더보기', 'bankmore']].map(([k, l, go]) => (go ? `<button type="button" class="${k === on ? 'on' : ''}" data-go="${go}">${ax(k, 24, 'currentColor')}${l}</button>` : `<span>${ax(k, 24, 'currentColor')}${l}</span>`)).join('')}</div>`;
 // how a record moved: a card bill (its two halves), a transfer, a card payment, cash, money in
-const txWay = x => (x.cardBill ? '카드 대금' : x.adjust ? '잔액 조정' : x.kind === 'card' ? '카드' : x.kind === 'transfer' ? '송금' : x.kind === 'cash' ? '현금 인출' : '입금');
+// a balance adjustment has no payee: its name is 잔액 조정, the model's reason only in the record (사유)
+const txName = x => (x.adjust ? '잔액 조정' : x.who);
+const txWay = x => (x.cardBill ? '카드 대금' : x.adjust ? '추정 금액' : x.kind === 'card' ? '카드' : x.kind === 'transfer' ? '송금' : x.kind === 'cash' ? '현금 인출' : '입금');
 // a record the clock put in (a salary, a rent) says 자동; a line that only makes the balance what the story said says 추정
-const txMarks = x => `${x.auto ? ' · 자동이체' : ''}${x.adjust ? ' · 추정' : ''}`;
-const txRow = (p, x) => `<button type="button" class="ax_rw" data-go="tx" data-i="${x.id}">${fi(x.who, 38)}<span class="ax_tx"><b class="ax_n">${esc(x.who)}${x.pending ? '<span class="ax_pend">대기</span>' : ''}${x.ev && (mo(p).orders.some(o => o.ev === x.ev) || mo(p).passes.some(o => o.ev === x.ev)) ? `<span class="ax_lnk">${ax('link', 10, 'currentColor', 2.4)} ${mo(p).orders.some(o => o.ev === x.ev) ? '쇼핑' : '지갑'}</span>` : ''}</b><span class="ax_p">${esc(fmtDate(p, x.time, true))} · ${txWay(x)}${txMarks(x)}${x.memo && !(x.adjust && x.memo === '잔액 맞춤') ? ` · ${esc(memoOf(p, x))}` : ''}</span></span><span class="ax_amt ${x.amount > 0 ? 'p' : ''} cg_num">${esc(txMoney(p, x, true))}</span></button>`;
+const txMarks = x => `${x.auto ? ' · 자동이체' : ''}`;
+const txRow = (p, x) => `<button type="button" class="ax_rw" data-go="tx" data-i="${x.id}">${fi(txName(x), 38)}<span class="ax_tx"><b class="ax_n">${esc(txName(x))}${x.pending ? '<span class="ax_pend">대기</span>' : ''}${x.ev && (mo(p).orders.some(o => o.ev === x.ev) || mo(p).passes.some(o => o.ev === x.ev)) ? `<span class="ax_lnk">${ax('link', 10, 'currentColor', 2.4)} ${mo(p).orders.some(o => o.ev === x.ev) ? '쇼핑' : '지갑'}</span>` : ''}</b><span class="ax_p">${esc(fmtDate(p, x.time, true))} · ${txWay(x)}${txMarks(x)}${x.memo && !(x.adjust && x.memo === '잔액 맞춤') ? ` · ${esc(memoOf(p, x))}` : ''}</span></span><span class="ax_amt ${x.amount > 0 ? 'p' : ''} cg_num">${esc(txMoney(p, x, true))}</span></button>`;
 const newestTx = p => [...(mo(p)?.tx || [])].sort(byStory(p.now)).reverse();
 export function bankHome(p, now) {
     const M = mo(p);
@@ -170,11 +172,12 @@ export function bankTx(p, now, id) {
         <div class="ax_bkr"><button type="button" class="ax_bkc" data-go="${ai >= 0 ? `acct:${ai}` : 'bank'}" aria-label="뒤로">${ax('back', 18, '#fff', 2.3)}</button><span class="ax_bkt">거래 상세</span><button type="button" class="ax_bkc" data-go="txdoc" data-i="${x.id}" aria-label="확인증">${ax('share', 17, '#fff')}</button></div>
       </div>
       <div class="ax_bks ax_bkso"><div class="ax_scroll">
-        <div class="ax_rcpt"><div class="ax_rch">${fi(x.who, 56, axTint(x.who), 18)}<b>${esc(x.who)}</b>${x.ko && koOn() ? `<small>${esc(x.ko)}</small>` : ''}<strong class="cg_num">${esc(txMoney(p, x, true))}</strong><span class="ax_rok ${x.pending ? 'pend' : ''}">${x.pending ? '대기 중' : '완료'}</span></div>
+        <div class="ax_rcpt"><div class="ax_rch">${fi(txName(x), 56, axTint(txName(x)), 18)}<b>${esc(txName(x))}</b>${x.ko && koOn() ? `<small>${esc(x.ko)}</small>` : ''}<strong class="cg_num">${esc(txMoney(p, x, true))}</strong><span class="ax_rok ${x.pending ? 'pend' : ''}">${x.pending ? '대기 중' : '완료'}</span></div>
           <div class="ax_rln"><span>날짜</span><span class="cg_num">${esc(fmtDate(p, x.time))} ${esc(fmtTime(p, x.time))}</span></div>
           <div class="ax_rln"><span>계좌</span><span>${a ? `${kindName[a.kind]} •••• ${esc(a.last4)}` : '—'}</span></div>
-          <div class="ax_rln"><span>방식</span><span>${x.kind === 'card' && !x.cardBill ? '카드 결제' : txWay(x)}${x.auto ? ' · 자동이체' : ''}</span></div>
+          <div class="ax_rln"><span>방식</span><span>${x.adjust ? '잔액 조정' : x.kind === 'card' && !x.cardBill ? '카드 결제' : txWay(x)}${x.auto ? ' · 자동이체' : ''}</span></div>
           ${x.auto && reg(p, x) ? `<div class="ax_rln"><span>정기</span><span>${esc(reg(p, x).name)} · ${esc(regWhen(p, reg(p, x)))}</span></div>` : ''}
+          ${x.adjust && x.who && x.who !== '잔액 조정' ? `<div class="ax_rln"><span>사유</span><span>${esc(x.who)}</span></div>` : ''}
           ${x.adjust ? `<div class="ax_rln"><span>추정</span><span>이야기에서 말한 잔액에 맞춘 금액이에요</span></div>` : ''}
           ${x.memo && !(x.adjust && x.memo === '잔액 맞춤') ? `<div class="ax_rln"><span>메모</span><span>${esc(memoOf(p, x))}</span></div>` : ''}</div>
         ${relatedRows(p, x.ev, `tx:${x.id}`)}
@@ -309,8 +312,8 @@ export function bankNotes(p, now) {
     const days = [...new Set(xs.map(x => String(x.time).slice(0, 5)))];
     const note = x => {
         const a = acctOf(p, x.account), b = bal.get(x.id), [ic, bg, fg, what] = NOTE_K[x.amount > 0 ? 'in' : x.pending ? 'wait' : x.kind === 'card' ? 'card' : x.kind === 'transfer' ? 'send' : 'out'];
-        const way = x.adjust ? '잔액 조정' : x.cardBill ? '카드 대금' : what;
-        return `<button type="button" class="ax_rw ax_bnr" data-go="tx" data-i="${x.id}"><span class="ax_fi" style="width: 40px; height: 40px; border-radius: 13px; background: ${bg}; color: ${fg}">${ax(ic, 19, 'currentColor', 2)}</span><span class="ax_tx"><b class="ax_n">${esc(x.who)}</b><span class="ax_p">${way}${a ? ` · ${esc(a.last4)}` : ''} · <span class="cg_num">${esc(fmtTime(p, x.time))}</span></span></span><span class="ax_fxv"><b class="ax_amt cg_num${x.amount > 0 ? ' p' : ''}">${esc(txMoney(p, x, true))}</b><small class="cg_num">${b !== undefined ? `잔액 ${esc(acctMoney(p, a, b))}` : x.pending ? '대기 중' : ''}</small></span></button>`;
+        const way = x.adjust ? '추정 금액' : x.cardBill ? '카드 대금' : what;
+        return `<button type="button" class="ax_rw ax_bnr" data-go="tx" data-i="${x.id}"><span class="ax_fi" style="width: 40px; height: 40px; border-radius: 13px; background: ${bg}; color: ${fg}">${ax(ic, 19, 'currentColor', 2)}</span><span class="ax_tx"><b class="ax_n">${esc(txName(x))}</b><span class="ax_p">${way}${a ? ` · ${esc(a.last4)}` : ''} · <span class="cg_num">${esc(fmtTime(p, x.time))}</span></span></span><span class="ax_fxv"><b class="ax_amt cg_num${x.amount > 0 ? ' p' : ''}">${esc(txMoney(p, x, true))}</b><small class="cg_num">${b !== undefined ? `잔액 ${esc(acctMoney(p, a, b))}` : x.pending ? '대기 중' : ''}</small></span></button>`;
     };
     return `<div class="ax_bk">${bankHead(p, now, 'bank', '알림')}
       <div class="ax_bks"><div class="ax_scroll">
@@ -377,7 +380,7 @@ export function bankStmt(p, now, arg = '') {
           <div class="ax_stt"><div><b>${esc(M.bank.name)}</b><small>${esc(p.owner)} · ${kindName[a.kind]} •••• ${esc(a.last4)}</small></div><div class="r"><b>${credit ? '카드 이용대금 명세서' : '거래명세서'}</b><small class="cg_num">${esc(paperDay(p, mm, 1))} – ${esc(fmtDate(p, `${mm}-${String(last).padStart(2, '0')}`, true))}</small></div></div>
           <div class="ax_sts">${credit ? '' : `<div><small>시작 잔액</small><b class="cg_num">${mon(start)}</b></div><div><small>끝 잔액</small><b class="cg_num">${mon(end)}</b></div>`}<div><small>들어온 돈</small><b class="cg_num p">${sgn(inn)}</b></div><div><small>${credit ? '쓴 돈' : '나간 돈'}</small><b class="cg_num">${sgn(-out)}</b></div></div>
           ${bars.length ? `<div class="ax_stb">${bars.map(([n, v]) => `<div><span>${esc(n)}</span><i style="width: ${Math.max(3, Math.round(v / top * 100))}%"></i><em class="cg_num">${mon(v)}</em></div>`).join('')}</div>` : ''}
-          <table class="ax_stl">${xs.map(x => `<tr data-go="tx" data-i="${x.id}"><td class="cg_num">${esc(fmtDate(p, x.time, true))}</td><td>${esc(x.who)}</td><td class="cg_num${x.amount > 0 ? ' p' : ''}">${sgn(x.amount)}</td></tr>`).join('') || '<tr><td colspan="3">이 달 거래가 없어요</td></tr>'}</table>
+          <table class="ax_stl">${xs.map(x => `<tr data-go="tx" data-i="${x.id}"><td class="cg_num">${esc(fmtDate(p, x.time, true))}</td><td>${esc(txName(x))}</td><td class="cg_num${x.amount > 0 ? ' p' : ''}">${sgn(x.amount)}</td></tr>`).join('') || '<tr><td colspan="3">이 달 거래가 없어요</td></tr>'}</table>
         </div>
         <i class="ax_pad"></i>
       </div></div>
@@ -390,9 +393,9 @@ export function txDoc(p, now, id) {
     const title = card ? '카드 매출전표' : inn ? '입금확인증' : '이체확인증';
     const when = `${paperDay(p, String(x.time).slice(0, 2), String(x.time).slice(3, 5))} ${fmtTime(p, x.time)}`, mine = `${esc(p.owner)} · ${a ? `${kindName[a.kind]} •••• ${esc(a.last4)}` : ''}`;
     const ln = (k, v) => v ? `<div class="ax_dln"><span>${k}</span><span>${v}</span></div>` : '';
-    const rows = card ? ln('가맹점', esc(x.who)) + ln('카드', a ? `•••• •••• •••• ${esc(a.last4)}` : '') + ln('승인 번호', `<span class="cg_num">${String(h % 100000000).padStart(8, '0')}</span>`) + ln('승인 일시', `<span class="cg_num">${esc(when)}</span>`) + ln('결과', x.pending ? '승인 대기' : '승인')
-        : inn ? ln('보낸 분', esc(x.who)) + ln('받는 분', mine) + ln('받은 날', `<span class="cg_num">${esc(when)}</span>`) + ln('메모', esc(memoOf(p, x))) + ln('결과', '정상 입금')
-        : ln('보낸 분', mine) + ln('받는 분', esc(x.who)) + ln('보낸 날', `<span class="cg_num">${esc(when)}</span>`) + ln('메모', esc(memoOf(p, x))) + ln('결과', x.pending ? '처리 중' : '정상 처리');
+    const rows = card ? ln('가맹점', esc(txName(x))) + ln('카드', a ? `•••• •••• •••• ${esc(a.last4)}` : '') + ln('승인 번호', `<span class="cg_num">${String(h % 100000000).padStart(8, '0')}</span>`) + ln('승인 일시', `<span class="cg_num">${esc(when)}</span>`) + ln('결과', x.pending ? '승인 대기' : '승인')
+        : inn ? ln('보낸 분', esc(txName(x))) + ln('받는 분', mine) + ln('받은 날', `<span class="cg_num">${esc(when)}</span>`) + ln('메모', esc(memoOf(p, x))) + ln('결과', '정상 입금')
+        : ln('보낸 분', mine) + ln('받는 분', esc(txName(x))) + ln('보낸 날', `<span class="cg_num">${esc(when)}</span>`) + ln('메모', esc(memoOf(p, x))) + ln('결과', x.pending ? '처리 중' : '정상 처리');
     const bank = String(M.bank.name || 'BANK').toUpperCase().split(/\s+/).slice(0, 2);
     return `<div class="ax_bk">${bankHead(p, now, `tx:${x.id}`, title, true)}
       <div class="ax_bks ax_bkso"><div class="ax_scroll">
