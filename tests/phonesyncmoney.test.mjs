@@ -683,6 +683,11 @@ test('점검 9-4 (records): the money step\'s one list goes in the lists the mon
     assert.deepEqual(mo.quotes.map(q => [q.value, q.source]), [[130, 'guess'], [131, 'story']]);
     assert.deepEqual([mo.deliveries[0].for, mo.deliveries[0].time], [2, '10-26 19:30']);
     assert.equal(mo.newCard.exp, '10/29');
+    // (a day with its year: one full day; without, the day alone)
+    const yr = recordsMoney([{ type: 'asset', names: ['Trust'], date: '06-15', year: 2025 }, { type: 'asset', names: ['Car'], date: '03-02' }, { type: 'debt', names: ['Loan'], date: '01-10', year: '2024' }]);
+    assert.deepEqual([yr.assets.map(a => a.since), yr.debts[0].since], [['2025-06-15', '03-02'], '2024-01-10']);
+    // (a ticket takes only a ticket's status)
+    assert.deepEqual(recordsMoney([{ type: 'ticket', by: 'Inn', status: 'delivered' }, { type: 'ticket', by: 'Inn', status: 'Used' }]).passes.map(x => x.status), ['', 'used']);
 });
 
 test('점검 9-4: a debt of the household is theirs; a ticket\'s last day and a membership; a parcel sent to the owner; a value the story says changed is the new one, a mention of it as it was keeps the story\'s', () => {
@@ -828,4 +833,79 @@ test('점검 9-5: a parcel past its arrival day has come, by the clock (되돌�
     addPrice(m, 'STOCK:XETRA:SAP', '2026-10-20', { value: 120, source: 'guess' });
     const { investNow } = await import('../src/phonesyncmoney.js');
     assert.equal(investNow(m, p).date, '2026-10-20');
+});
+
+test('run58: what the phone lacks is said only while it lacks it (no regular yet, a card with no bill day); an order keeps the time it was made', async () => {
+    const { moneyMissing } = await import('../src/phonesyncmoney.js');
+    const { m, p } = setup();
+    assert.match(moneyMissing(p), /No regular income yet/);
+    assert.match(moneyMissing(p), /No regular bill yet/);
+    assert.match(moneyMissing(p), /Cards with no "billDay": 2222\./);
+    applyMoney(m, p, ev('o', 5, '11-03', { orders: [{ names: ['Scarf'], price: 45000, time: '20:30', occurrence: 'again', refersBack: false }],
+        regulars: [{ names: ['Rent'], amount: -650, frequency: 'monthly', day: 1, account: '1111', occurrence: 'again', refersBack: false }],
+        accounts: [{ account: '2222', billDay: 15, paidFrom: '1111', occurrence: 'again' }] }), opts());
+    assert.equal(p.money.orders[0].time, '11-03 20:30');
+    // (a bill but no income yet: the income is still asked for)
+    assert.equal(moneyMissing(p), '- No regular income yet (pay, an allowance or support): write the one the owner\'s life has, whatever the messages are about.');
+    applyMoney(m, p, ev('pay', 6, '11-04', { regulars: [{ names: ['Salary'], amount: 2000, frequency: 'monthly', day: 25, account: '1111', occurrence: 'again', refersBack: false }] }), opts());
+    assert.equal(moneyMissing(p), '');
+});
+
+test('run59: the clock never pays a regular on a day the bank\'s balance already holds (before its as-of day)', async () => {
+    const { regularClock } = await import('../src/phonesyncmoney.js');
+    const { m, p, bank } = setup();
+    applyMoney(m, p, ev('pay', 5, '10-15', { regulars: [{ names: ['Salary'], amount: 2000, frequency: 'monthly', day: 18, account: '1111', occurrence: 'again', refersBack: false }] }), opts());
+    regularClock(m, p, '10-26 09:00', '2026');
+    // (10-18 is before the balance's day, 10-20: already in it)
+    assert.equal(p.money.tx.length, 0);
+    assert.equal(bank(), 1000);
+    regularClock(m, p, '11-19 09:00', '2026');
+    assert.deepEqual(p.money.tx.map(t => t.day), ['2026-11-18']);
+});
+
+test('run60: an asset with no day the owner got it keeps none (the message\'s day is not it)', () => {
+    const { m, p } = setup();
+    applyMoney(m, p, ev('t', 5, '11-03', { assets: [{ kind: 'deposit', names: ['Trust'], value: 5000, status: 'blocked', occurrence: 'again', refersBack: false }, { kind: 'vehicle', names: ['Car'], value: 9000, since: '03-02', occurrence: 'again', refersBack: false }] }), opts());
+    assert.deepEqual(p.money.assets.map(a => a.since), ['', '03-02']);
+    applyMoney(m, p, ev('t2', 6, '11-03', { assets: [{ kind: 'deposit', names: ['Old trust'], value: 1, since: '2025-05-10', occurrence: 'again', refersBack: false }] }), opts());
+    assert.equal(p.money.assets.at(-1).since, '2025-05-10');
+});
+
+test('run61: a card bill the model wrote by hand, from the paying account to the card by its name, is that month\'s: the clock pays no second one', async () => {
+    const { regularClock } = await import('../src/phonesyncmoney.js');
+    const { m, p, bank } = setup();
+    applyMoney(m, p, ev('cc', 5, '10-20', { accounts: [{ account: '2222', billDay: 14, paidFrom: '1111', occurrence: 'again' }] }), opts());
+    regularClock(m, p, '10-20 09:00', '2026');
+    applyMoney(m, p, ev('d', 6, '10-26', { moves: [{ account: '2222', amount: -80, who: 'Trattoria', kind: 'card', occurrence: 'new' }] }), opts());
+    applyMoney(m, p, ev('bill', 7, '11-14', { moves: [{ account: '1111', amount: -80, who: 'Karte', kind: 'transfer', memo: '카드 대금', occurrence: 'new' }] }), opts());
+    regularClock(m, p, '11-20 09:00', '2026');
+    assert.equal(p.money.tx.filter(t => t.cardBill).length, 0);
+    assert.equal(bank(), 920);
+});
+
+test('run66: a mobile pay payment is a card payment for the counts, marked as one; on the giro its money leaves the balance', () => {
+    const { m, p, bank } = setup();
+    applyMoney(m, p, ev('pay', 5, '10-26', { moves: [{ account: '2222', amount: -12, who: 'Cafe', kind: 'mobile', occurrence: 'new' }, { account: '1111', amount: -30, who: 'Shop', kind: 'mobile', occurrence: 'new' }] }), opts());
+    assert.deepEqual(p.money.tx.map(t => [t.account, t.kind, t.mobile]), [['2222', 'card', true], ['1111', 'card', true]]);
+    assert.equal(bank(), 970);
+});
+
+test('run67: an asset or debt there before, given this message\'s day as the day it began, keeps none; a regular\'s first day a week ahead is its next day, not last year\'s', () => {
+    const { m, p } = setup();
+    applyMoney(m, p, ev('x', 5, '11-03', { debts: [{ kind: 'loan', names: ['Family loan'], amount: 1000, since: '2026-11-03', occurrence: 'again', refersBack: false }, { kind: 'loan', names: ['New loan'], amount: 500, since: '11-03', occurrence: 'new', refersBack: false }],
+        assets: [{ kind: 'deposit', names: ['Trust'], value: 9, since: '11-03', occurrence: 'again', refersBack: false }],
+        regulars: [{ names: ['Phone'], amount: -55, frequency: 'monthly', day: 10, date: '11-10', account: '1111', occurrence: 'again', refersBack: false }, { names: ['Pay'], amount: 2000, frequency: 'monthly', day: 25, date: '01-25', account: '1111', occurrence: 'again', refersBack: false }] }), opts());
+    assert.deepEqual(p.money.debts.map(d => d.since ?? ''), ['', '11-03']);
+    assert.equal(p.money.assets[0].since, '');
+    assert.deepEqual(p.money.regulars.map(r => r.since), ['2026-11-10', '2026-01-25']);
+});
+
+test('run68: a stay told twice in one answer (booked, then extended) is one ticket with the new last day; another place is another', () => {
+    const { m, p } = setup();
+    applyMoney(m, p, ev('stay', 5, '11-07', { passes: [
+        { kind: 'hotel', by: 'Airbnb', names: ['Airbnb'], date: '11-07', until: '11-21', status: 'booked', occurrence: 'new', refersBack: false },
+        { kind: 'hotel', by: 'Airbnb', names: ['Airbnb'], date: '11-07', until: '12-03', status: 'used', occurrence: 'again' },
+        { kind: 'hotel', by: 'Glad Hotel', names: ['Glad Hotel'], date: '11-02', until: '11-07', occurrence: 'again' },
+    ] }), opts());
+    assert.deepEqual(p.money.passes.map(x => [x.by, x.until, x.status]), [['Airbnb', '12-03', 'used'], ['Glad Hotel', '11-07', '']]);
 });

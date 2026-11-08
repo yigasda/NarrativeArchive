@@ -63,6 +63,9 @@ const nameHit = (a, b) => a.some(u => b.some(v => { const x = NAME(u), y = NAME(
 const OPEN = { orders: o => !ORDER_OVER(o.status) && o.status !== 'delivered', passes: o => !PASS_OVER(o.status), assets: o => ['held', 'expected', 'blocked'].includes(o.status || 'held'), debts: o => ['open', 'overdue'].includes(o.status || 'open') };
 export const PASS_OVER = v => { const s = String(v || '').toLowerCase().trim().replace(/(?:환불|취소)\s*(?:불가|가능|안\s*됨)|non-?refundable|free\s+cancel\w*|cancel\w*\s+(?:allowed|possible)|refundable/g, ' '); return !/미사용|사용\s*전|사용\s*예정|unused|not\s+(?:yet\s+)?used/.test(s) && /\bused\b|cancel|refund|checked out|expired|사용\s*(?:완료|됨|함)|취소|환불|만료/.test(s); };
 const samePlace = (a, b) => !!plain(a) && plain(a) === plain(b);
+// (a day with its year, "2025-05-10", keeps it: an asset got long ago is not this year's)
+const withYear = (date, year) => { const md = when(date).slice(0, 5), y = String(year ?? '').trim(); return /^\d{2}-\d{2}$/.test(md) && /^\d{4}$/.test(y) ? `${y}-${md}` : (/^\d{4}-\d{2}-\d{2}/.test(String(date ?? '').trim()) ? String(date).trim().slice(0, 10) : md); };
+const sinceOf = v => (/^\d{4}-\d{2}-\d{2}/.test(String(v ?? '').trim()) ? String(v).trim().slice(0, 10) : when(v).slice(0, 5));
 // 정기 입출금: how often, and on which day (monthly: the day of the month; weekly: the weekday 0–6; yearly: "MM-DD")
 const REG_FREQ = ['monthly', 'weekly', 'yearly'];
 const WEEK = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6, 일: 0, 월: 1, 화: 2, 수: 3, 목: 4, 금: 5, 토: 6 };
@@ -114,6 +117,20 @@ export function monthSoFar(p) {
     }
     return [...by.values()];
 }
+// what the phone should hold and doesn't yet, said only while it is so: no regular income or bill at all; a card with no
+// bill day (so its bill can't be paid)
+export function moneyMissing(p) {
+    const mo = p.money;
+    if (!mo?.bank) return '';
+    const out = [];
+    // (what the code can tell: money coming in again and again, and money going out again and again)
+    const going = (mo.regulars || []).filter(r => r.status !== 'stopped');
+    if (!going.some(r => r.amount > 0)) out.push('- No regular income yet (pay, an allowance or support): write the one the owner\'s life has, whatever the messages are about.');
+    if (!going.some(r => r.amount < 0)) out.push('- No regular bill yet (rent, a phone bill, a subscription): write the ones the owner\'s life has.');
+    const cards = mo.bank.accounts.filter(a => a.kind === 'credit' && !a.closed && !a.billDay).map(a => a.last4);
+    if (cards.length) out.push(`- Cards with no "billDay": ${cards.join(', ')}. Give each an "account" record with its "billDay" and "paidFrom".`);
+    return out.join('\n');
+}
 // what the model sees of the money apps
 const newestAndOpen = (xs, n, open) => { const all = xs || [], last = all.slice(-n); return [...all.slice(0, -n || all.length).filter(open).slice(-12), ...last]; };
 export function moneyNow(p) {
@@ -164,9 +181,12 @@ export function recordsMoney(recs) {
         else if (type === 'regular') add('regulars', x);
         // (who pays: the owner, someone else, or the courier at the door; a parcel sent to the owner is never theirs to pay)
         else if (type === 'order') { const { amount, ...o } = x; add('orders', { ...o, price: amount ?? o.price ?? null, ...(o.sender || ['someone else', 'on delivery'].includes(String(o.payer || '').toLowerCase()) ? { paid: false } : {}) }); }
-        else if (type === 'ticket') add('passes', x);
-        else if (type === 'asset') { const { amount, amountFrom, ...o } = x; add('assets', { ...o, value: amount ?? o.value ?? null, ...(amountFrom ? { valueFrom: amountFrom } : {}) }); }
-        else if (type === 'debt') add('debts', x);
+        // (a ticket's status is one of its own: an order's "delivered" on it is none)
+        else if (type === 'ticket') { const st = String(x.status ?? '').toLowerCase().trim(); add('passes', { ...x, status: ['booked', 'used', 'cancelled'].includes(st) ? st : '' }); }
+        // (an asset's "date" is when the owner got it)
+        // (an asset's "date" is when the owner got it, a debt's when it was taken on; with its "year", one full day)
+        else if (type === 'asset') { const { amount, amountFrom, date, year, ...o } = x; const since = o.since || withYear(date, year); add('assets', { ...o, value: amount ?? o.value ?? null, ...(amountFrom ? { valueFrom: amountFrom } : {}), ...(since ? { since } : {}) }); }
+        else if (type === 'debt') { const { date, year, ...o } = x; const since = o.since || withYear(date, year); add('debts', { ...o, ...(since ? { since } : {}) }); }
         else if (type === 'account') add('accounts', x);
         else if (type === 'card') mo.newCard ||= x;
         else if (type === 'trade') add('trades', x);
@@ -320,6 +340,13 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
             res = sn.length ? pick(box.filter(o => nameHit(storyNames(path, o), sn) && ok(o)))
                 : pick(box.filter(o => OPEN[path](o) && (path === 'orders' || o.kind === x.kind) && ok(o)));
         }
+        // (none on the phone yet, but told of earlier in this same answer, by its names: that one, not a second record, run68's
+        // stay told twice; a different place or the way back is still another)
+        if (!res.rec && !res.ambiguous) {
+            const xs = list(mo[path]), xn = allNames(path, x);
+            const prev = xs.slice(0, xs.indexOf(x)).find(y => { const r = resolved.get(y); return r && !r.rec && !r.ambiguous && !r.same && (path === 'orders' || y.kind === x.kind) && nameHit(allNames(path, y), xn) && !conflict(path, y, x); });
+            if (prev) res = { rec: null, same: prev };
+        }
         resolved.set(x, res);
     }
     // (a payment's "for": the order, ticket or asset of this event it pays, by one of its names)
@@ -399,7 +426,9 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         const id = sid(`sync:${e.id}:m${k}`);
         const row = { id, account: acct.last4, who: txt(x.who, 60), ko: txt(x.ko, 60), amount: round(amount), time: `${date}${(hhmm(x.time) || e.time) ? ` ${hhmm(x.time) || e.time}` : ''}`, day: full,
             // on the card everything is a card row (a refund is plus), except paying the card off: a transfer, which the month's count leaves out
-            kind: acct.kind === 'credit' ? (x.kind === 'transfer' ? 'transfer' : 'card') : ['card', 'transfer', 'deposit', 'cash'].includes(x.kind) ? x.kind : amount > 0 ? 'deposit' : 'card', memo: txt(x.memo), pending: false, ev: e.id, storyEvent: e.id, sourceIndex: e.at, ...(x._reg ? { regular: x._reg.id } : {}), ...(g ? { amountFrom: 'guess' } : {}) };
+            kind: acct.kind === 'credit' ? (x.kind === 'transfer' ? 'transfer' : 'card') : x.kind === 'mobile' ? 'card' : ['card', 'transfer', 'deposit', 'cash'].includes(x.kind) ? x.kind : amount > 0 ? 'deposit' : 'card', memo: txt(x.memo), pending: false,
+            // (a mobile pay app: a card payment for the counts, marked so the bank shows it as one)
+            ...(x.kind === 'mobile' ? { mobile: true } : {}), ev: e.id, storyEvent: e.id, sourceIndex: e.at, ...(x._reg ? { regular: x._reg.id } : {}), ...(g ? { amountFrom: 'guess' } : {}) };
         // a card payment just made waits for approval through its day (the clock settles it the next)
         const nowDay = String(p.now || '').slice(0, 5);
         row.pending = row.kind === 'card' && row.amount < 0 && !(/^\d{2}-\d{2}$/.test(nowDay) && /^\d{2}-\d{2}$/.test(date) && dayGap(date, nowDay) > 0);
@@ -461,27 +490,30 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
     const STATES = { assets: ['held', 'expected', 'blocked', 'sold', 'lost', 'settled'], debts: ['open', 'paid', 'overdue', 'forgiven'] };
     const WHOSE = ['owner', 'shared', 'family', 'company'];
     const hangul = v => /\p{Script=Hangul}/u.test(v || '');
+    // (an asset's day the owner got it is the story's or the model's, never this message's day put in its place: none when not given;
+    // for one there before ("again"), the message's day itself, written by the model, is none either, run66 · 67)
+    const sinceFor = x => { const v = sinceOf(x.since); return x.occurrence !== 'new' && v && (v === date || v === full) ? '' : v; };
     const make = {
         // (a price the story doesn't give, null or "", is none, never 0; the arrival day is the model's, made up when the story
         // gives none)
         orders: x => { const names = allNames('orders', x), item = txt(x.item) || names[0] || '', price = x.price === null || x.price === undefined || x.price === '' ? NaN : Number(x.price);
             if (!item) return null;
-            return { shop: txt(x.shop, 60), item, ko: txt(x.ko) || (hangul(item) ? '' : names.find(n => hangul(n)) || ''), names, option: txt(x.option, 60), qty: Math.max(1, Math.round(Number(x.qty) || 1)), price: finite(price) ? price : null, time: date, status: ORDER.includes(x.status) ? x.status : 'ordered', eta: when(x.eta).slice(0, 5), arrived: '', gift: giftOf(x.gift), ...(txt(x.sender) ? { sender: txt(x.sender, 60) } : {}), ...(['owner', 'someone else', 'on delivery'].includes(x.payer) ? { payer: x.payer } : {}), ...(x.paid === false ? { paid: false } : {}), ...(gOf(x) ? { amountFrom: 'guess' } : {}) }; },
+            return { shop: txt(x.shop, 60), item, ko: txt(x.ko) || (hangul(item) ? '' : names.find(n => hangul(n)) || ''), names, option: txt(x.option, 60), qty: Math.max(1, Math.round(Number(x.qty) || 1)), price: finite(price) ? price : null, time: hhmm(x.time) ? `${date} ${hhmm(x.time)}` : date, status: ORDER.includes(x.status) ? x.status : 'ordered', eta: when(x.eta).slice(0, 5), arrived: '', gift: giftOf(x.gift), ...(txt(x.sender) ? { sender: txt(x.sender, 60) } : {}), ...(['owner', 'someone else', 'on delivery'].includes(x.payer) ? { payer: x.payer } : {}), ...(x.paid === false ? { paid: false } : {}), ...(gOf(x) ? { amountFrom: 'guess' } : {}) }; },
         passes: x => { const names = allNames('passes', x), by = txt(x.by, 60) || (Array.isArray(x.names) ? txt(x.names[0], 60) : '');
             if (!by && !txt(x.to)) return null;
             return { kind: KINDS.passes.includes(x.kind) ? x.kind : 'other', by, names, from: txt(x.from, 40), to: txt(x.to, 40), date: when(x.date).slice(0, 5) || date, time: hhmm(x.time), seat: txt(x.seat, 12), gate: txt(x.gate, 12), no: txt(x.no, 24), status: txt(x.status, 30), ...(when(x.until) ? { until: when(x.until).slice(0, 5) } : {}) }; },
         assets: x => { const names = allNames('assets', x);
             if (!names.length) return null;
-            return { kind: KINDS.assets.includes(x.kind) ? x.kind : 'other', name: names[0], names, value: finite(Number(x.value)) ? round(Number(x.value)) : null, currency: currency(String(x.currency || '').toUpperCase()) ? String(x.currency).toUpperCase() : p.money.currency, valueFrom: x.valueFrom === 'story' ? 'story' : 'guess', whose: WHOSE.includes(x.whose) ? x.whose : 'owner', status: STATES.assets.includes(x.status) ? x.status : 'held', since: when(x.since).slice(0, 5) || date, conditions: txt(x.conditions, 200) }; },
+            return { kind: KINDS.assets.includes(x.kind) ? x.kind : 'other', name: names[0], names, value: finite(Number(x.value)) ? round(Number(x.value)) : null, currency: currency(String(x.currency || '').toUpperCase()) ? String(x.currency).toUpperCase() : p.money.currency, valueFrom: x.valueFrom === 'story' ? 'story' : 'guess', whose: WHOSE.includes(x.whose) ? x.whose : 'owner', status: STATES.assets.includes(x.status) ? x.status : 'held', since: sinceFor(x), conditions: txt(x.conditions, 200) }; },
         debts: x => { const names = allNames('debts', x);
             if (!names.length && !txt(x.lender)) return null;
-            return { kind: KINDS.debts.includes(x.kind) ? x.kind : 'other', name: names[0] || txt(x.lender, 60), names, lender: txt(x.lender, 60), amount: finite(Number(x.amount)) ? round(Math.abs(Number(x.amount))) : null, currency: currency(String(x.currency || '').toUpperCase()) ? String(x.currency).toUpperCase() : p.money.currency, amountFrom: x.amountFrom === 'story' ? 'story' : 'guess', whose: WHOSE.includes(x.whose) ? x.whose : 'owner', due: when(x.due).slice(0, 5), status: STATES.debts.includes(x.status) ? x.status : 'open', conditions: txt(x.conditions, 200) }; },
+            return { kind: KINDS.debts.includes(x.kind) ? x.kind : 'other', name: names[0] || txt(x.lender, 60), names, lender: txt(x.lender, 60), amount: finite(Number(x.amount)) ? round(Math.abs(Number(x.amount))) : null, currency: currency(String(x.currency || '').toUpperCase()) ? String(x.currency).toUpperCase() : p.money.currency, amountFrom: x.amountFrom === 'story' ? 'story' : 'guess', whose: WHOSE.includes(x.whose) ? x.whose : 'owner', ...(sinceFor(x) ? { since: sinceFor(x) } : {}), due: when(x.due).slice(0, 5), status: STATES.debts.includes(x.status) ? x.status : 'open', conditions: txt(x.conditions, 200) }; },
     };
     // what a mention gives, field by field: { field: [value, made] }
     const VALUES = {
         orders: x => ({ shop: txt(x.shop, 60), option: txt(x.option, 60), gift: giftOf(x.gift), sender: txt(x.sender, 60), eta: when(x.eta).slice(0, 5), price: x.price === null || x.price === undefined || x.price === '' || !finite(Number(x.price)) ? '' : Number(x.price) }),
         passes: x => ({ no: txt(x.no, 24), from: txt(x.from, 40), to: txt(x.to, 40), seat: txt(x.seat, 12), gate: txt(x.gate, 12), date: when(x.date).slice(0, 5), time: hhmm(x.time), until: when(x.until).slice(0, 5) }),
-        assets: x => ({ value: finite(Number(x.value)) ? round(Number(x.value)) : '', whose: WHOSE.includes(x.whose) ? x.whose : '', since: when(x.since).slice(0, 5), conditions: txt(x.conditions, 200) }),
+        assets: x => ({ value: finite(Number(x.value)) ? round(Number(x.value)) : '', whose: WHOSE.includes(x.whose) ? x.whose : '', since: sinceFor(x), conditions: txt(x.conditions, 200) }),
         debts: x => ({ lender: txt(x.lender, 60), amount: finite(Number(x.amount)) ? round(Math.abs(Number(x.amount))) : '', whose: WHOSE.includes(x.whose) ? x.whose : '', due: when(x.due).slice(0, 5), conditions: txt(x.conditions, 200) }),
     };
     const APP = { orders: '쇼핑', passes: '지갑', assets: '자산', debts: '빚' };
@@ -493,7 +525,7 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         const box = p.money[path] ||= [], res = resolved.get(x) || { rec: null };
         // (more than one it may be: the code doesn't pick one; nothing changes, a note says why)
         if (res.ambiguous) { out.notes.push(`${allNames(path, x)[0] || x.kind || APP[path]}: 어느 기록인지 몰라서 넣지 않았어요`); return; }
-        const old = res.rec;
+        const old = res.rec || (res.same && res.same._row) || null;
         if (!old && x.occurrence === 'again' && !allNames(path, x).length && !txt(x.to) && !txt(x.lender)) { out.notes.push(`${APP[path]}: 무엇인지 모르는 이야기는 넣지 않았어요`); return; }
         if (old) {
             if (old.sourceIndex == null) old.sourceIndex = e.at;
@@ -557,6 +589,7 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         if (x.occurrence === 'again' && (path === 'orders' || path === 'passes')) { row.told = true; if (path === 'passes' && !when(x.date) && !xm.includes('date')) row.dayUnknown = true; }
         else if (path === 'orders' && row.status !== 'cancelled' && row.price && x.paid !== false && !x.gift && !pay && !list(mo.moves).some(y => Number(y.amount) < 0)) out.notes.push(`${row.item}: 주문은 넣었지만 결제가 없었어요`);
         box.push(row);
+        x._row = row;
         out.effects.push({ type: 'push', path: `money.${path}`, item: structuredClone(row) });
         out.changes.push({ app: APP[path], label: label(path, row), amount: null });
     });
@@ -591,7 +624,11 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         const a = acct || accountOf(p, { account: '', kind: '' });
         if (!a) { out.notes.push(`${names[0]}: 정기 입출금의 계좌를 몰라서 넣지 않았어요`); return; }
         let d = dayOf(freq);
-        const sinceDay = when(x.date).slice(0, 5) || date, since = fullDay(year, anchor, sinceDay);
+        // (its first day: one going on already ("again") began on or before this message's day, never next year)
+        const sinceDay = when(x.date).slice(0, 5) || date;
+        let since = fullDay(year, anchor, sinceDay);
+        // (a first day within a month after this one is its next day, "the bill goes out on the 10th", not last year's)
+        if (x.occurrence !== 'new' && since > full && dayGap(date, sinceDay) > 31) since = `${Number(since.slice(0, 4)) - 1}${since.slice(4)}`;
         if (d === null || d === -1 || d === '') d = freq === 'weekly' ? new Date(`${since}T00:00:00Z`).getUTCDay() : freq === 'yearly' ? sinceDay : Number(sinceDay.slice(3, 5));
         const xm = madeOf(x), row = { id: sid(`sync:${e.id}:r${k}`), name: names[0], names, amount: round(amount), currency: a.currency, frequency: freq, day: d, account: a.last4, who: txt(x.who, 60), ko: txt(x.ko, 60),
             ...(txt(x.for) ? { for: txt(x.for, 80) } : {}), status: x.status === 'stopped' ? 'stopped' : 'active', since, paidThrough: shiftDay(full, -1), ...(xm.length ? { made: xm } : {}), ...(gOf(x) ? { amountFrom: 'guess' } : {}),
@@ -792,7 +829,10 @@ export function regularClock(m, p, now, year) {
         if (r.status === 'stopped' || !REG_FREQ.includes(r.frequency) || !finite(r.amount) || !r.amount) continue;
         const acct = mo.bank.accounts.find(a => a.last4 === r.account);
         if (!acct || acct.closed) continue;
-        const start = from(r.paidThrough, r.since);
+        let start = from(r.paidThrough, r.since);
+        // (never on a day the bank's balance already holds: it was read as of its day)
+        const asOf = ymdDate(String(mo.asOf || '').slice(0, 10));
+        if (start && asOf && start <= asOf) start = new Date(asOf.getTime() + 864e5);
         if (!start || start > stop) continue;
         for (const d = new Date(start); d <= stop; d.setUTCDate(d.getUTCDate() + 1)) {
             if (!dueOn(r, d)) continue;
@@ -818,8 +858,10 @@ export function regularClock(m, p, now, year) {
             if (d.getUTCDate() !== Math.min(a.billDay, monthLen(d))) continue;
             const day = isoDay(d), prev = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - 1, 1)); prev.setUTCDate(Math.min(a.billDay, monthLen(prev)));
             const lo = isoDay(prev), inside = t => { const td = rowDay(t, year, today); return td > lo && td <= day; };
-            // (paid off by hand in that month: nothing more)
-            if (tx.some(t => t.account === a.last4 && t.kind === 'transfer' && t.amount > 0 && !t.auto && inside(t))) continue;
+            // (paid off by hand in that month: nothing more; on the card's side, or as money gone from the paying account to
+            // the card by its name or number)
+            const named = t => { const w = plain(t.who); return !!w && (plain(a.name) && (w.includes(plain(a.name)) || plain(a.name).includes(w)) || String(t.who || '').includes(a.last4)); };
+            if (tx.some(t => !t.auto && inside(t) && (t.account === a.last4 && t.kind === 'transfer' && t.amount > 0 || t.account === payer.last4 && t.amount < 0 && t.kind === 'transfer' && named(t)))) continue;
             const net = round(-tx.filter(t => t.account === a.last4 && t.kind === 'card' && inside(t)).reduce((n, t) => n + (finite(t.amount) ? t.amount : 0), 0));
             if (!(net > 0)) continue;
             if (!book(payer, { id: `bill:${a.id}:${day}`, account: payer.last4, who: `${a.name || '카드'} 대금`, ko: '', amount: -net, time: day.slice(5), day, kind: 'transfer', memo: '카드 대금', pending: false, auto: true, cardBill: a.id })) continue;

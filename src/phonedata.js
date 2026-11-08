@@ -24,7 +24,7 @@ import { clockFallback, exactClockShift } from './phoneclock.js';
 import { PLACE } from './phonemapcity.js';
 export { tidyKo, arr, gapDays, giftOf, hhmm, jsonOf, ko, last4, line, num, pad, pick, storyMin, byStory, str, when, withEv };
 import { COUNTRY_TZ, applyDays, applyLife, applyWeather, cardClock, cityAt, dayGap, dlvClock, fillDays, lifeClock, lifeNow, weatherFrom, zoneShift } from './phonesynclife.js';
-import { applyMoney, dlvTotal, investNow, moneyNow, orderClock, payOrders, recordsMoney, regularClock, replayEffects, revertEffects } from './phonesyncmoney.js';
+import { applyMoney, dlvTotal, investNow, moneyMissing, moneyNow, orderClock, payOrders, recordsMoney, regularClock, replayEffects, revertEffects } from './phonesyncmoney.js';
 import { isDone, pruneDropped, srcOf, addFrom, orphanOf, itemMark, edited, busy, exclusive, joinComments, realign, bodyMark, newSync, syncOf, makeMark, settleMarks, pickRound, unreadCount, addDone, settleRound, archiveRound, archivedUnread, readBefore, reachesEnd, quoted, journalAdd, journalRead, journalWrite } from './phonesync.js';
 
 export const WALLS = ['dusk', 'ocean', 'forest', 'rose', 'night', 'sand', 'mono', 'aurora'];
@@ -339,7 +339,8 @@ YOU GET
 - EVENTS: what the phone already put down for these messages, by message number.
 - ARCHIVE FOR THESE MESSAGES (sometimes): the story around them.
 - MONEY NOW${invest ? `, INVESTMENTS NOW` : ''}${delivery ? `, DELIVERY SHOPS` : ''} and sometimes WEALTH: the owner's finances and records, with ids, and this month's income and spending so far.
-- DAYS PASSED (sometimes): the story days that ended in these messages, including ones the story skipped or spent away from the owner: the latest few one by one, a longer stretch before them as one span.
+- DAYS PASSED (sometimes): the story days that ended in these messages, including ones the story skipped or spent away from the owner, one by one (a long stretch before them as one span).
+- MISSING ON THE PHONE (sometimes): what the phone should hold and doesn't yet. Write it now.
 - OWNER, and sometimes OWNER PROFILE, STORY YEAR and CALENDAR (the days around now, with their weekdays).
 
 READING THE STORY
@@ -351,14 +352,15 @@ READING THE STORY
 
 KEEPING IN STEP
 - What is already on the phone: its id as "already". Keep the facts it holds, fill its gaps, change what the story changes.
+- A booking or order that changes (a stay extended, a trip moved, a delivery late): its own record too, in the same message, with what changed, besides any payment for it.
 - Repeated mentions alone do not create another record. Separate actions or changes concerning the same item remain separate records.
 - Details the story leaves out are made up to fit and listed in "made". A value that went up or down with no figure gets a new estimate.
 - One story beat is one trail: rising shares change their value; blocked money is not a withdrawal; an order talked about again is not paid again.
 - A message marked (changed): its records as the edited text now has them.
 
 TIME PASSING
-- What recurs (pay, an allowance, support, rent, bills, subscriptions, a membership, a loan repayment) is one "regular" record, written once when the story or the owner's life shows it; the app pays it on its days. A change to it is the same record with the new "amount" or "status".
-- DAYS PASSED: the owner lived each of those days too. Besides what the scenes show and the regular ones, the phone would show what fits their life that day: a few payments${delivery ? `, orders or deliveries` : ''}${!delivery ? ` or orders` : ''}. A span of many days: a few records for the whole of it (groceries, meals out, getting around), dated within it.
+- What recurs (pay, an allowance, support, rent, bills, subscriptions, a membership, a loan repayment) is one "regular" record, written once when the story or the owner's life shows it; the app pays it on its days. A rent day or a payday is that regular, not a one-off payment. A change to it is the same record with the new "amount" or "status".
+- DAYS PASSED: the owner lived through those days too. Fill in the life the scenes left out, shaped by this owner's tastes, habits, moods, circumstances and experiences in the story. Write the financial records that follow, beyond those already shown or handled by regular records. What happens each day determines the kinds and number of records, their amounts, timing and how money moves. Most days leave some records; a few leave none; familiar routines may recur. Each record is dated on its own day.
 - Write any missing "regular" records that the owner's life plainly has (pay or an allowance, rent, a phone bill, subscriptions), using OWNER PROFILE and MONEY NOW; a card account with no "billDay" gets one.
 
 WHICH TYPE
@@ -372,9 +374,10 @@ WHICH TYPE
 - One thing may need two types, like a new order and the payment for it.
 
 PAYMENTS
+- Paying more for a stay or a booking already on the phone (an extension, a change): write that ticket again with its new dates, besides the payment.
 - Bank and card movements go in "payment". What the owner pays for now (an order, a ticket${delivery ? `, a delivery` : ''}, an asset, a debt, a regular paid by hand) has its payment in the same message, its "for" naming that record; money got back from a loan the owner gave too.
 - The owner's share only: the stated split, or a plausible one. Paid by someone else, or with cash already in hand: no payment.
-- A card purchase goes on the card's account; a refund is plus. No money is made up to cover a payment; a balance may go below zero.
+- A card purchase goes on the card's account; a refund is plus. A card's bill is paid by the app on its bill day: never write it as a payment. No money is made up to cover a payment; a balance may go below zero.
 - Family, company and expected money is not the owner's cash: "whose" and "status": "expected" say so.
 - A cancelled paid order normally gets a refund. Infer its amount and timing from context and existing records unless the story indicates otherwise.${invest ? `
 
@@ -390,7 +393,7 @@ DELIVERY
 - A shop not in DELIVERY SHOPS: "newShop" with 2 to 4 dishes, the one ordered among them.` : ''}
 
 LANGUAGE
-Names fit the owner's country. A name not in Korean gets "ko". People come from the story.
+Names fit the owner's country. A name not in Korean gets "ko". People paid or paying may be made up; never a new relative or partner.
 
 JSON (one object, nothing before or after it)
 { "records": [{
@@ -406,12 +409,12 @@ JSON (one object, nothing before or after it)
     "status",
     "made": [the fields made up],
 
-    payment: "amount": the money moved, minus for money out; "date": when it moved; "account": last 4 digits${invest ? ` or "broker:EUR"` : ''}, "kind": "card" | "transfer" | "deposit" | "cash" (taken out of the account as cash), "who", "ko", "memo", "fee": on top, on money sent, "rate": for a currency other than the account's, "for": a name of the record it pays, or ""
+    payment: "amount": the money moved, minus for money out; "date": when it moved; "account": last 4 digits${invest ? ` or "broker:EUR"` : ''}, "kind": "card" | "mobile" | "transfer" | "deposit" | "cash" (taken out of the account as cash): abroad is a card or mobile payment in its "currency"; a refund is plus, the way it was paid; savings and money sent or received are transfers; "who", "ko", "memo", "fee": on top, on money sent, "rate": for a currency other than the account's, "for": a name of the record it pays, or ""
     regular: "amount": each time, minus for money out; "date": its first day; "frequency": "monthly" | "weekly" | "yearly"; "day": the day of the month or the weekday; "account": last 4 digits; "who": who pays it or is paid, "ko"; "for": the debt it pays, or ""; "status": "active" | "stopped"
-    order: "amount": one item's price; "date": when ordered; "shop", "option", "qty", "status": "ordered" | "shipped" | "on the way" | "delivered" | "cancelled" | "returning" | "returned" | "refunded", "eta": "MM-DD", "gift": who it is for, "sender": who sent it to the owner, "payer": "owner" | "someone else" | "on delivery"
-    ticket: no "amount" (its price is the payment); "date": the day of travel, the event or check-in; "until": "MM-DD", the last day of a stay or membership; "kind": "flight" | "train" | "hotel" | "event" | "membership" | "other", "by": airline, line, hotel, venue or club, "from", "to", "seat", "gate", "no"
-    asset: "amount": its whole value now; "date": when the owner got it; "kind": "property" | "vehicle" | "business" | "valuable" | "deposit" | "receivable" (money owed to the owner) | "investment" | "other", "whose": "owner" | "shared" | "family" | "company", "status": "held" | "expected" | "blocked" | "sold" | "lost", "conditions"
-    debt: "amount": what is owed now; "date": when it was taken on; "kind": "loan" | "mortgage" | "personal" | "tax" | "other", "lender", "whose", "due": "MM-DD", "status": "open" | "paid" | "overdue" | "forgiven", "conditions"
+    order: "amount": one item's price; "date", "time": when ordered, made up to fit when not told; "shop", "option", "qty", "status": "ordered" | "shipped" | "on the way" | "delivered" | "cancelled" | "returning" | "returned" | "refunded", "eta": "MM-DD", "gift": who it is for, "sender": who sent it to the owner, "payer": "owner" | "someone else" | "on delivery"
+    ticket: no "amount" (its price is the payment); "date": the day of travel, the event or check-in; "until": "MM-DD", the last day of a stay or membership (a stay extended moves it); "status": "booked" | "used" | "cancelled"; "kind": "flight" | "train" | "hotel" | "event" | "membership" | "other", "by": airline, line, hotel, venue or club, "from", "to", "seat", "gate", "no"
+    asset: "amount": its whole value now; "date": when the owner got it, made up to fit when not told, never the day it is mentioned; "year": that year; "kind": "property" | "vehicle" | "business" | "valuable" | "deposit" (money in another bank or a trust) | "receivable" (money someone owes the owner) | "investment" | "other", "whose": "owner" | "shared" | "family" | "company", "status": "held" | "expected" | "blocked" | "sold" | "lost", "conditions"
+    debt: "amount": what is owed now; "date": a plausible earlier day it began (made up when untold; today only if it began today); "year": that year; "kind": "loan" | "mortgage" | "personal" | "tax" | "other", "lender", "whose", "due": "MM-DD", "status": "open" | "paid" | "overdue" | "forgiven", "conditions"
     account: "amount": the money in it when opened, none for a card account; "date": when opened; "kind": "checking" | "savings" | "credit", "last4" when known, for a card "billDay": the day of the month its bill is paid and "paidFrom": the account it is paid from, "balance": for one already on the phone, when the story implies it, the account's resulting balance at this point in the story, including payments reported up to that point, with "memo": the story context behind this balance, in a few words; "status": "open" | "blocked" | "closed", "reason"
     card: "account": last 4 digits, "exp": "MM/YY"${invest ? `
     trade: "amount": a dividend's total only; "date": when traded; "kind": "buy" | "sell" | "dividend", "symbol", "ko", "quantity", "price": per share, "fee"
@@ -422,6 +425,7 @@ JSON (one object, nothing before or after it)
     cart: "shop", "items": [like a delivery's]` : ''}
 }] }
 Use the message's day for a current change unless the story gives another time.
+With DAYS PASSED, about as many records for those days as its first line says.
 Numbers are plain JSON numbers. Nothing for the owner's money: "records": [].`;
 }
 
@@ -1404,23 +1408,32 @@ const OWED_TRIES = 2;
 // one list of records per event, its two steps together (되돌리기 keeps an event's records that can't go back)
 const byEvent = xs => { const out = new Map(); for (const x of xs) out.set(x.id, [...(out.get(x.id) || []), ...(x.effects || [])]); return [...out]; };
 const MONEY_PATH = /^(money|investment|delivery)\./;
+const SPAN_MAX = 60, ON_DAY = ['payment', 'order', 'trade', 'delivery'];
 // DAYS PASSED: the story days these messages moved past (from the phone's day before the round to the day before its new
 // one), each with the message it ended in (the first whose event is on a later day, else the round's last): the latest
-// seven one by one, a longer stretch before them as one span
+// 31 one by one, a longer stretch before them as one span
+const DAYS_EACH = 31;
 const WEEKDAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 function daysPassed(was, now, known, events, last) {
     const a = String(was || '').slice(0, 5), b = String(now || '').slice(0, 5);
-    if (!/^\d{2}-\d{2}$/.test(a) || !/^\d{2}-\d{2}$/.test(b) || !Number.isInteger(last) || last < 0) return '';
+    if (!/^\d{2}-\d{2}$/.test(a) || !/^\d{2}-\d{2}$/.test(b) || !Number.isInteger(last) || last < 0) return null;
     const gap = dayGap(a, b);
-    if (!(gap > 0)) return '';
+    if (!(gap > 0)) return null;
     const y = Number(known) || 2000, start = new Date(Date.UTC(y, Number(a.slice(0, 2)) - 1, Number(a.slice(3, 5))));
     const day = k => { const d = new Date(start); d.setUTCDate(d.getUTCDate() + k); return { md: `${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`, wd: known ? ` ${WEEKDAY[d.getUTCDay()]}` : '' }; };
     const dated = arr(events).filter(e => Number.isInteger(e.at) && /^\d{2}-\d{2}$/.test(e.date || '')).sort((x, z) => x.at - z.at);
     const endedIn = md => dated.find(e => dayGap(md, e.date) > 0)?.at ?? last;
-    const lines = [], each = Math.min(gap, 7);
-    if (gap > each) { const f = day(0), t = day(gap - each - 1); lines.push(`- ${f.md} to ${t.md} (${gap - each} days, ended by #${endedIn(t.md)})`); }
+    // (one line a day: a stretch on one line got a few records for all of it, run60 · run62)
+    const lines = [], each = Math.min(gap, DAYS_EACH);
+    let span = null;
+    if (gap > each) { const f = day(0), t = day(gap - each - 1), n = gap - each; span = [f.md, t.md]; lines.push(`- ${f.md} to ${t.md} (${n} days, ended by #${endedIn(t.md)})`); }
     for (let k = gap - each; k < gap; k++) { const d = day(k); lines.push(`- ${d.md}${d.wd} (ended in #${endedIn(d.md)})`); }
-    return lines.join('\n');
+    // (how many, as a number, the way the bank's fill asks: with none, the model wrote a month of nothing, run61 · 63)
+    // (one number, not a range: with a range the model took its low end, one a day, run64)
+    const about = Math.min(Math.round(gap * 1.5), 90);
+    // (and how many not by card, as a number too: told only in words, every one was a card, run66 · 67)
+    const other = Math.max(1, Math.round(about / 3));
+    return { text: [`${gap} day${gap > 1 ? 's' : ''}: about ${about} records in all, about ${other} of them not by card; most days one to three, some none; where, what and how money moves are this owner's (for instance card, mobile pay, money sent or received, cash taken out, payment abroad, refund, savings, currency exchange).`, ...lines].join('\n'), span };
 }
 async function moneyStage(m, p, owner, c) {
     const s = p.sync, out = { late: [], owed: [], notes: [], changes: [], apps: new Set() };
@@ -1441,7 +1454,7 @@ async function moneyStage(m, p, owner, c) {
     const asked = [...new Set([...msgs, ...targets.map(t => t.at).filter(Number.isInteger)])].sort((x, y) => x - y);
     // a record names one of these messages, or one an archive section read now covers
     const allowed = at => msgs.has(at) || targets.some(t => t.at === at) || evidence.some(x => at >= x.first && at <= x.last);
-    if (!asked.length && !evidence.length && !c.passed) return out;
+    if (!asked.length && !evidence.length && !c.passed?.text) return out;
     // owed: tried once more next round, then skipped (the note says how many messages)
     const owing = { again: [], skipped: [] };
     const owe = (at, why, alone = false) => {
@@ -1472,7 +1485,7 @@ async function moneyStage(m, p, owner, c) {
         money ? `[MONEY NOW]\n${JSON.stringify(money)}` : '', invest ? `[INVESTMENTS NOW]\n${JSON.stringify(invest)}` : '',
         money && p.delivery ? `[DELIVERY SHOPS]\n${(p.delivery.shops || []).map(x => x.name).join('\n') || '(none yet)'}${p.delivery.cart?.items?.length ? `\nCART (in the basket, not ordered): ${p.delivery.cart.shop}: ${p.delivery.cart.items.map(x => `${x.qty || 1}× ${x.name}`).join(', ')}` : ''}` : '',
         p.wealthPlan ? `[WEALTH]\n${JSON.stringify({ currency: p.wealthPlan.currency, deposits: p.wealthPlan.deposits, investments: p.wealthPlan.investments, basis: p.wealthPlan.basis })}` : '',
-        c.passed ? `[DAYS PASSED]\n${c.passed}` : '',
+        c.passed?.text ? `[DAYS PASSED]\n${c.passed.text}` : '', money ? (x => (x ? `[MISSING ON THE PHONE]\n${x}` : ''))(moneyMissing(p)) : '',
         c.known ? `[STORY YEAR]\n${c.known}` : '', dayList.length ? `[CALENDAR]\n${dayList.join('\n')}` : '',
         `[OWNER]\n${owner}`, c.profile || '', namesBlock(m),
     ].filter(Boolean).join('\n\n');
@@ -1508,15 +1521,27 @@ async function moneyStage(m, p, owner, c) {
             if (!r || typeof r !== 'object') continue;
             const at = Number(String(r.at ?? '').replace(/^\s*#/, ''));
             if (!Number.isInteger(at) || !allowed(at)) { bad++; continue; }
+            // (an estimated price is the newest day's: the brokerage moves on to it)
+            if (String(r.type || '').toLowerCase() === 'quote' && r.amountFrom === 'guess' && /^\d{2}-\d{2}$/.test(c.nowDay || '')) r.date = c.nowDay;
             if (!byAt.has(at)) byAt.set(at, []);
             byAt.get(at).push(r);
         }
         if (bad) out.notes.push(`돈 기록 ${bad}개는 어느 메시지인지 몰라서 넣지 않았어요`);
+        // (a long stretch of skipped days: 20 records at most for it, the rest left out and said)
+        const span = c.passed?.span;
+        if (span) {
+            let n = 0, over = 0;
+            const inSpan = r => { const d = when(r.date).slice(0, 5); return /^\d{2}-\d{2}$/.test(d) && dayGap(span[0], d) >= 0 && dayGap(d, span[1]) >= 0; };
+            for (const [at, rs] of byAt) byAt.set(at, rs.filter(r => !inSpan(r) || ++n <= SPAN_MAX || !++over));
+            if (over) out.notes.push(`건너뛴 날의 돈 기록 ${over}개는 너무 많아서 넣지 않았어요`);
+        }
         for (const [at, rs] of [...byAt].sort((x, y) => x[0] - y[0])) {
             const id = eventAt(at), t = targets.find(x => x.id === id);
             // (one message's records on different days, a skipped day's spending: each day on its own)
             const byDay = new Map();
-            for (const r of rs) { const d = when(r.date).slice(0, 5) || dayAt(at); if (!byDay.has(d)) byDay.set(d, []); byDay.get(d).push(r); }
+            // (by the day it happened: a payment, an order, a trade, a delivery; any other record's "date" is no such day (a
+            // regular's first day, when an asset was got), and it goes on its message's day)
+            for (const r of rs) { const d = (ON_DAY.includes(String(r.type || '').toLowerCase()) && when(r.date).slice(0, 5)) || dayAt(at); if (!byDay.has(d)) byDay.set(d, []); byDay.get(d).push(r); }
             const named = rs.map(r => line(arr(r.names)[0] || r.who || r.shop || r.by || r.symbol || r.memo || '', 30)).filter(Boolean);
             for (const [d, dayRecs] of byDay) groups.push({ id, at, date: d, time: t?.date === d ? t.time || '' : '', summary: t?.summary || `돈: ${[...new Set(named)].slice(0, 3).join(', ') || `#${at}`}`, quote: t?.quote || '', money: recordsMoney(dayRecs), mine: !t });
         }
@@ -3284,7 +3309,7 @@ STORY OR INVENTED
 - Rent, wages, bills and subscriptions: invent them, fitting the owner's job and life, unless the story gives them.
 - Besides the story's, 2 to 4 everyday online orders fitting the owner (household things, books, clothes), with no "ev".
 - An amount the story gives stays as it is: whose it is, its currency, its date and what it was for. A company's value, a transfer or an old balance is not what the owner has in the bank now.
-- Balances, last four digits, card expiry dates, everyday payments (coffee, groceries, transit), and amounts the story doesn't give: invent them, fitting the owner's life, job and country. The deposits together fall within FINANCIAL SCALE.
+- Balances, last four digits, card expiry dates, everyday payments (coffee, groceries, transit), and amounts the story doesn't give: invent them, fitting the owner's life, job and country. Paid the ways this owner pays, not all by card (mobile pay, money sent to people, cash taken out). The deposits together fall within FINANCIAL SCALE.
 - Company money, family money and an inheritance still to come are not the owner's cash. Don't invent a trust or a restriction to explain a small balance.
 - People (who money goes to or comes from): only people the story or PEOPLE AROUND has, or a shop, a landlord, an employer the owner's life plainly has.
 - A booking the story has carries the details a real one would (a booking number, a seat, a gate, a delivery date), made up to fit.
@@ -3312,7 +3337,7 @@ JSON (one object, nothing before or after it)
   "bank": { "name", "accounts": [{ "id": its id in EXISTING ACCOUNTS or REBUILD ACCOUNTS, or "", "kind": "checking" | "savings" | "credit", "name", "last4", "currency": three-letter code, "balance": number }] },
   "cards": [{ "account": last4, "exp": "MM/YY" }],
   "tx": [{ "account": last4, "who": merchant or person, "ko", "amount": number (minus for money out), "time": "MM-DD HH:MM",
-           "kind": "card" | "transfer" | "deposit" | "cash", "memo", "pending": true or false, "ev" }],
+           "kind": "card" | "mobile" | "transfer" | "deposit" | "cash", "memo", "pending": true or false, "ev" }],
   "passes": [{ "kind": "flight" | "train" | "hotel" | "event" | "other", "by": airline, line, hotel or venue, "from", "to",
                "date": "MM-DD", "time": "HH:MM", "seat", "gate", "no", "status", "made": [the fields made up to fit, like "no", "seat"], "ev" }],
   "orders": [{ "shop", "item", "ko", "option", "qty", "price": number, "time", "status": "ordered" | "shipped" | "on the way" | "delivered" | "unknown",
@@ -3387,7 +3412,7 @@ export function parseMoney(raw, country = '') {
         bank: { name: line(raw.bank?.name, 40) || 'Bank', accounts },
         cards: arr(raw.cards).map(c => ({ account: acctOf(c?.account), exp: line(c?.exp, 5) })).filter(c => accounts.some(a => a.last4 === c.account)).slice(0, 6),
         // a record on no account the bank has is shown nowhere: left out; money in with no kind is a deposit
-        tx: arr(raw.tx).map(x => withEv({ account: acctOf(x?.account), who: line(x?.who, 60), ko: ko(x?.ko), amount: num(x?.amount), time: when(x?.time), kind: pick(x?.kind, ['card', 'transfer', 'deposit', 'cash'], num(x?.amount) > 0 ? 'deposit' : 'card'), memo: line(x?.memo, 80), pending: x?.pending === true }, x)).filter(x => x.who && x.amount !== null && x.amount !== 0 && x.account).slice(-30),
+        tx: arr(raw.tx).map(x => withEv({ account: acctOf(x?.account), who: line(x?.who, 60), ko: ko(x?.ko), amount: num(x?.amount), time: when(x?.time), kind: x?.kind === 'mobile' ? 'card' : pick(x?.kind, ['card', 'transfer', 'deposit', 'cash'], num(x?.amount) > 0 ? 'deposit' : 'card'), ...(x?.kind === 'mobile' ? { mobile: true } : {}), memo: line(x?.memo, 80), pending: x?.pending === true }, x)).filter(x => x.who && x.amount !== null && x.amount !== 0 && x.account).slice(-30),
         passes: arr(raw.passes).map(x => withEv({ kind: pick(x?.kind, ['flight', 'train', 'hotel', 'event', 'other'], 'other'), by: line(x?.by, 60), from: line(x?.from, 40), to: line(x?.to, 40), date: when(x?.date).slice(0, 5), time: hhmm(x?.time), seat: line(x?.seat, 12), gate: line(x?.gate, 12), no: line(x?.no, 24), status: line(x?.status, 30), ...(madeOf(x).length ? { made: madeOf(x) } : {}) }, x)).filter(x => x.by).slice(-10),
         orders: arr(raw.orders).map(x => withEv({ shop: line(x?.shop, 60), item: line(x?.item, 80), ko: ko(x?.ko), option: line(x?.option, 60), qty: Math.max(1, Math.round(num(x?.qty) || 1)), price: num(x?.price), time: when(x?.time), status: pick(x?.status, ['ordered', 'shipped', 'on the way', 'delivered', 'unknown', 'cancelled', 'returning', 'returned', 'refunded'], 'unknown'), eta: when(x?.eta).slice(0, 5), arrived: when(x?.arrived).slice(0, 5), gift: giftOf(x?.gift) }, x)).filter(x => x.item).slice(-12),
     };
