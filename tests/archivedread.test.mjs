@@ -807,7 +807,7 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.match(on, /"photos": \[\{ "caption", "ko", "time", "mood" \}\]/);
     assert.match(on, /The diary: an entry when a story day ends in these messages or a scene stays with them, as long as this owner would write it;/);
     assert.match(on, /Voice memos: about one every few days/);
-    assert.match(on, /\nTHE STORY IS CANON\n- The story is canon\. Your work is one of two things: find the events in the story and write within what it tells, or write the everyday life outside it\.\n- Never get ahead of anything tied to the story's events\. Never make up the story's future because it would fit\. Make up no event, outcome, ending, secret, new fact, reason, full account or plan\./);
+    assert.match(on, /\nTHE STORY IS CANON\n- The story is canon: write within what it tells, or the everyday life outside it\.\n- Never get ahead of its events: make up no event, outcome, ending, secret, new fact, reason, full account or plan of theirs;/);
     assert.match(on, /photo: "caption", "ko", "time", "mood"/);
     assert.ok(!on.includes('talk over each other') && on.includes('Contact goes both ways; a group chat may go on without them.'));
     assert.ok(on.includes('Posts only if this owner posts.') && !on.includes('Not every app every day') && !on.includes('only if this owner keeps them'));
@@ -1145,7 +1145,7 @@ test('life records that answer a scene ("scene" its id) go on it and the day\'s 
     // (they are the scene's: on its event)
     assert.ok(c.p.sync.events.bar);
     assert.match(T.sys, /each item with "scene" when it answers one/);
-    assert.match(T.sys, /- In a record about the story's people or events, anything a later message could contradict is a new fact\. What the messages already say may be said again\./);
+    assert.match(T.sys, /- About the story's people or events, anything a later message could contradict is a new fact: a task and its deadline \("check the moodboards by 18:00"\), a thing done \("uploaded it"\), a plan for later \("ramyeon tonight\?"\)\. What the messages already say may be said again\./);
 });
 
 test('the answer\'s "everyday" lists: each app the owner\'s own life, on its scene when it answers one; counted as life', async () => {
