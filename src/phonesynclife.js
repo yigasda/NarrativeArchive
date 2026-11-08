@@ -4,7 +4,9 @@
 // changed since stays as it is.
 // The model's records are cleaned here too, for the first fill (phonelife.js) and for a reflection alike.
 import { arr, hhmm, ko, line, num, pad, pick, when, withEv } from './phoneparse.js';
-import { appOf, kindOfApp } from './phonescreen.js';
+import { appOf, kindOfApp, KR_ONLY, homeScreen } from './phonescreen.js';
+// (for the reflection, which reads the screen apps through here)
+export { KR_ONLY, homeScreen };
 
 export const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 export const CONDS = ['clear', 'partly', 'cloudy', 'drizzle', 'rain', 'sleet', 'snow', 'fog', 'storm', 'wind'];

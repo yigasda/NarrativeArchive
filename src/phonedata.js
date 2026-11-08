@@ -23,7 +23,7 @@ import { rememberStory, dateOrderSource, htmlClocks, htmlDatedClocks, htmlTimeCo
 import { clockFallback, exactClockShift } from './phoneclock.js';
 import { PLACE } from './phonemapcity.js';
 export { tidyKo, arr, gapDays, giftOf, hhmm, jsonOf, ko, last4, line, num, pad, pick, storyMin, byStory, str, when, withEv };
-import { COUNTRY_TZ, applyDays, applyLife, applyWeather, cardClock, cityAt, dayGap, dlvClock, fillDays, lifeClock, lifeNow, weatherFrom, zoneShift } from './phonesynclife.js';
+import { COUNTRY_TZ, KR_ONLY, applyDays, applyLife, applyWeather, cardClock, cityAt, dayGap, dlvClock, fillDays, homeScreen, lifeClock, lifeNow, weatherFrom, zoneShift } from './phonesynclife.js';
 import { applyMoney, dlvTotal, investNow, moneyMissing, moneyNow, orderClock, payOrders, recordsMoney, regularClock, replayEffects, revertEffects } from './phonesyncmoney.js';
 import { isDone, pruneDropped, srcOf, addFrom, orphanOf, itemMark, edited, busy, exclusive, joinComments, realign, bodyMark, newSync, syncOf, makeMark, settleMarks, pickRound, unreadCount, addDone, settleRound, archiveRound, archivedUnread, readBefore, reachesEnd, quoted, journalAdd, journalRead, journalWrite } from './phonesync.js';
 
@@ -406,7 +406,7 @@ SCREEN TIME
 - "screen" on each "health" record: that day's phone use, from their character, not their polite profile; it may show habits they would never admit, for instance a game they can't put down, texting all night, barely touching the phone.
 - Each day follows what happened and how they felt, in their own habits (LIFE NOW's usual), plus any other app that day called for (a trip: maps, a translator).
 - It agrees with the other apps that day: hours of texts are hours in the chat app; the last text or search is no later than "late".
-- The apps people use where the owner lives, by their real names.
+- Mostly the apps people use where the owner lives, by their real names; another country's app only when the story shows them using it.
 - Numbers only.` : ''}
 
 KEEPING IN STEP
@@ -745,6 +745,15 @@ function everydayOn(raw, rows, textAt) {
 const REC_KEY = { contact: 'contacts', text: 'threads', call: 'calls', photo: 'photos', note: 'notes', search: 'searches', calendar: 'events', post: 'posts', mail: 'mails', diary: 'diary', visit: 'visits', voice: 'voice', alarm: 'alarms', timer: 'timers', file: 'files', health: 'health' };
 const REC_META = ['type', 'at', 'from', 'scene', 'already', 'made', 'kind', 'sender'];
 const atNum = v => Number(String(v ?? '').replace(/^\s*#/, ''));
+// the screen time an answer writes (each day's, a habit's new apps), without the apps only Korea has when the owner lives
+// elsewhere: a day's minutes go to their usual app of that kind, a new app is left out
+export function homeScreens(raw, away, usual) {
+    if (!away || !raw || typeof raw !== 'object') return;
+    const day = d => { if (d && typeof d === 'object' && d.screen && typeof d.screen === 'object') d.screen = homeScreen(true, d.screen, usual); };
+    const habit = u => { const add = u?.screen?.add; if (Array.isArray(add)) u.screen.add = add.filter(a => !KR_ONLY.test(String(a?.app ?? ''))); };
+    for (const e of arr(raw.events)) { if (!e?.phone || typeof e.phone !== 'object') continue; arr(e.phone.health).forEach(day); habit(e.phone.usual); }
+    arr(raw.days).forEach(day);
+}
 export const recordCount = recs => { const xs = arr(recs).filter(r => r && typeof r === 'object'); return { scenes: xs.filter(r => r.type === 'scene').length, story: xs.filter(r => r.type !== 'scene' && r.from !== 'life').length, life: xs.filter(r => r.type !== 'scene' && r.from === 'life').length }; };
 export function recordsCore(raw, textOf = () => '') {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw) || !Array.isArray(raw.records)) return raw;
@@ -1950,6 +1959,8 @@ async function updatePhone(m, owner) {
         const answer0 = jsonOf(out), core0 = recordsCore(answer0, i => coreText.get(i));
         // (how many scenes, story and life records the answer had: for checking the story isn't crowded out)
         const recCount = Array.isArray(answer0?.records) ? recordCount(answer0.records) : null;
+        // (no app only Korea has on a phone whose owner lives elsewhere, as the screen time's fill)
+        homeScreens(core0, !!homeCountry(p) && homeCountry(p) !== 'KR', p.life?.health?.usual?.screen);
         // the answer is for the chat and messages it was asked about
         if (phoneChatScope(ctx()) !== scope || m.phones?.[key] !== p) throw new Error('반영하는 사이 채팅이나 폰이 바뀌었어요. 다시 해 주세요');
         if (p.money?.at !== made.money || p.investment?.at !== made.invest) throw new Error('반영하는 사이 은행이나 투자가 새로 만들어졌어요. 다시 해 주세요');

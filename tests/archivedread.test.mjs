@@ -1125,3 +1125,20 @@ test('recordsCore: the old answer as it is; health of a story day on its scene, 
     assert.deepEqual(got.everyday.mails, [{ from: 'Zalando', subject: 'Sale', time: '10-26 10:00' }]);
     assert.ok(!('records' in got));
 });
+
+test('no app only Korea has on the screen time of an owner who lives elsewhere: a day\'s minutes to their usual app of that kind, a new one left out', () => {
+    const usual = { apps: [{ app: 'WhatsApp', kind: 'chat', min: 60 }, { app: 'YouTube', kind: 'video', min: 40 }] };
+    const raw = { events: [{ id: 'a', phone: { health: [{ date: '10-26', screen: { apps: { KakaoTalk: 90, YouTube: 30, '카톡': 10 }, pickups: 80 } }], usual: { screen: { add: [{ app: 'KakaoTalk', kind: 'chat', min: 30 }, { app: 'Duolingo', kind: 'other', min: 10 }] } } } }],
+        days: [{ date: '10-25', screen: { apps: { 'Naver Map': 20, WhatsApp: 15 } } }] };
+    const ko = structuredClone(raw);
+    data.homeScreens(raw, true, usual);
+    assert.deepEqual(raw.events[0].phone.health[0].screen.apps, { WhatsApp: 100, YouTube: 30 });
+    assert.equal(raw.events[0].phone.health[0].screen.pickups, 80);
+    assert.deepEqual(raw.events[0].phone.usual.screen.add.map(a => a.app), ['Duolingo']);
+    // (a map app with no map app in their usual: its minutes go nowhere)
+    assert.deepEqual(raw.days[0].screen.apps, { WhatsApp: 15 });
+    // an owner in Korea keeps them all
+    const same = structuredClone(ko); data.homeScreens(same, false, usual);
+    assert.deepEqual(same, ko);
+    assert.match(data.coreSystem({ life: true }), /Mostly the apps people use where the owner lives, by their real names; another country's app only when the story shows them using it\./);
+});
