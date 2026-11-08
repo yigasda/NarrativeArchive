@@ -344,49 +344,36 @@ const CORE_TIMES = `- Times are "MM-DD HH:MM"; a year only as STORY YEAR or the 
 export function coreRecordsSystem({ life = false, weather = false, tracker = false, zone = false, archiveOnly = false, wallet = false, split = true } = {}) {
     const lifeTypes = life ? ' | "alarm" | "timer" | "file" | "health" | "usual"' : '';
     return `${split ? 'STAGE: core\n' : ''}GOAL
-Keep the owner's phone in step with the story. Role-play rarely says what the owner texted, searched, photographed or saved. Read what happened and what these hours were like for the owner. Write the story's trail and the owner's own life on their phone, whether or not the story mentions it, with details made up to fit the owner, the people and the moment. The app links records to their messages, merges them and keeps what is already there.
+Keep the owner's phone in step with the story. Role-play rarely says what the owner texted, searched, photographed or saved. Write the story's trail and the owner's own life on their phone, details made up to fit. The app links records to their messages and keeps what is already there.
 
 YOU GET
 - NEW MESSAGES: the messages to read now, numbered (#123).
 - ARCHIVE FOR THESE MESSAGES (sometimes): summaries covering them or a stretch archived before the phone read it; evidence like the messages.
-- Background only (sometimes): ARCHIVE BEFORE, STORY NOW, WORLD, LOREBOOK, OWNER PROFILE, STORY YEAR, and DAYS (the days ahead with weekdays: "on Friday" is the next one there).
-- The phone: PHONE NOW (its "now": when it was last read), EVENTS ON THE PHONE (its scenes, with ids)${life ? ', LIFE NOW (alarms, files and health days, with ids)' : ''}, and sometimes MESSAGES READ BEFORE, NOW CHANGED (edited messages, with the scenes they gave).${weather && tracker ? `
+- Background only (sometimes): ARCHIVE BEFORE (the section just before), STORY NOW, WORLD, OWNER PROFILE, STORY YEAR, and DAYS (the days ahead with weekdays: "on Friday" is the next one there).
+- The phone: PHONE NOW (its "now": when it was last read), EVENTS ON THE PHONE (its latest scenes, with ids)${life ? ', LIFE NOW (alarms, files and health days, with ids)' : ''}, and sometimes MESSAGES READ BEFORE, NOW CHANGED (edited messages, with the scenes they gave).${weather && tracker ? `
 - WEATHER NOW: the date, time, place and weather from the chat's last status line (a scene the owner isn't in: its place and weather only).` : ''}
 - OWNER'S CLOCK (sometimes): where the owner is, their time now, and the hours to other cities and people.
 - PEOPLE AROUND (sometimes): people in the owner's life and where things stand now.
 - OWNER, and OWNER DOESN'T KNOW (sometimes): nothing on the phone may show it.
 
-${archiveOnly ? '' : `${CORE_CLOCK_FIRST}\n${CORE_TIMES}\n\n`}READING THE STORY
-- The story comes first: every scene and its trail on the phone are written before any record of the owner's own life. A life record never takes a story record's place.
-- Everything that happens in these messages is a "scene"; a scene that would leave anything on the phone gets those records too.
-- Ask what the owner's phone would show after these scenes. Scenes leave a trail on a phone without saying so, for instance a text after a fight, a photo of dinner, a search before a trip, a missed call in a meeting, a note of what someone asked for.
-- A plan made in these messages goes in the calendar; what is planned hasn't happened yet (no photo of it).${wallet ? `
-- A ticket (a flight, a train, a hotel stay, a show, a membership) goes in the wallet, and the calendar shows it from there: never a calendar record for it. A reservation or an appointment is still one.` : ''}
+${archiveOnly ? `TIMES\n${CORE_TIMES}` : `${CORE_CLOCK_FIRST}\n${CORE_TIMES}`}
+
+THE STORY
+- The story comes first: every scene in these messages ("scene" records) and its trail on the phone, before any record of the owner's own life. A life record never replaces a story record.
+- Scenes leave a trail without saying so, for instance a text after a fight, a photo of dinner, a search before a trip. A story record holds what the messages show or plainly imply, details made up to fit.
+- A plan goes in the calendar and hasn't happened yet.${wallet ? ' A ticket goes in the wallet, never in the calendar; a reservation or an appointment still goes in the calendar.' : ''} Never a booking, trip or purchase the story doesn't have.
 
 THE OWNER'S LIFE
-- The phone is lived in even when the story says nothing about it. The owner's life runs through it every waking hour, shaped by their job or school, habits, tastes, moods, money, city and relationships.
-- The owner may reach out, not only answer, as their character and relationships lead them to.
-- Other people bring their own lives to the phone: news, questions, photos or favours. A group chat may go on without the owner.
-- Their interests and how these hours feel show in what they look up, save, write, photograph and share. Mails and reminders fit the people, places and services they deal with.
-- Habits recur.
-- PEOPLE AROUND turn up wherever they would on a real phone, whether or not they are in the scenes. Never someone the owner isn't in touch with now.
-
-ONE DAY ON EVERY APP
-- Every app tells the same day, the way this owner lives it. For instance texts at 3am and a late last look at the phone go with short sleep; a run with a workout and steps; a day out with maps and many steps.
-- Times hang together: the owner does nothing on the phone while they sleep or while a scene keeps their hands busy, unless the story shows it; texts and calls from others still come in.
-- Not every app every day: a day leans on the apps this owner reaches for, and routines repeat.
+- The phone is lived in every waking hour, shaped by their job or school, habits, tastes, moods, money, city and relationships. The owner may reach out; others bring their own lives (news, questions, favours); a group chat may go on without them.
+- About ${LIFE_A_DAY} life records a waking day, about one an hour; days the story skips were lived too (at most ${LIFE_MAX} in all${life ? ', "health" not counted' : ''}), each dated on its day. Not every app every day; routines recur.
+- Every app tells the same day, the way this owner lives it: late-night texts go with ${life ? 'a late "late" and short sleep' : 'a late night'}. The owner does nothing on the phone while asleep or busy in a scene; others' texts and calls still come in.
+- Small happenings of that life are fine; nothing that moves the story (a decision, promise, plan, meeting, secret or change with the story's people).
+- People: the story's, PEOPLE AROUND (wherever they would turn up; never someone the owner isn't in touch with now), and made-up people of their own life, named for where they live; never a new relative or partner. Relationship words only as the story uses them. Someone new texted or called gets a "contact".
 
 THE APPS
-- Texts: as these people really text, for instance a reply hours later, a question left unanswered, a laugh, a link, a plan that fizzles. The owner sounds different with each person, the way they are with them.
-- Group chats: several people talk over each other, and the owner joins in or just reads, as they would; for instance a birthday, something funny, a vote on where to eat.
-- Calls: for instance a short call, a missed call returned later, a long call at night with someone close; work hours and sleep shape them.
-- Photos: what they would really take, for instance food, the sky, a pet, a screenshot, a receipt, the same shot twice; their eye shows in it.
-- Searches: what is on their mind at that hour, for instance a symptom at night, a recipe, a word they heard, a price, a place, a name they are curious about.
-- Mails: from the people and the places in their life, for instance a coworker, a professor, receipts, newsletters, bills, shipping notices, offers left unread.
-- Calendar: the fixed things of their week, for instance a class, a shift, an appointment, a birthday; never each small thing they do.
-- Posts: only if this owner posts, the kind they post, with likes that fit their following and comments from people in their life. The diary and voice memos too only if this owner would keep them.${life ? `
-- Alarms: they move with life, for instance one more before an early day, one switched off after a trip.
-- Files: what piles up, for instance downloads, screenshots, a work or school document, a ticket or a receipt.` : ''}
+- Texts: as these people really text, for instance late replies, unanswered questions, plans that fizzle; the owner sounds different with each person. A text record is one exchange; in a group chat people talk over each other.
+- Calls, photos, searches, mails and the calendar fit their relationships, their eye, what is on their mind and what they have to do; the calendar holds fixed things, never each small thing.
+- Posts, the diary and voice memos only if this owner keeps them.${life ? ' Alarms and files change with life.' : ''}
 
 IN THEIR OWN WORDS (notes, the diary, voice memos)
 - The phone's most personal records: written out in full as this owner would write or say them, never a summary of the day.
@@ -395,86 +382,55 @@ IN THEIR OWN WORDS (notes, the diary, voice memos)
 - Voice memos: spoken, not written: the way the owner talks in the archive and chat, with pauses (…), restarts and half sentences. A moment they could talk into the phone alone, for instance after a fight, on the way somewhere or late at night; for instance an idea, a reminder to self, a tune, words for someone they can't say yet. 20 to 90 seconds of speech, "sec" to fit, "place" where they were. Not the diary told again; no new secrets or story events.${life ? `
 
 HEALTH
-- A "health" record for every story day these messages move into, and for a day in LIFE NOW the story now shows. The day of "now" again every time, with its totals so far (steps, workouts, coffee, water, "screen"), even when nothing new happened.
-- The numbers follow the day: a long night out means short sleep, a day on foot many steps, a lazy Sunday few; a day the story doesn't show is written freely from the owner and their life, still following that day's scenes.
+- A "health" record for each story day these messages reach and for a LIFE NOW day the story now shows; the day of "now" every time, with its totals so far (steps, workouts, coffee, water, "screen"), even with nothing new.
+- Numbers follow the day (a long night out: short sleep; a day on foot: many steps; a lazy Sunday: few); coffee, water, workouts and weight fit their habits (LIFE NOW's usual). A day the story doesn't show is written freely from their life, still following its scenes.
 - Sleep goes on the day they woke: asleep at 01:30 after the evening of 10-25, up at 08:50, is the 10-26 row.
-- Coffee, water, workouts and weight fit the owner and their habits (LIFE NOW's usual).
 - A lasting change to their habits or body these messages state (they lost weight, quit coffee, get up earlier now): a "usual" record with only what changed.
-- Numbers only: no diagnosis, no mood, no reason.
 
 SCREEN TIME
-- "screen" on each "health" record: that day's phone use, from their character, not their polite profile; it may show habits they would never admit, for instance a game they can't put down, texting all night, barely touching the phone.
-- Each day follows what happened and how they felt, in their own habits (LIFE NOW's usual).
-- Each day's "apps": as many as this owner really uses, from LIFE NOW's usual and what that day called for, for instance the weather on a rainy day, the bank on payday, maps on a day out. The apps differ from day to day, so over the days many kinds show up (chat, social, video, music, game, work or study, reading or news, shopping, money, maps or travel, health).
-- A new app they start using, of any kind (chat, social, video, music, game, work or study, reading or news, shopping, money, maps or travel, health), when the story or their life gives a reason, for instance a translator for a trip: a "usual" record with it in "screen"."add".
-- It agrees with the other apps that day: hours of texts are hours in the chat app; the last text or search is no later than "late".
-- Mostly the apps people use where the owner lives, by their real names; another country's app only when the story shows them using it.
-- Numbers only.` : ''}
+- "screen" on each "health" record: that day's phone use, from their character, not their polite profile (it may show habits they would never admit, for instance a game they can't put down, texting all night, barely touching the phone), following that day's events and feelings on top of LIFE NOW's usual.
+- "apps": as many as they really use, from their usual and what the day called for (the weather on a rainy day, the bank on payday, maps on a day out), so days differ and many kinds show up over time. Hours of texts are hours in the chat app; nothing later than "late".
+- A new app of any kind (chat, social, video, music, game, work or study, reading or news, shopping, money, maps or travel, health), when the story or their life gives a reason, for instance a translator for a trip: in a "usual" record's "screen"."add".
+- Mostly apps common where the owner lives, by their real names; another country's only when the story shows them using it.` : ''}${life && weather ? `
 
-KEEPING IN STEP
-- A story record is only what happens in NEW MESSAGES or ARCHIVE FOR THESE MESSAGES. Background and memories of earlier days add nothing.
-- A record already in PHONE NOW${life ? ' or LIFE NOW' : ''} is never written again (new texts in a chat already there are new records; a plan moved or called off is its calendar record again)${life ? '; an alarm or file there is changed with its id as "already" and only what changed (a deleted file: "deleted": true)' : ''}.
-- A scene in EVENTS ON THE PHONE keeps its id. MESSAGES READ BEFORE, NOW CHANGED: their scenes as the edited text now has them, with the ids listed there.
-- A story record holds what the messages show or plainly imply; its details are made up to fit.
-- A record of the owner's life may carry the small happenings of that life (a friend's news, a coworker's question, a sale, a parcel notice), but nothing that moves the story: no decision, promise, plan, meeting, secret or change between the owner and the story's people that a later message could contradict. What the messages already say may come up again.
-- People: only the story's or PEOPLE AROUND, and the people of the owner's own life made up to fit; never a new relative or partner. A relationship word (girlfriend, ex, husband, boss) only if the messages, archive or PEOPLE AROUND use it for them. Someone texted or called who isn't in the contacts yet gets a "contact" record too.
-- Never a booking, a trip or a purchase the story doesn't have. A booking the story has carries the details a real one would (a booking number, a seat, a gate), made up to fit.
-
-TIME PASSING
-- About ${LIFE_A_DAY} records of the owner's life for a whole waking day, in step with the hours these messages cover (an hour: about one; a few minutes: often none). Days these messages skip or spend away from the owner (from PHONE NOW's "now" to the answer's "now") were lived too: about ${LIFE_A_DAY} for each, at most ${LIFE_MAX} in all${life ? ' ("health" records not counted)' : ''}. What happens each day decides its records; most days leave some, a few none; routines recur. Each record is dated on its own day.${life && weather ? `
+WEATHER
 - "weather": ${weatherRule(tracker)}
 - With new weather, also each saved city's "cond", "temp", "hi" and "lo".` : ''}
 
-WHICH TYPE
-- "scene": one for each thing that happens in a message (a dinner, a fight, a flight). Background talk is no scene.
-- Every other record says "from": "story" when the messages or archive show it, "life" when it is the owner's own life (with or without a scene near it); a story record names its "scene".
-- One moment may need several records, like a photo, a post and a text about the same dinner.
-- A text record is one exchange: a person's or a group chat's messages close together.${life ? `
-${LIFE_ONCE} Pictures the camera takes are photos, not files.` : ''}
+KEEPING IN STEP
+- What PHONE NOW${life ? ' or LIFE NOW' : ''} holds is never written again: new texts in a chat are new; a plan moved or called off is its calendar record again${life ? '; an alarm or file changes by its id as "already"' : ''}. A scene in EVENTS ON THE PHONE keeps its id; MESSAGES READ BEFORE, NOW CHANGED: as the edited text now has them, with the ids listed.
 
 LANGUAGE
-- Each text is in the language its writer would really use on a phone: from their nationality and where they live; between two people, the language they share.
-- A text that is not in Korean gets "ko": a natural Korean translation. A Korean text gets no "ko".
-- People write the way they talk in the archive and chat. Texts are short, like real texts.
-- A made-up person's name fits where they live.${archiveOnly ? `
-
-TIMES
-${CORE_TIMES}` : ''}
+- Each text in the language its writer really uses. "ko", "kt", "ks", "pko": the Korean of a text, title, subject or posted photo not in Korean. Texts short.
 
 JSON (one object, nothing before or after it)
-{ ${archiveOnly ? '' : '"clock": { "basis": "default used or switch evidence; time passed", "finalViewpoint": "name", "elapsedTime": null or "3 hours", "sceneTime": "MM-DD HH:MM", "messageSender": null or "name" },\n  '}"now": "MM-DD HH:MM" (${archiveOnly ? 'the moment of the newest message, never a time something is only planned for' : 'the time resolved in CLOCK FIRST'}),
-  "moved": [{ "name": as in OWNER or the messages, "city": in English, "names": [each name the messages and status lines write it as, exactly, then its English and Korean names], "tz": its time zone like "Asia/Seoul", "in": the two-letter country code of "city" }] (only people these messages put in another city, the owner too; else []),${zone ? `
+{ ${archiveOnly ? '' : '"clock": { "basis": "default used or switch evidence; time passed", "finalViewpoint": "name", "elapsedTime": null or "3 hours", "sceneTime": "MM-DD HH:MM", "messageSender": null or "name" },\n  '}"now": "MM-DD HH:MM"${archiveOnly ? ' (the moment of the newest message, never a time something is only planned for)' : ''},
+  "moved": [{ "name", "city": in English, "names": [as the messages write it, then in English and Korean], "tz", "in": its country code }] (people these messages put in another city, the owner too),${zone ? `
   "statusCity": whose clock the newest status line here shows (the app can't place its scene): a city or person in OWNER'S CLOCK, "owner" for the owner's own, another city as { "city": in English, "tz" }, or "" when the messages don't say,` : ''}
-  "records": [{
-    Include only fields applicable to this record; the fields below are not all required.
+  "records": [{ only the fields it needs:
     "type": "scene" | "contact" | "text" | "call" | "photo" | "note" | "search" | "calendar" | "post" | "profile" | "mail" | "diary" | "visit" | "voice"${lifeTypes},
-    "at": the message number it comes from; for an archive section, the message in its range it belongs to; for a record of the owner's life, the message whose hours it falls in; for a skipped day, the message that moved past it,
-    "from": "story" | "life",
-    "scene": the "id" of its scene, or "",
-    ${life ? '"already": an id from LIFE NOW, or "",\n    ' : ''}"time": "MM-DD HH:MM", when it happened (a scene, a calendar item and an alarm say theirs below),
-
-    scene: "id": an id from EVENTS ON THE PHONE, or a short new tag like "berlin-flight"; "quote": a few words copied exactly as written in that message or section, not reworded; "date": "MM-DD", "time": "HH:MM" or "", when it happens (a plan: when it is made); "summary": one short line
-    contact: "name": as the story writes it, else as the owner knows them, "saved": how the owner saved them (a nickname, an emoji, or just the name)
-    text: "with": the person, or a group chat's name (the same name every time); "group": true for a group chat; "members": [everyone in it but the owner, each named as in the contacts and their own chat]; "messages": [{ "from": "me" or the sender's name, "text", "ko", "time", "deleted": true for one the owner deleted }]; "draft": { "text", "ko", "time" } only for a text the owner wrote and didn't send
-    call: "with", "kind": "in" | "out" | "missed", "min": minutes talked, "count": calls in a row (34 missed calls are one record)
-    photo: "caption": what it shows, "ko", "mood": one of ${MOODS.join(', ')}
-    note: "title", "kt": Korean title, "text", "ko"
-    search: "q", "ko", "tab": true if its page is still open on the phone, "mark": true if they bookmarked it
-    calendar: "title", "ko", "date": "MM-DD", "time": "HH:MM" or ""; a plan moved or called off: "was": the date it had, or "cancelled": true
-    post: "text", "ko", "photo": what the posted photo shows or "", "pko": its Korean, "likes": a number, "comments": [{ "from": name, "text", "ko" }]
-    profile: "handle": the owner's SNS name, "bio", "ko", "followers": a number, "following": a number
-    mail: "sender", "subject", "ks": Korean subject, "text", "ko", "unread": true or false
-    diary: "date": "MM-DD", "title", "kt", "text", "ko"
-    visit: "place": a place the owner really went to, as the story writes it (a room, a shop, a house; a city alone when the story names nothing closer there, never the city they live in alone), "city": the city it is in, or "", "home": true when it is the owner's own home, "with": [the people there with them], "already": the id of that same visit in PHONE NOW, else ""
+    "at": its message number (a life record: the message whose hours it falls in), "from": "story" | "life", "scene": its scene's id or "",${life ? ' "already": a LIFE NOW id or "",' : ''} "time": "MM-DD HH:MM",
+    scene: "id" (from EVENTS ON THE PHONE or a new tag like "berlin-flight"), "quote": a few exact words of its message, "date", "time": "HH:MM", "summary"
+    contact: "name", "saved"
+    text: "with": the person or the group chat's name (always the same), "group", "members": [all but the owner, as in the contacts], "messages": [{ "from": "me" or the sender, "text", "ko", "time", "deleted" }], "draft": an unsent { "text", "ko", "time" }
+    call: "with", "kind": "in" | "out" | "missed", "min", "count": calls in a row
+    photo: "caption", "ko", "mood": ${MOODS.join(' | ')}
+    note: "title", "kt", "text", "ko"
+    search: "q", "ko", "tab": still open, "mark": bookmarked
+    calendar: "title", "ko", "date", "time": "HH:MM", "was": its old date, "cancelled"
+    post: "text", "ko", "photo", "pko", "likes", "comments": [{ "from", "text", "ko" }]
+    profile: "handle", "bio", "ko", "followers", "following"
+    mail: "sender", "subject", "ks", "text", "ko", "unread"
+    diary: "date", "title", "kt", "text", "ko"
+    visit: "place": where they really went, as the story writes it (never just their own city), "city", "home", "with", "already": that visit's id in PHONE NOW
     voice: "title", "kt", "text", "ko", "sec", "place"${life ? `
-    alarm: ${inner(LIFE_ALARMS)}
-    timer: ${inner(LIFE_TIMERS)}
-    file: ${inner(LIFE_FILES)}
-    health: "date": the day they woke, "sleep", "wake", "woke": times awake in the night, "steps", "km", "floors", "hr": [low, high], "workouts": [{ "kind", "time", "min", "km" }], "coffee": cups, "coffeeKind", "water": litres, "weight": kg only when they weighed, "screen": { "apps": { app name: minutes }, "pickups", "late": "HH:MM" }
-    usual: ${USUAL_ITEM.trim().replace(/^"usual": \{ /, '').replace(/ \}$/, '')}` : ''}
+    alarm: "time": "HH:MM", "label", "ko", "days": [weekdays], or [] and "date" for one occasion, "on", "wake", "then", "snooze", "snoozeCount", "sound"
+    timer: "label", "ko", "sec"
+    file: "name", "kind", "folder", "size": KB, "time", "from", "pages", "length", "tag", "private", "preview": its first page in a line, "look": sea | city | night | food | hills | pet | sunset | mountain | snow | flower | interior | concert | paper | screenshot | map | ticket | receipt | invoice | cv | letter | certificate | recipe | medical | menu | contract | notes | voice | music, "ko", "opened", "deleted"
+    health: "date": the day they woke, "sleep", "wake", "woke", "steps", "km", "floors", "hr": [low, high], "workouts": [{ "kind", "time", "min", "km" }], "coffee", "coffeeKind", "water", "weight", "screen": { "apps": { app: minutes }, "pickups", "late" }
+    usual: "weight", "height", "coffee", "coffeeKind", "coffeeKo", "water", "bed", "sleep", "wake", "steps", "workouts", "rest", "screen": { "add": [{ "app", "kind": chat | social | game | video | music | work | reading | shopping | money | maps | health | other, "min" }], "drop", "pickups", "late" }` : ''}
   }]${life && weather ? `,\n${WEATHER_JSON}` : ''} }
-In "records": the scenes and their story records first, then the owner's own life.
-Numbers are plain JSON numbers. Nothing new: "records": [].`;
+"records": scenes and story records first, then the owner's own life. Numbers are plain JSON numbers. Nothing new: "records": [].`;
 }
 export const coreSystem = ({ life = false, weather = false, tracker = false, zone = false, archiveOnly = false, wallet = false, split = true } = {}) => coreRecordsSystem({ life, weather, tracker, zone, archiveOnly, wallet, split });
 // 돈 단계 (3.176~): every round's messages, read for what the owner's phone would now show. One list of records.
@@ -966,7 +922,7 @@ const secEnd = s => { const mt = s.title.match(RANGE_HEAD); return mt ? Number(m
 const secFirst = s => { const mt = s.title.match(RANGE_HEAD); return mt ? Number(mt[2]) : -1; };
 const lastEnd = m => Math.max(-1, ...parseSections(String(m.text || '')).filter(s => !s.group).map(secEnd));
 // a reflection's background (the archive before its messages): the newest sections up to this, the rest is old news
-const BEFORE_MAX = 30_000;
+const BEFORE_MAX = 5_000;
 // stretches archived before the phone read them, read from their sections: whole sections, up to this many tokens of
 // section text a round (about 20 sections of 250–280 words). A summary is nearly all events, about 4–5 to 1,000 tokens,
 // so they fit one answer's 40 events and 16,000 tokens (an answer cut short would lose the round). A section is never cut:
@@ -1889,8 +1845,9 @@ async function updatePhone(m, owner) {
         // background is what was read before: never a section read now as evidence, nor one archived and still unread
         const unreadArch = new Set(archivedUnread(s, sections, rows, chatRows()).map(x => x.key)), background = got.background.filter(x => !evidence.some(y => y.key === x.key) && !unreadArch.has(x.key));
         const before = [];
-        for (let i = background.length - 1, size = 0; i >= 0 && size + background[i].text.length <= BEFORE_MAX; i--) { before.unshift(background[i].text); size += background[i].text.length; }
-        const events = Object.entries(s.events).slice(-40).map(([id, e]) => `- ${id}: ${e.summary}${e.at === null || e.at === undefined ? '' : ` (#${e.at})`}`).join('\n');
+        // (the section just before only, its end when long: the story's people and state come in PEOPLE AROUND and STORY NOW)
+        if (background.length) { const t = background.at(-1).text; before.push(t.length > BEFORE_MAX ? t.slice(-BEFORE_MAX) : t); }
+        const events = Object.entries(s.events).slice(-15).map(([id, e]) => `- ${id}: ${e.summary}${e.at === null || e.at === undefined ? '' : ` (#${e.at})`}`).join('\n');
         const world = worldText(m), lore = await loreFor(m, owner), profile = await ownerProfileBlock(ctx(), p.financeProfile, owner, { money: !!(p.money || p.investment) });
         if (p.money) migrateBank(m, p);
         const money = moneyNow(p), invest = investNow(m, p), life = lifeNow(p);
@@ -1949,7 +1906,7 @@ async function updatePhone(m, owner) {
             !split && money && p.delivery ? `[DELIVERY SHOPS]\n${(p.delivery.shops || []).map(x => x.name).join('\n') || '(none yet)'}${p.delivery.cart?.items?.length ? `\nCART (in the basket, not ordered): ${p.delivery.cart.shop}: ${p.delivery.cart.items.map(x => `${x.name} ×${x.qty}`).join(', ')}` : ''}` : '',
             life ? `[LIFE NOW]\n${JSON.stringify(life)}` : '', askWeather && tracker ? `[WEATHER NOW]\n${JSON.stringify(trackShown)}` : '', clock,
             !split && (money || invest) && p.wealthPlan ? `[WEALTH]\n${JSON.stringify({ currency: p.wealthPlan.currency, deposits: p.wealthPlan.deposits, investments: p.wealthPlan.investments, basis: p.wealthPlan.basis })}` : '',
-            world ? `[WORLD]\n${world}` : '', lore ? `[LOREBOOK]\n${lore}` : '', aroundBlock(p),
+            world ? `[WORLD]\n${world}` : '', aroundBlock(p),
             `[OWNER]\n${owner}`, profile, blindBlock(m, owner), namesBlock(m),
         ].filter(Boolean);
         const input = inputParts.join('\n\n');

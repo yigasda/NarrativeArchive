@@ -681,7 +681,7 @@ test('a slow day: each 반영 the same day writes today\'s totals so far, never 
     assert.equal(today().workout.kind, 'Yoga');
     assert.deepEqual(today().hr, [58, 140]);
     assert.match(T.sys, /"workouts": \[\{ "kind", "time", "min", "km" \}\]/);
-    assert.match(T.sys, /The day of "now" again every time, with its totals so far \(steps, workouts, coffee, water, "screen"\), even when nothing new happened/);
+    assert.match(T.sys, /the day of "now" every time, with its totals so far \(steps, workouts, coffee, water, "screen"\), even with nothing new/);
     assert.deepEqual([today().steps, today().coffee, today().screen.apps, today().screen.pickups], [3000, 3, { WhatsApp: 60, Instagram: 40 }, 45]);
     // (told in an event: more steps go in)
     T.chat.push(say('Ren', 'walked all the way home'));
@@ -750,7 +750,7 @@ test('calls one after another from the same person (34 missed) are one row with 
         calls: [missed('01:10'), missed('01:12'), missed('01:15', { count: 30 }), missed('01:40', { count: 2 }), { with: 'Ren', type: 'in', time: '10-26 07:00', min: 3 }, missed('07:30')] } }] });
     const ivo = c.p.calls.filter(x => x.with === 'Ivo');
     assert.deepEqual(ivo.map(x => [x.time, x.count]), [['10-26 01:40', 34], ['10-26 07:30', undefined]]);
-    assert.match(T.sys, /"count": calls in a row \(34 missed calls are one record\)/);
+    assert.match(T.sys, /"count": calls in a row/);
 });
 
 test('일상 comes in the reflection\'s own answer (no request of its own); who the owner had a scene with it reads from the messages itself', async () => {
@@ -771,11 +771,11 @@ test('일상 comes in the reflection\'s own answer (no request of its own); who 
     assert.ok(!sys.includes('SCENES WITH') && !sys.includes('PUT ON THE PHONE NOW'));
     // (no forced text after a scene: a text after a fight is part of the story's trail)
     assert.ok(!sys.includes('parted from'));
-    assert.match(sys, /Scenes leave a trail on a phone without saying so, for instance a text after a fight/);
-    assert.match(sys, /The phone is lived in even when the story says nothing about it\./);
-    assert.match(sys, /What the messages already say may come up again\./);
-    assert.match(sys, /PEOPLE AROUND turn up wherever they would on a real phone, whether or not they are in the scenes\./);
-    assert.match(sys, /nothing that moves the story: no decision, promise, plan, meeting, secret or change between the owner and the story's people that a later message could contradict/);
+    assert.match(sys, /Scenes leave a trail without saying so, for instance a text after a fight/);
+    assert.match(sys, /The phone is lived in every waking hour/);
+    assert.match(sys, /Someone new texted or called gets a "contact"/);
+    assert.match(sys, /PEOPLE AROUND \(wherever they would turn up; never someone the owner isn't in touch with now\)/);
+    assert.match(sys, /nothing that moves the story \(a decision, promise, plan, meeting, secret or change with the story's people\)/);
     assert.match(sys, /"from": "story" \| "life"/);
     const guess = [...c.p.threads.flatMap(th => th.messages.filter(x => x.src === 'guess').map(x => `${th.with}:${x.text}`)), ...c.p.searches.filter(x => x.src === 'guess').map(x => x.q)];
     assert.deepEqual(guess.sort(), ['Ivo:whatever', 'Ivo:you started it', 'Mittagstisch Seongsu']);
@@ -788,38 +788,38 @@ test('일상 comes in the reflection\'s own answer (no request of its own); who 
 });
 
 test('the reflection\'s own instructions: one list of records, the story\'s and the owner\'s own life; so many a day', () => {
-    const on = data.coreSystem({ life: true }), plain = data.coreSystem();
-    for (const k of ['READING THE STORY', 'THE OWNER\'S LIFE', 'KEEPING IN STEP', 'TIME PASSING', 'WHICH TYPE', 'LANGUAGE']) assert.ok(on.includes(`\n${k}\n`), k);
+    const on = data.coreSystem({ life: true }), plain = data.coreSystem(), onW = data.coreSystem({ life: true, weather: true });
+    for (const k of ['THE STORY', 'THE OWNER\'S LIFE', 'THE APPS', 'IN THEIR OWN WORDS (notes, the diary, voice memos)', 'HEALTH', 'SCREEN TIME', 'WEATHER', 'KEEPING IN STEP', 'LANGUAGE']) assert.ok(onW.includes(`\n${k}\n`), k);
     // (the times in CLOCK FIRST; their own TIMES only when an archive-only round has no CLOCK FIRST)
     assert.ok(!on.includes('\nTIMES\n') && on.includes('Every record\'s time is on the owner\'s clock'));
     const arch = data.coreSystem({ life: true, archiveOnly: true });
     assert.ok(arch.includes('\nTIMES\n- Times are "MM-DD HH:MM"') && !arch.includes('CLOCK FIRST'));
-    assert.match(on, /About 11 records of the owner's life for a whole waking day, in step with the hours these messages cover \(an hour: about one; a few minutes: often none\)\./);
-    assert.match(on, /for a record of the owner's life, the message whose hours it falls in/);
-    assert.match(on, /new texts in a chat already there are new records/);
-    assert.match(on, /texts and calls from others still come in/);
+    assert.match(on, /About 11 life records a waking day, about one an hour; days the story skips were lived too \(at most 70 in all, "health" not counted\), each dated on its day\./);
+    assert.match(on, /"at": its message number \(a life record: the message whose hours it falls in\)/);
+    assert.match(on, /new texts in a chat are new/);
+    assert.match(on, /others' texts and calls still come in/);
     assert.ok(!on.includes('write events and app records'));
-    assert.match(on, /A made-up person's name fits where they live\./);
+    assert.match(on, /made-up people of their own life, named for where they live/);
     assert.ok(!on.includes('call home') && !on.includes('check on family'));
     assert.ok(!on.includes('"made": [') && on.includes('a plan moved or called off is its calendar record again'));
-    assert.match(on, /at most 70 in all \("health" records not counted\)/);
-    assert.ok(!data.coreSystem().includes('"health" records not counted'));
-    assert.equal(on.split('\n- Posts').length, 2);
-    assert.match(on, /about 11 for each, at most 70 in all/);
+    assert.ok(!on.includes('LOREBOOK') && on.includes('ARCHIVE BEFORE (the section just before)'));
+    assert.ok(!data.coreSystem().includes('"health" not counted'));
+    assert.ok(!on.includes('Numbers only'));
+    assert.ok(!on.includes('ONE DAY ON EVERY APP') && !on.includes('TIME PASSING') && !on.includes('WHICH TYPE'));
     assert.match(on, /"type": "scene" \| "contact" \| "text" \| "call" \| "photo" \| "note" \| "search" \| "calendar" \| "post" \| "profile" \| "mail" \| "diary" \| "visit" \| "voice" \| "alarm" \| "timer" \| "file" \| "health" \| "usual"/);
     assert.ok(!plain.includes('"alarm" | "timer"') && !plain.includes('LIFE NOW'));
-    assert.match(on, /never a booking, a trip or a purchase the story doesn't have|Never a booking, a trip or a purchase the story doesn't have/);
+    assert.match(on, /Never a booking, trip or purchase the story doesn't have/);
     assert.match(on, /Records of the owner's life fall between PHONE NOW's "now" and the answer's "now"\./);
     // (group chats, as the messenger shows them)
-    assert.match(on, /"group": true for a group chat; "members": \[everyone in it but the owner, each named as in the contacts and their own chat\]/);
+    assert.match(on, /"group", "members": \[all but the owner, as in the contacts\]/);
     assert.match(on, /never a new relative or partner/);
     // (said once)
-    assert.equal(on.split('A relationship word (girlfriend, ex, husband, boss)').length, 2);
+    assert.match(on, /Relationship words only as the story uses them/);
     assert.equal(on.split('The diary: at most one entry a day').length, 2);
     // (the story first; the apps written as a real phone holds them)
-    assert.match(on, /The story comes first: every scene and its trail on the phone are written before any record of the owner's own life\./);
-    assert.match(on, /In "records": the scenes and their story records first, then the owner's own life\./);
-    for (const k of ['ONE DAY ON EVERY APP', 'THE APPS', 'IN THEIR OWN WORDS (notes, the diary, voice memos)', 'HEALTH', 'SCREEN TIME']) assert.ok(on.includes(`\n${k}\n`), k);
+    assert.match(on, /The story comes first: every scene in these messages \("scene" records\) and its trail on the phone, before any record of the owner's own life\./);
+    assert.match(on, /"records": scenes and story records first, then the owner's own life\./);
+    assert.ok(!data.coreSystem({ life: true }).includes('\nWEATHER\n'));
     assert.ok(!plain.includes('\nHEALTH\n') && !plain.includes('\nSCREEN TIME\n') && plain.includes('\nIN THEIR OWN WORDS'));
     // (no old shape left in it)
     assert.ok(!on.includes('"events": [{') && !on.includes('"everyday"') && !on.includes('Items in "phone"'));
@@ -827,9 +827,9 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
 
 test('일상 on a phone with the everyday apps: an alarm, a timer and files too, as the reflection writes them', async () => {
     const sys = data.coreSystem({ life: true });
-    assert.match(sys, /alarm: "time", "label"/);
-    assert.match(sys, /An alarm for one occasion \(a flight, an appointment\) rings once/);
-    assert.ok(!data.coreSystem().includes('alarm: "time"'));
+    assert.match(sys, /alarm: "time": "HH:MM", "label"/);
+    assert.match(sys, /Alarms and files change with life\./);
+    assert.ok(!data.coreSystem().includes('alarm: "time"') && !data.coreSystem().includes('Alarms and files'));
     const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'long day tomorrow'), say('Mara', 'sleep early')]);
     c.p.now = '10-26 21:00'; c.p.year = 2026;
     c.p.life = { at: '10-26 21:00', clock: { alarms: [], timers: [], running: null }, files: { folders: [], items: [] }, health: { usual: {}, days: [] }, weather: { here: { place: 'Seoul', date: '10-26', time: '21:00', cond: 'clear', temp: 9, hours: [], days: [], tiles: {} }, cities: [] } };
@@ -843,7 +843,7 @@ test('일상 on a phone with the everyday apps: an alarm, a timer and files too,
 });
 
 test('일상 texting someone not saved yet saves them too (only someone it texts or calls); 되돌리기 takes the contact back', async () => {
-    assert.match(data.coreSystem(), /Someone texted or called who isn't in the contacts yet gets a "contact" record too/);
+    assert.match(data.coreSystem(), /Someone new texted or called gets a "contact"/);
     const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'thinking of Ivo'), say('Mara', 'call him')]);
     c.p.now = '10-26 09:00'; c.p.year = 2026;
     globalThis.__everyday = { everyday: { contacts: [{ name: 'Ivo', saved: 'Ivo 🙄' }, { name: 'Stranger', saved: 'x' }], threads: [{ with: 'Ivo', messages: [{ from: 'me', text: 'you up?', time: '10-26 09:20' }] }] } };
@@ -1146,7 +1146,20 @@ test('no app only Korea has on the screen time of an owner who lives elsewhere: 
     const same = structuredClone(ko); data.homeScreens(same, false, usual);
     assert.deepEqual(same, ko);
     assert.ok(!data.coreSystem({ life: true }).includes('more than 10 apps'));
-    assert.match(data.coreSystem({ life: true }), /Each day's "apps": as many as this owner really uses, from LIFE NOW's usual .*The apps differ from day to day, so over the days many kinds show up/);
-    assert.match(data.coreSystem({ life: true }), /A new app they start using, of any kind \(chat, social, video, music, game, work or study, reading or news, shopping, money, maps or travel, health\), when the story or their life gives a reason, for instance a translator for a trip: a "usual" record with it in "screen"\."add"\./);
-    assert.match(data.coreSystem({ life: true }), /Mostly the apps people use where the owner lives, by their real names; another country's app only when the story shows them using it\./);
+    assert.match(data.coreSystem({ life: true }), /"apps": as many as they really use, from their usual and what the day called for .*so days differ and many kinds show up over time/);
+    assert.match(data.coreSystem({ life: true }), /A new app of any kind \(chat, social, video, music, game, work or study, reading or news, shopping, money, maps or travel, health\), when the story or their life gives a reason, for instance a translator for a trip: in a "usual" record's "screen"\."add"\./);
+    assert.match(data.coreSystem({ life: true }), /Mostly apps common where the owner lives, by their real names; another country's only when the story shows them using it\./);
+});
+
+test('the reflection reads less around it: its 15 latest scenes, no lorebook', async () => {
+    const c = setup([say('Ren', 'start'), say('Mara', 'hello'), say('Ren', 'tea')]);
+    c.p.now = '10-26 09:00'; c.p.year = 2026;
+    await run(c.m, { now: '10-26 09:30', records: [] });
+    for (let i = 0; i < 30; i++) c.p.sync.events[`old-${i}`] = { at: null, summary: `old ${i}` };
+    T.chat.push(say('Mara', 'more tea'));
+    await run(c.m, { now: '10-26 10:00', records: [] });
+    const block = T.input.split('[EVENTS ON THE PHONE]\n')[1].split('\n\n')[0];
+    assert.equal(block.split('\n').length, 15);
+    assert.ok(block.includes('old-29') && !block.includes('old-10:'));
+    assert.ok(!T.input.includes('[LOREBOOK]') && !T.sys.includes('LOREBOOK'));
 });

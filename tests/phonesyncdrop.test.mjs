@@ -229,7 +229,7 @@ test('a phone with a bank but without the everyday or delivery apps: core then m
     const c = await bookCase();
     assert.equal(T.sys, data.coreSystem({ wallet: true }));
     // (a phone with the wallet: its tickets are the calendar's from there, core writes no calendar item for one)
-    assert.ok(T.sys.includes('goes in the wallet, and the calendar shows it from there: never a calendar record for it') && T.sys.includes('A reservation or an appointment is still one.') && !data.coreSystem().includes('goes in the wallet'));
+    assert.ok(T.sys.includes('A ticket goes in the wallet, never in the calendar; a reservation or an appointment still goes in the calendar.') && !data.coreSystem().includes('goes in the wallet'));
     assert.ok(!T.sys.includes('LIFE NOW') && !T.sys.includes('deliveries'));
     assert.ok(!T.input.includes('[MONEY NOW]'));
     assert.equal(T.moneySys, data.moneySystem());
@@ -2184,7 +2184,7 @@ test('다녀간 곳 (the map): a reflection puts the places the owner went to on
 test('다녀간 곳: making a phone asks for the newest visits; the prompts that make up an ordinary day never do', () => {
     for (const s of [data.AI_SYS_PHONE, data.AI_SYS_PHONE_APPS, data.updateSystem({ split: true })]) assert.ok(s.includes('"visits": [{ "place": a place the owner really went to'), s.slice(0, 40));
     assert.ok(data.AI_SYS_PHONE.includes('the 12 newest visits'));
-    for (const life of [false, true]) assert.match(data.coreSystem({ life }), /visit: "place": a place the owner really went to/);
+    for (const life of [false, true]) assert.match(data.coreSystem({ life }), /visit: "place": where they really went, as the story writes it \(never just their own city\)/);
     // (a visit of the owner's own life is none: a place is gone to in the story)
     const got0 = data.recordsCore({ now: '10-25 16:00', records: [{ type: 'scene', id: 'cafe', at: 2, quote: 'x', summary: 'cafe' }, { type: 'visit', at: 2, from: 'story', scene: 'cafe', place: 'Café Moka' }, { type: 'visit', at: 2, from: 'life', place: 'Gym' }] });
     assert.deepEqual(got0.events[0].phone.visits.map(x => x.place), ['Café Moka']);
