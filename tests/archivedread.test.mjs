@@ -712,6 +712,8 @@ test('반영\'s everyday records: so many an answer and a day in each app, texts
     assert.match(T.sys, /\nTHE OWNER'S LIFE\n/);
     assert.ok(!T.sys.includes('only when the archive or chat shows the owner recorded one'));
     assert.ok(data.AI_SYS_PHONE.includes('only when the archive or chat shows the owner recorded one'));
+    // (making a phone: what happened in the chat after the archive counts too)
+    assert.ok(data.AI_SYS_PHONE.includes('only if the archive, lorebook or chat has them') && data.AI_SYS_PHONE.includes('The diary holds only what the archive or chat shows happened'));
     assert.match(T.sys, /- PEOPLE AROUND \(sometimes\)/);
     assert.match(T.input, /\[PEOPLE AROUND\]\n- Ivo \(이보\): Ren's older brother/);
     // the rest of the day: Ivo up to 16 texts a day, notes up to 2

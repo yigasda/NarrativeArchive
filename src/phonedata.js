@@ -59,11 +59,11 @@ ANSWER — one JSON object, nothing else:
 const PHONE_FACT = `ONE TEST FOR EVERY ITEM
 Could this be on the owner's phone, given what the archive, lorebook and chat show? If not, leave it out.
 - The lorebook counts as fact like the archive; where the two disagree, the archive wins.
-- Events (a meeting, a fight, a confession, a trip, a loss) only if the archive or lorebook has them.
+- Events (a meeting, a confession, a trip, a loss, how something turned out or will go) only if the archive, lorebook or chat has them.
 - Small everyday things around those events are fine: how a text was worded, a photo of a place they were, a search they would make.
 - People: only people the story or PEOPLE AROUND has. A relationship word (girlfriend, ex, husband, boss) only if the archive or chat uses it for them.
 - Nothing later than the newest moment of the story.
-- The diary holds only what the archive shows happened and what the owner felt about it; no new secrets, no new feelings.`;
+- The diary holds only what the archive or chat shows happened and what the owner felt about it; no new secrets, no new feelings.`;
 // every time on the phone is the owner's own clock: a time written on the other side of the world is moved to theirs
 export const OWN_CLOCK = `Every time is on the owner's phone clock, where the owner is now. A time on a screen or in a scene goes by the city of whoever's screen or scene it is: the owner's city, or no OWNER'S CLOCK, keeps it; another city in OWNER'S CLOCK moves it by its hours there (a messenger timestamp on the other side's screen). A status line's time is the clock of the city its scene is in; OWNER'S CLOCK gives the newest one on the owner's clock when that is another city.`;
 export const CLOCK_GET = `- OWNER'S CLOCK (sometimes): where the owner is, their time now, and how many hours the other saved cities and the people elsewhere are ahead or behind.`;
