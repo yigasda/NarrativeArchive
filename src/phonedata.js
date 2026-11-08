@@ -366,6 +366,7 @@ THE STORY
 THE OWNER'S LIFE
 - The phone is lived in every waking hour, from who the owner is. Contact goes both ways; a group chat may go on without them.
 - "everyday": the owner's ordinary life in these hours and each day the story skips, from their habits: any app, a little in each as a real phone gets it; texts and calls by the person, and a diary entry when these hours end the day. A list with nothing in these hours stays empty.
+- "everyday" is the owner's life outside what the story follows. A record about a matter the story follows is a story record in "records", only as the messages show it.
 - How many: about ${LIFE_A_DAY} life records for each waking day, about one an hour; each day the story skips gets its own (at most ${LIFE_MAX} in all${life ? ', "health" not counted' : ''}), dated on that day. Routines recur.
 - Every app tells the same day, the way this owner lives it: late-night texts go with ${life ? 'a late "late" and short sleep' : 'a late night'}. The owner does nothing on the phone while asleep or busy in a scene; others' texts and calls still come in.
 - First tell apart what a record may take from the story and what it may not. A record taken from the story may write anything about it, for instance a text after a fight, a search about what just happened, a photo of the evening, a note to remember it; but NEVER a new fact, event, secret, later plan, promise or deadline the story hasn't mentioned.
@@ -431,7 +432,7 @@ JSON (one object, nothing before or after it)
     health: "date": the day they woke, "sleep", "wake", "woke", "steps", "km", "floors", "hr": [low, high], "workouts": [{ "kind", "time", "min", "km" }], "coffee", "coffeeKind", "water", "weight", "screen": { "apps": { app: minutes }, "pickups", "late" }
     usual: "weight", "height", "coffee", "coffeeKind", "coffeeKo", "water", "bed", "sleep", "wake", "steps", "workouts", "rest", "screen": { "add": [{ "app", "kind": chat | social | game | video | music | work | reading | shopping | money | maps | health | other, "min" }], "drop", "pickups", "late" }` : ''}
   }],
-  "everyday": { the owner's own life, a list for each app ([] when nothing), each item as its record above without "type" and "at", "scene" when it answers one:
+  "everyday": { the owner's own life, a list for each app ([] when nothing), each item: "time": "MM-DD HH:MM" (the diary "date"), "scene" when it answers one, then its own fields as above:
     "texts": [], "calls": [], "photos": [], "searches": [], "notes": [], "mails": [], "posts": [], "calendar": [], "diary": [], "voice": [], "contacts": []${life ? ', "alarms": [], "timers": [], "files": []' : ''} }${life && weather ? `,\n${WEATHER_JSON}` : ''} }
 "records": scenes and story records${life ? ', and "health" and "usual"' : ''}; the owner's own life goes in "everyday". Numbers are plain JSON numbers. Nothing new: "records": [].`;
 }
@@ -721,7 +722,11 @@ export function recordsCore(raw, textOf = () => '') {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw) || !Array.isArray(raw.records)) return raw;
     // (the owner's own life comes in "everyday", a list for each app: a life record each, as the old answer's "from": "life")
     const { records, everyday: own, ...rest } = raw, ed = own && typeof own === 'object' && !Array.isArray(own) ? own : {};
-    const lives = Object.entries(EVERYDAY_TYPE).flatMap(([k, type]) => arr(ed[k]).filter(x => x && typeof x === 'object' && !Array.isArray(x)).map(x => ({ ...x, type, from: 'life' })));
+    // (one written without its time is in these hours: the answer's now; a diary without its date, that day)
+    const now = when(raw.now), at = y => (y && typeof y === 'object' && !String(y.time ?? '').trim() && hm(now) ? { ...y, time: now } : y);
+    const timed = (x, type) => (type === 'diary' ? (String(x.date ?? '').trim() || !hm(now) ? x : { ...x, date: now.slice(0, 5) })
+        : type === 'contact' || type === 'calendar' ? x : type === 'text' ? { ...x, ...(Array.isArray(x.messages) ? { messages: x.messages.map(at) } : {}) } : at(x));
+    const lives = Object.entries(EVERYDAY_TYPE).flatMap(([k, type]) => arr(ed[k]).filter(x => x && typeof x === 'object' && !Array.isArray(x)).map(x => ({ ...timed(x, type), type, from: 'life' })));
     const recs = [...records.filter(r => r && typeof r === 'object' && !Array.isArray(r)), ...lives];
     const events = [], byId = new Map(), made = new Map(), everyday = {}, days = [];
     for (const r of recs) if (r.type === 'scene') {

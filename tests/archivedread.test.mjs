@@ -1137,7 +1137,8 @@ test('life records that answer a scene ("scene" its id) go on it and the day\'s 
     assert.ok(lio.messages.every(x => x.src === 'guess' && !('onScene' in x)));
     // (they are the scene's: on its event)
     assert.ok(c.p.sync.events.bar);
-    assert.match(T.sys, /each item as its record above without "type" and "at", "scene" when it answers one/);
+    assert.match(T.sys, /each item: "time": "MM-DD HH:MM" \(the diary "date"\), "scene" when it answers one, then its own fields as above/);
+    assert.match(T.sys, /- "everyday" is the owner's life outside what the story follows\. A record about a matter the story follows is a story record in "records", only as the messages show it\./);
 });
 
 test('the answer\'s "everyday" lists: each app the owner\'s own life, on its scene when it answers one; counted as life', async () => {
@@ -1150,7 +1151,11 @@ test('the answer\'s "everyday" lists: each app the owner\'s own life, on its sce
         texts: [{ with: 'Lio', messages: [{ from: 'Lio', text: 'how was it?', time: '10-26 21:00' }], scene: 'pho' }],
         searches: Array.from({ length: 7 }, (_, i) => ({ q: `q${i}`, time: `10-26 20:0${i}` })),
         calendar: [{ title: 'Dentist', date: '10-28', time: '09:00' }], calls: [{ with: 'Ivo', kind: 'missed', time: '10-26 20:30' }],
-        mails: [{ sender: 'Stadtwerke', subject: 'Rechnung', text: 'x', time: '10-26 20:40' }], diary: [], voice: [] } });
+        mails: [{ sender: 'Stadtwerke', subject: 'Rechnung', text: 'x', time: '10-26 20:40' }], diary: [{ title: 'Pho', text: 'good night' }],
+        voice: [{ title: 'idea', text: 'hm… a song', sec: 30 }], texts2: [] } });
+    // (written without its time: the answer's now; the diary without its date: that day)
+    assert.deepEqual(c.p.voice.map(x => x.time), ['10-26 22:00']);
+    assert.deepEqual(c.p.diary.map(x => x.date), ['10-26']);
     assert.deepEqual(c.p.photos.map(x => [x.caption, x.src ?? '']), [['pho bowls', '']]);
     assert.ok(c.p.threads.find(t => t.with === 'Lio').messages.every(x => x.src === 'guess'));
     // (plain searches: the day's five)
@@ -1158,7 +1163,7 @@ test('the answer\'s "everyday" lists: each app the owner\'s own life, on its sce
     assert.deepEqual(c.p.events.map(x => [x.title, x.src]), [['Dentist', 'guess']]);
     assert.deepEqual(c.p.calls.map(x => [x.with, x.type, x.src]), [['Ivo', 'missed', 'guess']]);
     assert.deepEqual(c.p.mails.map(x => [x.from, x.src]), [['Stadtwerke', 'guess']]);
-    assert.deepEqual(c.p.syncLast.records, { scenes: 1, story: 1, life: 11 });
+    assert.deepEqual(c.p.syncLast.records, { scenes: 1, story: 1, life: 13 });
 });
 
 test('the owner\'s own life a day, not a reflection: a skipped week fills each day, photos 5 a day, the diary as many as written', async () => {
