@@ -84,8 +84,10 @@ export function screenTimeScreen(p, now, i = '') {
     const pk = d ? d.pickups : v.pickupsAvg;
     const pick = pk !== null && pk !== undefined ? `<div class="ax_card sc_pick"><span class="sc_pki">${ax('scphone', 20, ACC, 1.9)}</span><div class="sc_pkt"><div class="sc_lbl">${d ? (d.today ? '오늘 지금까지' : fmtDate(p, d.date)) : '하루 평균'} 집어든 횟수</div><b>${feel(pk)}</b></div><div class="sc_pkn"><div class="cg_num">${pk}<u>번</u></div><span class="sc_lvl">${[1, 2, 3, 4].map(n => `<i class="${n <= level(pk) ? 'on' : ''}"></i>`).join('')}</span></div></div>` : '';
     // the apps: the week's daily average, or what that day held
-    const rows = d ? d.apps.slice(0, 8).map(([name, m]) => { const kind = appOf(name)?.kind || v.top.find(t => t.app === name)?.kind || 'other'; return { name, kind, m }; })
-        : v.top.slice(0, 8).map(t => ({ name: t.app, kind: t.kind, m: t.avg }));
+    const allRows = d ? d.apps.map(([name, m]) => { const kind = appOf(name)?.kind || v.top.find(t => t.app === name)?.kind || 'other'; return { name, kind, m }; })
+        : v.top.map(t => ({ name: t.app, kind: t.kind, m: t.avg }));
+    // every app the day held (up to twenty), the whole list
+    const rows = allRows.slice(0, 20);
     const mx = Math.max(1, ...rows.map(r => r.m));
     const list = rows.length ? `<div class="ax_sec">${d ? (d.today ? '오늘 쓴 앱' : '이날 쓴 앱') : '많이 쓴 앱 · 하루 평균'}</div><div class="ax_card sc_apps">${rows.map(r => `<div class="ax_rw sc_rw">${iconOf(r.name, r.kind)}<span class="ax_tx"><span class="ax_n">${esc(appOf(r.name)?.name || r.name)}</span>${d ? `<span class="ax_p">${KIND_KO[r.kind] || ''}</span>` : `<span class="sc_bar"><i style="width: ${(r.m / mx * 100).toFixed(1)}%"></i></span>`}</span><span class="sc_m cg_num">${durKo(r.m)}</span></div>`).join('')}</div>` : '';
     return wrap(head + pick + list);
