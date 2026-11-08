@@ -359,7 +359,7 @@ KEEPING IN STEP
 
 TIME PASSING
 - What recurs (pay, an allowance, support, rent, bills, subscriptions, a membership, a loan repayment) is one "regular" record, written once when the story or the owner's life shows it; the app pays it on its days. A rent day or a payday is that regular, not a one-off payment. A change to it is the same record with the new "amount" or "status".
-- DAYS PASSED: the owner lived each of those days too. Besides what the scenes show and the regular ones, the phone would show what fits their life that day: one or two payments${delivery ? `, orders or deliveries` : ''}${!delivery ? ` or orders` : ''} a day, the way this owner lives: their tastes, habits, moods and what the story put them through. What that is depends on who they are: a late taxi for one, a game top-up for another; these are not a list to pick from. Days differ; never the same few things every day. A span of many days the same, about as many as its line says, each dated within it.
+- DAYS PASSED: the owner lived through those days too. Fill in the life the scenes left out, shaped by this owner's tastes, habits, moods, circumstances and experiences in the story. Write the financial records that follow, beyond those already shown or handled by regular records. What happens each day determines the kinds and number of records, their amounts, timing and how money moves. Some days leave no financial records; familiar routines may recur. Each record is dated on its own day.
 - Write any missing "regular" records that the owner's life plainly has (pay or an allowance, rent, a phone bill, subscriptions), using OWNER PROFILE and MONEY NOW; a card account with no "billDay" gets one.
 
 WHICH TYPE
@@ -1421,8 +1421,7 @@ function daysPassed(was, now, known, events, last) {
     const endedIn = md => dated.find(e => dayGap(md, e.date) > 0)?.at ?? last;
     const lines = [], each = Math.min(gap, 7);
     let span = null;
-    // (about one or two a day of it, 60 at most: the code's count, so the model needn't work it out)
-    if (gap > each) { const f = day(0), t = day(gap - each - 1), n = gap - each, lo = Math.min(n, SPAN_MAX), hi = Math.min(n * 2, SPAN_MAX); span = [f.md, t.md]; lines.push(`- ${f.md} to ${t.md} (${n} days, ended by #${endedIn(t.md)}: about ${lo === hi ? lo : `${lo}–${hi}`} records)`); }
+    if (gap > each) { const f = day(0), t = day(gap - each - 1), n = gap - each; span = [f.md, t.md]; lines.push(`- ${f.md} to ${t.md} (${n} days, ended by #${endedIn(t.md)})`); }
     for (let k = gap - each; k < gap; k++) { const d = day(k); lines.push(`- ${d.md}${d.wd} (ended in #${endedIn(d.md)})`); }
     return { text: lines.join('\n'), span };
 }

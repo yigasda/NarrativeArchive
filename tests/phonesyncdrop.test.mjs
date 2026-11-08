@@ -531,7 +531,7 @@ test('reflection in two steps: core keeps the life apps and holds no money at al
     // the apps the phone doesn't have aren't named
     const plain = data.moneySystem();
     for (const k of ['DELIVERY SHOPS', '"newShop"', 'delivery: no', 'INVESTMENTS', 'broker', 'stake:', 'quote:']) assert.ok(!plain.includes(k), `money without delivery or brokerage holds ${k}`);
-    assert.ok(plain.includes('one or two payments or orders a day') && money.includes('one or two payments, orders or deliveries a day'));
+    assert.ok(plain.includes('What happens each day determines the kinds and number of records') && plain.includes('Each record is dated on its own day.'));
     // no marker of the template left over, no doubled space before a comma
     for (const t of [plain, money, data.moneySystem({ delivery: true }), data.moneySystem({ invest: true })]) { assert.ok(!/배달|투자|\$\{| ,/.test(t)); }
     // the one-step instructions are unchanged
@@ -636,7 +636,7 @@ test('a long skip: the days before the last seven go as one span', async () => {
     const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'a month went by')]);
     T.moneyAnswers = [{ records: [] }];
     await run(c.m, { now: '11-26 10:00', events: [] });
-    assert.match(T.moneyInput, /\[DAYS PASSED\]\n- 10-26 to 11-18 \(24 days, ended by #2: about 24–48 records\)\n- 11-19 Thu \(ended in #2\)/);
+    assert.match(T.moneyInput, /\[DAYS PASSED\]\n- 10-26 to 11-18 \(24 days, ended by #2\)\n- 11-19 Thu \(ended in #2\)/);
     assert.match(T.moneyInput, /- 11-25 Wed \(ended in #2\)\n\n/);
 });
 
