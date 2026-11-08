@@ -142,6 +142,37 @@ for (const path of paths(BASE)) {
     if (!path.length) continue;
     for (const v of [undefined, ...BAD]) await one(setAt(BASE, path, v), path, v);
 }
+// the records answer (3.180~): every field of it, the same way
+const RBASE = {
+    clock: BASE.clock, now: '01-02 21:10', moved: [],
+    records: [
+        { type: 'scene', id: 'pizza', at: 3, quote: 'I ordered', date: '12-31', time: '19:40', summary: 'pizza' },
+        { type: 'text', at: 3, from: 'story', scene: 'pizza', with: 'Mara', messages: [{ from: 'Mara', text: 'ordered!', ko: '시켰어', time: '12-31 19:41' }] },
+        { type: 'photo', at: 3, from: 'story', scene: 'pizza', caption: 'pizza box', time: '12-31 20:20', mood: 'warm' },
+        { type: 'text', at: 4, from: 'life', with: 'Uni', group: true, members: ['Ivo', 'Lio'], messages: [{ from: 'Ivo', text: 'snow!', time: '01-01 09:00' }, { from: 'me', text: 'ja', time: '01-01 09:01' }] },
+        { type: 'call', at: 4, from: 'life', with: 'Ivo', kind: 'missed', time: '01-01 12:00', count: 2 },
+        { type: 'mail', at: 5, from: 'life', sender: 'Zalando', subject: 'Sale', text: 'hi', time: '01-02 08:00', unread: true },
+        { type: 'note', at: 5, from: 'story', title: 'BER', text: 'gate', time: '01-02 10:00' },
+        { type: 'calendar', at: 5, from: 'story', title: 'Flight', date: '01-03', time: '10:20' },
+        { type: 'health', at: 4, from: 'life', date: '01-01', steps: 9000 },
+        { type: 'alarm', at: 4, from: 'story', already: 'a1', on: false },
+        { type: 'file', at: 4, from: 'life', name: 'shot.png', kind: 'image', folder: 'Downloads', time: '01-01 11:00', look: 'screenshot' },
+        { type: 'usual', at: 4, from: 'story', coffee: 2 },
+        { type: 'contact', at: 4, from: 'life', name: 'Ivo', saved: 'Ivo' },
+    ],
+    weather: BASE.weather,
+};
+{
+    const { m, p } = setup(); T.answers = [RBASE]; await data.makePhone(m, 'Ren', { update: true });
+    const uni = p.threads.find(t => t.group), got = { failed: p.sync.failed, notes: p.syncLast?.notes, uni: uni?.members, uniGuess: uni?.messages.every(x => x.src === 'guess'), photos: p.photos.length, mails: p.mails.filter(x => x.src === 'guess').length, files: p.life.files.items.length };
+    if (process.env.SHOW) console.log(JSON.stringify(got));
+    if (Object.keys(got.failed || {}).length || got.notes?.length || String(got.uni) !== 'Ivo,Lio' || !got.uniGuess || got.mails !== 1) throw new Error('RECORDS BASE DID NOT LAND ' + JSON.stringify(got));
+}
+await one(RBASE, ['(records)'], null);
+for (const path of paths(RBASE)) {
+    if (!path.length) continue;
+    for (const v of [undefined, ...BAD]) await one(setAt(RBASE, path, v), ['records', ...path], v);
+}
 // whole answers that are broken
 for (const raw of ['', 'no json', '{"now": "01-02 21:10"}', '{"events": {}}', '{"events": [null, 1, "x"]}', '[]', 'null', '{"events":[{"id":"a","at":3,"phone":null,"money":"x"}]}']) await one(raw, ['(answer)'], raw);
 console.log(`runs ${runs}, problems ${problems.size}`);

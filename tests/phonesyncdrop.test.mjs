@@ -15,7 +15,7 @@ const map = { './extract.js': cleanMessageURL,
     './phoneprofile.js': href('phoneprofile.js'),
     './phonestory.js': encoded(`export const phoneTarget=()=>({scope:phoneChatScope(),check(){}});export const phoneChatScope=()=>globalThis.__dropTest.scope||'test';`),
     './wealth.js': encoded(`export const ensureWealth=async()=>null;export const wealthBlock=()=>'';export const wealthDate=()=> '2026-10-26';export const wealthCheck=()=>null;export const addWealthFX=()=>{};`),
-    './ai.js': encoded(`import { reflectionFixture } from '${new URL('./reflectionfixture.mjs', import.meta.url).href}'; import { phoneMadeFixture as __pmf } from '${new URL('./reflectionfixture.mjs', import.meta.url).href}'; const askDraft0=async(input,o)=>{if(String(o.system).startsWith('GOAL\\nWrite the ordinary life')){(globalThis.__everydayIn||=[]).push(input);const e=globalThis.__everyday;return JSON.stringify(typeof e==='function'?e(input):e||{});}if(String(o.system).startsWith('GOAL\\nWork out where')){(globalThis.__where||=[]).push(input);await globalThis.__dropTest.beforeWhere?.();return '{"people":[]}';}const T=globalThis.__dropTest;if(String(o.system).startsWith('STAGE: money')){T.moneyInput=input;T.moneySys=o.system;T.moneyCalls=(T.moneyCalls||0)+1;if(T.moneyAnswers&&T.moneyAnswers.length){const a=T.moneyAnswers.shift();return typeof a==='string'?a:JSON.stringify(a);}const core=(T.lastCore&&T.lastCore.events)||[];const out=[];for(const l of String(input).split('\\n')){const x=l.match(/^- (.+?): #(\\d+) .*?\\("(.*)"\\)(?: \\(changed\\))?$/)||l.match(/^- (.+?): #(\\d+) /);if(!x)continue;const e=core.find(e=>e&&e.money&&Number(String(e.at).replace('#',''))===Number(x[2])&&(x[3]===undefined||String(e.quote||'').slice(0,200)===x[3]));if(e)out.push({id:x[1],money:e.money});}return JSON.stringify({events:out});}T.sys=o.system;T.input=input;await T.beforeCore?.();const a=T.answers.shift();T.lastCore=a&&typeof a==='object'?a:null;const r=typeof a==='string'?a:JSON.stringify(reflectionFixture(a,input));if(!String(o.system).includes('\\nEVERYDAY\\n')||globalThis.__everyday===undefined)return r;(globalThis.__everydayIn||=[]).push(input);let e=globalThis.__everyday;e=typeof e==='function'?e(input):e;let j;try{j=JSON.parse(r);}catch{return r;}if(j&&typeof j==='object'&&j.everyday===undefined&&e&&e.everyday)j.everyday=e.everyday;return JSON.stringify(j);};;export const askDraft=async(i,o)=>__pmf(await askDraft0(i,o),i,o?.system);`),
+    './ai.js': encoded(`import { reflectionFixture } from '${new URL('./reflectionfixture.mjs', import.meta.url).href}'; import { phoneMadeFixture as __pmf } from '${new URL('./reflectionfixture.mjs', import.meta.url).href}'; const askDraft0=async(input,o)=>{if(String(o.system).startsWith('GOAL\\nWrite the ordinary life')){(globalThis.__everydayIn||=[]).push(input);const e=globalThis.__everyday;return JSON.stringify(typeof e==='function'?e(input):e||{});}if(String(o.system).startsWith('GOAL\\nWork out where')){(globalThis.__where||=[]).push(input);await globalThis.__dropTest.beforeWhere?.();return '{"people":[]}';}const T=globalThis.__dropTest;if(String(o.system).startsWith('STAGE: money')){T.moneyInput=input;T.moneySys=o.system;T.moneyCalls=(T.moneyCalls||0)+1;if(T.moneyAnswers&&T.moneyAnswers.length){const a=T.moneyAnswers.shift();return typeof a==='string'?a:JSON.stringify(a);}const core=(T.lastCore&&T.lastCore.events)||[];const out=[];for(const l of String(input).split('\\n')){const x=l.match(/^- (.+?): #(\\d+) .*?\\("(.*)"\\)(?: \\(changed\\))?$/)||l.match(/^- (.+?): #(\\d+) /);if(!x)continue;const e=core.find(e=>e&&e.money&&Number(String(e.at).replace('#',''))===Number(x[2])&&(x[3]===undefined||String(e.quote||'').slice(0,200)===x[3]));if(e)out.push({id:x[1],money:e.money});}return JSON.stringify({events:out});}T.sys=o.system;T.input=input;await T.beforeCore?.();const a=T.answers.shift();T.lastCore=a&&typeof a==='object'?a:null;const r=typeof a==='string'?a:JSON.stringify(reflectionFixture(a,input));if(!String(o.system).includes('\\nTHE OWNER\\'S LIFE\\n')||globalThis.__everyday===undefined)return r;(globalThis.__everydayIn||=[]).push(input);let e=globalThis.__everyday;e=typeof e==='function'?e(input):e;let j;try{j=JSON.parse(r);}catch{return r;}if(j&&typeof j==='object'&&j.everyday===undefined&&e&&e.everyday)j.everyday=e.everyday;return JSON.stringify(j);};;export const askDraft=async(i,o)=>__pmf(await askDraft0(i,o),i,o?.system);`),
     './core.js': encoded(`export const ctx=()=>({chat:globalThis.__dropTest.chat,chatMetadata:globalThis.__dropTest.meta,loadWorldInfo:async()=>null,characters:[]});export const globalSettings=()=>({});export const saveMeta=async()=>{};`),
     './calendar.js': encoded(`export const calendars=()=>({});export const headingDate=()=>({});`),
     './drift.js': encoded(`export const recentForCheck=()=>[];export const chatRows=()=>globalThis.__dropTest.chat.map((x,i)=>({index:i,user:x.is_user,hidden:!!x.is_system,text:'[#'+i+'] '+x.name+': '+(globalThis.__dropTest.clean?globalThis.__dropTest.clean(x.mes):x.mes)}));`),
@@ -174,7 +174,7 @@ test('in the same chat, a message written over in its place is still an edit, re
     assert.equal(c.p.sync.dropped?.length || 0, 0);
     assert.ok(c.p.syncLast.notes.some(n => /읽은 대화가 바뀌어서|바뀐 대화 1개/.test(n)));
     // (일상 comes in the same answer: the reflection asked for it)
-    assert.match(T.sys, /\nEVERYDAY\n/);
+    assert.match(T.sys, /\nTHE OWNER'S LIFE\n/);
 });
 
 test('a chat renamed or a backup imported keeps its mark: an edit made right after is still an edit, nothing is offered to take off', async () => {
@@ -227,10 +227,10 @@ test('after the update, a phone already read in its branch, a renamed chat, or a
 
 test('a phone with a bank but without the everyday or delivery apps: core then money, each with only its own', async () => {
     const c = await bookCase();
-    assert.equal(T.sys, data.coreSystem({ wallet: true, everyday: true }));
+    assert.equal(T.sys, data.coreSystem({ wallet: true }));
     // (a phone with the wallet: its tickets are the calendar's from there, core writes no calendar item for one)
-    assert.ok(T.sys.includes('A ticket the wallet holds') && T.sys.includes('A reservation or an appointment is still a calendar item') && !data.coreSystem().includes('the wallet holds'));
-    assert.ok(!T.sys.includes('LIFE') && !T.sys.includes('deliveries'));
+    assert.ok(T.sys.includes('A ticket the wallet holds') && T.sys.includes('A reservation or an appointment is still one.') && !data.coreSystem().includes('the wallet holds'));
+    assert.ok(!T.sys.includes('LIFE NOW') && !T.sys.includes('deliveries'));
     assert.ok(!T.input.includes('[MONEY NOW]'));
     assert.equal(T.moneySys, data.moneySystem());
     assert.ok(T.moneyInput.includes('[MONEY NOW]') && T.moneyInput.includes('[EVENTS]'));
@@ -522,7 +522,7 @@ test('reflection in two steps: core keeps the life apps and holds no money at al
     const core = data.coreSystem({ life: true, weather: true, tracker: true, invest: true }), money = data.moneySystem({ delivery: true, invest: true });
     assert.equal(core.split('\n')[0], 'STAGE: core');
     assert.equal(money.split('\n')[0], 'STAGE: money');
-    for (const k of ['"alarms"', '"health"', '"days"', '"weather"', '"cities"', 'LIFE NOW']) assert.ok(core.includes(k), `core lacks ${k}`);
+    for (const k of ['alarm: ', '"health"', '"days"', '"weather"', '"cities"', 'LIFE NOW']) assert.ok(core.includes(k), `core lacks ${k}`);
     // (core marks nothing for money: the money step reads every round itself)
     for (const k of ['"apps": [] or', '"money" when the event', '"moves"', '"deliveries"', 'MONEY NOW', 'a payment in them is that same payment', 'second step', 'an order already placed']) assert.ok(!core.includes(k), `core holds ${k}`);
     for (const k of ['{ "records": [{', '"type": "payment" | "regular" | "order"', 'DAYS PASSED', 'CALENDAR', 'TIME PASSING', 'delivery: no "amount"', '"newShop"', 'stake:', 'INVESTMENTS NOW', 'broker:EUR']) assert.ok(money.includes(k), `money lacks ${k}`);
@@ -2065,6 +2065,8 @@ test('flat clock display preserves resolved sceneTime and model data while norma
 });
 
 test('256 prompt options agree on the new clock schema and their archive-only variants retain the 3.171.16 schema', () => {
+    // (the answer's first line: the one-step instructions' ANSWER, the core's records JSON)
+    const exampleOf = t => (t.includes('ANSWER — one JSON object, nothing else:') ? t.split('ANSWER — one JSON object, nothing else:')[1] : t.split('JSON (one object, nothing before or after it)')[1]).split('\n')[1];
     const systems = [data.AI_SYS_PHONE_UPDATE];
     for (let mask = 0; mask < 256; mask++) {
         const flags = Object.fromEntries(['money','delivery','life','weather','tracker','split','invest','zone'].map((key, i) => [key, !!(mask & (1 << i))]));
@@ -2072,9 +2074,9 @@ test('256 prompt options agree on the new clock schema and their archive-only va
         systems.push(data.coreSystem(flags));
         for (const legacy of [data.updateSystem({...flags,archiveOnly:true}),data.coreSystem({...flags,archiveOnly:true})]) {
             assert.doesNotMatch(legacy,/CLOCK FIRST|finalViewpoint|elapsedTime|sceneTime/);
-            assert.match(legacy,/- "now": the moment of the newest message, never a time something is only planned for\./);
-            const example=legacy.split('ANSWER — one JSON object, nothing else:')[1].split('\n')[1];
-            assert.match(example,/^\{ "now": "MM-DD HH:MM", "moved":/);
+            assert.match(legacy,/- "now": the moment of the newest message, never a time something is only planned for\.|"now": "MM-DD HH:MM" \(the moment of the newest message, never a time something is only planned for\)/);
+            const example=exampleOf(legacy);
+            assert.match(example,/^\{ "now": "MM-DD HH:MM"/);
             assert.doesNotMatch(example,/"clock"/);
         }
     }
@@ -2086,7 +2088,7 @@ test('256 prompt options agree on the new clock schema and their archive-only va
         assert.match(system, /This step only converts time zones; never add elapsed time/);
         assert.match(system, /finalViewpoint \(the final viewpoint determined for the last message\)/);
         assert.match(system, /sceneTime \(the resulting current scene time before conversion, already including elapsedTime\)/);
-        const example = system.split('ANSWER — one JSON object, nothing else:')[1].split('\n')[1];
+        const example = exampleOf(system);
         assert.match(example, /"finalViewpoint": "name", "elapsedTime": null or "3 hours", "sceneTime": "MM-DD HH:MM"/);
         assert.doesNotMatch(example, /"screen"|"screenOwner"|"owner"|"time"/);
     }
@@ -2180,7 +2182,11 @@ test('다녀간 곳 (the map): a reflection puts the places the owner went to on
 test('다녀간 곳: making a phone asks for the newest visits; the prompts that make up an ordinary day never do', () => {
     for (const s of [data.AI_SYS_PHONE, data.AI_SYS_PHONE_APPS, data.updateSystem({ split: true })]) assert.ok(s.includes('"visits": [{ "place": a place the owner really went to'), s.slice(0, 40));
     assert.ok(data.AI_SYS_PHONE.includes('the 12 newest visits'));
-    for (const life of [false, true]) assert.match(data.coreSystem({ everyday: true, life }), /"everyday": \{ the same items as in "phone" but "profile", "visits"/);
+    for (const life of [false, true]) assert.match(data.coreSystem({ life }), /visit: "place": a place the owner really went to/);
+    // (a visit of the owner's own life is none: a place is gone to in the story)
+    const got0 = data.recordsCore({ now: '10-25 16:00', records: [{ type: 'scene', id: 'cafe', at: 2, quote: 'x', summary: 'cafe' }, { type: 'visit', at: 2, from: 'story', scene: 'cafe', place: 'Café Moka' }, { type: 'visit', at: 2, from: 'life', place: 'Gym' }] });
+    assert.deepEqual(got0.events[0].phone.visits.map(x => x.place), ['Café Moka']);
+    assert.equal(got0.everyday, undefined);
     const got = data.parsePhone(JSON.stringify({ visits: [{ place: 'Café Moka', city: 'Seoul', with: ['Mara', 'Mara', ''], time: '10-25 15:00' }, { place: ' ', city: 'Seoul' }] }), 'Ren');
     assert.deepEqual(got.visits.map(x => [x.place, x.city, x.with, x.time]), [['Café Moka', 'Seoul', ['Mara'], '10-25 15:00']]);
 });
