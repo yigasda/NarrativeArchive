@@ -554,7 +554,7 @@
 .na_ap2_checks .na_ai_conflict i.fa-wand-magic-sparkles { color: var(--na-accent-fg, var(--na-accent)); margin-right: 4px; }
 .na_ap2_checks .na_conflict_out { margin: 0 14px 12px; }
 .na_ap2_end { display: flex; align-items: center; gap: 2px; color: var(--na-dim); --axfg: var(--na-dim); font-weight: 600}
-.na_ap2_end input { width: 5.5em !important; margin: 0 !important; text-align: center; font-weight: 600; }
+.na_ap2_end input { width: 5.5em; margin: 0; text-align: center; font-weight: 600; }
 .na_ap2 .na_append_info:empty { display: none; }
 
 /* ============ health v2 */
