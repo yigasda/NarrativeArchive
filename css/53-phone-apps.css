@@ -57,6 +57,12 @@
 .ax_who2 > span:last-child { min-width: 0; }
 .ax_gav { position: relative; flex: none; display: inline-flex; } .ax_gav i { position: absolute; right: -3px; bottom: -2px; font-size: 10.5px; font-style: normal; font-weight: 700; background: #fff; color: #4a525d; border-radius: 999px; padding: 1px 6px; box-shadow: 0 1px 3px rgba(22, 27, 34, 0.15); }
 .ax_gstk { display: flex; flex: none; } .ax_gstk > * + * { margin-left: -9px; } .ax_gstk > * { box-shadow: 0 0 0 2px #f2f3f5; border-radius: 50%; }
+.na_ph_bb { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; } .ax_mholding .ax_bb:not(.ax_mheld .ax_bb), .ax_mholding .ax_who, .ax_mholding .ax_tm { opacity: 0.35; filter: blur(1px); }
+.ax_mheld { display: flex; flex-direction: column; align-items: flex-start; position: relative; z-index: 3; } .ax_mheld.me { align-items: flex-end; } .ax_mheld .ax_bb { box-shadow: 0 10px 30px rgba(22, 27, 34, 0.18); }
+.ax_mbar { display: flex; gap: 2px; margin: 8px 0 4px; padding: 6px 8px; background: #fff; border-radius: 18px; box-shadow: 0 1px 2px rgba(22, 27, 34, 0.05), 0 10px 28px rgba(22, 27, 34, 0.16); }
+.ax .ax_mbar button { --axbg: transparent; --axsh: none; --axr: 12px; display: flex; flex-direction: column; align-items: center; gap: 3px; width: 56px; padding: 4px 0; color: #3f4a5a; --axfg: #3f4a5a; } .ax .ax_mbar small { font-size: 10.5px; --axfs: 10.5px; } .ax .ax_mbar .red, .ax .ax_mtop .red { color: #d9433b; --axfg: #d9433b; }
+.ax_mrow { display: flex; align-items: center; gap: 10px; } .ax_mrow.me .ax_bb { margin-left: auto; } .ax_mck { width: 22px; height: 22px; border-radius: 50%; border: 1.6px solid #c2c7cf; flex: none; display: grid; place-items: center; } .ax_mck.on { background: #2f6bff; border-color: #2f6bff; }
+.ax_bt.ax_bpk { background: #e1e9ff; } .ax_bm.ax_bpk { background: #1f55d8; } .ax_mtop { gap: 8px; } .ax_mtop > b { flex: 1; font-size: 17px; --axfs: 17px; font-weight: 600; }
 .ax_msgs { gap: 4px; padding: 6px 14px; }
 .ax_tm { align-self: center; font-size: 11.5px; --axfs: 11.5px; color: #7c8592; --axfg: #7c8592; margin: 6px 0 8px; padding: 4px 10px; border-radius: 10px; --axr: 10px; background: rgba(255, 255, 255, 0.7)}
 .ax_tm b { font-weight: 600; color: #4d5562; }

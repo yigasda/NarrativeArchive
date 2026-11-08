@@ -265,9 +265,13 @@ export function draftView(p, now, i, roster) {
       </div>
       ${axInd()}`;
 }
-export function threadScreen(p, now, i, roster) {
+// 꾹 누르기 (docs/mockups/phone-msgpress D): a bubble held shows a bar of four under it — 복사 · 재번역 · 선택 · 삭제;
+// 선택 picks many (a circle on the left), and the head becomes ✕ · N개 선택 with 복사 · 재번역 · 삭제
+Object.assign(AX, { mqcopy: 'M9 9h10v10H9zM5 15V5h10', mqtrans: 'M4 6h8M8 4v2M5 10c2 0 5-1 6-4M14 8l4 10M15 15h5', mqpick: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM8 12l3 3 5-6', mqbin: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13' });
+export function threadScreen(p, now, i, roster, ui = {}) {
     const t = p.threads[i];
     if (!t) return msgList(p, now, roster);
+    const pick = ui.msgPick?.i === i ? ui.msgPick.ks : null, held = !pick && ui.msgHeld?.i === i ? ui.msgHeld.k : null;
     const ms = t.messages.filter(x => !x.deleted), group = !!t.group || new Set(ms.filter(x => x.from !== 'me').map(x => nameKey(x.from))).size > 1, saved = savedName(p, t.with);
     let day = '';
     const rows = ms.map((x, n) => {
@@ -277,13 +281,21 @@ export function threadScreen(p, now, i, roster) {
         else if (prev && prev.from !== x.from) out += '<i class="ax_gap"></i>';
         if (!me && group && (!prev || prev.from !== x.from || d !== prev.time.slice(0, 5))) out += `<div class="ax_who">${esc(savedName(p, x.from))}</div>`;
         const tail = !next || next.from !== x.from || next.time.slice(0, 5) !== d;
-        out += `<div class="ax_bb ${me ? 'ax_bm' : 'ax_bt'} ${tail ? 'tail' : ''}">${esc(x.text)}${x.ko && koOn() ? `<span class="ax_k">${esc(x.ko)}</span>` : ''}</div>`;
+        const k = t.messages.indexOf(x), on = pick?.has(k), busy = ui.retr?.has(k);
+        const bb = `<div class="ax_bb ${me ? 'ax_bm' : 'ax_bt'} ${tail ? 'tail' : ''}${on ? ' ax_bpk' : ''} na_ph_bb" data-k="${k}">${esc(x.text)}${x.ko && koOn() ? `<span class="ax_k">${busy ? `${busyHtml} 번역하는 중` : esc(x.ko)}</span>` : busy ? `<span class="ax_k">${busyHtml} 번역하는 중</span>` : ''}</div>`;
+        if (pick) out += `<div class="ax_mrow${me ? ' me' : ''}"><i class="ax_mck${on ? ' on' : ''}">${on ? ax('check', 13, '#fff', 3) : ''}</i>${bb}</div>`;
+        else if (held === k) out += `<div class="ax_mheld${me ? ' me' : ''}">${bb}<div class="ax_mbar">${[['mqcopy', '복사', 'na_ph_mcopy', ''], ['mqtrans', '재번역', 'na_ph_mretr', ''], ['mqpick', '선택', 'na_ph_mpick', ''], ['mqbin', '삭제', 'na_ph_mdel', ' red']].map(([ic, l, c, r]) => `<button type="button" class="${c}${r}" data-k="${k}">${ax(ic, 19, 'currentColor', 2)}<small>${l}</small></button>`).join('')}</div></div>`;
+        else out += bb;
         if (me && !next && x.time.length > 5) out += `<div class="ax_read">읽음 ${esc(fmtTime(p, x.time))}</div>`;
         return out;
     }).join('');
+    if (pick) return `${axBar(p, now)}
+      <div class="ax_top ax_mtop"><button type="button" class="ax_cb na_ph_mquit" aria-label="그만 고르기">${ax('x', 17, 'currentColor', 2.4)}</button><b>${pick.size}개 선택</b><button type="button" class="ax_cb na_ph_mcopy" aria-label="복사" ${pick.size ? '' : 'disabled'}>${ax('mqcopy', 17, 'currentColor', 2.2)}</button><button type="button" class="ax_cb na_ph_mretr" aria-label="재번역" ${pick.size ? '' : 'disabled'}>${ax('mqtrans', 17, 'currentColor', 2.2)}</button><button type="button" class="ax_cb na_ph_mdel red" aria-label="삭제" ${pick.size ? '' : 'disabled'}>${ax('mqbin', 17, 'currentColor', 2.2)}</button></div>
+      <div class="ax_scroll ax_msgs ax_mpicking">${rows}<i class="ax_pad big"></i></div>
+      ${axInd()}`;
     return `${axBar(p, now)}
       ${axTop(`${axCb('msg')}${t.group ? `<button type="button" class="ax_who2" data-go="groupinfo" data-i="${i}">${groupStack(t, roster)}<span><b>${esc(t.with)}</b><small>${groupOf(t).length + 1}명 ›</small></span></button>` : `<button type="button" class="ax_who2" data-go="contact" data-i="${encodeURIComponent(nameKey(t.with))}">${axAv(t.with, 38, roster)}<span><b>${esc(saved)}</b><small>연락처 보기 ›</small></span></button>`}`, axKp(p))}
-      <div class="ax_scroll ax_msgs">${rows}<i class="ax_pad big"></i></div>
+      <div class="ax_scroll ax_msgs${held !== null ? ' ax_mholding' : ''}">${rows}<i class="ax_pad big"></i></div>
       ${draftBar(p, t, i)}
       ${axInd()}`;
 }
