@@ -811,7 +811,7 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.match(on, /photo: "caption", "ko", "time", "mood"/);
     assert.ok(!on.includes('talk over each other') && on.includes('Contact goes both ways; a group chat may go on without them.'));
     assert.ok(on.includes('Posts only if this owner posts.') && !on.includes('Not every app every day') && !on.includes('only if this owner keeps them'));
-    assert.match(on, /"at": its message number, "scene": its scene's id or "",/);
+    assert.match(on, /"at": its message number \(every record has one\), "scene": its scene's id or "",/);
     assert.match(on, /"alarms": \[\{ "time", "label", "ko", "days", "date" \}\], "timers": \[\{ "label", "ko", "sec" \}\], "files": \[/);
     assert.ok(!plain.includes('"alarms": [') && plain.includes('"records": scenes and story records; the owner\'s own life goes in "everyday".'));
     assert.match(on, /new texts in a chat are new/);
@@ -1285,12 +1285,4 @@ test('"health" after "everyday": a past day guessed from their usual becomes the
     assert.deepEqual([day('10-25').steps, day('10-24').steps, day('10-26')?.steps], [6100, 4000, 3000]);
     await data.undoRound(c.m, c.p);
     assert.equal(day('10-25').steps, 8050);
-});
-
-test('recordsCore: a story record without its message number goes on the scene of its day and time', () => {
-    const got = data.recordsCore({ now: '11-06 21:00', records: [
-        { type: 'scene', id: 'dinner', at: 2, quote: 'dinner', date: '11-03', time: '19:00' }, { type: 'scene', id: 'hotel', at: 4, quote: 'hotel', date: '11-03', time: '21:30' },
-        { type: 'scene', id: 'studio', at: 8, quote: 'studio', date: '11-06', time: '20:30' },
-        { type: 'visit', place: 'Pho 24', time: '11-03 19:10' }, { type: 'visit', place: 'Hotel Lio', time: '11-03 21:40' }, { type: 'visit', place: 'Studio', time: '11-06 20:30' }] });
-    assert.deepEqual(got.events.map(e => [e.id, (e.phone.visits || []).map(v => v.place)]), [['dinner', ['Pho 24']], ['hotel', ['Hotel Lio']], ['studio', ['Studio']]]);
 });
