@@ -807,7 +807,7 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.match(on, /"photos": \[\{ "caption", "ko", "time", "mood" \}\]/);
     assert.match(on, /The diary: an entry when a story day ends in these messages or a scene stays with them, as long as this owner would write it;/);
     assert.match(on, /Voice memos: about one every few days/);
-    assert.match(on, /\nTHE STORY IS CANON\n- The story is canon\. Your work is one of two things: find the events in the story and write within what it tells, or write the everyday life outside it\.\n- Never get ahead of anything tied to the story's events\./);
+    assert.match(on, /\nTHE STORY IS CANON\n- The story is canon\. Your work is one of two things: find the events in the story and write within what it tells, or write the everyday life outside it\.\n- Never get ahead of anything tied to the story's events\. Never make up the story's future because it would fit\. Make up no event, outcome, ending, secret, new fact, reason, full account or plan\./);
     assert.match(on, /photo: "caption", "ko", "time", "mood"/);
     assert.ok(!on.includes('talk over each other') && on.includes('Contact goes both ways; a group chat may go on without them.'));
     assert.ok(on.includes('Posts only if this owner posts.') && !on.includes('Not every app every day') && !on.includes('only if this owner keeps them'));

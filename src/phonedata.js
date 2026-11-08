@@ -361,7 +361,7 @@ ${archiveOnly ? `TIMES\n${CORE_TIMES}` : `${CORE_CLOCK_FIRST}\n${CORE_TIMES}`}
 
 THE STORY IS CANON
 - The story is canon. Your work is one of two things: find the events in the story and write within what it tells, or write the everyday life outside it.
-- Never get ahead of anything tied to the story's events. Never make up the story's future because it would fit. Make up no secret, new fact, reason or full account of an event, outcome or completion of one, or plan.
+- Never get ahead of anything tied to the story's events. Never make up the story's future because it would fit. Make up no event, outcome, ending, secret, new fact, reason, full account or plan.
 - When writing about the story, only what it states, only as far as it states. A made-up future belongs only to everyday life outside the story.
 - In a record about the story's people or events, anything a later message could contradict is a new fact. What the messages already say may be said again.
 
