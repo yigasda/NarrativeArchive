@@ -64,6 +64,7 @@ const OPEN = { orders: o => !ORDER_OVER(o.status) && o.status !== 'delivered', p
 export const PASS_OVER = v => { const s = String(v || '').toLowerCase().trim().replace(/(?:환불|취소)\s*(?:불가|가능|안\s*됨)|non-?refundable|free\s+cancel\w*|cancel\w*\s+(?:allowed|possible)|refundable/g, ' '); return !/미사용|사용\s*전|사용\s*예정|unused|not\s+(?:yet\s+)?used/.test(s) && /\bused\b|cancel|refund|checked out|expired|사용\s*(?:완료|됨|함)|취소|환불|만료/.test(s); };
 const samePlace = (a, b) => !!plain(a) && plain(a) === plain(b);
 // (a day with its year, "2025-05-10", keeps it: an asset got long ago is not this year's)
+const withYear = (date, year) => { const md = when(date).slice(0, 5), y = String(year ?? '').trim(); return /^\d{2}-\d{2}$/.test(md) && /^\d{4}$/.test(y) ? `${y}-${md}` : (/^\d{4}-\d{2}-\d{2}/.test(String(date ?? '').trim()) ? String(date).trim().slice(0, 10) : md); };
 const sinceOf = v => (/^\d{4}-\d{2}-\d{2}/.test(String(v ?? '').trim()) ? String(v).trim().slice(0, 10) : when(v).slice(0, 5));
 // 정기 입출금: how often, and on which day (monthly: the day of the month; weekly: the weekday 0–6; yearly: "MM-DD")
 const REG_FREQ = ['monthly', 'weekly', 'yearly'];
@@ -183,8 +184,9 @@ export function recordsMoney(recs) {
         // (a ticket's status is one of its own: an order's "delivered" on it is none)
         else if (type === 'ticket') { const st = String(x.status ?? '').toLowerCase().trim(); add('passes', { ...x, status: ['booked', 'used', 'cancelled'].includes(st) ? st : '' }); }
         // (an asset's "date" is when the owner got it)
-        else if (type === 'asset') { const { amount, amountFrom, date, ...o } = x; add('assets', { ...o, value: amount ?? o.value ?? null, ...(amountFrom ? { valueFrom: amountFrom } : {}), ...(o.since || date ? { since: o.since || date } : {}) }); }
-        else if (type === 'debt') add('debts', x);
+        // (an asset's "date" is when the owner got it, a debt's when it was taken on; with its "year", one full day)
+        else if (type === 'asset') { const { amount, amountFrom, date, year, ...o } = x; const since = o.since || withYear(date, year); add('assets', { ...o, value: amount ?? o.value ?? null, ...(amountFrom ? { valueFrom: amountFrom } : {}), ...(since ? { since } : {}) }); }
+        else if (type === 'debt') { const { date, year, ...o } = x; const since = o.since || withYear(date, year); add('debts', { ...o, ...(since ? { since } : {}) }); }
         else if (type === 'account') add('accounts', x);
         else if (type === 'card') mo.newCard ||= x;
         else if (type === 'trade') add('trades', x);
@@ -494,7 +496,7 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
             return { kind: KINDS.assets.includes(x.kind) ? x.kind : 'other', name: names[0], names, value: finite(Number(x.value)) ? round(Number(x.value)) : null, currency: currency(String(x.currency || '').toUpperCase()) ? String(x.currency).toUpperCase() : p.money.currency, valueFrom: x.valueFrom === 'story' ? 'story' : 'guess', whose: WHOSE.includes(x.whose) ? x.whose : 'owner', status: STATES.assets.includes(x.status) ? x.status : 'held', since: sinceOf(x.since), conditions: txt(x.conditions, 200) }; },
         debts: x => { const names = allNames('debts', x);
             if (!names.length && !txt(x.lender)) return null;
-            return { kind: KINDS.debts.includes(x.kind) ? x.kind : 'other', name: names[0] || txt(x.lender, 60), names, lender: txt(x.lender, 60), amount: finite(Number(x.amount)) ? round(Math.abs(Number(x.amount))) : null, currency: currency(String(x.currency || '').toUpperCase()) ? String(x.currency).toUpperCase() : p.money.currency, amountFrom: x.amountFrom === 'story' ? 'story' : 'guess', whose: WHOSE.includes(x.whose) ? x.whose : 'owner', due: when(x.due).slice(0, 5), status: STATES.debts.includes(x.status) ? x.status : 'open', conditions: txt(x.conditions, 200) }; },
+            return { kind: KINDS.debts.includes(x.kind) ? x.kind : 'other', name: names[0] || txt(x.lender, 60), names, lender: txt(x.lender, 60), amount: finite(Number(x.amount)) ? round(Math.abs(Number(x.amount))) : null, currency: currency(String(x.currency || '').toUpperCase()) ? String(x.currency).toUpperCase() : p.money.currency, amountFrom: x.amountFrom === 'story' ? 'story' : 'guess', whose: WHOSE.includes(x.whose) ? x.whose : 'owner', ...(sinceOf(x.since) ? { since: sinceOf(x.since) } : {}), due: when(x.due).slice(0, 5), status: STATES.debts.includes(x.status) ? x.status : 'open', conditions: txt(x.conditions, 200) }; },
     };
     // what a mention gives, field by field: { field: [value, made] }
     const VALUES = {

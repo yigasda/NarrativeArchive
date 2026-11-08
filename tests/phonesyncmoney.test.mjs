@@ -683,6 +683,9 @@ test('점검 9-4 (records): the money step\'s one list goes in the lists the mon
     assert.deepEqual(mo.quotes.map(q => [q.value, q.source]), [[130, 'guess'], [131, 'story']]);
     assert.deepEqual([mo.deliveries[0].for, mo.deliveries[0].time], [2, '10-26 19:30']);
     assert.equal(mo.newCard.exp, '10/29');
+    // (a day with its year: one full day; without, the day alone)
+    const yr = recordsMoney([{ type: 'asset', names: ['Trust'], date: '06-15', year: 2025 }, { type: 'asset', names: ['Car'], date: '03-02' }, { type: 'debt', names: ['Loan'], date: '01-10', year: '2024' }]);
+    assert.deepEqual([yr.assets.map(a => a.since), yr.debts[0].since], [['2025-06-15', '03-02'], '2024-01-10']);
     // (a ticket takes only a ticket's status)
     assert.deepEqual(recordsMoney([{ type: 'ticket', by: 'Inn', status: 'delivered' }, { type: 'ticket', by: 'Inn', status: 'Used' }]).passes.map(x => x.status), ['', 'used']);
 });
