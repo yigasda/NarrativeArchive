@@ -862,6 +862,8 @@ test('run60: an asset with no day the owner got it keeps none (the message\'s da
     const { m, p } = setup();
     applyMoney(m, p, ev('t', 5, '11-03', { assets: [{ kind: 'deposit', names: ['Trust'], value: 5000, status: 'blocked', occurrence: 'again', refersBack: false }, { kind: 'vehicle', names: ['Car'], value: 9000, since: '03-02', occurrence: 'again', refersBack: false }] }), opts());
     assert.deepEqual(p.money.assets.map(a => a.since), ['', '03-02']);
+    applyMoney(m, p, ev('t2', 6, '11-03', { assets: [{ kind: 'deposit', names: ['Old trust'], value: 1, since: '2025-05-10', occurrence: 'again', refersBack: false }] }), opts());
+    assert.equal(p.money.assets.at(-1).since, '2025-05-10');
 });
 
 test('run61: a card bill the model wrote by hand, from the paying account to the card by its name, is that month\'s: the clock pays no second one', async () => {

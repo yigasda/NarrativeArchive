@@ -63,6 +63,8 @@ const nameHit = (a, b) => a.some(u => b.some(v => { const x = NAME(u), y = NAME(
 const OPEN = { orders: o => !ORDER_OVER(o.status) && o.status !== 'delivered', passes: o => !PASS_OVER(o.status), assets: o => ['held', 'expected', 'blocked'].includes(o.status || 'held'), debts: o => ['open', 'overdue'].includes(o.status || 'open') };
 export const PASS_OVER = v => { const s = String(v || '').toLowerCase().trim().replace(/(?:환불|취소)\s*(?:불가|가능|안\s*됨)|non-?refundable|free\s+cancel\w*|cancel\w*\s+(?:allowed|possible)|refundable/g, ' '); return !/미사용|사용\s*전|사용\s*예정|unused|not\s+(?:yet\s+)?used/.test(s) && /\bused\b|cancel|refund|checked out|expired|사용\s*(?:완료|됨|함)|취소|환불|만료/.test(s); };
 const samePlace = (a, b) => !!plain(a) && plain(a) === plain(b);
+// (a day with its year, "2025-05-10", keeps it: an asset got long ago is not this year's)
+const sinceOf = v => (/^\d{4}-\d{2}-\d{2}/.test(String(v ?? '').trim()) ? String(v).trim().slice(0, 10) : when(v).slice(0, 5));
 // 정기 입출금: how often, and on which day (monthly: the day of the month; weekly: the weekday 0–6; yearly: "MM-DD")
 const REG_FREQ = ['monthly', 'weekly', 'yearly'];
 const WEEK = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6, 일: 0, 월: 1, 화: 2, 수: 3, 목: 4, 금: 5, 토: 6 };
@@ -488,7 +490,7 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
             return { kind: KINDS.passes.includes(x.kind) ? x.kind : 'other', by, names, from: txt(x.from, 40), to: txt(x.to, 40), date: when(x.date).slice(0, 5) || date, time: hhmm(x.time), seat: txt(x.seat, 12), gate: txt(x.gate, 12), no: txt(x.no, 24), status: txt(x.status, 30), ...(when(x.until) ? { until: when(x.until).slice(0, 5) } : {}) }; },
         assets: x => { const names = allNames('assets', x);
             if (!names.length) return null;
-            return { kind: KINDS.assets.includes(x.kind) ? x.kind : 'other', name: names[0], names, value: finite(Number(x.value)) ? round(Number(x.value)) : null, currency: currency(String(x.currency || '').toUpperCase()) ? String(x.currency).toUpperCase() : p.money.currency, valueFrom: x.valueFrom === 'story' ? 'story' : 'guess', whose: WHOSE.includes(x.whose) ? x.whose : 'owner', status: STATES.assets.includes(x.status) ? x.status : 'held', since: when(x.since).slice(0, 5), conditions: txt(x.conditions, 200) }; },
+            return { kind: KINDS.assets.includes(x.kind) ? x.kind : 'other', name: names[0], names, value: finite(Number(x.value)) ? round(Number(x.value)) : null, currency: currency(String(x.currency || '').toUpperCase()) ? String(x.currency).toUpperCase() : p.money.currency, valueFrom: x.valueFrom === 'story' ? 'story' : 'guess', whose: WHOSE.includes(x.whose) ? x.whose : 'owner', status: STATES.assets.includes(x.status) ? x.status : 'held', since: sinceOf(x.since), conditions: txt(x.conditions, 200) }; },
         debts: x => { const names = allNames('debts', x);
             if (!names.length && !txt(x.lender)) return null;
             return { kind: KINDS.debts.includes(x.kind) ? x.kind : 'other', name: names[0] || txt(x.lender, 60), names, lender: txt(x.lender, 60), amount: finite(Number(x.amount)) ? round(Math.abs(Number(x.amount))) : null, currency: currency(String(x.currency || '').toUpperCase()) ? String(x.currency).toUpperCase() : p.money.currency, amountFrom: x.amountFrom === 'story' ? 'story' : 'guess', whose: WHOSE.includes(x.whose) ? x.whose : 'owner', due: when(x.due).slice(0, 5), status: STATES.debts.includes(x.status) ? x.status : 'open', conditions: txt(x.conditions, 200) }; },
@@ -497,7 +499,7 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
     const VALUES = {
         orders: x => ({ shop: txt(x.shop, 60), option: txt(x.option, 60), gift: giftOf(x.gift), sender: txt(x.sender, 60), eta: when(x.eta).slice(0, 5), price: x.price === null || x.price === undefined || x.price === '' || !finite(Number(x.price)) ? '' : Number(x.price) }),
         passes: x => ({ no: txt(x.no, 24), from: txt(x.from, 40), to: txt(x.to, 40), seat: txt(x.seat, 12), gate: txt(x.gate, 12), date: when(x.date).slice(0, 5), time: hhmm(x.time), until: when(x.until).slice(0, 5) }),
-        assets: x => ({ value: finite(Number(x.value)) ? round(Number(x.value)) : '', whose: WHOSE.includes(x.whose) ? x.whose : '', since: when(x.since).slice(0, 5), conditions: txt(x.conditions, 200) }),
+        assets: x => ({ value: finite(Number(x.value)) ? round(Number(x.value)) : '', whose: WHOSE.includes(x.whose) ? x.whose : '', since: sinceOf(x.since), conditions: txt(x.conditions, 200) }),
         debts: x => ({ lender: txt(x.lender, 60), amount: finite(Number(x.amount)) ? round(Math.abs(Number(x.amount))) : '', whose: WHOSE.includes(x.whose) ? x.whose : '', due: when(x.due).slice(0, 5), conditions: txt(x.conditions, 200) }),
     };
     const APP = { orders: '쇼핑', passes: '지갑', assets: '자산', debts: '빚' };

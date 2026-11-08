@@ -424,6 +424,7 @@ JSON (one object, nothing before or after it)
     cart: "shop", "items": [like a delivery's]` : ''}
 }] }
 Use the message's day for a current change unless the story gives another time.
+With DAYS PASSED, about as many records for those days as its first line says.
 Numbers are plain JSON numbers. Nothing for the owner's money: "records": [].`;
 }
 
@@ -1426,7 +1427,9 @@ function daysPassed(was, now, known, events, last) {
     let span = null;
     if (gap > each) { const f = day(0), t = day(gap - each - 1), n = gap - each; span = [f.md, t.md]; lines.push(`- ${f.md} to ${t.md} (${n} days, ended by #${endedIn(t.md)})`); }
     for (let k = gap - each; k < gap; k++) { const d = day(k); lines.push(`- ${d.md}${d.wd} (ended in #${endedIn(d.md)})`); }
-    return { text: lines.join('\n'), span };
+    // (how many, as a number, the way the bank's fill asks: with none, the model wrote a month of nothing, run61 · 63)
+    const lo = Math.min(gap, 60), hi = Math.min(gap * 2, 90);
+    return { text: [`${gap} day${gap > 1 ? 's' : ''}: about ${lo} to ${hi} records in all, spread over them (some days none, some days several).`, ...lines].join('\n'), span };
 }
 async function moneyStage(m, p, owner, c) {
     const s = p.sync, out = { late: [], owed: [], notes: [], changes: [], apps: new Set() };
