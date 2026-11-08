@@ -1430,7 +1430,7 @@ function daysPassed(was, now, known, events, last) {
     // (how many, as a number, the way the bank's fill asks: with none, the model wrote a month of nothing, run61 · 63)
     // (one number, not a range: with a range the model took its low end, one a day, run64)
     const about = Math.min(Math.round(gap * 1.5), 90);
-    return { text: [`${gap} day${gap > 1 ? 's' : ''}: about ${about} records in all; most days one to three, some none; where, what and how they pay are this owner's, not only cards.`, ...lines].join('\n'), span };
+    return { text: [`${gap} day${gap > 1 ? 's' : ''}: about ${about} records in all; most days one to three, some none; where, what and how money moves are this owner's; a card is only one of the ways.`, ...lines].join('\n'), span };
 }
 async function moneyStage(m, p, owner, c) {
     const s = p.sync, out = { late: [], owed: [], notes: [], changes: [], apps: new Set() };
