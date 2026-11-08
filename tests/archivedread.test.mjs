@@ -789,7 +789,11 @@ test('일상 comes in the reflection\'s own answer (no request of its own); who 
 
 test('the reflection\'s own instructions: one list of records, the story\'s and the owner\'s own life; so many a day', () => {
     const on = data.coreSystem({ life: true }), plain = data.coreSystem();
-    for (const k of ['READING THE STORY', 'THE OWNER\'S LIFE', 'KEEPING IN STEP', 'TIME PASSING', 'WHICH TYPE', 'LANGUAGE', 'TIMES']) assert.ok(on.includes(`\n${k}\n`), k);
+    for (const k of ['READING THE STORY', 'THE OWNER\'S LIFE', 'KEEPING IN STEP', 'TIME PASSING', 'WHICH TYPE', 'LANGUAGE']) assert.ok(on.includes(`\n${k}\n`), k);
+    // (the times in CLOCK FIRST; their own TIMES only when an archive-only round has no CLOCK FIRST)
+    assert.ok(!on.includes('\nTIMES\n') && on.includes('Every record\'s time is on the owner\'s clock'));
+    const arch = data.coreSystem({ life: true, archiveOnly: true });
+    assert.ok(arch.includes('\nTIMES\n- Times are "MM-DD HH:MM"') && !arch.includes('CLOCK FIRST'));
     assert.match(on, /About 11 records of the owner's life for a whole waking day, in step with the hours these messages cover \(an hour: about one; a few minutes: often none\)\./);
     assert.match(on, /for a record of the owner's life, the message whose hours it falls in/);
     assert.match(on, /new texts in a chat already there are new records/);
@@ -1142,7 +1146,7 @@ test('no app only Korea has on the screen time of an owner who lives elsewhere: 
     const same = structuredClone(ko); data.homeScreens(same, false, usual);
     assert.deepEqual(same, ko);
     assert.ok(!data.coreSystem({ life: true }).includes('more than 10 apps'));
-    assert.match(data.coreSystem({ life: true }), /Each day's "apps": as many as this owner really uses, from LIFE NOW's usual .*The apps differ from day to day, so over the days many kinds show up/);
-    assert.match(data.coreSystem({ life: true }), /A new app they start using, of any kind \(chat, social, video, music, game, work or study, reading or news, shopping, money, maps or travel, health\), when the story or their life gives a reason, for instance a translator for a trip: a "usual" record with it in "screen"\."add"\./);
-    assert.match(data.coreSystem({ life: true }), /Mostly the apps people use where the owner lives, by their real names; another country's app only when the story shows them using it\./);
+    assert.match(data.coreSystem({ life: true }), /Each day's "apps": as many as this owner uses, chosen from their usual apps and that day's needs\. Let usage differ across days so the range of their apps shows\./);
+    assert.match(data.coreSystem({ life: true }), /A new app of any kind, when the story or their life gives a reason: a "usual" record with it in "screen"\."add"\./);
+    assert.match(data.coreSystem({ life: true }), /Mostly use apps common where the owner lives, by their real names; another country's app only when the story shows them using it\./);
 });

@@ -337,25 +337,26 @@ const inner = line => line.slice(line.indexOf('[{ ') + 3, line.lastIndexOf(' }]'
 export const LIFE_A_DAY = 11, LIFE_MAX = 70;
 // (CLOCK FIRST as the records answer says it)
 const CORE_CLOCK_FIRST = CLOCK_FIRST.replace('then write events and app records using those times', 'then write the records using those times');
+// (the times of every record: in CLOCK FIRST, or on their own when an archive-only round has none)
+const CORE_TIMES = `- Times are "MM-DD HH:MM"; a year only as STORY YEAR or the story itself gives one.
+- Every record's time is on the owner's clock: a time from another city's screen or scene moves by its hours in OWNER'S CLOCK.
+- Records of the owner's life fall between PHONE NOW's "now" and the answer's "now".`;
 export function coreRecordsSystem({ life = false, weather = false, tracker = false, zone = false, archiveOnly = false, wallet = false, split = true } = {}) {
     const lifeTypes = life ? ' | "alarm" | "timer" | "file" | "health" | "usual"' : '';
     return `${split ? 'STAGE: core\n' : ''}GOAL
-Keep the owner's phone in step with the story. Role-play is told as narrative: it rarely says what the owner texted, searched, photographed or saved. Read what happened and what these hours were like for the owner, and write what their phone would now show, the story's trail and the owner's own life running through it whether or not the story mentions it: texts and calls, photos, notes, searches, mails, posts, the diary, voice memos, the calendar${life ? ', alarms, files and health' : ''}, with the details made up to fit the owner, the people and the moment. The app links records to their messages, merges them and keeps what is already there.
+Keep the owner's phone in step with the story. Role-play rarely says what the owner texted, searched, photographed or saved. Read what happened and what these hours were like for the owner. Write the story's trail and the owner's own life on their phone, whether or not the story mentions it, with details made up to fit the owner, the people and the moment. The app links records to their messages, merges them and keeps what is already there.
 
 YOU GET
-- NEW MESSAGES: the messages to read now, each with its number (#123).
-- ARCHIVE FOR THESE MESSAGES (sometimes): summary sections covering them, or a stretch archived before the phone read it (its messages are not in NEW MESSAGES). They count as evidence, like the messages.
-- ARCHIVE BEFORE (sometimes): what happened earlier. Background.
-- STORY NOW (sometimes): where the story stands after these messages. Background.
-- EVENTS ON THE PHONE: scenes the phone already holds, with their ids.
-- DAYS (sometimes): the story's days from the day before these messages on, with their weekdays. A weekday the story names ("on Friday") is the next one there.
-- MESSAGES READ BEFORE, NOW CHANGED (sometimes): messages put on the phone before and edited since, with the scenes they gave.
-- PHONE NOW: the newest of what the phone holds, its "now" the moment it was last read to.
-${life ? `- LIFE NOW: the alarms, files and health days the phone holds, with record ids.\n` : ''}${weather && tracker ? `- WEATHER NOW: the date, time, place and weather from the chat's last status line up to these messages (a scene the owner isn't in: its place and weather only).\n` : ''}${CLOCK_GET}
-- PEOPLE AROUND (sometimes): people in the owner's life, close or not, from the cards, persona, profile and lorebook, with where things stand now.
-- OWNER, and sometimes STORY YEAR, WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW. Nothing on the phone may show what the owner doesn't know.
+- NEW MESSAGES: the messages to read now, numbered (#123).
+- ARCHIVE FOR THESE MESSAGES (sometimes): summaries covering them or a stretch archived before the phone read it; evidence like the messages.
+- Background only (sometimes): ARCHIVE BEFORE, STORY NOW, WORLD, LOREBOOK, OWNER PROFILE, STORY YEAR, and DAYS (the days ahead with weekdays: "on Friday" is the next one there).
+- The phone: PHONE NOW (its "now": when it was last read), EVENTS ON THE PHONE (its scenes, with ids)${life ? ', LIFE NOW (alarms, files and health days, with ids)' : ''}, and sometimes MESSAGES READ BEFORE, NOW CHANGED (edited messages, with the scenes they gave).${weather && tracker ? `
+- WEATHER NOW: the date, time, place and weather from the chat's last status line (a scene the owner isn't in: its place and weather only).` : ''}
+- OWNER'S CLOCK (sometimes): where the owner is, their time now, and the hours to other cities and people.
+- PEOPLE AROUND (sometimes): people in the owner's life and where things stand now.
+- OWNER, and OWNER DOESN'T KNOW (sometimes): nothing on the phone may show it.
 
-${archiveOnly ? '' : `${CORE_CLOCK_FIRST}\n\n`}READING THE STORY
+${archiveOnly ? '' : `${CORE_CLOCK_FIRST}\n${CORE_TIMES}\n\n`}READING THE STORY
 - The story comes first: every scene and its trail on the phone are written before any record of the owner's own life. A life record never takes a story record's place.
 - Everything that happens in these messages is a "scene"; a scene that would leave anything on the phone gets those records too.
 - Ask what the owner's phone would show after these scenes. Scenes leave a trail on a phone without saying so, for instance a text after a fight, a photo of dinner, a search before a trip, a missed call in a meeting, a note of what someone asked for.
@@ -363,12 +364,11 @@ ${archiveOnly ? '' : `${CORE_CLOCK_FIRST}\n\n`}READING THE STORY
 - A ticket (a flight, a train, a hotel stay, a show, a membership) goes in the wallet, and the calendar shows it from there: never a calendar record for it. A reservation or an appointment is still one.` : ''}
 
 THE OWNER'S LIFE
-- The phone is lived in even when the story says nothing about it. The owner's life runs through it every waking hour, from who they are: their job or school, habits, tastes, moods, money, city and the people in their life.
-- The owner may reach out, not only answer, if they are someone who would: for instance text a friend, send something funny, complain about their day, call someone back.
-- The people in their life have lives of their own and may bring them to the phone, for instance news, a question, a photo, a favour. A group chat the owner is in may go on without them.
-- Their own interests show: what they look up, save, note down, photograph and post; mails from the shops, services, school or work they deal with; reminders they keep.
-- How these hours feel to the owner colours it all, for instance late-night searches and an unsent draft after a bad day, photos and a post after a good one.
-- Habits come back, for instance the same morning chat or the usual order.
+- The phone is lived in even when the story says nothing about it. The owner's life runs through it every waking hour, shaped by their job or school, habits, tastes, moods, money, city and relationships.
+- The owner may reach out, not only answer, as their character and relationships lead them to.
+- Other people bring their own lives to the phone: news, questions, photos or favours. A group chat may go on without the owner.
+- Their interests and how these hours feel show in what they look up, save, write, photograph and share. Mails and reminders fit the people, places and services they deal with.
+- Habits recur.
 - PEOPLE AROUND turn up wherever they would on a real phone, whether or not they are in the scenes. Never someone the owner isn't in touch with now.
 
 ONE DAY ON EVERY APP
@@ -377,22 +377,22 @@ ONE DAY ON EVERY APP
 - Not every app every day: a day leans on the apps this owner reaches for, and routines repeat.
 
 THE APPS
-- Texts: as these people really text, for instance a reply hours later, a question left unanswered, a laugh, a link, a plan that fizzles. The owner sounds different with each person, the way they are with them.
-- Group chats: several people talk over each other, and the owner joins in or just reads, as they would; for instance a birthday, something funny, a vote on where to eat.
-- Calls: for instance a short call, a missed call returned later, a long call at night with someone close; work hours and sleep shape them.
-- Photos: what they would really take, for instance food, the sky, a pet, a screenshot, a receipt, the same shot twice; their eye shows in it.
-- Searches: what is on their mind at that hour, for instance a symptom at night, a recipe, a word they heard, a price, a place, a name they are curious about.
-- Mails: from the people and the places in their life, for instance a coworker, a professor, receipts, newsletters, bills, shipping notices, offers left unread.
-- Calendar: the fixed things of their week, for instance a class, a shift, an appointment, a birthday; never each small thing they do.
-- Posts: only if this owner posts, the kind they post, with likes that fit their following and comments from people in their life. The diary and voice memos too only if this owner would keep them.${life ? `
-- Alarms: they move with life, for instance one more before an early day, one switched off after a trip.
-- Files: what piles up, for instance downloads, screenshots, a work or school document, a ticket or a receipt.` : ''}
+- Texts: as these people really text, including delayed replies, unanswered messages and unfinished exchanges. The owner sounds different with each person.
+- Group chats: several people talk over each other; the owner joins in or just reads, as they would.
+- Calls: their timing, length and whether they are answered fit the relationships, work hours and sleep.
+- Photos: what the owner would really take, including screenshots and imperfect or repeated shots; their eye shows in it.
+- Searches: what is on their mind at that hour.
+- Mails: from the people, workplaces, shops and services in their life; some remain unread.
+- Calendar: fixed commitments and occasions, never each small thing they do.
+- Posts: only if this owner posts, in their style, with likes that fit their following and comments from people in their life. The diary and voice memos too only if this owner would keep them.${life ? `
+- Alarms: added, changed or switched off as life calls for.
+- Files: what they would download, receive or keep.` : ''}
 
 IN THEIR OWN WORDS (notes, the diary, voice memos)
-- The phone's most personal records: written out in full as this owner would write or say them, never a summary of the day.
-- Notes: in the shape a real note has, for instance a list with items ticked or crossed out, a half-sentence to remember, a draft of something hard to say, an address and a number, a line they liked. Short or long as they are, with their own shorthand, spelling and mix of languages.
-- The diary: at most one entry a day, in the first person and their own voice; as long as this owner would write that day. What happened as they saw it, what they felt and wouldn't say aloud, a thought that keeps coming back, a question to themselves; not the day's events in order. A day the story shows: what happened and what they feel about it; another day: that day of their life. No new secrets or story events.
-- Voice memos: spoken, not written: the way the owner talks in the archive and chat, with pauses (…), restarts and half sentences. A moment they could talk into the phone alone, for instance after a fight, on the way somewhere or late at night; for instance an idea, a reminder to self, a tune, words for someone they can't say yet. 20 to 90 seconds of speech, "sec" to fit, "place" where they were. Not the diary told again; no new secrets or story events.${life ? `
+- Write these personal records in full as the owner would write or say them, never as a summary of the day.
+- Notes: use the form the purpose calls for—a list, fragment, draft or saved detail—with the owner's shorthand, spelling and mix of languages. Short or long as they would make it.
+- The diary: at most one entry a day, in the first person and their own voice, as long as they would write. Their experience, feelings, private thoughts and questions, not the day's events in order. A day the story shows follows those events; another day follows their life. No new secrets or story events.
+- Voice memos: spoken in the owner's voice from the archive and chat, with pauses (…), restarts and half sentences, at a moment they could record alone. 20 to 90 seconds of speech, "sec" to fit, "place" where they were. Not the diary told again; no new secrets or story events.${life ? `
 
 HEALTH
 - A "health" record for every story day these messages move into, and for a day in LIFE NOW the story now shows. The day of "now" again every time, with its totals so far (steps, workouts, coffee, water, "screen"), even when nothing new happened.
@@ -403,12 +403,12 @@ HEALTH
 - Numbers only: no diagnosis, no mood, no reason.
 
 SCREEN TIME
-- "screen" on each "health" record: that day's phone use, from their character, not their polite profile; it may show habits they would never admit, for instance a game they can't put down, texting all night, barely touching the phone.
-- Each day follows what happened and how they felt, in their own habits (LIFE NOW's usual).
-- Each day's "apps": as many as this owner really uses, from LIFE NOW's usual and what that day called for, for instance the weather on a rainy day, the bank on payday, maps on a day out. The apps differ from day to day, so over the days many kinds show up (chat, social, video, music, game, work or study, reading or news, shopping, money, maps or travel, health).
-- A new app they start using, of any kind (chat, social, video, music, game, work or study, reading or news, shopping, money, maps or travel, health), when the story or their life gives a reason, for instance a translator for a trip: a "usual" record with it in "screen"."add".
-- It agrees with the other apps that day: hours of texts are hours in the chat app; the last text or search is no later than "late".
-- Mostly the apps people use where the owner lives, by their real names; another country's app only when the story shows them using it.
+- "screen" on each "health" record: that day's phone use, from their character, not their polite profile. It may reveal habits they would never admit.
+- Follow that day's events and feelings, with LIFE NOW's usual as the baseline.
+- Each day's "apps": as many as this owner uses, chosen from their usual apps and that day's needs. Let usage differ across days so the range of their apps shows.
+- A new app of any kind, when the story or their life gives a reason: a "usual" record with it in "screen"."add".
+- Agree with the other records: hours of texts are hours in the chat app; the last text or search is no later than "late".
+- Mostly use apps common where the owner lives, by their real names; another country's app only when the story shows them using it.
 - Numbers only.` : ''}
 
 KEEPING IN STEP
@@ -436,12 +436,10 @@ LANGUAGE
 - Each text is in the language its writer would really use on a phone: from their nationality and where they live; between two people, the language they share.
 - A text that is not in Korean gets "ko": a natural Korean translation. A Korean text gets no "ko".
 - People write the way they talk in the archive and chat. Texts are short, like real texts.
-- A made-up person's name fits where they live.
+- A made-up person's name fits where they live.${archiveOnly ? `
 
 TIMES
-"MM-DD HH:MM" in story time. A year only as STORY YEAR or the story itself gives one.
-${OWN_CLOCK}
-Records of the owner's life fall between PHONE NOW's "now" and the answer's "now".
+${CORE_TIMES}` : ''}
 
 JSON (one object, nothing before or after it)
 { ${archiveOnly ? '' : '"clock": { "basis": "default used or switch evidence; time passed", "finalViewpoint": "name", "elapsedTime": null or "3 hours", "sceneTime": "MM-DD HH:MM", "messageSender": null or "name" },\n  '}"now": "MM-DD HH:MM" (${archiveOnly ? 'the moment of the newest message, never a time something is only planned for' : 'the time resolved in CLOCK FIRST'}),
