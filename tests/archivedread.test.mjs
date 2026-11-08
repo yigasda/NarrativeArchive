@@ -783,7 +783,7 @@ test('일상 comes in the reflection\'s own answer (no request of its own); who 
     assert.match(sys, /Someone new texted or called gets a "contact"/);
     assert.match(sys, /PEOPLE AROUND \(never someone they aren't in touch with now\)/);
     assert.ok(!sys.includes("THE STORY IS CANON") && sys.indexOf("\nSTORY NEXT\nAfter \"clock\" and \"now\", write the records this way.") > sys.indexOf("CLOCK FIRST"));
-    assert.match(sys, /\"everyday\": \{ the owner's own life: \"texts\", \"calls\", \"photos\"/);
+    assert.match(sys, /\"everyday\": \{ the owner's own life outside the story: \"texts\", \"calls\", \"photos\"/);
     const guess = [...c.p.threads.flatMap(th => th.messages.filter(x => x.src === 'guess').map(x => `${th.with}:${x.text}`)), ...c.p.searches.filter(x => x.src === 'guess').map(x => x.q)];
     assert.deepEqual(guess.sort(), ['Ivo:whatever', 'Ivo:you started it', 'Mittagstisch Seongsu']);
     // (a time after the round's now, 09:52 for 09:45, is the now)
@@ -801,7 +801,7 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.ok(!on.includes('\nTIMES\n') && on.includes('Every record\'s time is on the owner\'s clock'));
     const arch = data.coreSystem({ life: true, archiveOnly: true });
     assert.ok(arch.includes('\nTIMES\n- Times are "MM-DD HH:MM"') && !arch.includes('CLOCK FIRST'));
-    assert.match(on, /- \"everyday\": their ordinary life in these hours and each day the story skips \(dated on that day\), from their habits: it fills most lists as these hours call for, for example a photo of lunch,/);
+    assert.match(on, /- \"everyday\": their ordinary life outside the story in these hours and each day the story skips \(dated on that day\), from their habits: it fills most lists as these hours call for, for example a photo of lunch,/);
     assert.match(on, /- For each person the owner had a scene with in NEW MESSAGES: at least one text between the two later these hours, in their own voices/);
     assert.match(on, /\nITEMS \(each with only the fields it needs\)\nscene: "id"/);
     assert.match(on, /\nphoto: "caption", "ko", "time", "mood"/);
@@ -1145,7 +1145,8 @@ test('life records that answer a scene ("scene" its id) go on it and the day\'s 
     assert.ok(lio.messages.every(x => x.src === 'guess' && !('onScene' in x)));
     // (they are the scene's: on its event)
     assert.ok(c.p.sync.events.bar);
-    assert.match(T.sys, /each a list of ITEMS of that type \(an empty one when nothing\), each with \"scene\" when it answers one, and \"said\" and \"made\" when it is about the story/);
+    assert.match(T.sys, /each a list of ITEMS of that type \(an empty one when nothing\), each with \"scene\" when it answers one \}/);
+    assert.match(T.sys, /at least one text between the two later these hours, in their own voices, as a story record in "records" \(with its "said"\)\./);
 });
 
 test('the answer\'s "everyday" lists: each app the owner\'s own life, on its scene when it answers one; counted as life', async () => {

@@ -370,8 +370,8 @@ THE STORY
 
 THE OWNER'S LIFE
 - The phone is lived in every waking hour, from who the owner is; contact goes both ways, and a group chat goes on without them.
-- "everyday": their ordinary life in these hours and each day the story skips (dated on that day), from their habits: it fills most lists as these hours call for, for example a photo of lunch, a search, a note, a mail, a post, texts and calls by the person, a voice memo, a diary entry when the day ends${life ? ', an alarm, a timer, a saved file' : ''}. Routines recur.
-- For each person the owner had a scene with in NEW MESSAGES: at least one text between the two later these hours, in their own voices.
+- "everyday": their ordinary life outside the story in these hours and each day the story skips (dated on that day), from their habits: it fills most lists as these hours call for, for example a photo of lunch, a search, a note, a mail, a post, texts and calls by the person, a voice memo, a diary entry when the day ends${life ? ', an alarm, a timer, a saved file' : ''}. Routines recur.
+- For each person the owner had a scene with in NEW MESSAGES: at least one text between the two later these hours, in their own voices, as a story record in "records" (with its "said").
 - Every app tells the same day: late texts go with ${life ? 'a late "late" and short sleep' : 'a late night'}; nothing on the phone while they sleep or are busy in a scene, though others' texts and calls come in.
 - People: the story's, PEOPLE AROUND (never someone they aren't in touch with now), and made-up people of their own life, named for where they live; no new relative or partner. Relationship words only as the story uses them. Someone new texted or called gets a "contact".
 
@@ -413,7 +413,7 @@ JSON (one object, nothing before or after it)
   "statusCity": whose clock the newest status line here shows (the app can't place its scene): a city or person in OWNER'S CLOCK, "owner" for the owner's own, another city as { "city": in English, "tz" }, or "" when the messages don't say,` : ''}
   "records": [{ "type": "scene" | "contact" | "text" | "call" | "photo" | "note" | "search" | "calendar" | "post" | "profile" | "mail" | "diary" | "visit" | "voice"${lifeTypes},
     "at": its message number (every record has one), "scene": its scene's id or "", "said": exact words of its message it rests on, "made": [what in it is made up to fit],${life ? ' "already": a LIFE NOW id or "",' : ''} and the fields of its type in ITEMS }],
-  "everyday": { the owner's own life: "texts", "calls", "photos", "searches", "notes", "mails", "posts", "calendar", "diary", "voice", "contacts"${life ? ', "alarms", "timers", "files"' : ''}, each a list of ITEMS of that type (an empty one when nothing), each with "scene" when it answers one, and "said" and "made" when it is about the story }${life ? `,
+  "everyday": { the owner's own life outside the story: "texts", "calls", "photos", "searches", "notes", "mails", "posts", "calendar", "diary", "voice", "contacts"${life ? ', "alarms", "timers", "files"' : ''}, each a list of ITEMS of that type (an empty one when nothing), each with "scene" when it answers one }${life ? `,
   "health": [{ "date": the day they woke, "already": a LIFE NOW id or "", "sleep", "wake", "woke", "steps", "km", "floors", "hr": [low, high], "workouts": [{ "kind", "time", "min", "km" }], "coffee", "coffeeKind", "water", "weight", "screen": { "apps": { app: minutes }, "pickups", "late" } }],
   "usual": { "weight", "height", "coffee", "coffeeKind", "coffeeKo", "water", "bed", "sleep", "wake", "steps", "workouts", "rest", "screen": { "add": [{ "app", "kind": chat | social | game | video | music | work | reading | shopping | money | maps | health | other, "min" }], "drop", "pickups", "late" } } or null` : ''}${life && weather ? `,\n${WEATHER_JSON}` : ''} }
 "records": scenes and story records; the owner's own life goes in "everyday". Numbers are plain JSON numbers. Nothing new: "records": [].
