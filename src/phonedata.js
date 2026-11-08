@@ -793,11 +793,13 @@ const BUNDLE_LINES = 8, BUNDLES = 2;
 const dayOfItem = x => when(String(x?.date || x?.time || '')).slice(0, 5);
 // (the day of "now" so far: its share of the waking hours, 07:00 to 23:00, gone by; a morning round leaves the rest of
 // the day its own. At least one, and one exchange of texts)
-const WAKE_FROM = 7, WAKE_HOURS = 16;
+const WAKE_FROM = 7, WAKE_HOURS = 16, DIARY_FROM = 18;
 const capSoFar = (k, d, now) => {
     const all = EVERYDAY_CAP[k] || 0, t = String(now || '');
     if (!d || t.slice(0, 5) !== d || !hm(t)) return all;
     const [h, m] = hhmm(t.slice(6)).split(':').map(Number), part = Math.min(1, Math.max(0, (h + m / 60 - WAKE_FROM) / WAKE_HOURS));
+    // (the diary: the day's from 18:00, when most of it is told; a round before that leaves it to a later one)
+    if (k === 'diary') return h >= DIARY_FROM ? all : 0;
     return Math.min(all, Math.max(k === 'threads' ? BUNDLE_LINES : 1, Math.ceil(all * part)));
 };
 function everydayOnly(p, add, day, daily, now = '') {

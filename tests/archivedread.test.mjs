@@ -740,7 +740,7 @@ test('the answer\'s own "everyday": marked as everyday records, on the round\'s 
 
     // a round with nothing but small talk: its last message carries them
     T.chat.push(say('Mara', 'just bored at my desk'));
-    await run(c.m, { now: '10-26 11:00', events: [], everyday: { diary: [{ date: '10-26', title: 'Büro', text: 'Langweilig.' }] } });
+    await run(c.m, { now: '10-26 19:00', events: [], everyday: { diary: [{ date: '10-26', title: 'Büro', text: 'Langweilig.' }] } });
     assert.ok(guess().includes('diary:Büro'));
     await data.undoRound(c.m, c.p);
     assert.ok(!guess().includes('diary:Büro'));
@@ -1111,8 +1111,11 @@ test('life records that answer a scene ("scene" its id) go on it and the day\'s 
     c.p.now = '10-26 07:30'; c.p.year = 2026;
     const srch = (q, h, x = {}) => ({ type: 'search', at: 2, from: 'life', q, time: `10-26 ${h}`, ...x });
     // (09:00: one search of the day's five so far)
-    await run(c.m, { now: '10-26 09:00', records: [srch('weather', '08:10'), srch('bus', '08:20'), srch('news', '08:30')] });
+    await run(c.m, { now: '10-26 09:00', records: [srch('weather', '08:10'), srch('bus', '08:20'), srch('news', '08:30'),
+        // (a diary of the day before 18:00: left to a later round; the day before's, kept)
+        { type: 'diary', at: 2, from: 'life', date: '10-26', title: 'morning diary', text: 'x' }, { type: 'diary', at: 2, from: 'life', date: '10-25', title: 'yesterday', text: 'x' }] });
     assert.deepEqual(c.p.searches.map(x => x.q), ['weather']);
+    assert.deepEqual(c.p.diary.map(x => x.title), ['yesterday']);
     T.chat.push(say('Ren', 'Ivo and Ren have it out at the bar'));
     const ex = (h, n) => ({ type: 'text', at: 4, from: 'life', scene: 'bar', with: 'Lio', messages: Array.from({ length: n }, (_, i) => ({ from: i % 2 ? 'me' : 'Lio', text: `${h}:${i}`, time: `10-26 ${h}:${String(10 + i).padStart(2, '0')}` })) });
     await run(c.m, { now: '10-26 23:40', records: [
@@ -1122,7 +1125,7 @@ test('life records that answer a scene ("scene" its id) go on it and the day\'s 
         ex('22', 10), ex('23', 3), { ...ex('21', 2), scene: '' },
         ...['d1', 'd2'].map(title => ({ type: 'diary', at: 4, from: 'life', scene: 'bar', date: '10-26', title, text: 'x' }))] });
     // (the diary: one a day, a scene's own too)
-    assert.deepEqual(c.p.diary.map(x => x.title), ['d1']);
+    assert.deepEqual(c.p.diary.map(x => x.title), ['yesterday', 'd1']);
     const s = c.p.searches.filter(x => x.src === 'guess').map(x => x.q);
     // (all six of the scene's, and the plain one: the day's count is the plain ones' only)
     assert.deepEqual(s, ['weather', 'after a', 'after b', 'after c', 'after d', 'after e', 'after f', 'plain']);
