@@ -262,7 +262,7 @@ test('the everyday and delivery apps through a reflection: asked for, put in, an
     await run(c.m, lifeAnswer());
     assert.ok(T.sys.includes('LIFE\n') && !T.sys.includes('"deliveries"') && T.sys.includes('"weather"'));
     assert.ok(T.input.includes('[LIFE NOW]') && !T.input.includes('[DELIVERY SHOPS]'));
-    assert.ok(T.moneySys.includes('"deliveries"') && T.moneyInput.includes('[DELIVERY SHOPS]'));
+    assert.ok(T.moneySys.includes('delivery: no "amount"') && T.moneyInput.includes('[DELIVERY SHOPS]'));
     const L = c.p.life;
     assert.deepEqual(L.clock.alarms.map(a => a.label), ['Aufstehen', 'Flughafen']);
     assert.equal(L.health.days.length, 1);
@@ -518,24 +518,87 @@ test('a Korean line that only says its original again is not drawn twice; a real
     assert.equal(p.events[0].ko, '');
 });
 
-test('reflection in two steps: core keeps the life apps and marks money; money holds the money only; each names its step', () => {
+test('reflection in two steps: core keeps the life apps and holds no money at all; money reads every round in one list of records; each names its step', () => {
     const core = data.coreSystem({ life: true, weather: true, tracker: true, invest: true }), money = data.moneySystem({ delivery: true, invest: true });
     assert.equal(core.split('\n')[0], 'STAGE: core');
     assert.equal(money.split('\n')[0], 'STAGE: money');
-    assert.match(core, /"apps": \[\] or \["money", "invest"\]/);
-    assert.match(core, /only touches these apps .*a share price mentioned.* is still an event/);
-    assert.match(core, /its basket too/);
-    assert.match(core, /a share price the story gives, a share they start watching, a stake/);
     for (const k of ['"alarms"', '"health"', '"days"', '"weather"', '"cities"', 'LIFE NOW']) assert.ok(core.includes(k), `core lacks ${k}`);
-    for (const k of ['"moves"', '"deliveries"', 'MONEY NOW', 'a payment in them is that same payment']) assert.ok(!core.includes(k), `core holds ${k}`);
-    for (const k of ['"moves"', '"deliveries"', '"newShop"', '"stakes"']) assert.ok(money.includes(k), `money lacks ${k}`);
-    assert.ok(!data.moneySystem().includes('"deliveries"'));
-    // the brokerage only when asked: a meal or a taxi doesn't carry trades, prices or stakes
-    for (const k of ['"trades"', 'INVESTMENTS NOW', '"stakes"', 'broker']) assert.ok(!data.moneySystem({ delivery: true }).includes(k), `money without invest holds ${k}`);
-    assert.ok(!data.coreSystem({ life: true }).includes('"invest"'));
+    // (core marks nothing for money: the money step reads every round itself)
+    for (const k of ['"apps": [] or', '"money" when the event', '"moves"', '"deliveries"', 'MONEY NOW', 'a payment in them is that same payment', 'second step', 'an order already placed']) assert.ok(!core.includes(k), `core holds ${k}`);
+    for (const k of ['{ "records": [{', '"type": "payment" | "regular" | "order"', 'DAYS PASSED', 'CALENDAR', 'TIME PASSING', 'delivery: no "amount"', '"newShop"', 'stake:', 'INVESTMENTS NOW', 'broker:EUR']) assert.ok(money.includes(k), `money lacks ${k}`);
+    // the apps the phone doesn't have aren't named
+    const plain = data.moneySystem();
+    for (const k of ['DELIVERY SHOPS', '"newShop"', 'delivery: no', 'INVESTMENTS', 'broker', 'stake:', 'quote:']) assert.ok(!plain.includes(k), `money without delivery or brokerage holds ${k}`);
+    assert.ok(plain.includes('a few payments or orders.') && money.includes('a few payments, orders or deliveries.'));
+    // no marker of the template left over, no doubled space before a comma
+    for (const t of [plain, money, data.moneySystem({ delivery: true }), data.moneySystem({ invest: true })]) { assert.ok(!/배달|투자|\$\{| ,/.test(t)); }
     // the one-step instructions are unchanged
     assert.ok(!data.updateSystem({ money: true }).startsWith('STAGE'));
     assert.ok(!data.updateSystem({ money: true }).includes('"apps"'));
+});
+
+// ---- 돈 단계 3.176: every round, one list of records by message number
+test('money every round, by message number: core\'s one event takes its message\'s money, a message with none gets a money event of its own; 되돌리기 and 빼기 take them', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Mara', 'I paid the taxi'), say('Ren', 'grabbed a coffee on the way'), say('Ren', 'see you')]);
+    T.moneyCalls = 0; T.lastCore = null;
+    T.moneyAnswers = [{ records: [
+        { type: 'payment', at: 2, account: '1111', amount: -12000, who: '택시', kind: 'card', occurrence: 'new', amountFrom: 'guess' },
+        // (a message core gave no event: its own money event)
+        { type: 'payment', at: 3, account: '1111', amount: -4500, who: 'Cafe Ivo', kind: 'card', occurrence: 'new', amountFrom: 'guess' },
+        // (a message number not in this round: left out, said)
+        { type: 'payment', at: 40, account: '1111', amount: -1, who: 'nowhere', occurrence: 'new' },
+        { type: 'nothing', at: 3 },
+    ] }];
+    // (core marks nothing: the money step goes all the same)
+    await run(c.m, { now: '10-26 13:00', events: [{ id: 'taxi', at: 2, quote: 'paid the taxi', summary: '택시', date: '10-26', time: '12:40', phone: {} }] });
+    assert.equal(T.moneyCalls, 1);
+    assert.match(T.moneyInput, /\[MESSAGES\]\n\[#2\] Mara: I paid the taxi\n\n\[#3\] Ren: grabbed a coffee on the way\n\n\[#4\] Ren: see you/);
+    assert.match(T.moneyInput, /\[EVENTS\]\n- taxi: #2 10-26 12:40 택시 \("paid the taxi"\)/);
+    assert.match(T.moneyInput, /\[CALENDAR\]\n/);
+    assert.ok(!/\[DAYS\]/.test(T.moneyInput));
+    assert.equal(c.bank(), 100000 - 12000 - 4500);
+    const ev = c.p.sync.events;
+    assert.ok(ev.taxi.effects.some(x => x.item?.who === '택시'));
+    assert.deepEqual([ev['money-3']?.at, ev['money-3']?.summary], [3, '돈: Cafe Ivo']);
+    assert.ok(ev['money-3'].effects.some(x => x.item?.who === 'Cafe Ivo'));
+    assert.ok(!Object.keys(ev).some(k => k === 'money-4'));
+    assert.ok(c.p.syncLast.notes.some(n => n.includes('어느 메시지인지 몰라서')));
+    assert.deepEqual(c.p.money.tx.map(t => t.amountFrom), ['guess', 'guess']);
+    // 되돌리기: both go, the money event too
+    await data.undoRound(c.m, c.p);
+    assert.equal(c.bank(), 100000);
+    assert.ok(!c.p.sync.events['money-3']);
+    // read again, then the coffee message deleted: 빼기 takes the coffee only
+    T.moneyAnswers = [{ records: [{ type: 'payment', at: 2, account: '1111', amount: -12000, who: '택시', kind: 'card', occurrence: 'new' }, { type: 'payment', at: 3, account: '1111', amount: -4500, who: 'Cafe Ivo', kind: 'card', occurrence: 'new' }] }];
+    await run(c.m, { now: '10-26 13:00', events: [{ id: 'taxi', at: 2, quote: 'paid the taxi', summary: '택시', date: '10-26', time: '12:40', phone: {} }] });
+    assert.equal(c.bank(), 83500);
+    T.chat.splice(3, 1);
+    T.moneyAnswers = [{ records: [] }];
+    await nextRound(c, 'good night');
+    const d = c.p.sync.dropped;
+    assert.deepEqual(d.map(x => x.events), [['money-3']]);
+    await data.dropStretch(c.m, c.p, 0);
+    assert.equal(c.bank(), 88000);
+    assert.deepEqual(c.p.money.tx.map(t => t.who), ['택시']);
+});
+
+test('money records: one message\'s records on two days are booked on each; a payment and its order linked by "for"; an order sent to the owner is never theirs to pay', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'a week went by; I bought a lamp today'), say('Mara', 'sent you a scarf, check it')]);
+    T.moneyAnswers = [{ records: [
+        { type: 'payment', at: 2, date: '10-22', account: '1111', amount: -6000, who: '마트', kind: 'card', occurrence: 'new', amountFrom: 'guess' },
+        { type: 'order', at: 2, names: ['Desk lamp', '스탠드'], shop: 'Lumo', amount: 30000, qty: 1, status: 'ordered', occurrence: 'new', refersBack: false, made: ['shop'] },
+        { type: 'payment', at: 2, account: '1111', amount: -30000, who: 'Lumo', kind: 'card', occurrence: 'new', for: 'Desk lamp' },
+        { type: 'order', at: 3, names: ['Wool scarf', '목도리'], shop: 'Varo Knits', amount: 20000, status: 'shipped', sender: 'Mara', occurrence: 'again', refersBack: false, made: ['shop', 'amount'] },
+    ] }];
+    await run(c.m, { now: '10-26 20:00', events: [{ id: 'lamp', at: 2, quote: 'I bought a lamp today', summary: '스탠드', date: '10-26', time: '18:00', phone: {} }] });
+    assert.equal(c.bank(), 100000 - 6000 - 30000);
+    assert.deepEqual(c.p.money.tx.map(t => [t.who, t.time.slice(0, 5)]), [['마트', '10-22'], ['Lumo', '10-26']]);
+    const [lamp, scarf] = c.p.money.orders;
+    assert.equal(lamp.price, 30000);
+    assert.equal(lamp.paidBy, c.p.money.tx[1].id);
+    assert.deepEqual([scarf.item, scarf.paid, scarf.status, scarf.told], ['Wool scarf', false, 'shipped', true]);
+    assert.ok(!c.p.syncLast.notes.some(n => n.includes('결제가 없었어요')));
+    assert.ok(c.p.sync.events['money-3'].effects.some(x => x.path === 'money.orders'));
 });
 
 // ---- 반영 in two steps: money asked after core, owed when it can't go in (docs/REFLECT-2STAGE-PLAN.md)
@@ -568,7 +631,8 @@ test('the money step failing: core\'s texts stay, the money is owed and asked ag
     await run(c.m, taxiCore());
     assert.deepEqual(texts(c.p), ['택시비 냈어']);
     assert.equal(c.bank(), 100000);
-    assert.deepEqual(c.p.sync.owed.money.map(x => [x.id, x.tries]), [['taxi', 1]]);
+    // (owed by message: every message of the round, read again next round)
+    assert.deepEqual(c.p.sync.owed.money.map(x => [x.at, x.tries]), [[2, 1], [3, 1]]);
     assert.ok(c.p.syncLast.notes.some(n => n.includes('다음 반영 때 다시')));
     // the next round marks nothing; the owed money is asked for all the same, and goes on the same event
     T.moneyAnswers.push(taxiPaid);
@@ -580,7 +644,7 @@ test('the money step failing: core\'s texts stay, the money is owed and asked ag
     // 되돌리기 of that round: the payment goes, and it is owed again (not lost); core's texts from the round before stay
     await data.undoRound(c.m, c.p);
     assert.equal(c.bank(), 100000);
-    assert.deepEqual(c.p.sync.owed.money.map(x => [x.id, x.tries]), [['taxi', 1]]);
+    assert.deepEqual(c.p.sync.owed.money.map(x => [x.at, x.tries]), [[2, 1], [3, 1]]);
     assert.deepEqual(texts(c.p), ['택시비 냈어']);
 });
 
@@ -600,7 +664,8 @@ test('money that fails two rounds running is skipped, with a note', async () => 
     T.moneyAnswers.push('broken', 'broken again');
     await run(c.m, taxiCore());
     await nextRound(c, 'see you tomorrow');
-    assert.deepEqual(c.p.sync.owed.money, []);
+    // the round's messages failed twice: skipped; the new message failed once: owed
+    assert.deepEqual(c.p.sync.owed.money.map(x => [x.at, x.tries]), [[4, 1]]);
     assert.ok(c.p.syncLast.notes.some(n => n.includes('두 번 못 넣어서 건너뛰었어요')));
     assert.deepEqual(texts(c.p), ['택시비 냈어']);
 });
@@ -632,7 +697,7 @@ test('복구 of a round whose money step failed brings back what it owes', async
     c.m.phones.ren = was;
     const perf = globalThis.performance; globalThis.performance = { timeOrigin: Date.now() + 1e6 };
     try { assert.equal(await data.restoreRounds(c.m, 'test'), 1); } finally { globalThis.performance = perf; }
-    assert.deepEqual(was.sync.owed.money.map(x => x.id), ['taxi']);
+    assert.deepEqual(was.sync.owed.money.map(x => x.at), [2, 3]);
     assert.deepEqual(texts(was), ['택시비 냈어']);
 });
 
@@ -1045,11 +1110,16 @@ test('money: an old event\'s name on the next day\'s new payment pays it; an owe
     T.chat.push(say('Ren', 'and a coffee for 4500 won'), say('Mara', 'nice'));
     T.moneyAnswers = ['not json at all'];
     await run(c.m, { now: '10-27 11:00', events: [{ id: 'coffee', at: 4, quote: 'a coffee for 4500 won', summary: '커피', date: '10-27', time: '10:30', apps: ['money'], phone: {} }] });
-    assert.equal(c.p.sync.owed.money.length, 1);
+    assert.deepEqual(c.p.sync.owed.money.map(x => x.at), [4, 5]);
+    // the owed messages are read again with the next round's (the coffee event with them); an answer with nothing for
+    // them is the money step's reading: nothing owed after it
     T.chat.push(say('Ren', 'lunch for 9000 won'));
     T.moneyAnswers = [{ events: [{ id: 'lunch', money: { moves: [{ account: '1111', amount: -9000, who: '점심', kind: 'card', occurrence: 'new' }] } }] }];
     await run(c.m, { now: '10-27 13:00', events: [{ id: 'lunch', at: 6, quote: 'lunch for 9000 won', summary: '점심', date: '10-27', time: '12:30', apps: ['money'], phone: {} }] });
-    assert.ok(c.p.syncLast.notes.some(n => n.includes('커피')));
+    assert.match(T.moneyInput, /\[#4\] Ren: and a coffee for 4500 won/);
+    assert.match(T.moneyInput, /- coffee: #4 10-27 10:30 커피/);
+    assert.deepEqual(c.p.sync.owed.money, []);
+    assert.equal(c.bank(), 64000);
 });
 
 test('a delivery told again without its prices ("the chicken came") moves the order on, no second order', async () => {
