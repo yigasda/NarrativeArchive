@@ -357,19 +357,19 @@ ${life ? `- LIFE NOW: the alarms, files and health days the phone holds, with re
 
 ${archiveOnly ? '' : `${CORE_CLOCK_FIRST}\n\n`}READING THE STORY
 - The story comes first: every scene and its trail on the phone are written before any record of the owner's own life. A life record never takes a story record's place.
-- Everything that happens in these messages is a "scene"; a scene that would leave anything on the phone gets those records too (a photo, a text, a call, a search, a calendar item).
+- Everything that happens in these messages is a "scene"; a scene that would leave anything on the phone gets those records too.
 - Ask what the owner's phone would show after these scenes. Scenes leave a trail on a phone without saying so: a text after a fight, a photo of dinner, a search before a trip, a missed call in a meeting, a note of what someone asked for.
-- Each person the owner knows (not a stranger) they had a scene with and then parted from: at least one text between the two later these hours, in their own voices (a fight may go on; a job given in person gets a short check).
+- Each person the owner knows (not a stranger) they had a scene with and then parted from, when these hours go on after they part: at least one text between the two later, in their own voices, as a "life" record (a fight may go on; a job given in person gets a short check).
 - A plan made in these messages goes in the calendar; what is planned hasn't happened yet (no photo of it).${wallet ? `
 - A ticket the wallet holds (a flight, a train, a hotel stay, a show, a membership) shows on the calendar from there: no calendar record for it. A reservation or an appointment is still one.` : ''}
 
 THE OWNER'S LIFE
 - The phone is lived in even when the story says nothing about it. The owner's life runs through it every waking hour, from who they are: their job or school, habits, tastes, moods, money, city and the people in their life.
-- The owner reaches out, not only answers: they text friends, send something funny, check on family, complain about their day, call someone back.
-- The people in their life have lives of their own and bring them to the phone: news, a question, a photo, a favour. Group chats they share (friends, family, a team) go on without the owner too.
+- The owner reaches out, not only answers: for instance they text a friend, send something funny, complain about their day, call someone back.
+- The people in their life have lives of their own and bring them to the phone: news, a question, a photo, a favour. Group chats they share go on without the owner too.
 - Their own interests show: what they look up, save, note down, photograph and post; mails from the shops, services, school or work they deal with; reminders they keep.
 - How these hours feel to the owner colours it all, for instance late-night searches and an unsent draft after a bad day, photos and a post after a good one.
-- Habits come back: the same morning chat, the usual order, the weekly call home.
+- Habits come back, for instance the same morning chat or the usual order.
 - PEOPLE AROUND turn up wherever they would on a real phone, whether or not they are in the scenes. Never someone the owner isn't in touch with now.
 
 ONE DAY ON EVERY APP
@@ -380,7 +380,7 @@ ONE DAY ON EVERY APP
 THE APPS
 - Texts: real chats wander, for instance a reply hours later, a question left unanswered, a laugh, a link, a plan that fizzles. The owner sounds different with each person (careful with a boss, blunt with a sibling).
 - Group chats: several people talk over each other, and the owner joins in or just reads, as they would; for instance a birthday, something funny, a vote on where to eat.
-- Calls: short calls home, a missed call returned later, a long call at night with someone close; work hours and sleep shape them.
+- Calls: for instance a short call, a missed call returned later, a long call at night with someone close; work hours and sleep shape them.
 - Photos: what they would really take, for instance food, the sky, a pet, a screenshot, a receipt, the same shot twice; their eye shows in it.
 - Searches: what is on their mind at that hour, for instance a symptom at night, a recipe, a word they heard, a price, a place, a name they are curious about.
 - Mails: from the people and the places in their life, for instance a coworker, a professor, family abroad, receipts, newsletters, bills, shipping notices, offers left unread.
@@ -416,7 +416,7 @@ KEEPING IN STEP
 - A scene in EVENTS ON THE PHONE keeps its id. MESSAGES READ BEFORE, NOW CHANGED: their scenes as the edited text now has them, with the ids listed there.
 - A story record holds what the messages show or plainly imply; its details are made up to fit.
 - A record of the owner's life may carry the small happenings of that life (a friend's news, a coworker's question, a sale, a parcel notice), but nothing that moves the story: no decision, promise, plan, meeting, secret or change between the owner and the story's people that a later message could contradict. What the messages already say may come up again.
-- People: only the story's or PEOPLE AROUND, and the people of the owner's own life (a coworker, a classmate, a neighbour) made up to fit; never a new relative or partner. A relationship word (girlfriend, ex, husband, boss) only if the messages, archive or PEOPLE AROUND use it for them. Someone texted or called who isn't in the contacts yet gets a "contact" record too.
+- People: only the story's or PEOPLE AROUND, and the people of the owner's own life made up to fit; never a new relative or partner. A relationship word (girlfriend, ex, husband, boss) only if the messages, archive or PEOPLE AROUND use it for them. Someone texted or called who isn't in the contacts yet gets a "contact" record too.
 - Never a booking, a trip or a purchase the story doesn't have. A booking the story has carries the details a real one would (a booking number, a seat, a gate), made up to fit.
 
 TIME PASSING
@@ -435,6 +435,7 @@ LANGUAGE
 - Each text is in the language its writer would really use on a phone: from their nationality and where they live; between two people, the language they share.
 - A text that is not in Korean gets "ko": a natural Korean translation. A Korean text gets no "ko".
 - People write the way they talk in the archive and chat. Texts are short, like real texts.
+- A made-up person's name fits where they live.
 
 TIMES
 "MM-DD HH:MM" in story time. A year only as STORY YEAR or the story itself gives one.
