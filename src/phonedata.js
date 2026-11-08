@@ -244,7 +244,7 @@ ${archiveOnly ? '' : `${CLOCK_FIRST}\n\n`}WHAT IS NEW
 - Only what happens in NEW MESSAGES or ARCHIVE FOR THESE MESSAGES. Guesses and memories of earlier days add nothing.
 ${split ? '' : `- Something done before that the phone would hold, first told of here (an order already placed, a ticket already bought): an event in that message; its money says "again".
 `}- A plan made in these messages goes in the calendar; what is planned hasn't happened yet (no payment, no photo).
-${wallet ? `- A ticket, a booking or a stay (a flight, a train, a hotel, a show, a membership) is the wallet's, and the calendar shows it from there: no calendar item for it.
+${wallet ? `- A ticket the wallet holds (a flight, a train, a hotel stay, a show, a membership) shows on the calendar from there: no calendar item for it. A reservation or an appointment is still a calendar item.
 ` : ''}- Each message's own replies, orders and payments belong to the event in that message, not folded into an earlier one.
 - An event in EVENTS ON THE PHONE keeps its id; add only what the phone doesn't hold yet.
 - MESSAGES READ BEFORE, NOW CHANGED were already put on the phone: give their events the ids listed there${split ? '' : '; a payment in them is that same payment, its amount corrected if it changed'}.

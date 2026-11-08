@@ -231,7 +231,7 @@ test('a phone with a bank but without the everyday or delivery apps: core then m
     const c = await bookCase();
     assert.equal(T.sys, data.coreSystem({ wallet: true }));
     // (a phone with the wallet: its tickets are the calendar's from there, core writes no calendar item for one)
-    assert.ok(T.sys.includes("is the wallet's, and the calendar shows it from there") && !data.coreSystem().includes("is the wallet's"));
+    assert.ok(T.sys.includes('A ticket the wallet holds') && T.sys.includes('A reservation or an appointment is still a calendar item') && !data.coreSystem().includes('the wallet holds'));
     assert.ok(!T.sys.includes('LIFE') && !T.sys.includes('deliveries'));
     assert.ok(!T.input.includes('[MONEY NOW]'));
     assert.equal(T.moneySys, data.moneySystem());
