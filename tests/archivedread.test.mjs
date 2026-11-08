@@ -1119,7 +1119,10 @@ test('life records that answer a scene ("scene" its id) go on it and the day\'s 
         { type: 'scene', id: 'bar', at: 4, quote: 'Ivo and Ren have it out', date: '10-26', time: '22:00', summary: 'the fight' },
         ...['a', 'b', 'c', 'd', 'e', 'f'].map((q, i) => srch(`after ${q}`, `23:0${i}`, { at: 4, scene: 'bar' })),
         srch('plain', '23:20', { at: 4 }),
-        ex('22', 10), ex('23', 3), { ...ex('21', 2), scene: '' }] });
+        ex('22', 10), ex('23', 3), { ...ex('21', 2), scene: '' },
+        ...['d1', 'd2'].map(title => ({ type: 'diary', at: 4, from: 'life', scene: 'bar', date: '10-26', title, text: 'x' }))] });
+    // (the diary: one a day, a scene's own too)
+    assert.deepEqual(c.p.diary.map(x => x.title), ['d1']);
     const s = c.p.searches.filter(x => x.src === 'guess').map(x => x.q);
     // (all six of the scene's, and the plain one: the day's count is the plain ones' only)
     assert.deepEqual(s, ['weather', 'after a', 'after b', 'after c', 'after d', 'after e', 'after f', 'plain']);

@@ -808,8 +808,8 @@ function everydayOnly(p, add, day, daily, now = '') {
         .filter(x => isGuess(x) && (dayOfItem(x) || '') === d).length;
     const ok = (k, x, th) => {
         if (!isGuess(x)) return true;
-        // (a scene's own: kept, the day's count never filled by it)
-        if (x.onScene) return true;
+        // (a scene's own: kept, the day's count never filled by it; the diary is one a day all the same)
+        if (x.onScene && k !== 'diary') return true;
         const d = dayOfItem(x) || day || '', w = who(k, x, th), dk = `${k}|${w}|${d}`;
         if (!daily.has(dk)) daily.set(dk, had(k, d, w));
         if (daily.get(dk) >= capSoFar(k, d, now)) return false;
