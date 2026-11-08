@@ -531,7 +531,7 @@ test('reflection in two steps: core keeps the life apps and holds no money at al
     // the apps the phone doesn't have aren't named
     const plain = data.moneySystem();
     for (const k of ['DELIVERY SHOPS', '"newShop"', 'delivery: no', 'INVESTMENTS', 'broker', 'stake:', 'quote:']) assert.ok(!plain.includes(k), `money without delivery or brokerage holds ${k}`);
-    assert.ok(plain.includes('a few payments or orders.') && money.includes('a few payments, orders or deliveries.'));
+    assert.ok(plain.includes('one or two payments or orders a day') && money.includes('one or two payments, orders or deliveries a day'));
     // no marker of the template left over, no doubled space before a comma
     for (const t of [plain, money, data.moneySystem({ delivery: true }), data.moneySystem({ invest: true })]) { assert.ok(!/배달|투자|\$\{| ,/.test(t)); }
     // the one-step instructions are unchanged
@@ -621,13 +621,13 @@ test('time passing through a reflection: the days the story moved past go to the
     assert.deepEqual([c.p.money.tx.length, (c.p.money.regulars || []).length], [0, 0]);
 });
 
-test('a long skip: at most 20 records for the span of skipped days, the rest left out and said; the phone\'s missing regulars and bill days are asked for', async () => {
+test('a long skip: at most 60 records for the span of skipped days, the rest left out and said; the phone\'s missing regulars and bill days are asked for', async () => {
     const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'a month went by')]);
-    const many = Array.from({ length: 26 }, (_, k) => ({ type: 'payment', at: 2, date: `11-${String(k % 18 + 1).padStart(2, '0')}`, account: '1111', amount: -1000 - k, who: `Shop ${k}`, kind: 'card', occurrence: 'new', amountFrom: 'guess' }));
+    const many = Array.from({ length: 66 }, (_, k) => ({ type: 'payment', at: 2, date: `11-${String(k % 18 + 1).padStart(2, '0')}`, account: '1111', amount: -1000 - k, who: `Shop ${k}`, kind: 'card', occurrence: 'new', amountFrom: 'guess' }));
     T.moneyAnswers = [{ records: [...many, { type: 'payment', at: 2, date: '11-25', account: '1111', amount: -5000, who: 'Last week', kind: 'card', occurrence: 'new' }] }];
     await run(c.m, { now: '11-26 10:00', events: [] });
     assert.match(T.moneyInput, /\[MISSING ON THE PHONE\]\n- No "regular" yet/);
-    assert.equal(c.p.money.tx.filter(t => t.who.startsWith('Shop')).length, 20);
+    assert.equal(c.p.money.tx.filter(t => t.who.startsWith('Shop')).length, 60);
     assert.ok(c.p.money.tx.some(t => t.who === 'Last week'));
     assert.ok(c.p.syncLast.notes.some(n => n.includes('6개는 너무 많아서')));
 });
@@ -636,8 +636,23 @@ test('a long skip: the days before the last seven go as one span', async () => {
     const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'a month went by')]);
     T.moneyAnswers = [{ records: [] }];
     await run(c.m, { now: '11-26 10:00', events: [] });
-    assert.match(T.moneyInput, /\[DAYS PASSED\]\n- 10-26 to 11-18 \(24 days, ended by #2\)\n- 11-19 Thu \(ended in #2\)/);
+    assert.match(T.moneyInput, /\[DAYS PASSED\]\n- 10-26 to 11-18 \(24 days, ended by #2: about 24–48 records\)\n- 11-19 Thu \(ended in #2\)/);
     assert.match(T.moneyInput, /- 11-25 Wed \(ended in #2\)\n\n/);
+});
+
+test('run59: a regular\'s "date" is its first day, not the day it was heard of: it goes on its message\'s day, and the clock pays nothing before that (the rent already paid this month is not paid again)', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'rent went out on the 21st as always')]);
+    c.p.money.tx.push({ id: 'old-rent', account: '1111', who: '집주인', amount: -50000, time: '10-21 09:00', day: '2026-10-21', kind: 'transfer' });
+    T.moneyAnswers = [{ records: [
+        { type: 'regular', at: 2, names: ['Rent', '월세'], amount: -50000, frequency: 'monthly', day: 21, date: '10-21', account: '1111', who: '집주인', occurrence: 'again', refersBack: false },
+        { type: 'regular', at: 2, names: ['Salary', '월급'], amount: 300000, frequency: 'monthly', day: 25, date: '01-25', account: '1111', who: 'Varo', occurrence: 'again', refersBack: false },
+        { type: 'asset', at: 2, kind: 'vehicle', names: ['Car'], amount: 9000000, date: '03-02', occurrence: 'again', refersBack: false },
+    ] }];
+    await run(c.m, { now: '10-26 20:00', events: [{ id: 'rent', at: 2, quote: 'rent went out', summary: '월세', date: '10-26', time: '19:00', phone: {} }] });
+    assert.deepEqual(c.p.money.regulars.map(r => [r.name, r.since, r.paidThrough]), [['Rent', '2026-10-21', '2026-10-26'], ['Salary', '2026-01-25', '2026-10-26']]);
+    // (no second rent on 10-21, no back pay of the salary on 10-25: both before the day they were told of)
+    assert.deepEqual(c.p.money.tx.map(t => t.id), ['old-rent']);
+    assert.equal(c.p.money.assets[0].since, '03-02');
 });
 
 // ---- 반영 in two steps: money asked after core, owed when it can't go in (docs/REFLECT-2STAGE-PLAN.md)

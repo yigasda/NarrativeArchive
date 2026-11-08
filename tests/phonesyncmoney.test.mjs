@@ -841,3 +841,15 @@ test('run58: what the phone lacks is said only while it lacks it (no regular yet
     assert.equal(p.money.orders[0].time, '11-03 20:30');
     assert.equal(moneyMissing(p), '');
 });
+
+test('run59: the clock never pays a regular on a day the bank\'s balance already holds (before its as-of day)', async () => {
+    const { regularClock } = await import('../src/phonesyncmoney.js');
+    const { m, p, bank } = setup();
+    applyMoney(m, p, ev('pay', 5, '10-15', { regulars: [{ names: ['Salary'], amount: 2000, frequency: 'monthly', day: 18, account: '1111', occurrence: 'again', refersBack: false }] }), opts());
+    regularClock(m, p, '10-26 09:00', '2026');
+    // (10-18 is before the balance's day, 10-20: already in it)
+    assert.equal(p.money.tx.length, 0);
+    assert.equal(bank(), 1000);
+    regularClock(m, p, '11-19 09:00', '2026');
+    assert.deepEqual(p.money.tx.map(t => t.day), ['2026-11-18']);
+});

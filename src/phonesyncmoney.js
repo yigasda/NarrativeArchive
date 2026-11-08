@@ -176,7 +176,8 @@ export function recordsMoney(recs) {
         // (who pays: the owner, someone else, or the courier at the door; a parcel sent to the owner is never theirs to pay)
         else if (type === 'order') { const { amount, ...o } = x; add('orders', { ...o, price: amount ?? o.price ?? null, ...(o.sender || ['someone else', 'on delivery'].includes(String(o.payer || '').toLowerCase()) ? { paid: false } : {}) }); }
         else if (type === 'ticket') add('passes', x);
-        else if (type === 'asset') { const { amount, amountFrom, ...o } = x; add('assets', { ...o, value: amount ?? o.value ?? null, ...(amountFrom ? { valueFrom: amountFrom } : {}) }); }
+        // (an asset's "date" is when the owner got it)
+        else if (type === 'asset') { const { amount, amountFrom, date, ...o } = x; add('assets', { ...o, value: amount ?? o.value ?? null, ...(amountFrom ? { valueFrom: amountFrom } : {}), ...(o.since || date ? { since: o.since || date } : {}) }); }
         else if (type === 'debt') add('debts', x);
         else if (type === 'account') add('accounts', x);
         else if (type === 'card') mo.newCard ||= x;
@@ -602,7 +603,10 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         const a = acct || accountOf(p, { account: '', kind: '' });
         if (!a) { out.notes.push(`${names[0]}: 정기 입출금의 계좌를 몰라서 넣지 않았어요`); return; }
         let d = dayOf(freq);
-        const sinceDay = when(x.date).slice(0, 5) || date, since = fullDay(year, anchor, sinceDay);
+        // (its first day: one going on already ("again") began on or before this message's day, never next year)
+        const sinceDay = when(x.date).slice(0, 5) || date;
+        let since = fullDay(year, anchor, sinceDay);
+        if (x.occurrence !== 'new' && since > full) since = `${Number(since.slice(0, 4)) - 1}${since.slice(4)}`;
         if (d === null || d === -1 || d === '') d = freq === 'weekly' ? new Date(`${since}T00:00:00Z`).getUTCDay() : freq === 'yearly' ? sinceDay : Number(sinceDay.slice(3, 5));
         const xm = madeOf(x), row = { id: sid(`sync:${e.id}:r${k}`), name: names[0], names, amount: round(amount), currency: a.currency, frequency: freq, day: d, account: a.last4, who: txt(x.who, 60), ko: txt(x.ko, 60),
             ...(txt(x.for) ? { for: txt(x.for, 80) } : {}), status: x.status === 'stopped' ? 'stopped' : 'active', since, paidThrough: shiftDay(full, -1), ...(xm.length ? { made: xm } : {}), ...(gOf(x) ? { amountFrom: 'guess' } : {}),
@@ -803,7 +807,10 @@ export function regularClock(m, p, now, year) {
         if (r.status === 'stopped' || !REG_FREQ.includes(r.frequency) || !finite(r.amount) || !r.amount) continue;
         const acct = mo.bank.accounts.find(a => a.last4 === r.account);
         if (!acct || acct.closed) continue;
-        const start = from(r.paidThrough, r.since);
+        let start = from(r.paidThrough, r.since);
+        // (never on a day the bank's balance already holds: it was read as of its day)
+        const asOf = ymdDate(String(mo.asOf || '').slice(0, 10));
+        if (start && asOf && start <= asOf) start = new Date(asOf.getTime() + 864e5);
         if (!start || start > stop) continue;
         for (const d = new Date(start); d <= stop; d.setUTCDate(d.getUTCDate() + 1)) {
             if (!dueOn(r, d)) continue;

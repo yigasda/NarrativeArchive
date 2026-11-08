@@ -359,7 +359,7 @@ KEEPING IN STEP
 
 TIME PASSING
 - What recurs (pay, an allowance, support, rent, bills, subscriptions, a membership, a loan repayment) is one "regular" record, written once when the story or the owner's life shows it; the app pays it on its days. A rent day or a payday is that regular, not a one-off payment. A change to it is the same record with the new "amount" or "status".
-- DAYS PASSED: the owner lived each of those days too. Besides what the scenes show and the regular ones, the phone would show what fits their life that day: a few payments${delivery ? `, orders or deliveries` : ''}${!delivery ? ` or orders` : ''}. A span of many days: two or three records a week of it (groceries, meals out, getting around), at most 20, dated within it.
+- DAYS PASSED: the owner lived each of those days too. Besides what the scenes show and the regular ones, the phone would show what fits their life that day: one or two payments${delivery ? `, orders or deliveries` : ''}${!delivery ? ` or orders` : ''} a day, as the owner's life would have them (coffee, a meal, getting around, groceries). A span of many days the same, about as many as its line says, each dated within it.
 - Write any missing "regular" records that the owner's life plainly has (pay or an allowance, rent, a phone bill, subscriptions), using OWNER PROFILE and MONEY NOW; a card account with no "billDay" gets one.
 
 WHICH TYPE
@@ -1405,7 +1405,7 @@ const OWED_TRIES = 2;
 // one list of records per event, its two steps together (되돌리기 keeps an event's records that can't go back)
 const byEvent = xs => { const out = new Map(); for (const x of xs) out.set(x.id, [...(out.get(x.id) || []), ...(x.effects || [])]); return [...out]; };
 const MONEY_PATH = /^(money|investment|delivery)\./;
-const SPAN_MAX = 20;
+const SPAN_MAX = 60, ON_DAY = ['payment', 'order', 'trade', 'delivery'];
 // DAYS PASSED: the story days these messages moved past (from the phone's day before the round to the day before its new
 // one), each with the message it ended in (the first whose event is on a later day, else the round's last): the latest
 // seven one by one, a longer stretch before them as one span
@@ -1421,7 +1421,8 @@ function daysPassed(was, now, known, events, last) {
     const endedIn = md => dated.find(e => dayGap(md, e.date) > 0)?.at ?? last;
     const lines = [], each = Math.min(gap, 7);
     let span = null;
-    if (gap > each) { const f = day(0), t = day(gap - each - 1); span = [f.md, t.md]; lines.push(`- ${f.md} to ${t.md} (${gap - each} days, ended by #${endedIn(t.md)})`); }
+    // (about one or two a day of it, 60 at most: the code's count, so the model needn't work it out)
+    if (gap > each) { const f = day(0), t = day(gap - each - 1), n = gap - each, lo = Math.min(n, SPAN_MAX), hi = Math.min(n * 2, SPAN_MAX); span = [f.md, t.md]; lines.push(`- ${f.md} to ${t.md} (${n} days, ended by #${endedIn(t.md)}: about ${lo === hi ? lo : `${lo}–${hi}`} records)`); }
     for (let k = gap - each; k < gap; k++) { const d = day(k); lines.push(`- ${d.md}${d.wd} (ended in #${endedIn(d.md)})`); }
     return { text: lines.join('\n'), span };
 }
@@ -1527,7 +1528,9 @@ async function moneyStage(m, p, owner, c) {
             const id = eventAt(at), t = targets.find(x => x.id === id);
             // (one message's records on different days, a skipped day's spending: each day on its own)
             const byDay = new Map();
-            for (const r of rs) { const d = when(r.date).slice(0, 5) || dayAt(at); if (!byDay.has(d)) byDay.set(d, []); byDay.get(d).push(r); }
+            // (by the day it happened: a payment, an order, a trade, a delivery; any other record's "date" is no such day (a
+            // regular's first day, when an asset was got), and it goes on its message's day)
+            for (const r of rs) { const d = (ON_DAY.includes(String(r.type || '').toLowerCase()) && when(r.date).slice(0, 5)) || dayAt(at); if (!byDay.has(d)) byDay.set(d, []); byDay.get(d).push(r); }
             const named = rs.map(r => line(arr(r.names)[0] || r.who || r.shop || r.by || r.symbol || r.memo || '', 30)).filter(Boolean);
             for (const [d, dayRecs] of byDay) groups.push({ id, at, date: d, time: t?.date === d ? t.time || '' : '', summary: t?.summary || `돈: ${[...new Set(named)].slice(0, 3).join(', ') || `#${at}`}`, quote: t?.quote || '', money: recordsMoney(dayRecs), mine: !t });
         }
