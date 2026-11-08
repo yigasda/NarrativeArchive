@@ -882,3 +882,10 @@ test('run61: a card bill the model wrote by hand, from the paying account to the
     assert.equal(p.money.tx.filter(t => t.cardBill).length, 0);
     assert.equal(bank(), 920);
 });
+
+test('run66: a mobile pay payment is a card payment for the counts, marked as one; on the giro its money leaves the balance', () => {
+    const { m, p, bank } = setup();
+    applyMoney(m, p, ev('pay', 5, '10-26', { moves: [{ account: '2222', amount: -12, who: 'Cafe', kind: 'mobile', occurrence: 'new' }, { account: '1111', amount: -30, who: 'Shop', kind: 'mobile', occurrence: 'new' }] }), opts());
+    assert.deepEqual(p.money.tx.map(t => [t.account, t.kind, t.mobile]), [['2222', 'card', true], ['1111', 'card', true]]);
+    assert.equal(bank(), 970);
+});
