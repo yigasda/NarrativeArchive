@@ -114,6 +114,17 @@ export function monthSoFar(p) {
     }
     return [...by.values()];
 }
+// what the phone should hold and doesn't yet, said only while it is so: no regular income or bill at all; a card with no
+// bill day (so its bill can't be paid)
+export function moneyMissing(p) {
+    const mo = p.money;
+    if (!mo?.bank) return '';
+    const out = [];
+    if (!(mo.regulars || []).length) out.push('- No "regular" yet: write the ones the owner\'s life has now (pay or an allowance, rent, a phone bill, subscriptions), whatever the messages are about.');
+    const cards = mo.bank.accounts.filter(a => a.kind === 'credit' && !a.closed && !a.billDay).map(a => a.last4);
+    if (cards.length) out.push(`- Cards with no "billDay": ${cards.join(', ')}. Give each an "account" record with its "billDay" and "paidFrom".`);
+    return out.join('\n');
+}
 // what the model sees of the money apps
 const newestAndOpen = (xs, n, open) => { const all = xs || [], last = all.slice(-n); return [...all.slice(0, -n || all.length).filter(open).slice(-12), ...last]; };
 export function moneyNow(p) {
@@ -466,7 +477,7 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         // gives none)
         orders: x => { const names = allNames('orders', x), item = txt(x.item) || names[0] || '', price = x.price === null || x.price === undefined || x.price === '' ? NaN : Number(x.price);
             if (!item) return null;
-            return { shop: txt(x.shop, 60), item, ko: txt(x.ko) || (hangul(item) ? '' : names.find(n => hangul(n)) || ''), names, option: txt(x.option, 60), qty: Math.max(1, Math.round(Number(x.qty) || 1)), price: finite(price) ? price : null, time: date, status: ORDER.includes(x.status) ? x.status : 'ordered', eta: when(x.eta).slice(0, 5), arrived: '', gift: giftOf(x.gift), ...(txt(x.sender) ? { sender: txt(x.sender, 60) } : {}), ...(['owner', 'someone else', 'on delivery'].includes(x.payer) ? { payer: x.payer } : {}), ...(x.paid === false ? { paid: false } : {}), ...(gOf(x) ? { amountFrom: 'guess' } : {}) }; },
+            return { shop: txt(x.shop, 60), item, ko: txt(x.ko) || (hangul(item) ? '' : names.find(n => hangul(n)) || ''), names, option: txt(x.option, 60), qty: Math.max(1, Math.round(Number(x.qty) || 1)), price: finite(price) ? price : null, time: hhmm(x.time) ? `${date} ${hhmm(x.time)}` : date, status: ORDER.includes(x.status) ? x.status : 'ordered', eta: when(x.eta).slice(0, 5), arrived: '', gift: giftOf(x.gift), ...(txt(x.sender) ? { sender: txt(x.sender, 60) } : {}), ...(['owner', 'someone else', 'on delivery'].includes(x.payer) ? { payer: x.payer } : {}), ...(x.paid === false ? { paid: false } : {}), ...(gOf(x) ? { amountFrom: 'guess' } : {}) }; },
         passes: x => { const names = allNames('passes', x), by = txt(x.by, 60) || (Array.isArray(x.names) ? txt(x.names[0], 60) : '');
             if (!by && !txt(x.to)) return null;
             return { kind: KINDS.passes.includes(x.kind) ? x.kind : 'other', by, names, from: txt(x.from, 40), to: txt(x.to, 40), date: when(x.date).slice(0, 5) || date, time: hhmm(x.time), seat: txt(x.seat, 12), gate: txt(x.gate, 12), no: txt(x.no, 24), status: txt(x.status, 30), ...(when(x.until) ? { until: when(x.until).slice(0, 5) } : {}) }; },

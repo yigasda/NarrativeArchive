@@ -621,6 +621,17 @@ test('time passing through a reflection: the days the story moved past go to the
     assert.deepEqual([c.p.money.tx.length, (c.p.money.regulars || []).length], [0, 0]);
 });
 
+test('a long skip: at most 20 records for the span of skipped days, the rest left out and said; the phone\'s missing regulars and bill days are asked for', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'a month went by')]);
+    const many = Array.from({ length: 26 }, (_, k) => ({ type: 'payment', at: 2, date: `11-${String(k % 18 + 1).padStart(2, '0')}`, account: '1111', amount: -1000 - k, who: `Shop ${k}`, kind: 'card', occurrence: 'new', amountFrom: 'guess' }));
+    T.moneyAnswers = [{ records: [...many, { type: 'payment', at: 2, date: '11-25', account: '1111', amount: -5000, who: 'Last week', kind: 'card', occurrence: 'new' }] }];
+    await run(c.m, { now: '11-26 10:00', events: [] });
+    assert.match(T.moneyInput, /\[MISSING ON THE PHONE\]\n- No "regular" yet/);
+    assert.equal(c.p.money.tx.filter(t => t.who.startsWith('Shop')).length, 20);
+    assert.ok(c.p.money.tx.some(t => t.who === 'Last week'));
+    assert.ok(c.p.syncLast.notes.some(n => n.includes('6개는 너무 많아서')));
+});
+
 test('a long skip: the days before the last seven go as one span', async () => {
     const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'a month went by')]);
     T.moneyAnswers = [{ records: [] }];

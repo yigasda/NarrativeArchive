@@ -24,7 +24,7 @@ import { clockFallback, exactClockShift } from './phoneclock.js';
 import { PLACE } from './phonemapcity.js';
 export { tidyKo, arr, gapDays, giftOf, hhmm, jsonOf, ko, last4, line, num, pad, pick, storyMin, byStory, str, when, withEv };
 import { COUNTRY_TZ, applyDays, applyLife, applyWeather, cardClock, cityAt, dayGap, dlvClock, fillDays, lifeClock, lifeNow, weatherFrom, zoneShift } from './phonesynclife.js';
-import { applyMoney, dlvTotal, investNow, moneyNow, orderClock, payOrders, recordsMoney, regularClock, replayEffects, revertEffects } from './phonesyncmoney.js';
+import { applyMoney, dlvTotal, investNow, moneyMissing, moneyNow, orderClock, payOrders, recordsMoney, regularClock, replayEffects, revertEffects } from './phonesyncmoney.js';
 import { isDone, pruneDropped, srcOf, addFrom, orphanOf, itemMark, edited, busy, exclusive, joinComments, realign, bodyMark, newSync, syncOf, makeMark, settleMarks, pickRound, unreadCount, addDone, settleRound, archiveRound, archivedUnread, readBefore, reachesEnd, quoted, journalAdd, journalRead, journalWrite } from './phonesync.js';
 
 export const WALLS = ['dusk', 'ocean', 'forest', 'rose', 'night', 'sand', 'mono', 'aurora'];
@@ -340,6 +340,7 @@ YOU GET
 - ARCHIVE FOR THESE MESSAGES (sometimes): the story around them.
 - MONEY NOW${invest ? `, INVESTMENTS NOW` : ''}${delivery ? `, DELIVERY SHOPS` : ''} and sometimes WEALTH: the owner's finances and records, with ids, and this month's income and spending so far.
 - DAYS PASSED (sometimes): the story days that ended in these messages, including ones the story skipped or spent away from the owner: the latest few one by one, a longer stretch before them as one span.
+- MISSING ON THE PHONE (sometimes): what the phone should hold and doesn't yet. Write it now.
 - OWNER, and sometimes OWNER PROFILE, STORY YEAR and CALENDAR (the days around now, with their weekdays).
 
 READING THE STORY
@@ -357,8 +358,8 @@ KEEPING IN STEP
 - A message marked (changed): its records as the edited text now has them.
 
 TIME PASSING
-- What recurs (pay, an allowance, support, rent, bills, subscriptions, a membership, a loan repayment) is one "regular" record, written once when the story or the owner's life shows it; the app pays it on its days. A change to it is the same record with the new "amount" or "status".
-- DAYS PASSED: the owner lived each of those days too. Besides what the scenes show and the regular ones, the phone would show what fits their life that day: a few payments${delivery ? `, orders or deliveries` : ''}${!delivery ? ` or orders` : ''}. A span of many days: a few records for the whole of it (groceries, meals out, getting around), dated within it.
+- What recurs (pay, an allowance, support, rent, bills, subscriptions, a membership, a loan repayment) is one "regular" record, written once when the story or the owner's life shows it; the app pays it on its days. A rent day or a payday is that regular, not a one-off payment. A change to it is the same record with the new "amount" or "status".
+- DAYS PASSED: the owner lived each of those days too. Besides what the scenes show and the regular ones, the phone would show what fits their life that day: a few payments${delivery ? `, orders or deliveries` : ''}${!delivery ? ` or orders` : ''}. A span of many days: two or three records a week of it (groceries, meals out, getting around), at most 20, dated within it.
 - Write any missing "regular" records that the owner's life plainly has (pay or an allowance, rent, a phone bill, subscriptions), using OWNER PROFILE and MONEY NOW; a card account with no "billDay" gets one.
 
 WHICH TYPE
@@ -1404,23 +1405,25 @@ const OWED_TRIES = 2;
 // one list of records per event, its two steps together (되돌리기 keeps an event's records that can't go back)
 const byEvent = xs => { const out = new Map(); for (const x of xs) out.set(x.id, [...(out.get(x.id) || []), ...(x.effects || [])]); return [...out]; };
 const MONEY_PATH = /^(money|investment|delivery)\./;
+const SPAN_MAX = 20;
 // DAYS PASSED: the story days these messages moved past (from the phone's day before the round to the day before its new
 // one), each with the message it ended in (the first whose event is on a later day, else the round's last): the latest
 // seven one by one, a longer stretch before them as one span
 const WEEKDAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 function daysPassed(was, now, known, events, last) {
     const a = String(was || '').slice(0, 5), b = String(now || '').slice(0, 5);
-    if (!/^\d{2}-\d{2}$/.test(a) || !/^\d{2}-\d{2}$/.test(b) || !Number.isInteger(last) || last < 0) return '';
+    if (!/^\d{2}-\d{2}$/.test(a) || !/^\d{2}-\d{2}$/.test(b) || !Number.isInteger(last) || last < 0) return null;
     const gap = dayGap(a, b);
-    if (!(gap > 0)) return '';
+    if (!(gap > 0)) return null;
     const y = Number(known) || 2000, start = new Date(Date.UTC(y, Number(a.slice(0, 2)) - 1, Number(a.slice(3, 5))));
     const day = k => { const d = new Date(start); d.setUTCDate(d.getUTCDate() + k); return { md: `${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`, wd: known ? ` ${WEEKDAY[d.getUTCDay()]}` : '' }; };
     const dated = arr(events).filter(e => Number.isInteger(e.at) && /^\d{2}-\d{2}$/.test(e.date || '')).sort((x, z) => x.at - z.at);
     const endedIn = md => dated.find(e => dayGap(md, e.date) > 0)?.at ?? last;
     const lines = [], each = Math.min(gap, 7);
-    if (gap > each) { const f = day(0), t = day(gap - each - 1); lines.push(`- ${f.md} to ${t.md} (${gap - each} days, ended by #${endedIn(t.md)})`); }
+    let span = null;
+    if (gap > each) { const f = day(0), t = day(gap - each - 1); span = [f.md, t.md]; lines.push(`- ${f.md} to ${t.md} (${gap - each} days, ended by #${endedIn(t.md)})`); }
     for (let k = gap - each; k < gap; k++) { const d = day(k); lines.push(`- ${d.md}${d.wd} (ended in #${endedIn(d.md)})`); }
-    return lines.join('\n');
+    return { text: lines.join('\n'), span };
 }
 async function moneyStage(m, p, owner, c) {
     const s = p.sync, out = { late: [], owed: [], notes: [], changes: [], apps: new Set() };
@@ -1441,7 +1444,7 @@ async function moneyStage(m, p, owner, c) {
     const asked = [...new Set([...msgs, ...targets.map(t => t.at).filter(Number.isInteger)])].sort((x, y) => x - y);
     // a record names one of these messages, or one an archive section read now covers
     const allowed = at => msgs.has(at) || targets.some(t => t.at === at) || evidence.some(x => at >= x.first && at <= x.last);
-    if (!asked.length && !evidence.length && !c.passed) return out;
+    if (!asked.length && !evidence.length && !c.passed?.text) return out;
     // owed: tried once more next round, then skipped (the note says how many messages)
     const owing = { again: [], skipped: [] };
     const owe = (at, why, alone = false) => {
@@ -1472,7 +1475,7 @@ async function moneyStage(m, p, owner, c) {
         money ? `[MONEY NOW]\n${JSON.stringify(money)}` : '', invest ? `[INVESTMENTS NOW]\n${JSON.stringify(invest)}` : '',
         money && p.delivery ? `[DELIVERY SHOPS]\n${(p.delivery.shops || []).map(x => x.name).join('\n') || '(none yet)'}${p.delivery.cart?.items?.length ? `\nCART (in the basket, not ordered): ${p.delivery.cart.shop}: ${p.delivery.cart.items.map(x => `${x.qty || 1}× ${x.name}`).join(', ')}` : ''}` : '',
         p.wealthPlan ? `[WEALTH]\n${JSON.stringify({ currency: p.wealthPlan.currency, deposits: p.wealthPlan.deposits, investments: p.wealthPlan.investments, basis: p.wealthPlan.basis })}` : '',
-        c.passed ? `[DAYS PASSED]\n${c.passed}` : '',
+        c.passed?.text ? `[DAYS PASSED]\n${c.passed.text}` : '', money ? (x => (x ? `[MISSING ON THE PHONE]\n${x}` : ''))(moneyMissing(p)) : '',
         c.known ? `[STORY YEAR]\n${c.known}` : '', dayList.length ? `[CALENDAR]\n${dayList.join('\n')}` : '',
         `[OWNER]\n${owner}`, c.profile || '', namesBlock(m),
     ].filter(Boolean).join('\n\n');
@@ -1512,6 +1515,14 @@ async function moneyStage(m, p, owner, c) {
             byAt.get(at).push(r);
         }
         if (bad) out.notes.push(`돈 기록 ${bad}개는 어느 메시지인지 몰라서 넣지 않았어요`);
+        // (a long stretch of skipped days: 20 records at most for it, the rest left out and said)
+        const span = c.passed?.span;
+        if (span) {
+            let n = 0, over = 0;
+            const inSpan = r => { const d = when(r.date).slice(0, 5); return /^\d{2}-\d{2}$/.test(d) && dayGap(span[0], d) >= 0 && dayGap(d, span[1]) >= 0; };
+            for (const [at, rs] of byAt) byAt.set(at, rs.filter(r => !inSpan(r) || ++n <= SPAN_MAX || !++over));
+            if (over) out.notes.push(`건너뛴 날의 돈 기록 ${over}개는 너무 많아서 넣지 않았어요`);
+        }
         for (const [at, rs] of [...byAt].sort((x, y) => x[0] - y[0])) {
             const id = eventAt(at), t = targets.find(x => x.id === id);
             // (one message's records on different days, a skipped day's spending: each day on its own)

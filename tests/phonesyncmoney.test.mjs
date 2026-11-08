@@ -829,3 +829,15 @@ test('점검 9-5: a parcel past its arrival day has come, by the clock (되돌�
     const { investNow } = await import('../src/phonesyncmoney.js');
     assert.equal(investNow(m, p).date, '2026-10-20');
 });
+
+test('run58: what the phone lacks is said only while it lacks it (no regular yet, a card with no bill day); an order keeps the time it was made', async () => {
+    const { moneyMissing } = await import('../src/phonesyncmoney.js');
+    const { m, p } = setup();
+    assert.match(moneyMissing(p), /No "regular" yet/);
+    assert.match(moneyMissing(p), /Cards with no "billDay": 2222\./);
+    applyMoney(m, p, ev('o', 5, '11-03', { orders: [{ names: ['Scarf'], price: 45000, time: '20:30', occurrence: 'again', refersBack: false }],
+        regulars: [{ names: ['Rent'], amount: -650, frequency: 'monthly', day: 1, account: '1111', occurrence: 'again', refersBack: false }],
+        accounts: [{ account: '2222', billDay: 15, paidFrom: '1111', occurrence: 'again' }] }), opts());
+    assert.equal(p.money.orders[0].time, '11-03 20:30');
+    assert.equal(moneyMissing(p), '');
+});
