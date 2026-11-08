@@ -775,7 +775,7 @@ test('일상 comes in the reflection\'s own answer (no request of its own); who 
     assert.match(sys, /The phone is lived in every waking hour/);
     assert.match(sys, /Someone new texted or called gets a "contact"/);
     assert.match(sys, /PEOPLE AROUND \(wherever they would turn up; never someone the owner isn't in touch with now\)/);
-    assert.match(sys, /Their own life's small happenings are fine\. Nothing about the story that a later message could contradict: what someone in it decided, promised, said or wants/);
+    assert.match(sys, /NEVER write how anything the story is following turns out, or what comes next for it: the story will tell\./);
     assert.match(sys, /"from": "story" \| "life"/);
     const guess = [...c.p.threads.flatMap(th => th.messages.filter(x => x.src === 'guess').map(x => `${th.with}:${x.text}`)), ...c.p.searches.filter(x => x.src === 'guess').map(x => x.q)];
     assert.deepEqual(guess.sort(), ['Ivo:whatever', 'Ivo:you started it', 'Mittagstisch Seongsu']);
@@ -798,7 +798,7 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.match(on, /each answer fills most lists as these hours call for, for example a photo of lunch, a search, a note, a mail, a post, texts and calls by the person, a voice memo, and a diary entry when these hours end the day\./);
     assert.match(on, /The diary: one entry for each story day that ends in these messages/);
     assert.match(on, /Voice memos: about one every few days/);
-    assert.match(on, /a task or plan tied to the story\. What the messages already say may come up again\./);
+    assert.match(on, /nothing about the story's people that a later message could contradict\./);
     assert.ok(!on.includes('talk over each other') && on.includes('Contact goes both ways; a group chat may go on without them.'));
     assert.ok(on.includes('Posts only if this owner posts.') && !on.includes('Not every app every day') && !on.includes('only if this owner keeps them'));
     assert.match(on, /"at": its message number \(a life record: the message whose hours it falls in\)/);
@@ -1179,4 +1179,12 @@ test('recordsCore: a health day already on the phone ("already") is rewritten on
     const onEvent = got.events.flatMap(e => e.phone.health || []).map(x => x.date);
     assert.deepEqual(onEvent, ['11-03']);
     assert.deepEqual(got.days.map(x => x.date), ['11-04']);
+});
+
+test('recordsCore: a text record\'s times alone take its own day, not its scene\'s', () => {
+    const got = data.recordsCore({ now: '11-06 09:20', records: [
+        { type: 'scene', id: 'studio', at: 8, quote: 'studio', date: '11-06', summary: 'studio' },
+        { type: 'text', at: 8, from: 'life', with: '엄마', time: '11-04 17:40', messages: [{ from: '엄마', text: '지낼만하니?', time: '17:35' }, { from: 'me', text: '응', time: '17:40' }, { from: 'me', text: 'x', time: '11-05 08:00' }] },
+    ] });
+    assert.deepEqual(got.everyday.threads[0].messages.map(m => m.time), ['11-04 17:35', '11-04 17:40', '11-05 08:00']);
 });

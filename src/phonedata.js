@@ -368,7 +368,7 @@ THE OWNER'S LIFE
 - The owner's ordinary life in these hours and each day the story skips, from their habits: each answer fills most lists as these hours call for, for example a photo of lunch, a search, a note, a mail, a post, texts and calls by the person, a voice memo, and a diary entry when these hours end the day. A list with nothing in these hours stays empty.
 - How many: about ${LIFE_A_DAY} life records for each waking day, about one an hour; each day the story skips gets its own (at most ${LIFE_MAX} in all${life ? ', "health" not counted' : ''}), dated on that day. Routines recur.
 - Every app tells the same day, the way this owner lives it: late-night texts go with ${life ? 'a late "late" and short sleep' : 'a late night'}. The owner does nothing on the phone while asleep or busy in a scene; others' texts and calls still come in.
-- Their own life's small happenings are fine. Nothing about the story that a later message could contradict: what someone in it decided, promised, said or wants, a meeting or a change between them and the owner, how a story matter turned out, a task or plan tied to the story. What the messages already say may come up again.
+- NEVER write how anything the story is following turns out, or what comes next for it: the story will tell. Their own life's small happenings are fine; nothing about the story's people that a later message could contradict.
 - People: the story's, PEOPLE AROUND (wherever they would turn up; never someone the owner isn't in touch with now), and made-up people of their own life, named for where they live; never a new relative or partner. Relationship words only as the story uses them. Someone new texted or called gets a "contact".
 
 THE APPS
@@ -744,6 +744,13 @@ export function recordsCore(raw, textOf = () => '') {
         if ((r.type === 'alarm' || r.type === 'file') && r.already) x.change = r.already;
         if (r.type === 'visit' && r.already) x.already = r.already;
         if (r.type === 'note' && r.time === undefined) delete x.time;
+        // (a text's time alone, "17:35", is on its record's day, not on its scene's: a skipped day's texts stay on it)
+        const day = String(when(r.time || '')).slice(0, 5);
+        if (r.type === 'text' && /^\d{2}-\d{2}$/.test(day)) {
+            const dated = y => (y && typeof y === 'object' && /^\s*\d{1,2}:\d{2}\s*$/.test(String(y.time || '')) ? { ...y, time: `${day} ${hhmm(y.time)}` } : y);
+            if (Array.isArray(x.messages)) x.messages = x.messages.map(dated);
+            if (x.draft) x.draft = dated(x.draft);
+        }
         return x;
     };
     for (const r of recs) {
