@@ -783,7 +783,7 @@ test('일상 comes in the reflection\'s own answer (no request of its own); who 
     assert.match(sys, /Someone new texted or called gets a "contact"/);
     assert.match(sys, /PEOPLE AROUND \(wherever they would turn up; never someone the owner isn't in touch with now\)/);
     assert.match(sys, /\nONE TEST FOR EVERY ITEM\nCould this be on the owner's phone, given what the messages and archive show\? If not, leave it out\./);
-    assert.match(sys, /"everyday": \{ the owner's own life, a list for each app \(\[\] when nothing\)/);
+    assert.match(sys, /"everyday": \{ the owner's own life, each app a list \(an empty one when nothing\)/);
     const guess = [...c.p.threads.flatMap(th => th.messages.filter(x => x.src === 'guess').map(x => `${th.with}:${x.text}`)), ...c.p.searches.filter(x => x.src === 'guess').map(x => x.q)];
     assert.deepEqual(guess.sort(), ['Ivo:whatever', 'Ivo:you started it', 'Mittagstisch Seongsu']);
     // (a time after the round's now, 09:52 for 09:45, is the now)
@@ -802,7 +802,9 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     const arch = data.coreSystem({ life: true, archiveOnly: true });
     assert.ok(arch.includes('\nTIMES\n- Times are "MM-DD HH:MM"') && !arch.includes('CLOCK FIRST'));
     assert.match(on, /How many: about 11 life records for each waking day, about one an hour; each day the story skips gets its own \(at most 70 in all, "health" not counted\), dated on that day\./);
-    assert.match(on, /- "everyday": the owner's ordinary life in these hours and each day the story skips, from their habits: any app, a little in each as a real phone gets it;/);
+    assert.match(on, /- "everyday": the owner's ordinary life in these hours and each day the story skips, from their habits: it fills most lists as these hours call for, for example a photo of lunch,/);
+    assert.match(on, /- For each person the owner had a scene with in NEW MESSAGES: at least one text between the two later these hours, in their own voices/);
+    assert.match(on, /"photos": \[\{ "caption", "ko", "time", "mood" \}\]/);
     assert.match(on, /The diary: an entry when a story day ends in these messages or a scene stays with them, as long as this owner would write it;/);
     assert.match(on, /Voice memos: about one every few days/);
     assert.match(on, /- Events \(a meeting, a confession, a trip, a loss, how something turned out or will go\) only if the messages or archive have them\./);
@@ -810,8 +812,8 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.ok(!on.includes('talk over each other') && on.includes('Contact goes both ways; a group chat may go on without them.'));
     assert.ok(on.includes('Posts only if this owner posts.') && !on.includes('Not every app every day') && !on.includes('only if this owner keeps them'));
     assert.match(on, /"at": its message number, "scene": its scene's id or "",/);
-    assert.match(on, /"texts": \[\], "calls": \[\], "photos": \[\], "searches": \[\], "notes": \[\], "mails": \[\], "posts": \[\], "calendar": \[\], "diary": \[\], "voice": \[\], "contacts": \[\], "alarms": \[\], "timers": \[\], "files": \[\] \}/);
-    assert.ok(!plain.includes('"alarms": []') && plain.includes('"records": scenes and story records; the owner\'s own life goes in "everyday".'));
+    assert.match(on, /"alarms": \[\{ "time", "label", "ko", "days", "date" \}\], "timers": \[\{ "label", "ko", "sec" \}\], "files": \[/);
+    assert.ok(!plain.includes('"alarms": [') && plain.includes('"records": scenes and story records; the owner\'s own life goes in "everyday".'));
     assert.match(on, /new texts in a chat are new/);
     assert.match(on, /others' texts and calls still come in/);
     assert.ok(!on.includes('write events and app records'));
@@ -1140,7 +1142,7 @@ test('life records that answer a scene ("scene" its id) go on it and the day\'s 
     assert.ok(lio.messages.every(x => x.src === 'guess' && !('onScene' in x)));
     // (they are the scene's: on its event)
     assert.ok(c.p.sync.events.bar);
-    assert.match(T.sys, /each item with its fields as above, "scene" when it answers one/);
+    assert.match(T.sys, /each item with "scene" when it answers one/);
     assert.match(T.sys, /- Anything a later message could contradict is a new fact: what someone decided, said or wants, a time, a result; a task and its deadline \("check the moodboards by 18:00"\), a thing done \("uploaded it"\), a plan for later \("ramyeon tonight\?"\)\. What these messages already say is no new fact/);
 });
 

@@ -370,7 +370,8 @@ THE STORY
 
 THE OWNER'S LIFE
 - The phone is lived in every waking hour, from who the owner is. Contact goes both ways; a group chat may go on without them.
-- "everyday": the owner's ordinary life in these hours and each day the story skips, from their habits: any app, a little in each as a real phone gets it; texts and calls by the person, and a diary entry when these hours end the day. A list with nothing in these hours stays empty.
+- "everyday": the owner's ordinary life in these hours and each day the story skips, from their habits: it fills most lists as these hours call for, for example a photo of lunch, a search, a note, a mail, a post, texts and calls by the person, a voice memo, and a diary entry when these hours end the day${life ? ', an alarm for tomorrow, a timer for the pasta, a file saved or screenshotted' : ''}. A list with nothing in these hours stays empty.
+- For each person the owner had a scene with in NEW MESSAGES: at least one text between the two later these hours, in their own voices (a fight may go on; a job given in person gets a short check).
 - Anything a later message could contradict is a new fact: what someone decided, said or wants, a time, a result; a task and its deadline ("check the moodboards by 18:00"), a thing done ("uploaded it"), a plan for later ("ramyeon tonight?"). What these messages already say is no new fact: a text may say it again ("the deck is for Friday"). How they feel and small things around them are fine. No new facts, events, plans or secrets.
 - How many: about ${LIFE_A_DAY} life records for each waking day, about one an hour; each day the story skips gets its own (at most ${LIFE_MAX} in all${life ? ', "health" not counted' : ''}), dated on that day. Routines recur.
 - Every app tells the same day, the way this owner lives it: late-night texts go with ${life ? 'a late "late" and short sleep' : 'a late night'}. The owner does nothing on the phone while asleep or busy in a scene; others' texts and calls still come in.
@@ -436,8 +437,13 @@ JSON (one object, nothing before or after it)
     health: "date": the day they woke, "sleep", "wake", "woke", "steps", "km", "floors", "hr": [low, high], "workouts": [{ "kind", "time", "min", "km" }], "coffee", "coffeeKind", "water", "weight", "screen": { "apps": { app: minutes }, "pickups", "late" }
     usual: "weight", "height", "coffee", "coffeeKind", "coffeeKo", "water", "bed", "sleep", "wake", "steps", "workouts", "rest", "screen": { "add": [{ "app", "kind": chat | social | game | video | music | work | reading | shopping | money | maps | health | other, "min" }], "drop", "pickups", "late" }` : ''}
   }],
-  "everyday": { the owner's own life, a list for each app ([] when nothing), each item with its fields as above, "scene" when it answers one:
-    "texts": [], "calls": [], "photos": [], "searches": [], "notes": [], "mails": [], "posts": [], "calendar": [], "diary": [], "voice": [], "contacts": []${life ? ', "alarms": [], "timers": [], "files": []' : ''} }${life && weather ? `,\n${WEATHER_JSON}` : ''} }
+  "everyday": { the owner's own life, each app a list (an empty one when nothing), each item with "scene" when it answers one:
+    "texts": [{ "with", "group", "members", "messages": [{ "from", "text", "ko", "time" }] }], "calls": [{ "with", "kind", "time", "min" }],
+    "photos": [{ "caption", "ko", "time", "mood" }], "searches": [{ "q", "ko", "time" }], "notes": [{ "title", "kt", "text", "ko", "time" }],
+    "mails": [{ "sender", "subject", "ks", "text", "ko", "time", "unread" }], "posts": [{ "text", "ko", "photo", "pko", "time", "likes", "comments" }],
+    "calendar": [{ "title", "ko", "date", "time" }], "diary": [{ "date", "title", "kt", "text", "ko" }], "voice": [{ "title", "kt", "text", "ko", "time", "sec", "place" }],
+    "contacts": [{ "name", "saved" }]${life ? `,
+    "alarms": [{ "time", "label", "ko", "days", "date" }], "timers": [{ "label", "ko", "sec" }], "files": [{ "name", "kind", "folder", "time", "look", "preview", "ko" }]` : ''} }${life && weather ? `,\n${WEATHER_JSON}` : ''} }
 "records": scenes and story records${life ? ', and "health" and "usual"' : ''}; the owner's own life goes in "everyday". Numbers are plain JSON numbers. Nothing new: "records": [].`;
 }
 export const coreSystem = ({ life = false, weather = false, tracker = false, zone = false, archiveOnly = false, wallet = false, split = true } = {}) => coreRecordsSystem({ life, weather, tracker, zone, archiveOnly, wallet, split });
