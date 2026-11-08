@@ -52,7 +52,7 @@ export function screenOf(v) {
     const total = Object.values(apps).reduce((a, b) => a + b, 0);
     if (total > 1440) for (const k of Object.keys(apps)) apps[k] = Math.round(apps[k] * 1440 / total);
     const o = {};
-    if (Object.keys(apps).length) o.apps = Object.fromEntries(Object.entries(apps).sort((a, b) => b[1] - a[1]).slice(0, 12));
+    if (Object.keys(apps).length) o.apps = Object.fromEntries(Object.entries(apps).sort((a, b) => b[1] - a[1]).slice(0, 20));
     const pk = int(v.pickups, 0, 1000), late = hhmm(v.late);
     if (pk !== null) o.pickups = pk;
     if (late) o.late = late;
