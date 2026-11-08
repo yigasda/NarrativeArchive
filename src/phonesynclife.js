@@ -43,7 +43,7 @@ export const fileOf = x => withEv({ name: line(x?.name, 80), kind: kindOf(String
     pages: int(x?.pages, 0, 2000), length: line(x?.length, 8), tag: pick(x?.tag, ['red', 'orange'], ''), private: yes(x?.private), preview: yes(x?.private) ? '' : line(x?.preview, 160), look: line(x?.look, 20).toLowerCase(), ko: ko(x?.ko), opened: when(x?.opened), trashed: day5(x?.trashed) }, x);
 // 스크린타임: that day's phone use, as the model writes it ({ "apps": { name: minutes }, "pickups", "late" }; a list of
 // { app, min } too). A day never holds more than its 24 hours; nothing given is none (the screen works it out)
-export const SCREEN_KINDS = ['chat', 'social', 'game', 'video', 'music', 'work', 'reading', 'shopping', 'other'];
+export const SCREEN_KINDS = ['chat', 'social', 'game', 'video', 'music', 'work', 'reading', 'shopping', 'money', 'maps', 'health', 'other'];
 export function screenOf(v) {
     if (!v || typeof v !== 'object') return null;
     const pairs = Array.isArray(v.apps) ? v.apps.map(x => [x?.app ?? x?.name, x?.min]) : v.apps && typeof v.apps === 'object' ? Object.entries(v.apps) : [];

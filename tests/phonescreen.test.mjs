@@ -168,3 +168,9 @@ test('the reflection reads their usual phone use short: names and minutes', asyn
         'WhatsApp 48, Gmail 62 · sometimes: Tinder 14 · pickups 84 · late 23:55');
     assert.equal(screenLine({ apps: [{ app: 'Signal', min: 30 }] }), 'Signal 30');
 });
+
+test('a reflection\'s new apps keep the kinds 금융 · 지도 · 건강', async () => {
+    const { screenChange } = await import('../src/phonesynclife.js');
+    const got = screenChange({ apps: [] }, { add: [{ app: 'Revolut', kind: 'money', min: 10 }, { app: 'Komoot', kind: 'maps', min: 5 }, { app: 'Strava', kind: 'health', min: 7 }] });
+    assert.deepEqual(got.apps.map(a => a.kind), ['money', 'health', 'maps']);
+});

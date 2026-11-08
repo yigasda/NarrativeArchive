@@ -527,7 +527,7 @@ ${SCREEN_LIST}
 - Numbers only: no diagnosis, no mood, no reason.
 
 JSON (one object, nothing before or after it)
-{ "usual": { "apps": [{ "app", "kind": "chat" | "social" | "game" | "video" | "music" | "work" | "reading" | "shopping" | "other", "min": minutes a day }], "sometimes": [the same, apps they open now and then, "min" on a day they do], "pickups": a day, "late": "HH:MM" they usually last look at it },
+{ "usual": { "apps": [{ "app", "kind": "chat" | "social" | "game" | "video" | "music" | "work" | "reading" | "shopping" | "money" | "maps" | "health" | "other", "min": minutes a day }], "sometimes": [the same, apps they open now and then, "min" on a day they do], "pickups": a day, "late": "HH:MM" they usually last look at it },
   "days": [{ "date": "MM-DD" as in DAYS, "apps": { app name: minutes }, "pickups", "late": "HH:MM" }] }
 Numbers are plain JSON numbers.`;
 // again (다시 만들기 › 스크린타임): their usual and the last week made anew, except a day a reflection wrote (its own row,
