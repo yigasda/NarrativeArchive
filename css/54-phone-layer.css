@@ -261,6 +261,9 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax_fxcal i.t { box-shadow: inset 0 0 0 1.5px #1d3461; color: #1d3461; } .ax_fxcal i.p.t { box-shadow: inset 0 0 0 1.5px #1d3461, inset 0 0 0 3px #fff; }
 .ax_rw .ax_dd { display: inline-block; padding: 1px 7px; border-radius: 999px; --axr: 999px; background: #fbe4df; color: #b8573a; --axfg: #b8573a; font-size: 10.5px; --axfs: 10.5px; font-weight: 700; margin-left: 6px; vertical-align: 1px}
 .ax_rw .ax_dd.ok { background: #dcefdf; color: #3f7d50; --axfg: #3f7d50} .ax_rw .ax_dd.g { background: #eceef2; color: #6b7380; --axfg: #6b7380}
+.ax_rln b.ax_wneg { color: #b8573a; } .ax_rln.ax_wtot { border-top: 1px solid #eef0f3; } .ax_rln.ax_wtot b { font-size: 17px; }
+.ax_wrw .ax_tx { min-width: 0; } .ax_wrw :is(.ax_n, .ax_p) { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ax_wrw .ax_amt { flex: none; }
+.ax_wpl { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 16px 12px; } .ax_wpl span { padding: 6px 11px; border-radius: 999px; background: #eceef2; color: #6b7380; --axfg: #6b7380; font-size: 12px; --axfs: 12px; white-space: nowrap; }
 .ax_fxv { text-align: right; flex: none; display: flex; flex-direction: column; align-items: flex-end; } .ax .ax_fxv small { font-size: 11.5px; color: #8a929d; margin-top: 2px; align-self: flex-end; }
 .ax .ax_rw.on { --axbg: #f6f8fb; }
 /* 은행 › 알림 · 송금 · 명세서 · 확인증 · 더보기 */

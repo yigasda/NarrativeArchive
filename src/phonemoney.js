@@ -128,6 +128,7 @@ export function bankHome(p, now) {
       <div class="ax_bks"><div class="ax_scroll">
         ${displayTools(p)}<div class="ax_shd">내 계좌</div>
         <div class="ax_card">${M.bank.accounts.map((a, i) => `<button type="button" class="ax_acc" data-go="acct" data-i="${i}"><span class="ax_accic ${a.kind}">${ax(a.kind === 'savings' ? 'star' : 'card2', 20, 'currentColor', 1.9)}</span><span class="ax_tx"><b>${kindName[a.kind]}${a.name ? ` · ${esc(a.name)}` : ''}</b><small class="cg_num">•••• ${esc(a.last4)}${a.closed ? ' · 해지' : a.blocked ? ' · 막힘' : ''}</small></span><span class="ax_accv"><b class="cg_num">${esc(fmtMoney({ ...p, money: { currency: a.currency || M.currency } }, a.kind === 'credit' ? creditAmount(a) : a.balance))}</b><small>${a.closed ? '해지' : a.kind === 'credit' ? creditLabel(a) : '사용 가능'}</small>${converted(p,a) ? `<small class="ax_fx_note">${converted(p,a,true)}</small>` : ''}</span></button>`).join('')}</div>
+        ${wealthLine(p)}
         ${(ms => (ms.length ? `<div class="ax_shd">이번 달</div><div class="ax_card">${ms.map(x => `<div class="ax_rln"><span>${ms.length > 1 ? `${esc(x.currency)} · ` : ''}들어온 돈</span><b class="ax_amt p cg_num">${esc(fmtIn(p, x.in, x.currency, true))}</b></div><div class="ax_rln"><span>${ms.length > 1 ? `${esc(x.currency)} · ` : ''}나간 돈</span><b class="ax_amt cg_num">${esc(fmtIn(p, -x.out, x.currency, true))}</b></div>`).join('')}</div>` : ''))(monthSoFar(p).filter(x => x.in || x.out))}
         <div class="iv_navs"><button type="button" class="iv_nav" data-go="invest">투자 계좌</button><button type="button" class="iv_nav" data-go="ivactivity">연결된 이체</button></div><div class="ax_shd">최근 거래</div>
         <div class="ax_card">${newestTx(p).slice(0, 4).map(x => txRow(p, x)).join('') || '<div class="ax_empty">거래가 없어요</div>'}</div>
@@ -432,6 +433,51 @@ function memberCard(p, t, cls = '') {
     return `<div class="ax_mcard ${t.k.toLowerCase()}${cls}">${pv ? '<svg viewBox="0 0 358 150" preserveAspectRatio="none"><rect x="7" y="7" width="344" height="136" rx="12" fill="none" stroke="#c9a961" stroke-opacity=".6" stroke-width=".8"/><g fill="none" stroke="#c9a961" stroke-opacity=".18" stroke-width=".7">' + [0, 18, 36, 54, 72].map((r, k) => `<ellipse cx="290" cy="75" rx="${40 + k * 18}" ry="${90 - k * 10}" transform="rotate(${r} 290 75)"/>`).join('') + '</g></svg>' : t.k === 'PLATINUM' ? PAT.platinum.replace(/^/, '<svg viewBox="0 0 330 200" preserveAspectRatio="none">') + '</svg>' : `<svg viewBox="0 0 330 200" preserveAspectRatio="none">${PAT.guilloche}</svg>`}
           <span class="nm">${esc(String(M.bank.name || '').split(/\s+/)[0].toUpperCase())} ${t.k}</span><span class="mb">MEMBER</span><span class="tl">고객 번호<b class="cg_num">${esc(no)}</b></span><span class="rt">예금 합계<b class="cg_num">${esc(fmtIn(p, sum.value, cur))}</b></span></div>`;
 }
+// ---- 재산 · 빚 (p.money.assets / debts, docs/mockups/phone-wealth D): what the owner has besides the accounts and what
+// they owe, in the bank's currency. Counted: their own, half of what is shared. Left out (grey, named): what is only
+// expected, blocked, the family's or the company's. Gone ones (sold, lost, settled, paid, forgiven) are not shown.
+Object.assign(AX, { wcar: 'M5 16l1.5-5h11L19 16M4 16h16v3H4zM7 19v1M17 19v1', wgem: 'M6 4h12l3 5-9 11L3 9zM3 9h18M9 4l3 16 3-16', whand: 'M4 13l4-1 5 2 6-3v2l-6 4-5-1-4 1zM12 4v6M9 7h6',
+    wchart: 'M4 19V5M4 19h16M8 15l3-4 3 2 5-6', wpeople: 'M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM3 20a6 6 0 0 1 12 0M16 11a3 3 0 1 0 0-6M21 20a6 6 0 0 0-4-5.7', wbldg: 'M4 20V8l8-4 8 4v12M9 20v-5h6v5M8 11h.01M12 11h.01M16 11h.01' });
+const W_AS = { property: ['house', '집'], vehicle: ['wcar', '차'], business: ['wbldg', '사업'], valuable: ['wgem', '귀중품'], deposit: ['star', '예치금'], receivable: ['whand', '받을 돈'], investment: ['wchart', '투자'], other: ['box', '그 밖'] };
+const W_DB = { loan: ['doc', '대출'], mortgage: ['house', '주택 담보'], personal: ['user', '빌린 돈'], tax: ['doc', '세금'], other: ['doc', '빚'] };
+const W_WHOSE = { shared: '같이 가진 것 · 절반', family: '가족 것', company: '회사 것' };
+function wealthOf(p) {
+    const M = mo(p), cur = M.currency, conv = (v, c) => (Number(v) || 0) / (SCALE[c || cur] || 1) * (SCALE[cur] || 1);
+    const words = x => String(x.names?.[0] || x.name || x.lender || '').trim();
+    const assets = (M.assets || []).filter(x => !['sold', 'lost', 'settled'].includes(x.status) && finite(Number(x.value))).map(x => {
+        const [icon, kind] = W_AS[x.kind] || W_AS.other, out = x.status === 'expected' ? '받을 예정' : x.status === 'blocked' ? '막힘' : x.whose === 'family' ? '가족 것' : x.whose === 'company' ? '회사 것' : '';
+        const v = conv(x.value, x.currency) * (x.whose === 'shared' ? 0.5 : 1);
+        return { x, name: words(x) || kind, icon, sub: [kind, W_WHOSE[x.whose] || '', x.status === 'expected' ? '받을 예정' : x.status === 'blocked' ? '막힘' : ''].filter(Boolean).join(' · '), v, out };
+    });
+    const today = String(storyNow(p) || p.now || '').slice(0, 5);
+    const debts = (M.debts || []).filter(x => !['paid', 'forgiven'].includes(x.status) && finite(Number(x.amount))).map(x => {
+        const [icon, kind] = W_DB[x.kind] || W_DB.other, out = x.whose === 'family' ? '가족 빚' : x.whose === 'company' ? '회사 빚' : '';
+        const v = -Math.abs(conv(x.amount, x.currency)) * (x.whose === 'shared' ? 0.5 : 1), gap = /^\d{2}-\d{2}/.test(String(x.due || '')) ? gapDays(today, String(x.due).slice(0, 5)) : null;
+        const due = x.status === 'overdue' || gap !== null && gap < 0 ? ['연체', ''] : gap === 0 ? ['오늘', ''] : gap !== null ? [`D-${gap}`, gap <= 7 ? '' : 'g'] : null;
+        return { x, name: words(x) || kind, icon, sub: [kind, x.whose === 'shared' ? '같이 진 빚 · 절반' : '', x.lender && !words(x).toLowerCase().includes(String(x.lender).toLowerCase()) ? x.lender : ''].filter(Boolean).join(' · '), v, out, due };
+    });
+    const has = assets.filter(a => !a.out).reduce((n, a) => n + a.v, 0), owe = debts.filter(d => !d.out).reduce((n, d) => n + d.v, 0);
+    return { assets, debts, has, owe, cur };
+}
+const W_ROW = (p, w, a, debt) => `<div class="ax_rw ax_wrw"><span class="ax_fi" style="width: 38px; height: 38px; background: ${debt ? '#f6e7e1' : '#e2e9f5'}; color: ${debt ? '#b8573a' : '#2c4a80'}">${ax(a.icon, 19, 'currentColor', 1.9)}</span><span class="ax_tx"><b class="ax_n">${esc(a.name)}</b><span class="ax_p">${a.due ? `<span class="ax_dd ${a.due[1]}" style="margin: 0 6px 0 0">${a.due[0]}</span>` : ''}${esc(a.sub)}</span></span><span class="ax_amt ${debt ? '' : 'p'} cg_num">${esc(fmtIn(p, a.v, w.cur, true))}</span></div>`;
+// 더보기's 재산 · 빚: the four lines, what they have, what they owe, what is left out of it
+function wealthPart(p) {
+    const w = wealthOf(p);
+    if (!w.assets.length && !w.debts.length) return '';
+    const dep = bankSum(p).value, mine = w.assets.filter(a => !a.out), owed = w.debts.filter(d => !d.out), left = [...w.assets, ...w.debts].filter(a => a.out);
+    const ln = (k, v, cls = '') => `<div class="ax_rln"><span>${k}</span><b class="cg_num ${cls}">${esc(fmtIn(p, v, w.cur))}</b></div>`;
+    return `<div class="ax_sec">재산 · 빚</div>
+        <div class="ax_card">${ln('예금', dep)}${ln('가진 것', w.has)}${w.debts.length ? ln('빚', w.owe, 'ax_wneg') : ''}<div class="ax_rln ax_wtot"><span>순자산</span><b class="cg_num">${esc(fmtIn(p, dep + w.has + w.owe, w.cur))}</b></div></div>
+        ${mine.length ? `<div class="ax_sec">가진 것</div><div class="ax_card">${mine.map(a => W_ROW(p, w, a, false)).join('')}</div>` : ''}
+        ${owed.length ? `<div class="ax_sec">빚</div><div class="ax_card">${owed.map(d => W_ROW(p, w, d, true)).join('')}</div>` : ''}
+        ${left.length ? `<div class="ax_sec">합계에 안 넣은 것</div><div class="ax_wpl">${left.map(a => `<span>${esc(a.out)} · ${esc(a.name)}</span>`).join('')}</div>` : ''}`;
+}
+// 은행 첫 화면: what they have besides the accounts, one line under 내 계좌 (never the debts)
+function wealthLine(p) {
+    const w = wealthOf(p), mine = w.assets.filter(a => !a.out);
+    if (!mine.length) return '';
+    return `<div class="ax_card"><button type="button" class="ax_rw" data-go="bankmore"><span class="ax_fi" style="width: 38px; height: 38px; background: #e2e9f5; color: #2c4a80">${ax('house', 19, 'currentColor', 1.9)}</span><span class="ax_tx"><b class="ax_n">재산</b><span class="ax_p">가진 것 ${mine.length}개</span></span><span class="ax_fxv"><b class="ax_amt cg_num">${esc(fmtIn(p, w.has, w.cur))}</b></span>${ax('chev', 16, '#c2c7cf', 2.4)}</button></div>`;
+}
 export function bankMore(p, now) {
     const M = mo(p); if (!M) return bankHome(p, now);
     const { t, has, next } = bankTier(p), sum = bankSum(p), cur = bankDisplayCurrency(p), owner = esc(p.owner), init = esc([...String(p.owner || '?')][0].toUpperCase());
@@ -446,7 +492,7 @@ export function bankMore(p, now) {
       <div class="ax_bks"><div class="ax_scroll">
         ${card}
         ${t ? '' : `<div class="ax_sec">예금 합계</div><div class="ax_card ax_tot"><div class="h"><b class="cg_num">${esc(fmtIn(p, sum.value, cur))}</b><small>계좌 ${parts.length}개</small></div>${parts.length ? `<div class="bar">${parts.map(a => `<i style="flex: ${Number(a.balance) / (SCALE[a.currency] || 1)}; background: ${PC[a.kind] || '#9aa3ae'}"></i>`).join('')}</div><div class="lg">${parts.map(a => `<span style="color: ${PC[a.kind] || '#9aa3ae'}">● ${kindName[a.kind]} ${Math.round(Number(a.balance) / (SCALE[a.currency] || 1) / tot * 100)}%</span>`).join('')}</div>` : ''}</div>`}
-        ${prog}${ben}
+        ${wealthPart(p)}${prog}${ben}
         <div class="ax_sec">계좌 정보</div>
         <div class="ax_card ax_info">${M.bank.accounts.map(a => `<div class="ax_rw"><span class="ax_tx"><span class="k">${kindName[a.kind]}${a.name ? ` · ${esc(a.name)}` : ''}</span><b class="cg_num">${a.kind === 'credit' ? `•••• •••• •••• ${esc(a.last4)}` : esc(acctNo(p, a))}</b></span></div>`).join('')}</div>
         <i class="ax_pad"></i>
