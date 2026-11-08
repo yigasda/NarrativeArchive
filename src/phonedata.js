@@ -559,6 +559,8 @@ export const countryOf = v => { const s = String(v || '').trim(), u = s.toUpperC
 // a count as a profile writes it: 1200, "1.2k", "3.4만", "2M"
 const countOf = v => { const s = String(v ?? '').trim(), n = num(s); if (n === null) return 0; const k = /만/.test(s) ? 1e4 : /백만|\d\s*[mM]\b/.test(s) ? 1e6 : /\d\s*[kK]\b|천/.test(s) ? 1e3 : 1; return Math.max(0, Math.round(n * k)); };
 const truthy = v => v === true || /^(true|yes|ja|예|네)$/i.test(String(v ?? '').trim());
+// (a list the model wrote as one name, "with": "Ren", is that one name)
+const oneOrMany = v => (typeof v === 'string' ? (v.trim() ? [v] : []) : arr(v));
 // owner: whose phone it is (a message they wrote is "me", whatever name the model gives it; no thread or call with themselves)
 export function parsePhone(out, owner = '') {
     const s = String(out || '').replace(/```(?:json)?/gi, '');
@@ -582,7 +584,7 @@ export function parsePhone(out, owner = '') {
         accent: pick(raw.accent, ACCENTS, ''),
         now: when(raw.now),
         contacts: arr(raw.contacts).map(x => ({ name: line(x?.name, 40), saved: line(x?.saved, 40) })).filter(x => x.name && !mine(x.name)).slice(0, CAP.contacts),
-        threads: arr(raw.threads).map(t => { const d = t?.draft && str(t.draft.text, 600); const group = t?.group === true ? { group: true, members: [...new Set(arr(t.members).map(x => line(x, 40)).filter(x => x && !mine(x)))].slice(0, 30) } : {}; return { with: line(t?.with, 40), ...group, messages: arr(t?.messages).map(x => msg(x, t)).filter(x => x.text), ...(d ? { draft: { text: d, ko: ko(t.draft.ko), time: when(t.draft.time), src: 'story' } } : {}) }; }).filter(t => t.with && !mine(t.with) && t.messages.length).slice(0, CAP.threads),
+        threads: arr(raw.threads).map(t => { const d = t?.draft && str(t.draft.text, 600); const group = t?.group === true ? { group: true, members: [...new Set(oneOrMany(t.members).map(x => line(x, 40)).filter(x => x && !mine(x)))].slice(0, 30) } : {}; return { with: line(t?.with, 40), ...group, messages: arr(t?.messages).map(x => msg(x, t)).filter(x => x.text), ...(d ? { draft: { text: d, ko: ko(t.draft.ko), time: when(t.draft.time), src: 'story' } } : {}) }; }).filter(t => t.with && !mine(t.with) && t.messages.length).slice(0, CAP.threads),
         calls: inARow(arr(raw.calls).map(x => tag({ with: line(x?.with, 40), type: pick(x?.type, ['in', 'out', 'missed'], 'in'), time: when(x?.time), min: Math.max(0, Math.min(600, Math.round(num(x?.min) || 0))), ...(callCount(x?.count) > 1 ? { count: callCount(x.count) } : {}) }, x)).filter(x => x.with && !mine(x.with))),
         photos: arr(raw.photos).map(x => tag({ caption: line(x?.caption, 200), ko: ko(x?.ko), time: when(x?.time), mood: pick(x?.mood, MOODS, 'warm') }, x)).filter(x => x.caption),
         notes: arr(raw.notes).map(x => tag({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 1500), ko: str(x?.ko, 1500), time: when(x?.time) }, x)).filter(x => x.title || x.text),
@@ -593,7 +595,7 @@ export function parsePhone(out, owner = '') {
             comments: arr(x?.comments).map(c => ({ from: line(c?.from, 40), text: line(c?.text, 300), ko: ko(c?.ko) })).filter(c => c.from && c.text).slice(0, CAP.comments) }, x)).filter(x => x.text || x.photo),
         mails: arr(raw.mails).map(x => tag({ from: line(x?.from, 60), subject: line(x?.subject, 120), ks: line(x?.ks, 120), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), unread: truthy(x?.unread) }, x)).filter(x => x.from && (x.subject || x.text)),
         diary: arr(raw.diary).map(x => tag({ date: when(x?.date).slice(0, 5), title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000) }, x)).filter(x => x.date && x.text),
-        visits: arr(raw.visits).map(x => tag({ place: line(x?.place, 60), city: line(x?.city, 60), ...(line(x?.already, 40) ? { already: line(x.already, 40) } : {}), ...(x?.home === true ? { home: true } : {}), with: [...new Set(arr(x?.with).map(n => line(n, 40)).filter(n => n && !mine(n)))].slice(0, 6), time: when(x?.time), src: 'story' }, x)).filter(x => x.place).slice(-CAP.visits),
+        visits: arr(raw.visits).map(x => tag({ place: line(x?.place, 60), city: line(x?.city, 60), ...(line(x?.already, 40) ? { already: line(x.already, 40) } : {}), ...(x?.home === true ? { home: true } : {}), with: [...new Set(oneOrMany(x?.with).map(n => line(n, 40)).filter(n => n && !mine(n)))].slice(0, 6), time: when(x?.time), src: 'story' }, x)).filter(x => x.place).slice(-CAP.visits),
         voice: arr(raw.voice).map(x => tag({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), sec: secOf(x?.sec), place: line(x?.place, 60), src: 'story' }, x)).filter(x => x.text),
     });
 }
@@ -753,7 +755,8 @@ export function recordsCore(raw, textOf = () => '') {
     const recs = [...records.filter(r => r && typeof r === 'object' && !Array.isArray(r)), ...lives, ...health, ...usual];
     const events = [], byId = new Map(), made = new Map(), everyday = {}, days = [];
     for (const r of recs) if (r.type === 'scene') {
-        const e = { id: line(r.id, 60) || `scene-${atNum(r.at)}`, at: r.at, quote: r.quote ?? '', date: r.date ?? '', time: r.time ?? '', summary: r.summary ?? '', phone: {} };
+        // (its name in "id", or in "scene" as the records' shared field has it)
+        const e = { id: line(r.id, 60) || line(r.scene, 60) || `scene-${atNum(r.at)}`, at: r.at, quote: r.quote ?? '', date: r.date ?? '', time: r.time ?? '', summary: r.summary ?? '', phone: {} };
         events.push(e);
         if (!byId.has(e.id)) byId.set(e.id, e);
     }

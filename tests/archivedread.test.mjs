@@ -1286,3 +1286,13 @@ test('"health" after "everyday": a past day guessed from their usual becomes the
     await data.undoRound(c.m, c.p);
     assert.equal(day('10-25').steps, 8050);
 });
+
+test('recordsCore: a scene named in "scene" (no "id") is that scene; a record pointing at it goes on it; "with" as one name', async () => {
+    const got = data.recordsCore({ now: '11-06 21:00', records: [
+        { type: 'scene', scene: 'pho-dinner', at: 0, quote: 'dinner', date: '11-03', time: '19:00' }, { type: 'scene', scene: 'hotel-night', at: 5, quote: 'hotel', date: '11-03', time: '21:30' },
+        { type: 'visit', place: 'Pho 24', with: 'Ren', time: '11-03 19:10', scene: 'pho-dinner' }, { type: 'visit', place: 'Hotel Lio', time: '11-03 21:40', scene: 'hotel-night' }] });
+    assert.deepEqual(got.events.map(e => [e.id, (e.phone.visits || []).map(v => v.place)]), [['pho-dinner', ['Pho 24']], ['hotel-night', ['Hotel Lio']]]);
+    const ph = data.parsePhone(JSON.stringify({ visits: [{ place: 'Pho 24', with: 'Ren', time: '11-03 19:10' }], threads: [{ with: 'Uni', group: true, members: 'Ivo', messages: [{ from: 'Ivo', text: 'hi', time: '11-03 20:00' }] }] }), 'Mara');
+    assert.deepEqual(ph.visits[0].with, ['Ren']);
+    assert.deepEqual(ph.threads[0].members, ['Ivo']);
+});
