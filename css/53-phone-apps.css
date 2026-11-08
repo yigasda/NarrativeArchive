@@ -31,7 +31,7 @@
 .ax_tx b.m { color: #c0473d; }
 .ax_tx .ax_n { font-size: 15.5px; --axfs: 15.5px; font-weight: 500}
 .ax_p { margin-top: 2px; font-size: 13.5px; --axfs: 13.5px; color: #7c8592; --axfg: #7c8592; line-height: 1.38; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden}
-.ax_p .ax_ko { display: inline; margin-left: 4px; font-size: 1em; --axfs: 1em}
+.ax_p .ax_ko, .ax_p1 .ax_ko { display: inline; margin-left: 4px; font-size: 1em; --axfs: 1em}
 .ax_p1 { margin-top: 2px; font-size: 13.5px; --axfs: 13.5px; color: #7c8592; --axfg: #7c8592; white-space: nowrap; overflow: hidden; text-overflow: ellipsis}
 .ax_p1 .cg_num { color: #4d5562; --axfg: #4d5562; margin-right: 6px}
 .ax_rw small { font-size: 12.5px; color: #8a929d; align-self: flex-start; margin-top: 3px; text-align: right; flex: none; }

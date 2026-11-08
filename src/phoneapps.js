@@ -240,7 +240,7 @@ export function msgList(p, now, roster) {
         ${ts.length ? `<div class="ax_card">${ts.map(t => { const x = t.messages.filter(y => !y.deleted).at(-1) || t.messages[t.messages.length - 1]; return swipeRow('thread', p.threads.indexOf(t), `
           <button type="button" class="ax_rw" data-go="thread" data-i="${p.threads.indexOf(t)}">${threadNew(t) ? '<i class="ax_dot"></i>' : ''}${t.group ? groupAv(t, 48) : axAv(t.with, 48, roster)}<span class="ax_tx">
             <span class="ax_h"><b>${esc(savedName(p, t.with))}</b><small class="cg_num">${esc(listTime(p, x?.time || ''))}</small></span>
-            <span class="ax_p">${t.draft ? `<span class="ax_draftw">초안</span>${esc(t.draft.text)}` : `${t.group && x?.from ? `${esc(x.from === 'me' ? '나' : savedName(p, x.from))}: ` : ''}${esc(x?.text || '')}${x?.ko && koOn() ? `<span class="ax_ko">${esc(x.ko)}</span>` : ''}`}</span></span></button>`); }).join('')}</div>` : '<div class="ax_empty">메시지가 없어요</div>'}
+            <span class="ax_p1">${t.draft ? `<span class="ax_draftw">초안</span>${esc(t.draft.text)}` : `${t.group && x?.from ? `${esc(x.from === 'me' ? '나' : savedName(p, x.from))}: ` : ''}${esc(x?.text || '')}${x?.ko && koOn() ? `<span class="ax_ko">${esc(x.ko)}</span>` : ''}`}</span></span></button>`); }).join('')}</div>` : '<div class="ax_empty">메시지가 없어요</div>'}
         <i class="ax_pad"></i>
       </div>
       ${axInd()}`;
