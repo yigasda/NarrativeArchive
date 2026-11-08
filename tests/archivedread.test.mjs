@@ -1141,6 +1141,6 @@ test('no app only Korea has on the screen time of an owner who lives elsewhere: 
     const same = structuredClone(ko); data.homeScreens(same, false, usual);
     assert.deepEqual(same, ko);
     assert.match(data.coreSystem({ life: true }), /Each day's "apps": most of their everyday apps from LIFE NOW's usual .*more than 10 apps, like a real phone's day\./);
-    assert.match(data.coreSystem({ life: true }), /a "usual" record with it in "screen"\."add"\./);
+    assert.match(data.coreSystem({ life: true }), /A new app they start using, of any kind \(chat, social, video, music, game, work or study, reading or news, shopping, money, maps or travel, health\), when the story or their life gives a reason, for instance a translator for a trip: a "usual" record with it in "screen"\."add"\./);
     assert.match(data.coreSystem({ life: true }), /Mostly the apps people use where the owner lives, by their real names; another country's app only when the story shows them using it\./);
 });
