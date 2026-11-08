@@ -203,13 +203,18 @@ const delRow = (kind, i, label) => `<div class="ax_card ax_delcard"><button type
 // a list row that slides left to show 삭제 (메시지 · 메일 · 통화)
 const swipeRow = (kind, i, row) => `<div class="ax_swp"><button type="button" class="na_ph_rm ax_swdel" data-kind="${kind}" data-i="${esc(String(i))}">${ax('trash2', 21, 'currentColor', 2)}<span>삭제</span></button>${row}</div>`;
 const delBtn = (kind, i, cls, inner) => `<button type="button" class="na_ph_rm ${cls}" data-kind="${kind}" data-i="${esc(String(i))}" aria-label="지우기">${inner}</button>`;
-export const AXB = { clock: 'clockc', timer: 'clockc', wclock: 'clockc', alarm: 'clockc', health: 'health', hsteps: 'health', hsleep: 'health', hcmp: 'health', hwork: 'health', hheart: 'health', hwater: 'health', hweight: 'health', files: 'files', folder: 'files', file: 'files', weather: 'sky', wcity: 'sky', wlist: 'sky', dlv: 'dlv', delivery: 'dlv', dshop: 'dlv', dcart: 'dlv', dorders: 'dlv', dorder: 'dlv', ditem: 'dlv', dpay: 'dlv', drate: 'dlv', setprofile: 'slate', ivnotes: 'invest', ivschedule: 'invest', ivhistory: 'invest', invest: 'invest', stock: 'invest', ivactivity: 'invest', ivwatch: 'invest', ivstakes: 'invest', ivcash: 'invest', ivprices: 'invest', msg: 'blue', thread: 'blue', call: 'blue', callmiss: 'blue', callwho: 'blue', contacts: 'blue', contact: 'blue', draft: 'blue', page: 'sky', tabs: 'sky', marks: 'sky', history: 'sky', bank: 'bank', acct: 'bank', tx: 'bank', fixed: 'bank', banknote: 'bank', banksend: 'bank', stmt: 'bank', txdoc: 'bank', bankmore: 'bank', wallet: 'wallet', card: 'wallet', pass: 'wallet', shop: 'shop', order: 'shop', track: 'shop', voice: 'voice', voiceone: 'voice', photo: 'apri', photoone: 'apri', note: 'butter', noteone: 'butter', search: 'sky', searchone: 'sky', cal: 'brick', calone: 'brick', mail: 'sky', mailone: 'sky', set: 'slate', settheme: 'slate', setdate: 'slate', setscreenholder: 'slate', setplace: 'slate', prep: 'slate', setlore: 'slate', setwho: 'slate', setremake: 'slate', setsync: 'slate', setsyncpick: 'slate', stime: 'stime', cam: 'apri', map: 'blue', mapq: 'blue', mapc: 'blue' };
+export const AXB = { clock: 'clockc', timer: 'clockc', wclock: 'clockc', alarm: 'clockc', health: 'health', hsteps: 'health', hsleep: 'health', hcmp: 'health', hwork: 'health', hheart: 'health', hwater: 'health', hweight: 'health', files: 'files', folder: 'files', file: 'files', weather: 'sky', wcity: 'sky', wlist: 'sky', dlv: 'dlv', delivery: 'dlv', dshop: 'dlv', dcart: 'dlv', dorders: 'dlv', dorder: 'dlv', ditem: 'dlv', dpay: 'dlv', drate: 'dlv', setprofile: 'slate', ivnotes: 'invest', ivschedule: 'invest', ivhistory: 'invest', invest: 'invest', stock: 'invest', ivactivity: 'invest', ivwatch: 'invest', ivstakes: 'invest', ivcash: 'invest', ivprices: 'invest', msg: 'blue', thread: 'blue', call: 'blue', callmiss: 'blue', callwho: 'blue', contacts: 'blue', contact: 'blue', draft: 'blue', groupinfo: 'blue', page: 'sky', tabs: 'sky', marks: 'sky', history: 'sky', bank: 'bank', acct: 'bank', tx: 'bank', fixed: 'bank', banknote: 'bank', banksend: 'bank', stmt: 'bank', txdoc: 'bank', bankmore: 'bank', wallet: 'wallet', card: 'wallet', pass: 'wallet', shop: 'shop', order: 'shop', track: 'shop', voice: 'voice', voiceone: 'voice', photo: 'apri', photoone: 'apri', note: 'butter', noteone: 'butter', search: 'sky', searchone: 'sky', cal: 'brick', calone: 'brick', mail: 'sky', mailone: 'sky', set: 'slate', settheme: 'slate', setdate: 'slate', setscreenholder: 'slate', setplace: 'slate', prep: 'slate', setlore: 'slate', setwho: 'slate', setremake: 'slate', setsync: 'slate', setsyncpick: 'slate', stime: 'stime', cam: 'apri', map: 'blue', mapq: 'blue', mapc: 'blue' };
 export const AXB_C = { clockc: ['#f5a524', '#3a3220'], health: ['#e0405f', '#fbe3e8'], files: ['#2f6fbf', '#dfeaf8'], dlv: ['#1fa8a3', '#d9f4f3'], invest: ['#17695d', '#d9eee5'], blue: ['#2f6bff', '#e1e9ff'], apri: ['#a65a4e', '#f7e3d7'], butter: ['#7f6a22', '#f6edcf'], sky: ['#3f6a9e', '#dde8f4'], brick: ['#a14a42', '#f3dcd9'], slate: ['#454d5a', '#e6e8ec'], bank: ['#2c4a80', '#e2e9f5'], wallet: ['#3d4a66', '#e3e7ef'], shop: ['#2f7d74', '#d9efec'], voice: ['#8a5a2e', '#f2e7d6'], stime: ['#3f8fd8', '#e3f1fd'] };
 // people outside the archive get a letter on one of the home icons' colours
 const AX_AV = ['#8faed1', '#a699c9', '#d89f98', '#89b892', '#d494a7', '#a2a7af', '#dcc680'];
 export const axTint = n => AX_AV[[...String(n)].reduce((h, ch) => (h * 31 + ch.codePointAt(0)) % 9973, 7) % AX_AV.length];
 export const axLetter = (n, z) => `<span class="ax_avc" style="width: ${z}px; height: ${z}px; font-size: ${Math.round(z * 0.4)}px; --axfs: ${Math.round(z * 0.4)}px; background: ${axTint(n)}">${esc([...String(n).trim()][0] || '?')}</span>`;
 const axAv = (n, z, roster) => (roster.has(nameKey(n)) ? axFace(n, z) : axLetter(n, z));
+// 단톡 (p.threads with group: true, members without the owner; with is the room's name). docs/mockups/phone-groupchat: the list as D
+// (the room's letter, how many are in it), the room as A (three faces, the name, N명 › to the members, a name over each run)
+export const groupOf = (t) => (t?.group ? [...new Set((Array.isArray(t.members) && t.members.length ? t.members : t.messages.filter(x => x.from && x.from !== 'me').map(x => x.from)).filter(Boolean))] : null);
+const groupAv = (t, z) => `<span class="ax_gav">${axLetter(t.with, z)}<i class="cg_num">${groupOf(t).length + 1}</i></span>`;
+const groupStack = (t, roster) => `<span class="ax_gstk">${groupOf(t).slice(0, 3).map(n => axAv(n, 26, roster)).join('')}</span>`;
 export const axFlat = mood => (AX_MOOD[mood] || AX_MOOD.warm).split(', ')[1];
 export const axCb = (go, k = 'back') => `<button type="button" class="ax_cb" data-go="${go}" aria-label="${k === 'x' ? '닫기' : '뒤로'}">${ax(k, 18, 'currentColor', 2.3)}</button>`;
 export const axKp = p => (hasKo(p) ? `<button type="button" class="na_ph_kochip ax_kp ${koOn() ? 'on' : ''}">가 한국어</button>` : '');
@@ -233,9 +238,9 @@ export function msgList(p, now, roster) {
         ${axH1('메시지', ts.length ? `${ts.length}개 대화` : '')}
         ${axFind()}
         ${ts.length ? `<div class="ax_card">${ts.map(t => { const x = t.messages.filter(y => !y.deleted).at(-1) || t.messages[t.messages.length - 1]; return swipeRow('thread', p.threads.indexOf(t), `
-          <button type="button" class="ax_rw" data-go="thread" data-i="${p.threads.indexOf(t)}">${threadNew(t) ? '<i class="ax_dot"></i>' : ''}${axAv(t.with, 48, roster)}<span class="ax_tx">
+          <button type="button" class="ax_rw" data-go="thread" data-i="${p.threads.indexOf(t)}">${threadNew(t) ? '<i class="ax_dot"></i>' : ''}${t.group ? groupAv(t, 48) : axAv(t.with, 48, roster)}<span class="ax_tx">
             <span class="ax_h"><b>${esc(savedName(p, t.with))}</b><small class="cg_num">${esc(listTime(p, x?.time || ''))}</small></span>
-            <span class="ax_p">${t.draft ? `<span class="ax_draftw">초안</span>${esc(t.draft.text)}` : `${esc(x?.text || '')}${x?.ko && koOn() ? `<span class="ax_ko">${esc(x.ko)}</span>` : ''}`}</span></span></button>`); }).join('')}</div>` : '<div class="ax_empty">메시지가 없어요</div>'}
+            <span class="ax_p">${t.draft ? `<span class="ax_draftw">초안</span>${esc(t.draft.text)}` : `${t.group && x?.from ? `${esc(x.from === 'me' ? '나' : savedName(p, x.from))}: ` : ''}${esc(x?.text || '')}${x?.ko && koOn() ? `<span class="ax_ko">${esc(x.ko)}</span>` : ''}`}</span></span></button>`); }).join('')}</div>` : '<div class="ax_empty">메시지가 없어요</div>'}
         <i class="ax_pad"></i>
       </div>
       ${axInd()}`;
@@ -263,7 +268,7 @@ export function draftView(p, now, i, roster) {
 export function threadScreen(p, now, i, roster) {
     const t = p.threads[i];
     if (!t) return msgList(p, now, roster);
-    const ms = t.messages.filter(x => !x.deleted), group = new Set(ms.filter(x => x.from !== 'me').map(x => nameKey(x.from))).size > 1, saved = savedName(p, t.with);
+    const ms = t.messages.filter(x => !x.deleted), group = !!t.group || new Set(ms.filter(x => x.from !== 'me').map(x => nameKey(x.from))).size > 1, saved = savedName(p, t.with);
     let day = '';
     const rows = ms.map((x, n) => {
         let out = '';
@@ -277,12 +282,27 @@ export function threadScreen(p, now, i, roster) {
         return out;
     }).join('');
     return `${axBar(p, now)}
-      ${axTop(`${axCb('msg')}<button type="button" class="ax_who2" data-go="contact" data-i="${encodeURIComponent(nameKey(t.with))}">${axAv(t.with, 38, roster)}<span><b>${esc(saved)}</b><small>연락처 보기 ›</small></span></button>`, axKp(p))}
+      ${axTop(`${axCb('msg')}${t.group ? `<button type="button" class="ax_who2" data-go="groupinfo" data-i="${i}">${groupStack(t, roster)}<span><b>${esc(t.with)}</b><small>${groupOf(t).length + 1}명 ›</small></span></button>` : `<button type="button" class="ax_who2" data-go="contact" data-i="${encodeURIComponent(nameKey(t.with))}">${axAv(t.with, 38, roster)}<span><b>${esc(saved)}</b><small>연락처 보기 ›</small></span></button>`}`, axKp(p))}
       <div class="ax_scroll ax_msgs">${rows}<i class="ax_pad big"></i></div>
       ${draftBar(p, t, i)}
       ${axInd()}`;
 }
 
+// 단톡 › 멤버: who is in the room (a name not in the contacts still shows by its name), the owner first
+export function groupInfo(p, now, i, roster) {
+    const t = p.threads[i];
+    if (!groupOf(t)) return threadScreen(p, now, i, roster);
+    const ms = groupOf(t);
+    return `${axBar(p, now)}
+      ${axTop(axCb(`thread:${i}`))}
+      <div class="ax_scroll">
+        ${axH1(t.with, `${ms.length + 1}명`)}
+        <div class="ax_card"><div class="ax_rw">${axAv(p.owner, 44, roster)}<span class="ax_tx"><b>나 · ${esc(p.owner)}</b></span></div>
+        ${ms.map(n => `<button type="button" class="ax_rw" data-go="contact" data-i="${encodeURIComponent(nameKey(n))}">${axAv(n, 44, roster)}<span class="ax_tx"><b>${esc(savedName(p, n))}</b><span class="ax_p">${esc(p.threads.filter(x => x !== t && !x.group && nameKey(x.with) === nameKey(n)).length ? '1:1 대화도 있어요' : '연락처 보기')}</span></span>${axChev}</button>`).join('')}</div>
+        <i class="ax_pad"></i>
+      </div>
+      ${axInd()}`;
+}
 // 전화: one row per run of the same person and kind on one day, newest first
 function callRuns(p, onlyMissed) {
     const runs = [];
@@ -316,7 +336,7 @@ export function contactList(p) {
     const seen = new Map();
     const gone = new Set(p.hiddenContacts || []);
     const add = n => { const k = nameKey(n); if (k && k !== 'me' && k !== nameKey(p.owner) && !gone.has(k) && !seen.has(k)) seen.set(k, n); };
-    p.contacts.forEach(c => add(c.name)); p.threads.forEach(t => add(t.with)); p.calls.forEach(c => add(c.with));
+    p.contacts.forEach(c => add(c.name)); p.threads.forEach(t => (t.group ? groupOf(t).forEach(add) : add(t.with))); p.calls.forEach(c => add(c.with));
     return [...seen.values()].sort((a, b) => savedName(p, a).localeCompare(savedName(p, b)));
 }
 export function contactsScreen(p, now, roster) {

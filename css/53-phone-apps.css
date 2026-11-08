@@ -54,6 +54,8 @@
 .ax_who2 b { display: block; font-size: 16px; font-weight: 600; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .ax_who2 small { font-size: 12px; color: #7c8592; }
 .ax_who2 > span:last-child { min-width: 0; }
+.ax_gav { position: relative; flex: none; display: inline-flex; } .ax_gav i { position: absolute; right: -3px; bottom: -2px; font-size: 10.5px; font-style: normal; font-weight: 700; background: #fff; color: #4a525d; border-radius: 999px; padding: 1px 6px; box-shadow: 0 1px 3px rgba(22, 27, 34, 0.15); }
+.ax_gstk { display: flex; flex: none; } .ax_gstk > * + * { margin-left: -9px; } .ax_gstk > * { box-shadow: 0 0 0 2px #f2f3f5; border-radius: 50%; }
 .ax_msgs { gap: 4px; padding: 6px 14px; }
 .ax_tm { align-self: center; font-size: 11.5px; --axfs: 11.5px; color: #7c8592; --axfg: #7c8592; margin: 6px 0 8px; padding: 4px 10px; border-radius: 10px; --axr: 10px; background: rgba(255, 255, 255, 0.7)}
 .ax_tm b { font-weight: 600; color: #4d5562; }
