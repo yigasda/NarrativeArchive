@@ -1286,3 +1286,11 @@ test('"health" after "everyday": a past day guessed from their usual becomes the
     await data.undoRound(c.m, c.p);
     assert.equal(day('10-25').steps, 8050);
 });
+
+test('recordsCore: a story record without its message number goes on the scene of its day and time', () => {
+    const got = data.recordsCore({ now: '11-06 21:00', records: [
+        { type: 'scene', id: 'dinner', at: 2, quote: 'dinner', date: '11-03', time: '19:00' }, { type: 'scene', id: 'hotel', at: 4, quote: 'hotel', date: '11-03', time: '21:30' },
+        { type: 'scene', id: 'studio', at: 8, quote: 'studio', date: '11-06', time: '20:30' },
+        { type: 'visit', place: 'Pho 24', time: '11-03 19:10' }, { type: 'visit', place: 'Hotel Lio', time: '11-03 21:40' }, { type: 'visit', place: 'Studio', time: '11-06 20:30' }] });
+    assert.deepEqual(got.events.map(e => [e.id, (e.phone.visits || []).map(v => v.place)]), [['dinner', ['Pho 24']], ['hotel', ['Hotel Lio']], ['studio', ['Studio']]]);
+});

@@ -728,7 +728,8 @@ function timedLife(x, type) {
 const untimedLife = ed => Object.entries(EVERYDAY_TYPE).reduce((n, [k, type]) => n + arr(ed?.[k]).filter(x => x && typeof x === 'object' && !Array.isArray(x)).reduce((m, x) => m + (type === 'text' ? arr(x.messages).filter(y => !hasTime(y)).length : timedLife(x, type) ? 0 : 1), 0), 0);
 // (the answer's "everyday" lists, by the record each item is)
 const EVERYDAY_TYPE = { texts: 'text', threads: 'text', calls: 'call', photos: 'photo', searches: 'search', notes: 'note', mails: 'mail', posts: 'post', calendar: 'calendar', events: 'calendar', diary: 'diary', voice: 'voice', contacts: 'contact', alarms: 'alarm', timers: 'timer', files: 'file' };
-const atNum = v => Number(String(v ?? '').replace(/^\s*#/, ''));
+// (none written is no number: Number("") would be message 0)
+const atNum = v => (String(v ?? '').trim() ? Number(String(v).replace(/^\s*#/, '')) : NaN);
 // the screen time an answer writes (each day's, a habit's new apps), without the apps only Korea has when the owner lives
 // elsewhere: a day's minutes go to their usual app of that kind, a new app is left out
 export function homeScreens(raw, away, usual) {
@@ -757,13 +758,21 @@ export function recordsCore(raw, textOf = () => '') {
         if (!byId.has(e.id)) byId.set(e.id, e);
     }
     // a story record's event: its scene, the one scene of its message, else one for that message (its words the quote)
+    // (one written without its message number: the scene of its day that had begun by its time, else that day's first)
+    const byTime = r => {
+        const t = when(String(r.time || r.date || '')), d = t.slice(0, 5), h = hhmm(t.slice(6));
+        const day = events.filter(e => when(e.date).slice(0, 5) === d);
+        if (!d || !day.length) return null;
+        const begun = h ? day.filter(e => hhmm(e.time) && hhmm(e.time) <= h).sort((a, b) => hhmm(a.time).localeCompare(hhmm(b.time))) : [];
+        return begun.at(-1) || day[0];
+    };
     const hostOf = r => {
         const own = byId.get(String(r.scene ?? '').trim());
         if (own) return own;
         const at = atNum(r.at), there = events.filter(e => atNum(e.at) === at);
         if (there.length === 1) return there[0];
         if (there.length) return there.at(-1);
-        if (!Number.isInteger(at)) return events.at(-1);
+        if (!Number.isInteger(at)) return byTime(r) || events.at(-1);
         if (!made.has(at)) {
             const words = String(textOf(at) || '').replace(/^\[#\d+[^\]]*\]\s*/, '').trim().slice(0, 40);
             if (!words) return events.at(-1);
