@@ -1141,7 +1141,7 @@ test('life records that answer a scene ("scene" its id) go on it and the day\'s 
     // (they are the scene's: on its event)
     assert.ok(c.p.sync.events.bar);
     assert.match(T.sys, /each item with its fields as above, "scene" when it answers one/);
-    assert.match(T.sys, /- "everyday" is the owner's life outside what the story follows\. A record about a matter the story follows is a story record in "records", only as the messages show it\./);
+    assert.match(T.sys, /- Anything a later message could contradict is a new fact: what someone decided, said or wants, a time, a result; a task and its deadline \("check the moodboards by 18:00"\), a thing done \("uploaded it"\), a plan for later \("ramyeon tonight\?"\)\. What these messages already say is no new fact/);
 });
 
 test('the answer\'s "everyday" lists: each app the owner\'s own life, on its scene when it answers one; counted as life', async () => {
