@@ -342,11 +342,11 @@ test('점검 7 (도시 · 연도): a name two places go by is always asked when 
     for (const city of ['San Juan', 'Cordoba', 'Tripoli', 'La Paz']) assert.ok(data.cityChoices(p, city).choices?.length >= 2, city);
     await data.setPlaceCity(mm, p, 'Ivo', 'Seoul', 'asia/seoul');
     assert.equal(p.where.people.find(x => x.name === 'Ivo').tz, 'Asia/Seoul');
+    // (점검 8: a newer status line with no year: the code works out no year from the days; the place reading's goes)
     globalThis.__trackers = [{ date: '01-02' }, { date: '2026-12-30' }];
-    assert.deepEqual(data.__trackerYear(), { y: 2027, day: '01-02' });
-    // (a scene back in October is no new year)
-    globalThis.__trackers = [{ date: '11-06' }, { date: '10-01' }, { date: '2026-11-05' }];
-    assert.deepEqual(data.__trackerYear(), { y: 2026, day: '11-06' });
+    assert.equal(data.__trackerYear(), null);
+    globalThis.__trackers = [{ date: '2026-12-30' }, { date: '12-29' }];
+    assert.deepEqual(data.__trackerYear(), { y: 2026, day: '12-30' });
     delete globalThis.__trackers;
 });
 

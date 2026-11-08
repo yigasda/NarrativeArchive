@@ -864,12 +864,10 @@ function trackerYear(upto = null) {
     const dayOf = t => { const d = monthDay(t.date || ''); return d ? `${pad(d.mo)}-${pad(d.d)}` : ''; };
     const i = ts.findIndex(t => Number(yearIn(t.date || '')));
     if (i < 0) return null;
-    // (newer status lines that write no year, "01-02" after "2026-12-30": the year runs on past New Year with them, as far as
-    // the newest; its day is the newest one written. Only a step from November or December to January or February is New
-    // Year: a scene back in October is no new year)
-    let y = Number(yearIn(ts[i].date)), prev = dayOf(ts[i]), day = prev;
-    for (const t of ts.slice(0, i).reverse()) { const d = dayOf(t); if (!d) continue; if (prev >= '11' && d < '03') y++; prev = day = d; }
-    return { y, day };
+    // (a newer status line with a day but no year, "01-02" after "2026-12-30": the status lines no longer say the year, and the
+    // code doesn't work it out from the days; the place reading's year goes, as the model read it from the story)
+    if (ts.slice(0, i).some(t => dayOf(t) && dayOf(t) !== dayOf(ts[i]))) return null;
+    return { y: Number(yearIn(ts[i].date)), day: dayOf(ts[i]) };
 }
 // a status line's year on the owner's clock: its New Year's Day is still the old year where the owner is on 12-31, and
 // its 12-31 already the new one where they are on 01-01
