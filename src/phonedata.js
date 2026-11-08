@@ -705,6 +705,17 @@ function everydayOn(raw, rows, textAt) {
 // "everyday" (재구성: marked, on the round's last event, so many a day). textOf: a message's text, for a made event's quote
 const REC_KEY = { contact: 'contacts', text: 'threads', call: 'calls', photo: 'photos', note: 'notes', search: 'searches', calendar: 'events', post: 'posts', mail: 'mails', diary: 'diary', visit: 'visits', voice: 'voice', alarm: 'alarms', timer: 'timers', file: 'files', health: 'health' };
 const REC_META = ['type', 'at', 'from', 'scene', 'already', 'made', 'kind', 'sender'];
+// an "everyday" item as it is, without what has no time (a text's texts one by one; the diary and the calendar by their
+// date; a contact, an alarm, a timer or a file needs none); null when nothing is left
+const hasTime = y => !!String(y?.time ?? '').trim();
+function timedLife(x, type) {
+    if (type === 'text') { const msgs = arr(x.messages).filter(hasTime); return msgs.length || x.draft ? { ...x, messages: msgs } : null; }
+    if (type === 'diary' || type === 'calendar') return String(x.date ?? '').trim() ? x : null;
+    if (['contact', 'alarm', 'timer', 'file'].includes(type)) return x;
+    return hasTime(x) ? x : null;
+}
+// how many an answer's "everyday" wrote without their time (left out)
+const untimedLife = ed => Object.entries(EVERYDAY_TYPE).reduce((n, [k, type]) => n + arr(ed?.[k]).filter(x => x && typeof x === 'object' && !Array.isArray(x)).reduce((m, x) => m + (type === 'text' ? arr(x.messages).filter(y => !hasTime(y)).length : timedLife(x, type) ? 0 : 1), 0), 0);
 // (the answer's "everyday" lists, by the record each item is)
 const EVERYDAY_TYPE = { texts: 'text', threads: 'text', calls: 'call', photos: 'photo', searches: 'search', notes: 'note', mails: 'mail', posts: 'post', calendar: 'calendar', events: 'calendar', diary: 'diary', voice: 'voice', contacts: 'contact', alarms: 'alarm', timers: 'timer', files: 'file' };
 const atNum = v => Number(String(v ?? '').replace(/^\s*#/, ''));
@@ -717,16 +728,13 @@ export function homeScreens(raw, away, usual) {
     for (const e of arr(raw.events)) { if (!e?.phone || typeof e.phone !== 'object') continue; arr(e.phone.health).forEach(day); habit(e.phone.usual); }
     arr(raw.days).forEach(day);
 }
-export const recordCount = (recs, ed) => { const own = ed && typeof ed === 'object' && !Array.isArray(ed) ? Object.keys(EVERYDAY_TYPE).flatMap(k => arr(ed[k]).map(x => ({ ...x, from: 'life' }))) : [], xs = [...arr(recs), ...own].filter(r => r && typeof r === 'object'); return { scenes: xs.filter(r => r.type === 'scene').length, story: xs.filter(r => r.type !== 'scene' && r.from !== 'life').length, life: xs.filter(r => r.type !== 'scene' && r.from === 'life').length }; };
+export const recordCount = (recs, ed) => { const own = ed && typeof ed === 'object' && !Array.isArray(ed) ? Object.keys(EVERYDAY_TYPE).flatMap(k => arr(ed[k]).map(x => ({ ...x, from: 'life' }))) : [], xs = [...arr(recs), ...own].filter(r => r && typeof r === 'object'), untimed = untimedLife(ed); return { scenes: xs.filter(r => r.type === 'scene').length, story: xs.filter(r => r.type !== 'scene' && r.from !== 'life').length, life: xs.filter(r => r.type !== 'scene' && r.from === 'life').length, ...(untimed ? { untimed } : {}) }; };
 export function recordsCore(raw, textOf = () => '') {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw) || !Array.isArray(raw.records)) return raw;
     // (the owner's own life comes in "everyday", a list for each app: a life record each, as the old answer's "from": "life")
     const { records, everyday: own, ...rest } = raw, ed = own && typeof own === 'object' && !Array.isArray(own) ? own : {};
-    // (one written without its time is in these hours: the answer's now; a diary without its date, that day)
-    const now = when(raw.now), at = y => (y && typeof y === 'object' && !String(y.time ?? '').trim() && hm(now) ? { ...y, time: now } : y);
-    const timed = (x, type) => (type === 'diary' ? (String(x.date ?? '').trim() || !hm(now) ? x : { ...x, date: now.slice(0, 5) })
-        : type === 'contact' || type === 'calendar' ? x : type === 'text' ? { ...x, ...(Array.isArray(x.messages) ? { messages: x.messages.map(at) } : {}) } : at(x));
-    const lives = Object.entries(EVERYDAY_TYPE).flatMap(([k, type]) => arr(ed[k]).filter(x => x && typeof x === 'object' && !Array.isArray(x)).map(x => ({ ...timed(x, type), type, from: 'life' })));
+    // (one written without its time is left out: the model's to say when, never the app's; see untimedLife)
+    const lives = Object.entries(EVERYDAY_TYPE).flatMap(([k, type]) => arr(ed[k]).filter(x => x && typeof x === 'object' && !Array.isArray(x)).map(x => timedLife(x, type)).filter(Boolean).map(x => ({ ...x, type, from: 'life' })));
     const recs = [...records.filter(r => r && typeof r === 'object' && !Array.isArray(r)), ...lives];
     const events = [], byId = new Map(), made = new Map(), everyday = {}, days = [];
     for (const r of recs) if (r.type === 'scene') {

@@ -1152,10 +1152,12 @@ test('the answer\'s "everyday" lists: each app the owner\'s own life, on its sce
         searches: Array.from({ length: 7 }, (_, i) => ({ q: `q${i}`, time: `10-26 20:0${i}` })),
         calendar: [{ title: 'Dentist', date: '10-28', time: '09:00' }], calls: [{ with: 'Ivo', kind: 'missed', time: '10-26 20:30' }],
         mails: [{ sender: 'Stadtwerke', subject: 'Rechnung', text: 'x', time: '10-26 20:40' }], diary: [{ title: 'Pho', text: 'good night' }],
-        voice: [{ title: 'idea', text: 'hm… a song', sec: 30 }], texts2: [] } });
-    // (written without its time: the answer's now; the diary without its date: that day)
-    assert.deepEqual(c.p.voice.map(x => x.time), ['10-26 22:00']);
-    assert.deepEqual(c.p.diary.map(x => x.date), ['10-26']);
+        voice: [{ title: 'idea', text: 'hm… a song', sec: 30 }, { title: 'later', text: 'ok', sec: 20, time: '10-26 21:50' }],
+        notes: [{ title: 'no time', text: 'x' }] } });
+    // (written without its time or date: left out, the app never makes one up; counted)
+    assert.deepEqual(c.p.voice.map(x => x.title), ['later']);
+    assert.deepEqual(c.p.diary, []);
+    assert.equal(c.p.notes.length, 0);
     assert.deepEqual(c.p.photos.map(x => [x.caption, x.src ?? '']), [['pho bowls', '']]);
     assert.ok(c.p.threads.find(t => t.with === 'Lio').messages.every(x => x.src === 'guess'));
     // (plain searches: the day's five)
@@ -1163,7 +1165,7 @@ test('the answer\'s "everyday" lists: each app the owner\'s own life, on its sce
     assert.deepEqual(c.p.events.map(x => [x.title, x.src]), [['Dentist', 'guess']]);
     assert.deepEqual(c.p.calls.map(x => [x.with, x.type, x.src]), [['Ivo', 'missed', 'guess']]);
     assert.deepEqual(c.p.mails.map(x => [x.from, x.src]), [['Stadtwerke', 'guess']]);
-    assert.deepEqual(c.p.syncLast.records, { scenes: 1, story: 1, life: 13 });
+    assert.deepEqual(c.p.syncLast.records, { scenes: 1, story: 1, life: 15, untimed: 3 });
 });
 
 test('the owner\'s own life a day, not a reflection: a skipped week fills each day, photos 5 a day, the diary as many as written', async () => {
