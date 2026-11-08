@@ -1381,7 +1381,7 @@ export function orderScreen(p, now, id) {
     if (!o) return ordersScreen(p, now);
     const bm = d.look === 'baemin', tx = (p.money?.tx || []).find(t => t.delivery === o.id && !String(t.id).endsWith('-r')), acct = tx && p.money.bank.accounts.find(a => a.last4 === tx.account);
     const sub = o.items.reduce((n, x) => n + x.qty * x.price, 0), total = orderSum(o), s = shopOf(d, o.shop);
-    const payBy = acct ? `${esc(acct.name || '')} •••• ${esc(acct.last4)}` : o.account === 'cash' ? (bm ? '만나서 현금결제' : 'Bar bei Lieferung') : (bm ? '카드' : 'Karte');
+    const payBy = o.payer === 'someone else' ? (bm ? '다른 사람이 결제' : 'Von jemand anderem bezahlt') : o.payer === 'on delivery' ? (bm ? '만나서 결제' : 'Bei Lieferung') : acct ? `${esc(acct.name || '')} •••• ${esc(acct.last4)}` : o.account === 'cash' ? (bm ? '만나서 현금결제' : 'Bar bei Lieferung') : (bm ? '카드' : 'Karte');
     const bank = tx ? `<button type="button" class="dv_bank" data-go="tx" data-i="${esc(tx.id)}">${bm ? '은행 앱에서 보기' : 'In der Bank-App'} ${I.chev}</button>` : '';
     const note = (t, v, k) => (v ? `<div class="nt"><small>${t}</small>${esc(v)}${k && koOn() ? `<span class="lf_k">${esc(k)}</span>` : ''}</div>` : '');
     if (o.status === 'on the way' && o.mode === 'delivery') {

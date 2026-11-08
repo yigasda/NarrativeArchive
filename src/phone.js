@@ -5,7 +5,7 @@
 //   upto (the last message number the archive held), at, inject } }
 
 import { phoneChatScope, phoneTarget, ensurePhoneStory, resetPhoneStory } from './phonestory.js';
-import { prepareWealth, dateOrderOf, needsDateOrder, setDateOrder, setScreenHolder, ensureScreenHolder, screenHolderChoices, setOwnerLives, setPlaceCity, dropPlacePerson, rereadPlaces, placeInfo, countryOf, countryZones, phonePre, preparePhone, setPreYear, screenHolderLabel } from './phonedata.js';
+import { prepareWealth, dateOrderOf, needsDateOrder, setDateOrder, setScreenHolder, ensureScreenHolder, screenHolderChoices, setOwnerLives, setPlaceCity, cityChoices, answerOwnerAsk, dropPlacePerson, rereadPlaces, placeInfo, countryOf, countryZones, phonePre, preparePhone, setPreYear, screenHolderLabel } from './phonedata.js';
 import { profileEntries, resolvePhoneProfile, currentPersonaBinding } from './phoneprofile.js';
 import { investmentScreen } from './investui.js';
 import { collectInvestmentRecords, fillInvestment, fillChartHistory, refreshMarket, refreshBankFX, investmentDate, validDate } from './investdata.js';
@@ -409,7 +409,7 @@ export async function openPhone(who = null) {
         if (!r?.checked) return toastr.info('새로 읽을 대화가 없어요', '캐릭터 휴대폰');
         const head = `${r.checked}개 확인 · 남은 ${r.remaining}개`;
         const owed = p.sync?.owed?.money?.length || 0;
-        const tail = `${r.failed.length ? ` · 넣지 못한 일 ${r.failed.length}개` : ''}${owed ? ` · 결제 ${owed}개는 다음 반영 때 다시` : ''}`;
+        const tail = `${r.failed.length ? ` · 넣지 못한 일 ${r.failed.length}개` : ''}${owed ? ` · 메시지 ${owed}개의 결제는 다음 반영 때 다시` : ''}`;
         toastr[r.failed.length || owed ? 'warning' : r.apps.length ? 'success' : 'info'](`${r.apps.length ? `${r.apps.join(' · ')}에 넣었어요` : '새로 넣은 건 없어요'}${tail}`, head);
     };
     // Investment calls are explicit; navigation and unresolved quote conflicts never trigger them.
@@ -1053,7 +1053,8 @@ export async function openPhone(who = null) {
     const placeLocked = () => { if (!(making || busyMake || investing || filling.size || busy.fill || busy.sync || placeReading || prepLinking)) return false; toastr.info('반영이 끝난 뒤 바꿔 주세요', '캐릭터 휴대폰'); return true; };
     const placeCity = async (name, now) => {
         const v = await askInput(`${name}의 도시`, '시간대는 도시 이름으로 찾아요.', now || '');
-        if (!v || v === now) return;
+        // the same name again is done, unless two towns share it (Portland): then which one is asked again
+        if (!v || v === now && !cityChoices(tgt(), v, name).choices) return;
         try { await setPlaceCity(m, tgt(), name, v); } catch (err) {
             if (!err?.choices && !err?.askCountry) { toastr.warning(String(err?.message || err), '위치 정보'); return drawPhone(true); }
             const tz = await askZone(tgt(), name, v, err);
@@ -1066,6 +1067,14 @@ export async function openPhone(who = null) {
     $root.on('click', '.na_ph_plrow', async function (e) {
         e.stopPropagation(); if (placeLocked()) return;
         const name = this.dataset.n, x = placeInfo(tgt()).people.find(r => r.name === name); if (x) await placeCity(name, x.city);
+    });
+    // 이 사람이 주인인가요?: a name read both as the owner's and as someone else's (p.where.ask)
+    $root.on('click', '.na_ph_plask', async function (e) {
+        e.stopPropagation(); if (placeLocked()) return;
+        const p = tgt(), name = this.dataset.n, own = placeInfo(p).owner.name || p.owner;
+        const v = await askChoice(`${name}, ${own}인가요?`, `같은 이름을 ${own}의 다른 이름으로도, 다른 사람으로도 읽었어요.`, [{ v: 'yes', label: `네, ${own}예요` }, { v: 'no', label: '아니요, 다른 사람이에요' }], '나중에');
+        if (v !== 'yes' && v !== 'no') return;
+        await answerOwnerAsk(m, p, name, v === 'yes'); drawPhone(true);
     });
     // 밀어서 빼기, like a message or a mail: the row slid open shows 빼기
     $root.on('click', '.na_ph_pldrop', async function (e) { e.stopPropagation(); if (placeLocked()) return; await dropPlacePerson(m, tgt(), this.dataset.n); drawPhone(true); });
@@ -1128,10 +1137,10 @@ export async function openPhone(who = null) {
     });
     $root.on('click', '.na_ph_storyreset', async e => {
         e.stopPropagation();
-        if (making || investing || filling.size) return toastr.info('생성 중인 작업이 끝난 뒤 다시 시도해 주세요');
+        if (making || busyMake || investing || filling.size || placeReading || prepLinking) return toastr.info('생성 중인 작업이 끝난 뒤 다시 시도해 주세요');
         const scope=phoneChatScope(ctx());
         if (!await askSheet('이 방의 폰을 새로 시작할까요?', '모든 인물의 폰이 지워져요.', '새로 시작')) return;
-        if(getMeta()!==m || phoneChatScope(ctx())!==scope || making || investing || filling.size) return;
+        if(getMeta()!==m || phoneChatScope(ctx())!==scope || making || busyMake || investing || filling.size || placeReading || prepLinking) return toastr.info('생성 중인 작업이 끝난 뒤 다시 시도해 주세요');
         resetPhoneStory(m,scope);profileStates.clear();profileDrafts.clear();remake.clear();view='lock';
         await saveMeta();applyInjection();draw();
     });

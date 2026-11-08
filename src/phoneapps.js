@@ -477,24 +477,37 @@ export function calScreen(p, now, m, pick = '') {
     const an = annivList(m, p.owner);
     // a plan called off stays in the data (되돌리기) but not on the calendar
     const evs = p.events.map((e, k) => ({ e, k })).filter(x => !x.e.cancelled);
-    const marked = new Set([...evs.map(x => x.e.date), ...an.map(a => a.date)]);
+    // the wallet's passes, read as they are now (never copied): on their day, a stay or membership on every day to its last
+    const md = (d, n) => { const t = new Date(Date.UTC(2001, Number(d.slice(0, 2)) - 1, Number(d.slice(3, 5)) + n)); return `${pad(t.getUTCMonth() + 1)}-${pad(t.getUTCDate())}`; };
+    const pss = (p.money?.passes || []).filter(x => !x.dayUnknown && /^\d{2}-\d{2}/.test(String(x.date || ''))).map(x => {
+        const d0 = String(x.date).slice(0, 5), u = /^\d{2}-\d{2}/.test(String(x.until || '')) ? String(x.until).slice(0, 5) : '', n = u ? gapDays(d0, u) : 0;
+        // a stay marks each of its days; something longer (a membership) only its first and last, and runs under 오늘
+        return { x, d0, u, end: u && n > 0 ? u : d0, days: n > 0 && n <= 31 ? Array.from({ length: n + 1 }, (_, k) => md(d0, k)) : u && n > 0 ? [d0, u] : [d0] };
+    });
+    const runs = (q, d) => gapDays(q.d0, d) >= 0 && gapDays(d, q.end) >= 0;
+    const passOn = d => pss.filter(q => runs(q, d));
+    const pRow = (q, when = '') => `<button type="button" class="ax_ev" data-go="pass" data-i="${esc(q.x.id)}"><i style="background: #6b84a8"></i><span class="ax_tx"><b>${esc(q.x.by || q.x.to || '표')}</b><span class="ax_p">지갑${q.u ? ` · ${esc(fmtDate(p, q.d0, true))} ~ ${esc(fmtDate(p, q.u, true))}` : q.x.by && q.x.to ? ` · ${esc(q.x.to)}` : ''}</span></span><small class="cg_num">${q.x.time ? esc(clockOf(p, q.x.time)) : '하루 종일'}${when ? `<br>${esc(when)}` : ''}</small></button>`;
+    const marked = new Set([...evs.map(x => x.e.date), ...an.map(a => a.date), ...pss.flatMap(q => q.days)]);
     const len = new Date((!p.noYear && Number(p.year)) || 2000, x0.mo, 0).getDate(); // February: 29 days unless the story's year says 28
     const grid = Array.from({ length: len }, (_, n) => { const d = `${pad(x0.mo)}-${pad(n + 1)}`; return dayBtn('cal', d, pick, `${d === (pick || day) ? 't' : ''} ${marked.has(d) ? 'e' : ''}`, n + 1); }).join('');
     const row = ({ e, k }, when = '') => `<button type="button" class="ax_ev" data-go="calone" data-i="${k}"><i style="background: ${AX_EVC[k % AX_EVC.length]}"></i><span class="ax_tx"><b>${esc(e.title)}</b>${e.ko && koOn() ? `<span class="ax_p">${esc(e.ko)}</span>` : ''}</span><small class="cg_num">${e.time ? esc(fmtTime(p, `${e.date} ${e.time}`)) : '하루 종일'}${when ? `<br>${esc(when)}` : ''}</small></button>`;
     const anRow = a => `<div class="ax_ev"><i style="background: #d494a7"></i><span class="ax_tx"><b>♥ ${esc(a.name)}</b><span class="ax_p">기념일 · 매년 ${esc(fmtDate(p, a.date))}</span></span></div>`;
     // ahead or past the short way round New Year (an event on 01-02 is ahead of 12-30)
-    const soon = [...new Set(evs.filter(x => gapDays(day, x.e.date) >= 0).map(x => x.e.date))].sort((a, b) => gapDays(day, a) - gapDays(day, b));
+    // a pass shows under the day it starts (or today, while a stay runs)
+    const pStart = q => (runs(q, day) ? day : q.d0);
+    const soon = [...new Set([...evs.filter(x => gapDays(day, x.e.date) >= 0).map(x => x.e.date), ...pss.filter(q => gapDays(day, q.end) >= 0).map(pStart)])].sort((a, b) => gapDays(day, a) - gapDays(day, b));
     if (an.some(a => a.date === day) && !soon.includes(day)) soon.unshift(day);
     const past = evs.filter(x => gapDays(day, x.e.date) < 0).sort((a, b) => gapDays(day, b.e.date) - gapDays(day, a.e.date));
+    const pastP = pss.filter(q => gapDays(day, q.end) < 0).sort((a, b) => gapDays(day, b.d0) - gapDays(day, a.d0));
     return `${axBar(p, now)}
       ${axTop(axCb('home'), axKp(p))}
       <div class="ax_scroll">
-        ${axH1(`${x0.mo}월`, evs.length ? `일정 ${evs.length}` : '')}${p.investment?.schedules?.length ? `<button type="button" class="ax_card" data-go="ivschedule">투자 · 배당·권리 일정 ${p.investment.schedules.length}건 보기</button>` : ''}
+        ${axH1(`${x0.mo}월`, evs.length + pss.length ? `일정 ${evs.length + pss.length}` : '')}${p.investment?.schedules?.length ? `<button type="button" class="ax_card" data-go="ivschedule">투자 · 배당·권리 일정 ${p.investment.schedules.length}건 보기</button>` : ''}
         <div class="ax_card"><div class="ax_cal7">${grid}</div></div>
-        ${pick ? `<div class="ax_sec">${esc(fmtDate(p, pick))}${pick === day ? ' · 오늘' : ''}</div>${(list => (list ? `<div class="ax_card">${list}</div>` : '<div class="ax_empty">이날 일정이 없어요</div>'))(`${an.filter(a => a.date === pick).map(anRow).join('')}${evs.filter(x => x.e.date === pick).map(x => row(x)).join('')}`)}` : `${soon.map(d => `<div class="ax_sec">${esc(fmtDate(p, d))}${d === day ? ' · 오늘' : ''}</div><div class="ax_card">${d === day ? an.filter(a => a.date === d).map(anRow).join('') : ''}${evs.filter(x => x.e.date === d).map(x => row(x)).join('')}</div>`).join('')}
+        ${pick ? `<div class="ax_sec">${esc(fmtDate(p, pick))}${pick === day ? ' · 오늘' : ''}</div>${(list => (list ? `<div class="ax_card">${list}</div>` : '<div class="ax_empty">이날 일정이 없어요</div>'))(`${an.filter(a => a.date === pick).map(anRow).join('')}${evs.filter(x => x.e.date === pick).map(x => row(x)).join('')}${passOn(pick).map(q => pRow(q)).join('')}`)}` : `${soon.map(d => `<div class="ax_sec">${esc(fmtDate(p, d))}${d === day ? ' · 오늘' : ''}</div><div class="ax_card">${d === day ? an.filter(a => a.date === d).map(anRow).join('') : ''}${evs.filter(x => x.e.date === d).map(x => row(x)).join('')}${pss.filter(q => gapDays(day, q.end) >= 0 && pStart(q) === d).map(q => pRow(q)).join('')}</div>`).join('')}
         ${soon.length ? '' : '<div class="ax_sec">다가오는 일정 없음</div>'}
         ${an.length ? `<div class="ax_sec">기념일</div><div class="ax_card">${an.map(anRow).join('')}</div>` : ''}
-        ${past.length ? `<div class="ax_sec">지난 일정</div><div class="ax_card">${past.map(x => row(x, fmtDate(p, x.e.date, true))).join('')}</div>` : ''}`}
+        ${past.length || pastP.length ? `<div class="ax_sec">지난 일정</div><div class="ax_card">${past.map(x => row(x, fmtDate(p, x.e.date, true))).join('')}${pastP.map(q => pRow(q, fmtDate(p, q.d0, true))).join('')}</div>` : ''}`}
         <i class="ax_pad"></i>
       </div>
       ${axInd()}`;
@@ -638,6 +651,7 @@ function placeBody(p, now, warn = '') {
     const info = placeInfo(p), o = info.owner, man = '<i class="ax_pl_man">수동</i>';
     const opts = Object.entries(COUNTRIES).map(([k, v]) => `<option value="${k}" ${k === o.lives ? 'selected' : ''}>${esc(v)}</option>`).join('') + (o.lives && !COUNTRIES[o.lives] ? `<option value="${esc(o.lives)}" selected>${esc(o.lives)}</option>` : '');
     const row = x => { const c = placeClock(p, now, x.hours); return `<div class="ax_swp"><button type="button" class="ax_swdel na_ph_pldrop" data-n="${esc(x.name)}">${ax('trash2', 21, 'currentColor', 2)}<span>빼기</span></button><div role="button" tabindex="0" class="ax_rw ax_pl_row na_ph_plrow" data-n="${esc(x.name)}"><span class="ax_pl_l"><b>${esc(x.city || '모르는 곳')}</b><small>${esc(x.name)}${c.day ? ` · ${c.day}` : ''}${x.manual ? ` ${man}` : ''}</small></span><span class="ax_pl_r"><b class="cg_num">${hoursText(x.hours)}</b>${c.time ? `<small class="cg_num">${esc(c.time)}</small>` : ''}</span></div></div>`; };
+    const asks = Array.isArray(p.where?.ask) ? p.where.ask.filter(Boolean) : [];
     const w = warn || (info.failed ? '자동으로 못 읽었어요 · 직접 정하거나 연동해 주세요' : '');
     return `${w ? `<div class="ax_pl_warn">${ax('info', 16, '#8a6a1f', 2.2)}<span>${esc(w)}</span></div>` : ''}
         <div class="ax_pl_hero">
@@ -648,6 +662,7 @@ function placeBody(p, now, warn = '') {
             <div class="ax_pl_chip"><span>시간대</span><b>${esc(o.tz || '—')}</b></div>
           </div>
         </div>
+        ${asks.length ? `<div class="ax_sec">주인인지 몰라요</div><div class="ax_card">${asks.map(n => `<div role="button" tabindex="0" class="ax_rw na_ph_plask" data-n="${esc(n)}"><span class="ax_si" style="background: #f3e8c9">${ax('info', 17, '#8a6a1f', 2.2)}</span><span class="ax_tx"><span class="ax_n">${esc(n)}</span><span class="ax_p1">${esc(o.name || p.owner)}인가요? · 눌러서 답하기</span></span>${axChev}</div>`).join('')}</div>` : ''}
         <div class="ax_sec">다른 사람</div>
         ${info.people.length ? `<div class="ax_card ax_pl_list">${info.people.map(row).join('')}</div>` : '<div class="ax_card ax_pl_list"><div class="ax_pl_none">아직 읽은 사람이 없어요</div></div>'}
         <div class="ax_foot">눌러서 도시를 바꾸고, 왼쪽으로 밀어서 뺄 수 있어요.</div>`;
