@@ -359,7 +359,7 @@ ${archiveOnly ? '' : `${CORE_CLOCK_FIRST}\n\n`}READING THE STORY
 - The story comes first: every scene and its trail on the phone are written before any record of the owner's own life. A life record never takes a story record's place.
 - Everything that happens in these messages is a "scene"; a scene that would leave anything on the phone gets those records too (a photo, a text, a call, a search, a calendar item).
 - Ask what the owner's phone would show after these scenes. Scenes leave a trail on a phone without saying so: a text after a fight, a photo of dinner, a search before a trip, a missed call in a meeting, a note of what someone asked for.
-- Each person the owner had a scene with and then parted from: at least one text between the two later these hours, in their own voices (a fight may go on; a job given in person gets a short check).
+- Each person in the owner's life they had a scene with and then parted from: at least one text between the two later these hours, in their own voices (a fight may go on; a job given in person gets a short check).
 - A plan made in these messages goes in the calendar; what is planned hasn't happened yet (no photo of it).${wallet ? `
 - A ticket the wallet holds (a flight, a train, a hotel stay, a show, a membership) shows on the calendar from there: no calendar record for it. A reservation or an appointment is still one.` : ''}
 
@@ -392,8 +392,8 @@ THE APPS
 IN THEIR OWN WORDS (notes, the diary, voice memos)
 - The phone's most personal records: written out in full as this owner would write or say them, never a summary of the day.
 - Notes: in the shape a real note has, for instance a list with items ticked or crossed out, a half-sentence to remember, a draft of something hard to say, an address and a number, a line they liked. Short or long as they are, with their own shorthand, spelling and mix of languages.
-- The diary: at most one entry a day, in the first person and their own voice; a few lines on a quiet day, a few paragraphs on a big one. What happened as they saw it, what they felt and wouldn't say aloud, a thought that keeps coming back, a question to themselves; not the day's events in order. Only what the story shows happened and what they feel about it; no new secrets or events.
-- Voice memos: spoken, not written: the way the owner talks in the archive and chat, with pauses (…), restarts and half sentences. A moment they could talk into the phone alone (after a fight, on the way somewhere, late at night), for instance an idea, a reminder to self, a tune, words for someone they can't say yet. 20 to 90 seconds of speech, "sec" to fit, "place" where they were. Not the diary told again.${life ? `
+- The diary: at most one entry a day, in the first person and their own voice; a few lines on a quiet day, a few paragraphs on a big one. What happened as they saw it, what they felt and wouldn't say aloud, a thought that keeps coming back, a question to themselves; not the day's events in order. A day the story shows: what happened and what they feel about it; another day: that day of their life. No new secrets or story events.
+- Voice memos: spoken, not written: the way the owner talks in the archive and chat, with pauses (…), restarts and half sentences. A moment they could talk into the phone alone (after a fight, on the way somewhere, late at night), for instance an idea, a reminder to self, a tune, words for someone they can't say yet. 20 to 90 seconds of speech, "sec" to fit, "place" where they were. Not the diary told again; no new secrets or story events.${life ? `
 
 HEALTH
 - A "health" record for every story day these messages move into, and for a day in LIFE NOW the story now shows. The day of "now" again every time, with its totals so far (steps, workouts, coffee, water, "screen"), even when nothing new happened.
@@ -412,15 +412,15 @@ SCREEN TIME
 
 KEEPING IN STEP
 - A story record is only what happens in NEW MESSAGES or ARCHIVE FOR THESE MESSAGES. Background and memories of earlier days add nothing.
-- A record already in PHONE NOW${life ? ' or LIFE NOW' : ''} is never written again (new texts in a chat already there are new records)${life ? '; an alarm or file there is changed with its id as "already" and only what changed (a deleted file: "deleted": true)' : ''}.
+- A record already in PHONE NOW${life ? ' or LIFE NOW' : ''} is never written again (new texts in a chat already there are new records; a plan moved or called off is its calendar record again)${life ? '; an alarm or file there is changed with its id as "already" and only what changed (a deleted file: "deleted": true)' : ''}.
 - A scene in EVENTS ON THE PHONE keeps its id. MESSAGES READ BEFORE, NOW CHANGED: their scenes as the edited text now has them, with the ids listed there.
-- A record from the story holds what the messages say.
+- A story record holds what the messages show or plainly imply; its details are made up to fit.
 - A record of the owner's life may carry the small happenings of that life (a friend's news, a coworker's question, a sale, a parcel notice), but nothing that moves the story: no decision, promise, plan, meeting, secret or change between the owner and the story's people that a later message could contradict. What the messages already say may come up again.
 - People: only the story's or PEOPLE AROUND, and the people of the owner's own life (a coworker, a classmate, a neighbour) made up to fit; never a new relative or partner. A relationship word (girlfriend, ex, husband, boss) only if the messages, archive or PEOPLE AROUND use it for them. Someone texted or called who isn't in the contacts yet gets a "contact" record too.
 - Never a booking, a trip or a purchase the story doesn't have. A booking the story has carries the details a real one would (a booking number, a seat, a gate), made up to fit.
 
 TIME PASSING
-- About ${LIFE_A_DAY} records of the owner's life for a whole waking day, in step with the hours these messages cover (an hour: one or two; a few minutes: often none). Days these messages skip or spend away from the owner (from PHONE NOW's "now" to the answer's "now") were lived too: about ${LIFE_A_DAY} for each, at most ${LIFE_MAX} in all. What happens each day decides its records; most days leave some, a few none; routines recur. Each record is dated on its own day.${life && weather ? `
+- About ${LIFE_A_DAY} records of the owner's life for a whole waking day, in step with the hours these messages cover (an hour: one or two; a few minutes: often none). Days these messages skip or spend away from the owner (from PHONE NOW's "now" to the answer's "now") were lived too: about ${LIFE_A_DAY} for each, at most ${LIFE_MAX} in all${life ? ' ("health" records not counted)' : ''}. What happens each day decides its records; most days leave some, a few none; routines recur. Each record is dated on its own day.${life && weather ? `
 - "weather": ${weatherRule(tracker)}
 - With new weather, also each saved city's "cond", "temp", "hi" and "lo".` : ''}
 
@@ -451,11 +451,10 @@ JSON (one object, nothing before or after it)
     "at": the message number it comes from; for an archive section, the message in its range it belongs to; for a record of the owner's life, the message whose hours it falls in; for a skipped day, the message that moved past it,
     "from": "story" | "life",
     "scene": the "id" of its scene, or "",
-    ${life ? '"already": an id from LIFE NOW, or "",\n    ' : ''}"time": "MM-DD HH:MM",
-    "made": [the fields made up],
+    ${life ? '"already": an id from LIFE NOW, or "",\n    ' : ''}"time": "MM-DD HH:MM", when it happened (a scene, a calendar item and an alarm say theirs below),
 
     scene: "id": an id from EVENTS ON THE PHONE, or a short new tag like "berlin-flight"; "quote": a few words copied exactly as written in that message or section, not reworded; "date": "MM-DD", "time": "HH:MM" or "", when it happens (a plan: when it is made); "summary": one short line
-    contact: "name": as in the story, "saved": how the owner saved them (a nickname, an emoji, or just the name)
+    contact: "name": as the story writes it, else as the owner knows them, "saved": how the owner saved them (a nickname, an emoji, or just the name)
     text: "with": the person, or a group chat's name (the same name every time); "group": true for a group chat; "members": [everyone in it but the owner, each named as in the contacts and their own chat]; "messages": [{ "from": "me" or the sender's name, "text", "ko", "time", "deleted": true for one the owner deleted }]; "draft": { "text", "ko", "time" } only for a text the owner wrote and didn't send
     call: "with", "kind": "in" | "out" | "missed", "min": minutes talked, "count": calls in a row (34 missed calls are one record)
     photo: "caption": what it shows, "ko", "mood": one of ${MOODS.join(', ')}
