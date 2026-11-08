@@ -517,7 +517,7 @@ YOU GET
 - LIVES IN: the country they live in. PHONE COUNTRY (sometimes).
 
 SCREEN TIME
-- It shows who they really are, habits they'd never admit (a game they can't put down, texting all night, barely touching the phone): from their character, not their polite profile.
+- From their character, not their polite profile; it may show habits they'd never admit, for instance a game they can't put down, texting all night, barely touching the phone.
 - "usual": 10 to 14 apps they open every day and 14 to 18 now and then, about 30 in all, spread over at least 6 of: chat, social, video, music, game, work or study, reading or news, shopping, money, maps or travel, health. Leave out what they would never touch. Someone who barely uses a phone shows it in short minutes, not in fewer apps.
 - Each of DAYS follows what happened that day and how they felt (a fight: hours of texting late into the night; a day out with friends: barely any), and how they slept.
 - The apps people use where they live (LIVES IN), above all for chat, maps, shopping, delivery and money. Another country's app only when the story shows them using it.
