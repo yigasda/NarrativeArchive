@@ -72,6 +72,12 @@ const BASE = {
         { id: 'air', at: 5, quote: 'airport', summary: 'airport plan', date: '01-02', time: '', phone: { calls: [{ with: 'Mara', type: 'in', time: '01-02 18:00', min: 4 }], mails: [{ from: 'LH', subject: 'Check-in', text: 'open', time: '01-02 10:00' }], searches: [{ q: 'BER terminal', time: '01-02 12:00' }], posts: [{ text: 'packing', time: '01-02 15:00', comments: [{ from: 'Mara', text: 'ㅋㅋ' }] }] } },
     ],
     days: [{ date: '12-30', steps: 4000, from: 'pattern' }, { date: '01-02', steps: 3000, from: 'pattern' }],
+    // (일상, in the same answer)
+    everyday: { contacts: [{ name: 'Ivo', saved: 'Ivo 🙄' }], threads: [{ with: 'Ivo', messages: [{ from: 'Ivo', text: 'lunch?', ko: '점심?', time: '01-02 12:10' }] }], calls: [{ with: 'Ivo', type: 'missed', time: '01-02 13:00' }],
+        photos: [{ caption: 'sky', time: '01-02 15:00' }], notes: [{ title: 'Groceries', text: 'milk', time: '01-02 16:00' }], searches: [{ q: 'snow tomorrow', time: '01-02 17:00' }],
+        mails: [{ from: 'Newsletter', subject: 'Week', text: 'hi', time: '01-02 08:00' }], posts: [{ text: 'snow', time: '01-02 18:00' }], diary: [{ date: '01-02', title: 'Snow', text: 'cold.' }],
+        voice: [{ title: 'idea', text: 'call Ivo', time: '01-02 19:00', sec: 10 }], events: [{ title: 'Dentist', date: '01-09', time: '09:00' }],
+        alarms: [{ time: '07:00', label: 'Up', date: '01-03', days: [], on: true }], files: [{ name: 'shot.png', kind: 'image', folder: 'Downloads', time: '01-02 20:00', look: 'screenshot' }], timers: [{ label: 'Tea', sec: 180 }] },
     weather: { place: 'Varo', date: '01-02', time: '21:00', from: 'chat', cond: 'snow', temp: -2, hi: 1, lo: -5, line: 'snow', ko: '눈', hours: [{ time: '22:00', cond: 'snow', temp: -3, rain: 40 }], days: [{ day: '01-03', cond: 'cloudy', lo: -4, hi: 2, rain: 20 }],
         tiles: { wind: 12, sunrise: '08:17', sunset: '16:02' }, cities: [{ name: 'Seoul', cond: 'clear', temp: -6, hi: -1, lo: -9 }] },
 };
@@ -129,7 +135,7 @@ async function one(answer, path, v) {
     const { m, p } = setup(); T.answers = [BASE]; await data.makePhone(m, 'Ren', { update: true });
     const got = { failed: p.sync.failed, notes: p.syncLast?.notes, trades: p.investment.trades.length, tx: p.money.tx.length, orders: p.money.orders.length, passes: p.money.passes.length, dlv: p.delivery.orders.length, health: p.life.health.days.length, files: p.life.files.items.length, looks: p.life.files.items.map(f => f.look).join(','), weight: p.life.health.usual.weight, now: p.now, year: p.year, weather: p.life.weather.here.cond, texts: p.threads.length, voice: p.voice.length, dlvAccount: p.delivery.orders[0]?.account };
     if (process.env.SHOW) console.log(JSON.stringify(got));
-    if (Object.keys(got.failed || {}).length || got.trades !== 3 || got.dlv !== 1 || got.dlvAccount !== '1111' || got.looks !== 'receipt,snow' || got.notes?.length || got.now !== '01-02 21:10' || got.year !== 2027) throw new Error('BASE DID NOT LAND ' + JSON.stringify(got));
+    if (Object.keys(got.failed || {}).length || got.trades !== 3 || got.dlv !== 1 || got.dlvAccount !== '1111' || got.looks !== 'receipt,snow,screenshot' || got.texts !== 2 || got.notes?.length || got.now !== '01-02 21:10' || got.year !== 2027) throw new Error('BASE DID NOT LAND ' + JSON.stringify(got));
 }
 await one(BASE, ['(base)'], null);
 for (const path of paths(BASE)) {

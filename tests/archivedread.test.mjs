@@ -15,7 +15,7 @@ const map = { './extract.js': cleanMessageURL,
     './phoneprofile.js': href('phoneprofile.js'),
     './phonestory.js': encoded(`export const phoneTarget=()=>({scope:phoneChatScope(),check(){}});export const phoneChatScope=()=>globalThis.__archTest.scope||'test';`),
     './wealth.js': encoded(`export const ensureWealth=async()=>null;export const wealthBlock=()=>'';export const wealthDate=()=> '2026-10-26';export const wealthCheck=()=>null;export const addWealthFX=()=>{};`),
-    './ai.js': encoded(`import { reflectionFixture } from '${new URL('./reflectionfixture.mjs', import.meta.url).href}'; import { phoneMadeFixture as __pmf } from '${new URL('./reflectionfixture.mjs', import.meta.url).href}'; const askDraft0=async(input,o)=>{globalThis.__archTest.clockAuditCalls?.push({input,system:o.system});if(String(o.system).startsWith('GOAL\\nWrite the ordinary life')){(globalThis.__everydayIn||=[]).push(input);await globalThis.__archTest.beforeEveryday?.();const e=globalThis.__everyday;return JSON.stringify(typeof e==='function'?e(input):e||{});}if(String(o.system).startsWith('GOAL\\nWork out where')){(globalThis.__where||=[]).push(input);if(globalThis.__whereFail)throw new Error('quota');return JSON.stringify(globalThis.__whereAnswer||{people:[]});}const T=globalThis.__archTest;if(String(o.system).startsWith('STAGE: money')){T.moneyInput=input;T.moneySys=o.system;T.moneyCalls=(T.moneyCalls||0)+1;if(T.moneyAnswers&&T.moneyAnswers.length){const a=T.moneyAnswers.shift();return typeof a==='string'?a:JSON.stringify(a);}const core=(T.lastCore&&T.lastCore.events)||[];const out=[];for(const l of String(input).split('\\n')){const x=l.match(/^- (.+?): #(\\d+) .*?\\("(.*)"\\)(?: \\(changed\\))?$/)||l.match(/^- (.+?): #(\\d+) /);if(!x)continue;const e=core.find(e=>e&&e.money&&Number(String(e.at).replace('#',''))===Number(x[2])&&(x[3]===undefined||String(e.quote||'').slice(0,200)===x[3]));if(e)out.push({id:x[1],money:e.money});}return JSON.stringify({events:out});}T.sys=o.system;T.input=input;const a=T.answers.shift();T.lastCore=a&&typeof a==='object'?a:null;return typeof a==='string'?a:JSON.stringify(reflectionFixture(a,input));};;export const askDraft=async(i,o)=>__pmf(await askDraft0(i,o),i,o?.system);`),
+    './ai.js': encoded(`import { reflectionFixture } from '${new URL('./reflectionfixture.mjs', import.meta.url).href}'; import { phoneMadeFixture as __pmf } from '${new URL('./reflectionfixture.mjs', import.meta.url).href}'; const askDraft0=async(input,o)=>{globalThis.__archTest.clockAuditCalls?.push({input,system:o.system});if(String(o.system).startsWith('GOAL\\nWrite the ordinary life')){(globalThis.__everydayIn||=[]).push(input);await globalThis.__archTest.beforeEveryday?.();const e=globalThis.__everyday;return JSON.stringify(typeof e==='function'?e(input):e||{});}if(String(o.system).startsWith('GOAL\\nWork out where')){(globalThis.__where||=[]).push(input);if(globalThis.__whereFail)throw new Error('quota');return JSON.stringify(globalThis.__whereAnswer||{people:[]});}const T=globalThis.__archTest;if(String(o.system).startsWith('STAGE: money')){T.moneyInput=input;T.moneySys=o.system;T.moneyCalls=(T.moneyCalls||0)+1;if(T.moneyAnswers&&T.moneyAnswers.length){const a=T.moneyAnswers.shift();return typeof a==='string'?a:JSON.stringify(a);}const core=(T.lastCore&&T.lastCore.events)||[];const out=[];for(const l of String(input).split('\\n')){const x=l.match(/^- (.+?): #(\\d+) .*?\\("(.*)"\\)(?: \\(changed\\))?$/)||l.match(/^- (.+?): #(\\d+) /);if(!x)continue;const e=core.find(e=>e&&e.money&&Number(String(e.at).replace('#',''))===Number(x[2])&&(x[3]===undefined||String(e.quote||'').slice(0,200)===x[3]));if(e)out.push({id:x[1],money:e.money});}return JSON.stringify({events:out});}T.sys=o.system;T.input=input;const a=T.answers.shift();T.lastCore=a&&typeof a==='object'?a:null;const r=typeof a==='string'?a:JSON.stringify(reflectionFixture(a,input));if(!String(o.system).includes('\\nEVERYDAY\\n')||globalThis.__everyday===undefined)return r;(globalThis.__everydayIn||=[]).push(input);await globalThis.__archTest.beforeEveryday?.();let e=globalThis.__everyday;e=typeof e==='function'?e(input):e;let j;try{j=JSON.parse(r);}catch{return r;}if(j&&typeof j==='object'&&j.everyday===undefined&&e&&e.everyday)j.everyday=e.everyday;return JSON.stringify(j);};;export const askDraft=async(i,o)=>__pmf(await askDraft0(i,o),i,o?.system);`),
     './core.js': encoded(`export const ctx=()=>({chat:globalThis.__archTest.chat,chatMetadata:globalThis.__archTest.meta,loadWorldInfo:async()=>null,characters:[]});export const globalSettings=()=>({});export const saveMeta=async()=>{};`),
     './calendar.js': encoded(`export const calendars=()=>({});export const headingDate=()=>({});`),
     './drift.js': encoded(`export const recentForCheck=()=>[];export const chatRows=()=>globalThis.__archTest.chat.map((x,i)=>({index:i,user:x.is_user,hidden:!!x.is_system,text:'[#'+i+'] '+x.name+': '+x.mes}));`),
@@ -707,8 +707,8 @@ test('반영\'s everyday records: so many an answer and a day in each app, texts
     assert.deepEqual(guess('notes'), ['Einkaufsliste']);
     assert.deepEqual(guess('threads').sort(), ['Ivo 09:0', 'Ivo 09:1', 'Ivo 09:2', 'Lena 09:0', 'Lena 09:1']);
     assert.ok(c.p.searches.some(x => x.q === 'Ren train times' && x.src !== 'guess'));
-    // (the reflection itself no longer writes them; its own step does)
-    assert.ok(!T.sys.includes('EVERYDAY'));
+    // (the reflection writes them itself, in the same answer)
+    assert.match(T.sys, /\nEVERYDAY\n/);
     assert.ok(!T.sys.includes('only when the archive or chat shows the owner recorded one'));
     assert.ok(data.AI_SYS_PHONE.includes('only when the archive or chat shows the owner recorded one'));
     assert.match(T.sys, /- PEOPLE AROUND \(sometimes\)/);
@@ -752,7 +752,7 @@ test('calls one after another from the same person (34 missed) are one row with 
     assert.match(T.sys, /"count": calls in a row \(34 missed calls are one item\)/);
 });
 
-test('일상 is its own request after the reflection\'s: it gets all the reflection got and what it put on the phone; who the owner had a scene with it reads from the messages itself', async () => {
+test('일상 comes in the reflection\'s own answer (no request of its own); who the owner had a scene with it reads from the messages itself', async () => {
     const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'Varo gave me the cafe job at my desk'), say('Mara', 'then Ivo came by and we fought')]);
     c.p.now = '10-26 08:00'; c.p.year = 2026;
     c.p.around = { at: 1, people: [{ name: 'Ivo', aka: ['이보'], about: 'Ren\'s older brother; they fight and text short and sharp.' }, { name: 'Varo Lind', about: 'Ren\'s boss; texts only a file name and a date.' }, { name: 'Lio', about: 'ex; not in touch.' }] };
@@ -761,56 +761,48 @@ test('일상 is its own request after the reflection\'s: it gets all the reflect
     try {
         await run(c.m, { now: '10-26 09:45', events: [{ id: 'job', at: 2, quote: 'Varo gave me the cafe job', summary: 'Varo gave the cafe job', date: '10-26', time: '09:00', phone: { notes: [{ title: 'Cafe job', text: 'from Varo', time: '10-26 09:05' }] } }] });
     } finally { delete globalThis.__everyday; }
-    const got = globalThis.__everydayIn.at(-1);
-    for (const b of ['[NEW MESSAGES]', '[PHONE NOW]', '[PEOPLE AROUND]', '[OWNER]', '[PUT ON THE PHONE NOW]\n- #2 Varo gave the cafe job (notes 1)']) assert.ok(got.includes(b), b);
+    // one request: the reflection's own, asked for its everyday too
+    assert.equal(globalThis.__everydayIn.length, 1);
+    const got = globalThis.__everydayIn.at(-1), sys = T.sys;
+    for (const b of ['[NEW MESSAGES]', '[PHONE NOW]', '[PEOPLE AROUND]', '[OWNER]']) assert.ok(got.includes(b), b);
     // (점검 8: no list of names the code found in the text: the model reads the messages)
-    assert.ok(!got.includes('[SCENES WITH]'));
-    // (not what only the reflection uses; nothing it doesn't get is named)
-    assert.ok(!data.AI_SYS_EVERYDAY.includes('MONEY NOW') && !data.AI_SYS_EVERYDAY.includes('INVESTMENTS NOW') && !data.AI_SYS_EVERYDAY.includes('MESSAGES READ BEFORE'));
-    // its blocks are the ones it says it gets
-    for (const b of ['NEW MESSAGES', 'PHONE NOW', 'PEOPLE AROUND', 'PUT ON THE PHONE NOW', 'OWNER']) assert.ok(data.AI_SYS_EVERYDAY.includes(`${b}`), b);
-    assert.ok(!data.AI_SYS_EVERYDAY.includes('SCENES WITH'));
-    assert.match(data.AI_SYS_EVERYDAY, /For each person the owner had a scene with in NEW MESSAGES: at least one text between the two later these hours/);
-    assert.match(data.AI_SYS_EVERYDAY, /each answer fills most lists as these hours call for, for example a photo of lunch, a search, a note, a mail, a post, texts and calls by the person, a voice memo, and a diary entry when these hours end the day\. A list with nothing in these hours stays empty\./);
-    assert.match(data.AI_SYS_EVERYDAY, /What these messages already say is no new fact: a text may say it again/);
-    assert.match(data.AI_SYS_EVERYDAY, /PEOPLE AROUND are part of the owner's life whether or not they are in touch: they turn up wherever they would on a real phone\./);
-    assert.match(data.AI_SYS_EVERYDAY, /Anything a later message could contradict is a new fact/);
-    assert.match(data.AI_SYS_EVERYDAY, /a task and its deadline \("check the moodboards by 18:00"\), a thing done \("uploaded it"\), a plan for later \("ramyeon tonight\?"\)/);
+    assert.ok(!got.includes('[SCENES WITH]') && !got.includes('[PUT ON THE PHONE NOW]'));
+    assert.ok(!sys.includes('SCENES WITH') && !sys.includes('PUT ON THE PHONE NOW'));
+    assert.match(sys, /For each person the owner had a scene with in NEW MESSAGES: at least one text between the two later these hours/);
+    assert.match(sys, /it fills most lists as these hours call for, for example a photo of lunch, a search, a note, a mail, a post, texts and calls by the person, a voice memo, and a diary entry when these hours end the day\. A list with nothing in these hours stays empty\./);
+    assert.match(sys, /What these messages already say is no new fact: a text may say it again/);
+    assert.match(sys, /PEOPLE AROUND are part of the owner's life whether or not they are in touch: they turn up wherever they would on a real phone\./);
+    assert.match(sys, /Anything a later message could contradict is a new fact/);
+    assert.match(sys, /a task and its deadline \("check the moodboards by 18:00"\), a thing done \("uploaded it"\), a plan for later \("ramyeon tonight\?"\)/);
+    assert.match(sys, /"everyday": \{ the same items as in "phone" but "profile", "visits", each app a list/);
     const guess = [...c.p.threads.flatMap(th => th.messages.filter(x => x.src === 'guess').map(x => `${th.with}:${x.text}`)), ...c.p.searches.filter(x => x.src === 'guess').map(x => x.q)];
     assert.deepEqual(guess.sort(), ['Ivo:whatever', 'Ivo:you started it', 'Mittagstisch Seongsu']);
     // (a time after the round's now, 09:52 for 09:45, is the now)
     assert.equal(c.p.threads.find(th => th.with === 'Ivo').messages.find(x => x.text === 'whatever').time, '10-26 09:45');
-    // it failing leaves the round as it is
+    // an "everyday" of the wrong shape is left out; the round goes in
     T.chat.push(say('Ren', 'quiet afternoon'));
-    globalThis.__everyday = () => { throw new Error('quota'); };
-    try { await run(c.m, { now: '10-26 15:00', events: [] }); } finally { delete globalThis.__everyday; }
+    await run(c.m, { now: '10-26 15:00', events: [], everyday: [{ title: 'x' }] });
     assert.ok(c.p.sync.done.flat().includes(4));
 });
 
-test('일상\'s items are the reflection\'s own (each app\'s notes on its fields), the contacts too, without the profile; its rules for people and the diary too', () => {
-    const ev = data.AI_SYS_EVERYDAY, core = data.coreSystem({ life: true });
-    for (const k of ['contacts', 'threads', 'calls', 'photos', 'notes', 'searches', 'events', 'posts', 'mails', 'diary', 'voice']) {
-        const lineOf = s => s.split("\n").filter(l => l.trimStart().startsWith(`"${k}": [`)).at(-1)?.replace(/,$/, "");
-        assert.equal(lineOf(ev), lineOf(core.split('Items in "phone":')[1]), k);
-    }
-    assert.ok(!/"profile": \{/.test(ev));
-    assert.match(ev, /"tab": true if its page is still open/);
-    assert.match(ev, /"comments": \[/);
-    assert.match(ev, /A relationship word \(girlfriend, ex, husband, boss\)/);
-    assert.match(ev, /A diary entry holds what these messages show/);
-    assert.equal(ev.split('\nTIMES\n').length, 2);
-    assert.match(ev, /Never a booking, a trip or a purchase the story doesn't have/);
+test('일상 in the reflection\'s own instructions: only for a round with messages; the same items as "phone"', () => {
+    const on = data.coreSystem({ life: true, everyday: true }), off = data.coreSystem({ life: true });
+    assert.match(on, /\nEVERYDAY\n/);
+    assert.match(on, /"everyday": \{ the same items as in "phone" but "profile", "visits", "health" and "usual", each app a list/);
+    assert.match(on, /Never a booking|never a booking, a trip or a purchase the story doesn't have/);
+    assert.match(on, /Times between PHONE NOW's "now" and the answer's "now"/);
+    assert.ok(!off.includes('\nEVERYDAY\n') && !off.includes('"everyday": {'));
+    // (an archive-only round reads no hours of its own)
+    assert.ok(!data.coreSystem({ everyday: true, archiveOnly: true }).includes('\nEVERYDAY\n'));
+    // (the rules it shares with the events are said once)
+    assert.equal(on.split('A relationship word (girlfriend, ex, husband, boss)').length, 2);
+    assert.equal(on.split('A diary entry holds what these messages show').length, 2);
 });
 
 test('일상 on a phone with the everyday apps: an alarm, a timer and files too, as the reflection writes them', async () => {
-    const sys = data.everydaySystem({ life: true }), core = data.coreSystem({ life: true }).split('Items in "phone":')[1];
-    for (const k of ['alarms', 'files', 'timers']) {
-        const lineOf = s => s.split('\n').find(l => l.trimStart().startsWith(`"${k}": [`))?.replace(/,$/, '');
-        assert.ok(lineOf(sys), k);
-        assert.equal(lineOf(sys), lineOf(core), k);
-    }
-    assert.match(sys, /An alarm for one occasion \(a flight, an appointment\) rings once/);
-    assert.ok(!data.everydaySystem().includes('"alarms": ['));
+    const sys = data.coreSystem({ life: true, everyday: true });
+    assert.match(sys, /a diary entry when these hours end the day, an alarm for tomorrow, a timer for the pasta, a file saved or screenshotted\./);
+    assert.ok(!data.coreSystem({ everyday: true }).includes('an alarm for tomorrow'));
     const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'long day tomorrow'), say('Mara', 'sleep early')]);
     c.p.now = '10-26 21:00'; c.p.year = 2026;
     c.p.life = { at: '10-26 21:00', clock: { alarms: [], timers: [], running: null }, files: { folders: [], items: [] }, health: { usual: {}, days: [] }, weather: { here: { place: 'Seoul', date: '10-26', time: '21:00', cond: 'clear', temp: 9, hours: [], days: [], tiles: {} }, cities: [] } };
@@ -824,8 +816,7 @@ test('일상 on a phone with the everyday apps: an alarm, a timer and files too,
 });
 
 test('일상 texting someone not saved yet saves them too (only someone it texts or calls); 되돌리기 takes the contact back', async () => {
-    assert.match(data.everydaySystem(), /"contacts": \[\{ "name": name in the story/);
-    assert.match(data.everydaySystem(), /Someone texted or called who isn't in the contacts yet goes in "contacts" too/);
+    assert.match(data.coreSystem({ everyday: true }), /Someone texted or called who isn't in the contacts yet goes in "contacts" too/);
     const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'thinking of Ivo'), say('Mara', 'call him')]);
     c.p.now = '10-26 09:00'; c.p.year = 2026;
     globalThis.__everyday = { everyday: { contacts: [{ name: 'Ivo', saved: 'Ivo 🙄' }, { name: 'Stranger', saved: 'x' }], threads: [{ with: 'Ivo', messages: [{ from: 'me', text: 'you up?', time: '10-26 09:20' }] }] } };
@@ -899,9 +890,10 @@ for(let bits=0;bits<16;bits++)for(const order of ['oldest','newest'])for(const s
    if(style==='dated')assert.ok(core[0].input.includes("On Mara's clock →"));
   }
   assert.equal(core[0].input.includes('[MONEY NOW]'),false);assert.ok(!core[0].input.includes("On Ren's clock →"));if(style==='narrative')assert.ok(!core[0].input.includes('Time choices.'));
-  const ed=calls.filter(x=>x.system.startsWith('GOAL\nWrite the ordinary life'));
+  // (일상 in the core answer, asked only for a round with messages; no request of its own)
+  assert.ok(!calls.some(x=>x.system.startsWith('GOAL\nWrite the ordinary life')));
+  const ed=core[0].system.includes('\nEVERYDAY\n')?[core[0]]:[];
   assert.equal(ed.length,source==='archive'?0:1);
-  if(ed.length){assert.ok(ed[0].input.includes('Owner-local window: 10-26 03:38 to 10-26 12:00.'));assert.ok(!ed[0].system.includes('CLOCK FIRST'));}
   const mo=calls.filter(x=>x.system.startsWith('STAGE: money'));
   assert.equal(mo.length,!!(bits&3)?1:0);
   if(mo.length){assert.equal(mo[0].input.includes('[INVESTMENTS NOW]'),!!(bits&2));assert.equal(mo[0].input.includes('[DELIVERY SHOPS]'),!!((bits&1)&&(bits&8)));assert.ok(mo[0].input.includes('10-26 12:00'));assert.ok(!mo[0].system.includes('CLOCK FIRST'));}
@@ -925,25 +917,27 @@ test('everyday and saved clock share the status-adjusted or guarded end; explici
         const expected=kind==='status'?'10-26 13:00':kind==='backwards'?'10-26 12:00':'10-27 12:00';
         globalThis.__everydayIn=[];let during;
         T.beforeEveryday=()=>{during=c.p.now;};
+        // (an everyday record past the round's end is at the end)
+        globalThis.__everyday={everyday:{notes:[{title:'Late',text:'later',time:'10-28 23:00'}]}};
         try {
             await run(c.m,{now:modelNow,events:[{id:'tea',at:2,quote:'Tea at eleven',date:'10-26',time:'11:00',phone:{notes:[{title:'Tea',text:'Tea at eleven',time:'10-26 11:00'}]}}]});
             assert.equal(during,savedBefore,'clock must stay saved until all requests succeed');
-            assert.ok(globalThis.__everydayIn.at(-1).includes(`Owner-local window: ${savedBefore} to ${expected}.`));
-            assert.equal(c.p.now,expected);assert.equal(c.p.notes[0].time,'10-26 11:00');
+            assert.equal(c.p.notes.find(x=>x.title==='Late').time,expected);
+            assert.equal(c.p.now,expected);assert.equal(c.p.notes.find(x=>x.title==='Tea').time,'10-26 11:00');
             await data.undoRound(c.m,c.p);assert.equal(c.p.now,savedBefore);
-        } finally {T.beforeEveryday=null;T.trackers=null;}
+        } finally {T.beforeEveryday=null;T.trackers=null;delete globalThis.__everyday;}
     }
 });
 
-test('a changed chat during everyday does not commit the clock or moved locations preview', async () => {
-    const c=setup([say('Ren','start'),say('Mara','hello'),say('Ren','Leaving now')]);frankfurtPhone(c,{cities:false});
+test('a chat changed while the reflection is asked does not commit the clock or moved locations preview', async () => {
+    const c=setup([say('Ren','start'),say('Mara','hello'),say('Ren','Leaving now')]);frankfurtPhone(c,{cities:false});globalThis.__everyday={};
     const before={now:c.p.now,year:c.p.year,where:structuredClone(c.p.where)};let during;
     T.beforeEveryday=()=>{during={now:c.p.now,where:structuredClone(c.p.where)};T.chat[2].mes='Changed while waiting';};
     try {
         await assert.rejects(()=>run(c.m,{clock:{finalViewpoint:'Ren',elapsedTime: null,sceneTime:'10-26 11:24'},now:'10-26 11:24',moved:[{name:'Ren',city:'Seoul',tz:'Asia/Seoul'}],events:[]}),/대화가 바뀌었어요/);
         assert.deepEqual(during,{now:before.now,where:before.where});
         assert.equal(c.p.now,before.now);assert.equal(c.p.year,before.year);assert.deepEqual(c.p.where,before.where);
-    } finally {T.beforeEveryday=null;}
+    } finally {T.beforeEveryday=null;delete globalThis.__everyday;}
 });
 
 test('archive-only reflection accepts legacy now without clock metadata, updates the clock, and undoes it', async () => {

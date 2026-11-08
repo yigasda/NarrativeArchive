@@ -214,17 +214,17 @@ ${PHONE_LAST}`;
 // life: 시계 · 건강 · 파일 (and 날씨 only when no status line gives it: weather)
 // weather: the model writes the weather (no status line gives it, or the day moved on); tracker: a status line gives some
 // split: the first of two steps (core): no money, each event marked "money" when it touches it (moneySystem writes it after)
-// 시계 · 파일 items and their rules, the same in the reflection and its 일상
+// 시계 · 파일 items and their rules, the same for the story's events and the everyday ones
 const LIFE_ALARMS = `  "alarms": [{ "change": an id or "", "time", "label", "ko", "days": the weekdays it repeats or [], "date": "MM-DD" for a one-time alarm, "on", "wake", "then", "snooze", "snoozeCount", "sound" }],`;
 const LIFE_FILES = `  "files": [{ "change": an id or "", "name", "kind", "folder": one of LIFE NOW's "folders" (downloads are "Downloads"), or a new one the story makes, "size": KB, "time", "from", "pages", "length": "M:SS" for audio or video, "tag": "red" | "orange" | "", "private", "preview", "look": what it shows (a picture or video: "sea" | "city" | "night" | "food" | "hills" | "pet" | "sunset" | "mountain" | "snow" | "flower" | "interior" | "concert" | "paper" | "screenshot" | "map"; a document: "ticket" (a flight or train ticket, "preview": "carrier · from → to · date") | "receipt" | "invoice" | "cv" | "letter" | "certificate" | "recipe" | "medical" | "menu" | "contract" | "notes"; audio: "voice" | "music"), "ko", "opened", "deleted": true when removed }],`;
 const LIFE_TIMERS = `  "timers": [{ "label", "ko", "sec" }],`;
 const LIFE_ONCE = `- An alarm for one occasion (a flight, an appointment) rings once: "days": [] and its "date". Only an alarm the owner keeps for every week has "days".`;
 const LIFE_CHANGE = `- A record already in LIFE NOW is changed with "change": its id; write only the fields that changed. A deleted file is "deleted": true.`;
 // wallet: the phone has the bank's wallet, whose tickets the calendar shows (core then writes none of them)
-export function updateSystem({ money = true, delivery = false, life = false, weather = false, tracker = false, split = false, invest = false, zone = false, archiveOnly = false, wallet = false } = {}) {
+export function updateSystem({ money = true, delivery = false, life = false, weather = false, tracker = false, split = false, invest = false, zone = false, archiveOnly = false, wallet = false, everyday = false } = {}) {
     const paid = delivery ? 'order, ticket or delivery' : 'order or ticket';
     return `${split ? 'STAGE: core\n' : ''}GOAL
-Add to one character's phone what a few new chat messages put on it, in a long role-play. The user opens the phone to peek at the story from the phone's side.
+Add to one character's phone what a few new chat messages put on it, in a long role-play. The user opens the phone to peek at the story from the phone's side.${everyday ? ' Around the story, the owner\'s ordinary life in those hours too.' : ''}
 An app adds your JSON to the phone; you only write what is new.
 
 YOU GET
@@ -283,7 +283,14 @@ MONEY (only with MONEY NOW or INVESTMENTS NOW)
 - A cancelled order${delivery ? ' or delivery' : ''} moves no money; if it was already paid, its refund is a plus move.
 ${delivery ? `- A delivery paid in cash at the door has no move. "tip" only where tipping is the custom; elsewhere 0.
 - A delivery from a shop not in DELIVERY SHOPS also gives "newShop" with 2 to 4 dishes: the one ordered and others it would have.
-` : ''}` : ''}
+` : ''}` : ''}${everyday ? `
+EVERYDAY
+- Besides the story's events, the owner's ordinary life in the hours these messages cover, from their habits, in the top-level "everyday": it fills most lists as these hours call for, for example a photo of lunch, a search, a note, a mail, a post, texts and calls by the person, a voice memo, and a diary entry when these hours end the day${life ? ', an alarm for tomorrow, a timer for the pasta, a file saved or screenshotted' : ''}. A list with nothing in these hours stays empty.
+- For each person the owner had a scene with in NEW MESSAGES: at least one text between the two later these hours, in their own voices (a fight may go on; a job given in person gets a short check).
+- People from the story or PEOPLE AROUND as they are and with what they feel; never someone the owner isn't in touch with now. PEOPLE AROUND are part of the owner's life whether or not they are in touch: they turn up wherever they would on a real phone. Someone texted or called who isn't in the contacts yet goes in "contacts" too.
+- Anything a later message could contradict is a new fact: what someone decided, said or wants, a time, a result; a task and its deadline ("check the moodboards by 18:00"), a thing done ("uploaded it"), a plan for later ("ramyeon tonight?"). What these messages already say is no new fact: a text may say it again ("the deck is for Friday"). How they feel and small things around them are fine. No new facts, events, plans or secrets.
+- Times between PHONE NOW's "now" and the answer's "now". Nothing an event already put down; never a booking, a trip or a purchase the story doesn't have.
+` : ''}
 ${PHONE_STYLE.replace('; "now" is the newest moment of the story.', '.')}
 
 ANSWER — one JSON object, nothing else:
@@ -297,7 +304,8 @@ ANSWER — one JSON object, nothing else:
                           "orders": [{ "shop", "item", "ko", "option", "qty", "price": unit price, "status": "ordered" (the default) | "shipped" | "on the way" | "delivered" | "cancelled" | "returning" | "returned" | "refunded", "eta": "MM-DD" or "", "gift", "paid": false only when someone else pays or it is paid on delivery, "occurrence": "new" | "again", "already": "" }],
                           "passes": [{ "kind": "flight" | "train" | "hotel" | "event" | "other", "by": airline, line, hotel or venue, "from", "to", "date": "MM-DD", "time", "seat", "gate", "no", "status", "made": [the fields made up to fit, like "no", "seat", "date"], "occurrence": "new" | "again", "already": "" }]${delivery ? `,
                           "deliveries": [{ "shop", "items": [{ "name", "ko", "option", "optionKo", "qty", "price": unit price, "pic": { "base": the dish in 1 to 3 English words, "with": [up to 3 main ingredients, like "beef"], "size": "regular" | "large", "set": [a set's sides or drinks] } }], "fee", "tip", "discount", "mode": "delivery" | "pickup", "time": "MM-DD HH:MM", "arrived": "MM-DD HH:MM" or "", "to": "home" | "work" | a person's name, "address", "left": where the courier left it, or "", "noteShop", "noteShopKo", "noteRider", "noteRiderKo", "noCutlery", "for": how many people, "status": "on the way" | "delivered" | "cancelled" | "refunded", "gift", "occurrence": "new" | "again", "already": "",
-                                          "newShop": { "name": the same as "shop", "ko", "cuisine", "menu": [{ "name", "ko", "desc", "price", "top": true for its best-known dish, "pic" }] } or null }]` : ''} }` : ''} }],
+                                          "newShop": { "name": the same as "shop", "ko", "cuisine", "menu": [{ "name", "ko", "desc", "price", "top": true for its best-known dish, "pic" }] } or null }]` : ''} }` : ''} }],${everyday ? `
+  "everyday": { the same items as in "phone" but "profile", "visits"${life ? ', "health" and "usual"' : ''}, each app a list, an empty one when nothing },` : ''}
 ${life ? `,
   "days": [{ the same fields as "health" }]` : ''}${life && weather ? `,
   "weather": { "place", "date", "time", "from": "chat" | "archive" | "guess", "cond": "clear" | "partly" | "cloudy" | "drizzle" | "rain" | "sleet" | "snow" | "fog" | "storm" | "wind", "temp", "hi", "lo", "line", "ko",
@@ -326,7 +334,7 @@ export const AI_SYS_PHONE_UPDATE = updateSystem();
 // line names the step (the test harness files each answer under it)
 // core: the old one-step instructions without money (life, files, health and the weather stay: they read the whole
 // messages anyway); the money step reads every round on its own
-export const coreSystem = ({ life = false, weather = false, tracker = false, invest = false, zone = false, archiveOnly = false, wallet = false } = {}) => updateSystem({ money: false, delivery: false, life, weather, tracker, split: true, invest, zone, archiveOnly, wallet });
+export const coreSystem = ({ life = false, weather = false, tracker = false, invest = false, zone = false, archiveOnly = false, wallet = false, everyday = false } = {}) => updateSystem({ money: false, delivery: false, life, weather, tracker, split: true, invest, zone, archiveOnly, wallet, everyday: everyday && !archiveOnly });
 // 돈 단계 (3.176~): every round's messages, read for what the owner's phone would now show. One list of records.
 // delivery: the phone has the delivery app; invest: it has the brokerage
 export function moneySystem({ delivery = false, invest = false } = {}) {
@@ -586,61 +594,8 @@ function everydayOn(raw, rows, textAt) {
     ed.contacts = arr(ed.contacts).filter(x => talked.has(nameKey(x?.name)));
     for (const k of EVERYDAY_KEYS) if (arr(ed[k]).length) host.phone[k] = [...arr(host.phone[k]), ...arr(ed[k]).slice(0, EVERYDAY_LIFE[k] ?? Infinity).map(mark)];
 }
-// ---- 일상 (반영의 다음 요청): the owner's ordinary life in the hours these messages cover, and the texts after a scene,
-// on its own (in the reflection's own request it was a line among many: run51–53 wrote none after a scene and kept making
-// up details). It gets all the reflection got, what the reflection put on the phone from these messages, and the people
-// the owner had a scene with
-// the apps' items as the reflection writes them, without the profile (no SNS name changed); the contacts in, so someone
-// texted who isn't saved yet is
-// (no visit: a place is gone to in the story, never made up for an ordinary day)
-const EVERYDAY_ITEMS = PHONE_ITEMS.split('\n').filter(l => !/^\s*"(?:profile|visits)"/.test(l)).join('\n').replace(VOICE_ONLY, '');
-export const everydaySystem = ({ life = false } = {}) => `GOAL
-Write the ordinary life on one character's phone in the hours a few new role-play messages cover: the small records a real phone gathers, and the texts people send after a scene with the owner.
-Another step already put the story's own events on the phone; you only add everyday life around them.
-
-YOU GET
-- NEW MESSAGES: the messages these hours come from, each with its number (#123).
-- ARCHIVE FOR THESE MESSAGES, ARCHIVE BEFORE, STORY NOW (sometimes): the story around them. Background.
-- EVENTS ON THE PHONE, PHONE NOW, LIFE NOW (sometimes: the alarms, files and health days, with record ids), WEATHER NOW (sometimes), DAYS (sometimes): what the phone holds.
-${CLOCK_GET}
-- PEOPLE AROUND (sometimes): people in the owner's life, close or not, from the cards, persona, profile and lorebook, with where things stand now.
-- PUT ON THE PHONE NOW: what the other step wrote from these messages. Never again.
-- OWNER, and sometimes STORY YEAR, WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW. Nothing on the phone may show what the owner doesn't know.
-
-EVERYDAY
-- The owner's ordinary life in these hours, from their habits: each answer fills most lists as these hours call for, for example a photo of lunch, a search, a note, a mail, a post, texts and calls by the person, a voice memo, and a diary entry when these hours end the day. A list with nothing in these hours stays empty.
-- For each person the owner had a scene with in NEW MESSAGES: at least one text between the two later these hours, in their own voices (a fight may go on; a job given in person gets a short check).
-- People from the story or PEOPLE AROUND as they are and with what they feel; never someone the owner isn't in touch with now. PEOPLE AROUND are part of the owner's life whether or not they are in touch: they turn up wherever they would on a real phone. Someone texted or called who isn't in the contacts yet goes in "contacts" too. A relationship word (girlfriend, ex, husband, boss) only if the messages, archive or PEOPLE AROUND use it for them.
-- A diary entry holds what these messages show and what the owner feels about it, as the story and PEOPLE AROUND show them; no new secrets or events.
-- Anything a later message could contradict is a new fact: what someone decided, said or wants, a time, a result; a task and its deadline ("check the moodboards by 18:00"), a thing done ("uploaded it"), a plan for later ("ramyeon tonight?"). What these messages already say is no new fact: a text may say it again ("the deck is for Friday"). How they feel and small things around them are fine. No new facts, events, plans or secrets.
-- Times stay within the owner-local window in PUT ON THE PHONE NOW; do not read its end again from other screens.
-- Never a booking, a trip or a purchase the story doesn't have (a ticket mail, an order confirmation).${life ? `
-- Their clock and files too: an alarm they set for tomorrow, a timer for the pasta, a file they download, save or screenshot. Pictures the camera takes go to photos, not files.
-${LIFE_ONCE}
-${LIFE_CHANGE}` : ''}
-
-${PHONE_STYLE}
-
-JSON (one object, nothing before or after it)
-{ "everyday": { the items below, each app a list (an empty one when nothing) } }
-Items, as the phone's own apps take them:
-{
-${EVERYDAY_ITEMS}${life ? `,
-${LIFE_ALARMS}
-${LIFE_FILES}
-${LIFE_TIMERS}` : ''}
-}`;
-export const AI_SYS_EVERYDAY = everydaySystem();
-// what the reflection put on the phone from these messages, one line an event
-const putLine = e => { const ph = e?.phone && typeof e.phone === 'object' ? e.phone : {}; const bits = Object.entries(ph).filter(([, v]) => Array.isArray(v) && v.length).map(([k, v]) => (k === 'threads' ? `texts with ${v.map(t => t?.with).filter(Boolean).join(', ')}` : `${k} ${v.length}`)); return `- #${e?.at ?? '?'} ${line(e?.summary, 120)}${bits.length ? ` (${bits.join('; ')})` : ''}`; };
-// the reflection's own blocks, but the messages read before and changed since (they only match its events' ids)
-export const everydayParts = parts => arr(parts).filter(b => !String(b).startsWith('[MESSAGES READ BEFORE, NOW CHANGED]'));
-async function askEveryday(parts, raw, p, rows, life = false, m = null) {
-    const mine = everydayParts(parts).join('\n\n');
-    const blocks = [mine, `[PUT ON THE PHONE NOW]\n${arr(raw?.events).map(putLine).join('\n') || '(nothing)'}\nOwner-local window: ${p.now || "unknown"} to ${raw?.now || p.now || "unknown"}.`].filter(Boolean).join('\n\n');
-    try { const got = jsonOf(await askDraft(blocks, { force: true, system: everydaySystem({ life }), maxTokens: 6000, effort: 'low' })); return got?.everyday && typeof got.everyday === 'object' ? got.everyday : null; }
-    catch (err) { console.warn('[narrative-archive] everyday', err); return null; }
-}
+// ---- 일상: the owner's ordinary life in the hours these messages cover comes in the reflection's own answer, its top-level
+// "everyday" (3.179.1~, as the money step writes story and everyday payments together; 3.171.9–3.179.0 asked it apart)
 // the people closest to the owner (위치 판독's "around"): who they are to the owner and how it stands, in the cards' own words
 export const aroundBlock = p => (p?.around?.people?.length ? `[PEOPLE AROUND]\n${p.around.people.map(x => `- ${x.name}${x.aka?.length ? ` (${x.aka.join(', ')})` : ''}: ${x.about}`).join('\n')}` : '');
 // 반영's everyday records (재구성, "everyday": true): so many an answer and a day in each app, texts and calls for each
@@ -1772,9 +1727,8 @@ async function updatePhone(m, owner) {
         const input = inputParts.join('\n\n');
         const made = { money: p.money?.at, invest: p.investment?.at, life: p.life, delivery: p.delivery };
         // low thinking: tested against medium on Vertex, the same payments, ids and amounts, without the thinking cost
-        const out = await askDraft(input, { force: true, system: split ? coreSystem({ life: !!life, weather: askWeather, tracker: !!tracker, invest: !!invest, zone: askZone, archiveOnly, wallet: !!money }) : updateSystem({ money: false, life: !!life, weather: askWeather, tracker: !!tracker, zone: askZone, archiveOnly }), maxTokens: 16000, effort: 'low' });
-        // then the everyday life of these hours, on its own (it fails alone: the round goes in without it)
-        // (only on an answer the round can use: a broken one fails the round, and its 일상 would be paid for nothing)
+        const out = await askDraft(input, { force: true, system: split ? coreSystem({ life: !!life, weather: askWeather, tracker: !!tracker, invest: !!invest, zone: askZone, archiveOnly, wallet: !!money, everyday: round.rows.length > 0 }) : updateSystem({ money: false, life: !!life, weather: askWeather, tracker: !!tracker, zone: askZone, archiveOnly, everyday: !archiveOnly }), maxTokens: 16000, effort: 'low' });
+        // (the everyday life of these hours comes in the same answer, its top-level "everyday")
         const core0 = jsonOf(out);
         // the answer is for the chat and messages it was asked about
         if (phoneChatScope(ctx()) !== scope || m.phones?.[key] !== p) throw new Error('반영하는 사이 채팅이나 폰이 바뀌었어요. 다시 해 주세요');
@@ -1787,6 +1741,8 @@ async function updatePhone(m, owner) {
         // Archive-only records keep the 3.171.16 date fallback from the model's original now.
         // The separately guarded clockPlan still decides the phone's saved time.
         const raw = archiveOnly ? { ...core0 } : { ...core0, now: clockPlan.now };
+        // (일상 is asked only for a round with messages of its own)
+        if (archiveOnly || !round.rows.length || !raw.everyday || typeof raw.everyday !== 'object' || Array.isArray(raw.everyday)) delete raw.everyday;
         // Temporary diagnostic: unify only the selected person's display alias; keep the model answer intact.
         if (!archiveOnly && typeof toastr !== 'undefined') {
             const diagnostic = `${clock || '(OWNER’S CLOCK 입력 없음)'}\n\n[MODEL RESPONSE]\n${JSON.stringify({ clock: clockForDisplay(core0.clock, m) ?? null, now: core0.now ?? null, ...(clockPlan.now !== when(core0.now) ? { appliedNow: clockPlan.now } : {}) }, null, 2)}`;
@@ -1795,11 +1751,6 @@ async function updatePhone(m, owner) {
             });
             toast?.find?.('.toast-message')?.css?.({ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' });
         }
-        const everyday = round.rows.length ? await askEveryday(inputParts, raw, p, round.rows, !!life, m) : null;
-        if (phoneChatScope(ctx()) !== scope || m.phones?.[key] !== p || p.money?.at !== made.money || p.investment?.at !== made.invest || p.life !== made.life || p.delivery !== made.delivery) throw new Error('반영하는 사이 폰이 바뀌었어요. 다시 해 주세요');
-        const afterEveryday = new Map(syncRows().map(r => [r.index, r.text]));
-        if (round.rows.some(r => afterEveryday.get(r.index) !== r.text)) throw new Error('반영하는 사이 대화가 바뀌었어요. 다시 해 주세요');
-        if (everyday) raw.everyday = everyday;
         const inRound = new Set(round.rows.map(r => r.index)), textAt = new Map(round.rows.map(r => [r.index, r.text])), start = s.marks.base.index;
         const rid = Math.random().toString(36).slice(2, 10), rowText = new Map(rows.map(r => [r.index, r.text]));
         const failed = {}, loose = [], added = [], apps = new Set(), changes = [], notes = [...swiped];
@@ -1904,7 +1855,7 @@ async function updatePhone(m, owner) {
             s.hiddenRead ||= {};
             for (const x of evidence) for (const [i, t] of txt) if (i > base && i >= x.first && i <= x.last && s.hiddenRead[i] === undefined) { s.hiddenRead[i] = bodyMark(t); hiddenNow.push([i, s.hiddenRead[i]]); }
         }
-        // Commit the same preview used by everyday, only after the round's requests and guards succeeded.
+        // Commit the clock preview only after the round's requests and guards succeeded.
         p.now = clockPlan.now; p.year = clockPlan.year; p.where = clockPlan.where;
         const { named, setBack } = clockPlan;
         sceneOwn = clockPlan.sceneOwn;
