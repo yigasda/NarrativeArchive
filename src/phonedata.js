@@ -339,7 +339,7 @@ YOU GET
 - EVENTS: what the phone already put down for these messages, by message number.
 - ARCHIVE FOR THESE MESSAGES (sometimes): the story around them.
 - MONEY NOW${invest ? `, INVESTMENTS NOW` : ''}${delivery ? `, DELIVERY SHOPS` : ''} and sometimes WEALTH: the owner's finances and records, with ids, and this month's income and spending so far.
-- DAYS PASSED (sometimes): the story days that ended in these messages, including ones the story skipped or spent away from the owner: the latest few one by one, a longer stretch before them as one span.
+- DAYS PASSED (sometimes): the story days that ended in these messages, including ones the story skipped or spent away from the owner, one by one (a long stretch before them as one span).
 - MISSING ON THE PHONE (sometimes): what the phone should hold and doesn't yet. Write it now.
 - OWNER, and sometimes OWNER PROFILE, STORY YEAR and CALENDAR (the days around now, with their weekdays).
 
@@ -352,6 +352,7 @@ READING THE STORY
 
 KEEPING IN STEP
 - What is already on the phone: its id as "already". Keep the facts it holds, fill its gaps, change what the story changes.
+- A booking or order that changes (a stay extended, a trip moved, a delivery late): its own record too, in the same message, with what changed, besides any payment for it.
 - Repeated mentions alone do not create another record. Separate actions or changes concerning the same item remain separate records.
 - Details the story leaves out are made up to fit and listed in "made". A value that went up or down with no figure gets a new estimate.
 - One story beat is one trail: rising shares change their value; blocked money is not a withdrawal; an order talked about again is not paid again.
@@ -411,7 +412,7 @@ JSON (one object, nothing before or after it)
     regular: "amount": each time, minus for money out; "date": its first day; "frequency": "monthly" | "weekly" | "yearly"; "day": the day of the month or the weekday; "account": last 4 digits; "who": who pays it or is paid, "ko"; "for": the debt it pays, or ""; "status": "active" | "stopped"
     order: "amount": one item's price; "date": when ordered; "shop", "option", "qty", "status": "ordered" | "shipped" | "on the way" | "delivered" | "cancelled" | "returning" | "returned" | "refunded", "eta": "MM-DD", "gift": who it is for, "sender": who sent it to the owner, "payer": "owner" | "someone else" | "on delivery"
     ticket: no "amount" (its price is the payment); "date": the day of travel, the event or check-in; "until": "MM-DD", the last day of a stay or membership; "kind": "flight" | "train" | "hotel" | "event" | "membership" | "other", "by": airline, line, hotel, venue or club, "from", "to", "seat", "gate", "no"
-    asset: "amount": its whole value now; "date": when the owner got it; "kind": "property" | "vehicle" | "business" | "valuable" | "deposit" (money in another bank or a trust) | "receivable" (money someone owes the owner) | "investment" | "other", "whose": "owner" | "shared" | "family" | "company", "status": "held" | "expected" | "blocked" | "sold" | "lost", "conditions"
+    asset: "amount": its whole value now; "date": when the owner got it, made up to fit when not told, never the day it is mentioned; "kind": "property" | "vehicle" | "business" | "valuable" | "deposit" (money in another bank or a trust) | "receivable" (money someone owes the owner) | "investment" | "other", "whose": "owner" | "shared" | "family" | "company", "status": "held" | "expected" | "blocked" | "sold" | "lost", "conditions"
     debt: "amount": what is owed now; "date": when it was taken on; "kind": "loan" | "mortgage" | "personal" | "tax" | "other", "lender", "whose", "due": "MM-DD", "status": "open" | "paid" | "overdue" | "forgiven", "conditions"
     account: "amount": the money in it when opened, none for a card account; "date": when opened; "kind": "checking" | "savings" | "credit", "last4" when known, for a card "billDay": the day of the month its bill is paid and "paidFrom": the account it is paid from, "balance": for one already on the phone, when the story implies it, the account's resulting balance at this point in the story, including payments reported up to that point, with "memo": the story context behind this balance, in a few words; "status": "open" | "blocked" | "closed", "reason"
     card: "account": last 4 digits, "exp": "MM/YY"${invest ? `
@@ -1408,7 +1409,8 @@ const MONEY_PATH = /^(money|investment|delivery)\./;
 const SPAN_MAX = 60, ON_DAY = ['payment', 'order', 'trade', 'delivery'];
 // DAYS PASSED: the story days these messages moved past (from the phone's day before the round to the day before its new
 // one), each with the message it ended in (the first whose event is on a later day, else the round's last): the latest
-// seven one by one, a longer stretch before them as one span
+// 31 one by one, a longer stretch before them as one span
+const DAYS_EACH = 31;
 const WEEKDAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 function daysPassed(was, now, known, events, last) {
     const a = String(was || '').slice(0, 5), b = String(now || '').slice(0, 5);
@@ -1419,7 +1421,8 @@ function daysPassed(was, now, known, events, last) {
     const day = k => { const d = new Date(start); d.setUTCDate(d.getUTCDate() + k); return { md: `${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`, wd: known ? ` ${WEEKDAY[d.getUTCDay()]}` : '' }; };
     const dated = arr(events).filter(e => Number.isInteger(e.at) && /^\d{2}-\d{2}$/.test(e.date || '')).sort((x, z) => x.at - z.at);
     const endedIn = md => dated.find(e => dayGap(md, e.date) > 0)?.at ?? last;
-    const lines = [], each = Math.min(gap, 7);
+    // (one line a day: a stretch on one line got a few records for all of it, run60 · run62)
+    const lines = [], each = Math.min(gap, DAYS_EACH);
     let span = null;
     if (gap > each) { const f = day(0), t = day(gap - each - 1), n = gap - each; span = [f.md, t.md]; lines.push(`- ${f.md} to ${t.md} (${n} days, ended by #${endedIn(t.md)})`); }
     for (let k = gap - each; k < gap; k++) { const d = day(k); lines.push(`- ${d.md}${d.wd} (ended in #${endedIn(d.md)})`); }

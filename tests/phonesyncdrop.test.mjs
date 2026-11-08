@@ -623,21 +623,29 @@ test('time passing through a reflection: the days the story moved past go to the
 
 test('a long skip: at most 60 records for the span of skipped days, the rest left out and said; the phone\'s missing regulars and bill days are asked for', async () => {
     const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'a month went by')]);
-    const many = Array.from({ length: 66 }, (_, k) => ({ type: 'payment', at: 2, date: `11-${String(k % 18 + 1).padStart(2, '0')}`, account: '1111', amount: -1000 - k, who: `Shop ${k}`, kind: 'card', occurrence: 'new', amountFrom: 'guess' }));
+    const many = Array.from({ length: 66 }, (_, k) => ({ type: 'payment', at: 2, date: ['10-26', '10-28', '10-30', '11-01', '11-03'][k % 5], account: '1111', amount: -1000 - k, who: `Shop ${k}`, kind: 'card', occurrence: 'new', amountFrom: 'guess' }));
     T.moneyAnswers = [{ records: [...many, { type: 'payment', at: 2, date: '11-25', account: '1111', amount: -5000, who: 'Last week', kind: 'card', occurrence: 'new' }] }];
-    await run(c.m, { now: '11-26 10:00', events: [] });
+    await run(c.m, { now: '12-05 10:00', events: [] });
     assert.match(T.moneyInput, /\[MISSING ON THE PHONE\]\n- No regular income yet .*\n- No regular bill yet/);
     assert.equal(c.p.money.tx.filter(t => t.who.startsWith('Shop')).length, 60);
     assert.ok(c.p.money.tx.some(t => t.who === 'Last week'));
     assert.ok(c.p.syncLast.notes.some(n => n.includes('6개는 너무 많아서')));
 });
 
-test('a long skip: the days before the last seven go as one span', async () => {
+test('a long skip: a month goes one day a line; only the days before the last 31 go as one span', async () => {
     const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'a month went by')]);
     T.moneyAnswers = [{ records: [] }];
     await run(c.m, { now: '11-26 10:00', events: [] });
-    assert.match(T.moneyInput, /\[DAYS PASSED\]\n- 10-26 to 11-18 \(24 days, ended by #2\)\n- 11-19 Thu \(ended in #2\)/);
+    // (31 days: each on its own line, no span)
+    assert.match(T.moneyInput, /\[DAYS PASSED\]\n- 10-26 Mon \(ended in #2\)\n- 10-27 Tue \(ended in #2\)/);
     assert.match(T.moneyInput, /- 11-25 Wed \(ended in #2\)\n\n/);
+    assert.equal((T.moneyInput.match(/^- \d{2}-\d{2} \w{3} \(ended in #2\)$/gm) || []).length, 31);
+    assert.ok(!/ to \d{2}-\d{2} \(/.test(T.moneyInput));
+    // longer: the days before the last 31 on one line
+    T.chat.push(say('Mara', 'two more months went by'));
+    T.moneyAnswers = [{ records: [] }];
+    await run(c.m, { now: '01-15 10:00', events: [] });
+    assert.match(T.moneyInput, /\[DAYS PASSED\]\n- 11-26 to 12-14 \(19 days, ended by #3\)\n- 12-15 Tue \(ended in #3\)/);
 });
 
 test('run59: a regular\'s "date" is its first day, not the day it was heard of: it goes on its message\'s day, and the clock pays nothing before that (the rent already paid this month is not paid again)', async () => {
