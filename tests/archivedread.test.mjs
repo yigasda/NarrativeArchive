@@ -1069,6 +1069,7 @@ test('a story record in a message with no scene gets an event for that message, 
     await run(c.m, { now: '10-26 09:30', records: [{ type: 'note', at: 2, from: 'story', title: 'Shopping', text: 'milk', time: '10-26 09:10' }] });
     assert.deepEqual(c.p.notes.map(x => [x.title, x.src ?? '']), [['Shopping', '']]);
     assert.ok(Object.keys(c.p.sync.events).includes('msg-2'));
+    assert.equal(c.p.sync.events['msg-2'].summary, '메모');
     assert.deepEqual(c.p.syncLast?.notes || [], []);
 });
 

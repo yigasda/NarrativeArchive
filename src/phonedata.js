@@ -804,7 +804,9 @@ export function recordsCore(raw, textOf = () => '') {
         if (host) host.phone[key] = [...arr(host.phone[key]), x];
     }
     // (a scene with no summary of its own: what it put on the phone)
-    for (const e of events) if (!e.summary) e.summary = Object.keys(e.phone).join(', ') || e.id;
+    // (in the apps' own names, as the list of reflected events shows it: "메모 · 문자")
+    const named = k => APP_NAME[k] || { health: '건강', usual: '건강', alarms: '시계', timers: '시계', files: '파일', profile: 'SNS' }[k] || k;
+    for (const e of events) if (!e.summary) e.summary = [...new Set(Object.keys(e.phone).map(named))].join(' · ') || e.id;
     return { ...rest, events, ...(Object.keys(everyday).length ? { everyday } : {}), ...(days.length ? { days: [...arr(rest.days), ...days] } : {}) };
 }
 // ---- 일상: the owner's ordinary life in the hours these messages cover comes in the reflection's own answer, its top-level
