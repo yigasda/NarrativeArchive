@@ -18,7 +18,7 @@ body.na_darkui .na_cal3_avic { background: #2E2E34; color: var(--na-accent-fg); 
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_popup button.na_cal3_day:not(#na_x) { flex: none; width: 52px; margin: 0; padding: 7px 0 6px; border: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; border-radius: 14px; --axr: 14px; --c-r: 14px; display: flex; flex-direction: column; align-items: center; gap: 1px; font: inherit; --axfs: inherit; --axff: inherit; cursor: pointer; color: var(--na-ink); --axfg: var(--na-ink); --c-fg: var(--na-ink)}
 body:not(.na_darkui) dialog.popup .na_popup button.na_cal3_day:not(#na_x) { background: #F7EEE7; --c-bg: #F7EEE7; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.08); --c-sh: 0 1px 2px rgba(70, 52, 40, 0.08); }
 body.na_darkui dialog.popup .na_popup button.na_cal3_day:not(#na_x) { background: #232328; --c-bg: #232328; box-shadow: none; --c-sh: none; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_popup button.na_cal3_day.on:not(#na_x) { background: var(--na-accent) !important; --c-bg: var(--na-accent); color: var(--na-onaccent, #fff) !important; --axfg: var(--na-onaccent, #fff); --c-fg: var(--na-onaccent, #fff)}
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_popup button.na_cal3_day.on:not(#na_x) { background: var(--na-accent); --c-bg: var(--na-accent); color: var(--na-onaccent, #fff); --axfg: var(--na-onaccent, #fff); --c-fg: var(--na-onaccent, #fff)}
 .na_cal3_day small { font-size: 10.5px; color: var(--na-dim); white-space: nowrap; max-width: 46px; overflow: hidden; text-overflow: ellipsis; }
 .na_cal3_day.on small { color: inherit; opacity: 0.8; }
 .na_cal3_day b { font-size: 17px; line-height: 1.2; }
@@ -27,7 +27,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_popup button.na_cal3_day.
 .na_cal3_day.on u { background: currentColor; }
 body:not(.na_darkui) .na_cal_item.na_cal3_hl { --c-bg: #F3E4D8; }
 body.na_darkui .na_cal_item.na_cal3_hl { --c-bg: #2E2E34; }
-.na_cal3_av.plain .na_cal3_avic { background: var(--na-card2) !important; color: var(--na-dim) !important; --axfg: var(--na-dim)}
+.na_cal3_av.plain .na_cal3_avic { background: var(--na-card2); color: var(--na-dim); --axfg: var(--na-dim)}
 .na_cal3_av.plain .na_cal3_avtx b { font-weight: 600; color: var(--na-mute); }
 /* 이탈 감지 (never checked) in the big window: the example on top, 최근 메시지 + 검사하기 at the bottom like the wizard's buttons */
 .na_dr2.na_dr3_new { display: flex; flex-direction: column; }
