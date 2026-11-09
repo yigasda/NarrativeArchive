@@ -344,7 +344,8 @@ function gmapMarks(labels) {
       const [x, y] = best.at; taken.push([x - 11, y - 11, x + 11, y + 11]); placed.push([x, y]); pool = pool.filter(q => q.ic !== best.ic || Math.hypot(q.at[0] - x, q.at[1] - y) > 150);
       // ICONSTYLE: white (old kit badge) · dot (the named places' coloured dot, smaller and faded) · line (just the glyph, faint, no badge)
       const ist = process.env.ICONSTYLE || 'white', col = CAT[best.ic] || '#6f6a64';
-      o += ist === 'dot' ? `<g transform="translate(${f(x)} ${f(y)})" opacity=".55"><circle r="6.5" fill="${col}"/><g fill="none" stroke="#fff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" transform="translate(-4.3 -4.3) scale(.36)">${glyph(best.ic)}</g></g>`
+      o += ist === 'full' ? `<g transform="translate(${f(x)} ${f(y)})"><circle r="7.5" fill="${col}"/><g fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" transform="translate(-5 -5) scale(.42)">${glyph(best.ic)}</g></g>`   // the named places' dot exactly, without the name
+        : ist === 'dot' ? `<g transform="translate(${f(x)} ${f(y)})" opacity=".55"><circle r="6.5" fill="${col}"/><g fill="none" stroke="#fff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" transform="translate(-4.3 -4.3) scale(.36)">${glyph(best.ic)}</g></g>`
         : ist === 'line' ? `<g fill="none" stroke="${col}" stroke-opacity=".6" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" transform="translate(${f(x - 8.4)} ${f(y - 8.4)}) scale(.7)">${glyph(best.ic)}</g>`
         : `<g transform="translate(${f(x)} ${f(y)})"><circle r="10.5" fill="#fff" stroke="#e3ddd2" stroke-width="1"/><g fill="none" stroke="#7d7266" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" transform="translate(-7.2 -7.2) scale(.6)">${glyph(best.ic)}</g></g>`; } }
   // streets: the longest pieces, upright text along the line
