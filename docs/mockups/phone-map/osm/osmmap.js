@@ -99,8 +99,8 @@ const LC = Object.fromEntries(Object.keys(COVER).map(k => [k, '']));
 const PRETTY = process.env.STYLE === 'pretty';
 // STYLE=gmap: a busy street map's manner — cream ground, land uses in their own colours, hardly any houses, white streets with no rim, coloured place names with their icons, street names along the streets
 const GMAP = process.env.STYLE === 'gmap', COLLECT = PRETTY || GMAP, STREETS = [];
-if (GMAP) Object.assign(C, { land: '#f4efe6', built: '#f1ece3', resi: '#f4efe6', shop: '#f4ece4', works: '#ebe8e3', railyard: '#e8e5df', school: '#efe1bd', park: '#c8e6b3', forest: '#b9dca5', water: '#a8d2f4',
-  bld: '#e7e4df', edge: '#e9e2d6', road: '#ffffff', major: '#fde293', majorEdge: '#f2c766', plaza: '#efe9df', foot: '#dcefd0' });
+if (GMAP) Object.assign(C, { land: '#f3e7d6', built: '#f1e5d4', resi: '#f3e7d6', shop: '#f1dcd2', works: '#e3e1dd', railyard: '#e2dfda', school: '#ebd5a8', park: '#c2e0a3', forest: '#b2d796', water: '#a4cdf2',
+  bld: '#dedbd6', edge: '#dccfbb', road: '#ffffff', major: '#fdd98a', majorEdge: '#e9b85a', plaza: '#efe4d3', foot: '#d6ebc6' });
 if (GMAP) Object.assign(COVER, { grass: '#d3ecc3', allot: '#d6ebc5', orchard: '#cfe8bc', vine: '#dde8c0', grave: '#d4e3cb', scrub: '#cfe3b8', farm: '#f1ecd9' });
 const { ICON, glyph, pick } = require('./icons.js');
 const COVER0 = null;
@@ -198,10 +198,10 @@ if (GMAP) svg = `<rect width="${W}" height="${H}" fill="${C.land}"/>`
   + ['farm', 'grass', 'allot', 'orchard', 'vine', 'grave', 'scrub', 'wet', 'sand', 'rock'].map(k2 => fill(LC[k2], COVER[k2])).join('') + fill(L.park, C.park) + fill(L.forest, C.forest) + fill(L.plaza, C.plaza) + fill(L.water, C.water)
   + fill(L.bld, C.bld) + fill(L.station, '#e2dfda')
   + (L.park + L.forest ? `<defs><clipPath id="gp"><path d="${L.park + L.forest}"/></clipPath></defs><g clip-path="url(#gp)">${st(L.foot, C.foot, 1.1)}</g>` : '')
-  + st(L.minor, C.edge, mpx(8) + 0.8) + st(L.mid, C.edge, mpx(12) + 1)
-  + st(L.minor, C.road, mpx(8)) + st(L.mid, C.road, mpx(12))
+  + st(L.minor, C.edge, Math.max(5.5, mpx(8)) + 1.6) + st(L.mid, C.edge, Math.max(8, mpx(12)) + 1.8)
+  + st(L.minor, C.road, Math.max(5.5, mpx(8))) + st(L.mid, C.road, Math.max(8, mpx(12)))
   + st(L.rail, '#b8b6b2', 2.2) + st(L.rail, '#f4efe6', 0.9, ' stroke-dasharray="6 5"')
-  + st(L.major, C.majorEdge, mpx(16) + 1.4) + st(L.major, C.major, mpx(16));
+  + st(L.major, C.majorEdge, Math.max(10, mpx(16)) + 1.8) + st(L.major, C.major, Math.max(10, mpx(16)));
 // trees in the parks, the station box, the icons — the old kit's pieces on the real shapes
 function prettyTop() {
   let o = '', seed = 7; const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
