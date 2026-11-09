@@ -11,7 +11,7 @@
 | 5. 이렇게 하는 이유 | 소망이 싫어하는 것 · 좋아한 것 |
 | 6. 화면별 참고 | 공통 토큰, 은행 · 지갑 · 날씨 · 그 밖의 앱 |
 | 7. 확장 패널 · 팝업 | 휴대폰 바깥 |
-| 8. 가끔 보는 것 | 실제 폰 준비(한 번), 주요 파일, 공용 도우미, 지난 시안 |
+| 8. 가끔 보는 것 | 실제 폰 준비(한 번), 지난 시안 |
 | 9. 남은 일 | |
 
 ---
@@ -54,6 +54,37 @@
 - 앱 화면은 390 × 844 보드 크기로 그리고, 실제 창에 맞춰 줄여요.
 - 루트 클래스는 `.na_ph_scr.ax`이고, 앱 안에서는 `.ax`가 기준이에요.
 - 눌러서 화면을 옮기는 건 `data-go="경로"`(+ `data-i="값"`)예요. `src/phone.js`의 `$root.on('click', '.na_ph_frame [data-go]', …)`가 받아서 `view = "경로:값"`으로 바꾸고 다시 그려요. `<button>`이 아니어도 `data-go`만 있으면 눌려요(예: 명세서 표의 `<tr>`).
+
+#### 주요 파일
+
+| 파일 | 내용 |
+|---|---|
+| `src/phone.js` | 화면 고르기(`screen()`), 경로표, 클릭 처리, 스크롤 유지, 은행 환율 칸 처리 |
+| `src/phoneapps.js` | 공용 도우미와 아이콘 `AX`, 앱별 색 `AXB` / `AXB_C`, 메시지 · 전화 · 사진 등 1쪽 앱들 |
+| `src/phonehome.js` | 잠금 · 홈 1쪽 · 2쪽, 홈 아이콘(`CG_I` 모양, `CG_GEL` 색), 위젯 |
+| `src/phonemoney.js` | 은행 · 고정 지출 · 알림 · 송금 · 명세서 · 확인증 · 더보기, 지갑(카드 · 멤버십 · 패스), 쇼핑, 음성 메모 |
+| `src/phonelifeapps.js` | 시계 · 건강 · 파일 · 날씨 · 배달 · 홈 날씨 위젯 |
+| `src/phonefood.js` | 음식 그림(바탕 159개, 토핑, 곁들임). 낱말로 그림 고르기(`GUESS`, `WORD`, `wordsPic`, `dishPic`) |
+| `src/phoneprod.js` | 쇼핑 상품 실루엣 50종. 낱말로 종류 · 색 고르기(`prodKind`, `prodSvg`) |
+| `src/phonedata.js` | 폰 데이터 모양, 채우기 프롬프트, `storyNow` |
+| `src/phonelife.js` / `phonesync*.js` | 채우기 · 반영(데이터 쪽). **4장 데이터 쪽 경계 참고, 건드리지 않아요** |
+| `style.css` | 전부 한 파일(약 7000줄). 앱마다 주석 머리(`/* 은행 › … */`)로 묶여 있어요 |
+
+#### 공용 도우미 (`src/phoneapps.js`)
+
+- `ax(k, size=22, color='currentColor', strokeWidth=2, fill='none')`: `AX[k]` 경로로 선 아이콘 SVG를 만들어요.
+- 새 아이콘은 쓰는 파일 위쪽에 `Object.assign(AX, { 이름: 'path d' })`로 더해요. 24×24 기준 선 아이콘이에요.
+- **이름이 겹치면 덮어써요.** 먼저 `grep -n "이름:" src/*.js`로 확인해요.
+- `axBar(p, now, color)`: 상태줄이에요.
+- `axTop(left, right)`: 위쪽 줄이에요.
+- `axCb(go)`: 둥근 뒤로 버튼이에요.
+- `axH1(title, sub)`: 큰 제목이에요.
+- `axInd(color)`: 아래 홈 막대예요.
+- `axDay(p, now, 'MM-DD')`: "오늘" 또는 날짜예요.
+- `axTint(name)`: 이름마다 고정된 아바타 색이에요.
+- `axLetter(name, size)`: 글자 아바타예요.
+- `axKp(p)`: 한국어 알약이에요.
+- `busyHtml`: 도는 아이콘이에요.
 
 #### 새 화면을 더할 때 체크리스트
 
@@ -467,37 +498,6 @@ SillyTavern 테마는 `.menu_button`, `input`, `select`, `textarea`, `small`, �
    ```
 4. 가짜 모델을 켜요: `node tools/dev/fakeph.mjs`(:5555). 폰 만들기 · 채우기 · 반영에 정해진 답을 줘요. 마지막 요청은 `$TMPDIR/na_fakeph_last_req.json`에 남아요(프롬프트 확인용).
 5. Playwright: 클라우드 세션에는 Chromium이 미리 깔려 있어요. `playwright install`은 하지 않아요.
-
-### 주요 파일
-
-| 파일 | 내용 |
-|---|---|
-| `src/phone.js` | 화면 고르기(`screen()`), 경로표, 클릭 처리, 스크롤 유지, 은행 환율 칸 처리 |
-| `src/phoneapps.js` | 공용 도우미와 아이콘 `AX`, 앱별 색 `AXB` / `AXB_C`, 메시지 · 전화 · 사진 등 1쪽 앱들 |
-| `src/phonehome.js` | 잠금 · 홈 1쪽 · 2쪽, 홈 아이콘(`CG_I` 모양, `CG_GEL` 색), 위젯 |
-| `src/phonemoney.js` | 은행 · 고정 지출 · 알림 · 송금 · 명세서 · 확인증 · 더보기, 지갑(카드 · 멤버십 · 패스), 쇼핑, 음성 메모 |
-| `src/phonelifeapps.js` | 시계 · 건강 · 파일 · 날씨 · 배달 · 홈 날씨 위젯 |
-| `src/phonefood.js` | 음식 그림(바탕 159개, 토핑, 곁들임). 낱말로 그림 고르기(`GUESS`, `WORD`, `wordsPic`, `dishPic`) |
-| `src/phoneprod.js` | 쇼핑 상품 실루엣 50종. 낱말로 종류 · 색 고르기(`prodKind`, `prodSvg`) |
-| `src/phonedata.js` | 폰 데이터 모양, 채우기 프롬프트, `storyNow` |
-| `src/phonelife.js` / `phonesync*.js` | 채우기 · 반영(데이터 쪽). **4장 데이터 쪽 경계 참고, 건드리지 않아요** |
-| `style.css` | 전부 한 파일(약 7000줄). 앱마다 주석 머리(`/* 은행 › … */`)로 묶여 있어요 |
-
-### 공용 도우미 (`src/phoneapps.js`)
-
-- `ax(k, size=22, color='currentColor', strokeWidth=2, fill='none')`: `AX[k]` 경로로 선 아이콘 SVG를 만들어요.
-- 새 아이콘은 쓰는 파일 위쪽에 `Object.assign(AX, { 이름: 'path d' })`로 더해요. 24×24 기준 선 아이콘이에요.
-- **이름이 겹치면 덮어써요.** 먼저 `grep -n "이름:" src/*.js`로 확인해요.
-- `axBar(p, now, color)`: 상태줄이에요.
-- `axTop(left, right)`: 위쪽 줄이에요.
-- `axCb(go)`: 둥근 뒤로 버튼이에요.
-- `axH1(title, sub)`: 큰 제목이에요.
-- `axInd(color)`: 아래 홈 막대예요.
-- `axDay(p, now, 'MM-DD')`: "오늘" 또는 날짜예요.
-- `axTint(name)`: 이름마다 고정된 아바타 색이에요.
-- `axLetter(name, size)`: 글자 아바타예요.
-- `axKp(p)`: 한국어 알약이에요.
-- `busyHtml`: 도는 아이콘이에요.
 
 ### 지난 시안 보기
 
