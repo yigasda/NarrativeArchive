@@ -103,7 +103,8 @@ const grain = (fg, op, u) => fadeIn(u, `<defs><filter id="${u}n" x="0" y="0" wid
 const weave = (fg, op, u) => { let a = '', b = '';
     for (let r = 0; r < 30; r++) for (let c = 0; c < 36; c++) { const x = 150 + c * 7.4, y = -8 + r * 7.4;
         if ((r + c) % 2) a += `M${r1(x + 0.6)} ${r1(y + 1)}h6.2v5.4h-6.2Z`; else b += `M${r1(x + 1)} ${r1(y + 0.6)}h5.4v6.2h-5.4Z`; }
-    return fadeIn(u, `<path d="${a}" ${F(fg, 0.05)}/><path d="${b}" ${F(fg, 0.035)}/>`); };
+    // a long soft fade from the dark of the card, so the weave has no edge
+    return `<defs><linearGradient id="${u}w" x1="0" x2="1"><stop offset=".42" stop-color="#fff" stop-opacity="0"/><stop offset=".88" stop-color="#fff"/></linearGradient><mask id="${u}k"><rect x="-20" y="-20" width="400" height="260" fill="url(#${u}w)"/></mask></defs><g mask="url(#${u}k)"><path d="${a}" ${F(fg, 0.05)}/><path d="${b}" ${F(fg, 0.035)}/></g>`; };
 const MOTIF = { flight: [flight, null], train: [lined, null], membership: [dots, holo], other: [dots], concert: [spots, confetti], hotel: [windows, doors], match: [bowl, knit],
     movie: [grain], museum: [rosette, rosetteP], bus: [lanes, chevrons], ferry: [depths, seaChart], theater: [harlequin, damask], park: [wheel, sunburst] };
 const seedOf = id => [...String(id || '')].reduce((h, c) => h + c.charCodeAt(0), 0);
