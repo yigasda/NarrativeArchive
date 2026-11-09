@@ -200,10 +200,10 @@ if (GMAP) svg = `<rect width="${W}" height="${H}" fill="${C.land}"/>`
   + fill(L.bld, C.bld) + fill(L.station, '#e2dfda')
   // park paths as faces, not lines: the few long ones as a soft band one shade lighter than the grass, no rim
   + (L.park + L.forest ? `<defs><clipPath id="gp"><path d="${L.park + L.forest}"/></clipPath></defs><g clip-path="url(#gp)">${st(parkPaths(), C.foot, Math.max(3.6, mpx(4)))}</g>` : '')
-  + st(L.minor, C.edge, Math.max(5.5, mpx(8)) + 1.6) + st(L.mid, C.edge, Math.max(8, mpx(12)) + 1.8)
+  + st(L.minor, C.edge, Math.max(5.5, mpx(8)) + 0.8) + st(L.mid, C.edge, Math.max(8, mpx(12)) + 0.9)
   + st(L.minor, C.road, Math.max(5.5, mpx(8))) + st(L.mid, C.road, Math.max(8, mpx(12)))
   + st(L.rail, '#b8b6b2', 2.2) + st(L.rail, '#f4efe6', 0.9, ' stroke-dasharray="6 5"')
-  + st(L.major, C.majorEdge, Math.max(10, mpx(16)) + 1.8) + st(L.major, C.major, Math.max(10, mpx(16)));
+  + st(L.major, C.majorEdge, Math.max(10, mpx(16)) + 0.9) + st(L.major, C.major, Math.max(10, mpx(16)));
 // the park paths worth a soft band: measured only where they run inside a park and on screen, the longest few
 function parkPaths() {
   const inside = (x, y, ps) => { let c = false; for (let i = 0, j = ps.length - 1; i < ps.length; j = i++) { const [a, b] = ps[i], [u, v] = ps[j]; if ((b > y) !== (v > y) && x < (u - a) * (y - b) / (v - b) + a) c = !c; } return c; };
