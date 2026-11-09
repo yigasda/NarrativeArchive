@@ -358,7 +358,7 @@ ${archiveOnly ? `TIMES\n${CORE_TIMES}` : `${CORE_CLOCK_FIRST}\n${CORE_TIMES}`}
 STORY AND PERSONAL LIFE
 - Classify each record by what it is about, not by whether the phone activity was explicitly described.
 - Anything about a story event goes in "records", including made-up texts, searches, notes and diary entries about it.
-- "everyday" follows the owner's own daily life. A story matter comes into it only as a feeling: never its next step, an arrival, a completion, a new fact, a secret or how it came about.
+- "everyday" follows the owner's own daily life. A story matter comes into it only as a feeling. Never make up its next step, an arrival, a completion, a new fact, a secret or how it came about, building a new storyline the story's canon never told.
 
 EVERYDAY
 - The phone is lived in every waking hour, from who the owner is; contact goes both ways, and a group chat goes on without them.

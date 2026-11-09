@@ -812,7 +812,7 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.match(on, /\nphoto: "caption", "ko", "time", "mood"/);
     assert.match(on, /The diary: an entry when a story day ends in these messages or a scene stays with them, as long as this owner would write it;/);
     assert.match(on, /Voice memos: about one every few days/);
-    assert.match(on, /- "everyday" follows the owner's own daily life\. A story matter comes into it only as a feeling: never its next step, an arrival, a completion, a new fact, a secret or how it came about\./);
+    assert.match(on, /- "everyday" follows the owner's own daily life\. A story matter comes into it only as a feeling\. Never make up its next step, an arrival, a completion, a new fact, a secret or how it came about, building a new storyline the story's canon never told\./);
     assert.ok(!on.includes('"made": [what') && !on.includes('"story": [') && on.includes('"said": exact words of the message it comes from,'));
     assert.match(on, /photo: "caption", "ko", "time", "mood"/);
     assert.ok(!on.includes('talk over each other') && on.includes('contact goes both ways, and a group chat goes on without them.'));
