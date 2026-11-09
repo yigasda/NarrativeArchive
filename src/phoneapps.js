@@ -668,7 +668,7 @@ export function setDate(p, now, m = null) {
 // { who, style, by }; an old { from, to, style } reads from as who), how each person sounds to others. What 소망 set
 // first, with 사람 추가; the translator's (by: 'model') under it, its names a little grey. A row opens the alert to edit
 // (and becomes 소망's); slid left, 삭제
-export const voiceList = p => (Array.isArray(p?.koVoice) ? p.koVoice : []).map((v, i) => ({ who: String(v?.who ?? v?.from ?? '').trim(), style: String(v?.style || '').trim(), model: v?.by === 'model', i })).filter(v => v.who);
+export const voiceList = p => (Array.isArray(p?.koVoice) ? p.koVoice : []).map((v, i) => ({ who: String(v?.who ?? v?.from ?? '').trim(), style: String(v?.style || '').trim(), label: String(v?.label || '').trim(), model: v?.by === 'model', i })).filter(v => v.who);
 // the list shows the style up to its first comma / full stop (docs/mockups/phone-voice short 2) and "외 N개" for the rest, so a long style stays one line
 export const voiceParts = st => String(st || '').split(/[,.;!?\n，。、；！？·…]+/).map(x => x.trim()).filter(Boolean);
 const voiceShort = st => { const ps = voiceParts(st); return `<span class="ax_p ax_kvp">${ps.length ? `${esc(ps[0])}${ps.length > 1 ? ` <span class="ax_kvm">외 ${ps.length - 1}개</span>` : ''}` : '말투 적기'}</span>`; };
@@ -678,7 +678,7 @@ const voiceShort = st => { const ps = voiceParts(st); return `<span class="ax_p 
 Object.assign(AX, { wand: 'M15 4V2M15 10V8M11 6h2M17 6h2M4 20L14 10M19 13v2M18 14h2' });
 export function setVoice(p, now, pick = null, busy = false) {
     const rows = voiceList(p), mine = rows.filter(v => !v.model), auto = rows.filter(v => v.model), on = v => !!pick?.has(v.who.toLowerCase());
-    const face = v => `${axLetter(v.who, 36)}<span class="ax_tx"><span class="ax_n${v.model ? ' ax_kvauto' : ''}">${esc(v.who)}</span>${voiceShort(v.style)}</span>`;
+    const face = v => `${axLetter(v.who, 36)}<span class="ax_tx"><span class="ax_n${v.model ? ' ax_kvauto' : ''}">${esc(v.who)}</span>${v.label ? `<span class="ax_p ax_kvp">${esc(v.label)}</span>` : voiceShort(v.style)}</span>`; // the story's short label (phonetr.js) when it gave one
     const row = v => (pick
         ? `<div role="button" tabindex="0" class="ax_rw na_ph_kvtick" data-n="${esc(v.who)}">${face(v)}<span class="ax_radio${on(v) ? ' on' : ''}">${on(v) ? ax('check', 14, '#fff', 3.4) : ''}</span></div>`
         : swipeRow('kovoice', v.i, `<div role="button" tabindex="0" class="ax_rw na_ph_kvrow" data-i="${v.i}">${face(v)}${axChev}</div>`));
