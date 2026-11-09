@@ -883,6 +883,14 @@ test('run61: a card bill the model wrote by hand, from the paying account to the
     assert.equal(bank(), 920);
 });
 
+test('the report says what a payment was for: who it went to and its memo, or nothing (the scene then)', () => {
+    const { m, p } = setup();
+    const a = applyMoney(m, p, ev('d', 6, '10-26', { moves: [{ account: '2222', amount: -80, who: 'Trattoria', memo: 'dinner', kind: 'card', occurrence: 'new' }] }), opts());
+    assert.equal(a.changes[0].what, 'Trattoria · dinner');
+    const b = applyMoney(m, p, ev('r', 7, '10-26', { moves: [{ account: '1111', amount: -30, kind: 'transfer', occurrence: 'new' }] }), opts());
+    assert.ok(!('what' in b.changes[0]));
+});
+
 test('run66: a mobile pay payment is a card payment for the counts, marked as one; on the giro its money leaves the balance', () => {
     const { m, p, bank } = setup();
     applyMoney(m, p, ev('pay', 5, '10-26', { moves: [{ account: '2222', amount: -12, who: 'Cafe', kind: 'mobile', occurrence: 'new' }, { account: '1111', amount: -30, who: 'Shop', kind: 'mobile', occurrence: 'new' }] }), opts());

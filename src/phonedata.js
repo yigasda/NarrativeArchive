@@ -1840,7 +1840,7 @@ async function moneyStage(m, p, owner, c) {
         let paid;
         try { paid = applyMoney(m, p, { id: g.id, at: g.at, date: g.date, time: g.time, summary: g.summary, money: g.money }, { placeCity: cityIds, year: c.year, anchor: c.anchor, marks: s.marks, legs: s.events[g.id]?.legs || [], span: s.failed[g.at]?.span || null, edited: !!c.reread?.has(g.at) }); }
         catch (err) { p.money = stage.money; p.investment = stage.investment; m.finance = stage.finance; if (p.delivery) p.delivery = Object.assign(p.delivery, stage.delivery); failedAt.add(g.at); owe(g.at, String(err?.message || err), true); continue; }
-        for (const ch of paid.changes) { out.apps.add(ch.app); if (ch.amount !== null) out.changes.push({ ...ch, what: line(g.summary, 60) }); }
+        for (const ch of paid.changes) { out.apps.add(ch.app); if (ch.amount !== null) out.changes.push({ ...ch, what: ch.what || line(g.summary, 60) }); }
         out.notes.push(...paid.notes);
         // a message's own money event holds only what it gave; one with nothing is none
         if (g.mine && !paid.effects.length && !s.events[g.id]) continue;
@@ -2140,7 +2140,7 @@ async function updatePhone(m, owner) {
             if (day) lastDay = day;
             try { paid = applyMoney(m, p, { id, at, date: day, time: hhmm(e.time), summary: line(e.summary, 160), money: e.money }, { placeCity: cityIds, year, anchor, marks: s.marks, legs: s.events[id]?.legs || [], span: s.failed[at]?.span || null, edited: reread.has(at) }); }
             catch (err) { p.money = stage.money; p.investment = stage.investment; m.finance = stage.finance; if (p.delivery) p.delivery = Object.assign(p.delivery, stage.delivery); fail(String(err?.message || err)); continue; }
-            for (const c of paid.changes) { apps.add(c.app); if (c.amount !== null) changes.push({ ...c, what: line(e.summary, 60) }); }
+            for (const c of paid.changes) { apps.add(c.app); if (c.amount !== null) changes.push({ ...c, what: c.what || line(e.summary, 60) }); }
             notes.push(...paid.notes);
             // the everyday apps: alarms, files, the days the story shows
             const lived = applyLife(p, { id, at, date: day, time: hhmm(e.time) }, phone, !!p.life && at > (s.marks.life?.index ?? -1));

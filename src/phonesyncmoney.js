@@ -441,7 +441,9 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
             L.entries[id] = { amount: round(amount), date: full, sourceIndex: e.at };
             out.effects.push({ type: 'entry', key: lk, id, amount: round(amount), date: full, sourceIndex: e.at });
         }
-        out.changes.push({ app: acct.kind === 'credit' ? '카드' : '은행', label, amount: round(amount), currency: acct.currency });
+        // (what the row says it was for: who it went to and its memo; the report shows that, not the scene)
+        const said = [row.who, row.memo].filter(Boolean).join(' · ');
+        out.changes.push({ app: acct.kind === 'credit' ? '카드' : '은행', label, amount: round(amount), currency: acct.currency, ...(said ? { what: said } : {}) });
         out.legs.push({ key, amount: round(amount), state: 'applied', rec: id, from });
     });
 
