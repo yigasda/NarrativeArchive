@@ -781,7 +781,7 @@ test('일상 comes in the reflection\'s own answer (no request of its own); who 
     assert.match(sys, /\nSTEP 3 · RECORDS\nGo through each scene's messages in order\. Write a record only in these cases, with "scene", "at", "said" \(the exact words it comes from\) and "situations":/);
     assert.match(sys, /A record says no more than its "said"\. Nothing else goes in "records"\./);
     assert.match(sys, /7\. Every record, in "records" or "everyday", lists in "situations" each situation it mentions or touches, and keeps to what each one's state allows\./);
-    assert.match(sys, /d\. PEOPLE AROUND: contact both ways; group chats go on without the owner\./);
+    assert.match(sys, /c\. PEOPLE AROUND: contact both ways; group chats go on without the owner\./);
     assert.match(sys, /new plausible ones with local names \(each with a "contact"\)/);
     assert.match(sys, /no one they are no longer in touch with\./);
     assert.ok(!sys.includes("DO NOT CONTINUE THE STORY") && !sys.includes("SCENES AND RECORDS") && sys.indexOf("\nSTEP 1 · SCENES\n") > sys.indexOf("CLOCK FIRST"));
@@ -808,7 +808,7 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     const arch = data.coreSystem({ life: true, archiveOnly: true });
     assert.ok(arch.includes('\nTIMES\n- Times are "MM-DD HH:MM"') && !arch.includes('CLOCK FIRST'));
     // (GOAL)
-    assert.match(on, /^STAGE: core\nGOAL\nWrite what the owner's phone gains from NEW MESSAGES, in order: set the time, write down where the story stands, record the phone trail the messages show, then fill the owner's own day around it\. The story decides what happens; the phone only shows it\./);
+    assert.match(on, /^STAGE: core\nGOAL\nWrite what the owner's phone gains from NEW MESSAGES\. The story decides what happens; the phone only shows it\.\n\nYOU GET/);
     // (STEP 1)
     assert.match(on, /3\. "with": only people physically in the same place as the owner\. Not people mentioned, remembered, texted or called\./);
     // (STEP 2: where things stand, and what each state allows)
@@ -827,8 +827,8 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.ok(!on.includes('3 or more people') && on.includes('- Mail: whatever would really land in their inbox from their life, accounts, hobbies and habits.'));
     assert.match(on, /   a\. people the owner had a scene with may text later, if it fits;/);
     assert.ok(!on.includes('at least one later text exchange'));
-    assert.match(on, /   c\. PHONE NOW's habits, LIFE NOW's usual, OWNER PROFILE: routines and interests that recur;/);
-    assert.match(on, /   d\. PEOPLE AROUND: contact both ways; group chats go on without the owner\./);
+    assert.match(on, /   b\. PHONE NOW's habits, LIFE NOW's usual, OWNER PROFILE: routines and interests that recur;/);
+    assert.match(on, /   c\. PEOPLE AROUND: contact both ways; group chats go on without the owner\./);
     assert.match(on, /incoming texts and calls may arrive/);
     assert.match(on, /No new relative or partner; relationship labels only from the story;/);
     assert.equal(on.split('5. Diary: one entry for a day that ends in these hours or a scene that stays with them, on that day.').length, 2);

@@ -344,7 +344,7 @@ const CORE_TIMES = `- Times are "MM-DD HH:MM"; a year only as STORY YEAR or the 
 export function coreRecordsSystem({ life = false, weather = false, tracker = false, zone = false, archiveOnly = false, wallet = false, split = true } = {}) {
     const lifeTypes = life ? ' | "alarm" | "timer" | "file"' : '';
     return `${split ? 'STAGE: core\n' : ''}GOAL
-Write what the owner's phone gains from NEW MESSAGES, in order: set the time, write down where the story stands, record the phone trail the messages show, then fill the owner's own day around it. The story decides what happens; the phone only shows it.
+Write what the owner's phone gains from NEW MESSAGES. The story decides what happens; the phone only shows it.
 
 YOU GET
 - NEW MESSAGES (numbered #123). Sometimes ARCHIVE FOR THESE MESSAGES: summaries covering them, also evidence.
@@ -388,9 +388,8 @@ STEP 4 · EVERYDAY
 2. Amount: about ${LIFE_A_DAY} records per full waking day, fewer for part of one. A full day uses at least 6 of their apps (texts, calls, photos, searches, notes, mails, posts, voice memos${life ? ', alarms, files' : ''}). Who they talk to, and how much, follows their character and PEOPLE AROUND.
 3. Take each day from, in order:
    a. people the owner had a scene with may text later, if it fits;
-   b. situations: only what STEP 2 allows for their state;
-   c. PHONE NOW's habits${life ? ", LIFE NOW's usual" : ''}, OWNER PROFILE: routines and interests that recur;
-   d. PEOPLE AROUND: contact both ways; group chats go on without the owner.
+   b. PHONE NOW's habits${life ? ", LIFE NOW's usual" : ''}, OWNER PROFILE: routines and interests that recur;
+   c. PEOPLE AROUND: contact both ways; group chats go on without the owner.
    The story sets mood, place and free time.
 4. People: from the story, PEOPLE AROUND, or new plausible ones with local names (each with a "contact"). No new relative or partner; relationship labels only from the story; no one they are no longer in touch with.
 5. Diary: one entry for a day that ends in these hours or a scene that stays with them, on that day. Voice memo: about one every few days.
