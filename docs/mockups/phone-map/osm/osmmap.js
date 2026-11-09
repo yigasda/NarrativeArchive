@@ -74,7 +74,40 @@ let svg = `<rect width="${W}" height="${H}" fill="${C.land}"/>`
   + st(L.minor, C.road, mpx(9)) + st(L.mid, C.road, mpx(12))
   + st(L.rail, C.rail, 2.4) + st(L.rail, C.land, 1.1, ' stroke-dasharray="4 4"') + st(L.tram, C.rail, 0.9)
   + st(L.major, C.majorEdge, mpx(16) + 2) + st(L.major, C.major, mpx(16));
-const labels = labelsSrc ? JSON.parse(fs.readFileSync(labelsSrc, 'utf8')) : [];
+// no labels file → names from the data: stations, quarters, sights, the river; greedy, no overlaps, above the sheet
+const CITY = /^(Berlin|München|Hamburg|Köln|Düsseldorf|Frankfurt \(Main\)|Frankfurt|Dresden|Heidelberg|Leipzig|Nürnberg)[\s-]+/;
+function autoLabels() {
+  const cand = [], seen = new Set();
+  for (const e of d.elements) {
+    const t = e.tags || {};
+    let n = t.name; if (!n) continue;
+    if (t.railway === 'station') n = /Hauptbahnhof|Hbf/.test(n) ? 'Hauptbahnhof' : n.replace(CITY, '').replace(/^[SU]\+?[SU]? /, '');
+    if (n.length > 20) continue;
+    if (e.type === 'node') {
+      let pr = 0, sz = 11, wt = 600, col = C.label;
+      if (t.railway === 'station') { if (t.station === 'subway') continue; pr = 5; sz = 11.5; wt = 700; col = '#4a5058'; }
+      else if (t.place === 'suburb') pr = 4; else if (t.place === 'quarter') pr = 3.5; else if (t.place === 'square') pr = 2.5;
+      else if (t.place === 'neighbourhood') { pr = 2; sz = 10.5; } else if (t.tourism === 'attraction' && t.wikidata && !t.shop) { pr = 1; sz = 10; }
+      if (pr) cand.push([pr, e.lat, e.lon, n, sz, wt, col]);
+    } else if (e.type === 'way' && t.waterway === 'river' && e.geometry) {
+      const ps = e.geometry.filter(p => { const [x, y] = P(p.lat, p.lon); return x > 40 && x < W - 40 && y > 30 && y < 470; });
+      if (ps.length) { const p = ps[ps.length >> 1]; cand.push([4.5, p.lat, p.lon, n, 11, 600, '#5a84ad']); }
+    }
+  }
+  cand.sort((a, b) => b[0] - a[0]);
+  const boxes = [], outL = [];
+  for (const [pr, la, lo, n, sz, wt, col] of cand) {
+    if (seen.has(n)) continue;
+    const [x, y] = P(la, lo), w = n.length * sz * 0.6 + 6, h = sz + 6;
+    if (x - w / 2 < 6 || x + w / 2 > W - 6 || y - h < 14 || y > 486) continue;
+    const b = [x - w / 2 - 8, y - h - 6, x + w / 2 + 8, y + 6];
+    if (boxes.some(c => b[0] < c[2] && b[2] > c[0] && b[1] < c[3] && b[3] > c[1])) continue;
+    boxes.push(b); seen.add(n); outL.push([la, lo, n, sz, wt, col]);
+    if (outL.length >= 8) break;
+  }
+  return outL;
+}
+const labels = labelsSrc ? JSON.parse(fs.readFileSync(labelsSrc, 'utf8')) : autoLabels();
 for (const [la, lo, text, size = 11, wt = 600, col = C.label] of labels) {
   const [x, y] = P(la, lo);
   svg += `<text x="${f(x)}" y="${f(y)}" text-anchor="middle" font-family="-apple-system, 'Noto Sans KR', sans-serif" font-size="${size}" font-weight="${wt}" fill="${col}" stroke="${C.land}" stroke-width="3" paint-order="stroke" letter-spacing=".02em">${text}</text>`;
