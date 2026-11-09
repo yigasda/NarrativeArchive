@@ -45,18 +45,16 @@ function town(name, cc, names) {
   if (R.water === 'river') { const y0 = 140 + r() * 260, pts = Array.from({ length: 8 }, (_, i) => [-30 + i * 64, y0 + Math.sin(i * 0.9 + r() * 3) * 30 + (i - 4) * 8 * R.side]), w = 22 + r() * 12; river = { pts, at: at(pts), w }; wet = (x, y) => Math.abs(y - river.at(x)) < w / 2 + 16; }
   if (R.water === 'lake') { const lx = r() < 0.5 ? 70 : 320, ly = 120 + r() * 320, rx = 66 + r() * 26, ry = 48 + r() * 24; wet = (x, y) => inEll(x, y, lx, ly, rx + 6, ry + 6); under += `<path d="${blob(r, lx, ly, rx, ry, 12)}" fill="${C.water}"/>`; }
   const cx = R.cx, cy = R.cy;
-  // the big roads' lines first, so the compounds keep clear of them
-  const roadPts = [];
-  if (R.style === 'boulevard') { for (const x of [60 + r() * 40, 230 + r() * 60]) roadPts.push([[x, -20], [x + R.tilt * 120, 600]]); for (const y of [150 + r() * 40, 300 + r() * 40]) roadPts.push([[-20, y], [410, y - R.tilt * 120]]); }
-  else { const n = R.quiet ? 1 : 2; for (let i = 0; i < n; i++) { const vert = i % 2 === 0; roadPts.push(Array.from({ length: 5 }, (_, k) => vert ? [cx + (r() - 0.5) * 120 + (k - 2) * 20, -20 + k * 150] : [-20 + k * 107, cy + (r() - 0.5) * 120])); } }
+  // the big roads' skeleton first (one of 15, plus overlays), so the compounds keep clear of them
+  const RD = require('./roads.js')({ r, f, curve, C, big, way }).draw(R.style, R.quiet, cx, cy), roadPts = RD.lines; R.sk = RD.sk + ' + ' + RD.ov.join(' · ');
   const seg = (p, q, x, y) => { const dx = q[0] - p[0], dy = q[1] - p[1], t = Math.max(0, Math.min(1, ((x - p[0]) * dx + (y - p[1]) * dy) / (dx * dx + dy * dy))); return Math.hypot(x - p[0] - t * dx, y - p[1] - t * dy); };
   const roadNear = (x, y, d) => roadPts.some(ps => ps.slice(1).some((q, i) => seg(ps[i], q, x, y) < d));
   // the compounds: apartments (KR), a shrine or temple (JP · TH · KR), a school everywhere; each keeps the streets out
   const zones = [], free = (x, y, rad, rd = 58) => !wet(x, y) && !roadNear(x, y, rd) && !zones.some(z => z.inside(x, y)) && x > 30 && x < 360 && y > 40 && y < 520 && Math.hypot(x - cx, y - cy) > rad;
   const place = (make, rad, hw = 40, hh = 30, rd = 58, tries = 80) => { for (let t = 0; t < tries; t++) { const x = 40 + r() * 310, y = 50 + r() * 450; if (free(x, y, rad, rd) && [[1, 1], [-1, -1], [1, -1], [-1, 1]].every(([u, v]) => free(x + u * hw, y + v * hh, 0, 10))) { const z = make(x, y); zones.push(z); return z; } } };
   if (cc === 'KR') { place((x, y) => P.apt(x, y, 110, 80, R.tilt * 0.4, `${names[1]} 아파트`), 60, 58, 42, 66); place((x, y) => P.apt(x, y, 96, 72, R.tilt * 0.4 + 0.05, `${names[2]} 단지`), 60, 50, 38, 60); }
-  if (cc === 'JP' || R.old || cc === 'TH') place((x, y) => P.shrine(x, y, 42, 34, cc === 'JP'), 40);
-  place((x, y) => P.school(x, y, R.tilt), 60);
+  if (cc === 'JP' || R.old || cc === 'TH') place((x, y) => P.shrine(x, y, 42, 34, cc), 40);
+  place((x, y) => P.school(x, y, R.tilt + (r() - 0.5) * 0.6, cc), 60);
   const parks = []; for (let i = 0; i < R.parks - 1; i++) { const p = [30 + r() * 330, 40 + r() * 480, 26 + r() * 26, 20 + r() * 20]; if (free(p[0], p[1], 0)) parks.push(p); }
   // the street field (as in kit2), bent along the shore or the river
   const field = { valley: (x, y) => R.tilt + R.bend * Math.sin(x / 140 + R.cx) + 0.3 * Math.cos(y / 160 + R.cy),
@@ -81,10 +79,10 @@ function town(name, cc, names) {
   if (R.style === 'canal') for (const k of [230, 300, 370, 440]) o += `<circle cx="${f(cx)}" cy="${f(cy + 260)}" r="${k}" fill="none" stroke="${C.water}" stroke-width="8"/>`;
   if (R.style === 'hill') { for (let k = 1; k < 9; k++) o += `<circle cx="${f(R.hx)}" cy="${f(R.hy)}" r="${k * 52}" fill="none" stroke="${C.contour}" stroke-width="1.2"/>`; o += P.stairs(lines, R.hx, R.hy); }
   // big roads, kept on land: they stop at the sea (clip), cross a river as bridges
-  let roads = roadPts.map(ps => ps.length === 2 ? big(`M${f(ps[0][0])} ${f(ps[0][1])} L${f(ps[1][0])} ${f(ps[1][1])}`, 9) : big(curve(ps), 6.5)).join('');
+  let roads = RD.svg;
   if (river) for (const x of P.riverbank(river.pts, river.w, way).bridges) { const y = river.at(x); roads += `<path d="M${f(x)} ${f(y - river.w / 2 - 14)}V${f(y + river.w / 2 + 14)}" stroke="${C.edge}" stroke-width="7.4"/><path d="M${f(x)} ${f(y - river.w / 2 - 14)}V${f(y + river.w / 2 + 14)}" stroke="#fff" stroke-width="5"/>`; }
   o += landClip ? `<defs><clipPath id="land${hsh(name)}"><path d="${landClip}"/></clipPath></defs><g clip-path="url(#land${hsh(name)})">${roads}</g>` : roads;
-  o += over;
+  o += (landClip ? `<g clip-path="url(#land${hsh(name)})">${RD.top}</g>` : RD.top) + over;
   if (R.style === 'old') o += `<path d="${blob(r, cx, cy, 18, 14, 8)}" fill="${C.plaza}" stroke="${C.edge}"/>` + poi(cx, cy, G[R.temple]);
   if (R.style === 'hill') o += poi(R.hx + (cx - R.hx) * 0.35, R.hy + (cy - R.hy) * 0.35, G.view);
   if (st) { for (let i = 0; i < R.rails; i++) { const a = R.tilt + i * 0.5, dx = Math.cos(a) * 300, dy = Math.sin(a) * 300; o += rail(`M${f(st[0] - dx)} ${f(st[1] - dy)} L${f(st[0] + dx)} ${f(st[1] + dy)}`); }
@@ -103,6 +101,6 @@ const css = `*{box-sizing:border-box;margin:0}body{background:#d9dce2;font-famil
 .ph{width:390px;height:620px;border-radius:44px 44px 0 0;border:9px solid #111;border-bottom:0;overflow:hidden;position:relative;background:#f4f5f7}.ph svg{display:block}
 .sh{position:absolute;left:0;right:0;top:500px;bottom:0;background:#f4f5f7;border-radius:22px 22px 0 0;box-shadow:0 -6px 24px rgba(22,27,34,.14);padding:12px 18px}.gr{width:36px;height:5px;border-radius:3px;background:#d4d7dc;margin:0 auto 12px}.sh h2{font-size:22px;font-weight:700}`;
 const html = `<!doctype html><html lang="ko"><head><meta charset="utf-8"><style>${css}</style></head><body><h1>다녀간 곳 › 재료 10가지를 넣은 동네 8곳</h1><p class="s">목조 골목 · 중정 블록 · 마당 집 · 빌딩 · 아파트 단지 · 신사/절 경내 · 학교 운동장 · 모래사장+해안도로+방파제 · 둔치+다리 · 계단길 — 큰길은 물에서 멈춰요</p><div class="row">`
-  + TOWNS.map(([name, cc, flag, names]) => { const { svg, R } = town(name, cc, names); return `<div class="col"><b>${flag} ${name}</b><small>${R.style} · 물 ${R.water}${R.rails ? ` · 철도 ${R.rails}` : ''}${R.quiet ? ' · 조용한 주택가' : ''}</small><div class="ph"><svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${svg}</svg><div class="sh"><div class="gr"></div><h2>${flag} ${names[0]}</h2></div></div></div>`; }).join('') + `</div></body></html>`;
+  + TOWNS.map(([name, cc, flag, names]) => { const { svg, R } = town(name, cc, names); return `<div class="col"><b>${flag} ${name}</b><small>${R.style} · 물 ${R.water} · 큰길 ${R.sk || ''}${R.rails ? ` · 철도 ${R.rails}` : ''}${R.quiet ? ' · 조용한 주택가' : ''}</small><div class="ph"><svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${svg}</svg><div class="sh"><div class="gr"></div><h2>${flag} ${names[0]}</h2></div></div></div>`; }).join('') + `</div></body></html>`;
 fs.writeFileSync(path.join(__dirname, 'kit3.html'), html);
 console.log('ok');
