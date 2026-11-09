@@ -398,7 +398,7 @@ WEATHER
 - With new weather, also each saved city's "cond", "temp", "hi" and "lo".` : ''}
 
 KEEPING IN STEP
-- Never write again what PHONE NOW${life ? ' or LIFE NOW' : ''} holds: only new texts; a changed plan${life ? ', alarm or file' : ''} by its id ("already"); a known scene keeps its id, an edited message the ids listed.
+- Never write again what PHONE NOW${life ? ' or LIFE NOW' : ''} holds: only new texts; a moved or cancelled plan is its calendar record again ("was", "cancelled"); ${life ? 'a changed alarm or file by its id ("already"); ' : ''}a known scene keeps its id, an edited message the ids listed.
 
 LANGUAGE
 - Each text in the language its writer really uses. "ko", "kt", "ks", "pko": the Korean of a text, title, subject or posted photo not in Korean. Texts short.

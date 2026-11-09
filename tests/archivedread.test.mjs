@@ -819,12 +819,12 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.match(on, /"at": its message number \(every record has one\), "scene": the id of its scene in "scenes" or "",/);
     assert.match(on, /routines and interests recur\./);
     assert.ok(!plain.includes("LIFE NOW's usual") && !plain.includes('alarms and files') && plain.includes('"scenes" first, then "everyday" and "records".'));
-    assert.match(on, /- Never write again what PHONE NOW or LIFE NOW holds: only new texts; a changed plan, alarm or file by its id \("already"\); a known scene keeps its id, an edited message the ids listed\./);
+    assert.match(on, /- Never write again what PHONE NOW or LIFE NOW holds: only new texts; a moved or cancelled plan is its calendar record again \("was", "cancelled"\); a changed alarm or file by its id \("already"\); a known scene keeps its id, an edited message the ids listed\./);
     assert.match(on, /incoming texts and calls may arrive/);
     assert.ok(!on.includes('write events and app records'));
     assert.match(on, /Use locally fitting names; no new relative or partner\./);
     assert.ok(!on.includes('call home') && !on.includes('check on family'));
-    assert.ok(!on.includes('"made": [the fields') && on.includes('a changed plan, alarm or file by its id'));
+    assert.ok(!on.includes('"made": [the fields') && on.includes('a moved or cancelled plan is its calendar record again'));
     assert.ok(!on.includes('LOREBOOK') && on.includes('Background (sometimes): ARCHIVE BEFORE, STORY NOW'));
     assert.ok(!data.coreSystem().includes('"health" not counted'));
     assert.ok(!on.includes('Numbers only'));
