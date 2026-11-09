@@ -362,7 +362,7 @@ STORY AND PERSONAL LIFE
 
 EVERYDAY
 - The phone is lived in every waking hour, from who the owner is; contact goes both ways, and a group chat goes on without them.
-- Build each day's personal records from OWNER PROFILE${life ? ', LIFE NOW' : ''} (when given) and the owner's established habits, interests and relationships.
+- Build each day's personal records from who the owner is: what PHONE NOW shows they already do (whom they text, what they search, photograph and note), PEOPLE AROUND, OWNER PROFILE${life ? " and LIFE NOW's usual" : ''} (when given).
 - The current story may affect their mood, location and availability. Its ongoing matters are not subjects to develop in this section.
 - Each day is a set of phone records, not the next chapter of the story. Personal routines and independent interests can recur across days.
 - About ${LIFE_A_DAY} records for a full waking day, scaled to the hours covered, each day the story skips too. Use the apps this owner would use.

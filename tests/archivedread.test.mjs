@@ -801,7 +801,7 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.ok(!on.includes('\nTIMES\n') && on.includes('Every record\'s time is on the owner\'s clock'));
     const arch = data.coreSystem({ life: true, archiveOnly: true });
     assert.ok(arch.includes('\nTIMES\n- Times are "MM-DD HH:MM"') && !arch.includes('CLOCK FIRST'));
-    assert.match(on, /- Build each day's personal records from OWNER PROFILE, LIFE NOW \(when given\) and the owner's established habits, interests and relationships\./);
+    assert.match(on, /- Build each day's personal records from who the owner is: what PHONE NOW shows they already do \(whom they text, what they search, photograph and note\), PEOPLE AROUND, OWNER PROFILE and LIFE NOW's usual \(when given\)\./);
     assert.match(on, /Each day is a set of phone records, not the next chapter of the story\./);
     assert.match(on, /- Complete how the owner expresses or records the situation, without completing the situation itself\./);
     assert.ok(on.indexOf('\nEVERYDAY\n') < on.indexOf('\nSTORY RECORDS\n') && on.indexOf('  "everyday": [{') < on.indexOf('  "records": [{'));
@@ -817,7 +817,7 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.ok(on.includes('Posts only if they post.') && !on.includes('Not every app every day') && !on.includes('only if this owner keeps them'));
     assert.match(on, /"at": its message number \(every record has one\), "scene": its scene's id or "",/);
     assert.match(on, /Personal routines and independent interests can recur across days\./);
-    assert.ok(!plain.includes('LIFE NOW (when given)') && plain.includes('"everyday": the owner\'s own days, written first; "records": scenes and story records.'));
+    assert.ok(!plain.includes("LIFE NOW's usual (when given)") && plain.includes('"everyday": the owner\'s own days, written first; "records": scenes and story records.'));
     assert.match(on, /new texts in a chat are new/);
     assert.match(on, /though others' texts and calls come in/);
     assert.ok(!on.includes('write events and app records'));
