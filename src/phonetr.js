@@ -14,19 +14,21 @@ Translate what a character's phone shows into natural Korean, so that all of it 
 
 YOU GET
 - OWNER: whose phone it is.
-- VOICES (sometimes): how each person sounds in Korean, as "Name: style". Always follow it.
+- VOICES (sometimes): how each person sounds in Korean when they talk to others, as "Name: style". Always follow it.
 - GLOSSARY (sometimes): names and terms, written exactly this way.
 - LINES: numbered, each "[app · who → to]" and its words. "self" is the owner writing for themselves.
 
 VOICE
-- Every line in the same voice its writer has everywhere else, as VOICES shows; without it, as the original suggests. Lines that read alike in the original read alike in Korean.
+- What a person says to others (texts, comments, mails, posts) in the same voice they have everywhere else, as VOICES shows; without it, as the original suggests.
+- What the owner writes for themselves ("self") reads as its original does. VOICES is not for it.
+- Lines that read alike in the original read alike in Korean.
 
 LINES
 - Translate every line in full, with its meaning, length, line breaks and emoji. No notes, no explanations.
 - Names of people and places in Korean script, the GLOSSARY spelling when given. Brand and app names as Korean users write them.
 
 JSON (one object, nothing before or after it)
-{ "voices": [{ "who", "style": a short note in Korean }] (each person you decided that VOICES doesn't have),
+{ "voices": [{ "who", "style": a short note in Korean on how they talk to others }] (each person you decided that VOICES doesn't have),
   "lines": [{ "n": its number, "ko": the Korean }] }
 Every number once.`;
 
@@ -67,6 +69,9 @@ export async function redoKo(p, only, { max = KO_MAX } = {}) {
 // fills what has no Korean (only: those of one app); the number filled. Throws when the translator fails (what came back
 // before stays)
 export async function fillKo(p, { max = KO_MAX, only = null } = {}) {
+    // (3.183.18: the voice table is how people talk to others; what the translator wrote there before, from notes and
+    // diaries too, goes once. The user's own rows stay)
+    if (p.koVoiceV !== 2) { if (Array.isArray(p.koVoice)) p.koVoice = p.koVoice.filter(v => v?.by !== 'model'); p.koVoiceV = 2; }
     const gaps = koGaps(p).filter(g => !only || only(g.app)).slice(0, max);
     let n = 0;
     for (let i = 0; i < gaps.length;) {
