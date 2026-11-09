@@ -375,28 +375,20 @@ STEP 2 · SITUATIONS
 5. Nothing in "open" is stated or guessed as fact: no text, memo, search, mail or diary fills it. The owner may ask; no one answers. Anything said about a situation repeats or reacts to "known" and adds no fact.
 
 STEP 3 · RECORDS
-Go through each scene's messages in order. Write a record only in these cases, with "scene", "at", "said" (the exact words it comes from) and "situation":
-1. A phone action the messages show or say (a text, call, photo, search, mail, post, voice memo) → that record.
-2. A plan made → "calendar". A PHONE NOW plan the messages move → its calendar record again with "was"; called off or undone (an order cancelled) → "cancelled": true.${wallet ? ' Tickets go in the wallet; reservations and appointments in the calendar.' : ''} No booking, trip or purchase the story lacks.
-3. Each scene where the owner is somewhere → one "visit".
-4. Someone new the owner meets and would save → "contact".${life ? `
-5. An alarm or file the messages set or change → that record.` : ''}
-A record says no more than its "said". Nothing else goes in "records".
+"records": one entry for each day from PHONE NOW's "now" to the answer's "now", skipped days included, with all that is new on the phone that day. A record about a situation names it in "situation" and keeps to what its state allows.
+1. From the scenes, in order, only these, each with "scene", "at" and "said" (the exact words it comes from), saying no more than "said":
+   a. a phone action the messages show or say (a text, call, photo, search, mail, post, voice memo);
+   b. a plan made → "calendar"; a PHONE NOW plan the messages move → again with "was"; called off or undone (an order cancelled) → "cancelled": true.${wallet ? ' Tickets go in the wallet; reservations and appointments in the calendar.' : ''} No booking, trip or purchase the story lacks;
+   c. one "visit" for each scene where the owner is somewhere;
+   d. someone new the owner meets and would save → "contact"${life ? `;
+   e. an alarm or file the messages set or change` : ''}.
+2. Around them, the owner's own life ("scene": ""), in the waking hours no scene covers. Asleep or busy in a scene: no owner activity; incoming texts and calls may arrive.
+   - About ${LIFE_A_DAY} a full waking day, fewer for part of one. A full day uses at least 6 apps: texts with 3 or more people, photos, searches, and others from their range (calls, notes, mails, posts, voice memos${life ? ', alarms, files' : ''}).
+   - From PHONE NOW's habits${life ? ", LIFE NOW's usual" : ''} and OWNER PROFILE (routines and interests recur); PEOPLE AROUND (contact both ways; group chats go on without the owner); people from a scene may text later, if it fits. The story sets mood, place and free time.
+   - People: from the story, PEOPLE AROUND, or new plausible ones with local names (each with a "contact"). No new relative or partner; relationship labels only from the story; no one they are no longer in touch with.
+   - Diary: one for a day that ends in these hours or a scene that stays with them. Voice memo: about one every few days.
 
-STEP 4 · EVERYDAY
-1. Hours: the waking hours from PHONE NOW's "now" to the answer's "now" that no scene covers, skipped days included. Asleep or busy in a scene: no owner activity; incoming texts and calls may arrive.
-2. Amount: about ${LIFE_A_DAY} records per full waking day, fewer for part of one. A full day uses at least 6 apps: texts with 3 or more people, photos, searches, and others from their range (calls, notes, mails, posts, voice memos${life ? ', alarms, files' : ''}).
-3. Take each day from, in order:
-   a. people the owner had a scene with may text later, if it fits;
-   b. situations: only what STEP 2 allows for their state;
-   c. PHONE NOW's habits${life ? ", LIFE NOW's usual" : ''}, OWNER PROFILE: routines and interests that recur;
-   d. PEOPLE AROUND: contact both ways; group chats go on without the owner.
-   The story sets mood, place and free time.
-4. People: from the story, PEOPLE AROUND, or new plausible ones with local names (each with a "contact"). No new relative or partner; relationship labels only from the story; no one they are no longer in touch with.
-5. Diary: one entry for a day that ends in these hours or a scene that stays with them, on that day. Voice memo: about one every few days.
-6. Nothing in "records" is written again in "everyday".
-
-STEP 5 · EACH APP
+STEP 4 · EACH APP
 - Text: one record is one exchange, in the tone of that relationship; replies may be late or missing.
 - Call, photo: what the owner would really do or shoot, in their eye.
 - Search: what they would type. About a situation: only words in its "known".
@@ -432,10 +424,8 @@ JSON (one object, nothing before or after it)
   "moved": [{ "name", "city": in English, "names": [as the messages write it, then in English and Korean], "tz", "in": its country code }] (people these messages put in another city, the owner too),${zone ? `
   "statusCity": whose clock the newest status line here shows (the app can't place its scene): a city or person in OWNER'S CLOCK, "owner" for the owner's own, another city as { "city": in English, "tz" }, or "" when the messages don't say,` : ''}
   "scenes": [{ "id", "at": its source message number, "quote": exact words from that message or archive section, "date": "MM-DD", "time": "HH:MM" or "", "summary": one short line, "place": the scene's place, or "", "city": its city, or "", "with": [people physically there with the owner; otherwise []] }],
-  "situations": [{ "id": a short tag, "what", "state", "known", "open", "eta": "MM-DD" or "" }],
-  "records": [{ "type": "contact" | "text" | "call" | "photo" | "note" | "search" | "calendar" | "post" | "profile" | "mail" | "diary" | "visit" | "voice"${lifeTypes},
-    "at": its message number, "scene": its scene id, "said": exact words, "situation": a situation id or "",${life ? ' "already": a LIFE NOW id or "",' : ''} and the fields of its type in ITEMS }],
-  "everyday": [{ "date": "MM-DD", "records": [{ "type": one of the ITEMS types but "profile" and "visit", "situation": a situation id or "", and the fields of its type in ITEMS }] }] (one entry a day, in order)${life ? `,
+  "situations": [{ "id": a short tag, "what", "state", "known", "open", "eta": an order's expected "MM-DD", else "" }],
+  "records": [{ "date": "MM-DD", "records": [{ "type": "contact" | "text" | "call" | "photo" | "note" | "search" | "calendar" | "post" | "profile" | "mail" | "diary" | "visit" | "voice"${lifeTypes}, "scene": its scene id, or "" for the owner's own life, "at": its message number, "said": exact words, "situation": a situation id or "",${life ? ' "already": a LIFE NOW id or "",' : ''} and the fields of its type in ITEMS }] }] (one entry a day, in order)${life ? `,
   "health": [{ "date": the day they woke, "already": a LIFE NOW id or "", "sleep", "wake", "woke", "steps", "km", "floors", "hr": [low, high], "workouts": [{ "kind", "time", "min", "km" }], "coffee", "coffeeKind", "water", "weight", "screen": { "apps": { app: minutes }, "pickups", "late" } }],
   "usual": { "weight", "height", "coffee", "coffeeKind", "coffeeKo", "water", "bed", "sleep", "wake", "steps", "workouts", "rest", "screen": { "add": [{ "app", "kind": chat | social | game | video | music | work | reading | shopping | money | maps | health | other, "min" }], "drop", "pickups", "late" } } or null` : ''}${life && weather ? `,\n${WEATHER_JSON}` : ''} }
 Write in this order. Numbers are plain JSON numbers. Nothing new: "records": [].
@@ -768,12 +758,36 @@ export function homeScreens(raw, away, usual) {
     for (const e of arr(raw.events)) { if (!e?.phone || typeof e.phone !== 'object') continue; arr(e.phone.health).forEach(day); habit(e.phone.usual); }
     arr(raw.days).forEach(day);
 }
+// "records" as one day list (3.180~: [{ date, records: [...] }], the story's and the owner's own together): a record with
+// its scene or its words ("said") is the story's, as the flat list has it; the rest is the owner's own life, "everyday" by
+// app. The model says which; the app only reads it. A flat list and "everyday" as they are
+const isDay = r => r && typeof r === 'object' && !Array.isArray(r) && !r.type && Array.isArray(r.records);
+const ofStory = r => ['visit', 'profile'].includes(r.type) || !!String(r.scene ?? '').trim() || !!String(r.said ?? '').trim();
+export function splitDays(recs0, own) {
+    if (!Array.isArray(recs0) || !recs0.some(isDay)) return { recs: recs0, own };
+    const recs = [], days = [];
+    for (const r of recs0) {
+        if (!isDay(r)) { recs.push(r); continue; }
+        const mine = [];
+        for (const x of r.records) {
+            if (!x || typeof x !== 'object' || Array.isArray(x)) continue;
+            if (!ofStory(x)) { mine.push(x); continue; }
+            // (a diary without its date is that day's)
+            recs.push(x.type === 'diary' && !String(x.date ?? '').trim() && r.date ? { ...x, date: r.date } : x);
+        }
+        if (mine.length) days.push({ date: r.date, records: mine });
+    }
+    if (!days.length) return { recs, own };
+    const a = edLists(own), b = edLists(days), ed = { ...a };
+    for (const [k, v] of Object.entries(b)) ed[k] = [...arr(a[k]), ...v];
+    return { recs, own: ed };
+}
 export const recordCount = (recs, ed0) => { const ed = edLists(ed0), own = ed && typeof ed === 'object' && !Array.isArray(ed) ? Object.keys(EVERYDAY_TYPE).flatMap(k => arr(ed[k]).map(x => ({ ...x, from: 'life' }))) : [], xs = [...arr(recs), ...own].filter(r => r && typeof r === 'object'), untimed = untimedLife(ed), nosaid = arr(recs).filter(r => r && typeof r === 'object' && r.from !== 'life' && !['scene', 'contact', 'profile', 'health', 'usual'].includes(r.type) && !String(r.said ?? '').trim()).length; return { scenes: xs.filter(r => r.type === 'scene').length, story: xs.filter(r => r.type !== 'scene' && r.from !== 'life').length, life: xs.filter(r => r.type !== 'scene' && r.from === 'life').length, ...(untimed ? { untimed } : {}), ...(nosaid ? { nosaid } : {}) }; };
 export function recordsCore(raw, textOf = () => '') {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw) || !(Array.isArray(raw.records) || Array.isArray(raw.scenes))) return raw;
     // (the owner's own life comes in "everyday", a list for each app: a life record each, as the old answer's "from": "life")
     // ("scenes" first, 3.180~: each a scene record; a visit on one of them is with its scene's companions, as the scene has them)
-    const { records: recs0, scenes: sc0, everyday: own, ...rest } = raw, ed = edLists(own);
+    const { records: recs1, scenes: sc0, everyday: own1, ...rest } = raw, { recs: recs0, own } = splitDays(recs1, own1), ed = edLists(own);
     const sceneRows = arr(sc0).filter(x => x && typeof x === 'object' && !Array.isArray(x)).map(x => ({ ...x, type: 'scene' }));
     const withOf = new Map(sceneRows.map(x => [String(x.id ?? x.scene ?? '').trim(), x.with]).filter(([k]) => k));
     const records = [...sceneRows, ...arr(recs0).map(r => (Array.isArray(sc0) && r && typeof r === 'object' && r.type === 'visit' && withOf.has(String(r.scene ?? '').trim()) ? { ...r, with: withOf.get(String(r.scene).trim()) } : r))];
@@ -2035,7 +2049,7 @@ async function updatePhone(m, owner) {
         const advanced = arr(core0?._advanced);
         if (core0 && typeof core0 === 'object') delete core0._advanced;
         // (how many scenes, story and life records the answer had: for checking the story isn't crowded out)
-        const recCount = Array.isArray(answer0?.records) || Array.isArray(answer0?.scenes) ? recordCount([...arr(answer0.scenes).filter(x => x && typeof x === 'object').map(x => ({ ...x, type: 'scene' })), ...arr(answer0.records)], answer0.everyday) : null;
+        const recCount = Array.isArray(answer0?.records) || Array.isArray(answer0?.scenes) ? (sp => recordCount([...arr(answer0.scenes).filter(x => x && typeof x === 'object').map(x => ({ ...x, type: 'scene' })), ...arr(sp.recs)], sp.own))(splitDays(answer0.records, answer0.everyday)) : null;
         // (no app only Korea has on a phone whose owner lives elsewhere, as the screen time's fill)
         homeScreens(core0, !!homeCountry(p) && homeCountry(p) !== 'KR', p.life?.health?.usual?.screen);
         // the answer is for the chat and messages it was asked about
