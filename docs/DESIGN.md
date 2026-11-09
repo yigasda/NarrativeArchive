@@ -11,7 +11,8 @@
 | 5. 이렇게 하는 이유 | 소망이 싫어하는 것 · 좋아한 것 |
 | 6. 화면별 참고 | 공통 토큰, 은행 · 지갑 · 날씨 · 그 밖의 앱 |
 | 7. 확장 패널 · 팝업 | 휴대폰 바깥 |
-| 8. 남은 일 | |
+| 8. 가끔 보는 것 | 실제 폰 준비(한 번), 주요 파일, 공용 도우미, 지난 시안 |
+| 9. 남은 일 | |
 
 ---
 
@@ -45,18 +46,6 @@
 - 버튼 위쪽 빛, 그림자 같은 지금 앱의 질감을 시안에도 넣어요. 빠지면 예전 CSS보다 덜 고급스러워 보여요.
 - 실제 데이터 모양(독일어 상점 이름 + 한국어)으로 채우면 판단하기 쉬워요.
 
-#### 지난 시안 보기
-
-- 시안 HTML과 실제 폰 확인 화면은 `docs/mockups/`에 있어요(목록은 `docs/mockups/README.md`).
-- claude.ai 아티팩트로 남은 시안(소망 계정)
-  - 서사 아카이브 UI 정리 시안 — https://claude.ai/artifact/2h3uXNreJvqRx7R15ydzba
-  - 서사 아카이브 새 기능 UI 시안 — https://claude.ai/artifact/KGTyWaF6YwRk99qNq4GGCK
-  - 압축 작업실 플랜 — https://claude.ai/artifact/KF5MdQoffetxtH3iqQ2AQt
-  - 클리어 글래스 폰 — https://claude.ai/artifact/RRnQjAZYQazFueCNUdgem9
-  - 글래스 폰 시안 — https://claude.ai/artifact/E3XbNxBS2Y8iRjzZ5SpcCH
-- 아티팩트는 Artifact 도구의 `read`로 읽어요(웹으로 받지 않아요). 다른 계정이면 소망이 공유를 켜 줘야 열려요.
-- 새 시안을 그리면 고른 것은 `docs/mockups/`에 넣어 두세요. 세션 임시 폴더는 세션이 끝나면 사라져요.
-
 ### 2단계: 코드로 옮기기
 
 #### 화면이 그려지는 방식
@@ -65,37 +54,6 @@
 - 앱 화면은 390 × 844 보드 크기로 그리고, 실제 창에 맞춰 줄여요.
 - 루트 클래스는 `.na_ph_scr.ax`이고, 앱 안에서는 `.ax`가 기준이에요.
 - 눌러서 화면을 옮기는 건 `data-go="경로"`(+ `data-i="값"`)예요. `src/phone.js`의 `$root.on('click', '.na_ph_frame [data-go]', …)`가 받아서 `view = "경로:값"`으로 바꾸고 다시 그려요. `<button>`이 아니어도 `data-go`만 있으면 눌려요(예: 명세서 표의 `<tr>`).
-
-#### 주요 파일
-
-| 파일 | 내용 |
-|---|---|
-| `src/phone.js` | 화면 고르기(`screen()`), 경로표, 클릭 처리, 스크롤 유지, 은행 환율 칸 처리 |
-| `src/phoneapps.js` | 공용 도우미와 아이콘 `AX`, 앱별 색 `AXB` / `AXB_C`, 메시지 · 전화 · 사진 등 1쪽 앱들 |
-| `src/phonehome.js` | 잠금 · 홈 1쪽 · 2쪽, 홈 아이콘(`CG_I` 모양, `CG_GEL` 색), 위젯 |
-| `src/phonemoney.js` | 은행 · 고정 지출 · 알림 · 송금 · 명세서 · 확인증 · 더보기, 지갑(카드 · 멤버십 · 패스), 쇼핑, 음성 메모 |
-| `src/phonelifeapps.js` | 시계 · 건강 · 파일 · 날씨 · 배달 · 홈 날씨 위젯 |
-| `src/phonefood.js` | 음식 그림(바탕 159개, 토핑, 곁들임). 낱말로 그림 고르기(`GUESS`, `WORD`, `wordsPic`, `dishPic`) |
-| `src/phoneprod.js` | 쇼핑 상품 실루엣 50종. 낱말로 종류 · 색 고르기(`prodKind`, `prodSvg`) |
-| `src/phonedata.js` | 폰 데이터 모양, 채우기 프롬프트, `storyNow` |
-| `src/phonelife.js` / `phonesync*.js` | 채우기 · 반영(데이터 쪽). **4장 데이터 쪽 경계 참고, 건드리지 않아요** |
-| `style.css` | 전부 한 파일(약 7000줄). 앱마다 주석 머리(`/* 은행 › … */`)로 묶여 있어요 |
-
-#### 공용 도우미 (`src/phoneapps.js`)
-
-- `ax(k, size=22, color='currentColor', strokeWidth=2, fill='none')`: `AX[k]` 경로로 선 아이콘 SVG를 만들어요.
-- 새 아이콘은 쓰는 파일 위쪽에 `Object.assign(AX, { 이름: 'path d' })`로 더해요. 24×24 기준 선 아이콘이에요.
-- **이름이 겹치면 덮어써요.** 먼저 `grep -n "이름:" src/*.js`로 확인해요.
-- `axBar(p, now, color)`: 상태줄이에요.
-- `axTop(left, right)`: 위쪽 줄이에요.
-- `axCb(go)`: 둥근 뒤로 버튼이에요.
-- `axH1(title, sub)`: 큰 제목이에요.
-- `axInd(color)`: 아래 홈 막대예요.
-- `axDay(p, now, 'MM-DD')`: "오늘" 또는 날짜예요.
-- `axTint(name)`: 이름마다 고정된 아바타 색이에요.
-- `axLetter(name, size)`: 글자 아바타예요.
-- `axKp(p)`: 한국어 알약이에요.
-- `busyHtml`: 도는 아이콘이에요.
 
 #### 새 화면을 더할 때 체크리스트
 
@@ -111,33 +69,8 @@
 
 ### 3단계: 실제 폰에서 확인
 
+처음이면 8장 "실제 폰 준비"부터 해요.
 
-#### 준비 (한 번)
-
-1. SillyTavern을 받아요(1.19.0에서 확인).
-   ```bash
-   git clone https://github.com/SillyTavern/SillyTavern ~/sillytavern && cd ~/sillytavern && npm install
-   node server.js   # :8000 (config.yaml이 처음 생겨요. whitelistMode 기본값으로 127.0.0.1 접속 가능)
-   ```
-   새로 깐 SillyTavern은 처음 열 때 **환영 창(페르소나 이름)**이 떠서 캐릭터 목록이 안 불려요(`probe.cjs`가 `characters?.length > 0`에서 멈춰요). 한 번 저장을 눌러 넘겨요.
-   ```js
-   await p.goto('http://127.0.0.1:8000/'); await p.waitForTimeout(8000); await p.click('dialog .popup-button-ok');  // settings.json의 firstRun이 false가 돼요
-   ```
-   기본 연결이 AI Horde인데 클라우드 세션에서는 Horde에 접속이 안 돼요. `data/default-user/settings.json`의 `"main_api": "koboldhorde"`를 `"openai"`로 바꿔 둬요. 로그의 `aihorde.net` 오류와 확장 업데이트 500(`Directory is not a Git repository`)은 무시해도 돼요.
-2. 확장을 넣어요(바꿀 때마다 다시 복사).
-   ```bash
-   mkdir -p ~/sillytavern/data/default-user/extensions/NarrativeArchive
-   cp -r manifest.json index.js src style.css css assets ~/sillytavern/data/default-user/extensions/NarrativeArchive/
-   ```
-   `style.css`는 `css/` 파일들을 `@import`로 불러요. `css`를 빼먹으면 스타일이 하나도 안 먹어요(콘솔에 `Refused to apply style … MIME type ('text/plain')`).
-   `src` · `style.css` · `css`만 바뀌었으면 그 셋만 복사해요. 브라우저를 새로 열면 반영돼요.
-3. 테스트 채팅을 넣어요. 기본 캐릭터 Seraphina가 0번이어야 해요.
-   ```bash
-   mkdir -p ~/sillytavern/data/default-user/chats/default_Seraphina
-   cp tools/dev/na_test.jsonl ~/sillytavern/data/default-user/chats/default_Seraphina/
-   ```
-4. 가짜 모델을 켜요: `node tools/dev/fakeph.mjs`(:5555). 폰 만들기 · 채우기 · 반영에 정해진 답을 줘요. 마지막 요청은 `$TMPDIR/na_fakeph_last_req.json`에 남아요(프롬프트 확인용).
-5. Playwright: 클라우드 세션에는 Chromium이 미리 깔려 있어요. `playwright install`은 하지 않아요.
 
 #### 찍기
 
@@ -504,7 +437,83 @@ SillyTavern 테마는 `.menu_button`, `input`, `select`, `textarea`, `small`, �
 
 ---
 
-## 8. 남은 일 · 아이디어
+## 8. 가끔 보는 것 (필요할 때만)
+
+처음 한 번이나 찾아볼 때만 봐요. 매 작업마다 읽지 않아도 돼요.
+
+### 실제 폰 준비 (한 번)
+
+1. SillyTavern을 받아요(1.19.0에서 확인).
+   ```bash
+   git clone https://github.com/SillyTavern/SillyTavern ~/sillytavern && cd ~/sillytavern && npm install
+   node server.js   # :8000 (config.yaml이 처음 생겨요. whitelistMode 기본값으로 127.0.0.1 접속 가능)
+   ```
+   새로 깐 SillyTavern은 처음 열 때 **환영 창(페르소나 이름)**이 떠서 캐릭터 목록이 안 불려요(`probe.cjs`가 `characters?.length > 0`에서 멈춰요). 한 번 저장을 눌러 넘겨요.
+   ```js
+   await p.goto('http://127.0.0.1:8000/'); await p.waitForTimeout(8000); await p.click('dialog .popup-button-ok');  // settings.json의 firstRun이 false가 돼요
+   ```
+   기본 연결이 AI Horde인데 클라우드 세션에서는 Horde에 접속이 안 돼요. `data/default-user/settings.json`의 `"main_api": "koboldhorde"`를 `"openai"`로 바꿔 둬요. 로그의 `aihorde.net` 오류와 확장 업데이트 500(`Directory is not a Git repository`)은 무시해도 돼요.
+2. 확장을 넣어요(바꿀 때마다 다시 복사).
+   ```bash
+   mkdir -p ~/sillytavern/data/default-user/extensions/NarrativeArchive
+   cp -r manifest.json index.js src style.css css assets ~/sillytavern/data/default-user/extensions/NarrativeArchive/
+   ```
+   `style.css`는 `css/` 파일들을 `@import`로 불러요. `css`를 빼먹으면 스타일이 하나도 안 먹어요(콘솔에 `Refused to apply style … MIME type ('text/plain')`).
+   `src` · `style.css` · `css`만 바뀌었으면 그 셋만 복사해요. 브라우저를 새로 열면 반영돼요.
+3. 테스트 채팅을 넣어요. 기본 캐릭터 Seraphina가 0번이어야 해요.
+   ```bash
+   mkdir -p ~/sillytavern/data/default-user/chats/default_Seraphina
+   cp tools/dev/na_test.jsonl ~/sillytavern/data/default-user/chats/default_Seraphina/
+   ```
+4. 가짜 모델을 켜요: `node tools/dev/fakeph.mjs`(:5555). 폰 만들기 · 채우기 · 반영에 정해진 답을 줘요. 마지막 요청은 `$TMPDIR/na_fakeph_last_req.json`에 남아요(프롬프트 확인용).
+5. Playwright: 클라우드 세션에는 Chromium이 미리 깔려 있어요. `playwright install`은 하지 않아요.
+
+### 주요 파일
+
+| 파일 | 내용 |
+|---|---|
+| `src/phone.js` | 화면 고르기(`screen()`), 경로표, 클릭 처리, 스크롤 유지, 은행 환율 칸 처리 |
+| `src/phoneapps.js` | 공용 도우미와 아이콘 `AX`, 앱별 색 `AXB` / `AXB_C`, 메시지 · 전화 · 사진 등 1쪽 앱들 |
+| `src/phonehome.js` | 잠금 · 홈 1쪽 · 2쪽, 홈 아이콘(`CG_I` 모양, `CG_GEL` 색), 위젯 |
+| `src/phonemoney.js` | 은행 · 고정 지출 · 알림 · 송금 · 명세서 · 확인증 · 더보기, 지갑(카드 · 멤버십 · 패스), 쇼핑, 음성 메모 |
+| `src/phonelifeapps.js` | 시계 · 건강 · 파일 · 날씨 · 배달 · 홈 날씨 위젯 |
+| `src/phonefood.js` | 음식 그림(바탕 159개, 토핑, 곁들임). 낱말로 그림 고르기(`GUESS`, `WORD`, `wordsPic`, `dishPic`) |
+| `src/phoneprod.js` | 쇼핑 상품 실루엣 50종. 낱말로 종류 · 색 고르기(`prodKind`, `prodSvg`) |
+| `src/phonedata.js` | 폰 데이터 모양, 채우기 프롬프트, `storyNow` |
+| `src/phonelife.js` / `phonesync*.js` | 채우기 · 반영(데이터 쪽). **4장 데이터 쪽 경계 참고, 건드리지 않아요** |
+| `style.css` | 전부 한 파일(약 7000줄). 앱마다 주석 머리(`/* 은행 › … */`)로 묶여 있어요 |
+
+### 공용 도우미 (`src/phoneapps.js`)
+
+- `ax(k, size=22, color='currentColor', strokeWidth=2, fill='none')`: `AX[k]` 경로로 선 아이콘 SVG를 만들어요.
+- 새 아이콘은 쓰는 파일 위쪽에 `Object.assign(AX, { 이름: 'path d' })`로 더해요. 24×24 기준 선 아이콘이에요.
+- **이름이 겹치면 덮어써요.** 먼저 `grep -n "이름:" src/*.js`로 확인해요.
+- `axBar(p, now, color)`: 상태줄이에요.
+- `axTop(left, right)`: 위쪽 줄이에요.
+- `axCb(go)`: 둥근 뒤로 버튼이에요.
+- `axH1(title, sub)`: 큰 제목이에요.
+- `axInd(color)`: 아래 홈 막대예요.
+- `axDay(p, now, 'MM-DD')`: "오늘" 또는 날짜예요.
+- `axTint(name)`: 이름마다 고정된 아바타 색이에요.
+- `axLetter(name, size)`: 글자 아바타예요.
+- `axKp(p)`: 한국어 알약이에요.
+- `busyHtml`: 도는 아이콘이에요.
+
+### 지난 시안 보기
+
+- 시안 HTML과 실제 폰 확인 화면은 `docs/mockups/`에 있어요(목록은 `docs/mockups/README.md`).
+- claude.ai 아티팩트로 남은 시안(소망 계정)
+  - 서사 아카이브 UI 정리 시안 — https://claude.ai/artifact/2h3uXNreJvqRx7R15ydzba
+  - 서사 아카이브 새 기능 UI 시안 — https://claude.ai/artifact/KGTyWaF6YwRk99qNq4GGCK
+  - 압축 작업실 플랜 — https://claude.ai/artifact/KF5MdQoffetxtH3iqQ2AQt
+  - 클리어 글래스 폰 — https://claude.ai/artifact/RRnQjAZYQazFueCNUdgem9
+  - 글래스 폰 시안 — https://claude.ai/artifact/E3XbNxBS2Y8iRjzZ5SpcCH
+- 아티팩트는 Artifact 도구의 `read`로 읽어요(웹으로 받지 않아요). 다른 계정이면 소망이 공유를 켜 줘야 열려요.
+- 새 시안을 그리면 고른 것은 `docs/mockups/`에 넣어 두세요. 세션 임시 폴더는 세션이 끝나면 사라져요.
+
+---
+
+## 9. 남은 일 · 아이디어
 
 - **쇼핑:** 맨 위 종 · 장바구니, 아래 탭의 홈 · 카테고리 · 내 정보가 눌러도 아무것도 안 돼요. 살리거나 빼야 해요(홈 · 내 정보 같은 탭은 필요 없어요).
 - **파일:** `look` 목록 대신 사진 · 영상은 한 줄 설명을 코드가 낱말로 읽게 바꾸자고 미뤄 둔 게 있어요. 옛 `look` 값은 계속 읽고, 바꾼 뒤 반영 쪽에 `look` 목록을 지시문에서 빼라고 메시지를 줘요.
