@@ -358,7 +358,7 @@ ${archiveOnly ? `TIMES\n${CORE_TIMES}` : `${CORE_CLOCK_FIRST}\n${CORE_TIMES}`}
 STORY AND PERSONAL LIFE
 - Classify each record by what it is about, not by whether the phone activity was explicitly described.
 - Anything about a story event goes in "records", including made-up texts, searches, notes and diary entries about it.
-- "everyday" follows the owner's own daily life. The story may shape its mood and rhythm, but it never reports, resolves or extends a story event.
+- "everyday" follows the owner's own daily life. A story matter comes into it only as a feeling: never its next step, an arrival, a completion, a new fact, a secret or how it came about.
 
 EVERYDAY
 - The phone is lived in every waking hour, from who the owner is; contact goes both ways, and a group chat goes on without them.
@@ -390,7 +390,7 @@ THE APPS
 IN THEIR OWN WORDS (notes, the diary, voice memos)
 - The phone's most personal records: written out in full as this owner would write or say them, never a summary of the day.
 - Notes: in the shape a real note has, short or long as they are, with their own shorthand, spelling and mix of languages.
-- The diary: an entry when a story day ends in these messages or a scene stays with them, as long as this owner would write it; not the day's events in order. A day the story shows: what happened and what they feel about it; another day: that day of their life. The diary is the owner's day: it goes in "everyday" on its day, and the story comes into it only as the messages tell it and as feelings.
+- The diary: an entry when a story day ends in these messages or a scene stays with them, as long as this owner would write it; not the day's events in order. A day the story shows: what happened and what they feel about it; another day: that day of their life. The diary is the owner's day: it goes in "everyday" on its day.
 - Voice memos: about one every few days; spoken, not written: the way the owner talks in the archive and chat, with pauses (…), restarts and half sentences, at a moment they could talk into the phone alone, for instance after a fight, on the way somewhere or late at night. 20 to 90 seconds of speech, "sec" to fit, "place" where they were. Not the diary told again.${life ? `
 
 HEALTH

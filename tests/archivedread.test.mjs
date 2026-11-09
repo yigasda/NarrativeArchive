@@ -804,7 +804,7 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.match(on, /- Build each day's personal records from who the owner is: what PHONE NOW shows they already do \(whom they text, what they search, photograph and note\), PEOPLE AROUND, OWNER PROFILE and LIFE NOW's usual \(when given\)\./);
     assert.match(on, /Each day is a set of phone records, not the next chapter of the story\./);
     assert.match(on, /Use the apps this owner would use, for example a photo of lunch, a search, a note, a mail, texts and calls by the person, a voice memo, a diary entry when the day ends, an alarm, a saved file\./);
-    assert.match(on, /The diary is the owner's day: it goes in "everyday" on its day, and the story comes into it only as the messages tell it and as feelings\./);
+    assert.match(on, /The diary is the owner's day: it goes in "everyday" on its day\.\n/);
     assert.match(on, /- Complete how the owner expresses or records the situation, without completing the situation itself\./);
     assert.ok(on.indexOf('\nEVERYDAY\n') < on.indexOf('\nSTORY RECORDS\n') && on.indexOf('  "everyday": [{') < on.indexOf('  "records": [{'));
     assert.match(on, /- For each person the owner had a scene with in NEW MESSAGES: at least one text between the two later these hours, in their own voices/);
@@ -812,7 +812,7 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.match(on, /\nphoto: "caption", "ko", "time", "mood"/);
     assert.match(on, /The diary: an entry when a story day ends in these messages or a scene stays with them, as long as this owner would write it;/);
     assert.match(on, /Voice memos: about one every few days/);
-    assert.match(on, /- "everyday" follows the owner's own daily life\. The story may shape its mood and rhythm, but it never reports, resolves or extends a story event\./);
+    assert.match(on, /- "everyday" follows the owner's own daily life\. A story matter comes into it only as a feeling: never its next step, an arrival, a completion, a new fact, a secret or how it came about\./);
     assert.ok(!on.includes('"made": [what') && !on.includes('"story": [') && on.includes('"said": exact words of the message it comes from,'));
     assert.match(on, /photo: "caption", "ko", "time", "mood"/);
     assert.ok(!on.includes('talk over each other') && on.includes('contact goes both ways, and a group chat goes on without them.'));
