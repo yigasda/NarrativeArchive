@@ -1,5 +1,5 @@
 const { execFileSync } = require('child_process'); const fs = require('fs'); const { chromium } = require('playwright');
-const P = [['', '지금'], ['1', '한 단계 연하게'], ['2', '두 단계 연하게']];
+const P = [['1', '한 단계'], ['1.5', '1.5단계'], ['2', '두 단계']];
 const dir = process.argv[2], out = process.argv[3]; fs.mkdirSync(out, { recursive: true });
 (async () => { const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 470, height: 900 }, deviceScaleFactor: 2 }); const cells = [];
   for (const [r, t] of P) { const h = `${out}/road${r || 0}.html`;

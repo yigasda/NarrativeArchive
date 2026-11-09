@@ -19,8 +19,8 @@ const PALS = {
     label: '#6a5f50', foot: '#e3d8c3', resi: '#efe6d4', shop: '#f0dcc4', works: '#e2dccf', railyard: '#e3dccd', school: '#efe1b8', plaza: '#ebdfc8', mark: '#d2c09f' },
   terra: { land: '#f1ebe3', built: '#ebe2d8', bld: '#dcc4b2', shadow: '#bea08a', edge: '#d5c7b9', park: '#c8ddb4', forest: '#b3cf9c', water: '#a5c8e6', major: '#f8d58a', majorEdge: '#d9b064',
     label: '#66594f', foot: '#e2d7cc', resi: '#eee6dc', shop: '#f0dccd', works: '#e3ded8', railyard: '#e4ded7', school: '#efe2c0', plaza: '#ebe0d3', mark: '#d0b19b' } };
-// ROAD=1|2: softer yellow for the big roads (1 a step, 2 two steps)
-if (PALS.neutral && process.env.ROAD) Object.assign(PALS.neutral, process.env.ROAD === '2' ? { major: '#fcedc6', majorEdge: '#ead8a8' } : { major: '#fce3a2', majorEdge: '#e9cd88' });
+// ROAD=1|1.5|2: softer yellow for the big roads
+if (PALS.neutral && process.env.ROAD) Object.assign(PALS.neutral, process.env.ROAD === '2' ? { major: '#fcedc6', majorEdge: '#ead8a8' } : process.env.ROAD === '1.5' ? { major: '#fce8b4', majorEdge: '#e9d298' } : { major: '#fce3a2', majorEdge: '#e9cd88' });
 if (PALS[process.env.PAL ?? 'neutral']) Object.assign(C, PALS[process.env.PAL ?? 'neutral']);   // 기본: 2 중립 밝은 톤 + B·C·D
 const d = JSON.parse(require('fs').readFileSync(src, 'utf8'));
 const mx = 111320 * Math.cos(lat0 * Math.PI / 180), my = 110540;
