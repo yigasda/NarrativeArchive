@@ -21,6 +21,9 @@ const PALS = {
     label: '#66594f', foot: '#e2d7cc', resi: '#eee6dc', shop: '#f0dccd', works: '#e3ded8', railyard: '#e4ded7', school: '#efe2c0', plaza: '#ebe0d3', mark: '#d0b19b' } };
 // ROAD=1|1.5|2: softer yellow for the big roads
 if (PALS.neutral && process.env.ROAD) Object.assign(PALS.neutral, process.env.ROAD === '2' ? { major: '#fcedc6', majorEdge: '#ead8a8' } : process.env.ROAD === '1.5' ? { major: '#fce8b4', majorEdge: '#e9d298' } : { major: '#fce3a2', majorEdge: '#e9cd88' });
+// PAL=mix: halfway between the neutral tone and the old beige
+{ const hx = c => [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16)), mixc = (a, b) => '#' + hx(a).map((v, i) => Math.round((v + hx(b)[i]) / 2).toString(16).padStart(2, '0')).join('');
+  PALS.mix = Object.fromEntries(Object.entries(PALS.neutral).map(([k2, v]) => [k2, C[k2] ? mixc(v, C[k2]) : v])); }
 if (PALS[process.env.PAL ?? 'neutral']) Object.assign(C, PALS[process.env.PAL ?? 'neutral']);   // 기본: 2 중립 밝은 톤 + B·C·D
 const d = JSON.parse(require('fs').readFileSync(src, 'utf8'));
 { const cv = src.replace(/\.json$/, '-cover.json'); if (require('fs').existsSync(cv)) { const seen = new Set(d.elements.map(e => e.type + e.id)); for (const e of JSON.parse(require('fs').readFileSync(cv, 'utf8')).elements) if (!seen.has(e.type + e.id)) d.elements.push(e); } }
@@ -31,7 +34,6 @@ if (FX.includes('C')) {
   let n = 0; for (const e of d.elements) if (e.tags && e.tags.building && e.geometry) { const g = e.geometry[0], x = (g.lon - lon0) * mx, y = (g.lat - lat0) * my; if (Math.abs(x) < 500 && Math.abs(y) < 500) n++; }
   span = Math.max(1000, Math.min(1550, 2600 - n * 1.1)); console.log('density', n, '→ span', Math.round(span));
 }
-if (process.env.STYLE === 'pretty') span *= 0.7;                 // closer, like the old maps: fewer, bigger blocks
 const W = 390, H = 560, k = W / span;                       // px per meter
 const P = (la, lo) => [W / 2 + (lo - lon0) * mx * k, H / 2 - (la - lat0) * my * k];
 const f = n => (Math.round(n * 10) / 10).toString();

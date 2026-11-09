@@ -1,6 +1,6 @@
 const { execFileSync } = require('child_process'); const fs = require('fs'); const { chromium } = require('playwright');
 const [src, la, lo, title, sub, out] = process.argv.slice(2);
-const V = [['지금', {}], ['예쁜 지도 · 중립 톤', { STYLE: 'pretty', MAIN: process.env.MAINNAME }], ['예쁜 지도 · 예전 베이지', { STYLE: 'pretty', PAL: 'old', MAIN: process.env.MAINNAME }]];
+const V = [['중립 톤', { STYLE: 'pretty', MAIN: process.env.MAINNAME }], ['반반 섞기', { STYLE: 'pretty', PAL: 'mix', MAIN: process.env.MAINNAME }], ['예전 베이지', { STYLE: 'pretty', PAL: 'old', MAIN: process.env.MAINNAME }]];
 (async () => { const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 470, height: 900 }, deviceScaleFactor: 2 }); const cells = [];
   for (const [i, [t, env]] of V.entries()) { const h = `${out}-${i}.html`;
     execFileSync('node', ['/home/user/NarrativeArchive/docs/mockups/phone-map/osm/osmmap.js', src, h, la, lo, '1500'], { env: { ...process.env, ...env } });
