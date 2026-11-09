@@ -792,7 +792,7 @@ export async function openPhone(who = null) {
             if (!p || making || koBusy) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요');
             // (this screen's lines only: one chat, one note, one page …; a list screen its app's newest 40; 설정 the whole phone, asked first)
             const scope = koScopeOf(p, view), only = koAppOf(view), pick = scope || (only ? g => only(g.app) : null);
-            if (pick && !koGaps(p, { all: true }).some(pick)) return toastr.info('이 화면엔 다시 번역할 게 없어요', '캐릭터 휴대폰');
+            if (pick && !koGaps(p, { all: true }).some(pick)) return; // (nothing on this screen to translate again: quietly nothing)
             if (!pick && !await askSheet('폰 전체를 다시 번역할까요?', '지금 한국어가 전부 새 번역으로 바뀌어요.', '다시 번역')) return;
             let n = 0;
             koBusy = true;
