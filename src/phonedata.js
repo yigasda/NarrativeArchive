@@ -3573,19 +3573,25 @@ export const hasKo = p => [...p.threads.flatMap(t => t.messages), ...p.photos, .
 // what on the phone is written in another language and has no Korean yet: [{ x: the item, f: its field, k: the Korean's field }].
 // The reflection writes none (3.182.4~): the app asks the translator after it (phonetr.js), or when 한국어 is pressed
 const KO_HANGUL = /[\uac00-\ud7a3]/, KO_WORDS = /\p{L}{2,}/u;
-export function koGaps(p) {
-    const out = [], add = (x, f, k) => { const v = x?.[f]; if (typeof v === 'string' && v.trim() && !String(x[k] ?? '').trim() && KO_WORDS.test(v) && !KO_HANGUL.test(v)) out.push({ x, f, k }); };
-    for (const t of p?.threads || []) { for (const m of t.messages || []) add(m, 'text', 'ko'); if (t.draft) add(t.draft, 'text', 'ko'); }
-    for (const x of p?.photos || []) add(x, 'caption', 'ko');
-    for (const x of [...(p?.notes || []), ...(p?.diary || []), ...(p?.voice || [])]) { add(x, 'title', 'kt'); add(x, 'text', 'ko'); }
-    for (const x of p?.searches || []) add(x, 'q', 'ko');
-    for (const x of p?.events || []) add(x, 'title', 'ko');
-    for (const x of p?.posts || []) { add(x, 'text', 'ko'); add(x, 'photo', 'pko'); for (const c of x.comments || []) add(c, 'text', 'ko'); }
-    for (const x of p?.mails || []) { add(x, 'subject', 'ks'); add(x, 'text', 'ko'); }
-    if (p?.profile) add(p.profile, 'bio', 'ko');
-    for (const x of p?.life?.clock?.alarms || []) add(x, 'label', 'ko');
-    for (const x of p?.life?.clock?.timers || []) add(x, 'label', 'ko');
-    for (const x of p?.life?.files?.items || []) add(x, 'preview', 'ko');
+export function koGaps(p, { all = false } = {}) {
+    // (each with what the translator needs for its voice: the app, who says it and to whom; "self" for the owner's own;
+    // all: those with their Korean too, for translating an app again)
+    const out = [], own = p?.owner || 'me', add = (x, f, k, app, who = own, to = 'self') => { const v = x?.[f]; if (typeof v === 'string' && v.trim() && (all || !String(x[k] ?? '').trim()) && KO_WORDS.test(v) && !KO_HANGUL.test(v)) out.push({ x, f, k, app, who, to }); };
+    for (const t of p?.threads || []) {
+        const room = t.group ? `${t.with} (group)` : t.with;
+        for (const m of t.messages || []) add(m, 'text', 'ko', 'text', m.from === 'me' ? own : m.from, m.from === 'me' ? room : t.group ? room : own);
+        if (t.draft) add(t.draft, 'text', 'ko', 'text draft', own, room);
+    }
+    for (const x of p?.photos || []) add(x, 'caption', 'ko', 'photo caption');
+    for (const [app, xs] of [['note', p?.notes], ['diary', p?.diary], ['voice memo', p?.voice]]) for (const x of xs || []) { add(x, 'title', 'kt', `${app} title`); add(x, 'text', 'ko', app); }
+    for (const x of p?.searches || []) add(x, 'q', 'ko', 'search');
+    for (const x of p?.events || []) add(x, 'title', 'ko', 'calendar');
+    for (const x of p?.posts || []) { add(x, 'text', 'ko', 'post', own, 'followers'); add(x, 'photo', 'pko', 'post photo'); for (const c of x.comments || []) add(c, 'text', 'ko', 'comment', c.from || 'someone', own); }
+    for (const x of p?.mails || []) { add(x, 'subject', 'ks', 'mail subject', x.from || x.sender || 'sender', own); add(x, 'text', 'ko', 'mail', x.from || x.sender || 'sender', own); }
+    if (p?.profile) add(p.profile, 'bio', 'ko', 'profile bio', own, 'followers');
+    for (const x of p?.life?.clock?.alarms || []) add(x, 'label', 'ko', 'alarm');
+    for (const x of p?.life?.clock?.timers || []) add(x, 'label', 'ko', 'timer');
+    for (const x of p?.life?.files?.items || []) add(x, 'preview', 'ko', 'file');
     return out;
 }
 // after the Korean is added, 되돌리기 still sees the phone as the reflection left it

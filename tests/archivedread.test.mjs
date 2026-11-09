@@ -1413,3 +1413,49 @@ test('"situations" and each record\'s "situation" are the model\'s own notes: re
     assert.ok([...c.p.searches, ...c.p.threads.flatMap(t => t.messages), ...c.p.threads].every(x => !('situation' in x) && !('situations' in x)));
     assert.ok(!('situations' in c.p) && !JSON.stringify(c.p).includes('the scarf Ren sent'));
 });
+
+// ---- the phone's Korean (phonetr.js): its own instructions, each line with its app and who says it to whom, the chat's
+// Korean so far as examples, and the voice table the translator adds to (the user's own rows win)
+test('fillKo: each line goes with who says it to whom, and the voice table, no examples from the Korean already there; a decided person is kept, an own row stays', async () => {
+    const dataURL = encoded(src.replace(/from '([^']+)'/g, (all, k) => `from '${map[k] || k}'`));
+    const trSrc = await readFile(new URL('../src/phonetr.js', import.meta.url), 'utf8');
+    const trMap = { './phonedata.js': dataURL, './phoneparse.js': href('phoneparse.js'),
+        './translate.js': encoded(`export const glossaryEntries=()=>[];export const glossaryIn=()=>[];export const askTranslator=async(input,o)=>{const K=globalThis.__ko;K.calls.push({input,system:o.system});return typeof K.answer==='function'?K.answer(input):K.answer;};`),
+        './core.js': encoded(`export const getMeta=()=>({});export const hasChat=()=>true;`) };
+    const tr = await import(encoded(trSrc.replace(/from '([^']+)'/g, (all, k) => `from '${trMap[k] || k}'`)));
+    const K = (globalThis.__ko = { calls: [] });
+    const p = { owner: 'Oscar', threads: [{ with: 'Mother', messages: [{ from: 'me', text: 'hi Mom', ko: '엄마 안녕', time: '11-08 10:00' }, { from: 'me', text: 'Throw it out', time: '11-08 10:05' }, { from: 'Mother', text: 'Why so cold?', time: '11-08 10:06' }] }],
+        photos: [], notes: [{ title: 'Checklist', text: 'pack\nboiler' }], searches: [], events: [], koVoice: [{ who: 'Oscar', style: '엄마한테도 반말, 퉁명스럽게' }] };
+    K.answer = JSON.stringify({ voices: [{ who: 'Oscar', style: '존댓말' }, { who: 'Mother', style: '반말, 다정하게' }],
+        lines: [{ n: 1, ko: '버려' }, { n: 2, ko: '왜 그렇게 차갑니?' }, { n: 3, ko: '체크리스트' }, { n: 4, ko: '짐 싸기\n보일러' }] });
+    assert.equal(await tr.fillKo(p), 4);
+    const { input, system } = K.calls[0];
+    assert.ok(system.startsWith('GOAL\nTranslate what a character\'s phone shows into natural Korean') && system.includes('so that all of it reads as one: each person sounds the same wherever they appear.') && system.includes('\nVOICE\n- Every line in the same voice its writer has everywhere else, as VOICES shows; without it, as the original suggests. Lines that read alike in the original read alike in Korean.\n\nLINES\n') && !system.includes('To "self"') && system.includes('"voices"'));
+    assert.match(input, /\[OWNER\]\nOscar/);
+    assert.match(input, /\[VOICES\]\n- Oscar: 엄마한테도 반말, 퉁명스럽게/);
+    assert.ok(!input.includes('[EXAMPLES]') && !input.includes('엄마 안녕') && !system.includes('EXAMPLES'));
+    assert.match(input, /1: \[text · Oscar → Mother\] "Throw it out"\n2: \[text · Mother → Oscar\] "Why so cold\?"\n3: \[note title · Oscar → self\] "Checklist"\n4: \[note · Oscar → self\] "pack\\nboiler"/);
+    assert.deepEqual(p.threads[0].messages.map(x => x.ko), ['엄마 안녕', '버려', '왜 그렇게 차갑니?']);
+    assert.deepEqual([p.notes[0].kt, p.notes[0].ko], ['체크리스트', '짐 싸기\n보일러']);
+    // (the user's row stays; the pair it decided is added)
+    assert.deepEqual(p.koVoice.map(v => `${v.who}:${v.style}`), ['Oscar:엄마한테도 반말, 퉁명스럽게', 'Mother:반말, 다정하게']);
+    // nothing left: no request
+    assert.equal(await tr.fillKo(p), 0);
+    assert.equal(K.calls.length, 1);
+    // a long press: the app on screen again, all of it; another app's Korean stays; a failure puts the old Korean back
+    assert.equal(tr.koAppOf('thread:Mother')('text'), true);
+    assert.equal(tr.koAppOf('noteone')('text'), false);
+    assert.equal(tr.koAppOf('home'), null);
+    K.answer = (input) => JSON.stringify({ lines: input.split('\n').filter(l => /^\d+: \[text/.test(l)).map(l => ({ n: Number(l.split(':')[0]), ko: `새 ${l.split(':')[0]}` })) });
+    assert.equal(await tr.redoKo(p, tr.koAppOf('thread:Mother')), 3);
+    assert.deepEqual(p.threads[0].messages.map(x => x.ko), ['새 1', '새 2', '새 3']);
+    assert.deepEqual([p.notes[0].kt, p.notes[0].ko], ['체크리스트', '짐 싸기\n보일러']);
+    K.answer = () => { throw new Error('down'); };
+    await assert.rejects(tr.redoKo(p, tr.koAppOf('thread:Mother')), /down/);
+    assert.deepEqual(p.threads[0].messages.map(x => x.ko), ['새 1', '새 2', '새 3']);
+    // a translator that fails throws, and what it hadn't filled stays empty
+    const q = { owner: 'Oscar', threads: [{ with: 'Ren', messages: [{ from: 'Ren', text: 'see you', time: '11-08 11:00' }] }], photos: [], notes: [], searches: [], events: [] };
+    K.answer = () => { throw new Error('quota'); };
+    await assert.rejects(tr.fillKo(q), /quota/);
+    assert.equal(q.threads[0].messages[0].ko, undefined);
+});
