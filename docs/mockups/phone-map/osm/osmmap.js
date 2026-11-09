@@ -321,6 +321,8 @@ function gmapMarks(labels) {
     if (sn.size >= 8) break; }
   return `<defs>${defs}</defs>` + o;
 }
+// the data's licence (ODbL): the credit always shows in the map's corner, above the sheet (which starts at 500), and links to the copyright page
+svg += `<a href="https://www.openstreetmap.org/copyright" target="_blank"><text x="${W - 8}" y="493" text-anchor="end" font-family="-apple-system, 'Noto Sans KR', sans-serif" font-size="8.5" font-weight="500" fill="#6f6a64" stroke="#fff" stroke-width="2.4" stroke-opacity=".8" paint-order="stroke">© OpenStreetMap contributors</text></a>`;
 const css = `*{box-sizing:border-box;margin:0}body{background:#d9dce2;font-family:-apple-system,'Noto Sans KR',sans-serif;padding:24px;width:458px}
 .ph{width:390px;height:844px;border-radius:44px;border:9px solid #111;overflow:hidden;position:relative;background:#f4f5f7;box-sizing:content-box}.ph svg{display:block}
 .sh{position:absolute;left:0;right:0;top:500px;bottom:0;background:#f4f5f7;border-radius:22px 22px 0 0;box-shadow:0 -6px 24px rgba(22,27,34,.14);padding:12px 18px}.gr{width:36px;height:5px;border-radius:3px;background:#d4d7dc;margin:0 auto 14px}

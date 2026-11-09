@@ -20,6 +20,7 @@
 - **메시지 › 꾹 누르기**(시안 `docs/mockups/phone-msgpress` D): 수정 기능은 일부러 없어요. 번역이 이상하면 재번역으로 풀어요(원문은 안 바뀌어요).
 - **메시지 › 단톡**(시안 `docs/mockups/phone-groupchat`, 목록 D · 방 A): 목록 미리보기는 원문 한 줄 + 한국어 한 줄이고, 두 줄로 넘어가지 않아요. 연락처에는 방 이름이 아니라 멤버가 들어가요.
 - **다녀간 곳**(`mapScreen`, 시안 `docs/mockups/phone-map`): 지도는 64장을 통째로 그렸고(`phonemaptowns.js`), 어느 지도를 쓸지는 도시 표 `docs/mockups/phone-map/towns/citytable.md` → `python3 docs/mockups/phone-map/towns/gencity.py` → `src/phonemapcity.js`로 정해요. 새 지도는 4장씩 그려 보고 고르고(한꺼번에 많이 그리면 못생겨져요), 서로 비슷해 보이면 안 돼요. 찾기는 늘 두 군데 보여요(오른쪽 위 앱 색 돋보기 + 시트 맨 아래 줄, 빈 화면에서도). 확대(`phonemapzoom.js`)는 `docs/DESIGN.md` 4장 함정의 방식(canvas에만 그리기)을 지켜요.
+  - **철칙: OpenStreetMap 데이터로 그린 지도에는 출처를 늘 보여요(ODbL 라이선스 조건, 필수).** 지도가 보이는 화면이면 지도 구석(오른쪽 아래)에 작은 글씨로 "© OpenStreetMap contributors"를 넣어요. 누르면 https://www.openstreetmap.org/copyright 로 가게 해요(링크가 어려우면 글자만이라도). 시트가 지도를 덮어도 지도가 보이는 동안은 가려지지 않게, 보이는 지도 영역 안(시트 위)에 둬요. 지도 그림을 사진 · 파일로 저장해 폰 안에 남길 때도 그림 안에 같은 글자를 넣어요. OSM 지도 시안(`docs/mockups/phone-map/osm/osmmap.js`)은 그림 안에 이미 넣어 그려요.
 - **도시 찾기**(`phonemapsearch.js` · `phonemapfind.js`, 시안 `docs/mockups/phone-map/search` flow): 입력칸은 `<input>`이 아니라 `contenteditable` div예요(테마가 `input`을 `!important`로 칠해서). 한국어 · 영어 · 일본어 · 중국어 · 현지 이름과 나라 이름으로 다 찾아요.
 - **번역 못 했어요 팝업**(`trPop`, 시안 `docs/mockups/phone-trfail` A): 확인 창과 같은 유리 카드예요. 닫기는 그 회차만 숨기고, 반영 보고의 다시 하기 버튼은 남아요.
 - **위치 정보 › 도시 고르기**(시안 `docs/mockups/phone-place-ask` B): 시간대를 못 정하면 같은 유리 카드로 물어요.
