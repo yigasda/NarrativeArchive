@@ -778,11 +778,11 @@ test('일상 comes in the reflection\'s own answer (no request of its own); who 
     assert.ok(!sys.includes('SCENES WITH') && !sys.includes('PUT ON THE PHONE NOW'));
     // (no forced text after a scene: a text after a fight is part of the story's trail)
     assert.ok(!sys.includes('parted from'));
-    assert.match(sys, /Write each scene's phone trail in "records", linked by "scene" and "said"\. Include implied phone activity/);
+    assert.match(sys, /- "records": each scene's phone trail, including what it plainly implies, linked by "scene" and "said" and saying no more than its source\./);
     assert.match(sys, /Contact goes both ways; group chats may continue without the owner\./);
     assert.match(sys, /New correspondents get a "contact"/);
     assert.match(sys, /Do not contact someone they are no longer in touch with\./);
-    assert.ok(!sys.includes("THE STORY IS CANON") && !sys.includes("STORY NEXT") && !sys.includes("WHAT A RECORD DOES") && sys.indexOf("\nSCENES AND RECORDS\n- After \"clock\" and \"now\", extract \"scenes\"") > sys.indexOf("CLOCK FIRST"));
+    assert.ok(!sys.includes("THE STORY IS CANON") && !sys.includes("STORY NEXT") && !sys.includes("WHAT A RECORD DOES") && sys.indexOf("\nSCENES AND RECORDS\n- \"scenes\": after \"clock\" and \"now\"") > sys.indexOf("CLOCK FIRST"));
     assert.match(sys, /\"everyday\": \[\{ \"date\": \"MM-DD\", \"records\": \[/);
     const guess = [...c.p.threads.flatMap(th => th.messages.filter(x => x.src === 'guess').map(x => `${th.with}:${x.text}`)), ...c.p.searches.filter(x => x.src === 'guess').map(x => x.q)];
     assert.deepEqual(guess.sort(), ['Ivo:whatever', 'Ivo:you started it', 'Mittagstisch Seongsu']);
@@ -805,8 +805,8 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.match(on, /About 11 records per full waking day, scaled to the hours covered, including skipped days\./);
     assert.match(on, /Use the owner's range of apps: photos, searches, notes, mails, texts, calls, voice memos, diary, alarms and files\./);
     assert.match(on, /- Diary: in "everyday" on its day, when a day ends or a scene stays with them\./);
-    assert.match(on, /Do not repeat the scene itself\./);
-    assert.match(on, /A plan in PHONE NOW that the messages move, call off or undo \(an order cancelled, a trip dropped\) is its calendar record again, with "was" or "cancelled"\./);
+    assert.match(on, /- "scenes": after "clock" and "now", each scene of NEW MESSAGES and ARCHIVE FOR THESE MESSAGES: what happens, where, when, and who is physically with the owner/);
+    assert.match(on, /A plan in PHONE NOW that the messages move, call off or undo \(an order cancelled\) is written again with "was" or "cancelled"\./);
     assert.ok(on.indexOf('  "scenes": [{') < on.indexOf('  "everyday": [{') && !on.includes('\nscene: "id"') && on.includes('"with": [people physically there with the owner; otherwise []]'));
     assert.ok(on.indexOf('\nSCENES AND RECORDS\n') < on.indexOf('\nEVERYDAY\n') && on.indexOf('  "everyday": [{') < on.indexOf('  "records": [{'));
     assert.match(on, /include at least one later text exchange within these hours/);
@@ -832,7 +832,7 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.ok(!on.includes('ONE DAY ON EVERY APP') && !on.includes('TIME PASSING') && !on.includes('WHICH TYPE'));
     assert.match(on, /"type": "contact" \| "text" \| "call" \| "photo" \| "note" \| "search" \| "calendar" \| "post" \| "profile" \| "mail" \| "diary" \| "visit" \| "voice" \| "alarm" \| "timer" \| "file"/);
     assert.ok(!plain.includes('"alarm" | "timer"') && !plain.includes('LIFE NOW'));
-    assert.match(on, /Never invent a booking, trip or purchase absent from the story/);
+    assert.match(on, /No booking, trip or purchase the story lacks/);
     assert.match(on, /Records of the owner's life fall between PHONE NOW's "now" and the answer's "now"\./);
     // (group chats, as the messenger shows them)
     assert.match(on, /"group", "members": \[all but the owner, as in the contacts\]/);
@@ -844,7 +844,7 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.match(on, /"scenes" first, then "everyday" and "records"\./);
     // (the days' health and a habit after "everyday", on their own)
     assert.ok(on.indexOf('\n  "health": [{ "date": the day they woke, "already"') > on.indexOf('\n  "everyday": {') && on.includes('\n  "usual": { "weight"'));
-    assert.match(on, /- Write each scene.s phone trail in "records", linked by "scene" and "said"/);
+    assert.match(on, /- "records": each scene.s phone trail/);
     assert.ok(!data.coreSystem({ life: true }).includes('\nWEATHER\n'));
     assert.ok(!plain.includes('\nHEALTH\n') && !plain.includes('\nSCREEN TIME\n') && plain.includes('\nIN THEIR OWN WORDS'));
     // (no old shape left in it)
@@ -1317,7 +1317,7 @@ test('a story record\'s "said" and "made" are the answer\'s only: what the model
     assert.match(T.sys, /\nDO NOT CONTINUE THE STORY\nYou are not the role-play author\. Your job is to show the owner's phone within the story, not to write what happens next\./);
     assert.ok(T.sys.indexOf('\nCLOCK FIRST\n') < T.sys.indexOf('\nDO NOT CONTINUE THE STORY\n') && T.sys.indexOf('\nDO NOT CONTINUE THE STORY\n') < T.sys.indexOf('\nSCENES AND RECORDS\n') && !T.sys.includes('Tell apart what you may make up'));
     assert.match(T.sys, /- The story says a parcel is on its way → having it arrive invents what happens next\./);
-    assert.match(T.sys, /Phone data supplies existing details; an expected date is not an actual event\. Generated everyday content is not story evidence\./);
+    assert.match(T.sys, /- Phone data and "everyday" are not story facts: an expected date has not happened yet\./);
 });
 
 test('"everyday" as days ([{ date, records }]): each day\'s records read as the owner\'s own life, as the lists by app were', async () => {

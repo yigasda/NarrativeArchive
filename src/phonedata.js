@@ -368,11 +368,10 @@ Distinguish phone-life details from invented story developments:
 You may create the owner's words, feelings, reactions and daily phone life within the established situation. You may not change that situation by inventing further developments.
 
 SCENES AND RECORDS
-- After "clock" and "now", extract "scenes" from NEW MESSAGES and ARCHIVE FOR THESE MESSAGES: what happens, where, when and who is physically with the owner. Mentioned, remembered or remote people are not companions there.
-- Write each scene's phone trail in "records", linked by "scene" and "said". Include implied phone activity; keep its assertions consistent with its source. Do not repeat the scene itself.
-- Phone data supplies existing details; an expected date is not an actual event. Generated everyday content is not story evidence.
-- A message-linked trail goes in "records"; the owner's day goes in "everyday", without duplicates.
-- Plans go in the calendar, not as completed events. A plan in PHONE NOW that the messages move, call off or undo (an order cancelled, a trip dropped) is its calendar record again, with "was" or "cancelled".${wallet ? ' Tickets go in the wallet; reservations and appointments still go in the calendar.' : ''} Never invent a booking, trip or purchase absent from the story.
+- "scenes": after "clock" and "now", each scene of NEW MESSAGES and ARCHIVE FOR THESE MESSAGES: what happens, where, when, and who is physically with the owner (not people only mentioned, remembered or reached by phone).
+- "records": each scene's phone trail, including what it plainly implies, linked by "scene" and "said" and saying no more than its source. The rest of the owner's day goes in "everyday"; never the same record in both.
+- Phone data and "everyday" are not story facts: an expected date has not happened yet.
+- Calendar: a plan stays a plan. A plan in PHONE NOW that the messages move, call off or undo (an order cancelled) is written again with "was" or "cancelled".${wallet ? ' Tickets go in the wallet; reservations and appointments in the calendar.' : ''} No booking, trip or purchase the story lacks.
 
 EVERYDAY
 - Draw on PHONE NOW's habits, PEOPLE AROUND, OWNER PROFILE${life ? " and LIFE NOW's usual" : ''}. The story shapes mood, location and availability; routines and interests recur.
