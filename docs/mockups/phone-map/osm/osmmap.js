@@ -111,14 +111,15 @@ const GPALS = {
     C: { land: '#f3f3f3', built: '#f3f3f3', resi: '#f3f3f3', shop: '#f3eeee', works: '#ebebeb', railyard: '#ebebeb', school: '#f1ead9', park: '#c9f0d7', forest: '#b8e7c7', water: '#a7e4ee', vine: '#e4f1c6', bld: '#e9e9e9', edge: '#dcdcdc', major: '#fdd3ae', majorEdge: '#f3b98a', plaza: '#f3f3f3' },
 };
 GPALS.AC = { ...GPALS.A, water: GPALS.C.water, major: GPALS.C.major, majorEdge: GPALS.C.majorEdge };   // A's cream with C's water and apricot main roads
-GPALS.ACa = { ...GPALS.A, water: GPALS.C.water };   // A's cream and main roads with C's water
+GPALS.ACa = { ...GPALS.A, water: GPALS.C.water };
+GPALS.ACm = { ...GPALS.ACa, motor: GPALS.C.major, motorEdge: GPALS.C.majorEdge };   // pale yellow main roads, apricot motorways   // A's cream and main roads with C's water
 if (GMAP && GPALS[process.env.GPAL]) { const g = GPALS[process.env.GPAL]; Object.assign(C, g); Object.assign(COVER, { grass: g.park, allot: g.park, orchard: g.park, vine: g.vine, grave: g.park, scrub: g.forest, farm: g.school }); }   // vineyards keep their own yellow-green
 const { ICON, glyph, pick } = require('./icons.js');
 const COVER0 = null;
 const pxArea = ps => Math.abs(ps.reduce((s, p, i) => { const q = ps[(i + 1) % ps.length]; return s + p[0] * q[1] - q[0] * p[1]; }, 0)) / 2;
 const centre = ps => { const n = ps.length; return [ps.reduce((s, p) => s + p[0], 0) / n, ps.reduce((s, p) => s + p[1], 0) / n]; };
 const POIS = [], GREENS = [];
-const L = { station: '',  shop: '', works: '', railyard: '', school: '', mark: '', markStation: '', shadow: {}, built: '', park: '', forest: '', water: '', plaza: '', bld: '', foot: '', minor: '', mid: '', major: '', rail: '', tram: '' };
+const L = { motor: '', station: '',  shop: '', works: '', railyard: '', school: '', mark: '', markStation: '', shadow: {}, built: '', park: '', forest: '', water: '', plaza: '', bld: '', foot: '', minor: '', mid: '', major: '', rail: '', tram: '' };
 const BUILT = /residential|commercial|retail|industrial|railway|construction|brownfield|education|emergency/;
 const GREEN = /grass|village_green|flowerbed|meadow|allotments|cemetery|greenhouse/;
 for (const e of d.elements) {
@@ -162,7 +163,8 @@ for (const e of d.elements) {
   if (h === 'pedestrian' && closed && t.area === 'yes') { L.plaza += area(e); continue; }
   const dl = line(pts(e.geometry));
   if (h) {
-    if (/^(primary|trunk|motorway)(_link)?$/.test(h)) L.major += dl;
+    if (GMAP && /^(trunk|motorway)(_link)?$/.test(h)) L.motor += dl;   // gmap: motorways and trunk roads apart, so they can take their own colour
+    else if (/^(primary|trunk|motorway)(_link)?$/.test(h)) L.major += dl;
     else if (/^(secondary|tertiary)(_link)?$/.test(h)) L.mid += dl;
     else if (/^(residential|unclassified|living_street|pedestrian|busway)$/.test(h) || h === 'service' && (!COLLECT || t.name)) L.minor += dl;
     else if (/^(footway|path|cycleway|track)$/.test(h) && !PRETTY) { if (GMAP) { const ps = pts(e.geometry); FOOT.push({ dl, ps }); } else L.foot += dl; }
@@ -213,7 +215,8 @@ if (GMAP) svg = `<rect width="${W}" height="${H}" fill="${C.land}"/>`
   + st(L.minor, C.edge, Math.max(5.5, mpx(8)) + 1.2) + st(L.mid, C.edge, Math.max(8, mpx(12)) + 1.35)
   + st(L.minor, C.road, Math.max(5.5, mpx(8))) + st(L.mid, C.road, Math.max(8, mpx(12)))
   + st(L.rail, '#b8b6b2', 2.2) + st(L.rail, '#f4efe6', 0.9, ' stroke-dasharray="6 5"')
-  + st(L.major, C.majorEdge, Math.max(10, mpx(16)) + 1.35) + st(L.major, C.major, Math.max(10, mpx(16)));
+  + st(L.major, C.majorEdge, Math.max(10, mpx(16)) + 1.35) + st(L.major, C.major, Math.max(10, mpx(16)))
+  + st(L.motor, C.motorEdge || C.majorEdge, Math.max(11, mpx(20)) + 1.35) + st(L.motor, C.motor || C.major, Math.max(11, mpx(20)));
 // the park paths worth a soft band: measured only where they run inside a park and on screen, the longest few
 function parkPaths() {
   const inside = (x, y, ps) => { let c = false; for (let i = 0, j = ps.length - 1; i < ps.length; j = i++) { const [a, b] = ps[i], [u, v] = ps[j]; if ((b > y) !== (v > y) && x < (u - a) * (y - b) / (v - b) + a) c = !c; } return c; };
