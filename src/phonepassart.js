@@ -97,13 +97,15 @@ const confetti = (fg, op, u) => { let o = '';
         o += `<rect x="${r1(x - w / 2)}" y="${r1(y - h / 2)}" width="${w}" height="${h}" rx="0.8" transform="rotate(${rot} ${x} ${y})" ${F(fg, r1((0.08 + (i % 4) * 0.04) * 100) / 100)}/>`; }
     for (const [x, y] of [[214, 30], [300, 74], [356, 22], [250, 140], [338, 150]]) o += `<path d="M${x} ${y}c6 4 -6 10 0 14s-6 10 0 14s-6 10 0 14" stroke="${fg}" stroke-opacity=".16" stroke-width="2" fill="none" stroke-linecap="round"/>`;
     return fadeIn(u, o); };
-// movie (mockup, not chosen yet): film grain, a fine noise over the dark, a touch stronger toward the right, very faint
+// movie: film grain, a fine noise over the dark, a touch stronger toward the right, very faint
 const grain = (fg, op, u) => fadeIn(u, `<defs><filter id="${u}n" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="1.3" numOctaves="2" seed="7" result="t"/><feColorMatrix in="t" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1.4 -0.62"/></filter></defs><rect x="0" y="-10" width="400" height="230" filter="url(#${u}n)" opacity=".5"/>`);
-// movie (mockup, not chosen yet): the seat's velvet, channels stitched down the back, the pile catching a little light in each
-const seat = (fg, op, u) => fadeIn(u, `<defs><linearGradient id="${u}v" x1="0" x2="1"><stop offset="0" stop-color="${fg}" stop-opacity="0"/><stop offset=".5" stop-color="${fg}" stop-opacity=".045"/><stop offset="1" stop-color="${fg}" stop-opacity="0"/></linearGradient></defs>`
-    + range(0, 12).map(i => `<rect x="${150 + i * 22}" y="-10" width="22" height="230" fill="url(#${u}v)"/>`).join('') + P(range(1, 12).map(i => `M${150 + i * 22} -10V220`).join(''), `${S(fg, 0.08, 0.6)} stroke-dasharray="2 2.5"`));
+// movie (mockup, not chosen yet): the woven fabric of the auditorium walls, a basket weave of tiny pairs, very faint
+const weave = (fg, op, u) => { let a = '', b = '';
+    for (let r = 0; r < 30; r++) for (let c = 0; c < 36; c++) { const x = 150 + c * 7.4, y = -8 + r * 7.4;
+        if ((r + c) % 2) a += `M${r1(x + 0.6)} ${r1(y + 1)}h6.2v2.2h-6.2ZM${r1(x + 0.6)} ${r1(y + 4.2)}h6.2v2.2h-6.2Z`; else b += `M${r1(x + 1)} ${r1(y + 0.6)}h2.2v6.2h-2.2ZM${r1(x + 4.2)} ${r1(y + 0.6)}h2.2v6.2h-2.2Z`; }
+    return fadeIn(u, `<path d="${a}" ${F(fg, 0.05)}/><path d="${b}" ${F(fg, 0.035)}/>`); };
 const MOTIF = { flight: [flight, null], train: [lined, null], membership: [dots, holo], other: [dots], concert: [spots, confetti], hotel: [windows, doors], match: [bowl, knit],
-    movie: [null], museum: [rosette, rosetteP], bus: [lanes, chevrons], ferry: [depths, seaChart], theater: [harlequin, damask], park: [wheel, sunburst] };
+    movie: [grain], museum: [rosette, rosetteP], bus: [lanes, chevrons], ferry: [depths, seaChart], theater: [harlequin, damask], park: [wheel, sunburst] };
 const seedOf = id => [...String(id || '')].reduce((h, c) => h + c.charCodeAt(0), 0);
 export function passMotif(k, fg, op, id) {
     const xs = MOTIF[k] || MOTIF.other, f = xs[seedOf(id) % xs.length];
