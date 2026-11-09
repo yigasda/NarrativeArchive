@@ -30,7 +30,7 @@ import { placeNames } from './phonemapfind.js';
 import { FLAG_NAME, flagSvg } from './phoneflags.js';
 import { mapZoom } from './phonemapzoom.js';
 import { glossaryEntries, openGlossary } from './translate.js';
-import { dropVoice, fillKo, koAppOf, learnVoices, pickVoices, redoKo } from './phonetr.js';
+import { dropVoice, fillKo, koAppOf, labelVoices, learnVoices, pickVoices, redoKo } from './phonetr.js';
 // 을 / 를 after a word: by its last syllable's final consonant (a Latin ending, like SNS, reads as 를)
 const josa = w => { const c = w.charCodeAt(w.length - 1) - 0xac00; return c >= 0 && c < 11172 && c % 28 ? '을' : '를'; };
 import { confirm, esc } from './util.js';
@@ -1235,10 +1235,20 @@ export async function openPhone(who = null) {
     });
     // 설정 › 말투: a row's style written anew (the row becomes 소망's: by 'user', an old from read as who); 사람 추가 asks the
     // name, then the style (a name already there is that row). Saved with saveMeta; translations already made stay
+    // a row written by hand gets its short label afterwards (labelVoices, not waited for): put in only if the row is still
+    // there with the same style; a failure leaves the list showing its first pieces, and isn't asked again
+    const voiceLabel = (p, row) => {
+        if (!row?.style) return;
+        labelVoices([{ who: row.who, style: row.style }]).then(async ([l]) => {
+            if (!l || !p.koVoice?.includes(row)) return; // (the row object itself: edited again, it is a new one)
+            row.label = l; await saveMeta(); if (!phoneClosed && phone() === p) drawPhone(true);
+        }).catch(err => console.warn('[narrative-archive] voice label', err));
+    };
     const voiceSet = async (p, k, style) => {
-        const v = p.koVoice[k], w = String(v?.who ?? v?.from ?? '').trim();
-        p.koVoice[k] = { who: w, style, by: 'user' };
+        const v = p.koVoice[k], w = String(v?.who ?? v?.from ?? '').trim(), row = { who: w, style, by: 'user' };
+        p.koVoice[k] = row;
         await saveMeta(); if (!phoneClosed) drawPhone(true);
+        voiceLabel(p, row);
     };
     $root.on('click', '.na_ph_kvrow', async function (e) {
         e.stopPropagation(); const p = phone(), k = Number(this.dataset.i), v = p?.koVoice?.[k]; if (!v) return;
@@ -1313,9 +1323,11 @@ export async function openPhone(who = null) {
         const style = await askInput(`${name}의 말투`, '남에게 하는 말투를 짧게 적어요.', have >= 0 ? String(p.koVoice[have].style || '') : '', '저장', { area: true, empty: have < 0 });
         if (style === false || phone() !== p) return;
         if (have >= 0) return voiceSet(p, have, style.slice(0, 300));
-        p.koVoice.push({ who: name.slice(0, 40), style: style.slice(0, 300), by: 'user' });
+        const row = { who: name.slice(0, 40), style: style.slice(0, 300), by: 'user' };
+        p.koVoice.push(row);
         if (view === 'setvoiceadd') view = 'setvoice';
         await saveMeta(); if (!phoneClosed) drawPhone(true);
+        voiceLabel(p, row);
     });
     $root.on('click', '.na_ph_screenholder', async function (e) {
         e.stopPropagation();
