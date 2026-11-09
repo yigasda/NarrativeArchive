@@ -910,6 +910,13 @@ function scene(cond, phase) {
     out.push(`<svg class="land" viewBox="0 0 390 260" preserveAspectRatio="none"><path d="M0 70 Q90 20 190 60 T390 40 V260 H0Z" fill="${h1}"/><path d="M0 110 Q120 70 230 105 T390 90 V260 H0Z" fill="${h2}"/><path d="M0 160 Q140 130 260 160 T390 150 V260 H0Z" fill="${h3}"/></svg>`);
     return `<div class="lf_sc">${out.join('')}</div>`;
 }
+// the city card's fog lines (the home widget draws the same, scaled): solid, the white mixed into the band behind, so no edge shows through
+const FOG_CARD = [[150, 22, 230], [110, 44, 200], [170, 66, 210]];
+function fogCard(q, sx, sy) {
+    const a = Number(String(q.fog).match(/[\d.]+\)$/)?.[0].slice(0, -1)) || 0.2, under = y => [...(q.cb || [])].reverse().find(([t]) => t <= y)?.[1] || q.sky;
+    const mix = hex => { const n = parseInt(hex.slice(1), 16); return `#${[n >> 16, (n >> 8) & 255, n & 255].map(v => Math.round(v + (255 - v) * a).toString(16).padStart(2, '0')).join('')}`; };
+    return FOG_CARD.map(([x, y, w]) => `<rect x="${(x * sx).toFixed(1)}" y="${(y * sy).toFixed(1)}" width="${(w * sx).toFixed(1)}" height="${(9 * sy).toFixed(1)}" rx="${(4.5 * sy).toFixed(1)}" fill="${mix(under(y + 4.5))}"/>`).join('');
+}
 // the same sky, small, for a card in the city list (358 by 118, drawn to fit any width)
 function cardSky(cond, phase) {
     cond = condOk(cond);
@@ -931,7 +938,7 @@ function cardSky(cond, phase) {
     if (q.fall === 'heavy') out.push(lines('rgba(255,255,255,.4)', 2, 16, 18, 6, 7));
     if (q.fall === 'sleet') out.push(lines('rgba(255,255,255,.35)', 1.4, 9, 12, 4, 2) + dots(10, 2, 17));
     if (q.fall === 'snow') out.push(dots(22, 2.2, 11));
-    if (q.fog) out.push('<g fill="rgba(255,255,255,.2)"><rect x="150" y="22" width="230" height="9" rx="4.5"/><rect x="110" y="44" width="200" height="9" rx="4.5"/><rect x="170" y="66" width="210" height="9" rx="4.5"/></g>');
+    if (q.fog) out.push(fogCard(q, 1, 1));
     if (q.bolt) out.push('<path d="M232 30 L216 62 L228 62 L218 92 L246 54 L232 54 L242 30Z" fill="#f6c94a"/>');
     if (q.wind) out.push(`<g fill="none" stroke="rgba(255,255,255,.45)" stroke-width="2" stroke-linecap="round"><path d="M110 40 H190 Q204 40 204 30"/><path d="M140 58 H230"/><path d="M100 74 H170 Q184 74 184 84"/></g>${phase === 'night' ? '' : '<g fill="#2f5f3e"><rect x="184" y="62" width="4" height="26" transform="rotate(12 186 88)"/><ellipse cx="196" cy="58" rx="12" ry="16" transform="rotate(24 196 74)"/></g>'}`);
     const [h1, h2] = q.hills, low = cond === 'snow';
@@ -965,7 +972,7 @@ function widgetSky(cond, phase) {
     if (q.fall === 'heavy') out.push(lines('rgba(255,255,255,.5)', 2, 16, 18, 6));
     if (q.fall === 'sleet') out.push(lines('rgba(255,255,255,.45)', 1.4, 8, 12, 4) + flakes(9, 2));
     if (q.fall === 'snow') out.push(flakes(22, 2.3));
-    if (q.fog) out.push(`<g fill="rgba(255,255,255,.22)"><rect x="96" y="58" width="170" height="10" rx="5"/><rect x="118" y="80" width="150" height="10" rx="5"/><rect x="104" y="102" width="164" height="10" rx="5"/></g>`);
+    if (q.fog) out.push(fogCard(q, W / 358, k));
     if (q.bolt) out.push(`<path d="M${C} 62 L${C - 16} 94 L${C - 4} 94 L${C - 14} 124 L${C + 14} 86 L${C} 86 L${C + 10} 62Z" fill="#f6c94a"/>`);
     if (q.wind || cond === 'wind') out.push(`<g fill="none" stroke="rgba(255,255,255,.5)" stroke-width="2" stroke-linecap="round"><path d="M116 60 H196 Q210 60 210 50"/><path d="M134 80 H244"/><path d="M110 98 H180 Q194 98 194 108"/></g>${phase === 'night' ? '' : `<g fill="#2f5f3e"><rect x="${C + 18}" y="84" width="4" height="26" transform="rotate(12 ${C + 20} 110)"/><ellipse cx="${C + 30}" cy="80" rx="12" ry="16" transform="rotate(24 ${C + 30} 80)"/></g>`}`);
     const [h1, h2] = q.hills;
