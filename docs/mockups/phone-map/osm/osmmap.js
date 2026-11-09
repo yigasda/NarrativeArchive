@@ -2,14 +2,21 @@
 // node docs/mockups/phone-map/osm/osmmap.js <data.json> <out.html> <lat> <lon> <metersAcross> [labels.json]
 const fs = require('fs');
 const [, , src, out, lat0s, lon0s, spanS, labelsSrc] = process.argv;
-const lat0 = +lat0s, lon0 = +lon0s, span = +spanS;
+const lat0 = +lat0s, lon0 = +lon0s, FX = process.env.FX || '';   // FX: A 큰 건물 색 · B 땅 쓰임 색 · C 동네마다 축척 · D 건물 그림자
 const C = { land: '#f3f0ea', built: '#ebe7df', park: '#d4e8c9', forest: '#c3dcb5', water: '#b6d4ef', road: '#ffffff', edge: '#dad4c9', major: '#fde7a3', majorEdge: '#e3c77c',
-  rail: '#a9a49b', label: '#6f7681', plaza: '#efe6d2', bld: '#e0dbd0', foot: '#e6e1d7' };
-const W = 390, H = 560, k = W / span;                       // px per meter
+  rail: '#a9a49b', label: '#6f7681', plaza: '#efe6d2', bld: '#e0dbd0', foot: '#e6e1d7',
+  mark: '#d5cab6', markStation: '#d3d4d6', resi: '#f0ece5', shop: '#f3e3d6', works: '#e3e3df', railyard: '#e4e2dc', school: '#f3e9c9', shadow: '#bdb4a4' };
+const d = JSON.parse(require('fs').readFileSync(src, 'utf8'));
 const mx = 111320 * Math.cos(lat0 * Math.PI / 180), my = 110540;
+// C: dense old towns closer, loose estates and parks further out — buildings per km² round the centre
+let span = +spanS;
+if (FX.includes('C')) {
+  let n = 0; for (const e of d.elements) if (e.tags && e.tags.building && e.geometry) { const g = e.geometry[0], x = (g.lon - lon0) * mx, y = (g.lat - lat0) * my; if (Math.abs(x) < 500 && Math.abs(y) < 500) n++; }
+  span = Math.max(1000, Math.min(1550, 2600 - n * 1.1)); console.log('density', n, '→ span', Math.round(span));
+}
+const W = 390, H = 560, k = W / span;                       // px per meter
 const P = (la, lo) => [W / 2 + (lo - lon0) * mx * k, H / 2 - (la - lat0) * my * k];
 const f = n => (Math.round(n * 10) / 10).toString();
-const d = JSON.parse(fs.readFileSync(src, 'utf8'));
 const pts = g => g.map(p => P(p.lat, p.lon));
 const line = ps => 'M' + ps.map(p => f(p[0]) + ' ' + f(p[1])).join('L');
 const ring = ps => line(ps) + 'Z';
@@ -39,17 +46,33 @@ function rings(members) {
   return outv.join('');
 }
 const area = e => e.type === 'relation' ? rings(e.members || []) : (e.geometry ? ring(pts(e.geometry)) : '');
-const L = { built: '', park: '', forest: '', water: '', plaza: '', bld: '', foot: '', minor: '', mid: '', major: '', rail: '', tram: '' };
+const L = { resi: '', shop: '', works: '', railyard: '', school: '', mark: '', markStation: '', shadow: {}, built: '', park: '', forest: '', water: '', plaza: '', bld: '', foot: '', minor: '', mid: '', major: '', rail: '', tram: '' };
 const BUILT = /residential|commercial|retail|industrial|railway|construction|brownfield|education|emergency/;
 const GREEN = /grass|village_green|flowerbed|meadow|allotments|cemetery|greenhouse/;
 for (const e of d.elements) {
   const t = e.tags || {}, closed = e.geometry && e.geometry.length > 2 && e.geometry[0].lat === e.geometry.at(-1).lat && e.geometry[0].lon === e.geometry.at(-1).lon;
   if (t.natural === 'water' || (t.waterway && /riverbank|dock/.test(t.waterway))) { L.water += area(e); continue; }
-  if (t.building) { if (e.type === 'way' && closed) L.bld += area(e); continue; }
+  if (t.building) {
+    if (e.type !== 'way' || !closed) continue;
+    const a = area(e);
+    // A: churches, stations, castles, halls and anything with its own wiki page stand out a little
+    const big = /cathedral|church|chapel|castle|palace|train_station|government|museum|civic|public|university|stadium|transportation/.test(t.building) || t.historic || t.tourism || t.wikidata || t.amenity === 'place_of_worship';
+    if (FX.includes('A') && big) { if (/train_station|transportation/.test(t.building) || t.railway) L.markStation += a; else L.mark += a; }
+    else L.bld += a;
+    // D: a soft shadow down-right, longer for taller houses
+    if (FX.includes('D')) { const lv = parseFloat(t['building:levels']) || (t.height ? parseFloat(t.height) / 3 : 0) || 3, off = Math.min(7, 0.5 + lv * 3 * k * 0.3), b = (Math.round(off * 2) / 2).toFixed(1); L.shadow[b] = (L.shadow[b] || '') + a; }
+    continue;
+  }
   if (t.leisure && /park|garden/.test(t.leisure)) { L.park += area(e); continue; }
   if (t.landuse === 'forest' || t.natural === 'scrub') { L.forest += area(e); continue; }
   if (t.landuse && GREEN.test(t.landuse)) { L.park += area(e); continue; }
-  if (t.landuse && BUILT.test(t.landuse)) { L.built += area(e); continue; }
+  if (t.landuse && BUILT.test(t.landuse)) {
+    const a = area(e), u = t.landuse;
+    if (!FX.includes('B')) L.built += a;
+    else if (u === 'residential') L.resi += a; else if (/commercial|retail/.test(u)) L.shop += a; else if (u === 'industrial') L.works += a;
+    else if (u === 'railway') L.railyard += a; else if (u === 'education') L.school += a; else L.built += a;
+    continue;
+  }
   if (e.type !== 'way' || !e.geometry) continue;
   if (t.tunnel && t.tunnel !== 'no') continue;
   const h = t.highway, rw = t.railway;
@@ -67,8 +90,9 @@ const st = (dd, col, w, extra = '') => dd ? `<path d="${dd}" fill="none" stroke=
 const fill = (dd, col) => dd ? `<path d="${dd}" fill="${col}" fill-rule="evenodd"/>` : '';
 const mpx = m => Math.max(0.6, m * k);                       // real width in meters → px, with a floor
 let svg = `<rect width="${W}" height="${H}" fill="${C.land}"/>`
-  + fill(L.built, C.built) + fill(L.park, C.park) + fill(L.forest, C.forest) + fill(L.plaza, C.plaza) + fill(L.water, C.water)
-  + fill(L.bld, C.bld)
+  + fill(L.built, C.built) + fill(L.resi, C.resi) + fill(L.shop, C.shop) + fill(L.works, C.works) + fill(L.railyard, C.railyard) + fill(L.school, C.school) + fill(L.park, C.park) + fill(L.forest, C.forest) + fill(L.plaza, C.plaza) + fill(L.water, C.water)
+  + Object.entries(L.shadow).map(([o, dd]) => `<path d="${dd}" fill="${C.shadow}" opacity=".75" transform="translate(${o} ${(o * 1.3).toFixed(1)})"/>`).join('')
+  + fill(L.bld, C.bld) + fill(L.mark, C.mark) + fill(L.markStation, C.markStation)
   + st(L.foot, C.foot, mpx(3))
   + st(L.minor, C.edge, mpx(9) + 1.6) + st(L.mid, C.edge, mpx(12) + 1.8)
   + st(L.minor, C.road, mpx(9)) + st(L.mid, C.road, mpx(12))
