@@ -99,8 +99,9 @@ const LC = Object.fromEntries(Object.keys(COVER).map(k => [k, '']));
 const PRETTY = process.env.STYLE === 'pretty';
 // STYLE=gmap: a busy street map's manner — cream ground, land uses in their own colours, hardly any houses, white streets with no rim, coloured place names with their icons, street names along the streets
 const GMAP = process.env.STYLE === 'gmap', COLLECT = PRETTY || GMAP, STREETS = [], FOOT = [];
-if (GMAP) Object.assign(C, { land: '#f3e7d6', built: '#f1e5d4', resi: '#f3e7d6', shop: '#f1dcd2', works: '#e3e1dd', railyard: '#e2dfda', school: '#ebd5a8', park: '#c2e0a3', forest: '#b2d796', water: '#a4cdf2',
-  bld: '#dedbd6', edge: '#dccfbb', road: '#ffffff', major: '#fdd98a', majorEdge: '#e9b85a', plaza: '#efe4d3', foot: '#d2e9bd' });
+// gmap: ordinary blocks stay the quiet ground (homes, shops, offices alike); only the places that mean something get a colour — parks, campuses, works yards, water
+if (GMAP) Object.assign(C, { land: '#f5ede2', built: '#f5ede2', resi: '#f5ede2', shop: '#f5ede2', works: '#ebe8e3', railyard: '#ebe8e3', school: '#efdcb6', park: '#c2e0a3', forest: '#b2d796', water: '#a4cdf2',
+  bld: '#dedbd6', edge: '#dccfbb', road: '#ffffff', major: '#fdd98a', majorEdge: '#e9b85a', plaza: '#f5ede2', foot: '#d2e9bd' });
 if (GMAP) Object.assign(COVER, { grass: '#d3ecc3', allot: '#d6ebc5', orchard: '#cfe8bc', vine: '#dde8c0', grave: '#d4e3cb', scrub: '#cfe3b8', farm: '#f1ecd9' });
 const { ICON, glyph, pick } = require('./icons.js');
 const COVER0 = null;
@@ -121,7 +122,7 @@ for (const e of d.elements) {
       { const ic = pick(t); if (ic && (t.name || t.wikidata)) POIS.push({ ic, at: centre(ps), pr: (t.wikidata ? 2 : 0) + (t.name ? 1 : 0) + Math.min(2, px / 400), name: t.name }); }
       if (t.building === 'train_station' || t.railway === 'station') { L.station += a; continue; }
       if (px < 40 * k * k * 2.2) continue;          // the tiny sheds and kiosks go
-      if (GMAP && px < 900 * k * k) continue;          // gmap: only the big blocks (estates, halls, stations) stay
+      if (GMAP) continue;                              // gmap: no houses at this scale — the blocks are the ground
     }
     // A: churches, stations, castles, halls and anything with its own wiki page stand out a little
     const big = /cathedral|church|chapel|castle|palace|train_station|government|museum|civic|public|university|stadium|transportation/.test(t.building) || t.historic || t.tourism || t.wikidata || t.amenity === 'place_of_worship';
