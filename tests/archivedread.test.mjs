@@ -1416,7 +1416,7 @@ test('"situations" and each record\'s "situation" are the model\'s own notes: re
 
 // ---- the phone's Korean (phonetr.js): its own instructions, each line with its app and who says it to whom, the chat's
 // Korean so far as examples, and the voice table the translator adds to (the user's own rows win)
-test('fillKo: each line goes with who says it to whom, the chat\'s Korean as examples and the voice table; a decided pair is kept, an own row stays', async () => {
+test('fillKo: each line goes with who says it to whom, the chat\'s Korean as examples and the voice table; a decided person is kept, an own row stays', async () => {
     const dataURL = encoded(src.replace(/from '([^']+)'/g, (all, k) => `from '${map[k] || k}'`));
     const trSrc = await readFile(new URL('../src/phonetr.js', import.meta.url), 'utf8');
     const trMap = { './phonedata.js': dataURL, './phoneparse.js': href('phoneparse.js'),
@@ -1425,20 +1425,20 @@ test('fillKo: each line goes with who says it to whom, the chat\'s Korean as exa
     const tr = await import(encoded(trSrc.replace(/from '([^']+)'/g, (all, k) => `from '${trMap[k] || k}'`)));
     const K = (globalThis.__ko = { calls: [] });
     const p = { owner: 'Oscar', threads: [{ with: 'Mother', messages: [{ from: 'me', text: 'hi Mom', ko: '엄마 안녕', time: '11-08 10:00' }, { from: 'me', text: 'Throw it out', time: '11-08 10:05' }, { from: 'Mother', text: 'Why so cold?', time: '11-08 10:06' }] }],
-        photos: [], notes: [{ title: 'Checklist', text: 'pack\nboiler' }], searches: [], events: [], koVoice: [{ from: 'Oscar', to: 'Mother', style: '반말, 퉁명스럽게' }] };
-    K.answer = JSON.stringify({ voices: [{ from: 'Oscar', to: 'Mother', style: '존댓말' }, { from: 'Mother', to: 'Oscar', style: '반말, 다정하게' }],
+        photos: [], notes: [{ title: 'Checklist', text: 'pack\nboiler' }], searches: [], events: [], koVoice: [{ who: 'Oscar', style: '엄마한테도 반말, 퉁명스럽게' }] };
+    K.answer = JSON.stringify({ voices: [{ who: 'Oscar', style: '존댓말' }, { who: 'Mother', style: '반말, 다정하게' }],
         lines: [{ n: 1, ko: '버려' }, { n: 2, ko: '왜 그렇게 차갑니?' }, { n: 3, ko: '체크리스트' }, { n: 4, ko: '짐 싸기\n보일러' }] });
     assert.equal(await tr.fillKo(p), 4);
     const { input, system } = K.calls[0];
-    assert.ok(system.startsWith('GOAL\nTranslate what a character\'s phone shows into natural Korean') && system.includes('\nVOICE\n- Each line in the voice its writer really uses with that listener, as VOICES and EXAMPLES show; with neither, as the original and the relationship suggest. One pair keeps one voice.\n\nLINES\n') && !system.includes('To "self"') && system.includes('"voices"'));
+    assert.ok(system.startsWith('GOAL\nTranslate what a character\'s phone shows into natural Korean') && system.includes('so that all of it reads as one: each person sounds the same wherever they appear.') && system.includes('\nVOICE\n- Every line in the same voice its writer has everywhere else, as VOICES and EXAMPLES show; with neither, as the original suggests. Lines that read alike in the original read alike in Korean.\n\nLINES\n') && !system.includes('To "self"') && system.includes('"voices"'));
     assert.match(input, /\[OWNER\]\nOscar/);
-    assert.match(input, /\[VOICES\]\n- Oscar → Mother: 반말, 퉁명스럽게/);
+    assert.match(input, /\[VOICES\]\n- Oscar: 엄마한테도 반말, 퉁명스럽게/);
     assert.match(input, /\[EXAMPLES\]\n- Oscar → Mother: "hi Mom" = "엄마 안녕"/);
     assert.match(input, /1: \[text · Oscar → Mother\] "Throw it out"\n2: \[text · Mother → Oscar\] "Why so cold\?"\n3: \[note title · Oscar → self\] "Checklist"\n4: \[note · Oscar → self\] "pack\\nboiler"/);
     assert.deepEqual(p.threads[0].messages.map(x => x.ko), ['엄마 안녕', '버려', '왜 그렇게 차갑니?']);
     assert.deepEqual([p.notes[0].kt, p.notes[0].ko], ['체크리스트', '짐 싸기\n보일러']);
     // (the user's row stays; the pair it decided is added)
-    assert.deepEqual(p.koVoice.map(v => `${v.from}→${v.to}:${v.style}`), ['Oscar→Mother:반말, 퉁명스럽게', 'Mother→Oscar:반말, 다정하게']);
+    assert.deepEqual(p.koVoice.map(v => `${v.who}:${v.style}`), ['Oscar:엄마한테도 반말, 퉁명스럽게', 'Mother:반말, 다정하게']);
     // nothing left: no request
     assert.equal(await tr.fillKo(p), 0);
     assert.equal(K.calls.length, 1);
