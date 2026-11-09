@@ -14,7 +14,7 @@ const PALS = {
   cool: { land: '#eceef0', built: '#e6e9ec', bld: '#d5dae0', shadow: '#b8bfc8', edge: '#cfd4da', park: '#cbe3c4', forest: '#b7d6ae', water: '#a7c8ec', major: '#f9dc8a', majorEdge: '#dfbe6a',
     label: '#58606b', foot: '#dde1e5', resi: '#e9ecef', shop: '#efe4e0', works: '#dee1e5', railyard: '#e0e3e6', school: '#efe8cf', plaza: '#e8eaec', mark: '#c9d0d8' },
   neutral: { land: '#f5f5f3', built: '#efefec', bld: '#dededa', shadow: '#c4c4be', edge: '#d6d6d1', park: '#c3e5b6', forest: '#aed8a0', water: '#9fcaf2', major: '#fce8b4', majorEdge: '#e9d298',
-    label: '#5f646c', foot: '#e4e4e0', resi: '#f1f1ee', shop: '#f5e6dc', works: '#e6e6e3', railyard: '#e7e7e4', school: '#f3ebcc', plaza: '#ececea', mark: '#d2d2cc' },
+    label: '#5f646c', foot: '#e4e4e0', resi: '#f1f1ee', shop: '#f5e6dc', works: '#e6e6e3', railyard: '#e3e3df', school: '#f3ebcc', plaza: '#ececea', mark: '#d2d2cc' },
   paper: { land: '#f2ead9', built: '#ece2cf', bld: '#ddcfb5', shadow: '#c2b296', edge: '#d6c9b0', park: '#cddcb0', forest: '#b9cd98', water: '#a9c7d9', major: '#f4cf7f', majorEdge: '#d4ab5a',
     label: '#6a5f50', foot: '#e3d8c3', resi: '#efe6d4', shop: '#f0dcc4', works: '#e2dccf', railyard: '#e3dccd', school: '#efe1b8', plaza: '#ebdfc8', mark: '#d2c09f' },
   terra: { land: '#f1ebe3', built: '#ebe2d8', bld: '#dcc4b2', shadow: '#bea08a', edge: '#d5c7b9', park: '#c8ddb4', forest: '#b3cf9c', water: '#a5c8e6', major: '#f8d58a', majorEdge: '#d9b064',
@@ -115,7 +115,10 @@ for (const e of d.elements) {
     else if (/^(secondary|tertiary)(_link)?$/.test(h)) L.mid += dl;
     else if (/^(residential|unclassified|living_street|service|pedestrian|busway)$/.test(h)) L.minor += dl;
     else if (/^(footway|path|cycleway|track)$/.test(h)) L.foot += dl;
-  } else if (rw === 'rail' || rw === 'light_rail') L.rail += dl;
+  } else if (rw === 'rail' || rw === 'light_rail') {
+    // RAIL=old keeps every track dashed; by default the yard tracks (sidings, spurs) vanish into the yard's face and the main lines are one thin line
+    if (process.env.RAIL === 'old' || !t.service) L.rail += dl;
+  }
   else if (rw === 'tram') L.tram += dl;
 }
 // TERRAIN=<prefix from terrain.py>: height bands on green, depth on water, soft hill shading under the houses
@@ -143,7 +146,8 @@ let svg = `<rect width="${W}" height="${H}" fill="${C.land}"/>`
       + `<g mask="url(#fo)">${st(L.foot, C.foot, mpx(3))}</g><g clip-path="url(#fg)" opacity=".35">${st(L.foot, C.foot, mpx(2.4))}</g>` : st(L.foot, C.foot, mpx(3)))
   + st(L.minor, C.edge, mpx(9) + 1.6) + st(L.mid, C.edge, mpx(12) + 1.8)
   + st(L.minor, C.road, mpx(9)) + st(L.mid, C.road, mpx(12))
-  + st(L.rail, C.rail, 2.4) + st(L.rail, C.land, 1.1, ' stroke-dasharray="4 4"') + st(L.tram, C.rail, 0.9)
+  + (process.env.RAIL === 'old' ? st(L.rail, C.rail, 2.4) + st(L.rail, C.land, 1.1, ' stroke-dasharray="4 4"') + st(L.tram, C.rail, 0.9)
+     : st(L.rail, C.railLine || '#b9b9b3', 1.3) + st(L.tram, C.railLine || '#b9b9b3', 0.6, ' opacity=".6"'))
   + st(L.major, C.majorEdge, mpx(16) + 2) + st(L.major, C.major, mpx(16));
 // no labels file → names from the data: stations, quarters, sights, the river; greedy, no overlaps, above the sheet
 const CITY = /^(Berlin|München|Hamburg|Köln|Düsseldorf|Frankfurt \(Main\)|Frankfurt|Dresden|Heidelberg|Leipzig|Nürnberg)[\s-]+/;
