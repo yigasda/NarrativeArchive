@@ -355,7 +355,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax_psrt { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; padding: 4px 16px 0; }
 .ax_psrt b { display: block; font: 300 44px/1.05 'Inter Tight', -apple-system, sans-serif; letter-spacing: -0.02em; }
 .ax_psrt b.ax_pbsm { font-size: 26px; font-weight: 400; }
-.ax_pspl { align-self: center; opacity: 0.8; margin-bottom: 8px; }
+.ax_pspl { align-self: center; opacity: 0.8; margin-bottom: 8px; } .ax_psrt.sm .ax_pspl { margin: 0; align-self: flex-end; height: 27px; display: flex; align-items: center; }
 .ax_psfl { display: grid; grid-template-columns: repeat(4, auto); justify-content: start; gap: 8px 22px; padding: 14px 16px 16px; }
 .ax_psfl small { display: block; font-size: 10px; letter-spacing: 0.06em; opacity: 0.7; font-weight: 600; } .ax_psfl b { font: 600 15px 'Inter Tight', -apple-system, sans-serif; overflow-wrap: anywhere; }
 .ax_ccpr .ax_cclg b { display: block; font-size: 15px; letter-spacing: 0.14em; }

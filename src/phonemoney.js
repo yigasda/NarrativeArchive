@@ -596,7 +596,7 @@ function passArt(p, x, full) {
     // the drawing behind (none on the open ticket); on the globe the plane icon gives way to a plain line between the two places,
     // and the train without a drawing has its icon between the two stations, as the plain boarding pass does
     const drawn = passMotif(k, light ? '#3a2e1e' : '#fff', light ? 0.26 : 0.2, x.id, PASS_ACC[k]), art = full ? '' : drawn, globe = k === 'flight' && drawn, plainTrain = k === 'train' && drawn === null;
-    const route = (a, b, big, sm = String(a).length > 4 || String(b).length > 4) => `<span class="ax_psrt ${big && !globe ? '' : 'ln'}"><span><b class="${big && !sm ? '' : 'ax_pbsm'}">${esc(a)}</b></span><span class="ax_pspl">${big && !globe ? ax(k === 'train' ? 'train' : 'plane', 22, 'currentColor', 1.6) : `<i${globe ? ' class="sl"' : ''}></i>`}</span><span class="ax_r"><b class="${big && !sm ? '' : 'ax_pbsm'}">${esc(b)}</b></span></span>`;
+    const route = (a, b, big, sm = String(a).length > 4 || String(b).length > 4) => `<span class="ax_psrt ${big && !globe ? '' : 'ln'}${big && sm ? ' sm' : ''}"><span><b class="${big && !sm ? '' : 'ax_pbsm'}">${esc(a)}</b></span><span class="ax_pspl">${big && !globe ? ax(k === 'train' ? 'train' : 'plane', 22, 'currentColor', 1.6) : `<i${globe ? ' class="sl"' : ''}></i>`}</span><span class="ax_r"><b class="${big && !sm ? '' : 'ax_pbsm'}">${esc(b)}</b></span></span>`;
     const title = t => `<span class="ax_psti">${esc(t)}</span>`;
     const date = passDate(p, x), out = x.until && /^\d{2}-\d{2}/.test(String(x.until)) ? x.until : x.to && /^\d{2}-\d{2}/.test(x.to) ? x.to : '';
     let mid = '', fields = '';
