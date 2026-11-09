@@ -67,8 +67,12 @@
 | `src/phonefood.js` | 음식 그림(바탕 159개, 토핑, 곁들임). 낱말로 그림 고르기(`GUESS`, `WORD`, `wordsPic`, `dishPic`) |
 | `src/phoneprod.js` | 쇼핑 상품 실루엣 50종. 낱말로 종류 · 색 고르기(`prodKind`, `prodSvg`) |
 | `src/phonedata.js` | 폰 데이터 모양, 채우기 프롬프트, `storyNow` |
+| `src/phonepassart.js` | 지갑 표 뒤 무늬(종류마다 둘, 표 id로 고름) |
+| `src/phonemap*.js` · `phoneflags.js` | 다녀간 곳 지도 · 도시 찾기 · 확대, 국기 |
+| `src/phonestime.js` · `phoneicons.js` · `phonescreen.js` | 스크린타임, 앱 아이콘, 앱 목록(CATALOG) · 종류 |
+| `src/phoneai.js` | 폰에서 바로 부르는 모델 일(재번역 `AI_SYS_RETRANSLATE` 등) |
 | `src/phonelife.js` / `phonesync*.js` | 채우기 · 반영(데이터 쪽). **4장 데이터 쪽 경계 참고, 건드리지 않아요** |
-| `style.css` | 전부 한 파일(약 7000줄). 앱마다 주석 머리(`/* 은행 › … */`)로 묶여 있어요 |
+| `style.css` · `css/*.css` | `style.css`는 `css/` 파일들을 `@import`만 해요. 패널은 `css/10~45` · `70~72`, 휴대폰은 `css/50~57`(`5x-phone-*.css`), 다크 · 팝업은 `css/60~69`예요. 파일 안은 주석 머리(`/* ============ … */`)로 묶여 있어요 |
 
 #### 공용 도우미 (`src/phoneapps.js`)
 
@@ -95,7 +99,7 @@
    - `data-i`를 **늘** 받는 경로면 클릭 처리의 `view = [ … ].includes(go)` 첫 목록에 더해요. **있을 때만** 받는 경로면 두 번째 목록(`['cal', …, 'wallet']`)에 더해요.
    - 같은 화면 안에서 고르기만 바뀌는 경로(고정 지출 · 송금 · 명세서 · 지갑)는 `const stay = [...]`에 더해요. 그래야 스크롤 위치가 남아요.
 3. `src/phoneapps.js`의 `AXB`에 `경로: '색이름'`을 더해요. 앱 강조색이 `--axd` · `--axc`로 들어와요.
-4. CSS를 `style.css`의 그 앱 묶음에 더해요(3장 디자인 철칙, 4장 테마 충돌 규칙대로).
+4. CSS를 그 앱의 `css/5x-phone-*.css` 묶음에 더해요(3장 디자인 철칙, 4장 테마 충돌 규칙대로).
 5. 테스트 → 실제 폰 확인 → 버전 → 커밋(2장 3~4단계).
 
 ### 3단계: 실제 폰에서 확인
@@ -250,14 +254,14 @@ node --test tests/*.test.mjs
    ```css
    .ax .ax_myrow { --axbg: #fff; --axsh: 0 1px 2px …; }   /* background: #fff 는 안 먹어요 */
    ```
-   `style.css`의 큰 규칙(아래)이 모든 폰 버튼 배경을 `var(--axbg, transparent) !important`로 덮어써요. `background:`를 써도 소용없어요.
+   큰 규칙(아래, `css/52-phone-sns.css`)이 모든 폰 버튼 배경을 `var(--axbg, transparent) !important`로 덮어써요. `background:`를 써도 소용없어요.
    ```css
    body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax :is(button, label) {
      background: var(--axbg, transparent) !important; background-image: none;
      box-shadow: var(--axsh, none) !important; border-color: transparent !important; }
    ```
 2. **배경을 꼭 칠해야 하는 버튼이 아닌 것**(div, span)은 `background`를 그냥 써도 돼요. 버튼처럼 눌려야 하지만 테마를 피하고 싶으면 `<div role="button" tabindex="0" data-go=…>`도 돼요.
-3. 테마를 이겨야 하는 글자 크기 · 둥글기 · 테두리는 `!important`를 붙여요(예: `.ax_kp` 한국어 알약, 쇼핑 탭 밑줄). 같은 우선순위로 이기려면 위의 긴 선택자(`body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup …`)를 앞에 붙여요.
+3. 테마를 이겨야 하는 글자 크기 · 둥글기 · 테두리는 먼저 `--axfs` · `--axr` 같은 변수로 풀어요. `!important` 수는 `tests/css.budget.json`이 막고 있어서 새로 늘리지 않아요. 예전엔 `!important`를 붙였어요(예: `.ax_kp` 한국어 알약, 쇼핑 탭 밑줄). 같은 우선순위로 이기려면 위의 긴 선택자(`body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup …`)를 앞에 붙여요.
 4. **`input` / `select`**(은행 환율 칸 등)는 테마가 모양을 크게 바꿔요. 실제 입력칸은 투명(`opacity: 0`)하게 덮고, 보이는 값은 따로 그려요. 은행 `displayTools`가 이렇게 해요. 날짜칸은 누르면 `showPicker()`를 불러요(`phone.js`).
 5. 글꼴은 `.ax_canvas`에서 `-apple-system, 'SF Pro Text', 'Noto Sans KR', sans-serif`로 정해요. 숫자는 `'Inter Tight'`, 숫자 칸에는 `.cg_num`을 써요.
 6. 다크 UI: SillyTavern 쪽 패널은 `body.na_darkui`가 붙으면 어두운 팔레트예요(`src/theme.js`). 폰 화면 자체는 다크 테마를 따로 그리지 않아요. 어두운 테마에서도 폰은 같은 밝은 화면으로 보여야 해요. 확인은 `probe.cjs dark`로 해요.
@@ -265,7 +269,7 @@ node --test tests/*.test.mjs
 #### 클래스 이름 충돌
 
 - 클래스는 전부 전역이에요. 이름이 겹치면 엉뚱한 화면 규칙이 섞여요.
-- 새 이름은 `grep -n "\.새이름\b" style.css src/*.js`로 비어 있는지 먼저 봐요. 앱 앞글자를 붙이는 게 안전해요(`lf_` 생활 앱, `dv_` 배달, `cd_` 카드 상세, `ax_bk…` 은행, `iv_` 투자, `cg_` 홈).
+- 새 이름은 `grep -n "\.새이름\b" css/*.css src/*.js`로 비어 있는지 먼저 봐요. 앱 앞글자를 붙이는 게 안전해요(`lf_` 생활 앱, `dv_` 배달, `cd_` 카드 상세, `ax_bk…` 은행, `iv_` 투자, `cg_` 홈).
 
 #### 홈은 다른 체계예요
 
@@ -284,7 +288,7 @@ node --test tests/*.test.mjs
 
 ### 데이터 쪽 경계 (반영 담당 세션)
 
-- **반영 코드는 다른 세션(반영 쪽 오푸스) 담당이에요.** `src/phonesync.js`, `phonesyncmoney.js`, `phonesynclife.js`의 반영 부분, `src/phonedata.js`의 반영 지시문(약 199~213줄)이에요.
+- **반영 코드는 다른 세션(반영 쪽 오푸스) 담당이에요.** `src/phonesync.js`, `phonesyncmoney.js`, `phonesynclife.js`의 반영 부분, `src/phonedata.js`의 반영 지시문(`AI_SYS_PHONE_UPDATE` = `updateSystem()` 등), 번역 `src/phonetr.js`(`koGaps` · `refreshUndoAfter`)예요.
 - 디자인 때문에 거기를 고쳐야 하면 직접 고치지 말고, 소망에게 **그쪽에 보낼 메시지**를 써 줘요. 무엇이 왜 필요한지, 지시문 토큰을 늘리지 않는 방법을 같이 적어요.
 - 채우기(폰 처음 만들 때 한 번)와 반영(대화가 진행될 때마다, 지시문이 붐빔)은 달라요. 채우기에만 있는 것이 있어요(예: 지갑의 "지난 패스" 2~4개는 채우기에서만 지어내요).
 - 날짜: 화면의 "오늘"은 `storyNow(p)`예요. 상태창(status tracker)의 날짜를 먼저 보고, 없으면 반영이 갱신하는 `p.now`를 써요.
@@ -408,21 +412,21 @@ node --test tests/*.test.mjs
 - **아이콘**: 새 화면은 선 아이콘 `svgA(ICO_A.이름)`(`src/theme.js`)을 써요. 예전 화면(홈 탭, 일부 버튼)에는 Font Awesome `<i class="fa-solid …">`이 남아 있어요.
 - **홈 탭도 우리 팔레트예요**: 홈 탭(미터, 다음 할 일 카드, 빠른 버튼)도 나중에 시안(홈 7)대로 다시 그려져서 다른 탭과 같은 크림 · 차콜 팔레트예요. `css/41-home-theme.css`의 옛 "테마를 따라간다" 블록은 그 뒤 블록(`css/42-home.css`)에 덮여 있어요.
 
-### 7-2. 색 토큰 (`style.css` › `/* mockup palette */`)
+### 7-2. 색 토큰 (`css/30-palette.css` › `/* mockup palette */`)
 
 밝게(`body:not(.na_darkui)`) / 어둡게(`body.na_darkui`) 두 벌이 `#na_settings, .na_popup, .na_v2`에 걸려 있어요.
 
 | 토큰 | 밝게 | 어둡게 | 쓰임 |
 |---|---|---|---|
 | `--na-ink` | `#463428` | `#ECEAE6` | 본문 글자 |
-| `--na-accent` / `-ink` / `-soft` | `#B8541F` / `#A84A17` / `#F6E1D3` | `#E9DFCF` 크림 / `#F0CF8E` 짐작 금색 / `#3A3222` | 강조 · 주요 버튼(다크는 크림 버튼 + 작은 강조는 금색) |
-| `--na-card` / `--na-card2` / `--na-paper` | `#F7EEE7` / `#F1E6DD` / `#F7EEE7` | `#3A2F28` / `#44382F` / `#3A2F28` | 카드 · 탭 바탕 · 선택 탭 |
-| `--na-line` / `--na-line2` | `#E5D5C9` / `#F1E6DD` | `#54463D` / `#44382F` | 테두리 · 나눔선 |
-| `--na-dim` / `--na-mute` / `--na-sub` | `#8A7A70` / `#6B5A50` / `#7A6A60` | `#B3A396` / `#CABBAE` / `#BFB0A3` | 보조 글자 |
-| `--na-fill` / `--na-onfill` | `#6E5D52` / `#F7EEE7` | `#5E4C41` / `#F7ECE2` | 선택된 칩 |
+| `--na-accent` / `-ink` / `-soft` | `#B8541F` / `#A84A17` / `#F6E1D3` | `#E9DFCF` 크림 / `#F0CF8E` 짐작 금색 / `#2E2E34` | 강조 · 주요 버튼(다크는 크림 버튼 + 작은 강조는 금색) |
+| `--na-card` / `--na-card2` / `--na-paper` | `#F7EEE7` / `#F1E6DD` / `#F7EEE7` | `#232328` / `#2E2E34` / `#232328` | 카드 · 탭 바탕 · 선택 탭 |
+| `--na-line` / `--na-line2` | `#E5D5C9` / `#F1E6DD` | `#3A3A41` / `#2E2E34` | 테두리 · 나눔선 |
+| `--na-dim` / `--na-mute` / `--na-sub` | `#8A7A70` / `#6B5A50` / `#7A6A60` | `#9A989F` / `#B9B7BD` / `#A9A7AE` | 보조 글자 |
+| `--na-fill` / `--na-onfill` | `#6E5D52` / `#F7EEE7` | `#4A4A52` / `#F3F1ED` | 선택된 칩 |
 | `--na-ok` · `--na-bad` · `--na-warn` · `--na-amber` · `--na-purple` (+ `-soft`) | 초록 · 빨강 · 주황 · 호박 · 보라 | 밝게 올린 같은 색 | 상태 |
 | `--na-warm` · `--na-cold` (+ `-ink`, `-soft`) | 따뜻함 주황 · 차가움 파랑 | | 관계 온도 같은 양극 그래프 |
-| 패널 바탕 | `#F0E4DB` | `#1C1C20` | 패널 · 팝업 바탕(고정) |
+| 패널 바탕 | `#F0E4DB` | `#17171A` | 패널 · 팝업 바탕(고정) |
 
 **다크 = 차콜(3.168):** 갈색 다크를 버렸어요(다크의 주황이 별로였어요). 무채색 차콜 바탕에 큰 버튼 · 켜진 것은 크림(`--na-accent` `#E9DFCF`), 숫자 · 링크 · 탭 글자 같은 작은 강조는 짐작 태그의 금색(`--na-accent-ink` `#F0CF8E`), 아이콘처럼 `color: var(--na-accent)`였던 곳은 조금 진한 금색(`--na-accent-fg` `#E2B65C`, 밝은 테마엔 없어서 원래 주황)이에요. 패널도 팝업과 같은 층(바탕 `#17171A` · 카드 `#232328` · 칸 `#2E2E34`)에 카드 그림자를 둬요. 크림만 쓰면 색이 단조로워요. **셀로판지 금지:** 짙은 색을 반투명하게 깐 바탕(아이콘 동그라미, 배지, 경고 칸 · 버튼)은 쓰지 않아요. 다크의 `-soft` 바탕은 전부 무채색 칸(`#2E2E34`)이고, 색은 아이콘 · 글자 · 얇은 선에만 넣어요(시안 `no_cellophane.png` A). 크림 위 글자 · 체크 · 스위치 손잡이는 흰색이 아니라 `--na-onaccent`(`#1B1B1F`)예요. 새 규칙에서 `background: var(--na-accent)`를 쓰면 글자는 `color: var(--na-onaccent, #fff)`로 써요. 관계 온도의 따뜻함(`--na-warm`)만 주황으로 남아요. 시안: `docs/mockups/dark-charcoal`. **어두운 팝업:** 팝업 바탕 `#17171A`, 카드 `#232328`(테두리 없이 위쪽 빛 + 그림자), 칸 `#2E2E34`. 색을 깐 칸(탁한 초록 · 노랑)은 쓰지 않고 색은 얇은 선이나 글자로만 넣어요: 내 말풍선은 주황 테두리, 답은 왼쪽 색 띠, 미리보기 더한 줄 · 뺀 줄도 왼쪽 띠 + 아주 옅은 색. 팝업 안에서는 토큰(`--na-card` 등)을 바꿔 두어서 모든 팝업이 따라가요(`style.css` 맨 끝).
 
@@ -431,17 +435,17 @@ node --test tests/*.test.mjs
 ### 7-3. 테마 충돌 (패널 쪽)
 
 SillyTavern 테마는 `.menu_button`, `input`, `select`, `textarea`, `small`, 체크박스, 팝업 바탕에 자기 색을 칠하고, 어떤 테마는 `!important`까지 써요. 패널은 이걸 이렇게 막아요.
-- **팝업 바탕 · 글자 고정**: `dialog.popup:has(.na_popup, #na_settings)`에 바탕 `#F0E4DB` / `#2A221D`, 글자색을 `!important`로 박아요(`/* SillyTavern themes that force their own colours … */`).
+- **팝업 바탕 · 글자 고정**: `dialog.popup:has(.na_popup, #na_settings)`에 바탕 `#F0E4DB` / `#17171A`, 글자색을 `!important`로 박아요(`/* SillyTavern themes that force their own colours … */`).
 - **SillyTavern 테마 변수 바꿔치기**: 패널 · 팝업 안에서는 `--SmartThemeBodyColor`, `--SmartThemeQuoteColor`, `--SmartThemeBlurTintColor` 등을 우리 팔레트 값으로 덮어써요. SillyTavern 자체 규칙이 이 변수를 읽어도 우리 색이 나와요.
 - **버튼은 자기 클래스**: `.menu_button` 대신 `.na_btn`(`.na_primary`, `.na_small`)을 써요. 테마의 메뉴 버튼 규칙이 안 새요. 팝업 아래쪽 확인 · 취소(`.popup-controls .menu_button`)도 `!important`로 우리 색이에요.
 - **스위치**: 체크박스는 숨기고(`skinToggles`, `input.na_toggle`) `.na_tgl_ui`가 스위치를 그려요. 테마 체크박스 CSS가 못 깨요.
-- **입력칸**: 검색칸 · 연결 설정칸은 겉 상자가 칸을 그리고, 안의 `input`은 납작하게 둬요(`/* the input itself is bare; the wrapper draws the field */`). 테마 padding이 글자를 아이콘 밑으로 밀지 못해요. `.text_pole`은 크림 칸(`#F2E9E2`) / 짙은 칸(`#2E2621`)으로 고정이에요.
+- **입력칸**: 검색칸 · 연결 설정칸은 겉 상자가 칸을 그리고, 안의 `input`은 납작하게 둬요(`/* the input itself is bare; the wrapper draws the field */`). 테마 padding이 글자를 아이콘 밑으로 밀지 못해요. `.text_pole`은 크림 칸(`#F2E9E2`) / 짙은 칸(`#2A2A30`)으로 고정이에요.
 - **`<small>`**: SillyTavern의 `small { opacity: .7 }`이 새서, 패널 안 `small`은 `opacity: 1`에 우리 색이에요.
 - **확장 목록 머리줄**: 기본 그라데이션 대신 패널 바탕색으로 칠해 패널과 한 덩어리로 보여요.
 - **확인 창**(`util.confirm`, 이야기 고르기): 둥근 크림 카드에 그림자 두 겹, 큰 제목, "취소 · 실행" 알약 반반(실행은 주황 + 위쪽 빛)이에요. 지우는 창(`confirm(제목, 설명, 버튼, { danger: true })`)만 위에 주황 동그라미 아이콘 + 가운데 정렬, 나머지는 왼쪽 정렬이에요. 버튼은 하는 일 이름(지우기 · 바꾸기 …)이고, "아니요를 누르면 …" 창은 `{ no: 아니요 }`로 네 · 아니요예요. 고르기(라디오)가 있는 창은 왼쪽 정렬에 고르기가 알약(고른 쪽 진한 갈색)이에요(시안 `docs/mockups/ext-confirm` B). "이 이야기의 휴대폰"은 따로 질문 한 줄("같은 이야기인가요?") + 아이콘 타일 두 개(`.na_sc`, 시안 `ext-choice` B+C)예요. 기존 테마 방어 규칙에 id가 섞여 있어서(`:has(.na_popup, #na_settings)`) 이길 때는 `:not(#na_x)`를 붙여요. 팔레트 변수는 `.na_popup` 안에만 있어서 `dialog.popup:has(.na_confirm)`에도 걸어 뒀어요(버튼 줄이 `.na_popup` 바깥이에요).
 - **아카이브에 추가**(`src/append.js`, `.na_ap3`, 시안 `docs/mockups/ext-append`): 위 카드에 큰 번호 + "초안 | 추가 후" 전환이 있고, 추가 후는 원래 미리보기(`.na_diff`, 손대지 않음)를 스크롤 상자에 보여줘요. "크게 보기"는 미리보기 · 고치기 칸 · 버튼 줄을 창 전체 화면으로 옮겼다가 돌아가기로 제자리에 돌려놔요(같은 요소를 옮겨요, 복사 아님). AI로 고치기는 작은 채팅이에요: 내 요청(주황) ↔ 답(초록 ✓ 고쳤어요 · 노랑 못 한 것 · 빨강 ✕ 못 고쳤어요). 답은 모델이 쓰지 않고 코드가 써요(바뀐 섹션 · 줄 수). 범위 칩은 번호 + 섹션 이름 한 줄. 아래 취소 · 추가하기는 창 안 버튼이고 팝업 자체 버튼은 숨겨요(`.na_ap3_dlg`).
 - **빈 창 예시 인물**: 누가 아는가 · 대사 은행처럼 빈 창에 예시를 그릴 땐 이야기 속 사람 대신 Claude · GPT · Gemini를 써요. 얼굴은 `people.js`의 `exFace`로 그리고 색은 늘 고정이에요(Claude 주황 `#D97757`, GPT 차콜 `#3A3A3C`, Gemini 차분한 남색 `#3E5683`). 프사 없이 글자 동그라미예요.
-- **창 크기 규칙(3.169.5):** 확장 창은 전부 내용만큼 뜨되, 최소 높이는 화면의 55%로 같아요(`style.css` 맨 끝 `window size`). 짧은 창도 너무 작지 않고, 큰 창으로 늘렸을 때처럼 텅 비지도 않아요. 길면 화면 끝까지 커지고 안에서 스크롤돼요. 확인 창 · 휴대폰 · 작업실 · 아카이브에 추가만 자기 크기를 써요. 버튼이 아래에 붙는 창(마법사, 이탈 감지 빈 화면)은 빈칸(`flex: 1`)이나 `margin-top: auto`로 내려요. 확인 사진은 폰 높이(412×870)로 찍어요. 너무 길게 찍으면 크기가 헷갈려요.
+- **창 크기 규칙(3.169.5):** 확장 창은 전부 내용만큼 뜨되, 최소 높이는 화면의 55%로 같아요(`css/71-size-kwtest-xray-au.css` 맨 위 `window size`). 짧은 창도 너무 작지 않고, 큰 창으로 늘렸을 때처럼 텅 비지도 않아요. 길면 화면 끝까지 커지고 안에서 스크롤돼요. 확인 창 · 휴대폰 · 작업실 · 아카이브에 추가만 자기 크기를 써요. 버튼이 아래에 붙는 창(마법사, 이탈 감지 빈 화면)은 빈칸(`flex: 1`)이나 `margin-top: auto`로 내려요. 확인 사진은 폰 높이(412×870)로 찍어요. 너무 길게 찍으면 크기가 헷갈려요.
 - **닫는 법은 하나(`src/popupchrome.js`):** 확장 팝업은 아래 "닫기"로만 닫아요. ✕나 "취소"를 닫기용으로 쓰지 않아요. 보기만 하는 창은 가운데 작은 "닫기" 하나, 무언가 하는 창은 "닫기(글자) · 하는 일(주황 알약)"이에요. 팝업이 열리면 이 파일이 자동으로 모양을 입히고 취소 버튼 글자를 "닫기"로 바꿔요. 확인 창(`util.confirm`)만 "취소 · 하는 일"이에요(취소가 대답이라서).
 - 새 화면을 만들면 **아주 화려한 SillyTavern 테마**(버튼 · 입력칸을 `!important`로 칠하는 것)를 씌우고 한 번 확인해요. 소망 화면에서만 깨지는 일이 실제로 있었어요.
 
@@ -457,7 +461,7 @@ SillyTavern 테마는 `.menu_button`, `input`, `select`, `textarea`, `small`, �
 | `src/browser.js` | 섹션 둘러보기 |
 | `src/people.js`, `calendar.js`, `xray.js`, `worldmap.js`, `drift.js` 등 | 이야기를 보여주는 도구들(v2 디자인) |
 - 팝업은 SillyTavern의 `callGenericPopup($root, POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, … })`로 열고, 안쪽 루트에 `.na_popup`(새 화면은 `.na_v2`도)을 붙여요. 그래야 팔레트와 테마 방어가 걸려요.
-- CSS는 같은 `style.css` 앞부분(약 1~4400줄)이 패널 쪽이에요. `/* ============ … v2 */` 머리마다 화면이 묶여 있어요. 휴대폰 CSS는 그 뒤예요.
+- 패널 CSS는 `css/10~45` · `css/70~72`예요. `/* ============ … */` 머리마다 화면이 묶여 있어요. 휴대폰 CSS는 `css/50~57`이에요.
 
 ### 7-5. 패널 디자인 원칙 (지금까지 굳은 것)
 
