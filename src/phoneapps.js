@@ -699,7 +699,7 @@ export function setVoice(p, now, pick = null, busy = false) {
       ${axInd()}`;
 }
 // 말투 › 사람 추가 (docs/mockups/phone-voice add B): the people the phone shows who aren't in the 말투 table, where each
-// shows up (연락처 · 문자 · 전화 · 댓글); chosen ones are added and asked of the story at once (phone.js). 직접 적기 types a name
+// shows up (연락처 · 문자 · 전화 · 댓글), the owner first (나: their own texts and posts are translated in their voice too); chosen ones are added and asked of the story at once (phone.js). 직접 적기 types a name
 const VOICE_FROM = ['연락처', '문자', '전화', '댓글'];
 export function voicePeople(p) {
     const have = new Set(voiceList(p).map(v => v.who.toLowerCase())), gone = new Set(p.hiddenContacts || []), seen = new Map();
@@ -708,7 +708,8 @@ export function voicePeople(p) {
     (p.threads || []).forEach(t => (t.group ? groupOf(t) : [t.with]).forEach(n => add(n, '문자')));
     (p.calls || []).forEach(c => add(c.with, '전화'));
     (p.posts || []).forEach(x => (x.comments || []).forEach(c => add(c.from, '댓글')));
-    return [...seen.values()].map(x => ({ name: x.name, from: VOICE_FROM.filter(w => x.from.has(w)).join(' · ') })).sort((a, b) => a.name.localeCompare(b.name));
+    const own = String(p.owner || '').trim(), me = own && nameKey(own) !== 'me' && !have.has(own.toLowerCase()) ? [{ name: own, from: '나' }] : [];
+    return [...me, ...[...seen.values()].map(x => ({ name: x.name, from: VOICE_FROM.filter(w => x.from.has(w)).join(' · ') })).sort((a, b) => a.name.localeCompare(b.name))];
 }
 export function setVoiceAdd(p, now, pick = new Set(), busy = false) {
     const ps = voicePeople(p), on = x => pick.has(x.name.toLowerCase()), n = ps.filter(on).length;
