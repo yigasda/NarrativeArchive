@@ -207,8 +207,15 @@ if (GMAP) svg = `<rect width="${W}" height="${H}" fill="${C.land}"/>`
 function parkPaths() {
   const inside = (x, y, ps) => { let c = false; for (let i = 0, j = ps.length - 1; i < ps.length; j = i++) { const [a, b] = ps[i], [u, v] = ps[j]; if ((b > y) !== (v > y) && x < (u - a) * (y - b) / (v - b) + a) c = !c; } return c; };
   const big = GREENS.filter(g => pxArea(g) > 2500 * k * k), inPark = ([x, y]) => x > 0 && x < W && y > 0 && y < 490 && big.some(g => inside(x, y, g));
-  return FOOT.map(q => ({ dl: q.dl, len: q.ps.reduce((a, pt, i) => i && inPark(pt) && inPark(q.ps[i - 1]) ? a + Math.hypot(pt[0] - q.ps[i - 1][0], pt[1] - q.ps[i - 1][1]) : a, 0) }))
-    .filter(q => q.len > 50 * k).sort((a, b) => b.len - a.len).slice(0, 10).map(q => q.dl).join('');
+  const cand = FOOT.map(q => ({ ...q, len: q.ps.reduce((a, pt, i) => i && inPark(pt) && inPark(q.ps[i - 1]) ? a + Math.hypot(pt[0] - q.ps[i - 1][0], pt[1] - q.ps[i - 1][1]) : a, 0) }))
+    .filter(q => q.len > 50 * k).sort((a, b) => b.len - a.len);
+  // no two paths side by side: a path mostly within 28 px of one already drawn is left out
+  const kept = [], dots = [], gap = 28;
+  for (const q of cand) { const sp = []; for (let i = 1; i < q.ps.length; i++) { const [a, b] = [q.ps[i - 1], q.ps[i]], n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 6)); for (let j = 0; j < n; j++) sp.push([a[0] + (b[0] - a[0]) * j / n, a[1] + (b[1] - a[1]) * j / n]); }
+    const vis = sp.filter(inPark); if (!vis.length) continue;
+    const near = vis.filter(([x, y]) => dots.some(([u, v]) => (u - x) ** 2 + (v - y) ** 2 < gap * gap)).length / vis.length;
+    if (near > 0.3) continue; kept.push(q.dl); dots.push(...vis); if (kept.length >= 8) break; }
+  return kept.join('');
 }
 // trees in the parks, the station box, the icons — the old kit's pieces on the real shapes
 function prettyTop() {
