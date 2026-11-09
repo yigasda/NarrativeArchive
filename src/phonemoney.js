@@ -593,14 +593,15 @@ const passSpan = (p, x) => (x.until && /^\d{2}-\d{2}/.test(String(x.until)) ? `$
 function passArt(p, x, full) {
     const k = passKind(x), [bg, icon, lab] = PASS[k], light = LIGHT.has(k);
     const f = (label, v) => (v === null || v === undefined || String(v).trim() === '' || v === '—' ? '' : `<span><small>${label}</small><b>${esc(String(v))}</b></span>`);
-    // the drawing behind (none on the open ticket); on the globe the plane icon gives way to a plain line between the two places
-    const drawn = passMotif(k, light ? '#3a2e1e' : '#fff', light ? 0.26 : 0.2, x.id, PASS_ACC[k]), art = full ? '' : drawn, globe = k === 'flight' && drawn;
-    const route = (a, b, big) => `<span class="ax_psrt ${big && !globe ? '' : 'ln'}"><span><b class="${big && String(a).length <= 4 ? '' : 'ax_pbsm'}">${esc(a)}</b></span><span class="ax_pspl">${big && !globe ? ax('plane', 22, 'currentColor', 1.6) : `<i${globe ? ' class="sl"' : ''}></i>`}</span><span class="ax_r"><b class="${big && String(b).length <= 4 ? '' : 'ax_pbsm'}">${esc(b)}</b></span></span>`;
+    // the drawing behind (none on the open ticket); on the globe the plane icon gives way to a plain line between the two places,
+    // and the train without a drawing has its icon between the two stations, as the plain boarding pass does
+    const drawn = passMotif(k, light ? '#3a2e1e' : '#fff', light ? 0.26 : 0.2, x.id, PASS_ACC[k]), art = full ? '' : drawn, globe = k === 'flight' && drawn, plainTrain = k === 'train' && drawn === null;
+    const route = (a, b, big, sm = String(a).length > 4 || String(b).length > 4) => `<span class="ax_psrt ${big && !globe ? '' : 'ln'}"><span><b class="${big && !sm ? '' : 'ax_pbsm'}">${esc(a)}</b></span><span class="ax_pspl">${big && !globe ? ax(k === 'train' ? 'train' : 'plane', 22, 'currentColor', 1.6) : `<i${globe ? ' class="sl"' : ''}></i>`}</span><span class="ax_r"><b class="${big && !sm ? '' : 'ax_pbsm'}">${esc(b)}</b></span></span>`;
     const title = t => `<span class="ax_psti">${esc(t)}</span>`;
     const date = passDate(p, x), out = x.until && /^\d{2}-\d{2}/.test(String(x.until)) ? x.until : x.to && /^\d{2}-\d{2}/.test(x.to) ? x.to : '';
     let mid = '', fields = '';
     if (k === 'flight') { mid = x.from && x.to ? route(x.from, x.to, true) : title(x.to || x.from || ''); fields = f('날짜', date) + f('탑승구', x.gate) + f('좌석', x.seat) + f('편명', x.no); }
-    else if (k === 'train' || k === 'bus' || k === 'ferry') { mid = x.from && x.to ? route(x.from, x.to, false) : title(x.to || x.from || ''); fields = f('날짜', date) + f('좌석', x.seat) + f(k === 'bus' ? '예약' : '번호', x.no) + f('소유자', String(p.owner).toUpperCase()); }
+    else if (k === 'train' || k === 'bus' || k === 'ferry') { mid = x.from && x.to ? route(x.from, x.to, plainTrain) : title(x.to || x.from || ''); fields = f('날짜', date) + f('좌석', x.seat) + f(k === 'bus' ? '예약' : '번호', x.no) + f('소유자', String(p.owner).toUpperCase()); }
     else if (k === 'hotel') { const n = nights(x.date, out); mid = title(x.to && !/^\d{2}-\d{2}/.test(x.to) ? x.to : x.from || ''); fields = f('체크인', date) + f('체크아웃', out ? fmtDate(p, out, true) : '') + f('숙박', n ? `${n}박` : '') + f('예약', x.no) + f('객실', x.seat); }
     else if (k === 'membership') { mid = title(x.to || x.from || x.by || ''); fields = f('기간', passSpan(p, x) || date) + f('번호', x.no) + f('회원', String(p.owner).toUpperCase()); }
     else if (k === 'match') { const m = String(x.to || x.from || '').split(/\s+(?:vs\.?|gegen|대|–|-)\s+/i); mid = m.length === 2 ? `<span class="ax_psvs"><b>${esc(m[0])}</b><small>vs</small><b>${esc(m[1])}</b></span>` : title(x.to || x.from || ''); fields = f('날짜', date) + f('블록', x.gate) + f('좌석', x.seat) + f('번호', x.no); }
