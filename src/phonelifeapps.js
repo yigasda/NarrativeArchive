@@ -200,8 +200,7 @@ function cityTime(p, lf, c) {
     const n = now5(p), at = realDate(n, 12) || new Date();
     const here = hereZone(lf, p), a = c.tz ? zoneMin(c.tz, at) : null, b = here ? zoneMin(here, at) : a;
     const off = a !== null && b !== null ? Math.round((a - b) / 60) : 0, t = toMin(n.slice(6)) ?? toMin(lf.weather.here.time) ?? 12 * 60;
-    const sun = c.sunrise && c.sunset ? [c.sunrise, c.sunset] : sunOf(n.slice(0, 5), c.tz) || [];
-    const local = t + off * 60, night = (() => { const ss = toMin(sun[1]) ?? 18 * 60, sr = toMin(sun[0]) ?? 6 * 60 + 30; const l = ((local % 1440) + 1440) % 1440; return l >= ss || l < sr; })();
+    const local = t + off * 60, night = phaseOf(hm(local)) === 'night';
     return { off, time: hm(local), night, date: n.slice(0, 5), dayShift: local >= 1440 ? '내일' : local < 0 ? '어제' : '오늘' };
 }
 // the world map card: grid paper, the land, tonight's shadow (from the story's date and time), a pin per saved city
@@ -781,16 +780,13 @@ export function fileScreen(p, now, id) {
 // ================= 날씨 =================
 // what each sky is called; the colours come from pal() below
 const WX = { clear: '맑음', partly: '구름 조금', cloudy: '흐림', drizzle: '이슬비', rain: '비', sleet: '진눈깨비', snow: '눈', fog: '안개', storm: '뇌우', wind: '강풍' };
-// the part of the day a sky is drawn for: dawn and evening are the hour around sunrise and sunset
-function phaseOf(time, sunrise, sunset) {
-    let t = toMin(time), ss = toMin(sunset) ?? 18 * 60;
-    const sr = toMin(sunrise) ?? 6 * 60 + 30;
+// the part of the day a sky is drawn for, by the clock alone (the same for every picture: the sky, the hours' icons, the world clock's sun and
+// moon): 새벽 04–07, 낮 07–17, 저녁 17–20, 밤 20–04. The sun's own times stay on the sunset tile only
+function phaseOf(time) {
+    const t = toMin(time);
     if (t === null) return 'day';
-    // a sunset past midnight (a far northern summer): the day runs on past the clock's wrap
-    if (ss < sr) { ss += 1440; if (t < sr - 45) t += 1440; }
-    if (t >= sr - 45 && t <= sr + 45) return 'dawn';
-    if (t >= ss - 50 && t <= ss + 30) return 'eve';
-    return t > ss + 30 || t < sr - 45 ? 'night' : 'day';
+    const m = ((t % 1440) + 1440) % 1440;
+    return m < 4 * 60 ? 'night' : m < 7 * 60 ? 'dawn' : m < 17 * 60 ? 'day' : m < 20 * 60 ? 'eve' : 'night';
 }
 const WET = { drizzle: 1, rain: 1, sleet: 1 };
 // one palette per sky and part of the day: flat layers only (sky, bands, three hills, clouds), no gradients
@@ -1092,7 +1088,7 @@ function weatherBody(p, h, name, night, sub, source, tileCol, lead = '') {
     h = { ...h, days: rows.map(x => x.d) };
     const lo =Math.min(...h.days.map(d => d.lo ?? 99), h.lo ?? 99), hi = Math.max(...h.days.map(d => d.hi ?? -99), h.hi ?? -99);
     return `<div class="lf_wtop">${sub ? `<small>${sub}</small>` : ''}<h2>${esc(name)}</h2><div class="t">${h.temp ?? '—'}°</div><div class="c">${esc(saidOf(h))}</div><div class="hl">최고:${h.hi ?? '—'}° 최저:${h.lo ?? '—'}°</div>${source}</div>
-      ${h.hours.length ? `<div class="lf_wcard">${h.line ? `<div class="ln1">${esc(h.line)}${k1(h.ko, 'lf_wk')}</div>` : ''}<div class="lf_hrs">${h.hours.map((x, k) => `<div>${k ? esc(hourOf(p, x.time)) : '지금'}<em>${x.rain >= 20 ? `${x.rain}%` : ''}</em>${wxIc(x.cond, 26, phaseOf(x.time, h.tiles.sunrise || h.sr, h.tiles.sunset || h.ss) === 'night')}<b class="cg_num">${x.temp ?? '—'}°</b></div>`).join('')}</div>${hourLine(h.hours)}</div>` : ''}
+      ${h.hours.length ? `<div class="lf_wcard">${h.line ? `<div class="ln1">${esc(h.line)}${k1(h.ko, 'lf_wk')}</div>` : ''}<div class="lf_hrs">${h.hours.map((x, k) => `<div>${k ? esc(hourOf(p, x.time)) : '지금'}<em>${x.rain >= 20 ? `${x.rain}%` : ''}</em>${wxIc(x.cond, 26, phaseOf(x.time) === 'night')}<b class="cg_num">${x.temp ?? '—'}°</b></div>`).join('')}</div>${hourLine(h.hours)}</div>` : ''}
       ${h.days.length ? `<div class="lf_wcard"><div class="hd">${h.days.length}일간의 일기예보</div>${rows.map(({ d, name: dn, now: isNow }) => `<div class="lf_d10"><span>${dn}</span><span class="ic">${wxIc(d.cond, 22)}${d.rain >= 30 ? `<em>${d.rain}%</em>` : ''}</span><span class="lo cg_num">${d.lo ?? '—'}°</span>${tempBar(d, lo, hi, isNow ? h.temp : null)}<span class="hi cg_num">${d.hi ?? '—'}°</span></div>`).join('')}</div>` : ''}
       ${weatherTiles(h, tileCol, lead)}`;
 }
@@ -1112,7 +1108,7 @@ export function weatherScreen(p, now) {
     const lf = L(p);
     if (!lf) return lifeEmpty(p, now, '날씨', 'life');
     // the phone's own clock (the weather's time is when it was last told, often hours before)
-    const h = hereFull(p, lf), time = now5(p).slice(6) || h.time, phase = phaseOf(time, h.tiles.sunrise, h.tiles.sunset), q = pal(h.cond, phase);
+    const h = hereFull(p, lf), time = now5(p).slice(6) || h.time, phase = phaseOf(time), q = pal(h.cond, phase);
     return `<div class="lf_wx" style="${wxVars(q)}">${scene(h.cond, phase)}
       ${axBar(p, now, '#fff')}
       <div class="ax_top lf_wbar">${axCb('home2')}<button type="button" class="lf_pill wx" data-go="wlist">도시 ${lf.weather.cities.filter(c => c !== cityOfPlace(h.place, lf.weather.cities)).length}</button></div>
@@ -1167,7 +1163,7 @@ export function cityScreen(p, now, id) {
     h.tiles = fillTiles({ ...h, tiles: { sunset: c.sunset || '', sunrise: c.sunrise || '', rain24: null, rainNext: c.rainNext ?? null, feels: c.feels ?? null, wind: c.wind ?? null, gust: c.gust ?? null, humidity: c.humidity ?? null, dew: c.dew ?? null, visibility: c.visibility ?? null, dir: c.dir || '' } }, `${c.name}:${now5(p).slice(0, 5)}`, now5(p), c.tz);
     // a city shows no visibility tile: its detail already carries today's temperatures, and seven tiles leave one alone
     h.tiles.visibility = null;
-    const phase = phaseOf(t.time, h.tiles.sunrise, h.tiles.sunset), q = pal(c.cond, phase), tileCol = shade(q.sky, q.phase === 'day' && q.sky === '#4f8fd8' ? 0.62 : 0.8);
+    const phase = phaseOf(t.time), q = pal(c.cond, phase), tileCol = shade(q.sky, q.phase === 'day' && q.sky === '#4f8fd8' ? 0.62 : 0.8);
     const lm = toMin(t.time), warm = (c.hi ?? 0) >= 15 ? '#f3c66b' : '#9fd6ec';
     // the city's own tiles first: its sunset and today's temperatures; no clock, the status bar and the list already tell the time
     const lead = `${sunsetTile(h.tiles.sunset, h.tiles.sunrise, t.time, tileCol)}${tile('오늘 기온', `${c.temp ?? '—'}°`, dayCurve(c, lm, warm), `최저 ${c.lo ?? '—'}° · 최고 ${c.hi ?? '—'}°`)}`;
@@ -1185,7 +1181,7 @@ export function hereWidget(p, now) {
       <span class="cg_wxeb"><svg aria-hidden="true" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#8a929d" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17a4 4 0 0 1 .5-8A5.5 5.5 0 0 1 18 11a3 3 0 0 1-.5 6zM15 4.5a3 3 0 0 1 3.5 2.5"/></svg><b>아직 날씨가 없어요</b><small>눌러서 채우기</small></span>
     </button>`;
     // the same weather the app shows: a newer status line already over the saved one
-    const f = hereFull(p, L(p)), ph = phaseOf(now5(p).slice(6) || f.time, f.tiles.sunrise, f.tiles.sunset);
+    const f = hereFull(p, L(p)), ph = phaseOf(now5(p).slice(6) || f.time);
     return `<button type="button" class="lf_city cg_wx" data-go="weather" style="--axbg: ${pal(f.cond, ph).sky}">${widgetSky(f.cond, ph)}
       <span class="l"><b>${esc(f.place || '현재 위치')}</b><small><svg width="11" height="11" viewBox="0 0 24 24"><path d="M3 11l18-8-8 18-2-8z" fill="#fff"/></svg> 현재 위치</small><span>${esc(saidOf(f))}</span></span><span class="r"><b>${f.temp ?? '—'}°</b><span>최고 ${f.hi ?? '—'}° 최저 ${f.lo ?? '—'}°</span></span></button>`;
 }
@@ -1199,8 +1195,8 @@ export function cityList(p, now) {
     return `${axBar(p, now)}${axTop(axCb('weather'), axKp(p))}
       <div class="ax_scroll">${axH1('날씨')}
         <div class="lf_q">${ax('search', 16, '#8a929d', 2.4)}도시 또는 공항 검색</div>
-        ${card('weather', '', h.place || '현재 위치', `${nav} 현재 위치`, h.cond, phaseOf(ht, h.tiles.sunrise, h.tiles.sunset), h.temp, h.hi, h.lo, [saidOf(h), same?.note].filter(Boolean).join(' · '))}
-        ${lf.weather.cities.filter(c0 => c0 !== same).map(c0 => { const c = cityView(p, lf, c0), t = cityTime(p, lf, c), sun = c.sunrise && c.sunset ? [c.sunrise, c.sunset] : sunOf(now5(p).slice(0, 5), c.tz) || []; return card('wcity', c.id, c.name, t.off ? `${clockOf(p, t.time)} · ${t.off > 0 ? '+' : '−'}${Math.abs(t.off)}시간` : '', c.cond, phaseOf(t.time, sun[0], sun[1]), c.temp, c.hi, c.lo, [WX[c.cond], c.note].filter(Boolean).join(' · ')); }).join('')}
+        ${card('weather', '', h.place || '현재 위치', `${nav} 현재 위치`, h.cond, phaseOf(ht), h.temp, h.hi, h.lo, [saidOf(h), same?.note].filter(Boolean).join(' · '))}
+        ${lf.weather.cities.filter(c0 => c0 !== same).map(c0 => { const c = cityView(p, lf, c0), t = cityTime(p, lf, c); return card('wcity', c.id, c.name, t.off ? `${clockOf(p, t.time)} · ${t.off > 0 ? '+' : '−'}${Math.abs(t.off)}시간` : `${clockOf(p, t.time)} · 같은 시간`, c.cond, phaseOf(t.time), c.temp, c.hi, c.lo, [WX[c.cond], c.note].filter(Boolean).join(' · ')); }).join('')}
         <i class="lf_pad"></i></div>${axInd()}`;
 }
 

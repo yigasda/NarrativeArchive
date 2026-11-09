@@ -469,6 +469,11 @@ test('OWNER\'S CLOCK names a summer-time change within a week of its time, on th
     // (a place on the owner's hours now, but not in a week: its row stays, with the change; never in the archive's block)
     const lagos = { owner: 'Ren', year: 2026, now: '10-24 12:00', life: { weather: { here: { place: 'London' }, cities: [{ name: 'London', tz: 'Europe/London' }, { name: 'Lagos', tz: 'Africa/Lagos' }, { name: 'Seoul', tz: 'Asia/Seoul' }] } } };
     assert.match(data.clockBlock(lagos, lagos.now), /- Lagos: 0 hours \(DST: \+1 hour from 10-25 02:00→01:00\)/);
+    // (a saved city in the owner's own zone is a row too, "0 hours"; the city the owner is in never is)
+    const munich = { owner: 'Ren', year: 2026, now: '11-09 05:16', life: { weather: { here: { place: 'Frankfurt' }, cities: [{ name: 'Frankfurt', tz: 'Europe/Berlin' }, { name: 'Seoul', tz: 'Asia/Seoul' }, { name: 'Munich', tz: 'Europe/Berlin' }] } } };
+    const mb = data.clockBlock(munich, munich.now);
+    assert.match(mb, /- Seoul: \+8 hours\n- Munich: 0 hours$/);
+    assert.doesNotMatch(mb, /- Frankfurt/);
     // (two changes an hour apart, one while the owner's clock repeats an hour: told apart)
     const ny = { owner: 'Ren', year: 2026, now: '10-30 12:00', life: { weather: { here: { place: 'New York' }, cities: [{ name: 'New York', tz: 'America/New_York' }, { name: 'Chicago', tz: 'America/Chicago' }, { name: 'Seoul', tz: 'Asia/Seoul' }] } } };
     assert.match(data.clockBlock(ny, ny.now), /- Chicago: -1 hour \(DST: 0 hours from 11-01 02:00→01:00; -1 hour from 11-01 02:00\)/);
