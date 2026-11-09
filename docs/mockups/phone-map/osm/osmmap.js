@@ -200,10 +200,10 @@ if (GMAP) svg = `<rect width="${W}" height="${H}" fill="${C.land}"/>`
   + fill(L.bld, C.bld) + fill(L.station, '#e2dfda')
   // park paths as faces, not lines: the few long ones as a soft band one shade lighter than the grass, no rim
   + (L.park + L.forest ? `<defs><clipPath id="gp"><path d="${L.park + L.forest}"/></clipPath></defs><g clip-path="url(#gp)">${st(parkPaths(), C.foot, Math.max(3.6, mpx(4)))}</g>` : '')
-  + st(L.minor, C.edge, Math.max(5.5, mpx(8)) + 0.8) + st(L.mid, C.edge, Math.max(8, mpx(12)) + 0.9)
+  + st(L.minor, C.edge, Math.max(5.5, mpx(8)) + 1.2) + st(L.mid, C.edge, Math.max(8, mpx(12)) + 1.35)
   + st(L.minor, C.road, Math.max(5.5, mpx(8))) + st(L.mid, C.road, Math.max(8, mpx(12)))
   + st(L.rail, '#b8b6b2', 2.2) + st(L.rail, '#f4efe6', 0.9, ' stroke-dasharray="6 5"')
-  + st(L.major, C.majorEdge, Math.max(10, mpx(16)) + 0.9) + st(L.major, C.major, Math.max(10, mpx(16)));
+  + st(L.major, C.majorEdge, Math.max(10, mpx(16)) + 1.35) + st(L.major, C.major, Math.max(10, mpx(16)));
 // the park paths worth a soft band: measured only where they run inside a park and on screen, the longest few
 function parkPaths() {
   const inside = (x, y, ps) => { let c = false; for (let i = 0, j = ps.length - 1; i < ps.length; j = i++) { const [a, b] = ps[i], [u, v] = ps[j]; if ((b > y) !== (v > y) && x < (u - a) * (y - b) / (v - b) + a) c = !c; } return c; };
@@ -295,19 +295,23 @@ function gmapMarks(labels) {
   const hit = b => taken.some(c => b[0] < c[2] && b[2] > c[0] && b[1] < c[3] && b[3] > c[1]);
   const txt = (x, y, t, sz, wt, col, anchor = 'middle') => `<text x="${f(x)}" y="${f(y)}" text-anchor="${anchor}" font-family="-apple-system, 'Noto Sans KR', 'Hiragino Sans', sans-serif" font-size="${sz}" font-weight="${wt}" fill="${col}" stroke="#fff" stroke-width="3" stroke-linejoin="round" paint-order="stroke">${t}</text>`;
   // quarters first (they own the middle), then places, then streets in what is left
-  for (const [la, lo, n, sz, wt, col] of labels) { const [x, y] = P(la, lo), big = n === process.env.MAIN, z = big ? 15 : col === '#5a84ad' ? 11.5 : 12, w = n.length * z * 0.6;
+  let quarters = 0;
+  for (const [la, lo, n, sz, wt, col] of labels) { if (n !== process.env.MAIN && col !== '#5a84ad' && ++quarters > 3) continue;   // the big name + three quarters at most
+    const [x, y] = P(la, lo), big = n === process.env.MAIN, z = big ? 15 : col === '#5a84ad' ? 11.5 : 12, w = n.length * z * 0.6;
     const b = [x - w / 2 - 4, y - z - 2, x + w / 2 + 4, y + 4]; if (hit(b)) continue; taken.push(b);
     o += txt(x, y, n, z, big ? 700 : 600, col === '#5a84ad' ? '#4a7fb5' : big ? '#3c4043' : '#5f6368'); }
   const CAT = { food: '#e37400', cafe: '#e37400', bar: '#e37400', beer: '#e37400', bakery: '#e37400', wine: '#e37400', shop: '#4a7cd6', mall: '#4a7cd6', market: '#4a7cd6', fuel: '#4a7cd6',
     school: '#8a6d55', university: '#8a6d55', library: '#8a6d55', hospital: '#d14a3e', pharmacy: '#d14a3e', park: '#3d8b3d', garden: '#3d8b3d', forest: '#3d8b3d', playground: '#3d8b3d', zoo: '#3d8b3d', golf: '#3d8b3d',
     metro: '#3a76c4', train: '#3a76c4', tram: '#3a76c4', bus: '#3a76c4', ferry: '#3a76c4', airport: '#3a76c4', museum: '#1d8f9f', gallery: '#1d8f9f', theatre: '#1d8f9f', cinema: '#1d8f9f', music: '#1d8f9f', castle: '#1d8f9f', palace: '#1d8f9f', monument: '#1d8f9f', view: '#1d8f9f' };
-  const seen = new Set(); let n = 0;
+  const seen = new Set(), placed = []; let n = 0;
   for (const p of POIS.filter(q => q.name && q.name.length <= 22).sort((a, b) => b.pr - a.pr)) {
     if (seen.has(p.name)) continue; const [x, y] = p.at, col = CAT[p.ic] || '#6f6a64', w = p.name.length * 10.5 * 0.58 + 16;
     if (x < 10 || x + w > W - 4 || y < 14 || y > 482) continue;
-    const b = [x - 8, y - 9, x + w, y + 8]; if (hit(b)) continue; taken.push(b); seen.add(p.name);
+    const b = [x - 8, y - 9, x + w, y + 8]; if (hit(b)) continue;
+    if (placed.some(([u, v]) => Math.hypot(u - x, v - y) < 120)) continue;   // places spread out, not stacked
+    taken.push(b); seen.add(p.name); placed.push([x, y]);
     o += `<g transform="translate(${f(x)} ${f(y)})"><circle r="7.5" fill="${col}"/><g fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" transform="translate(-5 -5) scale(.42)">${glyph(p.ic)}</g></g>` + txt(x + 11, y + 3.6, p.name, 10.5, 600, col, 'start');
-    if (++n >= 14) break; }
+    if (++n >= 4) break; }
   // streets: the longest pieces, upright text along the line
   const sn = new Set();
   for (const s2 of STREETS.map(q => ({ ...q, len: q.ps.reduce((a, pt, i) => i ? a + Math.hypot(pt[0] - q.ps[i - 1][0], pt[1] - q.ps[i - 1][1]) : 0, 0) })).sort((a, b) => b.rank - a.rank || b.len - a.len)) {
