@@ -3253,7 +3253,9 @@ function placesAround(p, m = null) {
     const out = [], own = ownerZone(p);
     // (the owner's own place as the weather app has it is one of their names too: a zone known only by the country)
     if (own) out.push({ tz: own.tz, name: own.where, names: [own.where, ...own.names, p?.life?.weather?.here?.place], own: true, ...byOf(m, [p?.owner, ...arr(whereOf(p, p?.owner)?.aka)]) });
-    for (const c of arr(p?.life?.weather?.cities)) if (c?.tz) out.push({ tz: c.tz, name: c.name, names: [c.name, c.ko] });
+    // (a saved city: a row even on the owner's hours, unless it is the city the owner is in)
+    const cities = arr(p?.life?.weather?.cities), inCity = cityAt(p?.life?.weather?.here?.place, cities);
+    for (const c of cities) if (c?.tz) out.push({ tz: c.tz, name: c.name, names: [c.name, c.ko], saved: true, here: c === inCity || !!own && [own.where, ...own.names].some(n => n && [c.name, c.ko].some(k => k && pkey(k) === pkey(n))) });
     for (const x of p?.where?.people || []) if (nameKey(x.name) !== nameKey(p.owner)) { const z = zoneOfWhere(x); if (z) out.push({ tz: z.tz, name: z.where, names: z.names, who: x.name, ...byOf(m, [x.name, ...arr(x.aka)]) }); }
     // another phone's owner: where that phone read them to be, else its own saved city or country
     for (const q of Object.values(phonesOf(m) || {})) if (q && q !== p && q.owner && !whereOf(p, q.owner)) { const z = ownerZone(q); if (z) out.push({ tz: z.tz, name: z.where, names: z.names, who: q.owner, ...byOf(m, [q.owner, ...arr(whereOf(q, q.owner)?.aka)]) }); }
@@ -3324,12 +3326,13 @@ export function zonesOf(p, at = p?.now, m = null, { wholeYear = false } = {}) {
     const base = mins(t), hours = tz => (mins(zoneShift(t, own.tz, tz, yearOr(t, p.year))) - base) / 60, others = [];
     for (const z of placesAround(p, m).slice(1)) {
         const name = z.who || z.name;
-        if (z.tz === own.tz || others.some(o => nameKey(o.name) === nameKey(name))) continue;
+        if (z.tz === own.tz && !z.saved || z.here || others.some(o => nameKey(o.name) === nameKey(name))) continue;
         // (wholeYear: a time that is no story time, today's: every change in the year, the hours from each)
         const year = yearOr(t, p.year) || new Date().getFullYear();
         const h = hours(z.tz), dst = wholeYear ? dstYear(own.tz, z.tz, year).map(x => ({ at: x.at, hours: x.after, past: false })) : dstNear(t, own.tz, z.tz, yearOr(t, p.year), h), more = dst.length ? { dst } : {};
-        // (a place on the owner's hours now is no row, unless its hours change within the week: "0 hours (DST: +1 hour from …)")
-        if (h || dst.length) others.push(z.who ? { name: z.who, where: z.name, hours: h, ...more } : { name: z.name, hours: h, ...more });
+        // (a place on the owner's hours now is no row, unless its hours change within the week: "0 hours (DST: +1 hour from …)",
+        // or it is a saved city: "Munich: 0 hours", so a time there is plainly the owner's)
+        if (h || dst.length || z.saved) others.push(z.who ? { name: z.who, where: z.name, hours: h, ...more } : { name: z.name, hours: h, ...more });
     }
     return others.some(o => o.hours || o.dst?.length) ? { own: { name: own.where, tz: own.tz }, at: t, others } : null;
 }
