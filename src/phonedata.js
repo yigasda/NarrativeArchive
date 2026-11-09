@@ -376,7 +376,7 @@ STEP 2 · SITUATIONS
 
 STEP 3 · RECORDS
 Go through each scene's messages in order. Write a record only in these cases, with "scene", "at", "said" (the exact words it comes from) and "situations":
-1. A phone action the messages show or say (a text, call, photo, search, mail, post, voice memo) → that record.
+1. A phone action the messages show or say (a text, call, photo, search, mail, post, voice memo) → that record. A text exchange the messages already show: only its last 4 messages.
 2. A plan made → "calendar". A PHONE NOW plan the messages move → its calendar record again with "was"; called off or undone (an order cancelled) → "cancelled": true.${wallet ? ' Tickets go in the wallet; reservations and appointments in the calendar.' : ''} No booking, trip or purchase the story lacks.
 3. Each scene where the owner is somewhere → one "visit".
 4. Someone new the owner meets and would save → "contact".${life ? `
@@ -425,7 +425,8 @@ KEEPING IN STEP
 - A text in PHONE NOW: only its new messages.${life ? ' A LIFE NOW alarm or file: not again unless it changes, then with its id in "already".' : ''} A known scene: its id. An edited message: the ids listed.
 
 LANGUAGE
-- Each text in the language its writer really uses. "ko", "kt", "ks", "pko": the Korean of a text, title, subject or posted photo not in Korean. Texts short.
+- Each text in the language its writer really uses. Texts short.
+- Anything written in another language than Korean gets its Korean in the field paired with it in ITEMS: "ko" for a text, caption, note, mail, diary, voice memo or post, "kt" for a title, "ks" for a subject, "pko" for a post's photo.
 
 JSON (one object, nothing before or after it)
 { ${archiveOnly ? '' : '"clock": { "basis": "default used or switch evidence; time passed", "finalViewpoint": "name", "elapsedTime": null or "3 hours", "sceneTime": "MM-DD HH:MM", "messageSender": null or "name" },\n  '}"now": "MM-DD HH:MM"${archiveOnly ? ' (the moment of the newest message, never a time something is only planned for)' : ''},
