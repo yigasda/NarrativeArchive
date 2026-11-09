@@ -870,9 +870,9 @@ const DUSK = {
 };
 function duskPal(cond, D) {
     const c = DUSK.clear, g = DUSK.grey, sky = { sky: c.sky, bands: c.bands, cb: c.cb, hills: c.hills }, phase = 'dusk';
-    if (cond === 'clear') return { ...sky, stars: 22, venus: true, phase };
-    if (cond === 'partly') return { ...sky, stars: 12, venus: true, cloud: c.cloud, phase };
-    if (cond === 'wind') return { ...sky, stars: 14, venus: true, cloud: c.cloud, wind: true, phase };
+    if (cond === 'clear') return { ...sky, stars: 34, venus: true, phase };
+    if (cond === 'partly') return { ...sky, stars: 20, venus: true, cloud: c.cloud, phase };
+    if (cond === 'wind') return { ...sky, stars: 22, venus: true, cloud: c.cloud, wind: true, phase };
     if (cond === 'snow') return { ...g, hills: ['#c9cad9', '#b0b1c4', '#9798ae'], cloud: g.cloud, fall: 'snow', phase };
     if (cond === 'fog') return { ...g, fog: 'rgba(255, 255, 255, 0.14)', phase };
     return wetSky({ ...g, cloud2: cond === 'cloudy' ? g.cloud2 : undefined, fall: D[cond].fall, phase }, cond);
@@ -897,7 +897,10 @@ function scene(cond, phase) {
     cond = condOk(cond);
     const q = pal(cond, phase), r = rnd(cond.length * 31 + phase.length * 7), out = [];
     for (const [y, c] of q.bands || []) out.push(`<i class="bd" style="top: ${y}px; background: ${c}"></i>`);
-    if (q.stars) out.push(Array.from({ length: q.stars }, () => `<i class="st${phase === 'dawn' ? ' fd' : ''}" style="left: ${Math.round(10 + r() * 370)}px; top: ${Math.round(60 + r() * 360)}px; --d: ${(2 + r() * 3).toFixed(1)}s; --dl: -${(r() * 4).toFixed(1)}s"></i>`).join(''));
+    // at dusk the stars are scattered over the whole sky, a few bigger, some cream, each with a little glow (so they read as stars, not sleet)
+    if (q.stars && phase === 'dusk') out.push(Array.from({ length: q.stars }, (_, k) => { const z = k % 7 === 0 ? 4 : k % 3 === 0 ? 3.2 : 2.6, col = k % 3 === 1 ? '#fff1d2' : '#ffffff';
+        return `<i class="st" style="left: ${Math.round(8 + r() * 374)}px; top: ${Math.round(40 + r() * 520)}px; width: ${z}px; height: ${z}px; background: ${col}; box-shadow: 0 0 ${z * 1.6}px ${(z * 0.3).toFixed(1)}px rgba(255, 244, 222, ${z > 3 ? 0.6 : 0.42}); opacity: ${(0.8 + r() * 0.2).toFixed(2)}; --d: ${(4 + r() * 4).toFixed(1)}s; --dl: -${(r() * 5).toFixed(1)}s"></i>`; }).join(''));
+    else if (q.stars) out.push(Array.from({ length: q.stars }, () => `<i class="st${phase === 'dawn' ? ' fd' : ''}" style="left: ${Math.round(10 + r() * 370)}px; top: ${Math.round(60 + r() * 360)}px; --d: ${(2 + r() * 3).toFixed(1)}s; --dl: -${(r() * 4).toFixed(1)}s"></i>`).join(''));
     const sun = (x, y, rad, core, halo, cls = '') => `<span class="sun ${cls}" style="left: ${x - rad * 2.4}px; top: ${y - rad * 2.4}px; width: ${rad * 4.8}px; height: ${rad * 4.8}px"><b style="background: ${halo}"></b><b class="h2" style="background: ${halo}"></b><i style="background: ${core}; width: ${rad * 2}px; height: ${rad * 2}px"></i></span>`;
     if (q.sun === 'day') out.push(cond === 'partly' ? sun(320, 190, 42, '#f6c94a', 'rgba(255, 255, 255, 0.14)') : sun(330, 210, 46, '#f6c94a', 'rgba(255, 255, 255, 0.14)'));
     // the sun climbs with the clock: at dawn just over the first card's edge, a step higher in each morning, at noon beside the temperature
