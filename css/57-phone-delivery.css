@@ -391,6 +391,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax 
 .pcf_msg { position: relative; display: flex; flex-direction: column; gap: 5px; padding: 22px 20px 16px; text-align: center; }
 .pcf_msg b { font-size: 17px; font-weight: 600; color: #161b22; }
 .pcf_msg span { font-size: 13.5px; --axfs: 13.5px; line-height: 1.4; color: #4f5763; }
+.pcf_msg .pcf_tr { align-self: center; width: 40px; height: 40px; border-radius: 12px; background: #e1e9ff; color: #2f6bff; display: grid; place-items: center; margin-bottom: 6px; }
 .pcf_btns { position: relative; display: flex; border-top: 0.5px solid rgba(60, 60, 67, 0.2); }
 .pcf_btns > div + div { border-left: 0.5px solid rgba(60, 60, 67, 0.2); }
 .pcf_btns.v { flex-direction: column; }
