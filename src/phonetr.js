@@ -58,6 +58,32 @@ export function voicesWanted(p, { all = false } = {}) {
     return [...new Set(koGaps(p, { all }).filter(g => /^(text|comment)/.test(g.app)).map(g => String(g.who).trim()).filter(Boolean))]
         .filter(n => !have.has(n.toLowerCase()) && !asked.has(n.toLowerCase())).slice(0, 20);
 }
+// 이름표: a row the user wrote gets a short label for the list, like the story's own (its own small request: no story, no
+// translation; the note alone)
+export const AI_SYS_VOICE_LABEL = `GOAL
+Give each note on how a person talks a short label for a list.
+
+YOU GET
+- NOTES: numbered, each a person's name and a note on how they talk.
+
+LABEL
+- Two or three short Korean words joined with " · ", at most 20 characters, saying what the note says. Like "격식 존댓말 · 단호함".
+
+JSON (one object, nothing before or after it)
+{ "labels": [{ "n": its number, "label" }] }
+Every number once.`;
+export const labelOk = l => { const t = String(l ?? '').trim(); return t && t.length <= 20 ? t : ''; };
+// items: [{ who, style }] → [label or ''] in the same order. Throws when the request fails
+export async function labelVoices(items) {
+    const list = (Array.isArray(items) ? items : []).slice(0, 40);
+    if (!list.some(x => String(x?.style || '').trim())) return list.map(() => '');
+    const input = `[NOTES]\n${list.map((x, i) => `${i + 1}: ${String(x?.who || '').trim() || '?'}: ${String(x?.style || '').replace(/\s+/g, ' ').trim().slice(0, 300)}`).join('\n')}`;
+    const got = parseJson(String(await askDraft(input, { force: true, system: AI_SYS_VOICE_LABEL, maxTokens: 800, effort: 'low' })).replace(/^[^{]*/, '').replace(/[^}]*$/, ''), { salvage: true }) || {};
+    const out = list.map(() => '');
+    for (const r of Array.isArray(got.labels) ? got.labels : []) { const k = Number(r?.n) - 1; if (k >= 0 && k < out.length && String(list[k]?.style || '').trim()) out[k] = labelOk(r?.label); }
+    return out;
+}
+
 // a row the user deletes: gone, and that person isn't asked of the story again (사람 추가 brings them back by hand).
 // The deleted row, or null
 export function dropVoice(p, i) {
