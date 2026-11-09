@@ -203,7 +203,7 @@ const delRow = (kind, i, label) => `<div class="ax_card ax_delcard"><button type
 // a list row that slides left to show 삭제 (메시지 · 메일 · 통화)
 const swipeRow = (kind, i, row) => `<div class="ax_swp"><button type="button" class="na_ph_rm ax_swdel" data-kind="${kind}" data-i="${esc(String(i))}">${ax('trash2', 21, 'currentColor', 2)}<span>삭제</span></button>${row}</div>`;
 const delBtn = (kind, i, cls, inner) => `<button type="button" class="na_ph_rm ${cls}" data-kind="${kind}" data-i="${esc(String(i))}" aria-label="지우기">${inner}</button>`;
-export const AXB = { clock: 'clockc', timer: 'clockc', wclock: 'clockc', alarm: 'clockc', health: 'health', hsteps: 'health', hsleep: 'health', hcmp: 'health', hwork: 'health', hheart: 'health', hwater: 'health', hweight: 'health', files: 'files', folder: 'files', file: 'files', weather: 'sky', wcity: 'sky', wlist: 'sky', dlv: 'dlv', delivery: 'dlv', dshop: 'dlv', dcart: 'dlv', dorders: 'dlv', dorder: 'dlv', ditem: 'dlv', dpay: 'dlv', drate: 'dlv', setprofile: 'slate', ivnotes: 'invest', ivschedule: 'invest', ivhistory: 'invest', invest: 'invest', stock: 'invest', ivactivity: 'invest', ivwatch: 'invest', ivstakes: 'invest', ivcash: 'invest', ivprices: 'invest', msg: 'blue', thread: 'blue', call: 'blue', callmiss: 'blue', callwho: 'blue', contacts: 'blue', contact: 'blue', draft: 'blue', groupinfo: 'blue', page: 'sky', tabs: 'sky', marks: 'sky', history: 'sky', bank: 'bank', acct: 'bank', tx: 'bank', fixed: 'bank', banknote: 'bank', banksend: 'bank', stmt: 'bank', txdoc: 'bank', bankmore: 'bank', wallet: 'wallet', card: 'wallet', pass: 'wallet', shop: 'shop', order: 'shop', track: 'shop', voice: 'voice', voiceone: 'voice', photo: 'apri', photoone: 'apri', note: 'butter', noteone: 'butter', search: 'sky', searchone: 'sky', cal: 'brick', calone: 'brick', mail: 'sky', mailone: 'sky', set: 'slate', settheme: 'slate', setdate: 'slate', setscreenholder: 'slate', setplace: 'slate', prep: 'slate', setlore: 'slate', setwho: 'slate', setremake: 'slate', setsync: 'slate', setsyncpick: 'slate', stime: 'stime', cam: 'apri', map: 'blue', mapq: 'blue', mapc: 'blue' };
+export const AXB = { clock: 'clockc', timer: 'clockc', wclock: 'clockc', alarm: 'clockc', health: 'health', hsteps: 'health', hsleep: 'health', hcmp: 'health', hwork: 'health', hheart: 'health', hwater: 'health', hweight: 'health', files: 'files', folder: 'files', file: 'files', weather: 'sky', wcity: 'sky', wlist: 'sky', dlv: 'dlv', delivery: 'dlv', dshop: 'dlv', dcart: 'dlv', dorders: 'dlv', dorder: 'dlv', ditem: 'dlv', dpay: 'dlv', drate: 'dlv', setprofile: 'slate', ivnotes: 'invest', ivschedule: 'invest', ivhistory: 'invest', invest: 'invest', stock: 'invest', ivactivity: 'invest', ivwatch: 'invest', ivstakes: 'invest', ivcash: 'invest', ivprices: 'invest', msg: 'blue', thread: 'blue', call: 'blue', callmiss: 'blue', callwho: 'blue', contacts: 'blue', contact: 'blue', draft: 'blue', groupinfo: 'blue', page: 'sky', tabs: 'sky', marks: 'sky', history: 'sky', bank: 'bank', acct: 'bank', tx: 'bank', fixed: 'bank', banknote: 'bank', banksend: 'bank', stmt: 'bank', txdoc: 'bank', bankmore: 'bank', wallet: 'wallet', card: 'wallet', pass: 'wallet', shop: 'shop', order: 'shop', track: 'shop', voice: 'voice', voiceone: 'voice', photo: 'apri', photoone: 'apri', note: 'butter', noteone: 'butter', search: 'sky', searchone: 'sky', cal: 'brick', calone: 'brick', mail: 'sky', mailone: 'sky', set: 'slate', settheme: 'slate', setdate: 'slate', setscreenholder: 'slate', setplace: 'slate', prep: 'slate', setvoice: 'slate', setlore: 'slate', setwho: 'slate', setremake: 'slate', setsync: 'slate', setsyncpick: 'slate', stime: 'stime', cam: 'apri', map: 'blue', mapq: 'blue', mapc: 'blue' };
 export const AXB_C = { clockc: ['#f5a524', '#3a3220'], health: ['#e0405f', '#fbe3e8'], files: ['#2f6fbf', '#dfeaf8'], dlv: ['#1fa8a3', '#d9f4f3'], invest: ['#17695d', '#d9eee5'], blue: ['#2f6bff', '#e1e9ff'], apri: ['#a65a4e', '#f7e3d7'], butter: ['#7f6a22', '#f6edcf'], sky: ['#3f6a9e', '#dde8f4'], brick: ['#a14a42', '#f3dcd9'], slate: ['#454d5a', '#e6e8ec'], bank: ['#2c4a80', '#e2e9f5'], wallet: ['#3d4a66', '#e3e7ef'], shop: ['#2f7d74', '#d9efec'], voice: ['#8a5a2e', '#f2e7d6'], stime: ['#3f8fd8', '#e3f1fd'] };
 // people outside the archive get a letter on one of the home icons' colours
 const AX_AV = ['#8faed1', '#a699c9', '#d89f98', '#89b892', '#d494a7', '#a2a7af', '#dcc680'];
@@ -603,6 +603,7 @@ export function setScreen(p, now, m, ui) {
           <button type="button" class="ax_rw" data-go="settheme">${si('#a699c9', 'palette')}<span class="ax_tx"><span class="ax_n">테마</span></span><span class="ax_v">${p.theme === 'gray' ? '화이트 그레이' : '컬러 젤'}</span>${axChev}</button>
           <button type="button" class="ax_rw na_ph_kochip ax_koline">${si('#89b892', 'lang')}<span class="ax_tx"><span class="ax_n">한국어 보기</span></span><span class="ax_sw ${koOn() ? 'on' : ''}"></span></button>
           <button type="button" class="ax_rw na_ph_gloss">${si('#dcc680', 'pen')}<span class="ax_tx"><span class="ax_n">번역 용어집</span></span><span class="ax_v">${(n => (n ? `${n}개` : ''))(glossaryEntries(m).length)}</span>${axChev}</button>
+          <button type="button" class="ax_rw" data-go="setvoice">${si('#8faed1', 'cmt')}<span class="ax_tx"><span class="ax_n">말투</span></span><span class="ax_v">${(n => (n ? `${n}명` : ''))(voiceList(p).length)}</span>${axChev}</button>
         </div>
         <div class="ax_foot">한국어 보기를 켜면 외국어 글 밑에 번역이 붙어요.<br>적어두면 이제부터 새로 쓰는 글에 이름이 그대로 나와요.</div>
         ${(v => (v || p.life?.health ? `<div class="ax_sec">스크린타임</div><div class="ax_card"><button type="button" class="ax_rw" data-go="stime">${si('#79b5ee', 'sandglass')}<span class="ax_tx"><span class="ax_n">스크린타임</span></span><span class="ax_v">${v?.avg != null ? `하루 ${(n => `${Math.floor(n / 60) ? `${Math.floor(n / 60)}시간 ` : ''}${n % 60}분`)(v.avg)}` : ''}</span>${axChev}</button></div>` : ''))(screenView(p, now))}
@@ -660,6 +661,25 @@ export function setDate(p, now, m = null) {
         <div class="ax_foot">캐릭터와 주고받는 메시지의 시간이 누구를 기준으로 하는지 골라 주세요.</div>
         ${(o => `<div class="ax_sec">날짜 읽는 법</div><div class="ax_card"><div class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_n">순서</span></span><span class="ax_dseg">${[['md', '월.일'], ['dm', '일.월']].map(([v, t]) => `<span role="button" tabindex="0" class="na_ph_dord${o === v ? ' on' : ''}" data-v="${v}">${t}</span>`).join('')}</span></div></div>
         <div class="ax_foot">03.11. → ${o === 'dm' ? '11월 3일' : '3월 11일'}</div>`)(dateOrderOf(m))}
+      </div>
+      ${axInd()}`;
+}
+// 설정 › 말투 (docs/mockups/phone-voice A+D): the voice table the translator sends with every translation (p.koVoice:
+// { who, style, by }; an old { from, to, style } reads from as who), how each person sounds to others. What 소망 set
+// first, with 사람 추가; the translator's (by: 'model') under it, its names a little grey. A row opens the alert to edit
+// (and becomes 소망's); slid left, 삭제
+export const voiceList = p => (Array.isArray(p?.koVoice) ? p.koVoice : []).map((v, i) => ({ who: String(v?.who ?? v?.from ?? '').trim(), style: String(v?.style || '').trim(), model: v?.by === 'model', i })).filter(v => v.who);
+export function setVoice(p, now) {
+    const rows = voiceList(p), mine = rows.filter(v => !v.model), auto = rows.filter(v => v.model);
+    const row = v => swipeRow('kovoice', v.i, `<div role="button" tabindex="0" class="ax_rw na_ph_kvrow" data-i="${v.i}">${axLetter(v.who, 36)}<span class="ax_tx"><span class="ax_n${v.model ? ' ax_kvauto' : ''}">${esc(v.who)}</span><span class="ax_p">${esc(v.style || '말투 적기')}</span></span>${axChev}</div>`);
+    return `${axBar(p, now)}
+      ${axTop(axCb('set'))}
+      <div class="ax_scroll">${axH1('말투', rows.length ? `${rows.length}명` : '')}
+        <div class="ax_sec">내가 정한 말투</div>
+        <div class="ax_card">${mine.map(row).join('')}<div role="button" tabindex="0" class="ax_rw ax_rwn na_ph_kvadd"><span class="ax_tx"><span class="ax_n ax_blue">사람 추가</span></span></div></div>
+        ${auto.length ? `<div class="ax_sec">번역기가 정한 말투</div><div class="ax_card">${auto.map(row).join('')}</div><div class="ax_foot">고치면 내가 정한 말투로 옮겨져요.</div>` : ''}
+        <div class="ax_foot">남에게 하는 말투예요. 일기 · 메모에는 안 써요.<br>이미 옮긴 문장은 그대로예요. 다시 맞추려면 그 앱에서 "가 한국어"를 꾹 눌러요.</div>
+        <i class="ax_pad"></i>
       </div>
       ${axInd()}`;
 }
