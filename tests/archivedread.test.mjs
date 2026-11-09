@@ -808,7 +808,7 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.match(on, /- Complete how the owner expresses or records the situation, without moving the situation itself to its next step\. This holds for every app: texts, searches, notes, mails, the diary and voice memos\./);
     assert.match(on, /- Record developments the messages establish, but do not invent new developments in the story through phone records: decisions, arrangements, steps toward resolving an ongoing matter \(going somewhere about it, papers gathered or sent, a call or a reply about it\), or outcomes \(a parcel arriving, works finished, an answer received\)\.\n- Phone data supplies existing details\. An expected date does not establish/);
     assert.match(on, /- Write each scene's phone trail in "records", linked by its "scene" id\. The scene itself is already in "scenes" and is not repeated here\./);
-    assert.match(on, /\nSCENES FIRST\n- Before writing phone life, extract the scenes from NEW MESSAGES and ARCHIVE FOR THESE MESSAGES into "scenes"\./);
+    assert.match(on, /\nSCENES NEXT\n- Before writing phone life, extract the scenes from NEW MESSAGES and ARCHIVE FOR THESE MESSAGES into "scenes"\./);
     assert.ok(on.indexOf('  "scenes": [{') < on.indexOf('  "everyday": [{') && !on.includes('\nscene: "id"') && on.includes('"with": [people physically there with the owner; otherwise []]'));
     assert.match(on, /A trail tied to one message \(with its "said"\) goes in "records"; the rest of the owner's day goes in "everyday"\. Never the same record in both\./);
     assert.ok(on.indexOf('\nEVERYDAY\n') < on.indexOf('\nSTORY RECORDS\n') && on.indexOf('  "everyday": [{') < on.indexOf('  "records": [{'));

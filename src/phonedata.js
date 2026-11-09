@@ -355,7 +355,7 @@ YOU GET
 
 ${archiveOnly ? `TIMES\n${CORE_TIMES}` : `${CORE_CLOCK_FIRST}\n${CORE_TIMES}`}
 
-SCENES FIRST
+SCENES NEXT
 - Before writing phone life, extract the scenes from NEW MESSAGES and ARCHIVE FOR THESE MESSAGES into "scenes".
 - Record what happens, where, when and who is physically there with the owner. People mentioned, remembered or contacted remotely are not companions at that place.
 - Use these scenes when writing their phone records. Generated everyday content does not add facts to them.
