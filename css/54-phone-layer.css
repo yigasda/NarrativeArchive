@@ -362,7 +362,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax_ccpr .ax_cclg small { display: block; font-size: 10px; letter-spacing: 0.38em; opacity: 0.8; margin-top: 3px; font-weight: 600; }
 .ax_psrt.ln { align-items: center; padding-bottom: 2px; }
 .ax_psrt.ln .ax_pspl { flex: 1; margin: 0 6px; }
-.ax_psrt.ln .ax_pspl i { display: block; border-top: 2px dotted currentColor; opacity: 0.5;  .ax_psrt.ln .ax_pspl i.sl { border-top: 1px solid currentColor; opacity: 0.45; }
+.ax_psrt.ln .ax_pspl i { display: block; border-top: 2px dotted currentColor; opacity: 0.5; } .ax_psrt.ln .ax_pspl i.sl { border-top: 1px solid currentColor; opacity: 0.45; }
 .ax_psti { display: block; padding: 4px 16px 0; font: 600 24px/1.2 'Inter Tight', -apple-system, sans-serif; --axff: 'Inter Tight', -apple-system, sans-serif; --axfs: 24px; letter-spacing: -0.01em; --axls: -0.01em}
 .ax_ps_hotel .ax_psti, .ax_ps_museum .ax_psti { font-weight: 300; font-size: 30px; --axfs: 30px}
 .ax_ps_movie { color: #f6d27a; --axfg: #f6d27a} .ax_ps_movie .ax_psti { color: #fff; --axfg: #fff}
