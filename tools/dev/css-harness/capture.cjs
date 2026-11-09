@@ -95,6 +95,8 @@ if (require.main === module) (async () => {
                             // window scenes answer from the in-page fake; the phone talks to tools/dev/fakeph.mjs
                             await p.unroute('http://127.0.0.1:5555/**').catch(() => {});
                             if (!sc.phone) await p.route('http://127.0.0.1:5555/**', async route => { const body = route.request().postData() || ''; const txt = answer(body); const isAnth = /anthropic|\/messages/.test(route.request().url()); await route.fulfill({ status: 200, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(isAnth ? { content: [{ type: 'text', text: txt }] } : { choices: [{ message: { role: 'assistant', content: txt } }] }) }); });
+                            // a scene can ask for the reduced-motion look (the rules under @media (prefers-reduced-motion: reduce))
+                            await p.emulateMedia({ reducedMotion: sc.reduce ? 'reduce' : 'no-preference' });
                             await sc.open(p, helpers);
                             // every web font in, so glyphs are the same pixels run after run (the phone loads Noto Sans KR lazily)
                             await p.evaluate(() => document.fonts.ready); await p.waitForFunction(() => [...document.fonts].every(f => f.status !== 'loading'), null, { timeout: 5000 }).catch(() => {});

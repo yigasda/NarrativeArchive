@@ -34,6 +34,10 @@ const SCENES = [
     // --- the windows as they open ---
     win('quotes', 'quotes.js', 'openQuotes'), win('knowledge', 'knowledge.js', 'openKnowledge'), win('drift', 'drift.js', 'openDrift'), win('branches', 'branches.js', 'openBranches'),
     win('wizard', 'wizard.js', 'openWizard'), win('au', 'wizard.js', 'openAuSettings'), win('extract', 'extract.js', 'openExtract'), win('calendar', 'calendar.js', 'openCalendar'),
+    // a day picked on the calendar (the day without an anniversary: the plain card), the chat picker, the section picker
+    { name: 'calendar-day', arch: 'full', root: DLG, open: async p => { await openMod(p, 'calendar.js', 'openCalendar'); await tap(p, `${DLG} .na_cal3_day`); await p.waitForTimeout(600); } },
+    { name: 'chatpick', arch: 'full', root: DLG, open: p => openMod(p, 'chats.js', 'openChatPicker') },
+    { name: 'fadepick', arch: 'full', root: DLG, open: p => openMod(p, 'fade.js', 'openFadePicker') },
     win('people', 'people.js', 'openPeople'), win('worlds', 'world.js', 'openWorlds'), win('health', 'health.js', 'openHealth'), win('ask', 'ask.js', 'openAsk'),
     win('preview', 'preview.js', 'openPreview'), win('xray', 'xray.js', 'openXray'), win('retitle', 'retitle.js', 'openRetitle'), win('merge', 'retitle.js', 'openMerge'),
     win('stylesamples', 'scenes.js', 'openStyleSamples'), win('worknote', 'scenes.js', 'openWorkNote'), win('digest', 'digest.js', 'openDigest'), win('glossary', 'translate.js', 'openGlossary'),
@@ -108,6 +112,9 @@ const SCENES = [
     { name: 'phone-wlist', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phone(p); await h.phoneFill(p, 'life', 'clock'); await h.phoneTo(p, 'wlist'); } },
     { name: 'phone-diaryone', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phone(p); await h.phoneTo(p, 'diary'); await p.evaluate(() => { const x = document.createElement('button'); x.dataset.go = 'diaryone'; x.dataset.i = '0'; x.style.display = 'none'; document.querySelector('.na_ph_frame .na_ph_scr').append(x); x.click(); x.remove(); }); await p.waitForTimeout(700); } },
     { name: 'phone-home2-wx', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phone(p); await h.phoneFill(p, 'life', 'clock'); await h.phoneTo(p, 'home2'); } },
+    { name: 'phone-timer', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phone(p); await h.phoneFill(p, 'life', 'clock'); await h.phoneTo(p, 'timer'); } },
+    { name: 'phone-weather-still', arch: 'full', root: '.na_ph_frame', phone: true, reduce: true, open: async (p, h) => { await h.phone(p); await h.phoneFill(p, 'life', 'clock'); await h.phoneTo(p, 'weather'); } },
+    { name: 'phone-home2-still', arch: 'full', root: '.na_ph_frame', phone: true, reduce: true, open: async (p, h) => { await h.phone(p); await h.phoneFill(p, 'life', 'clock'); await h.phoneTo(p, 'home2'); } },
     { name: 'phone-cam', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phone(p); await h.phoneTo(p, 'cam'); } },
     { name: 'phone-home-gray', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phone(p); await h.phoneTo(p, 'settheme'); await p.$eval('.na_ph_theme[data-v="gray"]', e => e.click()); await p.waitForTimeout(400); await h.phoneTo(p, 'home'); } },
     { name: 'phone-ask', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phone(p); await h.phoneTo(p, 'set'); await p.$eval('.na_ph_setdel', e => e.click()); await p.waitForSelector('.pcf', { timeout: 8000 }); await p.waitForTimeout(500); } },
