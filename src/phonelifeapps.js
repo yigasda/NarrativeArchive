@@ -781,12 +781,12 @@ export function fileScreen(p, now, id) {
 // what each sky is called; the colours come from pal() below
 const WX = { clear: '맑음', partly: '구름 조금', cloudy: '흐림', drizzle: '이슬비', rain: '비', sleet: '진눈깨비', snow: '눈', fog: '안개', storm: '뇌우', wind: '강풍' };
 // the part of the day a sky is drawn for, by the clock alone (the same for every picture: the sky, the hours' icons, the world clock's sun and
-// moon): 새벽 04–07, 아침 07–11 (분홍 07–09 'morn', 노랑 09–11 'forenoon'), 낮 11–17, 저녁 17–20, 밤 20–04. The sun's own times stay on the sunset tile only
+// moon): 새벽 04–07, 아침 07–11 (분홍 07–09 'morn', 노랑 09–11 'forenoon'), 낮 11–16, 늦은 오후 16–17 'aft', 저녁 17–20, 밤 20–04. The sun's own times stay on the sunset tile only
 function phaseOf(time) {
     const t = toMin(time);
     if (t === null) return 'day';
     const m = ((t % 1440) + 1440) % 1440;
-    return m < 4 * 60 ? 'night' : m < 7 * 60 ? 'dawn' : m < 9 * 60 ? 'morn' : m < 11 * 60 ? 'forenoon' : m < 17 * 60 ? 'day' : m < 20 * 60 ? 'eve' : 'night';
+    return m < 4 * 60 ? 'night' : m < 7 * 60 ? 'dawn' : m < 9 * 60 ? 'morn' : m < 11 * 60 ? 'forenoon' : m < 16 * 60 ? 'day' : m < 17 * 60 ? 'aft' : m < 20 * 60 ? 'eve' : 'night';
 }
 const WET = { drizzle: 1, rain: 1, sleet: 1 };
 // grey skies by how hard it comes down, as at noon: 진눈깨비 a touch lighter (the snow in it), 흐림, 이슬비 a shade darker, 비 the darkest
@@ -814,6 +814,7 @@ function pal(cond, phase) {
     const NIGHT = ['#222b40', '#1c2436', '#161d2c'];
     if (cond === 'storm') return { ...D.storm, phase: 'day' };
     if (phase === 'morn' || phase === 'forenoon') return mornPal(cond, D, phase);
+    if (phase === 'aft') return mornPal(cond, D, 'aft');
     if (cond === 'fog' && FOG[phase]) return { ...FOG[phase], phase };
     if (phase === 'night') {
         if (cond === 'clear' || cond === 'wind') return { sky: '#28324a', hills: NIGHT, moon: true, stars: 34, wind: cond === 'wind', phase };
@@ -854,6 +855,11 @@ const MORN = {
             grey: { sky: '#8ea2be', bands: [[165, '#a1b1c8'], [220, '#bcc3cd'], [275, '#d8cebd']], cb: [[48, '#a1b1c8'], [64, '#bcc3cd'], [78, '#d8cebd']], hills: ['#8999b2', '#7d8da6', '#71819a'], cloud: '#a3b2c7', cloud2: '#b4c0d1' },
             snow: { sky: '#92aed4', bands: [[165, '#a8c0dc'], [220, '#c8d2df'], [275, '#ebdcc4']], cb: [[48, '#a8c0dc'], [64, '#c8d2df'], [78, '#ebdcc4']], hills: ['#fbf6ec', '#ece7df', '#dbd9d6'], cloud: '#b0c4dc' },
             fog: { sky: '#a3adb9', bands: [[165, '#b0b8c2'], [220, '#c3c6c7'], [275, '#dbd2c0']], cb: [[48, '#b0b8c2'], [64, '#c3c6c7'], [78, '#dbd2c0']], hills: ['#9aa3ad', '#8f98a2', '#848d97'] } },
+    // 늦은 오후 (16–17, 골든아워): a clear blue up top, a deep gold and apricot low, the light already warm before the sunset
+    aft: { clear: { sky: '#4f8ad0', bands: [[150, '#6e9ccf'], [198, '#a9b6c4'], [244, '#e8c48e'], [292, '#f2ad6c']], cb: [[40, '#6e9ccf'], [56, '#a9b6c4'], [70, '#e8c48e'], [82, '#f2ad6c']], hills: ['#6d7fae', '#5d6f9e', '#4f618f'], puff: '#a4bad8', cloud: '#b3c4dc', front: '#fff1dc' },
+         grey: { sky: '#7f7b95', bands: [[165, '#958397'], [220, '#b08f8e'], [275, '#c99c7c']], cb: [[48, '#958397'], [64, '#b08f8e'], [78, '#c99c7c']], hills: ['#76708c', '#6a6480', '#5e5874'], cloud: '#928ca6', cloud2: '#a39bb2' },
+         snow: { sky: '#879cbd', bands: [[165, '#a0afc6'], [220, '#c2c1c8'], [275, '#e8caa8']], cb: [[48, '#a0afc6'], [64, '#c2c1c8'], [78, '#e8caa8']], hills: ['#f8eee2', '#e9ded6', '#d7cfcc'], cloud: '#a6b3c8' },
+         fog: { sky: '#9aa0aa', bands: [[165, '#aaacb1'], [220, '#c0b9b2'], [275, '#d9c2a6']], cb: [[48, '#aaacb1'], [64, '#c0b9b2'], [78, '#d9c2a6']], hills: ['#8f939c', '#848891', '#797d86'] } }
 };
 function mornPal(cond, D, phase) {
     const V = MORN[phase], c = V.clear, g = V.grey, sky = { sky: c.sky, bands: c.bands, cb: c.cb, hills: c.hills };
@@ -881,6 +887,7 @@ function scene(cond, phase) {
     // the sun climbs with the clock: at dawn just over the first card's edge, a step higher in each morning, at noon beside the temperature
     if (q.sun === 'rise') out.push(sun(312, 308, 40, '#fbe6a6', 'rgba(246, 211, 154, 0.45)', 'rise'));
     if (q.sun === 'morn') out.push(cond === 'partly' ? sun(306, 256, 40, '#ffe9bf', 'rgba(252, 212, 166, 0.46)', 'rise2') : sun(312, 262, 42, '#ffe9bf', 'rgba(252, 212, 166, 0.46)', 'rise2'));
+    if (q.sun === 'aft') out.push(cond === 'partly' ? sun(318, 220, 44, '#fbd98a', 'rgba(250, 210, 140, 0.42)') : sun(324, 228, 46, '#fbd98a', 'rgba(250, 210, 140, 0.42)'));
     if (q.sun === 'forenoon') out.push(cond === 'partly' ? sun(312, 236, 44, '#ffe6a2', 'rgba(255, 226, 170, 0.45)') : sun(320, 244, 46, '#ffe6a2', 'rgba(255, 226, 170, 0.45)'));
     if (q.sun === 'sink') out.push(sun(312, 250, 46, '#fbe08f', 'rgba(247, 200, 115, 0.4)', 'sink'));
     if (q.moon) out.push(`<span class="mn" style="left: ${cond === 'clear' || cond === 'wind' ? 292 : 300}px; top: ${cond === 'clear' || cond === 'wind' ? 150 : 170}px"><i></i><b style="background: ${q.sky}"></b></span>`);
@@ -926,6 +933,7 @@ function cardSky(cond, phase) {
     if (q.sun === 'day') out.push(cond === 'partly' ? '<circle cx="300" cy="34" r="50" fill="#69a0d8"/><circle cx="300" cy="34" r="26" fill="#f6c94a"/>' : '<circle cx="330" cy="30" r="62" fill="#5f9ade"/><circle cx="330" cy="30" r="44" fill="#74a8e2"/><circle cx="330" cy="30" r="26" fill="#f6c94a"/>');
     if (q.sun === 'rise') out.push('<circle cx="226" cy="88" r="26" fill="#f6d39a"/><circle cx="226" cy="88" r="15" fill="#fbe6a6"/>');
     if (q.sun === 'morn') out.push('<circle cx="250" cy="62" r="34" fill="#f9d3a6" opacity=".5"/><circle cx="250" cy="62" r="18" fill="#ffe9bf"/>');
+    if (q.sun === 'aft') out.push('<circle cx="262" cy="58" r="38" fill="#f7c873" opacity=".4"/><circle cx="262" cy="58" r="21" fill="#fbd98a"/>');
     if (q.sun === 'forenoon') out.push('<circle cx="290" cy="46" r="40" fill="#fff" opacity=".2"/><circle cx="290" cy="46" r="22" fill="#ffe6a2"/>');
     if (q.sun === 'sink') out.push('<circle cx="226" cy="86" r="34" fill="#f7c873" opacity=".55"/><circle cx="226" cy="86" r="20" fill="#fbe08f"/>');
     if (q.moon) out.push(`<circle cx="${q.cloud ? 150 : 222}" cy="28" r="16" fill="#f1ead2"/><circle cx="${q.cloud ? 158 : 230}" cy="22" r="14" fill="${q.sky}"/>`);
@@ -957,6 +965,7 @@ function widgetSky(cond, phase) {
     if (q.sun === 'day') out.push(`<circle cx="${cond === 'partly' ? C - 14 : C}" cy="50" r="40" fill="#fff" opacity=".14"/><circle cx="${cond === 'partly' ? C - 14 : C}" cy="50" r="24" fill="#f6c94a"/>`);
     if (q.sun === 'rise') out.push(`<circle cx="${C}" cy="116" r="30" fill="#f6d39a" opacity=".6"/><circle cx="${C}" cy="116" r="18" fill="#fbe6a6"/>`);
     if (q.sun === 'morn') out.push(`<circle cx="${C}" cy="86" r="36" fill="#f9d3a6" opacity=".5"/><circle cx="${C}" cy="86" r="21" fill="#ffe9bf"/>`);
+    if (q.sun === 'aft') out.push(`<circle cx="${C}" cy="80" r="38" fill="#f7c873" opacity=".4"/><circle cx="${C}" cy="80" r="22" fill="#fbd98a"/>`);
     if (q.sun === 'forenoon') out.push(`<circle cx="${cond === 'partly' ? C - 14 : C}" cy="70" r="38" fill="#fff" opacity=".2"/><circle cx="${cond === 'partly' ? C - 14 : C}" cy="70" r="23" fill="#ffe6a2"/>`);
     if (q.sun === 'sink') out.push(`<circle cx="${C}" cy="112" r="38" fill="#f7c873" opacity=".5"/><circle cx="${C}" cy="112" r="22" fill="#fbe08f"/>`);
     if (q.moon && !q.cloud) out.push(`<circle cx="${C}" cy="46" r="17" fill="#f1ead2"/><circle cx="${C + 8}" cy="40" r="15" fill="${q.sky}"/>`);
