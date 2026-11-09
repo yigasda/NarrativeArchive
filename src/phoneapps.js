@@ -184,7 +184,7 @@ export function diaryOne(p, now, k) {
     const x = (p.diary || [])[k];
     if (!x) return diaryScreen(p, now);
     return `${axBar(p, now, '#3d3127')}
-      <div class="ax_dytop"><button type="button" class="ax_back" data-go="diary">${ax('back', 22, '#8a6d4a', 2.4)}${esc(`${parts(x.date)?.mo || ''}월`)}</button><span class="ax_dyr">${delBtn('diary', k, 'ax_dydel', ax('trash2', 21, '#8a6d4a', 1.9))}${x.ko ? `<button type="button" class="na_ph_kochip ax_kobtn ${koOn() ? 'on' : ''}">한국어</button>` : ''}</span></div>
+      <div class="ax_dytop"><button type="button" class="ax_back" data-go="diary">${ax('back', 22, '#8a6d4a', 2.4)}${esc(`${parts(x.date)?.mo || ''}월`)}</button><span class="ax_dyr">${delBtn('diary', k, 'ax_dydel', ax('trash2', 21, '#8a6d4a', 1.9))}${x.ko || x.kt || hasKo(p) ? `<button type="button" class="na_ph_kochip ax_kobtn ${koOn() ? 'on' : ''}">한국어</button>` : ''}</span></div>
       <div class="ax_scroll ax_paper">
         <div class="ax_pdt">${esc(fmtDate(p, x.date))}</div>
         <h3>${esc(x.title || '')}</h3>${x.kt && koOn() ? `<div class="ax_pkt">${esc(x.kt)}</div>` : ''}
