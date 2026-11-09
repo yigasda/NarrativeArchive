@@ -59,5 +59,18 @@ d = np.zeros(H.shape + (4,), dtype=np.uint8)
 d[..., 0], d[..., 1], d[..., 2] = 30, 90, 170
 d[..., 3] = (dep ** 0.7 * 120).astype(np.uint8)
 Image.fromarray(np.asarray(Image.fromarray(d, 'RGBA').filter(ImageFilter.GaussianBlur(2))), 'RGBA').save(out + '-depth.png', optimize=True)
+# STEP: the same as faces with sharp edges, like a printed map — heights smoothed, upsampled ×4, then cut into flat bands
+U = 4
+Hu = np.asarray(Image.fromarray(blur(H, 2.0).astype(np.float32), 'F').resize((H.shape[1] * U, H.shape[0] * U), Image.BICUBIC), dtype=np.float32)
+bu = np.clip(np.floor((Hu - base - 20) / 40), 0, 7)
+alpha = np.array([0, 22, 40, 56, 70, 82, 92, 100], dtype=np.uint8)
+s1 = np.zeros(Hu.shape + (4,), dtype=np.uint8); s1[..., 0], s1[..., 1], s1[..., 2] = 52, 104, 46; s1[..., 3] = alpha[bu.astype(int)]
+Image.fromarray(s1, 'RGBA').save(out + '-steps.png', optimize=True)
+# stepped shade: two flat tones on the slopes facing away from the light, no soft ramp
+gyu, gxu = np.gradient(Hu * 1.6, mpp / U); sl = np.arctan(np.hypot(gxu, gyu)); asp = np.arctan2(-gxu, gyu)
+shu = np.sin(alt) * np.cos(sl) + np.cos(alt) * np.sin(sl) * np.cos(az - asp); dk = (flat - shu) / flat
+s2 = np.zeros(Hu.shape + (4,), dtype=np.uint8); s2[..., 0], s2[..., 1], s2[..., 2] = 50, 80, 60
+s2[..., 3] = np.where(dk > 0.55, 46, np.where(dk > 0.25, 24, 0)).astype(np.uint8)
+Image.fromarray(s2, 'RGBA').save(out + '-stepshade.png', optimize=True)
 json.dump({'S': lat_s, 'W': lon_w, 'N': lat_n, 'E': lon_e, 'min': float(H.min()), 'max': float(H.max()), 'base': float(base)}, open(out + '.json', 'w'))
 print('ok', cols, 'x', rows, 'tiles', 'height', round(float(H.min())), '…', round(float(H.max())), 'm')

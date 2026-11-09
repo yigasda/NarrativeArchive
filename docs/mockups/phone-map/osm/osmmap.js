@@ -107,6 +107,10 @@ function terrain() {
   const T = process.env.TERRAIN; if (!T) return '';
   const m = JSON.parse(fs.readFileSync(T + '.json', 'utf8')), [x0, y0] = P(m.N, m.W), [x1, y1] = P(m.S, m.E);
   const img = (name, extra = '') => `<image href="data:image/png;base64,${fs.readFileSync(T + '-' + name + '.png').toString('base64')}" x="${f(x0)}" y="${f(y0)}" width="${f(x1 - x0)}" height="${f(y1 - y0)}" preserveAspectRatio="none"${extra}/>`;
+  const defs = `<defs><clipPath id="tg"><path d="${L.park + L.forest}"/></clipPath><mask id="tl"><rect x="-50" y="-50" width="${W + 100}" height="${H + 100}" fill="#fff"/><path d="${L.water}" fill="#000"/></mask></defs>`;
+  // TSTYLE=steps: flat height bands on green (sharp edges); steps+shade: plus two flat shade tones on the far slopes
+  if (process.env.TSTYLE === 'steps') return defs + img('steps', ' clip-path="url(#tg)"');
+  if (process.env.TSTYLE === 'steps+shade') return defs + img('steps', ' clip-path="url(#tg)"') + img('stepshade', ' mask="url(#tl)"');
   return `<defs><clipPath id="tg"><path d="${L.park + L.forest}"/></clipPath><clipPath id="tw"><path d="${L.water}"/></clipPath><mask id="tl"><rect x="-50" y="-50" width="${W + 100}" height="${H + 100}" fill="#fff"/><path d="${L.water}" fill="#000"/></mask></defs>`
     + (L.park + L.forest ? img('hills', ' clip-path="url(#tg)"') : '') + (L.water ? img('depth', ' clip-path="url(#tw)"') : '') + img('shade', ' mask="url(#tl)" opacity=".35"') + (L.park + L.forest ? img('shade', ' clip-path="url(#tg)" opacity=".65"') : '');
 }
