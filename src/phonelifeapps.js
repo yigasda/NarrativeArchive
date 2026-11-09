@@ -780,8 +780,7 @@ export function fileScreen(p, now, id) {
 // ================= 날씨 =================
 // what each sky is called; the colours come from pal() below
 const WX = { clear: '맑음', partly: '구름 조금', cloudy: '흐림', drizzle: '이슬비', rain: '비', sleet: '진눈깨비', snow: '눈', fog: '안개', storm: '뇌우', wind: '강풍' };
-// the part of the day a sky is drawn for: dawn and evening are the hour around sunrise and sunset
-// the part of the day by the clock alone (the same for every picture: the sky, the hours' icons, the world clock's sun and
+// the part of the day a sky is drawn for, by the clock alone (the same for every picture: the sky, the hours' icons, the world clock's sun and
 // moon): 새벽 04–07, 낮 07–17, 저녁 17–20, 밤 20–04. The sun's own times stay on the sunset tile only
 function phaseOf(time) {
     const t = toMin(time);
