@@ -18,12 +18,12 @@ const ICON = {
   music: 'M9 18V5l11-2v13M9 18a3 3 0 1 1-3-3 3 3 0 0 1 3 3zM20 16a3 3 0 1 1-3-3 3 3 0 0 1 3 3z',
   library: 'M4 4h4v16H4zM10 4h4v16h-4zM16 5l3.5-1 3 15.5-3.5.9z',
   monument: 'M10 21V8l2-5 2 5v13M7 21h10',
-  statue: 'M12 3a2 2 0 1 0 0 .1M9 21v-6l-1-5h8l-1 5v6M7 21h10',
+  statue: 'M10 4a2 2 0 1 0 4 0a2 2 0 1 0 -4 0M9 21v-6l-1-5h8l-1 5v6M7 21h10',
   castle: 'M4 21V8h3v2h3V8h4v2h3V8h3v13zM10 21v-5h4v5',
   palace: 'M3 21V11l3-2 3 2V7l3-3 3 3v4l3-2 3 2v10zM10 21v-4h4v4',
   ruin: 'M4 21V9l2-2 2 2v5M10 21V5h4v8M16 21v-6l2-2 2 2v6M3 21h18',
   tower: 'M12 2l3 20H9zM10 9h4M9.4 14h5.2',
-  clock: 'M8 21V7l4-4 4 4v14zM12 10a2.5 2.5 0 1 0 0 .1M12 10v1.5M6 21h12',
+  clock: 'M8 21V7l4-4 4 4v14zM9.5 10a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0 -5 0M12 10v1.5M6 21h12',
   lighthouse: 'M10 21l1-12h2l1 12zM9 9h6M10 9V6h4v3M12 6V3M6 5l3 1M18 5l-3 1',
   windmill: 'M12 9l-5-5M12 9l5-5M12 9l-5 5M12 9l5 5M9.5 21l1.5-9h2l1.5 9zM8 21h8',
   observatory: 'M4 15a8 8 0 0 1 16 0zM12 7l5-3M3 15h18v6H3z',
@@ -36,7 +36,7 @@ const ICON = {
   beach: 'M4 20h16M6 20c2-6 6-9 12-10M10 12l-4-6M10 12a6 6 0 0 1 8-5',
   lake: 'M3 9c3-2 5 2 9 0s6 2 9 0M3 14c3-2 5 2 9 0s6 2 9 0M3 19c3-2 5 2 9 0s6 2 9 0',
   fountain: 'M12 13V5M12 5c-2 0-4 2-4 5M12 5c2 0 4 2 4 5M5 15h14l-2 5H7z',
-  zoo: 'M7 9a2 2 0 1 0 0 .1M17 9a2 2 0 1 0 0 .1M4 13a2 2 0 1 0 0 .1M20 13a2 2 0 1 0 0 .1M8 19c0-4 2-6 4-6s4 2 4 6c-2 1-6 1-8 0z',
+  zoo: 'M7 16.5c0-3 2.2-5 5-5s5 2 5 5c0 2.3-2 3.5-5 3.5s-5-1.2-5-3.5zM3.3 10.5a1.7 2.2 0 1 0 3.4 0a1.7 2.2 0 1 0 -3.4 0M7.5 6.2a1.7 2.2 0 1 0 3.4 0a1.7 2.2 0 1 0 -3.4 0M13.1 6.2a1.7 2.2 0 1 0 3.4 0a1.7 2.2 0 1 0 -3.4 0M17.3 10.5a1.7 2.2 0 1 0 3.4 0a1.7 2.2 0 1 0 -3.4 0',
   playground: 'M4 21L9 5h6l5 16M7 14h10M12 5v4M10 13l-2 8',
   spring: 'M7 20c-3-3-3-7 0-9h10c3 2 3 6 0 9zM9 8c-1-2 1-3 0-5M12 8c-1-2 1-3 0-5M15 8c-1-2 1-3 0-5',
   camp: 'M3 20l9-15 9 15zM12 5v15M9 20l3-6 3 6',
@@ -46,7 +46,7 @@ const ICON = {
   swim: 'M3 17c2-1.5 3 1.5 5 0s3 1.5 5 0 3 1.5 5 0 3 1.5 3 0M7 13l4-6 4 3M17 7.5a1.5 1.5 0 1 0 0 .1',
   golf: 'M9 21V3l8 3-8 3M5 21h8',
   ski: 'M4 20l16-6M7 4a1.5 1.5 0 1 0 0 .1M8 8l3 4 4-1M11 12l-2 5',
-  bike: 'M6 17a3 3 0 1 0 0 .1M18 17a3 3 0 1 0 0 .1M6 17l4-7h6l2 7M10 10l2 7h4M14 7h3',
+  bike: 'M2.5 16a3.5 3.5 0 1 0 7 0a3.5 3.5 0 1 0 -7 0M14.5 16a3.5 3.5 0 1 0 7 0a3.5 3.5 0 1 0 -7 0M6 16l4-7h5l3 7M10 9l2.5 7M15 9l-2.5 7M9 7h2.5M15 9l1-3h2',
   // 먹고 사기
   shop: 'M5 8h14l-1.2 12H6.2zM9 8V6a3 3 0 0 1 6 0v2',
   market: 'M3 9l2-5h14l2 5zM3 9c0 2 2 3 3 3s3-1 3-3c0 2 2 3 3 3s3-1 3-3c0 2 2 3 3 3s3-1 3-3M5 12v8h14v-8',
@@ -58,9 +58,9 @@ const ICON = {
   bakery: 'M4 15c0-5 4-8 8-8s8 3 8 8c-2 2-14 2-16 0zM8 9l1 5M12 8v6M16 9l-1 5',
   wine: 'M8 3h8c0 5-1 8-4 8s-4-3-4-8zM12 11v8M8 21h8',
   // 머무르기 · 생활
-  hotel: 'M3 18V7M3 13h18v5M21 18v-3M7 11a2 2 0 1 0 0 .1M10 13V10h8a3 3 0 0 1 3 3',
-  hospital: 'M4 4h16v16H4zM12 8v8M8 12h8',
-  pharmacy: 'M9 3h6v6h6v6h-6v6H9v-6H3V9h6z',
+  hotel: 'M3 18V7M3 13h18v5M21 18v-3M5 11a2 2 0 1 0 4 0a2 2 0 1 0 -4 0M10 13V10h8a3 3 0 0 1 3 3',
+  hospital: 'M9 4h6v5h5v6h-5v5H9v-5H4V9h5z',
+  pharmacy: 'M4.9 19.1a4 4 0 0 1 0-5.7l8.5-8.5a4 4 0 0 1 5.7 5.7l-8.5 8.5a4 4 0 0 1-5.7 0zM8.8 8.8l6.4 6.4',
   school: 'M3 9l9-5 9 5-9 5zM7 11v5c3 2 7 2 10 0v-5',
   university: 'M3 9l9-5 9 5M5 9v9M19 9v9M9 12v6M15 12v6M3 20h18M12 6.5h.1',
   townhall: 'M4 21V10h16v11M2 10l10-6 10 6M12 4V2M9 21v-6h6v6M7 13v2M17 13v2',
@@ -75,7 +75,7 @@ const ICON = {
   bus: 'M6 4h12a2 2 0 0 1 2 2v11H4V6a2 2 0 0 1 2-2zM4 12h16M7 20v-3M17 20v-3M7.5 15h.1M16.5 15h.1',
   boat: 'M3 15h18l-3 5H6zM12 4v11M12 4l6 8h-6',
   ferry: 'M3 16l2 4h14l2-4zM6 16V11h12v5M9 11V7h6v4M3 22c2-1 3 1 5 0s3 1 5 0 3 1 5 0',
-  harbour: 'M12 5a2 2 0 1 0 0 .1M12 7v13M8 11h8M5 15c0 3 3 5 7 5s7-2 7-5',
+  harbour: 'M10 5a2 2 0 1 0 4 0a2 2 0 1 0 -4 0M12 7v13M8 11h8M5 15c0 3 3 5 7 5s7-2 7-5',
   airport: 'M21 15l-8-4V5a1 1 0 0 0-2 0v6l-8 4v2l8-2v4l-2 2h6l-2-2v-4l8 2z',
   cable: 'M3 6l18-3M10 5v4M7 9h8v7H7zM7 13h8',
   parking: 'M5 3h14v18H5zM10 17V7h3a3 3 0 0 1 0 6h-3',
@@ -132,4 +132,7 @@ function pick(t) {
   if (to === 'attraction' || to === 'information' && t.information === 'office') return to === 'attraction' ? 'view' : 'info';
   return null;
 }
-module.exports = { ICON, pick };
+// OFF: how far each glyph moves so its real box sits in the middle of the 24 grid (iconbox.cjs measures it)
+const OFF = {"cathedral":[0,-1],"mosque":[0,-1],"shrine":[0,-1],"temple":[0,2],"pagoda":[0,0.5],"theatre":[0,0.75],"cinema":[0,1.97],"music":[0.5,0],"library":[-1.25,-0.2],"statue":[0,0.5],"castle":[0,-2.5],"palace":[0,-0.5],"ruin":[0,-1],"windmill":[0,-0.5],"observatory":[0,-0.5],"garden":[0,-1.5],"mountain":[0,-2],"beach":[0,-1],"lake":[0,-2],"fountain":[0,-0.5],"playground":[0,-1],"spring":[0,0.5],"camp":[0,-0.5],"golf":[1,0],"ski":[0,0.72],"bike":[0,-0.75],"shop":[0,0.5],"mall":[0,-0.5],"cafe":[0,1],"food":[1.5,0],"bar":[0,-0.5],"beer":[-0.5,0.38],"hotel":[0,-0.5],"school":[0,1.25],"townhall":[0,0.5],"fire":[-1,-0.5],"bank":[0,0.5],"ferry":[0,-2.64],"harbour":[0,0.5],"airport":[0,-0.5],"cable":[0,2.5],"fuel":[-0.5,0],"bridge":[0,-1.75],"cemetery":[0,-1],"aquarium":[1,0]};
+const glyph = n => OFF[n] ? `<g transform="translate(${OFF[n][0]} ${OFF[n][1]})"><path d="${ICON[n]}"/></g>` : `<path d="${ICON[n]}"/>`;
+module.exports = { ICON, OFF, glyph, pick };

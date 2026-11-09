@@ -95,7 +95,7 @@ const RAILKEEP = new Set();
 const LC = Object.fromEntries(Object.keys(COVER).map(k => [k, '']));
 // STYLE=pretty: the real shapes drawn the way the old kit maps were — fewer lines, big charcoal names, icons, a station box, trees in parks
 const PRETTY = process.env.STYLE === 'pretty';
-const { ICON, pick } = require('./icons.js');
+const { ICON, glyph, pick } = require('./icons.js');
 const pxArea = ps => Math.abs(ps.reduce((s, p, i) => { const q = ps[(i + 1) % ps.length]; return s + p[0] * q[1] - q[0] * p[1]; }, 0)) / 2;
 const centre = ps => { const n = ps.length; return [ps.reduce((s, p) => s + p[0], 0) / n, ps.reduce((s, p) => s + p[1], 0) / n]; };
 const POIS = [], GREENS = [];
@@ -241,13 +241,13 @@ function prettyMarks(labels) {
   const free = (x, y, r) => x > 14 && x < W - 14 && y > 16 && y < 480 && !taken.some(b => x + r > b[0] && x - r < b[2] && y + r > b[1] && y - r < b[3]);
   const st = d.elements.find(e => e.type === 'node' && e.tags && e.tags.railway === 'station' && e.tags.station !== 'subway' && (() => { const [x, y] = P(e.lat, e.lon); return x > 20 && x < W - 20 && y > 30 && y < 470; })());
   if (st) { let [x, y] = P(st.lat, st.lon); y -= 22; if (free(x, y, 9)) { taken.push([x - 12, y - 12, x + 12, y + 12]);
-    o += `<g transform="translate(${f(x)} ${f(y)})"><rect x="-9" y="-9" width="18" height="18" rx="5" fill="#5f6670"/><path d="${ICON.train}" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" transform="translate(-6 -6) scale(.5)"/></g>`; } }
+    o += `<g transform="translate(${f(x)} ${f(y)})"><rect x="-9" y="-9" width="18" height="18" rx="5" fill="#5f6670"/><g fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" transform="translate(-6 -6) scale(.5)">${glyph('train')}</g></g>`; } }
   const used = new Map(), pool = POIS.filter(p => p.ic !== 'train').sort((a, b) => b.pr - a.pr);
   let n = 0;
   for (const p of pool) { const [x, y] = p.at; if (!free(x, y, 11) || (used.get(p.ic) || 0) >= 2) continue;
     if (taken.some(b => Math.hypot((b[0] + b[2]) / 2 - x, (b[1] + b[3]) / 2 - y) < 46 && b[2] - b[0] < 30)) continue;
     taken.push([x - 11, y - 11, x + 11, y + 11]); used.set(p.ic, (used.get(p.ic) || 0) + 1);
-    o += `<g transform="translate(${f(x)} ${f(y)})"><circle r="9.5" fill="#fff" stroke="#d8d4cc" stroke-width="1"/><path d="${ICON[p.ic]}" fill="none" stroke="#8a7f73" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" transform="translate(-6.6 -6.6) scale(.55)"/></g>`;
+    o += `<g transform="translate(${f(x)} ${f(y)})"><circle r="9.5" fill="#fff" stroke="#d8d4cc" stroke-width="1"/><g fill="none" stroke="#8a7f73" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" transform="translate(-6.6 -6.6) scale(.55)">${glyph(p.ic)}</g></g>`;
     if (++n >= 7) break; }
   return o;
 }
