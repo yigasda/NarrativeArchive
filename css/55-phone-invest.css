@@ -535,16 +535,16 @@
 @keyframes lf_flash { 0%, 92%, 94%, 100% { opacity: 0; } 93% { opacity: 0.35; } 95% { opacity: 0.15; } }
 @media (prefers-reduced-motion: reduce) { .ax .lf_sky *, :is(.ax, .cg) .lf_city i { animation: none !important; } }
 .ax .lf_wtop { text-align: center; padding-top: 2px; flex: none; }
-.ax .lf_wtop small { display: flex; align-items: center; justify-content: center; gap: 5px; font-size: 12.5px; font-weight: 600; opacity: 0.9; }
+.ax .lf_wtop small { display: flex; align-items: center; justify-content: center; gap: 5px; font-size: 12.5px; font-weight: 600; }
 .ax .lf_wtop h2 { margin: 2px 0 0; font-size: 32px; font-weight: 500; color: #fff; }
 .ax .lf_wtop .t { font: 200 96px/1 'Inter Tight', -apple-system, sans-serif; --axff: 'Inter Tight', -apple-system, sans-serif; --axfs: 96px; margin-left: 22px; letter-spacing: -0.03em; --axls: -0.03em}
-.ax .lf_wtop .c { font-size: 19px; --axfs: 19px; font-weight: 600; opacity: 0.92}
+.ax .lf_wtop .c { font-size: 19px; --axfs: 19px; font-weight: 600}
 .ax .lf_wtop .hl { font-size: 17px; --axfs: 17px; font-weight: 600; margin-top: 2px}
 .ax .lf_wsrc { display: inline-flex; align-items: center; gap: 6px; margin: 10px 0 16px; font-size: 11.5px; --axfs: 11.5px; background: rgba(255, 255, 255, 0.16); border-radius: 12px; --axr: 12px; padding: 4px 10px}
 .ax .lf_wcard { margin: 0 16px 10px; border-radius: 16px; --axr: 16px; background: rgba(255, 255, 255, 0.14); padding: 11px 14px; flex: none}
-.ax .lf_wcard .hd { display: flex; align-items: center; gap: 6px; font-size: 11.5px; --axfs: 11.5px; font-weight: 600; opacity: 0.75; padding-bottom: 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.22)}
+.ax .lf_wcard .hd { display: flex; align-items: center; gap: 6px; font-size: 11.5px; --axfs: 11.5px; font-weight: 600; padding-bottom: 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.22)}
 .ax .lf_wcard .ln1 { font-size: 14.5px; --axfs: 14.5px; font-weight: 500; padding: 2px 0 9px; border-bottom: 1px solid rgba(255, 255, 255, 0.22); line-height: 1.4}
-.ax .lf_wk { display: block; font-size: 12.5px; --axfs: 12.5px; opacity: 0.8; font-weight: 400; margin-top: 2px}
+.ax .lf_wk { display: block; font-size: 12.5px; --axfs: 12.5px; font-weight: 400; margin-top: 2px}
 .ax .lf_hrs { display: flex; justify-content: space-between; padding-top: 10px; }
 .ax .lf_hrs div { width: 46px; text-align: center; font-size: 13.5px; font-weight: 600; display: flex; flex-direction: column; align-items: center; }
 .ax .lf_hrs em { font-style: normal; font-size: 11px; color: #9fd6ff; height: 14px; font-weight: 700; }
@@ -555,14 +555,14 @@
 .ax .lf_d10 > span:first-child { width: 42px; }
 .ax .lf_d10 .ic { width: 44px; display: flex; flex-direction: column; align-items: center; }
 .ax .lf_d10 .ic em { font-style: normal; font-size: 10.5px; color: #9fd6ff; font-weight: 700; }
-.ax .lf_d10 .lo { width: 30px; text-align: right; opacity: 0.6; font-weight: 500; }
+.ax .lf_d10 .lo { width: 30px; text-align: right; font-weight: 500; }
 .ax .lf_d10 .hi { width: 30px; font-weight: 500; }
 .ax .lf_d10 .bar { flex: 1; height: 5px; border-radius: 3px; --axr: 3px; background: rgba(0, 0, 0, 0.18); position: relative}
 .ax .lf_d10 .bar i { position: absolute; top: 0; bottom: 0; border-radius: 3px; }
 .ax .lf_d10 .bar b { position: absolute; top: -2.5px; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.25); }
 .ax .lf_tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0 16px; flex: none; }
 .ax .lf_tile { border-radius: 16px; --axr: 16px; background: rgba(255, 255, 255, 0.14); padding: 11px 13px; height: 150px; position: relative; overflow: hidden; box-sizing: border-box}
-.ax .lf_tile .hd { display: flex; align-items: center; gap: 5px; font-size: 11px; --axfs: 11px; font-weight: 600; opacity: 0.75}
+.ax .lf_tile .hd { display: flex; align-items: center; gap: 5px; font-size: 11px; --axfs: 11px; font-weight: 600}
 .ax .lf_tile b { display: block; font: 400 30px 'Inter Tight', sans-serif; margin-top: 6px; }
 .ax .lf_tile b small { font-size: 16px; }
 .ax .lf_tile .s { font-size: 12.5px; --axfs: 12.5px; font-weight: 500}
@@ -580,7 +580,7 @@
 .cg .lf_city.cg_wx .l, .cg .lf_city.cg_wx .r { text-shadow: 0 1px 3px rgba(0, 0, 0, 0.22); }
 .cg .lf_city.cg_wx .r b { font: 300 46px/1 'Inter Tight', -apple-system, sans-serif; }
 :is(.ax, .cg) .lf_city .l b { font-weight: 700; }
-:is(.ax, .cg) .lf_city .l small, :is(.ax, .cg) .lf_city .l span, :is(.ax, .cg) .lf_city .r span { font-size: 13px; --axfs: 13px; font-weight: 600; opacity: 0.92}
+:is(.ax, .cg) .lf_city .l small, :is(.ax, .cg) .lf_city .l span, :is(.ax, .cg) .lf_city .r span { font-size: 13px; --axfs: 13px; font-weight: 600}
 :is(.ax, .cg) .lf_city .l span, :is(.ax, .cg) .lf_city .r span { margin-top: auto; }
 :is(.ax, .cg) .lf_city .r { text-align: right; }
 :is(.ax, .cg) .lf_city .r b { font: 300 48px/1 'Inter Tight', sans-serif; }
@@ -602,7 +602,6 @@
 .ax .lf_pvaud .lf_wave { flex: 1; display: flex; align-items: center; justify-content: space-between; height: 64px; gap: 0; }
 .ax .lf_pvaud .lf_wave i { width: 4px; border-radius: 2px; background: #c9d3e0; }
 .ax .lf_audt { display: flex; justify-content: space-between; width: 100%; font-size: 12.5px; --axfs: 12.5px; color: #8a929d; --axfg: #8a929d; padding-left: 60px; box-sizing: border-box}
-.ax .lf_tile p:last-child { opacity: 0.8; }
 /* 타이머 buttons: two pills under the ring (A) */
 .ax .lf_tend { text-align: center; font-size: 13.5px; --axfs: 13.5px; color: #8b8f98; --axfg: #8b8f98; margin: -4px 0 0; flex: none}
 .ax .lf_tend b { color: #f5a524; font-weight: 600; margin-left: 4px; }

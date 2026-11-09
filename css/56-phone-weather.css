@@ -42,14 +42,14 @@
 @media (prefers-reduced-motion: reduce) { .ax .lf_sc * { animation: none !important; } .ax .lf_sc .bolt, .ax .lf_sc .fl { display: none; } }
 
 .ax .lf_wx .lf_wcard { background: var(--wcard); }
-.ax .lf_wx .lf_wcard .hd { font-size: 11px; --axfs: 11px; letter-spacing: 0.06em; --axls: 0.06em; opacity: 0.72}
+.ax .lf_wx .lf_wcard .hd { font-size: 11px; --axfs: 11px; letter-spacing: 0.06em; --axls: 0.06em}
 .ax .lf_wx .lf_hrs svg { margin: 6px auto 4px; }
 .ax .lf_tl { display: block; width: 100%; height: 26px; margin-top: 2px; overflow: visible; }
 .ax .lf_wx .lf_tile { background: var(--wtile); height: 162px; border-radius: 18px; --axr: 18px; padding: 12px 13px}
-.ax .lf_wx .lf_tile .hd { font-size: 11px; --axfs: 11px; font-weight: 600; letter-spacing: 0.05em; --axls: 0.05em; opacity: 0.72}
+.ax .lf_wx .lf_tile .hd { font-size: 11px; --axfs: 11px; font-weight: 600; letter-spacing: 0.05em; --axls: 0.05em}
 .ax .lf_wx .lf_tile b { font-size: 30px; font-weight: 400; margin-top: 4px; }
 .ax .lf_wx .lf_tile b small { font-size: 15px; }
-.ax .lf_wx .lf_tile p { bottom: 11px; font-size: 12px; font-weight: 500; opacity: 0.92; }
+.ax .lf_wx .lf_tile p { bottom: 11px; font-size: 12px; font-weight: 500; }
 .ax .lf_tile .pic { position: absolute; }
 .ax .lf_tile .pic.sunset { left: 0; right: 0; bottom: 30px; width: 100%; height: 62px; }
 .ax .lf_tile .pic.bars { left: 13px; top: 68px; width: calc(100% - 26px); height: 42px; }
@@ -63,7 +63,9 @@
 :is(.ax, .cg) .lf_city { height: 118px; border-radius: 20px; --axr: 20px; width: calc(100% - 32px); margin: 0 16px 10px; padding: 14px 16px}
 :is(.ax, .cg) .lf_city > svg.bg { position: absolute; inset: 0; width: 100%; height: 100%; }
 :is(.ax, .cg) .lf_city .l b { font-size: 21px; letter-spacing: -0.01em; }
-:is(.ax, .cg) .lf_city .l small { display: flex; align-items: center; gap: 4px; margin-top: 1px; opacity: 0.85; }
-:is(.ax, .cg) .lf_city .l span, :is(.ax, .cg) .lf_city .r span { font-size: 13.5px; --axfs: 13.5px; opacity: 0.92; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3)}
+:is(.ax, .cg) .lf_city .l small { display: flex; align-items: center; gap: 4px; margin-top: 1px; }
+/* a theme paints every small its muted colour (Blue Lemonade: body.salty … small, 3 classes): the sky's small lines stay its white */
+dialog.popup:has(.na_popup) .na_popup :is(.ax, .cg) :is(.lf_city, .lf_wtop, .lf_tile) small { color: inherit; }
+:is(.ax, .cg) .lf_city .l span, :is(.ax, .cg) .lf_city .r span { font-size: 13.5px; --axfs: 13.5px; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3)}
 :is(.ax, .cg) .lf_city .r b { font-size: 50px; font-weight: 200; letter-spacing: -0.03em; margin-right: -4px; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.28), 0 1px 2px rgba(0, 0, 0, 0.18); }
 
