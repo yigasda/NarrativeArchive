@@ -100,15 +100,15 @@ const PRETTY = process.env.STYLE === 'pretty';
 // STYLE=gmap: a busy street map's manner — cream ground, land uses in their own colours, hardly any houses, white streets with no rim, coloured place names with their icons, street names along the streets
 const GMAP = process.env.STYLE === 'gmap', COLLECT = PRETTY || GMAP, STREETS = [], FOOT = [];
 // gmap: ordinary blocks stay the quiet ground (homes, shops, offices alike); only the places that mean something get a colour — parks, campuses, works yards, water
-if (GMAP) Object.assign(C, { land: '#f5ede2', built: '#f5ede2', resi: '#f5ede2', shop: '#f5ede2', works: '#ebe8e3', railyard: '#ebe8e3', school: '#efdcb6', park: '#c2e0a3', forest: '#b2d796', water: '#a4cdf2',
-  bld: '#dedbd6', edge: '#dccfbb', road: '#ffffff', major: '#fdd98a', majorEdge: '#e9b85a', plaza: '#f5ede2', foot: '#d2e9bd' });
+if (GMAP) Object.assign(C, { land: '#f5ede2', built: '#f5ede2', resi: '#f5ede2', shop: '#f4e3da', works: '#ebe8e3', railyard: '#ebe8e3', school: '#efdcb6', park: '#c2e0a3', forest: '#b2d796', water: '#a4cdf2',
+  bld: '#eee4d6', edge: '#dccfbb', road: '#ffffff', major: '#fdd98a', majorEdge: '#e9b85a', plaza: '#f5ede2', foot: '#d2e9bd' });
 if (GMAP) Object.assign(COVER, { grass: '#d3ecc3', allot: '#d6ebc5', orchard: '#cfe8bc', vine: '#dde8c0', grave: '#d4e3cb', scrub: '#cfe3b8', farm: '#f1ecd9' });
 const { ICON, glyph, pick } = require('./icons.js');
 const COVER0 = null;
 const pxArea = ps => Math.abs(ps.reduce((s, p, i) => { const q = ps[(i + 1) % ps.length]; return s + p[0] * q[1] - q[0] * p[1]; }, 0)) / 2;
 const centre = ps => { const n = ps.length; return [ps.reduce((s, p) => s + p[0], 0) / n, ps.reduce((s, p) => s + p[1], 0) / n]; };
 const POIS = [], GREENS = [];
-const L = { station: '',  shop: '', works: '', railyard: '', school: '', mark: '', markStation: '', shadow: {}, built: '', park: '', forest: '', water: '', plaza: '', bld: '', foot: '', minor: '', mid: '', major: '', rail: '', tram: '' };
+const L = { gEdu: '', gHealth: '', gBiz: '', gPitch: '', station: '',  shop: '', works: '', railyard: '', school: '', mark: '', markStation: '', shadow: {}, built: '', park: '', forest: '', water: '', plaza: '', bld: '', foot: '', minor: '', mid: '', major: '', rail: '', tram: '' };
 const BUILT = /residential|commercial|retail|industrial|railway|construction|brownfield|education|emergency/;
 const GREEN = /grass|village_green|flowerbed|meadow|allotments|cemetery|greenhouse/;
 for (const e of d.elements) {
@@ -122,7 +122,13 @@ for (const e of d.elements) {
       { const ic = pick(t); if (ic && (t.name || t.wikidata)) POIS.push({ ic, at: centre(ps), pr: (t.wikidata ? 2 : 0) + (t.name ? 1 : 0) + Math.min(2, px / 400), name: t.name }); }
       if (t.building === 'train_station' || t.railway === 'station') { L.station += a; continue; }
       if (px < 40 * k * k * 2.2) continue;          // the tiny sheds and kiosks go
-      if (GMAP) continue;                              // gmap: no houses at this scale — the blocks are the ground
+      if (GMAP) {                                      // gmap: houses are the ground; only buildings that say what a place is get a face
+        const b = t.building, am = t.amenity;
+        if (/^(university|college|school|kindergarten)$/.test(b) || /^(university|college|school|kindergarten)$/.test(am || '')) L.gEdu += a;
+        else if (b === 'hospital' || am === 'hospital' || am === 'clinic') L.gHealth += a;
+        else if (px > 500 * k * k && (/^(office|retail|commercial|supermarket|hotel|government|civic|public|industrial|warehouse|train_station)$/.test(b) || t.shop || t.office)) L.gBiz += a;
+        else L.bld += a;                               // every other house: a faint shade of the ground, so dense blocks read as dense
+        continue; }
     }
     // A: churches, stations, castles, halls and anything with its own wiki page stand out a little
     const big = /cathedral|church|chapel|castle|palace|train_station|government|museum|civic|public|university|stadium|transportation/.test(t.building) || t.historic || t.tourism || t.wikidata || t.amenity === 'place_of_worship';
@@ -135,6 +141,9 @@ for (const e of d.elements) {
   if (COLLECT && e.geometry) { const ic = pick(t); if (ic && t.name && !t.building) { const ps = pts(e.geometry); POIS.push({ ic, at: centre(ps), pr: (t.wikidata ? 2 : 0) + 1 + Math.min(2, pxArea(ps) / 3000), name: t.name }); } }
   if (COLLECT && e.type === 'node') { const ic = pick(t); if (ic && (t.name || t.wikidata)) POIS.push({ ic, at: P(e.lat, e.lon), pr: (t.wikidata ? 2.5 : 0) + 1, name: t.name }); }
   // gmap: parks only where they matter — courtyard lawns, flowerbeds and small gardens go
+  if (GMAP && !t.building && e.geometry && /^(university|college|school|kindergarten)$/.test(t.amenity || '')) { L.gEdu += area(e); continue; }
+  if (GMAP && !t.building && e.geometry && /^(hospital|clinic)$/.test(t.amenity || '')) { L.gHealth += area(e); continue; }
+  if (GMAP && e.geometry && t.leisure === 'pitch') { L.gPitch += area(e); continue; }
   if (GMAP && e.type === 'way' && e.geometry && (t.leisure && /park|garden/.test(t.leisure) || /^(grass|flowerbed|village_green|greenery)$/.test(t.landuse || '') || t.natural === 'grassland') && pxArea(pts(e.geometry)) < 2500 * k * k) continue;
   if (t.leisure && /park|garden/.test(t.leisure)) { L.park += area(e); if (COLLECT && e.type === 'way' && e.geometry) GREENS.push(pts(e.geometry)); continue; }
   { const c = coverOf(t); if (c) { if (c === 'forest') L.forest += area(e); else LC[c] += area(e); continue; } }
@@ -197,7 +206,7 @@ let svg = `<rect width="${W}" height="${H}" fill="${C.land}"/>`
 if (GMAP) svg = `<rect width="${W}" height="${H}" fill="${C.land}"/>`
   + fill(L.built, C.built) + fill(L.resi, C.resi) + fill(L.shop, C.shop) + fill(L.works, C.works) + fill(L.railyard, C.railyard) + fill(L.school, C.school)
   + ['farm', 'grass', 'allot', 'orchard', 'vine', 'grave', 'scrub', 'wet', 'sand', 'rock'].map(k2 => fill(LC[k2], COVER[k2])).join('') + fill(L.park, C.park) + fill(L.forest, C.forest) + fill(L.plaza, C.plaza) + fill(L.water, C.water)
-  + fill(L.bld, C.bld) + fill(L.station, '#e2dfda')
+  + fill(L.bld, C.bld) + fill(L.gPitch, '#cbe6b6') + fill(L.gEdu, C.school) + fill(L.gHealth, '#f3d8d4') + fill(L.gBiz, '#e4ded6') + fill(L.station, '#e2dfda')
   // park paths as faces, not lines: the few long ones as a soft band one shade lighter than the grass, no rim
   + (L.park + L.forest ? `<defs><clipPath id="gp"><path d="${L.park + L.forest}"/></clipPath></defs><g clip-path="url(#gp)">${st(parkPaths(), C.foot, Math.max(3.6, mpx(4)))}</g>` : '')
   + st(L.minor, C.edge, Math.max(5.5, mpx(8)) + 1.6) + st(L.mid, C.edge, Math.max(8, mpx(12)) + 1.8)
