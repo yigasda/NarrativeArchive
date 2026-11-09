@@ -778,14 +778,14 @@ test('일상 comes in the reflection\'s own answer (no request of its own); who 
     assert.ok(!sys.includes('SCENES WITH') && !sys.includes('PUT ON THE PHONE NOW'));
     // (no forced text after a scene: a text after a fight is part of the story's trail)
     assert.ok(!sys.includes('parted from'));
-    assert.match(sys, /\nSTEP 3 · RECORDS\n"records": one entry for each day from PHONE NOW's "now" to the answer's "now", skipped days included, with all that is new on the phone that day\./);
-    assert.match(sys, /1\. From the scenes, in order, only these, each with "scene", "at" and "said" \(the exact words it comes from\), saying no more than "said":/);
-    assert.match(sys, /2\. Around them, the owner's own life \("scene": ""\), in the waking hours no scene covers\./);
-    assert.match(sys, /PEOPLE AROUND \(contact both ways; group chats go on without the owner\)/);
+    assert.match(sys, /\nSTEP 3 · RECORDS\nGo through each scene's messages in order\. Write a record only in these cases, with "scene", "at", "said" \(the exact words it comes from\) and "situations":/);
+    assert.match(sys, /A record says no more than its "said"\. Nothing else goes in "records"\./);
+    assert.match(sys, /7\. Every record, in "records" or "everyday", lists in "situations" each situation it mentions or touches, and keeps to what each one's state allows\./);
+    assert.match(sys, /d\. PEOPLE AROUND: contact both ways; group chats go on without the owner\./);
     assert.match(sys, /new plausible ones with local names \(each with a "contact"\)/);
     assert.match(sys, /no one they are no longer in touch with\./);
     assert.ok(!sys.includes("DO NOT CONTINUE THE STORY") && !sys.includes("SCENES AND RECORDS") && sys.indexOf("\nSTEP 1 · SCENES\n") > sys.indexOf("CLOCK FIRST"));
-    assert.match(sys, /"records": \[\{ "date": "MM-DD", "records": \[/);
+    assert.match(sys, /"everyday": \[\{ "date": "MM-DD", "records": \[/);
     const guess = [...c.p.threads.flatMap(th => th.messages.filter(x => x.src === 'guess').map(x => `${th.with}:${x.text}`)), ...c.p.searches.filter(x => x.src === 'guess').map(x => x.q)];
     assert.deepEqual(guess.sort(), ['Ivo:whatever', 'Ivo:you started it', 'Mittagstisch Seongsu']);
     // (a time after the round's now, 09:52 for 09:45, is the now)
@@ -798,10 +798,10 @@ test('일상 comes in the reflection\'s own answer (no request of its own); who 
 
 test('the reflection\'s own instructions: one list of records, the story\'s and the owner\'s own life; so many a day', () => {
     const on = data.coreSystem({ life: true }), plain = data.coreSystem(), onW = data.coreSystem({ life: true, weather: true });
-    for (const k of ['STEP 1 · SCENES', 'STEP 2 · SITUATIONS', 'STEP 3 · RECORDS', 'STEP 4 · EACH APP', 'HEALTH', 'SCREEN TIME', 'WEATHER', 'KEEPING IN STEP', 'LANGUAGE']) assert.ok(onW.includes(`\n${k}\n`), k);
+    for (const k of ['STEP 1 · SCENES', 'STEP 2 · SITUATIONS', 'STEP 3 · RECORDS', 'STEP 4 · EVERYDAY', 'STEP 5 · EACH APP', 'HEALTH', 'SCREEN TIME', 'WEATHER', 'KEEPING IN STEP', 'LANGUAGE']) assert.ok(onW.includes(`\n${k}\n`), k);
     // (the steps in order, after CLOCK FIRST; nothing of the old sections left)
     const at = k => onW.indexOf(`\n${k}\n`);
-    assert.ok(at('CLOCK FIRST') < at('STEP 1 · SCENES') && at('STEP 1 · SCENES') < at('STEP 2 · SITUATIONS') && at('STEP 2 · SITUATIONS') < at('STEP 3 · RECORDS') && at('STEP 3 · RECORDS') < at('STEP 4 · EACH APP') && !onW.includes('EVERYDAY') && !onW.includes('"everyday"'));
+    assert.ok(at('CLOCK FIRST') < at('STEP 1 · SCENES') && at('STEP 1 · SCENES') < at('STEP 2 · SITUATIONS') && at('STEP 2 · SITUATIONS') < at('STEP 3 · RECORDS') && at('STEP 3 · RECORDS') < at('STEP 4 · EVERYDAY') && at('STEP 4 · EVERYDAY') < at('STEP 5 · EACH APP'));
     for (const old of ['DO NOT CONTINUE THE STORY', 'SCENES AND RECORDS', 'THE APPS', 'IN THEIR OWN WORDS', '"advances"', 'role-play writer']) assert.ok(!onW.includes(old), old);
     // (the times in CLOCK FIRST; their own TIMES only when an archive-only round has no CLOCK FIRST)
     assert.ok(!on.includes('\nTIMES\n') && on.includes('Every record\'s time is on the owner\'s clock'));
@@ -819,19 +819,20 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.match(on, /Nothing in "open" is stated or guessed as fact: no text, memo, search, mail or diary fills it\. The owner may ask; no one answers\./);
     assert.ok(on.includes('PHONE NOW and ORDERS AND TICKETS') === false && data.coreSystem({ life: true, wallet: true }).includes('STORY NOW, PHONE NOW and ORDERS AND TICKETS: a parcel'));
     // (STEP 3: the cases)
-    assert.match(on, /   b\. a plan made → "calendar"; a PHONE NOW plan the messages move → again with "was"; called off or undone \(an order cancelled\) → "cancelled": true\. No booking, trip or purchase the story lacks;/);
-    assert.match(on, /   c\. one "visit" for each scene where the owner is somewhere;/);
-    assert.ok(on.includes('   e. an alarm or file the messages set or change.') && !plain.includes('e. an alarm or file') && plain.includes('would save → "contact".'));
+    assert.match(on, /2\. A plan made → "calendar"\. A PHONE NOW plan the messages move → its calendar record again with "was"; called off or undone \(an order cancelled\) → "cancelled": true\. No booking, trip or purchase the story lacks\./);
+    assert.match(on, /3\. Each scene where the owner is somewhere → one "visit"\./);
+    assert.ok(on.includes('5. An alarm or file the messages set or change → that record.') && !plain.includes('5. An alarm or file'));
     // (STEP 4: hours, amount, sources; a later text is not forced)
-    assert.match(on, /   - About 11 a full waking day, fewer for part of one\. A full day uses at least 6 of their apps \(texts, calls, photos, searches, notes, mails, posts, voice memos, alarms, files\)\. Who they talk to, and how much, follows their character and PEOPLE AROUND\./);
+    assert.match(on, /2\. Amount: about 11 records per full waking day, fewer for part of one\. A full day uses at least 6 of their apps \(texts, calls, photos, searches, notes, mails, posts, voice memos, alarms, files\)\. Who they talk to, and how much, follows their character and PEOPLE AROUND\./);
     assert.ok(!on.includes('3 or more people') && on.includes('- Mail: whatever would really land in their inbox from their life, accounts, hobbies and habits.'));
-    assert.match(on, /people from a scene may text later, if it fits\./);
+    assert.match(on, /   a\. people the owner had a scene with may text later, if it fits;/);
     assert.ok(!on.includes('at least one later text exchange'));
-    assert.match(on, /   - From PHONE NOW's habits, LIFE NOW's usual and OWNER PROFILE \(routines and interests recur\); PEOPLE AROUND \(contact both ways; group chats go on without the owner\);/);
+    assert.match(on, /   c\. PHONE NOW's habits, LIFE NOW's usual, OWNER PROFILE: routines and interests that recur;/);
+    assert.match(on, /   d\. PEOPLE AROUND: contact both ways; group chats go on without the owner\./);
     assert.match(on, /incoming texts and calls may arrive/);
     assert.match(on, /No new relative or partner; relationship labels only from the story;/);
-    assert.equal(on.split('- Diary: one for a day that ends in these hours or a scene that stays with them.').length, 2);
-    // (STEP 4)
+    assert.equal(on.split('5. Diary: one entry for a day that ends in these hours or a scene that stays with them, on that day.').length, 2);
+    // (STEP 5)
     assert.match(on, /- Search: what they would type\. About a situation: only words in its "known"\./);
     assert.match(on, /- Voice memo: spoken, not written: the way they talk in the chat/);
     assert.ok(on.includes('Post: only if they post. Alarm, file: change with their life.') && !plain.includes('Alarm, file:'));
@@ -840,10 +841,10 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.match(on, /Records of the owner's life fall between PHONE NOW's "now" and the answer's "now"\./);
     // (JSON: scenes, situations, records, everyday, then health and usual)
     const j = k => on.indexOf(`\n  "${k}": `);
-    assert.ok(j('scenes') < j('situations') && j('situations') < j('records') && j('records') < j('health') && j('everyday') === -1 && on.includes('\n  "usual": { "weight"'));
+    assert.ok(j('scenes') < j('situations') && j('situations') < j('records') && j('records') < j('everyday') && j('everyday') < j('health') && on.includes('\n  "usual": { "weight"'));
     assert.ok(on.includes('"with": [people physically there with the owner; otherwise []]') && on.includes('"situations": [{ "id": a short tag, "what", "state", "known", "open", "eta": an order\'s expected "MM-DD", else "" }]'));
-    assert.match(on, /  "records": \[\{ "date": "MM-DD", "records": \[\{ "type": "contact" \| "text"/);
-    assert.match(on, /"scene": its scene id, or "" for the owner's own life, "at": its message number, "said": exact words, "situation": a situation id or "", "already": a LIFE NOW id or "",/);
+    assert.match(on, /"at": its message number, "scene": its scene id, "said": exact words, "situations": \[situation ids\] or \[\], "already": a LIFE NOW id or "",/);
+    assert.match(on, /"everyday": \[\{ "date": "MM-DD", "records": \[\{ "type": one of the ITEMS types but "profile" and "visit", "situations": \[situation ids\] or \[\], and the fields of its type in ITEMS \}\] \}\] \(one entry a day, in order\)/);
     assert.match(on, /"type": "contact" \| "text" \| "call" \| "photo" \| "note" \| "search" \| "calendar" \| "post" \| "profile" \| "mail" \| "diary" \| "visit" \| "voice" \| "alarm" \| "timer" \| "file"/);
     assert.ok(!plain.includes('"alarm" | "timer"') && !plain.includes('LIFE NOW') && plain.includes('Write in this order. Numbers are plain JSON numbers.'));
     assert.match(on, /\nITEMS \(each with only the fields it needs\)\ncontact: "name"/);
@@ -1152,8 +1153,8 @@ test('life records that answer a scene ("scene" its id) go on it and the day\'s 
     assert.ok(lio.messages.every(x => x.src === 'guess' && !('onScene' in x)));
     // (they are the scene's: on its event)
     assert.ok(c.p.sync.events.bar);
-    assert.match(T.sys, /"scene": its scene id, or "" for the owner's own life,/);
-    assert.match(T.sys, /people from a scene may text later, if it fits\./);
+    assert.match(T.sys, /"everyday": \[\{ "date": "MM-DD", "records": \[\{ "type": one of the ITEMS types but "profile" and "visit", "situations": \[situation ids\] or \[\]/);
+    assert.match(T.sys, /a\. people the owner had a scene with may text later, if it fits;/);
 });
 
 test('the answer\'s "everyday" lists: each app the owner\'s own life, on its scene when it answers one; counted as life', async () => {
@@ -1390,10 +1391,10 @@ test('"situations" and each record\'s "situation" are the model\'s own notes: re
     c.p.now = '10-26 18:00'; c.p.year = 2026;
     await run(c.m, { now: '10-26 22:00', scenes: [{ id: 'scarf', at: 2, quote: 'I sent you a scarf', date: '10-26', time: '20:00', summary: 'scarf', place: '', city: '', with: [] }],
         situations: [{ id: 'sc1', what: 'the scarf Ren sent', state: 'sent', known: 'I sent you a scarf', open: 'when it comes', eta: '' }],
-        records: [{ type: 'text', at: 2, scene: 'scarf', said: 'I sent you a scarf', situation: 'sc1', with: 'Lio', messages: [{ from: 'me', text: 'can\'t wait!!', time: '10-26 20:10' }] }],
-        everyday: [{ date: '10-26', records: [{ type: 'search', q: 'parcel tracking', time: '10-26 21:00', situation: 'sc1' }] }] });
+        records: [{ type: 'text', at: 2, scene: 'scarf', said: 'I sent you a scarf', situations: ['sc1'], with: 'Lio', messages: [{ from: 'me', text: 'can\'t wait!!', time: '10-26 20:10' }] }],
+        everyday: [{ date: '10-26', records: [{ type: 'search', q: 'parcel tracking', time: '10-26 21:00', situations: ['sc1'] }] }] });
     assert.deepEqual(c.p.searches.map(x => x.q), ['parcel tracking']);
     assert.deepEqual(c.p.threads.find(t => t.with === 'Lio').messages.map(x => x.text), ['can\'t wait!!']);
-    assert.ok([...c.p.searches, ...c.p.threads.flatMap(t => t.messages), ...c.p.threads].every(x => !('situation' in x)));
+    assert.ok([...c.p.searches, ...c.p.threads.flatMap(t => t.messages), ...c.p.threads].every(x => !('situation' in x) && !('situations' in x)));
     assert.ok(!('situations' in c.p) && !JSON.stringify(c.p).includes('the scarf Ren sent'));
 });
