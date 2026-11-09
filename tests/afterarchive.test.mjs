@@ -763,6 +763,19 @@ test('다시 만들기 keeps what a reflection put in from a section running pas
     assert.deepEqual(p.notes.map(n => n.title).sort(), ['Groceries', 'Train times']);
 });
 
+test('다시 만들기 (the whole phone) keeps the voice table: the rows, who not to ask the story again, its tidy mark', async () => {
+    globalThis.__rows = rows(8);
+    const koVoice = [{ who: 'Ren', style: '엄마한테도 반말', by: 'user' }, { who: 'Mara', style: '다정한 반말', label: '다정한 반말', by: 'model', evidence: ['hey'] }];
+    const p = plainPhone({ koVoice: structuredClone(koVoice), koVoiceAsked: ['Ivo'], koVoiceV: 3 });
+    const mm = { ...m, phones: { ren: p } };
+    globalThis.__menu = { calls: [], answers: [JSON.stringify({ now: '10-26 09:00', notes: [{ title: 'Groceries', text: 'milk', time: '10-26 08:00' }] })], answer: '{}' };
+    const warn = console.warn; console.warn = () => {};
+    try { await data.makePhone(mm, 'Ren'); } finally { console.warn = warn; }
+    const q = mm.phones.ren;
+    assert.notEqual(q, p);
+    assert.deepEqual([q.koVoice, q.koVoiceAsked, q.koVoiceV], [koVoice, ['Ivo'], 3]);
+});
+
 test('위치 정보: the owner\'s country and city by hand, a person taken off or moved; the reading asked again keeps all of it', async () => {
     globalThis.__rows = rows(8);
     const p = plainPhone({ country: 'KR', where: { at: 1, people: [{ name: 'Ren', city: 'Seoul', names: ['Seoul'], lives: 'KR', tz: 'Asia/Seoul' }, { name: 'Mara', city: 'Seoul', names: ['Seoul'], lives: 'KR', tz: 'Asia/Seoul' }, { name: 'Ivo', city: 'Paris', names: ['Paris'], lives: 'FR', tz: 'Europe/Paris' }] }, contacts: [{ name: 'Mara' }, { name: 'Ivo' }] });

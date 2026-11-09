@@ -1579,8 +1579,8 @@ async function makePhone0(m, owner, { update = false, apps = null } = {}) {
         if (was?.money) base.money = was.money;
         if (was?.investment) base.investment = was.investment;
         // the apps filled on their own (clock · health · files · weather, delivery) stay like the bank, and so does what the
-        // owner set: the year, hidden contacts and places, where they live
-        for (const k of ['life', 'delivery', 'voiceAt', 'year', 'noYear', 'yearSet', 'yearShift', 'hiddenContacts', 'hiddenPlaces', 'lives', 'livesManual', 'where', 'around']) if (was?.[k] !== undefined) base[k] = was[k];
+        // owner set: the year, hidden contacts and places, where they live, the voice table (말투)
+        for (const k of ['life', 'delivery', 'voiceAt', 'year', 'noYear', 'yearSet', 'yearShift', 'hiddenContacts', 'hiddenPlaces', 'lives', 'livesManual', 'where', 'around', 'koVoice', 'koVoiceAsked', 'koVoiceV']) if (was?.[k] !== undefined) base[k] = was[k];
         // (made for the first time: where everyone is and PEOPLE AROUND, as read before it)
         if (pre) for (const k of ['where', 'around', 'lives', 'livesManual', 'year', 'noYear', 'yearSet', 'yearShift']) if (pre[k] !== undefined) base[k] = structuredClone(pre[k]);
         // (the phone is set to the country its owner lives in, as read and checked, over the one the answer gave)
