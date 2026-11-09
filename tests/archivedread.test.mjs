@@ -1465,13 +1465,14 @@ test('fillKo: each line goes with who says it to whom, and the voice table, no e
     const v = { owner: 'Oscar', koVoiceV: 3, koVoice: [{ who: 'Oscar', style: '엄마한테도 반말, 퉁명스럽게' }], around: p.around, photos: [], notes: [], searches: [], events: [],
         threads: [{ with: 'Mother', messages: [{ from: 'me', text: 'later', time: '11-08 12:00' }, { from: 'Mother', text: 'Call me', time: '11-08 12:01' }] }, { with: 'Ivo', messages: [{ from: 'Ivo', text: 'you up?', time: '11-08 12:02' }] }] };
     assert.deepEqual(tr.voicesWanted(v), ['Mother', 'Ivo']);
-    K.voices = JSON.stringify({ people: [{ who: 'Mother', style: '아들한테 반말, 걱정 많은 말투', evidence: ['Why so cold?'] }, { who: 'Ivo', style: '반말', evidence: [] }, { who: 'GitHub', style: 'x', evidence: ['y'] }] });
+    K.voices = JSON.stringify({ people: [{ who: 'Mother', style: '아들한테 반말, 걱정 많은 말투', label: '다정한 반말 · 걱정', evidence: ['Why so cold?'] }, { who: 'Ivo', style: '반말', evidence: [] }, { who: 'GitHub', style: 'x', evidence: ['y'] }] });
     assert.equal(await tr.learnVoices({ phones: {} }, 'Oscar', v), 1);
     const vc = K.voiceCalls[0];
     assert.ok(vc.system.startsWith('GOAL\nWork out how each person in WHO writes to the people they text, as the story shows it') && vc.system.includes('"evidence"') && vc.system.includes('- CHARACTER CARD — name and PERSONA — name (sometimes): the chat\'s cards and the user\'s persona, as written, with how they speak.'));
     assert.match(vc.input, /\[WHO\]\n- Mother\n- Ivo/);
     assert.ok(!vc.input.includes('[PEOPLE AROUND]') && !vc.system.includes('PEOPLE AROUND'));
-    assert.deepEqual(v.koVoice.map(r => [r.who, r.style, r.by, r.evidence]), [['Oscar', '엄마한테도 반말, 퉁명스럽게', undefined, undefined], ['Mother', '아들한테 반말, 걱정 많은 말투', 'model', ['Why so cold?']]]);
+    assert.deepEqual(v.koVoice.map(r => [r.who, r.style, r.label, r.by, r.evidence]), [['Oscar', '엄마한테도 반말, 퉁명스럽게', undefined, undefined, undefined], ['Mother', '아들한테 반말, 걱정 많은 말투', '다정한 반말 · 걱정', 'model', ['Why so cold?']]]);
+    assert.ok(vc.system.includes('"label"') && !K.calls.some(c => c.input.includes('다정한 반말 · 걱정')));
     assert.deepEqual(tr.voicesWanted(v), []);
     assert.deepEqual(v.koVoiceAsked, ['Ivo']);
     // a row the user deletes is not asked of the story again
@@ -1482,9 +1483,11 @@ test('fillKo: each line goes with who says it to whom, and the voice table, no e
     assert.equal(tr.dropVoice(v, 9), null);
     // 뽑기: the user asks about someone (here one they deleted, and one they wrote by hand); what is found takes the row
     v.koVoice.push({ who: 'Ivo', style: '내가 쓴 말투', by: 'user' });
-    K.voices = JSON.stringify({ people: [{ who: 'Mother', style: '반말, 다정하게', evidence: ['Call me'] }, { who: 'Ivo', style: '', evidence: [] }] });
+    K.voices = JSON.stringify({ people: [{ who: 'Mother', style: '반말, 다정하게', label: '아주 길게 늘어놓은 라벨이라서 스무 자를 넘는 것', evidence: ['Call me'] }, { who: 'Ivo', style: '', evidence: [] }] });
     assert.deepEqual(await tr.pickVoices({ phones: {} }, 'Oscar', v, ['Mother', 'Ivo']), { found: ['Mother'], missing: ['Ivo'] });
     assert.match(K.voiceCalls.at(-1).input, /\[WHO\]\n- Mother\n- Ivo/);
     assert.deepEqual(v.koVoice.map(r => `${r.who}:${r.style}`), ['Oscar:엄마한테도 반말, 퉁명스럽게', 'Ivo:내가 쓴 말투', 'Mother:반말, 다정하게']);
     assert.deepEqual(v.koVoiceAsked, ['Ivo']);
+    // (a label over 20 characters is not a label: left out, not cut)
+    assert.equal(v.koVoice.find(r => r.who === 'Mother').label, undefined);
 });
