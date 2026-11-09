@@ -321,6 +321,17 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax .ax_wlb { --axbg: none; display: block; width: 100%; padding: 0; text-align: left; }
 .ax_ccstack .ax_wlb + .ax_wlb { margin-top: -178px; }
 .ax_psstack .ax_wlb + .ax_wlb { margin-top: -118px; }
+.ax_ps { position: relative; display: block; border-radius: 18px; --axr: 18px; color: #fff; --axfg: #fff; overflow: hidden; box-shadow: 0 10px 24px rgba(22, 27, 34, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.14); --ps2: rgba(255, 255, 255, 0.62)}
+.ax_ps.cream { color: #1b1f27; --axfg: #1b1f27; --ps2: rgba(27, 31, 39, 0.55)} .ax_psmo { position: absolute; inset: 0; width: 100%; height: 100%; } .ax_pstop { position: relative; display: block; } .ax_pstop > :not(.ax_psmo) { position: relative; }
+.ax_psh { display: flex; align-items: center; gap: 8px; padding: 17px 18px 13px; } .ax_psh i { width: 7px; height: 7px; border-radius: 50%; --axr: 50%; background: var(--pa); flex: none} .ax_psh small { font-size: 11px; --axfs: 11px; color: var(--ps2); --axfg: var(--ps2); flex: none}
+.ax_psn { flex: 1; min-width: 0; font-size: 11.5px; --axfs: 11.5px; font-weight: 600; letter-spacing: 0.16em; --axls: 0.16em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis}
+.ax_psrt { display: flex; align-items: center; gap: 12px; padding: 12px 18px 0; } .ax_psrt b { font: 200 40px/1 'Inter Tight', -apple-system, sans-serif; --axff: 'Inter Tight', -apple-system, sans-serif; --axfs: 40px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto} .ax_psrt i { flex: 1 1 16px; height: 1px; background: var(--pa); opacity: 0.6; }
+.ax_psrt.sm b { font-size: 30px; --axfs: 30px} .ax_psti { display: block; padding: 12px 18px 0; } .ax_psti b { display: block; font: 300 28px/1.15 'Inter Tight', -apple-system, sans-serif; --axff: 'Inter Tight', -apple-system, sans-serif; --axfs: 28px; letter-spacing: -0.01em; --axls: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis}
+.ax_psti small, .ax_psfl small, .ax_pswh small { display: block; color: var(--ps2); --axfg: var(--ps2); font-size: 12px; --axfs: 12px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis}
+.ax_psbt { display: flex; align-items: flex-end; gap: 12px; padding: 18px 18px 16px; } .ax_psfl { flex: 1; min-width: 0; display: flex; gap: 16px; overflow: hidden; } .ax_psfl > span { min-width: 0; flex: 0 1 auto; }
+.ax_psfl small, .ax_pswh small { font-size: 9.5px; --axfs: 9.5px; letter-spacing: 0.08em; --axls: 0.08em; font-weight: 600; margin: 0} .ax_psfl b { display: block; font: 500 13.5px 'Inter Tight', -apple-system, sans-serif; --axff: 'Inter Tight', -apple-system, sans-serif; --axfs: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis}
+.ax_pswh { text-align: right; flex: none; } .ax_pswh b { display: block; font: 500 22px/1 'Inter Tight', -apple-system, sans-serif; --axff: 'Inter Tight', -apple-system, sans-serif; --axfs: 22px; color: var(--pa); --axfg: var(--pa)}
+.ax_psperf { display: block; border-top: 2px dashed rgba(255, 255, 255, 0.28); margin: 0 14px; } .ax_ps.cream .ax_psperf { border-color: rgba(59, 50, 38, 0.2); }
 /* 지갑 덱: every one but the open one shows only its top edge, the next lying over it; those after the open one sit in a
    tail cut off at the last edge. A tap on one behind brings it out whole */
 .ax_deck { display: flex; flex-direction: column; padding-bottom: 6px; }
@@ -345,34 +356,9 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax_ccbot { margin-top: auto; display: flex; justify-content: space-between; align-items: flex-end; }
 .ax_ccbot small { display: block; font-size: 9.5px; letter-spacing: 0.1em; opacity: 0.7; font-weight: 600; } .ax_ccbot b { font: 600 14px 'Inter Tight', -apple-system, sans-serif; letter-spacing: 0.06em; }
 .ax_r { text-align: right; }
-.ax_ps { position: relative; display: block; border-radius: 18px; --axr: 18px; color: #fff; --axfg: #fff; overflow: hidden; box-shadow: 0 10px 24px rgba(22, 27, 34, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.18)}
-.ax_ps.cream { color: #3b3226; --axfg: #3b3226}
-.ax_psh { display: flex; align-items: center; gap: 9px; padding: 14px 16px 10px; }
-.ax_pslg { width: 30px; height: 30px; border-radius: 9px; --axr: 9px; background: rgba(255, 255, 255, 0.18); display: grid; place-items: center; flex: none}
-.ax_ps.cream .ax_pslg { background: rgba(59, 50, 38, 0.1); }
-.ax_psn { flex: 1; min-width: 0; font-size: 14px; --axfs: 14px; font-weight: 700; letter-spacing: 0.04em; --axls: 0.04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis}
-.ax_pshr { text-align: right; font-size: 10px; --axfs: 10px; letter-spacing: 0.06em; --axls: 0.06em; opacity: 0.85; font-weight: 600} .ax_pshr b { display: block; font-size: 15px; letter-spacing: 0; }
-.ax_psrt { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; padding: 4px 16px 0; }
-.ax_psrt b { display: block; font: 300 44px/1.05 'Inter Tight', -apple-system, sans-serif; letter-spacing: -0.02em; }
-.ax_psrt b.ax_pbsm { font-size: 26px; font-weight: 400; }
-.ax_pspl { align-self: center; opacity: 0.8; margin-bottom: 8px; }
-.ax_psfl { display: grid; grid-template-columns: repeat(4, auto); justify-content: start; gap: 8px 22px; padding: 14px 16px 16px; }
-.ax_psfl small { display: block; font-size: 10px; letter-spacing: 0.06em; opacity: 0.7; font-weight: 600; } .ax_psfl b { font: 600 15px 'Inter Tight', -apple-system, sans-serif; overflow-wrap: anywhere; }
 .ax_ccpr .ax_cclg b { display: block; font-size: 15px; letter-spacing: 0.14em; }
 .ax_ccpr .ax_cclg small { display: block; font-size: 10px; letter-spacing: 0.38em; opacity: 0.8; margin-top: 3px; font-weight: 600; }
-.ax_psrt.ln { align-items: center; padding-bottom: 2px; }
-.ax_psrt.ln .ax_pspl { flex: 1; margin: 0 6px; }
-.ax_psrt.ln .ax_pspl i { display: block; border-top: 2px dotted currentColor; opacity: 0.5; }
-.ax_psti { display: block; padding: 4px 16px 0; font: 600 24px/1.2 'Inter Tight', -apple-system, sans-serif; --axff: 'Inter Tight', -apple-system, sans-serif; --axfs: 24px; letter-spacing: -0.01em; --axls: -0.01em}
-.ax_ps_hotel .ax_psti, .ax_ps_museum .ax_psti { font-weight: 300; font-size: 30px; --axfs: 30px}
-.ax_ps_movie { color: #f6d27a; --axfg: #f6d27a} .ax_ps_movie .ax_psti { color: #fff; --axfg: #fff}
-.ax_psvs { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 16px 0; font: 800 20px 'Inter Tight', -apple-system, sans-serif; --axff: 'Inter Tight', -apple-system, sans-serif; --axfs: 20px}
-.ax_psvs small { font-size: 13px; opacity: 0.6; font-weight: 600; }
-.ax_psfl:empty { display: none; }
 .ax_psold .ax_ps { filter: grayscale(0.55) brightness(1.04); }
-.ax_psst { display: block; text-align: center; margin-top: 12px; font-size: 12px; --axfs: 12px; font-weight: 700; opacity: 0.8}
-.ax_psperf { display: block; border-top: 2px dashed rgba(255, 255, 255, 0.28); margin: 0 14px; }
-.ax_ps.cream .ax_psperf { border-color: rgba(59, 50, 38, 0.2); }
 .ax_psqr { display: grid; grid-template-columns: repeat(21, 1fr); width: 150px; height: 150px; margin: 18px auto; border-radius: 12px; --axr: 12px; background: #fff; padding: 10px; box-sizing: border-box}
 .ax_psqr i { display: block; }
 .ax_cbal { display: flex; justify-content: space-between; padding: 16px 22px 8px; font-size: 13px; --axfs: 13px; color: #6b7380; --axfg: #6b7380; flex: none} .ax_cbal b { font-size: 15px; color: #161b22; }

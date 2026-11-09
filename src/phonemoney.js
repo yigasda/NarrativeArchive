@@ -12,6 +12,7 @@ import { AX, ax, axBar, axCb, axDay, axFind, axH1, axInd, axKp, axLetter, axTint
 import { byStory, clockOf, fmtDate, fmtTime, fullDate, gapDays, homeCountry, koOn, listTime, localeOf, storyNow } from './phonedata.js';
 import { esc } from './util.js';
 import { prodSvg } from './phoneprod.js';
+import { passMotif } from './phonepassart.js';
 import { dlvApp, monthSoFar, PASS_OVER } from './phonesyncmoney.js';
 
 Object.assign(AX, {
@@ -563,18 +564,24 @@ function cardArt(p, c) {
         + `<span class="ax_ccmid">${chip}${nfc}</span><span class="ax_ccno cg_num">${L.mono ? '••••' : '•••• •••• ••••'} ${esc(c.account)}</span><span class="ax_ccbot"><span><small>CARD HOLDER</small><b>${esc(String(p.owner).toUpperCase())}</b></span><span class="ax_r"><small>VALID THRU</small><b>${esc(c.exp || '—')}</b></span></span></span>`;
 }
 // passes: the kind the bank gave (flight, train, hotel, event, other), and for an event or other ticket what its venue's name
-// says it is (a cinema, a match, a museum, a bus or ferry, else a concert or show); empty fields are left out
-const PASS = { flight: ['#2c4a80', 'plane', '탑승'], train: ['#8e3a33', 'train', '열차'], hotel: ['#efe2cf', 'bed', '체크인'], concert: ['#26304f', 'ticket', '입장'],
-    movie: ['#1d1d22', 'film', '상영'], match: ['#2f6a3a', 'ball', '킥오프'], museum: ['#f3ede4', 'museum', '관람'], bus: ['#2f6f8f', 'bus', '출발'], membership: ['#2e5e57', 'card', '유효'], other: ['#3d4a66', 'ticket', '시간'] };
+// says it is (a cinema, a theme park, a match, a museum, a ferry, a bus, a stage, else a concert); empty fields are left out.
+// Each kind keeps its wallet colour and gets its own fine-line drawing (src/phonepassart.js); [bg, accent, kind, time label]
+const PASS = { flight: ['#2c4a80', '#a9c4f0', '탑승권', '탑승'], train: ['#8e3a33', '#f2b6a6', '승차권', '출발'], bus: ['#2f6f8f', '#a8e0f2', '버스', '출발'],
+    ferry: ['#24505c', '#9fe0dc', '배', '출항'], hotel: ['#efe2cf', '#8a5a2a', '숙소', '체크인'], concert: ['#26304f', '#c9b8ff', '콘서트', '입장'],
+    theater: ['#6a2a3e', '#f2b8c8', '공연', '개막'], movie: ['#1d1d22', '#f0c96a', '영화', '상영'], match: ['#2f6a3a', '#bfe6a0', '경기', '킥오프'],
+    museum: ['#f3ede4', '#7a5a3a', '전시', '관람'], park: ['#8a5a2e', '#ffd28a', '놀이공원', '개장'], membership: ['#2e5e57', '#a8dccc', '회원권', '유효'],
+    other: ['#3d4a66', '#c3cde0', '티켓', '시간'] };
 const LIGHT = new Set(['hotel', 'museum']);
-Object.assign(AX, { film: 'M4 5h16v14H4zM8 5v14M16 5v14M4 9h4M4 15h4M16 9h4M16 15h4', ball: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7l4 3-1.5 5h-5L8 10z', museum: 'M3 9l9-5 9 5M5 9v9M9 9v9M15 9v9M19 9v9M3 20h18', bus: 'M6 4h12a2 2 0 0 1 2 2v10H4V6a2 2 0 0 1 2-2zM4 11h16M7 19v-3M17 19v-3M8 14h.01M16 14h.01' });
 const passKind = x => {
     if (['flight', 'train', 'hotel', 'membership'].includes(x.kind)) return x.kind;
     const w = `${x.by || ''} ${x.to || ''} ${x.from || ''}`;
-    if (/kino|cinema|movie|film|영화|cgv|megabox|롯데시네마|映画|电影/i.test(w)) return 'movie';
+    if (/kino|cine|movie|film|영화|cgv|megabox|롯데시네마|映画|电影/i.test(w)) return 'movie';
+    if (/europa-park|freizeitpark|theme ?park|amusement|disney|universal studios|phantasialand|legoland|heide park|에버랜드|롯데월드|놀이공원|遊園地|游乐园/i.test(w)) return 'park';
     if (/stadion|stadium|arena|park\b|match|spiel|fc\b|sv\b|경기|구장|스타디움|球場|体育/i.test(w)) return 'match';
     if (/museum|galerie|gallery|ausstellung|exhibit|미술관|박물관|전시|美術館|博物馆/i.test(w)) return 'museum';
-    if (/bus|flixbus|fernbus|fähre|ferry|ship|schiff|버스|페리|여객선|フェリー|巴士|轮渡/i.test(w)) return 'bus';
+    if (/fähre|ferry|ship|schiff|페리|여객선|フェリー|轮渡|transtejo/i.test(w)) return 'ferry';
+    if (/bus|flixbus|fernbus|버스|巴士/i.test(w)) return 'bus';
+    if (/theat|oper\b|opera|musical|ballet|schauspiel|극장|뮤지컬|오페라|연극|발레|劇場|剧院/i.test(w)) return 'theater';
     return x.kind === 'event' ? 'concert' : 'other';
 };
 // check-in to check-out, across New Year too (12-30 → 01-02 is 3 nights)
@@ -582,23 +589,27 @@ const nights = (a, b) => { const m = s => /^\d{2}-\d{2}/.test(String(s || '')); 
 const passBy = x => String(x.by || x.to || '');
 const passDate = (p, x) => (x.dayUnknown || !x.date ? '날짜 미정' : fmtDate(p, x.date, true));
 const passSpan = (p, x) => (x.until && /^\d{2}-\d{2}/.test(String(x.until)) ? `${passDate(p, x)} ~ ${fmtDate(p, x.until, true)}` : '');
+// one card: dot · brand · kind on top, one big route or title, the fields on one line and the time in the kind's accent
 function passArt(p, x, full) {
-    const k = passKind(x), [bg, icon, lab] = PASS[k], light = LIGHT.has(k);
+    const k = passKind(x), [bg, acc, kind, lab] = PASS[k], light = LIGHT.has(k);
     const f = (label, v) => (v === null || v === undefined || String(v).trim() === '' || v === '—' ? '' : `<span><small>${label}</small><b>${esc(String(v))}</b></span>`);
-    const route = (a, b, big) => `<span class="ax_psrt ${big ? '' : 'ln'}"><span><b class="${big && String(a).length <= 4 ? '' : 'ax_pbsm'}">${esc(a)}</b></span><span class="ax_pspl">${big ? ax('plane', 22, 'currentColor', 1.6) : '<i></i>'}</span><span class="ax_r"><b class="${big && String(b).length <= 4 ? '' : 'ax_pbsm'}">${esc(b)}</b></span></span>`;
-    const title = t => `<span class="ax_psti">${esc(t)}</span>`;
+    const route = (a, b) => `<span class="ax_psrt${String(a).length > 4 || String(b).length > 4 ? ' sm' : ''}"><b>${esc(a)}</b><i></i><b>${esc(b)}</b></span>`;
+    const title = (t, sub) => `<span class="ax_psti"><b>${esc(t)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span>`;
     const date = passDate(p, x), out = x.until && /^\d{2}-\d{2}/.test(String(x.until)) ? x.until : x.to && /^\d{2}-\d{2}/.test(x.to) ? x.to : '';
+    const ends = k === 'membership' && out, move = k === 'flight' || k === 'train' || k === 'bus' || k === 'ferry';
     let mid = '', fields = '';
-    if (k === 'flight') { mid = x.from && x.to ? route(x.from, x.to, true) : title(x.to || x.from || ''); fields = f('날짜', date) + f('탑승구', x.gate) + f('좌석', x.seat) + f('편명', x.no); }
-    else if (k === 'train' || k === 'bus') { mid = x.from && x.to ? route(x.from, x.to, false) : title(x.to || x.from || ''); fields = f('날짜', date) + f('좌석', x.seat) + f(k === 'bus' ? '예약' : '번호', x.no) + f('소유자', String(p.owner).toUpperCase()); }
-    else if (k === 'hotel') { const n = nights(x.date, out); mid = title(x.to && !/^\d{2}-\d{2}/.test(x.to) ? x.to : x.from || ''); fields = f('체크인', date) + f('체크아웃', out ? fmtDate(p, out, true) : '') + f('숙박', n ? `${n}박` : '') + f('예약', x.no) + f('객실', x.seat); }
-    else if (k === 'membership') { mid = title(x.to || x.from || x.by || ''); fields = f('기간', passSpan(p, x) || date) + f('번호', x.no) + f('회원', String(p.owner).toUpperCase()); }
-    else if (k === 'match') { const m = String(x.to || x.from || '').split(/\s+(?:vs\.?|gegen|대|–|-)\s+/i); mid = m.length === 2 ? `<span class="ax_psvs"><b>${esc(m[0])}</b><small>vs</small><b>${esc(m[1])}</b></span>` : title(x.to || x.from || ''); fields = f('날짜', date) + f('블록', x.gate) + f('좌석', x.seat) + f('번호', x.no); }
-    else { mid = title(x.to || x.from || ''); fields = f(passSpan(p, x) ? '기간' : '날짜', passSpan(p, x) || date) + f(k === 'movie' ? '관' : k === 'museum' ? '입장권' : '구역', x.gate) + f('좌석', x.seat) + f('번호', x.no); }
-    return `<span class="ax_ps ax_ps_${k} ${light ? 'cream' : ''}" style="background: ${bg}">
-      <span class="ax_psh"><span class="ax_pslg">${ax(icon, 16, 'currentColor')}</span><span class="ax_psn">${esc(passBy(x).toUpperCase())}</span><span class="ax_pshr">${k === 'membership' && out ? '까지' : lab}<b class="cg_num">${esc(k === 'membership' && out ? fmtDate(p, out, true) : x.time ? clockOf(p, x.time) : date || '')}</b></span></span>
-      ${mid}<span class="ax_psfl">${fields}</span>
-      ${full ? `<span class="ax_psperf"></span>${x.status ? `<span class="ax_psst">${esc(x.status)}</span>` : ''}<span class="ax_psqr">${qr(x.id)}</span>` : ''}</span>`;
+    if (move) {
+        mid = x.from && x.to ? route(x.from, x.to) : title(x.to || x.from || '');
+        fields = f('날짜', date) + (k === 'flight' ? f('탑승구', x.gate) + f('좌석', x.seat) + f('편명', x.no) : f(k === 'train' ? '칸' : '갑판', k === 'bus' ? '' : x.gate) + f('좌석', x.seat) + f(k === 'train' ? '번호' : '예약', x.no));
+    } else if (k === 'hotel') { const n = nights(x.date, out); mid = title(x.to && !/^\d{2}-\d{2}/.test(x.to) ? x.to : x.from || '', n ? `${n}박` : ''); fields = f('체크인', date) + f('체크아웃', out ? fmtDate(p, out, true) : '') + f('예약', x.no) + f('객실', x.seat); }
+    else if (k === 'membership') { mid = title(x.to || x.from || x.by || '', String(p.owner || '')); fields = f('기간', passSpan(p, x) || date) + f('번호', x.no); }
+    else if (k === 'match') { mid = title(String(x.to || x.from || '').replace(/\s+(?:vs\.?|gegen|대|-)\s+/i, ' – ')); fields = f('날짜', date) + f('블록', x.gate) + f('좌석', x.seat) + f('번호', x.no); }
+    else { mid = title(x.to || x.from || ''); fields = f(passSpan(p, x) ? '기간' : '날짜', passSpan(p, x) || date) + f(k === 'movie' ? '관' : k === 'museum' || k === 'park' ? '입장권' : '구역', x.gate) + f('좌석', x.seat) + f('번호', x.no); }
+    const when = ends ? fmtDate(p, out, true) : x.time ? clockOf(p, x.time) : '';
+    return `<span class="ax_ps ax_ps_${k}${light ? ' cream' : ''}" style="background: ${bg}; --pa: ${acc}"><span class="ax_pstop"><svg class="ax_psmo" viewBox="0 0 340 200" preserveAspectRatio="xMaxYMid slice" aria-hidden="true">${passMotif(k, light ? '#3a2e1e' : '#fff', light ? 0.26 : 0.2, x.id)}</svg>
+      <span class="ax_psh"><i></i><span class="ax_psn">${esc(passBy(x).toUpperCase())}</span><small>${kind}</small></span>
+      ${mid}<span class="ax_psbt"><span class="ax_psfl">${fields}</span>${when ? `<span class="ax_pswh"><small>${ends ? '까지' : lab}</small><b class="cg_num">${esc(when)}</b></span>` : ''}</span></span>
+      ${full ? `<span class="ax_psperf"></span><span class="ax_psqr">${qr(x.id)}</span>` : ''}</span>`;
 }
 // a QR-looking square (drawn, not a code)
 function qr(seed) {
