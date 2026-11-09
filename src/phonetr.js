@@ -20,10 +20,7 @@ YOU GET
 - LINES: numbered, each "[app · who → to]" and its words. "self" is the owner writing for themselves.
 
 VOICE
-- A text, draft or comment: the Korean speech level and tone that speaker uses with that listener (반말 or 존댓말, close or distant, how they call each other), as VOICES and EXAMPLES show. With neither: decide from the relationship and the original's tone, and keep it for every line of that pair.
-- To "self" (notes, diary, voice memos, captions, searches, alarms, files): the owner talking to themselves, in 반말, with their own shorthand.
-- A mail or notice from a service: the polite Korean real ones of that kind use.
-- A post or profile: the owner's own public voice.
+- Each line in the voice its writer really uses with that listener, as VOICES and EXAMPLES show; with neither, as the original and the relationship suggest. One pair keeps one voice.
 
 LINES
 - Translate every line in full, with its meaning, length, line breaks and emoji. No notes, no explanations.

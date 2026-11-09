@@ -1430,7 +1430,7 @@ test('fillKo: each line goes with who says it to whom, the chat\'s Korean as exa
         lines: [{ n: 1, ko: '버려' }, { n: 2, ko: '왜 그렇게 차갑니?' }, { n: 3, ko: '체크리스트' }, { n: 4, ko: '짐 싸기\n보일러' }] });
     assert.equal(await tr.fillKo(p), 4);
     const { input, system } = K.calls[0];
-    assert.ok(system.startsWith('GOAL\nTranslate what a character\'s phone shows into natural Korean') && system.includes('\nVOICE\n') && system.includes('"voices"'));
+    assert.ok(system.startsWith('GOAL\nTranslate what a character\'s phone shows into natural Korean') && system.includes('\nVOICE\n- Each line in the voice its writer really uses with that listener, as VOICES and EXAMPLES show; with neither, as the original and the relationship suggest. One pair keeps one voice.\n\nLINES\n') && !system.includes('To "self"') && system.includes('"voices"'));
     assert.match(input, /\[OWNER\]\nOscar/);
     assert.match(input, /\[VOICES\]\n- Oscar → Mother: 반말, 퉁명스럽게/);
     assert.match(input, /\[EXAMPLES\]\n- Oscar → Mother: "hi Mom" = "엄마 안녕"/);
