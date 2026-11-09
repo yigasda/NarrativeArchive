@@ -6,6 +6,9 @@ const lat0 = +lat0s, lon0 = +lon0s, FX = process.env.FX || '';   // FX: A 큰 �
 const C = { land: '#f3f0ea', built: '#ebe7df', park: '#d4e8c9', forest: '#c3dcb5', water: '#b6d4ef', road: '#ffffff', edge: '#dad4c9', major: '#fde7a3', majorEdge: '#e3c77c',
   rail: '#a9a49b', label: '#6f7681', plaza: '#efe6d2', bld: '#e0dbd0', foot: '#e6e1d7',
   mark: '#d5cab6', markStation: '#d3d4d6', resi: '#f0ece5', shop: '#f3e3d6', works: '#e3e3df', railyard: '#e4e2dc', school: '#f3e9c9', shadow: '#bdb4a4' };
+// DEEP=1: the same palette a step deeper (less washed out)
+if (process.env.DEEP) Object.assign(C, { land: '#efe9df', built: '#e6e0d5', park: '#c6e0b4', forest: '#b3d3a0', water: '#a3c9ee', edge: '#cfc7b8', major: '#fcd87c', majorEdge: '#dcb75e',
+  label: '#5c636e', bld: '#d6cdbd', foot: '#ddd6ca', mark: '#c9b99d', resi: '#ebe5da', shop: '#f0dccb', works: '#dcdcd6', railyard: '#dedbd3', school: '#efe3bc', shadow: '#ada291' });
 const d = JSON.parse(require('fs').readFileSync(src, 'utf8'));
 const mx = 111320 * Math.cos(lat0 * Math.PI / 180), my = 110540;
 // C: dense old towns closer, loose estates and parks further out — buildings per km² round the centre
