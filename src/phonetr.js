@@ -42,7 +42,6 @@ Work out how each person in WHO writes to the people they text, as the story sho
 YOU GET
 - ARCHIVE, RECENT CHAT, OWNER, and sometimes STORY YEAR, WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW. Nothing on the phone may show what the owner doesn't know.
 - CHARACTER CARD — name and PERSONA — name (sometimes): the chat's cards and the user's persona, as written, with how they speak.
-- PEOPLE AROUND (sometimes): the people in the owner's life, who they are to the owner and where things stand.
 - WHO: the people to describe.
 
 VOICE
@@ -65,7 +64,7 @@ export async function learnVoices(m, owner, p, { all = false } = {}) {
     // (the cards and the persona whole; the owner's chosen profile only when it is a lorebook entry: a card or a persona is
     // in already)
     const binding = p.financeProfile || m?.phoneProfiles?.[String(owner || '').toLowerCase()] || null;
-    const input = await sideRequest(m, owner, [...cardBlocks(), aroundBlock(p), `[WHO]\n${want.map(n => `- ${n}`).join('\n')}`], { profile: binding?.type === 'lore' ? binding : undefined });
+    const input = await sideRequest(m, owner, [...cardBlocks(), `[WHO]\n${want.map(n => `- ${n}`).join('\n')}`], { profile: binding?.type === 'lore' ? binding : undefined });
     const got = parseJson(String(await askDraft(input, { force: true, system: AI_SYS_PHONE_VOICE, maxTokens: 3000, effort: 'low' })).replace(/^[^{]*/, '').replace(/[^}]*$/, ''), { salvage: true }) || {};
     const wanted = new Map(want.map(n => [n.toLowerCase(), n])), have = new Set(voiceRows(p).map(whoKey));
     const rows = (Array.isArray(got.people) ? got.people : []).filter(v => v && wanted.has(whoKey(v)) && !have.has(whoKey(v)) && String(v.style || '').trim()

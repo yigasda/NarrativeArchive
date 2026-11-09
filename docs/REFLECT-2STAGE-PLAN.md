@@ -92,6 +92,7 @@
     - 같은 때: 말투는 번역기가 곁다리로 정하지 않고 이야기에서 따로 뽑음(`learnVoices`, 지시문 `AI_SYS_PHONE_VOICE`, sideRequest로 ARCHIVE · RECENT CHAT 등 + [PEOPLE AROUND] + [WHO]). 번역 직전, 문자 · 댓글을 쓴 사람 중 말투표에 없는 사람만. 답 { people: [{ who, style, evidence: [이야기 원문] }] }, 근거가 없으면 안 넣고 다시 안 물음(koVoiceAsked). 줄을 지우면 다음에 다시 뽑음. 번역 지시문의 "voices" 답은 뺌. 버튼 없음.
     - 같은 때: 말투 뽑기에 캐릭터 카드 · 페르소나를 통째로(cardBlocks: description · personality · scenario · first_mes · mes_example). 근거는 이야기나 카드의 원문.
     - 같은 때: OWNER PROFILE은 소망이 고른 게 로어북 항목일 때만 같이(카드 · 페르소나를 골랐으면 이미 통째로 들어가 겹침).
+    - 같은 때: 말투 뽑기에서 PEOPLE AROUND를 뺌(원문을 통째로 보내니 요약은 겹침). LOREBOOK(카드 없는 주변 인물)과 WHO는 남김. 번역 요청의 PEOPLE AROUND는 그대로.
     - run77 뒤(생활 12개): THE STORY 첫 줄의 "before the owner's own life"를 뺌(옛 최종엔 없던 우선순위). 건강 · usual은 records에서 빼서 everyday 뒤 맨 위 칸 "health" · "usual"로(모델이 앞에서부터 쓰니 생활이 뒤로 밀려 짧아지지 않게). `recordsCore`가 둘을 읽어요. `applyDays`: 폰의 날이 짐작(pattern, 모델이 쓴 `:d` 줄 아님)이면 모델 값으로 바꿈(되돌리기 됨; run77 11-05가 pattern 8,050으로 남던 것).
     - THE STORY IS CANON(run78 뒤 세 줄로 압축하고 옛 따옴표 예시 — 마감 · 한 일 · 나중 계획 — 를 넷째 줄에 되돌림; 처음엔 할 일은 둘 중 하나: 이야기 안에서 쓰기 · 이야기 밖 일상 / 앞서가지 않기, 비밀 · 새 사실 · 이유와 전말 · 결과와 완료 · 계획 지어내지 않기 / 명시한 만큼만, 지어낸 미래는 일상만 / 이야기 사람 · 사건 기록에선 나중 메시지가 뒤집을 수 있는 건 새 사실). 겹치던 줄은 뺌: THE OWNER'S LIFE의 옛 새 사실 줄(예시 포함), 일기 · 음성 메모 끝의 "no new secrets or story events".
       - 지시문: 본체 15,553자(생활 앱 19,427, +날씨 20,484).
