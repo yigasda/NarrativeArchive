@@ -85,12 +85,11 @@ const damask = (fg, op, u) => { let a = '', b = '';
         b += `M${x} ${y - 12}C${x + 5} ${y - 6} ${x + 5} ${y + 4} ${x} ${y + 12}C${x - 5} ${y + 4} ${x - 5} ${y - 6} ${x} ${y - 12}Z`;
         const fx = x + 22, fy = y + 28; for (let k = 0; k < 4; k++) { const t = k * PI / 2; b += `M${fx} ${fy}Q${r1(fx + 7 * cos(t - 0.5))} ${r1(fy + 7 * sin(t - 0.5))} ${r1(fx + 8 * cos(t))} ${r1(fy + 8 * sin(t))}Q${r1(fx + 7 * cos(t + 0.5))} ${r1(fy + 7 * sin(t + 0.5))} ${fx} ${fy}Z`; } }
     return fadeIn(u, `<path d="${a}" ${F(fg, 0.07)}/><path d="${b}" ${F(fg, 0.07)}/>`); };
-// theme park (mockup, not chosen yet): bunting, two strings of pennants swagged across, the flags in two tones
-const bunting = (fg, op, u) => { let o = '';
-    for (const [y0, sag, x0, n] of [[24, 34, 170, 11], [70, 40, 190, 10]]) { const x1 = 430, at = t => [x0 + (x1 - x0) * t, y0 + sag * 4 * t * (1 - t)];
-        o += `<path d="M${range(0, 31).map(i => at(i / 30).map(r1).join(' ')).join('L')}" ${S(fg, op * 1.4, 0.8)}/>`;
-        for (let i = 0; i < n; i++) { const [ax, ay] = at((i + 0.15) / n), [bx, by] = at((i + 0.85) / n), mx = (ax + bx) / 2, my = (ay + by) / 2 + 22;
-            o += `<path d="M${r1(ax)} ${r1(ay)}L${r1(bx)} ${r1(by)}L${r1(mx)} ${r1(my)}Z" ${F(fg, i % 2 ? 0.08 : 0.15)}/>`; } }
+// match (mockup, not chosen yet): the stand seen from the pitch, rows of seats curving round, each row a little smaller and fainter
+const stand = (fg, op, u) => { let o = '';
+    for (let r = 0; r < 9; r++) { const k = 0.9 ** r, y = 200 - r * 22 * k - r * 4, w = 18 * k, h = 14 * k, gap = 4 * k, n = Math.ceil(260 / (w + gap)) + 1, bend = 10 * k;
+        for (let i = 0; i < n; i++) { const x = 160 + i * (w + gap), t = (x - 160) / 260, yy = y - bend * 4 * t * (1 - t);
+            o += `<rect x="${r1(x)}" y="${r1(yy - h)}" width="${r1(w)}" height="${r1(h)}" rx="${r1(h * 0.35)}" ${F(fg, r1((0.15 - r * 0.012) * 100) / 100)}/>`; } }
     return fadeIn(u, o); };
 const MOTIF = { flight: [flight, null], train: [lined, null], membership: [dots, holo], other: [dots], concert: [spots], hotel: [windows, doors], match: [bowl],
     movie: [null], museum: [rosette, rosetteP], bus: [lanes, chevrons], ferry: [depths, seaChart], theater: [harlequin], park: [wheel, sunburst] };
