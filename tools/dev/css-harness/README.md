@@ -43,6 +43,8 @@ node tools/dev/css-harness/sheet.cjs baseline step41 [--scenes a,b]           # 
 node --test tests/css.test.mjs                       # style.css가 tests/css.budget.json 예산(줄 수 · !important · :not(#na_x))을 넘지 않는지
 ```
 
+`!important` 정리(impstrip · cmpgen · tryone · impchain · stkeep)는 `docs/IMPORTANT-CLEANUP.md`에 순서 · 사고 기록과 같이 있어요.
+
 ## 무엇을 찍나 (scenes.cjs)
 
 - 창 22개의 처음 화면, 빈 화면 6개, 결과 · 다음 단계 화면(섹션 버전, 제목 다시 짓기 결과, 섹션 합치기 결과, 마법사 2 · 3 · 채점, 아카이브에 질문 답, 작업실 시작 전 · 2 · 3 · 4 · ⋯ 메뉴 · + 메뉴), 확인 팝업 2종, 확장 패널, 폰 4화면.
