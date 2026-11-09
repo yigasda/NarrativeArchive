@@ -200,7 +200,7 @@ function cityTime(p, lf, c) {
     const n = now5(p), at = realDate(n, 12) || new Date();
     const here = hereZone(lf, p), a = c.tz ? zoneMin(c.tz, at) : null, b = here ? zoneMin(here, at) : a;
     const off = a !== null && b !== null ? Math.round((a - b) / 60) : 0, t = toMin(n.slice(6)) ?? toMin(lf.weather.here.time) ?? 12 * 60;
-    const local = t + off * 60, night = phaseOf(hm(local)) === 'night';
+    const local = t + off * 60, night = /^(night|dusk)$/.test(phaseOf(hm(local)));   // after sunset the dial goes dark, as the sky does
     return { off, time: hm(local), night, date: n.slice(0, 5), dayShift: local >= 1440 ? '내일' : local < 0 ? '어제' : '오늘' };
 }
 // the world map card: grid paper, the land, tonight's shadow (from the story's date and time), a pin per saved city
@@ -781,19 +781,19 @@ export function fileScreen(p, now, id) {
 // what each sky is called; the colours come from pal() below
 const WX = { clear: '맑음', partly: '구름 조금', cloudy: '흐림', drizzle: '이슬비', rain: '비', sleet: '진눈깨비', snow: '눈', fog: '안개', storm: '뇌우', wind: '강풍' };
 // the part of the day a sky is drawn for, by the clock alone (the same for every picture: the sky, the hours' icons, the world clock's sun and
-// moon): 새벽 05–07, 아침 07–11 (분홍 07–09 'morn', 노랑 09–11 'forenoon'), 낮 11–15, 늦은 오후 15–17 'aft', 저녁 17–20:30, 밤 20:30–05. The sun's own times stay on the sunset tile only
+// moon): 새벽 05–07, 아침 07–11 (분홍 07–09 'morn', 노랑 09–11 'forenoon'), 낮 11–15, 늦은 오후 15–17 'aft', 저녁 17–19 'eve', 해 진 뒤 19–21 'dusk', 밤 21–05. The sun's own times stay on the sunset tile only
 function phaseOf(time) {
     const t = toMin(time);
     if (t === null) return 'day';
     const m = ((t % 1440) + 1440) % 1440;
-    return m < 5 * 60 ? 'night' : m < 7 * 60 ? 'dawn' : m < 9 * 60 ? 'morn' : m < 11 * 60 ? 'forenoon' : m < 15 * 60 ? 'day' : m < 17 * 60 ? 'aft' : m < 20 * 60 + 30 ? 'eve' : 'night';
+    return m < 5 * 60 ? 'night' : m < 7 * 60 ? 'dawn' : m < 9 * 60 ? 'morn' : m < 11 * 60 ? 'forenoon' : m < 15 * 60 ? 'day' : m < 17 * 60 ? 'aft' : m < 19 * 60 ? 'eve' : m < 21 * 60 ? 'dusk' : 'night';
 }
 const WET = { drizzle: 1, rain: 1, sleet: 1 };
 // grey skies by how hard it comes down, as at noon: 진눈깨비 a touch lighter (the snow in it), 흐림, 이슬비 a shade darker, 비 the darkest
 const WET_K = { sleet: 0.07, cloudy: 0, drizzle: -0.06, rain: -0.15 };
 const wetHex = (hex, k) => { if (!/^#[0-9a-f]{6}$/i.test(hex || '') || !k) return hex; const n = parseInt(hex.slice(1), 16); return `#${[n >> 16, (n >> 8) & 255, n & 255].map(v => Math.round(k > 0 ? v + (255 - v) * k : v * (1 + k)).toString(16).padStart(2, '0')).join('')}`; };
 // 비 goes darker still in the lit hours (dawn, morning, dusk); at night it stays where it is
-const wetSky = (q, cond) => { const k = cond === 'rain' && q.phase !== 'night' ? -0.25 : WET_K[cond]; if (!k) return q; const b = l => l && l.map(([y, c]) => [y, wetHex(c, k)]); return { ...q, sky: wetHex(q.sky, k), bands: b(q.bands), cb: b(q.cb), hills: q.hills.map(c => wetHex(c, k)), cloud: wetHex(q.cloud, k), cloud2: wetHex(q.cloud2, k) }; };
+const wetSky = (q, cond) => { const k = cond === 'rain' && q.phase !== 'night' && q.phase !== 'dusk' ? -0.25 : WET_K[cond]; if (!k) return q; const b = l => l && l.map(([y, c]) => [y, wetHex(c, k)]); return { ...q, sky: wetHex(q.sky, k), bands: b(q.bands), cb: b(q.cb), hills: q.hills.map(c => wetHex(c, k)), cloud: wetHex(q.cloud, k), cloud2: wetHex(q.cloud2, k) }; };
 // one palette per sky and part of the day: flat layers only (sky, bands, three hills, clouds), no gradients
 // a sky the app doesn't know (an older save, a blank) is drawn as cloudy
 const condOk = c => (Object.hasOwn(WX, c) ? c : 'cloudy');
@@ -815,6 +815,7 @@ function pal(cond, phase) {
     if (cond === 'storm') return { ...D.storm, phase: 'day' };
     if (phase === 'morn' || phase === 'forenoon') return mornPal(cond, D, phase);
     if (phase === 'aft') return mornPal(cond, D, 'aft');
+    if (phase === 'dusk') return duskPal(cond, D);
     if (cond === 'fog' && FOG[phase]) return { ...FOG[phase], phase };
     if (phase === 'night') {
         if (cond === 'clear' || cond === 'wind') return { sky: '#28324a', hills: NIGHT, moon: true, stars: 34, wind: cond === 'wind', phase };
@@ -861,6 +862,26 @@ const MORN = {
          snow: { sky: '#879cbd', bands: [[165, '#a0afc6'], [220, '#c2c1c8'], [275, '#e8caa8']], cb: [[48, '#a0afc6'], [64, '#c2c1c8'], [78, '#e8caa8']], hills: ['#f8eee2', '#e9ded6', '#d7cfcc'], cloud: '#a6b3c8' },
          fog: { sky: '#9aa0aa', bands: [[165, '#aaacb1'], [220, '#c0b9b2'], [275, '#d9c2a6']], cb: [[48, '#aaacb1'], [64, '#c0b9b2'], [78, '#d9c2a6']], hills: ['#8f939c', '#848891', '#797d86'] } }
 };
+// 해 진 뒤 (19–21): the sun already down, not yet night — the clear night's sky up top, the last of the light low down in violet, rose and
+// a dusty pink. Built the way 늦은 오후 is (the same fields, so the same clouds, fog and snow as every other hour), only no sun:
+// flat stars instead, and the evening star (a flat four-point star low in the west)
+const DUSK = {
+    clear: { sky: '#28324a', bands: [[150, '#303750'], [198, '#433f5a'], [244, '#5f4a62'], [292, '#82596a']], cb: [[40, '#303750'], [56, '#433f5a'], [70, '#5f4a62'], [82, '#82596a']], hills: ['#2a2a40', '#222336', '#1b1c2c'], puff: '#3a4058', cloud: '#3e4460', front: '#56566f' },
+    // the grey skies come from the clear one, between 저녁 and 밤 (from the clear sky: 흐림 lightness −0.02 · saturation ×0.67,
+    // 눈 +0.03 · ×0.7, 안개 +0.04 · ×0.4, the bands and hills alike); 비 · 이슬비 · 진눈깨비 take 흐림 through wetSky
+    grey: { sky: '#2a303e', bands: [[165, '#413f50'], [220, '#574958'], [275, '#755b66']], cb: [[48, '#413f50'], [64, '#574958'], [78, '#755b66']], hills: ['#292937', '#21222d', '#1a1a23'], cloud: '#343c4d', cloud2: '#3a4356' },
+    snow: { sky: '#333b4e', bands: [[165, '#4d4a5f'], [220, '#655567'], [275, '#856673']], cb: [[48, '#4d4a5f'], [64, '#655567'], [78, '#856673']], hills: ['#d6d4de', '#c0bdca', '#aaa6b6'], cloud: '#3d475d' },
+    fog: { sky: '#3b404b', bands: [[165, '#52515d'], [220, '#645b66'], [275, '#816f76']], cb: [[48, '#52515d'], [64, '#645b66'], [78, '#816f76']], hills: ['#3a3a44', '#31323b', '#292a32'] },
+};
+function duskPal(cond, D) {
+    const c = DUSK.clear, g = DUSK.grey, sky = { sky: c.sky, bands: c.bands, cb: c.cb, hills: c.hills }, phase = 'dusk';
+    if (cond === 'clear') return { ...sky, puff: c.puff, stars: 16, venus: true, phase };
+    if (cond === 'partly') return { ...sky, cloud: c.cloud, front: c.front, stars: 16, venus: true, phase };
+    if (cond === 'wind') return { ...sky, cloud: c.cloud, wind: true, stars: 16, phase };
+    if (cond === 'snow') return { ...DUSK.snow, fall: 'snow', phase };
+    if (cond === 'fog') return { ...DUSK.fog, fog: 'rgba(255, 255, 255, 0.16)', phase };
+    return wetSky({ ...g, cloud2: cond === 'cloudy' ? g.cloud2 : undefined, fall: D[cond].fall, phase }, cond);
+}
 function mornPal(cond, D, phase) {
     const V = MORN[phase], c = V.clear, g = V.grey, sky = { sky: c.sky, bands: c.bands, cb: c.cb, hills: c.hills };
     if (cond === 'clear') return { ...sky, sun: phase, puff: c.puff, phase };
@@ -881,7 +902,14 @@ function scene(cond, phase) {
     cond = condOk(cond);
     const q = pal(cond, phase), r = rnd(cond.length * 31 + phase.length * 7), out = [];
     for (const [y, c] of q.bands || []) out.push(`<i class="bd" style="top: ${y}px; background: ${c}"></i>`);
-    if (q.stars) out.push(Array.from({ length: q.stars }, () => `<i class="st${phase === 'dawn' ? ' fd' : ''}" style="left: ${Math.round(10 + r() * 370)}px; top: ${Math.round(60 + r() * 360)}px; --d: ${(2 + r() * 3).toFixed(1)}s; --dl: -${(r() * 4).toFixed(1)}s"></i>`).join(''));
+    // at dusk: flat round stars spread evenly over the dark upper sky (a loose grid, each nudged), fewer lower down, none behind the
+    // place and the temperature; two sizes, white and cream, no glow
+    if (q.stars && phase === 'dusk') { const pts = [], r = rnd(214);   // one fixed scatter for every dusk sky (the one 구름 조금 had)
+        for (let row = 0; row < 6; row++) for (let col = 0; col < 7; col++) { const x = 14 + col * 56 + r() * 40, y = 40 + row * 50 + r() * 34;
+            if (x > 110 && x < 280 && y > 205 && y < 350) continue; if (row >= 4 && r() < 0.5) continue; pts.push([x, y]); }
+        out.push(pts.slice(0, q.stars).map(([x, y], k) => { const z = k % 4 === 0 ? 6 : 4;
+            return `<i class="st" style="left: ${Math.round(x)}px; top: ${Math.round(y)}px; width: ${z}px; height: ${z}px; background: ${k % 3 === 1 ? '#f6e7c4' : '#f4f1e8'}; box-shadow: 0 0 ${z}px ${(z / 4).toFixed(1)}px rgba(255, 246, 226, 0.35); --d: ${(4 + r() * 4).toFixed(1)}s; --dl: -${(r() * 5).toFixed(1)}s"></i>`; }).join('')); }
+    else if (q.stars) out.push(Array.from({ length: q.stars }, () => `<i class="st${phase === 'dawn' ? ' fd' : ''}" style="left: ${Math.round(10 + r() * 370)}px; top: ${Math.round(60 + r() * 360)}px; --d: ${(2 + r() * 3).toFixed(1)}s; --dl: -${(r() * 4).toFixed(1)}s"></i>`).join(''));
     const sun = (x, y, rad, core, halo, cls = '') => `<span class="sun ${cls}" style="left: ${x - rad * 2.4}px; top: ${y - rad * 2.4}px; width: ${rad * 4.8}px; height: ${rad * 4.8}px"><b style="background: ${halo}"></b><b class="h2" style="background: ${halo}"></b><i style="background: ${core}; width: ${rad * 2}px; height: ${rad * 2}px"></i></span>`;
     if (q.sun === 'day') out.push(cond === 'partly' ? sun(320, 190, 42, '#f6c94a', 'rgba(255, 255, 255, 0.14)') : sun(330, 210, 46, '#f6c94a', 'rgba(255, 255, 255, 0.14)'));
     // the sun climbs with the clock: at dawn just over the first card's edge, a step higher in each morning, at noon beside the temperature
@@ -890,7 +918,11 @@ function scene(cond, phase) {
     if (q.sun === 'aft') out.push(cond === 'partly' ? sun(318, 220, 44, '#fbd98a', 'rgba(250, 210, 140, 0.42)') : sun(324, 228, 46, '#fbd98a', 'rgba(250, 210, 140, 0.42)'));
     if (q.sun === 'forenoon') out.push(cond === 'partly' ? sun(312, 236, 44, '#ffe6a2', 'rgba(255, 226, 170, 0.45)') : sun(320, 244, 46, '#ffe6a2', 'rgba(255, 226, 170, 0.45)'));
     if (q.sun === 'sink') out.push(sun(312, 250, 46, '#fbe08f', 'rgba(247, 200, 115, 0.4)', 'sink'));
-    if (q.moon) out.push(`<span class="mn" style="left: ${cond === 'clear' || cond === 'wind' ? 292 : 300}px; top: ${cond === 'clear' || cond === 'wind' ? 150 : 170}px"><i></i><b style="background: ${q.sky}"></b></span>`);
+    // the evening star: a flat four-point star where the other hours keep their sun or moon (clear of the clouds)
+    if (q.venus) out.push('<svg class="lf_vn" style="left: 306px; top: 132px; width: 22px; height: 22px" viewBox="0 0 24 24"><path d="M12 0 C13 8 16 11 24 12 C16 13 13 16 12 24 C11 16 8 13 0 12 C8 11 11 8 12 0Z" fill="#f6e7c4"/></svg>');
+    // the moon's bite takes the colour behind it (at dusk the moon sits on a band, not on the plain sky)
+    if (q.moon) { const mx = cond === 'clear' || cond === 'wind' ? 292 : 300, my = phase === 'dusk' ? 96 : cond === 'clear' || cond === 'wind' ? 150 : 170, back = [...(q.bands || [])].reverse().find(([t]) => t <= my + 27)?.[1] || q.sky;
+        out.push(`<span class="mn" style="left: ${mx}px; top: ${my}px"><i></i><b style="background: ${back}"></b></span>`); }
     if (q.puff) out.push(puffSvg(-40, phase === 'eve' ? 90 : 200, phase === 'eve' ? 200 : 170, q.puff, 2.78));
     if (cond === 'partly' && q.front) out.push(puffSvg(-60, 90, 200, q.cloud, 2.78) + puffSvg(258, 196, 130, q.front, 3.9));
     else if (q.cloud && cond === 'wind') out.push(puffSvg(-60, 90, 240, q.cloud, 40) + puffSvg(200, 160, 200, q.cloud, 32));
@@ -912,7 +944,7 @@ function scene(cond, phase) {
     }
     if (q.bolt) out.push('<svg class="bolt" viewBox="0 0 60 120"><path d="M34 0 L8 64 L28 64 L14 120 L56 46 L34 46 L46 0Z" fill="#f6d34a"/></svg><i class="fl"></i>');
     if (q.wind) out.push([[190, 120, 2.6, 0], [260, 90, 3.1, 1.2], [330, 150, 2.4, 0.6], [410, 110, 2.9, 2], [480, 130, 2.7, 1.5]].map(([t, w, d, dl]) => `<i class="wl" style="top: ${t}px; width: ${w}px; --d: ${d}s; --dl: -${dl}s"></i>`).join('')
-        + (phase === 'night' ? '' : Array.from({ length: 10 }, () => `<i class="lv" style="top: ${Math.round(160 + r() * 400)}px; --d: ${(3 + r() * 2).toFixed(1)}s; --dl: -${(r() * 4).toFixed(1)}s"></i>`).join('') + '<svg class="tree" viewBox="0 0 60 110"><rect x="27" y="50" width="6" height="60" fill="#2c4a37"/><ellipse cx="30" cy="40" rx="24" ry="36" fill="#335c42"/></svg>'));
+        + (phase === 'night' || phase === 'dusk' ? '' : Array.from({ length: 10 }, () => `<i class="lv" style="top: ${Math.round(160 + r() * 400)}px; --d: ${(3 + r() * 2).toFixed(1)}s; --dl: -${(r() * 4).toFixed(1)}s"></i>`).join('') + '<svg class="tree" viewBox="0 0 60 110"><rect x="27" y="50" width="6" height="60" fill="#2c4a37"/><ellipse cx="30" cy="40" rx="24" ry="36" fill="#335c42"/></svg>'));
     const [h1, h2, h3] = q.hills;
     out.push(`<svg class="land" viewBox="0 0 390 260" preserveAspectRatio="none"><path d="M0 70 Q90 20 190 60 T390 40 V260 H0Z" fill="${h1}"/><path d="M0 110 Q120 70 230 105 T390 90 V260 H0Z" fill="${h2}"/><path d="M0 160 Q140 130 260 160 T390 150 V260 H0Z" fill="${h3}"/></svg>`);
     return `<div class="lf_sc">${out.join('')}</div>`;
@@ -936,9 +968,10 @@ function cardSky(cond, phase) {
     if (q.sun === 'aft') out.push('<circle cx="262" cy="58" r="38" fill="#f7c873" opacity=".4"/><circle cx="262" cy="58" r="21" fill="#fbd98a"/>');
     if (q.sun === 'forenoon') out.push('<circle cx="290" cy="46" r="40" fill="#fff" opacity=".2"/><circle cx="290" cy="46" r="22" fill="#ffe6a2"/>');
     if (q.sun === 'sink') out.push('<circle cx="226" cy="86" r="34" fill="#f7c873" opacity=".55"/><circle cx="226" cy="86" r="20" fill="#fbe08f"/>');
+    if (q.venus) out.push(`<path transform="translate(${q.cloud ? 150 : 222} 28) scale(.6) translate(-12 -12)" d="M12 0 C13 8 16 11 24 12 C16 13 13 16 12 24 C11 16 8 13 0 12 C8 11 11 8 12 0Z" fill="#f6e7c4"/>`);
     if (q.moon) out.push(`<circle cx="${q.cloud ? 150 : 222}" cy="28" r="16" fill="#f1ead2"/><circle cx="${q.cloud ? 158 : 230}" cy="22" r="14" fill="${q.sky}"/>`);
     // 구름 조금: the front cloud on the sun's lower left (the temperature sits top right), a little smaller, so the sun still shows (wherever the hour puts it)
-    if (cond === 'partly' && q.front) { const [sx, sy] = { day: [300, 34], forenoon: [290, 46], aft: [262, 58], morn: [250, 62], rise: [226, 88], sink: [226, 86] }[q.sun] || [300, 34]; out.push(`<g transform="translate(${sx - 74} ${sy - 2}) scale(.8) translate(-226 -22)">${'<g fill="' + (q.phase === 'aft' ? q.front : '#e9f0f8') + '"><circle cx="246" cy="58" r="20"/><circle cx="274" cy="48" r="26"/><circle cx="304" cy="60" r="18"/><rect x="226" y="58" width="96" height="20" rx="10"/></g>'}</g>`); }
+    if (cond === 'partly' && q.front && q.sun) { const [sx, sy] = { day: [300, 34], forenoon: [290, 46], aft: [262, 58], morn: [250, 62], rise: [226, 88], sink: [226, 86] }[q.sun] || [300, 34]; out.push(`<g transform="translate(${sx - 74} ${sy - 2}) scale(.8) translate(-226 -22)">${'<g fill="' + (q.phase === 'aft' ? q.front : '#e9f0f8') + '"><circle cx="246" cy="58" r="20"/><circle cx="274" cy="48" r="26"/><circle cx="304" cy="60" r="18"/><rect x="226" y="58" width="96" height="20" rx="10"/></g>'}</g>`); }
     // 구름 조금 at dawn and dusk (no front cloud): the cloud up on the sun's right, as the other hours, so the low sun shows
     else if (cond === 'partly' && (q.sun === 'rise' || q.sun === 'sink')) out.push(`<g transform="translate(238 ${q.sun === 'rise' ? 52 : 50}) scale(.6) translate(-206 -8)">${`<g fill="${q.cloud}"><circle cx="230" cy="34" r="26"/><circle cx="268" cy="22" r="34"/><circle cx="308" cy="36" r="24"/><rect x="206" y="34" width="124" height="28" rx="14"/></g>${q.cloud2 ? `<g fill="${q.cloud2}"><circle cx="320" cy="62" r="18"/><circle cx="346" cy="54" r="24"/><rect x="302" y="62" width="70" height="20" rx="10"/></g>` : ''}`}</g>`);
     else if (q.cloud && cond !== 'wind') out.push(`<g fill="${q.cloud}"><circle cx="230" cy="34" r="26"/><circle cx="268" cy="22" r="34"/><circle cx="308" cy="36" r="24"/><rect x="206" y="34" width="124" height="28" rx="14"/></g>${q.cloud2 ? `<g fill="${q.cloud2}"><circle cx="320" cy="62" r="18"/><circle cx="346" cy="54" r="24"/><rect x="302" y="62" width="70" height="20" rx="10"/></g>` : ''}`);
@@ -951,7 +984,7 @@ function cardSky(cond, phase) {
     if (q.fall === 'snow') out.push(dots(22, 2.2, 11));
     if (q.fog) out.push(fogCard(q, 1, 1));
     if (q.bolt) out.push('<path d="M232 30 L216 62 L228 62 L218 92 L246 54 L232 54 L242 30Z" fill="#f6c94a"/>');
-    if (q.wind) out.push(`<g fill="none" stroke="rgba(255,255,255,.45)" stroke-width="2" stroke-linecap="round"><path d="M110 40 H190 Q204 40 204 30"/><path d="M140 58 H230"/><path d="M100 74 H170 Q184 74 184 84"/></g>${phase === 'night' ? '' : '<g fill="#2f5f3e"><rect x="184" y="62" width="4" height="26" transform="rotate(12 186 88)"/><ellipse cx="196" cy="58" rx="12" ry="16" transform="rotate(24 196 74)"/></g>'}`);
+    if (q.wind) out.push(`<g fill="none" stroke="rgba(255,255,255,.45)" stroke-width="2" stroke-linecap="round"><path d="M110 40 H190 Q204 40 204 30"/><path d="M140 58 H230"/><path d="M100 74 H170 Q184 74 184 84"/></g>${phase === 'night' || phase === 'dusk' ? '' : '<g fill="#2f5f3e"><rect x="184" y="62" width="4" height="26" transform="rotate(12 186 88)"/><ellipse cx="196" cy="58" rx="12" ry="16" transform="rotate(24 196 74)"/></g>'}`);
     const [h1, h2] = q.hills, low = cond === 'snow';
     out.push(low ? `<path d="M0 106 Q90 98 180 104 T358 100 V118 H0Z" fill="${h1}"/><path d="M0 112 Q110 106 210 110 T358 108 V118 H0Z" fill="${h2}"/>`
         : `<path d="M0 92 Q90 78 180 88 T358 82 V118 H0Z" fill="${h1}"/><path d="M0 104 Q110 94 210 102 T358 98 V118 H0Z" fill="${h2}"/>`);
@@ -971,10 +1004,12 @@ function widgetSky(cond, phase) {
     if (q.sun === 'aft') out.push(`<circle cx="${C}" cy="80" r="38" fill="#f7c873" opacity=".4"/><circle cx="${C}" cy="80" r="22" fill="#fbd98a"/>`);
     if (q.sun === 'forenoon') out.push(`<circle cx="${cond === 'partly' ? C - 14 : C}" cy="70" r="38" fill="#fff" opacity=".2"/><circle cx="${cond === 'partly' ? C - 14 : C}" cy="70" r="23" fill="#ffe6a2"/>`);
     if (q.sun === 'sink') out.push(`<circle cx="${C}" cy="112" r="38" fill="#f7c873" opacity=".5"/><circle cx="${C}" cy="112" r="22" fill="#fbe08f"/>`);
+    // the evening star sits where the moon would (the card and the widget keep their picture in the same place every hour)
+    if (q.venus) out.push(`<path transform="translate(${q.cloud ? C - 26 : C} ${q.cloud ? 40 : 46}) scale(.6) translate(-12 -12)" d="M12 0 C13 8 16 11 24 12 C16 13 13 16 12 24 C11 16 8 13 0 12 C8 11 11 8 12 0Z" fill="#f6e7c4"/>`);
     if (q.moon && !q.cloud) out.push(`<circle cx="${C}" cy="46" r="17" fill="#f1ead2"/><circle cx="${C + 8}" cy="40" r="15" fill="${q.sky}"/>`);
     if (q.moon && q.cloud) out.push(`<circle cx="${C - 26}" cy="40" r="13" fill="#f1ead2"/><circle cx="${C - 20}" cy="35" r="12" fill="${q.sky}"/>`);
     const cloud = (x, y, s, col) => `<g fill="${col}" transform="translate(${x} ${y}) scale(${s})"><circle cx="-22" cy="4" r="16"/><circle cx="0" cy="-6" r="22"/><circle cx="24" cy="4" r="15"/><rect x="-38" y="4" width="78" height="18" rx="9"/></g>`;
-    if (cond === 'partly' && q.front) { const [sx, sy] = { day: [C - 14, 50], forenoon: [C - 14, 70], aft: [C, 80], morn: [C, 86], rise: [C, 116], sink: [C, 112] }[q.sun] || [C - 14, 50]; out.push(cloud(sx + 30, sy + 10, 0.72, q.phase === 'aft' ? q.front : '#e9f0f8')); }
+    if (cond === 'partly' && q.front && q.sun) { const [sx, sy] = { day: [C - 14, 50], forenoon: [C - 14, 70], aft: [C, 80], morn: [C, 86], rise: [C, 116], sink: [C, 112] }[q.sun] || [C - 14, 50]; out.push(cloud(sx + 30, sy + 10, 0.72, q.phase === 'aft' ? q.front : '#e9f0f8')); }
     else if (cond === 'partly' && (q.sun === 'rise' || q.sun === 'sink')) out.push(cloud(C + 50, q.sun === 'rise' ? 80 : 76, 1.1, q.cloud));
     else if (q.cloud && cond !== 'wind') out.push((q.cloud2 ? cloud(C - 46, 70, 0.6, q.cloud2) : '') + cloud(C + 6, 52, 1.05, q.cloud));
     const r = rnd(cond.length * 13 + phase.length);
@@ -987,7 +1022,7 @@ function widgetSky(cond, phase) {
     if (q.fall === 'snow') out.push(flakes(22, 2.3));
     if (q.fog) out.push(fogCard(q, W / 358, k));
     if (q.bolt) out.push(`<path d="M${C} 62 L${C - 16} 94 L${C - 4} 94 L${C - 14} 124 L${C + 14} 86 L${C} 86 L${C + 10} 62Z" fill="#f6c94a"/>`);
-    if (q.wind || cond === 'wind') out.push(`<g fill="none" stroke="rgba(255,255,255,.5)" stroke-width="2" stroke-linecap="round"><path d="M116 60 H196 Q210 60 210 50"/><path d="M134 80 H244"/><path d="M110 98 H180 Q194 98 194 108"/></g>${phase === 'night' ? '' : `<g fill="#2f5f3e"><rect x="${C + 18}" y="84" width="4" height="26" transform="rotate(12 ${C + 20} 110)"/><ellipse cx="${C + 30}" cy="80" rx="12" ry="16" transform="rotate(24 ${C + 30} 80)"/></g>`}`);
+    if (q.wind || cond === 'wind') out.push(`<g fill="none" stroke="rgba(255,255,255,.5)" stroke-width="2" stroke-linecap="round"><path d="M116 60 H196 Q210 60 210 50"/><path d="M134 80 H244"/><path d="M110 98 H180 Q194 98 194 108"/></g>${phase === 'night' || phase === 'dusk' ? '' : `<g fill="#2f5f3e"><rect x="${C + 18}" y="84" width="4" height="26" transform="rotate(12 ${C + 20} 110)"/><ellipse cx="${C + 30}" cy="80" rx="12" ry="16" transform="rotate(24 ${C + 30} 80)"/></g>`}`);
     const [h1, h2] = q.hills;
     out.push(cond === 'snow' ? `<path d="M0 136 Q90 128 180 134 T340 130 V150 H0Z" fill="${h1}"/><path d="M0 142 Q110 136 210 140 T340 138 V150 H0Z" fill="${h2}"/>`
         : `<path d="M0 120 Q90 104 180 114 T340 108 V150 H0Z" fill="${h1}"/><path d="M0 134 Q110 122 210 130 T340 126 V150 H0Z" fill="${h2}"/>`);
@@ -1157,7 +1192,7 @@ function weatherBody(p, h, name, night, sub, source, tileCol, lead = '') {
     h = { ...h, days: rows.map(x => x.d) };
     const lo =Math.min(...h.days.map(d => d.lo ?? 99), h.lo ?? 99), hi = Math.max(...h.days.map(d => d.hi ?? -99), h.hi ?? -99);
     return `<div class="lf_wtop">${sub ? `<small>${sub}</small>` : ''}<h2>${esc(name)}</h2><div class="t">${h.temp ?? '—'}°</div><div class="c">${esc(saidOf(h))}</div><div class="hl">최고:${h.hi ?? '—'}° 최저:${h.lo ?? '—'}°</div>${source}</div>
-      ${h.hours.length ? `<div class="lf_wcard">${h.line ? `<div class="ln1">${esc(h.line)}${k1(h.ko, 'lf_wk')}</div>` : ''}<div class="lf_hrs">${h.hours.map((x, k) => `<div>${k ? esc(hourOf(p, x.time)) : '지금'}<em>${x.rain >= 20 ? `${x.rain}%` : ''}</em>${wxIc(x.cond, 26, phaseOf(x.time) === 'night')}<b class="cg_num">${x.temp ?? '—'}°</b></div>`).join('')}</div>${hourLine(h.hours)}</div>` : ''}
+      ${h.hours.length ? `<div class="lf_wcard">${h.line ? `<div class="ln1">${esc(h.line)}${k1(h.ko, 'lf_wk')}</div>` : ''}<div class="lf_hrs">${h.hours.map((x, k) => `<div>${k ? esc(hourOf(p, x.time)) : '지금'}<em>${x.rain >= 20 ? `${x.rain}%` : ''}</em>${wxIc(x.cond, 26, /^(night|dusk)$/.test(phaseOf(x.time)))}<b class="cg_num">${x.temp ?? '—'}°</b></div>`).join('')}</div>${hourLine(h.hours)}</div>` : ''}
       ${h.days.length ? `<div class="lf_wcard"><div class="hd">${h.days.length}일간의 일기예보</div>${rows.map(({ d, name: dn, now: isNow }) => `<div class="lf_d10"><span>${dn}</span><span class="ic">${wxIc(d.cond, 22)}${d.rain >= 30 ? `<em>${d.rain}%</em>` : ''}</span><span class="lo cg_num">${d.lo ?? '—'}°</span>${tempBar(d, lo, hi, isNow ? h.temp : null)}<span class="hi cg_num">${d.hi ?? '—'}°</span></div>`).join('')}</div>` : ''}
       ${weatherTiles(h, tileCol, lead)}`;
 }
