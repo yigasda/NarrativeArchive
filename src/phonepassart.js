@@ -33,13 +33,9 @@ const doors = (fg, op, u) => fadeIn(u, `<defs><linearGradient id="${u}s" x1="0" 
 const bowl = (fg, op, u) => { const vx = 300, vy = -60, x = (x0, y) => r1(vx + (x0 - vx) * (y - vy) / (210 - vy)); let st = '', ln = '';
     for (let i = 0; i < 16; i++) { const a = 60 + i * 30, b = a + 30, y0 = 20; ln += `M${x(a, y0)} ${y0}L${a} 210`; if (i % 2) st += `M${x(a, y0)} ${y0}L${a} 210H${b}L${x(b, y0)} ${y0}Z`; }
     return fadeIn(u, P(st, F(fg, 0.04)) + P(ln, Z(fg, op, 0.8, 0.5)) + P(`M${x(60, 20)} 20H${x(540, 20)}M${x(60, 90)} 90H${x(540, 90)}`, Z(fg, op, 1.3, 0.8)) + `<ellipse cx="${vx}" cy="90" rx="${r1((x(540, 90) - x(60, 90)) * 0.09)}" ry="9" ${Z(fg, op, 1.3, 0.8)}/>`); };
-// museum: an isometric lattice, the floor of a gallery drawn in fine triangles
-const columns = (fg, op, u) => { let d = ''; const h = 16; for (let i = -20; i < 30; i++) d += `M${130 + i * h * 1.1547} -10l${r1(220 * 0.57735)} 220M${130 + i * h * 1.1547} 210l${r1(220 * 0.57735)} -220`; for (let y = -10; y < 214; y += h) d += `M130 ${y}H420`; return fadeIn(u, P(d, Z(fg, op, 0.8, 0.4))); };
 // museum: marble, veins branching in fine lines of a few weights
 const rosette = (fg, op, u) => { const vein = (x, y, a, n, w, k) => { let d = `M${x} ${y}`; for (let i = 0; i < n; i++) { a += sin(i * 1.7 + x) * 0.35; x += 9 * cos(a); y += 9 * sin(a); d += `L${r1(x)} ${r1(y)}`; } return P(d, Z(fg, op, k, w)); };
     return fadeIn(u, vein(160, 200, -0.7, 40, 1.2, 1.6) + vein(240, 214, -1.1, 30, 0.7, 1.2) + vein(200, 150, -0.2, 30, 0.5, 0.9) + vein(300, 120, -1.4, 18, 0.5, 0.9) + vein(260, 200, -0.4, 22, 0.4, 0.7) + vein(330, 214, -1.8, 26, 0.9, 1.3) + vein(210, 90, -0.6, 26, 0.4, 0.6)); };
-// bus: the road ahead as a perspective grid running to the horizon
-const route = (fg, op, u) => { const vx = 300, vy = 40, ts = range(1, 14).map(k => vy + (210 - vy) * (k / 13) ** 1.9); return fadeIn(u, P(range(0, 23).map(i => `M${vx} ${vy}L${-140 + i * 40} 214`).join('') + ts.map(y => `M130 ${r1(y)}H420`).join(''), Z(fg, op, 0.8, 0.5)) + P(`M130 ${vy}H420`, Z(fg, op, 1.6, 0.8))); };
 // bus: a motorway flyover from above, lanes sweeping round in parallel curves, the dashes between them
 const lanes = (fg, op, u) => { const lane = k => `M130 ${190 - k * 9}C250 ${190 - k * 9} ${300 - k * 4} ${150 - k * 6} ${330 - k * 6} ${80 - k * 3}S${380 - k * 6} -10 ${420} ${-20 + k * 6}`;
     return fadeIn(u, range(0, 12).map(k => P(lane(k), Z(fg, op, k % 4 === 0 ? 1.5 : 0.7, k % 4 === 0 ? 0.8 : 0.5) + (k % 4 === 2 ? ' stroke-dasharray="6 6"' : ''))).join('')); };
@@ -80,8 +76,17 @@ const chevrons = (fg, op) => range(0, 5).map(i => `<path d="M${210 + i * 26} 64L
 const sunburst = (fg, op) => range(0, 9).map(i => { const a0 = PI + i * PI / 18, a1 = a0 + PI / 36; return `<path d="M350 210L${M(pt(350, 210, 260, a0))}L${M(pt(350, 210, 260, a1))}Z" fill="${fg}" fill-opacity="${r1(op * 0.35 * 100) / 100}"/>`; }).join('');
 const LN = (fg, op, k, w) => `stroke="${fg}" stroke-opacity="${r1(op * k * 100) / 100}" stroke-width="${w}" fill="none"`;
 // what 소망 chose, kind by kind; null is the plain look (no drawing). The train and the movie have no drawing chosen yet
-const MOTIF = { flight: [flight, null], train: [null], membership: [dots, holo], other: [dots], concert: [spots], hotel: [windows, doors], match: [bowl],
-    movie: [null], museum: [rosette, columns, rosetteP], bus: [route, lanes, chevrons], ferry: [depths, seaChart], theater: [harlequin], park: [wheel, sunburst] };
+// the main wallet's look: no drawing and the dotted line between the two places ('' draws nothing but keeps the line)
+const lined = () => '';
+// theater (mockup, not chosen yet): damask, the opera house wallpaper, rows of medallions with a small flower between them, shaded in one tone
+const damask = (fg, op, u) => { let a = '', b = '';
+    for (let r = -1; r < 5; r++) for (let c = 0; c < 6; c++) { const x = 168 + c * 44 + (r % 2 ? 22 : 0), y = r * 56 + 20;
+        a += `M${x} ${y - 26}C${x + 10} ${y - 16} ${x + 16} ${y - 6} ${x + 8} ${y + 4}C${x + 16} ${y + 10} ${x + 14} ${y + 22} ${x} ${y + 26}C${x - 14} ${y + 22} ${x - 16} ${y + 10} ${x - 8} ${y + 4}C${x - 16} ${y - 6} ${x - 10} ${y - 16} ${x} ${y - 26}Z`;
+        b += `M${x} ${y - 12}C${x + 5} ${y - 6} ${x + 5} ${y + 4} ${x} ${y + 12}C${x - 5} ${y + 4} ${x - 5} ${y - 6} ${x} ${y - 12}Z`;
+        const fx = x + 22, fy = y + 28; for (let k = 0; k < 4; k++) { const t = k * PI / 2; b += `M${fx} ${fy}Q${r1(fx + 7 * cos(t - 0.5))} ${r1(fy + 7 * sin(t - 0.5))} ${r1(fx + 8 * cos(t))} ${r1(fy + 8 * sin(t))}Q${r1(fx + 7 * cos(t + 0.5))} ${r1(fy + 7 * sin(t + 0.5))} ${fx} ${fy}Z`; } }
+    return fadeIn(u, `<path d="${a}" ${F(fg, 0.07)}/><path d="${b}" ${F(fg, 0.07)}/>`); };
+const MOTIF = { flight: [flight, null], train: [lined, null], membership: [dots, holo], other: [dots], concert: [spots], hotel: [windows, doors], match: [bowl],
+    movie: [null], museum: [rosette, rosetteP], bus: [lanes, chevrons], ferry: [depths, seaChart], theater: [harlequin], park: [wheel, sunburst] };
 const seedOf = id => [...String(id || '')].reduce((h, c) => h + c.charCodeAt(0), 0);
 export function passMotif(k, fg, op, id) {
     const xs = MOTIF[k] || MOTIF.other, f = xs[seedOf(id) % xs.length];
