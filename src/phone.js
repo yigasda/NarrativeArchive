@@ -212,14 +212,16 @@ export async function openPhone(who = null) {
             if (el.isConnected) el.querySelector('.pcf_ok').focus({ preventScroll: true });
         });
     };
-    // the same sheet with a line to type (a city): resolves the text, or false
-    const askInput = (title, text, value = '', ok = '저장') => {
+    // the same sheet with a line to type (a city): resolves the text, or false. area: a few lines that wrap (a 말투), an
+    // editable div as 도시 찾기's (a theme that paints every textarea can't reach it); Enter still saves
+    const fieldVal = f => String(f.value ?? f.innerText ?? '').replace(/\s+/g, ' ').trim();
+    const askInput = (title, text, value = '', ok = '저장', { area = false } = {}) => {
         ask?.done(false);
         return new Promise(done => {
-            const el = $(`<div class="pcf" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="pcf_box"><div class="pcf_card"><div class="pcf_msg"><b>${esc(title)}</b>${text ? `<span>${esc(text)}</span>` : ''}</div><div class="pcf_in"><input type="text" class="pcf_field" value="${esc(value)}" enterkeyhint="done" autocomplete="off"></div><div class="pcf_btns"><div role="button" tabindex="0" class="pcf_no">취소</div><div role="button" tabindex="0" class="pcf_ok safe">${esc(ok)}</div></div></div></div></div>`)[0];
+            const el = $(`<div class="pcf" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="pcf_box"><div class="pcf_card"><div class="pcf_msg"><b>${esc(title)}</b>${text ? `<span>${esc(text)}</span>` : ''}</div><div class="pcf_in">${area ? `<div class="pcf_field pcf_area" contenteditable="true" role="textbox" aria-multiline="true" enterkeyhint="done" spellcheck="false">${esc(value)}</div>` : `<input type="text" class="pcf_field" value="${esc(value)}" enterkeyhint="done" autocomplete="off">`}</div><div class="pcf_btns"><div role="button" tabindex="0" class="pcf_no">취소</div><div role="button" tabindex="0" class="pcf_ok safe">${esc(ok)}</div></div></div></div></div>`)[0];
             ask = { el, done: v => { ask = null; el.remove(); done(v); } };
             placeAsk();
-            if (el.isConnected) { const f = el.querySelector('.pcf_field'); f.focus({ preventScroll: true }); f.select(); }
+            if (el.isConnected) { const f = el.querySelector('.pcf_field'); f.focus({ preventScroll: true }); if (f.select) f.select(); else { const r = document.createRange(); r.selectNodeContents(f); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); } }
         });
     };
     // the same sheet, a row a place: its flag, a name, a line under it (시안 B, docs/mockups/phone-place-ask); title may carry a flag
@@ -280,8 +282,9 @@ export async function openPhone(who = null) {
         const v = await askChoice('날짜를 어떻게 쓰세요?', '나중에 설정에서 바꿀 수 있어요.', [{ v: 'md', label: '월.일', sub: '11.03 = 11월 3일' }, { v: 'dm', label: '일.월', sub: '03.11. = 11월 3일' }]);
         if (v === 'md' || v === 'dm') await setDateOrder(m, v);
     };
-    $root.on('click', '.pcf', function (e) { e.stopPropagation(); const b = e.target.closest('.pcf_ok, .pcf_no'); if (b) { const f = this.querySelector('.pcf_field'); ask?.done(b.classList.contains('pcf_ok') ? (f ? f.value.trim() || false : b.dataset.v || true) : false); } else if (e.target === this) ask?.done(false); });
-    $root.on('keydown', '.pcf_field', function (e) { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); ask?.done(this.value.trim() || false); } else if (e.key === 'Escape') ask?.done(false); });
+    $root.on('click', '.pcf', function (e) { e.stopPropagation(); const b = e.target.closest('.pcf_ok, .pcf_no'); if (b) { const f = this.querySelector('.pcf_field'); ask?.done(b.classList.contains('pcf_ok') ? (f ? fieldVal(f) || false : b.dataset.v || true) : false); } else if (e.target === this) ask?.done(false); });
+    $root.on('paste', '.pcf_area', function (e) { e.preventDefault(); const t = (e.originalEvent?.clipboardData?.getData('text/plain') || '').replace(/\s+/g, ' '); document.execCommand('insertText', false, t); });
+    $root.on('keydown', '.pcf_field', function (e) { e.stopPropagation(); if (e.key === 'Enter' && !e.originalEvent?.isComposing && e.keyCode !== 229) { e.preventDefault(); ask?.done(fieldVal(this) || false); } else if (e.key === 'Escape') ask?.done(false); });
     $root.on('keydown', '.pcf_ok, .pcf_no', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ask?.done(this.classList.contains('pcf_ok') ? (this.dataset.v || true) : false); } });
     const drawPhone = (keep = false) => {
         queueMicrotask(placeAsk);  // every way out of a redraw (some return early) puts the open sheet back
@@ -1234,7 +1237,7 @@ export async function openPhone(who = null) {
     $root.on('click', '.na_ph_kvrow', async function (e) {
         e.stopPropagation(); const p = phone(), k = Number(this.dataset.i), v = p?.koVoice?.[k]; if (!v) return;
         const w = String(v.who ?? v.from ?? '').trim();
-        const style = await askInput(`${w}의 말투`, '남에게 하는 말투를 짧게 적어요.', String(v.style || ''));
+        const style = await askInput(`${w}의 말투`, '남에게 하는 말투를 짧게 적어요.', String(v.style || ''), '저장', { area: true });
         if (!style || phone() !== p || p.koVoice?.[k] !== v) return;
         await voiceSet(p, k, style.slice(0, 120));
     });
@@ -1244,7 +1247,7 @@ export async function openPhone(who = null) {
         if (!name || phone() !== p) return;
         if (!Array.isArray(p.koVoice)) p.koVoice = [];
         const have = p.koVoice.findIndex(v => String(v?.who ?? v?.from ?? '').trim().toLowerCase() === name.toLowerCase());
-        const style = await askInput(`${name}의 말투`, '남에게 하는 말투를 짧게 적어요.', have >= 0 ? String(p.koVoice[have].style || '') : '');
+        const style = await askInput(`${name}의 말투`, '남에게 하는 말투를 짧게 적어요.', have >= 0 ? String(p.koVoice[have].style || '') : '', '저장', { area: true });
         if (!style || phone() !== p) return;
         if (have >= 0) return voiceSet(p, have, style.slice(0, 120));
         p.koVoice.push({ who: name.slice(0, 40), style: style.slice(0, 120), by: 'user' });
