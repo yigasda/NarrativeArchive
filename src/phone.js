@@ -15,7 +15,7 @@ import { ctx, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
 import { applyInjection } from './inject.js';
 import { faceHtml, nameKey, peopleList } from './people.js';
 import { drafting, drawing, drawPhoto, drawPost, filling, makeDraft, paging, retranslate, retranslating, recording, recordVoice, searching, searchPage, shooting, takePhoto, webPage, writeEntry, writing } from './phoneai.js';
-import { axFind, groupInfo, APPS, AXB, AXB_C, busyHtml, setDate, setScreenHolderView, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, mapTowns, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setOwnerProfile, setWho, snsPost, snsScreen, statusBar, threadScreen, setPlace, prepScreen } from './phoneapps.js';
+import { ax, axFind, groupInfo, APPS, AXB, AXB_C, busyHtml, setDate, setScreenHolderView, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, mapTowns, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setOwnerProfile, setWho, snsPost, snsScreen, statusBar, threadScreen, setPlace, prepScreen } from './phoneapps.js';
 import { dropStretch, koGaps, savedName, ensureIds, ensureYear, hasDatedRecords, noArchive, setStoryYear, storyYear, fillDevice, fillMoney, fillVoice, koOn, loreOff, makePhone, tidyKo, markAfter, phoneLore, REMAKE, restoreRounds, retryMoney, showNow, storyNow, syncLeft, syncRows, syncState, tidyJournal, undoRound } from './phonedata.js';
 import { busy, watchBusy, exclusive, journalRead, journalWrite, syncOf } from './phonesync.js';
 import { syncPick, syncSettings } from './phonesyncui.js';
@@ -151,6 +151,15 @@ export async function openPhone(who = null) {
             toastr.warning(`번역을 못 했어요 · 반영 기록에서 다시 할 수 있어요 (${String(err?.message || err)})`, '캐릭터 휴대폰');
         } finally { koBusy = false; }
         if (!phoneClosed && phone() === p) drawPhone(true);
+    };
+    // 번역 못 했어요 (docs/mockups/phone-trfail A): while the round's Korean failed (p.syncLast.trFailed), a glass card over
+    // whatever screen the phone shows; 다시 하기 runs koRun again (its success clears the mark, and the card with it),
+    // 닫기 keeps it away for that round (trSeen). The report's 번역 못 함 · 다시 하기 stays either way
+    const trPop = () => {
+        const p = phone(), host = $root.find('.na_ph_frame .cg_canvas')[0] || $root.find('.na_ph_frame .na_ph_scr')[0];
+        $root.find('.na_ph_trpop').remove();
+        if (!p?.syncLast?.trFailed || p.syncLast.trSeen || ask || !host) return;
+        host.insertAdjacentHTML('beforeend', `<div class="pcf na_ph_trpop" role="dialog" aria-modal="true" aria-label="한국어 번역을 못 했어요"><div class="pcf_box"><div class="pcf_card"><div class="pcf_msg"><i class="pcf_tr">${ax('mqtrans', 20, 'currentColor', 2)}</i><b>한국어 번역을 못 했어요</b><span>다시 하면 빈 것만 번역해요</span></div><div class="pcf_btns"><div role="button" tabindex="0" class="pcf_no na_ph_trno">닫기</div><div role="button" tabindex="0" class="pcf_ok safe na_ph_trok">${koBusy ? `${busyHtml} 번역 중` : '다시 하기'}</div></div></div></div></div>`);
     };
     const profileDrafts = new Map();
     const pendingProfile = () => {
@@ -338,6 +347,7 @@ export async function openPhone(who = null) {
         $root.find('.na_ph_frame').html(html);
         if (sheet && (view === 'photo' || view === 'set')) $root.find('.na_ph_scr').append(looksSheet(m));
         placeAsk();
+        trPop();
         if (keep) $root.find('.na_ph_body, .ax_scroll').scrollTop(top);
         if (making && view === 'setremake') $root.find('.na_ph_setremake .ax_n').html(`${busyHtml} 다시 만드는 중`);
         // a redraw mid-reflection (or mid-make) keeps saying so: withSpinner only dressed the button that was there
@@ -784,6 +794,19 @@ export async function openPhone(who = null) {
         const p = phone();
         if (p && koGaps(p).length && !making) { if (koBusy) return; await withSpinner($(e.currentTarget), '번역 중', () => koRun(p, true)); const g = globalSettings(); g.phoneKo = true; saveGlobal(); return; }
         const g = globalSettings(); g.phoneKo = !koOn(); drawPhone(); if (view.startsWith('thread')) $root.find('.ax_scroll').scrollTop(1e6); saveGlobal();
+    });
+    $root.on('click keydown', '.na_ph_trok', async e => {
+        if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault(); e.stopPropagation();
+        if (koBusy) return; if (making) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요');
+        const p = phone(); if (!p) return;
+        const run = koRun(p, true); $(e.currentTarget).html(`${busyHtml} 번역 중`); await run;
+    });
+    $root.on('click keydown', '.na_ph_trno', async e => {
+        if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault(); e.stopPropagation();
+        const p = phone(); if (p?.syncLast) { p.syncLast.trSeen = true; await saveMeta(); }
+        $root.find('.na_ph_trpop').remove();
     });
     $root.on('click', '.na_sync_tr', async e => { e.stopPropagation(); if (making) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요'); await withSpinner($(e.currentTarget), '번역 중', () => koRun(phone(), true)); });
     $root.on('click', '.na_ph_makebtn', function () { make($(this), false); });
