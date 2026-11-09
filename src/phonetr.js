@@ -57,6 +57,15 @@ export function voicesWanted(p, { all = false } = {}) {
     return [...new Set(koGaps(p, { all }).filter(g => /^(text|comment)/.test(g.app)).map(g => String(g.who).trim()).filter(Boolean))]
         .filter(n => !have.has(n.toLowerCase()) && !asked.has(n.toLowerCase())).slice(0, 20);
 }
+// a row the user deletes: gone, and that person isn't asked of the story again (사람 추가 brings them back by hand).
+// The deleted row, or null
+export function dropVoice(p, i) {
+    const rows = Array.isArray(p?.koVoice) ? p.koVoice : [], k = Number(i);
+    if (!Number.isInteger(k) || k < 0 || k >= rows.length) return null;
+    const [row] = rows.splice(k, 1), name = who(row);
+    if (name && !(p.koVoiceAsked || []).some(x => String(x).toLowerCase() === name.toLowerCase())) p.koVoiceAsked = [...(p.koVoiceAsked || []), name].slice(-200);
+    return row;
+}
 // asks the story for them; the rows added. A row needs its words from the story; the rest are marked asked
 export async function learnVoices(m, owner, p, { all = false } = {}) {
     const want = voicesWanted(p, { all });
@@ -71,7 +80,7 @@ export async function learnVoices(m, owner, p, { all = false } = {}) {
         && (Array.isArray(v.evidence) ? v.evidence : []).some(e => String(e || '').trim()) && have.add(whoKey(v)))
         .map(v => ({ who: wanted.get(whoKey(v)), style: String(v.style).trim().slice(0, 120), evidence: v.evidence.map(e => String(e).trim()).filter(Boolean).slice(0, 2).map(e => e.slice(0, 160)), by: 'model' }));
     if (rows.length) p.koVoice = [...voiceRows(p), ...rows].slice(-80);
-    // (one the story doesn't show isn't asked again; one with a row is asked again only if that row is deleted)
+    // (one the story doesn't show isn't asked again; nor one whose row the user deletes: dropVoice)
     const got1 = new Set(rows.map(r => r.who.toLowerCase()));
     p.koVoiceAsked = [...new Set([...(p.koVoiceAsked || []), ...want.filter(n => !got1.has(n.toLowerCase()))])].slice(-200);
     return rows.length;

@@ -1474,4 +1474,10 @@ test('fillKo: each line goes with who says it to whom, and the voice table, no e
     assert.deepEqual(v.koVoice.map(r => [r.who, r.style, r.by, r.evidence]), [['Oscar', '엄마한테도 반말, 퉁명스럽게', undefined, undefined], ['Mother', '아들한테 반말, 걱정 많은 말투', 'model', ['Why so cold?']]]);
     assert.deepEqual(tr.voicesWanted(v), []);
     assert.deepEqual(v.koVoiceAsked, ['Ivo']);
+    // a row the user deletes is not asked of the story again
+    assert.equal(tr.dropVoice(v, 1).who, 'Mother');
+    assert.deepEqual(v.koVoice.map(r => r.who), ['Oscar']);
+    assert.deepEqual(v.koVoiceAsked, ['Ivo', 'Mother']);
+    assert.deepEqual(tr.voicesWanted(v), []);
+    assert.equal(tr.dropVoice(v, 9), null);
 });
