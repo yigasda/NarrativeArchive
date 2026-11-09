@@ -801,7 +801,10 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.ok(!on.includes('\nTIMES\n') && on.includes('Every record\'s time is on the owner\'s clock'));
     const arch = data.coreSystem({ life: true, archiveOnly: true });
     assert.ok(arch.includes('\nTIMES\n- Times are "MM-DD HH:MM"') && !arch.includes('CLOCK FIRST'));
-    assert.match(on, /- Complete each day's personal life before moving to the next: about 11 records for a full waking day, scaled to the hours covered, each day the story skips too\.\n- Choose the apps from this owner's habits and that day's circumstances, for example a photo of lunch,/);
+    assert.match(on, /- Build each day's personal records from OWNER PROFILE, LIFE NOW \(when given\) and the owner's established habits, interests and relationships\./);
+    assert.match(on, /Each day is a set of phone records, not the next chapter of the story\./);
+    assert.match(on, /- Complete how the owner expresses or records the situation, without completing the situation itself\./);
+    assert.ok(on.indexOf('\nEVERYDAY\n') < on.indexOf('\nSTORY RECORDS\n') && on.indexOf('  "everyday": [{') < on.indexOf('  "records": [{'));
     assert.match(on, /- For each person the owner had a scene with in NEW MESSAGES: at least one text between the two later these hours, in their own voices/);
     assert.match(on, /\nITEMS \(each with only the fields it needs\)\nscene: "id"/);
     assert.match(on, /\nphoto: "caption", "ko", "time", "mood"/);
@@ -813,8 +816,8 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.ok(!on.includes('talk over each other') && on.includes('contact goes both ways, and a group chat goes on without them.'));
     assert.ok(on.includes('Posts only if they post.') && !on.includes('Not every app every day') && !on.includes('only if this owner keeps them'));
     assert.match(on, /"at": its message number \(every record has one\), "scene": its scene's id or "",/);
-    assert.match(on, /a voice memo, an alarm, a timer, a saved file\. Repeated routines are welcome; no app needs a record merely to fill its category\./);
-    assert.ok(!plain.includes('an alarm, a timer') && plain.includes('"records": scenes and story records; "everyday": the owner\'s own days.'));
+    assert.match(on, /Personal routines and independent interests can recur across days\./);
+    assert.ok(!plain.includes('LIFE NOW (when given)') && plain.includes('"everyday": the owner\'s own days, written first; "records": scenes and story records.'));
     assert.match(on, /new texts in a chat are new/);
     assert.match(on, /though others' texts and calls come in/);
     assert.ok(!on.includes('write events and app records'));
@@ -836,7 +839,7 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.match(on, /Relationship words only as the story uses them/);
     assert.equal(on.split('The diary: an entry when a story day ends').length, 2);
     // (the story first; the apps written as a real phone holds them)
-    assert.match(on, /"records": scenes and story records; "everyday": the owner's own days\./);
+    assert.match(on, /"everyday": the owner's own days, written first; "records": scenes and story records\./);
     // (the days' health and a habit after "everyday", on their own)
     assert.ok(on.indexOf('\n  "health": [{ "date": the day they woke, "already"') > on.indexOf('\n  "everyday": {') && on.includes('\n  "usual": { "weight"'));
     assert.match(on, /- Every scene in these messages \("scene" records\) and its trail on the phone\.\n/);
