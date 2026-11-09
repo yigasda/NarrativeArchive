@@ -147,6 +147,8 @@ let svg = `<rect width="${W}" height="${H}" fill="${C.land}"/>`
   + st(L.minor, C.edge, mpx(9) + 1.6) + st(L.mid, C.edge, mpx(12) + 1.8)
   + st(L.minor, C.road, mpx(9)) + st(L.mid, C.road, mpx(12))
   + (process.env.RAIL === 'old' ? st(L.rail, C.rail, 2.4) + st(L.rail, C.land, 1.1, ' stroke-dasharray="4 4"') + st(L.tram, C.rail, 0.9)
+     : process.env.RAIL === 'dash' ? st(L.rail, '#b4b4ae', 2.6) + st(L.rail, '#f5f5f3', 1.1, ' stroke-dasharray="6 5"') + st(L.tram, '#b9b9b3', 0.6, ' opacity=".6"')
+     : process.env.RAIL === 'band' ? st(L.rail, '#bdbdb7', 2.8) + st(L.rail, '#f2f2ef', 0.9) + st(L.tram, '#b9b9b3', 0.6, ' opacity=".6"')
      : st(L.rail, C.railLine || '#b9b9b3', 1.3) + st(L.tram, C.railLine || '#b9b9b3', 0.6, ' opacity=".6"'))
   + st(L.major, C.majorEdge, mpx(16) + 2) + st(L.major, C.major, mpx(16));
 // no labels file → names from the data: stations, quarters, sights, the river; greedy, no overlaps, above the sheet
