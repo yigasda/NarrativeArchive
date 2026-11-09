@@ -358,7 +358,8 @@ ${archiveOnly ? `TIMES\n${CORE_TIMES}` : `${CORE_CLOCK_FIRST}\n${CORE_TIMES}`}
 WHAT A RECORD DOES
 - The story's situation, people and mood are material for every app, in "everyday" and in "records" alike.
 - A record may express and live the situation as it stands: a diary sick of the paperwork, a voice memo missing home, a text waiting for a parcel.
-- Record developments the messages establish, but do not invent new developments in the story through phone records: decisions, arrangements, steps toward resolving an ongoing matter, or outcomes.
+- Record developments the messages establish, but do not invent new developments in the story through phone records: decisions, arrangements, steps toward resolving an ongoing matter (going somewhere about it, papers gathered or sent, a call or a reply about it), or outcomes.
+- Phone data supplies existing details. An expected date does not establish that a story event has happened; an arrival the messages state or plainly imply does.
 - Complete how the owner expresses or records the situation, without moving the situation itself to its next step. This holds for every app: texts, searches, notes, mails, the diary and voice memos.
 - A trail tied to one message (with its "said") goes in "records"; the rest of the owner's day goes in "everyday". Never the same record in both.
 
@@ -368,12 +369,12 @@ EVERYDAY
 - The current story may affect their mood, location and availability.
 - Each day is a set of phone records, not the next chapter of the story. Personal routines and independent interests can recur across days.
 - About ${LIFE_A_DAY} records for a full waking day, scaled to the hours covered, each day the story skips too. Use the apps this owner would use, for example a photo of lunch, a search, a note, a mail, texts and calls by the person, a voice memo, a diary entry when the day ends${life ? ', an alarm, a saved file' : ''}.
-- For each person the owner had a scene with in NEW MESSAGES: at least one text between the two later these hours, in their own voices, in "records".
+- For each person the owner had a scene with in NEW MESSAGES: at least one text between the two later these hours, in their own voices.
 - Every app tells the same day: late texts go with ${life ? 'a late "late" and short sleep' : 'a late night'}; nothing on the phone while they sleep or are busy in a scene, though others' texts and calls come in.
 - People: the story's, PEOPLE AROUND (never someone they aren't in touch with now), and made-up people of their own life, named for where they live; no new relative or partner. Relationship words only as the story uses them. Someone new texted or called gets a "contact".
 
 THE STORY
-- Every scene in these messages ("scene" records) and its trail on the phone.
+- Every scene in these messages ("scene" records) and its trail in "records": where it happened (a "visit") and what the phone kept from it.
 - Scenes leave a trail without saying so, for instance a text after a fight, a photo of dinner, a search before a trip. A story record holds what the messages show or plainly imply, details made up to fit.
 - A plan goes in the calendar and hasn't happened yet.${wallet ? ' A ticket goes in the wallet, never in the calendar; a reservation or an appointment still goes in the calendar.' : ''} Never a booking, trip or purchase the story doesn't have.
 
@@ -381,7 +382,6 @@ STORY RECORDS
 - Return to NEW MESSAGES and ARCHIVE FOR THESE MESSAGES for the scenes and their phone records.
 - "said" identifies the source; everything the record asserts about that event must remain consistent with what the source establishes.
 - Keep unfinished matters unfinished: no next action, decision, arrangement, deadline or outcome the messages don't establish. This holds for every app: texts, searches, notes, the diary.
-- Phone data supplies existing details. An expected date does not establish that a story event has happened; an arrival the messages state or plainly imply does.
 - Generated everyday records are not evidence that a story event happened.
 
 THE APPS

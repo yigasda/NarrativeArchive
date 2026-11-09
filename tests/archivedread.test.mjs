@@ -806,7 +806,8 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.match(on, /Use the apps this owner would use, for example a photo of lunch, a search, a note, a mail, texts and calls by the person, a voice memo, a diary entry when the day ends, an alarm, a saved file\./);
     assert.match(on, /The diary is the owner's day: it goes in "everyday" on its day\.\n/);
     assert.match(on, /- Complete how the owner expresses or records the situation, without moving the situation itself to its next step\. This holds for every app: texts, searches, notes, mails, the diary and voice memos\./);
-    assert.match(on, /- Record developments the messages establish, but do not invent new developments in the story through phone records: decisions, arrangements, steps toward resolving an ongoing matter, or outcomes\./);
+    assert.match(on, /- Record developments the messages establish, but do not invent new developments in the story through phone records: decisions, arrangements, steps toward resolving an ongoing matter \(going somewhere about it, papers gathered or sent, a call or a reply about it\), or outcomes\.\n- Phone data supplies existing details\. An expected date does not establish/);
+    assert.match(on, /trail in "records": where it happened \(a "visit"\) and what the phone kept from it\./);
     assert.match(on, /A trail tied to one message \(with its "said"\) goes in "records"; the rest of the owner's day goes in "everyday"\. Never the same record in both\./);
     assert.ok(on.indexOf('\nEVERYDAY\n') < on.indexOf('\nSTORY RECORDS\n') && on.indexOf('  "everyday": [{') < on.indexOf('  "records": [{'));
     assert.match(on, /- For each person the owner had a scene with in NEW MESSAGES: at least one text between the two later these hours, in their own voices/);
@@ -846,7 +847,7 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.match(on, /"everyday": the owner's own days, written first; "records": scenes and story records\./);
     // (the days' health and a habit after "everyday", on their own)
     assert.ok(on.indexOf('\n  "health": [{ "date": the day they woke, "already"') > on.indexOf('\n  "everyday": {') && on.includes('\n  "usual": { "weight"'));
-    assert.match(on, /- Every scene in these messages \("scene" records\) and its trail on the phone\.\n/);
+    assert.match(on, /- Every scene in these messages \("scene" records\) and its trail in "records"/);
     assert.ok(!data.coreSystem({ life: true }).includes('\nWEATHER\n'));
     assert.ok(!plain.includes('\nHEALTH\n') && !plain.includes('\nSCREEN TIME\n') && plain.includes('\nIN THEIR OWN WORDS'));
     // (no old shape left in it)
@@ -1153,7 +1154,7 @@ test('life records that answer a scene ("scene" its id) go on it and the day\'s 
     // (they are the scene's: on its event)
     assert.ok(c.p.sync.events.bar);
     assert.match(T.sys, /\"everyday\": \[\{ \"date\": \"MM-DD\", \"records\": \[\{ \"type\": one of the ITEMS types but \"scene\", \"profile\" and \"visit\", and the fields of its type in ITEMS \}\] \}\] \(one entry a day, in order\)/);
-    assert.match(T.sys, /at least one text between the two later these hours, in their own voices, in "records"\./);
+    assert.match(T.sys, /at least one text between the two later these hours, in their own voices\.\n/);
 });
 
 test('the answer\'s "everyday" lists: each app the owner\'s own life, on its scene when it answers one; counted as life', async () => {
