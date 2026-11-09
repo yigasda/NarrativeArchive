@@ -43,17 +43,21 @@ const stationBox = (x, y, w, h, ang = 0) => `<g transform="rotate(${f(ang)} ${f(
 const poi = (x, y, glyph) => `<g transform="translate(${f(x)} ${f(y)})"><circle r="8.5" fill="#fff" stroke="${C.edge}" stroke-width="1"/><path d="${glyph}" fill="none" stroke="${C.poi}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" transform="translate(-6 -6) scale(.5)"/></g>`;
 const G = { church: 'M12 2v6M9 5h6M5 22V12l7-4 7 4v10M10 22v-5h4v5', shrine: 'M3 6h18M5 9h14M7 9v13M17 9v13M4 4l16 0', tower: 'M12 2l3 20H9zM10 9h4M9.4 14h5.2', park: 'M12 3l5 8h-3l4 6H6l4-6H7zM12 17v4', museum: 'M3 9l9-5 9 5M5 9v9M9 9v9M15 9v9M19 9v9M3 20h18', shop: 'M5 8h14l-1.2 12H6.2zM9 8V6a3 3 0 0 1 6 0v2', bridge: 'M3 16h18M5 16c2-6 12-6 14 0M8 16v-3M16 16v-3' };
 
-// ---- 일본 · 시부야: 골짜기에 모인 철도, 잘게 쪼갠 골목 패치(각도가 제각각), 굽은 큰길, 스크램블
+const flow = require('./flow.js');
+// blend street directions without flips: streets repeat every 90°, so blend the angle ×4 as a vector
+const mix = (ws) => { let cx = 0, cy = 0; for (const [w, a] of ws) { cx += w * Math.cos(4 * a); cy += w * Math.sin(4 * a); } return Math.atan2(cy, cx) / 4; };
+const inEll = (x, y, cx, cy, rx, ry) => ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 < 1;
+// ---- 일본 · 시부야: 골짜기로 휘어 드는 골목이 서서히 방향을 바꾸며 이어지고, 철도 네 줄이 역으로 모여요
 function shibuya() {
-  const r = rng('渋谷'); let o = `<rect width="${W}" height="${H}" fill="${C.land}"/>`;
-  // patches of narrow lanes, each turned its own way, like the hills around the valley
-  const patches = [[-30, -40, 210, 260, -14], [180, -60, 260, 250, 9], [-40, 250, 230, 340, 4], [200, 230, 240, 360, -21]];
-  for (const [x, y, w, h, a] of patches) { const cx = x + w / 2, cy = y + h / 2; o += clip(`M${x} ${y}h${w}v${h}h-${w}Z`, `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${C.land}"/>` + blocks(r, cx, cy, a, 22, 15, 4.2, x - 80, x + w + 80, y - 80, y + h + 80, 0.94, 2) + gridLines(cx, cy, a, 22, 15, 4.2, x - 80, x + w + 80, y - 80, y + h + 80, 2)); }
-  // a shrine wood on the hill (Meiji Jingu side) and a small park
+  const r = rng('渋谷'); let o = `<rect width="${W}" height="${H}" fill="${C.built}"/>`;
+  const sx = 214, sy = 276;
+  const field = (x, y) => { const d = Math.hypot(x - sx, y - sy), toward = Math.atan2(sy - y, sx - x);
+    return mix([[Math.min(1, 70 / (d + 1)), toward], [1, -0.25 + 0.45 * Math.sin(x / 150) + 0.3 * Math.cos(y / 170)]]); };
+  const block = (x, y) => inEll(x, y, 40, 40, 96, 76) || inEll(x, y, 330, 470, 36, 28) || inEll(x, y, sx, sy, 40, 30);
+  const { houses, streets } = flow({ W, H, field, block, sep: 24, r, C, f });
   o += `<path d="${parkBlob(r, 40, 40, 90, 70)}" fill="${C.park}"/>` + trees(r, 40, 40, 90, 70, 40) + `<path d="${parkBlob(r, 330, 470, 34, 26)}" fill="${C.park}"/>`;
-  // the big roads bending through the valley (Meiji-dōri, Route 246, Dōgenzaka)
+  o += houses + way(streets, 2.1);
   o += big(curve([[150, -20], [170, 120], [188, 250], [200, 380], [214, 580]]), 7.5) + big(curve([[-20, 330], [120, 300], [196, 286], [300, 300], [410, 340]]), 8.5) + big(curve([[-20, 210], [80, 230], [190, 278]]), 5.5);
-  // four rail lines into the valley station, crossing at angles
   o += rail(curve([[232, -20], [226, 150], [214, 280], [206, 420], [200, 580]]), 3.2) + rail(curve([[244, -20], [238, 150], [226, 280], [218, 420], [212, 580]]), 3.2)
      + rail(curve([[-20, 262], [100, 266], [214, 274], [410, 250]]), 3) + rail(curve([[410, 176], [300, 220], [230, 270]]), 2.6);
   o += stationBox(186, 252, 64, 46, -6) + `<path d="M196 302l10 -8M206 302l-10 -8M201 296v12M195 300h12" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>`;
@@ -61,36 +65,27 @@ function shibuya() {
   o += label(218, 246, '渋谷駅', 12, 700, '#5b4f6b') + label(120, 150, '神南', 11) + label(92, 410, '道玄坂', 11) + label(300, 410, '桜丘町', 11) + label(310, 140, '宮益坂', 11) + label(52, 92, '代々木公園', 10, 600, '#6b8a5e');
   return o;
 }
-// ---- 독일 · 프랑크푸르트 중앙역: 막다른 역으로 부채꼴로 모이는 선로, 역 앞 바둑판(Bahnhofsviertel), 옛 성벽 자리 링(Anlagenring) 공원,
-// 링 안 구시가의 휘어진 길과 광장, 남쪽의 강(Main)과 다리
+// ---- 독일 · 프랑크푸르트: 역 앞은 반듯한 바둑판, 성벽 자리 공원 링 안에서는 길이 성당 광장 쪽으로 모이며 휘고, 남쪽엔 강
 function frankfurt() {
-  const r = rng('Frankfurt'); let o = `<rect width="${W}" height="${H}" fill="${C.land}"/>`;
-  // the river along the south, one band with a bank on each side, the far bank's blocks
-  const top = [[-30, 468], [80, 456], [200, 462], [300, 448], [420, 432]], bot = [[420, 486], [300, 500], [200, 508], [80, 504], [-30, 516]];
-  o += `<path d="${curve(top)} L${bot[0][0]} ${bot[0][1]} ${curve(bot).replace(/^M[^C]*/, '')} Z" fill="${C.water}"/>`;
-  o += clip(`M-30 ${f(518)} ${curve([[-30, 518], [80, 506], [200, 510], [300, 502], [420, 488]]).replace(/^M[^C]*/, '')} V600 H-30Z`, blocks(r, 200, 560, 2, 26, 18, 5, -40, 440, 490, 620, 0.9) + gridLines(200, 560, 2, 26, 18, 5, -40, 440, 490, 620, 2.2));
-  // the old town inside the ring: an oval park ring, curved lanes inside, a cathedral square
-  const ring = curve([[220, 170], [330, 150], [400, 240], [380, 400], [260, 446], [190, 380], [180, 260]], true);
-  o += `<path d="${ring}" fill="${C.park}"/>`;
-  const inner = curve([[230, 186], [326, 170], [384, 246], [366, 388], [262, 430], [204, 374], [196, 264]], true);
-  // the old town: small patches of crooked blocks at their own angles, three lanes running to the cathedral square
-  let old = `<path d="${inner}" fill="${C.built}"/>`;
-  for (const [x, y, w, h, a] of [[190, 160, 110, 140, 12], [290, 150, 120, 150, -18], [180, 290, 120, 170, -7], [290, 290, 120, 170, 23]]) { const cx = x + w / 2, cy = y + h / 2; old += clip(`M${x} ${y}h${w}v${h}h-${w}Z`, blocks(r, cx, cy, a, 15, 11, 3.4, x - 60, x + w + 60, y - 60, y + h + 60, 0.95, 2) + gridLines(cx, cy, a, 15, 11, 3.4, x - 60, x + w + 60, y - 60, y + h + 60, 1.8)); }
-  const lanes = `M210 270Q250 300 296 334M300 176Q292 260 296 334M372 400Q330 370 296 334M240 420Q270 380 296 334`;
-  o += clip(inner, old + way(lanes, 2.6));
-  o += `<path d="${parkBlob(r, 296, 334, 18, 14, 8)}" fill="${C.plaza}" stroke="${C.edge}"/>`;
-  // the ring road round the park ring, and the boulevard from the station into town
-  o += big(ring, 6.5) + big(curve([[130, 220], [180, 248], [200, 262]]), 6.5);
-  o += clip('M-20 -20 H420 V150 L330 150 L220 170 L196 150 L70 150 L70 186 L-20 186Z', blocks(r, 200, 60, -8, 28, 22, 5, -60, 460, -60, 200, 0.9) + gridLines(200, 60, -8, 28, 22, 5, -60, 460, -60, 200, 2.2));
-  o += clip('M-20 320 L62 306 L62 440 L-20 452Z', blocks(r, 20, 380, 4, 22, 20, 5, -40, 80, 300, 470, 0.9) + gridLines(20, 380, 4, 22, 20, 5, -40, 80, 300, 470, 2));
-  // Bahnhofsviertel: a strict grid between the station and the ring
-  o += clip('M70 150 L196 150 L196 440 L70 440Z', `<rect x="70" y="150" width="130" height="290" fill="${C.land}"/>` + blocks(r, 130, 300, 0, 26, 30, 5, 70, 200, 150, 440, 0.96, 2) + gridLines(130, 300, 0, 26, 30, 5, 70, 200, 150, 440, 2.4));
-  // the terminus: tracks fanning in from the west into one big hall
-  let fan = ''; for (let i = 0; i < 9; i++) { const yy = 196 + i * 12; fan += `M-20 ${f(yy + (i - 4) * 16)}C20 ${f(yy + (i - 4) * 10)} 40 ${f(yy)} 66 ${f(yy)}`; }
-  o += `<path d="${fan}" fill="none" stroke="${C.rail}" stroke-width="2.4"/>` + `<rect x="62" y="186" width="30" height="120" rx="3" fill="${C.station}" stroke="${C.stationEdge}" stroke-width="1.2"/>` + `<path d="M64 200h26M64 230h26M64 260h26M64 290h26" stroke="${C.stationEdge}"/>`;
-  o += big(curve([[200, 462], [214, 430], [230, 400]]), 4.5) + way('M310 446 L318 500 M150 458 L146 506', 4);
-  o += poi(296, 334, G.church) + poi(240, 486, G.museum) + poi(350, 470, G.bridge);
-  o += label(78, 178, 'Hauptbahnhof', 11.5, 700, '#5b4f6b') + label(134, 360, 'Bahnhofsviertel', 10.5) + label(300, 300, 'Altstadt', 11) + label(330, 200, 'Innenstadt', 10.5) + label(200, 484, 'Main', 11, 600, '#5a84ad') + label(150, 548, 'Sachsenhausen', 10.5);
+  const r = rng('Frankfurt'); let o = `<rect width="${W}" height="${H}" fill="${C.built}"/>`;
+  const dx = 296, dy = 330, ring = (x, y) => ((x - 292) / 104) ** 2 + ((y - 300) / 150) ** 2;
+  const riverY = x => 470 + 10 * Math.sin(x / 70) - x * 0.06;
+  const field = (x, y) => { const g = ring(x, y), w = Math.max(0, Math.min(1, (1.25 - g) * 2.2)), toward = Math.atan2(dy - y, dx - x);
+    return mix([[w, toward], [1 - w, 0.02], [x > 330 && y < 150 ? 0.6 : 0, -0.14]]); };
+  const inRing = (x, y) => { const g = ring(x, y); return g > 0.88 && g < 1.08; };
+  const block = (x, y) => inRing(x, y) || (y > riverY(x) - 4 && y < riverY(x) + 36) || (x > 58 && x < 96 && y > 182 && y < 310) || (x < 62 && y > 170 && y < 320) || inEll(x, y, dx, dy, 16, 12);
+  const { houses, streets } = flow({ W, H, field, block, sep: 25, r, C, f });
+  const ringD = curve(Array.from({ length: 24 }, (_, k) => { const a = k / 24 * 6.283; return [292 + Math.cos(a) * 104 * 0.98, 300 + Math.sin(a) * 150 * 0.98]; }), true);
+  const top = Array.from({ length: 9 }, (_, i) => { const x = -30 + i * 56; return [x, riverY(x) - 2]; }), bot = Array.from({ length: 9 }, (_, i) => { const x = 418 - i * 56; return [x, riverY(x) + 34]; });
+  o += `<path d="${curve(top)} L${f(bot[0][0])} ${f(bot[0][1])} ${curve(bot).replace(/^M[^C]*/, '')} Z" fill="${C.water}"/>`;
+  o += `<path d="${ringD}" fill="none" stroke="${C.park}" stroke-width="22"/>` + houses + way(streets, 2.2);
+  o += `<path d="${parkBlob(r, dx, dy, 18, 14, 8)}" fill="${C.plaza}" stroke="${C.edge}"/>`;
+  o += big(curve(Array.from({ length: 24 }, (_, k) => { const a = k / 24 * 6.283; return [292 + Math.cos(a) * 104 * 1.1, 300 + Math.sin(a) * 150 * 1.06]; }), true), 6);
+  o += big(curve([[96, 246], [140, 248], [186, 258]]), 6.5) + big(curve([[200, riverY(200) - 30], [208, riverY(208) + 10], [214, riverY(214) + 50]]), 4.5) + way(`M320 ${f(riverY(320) - 6)} L324 ${f(riverY(324) + 40)}M140 ${f(riverY(140) - 6)} L138 ${f(riverY(138) + 40)}`, 4);
+  let fan = ''; for (let i = 0; i < 9; i++) { const yy = 196 + i * 12; fan += `M-20 ${f(yy + (i - 4) * 16)}C20 ${f(yy + (i - 4) * 10)} 40 ${f(yy)} 62 ${f(yy)}`; }
+  o += `<path d="${fan}" fill="none" stroke="${C.rail}" stroke-width="2.4"/>` + `<rect x="60" y="186" width="34" height="120" rx="3" fill="${C.station}" stroke="${C.stationEdge}" stroke-width="1.2"/>` + `<path d="M62 200h30M62 230h30M62 260h30M62 290h30" stroke="${C.stationEdge}"/>`;
+  o += poi(dx, dy, G.church) + poi(240, 520, G.museum) + poi(352, 470, G.bridge);
+  o += label(78, 176, 'Hauptbahnhof', 11.5, 700, '#5b4f6b') + label(140, 360, 'Bahnhofsviertel', 10.5) + label(300, 290, 'Altstadt', 11) + label(330, 200, 'Innenstadt', 10.5) + label(200, 482, 'Main', 11, 600, '#5a84ad') + label(150, 548, 'Sachsenhausen', 10.5) + label(160, 70, 'Westend', 10.5);
   return o;
 }
 // ---- 한국 · 강남역: 넓은 대로가 큰 격자를 만들고, 그 안은 휘어진 골목 덩어리, 뒤로 산 등고선, 대로 밑 지하철
