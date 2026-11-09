@@ -4,7 +4,7 @@
 // voice table (p.koVoice: how each person sounds in Korean), so every translation reads alike; the translator adds a
 // person it decides, the user can change one
 
-import { koGaps, refreshUndoAfter } from './phonedata.js';
+import { aroundBlock, koGaps, refreshUndoAfter } from './phonedata.js';
 import { askTranslator, glossaryEntries, glossaryIn } from './translate.js';
 import { getMeta, hasChat } from './core.js';
 import { parseJson } from './phoneparse.js';
@@ -14,12 +14,13 @@ Translate what a character's phone shows into natural Korean, so that all of it 
 
 YOU GET
 - OWNER: whose phone it is.
+- PEOPLE AROUND (sometimes): the people in the owner's life, who they are to the owner and where things stand.
 - VOICES (sometimes): how each person sounds in Korean in texts and comments, as "Name: style". Always follow it.
 - GLOSSARY (sometimes): names and terms, written exactly this way.
 - LINES: numbered, each "[app · who → to]" and its words. "self" is the owner writing for themselves.
 
 VOICE
-- Texts and comments: each person in the same voice they have everywhere else, as VOICES shows; without it, as the original suggests.
+- Texts and comments: each person in the same voice they have everywhere else, as VOICES shows; without it, as the original and who they are to each other (PEOPLE AROUND) suggest.
 - Everything else (the owner's own notes, diary, calendar and the like, mails, posts) reads as its original does. VOICES is not for it.
 - Lines that read alike in the original read alike in Korean.
 
@@ -45,6 +46,7 @@ function inputOf(p, chunk) {
     const voices = voiceRows(p), gloss = hasChat() ? glossaryIn(glossaryEntries(getMeta()), chunk.map(g => g.x[g.f]).join('\n')) : [];
     return [
         `[OWNER]\n${p.owner || 'me'}`,
+        aroundBlock(p),
         voices.length ? `[VOICES]\n${voices.map(v => `- ${who(v)}: ${v.style}`).join('\n')}` : '',
         gloss.length ? `[GLOSSARY]\n${gloss.map(e => `- ${e.src} = ${e.ko}`).join('\n')}` : '',
         `[LINES]\n${chunk.map((g, i) => `${i + 1}: [${g.app} · ${g.who} → ${g.to}] ${JSON.stringify(String(g.x[g.f]))}`).join('\n')}`,
