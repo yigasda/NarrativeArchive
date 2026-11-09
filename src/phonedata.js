@@ -3593,7 +3593,17 @@ export function koGaps(p, { all = false } = {}) {
     }
     for (const x of p?.photos || []) add(x, 'caption', 'ko', 'photo caption');
     for (const [app, xs] of [['note', p?.notes], ['diary', p?.diary], ['voice memo', p?.voice]]) for (const x of xs || []) { add(x, 'title', 'kt', `${app} title`); add(x, 'text', 'ko', app); }
-    for (const x of p?.searches || []) add(x, 'q', 'ko', 'search');
+    // (a search and the web it opened: the answer, the results, the questions, each page written so far)
+    const web = (o, depth = 0) => {
+        if (!o || typeof o !== 'object' || depth > 6) return;
+        if (Array.isArray(o)) { for (const y of o) web(y, depth + 1); return; }
+        add(o, 'title', 'kt', 'web'); add(o, 'text', 'ko', 'web');
+        for (const [k, v] of Object.entries(o)) if (v && typeof v === 'object' && !['nav', 'steps', 'pic', 'marks'].includes(k)) web(v, depth + 1);
+    };
+    for (const x of p?.searches || []) {
+        add(x, 'q', 'ko', 'search');
+        web(x.answer); for (const q of x.questions || []) add(q, 'q', 'ko', 'web'); web(x.results);
+    }
     for (const x of p?.events || []) add(x, 'title', 'ko', 'calendar');
     for (const x of p?.posts || []) { add(x, 'text', 'ko', 'post', own, 'followers'); add(x, 'photo', 'pko', 'post photo'); for (const c of x.comments || []) add(c, 'text', 'ko', 'comment', c.from || 'someone', own); }
     for (const x of p?.mails || []) { add(x, 'subject', 'ks', 'mail subject', x.from || x.sender || 'sender', own); add(x, 'text', 'ko', 'mail', x.from || x.sender || 'sender', own); }
