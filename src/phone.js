@@ -347,6 +347,7 @@ export async function openPhone(who = null) {
         }
         if (!view.startsWith('thread:') || view !== msgView) { msgHeld = null; msgPick = null; msgView = view; }
         if (view !== 'setvoice' && !voiceBusy) voicePick = null;
+        if (view === 'setvoice') voiceFill(p);
         if (view !== 'setvoiceadd' && !voiceBusy) voiceAdd = new Set();
         const top = keep ? $root.find('.na_ph_body, .ax_scroll').scrollTop() : 0;
         // a screen that can't be drawn says why (and in the console), instead of leaving the phone blank or on another screen
@@ -1243,6 +1244,20 @@ export async function openPhone(who = null) {
             if (!l || !p.koVoice?.includes(row)) return; // (the row object itself: edited again, it is a new one)
             row.label = l; await saveMeta(); if (!phoneClosed && phone() === p) drawPhone(true);
         }).catch(err => console.warn('[narrative-archive] voice label', err));
+    };
+    // the first time 말투 opens (each phone, once a session): every row written by hand without a label asks for one, all
+    // in one request; a failure leaves them as they are
+    const voiceFilled = new WeakSet();
+    const voiceFill = p => {
+        if (!p || voiceFilled.has(p)) return; voiceFilled.add(p);
+        const rows = (Array.isArray(p.koVoice) ? p.koVoice : []).filter(v => v && v.by !== 'model' && String(v.style || '').trim() && !v.label).slice(0, 40);
+        if (!rows.length) return;
+        const was = rows.map(v => v.style);
+        labelVoices(rows.map(v => ({ who: String(v.who ?? v.from ?? '').trim(), style: v.style }))).then(async ls => {
+            let n = 0;
+            rows.forEach((v, i) => { if (ls[i] && p.koVoice?.includes(v) && v.style === was[i] && !v.label) { v.label = ls[i]; n++; } });
+            if (n) { await saveMeta(); if (!phoneClosed && phone() === p) drawPhone(true); }
+        }).catch(err => console.warn('[narrative-archive] voice labels', err));
     };
     const voiceSet = async (p, k, style) => {
         const v = p.koVoice[k], w = String(v?.who ?? v?.from ?? '').trim(), row = { who: w, style, by: 'user' };
