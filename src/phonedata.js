@@ -362,7 +362,7 @@ STEP 1 · SCENES
 
 STEP 2 · SITUATIONS
 1. List every matter left open in NEW MESSAGES, ARCHIVE FOR THESE MESSAGES, STORY NOW${wallet ? ', PHONE NOW and ORDERS AND TICKETS' : ' and PHONE NOW'}: a parcel, a request, a plan, a blocked account, a repair, a debt, a question.
-2. "known": only what these give, in their words. "open": what they leave unknown (reasons, outcomes, amounts, durations, what really happened). Anything in OWNER DOESN'T KNOW is "open".
+2. "known": only what these give, in their words. "open": what they leave unknown (reasons, outcomes, amounts, durations, places, what really happened). Anything in OWNER DOESN'T KNOW is "open".
 3. "state": planned, sent, waiting, blocked, done, cancelled or unknown. Only NEW MESSAGES change it. A passing date, an eta or a natural next step never does.${wallet ? ' An order takes its status from ORDERS AND TICKETS.' : ''}
 4. What each state allows on the phone:
    planned: the plan, reminders, looking forward, worrying. Not: it happening, its outcome.

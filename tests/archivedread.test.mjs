@@ -812,7 +812,7 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     // (STEP 1)
     assert.match(on, /3\. "with": only people physically in the same place as the owner\. Not people mentioned, remembered, texted or called\./);
     // (STEP 2: where things stand, and what each state allows)
-    assert.match(on, /"known": only what these give, in their words\. "open": what they leave unknown \(reasons, outcomes, amounts, durations, what really happened\)\. Anything in OWNER DOESN'T KNOW is "open"\./);
+    assert.match(on, /"known": only what these give, in their words\. "open": what they leave unknown \(reasons, outcomes, amounts, durations, places, what really happened\)\. Anything in OWNER DOESN'T KNOW is "open"\./);
     assert.match(on, /Only NEW MESSAGES change it\. A passing date, an eta or a natural next step never does\./);
     assert.match(on, /   sent: tracking checks, waiting, asking when\. Not: arrival, opening, photos, wearing, thanks, even on or after the eta\./);
     assert.match(on, /   blocked: complaints, worry, living around it\. Not: any step to resolve it \(documents, visits, mails, inquiries, procedure searches, prep memos\)\./);
