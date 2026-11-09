@@ -669,9 +669,12 @@ export function setDate(p, now, m = null) {
 // first, with 사람 추가; the translator's (by: 'model') under it, its names a little grey. A row opens the alert to edit
 // (and becomes 소망's); slid left, 삭제
 export const voiceList = p => (Array.isArray(p?.koVoice) ? p.koVoice : []).map((v, i) => ({ who: String(v?.who ?? v?.from ?? '').trim(), style: String(v?.style || '').trim(), model: v?.by === 'model', i })).filter(v => v.who);
+// the list shows the style up to its first comma / full stop (docs/mockups/phone-voice short 2) and "외 N개" for the rest, so a long style stays one line
+export const voiceParts = st => String(st || '').split(/[,.;!?\n，。、；！？·…]+/).map(x => x.trim()).filter(Boolean);
+const voiceShort = st => { const ps = voiceParts(st); return `<span class="ax_p ax_kvp">${ps.length ? `${esc(ps[0])}${ps.length > 1 ? ` <span class="ax_kvm">외 ${ps.length - 1}개</span>` : ''}` : '말투 적기'}</span>`; };
 export function setVoice(p, now) {
     const rows = voiceList(p), mine = rows.filter(v => !v.model), auto = rows.filter(v => v.model);
-    const row = v => swipeRow('kovoice', v.i, `<div role="button" tabindex="0" class="ax_rw na_ph_kvrow" data-i="${v.i}">${axLetter(v.who, 36)}<span class="ax_tx"><span class="ax_n${v.model ? ' ax_kvauto' : ''}">${esc(v.who)}</span><span class="ax_p">${esc(v.style || '말투 적기')}</span></span>${axChev}</div>`);
+    const row = v => swipeRow('kovoice', v.i, `<div role="button" tabindex="0" class="ax_rw na_ph_kvrow" data-i="${v.i}">${axLetter(v.who, 36)}<span class="ax_tx"><span class="ax_n${v.model ? ' ax_kvauto' : ''}">${esc(v.who)}</span>${voiceShort(v.style)}</span>${axChev}</div>`);
     return `${axBar(p, now)}
       ${axTop(axCb('set'))}
       <div class="ax_scroll">${axH1('말투', rows.length ? `${rows.length}명` : '')}

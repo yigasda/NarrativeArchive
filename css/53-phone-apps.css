@@ -22,6 +22,7 @@
 .ax .ax_dyfind { display: grid; place-items: center; padding: 0; }
 /* 설정 › 말투: the translator's names a little grey */
 .ax .ax_n.ax_kvauto { color: #6b7380; --axfg: #6b7380; }
+.ax .ax_p.ax_kvp { -webkit-line-clamp: 1; } .ax .ax_kvm { color: #a9b0ba; --axfg: #a9b0ba; }
 .ax_diary .ax_find { margin-top: 4px; }
 .ax_card { margin: 0 14px 12px; border-radius: 22px; --axr: 22px; background: #fff; box-shadow: 0 1px 2px rgba(22, 27, 34, 0.04), 0 8px 24px rgba(22, 27, 34, 0.05); overflow: hidden; flex: none}
 .ax_sec { margin: 6px 26px 8px; font-size: 12.5px; --axfs: 12.5px; font-weight: 600; color: #6b7380; --axfg: #6b7380; letter-spacing: 0.02em; --axls: 0.02em; flex: none}
