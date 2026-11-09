@@ -837,7 +837,7 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.match(on, /incoming texts and calls may arrive/);
     // (rules the rewrite had dropped, back: what the owner doesn't know, a record about an order, notes and memos whole, a diary on a day not shown, late texts)
     assert.ok(on.includes("and OWNER DOESN'T KNOW (never on the phone as known). And OWNER."));
-    assert.ok(on.includes('- Note: the owner\'s form, length, shorthand, spelling and languages.') && !on.includes('full personal content') && on.includes('from the day the story shows or, on a day it doesn\'t, from their life;'));
+    assert.ok(on.includes('- Note: the owner\'s form, length, shorthand, spelling and languages.') && !on.includes('full personal content') && on.includes('- Diary: their experience and feelings at natural length; never a list of events or a summary.'));
     assert.ok(on.includes('Late texts agree with screen time and sleep.') && plain.includes('Late texts agree with a late night.'));
     assert.match(on, /No new relative or partner; relationship labels only from the story;/);
     assert.equal(on.split('5. Diary: one entry for a day that ends in these hours or a scene that stays with them, on that day.').length, 2);

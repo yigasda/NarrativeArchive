@@ -106,7 +106,7 @@
       · YOU GET의 OWNER DOESN'T KNOW "(never on the phone as known)" (PROMPT-RULES 4번 규칙)
       · ORDERS AND TICKETS "a record about one keeps its item, dates and status"
       · 음성 메모 "in the archive and chat" (메모 · 음성의 "full personal content"는 되살렸다가 뺌: 다른 줄이 받쳐 줌, 소망 결정)
-      · 일기 "from the day the story shows or, on a day it doesn't, from their life"
+      · (일기 "안 보인 날은 삶에서"도 되살렸다가 뺌: STEP 4 · situations가 받쳐 줌, 소망 결정)
       · EVERYDAY 1번 "Late texts agree with screen time and sleep / a late night"
       · 복구로 돌아온 회차도 번역(koRun)
       일부러 뺀 것(소망 결정)은 그대로: DO NOT CONTINUE, "plainly implies", "not story facts", 장면 사람 문자 강제, 3명 이상, Texts short, 한국어 칸, advances. 약 3,640토큰.

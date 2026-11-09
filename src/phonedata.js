@@ -403,7 +403,7 @@ STEP 5 · EACH APP
 - Note: the owner's form, length, shorthand, spelling and languages.
 - Mail: whatever would really land in their inbox from their life, accounts, hobbies and habits.
 - Calendar: fixed commitments only. Post: only if they post.${life ? ' Alarm, file: change with their life.' : ''}
-- Diary: their experience and feelings at natural length, from the day the story shows or, on a day it doesn't, from their life; never a list of events or a summary.
+- Diary: their experience and feelings at natural length; never a list of events or a summary.
 - Voice memo: spoken, not written: the way they talk in the archive and chat, with pauses (…), restarts and half sentences, at a moment alone (after a fight, on the way somewhere, late at night). 20 to 90 seconds; "sec" to fit; "place" where they were. Never the diary told again.${life ? `
 
 HEALTH
