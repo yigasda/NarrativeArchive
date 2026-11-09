@@ -2,7 +2,7 @@
 // node docs/mockups/phone-map/osm/osmmap.js <data.json> <out.html> <lat> <lon> <metersAcross> [labels.json]
 const fs = require('fs');
 const [, , src, out, lat0s, lon0s, spanS, labelsSrc] = process.argv;
-const lat0 = +lat0s, lon0 = +lon0s, FX = process.env.FX ?? 'BCD';   // FX: A 큰 건물 색 · B 땅 쓰임 색 · C 동네마다 축척 · D 건물 그림자
+const lat0 = +lat0s, lon0 = +lon0s, FX = process.env.FX ?? (process.env.STYLE === 'pretty' ? 'BC' : 'BCD');   // FX: A 큰 건물 색 · B 땅 쓰임 색 · C 동네마다 축척 · D 건물 그림자
 const C = { land: '#f3f0ea', built: '#ebe7df', park: '#d4e8c9', forest: '#c3dcb5', water: '#b6d4ef', road: '#ffffff', edge: '#dad4c9', major: '#fde7a3', majorEdge: '#e3c77c',
   rail: '#a9a49b', label: '#6f7681', plaza: '#efe6d2', bld: '#e0dbd0', foot: '#e6e1d7',
   mark: '#d5cab6', markStation: '#d3d4d6', resi: '#f0ece5', shop: '#f3e3d6', works: '#e3e3df', railyard: '#e4e2dc', school: '#f3e9c9', shadow: '#bdb4a4' };
@@ -31,6 +31,7 @@ if (FX.includes('C')) {
   let n = 0; for (const e of d.elements) if (e.tags && e.tags.building && e.geometry) { const g = e.geometry[0], x = (g.lon - lon0) * mx, y = (g.lat - lat0) * my; if (Math.abs(x) < 500 && Math.abs(y) < 500) n++; }
   span = Math.max(1000, Math.min(1550, 2600 - n * 1.1)); console.log('density', n, '→ span', Math.round(span));
 }
+if (process.env.STYLE === 'pretty') span *= 0.7;                 // closer, like the old maps: fewer, bigger blocks
 const W = 390, H = 560, k = W / span;                       // px per meter
 const P = (la, lo) => [W / 2 + (lo - lon0) * mx * k, H / 2 - (la - lat0) * my * k];
 const f = n => (Math.round(n * 10) / 10).toString();
@@ -92,7 +93,13 @@ const RAILKEEP = new Set();
     if (process.env.RAIL === 'old' || hit < 0.5) { RAILKEEP.add(w.e.id); for (const p of w.pts) { const k = key(p[0], p[1]); if (!grid.has(k)) grid.set(k, []); grid.get(k).push(p); } }
   } }
 const LC = Object.fromEntries(Object.keys(COVER).map(k => [k, '']));
-const L = { resi: '', shop: '', works: '', railyard: '', school: '', mark: '', markStation: '', shadow: {}, built: '', park: '', forest: '', water: '', plaza: '', bld: '', foot: '', minor: '', mid: '', major: '', rail: '', tram: '' };
+// STYLE=pretty: the real shapes drawn the way the old kit maps were — fewer lines, big charcoal names, icons, a station box, trees in parks
+const PRETTY = process.env.STYLE === 'pretty';
+const { ICON, pick } = require('./icons.js');
+const pxArea = ps => Math.abs(ps.reduce((s, p, i) => { const q = ps[(i + 1) % ps.length]; return s + p[0] * q[1] - q[0] * p[1]; }, 0)) / 2;
+const centre = ps => { const n = ps.length; return [ps.reduce((s, p) => s + p[0], 0) / n, ps.reduce((s, p) => s + p[1], 0) / n]; };
+const POIS = [], GREENS = [];
+const L = { station: '',  shop: '', works: '', railyard: '', school: '', mark: '', markStation: '', shadow: {}, built: '', park: '', forest: '', water: '', plaza: '', bld: '', foot: '', minor: '', mid: '', major: '', rail: '', tram: '' };
 const BUILT = /residential|commercial|retail|industrial|railway|construction|brownfield|education|emergency/;
 const GREEN = /grass|village_green|flowerbed|meadow|allotments|cemetery|greenhouse/;
 for (const e of d.elements) {
@@ -101,6 +108,12 @@ for (const e of d.elements) {
   if (t.building) {
     if (e.type !== 'way' || !closed) continue;
     const a = area(e);
+    if (PRETTY) {
+      const ps = pts(e.geometry), px = pxArea(ps);
+      { const ic = pick(t); if (ic && (t.name || t.wikidata)) POIS.push({ ic, at: centre(ps), pr: (t.wikidata ? 2 : 0) + (t.name ? 1 : 0) + Math.min(2, px / 400), name: t.name }); }
+      if (t.building === 'train_station' || t.railway === 'station') { L.station += a; continue; }
+      if (px < 40 * k * k * 2.2) continue;          // the tiny sheds and kiosks go
+    }
     // A: churches, stations, castles, halls and anything with its own wiki page stand out a little
     const big = /cathedral|church|chapel|castle|palace|train_station|government|museum|civic|public|university|stadium|transportation/.test(t.building) || t.historic || t.tourism || t.wikidata || t.amenity === 'place_of_worship';
     if (FX.includes('A') && big) { if (/train_station|transportation/.test(t.building) || t.railway) L.markStation += a; else L.mark += a; }
@@ -109,7 +122,9 @@ for (const e of d.elements) {
     if (FX.includes('D')) { const lv = parseFloat(t['building:levels']) || (t.height ? parseFloat(t.height) / 3 : 0) || 3, off = Math.min(7, 0.5 + lv * 3 * k * 0.3), b = (Math.round(off * 2) / 2).toFixed(1); L.shadow[b] = (L.shadow[b] || '') + a; }
     continue;
   }
-  if (t.leisure && /park|garden/.test(t.leisure)) { L.park += area(e); continue; }
+  if (PRETTY && e.geometry) { const ic = pick(t); if (ic && t.name && !t.building) { const ps = pts(e.geometry); POIS.push({ ic, at: centre(ps), pr: (t.wikidata ? 2 : 0) + 1 + Math.min(2, pxArea(ps) / 3000), name: t.name }); } }
+  if (PRETTY && e.type === 'node') { const ic = pick(t); if (ic && (t.name || t.wikidata)) POIS.push({ ic, at: P(e.lat, e.lon), pr: (t.wikidata ? 2.5 : 0) + 1, name: t.name }); }
+  if (t.leisure && /park|garden/.test(t.leisure)) { L.park += area(e); if (PRETTY && e.type === 'way' && e.geometry) GREENS.push(pts(e.geometry)); continue; }
   { const c = coverOf(t); if (c) { if (c === 'forest') L.forest += area(e); else LC[c] += area(e); continue; } }
   if (t.landuse && GREEN.test(t.landuse)) { L.park += area(e); continue; }
   if (t.landuse && BUILT.test(t.landuse)) {
@@ -127,8 +142,8 @@ for (const e of d.elements) {
   if (h) {
     if (/^(primary|trunk|motorway)(_link)?$/.test(h)) L.major += dl;
     else if (/^(secondary|tertiary)(_link)?$/.test(h)) L.mid += dl;
-    else if (/^(residential|unclassified|living_street|service|pedestrian|busway)$/.test(h)) L.minor += dl;
-    else if (/^(footway|path|cycleway|track)$/.test(h)) L.foot += dl;
+    else if (/^(residential|unclassified|living_street|pedestrian|busway)$/.test(h) || h === 'service' && (!PRETTY || t.name)) L.minor += dl;
+    else if (/^(footway|path|cycleway|track)$/.test(h) && !PRETTY) L.foot += dl;
   } else if (rw === 'rail' || rw === 'light_rail') {
     // RAIL=old keeps every track dashed; by default the yard tracks (sidings, spurs) vanish into the yard's face and the main lines are one thin line
     if (RAILKEEP.has(e.id)) L.rail += dl;
@@ -164,7 +179,17 @@ let svg = `<rect width="${W}" height="${H}" fill="${C.land}"/>`
      : (process.env.RAIL ?? 'dash') === 'dash' ? st(L.rail, '#b4b4ae', 2.6) + st(L.rail, '#f5f5f3', 1.1, ' stroke-dasharray="6 5"') + st(L.tram, '#b9b9b3', 0.6, ' opacity=".6"')
      : process.env.RAIL === 'band' ? st(L.rail, '#bdbdb7', 2.8) + st(L.rail, '#f2f2ef', 0.9) + st(L.tram, '#b9b9b3', 0.6, ' opacity=".6"')
      : st(L.rail, C.railLine || '#b9b9b3', 1.3) + st(L.tram, C.railLine || '#b9b9b3', 0.6, ' opacity=".6"'))
-  + st(L.major, C.majorEdge, mpx(16) + 2) + st(L.major, C.major, mpx(16));
+  + st(L.major, C.majorEdge, mpx(16) + 2) + st(L.major, C.major, mpx(16))
+  + (PRETTY ? prettyTop() : '');
+// trees in the parks, the station box, the icons — the old kit's pieces on the real shapes
+function prettyTop() {
+  let o = '', seed = 7; const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+  const inside = (x, y, ps) => { let c = false; for (let i = 0, j = ps.length - 1; i < ps.length; j = i++) { const [a, b] = ps[i], [u, v] = ps[j]; if ((b > y) !== (v > y) && x < (u - a) * (y - b) / (v - b) + a) c = !c; } return c; };
+  for (const ps of GREENS) { const A = pxArea(ps); if (A < 500) continue; const xs = ps.map(p => p[0]), ys = ps.map(p => p[1]), [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+    for (let n = Math.min(60, A / 220), i = 0, tries = 0; i < n && tries < n * 6; tries++) { const x = x0 + rnd() * (x1 - x0), y = y0 + rnd() * (y1 - y0); if (x < -10 || x > W + 10 || y < -10 || y > H + 10 || !inside(x, y, ps)) continue; o += `<circle cx="${f(x)}" cy="${f(y)}" r="${f(2 + rnd() * 2.4)}" fill="${C.tree || C.forest}"/>`; i++; } }
+  if (L.station) o += `<path d="${L.station}" fill="${C.station || '#d9d2c5'}" stroke="${C.stationEdge || '#c4bcae'}" stroke-width="1.2" fill-rule="evenodd"/>`;
+  return o;
+}
 // no labels file → names from the data: stations, quarters, sights, the river; greedy, no overlaps, above the sheet
 const CITY = /^(Berlin|München|Hamburg|Köln|Düsseldorf|Frankfurt \(Main\)|Frankfurt|Dresden|Heidelberg|Leipzig|Nürnberg)[\s-]+/;
 function autoLabels() {
@@ -187,9 +212,13 @@ function autoLabels() {
   }
   cand.sort((a, b) => b[0] - a[0]);
   const boxes = [], outL = [];
+  const M = process.env.MAIN;
+  if (M) { const nd = d.elements.find(e => e.type === 'node' && e.tags && e.tags.name === M && e.tags.place); let la = lat0 + 40 / (my * k), lo = lon0;
+    if (nd) { const [x, y] = P(nd.lat, nd.lon); if (x > 60 && x < W - 60 && y > 40 && y < 440) [la, lo] = [nd.lat, nd.lon]; }
+    const [x, y] = P(la, lo), w = M.length * 16 * 0.62 + 10; boxes.push([x - w / 2 - 10, y - 26, x + w / 2 + 10, y + 10]); seen.add(M); outL.push([la, lo, M, 16, 800, '#3a4048']); }
   for (const [pr, la, lo, n, sz, wt, col] of cand) {
     if (seen.has(n)) continue;
-    const [x, y] = P(la, lo), w = n.length * sz * 0.6 + 6, h = sz + 6;
+    const zs = PRETTY ? 1.25 : 1, [x, y] = P(la, lo), w = n.length * sz * zs * 0.6 + 6, h = sz * zs + 6;
     if (x - w / 2 < 6 || x + w / 2 > W - 6 || y - h < 14 || y > 486) continue;
     const b = [x - w / 2 - 8, y - h - 6, x + w / 2 + 8, y + 6];
     if (boxes.some(c => b[0] < c[2] && b[2] > c[0] && b[1] < c[3] && b[3] > c[1])) continue;
@@ -199,9 +228,28 @@ function autoLabels() {
   return outL;
 }
 const labels = labelsSrc ? JSON.parse(fs.readFileSync(labelsSrc, 'utf8')) : autoLabels();
+if (PRETTY) svg += prettyMarks(labels);
 for (const [la, lo, text, size = 11, wt = 600, col = C.label] of labels) {
   const [x, y] = P(la, lo);
+  if (PRETTY) { const big = size >= 11.5 || wt >= 700, first = text === labels[0][2], sz = first ? 16 : big ? 14 : 12, cl = col === '#5a84ad' ? '#4f7aa6' : big ? '#3f454d' : '#5a6069';
+    svg += `<text x="${f(x)}" y="${f(y)}" text-anchor="middle" font-family="-apple-system, 'Noto Sans KR', 'Hiragino Sans', sans-serif" font-size="${sz}" font-weight="${first || big ? 700 : 650}" fill="${first ? '#3a4048' : cl}" stroke="#fff" stroke-width="${first ? 4.2 : 3.6}" stroke-linejoin="round" paint-order="stroke">${text}</text>`; continue; }
   svg += `<text x="${f(x)}" y="${f(y)}" text-anchor="middle" font-family="-apple-system, 'Noto Sans KR', sans-serif" font-size="${size}" font-weight="${wt}" fill="${col}" stroke="${C.land}" stroke-width="3" paint-order="stroke" letter-spacing=".02em">${text}</text>`;
+}
+// icons: up to 7, landmarks first, spread out, clear of the names; a train badge by the main station
+function prettyMarks(labels) {
+  let o = ''; const taken = labels.map(([la, lo, n, sz]) => { const [x, y] = P(la, lo), w = n.length * 7.6 + 8; return [x - w / 2, y - 16, x + w / 2, y + 5]; });
+  const free = (x, y, r) => x > 14 && x < W - 14 && y > 16 && y < 480 && !taken.some(b => x + r > b[0] && x - r < b[2] && y + r > b[1] && y - r < b[3]);
+  const st = d.elements.find(e => e.type === 'node' && e.tags && e.tags.railway === 'station' && e.tags.station !== 'subway' && (() => { const [x, y] = P(e.lat, e.lon); return x > 20 && x < W - 20 && y > 30 && y < 470; })());
+  if (st) { let [x, y] = P(st.lat, st.lon); y -= 22; if (free(x, y, 9)) { taken.push([x - 12, y - 12, x + 12, y + 12]);
+    o += `<g transform="translate(${f(x)} ${f(y)})"><rect x="-9" y="-9" width="18" height="18" rx="5" fill="#5f6670"/><path d="${ICON.train}" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" transform="translate(-6 -6) scale(.5)"/></g>`; } }
+  const used = new Map(), pool = POIS.filter(p => p.ic !== 'train').sort((a, b) => b.pr - a.pr);
+  let n = 0;
+  for (const p of pool) { const [x, y] = p.at; if (!free(x, y, 11) || (used.get(p.ic) || 0) >= 2) continue;
+    if (taken.some(b => Math.hypot((b[0] + b[2]) / 2 - x, (b[1] + b[3]) / 2 - y) < 46 && b[2] - b[0] < 30)) continue;
+    taken.push([x - 11, y - 11, x + 11, y + 11]); used.set(p.ic, (used.get(p.ic) || 0) + 1);
+    o += `<g transform="translate(${f(x)} ${f(y)})"><circle r="9.5" fill="#fff" stroke="#d8d4cc" stroke-width="1"/><path d="${ICON[p.ic]}" fill="none" stroke="#8a7f73" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" transform="translate(-6.6 -6.6) scale(.55)"/></g>`;
+    if (++n >= 7) break; }
+  return o;
 }
 const css = `*{box-sizing:border-box;margin:0}body{background:#d9dce2;font-family:-apple-system,'Noto Sans KR',sans-serif;padding:24px;width:458px}
 .ph{width:390px;height:844px;border-radius:44px;border:9px solid #111;overflow:hidden;position:relative;background:#f4f5f7;box-sizing:content-box}.ph svg{display:block}
