@@ -162,5 +162,5 @@ button.na_cp3_sect { cursor: pointer; width: calc(100% - 8px); }
 .na_cp3_stats small { font-size: 11px; color: var(--na-dim); }
 .na_cp3_prev { padding: 10px 12px; border-radius: 12px; --axr: 12px; background: var(--na-card2); font-family: ui-monospace, var(--monoFontFamily, monospace); --axff: ui-monospace, var(--monoFontFamily, monospace); font-size: 11.5px; --axfs: 11.5px; line-height: 1.55; color: var(--na-mute); --axfg: var(--na-mute); white-space: pre-wrap; max-height: 120px; overflow: hidden}
 .na_cp3_note { display: block; margin: 12px 4px 0; font-size: 12px; --axfs: 12px; color: var(--na-dim); --axfg: var(--na-dim)}
-dialog.popup:has(.na_cp3) .popup-button-ok.disabled { opacity: 0.5; pointer-events: none; }
+dialog.popup:has(.na_cp3) .popup-button-ok.disabled { --k-op: 0.5; pointer-events: none; }
 
