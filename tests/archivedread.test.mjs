@@ -842,8 +842,8 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.match(on, /- Voice memo: spoken, not written: the way they talk in the chat/);
     assert.ok(on.includes('Post: only if they post. Alarm, file: change with their life.') && !plain.includes('Alarm, file:'));
     // (KEEPING IN STEP: a LIFE NOW alarm is not written again unless it changes)
-    assert.match(on, /- Nothing PHONE NOW or LIFE NOW holds is written again\. A text: only its new messages\. A note, mail, search, photo, diary or post: a new one only when it says something new\. A LIFE NOW alarm or file: not again unless it changes, then with its id in "already"\. A known scene: its id\. An edited message: the ids listed\./);
-    assert.ok(plain.includes('- Nothing PHONE NOW holds is written again. A text: only its new messages.'));
+    assert.match(on, /- Nothing PHONE NOW or LIFE NOW holds is written again, nor a near copy of it \(e\.g\. a note, list, mail or message with only a few words changed\)\. A text: only its new messages\. A note, mail, search, photo, diary or post: a new one only when it says something new\. A LIFE NOW alarm or file: not again unless it changes, then with its id in "already"\. A known scene: its id\. An edited message: the ids listed\./);
+    assert.ok(plain.includes('- Nothing PHONE NOW holds is written again, nor a near copy of it (e.g. a note, list, mail or message with only a few words changed). A text: only its new messages.'));
     assert.match(on, /Records of the owner's life fall between PHONE NOW's "now" and the answer's "now"\./);
     // (JSON: scenes, situations, records, everyday, then health and usual)
     const j = k => on.indexOf(`\n  "${k}": `);

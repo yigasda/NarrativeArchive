@@ -422,7 +422,7 @@ WEATHER
 - With new weather, also each saved city's "cond", "temp", "hi" and "lo".` : ''}
 
 KEEPING IN STEP
-- Nothing PHONE NOW${life ? ' or LIFE NOW' : ''} holds is written again. A text: only its new messages. A note, mail, search, photo, diary or post: a new one only when it says something new.${life ? ' A LIFE NOW alarm or file: not again unless it changes, then with its id in "already".' : ''} A known scene: its id. An edited message: the ids listed.
+- Nothing PHONE NOW${life ? ' or LIFE NOW' : ''} holds is written again, nor a near copy of it (e.g. a note, list, mail or message with only a few words changed). A text: only its new messages. A note, mail, search, photo, diary or post: a new one only when it says something new.${life ? ' A LIFE NOW alarm or file: not again unless it changes, then with its id in "already".' : ''} A known scene: its id. An edited message: the ids listed.
 
 LANGUAGE
 - Each text in the language its writer really uses, as long as that person really writes. No Korean translations: the app adds them.
