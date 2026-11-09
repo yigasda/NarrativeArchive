@@ -77,6 +77,20 @@ const coverOf = t => { const n = t.natural, u = t.landuse;
   if (u === 'allotments') return 'allot';
   if (u === 'cemetery') return 'grave';
   return null; };
+// rails: bundles of parallel tracks collapse to one line, lone tracks (a harbour line, a spur) stay.
+// greedy: main lines first, longest first; a track mostly within 30 m of an accepted one is dropped
+const RAILKEEP = new Set();
+{ const ways = d.elements.filter(e => e.type === 'way' && e.geometry && e.tags && /^(rail|light_rail)$/.test(e.tags.railway) && !(e.tags.tunnel && e.tags.tunnel !== 'no'));
+  const toM = g => g.map(p => [(p.lon - lon0) * mx, (p.lat - lat0) * my]);
+  const sample = ms => { const o = []; for (let i = 1; i < ms.length; i++) { const [a, b] = [ms[i - 1], ms[i]], n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 6)); for (let k = 0; k < n; k++) o.push([a[0] + (b[0] - a[0]) * k / n, a[1] + (b[1] - a[1]) * k / n]); } o.push(ms.at(-1)); return o; };
+  const len = ms => ms.reduce((s, p, i) => i ? s + Math.hypot(p[0] - ms[i - 1][0], p[1] - ms[i - 1][1]) : 0, 0);
+  const W8 = ways.map(e => { const ms = toM(e.geometry); return { e, pts: sample(ms), len: len(ms), main: !e.tags.service }; }).sort((a, b) => (b.main - a.main) || (b.len - a.len));
+  const grid = new Map(), cell = 30, key = (x, y) => Math.floor(x / cell) + ',' + Math.floor(y / cell);
+  const near = ([x, y]) => { for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) { const c = grid.get((Math.floor(x / cell) + i) + ',' + (Math.floor(y / cell) + j)); if (c) for (const [u, v] of c) if ((u - x) ** 2 + (v - y) ** 2 < cell * cell) return true; } return false; };
+  for (const w of W8) {
+    const hit = w.pts.filter(near).length / w.pts.length;
+    if (process.env.RAIL === 'old' || hit < 0.5) { RAILKEEP.add(w.e.id); for (const p of w.pts) { const k = key(p[0], p[1]); if (!grid.has(k)) grid.set(k, []); grid.get(k).push(p); } }
+  } }
 const LC = Object.fromEntries(Object.keys(COVER).map(k => [k, '']));
 const L = { resi: '', shop: '', works: '', railyard: '', school: '', mark: '', markStation: '', shadow: {}, built: '', park: '', forest: '', water: '', plaza: '', bld: '', foot: '', minor: '', mid: '', major: '', rail: '', tram: '' };
 const BUILT = /residential|commercial|retail|industrial|railway|construction|brownfield|education|emergency/;
@@ -117,7 +131,7 @@ for (const e of d.elements) {
     else if (/^(footway|path|cycleway|track)$/.test(h)) L.foot += dl;
   } else if (rw === 'rail' || rw === 'light_rail') {
     // RAIL=old keeps every track dashed; by default the yard tracks (sidings, spurs) vanish into the yard's face and the main lines are one thin line
-    if (process.env.RAIL === 'old' || !t.service) L.rail += dl;
+    if (RAILKEEP.has(e.id)) L.rail += dl;
   }
   else if (rw === 'tram') L.tram += dl;
 }
