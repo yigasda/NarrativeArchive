@@ -1,19 +1,14 @@
-// 지갑 표 뒤에 깔리는 무늬: 종류마다 다른 그림(viewBox 340×200, 오른쪽에 붙여 그려요). 시안 docs/mockups/phone-passes/,
-// 소망이 동그라미 친 것만 있어요. 종류마다 둘이고, 표 id로 둘 중 하나를 골라요(늘 같은 표는 같은 무늬).
-// 그림마다 층(옅고 진한 선 · 면), 은은한 빛 하나, 강조색 한 점을 두고, 글자가 있는 왼쪽으로 갈수록 사라져요(fade).
-// 같은 모양의 선은 한 path에 모아요(요소 수가 적어야 휴대폰 창이 가벼워요)
+// 지갑 표 뒤 무늬(viewBox 340×200, 오른쪽에 붙어요). 소망이 시안 2~13에서 동그라미 친 것만 있어요. 종류마다 하나~셋이고,
+// 표 id 글자 합으로 골라요(늘 같은 표는 같은 무늬, 이웃한 id끼리 번갈아요). null은 무늬 없는 모습
 const r1 = v => Math.round(v * 10) / 10;
 const S = (fg, op, w = 0.8) => `stroke="${fg}" stroke-opacity="${r1(op * 100) / 100}" fill="none" stroke-width="${w}"`;
-const F = (c, a) => `fill="${c}" fill-opacity="${r1(a * 100) / 100}"`;
+const F = (fg, a) => `fill="${fg}" fill-opacity="${r1(a * 1000) / 1000}"`;
+const P = (d, a) => `<path d="${d}" ${a}/>`;
 const range = (a, b, s = 1) => { const o = []; for (let v = a; s > 0 ? v < b : v > b; v += s) o.push(v); return o; };
-const cos = Math.cos, sin = Math.sin, PI = Math.PI;
-const P = (d, attrs) => `<path d="${d}" ${attrs}/>`;
-// a soft round light (radial gradient) and a fade from the left; u keeps the ids of one card apart from another's
-const glow = (u, n, cx, cy, r, c, a) => `<defs><radialGradient id="${u}${n}"><stop offset="0" stop-color="${c}" stop-opacity="${a}"/><stop offset="1" stop-color="${c}" stop-opacity="0"/></radialGradient></defs><circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#${u}${n})"/>`;
-const fade = (u, inner, from = 0.12, to = 0.5) => `<defs><linearGradient id="${u}f" x1="0" x2="1"><stop offset="${from}" stop-color="#fff" stop-opacity="0"/><stop offset="${to}" stop-color="#fff"/></linearGradient><mask id="${u}m"><rect x="-20" y="-20" width="400" height="260" fill="url(#${u}f)"/></mask></defs><g mask="url(#${u}m)">${inner}</g>`;
-const vgrad = (u, n, c, a0, a1) => `<defs><linearGradient id="${u}${n}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c}" stop-opacity="${a0}"/><stop offset="1" stop-color="${c}" stop-opacity="${a1}"/></linearGradient></defs>`;
-
-// ---- kept as chosen: flight (globe + route), membership (dots, hologram)
+const cos = Math.cos, sin = Math.sin, PI = Math.PI, D = PI / 180;
+const pt = (cx, cy, r, a) => [r1(cx + r * cos(a)), r1(cy + r * sin(a))];
+const M = ([x, y]) => `${x} ${y}`;
+// ---- kept: flight, membership
 const flight = (fg, op) => {
     const s = S(fg, op), cx = 270, cy = 150, r = 120;
     return range(0, 90, 15).map(a => `<ellipse cx="${cx}" cy="${cy}" rx="${r1(r * Math.abs(cos(a / 180 * PI)))}" ry="${r}" ${s}/>`).join('')
@@ -21,174 +16,130 @@ const flight = (fg, op) => {
         + `<path d="M140 70 Q240 30 330 95" ${S(fg, op * 2.2, 1.1)} stroke-dasharray="2 4"/><circle cx="140" cy="70" r="2.4" fill="${fg}" fill-opacity="${r1(op * 250) / 100}"/>`;
 };
 const dots = (fg, op) => range(0, 12).flatMap(c => range(0, 12).map(r => `<circle cx="${150 + c * 16}" cy="${12 + r * 16}" r="${r1((0.6 + (c + r) * 0.12) * 100) / 100}" fill="${fg}" fill-opacity="${r1(op * 160) / 100}"/>`)).join('');
-const holo = (fg, op, u) => `<defs><linearGradient id="${u}h" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd1f0"/><stop offset=".35" stop-color="#c4f2ff"/><stop offset=".7" stop-color="#d9ffc9"/><stop offset="1" stop-color="#fff1b8"/></linearGradient></defs><rect x="262" y="-10" width="46" height="230" fill="url(#${u}h)" fill-opacity=".28"/>`
-    + P(range(0, 12).map(i => `M${262 + i * 4} -10V220`).join(''), 'stroke="#fff" stroke-opacity=".12"');
+const holo = (fg, op, u) => `<defs><linearGradient id="${u}h" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd1f0"/><stop offset=".35" stop-color="#c4f2ff"/><stop offset=".7" stop-color="#d9ffc9"/><stop offset="1" stop-color="#fff1b8"/></linearGradient></defs><rect x="262" y="-10" width="46" height="230" fill="url(#${u}h)" fill-opacity=".28"/>` + range(0, 12).map(i => `<path d="M${262 + i * 4} -10 V220" stroke="#fff" stroke-opacity=".12"/>`).join('');
 
-// ---- train: speed lines into a lit vanishing point, a few long streaks in the accent
-const train = (fg, op, u, acc) => {
-    const vx = 330, vy = 92, ys = range(-80, 300, 12);
-    const lines = (pick, a, w) => P(ys.filter(pick).map(y => `M${vx} ${vy}L-20 ${y}`).join(''), S(fg, a, w));
-    return fade(u, glow(u, 'g', vx, vy, 70, acc, 0.35) + lines(() => true, op * 0.55, 0.6) + lines(y => Math.abs(y - vy) < 70, op * 0.9, 0.8)
-        + P([-30, 6, 44, 150, 196].map(y => `M${vx} ${vy}L-20 ${y}`).join(''), S(acc, 0.55, 1.2)) + `<circle cx="${vx}" cy="${vy}" r="3" fill="${acc}"/>`, 0.05, 0.55);
+// ---- each kind a finely built texture of its own, faded in from the left so the words stay clear
+const fadeIn = (u, inner) => `<defs><linearGradient id="${u}f" x1="0" x2="1"><stop offset=".3" stop-color="#fff" stop-opacity="0"/><stop offset=".62" stop-color="#fff"/></linearGradient><mask id="${u}m"><rect x="-20" y="-20" width="400" height="260" fill="url(#${u}f)"/></mask></defs><g mask="url(#${u}m)">${inner}</g>`;
+const Z = (fg, op, k = 1, w = 0.7) => S(fg, op * k, w);
+// train: the winged wheel of the railways, spoked wheel between two swept wings of five feathers each
+const train = (fg, op, u) => { const cx = 286, cy = 100;
+    let d = disc(cx, cy, 30) + disc(cx, cy, 24) + disc(cx, cy, 7) + disc(cx, cy, 3);
+    for (let i = 0; i < 10; i++) { const a = i * PI / 5; d += bar(...pt(cx, cy, 6, a), ...pt(cx, cy, 25, a), 2.6); }
+    for (const s of [-1, 1]) for (let k = 0; k < 5; k++) { const bx = cx + s * 27, by = cy - 16 + k * 7, tx = cx + s * (104 - k * 13), ty = cy - 38 + k * 9, mx = (bx + tx) / 2;
+        d += `M${bx} ${r1(by - 2.6)}Q${r1(mx)} ${r1(ty - 8)} ${r1(tx)} ${r1(ty)}Q${r1(mx + s * 6)} ${r1(ty + 6)} ${bx} ${r1(by + 2.6)}Z`; }
+    return emb(u, fg, `<path d="${d}"/>`); };
+// concert: a studio microphone, the capsule with its grille, the yoke, the stand and its base
+const rings = (fg, op, u) => { const cx = 290; let g = `M${cx - 26} 46a26 26 0 0 1 52 0V96a26 26 0 0 1 -52 0Z`;
+    for (let i = 0; i < 7; i++) g += `M${cx - 17} ${40 + i * 9}h34v3.2h-34Z`;
+    return emb(u, fg, `<path d="${g}"/><path d="M${cx - 36} 82v14a36 36 0 0 0 72 0v-14" fill="none" stroke="#000" stroke-width="4"/><path d="M${cx - 2} 132h4v34h-4ZM${cx - 30} 166h60a4 4 0 0 1 0 8h-60a4 4 0 0 1 0 -8Z"/>`); };
+// concert: a sound ribbon, many sine lines in shifted phase twisting into one band
+const spots = (fg, op, u) => fadeIn(u, range(0, 26).map(j => { const ph = j * 0.12; return `<path d="M${range(0, 61).map(i => { const x = 130 + i * 5, t = i / 60; return `${r1(x)} ${r1(100 + (42 * sin(t * PI * 2.2 + ph) + 10 * cos(t * PI * 5 + ph * 2)) * sin(t * PI))}`; }).join('L')}" ${Z(fg, op, 1, 0.5)}/>`; }).join(''));
+// hotel: a tufted headboard, quilted lines with a button at each crossing
+const windows = (fg, op, u) => { let d = '', dots = ''; for (let i = -8; i < 14; i++) d += `M${150 + i * 22} -10l120 220M${150 + i * 22} 210l120 -220`;
+    for (let r = 0; r < 12; r++) for (let c = 0; c < 14; c++) { const x = 150 + c * 22 + (r % 2 ? 11 : 0), y = -10 + r * 20.2; dots += `<circle cx="${r1(x)}" cy="${r1(y)}" r="1.3" ${F(fg, op * 1.8)}/>`; }
+    return fadeIn(u, P(d, Z(fg, op, 1, 0.5)) + dots); };
+// hotel: satin, fine pinstripes under one soft sheen
+const doors = (fg, op, u) => fadeIn(u, `<defs><linearGradient id="${u}s" x1="0" y1="0" x2="1" y2="1"><stop offset=".3" stop-color="${fg}" stop-opacity="0"/><stop offset=".55" stop-color="${fg}" stop-opacity="${r1(op * 0.7 * 100) / 100}"/><stop offset=".8" stop-color="${fg}" stop-opacity="0"/></linearGradient></defs><rect x="0" y="-10" width="400" height="220" fill="url(#${u}s)"/>` + P(range(0, 60).map(i => `M${130 + i * 4.5} -10V210`).join(''), Z(fg, op, 0.55, 0.4)));
+// match: a club crest, shield with an inner border, a star over a chevron, three small stars above
+const pitch = (fg, op, u) => { const sh = (x0, x1, y0, y1) => { const m = (x0 + x1) / 2; return `M${x0} ${y0}H${x1}V${y1 - 40}C${x1} ${y1 - 12} ${m + 16} ${y1 - 4} ${m} ${y1}C${m - 16} ${y1 - 4} ${x0} ${y1 - 12} ${x0} ${y1 - 40}Z`; };
+    const d = sh(244, 336, 44, 172) + sh(252, 328, 52, 162) + star(290, 92, 20, 8) + `M262 132L290 116L318 132V140L290 124L262 140Z` + star(266, 32, 6, 2.4) + star(290, 28, 7, 2.8) + star(314, 32, 6, 2.4);
+    return emb(u, fg, `<path d="${d}"/>`); };
+// match: the pitch seen from the stand, mown stripes in perspective with their fine edges
+const bowl = (fg, op, u) => { const vx = 300, vy = -60, x = (x0, y) => r1(vx + (x0 - vx) * (y - vy) / (210 - vy)); let st = '', ln = '';
+    for (let i = 0; i < 16; i++) { const a = 60 + i * 30, b = a + 30, y0 = 20; ln += `M${x(a, y0)} ${y0}L${a} 210`; if (i % 2) st += `M${x(a, y0)} ${y0}L${a} 210H${b}L${x(b, y0)} ${y0}Z`; }
+    return fadeIn(u, P(st, F(fg, 0.04)) + P(ln, Z(fg, op, 0.8, 0.5)) + P(`M${x(60, 20)} 20H${x(540, 20)}M${x(60, 90)} 90H${x(540, 90)}`, Z(fg, op, 1.3, 0.8)) + `<ellipse cx="${vx}" cy="90" rx="${r1((x(540, 90) - x(60, 90)) * 0.09)}" ry="9" ${Z(fg, op, 1.3, 0.8)}/>`); };
+// movie: a film reel, six windows round the hub, the strip running off it with its sprocket holes
+const beam = (fg, op, u) => { const cx = 282, cy = 90; let d = disc(cx, cy, 56) + disc(cx, cy, 9) + disc(cx, cy, 4);
+    for (let i = 0; i < 6; i++) { const [x, y] = pt(cx, cy, 32, i * PI / 3 + PI / 6); d += disc(x, y, 14); }
+    let s = `M${cx} ${cy + 56}H360V${cy + 78}H${cx}Z`; for (let i = 0; i < 8; i++) s += `M${cx + 6 + i * 10} ${cy + 59}h5v4h-5ZM${cx + 6 + i * 10} ${cy + 71}h5v4h-5Z`;
+    return emb(u, fg, `<path d="${d}"/><path d="${s}"/>`); };
+// movie: the festival laurel, two branches of paired leaves closing round a star
+const premiere = (fg, op, u) => { const cx = 290, cy = 100, R = 54; let d = star(cx, cy, 18, 7.5);
+    for (const s of [-1, 1]) { d += `M${M(pt(cx, cy, R - 1.2, PI / 2 + s * 0.28))}A${R - 1.2} ${R - 1.2} 0 0 ${s < 0 ? 1 : 0} ${M(pt(cx, cy, R - 1.2, PI / 2 + s * 2.35))}L${M(pt(cx, cy, R + 1.2, PI / 2 + s * 2.35))}A${R + 1.2} ${R + 1.2} 0 0 ${s < 0 ? 0 : 1} ${M(pt(cx, cy, R + 1.2, PI / 2 + s * 0.28))}Z`;
+        for (let k = 0; k < 9; k++) { const a = PI / 2 + s * (0.42 + k * 0.23), [x, y] = pt(cx, cy, R, a), tg = a + s * PI / 2, sz = 11 - k * 0.5;
+            for (const side of [-1, 1]) { const dir = tg + side * 0.55, [ex, ey] = [x + cos(dir) * sz * 2, y + sin(dir) * sz * 2], [mx, my] = [x + cos(dir) * sz, y + sin(dir) * sz], nx = -sin(dir) * sz * 0.38, ny = cos(dir) * sz * 0.38;
+                d += `M${r1(x)} ${r1(y)}Q${r1(mx + nx)} ${r1(my + ny)} ${r1(ex)} ${r1(ey)}Q${r1(mx - nx)} ${r1(my - ny)} ${r1(x)} ${r1(y)}Z`; } } }
+    return emb(u, fg, `<path d="${d}"/>`); };
+// museum: an isometric lattice, the floor of a gallery drawn in fine triangles
+const columns = (fg, op, u) => { let d = ''; const h = 16; for (let i = -20; i < 30; i++) d += `M${130 + i * h * 1.1547} -10l${r1(220 * 0.57735)} 220M${130 + i * h * 1.1547} 210l${r1(220 * 0.57735)} -220`; for (let y = -10; y < 214; y += h) d += `M130 ${y}H420`; return fadeIn(u, P(d, Z(fg, op, 0.8, 0.4))); };
+// museum: marble, veins branching in fine lines of a few weights
+const rosette = (fg, op, u) => { const vein = (x, y, a, n, w, k) => { let d = `M${x} ${y}`; for (let i = 0; i < n; i++) { a += sin(i * 1.7 + x) * 0.35; x += 9 * cos(a); y += 9 * sin(a); d += `L${r1(x)} ${r1(y)}`; } return P(d, Z(fg, op, k, w)); };
+    return fadeIn(u, vein(160, 200, -0.7, 40, 1.2, 1.6) + vein(240, 214, -1.1, 30, 0.7, 1.2) + vein(200, 150, -0.2, 30, 0.5, 0.9) + vein(300, 120, -1.4, 18, 0.5, 0.9) + vein(260, 200, -0.4, 22, 0.4, 0.7) + vein(330, 214, -1.8, 26, 0.9, 1.3) + vein(210, 90, -0.6, 26, 0.4, 0.6)); };
+// bus: the road ahead as a perspective grid running to the horizon
+const route = (fg, op, u) => { const vx = 300, vy = 40, ts = range(1, 14).map(k => vy + (210 - vy) * (k / 13) ** 1.9); return fadeIn(u, P(range(0, 23).map(i => `M${vx} ${vy}L${-140 + i * 40} 214`).join('') + ts.map(y => `M130 ${r1(y)}H420`).join(''), Z(fg, op, 0.8, 0.5)) + P(`M130 ${vy}H420`, Z(fg, op, 1.6, 0.8))); };
+// bus: a motorway flyover from above, lanes sweeping round in parallel curves, the dashes between them
+const lanes = (fg, op, u) => { const lane = k => `M130 ${190 - k * 9}C250 ${190 - k * 9} ${300 - k * 4} ${150 - k * 6} ${330 - k * 6} ${80 - k * 3}S${380 - k * 6} -10 ${420} ${-20 + k * 6}`;
+    return fadeIn(u, range(0, 12).map(k => P(lane(k), Z(fg, op, k % 4 === 0 ? 1.5 : 0.7, k % 4 === 0 ? 0.8 : 0.5) + (k % 4 === 2 ? ' stroke-dasharray="6 6"' : ''))).join('')); };
+// ferry: a ship's wheel, the rim, eight spokes running through to turned handles, the hub
+const waves = (fg, op, u) => { const cx = 290, cy = 100; let d = disc(cx, cy, 48) + disc(cx, cy, 40) + disc(cx, cy, 12) + disc(cx, cy, 5);
+    for (let i = 0; i < 8; i++) { const a = i * PI / 4; d += bar(...pt(cx, cy, 11, a), ...pt(cx, cy, 41, a), 4) + bar(...pt(cx, cy, 47, a), ...pt(cx, cy, 58, a), 4.5);
+        const [x, y] = pt(cx, cy, 66, a); d += `M${M(pt(cx, cy, 58, a + 0.1))}L${M(pt(cx, cy, 58, a - 0.1))}L${M(pt(x, y, 4.5, a - PI / 2))}A4.5 4.5 0 0 1 ${M(pt(x, y, 4.5, a + PI / 2))}Z`; }
+    return emb(u, fg, `<path d="${d}"/>`); };
+// ferry: water seen from above, swell drawn as many fine lines that ride over one another
+const depths = (fg, op, u) => fadeIn(u, range(0, 34).map(r => { const y0 = -10 + r * 7; return `<path d="M${range(0, 55).map(i => { const x = 130 + i * 5; return `${x} ${r1(y0 + 5 * sin(x * 0.035 + r * 0.45) + 3 * sin(x * 0.09 - r * 0.3))}`; }).join('L')}" ${Z(fg, op, r % 5 === 0 ? 1.2 : 0.6, 0.45)}/>`; }).join(''));
+// theater: a lyre, two curving arms, the crossbar, five strings and the base
+const arches = (fg, op, u) => { const cx = 290; let arms = '';
+    for (const s of [-1, 1]) arms += `M${cx + s * 10} 160C${cx + s * 40} 154 ${cx + s * 46} 116 ${cx + s * 34} 92C${cx + s * 26} 76 ${cx + s * 30} 56 ${cx + s * 44} 46`;
+    const strings = range(0, 5).map(i => `M${cx - 12 + i * 6} 72V156`).join('');
+    return emb(u, fg, `<path d="${arms}" fill="none" stroke="#000" stroke-width="6" stroke-linecap="round"/><path d="M${cx - 44} 66h88v6h-88Z"/><path d="${strings}" fill="none" stroke="#000" stroke-width="1.4"/><path d="M${cx - 26} 156h52a5 5 0 0 1 0 10h-52a5 5 0 0 1 0 -10Z"/>`
+        + `<path d="${disc(cx - 44, 44, 5) + disc(cx + 44, 44, 5)}"/>`); };
+// theater: the proscenium, an arch on two fluted pilasters with a keystone, over the stage step
+const diamonds = (fg, op, u) => { const cx = 282, w = 42, top = 100;
+    let d = `M${cx - w - 10} 168V${top}A${w + 10} ${w + 10} 0 0 1 ${cx + w + 10} ${top}V168H${cx + w}V${top}A${w} ${w} 0 0 0 ${cx - w} ${top}V168Z` + `M${cx - 8} ${top - w - 12}h16l-3 16h-10Z`;
+    for (const s of [-1, 1]) { const x = cx + s * (w + 5); d += `M${x - 9} 168h18v4h-18Z`; for (let i = 0; i < 3; i++) d += `M${x - 5 + i * 4} ${top + 6}h1.6v${158 - top}h-1.6Z`; }
+    return emb(u, fg, `<path d="${d}"/><path d="M${cx - w - 22} 174h${2 * w + 44}v6h-${2 * w + 44}Z"/>`); };
+// theme park: a swirl, many fine lines turning out from one point like a spinning ride
+const wheel = (fg, op, u) => { const cx = 320, cy = 96; return fadeIn(u, range(0, 36).map(j => { const a0 = j * PI / 18; return `<path d="M${range(0, 41).map(i => { const t = i / 40, r = 6 + t * 190, a = a0 + t * 2.6; return M(pt(cx, cy, r, a)); }).join('L')}" ${Z(fg, op, 0.7, 0.45)}/>`; }).join('')); };
+// theme park: a scalloped seal, a ring inside and a star at its heart, like the stamp on a day pass
+const coaster = (fg, op, u) => { const cx = 290, cy = 100; let o = '';
+    for (let i = 0; i < 28; i++) { const a = i * PI / 14, b = (i + 1) * PI / 14; o += `${i ? '' : `M${M(pt(cx, cy, 60, a))}`}Q${M(pt(cx, cy, 68, (a + b) / 2))} ${M(pt(cx, cy, 60, b))}`; }
+    return emb(u, fg, `<path d="${o}Z${disc(cx, cy, 50)}${disc(cx, cy, 46)}${star(cx, cy, 30, 12)}"/>`); };
+// ---- embossed emblems: one carefully built mark per kind, pressed into the card (a lit edge, a shadowed edge, a faint face)
+const emb = (u, fg, inner) => `<defs><filter id="${u}x" x="-20%" y="-20%" width="140%" height="140%"><feFlood flood-color="${fg}" flood-opacity=".06"/><feComposite in2="SourceAlpha" operator="in" result="F"/>`
+    + `<feOffset in="SourceAlpha" dx=".9" dy=".9" result="a"/><feComposite in="SourceAlpha" in2="a" operator="out" result="ha"/><feFlood flood-color="#fff" flood-opacity=".3"/><feComposite in2="ha" operator="in" result="H"/>`
+    + `<feOffset in="SourceAlpha" dx="-.9" dy="-.9" result="b"/><feComposite in="SourceAlpha" in2="b" operator="out" result="sa"/><feFlood flood-color="#000" flood-opacity=".34"/><feComposite in2="sa" operator="in" result="L"/>`
+    + `<feMerge><feMergeNode in="F"/><feMergeNode in="H"/><feMergeNode in="L"/></feMerge></filter></defs><g filter="url(#${u}x)" fill="#000" fill-rule="evenodd">${inner}</g>`;
+const disc = (cx, cy, r) => `M${r1(cx - r)} ${cy}a${r} ${r} 0 1 0 ${r1(2 * r)} 0a${r} ${r} 0 1 0 ${r1(-2 * r)} 0Z`;
+const star = (cx, cy, R, r, n = 5, rot = -PI / 2) => `M${range(0, n * 2).map(i => M(pt(cx, cy, i % 2 ? r : R, rot + i * PI / n))).join('L')}Z`;
+const bar = (x0, y0, x1, y1, w) => { const dx = x1 - x0, dy = y1 - y0, Ln = Math.hypot(dx, dy), nx = -dy / Ln * w / 2, ny = dx / Ln * w / 2; return `M${r1(x0 + nx)} ${r1(y0 + ny)}L${r1(x1 + nx)} ${r1(y1 + ny)}L${r1(x1 - nx)} ${r1(y1 - ny)}L${r1(x0 - nx)} ${r1(y0 - ny)}Z`; };
+// theater: a harlequin of tall diamonds, every other one shaded (chosen from mockup 10)
+const harlequin = (fg, op) => {
+    const w = 20, h = 32; let fill = '';
+    for (let r = -1; r < 8; r++) for (let c = 0; c < 14; c++) { if ((r + c) % 2) continue; const x = 150 + c * w + (r % 2 ? w / 2 : 0) - (r % 2 ? 0 : 0), y = r * h / 2; fill += `M${x} ${y}l${w / 2} ${h / 2}l-${w / 2} ${h / 2}l-${w / 2} -${h / 2}Z`; }
+    const grid = range(-12, 14).map(i => `M${150 + i * w} -10l${r1(224 * w / h * 0.5 * 2 / 1)} 224M${150 + i * w} 214l${r1(224 * w / h)} -224`).join('');
+    return P(fill, F(fg, 0.05)) + P(grid, S(fg, op, 0.6));
 };
-// ---- concert: rings of sound, alternate rings dotted, a light at the source, a few notes of light on the rings
-const rings = (fg, op, u, acc) => {
-    const cx = 300, cy = 100, rs = range(14, 250, 12);
-    return fade(u, glow(u, 'g', cx, cy, 80, acc, 0.4)
-        + rs.map((r, i) => `<circle cx="${cx}" cy="${cy}" r="${r}" ${S(fg, op * (1.3 - i / rs.length), i % 3 === 2 ? 1.4 : 0.7)}${i % 2 ? ' stroke-dasharray="1 4" stroke-linecap="round"' : ''}/>`).join('')
-        + [[36, 200], [60, 250], [96, 214], [132, 236]].map(([r, a]) => `<circle cx="${r1(cx + r * cos(a * PI / 180))}" cy="${r1(cy + r * sin(a * PI / 180))}" r="2.2" fill="${acc}" fill-opacity=".85"/>`).join('')
-        + `<circle cx="${cx}" cy="${cy}" r="4" fill="${acc}"/>`, 0.15, 0.6);
+// museum: a ceiling rosette of lens petals (chosen from mockup 10)
+const rosetteP = (fg, op) => {
+    const cx = 300, cy = 118, petal = (a, r0, r1_, w) => { const [x0, y0] = pt(cx, cy, r0, a), [x1, y1] = pt(cx, cy, r1_, a), m = (r0 + r1_) / 2, [ax, ay] = pt(cx, cy, m, a - w), [bx, by] = pt(cx, cy, m, a + w); return `M${x0} ${y0}Q${ax} ${ay} ${x1} ${y1}Q${bx} ${by} ${x0} ${y0}Z`; };
+    const outer = range(0, 16).map(i => petal(i * PI / 8, 16, 74, 0.2)).join(''), inner = range(0, 8).map(i => petal(i * PI / 4 + PI / 8, 12, 46, 0.32)).join('');
+    const beads = range(0, 60).map(i => { const [x, y] = pt(cx, cy, 83, i * PI / 30); return `<circle cx="${x}" cy="${y}" r="1.1" ${F(fg, op * 1.8)}/>`; }).join('');
+    return P(outer, `${F(fg, 0.03)} ${S(fg, op, 0.7)}`) + P(inner, S(fg, op * 1.3, 0.7)) + beads + [78, 88, 92, 100].map((r, i) => `<circle cx="${cx}" cy="${cy}" r="${r}" ${S(fg, op * (i === 2 ? 1.3 : 0.8), 0.7)}/>`).join('')
+        + `<circle cx="${cx}" cy="${cy}" r="10" ${S(fg, op * 1.3)}/><circle cx="${cx}" cy="${cy}" r="5" ${F(fg, op * 1.6)}/>`;
 };
-// ---- concert: two spotlights, each a soft cone with fine edges and dust in the light, a pool on the floor
-const spots = (fg, op, u, acc) => {
-    const cone = (x, to, n) => vgrad(u, n, acc, 0.42, 0) + P(`M${x - 6} -10L${to - 56} 210H${to + 56}L${x + 6} -10Z`, `fill="url(#${u}${n})"`) + P(`M${x - 6} -10L${to - 56} 210M${x + 6} -10L${to + 56} 210`, S(fg, op * 1.2));
-    const dust = [[236, 70], [252, 110], [228, 140], [300, 60], [284, 120], [310, 150], [262, 170], [242, 96]];
-    return fade(u, cone(230, 250, 'a') + cone(330, 280, 'b') + `<ellipse cx="266" cy="190" rx="90" ry="12" ${F(acc, 0.16)}/>`
-        + dust.map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="${i % 3 ? 0.9 : 1.4}" fill="#fff" fill-opacity="${i % 2 ? 0.35 : 0.6}"/>`).join(''), 0.2, 0.6);
+// ferry: a sea chart, the coast hatched, depth lines, soundings, the fairway (chosen from mockup 10)
+const seaChart = (fg, op, u) => {
+    const coast = 'M250 -10C268 20 300 34 318 56C336 78 352 88 372 92C392 96 404 104 420 112';
+    const sh = (k, s) => coast.replace(/(-?\d+\.?\d*) (-?\d+\.?\d*)/g, (_, x, y) => `${r1(+x - k * 7)} ${r1(+y + k * 9 * s)}`);
+    const land = `${coast}L420 -10Z`;
+    const hatch = range(0, 30).map(i => `M${250 + i * 7} -10l-40 60`).join('');
+    const nums = [['4', 268, 74], ['9', 300, 96], ['13', 236, 104], ['21', 312, 138], ['28', 258, 158], ['35', 350, 168], ['17', 368, 130]];
+    return `<defs><clipPath id="${u}c"><path d="${land}"/></clipPath></defs>` + P(land, F(fg, 0.05)) + `<g clip-path="url(#${u}c)">${P(hatch, S(fg, op * 0.7, 0.6))}</g>` + P(coast, S(fg, op * 1.6, 0.9))
+        + range(1, 10).map(k => P(sh(k, 1 + k * 0.08), S(fg, op * (k % 3 === 0 ? 1.1 : 0.6), k % 3 === 0 ? 0.8 : 0.6))).join('')
+        + nums.map(([t, x, y]) => `<text x="${x}" y="${y}" font-size="7" font-style="italic" font-family="Georgia, serif" ${F(fg, op * 2.6)}>${t}</text>`).join('')
+        + P('M180 206C232 172 262 150 344 126', `${S(fg, op * 1.8, 0.9)} stroke-dasharray="3 3"`) + `<circle cx="344" cy="126" r="2.6" ${F(fg, op * 2.5)}/>`;
 };
-// ---- hotel: the facade at night, floors and windows, a few rooms lit warm
-const windows = (fg, op, u, acc) => {
-    const lit = new Set(['1,2', '3,1', '4,4', '6,3', '2,5', '5,6', '7,2']);
-    let o = '', w = '';
-    for (let c = 0; c < 8; c++) for (let r = 0; r < 7; r++) {
-        const x = 186 + c * 20, y = 18 + r * 24;
-        if (lit.has(`${c},${r}`)) o += `<rect x="${x}" y="${y}" width="11" height="15" rx="5.5" ${F(acc, 0.55)}/>`;
-        else w += `M${x + 5.5} ${y}a5.5 5.5 0 0 1 5.5 5.5V${y + 15}H${x}V${y + 5.5}a5.5 5.5 0 0 1 5.5 -5.5Z`;
-    }
-    return fade(u, P(w, S(fg, op * 0.9, 0.7)) + o + P(range(0, 8).map(r => `M176 ${r1(38 + r * 24)}H350`).join(''), S(fg, op * 0.45)) + P('M176 8H350M176 12H350', S(fg, op * 1.2, 1)), 0.25, 0.6);
-};
-// ---- hotel: a doorway inside doorways, each frame a step deeper, a lamp over the door
-const doors = (fg, op, u, acc) => {
-    const fr = range(0, 7).map(i => [230 - i * 13, 34 - i * 12, 80 + i * 26, 40 + i * 13]);
-    return fade(u, fr.reverse().map(([x, y, w, r], i) => `<rect x="${x}" y="${y}" width="${w}" height="220" rx="${r}" ${F('#3a2e1e', 0.018 * (i + 1))} ${S(fg, op * (0.6 + i * 0.08))}/>`).join('')
-        + glow(u, 'g', 270, 46, 34, acc, 0.5) + `<circle cx="270" cy="46" r="3" fill="${acc}"/><circle cx="296" cy="140" r="2.6" ${F(acc, 0.8)}/>`, 0.2, 0.6);
-};
-// ---- match: the pitch from above, mown stripes, crisp lines, the ball on the spot
-const pitch = (fg, op, u, acc) => {
-    const x0 = 160, x1 = 470, y0 = 14, y1 = 186, mx = 270;
-    const stripes = range(0, 10).filter(i => i % 2).map(i => `<rect x="${x0 + i * 31}" y="${y0}" width="31" height="${y1 - y0}" ${F('#fff', 0.035)}/>`).join('');
-    const lines = `M${x0} ${y0}H${x1}V${y1}H${x0}ZM${mx} ${y0}V${y1}M${x0} 62H${x0 + 40}V138H${x0}M${x0} 84H${x0 + 14}V116H${x0}`;
-    return fade(u, stripes + P(lines, S(fg, op * 1.3, 0.9)) + `<circle cx="${mx}" cy="100" r="36" ${S(fg, op * 1.3, 0.9)}/>` + P(`M${x0 + 40} 82A22 22 0 0 1 ${x0 + 40} 118`, S(fg, op * 1.3, 0.9))
-        + glow(u, 'g', mx, 100, 30, acc, 0.35) + `<circle cx="${mx}" cy="100" r="3.2" fill="${acc}"/>`, 0.1, 0.5);
-};
-// ---- match: the stadium bowl, tiers getting lighter outward, floodlights on the rim, the pitch inside
-const bowl = (fg, op, u, acc) => {
-    const ring = i => [190 - i * 13, 66 - i * 11, 160 + i * 26, 68 + i * 22, 34 + i * 11];
-    let o = '';
-    for (let i = 7; i >= 0; i--) { const [x, y, w, h, r] = ring(i); o += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" ${F('#fff', i % 2 ? 0.025 : 0.04)} ${S(fg, op * (1.2 - i * 0.08))}/>`; }
-    const [x, y, w, h] = ring(0);
-    o += `<rect x="${x + 10}" y="${y + 10}" width="${w - 20}" height="${h - 20}" rx="10" ${F(acc, 0.18)}/>` + P(`M${x + w / 2} ${y + 10}V${y + h - 10}`, S(fg, op * 1.4));
-    const [X, Y, W, H, R] = ring(7);
-    o += [[X + R * 0.3, Y + R * 0.3], [X + W - R * 0.3, Y + R * 0.3], [X + R * 0.3, Y + H - R * 0.3], [X + W - R * 0.3, Y + H - R * 0.3]].map(([a, b], i) => glow(u, `l${i}`, r1(a), r1(b), 16, acc, 0.5) + `<circle cx="${r1(a)}" cy="${r1(b)}" r="2.2" fill="${acc}"/>`).join('');
-    return fade(u, o, 0.15, 0.55);
-};
-// ---- movie: the projector's beam, a soft cone with fine rays and dust, the lens lit
-const beam = (fg, op, u, acc) => {
-    const lx = 345, ly = -5;
-    return fade(u, `<defs><linearGradient id="${u}b" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${acc}" stop-opacity=".38"/><stop offset="1" stop-color="${acc}" stop-opacity="0"/></linearGradient></defs>`
-        + P(`M${lx} ${ly}L90 210H330Z`, `fill="url(#${u}b)"`) + P(range(0, 16).map(i => `M${lx} ${ly}L${100 + i * 15} 210`).join(''), S(fg, op * 0.7, 0.6))
-        + [[300, 50], [270, 90], [250, 130], [310, 110], [220, 170], [286, 150], [330, 70]].map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="${i % 2 ? 0.9 : 1.3}" fill="#fff" fill-opacity="${i % 3 ? 0.4 : 0.7}"/>`).join('')
-        + glow(u, 'g', lx, ly, 40, acc, 0.6) + `<circle cx="${lx - 6}" cy="${ly + 6}" r="5" fill="${acc}"/>`, 0.15, 0.55);
-};
-// ---- movie: a premiere's starburst, tapered rays, stars of a few sizes, the light in the middle
-const premiere = (fg, op, u, acc) => {
-    const cx = 280, cy = 96, rays = range(0, 24).map(a => {
-        const t = a * PI / 12, w = 0.035, L = a % 2 ? 120 : 160;
-        return `M${r1(cx + 14 * cos(t - w))} ${r1(cy + 14 * sin(t - w))}L${r1(cx + L * cos(t))} ${r1(cy + L * sin(t))}L${r1(cx + 14 * cos(t + w))} ${r1(cy + 14 * sin(t + w))}Z`;
-    }).join('');
-    const star = (x, y, s, a) => P(`M${x} ${y - s}C${x + s * 0.12} ${y - s * 0.12} ${x + s * 0.12} ${y - s * 0.12} ${x + s} ${y}C${x + s * 0.12} ${y + s * 0.12} ${x + s * 0.12} ${y + s * 0.12} ${x} ${y + s}C${x - s * 0.12} ${y + s * 0.12} ${x - s * 0.12} ${y + s * 0.12} ${x - s} ${y}C${x - s * 0.12} ${y - s * 0.12} ${x - s * 0.12} ${y - s * 0.12} ${x} ${y - s}Z`, F('#fff', a));
-    return fade(u, P(rays, F(fg, op * 0.6)) + glow(u, 'g', cx, cy, 60, acc, 0.45) + `<circle cx="${cx}" cy="${cy}" r="5" fill="${acc}"/>`
-        + star(212, 40, 7, 0.55) + star(330, 156, 9, 0.5) + star(244, 160, 4, 0.45) + star(318, 34, 5, 0.6) + star(196, 120, 3.5, 0.4), 0.15, 0.55);
-};
-// ---- museum: a classical front, pediment, fluted columns on steps, a lamp-lit doorway
-const columns = (fg, op, u, acc) => {
-    const xs = range(0, 5).map(i => 176 + i * 40);
-    const fl = xs.flatMap(x => range(0, 5).map(j => `M${x + 3 + j * 3.5} 62V166`)).join('');
-    return fade(u, P('M162 52L268 14L374 52Z', `${F('#3a2e1e', 0.05)} ${S(fg, op * 1.2, 0.9)}`) + P('M162 52H374M166 58H370', S(fg, op * 1.2, 0.9))
-        + xs.map(x => `<rect x="${x}" y="60" width="20" height="108" ${F('#3a2e1e', 0.04)}/>`).join('') + P(fl, S(fg, op * 0.8, 0.6))
-        + P('M156 168H380M150 176H386M144 184H392', S(fg, op * 1.2, 0.9)) + glow(u, 'g', 286, 120, 26, acc, 0.35) + `<circle cx="268" cy="34" r="3" ${F(acc, 0.9)}/>`, 0.2, 0.6);
-};
-// ---- museum: a rosette, petals filled by turns, a bead ring outside, the heart in the accent
-const rosette = (fg, op, u, acc) => {
-    const cx = 275, cy = 100, pet = range(0, 12).map(a => `<circle cx="${r1(cx + 40 * cos(a * PI / 6))}" cy="${r1(cy + 40 * sin(a * PI / 6))}" r="40" ${a % 2 ? F('#3a2e1e', 0.03) : 'fill="none"'} ${S(fg, op)}/>`).join('');
-    return fade(u, pet + `<circle cx="${cx}" cy="${cy}" r="82" ${S(fg, op * 1.2, 0.9)}/><circle cx="${cx}" cy="${cy}" r="90" ${S(fg, op * 0.7)}/>`
-        + range(0, 36).map(a => `<circle cx="${r1(cx + 86 * cos(a * PI / 18))}" cy="${r1(cy + 86 * sin(a * PI / 18))}" r="1.2" ${F(fg, op * 1.8)}/>`).join('')
-        + `<circle cx="${cx}" cy="${cy}" r="9" ${F(acc, 0.85)}/><circle cx="${cx}" cy="${cy}" r="14" ${S(acc, 0.6)}/>`, 0.2, 0.6);
-};
-// ---- bus: a network map, other lines faint, this one in the accent, stops as rings, the end stop bigger
-const route = (fg, op, u, acc) => {
-    const mine = [[196, 156], [226, 156], [248, 132], [284, 132], [306, 106], [350, 106]];
-    const other = 'M180 70H230L262 102V190M214 20L246 52H300L330 82V200M280 160H330L352 138';
-    return fade(u, P(other, `${S(fg, op * 1.2, 3)} stroke-linecap="round" stroke-linejoin="round"`)
-        + P(`M${mine.map(q => q.join(' ')).join('L')}`, `stroke="${acc}" stroke-width="3.4" fill="none" stroke-linecap="round" stroke-linejoin="round"`)
-        + mine.map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="${i === mine.length - 1 ? 6 : 4}" fill="#fff" stroke="${acc}" stroke-width="2"/>`).join('')
-        + [[230, 70], [262, 140], [300, 52]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="3" fill="none" ${S(fg, op * 2, 1.4)}/>`).join(''), 0.25, 0.6);
-};
-// ---- bus: the road ahead, its surface darker, dashes growing toward you, a low sun on the horizon
-const lanes = (fg, op, u, acc) => {
-    const hx = 270, hy = 44, dash = range(1, 6).map(i => i * 0.13).map(t => { const y0 = hy + t * t * 160, y1 = hy + (t + 0.06) ** 2 * 160, w = 0.6 + t * 3; return `M${r1(hx - w)} ${r1(y0)}H${r1(hx + w)}L${r1(hx + w * 1.3)} ${r1(y1)}H${r1(hx - w * 1.3)}Z`; }).join('');
-    return fade(u, glow(u, 'g', hx, hy, 60, acc, 0.45) + P(`M${hx - 8} ${hy}L150 210H390L${hx + 8} ${hy}Z`, F('#000', 0.14))
-        + P(`M${hx - 8} ${hy}L150 210M${hx + 8} ${hy}L390 210`, S(fg, op * 1.4, 1)) + P(`M${hx - 5} ${hy}L180 210M${hx + 5} ${hy}L360 210`, S(fg, op * 0.6, 0.6))
-        + P(dash, F(fg, op * 2.4)) + P(`M150 ${hy}H390`, S(fg, op * 0.9)), 0.2, 0.55);
-};
-// ---- ferry: swell in layers, each band a little deeper, crests drawn, the sun on the water
-const waves = (fg, op, u, acc) => {
-    const band = (y, amp) => `M-20 ${y} ${range(0, 10).map(() => `q11 ${r1(-amp)} 22 0 t22 0`).join(' ')}`;
-    let o = glow(u, 'g', 296, 40, 46, acc, 0.45) + `<circle cx="296" cy="40" r="11" ${F(acc, 0.6)}/>`;
-    for (let i = 0; i < 8; i++) { const y = 70 + i * 18, a = 5 + i * 0.6; o += P(`${band(y, a)}V230H-20Z`, F('#000', 0.035)) + P(band(y, a), S(fg, op * (0.8 + i * 0.07), 0.8)); }
-    return fade(u, o + P('M266 64h60M276 72h40M286 80h20', S(acc, 0.5, 1.2)), 0.25, 0.6);
-};
-// ---- ferry: a sea chart, depth contours shaded deeper inward, soundings, the channel marked
-const depths = (fg, op, u, acc) => {
-    const c = i => `M${150 + i * 6} 210C${180 + i * 8} ${120 - i * 6} 260 ${150 - i * 12} ${300 - i * 2} ${80 - i * 8}S350 ${20 + i * 4} 370 ${10 + i * 14}L400 -20V210Z`;
-    const n = [['12', 214, 166], ['18', 252, 124], ['25', 300, 150], ['31', 318, 96], ['40', 344, 140]];
-    return fade(u, range(0, 9).map(i => P(c(i), `${F('#000', 0.03)} ${S(fg, op * (0.9 + i * 0.04))}`)).join('')
-        + n.map(([t, x, y]) => `<text x="${x}" y="${y}" font-size="8" font-family="Inter Tight, sans-serif" ${F(fg, op * 2.2)}>${t}</text>`).join('')
-        + P('M196 196C240 150 286 120 360 40', `stroke="${acc}" stroke-width="1.4" fill="none" stroke-dasharray="5 4"`) + `<circle cx="360" cy="40" r="3.4" fill="${acc}"/>`, 0.2, 0.6);
-};
-// ---- theater: the proscenium, curtains drawn back in folds, nested arches, a pool of light on the stage
-const arches = (fg, op, u, acc) => {
-    const arch = i => `M${200 - i * 14} 210V${110 - i * 4}A${80 + i * 14} ${80 + i * 14} 0 0 1 ${360 + i * 14} ${110 - i * 4}V210`;
-    const folds = left => range(0, 5).map(j => left ? `M${196 + j * 7} 40C${206 + j * 6} 110 ${192 + j * 8} 150 ${200 + j * 9} 210` : `M${364 - j * 7} 40C${354 - j * 6} 110 ${368 - j * 8} 150 ${360 - j * 9} 210`).join('');
-    return fade(u, range(0, 7).map(i => P(arch(i), S(fg, op * (1.2 - i * 0.1), i ? 0.8 : 1.4))).join('') + P(`${folds(true)}${folds(false)}`, S(fg, op * 0.9, 0.7))
-        + P('M196 30C230 60 250 64 280 64C310 64 330 60 364 30V22H196Z', F('#000', 0.12)) + `<ellipse cx="280" cy="192" rx="56" ry="10" ${F(acc, 0.28)}/>` + glow(u, 'g', 280, 180, 60, acc, 0.3), 0.2, 0.6);
-};
-// ---- theater: harlequin diamonds, every other one filled, a few in the accent, fading in from the left
-const diamonds = (fg, op, u, acc) => {
-    let fill = '', hot = '';
-    for (let r = 0; r < 10; r++) for (let c = 0; c < 10; c++) {
-        const x = 150 + c * 24 + (r % 2 ? 12 : 0), y = -32 + r * 22, d = `M${x} ${y}l12 22l-12 22l-12 -22Z`;
-        if ((r * 7 + c * 3) % 11 === 0) hot += d; else if ((r + c) % 2) fill += d;
-    }
-    const grid = range(-6, 9).map(i => `M${150 + i * 24} -10L${270 + i * 24} 210M${150 + i * 24} 210L${270 + i * 24} -10`).join('');
-    return fade(u, P(fill, F('#000', 0.1)) + P(hot, F(acc, 0.32)) + P(grid, S(fg, op * 1.1, 0.7)), 0.2, 0.6);
-};
-// ---- theme park: the big wheel, gondolas tinted, lights on the rim, the legs it stands on
-const wheel = (fg, op, u, acc) => {
-    const cx = 280, cy = 92, R = 76, at = (a, r) => [r1(cx + r * cos(a * PI / 12)), r1(cy + r * sin(a * PI / 12))];
-    const spokes = range(0, 24).map(a => { const [x, y] = at(a, R); return `M${cx} ${cy}L${x} ${y}`; }).join('');
-    const pods = range(0, 12).map(a => { const [x, y] = at(a * 2, R); return `<rect x="${r1(x - 5)}" y="${y}" width="10" height="9" rx="3" ${a % 3 ? F(fg, 0.12) : F(acc, 0.6)}/>`; }).join('');
-    const bulbs = range(0, 48).map(a => { const [x, y] = at(a / 2, R + 6); return `<circle cx="${x}" cy="${y}" r="1" ${F(a % 4 ? '#fff' : acc, a % 4 ? 0.4 : 0.9)}/>`; }).join('');
-    return fade(u, glow(u, 'g', cx, cy, 100, acc, 0.22) + `<circle cx="${cx}" cy="${cy}" r="${R}" ${S(fg, op * 1.4, 1.2)}/><circle cx="${cx}" cy="${cy}" r="${R - 8}" ${S(fg, op * 0.8)}/>`
-        + P(spokes, S(fg, op * 0.9, 0.6)) + pods + bulbs + P(`M${cx} ${cy}L${cx - 46} 210M${cx} ${cy}L${cx + 46} 210M${cx - 30} 168H${cx + 30}`, S(fg, op * 1.6, 1.6)) + `<circle cx="${cx}" cy="${cy}" r="5" ${F(acc, 0.9)}/>`, 0.2, 0.6);
-};
-// ---- theme park: a coaster, two rails with ties, the lattice under it, a car on the hill
-const coaster = (fg, op, u, acc) => {
-    const f = q => [140 + q * 240, 120 - 64 * sin(q * PI * 2.2) * (1 - q * 0.3)], t = range(0, 61).map(i => i / 60);
-    const rail = dy => `M${t.map(q => { const [x, y] = f(q); return `${r1(x)} ${r1(y + dy)}`; }).join('L')}`;
-    const ties = t.filter((_, i) => i % 2 === 0).map(q => { const [x, y] = f(q); return `M${r1(x)} ${r1(y)}v8`; }).join('');
-    const legs = t.filter((_, i) => i % 5 === 0).map(q => { const [x, y] = f(q); return `M${r1(x)} ${r1(y + 8)}V210`; }).join('');
-    const cross = t.filter((_, i) => i % 5 === 0).slice(0, -1).map((q, i) => { const [x, y] = f(q), [x2, y2] = f(t[(i + 1) * 5]); return `M${r1(x)} ${r1(y + 8)}L${r1(x2)} 210M${r1(x2)} ${r1(y2 + 8)}L${r1(x)} 210`; }).join('');
-    const [cx, cy] = f(0.27);
-    return fade(u, P(cross, S(fg, op * 0.45, 0.5)) + P(legs, S(fg, op * 0.9, 0.8)) + P(rail(0) + rail(8), S(fg, op * 1.8, 1.1)) + P(ties, S(fg, op * 1.1, 0.7))
-        + `<rect x="${r1(cx - 12)}" y="${r1(cy - 8)}" width="24" height="10" rx="4" ${F(acc, 0.9)}/>` + glow(u, 'g', r1(cx), r1(cy), 30, acc, 0.35), 0.15, 0.55);
-};
-// the plain look of the first wallet has no drawing: null
-const MOTIF = { flight: [flight, null], train: [train, null], membership: [dots, holo], other: [dots], concert: [rings, spots], hotel: [windows, doors], match: [pitch, bowl],
-    movie: [beam, premiere], museum: [columns, rosette], bus: [route, lanes], ferry: [waves, depths], theater: [arches, diamonds], park: [wheel, coaster] };
-// the sum of its letters: ids next to each other (p1, p2 …) take turns
+// bus: chevrons pointing on, fading in toward the front (chosen from mockup 10)
+const chevrons = (fg, op) => range(0, 5).map(i => `<path d="M${210 + i * 26} 64L${240 + i * 26} 100L${210 + i * 26} 136" ${LN(fg, op, 0.5 + i * 0.25, 8)} stroke-linecap="round" stroke-linejoin="round"/>`).join('');
+// theme park: a sunburst from the bottom right corner, every other ray filled (chosen from mockup 10)
+const sunburst = (fg, op) => range(0, 9).map(i => { const a0 = PI + i * PI / 18, a1 = a0 + PI / 36; return `<path d="M350 210L${M(pt(350, 210, 260, a0))}L${M(pt(350, 210, 260, a1))}Z" fill="${fg}" fill-opacity="${r1(op * 0.35 * 100) / 100}"/>`; }).join('');
+const LN = (fg, op, k, w) => `stroke="${fg}" stroke-opacity="${r1(op * k * 100) / 100}" stroke-width="${w}" fill="none"`;
+// what 소망 chose, kind by kind; null is the plain look (no drawing). The train and movie marks and the concert, match and theater
+// singles are the only ones not circled yet
+const MOTIF = { flight: [flight, null], train: [train, null], membership: [dots, holo], other: [dots], concert: [spots], hotel: [windows, doors], match: [bowl],
+    movie: [beam, premiere], museum: [rosette, columns, rosetteP], bus: [route, lanes, chevrons], ferry: [depths, seaChart], theater: [harlequin], park: [wheel, sunburst] };
 const seedOf = id => [...String(id || '')].reduce((h, c) => h + c.charCodeAt(0), 0);
-export function passMotif(k, fg, op, id, acc = fg) {
+export function passMotif(k, fg, op, id) {
     const xs = MOTIF[k] || MOTIF.other, f = xs[seedOf(id) % xs.length];
-    return f ? f(fg, op, `pa${String(id || '').replace(/[^\w-]/g, '')}`, acc) : null;
+    return f ? f(fg, op, `pa${String(id || '').replace(/[^\w-]/g, '')}`) : null;
 }
