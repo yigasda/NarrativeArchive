@@ -873,7 +873,7 @@ const DUSK = {
 };
 function duskPal(cond, D) {
     const c = DUSK.clear, g = DUSK.grey, sky = { sky: c.sky, bands: c.bands, cb: c.cb, hills: c.hills }, phase = 'dusk';
-    if (cond === 'clear') return { ...sky, puff: c.puff, stars: 26, venus: true, phase };
+    if (cond === 'clear') return { ...sky, puff: c.puff, stars: 16, venus: true, phase };
     if (cond === 'partly') return { ...sky, cloud: c.cloud, front: c.front, stars: 16, venus: true, phase };
     if (cond === 'wind') return { ...sky, cloud: c.cloud, wind: true, stars: 16, phase };
     if (cond === 'snow') return { ...DUSK.snow, fall: 'snow', phase };
@@ -902,7 +902,7 @@ function scene(cond, phase) {
     for (const [y, c] of q.bands || []) out.push(`<i class="bd" style="top: ${y}px; background: ${c}"></i>`);
     // at dusk: flat round stars spread evenly over the dark upper sky (a loose grid, each nudged), fewer lower down, none behind the
     // place and the temperature; two sizes, white and cream, no glow
-    if (q.stars && phase === 'dusk') { const pts = [];
+    if (q.stars && phase === 'dusk') { const pts = [], r = rnd(214);   // one fixed scatter for every dusk sky (the one 구름 조금 had)
         for (let row = 0; row < 6; row++) for (let col = 0; col < 7; col++) { const x = 14 + col * 56 + r() * 40, y = 40 + row * 50 + r() * 34;
             if (x > 110 && x < 280 && y > 205 && y < 350) continue; if (row >= 4 && r() < 0.5) continue; pts.push([x, y]); }
         out.push(pts.slice(0, q.stars).map(([x, y], k) => { const z = k % 4 === 0 ? 6 : 4;
