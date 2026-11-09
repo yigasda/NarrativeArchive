@@ -46,11 +46,14 @@ const depths = (fg, op) => range(0, 10).map(i => `<path d="M${150 + i * 6} 200 C
 const rosette = (fg, op) => range(0, 12).map(a => `<circle cx="${r1(275 + 40 * cos(a * PI / 6))}" cy="${r1(100 + 40 * sin(a * PI / 6))}" r="40" ${S(fg, op)}/>`).join('') + `<circle cx="275" cy="100" r="80" ${S(fg, op)}/>`;
 const premiere = (fg, op) => range(0, 16).map(a => `<path d="M${r1(275 + cos(a * PI / 8) * 20)} ${r1(100 + sin(a * PI / 8) * 20)} L${r1(275 + cos(a * PI / 8) * 140)} ${r1(100 + sin(a * PI / 8) * 140)}" ${S(fg, op)}/>`).join('')
     + range(0, 8).map(a => `<path d="M${r1(275 + cos(a * PI / 4) * 90)} ${r1(100 + sin(a * PI / 4) * 90 - 8)} l2.4 6 6 2.4 -6 2.4 -2.4 6 -2.4 -6 -6 -2.4 6 -2.4z" ${S(fg, op * 1.6)}/>`).join('');
-const MOTIF = { flight: [flight], train: [train], membership: [dots], other: [dots], concert: [rings, spots], hotel: [windows, doors], match: [pitch, bowl], movie: [beam, premiere],
+// a hologram strip down the membership card (the gradient id is the pass's own, so two cards never share one)
+const holo = (fg, op, id) => { const g = `ph${String(id || '').replace(/[^\w-]/g, '')}`; return `<defs><linearGradient id="${g}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd1f0"/><stop offset=".35" stop-color="#c4f2ff"/><stop offset=".7" stop-color="#d9ffc9"/><stop offset="1" stop-color="#fff1b8"/></linearGradient></defs><rect x="262" y="-10" width="46" height="230" fill="url(#${g})" fill-opacity=".28"/>` + range(0, 12).map(i => `<path d="M${262 + i * 4} -10 V220" stroke="#fff" stroke-opacity=".12"/>`).join(''); };
+// null: the plain look of the first wallet (an icon tile on top, the icon between the two places, no drawing)
+const MOTIF = { flight: [flight, null], train: [train, null], membership: [dots, holo], other: [dots], concert: [rings, spots], hotel: [windows, doors], match: [pitch, bowl], movie: [beam, premiere],
     museum: [columns, rosette], bus: [route, lanes], ferry: [waves, depths], theater: [arches, diamonds], park: [wheel, coaster] };
 // the sum of its letters: ids next to each other (p1, p2 …) take turns
 const seedOf = id => [...String(id || '')].reduce((h, c) => h + c.charCodeAt(0), 0);
 export function passMotif(k, fg, op, id) {
-    const xs = MOTIF[k] || MOTIF.other;
-    return xs[seedOf(id) % xs.length](fg, op);
+    const xs = MOTIF[k] || MOTIF.other, f = xs[seedOf(id) % xs.length];
+    return f ? f(fg, op, id) : null;
 }

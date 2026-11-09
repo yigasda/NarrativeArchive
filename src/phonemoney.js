@@ -571,7 +571,7 @@ const PASS = { flight: ['#2c4a80', '#a9c4f0', '탑승권', '탑승'], train: ['#
     theater: ['#6a2a3e', '#f2b8c8', '공연', '개막'], movie: ['#1d1d22', '#f0c96a', '영화', '상영'], match: ['#2f6a3a', '#bfe6a0', '경기', '킥오프'],
     museum: ['#f3ede4', '#7a5a3a', '전시', '관람'], park: ['#8a5a2e', '#ffd28a', '놀이공원', '개장'], membership: ['#2e5e57', '#a8dccc', '회원권', '유효'],
     other: ['#3d4a66', '#c3cde0', '티켓', '시간'] };
-const LIGHT = new Set(['hotel', 'museum']);
+const LIGHT = new Set(['hotel', 'museum']), PASS_ICON = { flight: 'plane', train: 'train' };
 const passKind = x => {
     if (['flight', 'train', 'hotel', 'membership'].includes(x.kind)) return x.kind;
     const w = `${x.by || ''} ${x.to || ''} ${x.from || ''}`;
@@ -591,7 +591,7 @@ const passDate = (p, x) => (x.dayUnknown || !x.date ? '날짜 미정' : fmtDate(
 const passSpan = (p, x) => (x.until && /^\d{2}-\d{2}/.test(String(x.until)) ? `${passDate(p, x)} ~ ${fmtDate(p, x.until, true)}` : '');
 // one card: dot · brand · kind on top, one big route or title, the fields on one line and the time in the kind's accent
 function passArt(p, x, full) {
-    const k = passKind(x), [bg, acc, kind, lab] = PASS[k], light = LIGHT.has(k);
+    const k = passKind(x), [bg, acc, kind, lab] = PASS[k], light = LIGHT.has(k), icon = PASS_ICON[k] || 'ticket';
     const f = (label, v) => (v === null || v === undefined || String(v).trim() === '' || v === '—' ? '' : `<span><small>${label}</small><b>${esc(String(v))}</b></span>`);
     const route = (a, b) => `<span class="ax_psrt${String(a).length > 4 || String(b).length > 4 ? ' sm' : ''}"><b>${esc(a)}</b><i></i><b>${esc(b)}</b></span>`;
     const title = (t, sub) => `<span class="ax_psti"><b>${esc(t)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span>`;
@@ -606,9 +606,13 @@ function passArt(p, x, full) {
     else if (k === 'match') { mid = title(String(x.to || x.from || '').replace(/\s+(?:vs\.?|gegen|대|-)\s+/i, ' – ')); fields = f('날짜', date) + f('블록', x.gate) + f('좌석', x.seat) + f('번호', x.no); }
     else { mid = title(x.to || x.from || ''); fields = f(passSpan(p, x) ? '기간' : '날짜', passSpan(p, x) || date) + f(k === 'movie' ? '관' : k === 'museum' || k === 'park' ? '입장권' : '구역', x.gate) + f('좌석', x.seat) + f('번호', x.no); }
     const when = ends ? fmtDate(p, out, true) : x.time ? clockOf(p, x.time) : '';
-    return `<span class="ax_ps ax_ps_${k}${light ? ' cream' : ''}" style="background: ${bg}; --pa: ${acc}"><span class="ax_pstop"><svg class="ax_psmo" viewBox="0 0 340 200" preserveAspectRatio="xMaxYMid slice" aria-hidden="true">${passMotif(k, light ? '#3a2e1e' : '#fff', light ? 0.26 : 0.2, x.id)}</svg>
-      <span class="ax_psh"><i></i><span class="ax_psn">${esc(passBy(x).toUpperCase())}</span><small>${kind}</small></span>
-      ${mid}<span class="ax_psbt"><span class="ax_psfl">${fields}</span>${when ? `<span class="ax_pswh"><small>${ends ? '까지' : lab}</small><b class="cg_num">${esc(when)}</b></span>` : ''}</span></span>
+    const art = passMotif(k, light ? '#3a2e1e' : '#fff', light ? 0.26 : 0.2, x.id), plain = art === null;
+    const top = plain ? `<span class="ax_psh"><span class="ax_pslg">${ax(icon, 16, 'currentColor')}</span><span class="ax_psn">${esc(passBy(x).toUpperCase())}</span>${when ? `<span class="ax_pswh"><small>${ends ? '까지' : lab}</small><b class="cg_num">${esc(when)}</b></span>` : `<small>${kind}</small>`}</span>`
+        : `<span class="ax_psh"><i></i><span class="ax_psn">${esc(passBy(x).toUpperCase())}</span><small>${kind}</small></span>`;
+    const body = plain ? mid.replace('<i></i>', `<i class="pl">${ax(icon, 20, 'currentColor', 1.6)}</i>`) : mid;
+    return `<span class="ax_ps ax_ps_${k}${light ? ' cream' : ''}${plain ? ' plain' : ''}" style="background: ${bg}; --pa: ${acc}"><span class="ax_pstop">${plain ? '' : `<svg class="ax_psmo" viewBox="0 0 340 200" preserveAspectRatio="xMaxYMid slice" aria-hidden="true">${art}</svg>`}
+      ${top}
+      ${body}<span class="ax_psbt"><span class="ax_psfl">${fields}</span>${when && !plain ? `<span class="ax_pswh"><small>${ends ? '까지' : lab}</small><b class="cg_num">${esc(when)}</b></span>` : ''}</span></span>
       ${full ? `<span class="ax_psperf"></span><span class="ax_psqr">${qr(x.id)}</span>` : ''}</span>`;
 }
 // a QR-looking square (drawn, not a code)
