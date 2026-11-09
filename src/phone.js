@@ -1245,7 +1245,7 @@ export async function openPhone(who = null) {
         const w = String(v.who ?? v.from ?? '').trim();
         const style = await askInput(`${w}의 말투`, '남에게 하는 말투를 짧게 적어요.', String(v.style || ''), '저장', { area: true });
         if (!style || phone() !== p || p.koVoice?.[k] !== v) return;
-        await voiceSet(p, k, style.slice(0, 120));
+        await voiceSet(p, k, style.slice(0, 300));
     });
     // 이야기에서 뽑기: the row starts choosing; with names chosen it asks the story about them (pickVoices: what it finds takes
     // the row, what it doesn't keeps the row it had). 취소 stops choosing
@@ -1312,8 +1312,8 @@ export async function openPhone(who = null) {
         const have = p.koVoice.findIndex(v => String(v?.who ?? v?.from ?? '').trim().toLowerCase() === name.toLowerCase());
         const style = await askInput(`${name}의 말투`, '남에게 하는 말투를 짧게 적어요.', have >= 0 ? String(p.koVoice[have].style || '') : '', '저장', { area: true, empty: have < 0 });
         if (style === false || phone() !== p) return;
-        if (have >= 0) return voiceSet(p, have, style.slice(0, 120));
-        p.koVoice.push({ who: name.slice(0, 40), style: style.slice(0, 120), by: 'user' });
+        if (have >= 0) return voiceSet(p, have, style.slice(0, 300));
+        p.koVoice.push({ who: name.slice(0, 40), style: style.slice(0, 300), by: 'user' });
         if (view === 'setvoiceadd') view = 'setvoice';
         await saveMeta(); if (!phoneClosed) drawPhone(true);
     });
