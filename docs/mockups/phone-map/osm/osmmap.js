@@ -113,7 +113,8 @@ const GPALS = {
 GPALS.AC = { ...GPALS.A, water: GPALS.C.water, major: GPALS.C.major, majorEdge: GPALS.C.majorEdge };   // A's cream with C's water and apricot main roads
 GPALS.ACa = { ...GPALS.A, water: GPALS.C.water };
 GPALS.ACm = { ...GPALS.ACa, motor: GPALS.C.major, motorEdge: GPALS.C.majorEdge };   // pale yellow main roads, apricot motorways   // A's cream and main roads with C's water
-if (GMAP && GPALS[process.env.GPAL]) { const g = GPALS[process.env.GPAL]; Object.assign(C, g); Object.assign(COVER, { grass: g.park, allot: g.park, orchard: g.park, vine: g.vine, grave: g.park, scrub: g.forest, farm: g.school }); }   // vineyards keep their own yellow-green
+// 기본 GPAL: ACa (A 바탕 + C 물 + A 연노랑 큰길)
+if (GMAP && GPALS[process.env.GPAL ?? 'ACa']) { const g = GPALS[process.env.GPAL ?? 'ACa']; Object.assign(C, g); Object.assign(COVER, { grass: g.park, allot: g.park, orchard: g.park, vine: g.vine, grave: g.park, scrub: g.forest, farm: g.school }); }   // vineyards keep their own yellow-green
 const { ICON, glyph, pick } = require('./icons.js');
 const COVER0 = null;
 const pxArea = ps => Math.abs(ps.reduce((s, p, i) => { const q = ps[(i + 1) % ps.length]; return s + p[0] * q[1] - q[0] * p[1]; }, 0)) / 2;
@@ -312,7 +313,7 @@ function gmapMarks(labels) {
   for (const [la, lo, n, sz, wt, col] of labels) { if (n !== process.env.MAIN && col !== '#5a84ad' && ++quarters > 3) continue;   // the big name + three quarters at most
     const [x, y] = P(la, lo), big = n === process.env.MAIN, z = big ? 15 : col === '#5a84ad' ? 11.5 : 12, w = n.length * z * 0.6;
     const b = [x - w / 2 - 4, y - z - 2, x + w / 2 + 4, y + 4]; if (hit(b)) continue; taken.push(b);
-    if (process.env.GPAL && !big && col !== '#5a84ad') { o += `<text x="${f(x)}" y="${f(y)}" text-anchor="middle" font-family="-apple-system, 'Noto Sans KR', sans-serif" font-size="10" font-weight="600" letter-spacing=".12em" fill="#6f6f6f" stroke="#fff" stroke-width="2.6" paint-order="stroke">${n.toUpperCase()}</text>`; continue; }
+    if ((process.env.GPAL ?? 'ACa') && !big && col !== '#5a84ad') { o += `<text x="${f(x)}" y="${f(y)}" text-anchor="middle" font-family="-apple-system, 'Noto Sans KR', sans-serif" font-size="10" font-weight="600" letter-spacing=".12em" fill="#6f6f6f" stroke="#fff" stroke-width="2.6" paint-order="stroke">${n.toUpperCase()}</text>`; continue; }
     o += txt(x, y, n, z, big ? 700 : 600, col === '#5a84ad' ? (process.env.GPAL === 'B' ? '#3f5a63' : '#4a7fb5') : big ? '#3c4043' : '#5f6368'); }
   const CAT = { food: '#e37400', cafe: '#e37400', bar: '#e37400', beer: '#e37400', bakery: '#e37400', wine: '#e37400', shop: '#4a7cd6', mall: '#4a7cd6', market: '#4a7cd6', fuel: '#4a7cd6',
     school: '#8a6d55', university: '#8a6d55', library: '#8a6d55', hospital: '#d14a3e', pharmacy: '#d14a3e', park: '#3d8b3d', garden: '#3d8b3d', forest: '#3d8b3d', playground: '#3d8b3d', zoo: '#3d8b3d', golf: '#3d8b3d',
