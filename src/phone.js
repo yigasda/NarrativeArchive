@@ -215,10 +215,10 @@ export async function openPhone(who = null) {
     // the same sheet with a line to type (a city): resolves the text, or false. area: a few lines that wrap (a 말투), an
     // editable div as 도시 찾기's (a theme that paints every textarea can't reach it); Enter still saves
     const fieldVal = f => String(f.value ?? f.innerText ?? '').replace(/\s+/g, ' ').trim();
-    const askInput = (title, text, value = '', ok = '저장', { area = false } = {}) => {
+    const askInput = (title, text, value = '', ok = '저장', { area = false, quotes = [] } = {}) => {
         ask?.done(false);
         return new Promise(done => {
-            const el = $(`<div class="pcf" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="pcf_box"><div class="pcf_card"><div class="pcf_msg"><b>${esc(title)}</b>${text ? `<span>${esc(text)}</span>` : ''}</div><div class="pcf_in">${area ? `<div class="pcf_field pcf_area" contenteditable="true" role="textbox" aria-multiline="true" enterkeyhint="done" spellcheck="false">${esc(value)}</div>` : `<input type="text" class="pcf_field" value="${esc(value)}" enterkeyhint="done" autocomplete="off">`}</div><div class="pcf_btns"><div role="button" tabindex="0" class="pcf_no">취소</div><div role="button" tabindex="0" class="pcf_ok safe">${esc(ok)}</div></div></div></div></div>`)[0];
+            const el = $(`<div class="pcf" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="pcf_box"><div class="pcf_card"><div class="pcf_msg"><b>${esc(title)}</b>${text ? `<span>${esc(text)}</span>` : ''}</div><div class="pcf_in">${area ? `<div class="pcf_field pcf_area" contenteditable="true" role="textbox" aria-multiline="true" enterkeyhint="done" spellcheck="false">${esc(value)}</div>` : `<input type="text" class="pcf_field" value="${esc(value)}" enterkeyhint="done" autocomplete="off">`}${quotes.length ? `<div class="pcf_ev">${quotes.map(q => `<span>「${esc(q)}」</span>`).join('')}</div>` : ''}</div><div class="pcf_btns"><div role="button" tabindex="0" class="pcf_no">취소</div><div role="button" tabindex="0" class="pcf_ok safe">${esc(ok)}</div></div></div></div></div>`)[0];
             ask = { el, done: v => { ask = null; el.remove(); done(v); } };
             placeAsk();
             if (el.isConnected) { const f = el.querySelector('.pcf_field'); f.focus({ preventScroll: true }); if (f.select) f.select(); else { const r = document.createRange(); r.selectNodeContents(f); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); } }
@@ -1237,7 +1237,9 @@ export async function openPhone(who = null) {
     $root.on('click', '.na_ph_kvrow', async function (e) {
         e.stopPropagation(); const p = phone(), k = Number(this.dataset.i), v = p?.koVoice?.[k]; if (!v) return;
         const w = String(v.who ?? v.from ?? '').trim();
-        const style = await askInput(`${w}의 말투`, '남에게 하는 말투를 짧게 적어요.', String(v.style || ''), '저장', { area: true });
+        // a row the story gave: its evidence (the story's or card's own words, up to two) small under the field (docs/mockups/phone-voice evidence B)
+        const quotes = v.by === 'model' && Array.isArray(v.evidence) ? v.evidence.map(x => String(x || '').trim().replace(/^["“「]+|["”」]+$/g, '')).filter(Boolean).slice(0, 2) : [];
+        const style = await askInput(`${w}의 말투`, '남에게 하는 말투를 짧게 적어요.', String(v.style || ''), '저장', { area: true, quotes });
         if (!style || phone() !== p || p.koVoice?.[k] !== v) return;
         await voiceSet(p, k, style.slice(0, 120));
     });

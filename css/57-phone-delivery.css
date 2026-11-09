@@ -407,6 +407,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax 
 .pcf_in { position: relative; padding: 0 16px 16px; }
 .pcf .pcf_field { box-sizing: border-box; width: 100%; height: 40px; margin: 0; padding: 0 12px; border: 0; border-radius: 12px; background: #fff; color: #161b22; font: inherit; font-size: 16px; box-shadow: inset 0 0 0 1px rgba(60, 60, 67, 0.16); outline: none; }
 .pcf .pcf_field.pcf_area { height: auto; min-height: 96px; max-height: 168px; overflow-y: auto; padding: 10px 12px; line-height: 1.45; text-align: left; white-space: pre-wrap; overflow-wrap: anywhere; outline: none; cursor: text; -webkit-user-select: text; user-select: text; }
+.pcf_ev { display: flex; flex-direction: column; gap: 2px; margin-top: 10px; text-align: left; font-size: 12.5px; --axfs: 12.5px; line-height: 1.45; color: #6b7380; --axfg: #6b7380; overflow-wrap: anywhere; }
 .pcf_sub { margin-right: 8px; font-size: 13.5px; --axfs: 13.5px; color: #4f5763; }
 .pcf_ok:active, .pcf_no:active { background: rgba(60, 60, 67, 0.08); }
 /* 위치 정보 › 도시 고르기 (시안 B): a row a place with its flag, a line under it; the country flags in a grid */
