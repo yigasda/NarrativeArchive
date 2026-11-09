@@ -15,7 +15,7 @@ import { ctx, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
 import { applyInjection } from './inject.js';
 import { faceHtml, nameKey, peopleList } from './people.js';
 import { drafting, drawing, drawPhoto, drawPost, filling, makeDraft, paging, retranslate, retranslating, recording, recordVoice, searching, searchPage, shooting, takePhoto, webPage, writeEntry, writing } from './phoneai.js';
-import { ax, axFind, groupInfo, APPS, AXB, AXB_C, busyHtml, setDate, setScreenHolderView, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, mapTowns, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setOwnerProfile, setWho, snsPost, snsScreen, statusBar, threadScreen, setPlace, prepScreen } from './phoneapps.js';
+import { setVoice, setVoiceAdd, voiceList, voicePeople, ax, axFind, groupInfo, APPS, AXB, AXB_C, busyHtml, setDate, setScreenHolderView, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, mapTowns, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setOwnerProfile, setWho, snsPost, snsScreen, statusBar, threadScreen, setPlace, prepScreen } from './phoneapps.js';
 import { dropStretch, koGaps, savedName, ensureIds, ensureYear, hasDatedRecords, noArchive, setStoryYear, storyYear, fillDevice, fillMoney, fillVoice, koOn, loreOff, makePhone, tidyKo, markAfter, phoneLore, REMAKE, restoreRounds, retryMoney, showNow, storyNow, syncLeft, syncRows, syncState, tidyJournal, undoRound } from './phonedata.js';
 import { busy, watchBusy, exclusive, journalRead, journalWrite, syncOf } from './phonesync.js';
 import { syncPick, syncSettings } from './phonesyncui.js';
@@ -30,7 +30,7 @@ import { placeNames } from './phonemapfind.js';
 import { FLAG_NAME, flagSvg } from './phoneflags.js';
 import { mapZoom } from './phonemapzoom.js';
 import { glossaryEntries, openGlossary } from './translate.js';
-import { fillKo, koAppOf, redoKo } from './phonetr.js';
+import { dropVoice, fillKo, koAppOf, koScopeOf, labelVoices, learnVoices, pickVoices, redoKo, roundScope } from './phonetr.js';
 // 을 / 를 after a word: by its last syllable's final consonant (a Latin ending, like SNS, reads as 를)
 const josa = w => { const c = w.charCodeAt(w.length - 1) - 0xac00; return c >= 0 && c < 11172 && c % 28 ? '을' : '를'; };
 import { confirm, esc } from './util.js';
@@ -54,7 +54,7 @@ function screen(p, view, m, roster, ui) {
         : v === 'note' ? noteScreen(p, now) : v === 'noteone' ? noteOne(p, now, Number(i)) : v === 'search' ? searchScreen(p, now) : v === 'page' ? pageView(p, now, i || '', paging.has(`${nameKey(p.owner)}:${i}`)) : v === 'tabs' ? tabsScreen(p, now) : v === 'marks' || v === 'history' ? marksScreen(p, now, v === 'history') : v === 'searchone' ? searchOne(p, now, Number(i), searching.has(`${nameKey(p.owner)}:${i}`))
         : v === 'cal' ? calScreen(p, now, m, i || '') : v === 'calone' ? calOne(p, now, Number(i), m) : v === 'map' ? (mapTowns(p, m).groups.length ? mapScreen(p, now, m, i || '') : mapEmptyScreen(p, now, m)) : v === 'mapq' ? mapSearchScreen(p, now, m, i || '', ui.mapQ || '') : v === 'mapc' ? mapCityScreen(p, now, m, i || '')
         : v === 'sns' ? snsScreen(p, now) : v === 'snspost' ? snsPost(p, now, Number(i)) : v === 'mail' ? mailScreen(p, now) : v === 'mailone' ? mailOne(p, now, Number(i))
-        : v === 'diary' ? diaryScreen(p, now, i || '') : v === 'diaryone' ? diaryOne(p, now, Number(i)) : v === 'setsync' ? syncSettings(p, now, ui) : v === 'setsyncpick' ? syncPick(p, now, ui) : v === 'set' ? setScreen(p, now, m, ui) : v === 'stime' ? screenTimeScreen(p, now, i || '') : v === 'settheme' ? setTheme(p, now) : v === 'setscreenholder' ? setScreenHolderView(p, now, m, ui.holderBack) : v === 'setdate' ? setDate(p, now, m) : v === 'setplace' ? setPlace(p, now, m, ui) : v === 'prep' ? prepScreen(p, now, m, ui.prep) : v === 'setremake' ? setRemake(p, now, ui, m) : v === 'setprofile' ? setOwnerProfile(p,now,ui.profileState) : v === 'setwho' ? setWho(p, now, m) : v === 'setlore' ? setLore(p, now, m, ui)
+        : v === 'diary' ? diaryScreen(p, now, i || '') : v === 'diaryone' ? diaryOne(p, now, Number(i)) : v === 'setsync' ? syncSettings(p, now, ui) : v === 'setsyncpick' ? syncPick(p, now, ui) : v === 'set' ? setScreen(p, now, m, ui) : v === 'stime' ? screenTimeScreen(p, now, i || '') : v === 'settheme' ? setTheme(p, now) : v === 'setscreenholder' ? setScreenHolderView(p, now, m, ui.holderBack) : v === 'setdate' ? setDate(p, now, m) : v === 'setplace' ? setPlace(p, now, m, ui) : v === 'setvoice' ? setVoice(p, now, ui.voicePick, ui.voiceBusy) : v === 'setvoiceadd' ? setVoiceAdd(p, now, ui.voiceAdd, ui.voiceBusy) : v === 'prep' ? prepScreen(p, now, m, ui.prep) : v === 'setremake' ? setRemake(p, now, ui, m) : v === 'setprofile' ? setOwnerProfile(p,now,ui.profileState) : v === 'setwho' ? setWho(p, now, m) : v === 'setlore' ? setLore(p, now, m, ui)
         : v === 'cam' ? camScreen(p, now, i === undefined ? -1 : Number(i), shooting.has(nameKey(p.owner))) : homeScreen(p, now, m);
     // the home is the design board itself, at its own size, scaled to the screen (--k)
     // every app: drawn at the boards' size too, each its own app look
@@ -138,10 +138,14 @@ export async function openPhone(who = null) {
     // the Korean of what the phone has in another language (phonetr.js): after a reflection, from its report, or when
     // 한국어 is pressed. A failure is marked on the report (번역 못 함 · 다시 하기); the reflection itself stays
     let koBusy = false;
+    // 설정 › 말투's 이야기에서 뽑기: the names chosen (lower case) while choosing, null otherwise; busy while the story is asked
+    let voicePick = null, voiceAdd = new Set(), voiceBusy = false;
     const koRun = async (p, loud) => {
         if (koBusy || !p) return;
         koBusy = true;
         try {
+            // (how the people who text sound, from the story, for anyone not in the table yet; a failure here only leaves it out)
+            try { await learnVoices(m, owner, p); } catch (err) { console.warn('[narrative-archive] voices', err); }
             const n = await fillKo(p);
             if (p.syncLast?.trFailed) delete p.syncLast.trFailed;
             if (n || loud) await saveMeta();
@@ -212,14 +216,17 @@ export async function openPhone(who = null) {
             if (el.isConnected) el.querySelector('.pcf_ok').focus({ preventScroll: true });
         });
     };
-    // the same sheet with a line to type (a city): resolves the text, or false
-    const askInput = (title, text, value = '', ok = '저장') => {
+    // the same sheet with a line to type (a city): resolves the text, or false. area: a few lines that wrap (a 말투), an
+    // editable div as 도시 찾기's (a theme that paints every textarea can't reach it); Enter still saves
+    const fieldVal = f => String(f.value ?? f.innerText ?? '').replace(/\s+/g, ' ').trim();
+    const askInput = (title, text, value = '', ok = '저장', { area = false, empty = false } = {}) => {
         ask?.done(false);
         return new Promise(done => {
-            const el = $(`<div class="pcf" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="pcf_box"><div class="pcf_card"><div class="pcf_msg"><b>${esc(title)}</b>${text ? `<span>${esc(text)}</span>` : ''}</div><div class="pcf_in"><input type="text" class="pcf_field" value="${esc(value)}" enterkeyhint="done" autocomplete="off"></div><div class="pcf_btns"><div role="button" tabindex="0" class="pcf_no">취소</div><div role="button" tabindex="0" class="pcf_ok safe">${esc(ok)}</div></div></div></div></div>`)[0];
+            const el = $(`<div class="pcf" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="pcf_box"><div class="pcf_card"><div class="pcf_msg"><b>${esc(title)}</b>${text ? `<span>${esc(text)}</span>` : ''}</div><div class="pcf_in">${area ? `<div class="pcf_field pcf_area"${empty ? ' data-empty="1"' : ''} contenteditable="true" role="textbox" aria-multiline="true" enterkeyhint="done" spellcheck="false">${esc(value)}</div>` : `<input type="text" class="pcf_field" value="${esc(value)}" enterkeyhint="done" autocomplete="off">`}</div><div class="pcf_btns"><div role="button" tabindex="0" class="pcf_no">취소</div><div role="button" tabindex="0" class="pcf_ok safe">${esc(ok)}</div></div></div></div></div>`)[0];
             ask = { el, done: v => { ask = null; el.remove(); done(v); } };
             placeAsk();
-            if (el.isConnected) { const f = el.querySelector('.pcf_field'); f.focus({ preventScroll: true }); f.select(); }
+            // (a few lines with something written already (a 말투 to read): no keyboard and nothing selected until it is tapped)
+            if (el.isConnected) { const f = el.querySelector('.pcf_field'); if (area && String(value).trim()) el.querySelector('.pcf_ok').focus({ preventScroll: true }); else { f.focus({ preventScroll: true }); if (f.select) f.select(); else { const r = document.createRange(); r.selectNodeContents(f); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); } } }
         });
     };
     // the same sheet, a row a place: its flag, a name, a line under it (시안 B, docs/mockups/phone-place-ask); title may carry a flag
@@ -280,8 +287,9 @@ export async function openPhone(who = null) {
         const v = await askChoice('날짜를 어떻게 쓰세요?', '나중에 설정에서 바꿀 수 있어요.', [{ v: 'md', label: '월.일', sub: '11.03 = 11월 3일' }, { v: 'dm', label: '일.월', sub: '03.11. = 11월 3일' }]);
         if (v === 'md' || v === 'dm') await setDateOrder(m, v);
     };
-    $root.on('click', '.pcf', function (e) { e.stopPropagation(); const b = e.target.closest('.pcf_ok, .pcf_no'); if (b) { const f = this.querySelector('.pcf_field'); ask?.done(b.classList.contains('pcf_ok') ? (f ? f.value.trim() || false : b.dataset.v || true) : false); } else if (e.target === this) ask?.done(false); });
-    $root.on('keydown', '.pcf_field', function (e) { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); ask?.done(this.value.trim() || false); } else if (e.key === 'Escape') ask?.done(false); });
+    $root.on('click', '.pcf', function (e) { e.stopPropagation(); const b = e.target.closest('.pcf_ok, .pcf_no'); if (b) { const f = this.querySelector('.pcf_field'); ask?.done(b.classList.contains('pcf_ok') ? (f ? fieldVal(f) || (f.dataset.empty ? '' : false) : b.dataset.v || true) : false); } else if (e.target === this) ask?.done(false); });
+    $root.on('paste', '.pcf_area', function (e) { e.preventDefault(); const t = (e.originalEvent?.clipboardData?.getData('text/plain') || '').replace(/\s+/g, ' '); document.execCommand('insertText', false, t); });
+    $root.on('keydown', '.pcf_field', function (e) { e.stopPropagation(); if (e.key === 'Enter' && !e.originalEvent?.isComposing && e.keyCode !== 229) { e.preventDefault(); ask?.done(fieldVal(this) || false); } else if (e.key === 'Escape') ask?.done(false); });
     $root.on('keydown', '.pcf_ok, .pcf_no', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ask?.done(this.classList.contains('pcf_ok') ? (this.dataset.v || true) : false); } });
     const drawPhone = (keep = false) => {
         queueMicrotask(placeAsk);  // every way out of a redraw (some return early) puts the open sheet back
@@ -339,11 +347,14 @@ export async function openPhone(who = null) {
             return;
         }
         if (!view.startsWith('thread:') || view !== msgView) { msgHeld = null; msgPick = null; msgView = view; }
+        if (view !== 'setvoice' && !voiceBusy) voicePick = null;
+        if (view === 'setvoice') voiceFill(p);
+        if (view !== 'setvoiceadd' && !voiceBusy) voiceAdd = new Set();
         const top = keep ? $root.find('.na_ph_body, .ax_scroll').scrollTop() : 0;
         // a screen that can't be drawn says why (and in the console), instead of leaving the phone blank or on another screen
         let html;
         tidyKo(p);
-        try { html = screen(p, view, m, roster, { syncN: view === 'set' ? syncLeft(p, m) : null, syncRows: view.startsWith('setsync') ? syncRows() : [], syncWhy, syncPending, pickMore, loreExp, loreEnts, remake, contactBack, investing, profileState:profileStates.get(nameKey(p.owner)), placeReading, mapQ, msgHeld, msgPick, retr: retrKs }); }
+        try { html = screen(p, view, m, roster, { syncN: view === 'set' ? syncLeft(p, m) : null, syncRows: view.startsWith('setsync') ? syncRows() : [], syncWhy, syncPending, pickMore, loreExp, loreEnts, remake, contactBack, investing, profileState:profileStates.get(nameKey(p.owner)), placeReading, mapQ, msgHeld, msgPick, retr: retrKs, voicePick: view === 'setvoice' ? voicePick : null, voiceAdd, voiceBusy }); }
         catch (err) {
             console.error('[narrative-archive] phone screen', view, err);
             toastr.error(`${view} 화면을 그리지 못했어요: ${err?.message || err}`, '캐릭터 휴대폰');
@@ -779,15 +790,18 @@ export async function openPhone(who = null) {
             koHeld = true;
             const p = phone();
             if (!p || making || koBusy) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요');
-            const only = koAppOf(view);
+            // (this screen's lines only: one chat, one note, one page …; a list screen its app's newest 40; 설정 the whole phone, asked first)
+            const scope = koScopeOf(p, view), only = koAppOf(view), pick = scope || (only ? g => only(g.app) : null);
+            if (pick && !koGaps(p, { all: true }).some(pick)) return; // (nothing on this screen to translate again: quietly nothing)
+            if (!pick && !await askSheet('폰 전체를 다시 번역할까요?', '지금 한국어가 전부 새 번역으로 바뀌어요.', '다시 번역')) return;
             let n = 0;
             koBusy = true;
-            try { n = await withSpinner($b, '다시 번역 중', () => redoKo(p, only)); if (p.syncLast?.trFailed) delete p.syncLast.trFailed; await saveMeta(); }
+            try { n = await withSpinner($b, '다시 번역 중', async () => { try { await learnVoices(m, owner, p, { all: true }); } catch (err) { console.warn('[narrative-archive] voices', err); } return redoKo(p, pick, !scope && only ? { max: 40, newest: true } : {}); }); if (p.syncLast?.trFailed) delete p.syncLast.trFailed; await saveMeta(); }
             catch (err) { toastr.warning(`다시 번역하지 못했어요 · 원래 한국어는 그대로예요 (${String(err?.message || err)})`, '캐릭터 휴대폰'); }
             finally { koBusy = false; }
             const g = globalSettings(); g.phoneKo = true; saveGlobal();
             if (!phoneClosed && phone() === p) drawPhone(true);
-            if (n) toastr.success(`${only ? '이 앱' : '폰'}의 한국어 ${n}개를 다시 옮겼어요`, '캐릭터 휴대폰');
+            if (n) toastr.success(`${n}개를 다시 번역했어요`, '캐릭터 휴대폰');
         }, 600);
     });
     $root.on('pointerup pointerleave pointercancel', '.na_ph_kochip:not(.na_ph_looksbtn)', () => clearTimeout(koHold));
@@ -813,6 +827,21 @@ export async function openPhone(who = null) {
         e.preventDefault(); e.stopPropagation();
         const p = phone(); if (p?.syncLast) { p.syncLast.trSeen = true; await saveMeta(); }
         $root.find('.na_ph_trpop').remove();
+    });
+    // 이번 반영 다시 번역: only what the last reflection put in
+    $root.on('click', '.na_sync_retr', async e => {
+        e.stopPropagation();
+        const p = phone();
+        if (!p || making || koBusy) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요');
+        const pick = roundScope(p);
+        if (!pick || !koGaps(p, { all: true }).some(pick)) return toastr.info('이번 반영엔 다시 번역할 게 없어요', '캐릭터 휴대폰');
+        let n = 0;
+        koBusy = true;
+        try { n = await withSpinner($(e.currentTarget), '다시 번역 중', () => redoKo(p, pick)); if (p.syncLast?.trFailed) delete p.syncLast.trFailed; await saveMeta(); }
+        catch (err) { toastr.warning(`다시 번역하지 못했어요 · 원래 한국어는 그대로예요 (${String(err?.message || err)})`, '캐릭터 휴대폰'); }
+        finally { koBusy = false; }
+        if (!phoneClosed && phone() === p) drawPhone(true);
+        if (n) toastr.success(`이번 반영 ${n}개를 다시 번역했어요`, '캐릭터 휴대폰');
     });
     $root.on('click', '.na_sync_tr', async e => { e.stopPropagation(); if (making) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요'); await withSpinner($(e.currentTarget), '번역 중', () => koRun(phone(), true)); });
     $root.on('click', '.na_ph_makebtn', function () { make($(this), false); });
@@ -865,7 +894,7 @@ export async function openPhone(who = null) {
         thread: { list: p => p.threads, back: 'msg', what: '대화' }, event: { list: p => p.events, back: 'cal', what: '일정' },
         mail: { list: p => p.mails, back: 'mail', what: '메일' }, post: { list: p => p.posts, back: 'sns', what: '게시물' },
     };
-    const OTHER = { voice: '음성 메모', draft: '보내지 않은 메시지', calls: '통화 기록', callrun: '통화 기록', contact: '연락처', place: '장소' };
+    const OTHER = { voice: '음성 메모', draft: '보내지 않은 메시지', calls: '통화 기록', callrun: '통화 기록', contact: '연락처', place: '장소', kovoice: '말투' };
     $root.on('click', '.na_ph_rm', async function (e) {
         e.stopPropagation();
         const p = phone(), kind = this.dataset.kind, i = this.dataset.i;
@@ -881,6 +910,7 @@ export async function openPhone(who = null) {
         // a contact or a place can come back from the story's records, so it is hidden rather than only removed
         else if (kind === 'contact') { p.contacts = p.contacts.filter(c => nameKey(c.name) !== i); p.hiddenContacts = [...new Set([...(p.hiddenContacts || []), i])]; view = 'contacts'; }
         else if (kind === 'place') p.hiddenPlaces = [...new Set([...(p.hiddenPlaces || []), i])];
+        else if (kind === 'kovoice') dropVoice(p, i);
         // from a list (메시지 · 메일 · 최근 검색 · 방문 기록) the list stays
         else { const xs = RM[kind].list(p); if (xs?.[Number(i)]) xs.splice(Number(i), 1); if (view.includes(':')) view = RM[kind].back; }
         drawPhone();
@@ -1112,7 +1142,7 @@ export async function openPhone(who = null) {
         syncWhy = ''; view = 'setsync'; drawPhone(); await saveMeta();
         toastr.success(mark.index < 0 ? '첫 대화부터 반영해요' : `#${mark.index} 다음부터 반영해요`, '캐릭터 휴대폰');
     });
-    $root.on('click', '.na_sync_restore', async e => { e.stopPropagation(); if (making || busy.sync || busy.fill) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요'); const n = await restoreRounds(m, phoneChatScope(ctx())); syncPending = 0; drawPhone(); if (m.phones && Object.values(m.phones).some(p => p.inject)) applyInjection(); toastr.success(`반영 ${n}번을 복구했어요`, '캐릭터 휴대폰'); });
+    $root.on('click', '.na_sync_restore', async e => { e.stopPropagation(); if (making || busy.sync || busy.fill) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요'); const n = await restoreRounds(m, phoneChatScope(ctx())); syncPending = 0; drawPhone(); if (n && phone()) koRun(phone(), false); /* (what came back has no Korean yet) */ if (m.phones && Object.values(m.phones).some(p => p.inject)) applyInjection(); toastr.success(`반영 ${n}번을 복구했어요`, '캐릭터 휴대폰'); });
     $root.on('click', '.na_sync_drop', async function (e) {
         e.stopPropagation();
         if (making || busy.sync || busy.fill) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요');
@@ -1222,6 +1252,116 @@ export async function openPhone(who = null) {
         try { await rereadPlaces(m, p, { all: v === 'all' }); toastr.success('위치를 연동했어요', '위치 정보'); }
         catch (err) { toastr.error(String(err?.message || err), '위치 정보'); }
         finally { placeReading = false; if (!phoneClosed) drawPhone(true); }
+    });
+    // 설정 › 말투: a row's style written anew (the row becomes 소망's: by 'user', an old from read as who); 사람 추가 asks the
+    // name, then the style (a name already there is that row). Saved with saveMeta; translations already made stay
+    // a row written by hand gets its short label afterwards (labelVoices, not waited for): put in only if the row is still
+    // there with the same style; a failure leaves the list showing its first pieces, and isn't asked again
+    const voiceLabel = (p, row) => {
+        if (!row?.style) return;
+        labelVoices([{ who: row.who, style: row.style }]).then(async ([l]) => {
+            if (!l || !p.koVoice?.includes(row)) return; // (the row object itself: edited again, it is a new one)
+            row.label = l; await saveMeta(); if (!phoneClosed && phone() === p) drawPhone(true);
+        }).catch(err => console.warn('[narrative-archive] voice label', err));
+    };
+    // the first time 말투 opens (each phone, once a session): every row written by hand without a label asks for one, all
+    // in one request; a failure leaves them as they are
+    const voiceFilled = new WeakSet();
+    const voiceFill = p => {
+        if (!p || voiceFilled.has(p)) return; voiceFilled.add(p);
+        const rows = (Array.isArray(p.koVoice) ? p.koVoice : []).filter(v => v && v.by !== 'model' && String(v.style || '').trim() && !v.label).slice(0, 40);
+        if (!rows.length) return;
+        const was = rows.map(v => v.style);
+        labelVoices(rows.map(v => ({ who: String(v.who ?? v.from ?? '').trim(), style: v.style }))).then(async ls => {
+            let n = 0;
+            rows.forEach((v, i) => { if (ls[i] && p.koVoice?.includes(v) && v.style === was[i] && !v.label) { v.label = ls[i]; n++; } });
+            if (n) { await saveMeta(); if (!phoneClosed && phone() === p) drawPhone(true); }
+        }).catch(err => console.warn('[narrative-archive] voice labels', err));
+    };
+    const voiceSet = async (p, k, style) => {
+        const v = p.koVoice[k], w = String(v?.who ?? v?.from ?? '').trim(), row = { who: w, style, by: 'user' };
+        p.koVoice[k] = row;
+        await saveMeta(); if (!phoneClosed) drawPhone(true);
+        voiceLabel(p, row);
+    };
+    $root.on('click', '.na_ph_kvrow', async function (e) {
+        e.stopPropagation(); const p = phone(), k = Number(this.dataset.i), v = p?.koVoice?.[k]; if (!v) return;
+        const w = String(v.who ?? v.from ?? '').trim();
+        const style = await askInput(`${w}의 말투`, '남에게 하는 말투를 짧게 적어요.', String(v.style || ''), '저장', { area: true });
+        if (!style || phone() !== p || p.koVoice?.[k] !== v) return;
+        await voiceSet(p, k, style.slice(0, 300));
+    });
+    // 이야기에서 뽑기: the row starts choosing; with names chosen it asks the story about them (pickVoices: what it finds takes
+    // the row, what it doesn't keeps the row it had). 취소 stops choosing
+    const voiceDraw = () => { if (!phoneClosed) drawPhone(true); };
+    $root.on('click', '.na_ph_kvpick', async function (e) {
+        e.stopPropagation(); const p = phone(); if (!p || voiceBusy) return;
+        if (!voicePick) { voicePick = new Set(); return voiceDraw(); }
+        const names = voiceList(p).filter(v => voicePick.has(v.who.toLowerCase())).map(v => v.who);
+        if (!names.length) return;
+        voiceBusy = true; voiceDraw();
+        let got = null;
+        try { got = await pickVoices(m, owner, p, names); await saveMeta(); }
+        catch (err) { console.warn('[narrative-archive] voices', err); toastr.warning(`말투를 못 뽑았어요 (${String(err?.message || err)})`, '캐릭터 휴대폰'); }
+        finally { voiceBusy = false; }
+        if (got) { voicePick = null; if (got.found.length) toastr.success(`${got.found.join(', ')} · 뽑았어요`, '말투'); if (got.missing.length) toastr.info(`${got.missing.join(', ')} · 이야기에서 말투를 못 찾았어요`, '말투'); }
+        voiceDraw();
+    });
+    $root.on('click', '.na_ph_kvx', function (e) { e.stopPropagation(); if (voiceBusy) return; voicePick = null; voiceDraw(); });
+    $root.on('click', '.na_ph_kvtick', function (e) {
+        e.stopPropagation(); if (!voicePick || voiceBusy) return; const k = String(this.dataset.n || '').toLowerCase();
+        if (voicePick.has(k)) voicePick.delete(k); else voicePick.add(k);
+        voiceDraw();
+    });
+    $root.on('click', '.na_ph_kvall', function (e) {
+        e.stopPropagation(); const p = phone(); if (!p || !voicePick || voiceBusy) return;
+        const ks = voiceList(p).filter(v => (this.dataset.g === 'auto') === v.model).map(v => v.who.toLowerCase());
+        if (ks.every(k => voicePick.has(k))) ks.forEach(k => voicePick.delete(k)); else ks.forEach(k => voicePick.add(k));
+        voiceDraw();
+    });
+    // 사람 추가: the people chosen are added (a name only) and asked of the story at once; what it doesn't find stays a name
+    // to write by hand. Back on the list after
+    $root.on('click', '.na_ph_kvaddtick', function (e) {
+        e.stopPropagation(); if (voiceBusy) return; const k = String(this.dataset.n || '').toLowerCase();
+        if (voiceAdd.has(k)) voiceAdd.delete(k); else voiceAdd.add(k);
+        voiceDraw();
+    });
+    $root.on('click', '.na_ph_kvaddall', function (e) {
+        e.stopPropagation(); const p = phone(); if (!p || voiceBusy) return;
+        const ks = voicePeople(p).map(x => x.name.toLowerCase());
+        if (ks.every(k => voiceAdd.has(k))) voiceAdd.clear(); else ks.forEach(k => voiceAdd.add(k));
+        voiceDraw();
+    });
+    $root.on('click', '.na_ph_kvaddgo', async function (e) {
+        e.stopPropagation(); const p = phone(); if (!p || voiceBusy) return;
+        const names = voicePeople(p).filter(x => voiceAdd.has(x.name.toLowerCase())).map(x => x.name).slice(0, 20);
+        if (!names.length) return;
+        if (!Array.isArray(p.koVoice)) p.koVoice = [];
+        names.forEach(n => p.koVoice.push({ who: n.slice(0, 40), style: '', by: 'user' }));
+        voiceBusy = true; voiceDraw();
+        let got = null;
+        try { got = await pickVoices(m, owner, p, names); }
+        catch (err) { console.warn('[narrative-archive] voices', err); toastr.warning(`말투를 못 뽑았어요 (${String(err?.message || err)})`, '캐릭터 휴대폰'); }
+        finally { voiceBusy = false; }
+        await saveMeta();
+        if (got) { if (got.found.length) toastr.success(`${got.found.join(', ')} · 뽑았어요`, '말투'); if (got.missing.length) toastr.info(`${got.missing.join(', ')} · 이야기에서 말투를 못 찾았어요`, '말투'); }
+        voiceAdd = new Set(); if (view === 'setvoiceadd') view = 'setvoice';
+        voiceDraw();
+    });
+    $root.on('click', '.na_ph_kvadd', async function (e) {
+        e.stopPropagation(); const p = phone(); if (!p) return;
+        const name = await askInput('사람 추가', '이름을 적어요.', '', '다음');
+        if (!name || phone() !== p) return;
+        if (!Array.isArray(p.koVoice)) p.koVoice = [];
+        const have = p.koVoice.findIndex(v => String(v?.who ?? v?.from ?? '').trim().toLowerCase() === name.toLowerCase());
+        const style = await askInput(`${name}의 말투`, '남에게 하는 말투를 짧게 적어요.', have >= 0 ? String(p.koVoice[have].style || '') : '', '저장', { area: true, empty: have < 0 });
+        if (style === false || phone() !== p) return;
+        if (have >= 0) return voiceSet(p, have, style.slice(0, 300));
+        const row = { who: name.slice(0, 40), style: style.slice(0, 300), by: 'user' };
+        p.koVoice.push(row);
+        if (view === 'setvoiceadd') view = 'setvoice';
+        await saveMeta(); if (!phoneClosed) drawPhone(true);
+        voiceLabel(p, row);
     });
     $root.on('click', '.na_ph_screenholder', async function (e) {
         e.stopPropagation();

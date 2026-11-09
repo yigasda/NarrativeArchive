@@ -349,9 +349,9 @@ Write what the owner's phone gains from NEW MESSAGES. The story decides what hap
 YOU GET
 - NEW MESSAGES (numbered #123). Sometimes ARCHIVE FOR THESE MESSAGES: summaries covering them, also evidence.
 - Sometimes ARCHIVE BEFORE, STORY NOW, WORLD, OWNER PROFILE, STORY YEAR, DAYS (the weekdays ahead: "on Friday" is the next one).
-- PHONE NOW ("now": when it was last read), EVENTS ON THE PHONE (scenes with ids)${life ? ', LIFE NOW (alarms, files, health days, with ids)' : ''}. Sometimes MESSAGES READ BEFORE, NOW CHANGED (edited messages with their scenes)${wallet ? ' and ORDERS AND TICKETS (orders and tickets with their status and eta)' : ''}.${weather && tracker ? `
+- PHONE NOW ("now": when it was last read), EVENTS ON THE PHONE (scenes with ids)${life ? ', LIFE NOW (alarms, files, health days, with ids)' : ''}. Sometimes MESSAGES READ BEFORE, NOW CHANGED (edited messages with their scenes)${wallet ? ' and ORDERS AND TICKETS (orders and tickets with their status and eta; a record about one keeps its item, dates and status)' : ''}.${weather && tracker ? `
 - WEATHER NOW: the chat's last status line (date, time, place, weather; a scene the owner isn't in: its place and weather only).` : ''}
-- Sometimes OWNER'S CLOCK (where the owner is, their time, the hours to others), PEOPLE AROUND (people in their life, where things stand) and OWNER DOESN'T KNOW. And OWNER.
+- Sometimes OWNER'S CLOCK (where the owner is, their time, the hours to others), PEOPLE AROUND (people in their life, where things stand) and OWNER DOESN'T KNOW (never on the phone as known). And OWNER.
 
 ${archiveOnly ? `TIMES\n${CORE_TIMES}` : `${CORE_CLOCK_FIRST}\n${CORE_TIMES}`}
 
@@ -384,7 +384,7 @@ Go through each scene's messages in order. Write a record only in these cases, w
 A record says no more than its "said". Nothing else goes in "records".
 
 STEP 4 · EVERYDAY
-1. Hours: the waking hours from PHONE NOW's "now" to the answer's "now" that no scene covers, skipped days included. Asleep or busy in a scene: no owner activity; incoming texts and calls may arrive.
+1. Hours: the waking hours from PHONE NOW's "now" to the answer's "now" that no scene covers, skipped days included. Asleep or busy in a scene: no owner activity; incoming texts and calls may arrive. Late texts agree with ${life ? 'screen time and sleep' : 'a late night'}.
 2. Amount: about ${LIFE_A_DAY} records per full waking day, fewer for part of one. A full day uses at least ${life ? 8 : 6} of their apps (texts, calls, photos, searches, notes, mails, posts, voice memos${life ? ', alarms, files' : ''}). Who they talk to, and how much, follows their character and PEOPLE AROUND.
 3. Take each day from, in order:
    a. people the owner had a scene with may text later, if it fits;
@@ -404,7 +404,7 @@ STEP 5 · EACH APP
 - Mail: whatever would really land in their inbox from their life, accounts, hobbies and habits.
 - Calendar: fixed commitments only. Post: only if they post.${life ? ' Alarm, file: change with their life.' : ''}
 - Diary: their experience and feelings at natural length; never a list of events or a summary.
-- Voice memo: spoken, not written: the way they talk in the chat, with pauses (…), restarts and half sentences, at a moment alone (after a fight, on the way somewhere, late at night). 20 to 90 seconds; "sec" to fit; "place" where they were. Never the diary told again.${life ? `
+- Voice memo: spoken, not written: the way they talk in the archive and chat, with pauses (…), restarts and half sentences, at a moment alone (after a fight, on the way somewhere, late at night). 20 to 90 seconds; "sec" to fit; "place" where they were. Never the diary told again.${life ? `
 
 HEALTH
 1. One row for each day reached and each LIFE NOW day newly shown. Today's row always, with totals so far (steps, workouts, coffee, water, "screen").
@@ -422,7 +422,7 @@ WEATHER
 - With new weather, also each saved city's "cond", "temp", "hi" and "lo".` : ''}
 
 KEEPING IN STEP
-- A text in PHONE NOW: only its new messages.${life ? ' A LIFE NOW alarm or file: not again unless it changes, then with its id in "already".' : ''} A known scene: its id. An edited message: the ids listed.
+- Nothing PHONE NOW${life ? ' or LIFE NOW' : ''} holds is written again, nor a near copy of it (e.g. a note, list, mail or message with only a few words changed). A text: only its new messages. A note, mail, search, photo, diary or post: a new one only when it says something new.${life ? ' A LIFE NOW alarm or file: not again unless it changes, then with its id in "already".' : ''} A known scene: its id. An edited message: the ids listed.
 
 LANGUAGE
 - Each text in the language its writer really uses, as long as that person really writes. No Korean translations: the app adds them.
@@ -437,7 +437,7 @@ JSON (one object, nothing before or after it)
     "at": its message number, "scene": its scene id, "said": exact words, "situations": [situation ids] or [],${life ? ' "already": a LIFE NOW id or "",' : ''} and the fields of its type in ITEMS }],
   "everyday": [{ "date": "MM-DD", "records": [{ "type": one of the ITEMS types but "profile" and "visit", "situations": [situation ids] or [], and the fields of its type in ITEMS }] }] (one entry a day, in order)${life ? `,
   "health": [{ "date": the day they woke, "already": a LIFE NOW id or "", "sleep", "wake", "woke", "steps", "km", "floors", "hr": [low, high], "workouts": [{ "kind", "time", "min", "km" }], "coffee", "coffeeKind", "water", "weight", "screen": { "apps": { app: minutes }, "pickups", "late" } }],
-  "usual": { "weight", "height", "coffee", "coffeeKind", "coffeeKo", "water", "bed", "sleep", "wake", "steps", "workouts", "rest", "screen": { "add": [{ "app", "kind": chat | social | game | video | music | work | reading | shopping | money | maps | health | other, "min" }], "drop", "pickups", "late" } } or null` : ''}${life && weather ? `,\n${WEATHER_JSON}` : ''} }
+  "usual": { "weight", "height", "coffee", "coffeeKind", "water", "bed", "sleep", "wake", "steps", "workouts", "rest", "screen": { "add": [{ "app", "kind": chat | social | game | video | music | work | reading | shopping | money | maps | health | other, "min" }], "drop", "pickups", "late" } } or null` : ''}${life && weather ? `,\n${WEATHER_JSON.replace('"line", "ko",', '"line",')}` : ''} }
 Write in this order. Numbers are plain JSON numbers. Nothing new: "records": [].
 
 ITEMS (each with only the fields it needs)
@@ -1281,7 +1281,8 @@ const LORE_MAX = 20_000;
 export const phoneLore = m => (Array.isArray(m.phoneLore) ? m.phoneLore.filter(Boolean) : []);
 // entries of a picked book left out by hand: m.phoneLoreOff = { [book]: [uid, …] }
 export const loreOff = (m, book) => new Set((m.phoneLoreOff && typeof m.phoneLoreOff === 'object' && Array.isArray(m.phoneLoreOff[book]) ? m.phoneLoreOff[book] : []).map(String));
-export async function loreFor(m, owner) {
+// skip: the owner's chosen profile when it is a lorebook entry ({ book, id }): it goes as OWNER PROFILE, not twice
+export async function loreFor(m, owner, skip = null) {
     const c = ctx(), re = nameRe(owner), items = [];
     for (const name of phoneLore(m)) {
         let data = null;
@@ -1290,6 +1291,7 @@ export async function loreFor(m, owner) {
         for (const [uid, e] of Object.entries(data?.entries || {})) {
             const body = String(e?.content || '').trim();
             if (!body || e.disable || off.has(String(e.uid ?? uid))) continue;
+            if (skip && skip.book === name && String(skip.id) === String(e.uid ?? uid)) continue;
             const title = String(e.comment || (e.key || []).join(', ')).trim();
             const mine = [body, title, ...(e.key || []), ...(e.keysecondary || [])].some(x => re.test(String(x)));
             items.push({ text: `- ${title ? `${title}: ` : ''}${body}`, rank: mine ? 0 : e.constant ? 1 : 2 });
@@ -1489,7 +1491,7 @@ async function makePhone0(m, owner, { update = false, apps = null } = {}) {
     const old = update ? m.phones?.[key] : null;
     const part = apps && m.phones?.[key] ? apps.flatMap(a => REMAKE[a] || []) : null;
     const binding=structuredClone(m.phones?.[key]?.financeProfile || m.phoneProfiles?.[key]);
-    const lore = await loreFor(m, owner), profile = await ownerProfileBlock(ctx(), binding, owner);
+    const lore = await loreFor(m, owner, binding?.type === 'lore' ? binding : null), profile = await ownerProfileBlock(ctx(), binding, owner);
     // a phone made for the first time (no reading of where everyone is): that reading first, so its OWNER'S CLOCK has the
     // hours and the time choices and its check knows the places, as a reflection's does (and PEOPLE AROUND goes along):
     // the one the user checked in 위치 정보 (preparePhone), else read now; its year too, from the start
@@ -1577,8 +1579,8 @@ async function makePhone0(m, owner, { update = false, apps = null } = {}) {
         if (was?.money) base.money = was.money;
         if (was?.investment) base.investment = was.investment;
         // the apps filled on their own (clock · health · files · weather, delivery) stay like the bank, and so does what the
-        // owner set: the year, hidden contacts and places, where they live
-        for (const k of ['life', 'delivery', 'voiceAt', 'year', 'noYear', 'yearSet', 'yearShift', 'hiddenContacts', 'hiddenPlaces', 'lives', 'livesManual', 'where', 'around']) if (was?.[k] !== undefined) base[k] = was[k];
+        // owner set: the year, hidden contacts and places, where they live, the voice table (말투)
+        for (const k of ['life', 'delivery', 'voiceAt', 'year', 'noYear', 'yearSet', 'yearShift', 'hiddenContacts', 'hiddenPlaces', 'lives', 'livesManual', 'where', 'around', 'koVoice', 'koVoiceAsked', 'koVoiceV']) if (was?.[k] !== undefined) base[k] = was[k];
         // (made for the first time: where everyone is and PEOPLE AROUND, as read before it)
         if (pre) for (const k of ['where', 'around', 'lives', 'livesManual', 'year', 'noYear', 'yearSet', 'yearShift']) if (pre[k] !== undefined) base[k] = structuredClone(pre[k]);
         // (the phone is set to the country its owner lives in, as read and checked, over the one the answer gave)
@@ -1987,7 +1989,7 @@ async function updatePhone(m, owner) {
         // (the section just before only, its end when long: the story's people and state come in PEOPLE AROUND and STORY NOW)
         if (background.length) { const t = background.at(-1).text; before.push(t.length > BEFORE_MAX ? t.slice(-BEFORE_MAX) : t); }
         const events = Object.entries(s.events).slice(-15).map(([id, e]) => `- ${id}: ${e.summary}${e.at === null || e.at === undefined ? '' : ` (#${e.at})`}`).join('\n');
-        const world = worldText(m), lore = await loreFor(m, owner), profile = await ownerProfileBlock(ctx(), p.financeProfile, owner, { money: !!(p.money || p.investment) });
+        const world = worldText(m), lore = await loreFor(m, owner, p.financeProfile?.type === 'lore' ? p.financeProfile : null), profile = await ownerProfileBlock(ctx(), p.financeProfile, owner, { money: !!(p.money || p.investment) });
         if (p.money) migrateBank(m, p);
         const money = moneyNow(p), invest = investNow(m, p), life = lifeNow(p);
         // a phone with money apps reads in two steps: core (marks the events money touches), then money for those
@@ -2722,6 +2724,13 @@ const realTz = v => { const z = String(v || '').trim(); if (!/^[A-Za-z]+(?:\/[A-
 // the cards as they are: every field the story can say where someone is in, nothing summed up
 const CARD_KEYS = ['description', 'personality', 'scenario', 'first_mes', 'mes_example'];
 const cardText = ch => CARD_KEYS.map(k => { const v = ch?.data?.[k] ?? ch?.[k]; return v ? `[${k}]\n${v}` : ''; }).filter(Boolean).join('\n\n');
+// the chat's character cards and the persona, whole, as blocks (the phone's voice table reads how people talk in them)
+export function cardBlocks() {
+    const c = ctx(), g = c?.groupId ? (c.groups || []).find(x => x.id === c.groupId) : null;
+    const chars = g ? (g.members || []).map(a => (c.characters || []).find(x => x.avatar === a)).filter(Boolean) : [c?.characters?.[c?.characterId]].filter(Boolean);
+    const persona = String(c?.powerUserSettings?.persona_description || '').trim();
+    return [...chars.map(ch => `[CHARACTER CARD — ${ch.name || ch.data?.name || ''}]\n${cardText(ch) || '(empty)'}`), persona ? `[PERSONA — ${c.name1 || 'user'}]\n${persona}` : ''].filter(Boolean);
+}
 // the other phones in this chat: given, else the chat's own saved ones (a screen or a fill that has only the phone)
 const phonesOf = m => m?.phones || ctx()?.chatMetadata?.narrative_archive?.phones || null;
 // known: a phone not made yet (no contacts to go by): the people the chat already names, the characters' cards, the
@@ -2759,7 +2768,7 @@ export async function readWhere(m, p, opts = {}) {
     if (p.making) p.asked = r.people;
     // a profile that is a lorebook entry is the one thing the cards and the persona don't already hold
     const lore = binding?.type === 'lore' ? await resolvePhoneProfile(ctx(), binding).catch(() => null) : null;
-    const book = await loreFor(m, p.owner).catch(() => '');
+    const book = await loreFor(m, p.owner, lore ? binding : null).catch(() => '');
     const input = [...r.blocks.slice(0, -3), lore ? `[OWNER PROFILE — chosen by the user for ${p.owner}]\n${lore.text}` : '', book ? `[LOREBOOK]\n${book}` : '', ...r.blocks.slice(-3)].filter(Boolean).join('\n\n');
     const raw = jsonOf(await askDraft(input, { force: true, system: AI_SYS_WHERE, maxTokens: 4500, effort: 'low' }));
     // the people closest to the owner, as the cards, the persona, the profile and the lorebook tell them (반영 reads these,
@@ -3244,7 +3253,9 @@ function placesAround(p, m = null) {
     const out = [], own = ownerZone(p);
     // (the owner's own place as the weather app has it is one of their names too: a zone known only by the country)
     if (own) out.push({ tz: own.tz, name: own.where, names: [own.where, ...own.names, p?.life?.weather?.here?.place], own: true, ...byOf(m, [p?.owner, ...arr(whereOf(p, p?.owner)?.aka)]) });
-    for (const c of arr(p?.life?.weather?.cities)) if (c?.tz) out.push({ tz: c.tz, name: c.name, names: [c.name, c.ko] });
+    // (a saved city: a row even on the owner's hours, unless it is the city the owner is in)
+    const cities = arr(p?.life?.weather?.cities), inCity = cityAt(p?.life?.weather?.here?.place, cities);
+    for (const c of cities) if (c?.tz) out.push({ tz: c.tz, name: c.name, names: [c.name, c.ko], saved: true, here: c === inCity || !!own && [own.where, ...own.names].some(n => n && [c.name, c.ko].some(k => k && pkey(k) === pkey(n))) });
     for (const x of p?.where?.people || []) if (nameKey(x.name) !== nameKey(p.owner)) { const z = zoneOfWhere(x); if (z) out.push({ tz: z.tz, name: z.where, names: z.names, who: x.name, ...byOf(m, [x.name, ...arr(x.aka)]) }); }
     // another phone's owner: where that phone read them to be, else its own saved city or country
     for (const q of Object.values(phonesOf(m) || {})) if (q && q !== p && q.owner && !whereOf(p, q.owner)) { const z = ownerZone(q); if (z) out.push({ tz: z.tz, name: z.where, names: z.names, who: q.owner, ...byOf(m, [q.owner, ...arr(whereOf(q, q.owner)?.aka)]) }); }
@@ -3315,12 +3326,13 @@ export function zonesOf(p, at = p?.now, m = null, { wholeYear = false } = {}) {
     const base = mins(t), hours = tz => (mins(zoneShift(t, own.tz, tz, yearOr(t, p.year))) - base) / 60, others = [];
     for (const z of placesAround(p, m).slice(1)) {
         const name = z.who || z.name;
-        if (z.tz === own.tz || others.some(o => nameKey(o.name) === nameKey(name))) continue;
+        if (z.tz === own.tz && !z.saved || z.here || others.some(o => nameKey(o.name) === nameKey(name))) continue;
         // (wholeYear: a time that is no story time, today's: every change in the year, the hours from each)
         const year = yearOr(t, p.year) || new Date().getFullYear();
         const h = hours(z.tz), dst = wholeYear ? dstYear(own.tz, z.tz, year).map(x => ({ at: x.at, hours: x.after, past: false })) : dstNear(t, own.tz, z.tz, yearOr(t, p.year), h), more = dst.length ? { dst } : {};
-        // (a place on the owner's hours now is no row, unless its hours change within the week: "0 hours (DST: +1 hour from …)")
-        if (h || dst.length) others.push(z.who ? { name: z.who, where: z.name, hours: h, ...more } : { name: z.name, hours: h, ...more });
+        // (a place on the owner's hours now is no row, unless its hours change within the week: "0 hours (DST: +1 hour from …)",
+        // or it is a saved city: "Munich: 0 hours", so a time there is plainly the owner's)
+        if (h || dst.length || z.saved) others.push(z.who ? { name: z.who, where: z.name, hours: h, ...more } : { name: z.name, hours: h, ...more });
     }
     return others.some(o => o.hours || o.dst?.length) ? { own: { name: own.where, tz: own.tz }, at: t, others } : null;
 }
@@ -3584,7 +3596,17 @@ export function koGaps(p, { all = false } = {}) {
     }
     for (const x of p?.photos || []) add(x, 'caption', 'ko', 'photo caption');
     for (const [app, xs] of [['note', p?.notes], ['diary', p?.diary], ['voice memo', p?.voice]]) for (const x of xs || []) { add(x, 'title', 'kt', `${app} title`); add(x, 'text', 'ko', app); }
-    for (const x of p?.searches || []) add(x, 'q', 'ko', 'search');
+    // (a search and the web it opened: the answer, the results, the questions, each page written so far)
+    const web = (o, depth = 0) => {
+        if (!o || typeof o !== 'object' || depth > 6) return;
+        if (Array.isArray(o)) { for (const y of o) web(y, depth + 1); return; }
+        add(o, 'title', 'kt', 'web'); add(o, 'text', 'ko', 'web');
+        for (const [k, v] of Object.entries(o)) if (v && typeof v === 'object' && !['nav', 'steps', 'pic', 'marks'].includes(k)) web(v, depth + 1);
+    };
+    for (const x of p?.searches || []) {
+        add(x, 'q', 'ko', 'search');
+        web(x.answer); for (const q of x.questions || []) add(q, 'q', 'ko', 'web'); web(x.results);
+    }
     for (const x of p?.events || []) add(x, 'title', 'ko', 'calendar');
     for (const x of p?.posts || []) { add(x, 'text', 'ko', 'post', own, 'followers'); add(x, 'photo', 'pko', 'post photo'); for (const c of x.comments || []) add(c, 'text', 'ko', 'comment', c.from || 'someone', own); }
     for (const x of p?.mails || []) { add(x, 'subject', 'ks', 'mail subject', x.from || x.sender || 'sender', own); add(x, 'text', 'ko', 'mail', x.from || x.sender || 'sender', own); }
@@ -3592,6 +3614,34 @@ export function koGaps(p, { all = false } = {}) {
     for (const x of p?.life?.clock?.alarms || []) add(x, 'label', 'ko', 'alarm');
     for (const x of p?.life?.clock?.timers || []) add(x, 'label', 'ko', 'timer');
     for (const x of p?.life?.files?.items || []) add(x, 'preview', 'ko', 'file');
+    if (p?.life?.weather) add(p.life.weather, 'line', 'ko', 'weather');
+    for (const x of p?.life?.files?.folders || []) add(x, 'name', 'ko', 'file folder');
+    if (p?.life?.health?.usual) add(p.life.health.usual, 'coffeeKind', 'coffeeKo', 'coffee');
+    // (은행 · 쇼핑 · 투자: their own requests write their Korean; what they left out, or a 다시 번역, is the translator's)
+    for (const x of p?.money?.tx || []) add(x, 'who', 'ko', 'bank', x.who || 'sender', own);
+    for (const x of p?.money?.orders || []) add(x, 'item', 'ko', 'shop');
+    for (const x of p?.investment?.securities || []) add(x, 'name', 'ko', 'invest');
+    for (const x of p?.investment?.watch || []) add(x, 'note', 'ko', 'invest');
+    // (배달: its own fill writes its Korean; what it left out, or a 다시 번역, is the translator's)
+    const dv = p?.delivery;
+    if (dv) {
+        for (const x of dv.shops || []) { add(x, 'name', 'ko', 'delivery'); for (const y of x.menu || []) add(y, 'name', 'ko', 'delivery'); }
+        for (const o of [...(dv.orders || []), ...(dv.cart ? [dv.cart] : [])]) {
+            for (const y of o.items || []) { add(y, 'name', 'ko', 'delivery'); add(y, 'option', 'optionKo', 'delivery'); }
+            add(o, 'noteShop', 'noteShopKo', 'delivery', own, o.shop || 'shop'); add(o, 'noteRider', 'noteRiderKo', 'delivery', own, 'courier');
+        }
+    }
+    return out;
+}
+// the records the last reflection put in (as 되돌리기 knows them): a Set of every object in them, for 이번 반영 다시 번역
+export function roundObjects(p) {
+    const u = p?.syncUndo, out = new Set();
+    if (!u) return out;
+    const walk = (o, d = 0) => { if (!o || typeof o !== 'object' || d > 8) return; if (!Array.isArray(o)) out.add(o); for (const v of Object.values(o)) if (v && typeof v === 'object') walk(v, d + 1); };
+    for (const [k, id] of u.items || []) walk((p[k] || []).find(x => x?.id === id));
+    const sig = x => JSON.stringify([x.from, x.text, x.time]);
+    for (const [tid, sigs] of u.msgs || []) { const t = (p.threads || []).find(x => x.id === tid), ss = new Set(sigs); for (const m of t?.messages || []) if (ss.has(sig(m))) walk(m); }
+    for (const e of u.effects || []) if (e?.type === 'push' && e.item?.id) { const list = String(e.path || '').split('.').reduce((o, k) => o?.[k], p); if (Array.isArray(list)) walk(list.find(x => x?.id === e.item.id)); }
     return out;
 }
 // after the Korean is added, 되돌리기 still sees the phone as the reflection left it
@@ -3694,7 +3744,7 @@ Oldest first.`;
 // story: how many tokens of chat stand in for a missing archive (0: the recent chat only, as with an archive)
 // read: an object to put what was read in ({ gap }), for a request whose app marks where it read up to
 export async function sideRequest(m, owner, blocks, { profile, money = false, story = 0, read = null } = {}) {
-    const world = worldText(m), lore = await loreFor(m, owner);
+    const world = worldText(m), lore = await loreFor(m, owner, profile?.type === 'lore' ? profile : null);
     const profileText = await ownerProfileBlock(ctx(),profile,owner,{money});
     const ph = m.phones?.[nameKey(owner)] || null, gap = read && 'gap' in read ? read.gap : windowOf(m, ph), upto = nowAt(gap);
     const recent = recentPhoneText(6, { upto, maxChars: 6000 });

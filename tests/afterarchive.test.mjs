@@ -469,6 +469,11 @@ test('OWNER\'S CLOCK names a summer-time change within a week of its time, on th
     // (a place on the owner's hours now, but not in a week: its row stays, with the change; never in the archive's block)
     const lagos = { owner: 'Ren', year: 2026, now: '10-24 12:00', life: { weather: { here: { place: 'London' }, cities: [{ name: 'London', tz: 'Europe/London' }, { name: 'Lagos', tz: 'Africa/Lagos' }, { name: 'Seoul', tz: 'Asia/Seoul' }] } } };
     assert.match(data.clockBlock(lagos, lagos.now), /- Lagos: 0 hours \(DST: \+1 hour from 10-25 02:00→01:00\)/);
+    // (a saved city in the owner's own zone is a row too, "0 hours"; the city the owner is in never is)
+    const munich = { owner: 'Ren', year: 2026, now: '11-09 05:16', life: { weather: { here: { place: 'Frankfurt' }, cities: [{ name: 'Frankfurt', tz: 'Europe/Berlin' }, { name: 'Seoul', tz: 'Asia/Seoul' }, { name: 'Munich', tz: 'Europe/Berlin' }] } } };
+    const mb = data.clockBlock(munich, munich.now);
+    assert.match(mb, /- Seoul: \+8 hours\n- Munich: 0 hours$/);
+    assert.doesNotMatch(mb, /- Frankfurt/);
     // (two changes an hour apart, one while the owner's clock repeats an hour: told apart)
     const ny = { owner: 'Ren', year: 2026, now: '10-30 12:00', life: { weather: { here: { place: 'New York' }, cities: [{ name: 'New York', tz: 'America/New_York' }, { name: 'Chicago', tz: 'America/Chicago' }, { name: 'Seoul', tz: 'Asia/Seoul' }] } } };
     assert.match(data.clockBlock(ny, ny.now), /- Chicago: -1 hour \(DST: 0 hours from 11-01 02:00→01:00; -1 hour from 11-01 02:00\)/);
@@ -761,6 +766,19 @@ test('다시 만들기 keeps what a reflection put in from a section running pas
     globalThis.__menu = { calls: [], answers: [JSON.stringify({ notes: [{ title: 'Groceries', text: 'milk', time: '10-20 10:00' }] })], answer: '{}' };
     await data.makePhone(mm, 'Ren', { apps: ['note'] });
     assert.deepEqual(p.notes.map(n => n.title).sort(), ['Groceries', 'Train times']);
+});
+
+test('다시 만들기 (the whole phone) keeps the voice table: the rows, who not to ask the story again, its tidy mark', async () => {
+    globalThis.__rows = rows(8);
+    const koVoice = [{ who: 'Ren', style: '엄마한테도 반말', by: 'user' }, { who: 'Mara', style: '다정한 반말', label: '다정한 반말', by: 'model', evidence: ['hey'] }];
+    const p = plainPhone({ koVoice: structuredClone(koVoice), koVoiceAsked: ['Ivo'], koVoiceV: 3 });
+    const mm = { ...m, phones: { ren: p } };
+    globalThis.__menu = { calls: [], answers: [JSON.stringify({ now: '10-26 09:00', notes: [{ title: 'Groceries', text: 'milk', time: '10-26 08:00' }] })], answer: '{}' };
+    const warn = console.warn; console.warn = () => {};
+    try { await data.makePhone(mm, 'Ren'); } finally { console.warn = warn; }
+    const q = mm.phones.ren;
+    assert.notEqual(q, p);
+    assert.deepEqual([q.koVoice, q.koVoiceAsked, q.koVoiceV], [koVoice, ['Ivo'], 3]);
 });
 
 test('위치 정보: the owner\'s country and city by hand, a person taken off or moved; the reading asked again keeps all of it', async () => {

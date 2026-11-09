@@ -86,6 +86,36 @@
     - 같은 때: 말투 고정 규칙(혼잣말 반말 · 서비스 존댓말 등)과 쌍(화자 → 상대)별 말투를 뺌. 목표는 "모든 번역이 한 사람이 쓴 것처럼, 사람마다 어디서나 같은 목소리". 말투표는 사람별 { who, style }(옛 { from, to }는 from을 사람으로 읽음).
     - 같은 때: "가 한국어"를 꾹 누르면(0.6초) 지금 보는 앱의 한국어를 지우고 전부 다시 번역(`redoKo`, `koAppOf(view)`로 앱을 고름, 홈 등 앱이 아닌 화면은 폰 전체). 실패하거나 빠진 줄은 원래 한국어로 되돌림. 짧게 누르기는 그대로.
     - 같은 때: [EXAMPLES](대화방에 이미 있는 한국어)를 뺌. 예전 반영이 들쭉날쭉하게 쓴 한국어를 따라 하게 됐음. 일관성은 말투표(VOICES)로만.
+    - 일기가 "~함" 말투로 번역됨(메모 글투가 "어디서나 같은 목소리" · 말투표로 일기까지 번짐). 말투표는 남에게 하는 말(문자 · 댓글 · 메일 · 게시물)만, 혼자 쓰는 글(self)은 원문의 결대로. 번역기가 전에 정한 말투표 줄(by: model)은 한 번 비움(p.koVoiceV = 2), 소망이 쓴 줄은 그대로.
+    - 말투표에 GitHub · Lufthansa · 회사가 들어가고, Oscar 말투가 "캘린더 일정에 맞춘 간결한 명사형"(묶음에 캘린더만 있던 때 정함). 말투표는 문자 · 댓글만: 그 요청에 그 사람의 문자 · 댓글이 있을 때만 받음(코드가 거름). 메일 · 게시물 · 캘린더 · 메모는 원문의 결대로. 번역기가 정한 옛 줄은 한 번 더 비움(koVoiceV = 3).
+    - 같은 때: 번역 요청에 [PEOPLE AROUND](aroundBlock)를 같이 보냄. 말투표가 없는 사람은 원문과 관계로 정함(짐작이라 확실한 건 소망이 쓴 말투표).
+    - 같은 때: 말투는 번역기가 곁다리로 정하지 않고 이야기에서 따로 뽑음(`learnVoices`, 지시문 `AI_SYS_PHONE_VOICE`, sideRequest로 ARCHIVE · RECENT CHAT 등 + [PEOPLE AROUND] + [WHO]). 번역 직전, 문자 · 댓글을 쓴 사람 중 말투표에 없는 사람만. 답 { people: [{ who, style, evidence: [이야기 원문] }] }, 근거가 없으면 안 넣고 다시 안 물음(koVoiceAsked). 줄을 지우면 다음에 다시 뽑음. 번역 지시문의 "voices" 답은 뺌. 버튼 없음.
+    - 같은 때: 말투 뽑기에 캐릭터 카드 · 페르소나를 통째로(cardBlocks: description · personality · scenario · first_mes · mes_example). 근거는 이야기나 카드의 원문.
+    - 같은 때: OWNER PROFILE은 소망이 고른 게 로어북 항목일 때만 같이(카드 · 페르소나를 골랐으면 이미 통째로 들어가 겹침).
+    - 같은 때: 말투 뽑기에서 PEOPLE AROUND를 뺌(원문을 통째로 보내니 요약은 겹침). LOREBOOK(카드 없는 주변 인물)과 WHO는 남김. 번역 요청의 PEOPLE AROUND는 그대로.
+    - 같은 때: OWNER PROFILE로 고른 로어북 항목은 [LOREBOOK]에서 자동으로 뺌(loreFor의 skip, sideRequest를 쓰는 모든 채우기에 해당).
+    - 같은 때(소망 결정): 소망이 지운 말투 줄은 다시 뽑지 않음. `dropVoice(p, i)`가 줄을 지우고 이름을 koVoiceAsked에 넣음. 다시 넣으려면 "사람 추가". 말투 화면의 지우기는 디자인 세션이 dropVoice를 부르게.
+    - 같은 때: 뽑기 `pickVoices(m, owner, p, names)`: 소망이 고른 사람을 이야기에서 바로 뽑음(지운 사람 · 직접 쓴 사람도). 찾으면 그 사람 줄을 바꾸고 not-asked에서 뺌, 못 찾으면 있던 줄 그대로. 돌려주는 값 { found, missing }. 버튼은 디자인 세션.
+    - 같은 때: 뽑은 말투에 목록용 짧은 이름표 `label`("격식 존댓말 · 단호함" 식, 20자까지, 넘으면 버림)을 같이 받음. 번역 요청엔 안 넣음. style 자르기는 120 → 300자(문장 중간에 잘려서). 지시문에 길이 안내는 안 넣음(소망: 뽑은 문장 길이는 그대로).
+    - 같은 때: 직접 쓴 말투 줄의 이름표 `labelVoices([{ who, style }])` → [label 또는 ""]. 번역 · 뽑기와 상관없는 따로 짧은 요청(지시문 `AI_SYS_VOICE_LABEL`, 받는 것 [NOTES]뿐, 이야기 · 카드 안 읽음). 20자 넘으면 "". 화면 연결은 디자인 세션.
+    - 실제 반영에서 이미 있는 체크리스트 메모를 거의 그대로 또 씀: 통째로 새로 쓸 때 KEEPING IN STEP의 "PHONE NOW에 있는 건 무엇이든 다시 쓰지 않음"이 빠졌음(문자 · 알람 · 파일 · 장면만 남음). 되살리고 메모 · 메일 · 검색 · 사진 · 일기 · 게시물은 "새로운 내용일 때만 새로", 몇 마디만 바꾼 거의 같은 것도 안 됨(예: 메모 · 목록 · 메일 · 메시지).
+    - 폰을 통째로 다시 만들면 말투표가 사라졌음 → koVoice · koVoiceAsked · koVoiceV도 옛 폰에서 넘김. 되돌리기 · 대화 빼기는 원래 말투표를 안 건드림.
+    - 날씨 한 줄 "Clear and cold early morning in Westend"의 한국어가 "대체로 맑음": core JSON의 날씨 칸에 설명 없는 "ko"가 남아서 모델이 날씨 이름을 씀(LANGUAGE의 ko 설명은 앞서 뺐음). core에서 날씨 "ko"를 빼고, 날씨 한 줄도 fillKo(koGaps, app "weather")가 옮김.
+    - 같은 때 전부 대조: core가 아직 묻던 한국어 칸은 usual의 coffeeKo 하나 → 뺌. 화면이 한국어를 보여 주는데 번역기 대상에 없던 곳: 파일 폴더 이름(life.files.folders name → ko), 커피 종류(usual coffeeKind → coffeeKo) → koGaps에 넣음. money · 배달 · 웹 페이지는 각자 요청이 한국어를 직접 써서 그대로.
+    - 통째로 새로 쓰기 전 지시문(5aaad62)과 규칙을 하나씩 대조해서 빠진 것을 되살림:
+      · YOU GET의 OWNER DOESN'T KNOW "(never on the phone as known)" (PROMPT-RULES 4번 규칙)
+      · ORDERS AND TICKETS "a record about one keeps its item, dates and status"
+      · 음성 메모 "in the archive and chat" (메모 · 음성의 "full personal content"는 되살렸다가 뺌: 다른 줄이 받쳐 줌, 소망 결정)
+      · (일기 "안 보인 날은 삶에서"도 되살렸다가 뺌: STEP 4 · situations가 받쳐 줌, 소망 결정)
+      · EVERYDAY 1번 "Late texts agree with screen time and sleep / a late night"
+      · 복구로 돌아온 회차도 번역(koRun)
+      일부러 뺀 것(소망 결정)은 그대로: DO NOT CONTINUE, "plainly implies", "not story facts", 장면 사람 문자 강제, 3명 이상, Texts short, 한국어 칸, advances. 약 3,640토큰.
+    - 다시 번역을 셋으로 나눔(앱 전체 다시 번역은 입력이 계속 늘고 마음에 든 번역까지 지워서):
+      · 화면 하나("가 한국어" 꾹): koScopeOf(p, view) — 대화방 하나 · 메모 · 일기 · 메일 · 일정 · 사진 · 게시물 · 음성 한 개, 검색 결과 하나(열어 본 페이지 빼고), 페이지 하나, 파일 · 폴더 · 알람 하나. 목록 화면은 그 앱의 최근 40줄만(koAppOf). 다시 번역할 게 없으면 조용히 아무것도 안 함(소망 결정).
+      · 이번 반영(보고의 "이번 반영 다시 번역"): roundScope = 되돌리기가 아는 그 회차의 새 기록(syncUndo items · msgs · push effects).
+      · 폰 전체(설정에서 꾹): "폰 전체를 다시 번역할까요?" 확인 뒤.
+      redoKo(p, pick, { max, newest })는 이제 줄 고르기(pick)를 받음.
+    - 꾹 누르기 화면 대조: 한국어 버튼이 있는 화면을 전부 뽑아 맞춤(koAppOf). 날씨 도시 목록(wlist) → 날씨 한 줄, 웹(search · page · marks · tabs · history) → 검색어와 웹 전부(바로 답, 결과 제목 · 요약, 함께 찾은 질문, 열어 본 페이지의 제목 · 첫 단락 · 본문 · 인용 · 알림 · 댓글 · 섹션), 건강(health · hcmp) → 커피 종류, 배달 → 배달(가게 · 메뉴 · 주문 · 장바구니 이름, 옵션, 요청사항: 배달 채우기가 빠뜨린 것도 번역기가 채움, 배달 화면 한국어 버튼도 번역 전에 보임), 옮길 게 없는 화면은 "이 화면엔 다시 옮길 한국어가 없어요". 은행(거래 상대) · 쇼핑(주문 상품) · 투자(종목 이름 · 관심 메모)도 대상(각자 요청이 쓴 한국어가 빠졌을 때, 폰 전체 다시 번역 때). 화면이 한국어를 보여 주는 칸은 이로써 지도 검색(지명 자료, 우리 기록 아님)과 카메라 방금 찍은 사진(사진첩으로 감) 빼고 전부, 설정 → 폰 전체. 전엔 목록에 없는 화면이 다 폰 전체였음.
     - run77 뒤(생활 12개): THE STORY 첫 줄의 "before the owner's own life"를 뺌(옛 최종엔 없던 우선순위). 건강 · usual은 records에서 빼서 everyday 뒤 맨 위 칸 "health" · "usual"로(모델이 앞에서부터 쓰니 생활이 뒤로 밀려 짧아지지 않게). `recordsCore`가 둘을 읽어요. `applyDays`: 폰의 날이 짐작(pattern, 모델이 쓴 `:d` 줄 아님)이면 모델 값으로 바꿈(되돌리기 됨; run77 11-05가 pattern 8,050으로 남던 것).
     - THE STORY IS CANON(run78 뒤 세 줄로 압축하고 옛 따옴표 예시 — 마감 · 한 일 · 나중 계획 — 를 넷째 줄에 되돌림; 처음엔 할 일은 둘 중 하나: 이야기 안에서 쓰기 · 이야기 밖 일상 / 앞서가지 않기, 비밀 · 새 사실 · 이유와 전말 · 결과와 완료 · 계획 지어내지 않기 / 명시한 만큼만, 지어낸 미래는 일상만 / 이야기 사람 · 사건 기록에선 나중 메시지가 뒤집을 수 있는 건 새 사실). 겹치던 줄은 뺌: THE OWNER'S LIFE의 옛 새 사실 줄(예시 포함), 일기 · 음성 메모 끝의 "no new secrets or story events".
       - 지시문: 본체 15,553자(생활 앱 19,427, +날씨 20,484).

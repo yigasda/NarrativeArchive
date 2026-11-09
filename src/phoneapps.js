@@ -184,7 +184,7 @@ export function diaryOne(p, now, k) {
     const x = (p.diary || [])[k];
     if (!x) return diaryScreen(p, now);
     return `${axBar(p, now, '#3d3127')}
-      <div class="ax_dytop"><button type="button" class="ax_back" data-go="diary">${ax('back', 22, '#8a6d4a', 2.4)}${esc(`${parts(x.date)?.mo || ''}월`)}</button><span class="ax_dyr">${delBtn('diary', k, 'ax_dydel', ax('trash2', 21, '#8a6d4a', 1.9))}${x.ko ? `<button type="button" class="na_ph_kochip ax_kobtn ${koOn() ? 'on' : ''}">한국어</button>` : ''}</span></div>
+      <div class="ax_dytop"><button type="button" class="ax_back" data-go="diary">${ax('back', 22, '#8a6d4a', 2.4)}${esc(`${parts(x.date)?.mo || ''}월`)}</button><span class="ax_dyr">${delBtn('diary', k, 'ax_dydel', ax('trash2', 21, '#8a6d4a', 1.9))}${x.ko || x.kt || hasKo(p) ? `<button type="button" class="na_ph_kochip ax_kobtn ${koOn() ? 'on' : ''}">한국어</button>` : ''}</span></div>
       <div class="ax_scroll ax_paper">
         <div class="ax_pdt">${esc(fmtDate(p, x.date))}</div>
         <h3>${esc(x.title || '')}</h3>${x.kt && koOn() ? `<div class="ax_pkt">${esc(x.kt)}</div>` : ''}
@@ -203,7 +203,7 @@ const delRow = (kind, i, label) => `<div class="ax_card ax_delcard"><button type
 // a list row that slides left to show 삭제 (메시지 · 메일 · 통화)
 const swipeRow = (kind, i, row) => `<div class="ax_swp"><button type="button" class="na_ph_rm ax_swdel" data-kind="${kind}" data-i="${esc(String(i))}">${ax('trash2', 21, 'currentColor', 2)}<span>삭제</span></button>${row}</div>`;
 const delBtn = (kind, i, cls, inner) => `<button type="button" class="na_ph_rm ${cls}" data-kind="${kind}" data-i="${esc(String(i))}" aria-label="지우기">${inner}</button>`;
-export const AXB = { clock: 'clockc', timer: 'clockc', wclock: 'clockc', alarm: 'clockc', health: 'health', hsteps: 'health', hsleep: 'health', hcmp: 'health', hwork: 'health', hheart: 'health', hwater: 'health', hweight: 'health', files: 'files', folder: 'files', file: 'files', weather: 'sky', wcity: 'sky', wlist: 'sky', dlv: 'dlv', delivery: 'dlv', dshop: 'dlv', dcart: 'dlv', dorders: 'dlv', dorder: 'dlv', ditem: 'dlv', dpay: 'dlv', drate: 'dlv', setprofile: 'slate', ivnotes: 'invest', ivschedule: 'invest', ivhistory: 'invest', invest: 'invest', stock: 'invest', ivactivity: 'invest', ivwatch: 'invest', ivstakes: 'invest', ivcash: 'invest', ivprices: 'invest', msg: 'blue', thread: 'blue', call: 'blue', callmiss: 'blue', callwho: 'blue', contacts: 'blue', contact: 'blue', draft: 'blue', groupinfo: 'blue', page: 'sky', tabs: 'sky', marks: 'sky', history: 'sky', bank: 'bank', acct: 'bank', tx: 'bank', fixed: 'bank', banknote: 'bank', banksend: 'bank', stmt: 'bank', txdoc: 'bank', bankmore: 'bank', wallet: 'wallet', card: 'wallet', pass: 'wallet', shop: 'shop', order: 'shop', track: 'shop', voice: 'voice', voiceone: 'voice', photo: 'apri', photoone: 'apri', note: 'butter', noteone: 'butter', search: 'sky', searchone: 'sky', cal: 'brick', calone: 'brick', mail: 'sky', mailone: 'sky', set: 'slate', settheme: 'slate', setdate: 'slate', setscreenholder: 'slate', setplace: 'slate', prep: 'slate', setlore: 'slate', setwho: 'slate', setremake: 'slate', setsync: 'slate', setsyncpick: 'slate', stime: 'stime', cam: 'apri', map: 'blue', mapq: 'blue', mapc: 'blue' };
+export const AXB = { clock: 'clockc', timer: 'clockc', wclock: 'clockc', alarm: 'clockc', health: 'health', hsteps: 'health', hsleep: 'health', hcmp: 'health', hwork: 'health', hheart: 'health', hwater: 'health', hweight: 'health', files: 'files', folder: 'files', file: 'files', weather: 'sky', wcity: 'sky', wlist: 'sky', dlv: 'dlv', delivery: 'dlv', dshop: 'dlv', dcart: 'dlv', dorders: 'dlv', dorder: 'dlv', ditem: 'dlv', dpay: 'dlv', drate: 'dlv', setprofile: 'slate', ivnotes: 'invest', ivschedule: 'invest', ivhistory: 'invest', invest: 'invest', stock: 'invest', ivactivity: 'invest', ivwatch: 'invest', ivstakes: 'invest', ivcash: 'invest', ivprices: 'invest', msg: 'blue', thread: 'blue', call: 'blue', callmiss: 'blue', callwho: 'blue', contacts: 'blue', contact: 'blue', draft: 'blue', groupinfo: 'blue', page: 'sky', tabs: 'sky', marks: 'sky', history: 'sky', bank: 'bank', acct: 'bank', tx: 'bank', fixed: 'bank', banknote: 'bank', banksend: 'bank', stmt: 'bank', txdoc: 'bank', bankmore: 'bank', wallet: 'wallet', card: 'wallet', pass: 'wallet', shop: 'shop', order: 'shop', track: 'shop', voice: 'voice', voiceone: 'voice', photo: 'apri', photoone: 'apri', note: 'butter', noteone: 'butter', search: 'sky', searchone: 'sky', cal: 'brick', calone: 'brick', mail: 'sky', mailone: 'sky', set: 'slate', settheme: 'slate', setdate: 'slate', setscreenholder: 'slate', setplace: 'slate', prep: 'slate', setvoice: 'slate', setvoiceadd: 'slate', setlore: 'slate', setwho: 'slate', setremake: 'slate', setsync: 'slate', setsyncpick: 'slate', stime: 'stime', cam: 'apri', map: 'blue', mapq: 'blue', mapc: 'blue' };
 export const AXB_C = { clockc: ['#f5a524', '#3a3220'], health: ['#e0405f', '#fbe3e8'], files: ['#2f6fbf', '#dfeaf8'], dlv: ['#1fa8a3', '#d9f4f3'], invest: ['#17695d', '#d9eee5'], blue: ['#2f6bff', '#e1e9ff'], apri: ['#a65a4e', '#f7e3d7'], butter: ['#7f6a22', '#f6edcf'], sky: ['#3f6a9e', '#dde8f4'], brick: ['#a14a42', '#f3dcd9'], slate: ['#454d5a', '#e6e8ec'], bank: ['#2c4a80', '#e2e9f5'], wallet: ['#3d4a66', '#e3e7ef'], shop: ['#2f7d74', '#d9efec'], voice: ['#8a5a2e', '#f2e7d6'], stime: ['#3f8fd8', '#e3f1fd'] };
 // people outside the archive get a letter on one of the home icons' colours
 const AX_AV = ['#8faed1', '#a699c9', '#d89f98', '#89b892', '#d494a7', '#a2a7af', '#dcc680'];
@@ -603,6 +603,7 @@ export function setScreen(p, now, m, ui) {
           <button type="button" class="ax_rw" data-go="settheme">${si('#a699c9', 'palette')}<span class="ax_tx"><span class="ax_n">테마</span></span><span class="ax_v">${p.theme === 'gray' ? '화이트 그레이' : '컬러 젤'}</span>${axChev}</button>
           <button type="button" class="ax_rw na_ph_kochip ax_koline">${si('#89b892', 'lang')}<span class="ax_tx"><span class="ax_n">한국어 보기</span></span><span class="ax_sw ${koOn() ? 'on' : ''}"></span></button>
           <button type="button" class="ax_rw na_ph_gloss">${si('#dcc680', 'pen')}<span class="ax_tx"><span class="ax_n">번역 용어집</span></span><span class="ax_v">${(n => (n ? `${n}개` : ''))(glossaryEntries(m).length)}</span>${axChev}</button>
+          <button type="button" class="ax_rw" data-go="setvoice">${si('#8faed1', 'cmt')}<span class="ax_tx"><span class="ax_n">말투</span></span><span class="ax_v">${(n => (n ? `${n}명` : ''))(voiceList(p).length)}</span>${axChev}</button>
         </div>
         <div class="ax_foot">한국어 보기를 켜면 외국어 글 밑에 번역이 붙어요.<br>적어두면 이제부터 새로 쓰는 글에 이름이 그대로 나와요.</div>
         ${(v => (v || p.life?.health ? `<div class="ax_sec">스크린타임</div><div class="ax_card"><button type="button" class="ax_rw" data-go="stime">${si('#79b5ee', 'sandglass')}<span class="ax_tx"><span class="ax_n">스크린타임</span></span><span class="ax_v">${v?.avg != null ? `하루 ${(n => `${Math.floor(n / 60) ? `${Math.floor(n / 60)}시간 ` : ''}${n % 60}분`)(v.avg)}` : ''}</span>${axChev}</button></div>` : ''))(screenView(p, now))}
@@ -660,6 +661,68 @@ export function setDate(p, now, m = null) {
         <div class="ax_foot">캐릭터와 주고받는 메시지의 시간이 누구를 기준으로 하는지 골라 주세요.</div>
         ${(o => `<div class="ax_sec">날짜 읽는 법</div><div class="ax_card"><div class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_n">순서</span></span><span class="ax_dseg">${[['md', '월.일'], ['dm', '일.월']].map(([v, t]) => `<span role="button" tabindex="0" class="na_ph_dord${o === v ? ' on' : ''}" data-v="${v}">${t}</span>`).join('')}</span></div></div>
         <div class="ax_foot">03.11. → ${o === 'dm' ? '11월 3일' : '3월 11일'}</div>`)(dateOrderOf(m))}
+      </div>
+      ${axInd()}`;
+}
+// 설정 › 말투 (docs/mockups/phone-voice A+D): the voice table the translator sends with every translation (p.koVoice:
+// { who, style, by }; an old { from, to, style } reads from as who), how each person sounds to others. What 소망 set
+// first, with 사람 추가; the translator's (by: 'model') under it, its names a little grey. A row opens the alert to edit
+// (and becomes 소망's); slid left, 삭제
+export const voiceList = p => (Array.isArray(p?.koVoice) ? p.koVoice : []).map((v, i) => ({ who: String(v?.who ?? v?.from ?? '').trim(), style: String(v?.style || '').trim(), label: String(v?.label || '').trim(), model: v?.by === 'model', i })).filter(v => v.who);
+// the list shows a style written by hand as its first two pieces (cut at commas, full stops …) joined with " · ", the
+// same shape as the story's labels; a long one ends in … on its one line
+export const voiceParts = st => String(st || '').split(/[,.;!?\n，。、；！？·…]+/).map(x => x.trim()).filter(Boolean);
+const voiceShort = st => { const ps = voiceParts(st); return `<span class="ax_p ax_kvp">${ps.length ? esc(ps.slice(0, 2).join(' · ')) : '말투 적기'}</span>`; };
+// 이야기에서 뽑기 (docs/mockups/phone-voice pickall B): the row on top turns the list into a choice — a circle at each
+// row's right (the settings radio), 전체 · 전체 해제 on each section's title, 취소 top right; with someone chosen the row
+// reads "N명 뽑기" and runs it (phone.js, pickVoices). pick: the chosen names (lower case), or null when not choosing
+Object.assign(AX, { wand: 'M15 4V2M15 10V8M11 6h2M17 6h2M4 20L14 10M19 13v2M18 14h2' });
+export function setVoice(p, now, pick = null, busy = false) {
+    const rows = voiceList(p), mine = rows.filter(v => !v.model), auto = rows.filter(v => v.model), on = v => !!pick?.has(v.who.toLowerCase());
+    const face = v => `${axLetter(v.who, 36)}<span class="ax_tx"><span class="ax_n${v.model ? ' ax_kvauto' : ''}">${esc(v.who)}</span>${v.label ? `<span class="ax_p ax_kvp">${esc(v.label)}</span>` : voiceShort(v.style)}</span>`; // the story's short label (phonetr.js) when it gave one
+    const row = v => (pick
+        ? `<div role="button" tabindex="0" class="ax_rw na_ph_kvtick" data-n="${esc(v.who)}">${face(v)}<span class="ax_radio${on(v) ? ' on' : ''}">${on(v) ? ax('check', 14, '#fff', 3.4) : ''}</span></div>`
+        : swipeRow('kovoice', v.i, `<div role="button" tabindex="0" class="ax_rw na_ph_kvrow" data-i="${v.i}">${face(v)}${axChev}</div>`));
+    const sec = (t, g, list) => (pick && list.length
+        ? `<div class="ax_sec ax_kvsec">${t}<span role="button" tabindex="0" class="ax_blue ax_kvall na_ph_kvall" data-g="${g}">${list.every(on) ? '전체 해제' : '전체'}</span></div>`
+        : `<div class="ax_sec">${t}</div>`);
+    const chosen = pick ? rows.filter(on) : [], n = chosen.length, again = n && chosen.every(v => v.style); // all of them have a style already: 다시 뽑기
+    return `${axBar(p, now)}
+      ${axTop(axCb('set'), pick ? '<span role="button" tabindex="0" class="ax_blue ax_kvx na_ph_kvx">취소</span>' : '')}
+      <div class="ax_scroll">${axH1('말투', rows.length ? `${rows.length}명` : '')}
+        <div class="ax_card"><div role="button" tabindex="0" class="ax_rw na_ph_kvpick${busy ? ' on' : ''}"><span class="ax_si" style="background: #8faed1">${ax('wand', 17, '#fff')}</span><span class="ax_tx"><span class="ax_n">${busy ? '뽑는 중' : n ? `${n}명 ${again ? '다시 ' : ''}뽑기` : '이야기에서 뽑기'}</span><span class="ax_p ax_kvp">고른 사람의 말투를 이야기에서 찾아요</span></span>${axChev}</div></div>
+        ${sec('내가 정한 말투', 'mine', mine)}
+        <div class="ax_card">${mine.map(row).join('')}${pick ? (mine.length ? '' : '<div class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_p ax_kvp">정한 사람이 없어요</span></span></div>') : '<div role="button" tabindex="0" class="ax_rw ax_rwn" data-go="setvoiceadd"><span class="ax_tx"><span class="ax_n ax_blue">사람 추가</span></span></div>'}</div>
+        ${sec('이야기에서 뽑은 말투', 'auto', auto)}<div class="ax_card">${auto.length ? auto.map(row).join('') : '<div class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_p ax_kvp">뽑은 사람이 없어요</span></span></div>'}</div>
+        <div class="ax_foot">고치면 내가 정한 말투로 옮겨져요.</div>
+        <i class="ax_pad"></i>
+      </div>
+      ${axInd()}`;
+}
+// 말투 › 사람 추가 (docs/mockups/phone-voice add B): the people the phone shows who aren't in the 말투 table, where each
+// shows up (연락처: the contacts app's, so texts and calls too · SNS: its comments), the owner first (나: their own texts and posts are translated in their voice too); chosen ones are added and asked of the story at once (phone.js). 직접 적기 types a name
+const VOICE_FROM = ['연락처', 'SNS'];
+export function voicePeople(p) {
+    const have = new Set(voiceList(p).map(v => v.who.toLowerCase())), gone = new Set(p.hiddenContacts || []), seen = new Map();
+    const add = (n, w) => { const name = String(n || '').trim(), k = nameKey(name); if (!k || k === 'me' || k === nameKey(p.owner) || gone.has(k) || have.has(name.toLowerCase())) return; if (!seen.has(k)) seen.set(k, { name, from: new Set() }); seen.get(k).from.add(w); };
+    (p.contacts || []).forEach(c => add(c.name, '연락처'));
+    (p.threads || []).forEach(t => (t.group ? groupOf(t) : [t.with]).forEach(n => add(n, '연락처')));
+    (p.calls || []).forEach(c => add(c.with, '연락처'));
+    (p.posts || []).forEach(x => (x.comments || []).forEach(c => add(c.from, 'SNS')));
+    const own = String(p.owner || '').trim(), me = own && nameKey(own) !== 'me' && !have.has(own.toLowerCase()) ? [{ name: own, from: '나' }] : [];
+    return [...me, ...[...seen.values()].map(x => ({ name: x.name, from: VOICE_FROM.filter(w => x.from.has(w)).join(' · ') })).sort((a, b) => a.name.localeCompare(b.name))];
+}
+export function setVoiceAdd(p, now, pick = new Set(), busy = false) {
+    const ps = voicePeople(p), on = x => pick.has(x.name.toLowerCase()), n = ps.filter(on).length;
+    return `${axBar(p, now)}
+      ${axTop(axCb('setvoice'))}
+      <div class="ax_scroll">${axH1('사람 추가')}
+        <div class="ax_card"><div role="button" tabindex="0" class="ax_rw na_ph_kvaddgo${busy ? ' on' : ''}"><span class="ax_si" style="background: #8faed1">${ax('wand', 17, '#fff')}</span><span class="ax_tx"><span class="ax_n">${busy ? '뽑는 중' : n ? `${n}명 뽑기` : '이야기에서 뽑기'}</span><span class="ax_p ax_kvp">고른 사람의 말투를 이야기에서 찾아요</span></span>${axChev}</div></div>
+        <div class="ax_sec${ps.length ? ' ax_kvsec' : ''}">폰에 나오는 사람${ps.length ? `<span role="button" tabindex="0" class="ax_blue ax_kvall na_ph_kvaddall">${ps.every(on) ? '전체 해제' : '전체'}</span>` : ''}</div>
+        <div class="ax_card">${ps.length ? ps.map(x => `<div role="button" tabindex="0" class="ax_rw na_ph_kvaddtick" data-n="${esc(x.name)}">${axLetter(x.name, 36)}<span class="ax_tx"><span class="ax_n">${esc(x.name)}</span><span class="ax_p ax_kvp">${esc(x.from)}</span></span><span class="ax_radio${on(x) ? ' on' : ''}">${on(x) ? ax('check', 14, '#fff', 3.4) : ''}</span></div>`).join('') : '<div class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_p ax_kvp">새로 고를 사람이 없어요</span></span></div>'}</div>
+        <div class="ax_card"><div role="button" tabindex="0" class="ax_rw ax_rwn na_ph_kvadd"><span class="ax_tx"><span class="ax_n ax_blue">직접 적기</span></span></div></div>
+        <div class="ax_foot">말투표에 없는 사람만 보여요.</div>
+        <i class="ax_pad"></i>
       </div>
       ${axInd()}`;
 }
