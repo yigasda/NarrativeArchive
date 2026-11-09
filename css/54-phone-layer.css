@@ -356,6 +356,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax_psrt b { display: block; font: 300 44px/1.05 'Inter Tight', -apple-system, sans-serif; letter-spacing: -0.02em; }
 .ax_psrt b.ax_pbsm { font-size: 26px; font-weight: 400; }
 .ax_pspl { align-self: center; opacity: 0.8; margin-bottom: 8px; } .ax_psrt.sm .ax_pspl { margin: 0; align-self: flex-end; height: 27px; display: flex; align-items: center; }
+/* the ticket's notches: a half-round bite out of each side between the big line and the fields, the wallet's ground showing through (not on the membership card) */ .ax_psnt { display: block; position: relative; height: 0; } .ax_psnt::before, .ax_psnt::after { content: ''; position: absolute; top: 2px; width: 26px; height: 26px; border-radius: 50%; --axr: 50%; background: #f4f5f7; box-shadow: inset 0 2px 3px rgba(22, 27, 34, 0.12); } .ax_psnt::before { left: -13px; } .ax_psnt::after { right: -13px; }
 .ax_psfl { display: grid; grid-template-columns: repeat(4, auto); justify-content: start; gap: 8px 22px; padding: 14px 16px 16px; }
 .ax_psfl small { display: block; font-size: 10px; letter-spacing: 0.06em; opacity: 0.7; font-weight: 600; } .ax_psfl b { font: 600 15px 'Inter Tight', -apple-system, sans-serif; overflow-wrap: anywhere; }
 .ax_ccpr .ax_cclg b { display: block; font-size: 15px; letter-spacing: 0.14em; }
