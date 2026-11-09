@@ -78,21 +78,27 @@ const LN = (fg, op, k, w) => `stroke="${fg}" stroke-opacity="${r1(op * k * 100) 
 // what 소망 chose, kind by kind; null is the plain look (no drawing). The train and the movie have no drawing chosen yet
 // the main wallet's look: no drawing and the dotted line between the two places ('' draws nothing but keeps the line)
 const lined = () => '';
-// theater (mockup, not chosen yet): damask, the opera house wallpaper, rows of medallions with a small flower between them, shaded in one tone
+// theater: damask, the opera house wallpaper, rows of medallions with a small flower between them, shaded in one tone
 const damask = (fg, op, u) => { let a = '', b = '';
     for (let r = -1; r < 5; r++) for (let c = 0; c < 6; c++) { const x = 168 + c * 44 + (r % 2 ? 22 : 0), y = r * 56 + 20;
         a += `M${x} ${y - 26}C${x + 10} ${y - 16} ${x + 16} ${y - 6} ${x + 8} ${y + 4}C${x + 16} ${y + 10} ${x + 14} ${y + 22} ${x} ${y + 26}C${x - 14} ${y + 22} ${x - 16} ${y + 10} ${x - 8} ${y + 4}C${x - 16} ${y - 6} ${x - 10} ${y - 16} ${x} ${y - 26}Z`;
         b += `M${x} ${y - 12}C${x + 5} ${y - 6} ${x + 5} ${y + 4} ${x} ${y + 12}C${x - 5} ${y + 4} ${x - 5} ${y - 6} ${x} ${y - 12}Z`;
         const fx = x + 22, fy = y + 28; for (let k = 0; k < 4; k++) { const t = k * PI / 2; b += `M${fx} ${fy}Q${r1(fx + 7 * cos(t - 0.5))} ${r1(fy + 7 * sin(t - 0.5))} ${r1(fx + 8 * cos(t))} ${r1(fy + 8 * sin(t))}Q${r1(fx + 7 * cos(t + 0.5))} ${r1(fy + 7 * sin(t + 0.5))} ${fx} ${fy}Z`; } }
     return fadeIn(u, `<path d="${a}" ${F(fg, 0.07)}/><path d="${b}" ${F(fg, 0.07)}/>`); };
-// match (mockup, not chosen yet): the stand seen from the pitch, rows of seats curving round, each row a little smaller and fainter
-const stand = (fg, op, u) => { let o = '';
-    for (let r = 0; r < 9; r++) { const k = 0.9 ** r, y = 200 - r * 22 * k - r * 4, w = 18 * k, h = 14 * k, gap = 4 * k, n = Math.ceil(260 / (w + gap)) + 1, bend = 10 * k;
-        for (let i = 0; i < n; i++) { const x = 160 + i * (w + gap), t = (x - 160) / 260, yy = y - bend * 4 * t * (1 - t);
-            o += `<rect x="${r1(x)}" y="${r1(yy - h)}" width="${r1(w)}" height="${r1(h)}" rx="${r1(h * 0.35)}" ${F(fg, r1((0.15 - r * 0.012) * 100) / 100)}/>`; } }
+// match (mockup, not chosen yet): a knitted scarf, rows of V stitches in the club's stripes
+const knit = (fg, op, u) => { const bands = [0.16, 0.06, 0.16, 0.06, 0.16]; let o = '';
+    for (let r = 0; r < 30; r++) { const y = -8 + r * 7.4, a = bands[Math.floor(r / 6) % 5]; let d = '';
+        for (let c = 0; c < 26; c++) { const x = 150 + c * 10 + (r % 2) * 0; d += `M${x} ${y}q2.6 1 5 6.4q-3.4 -0.4 -5 -3.4ZM${x + 10} ${y}q-2.6 1 -5 6.4q3.4 -0.4 5 -3.4Z`; }
+        o += `<path d="${d}" ${F(fg, a)}/>`; }
+    return fadeIn(u, o); };
+// concert (mockup, not chosen yet): confetti falling over the crowd, pieces turning as they fall, a few curled streamers
+const confetti = (fg, op, u) => { let o = '';
+    for (let i = 0; i < 70; i++) { const q = (i * 0.618034) % 1, t = (i * 0.414214) % 1, x = r1(170 + q * 240), y = r1(-6 + t * 210), w = r1(3 + (i % 5)), h = r1(w * (1.6 + (i % 3) * 0.4)), rot = (i * 47) % 180;
+        o += `<rect x="${r1(x - w / 2)}" y="${r1(y - h / 2)}" width="${w}" height="${h}" rx="0.8" transform="rotate(${rot} ${x} ${y})" ${F(fg, r1((0.08 + (i % 4) * 0.04) * 100) / 100)}/>`; }
+    for (const [x, y] of [[214, 30], [300, 74], [356, 22], [250, 140], [338, 150]]) o += `<path d="M${x} ${y}c6 4 -6 10 0 14s-6 10 0 14s-6 10 0 14" stroke="${fg}" stroke-opacity=".16" stroke-width="2" fill="none" stroke-linecap="round"/>`;
     return fadeIn(u, o); };
 const MOTIF = { flight: [flight, null], train: [lined, null], membership: [dots, holo], other: [dots], concert: [spots], hotel: [windows, doors], match: [bowl],
-    movie: [null], museum: [rosette, rosetteP], bus: [lanes, chevrons], ferry: [depths, seaChart], theater: [harlequin], park: [wheel, sunburst] };
+    movie: [null], museum: [rosette, rosetteP], bus: [lanes, chevrons], ferry: [depths, seaChart], theater: [harlequin, damask], park: [wheel, sunburst] };
 const seedOf = id => [...String(id || '')].reduce((h, c) => h + c.charCodeAt(0), 0);
 export function passMotif(k, fg, op, id) {
     const xs = MOTIF[k] || MOTIF.other, f = xs[seedOf(id) % xs.length];
