@@ -29,7 +29,7 @@
 @keyframes lf_fall2 { from { transform: translate(0, -60px) rotate(10deg); } to { transform: translate(-150px, 900px) rotate(10deg); } }
 .ax .lf_sc .sn { top: -20px; border-radius: 50%; --axr: 50%; background: #fff; animation: lf_snow2 var(--d) linear var(--dl) infinite}
 @keyframes lf_snow2 { 0% { transform: translate(0, -30px); } 25% { transform: translate(var(--s), 220px); } 50% { transform: translate(0, 440px); } 75% { transform: translate(var(--s), 660px); } 100% { transform: translate(0, 880px); } }
-.ax .lf_sc .fg { height: 34px; border-radius: 17px; --axr: 17px}
+.ax .lf_sc .fg { height: 34px; border-radius: 17px; --axr: 17px; animation: lf_fogd var(--d) ease-in-out var(--dl) infinite alternate; } @keyframes lf_fogd { from { transform: translateX(calc(var(--x) * -1)); } to { transform: translateX(var(--x)); } }
 .ax .lf_sc .bolt { left: 210px; top: 150px; width: 60px; height: 120px; opacity: 0; animation: lf_bolt 5s infinite; }
 .ax .lf_sc .fl { inset: 0; background: #fff; opacity: 0; animation: lf_flash2 5s infinite; }
 @keyframes lf_bolt { 0%, 58%, 66%, 100% { opacity: 0; } 60%, 64% { opacity: 1; } }

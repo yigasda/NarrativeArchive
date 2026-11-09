@@ -809,6 +809,7 @@ function pal(cond, phase) {
     const NIGHT = ['#222b40', '#1c2436', '#161d2c'];
     if (cond === 'storm') return { ...D.storm, phase: 'day' };
     if (phase === 'morn' || phase === 'forenoon') return mornPal(cond, D, phase);
+    if (cond === 'fog' && FOG[phase]) return { ...FOG[phase], phase };
     if (phase === 'night') {
         if (cond === 'clear' || cond === 'wind') return { sky: '#28324a', hills: NIGHT, moon: true, stars: 34, wind: cond === 'wind', phase };
         if (cond === 'partly' || cond === 'cloudy') return { sky: '#28324a', hills: NIGHT, moon: true, stars: 16, cloud: '#333d55', phase };
@@ -829,6 +830,13 @@ function pal(cond, phase) {
     }
     return { ...D[cond] || D.cloudy, phase: 'day' };
 }
+// fog takes the hour's own sky, faded: the light comes through the mist (dawn lilac, noon pale blue, dusk rose, night blue), whiter low
+const FOG = {
+    dawn: { sky: '#8c8fab', bands: [[165, '#9c9cb6'], [220, '#b3abbd'], [275, '#cdb8b9']], cb: [[48, '#9c9cb6'], [64, '#b3abbd'], [78, '#cdb8b9']], hills: ['#8e8ea6', '#83839b', '#787890'], fog: 'rgba(255, 255, 255, 0.22)' },
+    day: { sky: '#97a5b6', bands: [[165, '#a5b1bf'], [220, '#b9c2cb'], [275, '#cfd4d6']], cb: [[48, '#a5b1bf'], [64, '#b9c2cb'], [78, '#cfd4d6']], hills: ['#8d99a8', '#828e9d', '#778392'], fog: 'rgba(255, 255, 255, 0.24)' },
+    eve: { sky: '#a48a8c', bands: [[165, '#b29896'], [220, '#c3a89e'], [275, '#d6bca6']], cb: [[48, '#b29896'], [64, '#c3a89e'], [78, '#d6bca6']], hills: ['#94797f', '#886e75', '#7c646b'], fog: 'rgba(255, 255, 255, 0.2)' },
+    night: { sky: '#363d4d', bands: [[165, '#3d4556'], [220, '#465061'], [275, '#535d6d']], cb: [[48, '#3d4556'], [64, '#465061'], [78, '#535d6d']], hills: ['#2f3545', '#2a2f3e', '#242937'], fog: 'rgba(255, 255, 255, 0.13)' },
+};
 // the morning (07–11): the sky already warm from the top, as at dawn and dusk, in four wide bands; lighter than noon, the sun climbing.
 // 분홍 아침 (07–09) goes through lilac and rose to peach, 노랑 아침 (09–11) through soft sky and cream to a pale gold. Storms stay the storm.
 // bands: the screen's (top in px of 844), cb: the city card's (of 118)
@@ -882,8 +890,14 @@ function scene(cond, phase) {
     if (q.fall === 'heavy') out.push(drops(90, 'rn hv', 20, 18, 0.8, 0.4));
     if (q.fall === 'sleet') out.push(drops(40, 'rn', 14, 16, 1.2, 0.7) + flakes(30, false));
     if (q.fall === 'snow') out.push(flakes(60, true));
-    // fog: thin, faint wisps up high (to the right, clear of the place and the temperature), thicker banks lower down; fog stands still
-    if (q.fog) out.push([[88, 235, 190, 20, 0.55], [146, 100, 315, 26, 0.75], [236, 215, 260, 30, 0.9], [320, -60, 330], [390, 90, 360], [460, -20, 300], [530, 120, 320], [600, -40, 380]].map(([t, l, w, h, o]) => `<i class="fg" style="top: ${t}px; left: ${l}px; width: ${w}px; background: ${q.fog}${h ? `; height: ${h}px; border-radius: ${h / 2}px; opacity: ${o}` : ''}"></i>`).join(''));
+    // fog: thin, faint wisps up high (to the right, clear of the place and the temperature), thicker banks lower down. Each is solid, the
+    // white mixed into the band behind it (see-through ones showed the bands' edges), and drifts very slowly to and fro
+    if (q.fog) {
+        const a = Number(String(q.fog).match(/[\d.]+\)$/)?.[0].slice(0, -1)) || 0.22, under = y => [...(q.bands || [])].reverse().find(([t]) => t <= y)?.[1] || q.sky;
+        const mix = (hex, k) => { const n = parseInt(hex.slice(1), 16); return `#${[n >> 16, (n >> 8) & 255, n & 255].map(v => Math.round(v + (255 - v) * k).toString(16).padStart(2, '0')).join('')}`; };
+        out.push([[88, 235, 190, 20, 0.55, 58], [146, 100, 315, 26, 0.75, 70], [236, 215, 260, 30, 0.9, 64], [320, -60, 330, 0, 1, 76], [390, 90, 360, 0, 1, 62], [460, -20, 300, 0, 1, 80], [530, 120, 320, 0, 1, 68], [600, -40, 380, 0, 1, 74]]
+            .map(([t, l, w, h, o, d], k) => `<i class="fg" style="top: ${t}px; left: ${l}px; width: ${w}px; background: ${mix(under(t + (h || 34) / 2), a * o)}${h ? `; height: ${h}px; border-radius: ${h / 2}px` : ''}; --d: ${d}s; --dl: -${(d * (k * 0.37 % 1)).toFixed(1)}s; --x: ${14 + (k * 7) % 12}px"></i>`).join(''));
+    }
     if (q.bolt) out.push('<svg class="bolt" viewBox="0 0 60 120"><path d="M34 0 L8 64 L28 64 L14 120 L56 46 L34 46 L46 0Z" fill="#f6d34a"/></svg><i class="fl"></i>');
     if (q.wind) out.push([[190, 120, 2.6, 0], [260, 90, 3.1, 1.2], [330, 150, 2.4, 0.6], [410, 110, 2.9, 2], [480, 130, 2.7, 1.5]].map(([t, w, d, dl]) => `<i class="wl" style="top: ${t}px; width: ${w}px; --d: ${d}s; --dl: -${dl}s"></i>`).join('')
         + (phase === 'night' ? '' : Array.from({ length: 10 }, () => `<i class="lv" style="top: ${Math.round(160 + r() * 400)}px; --d: ${(3 + r() * 2).toFixed(1)}s; --dl: -${(r() * 4).toFixed(1)}s"></i>`).join('') + '<svg class="tree" viewBox="0 0 60 110"><rect x="27" y="50" width="6" height="60" fill="#2c4a37"/><ellipse cx="30" cy="40" rx="24" ry="36" fill="#335c42"/></svg>'));
