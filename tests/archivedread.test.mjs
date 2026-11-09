@@ -1314,7 +1314,9 @@ test('a story record\'s "said" and "made" are the answer\'s only: what the model
     assert.deepEqual(c.p.notes.map(x => x.title), ['Boiler']);
     assert.ok([...c.p.searches, ...c.p.notes].every(x => !('said' in x) && !Array.isArray(x.made)));
     assert.equal(c.p.syncLast.unsaid, undefined);
-    assert.match(T.sys, /  - May not: invent developments or additional facts about the story's events, including decisions, promises, resolution steps, deadlines or outcomes\. For example: the story only shows a parcel on its way, and a record has it arrive;/);
+    assert.match(T.sys, /\nDO NOT CONTINUE THE STORY\nYou are not the role-play author\. Your job is to show the owner's phone within the story, not to write what happens next\./);
+    assert.ok(T.sys.indexOf('\nCLOCK FIRST\n') < T.sys.indexOf('\nDO NOT CONTINUE THE STORY\n') && T.sys.indexOf('\nDO NOT CONTINUE THE STORY\n') < T.sys.indexOf('\nSCENES AND RECORDS\n') && !T.sys.includes('Tell apart what you may make up'));
+    assert.match(T.sys, /- The story says a parcel is on its way → having it arrive invents what happens next\./);
     assert.match(T.sys, /Phone data supplies existing details; an expected date is not an actual event\. Generated everyday content is not story evidence\./);
 });
 

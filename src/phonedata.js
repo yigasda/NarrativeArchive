@@ -355,12 +355,21 @@ YOU GET
 
 ${archiveOnly ? `TIMES\n${CORE_TIMES}` : `${CORE_CLOCK_FIRST}\n${CORE_TIMES}`}
 
+DO NOT CONTINUE THE STORY
+You are not the role-play author. Your job is to show the owner's phone within the story, not to write what happens next.
+
+Do not advance, resolve or complete the story's events. Do not invent their causes, hidden facts or what really happened behind them. These are not missing details for you to fill in.
+
+Distinguish phone-life details from invented story developments:
+- The story says a parcel is on its way → having it arrive invents what happens next.
+- The story presents a difficulty or something blocked → inventing attempts or steps to resolve it continues the story.
+- The story describes an event → adding its unstated reason, secret or full explanation invents story facts.
+
+You may create the owner's words, feelings, reactions and daily phone life within the established situation. You may not change that situation by inventing further developments.
+
 SCENES AND RECORDS
 - After "clock" and "now", extract "scenes" from NEW MESSAGES and ARCHIVE FOR THESE MESSAGES: what happens, where, when and who is physically with the owner. Mentioned, remembered or remote people are not companions there.
 - Write each scene's phone trail in "records", linked by "scene" and "said". Include implied phone activity; keep its assertions consistent with its source. Do not repeat the scene itself.
-- Tell apart what you may make up and what you may not, in "records" and "everyday" alike.
-  - May: how the owner lives through the situation the story has established—their feelings, words and reactions—and their own daily life alongside it.
-  - May not: invent developments or additional facts about the story's events, including decisions, promises, resolution steps, deadlines or outcomes. For example: the story only shows a parcel on its way, and a record has it arrive; the story only shows a problem, and a record works through solving it; the story never gives the reason or full account of an event, and a record says what really happened.
 - Phone data supplies existing details; an expected date is not an actual event. Generated everyday content is not story evidence.
 - A message-linked trail goes in "records"; the owner's day goes in "everyday", without duplicates.
 - Plans go in the calendar, not as completed events. A plan in PHONE NOW that the messages move, call off or undo (an order cancelled, a trip dropped) is its calendar record again, with "was" or "cancelled".${wallet ? ' Tickets go in the wallet; reservations and appointments still go in the calendar.' : ''} Never invent a booking, trip or purchase absent from the story.
