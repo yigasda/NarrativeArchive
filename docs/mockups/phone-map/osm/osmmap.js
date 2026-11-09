@@ -327,14 +327,18 @@ function gmapMarks(labels) {
     taken.push(b); seen.add(p.name); placed.push([x, y]);
     o += `<g transform="translate(${f(x)} ${f(y)})"><circle r="7.5" fill="${col}"/><g fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" transform="translate(-5 -5) scale(.42)">${glyph(p.ic)}</g></g>` + txt(x + 11, y + 3.6, p.name, 10.5, 600, col, 'start');
     if (++n >= 4) break; }
-  // a few more places as small icons only (no name), the old kit's white badge: spread out, clear of every name
-  let m = 0; if (process.env.ICONS !== '0')
-  for (const p of POIS.filter(q => !seen.has(q.name)).sort((a, b) => b.pr - a.pr)) {
-    const [x, y] = p.at; if (x < 14 || x > W - 14 || y < 18 || y > 478) continue;
-    const b = [x - 11, y - 11, x + 11, y + 11]; if (hit(b) || placed.some(([u, v]) => Math.hypot(u - x, v - y) < 80)) continue;
-    taken.push(b); placed.push([x, y]); if (p.name) seen.add(p.name);
-    o += `<g transform="translate(${f(x)} ${f(y)})"><circle r="10.5" fill="#fff" stroke="#e3ddd2" stroke-width="1"/><g fill="none" stroke="#7d7266" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" transform="translate(-7.2 -7.2) scale(.6)">${glyph(p.ic)}</g></g>`;
-    if (++m >= (process.env.ICONS === '0' ? 0 : 3)) break; }   // small icons: three at most on a screen
+  // a few more places as small icons only (no name), the old kit's white badge: each one goes where the screen is emptiest —
+  // the candidate furthest from every name and icon already there, and never nearer than 70 px to one
+  if (process.env.ICONS !== '0') {
+    const gap = ([x, y]) => Math.min(...taken.map(([a, b2, c, d]) => Math.hypot(Math.max(a - x, 0, x - c), Math.max(b2 - y, 0, y - d))), ...placed.map(([u, v]) => Math.hypot(u - x, v - y)));
+    let pool = POIS.filter(q => !seen.has(q.name) && q.at[0] > 16 && q.at[0] < W - 16 && q.at[1] > 22 && q.at[1] < 474);
+    for (let m = 0; m < 3 && pool.length; m++) {
+      let best = null, bd = 70;
+      const icons = placed.slice(-m || placed.length).slice(0, m);   // the small icons placed so far keep 120 px between them
+      for (const q of pool) { const g = gap(q.at) + q.pr * 4; if (gap(q.at) >= 70 && (!m || placed.slice(-m).every(([u, v]) => Math.hypot(u - q.at[0], v - q.at[1]) >= 120)) && g > bd) { bd = g; best = q; } }
+      if (!best) break;
+      const [x, y] = best.at; taken.push([x - 11, y - 11, x + 11, y + 11]); placed.push([x, y]); pool = pool.filter(q => q.ic !== best.ic || Math.hypot(q.at[0] - x, q.at[1] - y) > 150);
+      o += `<g transform="translate(${f(x)} ${f(y)})"><circle r="10.5" fill="#fff" stroke="#e3ddd2" stroke-width="1"/><g fill="none" stroke="#7d7266" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" transform="translate(-7.2 -7.2) scale(.6)">${glyph(best.ic)}</g></g>`; } }
   // streets: the longest pieces, upright text along the line
   const sn = new Set();
   for (const s2 of STREETS.map(q => ({ ...q, len: q.ps.reduce((a, pt, i) => i ? a + Math.hypot(pt[0] - q.ps[i - 1][0], pt[1] - q.ps[i - 1][1]) : 0, 0) })).sort((a, b) => b.rank - a.rank || b.len - a.len)) {
