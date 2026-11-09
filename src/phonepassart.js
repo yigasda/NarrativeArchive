@@ -99,11 +99,11 @@ const confetti = (fg, op, u) => { let o = '';
     return fadeIn(u, o); };
 // movie: film grain, a fine noise over the dark, a touch stronger toward the right, very faint
 const grain = (fg, op, u) => fadeIn(u, `<defs><filter id="${u}n" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="1.3" numOctaves="2" seed="7" result="t"/><feColorMatrix in="t" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1.4 -0.62"/></filter></defs><rect x="0" y="-10" width="400" height="230" filter="url(#${u}n)" opacity=".5"/>`);
-// movie (mockup, not chosen yet): the woven fabric of the auditorium walls, a basket weave of tiny pairs, very faint
+// movie (mockup, not chosen yet): the woven fabric of the auditorium walls, threads going over and under, very faint
 const weave = (fg, op, u) => { let a = '', b = '';
-    for (let r = 0; r < 30; r++) for (let c = 0; c < 36; c++) { const x = 150 + c * 7.4, y = -8 + r * 7.4;
-        if ((r + c) % 2) a += `M${r1(x + 0.6)} ${r1(y + 1)}h6.2v2.2h-6.2ZM${r1(x + 0.6)} ${r1(y + 4.2)}h6.2v2.2h-6.2Z`; else b += `M${r1(x + 1)} ${r1(y + 0.6)}h2.2v6.2h-2.2ZM${r1(x + 4.2)} ${r1(y + 0.6)}h2.2v6.2h-2.2Z`; }
-    return fadeIn(u, `<path d="${a}" ${F(fg, 0.05)}/><path d="${b}" ${F(fg, 0.035)}/>`); };
+    for (let r = 0; r < 24; r++) for (let c = 0; c < 30; c++) { const x = 150 + c * 9, y = -8 + r * 9;
+        if ((r + c) % 2) a += `M${x + 0.8} ${y + 2.6}h7.4v3.8h-7.4Z`; else b += `M${x + 2.6} ${y + 0.8}h3.8v7.4h-3.8Z`; }
+    return fadeIn(u, `<path d="${a}" ${F(fg, 0.045)}/><path d="${b}" ${F(fg, 0.03)}/>`); };
 const MOTIF = { flight: [flight, null], train: [lined, null], membership: [dots, holo], other: [dots], concert: [spots, confetti], hotel: [windows, doors], match: [bowl, knit],
     movie: [grain], museum: [rosette, rosetteP], bus: [lanes, chevrons], ferry: [depths, seaChart], theater: [harlequin, damask], park: [wheel, sunburst] };
 const seedOf = id => [...String(id || '')].reduce((h, c) => h + c.charCodeAt(0), 0);
