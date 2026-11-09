@@ -3630,6 +3630,17 @@ export function koGaps(p, { all = false } = {}) {
     }
     return out;
 }
+// the records the last reflection put in (as 되돌리기 knows them): a Set of every object in them, for 이번 반영 다시 번역
+export function roundObjects(p) {
+    const u = p?.syncUndo, out = new Set();
+    if (!u) return out;
+    const walk = (o, d = 0) => { if (!o || typeof o !== 'object' || d > 8) return; if (!Array.isArray(o)) out.add(o); for (const v of Object.values(o)) if (v && typeof v === 'object') walk(v, d + 1); };
+    for (const [k, id] of u.items || []) walk((p[k] || []).find(x => x?.id === id));
+    const sig = x => JSON.stringify([x.from, x.text, x.time]);
+    for (const [tid, sigs] of u.msgs || []) { const t = (p.threads || []).find(x => x.id === tid), ss = new Set(sigs); for (const m of t?.messages || []) if (ss.has(sig(m))) walk(m); }
+    for (const e of u.effects || []) if (e?.type === 'push' && e.item?.id) { const list = String(e.path || '').split('.').reduce((o, k) => o?.[k], p); if (Array.isArray(list)) walk(list.find(x => x?.id === e.item.id)); }
+    return out;
+}
 // after the Korean is added, 되돌리기 still sees the phone as the reflection left it
 export function refreshUndoAfter(p) { if (p?.syncUndo?.after) p.syncUndo.after = structuredClone(mergedState(p)); }
 

@@ -1460,12 +1460,27 @@ test('fillKo: each line goes with who says it to whom, and the voice table, no e
         assert.equal(tr.koAppOf(view)(app), yes, `${view} ${app}`);
     assert.equal(tr.koAppOf('set'), null);
     K.answer = (input) => JSON.stringify({ lines: input.split('\n').filter(l => /^\d+: \[text/.test(l)).map(l => ({ n: Number(l.split(':')[0]), ko: `새 ${l.split(':')[0]}` })) });
-    assert.equal(await tr.redoKo(p, tr.koAppOf('thread:Mother')), 3);
+    assert.equal(await tr.redoKo(p, g => tr.koAppOf('thread:Mother')(g.app)), 3);
     assert.deepEqual(p.threads[0].messages.map(x => x.ko), ['새 1', '새 2', '새 3']);
     assert.deepEqual([p.notes[0].kt, p.notes[0].ko], ['체크리스트', '짐 싸기\n보일러']);
+    // one screen: this chat only (a note's Korean stays); a list screen its app's newest; nothing on another screen
+    const scope = tr.koScopeOf(p, 'thread:0');
+    assert.ok(scope && scope({ x: p.threads[0].messages[1] }) && !scope({ x: p.notes[0] }));
+    assert.equal(tr.koScopeOf(p, 'noteone:0')({ x: p.notes[0] }), true);
+    assert.equal(tr.koScopeOf(p, 'msg'), null);
+    assert.equal(tr.koScopeOf(p, 'thread:9'), null);
+    K.answer = (input) => JSON.stringify({ lines: input.split('\n').filter(l => /^\d+: \[/.test(l)).map(l => ({ n: Number(l.split(':')[0]), ko: `한 화면 ${l.split(':')[0]}` })) });
+    assert.equal(await tr.redoKo(p, scope), 3);
+    assert.deepEqual([p.notes[0].kt, p.notes[0].ko], ['체크리스트', '짐 싸기\n보일러']);
+    // 이번 반영: none known, nothing
+    assert.equal(tr.roundScope(p), null);
+    const r = { owner: 'Oscar', threads: [{ id: 't1', with: 'Ren', messages: [{ from: 'Ren', text: 'old one', time: '11-01 10:00' }, { from: 'Ren', text: 'new one', time: '11-08 10:00' }] }], notes: [{ id: 'n0', title: 'Old' }, { id: 'n1', title: 'Plan' }], photos: [], searches: [], events: [],
+        life: { files: { items: [{ id: 'f1', preview: 'Ticket' }] } }, syncUndo: { items: [['notes', 'n1']], msgs: [['t1', [JSON.stringify(['Ren', 'new one', '11-08 10:00'])]]], effects: [{ type: 'push', path: 'life.files.items', item: { id: 'f1' } }] } };
+    const rs = tr.roundScope(r);
+    assert.deepEqual(data.koGaps(r).filter(rs).map(g => g.x[g.f]), ['new one', 'Plan', 'Ticket']);
     K.answer = () => { throw new Error('down'); };
-    await assert.rejects(tr.redoKo(p, tr.koAppOf('thread:Mother')), /down/);
-    assert.deepEqual(p.threads[0].messages.map(x => x.ko), ['새 1', '새 2', '새 3']);
+    await assert.rejects(tr.redoKo(p, g => tr.koAppOf('thread:Mother')(g.app)), /down/);
+    assert.deepEqual(p.threads[0].messages.map(x => x.ko), ['한 화면 1', '한 화면 2', '한 화면 3']);
     // a translator that fails throws, and what it hadn't filled stays empty
     const q = { owner: 'Oscar', threads: [{ with: 'Ren', messages: [{ from: 'Ren', text: 'see you', time: '11-08 11:00' }] }], photos: [], notes: [], searches: [], events: [] };
     K.answer = () => { throw new Error('quota'); };
