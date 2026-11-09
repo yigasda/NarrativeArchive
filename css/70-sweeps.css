@@ -1,6 +1,6 @@
 /* ============ 이야기 달력 (docs/mockups/ext-calendar): the list stays as it was; on top, one anniversary card (the next one, or the
    picked day's; tap to see and edit all) and a strip of the days that have scenes (tap one to jump there, tap again to let go) */
-.na_cal3_av { padding: 0 !important; overflow: hidden; gap: 0 !important; }
+.na_cal3_av { padding: 0; overflow: hidden; gap: 0; }
 .na_cal3_avtop { display: flex; align-items: center; gap: 10px; padding: 12px 14px; cursor: pointer; }
 .na_cal3_avic { width: 34px; height: 34px; flex: none; border-radius: 11px; --axr: 11px; display: grid; place-items: center; background: var(--na-accent-soft); color: var(--av, var(--na-accent)); --axfg: var(--av, var(--na-accent))}
 body.na_darkui .na_cal3_avic { background: #2E2E34; color: var(--na-accent-fg); --axfg: var(--na-accent-fg)}
@@ -15,10 +15,10 @@ body.na_darkui .na_cal3_avic { background: #2E2E34; color: var(--na-accent-fg); 
 .na_cal3_strip { display: flex; align-items: stretch; gap: 6px; overflow-x: auto; padding: 2px 2px 6px; scrollbar-width: none; }
 .na_cal3_strip::-webkit-scrollbar { display: none; }
 .na_cal3_sm { flex: none; align-self: center; padding: 0 4px; font-size: 11.5px; --axfs: 11.5px; font-weight: 700; color: var(--na-dim); --axfg: var(--na-dim); white-space: nowrap}
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_popup button.na_cal3_day:not(#na_x) { flex: none; width: 52px; margin: 0; padding: 7px 0 6px; border: 0 !important; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; border-radius: 14px; --axr: 14px; --c-r: 14px; display: flex; flex-direction: column; align-items: center; gap: 1px; font: inherit; --axfs: inherit; --axff: inherit; cursor: pointer; color: var(--na-ink) !important; --axfg: var(--na-ink); --c-fg: var(--na-ink)}
-body:not(.na_darkui) dialog.popup .na_popup button.na_cal3_day:not(#na_x) { background: #F7EEE7 !important; --c-bg: #F7EEE7; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.08) !important; --c-sh: 0 1px 2px rgba(70, 52, 40, 0.08); }
-body.na_darkui dialog.popup .na_popup button.na_cal3_day:not(#na_x) { background: #232328 !important; --c-bg: #232328; box-shadow: none !important; --c-sh: none; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_popup button.na_cal3_day.on:not(#na_x) { background: var(--na-accent) !important; --c-bg: var(--na-accent); color: var(--na-onaccent, #fff) !important; --axfg: var(--na-onaccent, #fff); --c-fg: var(--na-onaccent, #fff)}
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_popup button.na_cal3_day:not(#na_x) { flex: none; width: 52px; margin: 0; padding: 7px 0 6px; border: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; border-radius: 14px; --axr: 14px; --c-r: 14px; display: flex; flex-direction: column; align-items: center; gap: 1px; font: inherit; --axfs: inherit; --axff: inherit; cursor: pointer; color: var(--na-ink); --axfg: var(--na-ink); --c-fg: var(--na-ink)}
+body:not(.na_darkui) dialog.popup .na_popup button.na_cal3_day:not(#na_x) { background: #F7EEE7; --c-bg: #F7EEE7; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.08); --c-sh: 0 1px 2px rgba(70, 52, 40, 0.08); }
+body.na_darkui dialog.popup .na_popup button.na_cal3_day:not(#na_x) { background: #232328; --c-bg: #232328; box-shadow: none; --c-sh: none; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_popup button.na_cal3_day.on:not(#na_x) { background: var(--na-accent); --c-bg: var(--na-accent); color: var(--na-onaccent, #fff); --axfg: var(--na-onaccent, #fff); --c-fg: var(--na-onaccent, #fff)}
 .na_cal3_day small { font-size: 10.5px; color: var(--na-dim); white-space: nowrap; max-width: 46px; overflow: hidden; text-overflow: ellipsis; }
 .na_cal3_day.on small { color: inherit; opacity: 0.8; }
 .na_cal3_day b { font-size: 17px; line-height: 1.2; }
@@ -27,7 +27,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_popup button.na_cal3_day.
 .na_cal3_day.on u { background: currentColor; }
 body:not(.na_darkui) .na_cal_item.na_cal3_hl { --c-bg: #F3E4D8; }
 body.na_darkui .na_cal_item.na_cal3_hl { --c-bg: #2E2E34; }
-.na_cal3_av.plain .na_cal3_avic { background: var(--na-card2) !important; color: var(--na-dim) !important; --axfg: var(--na-dim)}
+.na_cal3_av.plain .na_cal3_avic { background: var(--na-card2); color: var(--na-dim); --axfg: var(--na-dim)}
 .na_cal3_av.plain .na_cal3_avtx b { font-weight: 600; color: var(--na-mute); }
 /* 이탈 감지 (never checked) in the big window: the example on top, 최근 메시지 + 검사하기 at the bottom like the wizard's buttons */
 .na_dr2.na_dr3_new { display: flex; flex-direction: column; }
