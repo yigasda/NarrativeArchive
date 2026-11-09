@@ -98,9 +98,9 @@ const LC = Object.fromEntries(Object.keys(COVER).map(k => [k, '']));
 // STYLE=pretty: the real shapes drawn the way the old kit maps were — fewer lines, big charcoal names, icons, a station box, trees in parks
 const PRETTY = process.env.STYLE === 'pretty';
 // STYLE=gmap: a busy street map's manner — cream ground, land uses in their own colours, hardly any houses, white streets with no rim, coloured place names with their icons, street names along the streets
-const GMAP = process.env.STYLE === 'gmap', COLLECT = PRETTY || GMAP, STREETS = [];
+const GMAP = process.env.STYLE === 'gmap', COLLECT = PRETTY || GMAP, STREETS = [], FOOT = [];
 if (GMAP) Object.assign(C, { land: '#f3e7d6', built: '#f1e5d4', resi: '#f3e7d6', shop: '#f1dcd2', works: '#e3e1dd', railyard: '#e2dfda', school: '#ebd5a8', park: '#c2e0a3', forest: '#b2d796', water: '#a4cdf2',
-  bld: '#dedbd6', edge: '#dccfbb', road: '#ffffff', major: '#fdd98a', majorEdge: '#e9b85a', plaza: '#efe4d3', foot: '#d6ebc6' });
+  bld: '#dedbd6', edge: '#dccfbb', road: '#ffffff', major: '#fdd98a', majorEdge: '#e9b85a', plaza: '#efe4d3', foot: '#cfe6ba' });
 if (GMAP) Object.assign(COVER, { grass: '#d3ecc3', allot: '#d6ebc5', orchard: '#cfe8bc', vine: '#dde8c0', grave: '#d4e3cb', scrub: '#cfe3b8', farm: '#f1ecd9' });
 const { ICON, glyph, pick } = require('./icons.js');
 const COVER0 = null;
@@ -154,7 +154,7 @@ for (const e of d.elements) {
     if (/^(primary|trunk|motorway)(_link)?$/.test(h)) L.major += dl;
     else if (/^(secondary|tertiary)(_link)?$/.test(h)) L.mid += dl;
     else if (/^(residential|unclassified|living_street|pedestrian|busway)$/.test(h) || h === 'service' && (!COLLECT || t.name)) L.minor += dl;
-    else if (/^(footway|path|cycleway|track)$/.test(h) && !PRETTY) L.foot += dl;
+    else if (/^(footway|path|cycleway|track)$/.test(h) && !PRETTY) { if (GMAP) { const ps = pts(e.geometry); FOOT.push({ dl, len: ps.reduce((a, q, i) => i ? a + Math.hypot(q[0] - ps[i - 1][0], q[1] - ps[i - 1][1]) : 0, 0) }); } else L.foot += dl; }
     if (GMAP && t.name && /^(primary|secondary|tertiary|residential|unclassified|living_street|pedestrian)$/.test(h)) STREETS.push({ name: t.name, ps: pts(e.geometry), rank: /^(primary|secondary)$/.test(h) ? 3 : h === 'tertiary' ? 2 : 1 });
   } else if (rw === 'rail' || rw === 'light_rail') {
     // RAIL=old keeps every track dashed; by default the yard tracks (sidings, spurs) vanish into the yard's face and the main lines are one thin line
@@ -197,7 +197,7 @@ if (GMAP) svg = `<rect width="${W}" height="${H}" fill="${C.land}"/>`
   + fill(L.built, C.built) + fill(L.resi, C.resi) + fill(L.shop, C.shop) + fill(L.works, C.works) + fill(L.railyard, C.railyard) + fill(L.school, C.school)
   + ['farm', 'grass', 'allot', 'orchard', 'vine', 'grave', 'scrub', 'wet', 'sand', 'rock'].map(k2 => fill(LC[k2], COVER[k2])).join('') + fill(L.park, C.park) + fill(L.forest, C.forest) + fill(L.plaza, C.plaza) + fill(L.water, C.water)
   + fill(L.bld, C.bld) + fill(L.station, '#e2dfda')
-  + (L.park + L.forest ? `<defs><clipPath id="gp"><path d="${L.park + L.forest}"/></clipPath></defs><g clip-path="url(#gp)">${st(L.foot, C.foot, 1.1)}</g>` : '')
+  + (L.park + L.forest ? `<defs><clipPath id="gp"><path d="${L.park + L.forest}"/></clipPath></defs><g clip-path="url(#gp)">${st(FOOT.filter(q => q.len > 160 * k).sort((a, b) => b.len - a.len).slice(0, 4).map(q => q.dl).join(''), C.foot, 0.9)}</g>` : '')
   + st(L.minor, C.edge, Math.max(5.5, mpx(8)) + 1.6) + st(L.mid, C.edge, Math.max(8, mpx(12)) + 1.8)
   + st(L.minor, C.road, Math.max(5.5, mpx(8))) + st(L.mid, C.road, Math.max(8, mpx(12)))
   + st(L.rail, '#b8b6b2', 2.2) + st(L.rail, '#f4efe6', 0.9, ' stroke-dasharray="6 5"')
