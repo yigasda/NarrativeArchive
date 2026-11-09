@@ -16,6 +16,12 @@ frankfurt-bankenviertel 50.0990 8.6580 50.1210 8.6820
 leipzig-zentrum 51.3290 12.3630 51.3510 12.3870
 dresden-altstadt 51.0410 13.7280 51.0630 13.7520
 nuernberg-altstadt 49.4430 11.0650 49.4650 11.0890
+berlin-friedrichshain 52.5000 13.4470 52.5220 13.4710
+berlin-neukoelln 52.4750 13.4180 52.4970 13.4420
+muenchen-englischergarten 48.1450 11.5910 48.1670 11.6150
+muenchen-olympiapark 48.1620 11.5380 48.1840 11.5620
+hamburg-altona 53.5390 9.9230 53.5610 9.9470
+hamburg-blankenese 53.5490 9.7930 53.5710 9.8170
 heidelberg-altstadt 49.4015 8.6880 49.4235 8.7120`.split('\n').map(l => l.split(' '));
 const dir = process.argv[2], outd = process.argv[3]; fs.mkdirSync(outd, { recursive: true });
 const done = [];
