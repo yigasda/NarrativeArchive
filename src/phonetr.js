@@ -65,9 +65,25 @@ function inputOf(p, chunk) {
     ].filter(Boolean).join('\n\n');
 }
 
-// fills what has no Korean; the number filled. Throws when the translator fails (what came back before stays)
-export async function fillKo(p, { max = KO_MAX } = {}) {
-    const gaps = koGaps(p).slice(0, max);
+// which of the phone's lines a screen shows (its view): the app 한국어 long-pressed there translates again
+const VIEW_APPS = [[/^(msg|thread|draft|groupinfo|contact)/, a => a.startsWith('text')], [/^photo/, a => a === 'photo caption'], [/^note/, a => a.startsWith('note')],
+    [/^search/, a => a === 'search'], [/^cal/, a => a === 'calendar'], [/^sns/, a => /^(post|comment|profile)/.test(a)], [/^mail/, a => a.startsWith('mail')],
+    [/^diary/, a => a.startsWith('diary')], [/^voice/, a => a.startsWith('voice memo')], [/^(clock|alarm)/, a => a === 'alarm' || a === 'timer'], [/^(files|folder|file)/, a => a === 'file']];
+export const koAppOf = view => VIEW_APPS.find(([re]) => re.test(String(view || '')))?.[1] || null;
+
+// translates one app's lines again (all of them, with the voice table and the examples as they are now): their Korean is
+// cleared first and, if the translator fails or leaves a line out, put back. The number translated
+export async function redoKo(p, only, { max = KO_MAX } = {}) {
+    const rows = koGaps(p, { all: true }).filter(g => !only || only(g.app)).slice(0, max), was = rows.map(g => g.x[g.k]);
+    for (const g of rows) delete g.x[g.k];
+    try { return await fillKo(p, { max, only }); }
+    finally { rows.forEach((g, i) => { if (!String(g.x[g.k] ?? '').trim() && was[i] !== undefined) g.x[g.k] = was[i]; }); }
+}
+
+// fills what has no Korean (only: those of one app); the number filled. Throws when the translator fails (what came back
+// before stays)
+export async function fillKo(p, { max = KO_MAX, only = null } = {}) {
+    const gaps = koGaps(p).filter(g => !only || only(g.app)).slice(0, max);
     let n = 0;
     for (let i = 0; i < gaps.length;) {
         let j = i, size = 0;

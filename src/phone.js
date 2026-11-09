@@ -30,7 +30,7 @@ import { placeNames } from './phonemapfind.js';
 import { FLAG_NAME, flagSvg } from './phoneflags.js';
 import { mapZoom } from './phonemapzoom.js';
 import { glossaryEntries, openGlossary } from './translate.js';
-import { fillKo } from './phonetr.js';
+import { fillKo, koAppOf, redoKo } from './phonetr.js';
 // 을 / 를 after a word: by its last syllable's final consonant (a Latin ending, like SNS, reads as 를)
 const josa = w => { const c = w.charCodeAt(w.length - 1) - 0xac00; return c >= 0 && c < 11172 && c % 28 ? '을' : '를'; };
 import { confirm, esc } from './util.js';
@@ -754,8 +754,32 @@ export async function openPhone(who = null) {
         if (v) g.looks[nameKey(this.dataset.n)] = v; else delete g.looks[nameKey(this.dataset.n)];
         saveGlobal();
     });
+    // a long press on 한국어 translates the app on screen again, all of it (a short one turns it on or off, as before)
+    let koHold = null, koHeld = false;
+    $root.on('pointerdown', '.na_ph_kochip:not(.na_ph_looksbtn)', e => {
+        koHeld = false; clearTimeout(koHold);
+        const $b = $(e.currentTarget);
+        koHold = setTimeout(async () => {
+            koHeld = true;
+            const p = phone();
+            if (!p || making || koBusy) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요');
+            const only = koAppOf(view);
+            let n = 0;
+            koBusy = true;
+            try { n = await withSpinner($b, '다시 번역 중', () => redoKo(p, only)); if (p.syncLast?.trFailed) delete p.syncLast.trFailed; await saveMeta(); }
+            catch (err) { toastr.warning(`다시 번역하지 못했어요 · 원래 한국어는 그대로예요 (${String(err?.message || err)})`, '캐릭터 휴대폰'); }
+            finally { koBusy = false; }
+            const g = globalSettings(); g.phoneKo = true; saveGlobal();
+            if (!phoneClosed && phone() === p) drawPhone(true);
+            if (n) toastr.success(`${only ? '이 앱' : '폰'}의 한국어 ${n}개를 다시 옮겼어요`, '캐릭터 휴대폰');
+        }, 600);
+    });
+    $root.on('pointerup pointerleave pointercancel', '.na_ph_kochip:not(.na_ph_looksbtn)', () => clearTimeout(koHold));
+    $root.on('contextmenu', '.na_ph_kochip:not(.na_ph_looksbtn)', e => e.preventDefault());
     $root.on('click', '.na_ph_kochip:not(.na_ph_looksbtn)', async e => {
         e.stopPropagation();
+        // (the click a long press ends with does nothing more)
+        if (koHeld) { koHeld = false; return; }
         // something still without its Korean: 한국어 fills it (and stays on) instead of turning off
         const p = phone();
         if (p && koGaps(p).length && !making) { if (koBusy) return; await withSpinner($(e.currentTarget), '번역 중', () => koRun(p, true)); const g = globalSettings(); g.phoneKo = true; saveGlobal(); return; }

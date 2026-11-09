@@ -3573,9 +3573,10 @@ export const hasKo = p => [...p.threads.flatMap(t => t.messages), ...p.photos, .
 // what on the phone is written in another language and has no Korean yet: [{ x: the item, f: its field, k: the Korean's field }].
 // The reflection writes none (3.182.4~): the app asks the translator after it (phonetr.js), or when 한국어 is pressed
 const KO_HANGUL = /[\uac00-\ud7a3]/, KO_WORDS = /\p{L}{2,}/u;
-export function koGaps(p) {
-    // (each with what the translator needs for its voice: the app, who says it and to whom; "self" for the owner's own)
-    const out = [], own = p?.owner || 'me', add = (x, f, k, app, who = own, to = 'self') => { const v = x?.[f]; if (typeof v === 'string' && v.trim() && !String(x[k] ?? '').trim() && KO_WORDS.test(v) && !KO_HANGUL.test(v)) out.push({ x, f, k, app, who, to }); };
+export function koGaps(p, { all = false } = {}) {
+    // (each with what the translator needs for its voice: the app, who says it and to whom; "self" for the owner's own;
+    // all: those with their Korean too, for translating an app again)
+    const out = [], own = p?.owner || 'me', add = (x, f, k, app, who = own, to = 'self') => { const v = x?.[f]; if (typeof v === 'string' && v.trim() && (all || !String(x[k] ?? '').trim()) && KO_WORDS.test(v) && !KO_HANGUL.test(v)) out.push({ x, f, k, app, who, to }); };
     for (const t of p?.threads || []) {
         const room = t.group ? `${t.with} (group)` : t.with;
         for (const m of t.messages || []) add(m, 'text', 'ko', 'text', m.from === 'me' ? own : m.from, m.from === 'me' ? room : t.group ? room : own);

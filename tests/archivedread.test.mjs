@@ -1442,6 +1442,17 @@ test('fillKo: each line goes with who says it to whom, the chat\'s Korean as exa
     // nothing left: no request
     assert.equal(await tr.fillKo(p), 0);
     assert.equal(K.calls.length, 1);
+    // a long press: the app on screen again, all of it; another app's Korean stays; a failure puts the old Korean back
+    assert.equal(tr.koAppOf('thread:Mother')('text'), true);
+    assert.equal(tr.koAppOf('noteone')('text'), false);
+    assert.equal(tr.koAppOf('home'), null);
+    K.answer = (input) => JSON.stringify({ lines: input.split('\n').filter(l => /^\d+: \[text/.test(l)).map(l => ({ n: Number(l.split(':')[0]), ko: `새 ${l.split(':')[0]}` })) });
+    assert.equal(await tr.redoKo(p, tr.koAppOf('thread:Mother')), 3);
+    assert.deepEqual(p.threads[0].messages.map(x => x.ko), ['새 1', '새 2', '새 3']);
+    assert.deepEqual([p.notes[0].kt, p.notes[0].ko], ['체크리스트', '짐 싸기\n보일러']);
+    K.answer = () => { throw new Error('down'); };
+    await assert.rejects(tr.redoKo(p, tr.koAppOf('thread:Mother')), /down/);
+    assert.deepEqual(p.threads[0].messages.map(x => x.ko), ['새 1', '새 2', '새 3']);
     // a translator that fails throws, and what it hadn't filled stays empty
     const q = { owner: 'Oscar', threads: [{ with: 'Ren', messages: [{ from: 'Ren', text: 'see you', time: '11-08 11:00' }] }], photos: [], notes: [], searches: [], events: [] };
     K.answer = () => { throw new Error('quota'); };
