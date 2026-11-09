@@ -823,7 +823,9 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.match(on, /3\. Each scene where the owner is somewhere → one "visit"\./);
     assert.match(on, /→ that record\. A text exchange the messages already show: only its last 4 messages\./);
     assert.ok(on.includes('- Each text in the language its writer really uses, as long as that person really writes.') && !on.includes('Texts short'));
-    assert.match(on, /- Anything written in another language than Korean gets its Korean in the field paired with it in ITEMS: "ko" for a text, caption, note, mail, diary, voice memo or post, "kt" for a title, "ks" for a subject, "pko" for a post's photo\./);
+    // (no Korean asked of the reflection: the app adds it after, phonetr.js)
+    assert.ok(on.includes('as long as that person really writes. No Korean translations: the app adds them.') && !/"ko"|"kt"|"ks"|"pko"/.test(on.slice(on.indexOf('\nITEMS'))));
+    assert.ok(on.includes('photo: "caption", "time", "mood"') && on.includes('note: "title", "text", "time"') && on.includes('"messages": [{ "from": "me" or the sender, "text", "time", "deleted" }]'));
     assert.ok(on.includes('5. An alarm or file the messages set or change → that record.') && !plain.includes('5. An alarm or file'));
     // (STEP 4: hours, amount, sources; a later text is not forced)
     assert.match(on, /2\. Amount: about 15 records per full waking day, fewer for part of one\. A full day uses at least 8 of their apps \(texts, calls, photos, searches, notes, mails, posts, voice memos, alarms, files\)\. Who they talk to, and how much, follows their character and PEOPLE AROUND\./);
@@ -1387,6 +1389,16 @@ test('"records" as one day list: a record with its scene or its words is the sto
     assert.deepEqual(got.events[0].phone.visits.map(v => [v.place, v.with]), [['Pho 24', ['Ren']]]);
     assert.deepEqual(got.everyday.photos.map(x => x.caption), ['sky']);
     assert.deepEqual({ scenes: c.p.syncLast.records.scenes, story: c.p.syncLast.records.story, life: c.p.syncLast.records.life }, { scenes: 1, story: 2, life: 2 });
+});
+
+test('koGaps: what is in another language and has no Korean yet, line fields by their Korean pair; Korean, numbers and filled ones left', () => {
+    const p = { threads: [{ with: 'Ren', messages: [{ text: 'see you', time: '10-26 10:00' }, { text: '응 나중에', time: '10-26 10:01' }, { text: 'ok!', ko: '알았어!', time: '10-26 10:02' }] }],
+        photos: [{ caption: 'rainy street' }, { caption: '2026' }], notes: [{ title: 'Groceries', text: 'milk\neggs' }], searches: [], events: [{ title: 'Lio dinner', ko: '' }],
+        posts: [{ text: 'hello', photo: 'sea', comments: [{ text: 'nice' }] }], mails: [{ subject: 'Your order', text: 'shipped' }], diary: [], voice: [],
+        life: { clock: { alarms: [{ label: 'Gym' }], timers: [] }, files: { items: [{ preview: 'Invoice no. 12' }] } } };
+    const got = data.koGaps(p).map(g => `${g.f}>${g.k}:${g.x[g.f]}`);
+    assert.deepEqual(got, ['text>ko:see you', 'caption>ko:rainy street', 'title>kt:Groceries', 'text>ko:milk\neggs', 'title>ko:Lio dinner', 'text>ko:hello', 'photo>pko:sea', 'text>ko:nice', 'subject>ks:Your order', 'text>ko:shipped', 'label>ko:Gym', 'preview>ko:Invoice no. 12']);
+    assert.ok(data.hasKo({ threads: [{ messages: [{ text: 'hi there' }] }], photos: [], notes: [], searches: [], events: [] }));
 });
 
 test('"situations" and each record\'s "situation" are the model\'s own notes: read, never stored', async () => {

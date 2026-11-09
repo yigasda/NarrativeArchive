@@ -425,8 +425,7 @@ KEEPING IN STEP
 - A text in PHONE NOW: only its new messages.${life ? ' A LIFE NOW alarm or file: not again unless it changes, then with its id in "already".' : ''} A known scene: its id. An edited message: the ids listed.
 
 LANGUAGE
-- Each text in the language its writer really uses, as long as that person really writes.
-- Anything written in another language than Korean gets its Korean in the field paired with it in ITEMS: "ko" for a text, caption, note, mail, diary, voice memo or post, "kt" for a title, "ks" for a subject, "pko" for a post's photo.
+- Each text in the language its writer really uses, as long as that person really writes. No Korean translations: the app adds them.
 
 JSON (one object, nothing before or after it)
 { ${archiveOnly ? '' : '"clock": { "basis": "default used or switch evidence; time passed", "finalViewpoint": "name", "elapsedTime": null or "3 hours", "sceneTime": "MM-DD HH:MM", "messageSender": null or "name" },\n  '}"now": "MM-DD HH:MM"${archiveOnly ? ' (the moment of the newest message, never a time something is only planned for)' : ''},
@@ -443,21 +442,21 @@ Write in this order. Numbers are plain JSON numbers. Nothing new: "records": [].
 
 ITEMS (each with only the fields it needs)
 contact: "name", "saved"
-text: "with": the person or the group chat's name (always the same), "group", "members": [all but the owner, as in the contacts], "messages": [{ "from": "me" or the sender, "text", "ko", "time", "deleted" }], "draft": an unsent { "text", "ko", "time" }
+text: "with": the person or the group chat's name (always the same), "group", "members": [all but the owner, as in the contacts], "messages": [{ "from": "me" or the sender, "text", "time", "deleted" }], "draft": an unsent { "text", "time" }
 call: "with", "kind": "in" | "out" | "missed", "time", "min", "count": calls in a row
-photo: "caption", "ko", "time", "mood": ${MOODS.join(' | ')}
-note: "title", "kt", "text", "ko", "time"
-search: "q", "ko", "time", "tab": still open, "mark": bookmarked
-calendar: "title", "ko", "date", "time": "HH:MM", "was": its old date, "cancelled"
-post: "text", "ko", "photo", "pko", "time", "likes", "comments": [{ "from", "text", "ko" }]
-profile: "handle", "bio", "ko", "followers", "following"
-mail: "sender", "subject", "ks", "text", "ko", "time", "unread"
-diary: "date", "title", "kt", "text", "ko"
+photo: "caption", "time", "mood": ${MOODS.join(' | ')}
+note: "title", "text", "time"
+search: "q", "time", "tab": still open, "mark": bookmarked
+calendar: "title", "date", "time": "HH:MM", "was": its old date, "cancelled"
+post: "text", "photo", "time", "likes", "comments": [{ "from", "text" }]
+profile: "handle", "bio", "followers", "following"
+mail: "sender", "subject", "text", "time", "unread"
+diary: "date", "title", "text"
 visit: "place": where they really went, as the story writes it (never just their own city), "city", "home", "time", "already": that visit's id in PHONE NOW
-voice: "title", "kt", "text", "ko", "time", "sec", "place"${life ? `
-alarm: "time": "HH:MM", "label", "ko", "days": [weekdays], or [] and "date" for one occasion, "on", "wake", "then", "snooze", "snoozeCount", "sound"
-timer: "label", "ko", "sec"
-file: "name", "kind", "folder", "size": KB, "time", "from", "pages", "length", "tag", "private", "preview": its first page in a line, "look": sea | city | night | food | hills | pet | sunset | mountain | snow | flower | interior | concert | paper | screenshot | map | ticket | receipt | invoice | cv | letter | certificate | recipe | medical | menu | contract | notes | voice | music, "ko", "opened", "deleted"` : ''}`;
+voice: "title", "text", "time", "sec", "place"${life ? `
+alarm: "time": "HH:MM", "label", "days": [weekdays], or [] and "date" for one occasion, "on", "wake", "then", "snooze", "snoozeCount", "sound"
+timer: "label", "sec"
+file: "name", "kind", "folder", "size": KB, "time", "from", "pages", "length", "tag", "private", "preview": its first page in a line, "look": sea | city | night | food | hills | pet | sunset | mountain | snow | flower | interior | concert | paper | screenshot | map | ticket | receipt | invoice | cv | letter | certificate | recipe | medical | menu | contract | notes | voice | music, "opened", "deleted"` : ''}`;
 }
 export const coreSystem = ({ life = false, weather = false, tracker = false, zone = false, archiveOnly = false, wallet = false, split = true } = {}) => coreRecordsSystem({ life, weather, tracker, zone, archiveOnly, wallet, split });
 // 돈 단계 (3.176~): every round's messages, read for what the owner's phone would now show. One list of records.
@@ -3570,7 +3569,27 @@ export function placesOf(m, owner) {
 
 export const koOn = () => globalSettings().phoneKo !== false;
 export const savedName = (p, n) => p.contacts.find(c => nameKey(c.name) === nameKey(n))?.saved || n;
-export const hasKo = p => [...p.threads.flatMap(t => t.messages), ...p.photos, ...p.notes, ...p.searches, ...p.events, ...(p.posts || []), ...(p.mails || []), ...(p.diary || [])].some(x => x.ko);
+export const hasKo = p => [...p.threads.flatMap(t => t.messages), ...p.photos, ...p.notes, ...p.searches, ...p.events, ...(p.posts || []), ...(p.mails || []), ...(p.diary || [])].some(x => x.ko) || koGaps(p).length > 0;
+// what on the phone is written in another language and has no Korean yet: [{ x: the item, f: its field, k: the Korean's field }].
+// The reflection writes none (3.182.4~): the app asks the translator after it (phonetr.js), or when 한국어 is pressed
+const KO_HANGUL = /[\uac00-\ud7a3]/, KO_WORDS = /\p{L}{2,}/u;
+export function koGaps(p) {
+    const out = [], add = (x, f, k) => { const v = x?.[f]; if (typeof v === 'string' && v.trim() && !String(x[k] ?? '').trim() && KO_WORDS.test(v) && !KO_HANGUL.test(v)) out.push({ x, f, k }); };
+    for (const t of p?.threads || []) { for (const m of t.messages || []) add(m, 'text', 'ko'); if (t.draft) add(t.draft, 'text', 'ko'); }
+    for (const x of p?.photos || []) add(x, 'caption', 'ko');
+    for (const x of [...(p?.notes || []), ...(p?.diary || []), ...(p?.voice || [])]) { add(x, 'title', 'kt'); add(x, 'text', 'ko'); }
+    for (const x of p?.searches || []) add(x, 'q', 'ko');
+    for (const x of p?.events || []) add(x, 'title', 'ko');
+    for (const x of p?.posts || []) { add(x, 'text', 'ko'); add(x, 'photo', 'pko'); for (const c of x.comments || []) add(c, 'text', 'ko'); }
+    for (const x of p?.mails || []) { add(x, 'subject', 'ks'); add(x, 'text', 'ko'); }
+    if (p?.profile) add(p.profile, 'bio', 'ko');
+    for (const x of p?.life?.clock?.alarms || []) add(x, 'label', 'ko');
+    for (const x of p?.life?.clock?.timers || []) add(x, 'label', 'ko');
+    for (const x of p?.life?.files?.items || []) add(x, 'preview', 'ko');
+    return out;
+}
+// after the Korean is added, 되돌리기 still sees the phone as the reflection left it
+export function refreshUndoAfter(p) { if (p?.syncUndo?.after) p.syncUndo.after = structuredClone(mergedState(p)); }
 
 // ---- 은행 · 지갑 · 쇼핑 (채우기): one request for all three, so the amounts agree. Balances and everyday payments are
 // invented (the user wants a real-looking bank); purchases and bookings come from the story. None of it goes back to the

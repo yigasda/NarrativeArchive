@@ -16,7 +16,7 @@ import { applyInjection } from './inject.js';
 import { faceHtml, nameKey, peopleList } from './people.js';
 import { drafting, drawing, drawPhoto, drawPost, filling, makeDraft, paging, retranslate, retranslating, recording, recordVoice, searching, searchPage, shooting, takePhoto, webPage, writeEntry, writing } from './phoneai.js';
 import { axFind, groupInfo, APPS, AXB, AXB_C, busyHtml, setDate, setScreenHolderView, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, mapTowns, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setOwnerProfile, setWho, snsPost, snsScreen, statusBar, threadScreen, setPlace, prepScreen } from './phoneapps.js';
-import { dropStretch, savedName, ensureIds, ensureYear, hasDatedRecords, noArchive, setStoryYear, storyYear, fillDevice, fillMoney, fillVoice, koOn, loreOff, makePhone, tidyKo, markAfter, phoneLore, REMAKE, restoreRounds, retryMoney, showNow, storyNow, syncLeft, syncRows, syncState, tidyJournal, undoRound } from './phonedata.js';
+import { dropStretch, koGaps, savedName, ensureIds, ensureYear, hasDatedRecords, noArchive, setStoryYear, storyYear, fillDevice, fillMoney, fillVoice, koOn, loreOff, makePhone, tidyKo, markAfter, phoneLore, REMAKE, restoreRounds, retryMoney, showNow, storyNow, syncLeft, syncRows, syncState, tidyJournal, undoRound } from './phonedata.js';
 import { busy, watchBusy, exclusive, journalRead, journalWrite, syncOf } from './phonesync.js';
 import { syncPick, syncSettings } from './phonesyncui.js';
 import { CG_W, homeScreen, lastSig, lockScreen, threadNew } from './phonehome.js';
@@ -30,6 +30,7 @@ import { placeNames } from './phonemapfind.js';
 import { FLAG_NAME, flagSvg } from './phoneflags.js';
 import { mapZoom } from './phonemapzoom.js';
 import { glossaryEntries, openGlossary } from './translate.js';
+import { fillKo } from './phonetr.js';
 // 을 / 를 after a word: by its last syllable's final consonant (a Latin ending, like SNS, reads as 를)
 const josa = w => { const c = w.charCodeAt(w.length - 1) - 0xac00; return c >= 0 && c < 11172 && c % 28 ? '을' : '를'; };
 import { confirm, esc } from './util.js';
@@ -134,6 +135,23 @@ export async function openPhone(who = null) {
       </div>`);
     const setSheet = on => { sheetOpen = on; $root.find('.na_phl_sheet, .na_phl_shade').prop('hidden', !on); };
     const phone = () => (owner ? m.phones[nameKey(owner)] : null);
+    // the Korean of what the phone has in another language (phonetr.js): after a reflection, from its report, or when
+    // 한국어 is pressed. A failure is marked on the report (번역 못 함 · 다시 하기); the reflection itself stays
+    let koBusy = false;
+    const koRun = async (p, loud) => {
+        if (koBusy || !p) return;
+        koBusy = true;
+        try {
+            const n = await fillKo(p);
+            if (p.syncLast?.trFailed) delete p.syncLast.trFailed;
+            if (n || loud) await saveMeta();
+        } catch (err) {
+            if (p.syncLast) p.syncLast.trFailed = true;
+            await saveMeta();
+            toastr.warning(`번역을 못 했어요 · 반영 기록에서 다시 할 수 있어요 (${String(err?.message || err)})`, '캐릭터 휴대폰');
+        } finally { koBusy = false; }
+        if (!phoneClosed && phone() === p) drawPhone(true);
+    };
     const profileDrafts = new Map();
     const pendingProfile = () => {
         const key=nameKey(owner);
@@ -408,6 +426,7 @@ export async function openPhone(who = null) {
         // the shops nearby, every 3 story days and 3 reflections (or at once on a move to another saved city): on their own, after the reflection
         refreshNearby(m, p, { read: !!r?.checked }).then(n => { if (n && !phoneClosed && phone() === p && /^(dlv|delivery)/.test(view)) drawPhone(true); }).catch(err => toastr.warning(String(err?.message || err), '동네 가게'));
         if (!r?.checked) return toastr.info('새로 읽을 대화가 없어요', '캐릭터 휴대폰');
+        koRun(p, false);
         const head = `${r.checked}개 확인 · 남은 ${r.remaining}개`;
         const owed = p.sync?.owed?.money?.length || 0;
         const tail = `${r.failed.length ? ` · 넣지 못한 일 ${r.failed.length}개` : ''}${owed ? ` · 메시지 ${owed}개의 결제는 다음 반영 때 다시` : ''}`;
@@ -735,7 +754,14 @@ export async function openPhone(who = null) {
         if (v) g.looks[nameKey(this.dataset.n)] = v; else delete g.looks[nameKey(this.dataset.n)];
         saveGlobal();
     });
-    $root.on('click', '.na_ph_kochip:not(.na_ph_looksbtn)', e => { e.stopPropagation(); const g = globalSettings(); g.phoneKo = !koOn(); drawPhone(); if (view.startsWith('thread')) $root.find('.ax_scroll').scrollTop(1e6); saveGlobal(); });
+    $root.on('click', '.na_ph_kochip:not(.na_ph_looksbtn)', async e => {
+        e.stopPropagation();
+        // something still without its Korean: 한국어 fills it (and stays on) instead of turning off
+        const p = phone();
+        if (p && koGaps(p).length && !making) { if (koBusy) return; await withSpinner($(e.currentTarget), '번역 중', () => koRun(p, true)); const g = globalSettings(); g.phoneKo = true; saveGlobal(); return; }
+        const g = globalSettings(); g.phoneKo = !koOn(); drawPhone(); if (view.startsWith('thread')) $root.find('.ax_scroll').scrollTop(1e6); saveGlobal();
+    });
+    $root.on('click', '.na_sync_tr', async e => { e.stopPropagation(); if (making) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요'); await withSpinner($(e.currentTarget), '번역 중', () => koRun(phone(), true)); });
     $root.on('click', '.na_ph_makebtn', function () { make($(this), false); });
     // 폰 만들기 준비
     const prepBusy = () => { if (!(making || busyMake || investing || filling.size || busy.fill || busy.sync || placeReading || prepLinking)) return false; toastr.info('하던 일이 끝난 뒤 해 주세요', '캐릭터 휴대폰'); return true; };
@@ -1017,7 +1043,7 @@ export async function openPhone(who = null) {
     });
     // 설정's rows: the busy text goes where the row's value is
     // one at a time: reflecting and making the bank or investment never overlap
-    const makeFrom = async ($at, update) => { if (making || busy.sync) return toastr.info('폰 작업이 진행 중이에요. 끝나면 다시 눌러 주세요', '캐릭터 휴대폰'); if (investing || filling.size || busy.fill) return toastr.info('은행·투자를 만드는 중이에요. 끝난 뒤 눌러 주세요'); making = true; try { await make($at, update); } finally { making = false; } };
+    const makeFrom = async ($at, update) => { if (koBusy) return toastr.info('번역하는 중이에요. 끝나면 다시 눌러 주세요', '캐릭터 휴대폰'); if (making || busy.sync) return toastr.info('폰 작업이 진행 중이에요. 끝나면 다시 눌러 주세요', '캐릭터 휴대폰'); if (investing || filling.size || busy.fill) return toastr.info('은행·투자를 만드는 중이에요. 끝난 뒤 눌러 주세요'); making = true; try { await make($at, update); } finally { making = false; } };
     $root.on('click', '.na_ph_setupd', function (e) { e.stopPropagation(); makeFrom($(this).find('.ax_v'), true); });
     // 설정 › 대화 반영
     $root.on('click', '.na_sync_order', async function (e) { e.stopPropagation(); syncOf(phone(), phoneChatScope(ctx())).order = this.dataset.v; drawPhone(true); await saveMeta(); });

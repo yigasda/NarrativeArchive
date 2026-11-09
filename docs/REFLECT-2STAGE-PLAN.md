@@ -81,6 +81,7 @@
     - 같은 때: situations에 "where" · "when" 칸(이야기가 준 장소 · 날짜, 주문 예정일 포함, 아니면 ""). ""로 남은 칸은 폰 어디서도 채우지 않음. "eta" 칸은 when으로 합쳐 뺌(저장 안 하는 칸). 약 +35토큰(≈3,540).
     - 실제 채팅 반영 뒤(3.182.0): 사진 · 메모 · 음성에 한국어가 안 붙음(LANGUAGE가 "a text"라고만 해서 문자로 읽음) → 칸마다 짝(ko · kt · ks · pko)을 적음. 이야기가 이미 보여 준 문자 대화를 통째로 옮김 → 마지막 4개만.
     - 같은 때: "Texts short"를 빼고 "그 사람이 실제로 쓰는 길이로"(단답형도 장문형도 성격대로).
+    - 실제 채팅 50개 반영에서도 한국어 칸을 거의 안 씀(출력 1만 토큰에 지침). core에서 한국어 칸(ko · kt · ks · pko)을 다 빼고 "No Korean translations: the app adds them." 반영(core + money)이 끝나면 `fillKo`(src/phonetr.js)가 한국어가 아니고 짝 칸이 빈 것(`koGaps`)만 번역기(translateLines, 캐시)로 한 번에 채움. 여러 줄 칸은 줄 단위로. 실패하면 보고에 "번역 못 함 · 다시 하기"(syncLast.trFailed), "가 한국어"를 눌러도 빈 것부터 채움. 채운 뒤 syncUndo.after를 다시 떠서 되돌리기가 그대로 됨. 지시문 약 −70토큰(≈3,520).
     - run77 뒤(생활 12개): THE STORY 첫 줄의 "before the owner's own life"를 뺌(옛 최종엔 없던 우선순위). 건강 · usual은 records에서 빼서 everyday 뒤 맨 위 칸 "health" · "usual"로(모델이 앞에서부터 쓰니 생활이 뒤로 밀려 짧아지지 않게). `recordsCore`가 둘을 읽어요. `applyDays`: 폰의 날이 짐작(pattern, 모델이 쓴 `:d` 줄 아님)이면 모델 값으로 바꿈(되돌리기 됨; run77 11-05가 pattern 8,050으로 남던 것).
     - THE STORY IS CANON(run78 뒤 세 줄로 압축하고 옛 따옴표 예시 — 마감 · 한 일 · 나중 계획 — 를 넷째 줄에 되돌림; 처음엔 할 일은 둘 중 하나: 이야기 안에서 쓰기 · 이야기 밖 일상 / 앞서가지 않기, 비밀 · 새 사실 · 이유와 전말 · 결과와 완료 · 계획 지어내지 않기 / 명시한 만큼만, 지어낸 미래는 일상만 / 이야기 사람 · 사건 기록에선 나중 메시지가 뒤집을 수 있는 건 새 사실). 겹치던 줄은 뺌: THE OWNER'S LIFE의 옛 새 사실 줄(예시 포함), 일기 · 음성 메모 끝의 "no new secrets or story events".
       - 지시문: 본체 15,553자(생활 앱 19,427, +날씨 20,484).

@@ -46,6 +46,7 @@ export function syncSettings(p, now, ui) {
           <div class="ax_rw"><span class="ax_tx"><span class="ax_n">${last.checked}개 확인 · 남은 ${last.remaining}개</span><span class="ax_p">${esc(last.apps.length ? `${last.apps.join(' · ')}에 넣었어요` : '새로 넣은 건 없어요')}</span></span></div>
           ${(last.changes || []).map(c => `<div class="ax_rw"><span class="ax_tx"><span class="ax_n">${esc(c.label)}</span><span class="ax_p">${esc(c.what || c.app)}</span></span><span class="ax_v cg_num ${c.amount < 0 ? '' : 'ax_plus'}">${esc(money(c.amount, c.currency))}</span></div>`).join('')}
           ${(last.notes || []).map(n => `<div class="ax_rw"><span class="ax_tx"><span class="ax_p">${esc(n)}</span></span></div>`).join('')}
+          ${last.trFailed ? '<button type="button" class="ax_rw ax_rwn na_sync_tr"><span class="ax_tx"><span class="ax_n ax_red">번역 못 함 · 다시 하기</span></span></button>' : ''}
           ${last.failed.map(f => `<div class="ax_rw"><span class="ax_tx"><span class="ax_n ax_red">${f.at === null ? '넣지 못한 일' : `#${f.at} ${f.skipped ? '건너뜀' : '다음에 한 번 더'}`}</span><span class="ax_p">${esc(f.why)}</span></span></div>`).join('')}
           ${p.syncUndo && last.checked && p.sync?.owed?.money?.length ? `<button type="button" class="ax_rw ax_rwn na_sync_money"><span class="ax_tx"><span class="ax_n ax_red">결제 다시 읽기 (메시지 ${p.sync.owed.money.length}개)</span></span></button>` : ''}
           ${p.syncUndo && last.checked ? '<button type="button" class="ax_rw ax_rwn na_sync_undo"><span class="ax_tx"><span class="ax_n ax_red">방금 반영 되돌리기</span></span></button>' : ''}
