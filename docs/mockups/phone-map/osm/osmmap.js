@@ -328,7 +328,7 @@ function gmapMarks(labels) {
     if (++n >= 4) break; }
   // a few more places as small icons only (no name), the old kit's white badge: each one goes where the screen is emptiest —
   // the candidate furthest from every name and icon already there, and never nearer than 70 px to one
-  if (process.env.ICONS !== '0') {
+  if (process.env.ICONS === '1') {   // small nameless icons: off by default (they made the clean map busy); the named dots carry every family's colour instead
     const gap = ([x, y]) => Math.min(...taken.map(([a, b2, c, d]) => Math.hypot(Math.max(a - x, 0, x - c), Math.max(b2 - y, 0, y - d))), ...placed.map(([u, v]) => Math.hypot(u - x, v - y)));
     let pool = POIS.filter(q => !seen.has(q.name) && q.at[0] > 16 && q.at[0] < W - 16 && q.at[1] > 22 && q.at[1] < 474);
     for (let m = 0; m < 3 && pool.length; m++) {
