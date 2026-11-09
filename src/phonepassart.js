@@ -99,14 +99,14 @@ const confetti = (fg, op, u) => { let o = '';
     return fadeIn(u, o); };
 // movie: film grain, a fine noise over the dark, a touch stronger toward the right, very faint
 const grain = (fg, op, u) => fadeIn(u, `<defs><filter id="${u}n" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="1.3" numOctaves="2" seed="7" result="t"/><feColorMatrix in="t" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1.4 -0.62"/></filter></defs><rect x="0" y="-10" width="400" height="230" filter="url(#${u}n)" opacity=".5"/>`);
-// movie (mockup, not chosen yet): the woven fabric of the auditorium walls, the first weave with each square left whole, very faint
+// movie: the woven fabric of the auditorium walls, the first weave with each square left whole, very faint
 const weave = (fg, op, u) => { let a = '', b = '';
     for (let r = 0; r < 30; r++) for (let c = 0; c < 36; c++) { const x = 150 + c * 7.4, y = -8 + r * 7.4;
         if ((r + c) % 2) a += `M${r1(x + 0.6)} ${r1(y + 1)}h6.2v5.4h-6.2Z`; else b += `M${r1(x + 1)} ${r1(y + 0.6)}h5.4v6.2h-5.4Z`; }
     // a long soft fade from the dark of the card, so the weave has no edge
     return `<defs><linearGradient id="${u}w" x1="0" x2="1"><stop offset=".42" stop-color="#fff" stop-opacity="0"/><stop offset=".88" stop-color="#fff"/></linearGradient><mask id="${u}k"><rect x="-20" y="-20" width="400" height="260" fill="url(#${u}w)"/></mask></defs><g mask="url(#${u}k)"><path d="${a}" ${F(fg, 0.05)}/><path d="${b}" ${F(fg, 0.035)}/></g>`; };
 const MOTIF = { flight: [flight, null], train: [lined, null], membership: [dots, holo], other: [dots], concert: [spots, confetti], hotel: [windows, doors], match: [bowl, knit],
-    movie: [grain], museum: [rosette, rosetteP], bus: [lanes, chevrons], ferry: [depths, seaChart], theater: [harlequin, damask], park: [wheel, sunburst] };
+    movie: [grain, weave], museum: [rosette, rosetteP], bus: [lanes, chevrons], ferry: [depths, seaChart], theater: [harlequin, damask], park: [wheel, sunburst] };
 const seedOf = id => [...String(id || '')].reduce((h, c) => h + c.charCodeAt(0), 0);
 export function passMotif(k, fg, op, id) {
     const xs = MOTIF[k] || MOTIF.other, f = xs[seedOf(id) % xs.length];
