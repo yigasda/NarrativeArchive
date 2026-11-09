@@ -3614,6 +3614,11 @@ export function koGaps(p, { all = false } = {}) {
     if (p?.life?.weather) add(p.life.weather, 'line', 'ko', 'weather');
     for (const x of p?.life?.files?.folders || []) add(x, 'name', 'ko', 'file folder');
     if (p?.life?.health?.usual) add(p.life.health.usual, 'coffeeKind', 'coffeeKo', 'coffee');
+    // (은행 · 쇼핑 · 투자: their own requests write their Korean; what they left out, or a 다시 번역, is the translator's)
+    for (const x of p?.money?.tx || []) add(x, 'who', 'ko', 'bank', x.who || 'sender', own);
+    for (const x of p?.money?.orders || []) add(x, 'item', 'ko', 'shop');
+    for (const x of p?.investment?.securities || []) add(x, 'name', 'ko', 'invest');
+    for (const x of p?.investment?.watch || []) add(x, 'note', 'ko', 'invest');
     // (배달: its own fill writes its Korean; what it left out, or a 다시 번역, is the translator's)
     const dv = p?.delivery;
     if (dv) {

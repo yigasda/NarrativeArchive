@@ -155,7 +155,8 @@ const VIEW_APPS = [[/^(msg|thread|draft|groupinfo|contact)/, a => a.startsWith('
     [/^(search|page|marks|tabs|history)/, a => a === 'search' || a === 'web'], [/^cal/, a => a === 'calendar'], [/^sns/, a => /^(post|comment|profile)/.test(a)], [/^mail/, a => a.startsWith('mail')],
     [/^diary/, a => a.startsWith('diary')], [/^voice/, a => a.startsWith('voice memo')], [/^(clock|alarm)/, a => a === 'alarm' || a === 'timer'], [/^(files|folder|file)/, a => a.startsWith('file')],
     [/^(weather|wlist)/, a => a === 'weather'], [/^(health|hcmp)/, a => a === 'coffee'],
-    [/^(delivery|dcart|ditem|dorder|dpay|drate|dshop)/, a => a === 'delivery']];
+    [/^(delivery|dcart|ditem|dorder|dpay|drate|dshop)/, a => a === 'delivery'],
+    [/^(bank|acct|tx|stmt|fixed|money)/, a => a === 'bank'], [/^(shop|order|track)/, a => a === 'shop'], [/^(invest|iv|stock)/, a => a === 'invest']];
 // (a screen not listed, as 설정, is the whole phone)
 export const koAppOf = view => VIEW_APPS.find(([re]) => re.test(String(view || '')))?.[1] || null;
 
