@@ -862,14 +862,16 @@ const MORN = {
          snow: { sky: '#879cbd', bands: [[165, '#a0afc6'], [220, '#c2c1c8'], [275, '#e8caa8']], cb: [[48, '#a0afc6'], [64, '#c2c1c8'], [78, '#e8caa8']], hills: ['#f8eee2', '#e9ded6', '#d7cfcc'], cloud: '#a6b3c8' },
          fog: { sky: '#9aa0aa', bands: [[165, '#aaacb1'], [220, '#c0b9b2'], [275, '#d9c2a6']], cb: [[48, '#aaacb1'], [64, '#c0b9b2'], [78, '#d9c2a6']], hills: ['#8f939c', '#848891', '#797d86'] } }
 };
-// 해 진 뒤 (19–21): the sun already down, not yet night — the night's own sky up top, the last of the light low down in violet, rose and
+// 해 진 뒤 (19–21): the sun already down, not yet night — the clear night's sky up top, the last of the light low down in violet, rose and
 // a dusty pink. Built the way 늦은 오후 is (the same fields, so the same clouds, fog and snow as every other hour), only no sun:
 // flat stars instead, and the evening star (a flat four-point star low in the west)
 const DUSK = {
     clear: { sky: '#28324a', bands: [[150, '#303750'], [198, '#433f5a'], [244, '#5f4a62'], [292, '#82596a']], cb: [[40, '#303750'], [56, '#433f5a'], [70, '#5f4a62'], [82, '#82596a']], hills: ['#2a2a40', '#222336', '#1b1c2c'], puff: '#3a4058', cloud: '#3e4460', front: '#56566f' },
-    grey: { sky: '#2c3446', bands: [[165, '#333a4e'], [220, '#423f53'], [275, '#574a5a']], cb: [[48, '#333a4e'], [64, '#423f53'], [78, '#574a5a']], hills: ['#262a3a', '#202331', '#1a1c28'], cloud: '#3a4155', cloud2: '#444b5f' },
-    snow: { sky: '#333b52', bands: [[165, '#3b4058'], [220, '#4c4660'], [275, '#655468']], cb: [[48, '#3b4058'], [64, '#4c4660'], [78, '#655468']], hills: ['#cfd0de', '#b8b9ca', '#a1a2b6'], cloud: '#454b64' },
-    fog: { sky: '#3a4052', bands: [[165, '#434759'], [220, '#524f61'], [275, '#685d6b']], cb: [[48, '#434759'], [64, '#524f61'], [78, '#685d6b']], hills: ['#363a4a', '#303443', '#2a2e3c'] },
+    // the grey skies come from the clear one, as every other hour's do: the same bands with their colour pressed out and a little light added
+    // (흐림 most of it, 눈 a touch lighter, 안개 the most faded); 비 · 이슬비 · 진눈깨비 take 흐림 through wetSky
+    grey: { sky: '#3b404c', bands: [[165, '#504e5c'], [220, '#655a67'], [275, '#806b73']], cb: [[48, '#504e5c'], [64, '#655a67'], [78, '#806b73']], hills: ['#373744', '#2f303b', '#292933'], cloud: '#565967', cloud2: '#60626f' },
+    snow: { sky: '#454a58', bands: [[165, '#5a5767'], [220, '#6e6270'], [275, '#89717b']], cb: [[48, '#5a5767'], [64, '#6e6270'], [78, '#89717b']], hills: ['#d6d4de', '#c0bdca', '#aaa6b6'], cloud: '#5f6272' },
+    fog: { sky: '#575b64', bands: [[165, '#696772'], [220, '#7a727b'], [275, '#908087']], cb: [[48, '#696772'], [64, '#7a727b'], [78, '#908087']], hills: ['#4d4d58', '#464750', '#404149'] },
 };
 function duskPal(cond, D) {
     const c = DUSK.clear, g = DUSK.grey, sky = { sky: c.sky, bands: c.bands, cb: c.cb, hills: c.hills }, phase = 'dusk';
@@ -906,7 +908,7 @@ function scene(cond, phase) {
         for (let row = 0; row < 6; row++) for (let col = 0; col < 7; col++) { const x = 14 + col * 56 + r() * 40, y = 40 + row * 50 + r() * 34;
             if (x > 110 && x < 280 && y > 205 && y < 350) continue; if (row >= 4 && r() < 0.5) continue; pts.push([x, y]); }
         out.push(pts.slice(0, q.stars).map(([x, y], k) => { const z = k % 4 === 0 ? 6 : 4;
-            return `<i class="st" style="left: ${Math.round(x)}px; top: ${Math.round(y)}px; width: ${z}px; height: ${z}px; background: ${k % 3 === 1 ? '#f6e7c4' : '#f4f1e8'}; --d: ${(4 + r() * 4).toFixed(1)}s; --dl: -${(r() * 5).toFixed(1)}s"></i>`; }).join('')); }
+            return `<i class="st" style="left: ${Math.round(x)}px; top: ${Math.round(y)}px; width: ${z}px; height: ${z}px; background: ${k % 3 === 1 ? '#f6e7c4' : '#f4f1e8'}; box-shadow: 0 0 ${z}px ${(z / 4).toFixed(1)}px rgba(255, 246, 226, 0.35); --d: ${(4 + r() * 4).toFixed(1)}s; --dl: -${(r() * 5).toFixed(1)}s"></i>`; }).join('')); }
     else if (q.stars) out.push(Array.from({ length: q.stars }, () => `<i class="st${phase === 'dawn' ? ' fd' : ''}" style="left: ${Math.round(10 + r() * 370)}px; top: ${Math.round(60 + r() * 360)}px; --d: ${(2 + r() * 3).toFixed(1)}s; --dl: -${(r() * 4).toFixed(1)}s"></i>`).join(''));
     const sun = (x, y, rad, core, halo, cls = '') => `<span class="sun ${cls}" style="left: ${x - rad * 2.4}px; top: ${y - rad * 2.4}px; width: ${rad * 4.8}px; height: ${rad * 4.8}px"><b style="background: ${halo}"></b><b class="h2" style="background: ${halo}"></b><i style="background: ${core}; width: ${rad * 2}px; height: ${rad * 2}px"></i></span>`;
     if (q.sun === 'day') out.push(cond === 'partly' ? sun(320, 190, 42, '#f6c94a', 'rgba(255, 255, 255, 0.14)') : sun(330, 210, 46, '#f6c94a', 'rgba(255, 255, 255, 0.14)'));
