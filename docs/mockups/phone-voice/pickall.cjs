@@ -37,7 +37,9 @@ const R = [['Mara', '친구에겐 반말', 1, 0], ['Ivo', '존댓말', 3, 0], ['
     // C: pill top right → a sheet from the bottom: 전체 선택, the names with checks, 취소 · N명 뽑기
     out.C0 = { top: pill, html: body(plain) };
     const sheetRows = R.map(r => `<div style="display:flex;align-items:center;gap:12px;height:52px;padding:0 18px;border-top:0.5px solid rgba(60,60,67,.14)">${axLetter(r[0], 30)}<span style="flex:1;font-size:16px;color:#161b22">${r[0]}</span>${radio(sel.has(r[0]))}</div>`).join('');
-    out.C1 = { top: pill, html: body(plain), over: `<div style="position:absolute;inset:0;background:rgba(20,24,32,.32)"></div><div style="position:absolute;left:10px;right:10px;bottom:28px;border-radius:22px;overflow:hidden;background:#f6f7f9;box-shadow:0 1px 2px rgba(22,27,34,.06),0 14px 40px rgba(22,27,34,.22)"><div style="padding:16px 18px 12px;text-align:center"><b style="font-size:16px">이야기에서 뽑기</b><div style="font-size:13px;color:#6b7380;margin-top:3px">고른 사람의 말투를 이야기에서 찾아요.</div></div><div style="display:flex;justify-content:flex-end;padding:0 18px 8px;font-size:14px;font-weight:600;color:#2f6bff">전체 선택</div>${sheetRows}<div style="display:flex;border-top:0.5px solid rgba(60,60,67,.2)"><div style="flex:1;height:50px;display:grid;place-items:center;font-size:17px;color:#2f6bff">취소</div><div style="flex:1;height:50px;display:grid;place-items:center;font-size:17px;font-weight:600;color:#2f6bff;border-left:0.5px solid rgba(60,60,67,.2)">2명 뽑기</div></div></div>` };
+    // C·: the phone's own alert (askPick's rows, askInput's two buttons) — only its rows are new: 전체 선택, then each person with a check
+    const ck = on => `<span style="margin-left:auto;width:22px;display:grid;place-items:center">${on ? ax('check', 18, '#2c4a80', 2.6) : ''}</span>`;
+    out.C1 = { top: pill, html: body(plain), card: `<div class="pcf_msg"><b>이야기에서 뽑기</b><span>고른 사람의 말투를 이야기에서 찾아요.</span></div><div class="pcf_btns v"><div class="pcf_ok safe pcf_pick"><span class="pcf_pt"><span>전체 선택</span></span>${ck(false)}</div>${R.map(r => `<div class="pcf_ok safe pcf_pick">${axLetter(r[0], 26)}<span class="pcf_pt"><span>${r[0]}</span></span>${ck(sel.has(r[0]))}</div>`).join('')}</div><div class="pcf_btns"><div class="pcf_no">취소</div><div class="pcf_ok safe">2명 뽑기</div></div>` };
     // D: a big button always at the bottom → checks at the right, a 전체 선택 chip row on top
     const chips = `<div style="display:flex;gap:8px;margin:-4px 16px 12px"><span style="padding:7px 13px;border-radius:999px;background:#e1e9ff;color:#2f6bff;font-size:13.5px;font-weight:600">전체 선택</span><span style="padding:7px 13px;border-radius:999px;background:#fff;color:#4f5763;font-size:13.5px;font-weight:600;box-shadow:0 1px 2px rgba(22,27,34,.06)">이야기에서 뽑은 것만</span></div>`;
     out.D0 = { html: body(plain), over: bar('이야기에서 뽑기') };
@@ -51,7 +53,13 @@ const R = [['Mara', '친구에겐 반말', 1, 0], ['Ivo', '존댓말', 3, 0], ['
       const tr = scr.querySelector('.ax_topr'); if (tr) tr.innerHTML = v.top || '';
       if (v.over) { if (getComputedStyle(scr).position === 'static') scr.style.position = 'relative'; scr.insertAdjacentHTML('beforeend', `<div style="position:absolute;inset:0;pointer-events:none;z-index:50">${v.over}</div>`); }
     }, v);
+    if (v.card) {
+      await p.evaluate(() => { const r = document.createElement('div'); r.className = 'ax_rw na_ph_kvadd'; r.id = 'pk_add'; r.style.display = 'none'; document.querySelector('.na_ph_frame .ax_scroll').appendChild(r); r.click(); });
+      await p.waitForSelector('.pcf .pcf_field'); await p.waitForTimeout(250);
+      await p.evaluate(card => { document.activeElement?.blur(); const el = document.querySelector('.pcf'), no = el.querySelector('.pcf_no'); no.id = 'pk_no'; const keep = document.createElement('div'); keep.style.display = 'none'; keep.appendChild(no); el.appendChild(keep); el.querySelector('.pcf_card').innerHTML = card; }, v.card);
+    }
     await p.waitForTimeout(300); await s.shot('pa_' + k);
+    if (v.card) { await p.evaluate(() => document.getElementById('pk_no')?.click()); await p.waitForTimeout(200); }
   }
   console.log(JSON.stringify(s.errors())); await s.close();
 })().catch(e => { console.error(String(e).slice(0, 400)); process.exit(1); });
