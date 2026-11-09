@@ -803,6 +803,8 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.ok(arch.includes('\nTIMES\n- Times are "MM-DD HH:MM"') && !arch.includes('CLOCK FIRST'));
     assert.match(on, /- Build each day's personal records from who the owner is: what PHONE NOW shows they already do \(whom they text, what they search, photograph and note\), PEOPLE AROUND, OWNER PROFILE and LIFE NOW's usual \(when given\)\./);
     assert.match(on, /Each day is a set of phone records, not the next chapter of the story\./);
+    assert.match(on, /Use the apps this owner would use, for example a photo of lunch, a search, a note, a mail, texts and calls by the person, a voice memo, a diary entry when the day ends, an alarm, a saved file\./);
+    assert.match(on, /The diary is the owner's day: it goes in "everyday" on its day, and the story comes into it only as the messages tell it and as feelings\./);
     assert.match(on, /- Complete how the owner expresses or records the situation, without completing the situation itself\./);
     assert.ok(on.indexOf('\nEVERYDAY\n') < on.indexOf('\nSTORY RECORDS\n') && on.indexOf('  "everyday": [{') < on.indexOf('  "records": [{'));
     assert.match(on, /- For each person the owner had a scene with in NEW MESSAGES: at least one text between the two later these hours, in their own voices/);

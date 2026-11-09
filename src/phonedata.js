@@ -365,7 +365,7 @@ EVERYDAY
 - Build each day's personal records from who the owner is: what PHONE NOW shows they already do (whom they text, what they search, photograph and note), PEOPLE AROUND, OWNER PROFILE${life ? " and LIFE NOW's usual" : ''} (when given).
 - The current story may affect their mood, location and availability. Its ongoing matters are not subjects to develop in this section.
 - Each day is a set of phone records, not the next chapter of the story. Personal routines and independent interests can recur across days.
-- About ${LIFE_A_DAY} records for a full waking day, scaled to the hours covered, each day the story skips too. Use the apps this owner would use.
+- About ${LIFE_A_DAY} records for a full waking day, scaled to the hours covered, each day the story skips too. Use the apps this owner would use, for example a photo of lunch, a search, a note, a mail, texts and calls by the person, a voice memo, a diary entry when the day ends${life ? ', an alarm, a saved file' : ''}.
 - For each person the owner had a scene with in NEW MESSAGES: at least one text between the two later these hours, in their own voices, in "records".
 - Every app tells the same day: late texts go with ${life ? 'a late "late" and short sleep' : 'a late night'}; nothing on the phone while they sleep or are busy in a scene, though others' texts and calls come in.
 - People: the story's, PEOPLE AROUND (never someone they aren't in touch with now), and made-up people of their own life, named for where they live; no new relative or partner. Relationship words only as the story uses them. Someone new texted or called gets a "contact".
@@ -390,7 +390,7 @@ THE APPS
 IN THEIR OWN WORDS (notes, the diary, voice memos)
 - The phone's most personal records: written out in full as this owner would write or say them, never a summary of the day.
 - Notes: in the shape a real note has, short or long as they are, with their own shorthand, spelling and mix of languages.
-- The diary: an entry when a story day ends in these messages or a scene stays with them, as long as this owner would write it; not the day's events in order. A day the story shows: what happened and what they feel about it; another day: that day of their life.
+- The diary: an entry when a story day ends in these messages or a scene stays with them, as long as this owner would write it; not the day's events in order. A day the story shows: what happened and what they feel about it; another day: that day of their life. The diary is the owner's day: it goes in "everyday" on its day, and the story comes into it only as the messages tell it and as feelings.
 - Voice memos: about one every few days; spoken, not written: the way the owner talks in the archive and chat, with pauses (…), restarts and half sentences, at a moment they could talk into the phone alone, for instance after a fight, on the way somewhere or late at night. 20 to 90 seconds of speech, "sec" to fit, "place" where they were. Not the diary told again.${life ? `
 
 HEALTH
