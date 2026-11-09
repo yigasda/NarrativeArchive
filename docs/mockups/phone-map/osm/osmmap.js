@@ -2,7 +2,7 @@
 // node docs/mockups/phone-map/osm/osmmap.js <data.json> <out.html> <lat> <lon> <metersAcross> [labels.json]
 const fs = require('fs');
 const [, , src, out, lat0s, lon0s, spanS, labelsSrc] = process.argv;
-const lat0 = +lat0s, lon0 = +lon0s, FX = process.env.FX ?? (process.env.STYLE === 'pretty' ? 'BC' : 'BCD');   // FX: A 큰 건물 색 · B 땅 쓰임 색 · C 동네마다 축척 · D 건물 그림자
+const lat0 = +lat0s, lon0 = +lon0s, FX = process.env.FX ?? (/^(pretty|gmap)$/.test(process.env.STYLE) ? 'BC' : 'BCD');   // FX: A 큰 건물 색 · B 땅 쓰임 색 · C 동네마다 축척 · D 건물 그림자
 const C = { land: '#f3f0ea', built: '#ebe7df', park: '#d4e8c9', forest: '#c3dcb5', water: '#b6d4ef', road: '#ffffff', edge: '#dad4c9', major: '#fde7a3', majorEdge: '#e3c77c',
   rail: '#a9a49b', label: '#6f7681', plaza: '#efe6d2', bld: '#e0dbd0', foot: '#e6e1d7',
   mark: '#d5cab6', markStation: '#d3d4d6', resi: '#f0ece5', shop: '#f3e3d6', works: '#e3e3df', railyard: '#e4e2dc', school: '#f3e9c9', shadow: '#bdb4a4' };
@@ -97,7 +97,13 @@ const RAILKEEP = new Set();
 const LC = Object.fromEntries(Object.keys(COVER).map(k => [k, '']));
 // STYLE=pretty: the real shapes drawn the way the old kit maps were — fewer lines, big charcoal names, icons, a station box, trees in parks
 const PRETTY = process.env.STYLE === 'pretty';
+// STYLE=gmap: a busy street map's manner — cream ground, land uses in their own colours, hardly any houses, white streets with no rim, coloured place names with their icons, street names along the streets
+const GMAP = process.env.STYLE === 'gmap', COLLECT = PRETTY || GMAP, STREETS = [];
+if (GMAP) Object.assign(C, { land: '#f4efe6', built: '#f1ece3', resi: '#f4efe6', shop: '#f4ece4', works: '#ebe8e3', railyard: '#e8e5df', school: '#efe1bd', park: '#c8e6b3', forest: '#b9dca5', water: '#a8d2f4',
+  bld: '#e7e4df', edge: '#e9e2d6', road: '#ffffff', major: '#fde293', majorEdge: '#f2c766', plaza: '#efe9df', foot: '#dcefd0' });
+if (GMAP) Object.assign(COVER, { grass: '#d3ecc3', allot: '#d6ebc5', orchard: '#cfe8bc', vine: '#dde8c0', grave: '#d4e3cb', scrub: '#cfe3b8', farm: '#f1ecd9' });
 const { ICON, glyph, pick } = require('./icons.js');
+const COVER0 = null;
 const pxArea = ps => Math.abs(ps.reduce((s, p, i) => { const q = ps[(i + 1) % ps.length]; return s + p[0] * q[1] - q[0] * p[1]; }, 0)) / 2;
 const centre = ps => { const n = ps.length; return [ps.reduce((s, p) => s + p[0], 0) / n, ps.reduce((s, p) => s + p[1], 0) / n]; };
 const POIS = [], GREENS = [];
@@ -110,11 +116,12 @@ for (const e of d.elements) {
   if (t.building) {
     if (e.type !== 'way' || !closed) continue;
     const a = area(e);
-    if (PRETTY) {
+    if (PRETTY || GMAP) {
       const ps = pts(e.geometry), px = pxArea(ps);
       { const ic = pick(t); if (ic && (t.name || t.wikidata)) POIS.push({ ic, at: centre(ps), pr: (t.wikidata ? 2 : 0) + (t.name ? 1 : 0) + Math.min(2, px / 400), name: t.name }); }
       if (t.building === 'train_station' || t.railway === 'station') { L.station += a; continue; }
       if (px < 40 * k * k * 2.2) continue;          // the tiny sheds and kiosks go
+      if (GMAP && px < 900 * k * k) continue;          // gmap: only the big blocks (estates, halls, stations) stay
     }
     // A: churches, stations, castles, halls and anything with its own wiki page stand out a little
     const big = /cathedral|church|chapel|castle|palace|train_station|government|museum|civic|public|university|stadium|transportation/.test(t.building) || t.historic || t.tourism || t.wikidata || t.amenity === 'place_of_worship';
@@ -124,8 +131,10 @@ for (const e of d.elements) {
     if (FX.includes('D')) { const lv = parseFloat(t['building:levels']) || (t.height ? parseFloat(t.height) / 3 : 0) || 3, off = Math.min(7, 0.5 + lv * 3 * k * 0.3), b = (Math.round(off * 2) / 2).toFixed(1); L.shadow[b] = (L.shadow[b] || '') + a; }
     continue;
   }
-  if (PRETTY && e.geometry) { const ic = pick(t); if (ic && t.name && !t.building) { const ps = pts(e.geometry); POIS.push({ ic, at: centre(ps), pr: (t.wikidata ? 2 : 0) + 1 + Math.min(2, pxArea(ps) / 3000), name: t.name }); } }
-  if (PRETTY && e.type === 'node') { const ic = pick(t); if (ic && (t.name || t.wikidata)) POIS.push({ ic, at: P(e.lat, e.lon), pr: (t.wikidata ? 2.5 : 0) + 1, name: t.name }); }
+  if (COLLECT && e.geometry) { const ic = pick(t); if (ic && t.name && !t.building) { const ps = pts(e.geometry); POIS.push({ ic, at: centre(ps), pr: (t.wikidata ? 2 : 0) + 1 + Math.min(2, pxArea(ps) / 3000), name: t.name }); } }
+  if (COLLECT && e.type === 'node') { const ic = pick(t); if (ic && (t.name || t.wikidata)) POIS.push({ ic, at: P(e.lat, e.lon), pr: (t.wikidata ? 2.5 : 0) + 1, name: t.name }); }
+  // gmap: parks only where they matter — courtyard lawns, flowerbeds and small gardens go
+  if (GMAP && e.type === 'way' && e.geometry && (t.leisure && /park|garden/.test(t.leisure) || /^(grass|flowerbed|village_green|greenery)$/.test(t.landuse || '') || t.natural === 'grassland') && pxArea(pts(e.geometry)) < 2500 * k * k) continue;
   if (t.leisure && /park|garden/.test(t.leisure)) { L.park += area(e); if (PRETTY && e.type === 'way' && e.geometry) GREENS.push(pts(e.geometry)); continue; }
   { const c = coverOf(t); if (c) { if (c === 'forest') L.forest += area(e); else LC[c] += area(e); continue; } }
   if (t.landuse && GREEN.test(t.landuse)) { L.park += area(e); continue; }
@@ -144,8 +153,9 @@ for (const e of d.elements) {
   if (h) {
     if (/^(primary|trunk|motorway)(_link)?$/.test(h)) L.major += dl;
     else if (/^(secondary|tertiary)(_link)?$/.test(h)) L.mid += dl;
-    else if (/^(residential|unclassified|living_street|pedestrian|busway)$/.test(h) || h === 'service' && (!PRETTY || t.name)) L.minor += dl;
+    else if (/^(residential|unclassified|living_street|pedestrian|busway)$/.test(h) || h === 'service' && (!COLLECT || t.name)) L.minor += dl;
     else if (/^(footway|path|cycleway|track)$/.test(h) && !PRETTY) L.foot += dl;
+    if (GMAP && t.name && /^(primary|secondary|tertiary|residential|unclassified|living_street|pedestrian)$/.test(h)) STREETS.push({ name: t.name, ps: pts(e.geometry), rank: /^(primary|secondary)$/.test(h) ? 3 : h === 'tertiary' ? 2 : 1 });
   } else if (rw === 'rail' || rw === 'light_rail') {
     // RAIL=old keeps every track dashed; by default the yard tracks (sidings, spurs) vanish into the yard's face and the main lines are one thin line
     if (RAILKEEP.has(e.id)) L.rail += dl;
@@ -183,6 +193,15 @@ let svg = `<rect width="${W}" height="${H}" fill="${C.land}"/>`
      : st(L.rail, C.railLine || '#b9b9b3', 1.3) + st(L.tram, C.railLine || '#b9b9b3', 0.6, ' opacity=".6"'))
   + st(L.major, C.majorEdge, mpx(16) + 2) + st(L.major, C.major, mpx(16))
   + (PRETTY ? prettyTop() : '');
+if (GMAP) svg = `<rect width="${W}" height="${H}" fill="${C.land}"/>`
+  + fill(L.built, C.built) + fill(L.resi, C.resi) + fill(L.shop, C.shop) + fill(L.works, C.works) + fill(L.railyard, C.railyard) + fill(L.school, C.school)
+  + ['farm', 'grass', 'allot', 'orchard', 'vine', 'grave', 'scrub', 'wet', 'sand', 'rock'].map(k2 => fill(LC[k2], COVER[k2])).join('') + fill(L.park, C.park) + fill(L.forest, C.forest) + fill(L.plaza, C.plaza) + fill(L.water, C.water)
+  + fill(L.bld, C.bld) + fill(L.station, '#e2dfda')
+  + (L.park + L.forest ? `<defs><clipPath id="gp"><path d="${L.park + L.forest}"/></clipPath></defs><g clip-path="url(#gp)">${st(L.foot, C.foot, 1.1)}</g>` : '')
+  + st(L.minor, C.edge, mpx(8) + 0.8) + st(L.mid, C.edge, mpx(12) + 1)
+  + st(L.minor, C.road, mpx(8)) + st(L.mid, C.road, mpx(12))
+  + st(L.rail, '#b8b6b2', 2.2) + st(L.rail, '#f4efe6', 0.9, ' stroke-dasharray="6 5"')
+  + st(L.major, C.majorEdge, mpx(16) + 1.4) + st(L.major, C.major, mpx(16));
 // trees in the parks, the station box, the icons — the old kit's pieces on the real shapes
 function prettyTop() {
   let o = '', seed = 7; const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
@@ -231,6 +250,7 @@ function autoLabels() {
 }
 const labels = labelsSrc ? JSON.parse(fs.readFileSync(labelsSrc, 'utf8')) : autoLabels();
 if (PRETTY) svg += prettyMarks(labels);
+if (GMAP) { svg += gmapMarks(labels); labels.length = 0; }
 for (const [la, lo, text, size = 11, wt = 600, col = C.label] of labels) {
   const [x, y] = P(la, lo);
   if (PRETTY) { const big = size >= 11.5 || wt >= 700, first = text === labels[0][2], sz = first ? 16 : big ? 14 : 12, cl = col === '#5a84ad' ? '#4f7aa6' : big ? '#3f454d' : '#5a6069';
@@ -252,6 +272,38 @@ function prettyMarks(labels) {
     o += `<g transform="translate(${f(x)} ${f(y)})"><circle r="9.5" fill="#fff" stroke="#d8d4cc" stroke-width="1"/><g fill="none" stroke="#8a7f73" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" transform="translate(-6.6 -6.6) scale(.55)">${glyph(p.ic)}</g></g>`;
     if (++n >= 7) break; }
   return o;
+}
+// gmap names: streets along their line, places with a coloured icon and the name in the same colour, quarters in grey
+function gmapMarks(labels) {
+  let o = '', defs = '', id = 0; const taken = [];
+  const hit = b => taken.some(c => b[0] < c[2] && b[2] > c[0] && b[1] < c[3] && b[3] > c[1]);
+  const txt = (x, y, t, sz, wt, col, anchor = 'middle') => `<text x="${f(x)}" y="${f(y)}" text-anchor="${anchor}" font-family="-apple-system, 'Noto Sans KR', 'Hiragino Sans', sans-serif" font-size="${sz}" font-weight="${wt}" fill="${col}" stroke="#fff" stroke-width="3" stroke-linejoin="round" paint-order="stroke">${t}</text>`;
+  // quarters first (they own the middle), then places, then streets in what is left
+  for (const [la, lo, n, sz, wt, col] of labels) { const [x, y] = P(la, lo), big = n === process.env.MAIN, z = big ? 15 : col === '#5a84ad' ? 11.5 : 12, w = n.length * z * 0.6;
+    const b = [x - w / 2 - 4, y - z - 2, x + w / 2 + 4, y + 4]; if (hit(b)) continue; taken.push(b);
+    o += txt(x, y, n, z, big ? 700 : 600, col === '#5a84ad' ? '#4a7fb5' : big ? '#3c4043' : '#5f6368'); }
+  const CAT = { food: '#e37400', cafe: '#e37400', bar: '#e37400', beer: '#e37400', bakery: '#e37400', wine: '#e37400', shop: '#4a7cd6', mall: '#4a7cd6', market: '#4a7cd6', fuel: '#4a7cd6',
+    school: '#8a6d55', university: '#8a6d55', library: '#8a6d55', hospital: '#d14a3e', pharmacy: '#d14a3e', park: '#3d8b3d', garden: '#3d8b3d', forest: '#3d8b3d', playground: '#3d8b3d', zoo: '#3d8b3d', golf: '#3d8b3d',
+    metro: '#3a76c4', train: '#3a76c4', tram: '#3a76c4', bus: '#3a76c4', ferry: '#3a76c4', airport: '#3a76c4', museum: '#1d8f9f', gallery: '#1d8f9f', theatre: '#1d8f9f', cinema: '#1d8f9f', music: '#1d8f9f', castle: '#1d8f9f', palace: '#1d8f9f', monument: '#1d8f9f', view: '#1d8f9f' };
+  const seen = new Set(); let n = 0;
+  for (const p of POIS.filter(q => q.name && q.name.length <= 22).sort((a, b) => b.pr - a.pr)) {
+    if (seen.has(p.name)) continue; const [x, y] = p.at, col = CAT[p.ic] || '#6f6a64', w = p.name.length * 10.5 * 0.58 + 16;
+    if (x < 10 || x + w > W - 4 || y < 14 || y > 482) continue;
+    const b = [x - 8, y - 9, x + w, y + 8]; if (hit(b)) continue; taken.push(b); seen.add(p.name);
+    o += `<g transform="translate(${f(x)} ${f(y)})"><circle r="7.5" fill="${col}"/><g fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" transform="translate(-5 -5) scale(.42)">${glyph(p.ic)}</g></g>` + txt(x + 11, y + 3.6, p.name, 10.5, 600, col, 'start');
+    if (++n >= 14) break; }
+  // streets: the longest pieces, upright text along the line
+  const sn = new Set();
+  for (const s2 of STREETS.map(q => ({ ...q, len: q.ps.reduce((a, pt, i) => i ? a + Math.hypot(pt[0] - q.ps[i - 1][0], pt[1] - q.ps[i - 1][1]) : 0, 0) })).sort((a, b) => b.rank - a.rank || b.len - a.len)) {
+    if (sn.has(s2.name) || s2.len < s2.name.length * 6.2 + 30) continue;
+    let ps = s2.ps.filter(([x, y]) => x > -20 && x < W + 20 && y > -20 && y < 490); if (ps.length < 2) continue;
+    if (ps[0][0] > ps.at(-1)[0]) ps = ps.slice().reverse();
+    const mid = ps[ps.length >> 1], w = s2.name.length * 5.6; const b = [mid[0] - w / 2 - 2, mid[1] - 8, mid[0] + w / 2 + 2, mid[1] + 8];
+    if (hit(b) || mid[0] < 30 || mid[0] > W - 30 || mid[1] < 20 || mid[1] > 480) continue; taken.push(b); sn.add(s2.name);
+    defs += `<path id="sp${id}" d="${line(ps)}"/>`;
+    o += `<text font-family="-apple-system, 'Noto Sans KR', sans-serif" font-size="9.5" font-weight="500" fill="#7a7770" stroke="#fff" stroke-width="2.6" paint-order="stroke" dy="3.2"><textPath href="#sp${id++}" startOffset="50%" text-anchor="middle">${s2.name}</textPath></text>`;
+    if (sn.size >= 8) break; }
+  return `<defs>${defs}</defs>` + o;
 }
 const css = `*{box-sizing:border-box;margin:0}body{background:#d9dce2;font-family:-apple-system,'Noto Sans KR',sans-serif;padding:24px;width:458px}
 .ph{width:390px;height:844px;border-radius:44px;border:9px solid #111;overflow:hidden;position:relative;background:#f4f5f7;box-sizing:content-box}.ph svg{display:block}
