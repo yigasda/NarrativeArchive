@@ -807,11 +807,13 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.match(on, /The diary is the owner's day: it goes in "everyday" on its day\.\n/);
     assert.match(on, /- Complete how the owner expresses or records the situation, without moving the situation itself to its next step\. This holds for every app: texts, searches, notes, mails, the diary and voice memos\./);
     assert.match(on, /- Record developments the messages establish, but do not invent new developments in the story through phone records: decisions, arrangements, steps toward resolving an ongoing matter \(going somewhere about it, papers gathered or sent, a call or a reply about it\), or outcomes \(a parcel arriving, works finished, an answer received\)\.\n- Phone data supplies existing details\. An expected date does not establish/);
-    assert.match(on, /trail in "records": where it happened \(a "visit"\) and what the phone kept from it\./);
+    assert.match(on, /- Write each scene's phone trail in "records", linked by its "scene" id\. The scene itself is already in "scenes" and is not repeated here\./);
+    assert.match(on, /\nSCENES FIRST\n- Before writing phone life, extract the scenes from NEW MESSAGES and ARCHIVE FOR THESE MESSAGES into "scenes"\./);
+    assert.ok(on.indexOf('  "scenes": [{') < on.indexOf('  "everyday": [{') && !on.includes('\nscene: "id"') && on.includes('"with": [people physically there with the owner; otherwise []]'));
     assert.match(on, /A trail tied to one message \(with its "said"\) goes in "records"; the rest of the owner's day goes in "everyday"\. Never the same record in both\./);
     assert.ok(on.indexOf('\nEVERYDAY\n') < on.indexOf('\nSTORY RECORDS\n') && on.indexOf('  "everyday": [{') < on.indexOf('  "records": [{'));
     assert.match(on, /- For each person the owner had a scene with in NEW MESSAGES: at least one text between the two later these hours, in their own voices/);
-    assert.match(on, /\nITEMS \(each with only the fields it needs\)\nscene: "id"/);
+    assert.match(on, /\nITEMS \(each with only the fields it needs\)\ncontact: "name"/);
     assert.match(on, /\nphoto: "caption", "ko", "time", "mood"/);
     assert.match(on, /The diary: an entry when a story day ends in these messages or a scene stays with them, as long as this owner would write it;/);
     assert.match(on, /Voice memos: about one every few days/);
@@ -820,9 +822,9 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.match(on, /photo: "caption", "ko", "time", "mood"/);
     assert.ok(!on.includes('talk over each other') && on.includes('contact goes both ways, and a group chat goes on without them.'));
     assert.ok(on.includes('Posts only if they post.') && !on.includes('Not every app every day') && !on.includes('only if this owner keeps them'));
-    assert.match(on, /"at": its message number \(every record has one\), "scene": its scene's id or "",/);
+    assert.match(on, /"at": its message number \(every record has one\), "scene": the id of its scene in "scenes" or "",/);
     assert.match(on, /Personal routines and independent interests can recur across days\./);
-    assert.ok(!plain.includes("LIFE NOW's usual (when given)") && plain.includes('"everyday": the owner\'s own days, written first; "records": scenes and story records.'));
+    assert.ok(!plain.includes("LIFE NOW's usual (when given)") && plain.includes('"scenes" first; "everyday": the owner\'s own days; "records": the scenes\' phone trails and story records.'));
     assert.match(on, /new texts in a chat are new/);
     assert.match(on, /though others' texts and calls come in/);
     assert.ok(!on.includes('write events and app records'));
@@ -833,7 +835,7 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.ok(!data.coreSystem().includes('"health" not counted'));
     assert.ok(!on.includes('Numbers only'));
     assert.ok(!on.includes('ONE DAY ON EVERY APP') && !on.includes('TIME PASSING') && !on.includes('WHICH TYPE'));
-    assert.match(on, /"type": "scene" \| "contact" \| "text" \| "call" \| "photo" \| "note" \| "search" \| "calendar" \| "post" \| "profile" \| "mail" \| "diary" \| "visit" \| "voice" \| "alarm" \| "timer" \| "file"/);
+    assert.match(on, /"type": "contact" \| "text" \| "call" \| "photo" \| "note" \| "search" \| "calendar" \| "post" \| "profile" \| "mail" \| "diary" \| "visit" \| "voice" \| "alarm" \| "timer" \| "file"/);
     assert.ok(!plain.includes('"alarm" | "timer"') && !plain.includes('LIFE NOW'));
     assert.match(on, /Never a booking, trip or purchase the story doesn't have/);
     assert.match(on, /Records of the owner's life fall between PHONE NOW's "now" and the answer's "now"\./);
@@ -844,10 +846,10 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.match(on, /Relationship words only as the story uses them/);
     assert.equal(on.split('The diary: an entry when a story day ends').length, 2);
     // (the story first; the apps written as a real phone holds them)
-    assert.match(on, /"everyday": the owner's own days, written first; "records": scenes and story records\./);
+    assert.match(on, /"scenes" first; "everyday": the owner's own days; "records": the scenes' phone trails and story records\./);
     // (the days' health and a habit after "everyday", on their own)
     assert.ok(on.indexOf('\n  "health": [{ "date": the day they woke, "already"') > on.indexOf('\n  "everyday": {') && on.includes('\n  "usual": { "weight"'));
-    assert.match(on, /- Every scene in these messages \("scene" records\) and its trail in "records"/);
+    assert.match(on, /- Write each scene.s phone trail in "records", linked by its "scene" id/);
     assert.ok(!data.coreSystem({ life: true }).includes('\nWEATHER\n'));
     assert.ok(!plain.includes('\nHEALTH\n') && !plain.includes('\nSCREEN TIME\n') && plain.includes('\nIN THEIR OWN WORDS'));
     // (no old shape left in it)
@@ -1153,7 +1155,7 @@ test('life records that answer a scene ("scene" its id) go on it and the day\'s 
     assert.ok(lio.messages.every(x => x.src === 'guess' && !('onScene' in x)));
     // (they are the scene's: on its event)
     assert.ok(c.p.sync.events.bar);
-    assert.match(T.sys, /\"everyday\": \[\{ \"date\": \"MM-DD\", \"records\": \[\{ \"type\": one of the ITEMS types but \"scene\", \"profile\" and \"visit\", and the fields of its type in ITEMS \}\] \}\] \(one entry a day, in order\)/);
+    assert.match(T.sys, /\"everyday\": \[\{ \"date\": \"MM-DD\", \"records\": \[\{ \"type\": one of the ITEMS types but \"profile\" and \"visit\", and the fields of its type in ITEMS \}\] \}\] \(one entry a day, in order\)/);
     assert.match(T.sys, /at least one text between the two later these hours, in their own voices\.\n/);
 });
 
@@ -1334,4 +1336,18 @@ test('"everyday" as days ([{ date, records }]): each day\'s records read as the 
     assert.deepEqual(c.p.searches.map(x => x.q), ['soup recipe']);
     assert.deepEqual(c.p.events.map(x => [x.title, x.src]), [['Dentist', 'guess']]);
     assert.deepEqual(c.p.syncLast.records, { scenes: 0, story: 0, life: 5 });
+});
+
+test('"scenes" first: each a scene on the phone; a visit on one is with that scene\'s companions; the old answer (a scene in "records", a visit\'s own "with") still read', async () => {
+    const got = data.recordsCore({ now: '11-06 21:00', scenes: [
+        { id: 'pho', at: 0, quote: 'dinner', date: '11-03', time: '19:00', summary: 'dinner', place: 'Pho 24', city: 'Seoul', with: ['Ren'] },
+        { id: 'hotel', at: 5, quote: 'hotel', date: '11-03', time: '21:30', summary: 'hotel', place: 'Hotel Lio', city: 'Seoul', with: [] }],
+    records: [{ type: 'visit', at: 0, scene: 'pho', place: 'Pho 24', time: '11-03 19:10', with: ['Ivo'] }, { type: 'visit', at: 5, scene: 'hotel', place: 'Hotel Lio', time: '11-03 21:40' }, { type: 'photo', at: 5, scene: 'hotel', caption: 'chicken', time: '11-03 22:00' }] });
+    assert.deepEqual(got.events.map(e => e.id), ['pho', 'hotel']);
+    assert.deepEqual(got.events.map(e => (e.phone.visits || []).map(v => [v.place, v.with])), [[['Pho 24', ['Ren']]], [['Hotel Lio', []]]]);
+    assert.deepEqual(got.events[1].phone.photos.map(x => x.caption), ['chicken']);
+    // (the old answer: its visit keeps its own "with")
+    const old = data.recordsCore({ now: '11-06 21:00', records: [{ type: 'scene', id: 'pho', at: 0, quote: 'dinner', date: '11-03', time: '19:00' }, { type: 'visit', at: 0, scene: 'pho', place: 'Pho 24', time: '11-03 19:10', with: ['Ren'] }] });
+    assert.deepEqual(old.events[0].phone.visits.map(v => v.with), [['Ren']]);
+    assert.equal(got.scenes, undefined);
 });
