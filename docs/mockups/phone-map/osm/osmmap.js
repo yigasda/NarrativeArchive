@@ -103,6 +103,14 @@ const GMAP = process.env.STYLE === 'gmap', COLLECT = PRETTY || GMAP, STREETS = [
 if (GMAP) Object.assign(C, { land: '#f5ede2', built: '#f5ede2', resi: '#f5ede2', shop: '#f5ede2', works: '#ebe8e3', railyard: '#ebe8e3', school: '#efdcb6', park: '#c2e0a3', forest: '#b2d796', water: '#a4cdf2',
   bld: '#dedbd6', edge: '#dccfbb', road: '#ffffff', major: '#fdd98a', majorEdge: '#e9b85a', plaza: '#f5ede2', foot: '#d2e9bd' });
 if (GMAP) Object.assign(COVER, { grass: '#d3ecc3', allot: '#d6ebc5', orchard: '#cfe8bc', vine: '#dde8c0', grave: '#d4e3cb', scrub: '#cfe3b8', farm: '#f1ecd9' });
+// GPAL=A|B|C: the street-map manner in three looks — A warm pale cream with mint parks, B light grey with sage parks and slate water,
+// C light grey with mint parks, cyan water and apricot main roads
+const GPALS = {
+    A: { land: '#faf6ee', built: '#faf6ee', resi: '#faf6ee', shop: '#fbf0d6', works: '#efece6', railyard: '#efece6', school: '#f4e7c6', park: '#c3e9cc', forest: '#b1e0bc', water: '#a9d8f0', bld: '#efe9df', edge: '#e6dece', major: '#fbe9b8', majorEdge: '#ecd59a', plaza: '#faf6ee' },
+    B: { land: '#f2f2f0', built: '#f2f2f0', resi: '#f2f2f0', shop: '#ede2de', works: '#e5e5e2', railyard: '#e5e5e2', school: '#e9e5dd', park: '#c8d7c6', forest: '#b7cab5', water: '#5d7882', bld: '#e7e7e4', edge: '#d8d8d4', major: '#bcb1a6', majorEdge: '#a1968c', plaza: '#f2f2f0' },
+    C: { land: '#f3f3f3', built: '#f3f3f3', resi: '#f3f3f3', shop: '#f3eeee', works: '#ebebeb', railyard: '#ebebeb', school: '#f1ead9', park: '#c9f0d7', forest: '#b8e7c7', water: '#a7e4ee', bld: '#e9e9e9', edge: '#dcdcdc', major: '#fdd3ae', majorEdge: '#f3b98a', plaza: '#f3f3f3' },
+};
+if (GMAP && GPALS[process.env.GPAL]) { const g = GPALS[process.env.GPAL]; Object.assign(C, g); Object.assign(COVER, { grass: g.park, allot: g.park, orchard: g.park, vine: g.park, grave: g.park, scrub: g.forest, farm: g.school }); }
 const { ICON, glyph, pick } = require('./icons.js');
 const COVER0 = null;
 const pxArea = ps => Math.abs(ps.reduce((s, p, i) => { const q = ps[(i + 1) % ps.length]; return s + p[0] * q[1] - q[0] * p[1]; }, 0)) / 2;
@@ -299,7 +307,8 @@ function gmapMarks(labels) {
   for (const [la, lo, n, sz, wt, col] of labels) { if (n !== process.env.MAIN && col !== '#5a84ad' && ++quarters > 3) continue;   // the big name + three quarters at most
     const [x, y] = P(la, lo), big = n === process.env.MAIN, z = big ? 15 : col === '#5a84ad' ? 11.5 : 12, w = n.length * z * 0.6;
     const b = [x - w / 2 - 4, y - z - 2, x + w / 2 + 4, y + 4]; if (hit(b)) continue; taken.push(b);
-    o += txt(x, y, n, z, big ? 700 : 600, col === '#5a84ad' ? '#4a7fb5' : big ? '#3c4043' : '#5f6368'); }
+    if (process.env.GPAL && !big && col !== '#5a84ad') { o += `<text x="${f(x)}" y="${f(y)}" text-anchor="middle" font-family="-apple-system, 'Noto Sans KR', sans-serif" font-size="10" font-weight="600" letter-spacing=".12em" fill="#6f6f6f" stroke="#fff" stroke-width="2.6" paint-order="stroke">${n.toUpperCase()}</text>`; continue; }
+    o += txt(x, y, n, z, big ? 700 : 600, col === '#5a84ad' ? (process.env.GPAL === 'B' ? '#3f5a63' : '#4a7fb5') : big ? '#3c4043' : '#5f6368'); }
   const CAT = { food: '#e37400', cafe: '#e37400', bar: '#e37400', beer: '#e37400', bakery: '#e37400', wine: '#e37400', shop: '#4a7cd6', mall: '#4a7cd6', market: '#4a7cd6', fuel: '#4a7cd6',
     school: '#8a6d55', university: '#8a6d55', library: '#8a6d55', hospital: '#d14a3e', pharmacy: '#d14a3e', park: '#3d8b3d', garden: '#3d8b3d', forest: '#3d8b3d', playground: '#3d8b3d', zoo: '#3d8b3d', golf: '#3d8b3d',
     metro: '#3a76c4', train: '#3a76c4', tram: '#3a76c4', bus: '#3a76c4', ferry: '#3a76c4', airport: '#3a76c4', museum: '#1d8f9f', gallery: '#1d8f9f', theatre: '#1d8f9f', cinema: '#1d8f9f', music: '#1d8f9f', castle: '#1d8f9f', palace: '#1d8f9f', monument: '#1d8f9f', view: '#1d8f9f' };
