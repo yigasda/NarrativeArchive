@@ -1281,7 +1281,8 @@ const LORE_MAX = 20_000;
 export const phoneLore = m => (Array.isArray(m.phoneLore) ? m.phoneLore.filter(Boolean) : []);
 // entries of a picked book left out by hand: m.phoneLoreOff = { [book]: [uid, …] }
 export const loreOff = (m, book) => new Set((m.phoneLoreOff && typeof m.phoneLoreOff === 'object' && Array.isArray(m.phoneLoreOff[book]) ? m.phoneLoreOff[book] : []).map(String));
-export async function loreFor(m, owner) {
+// skip: the owner's chosen profile when it is a lorebook entry ({ book, id }): it goes as OWNER PROFILE, not twice
+export async function loreFor(m, owner, skip = null) {
     const c = ctx(), re = nameRe(owner), items = [];
     for (const name of phoneLore(m)) {
         let data = null;
@@ -1290,6 +1291,7 @@ export async function loreFor(m, owner) {
         for (const [uid, e] of Object.entries(data?.entries || {})) {
             const body = String(e?.content || '').trim();
             if (!body || e.disable || off.has(String(e.uid ?? uid))) continue;
+            if (skip && skip.book === name && String(skip.id) === String(e.uid ?? uid)) continue;
             const title = String(e.comment || (e.key || []).join(', ')).trim();
             const mine = [body, title, ...(e.key || []), ...(e.keysecondary || [])].some(x => re.test(String(x)));
             items.push({ text: `- ${title ? `${title}: ` : ''}${body}`, rank: mine ? 0 : e.constant ? 1 : 2 });
@@ -3701,7 +3703,7 @@ Oldest first.`;
 // story: how many tokens of chat stand in for a missing archive (0: the recent chat only, as with an archive)
 // read: an object to put what was read in ({ gap }), for a request whose app marks where it read up to
 export async function sideRequest(m, owner, blocks, { profile, money = false, story = 0, read = null } = {}) {
-    const world = worldText(m), lore = await loreFor(m, owner);
+    const world = worldText(m), lore = await loreFor(m, owner, profile?.type === 'lore' ? profile : null);
     const profileText = await ownerProfileBlock(ctx(),profile,owner,{money});
     const ph = m.phones?.[nameKey(owner)] || null, gap = read && 'gap' in read ? read.gap : windowOf(m, ph), upto = nowAt(gap);
     const recent = recentPhoneText(6, { upto, maxChars: 6000 });
