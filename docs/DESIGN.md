@@ -261,7 +261,7 @@ node --test tests/*.test.mjs
      box-shadow: var(--axsh, none) !important; border-color: transparent !important; }
    ```
 2. **배경을 꼭 칠해야 하는 버튼이 아닌 것**(div, span)은 `background`를 그냥 써도 돼요. 버튼처럼 눌려야 하지만 테마를 피하고 싶으면 `<div role="button" tabindex="0" data-go=…>`도 돼요.
-3. 테마를 이겨야 하는 글자 크기 · 둥글기 · 테두리는 먼저 `--axfs` · `--axr` 같은 변수로 풀어요. `!important` 수는 `tests/css.budget.json`이 막고 있어서 새로 늘리지 않아요. 예전엔 `!important`를 붙였어요(예: `.ax_kp` 한국어 알약, 쇼핑 탭 밑줄). 같은 우선순위로 이기려면 위의 긴 선택자(`body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup …`)를 앞에 붙여요.
+3. 테마를 이겨야 하는 글자 크기 · 둥글기 · 테두리는 먼저 `--axfs` · `--axr` 같은 변수로 풀어요. `!important`는 전용 세션에서 1159개 → 227개로 정리했어요. 절대 새로 늘리지 않아요(`tests/css.budget.json`이 막고 있어요). 예전엔 `!important`를 붙였어요(예: `.ax_kp` 한국어 알약, 쇼핑 탭 밑줄). 같은 우선순위로 이기려면 위의 긴 선택자(`body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup …`)를 앞에 붙여요.
 4. **`input` / `select`**(은행 환율 칸 등)는 테마가 모양을 크게 바꿔요. 실제 입력칸은 투명(`opacity: 0`)하게 덮고, 보이는 값은 따로 그려요. 은행 `displayTools`가 이렇게 해요. 날짜칸은 누르면 `showPicker()`를 불러요(`phone.js`).
 5. 글꼴은 `.ax_canvas`에서 `-apple-system, 'SF Pro Text', 'Noto Sans KR', sans-serif`로 정해요. 숫자는 `'Inter Tight'`, 숫자 칸에는 `.cg_num`을 써요.
 6. 다크 UI: SillyTavern 쪽 패널은 `body.na_darkui`가 붙으면 어두운 팔레트예요(`src/theme.js`). 폰 화면 자체는 다크 테마를 따로 그리지 않아요. 어두운 테마에서도 폰은 같은 밝은 화면으로 보여야 해요. 확인은 `probe.cjs dark`로 해요.
