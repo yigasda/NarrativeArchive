@@ -1426,11 +1426,11 @@ test('fillKo: each line goes with who says it to whom, and the voice table, no e
     const K = (globalThis.__ko = { calls: [] });
     const p = { owner: 'Oscar', threads: [{ with: 'Mother', messages: [{ from: 'me', text: 'hi Mom', ko: '엄마 안녕', time: '11-08 10:00' }, { from: 'me', text: 'Throw it out', time: '11-08 10:05' }, { from: 'Mother', text: 'Why so cold?', time: '11-08 10:06' }] }],
         photos: [], notes: [{ title: 'Checklist', text: 'pack\nboiler' }], searches: [], events: [], koVoice: [{ who: 'Oscar', style: '엄마한테도 반말, 퉁명스럽게' }, { who: 'Oscar', style: '~함', by: 'model' }] };
-    K.answer = JSON.stringify({ voices: [{ who: 'Oscar', style: '존댓말' }, { who: 'Mother', style: '반말, 다정하게' }],
+    K.answer = JSON.stringify({ voices: [{ who: 'Oscar', style: '존댓말' }, { who: 'Mother', style: '반말, 다정하게' }, { who: 'GitHub', style: '시스템 알림' }],
         lines: [{ n: 1, ko: '버려' }, { n: 2, ko: '왜 그렇게 차갑니?' }, { n: 3, ko: '체크리스트' }, { n: 4, ko: '짐 싸기\n보일러' }] });
     assert.equal(await tr.fillKo(p), 4);
     const { input, system } = K.calls[0];
-    assert.ok(system.startsWith('GOAL\nTranslate what a character\'s phone shows into natural Korean') && system.includes('so that all of it reads as one: each person sounds the same wherever they appear.') && system.includes('\nVOICE\n- What a person says to others (texts, comments, mails, posts) in the same voice they have everywhere else, as VOICES shows; without it, as the original suggests.\n- What the owner writes for themselves ("self") reads as its original does. VOICES is not for it.\n- Lines that read alike in the original read alike in Korean.\n\nLINES\n') && !system.includes('To "self"') && system.includes('"voices"'));
+    assert.ok(system.startsWith('GOAL\nTranslate what a character\'s phone shows into natural Korean') && system.includes('so that all of it reads as one: each person sounds the same wherever they appear.') && system.includes('\nVOICE\n- Texts and comments: each person in the same voice they have everywhere else, as VOICES shows; without it, as the original suggests.\n- Everything else (the owner\'s own notes, diary, calendar and the like, mails, posts) reads as its original does. VOICES is not for it.\n- Lines that read alike in the original read alike in Korean.\n\nLINES\n') && !system.includes('To "self"') && system.includes('"voices"'));
     assert.match(input, /\[OWNER\]\nOscar/);
     assert.match(input, /\[VOICES\]\n- Oscar: 엄마한테도 반말, 퉁명스럽게/);
     assert.ok(!input.includes('[EXAMPLES]') && !input.includes('엄마 안녕') && !system.includes('EXAMPLES'));

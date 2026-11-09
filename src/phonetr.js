@@ -14,13 +14,13 @@ Translate what a character's phone shows into natural Korean, so that all of it 
 
 YOU GET
 - OWNER: whose phone it is.
-- VOICES (sometimes): how each person sounds in Korean when they talk to others, as "Name: style". Always follow it.
+- VOICES (sometimes): how each person sounds in Korean in texts and comments, as "Name: style". Always follow it.
 - GLOSSARY (sometimes): names and terms, written exactly this way.
 - LINES: numbered, each "[app · who → to]" and its words. "self" is the owner writing for themselves.
 
 VOICE
-- What a person says to others (texts, comments, mails, posts) in the same voice they have everywhere else, as VOICES shows; without it, as the original suggests.
-- What the owner writes for themselves ("self") reads as its original does. VOICES is not for it.
+- Texts and comments: each person in the same voice they have everywhere else, as VOICES shows; without it, as the original suggests.
+- Everything else (the owner's own notes, diary, calendar and the like, mails, posts) reads as its original does. VOICES is not for it.
 - Lines that read alike in the original read alike in Korean.
 
 LINES
@@ -28,7 +28,7 @@ LINES
 - Names of people and places in Korean script, the GLOSSARY spelling when given. Brand and app names as Korean users write them.
 
 JSON (one object, nothing before or after it)
-{ "voices": [{ "who", "style": a short note in Korean on how they talk to others }] (each person you decided that VOICES doesn't have),
+{ "voices": [{ "who", "style": a short note in Korean on how they write texts }] (each person whose texts or comments are in LINES and not in VOICES),
   "lines": [{ "n": its number, "ko": the Korean }] }
 Every number once.`;
 
@@ -71,7 +71,8 @@ export async function redoKo(p, only, { max = KO_MAX } = {}) {
 export async function fillKo(p, { max = KO_MAX, only = null } = {}) {
     // (3.183.18: the voice table is how people talk to others; what the translator wrote there before, from notes and
     // diaries too, goes once. The user's own rows stay)
-    if (p.koVoiceV !== 2) { if (Array.isArray(p.koVoice)) p.koVoice = p.koVoice.filter(v => v?.by !== 'model'); p.koVoiceV = 2; }
+    // (3.184.1: and only from texts and comments, never a mail's sender or a calendar line: what it decided before goes once more)
+    if (!(p.koVoiceV >= 3)) { if (Array.isArray(p.koVoice)) p.koVoice = p.koVoice.filter(v => v?.by !== 'model'); p.koVoiceV = 3; }
     const gaps = koGaps(p).filter(g => !only || only(g.app)).slice(0, max);
     let n = 0;
     for (let i = 0; i < gaps.length;) {
@@ -83,8 +84,9 @@ export async function fillKo(p, { max = KO_MAX, only = null } = {}) {
         const out = await askTranslator(inputOf(p, chunk), { system: AI_SYS_PHONE_KO, maxTokens: Math.min(16384, 1500 + size * 3) });
         const got = parseJson(String(out).replace(/^[^{]*/, '').replace(/[^}]*$/, ''), { salvage: true }) || {};
         // a person the translator decided is kept; one the table already has (the user's own, or an earlier) stays as it is
-        const have = new Set(voiceRows(p).map(whoKey));
-        const fresh = (Array.isArray(got.voices) ? got.voices : []).filter(v => v && who(v) && String(v.style || '').trim() && !have.has(whoKey(v)) && have.add(whoKey(v)))
+        // (only someone whose texts or comments are in this request: a service that mails, a calendar, a note never)
+        const have = new Set(voiceRows(p).map(whoKey)), talk = new Set(chunk.filter(g => /^(text|comment)/.test(g.app)).map(g => String(g.who).trim().toLowerCase()));
+        const fresh = (Array.isArray(got.voices) ? got.voices : []).filter(v => v && who(v) && String(v.style || '').trim() && talk.has(whoKey(v)) && !have.has(whoKey(v)) && have.add(whoKey(v)))
             .map(v => ({ who: who(v).slice(0, 60), style: String(v.style).trim().slice(0, 120), by: 'model' }));
         if (fresh.length) p.koVoice = [...voiceRows(p), ...fresh].slice(-80);
         for (const r of Array.isArray(got.lines) ? got.lines : []) {
