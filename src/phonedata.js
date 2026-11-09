@@ -383,7 +383,7 @@ STEP 3 · RECORDS
    d. someone new the owner meets and would save → "contact"${life ? `;
    e. an alarm or file the messages set or change` : ''}.
 2. Around them, the owner's own life ("scene": ""), in the waking hours no scene covers. Asleep or busy in a scene: no owner activity; incoming texts and calls may arrive.
-   - About ${LIFE_A_DAY} a full waking day, fewer for part of one. A full day uses at least 6 apps: texts with 3 or more people, photos, searches, and others from their range (calls, notes, mails, posts, voice memos${life ? ', alarms, files' : ''}).
+   - About ${LIFE_A_DAY} a full waking day, fewer for part of one. A full day uses at least 6 of their apps (texts, calls, photos, searches, notes, mails, posts, voice memos${life ? ', alarms, files' : ''}). Who they talk to, and how much, follows their character and PEOPLE AROUND.
    - From PHONE NOW's habits${life ? ", LIFE NOW's usual" : ''} and OWNER PROFILE (routines and interests recur); PEOPLE AROUND (contact both ways; group chats go on without the owner); people from a scene may text later, if it fits. The story sets mood, place and free time.
    - People: from the story, PEOPLE AROUND, or new plausible ones with local names (each with a "contact"). No new relative or partner; relationship labels only from the story; no one they are no longer in touch with.
    - Diary: one for a day that ends in these hours or a scene that stays with them. Voice memo: about one every few days.
@@ -393,7 +393,7 @@ STEP 4 · EACH APP
 - Call, photo: what the owner would really do or shoot, in their eye.
 - Search: what they would type. About a situation: only words in its "known".
 - Note: the owner's form, length, shorthand, spelling and languages.
-- Mail: senders from their life (work, shops, services, people).
+- Mail: whatever would really land in their inbox from their life, accounts, hobbies and habits.
 - Calendar: fixed commitments only. Post: only if they post.${life ? ' Alarm, file: change with their life.' : ''}
 - Diary: their experience and feelings at natural length; never a list of events or a summary.
 - Voice memo: spoken, not written: the way they talk in the chat, with pauses (…), restarts and half sentences, at a moment alone (after a fight, on the way somewhere, late at night). 20 to 90 seconds; "sec" to fit; "place" where they were. Never the diary told again.${life ? `

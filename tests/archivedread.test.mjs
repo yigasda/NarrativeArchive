@@ -823,7 +823,8 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.match(on, /   c\. one "visit" for each scene where the owner is somewhere;/);
     assert.ok(on.includes('   e. an alarm or file the messages set or change.') && !plain.includes('e. an alarm or file') && plain.includes('would save → "contact".'));
     // (STEP 4: hours, amount, sources; a later text is not forced)
-    assert.match(on, /   - About 11 a full waking day, fewer for part of one\. A full day uses at least 6 apps: texts with 3 or more people, photos, searches, and others from their range \(calls, notes, mails, posts, voice memos, alarms, files\)\./);
+    assert.match(on, /   - About 11 a full waking day, fewer for part of one\. A full day uses at least 6 of their apps \(texts, calls, photos, searches, notes, mails, posts, voice memos, alarms, files\)\. Who they talk to, and how much, follows their character and PEOPLE AROUND\./);
+    assert.ok(!on.includes('3 or more people') && on.includes('- Mail: whatever would really land in their inbox from their life, accounts, hobbies and habits.'));
     assert.match(on, /people from a scene may text later, if it fits\./);
     assert.ok(!on.includes('at least one later text exchange'));
     assert.match(on, /   - From PHONE NOW's habits, LIFE NOW's usual and OWNER PROFILE \(routines and interests recur\); PEOPLE AROUND \(contact both ways; group chats go on without the owner\);/);
