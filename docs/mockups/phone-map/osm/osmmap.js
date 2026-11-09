@@ -106,11 +106,11 @@ if (GMAP) Object.assign(COVER, { grass: '#d3ecc3', allot: '#d6ebc5', orchard: '#
 // GPAL=A|B|C: the street-map manner in three looks — A warm pale cream with mint parks, B light grey with sage parks and slate water,
 // C light grey with mint parks, cyan water and apricot main roads
 const GPALS = {
-    A: { land: '#faf6ee', built: '#faf6ee', resi: '#faf6ee', shop: '#fbf0d6', works: '#efece6', railyard: '#efece6', school: '#f4e7c6', park: '#c3e9cc', forest: '#b1e0bc', water: '#a9d8f0', bld: '#efe9df', edge: '#e6dece', major: '#fbe9b8', majorEdge: '#ecd59a', plaza: '#faf6ee' },
-    B: { land: '#f2f2f0', built: '#f2f2f0', resi: '#f2f2f0', shop: '#ede2de', works: '#e5e5e2', railyard: '#e5e5e2', school: '#e9e5dd', park: '#c8d7c6', forest: '#b7cab5', water: '#5d7882', bld: '#e7e7e4', edge: '#d8d8d4', major: '#bcb1a6', majorEdge: '#a1968c', plaza: '#f2f2f0' },
-    C: { land: '#f3f3f3', built: '#f3f3f3', resi: '#f3f3f3', shop: '#f3eeee', works: '#ebebeb', railyard: '#ebebeb', school: '#f1ead9', park: '#c9f0d7', forest: '#b8e7c7', water: '#a7e4ee', bld: '#e9e9e9', edge: '#dcdcdc', major: '#fdd3ae', majorEdge: '#f3b98a', plaza: '#f3f3f3' },
+    A: { land: '#faf6ee', built: '#faf6ee', resi: '#faf6ee', shop: '#fbf0d6', works: '#efece6', railyard: '#efece6', school: '#f4e7c6', park: '#c3e9cc', forest: '#b1e0bc', water: '#a9d8f0', vine: '#e6edc3', bld: '#efe9df', edge: '#e6dece', major: '#fbe9b8', majorEdge: '#ecd59a', plaza: '#faf6ee' },
+    B: { land: '#f2f2f0', built: '#f2f2f0', resi: '#f2f2f0', shop: '#ede2de', works: '#e5e5e2', railyard: '#e5e5e2', school: '#e9e5dd', park: '#c8d7c6', forest: '#b7cab5', water: '#5d7882', vine: '#dcdcc4', bld: '#e7e7e4', edge: '#d8d8d4', major: '#bcb1a6', majorEdge: '#a1968c', plaza: '#f2f2f0' },
+    C: { land: '#f3f3f3', built: '#f3f3f3', resi: '#f3f3f3', shop: '#f3eeee', works: '#ebebeb', railyard: '#ebebeb', school: '#f1ead9', park: '#c9f0d7', forest: '#b8e7c7', water: '#a7e4ee', vine: '#e4f1c6', bld: '#e9e9e9', edge: '#dcdcdc', major: '#fdd3ae', majorEdge: '#f3b98a', plaza: '#f3f3f3' },
 };
-if (GMAP && GPALS[process.env.GPAL]) { const g = GPALS[process.env.GPAL]; Object.assign(C, g); Object.assign(COVER, { grass: g.park, allot: g.park, orchard: g.park, vine: g.park, grave: g.park, scrub: g.forest, farm: g.school }); }
+if (GMAP && GPALS[process.env.GPAL]) { const g = GPALS[process.env.GPAL]; Object.assign(C, g); Object.assign(COVER, { grass: g.park, allot: g.park, orchard: g.park, vine: g.vine, grave: g.park, scrub: g.forest, farm: g.school }); }   // vineyards keep their own yellow-green
 const { ICON, glyph, pick } = require('./icons.js');
 const COVER0 = null;
 const pxArea = ps => Math.abs(ps.reduce((s, p, i) => { const q = ps[(i + 1) % ps.length]; return s + p[0] * q[1] - q[0] * p[1]; }, 0)) / 2;
