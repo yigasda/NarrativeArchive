@@ -15,7 +15,7 @@ import { ctx, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
 import { applyInjection } from './inject.js';
 import { faceHtml, nameKey, peopleList } from './people.js';
 import { drafting, drawing, drawPhoto, drawPost, filling, makeDraft, paging, retranslate, retranslating, recording, recordVoice, searching, searchPage, shooting, takePhoto, webPage, writeEntry, writing } from './phoneai.js';
-import { setVoice, ax, axFind, groupInfo, APPS, AXB, AXB_C, busyHtml, setDate, setScreenHolderView, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, mapTowns, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setOwnerProfile, setWho, snsPost, snsScreen, statusBar, threadScreen, setPlace, prepScreen } from './phoneapps.js';
+import { setVoice, voiceList, ax, axFind, groupInfo, APPS, AXB, AXB_C, busyHtml, setDate, setScreenHolderView, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, mapTowns, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setOwnerProfile, setWho, snsPost, snsScreen, statusBar, threadScreen, setPlace, prepScreen } from './phoneapps.js';
 import { dropStretch, koGaps, savedName, ensureIds, ensureYear, hasDatedRecords, noArchive, setStoryYear, storyYear, fillDevice, fillMoney, fillVoice, koOn, loreOff, makePhone, tidyKo, markAfter, phoneLore, REMAKE, restoreRounds, retryMoney, showNow, storyNow, syncLeft, syncRows, syncState, tidyJournal, undoRound } from './phonedata.js';
 import { busy, watchBusy, exclusive, journalRead, journalWrite, syncOf } from './phonesync.js';
 import { syncPick, syncSettings } from './phonesyncui.js';
@@ -30,7 +30,7 @@ import { placeNames } from './phonemapfind.js';
 import { FLAG_NAME, flagSvg } from './phoneflags.js';
 import { mapZoom } from './phonemapzoom.js';
 import { glossaryEntries, openGlossary } from './translate.js';
-import { fillKo, koAppOf, learnVoices, redoKo } from './phonetr.js';
+import { dropVoice, fillKo, koAppOf, learnVoices, pickVoices, redoKo } from './phonetr.js';
 // 을 / 를 after a word: by its last syllable's final consonant (a Latin ending, like SNS, reads as 를)
 const josa = w => { const c = w.charCodeAt(w.length - 1) - 0xac00; return c >= 0 && c < 11172 && c % 28 ? '을' : '를'; };
 import { confirm, esc } from './util.js';
@@ -54,7 +54,7 @@ function screen(p, view, m, roster, ui) {
         : v === 'note' ? noteScreen(p, now) : v === 'noteone' ? noteOne(p, now, Number(i)) : v === 'search' ? searchScreen(p, now) : v === 'page' ? pageView(p, now, i || '', paging.has(`${nameKey(p.owner)}:${i}`)) : v === 'tabs' ? tabsScreen(p, now) : v === 'marks' || v === 'history' ? marksScreen(p, now, v === 'history') : v === 'searchone' ? searchOne(p, now, Number(i), searching.has(`${nameKey(p.owner)}:${i}`))
         : v === 'cal' ? calScreen(p, now, m, i || '') : v === 'calone' ? calOne(p, now, Number(i), m) : v === 'map' ? (mapTowns(p, m).groups.length ? mapScreen(p, now, m, i || '') : mapEmptyScreen(p, now, m)) : v === 'mapq' ? mapSearchScreen(p, now, m, i || '', ui.mapQ || '') : v === 'mapc' ? mapCityScreen(p, now, m, i || '')
         : v === 'sns' ? snsScreen(p, now) : v === 'snspost' ? snsPost(p, now, Number(i)) : v === 'mail' ? mailScreen(p, now) : v === 'mailone' ? mailOne(p, now, Number(i))
-        : v === 'diary' ? diaryScreen(p, now, i || '') : v === 'diaryone' ? diaryOne(p, now, Number(i)) : v === 'setsync' ? syncSettings(p, now, ui) : v === 'setsyncpick' ? syncPick(p, now, ui) : v === 'set' ? setScreen(p, now, m, ui) : v === 'stime' ? screenTimeScreen(p, now, i || '') : v === 'settheme' ? setTheme(p, now) : v === 'setscreenholder' ? setScreenHolderView(p, now, m, ui.holderBack) : v === 'setdate' ? setDate(p, now, m) : v === 'setplace' ? setPlace(p, now, m, ui) : v === 'setvoice' ? setVoice(p, now) : v === 'prep' ? prepScreen(p, now, m, ui.prep) : v === 'setremake' ? setRemake(p, now, ui, m) : v === 'setprofile' ? setOwnerProfile(p,now,ui.profileState) : v === 'setwho' ? setWho(p, now, m) : v === 'setlore' ? setLore(p, now, m, ui)
+        : v === 'diary' ? diaryScreen(p, now, i || '') : v === 'diaryone' ? diaryOne(p, now, Number(i)) : v === 'setsync' ? syncSettings(p, now, ui) : v === 'setsyncpick' ? syncPick(p, now, ui) : v === 'set' ? setScreen(p, now, m, ui) : v === 'stime' ? screenTimeScreen(p, now, i || '') : v === 'settheme' ? setTheme(p, now) : v === 'setscreenholder' ? setScreenHolderView(p, now, m, ui.holderBack) : v === 'setdate' ? setDate(p, now, m) : v === 'setplace' ? setPlace(p, now, m, ui) : v === 'setvoice' ? setVoice(p, now, ui.voicePick, ui.voiceBusy) : v === 'prep' ? prepScreen(p, now, m, ui.prep) : v === 'setremake' ? setRemake(p, now, ui, m) : v === 'setprofile' ? setOwnerProfile(p,now,ui.profileState) : v === 'setwho' ? setWho(p, now, m) : v === 'setlore' ? setLore(p, now, m, ui)
         : v === 'cam' ? camScreen(p, now, i === undefined ? -1 : Number(i), shooting.has(nameKey(p.owner))) : homeScreen(p, now, m);
     // the home is the design board itself, at its own size, scaled to the screen (--k)
     // every app: drawn at the boards' size too, each its own app look
@@ -138,6 +138,8 @@ export async function openPhone(who = null) {
     // the Korean of what the phone has in another language (phonetr.js): after a reflection, from its report, or when
     // 한국어 is pressed. A failure is marked on the report (번역 못 함 · 다시 하기); the reflection itself stays
     let koBusy = false;
+    // 설정 › 말투's 이야기에서 뽑기: the names chosen (lower case) while choosing, null otherwise; busy while the story is asked
+    let voicePick = null, voiceBusy = false;
     const koRun = async (p, loud) => {
         if (koBusy || !p) return;
         koBusy = true;
@@ -217,10 +219,10 @@ export async function openPhone(who = null) {
     // the same sheet with a line to type (a city): resolves the text, or false. area: a few lines that wrap (a 말투), an
     // editable div as 도시 찾기's (a theme that paints every textarea can't reach it); Enter still saves
     const fieldVal = f => String(f.value ?? f.innerText ?? '').replace(/\s+/g, ' ').trim();
-    const askInput = (title, text, value = '', ok = '저장', { area = false } = {}) => {
+    const askInput = (title, text, value = '', ok = '저장', { area = false, empty = false } = {}) => {
         ask?.done(false);
         return new Promise(done => {
-            const el = $(`<div class="pcf" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="pcf_box"><div class="pcf_card"><div class="pcf_msg"><b>${esc(title)}</b>${text ? `<span>${esc(text)}</span>` : ''}</div><div class="pcf_in">${area ? `<div class="pcf_field pcf_area" contenteditable="true" role="textbox" aria-multiline="true" enterkeyhint="done" spellcheck="false">${esc(value)}</div>` : `<input type="text" class="pcf_field" value="${esc(value)}" enterkeyhint="done" autocomplete="off">`}</div><div class="pcf_btns"><div role="button" tabindex="0" class="pcf_no">취소</div><div role="button" tabindex="0" class="pcf_ok safe">${esc(ok)}</div></div></div></div></div>`)[0];
+            const el = $(`<div class="pcf" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="pcf_box"><div class="pcf_card"><div class="pcf_msg"><b>${esc(title)}</b>${text ? `<span>${esc(text)}</span>` : ''}</div><div class="pcf_in">${area ? `<div class="pcf_field pcf_area"${empty ? ' data-empty="1"' : ''} contenteditable="true" role="textbox" aria-multiline="true" enterkeyhint="done" spellcheck="false">${esc(value)}</div>` : `<input type="text" class="pcf_field" value="${esc(value)}" enterkeyhint="done" autocomplete="off">`}</div><div class="pcf_btns"><div role="button" tabindex="0" class="pcf_no">취소</div><div role="button" tabindex="0" class="pcf_ok safe">${esc(ok)}</div></div></div></div></div>`)[0];
             ask = { el, done: v => { ask = null; el.remove(); done(v); } };
             placeAsk();
             if (el.isConnected) { const f = el.querySelector('.pcf_field'); f.focus({ preventScroll: true }); if (f.select) f.select(); else { const r = document.createRange(); r.selectNodeContents(f); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); } }
@@ -284,7 +286,7 @@ export async function openPhone(who = null) {
         const v = await askChoice('날짜를 어떻게 쓰세요?', '나중에 설정에서 바꿀 수 있어요.', [{ v: 'md', label: '월.일', sub: '11.03 = 11월 3일' }, { v: 'dm', label: '일.월', sub: '03.11. = 11월 3일' }]);
         if (v === 'md' || v === 'dm') await setDateOrder(m, v);
     };
-    $root.on('click', '.pcf', function (e) { e.stopPropagation(); const b = e.target.closest('.pcf_ok, .pcf_no'); if (b) { const f = this.querySelector('.pcf_field'); ask?.done(b.classList.contains('pcf_ok') ? (f ? fieldVal(f) || false : b.dataset.v || true) : false); } else if (e.target === this) ask?.done(false); });
+    $root.on('click', '.pcf', function (e) { e.stopPropagation(); const b = e.target.closest('.pcf_ok, .pcf_no'); if (b) { const f = this.querySelector('.pcf_field'); ask?.done(b.classList.contains('pcf_ok') ? (f ? fieldVal(f) || (f.dataset.empty ? '' : false) : b.dataset.v || true) : false); } else if (e.target === this) ask?.done(false); });
     $root.on('paste', '.pcf_area', function (e) { e.preventDefault(); const t = (e.originalEvent?.clipboardData?.getData('text/plain') || '').replace(/\s+/g, ' '); document.execCommand('insertText', false, t); });
     $root.on('keydown', '.pcf_field', function (e) { e.stopPropagation(); if (e.key === 'Enter' && !e.originalEvent?.isComposing && e.keyCode !== 229) { e.preventDefault(); ask?.done(fieldVal(this) || false); } else if (e.key === 'Escape') ask?.done(false); });
     $root.on('keydown', '.pcf_ok, .pcf_no', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ask?.done(this.classList.contains('pcf_ok') ? (this.dataset.v || true) : false); } });
@@ -344,11 +346,12 @@ export async function openPhone(who = null) {
             return;
         }
         if (!view.startsWith('thread:') || view !== msgView) { msgHeld = null; msgPick = null; msgView = view; }
+        if (view !== 'setvoice' && !voiceBusy) voicePick = null;
         const top = keep ? $root.find('.na_ph_body, .ax_scroll').scrollTop() : 0;
         // a screen that can't be drawn says why (and in the console), instead of leaving the phone blank or on another screen
         let html;
         tidyKo(p);
-        try { html = screen(p, view, m, roster, { syncN: view === 'set' ? syncLeft(p, m) : null, syncRows: view.startsWith('setsync') ? syncRows() : [], syncWhy, syncPending, pickMore, loreExp, loreEnts, remake, contactBack, investing, profileState:profileStates.get(nameKey(p.owner)), placeReading, mapQ, msgHeld, msgPick, retr: retrKs }); }
+        try { html = screen(p, view, m, roster, { syncN: view === 'set' ? syncLeft(p, m) : null, syncRows: view.startsWith('setsync') ? syncRows() : [], syncWhy, syncPending, pickMore, loreExp, loreEnts, remake, contactBack, investing, profileState:profileStates.get(nameKey(p.owner)), placeReading, mapQ, msgHeld, msgPick, retr: retrKs, voicePick: view === 'setvoice' ? voicePick : null, voiceBusy }); }
         catch (err) {
             console.error('[narrative-archive] phone screen', view, err);
             toastr.error(`${view} 화면을 그리지 못했어요: ${err?.message || err}`, '캐릭터 휴대폰');
@@ -886,7 +889,7 @@ export async function openPhone(who = null) {
         // a contact or a place can come back from the story's records, so it is hidden rather than only removed
         else if (kind === 'contact') { p.contacts = p.contacts.filter(c => nameKey(c.name) !== i); p.hiddenContacts = [...new Set([...(p.hiddenContacts || []), i])]; view = 'contacts'; }
         else if (kind === 'place') p.hiddenPlaces = [...new Set([...(p.hiddenPlaces || []), i])];
-        else if (kind === 'kovoice') { if (Array.isArray(p.koVoice)) p.koVoice.splice(Number(i), 1); }
+        else if (kind === 'kovoice') dropVoice(p, i);
         // from a list (메시지 · 메일 · 최근 검색 · 방문 기록) the list stays
         else { const xs = RM[kind].list(p); if (xs?.[Number(i)]) xs.splice(Number(i), 1); if (view.includes(':')) view = RM[kind].back; }
         drawPhone();
@@ -1243,14 +1246,42 @@ export async function openPhone(who = null) {
         if (!style || phone() !== p || p.koVoice?.[k] !== v) return;
         await voiceSet(p, k, style.slice(0, 120));
     });
+    // 이야기에서 뽑기: the row starts choosing; with names chosen it asks the story about them (pickVoices: what it finds takes
+    // the row, what it doesn't keeps the row it had). 취소 stops choosing
+    const voiceDraw = () => { if (!phoneClosed) drawPhone(true); };
+    $root.on('click', '.na_ph_kvpick', async function (e) {
+        e.stopPropagation(); const p = phone(); if (!p || voiceBusy) return;
+        if (!voicePick) { voicePick = new Set(); return voiceDraw(); }
+        const names = voiceList(p).filter(v => voicePick.has(v.who.toLowerCase())).map(v => v.who);
+        if (!names.length) return;
+        voiceBusy = true; voiceDraw();
+        let got = null;
+        try { got = await pickVoices(m, owner, p, names); await saveMeta(); }
+        catch (err) { console.warn('[narrative-archive] voices', err); toastr.warning(`말투를 못 뽑았어요 (${String(err?.message || err)})`, '캐릭터 휴대폰'); }
+        finally { voiceBusy = false; }
+        if (got) { voicePick = null; if (got.found.length) toastr.success(`${got.found.join(', ')} · 뽑았어요`, '말투'); if (got.missing.length) toastr.info(`${got.missing.join(', ')} · 이야기에서 말투를 못 찾았어요`, '말투'); }
+        voiceDraw();
+    });
+    $root.on('click', '.na_ph_kvx', function (e) { e.stopPropagation(); if (voiceBusy) return; voicePick = null; voiceDraw(); });
+    $root.on('click', '.na_ph_kvtick', function (e) {
+        e.stopPropagation(); if (!voicePick || voiceBusy) return; const k = String(this.dataset.n || '').toLowerCase();
+        if (voicePick.has(k)) voicePick.delete(k); else voicePick.add(k);
+        voiceDraw();
+    });
+    $root.on('click', '.na_ph_kvall', function (e) {
+        e.stopPropagation(); const p = phone(); if (!p || !voicePick || voiceBusy) return;
+        const ks = voiceList(p).filter(v => (this.dataset.g === 'auto') === v.model).map(v => v.who.toLowerCase());
+        if (ks.every(k => voicePick.has(k))) ks.forEach(k => voicePick.delete(k)); else ks.forEach(k => voicePick.add(k));
+        voiceDraw();
+    });
     $root.on('click', '.na_ph_kvadd', async function (e) {
         e.stopPropagation(); const p = phone(); if (!p) return;
         const name = await askInput('사람 추가', '이름을 적어요.', '', '다음');
         if (!name || phone() !== p) return;
         if (!Array.isArray(p.koVoice)) p.koVoice = [];
         const have = p.koVoice.findIndex(v => String(v?.who ?? v?.from ?? '').trim().toLowerCase() === name.toLowerCase());
-        const style = await askInput(`${name}의 말투`, '남에게 하는 말투를 짧게 적어요.', have >= 0 ? String(p.koVoice[have].style || '') : '', '저장', { area: true });
-        if (!style || phone() !== p) return;
+        const style = await askInput(`${name}의 말투`, '남에게 하는 말투를 짧게 적어요.', have >= 0 ? String(p.koVoice[have].style || '') : '', '저장', { area: true, empty: have < 0 });
+        if (style === false || phone() !== p) return;
         if (have >= 0) return voiceSet(p, have, style.slice(0, 120));
         p.koVoice.push({ who: name.slice(0, 40), style: style.slice(0, 120), by: 'user' });
         await saveMeta(); if (!phoneClosed) drawPhone(true);

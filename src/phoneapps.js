@@ -672,15 +672,28 @@ export const voiceList = p => (Array.isArray(p?.koVoice) ? p.koVoice : []).map((
 // the list shows the style up to its first comma / full stop (docs/mockups/phone-voice short 2) and "외 N개" for the rest, so a long style stays one line
 export const voiceParts = st => String(st || '').split(/[,.;!?\n，。、；！？·…]+/).map(x => x.trim()).filter(Boolean);
 const voiceShort = st => { const ps = voiceParts(st); return `<span class="ax_p ax_kvp">${ps.length ? `${esc(ps[0])}${ps.length > 1 ? ` <span class="ax_kvm">외 ${ps.length - 1}개</span>` : ''}` : '말투 적기'}</span>`; };
-export function setVoice(p, now) {
-    const rows = voiceList(p), mine = rows.filter(v => !v.model), auto = rows.filter(v => v.model);
-    const row = v => swipeRow('kovoice', v.i, `<div role="button" tabindex="0" class="ax_rw na_ph_kvrow" data-i="${v.i}">${axLetter(v.who, 36)}<span class="ax_tx"><span class="ax_n${v.model ? ' ax_kvauto' : ''}">${esc(v.who)}</span>${voiceShort(v.style)}</span>${axChev}</div>`);
+// 이야기에서 뽑기 (docs/mockups/phone-voice pickall B): the row on top turns the list into a choice — a circle at each
+// row's right (the settings radio), 전체 · 전체 해제 on each section's title, 취소 top right; with someone chosen the row
+// reads "N명 뽑기" and runs it (phone.js, pickVoices). pick: the chosen names (lower case), or null when not choosing
+Object.assign(AX, { wand: 'M15 4V2M15 10V8M11 6h2M17 6h2M4 20L14 10M19 13v2M18 14h2' });
+export function setVoice(p, now, pick = null, busy = false) {
+    const rows = voiceList(p), mine = rows.filter(v => !v.model), auto = rows.filter(v => v.model), on = v => !!pick?.has(v.who.toLowerCase());
+    const face = v => `${axLetter(v.who, 36)}<span class="ax_tx"><span class="ax_n${v.model ? ' ax_kvauto' : ''}">${esc(v.who)}</span>${voiceShort(v.style)}</span>`;
+    const row = v => (pick
+        ? `<div role="button" tabindex="0" class="ax_rw na_ph_kvtick" data-n="${esc(v.who)}">${face(v)}<span class="ax_radio${on(v) ? ' on' : ''}">${on(v) ? ax('check', 14, '#fff', 3.4) : ''}</span></div>`
+        : swipeRow('kovoice', v.i, `<div role="button" tabindex="0" class="ax_rw na_ph_kvrow" data-i="${v.i}">${face(v)}${axChev}</div>`));
+    const sec = (t, g, list) => (pick && list.length
+        ? `<div class="ax_sec ax_kvsec">${t}<span role="button" tabindex="0" class="ax_blue ax_kvall na_ph_kvall" data-g="${g}">${list.every(on) ? '전체 해제' : '전체'}</span></div>`
+        : `<div class="ax_sec">${t}</div>`);
+    const n = pick ? rows.filter(on).length : 0;
     return `${axBar(p, now)}
-      ${axTop(axCb('set'))}
+      ${axTop(axCb('set'), pick ? '<span role="button" tabindex="0" class="ax_blue ax_kvx na_ph_kvx">취소</span>' : '')}
       <div class="ax_scroll">${axH1('말투', rows.length ? `${rows.length}명` : '')}
-        <div class="ax_sec">내가 정한 말투</div>
-        <div class="ax_card">${mine.map(row).join('')}<div role="button" tabindex="0" class="ax_rw ax_rwn na_ph_kvadd"><span class="ax_tx"><span class="ax_n ax_blue">사람 추가</span></span></div></div>
-        ${auto.length ? `<div class="ax_sec">이야기에서 뽑은 말투</div><div class="ax_card">${auto.map(row).join('')}</div><div class="ax_foot">고치면 내 말투로 옮겨요. 지우면 다음 번역 때 다시 뽑아요.</div>` : ''}
+        ${rows.length ? `<div class="ax_card"><div role="button" tabindex="0" class="ax_rw na_ph_kvpick${busy ? ' on' : ''}"><span class="ax_si" style="background: #8faed1">${ax('wand', 17, '#fff')}</span><span class="ax_tx"><span class="ax_n">${busy ? '뽑는 중' : n ? `${n}명 뽑기` : '이야기에서 뽑기'}</span><span class="ax_p ax_kvp">고른 사람의 말투를 이야기에서 찾아요</span></span>${axChev}</div></div>` : ''}
+        ${sec('내가 정한 말투', 'mine', mine)}
+        <div class="ax_card">${mine.map(row).join('')}${pick ? '' : '<div role="button" tabindex="0" class="ax_rw ax_rwn na_ph_kvadd"><span class="ax_tx"><span class="ax_n ax_blue">사람 추가</span></span></div>'}</div>
+        ${auto.length ? `${sec('이야기에서 뽑은 말투', 'auto', auto)}<div class="ax_card">${auto.map(row).join('')}</div>` : ''}
+        <div class="ax_foot">지운 사람은 다시 안 뽑아요.</div>
         <div class="ax_foot">일기 · 메모에는 안 써요. 이미 옮긴 글은 그대로예요.</div>
         <i class="ax_pad"></i>
       </div>
