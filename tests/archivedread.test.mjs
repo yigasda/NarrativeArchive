@@ -811,7 +811,7 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.match(on, /include at least one later text exchange within these hours/);
     assert.match(on, /\nITEMS \(each with only the fields it needs\)\ncontact: "name"/);
     assert.match(on, /\nphoto: "caption", "ko", "time", "mood"/);
-    assert.match(on, /- Voice: about one every few days/);
+    assert.match(on, /- Voice memos: about one every few days; spoken, not written/);
     assert.ok(!on.includes('"made": [what') && !on.includes('"story": [') && on.includes('"said": exact words of the message it comes from,'));
     assert.match(on, /photo: "caption", "ko", "time", "mood"/);
     assert.ok(!on.includes('talk over each other') && on.includes('Contact goes both ways; group chats may continue without the owner.'));
@@ -819,12 +819,12 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.match(on, /"at": its message number \(every record has one\), "scene": the id of its scene in "scenes" or "",/);
     assert.match(on, /routines and interests recur\./);
     assert.ok(!plain.includes("LIFE NOW's usual") && !plain.includes('alarms and files') && plain.includes('"scenes" first, then "everyday" and "records".'));
-    assert.match(on, /new texts in a chat are new/);
+    assert.match(on, /- Never write again what PHONE NOW or LIFE NOW holds: only new texts; a changed plan, alarm or file by its id \("already"\); a known scene keeps its id, an edited message the ids listed\./);
     assert.match(on, /incoming texts and calls may arrive/);
     assert.ok(!on.includes('write events and app records'));
     assert.match(on, /Use locally fitting names; no new relative or partner\./);
     assert.ok(!on.includes('call home') && !on.includes('check on family'));
-    assert.ok(!on.includes('"made": [the fields') && on.includes('a plan moved or called off is its calendar record again'));
+    assert.ok(!on.includes('"made": [the fields') && on.includes('a changed plan, alarm or file by its id'));
     assert.ok(!on.includes('LOREBOOK') && on.includes('Background (sometimes): ARCHIVE BEFORE, STORY NOW'));
     assert.ok(!data.coreSystem().includes('"health" not counted'));
     assert.ok(!on.includes('Numbers only'));

@@ -377,7 +377,7 @@ THE APPS
 IN THEIR OWN WORDS
 - Notes, diary and voice memos are full personal content, never summaries. Notes use the owner's form, length, shorthand, spelling and languages.
 - Diary: in "everyday" on its day, when a day ends or a scene stays with them. Write their experience and feelings at their natural length, not an ordered event list; use the shown day or their life on an unshown day.
-- Voice: about one every few days, in their spoken voice from the archive and chat, with pauses and restarts, when they could record alone. 20–90 seconds, matching "sec" and "place"; not the diary repeated.${life ? `
+- Voice memos: about one every few days; spoken, not written: the way the owner talks in the archive and chat, with pauses (…), restarts and half sentences, at a moment they could talk into the phone alone, for instance after a fight, on the way somewhere or late at night. 20 to 90 seconds of speech, "sec" to fit, "place" where they were. Not the diary told again.${life ? `
 
 HEALTH
 - Write each day reached and any LIFE NOW day newly shown. Always update today's totals so far (steps, workouts, coffee, water, "screen"), even with nothing new.
@@ -396,7 +396,7 @@ WEATHER
 - With new weather, also each saved city's "cond", "temp", "hi" and "lo".` : ''}
 
 KEEPING IN STEP
-- What PHONE NOW${life ? ' or LIFE NOW' : ''} holds is never written again: new texts in a chat are new; a plan moved or called off is its calendar record again${life ? '; an alarm or file changes by its id as "already"' : ''}. A scene in EVENTS ON THE PHONE keeps its id; MESSAGES READ BEFORE, NOW CHANGED: as the edited text now has them, with the ids listed.
+- Never write again what PHONE NOW${life ? ' or LIFE NOW' : ''} holds: only new texts; a changed plan${life ? ', alarm or file' : ''} by its id ("already"); a known scene keeps its id, an edited message the ids listed.
 
 LANGUAGE
 - Each text in the language its writer really uses. "ko", "kt", "ks", "pko": the Korean of a text, title, subject or posted photo not in Korean. Texts short.
