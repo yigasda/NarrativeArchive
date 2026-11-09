@@ -344,7 +344,7 @@ const CORE_TIMES = `- Times are "MM-DD HH:MM"; a year only as STORY YEAR or the 
 export function coreRecordsSystem({ life = false, weather = false, tracker = false, zone = false, archiveOnly = false, wallet = false, split = true } = {}) {
     const lifeTypes = life ? ' | "alarm" | "timer" | "file"' : '';
     return `${split ? 'STAGE: core\n' : ''}GOAL
-Keep the owner's phone in step with the story. Role-play rarely says what the owner texted, searched, photographed or saved. Write the story's trail and the owner's own life on their phone, details made up to fit. The app links records to their messages and keeps what is already there.
+Show how the owner lives through the story on their phone. Preserve what the story establishes, including what remains unresolved or unknown. Create the phone activity, wording and personal detail around that situation; do not supply what happens next to it.
 
 YOU GET
 - NEW MESSAGES (numbered #123), and sometimes ARCHIVE FOR THESE MESSAGES (summaries covering them; evidence too).
@@ -355,61 +355,41 @@ YOU GET
 
 ${archiveOnly ? `TIMES\n${CORE_TIMES}` : `${CORE_CLOCK_FIRST}\n${CORE_TIMES}`}
 
-SCENES NEXT
-- Before writing phone life, extract the scenes from NEW MESSAGES and ARCHIVE FOR THESE MESSAGES into "scenes".
-- Record what happens, where, when and who is physically there with the owner. People mentioned, remembered or contacted remotely are not companions at that place.
-- Use these scenes when writing their phone records. Generated everyday content does not add facts to them.
-
-WHAT A RECORD DOES
-- The story's situation, people and mood are material for every app, in "everyday" and in "records" alike.
-- A record may express and live the situation as it stands: a diary sick of the paperwork, a voice memo missing home, a text waiting for a parcel.
-- Record developments the messages establish, but do not invent new developments in the story through phone records: decisions, arrangements, steps toward resolving an ongoing matter (going somewhere about it, papers gathered or sent, a call or a reply about it), or outcomes (a parcel arriving, works finished, an answer received).
-- Phone data supplies existing details. An expected date does not establish that a story event has happened; an arrival the messages state or plainly imply does.
-- Complete how the owner expresses or records the situation, without moving the situation itself to its next step. This holds for every app: texts, searches, notes, mails, the diary and voice memos.
-- A trail tied to one message (with its "said") goes in "records"; the rest of the owner's day goes in "everyday". Never the same record in both.
+SCENES AND RECORDS
+- After "clock" and "now", extract "scenes" from NEW MESSAGES and ARCHIVE FOR THESE MESSAGES: what happens, where, when and who is physically with the owner. Mentioned, remembered or remote people are not companions there.
+- Write each scene's phone trail in "records", linked by "scene" and "said". Include implied phone activity; keep its assertions consistent with its source. Do not repeat the scene itself.
+- Both "records" and "everyday" may use the story's situations, people and mood. Complete their expression on the phone, not their next development: no invented decision, arrangement, resolution step, deadline or outcome.
+- Phone data supplies existing details; an expected date is not an actual event. Generated everyday content is not story evidence.
+- A message-linked trail goes in "records"; the owner's day goes in "everyday", without duplicates.
+- Plans go in the calendar, not as completed events.${wallet ? ' Tickets go in the wallet; reservations and appointments still go in the calendar.' : ''} Never invent a booking, trip or purchase absent from the story.
 
 EVERYDAY
-- The phone is lived in every waking hour, from who the owner is; contact goes both ways, and a group chat goes on without them.
-- Build each day's personal records from who the owner is: what PHONE NOW shows they already do (whom they text, what they search, photograph and note), PEOPLE AROUND, OWNER PROFILE${life ? " and LIFE NOW's usual" : ''} (when given).
-- The current story may affect their mood, location and availability.
-- Each day is a set of phone records, not the next chapter of the story. Personal routines and independent interests can recur across days.
-- About ${LIFE_A_DAY} records for a full waking day, scaled to the hours covered, each day the story skips too. Use the apps this owner would use, for example a photo of lunch, a search, a note, a mail, texts and calls by the person, a voice memo, a diary entry when the day ends${life ? ', an alarm, a saved file' : ''}.
-- For each person the owner had a scene with in NEW MESSAGES: at least one text between the two later these hours, in their own voices.
-- Every app tells the same day: late texts go with ${life ? 'a late "late" and short sleep' : 'a late night'}; nothing on the phone while they sleep or are busy in a scene, though others' texts and calls come in.
-- People: the story's, PEOPLE AROUND (never someone they aren't in touch with now), and made-up people of their own life, named for where they live; no new relative or partner. Relationship words only as the story uses them. Someone new texted or called gets a "contact".
-
-THE STORY
-- Write each scene's phone trail in "records", linked by its "scene" id. The scene itself is already in "scenes" and is not repeated here.
-- Scenes leave a trail without saying so, for instance a text after a fight, a photo of dinner, a search before a trip. A story record holds what the messages show or plainly imply, details made up to fit.
-- A plan goes in the calendar and hasn't happened yet.${wallet ? ' A ticket goes in the wallet, never in the calendar; a reservation or an appointment still goes in the calendar.' : ''} Never a booking, trip or purchase the story doesn't have.
-
-STORY RECORDS
-- Return to NEW MESSAGES and ARCHIVE FOR THESE MESSAGES for the scenes and their phone records.
-- "said" identifies the source; everything the record asserts about that event must remain consistent with what the source establishes.
-- Keep unfinished matters unfinished: no next action, decision, arrangement, deadline or outcome the messages don't establish. This holds for every app: texts, searches, notes, the diary.
-- Generated everyday records are not evidence that a story event happened.
+- Draw on PHONE NOW's habits, PEOPLE AROUND, OWNER PROFILE${life ? " and LIFE NOW's usual" : ''}. The story shapes mood, location and availability; routines and interests recur.
+- About ${LIFE_A_DAY} records per full waking day, scaled to the hours covered, including skipped days. Use the owner's range of apps: photos, searches, notes, mails, texts, calls, voice memos, diary${life ? ', alarms and files' : ''}.
+- Contact goes both ways; group chats may continue without the owner. For each person they had a scene with in NEW MESSAGES, include at least one later text exchange within these hours.
+- Apps describe one consistent day: late texts agree with ${life ? 'screen time and sleep' : 'a late night'}. No owner activity while asleep or busy in a scene; incoming texts and calls may arrive.
+- People may come from the story, PEOPLE AROUND or plausible personal life. Use locally fitting names; no new relative or partner. Relationship labels must come from the story. Do not contact someone they are no longer in touch with. New correspondents get a "contact".
 
 THE APPS
-- Texts: as these people really text (late replies, questions left open, plans that fizzle); the owner sounds different with each. A text record is one exchange.
-- Calls, photos, searches, mails and the calendar fit their relationships, their eye and what is on their mind; the calendar holds fixed things only. Posts only if they post.${life ? ' Alarms and files change with life.' : ''}
+- Texts sound like each relationship, with delayed or unanswered replies; one record is one exchange.
+- Calls, photos, searches and mails reflect the owner's relationships, eye and interests. Calendar entries are fixed commitments. Posts only if they post${life ? '; alarms and files change with life' : ''}.
 
-IN THEIR OWN WORDS (notes, the diary, voice memos)
-- The phone's most personal records: written out in full as this owner would write or say them, never a summary of the day.
-- Notes: in the shape a real note has, short or long as they are, with their own shorthand, spelling and mix of languages.
-- The diary: an entry when a story day ends in these messages or a scene stays with them, as long as this owner would write it; not the day's events in order. A day the story shows: what happened and what they feel about it; another day: that day of their life. The diary is the owner's day: it goes in "everyday" on its day.
-- Voice memos: about one every few days; spoken, not written: the way the owner talks in the archive and chat, with pauses (…), restarts and half sentences, at a moment they could talk into the phone alone, for instance after a fight, on the way somewhere or late at night. 20 to 90 seconds of speech, "sec" to fit, "place" where they were. Not the diary told again.${life ? `
+IN THEIR OWN WORDS
+- Notes, diary and voice memos are full personal content, never summaries. Notes use the owner's form, length, shorthand, spelling and languages.
+- Diary: in "everyday" on its day, when a day ends or a scene stays with them. Write their experience and feelings at their natural length, not an ordered event list; use the shown day or their life on an unshown day.
+- Voice: about one every few days, in their spoken voice from the archive and chat, with pauses and restarts, when they could record alone. 20–90 seconds, matching "sec" and "place"; not the diary repeated.${life ? `
 
 HEALTH
-- A "health" record for each story day these messages reach and for a LIFE NOW day the story now shows; the day of "now" every time, with its totals so far (steps, workouts, coffee, water, "screen"), even with nothing new.
-- Numbers follow the day (a long night out: short sleep; a day on foot: many steps; a lazy Sunday: few); coffee, water, workouts and weight fit their habits (LIFE NOW's usual). A day the story doesn't show is written freely from their life, still following its scenes.
-- Sleep goes on the day they woke: asleep at 01:30 after the evening of 10-25, up at 08:50, is the 10-26 row.
-- A lasting change to their habits or body these messages state (they lost weight, quit coffee, get up earlier now): a "usual" record with only what changed.
+- Write each day reached and any LIFE NOW day newly shown. Always update today's totals so far (steps, workouts, coffee, water, "screen"), even with nothing new.
+- Numbers fit that day's scenes and the owner's usual habits (a long night out: short sleep; a day on foot: many steps; a lazy Sunday: few); fill unshown days from their life.
+- Sleep belongs to the waking day: 01:30 after the evening of 10-25 through 08:50 is the 10-26 row.
+- Lasting habit or body changes stated in the messages go in "usual", only the changed fields.
 
 SCREEN TIME
-- "screen" on each "health" day: that day's phone use, from their character, not their polite profile (habits they wouldn't admit show), following the day on top of LIFE NOW's usual.
-- "apps": as many as they really use, so days differ (the weather on a rainy day, the bank on payday, maps on a day out). Hours of texts are hours in the chat app; nothing later than "late".
-- A new app the story or their life gives a reason for (a translator for a trip): in "usual"."screen"."add".
-- Apps common where they live, by their real names; another country's only when the story shows it.` : ''}${life && weather ? `
+- Each health day's "screen" follows their character and habits, including ones they would not admit, plus that day's events.
+- Use as many apps as they would, varying by day. Texting time agrees with chat usage; no activity after "late".
+- Add newly used apps justified by the story or their life to "usual"."screen"."add".
+- Use real app names common where they live; another country's apps only when the story shows them.` : ''}${life && weather ? `
 
 WEATHER
 - "weather": ${weatherRule(tracker)}
@@ -431,7 +411,7 @@ JSON (one object, nothing before or after it)
     "at": its message number (every record has one), "scene": the id of its scene in "scenes" or "", "said": exact words of the message it comes from,${life ? ' "already": a LIFE NOW id or "",' : ''} and the fields of its type in ITEMS }]${life ? `,
   "health": [{ "date": the day they woke, "already": a LIFE NOW id or "", "sleep", "wake", "woke", "steps", "km", "floors", "hr": [low, high], "workouts": [{ "kind", "time", "min", "km" }], "coffee", "coffeeKind", "water", "weight", "screen": { "apps": { app: minutes }, "pickups", "late" } }],
   "usual": { "weight", "height", "coffee", "coffeeKind", "coffeeKo", "water", "bed", "sleep", "wake", "steps", "workouts", "rest", "screen": { "add": [{ "app", "kind": chat | social | game | video | music | work | reading | shopping | money | maps | health | other, "min" }], "drop", "pickups", "late" } } or null` : ''}${life && weather ? `,\n${WEATHER_JSON}` : ''} }
-"scenes" first; "everyday": the owner's own days; "records": the scenes' phone trails and story records. Numbers are plain JSON numbers. Nothing new: "records": [].
+"scenes" first, then "everyday" and "records". Numbers are plain JSON numbers. Nothing new: "records": [].
 
 ITEMS (each with only the fields it needs)
 contact: "name", "saved"
