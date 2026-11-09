@@ -362,7 +362,7 @@ Can you not distinguish what you must not invent? Do not act as the author just 
 
 - The story only mentions a parcel being shipped → making it arrive is acting as the author and inventing the future.
 - The story only mentions something being blocked or a difficult situation → trying to resolve it is acting as the author.
-- The story describes an event → adding what supposedly really happened or why it happened is acting as the author.
+- The story describes an event → making up what really happened or why it happened is acting as the author.
 
 You may create the owner's words, feelings, reactions and daily phone life within the established situation. You may not change that situation by inventing further developments.
 
