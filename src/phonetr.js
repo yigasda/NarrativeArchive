@@ -62,7 +62,10 @@ export function voicesWanted(p, { all = false } = {}) {
 export async function learnVoices(m, owner, p, { all = false } = {}) {
     const want = voicesWanted(p, { all });
     if (!want.length) return 0;
-    const input = await sideRequest(m, owner, [...cardBlocks(), aroundBlock(p), `[WHO]\n${want.map(n => `- ${n}`).join('\n')}`]);
+    // (the cards and the persona whole; the owner's chosen profile only when it is a lorebook entry: a card or a persona is
+    // in already)
+    const binding = p.financeProfile || m?.phoneProfiles?.[String(owner || '').toLowerCase()] || null;
+    const input = await sideRequest(m, owner, [...cardBlocks(), aroundBlock(p), `[WHO]\n${want.map(n => `- ${n}`).join('\n')}`], { profile: binding?.type === 'lore' ? binding : undefined });
     const got = parseJson(String(await askDraft(input, { force: true, system: AI_SYS_PHONE_VOICE, maxTokens: 3000, effort: 'low' })).replace(/^[^{]*/, '').replace(/[^}]*$/, ''), { salvage: true }) || {};
     const wanted = new Map(want.map(n => [n.toLowerCase(), n])), have = new Set(voiceRows(p).map(whoKey));
     const rows = (Array.isArray(got.people) ? got.people : []).filter(v => v && wanted.has(whoKey(v)) && !have.has(whoKey(v)) && String(v.style || '').trim()
