@@ -6,7 +6,7 @@
 
 import { AX, ax, axBar, axCb, axH1, axInd, axKp, axTint, axTop, busyHtml } from './phoneapps.js';
 import { filling } from './phoneai.js';
-import { byStory, clockHeld, clockNum, clockOf, fmtDate, halfOf, hourOf, koOn, ownerZone, pad, phoneAt, sceneHome, storyNow } from './phonedata.js';
+import { byStory, clockHeld, clockNum, clockOf, fmtDate, halfOf, hourOf, koGaps, koOn, ownerZone, pad, phoneAt, sceneHome, storyNow } from './phonedata.js';
 import { shiftDay, weatherNow } from './phonelife.js';
 import { timerLeft, COUNTRY_TZ, apart, cityAt as cityOfPlace, mirrorHome, overlayNow } from './phonesynclife.js';
 import { decimalOf, fmtMoney, localeOf } from './phonemoney.js';
@@ -1245,7 +1245,8 @@ const bmTab = on => `<div class="dv_tab">${[['dlv', I.home, '홈'], ['', I.heart
 const ueTab = on => `<div class="dv_tab">${[['dlv', I.home, 'Startseite'], ['', I.search, 'Suchen'], ['dorders', I.list, 'Bestellungen'], ['', I.my, 'Konto']].map(([go, ic, t]) => `<${go ? `button type="button" data-go="${go}"` : 'span'} class="${go && go === on ? 'on' : ''}"><i>${ic}</i>${t}</${go ? 'button' : 'span'}>`).join('')}</div>`;
 const kk = x => (x?.ko && koOn() ? `<span class="lf_k">${esc(x.ko)}</span>` : '');
 // the 한국어 toggle, only when something in the app has a Korean line to show
-const dvKo = d => [...d.shops, ...d.shops.flatMap(s => s.menu || []), ...d.orders, ...d.orders.flatMap(o => o.items || []), ...(d.cart?.items || [])].some(x => x?.ko || x?.optionKo || x?.noteShopKo || x?.noteRiderKo);
+// (also when the translator still has some of it to do: the button fills it)
+const dvKo = d => koGaps({ delivery: d }).length > 0 || [...d.shops, ...d.shops.flatMap(s => s.menu || []), ...d.orders, ...d.orders.flatMap(o => o.items || []), ...(d.cart?.items || [])].some(x => x?.ko || x?.optionKo || x?.noteShopKo || x?.noteRiderKo);
 const dvKp = (d, cls) => (dvKo(d) ? `<button type="button" class="na_ph_kochip ${cls} ${koOn() ? 'on' : ''}">${cls === 'dv_kpu' ? '<i></i>한국어' : '가 한국어'}</button>` : '');
 const BM_CATS = [['rice', '한그릇'], ['chinese', '중식'], ['sushi', '돈까스·회'], ['pizza', '피자'], ['burger', '패스트푸드'], ['stew', '찜·탕'], ['jokbal', '족발·보쌈'], ['snack', '분식'], ['cafe', '카페'], ['chicken', '치킨']];
 const UE_CATS = [['pizza', 'Pizza'], ['sushi', 'Sushi'], ['burger', 'Burger'], ['asian', 'Asiatisch'], ['salad', 'Gesund']];

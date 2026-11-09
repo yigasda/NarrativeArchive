@@ -155,8 +155,7 @@ const VIEW_APPS = [[/^(msg|thread|draft|groupinfo|contact)/, a => a.startsWith('
     [/^(search|page|marks|tabs|history)/, a => a === 'search'], [/^cal/, a => a === 'calendar'], [/^sns/, a => /^(post|comment|profile)/.test(a)], [/^mail/, a => a.startsWith('mail')],
     [/^diary/, a => a.startsWith('diary')], [/^voice/, a => a.startsWith('voice memo')], [/^(clock|alarm)/, a => a === 'alarm' || a === 'timer'], [/^(files|folder|file)/, a => a.startsWith('file')],
     [/^(weather|wlist)/, a => a === 'weather'], [/^(health|hcmp)/, a => a === 'coffee'],
-    // (배달: its Korean is its own fill's, nothing of it is the translator's)
-    [/^(delivery|dcart|ditem|dorder|dpay|drate|dshop)/, () => false]];
+    [/^(delivery|dcart|ditem|dorder|dpay|drate|dshop)/, a => a === 'delivery']];
 // (a screen not listed, as 설정, is the whole phone)
 export const koAppOf = view => VIEW_APPS.find(([re]) => re.test(String(view || '')))?.[1] || null;
 

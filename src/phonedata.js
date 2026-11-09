@@ -3604,6 +3604,15 @@ export function koGaps(p, { all = false } = {}) {
     if (p?.life?.weather) add(p.life.weather, 'line', 'ko', 'weather');
     for (const x of p?.life?.files?.folders || []) add(x, 'name', 'ko', 'file folder');
     if (p?.life?.health?.usual) add(p.life.health.usual, 'coffeeKind', 'coffeeKo', 'coffee');
+    // (배달: its own fill writes its Korean; what it left out, or a 다시 번역, is the translator's)
+    const dv = p?.delivery;
+    if (dv) {
+        for (const x of dv.shops || []) { add(x, 'name', 'ko', 'delivery'); for (const y of x.menu || []) add(y, 'name', 'ko', 'delivery'); }
+        for (const o of [...(dv.orders || []), ...(dv.cart ? [dv.cart] : [])]) {
+            for (const y of o.items || []) { add(y, 'name', 'ko', 'delivery'); add(y, 'option', 'optionKo', 'delivery'); }
+            add(o, 'noteShop', 'noteShopKo', 'delivery', own, o.shop || 'shop'); add(o, 'noteRider', 'noteRiderKo', 'delivery', own, 'courier');
+        }
+    }
     return out;
 }
 // after the Korean is added, 되돌리기 still sees the phone as the reflection left it
