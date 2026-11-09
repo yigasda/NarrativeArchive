@@ -856,6 +856,8 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.match(on, /\nITEMS \(each with only the fields it needs\)\ncontact: "name"/);
     assert.match(on, /"group", "members": \[all but the owner, as in the contacts\]/);
     assert.ok(!data.coreSystem({ life: true }).includes('\nWEATHER\n'));
+    // (the weather's line goes in the story's words; its Korean is the app's, as everywhere: no "ko" asked)
+    assert.ok(onW.includes('"lo", "line",\n') && !onW.includes('"line", "ko"'));
     assert.ok(!plain.includes('\nHEALTH\n') && !plain.includes('\nSCREEN TIME\n'));
     assert.ok(!on.includes('"events": [{') && !on.includes('Items in "phone"') && !on.includes('LOREBOOK') && on.includes('- Sometimes ARCHIVE BEFORE, STORY NOW'));
 });
@@ -1396,9 +1398,9 @@ test('koGaps: what is in another language and has no Korean yet, line fields by 
     const p = { threads: [{ with: 'Ren', messages: [{ text: 'see you', time: '10-26 10:00' }, { text: '응 나중에', time: '10-26 10:01' }, { text: 'ok!', ko: '알았어!', time: '10-26 10:02' }] }],
         photos: [{ caption: 'rainy street' }, { caption: '2026' }], notes: [{ title: 'Groceries', text: 'milk\neggs' }], searches: [], events: [{ title: 'Lio dinner', ko: '' }],
         posts: [{ text: 'hello', photo: 'sea', comments: [{ text: 'nice' }] }], mails: [{ subject: 'Your order', text: 'shipped' }], diary: [], voice: [],
-        life: { clock: { alarms: [{ label: 'Gym' }], timers: [] }, files: { items: [{ preview: 'Invoice no. 12' }] } } };
+        life: { clock: { alarms: [{ label: 'Gym' }], timers: [] }, files: { items: [{ preview: 'Invoice no. 12' }] }, weather: { line: 'Clear and cold early morning in Westend', cond: 'clear' } } };
     const got = data.koGaps(p).map(g => `${g.f}>${g.k}:${g.x[g.f]}`);
-    assert.deepEqual(got, ['text>ko:see you', 'caption>ko:rainy street', 'title>kt:Groceries', 'text>ko:milk\neggs', 'title>ko:Lio dinner', 'text>ko:hello', 'photo>pko:sea', 'text>ko:nice', 'subject>ks:Your order', 'text>ko:shipped', 'label>ko:Gym', 'preview>ko:Invoice no. 12']);
+    assert.deepEqual(got, ['text>ko:see you', 'caption>ko:rainy street', 'title>kt:Groceries', 'text>ko:milk\neggs', 'title>ko:Lio dinner', 'text>ko:hello', 'photo>pko:sea', 'text>ko:nice', 'subject>ks:Your order', 'text>ko:shipped', 'label>ko:Gym', 'preview>ko:Invoice no. 12', 'line>ko:Clear and cold early morning in Westend']);
     assert.ok(data.hasKo({ threads: [{ messages: [{ text: 'hi there' }] }], photos: [], notes: [], searches: [], events: [] }));
 });
 
