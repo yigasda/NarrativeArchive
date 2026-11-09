@@ -781,12 +781,12 @@ export function fileScreen(p, now, id) {
 // what each sky is called; the colours come from pal() below
 const WX = { clear: '맑음', partly: '구름 조금', cloudy: '흐림', drizzle: '이슬비', rain: '비', sleet: '진눈깨비', snow: '눈', fog: '안개', storm: '뇌우', wind: '강풍' };
 // the part of the day a sky is drawn for, by the clock alone (the same for every picture: the sky, the hours' icons, the world clock's sun and
-// moon): 새벽 04–07, 아침 07–11 (분홍 07–09 'morn', 노랑 09–11 'forenoon'), 낮 11–16, 늦은 오후 16–17 'aft', 저녁 17–20, 밤 20–04. The sun's own times stay on the sunset tile only
+// moon): 새벽 05–07, 아침 07–11 (분홍 07–09 'morn', 노랑 09–11 'forenoon'), 낮 11–15, 늦은 오후 15–17 'aft', 저녁 17–20, 밤 20–05. The sun's own times stay on the sunset tile only
 function phaseOf(time) {
     const t = toMin(time);
     if (t === null) return 'day';
     const m = ((t % 1440) + 1440) % 1440;
-    return m < 4 * 60 ? 'night' : m < 7 * 60 ? 'dawn' : m < 9 * 60 ? 'morn' : m < 11 * 60 ? 'forenoon' : m < 16 * 60 ? 'day' : m < 17 * 60 ? 'aft' : m < 20 * 60 ? 'eve' : 'night';
+    return m < 5 * 60 ? 'night' : m < 7 * 60 ? 'dawn' : m < 9 * 60 ? 'morn' : m < 11 * 60 ? 'forenoon' : m < 15 * 60 ? 'day' : m < 17 * 60 ? 'aft' : m < 20 * 60 ? 'eve' : 'night';
 }
 const WET = { drizzle: 1, rain: 1, sleet: 1 };
 // grey skies by how hard it comes down, as at noon: 진눈깨비 a touch lighter (the snow in it), 흐림, 이슬비 a shade darker, 비 the darkest
@@ -855,7 +855,7 @@ const MORN = {
             grey: { sky: '#8ea2be', bands: [[165, '#a1b1c8'], [220, '#bcc3cd'], [275, '#d8cebd']], cb: [[48, '#a1b1c8'], [64, '#bcc3cd'], [78, '#d8cebd']], hills: ['#8999b2', '#7d8da6', '#71819a'], cloud: '#a3b2c7', cloud2: '#b4c0d1' },
             snow: { sky: '#92aed4', bands: [[165, '#a8c0dc'], [220, '#c8d2df'], [275, '#ebdcc4']], cb: [[48, '#a8c0dc'], [64, '#c8d2df'], [78, '#ebdcc4']], hills: ['#fbf6ec', '#ece7df', '#dbd9d6'], cloud: '#b0c4dc' },
             fog: { sky: '#a3adb9', bands: [[165, '#b0b8c2'], [220, '#c3c6c7'], [275, '#dbd2c0']], cb: [[48, '#b0b8c2'], [64, '#c3c6c7'], [78, '#dbd2c0']], hills: ['#9aa3ad', '#8f98a2', '#848d97'] } },
-    // 늦은 오후 (16–17, 골든아워): a clear blue up top, a deep gold and apricot low, the light already warm before the sunset
+    // 늦은 오후 (15–17, 골든아워): a clear blue up top, a deep gold and apricot low, the light already warm before the sunset
     aft: { clear: { sky: '#4f8ad0', bands: [[150, '#6e9ccf'], [198, '#a9b6c4'], [244, '#e8c48e'], [292, '#f2ad6c']], cb: [[40, '#6e9ccf'], [56, '#a9b6c4'], [70, '#e8c48e'], [82, '#f2ad6c']], hills: ['#6d7fae', '#5d6f9e', '#4f618f'], puff: '#a4bad8', cloud: '#b3c4dc', front: '#f8e2c0' },
          grey: { sky: '#7f7b95', bands: [[165, '#958397'], [220, '#b08f8e'], [275, '#c99c7c']], cb: [[48, '#958397'], [64, '#b08f8e'], [78, '#c99c7c']], hills: ['#76708c', '#6a6480', '#5e5874'], cloud: '#928ca6', cloud2: '#a39bb2' },
          snow: { sky: '#879cbd', bands: [[165, '#a0afc6'], [220, '#c2c1c8'], [275, '#e8caa8']], cb: [[48, '#a0afc6'], [64, '#c2c1c8'], [78, '#e8caa8']], hills: ['#f8eee2', '#e9ded6', '#d7cfcc'], cloud: '#a6b3c8' },
