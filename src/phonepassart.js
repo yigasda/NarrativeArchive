@@ -40,8 +40,11 @@ const coaster = (fg, op) => {
         + t.filter((_, i) => i % 2 === 0).map(u => { const [x, y] = f(u); return `<path d="M${r1(x)} ${r1(y)} v10" ${S(fg, op)}/>`; }).join('')
         + t.filter((_, i) => i % 6 === 0).map(u => { const [x, y] = f(u); return `<path d="M${r1(x)} ${r1(y + 10)} V210" ${S(fg, op * 0.6)}/>`; }).join('');
 };
-const MOTIF = { flight: [flight], train: [train], membership: [dots], other: [dots], concert: [rings, spots], hotel: [windows], match: [pitch, bowl], movie: [beam],
-    museum: [columns], bus: [route, lanes], ferry: [waves], theater: [arches], park: [wheel, coaster] };
+const doors = (fg, op) => range(0, 8).map(i => `<rect x="${230 - i * 12}" y="${30 - i * 12}" width="${80 + i * 24}" height="200" rx="${40 + i * 12}" ${S(fg, op)}/>`).join('');
+const diamonds = (fg, op) => range(-3, 9).map(i => `<path d="M${150 + i * 24} -10 L${150 + i * 24 + 120} 210 M${150 + i * 24} 210 L${150 + i * 24 + 120} -10" ${S(fg, op)}/>`).join('');
+const depths = (fg, op) => range(0, 10).map(i => `<path d="M${150 + i * 6} 200 C${180 + i * 8} ${120 - i * 6} 260 ${150 - i * 12} ${300 - i * 2} ${80 - i * 8} S350 ${20 + i * 4} 370 ${10 + i * 14}" ${S(fg, op)}/>`).join('');
+const MOTIF = { flight: [flight], train: [train], membership: [dots], other: [dots], concert: [rings, spots], hotel: [windows, doors], match: [pitch, bowl], movie: [beam],
+    museum: [columns], bus: [route, lanes], ferry: [waves, depths], theater: [arches, diamonds], park: [wheel, coaster] };
 const seedOf = id => [...String(id || '')].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 9973, 0);
 export function passMotif(k, fg, op, id) {
     const xs = MOTIF[k] || MOTIF.other;
