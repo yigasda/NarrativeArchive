@@ -21,7 +21,10 @@ const ROWS = [['Mara', '친구에겐 반말, 짧고 건조하게', 'user'], ['Re
     const mine = R.filter(r => r[2] !== 'model'), auto2 = R.filter(r => r[2] === 'model');
     const row = ([w, st]) => `<div class="ax_rw">${axLetter(w, 36)}<span class="ax_tx"><span class="ax_n">${w}</span><span class="ax_p">${st}</span></span>${chev}</div>`;
     const D = `${head('')}<div class="ax_sec">내가 정한 말투</div><div class="ax_card">${mine.map(row).join('')}<div class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_n ax_blue">사람 추가</span></span></div></div><div class="ax_sec">번역기가 정한 말투</div><div class="ax_card">${auto2.map(([w, st]) => `<div class="ax_rw">${axLetter(w, 36)}<span class="ax_tx"><span class="ax_n" style="color:#5a626e">${w}</span><span class="ax_p">${st}</span></span><span style="font-size:13px;font-weight:600;color:#2f6bff">고치기</span></div>`).join('')}</div><div class="ax_foot">번역기가 정한 줄은 고치면 내가 정한 말투로 옮겨져요.</div>${foot}<i class="ax_pad"></i>`;
-    return { A, B, C, D };
+    // E (A + D): A's rows, D's two groups — what I set (with 사람 추가) on top, the translator's under it, its names a little grey
+    const rowE = ([w, st], grey) => `<div class="ax_rw">${axLetter(w, 36)}<span class="ax_tx"><span class="ax_n"${grey ? ' style="color:#6b7380"' : ''}>${w}</span><span class="ax_p">${st}</span></span>${chev}</div>`;
+    const E = `${head('4명')}<div class="ax_sec">내가 정한 말투</div><div class="ax_card">${mine.map(r => rowE(r)).join('')}<div class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_n ax_blue">사람 추가</span></span></div></div><div class="ax_sec">번역기가 정한 말투</div><div class="ax_card">${auto2.map(r => rowE(r, true)).join('')}</div><div class="ax_foot">고치면 내가 정한 말투로 옮겨져요.</div>${foot}<i class="ax_pad"></i>`;
+    return { A, B, C, D, E };
   }, ROWS);
   for (const [k, h] of Object.entries(H)) { await s.to('set'); await p.waitForTimeout(250); await p.evaluate(h => { const sc = document.querySelector('.na_ph_frame .ax_scroll'); sc.innerHTML = h; sc.scrollTop = 0; }, h); await p.waitForTimeout(300); await s.shot('voice_' + k); }
   // the 설정 row: under 번역 용어집 in 화면
