@@ -593,7 +593,9 @@ const passSpan = (p, x) => (x.until && /^\d{2}-\d{2}/.test(String(x.until)) ? `$
 function passArt(p, x, full) {
     const k = passKind(x), [bg, icon, lab] = PASS[k], light = LIGHT.has(k);
     const f = (label, v) => (v === null || v === undefined || String(v).trim() === '' || v === '—' ? '' : `<span><small>${label}</small><b>${esc(String(v))}</b></span>`);
-    const route = (a, b, big) => `<span class="ax_psrt ${big ? '' : 'ln'}"><span><b class="${big && String(a).length <= 4 ? '' : 'ax_pbsm'}">${esc(a)}</b></span><span class="ax_pspl">${big ? ax('plane', 22, 'currentColor', 1.6) : '<i></i>'}</span><span class="ax_r"><b class="${big && String(b).length <= 4 ? '' : 'ax_pbsm'}">${esc(b)}</b></span></span>`;
+    // the drawing behind (none on the open ticket); on the globe the plane icon gives way to a plain line between the two places
+    const drawn = passMotif(k, light ? '#3a2e1e' : '#fff', light ? 0.26 : 0.2, x.id, PASS_ACC[k]), art = full ? '' : drawn, globe = k === 'flight' && drawn;
+    const route = (a, b, big) => `<span class="ax_psrt ${big && !globe ? '' : 'ln'}"><span><b class="${big && String(a).length <= 4 ? '' : 'ax_pbsm'}">${esc(a)}</b></span><span class="ax_pspl">${big && !globe ? ax('plane', 22, 'currentColor', 1.6) : `<i${globe ? ' class="sl"' : ''}></i>`}</span><span class="ax_r"><b class="${big && String(b).length <= 4 ? '' : 'ax_pbsm'}">${esc(b)}</b></span></span>`;
     const title = t => `<span class="ax_psti">${esc(t)}</span>`;
     const date = passDate(p, x), out = x.until && /^\d{2}-\d{2}/.test(String(x.until)) ? x.until : x.to && /^\d{2}-\d{2}/.test(x.to) ? x.to : '';
     let mid = '', fields = '';
@@ -604,7 +606,6 @@ function passArt(p, x, full) {
     else if (k === 'match') { const m = String(x.to || x.from || '').split(/\s+(?:vs\.?|gegen|대|–|-)\s+/i); mid = m.length === 2 ? `<span class="ax_psvs"><b>${esc(m[0])}</b><small>vs</small><b>${esc(m[1])}</b></span>` : title(x.to || x.from || ''); fields = f('날짜', date) + f('블록', x.gate) + f('좌석', x.seat) + f('번호', x.no); }
     else { mid = title(x.to || x.from || ''); fields = f(passSpan(p, x) ? '기간' : '날짜', passSpan(p, x) || date) + f(k === 'movie' ? '관' : k === 'museum' ? '입장권' : '구역', x.gate) + f('좌석', x.seat) + f('번호', x.no); }
     // the open ticket with its QR stays plain: the drawing is only for the wallet
-    const art = full ? '' : passMotif(k, light ? '#3a2e1e' : '#fff', light ? 0.26 : 0.2, x.id, PASS_ACC[k]);
     return `<span class="ax_ps ax_ps_${k} ${light ? 'cream' : ''}" style="background: ${bg}"><span class="ax_pstop">${art ? `<svg class="ax_psmo" viewBox="0 0 340 200" preserveAspectRatio="xMaxYMid slice" aria-hidden="true">${art}</svg>` : ''}
       <span class="ax_psh"><span class="ax_pslg">${ax(icon, 16, 'currentColor')}</span><span class="ax_psn">${esc(passBy(x).toUpperCase())}</span><span class="ax_pshr">${k === 'membership' && out ? '까지' : lab}<b class="cg_num">${esc(k === 'membership' && out ? fmtDate(p, out, true) : x.time ? clockOf(p, x.time) : date || '')}</b></span></span>
       ${mid}<span class="ax_psfl">${fields}</span></span>
