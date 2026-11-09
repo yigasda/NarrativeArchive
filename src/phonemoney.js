@@ -607,7 +607,7 @@ function passArt(p, x, full) {
     else if (k === 'match') { const m = String(x.to || x.from || '').split(/\s+(?:vs\.?|gegen|대|–|-)\s+/i); mid = m.length === 2 ? `<span class="ax_psvs"><b>${esc(m[0])}</b><small>vs</small><b>${esc(m[1])}</b></span>` : title(x.to || x.from || ''); fields = f('날짜', date) + f('블록', x.gate) + f('좌석', x.seat) + f('번호', x.no); }
     else { mid = title(x.to || x.from || ''); fields = f(passSpan(p, x) ? '기간' : '날짜', passSpan(p, x) || date) + f(k === 'movie' ? '관' : k === 'museum' ? '입장권' : '구역', x.gate) + f('좌석', x.seat) + f('번호', x.no); }
     // the open ticket with its QR stays plain: the drawing is only for the wallet
-    return `<span class="ax_ps ax_ps_${k} ${light ? 'cream' : ''}" style="background: ${bg}"><span class="ax_pstop">${art ? `<svg class="ax_psmo" viewBox="0 0 340 200" preserveAspectRatio="xMaxYMid slice" aria-hidden="true">${art}</svg>` : ''}
+    return `<span class="ax_ps ax_ps_${k} ${light ? 'cream' : ''}" style="--psbg: ${bg}"><span class="ax_pstop">${art ? `<svg class="ax_psmo" viewBox="0 0 340 200" preserveAspectRatio="xMaxYMid slice" aria-hidden="true">${art}</svg>` : ''}
       <span class="ax_psh"><span class="ax_pslg">${ax(icon, 16, 'currentColor')}</span><span class="ax_psn">${esc(passBy(x).toUpperCase())}</span><span class="ax_pshr">${k === 'membership' && out ? '까지' : lab}<b class="cg_num">${esc(k === 'membership' && out ? fmtDate(p, out, true) : x.time ? clockOf(p, x.time) : date || '')}</b></span></span>
       ${mid}${k === 'membership' ? '' : '<span class="ax_psnt"></span>'}<span class="ax_psfl">${fields}</span></span>
       ${full ? `<span class="ax_psperf"></span>${x.status ? `<span class="ax_psst">${esc(x.status)}</span>` : ''}<span class="ax_psqr">${qr(x.id)}</span>` : ''}</span>`;
