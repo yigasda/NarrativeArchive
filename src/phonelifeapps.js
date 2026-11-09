@@ -867,11 +867,11 @@ const MORN = {
 // flat stars instead, and the evening star (a flat four-point star low in the west)
 const DUSK = {
     clear: { sky: '#28324a', bands: [[150, '#303750'], [198, '#433f5a'], [244, '#5f4a62'], [292, '#82596a']], cb: [[40, '#303750'], [56, '#433f5a'], [70, '#5f4a62'], [82, '#82596a']], hills: ['#2a2a40', '#222336', '#1b1c2c'], puff: '#3a4058', cloud: '#3e4460', front: '#56566f' },
-    // the grey skies come from the clear one, as every other hour's do: the same bands with their colour pressed out and a little light added
-    // (흐림 most of it, 눈 a touch lighter, 안개 the most faded); 비 · 이슬비 · 진눈깨비 take 흐림 through wetSky
-    grey: { sky: '#3b404c', bands: [[165, '#504e5c'], [220, '#655a67'], [275, '#806b73']], cb: [[48, '#504e5c'], [64, '#655a67'], [78, '#806b73']], hills: ['#373744', '#2f303b', '#292933'], cloud: '#565967', cloud2: '#60626f' },
-    snow: { sky: '#454a58', bands: [[165, '#5a5767'], [220, '#6e6270'], [275, '#89717b']], cb: [[48, '#5a5767'], [64, '#6e6270'], [78, '#89717b']], hills: ['#d6d4de', '#c0bdca', '#aaa6b6'], cloud: '#5f6272' },
-    fog: { sky: '#575b64', bands: [[165, '#696772'], [220, '#7a727b'], [275, '#908087']], cb: [[48, '#696772'], [64, '#7a727b'], [78, '#908087']], hills: ['#4d4d58', '#464750', '#404149'] },
+    // the grey skies come from the clear one, as every other hour's do: the same navy, violet and rose, only a little greyer (흐림),
+    // 눈 a touch lighter, 안개 the most faded; 비 · 이슬비 · 진눈깨비 take 흐림 through wetSky
+    grey: { sky: '#323a4d', bands: [[165, '#4b475c'], [220, '#635365'], [275, '#82626f']], cb: [[48, '#4b475c'], [64, '#635365'], [78, '#82626f']], hills: ['#313143', '#2a2a3a', '#232331'], cloud: '#4f5368', cloud2: '#585d70' },
+    snow: { sky: '#3d4457', bands: [[165, '#545166'], [220, '#6c5c6e'], [275, '#8a6a77']], cb: [[48, '#545166'], [64, '#6c5c6e'], [78, '#8a6a77']], hills: ['#d6d4de', '#c0bdca', '#aaa6b6'], cloud: '#585c71' },
+    fog: { sky: '#4b515f', bands: [[165, '#5f5d6d'], [220, '#746776'], [275, '#8e7580']], cb: [[48, '#5f5d6d'], [64, '#746776'], [78, '#8e7580']], hills: ['#444453', '#3d3e4b', '#373842'] },
 };
 function duskPal(cond, D) {
     const c = DUSK.clear, g = DUSK.grey, sky = { sky: c.sky, bands: c.bands, cb: c.cb, hills: c.hills }, phase = 'dusk';
