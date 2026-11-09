@@ -822,6 +822,7 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.match(on, /2\. A plan made → "calendar"\. A PHONE NOW plan the messages move → its calendar record again with "was"; called off or undone \(an order cancelled\) → "cancelled": true\. No booking, trip or purchase the story lacks\./);
     assert.match(on, /3\. Each scene where the owner is somewhere → one "visit"\./);
     assert.match(on, /→ that record\. A text exchange the messages already show: only its last 4 messages\./);
+    assert.ok(on.includes('- Each text in the language its writer really uses, as long as that person really writes.') && !on.includes('Texts short'));
     assert.match(on, /- Anything written in another language than Korean gets its Korean in the field paired with it in ITEMS: "ko" for a text, caption, note, mail, diary, voice memo or post, "kt" for a title, "ks" for a subject, "pko" for a post's photo\./);
     assert.ok(on.includes('5. An alarm or file the messages set or change → that record.') && !plain.includes('5. An alarm or file'));
     // (STEP 4: hours, amount, sources; a later text is not forced)

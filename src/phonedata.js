@@ -425,7 +425,7 @@ KEEPING IN STEP
 - A text in PHONE NOW: only its new messages.${life ? ' A LIFE NOW alarm or file: not again unless it changes, then with its id in "already".' : ''} A known scene: its id. An edited message: the ids listed.
 
 LANGUAGE
-- Each text in the language its writer really uses. Texts short.
+- Each text in the language its writer really uses, as long as that person really writes.
 - Anything written in another language than Korean gets its Korean in the field paired with it in ITEMS: "ko" for a text, caption, note, mail, diary, voice memo or post, "kt" for a title, "ks" for a subject, "pko" for a post's photo.
 
 JSON (one object, nothing before or after it)
