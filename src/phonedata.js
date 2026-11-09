@@ -362,7 +362,7 @@ STEP 1 · SCENES
 
 STEP 2 · SITUATIONS
 1. List every matter left open in NEW MESSAGES, ARCHIVE FOR THESE MESSAGES, STORY NOW${wallet ? ', PHONE NOW and ORDERS AND TICKETS' : ' and PHONE NOW'}: a parcel, a request, a plan, a blocked account, a repair, a debt, a question.
-2. "known": only what these give, in their words. "open": what they leave unknown (reasons, outcomes, amounts, durations, places, what really happened). Anything in OWNER DOESN'T KNOW is "open".
+2. "where" and "when": the place and the dates or times these give (an order's expected date too), or "". "known": only what these give, in their words. "open": what they leave unknown (reasons, outcomes, amounts, durations, places, what really happened). Anything in OWNER DOESN'T KNOW is "open". A "where" or "when" left "" stays unknown on the whole phone.
 3. "state": planned, sent, waiting, blocked, done, cancelled or unknown. Only NEW MESSAGES change it. A passing date, an eta or a natural next step never does.${wallet ? ' An order takes its status from ORDERS AND TICKETS.' : ''}
 4. What each state allows on the phone:
    planned: the plan, reminders, looking forward, worrying. Not: it happening, its outcome.
@@ -432,7 +432,7 @@ JSON (one object, nothing before or after it)
   "moved": [{ "name", "city": in English, "names": [as the messages write it, then in English and Korean], "tz", "in": its country code }] (people these messages put in another city, the owner too),${zone ? `
   "statusCity": whose clock the newest status line here shows (the app can't place its scene): a city or person in OWNER'S CLOCK, "owner" for the owner's own, another city as { "city": in English, "tz" }, or "" when the messages don't say,` : ''}
   "scenes": [{ "id", "at": its source message number, "quote": exact words from that message or archive section, "date": "MM-DD", "time": "HH:MM" or "", "summary": one short line, "place": the scene's place, or "", "city": its city, or "", "with": [people physically there with the owner; otherwise []] }],
-  "situations": [{ "id": a short tag, "what", "state", "known", "open", "eta": an order's expected "MM-DD", else "" }],
+  "situations": [{ "id": a short tag, "what", "state", "where", "when", "known", "open" }],
   "records": [{ "type": "contact" | "text" | "call" | "photo" | "note" | "search" | "calendar" | "post" | "profile" | "mail" | "diary" | "visit" | "voice"${lifeTypes},
     "at": its message number, "scene": its scene id, "said": exact words, "situations": [situation ids] or [],${life ? ' "already": a LIFE NOW id or "",' : ''} and the fields of its type in ITEMS }],
   "everyday": [{ "date": "MM-DD", "records": [{ "type": one of the ITEMS types but "profile" and "visit", "situations": [situation ids] or [], and the fields of its type in ITEMS }] }] (one entry a day, in order)${life ? `,

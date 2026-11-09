@@ -842,7 +842,7 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     // (JSON: scenes, situations, records, everyday, then health and usual)
     const j = k => on.indexOf(`\n  "${k}": `);
     assert.ok(j('scenes') < j('situations') && j('situations') < j('records') && j('records') < j('everyday') && j('everyday') < j('health') && on.includes('\n  "usual": { "weight"'));
-    assert.ok(on.includes('"with": [people physically there with the owner; otherwise []]') && on.includes('"situations": [{ "id": a short tag, "what", "state", "known", "open", "eta": an order\'s expected "MM-DD", else "" }]'));
+    assert.ok(on.includes('"with": [people physically there with the owner; otherwise []]') && on.includes('"situations": [{ "id": a short tag, "what", "state", "where", "when", "known", "open" }]') && on.includes('A "where" or "when" left "" stays unknown on the whole phone.'));
     assert.match(on, /"at": its message number, "scene": its scene id, "said": exact words, "situations": \[situation ids\] or \[\], "already": a LIFE NOW id or "",/);
     assert.match(on, /"everyday": \[\{ "date": "MM-DD", "records": \[\{ "type": one of the ITEMS types but "profile" and "visit", "situations": \[situation ids\] or \[\], and the fields of its type in ITEMS \}\] \}\] \(one entry a day, in order\)/);
     assert.match(on, /"type": "contact" \| "text" \| "call" \| "photo" \| "note" \| "search" \| "calendar" \| "post" \| "profile" \| "mail" \| "diary" \| "visit" \| "voice" \| "alarm" \| "timer" \| "file"/);
@@ -1390,7 +1390,7 @@ test('"situations" and each record\'s "situation" are the model\'s own notes: re
     const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'I sent you a scarf')]);
     c.p.now = '10-26 18:00'; c.p.year = 2026;
     await run(c.m, { now: '10-26 22:00', scenes: [{ id: 'scarf', at: 2, quote: 'I sent you a scarf', date: '10-26', time: '20:00', summary: 'scarf', place: '', city: '', with: [] }],
-        situations: [{ id: 'sc1', what: 'the scarf Ren sent', state: 'sent', known: 'I sent you a scarf', open: 'when it comes', eta: '' }],
+        situations: [{ id: 'sc1', what: 'the scarf Ren sent', state: 'sent', where: '', when: '', known: 'I sent you a scarf', open: 'when it comes' }],
         records: [{ type: 'text', at: 2, scene: 'scarf', said: 'I sent you a scarf', situations: ['sc1'], with: 'Lio', messages: [{ from: 'me', text: 'can\'t wait!!', time: '10-26 20:10' }] }],
         everyday: [{ date: '10-26', records: [{ type: 'search', q: 'parcel tracking', time: '10-26 21:00', situations: ['sc1'] }] }] });
     assert.deepEqual(c.p.searches.map(x => x.q), ['parcel tracking']);
