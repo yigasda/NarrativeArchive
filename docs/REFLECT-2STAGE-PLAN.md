@@ -105,7 +105,7 @@
     - 통째로 새로 쓰기 전 지시문(5aaad62)과 규칙을 하나씩 대조해서 빠진 것을 되살림:
       · YOU GET의 OWNER DOESN'T KNOW "(never on the phone as known)" (PROMPT-RULES 4번 규칙)
       · ORDERS AND TICKETS "a record about one keeps its item, dates and status"
-      · 메모 "full personal content, never a summary", 음성 메모 "full personal content … in the archive and chat"
+      · 음성 메모 "in the archive and chat" (메모 · 음성의 "full personal content"는 되살렸다가 뺌: 다른 줄이 받쳐 줌, 소망 결정)
       · 일기 "from the day the story shows or, on a day it doesn't, from their life"
       · EVERYDAY 1번 "Late texts agree with screen time and sleep / a late night"
       · 복구로 돌아온 회차도 번역(koRun)

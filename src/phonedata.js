@@ -400,11 +400,11 @@ STEP 5 · EACH APP
 - Text: one record is one exchange, in the tone of that relationship; replies may be late or missing.
 - Call, photo: what the owner would really do or shoot, in their eye.
 - Search: what they would type. About a situation: only words in its "known".
-- Note: full personal content, never a summary, in the owner's form, length, shorthand, spelling and languages.
+- Note: the owner's form, length, shorthand, spelling and languages.
 - Mail: whatever would really land in their inbox from their life, accounts, hobbies and habits.
 - Calendar: fixed commitments only. Post: only if they post.${life ? ' Alarm, file: change with their life.' : ''}
 - Diary: their experience and feelings at natural length, from the day the story shows or, on a day it doesn't, from their life; never a list of events or a summary.
-- Voice memo: full personal content, spoken, not written: the way they talk in the archive and chat, with pauses (…), restarts and half sentences, at a moment alone (after a fight, on the way somewhere, late at night). 20 to 90 seconds; "sec" to fit; "place" where they were. Never the diary told again.${life ? `
+- Voice memo: spoken, not written: the way they talk in the archive and chat, with pauses (…), restarts and half sentences, at a moment alone (after a fight, on the way somewhere, late at night). 20 to 90 seconds; "sec" to fit; "place" where they were. Never the diary told again.${life ? `
 
 HEALTH
 1. One row for each day reached and each LIFE NOW day newly shown. Today's row always, with totals so far (steps, workouts, coffee, water, "screen").
