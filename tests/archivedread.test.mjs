@@ -1483,9 +1483,11 @@ test('fillKo: each line goes with who says it to whom, and the voice table, no e
     assert.equal(tr.dropVoice(v, 9), null);
     // 뽑기: the user asks about someone (here one they deleted, and one they wrote by hand); what is found takes the row
     v.koVoice.push({ who: 'Ivo', style: '내가 쓴 말투', by: 'user' });
-    K.voices = JSON.stringify({ people: [{ who: 'Mother', style: '반말, 다정하게', evidence: ['Call me'] }, { who: 'Ivo', style: '', evidence: [] }] });
+    K.voices = JSON.stringify({ people: [{ who: 'Mother', style: '반말, 다정하게', label: '아주 길게 늘어놓은 라벨이라서 스무 자를 넘는 것', evidence: ['Call me'] }, { who: 'Ivo', style: '', evidence: [] }] });
     assert.deepEqual(await tr.pickVoices({ phones: {} }, 'Oscar', v, ['Mother', 'Ivo']), { found: ['Mother'], missing: ['Ivo'] });
     assert.match(K.voiceCalls.at(-1).input, /\[WHO\]\n- Mother\n- Ivo/);
     assert.deepEqual(v.koVoice.map(r => `${r.who}:${r.style}`), ['Oscar:엄마한테도 반말, 퉁명스럽게', 'Ivo:내가 쓴 말투', 'Mother:반말, 다정하게']);
     assert.deepEqual(v.koVoiceAsked, ['Ivo']);
+    // (a label over 20 characters is not a label: left out, not cut)
+    assert.equal(v.koVoice.find(r => r.who === 'Mother').label, undefined);
 });

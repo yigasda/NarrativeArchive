@@ -78,7 +78,7 @@ async function askVoices(m, owner, p, names) {
     const wanted = new Map(names.map(n => [n.toLowerCase(), n])), seen = new Set();
     return (Array.isArray(got.people) ? got.people : []).filter(v => v && wanted.has(whoKey(v)) && !seen.has(whoKey(v)) && String(v.style || '').trim()
         && (Array.isArray(v.evidence) ? v.evidence : []).some(e => String(e || '').trim()) && seen.add(whoKey(v)))
-        .map(v => ({ who: wanted.get(whoKey(v)), style: String(v.style).trim().slice(0, 300), ...(String(v.label || '').trim() ? { label: String(v.label).trim().slice(0, 40) } : {}), evidence: v.evidence.map(e => String(e).trim()).filter(Boolean).slice(0, 2).map(e => e.slice(0, 160)), by: 'model' }));
+        .map(v => ({ who: wanted.get(whoKey(v)), style: String(v.style).trim().slice(0, 300), ...(String(v.label || '').trim() && String(v.label).trim().length <= 20 ? { label: String(v.label).trim() } : {}), evidence: v.evidence.map(e => String(e).trim()).filter(Boolean).slice(0, 2).map(e => e.slice(0, 160)), by: 'model' }));
 }
 // before a translation: who texts and has no row yet; the rows added. One the story doesn't show isn't asked again; nor
 // one whose row the user deletes (dropVoice)
