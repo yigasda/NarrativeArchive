@@ -1491,7 +1491,7 @@ async function makePhone0(m, owner, { update = false, apps = null } = {}) {
     const old = update ? m.phones?.[key] : null;
     const part = apps && m.phones?.[key] ? apps.flatMap(a => REMAKE[a] || []) : null;
     const binding=structuredClone(m.phones?.[key]?.financeProfile || m.phoneProfiles?.[key]);
-    const lore = await loreFor(m, owner), profile = await ownerProfileBlock(ctx(), binding, owner);
+    const lore = await loreFor(m, owner, binding?.type === 'lore' ? binding : null), profile = await ownerProfileBlock(ctx(), binding, owner);
     // a phone made for the first time (no reading of where everyone is): that reading first, so its OWNER'S CLOCK has the
     // hours and the time choices and its check knows the places, as a reflection's does (and PEOPLE AROUND goes along):
     // the one the user checked in 위치 정보 (preparePhone), else read now; its year too, from the start
@@ -1989,7 +1989,7 @@ async function updatePhone(m, owner) {
         // (the section just before only, its end when long: the story's people and state come in PEOPLE AROUND and STORY NOW)
         if (background.length) { const t = background.at(-1).text; before.push(t.length > BEFORE_MAX ? t.slice(-BEFORE_MAX) : t); }
         const events = Object.entries(s.events).slice(-15).map(([id, e]) => `- ${id}: ${e.summary}${e.at === null || e.at === undefined ? '' : ` (#${e.at})`}`).join('\n');
-        const world = worldText(m), lore = await loreFor(m, owner), profile = await ownerProfileBlock(ctx(), p.financeProfile, owner, { money: !!(p.money || p.investment) });
+        const world = worldText(m), lore = await loreFor(m, owner, p.financeProfile?.type === 'lore' ? p.financeProfile : null), profile = await ownerProfileBlock(ctx(), p.financeProfile, owner, { money: !!(p.money || p.investment) });
         if (p.money) migrateBank(m, p);
         const money = moneyNow(p), invest = investNow(m, p), life = lifeNow(p);
         // a phone with money apps reads in two steps: core (marks the events money touches), then money for those
@@ -2768,7 +2768,7 @@ export async function readWhere(m, p, opts = {}) {
     if (p.making) p.asked = r.people;
     // a profile that is a lorebook entry is the one thing the cards and the persona don't already hold
     const lore = binding?.type === 'lore' ? await resolvePhoneProfile(ctx(), binding).catch(() => null) : null;
-    const book = await loreFor(m, p.owner).catch(() => '');
+    const book = await loreFor(m, p.owner, lore ? binding : null).catch(() => '');
     const input = [...r.blocks.slice(0, -3), lore ? `[OWNER PROFILE — chosen by the user for ${p.owner}]\n${lore.text}` : '', book ? `[LOREBOOK]\n${book}` : '', ...r.blocks.slice(-3)].filter(Boolean).join('\n\n');
     const raw = jsonOf(await askDraft(input, { force: true, system: AI_SYS_WHERE, maxTokens: 4500, effort: 'low' }));
     // the people closest to the owner, as the cards, the persona, the profile and the lorebook tell them (반영 reads these,
