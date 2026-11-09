@@ -2,7 +2,7 @@
 // node docs/mockups/phone-map/osm/osmmap.js <data.json> <out.html> <lat> <lon> <metersAcross> [labels.json]
 const fs = require('fs');
 const [, , src, out, lat0s, lon0s, spanS, labelsSrc] = process.argv;
-const lat0 = +lat0s, lon0 = +lon0s, FX = process.env.FX || '';   // FX: A 큰 건물 색 · B 땅 쓰임 색 · C 동네마다 축척 · D 건물 그림자
+const lat0 = +lat0s, lon0 = +lon0s, FX = process.env.FX ?? 'BCD';   // FX: A 큰 건물 색 · B 땅 쓰임 색 · C 동네마다 축척 · D 건물 그림자
 const C = { land: '#f3f0ea', built: '#ebe7df', park: '#d4e8c9', forest: '#c3dcb5', water: '#b6d4ef', road: '#ffffff', edge: '#dad4c9', major: '#fde7a3', majorEdge: '#e3c77c',
   rail: '#a9a49b', label: '#6f7681', plaza: '#efe6d2', bld: '#e0dbd0', foot: '#e6e1d7',
   mark: '#d5cab6', markStation: '#d3d4d6', resi: '#f0ece5', shop: '#f3e3d6', works: '#e3e3df', railyard: '#e4e2dc', school: '#f3e9c9', shadow: '#bdb4a4' };
@@ -19,7 +19,7 @@ const PALS = {
     label: '#6a5f50', foot: '#e3d8c3', resi: '#efe6d4', shop: '#f0dcc4', works: '#e2dccf', railyard: '#e3dccd', school: '#efe1b8', plaza: '#ebdfc8', mark: '#d2c09f' },
   terra: { land: '#f1ebe3', built: '#ebe2d8', bld: '#dcc4b2', shadow: '#bea08a', edge: '#d5c7b9', park: '#c8ddb4', forest: '#b3cf9c', water: '#a5c8e6', major: '#f8d58a', majorEdge: '#d9b064',
     label: '#66594f', foot: '#e2d7cc', resi: '#eee6dc', shop: '#f0dccd', works: '#e3ded8', railyard: '#e4ded7', school: '#efe2c0', plaza: '#ebe0d3', mark: '#d0b19b' } };
-if (PALS[process.env.PAL]) Object.assign(C, PALS[process.env.PAL]);
+if (PALS[process.env.PAL ?? 'neutral']) Object.assign(C, PALS[process.env.PAL ?? 'neutral']);   // 기본: 2 중립 밝은 톤 + B·C·D
 const d = JSON.parse(require('fs').readFileSync(src, 'utf8'));
 const mx = 111320 * Math.cos(lat0 * Math.PI / 180), my = 110540;
 // C: dense old towns closer, loose estates and parks further out — buildings per km² round the centre

@@ -1,5 +1,5 @@
 const { chromium } = require('playwright'); const fs = require('fs');
-(async () => { const d = process.argv[2], L = JSON.parse(fs.readFileSync(d + '/list.json')); const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 470, height: 900 } });
+(async () => { const d = process.argv[2], L = JSON.parse(fs.readFileSync(d + '/list.json')); const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 470, height: 900 }, deviceScaleFactor: 2 });
   for (const n of L) { await p.goto('file://' + d + '/' + n + '.html'); await p.addStyleTag({ content: '.ph{border:0;border-radius:0}' }); await p.locator('svg').screenshot({ path: d + '/' + n + '.png', clip: undefined }); }
   const sheet = `<!doctype html><meta charset=utf-8><body style="margin:0;padding:16px;background:#d9dce2;font:13px -apple-system,sans-serif;width:${5*406+16}px"><div style="display:grid;grid-template-columns:repeat(5,390px);gap:16px">` + L.map(n => `<div><b>${n}</b><div style="height:500px;overflow:hidden;border-radius:14px;margin-top:4px"><img src="${n}.png" width=390></div></div>`).join('') + '</div>';
   fs.writeFileSync(d + '/sheet.html', sheet); await p.setViewportSize({ width: 2080, height: 1000 }); await p.goto('file://' + d + '/sheet.html'); await p.screenshot({ path: d + '/sheet.png', fullPage: true }); await b.close(); })();
