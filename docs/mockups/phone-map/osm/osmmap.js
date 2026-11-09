@@ -100,7 +100,7 @@ const PRETTY = process.env.STYLE === 'pretty';
 // STYLE=gmap: a busy street map's manner — cream ground, land uses in their own colours, hardly any houses, white streets with no rim, coloured place names with their icons, street names along the streets
 const GMAP = process.env.STYLE === 'gmap', COLLECT = PRETTY || GMAP, STREETS = [], FOOT = [];
 if (GMAP) Object.assign(C, { land: '#f3e7d6', built: '#f1e5d4', resi: '#f3e7d6', shop: '#f1dcd2', works: '#e3e1dd', railyard: '#e2dfda', school: '#ebd5a8', park: '#c2e0a3', forest: '#b2d796', water: '#a4cdf2',
-  bld: '#dedbd6', edge: '#dccfbb', road: '#ffffff', major: '#fdd98a', majorEdge: '#e9b85a', plaza: '#efe4d3', foot: '#cfe6ba' });
+  bld: '#dedbd6', edge: '#dccfbb', road: '#ffffff', major: '#fdd98a', majorEdge: '#e9b85a', plaza: '#efe4d3', foot: '#d2e9bd' });
 if (GMAP) Object.assign(COVER, { grass: '#d3ecc3', allot: '#d6ebc5', orchard: '#cfe8bc', vine: '#dde8c0', grave: '#d4e3cb', scrub: '#cfe3b8', farm: '#f1ecd9' });
 const { ICON, glyph, pick } = require('./icons.js');
 const COVER0 = null;
@@ -135,7 +135,7 @@ for (const e of d.elements) {
   if (COLLECT && e.type === 'node') { const ic = pick(t); if (ic && (t.name || t.wikidata)) POIS.push({ ic, at: P(e.lat, e.lon), pr: (t.wikidata ? 2.5 : 0) + 1, name: t.name }); }
   // gmap: parks only where they matter — courtyard lawns, flowerbeds and small gardens go
   if (GMAP && e.type === 'way' && e.geometry && (t.leisure && /park|garden/.test(t.leisure) || /^(grass|flowerbed|village_green|greenery)$/.test(t.landuse || '') || t.natural === 'grassland') && pxArea(pts(e.geometry)) < 2500 * k * k) continue;
-  if (t.leisure && /park|garden/.test(t.leisure)) { L.park += area(e); if (PRETTY && e.type === 'way' && e.geometry) GREENS.push(pts(e.geometry)); continue; }
+  if (t.leisure && /park|garden/.test(t.leisure)) { L.park += area(e); if (COLLECT && e.type === 'way' && e.geometry) GREENS.push(pts(e.geometry)); continue; }
   { const c = coverOf(t); if (c) { if (c === 'forest') L.forest += area(e); else LC[c] += area(e); continue; } }
   if (t.landuse && GREEN.test(t.landuse)) { L.park += area(e); continue; }
   if (t.landuse && BUILT.test(t.landuse)) {
@@ -154,7 +154,7 @@ for (const e of d.elements) {
     if (/^(primary|trunk|motorway)(_link)?$/.test(h)) L.major += dl;
     else if (/^(secondary|tertiary)(_link)?$/.test(h)) L.mid += dl;
     else if (/^(residential|unclassified|living_street|pedestrian|busway)$/.test(h) || h === 'service' && (!COLLECT || t.name)) L.minor += dl;
-    else if (/^(footway|path|cycleway|track)$/.test(h) && !PRETTY) { if (GMAP) { const ps = pts(e.geometry); FOOT.push({ dl, len: ps.reduce((a, q, i) => i ? a + Math.hypot(q[0] - ps[i - 1][0], q[1] - ps[i - 1][1]) : 0, 0) }); } else L.foot += dl; }
+    else if (/^(footway|path|cycleway|track)$/.test(h) && !PRETTY) { if (GMAP) { const ps = pts(e.geometry); FOOT.push({ dl, ps }); } else L.foot += dl; }
     if (GMAP && t.name && /^(primary|secondary|tertiary|residential|unclassified|living_street|pedestrian)$/.test(h)) STREETS.push({ name: t.name, ps: pts(e.geometry), rank: /^(primary|secondary)$/.test(h) ? 3 : h === 'tertiary' ? 2 : 1 });
   } else if (rw === 'rail' || rw === 'light_rail') {
     // RAIL=old keeps every track dashed; by default the yard tracks (sidings, spurs) vanish into the yard's face and the main lines are one thin line
@@ -197,11 +197,19 @@ if (GMAP) svg = `<rect width="${W}" height="${H}" fill="${C.land}"/>`
   + fill(L.built, C.built) + fill(L.resi, C.resi) + fill(L.shop, C.shop) + fill(L.works, C.works) + fill(L.railyard, C.railyard) + fill(L.school, C.school)
   + ['farm', 'grass', 'allot', 'orchard', 'vine', 'grave', 'scrub', 'wet', 'sand', 'rock'].map(k2 => fill(LC[k2], COVER[k2])).join('') + fill(L.park, C.park) + fill(L.forest, C.forest) + fill(L.plaza, C.plaza) + fill(L.water, C.water)
   + fill(L.bld, C.bld) + fill(L.station, '#e2dfda')
-  + (L.park + L.forest ? `<defs><clipPath id="gp"><path d="${L.park + L.forest}"/></clipPath></defs><g clip-path="url(#gp)">${st(FOOT.filter(q => q.len > 160 * k).sort((a, b) => b.len - a.len).slice(0, 4).map(q => q.dl).join(''), C.foot, 0.9)}</g>` : '')
+  // park paths as faces, not lines: the few long ones as a soft band one shade lighter than the grass, no rim
+  + (L.park + L.forest ? `<defs><clipPath id="gp"><path d="${L.park + L.forest}"/></clipPath></defs><g clip-path="url(#gp)">${st(parkPaths(), C.foot, Math.max(3.6, mpx(4)))}</g>` : '')
   + st(L.minor, C.edge, Math.max(5.5, mpx(8)) + 1.6) + st(L.mid, C.edge, Math.max(8, mpx(12)) + 1.8)
   + st(L.minor, C.road, Math.max(5.5, mpx(8))) + st(L.mid, C.road, Math.max(8, mpx(12)))
   + st(L.rail, '#b8b6b2', 2.2) + st(L.rail, '#f4efe6', 0.9, ' stroke-dasharray="6 5"')
   + st(L.major, C.majorEdge, Math.max(10, mpx(16)) + 1.8) + st(L.major, C.major, Math.max(10, mpx(16)));
+// the park paths worth a soft band: measured only where they run inside a park and on screen, the longest few
+function parkPaths() {
+  const inside = (x, y, ps) => { let c = false; for (let i = 0, j = ps.length - 1; i < ps.length; j = i++) { const [a, b] = ps[i], [u, v] = ps[j]; if ((b > y) !== (v > y) && x < (u - a) * (y - b) / (v - b) + a) c = !c; } return c; };
+  const big = GREENS.filter(g => pxArea(g) > 2500 * k * k), inPark = ([x, y]) => x > 0 && x < W && y > 0 && y < 490 && big.some(g => inside(x, y, g));
+  return FOOT.map(q => ({ dl: q.dl, len: q.ps.reduce((a, pt, i) => i && inPark(pt) && inPark(q.ps[i - 1]) ? a + Math.hypot(pt[0] - q.ps[i - 1][0], pt[1] - q.ps[i - 1][1]) : a, 0) }))
+    .filter(q => q.len > 50 * k).sort((a, b) => b.len - a.len).slice(0, 10).map(q => q.dl).join('');
+}
 // trees in the parks, the station box, the icons — the old kit's pieces on the real shapes
 function prettyTop() {
   let o = '', seed = 7; const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
