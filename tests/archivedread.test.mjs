@@ -1314,9 +1314,9 @@ test('a story record\'s "said" and "made" are the answer\'s only: what the model
     assert.deepEqual(c.p.notes.map(x => x.title), ['Boiler']);
     assert.ok([...c.p.searches, ...c.p.notes].every(x => !('said' in x) && !Array.isArray(x.made)));
     assert.equal(c.p.syncLast.unsaid, undefined);
-    assert.match(T.sys, /\nDO NOT CONTINUE THE STORY\nYou are not the role-play author\. Your job is to show the owner's phone within the story, not to write what happens next\./);
+    assert.match(T.sys, /\nDO NOT CONTINUE THE STORY\nYou are NOT a role-play writer\. Your problem is that you constantly try to get ahead of the story and continue it\./);
     assert.ok(T.sys.indexOf('\nCLOCK FIRST\n') < T.sys.indexOf('\nDO NOT CONTINUE THE STORY\n') && T.sys.indexOf('\nDO NOT CONTINUE THE STORY\n') < T.sys.indexOf('\nSCENES AND RECORDS\n') && !T.sys.includes('Tell apart what you may make up'));
-    assert.match(T.sys, /- The story says a parcel is on its way → having it arrive invents what happens next\./);
+    assert.match(T.sys, /- The story only mentions a parcel being shipped → making it arrive is acting as the author and inventing the future\./);
     assert.match(T.sys, /- Phone data and "everyday" are not story facts: an expected date has not happened yet\./);
 });
 
