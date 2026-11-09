@@ -13,7 +13,7 @@ if (process.env.DEEP) Object.assign(C, { land: '#efe9df', built: '#e6e0d5', park
 const PALS = {
   cool: { land: '#eceef0', built: '#e6e9ec', bld: '#d5dae0', shadow: '#b8bfc8', edge: '#cfd4da', park: '#cbe3c4', forest: '#b7d6ae', water: '#a7c8ec', major: '#f9dc8a', majorEdge: '#dfbe6a',
     label: '#58606b', foot: '#dde1e5', resi: '#e9ecef', shop: '#efe4e0', works: '#dee1e5', railyard: '#e0e3e6', school: '#efe8cf', plaza: '#e8eaec', mark: '#c9d0d8' },
-  neutral: { land: '#f5f5f3', built: '#efefec', bld: '#dededa', shadow: '#c4c4be', edge: '#d6d6d1', park: '#c3e5b6', forest: '#aed8a0', water: '#9fcaf2', major: '#fdd77a', majorEdge: '#e2b860',
+  neutral: { land: '#f5f5f3', built: '#efefec', bld: '#dededa', shadow: '#c4c4be', edge: '#d6d6d1', park: '#c3e5b6', forest: '#aed8a0', water: '#9fcaf2', major: '#fce8b4', majorEdge: '#e9d298',
     label: '#5f646c', foot: '#e4e4e0', resi: '#f1f1ee', shop: '#f5e6dc', works: '#e6e6e3', railyard: '#e7e7e4', school: '#f3ebcc', plaza: '#ececea', mark: '#d2d2cc' },
   paper: { land: '#f2ead9', built: '#ece2cf', bld: '#ddcfb5', shadow: '#c2b296', edge: '#d6c9b0', park: '#cddcb0', forest: '#b9cd98', water: '#a9c7d9', major: '#f4cf7f', majorEdge: '#d4ab5a',
     label: '#6a5f50', foot: '#e3d8c3', resi: '#efe6d4', shop: '#f0dcc4', works: '#e2dccf', railyard: '#e3dccd', school: '#efe1b8', plaza: '#ebdfc8', mark: '#d2c09f' },
