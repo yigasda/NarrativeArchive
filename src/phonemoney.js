@@ -569,6 +569,8 @@ function cardArt(p, c) {
 const PASS = { flight: ['#2c4a80', 'plane', '탑승'], train: ['#8e3a33', 'train', '열차'], hotel: ['#efe2cf', 'bed', '체크인'], concert: ['#26304f', 'ticket', '입장'],
     movie: ['#1d1d22', 'film', '상영'], match: ['#2f6a3a', 'ball', '킥오프'], museum: ['#f3ede4', 'museum', '관람'], bus: ['#2f6f8f', 'bus', '출발'], ferry: ['#24505c', 'ship', '출항'], theater: ['#6a2a3e', 'mask', '개막'], park: ['#8a5a2e', 'wheel', '개장'], membership: ['#2e5e57', 'card', '유효'], other: ['#3d4a66', 'ticket', '시간'] };
 const LIGHT = new Set(['hotel', 'museum']);
+// a tear-off ticket gets the notches; a booking (the hotel) or a card (the membership) does not
+const NOTCHED = new Set(['flight', 'train', 'bus', 'ferry', 'concert', 'theater', 'movie', 'match', 'museum', 'park', 'other']);
 // one accent per kind for the light and the single bright touch in its drawing
 const PASS_ACC = { flight: '#a9c4f0', train: '#f2b6a6', bus: '#a8e0f2', ferry: '#9fe0dc', hotel: '#8a5a2a', concert: '#c9b8ff', theater: '#f2b8c8', movie: '#f0c96a', match: '#bfe6a0', museum: '#7a5a3a', park: '#ffd28a', membership: '#a8dccc', other: '#c3cde0' };
 Object.assign(AX, { film: 'M4 5h16v14H4zM8 5v14M16 5v14M4 9h4M4 15h4M16 9h4M16 15h4', ball: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7l4 3-1.5 5h-5L8 10z', museum: 'M3 9l9-5 9 5M5 9v9M9 9v9M15 9v9M19 9v9M3 20h18', bus: 'M6 4h12a2 2 0 0 1 2 2v10H4V6a2 2 0 0 1 2-2zM4 11h16M7 19v-3M17 19v-3M8 14h.01M16 14h.01',
@@ -609,7 +611,7 @@ function passArt(p, x, full) {
     // the open ticket with its QR stays plain: the drawing is only for the wallet
     return `<span class="ax_ps ax_ps_${k} ${light ? 'cream' : ''}" style="--psbg: ${bg}"><span class="ax_pstop">${art ? `<svg class="ax_psmo" viewBox="0 0 340 200" preserveAspectRatio="xMaxYMid slice" aria-hidden="true">${art}</svg>` : ''}
       <span class="ax_psh"><span class="ax_pslg">${ax(icon, 16, 'currentColor')}</span><span class="ax_psn">${esc(passBy(x).toUpperCase())}</span><span class="ax_pshr">${k === 'membership' && out ? '까지' : lab}<b class="cg_num">${esc(k === 'membership' && out ? fmtDate(p, out, true) : x.time ? clockOf(p, x.time) : date || '')}</b></span></span>
-      ${mid}${k === 'membership' ? '' : '<span class="ax_psnt"></span>'}<span class="ax_psfl">${fields}</span></span>
+      ${mid}${NOTCHED.has(k) ? '<span class="ax_psnt"></span>' : ''}<span class="ax_psfl">${fields}</span></span>
       ${full ? `<span class="ax_psperf"></span>${x.status ? `<span class="ax_psst">${esc(x.status)}</span>` : ''}<span class="ax_psqr">${qr(x.id)}</span>` : ''}</span>`;
 }
 // a QR-looking square (drawn, not a code)
