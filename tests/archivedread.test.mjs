@@ -1416,29 +1416,31 @@ test('"situations" and each record\'s "situation" are the model\'s own notes: re
 
 // ---- the phone's Korean (phonetr.js): its own instructions, each line with its app and who says it to whom, the chat's
 // Korean so far as examples, and the voice table the translator adds to (the user's own rows win)
-test('fillKo: each line goes with who says it to whom, and the voice table, no examples from the Korean already there; a decided person is kept, an own row stays', async () => {
+test('fillKo: each line goes with who says it to whom, and the voice table, no examples from the Korean already there; voices come from the story, an own row stays', async () => {
     const dataURL = encoded(src.replace(/from '([^']+)'/g, (all, k) => `from '${map[k] || k}'`));
     const trSrc = await readFile(new URL('../src/phonetr.js', import.meta.url), 'utf8');
     const trMap = { './phonedata.js': dataURL, './phoneparse.js': href('phoneparse.js'),
         './translate.js': encoded(`export const glossaryEntries=()=>[];export const glossaryIn=()=>[];export const askTranslator=async(input,o)=>{const K=globalThis.__ko;K.calls.push({input,system:o.system});return typeof K.answer==='function'?K.answer(input):K.answer;};`),
-        './core.js': encoded(`export const getMeta=()=>({});export const hasChat=()=>true;`) };
+        './core.js': encoded(`export const getMeta=()=>({});export const hasChat=()=>true;`),
+        './ai.js': encoded(`export const askDraft=async(input,o)=>{const K=globalThis.__ko;K.voiceCalls.push({input,system:o.system});return typeof K.voices==='function'?K.voices(input):K.voices;};`) };
     const tr = await import(encoded(trSrc.replace(/from '([^']+)'/g, (all, k) => `from '${trMap[k] || k}'`)));
-    const K = (globalThis.__ko = { calls: [] });
+    const K = (globalThis.__ko = { calls: [], voiceCalls: [] });
     const p = { owner: 'Oscar', threads: [{ with: 'Mother', messages: [{ from: 'me', text: 'hi Mom', ko: '엄마 안녕', time: '11-08 10:00' }, { from: 'me', text: 'Throw it out', time: '11-08 10:05' }, { from: 'Mother', text: 'Why so cold?', time: '11-08 10:06' }] }],
         photos: [], notes: [{ title: 'Checklist', text: 'pack\nboiler' }], searches: [], events: [], koVoice: [{ who: 'Oscar', style: '엄마한테도 반말, 퉁명스럽게' }, { who: 'Oscar', style: '~함', by: 'model' }], around: { people: [{ name: 'Mother', about: "Oscar's mother in Frankfurt; they talk rarely" }] } };
-    K.answer = JSON.stringify({ voices: [{ who: 'Oscar', style: '존댓말' }, { who: 'Mother', style: '반말, 다정하게' }, { who: 'GitHub', style: '시스템 알림' }],
+    K.answer = JSON.stringify({
         lines: [{ n: 1, ko: '버려' }, { n: 2, ko: '왜 그렇게 차갑니?' }, { n: 3, ko: '체크리스트' }, { n: 4, ko: '짐 싸기\n보일러' }] });
     assert.equal(await tr.fillKo(p), 4);
     const { input, system } = K.calls[0];
-    assert.ok(system.startsWith('GOAL\nTranslate what a character\'s phone shows into natural Korean') && system.includes('so that all of it reads as one: each person sounds the same wherever they appear.') && system.includes('\nVOICE\n- Texts and comments: each person in the same voice they have everywhere else, as VOICES shows; without it, as the original and who they are to each other (PEOPLE AROUND) suggest.\n- Everything else (the owner\'s own notes, diary, calendar and the like, mails, posts) reads as its original does. VOICES is not for it.\n- Lines that read alike in the original read alike in Korean.\n\nLINES\n') && !system.includes('To "self"') && system.includes('"voices"'));
+    assert.ok(system.startsWith('GOAL\nTranslate what a character\'s phone shows into natural Korean') && system.includes('so that all of it reads as one: each person sounds the same wherever they appear.') && system.includes('\nVOICE\n- Texts and comments: each person in the same voice they have everywhere else, as VOICES shows; without it, as the original and who they are to each other (PEOPLE AROUND) suggest.\n- Everything else (the owner\'s own notes, diary, calendar and the like, mails, posts) reads as its original does. VOICES is not for it.\n- Lines that read alike in the original read alike in Korean.\n\nLINES\n') && !system.includes('To "self"'));
     assert.match(input, /\[OWNER\]\nOscar\n\n\[PEOPLE AROUND\]\n- Mother: Oscar's mother in Frankfurt; they talk rarely\n\n\[VOICES\]/);
     assert.match(input, /\[VOICES\]\n- Oscar: 엄마한테도 반말, 퉁명스럽게/);
     assert.ok(!input.includes('[EXAMPLES]') && !input.includes('엄마 안녕') && !system.includes('EXAMPLES'));
     assert.match(input, /1: \[text · Oscar → Mother\] "Throw it out"\n2: \[text · Mother → Oscar\] "Why so cold\?"\n3: \[note title · Oscar → self\] "Checklist"\n4: \[note · Oscar → self\] "pack\\nboiler"/);
     assert.deepEqual(p.threads[0].messages.map(x => x.ko), ['엄마 안녕', '버려', '왜 그렇게 차갑니?']);
     assert.deepEqual([p.notes[0].kt, p.notes[0].ko], ['체크리스트', '짐 싸기\n보일러']);
-    // (the user's row stays; the pair it decided is added)
-    assert.deepEqual(p.koVoice.map(v => `${v.who}:${v.style}`), ['Oscar:엄마한테도 반말, 퉁명스럽게', 'Mother:반말, 다정하게']);
+    // (the translator decides no voice any more: the user's row stays, the old automatic one is gone)
+    assert.deepEqual(p.koVoice.map(v => `${v.who}:${v.style}`), ['Oscar:엄마한테도 반말, 퉁명스럽게']);
+    assert.ok(!system.includes('"voices"'));
     // nothing left: no request
     assert.equal(await tr.fillKo(p), 0);
     assert.equal(K.calls.length, 1);
@@ -1458,4 +1460,17 @@ test('fillKo: each line goes with who says it to whom, and the voice table, no e
     K.answer = () => { throw new Error('quota'); };
     await assert.rejects(tr.fillKo(q), /quota/);
     assert.equal(q.threads[0].messages[0].ko, undefined);
+    // how a person texts, from the story: only who texts and has no row; a row needs the story's words; one the story
+    // doesn't show isn't asked again
+    const v = { owner: 'Oscar', koVoiceV: 3, koVoice: [{ who: 'Oscar', style: '엄마한테도 반말, 퉁명스럽게' }], around: p.around, photos: [], notes: [], searches: [], events: [],
+        threads: [{ with: 'Mother', messages: [{ from: 'me', text: 'later', time: '11-08 12:00' }, { from: 'Mother', text: 'Call me', time: '11-08 12:01' }] }, { with: 'Ivo', messages: [{ from: 'Ivo', text: 'you up?', time: '11-08 12:02' }] }] };
+    assert.deepEqual(tr.voicesWanted(v), ['Mother', 'Ivo']);
+    K.voices = JSON.stringify({ people: [{ who: 'Mother', style: '아들한테 반말, 걱정 많은 말투', evidence: ['Why so cold?'] }, { who: 'Ivo', style: '반말', evidence: [] }, { who: 'GitHub', style: 'x', evidence: ['y'] }] });
+    assert.equal(await tr.learnVoices({ phones: {} }, 'Oscar', v), 1);
+    const vc = K.voiceCalls[0];
+    assert.ok(vc.system.startsWith('GOAL\nWork out how each person in WHO writes to the people they text, as the story shows it') && vc.system.includes('"evidence"'));
+    assert.match(vc.input, /\[PEOPLE AROUND\]\n- Mother: Oscar's mother in Frankfurt; they talk rarely\n\n\[WHO\]\n- Mother\n- Ivo/);
+    assert.deepEqual(v.koVoice.map(r => [r.who, r.style, r.by, r.evidence]), [['Oscar', '엄마한테도 반말, 퉁명스럽게', undefined, undefined], ['Mother', '아들한테 반말, 걱정 많은 말투', 'model', ['Why so cold?']]]);
+    assert.deepEqual(tr.voicesWanted(v), []);
+    assert.deepEqual(v.koVoiceAsked, ['Ivo']);
 });

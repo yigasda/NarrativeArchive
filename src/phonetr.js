@@ -4,7 +4,8 @@
 // voice table (p.koVoice: how each person sounds in Korean), so every translation reads alike; the translator adds a
 // person it decides, the user can change one
 
-import { aroundBlock, koGaps, refreshUndoAfter } from './phonedata.js';
+import { aroundBlock, koGaps, refreshUndoAfter, sideRequest } from './phonedata.js';
+import { askDraft } from './ai.js';
 import { askTranslator, glossaryEntries, glossaryIn } from './translate.js';
 import { getMeta, hasChat } from './core.js';
 import { parseJson } from './phoneparse.js';
@@ -29,9 +30,49 @@ LINES
 - Names of people and places in Korean script, the GLOSSARY spelling when given. Brand and app names as Korean users write them.
 
 JSON (one object, nothing before or after it)
-{ "voices": [{ "who", "style": a short note in Korean on how they write texts }] (each person whose texts or comments are in LINES and not in VOICES),
-  "lines": [{ "n": its number, "ko": the Korean }] }
+{ "lines": [{ "n": its number, "ko": the Korean }] }
 Every number once.`;
+
+// how a person texts, from the story itself (3.184.2~): asked once for each who texts or comments on the phone and has no
+// row yet, before the translation. With the words that show it; a person the story doesn't show stays out (and isn't asked
+// again until the table changes)
+export const AI_SYS_PHONE_VOICE = `GOAL
+Work out how each person in WHO writes to the people they text, as the story shows it, so the phone's Korean keeps their voice.
+
+YOU GET
+- ARCHIVE, RECENT CHAT, OWNER, and sometimes STORY YEAR, WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW. Nothing on the phone may show what the owner doesn't know.
+- PEOPLE AROUND (sometimes): the people in the owner's life, who they are to the owner and where things stand.
+- WHO: the people to describe.
+
+VOICE
+- For each person in WHO: how they talk to the people they text (the Korean speech level they would use, how they address them, their habits), as the story shows it, in a short note in Korean.
+- "evidence": the exact words in the story that show it. Nothing in the story shows it: "style": "" and "evidence": [].
+
+JSON (one object, nothing before or after it)
+{ "people": [{ "who", "style", "evidence": [exact words from the story] }] }`;
+
+// who texts or comments in what is to be translated and has no row in the table: [names]
+export function voicesWanted(p, { all = false } = {}) {
+    const have = new Set(voiceRows(p).map(whoKey)), asked = new Set((p.koVoiceAsked || []).map(x => String(x).toLowerCase()));
+    return [...new Set(koGaps(p, { all }).filter(g => /^(text|comment)/.test(g.app)).map(g => String(g.who).trim()).filter(Boolean))]
+        .filter(n => !have.has(n.toLowerCase()) && !asked.has(n.toLowerCase())).slice(0, 20);
+}
+// asks the story for them; the rows added. A row needs its words from the story; the rest are marked asked
+export async function learnVoices(m, owner, p, { all = false } = {}) {
+    const want = voicesWanted(p, { all });
+    if (!want.length) return 0;
+    const input = await sideRequest(m, owner, [aroundBlock(p), `[WHO]\n${want.map(n => `- ${n}`).join('\n')}`]);
+    const got = parseJson(String(await askDraft(input, { force: true, system: AI_SYS_PHONE_VOICE, maxTokens: 3000, effort: 'low' })).replace(/^[^{]*/, '').replace(/[^}]*$/, ''), { salvage: true }) || {};
+    const wanted = new Map(want.map(n => [n.toLowerCase(), n])), have = new Set(voiceRows(p).map(whoKey));
+    const rows = (Array.isArray(got.people) ? got.people : []).filter(v => v && wanted.has(whoKey(v)) && !have.has(whoKey(v)) && String(v.style || '').trim()
+        && (Array.isArray(v.evidence) ? v.evidence : []).some(e => String(e || '').trim()) && have.add(whoKey(v)))
+        .map(v => ({ who: wanted.get(whoKey(v)), style: String(v.style).trim().slice(0, 120), evidence: v.evidence.map(e => String(e).trim()).filter(Boolean).slice(0, 2).map(e => e.slice(0, 160)), by: 'model' }));
+    if (rows.length) p.koVoice = [...voiceRows(p), ...rows].slice(-80);
+    // (one the story doesn't show isn't asked again; one with a row is asked again only if that row is deleted)
+    const got1 = new Set(rows.map(r => r.who.toLowerCase()));
+    p.koVoiceAsked = [...new Set([...(p.koVoiceAsked || []), ...want.filter(n => !got1.has(n.toLowerCase()))])].slice(-200);
+    return rows.length;
+}
 
 // how many fields one go fills at most (the rest wait for the next), and how much one request carries
 export const KO_MAX = 400;
@@ -85,12 +126,6 @@ export async function fillKo(p, { max = KO_MAX, only = null } = {}) {
         i = j;
         const out = await askTranslator(inputOf(p, chunk), { system: AI_SYS_PHONE_KO, maxTokens: Math.min(16384, 1500 + size * 3) });
         const got = parseJson(String(out).replace(/^[^{]*/, '').replace(/[^}]*$/, ''), { salvage: true }) || {};
-        // a person the translator decided is kept; one the table already has (the user's own, or an earlier) stays as it is
-        // (only someone whose texts or comments are in this request: a service that mails, a calendar, a note never)
-        const have = new Set(voiceRows(p).map(whoKey)), talk = new Set(chunk.filter(g => /^(text|comment)/.test(g.app)).map(g => String(g.who).trim().toLowerCase()));
-        const fresh = (Array.isArray(got.voices) ? got.voices : []).filter(v => v && who(v) && String(v.style || '').trim() && talk.has(whoKey(v)) && !have.has(whoKey(v)) && have.add(whoKey(v)))
-            .map(v => ({ who: who(v).slice(0, 60), style: String(v.style).trim().slice(0, 120), by: 'model' }));
-        if (fresh.length) p.koVoice = [...voiceRows(p), ...fresh].slice(-80);
         for (const r of Array.isArray(got.lines) ? got.lines : []) {
             const g = chunk[Number(r?.n) - 1], ko = String(r?.ko ?? '').trim();
             if (g && ko && !String(g.x[g.k] ?? '').trim()) { g.x[g.k] = ko; n++; }

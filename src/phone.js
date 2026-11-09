@@ -30,7 +30,7 @@ import { placeNames } from './phonemapfind.js';
 import { FLAG_NAME, flagSvg } from './phoneflags.js';
 import { mapZoom } from './phonemapzoom.js';
 import { glossaryEntries, openGlossary } from './translate.js';
-import { fillKo, koAppOf, redoKo } from './phonetr.js';
+import { fillKo, koAppOf, learnVoices, redoKo } from './phonetr.js';
 // 을 / 를 after a word: by its last syllable's final consonant (a Latin ending, like SNS, reads as 를)
 const josa = w => { const c = w.charCodeAt(w.length - 1) - 0xac00; return c >= 0 && c < 11172 && c % 28 ? '을' : '를'; };
 import { confirm, esc } from './util.js';
@@ -142,6 +142,8 @@ export async function openPhone(who = null) {
         if (koBusy || !p) return;
         koBusy = true;
         try {
+            // (how the people who text sound, from the story, for anyone not in the table yet; a failure here only leaves it out)
+            try { await learnVoices(m, owner, p); } catch (err) { console.warn('[narrative-archive] voices', err); }
             const n = await fillKo(p);
             if (p.syncLast?.trFailed) delete p.syncLast.trFailed;
             if (n || loud) await saveMeta();
@@ -785,7 +787,7 @@ export async function openPhone(who = null) {
             const only = koAppOf(view);
             let n = 0;
             koBusy = true;
-            try { n = await withSpinner($b, '다시 번역 중', () => redoKo(p, only)); if (p.syncLast?.trFailed) delete p.syncLast.trFailed; await saveMeta(); }
+            try { n = await withSpinner($b, '다시 번역 중', async () => { try { await learnVoices(m, owner, p, { all: true }); } catch (err) { console.warn('[narrative-archive] voices', err); } return redoKo(p, only); }); if (p.syncLast?.trFailed) delete p.syncLast.trFailed; await saveMeta(); }
             catch (err) { toastr.warning(`다시 번역하지 못했어요 · 원래 한국어는 그대로예요 (${String(err?.message || err)})`, '캐릭터 휴대폰'); }
             finally { koBusy = false; }
             const g = globalSettings(); g.phoneKo = true; saveGlobal();
