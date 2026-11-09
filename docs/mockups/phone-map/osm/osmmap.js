@@ -111,6 +111,7 @@ const GPALS = {
     C: { land: '#f3f3f3', built: '#f3f3f3', resi: '#f3f3f3', shop: '#f3eeee', works: '#ebebeb', railyard: '#ebebeb', school: '#f1ead9', park: '#c9f0d7', forest: '#b8e7c7', water: '#a7e4ee', vine: '#e4f1c6', bld: '#e9e9e9', edge: '#dcdcdc', major: '#fdd3ae', majorEdge: '#f3b98a', plaza: '#f3f3f3' },
 };
 GPALS.AC = { ...GPALS.A, water: GPALS.C.water, major: GPALS.C.major, majorEdge: GPALS.C.majorEdge };   // A's cream with C's water and apricot main roads
+GPALS.ACa = { ...GPALS.A, water: GPALS.C.water };   // A's cream and main roads with C's water
 if (GMAP && GPALS[process.env.GPAL]) { const g = GPALS[process.env.GPAL]; Object.assign(C, g); Object.assign(COVER, { grass: g.park, allot: g.park, orchard: g.park, vine: g.vine, grave: g.park, scrub: g.forest, farm: g.school }); }   // vineyards keep their own yellow-green
 const { ICON, glyph, pick } = require('./icons.js');
 const COVER0 = null;
