@@ -1150,7 +1150,7 @@ test('life records that answer a scene ("scene" its id) go on it and the day\'s 
     assert.ok(lio.messages.every(x => x.src === 'guess' && !('onScene' in x)));
     // (they are the scene's: on its event)
     assert.ok(c.p.sync.events.bar);
-    assert.match(T.sys, /\"everyday\": \[\{ \"date\": \"MM-DD\", \"records\": \[\{ \"type\": one of the ITEMS types but \"profile\" and \"visit\", and the fields of its type in ITEMS \}\] \}\] \(one entry a day, in order\)/);
+    assert.match(T.sys, /\"everyday\": \[\{ \"date\": \"MM-DD\", \"records\": \[\{ \"type\": one of the ITEMS types but \"profile\" and \"visit\", \"advances\", and the fields of its type in ITEMS \}\] \}\] \(one entry a day, in order\)/);
     assert.match(T.sys, /For each person they had a scene with in NEW MESSAGES, include at least one later text exchange within these hours\./);
 });
 
@@ -1347,4 +1347,19 @@ test('"scenes" first: each a scene on the phone; a visit on one is with that sce
     const old = data.recordsCore({ now: '11-06 21:00', records: [{ type: 'scene', id: 'pho', at: 0, quote: 'dinner', date: '11-03', time: '19:00' }, { type: 'visit', at: 0, scene: 'pho', place: 'Pho 24', time: '11-03 19:10', with: ['Ren'] }] });
     assert.deepEqual(old.events[0].phone.visits.map(v => v.with), [['Ren']]);
     assert.equal(got.scenes, undefined);
+});
+
+test('a record the model itself marks "advances": true (moves a story situation on by itself) is left out and shown; false or none goes in', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'I sent you a scarf')]);
+    c.p.now = '10-26 18:00'; c.p.year = 2026;
+    await run(c.m, { now: '10-26 22:00', scenes: [{ id: 'scarf', at: 2, quote: 'I sent you a scarf', date: '10-26', time: '20:00', summary: 'scarf', place: '', city: '', with: [] }],
+        records: [{ type: 'text', at: 2, scene: 'scarf', said: 'I sent you a scarf', advances: false, with: 'Lio', messages: [{ from: 'me', text: 'thank you!!', time: '10-26 20:10' }] }],
+        everyday: [{ date: '10-26', records: [{ type: 'photo', caption: 'the scarf arrived', time: '10-26 21:00', advances: true }, { type: 'search', q: 'soup recipe', time: '10-26 19:00', advances: 'false' }] }] });
+    assert.deepEqual(c.p.photos, []);
+    assert.deepEqual(c.p.searches.map(x => x.q), ['soup recipe']);
+    assert.deepEqual(c.p.threads.find(t => t.with === 'Lio').messages.map(x => x.text), ['thank you!!']);
+    assert.deepEqual(c.p.syncLast.advanced, [{ type: 'photo', from: 'everyday', what: 'the scarf arrived' }]);
+    assert.equal(c.p.syncLast.records.advanced, 1);
+    assert.ok([...c.p.searches, ...c.p.threads.flatMap(t => t.messages)].every(x => !('advances' in x)));
+    assert.match(T.sys, /"advances" on every record: did you move a story situation on by yourself \(a step, an arrival, a reason, an outcome the story never gave\)\? true or false\. A record with true is left out\./);
 });
