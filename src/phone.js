@@ -225,7 +225,8 @@ export async function openPhone(who = null) {
             const el = $(`<div class="pcf" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="pcf_box"><div class="pcf_card"><div class="pcf_msg"><b>${esc(title)}</b>${text ? `<span>${esc(text)}</span>` : ''}</div><div class="pcf_in">${area ? `<div class="pcf_field pcf_area"${empty ? ' data-empty="1"' : ''} contenteditable="true" role="textbox" aria-multiline="true" enterkeyhint="done" spellcheck="false">${esc(value)}</div>` : `<input type="text" class="pcf_field" value="${esc(value)}" enterkeyhint="done" autocomplete="off">`}</div><div class="pcf_btns"><div role="button" tabindex="0" class="pcf_no">취소</div><div role="button" tabindex="0" class="pcf_ok safe">${esc(ok)}</div></div></div></div></div>`)[0];
             ask = { el, done: v => { ask = null; el.remove(); done(v); } };
             placeAsk();
-            if (el.isConnected) { const f = el.querySelector('.pcf_field'); f.focus({ preventScroll: true }); if (f.select) f.select(); else { const r = document.createRange(); r.selectNodeContents(f); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); } }
+            // (a few lines with something written already (a 말투 to read): no keyboard and nothing selected until it is tapped)
+            if (el.isConnected) { const f = el.querySelector('.pcf_field'); if (area && String(value).trim()) el.querySelector('.pcf_ok').focus({ preventScroll: true }); else { f.focus({ preventScroll: true }); if (f.select) f.select(); else { const r = document.createRange(); r.selectNodeContents(f); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); } } }
         });
     };
     // the same sheet, a row a place: its flag, a name, a line under it (시안 B, docs/mockups/phone-place-ask); title may carry a flag
