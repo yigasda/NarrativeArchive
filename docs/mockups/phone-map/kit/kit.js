@@ -9,7 +9,7 @@ const curve = (pts, close = false) => { const P = close ? [pts.at(-1), ...pts, p
   for (let i = 1; i < P.length - 2; i++) { const [a, b, c, e] = [P[i - 1], P[i], P[i + 1], P[i + 2]]; d += ` C${f(b[0] + (c[0] - a[0]) / 6)} ${f(b[1] + (c[1] - a[1]) / 6)} ${f(c[0] - (e[0] - b[0]) / 6)} ${f(c[1] - (e[1] - b[1]) / 6)} ${f(c[0])} ${f(c[1])}`; }
   return close ? d + 'Z' : d; };
 const C = { land: '#f3f0ea', built: '#ebe7df', park: '#d4e8c9', forest: '#c3dcb5', water: '#b6d4ef', waterEdge: '#a3c6e6', road: '#ffffff', edge: '#dad4c9', major: '#fde7a3', majorEdge: '#e3c77c',
-  rail: '#a9a49b', contour: '#e2dccd', label: '#6f7681', plaza: '#efe6d2', bld: '#e0dbd0', bld2: '#d8d2c6', station: '#e9e1f0', stationEdge: '#c9bcd8', poi: '#8a7f73' };
+  rail: '#a9a49b', contour: '#e2dccd', label: '#6f7681', plaza: '#efe6d2', bld: '#e0dbd0', bld2: '#d8d2c6', station: '#d9d2c5', stationEdge: '#c4bcae', poi: '#8a7f73' };
 const W = 390, H = 560;
 let uid = 0;
 // ---- shared pieces
@@ -40,6 +40,7 @@ function gridLines(cx, cy, ang, bw, bh, gap, x0, x1, y0, y1, w = 2.2) {
 const parkBlob = (r, cx, cy, rx, ry, n = 10) => curve(Array.from({ length: n }, (_, k) => { const a = k / n * 6.283, q = 1 + (r() - 0.5) * 0.4; return [cx + Math.cos(a) * rx * q, cy + Math.sin(a) * ry * q]; }), true);
 const trees = (r, cx, cy, rx, ry, n) => { let o = ''; for (let i = 0; i < n; i++) { const a = r() * 6.283, d = Math.sqrt(r()); o += `<circle cx="${f(cx + Math.cos(a) * rx * d * 0.85)}" cy="${f(cy + Math.sin(a) * ry * d * 0.85)}" r="${f(2 + r() * 2.4)}" fill="${C.forest}"/>`; } return o; };
 const stationBox = (x, y, w, h, ang = 0) => `<g transform="rotate(${f(ang)} ${f(x + w / 2)} ${f(y + h / 2)})"><rect x="${f(x)}" y="${f(y)}" width="${f(w)}" height="${f(h)}" rx="3" fill="${C.station}" stroke="${C.stationEdge}" stroke-width="1.2"/></g>`;
+const badge = (x, y) => `<g transform="translate(${f(x)} ${f(y)})"><rect x="-8" y="-8" width="16" height="16" rx="4.5" fill="#5f6670"/><path d="M-3.5 -4.5h7a1.5 1.5 0 0 1 1.5 1.5v4.5a2 2 0 0 1 -2 2h-6a2 2 0 0 1 -2 -2v-4.5a1.5 1.5 0 0 1 1.5 -1.5zM-5 -0.5h10M-2.5 3.5l-1.5 2.5M2.5 3.5l1.5 2.5" fill="none" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></g>`;
 const poi = (x, y, glyph) => `<g transform="translate(${f(x)} ${f(y)})"><circle r="8.5" fill="#fff" stroke="${C.edge}" stroke-width="1"/><path d="${glyph}" fill="none" stroke="${C.poi}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" transform="translate(-6 -6) scale(.5)"/></g>`;
 const G = { church: 'M12 2v6M9 5h6M5 22V12l7-4 7 4v10M10 22v-5h4v5', shrine: 'M3 6h18M5 9h14M7 9v13M17 9v13M4 4l16 0', tower: 'M12 2l3 20H9zM10 9h4M9.4 14h5.2', park: 'M12 3l5 8h-3l4 6H6l4-6H7zM12 17v4', museum: 'M3 9l9-5 9 5M5 9v9M9 9v9M15 9v9M19 9v9M3 20h18', shop: 'M5 8h14l-1.2 12H6.2zM9 8V6a3 3 0 0 1 6 0v2', bridge: 'M3 16h18M5 16c2-6 12-6 14 0M8 16v-3M16 16v-3' };
 
@@ -60,9 +61,9 @@ function shibuya() {
   o += big(curve([[150, -20], [170, 120], [188, 250], [200, 380], [214, 580]]), 7.5) + big(curve([[-20, 330], [120, 300], [196, 286], [300, 300], [410, 340]]), 8.5) + big(curve([[-20, 210], [80, 230], [190, 278]]), 5.5);
   o += rail(curve([[232, -20], [226, 150], [214, 280], [206, 420], [200, 580]]), 3.2) + rail(curve([[244, -20], [238, 150], [226, 280], [218, 420], [212, 580]]), 3.2)
      + rail(curve([[-20, 262], [100, 266], [214, 274], [410, 250]]), 3) + rail(curve([[410, 176], [300, 220], [230, 270]]), 2.6);
-  o += stationBox(186, 252, 64, 46, -6) + `<path d="M196 302l10 -8M206 302l-10 -8M201 296v12M195 300h12" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>`;
+  o += [[200, 254, 24, 40, -4], [228, 262, 20, 30, -4], [188, 298, 30, 18, -6], [222, 296, 26, 16, -2]].map(([x, y, w, h, a]) => stationBox(x, y, w, h, a)).join('') + badge(214, 236);
   o += poi(54, 46, G.shrine) + poi(318, 468, G.park) + poi(110, 360, G.shop) + poi(292, 120, G.tower);
-  o += label(218, 246, '渋谷駅', 12, 700, '#5b4f6b') + label(120, 150, '神南', 11) + label(92, 410, '道玄坂', 11) + label(300, 410, '桜丘町', 11) + label(310, 140, '宮益坂', 11) + label(52, 92, '代々木公園', 10, 600, '#6b8a5e');
+  o += label(250, 240, '渋谷駅', 12, 700, '#4a5058') + label(120, 150, '神南', 11) + label(92, 410, '道玄坂', 11) + label(300, 410, '桜丘町', 11) + label(310, 140, '宮益坂', 11) + label(52, 92, '代々木公園', 10, 600, '#6b8a5e');
   return o;
 }
 // ---- 독일 · 프랑크푸르트: 역 앞은 반듯한 바둑판, 성벽 자리 공원 링 안에서는 길이 성당 광장 쪽으로 모이며 휘고, 남쪽엔 강
@@ -83,9 +84,9 @@ function frankfurt() {
   o += big(curve(Array.from({ length: 24 }, (_, k) => { const a = k / 24 * 6.283; return [292 + Math.cos(a) * 104 * 1.1, 300 + Math.sin(a) * 150 * 1.06]; }), true), 6);
   o += big(curve([[96, 246], [140, 248], [186, 258]]), 6.5) + big(curve([[200, riverY(200) - 30], [208, riverY(208) + 10], [214, riverY(214) + 50]]), 4.5) + way(`M320 ${f(riverY(320) - 6)} L324 ${f(riverY(324) + 40)}M140 ${f(riverY(140) - 6)} L138 ${f(riverY(138) + 40)}`, 4);
   let fan = ''; for (let i = 0; i < 9; i++) { const yy = 196 + i * 12; fan += `M-20 ${f(yy + (i - 4) * 16)}C20 ${f(yy + (i - 4) * 10)} 40 ${f(yy)} 62 ${f(yy)}`; }
-  o += `<path d="${fan}" fill="none" stroke="${C.rail}" stroke-width="2.4"/>` + `<rect x="60" y="186" width="34" height="120" rx="3" fill="${C.station}" stroke="${C.stationEdge}" stroke-width="1.2"/>` + `<path d="M62 200h30M62 230h30M62 260h30M62 290h30" stroke="${C.stationEdge}"/>`;
+  o += `<path d="${fan}" fill="none" stroke="${C.rail}" stroke-width="1.4"/>` + `<rect x="58" y="188" width="38" height="116" rx="2" fill="${C.station}" stroke="${C.stationEdge}" stroke-width="1"/>` + `<path d="M58 211h38M58 234h38M58 257h38M58 280h38" stroke="${C.stationEdge}" stroke-width=".8"/>` + `<rect x="92" y="200" width="12" height="92" rx="1.5" fill="${C.bld2}"/>` + badge(52, 168);
   o += poi(dx, dy, G.church) + poi(240, 520, G.museum) + poi(352, 470, G.bridge);
-  o += label(78, 176, 'Hauptbahnhof', 11.5, 700, '#5b4f6b') + label(140, 360, 'Bahnhofsviertel', 10.5) + label(300, 290, 'Altstadt', 11) + label(330, 200, 'Innenstadt', 10.5) + label(200, 482, 'Main', 11, 600, '#5a84ad') + label(150, 548, 'Sachsenhausen', 10.5) + label(160, 70, 'Westend', 10.5);
+  o += label(104, 172, 'Hauptbahnhof', 11.5, 700, '#4a5058') + label(140, 360, 'Bahnhofsviertel', 10.5) + label(300, 290, 'Altstadt', 11) + label(330, 200, 'Innenstadt', 10.5) + label(200, 482, 'Main', 11, 600, '#5a84ad') + label(150, 548, 'Sachsenhausen', 10.5) + label(160, 70, 'Westend', 10.5);
   return o;
 }
 // ---- 한국 · 강남역: 넓은 대로가 큰 격자를 만들고, 그 안은 휘어진 골목 덩어리, 뒤로 산 등고선, 대로 밑 지하철
