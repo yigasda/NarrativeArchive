@@ -72,21 +72,24 @@ function frankfurt() {
   const dx = 296, dy = 330, ring = (x, y) => ((x - 292) / 104) ** 2 + ((y - 300) / 150) ** 2;
   const riverY = x => 470 + 10 * Math.sin(x / 70) - x * 0.06;
   const field = (x, y) => { const g = ring(x, y), w = Math.max(0, Math.min(1, (1.25 - g) * 2.2)), toward = Math.atan2(dy - y, dx - x);
-    return mix([[w, toward], [1 - w, 0.02], [x > 330 && y < 150 ? 0.6 : 0, -0.14]]); };
+    return mix([[w, toward], [1 - w, 0.02 + (y < 170 ? 0.16 * Math.sin(x / 90) : 0)], [x > 330 && y < 150 ? 0.6 : 0, -0.14]]); };
   const inRing = (x, y) => { const g = ring(x, y); return g > 0.88 && g < 1.08; };
-  const block = (x, y) => inRing(x, y) || (y > riverY(x) - 4 && y < riverY(x) + 36) || (x > 58 && x < 96 && y > 182 && y < 310) || (x < 62 && y > 170 && y < 320) || inEll(x, y, dx, dy, 16, 12);
+  const block = (x, y) => inEll(x, y, 74, 62, 70, 46) || inEll(x, y, 232, 146, 14, 11) || inRing(x, y) || (y > riverY(x) - 4 && y < riverY(x) + 36) || (x > 58 && x < 96 && y > 182 && y < 310) || (x < 62 && y > 170 && y < 320) || inEll(x, y, dx, dy, 16, 12);
   const { houses, streets } = flow({ W, H, field, block, sep: 25, r, C, f });
   const ringD = curve(Array.from({ length: 24 }, (_, k) => { const a = k / 24 * 6.283; return [292 + Math.cos(a) * 104 * 0.98, 300 + Math.sin(a) * 150 * 0.98]; }), true);
   const top = Array.from({ length: 9 }, (_, i) => { const x = -30 + i * 56; return [x, riverY(x) - 2]; }), bot = Array.from({ length: 9 }, (_, i) => { const x = 418 - i * 56; return [x, riverY(x) + 34]; });
   o += `<path d="${curve(top)} L${f(bot[0][0])} ${f(bot[0][1])} ${curve(bot).replace(/^M[^C]*/, '')} Z" fill="${C.water}"/>`;
+  o += `<path d="${parkBlob(r, 74, 62, 66, 42, 11)}" fill="${C.park}"/>` + trees(r, 74, 62, 66, 42, 34) + `<path d="M60 58c8 -6 18 -6 26 0" fill="none" stroke="${C.water}" stroke-width="5" stroke-linecap="round"/>`;
   o += `<path d="${ringD}" fill="none" stroke="${C.park}" stroke-width="22"/>` + houses + way(streets, 2.2);
+  o += `<path d="${parkBlob(r, 232, 146, 14, 10, 8)}" fill="${C.plaza}" stroke="${C.edge}"/>`;
+  o += big(curve([[150, -20], [176, 60], [210, 120], [230, 146]]), 6) + big(curve([[410, 40], [330, 80], [270, 120], [236, 146]]), 5.5) + big(curve([[-20, 150], [40, 140], [96, 186]]), 5);
   o += `<path d="${parkBlob(r, dx, dy, 18, 14, 8)}" fill="${C.plaza}" stroke="${C.edge}"/>`;
   o += big(curve(Array.from({ length: 24 }, (_, k) => { const a = k / 24 * 6.283; return [292 + Math.cos(a) * 104 * 1.1, 300 + Math.sin(a) * 150 * 1.06]; }), true), 6);
   o += big(curve([[96, 246], [140, 248], [186, 258]]), 6.5) + big(curve([[200, riverY(200) - 30], [208, riverY(208) + 10], [214, riverY(214) + 50]]), 4.5) + way(`M320 ${f(riverY(320) - 6)} L324 ${f(riverY(324) + 40)}M140 ${f(riverY(140) - 6)} L138 ${f(riverY(138) + 40)}`, 4);
   let fan = ''; for (let i = 0; i < 9; i++) { const yy = 196 + i * 12; fan += `M-20 ${f(yy + (i - 4) * 16)}C20 ${f(yy + (i - 4) * 10)} 40 ${f(yy)} 62 ${f(yy)}`; }
   o += `<path d="${fan}" fill="none" stroke="${C.rail}" stroke-width="1.4"/>` + `<rect x="58" y="188" width="38" height="116" rx="2" fill="${C.station}" stroke="${C.stationEdge}" stroke-width="1"/>` + `<path d="M58 211h38M58 234h38M58 257h38M58 280h38" stroke="${C.stationEdge}" stroke-width=".8"/>` + `<rect x="92" y="200" width="12" height="92" rx="1.5" fill="${C.bld2}"/>` + badge(52, 168);
-  o += poi(dx, dy, G.church) + poi(240, 520, G.museum) + poi(352, 470, G.bridge);
-  o += label(104, 172, 'Hauptbahnhof', 11.5, 700, '#4a5058') + label(140, 360, 'Bahnhofsviertel', 10.5) + label(300, 290, 'Altstadt', 11) + label(330, 200, 'Innenstadt', 10.5) + label(200, 482, 'Main', 11, 600, '#5a84ad') + label(150, 548, 'Sachsenhausen', 10.5) + label(160, 70, 'Westend', 10.5);
+  o += poi(232, 146, G.museum) + poi(26, 134, G.tower) + poi(110, 56, G.park) + poi(dx, dy, G.church) + poi(240, 520, G.museum) + poi(352, 470, G.bridge);
+  o += label(104, 172, 'Hauptbahnhof', 11.5, 700, '#4a5058') + label(140, 360, 'Bahnhofsviertel', 10.5) + label(300, 290, 'Altstadt', 11) + label(330, 200, 'Innenstadt', 10.5) + label(200, 482, 'Main', 11, 600, '#5a84ad') + label(150, 548, 'Sachsenhausen', 10.5) + label(190, 92, 'Westend', 10.5) + label(76, 104, 'Palmengarten', 10, 600, '#6b8a5e') + label(266, 168, 'Opernplatz', 10) + label(330, 60, 'Nordend', 10.5);
   return o;
 }
 // ---- 한국 · 강남역: 넓은 대로가 큰 격자를 만들고, 그 안은 휘어진 골목 덩어리, 뒤로 산 등고선, 대로 밑 지하철
