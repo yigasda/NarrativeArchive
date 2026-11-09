@@ -358,7 +358,9 @@ ${archiveOnly ? `TIMES\n${CORE_TIMES}` : `${CORE_CLOCK_FIRST}\n${CORE_TIMES}`}
 SCENES AND RECORDS
 - After "clock" and "now", extract "scenes" from NEW MESSAGES and ARCHIVE FOR THESE MESSAGES: what happens, where, when and who is physically with the owner. Mentioned, remembered or remote people are not companions there.
 - Write each scene's phone trail in "records", linked by "scene" and "said". Include implied phone activity; keep its assertions consistent with its source. Do not repeat the scene itself.
-- Both "records" and "everyday" may use the story's situations, people and mood. Complete their expression on the phone, not their next development: no invented decision, arrangement, resolution step, deadline or outcome.
+- Tell apart what you may make up and what you may not, in "records" and "everyday" alike.
+  - May: how the owner lives through the situation the story has established—their feelings, words and reactions—and their own daily life alongside it.
+  - May not: invent developments or additional facts about the story's events, including decisions, promises, resolution steps, deadlines or outcomes. For example: the story only shows a parcel on its way, and a record has it arrive; the story only shows a problem, and a record works through solving it; the story never gives the reason or full account of an event, and a record says what really happened.
 - Phone data supplies existing details; an expected date is not an actual event. Generated everyday content is not story evidence.
 - A message-linked trail goes in "records"; the owner's day goes in "everyday", without duplicates.
 - Plans go in the calendar, not as completed events.${wallet ? ' Tickets go in the wallet; reservations and appointments still go in the calendar.' : ''} Never invent a booking, trip or purchase absent from the story.
