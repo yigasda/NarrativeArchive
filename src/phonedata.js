@@ -23,7 +23,7 @@ import { rememberStory, dateOrderSource, htmlClocks, htmlDatedClocks, htmlTimeCo
 import { clockFallback, exactClockShift } from './phoneclock.js';
 import { PLACE } from './phonemapcity.js';
 export { tidyKo, arr, gapDays, giftOf, hhmm, jsonOf, ko, last4, line, num, pad, pick, storyMin, byStory, str, when, withEv };
-import { COUNTRY_TZ, applyDays, applyLife, applyWeather, cardClock, cityAt, dayGap, dlvClock, fillDays, lifeClock, lifeNow, weatherFrom, zoneShift } from './phonesynclife.js';
+import { COUNTRY_TZ, KR_ONLY, applyDays, applyLife, applyWeather, cardClock, cityAt, dayGap, dlvClock, fillDays, homeScreen, lifeClock, lifeNow, weatherFrom, zoneShift } from './phonesynclife.js';
 import { applyMoney, dlvTotal, investNow, moneyMissing, moneyNow, orderClock, payOrders, recordsMoney, regularClock, replayEffects, revertEffects } from './phonesyncmoney.js';
 import { isDone, pruneDropped, srcOf, addFrom, orphanOf, itemMark, edited, busy, exclusive, joinComments, realign, bodyMark, newSync, syncOf, makeMark, settleMarks, pickRound, unreadCount, addDone, settleRound, archiveRound, archivedUnread, readBefore, reachesEnd, quoted, journalAdd, journalRead, journalWrite } from './phonesync.js';
 
@@ -59,11 +59,11 @@ ANSWER — one JSON object, nothing else:
 const PHONE_FACT = `ONE TEST FOR EVERY ITEM
 Could this be on the owner's phone, given what the archive, lorebook and chat show? If not, leave it out.
 - The lorebook counts as fact like the archive; where the two disagree, the archive wins.
-- Events (a meeting, a fight, a confession, a trip, a loss) only if the archive or lorebook has them.
+- Events (a meeting, a confession, a trip, a loss, how something turned out or will go) only if the archive, lorebook or chat has them.
 - Small everyday things around those events are fine: how a text was worded, a photo of a place they were, a search they would make.
 - People: only people the story or PEOPLE AROUND has. A relationship word (girlfriend, ex, husband, boss) only if the archive or chat uses it for them.
 - Nothing later than the newest moment of the story.
-- The diary holds only what the archive shows happened and what the owner felt about it; no new secrets, no new feelings.`;
+- The diary holds only what the archive or chat shows happened and what the owner felt about it; no new secrets, no new feelings.`;
 // every time on the phone is the owner's own clock: a time written on the other side of the world is moved to theirs
 export const OWN_CLOCK = `Every time is on the owner's phone clock, where the owner is now. A time on a screen or in a scene goes by the city of whoever's screen or scene it is: the owner's city, or no OWNER'S CLOCK, keeps it; another city in OWNER'S CLOCK moves it by its hours there (a messenger timestamp on the other side's screen). A status line's time is the clock of the city its scene is in; OWNER'S CLOCK gives the newest one on the owner's clock when that is another city.`;
 export const CLOCK_GET = `- OWNER'S CLOCK (sometimes): where the owner is, their time now, and how many hours the other saved cities and the people elsewhere are ahead or behind.`;
@@ -214,12 +214,18 @@ ${PHONE_LAST}`;
 // life: 시계 · 건강 · 파일 (and 날씨 only when no status line gives it: weather)
 // weather: the model writes the weather (no status line gives it, or the day moved on); tracker: a status line gives some
 // split: the first of two steps (core): no money, each event marked "money" when it touches it (moneySystem writes it after)
-// 시계 · 파일 items and their rules, the same in the reflection and its 일상
+// 시계 · 파일 items and their rules, the same for the story's events and the everyday ones
 const LIFE_ALARMS = `  "alarms": [{ "change": an id or "", "time", "label", "ko", "days": the weekdays it repeats or [], "date": "MM-DD" for a one-time alarm, "on", "wake", "then", "snooze", "snoozeCount", "sound" }],`;
 const LIFE_FILES = `  "files": [{ "change": an id or "", "name", "kind", "folder": one of LIFE NOW's "folders" (downloads are "Downloads"), or a new one the story makes, "size": KB, "time", "from", "pages", "length": "M:SS" for audio or video, "tag": "red" | "orange" | "", "private", "preview", "look": what it shows (a picture or video: "sea" | "city" | "night" | "food" | "hills" | "pet" | "sunset" | "mountain" | "snow" | "flower" | "interior" | "concert" | "paper" | "screenshot" | "map"; a document: "ticket" (a flight or train ticket, "preview": "carrier · from → to · date") | "receipt" | "invoice" | "cv" | "letter" | "certificate" | "recipe" | "medical" | "menu" | "contract" | "notes"; audio: "voice" | "music"), "ko", "opened", "deleted": true when removed }],`;
 const LIFE_TIMERS = `  "timers": [{ "label", "ko", "sec" }],`;
 const LIFE_ONCE = `- An alarm for one occasion (a flight, an appointment) rings once: "days": [] and its "date". Only an alarm the owner keeps for every week has "days".`;
 const LIFE_CHANGE = `- A record already in LIFE NOW is changed with "change": its id; write only the fields that changed. A deleted file is "deleted": true.`;
+const WEATHER_JSON = `  "weather": { "place", "date", "time", "from": "chat" | "archive" | "guess", "cond": "clear" | "partly" | "cloudy" | "drizzle" | "rain" | "sleet" | "snow" | "fog" | "storm" | "wind", "temp", "hi", "lo", "line", "ko",
+               "hours": [6 of { "time", "cond", "temp", "rain": percent }] (the hours ahead when the sky will change, else []), "days": [10 of { "day", "cond", "lo", "hi", "rain": percent }],
+               "tiles": { "rain24": mm today, "rainNext": mm by tomorrow, "wind": km/h, "dir", "humidity", "feels": only when the story gives it },
+               "cities": [{ "name", "cond", "temp", "hi", "lo" }, a city newly saved (home, work, family, a trip) also "tz", "note": a few words, "added": true] } or null`;
+const USUAL_ITEM = `  "usual": { "weight": kg, "coffee": cups a day, "coffeeKind", "coffeeKo", "water": litres a day, "bed": "HH:MM", "sleep": "HH:MM", "wake": "HH:MM", "steps", "workouts": a week, "rest": resting heart rate, "height": cm, "screen": { "add": [{ "app": its real name, "kind": "chat" | "social" | "game" | "video" | "music" | "work" | "reading" | "shopping" | "money" | "maps" | "health" | "other", "min" }] (installed, or used more or less), "drop": [apps deleted], "pickups", "late" } }`;
+const weatherRule = tracker => `${tracker ? 'WEATHER NOW stands for an owner in that scene (its date, time, place and weather); write the rest of the forecast to agree with it, "from": "chat". An owner elsewhere gets the weather where they are.' : 'what these messages describe, else the archive. If the story\'s day or place changed with nothing to go on, what fits the season and place, "from": "guess". If neither changed and nothing describes it: null (the app keeps the last weather).'}`;
 // wallet: the phone has the bank's wallet, whose tickets the calendar shows (core then writes none of them)
 export function updateSystem({ money = true, delivery = false, life = false, weather = false, tracker = false, split = false, invest = false, zone = false, archiveOnly = false, wallet = false } = {}) {
     const paid = delivery ? 'order, ticket or delivery' : 'order or ticket';
@@ -266,7 +272,7 @@ ${LIFE_CHANGE}
 - Health: a row for every story day these messages move into. A day these messages show goes in that event's "phone"."health"; a day already in LIFE NOW that the story now shows is rewritten the same way. Every other new day goes in the top-level "days", written freely from the character and their life (a lazy Sunday, a day on their feet, a sleepless night), still following that day's events and tickets. The day of "now" again every time, with its totals so far (steps, workouts, coffee, water, "screen"), even when nothing new happened.
 - "screen" on each day: that day's phone use, from what happened and how they felt (a fight: hours of texting late into the night; a day out with friends: barely any), in their own habits (LIFE NOW's usual), plus any other app that day called for, by its real name (a trip: maps, a translator).
 - A lasting change to their habits or body these messages state (they lost weight, quit coffee, drink more water, get up earlier now, quit a game, glued to the phone lately): that event's "phone"."usual" with only what changed. Nothing said: no "usual".
-${weather ? `- "weather": ${tracker ? 'WEATHER NOW stands for an owner in that scene (its date, time, place and weather); write the rest of the forecast to agree with it, "from": "chat". An owner elsewhere gets the weather where they are.' : 'what these messages describe, else the archive. If the story\'s day or place changed with nothing to go on, what fits the season and place, "from": "guess". If neither changed and nothing describes it: null (the app keeps the last weather).'}
+${weather ? `- "weather": ${weatherRule(tracker)}
 - With new weather, also write each saved city's "cond", "temp", "hi" and "lo".
 ` : ''}` : ''}${money ? `
 MONEY (only with MONEY NOW or INVESTMENTS NOW)
@@ -300,10 +306,7 @@ ANSWER — one JSON object, nothing else:
                                           "newShop": { "name": the same as "shop", "ko", "cuisine", "menu": [{ "name", "ko", "desc", "price", "top": true for its best-known dish, "pic" }] } or null }]` : ''} }` : ''} }],
 ${life ? `,
   "days": [{ the same fields as "health" }]` : ''}${life && weather ? `,
-  "weather": { "place", "date", "time", "from": "chat" | "archive" | "guess", "cond": "clear" | "partly" | "cloudy" | "drizzle" | "rain" | "sleet" | "snow" | "fog" | "storm" | "wind", "temp", "hi", "lo", "line", "ko",
-               "hours": [6 of { "time", "cond", "temp", "rain": percent }] (the hours ahead when the sky will change, else []), "days": [10 of { "day", "cond", "lo", "hi", "rain": percent }],
-               "tiles": { "rain24": mm today, "rainNext": mm by tomorrow, "wind": km/h, "dir", "humidity", "feels": only when the story gives it },
-               "cities": [{ "name", "cond", "temp", "hi", "lo" }, a city newly saved (home, work, family, a trip) also "tz", "note": a few words, "added": true] } or null` : ''} }
+${WEATHER_JSON}` : ''} }
 ${money ? `"money" only when money moves or an order or ticket changes.` : ''}
 ${money ? `Also in "money" when these messages show them: "newAccount": { "kind": "checking" | "savings" | "credit", "name", "last4", "currency", "balance" } (an account or card the owner opens), "newCard": { "account": last4, "exp": "MM/YY" }${delivery ? `, "cart": { "shop", "items": [like a delivery's] } (dishes put in the basket and not ordered)` : ''}, "watch": [{ "symbol", "name", "currency", "note", "ko" }] (a share they start watching), "quotes": [{ "symbol", "date", "value", "evidence": exact words }] (a price the story gives), "stakes": [{ "company", "listed", "percent", "holder", "voter", "beneficiary", "restriction", "value", "currency", "evidence": exact words }] (a stake the story says they now hold).
 ` : ''}In "events", a plan moved or called off is its item again with "was": the date it had, or "cancelled": true. In "threads", a text the owner deleted is { "text", "deleted": true }.
@@ -314,7 +317,7 @@ ${LIFE_ALARMS}
 ${LIFE_FILES}
   "health": [{ "date": the day they woke, "sleep", "wake", "woke": times awake in the night, "steps", "km", "floors", "hr": [low, high], "workouts": [{ "kind", "time", "min", "km" }], "coffee": cups, "coffeeKind", "water": litres, "weight": kg only when they weighed, "screen": { "apps": { app name: minutes }, "pickups", "late": "HH:MM" } }],
 ${LIFE_TIMERS}
-  "usual": { "weight": kg, "coffee": cups a day, "coffeeKind", "coffeeKo", "water": litres a day, "bed": "HH:MM", "sleep": "HH:MM", "wake": "HH:MM", "steps", "workouts": a week, "rest": resting heart rate, "height": cm, "screen": { "add": [{ "app": its real name, "kind", "min" }] (installed, or used more or less), "drop": [apps deleted], "pickups", "late" } }` : ''}
+${USUAL_ITEM}` : ''}
 }
 Fewer is fine. No new events: "events": [].
 In "phone" items, a booking the story has carries the details a real one would (a booking number, a seat, a gate), made up to fit; never a booking the story doesn't have.${money ? ' Money amounts follow MONEY.' : ''}`;
@@ -326,7 +329,136 @@ export const AI_SYS_PHONE_UPDATE = updateSystem();
 // line names the step (the test harness files each answer under it)
 // core: the old one-step instructions without money (life, files, health and the weather stay: they read the whole
 // messages anyway); the money step reads every round on its own
-export const coreSystem = ({ life = false, weather = false, tracker = false, invest = false, zone = false, archiveOnly = false, wallet = false } = {}) => updateSystem({ money: false, delivery: false, life, weather, tracker, split: true, invest, zone, archiveOnly, wallet });
+// ---- 반영 본체 (3.180~): every record one line in "records", the money step's way. The story's trail and the owner's own
+// life in one answer, each record saying which ("from"); the app turns them into its events (recordsCore)
+// (an item's fields as the phone's apps take them, without the "change" its life record says as "already")
+const inner = line => line.slice(line.indexOf('[{ ') + 3, line.lastIndexOf(' }]')).replace(/^"change": an id or "", /, '');
+// a day's own life records, at most (재구성; the story's own have no limit): see EVERYDAY_CAP
+export const LIFE_A_DAY = 15, LIFE_MAX = 70;
+// (CLOCK FIRST as the records answer says it)
+const CORE_CLOCK_FIRST = CLOCK_FIRST.replace('then write events and app records using those times', 'then write the records using those times');
+// (the times of every record: in CLOCK FIRST, or on their own when an archive-only round has none)
+const CORE_TIMES = `- Times are "MM-DD HH:MM"; a year only as STORY YEAR or the story itself gives one.
+- Every record's time is on the owner's clock: a time from another city's screen or scene moves by its hours in OWNER'S CLOCK.
+- Records of the owner's life fall between PHONE NOW's "now" and the answer's "now".`;
+export function coreRecordsSystem({ life = false, weather = false, tracker = false, zone = false, archiveOnly = false, wallet = false, split = true } = {}) {
+    const lifeTypes = life ? ' | "alarm" | "timer" | "file"' : '';
+    return `${split ? 'STAGE: core\n' : ''}GOAL
+Write what the owner's phone gains from NEW MESSAGES. The story decides what happens; the phone only shows it.
+
+YOU GET
+- NEW MESSAGES (numbered #123). Sometimes ARCHIVE FOR THESE MESSAGES: summaries covering them, also evidence.
+- Sometimes ARCHIVE BEFORE, STORY NOW, WORLD, OWNER PROFILE, STORY YEAR, DAYS (the weekdays ahead: "on Friday" is the next one).
+- PHONE NOW ("now": when it was last read), EVENTS ON THE PHONE (scenes with ids)${life ? ', LIFE NOW (alarms, files, health days, with ids)' : ''}. Sometimes MESSAGES READ BEFORE, NOW CHANGED (edited messages with their scenes)${wallet ? ' and ORDERS AND TICKETS (orders and tickets with their status and eta)' : ''}.${weather && tracker ? `
+- WEATHER NOW: the chat's last status line (date, time, place, weather; a scene the owner isn't in: its place and weather only).` : ''}
+- Sometimes OWNER'S CLOCK (where the owner is, their time, the hours to others), PEOPLE AROUND (people in their life, where things stand) and OWNER DOESN'T KNOW. And OWNER.
+
+${archiveOnly ? `TIMES\n${CORE_TIMES}` : `${CORE_CLOCK_FIRST}\n${CORE_TIMES}`}
+
+STEP 1 · SCENES
+1. Split NEW MESSAGES and ARCHIVE FOR THESE MESSAGES into scenes. A new scene starts where the place changes or time jumps.
+2. "id": the EVENTS ON THE PHONE id when it is that scene; otherwise a new tag.
+3. "with": only people physically in the same place as the owner. Not people mentioned, remembered, texted or called.
+
+STEP 2 · SITUATIONS
+1. List every matter left open in NEW MESSAGES, ARCHIVE FOR THESE MESSAGES, STORY NOW${wallet ? ', PHONE NOW and ORDERS AND TICKETS' : ' and PHONE NOW'}: a parcel, a request, a plan, a blocked account, a repair, a debt, a question.
+2. "where" and "when": the place and the dates or times these give (an order's expected date too), or "". "known": only what these give, in their words. "open": what they leave unknown (reasons, outcomes, amounts, durations, places, what really happened). Anything in OWNER DOESN'T KNOW is "open". A "where" or "when" left "" stays unknown on the whole phone.
+3. "state": planned, sent, waiting, blocked, done, cancelled or unknown. Only NEW MESSAGES change it. A passing date, an eta or a natural next step never does.${wallet ? ' An order takes its status from ORDERS AND TICKETS.' : ''}
+4. What each state allows on the phone:
+   planned: the plan, reminders, looking forward, worrying. Not: it happening, its outcome.
+   sent: tracking checks, waiting, asking when. Not: arrival, opening, photos, wearing, thanks, even on or after the eta.
+   waiting: checking, nervous texts. Not: the answer.
+   blocked: complaints, worry, living around it. Not: any step to resolve it (documents, visits, mails, inquiries, procedure searches, prep memos).
+   done: its traces.
+   cancelled: the cancellation, regret. Not: bringing it back.
+   unknown: not knowing, wondering. Not: anyone acting as if they know.
+5. Nothing in "open" is stated or guessed as fact: no text, memo, search, mail or diary fills it. The owner may ask; no one answers. Anything said about a situation repeats or reacts to "known" and adds no fact.
+
+STEP 3 · RECORDS
+Go through each scene's messages in order. Write a record only in these cases, with "scene", "at", "said" (the exact words it comes from) and "situations":
+1. A phone action the messages show or say (a text, call, photo, search, mail, post, voice memo) → that record.
+2. A plan made → "calendar". A PHONE NOW plan the messages move → its calendar record again with "was"; called off or undone (an order cancelled) → "cancelled": true.${wallet ? ' Tickets go in the wallet; reservations and appointments in the calendar.' : ''} No booking, trip or purchase the story lacks.
+3. Each scene where the owner is somewhere → one "visit".
+4. Someone new the owner meets and would save → "contact".${life ? `
+5. An alarm or file the messages set or change → that record.` : ''}
+A record says no more than its "said". Nothing else goes in "records".
+
+STEP 4 · EVERYDAY
+1. Hours: the waking hours from PHONE NOW's "now" to the answer's "now" that no scene covers, skipped days included. Asleep or busy in a scene: no owner activity; incoming texts and calls may arrive.
+2. Amount: about ${LIFE_A_DAY} records per full waking day, fewer for part of one. A full day uses at least ${life ? 8 : 6} of their apps (texts, calls, photos, searches, notes, mails, posts, voice memos${life ? ', alarms, files' : ''}). Who they talk to, and how much, follows their character and PEOPLE AROUND.
+3. Take each day from, in order:
+   a. people the owner had a scene with may text later, if it fits;
+   b. PHONE NOW's habits${life ? ", LIFE NOW's usual" : ''}, OWNER PROFILE: routines and interests that recur;
+   c. PEOPLE AROUND: contact both ways; group chats go on without the owner.
+   The story sets mood, place and free time.
+4. People: from the story, PEOPLE AROUND, or new plausible ones with local names (each with a "contact"). No new relative or partner; relationship labels only from the story; no one they are no longer in touch with.
+5. Diary: one entry for a day that ends in these hours or a scene that stays with them, on that day. Voice memo: about one every few days.
+6. Nothing in "records" is written again in "everyday".
+7. Every record, in "records" or "everyday", lists in "situations" each situation it mentions or touches, and keeps to what each one's state allows.
+
+STEP 5 · EACH APP
+- Text: one record is one exchange, in the tone of that relationship; replies may be late or missing.
+- Call, photo: what the owner would really do or shoot, in their eye.
+- Search: what they would type. About a situation: only words in its "known".
+- Note: the owner's form, length, shorthand, spelling and languages.
+- Mail: whatever would really land in their inbox from their life, accounts, hobbies and habits.
+- Calendar: fixed commitments only. Post: only if they post.${life ? ' Alarm, file: change with their life.' : ''}
+- Diary: their experience and feelings at natural length; never a list of events or a summary.
+- Voice memo: spoken, not written: the way they talk in the chat, with pauses (…), restarts and half sentences, at a moment alone (after a fight, on the way somewhere, late at night). 20 to 90 seconds; "sec" to fit; "place" where they were. Never the diary told again.${life ? `
+
+HEALTH
+1. One row for each day reached and each LIFE NOW day newly shown. Today's row always, with totals so far (steps, workouts, coffee, water, "screen").
+2. Sleep belongs to the waking day: 01:30 after the evening of 10-25 through 08:50 is the 10-26 row.
+3. Numbers by the day: a long night out → short sleep; a day on foot → many steps; a lazy day → few; a day not shown → their usual.
+4. "usual": only a lasting habit or body change the messages state, only the changed fields.
+
+SCREEN TIME
+1. Each row's "screen": the apps they really use, including ones they would not admit, varied by day and by that day's events.
+2. Texting minutes agree with the texts; no activity after "late".
+3. A new app the story or their life justifies → "usual"."screen"."add". Real app names where they live; another country's apps only when the story shows them.` : ''}${life && weather ? `
+
+WEATHER
+- "weather": ${weatherRule(tracker)}
+- With new weather, also each saved city's "cond", "temp", "hi" and "lo".` : ''}
+
+KEEPING IN STEP
+- A text in PHONE NOW: only its new messages.${life ? ' A LIFE NOW alarm or file: not again unless it changes, then with its id in "already".' : ''} A known scene: its id. An edited message: the ids listed.
+
+LANGUAGE
+- Each text in the language its writer really uses. "ko", "kt", "ks", "pko": the Korean of a text, title, subject or posted photo not in Korean. Texts short.
+
+JSON (one object, nothing before or after it)
+{ ${archiveOnly ? '' : '"clock": { "basis": "default used or switch evidence; time passed", "finalViewpoint": "name", "elapsedTime": null or "3 hours", "sceneTime": "MM-DD HH:MM", "messageSender": null or "name" },\n  '}"now": "MM-DD HH:MM"${archiveOnly ? ' (the moment of the newest message, never a time something is only planned for)' : ''},
+  "moved": [{ "name", "city": in English, "names": [as the messages write it, then in English and Korean], "tz", "in": its country code }] (people these messages put in another city, the owner too),${zone ? `
+  "statusCity": whose clock the newest status line here shows (the app can't place its scene): a city or person in OWNER'S CLOCK, "owner" for the owner's own, another city as { "city": in English, "tz" }, or "" when the messages don't say,` : ''}
+  "scenes": [{ "id", "at": its source message number, "quote": exact words from that message or archive section, "date": "MM-DD", "time": "HH:MM" or "", "summary": one short line, "place": the scene's place, or "", "city": its city, or "", "with": [people physically there with the owner; otherwise []] }],
+  "situations": [{ "id": a short tag, "what", "state", "where", "when", "known", "open" }],
+  "records": [{ "type": "contact" | "text" | "call" | "photo" | "note" | "search" | "calendar" | "post" | "profile" | "mail" | "diary" | "visit" | "voice"${lifeTypes},
+    "at": its message number, "scene": its scene id, "said": exact words, "situations": [situation ids] or [],${life ? ' "already": a LIFE NOW id or "",' : ''} and the fields of its type in ITEMS }],
+  "everyday": [{ "date": "MM-DD", "records": [{ "type": one of the ITEMS types but "profile" and "visit", "situations": [situation ids] or [], and the fields of its type in ITEMS }] }] (one entry a day, in order)${life ? `,
+  "health": [{ "date": the day they woke, "already": a LIFE NOW id or "", "sleep", "wake", "woke", "steps", "km", "floors", "hr": [low, high], "workouts": [{ "kind", "time", "min", "km" }], "coffee", "coffeeKind", "water", "weight", "screen": { "apps": { app: minutes }, "pickups", "late" } }],
+  "usual": { "weight", "height", "coffee", "coffeeKind", "coffeeKo", "water", "bed", "sleep", "wake", "steps", "workouts", "rest", "screen": { "add": [{ "app", "kind": chat | social | game | video | music | work | reading | shopping | money | maps | health | other, "min" }], "drop", "pickups", "late" } } or null` : ''}${life && weather ? `,\n${WEATHER_JSON}` : ''} }
+Write in this order. Numbers are plain JSON numbers. Nothing new: "records": [].
+
+ITEMS (each with only the fields it needs)
+contact: "name", "saved"
+text: "with": the person or the group chat's name (always the same), "group", "members": [all but the owner, as in the contacts], "messages": [{ "from": "me" or the sender, "text", "ko", "time", "deleted" }], "draft": an unsent { "text", "ko", "time" }
+call: "with", "kind": "in" | "out" | "missed", "time", "min", "count": calls in a row
+photo: "caption", "ko", "time", "mood": ${MOODS.join(' | ')}
+note: "title", "kt", "text", "ko", "time"
+search: "q", "ko", "time", "tab": still open, "mark": bookmarked
+calendar: "title", "ko", "date", "time": "HH:MM", "was": its old date, "cancelled"
+post: "text", "ko", "photo", "pko", "time", "likes", "comments": [{ "from", "text", "ko" }]
+profile: "handle", "bio", "ko", "followers", "following"
+mail: "sender", "subject", "ks", "text", "ko", "time", "unread"
+diary: "date", "title", "kt", "text", "ko"
+visit: "place": where they really went, as the story writes it (never just their own city), "city", "home", "time", "already": that visit's id in PHONE NOW
+voice: "title", "kt", "text", "ko", "time", "sec", "place"${life ? `
+alarm: "time": "HH:MM", "label", "ko", "days": [weekdays], or [] and "date" for one occasion, "on", "wake", "then", "snooze", "snoozeCount", "sound"
+timer: "label", "ko", "sec"
+file: "name", "kind", "folder", "size": KB, "time", "from", "pages", "length", "tag", "private", "preview": its first page in a line, "look": sea | city | night | food | hills | pet | sunset | mountain | snow | flower | interior | concert | paper | screenshot | map | ticket | receipt | invoice | cv | letter | certificate | recipe | medical | menu | contract | notes | voice | music, "ko", "opened", "deleted"` : ''}`;
+}
+export const coreSystem = ({ life = false, weather = false, tracker = false, zone = false, archiveOnly = false, wallet = false, split = true } = {}) => coreRecordsSystem({ life, weather, tracker, zone, archiveOnly, wallet, split });
 // 돈 단계 (3.176~): every round's messages, read for what the owner's phone would now show. One list of records.
 // delivery: the phone has the delivery app; invest: it has the brokerage
 export function moneySystem({ delivery = false, invest = false } = {}) {
@@ -439,6 +571,8 @@ export const countryOf = v => { const s = String(v || '').trim(), u = s.toUpperC
 // a count as a profile writes it: 1200, "1.2k", "3.4만", "2M"
 const countOf = v => { const s = String(v ?? '').trim(), n = num(s); if (n === null) return 0; const k = /만/.test(s) ? 1e4 : /백만|\d\s*[mM]\b/.test(s) ? 1e6 : /\d\s*[kK]\b|천/.test(s) ? 1e3 : 1; return Math.max(0, Math.round(n * k)); };
 const truthy = v => v === true || /^(true|yes|ja|예|네)$/i.test(String(v ?? '').trim());
+// (a list the model wrote as one name, "with": "Ren", is that one name)
+const oneOrMany = v => (typeof v === 'string' ? (v.trim() ? [v] : []) : arr(v));
 // owner: whose phone it is (a message they wrote is "me", whatever name the model gives it; no thread or call with themselves)
 export function parsePhone(out, owner = '') {
     const s = String(out || '').replace(/```(?:json)?/gi, '');
@@ -447,9 +581,10 @@ export function parsePhone(out, owner = '') {
     let raw;
     try { raw = parseJson(s.slice(a, b + 1), { salvage: true }); } catch { throw new Error('모델 답의 JSON이 깨져 있어요. 다시 해 보세요'); }
     // an everyday record the model made up from the owner's habits stays apart from the story (재구성)
-    const tag = (x, raw) => (raw?.everyday === true ? { ...withEv(x, raw), src: 'guess' } : withEv(x, raw));
+    // (one that answers a scene of these messages, "onScene", is kept whatever the day's count: see everydayOnly)
+    const tag = (x, raw) => (raw?.everyday === true ? { ...withEv(x, raw), src: 'guess', ...(raw.onScene === true ? { onScene: true } : {}) } : withEv(x, raw));
     const self = owner ? nameKey(owner) : '', mine = v => !!self && nameKey(line(v, 40)) === self;
-    const msg = (x, t) => ({ from: mine(x?.from) ? 'me' : line(x?.from, 40) || 'me', text: str(x?.text, 600), ko: ko(x?.ko), time: when(x?.time), ...(x?.deleted === true ? { deleted: true } : {}), ...(x?.everyday === true || t?.everyday === true ? { src: 'guess' } : {}) });
+    const msg = (x, t) => ({ from: mine(x?.from) ? 'me' : line(x?.from, 40) || 'me', text: str(x?.text, 600), ko: ko(x?.ko), time: when(x?.time), ...(x?.deleted === true ? { deleted: true } : {}), ...(x?.everyday === true || t?.everyday === true ? { src: 'guess', ...(x?.onScene === true || t?.onScene === true ? { onScene: true } : {}) } : {}) });
     // a translation that only repeats its text (a Korean text given the same "ko") is none: it would show twice
     const same = (a, b) => !!a && !!b && a.replace(/\s+/g, ' ').trim() === b.replace(/\s+/g, ' ').trim();
     const PAIRS = [['text', 'ko'], ['caption', 'ko'], ['q', 'ko'], ['title', 'ko'], ['title', 'kt'], ['subject', 'ks'], ['photo', 'pko'], ['bio', 'ko']];
@@ -461,7 +596,7 @@ export function parsePhone(out, owner = '') {
         accent: pick(raw.accent, ACCENTS, ''),
         now: when(raw.now),
         contacts: arr(raw.contacts).map(x => ({ name: line(x?.name, 40), saved: line(x?.saved, 40) })).filter(x => x.name && !mine(x.name)).slice(0, CAP.contacts),
-        threads: arr(raw.threads).map(t => { const d = t?.draft && str(t.draft.text, 600); return { with: line(t?.with, 40), messages: arr(t?.messages).map(x => msg(x, t)).filter(x => x.text), ...(d ? { draft: { text: d, ko: ko(t.draft.ko), time: when(t.draft.time), src: 'story' } } : {}) }; }).filter(t => t.with && !mine(t.with) && t.messages.length).slice(0, CAP.threads),
+        threads: arr(raw.threads).map(t => { const d = t?.draft && str(t.draft.text, 600); const group = t?.group === true ? { group: true, members: [...new Set(oneOrMany(t.members).map(x => line(x, 40)).filter(x => x && !mine(x)))].slice(0, 30) } : {}; return { with: line(t?.with, 40), ...group, messages: arr(t?.messages).map(x => msg(x, t)).filter(x => x.text), ...(d ? { draft: { text: d, ko: ko(t.draft.ko), time: when(t.draft.time), src: 'story' } } : {}) }; }).filter(t => t.with && !mine(t.with) && t.messages.length).slice(0, CAP.threads),
         calls: inARow(arr(raw.calls).map(x => tag({ with: line(x?.with, 40), type: pick(x?.type, ['in', 'out', 'missed'], 'in'), time: when(x?.time), min: Math.max(0, Math.min(600, Math.round(num(x?.min) || 0))), ...(callCount(x?.count) > 1 ? { count: callCount(x.count) } : {}) }, x)).filter(x => x.with && !mine(x.with))),
         photos: arr(raw.photos).map(x => tag({ caption: line(x?.caption, 200), ko: ko(x?.ko), time: when(x?.time), mood: pick(x?.mood, MOODS, 'warm') }, x)).filter(x => x.caption),
         notes: arr(raw.notes).map(x => tag({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 1500), ko: str(x?.ko, 1500), time: when(x?.time) }, x)).filter(x => x.title || x.text),
@@ -472,7 +607,7 @@ export function parsePhone(out, owner = '') {
             comments: arr(x?.comments).map(c => ({ from: line(c?.from, 40), text: line(c?.text, 300), ko: ko(c?.ko) })).filter(c => c.from && c.text).slice(0, CAP.comments) }, x)).filter(x => x.text || x.photo),
         mails: arr(raw.mails).map(x => tag({ from: line(x?.from, 60), subject: line(x?.subject, 120), ks: line(x?.ks, 120), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), unread: truthy(x?.unread) }, x)).filter(x => x.from && (x.subject || x.text)),
         diary: arr(raw.diary).map(x => tag({ date: when(x?.date).slice(0, 5), title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000) }, x)).filter(x => x.date && x.text),
-        visits: arr(raw.visits).map(x => tag({ place: line(x?.place, 60), city: line(x?.city, 60), ...(line(x?.already, 40) ? { already: line(x.already, 40) } : {}), ...(x?.home === true ? { home: true } : {}), with: [...new Set(arr(x?.with).map(n => line(n, 40)).filter(n => n && !mine(n)))].slice(0, 6), time: when(x?.time), src: 'story' }, x)).filter(x => x.place).slice(-CAP.visits),
+        visits: arr(raw.visits).map(x => tag({ place: line(x?.place, 60), city: line(x?.city, 60), ...(line(x?.already, 40) ? { already: line(x.already, 40) } : {}), ...(x?.home === true ? { home: true } : {}), with: [...new Set(oneOrMany(x?.with).map(n => line(n, 40)).filter(n => n && !mine(n)))].slice(0, 6), time: when(x?.time), src: 'story' }, x)).filter(x => x.place).slice(-CAP.visits),
         voice: arr(raw.voice).map(x => tag({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), sec: secOf(x?.sec), place: line(x?.place, 60), src: 'story' }, x)).filter(x => x.text),
     });
 }
@@ -561,8 +696,8 @@ function personIn(p, list, get, name) {
     return one(list.filter(x => names.includes(nameKey(get(x))))) || one(list.filter(x => samePerson(get(x), name)));
 }
 const EVERYDAY_KEYS = ['contacts', 'threads', 'calls', 'photos', 'notes', 'searches', 'mails', 'posts', 'diary', 'voice', 'events', 'alarms', 'files', 'timers'];
-// (the clock and files in an answer: an alarm and a timer, two files)
-const EVERYDAY_LIFE = { alarms: 1, timers: 1, files: 2 };
+// (the clock and files a day: an alarm, two timers, two files)
+const EVERYDAY_LIFE = { alarms: 1, timers: 2, files: 2 };
 function everydayOn(raw, rows, textAt) {
     const ed = raw?.everyday && typeof raw.everyday === 'object' && !Array.isArray(raw.everyday) ? raw.everyday : null;
     if (!ed || !EVERYDAY_KEYS.some(k => arr(ed[k]).length)) return;
@@ -584,84 +719,225 @@ function everydayOn(raw, rows, textAt) {
     // (a contact only for someone these records text or call)
     const talked = new Set([...arr(ed.threads).map(x => nameKey(x?.with)), ...arr(ed.calls).map(x => nameKey(x?.with))].filter(Boolean));
     ed.contacts = arr(ed.contacts).filter(x => talked.has(nameKey(x?.name)));
-    for (const k of EVERYDAY_KEYS) if (arr(ed[k]).length) host.phone[k] = [...arr(host.phone[k]), ...arr(ed[k]).slice(0, EVERYDAY_LIFE[k] ?? Infinity).map(mark)];
+    // (the clock and files: so many a day)
+    const perDay = (k, xs) => { if (!EVERYDAY_LIFE[k]) return xs; const n = new Map(); return xs.filter(x => { const d = dayOfItem(x); n.set(d, (n.get(d) || 0) + 1); return n.get(d) <= EVERYDAY_LIFE[k]; }); };
+    for (const k of EVERYDAY_KEYS) if (arr(ed[k]).length) host.phone[k] = [...arr(host.phone[k]), ...perDay(k, arr(ed[k])).map(mark)];
 }
-// ---- 일상 (반영의 다음 요청): the owner's ordinary life in the hours these messages cover, and the texts after a scene,
-// on its own (in the reflection's own request it was a line among many: run51–53 wrote none after a scene and kept making
-// up details). It gets all the reflection got, what the reflection put on the phone from these messages, and the people
-// the owner had a scene with
-// the apps' items as the reflection writes them, without the profile (no SNS name changed); the contacts in, so someone
-// texted who isn't saved yet is
-// (no visit: a place is gone to in the story, never made up for an ordinary day)
-const EVERYDAY_ITEMS = PHONE_ITEMS.split('\n').filter(l => !/^\s*"(?:profile|visits)"/.test(l)).join('\n').replace(VOICE_ONLY, '');
-export const everydaySystem = ({ life = false } = {}) => `GOAL
-Write the ordinary life on one character's phone in the hours a few new role-play messages cover: the small records a real phone gathers, and the texts people send after a scene with the owner.
-Another step already put the story's own events on the phone; you only add everyday life around them.
-
-YOU GET
-- NEW MESSAGES: the messages these hours come from, each with its number (#123).
-- ARCHIVE FOR THESE MESSAGES, ARCHIVE BEFORE, STORY NOW (sometimes): the story around them. Background.
-- EVENTS ON THE PHONE, PHONE NOW, LIFE NOW (sometimes: the alarms, files and health days, with record ids), WEATHER NOW (sometimes), DAYS (sometimes): what the phone holds.
-${CLOCK_GET}
-- PEOPLE AROUND (sometimes): people in the owner's life, close or not, from the cards, persona, profile and lorebook, with where things stand now.
-- PUT ON THE PHONE NOW: what the other step wrote from these messages. Never again.
-- OWNER, and sometimes STORY YEAR, WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW. Nothing on the phone may show what the owner doesn't know.
-
-EVERYDAY
-- The owner's ordinary life in these hours, from their habits: each answer fills most lists as these hours call for, for example a photo of lunch, a search, a note, a mail, a post, texts and calls by the person, a voice memo, and a diary entry when these hours end the day. A list with nothing in these hours stays empty.
-- For each person the owner had a scene with in NEW MESSAGES: at least one text between the two later these hours, in their own voices (a fight may go on; a job given in person gets a short check).
-- People from the story or PEOPLE AROUND as they are and with what they feel; never someone the owner isn't in touch with now. PEOPLE AROUND are part of the owner's life whether or not they are in touch: they turn up wherever they would on a real phone. Someone texted or called who isn't in the contacts yet goes in "contacts" too. A relationship word (girlfriend, ex, husband, boss) only if the messages, archive or PEOPLE AROUND use it for them.
-- A diary entry holds what these messages show and what the owner feels about it, as the story and PEOPLE AROUND show them; no new secrets or events.
-- Anything a later message could contradict is a new fact: what someone decided, said or wants, a time, a result; a task and its deadline ("check the moodboards by 18:00"), a thing done ("uploaded it"), a plan for later ("ramyeon tonight?"). What these messages already say is no new fact: a text may say it again ("the deck is for Friday"). How they feel and small things around them are fine. No new facts, events, plans or secrets.
-- Times stay within the owner-local window in PUT ON THE PHONE NOW; do not read its end again from other screens.
-- Never a booking, a trip or a purchase the story doesn't have (a ticket mail, an order confirmation).${life ? `
-- Their clock and files too: an alarm they set for tomorrow, a timer for the pasta, a file they download, save or screenshot. Pictures the camera takes go to photos, not files.
-${LIFE_ONCE}
-${LIFE_CHANGE}` : ''}
-
-${PHONE_STYLE}
-
-JSON (one object, nothing before or after it)
-{ "everyday": { the items below, each app a list (an empty one when nothing) } }
-Items, as the phone's own apps take them:
-{
-${EVERYDAY_ITEMS}${life ? `,
-${LIFE_ALARMS}
-${LIFE_FILES}
-${LIFE_TIMERS}` : ''}
-}`;
-export const AI_SYS_EVERYDAY = everydaySystem();
-// what the reflection put on the phone from these messages, one line an event
-const putLine = e => { const ph = e?.phone && typeof e.phone === 'object' ? e.phone : {}; const bits = Object.entries(ph).filter(([, v]) => Array.isArray(v) && v.length).map(([k, v]) => (k === 'threads' ? `texts with ${v.map(t => t?.with).filter(Boolean).join(', ')}` : `${k} ${v.length}`)); return `- #${e?.at ?? '?'} ${line(e?.summary, 120)}${bits.length ? ` (${bits.join('; ')})` : ''}`; };
-// the reflection's own blocks, but the messages read before and changed since (they only match its events' ids)
-export const everydayParts = parts => arr(parts).filter(b => !String(b).startsWith('[MESSAGES READ BEFORE, NOW CHANGED]'));
-async function askEveryday(parts, raw, p, rows, life = false, m = null) {
-    const mine = everydayParts(parts).join('\n\n');
-    const blocks = [mine, `[PUT ON THE PHONE NOW]\n${arr(raw?.events).map(putLine).join('\n') || '(nothing)'}\nOwner-local window: ${p.now || "unknown"} to ${raw?.now || p.now || "unknown"}.`].filter(Boolean).join('\n\n');
-    try { const got = jsonOf(await askDraft(blocks, { force: true, system: everydaySystem({ life }), maxTokens: 6000, effort: 'low' })); return got?.everyday && typeof got.everyday === 'object' ? got.everyday : null; }
-    catch (err) { console.warn('[narrative-archive] everyday', err); return null; }
+// ---- 반영 본체's answer (3.180~): "records", one line each, made into the events, "everyday" and "days" the rest of the
+// round reads (the old answer, with "events", is read as it is). A scene is an event; a story record goes on its scene
+// (else the one scene of its message, else one made for that message); a record of the owner's own life goes in
+// "everyday" (재구성: marked, on the round's last event, so many a day). textOf: a message's text, for a made event's quote
+const REC_KEY = { contact: 'contacts', text: 'threads', call: 'calls', photo: 'photos', note: 'notes', search: 'searches', calendar: 'events', post: 'posts', mail: 'mails', diary: 'diary', visit: 'visits', voice: 'voice', alarm: 'alarms', timer: 'timers', file: 'files', health: 'health' };
+const REC_META = ['type', 'at', 'from', 'scene', 'already', 'made', 'kind', 'sender', 'said', 'advances', 'situation', 'situations'];
+// an "everyday" item as it is, without what has no time (a text's texts one by one; the diary and the calendar by their
+// date; a contact, an alarm, a timer or a file needs none); null when nothing is left
+const hasTime = y => !!String(y?.time ?? '').trim();
+function timedLife(x, type) {
+    if (type === 'text') { const msgs = arr(x.messages).filter(hasTime); return msgs.length || x.draft ? { ...x, messages: msgs } : null; }
+    if (type === 'diary' || type === 'calendar') return String(x.date ?? '').trim() ? x : null;
+    if (['contact', 'alarm', 'timer', 'file'].includes(type)) return x;
+    return hasTime(x) ? x : null;
 }
+// how many an answer's "everyday" wrote without their time (left out)
+const untimedLife = ed => Object.entries(EVERYDAY_TYPE).reduce((n, [k, type]) => n + arr(ed?.[k]).filter(x => x && typeof x === 'object' && !Array.isArray(x)).reduce((m, x) => m + (type === 'text' ? arr(x.messages).filter(y => !hasTime(y)).length : timedLife(x, type) ? 0 : 1), 0), 0);
+// the answer's "everyday" as lists by app: a day list ([{ date, records: [{ type, … }] }], 3.180~) read into them; the
+// lists by app as they are
+const TYPE_LIST = { text: 'texts', call: 'calls', photo: 'photos', search: 'searches', note: 'notes', mail: 'mails', post: 'posts', calendar: 'calendar', diary: 'diary', voice: 'voice', contact: 'contacts', alarm: 'alarms', timer: 'timers', file: 'files' };
+const edLists = own => {
+    if (!Array.isArray(own)) return own && typeof own === 'object' ? own : {};
+    const out = {};
+    for (const d of own) for (const r of arr(d?.records)) {
+        const k = TYPE_LIST[r?.type];
+        if (!k) continue;
+        const { type, ...x } = r;
+        // (a diary without its date is that day's)
+        out[k] = [...arr(out[k]), k === 'diary' && !String(x.date ?? '').trim() && d?.date ? { ...x, date: d.date } : x];
+    }
+    return out;
+};
+// (the answer's "everyday" lists, by the record each item is)
+const EVERYDAY_TYPE = { texts: 'text', threads: 'text', calls: 'call', photos: 'photo', searches: 'search', notes: 'note', mails: 'mail', posts: 'post', calendar: 'calendar', events: 'calendar', diary: 'diary', voice: 'voice', contacts: 'contact', alarms: 'alarm', timers: 'timer', files: 'file' };
+// (none written is no number: Number("") would be message 0)
+const atNum = v => (String(v ?? '').trim() ? Number(String(v).replace(/^\s*#/, '')) : NaN);
+// the screen time an answer writes (each day's, a habit's new apps), without the apps only Korea has when the owner lives
+// elsewhere: a day's minutes go to their usual app of that kind, a new app is left out
+export function homeScreens(raw, away, usual) {
+    if (!away || !raw || typeof raw !== 'object') return;
+    const day = d => { if (d && typeof d === 'object' && d.screen && typeof d.screen === 'object') d.screen = homeScreen(true, d.screen, usual); };
+    const habit = u => { const add = u?.screen?.add; if (Array.isArray(add)) u.screen.add = add.filter(a => !KR_ONLY.test(String(a?.app ?? ''))); };
+    for (const e of arr(raw.events)) { if (!e?.phone || typeof e.phone !== 'object') continue; arr(e.phone.health).forEach(day); habit(e.phone.usual); }
+    arr(raw.days).forEach(day);
+}
+// "records" as one day list (3.180~: [{ date, records: [...] }], the story's and the owner's own together): a record with
+// its scene or its words ("said") is the story's, as the flat list has it; the rest is the owner's own life, "everyday" by
+// app. The model says which; the app only reads it. A flat list and "everyday" as they are
+const isDay = r => r && typeof r === 'object' && !Array.isArray(r) && !r.type && Array.isArray(r.records);
+const ofStory = r => ['visit', 'profile'].includes(r.type) || !!String(r.scene ?? '').trim() || !!String(r.said ?? '').trim();
+export function splitDays(recs0, own) {
+    if (!Array.isArray(recs0) || !recs0.some(isDay)) return { recs: recs0, own };
+    const recs = [], days = [];
+    for (const r of recs0) {
+        if (!isDay(r)) { recs.push(r); continue; }
+        const mine = [];
+        for (const x of r.records) {
+            if (!x || typeof x !== 'object' || Array.isArray(x)) continue;
+            if (!ofStory(x)) { mine.push(x); continue; }
+            // (a diary without its date is that day's)
+            recs.push(x.type === 'diary' && !String(x.date ?? '').trim() && r.date ? { ...x, date: r.date } : x);
+        }
+        if (mine.length) days.push({ date: r.date, records: mine });
+    }
+    if (!days.length) return { recs, own };
+    const a = edLists(own), b = edLists(days), ed = { ...a };
+    for (const [k, v] of Object.entries(b)) ed[k] = [...arr(a[k]), ...v];
+    return { recs, own: ed };
+}
+export const recordCount = (recs, ed0) => { const ed = edLists(ed0), own = ed && typeof ed === 'object' && !Array.isArray(ed) ? Object.keys(EVERYDAY_TYPE).flatMap(k => arr(ed[k]).map(x => ({ ...x, from: 'life' }))) : [], xs = [...arr(recs), ...own].filter(r => r && typeof r === 'object'), untimed = untimedLife(ed), nosaid = arr(recs).filter(r => r && typeof r === 'object' && r.from !== 'life' && !['scene', 'contact', 'profile', 'health', 'usual'].includes(r.type) && !String(r.said ?? '').trim()).length; return { scenes: xs.filter(r => r.type === 'scene').length, story: xs.filter(r => r.type !== 'scene' && r.from !== 'life').length, life: xs.filter(r => r.type !== 'scene' && r.from === 'life').length, ...(untimed ? { untimed } : {}), ...(nosaid ? { nosaid } : {}) }; };
+export function recordsCore(raw, textOf = () => '') {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw) || !(Array.isArray(raw.records) || Array.isArray(raw.scenes))) return raw;
+    // (the owner's own life comes in "everyday", a list for each app: a life record each, as the old answer's "from": "life")
+    // ("scenes" first, 3.180~: each a scene record; a visit on one of them is with its scene's companions, as the scene has them)
+    const { records: recs1, scenes: sc0, everyday: own1, ...rest } = raw, { recs: recs0, own } = splitDays(recs1, own1), ed = edLists(own);
+    const sceneRows = arr(sc0).filter(x => x && typeof x === 'object' && !Array.isArray(x)).map(x => ({ ...x, type: 'scene' }));
+    const withOf = new Map(sceneRows.map(x => [String(x.id ?? x.scene ?? '').trim(), x.with]).filter(([k]) => k));
+    const records = [...sceneRows, ...arr(recs0).map(r => (Array.isArray(sc0) && r && typeof r === 'object' && r.type === 'visit' && withOf.has(String(r.scene ?? '').trim()) ? { ...r, with: withOf.get(String(r.scene).trim()) } : r))];
+    // (one written without its time is left out: the model's to say when, never the app's; see untimedLife)
+    const lives = Object.entries(EVERYDAY_TYPE).flatMap(([k, type]) => arr(ed[k]).filter(x => x && typeof x === 'object' && !Array.isArray(x)).map(x => timedLife(x, type)).filter(Boolean).map(x => ({ ...x, type, from: 'life' })));
+    // (the days' health and a habit's change come on their own, after "everyday": a record each, as before)
+    const obj = x => x && typeof x === 'object' && !Array.isArray(x);
+    const health = arr(rest.health).filter(obj).map(x => ({ ...x, type: 'health', from: 'life' })), usual = obj(rest.usual) ? [{ ...rest.usual, type: 'usual' }] : [];
+    // ("situations": the model's own notes of where things stand, read before it writes; never stored)
+    delete rest.health; delete rest.usual; delete rest.situations;
+    const all = [...records.filter(r => r && typeof r === 'object' && !Array.isArray(r)), ...lives, ...health, ...usual];
+    // (a record the model itself says moves a story situation on, "advances": true, is left out: its own answer, kept for a look)
+    const yes = v => v === true || /^(true|yes)$/i.test(String(v ?? '').trim());
+    const advanced = all.filter(r => yes(r.advances)), recs = all.filter(r => !yes(r.advances));
+    const gist = r => line(r.text ?? (Array.isArray(r.messages) ? r.messages.map(m => m?.text).join(' / ') : '') ?? '', 80) || line(r.q ?? r.title ?? r.caption ?? r.subject ?? r.place ?? r.with ?? '', 80);
+    const events = [], byId = new Map(), made = new Map(), everyday = {}, days = [];
+    for (const r of recs) if (r.type === 'scene') {
+        // (its name in "id", or in "scene" as the records' shared field has it)
+        const e = { id: line(r.id, 60) || line(r.scene, 60) || `scene-${atNum(r.at)}`, at: r.at, quote: r.quote ?? '', date: r.date ?? '', time: r.time ?? '', summary: r.summary ?? '', phone: {} };
+        events.push(e);
+        if (!byId.has(e.id)) byId.set(e.id, e);
+    }
+    // a story record's event: its scene, the one scene of its message, else one for that message (its words the quote)
+    const hostOf = r => {
+        const own = byId.get(String(r.scene ?? '').trim());
+        if (own) return own;
+        const at = atNum(r.at), there = events.filter(e => atNum(e.at) === at);
+        if (there.length === 1) return there[0];
+        if (there.length) return there.at(-1);
+        if (!Number.isInteger(at)) return events.at(-1);
+        if (!made.has(at)) {
+            const words = String(textOf(at) || '').replace(/^\[#\d+[^\]]*\]\s*/, '').trim().slice(0, 40);
+            if (!words) return events.at(-1);
+            const e = { id: `msg-${at}`, at, quote: words, summary: '', date: '', time: '', phone: {} };
+            made.set(at, e); events.push(e);
+        }
+        return made.get(at);
+    };
+    const itemOf = r => {
+        const x = Object.fromEntries(Object.entries(r).filter(([k]) => !REC_META.includes(k)));
+        if (r.type === 'call') x.type = r.kind ?? r.type;
+        if (r.type === 'mail') x.from = r.sender ?? r.from;
+        if ((r.type === 'alarm' || r.type === 'file') && r.already) x.change = r.already;
+        if (r.type === 'visit' && r.already) x.already = r.already;
+        if (r.type === 'note' && r.time === undefined) delete x.time;
+        // (a text's time alone, "17:35", is on its record's day, not on its scene's: a skipped day's texts stay on it)
+        const day = String(when(r.time || '')).slice(0, 5);
+        if (r.type === 'text' && /^\d{2}-\d{2}$/.test(day)) {
+            const dated = y => (y && typeof y === 'object' && /^\s*\d{1,2}:\d{2}\s*$/.test(String(y.time || '')) ? { ...y, time: `${day} ${hhmm(y.time)}` } : y);
+            if (Array.isArray(x.messages)) x.messages = x.messages.map(dated);
+            if (x.draft) x.draft = dated(x.draft);
+        }
+        return x;
+    };
+    for (const r of recs) {
+        const key = REC_KEY[r.type];
+        if (r.type === 'scene' || (!key && r.type !== 'usual' && r.type !== 'profile')) continue;
+        const life = r.from === 'life', x = itemOf(r);
+        // (a day already in LIFE NOW, "already", is rewritten on an event: "days" only adds days the phone doesn't have)
+        if (r.type === 'health') { const host = life && !r.already ? null : byId.get(String(r.scene ?? '').trim()) || (Number.isInteger(atNum(r.at)) ? events.find(e => atNum(e.at) === atNum(r.at)) : null) || (r.already ? hostOf(r) : null); if (host) host.phone.health = [...arr(host.phone.health), x]; else days.push(x); continue; }
+        // (a habit or the SNS profile is one thing, on its scene or the last)
+        if (r.type === 'usual' || r.type === 'profile') { const host = hostOf(r); if (host) host.phone[r.type] = { ...(host.phone[r.type] || {}), ...x }; continue; }
+        // (no visit made up: a place is gone to in the story)
+        // (one that answers a scene of these messages, its id in "scene", goes on that scene, marked: the day's count leaves
+        // it out, so a big scene late in a day still gets its texts and searches; a contact stays with the others)
+        if (life) {
+            if (key === 'visits') continue;
+            const own = key !== 'contacts' && byId.get(String(r.scene ?? '').trim());
+            if (own) { own.phone[key] = [...arr(own.phone[key]), { ...x, everyday: true, onScene: true, ...(Array.isArray(x.messages) ? { messages: x.messages.map(y => (y && typeof y === 'object' ? { ...y, everyday: true, onScene: true } : y)) } : {}) }]; continue; }
+            everyday[key] = [...arr(everyday[key]), x]; continue;
+        }
+        const host = hostOf(r);
+        if (host) host.phone[key] = [...arr(host.phone[key]), x];
+    }
+    // (a scene with no summary of its own: what it put on the phone)
+    // (in the apps' own names, as the list of reflected events shows it: "메모 · 문자")
+    const named = k => APP_NAME[k] || { health: '건강', usual: '건강', alarms: '시계', timers: '시계', files: '파일', profile: 'SNS' }[k] || k;
+    for (const e of events) if (!e.summary) e.summary = [...new Set(Object.keys(e.phone).map(named))].join(' · ') || e.id;
+    return { ...rest, events, ...(Object.keys(everyday).length ? { everyday } : {}), ...(days.length ? { days: [...arr(rest.days), ...days] } : {}), ...(advanced.length ? { _advanced: advanced.map(r => ({ type: r.type, from: r.from === 'life' ? 'everyday' : 'records', what: gist(r) })) } : {}) };
+}
+// ---- 일상: the owner's ordinary life in the hours these messages cover comes in the reflection's own answer, its top-level
+// "everyday" (3.179.1~, as the money step writes story and everyday payments together; 3.171.9–3.179.0 asked it apart)
+// the owner's orders and tickets for 반영 본체 (the money step has them all): what a mail, text or calendar about one says
+// agrees with the phone (its item, its dates, its status); no money
+export const ordersBlock = (money, p = null) => {
+    // (its arrival day, from the phone's own order: MONEY NOW leaves it out)
+    const etaOf = id => arr(p?.money?.orders).find(x => x?.id === id)?.eta || '';
+    const orders = arr(money?.orders).map(o => ({ shop: o.shop, item: o.item, ...(o.option ? { option: o.option } : {}), ...(o.gift ? { gift: o.gift } : {}), ...(o.sender ? { sender: o.sender } : {}), status: o.status, time: o.time, ...(etaOf(o.id) ? { eta: etaOf(o.id) } : {}) }));
+    const tickets = arr(money?.passes).map(x => ({ kind: x.kind, by: x.by, ...(x.from ? { from: x.from } : {}), ...(x.to ? { to: x.to } : {}), ...(x.no ? { no: x.no } : {}), date: x.date, ...(x.until ? { until: x.until } : {}), status: x.status }));
+    return orders.length || tickets.length ? `[ORDERS AND TICKETS]\n${JSON.stringify({ ...(orders.length ? { orders } : {}), ...(tickets.length ? { tickets } : {}) })}` : '';
+};
 // the people closest to the owner (위치 판독's "around"): who they are to the owner and how it stands, in the cards' own words
 export const aroundBlock = p => (p?.around?.people?.length ? `[PEOPLE AROUND]\n${p.around.people.map(x => `- ${x.name}${x.aka?.length ? ` (${x.aka.join(', ')})` : ''}: ${x.about}`).join('\n')}` : '');
-// 반영's everyday records (재구성, "everyday": true): so many an answer and a day in each app, texts and calls for each
-// person (a slow day read in many rounds gets some each round, not a pile). The story's own records have no limit
-const EVERYDAY_CAP = { threads: [3, 12], calls: [1, 3], photos: [2, 8], searches: [2, 8], notes: [1, 3], mails: [1, 3], posts: [1, 2], diary: [1, 3], voice: [1, 2], events: [1, 3] };
+// 반영's own-life records (재구성, "everyday": true): so many a day in each app, by the person (or group chat) for texts and
+// calls; a day, not a reflection (3.180~), so each day a long gap covers gets its own. Texts: two exchanges a person a day
+// (a text record each), of up to 8 texts. The story's own records have no limit
+const EVERYDAY_CAP = { threads: 16, calls: 2, photos: 5, searches: 5, notes: 2, mails: 3, posts: 1, voice: 2, events: 2 };
+const BUNDLE_LINES = 8, BUNDLES = 2;
 const dayOfItem = x => when(String(x?.date || x?.time || '')).slice(0, 5);
-function everydayOnly(p, add, day, daily) {
-    const who = (k, x, th) => (k === 'threads' ? nameKey(th?.with) : k === 'calls' ? nameKey(x.with) : '');
-    const had = (k, d, w) => (k === 'threads' ? (p.threads || []).filter(th => nameKey(th.with) === w).flatMap(th => th.messages || []) : (p[k] || []).filter(x => k !== 'calls' || nameKey(x.with) === w))
+// (the day of "now" so far: its share of the waking hours, 07:00 to 23:00, gone by; a morning round leaves the rest of
+// the day its own. At least one, and one exchange of texts)
+const WAKE_FROM = 7, WAKE_HOURS = 16;
+const capSoFar = (k, d, now) => {
+    const all = EVERYDAY_CAP[k] || 0, t = String(now || '');
+    if (!d || t.slice(0, 5) !== d || !hm(t)) return all;
+    const [h, m] = hhmm(t.slice(6)).split(':').map(Number), part = Math.min(1, Math.max(0, (h + m / 60 - WAKE_FROM) / WAKE_HOURS));
+    return Math.min(all, Math.max(k === 'threads' ? BUNDLE_LINES : 1, Math.ceil(all * part)));
+};
+function everydayOnly(p, add, day, daily, now = '') {
+    // (a group chat is a room of its own, never the person it may be named like)
+    const room = th => `${th?.group ? 'group:' : ''}${nameKey(th?.with)}`;
+    const who = (k, x, th) => (k === 'threads' ? room(th) : k === 'calls' ? nameKey(x.with) : '');
+    const had = (k, d, w) => (k === 'threads' ? (p.threads || []).filter(th => room(th) === w).flatMap(th => th.messages || []) : (p[k] || []).filter(x => k !== 'calls' || nameKey(x.with) === w))
         .filter(x => isGuess(x) && (dayOfItem(x) || '') === d).length;
     const ok = (k, x, th) => {
         if (!isGuess(x)) return true;
-        const [perRound, perDay] = EVERYDAY_CAP[k] || [0, 0], d = dayOfItem(x) || day || '', w = who(k, x, th), dk = `${k}|${w}|${d}`, rk = `round|${k}|${w}`;
+        // (a scene's own: kept, the day's count never filled by it; the diary: as many as the answer writes)
+        if (x.onScene || k === 'diary') return true;
+        const d = dayOfItem(x) || day || '', w = who(k, x, th), dk = `${k}|${w}|${d}`;
         if (!daily.has(dk)) daily.set(dk, had(k, d, w));
-        if ((daily.get(rk) || 0) >= perRound || daily.get(dk) >= perDay) return false;
-        daily.set(dk, daily.get(dk) + 1); daily.set(rk, (daily.get(rk) || 0) + 1);
+        if (daily.get(dk) >= capSoFar(k, d, now)) return false;
+        daily.set(dk, daily.get(dk) + 1);
         return true;
     };
     for (const k of LISTS) if (Array.isArray(add[k])) add[k] = add[k].filter(x => ok(k, x));
-    if (Array.isArray(add.threads)) for (const th of add.threads) th.messages = (th.messages || []).filter(x => ok('threads', x, th));
+    if (Array.isArray(add.threads)) for (const th of add.threads) {
+        // (one exchange: its first 8 texts; past two exchanges with them that day, none)
+        let n = 0;
+        const own = (th.messages || []).filter(x => !isGuess(x) || ++n <= BUNDLE_LINES), first = own.find(isGuess);
+        // (a scene's own exchange: its first 8, never one of the day's two)
+        if (first?.onScene) th.messages = own;
+        else if (first) {
+            const bk = `bundle|${room(th)}|${dayOfItem(first) || day || ''}`, b = daily.get(bk) || 0;
+            daily.set(bk, b + 1);
+            th.messages = b >= BUNDLES ? own.filter(x => !isGuess(x)) : own.filter(x => ok('threads', x, th));
+        } else th.messages = own;
+    }
     if (Array.isArray(add.threads)) add.threads = add.threads.filter(th => th.messages.length || th.draft);
+    // (the mark is this round's only)
+    for (const k of [...LISTS, 'threads']) for (const x of arr(add[k])) { if (x && typeof x === 'object') delete x.onScene; for (const y of arr(x?.messages)) if (y && typeof y === 'object') delete y.onScene; }
 }
 // a reflection keeps everything (keepAll); making a phone keeps each list to its size
 // (the city they live in, by any of its names, a part of one too: "Frankfurt" for "Frankfurt am Main"; never a place in it,
@@ -725,7 +1001,9 @@ function mergePhone(p, add, { keepAll = false, m = null } = {}) {
         return s.length >= 3 && s.length / l.length >= 0.6 && l.includes(s);
     };
     for (const t of add.threads) {
-        const old = personIn(p, p.threads, x => x.with, t.with);
+        // (a group chat is its own room, by its name; a person's chat is never one)
+        const old = t.group ? p.threads.find(x => x.group && nameKey(x.with) === nameKey(t.with)) : personIn(p, p.threads.filter(x => !x.group), x => x.with, t.with);
+        if (old && t.group) old.members = [...new Set([...arr(old.members), ...arr(t.members)])].slice(0, 30);
         // a text the owner deleted: the one there is marked (it stays for 되돌리기), never added again
         // (one the phone never had, a thread new in this round too, goes in marked, so the data holds it)
         const gone = t.messages.filter(x => x.deleted), matched = new Set();
@@ -783,7 +1061,7 @@ const secEnd = s => { const mt = s.title.match(RANGE_HEAD); return mt ? Number(m
 const secFirst = s => { const mt = s.title.match(RANGE_HEAD); return mt ? Number(mt[2]) : -1; };
 const lastEnd = m => Math.max(-1, ...parseSections(String(m.text || '')).filter(s => !s.group).map(secEnd));
 // a reflection's background (the archive before its messages): the newest sections up to this, the rest is old news
-const BEFORE_MAX = 30_000;
+const BEFORE_MAX = 5_000;
 // stretches archived before the phone read them, read from their sections: whole sections, up to this many tokens of
 // section text a round (about 20 sections of 250–280 words). A summary is nearly all events, about 4–5 to 1,000 tokens,
 // so they fit one answer's 40 events and 16,000 tokens (an answer cut short would lose the round). A section is never cut:
@@ -1098,7 +1376,7 @@ const ev = (x, o) => (x.ev ? { ...o, ev: x.ev } : o);
 const phoneForModel = p => ({
     country: p.country, now: p.now,
     contacts: p.contacts.map(({ name, saved }) => ({ name, saved })),
-    threads: p.threads.map(t => ({ with: t.with, messages: real(t.messages).slice(-6).map(({ from, text, time }) => ({ from, text, time })) })),
+    threads: p.threads.map(t => ({ with: t.with, ...(t.group ? { group: true, members: t.members || [] } : {}), messages: real(t.messages).slice(-6).map(({ from, text, time }) => ({ from, text, time })) })),
     calls: real(p.calls).slice(-5).map(x => ev(x, { with: x.with, type: x.type, time: x.time, min: x.min, ...(x.count > 1 ? { count: x.count } : {}) })),
     photos: real(p.photos).slice(-4).map(x => ev(x, { caption: x.caption, time: x.time })),
     notes: real(p.notes).slice(-3).map(x => ev(x, { title: x.title, text: x.text.slice(0, 200), time: x.time })),
@@ -1706,8 +1984,9 @@ async function updatePhone(m, owner) {
         // background is what was read before: never a section read now as evidence, nor one archived and still unread
         const unreadArch = new Set(archivedUnread(s, sections, rows, chatRows()).map(x => x.key)), background = got.background.filter(x => !evidence.some(y => y.key === x.key) && !unreadArch.has(x.key));
         const before = [];
-        for (let i = background.length - 1, size = 0; i >= 0 && size + background[i].text.length <= BEFORE_MAX; i--) { before.unshift(background[i].text); size += background[i].text.length; }
-        const events = Object.entries(s.events).slice(-40).map(([id, e]) => `- ${id}: ${e.summary}${e.at === null || e.at === undefined ? '' : ` (#${e.at})`}`).join('\n');
+        // (the section just before only, its end when long: the story's people and state come in PEOPLE AROUND and STORY NOW)
+        if (background.length) { const t = background.at(-1).text; before.push(t.length > BEFORE_MAX ? t.slice(-BEFORE_MAX) : t); }
+        const events = Object.entries(s.events).slice(-15).map(([id, e]) => `- ${id}: ${e.summary}${e.at === null || e.at === undefined ? '' : ` (#${e.at})`}`).join('\n');
         const world = worldText(m), lore = await loreFor(m, owner), profile = await ownerProfileBlock(ctx(), p.financeProfile, owner, { money: !!(p.money || p.investment) });
         if (p.money) migrateBank(m, p);
         const money = moneyNow(p), invest = investNow(m, p), life = lifeNow(p);
@@ -1763,19 +2042,26 @@ async function updatePhone(m, owner) {
             reread.size ? `[MESSAGES READ BEFORE, NOW CHANGED]\n${[...reread].map(([at, evs]) => `- #${at}: ${evs.length ? evs.map(e => `${e.id} (${e.summary})`).join('; ') : 'nothing on the phone yet'}`).join('\n')}` : '',
             `[PHONE NOW]\n${JSON.stringify(phoneForModel(p))}`,
             !split && money ? `[MONEY NOW]\n${JSON.stringify(money)}` : '', !split && invest ? `[INVESTMENTS NOW]\n${JSON.stringify(invest)}` : '',
+            split && money ? ordersBlock(money, p) : '',
             !split && money && p.delivery ? `[DELIVERY SHOPS]\n${(p.delivery.shops || []).map(x => x.name).join('\n') || '(none yet)'}${p.delivery.cart?.items?.length ? `\nCART (in the basket, not ordered): ${p.delivery.cart.shop}: ${p.delivery.cart.items.map(x => `${x.name} ×${x.qty}`).join(', ')}` : ''}` : '',
             life ? `[LIFE NOW]\n${JSON.stringify(life)}` : '', askWeather && tracker ? `[WEATHER NOW]\n${JSON.stringify(trackShown)}` : '', clock,
             !split && (money || invest) && p.wealthPlan ? `[WEALTH]\n${JSON.stringify({ currency: p.wealthPlan.currency, deposits: p.wealthPlan.deposits, investments: p.wealthPlan.investments, basis: p.wealthPlan.basis })}` : '',
-            world ? `[WORLD]\n${world}` : '', lore ? `[LOREBOOK]\n${lore}` : '', aroundBlock(p),
+            world ? `[WORLD]\n${world}` : '', aroundBlock(p),
             `[OWNER]\n${owner}`, profile, blindBlock(m, owner), namesBlock(m),
         ].filter(Boolean);
         const input = inputParts.join('\n\n');
         const made = { money: p.money?.at, invest: p.investment?.at, life: p.life, delivery: p.delivery };
         // low thinking: tested against medium on Vertex, the same payments, ids and amounts, without the thinking cost
-        const out = await askDraft(input, { force: true, system: split ? coreSystem({ life: !!life, weather: askWeather, tracker: !!tracker, invest: !!invest, zone: askZone, archiveOnly, wallet: !!money }) : updateSystem({ money: false, life: !!life, weather: askWeather, tracker: !!tracker, zone: askZone, archiveOnly }), maxTokens: 16000, effort: 'low' });
-        // then the everyday life of these hours, on its own (it fails alone: the round goes in without it)
-        // (only on an answer the round can use: a broken one fails the round, and its 일상 would be paid for nothing)
-        const core0 = jsonOf(out);
+        const out = await askDraft(input, { force: true, system: coreSystem({ life: !!life, weather: askWeather, tracker: !!tracker, zone: askZone, archiveOnly, wallet: !!money, split }), maxTokens: 16000, effort: 'low' });
+        // (the everyday life of these hours comes in the same answer, its top-level "everyday")
+        const coreText = new Map(round.rows.map(r => [r.index, r.text]));
+        const answer0 = jsonOf(out), core0 = recordsCore(answer0, i => coreText.get(i));
+        const advanced = arr(core0?._advanced);
+        if (core0 && typeof core0 === 'object') delete core0._advanced;
+        // (how many scenes, story and life records the answer had: for checking the story isn't crowded out)
+        const recCount = Array.isArray(answer0?.records) || Array.isArray(answer0?.scenes) ? (sp => recordCount([...arr(answer0.scenes).filter(x => x && typeof x === 'object').map(x => ({ ...x, type: 'scene' })), ...arr(sp.recs)], sp.own))(splitDays(answer0.records, answer0.everyday)) : null;
+        // (no app only Korea has on a phone whose owner lives elsewhere, as the screen time's fill)
+        homeScreens(core0, !!homeCountry(p) && homeCountry(p) !== 'KR', p.life?.health?.usual?.screen);
         // the answer is for the chat and messages it was asked about
         if (phoneChatScope(ctx()) !== scope || m.phones?.[key] !== p) throw new Error('반영하는 사이 채팅이나 폰이 바뀌었어요. 다시 해 주세요');
         if (p.money?.at !== made.money || p.investment?.at !== made.invest) throw new Error('반영하는 사이 은행이나 투자가 새로 만들어졌어요. 다시 해 주세요');
@@ -1787,6 +2073,8 @@ async function updatePhone(m, owner) {
         // Archive-only records keep the 3.171.16 date fallback from the model's original now.
         // The separately guarded clockPlan still decides the phone's saved time.
         const raw = archiveOnly ? { ...core0 } : { ...core0, now: clockPlan.now };
+        // (the owner's own life, as the answer's records gave it: an "everyday" of another shape is none)
+        if (!raw.everyday || typeof raw.everyday !== 'object' || Array.isArray(raw.everyday)) delete raw.everyday;
         // Temporary diagnostic: unify only the selected person's display alias; keep the model answer intact.
         if (!archiveOnly && typeof toastr !== 'undefined') {
             const diagnostic = `${clock || '(OWNER’S CLOCK 입력 없음)'}\n\n[MODEL RESPONSE]\n${JSON.stringify({ clock: clockForDisplay(core0.clock, m) ?? null, now: core0.now ?? null, ...(clockPlan.now !== when(core0.now) ? { appliedNow: clockPlan.now } : {}) }, null, 2)}`;
@@ -1795,11 +2083,6 @@ async function updatePhone(m, owner) {
             });
             toast?.find?.('.toast-message')?.css?.({ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' });
         }
-        const everyday = round.rows.length ? await askEveryday(inputParts, raw, p, round.rows, !!life, m) : null;
-        if (phoneChatScope(ctx()) !== scope || m.phones?.[key] !== p || p.money?.at !== made.money || p.investment?.at !== made.invest || p.life !== made.life || p.delivery !== made.delivery) throw new Error('반영하는 사이 폰이 바뀌었어요. 다시 해 주세요');
-        const afterEveryday = new Map(syncRows().map(r => [r.index, r.text]));
-        if (round.rows.some(r => afterEveryday.get(r.index) !== r.text)) throw new Error('반영하는 사이 대화가 바뀌었어요. 다시 해 주세요');
-        if (everyday) raw.everyday = everyday;
         const inRound = new Set(round.rows.map(r => r.index)), textAt = new Map(round.rows.map(r => [r.index, r.text])), start = s.marks.base.index;
         const rid = Math.random().toString(36).slice(2, 10), rowText = new Map(rows.map(r => [r.index, r.text]));
         const failed = {}, loose = [], added = [], apps = new Set(), changes = [], notes = [...swiped];
@@ -1841,7 +2124,7 @@ async function updatePhone(m, owner) {
             for (const x of arr(phone.visits)) if (x && typeof x === 'object' && !String(x.time || '').trim() && day) x.time = day;
             for (const k of [...LISTS, 'threads']) for (const x of arr(phone[k])) { dated(x); for (const msg of arr(x?.messages)) dated(msg); if (x?.draft) dated(x.draft); }
             try { add = parsePhone(JSON.stringify(phone), owner); } catch { fail('앱 내용 형식이 잘못됐어요'); continue; }
-            everydayOnly(p, add, day, daily);
+            everydayOnly(p, add, day, daily, when(raw.now));
             // a bare number is no event id (a model counting its events would take an old event's number again)
             const tagOf = v => { const t = evOf(v); return /^\d+$/.test(t) ? '' : t; };
             // one id for two new events in one answer would take the second for the first (its payment kept out as the same one)
@@ -1904,7 +2187,7 @@ async function updatePhone(m, owner) {
             s.hiddenRead ||= {};
             for (const x of evidence) for (const [i, t] of txt) if (i > base && i >= x.first && i <= x.last && s.hiddenRead[i] === undefined) { s.hiddenRead[i] = bodyMark(t); hiddenNow.push([i, s.hiddenRead[i]]); }
         }
-        // Commit the same preview used by everyday, only after the round's requests and guards succeeded.
+        // Commit the clock preview only after the round's requests and guards succeeded.
         p.now = clockPlan.now; p.year = clockPlan.year; p.where = clockPlan.where;
         const { named, setBack } = clockPlan;
         sceneOwn = clockPlan.sceneOwn;
@@ -1918,7 +2201,7 @@ async function updatePhone(m, owner) {
         if (p.money) migrateBank(m, p);
         const id = rid;
         s.rounds = [...(s.rounds || []).slice(-19), id];
-        p.syncLast = { checked: inRound.size + archIn.length, remaining: unreadCount(s, rows) + archivedUnread(s, sections, rows, chatRows()).length, apps: [...apps], failed: [...Object.entries(failed).map(([at, why]) => ({ at: Number(at), why, skipped: s.failed[at]?.tries >= 2 })), ...loose.map(why => ({ at: null, why }))], changes, notes, at: Date.now() };
+        p.syncLast = { checked: inRound.size + archIn.length, remaining: unreadCount(s, rows) + archivedUnread(s, sections, rows, chatRows()).length, apps: [...apps], failed: [...Object.entries(failed).map(([at, why]) => ({ at: Number(at), why, skipped: s.failed[at]?.tries >= 2 })), ...loose.map(why => ({ at: null, why }))], changes, notes, ...(recCount ? { records: { ...recCount, ...(advanced.length ? { advanced: advanced.length } : {}) }, ...(advanced.length ? { advanced } : {}) } : {}), at: Date.now() };
         ensureIds(p);
         p.at = Date.now();
         pruneDropped(s, phoneItems(p));

@@ -4,7 +4,9 @@
 // changed since stays as it is.
 // The model's records are cleaned here too, for the first fill (phonelife.js) and for a reflection alike.
 import { arr, hhmm, ko, line, num, pad, pick, when, withEv } from './phoneparse.js';
-import { appOf, kindOfApp } from './phonescreen.js';
+import { appOf, kindOfApp, KR_ONLY, homeScreen } from './phonescreen.js';
+// (for the reflection, which reads the screen apps through here)
+export { KR_ONLY, homeScreen };
 
 export const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 export const CONDS = ['clear', 'partly', 'cloudy', 'drizzle', 'rain', 'sleet', 'snow', 'fog', 'storm', 'wind'];
@@ -41,7 +43,7 @@ export const fileOf = x => withEv({ name: line(x?.name, 80), kind: kindOf(String
     pages: int(x?.pages, 0, 2000), length: line(x?.length, 8), tag: pick(x?.tag, ['red', 'orange'], ''), private: yes(x?.private), preview: yes(x?.private) ? '' : line(x?.preview, 160), look: line(x?.look, 20).toLowerCase(), ko: ko(x?.ko), opened: when(x?.opened), trashed: day5(x?.trashed) }, x);
 // 스크린타임: that day's phone use, as the model writes it ({ "apps": { name: minutes }, "pickups", "late" }; a list of
 // { app, min } too). A day never holds more than its 24 hours; nothing given is none (the screen works it out)
-export const SCREEN_KINDS = ['chat', 'social', 'game', 'video', 'music', 'work', 'reading', 'shopping', 'other'];
+export const SCREEN_KINDS = ['chat', 'social', 'game', 'video', 'music', 'work', 'reading', 'shopping', 'money', 'maps', 'health', 'other'];
 export function screenOf(v) {
     if (!v || typeof v !== 'object') return null;
     const pairs = Array.isArray(v.apps) ? v.apps.map(x => [x?.app ?? x?.name, x?.min]) : v.apps && typeof v.apps === 'object' ? Object.entries(v.apps) : [];
@@ -458,6 +460,17 @@ export function applyDays(p, days, round) {
             const ch = Object.keys(to).filter(k => JSON.stringify(was[k] ?? null) !== JSON.stringify(to[k] ?? null));
             if (!ch.length) return;
             const fx = { type: 'change', path: 'life.health.days', id: was.id, from: fields(was, ch), to: fields(to, ch) };
+            setFields(was, fx.to);
+            out.push(fx);
+            return;
+        }
+        // (a day only guessed from their usual, by the app or a fill, is the model's now: what it wrote replaces it)
+        if (was && was.id && was.from === 'pattern' && !/:d\d+$/.test(String(was.id))) {
+            const keys = [...GROWS, 'bed', 'sleep', 'wake', 'woke', 'weight', 'screen', 'workout', 'workouts', 'hr'].filter(k => d?.[k] !== undefined && d[k] !== null && d[k] !== '' && clean[k] !== undefined && clean[k] !== null);
+            if (finiteNum(clean.steps) && !keys.includes('km') && d?.km === undefined) { clean.km = Math.round(clean.steps * 0.00072 * 10) / 10; keys.push('km'); }
+            const ch = [...new Set(keys)].filter(k => JSON.stringify(was[k] ?? null) !== JSON.stringify(clean[k] ?? null));
+            if (!ch.length) return;
+            const fx = { type: 'change', path: 'life.health.days', id: was.id, from: fields(was, ch), to: fields(clean, ch) };
             setFields(was, fx.to);
             out.push(fx);
             return;

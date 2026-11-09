@@ -190,3 +190,21 @@ export function screenView(p, today) {
     const pk = week.filter(d => d.pickups !== null), pickupsAvg = pk.length ? Math.round(pk.reduce((n, d) => n + d.pickups, 0) / pk.length) : null;
     return { days, avg: a, prevAvg: b, pct, top, pickupsAvg, lines, usual: u };
 }
+
+// apps only Korea has (카카오톡, 네이버, 쿠팡, 배민, 토스 …) on a phone whose owner lives elsewhere (away): taken out whatever
+// the model wrote (a Korean role-play calls any message "카톡"), their minutes going to an app of the same kind. The
+// screen time's fill and the reflection both
+export const KR_ONLY = /kakao|카카오|카톡|naver|네이버|coupang|쿠팡|baemin|배민|배달의\s*민족|요기요|yogiyo|\btoss\b|토스|melon|멜론|지니\s*뮤직|genie\s*music|11번가|g\s*마켓|gmarket|무신사|musinsa|당근|daangn|tving|티빙|wavve|웨이브|watcha|왓챠|리디|ridi|밀리의|코레일|korail|티맵|tmap|야놀자|여기어때|직방|번개장터|에이블리|\bably\b|지그재그|zigzag|오늘의집|컬리|kurly|케이뱅크|kbank|카뱅/i;
+// their usual ({ apps: [{ app, kind, min }], sometimes })
+export function homeUsual(away, usual) {
+    if (!usual || !away) return usual;
+    const fix = list => { const keep = (list || []).filter(a => !KR_ONLY.test(a.app)); for (const a of (list || []).filter(a => KR_ONLY.test(a.app))) { const to = keep.find(b => b.kind === a.kind); if (to) to.min += a.min; } return keep.sort((x, y) => y.min - x.min); };
+    return { ...usual, apps: fix(usual.apps), ...(usual.sometimes ? { sometimes: fix(usual.sometimes) } : {}) };
+}
+// a day's ({ apps: { app name: minutes } }), its minutes to their usual app of that kind
+export function homeScreen(away, sc, usual) {
+    if (!sc?.apps || typeof sc.apps !== 'object' || Array.isArray(sc.apps) || !away) return sc;
+    const all = [...(usual?.apps || []), ...(usual?.sometimes || [])], apps = {};
+    for (const [k, v] of Object.entries(sc.apps)) { if (!KR_ONLY.test(k)) { apps[k] = (apps[k] || 0) + v; continue; } const kind = kindOfApp(k, all), to = all.find(a => a.kind === kind && !KR_ONLY.test(a.app))?.app; if (to) apps[to] = (apps[to] || 0) + v; }
+    return { ...sc, apps };
+}

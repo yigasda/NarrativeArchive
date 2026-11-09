@@ -15,7 +15,7 @@ import { homeCountry, OWN_CLOCK, FILL_CLOCK_GET, FILL_CLOCK, clockBlock, fillClo
 import { cutShort } from './phoneparse.js';
 import { dlvTotal, payOrders, shopStats, unpayOrders } from './phonesyncmoney.js';
 import { alarmOf, cityAt, dayGap, fileOf, nightsToDays, overlayFresh, parseWeather, screenOf, usualScreenOf, weatherFrom } from './phonesynclife.js';
-import { SCREEN_LIST, kindOfApp } from './phonescreen.js';
+import { SCREEN_LIST, kindOfApp, homeUsual, homeScreen } from './phonescreen.js';
 import { exclusive, syncOf } from './phonesync.js';
 import { phoneChatScope } from './phonestory.js';
 import { recentTrackers } from './scenes.js';
@@ -517,35 +517,26 @@ YOU GET
 - LIVES IN: the country they live in. PHONE COUNTRY (sometimes).
 
 SCREEN TIME
-- It shows who they really are, habits they'd never admit (a game they can't put down, texting all night, barely touching the phone): from their character, not their polite profile.
+- From their character, not their polite profile; it may show habits they'd never admit, for instance a game they can't put down, texting all night, barely touching the phone.
 - "usual": 10 to 14 apps they open every day and 14 to 18 now and then, about 30 in all, spread over at least 6 of: chat, social, video, music, game, work or study, reading or news, shopping, money, maps or travel, health. Leave out what they would never touch. Someone who barely uses a phone shows it in short minutes, not in fewer apps.
 - Each of DAYS follows what happened that day and how they felt (a fight: hours of texting late into the night; a day out with friends: barely any), and how they slept.
+- Each day's "apps": as many as this owner really uses, from "usual" and the "sometimes" ones that day called for, for instance the weather on a rainy day, the bank on payday, maps on a day out. The apps differ from day to day, so over the days many kinds show up.
 - The apps people use where they live (LIVES IN), above all for chat, maps, shopping, delivery and money. Another country's app only when the story shows them using it.
 - Apps named as here (another real app is fine):
 ${SCREEN_LIST}
 - Numbers only: no diagnosis, no mood, no reason.
 
 JSON (one object, nothing before or after it)
-{ "usual": { "apps": [{ "app", "kind": "chat" | "social" | "game" | "video" | "music" | "work" | "reading" | "shopping" | "other", "min": minutes a day }], "sometimes": [the same, apps they open now and then, "min" on a day they do], "pickups": a day, "late": "HH:MM" they usually last look at it },
+{ "usual": { "apps": [{ "app", "kind": "chat" | "social" | "game" | "video" | "music" | "work" | "reading" | "shopping" | "money" | "maps" | "health" | "other", "min": minutes a day }], "sometimes": [the same, apps they open now and then, "min" on a day they do], "pickups": a day, "late": "HH:MM" they usually last look at it },
   "days": [{ "date": "MM-DD" as in DAYS, "apps": { app name: minutes }, "pickups", "late": "HH:MM" }] }
 Numbers are plain JSON numbers.`;
 // again (다시 만들기 › 스크린타임): their usual and the last week made anew, except a day a reflection wrote (its own row,
 // "sync:…": the story's day as told stays). Nothing is cleared before the answer is in, so a failed call loses nothing
 // apps only Korea has (카카오톡, 네이버, 쿠팡, 배민, 토스 …) on a phone whose owner lives elsewhere: taken out by the code
 // whatever the model wrote (a Korean role-play calls any message "카톡"); their minutes go to an app of the same kind
-const KR_ONLY = /kakao|카카오|카톡|naver|네이버|coupang|쿠팡|baemin|배민|배달의\s*민족|요기요|yogiyo|\btoss\b|토스|melon|멜론|지니\s*뮤직|genie\s*music|11번가|g\s*마켓|gmarket|무신사|musinsa|당근|daangn|tving|티빙|wavve|웨이브|watcha|왓챠|리디|ridi|밀리의|코레일|korail|티맵|tmap|야놀자|여기어때|직방|번개장터|에이블리|\bably\b|지그재그|zigzag|오늘의집|컬리|kurly|케이뱅크|kbank|카뱅/i;
 const abroad = p => String(livesIn(p) || '').toUpperCase() !== 'KR' && !!livesIn(p);
-function homeApps(p, usual) {
-    if (!usual || !abroad(p)) return usual;
-    const fix = list => { const keep = (list || []).filter(a => !KR_ONLY.test(a.app)); for (const a of (list || []).filter(a => KR_ONLY.test(a.app))) { const to = keep.find(b => b.kind === a.kind); if (to) to.min += a.min; } return keep.sort((x, y) => y.min - x.min); };
-    return { ...usual, apps: fix(usual.apps), ...(usual.sometimes ? { sometimes: fix(usual.sometimes) } : {}) };
-}
-function homeDay(p, sc, usual) {
-    if (!sc?.apps || !abroad(p)) return sc;
-    const all = [...(usual?.apps || []), ...(usual?.sometimes || [])], apps = {};
-    for (const [k, v] of Object.entries(sc.apps)) { if (!KR_ONLY.test(k)) { apps[k] = (apps[k] || 0) + v; continue; } const kind = kindOfApp(k, all), to = all.find(a => a.kind === kind && !KR_ONLY.test(a.app))?.app; if (to) apps[to] = (apps[to] || 0) + v; }
-    return { ...sc, apps };
-}
+const homeApps = (p, usual) => homeUsual(abroad(p), usual);
+const homeDay = (p, sc, usual) => homeScreen(abroad(p), sc, usual);
 export const fillScreen = (m, p, { again = false } = {}) => exclusive('fill', async () => {
     const h = p.life?.health;
     if (!h) throw new Error('건강 앱을 먼저 채워 주세요');
