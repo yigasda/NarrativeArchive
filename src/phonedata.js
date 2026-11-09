@@ -363,7 +363,7 @@ SCENES AND RECORDS
   - May not: invent developments or additional facts about the story's events, including decisions, promises, resolution steps, deadlines or outcomes. For example: the story only shows a parcel on its way, and a record has it arrive; the story only shows a problem, and a record works through solving it; the story never gives the reason or full account of an event, and a record says what really happened.
 - Phone data supplies existing details; an expected date is not an actual event. Generated everyday content is not story evidence.
 - A message-linked trail goes in "records"; the owner's day goes in "everyday", without duplicates.
-- Plans go in the calendar, not as completed events.${wallet ? ' Tickets go in the wallet; reservations and appointments still go in the calendar.' : ''} Never invent a booking, trip or purchase absent from the story.
+- Plans go in the calendar, not as completed events. A plan in PHONE NOW that the messages move, call off or undo (an order cancelled, a trip dropped) is its calendar record again, with "was" or "cancelled".${wallet ? ' Tickets go in the wallet; reservations and appointments still go in the calendar.' : ''} Never invent a booking, trip or purchase absent from the story.
 
 EVERYDAY
 - Draw on PHONE NOW's habits, PEOPLE AROUND, OWNER PROFILE${life ? " and LIFE NOW's usual" : ''}. The story shapes mood, location and availability; routines and interests recur.

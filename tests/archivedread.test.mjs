@@ -806,6 +806,7 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.match(on, /Use the owner's range of apps: photos, searches, notes, mails, texts, calls, voice memos, diary, alarms and files\./);
     assert.match(on, /- Diary: in "everyday" on its day, when a day ends or a scene stays with them\./);
     assert.match(on, /Do not repeat the scene itself\./);
+    assert.match(on, /A plan in PHONE NOW that the messages move, call off or undo \(an order cancelled, a trip dropped\) is its calendar record again, with "was" or "cancelled"\./);
     assert.ok(on.indexOf('  "scenes": [{') < on.indexOf('  "everyday": [{') && !on.includes('\nscene: "id"') && on.includes('"with": [people physically there with the owner; otherwise []]'));
     assert.ok(on.indexOf('\nSCENES AND RECORDS\n') < on.indexOf('\nEVERYDAY\n') && on.indexOf('  "everyday": [{') < on.indexOf('  "records": [{'));
     assert.match(on, /include at least one later text exchange within these hours/);
