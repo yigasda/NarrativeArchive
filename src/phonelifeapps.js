@@ -863,18 +863,21 @@ const MORN = {
          fog: { sky: '#9aa0aa', bands: [[165, '#aaacb1'], [220, '#c0b9b2'], [275, '#d9c2a6']], cb: [[48, '#aaacb1'], [64, '#c0b9b2'], [78, '#d9c2a6']], hills: ['#8f939c', '#848891', '#797d86'] } }
 };
 // 해 진 뒤 (19–21): the sun already down, not yet night — the night's own sky up top, the last of the light low down in violet, rose and
-// a dusty pink; no sun and no moon, the evening star low in the west and small stars coming out
+// a dusty pink. Built the way 늦은 오후 is (the same fields, so the same clouds, fog and snow as every other hour), only no sun:
+// flat stars instead, and the evening star (a flat four-point star low in the west)
 const DUSK = {
-    clear: { sky: '#28324a', bands: [[150, '#303750'], [198, '#433f5a'], [244, '#5f4a62'], [292, '#82596a']], cb: [[40, '#303750'], [56, '#433f5a'], [70, '#5f4a62'], [82, '#82596a']], hills: ['#2a2a40', '#222336', '#1b1c2c'], cloud: '#363c55' },
+    clear: { sky: '#28324a', bands: [[150, '#303750'], [198, '#433f5a'], [244, '#5f4a62'], [292, '#82596a']], cb: [[40, '#303750'], [56, '#433f5a'], [70, '#5f4a62'], [82, '#82596a']], hills: ['#2a2a40', '#222336', '#1b1c2c'], puff: '#3a4058', cloud: '#3e4460', front: '#56566f' },
     grey: { sky: '#2c3446', bands: [[165, '#333a4e'], [220, '#423f53'], [275, '#574a5a']], cb: [[48, '#333a4e'], [64, '#423f53'], [78, '#574a5a']], hills: ['#262a3a', '#202331', '#1a1c28'], cloud: '#3a4155', cloud2: '#444b5f' },
+    snow: { sky: '#333b52', bands: [[165, '#3b4058'], [220, '#4c4660'], [275, '#655468']], cb: [[48, '#3b4058'], [64, '#4c4660'], [78, '#655468']], hills: ['#cfd0de', '#b8b9ca', '#a1a2b6'], cloud: '#454b64' },
+    fog: { sky: '#3a4052', bands: [[165, '#434759'], [220, '#524f61'], [275, '#685d6b']], cb: [[48, '#434759'], [64, '#524f61'], [78, '#685d6b']], hills: ['#363a4a', '#303443', '#2a2e3c'] },
 };
 function duskPal(cond, D) {
     const c = DUSK.clear, g = DUSK.grey, sky = { sky: c.sky, bands: c.bands, cb: c.cb, hills: c.hills }, phase = 'dusk';
-    if (cond === 'clear') return { ...sky, stars: 34, venus: true, phase };
-    if (cond === 'partly') return { ...sky, stars: 20, venus: true, cloud: c.cloud, phase };
-    if (cond === 'wind') return { ...sky, stars: 22, venus: true, cloud: c.cloud, wind: true, phase };
-    if (cond === 'snow') return { ...g, hills: ['#c9cad9', '#b0b1c4', '#9798ae'], cloud: g.cloud, fall: 'snow', phase };
-    if (cond === 'fog') return { ...g, fog: 'rgba(255, 255, 255, 0.14)', phase };
+    if (cond === 'clear') return { ...sky, puff: c.puff, stars: 26, venus: true, phase };
+    if (cond === 'partly') return { ...sky, cloud: c.cloud, front: c.front, stars: 16, venus: true, phase };
+    if (cond === 'wind') return { ...sky, cloud: c.cloud, wind: true, stars: 16, phase };
+    if (cond === 'snow') return { ...DUSK.snow, fall: 'snow', phase };
+    if (cond === 'fog') return { ...DUSK.fog, fog: 'rgba(255, 255, 255, 0.16)', phase };
     return wetSky({ ...g, cloud2: cond === 'cloudy' ? g.cloud2 : undefined, fall: D[cond].fall, phase }, cond);
 }
 function mornPal(cond, D, phase) {
@@ -897,9 +900,9 @@ function scene(cond, phase) {
     cond = condOk(cond);
     const q = pal(cond, phase), r = rnd(cond.length * 31 + phase.length * 7), out = [];
     for (const [y, c] of q.bands || []) out.push(`<i class="bd" style="top: ${y}px; background: ${c}"></i>`);
-    // at dusk the stars are scattered over the whole sky, a few bigger, some cream, each with a little glow (so they read as stars, not sleet)
-    if (q.stars && phase === 'dusk') out.push(Array.from({ length: q.stars }, (_, k) => { const z = k % 7 === 0 ? 4 : k % 3 === 0 ? 3.2 : 2.6, col = k % 3 === 1 ? '#fff1d2' : '#ffffff';
-        return `<i class="st" style="left: ${Math.round(8 + r() * 374)}px; top: ${Math.round(40 + r() * 520)}px; width: ${z}px; height: ${z}px; background: ${col}; box-shadow: 0 0 ${z * 1.6}px ${(z * 0.3).toFixed(1)}px rgba(255, 244, 222, ${z > 3 ? 0.6 : 0.42}); opacity: ${(0.8 + r() * 0.2).toFixed(2)}; --d: ${(4 + r() * 4).toFixed(1)}s; --dl: -${(r() * 5).toFixed(1)}s"></i>`; }).join(''));
+    // at dusk: flat round stars over the whole sky, two sizes, white and cream (no glow)
+    if (q.stars && phase === 'dusk') out.push(Array.from({ length: q.stars }, (_, k) => { const z = k % 4 === 0 ? 6 : 4;
+        return `<i class="st" style="left: ${Math.round(8 + r() * 374)}px; top: ${Math.round(40 + r() * 400)}px; width: ${z}px; height: ${z}px; background: ${k % 3 === 1 ? '#f6e7c4' : '#f4f1e8'}; --d: ${(4 + r() * 4).toFixed(1)}s; --dl: -${(r() * 5).toFixed(1)}s"></i>`; }).join(''));
     else if (q.stars) out.push(Array.from({ length: q.stars }, () => `<i class="st${phase === 'dawn' ? ' fd' : ''}" style="left: ${Math.round(10 + r() * 370)}px; top: ${Math.round(60 + r() * 360)}px; --d: ${(2 + r() * 3).toFixed(1)}s; --dl: -${(r() * 4).toFixed(1)}s"></i>`).join(''));
     const sun = (x, y, rad, core, halo, cls = '') => `<span class="sun ${cls}" style="left: ${x - rad * 2.4}px; top: ${y - rad * 2.4}px; width: ${rad * 4.8}px; height: ${rad * 4.8}px"><b style="background: ${halo}"></b><b class="h2" style="background: ${halo}"></b><i style="background: ${core}; width: ${rad * 2}px; height: ${rad * 2}px"></i></span>`;
     if (q.sun === 'day') out.push(cond === 'partly' ? sun(320, 190, 42, '#f6c94a', 'rgba(255, 255, 255, 0.14)') : sun(330, 210, 46, '#f6c94a', 'rgba(255, 255, 255, 0.14)'));
@@ -909,8 +912,8 @@ function scene(cond, phase) {
     if (q.sun === 'aft') out.push(cond === 'partly' ? sun(318, 220, 44, '#fbd98a', 'rgba(250, 210, 140, 0.42)') : sun(324, 228, 46, '#fbd98a', 'rgba(250, 210, 140, 0.42)'));
     if (q.sun === 'forenoon') out.push(cond === 'partly' ? sun(312, 236, 44, '#ffe6a2', 'rgba(255, 226, 170, 0.45)') : sun(320, 244, 46, '#ffe6a2', 'rgba(255, 226, 170, 0.45)'));
     if (q.sun === 'sink') out.push(sun(312, 250, 46, '#fbe08f', 'rgba(247, 200, 115, 0.4)', 'sink'));
-    // the evening star: one bright, steady point low in the west with a soft glow (the small stars twinkle, it does not)
-    if (q.venus) out.push(`<i class="st" style="left: 60px; top: 226px; width: 7px; height: 7px; background: #fff9ec; box-shadow: 0 0 7px 2px rgba(255, 244, 220, 0.7), 0 0 20px 6px rgba(255, 226, 200, 0.25); animation: none"></i>`);
+    // the evening star: a flat four-point star where the other hours keep their sun or moon (clear of the clouds)
+    if (q.venus) out.push('<svg class="vn" style="left: 306px; top: 132px; width: 22px; height: 22px" viewBox="0 0 24 24"><path d="M12 0 C13 8 16 11 24 12 C16 13 13 16 12 24 C11 16 8 13 0 12 C8 11 11 8 12 0Z" fill="#f6e7c4"/></svg>');
     // the moon's bite takes the colour behind it (at dusk the moon sits on a band, not on the plain sky)
     if (q.moon) { const mx = cond === 'clear' || cond === 'wind' ? 292 : 300, my = phase === 'dusk' ? 96 : cond === 'clear' || cond === 'wind' ? 150 : 170, back = [...(q.bands || [])].reverse().find(([t]) => t <= my + 27)?.[1] || q.sky;
         out.push(`<span class="mn" style="left: ${mx}px; top: ${my}px"><i></i><b style="background: ${back}"></b></span>`); }
@@ -959,7 +962,7 @@ function cardSky(cond, phase) {
     if (q.sun === 'aft') out.push('<circle cx="262" cy="58" r="38" fill="#f7c873" opacity=".4"/><circle cx="262" cy="58" r="21" fill="#fbd98a"/>');
     if (q.sun === 'forenoon') out.push('<circle cx="290" cy="46" r="40" fill="#fff" opacity=".2"/><circle cx="290" cy="46" r="22" fill="#ffe6a2"/>');
     if (q.sun === 'sink') out.push('<circle cx="226" cy="86" r="34" fill="#f7c873" opacity=".55"/><circle cx="226" cy="86" r="20" fill="#fbe08f"/>');
-    if (q.venus) out.push('<circle cx="34" cy="58" r="6" fill="#fff4dc" opacity=".22"/><circle cx="34" cy="58" r="2" fill="#fff8ea"/>');
+    if (q.venus) out.push('<path transform="translate(34 58) scale(.42) translate(-12 -12)" d="M12 0 C13 8 16 11 24 12 C16 13 13 16 12 24 C11 16 8 13 0 12 C8 11 11 8 12 0Z" fill="#f6e7c4"/>');
     if (q.moon) out.push(`<circle cx="${q.cloud ? 150 : 222}" cy="28" r="16" fill="#f1ead2"/><circle cx="${q.cloud ? 158 : 230}" cy="22" r="14" fill="${q.sky}"/>`);
     // 구름 조금: the front cloud on the sun's lower left (the temperature sits top right), a little smaller, so the sun still shows (wherever the hour puts it)
     if (cond === 'partly' && q.front) { const [sx, sy] = { day: [300, 34], forenoon: [290, 46], aft: [262, 58], morn: [250, 62], rise: [226, 88], sink: [226, 86] }[q.sun] || [300, 34]; out.push(`<g transform="translate(${sx - 74} ${sy - 2}) scale(.8) translate(-226 -22)">${'<g fill="' + (q.phase === 'aft' ? q.front : '#e9f0f8') + '"><circle cx="246" cy="58" r="20"/><circle cx="274" cy="48" r="26"/><circle cx="304" cy="60" r="18"/><rect x="226" y="58" width="96" height="20" rx="10"/></g>'}</g>`); }
@@ -995,7 +998,7 @@ function widgetSky(cond, phase) {
     if (q.sun === 'aft') out.push(`<circle cx="${C}" cy="80" r="38" fill="#f7c873" opacity=".4"/><circle cx="${C}" cy="80" r="22" fill="#fbd98a"/>`);
     if (q.sun === 'forenoon') out.push(`<circle cx="${cond === 'partly' ? C - 14 : C}" cy="70" r="38" fill="#fff" opacity=".2"/><circle cx="${cond === 'partly' ? C - 14 : C}" cy="70" r="23" fill="#ffe6a2"/>`);
     if (q.sun === 'sink') out.push(`<circle cx="${C}" cy="112" r="38" fill="#f7c873" opacity=".5"/><circle cx="${C}" cy="112" r="22" fill="#fbe08f"/>`);
-    if (q.venus) out.push(`<circle cx="${C - 52}" cy="78" r="6.5" fill="#fff4dc" opacity=".22"/><circle cx="${C - 52}" cy="78" r="2.2" fill="#fff8ea"/>`);
+    if (q.venus) out.push(`<path transform="translate(${C - 52} 78) scale(.46) translate(-12 -12)" d="M12 0 C13 8 16 11 24 12 C16 13 13 16 12 24 C11 16 8 13 0 12 C8 11 11 8 12 0Z" fill="#f6e7c4"/>`);
     if (q.moon && !q.cloud) out.push(`<circle cx="${C}" cy="46" r="17" fill="#f1ead2"/><circle cx="${C + 8}" cy="40" r="15" fill="${q.sky}"/>`);
     if (q.moon && q.cloud) out.push(`<circle cx="${C - 26}" cy="40" r="13" fill="#f1ead2"/><circle cx="${C - 20}" cy="35" r="12" fill="${q.sky}"/>`);
     const cloud = (x, y, s, col) => `<g fill="${col}" transform="translate(${x} ${y}) scale(${s})"><circle cx="-22" cy="4" r="16"/><circle cx="0" cy="-6" r="22"/><circle cx="24" cy="4" r="15"/><rect x="-38" y="4" width="78" height="18" rx="9"/></g>`;
