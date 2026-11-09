@@ -2722,6 +2722,13 @@ const realTz = v => { const z = String(v || '').trim(); if (!/^[A-Za-z]+(?:\/[A-
 // the cards as they are: every field the story can say where someone is in, nothing summed up
 const CARD_KEYS = ['description', 'personality', 'scenario', 'first_mes', 'mes_example'];
 const cardText = ch => CARD_KEYS.map(k => { const v = ch?.data?.[k] ?? ch?.[k]; return v ? `[${k}]\n${v}` : ''; }).filter(Boolean).join('\n\n');
+// the chat's character cards and the persona, whole, as blocks (the phone's voice table reads how people talk in them)
+export function cardBlocks() {
+    const c = ctx(), g = c?.groupId ? (c.groups || []).find(x => x.id === c.groupId) : null;
+    const chars = g ? (g.members || []).map(a => (c.characters || []).find(x => x.avatar === a)).filter(Boolean) : [c?.characters?.[c?.characterId]].filter(Boolean);
+    const persona = String(c?.powerUserSettings?.persona_description || '').trim();
+    return [...chars.map(ch => `[CHARACTER CARD — ${ch.name || ch.data?.name || ''}]\n${cardText(ch) || '(empty)'}`), persona ? `[PERSONA — ${c.name1 || 'user'}]\n${persona}` : ''].filter(Boolean);
+}
 // the other phones in this chat: given, else the chat's own saved ones (a screen or a fill that has only the phone)
 const phonesOf = m => m?.phones || ctx()?.chatMetadata?.narrative_archive?.phones || null;
 // known: a phone not made yet (no contacts to go by): the people the chat already names, the characters' cards, the

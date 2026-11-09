@@ -4,7 +4,7 @@
 // voice table (p.koVoice: how each person sounds in Korean), so every translation reads alike; the translator adds a
 // person it decides, the user can change one
 
-import { aroundBlock, koGaps, refreshUndoAfter, sideRequest } from './phonedata.js';
+import { aroundBlock, cardBlocks, koGaps, refreshUndoAfter, sideRequest } from './phonedata.js';
 import { askDraft } from './ai.js';
 import { askTranslator, glossaryEntries, glossaryIn } from './translate.js';
 import { getMeta, hasChat } from './core.js';
@@ -41,15 +41,16 @@ Work out how each person in WHO writes to the people they text, as the story sho
 
 YOU GET
 - ARCHIVE, RECENT CHAT, OWNER, and sometimes STORY YEAR, WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW. Nothing on the phone may show what the owner doesn't know.
+- CHARACTER CARD — name and PERSONA — name (sometimes): the chat's cards and the user's persona, as written, with how they speak.
 - PEOPLE AROUND (sometimes): the people in the owner's life, who they are to the owner and where things stand.
 - WHO: the people to describe.
 
 VOICE
 - For each person in WHO: how they talk to the people they text (the Korean speech level they would use, how they address them, their habits), as the story shows it, in a short note in Korean.
-- "evidence": the exact words in the story that show it. Nothing in the story shows it: "style": "" and "evidence": [].
+- "evidence": the exact words in the story or a card that show it. Nothing shows it: "style": "" and "evidence": [].
 
 JSON (one object, nothing before or after it)
-{ "people": [{ "who", "style", "evidence": [exact words from the story] }] }`;
+{ "people": [{ "who", "style", "evidence": [exact words from the story or a card] }] }`;
 
 // who texts or comments in what is to be translated and has no row in the table: [names]
 export function voicesWanted(p, { all = false } = {}) {
@@ -61,7 +62,7 @@ export function voicesWanted(p, { all = false } = {}) {
 export async function learnVoices(m, owner, p, { all = false } = {}) {
     const want = voicesWanted(p, { all });
     if (!want.length) return 0;
-    const input = await sideRequest(m, owner, [aroundBlock(p), `[WHO]\n${want.map(n => `- ${n}`).join('\n')}`]);
+    const input = await sideRequest(m, owner, [...cardBlocks(), aroundBlock(p), `[WHO]\n${want.map(n => `- ${n}`).join('\n')}`]);
     const got = parseJson(String(await askDraft(input, { force: true, system: AI_SYS_PHONE_VOICE, maxTokens: 3000, effort: 'low' })).replace(/^[^{]*/, '').replace(/[^}]*$/, ''), { salvage: true }) || {};
     const wanted = new Map(want.map(n => [n.toLowerCase(), n])), have = new Set(voiceRows(p).map(whoKey));
     const rows = (Array.isArray(got.people) ? got.people : []).filter(v => v && wanted.has(whoKey(v)) && !have.has(whoKey(v)) && String(v.style || '').trim()

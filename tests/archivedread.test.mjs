@@ -1468,7 +1468,7 @@ test('fillKo: each line goes with who says it to whom, and the voice table, no e
     K.voices = JSON.stringify({ people: [{ who: 'Mother', style: '아들한테 반말, 걱정 많은 말투', evidence: ['Why so cold?'] }, { who: 'Ivo', style: '반말', evidence: [] }, { who: 'GitHub', style: 'x', evidence: ['y'] }] });
     assert.equal(await tr.learnVoices({ phones: {} }, 'Oscar', v), 1);
     const vc = K.voiceCalls[0];
-    assert.ok(vc.system.startsWith('GOAL\nWork out how each person in WHO writes to the people they text, as the story shows it') && vc.system.includes('"evidence"'));
+    assert.ok(vc.system.startsWith('GOAL\nWork out how each person in WHO writes to the people they text, as the story shows it') && vc.system.includes('"evidence"') && vc.system.includes('- CHARACTER CARD — name and PERSONA — name (sometimes): the chat\'s cards and the user\'s persona, as written, with how they speak.'));
     assert.match(vc.input, /\[PEOPLE AROUND\]\n- Mother: Oscar's mother in Frankfurt; they talk rarely\n\n\[WHO\]\n- Mother\n- Ivo/);
     assert.deepEqual(v.koVoice.map(r => [r.who, r.style, r.by, r.evidence]), [['Oscar', '엄마한테도 반말, 퉁명스럽게', undefined, undefined], ['Mother', '아들한테 반말, 걱정 많은 말투', 'model', ['Why so cold?']]]);
     assert.deepEqual(tr.voicesWanted(v), []);
