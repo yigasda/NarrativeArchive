@@ -4,7 +4,7 @@ const NAME = { 'berlin-charlottenburg': 'Charlottenburg', 'berlin-friedrichshain
   'bamberg-altstadt': 'Bamberg', 'bonn-zentrum': 'Bonn', 'bremen-altstadt': 'Bremen', 'dresden-altstadt': 'Dresden', 'dresden-neustadt': 'Äußere Neustadt', 'duesseldorf-altstadt': 'Düsseldorf', 'frankfurt-altstadt': 'Frankfurt', 'frankfurt-bankenviertel': 'Bahnhofsviertel',
   'garmisch-zentrum': 'Garmisch-Partenkirchen', 'hamburg-altona': 'Altona', 'hamburg-blankenese': 'Blankenese', 'hamburg-hafencity': 'HafenCity', 'hamburg-stgeorg': 'St. Georg', 'hamburg-stpauli': 'St. Pauli', 'hannover-mitte': 'Hannover', 'heidelberg-altstadt': 'Heidelberg',
   'koblenz-deutscheseck': 'Koblenz', 'leipzig-connewitz': 'Connewitz', 'leipzig-plagwitz': 'Plagwitz', 'muenchen-englischergarten': 'Englischer Garten', 'muenchen-nymphenburg': 'Nymphenburg', 'muenchen-olympiapark': 'Olympiapark', 'muenchen-schwabing': 'Schwabing',
-  'regensburg-altstadt': 'Regensburg', 'ruedesheim-zentrum': 'Rüdesheim am Rhein', 'stuttgart-mitte': 'Stuttgart' };
+  'regensburg-altstadt': 'Regensburg', 'ruedesheim-zentrum': 'Rüdesheim am Rhein', 'stuttgart-mitte': 'Stuttgart', 'dortmund-mitte': 'Dortmund', 'essen-mitte': 'Essen', 'potsdam-zentrum': 'Potsdam', 'sylt-westerland': 'Westerland' };
 (async () => { const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 470, height: 900 } }); const cells = [];
   for (const f of fs.readdirSync(S + '/osm_de').filter(x => x.endsWith('.json') && x.includes('-')).sort()) { const n = f.slice(0, -5);
     const d = JSON.parse(fs.readFileSync(`${S}/osm_de/${f}`)); let la = 0, lo = 0, c = 0; for (const e of d.elements) for (const g of e.geometry || []) { la += g.lat; lo += g.lon; c++; } la /= c; lo /= c;

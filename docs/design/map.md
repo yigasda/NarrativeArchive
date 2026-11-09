@@ -9,7 +9,7 @@
 - **덜 그리기.** 이 축척에서 건물 하나하나 · 보행로 · 이름 없는 골목은 안 그려요. 블록이 바탕이에요.
 - **실제 모양 그대로, 지어내지 않기.** 데이터가 없는 건 그리지 않아요.
 
-## 고른 모습 (시안 `docs/mockups/phone-map/osm/germany-33.jpg`, `gmap-AC-roads.jpg` 오른쪽)
+## 고른 모습 (시안 `docs/mockups/phone-map/osm/germany-37.jpg`, `gmap-AC-roads.jpg` 오른쪽)
 
 `osmmap.js`의 `STYLE=gmap`, 색 `GPAL=ACa`(기본)예요.
 
