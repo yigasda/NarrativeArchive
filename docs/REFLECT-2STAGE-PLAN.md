@@ -101,6 +101,7 @@
     - 실제 반영에서 이미 있는 체크리스트 메모를 거의 그대로 또 씀: 통째로 새로 쓸 때 KEEPING IN STEP의 "PHONE NOW에 있는 건 무엇이든 다시 쓰지 않음"이 빠졌음(문자 · 알람 · 파일 · 장면만 남음). 되살리고 메모 · 메일 · 검색 · 사진 · 일기 · 게시물은 "새로운 내용일 때만 새로", 몇 마디만 바꾼 거의 같은 것도 안 됨(예: 메모 · 목록 · 메일 · 메시지).
     - 폰을 통째로 다시 만들면 말투표가 사라졌음 → koVoice · koVoiceAsked · koVoiceV도 옛 폰에서 넘김. 되돌리기 · 대화 빼기는 원래 말투표를 안 건드림.
     - 날씨 한 줄 "Clear and cold early morning in Westend"의 한국어가 "대체로 맑음": core JSON의 날씨 칸에 설명 없는 "ko"가 남아서 모델이 날씨 이름을 씀(LANGUAGE의 ko 설명은 앞서 뺐음). core에서 날씨 "ko"를 빼고, 날씨 한 줄도 fillKo(koGaps, app "weather")가 옮김.
+    - 같은 때 전부 대조: core가 아직 묻던 한국어 칸은 usual의 coffeeKo 하나 → 뺌. 화면이 한국어를 보여 주는데 번역기 대상에 없던 곳: 파일 폴더 이름(life.files.folders name → ko), 커피 종류(usual coffeeKind → coffeeKo) → koGaps에 넣음. money · 배달 · 웹 페이지는 각자 요청이 한국어를 직접 써서 그대로.
     - run77 뒤(생활 12개): THE STORY 첫 줄의 "before the owner's own life"를 뺌(옛 최종엔 없던 우선순위). 건강 · usual은 records에서 빼서 everyday 뒤 맨 위 칸 "health" · "usual"로(모델이 앞에서부터 쓰니 생활이 뒤로 밀려 짧아지지 않게). `recordsCore`가 둘을 읽어요. `applyDays`: 폰의 날이 짐작(pattern, 모델이 쓴 `:d` 줄 아님)이면 모델 값으로 바꿈(되돌리기 됨; run77 11-05가 pattern 8,050으로 남던 것).
     - THE STORY IS CANON(run78 뒤 세 줄로 압축하고 옛 따옴표 예시 — 마감 · 한 일 · 나중 계획 — 를 넷째 줄에 되돌림; 처음엔 할 일은 둘 중 하나: 이야기 안에서 쓰기 · 이야기 밖 일상 / 앞서가지 않기, 비밀 · 새 사실 · 이유와 전말 · 결과와 완료 · 계획 지어내지 않기 / 명시한 만큼만, 지어낸 미래는 일상만 / 이야기 사람 · 사건 기록에선 나중 메시지가 뒤집을 수 있는 건 새 사실). 겹치던 줄은 뺌: THE OWNER'S LIFE의 옛 새 사실 줄(예시 포함), 일기 · 음성 메모 끝의 "no new secrets or story events".
       - 지시문: 본체 15,553자(생활 앱 19,427, +날씨 20,484).

@@ -437,7 +437,7 @@ JSON (one object, nothing before or after it)
     "at": its message number, "scene": its scene id, "said": exact words, "situations": [situation ids] or [],${life ? ' "already": a LIFE NOW id or "",' : ''} and the fields of its type in ITEMS }],
   "everyday": [{ "date": "MM-DD", "records": [{ "type": one of the ITEMS types but "profile" and "visit", "situations": [situation ids] or [], and the fields of its type in ITEMS }] }] (one entry a day, in order)${life ? `,
   "health": [{ "date": the day they woke, "already": a LIFE NOW id or "", "sleep", "wake", "woke", "steps", "km", "floors", "hr": [low, high], "workouts": [{ "kind", "time", "min", "km" }], "coffee", "coffeeKind", "water", "weight", "screen": { "apps": { app: minutes }, "pickups", "late" } }],
-  "usual": { "weight", "height", "coffee", "coffeeKind", "coffeeKo", "water", "bed", "sleep", "wake", "steps", "workouts", "rest", "screen": { "add": [{ "app", "kind": chat | social | game | video | music | work | reading | shopping | money | maps | health | other, "min" }], "drop", "pickups", "late" } } or null` : ''}${life && weather ? `,\n${WEATHER_JSON.replace('"line", "ko",', '"line",')}` : ''} }
+  "usual": { "weight", "height", "coffee", "coffeeKind", "water", "bed", "sleep", "wake", "steps", "workouts", "rest", "screen": { "add": [{ "app", "kind": chat | social | game | video | music | work | reading | shopping | money | maps | health | other, "min" }], "drop", "pickups", "late" } } or null` : ''}${life && weather ? `,\n${WEATHER_JSON.replace('"line", "ko",', '"line",')}` : ''} }
 Write in this order. Numbers are plain JSON numbers. Nothing new: "records": [].
 
 ITEMS (each with only the fields it needs)
@@ -3602,6 +3602,8 @@ export function koGaps(p, { all = false } = {}) {
     for (const x of p?.life?.clock?.timers || []) add(x, 'label', 'ko', 'timer');
     for (const x of p?.life?.files?.items || []) add(x, 'preview', 'ko', 'file');
     if (p?.life?.weather) add(p.life.weather, 'line', 'ko', 'weather');
+    for (const x of p?.life?.files?.folders || []) add(x, 'name', 'ko', 'file folder');
+    if (p?.life?.health?.usual) add(p.life.health.usual, 'coffeeKind', 'coffeeKo', 'coffee');
     return out;
 }
 // after the Korean is added, 되돌리기 still sees the phone as the reflection left it
