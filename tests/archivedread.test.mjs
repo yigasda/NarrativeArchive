@@ -1455,6 +1455,10 @@ test('fillKo: each line goes with who says it to whom, and the voice table, no e
     assert.equal(tr.koAppOf('thread:Mother')('text'), true);
     assert.equal(tr.koAppOf('noteone')('text'), false);
     assert.equal(tr.koAppOf('home'), null);
+    // (every screen with the 한국어 button, its own app: the weather's city list, the web's pages, 배달 none; 설정 the whole phone)
+    for (const [view, app, yes] of [['wlist', 'weather', true], ['weather', 'text', false], ['page', 'search', true], ['marks', 'search', true], ['voiceone', 'voice memo', true], ['voice:v1', 'voice memo title', true], ['files', 'file folder', true], ['clock', 'timer', true], ['health', 'coffee', true], ['dshop', 'text', false], ['msg', 'text draft', true], ['groupinfo', 'text', true]])
+        assert.equal(tr.koAppOf(view)(app), yes, `${view} ${app}`);
+    assert.equal(tr.koAppOf('set'), null);
     K.answer = (input) => JSON.stringify({ lines: input.split('\n').filter(l => /^\d+: \[text/.test(l)).map(l => ({ n: Number(l.split(':')[0]), ko: `새 ${l.split(':')[0]}` })) });
     assert.equal(await tr.redoKo(p, tr.koAppOf('thread:Mother')), 3);
     assert.deepEqual(p.threads[0].messages.map(x => x.ko), ['새 1', '새 2', '새 3']);

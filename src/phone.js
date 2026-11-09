@@ -791,6 +791,7 @@ export async function openPhone(who = null) {
             const p = phone();
             if (!p || making || koBusy) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요');
             const only = koAppOf(view);
+            if (only && !koGaps(p, { all: true }).some(g => only(g.app))) return toastr.info('이 화면엔 다시 옮길 한국어가 없어요', '캐릭터 휴대폰');
             let n = 0;
             koBusy = true;
             try { n = await withSpinner($b, '다시 번역 중', async () => { try { await learnVoices(m, owner, p, { all: true }); } catch (err) { console.warn('[narrative-archive] voices', err); } return redoKo(p, only); }); if (p.syncLast?.trFailed) delete p.syncLast.trFailed; await saveMeta(); }

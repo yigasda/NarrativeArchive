@@ -152,8 +152,12 @@ function inputOf(p, chunk) {
 
 // which of the phone's lines a screen shows (its view): the app 한국어 long-pressed there translates again
 const VIEW_APPS = [[/^(msg|thread|draft|groupinfo|contact)/, a => a.startsWith('text')], [/^photo/, a => a === 'photo caption'], [/^note/, a => a.startsWith('note')],
-    [/^search/, a => a === 'search'], [/^cal/, a => a === 'calendar'], [/^sns/, a => /^(post|comment|profile)/.test(a)], [/^mail/, a => a.startsWith('mail')],
-    [/^diary/, a => a.startsWith('diary')], [/^voice/, a => a.startsWith('voice memo')], [/^(clock|alarm)/, a => a === 'alarm' || a === 'timer'], [/^(files|folder|file)/, a => a.startsWith('file')]];
+    [/^(search|page|marks|tabs|history)/, a => a === 'search'], [/^cal/, a => a === 'calendar'], [/^sns/, a => /^(post|comment|profile)/.test(a)], [/^mail/, a => a.startsWith('mail')],
+    [/^diary/, a => a.startsWith('diary')], [/^voice/, a => a.startsWith('voice memo')], [/^(clock|alarm)/, a => a === 'alarm' || a === 'timer'], [/^(files|folder|file)/, a => a.startsWith('file')],
+    [/^(weather|wlist)/, a => a === 'weather'], [/^(health|hcmp)/, a => a === 'coffee'],
+    // (배달: its Korean is its own fill's, nothing of it is the translator's)
+    [/^(delivery|dcart|ditem|dorder|dpay|drate|dshop)/, () => false]];
+// (a screen not listed, as 설정, is the whole phone)
 export const koAppOf = view => VIEW_APPS.find(([re]) => re.test(String(view || '')))?.[1] || null;
 
 // translates one app's lines again (all of them, with the voice table and the examples as they are now): their Korean is

@@ -110,6 +110,7 @@
       · EVERYDAY 1번 "Late texts agree with screen time and sleep / a late night"
       · 복구로 돌아온 회차도 번역(koRun)
       일부러 뺀 것(소망 결정)은 그대로: DO NOT CONTINUE, "plainly implies", "not story facts", 장면 사람 문자 강제, 3명 이상, Texts short, 한국어 칸, advances. 약 3,640토큰.
+    - 꾹 누르기 화면 대조: 한국어 버튼이 있는 화면을 전부 뽑아 맞춤(koAppOf). 날씨 도시 목록(wlist) → 날씨 한 줄, 웹(page · marks · tabs · history) → 검색어, 건강(health · hcmp) → 커피 종류, 배달 → 없음("이 화면엔 다시 옮길 한국어가 없어요"), 설정 → 폰 전체. 전엔 목록에 없는 화면이 다 폰 전체였음.
     - run77 뒤(생활 12개): THE STORY 첫 줄의 "before the owner's own life"를 뺌(옛 최종엔 없던 우선순위). 건강 · usual은 records에서 빼서 everyday 뒤 맨 위 칸 "health" · "usual"로(모델이 앞에서부터 쓰니 생활이 뒤로 밀려 짧아지지 않게). `recordsCore`가 둘을 읽어요. `applyDays`: 폰의 날이 짐작(pattern, 모델이 쓴 `:d` 줄 아님)이면 모델 값으로 바꿈(되돌리기 됨; run77 11-05가 pattern 8,050으로 남던 것).
     - THE STORY IS CANON(run78 뒤 세 줄로 압축하고 옛 따옴표 예시 — 마감 · 한 일 · 나중 계획 — 를 넷째 줄에 되돌림; 처음엔 할 일은 둘 중 하나: 이야기 안에서 쓰기 · 이야기 밖 일상 / 앞서가지 않기, 비밀 · 새 사실 · 이유와 전말 · 결과와 완료 · 계획 지어내지 않기 / 명시한 만큼만, 지어낸 미래는 일상만 / 이야기 사람 · 사건 기록에선 나중 메시지가 뒤집을 수 있는 건 새 사실). 겹치던 줄은 뺌: THE OWNER'S LIFE의 옛 새 사실 줄(예시 포함), 일기 · 음성 메모 끝의 "no new secrets or story events".
       - 지시문: 본체 15,553자(생활 앱 19,427, +날씨 20,484).
