@@ -782,7 +782,7 @@ test('일상 comes in the reflection\'s own answer (no request of its own); who 
     assert.match(sys, /The phone is lived in every waking hour/);
     assert.match(sys, /Someone new texted or called gets a "contact"/);
     assert.match(sys, /PEOPLE AROUND \(never someone they aren't in touch with now\)/);
-    assert.ok(!sys.includes("THE STORY IS CANON") && !sys.includes("STORY NEXT") && sys.indexOf("\nSTORY AND PERSONAL LIFE\n- Classify each record by what it is about, not by whether the phone activity was explicitly described.") > sys.indexOf("CLOCK FIRST"));
+    assert.ok(!sys.includes("THE STORY IS CANON") && !sys.includes("STORY NEXT") && !sys.includes("STORY AND PERSONAL LIFE") && sys.indexOf("\nWHAT A RECORD DOES\n- The story's situation, people and mood are material for every app, in \"everyday\" and in \"records\" alike.") > sys.indexOf("CLOCK FIRST"));
     assert.match(sys, /\"everyday\": \[\{ \"date\": \"MM-DD\", \"records\": \[/);
     const guess = [...c.p.threads.flatMap(th => th.messages.filter(x => x.src === 'guess').map(x => `${th.with}:${x.text}`)), ...c.p.searches.filter(x => x.src === 'guess').map(x => x.q)];
     assert.deepEqual(guess.sort(), ['Ivo:whatever', 'Ivo:you started it', 'Mittagstisch Seongsu']);
@@ -805,14 +805,16 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.match(on, /Each day is a set of phone records, not the next chapter of the story\./);
     assert.match(on, /Use the apps this owner would use, for example a photo of lunch, a search, a note, a mail, texts and calls by the person, a voice memo, a diary entry when the day ends, an alarm, a saved file\./);
     assert.match(on, /The diary is the owner's day: it goes in "everyday" on its day\.\n/);
-    assert.match(on, /- Complete how the owner expresses or records the situation, without completing the situation itself\./);
+    assert.match(on, /- Complete how the owner expresses or records the situation, without moving the situation itself to its next step\. This holds for every app: texts, searches, notes, mails, the diary and voice memos\./);
+    assert.match(on, /- Record developments the messages establish, but do not invent new developments in the story through phone records: decisions, arrangements, steps toward resolving an ongoing matter, or outcomes\./);
+    assert.match(on, /A trail tied to one message \(with its "said"\) goes in "records"; the rest of the owner's day goes in "everyday"\. Never the same record in both\./);
     assert.ok(on.indexOf('\nEVERYDAY\n') < on.indexOf('\nSTORY RECORDS\n') && on.indexOf('  "everyday": [{') < on.indexOf('  "records": [{'));
     assert.match(on, /- For each person the owner had a scene with in NEW MESSAGES: at least one text between the two later these hours, in their own voices/);
     assert.match(on, /\nITEMS \(each with only the fields it needs\)\nscene: "id"/);
     assert.match(on, /\nphoto: "caption", "ko", "time", "mood"/);
     assert.match(on, /The diary: an entry when a story day ends in these messages or a scene stays with them, as long as this owner would write it;/);
     assert.match(on, /Voice memos: about one every few days/);
-    assert.match(on, /- "everyday" follows the owner's own daily life\. A story matter comes into it only as a feeling\. Never make up its next step, an arrival, a completion, a new fact, a secret or how it came about, building a new storyline the story's canon never told\./);
+    assert.match(on, /- A record may express and live the situation as it stands: a diary sick of the paperwork, a voice memo missing home, a text waiting for a parcel\./);
     assert.ok(!on.includes('"made": [what') && !on.includes('"story": [') && on.includes('"said": exact words of the message it comes from,'));
     assert.match(on, /photo: "caption", "ko", "time", "mood"/);
     assert.ok(!on.includes('talk over each other') && on.includes('contact goes both ways, and a group chat goes on without them.'));

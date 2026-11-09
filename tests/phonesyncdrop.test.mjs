@@ -260,7 +260,7 @@ const lifeAnswer = () => ({ now: '10-26 22:00', days: [{ date: '10-26', sleep: '
 test('the everyday and delivery apps through a reflection: asked for, put in, and taken back by 되돌리기', async () => {
     const c = lifeSetup();
     await run(c.m, lifeAnswer());
-    assert.ok(T.sys.includes('LIFE\n') && !T.sys.includes('"deliveries"') && T.sys.includes('"weather"'));
+    assert.ok(T.sys.includes('EVERYDAY\n') && !T.sys.includes('"deliveries"') && T.sys.includes('"weather"'));
     assert.ok(T.input.includes('[LIFE NOW]') && !T.input.includes('[DELIVERY SHOPS]'));
     assert.ok(T.moneySys.includes('delivery: no "amount"') && T.moneyInput.includes('[DELIVERY SHOPS]'));
     const L = c.p.life;

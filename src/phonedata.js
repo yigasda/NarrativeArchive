@@ -355,15 +355,17 @@ YOU GET
 
 ${archiveOnly ? `TIMES\n${CORE_TIMES}` : `${CORE_CLOCK_FIRST}\n${CORE_TIMES}`}
 
-STORY AND PERSONAL LIFE
-- Classify each record by what it is about, not by whether the phone activity was explicitly described.
-- Anything about a story event goes in "records", including made-up texts, searches, notes and diary entries about it.
-- "everyday" follows the owner's own daily life. A story matter comes into it only as a feeling. Never make up its next step, an arrival, a completion, a new fact, a secret or how it came about, building a new storyline the story's canon never told.
+WHAT A RECORD DOES
+- The story's situation, people and mood are material for every app, in "everyday" and in "records" alike.
+- A record may express and live the situation as it stands: a diary sick of the paperwork, a voice memo missing home, a text waiting for a parcel.
+- Record developments the messages establish, but do not invent new developments in the story through phone records: decisions, arrangements, steps toward resolving an ongoing matter, or outcomes.
+- Complete how the owner expresses or records the situation, without moving the situation itself to its next step. This holds for every app: texts, searches, notes, mails, the diary and voice memos.
+- A trail tied to one message (with its "said") goes in "records"; the rest of the owner's day goes in "everyday". Never the same record in both.
 
 EVERYDAY
 - The phone is lived in every waking hour, from who the owner is; contact goes both ways, and a group chat goes on without them.
 - Build each day's personal records from who the owner is: what PHONE NOW shows they already do (whom they text, what they search, photograph and note), PEOPLE AROUND, OWNER PROFILE${life ? " and LIFE NOW's usual" : ''} (when given).
-- The current story may affect their mood, location and availability. Its ongoing matters are not subjects to develop in this section.
+- The current story may affect their mood, location and availability.
 - Each day is a set of phone records, not the next chapter of the story. Personal routines and independent interests can recur across days.
 - About ${LIFE_A_DAY} records for a full waking day, scaled to the hours covered, each day the story skips too. Use the apps this owner would use, for example a photo of lunch, a search, a note, a mail, texts and calls by the person, a voice memo, a diary entry when the day ends${life ? ', an alarm, a saved file' : ''}.
 - For each person the owner had a scene with in NEW MESSAGES: at least one text between the two later these hours, in their own voices, in "records".
@@ -378,7 +380,6 @@ THE STORY
 STORY RECORDS
 - Return to NEW MESSAGES and ARCHIVE FOR THESE MESSAGES for the scenes and their phone records.
 - "said" identifies the source; everything the record asserts about that event must remain consistent with what the source establishes.
-- Complete how the owner expresses or records the situation, without completing the situation itself.
 - Keep unfinished matters unfinished: no next action, decision, arrangement, deadline or outcome the messages don't establish. This holds for every app: texts, searches, notes, the diary.
 - Phone data supplies existing details. An expected date does not establish that a story event has happened; an arrival the messages state or plainly imply does.
 - Generated everyday records are not evidence that a story event happened.
