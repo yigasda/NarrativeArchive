@@ -680,8 +680,8 @@ export function setVoice(p, now) {
       <div class="ax_scroll">${axH1('말투', rows.length ? `${rows.length}명` : '')}
         <div class="ax_sec">내가 정한 말투</div>
         <div class="ax_card">${mine.map(row).join('')}<div role="button" tabindex="0" class="ax_rw ax_rwn na_ph_kvadd"><span class="ax_tx"><span class="ax_n ax_blue">사람 추가</span></span></div></div>
-        ${auto.length ? `<div class="ax_sec">이야기에서 뽑은 말투</div><div class="ax_card">${auto.map(row).join('')}</div><div class="ax_foot">고치면 내가 정한 말투로 옮겨져요.<br>지우면 다음 번역 때 이야기에서 다시 뽑아요.</div>` : ''}
-        <div class="ax_foot">남에게 하는 말투예요. 일기 · 메모에는 안 써요.<br>이미 옮긴 문장은 그대로예요. 다시 맞추려면 그 앱에서 "가 한국어"를 꾹 눌러요.</div>
+        ${auto.length ? `<div class="ax_sec">이야기에서 뽑은 말투</div><div class="ax_card">${auto.map(row).join('')}</div><div class="ax_foot">고치면 내 말투로 옮겨요. 지우면 다음 번역 때 다시 뽑아요.</div>` : ''}
+        <div class="ax_foot">일기 · 메모에는 안 써요. 이미 옮긴 글은 그대로예요.</div>
         <i class="ax_pad"></i>
       </div>
       ${axInd()}`;
