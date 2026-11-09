@@ -685,11 +685,11 @@ export function setVoice(p, now, pick = null, busy = false) {
     const sec = (t, g, list) => (pick && list.length
         ? `<div class="ax_sec ax_kvsec">${t}<span role="button" tabindex="0" class="ax_blue ax_kvall na_ph_kvall" data-g="${g}">${list.every(on) ? '전체 해제' : '전체'}</span></div>`
         : `<div class="ax_sec">${t}</div>`);
-    const n = pick ? rows.filter(on).length : 0;
+    const chosen = pick ? rows.filter(on) : [], n = chosen.length, again = n && chosen.every(v => v.style); // all of them have a style already: 다시 뽑기
     return `${axBar(p, now)}
       ${axTop(axCb('set'), pick ? '<span role="button" tabindex="0" class="ax_blue ax_kvx na_ph_kvx">취소</span>' : '')}
       <div class="ax_scroll">${axH1('말투', rows.length ? `${rows.length}명` : '')}
-        <div class="ax_card"><div role="button" tabindex="0" class="ax_rw na_ph_kvpick${busy ? ' on' : ''}"><span class="ax_si" style="background: #8faed1">${ax('wand', 17, '#fff')}</span><span class="ax_tx"><span class="ax_n">${busy ? '뽑는 중' : n ? `${n}명 뽑기` : '이야기에서 뽑기'}</span><span class="ax_p ax_kvp">고른 사람의 말투를 이야기에서 찾아요</span></span>${axChev}</div></div>
+        <div class="ax_card"><div role="button" tabindex="0" class="ax_rw na_ph_kvpick${busy ? ' on' : ''}"><span class="ax_si" style="background: #8faed1">${ax('wand', 17, '#fff')}</span><span class="ax_tx"><span class="ax_n">${busy ? '뽑는 중' : n ? `${n}명 ${again ? '다시 ' : ''}뽑기` : '이야기에서 뽑기'}</span><span class="ax_p ax_kvp">고른 사람의 말투를 이야기에서 찾아요</span></span>${axChev}</div></div>
         ${sec('내가 정한 말투', 'mine', mine)}
         <div class="ax_card">${mine.map(row).join('')}${pick ? (mine.length ? '' : '<div class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_p ax_kvp">정한 사람이 없어요</span></span></div>') : '<div role="button" tabindex="0" class="ax_rw ax_rwn na_ph_kvadd"><span class="ax_tx"><span class="ax_n ax_blue">사람 추가</span></span></div>'}</div>
         ${sec('이야기에서 뽑은 말투', 'auto', auto)}<div class="ax_card">${auto.length ? auto.map(row).join('') : '<div class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_p ax_kvp">뽑은 사람이 없어요</span></span></div>'}</div>
