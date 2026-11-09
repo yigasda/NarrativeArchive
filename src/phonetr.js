@@ -1,6 +1,6 @@
 // The phone's Korean (3.182.4~): the reflection writes the story's own words only; what is in another language gets its
 // Korean here, after the reflection or when 한국어 is pressed. Its own instructions (not the archive's line translator):
-// each line goes with its app and who says it to whom, the chat's lines already in Korean as examples, and the phone's
+// each line goes with its app and who says it to whom, and the phone's
 // voice table (p.koVoice: how each person sounds in Korean), so every translation reads alike; the translator adds a
 // person it decides, the user can change one
 
@@ -15,12 +15,11 @@ Translate what a character's phone shows into natural Korean, so that all of it 
 YOU GET
 - OWNER: whose phone it is.
 - VOICES (sometimes): how each person sounds in Korean, as "Name: style". Always follow it.
-- EXAMPLES (sometimes): lines of the same chats already in Korean. Keep their voice.
 - GLOSSARY (sometimes): names and terms, written exactly this way.
 - LINES: numbered, each "[app · who → to]" and its words. "self" is the owner writing for themselves.
 
 VOICE
-- Every line in the same voice its writer has everywhere else, as VOICES and EXAMPLES show; with neither, as the original suggests. Lines that read alike in the original read alike in Korean.
+- Every line in the same voice its writer has everywhere else, as VOICES shows; without it, as the original suggests. Lines that read alike in the original read alike in Korean.
 
 LINES
 - Translate every line in full, with its meaning, length, line breaks and emoji. No notes, no explanations.
@@ -38,28 +37,13 @@ const KO_CHUNK = 60, KO_CHARS = 9000;
 const who = v => String(v?.who ?? v?.from ?? '').trim(), whoKey = v => who(v).toLowerCase();
 const voiceRows = p => (Array.isArray(p.koVoice) ? p.koVoice : []).filter(v => v && who(v) && String(v.style || '').trim());
 
-// a few lines of each chat in the request already in Korean, both ways, the newest
-function examplesFor(p, chunk) {
-    const own = p.owner || 'me', rooms = new Set(chunk.filter(g => g.app.startsWith('text')).map(g => (g.who === own ? g.to : g.who)));
-    const out = [];
-    for (const t of p.threads || []) {
-        const room = t.group ? `${t.with} (group)` : t.with;
-        if (!rooms.has(room) && !rooms.has(t.with)) continue;
-        for (const m of (t.messages || []).filter(m => String(m.ko || '').trim()).slice(-4)) {
-            const who = m.from === 'me' ? own : m.from, to = m.from === 'me' ? room : t.group ? room : own;
-            out.push(`- ${who} → ${to}: "${String(m.text).replace(/\s+/g, ' ').slice(0, 160)}" = "${String(m.ko).replace(/\s+/g, ' ').slice(0, 160)}"`);
-        }
-    }
-    return out.slice(0, 24);
-}
-
+// (no examples from the Korean already on the phone: what an older reflection wrote there is the uneven voice this
+// replaces; the voice table alone keeps it even)
 function inputOf(p, chunk) {
     const voices = voiceRows(p), gloss = hasChat() ? glossaryIn(glossaryEntries(getMeta()), chunk.map(g => g.x[g.f]).join('\n')) : [];
-    const ex = examplesFor(p, chunk);
     return [
         `[OWNER]\n${p.owner || 'me'}`,
         voices.length ? `[VOICES]\n${voices.map(v => `- ${who(v)}: ${v.style}`).join('\n')}` : '',
-        ex.length ? `[EXAMPLES]\n${ex.join('\n')}` : '',
         gloss.length ? `[GLOSSARY]\n${gloss.map(e => `- ${e.src} = ${e.ko}`).join('\n')}` : '',
         `[LINES]\n${chunk.map((g, i) => `${i + 1}: [${g.app} · ${g.who} → ${g.to}] ${JSON.stringify(String(g.x[g.f]))}`).join('\n')}`,
     ].filter(Boolean).join('\n\n');

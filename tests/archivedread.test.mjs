@@ -1416,7 +1416,7 @@ test('"situations" and each record\'s "situation" are the model\'s own notes: re
 
 // ---- the phone's Korean (phonetr.js): its own instructions, each line with its app and who says it to whom, the chat's
 // Korean so far as examples, and the voice table the translator adds to (the user's own rows win)
-test('fillKo: each line goes with who says it to whom, the chat\'s Korean as examples and the voice table; a decided person is kept, an own row stays', async () => {
+test('fillKo: each line goes with who says it to whom, and the voice table, no examples from the Korean already there; a decided person is kept, an own row stays', async () => {
     const dataURL = encoded(src.replace(/from '([^']+)'/g, (all, k) => `from '${map[k] || k}'`));
     const trSrc = await readFile(new URL('../src/phonetr.js', import.meta.url), 'utf8');
     const trMap = { './phonedata.js': dataURL, './phoneparse.js': href('phoneparse.js'),
@@ -1430,10 +1430,10 @@ test('fillKo: each line goes with who says it to whom, the chat\'s Korean as exa
         lines: [{ n: 1, ko: '버려' }, { n: 2, ko: '왜 그렇게 차갑니?' }, { n: 3, ko: '체크리스트' }, { n: 4, ko: '짐 싸기\n보일러' }] });
     assert.equal(await tr.fillKo(p), 4);
     const { input, system } = K.calls[0];
-    assert.ok(system.startsWith('GOAL\nTranslate what a character\'s phone shows into natural Korean') && system.includes('so that all of it reads as one: each person sounds the same wherever they appear.') && system.includes('\nVOICE\n- Every line in the same voice its writer has everywhere else, as VOICES and EXAMPLES show; with neither, as the original suggests. Lines that read alike in the original read alike in Korean.\n\nLINES\n') && !system.includes('To "self"') && system.includes('"voices"'));
+    assert.ok(system.startsWith('GOAL\nTranslate what a character\'s phone shows into natural Korean') && system.includes('so that all of it reads as one: each person sounds the same wherever they appear.') && system.includes('\nVOICE\n- Every line in the same voice its writer has everywhere else, as VOICES shows; without it, as the original suggests. Lines that read alike in the original read alike in Korean.\n\nLINES\n') && !system.includes('To "self"') && system.includes('"voices"'));
     assert.match(input, /\[OWNER\]\nOscar/);
     assert.match(input, /\[VOICES\]\n- Oscar: 엄마한테도 반말, 퉁명스럽게/);
-    assert.match(input, /\[EXAMPLES\]\n- Oscar → Mother: "hi Mom" = "엄마 안녕"/);
+    assert.ok(!input.includes('[EXAMPLES]') && !input.includes('엄마 안녕') && !system.includes('EXAMPLES'));
     assert.match(input, /1: \[text · Oscar → Mother\] "Throw it out"\n2: \[text · Mother → Oscar\] "Why so cold\?"\n3: \[note title · Oscar → self\] "Checklist"\n4: \[note · Oscar → self\] "pack\\nboiler"/);
     assert.deepEqual(p.threads[0].messages.map(x => x.ko), ['엄마 안녕', '버려', '왜 그렇게 차갑니?']);
     assert.deepEqual([p.notes[0].kt, p.notes[0].ko], ['체크리스트', '짐 싸기\n보일러']);
