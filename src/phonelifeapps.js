@@ -792,8 +792,8 @@ const WET = { drizzle: 1, rain: 1, sleet: 1 };
 // grey skies by how hard it comes down, as at noon: 진눈깨비 a touch lighter (the snow in it), 흐림, 이슬비 a shade darker, 비 the darkest
 const WET_K = { sleet: 0.07, cloudy: 0, drizzle: -0.06, rain: -0.15 };
 const wetHex = (hex, k) => { if (!/^#[0-9a-f]{6}$/i.test(hex || '') || !k) return hex; const n = parseInt(hex.slice(1), 16); return `#${[n >> 16, (n >> 8) & 255, n & 255].map(v => Math.round(k > 0 ? v + (255 - v) * k : v * (1 + k)).toString(16).padStart(2, '0')).join('')}`; };
-// 비 goes darker still in the lit hours (dawn, morning, dusk); at night it stays where it is
-const wetSky = (q, cond) => { const k = cond === 'rain' && q.phase !== 'night' && q.phase !== 'dusk' ? -0.25 : WET_K[cond]; if (!k) return q; const b = l => l && l.map(([y, c]) => [y, wetHex(c, k)]); return { ...q, sky: wetHex(q.sky, k), bands: b(q.bands), cb: b(q.cb), hills: q.hills.map(c => wetHex(c, k)), cloud: wetHex(q.cloud, k), cloud2: wetHex(q.cloud2, k) }; };
+// 비 goes darker still in every hour but the night (dawn, morning, dusk, after sunset); at night it stays where it is
+const wetSky = (q, cond) => { const k = cond === 'rain' && q.phase !== 'night' ? -0.25 : WET_K[cond]; if (!k) return q; const b = l => l && l.map(([y, c]) => [y, wetHex(c, k)]); return { ...q, sky: wetHex(q.sky, k), bands: b(q.bands), cb: b(q.cb), hills: q.hills.map(c => wetHex(c, k)), cloud: wetHex(q.cloud, k), cloud2: wetHex(q.cloud2, k) }; };
 // one palette per sky and part of the day: flat layers only (sky, bands, three hills, clouds), no gradients
 // a sky the app doesn't know (an older save, a blank) is drawn as cloudy
 const condOk = c => (Object.hasOwn(WX, c) ? c : 'cloudy');
