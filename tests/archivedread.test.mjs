@@ -778,7 +778,8 @@ test('일상 comes in the reflection\'s own answer (no request of its own); who 
     assert.ok(!sys.includes('SCENES WITH') && !sys.includes('PUT ON THE PHONE NOW'));
     // (no forced text after a scene: a text after a fight is part of the story's trail)
     assert.ok(!sys.includes('parted from'));
-    assert.match(sys, /- "records": each scene's phone trail, including what it plainly implies, linked by "scene" and "said" and saying no more than its source\./);
+    assert.match(sys, /- "records": each scene's phone trail, linked by "scene" and "said"; the rest of the owner's day goes in "everyday", never the same record in both\./);
+    assert.doesNotMatch(sys, /including what it plainly implies|are not story facts/);
     assert.match(sys, /Contact goes both ways; group chats may continue without the owner\./);
     assert.match(sys, /New correspondents get a "contact"/);
     assert.match(sys, /Do not contact someone they are no longer in touch with\./);
@@ -1317,7 +1318,6 @@ test('a story record\'s "said" and "made" are the answer\'s only: what the model
     assert.match(T.sys, /\nDO NOT CONTINUE THE STORY\nYou are NOT a role-play writer\. Your problem is that you constantly try to get ahead of the story and continue it\./);
     assert.ok(T.sys.indexOf('\nCLOCK FIRST\n') < T.sys.indexOf('\nDO NOT CONTINUE THE STORY\n') && T.sys.indexOf('\nDO NOT CONTINUE THE STORY\n') < T.sys.indexOf('\nSCENES AND RECORDS\n') && !T.sys.includes('Tell apart what you may make up'));
     assert.match(T.sys, /- The story only mentions a parcel being shipped → making it arrive is acting as the author and inventing the future\./);
-    assert.match(T.sys, /- Phone data and "everyday" are not story facts: an expected date has not happened yet\./);
 });
 
 test('"everyday" as days ([{ date, records }]): each day\'s records read as the owner\'s own life, as the lists by app were', async () => {

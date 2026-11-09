@@ -70,6 +70,7 @@
     - SCENES AND RECORDS를 네 줄로 줄임: "scenes"(동석자), "records"(흔적, 분명히 내비친 것까지, 근거보다 더 말하지 않기, 나머지 하루는 everyday, 중복 없음), 폰 데이터와 everyday는 이야기 사실 아님 · 예정일은 아직, 캘린더(계획은 계획, 옮김 · 취소 · 무름은 was · cancelled, 티켓은 지갑).
     - run95 뒤: DO NOT CONTINUE THE STORY 본문을 소망의 원래 글(순화 전)로: "You are NOT a role-play writer. Your problem is that you constantly try to get ahead of the story …", 예시마다 "acting as the author", 끝에 "You may create … You may not change that situation …".
     - run96(97) 뒤: 기록마다 "advances"(모델 자신의 판정: 이야기 상황을 제멋대로 진행시켰나 — 단계 · 도착 · 이유 · 결과). true면 저장 안 하고 `syncLast.advanced`(종류 · 칸 · 내용)와 `syncLast.records.advanced`에 셈. 코드는 모델 답만 따르고 판단하지 않음. 칸은 저장 안 함.
+    - 같은 때: SCENES AND RECORDS를 줄임. records 줄은 연결 규칙만("scene" · "said", everyday와 겹치지 않기), "Phone data and everyday are not story facts…" 줄은 뺌(돌려도 도움 안 됨). 약 -40토큰.
     - run77 뒤(생활 12개): THE STORY 첫 줄의 "before the owner's own life"를 뺌(옛 최종엔 없던 우선순위). 건강 · usual은 records에서 빼서 everyday 뒤 맨 위 칸 "health" · "usual"로(모델이 앞에서부터 쓰니 생활이 뒤로 밀려 짧아지지 않게). `recordsCore`가 둘을 읽어요. `applyDays`: 폰의 날이 짐작(pattern, 모델이 쓴 `:d` 줄 아님)이면 모델 값으로 바꿈(되돌리기 됨; run77 11-05가 pattern 8,050으로 남던 것).
     - THE STORY IS CANON(run78 뒤 세 줄로 압축하고 옛 따옴표 예시 — 마감 · 한 일 · 나중 계획 — 를 넷째 줄에 되돌림; 처음엔 할 일은 둘 중 하나: 이야기 안에서 쓰기 · 이야기 밖 일상 / 앞서가지 않기, 비밀 · 새 사실 · 이유와 전말 · 결과와 완료 · 계획 지어내지 않기 / 명시한 만큼만, 지어낸 미래는 일상만 / 이야기 사람 · 사건 기록에선 나중 메시지가 뒤집을 수 있는 건 새 사실). 겹치던 줄은 뺌: THE OWNER'S LIFE의 옛 새 사실 줄(예시 포함), 일기 · 음성 메모 끝의 "no new secrets or story events".
       - 지시문: 본체 15,553자(생활 앱 19,427, +날씨 20,484).

@@ -368,8 +368,7 @@ You may create the owner's words, feelings, reactions and daily phone life withi
 
 SCENES AND RECORDS
 - "scenes": after "clock" and "now", each scene of NEW MESSAGES and ARCHIVE FOR THESE MESSAGES: what happens, where, when, and who is physically with the owner (not people only mentioned, remembered or reached by phone).
-- "records": each scene's phone trail, including what it plainly implies, linked by "scene" and "said" and saying no more than its source. The rest of the owner's day goes in "everyday"; never the same record in both.
-- Phone data and "everyday" are not story facts: an expected date has not happened yet.
+- "records": each scene's phone trail, linked by "scene" and "said"; the rest of the owner's day goes in "everyday", never the same record in both.
 - Calendar: a plan stays a plan. A plan in PHONE NOW that the messages move, call off or undo (an order cancelled) is written again with "was" or "cancelled".${wallet ? ' Tickets go in the wallet; reservations and appointments in the calendar.' : ''} No booking, trip or purchase the story lacks.
 
 EVERYDAY
