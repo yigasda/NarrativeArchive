@@ -975,7 +975,7 @@ function widgetSky(cond, phase) {
     if (q.moon && q.cloud) out.push(`<circle cx="${C - 26}" cy="40" r="13" fill="#f1ead2"/><circle cx="${C - 20}" cy="35" r="12" fill="${q.sky}"/>`);
     const cloud = (x, y, s, col) => `<g fill="${col}" transform="translate(${x} ${y}) scale(${s})"><circle cx="-22" cy="4" r="16"/><circle cx="0" cy="-6" r="22"/><circle cx="24" cy="4" r="15"/><rect x="-38" y="4" width="78" height="18" rx="9"/></g>`;
     if (cond === 'partly' && q.front) { const [sx, sy] = { day: [C - 14, 50], forenoon: [C - 14, 70], aft: [C, 80], morn: [C, 86], rise: [C, 116], sink: [C, 112] }[q.sun] || [C - 14, 50]; out.push(cloud(sx + 30, sy + 10, 0.72, q.phase === 'aft' ? q.front : '#e9f0f8')); }
-    else if (cond === 'partly' && (q.sun === 'rise' || q.sun === 'sink')) out.push(cloud(C + 44, q.sun === 'rise' ? 84 : 80, 0.8, q.cloud));
+    else if (cond === 'partly' && (q.sun === 'rise' || q.sun === 'sink')) out.push(cloud(C + 50, q.sun === 'rise' ? 80 : 76, 1.1, q.cloud));
     else if (q.cloud && cond !== 'wind') out.push((q.cloud2 ? cloud(C - 46, 70, 0.6, q.cloud2) : '') + cloud(C + 6, 52, 1.05, q.cloud));
     const r = rnd(cond.length * 13 + phase.length);
     const lines = (col, w, n, ln, sl) => `<g stroke="${col}" stroke-width="${w}" stroke-linecap="round">${Array.from({ length: n }, () => { const x = Math.round(118 + r() * 132), y = Math.round(70 + r() * 42); return `<line x1="${x}" y1="${y}" x2="${x - sl}" y2="${y + ln}"/>`; }).join('')}</g>`;
