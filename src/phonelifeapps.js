@@ -900,9 +900,13 @@ function scene(cond, phase) {
     cond = condOk(cond);
     const q = pal(cond, phase), r = rnd(cond.length * 31 + phase.length * 7), out = [];
     for (const [y, c] of q.bands || []) out.push(`<i class="bd" style="top: ${y}px; background: ${c}"></i>`);
-    // at dusk: flat round stars over the whole sky, two sizes, white and cream (no glow)
-    if (q.stars && phase === 'dusk') out.push(Array.from({ length: q.stars }, (_, k) => { const z = k % 4 === 0 ? 6 : 4;
-        return `<i class="st" style="left: ${Math.round(8 + r() * 374)}px; top: ${Math.round(40 + r() * 400)}px; width: ${z}px; height: ${z}px; background: ${k % 3 === 1 ? '#f6e7c4' : '#f4f1e8'}; --d: ${(4 + r() * 4).toFixed(1)}s; --dl: -${(r() * 5).toFixed(1)}s"></i>`; }).join(''));
+    // at dusk: flat round stars spread evenly over the dark upper sky (a loose grid, each nudged), fewer lower down, none behind the
+    // place and the temperature; two sizes, white and cream, no glow
+    if (q.stars && phase === 'dusk') { const pts = [];
+        for (let row = 0; row < 6; row++) for (let col = 0; col < 7; col++) { const x = 14 + col * 56 + r() * 40, y = 40 + row * 50 + r() * 34;
+            if (x > 110 && x < 280 && y > 205 && y < 350) continue; if (row >= 4 && r() < 0.5) continue; pts.push([x, y]); }
+        out.push(pts.slice(0, q.stars).map(([x, y], k) => { const z = k % 4 === 0 ? 6 : 4;
+            return `<i class="st" style="left: ${Math.round(x)}px; top: ${Math.round(y)}px; width: ${z}px; height: ${z}px; background: ${k % 3 === 1 ? '#f6e7c4' : '#f4f1e8'}; --d: ${(4 + r() * 4).toFixed(1)}s; --dl: -${(r() * 5).toFixed(1)}s"></i>`; }).join('')); }
     else if (q.stars) out.push(Array.from({ length: q.stars }, () => `<i class="st${phase === 'dawn' ? ' fd' : ''}" style="left: ${Math.round(10 + r() * 370)}px; top: ${Math.round(60 + r() * 360)}px; --d: ${(2 + r() * 3).toFixed(1)}s; --dl: -${(r() * 4).toFixed(1)}s"></i>`).join(''));
     const sun = (x, y, rad, core, halo, cls = '') => `<span class="sun ${cls}" style="left: ${x - rad * 2.4}px; top: ${y - rad * 2.4}px; width: ${rad * 4.8}px; height: ${rad * 4.8}px"><b style="background: ${halo}"></b><b class="h2" style="background: ${halo}"></b><i style="background: ${core}; width: ${rad * 2}px; height: ${rad * 2}px"></i></span>`;
     if (q.sun === 'day') out.push(cond === 'partly' ? sun(320, 190, 42, '#f6c94a', 'rgba(255, 255, 255, 0.14)') : sun(330, 210, 46, '#f6c94a', 'rgba(255, 255, 255, 0.14)'));
