@@ -823,8 +823,8 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.match(on, /3\. Each scene where the owner is somewhere → one "visit"\./);
     assert.ok(on.includes('5. An alarm or file the messages set or change → that record.') && !plain.includes('5. An alarm or file'));
     // (STEP 4: hours, amount, sources; a later text is not forced)
-    assert.match(on, /2\. Amount: about 11 records per full waking day, fewer for part of one\. A full day uses at least 6 of their apps \(texts, calls, photos, searches, notes, mails, posts, voice memos, alarms, files\)\. Who they talk to, and how much, follows their character and PEOPLE AROUND\./);
-    assert.ok(!on.includes('3 or more people') && on.includes('- Mail: whatever would really land in their inbox from their life, accounts, hobbies and habits.'));
+    assert.match(on, /2\. Amount: about 15 records per full waking day, fewer for part of one\. A full day uses at least 8 of their apps \(texts, calls, photos, searches, notes, mails, posts, voice memos, alarms, files\)\. Who they talk to, and how much, follows their character and PEOPLE AROUND\./);
+    assert.ok(plain.includes('A full day uses at least 6 of their apps (texts, calls, photos, searches, notes, mails, posts, voice memos).') && !on.includes('3 or more people') && on.includes('- Mail: whatever would really land in their inbox from their life, accounts, hobbies and habits.'));
     assert.match(on, /   a\. people the owner had a scene with may text later, if it fits;/);
     assert.ok(!on.includes('at least one later text exchange'));
     assert.match(on, /   b\. PHONE NOW's habits, LIFE NOW's usual, OWNER PROFILE: routines and interests that recur;/);

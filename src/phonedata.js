@@ -334,7 +334,7 @@ export const AI_SYS_PHONE_UPDATE = updateSystem();
 // (an item's fields as the phone's apps take them, without the "change" its life record says as "already")
 const inner = line => line.slice(line.indexOf('[{ ') + 3, line.lastIndexOf(' }]')).replace(/^"change": an id or "", /, '');
 // a day's own life records, at most (재구성; the story's own have no limit): see EVERYDAY_CAP
-export const LIFE_A_DAY = 11, LIFE_MAX = 70;
+export const LIFE_A_DAY = 15, LIFE_MAX = 70;
 // (CLOCK FIRST as the records answer says it)
 const CORE_CLOCK_FIRST = CLOCK_FIRST.replace('then write events and app records using those times', 'then write the records using those times');
 // (the times of every record: in CLOCK FIRST, or on their own when an archive-only round has none)
@@ -385,7 +385,7 @@ A record says no more than its "said". Nothing else goes in "records".
 
 STEP 4 · EVERYDAY
 1. Hours: the waking hours from PHONE NOW's "now" to the answer's "now" that no scene covers, skipped days included. Asleep or busy in a scene: no owner activity; incoming texts and calls may arrive.
-2. Amount: about ${LIFE_A_DAY} records per full waking day, fewer for part of one. A full day uses at least 6 of their apps (texts, calls, photos, searches, notes, mails, posts, voice memos${life ? ', alarms, files' : ''}). Who they talk to, and how much, follows their character and PEOPLE AROUND.
+2. Amount: about ${LIFE_A_DAY} records per full waking day, fewer for part of one. A full day uses at least ${life ? 8 : 6} of their apps (texts, calls, photos, searches, notes, mails, posts, voice memos${life ? ', alarms, files' : ''}). Who they talk to, and how much, follows their character and PEOPLE AROUND.
 3. Take each day from, in order:
    a. people the owner had a scene with may text later, if it fits;
    b. PHONE NOW's habits${life ? ", LIFE NOW's usual" : ''}, OWNER PROFILE: routines and interests that recur;
