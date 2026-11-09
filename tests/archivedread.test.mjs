@@ -835,11 +835,15 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.match(on, /   b\. PHONE NOW's habits, LIFE NOW's usual, OWNER PROFILE: routines and interests that recur;/);
     assert.match(on, /   c\. PEOPLE AROUND: contact both ways; group chats go on without the owner\./);
     assert.match(on, /incoming texts and calls may arrive/);
+    // (rules the rewrite had dropped, back: what the owner doesn't know, a record about an order, notes and memos whole, a diary on a day not shown, late texts)
+    assert.ok(on.includes("and OWNER DOESN'T KNOW (never on the phone as known). And OWNER."));
+    assert.ok(on.includes('- Note: the owner\'s form, length, shorthand, spelling and languages.') && !on.includes('full personal content') && on.includes('- Diary: their experience and feelings at natural length; never a list of events or a summary.'));
+    assert.ok(on.includes('Late texts agree with screen time and sleep.') && plain.includes('Late texts agree with a late night.'));
     assert.match(on, /No new relative or partner; relationship labels only from the story;/);
     assert.equal(on.split('5. Diary: one entry for a day that ends in these hours or a scene that stays with them, on that day.').length, 2);
     // (STEP 5)
     assert.match(on, /- Search: what they would type\. About a situation: only words in its "known"\./);
-    assert.match(on, /- Voice memo: spoken, not written: the way they talk in the chat/);
+    assert.match(on, /- Voice memo: spoken, not written: the way they talk in the archive and chat/);
     assert.ok(on.includes('Post: only if they post. Alarm, file: change with their life.') && !plain.includes('Alarm, file:'));
     // (KEEPING IN STEP: a LIFE NOW alarm is not written again unless it changes)
     assert.match(on, /- Nothing PHONE NOW or LIFE NOW holds is written again, nor a near copy of it \(e\.g\. a note, list, mail or message with only a few words changed\)\. A text: only its new messages\. A note, mail, search, photo, diary or post: a new one only when it says something new\. A LIFE NOW alarm or file: not again unless it changes, then with its id in "already"\. A known scene: its id\. An edited message: the ids listed\./);
@@ -856,6 +860,8 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.match(on, /\nITEMS \(each with only the fields it needs\)\ncontact: "name"/);
     assert.match(on, /"group", "members": \[all but the owner, as in the contacts\]/);
     assert.ok(!data.coreSystem({ life: true }).includes('\nWEATHER\n'));
+    // (the weather's line goes in the story's words; its Korean is the app's, as everywhere: no "ko" asked)
+    assert.ok(onW.includes('"lo", "line",\n') && !onW.includes('"line", "ko"') && !onW.includes('"coffeeKo"'));
     assert.ok(!plain.includes('\nHEALTH\n') && !plain.includes('\nSCREEN TIME\n'));
     assert.ok(!on.includes('"events": [{') && !on.includes('Items in "phone"') && !on.includes('LOREBOOK') && on.includes('- Sometimes ARCHIVE BEFORE, STORY NOW'));
 });
@@ -1284,7 +1290,7 @@ test('반영 본체 gets the orders and tickets (no money), so a mail or text ab
     assert.equal(data.ordersBlock({ orders: [], passes: [] }), '');
     // (an order's arrival day, from the phone's own order)
     assert.match(data.ordersBlock({ orders: [{ id: 'o2', shop: 'Lio Shop', item: 'scarf', status: 'on the way', time: '11-03 14:00' }] }, { money: { orders: [{ id: 'o2', eta: '11-05' }] } }), /"status":"on the way","time":"11-03 14:00","eta":"11-05"/);
-    assert.match(data.coreSystem({ wallet: true }), /ORDERS AND TICKETS \(orders and tickets with their status and eta\)/);
+    assert.match(data.coreSystem({ wallet: true }), /ORDERS AND TICKETS \(orders and tickets with their status and eta; a record about one keeps its item, dates and status\)/);
     assert.ok(!data.coreSystem().includes('ORDERS AND TICKETS'));
 });
 
@@ -1394,11 +1400,11 @@ test('"records" as one day list: a record with its scene or its words is the sto
 
 test('koGaps: what is in another language and has no Korean yet, line fields by their Korean pair; Korean, numbers and filled ones left', () => {
     const p = { threads: [{ with: 'Ren', messages: [{ text: 'see you', time: '10-26 10:00' }, { text: '응 나중에', time: '10-26 10:01' }, { text: 'ok!', ko: '알았어!', time: '10-26 10:02' }] }],
-        photos: [{ caption: 'rainy street' }, { caption: '2026' }], notes: [{ title: 'Groceries', text: 'milk\neggs' }], searches: [], events: [{ title: 'Lio dinner', ko: '' }],
+        photos: [{ caption: 'rainy street' }, { caption: '2026' }], notes: [{ title: 'Groceries', text: 'milk\neggs' }], searches: [{ q: 'RE 7 delay', answer: { label: 'Bahn', text: 'Running 10 min late' }, questions: [{ q: 'Why late?' }], results: [{ title: 'DB news', text: 'Works at Hanau', page: { nav: ['Home'], title: 'Works at Hanau', lede: { text: 'Trains slower' }, body: [{ text: 'Until Friday' }], forum: { comments: [{ who: 'x', text: 'again??' }] } } }] }], events: [{ title: 'Lio dinner', ko: '' }],
         posts: [{ text: 'hello', photo: 'sea', comments: [{ text: 'nice' }] }], mails: [{ subject: 'Your order', text: 'shipped' }], diary: [], voice: [],
-        life: { clock: { alarms: [{ label: 'Gym' }], timers: [] }, files: { items: [{ preview: 'Invoice no. 12' }] } } };
+        life: { clock: { alarms: [{ label: 'Gym' }], timers: [] }, files: { items: [{ preview: 'Invoice no. 12' }], folders: [{ name: 'Work', ko: '' }] }, weather: { line: 'Clear and cold early morning in Westend', cond: 'clear' }, health: { usual: { coffeeKind: 'flat white' } } }, money: { tx: [{ who: 'REWE Markt', amount: -12 }], orders: [{ item: 'Wool rug', ko: '울 러그' }] }, investment: { securities: [{ symbol: 'SAP', name: 'SAP SE' }], watch: [{ symbol: 'SAP', note: 'buy the dip' }] }, delivery: { shops: [{ name: 'Uber Eats', menu: [{ name: 'Margherita', ko: '마르게리타' }] }], orders: [{ shop: 'Uno', items: [{ name: 'Tiramisu', option: 'large' }], noteRider: 'Ring twice' }] } };
     const got = data.koGaps(p).map(g => `${g.f}>${g.k}:${g.x[g.f]}`);
-    assert.deepEqual(got, ['text>ko:see you', 'caption>ko:rainy street', 'title>kt:Groceries', 'text>ko:milk\neggs', 'title>ko:Lio dinner', 'text>ko:hello', 'photo>pko:sea', 'text>ko:nice', 'subject>ks:Your order', 'text>ko:shipped', 'label>ko:Gym', 'preview>ko:Invoice no. 12']);
+    assert.deepEqual(got, ['text>ko:see you', 'caption>ko:rainy street', 'title>kt:Groceries', 'text>ko:milk\neggs', 'q>ko:RE 7 delay', 'text>ko:Running 10 min late', 'q>ko:Why late?', 'title>kt:DB news', 'text>ko:Works at Hanau', 'title>kt:Works at Hanau', 'text>ko:Trains slower', 'text>ko:Until Friday', 'text>ko:again??', 'title>ko:Lio dinner', 'text>ko:hello', 'photo>pko:sea', 'text>ko:nice', 'subject>ks:Your order', 'text>ko:shipped', 'label>ko:Gym', 'preview>ko:Invoice no. 12', 'line>ko:Clear and cold early morning in Westend', 'name>ko:Work', 'coffeeKind>coffeeKo:flat white', 'who>ko:REWE Markt', 'name>ko:SAP SE', 'note>ko:buy the dip', 'name>ko:Uber Eats', 'name>ko:Tiramisu', 'option>optionKo:large', 'noteRider>noteRiderKo:Ring twice']);
     assert.ok(data.hasKo({ threads: [{ messages: [{ text: 'hi there' }] }], photos: [], notes: [], searches: [], events: [] }));
 });
 
@@ -1449,13 +1455,32 @@ test('fillKo: each line goes with who says it to whom, and the voice table, no e
     assert.equal(tr.koAppOf('thread:Mother')('text'), true);
     assert.equal(tr.koAppOf('noteone')('text'), false);
     assert.equal(tr.koAppOf('home'), null);
+    // (every screen with the 한국어 button, its own app: the weather's city list, the web's pages, 배달 none; 설정 the whole phone)
+    for (const [view, app, yes] of [['wlist', 'weather', true], ['weather', 'text', false], ['page', 'search', true], ['marks', 'search', true], ['voiceone', 'voice memo', true], ['voice:v1', 'voice memo title', true], ['files', 'file folder', true], ['clock', 'timer', true], ['health', 'coffee', true], ['dshop', 'delivery', true], ['dorder', 'text', false], ['tx', 'bank', true], ['order', 'shop', true], ['stock', 'invest', true], ['msg', 'text draft', true], ['groupinfo', 'text', true]])
+        assert.equal(tr.koAppOf(view)(app), yes, `${view} ${app}`);
+    assert.equal(tr.koAppOf('set'), null);
     K.answer = (input) => JSON.stringify({ lines: input.split('\n').filter(l => /^\d+: \[text/.test(l)).map(l => ({ n: Number(l.split(':')[0]), ko: `새 ${l.split(':')[0]}` })) });
-    assert.equal(await tr.redoKo(p, tr.koAppOf('thread:Mother')), 3);
+    assert.equal(await tr.redoKo(p, g => tr.koAppOf('thread:Mother')(g.app)), 3);
     assert.deepEqual(p.threads[0].messages.map(x => x.ko), ['새 1', '새 2', '새 3']);
     assert.deepEqual([p.notes[0].kt, p.notes[0].ko], ['체크리스트', '짐 싸기\n보일러']);
+    // one screen: this chat only (a note's Korean stays); a list screen its app's newest; nothing on another screen
+    const scope = tr.koScopeOf(p, 'thread:0');
+    assert.ok(scope && scope({ x: p.threads[0].messages[1] }) && !scope({ x: p.notes[0] }));
+    assert.equal(tr.koScopeOf(p, 'noteone:0')({ x: p.notes[0] }), true);
+    assert.equal(tr.koScopeOf(p, 'msg'), null);
+    assert.equal(tr.koScopeOf(p, 'thread:9'), null);
+    K.answer = (input) => JSON.stringify({ lines: input.split('\n').filter(l => /^\d+: \[/.test(l)).map(l => ({ n: Number(l.split(':')[0]), ko: `한 화면 ${l.split(':')[0]}` })) });
+    assert.equal(await tr.redoKo(p, scope), 3);
+    assert.deepEqual([p.notes[0].kt, p.notes[0].ko], ['체크리스트', '짐 싸기\n보일러']);
+    // 이번 반영: none known, nothing
+    assert.equal(tr.roundScope(p), null);
+    const r = { owner: 'Oscar', threads: [{ id: 't1', with: 'Ren', messages: [{ from: 'Ren', text: 'old one', time: '11-01 10:00' }, { from: 'Ren', text: 'new one', time: '11-08 10:00' }] }], notes: [{ id: 'n0', title: 'Old' }, { id: 'n1', title: 'Plan' }], photos: [], searches: [], events: [],
+        life: { files: { items: [{ id: 'f1', preview: 'Ticket' }] } }, syncUndo: { items: [['notes', 'n1']], msgs: [['t1', [JSON.stringify(['Ren', 'new one', '11-08 10:00'])]]], effects: [{ type: 'push', path: 'life.files.items', item: { id: 'f1' } }] } };
+    const rs = tr.roundScope(r);
+    assert.deepEqual(data.koGaps(r).filter(rs).map(g => g.x[g.f]), ['new one', 'Plan', 'Ticket']);
     K.answer = () => { throw new Error('down'); };
-    await assert.rejects(tr.redoKo(p, tr.koAppOf('thread:Mother')), /down/);
-    assert.deepEqual(p.threads[0].messages.map(x => x.ko), ['새 1', '새 2', '새 3']);
+    await assert.rejects(tr.redoKo(p, g => tr.koAppOf('thread:Mother')(g.app)), /down/);
+    assert.deepEqual(p.threads[0].messages.map(x => x.ko), ['한 화면 1', '한 화면 2', '한 화면 3']);
     // a translator that fails throws, and what it hadn't filled stays empty
     const q = { owner: 'Oscar', threads: [{ with: 'Ren', messages: [{ from: 'Ren', text: 'see you', time: '11-08 11:00' }] }], photos: [], notes: [], searches: [], events: [] };
     K.answer = () => { throw new Error('quota'); };

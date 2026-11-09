@@ -30,7 +30,7 @@ import { placeNames } from './phonemapfind.js';
 import { FLAG_NAME, flagSvg } from './phoneflags.js';
 import { mapZoom } from './phonemapzoom.js';
 import { glossaryEntries, openGlossary } from './translate.js';
-import { dropVoice, fillKo, koAppOf, labelVoices, learnVoices, pickVoices, redoKo } from './phonetr.js';
+import { dropVoice, fillKo, koAppOf, koScopeOf, labelVoices, learnVoices, pickVoices, redoKo, roundScope } from './phonetr.js';
 // 을 / 를 after a word: by its last syllable's final consonant (a Latin ending, like SNS, reads as 를)
 const josa = w => { const c = w.charCodeAt(w.length - 1) - 0xac00; return c >= 0 && c < 11172 && c % 28 ? '을' : '를'; };
 import { confirm, esc } from './util.js';
@@ -790,15 +790,18 @@ export async function openPhone(who = null) {
             koHeld = true;
             const p = phone();
             if (!p || making || koBusy) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요');
-            const only = koAppOf(view);
+            // (this screen's lines only: one chat, one note, one page …; a list screen its app's newest 40; 설정 the whole phone, asked first)
+            const scope = koScopeOf(p, view), only = koAppOf(view), pick = scope || (only ? g => only(g.app) : null);
+            if (pick && !koGaps(p, { all: true }).some(pick)) return; // (nothing on this screen to translate again: quietly nothing)
+            if (!pick && !await askSheet('폰 전체를 다시 번역할까요?', '지금 한국어가 전부 새 번역으로 바뀌어요.', '다시 번역')) return;
             let n = 0;
             koBusy = true;
-            try { n = await withSpinner($b, '다시 번역 중', async () => { try { await learnVoices(m, owner, p, { all: true }); } catch (err) { console.warn('[narrative-archive] voices', err); } return redoKo(p, only); }); if (p.syncLast?.trFailed) delete p.syncLast.trFailed; await saveMeta(); }
+            try { n = await withSpinner($b, '다시 번역 중', async () => { try { await learnVoices(m, owner, p, { all: true }); } catch (err) { console.warn('[narrative-archive] voices', err); } return redoKo(p, pick, !scope && only ? { max: 40, newest: true } : {}); }); if (p.syncLast?.trFailed) delete p.syncLast.trFailed; await saveMeta(); }
             catch (err) { toastr.warning(`다시 번역하지 못했어요 · 원래 한국어는 그대로예요 (${String(err?.message || err)})`, '캐릭터 휴대폰'); }
             finally { koBusy = false; }
             const g = globalSettings(); g.phoneKo = true; saveGlobal();
             if (!phoneClosed && phone() === p) drawPhone(true);
-            if (n) toastr.success(`${only ? '이 앱' : '폰'}의 한국어 ${n}개를 다시 옮겼어요`, '캐릭터 휴대폰');
+            if (n) toastr.success(`${n}개를 다시 번역했어요`, '캐릭터 휴대폰');
         }, 600);
     });
     $root.on('pointerup pointerleave pointercancel', '.na_ph_kochip:not(.na_ph_looksbtn)', () => clearTimeout(koHold));
@@ -824,6 +827,21 @@ export async function openPhone(who = null) {
         e.preventDefault(); e.stopPropagation();
         const p = phone(); if (p?.syncLast) { p.syncLast.trSeen = true; await saveMeta(); }
         $root.find('.na_ph_trpop').remove();
+    });
+    // 이번 반영 다시 번역: only what the last reflection put in
+    $root.on('click', '.na_sync_retr', async e => {
+        e.stopPropagation();
+        const p = phone();
+        if (!p || making || koBusy) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요');
+        const pick = roundScope(p);
+        if (!pick || !koGaps(p, { all: true }).some(pick)) return toastr.info('이번 반영엔 다시 번역할 게 없어요', '캐릭터 휴대폰');
+        let n = 0;
+        koBusy = true;
+        try { n = await withSpinner($(e.currentTarget), '다시 번역 중', () => redoKo(p, pick)); if (p.syncLast?.trFailed) delete p.syncLast.trFailed; await saveMeta(); }
+        catch (err) { toastr.warning(`다시 번역하지 못했어요 · 원래 한국어는 그대로예요 (${String(err?.message || err)})`, '캐릭터 휴대폰'); }
+        finally { koBusy = false; }
+        if (!phoneClosed && phone() === p) drawPhone(true);
+        if (n) toastr.success(`이번 반영 ${n}개를 다시 번역했어요`, '캐릭터 휴대폰');
     });
     $root.on('click', '.na_sync_tr', async e => { e.stopPropagation(); if (making) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요'); await withSpinner($(e.currentTarget), '번역 중', () => koRun(phone(), true)); });
     $root.on('click', '.na_ph_makebtn', function () { make($(this), false); });
@@ -1124,7 +1142,7 @@ export async function openPhone(who = null) {
         syncWhy = ''; view = 'setsync'; drawPhone(); await saveMeta();
         toastr.success(mark.index < 0 ? '첫 대화부터 반영해요' : `#${mark.index} 다음부터 반영해요`, '캐릭터 휴대폰');
     });
-    $root.on('click', '.na_sync_restore', async e => { e.stopPropagation(); if (making || busy.sync || busy.fill) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요'); const n = await restoreRounds(m, phoneChatScope(ctx())); syncPending = 0; drawPhone(); if (m.phones && Object.values(m.phones).some(p => p.inject)) applyInjection(); toastr.success(`반영 ${n}번을 복구했어요`, '캐릭터 휴대폰'); });
+    $root.on('click', '.na_sync_restore', async e => { e.stopPropagation(); if (making || busy.sync || busy.fill) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요'); const n = await restoreRounds(m, phoneChatScope(ctx())); syncPending = 0; drawPhone(); if (n && phone()) koRun(phone(), false); /* (what came back has no Korean yet) */ if (m.phones && Object.values(m.phones).some(p => p.inject)) applyInjection(); toastr.success(`반영 ${n}번을 복구했어요`, '캐릭터 휴대폰'); });
     $root.on('click', '.na_sync_drop', async function (e) {
         e.stopPropagation();
         if (making || busy.sync || busy.fill) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요');

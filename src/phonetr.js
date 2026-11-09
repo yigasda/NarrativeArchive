@@ -4,7 +4,7 @@
 // voice table (p.koVoice: how each person sounds in Korean), so every translation reads alike; the translator adds a
 // person it decides, the user can change one
 
-import { aroundBlock, cardBlocks, koGaps, refreshUndoAfter, sideRequest } from './phonedata.js';
+import { aroundBlock, cardBlocks, koGaps, refreshUndoAfter, roundObjects, sideRequest } from './phonedata.js';
 import { askDraft } from './ai.js';
 import { askTranslator, glossaryEntries, glossaryIn } from './translate.js';
 import { getMeta, hasChat } from './core.js';
@@ -152,27 +152,60 @@ function inputOf(p, chunk) {
 
 // which of the phone's lines a screen shows (its view): the app 한국어 long-pressed there translates again
 const VIEW_APPS = [[/^(msg|thread|draft|groupinfo|contact)/, a => a.startsWith('text')], [/^photo/, a => a === 'photo caption'], [/^note/, a => a.startsWith('note')],
-    [/^search/, a => a === 'search'], [/^cal/, a => a === 'calendar'], [/^sns/, a => /^(post|comment|profile)/.test(a)], [/^mail/, a => a.startsWith('mail')],
-    [/^diary/, a => a.startsWith('diary')], [/^voice/, a => a.startsWith('voice memo')], [/^(clock|alarm)/, a => a === 'alarm' || a === 'timer'], [/^(files|folder|file)/, a => a === 'file']];
+    [/^(search|page|marks|tabs|history)/, a => a === 'search' || a === 'web'], [/^cal/, a => a === 'calendar'], [/^sns/, a => /^(post|comment|profile)/.test(a)], [/^mail/, a => a.startsWith('mail')],
+    [/^diary/, a => a.startsWith('diary')], [/^voice/, a => a.startsWith('voice memo')], [/^(clock|alarm)/, a => a === 'alarm' || a === 'timer'], [/^(files|folder|file)/, a => a.startsWith('file')],
+    [/^(weather|wlist)/, a => a === 'weather'], [/^(health|hcmp)/, a => a === 'coffee'],
+    [/^(delivery|dcart|ditem|dorder|dpay|drate|dshop)/, a => a === 'delivery'],
+    [/^(bank|acct|tx|stmt|fixed|money)/, a => a === 'bank'], [/^(shop|order|track)/, a => a === 'shop'], [/^(invest|iv|stock)/, a => a === 'invest']];
+// (a screen not listed, as 설정, is the whole phone)
 export const koAppOf = view => VIEW_APPS.find(([re]) => re.test(String(view || '')))?.[1] || null;
 
-// translates one app's lines again (all of them, with the voice table and the examples as they are now): their Korean is
-// cleared first and, if the translator fails or leaves a line out, put back. The number translated
-export async function redoKo(p, only, { max = KO_MAX } = {}) {
-    const rows = koGaps(p, { all: true }).filter(g => !only || only(g.app)).slice(0, max), was = rows.map(g => g.x[g.k]);
+// the lines one screen shows (its view): one chat, one note, one mail, one search (without its pages), one page …; a
+// predicate on koGaps' rows, or null for a list screen (then the app's newest, koAppOf)
+const objsIn = (root, skip = []) => { const s = new Set(); const walk = (o, d = 0) => { if (!o || typeof o !== 'object' || d > 8) return; if (!Array.isArray(o)) s.add(o); for (const [k, v] of Object.entries(o)) if (v && typeof v === 'object' && !skip.includes(k)) walk(v, d + 1); }; walk(root); return s; };
+export function koScopeOf(p, view) {
+    const v = String(view || ''), i = v.indexOf(':'), go = i < 0 ? v : v.slice(0, i), key = i < 0 ? '' : decodeURIComponent(v.slice(i + 1));
+    if (!key) return null;
+    const at = xs => { const n = Number(key); return Number.isInteger(n) && String(n) === key ? xs?.[n] : (xs || []).find(x => x?.id === key); };
+    const L = p?.life || {};
+    let root = null, skip = [];
+    if (['thread', 'draft', 'groupinfo'].includes(go)) root = at(p.threads);
+    else if (go === 'noteone') root = at(p.notes);
+    else if (go === 'diaryone') root = at(p.diary);
+    else if (go === 'mailone') root = at(p.mails);
+    else if (go === 'calone') root = at(p.events);
+    else if (go === 'photoone') root = at(p.photos);
+    else if (go === 'snspost') root = at(p.posts);
+    else if (go === 'voiceone' || go === 'voice') root = at(p.voice);
+    else if (go === 'searchone') { root = at(p.searches); skip = ['page']; }
+    else if (go === 'page') { const [k, j] = key.split('.').map(Number); root = p.searches?.[k]?.results?.[j]; }
+    else if (go === 'file') root = (L.files?.items || []).find(x => x.id === key);
+    else if (go === 'folder') root = (L.files?.folders || []).find(x => x.name === key);
+    else if (go === 'alarm') root = (L.clock?.alarms || []).find(x => x.id === key);
+    if (!root) return null;
+    const s = objsIn(root, skip);
+    return g => s.has(g.x);
+}
+// the records the last reflection put in
+export const roundScope = p => { const s = roundObjects(p); return s.size ? g => s.has(g.x) : null; };
+
+// translates lines again (pick: which of koGaps' rows; newest: only the last max of them, a list screen's): their Korean
+// is cleared first and, if the translator fails or leaves a line out, put back. The number translated
+export async function redoKo(p, pick, { max = KO_MAX, newest = false } = {}) {
+    const all = koGaps(p, { all: true }).filter(g => !pick || pick(g)), rows = newest ? all.slice(-max) : all.slice(0, max), was = rows.map(g => g.x[g.k]);
     for (const g of rows) delete g.x[g.k];
-    try { return await fillKo(p, { max, only }); }
+    try { return await fillKo(p, { max, pick: g => rows.some(r => r.x === g.x && r.k === g.k) }); }
     finally { rows.forEach((g, i) => { if (!String(g.x[g.k] ?? '').trim() && was[i] !== undefined) g.x[g.k] = was[i]; }); }
 }
 
 // fills what has no Korean (only: those of one app); the number filled. Throws when the translator fails (what came back
 // before stays)
-export async function fillKo(p, { max = KO_MAX, only = null } = {}) {
+export async function fillKo(p, { max = KO_MAX, pick = null } = {}) {
     // (3.183.18: the voice table is how people talk to others; what the translator wrote there before, from notes and
     // diaries too, goes once. The user's own rows stay)
     // (3.184.1: and only from texts and comments, never a mail's sender or a calendar line: what it decided before goes once more)
     if (!(p.koVoiceV >= 3)) { if (Array.isArray(p.koVoice)) p.koVoice = p.koVoice.filter(v => v?.by !== 'model'); p.koVoiceV = 3; }
-    const gaps = koGaps(p).filter(g => !only || only(g.app)).slice(0, max);
+    const gaps = koGaps(p).filter(g => !pick || pick(g)).slice(0, max);
     let n = 0;
     for (let i = 0; i < gaps.length;) {
         let j = i, size = 0;

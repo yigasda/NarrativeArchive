@@ -349,9 +349,9 @@ Write what the owner's phone gains from NEW MESSAGES. The story decides what hap
 YOU GET
 - NEW MESSAGES (numbered #123). Sometimes ARCHIVE FOR THESE MESSAGES: summaries covering them, also evidence.
 - Sometimes ARCHIVE BEFORE, STORY NOW, WORLD, OWNER PROFILE, STORY YEAR, DAYS (the weekdays ahead: "on Friday" is the next one).
-- PHONE NOW ("now": when it was last read), EVENTS ON THE PHONE (scenes with ids)${life ? ', LIFE NOW (alarms, files, health days, with ids)' : ''}. Sometimes MESSAGES READ BEFORE, NOW CHANGED (edited messages with their scenes)${wallet ? ' and ORDERS AND TICKETS (orders and tickets with their status and eta)' : ''}.${weather && tracker ? `
+- PHONE NOW ("now": when it was last read), EVENTS ON THE PHONE (scenes with ids)${life ? ', LIFE NOW (alarms, files, health days, with ids)' : ''}. Sometimes MESSAGES READ BEFORE, NOW CHANGED (edited messages with their scenes)${wallet ? ' and ORDERS AND TICKETS (orders and tickets with their status and eta; a record about one keeps its item, dates and status)' : ''}.${weather && tracker ? `
 - WEATHER NOW: the chat's last status line (date, time, place, weather; a scene the owner isn't in: its place and weather only).` : ''}
-- Sometimes OWNER'S CLOCK (where the owner is, their time, the hours to others), PEOPLE AROUND (people in their life, where things stand) and OWNER DOESN'T KNOW. And OWNER.
+- Sometimes OWNER'S CLOCK (where the owner is, their time, the hours to others), PEOPLE AROUND (people in their life, where things stand) and OWNER DOESN'T KNOW (never on the phone as known). And OWNER.
 
 ${archiveOnly ? `TIMES\n${CORE_TIMES}` : `${CORE_CLOCK_FIRST}\n${CORE_TIMES}`}
 
@@ -384,7 +384,7 @@ Go through each scene's messages in order. Write a record only in these cases, w
 A record says no more than its "said". Nothing else goes in "records".
 
 STEP 4 · EVERYDAY
-1. Hours: the waking hours from PHONE NOW's "now" to the answer's "now" that no scene covers, skipped days included. Asleep or busy in a scene: no owner activity; incoming texts and calls may arrive.
+1. Hours: the waking hours from PHONE NOW's "now" to the answer's "now" that no scene covers, skipped days included. Asleep or busy in a scene: no owner activity; incoming texts and calls may arrive. Late texts agree with ${life ? 'screen time and sleep' : 'a late night'}.
 2. Amount: about ${LIFE_A_DAY} records per full waking day, fewer for part of one. A full day uses at least ${life ? 8 : 6} of their apps (texts, calls, photos, searches, notes, mails, posts, voice memos${life ? ', alarms, files' : ''}). Who they talk to, and how much, follows their character and PEOPLE AROUND.
 3. Take each day from, in order:
    a. people the owner had a scene with may text later, if it fits;
@@ -404,7 +404,7 @@ STEP 5 · EACH APP
 - Mail: whatever would really land in their inbox from their life, accounts, hobbies and habits.
 - Calendar: fixed commitments only. Post: only if they post.${life ? ' Alarm, file: change with their life.' : ''}
 - Diary: their experience and feelings at natural length; never a list of events or a summary.
-- Voice memo: spoken, not written: the way they talk in the chat, with pauses (…), restarts and half sentences, at a moment alone (after a fight, on the way somewhere, late at night). 20 to 90 seconds; "sec" to fit; "place" where they were. Never the diary told again.${life ? `
+- Voice memo: spoken, not written: the way they talk in the archive and chat, with pauses (…), restarts and half sentences, at a moment alone (after a fight, on the way somewhere, late at night). 20 to 90 seconds; "sec" to fit; "place" where they were. Never the diary told again.${life ? `
 
 HEALTH
 1. One row for each day reached and each LIFE NOW day newly shown. Today's row always, with totals so far (steps, workouts, coffee, water, "screen").
@@ -437,7 +437,7 @@ JSON (one object, nothing before or after it)
     "at": its message number, "scene": its scene id, "said": exact words, "situations": [situation ids] or [],${life ? ' "already": a LIFE NOW id or "",' : ''} and the fields of its type in ITEMS }],
   "everyday": [{ "date": "MM-DD", "records": [{ "type": one of the ITEMS types but "profile" and "visit", "situations": [situation ids] or [], and the fields of its type in ITEMS }] }] (one entry a day, in order)${life ? `,
   "health": [{ "date": the day they woke, "already": a LIFE NOW id or "", "sleep", "wake", "woke", "steps", "km", "floors", "hr": [low, high], "workouts": [{ "kind", "time", "min", "km" }], "coffee", "coffeeKind", "water", "weight", "screen": { "apps": { app: minutes }, "pickups", "late" } }],
-  "usual": { "weight", "height", "coffee", "coffeeKind", "coffeeKo", "water", "bed", "sleep", "wake", "steps", "workouts", "rest", "screen": { "add": [{ "app", "kind": chat | social | game | video | music | work | reading | shopping | money | maps | health | other, "min" }], "drop", "pickups", "late" } } or null` : ''}${life && weather ? `,\n${WEATHER_JSON}` : ''} }
+  "usual": { "weight", "height", "coffee", "coffeeKind", "water", "bed", "sleep", "wake", "steps", "workouts", "rest", "screen": { "add": [{ "app", "kind": chat | social | game | video | music | work | reading | shopping | money | maps | health | other, "min" }], "drop", "pickups", "late" } } or null` : ''}${life && weather ? `,\n${WEATHER_JSON.replace('"line", "ko",', '"line",')}` : ''} }
 Write in this order. Numbers are plain JSON numbers. Nothing new: "records": [].
 
 ITEMS (each with only the fields it needs)
@@ -3593,7 +3593,17 @@ export function koGaps(p, { all = false } = {}) {
     }
     for (const x of p?.photos || []) add(x, 'caption', 'ko', 'photo caption');
     for (const [app, xs] of [['note', p?.notes], ['diary', p?.diary], ['voice memo', p?.voice]]) for (const x of xs || []) { add(x, 'title', 'kt', `${app} title`); add(x, 'text', 'ko', app); }
-    for (const x of p?.searches || []) add(x, 'q', 'ko', 'search');
+    // (a search and the web it opened: the answer, the results, the questions, each page written so far)
+    const web = (o, depth = 0) => {
+        if (!o || typeof o !== 'object' || depth > 6) return;
+        if (Array.isArray(o)) { for (const y of o) web(y, depth + 1); return; }
+        add(o, 'title', 'kt', 'web'); add(o, 'text', 'ko', 'web');
+        for (const [k, v] of Object.entries(o)) if (v && typeof v === 'object' && !['nav', 'steps', 'pic', 'marks'].includes(k)) web(v, depth + 1);
+    };
+    for (const x of p?.searches || []) {
+        add(x, 'q', 'ko', 'search');
+        web(x.answer); for (const q of x.questions || []) add(q, 'q', 'ko', 'web'); web(x.results);
+    }
     for (const x of p?.events || []) add(x, 'title', 'ko', 'calendar');
     for (const x of p?.posts || []) { add(x, 'text', 'ko', 'post', own, 'followers'); add(x, 'photo', 'pko', 'post photo'); for (const c of x.comments || []) add(c, 'text', 'ko', 'comment', c.from || 'someone', own); }
     for (const x of p?.mails || []) { add(x, 'subject', 'ks', 'mail subject', x.from || x.sender || 'sender', own); add(x, 'text', 'ko', 'mail', x.from || x.sender || 'sender', own); }
@@ -3601,6 +3611,34 @@ export function koGaps(p, { all = false } = {}) {
     for (const x of p?.life?.clock?.alarms || []) add(x, 'label', 'ko', 'alarm');
     for (const x of p?.life?.clock?.timers || []) add(x, 'label', 'ko', 'timer');
     for (const x of p?.life?.files?.items || []) add(x, 'preview', 'ko', 'file');
+    if (p?.life?.weather) add(p.life.weather, 'line', 'ko', 'weather');
+    for (const x of p?.life?.files?.folders || []) add(x, 'name', 'ko', 'file folder');
+    if (p?.life?.health?.usual) add(p.life.health.usual, 'coffeeKind', 'coffeeKo', 'coffee');
+    // (은행 · 쇼핑 · 투자: their own requests write their Korean; what they left out, or a 다시 번역, is the translator's)
+    for (const x of p?.money?.tx || []) add(x, 'who', 'ko', 'bank', x.who || 'sender', own);
+    for (const x of p?.money?.orders || []) add(x, 'item', 'ko', 'shop');
+    for (const x of p?.investment?.securities || []) add(x, 'name', 'ko', 'invest');
+    for (const x of p?.investment?.watch || []) add(x, 'note', 'ko', 'invest');
+    // (배달: its own fill writes its Korean; what it left out, or a 다시 번역, is the translator's)
+    const dv = p?.delivery;
+    if (dv) {
+        for (const x of dv.shops || []) { add(x, 'name', 'ko', 'delivery'); for (const y of x.menu || []) add(y, 'name', 'ko', 'delivery'); }
+        for (const o of [...(dv.orders || []), ...(dv.cart ? [dv.cart] : [])]) {
+            for (const y of o.items || []) { add(y, 'name', 'ko', 'delivery'); add(y, 'option', 'optionKo', 'delivery'); }
+            add(o, 'noteShop', 'noteShopKo', 'delivery', own, o.shop || 'shop'); add(o, 'noteRider', 'noteRiderKo', 'delivery', own, 'courier');
+        }
+    }
+    return out;
+}
+// the records the last reflection put in (as 되돌리기 knows them): a Set of every object in them, for 이번 반영 다시 번역
+export function roundObjects(p) {
+    const u = p?.syncUndo, out = new Set();
+    if (!u) return out;
+    const walk = (o, d = 0) => { if (!o || typeof o !== 'object' || d > 8) return; if (!Array.isArray(o)) out.add(o); for (const v of Object.values(o)) if (v && typeof v === 'object') walk(v, d + 1); };
+    for (const [k, id] of u.items || []) walk((p[k] || []).find(x => x?.id === id));
+    const sig = x => JSON.stringify([x.from, x.text, x.time]);
+    for (const [tid, sigs] of u.msgs || []) { const t = (p.threads || []).find(x => x.id === tid), ss = new Set(sigs); for (const m of t?.messages || []) if (ss.has(sig(m))) walk(m); }
+    for (const e of u.effects || []) if (e?.type === 'push' && e.item?.id) { const list = String(e.path || '').split('.').reduce((o, k) => o?.[k], p); if (Array.isArray(list)) walk(list.find(x => x?.id === e.item.id)); }
     return out;
 }
 // after the Korean is added, 되돌리기 still sees the phone as the reflection left it
