@@ -669,9 +669,10 @@ export function setDate(p, now, m = null) {
 // first, with 사람 추가; the translator's (by: 'model') under it, its names a little grey. A row opens the alert to edit
 // (and becomes 소망's); slid left, 삭제
 export const voiceList = p => (Array.isArray(p?.koVoice) ? p.koVoice : []).map((v, i) => ({ who: String(v?.who ?? v?.from ?? '').trim(), style: String(v?.style || '').trim(), label: String(v?.label || '').trim(), model: v?.by === 'model', i })).filter(v => v.who);
-// the list shows the style up to its first comma / full stop (docs/mockups/phone-voice short 2) and "외 N개" for the rest, so a long style stays one line
+// the list shows a style written by hand as its first two pieces (cut at commas, full stops …) joined with " · ", the
+// same shape as the story's labels; a long one ends in … on its one line
 export const voiceParts = st => String(st || '').split(/[,.;!?\n，。、；！？·…]+/).map(x => x.trim()).filter(Boolean);
-const voiceShort = st => { const ps = voiceParts(st); return `<span class="ax_p ax_kvp">${ps.length ? `${esc(ps[0])}${ps.length > 1 ? ` <span class="ax_kvm">외 ${ps.length - 1}개</span>` : ''}` : '말투 적기'}</span>`; };
+const voiceShort = st => { const ps = voiceParts(st); return `<span class="ax_p ax_kvp">${ps.length ? esc(ps.slice(0, 2).join(' · ')) : '말투 적기'}</span>`; };
 // 이야기에서 뽑기 (docs/mockups/phone-voice pickall B): the row on top turns the list into a choice — a circle at each
 // row's right (the settings radio), 전체 · 전체 해제 on each section's title, 취소 top right; with someone chosen the row
 // reads "N명 뽑기" and runs it (phone.js, pickVoices). pick: the chosen names (lower case), or null when not choosing
