@@ -789,6 +789,10 @@ function phaseOf(time) {
     return m < 4 * 60 ? 'night' : m < 7 * 60 ? 'dawn' : m < 9 * 60 ? 'morn' : m < 11 * 60 ? 'forenoon' : m < 17 * 60 ? 'day' : m < 20 * 60 ? 'eve' : 'night';
 }
 const WET = { drizzle: 1, rain: 1, sleet: 1 };
+// grey skies by how hard it comes down, as at noon: 진눈깨비 a touch lighter (the snow in it), 흐림, 이슬비 a shade darker, 비 the darkest
+const WET_K = { sleet: 0.07, cloudy: 0, drizzle: -0.06, rain: -0.15 };
+const wetHex = (hex, k) => { if (!/^#[0-9a-f]{6}$/i.test(hex || '') || !k) return hex; const n = parseInt(hex.slice(1), 16); return `#${[n >> 16, (n >> 8) & 255, n & 255].map(v => Math.round(k > 0 ? v + (255 - v) * k : v * (1 + k)).toString(16).padStart(2, '0')).join('')}`; };
+const wetSky = (q, cond) => { const k = WET_K[cond]; if (!k) return q; const b = l => l && l.map(([y, c]) => [y, wetHex(c, k)]); return { ...q, sky: wetHex(q.sky, k), bands: b(q.bands), cb: b(q.cb), hills: q.hills.map(c => wetHex(c, k)), cloud: wetHex(q.cloud, k), cloud2: wetHex(q.cloud2, k) }; };
 // one palette per sky and part of the day: flat layers only (sky, bands, three hills, clouds), no gradients
 // a sky the app doesn't know (an older save, a blank) is drawn as cloudy
 const condOk = c => (Object.hasOwn(WX, c) ? c : 'cloudy');
@@ -813,7 +817,7 @@ function pal(cond, phase) {
     if (phase === 'night') {
         if (cond === 'clear' || cond === 'wind') return { sky: '#28324a', hills: NIGHT, moon: true, stars: 34, wind: cond === 'wind', phase };
         if (cond === 'partly' || cond === 'cloudy') return { sky: '#28324a', hills: NIGHT, moon: true, stars: 16, cloud: '#333d55', phase };
-        if (WET[cond]) return { sky: '#2c3446', hills: ['#232a3a', '#1d2331', '#171c28'], cloud: '#363f53', fall: D[cond].fall, phase };
+        if (WET[cond]) return wetSky({ sky: '#2c3446', hills: ['#232a3a', '#1d2331', '#171c28'], cloud: '#363f53', fall: D[cond].fall, phase }, cond);
         if (cond === 'snow') return { sky: '#2f3a52', hills: ['#c5cfdc', '#aab6c6', '#919fb2'], cloud: '#3a4660', fall: 'snow', phase };
         return { sky: '#3b414b', hills: ['#343a43', '#2e333b', '#282c33'], fog: 'rgba(255, 255, 255, 0.12)', phase };
     }
@@ -822,11 +826,11 @@ function pal(cond, phase) {
     if (phase === 'eve' && cond === 'snow') return { sky: '#b07a74', bands: [[165, '#c08a7e'], [220, '#d39f8c']], cb: [[50, '#c08a7e'], [74, '#d39f8c']], hills: ['#f3e3dc', '#e2cfc8', '#cfbab4'], cloud: '#a8726f', fall: 'snow', phase };
     if (phase === 'dawn' && cond !== 'fog') {
         if (cond === 'clear' || cond === 'partly' || cond === 'wind') return { sky: '#7484b3', bands: [[150, '#9a99c2'], [195, '#c9a9c0'], [235, '#eebda6']], cb: [[52, '#9a99c2'], [68, '#c9a9c0'], [80, '#eebda6']], hills: ['#8d7fa6', '#6f6390', '#5a5079'], sun: 'rise', stars: 12, cloud: cond === 'partly' ? '#9aa2c6' : '', phase };
-        return { sky: '#7c86a8', bands: [[175, '#9796b4'], [225, '#b59fb4']], cb: [[56, '#9796b4'], [76, '#b59fb4']], hills: cond === 'snow' ? D.snow.hills : ['#7c7298', '#665c84', '#554b72'], cloud: '#8a92b2', fall: D[cond].fall, phase };
+        return wetSky({ sky: '#7c86a8', bands: [[175, '#9796b4'], [225, '#b59fb4']], cb: [[56, '#9796b4'], [76, '#b59fb4']], hills: cond === 'snow' ? D.snow.hills : ['#7c7298', '#665c84', '#554b72'], cloud: '#8a92b2', fall: D[cond].fall, phase }, cond);
     }
     if (phase === 'eve' && cond !== 'fog') {
         if (cond === 'clear' || cond === 'partly' || cond === 'wind') return { sky: '#c8664f', bands: [[120, '#dc7c52'], [180, '#ec9a5c'], [230, '#f5bd6e']], cb: [[40, '#dc7c52'], [62, '#ec9a5c'], [78, '#f5bd6e']], hills: ['#7a4a5e', '#5d3a50', '#4a2e42'], sun: 'sink', puff: '#d98b78', cloud: cond === 'partly' ? '#d98b78' : '', phase };
-        return { sky: '#a8605a', bands: [[165, '#b9715f'], [220, '#c98466']], cb: [[50, '#b9715f'], [74, '#c98466']], hills: cond === 'snow' ? D.snow.hills : ['#6a4152', '#523446', '#43293a'], cloud: '#9a5d5e', fall: D[cond].fall, phase };
+        return wetSky({ sky: '#a8605a', bands: [[165, '#b9715f'], [220, '#c98466']], cb: [[50, '#b9715f'], [74, '#c98466']], hills: cond === 'snow' ? D.snow.hills : ['#6a4152', '#523446', '#43293a'], cloud: '#9a5d5e', fall: D[cond].fall, phase }, cond);
     }
     return { ...D[cond] || D.cloudy, phase: 'day' };
 }
@@ -857,7 +861,7 @@ function mornPal(cond, D, phase) {
     if (cond === 'wind') return { ...sky, cloud: c.cloud, wind: true, phase };
     if (cond === 'snow') return { ...V.snow, fall: 'snow', phase };
     if (cond === 'fog') return { ...V.fog, fog: 'rgba(255, 255, 255, 0.24)', phase };
-    return { ...g, cloud2: cond === 'cloudy' ? g.cloud2 : undefined, fall: D[cond].fall, phase };
+    return wetSky({ ...g, cloud2: cond === 'cloudy' ? g.cloud2 : undefined, fall: D[cond].fall, phase }, cond);
 }
 // cards and tiles sit on the sky in one flat colour: a shade darker, or a shade lighter on a night sky
 const shade = (hex, f) => { const n = parseInt(hex.slice(1), 16), c = [n >> 16, (n >> 8) & 255, n & 255]; const lum = (c[0] * 0.3 + c[1] * 0.59 + c[2] * 0.11) / 255; return `#${c.map(v => Math.round(lum < 0.25 ? v + (255 - v) * (1 - f) * 0.5 : v * f).toString(16).padStart(2, '0')).join('')}`; };
