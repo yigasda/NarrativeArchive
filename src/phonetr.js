@@ -47,9 +47,10 @@ YOU GET
 VOICE
 - For each person in WHO: how they talk to the people they text (the Korean speech level they would use, how they address them, their habits), as the story shows it, in a short note in Korean.
 - "evidence": the exact words in the story or a card that show it. Nothing shows it: "style": "" and "evidence": [].
+- "label": the same in two or three short Korean words joined with " · ", like "격식 존댓말 · 단호함", for a list.
 
 JSON (one object, nothing before or after it)
-{ "people": [{ "who", "style", "evidence": [exact words from the story or a card] }] }`;
+{ "people": [{ "who", "style", "label", "evidence": [exact words from the story or a card] }] }`;
 
 // who texts or comments in what is to be translated and has no row in the table: [names]
 export function voicesWanted(p, { all = false } = {}) {
@@ -77,7 +78,7 @@ async function askVoices(m, owner, p, names) {
     const wanted = new Map(names.map(n => [n.toLowerCase(), n])), seen = new Set();
     return (Array.isArray(got.people) ? got.people : []).filter(v => v && wanted.has(whoKey(v)) && !seen.has(whoKey(v)) && String(v.style || '').trim()
         && (Array.isArray(v.evidence) ? v.evidence : []).some(e => String(e || '').trim()) && seen.add(whoKey(v)))
-        .map(v => ({ who: wanted.get(whoKey(v)), style: String(v.style).trim().slice(0, 120), evidence: v.evidence.map(e => String(e).trim()).filter(Boolean).slice(0, 2).map(e => e.slice(0, 160)), by: 'model' }));
+        .map(v => ({ who: wanted.get(whoKey(v)), style: String(v.style).trim().slice(0, 300), ...(String(v.label || '').trim() ? { label: String(v.label).trim().slice(0, 40) } : {}), evidence: v.evidence.map(e => String(e).trim()).filter(Boolean).slice(0, 2).map(e => e.slice(0, 160)), by: 'model' }));
 }
 // before a translation: who texts and has no row yet; the rows added. One the story doesn't show isn't asked again; nor
 // one whose row the user deletes (dropVoice)
