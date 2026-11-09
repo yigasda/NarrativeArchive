@@ -358,7 +358,7 @@ ${archiveOnly ? `TIMES\n${CORE_TIMES}` : `${CORE_CLOCK_FIRST}\n${CORE_TIMES}`}
 WHAT A RECORD DOES
 - The story's situation, people and mood are material for every app, in "everyday" and in "records" alike.
 - A record may express and live the situation as it stands: a diary sick of the paperwork, a voice memo missing home, a text waiting for a parcel.
-- Record developments the messages establish, but do not invent new developments in the story through phone records: decisions, arrangements, steps toward resolving an ongoing matter (going somewhere about it, papers gathered or sent, a call or a reply about it), or outcomes.
+- Record developments the messages establish, but do not invent new developments in the story through phone records: decisions, arrangements, steps toward resolving an ongoing matter (going somewhere about it, papers gathered or sent, a call or a reply about it), or outcomes (a parcel arriving, works finished, an answer received).
 - Phone data supplies existing details. An expected date does not establish that a story event has happened; an arrival the messages state or plainly imply does.
 - Complete how the owner expresses or records the situation, without moving the situation itself to its next step. This holds for every app: texts, searches, notes, mails, the diary and voice memos.
 - A trail tied to one message (with its "said") goes in "records"; the rest of the owner's day goes in "everyday". Never the same record in both.
