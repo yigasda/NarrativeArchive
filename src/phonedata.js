@@ -349,9 +349,9 @@ Write what the owner's phone gains from NEW MESSAGES. The story decides what hap
 YOU GET
 - NEW MESSAGES (numbered #123). Sometimes ARCHIVE FOR THESE MESSAGES: summaries covering them, also evidence.
 - Sometimes ARCHIVE BEFORE, STORY NOW, WORLD, OWNER PROFILE, STORY YEAR, DAYS (the weekdays ahead: "on Friday" is the next one).
-- PHONE NOW ("now": when it was last read), EVENTS ON THE PHONE (scenes with ids)${life ? ', LIFE NOW (alarms, files, health days, with ids)' : ''}. Sometimes MESSAGES READ BEFORE, NOW CHANGED (edited messages with their scenes)${wallet ? ' and ORDERS AND TICKETS (orders and tickets with their status and eta)' : ''}.${weather && tracker ? `
+- PHONE NOW ("now": when it was last read), EVENTS ON THE PHONE (scenes with ids)${life ? ', LIFE NOW (alarms, files, health days, with ids)' : ''}. Sometimes MESSAGES READ BEFORE, NOW CHANGED (edited messages with their scenes)${wallet ? ' and ORDERS AND TICKETS (orders and tickets with their status and eta; a record about one keeps its item, dates and status)' : ''}.${weather && tracker ? `
 - WEATHER NOW: the chat's last status line (date, time, place, weather; a scene the owner isn't in: its place and weather only).` : ''}
-- Sometimes OWNER'S CLOCK (where the owner is, their time, the hours to others), PEOPLE AROUND (people in their life, where things stand) and OWNER DOESN'T KNOW. And OWNER.
+- Sometimes OWNER'S CLOCK (where the owner is, their time, the hours to others), PEOPLE AROUND (people in their life, where things stand) and OWNER DOESN'T KNOW (never on the phone as known). And OWNER.
 
 ${archiveOnly ? `TIMES\n${CORE_TIMES}` : `${CORE_CLOCK_FIRST}\n${CORE_TIMES}`}
 
@@ -384,7 +384,7 @@ Go through each scene's messages in order. Write a record only in these cases, w
 A record says no more than its "said". Nothing else goes in "records".
 
 STEP 4 · EVERYDAY
-1. Hours: the waking hours from PHONE NOW's "now" to the answer's "now" that no scene covers, skipped days included. Asleep or busy in a scene: no owner activity; incoming texts and calls may arrive.
+1. Hours: the waking hours from PHONE NOW's "now" to the answer's "now" that no scene covers, skipped days included. Asleep or busy in a scene: no owner activity; incoming texts and calls may arrive. Late texts agree with ${life ? 'screen time and sleep' : 'a late night'}.
 2. Amount: about ${LIFE_A_DAY} records per full waking day, fewer for part of one. A full day uses at least ${life ? 8 : 6} of their apps (texts, calls, photos, searches, notes, mails, posts, voice memos${life ? ', alarms, files' : ''}). Who they talk to, and how much, follows their character and PEOPLE AROUND.
 3. Take each day from, in order:
    a. people the owner had a scene with may text later, if it fits;
@@ -400,11 +400,11 @@ STEP 5 · EACH APP
 - Text: one record is one exchange, in the tone of that relationship; replies may be late or missing.
 - Call, photo: what the owner would really do or shoot, in their eye.
 - Search: what they would type. About a situation: only words in its "known".
-- Note: the owner's form, length, shorthand, spelling and languages.
+- Note: full personal content, never a summary, in the owner's form, length, shorthand, spelling and languages.
 - Mail: whatever would really land in their inbox from their life, accounts, hobbies and habits.
 - Calendar: fixed commitments only. Post: only if they post.${life ? ' Alarm, file: change with their life.' : ''}
-- Diary: their experience and feelings at natural length; never a list of events or a summary.
-- Voice memo: spoken, not written: the way they talk in the chat, with pauses (…), restarts and half sentences, at a moment alone (after a fight, on the way somewhere, late at night). 20 to 90 seconds; "sec" to fit; "place" where they were. Never the diary told again.${life ? `
+- Diary: their experience and feelings at natural length, from the day the story shows or, on a day it doesn't, from their life; never a list of events or a summary.
+- Voice memo: full personal content, spoken, not written: the way they talk in the archive and chat, with pauses (…), restarts and half sentences, at a moment alone (after a fight, on the way somewhere, late at night). 20 to 90 seconds; "sec" to fit; "place" where they were. Never the diary told again.${life ? `
 
 HEALTH
 1. One row for each day reached and each LIFE NOW day newly shown. Today's row always, with totals so far (steps, workouts, coffee, water, "screen").

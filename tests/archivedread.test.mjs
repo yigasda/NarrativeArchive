@@ -835,11 +835,15 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.match(on, /   b\. PHONE NOW's habits, LIFE NOW's usual, OWNER PROFILE: routines and interests that recur;/);
     assert.match(on, /   c\. PEOPLE AROUND: contact both ways; group chats go on without the owner\./);
     assert.match(on, /incoming texts and calls may arrive/);
+    // (rules the rewrite had dropped, back: what the owner doesn't know, a record about an order, notes and memos whole, a diary on a day not shown, late texts)
+    assert.ok(on.includes("and OWNER DOESN'T KNOW (never on the phone as known). And OWNER."));
+    assert.ok(on.includes('- Note: full personal content, never a summary, in the owner\'s form') && on.includes('from the day the story shows or, on a day it doesn\'t, from their life;'));
+    assert.ok(on.includes('Late texts agree with screen time and sleep.') && plain.includes('Late texts agree with a late night.'));
     assert.match(on, /No new relative or partner; relationship labels only from the story;/);
     assert.equal(on.split('5. Diary: one entry for a day that ends in these hours or a scene that stays with them, on that day.').length, 2);
     // (STEP 5)
     assert.match(on, /- Search: what they would type\. About a situation: only words in its "known"\./);
-    assert.match(on, /- Voice memo: spoken, not written: the way they talk in the chat/);
+    assert.match(on, /- Voice memo: full personal content, spoken, not written: the way they talk in the archive and chat/);
     assert.ok(on.includes('Post: only if they post. Alarm, file: change with their life.') && !plain.includes('Alarm, file:'));
     // (KEEPING IN STEP: a LIFE NOW alarm is not written again unless it changes)
     assert.match(on, /- Nothing PHONE NOW or LIFE NOW holds is written again, nor a near copy of it \(e\.g\. a note, list, mail or message with only a few words changed\)\. A text: only its new messages\. A note, mail, search, photo, diary or post: a new one only when it says something new\. A LIFE NOW alarm or file: not again unless it changes, then with its id in "already"\. A known scene: its id\. An edited message: the ids listed\./);
@@ -1286,7 +1290,7 @@ test('반영 본체 gets the orders and tickets (no money), so a mail or text ab
     assert.equal(data.ordersBlock({ orders: [], passes: [] }), '');
     // (an order's arrival day, from the phone's own order)
     assert.match(data.ordersBlock({ orders: [{ id: 'o2', shop: 'Lio Shop', item: 'scarf', status: 'on the way', time: '11-03 14:00' }] }, { money: { orders: [{ id: 'o2', eta: '11-05' }] } }), /"status":"on the way","time":"11-03 14:00","eta":"11-05"/);
-    assert.match(data.coreSystem({ wallet: true }), /ORDERS AND TICKETS \(orders and tickets with their status and eta\)/);
+    assert.match(data.coreSystem({ wallet: true }), /ORDERS AND TICKETS \(orders and tickets with their status and eta; a record about one keeps its item, dates and status\)/);
     assert.ok(!data.coreSystem().includes('ORDERS AND TICKETS'));
 });
 

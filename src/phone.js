@@ -1124,7 +1124,7 @@ export async function openPhone(who = null) {
         syncWhy = ''; view = 'setsync'; drawPhone(); await saveMeta();
         toastr.success(mark.index < 0 ? '첫 대화부터 반영해요' : `#${mark.index} 다음부터 반영해요`, '캐릭터 휴대폰');
     });
-    $root.on('click', '.na_sync_restore', async e => { e.stopPropagation(); if (making || busy.sync || busy.fill) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요'); const n = await restoreRounds(m, phoneChatScope(ctx())); syncPending = 0; drawPhone(); if (m.phones && Object.values(m.phones).some(p => p.inject)) applyInjection(); toastr.success(`반영 ${n}번을 복구했어요`, '캐릭터 휴대폰'); });
+    $root.on('click', '.na_sync_restore', async e => { e.stopPropagation(); if (making || busy.sync || busy.fill) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요'); const n = await restoreRounds(m, phoneChatScope(ctx())); syncPending = 0; drawPhone(); if (n && phone()) koRun(phone(), false); // (what came back has no Korean yet) if (m.phones && Object.values(m.phones).some(p => p.inject)) applyInjection(); toastr.success(`반영 ${n}번을 복구했어요`, '캐릭터 휴대폰'); });
     $root.on('click', '.na_sync_drop', async function (e) {
         e.stopPropagation();
         if (making || busy.sync || busy.fill) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요');
