@@ -43,9 +43,13 @@ const coaster = (fg, op) => {
 const doors = (fg, op) => range(0, 8).map(i => `<rect x="${230 - i * 12}" y="${30 - i * 12}" width="${80 + i * 24}" height="200" rx="${40 + i * 12}" ${S(fg, op)}/>`).join('');
 const diamonds = (fg, op) => range(-3, 9).map(i => `<path d="M${150 + i * 24} -10 L${150 + i * 24 + 120} 210 M${150 + i * 24} 210 L${150 + i * 24 + 120} -10" ${S(fg, op)}/>`).join('');
 const depths = (fg, op) => range(0, 10).map(i => `<path d="M${150 + i * 6} 200 C${180 + i * 8} ${120 - i * 6} 260 ${150 - i * 12} ${300 - i * 2} ${80 - i * 8} S350 ${20 + i * 4} 370 ${10 + i * 14}" ${S(fg, op)}/>`).join('');
-const MOTIF = { flight: [flight], train: [train], membership: [dots], other: [dots], concert: [rings, spots], hotel: [windows, doors], match: [pitch, bowl], movie: [beam],
-    museum: [columns], bus: [route, lanes], ferry: [waves, depths], theater: [arches, diamonds], park: [wheel, coaster] };
-const seedOf = id => [...String(id || '')].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 9973, 0);
+const rosette = (fg, op) => range(0, 12).map(a => `<circle cx="${r1(275 + 40 * cos(a * PI / 6))}" cy="${r1(100 + 40 * sin(a * PI / 6))}" r="40" ${S(fg, op)}/>`).join('') + `<circle cx="275" cy="100" r="80" ${S(fg, op)}/>`;
+const premiere = (fg, op) => range(0, 16).map(a => `<path d="M${r1(275 + cos(a * PI / 8) * 20)} ${r1(100 + sin(a * PI / 8) * 20)} L${r1(275 + cos(a * PI / 8) * 140)} ${r1(100 + sin(a * PI / 8) * 140)}" ${S(fg, op)}/>`).join('')
+    + range(0, 8).map(a => `<path d="M${r1(275 + cos(a * PI / 4) * 90)} ${r1(100 + sin(a * PI / 4) * 90 - 8)} l2.4 6 6 2.4 -6 2.4 -2.4 6 -2.4 -6 -6 -2.4 6 -2.4z" ${S(fg, op * 1.6)}/>`).join('');
+const MOTIF = { flight: [flight], train: [train], membership: [dots], other: [dots], concert: [rings, spots], hotel: [windows, doors], match: [pitch, bowl], movie: [beam, premiere],
+    museum: [columns, rosette], bus: [route, lanes], ferry: [waves, depths], theater: [arches, diamonds], park: [wheel, coaster] };
+// the sum of its letters: ids next to each other (p1, p2 …) take turns
+const seedOf = id => [...String(id || '')].reduce((h, c) => h + c.charCodeAt(0), 0);
 export function passMotif(k, fg, op, id) {
     const xs = MOTIF[k] || MOTIF.other;
     return xs[seedOf(id) % xs.length](fg, op);
