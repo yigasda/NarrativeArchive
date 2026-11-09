@@ -692,9 +692,7 @@ export function setVoice(p, now, pick = null, busy = false) {
         ${rows.length ? `<div class="ax_card"><div role="button" tabindex="0" class="ax_rw na_ph_kvpick${busy ? ' on' : ''}"><span class="ax_si" style="background: #8faed1">${ax('wand', 17, '#fff')}</span><span class="ax_tx"><span class="ax_n">${busy ? '뽑는 중' : n ? `${n}명 뽑기` : '이야기에서 뽑기'}</span><span class="ax_p ax_kvp">고른 사람의 말투를 이야기에서 찾아요</span></span>${axChev}</div></div>` : ''}
         ${sec('내가 정한 말투', 'mine', mine)}
         <div class="ax_card">${mine.map(row).join('')}${pick ? '' : '<div role="button" tabindex="0" class="ax_rw ax_rwn na_ph_kvadd"><span class="ax_tx"><span class="ax_n ax_blue">사람 추가</span></span></div>'}</div>
-        ${auto.length ? `${sec('이야기에서 뽑은 말투', 'auto', auto)}<div class="ax_card">${auto.map(row).join('')}</div>` : ''}
-        <div class="ax_foot">지운 사람은 다시 안 뽑아요.</div>
-        <div class="ax_foot">일기 · 메모에는 안 써요. 이미 옮긴 글은 그대로예요.</div>
+        ${auto.length ? `${sec('이야기에서 뽑은 말투', 'auto', auto)}<div class="ax_card">${auto.map(row).join('')}</div><div class="ax_foot">고치면 내가 정한 말투로 옮겨져요.</div>` : ''}
         <i class="ax_pad"></i>
       </div>
       ${axInd()}`;
