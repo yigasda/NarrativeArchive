@@ -335,7 +335,11 @@ function gmapMarks(labels) {
     for (let m = 0; m < 3 && pool.length; m++) {
       let best = null, bd = 70;
       const icons = placed.slice(-m || placed.length).slice(0, m);   // the small icons placed so far keep 160 px between them
-      for (const q of pool) { const g = gap(q.at) + q.pr * 4; if (gap(q.at) >= 70 && (!m || placed.slice(-m).every(([u, v]) => Math.hypot(u - q.at[0], v - q.at[1]) >= 160)) && g > bd) { bd = g; best = q; } }
+      // by importance, not by distance: pushing each to the emptiest spot lined them up round the edge like a drawn shape.
+      // clear of the screen's edge too, and the whole set of markers stays at seven
+      if (placed.length >= 7) break;
+      for (const q of pool.slice().sort((a, b) => b.pr - a.pr)) { const [qx, qy] = q.at; if (qx < 50 || qx > W - 50 || qy < 50) continue;
+        if (gap(q.at) >= 70 && (!m || placed.slice(-m).every(([u, v]) => Math.hypot(u - qx, v - qy) >= 160))) { best = q; break; } }
       if (!best) break;
       const [x, y] = best.at; taken.push([x - 11, y - 11, x + 11, y + 11]); placed.push([x, y]); pool = pool.filter(q => q.ic !== best.ic || Math.hypot(q.at[0] - x, q.at[1] - y) > 150);
       o += `<g transform="translate(${f(x)} ${f(y)})"><circle r="10.5" fill="#fff" stroke="#e3ddd2" stroke-width="1"/><g fill="none" stroke="#7d7266" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" transform="translate(-7.2 -7.2) scale(.6)">${glyph(best.ic)}</g></g>`; } }
