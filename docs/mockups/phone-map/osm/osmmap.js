@@ -23,6 +23,7 @@ const PALS = {
 if (PALS.neutral && process.env.ROAD) Object.assign(PALS.neutral, process.env.ROAD === '2' ? { major: '#fcedc6', majorEdge: '#ead8a8' } : process.env.ROAD === '1.5' ? { major: '#fce8b4', majorEdge: '#e9d298' } : { major: '#fce3a2', majorEdge: '#e9cd88' });
 if (PALS[process.env.PAL ?? 'neutral']) Object.assign(C, PALS[process.env.PAL ?? 'neutral']);   // 기본: 2 중립 밝은 톤 + B·C·D
 const d = JSON.parse(require('fs').readFileSync(src, 'utf8'));
+{ const cv = src.replace(/\.json$/, '-cover.json'); if (require('fs').existsSync(cv)) { const seen = new Set(d.elements.map(e => e.type + e.id)); for (const e of JSON.parse(require('fs').readFileSync(cv, 'utf8')).elements) if (!seen.has(e.type + e.id)) d.elements.push(e); } }
 const mx = 111320 * Math.cos(lat0 * Math.PI / 180), my = 110540;
 // C: dense old towns closer, loose estates and parks further out — buildings per km² round the centre
 let span = +spanS;
@@ -62,6 +63,21 @@ function rings(members) {
   return outv.join('');
 }
 const area = e => e.type === 'relation' ? rings(e.members || []) : (e.geometry ? ring(pts(e.geometry)) : '');
+const COVER = { farm: '#f0eddc', grass: '#d3ebc4', scrub: '#c9ddb0', vine: '#dfe6bf', orchard: '#cfe5b8', allot: '#d9e8c6', grave: '#cfdcc8', rock: '#dcd9d3', sand: '#f3ead0', wet: '#cfe3dc' };
+const coverOf = t => { const n = t.natural, u = t.landuse;
+  if (n === 'wood' || u === 'forest') return 'forest';
+  if (/scrub|heath|shrubbery|fell/.test(n || '')) return 'scrub';
+  if (/bare_rock|scree|shingle|cliff|glacier/.test(n || '') || u === 'quarry') return 'rock';
+  if (/sand|beach/.test(n || '')) return 'sand';
+  if (n === 'wetland') return 'wet';
+  if (n === 'grassland' || /^(grass|meadow|village_green|greenery|greenfield|recreation_ground|flowerbed)$/.test(u || '') || t.leisure === 'golf_course') return 'grass';
+  if (u === 'vineyard') return 'vine';
+  if (u === 'orchard' || u === 'plant_nursery') return 'orchard';
+  if (/farmland|farmyard/.test(u || '')) return 'farm';
+  if (u === 'allotments') return 'allot';
+  if (u === 'cemetery') return 'grave';
+  return null; };
+const LC = Object.fromEntries(Object.keys(COVER).map(k => [k, '']));
 const L = { resi: '', shop: '', works: '', railyard: '', school: '', mark: '', markStation: '', shadow: {}, built: '', park: '', forest: '', water: '', plaza: '', bld: '', foot: '', minor: '', mid: '', major: '', rail: '', tram: '' };
 const BUILT = /residential|commercial|retail|industrial|railway|construction|brownfield|education|emergency/;
 const GREEN = /grass|village_green|flowerbed|meadow|allotments|cemetery|greenhouse/;
@@ -80,7 +96,7 @@ for (const e of d.elements) {
     continue;
   }
   if (t.leisure && /park|garden/.test(t.leisure)) { L.park += area(e); continue; }
-  if (t.landuse === 'forest' || t.natural === 'scrub') { L.forest += area(e); continue; }
+  { const c = coverOf(t); if (c) { if (c === 'forest') L.forest += area(e); else LC[c] += area(e); continue; } }
   if (t.landuse && GREEN.test(t.landuse)) { L.park += area(e); continue; }
   if (t.landuse && BUILT.test(t.landuse)) {
     const a = area(e), u = t.landuse;
@@ -118,7 +134,8 @@ const st = (dd, col, w, extra = '') => dd ? `<path d="${dd}" fill="none" stroke=
 const fill = (dd, col) => dd ? `<path d="${dd}" fill="${col}" fill-rule="evenodd"/>` : '';
 const mpx = m => Math.max(0.6, m * k);                       // real width in meters → px, with a floor
 let svg = `<rect width="${W}" height="${H}" fill="${C.land}"/>`
-  + fill(L.built, C.built) + fill(L.resi, C.resi) + fill(L.shop, C.shop) + fill(L.works, C.works) + fill(L.railyard, C.railyard) + fill(L.school, C.school) + fill(L.park, C.park) + fill(L.forest, C.forest) + fill(L.plaza, C.plaza) + fill(L.water, C.water)
+  + fill(L.built, C.built) + fill(L.resi, C.resi) + fill(L.shop, C.shop) + fill(L.works, C.works) + fill(L.railyard, C.railyard) + fill(L.school, C.school)
+  + ['farm', 'grass', 'allot', 'orchard', 'vine', 'grave', 'scrub', 'wet', 'sand', 'rock'].map(k => fill(LC[k], COVER[k])).join('') + fill(L.park, C.park) + fill(L.forest, C.forest) + fill(L.plaza, C.plaza) + fill(L.water, C.water)
   + terrain()
   + Object.entries(L.shadow).map(([o, dd]) => `<path d="${dd}" fill="${C.shadow}" opacity=".75" transform="translate(${o} ${(o * 1.3).toFixed(1)})"/>`).join('')
   + fill(L.bld, C.bld) + fill(L.mark, C.mark) + fill(L.markStation, C.markStation)
