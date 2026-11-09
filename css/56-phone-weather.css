@@ -12,7 +12,8 @@
 .ax .lf_sc .sun i { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); border-radius: 50%; }
 @keyframes lf_halo { 0%, 100% { transform: scale(0.94); opacity: 0.7; } 50% { transform: scale(1.04); opacity: 1; } }
 .ax .lf_sc .sun.rise { animation: lf_rise 14s ease-out infinite alternate; }
-@keyframes lf_rise { from { transform: translateY(70px); } to { transform: translateY(0); } }
+@keyframes lf_rise { from { transform: translateY(30px); } to { transform: translateY(0); } }
+.ax .lf_sc .sun.rise2 { animation: lf_rise2 16s ease-out infinite alternate; } @keyframes lf_rise2 { from { transform: translateY(12px); } to { transform: translateY(0); } }
 .ax .lf_sc .sun.sink { animation: lf_sink 14s ease-in infinite alternate; }
 @keyframes lf_sink { from { transform: translateY(-30px); } to { transform: translateY(50px); } }
 .ax .lf_sc .mn { width: 70px; height: 70px; animation: lf_mglow 6s ease-in-out infinite; }

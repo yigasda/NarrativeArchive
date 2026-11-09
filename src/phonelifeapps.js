@@ -781,12 +781,12 @@ export function fileScreen(p, now, id) {
 // what each sky is called; the colours come from pal() below
 const WX = { clear: '맑음', partly: '구름 조금', cloudy: '흐림', drizzle: '이슬비', rain: '비', sleet: '진눈깨비', snow: '눈', fog: '안개', storm: '뇌우', wind: '강풍' };
 // the part of the day a sky is drawn for, by the clock alone (the same for every picture: the sky, the hours' icons, the world clock's sun and
-// moon): 새벽 04–07, 낮 07–17, 저녁 17–20, 밤 20–04. The sun's own times stay on the sunset tile only
+// moon): 새벽 04–07, 아침 07–11 (분홍 07–09 'morn', 노랑 09–11 'forenoon'), 낮 11–17, 저녁 17–20, 밤 20–04. The sun's own times stay on the sunset tile only
 function phaseOf(time) {
     const t = toMin(time);
     if (t === null) return 'day';
     const m = ((t % 1440) + 1440) % 1440;
-    return m < 4 * 60 ? 'night' : m < 7 * 60 ? 'dawn' : m < 17 * 60 ? 'day' : m < 20 * 60 ? 'eve' : 'night';
+    return m < 4 * 60 ? 'night' : m < 7 * 60 ? 'dawn' : m < 9 * 60 ? 'morn' : m < 11 * 60 ? 'forenoon' : m < 17 * 60 ? 'day' : m < 20 * 60 ? 'eve' : 'night';
 }
 const WET = { drizzle: 1, rain: 1, sleet: 1 };
 // one palette per sky and part of the day: flat layers only (sky, bands, three hills, clouds), no gradients
@@ -808,6 +808,7 @@ function pal(cond, phase) {
     };
     const NIGHT = ['#222b40', '#1c2436', '#161d2c'];
     if (cond === 'storm') return { ...D.storm, phase: 'day' };
+    if (phase === 'morn' || phase === 'forenoon') return mornPal(cond, D, phase);
     if (phase === 'night') {
         if (cond === 'clear' || cond === 'wind') return { sky: '#28324a', hills: NIGHT, moon: true, stars: 34, wind: cond === 'wind', phase };
         if (cond === 'partly' || cond === 'cloudy') return { sky: '#28324a', hills: NIGHT, moon: true, stars: 16, cloud: '#333d55', phase };
@@ -828,6 +829,28 @@ function pal(cond, phase) {
     }
     return { ...D[cond] || D.cloudy, phase: 'day' };
 }
+// the morning (07–11): the sky already warm from the top, as at dawn and dusk, in four wide bands; lighter than noon, the sun climbing.
+// 분홍 아침 (07–09) goes through lilac and rose to peach, 노랑 아침 (09–11) through soft sky and cream to a pale gold. Storms stay the storm.
+// bands: the screen's (top in px of 844), cb: the city card's (of 118)
+const MORN = {
+    morn: { clear: { sky: '#7aa2dc', bands: [[150, '#96b0df'], [198, '#babde0'], [244, '#e0c5d0'], [292, '#f5c7b8']], cb: [[40, '#96b0df'], [56, '#babde0'], [70, '#e0c5d0'], [82, '#f5c7b8']], hills: ['#8f9cd0', '#7d8ac2', '#6c79b2'], puff: '#c0cbee', cloud: '#c0cbee', front: '#fff4f2' },
+            grey: { sky: '#8e9cbc', bands: [[165, '#a0a9c6'], [220, '#bcb8cc'], [275, '#d9c4c6']], cb: [[48, '#a0a9c6'], [64, '#bcb8cc'], [78, '#d9c4c6']], hills: ['#8b94b2', '#7f88a6', '#737c9a'], cloud: '#a4aecb', cloud2: '#b5bdd6' },
+            snow: { sky: '#93a6cf', bands: [[165, '#a9b6d6'], [220, '#c8c6dc'], [275, '#e9d4d6']], cb: [[48, '#a9b6d6'], [64, '#c8c6dc'], [78, '#e9d4d6']], hills: ['#fcf6f6', '#ede6ec', '#dcd7e2'], cloud: '#b2bfdd' },
+            fog: { sky: '#a2a8ba', bands: [[165, '#aeb2c2'], [220, '#c2c0ca'], [275, '#dacbcb']], cb: [[48, '#aeb2c2'], [64, '#c2c0ca'], [78, '#dacbcb']], hills: ['#9a9fae', '#8f94a3', '#848998'] } },
+    forenoon: { clear: { sky: '#70a9de', bands: [[150, '#91bce0'], [198, '#bdd0dc'], [244, '#e8dac0'], [292, '#f5d39c']], cb: [[40, '#91bce0'], [56, '#bdd0dc'], [70, '#e8dac0'], [82, '#f5d39c']], hills: ['#8aa6d0', '#7895c2', '#6784b3'], puff: '#c6d7ec', cloud: '#c6d7ec', front: '#fff8ec' },
+            grey: { sky: '#8ea2be', bands: [[165, '#a1b1c8'], [220, '#bcc3cd'], [275, '#d8cebd']], cb: [[48, '#a1b1c8'], [64, '#bcc3cd'], [78, '#d8cebd']], hills: ['#8999b2', '#7d8da6', '#71819a'], cloud: '#a3b2c7', cloud2: '#b4c0d1' },
+            snow: { sky: '#92aed4', bands: [[165, '#a8c0dc'], [220, '#c8d2df'], [275, '#ebdcc4']], cb: [[48, '#a8c0dc'], [64, '#c8d2df'], [78, '#ebdcc4']], hills: ['#fbf6ec', '#ece7df', '#dbd9d6'], cloud: '#b0c4dc' },
+            fog: { sky: '#a3adb9', bands: [[165, '#b0b8c2'], [220, '#c3c6c7'], [275, '#dbd2c0']], cb: [[48, '#b0b8c2'], [64, '#c3c6c7'], [78, '#dbd2c0']], hills: ['#9aa3ad', '#8f98a2', '#848d97'] } },
+};
+function mornPal(cond, D, phase) {
+    const V = MORN[phase], c = V.clear, g = V.grey, sky = { sky: c.sky, bands: c.bands, cb: c.cb, hills: c.hills };
+    if (cond === 'clear') return { ...sky, sun: phase, puff: c.puff, phase };
+    if (cond === 'partly') return { ...sky, sun: phase, cloud: c.cloud, front: c.front, phase };
+    if (cond === 'wind') return { ...sky, cloud: c.cloud, wind: true, phase };
+    if (cond === 'snow') return { ...V.snow, fall: 'snow', phase };
+    if (cond === 'fog') return { ...V.fog, fog: 'rgba(255, 255, 255, 0.24)', phase };
+    return { ...g, cloud2: cond === 'cloudy' ? g.cloud2 : undefined, fall: D[cond].fall, phase };
+}
 // cards and tiles sit on the sky in one flat colour: a shade darker, or a shade lighter on a night sky
 const shade = (hex, f) => { const n = parseInt(hex.slice(1), 16), c = [n >> 16, (n >> 8) & 255, n & 255]; const lum = (c[0] * 0.3 + c[1] * 0.59 + c[2] * 0.11) / 255; return `#${c.map(v => Math.round(lum < 0.25 ? v + (255 - v) * (1 - f) * 0.5 : v * f).toString(16).padStart(2, '0')).join('')}`; };
 // a fixed scatter per sky, so it doesn't jump between renders
@@ -842,7 +865,10 @@ function scene(cond, phase) {
     if (q.stars) out.push(Array.from({ length: q.stars }, () => `<i class="st${phase === 'dawn' ? ' fd' : ''}" style="left: ${Math.round(10 + r() * 370)}px; top: ${Math.round(60 + r() * 360)}px; --d: ${(2 + r() * 3).toFixed(1)}s; --dl: -${(r() * 4).toFixed(1)}s"></i>`).join(''));
     const sun = (x, y, rad, core, halo, cls = '') => `<span class="sun ${cls}" style="left: ${x - rad * 2.4}px; top: ${y - rad * 2.4}px; width: ${rad * 4.8}px; height: ${rad * 4.8}px"><b style="background: ${halo}"></b><b class="h2" style="background: ${halo}"></b><i style="background: ${core}; width: ${rad * 2}px; height: ${rad * 2}px"></i></span>`;
     if (q.sun === 'day') out.push(cond === 'partly' ? sun(320, 190, 42, '#f6c94a', 'rgba(255, 255, 255, 0.14)') : sun(330, 210, 46, '#f6c94a', 'rgba(255, 255, 255, 0.14)'));
-    if (q.sun === 'rise') out.push(sun(312, 262, 40, '#fbe6a6', 'rgba(246, 211, 154, 0.45)', 'rise'));
+    // the sun climbs with the clock: at dawn just over the first card's edge, a step higher in each morning, at noon beside the temperature
+    if (q.sun === 'rise') out.push(sun(312, 308, 40, '#fbe6a6', 'rgba(246, 211, 154, 0.45)', 'rise'));
+    if (q.sun === 'morn') out.push(cond === 'partly' ? sun(306, 256, 40, '#ffe9bf', 'rgba(252, 212, 166, 0.46)', 'rise2') : sun(312, 262, 42, '#ffe9bf', 'rgba(252, 212, 166, 0.46)', 'rise2'));
+    if (q.sun === 'forenoon') out.push(cond === 'partly' ? sun(312, 236, 44, '#ffe6a2', 'rgba(255, 226, 170, 0.45)') : sun(320, 244, 46, '#ffe6a2', 'rgba(255, 226, 170, 0.45)'));
     if (q.sun === 'sink') out.push(sun(312, 250, 46, '#fbe08f', 'rgba(247, 200, 115, 0.4)', 'sink'));
     if (q.moon) out.push(`<span class="mn" style="left: ${cond === 'clear' || cond === 'wind' ? 292 : 300}px; top: ${cond === 'clear' || cond === 'wind' ? 150 : 170}px"><i></i><b style="background: ${q.sky}"></b></span>`);
     if (q.puff) out.push(puffSvg(-40, phase === 'eve' ? 90 : 200, phase === 'eve' ? 200 : 170, q.puff, 2.78));
@@ -873,6 +899,8 @@ function cardSky(cond, phase) {
     if (q.stars) out.push(`<g fill="#fff"${phase === 'dawn' ? ' opacity=".7"' : ''}><circle cx="140" cy="18" r="1.2"/><circle cx="190" cy="44" r="1"/><circle cx="258" cy="62" r="1.4"/><circle cx="120" cy="56" r="1"/><circle cx="168" cy="72" r="1.1"/><circle cx="270" cy="12" r="1"/></g>`);
     if (q.sun === 'day') out.push(cond === 'partly' ? '<circle cx="300" cy="34" r="50" fill="#69a0d8"/><circle cx="300" cy="34" r="26" fill="#f6c94a"/>' : '<circle cx="330" cy="30" r="62" fill="#5f9ade"/><circle cx="330" cy="30" r="44" fill="#74a8e2"/><circle cx="330" cy="30" r="26" fill="#f6c94a"/>');
     if (q.sun === 'rise') out.push('<circle cx="226" cy="88" r="26" fill="#f6d39a"/><circle cx="226" cy="88" r="15" fill="#fbe6a6"/>');
+    if (q.sun === 'morn') out.push('<circle cx="250" cy="62" r="34" fill="#f9d3a6" opacity=".5"/><circle cx="250" cy="62" r="18" fill="#ffe9bf"/>');
+    if (q.sun === 'forenoon') out.push('<circle cx="290" cy="46" r="40" fill="#fff" opacity=".2"/><circle cx="290" cy="46" r="22" fill="#ffe6a2"/>');
     if (q.sun === 'sink') out.push('<circle cx="226" cy="86" r="34" fill="#f7c873" opacity=".55"/><circle cx="226" cy="86" r="20" fill="#fbe08f"/>');
     if (q.moon) out.push(`<circle cx="${q.cloud ? 150 : 222}" cy="28" r="16" fill="#f1ead2"/><circle cx="${q.cloud ? 158 : 230}" cy="22" r="14" fill="${q.sky}"/>`);
     if (cond === 'partly' && q.front) out.push('<g fill="#e9f0f8"><circle cx="246" cy="58" r="20"/><circle cx="274" cy="48" r="26"/><circle cx="304" cy="60" r="18"/><rect x="226" y="58" width="96" height="20" rx="10"/></g>');
@@ -902,6 +930,8 @@ function widgetSky(cond, phase) {
     const C = 180;
     if (q.sun === 'day') out.push(`<circle cx="${cond === 'partly' ? C - 14 : C}" cy="50" r="40" fill="#fff" opacity=".14"/><circle cx="${cond === 'partly' ? C - 14 : C}" cy="50" r="24" fill="#f6c94a"/>`);
     if (q.sun === 'rise') out.push(`<circle cx="${C}" cy="116" r="30" fill="#f6d39a" opacity=".6"/><circle cx="${C}" cy="116" r="18" fill="#fbe6a6"/>`);
+    if (q.sun === 'morn') out.push(`<circle cx="${C}" cy="86" r="36" fill="#f9d3a6" opacity=".5"/><circle cx="${C}" cy="86" r="21" fill="#ffe9bf"/>`);
+    if (q.sun === 'forenoon') out.push(`<circle cx="${cond === 'partly' ? C - 14 : C}" cy="70" r="38" fill="#fff" opacity=".2"/><circle cx="${cond === 'partly' ? C - 14 : C}" cy="70" r="23" fill="#ffe6a2"/>`);
     if (q.sun === 'sink') out.push(`<circle cx="${C}" cy="112" r="38" fill="#f7c873" opacity=".5"/><circle cx="${C}" cy="112" r="22" fill="#fbe08f"/>`);
     if (q.moon && !q.cloud) out.push(`<circle cx="${C}" cy="46" r="17" fill="#f1ead2"/><circle cx="${C + 8}" cy="40" r="15" fill="${q.sky}"/>`);
     if (q.moon && q.cloud) out.push(`<circle cx="${C - 26}" cy="40" r="13" fill="#f1ead2"/><circle cx="${C - 20}" cy="35" r="12" fill="${q.sky}"/>`);
