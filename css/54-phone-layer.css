@@ -325,7 +325,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
    tail cut off at the last edge. A tap on one behind brings it out whole */
 .ax_deck { display: flex; flex-direction: column; padding-bottom: 6px; }
 .ax_deck .ax_wlb { position: relative; flex: none; }
-.ax_deck .ax_wlb.sh { height: 60px; }
+.ax_deck .ax_wlb.sh { height: 60px; } .ax_deck .ax_wlb.sh > * { max-height: calc(100% + 26px); overflow: hidden; }
 .ax_deck .ax_wlb + .ax_wlb > * { box-shadow: 0 -3px 12px rgba(22, 27, 34, 0.14), 0 10px 24px rgba(22, 27, 34, 0.16); }
 .ax_deck > .ax_wlb.on:not(:last-child) { margin-bottom: 12px; }
 .ax_dtail { display: flex; flex-direction: column; overflow: hidden; border-radius: 18px; --axr: 18px; padding-top: 14px; margin-top: -14px}
@@ -345,7 +345,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax_ccbot { margin-top: auto; display: flex; justify-content: space-between; align-items: flex-end; }
 .ax_ccbot small { display: block; font-size: 9.5px; letter-spacing: 0.1em; opacity: 0.7; font-weight: 600; } .ax_ccbot b { font: 600 14px 'Inter Tight', -apple-system, sans-serif; letter-spacing: 0.06em; }
 .ax_r { text-align: right; }
-.ax_ps { position: relative; display: block; border-radius: 18px; --axr: 18px; color: #fff; --axfg: #fff; overflow: hidden; box-shadow: 0 10px 24px rgba(22, 27, 34, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.18)}
+.ax_ps { position: relative; display: block; background: none; border-radius: 18px; --axr: 18px; color: #fff; --axfg: #fff; overflow: hidden; --pssh: drop-shadow(0 10px 12px rgba(22, 27, 34, 0.16)); filter: var(--pssh)} .ax_deck .ax_wlb + .ax_wlb > .ax_ps { box-shadow: none; --pssh: drop-shadow(0 -3px 6px rgba(22, 27, 34, 0.14)) drop-shadow(0 10px 12px rgba(22, 27, 34, 0.16)); } .ax_psmo { position: absolute; inset: 0; width: 100%; height: 100%; } .ax_pstop { position: relative; display: block; } .ax_pstop > :not(.ax_psmo) { position: relative; }
 .ax_ps.cream { color: #3b3226; --axfg: #3b3226}
 .ax_psh { display: flex; align-items: center; gap: 9px; padding: 14px 16px 10px; }
 .ax_pslg { width: 30px; height: 30px; border-radius: 9px; --axr: 9px; background: rgba(255, 255, 255, 0.18); display: grid; place-items: center; flex: none}
@@ -355,21 +355,22 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax_psrt { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; padding: 4px 16px 0; }
 .ax_psrt b { display: block; font: 300 44px/1.05 'Inter Tight', -apple-system, sans-serif; letter-spacing: -0.02em; }
 .ax_psrt b.ax_pbsm { font-size: 26px; font-weight: 400; }
-.ax_pspl { align-self: center; opacity: 0.8; margin-bottom: 8px; }
+.ax_pspl { align-self: center; opacity: 0.8; margin-bottom: 8px; } .ax_psrt.sm .ax_pspl { margin: 0; align-self: flex-end; height: 27px; display: flex; align-items: center; }
+/* the ticket's notches: the card's ground and its drawing are cut away round --ny on both sides (set after drawing), so what lies behind shows through */ .ax_psnt { display: block; height: 0; } .ax_ps::before, .ax_ps .ax_psmo { -webkit-mask: radial-gradient(circle 13px at 0 var(--ny, -99px), #0000 12.5px, #000 13px) left / 51% 100% no-repeat, radial-gradient(circle 13px at 100% var(--ny, -99px), #0000 12.5px, #000 13px) right / 51% 100% no-repeat; mask: radial-gradient(circle 13px at 0 var(--ny, -99px), #0000 12.5px, #000 13px) left / 51% 100% no-repeat, radial-gradient(circle 13px at 100% var(--ny, -99px), #0000 12.5px, #000 13px) right / 51% 100% no-repeat; } .ax_ps::before { content: ''; position: absolute; inset: 0; background: var(--psbg); border-radius: inherit; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18); } .ax_ps > * { position: relative; }
 .ax_psfl { display: grid; grid-template-columns: repeat(4, auto); justify-content: start; gap: 8px 22px; padding: 14px 16px 16px; }
 .ax_psfl small { display: block; font-size: 10px; letter-spacing: 0.06em; opacity: 0.7; font-weight: 600; } .ax_psfl b { font: 600 15px 'Inter Tight', -apple-system, sans-serif; overflow-wrap: anywhere; }
 .ax_ccpr .ax_cclg b { display: block; font-size: 15px; letter-spacing: 0.14em; }
 .ax_ccpr .ax_cclg small { display: block; font-size: 10px; letter-spacing: 0.38em; opacity: 0.8; margin-top: 3px; font-weight: 600; }
 .ax_psrt.ln { align-items: center; padding-bottom: 2px; }
 .ax_psrt.ln .ax_pspl { flex: 1; margin: 0 6px; }
-.ax_psrt.ln .ax_pspl i { display: block; border-top: 2px dotted currentColor; opacity: 0.5; }
+.ax_psrt.ln .ax_pspl i { display: block; border-top: 2px dotted currentColor; opacity: 0.5; } .ax_psrt.ln .ax_pspl i.sl { border-top: 1px solid currentColor; opacity: 0.45; }
 .ax_psti { display: block; padding: 4px 16px 0; font: 600 24px/1.2 'Inter Tight', -apple-system, sans-serif; --axff: 'Inter Tight', -apple-system, sans-serif; --axfs: 24px; letter-spacing: -0.01em; --axls: -0.01em}
 .ax_ps_hotel .ax_psti, .ax_ps_museum .ax_psti { font-weight: 300; font-size: 30px; --axfs: 30px}
 .ax_ps_movie { color: #f6d27a; --axfg: #f6d27a} .ax_ps_movie .ax_psti { color: #fff; --axfg: #fff}
 .ax_psvs { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 16px 0; font: 800 20px 'Inter Tight', -apple-system, sans-serif; --axff: 'Inter Tight', -apple-system, sans-serif; --axfs: 20px}
 .ax_psvs small { font-size: 13px; opacity: 0.6; font-weight: 600; }
 .ax_psfl:empty { display: none; }
-.ax_psold .ax_ps { filter: grayscale(0.55) brightness(1.04); }
+.ax_psold .ax_ps { filter: grayscale(0.55) brightness(1.04) var(--pssh); }
 .ax_psst { display: block; text-align: center; margin-top: 12px; font-size: 12px; --axfs: 12px; font-weight: 700; opacity: 0.8}
 .ax_psperf { display: block; border-top: 2px dashed rgba(255, 255, 255, 0.28); margin: 0 14px; }
 .ax_ps.cream .ax_psperf { border-color: rgba(59, 50, 38, 0.2); }

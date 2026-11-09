@@ -155,6 +155,11 @@ export async function openPhone(who = null) {
     // 번역 못 했어요 (docs/mockups/phone-trfail A): while the round's Korean failed (p.syncLast.trFailed), a glass card over
     // whatever screen the phone shows; 다시 하기 runs koRun again (its success clears the mark, and the card with it),
     // 닫기 keeps it away for that round (trSeen). The report's 번역 못 함 · 다시 하기 stays either way
+    // the ticket's notches are cut where its marker sits, which depends on the ticket's own lines: read every place first, then set them
+    const notchPasses = () => {
+        const ns = [...$root.find('.na_ph_frame .ax_psnt')], ys = ns.map(n => n.offsetTop);
+        ns.forEach((n, i) => n.closest('.ax_ps')?.style.setProperty('--ny', `${ys[i] + 15}px`));
+    };
     const trPop = () => {
         const p = phone(), host = $root.find('.na_ph_frame .cg_canvas')[0] || $root.find('.na_ph_frame .na_ph_scr')[0];
         $root.find('.na_ph_trpop').remove();
@@ -348,6 +353,7 @@ export async function openPhone(who = null) {
         if (sheet && (view === 'photo' || view === 'set')) $root.find('.na_ph_scr').append(looksSheet(m));
         placeAsk();
         trPop();
+        notchPasses();
         if (keep) $root.find('.na_ph_body, .ax_scroll').scrollTop(top);
         if (making && view === 'setremake') $root.find('.na_ph_setremake .ax_n').html(`${busyHtml} 다시 만드는 중`);
         // a redraw mid-reflection (or mid-make) keeps saying so: withSpinner only dressed the button that was there
