@@ -334,7 +334,7 @@ function gmapMarks(labels) {
     const b = [x - 11, y - 11, x + 11, y + 11]; if (hit(b) || placed.some(([u, v]) => Math.hypot(u - x, v - y) < 80)) continue;
     taken.push(b); placed.push([x, y]); if (p.name) seen.add(p.name);
     o += `<g transform="translate(${f(x)} ${f(y)})"><circle r="10.5" fill="#fff" stroke="#e3ddd2" stroke-width="1"/><g fill="none" stroke="#7d7266" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" transform="translate(-7.2 -7.2) scale(.6)">${glyph(p.ic)}</g></g>`;
-    if (++m >= (process.env.ICONS === '0' ? 0 : 5)) break; }
+    if (++m >= (process.env.ICONS === '0' ? 0 : 3)) break; }   // small icons: three at most on a screen
   // streets: the longest pieces, upright text along the line
   const sn = new Set();
   for (const s2 of STREETS.map(q => ({ ...q, len: q.ps.reduce((a, pt, i) => i ? a + Math.hypot(pt[0] - q.ps[i - 1][0], pt[1] - q.ps[i - 1][1]) : 0, 0) })).sort((a, b) => b.rank - a.rank || b.len - a.len)) {
