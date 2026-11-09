@@ -66,24 +66,41 @@ export function dropVoice(p, i) {
     if (name && !(p.koVoiceAsked || []).some(x => String(x).toLowerCase() === name.toLowerCase())) p.koVoiceAsked = [...(p.koVoiceAsked || []), name].slice(-200);
     return row;
 }
-// asks the story for them; the rows added. A row needs its words from the story; the rest are marked asked
-export async function learnVoices(m, owner, p, { all = false } = {}) {
-    const want = voicesWanted(p, { all });
-    if (!want.length) return 0;
+// asks the story about these people (names); the rows it found: [{ who, style, evidence, by }]. A row needs the words
+// that show it (from the story or a card)
+async function askVoices(m, owner, p, names) {
     // (the cards and the persona whole; the owner's chosen profile only when it is a lorebook entry: a card or a persona is
     // in already)
     const binding = p.financeProfile || m?.phoneProfiles?.[String(owner || '').toLowerCase()] || null;
-    const input = await sideRequest(m, owner, [...cardBlocks(), `[WHO]\n${want.map(n => `- ${n}`).join('\n')}`], { profile: binding?.type === 'lore' ? binding : undefined });
+    const input = await sideRequest(m, owner, [...cardBlocks(), `[WHO]\n${names.map(n => `- ${n}`).join('\n')}`], { profile: binding?.type === 'lore' ? binding : undefined });
     const got = parseJson(String(await askDraft(input, { force: true, system: AI_SYS_PHONE_VOICE, maxTokens: 3000, effort: 'low' })).replace(/^[^{]*/, '').replace(/[^}]*$/, ''), { salvage: true }) || {};
-    const wanted = new Map(want.map(n => [n.toLowerCase(), n])), have = new Set(voiceRows(p).map(whoKey));
-    const rows = (Array.isArray(got.people) ? got.people : []).filter(v => v && wanted.has(whoKey(v)) && !have.has(whoKey(v)) && String(v.style || '').trim()
-        && (Array.isArray(v.evidence) ? v.evidence : []).some(e => String(e || '').trim()) && have.add(whoKey(v)))
+    const wanted = new Map(names.map(n => [n.toLowerCase(), n])), seen = new Set();
+    return (Array.isArray(got.people) ? got.people : []).filter(v => v && wanted.has(whoKey(v)) && !seen.has(whoKey(v)) && String(v.style || '').trim()
+        && (Array.isArray(v.evidence) ? v.evidence : []).some(e => String(e || '').trim()) && seen.add(whoKey(v)))
         .map(v => ({ who: wanted.get(whoKey(v)), style: String(v.style).trim().slice(0, 120), evidence: v.evidence.map(e => String(e).trim()).filter(Boolean).slice(0, 2).map(e => e.slice(0, 160)), by: 'model' }));
+}
+// before a translation: who texts and has no row yet; the rows added. One the story doesn't show isn't asked again; nor
+// one whose row the user deletes (dropVoice)
+export async function learnVoices(m, owner, p, { all = false } = {}) {
+    const want = voicesWanted(p, { all });
+    if (!want.length) return 0;
+    const rows = (await askVoices(m, owner, p, want)).filter(r => !voiceRows(p).some(v => whoKey(v) === whoKey(r)));
     if (rows.length) p.koVoice = [...voiceRows(p), ...rows].slice(-80);
-    // (one the story doesn't show isn't asked again; nor one whose row the user deletes: dropVoice)
     const got1 = new Set(rows.map(r => r.who.toLowerCase()));
     p.koVoiceAsked = [...new Set([...(p.koVoiceAsked || []), ...want.filter(n => !got1.has(n.toLowerCase()))])].slice(-200);
     return rows.length;
+}
+// 뽑기: the user asks the story about someone (a row they added, or one already there): what it finds takes that
+// person's row, whoever wrote it, and they come off the not-asked list; one it doesn't find keeps the row it had.
+// { found: [names], missing: [names] }
+export async function pickVoices(m, owner, p, names) {
+    const list = [...new Set((Array.isArray(names) ? names : [names]).map(n => String(n || '').trim()).filter(Boolean))].slice(0, 20);
+    if (!list.length) return { found: [], missing: [] };
+    const rows = await askVoices(m, owner, p, list), keys = new Set(rows.map(r => whoKey(r)));
+    const rest = (Array.isArray(p.koVoice) ? p.koVoice : []).filter(v => !keys.has(whoKey(v)));
+    p.koVoice = [...rest, ...rows].slice(-80);
+    p.koVoiceAsked = (p.koVoiceAsked || []).filter(x => !keys.has(String(x).toLowerCase()));
+    return { found: rows.map(r => r.who), missing: list.filter(n => !keys.has(n.toLowerCase())) };
 }
 
 // how many fields one go fills at most (the rest wait for the next), and how much one request carries
