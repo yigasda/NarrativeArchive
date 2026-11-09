@@ -12,7 +12,7 @@ const R = [['Mara', '친구에겐 반말', 1, 0], ['Ivo', '존댓말', 3, 0], ['
     const chev = ax('chev', 15, '#b7bdc6', 2.4), WAND = 'M15 4V2M15 10V8M11 6h2M17 6h2M4 20L14 10M19 13v2M18 14h2';
     const wand = (c = 'currentColor', n = 15) => `<svg width="${n}" height="${n}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" style="flex:none"><path d="${WAND}"/></svg>`;
     const sel = new Set(['Ren', 'Anja']);
-    const radio = on => `<span class="ax_radio${on ? ' on' : ''}" style="--axd:#2f6bff;flex:none">${on ? ax('check', 14, '#fff', 3.4) : ''}</span>`;
+    const radio = on => `<span class="ax_radio${on ? ' on' : ''}" style="flex:none">${on ? ax('check', 14, '#fff', 3.4) : ''}</span>`;
     const sub = ([, a, n]) => `<span class="ax_p" style="-webkit-line-clamp:1">${a}${n ? ` <span style="color:#a9b0ba">외 ${n}개</span>` : ''}</span>`;
     const nm = (w, g) => `<span class="ax_n"${g ? ' style="color:#6b7380"' : ''}>${w}</span>`;
     const foot = '<div class="ax_foot">지운 사람은 다시 안 뽑아요.</div>';
@@ -25,6 +25,7 @@ const R = [['Mara', '친구에겐 반말', 1, 0], ['Ivo', '존댓말', 3, 0], ['
     };
     const plain = r => `<div class="ax_rw">${axLetter(r[0], 36)}<span class="ax_tx">${nm(r[0], r[3])}${sub(r)}</span>${chev}</div>`;
     const pill = `<span style="display:inline-flex;align-items:center;gap:5px;font-size:16px;font-weight:600;color:#2f6bff">${wand('currentColor', 16)}뽑기</span>`;
+    const glass = t => `<div style="position:absolute;left:16px;right:16px;bottom:30px"><div class="pcf_card"><div class="pcf_btns" style="border-top:0"><div class="pcf_ok safe">${t}</div></div></div></div>`;
     const bar = (t, dim) => `<div style="position:absolute;left:0;right:0;bottom:0;padding:12px 16px 30px;background:linear-gradient(rgba(242,243,246,0),#f2f3f6 30%)"><div style="height:50px;border-radius:14px;display:flex;align-items:center;justify-content:center;gap:7px;background:#fff;color:${dim ? '#b4bac3' : '#2f6bff'};font-size:16px;font-weight:600;box-shadow:0 1px 2px rgba(22,27,34,.04),0 8px 24px rgba(22,27,34,.08)">${wand('currentColor', 17)}${t}</div></div>`;
     const out = {};
     // A: pill top right → edit mode: 취소 top right, 전체 선택 under the title, a circle at each row's left, the button at the bottom
@@ -33,7 +34,7 @@ const R = [['Mara', '친구에겐 반말', 1, 0], ['Ivo', '존댓말', 3, 0], ['
     // B: a card row under the title → check at the right, "전체" on each section's title
     const cardRow = `<div class="ax_card"><div class="ax_rw">${`<span class="ax_si" style="background:#8faed1">${wand('#fff', 17)}</span>`}<span class="ax_tx"><span class="ax_n">이야기에서 뽑기</span><span class="ax_p" style="-webkit-line-clamp:1">고른 사람의 말투를 이야기에서 찾아요</span></span>${chev}</div></div>`;
     out.B0 = { html: body(plain, { top: cardRow }) };
-    out.B1 = { top: '<span style="font-size:16px;font-weight:600;color:#2f6bff">취소</span>', html: body(r => `<div class="ax_rw">${axLetter(r[0], 36)}<span class="ax_tx">${nm(r[0], r[3])}${sub(r)}</span>${radio(sel.has(r[0]))}</div>`, { addRow: false, secR: rs => `<span style="font-size:13px;font-weight:600;color:#2f6bff;text-transform:none">${rs.every(r => sel.has(r[0])) ? '전체 해제' : '전체'}</span>` }), over: bar('2명 뽑기') };
+    out.B1 = { top: '<span class="ax_blue" style="font-size:16px">취소</span>', html: body(r => `<div class="ax_rw">${axLetter(r[0], 36)}<span class="ax_tx">${nm(r[0], r[3])}${sub(r)}</span>${radio(sel.has(r[0]))}</div>`, { addRow: false, secR: rs => `<span class="ax_blue" style="font-size:13px;font-weight:600">${rs.every(r => sel.has(r[0])) ? '전체 해제' : '전체'}</span>` }), over: glass('2명 뽑기') };
     // C: pill top right → a sheet from the bottom: 전체 선택, the names with checks, 취소 · N명 뽑기
     out.C0 = { top: pill, html: body(plain) };
     const sheetRows = R.map(r => `<div style="display:flex;align-items:center;gap:12px;height:52px;padding:0 18px;border-top:0.5px solid rgba(60,60,67,.14)">${axLetter(r[0], 30)}<span style="flex:1;font-size:16px;color:#161b22">${r[0]}</span>${radio(sel.has(r[0]))}</div>`).join('');
