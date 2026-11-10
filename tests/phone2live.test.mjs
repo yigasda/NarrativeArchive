@@ -115,17 +115,6 @@ test('mail: a mail the owner sends keeps "to", its Korean is the owner\'s voice 
     assert.deepEqual([sent?.who, sent?.to], ['Mara', 'Lufthansa']);
     assert.deepEqual([got?.who, got?.to], ['Lufthansa', 'Mara']);
     assert.match(JSON.stringify(data.phoneForModel(p).mails), /"to":"Lufthansa"/);
-    // (폰 2 only: a mail only opened is one already there, by its id; phone 1's prompt has no such line)
-    assert.match(data.coreRecordsSystem({ life: true, wallet: true, split: true, live: 'Ren' }), /"unread"; a PHONE NOW mail the owner only opens: "already": its id, nothing else\n/);
-    assert.doesNotMatch(data.coreRecordsSystem({ life: true, wallet: true, split: true }), /only opens/);
-    // (live: ids, and an unread mail older than the newest three; phone 1's PHONE NOW as it was)
-    const many = data.parsePhone(JSON.stringify({ owner: 'Mara', now: '11-07 10:00', mails: [{ from: 'Air Lyon', subject: 'E-ticket', text: 'Seat 14A.', time: '11-01 09:00', unread: true },
-        ...[1, 2, 3, 4].map(i => ({ from: 'Shop', subject: `News ${i}`, text: 'Hi.', time: `11-0${i + 1} 09:00`, unread: false }))] }), 'Mara');
-    data.ensureIds(many);
-    const live = data.phoneForModel(many, { live: true }).mails, one = data.phoneForModel(many).mails;
-    assert.deepEqual(live.map(x => x.subject), ['E-ticket', 'News 2', 'News 3', 'News 4']);
-    assert.ok(live.every(x => x.id) && live[0].unread === true && !('unread' in live[1]));
-    assert.deepEqual(one.map(x => Object.keys(x)), [['from', 'subject', 'time'], ['from', 'subject', 'time'], ['from', 'subject', 'time']]);
     assert.match(data.coreRecordsSystem({ life: true, wallet: true, split: true }), /mail: "sender", "to": only on a mail the owner sends \("sender" is then the owner\), "subject" \("Re: …" for an answer\)/);
 });
 

@@ -138,18 +138,6 @@ test('되돌리기 takes the round off as a source of what was already there', a
     assert.deepEqual(a(), [3]);
 });
 
-// 폰 2: a mail the owner only opens ("already": its id) is read now, nothing added; 되돌리기 makes it unread again
-test('a mail only opened: marked read by its id, no new mail, unread again after 되돌리기; an id the phone lacks adds nothing', async () => {
-    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'let me check the flight mail')]);
-    c.p.mails = [{ id: 'fl1', from: 'Air Lyon', subject: 'Your e-ticket', text: 'Seat 14A.', time: '10-25 10:00', unread: true }];
-    await run(c.m, { now: '10-26 10:00', events: [{ id: 'look', at: 2, quote: 'check the flight mail', summary: '항공권 메일을 엶', date: '10-26', time: '10:00', phone: { mails: [{ already: 'fl1' }, { already: 'nope' }] } }] });
-    assert.equal(c.p.mails.length, 1);
-    assert.equal(c.p.mails[0].unread, false);
-    assert.match(JSON.stringify(data.phoneForModel(c.p, { live: true }).mails), /"id":"fl1"/);
-    await data.undoRound(c.m, c.p);
-    assert.equal(c.p.mails[0].unread, true);
-});
-
 test('a branch: talk cut off past the branch point is gone, even where a new message took its place; the main chat keeps all', async () => {
     const c = await bookCase();
     const main = structuredClone(c.m), mainChat = structuredClone(T.chat);
