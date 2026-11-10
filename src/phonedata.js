@@ -380,8 +380,8 @@ STEP 3 · RECORDS
 Go through each scene's messages in order. Write a record only in these cases, with "scene", "at", "said" (the exact words it comes from) and "situations":
 ${live ? `1. A line "<owner's name> [App]: …" is what the owner did on the phone just then. It shows up in that app and in every other app it would really touch, each record's "said" that line. For example:
    - booked a flight → the ticket in the wallet, the payment, the booking mail, the flight in the calendar
-   - went for a long run → a workout and many steps in health, less screen time that hour
-   - passed an exam → a post, a call to mum
+   - couldn't sleep → a short night in health, late screen time, a search for how to fall asleep
+   - came home soaked in the rain → a photo of the wet street, a note about a cold coming on
    The chat between the owner and ${live} is already in MESSENGER: never write it again as a text or call. A text or call with anyone else that the chat tells of is written as usual ("I called Dad today" → a call to Dad).` : '1. A phone action the messages show or say (a text, call, photo, search, mail, post, voice memo) → that record. A text exchange the messages already show: only its last 4 messages.'}
 2. A plan made → "calendar". A PHONE NOW plan the messages move → its calendar record again with "was"; called off or undone (an order cancelled) → "cancelled": true.${wallet ? ' Tickets go in the wallet; reservations and appointments in the calendar.' : ''} No booking, trip or purchase the story lacks.
 3. Each scene where the owner is somewhere → one "visit".

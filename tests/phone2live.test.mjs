@@ -37,7 +37,8 @@ test('폰 2 live: core · money prompts read the MESSENGER chat and its action l
     assert.match(story, /A text exchange the messages already show: only its last 4 messages\./);
     assert.match(live, /the owner's MESSENGER chat with Ren, each scene under a status line/);
     assert.match(live, /A line "<owner's name> \[App\]: …" is what the owner did on the phone just then\. It shows up in that app and in every other app it would really touch/);
-    assert.match(live, /booked a flight → .*\n.*went for a long run → .*\n.*passed an exam → a post, a call to mum/);
+    assert.match(live, /booked a flight → .*\n.*couldn't sleep → a short night in health, late screen time, a search for how to fall asleep\n.*came home soaked in the rain → a photo of the wet street, a note about a cold coming on\n/);
+    assert.doesNotMatch(live, /long run|call to mum/);
     assert.match(live, /The chat between the owner and Ren is already in MESSENGER: never write it again as a text or call\. A text or call with anyone else that the chat tells of is written as usual/);
     assert.doesNotMatch(live, /only its last 4 messages/);
     assert.equal(data.coreSystem({ ...o, live: 'Ren' }), live);
