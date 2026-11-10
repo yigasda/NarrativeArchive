@@ -559,7 +559,8 @@ export function calOne(p, now, k, m) {
 
 // 메일 (docs/mockups/phone-mail thread, A's lists + D's reply): 받은편지함 · 보낸편지함 as the call app's bottom tabs; a mail
 // the owner sent has "to" (its from is the owner) and shows "받는 사람: {to}". A reply (phonedata.js mailAnswered) shows the mail it
-// answers as a grey quote; the mail answered lights the reply arrow, which opens the reply
+// answers as a grey quote; the mail answered lights the reply arrow, which opens the reply. The list's preview is the original
+// only (its Korean shows when the mail is opened)
 const mailSent = x => !!String(x?.to || '').trim();
 const mailWho = x => (mailSent(x) ? x.to : x.from);
 export function mailScreen(p, now, box = '') {
@@ -573,7 +574,7 @@ export function mailScreen(p, now, box = '') {
         ${ms.length ? `<div class="ax_card">${ms.map(([x, k]) => swipeRow('mail', k, `
           <button type="button" class="ax_rw ax_rwm" data-go="mailone" data-i="${k}">${x.unread && !sent ? '<i class="ax_dot"></i>' : ''}${axLetter(mailWho(x), 42)}<span class="ax_tx">
             <span class="ax_h"><b>${sent ? '<span class="ax_mto">받는 사람: </span>' : ''}${esc(mailWho(x))}</b><small class="cg_num">${esc(listTime(p, x.time))}</small></span>
-            <span class="ax_s ${x.unread && !sent ? 'u' : ''}">${esc(x.subject)}</span><span class="ax_p">${axKo(x.text.replace(/\s+/g, ' '), x.ko ? x.ko.replace(/\s+/g, ' ') : '')}</span></span></button>`)).join('')}</div>` : `<div class="ax_empty">${sent ? '보낸 메일이 없어요' : '메일이 없어요'}</div>`}
+            <span class="ax_s ${x.unread && !sent ? 'u' : ''}">${esc(x.subject)}</span><span class="ax_p">${esc(x.text.replace(/\s+/g, ' '))}</span></span></button>`)).join('')}</div>` : `<div class="ax_empty">${sent ? '보낸 메일이 없어요' : '메일이 없어요'}</div>`}
         <i class="ax_pad big"></i>
       </div>
       <div class="ax_dock"><button type="button" class="${sent ? '' : 'on'}" data-go="mail">받은편지함</button><button type="button" class="${sent ? 'on' : ''}" data-go="mail" data-i="sent">보낸편지함</button></div>

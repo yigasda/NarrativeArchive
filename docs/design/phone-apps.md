@@ -17,7 +17,7 @@
   - 맨 위 종 · 장바구니 아이콘은 아직 **눌러도 아무것도 안 돼요**(남은 일).
 - **배달:** 배달의민족(한국 거주) / Uber Eats(그 외) 두 모양이에요. 한국어 알약은 `dvKp`예요. 음식은 전부 `phonefood.js` 그림이에요.
 - **스크린타임**(`src/phonestime.js`, 시안 `docs/mockups/phone-screentime`): 막대는 다 옅게 깔고 누른 날만 진하게, 색은 많이 쓴 종류 셋만이에요(다 쌓으면 장난감 같아져요). 세로 눈금은 많아야 4개, 맨 위는 가장 긴 날에 가깝게 잡아 막대가 낮아지지 않게 해요. "평균" 글자는 늘 점선 옆이고 가까운 눈금 숫자가 비켜요. 앱 아이콘은 지금 아이콘을 닮게, 똑같지 않게 그려요.
-- **메일**(`mailScreen` · `mailOne`, 시안 `docs/mockups/phone-mail/thread` A 목록 + D 답장): 받은편지함 · 보낸편지함은 전화 앱과 같은 아래 탭(`ax_dock`, `mail` / `mail:sent`)이에요. 보낸 메일(`to`가 있음)은 목록에서 "받는 사람: {to}", 상세에서도 받는 사람이 `to`예요. 답장(`mailAnswered`)을 열면 본문 아래에 원래 메일이 회색 인용 칸(`.ax_mq`, 원문만)으로 붙어요. 원래 메일에서는 아래 답장 화살표가 켜져서 답장으로 가요. 답장이 없으면 흐려요. 쓰기는 아직 없어요.
+- **메일**(`mailScreen` · `mailOne`, 시안 `docs/mockups/phone-mail/thread` A 목록 + D 답장): 받은편지함 · 보낸편지함은 전화 앱과 같은 아래 탭(`ax_dock`, `mail` / `mail:sent`)이에요. 보낸 메일(`to`가 있음)은 목록에서 "받는 사람: {to}", 상세에서도 받는 사람이 `to`예요. 답장(`mailAnswered`)을 열면 본문 아래에 원래 메일이 회색 인용 칸(`.ax_mq`, 원문만)으로 붙어요. 목록 미리보기는 원문만이고, 한국어는 열었을 때 보여요. 원래 메일에서는 아래 답장 화살표가 켜져서 답장으로 가요. 답장이 없으면 흐려요. 쓰기는 아직 없어요.
 - **메시지 › 꾹 누르기**(시안 `docs/mockups/phone-msgpress` D): 수정 기능은 일부러 없어요. 번역이 이상하면 재번역으로 풀어요(원문은 안 바뀌어요).
 - **메시지 › 단톡**(시안 `docs/mockups/phone-groupchat`, 목록 D · 방 A): 목록 미리보기는 원문 한 줄 + 한국어 한 줄이고, 두 줄로 넘어가지 않아요. 연락처에는 방 이름이 아니라 멤버가 들어가요.
 - **다녀간 곳**(`mapScreen`, 시안 `docs/mockups/phone-map`): 지도는 64장을 통째로 그렸고(`phonemaptowns.js`), 어느 지도를 쓸지는 도시 표 `docs/mockups/phone-map/towns/citytable.md` → `python3 docs/mockups/phone-map/towns/gencity.py` → `src/phonemapcity.js`로 정해요. 새 지도는 4장씩 그려 보고 고르고(한꺼번에 많이 그리면 못생겨져요), 서로 비슷해 보이면 안 돼요. 찾기는 늘 두 군데 보여요(오른쪽 위 앱 색 돋보기 + 시트 맨 아래 줄, 빈 화면에서도). 확대(`phonemapzoom.js`)는 `docs/DESIGN.md` 4장 함정의 방식(canvas에만 그리기)을 지켜요.
