@@ -9,7 +9,7 @@
 - **덜 그리기.** 이 축척에서 건물 하나하나 · 보행로 · 이름 없는 골목은 안 그려요. 블록이 바탕이에요.
 - **실제 모양 그대로, 지어내지 않기.** 데이터가 없는 건 그리지 않아요.
 
-## 고른 모습 (시안 `docs/mockups/phone-map/osm/germany-37.jpg`, `gmap-AC-roads.jpg` 오른쪽)
+## 고른 모습 (시안 `docs/mockups/phone-map/osm/germany-52.jpg`, `gmap-AC-roads.jpg` 오른쪽)
 
 `osmmap.js`의 `STYLE=gmap`, 색 `GPAL=ACa`(기본)예요.
 
@@ -54,7 +54,7 @@
   - `<이름>.zip`: 물 · 길 · 철도 · 공원 · 땅 쓰임 · 건물 · place · 역 · 명소.
   - `<이름>-cover.zip`: 땅 덮개(숲 · 덤불 · 풀밭 · 바위 · 모래 · 습지 · 포도밭 · 과수원 · 농지). 같은 폴더에 있으면 `osmmap.js`가 자동으로 합쳐요. 색은 지금 있는 초록 계열로만 칠해요.
   - 구역(zone: 학교 · 병원 터 등)은 색을 안 늘리기로 해서 안 받아요.
-- **상태(작성 때):** 독일 33곳 받음. 실패한 곳(502/504)과 쪼개 받을 5곳(berlin-mitte, muenchen-marienplatz, koeln-dom, leipzig-zentrum, nuernberg-altstadt)은 그 세션이 다시 받는 중. 질트(바다) 데이터는 아직 없어요.
+- **상태(11-10):** 받기 끝. 동네 데이터 52 / 59곳, 땅 덮개 50 / 59곳(`osm-data`). 끝내 실패(서버 502/504): 동네 데이터 berlin-mitte · muenchen-marienplatz · koeln-dom · leipzig-zentrum · nuernberg-altstadt · muenchen-bogenhausen · luebeck-altstadt, 땅 덮개 frankfurt-altstadt · berlin-kreuzberg · berlin-charlottenburg · berlin-marzahn · hamburg-hafencity · duesseldorf-altstadt · nuernberg-altstadt · koblenz-deutscheseck · essen-mitte. 빽빽한 도심 5곳은 3×3 조각으로 쪼개도 실패했어요. 질트 범위는 섬 안쪽이라 바다가 안 보여요(해변까지 넓혀 다시 받아야 함).
 - 받은 원본 json은 저장소에 넣지 않아요(크기). zip만 `osm-data`에.
 
 ## 코드 (시안)
