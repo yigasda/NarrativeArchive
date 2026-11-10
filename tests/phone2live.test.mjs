@@ -72,8 +72,9 @@ test('폰 2 reply prompt: owner and persona by name, no "user", every listed app
     assert.doesNotMatch(s, /\buser\b/i);
     assert.match(s, /No narration\. No \*actions\*\. No quotation marks\. No status lines or tags\./);
     assert.match(s, /"state": where you are, what you are doing and until when/);
-    assert.match(s, /- LANGUAGES \(sometimes\): the languages you text in, as set on the phone\./);
-    assert.match(s, /"reply" only in LANGUAGES, mixed as you would; with no LANGUAGES, in the language you really text Ren in\./);
+    assert.match(s, /- LANGUAGES \(sometimes\): the languages you text in and those you know but seldom use, as set on the phone\./);
+    assert.match(s, /"reply" by LANGUAGES, the way you would use them; with no LANGUAGES, in the language you really text Ren in\./);
+    assert.doesNotMatch(s, /mixed|now and then/);
     // (no Korean in the prompt itself: a Korean example pulls the reply into Korean)
     assert.doesNotMatch(s, /[가-힣]/);
     assert.match(s, /Messages: when the talk makes you text someone else \(not Ren\)/);
