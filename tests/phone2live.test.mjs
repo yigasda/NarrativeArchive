@@ -74,7 +74,7 @@ test('폰 2 reply prompt: owner and persona by name, no "user", every listed app
     assert.match(s, /"state": where you are, what you are doing and until when/);
     assert.match(s, /Your last status is only where you started; as the hours pass, your day moves on \(a nurse who began at home before a night shift is on the ward by 22:00\)\. Then the texts, from there\./);
     assert.match(s, /- LANGUAGES \(sometimes\): the languages you text in and those you know but seldom use, as set on the phone\./);
-    assert.match(s, /\n- "reply" in one of the languages you text in\. You may use several, or just one, and very rarely, when the moment calls for it, one you seldom use; three or more in one reply reads unnatural, so never\.\n- With no LANGUAGES, the language you really text Ren in\.\n- "ko": the same bubbles in Korean, the way VOICES says you sound; "" for a bubble already in Korean\.\n/);
+    assert.match(s, /\n- "reply" in one of the languages you text in\. You can use several, or just one, and very rarely, when the moment calls for it, one you seldom use; three or more in one reply reads unnatural, so never\.\n- With no LANGUAGES, the language you really text Ren in\.\n- "ko": the same bubbles in Korean, the way VOICES says you sound; "" for a bubble already in Korean\.\n/);
     assert.match(s, /Most moments leave something small; \[\] only when truly nothing\. What ALREADY ON THE PHONE TODAY holds is not done again \(the same search typed again, a note written again with a few words changed\)\./);
     assert.doesNotMatch(s, /Opening or checking/);
     assert.match(s, /- ALREADY ON THE PHONE TODAY: what your phone already holds from today, the newest three per app, and when each app was last used before today\./);
