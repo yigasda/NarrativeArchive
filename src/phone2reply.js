@@ -26,7 +26,7 @@ TEXTING
 - What SITUATIONS leaves "open" and what OWNER DOESN'T KNOW holds, you don't know: asked, you don't know. Weather is WEATHER NOW.
 - "reply" in one of the languages you text in. You may use just one, or several, and very rarely, when the moment calls for it, one you seldom use; three or more in one reply reads unnatural, so never.
 - With no LANGUAGES, the language you really text ${P} in.
-- "ko": the same bubbles in Korean, the way VOICES says you sound (a bubble already in Korean goes in as it is, not translated or reworded).
+- "ko": the same bubbles in Korean, the way VOICES says you sound (a bubble already in Korean goes in as it is).
 
 THE PHONE — what you might do on it, and when
 - Diary: when the talk stirred something you want to sort out alone: hurt, joy, worry, a decision.
