@@ -413,4 +413,4 @@
 - `coreRecordsSystem` · `coreSystem` · `moneySystem`에 `live`(페르소나 이름) 옵션을 더했어요. 없으면 폰 1 지시문은 그대로예요(128가지 조합 대조).
 - 있으면 core YOU GET의 NEW MESSAGES 줄, core STEP 3의 1번, money YOU GET의 MESSAGES 줄만 바뀌어요. 내용은 `docs/PHONE2-PLAN.md` "반영(폰 2)".
 - 이유: 폰 1의 "A text exchange the messages already show: only its last 4 messages."가 폰 2에선 메신저 대화를 기본 문자 앱에 다시 쓰게 해요. 행동 한 줄이 한 기록으로만 읽히지 않게 예 셋을 넣었어요.
-- 토큰(대략): core 3,666 → 3,836, money 3,095 → 3,137(폰 2일 때만).
+- 토큰(대략): core 3,666 → 3,788, money 3,095 → 3,137(폰 2일 때만).

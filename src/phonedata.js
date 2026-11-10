@@ -349,7 +349,7 @@ export function coreRecordsSystem({ life = false, weather = false, tracker = fal
 Write what the owner's phone gains from NEW MESSAGES. The story decides what happens; the phone only shows it.
 
 YOU GET
-${live ? `- NEW MESSAGES (numbered #123): the owner's MESSENGER chat with ${live}, each scene under a status line (time · place · doing). A line "<owner's name> [App]: …" is something the owner did on the phone right then.` : '- NEW MESSAGES (numbered #123).'} Sometimes ARCHIVE FOR THESE MESSAGES: summaries covering them, also evidence.
+${live ? `- NEW MESSAGES (numbered #123): the owner's MESSENGER chat with ${live}, scene by scene under status lines; "<owner's name> [App]: …" lines are what the owner did on the phone then.` : '- NEW MESSAGES (numbered #123).'} Sometimes ARCHIVE FOR THESE MESSAGES: summaries covering them, also evidence.
 - Sometimes ARCHIVE BEFORE, STORY NOW, WORLD, OWNER PROFILE, STORY YEAR, DAYS (the weekdays ahead: "on Friday" is the next one).
 - PHONE NOW ("now": when it was last read), EVENTS ON THE PHONE (scenes with ids)${life ? ', LIFE NOW (alarms, files, health days, with ids)' : ''}. Sometimes MESSAGES READ BEFORE, NOW CHANGED (edited messages with their scenes)${wallet ? ' and ORDERS AND TICKETS (orders and tickets with their status and eta; a record about one keeps its item, dates and status)' : ''}.${weather && tracker ? `
 - WEATHER NOW: the chat's last status line (date, time, place, weather; a scene the owner isn't in: its place and weather only).` : ''}
@@ -378,11 +378,11 @@ STEP 2 · SITUATIONS
 
 STEP 3 · RECORDS
 Go through each scene's messages in order. Write a record only in these cases, with "scene", "at", "said" (the exact words it comes from) and "situations":
-${live ? `1. A line "<owner's name> [App]: …" is what the owner did on the phone just then. It shows up in that app and in every other app it would really touch, each record's "said" that line. For example:
+${live ? `1. Each "<owner's name> [App]: …" line → its records in every app it touches, "said" that line:
    - booked a flight → the ticket in the wallet, the payment, the booking mail, the flight in the calendar
    - couldn't sleep → a short night in health, late screen time, a search for how to fall asleep
-   - came home soaked in the rain → a photo of the wet street, a note about a cold coming on
-   The chat between the owner and ${live} is already in MESSENGER: never write it again as a text or call. A text or call with anyone else that the chat tells of is written as usual ("I called Dad today" → a call to Dad).` : '1. A phone action the messages show or say (a text, call, photo, search, mail, post, voice memo) → that record. A text exchange the messages already show: only its last 4 messages.'}
+   - cooked dinner from a recipe → the recipe saved in notes, a photo of the dish
+   The owner–${live} chat itself is never a text or call; a text or call with anyone else it tells of is ("I called Dad" → a call to Dad).` : '1. A phone action the messages show or say (a text, call, photo, search, mail, post, voice memo) → that record. A text exchange the messages already show: only its last 4 messages.'}
 2. A plan made → "calendar". A PHONE NOW plan the messages move → its calendar record again with "was"; called off or undone (an order cancelled) → "cancelled": true.${wallet ? ' Tickets go in the wallet; reservations and appointments in the calendar.' : ''} No booking, trip or purchase the story lacks.
 3. Each scene where the owner is somewhere → one "visit".
 4. Someone new the owner meets and would save → "contact".${life ? `

@@ -35,11 +35,11 @@ test('폰 2 live: core · money prompts read the MESSENGER chat and its action l
     const story = data.coreRecordsSystem(o), live = data.coreRecordsSystem({ ...o, live: 'Ren' });
     assert.doesNotMatch(story, /MESSENGER|\[App\]/);
     assert.match(story, /A text exchange the messages already show: only its last 4 messages\./);
-    assert.match(live, /the owner's MESSENGER chat with Ren, each scene under a status line/);
-    assert.match(live, /A line "<owner's name> \[App\]: …" is what the owner did on the phone just then\. It shows up in that app and in every other app it would really touch/);
-    assert.match(live, /booked a flight → .*\n.*couldn't sleep → a short night in health, late screen time, a search for how to fall asleep\n.*came home soaked in the rain → a photo of the wet street, a note about a cold coming on\n/);
-    assert.doesNotMatch(live, /long run|call to mum/);
-    assert.match(live, /The chat between the owner and Ren is already in MESSENGER: never write it again as a text or call\. A text or call with anyone else that the chat tells of is written as usual/);
+    assert.match(live, /the owner's MESSENGER chat with Ren, scene by scene under status lines; "<owner's name> \[App\]: …" lines are what the owner did on the phone then\./);
+    assert.match(live, /1\. Each "<owner's name> \[App\]: …" line → its records in every app it touches, "said" that line:\n/);
+    assert.match(live, /booked a flight → .*\n.*couldn't sleep → a short night in health, late screen time, a search for how to fall asleep\n.*cooked dinner from a recipe → the recipe saved in notes, a photo of the dish\n/);
+    assert.doesNotMatch(live, /long run|call to mum|soaked|cold coming/);
+    assert.match(live, /The owner–Ren chat itself is never a text or call; a text or call with anyone else it tells of is \("I called Dad" → a call to Dad\)\./);
     assert.doesNotMatch(live, /only its last 4 messages/);
     assert.equal(data.coreSystem({ ...o, live: 'Ren' }), live);
     const ms = data.moneySystem({ delivery: true, invest: true }), ml = data.moneySystem({ delivery: true, invest: true, live: 'Ren' });
