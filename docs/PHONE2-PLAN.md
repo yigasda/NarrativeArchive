@@ -152,7 +152,7 @@
 ### 이미 한 일(ALREADY ON THE PHONE TODAY)
 
 - 실험 1 run3에서 노트가 6번(대부분 "확인만"), 송금이 "2000 EUR 준비 → 1,200 EUR 확인"으로 어긋났어요.
-- 횟수(노트 ×5)는 안 보여 줘요. "많이 쓰는 사람"으로 읽고 더 쓸 수 있어서요. 대신 **오늘 폰에 이미 있는 것**을 앱마다 최근 2개까지 보여 줘요(메신저 말풍선은 안 들어감, 대화가 길어도 블록은 안 커짐). 오늘 전은 앱별 마지막 시각 하나씩.
+- 횟수(노트 ×5)는 안 보여 줘요. "많이 쓰는 사람"으로 읽고 더 쓸 수 있어서요. 대신 **오늘 폰에 이미 있는 것**을 앱마다 최근 3개까지 보여 줘요(메신저 말풍선은 안 들어감, 대화가 길어도 블록은 안 커짐). 오늘 전은 앱별 마지막 시각 하나씩.
   ```
   [ALREADY ON THE PHONE TODAY]
   notes: 18:41 "Seoul shopping list: German pharmacy cream (blue container)?" · 10:32 "Duty Free Scarf Options: Loro Piana cashmere stole"

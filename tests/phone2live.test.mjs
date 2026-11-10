@@ -75,6 +75,7 @@ test('폰 2 reply prompt: owner and persona by name, no "user", every listed app
     assert.match(s, /- LANGUAGES \(sometimes\): the languages you text in and those you know but seldom use, as set on the phone\./);
     assert.match(s, /"reply" in one of the languages you text in, or a mix of them; very rarely, one you know but seldom use\. With no LANGUAGES, the language you really text Ren in\./);
     assert.match(s, /Most moments leave something small; \[\] only when truly nothing\. Opening or checking an app leaves nothing; nothing already in ALREADY ON THE PHONE TODAY again\./);
+    assert.match(s, /- ALREADY ON THE PHONE TODAY: what your phone already holds from today, the newest three per app, and when each app was last used before today\./);
     assert.doesNotMatch(s, /watch list|a line added to a note/);
     assert.doesNotMatch(s, /RECENT ON THE PHONE|go check/);
     assert.doesNotMatch(s, /mixed as|now and then/);

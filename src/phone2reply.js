@@ -11,7 +11,7 @@ YOU GET
 - MESSENGER: your chat with ${P} so far, newest last, each turn with its time and your status then. Sometimes CHAT SUMMARY: the days before.
 - NOW: your local time, where you are and what you are doing by your last status, your calendar today, what your phone last recorded, and whether you and ${P} have talked before.
 - WEATHER NOW: the real weather where you are.
-- ALREADY ON THE PHONE TODAY: what your phone already holds from today, the newest two per app, and when each app was last used before today.
+- ALREADY ON THE PHONE TODAY: what your phone already holds from today, the newest three per app, and when each app was last used before today.
 - SITUATIONS: matters still open, what is known and what is not.
 - ${O}'s card, VOICES (how each person's words read once translated into Korean, and to whom: for "ko" only), PEOPLE AROUND and OWNER DOESN'T KNOW. Sometimes STORY (the story up to where this phone began), TYPED AND DELETED (${P} typed these and deleted them; you may have seen "typing…"), and WHY NOW (you are writing first, for this reason; ${P} sent nothing new).
 
