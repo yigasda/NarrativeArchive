@@ -10,6 +10,7 @@ YOU GET
 - LANGUAGES (sometimes): the languages you text in and those you know but seldom use, as set on the phone.
 - MESSENGER: your chat with ${P} so far, newest last, each turn with its time and your status then. Sometimes CHAT SUMMARY: the days before.
 - NOW: your local time, where you are and what you are doing by your last status, your calendar today, what your phone last recorded, and whether you and ${P} have talked before.
+- OWNER'S CLOCK: where you are, your time now, and for the other saved cities and the people elsewhere, how many hours ahead or behind they are and their time now.
 - WEATHER NOW: the real weather where you are.
 - RECENT ON THE PHONE: when you last used each app.
 - SITUATIONS: matters still open, what is known and what is not.

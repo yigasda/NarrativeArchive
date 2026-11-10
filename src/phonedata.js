@@ -3401,6 +3401,25 @@ export const clockBlock = (p, at = p?.now, m = null, st = null, required = false
     }
     return lines.join('\n');
 };
+// 폰 2 (live): the same block on the real time now (at: the owner's wall clock), with no time choices and no screen
+// viewpoint (phone 1's), and each place's time now beside its hours, worked out here so the model never adds them up
+const WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const wallPlus = (t, y, h = 0) => {
+    const mt = /^(\d{2})-(\d{2}) (\d{2}):(\d{2})$/.exec(t), d = new Date(Date.UTC(y, mt[1] - 1, mt[2], mt[3], mt[4]) + Math.round(h * 60) * 6e4), two = n => String(n).padStart(2, '0');
+    return `${two(d.getUTCMonth() + 1)}-${two(d.getUTCDate())} ${two(d.getUTCHours())}:${two(d.getUTCMinutes())} (${WD[d.getUTCDay()]})`;
+};
+export function phone2Clock(p, at, m = null) {
+    const t = String(at || '');
+    if (!/^\d{2}-\d{2} \d{2}:\d{2}$/.test(t)) return '';
+    const y = yearOr(t, p?.year) || new Date().getFullYear(), z = zonesOf(p, t, m), label = v => /[\r\n]/.test(v) ? JSON.stringify(v) : v;
+    const location = z?.own.name || ownerZone(p)?.where, lines = ["[OWNER'S CLOCK]"];
+    if (p?.owner) lines.push(`Phone owner: ${label(p.owner)}`);
+    if (location) lines.push(`Location: ${label(location)}`);
+    lines.push(`Time now: ${wallPlus(t, y)}`);
+    if (z) lines.push('', `Time differences from ${label(location || "the owner's clock")}:`, ...clockRows(p, m, z.others).map(c =>
+        `- ${label(c.name || 'Unnamed location')}${c.where ? ` (${label(c.where)})` : ''}: ${hoursText(c.hours)}, now ${wallPlus(t, y, c.hours)}${c.dst ? ` (DST: ${c.dst.map(d => `${hoursText(d.hours)} ${d.past ? 'before' : 'from'} ${d.at}`).join('; ')})` : ''}`));
+    return lines.join('\n');
+}
 // 3.171.16 clock context for archive-only reflection; retained for event-local times and legacy now.
 const archiveClockBlock = (p, at = p?.now, m = null, st = null) => {
     const z = zonesOf(p, at, m);

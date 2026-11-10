@@ -340,6 +340,23 @@ test('OWNER\'S CLOCK: where the owner is, their time, and the other saved cities
     assert.equal(data.clockBlock({ now: '11-03 04:33' }), '');
 });
 
+// 폰 2: the same block on the time now, each place's time beside its hours (the model adds nothing up), no time choices
+test('폰 2 OWNER\'S CLOCK: the time now with its weekday, every place\'s time now worked out, a day over midnight too', () => {
+    const p = zonePhone('11-06 06:40');
+    p.where = { people: [{ name: 'Mara', city: 'Seoul', tz: 'Asia/Seoul' }] };
+    const b = data.phone2Clock(p, '11-06 06:40');
+    assert.match(b, /^\[OWNER'S CLOCK\]\nPhone owner: Ren\nLocation: Frankfurt am Main\nTime now: 11-06 06:40 \(Fri\)\n\nTime differences from Frankfurt am Main:\n/);
+    assert.match(b, /- Mara \(Seoul\): \+8 hours, now 11-06 14:40 \(Fri\)/);
+    assert.match(b, /- New York: -6 hours, now 11-06 00:40 \(Fri\)/);
+    assert.doesNotMatch(b, /Saved phone time|Default screen viewpoint|Time choices/);
+    assert.match(data.phone2Clock(p, '11-06 23:10'), /- Mara \(Seoul\): \+8 hours, now 11-07 07:10 \(Sat\)/);
+    assert.match(data.phone2Clock(p, '12-31 20:00'), /now 01-01 04:00 \(Fri\)/);
+    // (one zone: the owner's own time all the same; no time: nothing)
+    const one = zonePhone('11-06 06:40'); one.life.weather.cities = one.life.weather.cities.slice(0, 1);
+    assert.equal(data.phone2Clock(one, '11-06 06:40'), "[OWNER'S CLOCK]\nPhone owner: Ren\nLocation: Frankfurt am Main\nTime now: 11-06 06:40 (Fri)");
+    assert.equal(data.phone2Clock(p, ''), '');
+});
+
 test('OWNER\'S CLOCK labels keep cities, people, viewpoint aliases and status conversion', () => {
     const p = zonePhone('11-05 03:38');
     p.where = { people: [{ name: 'Mara Park', aka: ['마라'], city: 'Seoul', tz: 'Asia/Seoul' }] };
