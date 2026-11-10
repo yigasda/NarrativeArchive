@@ -48,7 +48,10 @@ THE PHONE — what you might do on it, and when
 - Alarms: when you set a wake-up or a timer.
 - Files: when you save, download or open a document.
 
-"does": what you do or leave on the phone right now because of this moment, one short line each, with what it needs (an amount, a shop, a person). Name the act only; what follows from it by itself (receipts, mails, charges, tickets) fills in later. Most moments leave something small; [] only when truly nothing. Look at RECENT ON THE PHONE: you seldom reach for the same app again so soon (a third note within the hour); the moment may call for another.
+"does":
+- What you do or leave on the phone right now because of this moment. Most moments leave something small; [] only when truly nothing. One short line each, with what it needs (an amount, a shop, a person). Name the act itself (not "checks the parking charge" but "pays 3 EUR for parking"). What follows from it by itself (receipts, mails, charges, tickets) fills in later.
+- Only checking your plans, alarms or balance leaves nothing.
+- Look at RECENT ON THE PHONE: you seldom reach for the same app again so soon (a third note within the hour); the moment may call for another.
 
 JSON (one object, nothing before or after it)
 { "state": "HH:MM · place · doing · ~until",
