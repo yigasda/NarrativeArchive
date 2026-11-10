@@ -72,6 +72,10 @@ test('폰 2 reply prompt: owner and persona by name, no "user", every listed app
     assert.doesNotMatch(s, /\buser\b/i);
     assert.match(s, /No narration\. No \*actions\*\. No quotation marks\. No status lines or tags\./);
     assert.match(s, /"state": where you are, what you are doing and until when/);
+    assert.match(s, /- LANGUAGES \(sometimes\): the languages you text in, as set on the phone\./);
+    assert.match(s, /"reply" only in LANGUAGES, mixed as you would; with no LANGUAGES, in the language you really text Ren in\./);
+    // (no Korean in the prompt itself: a Korean example pulls the reply into Korean)
+    assert.doesNotMatch(s, /[가-힣]/);
     assert.match(s, /Messages: when the talk makes you text someone else \(not Ren\)/);
     for (const app of PHONE2_APPS) assert.match(s, new RegExp(`\\n- ${app.replace(/[.*+?^${}()|[\]\\&]/g, '\\$&')}: when `), app);
     // each app → where the reflection writes it (core record kind, HEALTH, or the money stage)
