@@ -65,6 +65,34 @@ function rings(members) {
   }
   return outv.join('');
 }
+// the sea: OSM draws a coast as lines with the land on their left; joined, then closed round a frame outside the screen on the water side
+function sea() {
+  const ways = d.elements.filter(e => e.type === 'way' && e.tags && e.tags.natural === 'coastline' && e.geometry).map(e => e.geometry.map(g => [g.lon, g.lat]));
+  if (!ways.length) return '';
+  const same = (a, b) => a[0] === b[0] && a[1] === b[1], chains = [];
+  while (ways.length) { let c = ways.shift(); for (let grow = true; grow;) { grow = false; for (let i = 0; i < ways.length; i++) { const w = ways[i];
+    if (same(c.at(-1), w[0])) { c = c.concat(w.slice(1)); ways.splice(i, 1); grow = true; break; } if (same(w.at(-1), c[0])) { c = w.concat(c.slice(1)); ways.splice(i, 1); grow = true; break; } } } chains.push(c); }
+  const X0 = -400, Y0 = -400, X1 = W + 400, Y1 = H + 400, per = 2 * (X1 - X0 + Y1 - Y0);
+  const tOf = ([x, y]) => { const c = [Math.abs(y - Y0), Math.abs(x - X1), Math.abs(y - Y1), Math.abs(x - X0)], k = c.indexOf(Math.min(...c));
+    return [x - X0, (X1 - X0) + (y - Y0), (X1 - X0) + (Y1 - Y0) + (X1 - x), 2 * (X1 - X0) + (Y1 - Y0) + (Y1 - y)][k]; };
+  const atT = t => { t = ((t % per) + per) % per; const a = X1 - X0, b = Y1 - Y0; return t < a ? [X0 + t, Y0] : t < a + b ? [X1, Y0 + t - a] : t < 2 * a + b ? [X1 - (t - a - b), Y1] : [X0, Y1 - (t - 2 * a - b)]; };
+  const inside = (x, y, ps) => { let c = false; for (let i = 0, j = ps.length - 1; i < ps.length; j = i++) { const [a, b] = ps[i], [u, v] = ps[j]; if ((b > y) !== (v > y) && x < (u - a) * (y - b) / (v - b) + a) c = !c; } return c; };
+  let out = '';
+  for (const c of chains) {
+    const px = c.map(([lo, la]) => P(la, lo)).map(([x, y]) => [Math.max(X0, Math.min(X1, x)), Math.max(Y0, Math.min(Y1, y))]);
+    if (px.length < 2) continue;
+    if (same(c[0], c.at(-1))) { out += ring(px); continue; }   // an island: the ring itself is land, so the water is everything else
+    const tb = tOf(px.at(-1)), ta = tOf(px[0]), corners = [0, X1 - X0, X1 - X0 + Y1 - Y0, 2 * (X1 - X0) + Y1 - Y0];
+    const walk = dir => { const pts = []; let t = tb; const end = dir > 0 ? (ta - tb + per) % per : (tb - ta + per) % per;
+      const cs = corners.map(k => dir > 0 ? (k - tb + per) % per : (tb - k + per) % per).map((dd, i) => [dd, corners[i]]).filter(([dd]) => dd > 0 && dd < end).sort((a, b) => a[0] - b[0]);
+      for (const [, k] of cs) pts.push(atT(k)); return [...px, atT(tb), ...pts, atT(ta)]; };
+    // the water is on the coast's right (land on the left): test a point just right of the middle of the line
+    const m = Math.floor(c.length / 2), [lo0, la0] = c[Math.max(0, m - 1)], [lo1, la1] = c[Math.min(c.length - 1, m)], ddx = lo1 - lo0, ddy = la1 - la0, nn = Math.hypot(ddx, ddy) || 1;
+    const tp = P((la0 + la1) / 2 - ddx / nn * 0.0002, (lo0 + lo1) / 2 + ddy / nn * 0.0002);
+    const A = walk(1), B = walk(-1); out += ring(inside(tp[0], tp[1], A) ? A : B);
+  }
+  return out;
+}
 const area = e => e.type === 'relation' ? rings(e.members || []) : (e.geometry ? ring(pts(e.geometry)) : '');
 const COVER = { farm: '#f0eddc', grass: '#d3ebc4', scrub: '#c9ddb0', vine: '#dfe6bf', orchard: '#cfe5b8', allot: '#d9e8c6', grave: '#cfdcc8', rock: '#dcd9d3', sand: '#f3ead0', wet: '#cfe3dc' };
 const coverOf = t => { const n = t.natural, u = t.landuse;
@@ -120,7 +148,9 @@ const COVER0 = null;
 const pxArea = ps => Math.abs(ps.reduce((s, p, i) => { const q = ps[(i + 1) % ps.length]; return s + p[0] * q[1] - q[0] * p[1]; }, 0)) / 2;
 const centre = ps => { const n = ps.length; return [ps.reduce((s, p) => s + p[0], 0) / n, ps.reduce((s, p) => s + p[1], 0) / n]; };
 const POIS = [], GREENS = [];
-const L = { motor: '', station: '',  shop: '', works: '', railyard: '', school: '', mark: '', markStation: '', shadow: {}, built: '', park: '', forest: '', water: '', plaza: '', bld: '', foot: '', minor: '', mid: '', major: '', rail: '', tram: '' };
+// a place worth a name on the map: not a car park, not a chain shop or supermarket (EDEKA, PENNY…), unless it has its own wiki page
+const okPlace = (t, ic) => ic !== 'parking' && ic !== 'fuel' && !(t.brand && !t.wikipedia) && !((t.shop || ic === 'shop' || ic === 'mall') && !t.wikidata);
+const L = { sea: '', motor: '', station: '',  shop: '', works: '', railyard: '', school: '', mark: '', markStation: '', shadow: {}, built: '', park: '', forest: '', water: '', plaza: '', bld: '', foot: '', minor: '', mid: '', major: '', rail: '', tram: '' };
 const BUILT = /residential|commercial|retail|industrial|railway|construction|brownfield|education|emergency/;
 const GREEN = /grass|village_green|flowerbed|meadow|allotments|cemetery|greenhouse/;
 for (const e of d.elements) {
@@ -131,7 +161,7 @@ for (const e of d.elements) {
     const a = area(e);
     if (PRETTY || GMAP) {
       const ps = pts(e.geometry), px = pxArea(ps);
-      { const ic = pick(t); if (ic && (t.name || t.wikidata)) POIS.push({ ic, at: centre(ps), pr: (t.wikidata ? 2 : 0) + (t.name ? 1 : 0) + Math.min(2, px / 400), name: t.name }); }
+      { const ic = pick(t); if (ic && (t.name || t.wikidata) && okPlace(t, ic)) POIS.push({ ic, at: centre(ps), pr: (t.wikidata ? 2 : 0) + (t.name ? 1 : 0) + Math.min(2, px / 400), name: t.name }); }
       if (t.building === 'train_station' || t.railway === 'station') { L.station += a; continue; }
       if (px < 40 * k * k * 2.2) continue;          // the tiny sheds and kiosks go
       if (GMAP) continue;                              // gmap: no houses at this scale — the blocks are the ground
@@ -144,8 +174,8 @@ for (const e of d.elements) {
     if (FX.includes('D')) { const lv = parseFloat(t['building:levels']) || (t.height ? parseFloat(t.height) / 3 : 0) || 3, off = Math.min(7, 0.5 + lv * 3 * k * 0.3), b = (Math.round(off * 2) / 2).toFixed(1); L.shadow[b] = (L.shadow[b] || '') + a; }
     continue;
   }
-  if (COLLECT && e.geometry) { const ic = pick(t); if (ic && t.name && !t.building) { const ps = pts(e.geometry); POIS.push({ ic, at: centre(ps), pr: (t.wikidata ? 2 : 0) + 1 + Math.min(2, pxArea(ps) / 3000), name: t.name }); } }
-  if (COLLECT && e.type === 'node') { const ic = pick(t); if (ic && (t.name || t.wikidata)) POIS.push({ ic, at: P(e.lat, e.lon), pr: (t.wikidata ? 2.5 : 0) + 1, name: t.name }); }
+  if (COLLECT && e.geometry) { const ic = pick(t); if (ic && t.name && !t.building && okPlace(t, ic)) { const ps = pts(e.geometry); POIS.push({ ic, at: centre(ps), pr: (t.wikidata ? 2 : 0) + 1 + Math.min(2, pxArea(ps) / 3000), name: t.name }); } }
+  if (COLLECT && e.type === 'node') { const ic = pick(t); if (ic && (t.name || t.wikidata) && okPlace(t, ic)) POIS.push({ ic, at: P(e.lat, e.lon), pr: (t.wikidata ? 2.5 : 0) + 1, name: t.name }); }
   // gmap: parks only where they matter — courtyard lawns, flowerbeds and small gardens go
   if (GMAP && e.type === 'way' && e.geometry && (t.leisure && /park|garden/.test(t.leisure) || /^(grass|flowerbed|village_green|greenery)$/.test(t.landuse || '') || t.natural === 'grassland') && pxArea(pts(e.geometry)) < 2500 * k * k) continue;
   if (t.leisure && /park|garden/.test(t.leisure)) { L.park += area(e); if (COLLECT && e.type === 'way' && e.geometry) GREENS.push(pts(e.geometry)); continue; }
@@ -193,7 +223,7 @@ const fill = (dd, col) => dd ? `<path d="${dd}" fill="${col}" fill-rule="evenodd
 const mpx = m => Math.max(0.6, m * k);                       // real width in meters → px, with a floor
 let svg = `<rect width="${W}" height="${H}" fill="${C.land}"/>`
   + fill(L.built, C.built) + fill(L.resi, C.resi) + fill(L.shop, C.shop) + fill(L.works, C.works) + fill(L.railyard, C.railyard) + fill(L.school, C.school)
-  + ['farm', 'grass', 'allot', 'orchard', 'vine', 'grave', 'scrub', 'wet', 'sand', 'rock'].map(k => fill(LC[k], COVER[k])).join('') + fill(L.park, C.park) + fill(L.forest, C.forest) + fill(L.plaza, C.plaza) + fill(L.water, C.water)
+  + ['farm', 'grass', 'allot', 'orchard', 'vine', 'grave', 'scrub', 'wet', 'sand', 'rock'].map(k => fill(LC[k], COVER[k])).join('') + fill(L.park, C.park) + fill(L.forest, C.forest) + fill(L.plaza, C.plaza) + fill(sea(), C.water) + fill(L.water, C.water)
   + terrain()
   + Object.entries(L.shadow).map(([o, dd]) => `<path d="${dd}" fill="${C.shadow}" opacity=".75" transform="translate(${o} ${(o * 1.3).toFixed(1)})"/>`).join('')
   + fill(L.bld, C.bld) + fill(L.mark, C.mark) + fill(L.markStation, C.markStation)
@@ -209,7 +239,7 @@ let svg = `<rect width="${W}" height="${H}" fill="${C.land}"/>`
   + (PRETTY ? prettyTop() : '');
 if (GMAP) svg = `<rect width="${W}" height="${H}" fill="${C.land}"/>`
   + fill(L.built, C.built) + fill(L.resi, C.resi) + fill(L.shop, C.shop) + fill(L.works, C.works) + fill(L.railyard, C.railyard) + fill(L.school, C.school)
-  + ['farm', 'grass', 'allot', 'orchard', 'vine', 'grave', 'scrub', 'wet', 'sand', 'rock'].map(k2 => fill(LC[k2], COVER[k2])).join('') + fill(L.park, C.park) + fill(L.forest, C.forest) + fill(L.plaza, C.plaza) + fill(L.water, C.water)
+  + ['farm', 'grass', 'allot', 'orchard', 'vine', 'grave', 'scrub', 'wet', 'sand', 'rock'].map(k2 => fill(LC[k2], COVER[k2])).join('') + fill(L.park, C.park) + fill(L.forest, C.forest) + fill(L.plaza, C.plaza) + fill(sea(), C.water) + fill(L.water, C.water)
   + fill(L.bld, C.bld) + fill(L.station, '#e2dfda')
   // park paths as faces, not lines: the few long ones as a soft band one shade lighter than the grass, no rim
   + (L.park + L.forest ? `<defs><clipPath id="gp"><path d="${L.park + L.forest}"/></clipPath></defs><g clip-path="url(#gp)">${st(parkPaths(), C.foot, Math.max(3.6, mpx(4)))}</g>` : '')
@@ -311,7 +341,8 @@ function gmapMarks(labels) {
   // quarters first (they own the middle), then places, then streets in what is left
   let quarters = 0;
   for (const [la, lo, n, sz, wt, col] of labels) { if (n !== process.env.MAIN && col !== '#5a84ad' && ++quarters > 3) continue;   // the big name + three quarters at most
-    const [x, y] = P(la, lo), big = n === process.env.MAIN, z = big ? 15 : col === '#5a84ad' ? 11.5 : 12, w = n.length * z * 0.6;
+    let [x, y] = P(la, lo); const big = n === process.env.MAIN, z = big ? 15 : col === '#5a84ad' ? 11.5 : 12, w = n.length * z * 0.6;
+    if (big) x = Math.max(w / 2 + 12, Math.min(W - w / 2 - 12, x));   // the big name never runs off the screen
     const b = [x - w / 2 - 4, y - z - 2, x + w / 2 + 4, y + 4]; if (hit(b)) continue; taken.push(b);
     if ((process.env.GPAL ?? 'ACa') && !big && col !== '#5a84ad') { o += `<text x="${f(x)}" y="${f(y)}" text-anchor="middle" font-family="-apple-system, 'Noto Sans KR', sans-serif" font-size="10" font-weight="600" letter-spacing=".12em" fill="#6f6f6f" stroke="#fff" stroke-width="2.6" paint-order="stroke">${n.toUpperCase()}</text>`; continue; }
     o += txt(x, y, n, z, big ? 700 : 600, col === '#5a84ad' ? (process.env.GPAL === 'B' ? '#3f5a63' : '#4a7fb5') : big ? '#3c4043' : '#5f6368'); }
@@ -354,7 +385,8 @@ function gmapMarks(labels) {
     let ps = s2.ps.filter(([x, y]) => x > -20 && x < W + 20 && y > -20 && y < 490); if (ps.length < 2) continue;
     if (ps[0][0] > ps.at(-1)[0]) ps = ps.slice().reverse();
     const mid = ps[ps.length >> 1], w = s2.name.length * 5.6; const b = [mid[0] - w / 2 - 2, mid[1] - 8, mid[0] + w / 2 + 2, mid[1] + 8];
-    if (hit(b) || mid[0] < 30 || mid[0] > W - 30 || mid[1] < 20 || mid[1] > 480) continue; taken.push(b); sn.add(s2.name);
+    const run = ps.filter(([x, y]) => Math.hypot(x - mid[0], y - mid[1]) < w / 2 + 6).map(([x, y]) => [x - 6, y - 7, x + 6, y + 7]);   // the text follows the street: every bit of it must be clear
+    if (hit(b) || run.some(hit) || mid[0] < 30 || mid[0] > W - 30 || mid[1] < 20 || mid[1] > 480) continue; taken.push(b, ...run); sn.add(s2.name);
     defs += `<path id="sp${id}" d="${line(ps)}"/>`;
     o += `<text font-family="-apple-system, 'Noto Sans KR', sans-serif" font-size="9.5" font-weight="500" fill="#7a7770" stroke="#fff" stroke-width="2.6" paint-order="stroke" dy="3.2"><textPath href="#sp${id++}" startOffset="50%" text-anchor="middle">${s2.name}</textPath></text>`;
     if (sn.size >= 8) break; }
