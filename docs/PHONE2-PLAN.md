@@ -110,7 +110,7 @@
 
 ### 받는 것
 
-메신저 최근 대화, 대화 요약, SITUATIONS(열려 있는 일), 캐릭터 카드, 말투표, PEOPLE AROUND, 그 사람의 현지 시각 · 캘린더 · 직전 상태 줄 · 반영된 최신 기록, WEATHER NOW, RECENT ON THE PHONE, OWNER DOESN'T KNOW. 이야기에서 시작했으면 갈라질 때의 이야기도.
+메신저 최근 대화, 대화 요약, SITUATIONS(열려 있는 일), 캐릭터 카드, 말투표, PEOPLE AROUND, 그 사람의 현지 시각 · 캘린더 · 직전 상태 줄 · 반영된 최신 기록, WEATHER NOW, ALREADY ON THE PHONE TODAY, OWNER DOESN'T KNOW. 이야기에서 시작했으면 갈라질 때의 이야기도.
 
 - 내가 "어제", "그저께", "아까", "오늘 아침", "지난주", "요즘"처럼 지난 때를 말하면, 그 기간 대화를 더 읽어 와요.
 - 먼저 연락할 때는 코드가 고른 이유 한 줄과 "이번엔 사용자가 아무것도 안 보냈다, 사용자 말은 쓰지 않는다"를 넣어요.
@@ -149,6 +149,19 @@
 - 설정 화면은 디자인 세션 몫.
 - 지시문 자체엔 한국어를 넣지 않아요(예시가 한국어면 답이 한국어로 끌려가요). VOICES(번역용 말투표)는 `ko`에만 써요.
 
+### 이미 한 일(ALREADY ON THE PHONE TODAY)
+
+- 실험 1 run3에서 노트가 6번(대부분 "확인만"), 송금이 "2000 EUR 준비 → 1,200 EUR 확인"으로 어긋났어요.
+- 횟수(노트 ×5)는 안 보여 줘요. "많이 쓰는 사람"으로 읽고 더 쓸 수 있어서요. 대신 **오늘 폰에 이미 있는 것**을 앱마다 최근 2개까지 보여 줘요(메신저 말풍선은 안 들어감, 대화가 길어도 블록은 안 커짐). 오늘 전은 앱별 마지막 시각 하나씩.
+  ```
+  [ALREADY ON THE PHONE TODAY]
+  notes: 18:41 "Seoul shopping list: German pharmacy cream (blue container)?" · 10:32 "Duty Free Scarf Options: Loro Piana cashmere stole"
+  bank: 21:01 "2,000 EUR sent to Somang for glasses"
+  before today: diary 11-06 22:10 · voice memo 11-06 23:05
+  ```
+- does 설명: 폰에 남는 것만(메모에 줄 추가 · 문자 보냄 · 송금 · 사진). "열어 보기 · 확인은 아무것도 안 남는다". "앱을 다시 쓰는 건 그 앱에 새로운 것일 때만"(예는 실험 장면과 안 겹치게: 이미 있는 볼 영화, 이미 낸 고지서). Mail 줄은 "메일을 쓸 때"만.
+- 언어 줄: "한 언어만, 또는 주언어를 섞어서; 아주 드물게 알지만 잘 안 쓰는 언어".
+
 ### 앱 목록(THE PHONE)
 
 분류 없이 쭉 보여 줘요. 앱마다 **이 대화 중에 사람이 왜, 언제 그 앱을 열게 되는지**를 붙여요. 그래야 대화에 안 나온 것도 골라요.
@@ -174,17 +187,17 @@ THE PHONE — what they might do on it, and when
 - Alarms: when they set a wake-up or a timer.
 - Files: when they save, download or open a document.
 
-"does": what they do or leave on the phone right now because of this moment, one short line each. Name the act only; what follows from it by itself (receipts, confirmation mails, charges, tickets) is filled in later. Most moments leave something small; [] only when truly nothing. People don't repeat the same thing too soon; see RECENT ON THE PHONE.
+"does": what they do or leave on the phone right now because of this moment, one short line each. Name the act only; what follows from it by itself (receipts, confirmation mails, charges, tickets) is filled in later. Most moments leave something small; [] only when truly nothing. People don't repeat the same thing too soon; see ALREADY ON THE PHONE TODAY.
 ```
 
 - 메신저(페르소나 방)는 목록에 없어요. 그건 `reply`가 맡아요.
 - 이 목록은 답장 지시문에만 있어요. **반영 지시문은 안 고쳐요.** 대신 테스트 하나가 "반영이 쓸 수 있는 기록 종류"와 이 목록의 앱이 빠짐없이 맞는지 확인해요(앱이 늘었는데 한쪽만 고치면 실패).
 
-### 너무 자주 고르지 않게: RECENT ON THE PHONE
+### 너무 자주 고르지 않게: ALREADY ON THE PHONE TODAY
 
 - 숫자 상한(일기 하루 한 번 등)을 박지 않아요. 코드가 앱별로 마지막에 쓴 때를 짧게 주고, 모델이 스스로 정해요.
   ```
-  [RECENT ON THE PHONE]
+  [ALREADY ON THE PHONE TODAY]
   diary 19:20 (40 min ago) · voice memo yesterday 23:10 · search 18:55 · photo 12:30 · delivery 19:22
   ```
 
@@ -293,7 +306,7 @@ THE PHONE — what they might do on it, and when
 4. **전환 + 코드 시계:** 설정 앱 스위치, 어느 폰인지 표시, 폰 고르는 화면. 현실 시간 시계(날짜는 이야기 · 시각은 현실), 메신저의 내 시각 표시, 진짜 날씨, 시세 · 정기 결제 · 택배 · 알람이 현실 시간으로 도는지.
 5. **이야기에서 시작:** 복사(SITUATIONS 포함), 페르소나 연락처 표시, 다시 시작 시 보관, 채팅 분기 때 따라가기.
 6. **메신저 보내기 · 저장 + 반영 입력 모양:** 페르소나로 보내고 메신저에만 저장. 이 단계부터 "이 대화를 반영이 어떤 NEW MESSAGES · MESSENGER 블록으로 받는지"를 같이 만들고, 페르소나 연락처로 가는 문자 버리기와 함께 시험해요.
-7. **답장 + 지금 상태:** 새 지시문(state → reply → ko → does), THE PHONE 목록, RECENT ON THE PHONE, WEATHER NOW, "지금 상태" 함수, 일의 줄과 세계 · 회차 표시, `does` → 바로 반영.
+7. **답장 + 지금 상태:** 새 지시문(state → reply → ko → does), THE PHONE 목록, ALREADY ON THE PHONE TODAY, WEATHER NOW, "지금 상태" 함수, 일의 줄과 세계 · 회차 표시, `does` → 바로 반영.
 8. **늦은 답 · 먼저 연락하기:** 짧은 지연은 기다림, 긴 지연은 다시 열 때 새로 만들기. 먼저 연락하기 이유 · 하루 상한 · 설정.
 9. **대화 밖 생활 · 통화 · 요약:** 대화 밖 생활 반영(정할 것 1번대로), 밀린 구간 나누기, 메신저 통화 기록과 짧은 요약, 하루 · 한 주 요약, 되돌리기, 요청 수 표시.
 10. **처음부터 시작:** 카드 + 페르소나만으로 폰 만들기, 모르는 사이로 시작하는 메신저.
