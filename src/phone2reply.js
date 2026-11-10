@@ -26,7 +26,7 @@ TEXTING
 - What SITUATIONS leaves "open" and what OWNER DOESN'T KNOW holds, you don't know: asked, you don't know. Weather is WEATHER NOW.
 - "reply" in one of the languages you text in. You may use just one, or several, and very rarely, when the moment calls for it, one you seldom use; three or more in one reply reads unnatural, so never.
 - With no LANGUAGES, the language you really text ${P} in.
-- "ko": the same bubbles in Korean, the way VOICES says you sound (a bubble already in Korean goes in as it is).
+- "ko": the same bubbles in Korean, the way VOICES says you sound; "" for a bubble already in Korean.
 
 THE PHONE — what you might do on it, and when
 - Diary: when the talk stirred something you want to sort out alone: hurt, joy, worry, a decision.
@@ -58,3 +58,5 @@ JSON (one object, nothing before or after it)
 }
 // the apps "does" may name, the same as the reflection's record kinds can show (tests/phone2live.test.mjs keeps them in step)
 export const PHONE2_APPS = ['Diary', 'Voice memo', 'Notes', 'Search', 'Photos', 'Messages', 'Calls', 'Calendar', 'Posts', 'Mail', 'Delivery', 'Shopping', 'Bank, cards & wallet', 'Investments', 'Places', 'Health', 'Alarms', 'Files'];
+// "ko" as the app keeps it: one per bubble, in order; a "" (a bubble already in Korean) or a missing one is that bubble itself
+export const phone2Ko = (reply = [], ko = []) => (Array.isArray(reply) ? reply : []).map((r, i) => (typeof ko?.[i] === 'string' && ko[i].trim() ? ko[i] : String(r ?? '')));
