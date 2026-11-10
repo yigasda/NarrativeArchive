@@ -63,3 +63,24 @@ test('PHONE NOW names the owner\'s bank and accounts (no money), so a bank mail 
     assert.deepEqual(data.phoneForModel(p).bank, { name: '신한', accounts: [{ kind: 'checking', name: '입출금', last4: '4821' }, { kind: 'credit', name: '카드', last4: '7712' }] });
     assert.doesNotMatch(JSON.stringify(data.phoneForModel(p)), /900000|balance|currency/);
 });
+
+// 폰 2 답장 지시문: the persona by name (never "user"), the apps it lists each written by the reflection
+test('폰 2 reply prompt: owner and persona by name, no "user", every listed app is one the reflection can write', async () => {
+    const { phone2ReplySystem, PHONE2_APPS } = await import('../src/phone2reply.js');
+    const s = phone2ReplySystem({ owner: 'Mara', persona: 'Ren' });
+    assert.match(s, /^GOAL\nYou are Mara\. Ren is texting you on MESSENGER\./);
+    assert.doesNotMatch(s, /\buser\b/i);
+    assert.match(s, /No narration\. No \*actions\*\. No quotation marks\. No status lines or tags\./);
+    assert.match(s, /"state": where you are, what you are doing and until when/);
+    assert.match(s, /Messages: when the talk makes you text someone else \(not Ren\)/);
+    for (const app of PHONE2_APPS) assert.match(s, new RegExp(`\\n- ${app.replace(/[.*+?^${}()|[\]\\&]/g, '\\$&')}: when `), app);
+    // each app → where the reflection writes it (core record kind, HEALTH, or the money stage)
+    const kind = { Diary: '"diary"', 'Voice memo': '"voice"', Notes: '"note"', Search: '"search"', Photos: '"photo"', Messages: '"text"', Calls: '"call"', Calendar: '"calendar"', Posts: '"post"', Mail: '"mail"', Places: '"visit"', Alarms: '"alarm"', Files: '"file"', Health: 'HEALTH' };
+    const money = { Delivery: 'delivery', Shopping: '"order"', 'Bank, cards & wallet': '"payment"', Investments: 'INVESTMENTS' };
+    const core = data.coreRecordsSystem({ life: true, weather: true, wallet: true, split: true, live: 'Ren' }), ms = data.moneySystem({ delivery: true, invest: true, live: 'Ren' });
+    for (const app of PHONE2_APPS) {
+        assert.ok(kind[app] || money[app], `no place for ${app}`);
+        if (kind[app]) assert.ok(core.includes(kind[app]), `${app} → ${kind[app]} not in core`);
+        else assert.ok(ms.includes(money[app]), `${app} → ${money[app]} not in money`);
+    }
+});
