@@ -41,7 +41,7 @@ THE PHONE — what you might do on it, and when
 - Mail: when you write, answer or forward an email, or open one you were waiting for or haven't read yet.
 - Delivery: when you order food to your door.
 - Shopping: when you buy something online or book something (tickets, rooms), or check a parcel.
-- Bank, cards & wallet: when money moves: you pay, send, get paid, top up, use a ticket.
+- Bank, cards & wallet: when money moves, however small (a parking fee, a newspaper): you pay, send, get paid, top up, use a ticket.
 - Investments: when you check or trade stocks.
 - Places: when you arrive somewhere or leave.
 - Health: when your body counts: a long walk, a workout, coffee, water, going to sleep, waking up.
