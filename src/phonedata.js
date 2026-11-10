@@ -493,6 +493,7 @@ KEEPING IN STEP
 - What is already on the phone: its id as "already". Keep the facts it holds, fill its gaps, change what the story changes.
 - A booking or order that changes (a stay extended, a trip moved, a delivery late): its own record too, in the same message, with what changed, besides any payment for it.
 - Repeated mentions alone do not create another record. Separate actions or changes concerning the same item remain separate records.
+- A name EVENTS already gives (a shop, a dish, a hotel, an airline) is written the same way.
 - Details the story leaves out are made up to fit and listed in "made". A value that went up or down with no figure gets a new estimate.
 - One story beat is one trail: rising shares change their value; blocked money is not a withdrawal; an order talked about again is not paid again.
 - A message marked (changed): its records as the edited text now has them.
@@ -548,7 +549,7 @@ JSON (one object, nothing before or after it)
     "status",
     "made": [the fields made up],
 
-    payment: "amount": the money moved, minus for money out; "date": when it moved; "account": last 4 digits${invest ? ` or "broker:EUR"` : ''}, "kind": "card" | "mobile" | "transfer" | "deposit" | "cash" (taken out of the account as cash): abroad is a card or mobile payment in its "currency"; a refund is plus, the way it was paid; savings and money sent or received are transfers; "who", "ko", "memo", "fee": on top, on money sent, "rate": for a currency other than the account's, "for": a name of the record it pays, or ""
+    payment: "amount": the money moved, minus for money out; "date": when it moved; "account": last 4 digits${invest ? ` or "broker:EUR"` : ''}, "kind": "card" | "mobile" | "transfer" | "deposit" | "cash" (taken out of the account as cash): abroad is a card or mobile payment in its "currency"; a refund is plus, the way it was paid; savings and money sent or received are transfers; "who", "ko", "memo", "fee": on top, on money sent, "rate": always when "currency" is not the account's: the account's money for one unit of it (1 EUR = 1480 KRW → 1480), "for": a name of the record it pays, or ""
     regular: "amount": each time, minus for money out; "date": its first day; "frequency": "monthly" | "weekly" | "yearly"; "day": the day of the month or the weekday; "account": last 4 digits; "who": who pays it or is paid, "ko"; "for": the debt it pays, or ""; "status": "active" | "stopped"
     order: "amount": one item's price; "date", "time": when ordered, made up to fit when not told; "shop", "option", "qty", "status": "ordered" | "shipped" | "on the way" | "delivered" | "cancelled" | "returning" | "returned" | "refunded", "eta": "MM-DD", "gift": who it is for, "sender": who sent it to the owner, "payer": "owner" | "someone else" | "on delivery"
     ticket: no "amount" (its price is the payment); "date": the day of travel, the event or check-in; "until": "MM-DD", the last day of a stay or membership (a stay extended moves it); "status": "booked" | "used" | "cancelled"; "kind": "flight" | "train" | "hotel" | "event" | "membership" | "other", "by": airline, line, hotel, venue or club, "from", "to", "seat", "gate", "no"

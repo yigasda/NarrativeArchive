@@ -47,3 +47,11 @@ test('폰 2 live: core · money prompts read the MESSENGER chat and its action l
     assert.doesNotMatch(ms, /MESSENGER/);
     assert.match(ml, /- MESSAGES: the owner's MESSENGER chat with Ren this round, numbered, under status lines\. A line "<owner's name> \[App\]: …" is something the owner did on the phone right then; money the talk only promises has not moved\. Messages marked \(changed\) were edited\./);
 });
+
+test('money: a payment in another currency always carries its rate; names EVENTS gave are kept', () => {
+    for (const live of ['', 'Ren']) {
+        const m = data.moneySystem({ delivery: true, invest: true, live });
+        assert.match(m, /"rate": always when "currency" is not the account's: the account's money for one unit of it \(1 EUR = 1480 KRW → 1480\)/);
+        assert.match(m, /- A name EVENTS already gives \(a shop, a dish, a hotel, an airline\) is written the same way\./);
+    }
+});

@@ -414,3 +414,9 @@
 - 있으면 core YOU GET의 NEW MESSAGES 줄, core STEP 3의 1번, money YOU GET의 MESSAGES 줄만 바뀌어요. 내용은 `docs/PHONE2-PLAN.md` "반영(폰 2)".
 - 이유: 폰 1의 "A text exchange the messages already show: only its last 4 messages."가 폰 2에선 메신저 대화를 기본 문자 앱에 다시 쓰게 해요. 행동 한 줄이 한 기록으로만 읽히지 않게 예 셋을 넣었어요.
 - 토큰(대략): core 3,666 → 3,788, money 3,095 → 3,137(폰 2일 때만).
+
+## money: 환율 · 이름 맞추기 (폰 2 단계 0 실험에서)
+
+- 실험 A에서 EUR 배달 결제에 "rate"가 빠져서, 코드가 결제를 버리고(다른 날 환율은 안 씀) 배달이 "현금"으로 남았어요. "rate"를 "통화가 다르면 늘, 계좌 통화로 1단위 값(1 EUR = 1480 KRW → 1480)"으로 구체적으로 바꿨어요.
+- 실험 A · B에서 배달 가게 이름이 core 메일과 money 배달에서 달랐어요. KEEPING IN STEP에 "EVENTS에 이미 나온 이름(가게 · 음식 · 호텔 · 항공사)은 같게 쓴다"를 넣었어요.
+- 폰 1 · 폰 2 모두 해당. 토큰 약 +35.
