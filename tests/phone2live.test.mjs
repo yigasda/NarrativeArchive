@@ -55,3 +55,11 @@ test('money: a payment in another currency always carries its rate; names EVENTS
         assert.match(m, /- A name EVENTS already gives \(a shop, a dish, a hotel, an airline\) is written the same way\./);
     }
 });
+
+test('PHONE NOW names the owner\'s bank and accounts (no money), so a bank mail names the right bank', () => {
+    const base = { owner: 'Mara', now: '11-11 07:00', contacts: [], threads: [], calls: [], photos: [], notes: [], searches: [], events: [], posts: [], mails: [], diary: [] };
+    assert.equal(data.phoneForModel(base).bank, undefined);
+    const p = { ...base, money: { bank: { name: '신한', accounts: [{ id: 'a1', kind: 'checking', name: '입출금', last4: '4821', currency: 'KRW', balance: 900000 }, { id: 'a2', kind: 'credit', name: '카드', last4: '7712', currency: 'KRW' }] } } };
+    assert.deepEqual(data.phoneForModel(p).bank, { name: '신한', accounts: [{ kind: 'checking', name: '입출금', last4: '4821' }, { kind: 'credit', name: '카드', last4: '7712' }] });
+    assert.doesNotMatch(JSON.stringify(data.phoneForModel(p)), /900000|balance|currency/);
+});

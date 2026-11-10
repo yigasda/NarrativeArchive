@@ -1383,7 +1383,7 @@ function phoneRequest(m, owner, p = null, lore = '', only = null, profile = '', 
 // PHONE NOW for the model: the newest of each list with its event tags; nothing 재구성, no ids
 const real = xs => (xs || []).filter(x => !isGuess(x));
 const ev = (x, o) => (x.ev ? { ...o, ev: x.ev } : o);
-const phoneForModel = p => ({
+export const phoneForModel = p => ({
     country: p.country, now: p.now,
     contacts: p.contacts.map(({ name, saved }) => ({ name, saved })),
     threads: p.threads.map(t => ({ with: t.with, ...(t.group ? { group: true, members: t.members || [] } : {}), messages: real(t.messages).slice(-6).map(({ from, text, time }) => ({ from, text, time })) })),
@@ -1400,6 +1400,8 @@ const phoneForModel = p => ({
     voice: real(p.voice || []).slice(-3).map(x => ev(x, { title: x.title, time: x.time })),
     // (the newest visits with their ids: the same visit told again is one of these, "already")
     visits: real(p.visits || []).slice(-4).map(x => ev(x, { id: x.id, place: x.place, city: x.city, time: x.time })),
+    // (the owner's bank and its accounts by name only: a bank mail or alert names the right bank; the money itself is the money stage's)
+    bank: p.money?.bank?.accounts?.length ? { name: p.money.bank.name, accounts: p.money.bank.accounts.map(a => ({ kind: a.kind, name: a.name, last4: a.last4 })) } : undefined,
 });
 
 // 폰 만들기 전 위치 정보: for a phone not made yet, where everyone is (asked of the people the chat already names), the
