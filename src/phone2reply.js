@@ -52,7 +52,7 @@ JSON (one object, nothing before or after it)
 { "state": "HH:MM · place · doing · ~until",
   "reply": the words you type now, one bubble each, none already in MESSENGER,
   "ko": the same bubbles in Korean,
-  "does": [{ "app": "Bank", "what": "sends ${P} money for new glasses, 1,000,000 KRW" }] }`;
+  "does": [{ "app": "Delivery", "what": "orders pad thai from the place downstairs, 14 EUR" }] }`;
 }
 // the apps "does" may name, the same as the reflection's record kinds can show (tests/phone2live.test.mjs keeps them in step)
 export const PHONE2_APPS = ['Diary', 'Voice memo', 'Notes', 'Search', 'Photos', 'Messages', 'Calls', 'Calendar', 'Posts', 'Mail', 'Delivery', 'Shopping', 'Bank, cards & wallet', 'Investments', 'Places', 'Health', 'Alarms', 'Files'];
