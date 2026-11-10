@@ -95,7 +95,7 @@ const PHONE_ITEMS = `  "contacts": [{ "name": name in the story, "saved": how th
   "profile": { "handle": the owner's SNS name, "bio", "ko", "followers": a number, "following": a number },
   "posts": [{ "text", "ko", "photo": what the posted photo shows or "", "pko": its Korean, "time", "likes": a number,
               "comments": [{ "from": name, "text", "ko" }] }],
-  "mails": [{ "from": sender, "subject", "ks": Korean subject, "text", "ko", "time", "unread": true or false }],
+  "mails": [{ "from": sender, "to": only on a mail the owner sent ("from" is then the owner), "subject" ("Re: …" for an answer), "ks": Korean subject, "text", "ko", "time", "unread": true or false }],
   "diary": [{ "date": "MM-DD", "title", "kt": Korean title, "text", "ko" }],
   "visits": [{ "place": a place the owner really went to, as the story writes it (a room, a shop, a house; a city alone when the story names nothing closer there, never the city they live in alone), "city": the city it is in, or "", "home": true when it is the owner's own home, "with": [the people there with them], "time", "already": the id of that same visit in PHONE NOW, else "" }],
   "voice": [{ "title", "kt", "text", "ko", "time", "sec", "place" }] only when the archive or chat shows the owner recorded one`;
@@ -456,7 +456,7 @@ search: "q", "time", "tab": still open, "mark": bookmarked
 calendar: "title", "date", "time": "HH:MM", "was": its old date, "cancelled"
 post: "text", "photo", "time", "likes", "comments": [{ "from", "text" }]
 profile: "handle", "bio", "followers", "following"
-mail: "sender", "subject", "text", "time", "unread"
+mail: "sender", "to": only on a mail the owner sends ("sender" is then the owner), "subject" ("Re: …" for an answer), "text", "time", "unread"
 diary: "date", "title", "text"
 visit: "place": where they really went, as the story writes it (never just their own city), "city", "home", "time", "already": that visit's id in PHONE NOW
 voice: "title", "text", "time", "sec", "place"${life ? `
@@ -613,7 +613,7 @@ export function parsePhone(out, owner = '') {
         profile: raw.profile && typeof raw.profile === 'object' ? { handle: line(raw.profile.handle, 40), bio: line(raw.profile.bio, 200), ko: ko(raw.profile.ko), followers: countOf(raw.profile.followers), following: countOf(raw.profile.following) } : null,
         posts: arr(raw.posts).map(x => tag({ text: str(x?.text, 800), ko: str(x?.ko, 800), photo: line(x?.photo, 200), pko: ko(x?.pko), time: when(x?.time), likes: Math.min(99999, countOf(x?.likes)),
             comments: arr(x?.comments).map(c => ({ from: line(c?.from, 40), text: line(c?.text, 300), ko: ko(c?.ko) })).filter(c => c.from && c.text).slice(0, CAP.comments) }, x)).filter(x => x.text || x.photo),
-        mails: arr(raw.mails).map(x => tag({ from: line(x?.from, 60), subject: line(x?.subject, 120), ks: line(x?.ks, 120), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), unread: truthy(x?.unread) }, x)).filter(x => x.from && (x.subject || x.text)),
+        mails: arr(raw.mails).map(x => tag({ from: line(x?.from, 60), ...(line(x?.to, 60) ? { to: line(x.to, 60) } : {}), subject: line(x?.subject, 120), ks: line(x?.ks, 120), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), unread: truthy(x?.unread) }, x)).filter(x => x.from && (x.subject || x.text)),
         diary: arr(raw.diary).map(x => tag({ date: when(x?.date).slice(0, 5), title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000) }, x)).filter(x => x.date && x.text),
         visits: arr(raw.visits).map(x => tag({ place: line(x?.place, 60), city: line(x?.city, 60), ...(line(x?.already, 40) ? { already: line(x.already, 40) } : {}), ...(x?.home === true ? { home: true } : {}), with: [...new Set(oneOrMany(x?.with).map(n => line(n, 40)).filter(n => n && !mine(n)))].slice(0, 6), time: when(x?.time), src: 'story' }, x)).filter(x => x.place).slice(-CAP.visits),
         voice: arr(raw.voice).map(x => tag({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), sec: secOf(x?.sec), place: line(x?.place, 60), src: 'story' }, x)).filter(x => x.text),
@@ -1394,7 +1394,7 @@ export const phoneForModel = p => ({
     events: real(p.events).slice(-4).map(x => ev(x, { title: x.title, date: x.date, time: x.time })),
     profile: p.profile ? { handle: p.profile.handle, bio: p.profile.bio } : undefined,
     posts: real(p.posts).slice(-3).map(x => ev(x, { text: x.text.slice(0, 200), photo: x.photo, time: x.time })),
-    mails: real(p.mails).slice(-3).map(x => ev(x, { from: x.from, subject: x.subject, time: x.time })),
+    mails: real(p.mails).slice(-3).map(x => ev(x, { from: x.from, ...(x.to ? { to: x.to } : {}), subject: x.subject, time: x.time })),
     diary: real(p.diary).slice(-2).map(x => ev(x, { date: x.date, title: x.title, text: x.text.slice(0, 300) })),
     // so a memo already there isn't recorded again
     voice: real(p.voice || []).slice(-3).map(x => ev(x, { title: x.title, time: x.time })),
@@ -3595,6 +3595,16 @@ export const hasKo = p => [...p.threads.flatMap(t => t.messages), ...p.photos, .
 // what on the phone is written in another language and has no Korean yet: [{ x: the item, f: its field, k: the Korean's field }].
 // The reflection writes none (3.182.4~): the app asks the translator after it (phonetr.js), or when 한국어 is pressed
 const KO_HANGUL = /[\uac00-\ud7a3]/, KO_WORDS = /\p{L}{2,}/u;
+// the mail an answer answers ("Re: Booking LH 712" → the newest earlier "Booking LH 712"), for the mail app's thread: by
+// the subject only, a word for word match after the "Re:"/"AW:"/"답장:" heads; none: null. Nothing is stored
+const RE_HEAD = /^\s*(?:(?:re|aw|fw|fwd|wg|답장|회신|전달)\s*[:：]\s*)+/i;
+export function mailAnswered(p, x) {
+    const list = p?.mails || [], k = list.indexOf(x), subj = String(x?.subject || '');
+    if (!RE_HEAD.test(subj)) return null;
+    const base = subj.replace(RE_HEAD, '').trim().toLowerCase();
+    for (let i = (k < 0 ? list.length : k) - 1; i >= 0; i--) if (list[i] !== x && String(list[i]?.subject || '').replace(RE_HEAD, '').trim().toLowerCase() === base) return list[i];
+    return null;
+}
 export function koGaps(p, { all = false } = {}) {
     // (each with what the translator needs for its voice: the app, who says it and to whom; "self" for the owner's own;
     // all: those with their Korean too, for translating an app again)
@@ -3619,7 +3629,7 @@ export function koGaps(p, { all = false } = {}) {
     }
     for (const x of p?.events || []) add(x, 'title', 'ko', 'calendar');
     for (const x of p?.posts || []) { add(x, 'text', 'ko', 'post', own, 'followers'); add(x, 'photo', 'pko', 'post photo'); for (const c of x.comments || []) add(c, 'text', 'ko', 'comment', c.from || 'someone', own); }
-    for (const x of p?.mails || []) { add(x, 'subject', 'ks', 'mail subject', x.from || x.sender || 'sender', own); add(x, 'text', 'ko', 'mail', x.from || x.sender || 'sender', own); }
+    for (const x of p?.mails || []) { const by = x.to ? own : x.from || x.sender || 'sender', to = x.to || own; add(x, 'subject', 'ks', 'mail subject', by, to); add(x, 'text', 'ko', 'mail', by, to); }
     if (p?.profile) add(p.profile, 'bio', 'ko', 'profile bio', own, 'followers');
     for (const x of p?.life?.clock?.alarms || []) add(x, 'label', 'ko', 'alarm');
     for (const x of p?.life?.clock?.timers || []) add(x, 'label', 'ko', 'timer');

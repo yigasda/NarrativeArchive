@@ -92,3 +92,22 @@ test('폰 2 reply prompt: owner and persona by name, no "user", every listed app
         else assert.ok(ms.includes(money[app]), `${app} → ${money[app]} not in money`);
     }
 });
+
+test('mail: a mail the owner sends keeps "to", its Korean is the owner\'s voice to them, an answer finds its mail by subject', () => {
+    const p = data.parsePhone(JSON.stringify({ owner: 'Oscar', now: '11-07 10:00', mails: [
+        { from: 'Lufthansa', subject: 'Booking LH 712', text: 'Your flight is booked.', time: '11-06 14:10' },
+        { from: 'Oscar', to: 'Lufthansa', subject: 'Re: Booking LH 712', text: 'Please add a window seat.', time: '11-07 09:00' },
+        { from: 'Bank', subject: 'Statement', text: 'Your statement is ready.', time: '11-07 09:30' },
+    ] }), 'Oscar');
+    assert.equal(p.mails[1].to, 'Lufthansa');
+    assert.equal(p.mails[0].to, undefined);
+    assert.equal(data.mailAnswered(p, p.mails[1]), p.mails[0]);
+    assert.equal(data.mailAnswered(p, p.mails[0]), null);
+    assert.equal(data.mailAnswered(p, p.mails[2]), null);
+    const gaps = data.koGaps({ ...p, owner: 'Oscar' }).filter(g => g.app === 'mail' || g.app === 'mail subject');
+    const sent = gaps.find(g => g.f === 'text' && g.x.text === 'Please add a window seat.'), got = gaps.find(g => g.f === 'text' && g.x.text === 'Your flight is booked.');
+    assert.deepEqual([sent?.who, sent?.to], ['Oscar', 'Lufthansa']);
+    assert.deepEqual([got?.who, got?.to], ['Lufthansa', 'Oscar']);
+    assert.match(JSON.stringify(data.phoneForModel(p).mails), /"to":"Lufthansa"/);
+    assert.match(data.coreRecordsSystem({ life: true, wallet: true, split: true }), /mail: "sender", "to": only on a mail the owner sends \("sender" is then the owner\), "subject" \("Re: …" for an answer\)/);
+});

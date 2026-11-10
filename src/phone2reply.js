@@ -36,7 +36,7 @@ THE PHONE — what you might do on it, and when
 - Calls: when you would rather ring someone than text.
 - Calendar: when the talk fixes a plan, appointment or reservation.
 - Posts: when you would share or react on social media, only if you post.
-- Mail: when you write an email.
+- Mail: when you write an email or answer one.
 - Delivery: when you order food to your door.
 - Shopping: when you buy something online or book something (tickets, rooms), or check a parcel.
 - Bank, cards & wallet: when money moves: you pay, send, get paid, top up, use a ticket.
