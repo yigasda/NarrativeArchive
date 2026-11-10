@@ -27,7 +27,7 @@ const map = { './extract.js': cleanMessageURL,
     './translate.js': encoded(`export const glossaryEntries=()=>[];export const glossaryPeople=()=>globalThis.__glossaryPeople||[];`), './world.js': encoded(`export const worldText=()=>'';`),
 };
 const src = await readFile(new URL('../src/phonedata.js', import.meta.url), 'utf8');
-const data = await import(encoded(src.replace(/from '([^']+)'/g, (all, k) => `from '${map[k] || k}'`)));
+const data = (await import('./phone2poison.mjs')).maybePoison(await import(encoded(src.replace(/from '([^']+)'/g, (all, k) => `from '${map[k] || k}'`))));
 // localStorage for the 복구 journal
 const store = new Map();
 globalThis.localStorage = { getItem: k => store.get(k) ?? null, setItem: (k, v) => store.set(k, v), removeItem: k => store.delete(k) };

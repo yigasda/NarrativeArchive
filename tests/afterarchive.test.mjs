@@ -27,7 +27,9 @@ const real = ['phonesync.js', 'phoneparse.js', 'phoneclock.js', 'phonemapcity.js
 const map = { './extract.js': cleanMessageURL, ...stub, ...Object.fromEntries(real.map(f => [`./${f}`, href(f)])) };
 const rewrite = async f => (await readFile(new URL(f, SRC), 'utf8')).replace(/from '([^']+)'/g, (all, k) => `from '${map[k] || k}'`);
 map['./phonedata.js'] = encoded(await rewrite('phonedata.js'));
-const data = await import(map['./phonedata.js']);
+const data = (await import('./phone2poison.mjs')).maybePoison(await import(map['./phonedata.js']));
+// (a meta as 폰 1 sees it: the 폰 2 trap run (PHONE2_POISON) puts m.live beside it, which these checks leave out)
+const no2 = m => { const { live: _, ...rest } = m; return rest; };
 const life = await import(encoded(await rewrite('phonelife.js')));
 const invest = await import(encoded(await rewrite('investdata.js')));
 const fin = await import(href('finance.js'));
@@ -374,7 +376,7 @@ Time differences from Frankfurt am Main:
 - New York: -6 hours (DST: -5 hours before 11-01 07:00)
 - Mara Park (Seoul): +8 hours
 The newest status line, 11-05 12:50 in Seoul, is 11-05 04:50 here.`);
-    assert.deepEqual({ p, m, st }, before);
+    assert.deepEqual({ p, m: no2(m), st }, before);
     for (const status of [null, { ...st, known: false }, { ...st, at: st.raw }]) {
         assert.doesNotMatch(data.clockBlock(p, p.now, m, status), /The newest status line/);
     }
@@ -400,7 +402,7 @@ test('OWNER\'S CLOCK combines a city with its people only in the output, keeping
     assert.deepEqual(data.zonesOf(p, p.now, m), offsets);
     assert.deepEqual(await data.reflectionClocks(p, rows, m), candidates);
     assert.ok(candidates.choices.some(x => x.names.includes('소망') && x.ownerTime === '11-05 04:38'));
-    assert.deepEqual({ p, m }, before);
+    assert.deepEqual({ p, m: no2(m) }, before);
     assert.equal(data.sceneZone(p, 'Seoul', m).tz, 'Asia/Seoul');
 });
 
