@@ -165,6 +165,8 @@
 .ax_msub .ax_ko { font-size: 14.5px; --axfs: 14.5px; font-weight: 500}
 .ax_mbody { padding: 10px 22px; font-size: 15.5px; --axfs: 15.5px; line-height: 1.6; white-space: pre-wrap; user-select: text; -webkit-user-select: text}
 .ax_mko { margin: 6px 16px 0; padding: 12px 14px; border-radius: 18px; --axr: 18px; background: rgba(255, 255, 255, 0.7); font-size: 14px; --axfs: 14px; line-height: 1.55; color: #5c6470; --axfg: #5c6470; white-space: pre-wrap}
+.ax .ax_mto { color: #8a929d; --axfg: #8a929d; font-weight: 500; } .ax .ax_ntb.off { opacity: 0.35; }
+.ax_mq { margin: 4px 22px 0; padding: 2px 0 2px 12px; border-left: 3px solid #d7dce3; color: #6b7380; font-size: 13.5px; line-height: 1.5; white-space: pre-wrap; } dialog.popup:has(.na_popup) .na_popup .ax .ax_mq small { display: block; margin-bottom: 4px; font-size: 12px; color: inherit; }
 /* 설정 */
 .ax_me { padding: 14px 16px; }
 .ax_me .ax_tx b { font-size: 18px; }

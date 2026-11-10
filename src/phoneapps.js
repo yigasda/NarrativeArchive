@@ -6,7 +6,7 @@ import { investmentDate } from './investdata.js';
 import { profileChoices, phoneDataInfo } from './phoneprofile.js';
 import { faceHtml, nameKey, nameRe, peopleData, peopleList, personLine } from './people.js';
 import { autopic, autopicPeople, drafting, drawing, looksOf, writing } from './phoneai.js';
-import { bigClock, byStory, clockOf, COUNTRIES, fmtDate, fmtTime, fullDate, gapDays, hasKo, koOn, lastTime, listTime, localeOf, loreOff, MOODS, pad, parts, phoneLore, placesOf, REMAKE, rowDay, savedName, dateOrderOf, placeInfo, screenHolderLabel, screenHolderChoices } from './phonedata.js';
+import { bigClock, byStory, mailAnswered, clockOf, COUNTRIES, fmtDate, fmtTime, fullDate, gapDays, hasKo, koOn, lastTime, listTime, localeOf, loreOff, MOODS, pad, parts, phoneLore, placesOf, REMAKE, rowDay, savedName, dateOrderOf, placeInfo, screenHolderLabel, screenHolderChoices } from './phonedata.js';
 import { threadNew } from './phonehome.js';
 import { screenView } from './phonescreen.js';
 import { BUSY, pinLayer, pinSpots, pinSvg, STAY, stripSvg, townKinds, townPlace, townSvg } from './phonemapart.js';
@@ -557,35 +557,44 @@ export function calOne(p, now, k, m) {
       ${axInd()}`;
 }
 
-// 메일
-export function mailScreen(p, now) {
-    const ms = (p.mails || []).map((x, k) => [x, k]).reverse(), unread = ms.filter(([x]) => x.unread).length;
+// 메일 (docs/mockups/phone-mail thread, A's lists + D's reply): 받은편지함 · 보낸편지함 as the call app's bottom tabs; a mail
+// the owner sent has "to" (its from is the owner) and shows "받는 사람: {to}". A reply (phonedata.js mailAnswered) shows the mail it
+// answers as a grey quote; the mail answered lights the reply arrow, which opens the reply
+const mailSent = x => !!String(x?.to || '').trim();
+const mailWho = x => (mailSent(x) ? x.to : x.from);
+export function mailScreen(p, now, box = '') {
+    const sent = box === 'sent', all = (p.mails || []).map((x, k) => [x, k]).reverse(), ms = all.filter(([x]) => mailSent(x) === sent);
+    const unread = sent ? 0 : ms.filter(([x]) => x.unread).length;
     return `${axBar(p, now)}
       ${axTop(axCb('home'), axKp(p))}
       <div class="ax_scroll">
-        ${axH1('받은편지함', unread ? `안 읽음 ${unread}` : '')}
+        ${axH1(sent ? '보낸편지함' : '받은편지함', unread ? `안 읽음 ${unread}` : '')}
         ${axFind()}
         ${ms.length ? `<div class="ax_card">${ms.map(([x, k]) => swipeRow('mail', k, `
-          <button type="button" class="ax_rw ax_rwm" data-go="mailone" data-i="${k}">${x.unread ? '<i class="ax_dot"></i>' : ''}${axLetter(x.from, 42)}<span class="ax_tx">
-            <span class="ax_h"><b>${esc(x.from)}</b><small class="cg_num">${esc(listTime(p, x.time))}</small></span>
-            <span class="ax_s ${x.unread ? 'u' : ''}">${esc(x.subject)}</span><span class="ax_p">${axKo(x.text.replace(/\s+/g, ' '), x.ko ? x.ko.replace(/\s+/g, ' ') : '')}</span></span></button>`)).join('')}</div>` : '<div class="ax_empty">메일이 없어요</div>'}
-        <i class="ax_pad"></i>
+          <button type="button" class="ax_rw ax_rwm" data-go="mailone" data-i="${k}">${x.unread && !sent ? '<i class="ax_dot"></i>' : ''}${axLetter(mailWho(x), 42)}<span class="ax_tx">
+            <span class="ax_h"><b>${sent ? '<span class="ax_mto">받는 사람: </span>' : ''}${esc(mailWho(x))}</b><small class="cg_num">${esc(listTime(p, x.time))}</small></span>
+            <span class="ax_s ${x.unread && !sent ? 'u' : ''}">${esc(x.subject)}</span><span class="ax_p">${axKo(x.text.replace(/\s+/g, ' '), x.ko ? x.ko.replace(/\s+/g, ' ') : '')}</span></span></button>`)).join('')}</div>` : `<div class="ax_empty">${sent ? '보낸 메일이 없어요' : '메일이 없어요'}</div>`}
+        <i class="ax_pad big"></i>
       </div>
+      <div class="ax_dock"><button type="button" class="${sent ? '' : 'on'}" data-go="mail">받은편지함</button><button type="button" class="${sent ? 'on' : ''}" data-go="mail" data-i="sent">보낸편지함</button></div>
       ${axInd()}`;
 }
 export function mailOne(p, now, k) {
-    const x = (p.mails || [])[k];
+    const list = p.mails || [], x = list[k];
     if (!x) return mailScreen(p, now);
+    const sent = mailSent(x), was = mailAnswered(p, x), reply = list.findIndex(y => y !== x && mailAnswered(p, y) === x);
+    const quote = was ? `<div class="ax_mq"><small class="cg_num">${esc(fmtDate(p, was.time, true))} ${esc(fmtTime(p, was.time))} · ${esc(was.from)}:</small>${esc(was.text)}</div>` : '';
     return `${axBar(p, now)}
-      ${axTop(axCb('mail'), axKp(p))}
+      ${axTop(axCb(sent ? 'mail:sent' : 'mail'), axKp(p))}
       <div class="ax_scroll">
-        <div class="ax_card ax_rw ax_mfrom">${axLetter(x.from, 44)}<span class="ax_tx"><b>${esc(x.from)}</b><span class="ax_p">받는 사람: ${esc(p.owner)}</span></span><small class="cg_num">${esc(fmtDate(p, x.time, true))} ${esc(fmtTime(p, x.time))}</small></div>
+        <div class="ax_card ax_rw ax_mfrom">${axLetter(x.from, 44)}<span class="ax_tx"><b>${esc(x.from)}</b><span class="ax_p">받는 사람: ${esc(sent ? x.to : p.owner)}</span></span><small class="cg_num">${esc(fmtDate(p, x.time, true))} ${esc(fmtTime(p, x.time))}</small></div>
         <div class="ax_msub">${axKo(x.subject, x.ks)}</div>
         <div class="ax_mbody">${esc(x.text)}</div>
+        ${quote}
         ${x.ko && koOn() ? `<div class="ax_mko">${esc(x.ko)}</div>` : ''}
         <i class="ax_pad big"></i>
       </div>
-      <div class="ax_ntool ax_mtool">${delBtn('mail', k, 'ax_ntb', ax('trash2', 22, 'currentColor', 1.9))}<span class="ax_ntc cg_num">받은편지함</span><span class="ax_ntb">${ax('reply', 22, 'currentColor', 1.9)}</span></div>
+      <div class="ax_ntool ax_mtool">${delBtn('mail', k, 'ax_ntb', ax('trash2', 22, 'currentColor', 1.9))}<span class="ax_ntc cg_num">${sent ? '보낸편지함' : '받은편지함'}</span>${reply >= 0 ? `<button type="button" class="ax_ntb" data-go="mailone" data-i="${reply}" aria-label="답장 보기">${ax('reply', 22, 'currentColor', 1.9)}</button>` : `<span class="ax_ntb off">${ax('reply', 22, 'currentColor', 1.9)}</span>`}</div>
       ${axInd()}`;
 }
 
