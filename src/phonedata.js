@@ -456,7 +456,7 @@ search: "q", "time", "tab": still open, "mark": bookmarked
 calendar: "title", "date", "time": "HH:MM", "was": its old date, "cancelled"
 post: "text", "photo", "time", "likes", "comments": [{ "from", "text" }]
 profile: "handle", "bio", "followers", "following"
-mail: "sender", "to": only on a mail the owner sends ("sender" is then the owner), "subject" ("Re: …" for an answer), "text", "time", "unread"
+mail: "sender", "to": only on a mail the owner sends ("sender" is then the owner), "subject" ("Re: …" for an answer), "text", "time", "unread"${live ? '; a PHONE NOW mail the owner only opens: "already": its id, nothing else' : ''}
 diary: "date", "title", "text"
 visit: "place": where they really went, as the story writes it (never just their own city), "city", "home", "time", "already": that visit's id in PHONE NOW
 voice: "title", "text", "time", "sec", "place"${life ? `
@@ -613,7 +613,7 @@ export function parsePhone(out, owner = '') {
         profile: raw.profile && typeof raw.profile === 'object' ? { handle: line(raw.profile.handle, 40), bio: line(raw.profile.bio, 200), ko: ko(raw.profile.ko), followers: countOf(raw.profile.followers), following: countOf(raw.profile.following) } : null,
         posts: arr(raw.posts).map(x => tag({ text: str(x?.text, 800), ko: str(x?.ko, 800), photo: line(x?.photo, 200), pko: ko(x?.pko), time: when(x?.time), likes: Math.min(99999, countOf(x?.likes)),
             comments: arr(x?.comments).map(c => ({ from: line(c?.from, 40), text: line(c?.text, 300), ko: ko(c?.ko) })).filter(c => c.from && c.text).slice(0, CAP.comments) }, x)).filter(x => x.text || x.photo),
-        mails: arr(raw.mails).map(x => tag({ from: line(x?.from, 60), ...(line(x?.to, 60) ? { to: line(x.to, 60) } : {}), subject: line(x?.subject, 120), ks: line(x?.ks, 120), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), unread: truthy(x?.unread) }, x)).filter(x => x.from && (x.subject || x.text)),
+        mails: arr(raw.mails).map(x => tag({ ...(line(x?.already, 40) ? { already: line(x.already, 40) } : {}), from: line(x?.from, 60), ...(line(x?.to, 60) ? { to: line(x.to, 60) } : {}), subject: line(x?.subject, 120), ks: line(x?.ks, 120), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), unread: truthy(x?.unread) }, x)).filter(x => x.already || x.from && (x.subject || x.text)),
         diary: arr(raw.diary).map(x => tag({ date: when(x?.date).slice(0, 5), title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000) }, x)).filter(x => x.date && x.text),
         visits: arr(raw.visits).map(x => tag({ place: line(x?.place, 60), city: line(x?.city, 60), ...(line(x?.already, 40) ? { already: line(x.already, 40) } : {}), ...(x?.home === true ? { home: true } : {}), with: [...new Set(oneOrMany(x?.with).map(n => line(n, 40)).filter(n => n && !mine(n)))].slice(0, 6), time: when(x?.time), src: 'story' }, x)).filter(x => x.place).slice(-CAP.visits),
         voice: arr(raw.voice).map(x => tag({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), sec: secOf(x?.sec), place: line(x?.place, 60), src: 'story' }, x)).filter(x => x.text),
@@ -850,6 +850,7 @@ export function recordsCore(raw, textOf = () => '') {
         if (r.type === 'mail') x.from = r.sender ?? r.from;
         if ((r.type === 'alarm' || r.type === 'file') && r.already) x.change = r.already;
         if (r.type === 'visit' && r.already) x.already = r.already;
+        if (r.type === 'mail' && r.already) x.already = r.already;
         if (r.type === 'note' && r.time === undefined) delete x.time;
         // (a text's time alone, "17:35", is on its record's day, not on its scene's: a skipped day's texts stay on it)
         const day = String(when(r.time || '')).slice(0, 5);
@@ -1053,6 +1054,9 @@ function mergePhone(p, add, { keepAll = false, m = null } = {}) {
         const homes = (p.visits || []).filter(x => x.home).map(x => nameKey(x.place));
         add.visits = add.visits.filter(x => visitOk(p, x) && !(x.home && (homes.includes(nameKey(x.place)) || !homes.push(nameKey(x.place))))).map(x => visitWith(p, x, m));
     }
+    // (폰 2: a mail on the phone the owner only opened, "already" its id: it is read now, and nothing is added; an id the
+    // phone doesn't have is nothing)
+    if (add.mails?.some(x => x.already)) add = { ...add, mails: add.mails.filter(x => { if (!x.already) return true; const o = (p.mails || []).find(y => y.id === x.already); if (o) o.unread = false; return false; }) };
     for (const k of LISTS) p[k] = keep([...(p[k] || []), ...fresh(k, p[k] || [], add[k] || [])], CAP[k]);
     if (add.profile?.handle || add.profile?.bio) p.profile = { ...(p.profile || {}), ...Object.fromEntries(Object.entries(add.profile).filter(([, v]) => v)) };
     for (const c of add.contacts) {
@@ -1383,7 +1387,8 @@ function phoneRequest(m, owner, p = null, lore = '', only = null, profile = '', 
 // PHONE NOW for the model: the newest of each list with its event tags; nothing 재구성, no ids
 const real = xs => (xs || []).filter(x => !isGuess(x));
 const ev = (x, o) => (x.ev ? { ...o, ev: x.ev } : o);
-export const phoneForModel = p => ({
+// live (폰 2): its mails with their ids, unread ones too (the owner may only open one: "already" its id)
+export const phoneForModel = (p, { live = false } = {}) => ({
     country: p.country, now: p.now,
     contacts: p.contacts.map(({ name, saved }) => ({ name, saved })),
     threads: p.threads.map(t => ({ with: t.with, ...(t.group ? { group: true, members: t.members || [] } : {}), messages: real(t.messages).slice(-6).map(({ from, text, time }) => ({ from, text, time })) })),
@@ -1394,7 +1399,7 @@ export const phoneForModel = p => ({
     events: real(p.events).slice(-4).map(x => ev(x, { title: x.title, date: x.date, time: x.time })),
     profile: p.profile ? { handle: p.profile.handle, bio: p.profile.bio } : undefined,
     posts: real(p.posts).slice(-3).map(x => ev(x, { text: x.text.slice(0, 200), photo: x.photo, time: x.time })),
-    mails: real(p.mails).slice(-3).map(x => ev(x, { from: x.from, ...(x.to ? { to: x.to } : {}), subject: x.subject, time: x.time })),
+    mails: (live ? real(p.mails).filter((x, i, a) => i >= a.length - 3 || x.unread).slice(-8) : real(p.mails).slice(-3)).map(x => ev(x, { ...(live ? { id: x.id } : {}), from: x.from, ...(x.to ? { to: x.to } : {}), subject: x.subject, time: x.time, ...(live && x.unread ? { unread: true } : {}) })),
     diary: real(p.diary).slice(-2).map(x => ev(x, { date: x.date, title: x.title, text: x.text.slice(0, 300) })),
     // so a memo already there isn't recorded again
     voice: real(p.voice || []).slice(-3).map(x => ev(x, { title: x.title, time: x.time })),
@@ -2410,6 +2415,7 @@ function mergedState(p) {
         contacts: Object.fromEntries((p.contacts || []).filter(x => x.id).map(x => [x.id, x.saved ?? null])),
         profile: p.profile ? { handle: p.profile.handle ?? '', bio: p.profile.bio ?? '' } : null,
         comments: Object.fromEntries((p.posts || []).filter(x => x.id).map(x => [x.id, x.comments || []])),
+        mails: Object.fromEntries((p.mails || []).filter(x => x.id).map(x => [x.id, !!x.unread])),
     };
 }
 function restoreMerged(p, before, after) {
@@ -2430,6 +2436,8 @@ function restoreMerged(p, before, after) {
     for (const x of p.contacts || []) if (x.id in before.contacts && same(now.contacts[x.id], after.contacts[x.id])) { if (before.contacts[x.id] === null) delete x.saved; else x.saved = before.contacts[x.id]; }
     if (same(now.profile, after.profile)) { if (before.profile) p.profile = { ...(p.profile || {}), ...before.profile }; else delete p.profile; }
     for (const x of p.posts || []) if (before.comments[x.id] && same(now.comments[x.id], after.comments[x.id])) x.comments = structuredClone(before.comments[x.id]);
+    // (a mail the round marked read is unread again)
+    for (const x of p.mails || []) if (before.mails?.[x.id] === true && after.mails?.[x.id] === false && !x.unread) x.unread = true;
 }
 const FX_APP = [[/^life\.weather/, '날씨'], [/^life\.health/, '건강'], [/^life\.clock/, '시계'], [/^life\.files/, '파일'], [/^delivery/, '배달'], [/^money\.(orders)/, '쇼핑'], [/^money\.passes/, '지갑'], [/^money/, '은행'], [/^investment/, '투자']];
 const fxApp = path => FX_APP.find(([re]) => re.test(String(path || '')))?.[1] || '';

@@ -428,3 +428,10 @@
 - 답장은 따로 칸을 저장하지 않아요. `mailAnswered(p, x)`가 제목("Re:" · "AW:" · "답장:" 등을 뗀 제목이 같은, 그보다 앞의 메일)으로 원래 메일을 찾아요. 화면의 스레드는 디자인 세션 몫.
 - PHONE NOW mails에 `to`가 같이 가요. 번역(koGaps)은 보낸 메일이면 말한 사람 = 주인, 듣는 사람 = `to`.
 - 토큰 약 +30(반영 · 폰 만들기).
+
+## 메일 열어 보기 (폰 2)
+
+- 답장 지시문 Mail 줄: "쓰기 · 답장 · 전달, 기다리던 메일이나 안 읽은 메일 열기". does 줄: "열어 보기 · 확인은 아무것도 안 남는다, 안 읽은 메일만 빼고".
+- 반영(`live`만): ITEMS mail 끝에 `a PHONE NOW mail the owner only opens: "already": its id, nothing else`. 폰 1 지시문은 그대로예요.
+- PHONE NOW(`phoneForModel(p, { live: true })`): 메일마다 `id`, 최근 3개에 더해 안 읽은 메일(최대 8개), 안 읽은 것엔 `"unread": true`. 폰 1은 그대로예요.
+- 코드: `"already"`가 폰에 있는 메일 id면 그 메일의 안 읽음 표시만 지워요. 새 메일은 안 생겨요. 없는 id면 아무것도 안 해요. 되돌리기하면 다시 안 읽음이 돼요.

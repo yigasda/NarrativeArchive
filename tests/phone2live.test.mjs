@@ -74,11 +74,12 @@ test('폰 2 reply prompt: owner and persona by name, no "user", every listed app
     assert.match(s, /"state": where you are, what you are doing and until when/);
     assert.match(s, /- LANGUAGES \(sometimes\): the languages you text in and those you know but seldom use, as set on the phone\./);
     assert.match(s, /"reply" in one of the languages you text in, or a mix of them; very rarely, one you know but seldom use\. With no LANGUAGES, the language you really text Ren in\./);
-    assert.match(s, /Most moments leave something small; \[\] only when truly nothing\. Opening or checking an app leaves nothing; nothing already in ALREADY ON THE PHONE TODAY again\./);
+    assert.match(s, /Most moments leave something small; \[\] only when truly nothing\. Opening or checking an app leaves nothing, but a mail you hadn't read; nothing already in ALREADY ON THE PHONE TODAY again\./);
     assert.match(s, /- ALREADY ON THE PHONE TODAY: what your phone already holds from today, the newest three per app, and when each app was last used before today\./);
     assert.doesNotMatch(s, /watch list|a line added to a note/);
     assert.doesNotMatch(s, /RECENT ON THE PHONE|go check/);
     assert.doesNotMatch(s, /mixed as|now and then/);
+    assert.match(s, /- Mail: when you write, answer or forward an email, or open one you were waiting for or haven't read yet\./);
     // (no Korean in the prompt itself: a Korean example pulls the reply into Korean)
     assert.doesNotMatch(s, /[가-힣]/);
     assert.match(s, /Messages: when the talk makes you text someone else \(not Ren\)/);
@@ -95,20 +96,31 @@ test('폰 2 reply prompt: owner and persona by name, no "user", every listed app
 });
 
 test('mail: a mail the owner sends keeps "to", its Korean is the owner\'s voice to them, an answer finds its mail by subject', () => {
-    const p = data.parsePhone(JSON.stringify({ owner: 'Oscar', now: '11-07 10:00', mails: [
+    const p = data.parsePhone(JSON.stringify({ owner: 'Mara', now: '11-07 10:00', mails: [
         { from: 'Lufthansa', subject: 'Booking LH 712', text: 'Your flight is booked.', time: '11-06 14:10' },
-        { from: 'Oscar', to: 'Lufthansa', subject: 'Re: Booking LH 712', text: 'Please add a window seat.', time: '11-07 09:00' },
+        { from: 'Mara', to: 'Lufthansa', subject: 'Re: Booking LH 712', text: 'Please add a window seat.', time: '11-07 09:00' },
         { from: 'Bank', subject: 'Statement', text: 'Your statement is ready.', time: '11-07 09:30' },
-    ] }), 'Oscar');
+    ] }), 'Mara');
     assert.equal(p.mails[1].to, 'Lufthansa');
     assert.equal(p.mails[0].to, undefined);
     assert.equal(data.mailAnswered(p, p.mails[1]), p.mails[0]);
     assert.equal(data.mailAnswered(p, p.mails[0]), null);
     assert.equal(data.mailAnswered(p, p.mails[2]), null);
-    const gaps = data.koGaps({ ...p, owner: 'Oscar' }).filter(g => g.app === 'mail' || g.app === 'mail subject');
+    const gaps = data.koGaps({ ...p, owner: 'Mara' }).filter(g => g.app === 'mail' || g.app === 'mail subject');
     const sent = gaps.find(g => g.f === 'text' && g.x.text === 'Please add a window seat.'), got = gaps.find(g => g.f === 'text' && g.x.text === 'Your flight is booked.');
-    assert.deepEqual([sent?.who, sent?.to], ['Oscar', 'Lufthansa']);
-    assert.deepEqual([got?.who, got?.to], ['Lufthansa', 'Oscar']);
+    assert.deepEqual([sent?.who, sent?.to], ['Mara', 'Lufthansa']);
+    assert.deepEqual([got?.who, got?.to], ['Lufthansa', 'Mara']);
     assert.match(JSON.stringify(data.phoneForModel(p).mails), /"to":"Lufthansa"/);
+    // (폰 2 only: a mail only opened is one already there, by its id; phone 1's prompt has no such line)
+    assert.match(data.coreRecordsSystem({ life: true, wallet: true, split: true, live: 'Ren' }), /"unread"; a PHONE NOW mail the owner only opens: "already": its id, nothing else\n/);
+    assert.doesNotMatch(data.coreRecordsSystem({ life: true, wallet: true, split: true }), /only opens/);
+    // (live: ids, and an unread mail older than the newest three; phone 1's PHONE NOW as it was)
+    const many = data.parsePhone(JSON.stringify({ owner: 'Mara', now: '11-07 10:00', mails: [{ from: 'Air Lyon', subject: 'E-ticket', text: 'Seat 14A.', time: '11-01 09:00', unread: true },
+        ...[1, 2, 3, 4].map(i => ({ from: 'Shop', subject: `News ${i}`, text: 'Hi.', time: `11-0${i + 1} 09:00`, unread: false }))] }), 'Mara');
+    data.ensureIds(many);
+    const live = data.phoneForModel(many, { live: true }).mails, one = data.phoneForModel(many).mails;
+    assert.deepEqual(live.map(x => x.subject), ['E-ticket', 'News 2', 'News 3', 'News 4']);
+    assert.ok(live.every(x => x.id) && live[0].unread === true && !('unread' in live[1]));
+    assert.deepEqual(one.map(x => Object.keys(x)), [['from', 'subject', 'time'], ['from', 'subject', 'time'], ['from', 'subject', 'time']]);
     assert.match(data.coreRecordsSystem({ life: true, wallet: true, split: true }), /mail: "sender", "to": only on a mail the owner sends \("sender" is then the owner\), "subject" \("Re: …" for an answer\)/);
 });

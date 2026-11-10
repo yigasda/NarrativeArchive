@@ -36,7 +36,7 @@ THE PHONE — what you might do on it, and when
 - Calls: when you would rather ring someone than text.
 - Calendar: when the talk fixes a plan, appointment or reservation.
 - Posts: when you would share or react on social media, only if you post.
-- Mail: when you write an email or answer one.
+- Mail: when you write, answer or forward an email, or open one you were waiting for or haven't read yet.
 - Delivery: when you order food to your door.
 - Shopping: when you buy something online or book something (tickets, rooms), or check a parcel.
 - Bank, cards & wallet: when money moves: you pay, send, get paid, top up, use a ticket.
@@ -46,7 +46,7 @@ THE PHONE — what you might do on it, and when
 - Alarms: when you set a wake-up or a timer.
 - Files: when you save, download or open a document.
 
-"does": what you do or leave on the phone right now because of this moment, one short line each, with what it needs (an amount, a shop, a person). Name the act only; what follows from it by itself (receipts, mails, charges, tickets) fills in later. Most moments leave something small; [] only when truly nothing. Opening or checking an app leaves nothing; nothing already in ALREADY ON THE PHONE TODAY again.
+"does": what you do or leave on the phone right now because of this moment, one short line each, with what it needs (an amount, a shop, a person). Name the act only; what follows from it by itself (receipts, mails, charges, tickets) fills in later. Most moments leave something small; [] only when truly nothing. Opening or checking an app leaves nothing, but a mail you hadn't read; nothing already in ALREADY ON THE PHONE TODAY again.
 
 JSON (one object, nothing before or after it)
 { "state": "HH:MM · place · doing · ~until",

@@ -159,7 +159,7 @@
   bank: 21:01 "2,000 EUR sent to Somang for glasses"
   before today: diary 11-06 22:10 · voice memo 11-06 23:05
   ```
-- does 설명: run1 첫마디("이 순간 때문에 하는 일 · 남는 것")를 그대로 두고, 끝에 "열어 보기 · 확인은 아무것도 안 남는다; ALREADY에 있는 건 다시 안 씀"만 더해요. run4에서 "폰에 남는 것(메모에 줄 추가 · 문자 · 송금 · 사진)" 예와 "새로운 것일 때만"을 넣었더니 메모로 쏠리고 행동 줄이 6/11로 줄었어요(앱 종류 run1 6 → run4 3). 그래서 예는 빼요. Mail 줄은 "메일을 쓸 때"만.
+- does 설명: run1 첫마디("이 순간 때문에 하는 일 · 남는 것")를 그대로 두고, 끝에 "열어 보기 · 확인은 아무것도 안 남는다; ALREADY에 있는 건 다시 안 씀"만 더해요. run4에서 "폰에 남는 것(메모에 줄 추가 · 문자 · 송금 · 사진)" 예와 "새로운 것일 때만"을 넣었더니 메모로 쏠리고 행동 줄이 6/11로 줄었어요(앱 종류 run1 6 → run4 3). 그래서 예는 빼요. Mail 줄은 "쓰기 · 답장 · 전달, 기다리던 메일이나 안 읽은 메일 열기". 안 읽은 메일을 열면 반영이 그 메일을 읽음으로 바꿔요(새 메일은 안 생김).
 - 언어 줄: "한 언어만, 또는 주언어를 섞어서; 아주 드물게 알지만 잘 안 쓰는 언어".
 
 ### 앱 목록(THE PHONE)
@@ -177,7 +177,7 @@ THE PHONE — what they might do on it, and when
 - Calls: when they would rather ring someone than text.
 - Calendar: when the talk fixes a plan, appointment or reservation.
 - Posts: when they would share or react on social media, only if they post.
-- Mail: when they write an email or go check one on purpose.
+- Mail: when they write, answer or forward an email, or open one they were waiting for or haven't read yet.
 - Delivery: when they order food to their door.
 - Shopping: when they buy something online or book something (tickets, rooms), or check a parcel.
 - Bank, cards & wallet: when money moves: they pay, send, get paid, top up, use a ticket.
