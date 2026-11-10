@@ -74,12 +74,13 @@ test('폰 2 reply prompt: owner and persona by name, no "user", every listed app
     assert.match(s, /"state": where you are, what you are doing and until when/);
     assert.match(s, /Your last status is only where you started; as the hours pass, your day moves on \(a nurse who began at home before a night shift is on the ward by 22:00\)\. Then the texts, from there\./);
     assert.match(s, /- LANGUAGES \(sometimes\): the languages you text in and those you know but seldom use, as set on the phone\./);
-    assert.match(s, /\n- "reply" in one of the languages you text in\. You can use several, or just one, and very rarely, when the moment calls for it, one you seldom use; three or more in one reply reads unnatural, so never\.\n- With no LANGUAGES, the language you really text Ren in\.\n- "ko": the same bubbles in Korean, the way VOICES says you sound; "" for a bubble already in Korean\.\n/);
-    assert.match(s, /Most moments leave something small; \[\] only when truly nothing\. What ALREADY ON THE PHONE TODAY holds is not done again \(the same search typed again, a note written again with a few words changed\)\./);
+    assert.match(s, /\n- "reply" in the languages you text in: you can mix two of them or use just one, and very rarely, when the moment calls for it, one you seldom use\.\n- With no LANGUAGES, the language you really text Ren in\.\n- "ko": the same bubbles in Korean, the way VOICES says you sound; "" for a bubble already in Korean\.\n/);
+    assert.match(s, /Most moments leave something small; \[\] only when truly nothing\. Look at RECENT ON THE PHONE: you seldom reach for the same app again so soon \(a third note within the hour\); the moment may call for another\./);
     assert.doesNotMatch(s, /Opening or checking/);
-    assert.match(s, /- ALREADY ON THE PHONE TODAY: what your phone already holds from today, the newest three per app, and when each app was last used before today\./);
+    // (run1 again: the apps' last times only; a list of what is on the phone drew more of the same)
+    assert.match(s, /- RECENT ON THE PHONE: when you last used each app\./);
     assert.doesNotMatch(s, /watch list|a line added to a note/);
-    assert.doesNotMatch(s, /RECENT ON THE PHONE|go check/);
+    assert.doesNotMatch(s, /ALREADY ON THE PHONE|go check|three or more/);
     assert.doesNotMatch(s, /mixed as|now and then/);
     assert.match(s, /- Mail: when you write, answer or forward an email, or open one you were waiting for or haven't read yet\./);
     // (no Korean in the prompt itself: a Korean example pulls the reply into Korean)
