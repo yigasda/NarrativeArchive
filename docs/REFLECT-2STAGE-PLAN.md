@@ -407,3 +407,10 @@
   - 남은 수(`syncLeft(p, m)`, `syncLast.remaining`)에 이런 섹션도 하나씩 세요.
 - core 지시문 YOU GET 한 줄 늘어남: 2,825 → 2,849토큰.
 - 안 한 것: 끊긴 채우기 뒤에 반영이 이미 지나간 구간(다시 만들기)은 소망이 미뤘어요. 앱별 다시 읽기 목록(호출 · 상태가 늘어남)과 반영 이벤트로 대신 보내기 둘 다 보류.
+
+## 폰 2(실시간) 옵션 `live`
+
+- `coreRecordsSystem` · `coreSystem` · `moneySystem`에 `live`(페르소나 이름) 옵션을 더했어요. 없으면 폰 1 지시문은 그대로예요(128가지 조합 대조).
+- 있으면 core YOU GET의 NEW MESSAGES 줄, core STEP 3의 1번, money YOU GET의 MESSAGES 줄만 바뀌어요. 내용은 `docs/PHONE2-PLAN.md` "반영(폰 2)".
+- 이유: 폰 1의 "A text exchange the messages already show: only its last 4 messages."가 폰 2에선 메신저 대화를 기본 문자 앱에 다시 쓰게 해요. 행동 한 줄이 한 기록으로만 읽히지 않게 예 셋을 넣었어요.
+- 토큰(대략): core 3,666 → 3,829, money 3,095 → 3,137(폰 2일 때만).

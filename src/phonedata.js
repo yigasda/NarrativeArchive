@@ -341,13 +341,15 @@ const CORE_CLOCK_FIRST = CLOCK_FIRST.replace('then write events and app records 
 const CORE_TIMES = `- Times are "MM-DD HH:MM"; a year only as STORY YEAR or the story itself gives one.
 - Every record's time is on the owner's clock: a time from another city's screen or scene moves by its hours in OWNER'S CLOCK.
 - Records of the owner's life fall between PHONE NOW's "now" and the answer's "now".`;
-export function coreRecordsSystem({ life = false, weather = false, tracker = false, zone = false, archiveOnly = false, wallet = false, split = true } = {}) {
+// live: the persona's name on a 폰 2 (live messenger) phone: NEW MESSAGES are the owner's MESSENGER chat with them, and a
+// line "<owner's name> [App]: …" is what the owner did on the phone then. Without it the prompt is the story phone's, word for word
+export function coreRecordsSystem({ life = false, weather = false, tracker = false, zone = false, archiveOnly = false, wallet = false, split = true, live = '' } = {}) {
     const lifeTypes = life ? ' | "alarm" | "timer" | "file"' : '';
     return `${split ? 'STAGE: core\n' : ''}GOAL
 Write what the owner's phone gains from NEW MESSAGES. The story decides what happens; the phone only shows it.
 
 YOU GET
-- NEW MESSAGES (numbered #123). Sometimes ARCHIVE FOR THESE MESSAGES: summaries covering them, also evidence.
+${live ? `- NEW MESSAGES (numbered #123): the owner's MESSENGER chat with ${live}, each scene under a status line (time · place · doing). A line "<owner's name> [App]: …" is something the owner did on the phone right then.` : '- NEW MESSAGES (numbered #123).'} Sometimes ARCHIVE FOR THESE MESSAGES: summaries covering them, also evidence.
 - Sometimes ARCHIVE BEFORE, STORY NOW, WORLD, OWNER PROFILE, STORY YEAR, DAYS (the weekdays ahead: "on Friday" is the next one).
 - PHONE NOW ("now": when it was last read), EVENTS ON THE PHONE (scenes with ids)${life ? ', LIFE NOW (alarms, files, health days, with ids)' : ''}. Sometimes MESSAGES READ BEFORE, NOW CHANGED (edited messages with their scenes)${wallet ? ' and ORDERS AND TICKETS (orders and tickets with their status and eta; a record about one keeps its item, dates and status)' : ''}.${weather && tracker ? `
 - WEATHER NOW: the chat's last status line (date, time, place, weather; a scene the owner isn't in: its place and weather only).` : ''}
@@ -376,7 +378,11 @@ STEP 2 · SITUATIONS
 
 STEP 3 · RECORDS
 Go through each scene's messages in order. Write a record only in these cases, with "scene", "at", "said" (the exact words it comes from) and "situations":
-1. A phone action the messages show or say (a text, call, photo, search, mail, post, voice memo) → that record. A text exchange the messages already show: only its last 4 messages.
+${live ? `1. A line "<owner's name> [App]: …" is what the owner did on the phone just then. It shows up in that app and in every other app it would really touch, each record's "said" that line. For example:
+   - booked a flight → the ticket in the wallet, the payment, the booking mail, the flight in the calendar
+   - went for a long run → a workout and many steps in health, less screen time that hour
+   - passed an exam → a post, a call to mum
+   The chat between the owner and ${live} is already in MESSENGER: never write it again as a text or call. A text or call with anyone else that the chat tells of is written as usual ("I called Dad today" → a call to Dad).` : '1. A phone action the messages show or say (a text, call, photo, search, mail, post, voice memo) → that record. A text exchange the messages already show: only its last 4 messages.'}
 2. A plan made → "calendar". A PHONE NOW plan the messages move → its calendar record again with "was"; called off or undone (an order cancelled) → "cancelled": true.${wallet ? ' Tickets go in the wallet; reservations and appointments in the calendar.' : ''} No booking, trip or purchase the story lacks.
 3. Each scene where the owner is somewhere → one "visit".
 4. Someone new the owner meets and would save → "contact".${life ? `
@@ -458,16 +464,17 @@ alarm: "time": "HH:MM", "label", "days": [weekdays], or [] and "date" for one oc
 timer: "label", "sec"
 file: "name", "kind", "folder", "size": KB, "time", "from", "pages", "length", "tag", "private", "preview": its first page in a line, "look": sea | city | night | food | hills | pet | sunset | mountain | snow | flower | interior | concert | paper | screenshot | map | ticket | receipt | invoice | cv | letter | certificate | recipe | medical | menu | contract | notes | voice | music, "opened", "deleted"` : ''}`;
 }
-export const coreSystem = ({ life = false, weather = false, tracker = false, zone = false, archiveOnly = false, wallet = false, split = true } = {}) => coreRecordsSystem({ life, weather, tracker, zone, archiveOnly, wallet, split });
+export const coreSystem = ({ life = false, weather = false, tracker = false, zone = false, archiveOnly = false, wallet = false, split = true, live = '' } = {}) => coreRecordsSystem({ life, weather, tracker, zone, archiveOnly, wallet, split, live });
 // 돈 단계 (3.176~): every round's messages, read for what the owner's phone would now show. One list of records.
 // delivery: the phone has the delivery app; invest: it has the brokerage
-export function moneySystem({ delivery = false, invest = false } = {}) {
+// live: as coreRecordsSystem's (a 폰 2 phone: MESSAGES are the owner's MESSENGER chat with the persona)
+export function moneySystem({ delivery = false, invest = false, live = '' } = {}) {
     return `STAGE: money
 GOAL
 Keep the owner's phone in step with the story. Role-play is told as narrative: it rarely names a figure, a shop, an app or a date. Read what happened and what it means for the owner's money, and write what their phone would now show: payments, orders, tickets${delivery ? `, deliveries` : ''}, assets, debts, regular income and bills${invest ? `, investments` : ''}, with the details made up to fit the owner, the place and the moment. The app links records, merges them, keeps the balances and stops anything being paid twice.
 
 YOU GET
-- MESSAGES: every message of this round, numbered. Messages marked (changed) were edited.
+${live ? `- MESSAGES: the owner's MESSENGER chat with ${live} this round, numbered, under status lines. A line "<owner's name> [App]: …" is something the owner did on the phone right then; money the talk only promises has not moved.` : '- MESSAGES: every message of this round, numbered.'} Messages marked (changed) were edited.
 - EVENTS: what the phone already put down for these messages, by message number.
 - ARCHIVE FOR THESE MESSAGES (sometimes): the story around them.
 - MONEY NOW${invest ? `, INVESTMENTS NOW` : ''}${delivery ? `, DELIVERY SHOPS` : ''} and sometimes WEALTH: the owner's finances and records, with ids, and this month's income and spending so far.
