@@ -150,7 +150,7 @@ const centre = ps => { const n = ps.length; return [ps.reduce((s, p) => s + p[0]
 const POIS = [], GREENS = [];
 // a place worth a name on the map: not a car park, not a chain shop or supermarket (EDEKA, PENNY…), unless it has its own wiki page
 const okPlace = (t, ic) => ic !== 'parking' && ic !== 'fuel' && !(t.brand && !t.wikipedia) && !((t.shop || ic === 'shop' || ic === 'mall') && !t.wikidata);
-const L = { sea: '', motor: '', station: '',  shop: '', works: '', railyard: '', school: '', mark: '', markStation: '', shadow: {}, built: '', park: '', forest: '', water: '', plaza: '', bld: '', foot: '', minor: '', mid: '', major: '', rail: '', tram: '' };
+const L = { lane: '', sea: '', motor: '', station: '',  shop: '', works: '', railyard: '', school: '', mark: '', markStation: '', shadow: {}, built: '', park: '', forest: '', water: '', plaza: '', bld: '', foot: '', minor: '', mid: '', major: '', rail: '', tram: '' };
 const BUILT = /residential|commercial|retail|industrial|railway|construction|brownfield|education|emergency/;
 const GREEN = /grass|village_green|flowerbed|meadow|allotments|cemetery|greenhouse/;
 for (const e of d.elements) {
@@ -197,6 +197,7 @@ for (const e of d.elements) {
     if (GMAP && /^(trunk|motorway)(_link)?$/.test(h)) L.motor += dl;   // gmap: motorways and trunk roads apart, so they can take their own colour
     else if (/^(primary|trunk|motorway)(_link)?$/.test(h)) L.major += dl;
     else if (/^(secondary|tertiary)(_link)?$/.test(h)) L.mid += dl;
+    else if (GMAP && (/^(living_street|pedestrian|busway)$/.test(h) || h === 'service' && t.name)) L.lane += dl;   // gmap: lanes, shared streets and yards a step narrower than a street
     else if (/^(residential|unclassified|living_street|pedestrian|busway)$/.test(h) || h === 'service' && (!COLLECT || t.name)) L.minor += dl;
     else if (/^(footway|path|cycleway|track)$/.test(h) && !PRETTY) { if (GMAP) { const ps = pts(e.geometry); FOOT.push({ dl, ps }); } else L.foot += dl; }
     if (GMAP && t.name && /^(primary|secondary|tertiary|residential|unclassified|living_street|pedestrian)$/.test(h)) STREETS.push({ name: t.name, ps: pts(e.geometry), rank: /^(primary|secondary)$/.test(h) ? 3 : h === 'tertiary' ? 2 : 1 });
@@ -243,6 +244,7 @@ if (GMAP) svg = `<rect width="${W}" height="${H}" fill="${C.land}"/>`
   + fill(L.bld, C.bld) + fill(L.station, '#e2dfda')
   // park paths as faces, not lines: the few long ones as a soft band one shade lighter than the grass, no rim
   + (L.park + L.forest ? `<defs><clipPath id="gp"><path d="${L.park + L.forest}"/></clipPath></defs><g clip-path="url(#gp)">${st(parkPaths(), C.foot, Math.max(3.6, mpx(4)))}</g>` : '')
+  + st(L.lane, C.edge, Math.max(3.6, mpx(5)) + 1) + st(L.lane, C.road, Math.max(3.6, mpx(5)))
   + st(L.minor, C.edge, Math.max(5.5, mpx(8)) + 1.2) + st(L.mid, C.edge, Math.max(8, mpx(12)) + 1.35)
   + st(L.minor, C.road, Math.max(5.5, mpx(8))) + st(L.mid, C.road, Math.max(8, mpx(12)))
   + st(L.rail, '#b8b6b2', 2.2) + st(L.rail, '#f4efe6', 0.9, ' stroke-dasharray="6 5"')
