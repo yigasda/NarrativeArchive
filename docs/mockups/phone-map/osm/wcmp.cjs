@@ -1,5 +1,0 @@
-const fs = require('fs'); const { chromium } = require('playwright'); const S = process.argv[2];
-const P = [['Schwabing', 'w-before-s.png', 'allde/muenchen-schwabing.png'], ['Rothenburg', 'w-before-r.png', 'allde/rothenburg-altstadt.png'], ['Bamberg', 'w-before-b.png', 'allde/bamberg-altstadt.png']];
-(async () => { const b = await chromium.launch(), p = await b.newPage({ viewport: { width: 1300, height: 800 } });
-  fs.writeFileSync(S + '/wcmp.html', `<!doctype html><meta charset=utf-8><body style="margin:0;padding:10px;background:#d9dce2;font:600 15px sans-serif">` + P.map(([n, a, c]) => `<div style="display:inline-block;margin:0 14px 14px 0">${n} · 전 / 후<br><img src="${a}" width=300 style="height:385px;object-fit:cover;object-position:top"> <img src="${c}" width=300 style="height:385px;object-fit:cover;object-position:top"></div>`).join(''));
-  await p.goto('file://' + S + '/wcmp.html'); await p.waitForTimeout(300); await p.screenshot({ path: S + '/wcmp.png', fullPage: true }); await b.close(); })();
