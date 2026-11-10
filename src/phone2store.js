@@ -6,8 +6,12 @@
 //   mode: 'story' | 'live',                      지금 보는 폰 (기본: 폰 1)
 //   world: null | {                               지금 폰 2 하나
 //     id, from: 'story' | 'fresh', startedAt (ms), dayShift (현실보다 며칠 앞인지),
-//     persona: the persona's name,
+//     scope: the chat it belongs to (phoneChatScope), storyUpto: 이야기에서 시작했으면 그때의 마지막 메시지 번호
+//       (폰 2는 이야기를 그 번호까지만 읽어요; 글을 복사하지 않아요), else null,
+//     persona: the persona's name, lastOwner: 마지막으로 연 폰 주인,
 //     phones: { [name key]: phone },              모든 인물의 폰 2
+//     finance, profiles, pre, lore, loreOff:      폰 1의 m.finance · phoneProfiles · phonePre · phoneLore · phoneLoreOff
+//                                                 에 해당하는 폰 2 것 (이야기에서 시작하면 그때의 깊은 복사)
 //     messenger: { accounts: { [name key]: { name } }, rooms: { [id]: { id, members: [name], messages: [] } } },
 //     queue: { round, jobs: [{ id, world, round, kind, owner, at, state: 'waiting' | 'running' | 'done' | 'failed' | 'dropped', error, seen }] },
 //   },
@@ -41,16 +45,31 @@ export function setLiveMode(m, mode) {
 }
 
 // a new 폰 2: the one there goes to the archive first (never thrown away); the jobs waiting for it are dropped there
-export function newWorld(m, { from = 'fresh', persona = '', dayShift = 0, now = Date.now() } = {}) {
+export function newWorld(m, { from = 'fresh', persona = '', dayShift = 0, scope = '', storyUpto = null, now = Date.now() } = {}) {
     if (from !== 'story' && from !== 'fresh') throw new Error('시작은 story 또는 fresh예요');
     if (!String(persona || '').trim()) throw new Error('페르소나 이름이 필요해요');
+    if (from === 'story' && !(Number.isInteger(storyUpto) && storyUpto >= 0)) throw new Error('이야기의 어느 메시지까지인지 필요해요');
     const live = ensureLive(m);
     if (live.world) archiveWorld(m, now);
     const name = String(persona).trim();
-    live.world = { id: newId('w'), from, startedAt: now, dayShift: Number(dayShift) || 0, persona: name, phones: {},
+    live.world = { id: newId('w'), from, startedAt: now, dayShift: Number(dayShift) || 0, scope: String(scope || ''), storyUpto: from === 'story' ? storyUpto : null,
+        persona: name, lastOwner: '', phones: {}, finance: null, profiles: {}, pre: {}, lore: [], loreOff: {},
         messenger: { accounts: { [liveKey(name)]: { name } }, rooms: {} }, queue: { round: 0, jobs: [] } };
     return live.world;
 }
+// 폰 1's chat-level keys a 폰 2 begun from the story takes a deep copy of (phoneScreenHolder, phoneStoryScope and
+// phoneStoryRun are 폰 1's alone; glossary, dateOrder and the settings stay shared, read only)
+export const STORY_COPY = { phones: 'phones', finance: 'finance', phoneProfiles: 'profiles', phonePre: 'pre', phoneLore: 'lore', phoneLoreOff: 'loreOff' };
+// 이야기에서 시작: a new 폰 2 from 폰 1 as it is now, nothing shared with it (폰 1 is only read)
+export function startFromStory(m, { persona, upto, scope = '', dayShift = 0, now = Date.now() } = {}) {
+    const copy = Object.fromEntries(Object.keys(STORY_COPY).filter(k => m?.[k] !== undefined && m[k] !== null).map(k => [k, structuredClone(m[k])]));
+    const w = newWorld(m, { from: 'story', persona, dayShift, scope, storyUpto: upto, now });
+    for (const [k, to] of Object.entries(STORY_COPY)) if (k in copy) w[to] = copy[k];
+    if (typeof m.lastPhoneOwner === 'string') w.lastOwner = m.lastPhoneOwner;
+    return w;
+}
+// 처음부터 시작: an empty 폰 2 (its phones are made later from the cards)
+export const startFresh = (m, { persona, scope = '', now = Date.now() } = {}) => newWorld(m, { from: 'fresh', persona, scope, now });
 export function archiveWorld(m, now = Date.now()) {
     const live = liveOf(m);
     if (!live?.world) return null;

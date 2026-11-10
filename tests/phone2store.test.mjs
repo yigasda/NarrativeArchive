@@ -38,7 +38,7 @@ test('폰 2 저장: reading and going back to 폰 1 never add m.live', () => {
 test('폰 2 저장: a new world beside 폰 1, the old one archived (never thrown away), phone 1 left as it was', () => {
     const m = phone1(), keep = structuredClone({ phones: m.phones, finance: m.finance, text: m.text });
     assert.throws(() => L.newWorld(m, {}), /페르소나/);
-    const w = L.newWorld(m, { from: 'story', persona: 'Ren', dayShift: 2, now: 1000 });
+    const w = L.newWorld(m, { from: 'story', persona: 'Ren', dayShift: 2, storyUpto: 40, now: 1000 });
     assert.deepEqual([w.from, w.persona, w.dayShift, w.startedAt], ['story', 'Ren', 2, 1000]);
     assert.equal(L.liveMode(m), 'story');
     assert.equal(L.setLiveMode(m, 'live'), 'live');
@@ -107,4 +107,44 @@ test('폰 2 저장: an m.live it can\'t read is left alone, never written over',
     assert.equal(L.liveOf(m), null);
     assert.throws(() => L.newWorld(m, { persona: 'Ren' }), /읽을 수 없어요/);
     assert.deepEqual(m.live, { v: 99, world: 'x' });
+});
+
+// 단계 2: what a 폰 2 begun from the story copies, deep (no object of 폰 1 shared), and 폰 1 left letter for letter
+const rich = () => ({ ...phone1(), phoneProfiles: { mara: { label: 'comfortable' } }, phonePre: { ivo: { owner: 'Ivo', year: 2026 } },
+    phoneLore: ['World'], phoneLoreOff: { World: ['u1'] }, phoneScreenHolder: 'Mara', lastPhoneOwner: 'Mara', phoneStoryScope: 's1', phoneStoryRun: 3,
+    glossary: 'Mara = 마라', dateOrder: 'md' });
+const objects = (v, out = new Set()) => { if (v && typeof v === 'object' && !out.has(v)) { out.add(v); for (const x of Object.values(v)) objects(x, out); } return out; };
+
+test('폰 2 이야기에서 시작: a deep copy of 폰 1\'s story keys, none of its objects shared, 폰 1 unchanged', () => {
+    const m = rich(), before = JSON.stringify(m), mine = objects(Object.fromEntries(Object.keys(m).filter(k => k !== 'live').map(k => [k, m[k]])));
+    assert.throws(() => L.startFromStory(m, { persona: 'Ren' }), /어느 메시지까지/);
+    assert.equal(JSON.stringify(m), before);
+    const w = L.startFromStory(m, { persona: 'Ren', upto: 482, scope: 's1', now: 5 });
+    assert.deepEqual([w.from, w.storyUpto, w.scope, w.lastOwner], ['story', 482, 's1', 'Mara']);
+    assert.deepEqual(w.phones, m.phones);
+    assert.deepEqual(w.finance, m.finance);
+    assert.deepEqual([w.profiles, w.pre, w.lore, w.loreOff], [m.phoneProfiles, m.phonePre, m.phoneLore, m.phoneLoreOff]);
+    for (const o of objects(w)) assert.ok(!mine.has(o), 'an object of 폰 1 in 폰 2');
+    // (폰 1's own: never copied; the shared ones are read where they are)
+    assert.doesNotMatch(JSON.stringify(w), /phoneScreenHolder|phoneStoryRun|Mara = 마라/);
+    // (폰 1 as it was, but for the one key m.live)
+    const { live, ...rest } = m;
+    assert.equal(JSON.stringify(rest), before);
+    // (what 폰 2 does to its copy never reaches 폰 1)
+    w.phones.mara.notes.push({ title: 'x', text: 'y' }); w.finance.accounts.a = 1; w.lore.push('Other');
+    assert.equal(JSON.stringify(rest), before);
+});
+
+test('폰 2 처음부터 시작: an empty world, nothing of 폰 1 in it', () => {
+    const m = rich(), before = JSON.stringify(m);
+    const w = L.startFresh(m, { persona: 'Ren', scope: 's1' });
+    assert.deepEqual([w.from, w.storyUpto, w.phones, w.finance, w.profiles, w.pre, w.lore, w.loreOff, w.lastOwner], ['fresh', null, {}, null, {}, {}, [], {}, '']);
+    const { live, ...rest } = m;
+    assert.equal(JSON.stringify(rest), before);
+});
+
+test('폰 2 이야기에서 시작: a 폰 1 with only some keys copies those, the rest empty', () => {
+    const m = { phones: {}, text: '' };
+    const w = L.startFromStory(m, { persona: 'Ren', upto: 0 });
+    assert.deepEqual([w.phones, w.finance, w.profiles, w.lore, w.lastOwner], [{}, null, {}, [], '']);
 });
