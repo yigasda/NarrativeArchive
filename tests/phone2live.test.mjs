@@ -79,6 +79,8 @@ test('폰 2 reply prompt: owner and persona by name, no "user", every listed app
     assert.doesNotMatch(s, /Opening or checking/);
     // (run1 again: the apps' last times only; a list of what is on the phone drew more of the same)
     assert.match(s, /- RECENT ON THE PHONE: when you last used each app\./);
+    // (the time is OWNER'S CLOCK's alone: NOW holds no clock)
+    assert.match(s, /\n- NOW: where you are and what you are doing by your last status, your calendar today,/);
     assert.match(s, /\n- OWNER'S CLOCK: where you are, your time now, and for the other saved cities and the people elsewhere, how many hours ahead or behind they are and their time now\.\n/);
     assert.doesNotMatch(s, /watch list|a line added to a note/);
     assert.doesNotMatch(s, /ALREADY ON THE PHONE|go check|three or more/);
