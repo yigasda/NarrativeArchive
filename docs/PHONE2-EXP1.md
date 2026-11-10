@@ -7,7 +7,7 @@
 - **실제 캐릭터로 해요.** 예시 인물은 성격이 없어서 말투를 판단할 수 없어요. 그래서 캐릭터 카드 · 장면 대화 · PEOPLE AROUND · SITUATIONS는 소망이 실험 세션에 직접 주고, **저장소엔 넣지 않아요**(입력 · 결과 모두 세션 임시 폴더).
 - 카드는 `description` 등 실리태번이 보내는 칸만 써요(`extensions` 안의 다른 앱 흔적은 빼요).
 - 하루치 장면 여러 개. 장면마다 페르소나가 보낸 말 1~3줄 → 모델이 주인 답장(`state` · `reply` · `ko` · `does`)을 써요. 다음 장면은 앞 장면까지의 대화가 MESSENGER에 쌓인 채로 보내요(한 장면 = 요청 한 번).
-- 블록: MESSENGER, NOW(현지 시각 · 직전 상태 · 오늘 캘린더 · 최근 기록 · 처음 대화인지), WEATHER NOW, RECENT ON THE PHONE(앞 장면 `does`로 갱신), SITUATIONS, 카드, VOICES(있으면), PEOPLE AROUND, OWNER DOESN'T KNOW(있으면).
+- 블록: LANGUAGES(있으면), MESSENGER, NOW(현지 시각 · 직전 상태 · 오늘 캘린더 · 최근 기록 · 처음 대화인지), WEATHER NOW, ALREADY ON THE PHONE TODAY(오늘 폰에 있는 것 앱마다 최근 3개 + 오늘 전 앱별 마지막 시각, 앞 장면 `does`로 갱신), SITUATIONS, 카드, VOICES(있으면), PEOPLE AROUND, OWNER DOESN'T KNOW(있으면).
 - 장면에 섞을 것: 행동이 나올 만한 장면(송금 · 검색 · 메모 · 감정 기록 등), 행동 없는 수다, 대답하기 싫은 말, 늦은 밤.
 
 ## 볼 것
@@ -19,7 +19,7 @@
 | 같은 말 반복 | 앞에서 보낸 말을 다시 보냈나(개수) |
 | 언어 · ko | `reply`가 그 사람이 실제로 쓰는 언어인가, `ko`가 같은 말풍선의 한국어인가 |
 | state | 시각 · 장소 · 하는 일이 NOW와 맞나 |
-| does | 나올 만한 장면에서 나왔나, 금액 · 가게 · 사람 같은 필요한 것이 있나, 수다 장면에선 `[]`인가, 너무 많이 고르지 않았나, 이미 있는 것(비행기 등)을 다시 하지 않았나 |
+| does | 나올 만한 장면에서 나왔나, 금액 · 가게 · 사람 같은 필요한 것이 있나, 수다 장면에선 `[]`인가, 너무 많이 고르지 않았나, 이미 있는 것(비행기 등)이나 ALREADY에 있는 것을 다시 하지 않았나, 앱 종류 수, "확인만" 하는 줄(개수) |
 | 모르는 것 | SITUATIONS의 open · OWNER DOESN'T KNOW를 아는 것처럼 말하지 않았나 |
 
 호출은 장면 수만큼. 상한은 코드로, 실패해도 다시 안 돌려요(`docs/VERTEX-RULES.md`).
