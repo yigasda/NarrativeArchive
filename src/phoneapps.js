@@ -6,7 +6,7 @@ import { investmentDate } from './investdata.js';
 import { profileChoices, phoneDataInfo } from './phoneprofile.js';
 import { faceHtml, nameKey, nameRe, peopleData, peopleList, personLine } from './people.js';
 import { autopic, autopicPeople, drafting, drawing, looksOf, writing } from './phoneai.js';
-import { bigClock, byStory, mailAnswered, clockOf, COUNTRIES, fmtDate, fmtTime, fullDate, gapDays, hasKo, koOn, lastTime, listTime, localeOf, loreOff, MOODS, pad, parts, phoneLore, placesOf, REMAKE, rowDay, savedName, dateOrderOf, placeInfo, screenHolderLabel, screenHolderChoices } from './phonedata.js';
+import { bigClock, byStory, mailAnswered, clockOf, COUNTRIES, fmtDate, fmtTime, fullDate, gapDays, hasKo, koOn, lastTime, listTime, localeOf, loreOff, MOODS, pad, parts, phoneLore, REMAKE, rowDay, savedName, dateOrderOf, placeInfo, screenHolderLabel, screenHolderChoices } from './phonedata.js';
 import { threadNew } from './phonehome.js';
 import { screenView } from './phonescreen.js';
 import { BUSY, pinLayer, pinSpots, pinSvg, STAY, stripSvg, townKinds, townPlace, townSvg } from './phonemapart.js';
@@ -960,8 +960,8 @@ export function camScreen(p, now, k, busy) {
       ${modes}${bar}${axInd('#fff')}`;
 }
 
-// 지도: where the owner was, newest first — the archive's headings (placesOf) and the visits the making and the reflections
-// read (p.visits), one row a place (nameKey), grouped by the city it is in: how many times, and who was there (the
+// 지도: where the owner was, newest first — the visits the making and the reflections read (p.visits; the archive's
+// headings are not read here: they doubled the visits and took time spans for places), one row a place (nameKey), grouped by the city it is in: how many times, and who was there (the
 // visits' "with"; a name with them at every place says nothing and is left out). No AI here
 // 과 / 와 after a name: by its Korean spelling (the glossary's, if there is one); a Latin name ending in l, m, n reads with
 // a final consonant (Ren → 렌과), the others without (Ivo → 이보와)
@@ -971,12 +971,7 @@ const waOf = (m, n) => { const ko = glossaryEntries(m).find(e => e.src.toLowerCa
 const storyCmp = now => byStory(now, x => x);
 function mapPlaces(m, p) {
     const gone = new Set(p.hiddenPlaces || []), rows = new Map(), cmp = storyCmp(p.now);
-    const row = place => { const k = nameKey(place); if (!rows.has(k)) rows.set(k, { place, an: 0, vn: 0, with: [], city: '', last: '', day: '', time: '', date: '' }); return rows.get(k); };
-    for (const x of placesOf(m, p.owner)) {
-        if (gone.has(nameKey(x.place))) continue;
-        const r = row(x.place); r.an += x.n;
-        if (!r.last || cmp(x.day || '', r.last) > 0) Object.assign(r, { last: x.day || '', day: x.day, date: x.date, time: x.time });
-    }
+    const row = place => { const k = nameKey(place); if (!rows.has(k)) rows.set(k, { place, vn: 0, with: [], city: '', last: '', day: '', time: '', date: '' }); return rows.get(k); };
     for (const v of p.visits || []) {
         if (!v?.place || gone.has(nameKey(v.place))) continue;
         const r = row(v.place); r.vn++; if (v.home) r.home = true;
@@ -985,8 +980,7 @@ function mapPlaces(m, p) {
         if (v.city && (!r.city || cmp(t, r.last) >= 0)) r.city = v.city;
         if (!r.last || cmp(t, r.last) > 0) Object.assign(r, { last: t, day: t.slice(0, 5), date: '', time: fmtTime(p, t) });
     }
-    // (the archive and the reflections can tell the same visit: the larger count, not both added)
-    const all = [...rows.values()].map(r => ({ ...r, n: Math.max(r.an, r.vn) })).sort((a, b) => cmp(b.last || '', a.last || ''));
+    const all = [...rows.values()].map(r => ({ ...r, n: r.vn })).sort((a, b) => cmp(b.last || '', a.last || ''));
     // a place with no city of its own: the city it is, when it is one the visits name
     const cities = new Map(all.filter(r => r.city).map(r => [nameKey(r.city), r.city]));
     for (const r of all) if (!r.city && cities.has(nameKey(r.place))) r.city = cities.get(nameKey(r.place));
@@ -999,7 +993,7 @@ function mapPlaces(m, p) {
     return all;
 }
 const homeOf = p => (p.visits || []).filter(x => x?.home && x.place).at(-1);
-// the month's outings, one a place a day: the visits (their day) and the archive's headings (their newest day); a day
+// the month's outings, one a place a day: the visits (their day); a day
 // at home is no outing
 function mapDays(m, p, pl) {
     const gone = new Set([...(p.hiddenPlaces || []), ...(p.visits || []).filter(x => x?.home && x.place).map(x => nameKey(x.place))]), seen = new Set(), out = [], city = new Map(pl.map(r => [nameKey(r.place), r.city]));
