@@ -12,7 +12,7 @@ import { ctx, globalSettings, saveMeta } from './core.js';
 import { chatRows, recentForCheck } from './drift.js';
 import { applyInjection } from './inject.js';
 import { knowledgeRows } from './knowledge.js';
-import { headingPlaces, nameKey, nameRe } from './people.js';
+import { nameKey, nameRe } from './people.js';
 import { estTok } from './recall.js';
 import { recentTrackers } from './scenes.js';
 import { parseSections, RANGE_HEAD, sectionKey, splitTail } from './sections.js';
@@ -3627,25 +3627,6 @@ function zoneNamed(p, name, m = null) {
     const hits = around.filter(z => z.names.some(lead));
     if (hits.length && hits.every(z => z.tz === hits[0].tz)) return { tz: hits[0].tz, name: hits[0].name, own: !!hits[0].own || mine(hits[0].tz, hits[0].name) };
     return null;
-}
-// ---- the places they have been: section headings that name a place, in sections the owner is in (no model).
-// One row a place, newest visit first: a move ("A → B") counts for both, and a place gone to again counts up
-export function placesOf(m, owner) {
-    const re = nameRe(owner), cals = calendars(), seen = new Map();
-    for (const s of parseSections(String(m.text || '')).filter(x => !x.group && RANGE_HEAD.test(x.title)).reverse()) {
-        if (!re.test(m.text.slice(s.start, s.end))) continue;
-        const pl = headingPlaces(s.title, cals);
-        if (!pl.length) continue;
-        const d = headingDate(s.title, cals);
-        const day = d.date?.d && cals[d.date.cal]?.length === 12 ? `${pad(d.date.m + 1)}-${pad(d.date.d)}` : '';
-        const name = s.title.match(RANGE_HEAD)[5].replace(/^\s*[—–-]\s*/, '').replace(/\s*\([^()]*\)\s*(\[[^\]]*\])?\s*$/, '').trim();
-        for (const place of pl) {
-            const k = nameKey(place), had = seen.get(k);
-            if (had) had.n++;
-            else seen.set(k, { place, n: 1, day, date: d.date?.label || '', time: d.time || '', scene: name, key: sectionKey(s) });
-        }
-    }
-    return [...seen.values()].slice(0, 40);
 }
 
 export const koOn = () => globalSettings().phoneKo !== false;
