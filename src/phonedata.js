@@ -1482,7 +1482,17 @@ export async function setPreYear(m, owner, year) {
     await saveMeta();
 }
 // apps: some of REMAKE's names, made again from the whole story while the rest of the phone stays as it is
-export function makePhone(m, owner, opts = {}) { return withDateOrder(dateOrderOf(m), () => makePhone0(m, owner, opts)); }
+// 폰 만들기 under way, by chat (its meta) and owner: the phone shut and opened again mid-make knows it, and a second
+// make of the same phone waits for the first (a reflection of a phone there is guarded by busy.sync already)
+const makingNow = new WeakMap();
+export const phoneMaking = (m, owner) => !!(m && makingNow.get(m)?.has(nameKey(owner)));
+export function makePhone(m, owner, opts = {}) {
+    if (opts.update && m?.phones?.[nameKey(owner)]) return withDateOrder(dateOrderOf(m), () => makePhone0(m, owner, opts));
+    const key = nameKey(owner), set = m && typeof m === 'object' ? (makingNow.get(m) || makingNow.set(m, new Set()).get(m)) : null;
+    if (set?.has(key)) return Promise.reject(new Error('이 폰을 만드는 중이에요. 끝날 때까지 기다려 주세요'));
+    set?.add(key);
+    return Promise.resolve().then(() => withDateOrder(dateOrderOf(m), () => makePhone0(m, owner, opts))).finally(() => set?.delete(key));
+}
 async function makePhone0(m, owner, { update = false, apps = null } = {}) {
     const run = storyRun(m);
     await ensureScreenHolder(m);

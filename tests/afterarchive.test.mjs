@@ -301,6 +301,26 @@ test('a second turn that fails keeps the first; a phone made anew has none (the 
     assert.equal(globalThis.__menu.calls.filter(c => c.sys === data.AI_SYS_PHONE).length, 1);
 });
 
+test('폰 만들기 under way: the same phone made again (the phone shut and opened mid-make) waits; another chat or person does not', async () => {
+    globalThis.__rows = bigRows(4);
+    globalThis.__menu = { calls: [], answers: [notesAnswer('A'), notesAnswer('B'), notesAnswer('C')], answer: '{}' };
+    const fresh = { ...m, phones: {} }, other = { ...m, phones: {} };
+    const first = data.makePhone(fresh, 'Ren');
+    assert.equal(data.phoneMaking(fresh, 'ren'), true);
+    assert.equal(data.phoneMaking(other, 'Ren'), false);
+    await assert.rejects(data.makePhone(fresh, 'Ren'), /만드는 중/);
+    const elsewhere = data.makePhone(other, 'Ren');
+    await first; await elsewhere;
+    assert.equal(data.phoneMaking(fresh, 'Ren'), false);
+    assert.equal(globalThis.__menu.calls.filter(c => c.sys === data.AI_SYS_PHONE).length, 2);
+    // (done: it lets go, and can be made again; one that throws lets go too)
+    globalThis.__menu = { calls: [], answers: [notesAnswer('D')], answer: '{}' };
+    await data.makePhone(fresh, 'Ren', { apps: ['note'] });
+    assert.equal(data.phoneMaking(fresh, 'Ren'), false);
+    await assert.rejects(data.makePhone(null, 'Ren'));
+    assert.equal(data.phoneMaking(null, 'Ren'), false);
+});
+
 // ---- 은행 채우기도 두 턴: 두 번째는 기록만, 잔액은 첫 번째 그대로
 const moneyAnswer = (who, balance, time) => JSON.stringify({ currency: 'EUR', bank: { name: 'Varo Bank', accounts: [{ id: '', kind: 'checking', name: 'Main', last4: '1111', currency: 'EUR', balance }] },
     cards: [{ account: '1111', exp: '09/29' }], tx: [{ account: '1111', who, amount: -12, time, kind: 'card' }], passes: [], orders: [{ shop: 'Ivo Books', item: who, price: 12, time, status: 'delivered' }] });
