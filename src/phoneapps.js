@@ -829,6 +829,8 @@ export function prepScreen(p, now, m, ui = {}) {
       <div class="ax_scroll">${axH1('폰 만들기 준비')}
         <div class="ax_foot ax_prep_lead">${esc(p.owner)}의 폰을 위에서부터 채우고 만들어요.</div>
         ${body}
+        ${ui.draft === false ? '<div class="ax_foot">⚙ 설정 → AI 모델에서 초안 모델을 먼저 정해 주세요.</div>' : ''}
+        ${ui.noArch ? `<div class="ax_sec">아직 아카이브가 없어요</div><div class="ax_card"><button type="button" class="ax_rw ax_rwn na_ph_gocompress"><span class="ax_tx"><span class="ax_n ax_blue">압축하기</span></span></button></div><div class="ax_foot">압축해 두면 폰이 더 정확하고 싸게 만들어져요.</div>` : ''}
         <i class="ax_pad"></i>
       </div>
       ${axInd()}`;

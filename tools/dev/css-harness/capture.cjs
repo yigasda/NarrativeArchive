@@ -163,15 +163,14 @@ const helpers = {
         await p.evaluate(y => { const el = document.querySelector('#na_settings'); el.scrollIntoView({ block: 'start' }); const sc = el.closest('.scrollableInner, #extensions_settings, .drawer-content') || el.parentElement; if (sc) sc.scrollTop += y; }, scrollY);
         await p.waitForTimeout(600);
     },
-    // the phone with nothing made yet: the make card
+    // the phone with nothing made yet: 폰 만들기 준비
     phoneBlank: async p => {
         await p.evaluate(async ([B]) => { const core = await import(B + 'core.js'); const m = core.getMeta(); delete m.phones; delete m.phonePre; (await import(B + 'phone.js')).openPhone('Mara'); }, [B]);
-        await p.waitForSelector('.na_ph_makebtn', { timeout: 8000 }); await p.waitForTimeout(500);
+        await p.waitForSelector('.na_ph_preplink', { timeout: 8000 }); await p.waitForTimeout(500);
     },
     phone: async p => {
         await p.evaluate(async ([B]) => { const core = await import(B + 'core.js'); const m = core.getMeta(); delete m.phones; delete m.phonePre; (await import(B + 'phone.js')).openPhone('Mara'); }, [B]);
-        // 폰 만들기 → 폰 만들기 준비: 위치 연동, then 이대로 폰 만들기 (and, with no city read, 이대로 만들기)
-        await p.waitForSelector('.na_ph_makebtn', { timeout: 8000 }); await p.$eval('.na_ph_makebtn', e => e.click());
+        // 폰 만들기 준비 (no phone yet opens there): 위치 연동, then 이대로 폰 만들기 (and, with no city read, 이대로 만들기)
         await p.waitForSelector('.na_ph_preplink', { timeout: 8000 }); await p.$eval('.na_ph_preplink', e => e.click());
         await p.waitForSelector('.na_ph_prepmake:not([disabled])', { timeout: 30000 }); await p.$eval('.na_ph_prepmake', e => e.click()); await p.waitForTimeout(400);
         if (await p.$('.pcf_ok[data-v="b"]')) await p.$eval('.pcf_ok[data-v="b"]', e => e.click());

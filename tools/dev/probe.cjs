@@ -42,8 +42,8 @@ async function open(theme = 'light', { width = 412, out = 'shots', video = '', m
         (await import(B + 'phone.js')).openPhone('Mara');
     }, { B, ARCH });
     await p.waitForTimeout(800);
-    // 폰 만들기 → 폰 만들기 준비: 위치 연동, then 이대로 폰 만들기 (make: false stops on the prep screen)
-    await p.click('.na_ph_makebtn'); await p.waitForSelector('.na_ph_preplink', { timeout: 15000 });
+    // no phone yet → 폰 만들기 준비 straight away: 위치 연동, then 이대로 폰 만들기 (make: false stops on the prep screen)
+    await p.waitForSelector('.na_ph_preplink', { timeout: 15000 });
     if (make) {
         await p.click('.na_ph_preplink'); await p.waitForSelector('.na_ph_prepmake:not([disabled])', { timeout: 30000 }); await p.waitForTimeout(300);
         await p.click('.na_ph_prepmake'); await p.waitForTimeout(400);
