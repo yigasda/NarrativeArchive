@@ -41,7 +41,8 @@ export async function copyText(text, fallbackEl) {
 export async function confirm(title, text = '', ok = '확인', { danger = false, no = '취소' } = {}) {
     const c = ctx();
     const $b = $(`<div class="na_popup na_v2 na_confirm${danger ? ' danger' : ''}"><div class="na_v2_title"><b>${esc(title)}</b></div>${text ? `<div class="na_confirm_text">${text}</div>` : ''}</div>`);
-    const r = await c.callGenericPopup($b, c.POPUP_TYPE.CONFIRM, '', { okButton: ok, cancelButton: no });
+    // (a long one, as 한 번에 압축 with 자세히 open on a phone, scrolls inside; the buttons stay at the bottom)
+    const r = await c.callGenericPopup($b, c.POPUP_TYPE.CONFIRM, '', { okButton: ok, cancelButton: no, allowVerticalScrolling: true });
     return r === c.POPUP_RESULT.AFFIRMATIVE || r === true;
 }
 

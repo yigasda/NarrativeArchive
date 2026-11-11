@@ -360,6 +360,8 @@ body.na_darkui .na_tag.dig { background: #2E2E34; color: #B9DDB0; --axfg: #B9DDB
 
 /* 이번 압축 메모 · 추가 창에서 이어서 고치기 */
 .na_qc_memo { display: block; width: 100%; box-sizing: border-box; margin: 12px 0 0; resize: vertical; --axfs: 0.9em; text-align: left}
+/* a list that scrolls on its own: a drag inside it moves only it (the dialog under it doesn't go along at either end) */
+.na_qc_scenes { overscroll-behavior: contain; }
 .na_apf { display: flex; flex-direction: column; gap: 6px; }
 .na_apf_foot { display: flex; align-items: center; gap: 10px; font-size: 0.86em; --axfs: 0.86em}
 .na_apf_foot label { flex: 1; min-width: 0; margin: 0; }
