@@ -792,43 +792,49 @@ export function prepScreen(p, now, m, ui = {}) {
     const blue = (t, cls, off = false) => `<div class="ax_card"><button type="button" class="ax_rw ax_rwn ${cls}"${off ? ' disabled' : ''}><span class="ax_tx"><span class="ax_n ${off ? 'ax_prep_off' : 'ax_blue'}">${t}</span></span></button></div>`;
     const wait = (n, sub) => `<div class="ax_card"><div class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_n ax_prep_wait">${n}</span><span class="ax_p ax_prep_sub">${sub}</span></span></div></div>`;
     const seg = `<span class="ax_dseg">${[['md', '월.일'], ['dm', '일.월']].map(([v, t]) => `<span role="button" tabindex="0" class="na_ph_dord${ui.order === v ? ' on' : ''}" data-v="${v}">${t}</span>`).join('')}</span>`;
+    // 1 · 초안 모델 first (docs/mockups/phone-prep-open steps): everything under it waits for it, the model reads the rest
+    const draft = ui.draft !== false;
+    const model = `<div class="ax_sec">1 · 초안 모델</div><div class="ax_card">${row('초안 모델', draft ? val(ui.draftName || '') : `<span class="ax_v"><span class="ax_blue">정하기</span></span>${axChev}`, 'na_ph_prepdraft')}</div>
+        <div class="ax_foot">폰을 채우고 반영하는 모델이에요. 확장 설정 › AI 모델과 같아요.</div>`;
     const steps = `
-        <div class="ax_sec">1 · 인물 정보</div><div class="ax_card">${row('프로필 연동', val(ui.profile || '연결 안 함'), 'na_ph_prepprofile')}</div>
-        <div class="ax_sec">2 · 참고 로어북 (선택)</div><div class="ax_card">${row('참고 로어북', val(ui.lore || '없음'), 'na_ph_makelore')}</div>
+        <div class="ax_sec">2 · 인물 정보</div><div class="ax_card">${row('프로필 연동', val(ui.profile || '연결 안 함'), 'na_ph_prepprofile')}</div>
+        <div class="ax_sec">3 · 참고 로어북 (선택)</div><div class="ax_card">${row('참고 로어북', val(ui.lore || '없음'), 'na_ph_makelore')}</div>
         <div class="ax_foot">안 고르면 아카이브와 본문만 읽어요.</div>
-        <div class="ax_sec">3 · 용어집 (선택)</div><div class="ax_card">${row('번역 용어집', val(ui.gloss ? `${ui.gloss}개` : '없음'), 'na_ph_gloss')}</div>
+        <div class="ax_sec">4 · 용어집</div><div class="ax_card">${row('번역 용어집', val(ui.gloss ? `${ui.gloss}개` : '없음'), 'na_ph_gloss')}</div>
         <div class="ax_foot">적어두면 이름이 그대로 나와요.</div>
-        <div class="ax_sec">4 · 날짜</div><div class="ax_card">${row('날짜 읽는 법', seg, '', 'div')}${row('메신저 시간대', val(ui.holder || '미설정'), 'na_ph_prepholder')}</div>`;
+        <div class="ax_sec">5 · 날짜</div><div class="ax_card">${row('날짜 읽는 법', seg, '', 'div')}${row('메신저 시간대', val(ui.holder || '미설정'), 'na_ph_prepholder')}</div>`;
     const sum = [ui.profile || '인물 정보 없음', ui.lore && ui.lore !== '없음' ? `로어북 ${ui.loreN}권` : '로어북 없음', `용어 ${ui.gloss || 0}개`, ui.order === 'dm' ? '일.월' : '월.일', ui.holder || '메신저 미설정'].join(' · ');
     const link = ui.linking ? `${busyHtml} 연동하는 중` : '';
     let body;
     if (!ui.pre) {
         body = `${steps}
-        <div class="ax_foot">위치는 1~4를 읽어서 정해요.</div>
-        <div class="ax_prep_gap"></div>${blue(link || '다음 · 위치 연동', 'na_ph_preplink', ui.linking)}
-        <div class="ax_sec">5 · 위치</div>${wait('위치', '위 단계를 마치면 열려요 · 연동한 뒤 직접 고칠 수 있어요')}
-        <div class="ax_sec">6 · 이야기 연도</div>${wait('연도', '위치 다음에 정해요')}
+        <div class="ax_foot">위치는 1~5를 읽어서 정해요.</div>
+        <div class="ax_prep_gap"></div>${blue(draft ? link || '다음 · 위치 연동' : '초안 모델을 먼저 정해 주세요', 'na_ph_preplink', ui.linking || !draft)}
+        <div class="ax_sec">6 · 위치</div>${wait('위치', '위 단계를 마치면 열려요 · 연동한 뒤 직접 고칠 수 있어요')}
+        <div class="ax_sec">7 · 이야기 연도</div>${wait('연도', '위치 다음에 정해요')}
         <div class="ax_prep_gap"></div>${blue('이대로 폰 만들기', 'na_ph_prepmake', true)}`;
     } else {
         const o = placeInfo(p).owner, on = !p.noYear;
         const warn = ui.stale === 'profile' ? '인물 정보가 바뀌었어요. 위치를 다시 연동해 주세요.' : ui.stale === 'lore' ? '참고 로어북이 바뀌었어요. 위치를 다시 연동해 주세요.' : !o.city || !o.tz ? '이야기에서 불러오지 못했어요. 폰 주인의 위치를 적어 주세요.' : '';
         const step = (dv, t) => `<span role="button" tabindex="0" class="ax_ystep na_ph_ystep" data-d="${dv}" aria-label="${dv < 0 ? '한 해 전' : '한 해 뒤'}">${t}</span>`;
-        body = `${ui.open ? `${steps}<div class="ax_card">${row('1~4 단계', val('접기'), 'na_ph_prepopen')}</div>` : `<div class="ax_card">${row('1~4 단계', val('다시 보기'), 'na_ph_prepopen')}</div>`}
+        body = `${ui.open ? `${steps}<div class="ax_card">${row('2~5 단계', val('접기'), 'na_ph_prepopen')}</div>` : `<div class="ax_card">${row('2~5 단계', val('다시 보기'), 'na_ph_prepopen')}</div>`}
         <div class="ax_foot">${ui.open ? '' : `${esc(sum)}<br>`}바꾸면 위치를 다시 연동해요.</div>
-        <div class="ax_sec">5 · 위치</div>
+        <div class="ax_sec">6 · 위치</div>
         ${placeBody(p, now, warn)}
         ${ui.stale || !o.city || !o.tz || placeInfo(p).failed ? blue(link || '다시 연동', 'na_ph_preplink', ui.linking) : ''}
-        <div class="ax_sec">6 · 이야기 연도</div>
+        <div class="ax_sec">7 · 이야기 연도</div>
         <div class="ax_card"><button type="button" class="ax_rw ax_rwn na_ph_yearshow"><span class="ax_tx"><span class="ax_n">연도 표시</span></span><span class="ax_sw ${on ? 'on' : ''}"></span></button>
           ${on ? row('연도', `<span class="ax_ys">${step(-1, '−')}<b class="cg_num na_ph_yval">${esc(String(p.year || ''))}</b>${step(1, '+')}</span>`, '', 'div') : ''}</div>
         <div class="ax_foot">연도를 알아야 요일이 맞게 나와요. 연도 없는 이야기만 꺼 주세요.</div>
-        <div class="ax_prep_gap"></div>${blue(ui.making ? `${busyHtml} 폰 만드는 중` : '이대로 폰 만들기', 'na_ph_prepmake', ui.linking || ui.making)}`;
+        <div class="ax_prep_gap"></div>${blue(ui.making ? `${busyHtml} 폰 만드는 중` : draft ? '이대로 폰 만들기' : '초안 모델을 먼저 정해 주세요', 'na_ph_prepmake', ui.linking || ui.making || !draft)}`;
     }
     return `${axBar(p, now)}
       ${axTop(`<button type="button" class="ax_cb na_ph_prepclose" aria-label="닫기">${ax('back', 18, 'currentColor', 2.3)}</button>`)}
       <div class="ax_scroll">${axH1('폰 만들기 준비')}
         <div class="ax_foot ax_prep_lead">${esc(p.owner)}의 폰을 위에서부터 채우고 만들어요.</div>
-        ${body}
+        ${model}
+        <div class="${draft ? '' : 'ax_prep_dim'}">${body}</div>
+        ${ui.noArch ? `<div class="ax_sec">아직 아카이브가 없어요</div><div class="ax_card"><button type="button" class="ax_rw ax_rwn na_ph_gocompress"><span class="ax_tx"><span class="ax_n ax_blue">압축하기</span></span></button></div><div class="ax_foot">압축해 두면 폰이 더 정확하고 싸게 만들어져요.</div>` : ''}
         <i class="ax_pad"></i>
       </div>
       ${axInd()}`;

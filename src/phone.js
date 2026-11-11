@@ -10,7 +10,7 @@ import { profileEntries, resolvePhoneProfile, currentPersonaBinding } from './ph
 import { investmentScreen } from './investui.js';
 import { collectInvestmentRecords, fillInvestment, fillChartHistory, refreshMarket, refreshBankFX, investmentDate, validDate } from './investdata.js';
 import { migrateBank, selectPrice } from './finance.js';
-import { draftReady, withSpinner } from './ai.js';
+import { draftReady, drLabel, withSpinner } from './ai.js';
 import { ctx, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
 import { applyInjection } from './inject.js';
 import { faceHtml, nameKey, peopleList } from './people.js';
@@ -313,37 +313,19 @@ export async function openPhone(who = null) {
         }
         // 메신저 시간대 opened from 폰 만들기 준비: the settings screen itself, back to the prep screen
         if (!p && view === 'setscreenholder') { $root.find('.na_ph_frame').html(screen(phonePre(m, owner) || pendingProfile(), view, m, roster, { holderBack: 'prep' })); return; }
-        if (!p && view === 'prep') {
-            const pre = phonePre(m, owner), key = nameKey(owner), bound = m.phoneProfiles?.[key], n = phoneLore(m).length;
-            const stale = !pre ? '' : JSON.stringify(pre.financeProfile ?? null) !== JSON.stringify(bound ?? null) ? 'profile' : (pre.lore ?? loreKey()) !== loreKey() ? 'lore' : '';
-            const top = keep ? $root.find('.ax_scroll').scrollTop() : 0;
-            $root.find('.na_ph_frame').html(screen(pre || pendingProfile(), 'prep', m, roster, { prep: { pre: !!pre, open: !pre || prepOpen, profile: bound?.label || '', lore: n ? `${n}권` : '없음', loreN: n, gloss: glossaryEntries(m).length, order: dateOrderOf(m), holder: screenHolderLabel(m), stale, linking: prepLinking, making: busyMake === 'make' } }));
-            if (keep) $root.find('.ax_scroll').scrollTop(top);
-            return;
-        }
         if (!p && view==='setprofile') {
             const draft=pendingProfile();
             $root.find('.na_ph_frame').html(screen(draft,view,m,roster,{profileState:profileStates.get(nameKey(owner))}));
             return;
         }
-        if (!p) {
-            $root.find('.na_ph_frame').html(`
-              <div class="na_ph_scr glass w_dusk"><div class="na_ph_sb"><span></span><i>${ic('sig', 15)}${ic('bat', 20, 1.6)}</i></div>
-                <div class="na_ph_body na_ph_make">
-                  <div class="na_ph_makecard">
-                    <span class="na_ph_makeface">${faceHtml(owner, 64)}</span>
-                    <b>${esc(owner)}의 폰</b>
-                    <p>${noArchive(m) ? '대화 본문을 읽고 폰을 채워요' : '아카이브를 읽고 폰을 채워요'}</p>
-                    <button type="button" class="na_ph_makebtn">폰 만들기</button>
-                    <span class="na_ph_makeopts">
-                      <button type="button" class="na_ph_makeprofile">${ic('user', 16, 2)}<span>${m.phoneProfiles?.[nameKey(owner)] ? esc(m.phoneProfiles[nameKey(owner)].label) : '인물 정보'}</span></button>
-                      <button type="button" class="na_ph_makewho">${ic('redo', 16, 2)}<span>인물 바꾸기</span></button>
-                      <button type="button" class="na_ph_makelore">${ic('note', 16, 2)}<span>로어북 ${(n => (n ? `${n}권` : '없음'))(phoneLore(m).length)}</span></button>
-                    </span>
-                    ${draftReady() ? '' : '<small>⚙ 설정 → AI 모델에서 초안 모델을 먼저 정해 주세요</small>'}
-                  </div>
-                  ${noArchive(m) ? `<div class="na_ph_maketip"><span class="t"><b>아직 아카이브가 없어요</b><small>압축해 두면 폰이 더 정확하고<br>싸게 만들어져요</small></span><button type="button" class="na_ph_gocompress">압축하기</button></div>` : ''}
-                </div></div>`);
+        // no phone yet: always 폰 만들기 준비 (the old 폰 만들기 card is gone; reopening the phone lands here too)
+        if (!p && view !== 'prep') { view = 'prep'; ensureScreenHolder(m).then(() => { if (!phoneClosed && !phone() && view === 'prep') drawPhone(true); }).catch(() => {}); }
+        if (!p && view === 'prep') {
+            const pre = phonePre(m, owner), key = nameKey(owner), bound = m.phoneProfiles?.[key], n = phoneLore(m).length;
+            const stale = !pre ? '' : JSON.stringify(pre.financeProfile ?? null) !== JSON.stringify(bound ?? null) ? 'profile' : (pre.lore ?? loreKey()) !== loreKey() ? 'lore' : '';
+            const top = keep ? $root.find('.ax_scroll').scrollTop() : 0;
+            $root.find('.na_ph_frame').html(screen(pre || pendingProfile(), 'prep', m, roster, { prep: { pre: !!pre, open: !pre || prepOpen, profile: bound?.label || '', lore: n ? `${n}권` : '없음', loreN: n, gloss: glossaryEntries(m).length, order: dateOrderOf(m), holder: screenHolderLabel(m), stale, linking: prepLinking, making: busyMake === 'make', draft: draftReady(), draftName: drLabel(), noArch: noArchive(m) } }));
+            if (keep) $root.find('.ax_scroll').scrollTop(top);
             return;
         }
         if (!view.startsWith('thread:') || view !== msgView) { msgHeld = null; msgPick = null; msgView = view; }
@@ -847,7 +829,14 @@ export async function openPhone(who = null) {
     $root.on('click', '.na_ph_makebtn', function () { make($(this), false); });
     // 폰 만들기 준비
     const prepBusy = () => { if (!(making || busyMake || investing || filling.size || busy.fill || busy.sync || placeReading || prepLinking)) return false; toastr.info('하던 일이 끝난 뒤 해 주세요', '캐릭터 휴대폰'); return true; };
-    $root.on('click', '.na_ph_prepclose', e => { e.stopPropagation(); prepOpen = false; view = 'lock'; drawPhone(); });
+    // 준비 화면's back: the phone picker (whose phone, or another person) — there is no screen behind it without a phone
+    // 1 · 초안 모델: the extension's own setting (확장 설정 › AI 모델 › 초안 모델); the phone closes to show it
+    $root.on('click', '.na_ph_prepdraft', async e => {
+        e.stopPropagation();
+        document.getElementById('na_phl')?.close();
+        try { const { goStart } = await import('./panel.js'); goStart('model'); } catch (err) { console.error('[narrative-archive] draft model', err); }
+    });
+    $root.on('click', '.na_ph_prepclose', e => { e.stopPropagation(); prepOpen = false; loreOpen = false; drawCtrl(); setSheet(true); });
     $root.on('click', '.na_ph_prepopen', e => { e.stopPropagation(); prepOpen = !prepOpen; drawPhone(true); });
     $root.on('click', '.na_ph_prepprofile', e => { e.stopPropagation(); if (prepBusy()) return; prepFrom = true; view = 'setprofile'; editProfile(); drawPhone(); });
     $root.on('click', '.na_ph_prepholder', e => { e.stopPropagation(); if (prepBusy()) return; view = 'setscreenholder'; drawPhone(); });
@@ -1450,7 +1439,14 @@ export async function openPhone(who = null) {
     // the phone's height is the screen's, but not while typing: a keyboard that shrinks the page (some phones' browsers)
     // would shrink the whole phone, so the height taken before the keyboard stays and the keyboard covers the bottom
     const typing = () => { const a = document.activeElement; return !!a && dlg.contains(a) && (a.matches('input, textarea, select') || a.isContentEditable); };
-    const setH = () => { if (!typing()) dlg.style.setProperty('--na-phh', `${window.innerHeight}px`); };
+    // (a touch screen whose height drops a lot at the same width is a keyboard opening, even when the focus has moved for a
+    // moment, as a screen redrawn while typing: the height stays; a turn of the phone changes the width and is taken)
+    let lastW = window.innerWidth, lastH = window.innerHeight;
+    const setH = () => {
+        const w = window.innerWidth, h = window.innerHeight, kb = w === lastW && h < lastH - 120 && window.matchMedia?.('(pointer: coarse)').matches;
+        if (typing() || kb) return;
+        lastW = w; lastH = h; dlg.style.setProperty('--na-phh', `${h}px`);
+    };
     const afterType = () => setTimeout(setH, 350);
     setH(); window.addEventListener('resize', setH); dlg.addEventListener('focusout', afterType);
     const stopBusy = watchBusy(() => { if (!phoneClosed && stillHere() && (view === 'set' || view === 'setsync')) drawPhone(true); });
