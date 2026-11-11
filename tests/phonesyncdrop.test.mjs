@@ -138,6 +138,26 @@ test('되돌리기 takes the round off as a source of what was already there', a
     assert.deepEqual(a(), [3]);
 });
 
+// the phone's place in the chat is the user's message it read up to; archived since (hidden: a system message), it is
+// still that message (hiding is not deleting), so the reflection goes on from there and never asks where to start
+test('read up to a user message the archive hid since: still its place, the reflection goes on from there', async () => {
+    const chat = [say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'going to the bookstore now'), say('Mara', 'I bought the book for 15000 won')];
+    const c = setup(chat);
+    c.p.sync.marks.base = makeMark(chat, 2);
+    assert.equal(data.syncState(c.p), 'ok');
+    // (압축: #0–#2 archived and hidden)
+    for (const x of chat.slice(0, 3)) x.is_system = true;
+    assert.equal(data.syncState(c.p), 'ok');
+    assert.equal(c.p.sync.marks.base.index, 2);
+    // (a message put in before it, the marked one hidden: found where it went)
+    chat.unshift(say('Mara', 'an older line'));
+    assert.equal(data.syncState(c.p), 'ok');
+    assert.equal(c.p.sync.marks.base.index, 3);
+    // (gone for good: still asks)
+    chat.splice(3, 1);
+    assert.equal(data.syncState(c.p), 'lost');
+});
+
 test('a branch: talk cut off past the branch point is gone, even where a new message took its place; the main chat keeps all', async () => {
     const c = await bookCase();
     const main = structuredClone(c.m), mainChat = structuredClone(T.chat);
