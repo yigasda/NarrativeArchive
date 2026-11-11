@@ -3525,9 +3525,39 @@ function ownedBy(scene, name) {
     return [...new Set([full, full.split(/\s+/)[0]])].some(n => n.length >= 2 && s.startsWith(n) && OWNED.test(s.slice(n.length)));
 }
 const sceneOf = place => String(place || '').split(/\s*[,，→>/·|]\s*/)[0].trim();
+// a country's name before the place ("대한민국 서울 강서구", "South Korea, Seoul", "Germany Frankfurt"): left off, so the
+// city after it is found; a place that is only a country stays as it is
+let countryKeys = null;
+const COUNTRY_MORE = ['한국', '남한', 'korea', 'republicofkorea', 'usa', 'us', 'uk', 'greatbritain', 'england', 'deutschland', 'nippon', '日本', 'prc'];
+function isCountry(v) {
+    if (!countryKeys) {
+        countryKeys = new Set(COUNTRY_MORE);
+        try {
+            const dn = ['en', 'ko', 'de', 'fr', 'ja'].map(l => new Intl.DisplayNames([l], { type: 'region' }));
+            for (let a = 65; a <= 90; a++) for (let b = 65; b <= 90; b++) {
+                const cc = String.fromCharCode(a, b);
+                for (const d of dn) { const n = d.of(cc); if (n && n !== cc) countryKeys.add(pkey(n)); }
+            }
+        } catch { /* no region names here: the few above */ }
+    }
+    return countryKeys.has(pkey(v));
+}
+function withoutCountry(place) {
+    const parts = String(place || '').split(/\s*[,，→>/·|]\s*/).filter(Boolean);
+    if (parts.length > 1 && isCountry(parts[0])) return parts.slice(1).join(', ');
+    const w = String(place || '').trim().split(/\s+/);
+    for (let k = Math.min(3, w.length - 1); k >= 1; k--) if (isCountry(w.slice(0, k).join(' '))) return w.slice(k).join(' ');
+    return String(place || '');
+}
 // the zone a status line's place names: its scene part is a known city's name, or starts with it ("서울 강남"). A name
 // only at the start ("Paris Baguette") is taken only when it is the owner's own zone; in another zone it is no proof
+// (found as written first, as always; only a place found nowhere is tried again without the country before it, so
+// "Singapore" or "Monaco" are still themselves)
 export function sceneZone(p, place, m = null) {
+    const z = sceneZone0(p, place, m), bare = withoutCountry(place);
+    return z || (bare !== String(place || '') ? sceneZone0(p, bare, m) : null);
+}
+function sceneZone0(p, place, m = null) {
     const sc = sceneOf(place), whole = pkey(sc), words = sc.split(/\s+/).filter(Boolean), first = pkey(words[0]), own = ownerZone(p);
     if (!whole) return null;
     // the place's first words as one ("New York" of "New York City")

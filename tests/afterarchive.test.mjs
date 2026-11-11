@@ -426,6 +426,25 @@ test('OWNER\'S CLOCK combines a city with its people only in the output, keeping
     assert.equal(data.sceneZone(p, 'Seoul', m).tz, 'Asia/Seoul');
 });
 
+// a status line's place with its country first ("대한민국 서울 강서구"): the city after it, when the place as written is found nowhere
+test('a scene\'s city with its country before it is still that city; a place found as written stays as it was', () => {
+    const p = zonePhone('11-05 03:38');
+    for (const place of ['대한민국 서울', 'South Korea, Seoul', '대한민국 서울 → 본가', 'Korea Seoul']) assert.equal(data.sceneZone(p, place)?.tz, 'Asia/Seoul', place);
+    assert.equal(data.sceneZone(p, 'Germany Frankfurt am Main')?.tz, 'Europe/Berlin');
+    assert.equal(data.sceneZone(p, 'Deutschland Frankfurt am Main Westend')?.tz, 'Europe/Berlin');
+    // (another zone's city from the start of a longer name stays unknown, country or not: "New York Bagels, Gangnam")
+    assert.equal(data.sceneZone(p, '서울 강서구'), null);
+    assert.equal(data.sceneZone(p, '대한민국 서울 강서구'), null);
+    // (an owner in Seoul: the district of their own city is theirs, the country before it too)
+    const s = { ...zonePhone('11-05 03:38'), life: { weather: { here: { place: 'Seoul' }, cities: [{ name: 'Seoul', ko: '서울', tz: 'Asia/Seoul' }, { name: 'Frankfurt am Main', tz: 'Europe/Berlin' }] } } };
+    assert.equal(data.sceneZone(s, '대한민국 서울 강서구')?.tz, 'Asia/Seoul');
+    assert.equal(data.sceneZone(s, '대한민국 서울 강서구')?.own, true);
+    // (as written first: Seoul is Seoul; a country alone is no city)
+    assert.deepEqual(data.sceneZone(p, '대한민국 서울'), data.sceneZone(p, '서울'));
+    assert.equal(data.sceneZone(p, '대한민국'), null);
+    assert.equal(data.sceneZone(p, 'South Korea'), null);
+});
+
 test('OWNER\'S CLOCK keeps different cities with the same zone or current offset, and requires whole city names', () => {
     const p = zonePhone('11-05 03:38');
     p.life.weather.cities.push({ name: 'Busan', tz: 'Asia/Seoul' }, { name: 'Tokyo', tz: 'Asia/Tokyo' });
