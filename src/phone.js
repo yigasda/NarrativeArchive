@@ -16,7 +16,7 @@ import { applyInjection } from './inject.js';
 import { faceHtml, nameKey, peopleList } from './people.js';
 import { drafting, drawing, drawPhoto, drawPost, filling, makeDraft, paging, retranslate, retranslating, recording, recordVoice, searching, searchPage, shooting, takePhoto, webPage, writeEntry, writing } from './phoneai.js';
 import { setDraft, setDraftModels, setVoice, setVoiceAdd, voiceList, voicePeople, ax, axFind, groupInfo, APPS, AXB, AXB_C, busyHtml, setDate, setScreenHolderView, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, mapTowns, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setOwnerProfile, setWho, snsPost, snsScreen, statusBar, threadScreen, setPlace, prepScreen } from './phoneapps.js';
-import { dropStretch, koGaps, savedName, ensureIds, ensureYear, hasDatedRecords, noArchive, setStoryYear, storyYear, fillDevice, fillMoney, fillVoice, koOn, loreOff, makePhone, tidyKo, markAfter, phoneLore, REMAKE, restoreRounds, retryMoney, showNow, storyNow, syncLeft, syncRows, syncState, tidyJournal, undoRound } from './phonedata.js';
+import { phoneMaking, dropStretch, koGaps, savedName, ensureIds, ensureYear, hasDatedRecords, noArchive, setStoryYear, storyYear, fillDevice, fillMoney, fillVoice, koOn, loreOff, makePhone, tidyKo, markAfter, phoneLore, REMAKE, restoreRounds, retryMoney, showNow, storyNow, syncLeft, syncRows, syncState, tidyJournal, undoRound } from './phonedata.js';
 import { busy, watchBusy, exclusive, journalRead, journalWrite, syncOf } from './phonesync.js';
 import { syncPick, syncSettings } from './phonesyncui.js';
 import { CG_W, homeScreen, lastSig, lockScreen, threadNew } from './phonehome.js';
@@ -44,6 +44,8 @@ const draftUi = () => { const t = draftSettings(); let host = ''; try { host = t
 // 초안 모델 › 모델: which setting the list fills, and the list (the address's, loaded; or SillyTavern's Vertex models)
 const draftKey = () => (draftSettings().mode === 'vertex' ? 'vxModel' : 'model');
 const draftIds = () => (draftSettings().mode === 'vertex' ? vxModelList() : draftSettings().models || []);
+// a make that ends tells every phone open now (one shut and opened again mid-make draws the phone it made)
+const madeWatch = new Set();
 function screen(p, view, m, roster, ui) {
     const now = storyNow(p);
     showNow(now);
@@ -333,7 +335,7 @@ export async function openPhone(who = null) {
             const pre = phonePre(m, owner), key = nameKey(owner), bound = m.phoneProfiles?.[key], n = phoneLore(m).length;
             const stale = !pre ? '' : JSON.stringify(pre.financeProfile ?? null) !== JSON.stringify(bound ?? null) ? 'profile' : (pre.lore ?? loreKey()) !== loreKey() ? 'lore' : '';
             const top = keep ? $root.find('.ax_scroll').scrollTop() : 0;
-            $root.find('.na_ph_frame').html(screen(pre || pendingProfile(), 'prep', m, roster, { prep: { pre: !!pre, open: !pre || prepOpen, profile: bound?.label || '', lore: n ? `${n}권` : '없음', loreN: n, gloss: glossaryEntries(m).length, order: dateOrderOf(m), holder: screenHolderLabel(m), stale, linking: prepLinking, making: busyMake === 'make', draft: draftReady(), draftName: drLabel(), noArch: noArchive(m) } }));
+            $root.find('.na_ph_frame').html(screen(pre || pendingProfile(), 'prep', m, roster, { prep: { pre: !!pre, open: !pre || prepOpen, profile: bound?.label || '', lore: n ? `${n}권` : '없음', loreN: n, gloss: glossaryEntries(m).length, order: dateOrderOf(m), holder: screenHolderLabel(m), stale, linking: prepLinking, making: busyMake === 'make' || phoneMaking(m, owner), draft: draftReady(), draftName: drLabel(), noArch: noArchive(m) } }));
             if (keep) $root.find('.ax_scroll').scrollTop(top);
             return;
         }
@@ -360,7 +362,7 @@ export async function openPhone(who = null) {
         if (making && view === 'setremake') $root.find('.na_ph_setremake .ax_n').html(`${busyHtml} 다시 만드는 중`);
         // a redraw mid-reflection (or mid-make) keeps saying so: withSpinner only dressed the button that was there
         if (busyMake === 'sync' || busy.sync && busy.operation === 'reflect' && busy.scope === openingScope && nameKey(busy.owner) === nameKey(owner)) $root.find('.na_ph_setupd .ax_v').html(`${busyHtml} 반영하는 중`);
-        if (busyMake === 'make') $root.find('.na_ph_makebtn:not(.na_ph_addok)').prop('disabled', true).html(`${busyHtml} 폰 만드는 중`);
+        if (busyMake === 'make' || phoneMaking(m, owner)) $root.find('.na_ph_makebtn:not(.na_ph_addok)').prop('disabled', true).html(`${busyHtml} 폰 만드는 중`);
         restoreFind();
         queueMicrotask(() => { autoChart(); autoMenu(); });
     };
@@ -435,7 +437,7 @@ export async function openPhone(who = null) {
         if (!prepared) await askDateOrder();
         busyMake = update ? 'sync' : 'make';
         let p;
-        try { p = await withSpinner($btn, update ? '반영하는 중' : '폰 만드는 중', () => makePhone(m, owner, { update })); } finally { busyMake = null; if (!phoneClosed && stillHere()) drawPhone(true); }
+        try { p = await withSpinner($btn, update ? '반영하는 중' : '폰 만드는 중', () => makePhone(m, owner, { update })); } finally { busyMake = null; if (!update) for (const fn of [...madeWatch]) fn(m, owner); if (!phoneClosed && stillHere()) drawPhone(true); }
         if (!p) return;
         if (!update) view = 'lock';
         draw();
@@ -837,7 +839,7 @@ export async function openPhone(who = null) {
     $root.on('click', '.na_sync_tr', async e => { e.stopPropagation(); if (making) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요'); await withSpinner($(e.currentTarget), '번역 중', () => koRun(phone(), true)); });
     $root.on('click', '.na_ph_makebtn', function () { make($(this), false); });
     // 폰 만들기 준비
-    const prepBusy = () => { if (!(making || busyMake || investing || filling.size || busy.fill || busy.sync || placeReading || prepLinking)) return false; toastr.info('하던 일이 끝난 뒤 해 주세요', '캐릭터 휴대폰'); return true; };
+    const prepBusy = () => { if (!(making || busyMake || phoneMaking(m, owner) || investing || filling.size || busy.fill || busy.sync || placeReading || prepLinking)) return false; toastr.info('하던 일이 끝난 뒤 해 주세요', '캐릭터 휴대폰'); return true; };
     // 준비 화면's back: the phone picker (whose phone, or another person) — there is no screen behind it without a phone
     // 1 · 초안 모델: the extension's own setting (확장 설정 › AI 모델 › 초안 모델); the phone closes to show it
     $root.on('click', '.na_ph_prepdraft', e => { e.stopPropagation(); view = 'setdraft'; drawPhone(); });
@@ -1502,6 +1504,13 @@ export async function openPhone(who = null) {
     };
     const afterType = () => setTimeout(setH, 350);
     setH(); window.addEventListener('resize', setH); dlg.addEventListener('focusout', afterType);
+    // a make of this phone that another opening started: its end shows the phone (the prep screen's views give way to the lock)
+    const onMade = (mm, who) => {
+        if (phoneClosed || mm !== m || nameKey(who) !== nameKey(owner) || !stillHere()) return;
+        if (phone() && ['prep', 'setdraft', 'setdraftmodel', 'setscreenholder', 'setprofile'].includes(view)) view = 'lock';
+        draw();
+    };
+    madeWatch.add(onMade);
     const stopBusy = watchBusy(() => { if (!phoneClosed && stillHere() && (view === 'set' || view === 'setsync')) drawPhone(true); });
     await new Promise(done => {
         const close = () => { if (dlg.open) dlg.close(); };
@@ -1511,7 +1520,7 @@ export async function openPhone(who = null) {
         dlg.addEventListener('cancel', e => { e.preventDefault(); if (ask) ask.done(false); else if (sheetOpen) setSheet(false); else close(); });
         dlg.addEventListener('close', () => { phoneClosed = true; ask?.done(false); done(); }, { once: true });
     });
-    stopBusy();
+    stopBusy(); madeWatch.delete(onMade);
     window.removeEventListener('resize', setH);
     ro.disconnect();
     const t = dlg.querySelector('#toast-container');
