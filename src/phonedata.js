@@ -63,7 +63,7 @@ Could this be on the owner's phone, given what the archive, lorebook and chat sh
 - Small everyday things around those events are fine: how a text was worded, a photo of a place they were, a search they would make.
 - People: only people the story or PEOPLE AROUND has. A relationship word (girlfriend, ex, husband, boss) only if the archive or chat uses it for them.
 - Nothing later than the newest moment of the story.
-- The diary holds only what the archive or chat shows happened and what the owner felt about it; no new secrets, no new feelings.`;
+- A diary entry is a day the archive or chat shows, in the owner's own feelings about it; no new secrets or events.`;
 // every time on the phone is the owner's own clock: a time written on the other side of the world is moved to theirs
 export const OWN_CLOCK = `Every time is on the owner's phone clock, where the owner is now. A time on a screen or in a scene goes by the city of whoever's screen or scene it is: the owner's city, or no OWNER'S CLOCK, keeps it; another city in OWNER'S CLOCK moves it by its hours there (a messenger timestamp on the other side's screen). A status line's time is the clock of the city its scene is in; OWNER'S CLOCK gives the newest one on the owner's clock when that is another city.`;
 export const CLOCK_GET = `- OWNER'S CLOCK (sometimes): where the owner is, their time now, and how many hours the other saved cities and the people elsewhere are ahead or behind.`;
@@ -165,7 +165,7 @@ JSON (one object, nothing before or after it)
 ${PHONE_ITEMS}
 }
 At most 6 threads of up to 12 messages, 10 calls, 8 photos, 5 notes, 8 searches (3 open at most), 6 events, 5 posts with up to 4 comments,
-6 mails, 5 diary entries, the 12 newest visits. Fewer is fine; an empty list is fine. The diary has no "everyday" entries.
+6 mails, 5 diary entries, the 12 newest visits. Fewer is fine; an empty list is fine.
 Oldest first in every list.
 ${PHONE_LAST}`;
 export const AI_SYS_PHONE_APPS = `GOAL
@@ -204,7 +204,7 @@ JSON (one object, nothing before or after it)
 ${PHONE_ITEMS}
 }
 At most 6 threads of up to 12 messages, 10 calls, 8 photos, 5 notes, 8 searches (3 open at most), 6 events, 5 posts with up to 4 comments,
-6 mails, 5 diary entries, the 12 newest visits. Fewer is fine; an empty list is fine. The diary has no "everyday" entries.
+6 mails, 5 diary entries, the 12 newest visits. Fewer is fine; an empty list is fine.
 Oldest first in every list.
 ${PHONE_LAST}`;
 
