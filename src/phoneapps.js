@@ -6,7 +6,7 @@ import { investmentDate } from './investdata.js';
 import { profileChoices, phoneDataInfo } from './phoneprofile.js';
 import { faceHtml, nameKey, nameRe, peopleData, peopleList, personLine } from './people.js';
 import { autopic, autopicPeople, drafting, drawing, looksOf, writing } from './phoneai.js';
-import { bigClock, byStory, mailAnswered, clockOf, COUNTRIES, fmtDate, fmtTime, fullDate, gapDays, hasKo, koOn, lastTime, listTime, localeOf, loreOff, MOODS, pad, parts, phoneLore, REMAKE, rowDay, savedName, dateOrderOf, placeInfo, screenHolderLabel, screenHolderChoices } from './phonedata.js';
+import { bigClock, byStory, mailAnswered, statusAt, clockOf, COUNTRIES, fmtDate, fmtTime, fullDate, gapDays, hasKo, koOn, lastTime, listTime, localeOf, loreOff, MOODS, pad, parts, phoneLore, REMAKE, rowDay, savedName, dateOrderOf, placeInfo, screenHolderLabel, screenHolderChoices } from './phonedata.js';
 import { threadNew } from './phonehome.js';
 import { screenView } from './phonescreen.js';
 import { BUSY, pinLayer, pinSpots, pinSvg, STAY, stripSvg, townKinds, townPlace, townSvg } from './phonemapart.js';
@@ -940,9 +940,22 @@ export function setLore(p, now, m, ui) {
       </div>
       ${axInd()}`;
 }
+// the camera's place: only the scene now — a status window on the newest shown message (or the newest character reply),
+// none from further back or hidden by a compression; and only the owner's own scene (statusAt: home, or the city they
+// are in), not the other end of a call
+function camPlace(p) {
+    const chat = ctx().chat || [], t = recentTrackers(1, { visibleOnly: true })[0];
+    if (!t?.place) return null;
+    const shown = [...chat.keys()].filter(i => chat[i] && !chat[i].is_system), last = shown.at(-1), reply = shown.filter(i => !chat[i].is_user).at(-1);
+    if (t.i !== last && t.i !== reply) return null;
+    const st = statusAt(p);
+    if (!st || st.i !== t.i) return null;
+    const here = String(placeInfo(p).owner?.city || '').trim().toLowerCase();
+    return st.home || (st.known && here && String(st.city || '').trim().toLowerCase() === here) ? t : null;
+}
 export function camScreen(p, now, k, busy) {
     const shot = k >= 0 ? p.photos[k] : null, last = p.photos[p.photos.length - 1], th = shot || last;
-    const t = recentTrackers(1)[0];
+    const t = camPlace(p);
     const modes = '<div class="ax_modes"><span>동영상</span><span class="on">사진</span><span>인물</span></div>';
     const bar = `<div class="ax_cbar"><button type="button" class="ax_cthumb" data-go="photo" aria-label="사진" style="--axbg: ${axFlat(th?.mood || 'green')}">${th?.img ? `<img src="${esc(th.img)}" alt="">` : ''}</button><button type="button" class="ax_shut na_ph_shutter" aria-label="찍기" ${busy ? 'disabled' : ''}><span>${busy ? busyHtml : ''}</span></button><span class="ax_flip" aria-hidden="true">${ax('flip', 22, '#fff')}</span></div>`;
     const top = pill => `<div class="ax_camtop">${ax('bolt', 22, '#fff')}<span class="ax_pill">${pill}</span><button type="button" class="ax_back" data-go="home" aria-label="닫기">${ax('x', 22, '#fff', 2.4)}</button></div>`;
