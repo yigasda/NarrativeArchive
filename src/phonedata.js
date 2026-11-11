@@ -63,7 +63,7 @@ Could this be on the owner's phone, given what the archive, lorebook and chat sh
 - Small everyday things around those events are fine: how a text was worded, a photo of a place they were, a search they would make.
 - People: only people the story or PEOPLE AROUND has. A relationship word (girlfriend, ex, husband, boss) only if the archive or chat uses it for them.
 - Nothing later than the newest moment of the story.
-- The diary holds only what the archive or chat shows happened and what the owner felt about it; no new secrets, no new feelings.`;
+- A diary entry is a day the archive or chat shows, in the owner's own feelings about it; no new secrets or events.`;
 // every time on the phone is the owner's own clock: a time written on the other side of the world is moved to theirs
 export const OWN_CLOCK = `Every time is on the owner's phone clock, where the owner is now. A time on a screen or in a scene goes by the city of whoever's screen or scene it is: the owner's city, or no OWNER'S CLOCK, keeps it; another city in OWNER'S CLOCK moves it by its hours there (a messenger timestamp on the other side's screen). A status line's time is the clock of the city its scene is in; OWNER'S CLOCK gives the newest one on the owner's clock when that is another city.`;
 export const CLOCK_GET = `- OWNER'S CLOCK (sometimes): where the owner is, their time now, and how many hours the other saved cities and the people elsewhere are ahead or behind.`;
@@ -165,7 +165,7 @@ JSON (one object, nothing before or after it)
 ${PHONE_ITEMS}
 }
 At most 6 threads of up to 12 messages, 10 calls, 8 photos, 5 notes, 8 searches (3 open at most), 6 events, 5 posts with up to 4 comments,
-6 mails, 5 diary entries, the 12 newest visits. Fewer is fine; an empty list is fine. The diary has no "everyday" entries.
+6 mails, 5 diary entries, the 12 newest visits. Fewer is fine; an empty list is fine.
 Oldest first in every list.
 ${PHONE_LAST}`;
 export const AI_SYS_PHONE_APPS = `GOAL
@@ -204,7 +204,7 @@ JSON (one object, nothing before or after it)
 ${PHONE_ITEMS}
 }
 At most 6 threads of up to 12 messages, 10 calls, 8 photos, 5 notes, 8 searches (3 open at most), 6 events, 5 posts with up to 4 comments,
-6 mails, 5 diary entries, the 12 newest visits. Fewer is fine; an empty list is fine. The diary has no "everyday" entries.
+6 mails, 5 diary entries, the 12 newest visits. Fewer is fine; an empty list is fine.
 Oldest first in every list.
 ${PHONE_LAST}`;
 
@@ -3393,6 +3393,25 @@ export const clockBlock = (p, at = p?.now, m = null, st = null, required = false
     }
     return lines.join('\n');
 };
+// 폰 2 (live): the same block on the real time now (at: the owner's wall clock), with no time choices and no screen
+// viewpoint (phone 1's), and each place's time now beside its hours, worked out here so the model never adds them up
+const WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const wallPlus = (t, y, h = 0) => {
+    const mt = /^(\d{2})-(\d{2}) (\d{2}):(\d{2})$/.exec(t), d = new Date(Date.UTC(y, mt[1] - 1, mt[2], mt[3], mt[4]) + Math.round(h * 60) * 6e4), two = n => String(n).padStart(2, '0');
+    return `${two(d.getUTCMonth() + 1)}-${two(d.getUTCDate())} ${two(d.getUTCHours())}:${two(d.getUTCMinutes())} (${WD[d.getUTCDay()]})`;
+};
+export function phone2Clock(p, at, m = null) {
+    const t = String(at || '');
+    if (!/^\d{2}-\d{2} \d{2}:\d{2}$/.test(t)) return '';
+    const y = yearOr(t, p?.year) || new Date().getFullYear(), z = zonesOf(p, t, m), label = v => /[\r\n]/.test(v) ? JSON.stringify(v) : v;
+    const location = z?.own.name || ownerZone(p)?.where, lines = ["[OWNER'S CLOCK]"];
+    if (p?.owner) lines.push(`Phone owner: ${label(p.owner)}`);
+    if (location) lines.push(`Location: ${label(location)}`);
+    lines.push(`Time now: ${wallPlus(t, y)}`);
+    if (z) lines.push('', `Time differences from ${label(location || "the owner's clock")}:`, ...clockRows(p, m, z.others).map(c =>
+        `- ${label(c.name || 'Unnamed location')}${c.where ? ` (${label(c.where)})` : ''}: ${hoursText(c.hours)}, now ${wallPlus(t, y, c.hours)}${c.dst ? ` (DST: ${c.dst.map(d => `${hoursText(d.hours)} ${d.past ? 'before' : 'from'} ${d.at}`).join('; ')})` : ''}`));
+    return lines.join('\n');
+}
 // 3.171.16 clock context for archive-only reflection; retained for event-local times and legacy now.
 const archiveClockBlock = (p, at = p?.now, m = null, st = null) => {
     const z = zonesOf(p, at, m);

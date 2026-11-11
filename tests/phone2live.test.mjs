@@ -72,12 +72,21 @@ test('폰 2 reply prompt: owner and persona by name, no "user", every listed app
     assert.doesNotMatch(s, /\buser\b/i);
     assert.match(s, /No narration\. No \*actions\*\. No quotation marks\. No status lines or tags\./);
     assert.match(s, /"state": where you are, what you are doing and until when/);
+    assert.match(s, /Your last status is only where you started; as the hours pass, your day moves on \(a nurse who began at home before a night shift is on the ward by 22:00\)\. Then the texts, from there\./);
     assert.match(s, /- LANGUAGES \(sometimes\): the languages you text in and those you know but seldom use, as set on the phone\./);
-    assert.match(s, /"reply" in one of the languages you text in, or a mix of them; very rarely, one you know but seldom use\. With no LANGUAGES, the language you really text Ren in\./);
-    assert.match(s, /Most moments leave something small; \[\] only when truly nothing\. Opening or checking an app leaves nothing; nothing already in ALREADY ON THE PHONE TODAY again\./);
+    assert.match(s, /\n- "reply" in one of the languages you text in, or a mix of two naturally; very rarely, one you know but seldom use\. With no LANGUAGES, the language you really text Ren in\.\n- "ko": the same bubbles in Korean, the way VOICES says you sound; "" for a bubble already in Korean\.\n/);
+    assert.match(s, /\n"does":\n- What you do or leave on the phone right now because of this moment\. Most moments leave something small; \[\] only when truly nothing\. One short line each, with what it needs \(an amount, a shop, a person\)\. Name the act itself \(not "checks the parking charge" but "pays 3 EUR for parking"\)\. What follows from it by itself \(receipts, mails, charges, tickets\) fills in later\.\n- Look at RECENT ON THE PHONE: you seldom reach for the same app again so soon \(a third note within the hour\); the moment may call for another\.\n/);
+    assert.doesNotMatch(s, /Opening or checking/);
+    // (run1 again: the apps' last times only; a list of what is on the phone drew more of the same)
+    assert.match(s, /- RECENT ON THE PHONE: when you last used each app\./);
+    assert.match(s, /\n- Bank, cards & wallet: when money moves, however small \(a parking fee, a newspaper\): you pay, send, get paid, top up, use a ticket\.\n/);
+    // (the time is OWNER'S CLOCK's alone: NOW holds no clock)
+    assert.match(s, /\n- NOW: where you are and what you are doing by your last status, your calendar today,/);
+    assert.match(s, /\n- OWNER'S CLOCK: where you are, your time now, and for the other saved cities and the people elsewhere, how many hours ahead or behind they are and their time now\.\n/);
     assert.doesNotMatch(s, /watch list|a line added to a note/);
-    assert.doesNotMatch(s, /RECENT ON THE PHONE|go check/);
+    assert.doesNotMatch(s, /ALREADY ON THE PHONE|go check|three or more|leaves nothing/);
     assert.doesNotMatch(s, /mixed as|now and then/);
+    assert.match(s, /- Mail: when you write, answer or forward an email, or open one you were waiting for or haven't read yet\./);
     // (no Korean in the prompt itself: a Korean example pulls the reply into Korean)
     assert.doesNotMatch(s, /[가-힣]/);
     assert.match(s, /Messages: when the talk makes you text someone else \(not Ren\)/);
@@ -94,20 +103,27 @@ test('폰 2 reply prompt: owner and persona by name, no "user", every listed app
 });
 
 test('mail: a mail the owner sends keeps "to", its Korean is the owner\'s voice to them, an answer finds its mail by subject', () => {
-    const p = data.parsePhone(JSON.stringify({ owner: 'Oscar', now: '11-07 10:00', mails: [
+    const p = data.parsePhone(JSON.stringify({ owner: 'Mara', now: '11-07 10:00', mails: [
         { from: 'Lufthansa', subject: 'Booking LH 712', text: 'Your flight is booked.', time: '11-06 14:10' },
-        { from: 'Oscar', to: 'Lufthansa', subject: 'Re: Booking LH 712', text: 'Please add a window seat.', time: '11-07 09:00' },
+        { from: 'Mara', to: 'Lufthansa', subject: 'Re: Booking LH 712', text: 'Please add a window seat.', time: '11-07 09:00' },
         { from: 'Bank', subject: 'Statement', text: 'Your statement is ready.', time: '11-07 09:30' },
-    ] }), 'Oscar');
+    ] }), 'Mara');
     assert.equal(p.mails[1].to, 'Lufthansa');
     assert.equal(p.mails[0].to, undefined);
     assert.equal(data.mailAnswered(p, p.mails[1]), p.mails[0]);
     assert.equal(data.mailAnswered(p, p.mails[0]), null);
     assert.equal(data.mailAnswered(p, p.mails[2]), null);
-    const gaps = data.koGaps({ ...p, owner: 'Oscar' }).filter(g => g.app === 'mail' || g.app === 'mail subject');
+    const gaps = data.koGaps({ ...p, owner: 'Mara' }).filter(g => g.app === 'mail' || g.app === 'mail subject');
     const sent = gaps.find(g => g.f === 'text' && g.x.text === 'Please add a window seat.'), got = gaps.find(g => g.f === 'text' && g.x.text === 'Your flight is booked.');
-    assert.deepEqual([sent?.who, sent?.to], ['Oscar', 'Lufthansa']);
-    assert.deepEqual([got?.who, got?.to], ['Lufthansa', 'Oscar']);
+    assert.deepEqual([sent?.who, sent?.to], ['Mara', 'Lufthansa']);
+    assert.deepEqual([got?.who, got?.to], ['Lufthansa', 'Mara']);
     assert.match(JSON.stringify(data.phoneForModel(p).mails), /"to":"Lufthansa"/);
     assert.match(data.coreRecordsSystem({ life: true, wallet: true, split: true }), /mail: "sender", "to": only on a mail the owner sends \("sender" is then the owner\), "subject" \("Re: …" for an answer\)/);
+});
+
+test('폰 2 ko: "" for a bubble already in Korean is that bubble; the others keep their Korean, in order', async () => {
+    const { phone2Ko } = await import('../src/phone2reply.js');
+    assert.deepEqual(phone2Ko(['Bin gleich da', '응 알았어', 'See you'], ['곧 도착해', '', '이따 봐']), ['곧 도착해', '응 알았어', '이따 봐']);
+    assert.deepEqual(phone2Ko(['Ok', '좋아'], ['알겠어']), ['알겠어', '좋아']);
+    assert.deepEqual(phone2Ko([], []), []);
 });

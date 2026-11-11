@@ -27,7 +27,7 @@ const map = { './extract.js': cleanMessageURL,
     './translate.js': encoded(`export const glossaryEntries=()=>[];export const glossaryPeople=()=>globalThis.__glossaryPeople||[];`), './world.js': encoded(`export const worldText=()=>'';`),
 };
 const src = await readFile(new URL('../src/phonedata.js', import.meta.url), 'utf8');
-const data = await import(encoded(src.replace(/from '([^']+)'/g, (all, k) => `from '${map[k] || k}'`)));
+const data = (await import('./phone2poison.mjs')).maybePoison(await import(encoded(src.replace(/from '([^']+)'/g, (all, k) => `from '${map[k] || k}'`))));
 // localStorage for the 복구 journal
 const store = new Map();
 globalThis.localStorage = { getItem: k => store.get(k) ?? null, setItem: (k, v) => store.set(k, v), removeItem: k => store.delete(k) };
@@ -713,7 +713,7 @@ test('반영\'s everyday records: so many an answer and a day in each app, texts
     assert.ok(!T.sys.includes('only when the archive or chat shows the owner recorded one'));
     assert.ok(data.AI_SYS_PHONE.includes('only when the archive or chat shows the owner recorded one'));
     // (making a phone: what happened in the chat after the archive counts too)
-    assert.ok(data.AI_SYS_PHONE.includes('only if the archive, lorebook or chat has them') && data.AI_SYS_PHONE.includes('The diary holds only what the archive or chat shows happened'));
+    assert.ok(data.AI_SYS_PHONE.includes('only if the archive, lorebook or chat has them') && data.AI_SYS_PHONE.includes("A diary entry is a day the archive or chat shows, in the owner's own feelings about it; no new secrets or events.") && !/no new feelings|has no "everyday" entries/.test(data.AI_SYS_PHONE));
     assert.match(T.sys, /PEOPLE AROUND \(people in their life, where things stand\)/);
     assert.match(T.input, /\[PEOPLE AROUND\]\n- Ivo \(이보\): Ren's older brother/);
     // the rest of the day: Ivo up to 16 texts a day, notes up to 2

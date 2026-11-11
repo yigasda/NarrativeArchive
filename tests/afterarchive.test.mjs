@@ -27,7 +27,9 @@ const real = ['phonesync.js', 'phoneparse.js', 'phoneclock.js', 'phonemapcity.js
 const map = { './extract.js': cleanMessageURL, ...stub, ...Object.fromEntries(real.map(f => [`./${f}`, href(f)])) };
 const rewrite = async f => (await readFile(new URL(f, SRC), 'utf8')).replace(/from '([^']+)'/g, (all, k) => `from '${map[k] || k}'`);
 map['./phonedata.js'] = encoded(await rewrite('phonedata.js'));
-const data = await import(map['./phonedata.js']);
+const data = (await import('./phone2poison.mjs')).maybePoison(await import(map['./phonedata.js']));
+// (a meta as 폰 1 sees it: the 폰 2 trap run (PHONE2_POISON) puts m.live beside it, which these checks leave out)
+const no2 = m => { const { live: _, ...rest } = m; return rest; };
 const life = await import(encoded(await rewrite('phonelife.js')));
 const invest = await import(encoded(await rewrite('investdata.js')));
 const fin = await import(href('finance.js'));
@@ -340,6 +342,23 @@ test('OWNER\'S CLOCK: where the owner is, their time, and the other saved cities
     assert.equal(data.clockBlock({ now: '11-03 04:33' }), '');
 });
 
+// 폰 2: the same block on the time now, each place's time beside its hours (the model adds nothing up), no time choices
+test('폰 2 OWNER\'S CLOCK: the time now with its weekday, every place\'s time now worked out, a day over midnight too', () => {
+    const p = zonePhone('11-06 06:40');
+    p.where = { people: [{ name: 'Mara', city: 'Seoul', tz: 'Asia/Seoul' }] };
+    const b = data.phone2Clock(p, '11-06 06:40');
+    assert.match(b, /^\[OWNER'S CLOCK\]\nPhone owner: Ren\nLocation: Frankfurt am Main\nTime now: 11-06 06:40 \(Fri\)\n\nTime differences from Frankfurt am Main:\n/);
+    assert.match(b, /- Mara \(Seoul\): \+8 hours, now 11-06 14:40 \(Fri\)/);
+    assert.match(b, /- New York: -6 hours, now 11-06 00:40 \(Fri\)/);
+    assert.doesNotMatch(b, /Saved phone time|Default screen viewpoint|Time choices/);
+    assert.match(data.phone2Clock(p, '11-06 23:10'), /- Mara \(Seoul\): \+8 hours, now 11-07 07:10 \(Sat\)/);
+    assert.match(data.phone2Clock(p, '12-31 20:00'), /now 01-01 04:00 \(Fri\)/);
+    // (one zone: the owner's own time all the same; no time: nothing)
+    const one = zonePhone('11-06 06:40'); one.life.weather.cities = one.life.weather.cities.slice(0, 1);
+    assert.equal(data.phone2Clock(one, '11-06 06:40'), "[OWNER'S CLOCK]\nPhone owner: Ren\nLocation: Frankfurt am Main\nTime now: 11-06 06:40 (Fri)");
+    assert.equal(data.phone2Clock(p, ''), '');
+});
+
 test('OWNER\'S CLOCK labels keep cities, people, viewpoint aliases and status conversion', () => {
     const p = zonePhone('11-05 03:38');
     p.where = { people: [{ name: 'Mara Park', aka: ['마라'], city: 'Seoul', tz: 'Asia/Seoul' }] };
@@ -357,7 +376,7 @@ Time differences from Frankfurt am Main:
 - New York: -6 hours (DST: -5 hours before 11-01 07:00)
 - Mara Park (Seoul): +8 hours
 The newest status line, 11-05 12:50 in Seoul, is 11-05 04:50 here.`);
-    assert.deepEqual({ p, m, st }, before);
+    assert.deepEqual({ p, m: no2(m), st }, before);
     for (const status of [null, { ...st, known: false }, { ...st, at: st.raw }]) {
         assert.doesNotMatch(data.clockBlock(p, p.now, m, status), /The newest status line/);
     }
@@ -383,7 +402,7 @@ test('OWNER\'S CLOCK combines a city with its people only in the output, keeping
     assert.deepEqual(data.zonesOf(p, p.now, m), offsets);
     assert.deepEqual(await data.reflectionClocks(p, rows, m), candidates);
     assert.ok(candidates.choices.some(x => x.names.includes('소망') && x.ownerTime === '11-05 04:38'));
-    assert.deepEqual({ p, m }, before);
+    assert.deepEqual({ p, m: no2(m) }, before);
     assert.equal(data.sceneZone(p, 'Seoul', m).tz, 'Asia/Seoul');
 });
 
