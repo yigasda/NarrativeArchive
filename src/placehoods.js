@@ -1,6 +1,9 @@
+import { HINT, PLACE } from './phonemapcity.js';
+
 // 동네 → 도시: a neighbourhood a status line names ("시부야 사거리", "Shibuya Crossing", "Kreuzberg") as the city it is in,
 // for sceneZone (phonedata.js) to find that city among the ones the phone knows. Imports nothing. Not the map's HINT
 // (phonemapcity.js: which drawing suits a place, generated, never edited by hand); this one is edited by hand.
+// The map's HINT words are read here too (only read, never changed), so a neighbourhood the map knows is known here as well.
 // Each row: [the city's names, its time zone, then its neighbourhoods, each "name|other name|…"] (Korean, English, local).
 export const HOODS = [
     // 한국
@@ -117,16 +120,40 @@ export const HOODS = [
 const key = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
 // what follows a neighbourhood's name and keeps it the neighbourhood ("시부야 사거리", "Shibuya Crossing", "시부야역"): never
 // a shop's word ("Shibuya Coffee" is a shop that may be anywhere)
-const AROUND = ['사거리', '삼거리', '오거리', '교차로', '역', '역앞', '역 앞', '거리', '골목', '근처', '일대', '부근', '쪽', '광장', '공원', '입구', '출구', '동', '구', '지구', '시내', '중심가', '번화가', '해변', '해수욕장', '항', '공항',
+const AROUND = ['사거리', '삼거리', '오거리', '교차로', '역', '역앞', '역 앞', '거리', '길', '시장', '골목', '근처', '일대', '부근', '쪽', '광장', '공원', '입구', '출구', '동', '구', '지구', '시내', '중심가', '번화가', '해변', '해수욕장', '항', '공항',
     'crossing', 'intersection', 'station', 'street', 'st', 'road', 'rd', 'avenue', 'ave', 'square', 'plaza', 'park', 'area', 'district', 'ward', 'quarter', 'neighborhood', 'neighbourhood', 'downtown', 'centre', 'center', 'beach', 'harbour', 'harbor', 'port', 'airport', 'market', 'side', 'exit', 'gate',
     '駅', '交差点', '通り', '広場', '公園'].map(key);
+// the map's HINT words that are no one neighbourhood (an airport, a suburb, "the City", "Central", a cathedral's name)
+const NOT_HOOD = ['공항', '교외', '방리유', 'banlieue', '달동네', '산동네', '시티', '뱅크', '은행가', '시청', '오페라', 'opéra', '센트럴', 'central', '피크', 'the peak',
+    '기타', '미션', 'mission', '루프', 'loop', '다마', 'tama', '101', '798', 'cbd', '수향', 'water town', '오로라', '8구', '16구', 'dom', '두오모', 'duomo', '구룡', 'kowloon'].map(key);
+// a country's one time zone, for a map town this table has no row for (a country with several is left out)
+const ONE_TZ = { kr: 'Asia/Seoul', jp: 'Asia/Tokyo', cn: 'Asia/Shanghai', hk: 'Asia/Hong_Kong', tw: 'Asia/Taipei', gb: 'Europe/London', de: 'Europe/Berlin',
+    fr: 'Europe/Paris', it: 'Europe/Rome', no: 'Europe/Oslo', es: 'Europe/Madrid', nl: 'Europe/Amsterdam', at: 'Europe/Vienna', ch: 'Europe/Zurich', cz: 'Europe/Prague',
+    ie: 'Europe/Dublin', be: 'Europe/Brussels', dk: 'Europe/Copenhagen', se: 'Europe/Stockholm', fi: 'Europe/Helsinki', gr: 'Europe/Athens', th: 'Asia/Bangkok',
+    vn: 'Asia/Ho_Chi_Minh', sg: 'Asia/Singapore', ph: 'Asia/Manila', in: 'Asia/Kolkata', tr: 'Europe/Istanbul', ae: 'Asia/Dubai', eg: 'Africa/Cairo', nz: 'Pacific/Auckland' };
+// the map's towns ("청두 · 충칭": each), as { names, tz }: this table's row of that city, else its names in PLACE and its country's zone
+function mapCities(town, rows) {
+    const out = [];
+    for (const t of String(town || '').split(' · ').map(x => x.trim()).filter(Boolean)) {
+        const row = rows.find(c => c.names.some(n => key(n) === key(t))), pl = PLACE.find(x => x[0] === t);
+        const names = [...new Set([t, ...(row?.names || []), ...(pl?.[1] || [])])], tz = row?.tz || ONE_TZ[pl?.[3]];
+        if (tz) out.push({ names, tz });
+    }
+    return out;
+}
 let index = null;
 function hoodIndex() {
     if (index) return index;
     index = new Map();
+    const rows = [], put = (n, city) => { const k = key(n); if (!k) return; const at = index.get(k) || index.set(k, []).get(k); if (!at.some(c => c.tz === city.tz && c.names.some(x => city.names.includes(x)))) at.push(city); };
     for (const [cities, tz, ...hoods] of HOODS) {
         const city = { names: cities.split('|'), tz };
-        for (const h of hoods) for (const n of h.split('|')) { const k = key(n); if (k) (index.get(k) || index.set(k, []).get(k)).push(city); }
+        rows.push(city);
+        for (const h of hoods) for (const n of h.split('|')) put(n, city);
+    }
+    for (const [town, words] of HINT) {
+        const cs = mapCities(town, rows);
+        for (const w of words || []) if (!NOT_HOOD.includes(key(w))) for (const c of cs) put(w, c);
     }
     return index;
 }
