@@ -1540,7 +1540,7 @@ async function makePhone0(m, owner, { update = false, apps = null } = {}) {
     // (made anew, up to now: an old phone's saved time is no time of the story's now; made again with its reading kept, it
     // reads up to that time and goes by it)
     const anew = !part && !old && !keep;
-    const ask = (g, extra = []) => askDraft(phoneRequest(m, owner, old, lore, part, profile, g, extra, pre, { anew }), { force: true, system: old ? AI_SYS_PHONE_UPDATE : part ? AI_SYS_PHONE_APPS : AI_SYS_PHONE, maxTokens: 16000 });
+    const ask = (g, extra = []) => askDraft(phoneRequest(m, owner, old, lore, part, profile, g, extra, pre, { anew }), { force: true, system: old ? AI_SYS_PHONE_UPDATE : part ? AI_SYS_PHONE_APPS : AI_SYS_PHONE, maxTokens: 32000 });
     const out = await ask(gap), got = parsePhone(out, owner);
     // a phone made sets its clock as a reflection does, by the same check, and like a reflection is not saved when it
     // doesn't hold (never asked again on its own)
