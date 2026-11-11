@@ -10,12 +10,12 @@ import { profileEntries, resolvePhoneProfile, currentPersonaBinding } from './ph
 import { investmentScreen } from './investui.js';
 import { collectInvestmentRecords, fillInvestment, fillChartHistory, refreshMarket, refreshBankFX, investmentDate, validDate } from './investdata.js';
 import { migrateBank, selectPrice } from './finance.js';
-import { draftReady, drLabel, withSpinner } from './ai.js';
+import { askDraft, draftReady, draftSettings, drLabel, listModels, vxModelList, withSpinner } from './ai.js';
 import { ctx, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
 import { applyInjection } from './inject.js';
 import { faceHtml, nameKey, peopleList } from './people.js';
 import { drafting, drawing, drawPhoto, drawPost, filling, makeDraft, paging, retranslate, retranslating, recording, recordVoice, searching, searchPage, shooting, takePhoto, webPage, writeEntry, writing } from './phoneai.js';
-import { setVoice, setVoiceAdd, voiceList, voicePeople, ax, axFind, groupInfo, APPS, AXB, AXB_C, busyHtml, setDate, setScreenHolderView, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, mapTowns, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setOwnerProfile, setWho, snsPost, snsScreen, statusBar, threadScreen, setPlace, prepScreen } from './phoneapps.js';
+import { setDraft, setVoice, setVoiceAdd, voiceList, voicePeople, ax, axFind, groupInfo, APPS, AXB, AXB_C, busyHtml, setDate, setScreenHolderView, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, mapTowns, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setOwnerProfile, setWho, snsPost, snsScreen, statusBar, threadScreen, setPlace, prepScreen } from './phoneapps.js';
 import { dropStretch, koGaps, savedName, ensureIds, ensureYear, hasDatedRecords, noArchive, setStoryYear, storyYear, fillDevice, fillMoney, fillVoice, koOn, loreOff, makePhone, tidyKo, markAfter, phoneLore, REMAKE, restoreRounds, retryMoney, showNow, storyNow, syncLeft, syncRows, syncState, tidyJournal, undoRound } from './phonedata.js';
 import { busy, watchBusy, exclusive, journalRead, journalWrite, syncOf } from './phonesync.js';
 import { syncPick, syncSettings } from './phonesyncui.js';
@@ -38,6 +38,9 @@ import { confirm, esc } from './util.js';
 // other files keep importing these from here
 export { phoneBlock } from './phonedata.js';
 
+// what 초안 모델's screen shows (the key only by its last four)
+const draftUi = () => { const t = draftSettings(); let host = ''; try { host = t.url ? new URL(t.url).host : ''; } catch { host = t.url; }
+    return { mode: t.mode, label: drLabel(), model: t.model, url: t.url, host, keyTail: t.key ? `…${String(t.key).slice(-4)}` : '', fmt: t.fmt, effort: t.effort, vxModel: t.vxModel, vxLocation: t.vxLocation, okAt: t.okAt }; };
 function screen(p, view, m, roster, ui) {
     const now = storyNow(p);
     showNow(now);
@@ -54,7 +57,7 @@ function screen(p, view, m, roster, ui) {
         : v === 'note' ? noteScreen(p, now) : v === 'noteone' ? noteOne(p, now, Number(i)) : v === 'search' ? searchScreen(p, now) : v === 'page' ? pageView(p, now, i || '', paging.has(`${nameKey(p.owner)}:${i}`)) : v === 'tabs' ? tabsScreen(p, now) : v === 'marks' || v === 'history' ? marksScreen(p, now, v === 'history') : v === 'searchone' ? searchOne(p, now, Number(i), searching.has(`${nameKey(p.owner)}:${i}`))
         : v === 'cal' ? calScreen(p, now, m, i || '') : v === 'calone' ? calOne(p, now, Number(i), m) : v === 'map' ? (mapTowns(p, m).groups.length ? mapScreen(p, now, m, i || '') : mapEmptyScreen(p, now, m)) : v === 'mapq' ? mapSearchScreen(p, now, m, i || '', ui.mapQ || '') : v === 'mapc' ? mapCityScreen(p, now, m, i || '')
         : v === 'sns' ? snsScreen(p, now) : v === 'snspost' ? snsPost(p, now, Number(i)) : v === 'mail' ? mailScreen(p, now, i) : v === 'mailone' ? mailOne(p, now, Number(i))
-        : v === 'diary' ? diaryScreen(p, now, i || '') : v === 'diaryone' ? diaryOne(p, now, Number(i)) : v === 'setsync' ? syncSettings(p, now, ui) : v === 'setsyncpick' ? syncPick(p, now, ui) : v === 'set' ? setScreen(p, now, m, ui) : v === 'stime' ? screenTimeScreen(p, now, i || '') : v === 'settheme' ? setTheme(p, now) : v === 'setscreenholder' ? setScreenHolderView(p, now, m, ui.holderBack) : v === 'setdate' ? setDate(p, now, m) : v === 'setplace' ? setPlace(p, now, m, ui) : v === 'setvoice' ? setVoice(p, now, ui.voicePick, ui.voiceBusy) : v === 'setvoiceadd' ? setVoiceAdd(p, now, ui.voiceAdd, ui.voiceBusy) : v === 'prep' ? prepScreen(p, now, m, ui.prep) : v === 'setremake' ? setRemake(p, now, ui, m) : v === 'setprofile' ? setOwnerProfile(p,now,ui.profileState) : v === 'setwho' ? setWho(p, now, m) : v === 'setlore' ? setLore(p, now, m, ui)
+        : v === 'diary' ? diaryScreen(p, now, i || '') : v === 'diaryone' ? diaryOne(p, now, Number(i)) : v === 'setsync' ? syncSettings(p, now, ui) : v === 'setsyncpick' ? syncPick(p, now, ui) : v === 'set' ? setScreen(p, now, m, ui) : v === 'stime' ? screenTimeScreen(p, now, i || '') : v === 'settheme' ? setTheme(p, now) : v === 'setscreenholder' ? setScreenHolderView(p, now, m, ui.holderBack) : v === 'setdate' ? setDate(p, now, m) : v === 'setplace' ? setPlace(p, now, m, ui) : v === 'setdraft' ? setDraft(p, now, draftUi(), ui.draftBack || 'set') : v === 'setvoice' ? setVoice(p, now, ui.voicePick, ui.voiceBusy) : v === 'setvoiceadd' ? setVoiceAdd(p, now, ui.voiceAdd, ui.voiceBusy) : v === 'prep' ? prepScreen(p, now, m, ui.prep) : v === 'setremake' ? setRemake(p, now, ui, m) : v === 'setprofile' ? setOwnerProfile(p,now,ui.profileState) : v === 'setwho' ? setWho(p, now, m) : v === 'setlore' ? setLore(p, now, m, ui)
         : v === 'cam' ? camScreen(p, now, i === undefined ? -1 : Number(i), shooting.has(nameKey(p.owner))) : homeScreen(p, now, m);
     // the home is the design board itself, at its own size, scaled to the screen (--k)
     // every app: drawn at the boards' size too, each its own app look
@@ -312,6 +315,8 @@ export async function openPhone(who = null) {
             return;
         }
         // 메신저 시간대 opened from 폰 만들기 준비: the settings screen itself, back to the prep screen
+        // 초안 모델 opened from 폰 만들기 준비: its screen, back to the prep screen
+        if (!p && view === 'setdraft') { $root.find('.na_ph_frame').html(screen(phonePre(m, owner) || pendingProfile(), view, m, roster, { draftBack: 'prep' })); return; }
         if (!p && view === 'setscreenholder') { $root.find('.na_ph_frame').html(screen(phonePre(m, owner) || pendingProfile(), view, m, roster, { holderBack: 'prep' })); return; }
         if (!p && view==='setprofile') {
             const draft=pendingProfile();
@@ -319,7 +324,7 @@ export async function openPhone(who = null) {
             return;
         }
         // no phone yet: always 폰 만들기 준비 (the old 폰 만들기 card is gone; reopening the phone lands here too)
-        if (!p && view !== 'prep') { view = 'prep'; ensureScreenHolder(m).then(() => { if (!phoneClosed && !phone() && view === 'prep') drawPhone(true); }).catch(() => {}); }
+        if (!p && view !== 'prep' && view !== 'setdraft') { view = 'prep'; ensureScreenHolder(m).then(() => { if (!phoneClosed && !phone() && view === 'prep') drawPhone(true); }).catch(() => {}); }
         if (!p && view === 'prep') {
             const pre = phonePre(m, owner), key = nameKey(owner), bound = m.phoneProfiles?.[key], n = phoneLore(m).length;
             const stale = !pre ? '' : JSON.stringify(pre.financeProfile ?? null) !== JSON.stringify(bound ?? null) ? 'profile' : (pre.lore ?? loreKey()) !== loreKey() ? 'lore' : '';
@@ -831,10 +836,52 @@ export async function openPhone(who = null) {
     const prepBusy = () => { if (!(making || busyMake || investing || filling.size || busy.fill || busy.sync || placeReading || prepLinking)) return false; toastr.info('하던 일이 끝난 뒤 해 주세요', '캐릭터 휴대폰'); return true; };
     // 준비 화면's back: the phone picker (whose phone, or another person) — there is no screen behind it without a phone
     // 1 · 초안 모델: the extension's own setting (확장 설정 › AI 모델 › 초안 모델); the phone closes to show it
-    $root.on('click', '.na_ph_prepdraft', async e => {
+    $root.on('click', '.na_ph_prepdraft', e => { e.stopPropagation(); view = 'setdraft'; drawPhone(); });
+    // 초안 모델's own screen (setDraft): each row asks in the phone's alert; a change clears the last test, saves the extension's
+    // settings and redraws them in the panel too
+    const draftDone = async () => {
+        delete draftSettings().okAt; saveGlobal();
+        try { (await import('./panelcfg.js')).renderAiSettings(); } catch { /* the panel isn't open */ }
+        if (!phoneClosed) drawPhone(true);
+    };
+    $root.on('click', '.na_ph_drset', async function (e) {
+        e.stopPropagation(); const t = draftSettings(), k = this.dataset.k;
+        if (k === 'mode') {
+            const v = await askChoice('방식', '', [{ v: 'same', label: '쓰지 않음' }, { v: 'custom', label: '커스텀 API' }, { v: 'vertex', label: 'Gemini · Vertex AI' }], '취소');
+            if (!v || v === true) return; t.mode = v; return draftDone();
+        }
+        if (k === 'fmt') {
+            const v = await askChoice('형식', '', [{ v: 'auto', label: '주소 보고 자동' }, { v: 'openai', label: 'OpenAI 호환' }, { v: 'anthropic', label: 'Anthropic' }], '취소');
+            if (!v || v === true) return; t.fmt = v === 'auto' ? '' : v; delete t.models; delete t.noEffort; delete t.leanHeaders; return draftDone();
+        }
+        if (k === 'effort') {
+            const v = await askChoice('생각', '', [{ v: 'auto', label: '작업마다 알아서' }, { v: 'low', label: '낮게 · 가장 싸요' }, { v: 'medium', label: '보통' }, { v: 'high', label: '높게' }], '취소');
+            if (!v || v === true) return; t.effort = v === 'auto' ? '' : v; return draftDone();
+        }
+        if (k === 'model' || k === 'vxModel') {
+            // a list to pick from (loaded from the address, or SillyTavern's Vertex models), else typed
+            let ids = k === 'vxModel' ? vxModelList() : t.models || [];
+            if (k === 'model' && !ids.length && t.url) { const got = await withSpinner($(this).find('.ax_v'), '불러오는 중', () => listModels(t)); if (got?.length) { t.models = ids = got; saveGlobal(); } }
+            let v = ids.length ? await askChoice('모델', '', [...ids.slice(0, 12).map(id => ({ v: id, label: id })), { v: '__type', label: '직접 적기' }], '취소') : '__type';
+            if (!v || v === true) return;
+            if (v === '__type') { v = await askInput('모델', '모델 이름을 적어요.', String(t[k] || '')); if (!v) return; }
+            t[k] = String(v).trim(); return draftDone();
+        }
+        const ask = { url: ['주소', 'https://api.example.com/v1 처럼 적어요.', t.url], key: ['API 키', t.key ? `지금 키는 …${String(t.key).slice(-4)}예요. 새 키를 적어요.` : 'API 키를 적어요.', ''], vxLocation: ['지역', '비우면 실리태번 설정을 따라요.', t.vxLocation] }[k];
+        if (!ask) return;
+        const v = await askInput(ask[0], ask[1], String(ask[2] || ''));
+        if (!v) return;
+        if (k === 'url' && v !== t.url) { delete t.models; delete t.noEffort; delete t.leanHeaders; }
+        t[k] = v.trim(); return draftDone();
+    });
+    $root.on('click', '.na_ph_drtest', async function (e) {
         e.stopPropagation();
-        document.getElementById('na_phl')?.close();
-        try { const { goStart } = await import('./panel.js'); goStart('model'); } catch (err) { console.error('[narrative-archive] draft model', err); }
+        const out = await withSpinner($(this).find('.ax_n'), '확인하는 중', () => askDraft('Reply with one short sentence: which model are you?', { maxTokens: 300 }));
+        if (!out) return;
+        const d = new Date(), two = n => String(n).padStart(2, '0'), md = [two(d.getMonth() + 1), two(d.getDate())]; // (the date as the phone reads dates: 월.일 or 일.월)
+        draftSettings().okAt = `${(dateOrderOf(m) === 'dm' ? md.reverse() : md).join('.')}. ${two(d.getHours())}:${two(d.getMinutes())}`;
+        saveGlobal(); toastr.success(out.slice(0, 160), `${drLabel()} 연결됨`);
+        if (!phoneClosed) drawPhone(true);
     });
     $root.on('click', '.na_ph_prepclose', e => { e.stopPropagation(); prepOpen = false; loreOpen = false; drawCtrl(); setSheet(true); });
     $root.on('click', '.na_ph_prepopen', e => { e.stopPropagation(); prepOpen = !prepOpen; drawPhone(true); });

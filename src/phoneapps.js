@@ -203,7 +203,7 @@ const delRow = (kind, i, label) => `<div class="ax_card ax_delcard"><button type
 // a list row that slides left to show 삭제 (메시지 · 메일 · 통화)
 const swipeRow = (kind, i, row) => `<div class="ax_swp"><button type="button" class="na_ph_rm ax_swdel" data-kind="${kind}" data-i="${esc(String(i))}">${ax('trash2', 21, 'currentColor', 2)}<span>삭제</span></button>${row}</div>`;
 const delBtn = (kind, i, cls, inner) => `<button type="button" class="na_ph_rm ${cls}" data-kind="${kind}" data-i="${esc(String(i))}" aria-label="지우기">${inner}</button>`;
-export const AXB = { clock: 'clockc', timer: 'clockc', wclock: 'clockc', alarm: 'clockc', health: 'health', hsteps: 'health', hsleep: 'health', hcmp: 'health', hwork: 'health', hheart: 'health', hwater: 'health', hweight: 'health', files: 'files', folder: 'files', file: 'files', weather: 'sky', wcity: 'sky', wlist: 'sky', dlv: 'dlv', delivery: 'dlv', dshop: 'dlv', dcart: 'dlv', dorders: 'dlv', dorder: 'dlv', ditem: 'dlv', dpay: 'dlv', drate: 'dlv', setprofile: 'slate', ivnotes: 'invest', ivschedule: 'invest', ivhistory: 'invest', invest: 'invest', stock: 'invest', ivactivity: 'invest', ivwatch: 'invest', ivstakes: 'invest', ivcash: 'invest', ivprices: 'invest', msg: 'blue', thread: 'blue', call: 'blue', callmiss: 'blue', callwho: 'blue', contacts: 'blue', contact: 'blue', draft: 'blue', groupinfo: 'blue', page: 'sky', tabs: 'sky', marks: 'sky', history: 'sky', bank: 'bank', acct: 'bank', tx: 'bank', fixed: 'bank', banknote: 'bank', banksend: 'bank', stmt: 'bank', txdoc: 'bank', bankmore: 'bank', wallet: 'wallet', card: 'wallet', pass: 'wallet', shop: 'shop', order: 'shop', track: 'shop', voice: 'voice', voiceone: 'voice', photo: 'apri', photoone: 'apri', note: 'butter', noteone: 'butter', search: 'sky', searchone: 'sky', cal: 'brick', calone: 'brick', mail: 'sky', mailone: 'sky', set: 'slate', settheme: 'slate', setdate: 'slate', setscreenholder: 'slate', setplace: 'slate', prep: 'slate', setvoice: 'slate', setvoiceadd: 'slate', setlore: 'slate', setwho: 'slate', setremake: 'slate', setsync: 'slate', setsyncpick: 'slate', stime: 'stime', cam: 'apri', map: 'blue', mapq: 'blue', mapc: 'blue' };
+export const AXB = { clock: 'clockc', timer: 'clockc', wclock: 'clockc', alarm: 'clockc', health: 'health', hsteps: 'health', hsleep: 'health', hcmp: 'health', hwork: 'health', hheart: 'health', hwater: 'health', hweight: 'health', files: 'files', folder: 'files', file: 'files', weather: 'sky', wcity: 'sky', wlist: 'sky', dlv: 'dlv', delivery: 'dlv', dshop: 'dlv', dcart: 'dlv', dorders: 'dlv', dorder: 'dlv', ditem: 'dlv', dpay: 'dlv', drate: 'dlv', setprofile: 'slate', ivnotes: 'invest', ivschedule: 'invest', ivhistory: 'invest', invest: 'invest', stock: 'invest', ivactivity: 'invest', ivwatch: 'invest', ivstakes: 'invest', ivcash: 'invest', ivprices: 'invest', msg: 'blue', thread: 'blue', call: 'blue', callmiss: 'blue', callwho: 'blue', contacts: 'blue', contact: 'blue', draft: 'blue', groupinfo: 'blue', page: 'sky', tabs: 'sky', marks: 'sky', history: 'sky', bank: 'bank', acct: 'bank', tx: 'bank', fixed: 'bank', banknote: 'bank', banksend: 'bank', stmt: 'bank', txdoc: 'bank', bankmore: 'bank', wallet: 'wallet', card: 'wallet', pass: 'wallet', shop: 'shop', order: 'shop', track: 'shop', voice: 'voice', voiceone: 'voice', photo: 'apri', photoone: 'apri', note: 'butter', noteone: 'butter', search: 'sky', searchone: 'sky', cal: 'brick', calone: 'brick', mail: 'sky', mailone: 'sky', set: 'slate', settheme: 'slate', setdate: 'slate', setscreenholder: 'slate', setplace: 'slate', prep: 'slate', setvoice: 'slate', setvoiceadd: 'slate', setdraft: 'slate', setlore: 'slate', setwho: 'slate', setremake: 'slate', setsync: 'slate', setsyncpick: 'slate', stime: 'stime', cam: 'apri', map: 'blue', mapq: 'blue', mapc: 'blue' };
 export const AXB_C = { clockc: ['#f5a524', '#3a3220'], health: ['#e0405f', '#fbe3e8'], files: ['#2f6fbf', '#dfeaf8'], dlv: ['#1fa8a3', '#d9f4f3'], invest: ['#17695d', '#d9eee5'], blue: ['#2f6bff', '#e1e9ff'], apri: ['#a65a4e', '#f7e3d7'], butter: ['#7f6a22', '#f6edcf'], sky: ['#3f6a9e', '#dde8f4'], brick: ['#a14a42', '#f3dcd9'], slate: ['#454d5a', '#e6e8ec'], bank: ['#2c4a80', '#e2e9f5'], wallet: ['#3d4a66', '#e3e7ef'], shop: ['#2f7d74', '#d9efec'], voice: ['#8a5a2e', '#f2e7d6'], stime: ['#3f8fd8', '#e3f1fd'] };
 // people outside the archive get a letter on one of the home icons' colours
 const AX_AV = ['#8faed1', '#a699c9', '#d89f98', '#89b892', '#d494a7', '#a2a7af', '#dcc680'];
@@ -835,6 +835,26 @@ export function prepScreen(p, now, m, ui = {}) {
         ${model}
         <div class="${draft ? '' : 'ax_prep_dim'}">${body}</div>
         ${ui.noArch ? `<div class="ax_sec">아직 아카이브가 없어요</div><div class="ax_card"><button type="button" class="ax_rw ax_rwn na_ph_gocompress"><span class="ax_tx"><span class="ax_n ax_blue">압축하기</span></span></button></div><div class="ax_foot">압축해 두면 폰이 더 정확하고 싸게 만들어져요.</div>` : ''}
+        <i class="ax_pad"></i>
+      </div>
+      ${axInd()}`;
+}
+// 초안 모델 (docs/mockups/phone-prep-open draftset C): the model in use as a card (its name, the way · address, the last
+// test that answered), 연결 테스트, then what to change — the same values as 확장 설정 › AI 모델 › 초안 모델. d from phone.js
+export function setDraft(p, now, d = {}, back = 'prep') {
+    const row = (n, v, k) => `<div role="button" tabindex="0" class="ax_rw ax_rwn na_ph_drset" data-k="${k}"><span class="ax_tx"><span class="ax_n">${n}</span></span><span class="ax_v">${esc(v)}</span>${axChev}</div>`;
+    const way = { custom: '커스텀 API', vertex: 'Gemini · Vertex AI' }[d.mode] || '쓰지 않음', on = d.mode === 'custom' || d.mode === 'vertex';
+    const sub = d.mode === 'custom' ? [way, d.host].filter(Boolean).join(' · ') : d.mode === 'vertex' ? [way, d.vxLocation].filter(Boolean).join(' · ') : '정하면 폰을 채우고 반영할 수 있어요';
+    const fields = d.mode === 'custom' ? `${row('모델', d.model || '정하기', 'model')}${row('주소', d.url || '정하기', 'url')}${row('API 키', d.keyTail || '없음', 'key')}${row('형식', { openai: 'OpenAI 호환', anthropic: 'Anthropic' }[d.fmt] || '주소 보고 자동', 'fmt')}${row('생각', { low: '낮게', medium: '보통', high: '높게' }[d.effort] || '작업마다 알아서', 'effort')}`
+        : d.mode === 'vertex' ? `${row('모델', d.vxModel || '정하기', 'vxModel')}${row('지역', d.vxLocation || '실리태번 설정 따라', 'vxLocation')}` : '';
+    return `${axBar(p, now)}
+      ${axTop(axCb(back))}
+      <div class="ax_scroll">${axH1('초안 모델')}
+        <div class="ax_card ax_drnow"><div class="dk">지금 쓰는 모델</div><b>${esc(on ? d.label || '' : '없음')}</b><div class="ds">${esc(sub)}</div>${on && d.okAt ? `<em>연결 확인됨 · ${esc(d.okAt)}</em>` : ''}</div>
+        ${on ? `<div class="ax_card"><div role="button" tabindex="0" class="ax_rw ax_rwn na_ph_drtest"><span class="ax_tx"><span class="ax_n ax_blue">연결 테스트</span></span></div></div>` : ''}
+        <div class="ax_sec">바꾸기</div>
+        <div class="ax_card">${row('방식', way, 'mode')}${fields}</div>
+        <div class="ax_foot">폰을 채우고 반영하는 모델이에요. 확장 설정 › AI 모델 › 초안 모델과 같은 값이에요.</div>
         <i class="ax_pad"></i>
       </div>
       ${axInd()}`;
