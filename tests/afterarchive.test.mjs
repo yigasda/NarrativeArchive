@@ -23,7 +23,7 @@ const stub = {
     './translate.js': encoded(`export const glossaryEntries=()=>globalThis.__glossaryEntries||[];export const glossaryPeople=()=>globalThis.__glossaryPeople||[];`), './world.js': encoded(`export const worldText=()=>'';`),
     './anniv.js': encoded(`export const datedRows=()=>[];`),
 };
-const real = ['phonesync.js', 'phoneparse.js', 'phoneclock.js', 'phonemapcity.js', 'phonesynclife.js', 'phonesyncmoney.js', 'finance.js', 'phoneprofile.js', 'phonefood.js', 'phonescreen.js'];
+const real = ['phonesync.js', 'phoneparse.js', 'phoneclock.js', 'phonemapcity.js', 'placehoods.js', 'phonesynclife.js', 'phonesyncmoney.js', 'finance.js', 'phoneprofile.js', 'phonefood.js', 'phonescreen.js'];
 const map = { './extract.js': cleanMessageURL, ...stub, ...Object.fromEntries(real.map(f => [`./${f}`, href(f)])) };
 const rewrite = async f => (await readFile(new URL(f, SRC), 'utf8')).replace(/from '([^']+)'/g, (all, k) => `from '${map[k] || k}'`);
 map['./phonedata.js'] = encoded(await rewrite('phonedata.js'));
@@ -443,6 +443,25 @@ test('a scene\'s city with its country before it is still that city; a place fou
     assert.deepEqual(data.sceneZone(p, '대한민국 서울'), data.sceneZone(p, '서울'));
     assert.equal(data.sceneZone(p, '대한민국'), null);
     assert.equal(data.sceneZone(p, 'South Korea'), null);
+});
+
+// a neighbourhood only (src/placehoods.js): its city, when the phone knows that city and only one; never a shop's name
+test('a scene at a neighbourhood ("시부야 사거리", "Kreuzberg") is its city\'s when the phone knows that city; a shop named after one is not', () => {
+    const p = zonePhone('11-05 03:38');
+    // (Tokyo known to no one here: unknown, never a move guessed)
+    assert.equal(data.sceneZone(p, '시부야 사거리'), null);
+    p.life.weather.cities.push({ name: 'Tokyo', ko: '도쿄', tz: 'Asia/Tokyo' });
+    for (const place of ['시부야 사거리', 'Shibuya Crossing', '시부야역', '渋谷駅', '시부야사거리 · 카페']) {
+        const z = data.sceneZone(p, place);
+        assert.deepEqual([z?.tz, z?.name, z?.hood], ['Asia/Tokyo', 'Tokyo', true], place);
+    }
+    assert.equal(data.sceneZone(p, 'Shibuya Coffee'), null);
+    assert.equal(data.sceneZone(p, 'Manhattan · 집')?.tz, 'America/New_York');
+    assert.equal(data.sceneZone(p, 'Westend · Küche')?.own, true);
+    // (Chelsea is London's and New York's, both known: no guess)
+    assert.equal(data.sceneZone(p, 'Chelsea'), null);
+    // (a city's own name is found as before, not as a neighbourhood)
+    assert.equal(data.sceneZone(p, 'Tokyo · 호텔')?.hood, undefined);
 });
 
 test('OWNER\'S CLOCK keeps different cities with the same zone or current offset, and requires whole city names', () => {

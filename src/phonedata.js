@@ -13,6 +13,7 @@ import { chatRows, recentForCheck } from './drift.js';
 import { applyInjection } from './inject.js';
 import { knowledgeRows } from './knowledge.js';
 import { nameKey, nameRe } from './people.js';
+import { hoodCities } from './placehoods.js';
 import { estTok } from './recall.js';
 import { recentTrackers } from './scenes.js';
 import { parseSections, RANGE_HEAD, sectionKey, splitTail } from './sections.js';
@@ -3218,7 +3219,8 @@ function weatherElsewhere(p, w, named, m = null) {
 // the owner's status line as the weather app takes it: a place that is no city the phone knows ("Mara's room", "Gangnam ·
 // cafe") leaves the app's own city as it is (the model's, else the one there); its sky, warmth and hour are the line's
 function homeTracker(p, t, w, m = null) {
-    if (!t || sceneZone(p, t.place, m)) return t;
+    // (a neighbourhood the phone placed, "Gangnam · cafe", is in a city, not one: the app keeps its city as for a room)
+    if (!t || (z => z && !z.hood)(sceneZone(p, t.place, m))) return t;
     const city = line(w?.place, 60), here = p?.life?.weather?.here?.place;
     // (the model's city when it names one: an owner gone somewhere new, "Rome · hotel", is in Rome)
     // (a room, a home, a cafe is no city — "방" or "집" only as the word's end, so 방콕 is Bangkok; the owner's own city or a
@@ -3555,7 +3557,24 @@ function withoutCountry(place) {
 // "Singapore" or "Monaco" are still themselves)
 export function sceneZone(p, place, m = null) {
     const z = sceneZone0(p, place, m), bare = withoutCountry(place);
-    return z || (bare !== String(place || '') ? sceneZone0(p, bare, m) : null);
+    return z || (bare !== String(place || '') ? sceneZone0(p, bare, m) : null) || hoodZone(p, sceneOf(bare), m);
+}
+// a neighbourhood only ("시부야 사거리", "Kreuzberg"): the city it is in, when that city is one the phone knows (a saved
+// city, or where someone is) and the only such one; a city no one here is in stays unknown, never a move guessed
+function hoodZone(p, place, m = null) {
+    const cs = hoodCities(place);
+    if (!cs.length) return null;
+    const zs = placesAround(p, m), hits = new Map();
+    for (const c of cs) {
+        const ks = new Set(c.names.map(pkey).filter(Boolean));
+        // (the owner's own row and a saved row of the same city are one city: the owner's)
+        for (const z of zs) if (z.tz === c.tz && [z.name, ...(z.names || [])].some(n => ks.has(pkey(n)))) { const k = `${z.tz}|${pkey(z.name)}`; if (!hits.get(k)?.own) hits.set(k, z); }
+    }
+    // (a name in two known cities, "Westend": the owner's own one when it is one of them; else no guess)
+    const all = [...hits.values()], one = all.length === 1 ? all : all.filter(z => z.own);
+    if (one.length !== 1) return null;
+    const z = one[0];
+    return { tz: z.tz, name: z.name, own: !!z.own, hood: true };
 }
 function sceneZone0(p, place, m = null) {
     const sc = sceneOf(place), whole = pkey(sc), words = sc.split(/\s+/).filter(Boolean), first = pkey(words[0]), own = ownerZone(p);
