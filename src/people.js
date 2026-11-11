@@ -158,7 +158,7 @@ export async function cropFace(file) {
     stage.addEventListener('pointercancel', up);
     draw();
     try {
-        const res = await c.callGenericPopup($root, c.POPUP_TYPE.CONFIRM, '', { okButton: '이대로 쓰기', cancelButton: '취소', leftAlign: true });
+        const res = await c.callGenericPopup($root, c.POPUP_TYPE.CONFIRM, '', { okButton: '이대로 쓰기', cancelButton: '취소', leftAlign: true, allowVerticalScrolling: true });
         if (res !== c.POPUP_RESULT.AFFIRMATIVE && res !== true) return null;
         return { sx: -tx / scale, sy: -ty / scale, ss: V / scale };
     } finally { URL.revokeObjectURL(url); }
