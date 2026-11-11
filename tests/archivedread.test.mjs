@@ -820,7 +820,7 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.ok(on.includes('PHONE NOW and ORDERS AND TICKETS') === false && data.coreSystem({ life: true, wallet: true }).includes('STORY NOW, PHONE NOW and ORDERS AND TICKETS: a parcel'));
     // (STEP 3: the cases)
     assert.match(on, /2\. A plan made → "calendar"\. A PHONE NOW plan the messages move → its calendar record again with "was"; called off or undone \(an order cancelled\) → "cancelled": true\. No booking, trip or purchase the story lacks\./);
-    assert.match(on, /3\. Each scene where the owner is somewhere → one "visit"\./);
+    assert.match(on, /3\. Each place the owner is at, in order, → one "visit": a scene that moves \(from the office to the station to a hotel in another city\) gives one at each\./);
     assert.match(on, /→ that record\. A text exchange the messages already show: only its last 4 messages\./);
     assert.ok(on.includes('- Each text in the language its writer really uses, as long as that person really writes.') && !on.includes('Texts short'));
     // (no Korean asked of the reflection: the app adds it after, phonetr.js)

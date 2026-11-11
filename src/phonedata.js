@@ -384,7 +384,7 @@ ${live ? `1. Each "<owner's name> [App]: …" line → its records in every app 
    - cooked dinner from a recipe → the recipe saved in notes, a photo of the dish
    The owner–${live} chat itself is never a text or call; a text or call with anyone else it tells of is ("I called Dad" → a call to Dad).` : '1. A phone action the messages show or say (a text, call, photo, search, mail, post, voice memo) → that record. A text exchange the messages already show: only its last 4 messages.'}
 2. A plan made → "calendar". A PHONE NOW plan the messages move → its calendar record again with "was"; called off or undone (an order cancelled) → "cancelled": true.${wallet ? ' Tickets go in the wallet; reservations and appointments in the calendar.' : ''} No booking, trip or purchase the story lacks.
-3. Each scene where the owner is somewhere → one "visit".
+3. Each place the owner is at, in order, → one "visit": a scene that moves (from the office to the station to a hotel in another city) gives one at each.
 4. Someone new the owner meets and would save → "contact".${life ? `
 5. An alarm or file the messages set or change → that record.` : ''}
 A record says no more than its "said". Nothing else goes in "records".
