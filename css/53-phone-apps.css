@@ -267,6 +267,7 @@
 .ax .ax_prep_lead { margin: -6px 28px 6px; }
 .ax .ax_n.ax_prep_wait { color: #a8aeb7; --axfg: #a8aeb7; }
 .ax .ax_p.ax_prep_sub, .ax .ax_n.ax_prep_off { color: #b4bac3; --axfg: #b4bac3; }
+.ax .ax_prep_dim { opacity: 0.45; pointer-events: none; }
 .ax .ax_prep_gap { height: 16px; flex: none; }
 /* one rhythm: a note sits 8px under its card, blocks of a step 12px apart, 다른 사람 20px under the place card,
    each step 28px under the step before (the gaps are between edges: nothing collapses in the scroll column) */

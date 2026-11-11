@@ -10,7 +10,7 @@ import { profileEntries, resolvePhoneProfile, currentPersonaBinding } from './ph
 import { investmentScreen } from './investui.js';
 import { collectInvestmentRecords, fillInvestment, fillChartHistory, refreshMarket, refreshBankFX, investmentDate, validDate } from './investdata.js';
 import { migrateBank, selectPrice } from './finance.js';
-import { draftReady, withSpinner } from './ai.js';
+import { draftReady, drLabel, withSpinner } from './ai.js';
 import { ctx, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
 import { applyInjection } from './inject.js';
 import { faceHtml, nameKey, peopleList } from './people.js';
@@ -324,7 +324,7 @@ export async function openPhone(who = null) {
             const pre = phonePre(m, owner), key = nameKey(owner), bound = m.phoneProfiles?.[key], n = phoneLore(m).length;
             const stale = !pre ? '' : JSON.stringify(pre.financeProfile ?? null) !== JSON.stringify(bound ?? null) ? 'profile' : (pre.lore ?? loreKey()) !== loreKey() ? 'lore' : '';
             const top = keep ? $root.find('.ax_scroll').scrollTop() : 0;
-            $root.find('.na_ph_frame').html(screen(pre || pendingProfile(), 'prep', m, roster, { prep: { pre: !!pre, open: !pre || prepOpen, profile: bound?.label || '', lore: n ? `${n}권` : '없음', loreN: n, gloss: glossaryEntries(m).length, order: dateOrderOf(m), holder: screenHolderLabel(m), stale, linking: prepLinking, making: busyMake === 'make', draft: draftReady(), noArch: noArchive(m) } }));
+            $root.find('.na_ph_frame').html(screen(pre || pendingProfile(), 'prep', m, roster, { prep: { pre: !!pre, open: !pre || prepOpen, profile: bound?.label || '', lore: n ? `${n}권` : '없음', loreN: n, gloss: glossaryEntries(m).length, order: dateOrderOf(m), holder: screenHolderLabel(m), stale, linking: prepLinking, making: busyMake === 'make', draft: draftReady(), draftName: drLabel(), noArch: noArchive(m) } }));
             if (keep) $root.find('.ax_scroll').scrollTop(top);
             return;
         }
@@ -830,6 +830,12 @@ export async function openPhone(who = null) {
     // 폰 만들기 준비
     const prepBusy = () => { if (!(making || busyMake || investing || filling.size || busy.fill || busy.sync || placeReading || prepLinking)) return false; toastr.info('하던 일이 끝난 뒤 해 주세요', '캐릭터 휴대폰'); return true; };
     // 준비 화면's back: the phone picker (whose phone, or another person) — there is no screen behind it without a phone
+    // 1 · 초안 모델: the extension's own setting (확장 설정 › AI 모델 › 초안 모델); the phone closes to show it
+    $root.on('click', '.na_ph_prepdraft', async e => {
+        e.stopPropagation();
+        document.getElementById('na_phl')?.close();
+        try { const { goStart } = await import('./panel.js'); goStart('model'); } catch (err) { console.error('[narrative-archive] draft model', err); }
+    });
     $root.on('click', '.na_ph_prepclose', e => { e.stopPropagation(); prepOpen = false; loreOpen = false; drawCtrl(); setSheet(true); });
     $root.on('click', '.na_ph_prepopen', e => { e.stopPropagation(); prepOpen = !prepOpen; drawPhone(true); });
     $root.on('click', '.na_ph_prepprofile', e => { e.stopPropagation(); if (prepBusy()) return; prepFrom = true; view = 'setprofile'; editProfile(); drawPhone(); });
