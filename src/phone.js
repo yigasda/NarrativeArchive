@@ -1433,7 +1433,14 @@ export async function openPhone(who = null) {
     // the phone's height is the screen's, but not while typing: a keyboard that shrinks the page (some phones' browsers)
     // would shrink the whole phone, so the height taken before the keyboard stays and the keyboard covers the bottom
     const typing = () => { const a = document.activeElement; return !!a && dlg.contains(a) && (a.matches('input, textarea, select') || a.isContentEditable); };
-    const setH = () => { if (!typing()) dlg.style.setProperty('--na-phh', `${window.innerHeight}px`); };
+    // (a touch screen whose height drops a lot at the same width is a keyboard opening, even when the focus has moved for a
+    // moment, as a screen redrawn while typing: the height stays; a turn of the phone changes the width and is taken)
+    let lastW = window.innerWidth, lastH = window.innerHeight;
+    const setH = () => {
+        const w = window.innerWidth, h = window.innerHeight, kb = w === lastW && h < lastH - 120 && window.matchMedia?.('(pointer: coarse)').matches;
+        if (typing() || kb) return;
+        lastW = w; lastH = h; dlg.style.setProperty('--na-phh', `${h}px`);
+    };
     const afterType = () => setTimeout(setH, 350);
     setH(); window.addEventListener('resize', setH); dlg.addEventListener('focusout', afterType);
     const stopBusy = watchBusy(() => { if (!phoneClosed && stillHere() && (view === 'set' || view === 'setsync')) drawPhone(true); });
