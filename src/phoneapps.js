@@ -1034,7 +1034,15 @@ function mapStrip(p, now, m, pl, sel) {
         const tk = day => nameKey(byDay.get(day).at(-1).city || ''), rs = runs(tk, 2).filter(r => r.k);
         const col = t => STAY[Math.max(0, STAY.length - towns.length + towns.findIndex(x => nameKey(x) === t))];
         blocks = rs.map(r => [r.a, r.b, col(r.k)]);
-        towns.forEach((t, k) => { const r = rs.filter(x => x.k === nameKey(t)).at(-1); if (r) labels.push([(r.a + r.b) / 2, t, nameKey(t) === sel, towns.length > 3 && k % 2 ? 'down' : 'up']); });
+        // each town named over its last stay; a name that would touch one already above goes under (and one that would touch
+        // both is left off rather than written over another)
+        const placed = { up: [], down: [] };
+        for (const t of towns) {
+            const r = rs.filter(x => x.k === nameKey(t)).at(-1); if (!r) continue;
+            const mid = (r.a + r.b) / 2, w = t.length * 0.62 * 11.5 / (326 / days) / 2, hit = side => placed[side].some(([x, h]) => Math.abs(x - mid) < h + w + 0.6);
+            const side = !hit('up') ? 'up' : !hit('down') ? 'down' : ''; if (!side) continue;
+            placed[side].push([mid, w]); labels.push([mid, t, nameKey(t) === sel, side]);
+        }
         sub = `${towns.length}도시`;
     } else {
         const rs = runs(() => 1), many = day => new Set(byDay.get(day).map(x => nameKey(x.place))).size;
