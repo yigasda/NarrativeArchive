@@ -301,6 +301,26 @@ test('a second turn that fails keeps the first; a phone made anew has none (the 
     assert.equal(globalThis.__menu.calls.filter(c => c.sys === data.AI_SYS_PHONE).length, 1);
 });
 
+test('폰 만들기 under way: the same phone made again (the phone shut and opened mid-make) waits; another chat or person does not', async () => {
+    globalThis.__rows = bigRows(4);
+    globalThis.__menu = { calls: [], answers: [notesAnswer('A'), notesAnswer('B'), notesAnswer('C')], answer: '{}' };
+    const fresh = { ...m, phones: {} }, other = { ...m, phones: {} };
+    const first = data.makePhone(fresh, 'Ren');
+    assert.equal(data.phoneMaking(fresh, 'ren'), true);
+    assert.equal(data.phoneMaking(other, 'Ren'), false);
+    await assert.rejects(data.makePhone(fresh, 'Ren'), /만드는 중/);
+    const elsewhere = data.makePhone(other, 'Ren');
+    await first; await elsewhere;
+    assert.equal(data.phoneMaking(fresh, 'Ren'), false);
+    assert.equal(globalThis.__menu.calls.filter(c => c.sys === data.AI_SYS_PHONE).length, 2);
+    // (done: it lets go, and can be made again; one that throws lets go too)
+    globalThis.__menu = { calls: [], answers: [notesAnswer('D')], answer: '{}' };
+    await data.makePhone(fresh, 'Ren', { apps: ['note'] });
+    assert.equal(data.phoneMaking(fresh, 'Ren'), false);
+    await assert.rejects(data.makePhone(null, 'Ren'));
+    assert.equal(data.phoneMaking(null, 'Ren'), false);
+});
+
 // ---- 은행 채우기도 두 턴: 두 번째는 기록만, 잔액은 첫 번째 그대로
 const moneyAnswer = (who, balance, time) => JSON.stringify({ currency: 'EUR', bank: { name: 'Varo Bank', accounts: [{ id: '', kind: 'checking', name: 'Main', last4: '1111', currency: 'EUR', balance }] },
     cards: [{ account: '1111', exp: '09/29' }], tx: [{ account: '1111', who, amount: -12, time, kind: 'card' }], passes: [], orders: [{ shop: 'Ivo Books', item: who, price: 12, time, status: 'delivered' }] });
@@ -1229,8 +1249,15 @@ test('위치 정보 before a phone is made: read once and kept, checked and set 
     } finally { delete globalThis.__ctx; delete globalThis.__whereAnswer; }
 });
 
-test('making a phone (and some apps again) takes its people from the story or PEOPLE AROUND, as the reflection does', () => {
-    for (const s of [data.AI_SYS_PHONE, data.AI_SYS_PHONE_APPS, data.updateSystem({ split: true })]) assert.ok(s.includes('- People: only people the story or PEOPLE AROUND has.'), s.slice(0, 40));
+test('making a phone (and some apps again): people from the story, PEOPLE AROUND or new plausible ones, as the reflection\'s everyday; no new relative or partner', () => {
+    for (const s of [data.AI_SYS_PHONE, data.AI_SYS_PHONE_APPS]) {
+        assert.ok(s.includes('- People: from the story, PEOPLE AROUND, or new plausible ones with local names (a colleague, a neighbour, a shop); no new relative or partner. A relationship word (girlfriend, ex, husband, boss) only if the archive or chat uses it for them.'), s.slice(0, 40));
+        // (the owner's ordinary life around the story fills the lists, to about so many each; never "an empty list is fine")
+        assert.ok(s.includes("- Around the story, the owner's ordinary life before its newest moment fills the rest:") && s.includes('Never a new event, relationship or secret.'));
+        assert.ok(s.includes('Fill each list to about: 10 threads of 6 to 15 messages, 20 calls, 15 photos, 10 notes, 15 searches (3 open at most), 10 events, 6 posts with up to 4 comments,\n10 mails, 8 diary entries, the 12 newest visits. Who they talk to, and how much, follows their character and PEOPLE AROUND.'));
+        assert.doesNotMatch(s, /an empty list is fine|At most 6 threads/);
+    }
+    assert.ok(data.updateSystem({ split: true }).includes('- People: only people the story or PEOPLE AROUND has.'));
 });
 
 test('the bank and voice memo fills get PEOPLE AROUND, and take their people from the story or it; life and delivery do not', async () => {

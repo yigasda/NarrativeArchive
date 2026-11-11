@@ -60,8 +60,8 @@ const PHONE_FACT = `ONE TEST FOR EVERY ITEM
 Could this be on the owner's phone, given what the archive, lorebook and chat show? If not, leave it out.
 - The lorebook counts as fact like the archive; where the two disagree, the archive wins.
 - Events (a meeting, a confession, a trip, a loss, how something turned out or will go) only if the archive, lorebook or chat has them.
-- Small everyday things around those events are fine: how a text was worded, a photo of a place they were, a search they would make.
-- People: only people the story or PEOPLE AROUND has. A relationship word (girlfriend, ex, husband, boss) only if the archive or chat uses it for them.
+- Around the story, the owner's ordinary life before its newest moment fills the rest: people texting and calling as usual, shopping and to-do notes, habitual searches, everyday photos; shaped by their character, tastes and PEOPLE AROUND. Never a new event, relationship or secret.
+- People: from the story, PEOPLE AROUND, or new plausible ones with local names (a colleague, a neighbour, a shop); no new relative or partner. A relationship word (girlfriend, ex, husband, boss) only if the archive or chat uses it for them.
 - Nothing later than the newest moment of the story.
 - A diary entry is a day the archive or chat shows, in the owner's own feelings about it; no new secrets or events.`;
 // every time on the phone is the owner's own clock: a time written on the other side of the world is moved to theirs
@@ -164,8 +164,8 @@ JSON (one object, nothing before or after it)
   "device": { "name": device name, "model": model name, "os": OS and version, "storage": capacity with GB or TB, "serial": invented serial number },
 ${PHONE_ITEMS}
 }
-At most 6 threads of up to 12 messages, 10 calls, 8 photos, 5 notes, 8 searches (3 open at most), 6 events, 5 posts with up to 4 comments,
-6 mails, 5 diary entries, the 12 newest visits. Fewer is fine; an empty list is fine.
+Fill each list to about: 10 threads of 6 to 15 messages, 20 calls, 15 photos, 10 notes, 15 searches (3 open at most), 10 events, 6 posts with up to 4 comments,
+10 mails, 8 diary entries, the 12 newest visits. Who they talk to, and how much, follows their character and PEOPLE AROUND.
 Oldest first in every list.
 ${PHONE_LAST}`;
 export const AI_SYS_PHONE_APPS = `GOAL
@@ -203,8 +203,8 @@ JSON (one object, nothing before or after it)
   "device": { "name": device name, "model": model name, "os": OS and version, "storage": capacity with GB or TB, "serial": invented serial number },
 ${PHONE_ITEMS}
 }
-At most 6 threads of up to 12 messages, 10 calls, 8 photos, 5 notes, 8 searches (3 open at most), 6 events, 5 posts with up to 4 comments,
-6 mails, 5 diary entries, the 12 newest visits. Fewer is fine; an empty list is fine.
+Fill each list to about: 10 threads of 6 to 15 messages, 20 calls, 15 photos, 10 notes, 15 searches (3 open at most), 10 events, 6 posts with up to 4 comments,
+10 mails, 8 diary entries, the 12 newest visits. Who they talk to, and how much, follows their character and PEOPLE AROUND.
 Oldest first in every list.
 ${PHONE_LAST}`;
 
@@ -1482,7 +1482,17 @@ export async function setPreYear(m, owner, year) {
     await saveMeta();
 }
 // apps: some of REMAKE's names, made again from the whole story while the rest of the phone stays as it is
-export function makePhone(m, owner, opts = {}) { return withDateOrder(dateOrderOf(m), () => makePhone0(m, owner, opts)); }
+// 폰 만들기 under way, by chat (its meta) and owner: the phone shut and opened again mid-make knows it, and a second
+// make of the same phone waits for the first (a reflection of a phone there is guarded by busy.sync already)
+const makingNow = new WeakMap();
+export const phoneMaking = (m, owner) => !!(m && makingNow.get(m)?.has(nameKey(owner)));
+export function makePhone(m, owner, opts = {}) {
+    if (opts.update && m?.phones?.[nameKey(owner)]) return withDateOrder(dateOrderOf(m), () => makePhone0(m, owner, opts));
+    const key = nameKey(owner), set = m && typeof m === 'object' ? (makingNow.get(m) || makingNow.set(m, new Set()).get(m)) : null;
+    if (set?.has(key)) return Promise.reject(new Error('이 폰을 만드는 중이에요. 끝날 때까지 기다려 주세요'));
+    set?.add(key);
+    return Promise.resolve().then(() => withDateOrder(dateOrderOf(m), () => makePhone0(m, owner, opts))).finally(() => set?.delete(key));
+}
 async function makePhone0(m, owner, { update = false, apps = null } = {}) {
     const run = storyRun(m);
     await ensureScreenHolder(m);
