@@ -39,7 +39,7 @@ import { liveMode, liveWorld, livePhone, liveMeta, setLiveMode, resetLive, remem
 import { shiftLabel, liveWall, viewerWall, startShift } from './phone2clock.js';
 import { orbitList, orbitRoom, orbitNew, orbitHomeWidget, liveStart } from './phoneorbit.js';
 import { liveStoryText, beginFromStory, liveBranched, adoptChat, rebeginFromStory } from './phone2story.js';
-import { liveGo } from './phone2go.js';
+import { liveGo, liveReflect } from './phone2go.js';
 
 // other files keep importing these from here
 export { phoneBlock } from './phonedata.js';
@@ -765,6 +765,8 @@ export async function openPhone(who = null) {
         if (view.startsWith('orbitroom') && atEnd) obBottom();
         if (typingNow) $root.find('.na_ob_in').trigger('focus');
     } }).catch(err => console.error('[narrative-archive] live go', err));
+    // 반영(소망 결정): 메신저를 나갈 때만 · 폰을 닫을 때 · 타임라인으로 바꿀 때. 실시간 폰의 인물마다 쌓인 대화를 한 번에(읽을 게 없으면 바로 끝)
+    const obReflect = () => { const w = liveWorld(realM); if (!w) return; (async () => { for (const p of Object.values(w.phones || {})) if (p?.owner) await liveReflect(realM, p.owner, { onChange: () => { if (!phoneClosed && stillHere() && live()) drawPhone(true); } }); })().catch(err => console.error('[narrative-archive] live reflect', err)); };
     const obSend = async () => {
         const r = roomNow(), t = String($root.find('.na_ob_in').val() || '').trim();
         if (!live() || !r || !t || obAcct() !== liveWorld(realM)?.persona) return;
@@ -820,8 +822,10 @@ export async function openPhone(who = null) {
         // (실시간 폰이 아직 없으면: 실시간을 고르면 시작 화면)
         if (to === 'live' && !liveWorld(realM)) { view = 'livestart'; sheet = false; draw(); return; }
         if (making || busyMake || investing || koBusy || filling.size || busy.fill || busy.sync) return toastr.info('다른 폰 작업이 끝난 뒤 바꿔 주세요', '캐릭터 휴대폰');
+        const fromLive = live();
         setLiveMode(realM, to);
         useMode();
+        if (fromLive && to === 'story') obReflect();
         owner = to === 'live' ? liveOwner() : selectedPhoneOwner(m, names, null, readPhoneSelection(selectionKey));
         view = 'set'; sheet = false;
         draw();
@@ -898,6 +902,7 @@ export async function openPhone(who = null) {
         if (go === 'contact' && !view.startsWith('contact')) contactBack = view;
         // picking another payment on 고정 지출 keeps the list where it was
         const stay = ['fixed', 'banksend', 'stmt', 'wallet', 'stime', 'map'].includes(go) && view.split(':')[0] === go ? $root.find('.ax_scroll').scrollTop() : null;
+        const wasOrbit = view.startsWith('orbit');
         if (go === 'orbitnew') { obPick = []; obGname = ''; }
         if (go === 'orbitroom' && this.dataset.i) { obDraft = ''; const w = liveWorld(realM); if (w?.messenger?.rooms?.[this.dataset.i] && obAcct() === w.persona) { readLive(realM, this.dataset.i, w.persona); saveMeta(); } }
         if (go === 'orbit') obSheet = false;
@@ -917,6 +922,7 @@ export async function openPhone(who = null) {
         if (go === 'mapc' && p0) { const n = placeNames(Number(String(this.dataset.i).split('~')[0]))?.ko; if (n && p0.mapSeen?.[0] !== n) { p0.mapSeen = [n, ...(p0.mapSeen || []).filter(x => x !== n)].slice(0, 5); saveMeta(); } }
         sheet = false;
         drawPhone();
+        if (wasOrbit && !view.startsWith('orbit') && live()) obReflect();
         $root.find('.na_ph_body, .ax_scroll').scrollTop(view.startsWith('thread') || view.startsWith('orbitroom') ? 1e6 : stay ?? 0);
         if (view === 'mapq' && !mapQ) $root.find('.mq_in').trigger('focus');
         if (go === 'searchone' && !phone()?.searches?.[Number(this.dataset.i)]?.results?.length) loadSearch(Number(this.dataset.i));
@@ -1739,7 +1745,7 @@ export async function openPhone(who = null) {
         $root.on('click', '.na_ph_quit', e => { e.stopPropagation(); close(); });
         $root.on('click', '.na_ph_wrap', e => { if (e.target === e.currentTarget) { if (sheetOpen) setSheet(false); else close(); } });
         dlg.addEventListener('cancel', e => { e.preventDefault(); if (ask) ask.done(false); else if (sheetOpen) setSheet(false); else close(); });
-        dlg.addEventListener('close', () => { phoneClosed = true; setPhoneMeta(null); ask?.done(false); done(); }, { once: true });
+        dlg.addEventListener('close', () => { phoneClosed = true; setPhoneMeta(null); if (liveMode(realM) === 'live' && stillHere()) obReflect(); ask?.done(false); done(); }, { once: true });
     });
     stopBusy(); madeWatch.delete(onMade);
     window.removeEventListener('resize', setH);
