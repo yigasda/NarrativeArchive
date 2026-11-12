@@ -148,7 +148,8 @@ function style(z0, P = C, main = '') {
       { id: 'use', type: 'fill', source: 't', 'source-layer': 'landuse', filter: ['in', ['get', 'class'], ['literal', ['railway', 'industrial', 'school', 'university', 'college', 'kindergarten', 'cemetery', 'pitch', 'stadium', 'playground', 'commercial', 'retail']]],
         paint: { 'fill-color': ['match', ['get', 'class'], ['commercial', 'retail'], C.shop, ['railway', 'industrial'], C.works, ['cemetery', 'pitch', 'stadium', 'playground'], C.park, C.school] } },
       ...(hill ? [{ id: 'hill', type: 'hillshade', source: 'dem', paint: { 'hillshade-exaggeration': hill, 'hillshade-shadow-color': C.shade || '#7a6a5a', 'hillshade-accent-color': C.shade || '#7a6a5a', 'hillshade-highlight-color': '#ffffff' } }] : []),
-      { id: 'water', type: 'fill', source: 't', 'source-layer': 'water', filter: ['!=', ['get', 'brunnel'], 'tunnel'], paint: { 'fill-color': C.water } },
+      // 집 마당 수영장은 물로 안 칠해요(하와이 주택가가 물 조각투성이가 돼요)
+      { id: 'water', type: 'fill', source: 't', 'source-layer': 'water', filter: ['all', ['!=', ['get', 'brunnel'], 'tunnel'], ['!=', ['get', 'class'], 'swimming_pool']], paint: { 'fill-color': C.water } },
       { id: 'river', type: 'line', source: 't', 'source-layer': 'waterway', filter: ['all', ['in', ['get', 'class'], ['literal', ['river', 'canal']]], ['!=', ['get', 'brunnel'], 'tunnel']],
         paint: { 'line-color': C.water, 'line-width': W(2.5, z0) } },
       // 이름 없는 구내 길 · 보행로는 안 그려요. 보행자 거리는 동네 길처럼
