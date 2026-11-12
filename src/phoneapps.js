@@ -1110,7 +1110,7 @@ export function mapScreen(p, now, m, pick = '') {
     // the town on the map: the one picked (a stay on the strip, a row under "다른 곳"), else where they were last
     const g = groups.find(x => x.k === pick) || groups[0];
     // a night map when they were last there at night
-    const kind = kinds.get(g.k || `~${p.owner}`), dark = mapNight(g, p.now);
+    const kind = kinds.get(g.k || `~${p.owner}`), dark = false;   // 밤 지도는 뺐어요(11-12)
     const shown = g.rows.slice(0, 7), W = 390, H = 430;
     const pins = pinSpots(shown.map(r => r.place), W, 150, 340).map(([x, y], k) => pinSvg(x, y, shown[k].place, dark)).join('');
     const art = `<svg class="mp_art" viewBox="0 0 ${W} ${H}" width="100%" aria-hidden="true" data-z="${esc(`${kind}~${g.k}`)}">${townSvg(kind, W, H, g.k || p.owner, dark, g.rows.map(r => r.place).join(' '))}</svg>${pinLayer(W, H, pins)}`;

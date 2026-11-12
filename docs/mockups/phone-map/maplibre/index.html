@@ -55,7 +55,6 @@ h1 { font-size: 18px; margin: 4px 0 0; }
     <div class="seg"><button id="bNew" class="on">새 지도</button><button id="bOld">지금 지도</button></div>
     <span class="stat" id="stat">불러오는 중…</span>
   </div>
-  <div class="row"><span class="stat">밤</span><div class="seg" id="night"></div></div>
 
   <div class="note" id="note"><b>보는 법</b> · 독일 6곳은 "지금 지도"로 바꿔서 같은 자리를 비교할 수 있어요. 사막은 모래, 눈 덮인 곳은 눈(북쪽 먼바다는 깊은 물), 산호초 바다는 에메랄드로 저절로 칠해요. 처음 여는 곳은 타일을 받아서 조금 걸리고, 한 번 본 곳은 빨라요.</div>
 </div>
@@ -183,12 +182,8 @@ function style(z0, P = C, main = '') {
     ] };
 }
 // 큰 동네 이름(MAIN): 진한 차콜 15px 굵게, 가운데 하나 — 곳마다 우리가 아는 이름이라 타일 말고 따로 얹어요
-// 밤 색 시안 세 벌(11-12): 고르면 앱의 밤 지도가 돼요
-const NIGHT = [
-  ['밤 A · 남색', { land: '#1e2633', park: '#28463b', forest: '#243f35', vine: '#2e4232', water: '#26557a', road: '#38424f', edge: '#2b3441', major: '#5a5236', majorEdge: '#4a4430', shop: '#2a2a35', school: '#29303a', works: '#262c35', rail: '#55606d', railDash: '#2b3441', rock: '#262f3d', sand: '#2b3240', ice: '#3a4556', hood: '#9aa4b2', street: '#8a94a2', waterInk: '#7fb6d9', main: '#eef1f5', halo: '#1e2633' }],
-  ['밤 B · 차콜', { land: '#232323', park: '#30473a', forest: '#2a3e32', vine: '#344535', water: '#27495e', road: '#3c3c3c', edge: '#2e2e2e', major: '#5e5330', majorEdge: '#4d4428', shop: '#2c2a28', school: '#2e2c29', works: '#2a2a2a', rail: '#5a5a5a', railDash: '#2e2e2e', rock: '#2a2a2a', sand: '#302d29', ice: '#444444', hood: '#a3a3a3', street: '#8f8f8f', waterInk: '#86b4cc', main: '#f2f2f2', halo: '#232323' }],
-  ['밤 C · 푸른 저녁', { land: '#39445a', park: '#446a5d', forest: '#3d6054', vine: '#4a6656', water: '#2f6f99', road: '#56627a', edge: '#475269', major: '#8a7c4e', majorEdge: '#736840', shop: '#463f52', school: '#454b5e', works: '#414a5c', rail: '#7a8499', railDash: '#475269', rock: '#454f64', sand: '#4a5266', ice: '#6b7a91', hood: '#c3cad6', street: '#aeb7c6', waterInk: '#9fd0ee', main: '#ffffff', halo: '#39445a' }],
-];
+// 밤 지도는 뺐어요(11-12 소망: 시안 세 벌이 다 못생겨서)
+const NIGHT = [];
 const mainLayer = P => ({ id: 'main', type: 'symbol', source: 'main', layout: { 'text-field': ['get', 'n'], 'text-font': ['Noto Sans Bold'], 'text-size': 15, 'text-allow-overlap': true },
   paint: { 'text-color': P.main, 'text-halo-color': P.halo || '#ffffff', 'text-halo-width': 1.5 } });
 // 아이콘: 지도 룰의 77종 중 쓰는 것, 색 동그라미(r 7.5) 위 흰 선 그림 — 필요할 때 만들어요
@@ -282,7 +277,6 @@ document.getElementById('bNew').onclick = () => setOld(false);
 document.getElementById('bOld').onclick = () => { if (PLACES[cur][5]) setOld(true); };
 const box = document.getElementById('places');
 PLACES.forEach((p, i) => { const b = document.createElement('button'); b.textContent = p[0]; b.onclick = () => show(i); box.appendChild(b); });
-nightRow();
 if (!window.maplibregl) stat.innerHTML = '<span class="err">MapLibre를 못 받았어요(인터넷 연결을 확인해 주세요)</span>'; else show(0);
 </script>
 </body>
