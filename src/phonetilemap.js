@@ -214,13 +214,45 @@ const CAPITAL = { de: 'berlin-mitte', kr: 'seoul-gwanghwamun', jp: 'tokyo-maruno
     cn: 'beijing-tiananmen', au: 'sydney-circularquay', ca: 'ottawa', no: 'oslo-sentrum', hk: 'hk-central', mo: 'macau-senado' };
 const NO_PLACE = '지도에 없는 곳이에요', NO_NET = '지도를 불러오지 못했어요';
 const say = (host, msg) => { if (host?.isConnected && !host.classList.contains('mp_tiled')) host.dataset.msg = msg; };
+// a town our list does not have (Schmitten, 11-12 소망: A): OpenStreetMap's search (Nominatim) is asked once for the place
+// and its town, and the answer kept in this browser (a miss too, so it is never asked again). One question at a time, at
+// most one a second (its rule); only the place's and town's names are sent
+const GEO_KEY = 'na_tm_geo';
+let geoQ = Promise.resolve(), geoLast = 0;
+const geoMem = () => { try { return JSON.parse(localStorage.getItem(GEO_KEY) || '{}') || {}; } catch { return {}; } };
+async function geoAsk(q) {
+    const mem = geoMem(); if (q in mem) return mem[q];
+    const run = geoQ.then(async () => {
+        const wait = geoLast + 1100 - Date.now(); if (wait > 0) await new Promise(r => setTimeout(r, wait));
+        geoLast = Date.now();
+        let hit = null;
+        try {
+            const r = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(q)}`, { headers: { Accept: 'application/json' } });
+            if (!r.ok) return undefined;   // the service down: not kept, asked again next time
+            const [x] = await r.json();
+            if (x) hit = [Number(x.lat), Number(x.lon), x.category === 'natural' ? '산' : /^(village|hamlet|isolated_dwelling|farm)$/.test(x.type) ? '시골' : '도심'];
+        } catch { return undefined; }
+        try { const m = geoMem(); m[q] = hit; localStorage.setItem(GEO_KEY, JSON.stringify(m)); } catch {}
+        return hit;
+    });
+    geoQ = run.catch(() => {});
+    return run;
+}
+async function geoSpot(want) {
+    const city = String(want.city || '').trim(), place = String((want.pins || [])[0] || '').trim();
+    for (const q of [place && place.toLowerCase() !== city.toLowerCase() ? `${place}, ${city}` : '', city].filter(Boolean)) {
+        const g = await geoAsk(q);
+        if (g) return [`geo:${q.toLowerCase()}`, '', g[2] + (g[0] >= 60 ? '·눈' : ''), g[0], g[1], city, [city]];
+    }
+    return null;
+}
 export async function mountTiles(root) {
     live.root = root;
     const host = root?.querySelector?.('.mp_bg[data-tm]');
     if (!host) { if (live.el?.isConnected) live.el.remove(); const bare = root?.querySelector?.('.mp_bg:not([data-tm])'); if (bare) say(bare, NO_PLACE); return; }
     let want; try { want = JSON.parse(host.dataset.tm); } catch { return; }
     const S = await loadSpots(), cap = CAPITAL[String(want.cc || '').toLowerCase()];
-    const spot = (want.city && spotIn(S, want.city, want.words || [])) || (cap && S.find(s => s[0] === cap)) || null;
+    const spot = (want.city && spotIn(S, want.city, want.words || [])) || (cap && S.find(s => s[0] === cap)) || (want.city && await geoSpot(want)) || null;
     if (!spot) return say(host, NO_PLACE);
     if (!host.isConnected) return;
     let gl; try { gl = await loadLib(); } catch { return say(host, NO_NET); }
