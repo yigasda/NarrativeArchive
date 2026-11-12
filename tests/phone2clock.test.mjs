@@ -9,7 +9,7 @@ const at = s => Date.parse(s);
 test('폰 2 시계: the file imports nothing, and nothing of 폰 1 but the phone window imports it', async () => {
     const src = f => readFile(new URL(`../src/${f}`, import.meta.url), 'utf8');
     assert.doesNotMatch(await src('phone2clock.js'), /^\s*import\b/m);
-    for (const f of (await readdir(new URL('../src/', import.meta.url))).filter(f => f.endsWith('.js') && f !== 'phone2clock.js' && f !== 'phone.js' && f !== 'phone2story.js' && f !== 'phone2feed.js'))   // 4-2: only the phone's window (switch, picker, phone()) may call it
+    for (const f of (await readdir(new URL('../src/', import.meta.url))).filter(f => f.endsWith('.js') && f !== 'phone2clock.js' && f !== 'phone.js' && f !== 'phone2story.js' && f !== 'phone2feed.js' && f !== 'phone2live.js'))   // 4-2: only the phone's window (switch, picker, phone()) may call it
         assert.doesNotMatch(await src(f), /phone2clock/, f);
 });
 

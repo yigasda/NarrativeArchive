@@ -390,6 +390,17 @@ THE PHONE — what they might do on it, and when
      - 실험(0단계)으로 이 모양이 반영에서 잘 펼쳐지는지 본 뒤 7단계에서 이어요.
 
 7. **답장 + 지금 상태:** 새 지시문(state → reply → ko → does), THE PHONE 목록, ALREADY ON THE PHONE TODAY, WEATHER NOW, "지금 상태" 함수, 일의 줄과 세계 · 회차 표시, `does` → 바로 반영.
+   - 7-1 됐어요(답장 요청의 입력): 아직 모델을 부르는 곳은 없어요.
+     - `src/phone2ask.js`(아무것도 안 부름): 모은 값을 글로. 답장 지시문은 실험(run14)에서 보낸 입력 모양에 맞춰 다듬어져서, 블록 이름 · 순서 · 줄 모양 · 구분 기호 · 시각 형식을 글자 그대로 지켜요. `tests/phone2ask.test.mjs`가 그때의 요청 하나(예시 인물로 바꾼 `tests/fixtures/phone2reply-input.txt`)와 글자 단위로 같은지 봐요.
+       - 순서(있는 것만): LANGUAGES · MESSENGER · CHAT SUMMARY · NOW · OWNER'S CLOCK · WEATHER NOW · RECENT ON THE PHONE · SITUATIONS · `[<주인>'s card]` · VOICES · PEOPLE AROUND · OWNER DOESN'T KNOW · STORY · TYPED AND DELETED · WHY NOW
+       - MESSENGER: 말풍선마다 한 줄. 남의 말 `MM-DD HH:MM · Ren: …`, 주인 말 `MM-DD HH:MM · Mara (상태): …`. NOW는 한 줄(마지막 상태 · 오늘 일정 · 앞으로의 일정 · 폰이 마지막에 남긴 것 · 이야기에서 알던 사이인지 · 첫 메신저 대화인지).
+     - `src/phone2live.js`: 실제 폰 2에서 값을 모아요(`gatherReply`). 폰 1 함수가 필요한 것(주인 시계 `phone2Clock`, 주변 사람, 카드, 지금 있는 곳, 이야기)은 부르는 쪽이 넘겨요.
+       - 시각은 전부 주인이 있는 곳의 폰 2 시각(메시지를 보낸 실제 순간). 실험 하네스는 주인 말에 답의 state 시각을 썼지만, 실제로는 답이 온 순간을 써요.
+       - 최근 말풍선 60개, 앞으로의 일정은 14일 안 4개, 이야기는 끝에서부터 통째 장면만 8,000자까지.
+       - WEATHER NOW: 지금은 폰의 날씨 앱 기록(오늘 것일 때만). 진짜 날씨는 4-3에서.
+       - SITUATIONS: 폰에 저장된 것(`p.situations`, 7-4의 폰 2 반영이 남겨요). 아직 없으면 `(none on the phone yet)`.
+       - 아직 안 보내는 것: CHAT SUMMARY(9단계), OWNER DOESN'T KNOW(이야기의 "누가 아는가"를 폰 2로 어떻게 가져올지 정한 뒤).
+
 8. **늦은 답 · 먼저 연락하기:** 짧은 지연은 기다림, 긴 지연은 다시 열 때 새로 만들기. 먼저 연락하기 이유 · 하루 상한 · 설정.
 9. **대화 밖 생활 · 통화 · 요약:** 대화 밖 생활 반영(정할 것 1번대로), 밀린 구간 나누기, 메신저 통화 기록과 짧은 요약, 하루 · 한 주 요약, 되돌리기, 요청 수 표시.
 10. **처음부터 시작:** 카드 + 페르소나만으로 폰 만들기, 모르는 사이로 시작하는 메신저.
