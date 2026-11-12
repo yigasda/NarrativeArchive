@@ -98,7 +98,7 @@ const PHONE_ITEMS = `  "contacts": [{ "name": name in the story, "saved": how th
               "comments": [{ "from": name, "text", "ko" }] }],
   "mails": [{ "from": sender, "to": only on a mail the owner sent ("from" is then the owner), "subject" ("Re: …" for an answer), "ks": Korean subject, "text", "ko", "time", "unread": true or false }],
   "diary": [{ "date": "MM-DD", "title", "kt": Korean title, "text", "ko" }],
-  "visits": [{ "place": a place the owner really went to, as the story writes it (a room, a shop, a house; a city alone when the story names nothing closer there, never the city they live in alone), "city": the city it is in, or "", "home": true when it is the owner's own home, "with": [the people there with them], "time", "already": the id of that same visit in PHONE NOW, else "" }],
+  "visits": [{ "place": a place the owner really went to, as the story writes it (a room, a shop, a house; a city alone when the story names nothing closer there, never the city they live in alone), "city": the city it is in, or "", "home": true when it is the owner's own home, "with": [the people there with them], "time", "already": the id of that same visit in PHONE NOW, else "" }] one for each place the owner is at, in order: a scene that moves (from the office to the station to a hotel in another city) gives one at each,
   "voice": [{ "title", "kt", "text", "ko", "time", "sec", "place" }] only when the archive or chat shows the owner recorded one`;
 // (반영: a voice memo may be an everyday one too, so the 폰 만들기 limit is left off there)
 const VOICE_ONLY = ' only when the archive or chat shows the owner recorded one';
@@ -166,7 +166,7 @@ JSON (one object, nothing before or after it)
 ${PHONE_ITEMS}
 }
 Fill each list to about: 10 threads of 6 to 15 messages, 20 calls, 15 photos, 10 notes, 15 searches (3 open at most), 10 events, 6 posts with up to 4 comments,
-10 mails, 8 diary entries, the 12 newest visits. Who they talk to, and how much, follows their character and PEOPLE AROUND.
+10 mails, 8 diary entries, the 30 newest visits. Who they talk to, and how much, follows their character and PEOPLE AROUND.
 Oldest first in every list.
 ${PHONE_LAST}`;
 export const AI_SYS_PHONE_APPS = `GOAL
@@ -205,7 +205,7 @@ JSON (one object, nothing before or after it)
 ${PHONE_ITEMS}
 }
 Fill each list to about: 10 threads of 6 to 15 messages, 20 calls, 15 photos, 10 notes, 15 searches (3 open at most), 10 events, 6 posts with up to 4 comments,
-10 mails, 8 diary entries, the 12 newest visits. Who they talk to, and how much, follows their character and PEOPLE AROUND.
+10 mails, 8 diary entries, the 30 newest visits. Who they talk to, and how much, follows their character and PEOPLE AROUND.
 Oldest first in every list.
 ${PHONE_LAST}`;
 
@@ -1320,7 +1320,7 @@ export async function loreFor(m, owner, skip = null) {
 // 번역 용어집: names as the user wants them, in the Korean and as full names
 export const namesBlock = m => { const g = glossaryEntries(m); return g.length ? `[NAMES]\nHow these names are written. Korean text uses the Korean form; a person's full name is the one given here.\n${g.map(e => `- ${e.src} = ${e.ko}`).join('\n')}` : ''; };
 // 다시 만들기, app by app: which JSON keys each app is drawn from
-export const REMAKE = { msg: ['threads', 'contacts'], call: ['calls'], photo: ['photos'], note: ['notes'], search: ['searches'], cal: ['events'], sns: ['profile', 'posts'], mail: ['mails'], diary: ['diary'] };
+export const REMAKE = { msg: ['threads', 'contacts'], call: ['calls'], photo: ['photos'], note: ['notes'], search: ['searches'], cal: ['events'], sns: ['profile', 'posts'], mail: ['mails'], diary: ['diary'], map: ['visits'] };
 const onlyAsk = keys => `[ONLY THESE]\nThe phone already holds the rest. Write only these keys of the JSON, from the whole story: ${keys.join(', ')}.`;
 // 누가 아는가: what the owner doesn't know (or only suspects) stays off their phone
 export const blindBlock = (m, owner) => {

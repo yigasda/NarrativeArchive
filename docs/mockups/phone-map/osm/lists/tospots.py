@@ -6,6 +6,7 @@ import os, re, json
 HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.join(HERE, '..', '..', '..', '..', '..')
 src = open(os.path.join(HERE, 'tocity.py'), encoding='utf8').read()
 exec(src[src.index('CITY_OF = '):src.index('ONE_TZ = ')])   # CITY_OF, CITY_EN, SPECIAL_CITY
+exec(src[src.index('# 손으로 다듬은 이름'):src.index('GENERIC_W = {')])   # NAMES
 FILES = [('de', 'de'), ('de', 'de-plus'), ('kr', 'kr'), ('jp', 'jp'), ('us', 'us'), ('gb', 'gb'), ('fr', 'fr'), ('it', 'it'), ('cn', 'cn'), ('au', 'au'), ('ca', 'ca'), ('no', 'no')]
 DESERT = set('grandcanyon-village monumentvalley page-antelope deathvalley-furnace brycecanyon arches whitesands joshuatree zion-springdale moab sedona marfa roswell yulara alicesprings cooberpedy brokenhill drumheller'.split())
 SKI = set('courchevel valdisere megeve mtbuller thredbo hemsedal trysil geilo beitostolen finse whistler'.split())
@@ -25,6 +26,7 @@ for cc, f in FILES:
             for x in [n] + n.split(' · '):
                 x = x.strip()
                 if len(x) >= 2 and x not in names: names.append(x)
+        if slug in NAMES: add(NAMES[slug][0]); add(NAMES[slug][1])   # 다듬은 이름(names.tsv) 먼저
         add(r['이름']); add(r['찾기'].split(',')[0])
         if r.get('표 동네'): add(r['표 동네'].split(': ', 1)[-1])
         kind = r['종류'] + ('·사막' if slug in DESERT else '·눈' if la >= 60 or slug in SKI else '')

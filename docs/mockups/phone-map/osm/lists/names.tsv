@@ -1,0 +1,1120 @@
+# 다듬은 이름: slug · 한국어 이름(설명 없이) · 그곳 이름(라틴 글자). tocity.py · tospots.py가 목록의 이름보다 먼저 써요. 손으로 고쳐도 돼요.
+badenbaden-zentrum	바덴바덴	Baden-Baden
+bamberg-altstadt	밤베르크	Bamberg
+berlin-charlottenburg	샤를로텐부르크	Charlottenburg
+berlin-friedrichshain	프리드리히스하인	Friedrichshain
+berlin-kreuzberg	크로이츠베르크	Kreuzberg
+berlin-lichtenberg	리히텐베르크	Lichtenberg
+berlin-marzahn	마르찬	Marzahn
+berlin-neukoelln	노이쾰른	Neukölln
+berlin-potsdamerplatz	포츠담 광장	Potsdamer Platz
+berlin-prenzlauerberg	프렌츨라우어베르크	Prenzlauer Berg
+berlin-wannsee	반제	Wannsee
+bonn-zentrum	본	Bonn
+bremen-altstadt	브레멘	Bremen
+dortmund-mitte	도르트문트	Dortmund
+dresden-altstadt	드레스덴	Dresden
+dresden-neustadt	노이슈타트	Äußere Neustadt
+duesseldorf-altstadt	뒤셀도르프	Düsseldorf
+duesseldorf-medienhafen	메디엔하펜	MedienHafen
+essen-mitte	에센	Essen
+frankfurt-altstadt	프랑크푸르트	Frankfurt
+frankfurt-bankenviertel	반호프스피어텔	Bahnhofsviertel
+freiburg-altstadt	프라이부르크	Freiburg
+fuessen-altstadt	퓌센	Füssen
+garmisch-zentrum	가르미슈파르텐키르헨	Garmisch-Partenkirchen
+goettingen-altstadt	괴팅겐	Göttingen
+hamburg-alster	알스터	Alster
+hamburg-altona	알토나	Altona
+hamburg-blankenese	블랑케네제	Blankenese
+hamburg-hafencity	하펜시티	HafenCity
+hamburg-stgeorg	장크트게오르크	St. Georg
+hamburg-stpauli	장크트파울리	St. Pauli
+hannover-mitte	하노버	Hannover
+heidelberg-altstadt	하이델베르크	Heidelberg
+kiel-zentrum	킬	Kiel
+koblenz-deutscheseck	코블렌츠	Koblenz
+koeln-belgischesviertel	벨기셰스 피어텔	Belgisches Viertel
+leipzig-connewitz	코네비츠	Connewitz
+leipzig-plagwitz	플라크비츠	Plagwitz
+marburg-altstadt	마르부르크	Marburg
+muenchen-englischergarten	영국 정원	Englischer Garten
+muenchen-nymphenburg	님펜부르크	Nymphenburg
+muenchen-olympiapark	올림피아파크	Olympiapark
+muenchen-schwabing	슈바빙	Schwabing
+passau-altstadt	파사우	Passau
+potsdam-zentrum	포츠담	Potsdam
+regensburg-altstadt	레겐스부르크	Regensburg
+rostock-altstadt	로스토크	Rostock
+rothenburg-altstadt	로텐부르크	Rothenburg ob der Tauber
+ruedesheim-zentrum	뤼데스하임	Rüdesheim am Rhein
+stuttgart-mitte	슈투트가르트	Stuttgart
+sylt-westerland	베스터란트	Westerland
+tuebingen-altstadt	튀빙겐	Tübingen
+berlin-mitte	미테	Mitte
+berlin-schoeneberg	쇠네베르크	Schöneberg
+muenchen-marienplatz	마리엔플라츠	Marienplatz
+muenchen-maxvorstadt	막스포어슈타트	Maxvorstadt
+muenchen-glockenbach	글로켄바흐	Glockenbachviertel
+muenchen-haidhausen	하이트하우젠	Haidhausen
+muenchen-bogenhausen	보겐하우젠	Bogenhausen
+frankfurt-westend	베스트엔트	Westend
+frankfurt-sachsenhausen	작센하우젠	Sachsenhausen
+frankfurt-bockenheim	보켄하임	Bockenheim
+frankfurt-nordend	노르트엔트	Nordend
+frankfurt-ostend	오스트엔트	Ostend
+frankfurt-flughafen	프랑크푸르트 공항	Flughafen Frankfurt
+hamburg-eimsbuettel	아임스뷔텔	Eimsbüttel
+koeln-dom	쾰른 대성당	Kölner Dom
+koeln-ehrenfeld	에렌펠트	Ehrenfeld
+koeln-deutz	도이츠	Deutz
+leipzig-zentrum	라이프치히	Leipzig
+nuernberg-altstadt	뉘른베르크	Nürnberg
+luebeck-altstadt	뤼베크	Lübeck
+berlin-gropiusstadt	그로피우스슈타트	Gropiusstadt
+berlin-zehlendorf	첼렌도르프	Zehlendorf
+berlin-spandau	슈판다우	Spandau
+berlin-tempelhof	템펠호프	Tempelhof
+berlin-flughafen	베를린 브란덴부르크 공항	Flughafen Berlin Brandenburg
+muenchen-neuperlach	노이페를라흐	Neuperlach
+muenchen-flughafen	뮌헨 공항	Flughafen München
+muenchen-allianzarena	알리안츠 아레나	Allianz Arena
+hamburg-wilhelmsburg	빌헬름스부르크	Wilhelmsburg
+hamburg-containerhafen	발터스호프	Waltershof
+bremerhaven-havenwelten	브레머하펜	Bremerhaven
+wolfsburg-autostadt	볼프스부르크	Wolfsburg
+ludwigshafen-basf	루트비히스하펜	Ludwigshafen
+duisburg-ruhrort	뒤스부르크	Duisburg
+essen-zollverein	촐페라인	Zollverein
+aachen-zentrum	아헨	Aachen
+garching-campus	가르힝	Garching
+karlsruhe-schloss	카를스루에	Karlsruhe
+koeln-lindenthal	린덴탈	Lindenthal
+stuttgart-killesberg	킬레스베르크	Killesberg
+leipzig-gruenau	그뤼나우	Grünau
+dresden-blasewitz	블라제비츠	Blasewitz
+potsdam-babelsberg	바벨스베르크	Babelsberg
+hannover-messe	하노버 메세	Messe Hannover
+duesseldorf-flughafen	뒤셀도르프 공항	Flughafen Düsseldorf
+berchtesgaden	베르히테스가덴	Berchtesgaden
+schoenau-koenigssee	쾨니히스제	Königssee
+oberstdorf	오버스트도르프	Oberstdorf
+mittenwald	미텐발트	Mittenwald
+oberammergau	오버아머가우	Oberammergau
+hohenschwangau	호엔슈반가우	Hohenschwangau
+tegernsee	테게른제	Tegernsee
+schliersee	슐리어제	Schliersee
+prien-chiemsee	프린	Prien am Chiemsee
+lindau-insel	린다우	Lindau
+konstanz-altstadt	콘스탄츠	Konstanz
+meersburg	메어스부르크	Meersburg
+starnberg	슈타른베르크	Starnberg
+waren-mueritz	바렌	Waren
+binz-ruegen	빈츠	Binz
+warnemuende	바르네뮌데	Warnemünde
+heiligendamm	하일리겐담	Heiligendamm
+norderney	노르더나이	Norderney
+helgoland	헬골란트	Helgoland
+sankt-peter-ording	장크트페터오르딩	Sankt Peter-Ording
+timmendorfer-strand	티멘도르퍼 슈트란트	Timmendorfer Strand
+list-sylt	리스트	List
+greetsiel	그레트질	Greetsiel
+ahlbeck-usedom	알베크	Ahlbeck
+burg-fehmarn	부르크	Burg auf Fehmarn
+cochem	코헴	Cochem
+bernkastel-kues	베른카스텔쿠스	Bernkastel-Kues
+bacharach	바하라흐	Bacharach
+sankt-goarshausen	장크트고아르스하우젠	Sankt Goarshausen
+deidesheim	다이데스하임	Deidesheim
+volkach	폴카흐	Volkach
+quedlinburg	크베들린부르크	Quedlinburg
+dinkelsbuehl	딩켈스뷜	Dinkelsbühl
+wernigerode	베르니게로데	Wernigerode
+monschau	몬샤우	Monschau
+burg-eltz	엘츠 성	Burg Eltz
+bad-kissingen	바트 키싱엔	Bad Kissingen
+bad-reichenhall	바트 라이헨할	Bad Reichenhall
+schierke-harz	시르케	Schierke
+triberg	트리베르크	Triberg
+titisee	티티제	Titisee
+undeloh-heide	운델로	Undeloh
+luebbenau-spreewald	뤼베나우	Lübbenau
+worpswede	보릅스베데	Worpswede
+pfronten	프론텐	Pfronten
+kurort-rathen	라텐	Rathen
+bodenmais	보덴마이스	Bodenmais
+seoul-gangnam	강남	Gangnam
+seoul-seocho	서초	Seocho
+seoul-samseong	삼성동 · 선릉	Samseong-dong
+seoul-apgujeong	압구정 · 가로수길	Apgujeong
+seoul-cheongdam	청담	Cheongdam
+seoul-jamsil	잠실	Jamsil
+seoul-yeouido	여의도	Yeouido
+seoul-yeongdeungpo	영등포	Yeongdeungpo
+seoul-hongdae	홍대 · 연남	Hongdae
+seoul-mangwon	망원 · 합정	Mangwon
+seoul-mapo	마포 · 공덕	Mapo
+seoul-sinchon	신촌 · 이대	Sinchon
+seoul-itaewon	이태원 · 한남	Itaewon
+seoul-yongsan	용산	Yongsan
+seoul-myeongdong	명동 · 을지로	Myeongdong
+seoul-namsan	남산	Namsan
+seoul-gwanghwamun	광화문 · 종로	Gwanghwamun
+seoul-seongsu	성수	Seongsu
+seoul-kondae	건대	Kondae
+seoul-wangsimni	왕십리	Wangsimni
+seoul-dongdaemun	동대문	Dongdaemun
+seoul-daehangno	대학로 · 혜화	Daehak-ro
+seoul-nowon	노원	Nowon
+seoul-magok	마곡	Magok
+seoul-gangseo	화곡	Hwagok
+seoul-mokdong	목동	Mokdong
+seoul-guro	구로 · 가산	Guro
+seoul-sillim	신림	Sillim
+seoul-snu	서울대입구 · 관악	Seouldaeipgu
+seoul-sadang	사당	Sadang
+seoul-noryangjin	노량진	Noryangjin
+seoul-eunpyeong	연신내	Yeonsinnae
+seoul-suyu	수유 · 강북	Suyu
+seoul-seongbuk	성북동	Seongbuk-dong
+seoul-dobong	도봉산	Dobongsan
+seoul-jungnang	중랑	Jungnang
+seoul-cheonho	천호 · 강동	Cheonho
+seoul-station	서울역	Seoul Station
+busan-haeundae	해운대	Haeundae
+busan-songjeong	송정	Songjeong
+busan-gwangalli	광안리	Gwangalli
+busan-seomyeon	서면 · 전포	Seomyeon
+busan-nampo	남포동	Nampo-dong
+busan-centum	센텀시티	Centum City
+busan-gijang	기장	Gijang
+busan-yeongdo	영도	Yeongdo
+busan-gamcheon	감천문화마을	Gamcheon
+busan-station	부산역	Busan Station
+incheon-songdo	송도	Songdo
+incheon-yeongjong	영종도	Yeongjongdo
+incheon-airport	인천공항	Incheon Airport
+incheon-bupyeong	부평	Bupyeong
+incheon-wolmido	월미도	Wolmido
+daegu-dongseongro	동성로	Dongseong-ro
+daegu-gimgwangseok	김광석길	Kim Kwang-seok-gil
+daegu-suseong	수성못	Suseongmot
+daejeon-dunsan	둔산	Dunsan
+daejeon-yuseong	유성	Yuseong
+daejeon-eunhaeng	은행동	Eunhaeng-dong
+gwangju-chungjangro	충장로	Chungjang-ro
+gwangju-sangmu	상무지구	Sangmu
+jeju-airport	제주시	Jeju
+jeju-seogwipo	서귀포	Seogwipo
+jeju-aewol	애월	Aewol
+jeju-hamdeok	함덕	Hamdeok
+jeju-seongsan	성산	Seongsan
+jeju-jungmun	중문	Jungmun
+jeju-hyeopjae	협재	Hyeopjae
+suwon-gwanggyo	광교	Gwanggyo
+suwon-haenggung	행궁동	Haenggung-dong
+suwon-ingye	인계동	Ingye-dong
+seongnam-pangyo	판교	Pangyo
+seongnam-seohyeon	서현	Seohyeon
+seongnam-jeongja	정자동	Jeongja-dong
+goyang-ilsan	일산	Ilsan
+goyang-kintex	킨텍스	Kintex
+gangneung-gyeongpo	경포	Gyeongpo
+gangneung-anmok	안목	Anmok
+gangneung-jumunjin	주문진	Jumunjin
+gyeongju-hwangnidan	황리단길	Hwangnidan-gil
+gyeongju-bomun	보문	Bomun
+jeonju-hanok	한옥마을	Hanok Maeul
+seorak-sogongwon	설악산	Seoraksan
+pyeongchang-daegwallyeong	대관령	Daegwallyeong
+jeongseon	정선	Jeongseon
+gurye-hwaeomsa	화엄사	Hwaeomsa
+bukhansan-uidong	우이동	Ui-dong
+danyang	단양	Danyang
+hapcheon-haeinsa	해인사	Haeinsa
+sokcho	속초	Sokcho
+yangyang-jukdo	죽도	Jukdo
+donghae-mukho	묵호	Mukho
+pohang-guryongpo	구룡포	Guryongpo
+ulleungdo-dodong	도동	Dodong
+tongyeong	통영	Tongyeong
+geoje-jangseungpo	장승포	Jangseungpo
+namhae-germanvillage	독일마을	Dogil Maeul
+yeosu-expo	여수	Yeosu
+boseong-greentea	보성	Boseong
+wando	완도	Wando
+mokpo-oldtown	목포	Mokpo
+sinan-jeungdo	증도	Jeungdo
+taean-anmyeondo	안면도	Anmyeondo
+boryeong-daecheon	대천	Daecheon
+ganghwa	강화도	Ganghwado
+jeju-udo	우도	Udo
+jeju-seonheul	선흘	Seonheul
+jeju-eorimok	어리목	Eorimok
+andong-hahoe	하회마을	Hahoe
+gyeongju-yangdong	양동마을	Yangdong
+gochang	고창	Gochang
+icheon	이천	Icheon
+gimje-plain	김제	Gimje
+hadong-hwagae	화개	Hwagae
+damyang	담양	Damyang
+suncheon-bay	순천만	Suncheonman
+yeongwol	영월	Yeongwol
+chuncheon-namiseom	남이섬	Namiseom
+gapyeong-cheongpyeong	청평	Cheongpyeong
+yangpyeong-dumulmeori	두물머리	Dumulmeori
+paju-heyri	헤이리	Heyri
+paju-imjingak	임진각	Imjingak
+gongju	공주	Gongju
+buyeo	부여	Buyeo
+yongin-everland	에버랜드	Everland
+sejong	세종	Sejong
+hwaseong-dongtan	동탄	Dongtan
+ulsan-mipo	울산	Ulsan
+changwon-sangnam	상남동	Sangnam-dong
+pyeongtaek-anjeong	안정리	Anjeong-ri
+cheongju	청주	Cheongju
+chuncheon	춘천	Chuncheon
+jinju	진주성	Jinjuseong
+andong-market	안동	Andong
+tokyo-shibuya	시부야	Shibuya
+tokyo-harajuku	하라주쿠 · 오모테산도	Harajuku
+tokyo-shinjuku	신주쿠	Shinjuku
+tokyo-roppongi	롯폰기 · 아자부	Roppongi
+tokyo-ginza	긴자 · 유라쿠초	Ginza
+tokyo-marunouchi	마루노우치 · 니혼바시	Marunouchi
+tokyo-akihabara	아키하바라	Akihabara
+tokyo-ueno	우에노	Ueno
+tokyo-asakusa	아사쿠사 · 스카이트리	Asakusa
+tokyo-odaiba	오다이바	Odaiba
+tokyo-shinagawa	시나가와	Shinagawa
+tokyo-ebisu	에비스 · 나카메구로	Ebisu
+tokyo-shimokitazawa	시모키타자와	Shimokitazawa
+tokyo-kichijoji	기치조지	Kichijoji
+tokyo-ikebukuro	이케부쿠로	Ikebukuro
+tokyo-haneda	하네다 공항	Haneda Airport
+narita-airport	나리타 공항	Narita Airport
+tokyo-koenji	고엔지	Koenji
+tokyo-toyosu	도요스	Toyosu
+tokyo-yanaka	야나카	Yanaka
+tokyo-okutama	오쿠타마	Okutama
+yokohama-minatomirai	미나토미라이	Minato Mirai
+yokohama-chinatown	차이나타운 · 모토마치	Chukagai
+osaka-namba	난바 · 도톤보리	Namba
+osaka-umeda	우메다	Umeda
+osaka-tennoji	덴노지 · 신세카이	Tennoji
+osaka-usj	유니버설 스튜디오 재팬	Universal Studios Japan
+kansai-airport	간사이 공항	Kansai Airport
+kyoto-gion	기온 · 가와라마치	Gion
+kyoto-arashiyama	아라시야마	Arashiyama
+kyoto-fushimi	후시미	Fushimi
+kyoto-ohara	오하라	Ohara
+fukuoka-tenjin	덴진 · 나카스	Tenjin
+fukuoka-hakata	하카타	Hakata
+sapporo-susukino	스스키노 · 오도리	Susukino
+nagoya-sakae	사카에	Sakae
+nagoya-meieki	나고야역	Meieki
+hakone-yumoto	하코네유모토	Hakone-Yumoto
+kusatsu-onsen	구사쓰	Kusatsu
+beppu	벳푸	Beppu
+noboribetsu	노보리베쓰	Noboribetsu
+ginzan-onsen	긴잔 온천	Ginzan Onsen
+kinosaki-onsen	기노사키	Kinosaki
+atami	아타미	Atami
+yufuin	유후인	Yufuin
+nikko	닛코	Nikko
+kamikochi	가미코치	Kamikochi
+shirakawa-go	시라카와고	Shirakawa-go
+takayama	다카야마	Takayama
+magome-juku	마고메	Magome
+tsumago-juku	쓰마고	Tsumago
+karuizawa	가루이자와	Karuizawa
+kawaguchiko	가와구치코	Kawaguchiko
+kamakura	가마쿠라	Kamakura
+enoshima	에노시마	Enoshima
+miyajima	미야지마	Miyajima
+naoshima	나오시마	Naoshima
+okinawa-naha	나하	Naha
+okinawa-chatan	차탄	Chatan
+ishigaki	이시가키	Ishigaki
+yakushima	야쿠시마	Yakushima
+shodoshima	쇼도시마	Shodoshima
+otaru	오타루	Otaru
+hakodate	하코다테	Hakodate
+nagasaki	나가사키	Nagasaki
+shimoda	시모다	Shimoda
+onomichi	오노미치	Onomichi
+kobe-harborland	하버랜드	Harborland
+kobe-kitano	기타노	Kitano
+mojiko	모지코	Mojiko
+aso	아소	Aso
+biei	비에이	Biei
+furano	후라노	Furano
+tono	도노	Tono
+iya-valley	이야	Iya
+tama-newtown	다마 뉴타운	Tama New Town
+musashikosugi	무사시코스기	Musashi-Kosugi
+urayasu-disney	도쿄 디즈니랜드	Tokyo Disneyland
+toyota-city	도요타	Toyota
+tsukuba	쓰쿠바	Tsukuba
+makuhari	마쿠하리	Makuhari
+sendai	센다이	Sendai
+hiroshima	히로시마	Hiroshima
+kanazawa	가나자와	Kanazawa
+nara-park	나라	Nara
+kawagoe	가와고에	Kawagoe
+kurashiki	구라시키	Kurashiki
+matsumoto	마쓰모토성	Matsumoto-jo
+himeji	히메지성	Himeji-jo
+beijing-wangfujing	왕푸징	Wangfujing
+beijing-tiananmen	톈안먼 · 첸먼	Tiananmen
+beijing-sanlitun	싼리툰	Sanlitun
+beijing-guomao	궈마오 · 차오양	Guomao
+beijing-haidian	중관춘	Zhongguancun
+beijing-nanluoguxiang	난뤄구샹	Nanluoguxiang
+beijing-houhai	허우하이	Houhai
+beijing-798	798 예술구	Dashanzi
+beijing-airport	서우두 공항	Beijing Capital Airport
+mutianyu	무톈위 만리장성	Mutianyu
+badaling	바다링 만리장성	Badaling
+shanghai-bund	와이탄 · 난징루	Waitan
+shanghai-lujiazui	루자쭈이 · 푸둥	Lujiazui
+shanghai-xintiandi	신톈디	Xintiandi
+shanghai-jingan	징안	Jing'an
+shanghai-xujiahui	쉬자후이	Xujiahui
+shanghai-hongqiao	훙차오	Hongqiao
+shanghai-pudong-airport	푸둥 공항	Pudong Airport
+shanghai-disney	상하이 디즈니랜드	Shanghai Disneyland
+zhujiajiao	주자자오	Zhujiajiao
+guangzhou-tianhe	톈허 · 주장신청	Tianhe
+guangzhou-shamian	사몐	Shamian
+shenzhen-nanshan	난산	Nanshan
+shenzhen-futian	푸톈	Futian
+shenzhen-luohu	뤄후	Luohu
+shenzhen-huaqiangbei	화창베이	Huaqiangbei
+dongguan-songshanhu	쑹산호	Songshanhu
+hk-central	센트럴 · 란콰이퐁	Central
+hk-wanchai	완차이 · 코즈웨이베이	Wan Chai
+hk-tst	침사추이	Tsim Sha Tsui
+hk-mongkok	몽콕	Mong Kok
+hk-peak	빅토리아 피크	Victoria Peak
+hk-lantau	옹핑	Ngong Ping
+hk-stanley	스탠리	Stanley
+hk-repulsebay	리펄스베이	Repulse Bay
+hk-saikung	사이쿵	Sai Kung
+hk-lamma	라마섬	Lamma Island
+hk-cheungchau	청차우	Cheung Chau
+hk-taio	타이오	Tai O
+hk-shamshuipo	삼수이포	Sham Shui Po
+hk-airport	첵랍콕 공항	Chek Lap Kok Airport
+hk-shatin	샤틴	Sha Tin
+macau-senado	세나도 광장	Largo do Senado
+macau-cotai	코타이 · 타이파	Cotai
+macau-coloane	콜로안	Coloane
+chengdu-kuanzhai	콴자이샹쯔	Kuanzhai Xiangzi
+chengdu-chunxi	춘시루	Chunxi Lu
+chongqing	충칭	Chongqing
+xian	시안	Xi'an
+hangzhou	항저우	Hangzhou
+suzhou	쑤저우	Suzhou
+nanjing	난징	Nanjing
+wuhan	우한	Wuhan
+harbin	하얼빈	Harbin
+qingdao	칭다오	Qingdao
+qingdao-badaguan	바다관	Badaguan
+tianjin	톈진	Tianjin
+kunming	쿤밍	Kunming
+changsha	창사	Changsha
+xiamen-gulangyu	구랑위	Gulangyu
+xiamen-zengcuoan	쩡춰안	Zengcuo'an
+lijiang	리장	Lijiang
+dali	다리	Dali
+pingyao	핑야오	Pingyao
+wuzhen	우전	Wuzhen
+zhouzhuang	저우좡	Zhouzhuang
+xitang	시탕	Xitang
+hongcun	훙춘	Hongcun
+fenghuang	펑황	Fenghuang
+yangshuo	양숴	Yangshuo
+longji	룽지	Longji
+shangrila	샹그릴라	Shangri-La
+tianluokeng	톈뤄컹	Tianluokeng
+guilin	구이린	Guilin
+huangshan	황산	Huangshan
+zhangjiajie	장자제	Zhangjiajie
+jiuzhaigou	주자이거우	Jiuzhaigou
+emeishan	어메이산	Emeishan
+lhasa	라싸	Lhasa
+sanya-yalong	야룽만	Yalongwan
+sanya-dadonghai	다둥하이	Dadonghai
+beidaihe	베이다이허	Beidaihe
+dalian	다롄	Dalian
+putuoshan	푸퉈산	Putuoshan
+weihai	웨이하이	Weihai
+ny-midtown	미드타운 · 타임스스퀘어	Midtown
+ny-soho	소호 · 트라이베카	SoHo
+ny-chelsea	첼시	Chelsea
+ny-greenwich	그리니치빌리지	Greenwich Village
+ny-eastvillage	이스트빌리지 · 로어이스트사이드	East Village
+ny-ues	어퍼이스트사이드	Upper East Side
+ny-uws	어퍼웨스트사이드	Upper West Side
+ny-centralpark	센트럴파크	Central Park
+ny-harlem	할렘	Harlem
+ny-wallstreet	월스트리트	Wall Street
+ny-dumbo	덤보	DUMBO
+ny-williamsburg	윌리엄스버그	Williamsburg
+ny-bushwick	부시윅	Bushwick
+ny-flushing	플러싱	Flushing
+ny-astoria	아스토리아	Astoria
+ny-bronx	브롱크스	Bronx
+ny-statenisland	스태튼아일랜드	Staten Island
+ny-jfk	케네디 공항	JFK Airport
+ny-laguardia	라과디아 공항	LaGuardia Airport
+la-hollywood	할리우드	Hollywood
+la-weho	웨스트할리우드	West Hollywood
+la-beverlyhills	베벌리힐스	Beverly Hills
+la-santamonica	샌타모니카	Santa Monica
+la-venice	베니스비치	Venice Beach
+la-dtla	다운타운	Downtown
+la-silverlake	실버레이크	Silver Lake
+la-koreatown	코리아타운	Koreatown
+la-pasadena	패서디나	Pasadena
+la-malibu	말리부	Malibu
+la-lax	로스앤젤레스 공항	LAX
+sf-mission	미션	Mission District
+sf-soma	소마 · 유니언스퀘어	SoMa
+sf-haight	헤이트애시버리	Haight-Ashbury
+sf-castro	카스트로	Castro
+sf-northbeach	노스비치 · 피셔맨스워프	North Beach
+sf-marina	마리나	Marina District
+seattle-capitolhill	캐피톨힐	Capitol Hill
+seattle-ballard	밸러드	Ballard
+seattle-fremont	프리몬트	Fremont
+seattle-pikeplace	파이크플레이스 마켓	Pike Place Market
+chicago-loop	루프 · 리버노스	The Loop
+chicago-goldcoast	골드코스트	Gold Coast
+chicago-lincolnpark	링컨파크	Lincoln Park
+chicago-wickerpark	위커파크	Wicker Park
+chicago-ohare	오헤어 공항	O'Hare Airport
+boston-backbay	백베이 · 비컨힐	Back Bay
+boston-northend	노스엔드	North End
+boston-southend	사우스엔드	South End
+dc-georgetown	조지타운	Georgetown
+dc-dupont	듀폰서클	Dupont Circle
+dc-mall	내셔널몰 · 캐피톨힐	National Mall
+miami-southbeach	사우스비치	South Beach
+miami-wynwood	윈우드	Wynwood
+miami-brickell	브리켈	Brickell
+miami-littlehavana	리틀하바나	Little Havana
+vegas-strip	라스베이거스 스트립	Las Vegas Strip
+vegas-fremont	프리몬트 스트리트	Fremont Street
+yosemite-valley	요세미티	Yosemite Valley
+grandcanyon-village	그랜드캐니언	Grand Canyon
+yellowstone-oldfaithful	옐로스톤	Yellowstone
+zion-springdale	스프링데일	Springdale
+aspen	애스펀	Aspen
+jackson-hole	잭슨홀	Jackson Hole
+gatlinburg	개틀린버그	Gatlinburg
+tahoe-south	사우스레이크타호	South Lake Tahoe
+moab	모압	Moab
+sedona	세도나	Sedona
+keywest	키웨스트	Key West
+honolulu-waikiki	와이키키	Waikiki
+maui-paia	파이아	Paia
+edgartown	에드거타운	Edgartown
+nantucket	낸터킷	Nantucket
+provincetown	프로빈스타운	Provincetown
+carmel	카멀바이더시	Carmel-by-the-Sea
+santabarbara	샌타바버라	Santa Barbara
+lagunabeach	라구나비치	Laguna Beach
+galveston	갤버스턴	Galveston
+myrtlebeach	머틀비치	Myrtle Beach
+atlanticcity	애틀랜틱시티	Atlantic City
+barharbor	바하버	Bar Harbor
+amish-intercourse	인터코스	Intercourse
+napa-yountville	욘트빌	Yountville
+sonoma	소노마	Sonoma
+stowe	스토우	Stowe
+woodstock-vt	우드스톡	Woodstock
+savannah	서배너	Savannah
+charleston	찰스턴	Charleston
+neworleans	뉴올리언스	New Orleans
+nashville	내슈빌	Nashville
+austin	오스틴	Austin
+santafe	샌타페이	Santa Fe
+marfa	마파	Marfa
+seligman	셀리그먼	Seligman
+pella	펠라	Pella
+levittown	레빗타운	Levittown
+stanford	스탠퍼드	Stanford
+mountainview	마운틴뷰	Mountain View
+dearborn	디어본	Dearborn
+houston-nasa	휴스턴 우주센터	Space Center Houston
+orlando-disney	디즈니 월드	Walt Disney World
+anaheim-disneyland	디즈니랜드	Disneyland
+cambridge-harvard	케임브리지	Cambridge
+princeton	프린스턴	Princeton
+hoboken	호보컨	Hoboken
+monumentvalley	모뉴먼트밸리	Monument Valley
+page-antelope	페이지	Page
+deathvalley-furnace	데스밸리	Death Valley
+brycecanyon	브라이스캐니언	Bryce Canyon
+arches	아치스 국립공원	Arches National Park
+whitesands	화이트샌즈	White Sands
+joshuatree	조슈아트리	Joshua Tree
+mtrainier-paradise	레이니어산	Mount Rainier
+redwood-orick	오릭	Orick
+glacier-westglacier	웨스트글레이셔	West Glacier
+estespark	에스테스파크	Estes Park
+lakeplacid	레이크플래시드	Lake Placid
+niagara-usa	나이아가라 폭포	Niagara Falls
+everglades-flamingo	에버글레이즈	Everglades
+memphis-beale	멤피스	Memphis
+hannibal	해니벌	Hannibal
+mackinac	매키노섬	Mackinac Island
+craterlake	크레이터호	Crater Lake
+anchorage	앵커리지	Anchorage
+juneau	주노	Juneau
+denali-park	디날리	Denali
+kona	코나	Kona
+hilo	힐로	Hilo
+kauai-hanalei	하날레이	Hanalei
+honolulu-chinatown	차이나타운	Chinatown
+bigsur	빅서	Big Sur
+cannonbeach	캐넌비치	Cannon Beach
+outerbanks-nagshead	내그스헤드	Nags Head
+fridayharbor	프라이데이하버	Friday Harbor
+bodie	보디	Bodie
+roswell	로스웰	Roswell
+leavenworth	레븐워스	Leavenworth
+solvang	솔뱅	Solvang
+taos	타오스	Taos
+deadwood	데드우드	Deadwood
+rushmore-keystone	키스톤	Keystone
+hooverdam-bouldercity	후버댐	Hoover Dam
+sausalito	소살리토	Sausalito
+kennedyspace	케네디 우주센터	Kennedy Space Center
+graceland	그레이스랜드	Graceland
+texas-fredericksburg	프레더릭스버그	Fredericksburg
+texas-ranch-bandera	반데라	Bandera
+kansas-wheat	린즈버그	Lindsborg
+lafayette-cajun	브로브리지	Breaux Bridge
+appalachia-boone	분	Boone
+nebraska-corn	수어드	Seward
+denver	덴버	Denver
+phoenix	피닉스	Phoenix
+atlanta	애틀랜타	Atlanta
+philadelphia	필라델피아	Philadelphia
+sandiego	샌디에이고	San Diego
+portland-or	포틀랜드	Portland
+saltlake	솔트레이크시티	Salt Lake City
+toronto-downtown	다운타운	Downtown
+toronto-kensington	켄싱턴마켓 · 퀸웨스트	Kensington Market
+toronto-yorkville	요크빌	Yorkville
+toronto-distillery	디스틸러리 디스트릭트	Distillery District
+toronto-islands	토론토 아일랜드	Toronto Islands
+toronto-beaches	비치스	The Beaches
+toronto-northyork	노스요크	North York
+toronto-scarborough	스카버러	Scarborough
+mississauga	미시소가	Mississauga
+markham	마컴	Markham
+oakville	오크빌	Oakville
+toronto-pearson	피어슨 공항	Pearson Airport
+vancouver-downtown	개스타운 · 예일타운	Gastown
+vancouver-kitsilano	키칠라노	Kitsilano
+vancouver-granville	그랜빌아일랜드	Granville Island
+vancouver-stanleypark	스탠리파크	Stanley Park
+vancouver-commercial	커머셜드라이브	Commercial Drive
+north-vancouver	노스밴쿠버	North Vancouver
+burnaby	버나비	Burnaby
+richmond-bc	리치먼드	Richmond
+vancouver-airport	밴쿠버 공항	Vancouver Airport
+montreal-vieux	올드몬트리올	Vieux-Montréal
+montreal-plateau	플라토	Plateau
+montreal-mileend	마일엔드	Mile End
+montreal-downtown	다운타운	Centre-Ville
+laval	라발	Laval
+montreal-airport	트뤼도 공항	Trudeau Airport
+ottawa	오타와	Ottawa
+quebec-vieux	퀘벡	Québec
+calgary	캘거리	Calgary
+edmonton	에드먼턴	Edmonton
+victoria	빅토리아	Victoria
+winnipeg	위니펙	Winnipeg
+halifax	핼리팩스	Halifax
+stjohns	세인트존스	St. John's
+regina	리자이나	Regina
+saskatoon	새스커툰	Saskatoon
+kingston	킹스턴	Kingston
+niagarafalls	나이아가라 폭포	Niagara Falls
+niagara-onthelake	나이아가라온더레이크	Niagara-on-the-Lake
+hamilton	해밀턴	Hamilton
+charlottetown	샬럿타운	Charlottetown
+sault	수세인트마리	Sault Ste. Marie
+thunderbay	선더베이	Thunder Bay
+moncton	멍크턴	Moncton
+sherbrooke	셔브룩	Sherbrooke
+troisrivieres	트루아리비에르	Trois-Rivières
+banff	밴프	Banff
+lakelouise	레이크루이스	Lake Louise
+jasper	재스퍼	Jasper
+canmore	캔모어	Canmore
+whistler	휘슬러	Whistler
+revelstoke	레벨스토크	Revelstoke
+nelson-bc	넬슨	Nelson
+tofino	토피노	Tofino
+ucluelet	유클루렛	Ucluelet
+saltspring	솔트스프링섬	Salt Spring Island
+kelowna	켈로나	Kelowna
+penticton	펜틱턴	Penticton
+drumheller	드럼헬러	Drumheller
+monttremblant	몽트랑블랑	Mont-Tremblant
+huntsville	헌츠빌	Huntsville
+picton	픽턴	Picton
+tobermory	토버모리	Tobermory
+peggyscove	페기스코브	Peggy's Cove
+lunenburg	루넨버그	Lunenburg
+baddeck	배덱	Baddeck
+cavendish	캐번디시	Cavendish
+rockyharbour	로키하버	Rocky Harbour
+tadoussac	타두사크	Tadoussac
+baiestpaul	베생폴	Baie-Saint-Paul
+iledorleans	오를레앙섬	Île d'Orléans
+churchill	처칠	Churchill
+yellowknife	옐로나이프	Yellowknife
+whitehorse	화이트호스	Whitehorse
+dawsoncity	도슨시티	Dawson City
+iqaluit	이칼루이트	Iqaluit
+steinbach	스타인바흐	Steinbach
+humboldt	험볼트	Humboldt
+fortmcmurray	포트맥머리	Fort McMurray
+london-soho	소호 · 코벤트가든	Soho
+london-mayfair	메이페어	Mayfair
+london-westminster	웨스트민스터 · 사우스뱅크	Westminster
+london-camden	캠든	Camden
+london-kingscross	킹스크로스	King's Cross
+london-islington	이즐링턴	Islington
+london-shoreditch	쇼디치 · 브릭 레인	Shoreditch
+london-hackney	해크니	Hackney
+london-city	시티 오브 런던	City of London
+london-canarywharf	캐너리 워프	Canary Wharf
+london-greenwich	그리니치	Greenwich
+london-nottinghill	노팅힐	Notting Hill
+london-kensington	켄싱턴	Kensington
+london-chelsea	첼시	Chelsea
+london-brixton	브릭스턴	Brixton
+london-heathrow	히스로 공항	Heathrow Airport
+london-gatwick	개트윅 공항	Gatwick Airport
+london-hampstead	햄스테드	Hampstead
+london-richmond	리치먼드	Richmond
+london-wimbledon	윔블던	Wimbledon
+london-wembley	웸블리	Wembley
+london-stratford	스트랫퍼드	Stratford
+london-croydon	크로이던	Croydon
+london-ealing	일링	Ealing
+manchester-centre	노던 쿼터 · 딘스게이트	Northern Quarter
+manchester-salford	샐퍼드	Salford
+edinburgh-oldtown	로열 마일	Royal Mile
+edinburgh-leith	리스	Leith
+liverpool-albertdock	리버풀	Liverpool
+bath	바스	Bath
+oxford	옥스퍼드	Oxford
+cambridge	케임브리지	Cambridge
+york	요크	York
+brighton	브라이턴	Brighton
+bristol-harbourside	브리스틀	Bristol
+glasgow-merchant	글래스고	Glasgow
+cardiff-bay	카디프 베이	Cardiff Bay
+belfast-cathedral	벨파스트	Belfast
+birmingham	버밍엄	Birmingham
+stratford-upon-avon	스트랫퍼드어폰에이번	Stratford-upon-Avon
+canterbury	캔터베리	Canterbury
+windsor	윈저	Windsor
+durham	더럼	Durham
+chester	체스터	Chester
+standrews	세인트앤드루스	St Andrews
+inverness	인버네스	Inverness
+norwich	노리치	Norwich
+portsmouth	포츠머스	Portsmouth
+newcastle-quayside	뉴캐슬	Newcastle upon Tyne
+bibury	바이버리	Bibury
+castlecombe	캐슬쿰	Castle Combe
+bourton	버턴온더워터	Bourton-on-the-Water
+grasmere	그래스미어	Grasmere
+ambleside	앰블사이드	Ambleside
+keswick	케직	Keswick
+castleton	캐슬턴	Castleton
+hawes	호스	Hawes
+haworth	하워스	Haworth
+rye	라이	Rye
+lavenham	래븐엄	Lavenham
+glastonbury	글래스턴베리	Glastonbury
+stonehenge-amesbury	스톤헨지	Stonehenge
+haltwhistle	홀트위슬	Haltwhistle
+stives	세인트아이브스	St Ives
+padstow	패드스토	Padstow
+mousehole	마우절	Mousehole
+tintagel	틴타젤	Tintagel
+whitby	휘트비	Whitby
+scarborough	스카버러	Scarborough
+tenby	텐비	Tenby
+dover	도버	Dover
+portree	포트리	Portree
+tobermory-mull	토버모리	Tobermory
+kirkwall	커크월	Kirkwall
+cowes	카우스	Cowes
+beaumaris	보마리스	Beaumaris
+llanberis	란베리스	Llanberis
+betws-y-coed	베투스이코이드	Betws-y-Coed
+fortwilliam	포트윌리엄	Fort William
+drumnadrochit	드럼나드로킷	Drumnadrochit
+pitlochry	피틀로크리	Pitlochry
+aviemore	에비모어	Aviemore
+luss	러스	Luss
+lyndhurst	린드허스트	Lyndhurst
+widecombe	와이드콤	Widecombe-in-the-Moor
+harrogate	해러게이트	Harrogate
+miltonkeynes	밀턴킨스	Milton Keynes
+paris-marais	마레 · 바스티유	Le Marais
+paris-montmartre	몽마르트르 · 피갈	Montmartre
+paris-champs	샹젤리제	Champs-Élysées
+paris-saintgermain	생제르맹 · 라탱 지구	Saint-Germain-des-Prés
+paris-belleville	벨빌	Belleville
+paris-ladefense	라데팡스	La Défense
+paris-eiffel	에펠탑	Tour Eiffel
+paris-cdg	샤를드골 공항	Charles de Gaulle Airport
+paris-orly	오를리 공항	Orly Airport
+paris-canal	생마르탱 운하	Canal Saint-Martin
+paris-batignolles	바티뇰	Batignolles
+paris-montparnasse	몽파르나스	Montparnasse
+paris-bercy	베르시	Bercy
+paris-neuilly	뇌이쉬르센	Neuilly-sur-Seine
+paris-saintdenis	생드니	Saint-Denis
+paris-sarcelles	사르셀	Sarcelles
+vincennes	뱅센	Vincennes
+versailles	베르사유	Versailles
+fontainebleau	퐁텐블로	Fontainebleau
+disneyland-paris	디즈니랜드 파리	Disneyland Paris
+provins	프로뱅	Provins
+chartres	샤르트르	Chartres
+giverny	지베르니	Giverny
+lyon-presquile	프레스킬 · 벨쿠르	Presqu'île
+lyon-croixrousse	크루아루스	Croix-Rousse
+lyon-partdieu	파르디외	Part-Dieu
+lyon-confluence	콩플뤼앙스	Confluence
+nice	니스	Nice
+marseille	마르세유	Marseille
+bordeaux	보르도	Bordeaux
+strasbourg	스트라스부르	Strasbourg
+toulouse	툴루즈	Toulouse
+lille	릴	Lille
+nantes	낭트	Nantes
+montpellier	몽펠리에	Montpellier
+avignon	아비뇽	Avignon
+rouen	루앙	Rouen
+reims	랭스	Reims
+annecy	안시	Annecy
+colmar	콜마르	Colmar
+cannes	칸	Cannes
+montsaintmichel	몽생미셸	Mont-Saint-Michel
+gordes	고르드	Gordes
+roussillon	루시용	Roussillon
+eze	에즈	Èze
+saintpaul	생폴드방스	Saint-Paul-de-Vence
+rocamadour	로카마두르	Rocamadour
+sarlat	사를라	Sarlat-la-Canéda
+riquewihr	리크위르	Riquewihr
+carcassonne	카르카손	Carcassonne
+saintemilion	생테밀리옹	Saint-Émilion
+beaune	본	Beaune
+valensole	발랑솔	Valensole
+collonges	콜롱주라루주	Collonges-la-Rouge
+conques	콩크	Conques
+amboise	앙부아즈	Amboise
+chenonceaux	슈농소	Chenonceaux
+vezelay	베즐레	Vézelay
+yvoire	이부아르	Yvoire
+etretat	에트르타	Étretat
+honfleur	옹플뢰르	Honfleur
+deauville	도빌	Deauville
+sainttropez	생트로페	Saint-Tropez
+biarritz	비아리츠	Biarritz
+saintmalo	생말로	Saint-Malo
+larochelle	라로셸	La Rochelle
+iledere	생마르탱드레	Saint-Martin-de-Ré
+arcachon	아르카숑	Arcachon
+pilat	필라 사구	Dune du Pilat
+bonifacio	보니파시오	Bonifacio
+ajaccio	아작시오	Ajaccio
+menton	망통	Menton
+belleile	벨일	Belle-Île
+cassis	카시스	Cassis
+collioure	콜리우르	Collioure
+porquerolles	포르크롤	Porquerolles
+chamonix	샤모니	Chamonix
+courchevel	쿠르슈벨	Courchevel
+valdisere	발디제르	Val-d'Isère
+megeve	므제브	Megève
+lourdes	루르드	Lourdes
+moustiers	무스티에생트마리	Moustiers-Sainte-Marie
+evian	에비앙	Évian-les-Bains
+aixlesbains	엑스레뱅	Aix-les-Bains
+gerardmer	제라르메	Gérardmer
+vichy	비시	Vichy
+toulouse-blagnac	블라냐크	Blagnac
+sophia-antipolis	소피아 앙티폴리스	Sophia Antipolis
+lehavre-port	르아브르	Le Havre
+rome-trastevere	트라스테베레	Trastevere
+rome-testaccio	테스타치오	Testaccio
+rome-vatican	바티칸	Vaticano
+rome-centro	트레비 · 스페인 광장	Trevi
+rome-termini	테르미니 · 몬티	Termini
+rome-eur	에우르	EUR
+rome-fiumicino	피우미치노 공항	Fiumicino Airport
+rome-ostia	오스티아	Ostia
+rome-cinecitta	치네치타	Cinecittà
+tivoli	티볼리	Tivoli
+milan-brera	브레라 · 포르타 누오바	Brera
+milan-navigli	나빌리	Navigli
+milan-duomo	두오모	Duomo
+milan-citylife	시티라이프	CityLife
+milan-malpensa	말펜사 공항	Malpensa Airport
+venice-sanmarco	산마르코 · 리알토	San Marco
+venice-murano	무라노	Murano
+venice-burano	부라노	Burano
+venice-lido	리도	Lido
+venice-mestre	메스트레	Mestre
+florence-centro	산타크로체 · 올트라르노	Santa Croce
+fiesole	피에솔레	Fiesole
+naples-centro	스파카나폴리	Spaccanapoli
+naples-chiaia	키아이아	Chiaia
+naples-vomero	보메로	Vomero
+turin	토리노	Torino
+turin-lingotto	링고토	Lingotto
+bologna	볼로냐	Bologna
+genoa	제노바	Genova
+palermo	팔레르모	Palermo
+verona	베로나	Verona
+siena	시에나	Siena
+pisa	피사	Pisa
+lucca	루카	Lucca
+bari	바리	Bari
+catania	카타니아	Catania
+trieste	트리에스테	Trieste
+lecce	레체	Lecce
+padova	파도바	Padova
+bergamo	베르가모	Bergamo
+mantova	만토바	Mantova
+ravenna	라벤나	Ravenna
+pompeii	폼페이	Pompei
+sangimignano	산지미냐노	San Gimignano
+montepulciano	몬테풀차노	Montepulciano
+pienza	피엔차	Pienza
+bagnovignoni	바뇨비뇨니	Bagno Vignoni
+greve	그레베인키안티	Greve in Chianti
+cortona	코르토나	Cortona
+assisi	아시시	Assisi
+orvieto	오르비에토	Orvieto
+civita	치비타 디 바뇨레조	Civita di Bagnoregio
+alberobello	알베로벨로	Alberobello
+matera	마테라	Matera
+polignano	폴리냐노 아 마레	Polignano a Mare
+ostuni	오스투니	Ostuni
+barolo	바롤로	Barolo
+ortisei	오르티세이	Ortisei
+cortina	코르티나 담페초	Cortina d'Ampezzo
+courmayeur	쿠르마예르	Courmayeur
+bolzano	볼차노	Bolzano
+merano	메라노	Merano
+bellagio	벨라조	Bellagio
+como	코모	Como
+varenna	바렌나	Varenna
+sirmione	시르미오네	Sirmione
+rivadelgarda	리바델가르다	Riva del Garda
+stresa	스트레사	Stresa
+orta	오르타 산 줄리오	Orta San Giulio
+amalfi	아말피	Amalfi
+positano	포지타노	Positano
+sorrento	소렌토	Sorrento
+capri	카프리	Capri
+ischia	이스키아	Ischia
+procida	프로치다	Procida
+vernazza	베르나차	Vernazza
+manarola	마나롤라	Manarola
+portofino	포르토피노	Portofino
+sanremo	산레모	Sanremo
+taormina	타오르미나	Taormina
+cefalu	체팔루	Cefalù
+ortigia	오르티자	Ortigia
+cagliari	칼리아리	Cagliari
+portocervo	포르토 체르보	Porto Cervo
+alghero	알게로	Alghero
+portoferraio	포르토페라이오	Portoferraio
+rimini	리미니	Rimini
+viareggio	비아레조	Viareggio
+maranello	마라넬로	Maranello
+sydney-circularquay	서큘러 키 · 더 록스	Circular Quay
+sydney-bondi	본다이	Bondi
+sydney-surryhills	서리 힐스	Surry Hills
+sydney-newtown	뉴타운	Newtown
+sydney-darlingharbour	달링 하버	Darling Harbour
+sydney-manly	맨리	Manly
+sydney-paddington	패딩턴	Paddington
+sydney-balmain	발메인	Balmain
+sydney-coogee	쿠지	Coogee
+sydney-cronulla	크로눌라	Cronulla
+sydney-parramatta	패러매타	Parramatta
+sydney-chatswood	채스우드	Chatswood
+sydney-blacktown	블랙타운	Blacktown
+sydney-olympicpark	올림픽 파크	Sydney Olympic Park
+sydney-airport	시드니 공항	Sydney Airport
+melbourne-fitzroy	피츠로이 · 칼턴	Fitzroy
+melbourne-stkilda	세인트킬다	St Kilda
+melbourne-southbank	사우스뱅크	Southbank
+melbourne-cbd	멜버른 시티	Melbourne
+melbourne-richmond	리치먼드	Richmond
+melbourne-brunswick	브런즈윅	Brunswick
+melbourne-brighton	브라이턴	Brighton
+melbourne-boxhill	박스힐	Box Hill
+melbourne-airport	멜버른 공항	Melbourne Airport
+brisbane	브리즈번	Brisbane
+perth	퍼스	Perth
+fremantle	프리맨틀	Fremantle
+adelaide	애들레이드	Adelaide
+hobart	호바트	Hobart
+darwin	다윈	Darwin
+canberra	캔버라	Canberra
+goldcoast	골드코스트	Gold Coast
+cairns	케언스	Cairns
+newcastle-nsw	뉴캐슬	Newcastle
+wollongong	울런공	Wollongong
+geelong	질롱	Geelong
+townsville	타운즈빌	Townsville
+mooloolaba	물루라바	Mooloolaba
+katoomba	카툼바	Katoomba
+pokolbin	포콜빈	Pokolbin
+byronbay	바이런 베이	Byron Bay
+noosa	누사	Noosa
+airliebeach	에얼리 비치	Airlie Beach
+hamiltonisland	해밀턴섬	Hamilton Island
+portdouglas	포트더글러스	Port Douglas
+capetribulation	케이프 트리뷸레이션	Cape Tribulation
+magneticisland	마그네틱섬	Magnetic Island
+kgari	크가리	K'gari
+yulara	율라라	Yulara
+alicesprings	앨리스스프링스	Alice Springs
+cooberpedy	쿠버페디	Coober Pedy
+brokenhill	브로큰힐	Broken Hill
+katherine	캐서린	Katherine
+jabiru	자비루	Jabiru
+kingscote	킹스코트	Kingscote
+tanunda	타눈다	Tanunda
+margaretriver	마거릿 리버	Margaret River
+lorne	론	Lorne
+apollobay	아폴로 베이	Apollo Bay
+portcampbell	포트캠벨	Port Campbell
+cowes-phillip	카우스	Cowes
+healesville	힐스빌	Healesville
+daylesford	데일스퍼드	Daylesford
+ballarat	밸러랫	Ballarat
+bendigo	벤디고	Bendigo
+bright	브라이트	Bright
+mtbuller	마운트 불러	Mount Buller
+thredbo	스레드보	Thredbo
+lakesentrance	레이크스 엔트런스	Lakes Entrance
+launceston	론서스턴	Launceston
+colesbay	콜스 베이	Coles Bay
+portarthur	포트아서	Port Arthur
+strahan	스트래핸	Strahan
+broome	브룸	Broome
+rottnest	로트네스트섬	Rottnest Island
+exmouth	엑스머스	Exmouth
+monkeymia	몽키 마이어	Monkey Mia
+albany	올버니	Albany
+esperance	에스퍼런스	Esperance
+huskisson	허스키슨	Huskisson
+kiama	카이아마	Kiama
+bowral	보럴	Bowral
+mudgee	머지	Mudgee
+lordhowe	로드하우섬	Lord Howe Island
+porthedland	포트헤들랜드	Port Hedland
+oslo-grunerlokka	그뤼네르뢰카	Grünerløkka
+oslo-akerbrygge	아케르 브뤼게	Aker Brygge
+oslo-majorstuen	마요르스투엔	Majorstuen
+oslo-sentrum	센트룸 · 카를 요한스 거리	Sentrum
+oslo-bjorvika	비요르비카	Bjørvika
+oslo-frogner	프로그네르	Frogner
+oslo-holmenkollen	홀멘콜렌	Holmenkollen
+oslo-bygdoy	뷔그되위	Bygdøy
+oslo-grorud	그로루드	Grorud
+oslo-airport	가르데르모엔 공항	Gardermoen
+bergen-bryggen	브뤼겐	Bryggen
+bergen-floyen	플뢰엔	Fløyen
+bergen-nordnes	노르네스	Nordnes
+trondheim-bakklandet	바클란데트	Bakklandet
+trondheim-solsiden	솔시덴	Solsiden
+stavanger-gamle	감레 스타방에르	Gamle Stavanger
+stavanger-oil	노르웨이 석유 박물관	Norsk Oljemuseum
+tromso	트롬쇠	Tromsø
+tromso-telegrafbukta	텔레그라프부크타	Telegrafbukta
+kristiansand	크리스티안산	Kristiansand
+alesund	올레순	Ålesund
+bodo	보되	Bodø
+drammen	드람멘	Drammen
+fredrikstad-gamlebyen	프레드릭스타드	Fredrikstad
+lillehammer	릴레함메르	Lillehammer
+hamar	하마르	Hamar
+tonsberg	퇸스베르그	Tønsberg
+kongsberg	콩스베르그	Kongsberg
+reine	레이네	Reine
+henningsvaer	헤닝스베르	Henningsvær
+svolvaer	스볼베르	Svolvær
+nusfjord	누스피오르	Nusfjord
+a-lofoten	로포텐 오	Å i Lofoten
+andenes	안데네스	Andenes
+geiranger	게이랑에르	Geiranger
+flam	플롬	Flåm
+gudvangen	구드방엔	Gudvangen
+aurland	아울란	Aurland
+balestrand	발레스트란	Balestrand
+undredal	운드레달	Undredal
+olden	올덴	Olden
+loen	로엔	Loen
+odda	오다	Odda
+lofthus	로프트후스	Lofthus
+eidfjord	에이드피오르	Eidfjord
+preikestolen	프레이케스톨렌	Preikestolen
+lysebotn	뤼세보튼	Lysebotn
+andalsnes	온달스네스	Åndalsnes
+trollstigen	트롤스티겐	Trollstigen
+atlanterhavsveien	대서양 도로	Atlanterhavsveien
+kristiansund	크리스티안순	Kristiansund
+roros	뢰로스	Røros
+lom	롬	Lom
+beitostolen	베이토스퇼렌	Beitostølen
+geilo	게일로	Geilo
+hemsedal	헴세달	Hemsedal
+trysil	트뤼실	Trysil
+finse	핀세	Finse
+rjukan	류칸	Rjukan
+heddal	헤달 목조 교회	Heddal
+setesdal-valle	발레	Valle
+lillesand	릴레산	Lillesand
+grimstad	그림스타드	Grimstad
+risor	리쇠르	Risør
+mandal	만달	Mandal
+lindesnes	린데스네스 등대	Lindesnes
+egersund	에게르순	Egersund
+haugesund	하우게순	Haugesund
+skudeneshavn	스쿠데네스하운	Skudeneshavn
+hamnoy	함뇌위	Hamnøy
+senja-hamn	센야섬	Senja
+alta	알타	Alta
+karasjok	카라쇼크	Karasjok
+kautokeino	카우토케이노	Kautokeino
+hammerfest	함메르페스트	Hammerfest
+honningsvag	호닝스보그	Honningsvåg
+kirkenes	키르케네스	Kirkenes
+narvik	나르비크	Narvik
+mo-i-rana	모이라나	Mo i Rana
+longyearbyen	롱위에아르뷔엔	Longyearbyen

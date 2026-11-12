@@ -2203,7 +2203,7 @@ test('다녀간 곳 (the map): a reflection puts the places the owner went to on
 
 test('다녀간 곳: making a phone asks for the newest visits; the prompts that make up an ordinary day never do', () => {
     for (const s of [data.AI_SYS_PHONE, data.AI_SYS_PHONE_APPS, data.updateSystem({ split: true })]) assert.ok(s.includes('"visits": [{ "place": a place the owner really went to'), s.slice(0, 40));
-    assert.ok(data.AI_SYS_PHONE.includes('the 12 newest visits'));
+    assert.ok(data.AI_SYS_PHONE.includes('the 30 newest visits'));
     for (const life of [false, true]) assert.match(data.coreSystem({ life }), /visit: "place": where they really went, as the story writes it \(never just their own city\)/);
     // (a visit of the owner's own life is none: a place is gone to in the story)
     const got0 = data.recordsCore({ now: '10-25 16:00', records: [{ type: 'scene', id: 'cafe', at: 2, quote: 'x', summary: 'cafe' }, { type: 'visit', at: 2, from: 'story', scene: 'cafe', place: 'Café Moka' }, { type: 'visit', at: 2, from: 'life', place: 'Gym' }] });
@@ -2310,4 +2310,8 @@ test('a card already on the phone gets its bill day from an "account" record wit
     assert.equal(c.bank(), 100000);
     // (the account not on the phone and the payment with no number: left out, and said)
     assert.ok(c.p.syncLast.notes.some(n => n.includes('돈 기록 2개는 어느 메시지인지 몰라서')));
+});
+
+test('다시 만들기: 지도(다녀간 곳)도 고를 수 있어요', () => {
+    assert.deepEqual(data.REMAKE.map, ['visits']);
 });

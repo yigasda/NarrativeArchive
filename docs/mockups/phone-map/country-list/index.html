@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><title>도시 찾기 · 나라 목록 시안</title>
+<style>
+/* 도시 찾기 › 나라(독일 70곳) 시안 A~D. 작은 지도 칸은 받아 둔 지도 그림(실제로는 타일 지도 사진) · 없는 곳은 종류 색 바탕 */
+body { margin: 0; padding: 24px; background: #e7e9ee; font-family: -apple-system, 'SF Pro Text', 'Noto Sans KR', sans-serif; display: flex; gap: 28px; color: #161b22; }
+.col { display: flex; flex-direction: column; gap: 10px; width: 410px; }
+.lab { font-weight: 700; font-size: 17px; } .lab small { display: block; font-weight: 500; font-size: 12.5px; color: #6b7280; margin-top: 3px; line-height: 1.4; }
+.ph { position: relative; width: 390px; height: 844px; border-radius: 44px; border: 10px solid #111; overflow: hidden; background: #f4f5f7; }
+.map { position: absolute; left: 0; top: 0; width: 390px; height: 330px; overflow: hidden; } .map img { width: 390px; display: block; margin-top: -60px; }
+.bar { position: absolute; top: 0; left: 0; right: 0; height: 47px; display: flex; justify-content: space-between; align-items: center; padding: 0 30px; font-weight: 600; font-size: 15px; z-index: 5; }
+.cb { position: absolute; left: 16px; top: 56px; width: 42px; height: 42px; border-radius: 50%; background: rgba(255,255,255,.92); display: grid; place-items: center; z-index: 5; box-shadow: 0 1px 2px rgba(22,27,34,.08), 0 6px 16px rgba(22,27,34,.14); }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; top: 250px; background: #f4f5f7; border-radius: 22px 22px 0 0; box-shadow: 0 -6px 24px rgba(22,27,34,.14); padding-top: 8px; z-index: 6; overflow: hidden; }
+.grab { width: 38px; height: 5px; border-radius: 3px; background: #cfd3da; margin: 0 auto 10px; }
+.field { margin: 0 16px 10px; height: 44px; border-radius: 14px; background: #e9ecf0; display: flex; align-items: center; gap: 8px; padding: 0 14px; font-size: 16px; }
+.kh { display: flex; align-items: center; gap: 10px; padding: 4px 22px 8px; font-weight: 700; font-size: 22px; } .kh small { font-size: 13px; color: #6b7380; font-weight: 500; }
+.flag { width: 28px; height: 18px; border-radius: 3px; background: linear-gradient(#111 0 33%, #d12 33% 66%, #fc0 66%); box-shadow: 0 0 0 1px rgba(0,0,0,.06); flex: none; }
+.chips { display: flex; gap: 6px; padding: 0 16px 10px; overflow: hidden; } .chip { flex: none; height: 32px; padding: 0 12px; border-radius: 999px; background: #fff; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 4px; box-shadow: 0 1px 2px rgba(22,27,34,.05); }
+.chip.on { background: #1d3461; color: #fff; } .chip em { font-style: normal; font-weight: 500; opacity: .6; }
+.sec { padding: 10px 26px 6px; font-size: 13px; font-weight: 600; color: #6b7380; display: flex; justify-content: space-between; } .sec b { color: #2f6bff; font-weight: 600; }
+.card { background: #fff; border-radius: 22px; margin: 0 14px 12px; box-shadow: 0 1px 2px rgba(22,27,34,.04), 0 8px 24px rgba(22,27,34,.05); }
+.rw { display: flex; align-items: center; gap: 12px; padding: 11px 16px; } .rw + .rw { border-top: 1px solid #eef0f3; } .rw .tx { flex: 1; min-width: 0; }
+.rw b { display: block; font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .rw b i { font-style: normal; color: #6b7380; font-weight: 500; }
+.rw span { font-size: 12.5px; color: #6b7380; } .chev { color: #b8bec7; }
+.ic { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; flex: none; }
+.rw.sm { padding: 9px 16px; } .rw.sm b { font-size: 14.5px; }
+.strip { display: flex; gap: 10px; padding: 2px 16px 12px; overflow: hidden; }
+.tc { flex: none; width: 128px; border-radius: 16px; overflow: hidden; background: #fff; box-shadow: 0 1px 2px rgba(22,27,34,.05), 0 6px 16px rgba(22,27,34,.1); }
+.tm { height: 84px; overflow: hidden; background: #f1ede4; } .tm img { width: 128px; display: block; margin-top: -40px; }
+.tc div.t { padding: 7px 10px 9px; } .tc b { display: block; font-size: 13.5px; } .tc span { font-size: 11.5px; color: #6b7380; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 16px; } .grid .tc { width: auto; } .grid .tm { height: 92px; } .grid .tm img { width: 100%; margin-top: -50px; }
+.acc .rw b { font-size: 15px; } .acc .n { font-size: 13px; color: #6b7380; font-weight: 600; }
+.dotmap { position: absolute; left: 0; top: 0; width: 390px; height: 360px; background: #faf6ee; overflow: hidden; }
+.dotmap i { position: absolute; width: 9px; height: 9px; border-radius: 50%; transform: translate(-4.5px, -4.5px); box-shadow: 0 0 0 1.5px #fff; }
+.dotmap span { position: absolute; font-size: 11px; font-weight: 700; color: #161b22; text-shadow: 0 0 3px #fff, 0 0 3px #fff; transform: translate(7px, -7px); white-space: nowrap; }
+.idx { position: absolute; right: 4px; top: 150px; display: flex; flex-direction: column; gap: 3px; font-size: 10.5px; font-weight: 700; color: #2f6bff; z-index: 7; }
+</style></head><body>
+<script>
+(async () => {
+const D = await (await fetch('de.json')).json();   // [ko, local, kind, hoods, [lat,lon], svg]
+const LABEL = k => ({ 도심: '도시', 교외: '교외', 일터: '일터', 공항: '공항', 산: '산골 마을', 호수: '호숫가', 바다: '바닷가', 섬: '섬', 강골짜기: '강 골짜기', 옛마을: '옛 마을', 온천: '온천 마을', 숲: '숲속 마을', 시골: '시골 마을' }[String(k).split('·')[0]] || '');
+const label = r => [LABEL(r[2]), r[3] > 1 ? `동네 ${r[3]}곳` : ''].filter(Boolean).join(' · ');
+const GROUP = k => { k = String(k).split('·')[0]; return ['도심', '교외', '일터', '공항'].includes(k) ? '도시' : ['바다', '섬'].includes(k) ? '바닷가 · 섬' : ['산', '호수', '숲', '온천'].includes(k) ? '산 · 호수' : '마을 · 옛 시내'; };
+const GC = { '도시': ['#e2e9f5', '#2c4a80'], '바닷가 · 섬': ['#dff1f4', '#1f7f8c'], '산 · 호수': ['#dcefdf', '#3f7d50'], '마을 · 옛 시내': ['#f4ead9', '#8a6a3a'] };
+const ICO = { '도시': 'M4 21V9l5-3v15M9 21V4l6 3v14M15 21v-9l5 2v7M3 21h18', '바닷가 · 섬': 'M3 17c2-1.5 3 1.5 5 0s3 1.5 5 0 3 1.5 5 0 3 1.5 3 0M6 13c1-4 4-6 8-6', '산 · 호수': 'M2 20l7-12 4 6 3-4 6 10z', '마을 · 옛 시내': 'M4 21V11l4-3 4 3v10M12 21V8l4-4 4 4v13M3 21h18' };
+const ic = g => `<span class="ic" style="background:${GC[g][0]}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${GC[g][1]}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${ICO[g]}"/></svg></span>`;
+const CHEV = '<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg>';
+const row = (r, sm) => `<div class="rw${sm ? ' sm' : ''}">${sm ? '' : ic(GROUP(r[2]))}<div class="tx"><b>${r[0]}${r[1] ? ` <i>${r[1]}</i>` : ''}</b><span>${label(r)}</span></div>${CHEV}</div>`;
+const thumb = r => `<div class="tm" style="background:${GC[GROUP(r[2])][0]}">${r[5] ? `<img src="svg/${r[5]}.svg">` : ''}</div>`;
+const tc = r => `<div class="tc">${thumb(r)}<div class="t"><b>${r[0]}</b><span>${label(r)}</span></div></div>`;
+const groups = Object.keys(GC).map(g => [g, D.filter(r => GROUP(r[2]) === g)]);
+const big = D.filter(r => r[3] >= 3);
+const top = (img = 'svg/berlin-charlottenburg.svg') => `<div class="bar"><span>16:50</span><span>●●● ▮</span></div><div class="map"><img src="${img}"></div><div class="cb"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1d2433" stroke-width="2.2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></div>`;
+const head = `<div class="grab"></div><div class="field"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8a929d" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg>독일</div><div class="kh"><span class="flag"></span>독일<small>70곳</small></div>`;
+// D: the country's map with a dot for each place (lat/lon onto the box), the list A–Z beside
+const lat = D.map(r => r[4]?.[0]).filter(Boolean), lon = D.map(r => r[4]?.[1]).filter(Boolean);
+const [la0, la1, lo0, lo1] = [Math.min(...lat), Math.max(...lat), Math.min(...lon), Math.max(...lon)];
+const dot = r => { if (!r[4]) return ''; const x = 30 + (r[4][1] - lo0) / (lo1 - lo0) * 320, y = 70 + (la1 - r[4][0]) / (la1 - la0) * 250, g = GROUP(r[2]);
+  return `<i style="left:${x}px;top:${y}px;background:${GC[g][1]}"></i>${r[3] >= 5 ? `<span style="left:${x}px;top:${y}px">${r[0]}</span>` : ''}`; };
+const byKo = [...D].sort((a, b) => a[0].localeCompare(b[0], 'ko'));
+const F = [
+  ['A', '종류 칩 + 묶음 목록', '맨 위 칩으로 좁혀요(전체 · 도시 · 바닷가 · 섬 · 산 · 호수 · 마을). 목록은 종류별로 나누고, 부제는 종류와 동네 수예요',
+    `${top()}<div class="sheet">${head}<div class="chips"><span class="chip on">전체 <em>70</em></span>${groups.map(([g, rs]) => `<span class="chip">${g} <em>${rs.length}</em></span>`).join('')}</div>
+     ${groups.slice(0, 2).map(([g, rs]) => `<div class="sec">${g} · ${rs.length}</div><div class="card">${rs.slice(0, g === '도시' ? 4 : 3).map(r => row(r)).join('')}</div>`).join('')}</div>`],
+  ['B', '큰 도시 지도 카드 + 나머지 접기', '동네가 많은 큰 도시는 작은 지도 카드로 옆으로 넘기고, 나머지는 종류별로 접어 둬요(누르면 펼쳐져요)',
+    `${top()}<div class="sheet">${head}<div class="sec">큰 도시 · ${big.length}</div><div class="strip">${big.slice(0, 4).map(tc).join('')}</div>
+     <div class="sec">그 밖의 곳 · ${D.length - big.length}</div><div class="card acc">${groups.map(([g, rs]) => `<div class="rw">${ic(g)}<div class="tx"><b>${g}</b><span>${rs.filter(r => r[3] < 3).slice(0, 3).map(r => r[0]).join(' · ')} …</span></div><span class="n">${rs.filter(r => r[3] < 3).length}</span>${CHEV}</div>`).join('')}</div></div>`],
+  ['C', '2열 지도 카드', '모든 곳을 작은 지도 카드로 두 줄씩 보여요. 사진처럼 훑어보기 좋아요(사진은 화면에 들어올 때 만들어요)',
+    `${top()}<div class="sheet">${head}<div class="grid">${D.slice(0, 6).map(tc).join('')}</div></div>`],
+  ['D', '나라 지도 위 점 + 가나다 목록', '위 지도에 70곳이 점으로 찍혀요(종류 색, 큰 도시만 이름). 아래는 가나다 짧은 목록, 오른쪽 글자로 건너뛰어요',
+    `<div class="bar"><span>16:50</span><span>●●● ▮</span></div><div class="dotmap">${D.map(dot).join('')}</div>${top('').split('<div class="map">')[0]}<div class="cb"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1d2433" stroke-width="2.2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></div>
+     <div class="sheet" style="top:350px">${head.replace('<div class="field">', '<div class="field" style="display:none">')}<div class="idx">${'ㄱㄴㄷㄹㅁㅂㅅㅇㅈㅊㅋㅌㅍㅎ'.split('').map(c => `<span>${c}</span>`).join('')}</div>
+     <div class="sec">ㄱ</div><div class="card">${byKo.filter(r => /^[가-깋]/.test(r[0])).slice(0, 3).map(r => row(r, true)).join('')}</div><div class="sec">ㄴ</div><div class="card">${byKo.filter(r => /^[나-닣]/.test(r[0])).slice(0, 3).map(r => row(r, true)).join('')}</div></div>`],
+];
+document.body.innerHTML = F.map(([k, t, d, h]) => `<div class="col"><div class="lab">${k}. ${t}<small>${d}</small></div><div class="ph">${h}</div></div>`).join('');
+})();
+</script>
+</body></html>

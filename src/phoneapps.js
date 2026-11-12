@@ -892,7 +892,9 @@ export function setTheme(p, now) {
 // 다시 만들기: the apps ticked are made again from the whole story; the rest stay
 // apps made by their own request (채우기), offered alongside
 export const REMAKE_MORE = ['money', 'voice', 'invest', 'life', 'delivery', 'screen'];
-const REMAKE_IC = { screen: ['#7f9cd6', 'sandglass'], life: ['#3b4a8f', 'clock'], delivery: ['#2ac1bc', 'save'], invest: ['#73998a', 'card'], money: ['#6f86b3', 'card'], voice: ['#c9a581', 'mic'], msg: ['#89b892', 'cmt'], call: ['#89b892', 'call'], photo: ['#d89f98', 'photo'], note: ['#dcc680', 'pen'], search: ['#8faed1', 'search'], cal: ['#d494a7', 'cal'], sns: ['#d494a7', 'heart'], mail: ['#8faed1', 'mail'], diary: ['#a699c9', 'compose'] };
+// (지도: 홈의 지도 아이콘과 같은 접힌 지도 · 같은 초록)
+Object.assign(AX, { foldmap: 'M9 4L4 6v14l5-2 6 2 5-2V4l-5 2zM9 4v14M15 6v14' });
+const REMAKE_IC = { screen: ['#7f9cd6', 'sandglass'], life: ['#3b4a8f', 'clock'], delivery: ['#2ac1bc', 'save'], invest: ['#73998a', 'card'], money: ['#6f86b3', 'card'], voice: ['#c9a581', 'mic'], msg: ['#89b892', 'cmt'], call: ['#89b892', 'call'], photo: ['#d89f98', 'photo'], note: ['#dcc680', 'pen'], search: ['#8faed1', 'search'], cal: ['#d494a7', 'cal'], sns: ['#d494a7', 'heart'], mail: ['#8faed1', 'mail'], diary: ['#a699c9', 'compose'], map: ['#93ba97', 'foldmap'] };
 export function setRemake(p, now, ui, mForRemake = {}) {
     const all = [...Object.keys(REMAKE), ...REMAKE_MORE], n = ui.remake.size;
     return `${axBar(p, now)}
