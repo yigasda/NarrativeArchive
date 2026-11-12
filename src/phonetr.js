@@ -105,6 +105,18 @@ export function langsOf(v) {
     const texts = list(v?.texts), knows = list(v?.knows).filter(x => !texts.some(y => y.toLowerCase() === x.toLowerCase()));
     return texts.length || knows.length ? { texts, knows } : null;
 }
+// 말투 › 나 › 쓰는 언어: the owner's languages as one line the user reads and writes, "한국어, English (Deutsch)": the ones
+// they text in, then in brackets those they know but seldom use. langsLine: the phone's, as that line ('' when none).
+// setLangs: the user's line kept on the phone (the voice reading leaves it alone from then on); an empty line takes it
+// off, and the next reading fills it again. Returns what is kept, or null
+export const langsLine = p => { const l = p?.langs, t = (l?.texts || []).join(', '), k = (l?.knows || []).join(', '); return `${t}${k ? `${t ? ' ' : ''}(${k})` : ''}`; };
+export function setLangs(p, line) {
+    const text = String(line ?? ''), inside = [...text.matchAll(/[(（]([^)）]*)[)）]/g)].map(x => x[1]).join(','), split = v => v.split(/[,\n·、，/]/);
+    const got = langsOf({ texts: split(text.replace(/[(（][^)）]*[)）]/g, ',')), knows: split(inside) });
+    if (!got) { delete p.langs; return null; }
+    p.langs = { ...got, by: 'user' };
+    return p.langs;
+}
 async function askVoices(m, owner, p, names) {
     // (the cards and the persona whole; the owner's chosen profile only when it is a lorebook entry: a card or a persona is
     // in already)
@@ -112,9 +124,9 @@ async function askVoices(m, owner, p, names) {
     const input = await sideRequest(m, owner, [...cardBlocks(), `[WHO]\n${names.map(n => `- ${n}`).join('\n')}`], { profile: binding?.type === 'lore' ? binding : undefined });
     const got = parseJson(String(await askDraft(input, { force: true, system: AI_SYS_PHONE_VOICE, maxTokens: 3000, effort: 'low' })).replace(/^[^{]*/, '').replace(/[^}]*$/, ''), { salvage: true }) || {};
     // (the owner's languages, read along with the voices: kept on the phone for 폰 2's replies; a reading that gives none
-    // keeps what the phone had)
+    // keeps what the phone had, and so does a line the user wrote themselves)
     const langs = langsOf(got.langs);
-    if (langs) p.langs = langs;
+    if (langs && p.langs?.by !== 'user') p.langs = { ...langs, by: 'model' };
     const wanted = new Map(names.map(n => [n.toLowerCase(), n])), seen = new Set();
     return (Array.isArray(got.people) ? got.people : []).filter(v => v && wanted.has(whoKey(v)) && !seen.has(whoKey(v)) && String(v.style || '').trim()
         && (Array.isArray(v.evidence) ? v.evidence : []).some(e => String(e || '').trim()) && seen.add(whoKey(v)))

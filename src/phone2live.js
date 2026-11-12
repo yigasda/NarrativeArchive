@@ -68,8 +68,8 @@ export function gatherReply(m, owner, roomId, { now = Date.now(), tz = 'UTC', de
     const first = !(room.messages || []).some(x => same(x.from, owner));
     const story = first ? String(deps.story?.() || '').trim() : '';
     return {
-        owner: p.owner, persona: P, // (the languages: what the user set, else what the voice reading found for the owner)
-        langs: w.langs?.[liveKey(owner)] || (p.langs?.texts?.length || p.langs?.knows?.length ? p.langs : null),
+        owner: p.owner, persona: P, // (the owner's languages: read with the voices, or set by the user in 말투; on the phone)
+        langs: p.langs?.texts?.length || p.langs?.knows?.length ? p.langs : null,
         messenger: (room.messages || []).slice(-LIVE_ASK.bubbles).map(x => ({ at: wall(x.at), from: x.from, text: x.call ? `(call ${Math.max(0, Math.round(Number(x.call.min) || 0))} min)` : x.text, state: x.state })),
         now: {
             last: lastState || one(deps.place?.(p)),

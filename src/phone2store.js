@@ -152,21 +152,6 @@ export function liveMeta(m, { text = null } = {}) {
     });
 }
 
-// 언어 (실시간 폰 설정): the languages an owner texts in, and those they know but seldom use, as the user sets them. The
-// reply request sends them as [LANGUAGES]; with none set the model goes by the card. Names as the user writes them
-// ("한국어", "German"), each once, 5 of a kind at most. Both empty: the setting is taken off. Returns what is kept, or null
-const langList = v => (Array.isArray(v) ? v : String(v ?? '').split(/[,\n·、，]/)).map(x => String(x ?? '').replace(/\s+/g, ' ').trim().slice(0, 30)).filter((x, i, all) => x && all.findIndex(y => y.toLowerCase() === x.toLowerCase()) === i).slice(0, 5);
-export const liveLangs = (m, owner) => { const l = liveWorld(m)?.langs?.[liveKey(owner)]; return l ? { texts: [...(l.texts || [])], knows: [...(l.knows || [])] } : null; };
-export function setLiveLangs(m, owner, { texts = [], knows = [] } = {}) {
-    const w = liveWorld(m), k = liveKey(owner);
-    if (!w) throw new Error('아직 폰 2가 없어요');
-    if (!k) throw new Error('누구의 언어인지 필요해요');
-    const t = langList(texts), n = langList(knows).filter(x => !t.some(y => y.toLowerCase() === x.toLowerCase()));
-    if (!t.length && !n.length) { if (w.langs) { delete w.langs[k]; if (!Object.keys(w.langs).length) delete w.langs; } return null; }
-    (w.langs ||= {})[k] = { texts: t, knows: n };
-    return liveLangs(m, owner);
-}
-
 // 브라우저 저장 (5-4): what 폰 1 keeps in this browser per chat (the last phone owner, 복구's journal) is keyed by the chat
 // (phoneChatScope). 폰 2 keeps its own under its own key, the chat's and its world's: "<scope>:live:<world id>", so neither
 // reads or overwrites the other, and a new 폰 2 never reads an old one's. null without a chat or a 폰 2

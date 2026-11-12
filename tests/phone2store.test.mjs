@@ -333,24 +333,3 @@ test('메신저 번호: 이야기에서 시작한 폰 2는 이야기의 마지�
     L.startFresh(f, { persona: 'Lio' });
     assert.equal(L.sendLive(f, L.ensureRoom(f, ['Ren']).id, 'a').n, 1);
 });
-
-test('언어 설정: 인물마다 문자에 쓰는 언어 · 알지만 잘 안 쓰는 언어', () => {
-    const m = { phones: {} };
-    assert.throws(() => L.setLiveLangs(m, 'Mara', { texts: ['French'] }), /아직 폰 2가 없어요/);
-    L.startFresh(m, { persona: 'Ren' });
-    assert.equal(L.liveLangs(m, 'Mara'), null);
-    // lists or a line the user typed; trimmed, each once; a language in both stays in "texts in"
-    assert.deepEqual(L.setLiveLangs(m, 'Mara', { texts: ' French,  English , french', knows: ['Korean', 'English', ''] }), { texts: ['French', 'English'], knows: ['Korean'] });
-    assert.deepEqual(L.liveLangs(m, 'mara'), { texts: ['French', 'English'], knows: ['Korean'] });
-    assert.deepEqual(L.setLiveLangs(m, 'Ivo', { texts: ['한국어'] }), { texts: ['한국어'], knows: [] });
-    // what comes back is a copy
-    L.liveLangs(m, 'Mara').texts.push('x'); assert.equal(L.liveLangs(m, 'Mara').texts.length, 2);
-    // five of a kind at most
-    assert.equal(L.setLiveLangs(m, 'Ivo', { texts: 'a,b,c,d,e,f,g' }).texts.length, 5);
-    // both empty: taken off
-    assert.equal(L.setLiveLangs(m, 'Ivo', { texts: '', knows: [] }), null);
-    assert.deepEqual(Object.keys(L.liveWorld(m).langs), ['mara']);
-    assert.equal(L.setLiveLangs(m, 'Mara', {}), null);
-    assert.equal(L.liveWorld(m).langs, undefined);
-    assert.throws(() => L.setLiveLangs(m, '', { texts: ['x'] }));
-});

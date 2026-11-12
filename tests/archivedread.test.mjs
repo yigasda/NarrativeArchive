@@ -1496,7 +1496,16 @@ test('fillKo: each line goes with who says it to whom, and the voice table, no e
     K.voices = JSON.stringify({ people: [{ who: 'Mother', style: '아들한테 반말, 걱정 많은 말투', label: '다정한 반말 · 걱정', evidence: ['Why so cold?'] }, { who: 'Ivo', style: '반말', evidence: [] }, { who: 'GitHub', style: 'x', evidence: ['y'] }], langs: { texts: ['German', ' English', 'german'], knows: ['Korean', 'English'] } });
     assert.equal(await tr.learnVoices({ phones: {} }, 'Oscar', v), 1);
     // (the owner's languages come with the same reading: each once, one in both only as texted in)
-    assert.deepEqual(v.langs, { texts: ['German', 'English'], knows: ['Korean'] });
+    assert.deepEqual(v.langs, { texts: ['German', 'English'], knows: ['Korean'], by: 'model' });
+    assert.equal(tr.langsLine(v), 'German, English (Korean)');
+    // the user's own line: kept, and the reading leaves it alone; emptied, the next reading fills it again
+    assert.deepEqual(tr.setLangs(v, ' 한국어 ,English（Deutsch, english） '), { texts: ['한국어', 'English'], knows: ['Deutsch'], by: 'user' });
+    assert.equal(tr.langsLine(v), '한국어, English (Deutsch)');
+    v.koVoice = [{ who: 'Oscar', style: '엄마한테도 반말, 퉁명스럽게' }]; v.koVoiceAsked = [];
+    await tr.learnVoices({ phones: {} }, 'Oscar', v);
+    assert.equal(v.langs.by, 'user'); assert.deepEqual(v.langs.texts, ['한국어', 'English']);
+    assert.equal(tr.setLangs(v, '  '), null); assert.equal(v.langs, undefined); assert.equal(tr.langsLine(v), '');
+    assert.deepEqual(tr.setLangs(v, '(Korean)'), { texts: [], knows: ['Korean'], by: 'user' }); assert.equal(tr.langsLine(v), '(Korean)');
     assert.equal(tr.langsOf({ texts: [], knows: [] }), null); assert.equal(tr.langsOf(null), null);
     const vc = K.voiceCalls[0];
     assert.ok(vc.system.startsWith('GOAL\nWork out how each person in WHO writes to the people they text, as the story shows it') && vc.system.includes('"evidence"') && vc.system.includes('LANGUAGES\n- "langs": the languages OWNER really texts in') && vc.system.includes('- CHARACTER CARD — name and PERSONA — name (sometimes): the chat\'s cards and the user\'s persona, as written, with how they speak.'));
