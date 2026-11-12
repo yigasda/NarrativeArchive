@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<title>폰 2 메신저 시안</title>
+<style>
+/* 폰 2(실시간) 메신저 시안 A~D. 가짜 데이터: 나 = 유나(서울), Mara(Varo, 독일어), Ivo(Varo), Ren(서울). 시각은 전부 보는 사람(서울) 시각. */
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#d9dbe0;font-family:-apple-system,'SF Pro Text','Noto Sans KR','WenQuanYi Zen Hei',sans-serif;color:#15171c;padding:28px 24px 40px;width:max-content}
+.row{display:flex;gap:26px;margin-bottom:34px;align-items:flex-start}
+.lab{width:250px;padding-top:30px}
+.lab h2{font-size:30px;font-weight:700;letter-spacing:-.02em}
+.lab p{font-size:15px;line-height:1.5;color:#4b5060;margin-top:10px}
+.cap{font-size:13px;color:#5b606c;text-align:center;margin-top:8px}
+.ph{width:390px;height:844px;border-radius:44px;border:10px solid #0d0d0f;position:relative;overflow:hidden;background:#f3f3f5;box-shadow:0 20px 50px rgba(0,0,0,.18)}
+.scr{position:absolute;inset:0;overflow:hidden}
+.num{font-family:'Inter Tight','Inter',sans-serif;font-feature-settings:'tnum'}
+/* status bar + notch (실시간: 초록 점) */
+.sb{position:absolute;top:0;left:0;right:0;height:50px;display:flex;justify-content:space-between;align-items:center;padding:4px 30px 0 34px;font:600 16px 'Inter',sans-serif;z-index:20}
+.sb .ic{display:flex;gap:6px;align-items:center}
+.notch{position:absolute;left:50%;top:11px;transform:translateX(-50%);width:120px;height:34px;border-radius:17px;background:#000;z-index:30;display:flex;align-items:center;justify-content:flex-end;padding-right:12px}
+.notch i{width:6px;height:6px;border-radius:50%;background:#3ddc97}
+.ind{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:#111;z-index:40}
+.wht .sb{color:#fff}.wht .ind{background:#fff}
+/* 흐린 그라데이션 덩어리: 사람마다 색 */
+.blob{position:absolute;inset:-30%;filter:blur(26px);transform:translateZ(0)}
+.g-mara{background:radial-gradient(40% 50% at 25% 35%,#6f8fe6 0,transparent 70%),radial-gradient(45% 55% at 75% 70%,#a9c4f7 0,transparent 70%),radial-gradient(40% 40% at 70% 20%,#c7b8f2 0,transparent 70%),#94acee}
+.g-ivo{background:radial-gradient(40% 50% at 30% 65%,#e8615a 0,transparent 70%),radial-gradient(45% 50% at 70% 30%,#f4ab95 0,transparent 70%),radial-gradient(35% 35% at 80% 80%,#f7c9b4 0,transparent 70%),#ee8b7c}
+.g-ren{background:radial-gradient(45% 50% at 30% 70%,#59b874 0,transparent 70%),radial-gradient(40% 45% at 70% 25%,#f0bf7f 0,transparent 70%),radial-gradient(40% 40% at 85% 75%,#cfe08c 0,transparent 70%),#8dcb8a}
+.g-yuna{background:radial-gradient(40% 50% at 30% 35%,#f2a2b4 0,transparent 70%),radial-gradient(45% 50% at 72% 70%,#f7c6a6 0,transparent 70%),radial-gradient(35% 40% at 75% 20%,#e7b3e0 0,transparent 70%),#f1b0b4}
+.g-grp{background:radial-gradient(45% 50% at 25% 40%,#8a6fdc 0,transparent 70%),radial-gradient(40% 50% at 75% 70%,#d79ad8 0,transparent 70%),radial-gradient(35% 40% at 70% 15%,#a7a1ef 0,transparent 70%),#a688de}
+.gl{position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,0) 40%),radial-gradient(120% 80% at 0 0,rgba(255,255,255,.18),transparent 60%);pointer-events:none}
+.grain{position:absolute;inset:0;opacity:.16;mix-blend-mode:overlay;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .55 0'/></filter><rect width='140' height='140' filter='url(%23n)'/></svg>")}
+.orb{position:relative;overflow:hidden;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 2px 6px rgba(22,27,34,.12)}
+.orb b{position:relative;z-index:2;text-shadow:0 1px 2px rgba(0,0,0,.12)}
+.orb .blob{filter:blur(8px)}
+.tx2{font-size:12px;color:#8a8f99}
+.ko{display:block;font-size:12.5px;line-height:1.4;margin-top:5px;padding-top:5px;border-top:1px solid rgba(0,0,0,.07);color:#6b707b}
+.kof{display:inline-flex;align-items:center;gap:3px;margin-top:5px;font-size:11.5px;font-weight:600;color:#6d7fae}
+svg{display:block}
+</style></head><body>
+<div id="out"></div>
+<script>
+/* ---------- 가짜 데이터 ---------- */
+const P = { mara: { n: 'Mara', g: 'g-mara', city: 'Varo', local: '14:10', st: '회사 · 회의 중', until: '15:00까지', av: 'busy' },
+            ivo: { n: 'Ivo', g: 'g-ivo', city: 'Varo', local: '14:10', st: '비행 중', until: '22:40 도착', av: 'away' },
+            ren: { n: 'Ren', g: 'g-ren', city: '서울', local: '21:10', st: '자는 중', until: '07:00쯤 깸', av: 'sleep' } };
+const ROOMS = [
+  { k: 'mara', name: 'Mara', last: 'Ich erzähl\'s dir gleich', lko: '바로 말해 줄게', t: '21:02', un: 2, typing: true },
+  { k: 'grp', name: 'Varo Werkstatt', who: 'Ivo', last: 'Schlüssel liegt unter der Matte', lko: '열쇠 매트 밑에 있어', t: '20:40', un: 5, members: ['mara', 'ivo'] },
+  { k: 'ren', name: 'Ren', me: true, last: '잘 자 내일 봐', t: '어제', un: 0, read: false },
+  { k: 'ivo', name: 'Ivo', last: 'Danke dir!', lko: '고마워!', t: '월', un: 0 },
+];
+const CHAT = [
+  { d: '오늘' },
+  { f: 'mara', t: '20:52', x: 'Hast du heute Abend Zeit?', ko: '오늘 저녁에 시간 있어?' },
+  { f: 'me', t: '20:53', x: '응 9시 이후엔 괜찮아' },
+  { f: 'me', t: '20:53', x: '무슨 일인데?', read: true },
+  { f: 'mara', t: '21:02', x: 'Ivo hat den Schlüssel immer noch nicht zurückgegeben 😤', ko: 'Ivo가 아직도 열쇠를 안 돌려줬어', fold: true },
+  { f: 'mara', t: '21:02', x: 'Ich erzähl\'s dir gleich', ko: '바로 말해 줄게' },
+  { f: 'me', t: '21:06', x: 'ㅋㅋ 또?', read: true },
+  { typing: 'mara' },
+];
+const GRP = [
+  { d: '오늘' },
+  { f: 'mara', t: '19:58', x: 'Wer hat zuletzt die Werkstatt abgeschlossen?', ko: '마지막에 작업실 누가 잠갔어?' },
+  { f: 'ivo', t: '20:31', x: 'Ich. Bin jetzt am Flughafen', ko: '나. 지금 공항이야' },
+  { f: 'ivo', t: '20:40', x: 'Schlüssel liegt unter der Matte', ko: '열쇠 매트 밑에 있어', fold: true },
+  { f: 'me', t: '21:04', x: '토요일에 내가 가서 챙길게', read: 1 },
+  { f: 'me', t: '21:05', x: 'Ivo 조심히 와!', read: 1 },
+  { state: 'ivo' },
+];
+
+/* ---------- 아이콘 (선) ---------- */
+const I = {
+  back: '<path d="M15 5l-7 7 7 7"/>', plus: '<path d="M12 5v14M5 12h14"/>', send: '<path d="M5 12h13M13 6l6 6-6 6"/>', mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
+  cam: '<path d="M4 8h3l2-2h6l2 2h3v10H4z"/><circle cx="12" cy="13" r="3.2"/>', srch: '<circle cx="11" cy="11" r="6"/><path d="M20 20l-4.3-4.3"/>', pen: '<path d="M4 20h4L19 9l-4-4L4 16z"/>',
+  eye: '<path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="2.8"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/>',
+  set: '<path d="M7 15a5 5 0 0 1 10 0"/><path d="M3 15h2M19 15h2M5.6 9.6l1.4 1.4M18.4 9.6 17 11M12 6v2M4 19h16"/>',
+  moon: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>', plane: '<path d="M3 13l18-7-7 18-2.5-8z"/>', clock: '<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>', call: '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/>',
+  chk: '<path d="M4 12.5l4.5 4.5L20 6"/>', chk2: '<path d="M2 12.5l4.5 4.5L17 6M11 15.5l1.5 1.5L23 6"/>', tr: '<path d="M4 6h8M8 4v2c0 4-2 7-5 8M6 10c1.5 2 3.5 3.5 6 4M13 20l4-9 4 9M14.5 17h5"/>', dots: '<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>',
+};
+const ic = (k, s = 22, c = 'currentColor', w = 2) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round">${I[k]}</svg>`;
+const sbar = (dark) => `<div class="sb"><span class="num">21:10</span><span class="ic"><svg width="18" height="12" viewBox="0 0 18 12" fill="${dark ? '#fff' : '#111'}"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg><svg width="16" height="12" viewBox="0 0 16 12" fill="none" stroke="${dark ? '#fff' : '#111'}" stroke-width="2" stroke-linecap="round"><path d="M1.5 4.5a10 10 0 0 1 13 0M4 7.3a6 6 0 0 1 8 0"/><circle cx="8" cy="10" r="1.2" fill="${dark ? '#fff' : '#111'}" stroke="none"/></svg><svg width="26" height="12" viewBox="0 0 26 12"><rect x=".5" y=".5" width="22" height="11" rx="3.5" fill="none" stroke="${dark ? '#fff' : '#111'}" opacity=".4"/><rect x="2.5" y="2.5" width="16" height="7" rx="2" fill="${dark ? '#fff' : '#111'}"/><rect x="23.5" y="4" width="1.6" height="4" rx=".8" fill="${dark ? '#fff' : '#111'}" opacity=".5"/></svg></span></div><div class="notch"><i></i></div>`;
+const orb = (k, s = 48) => { const g = k === 'grp' ? 'g-grp' : k === 'yuna' ? 'g-yuna' : P[k]?.g || 'g-mara', l = k === 'grp' ? 'V' : k === 'yuna' ? '유' : P[k].n[0]; return `<span class="orb" style="width:${s}px;height:${s}px;font-size:${s * .38}px"><span class="blob ${g}"></span><b>${l}</b></span>`; };
+const nm = k => (k === 'me' ? '나' : P[k].n);
+const avIc = k => ({ busy: 'clock', away: 'plane', sleep: 'moon' })[P[k].av];
+
+/* ---------- 화면 조각 ---------- */
+const G = {};
+const phone = (cls, inner, cap) => `<div><div class="ph ${cls}"><div class="scr">${inner}</div><div class="ind"></div></div><div class="cap">${cap}</div></div>`;
+const out = [];
+const row = (L, title, desc, frames) => out.push(`<div class="row"><div class="lab"><h2>${L}. ${title}</h2><p>${desc}</p></div>${frames.join('')}</div>`);
+
+/* =====================================================================
+   A. 오로라 머리 — 흰 바탕, 위에 큰 흐린 그라데이션 카드 하나(지금 그 사람), 검정 알약, 내 말은 검정
+   ===================================================================== */
+{
+const css = `<style>
+.A{background:#f2f2f4}
+.A .top{position:absolute;top:58px;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:0 18px}
+.A .cb{width:46px;height:46px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(22,27,34,.05),0 6px 16px rgba(22,27,34,.07)}
+.A h1{font-size:21px;font-weight:600;letter-spacing:-.01em}
+.A .seg{margin:0 16px;display:flex;background:#fff;border-radius:999px;padding:5px;box-shadow:0 1px 2px rgba(22,27,34,.04),0 6px 18px rgba(22,27,34,.05)}
+.A .seg b{flex:1;text-align:center;font-size:14.5px;font-weight:500;color:#6b707b;padding:10px 0;border-radius:999px}
+.A .seg b.on{background:#15161a;color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.16)}
+.A .hero{position:relative;overflow:hidden;margin:14px 16px 0;height:176px;border-radius:26px;color:#fff;box-shadow:0 10px 26px rgba(70,80,140,.22)}
+.A .hero .in{position:relative;z-index:3;padding:18px 20px}
+.A .hero small{font-size:12px;opacity:.85}
+.A .hero .big{font-size:48px;font-weight:600;letter-spacing:-.02em;line-height:1.05;margin-top:6px}
+.A .hero .big em{font-style:normal;font-size:13px;font-weight:500;opacity:.85;letter-spacing:0;margin-left:8px}
+.A .dots{display:flex;gap:4.2px;align-items:flex-end;margin-top:16px;height:30px}
+.A .dots i{width:4px;border-radius:2px;background:rgba(255,255,255,.55)}
+.A .dots i.h{background:#fff}
+.A .dl{display:flex;justify-content:space-between;font-size:10.5px;opacity:.8;margin-top:5px}
+.A .list{margin:14px 16px 0;background:#fff;border-radius:24px;padding:4px 0;box-shadow:0 1px 2px rgba(22,27,34,.04),0 8px 24px rgba(22,27,34,.05)}
+.A .rm{display:flex;gap:12px;align-items:center;padding:12px 16px;position:relative}
+.A .rm+.rm::before{content:'';position:absolute;left:76px;right:16px;top:0;height:1px;background:#eef0f3}
+.A .rm .t{flex:1;min-width:0}
+.A .rm b{font-size:15.5px;font-weight:600}
+.A .rm p{font-size:13.5px;color:#7b808b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.A .rm p.ty{color:#4c63b4;font-weight:500}
+.A .rm .r{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.A .un{min-width:21px;height:21px;padding:0 6px;border-radius:999px;background:#15161a;color:#fff;font:600 11.5px/21px 'Inter',sans-serif;text-align:center}
+.A .st{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:#8a8f99}
+.A .dock{white-space:nowrap;position:absolute;left:50%;bottom:26px;transform:translateX(-50%);display:flex;gap:10px;align-items:center;background:#fff;border-radius:999px;padding:6px 6px 6px 18px;box-shadow:0 1px 2px rgba(22,27,34,.05),0 12px 30px rgba(22,27,34,.14)}
+.A .dock .new{display:flex;gap:6px;align-items:center;background:#15161a;color:#fff;border-radius:999px;padding:11px 18px;font-size:14px;font-weight:600;box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
+/* chat */
+.A .chead{position:relative;overflow:hidden;margin:54px 12px 0;border-radius:28px;height:138px;color:#fff;box-shadow:0 10px 26px rgba(70,80,140,.2)}
+.A .chead .in{position:relative;z-index:3;padding:14px 16px;display:flex;flex-direction:column;height:100%}
+.A .chead .tl{display:flex;justify-content:space-between;align-items:center}
+.A .gbtn{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.3)}
+.A .chead h3{font-size:26px;font-weight:600;letter-spacing:-.01em;margin-top:auto}
+.A .chead .sub{font-size:12.5px;opacity:.9;display:flex;gap:6px;align-items:center;margin-top:2px}
+.A .msgs{position:absolute;top:202px;bottom:96px;left:0;right:0;padding:0 14px;display:flex;flex-direction:column;gap:6px;overflow:hidden;justify-content:flex-end}
+.A .day{align-self:center;font-size:11.5px;color:#8a8f99;background:#e7e8ec;border-radius:999px;padding:3px 10px;margin:4px 0}
+.A .b{max-width:76%;padding:10px 14px;border-radius:20px;font-size:15px;line-height:1.38;position:relative}
+.A .b.th{align-self:flex-start;background:#fff;border-bottom-left-radius:6px;box-shadow:0 1px 2px rgba(22,27,34,.05),0 4px 12px rgba(22,27,34,.05)}
+.A .b.me{align-self:flex-end;background:#15161a;color:#fff;border-bottom-right-radius:6px;box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 4px 12px rgba(22,27,34,.12)}
+.A .mt{font-size:10.5px;color:#9aa0a8;margin:-2px 6px 2px}
+.A .mt.r{align-self:flex-end}
+.A .sn{font-size:11.5px;font-weight:600;margin:4px 0 -2px 8px}
+.A .typ{align-self:flex-start;display:flex;gap:4px;background:#fff;border-radius:20px;border-bottom-left-radius:6px;padding:13px 15px;box-shadow:0 1px 2px rgba(22,27,34,.05),0 4px 12px rgba(22,27,34,.05)}
+.A .typ i{width:7px;height:7px;border-radius:50%;background:#b8bcc6}.A .typ i:nth-child(2){background:#8f95a3}
+.A .scard{align-self:stretch;position:relative;overflow:hidden;border-radius:20px;color:#fff;padding:12px 14px;display:flex;gap:10px;align-items:center;margin-top:6px}
+.A .scard .in{position:relative;z-index:3;display:flex;gap:10px;align-items:center}
+.A .scard small{display:block;font-size:12px;opacity:.9}
+.A .inp{position:absolute;left:12px;right:12px;bottom:26px;height:56px;display:flex;align-items:center;gap:8px;background:#fff;border-radius:999px;padding:0 6px 0 18px;box-shadow:0 1px 2px rgba(22,27,34,.05),0 12px 30px rgba(22,27,34,.12)}
+.A .inp>span:first-child{flex:1;color:#a2a7b0;font-size:15px}
+.A .sendb{width:44px;height:44px;border-radius:50%;background:#15161a;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
+</style>`;
+const dots = '0 0 0 0 0 0 0 1 2 3 3 3 2 3 3 2 1 3 3 3 2 2 1 0'.split(' ').map((v, i) => `<i class="${i === 14 ? 'h' : ''}" style="height:${[4, 9, 15, 22][v]}px"></i>`).join('');
+const list = css + sbar() + `<div class="top"><span class="cb">${ic('srch', 20)}</span><h1>메시지</h1><span class="cb">${ic('pen', 19)}</span></div>
+ <div style="height:118px"></div>
+ <div class="seg"><b class="on">전체</b><b>1:1</b><b>단체</b></div>
+ <div class="hero"><span class="blob g-mara"></span><span class="gl"></span><span class="grain"></span><div class="in"><small>Mara · Varo 지금</small><div class="big num">14:10<em>회의 중 · 15:00까지</em></div><div class="dots">${dots}</div><div class="dl"><span>0시</span><span>12시</span><span>24시</span></div></div></div>
+ <div class="list">${ROOMS.map(r => `<div class="rm">${orb(r.k, 50)}<div class="t"><b>${r.name}</b><p class="${r.typing ? 'ty' : ''}">${r.typing ? 'Mara가 입력 중…' : (r.who ? r.who + ': ' : r.me ? '나: ' : '') + r.last}</p></div><div class="r"><span class="tx2 num">${r.t}</span>${r.un ? `<span class="un">${r.un}</span>` : r.k === 'ren' ? `<span class="st">${ic('moon', 12, '#8a8f99')}자는 중</span>` : '<span style="height:21px"></span>'}</div></div>`).join('')}</div>
+ <div class="dock" style="padding:6px"><span class="new">${ic('plus', 16, '#fff', 2.4)}새 대화</span></div>`;
+const msg = (m, grp) => m.d ? `<div class="day">${m.d}</div>` : m.typing ? `<div class="typ"><i></i><i></i><i></i></div>` : m.state ? `<div class="scard"><span class="blob g-ivo"></span><span class="gl"></span><div class="in">${ic('plane', 20, '#fff')}<div><b style="font-size:14px">Ivo는 비행 중이에요</b><small>Varo 22:40 도착 · 내리면 읽어요</small></div></div></div>`
+  : `${grp && m.f !== 'me' ? `<div class="sn" style="color:${m.f === 'ivo' ? '#c4584f' : '#4c63b4'}">${nm(m.f)}</div>` : ''}<div class="b ${m.f === 'me' ? 'me' : 'th'}">${m.x}${m.ko ? (m.fold ? `<br><span class="kof">${ic('tr', 13, '#6d7fae')}번역 보기</span>` : `<span class="ko">${m.ko}</span>`) : ''}</div>${m.read ? `<div class="mt r">${m.read === 1 ? 'Mara 읽음' : '읽음'} · <span class="num">${m.t}</span></div>` : ''}`;
+const chat = css + sbar() + `<div class="chead"><span class="blob g-mara"></span><span class="gl"></span><span class="grain"></span><div class="in"><div class="tl"><span class="gbtn">${ic('back', 20, '#fff', 2.2)}</span><span class="gbtn">${ic('call', 18, '#fff')}</span></div><h3>Mara</h3><div class="sub">${ic('clock', 13, '#fff')}Varo 14:10 · 회의 중 · 15:00까지</div></div></div>
+ <div class="msgs">${CHAT.map(m => msg(m)).join('')}</div>
+ <div class="inp"><span>메시지</span>${ic('mic', 21, '#8a8f99')}<span class="sendb">${ic('send', 19, '#fff', 2.2)}</span></div>`;
+const grp = css + sbar() + `<div class="chead"><span class="blob g-grp"></span><span class="gl"></span><span class="grain"></span><div class="in"><div class="tl"><span class="gbtn">${ic('back', 20, '#fff', 2.2)}</span><span style="display:flex">${orb('mara', 30)}<span style="margin-left:-8px">${orb('ivo', 30)}</span></span></div><h3>Varo Werkstatt</h3><div class="sub">Mara · Ivo · 나</div></div></div>
+ <div class="msgs">${GRP.map(m => msg(m, true)).join('')}</div>
+ <div class="inp"><span>메시지</span>${ic('mic', 21, '#8a8f99')}<span class="sendb">${ic('send', 19, '#fff', 2.2)}</span></div>`;
+row('A', '오로라 머리', '흰 바탕 위에 큰 흐린 그라데이션 카드 하나.<br>목록 맨 위는 "지금 그 사람"(현지 시각 크게 + 하루 점 막대), 방 머리도 그 사람 색 카드예요.<br>내 말풍선 · 버튼은 검정 알약.', [phone('A', list, '방 목록'), phone('A', chat, '1:1 · 입력 중 · 번역 접기'), phone('A', grp, '단체방 · 비행 중')]);
+G.A = { css, list };
+}
+
+/* =====================================================================
+   B. 색 타일 — 방마다 그 사람 색 유리 타일(2칸), 상대 말풍선이 그 사람 색
+   ===================================================================== */
+{
+const css = `<style>
+.B{background:#f4f4f6}
+.B .h{position:absolute;top:58px;left:20px;right:20px;display:flex;justify-content:space-between;align-items:flex-end}
+.B .h h1{font-size:34px;font-weight:700;letter-spacing:-.02em}
+.B .h .me{display:flex;gap:8px;align-items:center;font-size:12.5px;color:#7b808b}
+.B .grid{position:absolute;top:122px;left:14px;right:14px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.B .tile{position:relative;overflow:hidden;border-radius:26px;height:178px;color:#fff;box-shadow:0 8px 22px rgba(60,60,90,.16)}
+.B .tile.w{grid-column:span 2;height:150px}
+.B .tile .in{position:relative;z-index:3;padding:15px 16px;height:100%;display:flex;flex-direction:column}
+.B .tile .tp{display:flex;justify-content:space-between;align-items:flex-start}
+.B .tile b{font-size:17px;font-weight:600;letter-spacing:-.01em}
+.B .tile .s{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;font-size:11.5px;opacity:.9;display:flex;gap:4px;align-items:center;margin-top:3px}
+.B .tile p{margin-top:auto;font-size:14px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.B .tile .ft{display:flex;justify-content:space-between;align-items:center;margin-top:7px;font-size:11.5px;opacity:.9}
+.B .gcirc{min-width:30px;height:30px;padding:0 8px;border-radius:999px;background:rgba(255,255,255,.26);display:flex;align-items:center;justify-content:center;font:600 13px 'Inter',sans-serif;box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
+.B .tyd{display:inline-flex;gap:3px;align-items:center}.B .tyd i{width:5px;height:5px;border-radius:50%;background:#fff;opacity:.9}.B .tyd i+i{opacity:.65}.B .tyd i+i+i{opacity:.4}
+.B .newt{border-radius:26px;height:178px;background:#fff;box-shadow:0 1px 2px rgba(22,27,34,.04),0 8px 24px rgba(22,27,34,.06);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#3a3f47;font-size:14px;font-weight:600}
+.B .newt span{width:50px;height:50px;border-radius:50%;background:#15161a;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 6px 14px rgba(22,27,34,.18)}
+/* chat */
+.B .ct{position:absolute;top:52px;left:0;right:0;height:64px;display:flex;align-items:center;gap:10px;padding:0 14px}
+.B .ct .cb{width:40px;height:40px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(22,27,34,.05),0 5px 14px rgba(22,27,34,.07)}
+.B .ct .nm{flex:1}.B .ct .nm b{font-size:17px;font-weight:600;display:block}
+.B .ct .nm span{font-size:12px;color:#7b808b;display:flex;gap:4px;align-items:center}
+.B .msgs{position:absolute;top:122px;bottom:92px;left:0;right:0;padding:0 14px;display:flex;flex-direction:column;gap:6px;overflow:hidden;justify-content:flex-end}
+.B .day{align-self:center;font-size:11.5px;color:#8a8f99;margin:2px 0 4px}
+.B .b{max-width:76%;padding:10px 14px;border-radius:22px;font-size:15px;line-height:1.38;position:relative;overflow:hidden}
+.B .b .bi{position:relative;z-index:3}
+.B .b.th{align-self:flex-start;color:#fff;border-bottom-left-radius:7px;box-shadow:0 6px 16px rgba(60,70,130,.16)}
+.B .b.th .ko{color:rgba(255,255,255,.86);border-top-color:rgba(255,255,255,.28)}
+.B .b.th .kof{color:#fff;opacity:.9}
+.B .b.me{align-self:flex-end;background:#fff;border-bottom-right-radius:7px;box-shadow:0 1px 2px rgba(22,27,34,.05),0 5px 14px rgba(22,27,34,.07)}
+.B .rd{align-self:flex-end;display:flex;gap:3px;align-items:center;font-size:10.5px;color:#9aa0a8;margin:-2px 4px 2px}
+.B .sn{font-size:11.5px;font-weight:600;color:#7b808b;margin:5px 0 -2px 10px}
+.B .typ{align-self:flex-start;position:relative;overflow:hidden;border-radius:22px;border-bottom-left-radius:7px;padding:13px 16px;display:flex;gap:4px}
+.B .typ i{position:relative;z-index:3;width:7px;height:7px;border-radius:50%;background:#fff}.B .typ i+i{opacity:.7}.B .typ i+i+i{opacity:.45}
+.B .stl{align-self:center;display:flex;gap:6px;align-items:center;font-size:12px;color:#6b707b;background:#fff;border-radius:999px;padding:7px 12px;margin-top:6px;box-shadow:0 1px 2px rgba(22,27,34,.04),0 5px 14px rgba(22,27,34,.06)}
+.B .stl i{width:8px;height:8px;border-radius:50%;background:#ee8b7c}
+.B .inp{position:absolute;left:12px;right:12px;bottom:24px;height:54px;display:flex;align-items:center;gap:10px;padding:0 6px 0 16px;background:#fff;border-radius:999px;box-shadow:0 1px 2px rgba(22,27,34,.05),0 10px 26px rgba(22,27,34,.1)}
+.B .inp>span:first-child{flex:1;color:#a2a7b0;font-size:15px}
+.B .sendb{width:42px;height:42px;border-radius:50%;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.3)}
+.B .sendb svg{position:relative;z-index:3}
+</style>`;
+const st = k => `<span class="s">${ic(avIc(k), 12, '#fff')}${P[k].city} ${P[k].local} · ${P[k].st}</span>`;
+const tile = (r, w) => `<div class="tile ${w ? 'w' : ''}"><span class="blob ${r.k === 'grp' ? 'g-grp' : P[r.k].g}"></span><span class="gl"></span><span class="grain"></span><div class="in"><div class="tp"><div><b>${r.name}</b>${r.k === 'grp' ? '<span class="s">Mara · Ivo · 나</span>' : st(r.k)}</div>${r.un ? `<span class="gcirc">${r.un}</span>` : ''}</div><p>${r.typing ? '<span class="tyd"><i></i><i></i><i></i></span> 입력 중' : (r.who ? r.who + ': ' : r.me ? '나: ' : '') + r.last}</p><div class="ft"><span>${r.lko && !r.typing ? r.lko : ''}</span><span class="num">${r.t}</span></div></div></div>`;
+const list = css + sbar() + `<div class="h"><h1>메시지</h1><span class="me">${orb('me' in P ? 'mara' : 'mara', 0)}</span></div>
+ <div class="grid">${tile(ROOMS[0])}${tile(ROOMS[2])}${tile(ROOMS[1], true)}${tile(ROOMS[3])}<div class="newt"><span>${ic('plus', 22, '#fff', 2.4)}</span>새 대화</div></div>`.replace(/<span class="me">.*?<\/span><\/div>/, '<span class="me">유나</span></div>');
+const msg = (m, grp) => { const g = m.f && m.f !== 'me' ? P[m.f].g : '';
+  return m.d ? `<div class="day">${m.d}</div>` : m.typing ? `<div class="typ"><span class="blob ${P[m.typing].g}"></span><i></i><i></i><i></i></div>` : m.state ? `<div class="stl"><i></i>Ivo · 비행 중 · Varo 22:40 도착</div>`
+  : `${grp && m.f !== 'me' ? `<div class="sn">${nm(m.f)}</div>` : ''}<div class="b ${m.f === 'me' ? 'me' : 'th'}">${g ? `<span class="blob ${g}"></span><span class="gl"></span>` : ''}<div class="bi">${m.x}${m.ko ? (m.fold ? `<br><span class="kof">${ic('tr', 13, '#fff')}번역 보기</span>` : `<span class="ko">${m.ko}</span>`) : ''}</div></div>${m.read ? `<div class="rd">${ic('chk2', 15, m.read === 1 ? '#4c63b4' : '#4c63b4', 2)}<span class="num">${m.t}</span></div>` : ''}`; };
+const head = (k, name, sub) => `<div class="ct"><span class="cb">${ic('back', 20)}</span>${orb(k, 40)}<div class="nm"><b>${name}</b><span>${sub}</span></div><span class="cb">${ic('call', 18)}</span></div>`;
+const inp = g => `<div class="inp"><span>메시지</span>${ic('mic', 21, '#8a8f99')}<span class="sendb"><span class="blob ${g}"></span>${ic('send', 18, '#fff', 2.3)}</span></div>`;
+const chat = css + sbar() + head('mara', 'Mara', `${ic('clock', 12, '#7b808b')}Varo 14:10 · 회의 중 · 15:00까지`) + `<div class="msgs">${CHAT.map(m => msg(m)).join('')}</div>` + inp('g-mara');
+const grp = css + sbar() + head('grp', 'Varo Werkstatt', 'Mara · Ivo · 나') + `<div class="msgs">${GRP.map(m => msg(m, true)).join('')}</div>` + inp('g-grp');
+row('B', '색 타일', '방마다 그 사람 색의 흐린 유리 타일(레퍼런스의 Income · Expenses 칸).<br>방 안에선 상대 말풍선이 그 사람 색이라, 단체방에서도 색으로 누군지 보여요.<br>내 말은 흰 말풍선.', [phone('B', list, '방 목록(타일)'), phone('B', chat, '1:1 · 입력 중 · 번역 접기'), phone('B', grp, '단체방 · 비행 중')]);
+}
+
+/* =====================================================================
+   C. 유리 전체 — 화면 바탕이 그 사람 색 오로라, 위에 반투명 유리 줄 · 말풍선
+   ===================================================================== */
+{
+const css = `<style>
+.C .bg{position:absolute;inset:0;overflow:hidden}
+.C .bg .blob{inset:-20%;filter:blur(40px)}
+.C .glass{background:rgba(255,255,255,.5);backdrop-filter:blur(18px) saturate(1.3);-webkit-backdrop-filter:blur(18px) saturate(1.3);box-shadow:inset 0 1px 0 rgba(255,255,255,.7),inset 0 0 0 1px rgba(255,255,255,.35),0 8px 24px rgba(40,40,80,.1)}
+.C .h{position:absolute;top:60px;left:20px;right:20px;display:flex;justify-content:space-between;align-items:center;color:#fff}
+.C .h h1{font-size:32px;font-weight:700;letter-spacing:-.02em;text-shadow:0 1px 8px rgba(40,40,90,.15)}
+.C .gb{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.C .srch{position:absolute;top:116px;left:16px;right:16px;height:44px;border-radius:14px;display:flex;align-items:center;gap:8px;padding:0 14px;color:rgba(30,32,40,.55);font-size:15px}
+.C .list{position:absolute;top:174px;left:12px;right:12px;display:flex;flex-direction:column;gap:10px}
+.C .rm{display:flex;gap:12px;align-items:center;padding:12px 14px;border-radius:22px}
+.C .rm .t{flex:1;min-width:0}
+.C .rm b{font-size:15.5px;font-weight:600;color:#1b1d24}
+.C .rm p{font-size:13.5px;color:rgba(30,32,40,.62);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.C .rm .r{display:flex;flex-direction:column;align-items:flex-end;gap:6px;font-size:12px;color:rgba(30,32,40,.55)}
+.C .un{min-width:21px;height:21px;padding:0 6px;border-radius:999px;background:rgba(20,22,30,.82);color:#fff;font:600 11.5px/21px 'Inter',sans-serif;text-align:center}
+.C .pres{width:12px;height:12px;border-radius:50%;border:2px solid rgba(255,255,255,.85);position:absolute;right:-1px;bottom:-1px;z-index:4}
+.C .fab{position:absolute;right:20px;bottom:34px;width:60px;height:60px;border-radius:22px;background:rgba(20,22,30,.85);display:flex;align-items:center;justify-content:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 12px 26px rgba(20,22,40,.28)}
+/* chat */
+.C .ct{position:absolute;top:52px;left:10px;right:10px;height:62px;border-radius:24px;display:flex;align-items:center;gap:10px;padding:0 10px}
+.C .ct .nm{flex:1}.C .ct .nm b{font-size:16.5px;font-weight:600;display:block;color:#1b1d24}
+.C .ct .nm span{font-size:12px;color:rgba(30,32,40,.62)}
+.C .lt{position:absolute;top:124px;left:0;right:0;text-align:center}
+.C .lt span{display:inline-flex;gap:6px;align-items:center;font-size:12px;color:#fff;background:rgba(20,22,30,.22);backdrop-filter:blur(10px);border-radius:999px;padding:5px 11px;box-shadow:inset 0 1px 0 rgba(255,255,255,.2)}
+.C .msgs{position:absolute;top:160px;bottom:96px;left:0;right:0;padding:0 14px;display:flex;flex-direction:column;gap:6px;overflow:hidden;justify-content:flex-end}
+.C .day{align-self:center;font-size:11.5px;color:#fff;opacity:.9;margin:2px 0 4px;text-shadow:0 1px 6px rgba(40,40,90,.2)}
+.C .b{max-width:76%;padding:10px 14px;border-radius:22px;font-size:15px;line-height:1.38}
+.C .b.th{align-self:flex-start;border-bottom-left-radius:7px;color:#1b1d24}
+.C .b.th .ko{color:rgba(30,32,40,.62);border-top-color:rgba(30,32,40,.1)}
+.C .b.me{align-self:flex-end;border-bottom-right-radius:7px;background:rgba(20,22,30,.78);color:#fff;backdrop-filter:blur(18px);box-shadow:inset 0 1px 0 rgba(255,255,255,.16),0 8px 22px rgba(20,22,40,.18)}
+.C .rd{align-self:flex-end;font-size:10.5px;color:#fff;opacity:.85;margin:-2px 6px 2px}
+.C .rd b{color:#fff;font-weight:700}
+.C .sn{font-size:11.5px;font-weight:600;color:#fff;margin:5px 0 -2px 10px;text-shadow:0 1px 6px rgba(40,40,90,.25)}
+.C .typ{align-self:flex-start;border-radius:22px;border-bottom-left-radius:7px;padding:13px 16px;display:flex;gap:4px}
+.C .typ i{width:7px;height:7px;border-radius:50%;background:rgba(30,32,40,.45)}.C .typ i+i{opacity:.7}.C .typ i+i+i{opacity:.45}
+.C .stl{align-self:stretch;display:flex;gap:10px;align-items:center;font-size:13px;color:#1b1d24;border-radius:20px;padding:11px 14px;margin-top:6px}
+.C .stl small{display:block;font-size:11.5px;color:rgba(30,32,40,.6)}
+.C .inp{position:absolute;left:12px;right:12px;bottom:26px;height:54px;display:flex;align-items:center;gap:10px;padding:0 6px 0 16px;border-radius:999px}
+.C .inp>span:first-child{flex:1;color:rgba(30,32,40,.5);font-size:15px}
+.C .sendb{width:42px;height:42px;border-radius:50%;background:rgba(20,22,30,.85);display:flex;align-items:center;justify-content:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
+</style>`;
+const pc = { busy: '#f2b54a', away: '#9aa0ab', sleep: '#8f86e0' };
+const bg = g => `<div class="bg"><span class="blob ${g}"></span><span class="grain"></span></div>`;
+const list = css + `<div class="bg"><span class="blob" style="background:radial-gradient(40% 35% at 20% 15%,#7f9ae8 0,transparent 70%),radial-gradient(40% 35% at 85% 30%,#d7a0d6 0,transparent 70%),radial-gradient(45% 40% at 30% 75%,#f3b39e 0,transparent 70%),radial-gradient(40% 35% at 80% 85%,#9fd3a0 0,transparent 70%),#b9b4e8"></span><span class="grain"></span></div>` + sbar(true) + `<div class="h"><h1>메시지</h1><span class="gb glass">${ic('pen', 19, '#1b1d24')}</span></div>
+ <div class="srch glass">${ic('srch', 18, 'rgba(30,32,40,.5)')}이름 · 대화 찾기</div>
+ <div class="list">${ROOMS.map(r => `<div class="rm glass"><span style="position:relative">${orb(r.k, 50)}${r.k !== 'grp' ? `<i class="pres" style="background:${pc[P[r.k].av]}"></i>` : ''}</span><div class="t"><b>${r.name}</b><p>${r.typing ? '입력 중…' : (r.who ? r.who + ': ' : r.me ? '나: ' : '') + r.last}</p></div><div class="r"><span class="num">${r.t}</span>${r.un ? `<span class="un">${r.un}</span>` : '<span style="height:21px"></span>'}</div></div>`).join('')}</div>
+ <div class="fab">${ic('plus', 24, '#fff', 2.4)}</div>`;
+const msg = (m, grp) => m.d ? `<div class="day">${m.d}</div>` : m.typing ? `<div class="typ glass"><i></i><i></i><i></i></div>` : m.state ? ''
+  : `${grp && m.f !== 'me' ? `<div class="sn">${nm(m.f)}</div>` : ''}<div class="b ${m.f === 'me' ? 'me' : 'th glass'}">${m.x}${m.ko ? (m.fold ? `<br><span class="kof" style="color:#4c5ea8">${ic('tr', 13, '#4c5ea8')}번역 보기</span>` : `<span class="ko">${m.ko}</span>`) : ''}</div>${m.read ? `<div class="rd">${m.read === 1 ? '<b>1</b> · ' : '읽음 · '}<span class="num">${m.t}</span></div>` : ''}`;
+const head = (k, name, sub) => `<div class="ct glass"><span class="gb">${ic('back', 21, '#1b1d24', 2.2)}</span>${orb(k, 40)}<div class="nm"><b>${name}</b><span>${sub}</span></div><span class="gb">${ic('call', 19, '#1b1d24')}</span></div>`;
+const inp = `<div class="inp glass"><span>메시지</span>${ic('mic', 21, 'rgba(30,32,40,.55)')}<span class="sendb">${ic('send', 18, '#fff', 2.3)}</span></div>`;
+const chat = css + bg('g-mara') + sbar(true) + head('mara', 'Mara', '회의 중 · 15:00까지') + `<div class="lt"><span>${ic('clock', 12, '#fff')}Mara 현지 14:10</span></div><div class="msgs">${CHAT.map(m => msg(m)).join('')}</div>` + inp;
+const grp = css + bg('g-grp') + sbar(true) + head('grp', 'Varo Werkstatt', 'Mara · Ivo 비행 중 · 나') + `<div class="lt"><span>${ic('clock', 12, '#fff')}Varo 14:10</span></div><div class="msgs">${GRP.map(m => msg(m, true)).join('')}</div>` + inp;
+row('C', '유리 전체', '화면 바탕 전체가 그 사람 색 오로라(목록은 여러 색).<br>방 · 말풍선 · 입력칸이 다 반투명 유리. 아바타 옆 점이 지금 상태(바쁨 · 비행 · 잠).<br>단체방 안 읽음은 숫자(1).', [phone('C wht', list, '방 목록'), phone('C wht', chat, '1:1 · 입력 중 · 번역 접기'), phone('C wht', grp, '단체방 · 비행 중')]);
+G.C = { css, msg, head, inp, bg };
+}
+
+/* =====================================================================
+   D. 상태 띠 — 거의 흰 화면, 그라데이션은 "지금 상태"에만(줄 뒤에 번지는 띠 · 방 위 상태 카드), 내 말은 앱 파랑
+   ===================================================================== */
+{
+const css = `<style>
+.D{background:#f5f5f7}
+.D .h{position:absolute;top:60px;left:20px;right:20px;display:flex;justify-content:space-between;align-items:center}
+.D .h h1{font-size:30px;font-weight:700;letter-spacing:-.02em}
+.D .cb{width:42px;height:42px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(22,27,34,.05),0 5px 14px rgba(22,27,34,.07)}
+.D .chips{position:absolute;top:116px;left:16px;display:flex;gap:8px}
+.D .chips b{font-size:13.5px;font-weight:500;padding:8px 15px;border-radius:999px;background:#fff;color:#4a4f5a;box-shadow:0 1px 2px rgba(22,27,34,.05),0 4px 10px rgba(22,27,34,.05)}
+.D .chips b.on{background:#15161a;color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.16)}
+.D .list{position:absolute;top:168px;left:14px;right:14px;display:flex;flex-direction:column;gap:10px}
+.D .rm{position:relative;overflow:hidden;background:#fff;border-radius:22px;padding:13px 14px;display:flex;gap:12px;align-items:center;box-shadow:0 1px 2px rgba(22,27,34,.04),0 8px 22px rgba(22,27,34,.05)}
+.D .rm .fx{position:absolute;right:-10px;top:-20px;bottom:-20px;width:62%;-webkit-mask-image:linear-gradient(90deg,transparent,#000 70%);mask-image:linear-gradient(90deg,transparent,#000 70%);opacity:.5}
+.D .rm .fx .blob{filter:blur(22px);inset:0}
+.D .rm>*:not(.fx){position:relative;z-index:2}
+.D .rm .t{flex:1;min-width:0}
+.D .rm b{font-size:15.5px;font-weight:600}
+.D .rm p{font-size:13.5px;color:#6b707b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.D .rm .stt{display:inline-flex;gap:4px;align-items:center;font-size:11.5px;color:#3a3f47;font-weight:500;margin-top:5px;background:rgba(255,255,255,.7);border-radius:999px;padding:2px 8px 2px 6px}
+.D .rm .r{display:flex;flex-direction:column;align-items:flex-end;gap:6px;font-size:12px;color:#8a8f99}
+.D .un{min-width:21px;height:21px;padding:0 6px;border-radius:999px;background:#2c4a80;color:#fff;font:600 11.5px/21px 'Inter',sans-serif;text-align:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.2)}
+.D .newb{position:absolute;left:16px;right:16px;bottom:30px;height:58px;border-radius:999px;background:#15161a;color:#fff;display:flex;align-items:center;justify-content:center;gap:8px;font-size:15.5px;font-weight:600;box-shadow:inset 0 1px 0 rgba(255,255,255,.16),0 10px 24px rgba(22,27,34,.2)}
+/* chat */
+.D .ct{position:absolute;top:54px;left:0;right:0;height:56px;display:flex;align-items:center;gap:10px;padding:0 14px}
+.D .ct .nm{flex:1;font-size:17px;font-weight:600}
+.D .scard{position:absolute;top:114px;left:12px;right:12px;height:112px;border-radius:26px;overflow:hidden;color:#fff;box-shadow:0 10px 24px rgba(70,80,140,.18)}
+.D .scard .in{position:relative;z-index:3;padding:14px 16px}
+.D .scard .pg{position:absolute;right:14px;top:14px;font:600 11.5px 'Inter',sans-serif;background:rgba(0,0,0,.16);border-radius:999px;padding:4px 9px;z-index:3}
+.D .scard h4{font-size:21px;font-weight:600;letter-spacing:-.01em;margin-top:4px}
+.D .scard small{font-size:12px;opacity:.9}
+.D .bar{position:absolute;left:16px;right:16px;bottom:14px;display:flex;gap:5px;z-index:3}
+.D .bar i{flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.35)}.D .bar i.on{background:#fff}
+.D .msgs{position:absolute;top:238px;bottom:92px;left:0;right:0;padding:0 14px;display:flex;flex-direction:column;gap:6px;overflow:hidden;justify-content:flex-end}
+.D .day{align-self:center;font-size:11.5px;color:#8a8f99;margin:2px 0 4px}
+.D .b{max-width:76%;padding:10px 14px;border-radius:20px;font-size:15px;line-height:1.38}
+.D .b.th{align-self:flex-start;background:#e9eaee;border-bottom-left-radius:6px}
+.D .b.me{align-self:flex-end;background:#2c4a80;color:#fff;border-bottom-right-radius:6px;box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 4px 12px rgba(44,74,128,.2)}
+.D .rd{align-self:flex-end;font-size:10.5px;color:#9aa0a8;margin:-2px 6px 2px}
+.D .sn{display:flex;gap:6px;align-items:center;font-size:11.5px;font-weight:600;color:#6b707b;margin:5px 0 -1px 2px}
+.D .typ{align-self:flex-start;display:flex;gap:4px;background:#e9eaee;border-radius:20px;border-bottom-left-radius:6px;padding:13px 15px}
+.D .typ i{width:7px;height:7px;border-radius:50%;background:#9aa0ab}.D .typ i+i{opacity:.7}.D .typ i+i+i{opacity:.45}
+.D .inp{position:absolute;left:12px;right:12px;bottom:26px;height:54px;display:flex;align-items:center;gap:10px;padding:0 6px 0 16px;background:#fff;border-radius:999px;box-shadow:0 1px 2px rgba(22,27,34,.05),0 10px 26px rgba(22,27,34,.1)}
+.D .inp>span:first-child{flex:1;color:#a2a7b0;font-size:15px}
+.D .sendb{width:42px;height:42px;border-radius:50%;background:#2c4a80;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.2)}
+</style>`;
+const sg = { busy: 'g-ivo', away: 'g-mara', sleep: 'g-grp' };   // 상태 색: 바쁨 산호 · 비행 파랑 · 잠 보라
+const SG = { busy: 'background:radial-gradient(50% 60% at 40% 50%,#f6b26b 0,transparent 70%),radial-gradient(50% 60% at 80% 40%,#f08a7c 0,transparent 70%),#f4a383', away: 'background:radial-gradient(50% 60% at 40% 50%,#7fb0ea 0,transparent 70%),radial-gradient(50% 60% at 80% 40%,#a9c4f7 0,transparent 70%),#94b4ee', sleep: 'background:radial-gradient(50% 60% at 40% 50%,#9b8be6 0,transparent 70%),radial-gradient(50% 60% at 80% 40%,#c6b8f2 0,transparent 70%),#ad9ee8', ok: 'background:radial-gradient(50% 60% at 40% 50%,#7cc98a 0,transparent 70%),radial-gradient(50% 60% at 80% 40%,#cfe08c 0,transparent 70%),#9fd39a' };
+const stOf = r => r.k === 'grp' ? { s: 'ok', t: '2명 깨어 있음', i: 'clock' } : { s: P[r.k].av, t: `${P[r.k].st} · ${P[r.k].until}`, i: avIc(r.k) };
+const list = css + sbar() + `<div class="h"><h1>메시지</h1><span class="cb">${ic('srch', 19)}</span></div><div class="chips"><b class="on">전체</b><b>안 읽음 7</b><b>단체</b></div>
+ <div class="list">${ROOMS.map(r => { const s = stOf(r); return `<div class="rm"><span class="fx"><span class="blob" style="${SG[s.s]}"></span></span>${orb(r.k, 48)}<div class="t"><b>${r.name}</b><p>${r.typing ? 'Mara가 입력 중…' : (r.who ? r.who + ': ' : r.me ? '나: ' : '') + r.last}</p><span class="stt">${ic(s.i, 12, '#3a3f47')}${s.t}</span></div><div class="r"><span class="num">${r.t}</span>${r.un ? `<span class="un">${r.un}</span>` : '<span style="height:21px"></span>'}</div></div>`; }).join('')}</div>
+ <div class="newb">${ic('plus', 18, '#fff', 2.4)}새 대화</div>`;
+const msg = (m, grp) => m.d ? `<div class="day">${m.d}</div>` : m.typing ? `<div class="typ"><i></i><i></i><i></i></div>` : m.state ? ''
+  : `${grp && m.f !== 'me' ? `<div class="sn">${orb(m.f, 18)}${nm(m.f)}</div>` : ''}<div class="b ${m.f === 'me' ? 'me' : 'th'}">${m.x}${m.ko ? (m.fold ? `<br><span class="kof">${ic('tr', 13, '#6d7fae')}번역 보기</span>` : `<span class="ko">${m.ko}</span>`) : ''}</div>${m.read ? `<div class="rd">${m.read === 1 ? 'Mara 읽음 · Ivo 아직' : '읽음'} · <span class="num">${m.t}</span></div>` : ''}`;
+const head = (k, name) => `<div class="ct"><span class="cb">${ic('back', 20)}</span>${orb(k, 38)}<span class="nm">${name}</span><span class="cb">${ic('call', 18)}</span></div>`;
+const inp = `<div class="inp"><span>메시지</span>${ic('mic', 21, '#8a8f99')}<span class="sendb">${ic('send', 18, '#fff', 2.3)}</span></div>`;
+const chat = css + sbar() + head('mara', 'Mara') + `<div class="scard"><span class="blob" style="${SG.busy}"></span><span class="gl"></span><span class="grain"></span><span class="pg">곧 연락돼요</span><div class="in"><small>Varo 14:10 · 지금</small><h4>회의 중 · 15:00까지</h4><small>끝나면 답할 거예요</small></div><div class="bar"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div></div><div class="msgs">${CHAT.map(m => msg(m)).join('')}</div>` + inp;
+const grp = css + sbar() + head('grp', 'Varo Werkstatt') + `<div class="scard"><span class="blob" style="${SG.away}"></span><span class="gl"></span><span class="grain"></span><span class="pg">Mara 깨어 있음</span><div class="in"><small>Ivo · 지금</small><h4>비행 중 · 22:40 도착</h4><small>내리면 읽어요</small></div><div class="bar"><i class="on"></i><i class="on"></i><i></i><i></i></div></div><div class="msgs">${GRP.map(m => msg(m, true)).join('')}</div>` + inp;
+row('D', '상태 띠', '화면은 거의 흰색. 그라데이션은 "지금 상태"에만 써요.<br>방 줄 오른쪽에 상태 색이 번지고(바쁨 산호 · 비행 파랑 · 잠 보라), 방 위엔 상태 카드 + 언제 연락되는지 막대.<br>내 말은 앱 파랑.', [phone('D', list, '방 목록'), phone('D', chat, '1:1 · 입력 중 · 번역 접기'), phone('D', grp, '단체방 · 비행 중')]);
+}
+
+/* =====================================================================
+   고른 것: 목록 A + 방 안 C. 남은 화면(새 대화 · 자는 중 늦은 답 · Ren 폰 읽기 전용)
+   ===================================================================== */
+{
+const A = G.A, C = G.C;
+const css = `<style>
+.N .top{position:absolute;top:58px;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:0 18px}
+.N .cb{width:46px;height:46px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(22,27,34,.05),0 6px 16px rgba(22,27,34,.07)}
+.N h1{font-size:21px;font-weight:600}
+.N .srch{margin:0 16px;height:46px;border-radius:999px;background:#fff;display:flex;align-items:center;gap:8px;padding:0 16px;color:#a2a7b0;font-size:15px;box-shadow:0 1px 2px rgba(22,27,34,.04),0 6px 18px rgba(22,27,34,.05)}
+.N .picked{display:flex;gap:14px;margin:16px 20px 0}
+.N .pk{display:flex;flex-direction:column;align-items:center;gap:5px;font-size:12px;color:#3a3f47;position:relative}
+.N .pk .x{position:absolute;right:-4px;top:-3px;width:20px;height:20px;border-radius:50%;background:#15161a;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #f2f2f4}
+.N .gname{margin:16px 16px 0;position:relative;overflow:hidden;border-radius:22px;color:#fff;padding:14px 16px;box-shadow:0 10px 24px rgba(70,80,140,.18)}
+.N .gname .in{position:relative;z-index:3}
+.N .gname small{font-size:12px;opacity:.88}
+.N .gname b{display:block;font-size:20px;font-weight:600;margin-top:3px}
+.N .gname b u{text-decoration:none;display:inline-block;width:2px;height:20px;background:#fff;vertical-align:-3px;margin-left:2px}
+.N .sec{font-size:12.5px;color:#8a8f99;margin:18px 22px 8px}
+.N .list{margin:0 16px;background:#fff;border-radius:24px;padding:4px 0;box-shadow:0 1px 2px rgba(22,27,34,.04),0 8px 24px rgba(22,27,34,.05)}
+.N .rm{display:flex;gap:12px;align-items:center;padding:11px 16px;position:relative}
+.N .rm+.rm::before{content:'';position:absolute;left:74px;right:16px;top:0;height:1px;background:#eef0f3}
+.N .rm .t{flex:1}.N .rm b{font-size:15.5px;font-weight:600}.N .rm p{font-size:12.5px;color:#8a8f99;margin-top:2px}
+.N .ck{width:26px;height:26px;border-radius:50%;border:2px solid #d4d7dd}
+.N .ck.on{border:0;background:#15161a;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
+.N .go{position:absolute;left:16px;right:16px;bottom:30px;height:58px;border-radius:999px;background:#15161a;color:#fff;display:flex;align-items:center;justify-content:center;gap:8px;font-size:15.5px;font-weight:600;box-shadow:inset 0 1px 0 rgba(255,255,255,.16),0 10px 24px rgba(22,27,34,.2)}
+.N .go em{font-style:normal;opacity:.6;font-weight:500}
+.C .ro{position:absolute;left:12px;right:12px;bottom:26px;height:54px;border-radius:999px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:13.5px;color:rgba(30,32,40,.65)}
+.C .who{position:absolute;top:124px;left:0;right:0;text-align:center}
+.C .who span{display:inline-flex;gap:6px;align-items:center;font-size:12px;color:#fff;background:rgba(20,22,30,.32);backdrop-filter:blur(10px);border-radius:999px;padding:5px 12px;box-shadow:inset 0 1px 0 rgba(255,255,255,.2)}
+.C .stl b{font-size:13.5px}
+</style>`;
+const pick = css + G.A.css + sbar() + `<div class="top"><span class="cb">${ic('back', 20)}</span><h1>새 대화</h1><span style="width:46px"></span></div>
+ <div style="height:118px"></div>
+ <div class="srch">${ic('srch', 18, '#a2a7b0')}이름 찾기</div>
+ <div class="picked">${['mara', 'ren'].map(k => `<span class="pk">${orb(k, 52)}<span class="x">${ic('plus', 12, '#fff', 3).replace('<path', '<path transform="rotate(45 12 12)"')}</span>${P[k].n}</span>`).join('')}</div>
+ <div class="gname"><span class="blob g-grp"></span><span class="gl"></span><span class="grain"></span><div class="in"><small>단체방 이름</small><b>주말 Varo<u></u></b></div></div>
+ <div class="sec">사람</div>
+ <div class="list">${[['mara', 'Varo', 1], ['ren', '서울', 1], ['ivo', 'Varo', 0]].map(([k, sub, on]) => `<div class="rm">${orb(k, 46)}<div class="t"><b>${P[k].n}</b><p>${sub}</p></div><span class="ck ${on ? 'on' : ''}">${on ? ic('chk', 15, '#fff', 3) : ''}</span></div>`).join('')}</div>
+ <div class="go">단체방 만들기 <em>· 나 포함 3명</em></div>`;
+const LATE = [{ d: '오늘' }, { f: 'ren', t: '18:20', x: '오늘 진짜 피곤하다' }, { f: 'me', t: '18:40', x: '일찍 자 ㅋㅋ', read: true }, { f: 'ren', t: '19:02', x: '응 씻고 바로 잘 듯' },
+  { f: 'me', t: '21:03', x: '아 맞다 내일 몇 시에 봐?', read: 1 }, { f: 'me', t: '21:04', x: '점심 같이 먹을까', read: 1 }, { sleep: 1 }];
+const msgL = m => m.sleep ? '' : C.msg(m);
+const late = css + C.css + C.bg('g-ren') + sbar(true) + C.head('ren', 'Ren', '자는 중') + `<div class="msgs" style="top:130px">${LATE.map(msgL).join('')}</div>` + C.inp;
+// Ren 폰: Ren 계정으로 본 같은 방. Ren 말이 오른쪽(진한 유리), 유나 말이 왼쪽. 입력칸 없음
+const RO = [{ d: '어제' }, { f: 'yuna', t: '22:41', x: '오늘 고마웠어' }, { f: 'me', t: '22:50', x: '나도 ㅎㅎ 잘 들어가', read: true }, { d: '오늘' }, { f: 'me', t: '18:20', x: '오늘 진짜 피곤하다', read: true }, { f: 'yuna', t: '18:40', x: '일찍 자 ㅋㅋ' }, { f: 'me', t: '19:02', x: '응 씻고 바로 잘 듯' }, { f: 'yuna', t: '21:03', x: '아 맞다 내일 몇 시에 봐?' }, { f: 'yuna', t: '21:04', x: '점심 같이 먹을까' }];
+const msgR = m => m.f === 'yuna' ? `<div class="b th glass">${m.x}</div>` : m.f === 'me' ? `<div class="b me">${m.x}</div>${m.read ? `<div class="rd">읽음 · <span class="num">${m.t}</span></div>` : ''}` : C.msg(m);
+const dayIc = hhmm => { const h = Number(String(hhmm).slice(0, 2)); return h >= 5 && h < 17 ? 'sun' : h >= 17 && h < 21 ? 'set' : 'moon'; };
+const ro = css + C.css + C.bg('g-yuna') + sbar(true) + C.head('yuna', '유나', '').replace(`<span class="gb">${ic('call', 19, '#1b1d24')}</span>`, '<span style="width:42px"></span>') + `<div class="who"><span>${ic(dayIc(P.ren.local), 13, '#fff')}Ren 폰 · Ren으로 보는 중</span></div><div class="msgs" style="top:160px;bottom:40px">${RO.map(msgR).join('')}</div>`;
+row('A+C', '고른 것', `목록은 A 그대로, 방 안은 C 그대로.<br>새 대화는 A(흰 목록 + 검정 알약), 방 안 화면은 C(그 사람 색 바탕 + 유리).<br>Ren은 유나와 같은 시간대라 현지 시각 칩이 없어요(다를 때만 나와요).<br>Ren 폰 칩 아이콘은 Ren 현지 시각: 05~17시 해 · 17~21시 저녁 · 21~05시 달.<br><span style="display:inline-flex;gap:8px;margin-top:8px">${['09:30', '18:40', '21:10'].map(t => `<span style="display:inline-flex;gap:5px;align-items:center;font-size:12px;color:#fff;background:#8f7c8a;border-radius:999px;padding:4px 10px">${ic(dayIc(t), 13, '#fff')}${t}</span>`).join('')}</span>`, [phone('A', A.list, '방 목록 (A)'), phone('A N', pick, '새 대화 · 여러 명 = 단체방'), phone('C wht', late, '자는 중 · 안 읽음 1 · 늦은 답'), phone('C wht', ro, 'Ren 폰 · 읽기만')]);
+}
+
+const only = new URLSearchParams(location.search).get('only');
+document.getElementById('out').innerHTML = (only ? out.filter(x => x.includes(`<h2>${only}.`)) : out).join('');
+</script>
+</body></html>

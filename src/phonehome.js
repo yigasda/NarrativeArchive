@@ -79,7 +79,8 @@ function noteItems(n) {
 export const lastSig = t => { const x = t.messages[t.messages.length - 1]; return x ? `${x.time}|${x.text}` : ''; };
 export const threadNew = t => t.messages[t.messages.length - 1]?.from !== 'me' && t.seen !== lastSig(t);
 // wx: the weather widget for the second page, drawn by the weather app (passed in, so the home needs no app module)
-export function homeScreen(p, now, m, page = 1, wx = '') {
+// top: what stands in the first page's widget row instead of 캘린더 · 메모 (실시간 폰의 Orbit 위젯, from phone.js)
+export function homeScreen(p, now, m, page = 1, wx = '', top = '') {
     const mono = p.theme === 'gray';
     const day = String(now).slice(0, 5), x = parts(now);
     const anniv = annivToday(m, now, p.owner);
@@ -98,7 +99,7 @@ export function homeScreen(p, now, m, page = 1, wx = '') {
       <div class="cg_col">
         ${cgBar(p, now)}
         <div class="cg_top">
-          <div class="cg_widgets">${page === 2 ? wx : `
+          <div class="cg_widgets">${page === 2 ? wx : top || `
             <button type="button" class="cg_glass cg_wcal" data-go="cal">
               <span class="cg_cap cg_capcal">${x ? `${x.mo}월` : '캘린더'}</span>
               <span class="cg_num cg_day">${x ? x.d : ''}</span>

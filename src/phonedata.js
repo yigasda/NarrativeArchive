@@ -1954,6 +1954,125 @@ function clockExpected(raw, p, m, now, c, scene, fail) {
     return expected;
 }
 
+// 분기한 방: a phone copied into a branch of the chat it was read in still holds that chat's talk past the branch point,
+// which never happened here. When the phone opens (before anything reads it), that talk is taken off by itself: the same
+// reading a reflection would do (otherChat → realign → settleDropped, renumber), then 빼기 on each stretch it found (sure or
+// not: past the branch point it is all other talk). What 빼기 must leave (built on, changed by hand) stays and is said.
+// The read marks go with the talk (realign), so the next reflection reads this chat's own messages from the branch point.
+// Returns null when there is nothing to do (not a branch, never read, its start not found), else { dropped, items, kept }.
+export async function settleBranch(m, p) {
+    const s = p?.sync;
+    if (!s?.marks?.base || !otherChat(s)) return null;
+    // a phone made past the branch point: the message it began at is not in this chat. It begins at the branch's end
+    // instead, and everything it read is the other chat's talk
+    let rebased = false;
+    if (syncState(p) === 'lost') {
+        const end = chatEnd();
+        if (!(s.marks.base.index > end) || end < 0) return null;
+        s.marks.base = markAfter(end); rebased = true;
+        if (syncState(p) !== 'ok') return null;
+    }
+    const moved = realign(s, chatRows(), { other: true });
+    for (const d of moved.dropped) d.unsure = false;
+    const notes = [], had = new Set((s.dropped || []).map(d => d.key));
+    settleDropped(p, moved, notes);
+    s.readChat = chatMark() || s.readChat;
+    renumber(m, p, moved);
+    // (numbers moved with no round after it: the last rounds' 되돌리기 would put back the main chat's)
+    if (moved.changed.length || moved.dropped.length || Object.entries(moved.moved).some(([o, n]) => Number(o) !== n)) { delete p.syncUndo; delete p.syncUndos; }
+    let dropped = 0, items = 0;
+    const kept = [];
+    for (const d of [...(s.dropped || [])].filter(x => !had.has(x.key))) {
+        const r = await dropStretch(m, p, d.key);
+        dropped += r.gone; items += r.items; kept.push(...r.kept);
+    }
+    // what the phone was made with (no message as its source): it goes when its time is past the story's time at the
+    // branch point, and the phone's clock goes back to that time. That time: the status line there; else the newest
+    // record still here from a message (none: neither is done, and the result says so)
+    const end = brPoint(s), at = statusAt(p, end, m)?.at || brNewestFrom(p, end);
+    let cut = 0;
+    if (at) {
+        cut = brCutMadeAfter(p, at) + brCutAppsAfter(m, p, at);
+        if (!p.now || laterThan(String(p.now), at)) p.now = at;
+        // (the bank's, investments', everyday and delivery apps' own reading marks: none past the branch point)
+        for (const g of ['money', 'invest', 'life', 'delivery']) if (s.marks?.[g] && s.marks[g].index > end) s.marks[g] = markAfter(end);
+        if (cut) { delete p.syncUndo; delete p.syncUndos; }
+    }
+    await saveMeta();
+    if (cut && p.inject) applyInjection();
+    return { dropped, items, kept, cut, at: at || '', rebased };
+}
+// the last message of this chat the phone still knows (read, or where it began): the branch point
+function brPoint(s) {
+    const end = chatEnd(), read = [...Object.keys(s.seen || {}), ...Object.keys(s.hiddenRead || {})].map(Number).filter(i => i <= end);
+    const base = s.marks?.base?.index;
+    return Math.max(...read, Number.isInteger(base) && base <= end ? base : -1, read.length || Number.isInteger(base) && base <= end ? -1 : end);
+}
+const brHasTime = v => /^\d{2}-\d{2}(?: \d{2}:\d{2})?$/.test(String(v || '').trim());
+const brItemTime = (k, x) => String((k === 'diary' ? x.date : x.time) || '').trim();
+// made with the phone: no source, or there before sources were kept (a reflection only told of it again)
+const brMadeWith = x => !Array.isArray(x?.froms) || !x.froms.length || x.froms.some(f => f.at === 'before');
+// the newest time on a record from a message at or before `end` (a status line can't be read there)
+function brNewestFrom(p, end) {
+    let best = '';
+    const look = (k, x) => { const t = brItemTime(k, x); if (brHasTime(t) && (x.froms || []).some(f => Number.isInteger(f.at) && f.at <= end) && (!best || laterThan(t, best))) best = t; };
+    for (const k of LISTS) for (const x of p[k] || []) look(k, x);
+    for (const t of p.threads || []) for (const x of t.messages || []) look('msg', x);
+    return best;
+}
+// records made with the phone and dated past `at` (events keep theirs: an event's date is when it happens, not when it was
+// written); a thread left empty goes. Returns how many went
+// the bank, shopping, everyday, delivery and investment records an app fill made (no message as their source: a
+// reflection's carry one, and 빼기 took those): past `at` they go. A payment already in an account's opening balance (the
+// fill's history) gives its amount back to that balance; a card's spending and the holdings are worked out again from what
+// stays. Tickets and alarms stay (their date is when they are for). Returns how many went
+function brCutAppsAfter(m, p, at) {
+    let n = 0;
+    const made = x => !Number.isInteger(x?.sourceIndex), later = t => brHasTime(String(t || '').trim()) && laterThan(String(t).trim(), at);
+    const drop = (list, past) => (Array.isArray(list) ? list.filter(x => { if (!(made(x) && past(x))) return true; n++; return false; }) : list);
+    const mo = p.money;
+    if (mo) {
+        const f = finance(m), accts = mo.bank?.accounts || [];
+        mo.tx = drop(mo.tx, t => {
+            if (!later(t.time)) return false;
+            const a = accts.find(x => x.last4 === t.account), key = a && `${a.id}:${a.currency || mo.currency}`, L = key && f.accounts[key];
+            // (one the ledger holds as its own entry is a reflection's: not this)
+            if (L?.entries?.[t.id]) return false;
+            if (L && a.kind !== 'credit' && L.included.includes(t.id)) {
+                if (!finite(t.amount)) return false;
+                reviseBaseline(m, key, Math.round((L.amount - t.amount + Number.EPSILON) * 100) / 100, '분기한 곳으로 되돌림');
+                L.included = L.included.filter(id => id !== t.id);
+            }
+            return true;
+        });
+        mo.orders = drop(mo.orders, x => later(x.time));
+    }
+    const lf = p.life;
+    if (lf?.health?.days) lf.health.days = drop(lf.health.days, d => later(d.date));
+    if (lf?.files?.items) lf.files.items = drop(lf.files.items, x => later(x.time));
+    if (p.delivery?.orders) p.delivery.orders = drop(p.delivery.orders, x => later(x.time));
+    const inv = p.investment, y = p.noYear ? '' : String(p.year || '');
+    if (inv?.trades && /^\d{4}$/.test(y)) {
+        const day = `${y}-${at.slice(0, 5)}`, f = finance(m);
+        inv.trades = drop(inv.trades, t => {
+            if (!(String(t.date || '') > day)) return false;
+            const acc = (inv.accounts || []).find(a => a.currency === t.currency), L = acc && f.accounts[acc.key];
+            if (L?.entries) delete L.entries[t.id];
+            return true;
+        });
+    }
+    if (n && p.money) migrateBank(m, p);
+    return n;
+}
+function brCutMadeAfter(p, at) {
+    let n = 0;
+    const past = (k, x) => brMadeWith(x) && brHasTime(brItemTime(k, x)) && laterThan(brItemTime(k, x), at);
+    for (const k of LISTS) if (k !== 'events' && Array.isArray(p[k])) p[k] = p[k].filter(x => { if (!past(k, x)) return true; n++; return false; });
+    for (const t of p.threads || []) t.messages = (t.messages || []).filter(x => { if (!past('msg', x)) return true; n++; return false; });
+    p.threads = (p.threads || []).filter(t => t.messages.length);
+    return n;
+}
+
 async function updatePhone(m, owner) {
     return exclusive('sync', async () => {
         const key = nameKey(owner), p = m.phones[key], scope = phoneChatScope(ctx());

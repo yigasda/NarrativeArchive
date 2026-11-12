@@ -16,7 +16,7 @@ import { applyInjection } from './inject.js';
 import { faceHtml, nameKey, peopleList } from './people.js';
 import { drafting, drawing, drawPhoto, drawPost, filling, makeDraft, paging, retranslate, retranslating, recording, recordVoice, searching, searchPage, shooting, takePhoto, webPage, writeEntry, writing } from './phoneai.js';
 import { setDraft, setDraftModels, setVoice, setVoiceAdd, voiceList, voicePeople, ax, axFind, groupInfo, APPS, AXB, AXB_C, busyHtml, setDate, setScreenHolderView, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, mapTowns, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setOwnerProfile, setWho, snsPost, snsScreen, statusBar, threadScreen, setPlace, prepScreen } from './phoneapps.js';
-import { phoneMaking, dropStretch, koGaps, savedName, ensureIds, ensureYear, hasDatedRecords, noArchive, setStoryYear, storyYear, fillDevice, fillMoney, fillVoice, koOn, loreOff, makePhone, tidyKo, markAfter, phoneLore, REMAKE, restoreRounds, retryMoney, showNow, storyNow, syncLeft, syncRows, syncState, tidyJournal, undoRound } from './phonedata.js';
+import { phoneMaking, dropStretch, settleBranch, koGaps, savedName, ensureIds, ensureYear, hasDatedRecords, noArchive, setStoryYear, storyYear, fillDevice, fillMoney, fillVoice, koOn, loreOff, makePhone, tidyKo, markAfter, phoneLore, REMAKE, restoreRounds, retryMoney, showNow, storyNow, syncLeft, syncRows, syncState, tidyJournal, undoRound } from './phonedata.js';
 import { busy, watchBusy, exclusive, journalRead, journalWrite, syncOf } from './phonesync.js';
 import { syncPick, syncSettings } from './phonesyncui.js';
 import { CG_W, homeScreen, lastSig, lockScreen, threadNew } from './phonehome.js';
@@ -35,8 +35,10 @@ import { dropVoice, fillKo, koAppOf, koScopeOf, labelVoices, learnVoices, pickVo
 // 을 / 를 after a word: by its last syllable's final consonant (a Latin ending, like SNS, reads as 를)
 const josa = w => { const c = w.charCodeAt(w.length - 1) - 0xac00; return c >= 0 && c < 11172 && c % 28 ? '을' : '를'; };
 import { confirm, esc } from './util.js';
-import { liveMode, liveWorld, livePhone, liveMeta, setLiveMode } from './phone2store.js';
-import { shiftLabel } from './phone2clock.js';
+import { liveMode, liveWorld, livePhone, liveMeta, setLiveMode, liveKey, liveRooms, ensureRoom, nameRoom, sendLive, readLive, unreadFor, unreadBy } from './phone2store.js';
+import { shiftLabel, liveWall, viewerWall } from './phone2clock.js';
+import { orbitList, orbitRoom, orbitNew, orbitHomeWidget } from './phoneorbit.js';
+import { liveStoryText } from './phone2story.js';
 
 // other files keep importing these from here
 export { phoneBlock } from './phonedata.js';
@@ -59,14 +61,14 @@ function screen(p, view, m, roster, ui) {
         files: () => filesScreen(p, now), folder: () => folderScreen(p, now, i || ''), file: () => fileScreen(p, now, i), weather: () => weatherScreen(p, now), wcity: () => cityScreen(p, now, i), wlist: () => cityList(p, now),
         // the home's delivery icon opens it by its app name
         dlv: () => dlvScreen(p, now), delivery: () => dlvScreen(p, now), dshop: () => shopScreen2(p, now, i), dcart: () => cartScreen(p, now), dorders: () => ordersScreen(p, now), dorder: () => orderScreen(p, now, i), ditem: () => itemScreen(p, now, i), dpay: () => payScreen(p, now), drate: () => rateScreen(p, now, i) }[v];
-    const body = life ? life() : ['ivnotes', 'ivschedule', 'ivhistory', 'invest', 'stock', 'ivactivity', 'ivwatch', 'ivstakes', 'ivcash', 'ivprices'].includes(v) ? investmentScreen(m, p, now, v, decodeURIComponent(i || ''), ui.investing) : v === 'lock' ? lockScreen(p, now) : v === 'home' ? homeScreen(p, now, m) : v === 'home2' ? homeScreen(p, now, m, 2, hereWidget(p, now)) : v === 'bank' ? bankHome(p, now) : v === 'acct' ? bankAcct(p, now, i || '0') : v === 'tx' ? bankTx(p, now, i || '') : v === 'fixed' ? fixedScreen(p, now, i || '') : v === 'banknote' ? bankNotes(p, now) : v === 'banksend' ? bankSend(p, now, i || '') : v === 'stmt' ? bankStmt(p, now, i || '') : v === 'txdoc' ? txDoc(p, now, i || '') : v === 'bankmore' ? bankMore(p, now) : v === 'wallet' ? walletScreen(p, now, i || '') : v === 'card' ? cardView(p, now, i || '0') : v === 'pass' ? passView(p, now, i || '') : v === 'shop' ? shopScreen(p, now, i || 'all') : v === 'order' ? orderView(p, now, i || '') : v === 'track' ? trackView(p, now, i || '') : v === 'voice' ? voiceScreen(p, now, i || '') : v === 'voiceone' ? voiceOne(p, now, i || '0') : v === 'groupinfo' ? groupInfo(p, now, Number(i) || 0, roster) : v === 'msg' ? msgList(p, now, roster)
+    const body = life ? life() : ['ivnotes', 'ivschedule', 'ivhistory', 'invest', 'stock', 'ivactivity', 'ivwatch', 'ivstakes', 'ivcash', 'ivprices'].includes(v) ? investmentScreen(m, p, now, v, decodeURIComponent(i || ''), ui.investing) : v === 'lock' ? lockScreen(p, now) : v === 'home' ? homeScreen(p, now, m, 1, '', ui.orbitHome || '') : v === 'home2' ? homeScreen(p, now, m, 2, hereWidget(p, now)) : v === 'bank' ? bankHome(p, now) : v === 'acct' ? bankAcct(p, now, i || '0') : v === 'tx' ? bankTx(p, now, i || '') : v === 'fixed' ? fixedScreen(p, now, i || '') : v === 'banknote' ? bankNotes(p, now) : v === 'banksend' ? bankSend(p, now, i || '') : v === 'stmt' ? bankStmt(p, now, i || '') : v === 'txdoc' ? txDoc(p, now, i || '') : v === 'bankmore' ? bankMore(p, now) : v === 'wallet' ? walletScreen(p, now, i || '') : v === 'card' ? cardView(p, now, i || '0') : v === 'pass' ? passView(p, now, i || '') : v === 'shop' ? shopScreen(p, now, i || 'all') : v === 'order' ? orderView(p, now, i || '') : v === 'track' ? trackView(p, now, i || '') : v === 'voice' ? voiceScreen(p, now, i || '') : v === 'voiceone' ? voiceOne(p, now, i || '0') : v === 'groupinfo' ? groupInfo(p, now, Number(i) || 0, roster) : v === 'msg' ? msgList(p, now, roster)
         : v === 'thread' ? threadScreen(p, now, Number(i), roster, ui) : v === 'draft' ? draftView(p, now, Number(i), roster) : v === 'call' || v === 'callmiss' ? callScreen(p, now, roster, v === 'callmiss') : v === 'callwho' ? callWho(p, now, Number(i), roster) : v === 'contacts' ? contactsScreen(p, now, roster) : v === 'contact' ? contactOne(p, now, decodeURIComponent(i || ''), roster, m, ui.contactBack)
         : v === 'photo' ? photoScreen(p, now) : v === 'photoone' ? photoView(p, now, Number(i))
         : v === 'note' ? noteScreen(p, now) : v === 'noteone' ? noteOne(p, now, Number(i)) : v === 'search' ? searchScreen(p, now) : v === 'page' ? pageView(p, now, i || '', paging.has(`${nameKey(p.owner)}:${i}`)) : v === 'tabs' ? tabsScreen(p, now) : v === 'marks' || v === 'history' ? marksScreen(p, now, v === 'history') : v === 'searchone' ? searchOne(p, now, Number(i), searching.has(`${nameKey(p.owner)}:${i}`))
         : v === 'cal' ? calScreen(p, now, m, i || '') : v === 'calone' ? calOne(p, now, Number(i), m) : v === 'map' ? (mapTowns(p, m).groups.length ? mapScreen(p, now, m, i || '') : mapEmptyScreen(p, now, m)) : v === 'mapq' ? mapSearchScreen(p, now, m, i || '', ui.mapQ || '') : v === 'mapc' ? mapCityScreen(p, now, m, i || '')
         : v === 'sns' ? snsScreen(p, now) : v === 'snspost' ? snsPost(p, now, Number(i)) : v === 'mail' ? mailScreen(p, now, i) : v === 'mailone' ? mailOne(p, now, Number(i))
         : v === 'diary' ? diaryScreen(p, now, i || '') : v === 'diaryone' ? diaryOne(p, now, Number(i)) : v === 'setsync' ? syncSettings(p, now, ui) : v === 'setsyncpick' ? syncPick(p, now, ui) : v === 'set' ? setScreen(p, now, m, ui) : v === 'stime' ? screenTimeScreen(p, now, i || '') : v === 'settheme' ? setTheme(p, now) : v === 'setscreenholder' ? setScreenHolderView(p, now, m, ui.holderBack) : v === 'setdate' ? setDate(p, now, m, ui) : v === 'setplace' ? setPlace(p, now, m, ui) : v === 'setdraft' ? setDraft(p, now, draftUi(), ui.draftBack || 'set') : v === 'setdraftmodel' ? setDraftModels(p, now, draftIds(), draftSettings()[draftKey()] || '', draftSettings().mode === 'custom') : v === 'setvoice' ? setVoice(p, now, ui.voicePick, ui.voiceBusy) : v === 'setvoiceadd' ? setVoiceAdd(p, now, ui.voiceAdd, ui.voiceBusy) : v === 'prep' ? prepScreen(p, now, m, ui.prep) : v === 'setremake' ? setRemake(p, now, ui, m) : v === 'setprofile' ? setOwnerProfile(p,now,ui.profileState,!!ui.phones?.live) : v === 'setwho' ? setWho(p, now, m, ui) : v === 'setlore' ? setLore(p, now, m, ui)
-        : v === 'cam' ? camScreen(p, now, i === undefined ? -1 : Number(i), shooting.has(nameKey(p.owner))) : homeScreen(p, now, m);
+        : v === 'cam' ? camScreen(p, now, i === undefined ? -1 : Number(i), shooting.has(nameKey(p.owner))) : v === 'orbit' ? orbitList(p, now, ui.orbit) : v === 'orbitroom' ? orbitRoom(p, now, ui.orbit) : v === 'orbitnew' ? orbitNew(p, now, ui.orbit) : homeScreen(p, now, m, 1, '', ui.orbitHome || '');
     // the home is the design board itself, at its own size, scaled to the screen (--k)
     // every app: drawn at the boards' size too, each its own app look
     if (!['home', 'home2', 'lock'].includes(v)) { const c = AXB_C[AXB[v]]; return `<div class="na_ph_scr app ax${['card', 'tx'].includes(v) ? '' : ` ax_${v}`} v_${v}${c ? ' axb' : ''}" style="--ph-acc:var(--ph-${p.accent})${c ? `; --axd: ${c[0]}; --axc: ${c[1]}` : ''}"><div class="cg_canvas ax_canvas">${body}</div></div>`; }
@@ -104,6 +106,23 @@ export async function openPhone(who = null) {
     if (!await ensurePhoneStory(m) || !stillHere()) return;
     await ensureScreenHolder(m, c);
     if (!stillHere()) return;
+    // 분기한 방 (docs/PHONE2-PLAN.md 5-3 준비): 그 방에 없는 뒷이야기를 폰마다 한 번 빼요. 실시간 폰은 서랍을 넘겨요.
+    // 분기가 아니거나 이미 했으면 null이고, 아무것도 안 바뀌고 알림도 없어요
+    {
+        const done = [];
+        const settle = async (meta, p) => { try { const r = await settleBranch(meta, p); if (r) done.push({ name: p.owner, ...r }); } catch (err) { console.error('[narrative-archive] branch', p?.owner, err); } };
+        for (const p of Object.values(realM.phones || {})) if (p?.owner) await settle(realM, p);
+        const lw = liveWorld(realM);
+        if (lw) { const d = liveMeta(realM, { text: () => liveStoryText(realM, liveWorld(realM)) }); for (const p of Object.values(lw.phones || {})) if (p?.owner) await settle(d, p); }
+        if (!stillHere()) return;
+        // 알림은 한 줄: 뺀 게 있을 때만(시각을 몰랐던 건 콘솔에만)
+        for (const r of done) if (!r.at) console.info('[narrative-archive] branch: story time at the branch point unknown, made records and clock kept', r.name);
+        const shown = done.filter(r => (r.dropped || 0) + (r.items || 0) + (r.cut || 0) > 0);
+        if (shown.length) {
+            const n = shown.reduce((t, r) => t + (r.dropped || 0) + (r.items || 0) + (r.cut || 0), 0), kept = [...new Set(shown.flatMap(r => r.kept || []))];
+            toastr.info(`갈라진 뒤 기록 ${n}개 뺐어요${kept.length ? ` · ${kept.join(', ')} 남김` : ''}`, `${[...new Set(shown.map(r => r.name))].join(' · ')} 폰`);
+        }
+    }
     // a round this browser made that the saved chat doesn't have: kept, and offered in 설정 › 대화 반영; the phone opens anyway
     let syncPending = 0;
     try { syncPending = tidyJournal(m, phoneChatScope(c)); } catch (err) { console.error('[narrative-archive] sync journal', err); }
@@ -133,9 +152,57 @@ export async function openPhone(who = null) {
     if (!stillHere()) return;
     // 실시간: the drawer is made once for its world and kept (a new one each time would copy the glossary again)
     let drawer = null;
-    const useMode = () => { m = live() ? (drawer?.w === liveWorld(realM) ? drawer.d : (drawer = { w: liveWorld(realM), d: liveMeta(realM) }).d) : realM; setPhoneMeta(m === realM ? null : m); };
+    const useMode = () => { m = live() ? (drawer?.w === liveWorld(realM) ? drawer.d : (drawer = { w: liveWorld(realM), d: liveMeta(realM, { text: () => liveStoryText(realM, liveWorld(realM)) }) }).d) : realM; setPhoneMeta(m === realM ? null : m); };
     useMode();
     const liveRoster = () => new Set(liveNames().map(nameKey));
+    // Orbit (실시간 폰의 메신저, docs/design/orbit.md): 계정은 페르소나(쓰기)와 이 폰 주인(읽기만) 둘. 왼쪽 위 얼굴 → 아래 시트로 바꿔요
+    let obTab = 'all', obPick = [], obGname = '', obWho = '', obSheet = false, obDraft = '';
+    const obOpen = new Set();   // 한국어를 기본과 반대로 둔 말들
+    const roomNow = () => (view.startsWith('orbitroom:') ? liveWorld(realM)?.messenger?.rooms?.[view.slice(10)] || null : null);
+    // 지금 계정: 폰 주인 계정은 주인이 페르소나가 아닐 때만, 그 폰을 보고 있을 때만
+    const obAcct = () => { const w = liveWorld(realM), me = w?.persona || ''; return obWho && owner && liveKey(obWho) === liveKey(owner) && liveKey(owner) !== liveKey(me) ? owner : me; };
+    const orbitUi = () => {
+        const w = liveWorld(realM);
+        if (!live() || !w) return {};
+        const me = w.persona, who = obAcct(), ro = liveKey(who) !== liveKey(me), sh = w.dayShift || 0, vw = ms => viewerWall(ms, sh).at, today = vw(Date.now()).slice(0, 5), yday = vw(Date.now() - 864e5).slice(0, 5);
+        const dayOf = a => (a.slice(0, 5) === today ? '오늘' : a.slice(0, 5) === yday ? '어제' : `${Number(a.slice(0, 2))}월 ${Number(a.slice(3, 5))}일`);
+        const shortAt = ms => { const a = vw(ms), d = dayOf(a); return d === '오늘' ? a.slice(6) : d; };
+        const tzOf = n => { const ph = livePhone(realM, n); return ph ? placeInfo(ph).owner.tz || '' : ''; };
+        const cityOf = n => { const ph = livePhone(realM, n); return ph ? placeInfo(ph).owner.city || '' : ''; };
+        const roomsOf = k => liveRooms(realM).filter(r => r.members.some(n => liveKey(n) === liveKey(k))).map(r => ({ r, last: r.messages[r.messages.length - 1] })).sort((a, b) => (b.last?.at || 0) - (a.last?.at || 0));
+        const view4 = k => {
+            const others = r => r.members.filter(n => liveKey(n) !== liveKey(k)), titleOf = r => r.name || others(r).join(', ');
+            const brief = ({ r, last }) => ({ id: r.id, title: titleOf(r), group: others(r).length > 1, last: last?.text || '', lastWho: last ? (liveKey(last.from) === liveKey(k) ? '나' : others(r).length > 1 ? last.from : '') : '', time: last ? shortAt(last.at) : '', unread: liveKey(k) === liveKey(me) ? unreadFor(r, me) : 0 });
+            return { others, titleOf, brief };
+        };
+        const mine4 = roomsOf(me), V = view4(who), rooms = ro ? roomsOf(who) : mine4;
+        const out = { orbitHome: orbitHomeWidget(mine4.slice(0, 2).map(view4(me).brief), mine4.reduce((n, x) => n + unreadFor(x.r, me), 0)) };
+        const v = view.split(':')[0];
+        // 계정 시트: 페르소나 + (주인이 다르면) 이 폰 주인
+        const accts = [me, ...(owner && liveKey(owner) !== liveKey(me) ? [owner] : [])].map(n => ({ name: n, sub: livePhone(realM, n)?.profile?.handle || liveKey(n), on: liveKey(n) === liveKey(who) }));
+        if (v === 'orbit') {
+            const hn = rooms.map(x => V.others(x.r).find(n => tzOf(n))).find(Boolean);
+            out.orbit = { tab: obTab, acct: { name: who, ro, sheet: obSheet && accts.length > 1, list: accts }, hero: hn ? { name: hn, city: cityOf(hn), local: liveWall(tzOf(hn), sh).at.slice(6) } : null, rooms: rooms.map(V.brief) };
+        } else if (v === 'orbitnew') {
+            if (ro) { view = 'orbit'; return orbitUi(); }
+            const names = [...new Map([...Object.values(w.phones || {}).map(p => p?.owner), ...Object.values(w.messenger?.accounts || {}).map(a => a?.name)].filter(n => n && liveKey(n) !== liveKey(me)).map(n => [liveKey(n), n])).values()];
+            out.orbit = { people: names.map(n => ({ name: n, sub: cityOf(n) })), picked: obPick, gname: obGname };
+        } else if (v === 'orbitroom') {
+            const r = roomNow();
+            if (!r || !r.members.some(n => liveKey(n) === liveKey(who))) { view = 'orbit'; return orbitUi(); }
+            const os = V.others(r), group = os.length > 1, chips = [];
+            if (!group && tzOf(os[0])) { const there = liveWall(tzOf(os[0]), sh).at.slice(6), here = vw(Date.now()).slice(6); if (there !== here) chips.push({ icon: 'clock', text: `${os[0]} 현지 ${there}` }); }
+            const msgs = []; let day = '';
+            for (const x of r.messages) {
+                const a = vw(x.at), d = dayOf(a);
+                if (d !== day) { msgs.push({ day: d }); day = d; }
+                const mine = liveKey(x.from) === liveKey(who);
+                msgs.push({ id: x.id, mine, from: x.from, text: x.text, ko: x.ko || '', open: koOn() !== obOpen.has(x.id), time: mine ? a.slice(6) : '', unread: mine && !ro ? unreadBy(r, x).length : 0 });
+            }
+            out.orbit = { id: r.id, title: V.titleOf(r), group, sub: group ? [...os, '나'].join(' · ') : '', chips, asOwner: ro, msgs, draft: obDraft };
+        }
+        return out;
+    };
     let view = 'lock', mapQ = '', contactBack = '', sheet = false, adding = false, loreOpen = false;
     let syncWhy = '', pickMore = 30;
     const profileStates = new Map();
@@ -368,7 +435,7 @@ export async function openPhone(who = null) {
         // a screen that can't be drawn says why (and in the console), instead of leaving the phone blank or on another screen
         let html;
         tidyKo(p);
-        try { html = screen(p, view, m, live() ? liveRoster() : roster, { phones: { live: live(), has: !!liveWorld(realM), shift: shiftLabel(liveWorld(realM)?.dayShift), names: live() ? liveNames() : null }, syncN: view === 'set' && !live() ? syncLeft(p, m) : null, syncRows: view.startsWith('setsync') ? syncRows() : [], syncWhy, syncPending, pickMore, loreExp, loreEnts, remake, contactBack, investing, profileState:profileStates.get(nameKey(p.owner)), placeReading, mapQ, msgHeld, msgPick, retr: retrKs, voicePick: view === 'setvoice' ? voicePick : null, voiceAdd, voiceBusy }); }
+        try { html = screen(p, view, m, live() ? liveRoster() : roster, { ...orbitUi(), phones: { live: live(), has: !!liveWorld(realM), shift: shiftLabel(liveWorld(realM)?.dayShift), names: live() ? liveNames() : null }, syncN: view === 'set' && !live() ? syncLeft(p, m) : null, syncRows: view.startsWith('setsync') ? syncRows() : [], syncWhy, syncPending, pickMore, loreExp, loreEnts, remake, contactBack, investing, profileState:profileStates.get(nameKey(p.owner)), placeReading, mapQ, msgHeld, msgPick, retr: retrKs, voicePick: view === 'setvoice' ? voicePick : null, voiceAdd, voiceBusy }); }
         catch (err) {
             console.error('[narrative-archive] phone screen', view, err);
             toastr.error(`${view} 화면을 그리지 못했어요: ${err?.message || err}`, '캐릭터 휴대폰');
@@ -638,6 +705,35 @@ export async function openPhone(who = null) {
     });
     $root.on('click','.na_ph_makeprofile',()=>{prepFrom=false;view='setprofile';editProfile();drawPhone();});
     $root.on('click', '.na_ph_pick:not(.na_ph_addp), .ax_whopick', async function (e) { e.stopPropagation(); const same = owner === this.dataset.n; owner = this.dataset.n; if (live()) liveWorld(realM).lastOwner = owner; else rememberPhoneSelection(m,owner,selectionKey); if (!same) { view = 'lock'; sheet = false; draw(); setSheet(false); } await saveMeta(); });
+    // Orbit: 목록 고르기 · 새 대화 사람 고르기 · 만들기 · 보내기 · 주인 보기 · 번역 접기
+    const obDraw = () => { drawPhone(true); };
+    const obBottom = () => { const e = $root.find('.ob_msgs')[0]; if (e) e.scrollTop = e.scrollHeight; };
+    $root.on('click', '.na_ob_tab', function (e) { e.stopPropagation(); obTab = this.dataset.v || 'all'; obDraw(); });
+    $root.on('input', '.na_ob_gname', function () { obGname = this.value; });
+    $root.on('input', '.na_ob_in', function () { obDraft = this.value; });
+    $root.on('click', '.na_ob_pick', function (e) { e.stopPropagation(); const n = this.dataset.n, k = liveKey(n); obPick = obPick.some(x => liveKey(x) === k) ? obPick.filter(x => liveKey(x) !== k) : [...obPick, n]; obDraw(); });
+    $root.on('click', '.na_ob_make', async function (e) {
+        e.stopPropagation();
+        if (!live() || !obPick.length) return;
+        const r = ensureRoom(realM, obPick);
+        if (obPick.length > 1 && obGname.trim()) nameRoom(realM, r.id, obGname);
+        readLive(realM, r.id, liveWorld(realM).persona);
+        obDraft = ''; view = `orbitroom:${r.id}`; draw(); obBottom();
+        await saveMeta();
+    });
+    $root.on('click', '.na_ob_acct', function (e) { e.stopPropagation(); obSheet = !obSheet; drawPhone(true); });
+    $root.on('click', '.na_ob_shade', function (e) { e.stopPropagation(); obSheet = false; drawPhone(true); });
+    $root.on('click', '.na_ob_who', function (e) { e.stopPropagation(); obWho = this.dataset.n === liveWorld(realM)?.persona ? '' : this.dataset.n; obSheet = false; drawPhone(); });
+    $root.on('click', '.na_ob_ko', function (e) { e.stopPropagation(); const id = this.dataset.id; if (obOpen.has(id)) obOpen.delete(id); else obOpen.add(id); const top = $root.find('.ob_msgs').scrollTop(); drawPhone(); $root.find('.ob_msgs').scrollTop(top); });
+    const obSend = async () => {
+        const r = roomNow(), t = String($root.find('.na_ob_in').val() || '').trim();
+        if (!live() || !r || !t || obAcct() !== liveWorld(realM)?.persona) return;
+        sendLive(realM, r.id, t);
+        obDraft = ''; drawPhone(); obBottom(); $root.find('.na_ob_in').trigger('focus');
+        await saveMeta();
+    };
+    $root.on('click', '.na_ob_send', e => { e.stopPropagation(); obSend(); });
+    $root.on('keydown', '.na_ob_in', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); e.stopPropagation(); obSend(); } });
     // 설정 › 휴대폰: 타임라인 (폰 1) · 실시간 (폰 2); 실시간 only once there is one
     $root.on('click', '.na_ph_pmode', async function (e) {
         e.stopPropagation();
@@ -721,7 +817,11 @@ export async function openPhone(who = null) {
         if (go === 'contact' && !view.startsWith('contact')) contactBack = view;
         // picking another payment on 고정 지출 keeps the list where it was
         const stay = ['fixed', 'banksend', 'stmt', 'wallet', 'stime', 'map'].includes(go) && view.split(':')[0] === go ? $root.find('.ax_scroll').scrollTop() : null;
-        view = ['ivnotes', 'ivschedule', 'ivhistory', 'stock', 'ivprices', 'thread', 'groupinfo', 'draft', 'page', 'acct', 'tx', 'txdoc', 'card', 'pass', 'order', 'track', 'voiceone', 'callwho', 'contact', 'noteone', 'photoone', 'searchone', 'calone', 'mailone', 'diaryone', 'snspost', 'alarm', 'hsteps', 'hsleep', 'hwork', 'hheart', 'hwater', 'hweight', 'folder', 'file', 'wcity', 'dshop', 'dorder', 'ditem', 'drate', 'mapc'].includes(go) || (['cal', 'diary', 'shop', 'voice', 'invest', 'health', 'fixed', 'banksend', 'stmt', 'wallet', 'stime', 'map', 'mapq', 'mail'].includes(go) && this.dataset.i) ? `${go}:${['ivnotes', 'ivschedule', 'ivhistory', 'stock', 'ivprices'].includes(go) ? encodeURIComponent(this.dataset.i || '') : this.dataset.i}` : go;
+        if (go === 'orbitnew') { obPick = []; obGname = ''; }
+        if (go === 'orbitroom' && this.dataset.i) { obDraft = ''; const w = liveWorld(realM); if (w?.messenger?.rooms?.[this.dataset.i] && obAcct() === w.persona) { readLive(realM, this.dataset.i, w.persona); saveMeta(); } }
+        if (go === 'orbit') obSheet = false;
+        if (this.closest('.ob_w')) obWho = '';   // (홈 위젯은 늘 페르소나의 방)
+        view = ['orbitroom', 'ivnotes', 'ivschedule', 'ivhistory', 'stock', 'ivprices', 'thread', 'groupinfo', 'draft', 'page', 'acct', 'tx', 'txdoc', 'card', 'pass', 'order', 'track', 'voiceone', 'callwho', 'contact', 'noteone', 'photoone', 'searchone', 'calone', 'mailone', 'diaryone', 'snspost', 'alarm', 'hsteps', 'hsleep', 'hwork', 'hheart', 'hwater', 'hweight', 'folder', 'file', 'wcity', 'dshop', 'dorder', 'ditem', 'drate', 'mapc'].includes(go) || (['cal', 'diary', 'shop', 'voice', 'invest', 'health', 'fixed', 'banksend', 'stmt', 'wallet', 'stime', 'map', 'mapq', 'mail'].includes(go) && this.dataset.i) ? `${go}:${['ivnotes', 'ivschedule', 'ivhistory', 'stock', 'ivprices'].includes(go) ? encodeURIComponent(this.dataset.i || '') : this.dataset.i}` : go;
         const mail = go === 'mailone' ? phone()?.mails?.[Number(this.dataset.i)] : null;
         if (mail?.unread) { mail.unread = false; saveMeta(); }
         const p0 = phone();
@@ -736,7 +836,7 @@ export async function openPhone(who = null) {
         if (go === 'mapc' && p0) { const n = placeNames(Number(String(this.dataset.i).split('~')[0]))?.ko; if (n && p0.mapSeen?.[0] !== n) { p0.mapSeen = [n, ...(p0.mapSeen || []).filter(x => x !== n)].slice(0, 5); saveMeta(); } }
         sheet = false;
         drawPhone();
-        $root.find('.na_ph_body, .ax_scroll').scrollTop(view.startsWith('thread') ? 1e6 : stay ?? 0);
+        $root.find('.na_ph_body, .ax_scroll').scrollTop(view.startsWith('thread') || view.startsWith('orbitroom') ? 1e6 : stay ?? 0);
         if (view === 'mapq' && !mapQ) $root.find('.mq_in').trigger('focus');
         if (go === 'searchone' && !phone()?.searches?.[Number(this.dataset.i)]?.results?.length) loadSearch(Number(this.dataset.i));
         if (go === 'page') openWeb(String(this.dataset.i));

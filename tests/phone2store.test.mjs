@@ -7,9 +7,10 @@ import * as L from '../src/phone2store.js';
 const src = f => readFile(new URL(`../src/${f}`, import.meta.url), 'utf8');
 const phone1 = () => ({ phones: { mara: { owner: 'Mara', now: '11-06 09:00', notes: [{ title: 'n', text: 't' }] } }, finance: { accounts: {} }, text: '## a', snapshots: [] });
 
-test('폰 2 저장: the file imports nothing, and no file but the phone window imports it', async () => {
+test('폰 2 저장: the file imports nothing, and no file but the phone window and 폰 2\'s story reader imports it', async () => {
     assert.doesNotMatch(await src('phone2store.js'), /^\s*import\b/m);
-    for (const f of (await readdir(new URL('../src/', import.meta.url))).filter(f => f.endsWith('.js') && f !== 'phone2store.js' && f !== 'phone.js'))   // 4-2: only the phone's window (switch, picker, phone()) may call it
+    const may = new Set(['phone2store.js', 'phone.js', 'phone2story.js']);   // 4-2: the phone's window; 5-1: phone2story.js (beginFromStory)
+    for (const f of (await readdir(new URL('../src/', import.meta.url))).filter(f => f.endsWith('.js') && !may.has(f)))
         assert.doesNotMatch(await src(f), /phone2store/, f);
 });
 
@@ -113,13 +114,17 @@ test('폰 2 저장: an m.live it can\'t read is left alone, never written over',
 const rich = () => ({ ...phone1(), phoneProfiles: { mara: { label: 'comfortable' } }, phonePre: { ivo: { owner: 'Ivo', year: 2026 } },
     phoneLore: ['World'], phoneLoreOff: { World: ['u1'] }, phoneScreenHolder: 'Mara', lastPhoneOwner: 'Mara', phoneStoryScope: 's1', phoneStoryRun: 3,
     glossary: 'Mara = 마라', dateOrder: 'md' });
+const MARK0 = { ranges: { '': [[0, 100]] }, titles: [], rawFrom: 101 };
 const objects = (v, out = new Set()) => { if (v && typeof v === 'object' && !out.has(v)) { out.add(v); for (const x of Object.values(v)) objects(x, out); } return out; };
 
 test('폰 2 이야기에서 시작: a deep copy of 폰 1\'s story keys, none of its objects shared, 폰 1 unchanged', () => {
     const m = rich(), before = JSON.stringify(m), mine = objects(Object.fromEntries(Object.keys(m).filter(k => k !== 'live').map(k => [k, m[k]])));
-    assert.throws(() => L.startFromStory(m, { persona: 'Ren' }), /어느 메시지까지/);
+    assert.throws(() => L.startFromStory(m, { persona: 'Ren', story: MARK0 }), /어느 메시지까지/);
+    assert.throws(() => L.startFromStory(m, { persona: 'Ren', upto: 482 }), /이야기 표시/);
     assert.equal(JSON.stringify(m), before);
-    const w = L.startFromStory(m, { persona: 'Ren', upto: 482, scope: 's1', now: 5 });
+    const w = L.startFromStory(m, { persona: 'Ren', upto: 482, scope: 's1', now: 5, story: MARK0 });
+    assert.deepEqual(w.story, MARK0);
+    assert.notEqual(w.story, MARK0);
     assert.deepEqual([w.from, w.storyUpto, w.scope, w.lastOwner], ['story', 482, 's1', 'Mara']);
     assert.deepEqual(w.phones, m.phones);
     assert.deepEqual(w.finance, m.finance);
@@ -138,14 +143,14 @@ test('폰 2 이야기에서 시작: a deep copy of 폰 1\'s story keys, none of 
 test('폰 2 처음부터 시작: an empty world, nothing of 폰 1 in it', () => {
     const m = rich(), before = JSON.stringify(m);
     const w = L.startFresh(m, { persona: 'Ren', scope: 's1' });
-    assert.deepEqual([w.from, w.storyUpto, w.phones, w.finance, w.profiles, w.pre, w.lore, w.loreOff, w.lastOwner], ['fresh', null, {}, null, {}, {}, [], {}, '']);
+    assert.deepEqual([w.from, w.storyUpto, w.story, w.phones, w.finance, w.profiles, w.pre, w.lore, w.loreOff, w.lastOwner], ['fresh', null, null, {}, null, {}, {}, [], {}, '']);
     const { live, ...rest } = m;
     assert.equal(JSON.stringify(rest), before);
 });
 
 test('폰 2 이야기에서 시작: a 폰 1 with only some keys copies those, the rest empty', () => {
     const m = { phones: {}, text: '' };
-    const w = L.startFromStory(m, { persona: 'Ren', upto: 0 });
+    const w = L.startFromStory(m, { persona: 'Ren', upto: 0, story: { ranges: {}, titles: [], rawFrom: 0 } });
     assert.deepEqual([w.phones, w.finance, w.profiles, w.lore, w.lastOwner], [{}, null, {}, [], '']);
 });
 
@@ -205,4 +210,79 @@ test('폰 2 서랍: 쓰면 폰 2에만 (폰 1은 글자 하나 안 바뀌어요)
 });
 test('폰 2 서랍: 폰 2가 없으면 만들지 않아요', () => {
     assert.throws(() => L.liveMeta({ phones: {} }), /폰 2/);
+});
+
+test('폰 2 메신저: 보내기 · 읽음 · 안 읽음 · 단체방 이름', () => {
+    const m = {};
+    L.startFresh(m, { persona: 'Yuna' });
+    const r = L.ensureRoom(m, ['Mara']), g = L.ensureRoom(m, ['Mara', 'Ivo']);
+    assert.throws(() => L.sendLive(m, r.id, '  '), /보낼 말/);
+    assert.throws(() => L.sendLive(m, 'nope', 'hi'), /없는 방/);
+    const a = L.sendLive(m, r.id, ' 안녕 ', 1000);
+    assert.deepEqual([a.from, a.text, a.at], ['Yuna', '안녕', 1000]);
+    assert.equal(L.unreadFor(r, 'Yuna'), 0);
+    assert.deepEqual(L.unreadBy(r, a), ['Mara']);
+    r.messages.push({ id: 'x', from: 'Mara', text: 'Hallo', at: 2000 });
+    assert.equal(L.unreadFor(r, 'Yuna'), 1);
+    L.readLive(m, r.id, 'yuna', 2500); L.readLive(m, r.id, 'Mara', 1500);
+    assert.equal(L.unreadFor(r, 'Yuna'), 0); assert.deepEqual(L.unreadBy(r, a), []);
+    L.readLive(m, r.id, 'Mara', 1200);   // (only forward)
+    assert.equal(r.read.mara, 1500);
+    L.readLive(m, r.id, 'Ivo', 9999);    // (not in the room: nothing)
+    assert.equal(r.read.ivo, undefined);
+    const b = L.sendLive(m, g.id, '토요일에 갈게', 3000);
+    L.readLive(m, g.id, 'Mara', 3100);
+    assert.deepEqual(L.unreadBy(g, b), ['Ivo']);
+    L.nameRoom(m, g.id, '  Varo Werkstatt '); assert.equal(g.name, 'Varo Werkstatt');
+    L.nameRoom(m, g.id, ''); assert.equal(g.name, undefined);
+    assert.equal(m.phones, undefined); assert.equal(m.finance, undefined);   // (폰 1 칸은 그대로)
+});
+// 5-2: 폰 1's story begins anew
+const withLive = () => {
+    const m = rich();
+    L.startFromStory(m, { persona: 'Lio', upto: 150, story: MARK0, dayShift: 3 });
+    L.archiveWorld(m);
+    const w = L.startFromStory(m, { persona: 'Lio', upto: 150, story: MARK0, dayShift: 3 });
+    const room = L.ensureRoom(m, ['Ren']);
+    room.messages.push({ from: 'Lio', text: 'hello' }, { from: 'Ren', text: 'hi' });
+    L.enqueueJob(m, { kind: 'reply', owner: 'Ren' });
+    L.setLiveMode(m, 'live');
+    return { m, w, room };
+};
+test('새 이야기로 비우기 · 대화만 남기기: 메신저만 남고, 폰 · 장부 · 이야기 표시 · 보관함 · 기다리던 일은 없어요', () => {
+    const { m, w, room } = withLive(), p1 = JSON.stringify({ ...m, live: undefined });
+    assert.equal(L.resetLive(m), 'chats');
+    const n = L.liveWorld(m);
+    assert.notEqual(n.id, w.id);
+    assert.deepEqual([n.from, n.storyUpto, n.story, n.dayShift, n.persona, n.lastOwner], ['fresh', null, null, 0, 'Lio', '']);
+    assert.deepEqual([n.phones, n.finance, n.profiles, n.pre, n.lore, n.loreOff], [{}, null, {}, {}, [], {}]);
+    assert.deepEqual(L.liveRooms(m).map(r => r.messages.map(x => x.text)), [['hello', 'hi']]);
+    assert.equal(L.liveRooms(m)[0].id, room.id);
+    assert.deepEqual(Object.keys(n.messenger.accounts).sort(), ['lio', 'ren']);
+    assert.deepEqual(n.queue.jobs, []);
+    assert.equal(L.nextJob(m), null);
+    assert.deepEqual(L.archivedWorlds(m), []);
+    assert.equal(L.liveMode(m), 'story');
+    assert.doesNotMatch(JSON.stringify(m.live), /"notes"|comfortable|World/);
+    assert.equal(JSON.stringify({ ...m, live: undefined }), p1);
+});
+test('새 이야기로 비우기 · 싹 다: m.live가 없어져요 (폰 1은 그대로)', () => {
+    const { m } = withLive(), p1 = JSON.stringify({ ...m, live: undefined });
+    assert.equal(L.resetLive(m, 'all'), 'all');
+    assert.equal(Object.hasOwn(m, 'live'), false);
+    assert.equal(JSON.stringify(m), p1);
+    assert.equal(L.liveMode(m), 'story');
+});
+test('새 이야기로 비우기: 폰 2가 없으면 아무것도 안 만들고, 대화가 없으면 통째로, 못 읽는 m.live는 그대로', () => {
+    const m = rich(), before = JSON.stringify(m);
+    assert.equal(L.resetLive(m), 'none');
+    assert.equal(L.resetLive(m, 'all'), 'none');
+    assert.equal(JSON.stringify(m), before);
+    L.startFresh(m, { persona: 'Lio' });
+    assert.equal(L.resetLive(m, 'chats'), 'all');
+    assert.equal(Object.hasOwn(m, 'live'), false);
+    const other = { ...rich(), live: { v: 2, something: 'newer' } }, was = JSON.stringify(other);
+    assert.equal(L.resetLive(other, 'all'), 'none');
+    assert.equal(JSON.stringify(other), was);
+    assert.throws(() => L.resetLive(m, 'some'), /all 또는 chats/);
 });
