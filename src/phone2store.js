@@ -87,6 +87,25 @@ export function archiveWorld(m, now = Date.now()) {
     return w;
 }
 export const archivedWorlds = m => [...(liveOf(m)?.archive || [])];
+// 폰 1's story begins anew (새 이야기로 비우기, "아니요, 새 이야기"): 폰 2 can't keep a story that is gone.
+//   'all':   폰 2 goes entirely, its archive too (m.live is taken off)
+//   'chats': the messenger stays (its rooms, messages and accounts, and the persona), in a world begun fresh: no phones,
+//            ledger, profiles, lore or story mark, real dates (dayShift 0), no job waiting; the archive goes
+// Either way the phone shows 타임라인 again. An m.live this version can't read is left as it is.
+// Returns what was done: 'none' (there was no 폰 2), 'all' or 'chats'.
+export function resetLive(m, how = 'chats') {
+    if (how !== 'all' && how !== 'chats') throw new Error('비우기는 all 또는 chats예요');
+    const live = liveOf(m);
+    if (!live) return 'none';
+    const w = live.world, rooms = Object.keys(w?.messenger?.rooms || {}).length;
+    if (how === 'all' || !w || !rooms) { delete m.live; return w || live.archive?.length ? 'all' : 'none'; }
+    live.world = { id: newId('w'), from: 'fresh', startedAt: w.startedAt, dayShift: 0, scope: w.scope, storyUpto: null, story: null,
+        persona: w.persona, lastOwner: '', phones: {}, finance: null, profiles: {}, pre: {}, lore: [], loreOff: {},
+        messenger: w.messenger, queue: { round: (Number(w.queue?.round) || 0) + 1, jobs: [] } };
+    live.archive = [];
+    live.mode = 'story';
+    return 'chats';
+}
 
 // 폰 2 phones: their own, never one of m.phones
 export const livePhone = (m, owner) => liveWorld(m)?.phones?.[liveKey(owner)] || null;

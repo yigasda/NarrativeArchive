@@ -4,7 +4,7 @@ import {readFile} from 'node:fs/promises';
 const enc=s=>'data:text/javascript;base64,'+Buffer.from(s).toString('base64');
 const core=enc(`export const ctx=()=>globalThis.storyTest.context;export const getMeta=()=>globalThis.storyTest.meta;export const saveMeta=async()=>{globalThis.storyTest.saves++};`);
 const src=await readFile(new URL('../src/phonestory.js',import.meta.url),'utf8');
-const story=await import(enc(src.replace("'./core.js'",JSON.stringify(core)).replace("'./phonesync.js'",JSON.stringify(new URL('../src/phonesync.js',import.meta.url).href))));
+const story=await import(enc(src.replace("'./core.js'",JSON.stringify(core)).replace("'./phonesync.js'",JSON.stringify(new URL('../src/phonesync.js',import.meta.url).href)).replace("'./phone2store.js'",JSON.stringify(new URL('../src/phone2store.js',import.meta.url).href))));
 function setup(){
  const m={text:'Story archive',phoneScreenHolder:'Mara',phoneProfiles:{newPerson:{type:'character',id:'new.png'}},phones:{oscar:{owner:'Oscar',wealthPlan:{currency:'EUR'}}},finance:{accounts:{a:{amount:42}},prices:{},transfers:{}},lastPhoneOwner:'Oscar',phoneLore:['old'],phoneLoreOff:{old:[1]}};
  const state=globalThis.storyTest={meta:m,saves:0,prompts:0,choice:'keep',confirmed:true};
@@ -104,4 +104,21 @@ test('점검 7: 새로 시작 takes this browser\'s record of rounds to put back
   assert.equal(store.has('narrativearchive:sync:scope-x'),false);
   assert.equal(m.phoneStoryRun,run+1);
  } finally { globalThis.localStorage=was; }
+});
+
+// 5-2: 폰 2 (m.live) when the story begins anew; 폰 1's own reset is the same with or without it
+const L2=await import(new URL('../src/phone2store.js',import.meta.url).href);
+const liveIn=m=>{L2.startFromStory(m,{persona:'Lio',upto:9,story:{ranges:{},titles:[],rawFrom:0}});L2.ensureRoom(m,['Ren']).messages.push({from:'Ren',text:'hi'});L2.setLiveMode(m,'live');};
+test('새 이야기: 폰 1이 비워지는 건 폰 2가 있든 없든 같고, 폰 2는 대화만 남아요 (기본) / 통째로 없어져요 (all)',()=>{
+ const a=setup().m,b=setup().m,c=setup().m;liveIn(b);liveIn(c);
+ story.resetPhoneStory(a,'s');story.resetPhoneStory(b,'s');story.resetPhoneStory(c,'s',{live:'all'});
+ const rest=m=>JSON.stringify({...m,live:undefined});
+ assert.equal(rest(b),rest(a));assert.equal(rest(c),rest(a));
+ assert.equal(Object.hasOwn(a,'live'),false);assert.equal(Object.hasOwn(c,'live'),false);
+ assert.deepEqual(L2.liveRooms(b).map(r=>r.messages.map(x=>x.text)),[['hi']]);assert.deepEqual(L2.liveWorld(b).phones,{});assert.equal(L2.liveWorld(b).storyUpto,null);assert.equal(L2.liveMode(b),'story');
+});
+test('새 이야기: 못 읽는 m.live가 있어도 폰 1 비우기는 그대로 돼요',()=>{
+ const a=setup().m,b=setup().m;b.live={v:9,x:1};
+ story.resetPhoneStory(a,'s');story.resetPhoneStory(b,'s');
+ assert.deepEqual(b.live,{v:9,x:1});assert.equal(JSON.stringify({...b,live:undefined}),JSON.stringify({...a,live:undefined}));
 });

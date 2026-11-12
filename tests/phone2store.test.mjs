@@ -9,7 +9,7 @@ const phone1 = () => ({ phones: { mara: { owner: 'Mara', now: '11-06 09:00', not
 
 test('폰 2 저장: the file imports nothing, and no file but the phone window and 폰 2\'s story reader imports it', async () => {
     assert.doesNotMatch(await src('phone2store.js'), /^\s*import\b/m);
-    const may = new Set(['phone2store.js', 'phone.js', 'phone2story.js']);   // 4-2: the phone's window; 5-1: phone2story.js (beginFromStory)
+    const may = new Set(['phone2store.js', 'phone.js', 'phone2story.js', 'phonestory.js']);   // 4-2: the phone's window; 5-1: phone2story.js (beginFromStory); 5-2: phonestory.js (resetLive, when the story begins anew)
     for (const f of (await readdir(new URL('../src/', import.meta.url))).filter(f => f.endsWith('.js') && !may.has(f)))
         assert.doesNotMatch(await src(f), /phone2store/, f);
 });
@@ -210,4 +210,54 @@ test('폰 2 서랍: 쓰면 폰 2에만 (폰 1은 글자 하나 안 바뀌어요)
 });
 test('폰 2 서랍: 폰 2가 없으면 만들지 않아요', () => {
     assert.throws(() => L.liveMeta({ phones: {} }), /폰 2/);
+});
+
+// 5-2: 폰 1's story begins anew
+const withLive = () => {
+    const m = rich();
+    L.startFromStory(m, { persona: 'Lio', upto: 150, story: MARK0, dayShift: 3 });
+    L.archiveWorld(m);
+    const w = L.startFromStory(m, { persona: 'Lio', upto: 150, story: MARK0, dayShift: 3 });
+    const room = L.ensureRoom(m, ['Ren']);
+    room.messages.push({ from: 'Lio', text: 'hello' }, { from: 'Ren', text: 'hi' });
+    L.enqueueJob(m, { kind: 'reply', owner: 'Ren' });
+    L.setLiveMode(m, 'live');
+    return { m, w, room };
+};
+test('새 이야기로 비우기 · 대화만 남기기: 메신저만 남고, 폰 · 장부 · 이야기 표시 · 보관함 · 기다리던 일은 없어요', () => {
+    const { m, w, room } = withLive(), p1 = JSON.stringify({ ...m, live: undefined });
+    assert.equal(L.resetLive(m), 'chats');
+    const n = L.liveWorld(m);
+    assert.notEqual(n.id, w.id);
+    assert.deepEqual([n.from, n.storyUpto, n.story, n.dayShift, n.persona, n.lastOwner], ['fresh', null, null, 0, 'Lio', '']);
+    assert.deepEqual([n.phones, n.finance, n.profiles, n.pre, n.lore, n.loreOff], [{}, null, {}, {}, [], {}]);
+    assert.deepEqual(L.liveRooms(m).map(r => r.messages.map(x => x.text)), [['hello', 'hi']]);
+    assert.equal(L.liveRooms(m)[0].id, room.id);
+    assert.deepEqual(Object.keys(n.messenger.accounts).sort(), ['lio', 'ren']);
+    assert.deepEqual(n.queue.jobs, []);
+    assert.equal(L.nextJob(m), null);
+    assert.deepEqual(L.archivedWorlds(m), []);
+    assert.equal(L.liveMode(m), 'story');
+    assert.doesNotMatch(JSON.stringify(m.live), /"notes"|comfortable|World/);
+    assert.equal(JSON.stringify({ ...m, live: undefined }), p1);
+});
+test('새 이야기로 비우기 · 싹 다: m.live가 없어져요 (폰 1은 그대로)', () => {
+    const { m } = withLive(), p1 = JSON.stringify({ ...m, live: undefined });
+    assert.equal(L.resetLive(m, 'all'), 'all');
+    assert.equal(Object.hasOwn(m, 'live'), false);
+    assert.equal(JSON.stringify(m), p1);
+    assert.equal(L.liveMode(m), 'story');
+});
+test('새 이야기로 비우기: 폰 2가 없으면 아무것도 안 만들고, 대화가 없으면 통째로, 못 읽는 m.live는 그대로', () => {
+    const m = rich(), before = JSON.stringify(m);
+    assert.equal(L.resetLive(m), 'none');
+    assert.equal(L.resetLive(m, 'all'), 'none');
+    assert.equal(JSON.stringify(m), before);
+    L.startFresh(m, { persona: 'Lio' });
+    assert.equal(L.resetLive(m, 'chats'), 'all');
+    assert.equal(Object.hasOwn(m, 'live'), false);
+    const other = { ...rich(), live: { v: 2, something: 'newer' } }, was = JSON.stringify(other);
+    assert.equal(L.resetLive(other, 'all'), 'none');
+    assert.equal(JSON.stringify(other), was);
+    assert.throws(() => L.resetLive(m, 'some'), /all 또는 chats/);
 });
