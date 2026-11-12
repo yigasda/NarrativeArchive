@@ -9,6 +9,25 @@
 
 | 도시 | 새 동네 | 시간대 |
 |---|---|---|
+| 베를린 | Friedrichshain | Europe/Berlin |
+| 베를린 | Neukolln | Europe/Berlin |
+| 드레스덴 | Äußere Neustadt · Aussere Neustadt | Europe/Berlin |
+| 프랑크푸르트 | Bahnhofsviertel | Europe/Berlin |
+| 함부르크 | St. Georg | Europe/Berlin |
+| 쾰른 | Belgisches Viertel | Europe/Berlin |
+
+| 새 곳 | 다른 이름 | 시간대 |
+|---|---|---|
+| Garmisch-Partenkirchen | Garmisch-Partenkirchen | Europe/Berlin |
+| Kiel | Kiel | Europe/Berlin |
+| Rothenburg ob der Tauber | Rothenburg ob der Tauber | Europe/Berlin |
+| Rüdesheim am Rhein | Rudesheim am Rhein · Rüdesheim am Rhein | Europe/Berlin |
+| Westerland | Westerland | Europe/Berlin |
+
+## 독일
+
+| 도시 | 새 동네 | 시간대 |
+|---|---|---|
 | 베를린 | 그로피우스슈타트 · Gropiusstadt | Europe/Berlin |
 | 베를린 | Zehlendorf | Europe/Berlin |
 | 베를린 | 슈판다우 · Altstadt Spandau | Europe/Berlin |
@@ -89,6 +108,12 @@
 
 | 새 곳 | 다른 이름 | 시간대 |
 |---|---|---|
+| 제주공항 | Jeju International Airport | Asia/Seoul |
+| 제주 애월 | Aewol | Asia/Seoul |
+| 제주 함덕 | Hamdeok Beach | Asia/Seoul |
+| 제주 성산 | Seongsan Ilchulbong | Asia/Seoul |
+| 제주 중문 | Jungmun Resort | Asia/Seoul |
+| 제주 협재 | Hyeopjae Beach | Asia/Seoul |
 | 설악산 소공원 | Seoraksan Sogongwon | Asia/Seoul |
 | 평창 대관령 목장 | Daegwallyeong Sheep Farm | Asia/Seoul |
 | 지리산 화엄사 | Hwaeomsa | Asia/Seoul |

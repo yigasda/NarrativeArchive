@@ -101,26 +101,24 @@ export function mapCityScreen(p, now, m, i = '') {
     const seen = g ? `다녀간 곳 ${g.rows.length}` : '';
     const hoodChips = v.hoods.length ? v.hoods.map(h => `<button type="button" class="mq_chip${v.hood?.k === h ? ' on' : ''}" data-go="mapc" data-i="${v.hood?.k === h ? at(place) : at(place, h)}">${esc(HINT[h][3])}</button>`).join('') : '';
     if (v.hood) {
-        const next = L.maps[(L.maps.indexOf(k) + 1) % L.maps.length];
         return `<div class="mp_wx mq_wx mq_one${dark ? ' mp_dark' : ''}"><div class="mp_bg mq_bgfull"${tileAt(PLACE[place][0], [v.hood.label, ...(HINT[v.hood.k]?.[1] || [])], g ? g.rows.slice(0, 6).map(r => r.place) : [])}>${art}</div>${axBar(p, now, dark ? '#fff' : '#111')}${axTop(axCb('mapc', 'back').replace('data-go="mapc"', `data-go="mapc" data-i="${at(place)}"`), mapFindBtn())}
           <div class="mq_hc">${hoodChips}</div>
           <div class="mq_fc">${TILE_CREDIT}${country}
             <div class="mq_tl"><b>${esc(v.hood.label)}</b>${dark ? '<span class="mq_pill">밤 지도</span>' : ''}</div>
-            <span class="mq_nm">${esc(kindName(k))}${seen ? ` · ${seen}` : ''}</span>
-            <div class="mq_btns"><button type="button" class="mq_b2" data-go="mapc" data-i="${flip}">${dark ? '☀ 낮으로' : '☾ 밤으로'}</button><button type="button" class="mq_b1" data-go="mapc" data-i="${at(place, hood, next, night || '')}">${icon('mqswap', 15, '#fff', 2.2)} 다른 지도</button></div>
+            ${seen ? `<span class="mq_nm">${seen}</span>` : ''}
+            <div class="mq_btns"><button type="button" class="mq_b2" data-go="mapc" data-i="${flip}">${dark ? '☀ 낮으로' : '☾ 밤으로'}</button></div>
           </div>${axInd(dark ? '#fff' : '#111')}</div>`;
     }
-    const thumbs = L.maps.slice(0, 8).map(x => `<button type="button" class="mq_th${x === k ? ' on' : ''}" data-go="mapc" data-i="${at(place, -1, x, night || '')}" aria-label="${esc(kindName(x))}"><svg viewBox="0 0 ${W} 430" width="96" height="78" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${townSvg(x, W, 430, L.seed, dark, L.hint)}</svg><span>${esc(kindName(x))}</span></button>`).join('');
+    // the town's neighbourhoods, each its own little map (the tile map draws it; till then, and offline, its drawn map)
+    const thumbs = v.hoods.slice(0, 8).map(h => `<button type="button" class="mq_th mq_hth" data-go="mapc" data-i="${at(place, h)}" aria-label="${esc(HINT[h][3])}" data-tt="${esc(JSON.stringify({ city: PLACE[place][0], words: [HINT[h][3], ...HINT[h][1]].slice(0, 10), dark }))}"><svg viewBox="0 0 ${W} 430" width="96" height="78" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${townSvg(HINT[h][2][0] || k, W, 430, `${L.seed}~${h}`, dark, HINT[h][1].join(' '))}</svg><span>${esc(HINT[h][3])}</span></button>`).join('');
     return `<div class="mp_wx mq_wx${dark ? ' mp_dark' : ''}"><div class="mp_bg mq_bgcity"${tileAt(PLACE[place][0], g ? g.rows.map(r => r.place) : [], g ? g.rows.slice(0, 6).map(r => r.place) : [])}>${art}</div>${axBar(p, now, dark ? '#fff' : '#111')}${axTop(axCb('mapq'), mapFindBtn())}
       <div class="ax_scroll"><i class="mp_gap mq_gap"></i><div class="mp_sheet"><i class="mp_grab"></i>${TILE_CREDIT}
         <div class="mq_hd">${country}
           <div class="mq_tl"><b>${esc(v.ko)}</b><button type="button" class="mq_dn" data-go="mapc" data-i="${flip}">${dark ? '☾ 밤 · ☀ 낮으로' : '☀ 낮 · ☾ 밤으로'}</button></div>
           ${nameLine ? `<span class="mq_nm">${esc(nameLine)}</span>` : ''}
-          <span class="mq_nm">${esc(kindName(k))} 지도</span></div>
+</div>
         ${g ? `<div class="ax_card"><button type="button" class="ax_rw ax_place" data-go="map" data-i="${esc(g.k)}"><span class="ax_si" style="background: var(--axc)">${ax('pindot', 17, 'var(--axd)', 2.2)}</span><span class="ax_tx"><span class="ax_n">${seen}</span><span class="ax_p1">${esc(g.rows.slice(0, 3).map(r => r.place).join(' · '))}</span></span>${axChev}</button></div>` : ''}
-        <div class="ax_sec">어울리는 지도 · ${L.maps.length}</div>
-        <div class="mq_ths">${thumbs}</div>
-        ${hoodChips ? `<div class="ax_sec">동네</div><div class="mq_chips">${hoodChips}</div>` : ''}
+        ${thumbs ? `<div class="ax_sec">주변 동네 · ${Math.min(8, v.hoods.length)}</div><div class="mq_ths">${thumbs}</div>` : ''}
         <i class="ax_pad"></i></div></div>
       ${axInd()}</div>`;
 }

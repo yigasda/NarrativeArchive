@@ -787,7 +787,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .mq_ths { display: flex; gap: 10px; padding: 4px 16px 10px; overflow-x: auto; scrollbar-width: none; }
 .mq_ths::-webkit-scrollbar { display: none; }
 .ax .mq_th { position: relative; width: 96px; height: 78px; padding: 0; border-radius: 14px; --axr: 14px; overflow: hidden; flex: none; --axbg: #e9ecf0; --axsh: 0 1px 2px rgba(22, 27, 34, 0.05), 0 6px 16px rgba(22, 27, 34, 0.1); }
-.mq_th svg { display: block; }
+.mq_th :is(svg, .mq_timg) { display: block; }
 .mq_th span { position: absolute; left: 0; right: 0; bottom: 0; padding: 16px 7px 5px; background: linear-gradient(transparent, rgba(0, 0, 0, 0.5)); color: #fff; --axfg: #fff; font-size: 10.5px; --axfs: 10.5px; font-weight: 600; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ax .mq_th.on { outline: 2.5px solid var(--axd); outline-offset: 2px; }
 /* a neighbourhood: its map on the whole screen, a card over it */

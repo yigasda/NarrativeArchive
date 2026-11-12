@@ -27,6 +27,7 @@ h1 { font-size: 18px; margin: 4px 0 0; }
 .credit { position: absolute; right: 8px; bottom: 6px; font: 500 8.5px/1 -apple-system, 'Noto Sans KR', sans-serif; color: #8a8f98; text-shadow: 0 0 2px #fff, 0 0 2px #fff; pointer-events: auto; }
 .credit a { color: inherit; text-decoration: none; }
 .frame.showold .credit { display: none; }
+.frame.night .credit { color: #9aa3b0; text-shadow: 0 0 2px rgba(0,0,0,.6); }
 .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .seg { display: inline-flex; background: var(--card); border-radius: 999px; padding: 3px; box-shadow: 0 1px 2px rgba(22,27,34,.06); }
 .seg button { border: 0; background: transparent; color: var(--ink); font: 600 12.5px/1 inherit; font-family: inherit; padding: 7px 12px; border-radius: 999px; cursor: pointer; }
@@ -54,6 +55,7 @@ h1 { font-size: 18px; margin: 4px 0 0; }
     <div class="seg"><button id="bNew" class="on">새 지도</button><button id="bOld">지금 지도</button></div>
     <span class="stat" id="stat">불러오는 중…</span>
   </div>
+  <div class="row"><span class="stat">밤</span><div class="seg" id="night"></div></div>
 
   <div class="note" id="note"><b>보는 법</b> · 독일 6곳은 "지금 지도"로 바꿔서 같은 자리를 비교할 수 있어요. 사막은 모래, 눈 덮인 곳은 눈(북쪽 먼바다는 깊은 물), 산호초 바다는 에메랄드로 저절로 칠해요. 처음 여는 곳은 타일을 받아서 조금 걸리고, 한 번 본 곳은 빨라요.</div>
 </div>
@@ -124,11 +126,13 @@ const W = (px, z0) => ['interpolate', ['exponential', 1.6], ['zoom'], z0 - 2, px
 const CJK = '-apple-system, "Noto Sans KR", "Hiragino Sans", "PingFang SC", sans-serif';
 // 장소: 종류별 색 동그라미 + 같은 색 글씨. 세 겹으로 놓아요(위 겹부터 자리를 잡아요): 볼거리 · 공원 → 역 · 관청 → 먹고 마시기(서로 멀리, 중요한 것만)
 const FOOD = ['food', 'cafe', 'bar', 'beer', 'bakery', 'wine'], TRANSIT = ['train', 'metro', 'tram', 'bus', 'ferry', 'cable', 'post', 'police', 'townhall', 'bank', 'info', 'school', 'shop'];
+let HALO = '#ffffff';
+const lighter = h => '#' + [1, 3, 5].map(i => Math.round(parseInt(h.slice(i, i + 2), 16) * 0.5 + 255 * 0.5).toString(16).padStart(2, '0')).join('');
 const poi = (id, f, pad, maxRank) => ({ id, type: 'symbol', source: 'pois',
   filter: ['all', f, ['<=', ['coalesce', ['get', 'rank'], 30], maxRank], ['!', ['in', ['get', 'subclass'], ['literal', ['bus_stop', 'subway_entrance', 'platform', 'supermarket', 'convenience', 'fuel', 'parking']]]]],
   layout: { 'icon-image': ['get', 'k'], 'icon-size': 1, 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Bold'], 'text-size': 10.5, 'text-anchor': 'left', 'text-offset': [0.95, 0],
     'symbol-sort-key': ['coalesce', ['get', 'rank'], 30], 'icon-padding': pad, 'text-padding': 6, 'text-optional': false, 'text-max-width': 9 },
-  paint: { 'text-color': ['get', 'col'], 'text-halo-color': '#ffffff', 'text-halo-width': 1.5 } });
+  paint: { 'text-color': ['get', 'col'], 'text-halo-color': HALO, 'text-halo-width': 1.5 } });
 function style(z0, P = C, main = '') {
   const C = P, hill = 0;
   const mid = ['secondary', 'tertiary'], maj = ['primary', 'trunk'], name = ['get', 'name'];
@@ -165,22 +169,28 @@ function style(z0, P = C, main = '') {
       road('motEdge', ['motorway'], W(11 + 1.35, z0), C.majorEdge), road('motRoad', ['motorway'], W(11, z0), C.major),
       { id: 'street', type: 'symbol', source: 't', 'source-layer': 'transportation_name', filter: ['in', ['get', 'class'], ['literal', ['primary', 'secondary', 'tertiary', 'minor']]],
         layout: { 'symbol-placement': 'line', 'text-field': name, 'text-font': ['Noto Sans Regular'], 'text-size': 9.5, 'symbol-spacing': 320, 'text-max-angle': 28, 'text-padding': 6 },
-        paint: { 'text-color': C.street, 'text-halo-color': '#ffffff', 'text-halo-width': 1.3 } },
+        paint: { 'text-color': C.street, 'text-halo-color': C.halo || '#ffffff', 'text-halo-width': 1.3 } },
       { id: 'waterName', type: 'symbol', source: 't', 'source-layer': 'water_name', layout: { 'text-field': name, 'text-font': ['Noto Sans Italic'], 'text-size': 10.5 },
-        paint: { 'text-color': C.waterInk, 'text-halo-color': '#ffffff', 'text-halo-width': 1.2 } },
+        paint: { 'text-color': C.waterInk, 'text-halo-color': C.halo || '#ffffff', 'text-halo-width': 1.2 } },
       { id: 'riverName', type: 'symbol', source: 't', 'source-layer': 'waterway', filter: ['==', ['get', 'class'], 'river'],
         layout: { 'symbol-placement': 'line', 'text-field': name, 'text-font': ['Noto Sans Italic'], 'text-size': 10.5, 'symbol-spacing': 400 },
-        paint: { 'text-color': C.waterInk, 'text-halo-color': '#ffffff', 'text-halo-width': 1.2 } },
+        paint: { 'text-color': C.waterInk, 'text-halo-color': C.halo || '#ffffff', 'text-halo-width': 1.2 } },
       // 장소: 종류별 색 동그라미 + 같은 색 글씨. 중요한 것부터, 서로 넉넉히 떨어지게
       { id: 'hood', type: 'symbol', source: 't', 'source-layer': 'place', filter: ['all', ['in', ['get', 'class'], ['literal', ['suburb', 'quarter', 'neighbourhood']]], ['!=', ['get', 'name'], main]],
         layout: { 'text-field': ['upcase', name], 'text-font': ['Noto Sans Bold'], 'text-size': 10, 'text-letter-spacing': 0.12, 'text-padding': 24 },
-        paint: { 'text-color': C.hood, 'text-halo-color': '#ffffff', 'text-halo-width': 1.3 } },
+        paint: { 'text-color': C.hood, 'text-halo-color': C.halo || '#ffffff', 'text-halo-width': 1.3 } },
       poi('poi', ['has', 'k'], 4, 999),
     ] };
 }
 // 큰 동네 이름(MAIN): 진한 차콜 15px 굵게, 가운데 하나 — 곳마다 우리가 아는 이름이라 타일 말고 따로 얹어요
+// 밤 색 시안 세 벌(11-12): 고르면 앱의 밤 지도가 돼요
+const NIGHT = [
+  ['밤 A · 남색', { land: '#1e2633', park: '#28463b', forest: '#243f35', vine: '#2e4232', water: '#26557a', road: '#38424f', edge: '#2b3441', major: '#5a5236', majorEdge: '#4a4430', shop: '#2a2a35', school: '#29303a', works: '#262c35', rail: '#55606d', railDash: '#2b3441', rock: '#262f3d', sand: '#2b3240', ice: '#3a4556', hood: '#9aa4b2', street: '#8a94a2', waterInk: '#7fb6d9', main: '#eef1f5', halo: '#1e2633' }],
+  ['밤 B · 차콜', { land: '#232323', park: '#30473a', forest: '#2a3e32', vine: '#344535', water: '#27495e', road: '#3c3c3c', edge: '#2e2e2e', major: '#5e5330', majorEdge: '#4d4428', shop: '#2c2a28', school: '#2e2c29', works: '#2a2a2a', rail: '#5a5a5a', railDash: '#2e2e2e', rock: '#2a2a2a', sand: '#302d29', ice: '#444444', hood: '#a3a3a3', street: '#8f8f8f', waterInk: '#86b4cc', main: '#f2f2f2', halo: '#232323' }],
+  ['밤 C · 푸른 저녁', { land: '#39445a', park: '#446a5d', forest: '#3d6054', vine: '#4a6656', water: '#2f6f99', road: '#56627a', edge: '#475269', major: '#8a7c4e', majorEdge: '#736840', shop: '#463f52', school: '#454b5e', works: '#414a5c', rail: '#7a8499', railDash: '#475269', rock: '#454f64', sand: '#4a5266', ice: '#6b7a91', hood: '#c3cad6', street: '#aeb7c6', waterInk: '#9fd0ee', main: '#ffffff', halo: '#39445a' }],
+];
 const mainLayer = P => ({ id: 'main', type: 'symbol', source: 'main', layout: { 'text-field': ['get', 'n'], 'text-font': ['Noto Sans Bold'], 'text-size': 15, 'text-allow-overlap': true },
-  paint: { 'text-color': P.main, 'text-halo-color': '#ffffff', 'text-halo-width': 1.5 } });
+  paint: { 'text-color': P.main, 'text-halo-color': P.halo || '#ffffff', 'text-halo-width': 1.5 } });
 // 아이콘: 지도 룰의 77종 중 쓰는 것, 색 동그라미(r 7.5) 위 흰 선 그림 — 필요할 때 만들어요
 function iconImage(k) {
   const [d, off, col] = ICONS[k], s = 2;
@@ -190,7 +200,10 @@ function iconImage(k) {
 }
 const frame = document.getElementById('frame'), stat = document.getElementById('stat'), old = document.getElementById('old');
 const zoomFor = (lat, span) => Math.log2(78271.517 * Math.cos(lat * Math.PI / 180) * frame.clientWidth / span);
-let map, deep, cur = 0, t0 = 0, palName = '', z0now = 14, found = [];
+let map, deep, cur = 0, t0 = 0, palName = '', z0now = 14, found = [], night = 0;
+function nightRow() { const seg = document.getElementById('night'); seg.innerHTML = '';
+  ['낮', ...NIGHT.map(x => x[0])].forEach((n, k) => { const b = document.createElement('button'); b.textContent = n; b.classList.toggle('on', k === night);
+    b.onclick = () => { night = k; nightRow(); const v = map && { c: map.getCenter(), z: map.getZoom() }; show(cur, v); }; seg.appendChild(b); }); }
 // 장소 고르기(지도 룰): 볼거리 → 먹고 마시기(하나) → 역(하나) → 그 밖, 한 화면 4개(확대하면 조금 더), 서로 120px 넘게, 큰 이름 둘레는 비워요
 const TIER = k => ['landmark', 'gate', 'skyscraper', 'square', 'artwork', 'bridge', 'clock', 'windmill', 'observatory', 'chapel', 'synagogue', 'pagoda', 'museum', 'gallery', 'theatre', 'cinema', 'music', 'castle', 'palace', 'monument', 'statue', 'ruin', 'view', 'tower', 'lighthouse', 'zoo', 'aquarium', 'wheel',
   'park', 'garden', 'stadium', 'church', 'cathedral', 'mosque', 'temple', 'shrine', 'library', 'university', 'market', 'mall', 'beach', 'fountain', 'spring', 'mountain', 'harbour', 'airport'].includes(k) ? 0
@@ -216,7 +229,7 @@ function pickPlaces() {
     if (k === 'hospital' && p.subclass !== 'hospital') continue;
     const xy = map.project(f.geometry.coordinates); if (xy.x < 24 || xy.x > w - 110 || xy.y < 18 || xy.y > h - 40) continue;
     if (Math.hypot(xy.x - c.x, xy.y - c.y) < 70) continue;
-    cand.push({ f: { ...f, properties: { ...p, k, col: ICONS[k][2] } }, k, t: TIER(k), r: p.rank ?? 30, xy });
+    cand.push({ f: { ...f, properties: { ...p, k, col: night ? lighter(ICONS[k][2]) : ICONS[k][2] } }, k, t: TIER(k), r: p.rank ?? 30, xy });
   }
   cand.sort((a, b) => a.t - b.t || a.r - b.r);
   const out = [], per = {};
@@ -247,7 +260,8 @@ function deepMap(center, zoom) {
 }
 function show(i, keep) {
   cur = i; const [, main, lat, lon, span, svg, type] = PLACES[i], z0 = zoomFor(lat, span);
-  const [over, pn] = palFor(type, lat), P = { ...C, ...over }; palName = pn;
+  const [over, pn] = palFor(type, lat), P = { ...C, ...over, ...(night ? NIGHT[night - 1][1] : {}) }; palName = pn + (night ? (pn ? ' · ' : '') + NIGHT[night - 1][0] : ''); HALO = P.halo || '#ffffff';
+  frame.style.background = P.land; frame.classList.toggle('night', !!night);
   document.querySelectorAll('#places button').forEach((b, k) => b.classList.toggle('on', k === i));
   document.getElementById('bOld').disabled = !svg; if (!svg) setOld(false); else old.src = 'svg/' + svg + '.svg';
   stat.textContent = '불러오는 중…'; t0 = performance.now();
@@ -268,6 +282,7 @@ document.getElementById('bNew').onclick = () => setOld(false);
 document.getElementById('bOld').onclick = () => { if (PLACES[cur][5]) setOld(true); };
 const box = document.getElementById('places');
 PLACES.forEach((p, i) => { const b = document.createElement('button'); b.textContent = p[0]; b.onclick = () => show(i); box.appendChild(b); });
+nightRow();
 if (!window.maplibregl) stat.innerHTML = '<span class="err">MapLibre를 못 받았어요(인터넷 연결을 확인해 주세요)</span>'; else show(0);
 </script>
 </body>

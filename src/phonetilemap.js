@@ -269,6 +269,7 @@ export function tileWatch(root) {
     let busy = false;
     sheetPull(root);
     new MutationObserver(() => {
+        tileThumbs(root);
         const host = root.querySelector('.mp_bg[data-tm]');
         if (!host) { if (live.el?.isConnected && !live.el.closest('.mp_bg[data-tm]')) live.el.remove(); return; }
         if (host._tm || busy) return;
@@ -313,4 +314,36 @@ function sheetPull(root) {
         else if (low && (dy < -24 || (Math.abs(dy) < 6 && Math.abs(dx) < 6))) setLow(wx, false);
     }, true);
     root.addEventListener('pointercancel', () => { g = null; }, true);
+}
+// a town's neighbourhoods as little maps (찾은 도시 › 주변 동네): one hidden map goes to each in turn and takes a picture
+// (no labels: at that size they are noise); the drawn map stays where it cannot
+const THUMB = new Map();   // slug~dark → picture
+let thumbMap = null, thumbQ = Promise.resolve();
+function thumbStyle(z0, P) { const s = tileStyle(z0, P); s.layers = s.layers.filter(l => l.type !== 'symbol'); return s; }
+function tileThumbs(root) {
+    for (const b of root.querySelectorAll('.mq_hth[data-tt]:not([data-tdone])')) {
+        b.dataset.tdone = '1';
+        thumbQ = thumbQ.then(() => thumbOne(b)).catch(() => {});
+    }
+}
+async function thumbOne(b) {
+    if (!b.isConnected) return;
+    const want = JSON.parse(b.dataset.tt), spot = spotIn(await loadSpots(), want.city, want.words || []);
+    if (!spot) return;
+    const k = `${spot[0]}~${want.dark ? 1 : 0}`;
+    let pic = THUMB.get(k);
+    if (!pic) {
+        const gl = await loadLib();
+        const P = palette(spot[2], spot[3]), w = 96, h = 78, z0 = Math.log2(78271.517 * Math.cos(spot[3] * Math.PI / 180) * w / 900);
+        let el = document.getElementById('na_tm_thumb');
+        if (!el) { el = document.createElement('div'); el.id = 'na_tm_thumb'; el.setAttribute('aria-hidden', 'true'); el.style.cssText = `position: fixed; left: -10000px; top: 0; width: ${w}px; height: ${h}px; pointer-events: none;`; document.body.appendChild(el); }
+        if (!thumbMap) thumbMap = new gl.Map({ container: el, interactive: false, attributionControl: false, preserveDrawingBuffer: true, fadeDuration: 0, style: thumbStyle(z0, P), center: [spot[4], spot[3]], zoom: z0 });
+        else { thumbMap.setStyle(thumbStyle(z0, P)); thumbMap.jumpTo({ center: [spot[4], spot[3]], zoom: z0 }); }
+        pic = await new Promise(res => { const t = setTimeout(() => res(''), 8000); thumbMap.once('idle', () => { clearTimeout(t); res(thumbMap.loaded() ? thumbMap.getCanvas().toDataURL('image/png') : ''); }); });
+        if (!pic) return;
+        THUMB.set(k, pic);
+    }
+    if (!b.isConnected) return;
+    const img = document.createElement('img'); img.src = pic; img.alt = ''; img.width = 96; img.height = 78; img.className = 'mq_timg';
+    b.querySelector('svg')?.replaceWith(img);
 }

@@ -9,9 +9,9 @@ HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.join(HERE, '..
 TABLE = os.path.join(ROOT, 'docs', 'mockups', 'phone-map', 'towns', 'citytable.md')
 A, B = '<!-- 받을 목록에서: 시작 (osm/lists/tocity.py가 써요) -->', '<!-- 받을 목록에서: 끝 -->'
 
-SEC = {'de': '독일', 'kr': '한국', 'jp': '일본', 'cn': '중국 · 대만 · 홍콩', 'gb': '영국 · 아일랜드', 'fr': '프랑스', 'it': '이탈리아',
+SEC = {'de0': '독일', 'de': '독일', 'kr': '한국', 'jp': '일본', 'cn': '중국 · 대만 · 홍콩', 'gb': '영국 · 아일랜드', 'fr': '프랑스', 'it': '이탈리아',
        'us': '미국', 'au': '호주 · 뉴질랜드', 'ca': '캐나다', 'no': '노르웨이'}
-FILES = {'de': 'de-plus', 'kr': 'kr', 'jp': 'jp', 'us': 'us', 'gb': 'gb', 'fr': 'fr', 'it': 'it', 'cn': 'cn', 'au': 'au', 'ca': 'ca', 'no': 'no'}
+FILES = {'de0': 'de', 'de': 'de-plus', 'kr': 'kr', 'jp': 'jp', 'us': 'us', 'gb': 'gb', 'fr': 'fr', 'it': 'it', 'cn': 'cn', 'au': 'au', 'ca': 'ca', 'no': 'no'}
 # slug 앞 → 도시(지도 표 · 표에 쓰는 이름)
 CITY_OF = {'berlin': '베를린', 'muenchen': '뮌헨', 'frankfurt': '프랑크푸르트', 'hamburg': '함부르크', 'koeln': '쾰른', 'leipzig': '라이프치히',
     'dresden': '드레스덴', 'stuttgart': '슈투트가르트', 'potsdam': '포츠담', 'hannover': '하노버', 'duesseldorf': '뒤셀도르프', 'nuernberg': '뉘른베르크',
@@ -30,7 +30,7 @@ CITY_EN = {'베를린': 'Berlin', '뮌헨': 'München', '프랑크푸르트': 'F
     '트론헤임': 'Trondheim', '스타방에르': 'Stavanger', '트롬쇠': 'Tromsø'}
 SPECIAL_CITY = {'narita-airport': '도쿄', 'kansai-airport': '오사카', 'shanghai-pudong-airport': '상하이', 'beijing-airport': '베이징', 'mississauga': '토론토',
     'markham': '토론토', 'oakville': '토론토', 'north-vancouver': '밴쿠버', 'burnaby': '밴쿠버', 'richmond-bc': '밴쿠버', 'laval': '몬트리올', 'mutianyu': None}
-ONE_TZ = {'de': 'Europe/Berlin', 'kr': 'Asia/Seoul', 'jp': 'Asia/Tokyo', 'cn': 'Asia/Shanghai', 'gb': 'Europe/London', 'fr': 'Europe/Paris', 'it': 'Europe/Rome', 'no': 'Europe/Oslo'}
+ONE_TZ = {'de0': 'Europe/Berlin', 'de': 'Europe/Berlin', 'kr': 'Asia/Seoul', 'jp': 'Asia/Tokyo', 'cn': 'Asia/Shanghai', 'gb': 'Europe/London', 'fr': 'Europe/Paris', 'it': 'Europe/Rome', 'no': 'Europe/Oslo'}
 
 # 종류 → 어울리는 그림 지도(실제 지도가 오기 전까지, 그리고 못 받은 곳)
 def maps(cc, kind, r):
@@ -121,10 +121,10 @@ out = [A, '', '# 받을 목록에서 더한 곳 (11-12)', '', '`docs/mockups/pho
 add_city, add_hood, report = {}, {}, {}
 for cc in FILES:
     for r in load(cc):
-        if r.get('받기') != 'o': continue
+        if not r.get('lat'): continue   # 받기 x without a centre: a row that shares another's map
         slug = r['slug']; kind = r['종류']
         city = SPECIAL_CITY.get(slug, CITY_OF.get(slug.split('-')[0]) if '-' in slug else None)
-        if r.get('표 동네'): continue                       # 표(HOODS)의 동네: 동네 단서가 이미 있어요
+        # 표(HOODS)의 동네도 더해요: 지도 표에 그 낱말이 이미 있으면 아래에서 빠져요(찾은 도시 › 주변 동네가 목록의 동네를 다 보여 줘요)
         if city:
             if re.search(r'-(zentrum|altstadt|mitte|centro|sentrum|downtown|cbd|dom)$', slug): continue   # the city's own centre: the city is enough
             ws = [w for w in hood_words(r, city) if w.lower() not in hint_words.get(city, set()) and w not in GENERIC_W]
@@ -132,7 +132,7 @@ for cc in FILES:
             if city.lower() not in names and city not in add_city:   # 표에 없는 도시: 도시 줄도 같이
                 add_city[city] = (cc, f'{city} {CITY_EN.get(city, "")}'.strip(), ['역 앞 번화가', '도심 업무지구', '골목 주택가', '큰 강 대도시'] if cc in ('kr', 'jp', 'cn') else ['유럽 소도시 광장', '옛 시내 + 새 시내', '큰 강 대도시', '역 앞 번화가'], [])
             add_hood.setdefault(cc, []).append((city, ws, maps(cc, kind, r), slug))
-            report.setdefault(cc, []).append((city, ' · '.join(ws), slug))
+            if not r.get('표 동네'): report.setdefault(cc, []).append((city, ' · '.join(ws), slug))   # 표에 있던 동네는 반영 쪽이 이미 알아요
         else:
             ko = town_ko(r['이름']).split(' · ')[0].strip(); ens = en_names(r['찾기'])   # one name: "속초 · 중앙시장" would make 중앙시장 a town
             if ko.lower() in names or any(e.lower() in names for e in ens): continue
@@ -182,7 +182,7 @@ def tz(cc, slug, lat, lon):
         if lon < -101.5: return 'America/Denver'
         if lon < -85.5: return 'America/Chicago'
         return 'America/New_York'
-NATION = {'de': '독일', 'kr': '한국', 'jp': '일본', 'cn': '중국 · 홍콩 · 마카오', 'gb': '영국', 'fr': '프랑스', 'it': '이탈리아', 'us': '미국', 'au': '호주', 'ca': '캐나다', 'no': '노르웨이'}
+NATION = {'de0': '독일', 'de': '독일', 'kr': '한국', 'jp': '일본', 'cn': '중국 · 홍콩 · 마카오', 'gb': '영국', 'fr': '프랑스', 'it': '이탈리아', 'us': '미국', 'au': '호주', 'ca': '캐나다', 'no': '노르웨이'}
 rows_by = {cc: {r['slug']: r for r in load(cc)} for cc in FILES}
 md = ['# 반영 세션에 보낼 것: 지도 표에 새로 더한 곳 (11-12)', '',
       '지도 표(HINT · PLACE)에 받을 목록의 곳을 더했어요(`tocity.py`). 반영 쪽 표(`HOODS`)에 더할지는 반영 세션이 정해요.',
