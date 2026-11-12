@@ -9,11 +9,8 @@
 
 | 도시 | 새 동네 | 시간대 |
 |---|---|---|
-| 베를린 | 포츠담 광장 · Potsdamer Platz | Europe/Berlin |
 | 프랑크푸르트 | 반호프스피어텔 · Bahnhofsviertel | Europe/Berlin |
 | 쾰른 | 벨기셰스 피어텔 · Belgisches Viertel | Europe/Berlin |
-| 라이프치히 | 플라크비츠 · Plagwitz | Europe/Berlin |
-| 뮌헨 | 영국 정원 · Englischer Garten | Europe/Berlin |
 
 | 새 곳 | 다른 이름 | 시간대 |
 |---|---|---|
@@ -328,7 +325,6 @@
 
 | 도시 | 새 동네 | 시간대 |
 |---|---|---|
-| 파리 | 생마르탱 운하 · Canal Saint-Martin | Europe/Paris |
 | 파리 | 바티뇰 · Batignolles | Europe/Paris |
 | 파리 | 몽파르나스 · Montparnasse | Europe/Paris |
 | 파리 | 베르시 · Bercy · Bercy Village | Europe/Paris |

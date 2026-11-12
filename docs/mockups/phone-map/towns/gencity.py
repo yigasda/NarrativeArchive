@@ -66,14 +66,22 @@ GU={'서울':{'화곡':'강서 강서구','목동 · 상계':'양천 양천구',
  '부산':{'해운대 · 광안리':'해운대구 수영 수영구','감천 · 영도':'사하 사하구 영도구','서면 · 부산역':'부산진 부산진구 동구','남포동':'중구'}}
 # 나라마다의 구 · 구역(area) 낱말: towns/areas.tsv (도시 · 동네 줄 이름 · 낱말 | 낱말), 손으로 고쳐도 돼요
 AP=os.path.join(os.path.dirname(os.path.abspath(__file__)),'areas.tsv')
-if os.path.exists(AP):
+if os.path.exists(AP) and not os.environ.get('NO_AREAS'):   # tocity.py reads the table without them (a town's own name is no area)
     for l in open(AP,encoding='utf8').read().strip().split('\n'):
         if not l or l.startswith('#'): continue
         c,lab,ws=l.split('\t'); GU.setdefault(c.split(' · ')[0],{}).setdefault(lab,'')
         GU[c.split(' · ')[0]][lab]+=' '+' '.join(w.strip().lower().replace(' ','\u00a0') for w in ws.split(' | ') if w.strip())
+# a word another row of that town already has stays that row's (plagwitz is 플라크비츠's, never added to another row)
+own={}
+for h in HINT:
+    for c in h[0].split(' · '):
+        for w in h[1]: own.setdefault((c,w),set()).add(id(h))
 for h in HINT:
     for c,rows in GU.items():
-        if c.lower() in h[0].split(' · ') and h[3] in rows: h[1]+= [w.replace('\u00a0',' ') for w in rows[h[3]].split() if w.replace('\u00a0',' ') not in h[1]]
+        if c.lower() in h[0].split(' · ') and h[3] in rows:
+            for w in rows[h[3]].split(' '):
+                w=w.replace('\u00a0',' ')
+                if w and not (len(w) < 2 and w.isascii()) and w not in h[1] and not any((x,w) in own for x in h[0].split(' · ')): h[1].append(w)
 miss=[(c,l) for c,rows in GU.items() for l in rows if not any(c.lower() in h[0].split(' · ') and h[3]==l for h in HINT)]
 if miss: print('GU: no row', miss)
 COMMON=kinds('큰 강 대도시 · 바둑판 + 호수 · 골목 주택가 · 아파트 단지 · 도심 업무지구 · 역 앞 번화가 · 교외 고리길 · 미국 소도시 · 유럽 소도시 광장 · 두 강이 만나는 곳 · 산 아래 도시 · 방사형 광장 · 만 해안 · 학교 캠퍼스 동네 · 언덕 주택가 · 테라스 하우스 동네 · 중정 블록 시가지 · 단독주택 주택가 · 넓은 교외 · 옛 시내 + 새 시내')

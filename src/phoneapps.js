@@ -1012,7 +1012,7 @@ const areaWords = (city, area) => { const t = String(townKo(city)).toLowerCase()
     const a2 = a.replace(/\s*(구|동|군|읍|면|区|區|-gu|-ku|-dong|bezirk|borough|district|arrondissement)$/u, '').replace(/^(bezirk|borough of|district of)\s+/u, ''), mine = HINT.map((h, k) => [h, k]).filter(([h]) => h[0].split(' · ').includes(t));
     // the word itself, then without its 구 · 区 · Bezirk, then the longest row word inside it ("Bezirk Mitte" → mitte)
     let k = (mine.find(([h]) => h[1].includes(a)) || mine.find(([h]) => a2.length >= 2 && h[1].includes(a2)) || [])[1] ?? -1;
-    if (k < 0) { let best = 2; for (const [h, i] of mine) for (const w of h[1]) if (w.length > best && a.includes(w)) { best = w.length; k = i; } }
+    if (k < 0) { let best = 2; for (const [h, i] of mine) for (const w of h[1]) if (w.length > best && new RegExp(`(^|[^\\p{L}\\p{N}])${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}($|[^\\p{L}\\p{N}])`, 'u').test(a)) { best = w.length; k = i; } }   // a whole word ("bezirk mitte" → mitte, never west in westend)
     return k >= 0 ? [HINT[k][3], ...HINT[k][1], area] : [area]; };
 export const rowWords = (city, rows) => [...new Set([...rows.flatMap(r => areaWords(city, r.area)), ...rows.map(r => r.place)])];
 export const hoodWords = (city, hood) => { if (!hood) return []; const t = String(townKo(city)).toLowerCase(), k = HINT.findIndex(h => h[3] === hood && h[0].split(' · ').includes(t)); return k >= 0 ? [HINT[k][3], ...HINT[k][1]] : [hood]; };
