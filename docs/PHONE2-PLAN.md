@@ -399,6 +399,7 @@ THE PHONE — what they might do on it, and when
        - 최근 말풍선 60개, 앞으로의 일정은 14일 안 4개. 이야기(STORY)는 **첫 메신저 대화 때만** 보내요(끝에서부터 통째 장면만 8,000자까지). 그 뒤로는 폰 · 주변 사람 · 열린 일 · 대화가 이야기를 이어 가요(소망 결정. 실험 run13 · 14는 이야기 없이 가장 잘 나왔어요).
        - WEATHER NOW: 지금은 폰의 날씨 앱 기록(오늘 것일 때만). 진짜 날씨는 4-3에서.
        - SITUATIONS: 폰에 저장된 것(`p.situations`, 7-4의 폰 2 반영이 남겨요). 아직 없으면 `(none on the phone yet)`.
+       - LANGUAGES: 주인이 쓰는 언어는 폰에 있어요(`p.langs = { texts, knows, by }`). 말투를 이야기에서 뽑을 때 같이 읽고(`phonetr.js` `askVoices`, `by: 'model'`), 사용자가 말투 › 나에서 한 줄로 고칠 수 있어요(`setLangs(p, '한국어, English (Deutsch)')` · `langsLine(p)`, `by: 'user'`: 그 뒤로는 읽기가 덮어쓰지 않아요). 없으면 블록이 없고 모델이 카드를 보고 골라요.
        - 아직 안 보내는 것: CHAT SUMMARY(9단계), OWNER DOESN'T KNOW(이야기의 "누가 아는가"를 폰 2로 어떻게 가져올지 정한 뒤).
 
    - 7-2 · 7-3 됐어요(`src/phone2run.js`, 모델 부르기 · 입력 모으기 · 저장은 부르는 쪽이 넘겨요. 아직 화면에 안 이어요).
@@ -413,7 +414,7 @@ THE PHONE — what they might do on it, and when
      - 되돌리기: 폰 1의 되돌리기(`undoRound`)는 폰 2 서랍을 받으면 "채팅이나 폰이 바뀌었어요"로 멈춰요(아무것도 안 바뀜). 폰 2의 되돌리기는 9단계에서 만들어요.
      - 분기한 방의 폰 2(5-3을 바꿈): 폰 2의 폰은 메신저 번호로 읽은 자리를 적어서, 폰 1의 분기 처리(`settleBranch`)에 넣으면 안 돼요. 대신:
        - 시작할 때 어느 채팅인지와 시작한 메시지의 글 표시를 적어요(`beginFromStory`의 `chat` · `fp`, `phonedata.js` `chatStamp`).
-       - 열 때 `liveBranched`로 가려요. 자기 채팅 → 그대로. 시작 뒤에 갈라진 분기 → 그대로(`adoptChat`). 시작 앞에서 갈라진 분기 → 폰 1을 먼저 되돌리고(`settleBranch`, 폰 1의 폰만) 폰 2는 그 폰 1에서 다시 시작(`rebeginFromStory`: 메신저 대화 없이, 페르소나 · 언어는 그대로, 보관함에 안 넣음. 폰 1에 폰이 없으면 폰 2를 내려요).
+       - 열 때 `liveBranched`로 가려요. 자기 채팅 → 그대로. 시작 뒤에 갈라진 분기 → 그대로(`adoptChat`). 시작 앞에서 갈라진 분기 → 폰 1을 먼저 되돌리고(`settleBranch`, 폰 1의 폰만) 폰 2는 그 폰 1에서 다시 시작(`rebeginFromStory`: 메신저 대화 없이, 페르소나는 그대로, 보관함에 안 넣음. 폰 1에 폰이 없으면 폰 2를 내려요).
        - 화면이 이 순서로 바뀌었고(3.198.8), 예전 방식(`settleLiveBranch`)은 지웠어요.
    - 7-5 답장을 실제로 돌리는 곳이 됐어요(`src/phone2go.js`의 `liveGo`, 화면은 디자인 세션이 이어요).
      - 화면은 보낸 뒤 `enqueueReplies` → `liveGo(realM, { onChange })`만 불러요. 입력 모으기 · 지시문 · 모델 · 저장 · 반영은 이 안에서 이어요.

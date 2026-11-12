@@ -141,11 +141,10 @@ test('분기 가리기: 자기 채팅 · 시작 뒤 분기 · 시작 앞 분기'
     assert.equal(S2.liveBranched(L2.liveWorld(f), { chat: 'br', branch: true, point: 1 }), 'none');
 });
 
-test('다시 시작: 되돌린 폰 1에서, 메신저 대화 · 예전 폰 2 기록 없이, 페르소나 · 언어는 그대로, 보관함에 안 넣어요', async () => {
+test('다시 시작: 되돌린 폰 1에서, 메신저 대화 · 예전 폰 2 기록 없이, 페르소나는 그대로, 보관함에 안 넣어요', async () => {
     const S2 = S, L2 = L;
     const m = { text: '', phones: { mara: { owner: 'Mara', notes: [{ title: '월요일' }, { title: '수요일' }] } } };
     const old = S2.beginFromStory(m, { persona: 'Ren', upto: 120, scope: 's', chat: 'main', fp: 'abc' });
-    old.langs = { mara: { texts: ['Korean'] } };
     const room = L2.ensureRoom(m, ['Mara']); L2.sendLive(m, room.id, '수요일에 한 말');
     old.phones.mara.notes.push({ title: '실시간에서 생긴 메모' });
     L2.setLiveMode(m, 'live');
@@ -153,7 +152,7 @@ test('다시 시작: 되돌린 폰 1에서, 메신저 대화 · 예전 폰 2 기
     m.phones.mara.notes = [{ title: '월요일' }];
     const w = S2.rebeginFromStory(m, { upto: 100, scope: 's2', dayShift: 3, chat: 'br', fp: 'mon' });
     assert.notEqual(w.id, old.id);
-    assert.equal(w.persona, 'Ren'); assert.deepEqual(w.langs, { mara: { texts: ['Korean'] } });
+    assert.equal(w.persona, 'Ren');
     assert.equal(w.storyUpto, 100); assert.equal(w.chat, 'br'); assert.equal(w.dayShift, 3);
     assert.deepEqual(w.phones.mara.notes.map(x => x.title), ['월요일']);
     assert.deepEqual(Object.keys(w.messenger.rooms), []);

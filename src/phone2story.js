@@ -106,7 +106,7 @@ export function liveBranched(w, { chat = null, branch = false, fp = null, point 
 // 'after': 폰 2 is this chat's from now on (asked once)
 export function adoptChat(w, chat) { if (w && chat) w.chat = String(chat); return w; }
 // 'before': 폰 2 begins again here, from 폰 1 as it is now (already rewound). The 폰 2 that came with the branch goes (not
-// to the archive: it is the main chat's, which keeps its own); its persona and languages stay. opts: as beginFromStory
+// to the archive: it is the main chat's, which keeps its own); its persona stays (the owners' languages are on 폰 1's phones, copied with them). opts: as beginFromStory
 // (persona left out: the one it had). 폰 1 with no phone: there is nothing to begin from, 폰 2 is taken off (returns null)
 export function rebeginFromStory(m, opts = {}) {
     const old = liveWorld(m);
@@ -116,7 +116,6 @@ export function rebeginFromStory(m, opts = {}) {
     live.world = null;
     try {
         const w = beginFromStory(m, { ...opts, persona: opts.persona || old.persona });
-        if (old.langs) w.langs = structuredClone(old.langs);
         live.mode = keep.mode;
         return w;
     } catch (err) { live.world = keep.world; live.mode = keep.mode; throw err; }

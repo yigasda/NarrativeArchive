@@ -57,7 +57,7 @@ test('앱마다 마지막 쓴 때: 폰 기록과 답하며 한 일(does)을 합�
 test('날씨가 오늘 것이 아니면 안 보내요; 언어 설정 · 지운 말 · 먼저 연락하는 이유는 있을 때만', () => {
     const x = world();
     x.m.live.world.phones.mara.life.weather.here.date = '11-05';
-    x.w.langs = { mara: { texts: ['French'], knows: ['Korean'] } };
+    x.w.phones.mara.langs = { texts: ['French'], knows: ['Korean'] };
     const text = replyInput(ask(x, { typed: ['보고 싶'], why: 'just woke up' }));
     assert.doesNotMatch(text, /WEATHER NOW/);
     assert.match(text, /^\[LANGUAGES\]\nMara\n- texts in: French\n- knows but seldom uses: Korean\n\n\[MESSENGER\]/);
@@ -92,4 +92,17 @@ test('없는 폰 · 없는 방 · 그 방에 없는 사람이면 아무것도 �
 test('폰 1은 이 파일을 안 불러요', async () => {
     const src = f => readFile(new URL(`../src/${f}`, import.meta.url), 'utf8');
     for (const f of (await readdir(new URL('../src/', import.meta.url))).filter(f => f.endsWith('.js') && f !== 'phone2live.js' && f !== 'phone2go.js')) assert.doesNotMatch(await src(f), /from '\.\/phone2live\.js'/, f);
+});
+
+test('폰에 있는 주인의 언어가 답장 요청의 LANGUAGES로 가요 (없으면 블록 없음)', async () => {
+    const S = await import('../src/phone2store.js'), G2 = await import('../src/phone2live.js'), A = await import('../src/phone2ask.js');
+    const m = { phones: {} };
+    S.startFresh(m, { persona: 'Ren' });
+    S.putLivePhone(m, { owner: 'Mara', contacts: [], threads: [] });
+    const room = S.ensureRoom(m, ['Mara']); S.sendLive(m, room.id, '안녕', Date.parse('2026-11-11T10:00:00Z'));
+    const ask = () => A.replyInput(G2.gatherReply(m, 'Mara', room.id, { now: Date.parse('2026-11-11T10:01:00Z'), tz: 'Asia/Seoul' }));
+    assert.ok(!ask().includes('[LANGUAGES]'));
+    // what the voice reading found for the owner (on their phone)
+    S.livePhone(m, 'Mara').langs = { texts: ['French', 'English'], knows: ['Korean'], by: 'user' };
+    assert.ok(ask().startsWith('[LANGUAGES]\nMara\n- texts in: French, English\n- knows but seldom uses: Korean\n\n[MESSENGER]'));
 });
