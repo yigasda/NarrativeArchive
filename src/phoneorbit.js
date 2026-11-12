@@ -92,7 +92,7 @@ export function orbitRoom(p, now, o) {
     return `<div class="ob_bg"><span class="ob_blob" style="background:${orbitBg(o.title, o.group)}"></span></div>${axBar(p, now, '#fff')}
       <div class="ob_ct ob_glass"><span class="ob_gb" role="button" tabindex="0" data-go="orbit" aria-label="뒤로">${ic('back', 21, '#1b1d24', 2.2)}</span>${face(o.title, 40, o.group)}<span class="ob_nm"><b>${esc(o.title)}</b>${o.sub ? `<span>${esc(o.sub)}</span>` : ''}</span></div>
       ${o.chips.length ? `<div class="ob_chips">${o.chips.map(c => `<span class="ob_chip">${ic(c.icon, 13, '#fff')}${esc(c.text)}</span>`).join('')}</div>` : ''}
-      <div class="ob_msgs ax_scroll${o.asOwner ? ' ro' : ''}"><div class="ob_mi">${o.msgs.map(msg).join('')}</div></div>
+      <div class="ob_msgs ax_scroll${o.asOwner ? ' ro' : ''}"><div class="ob_mi">${o.msgs.map(msg).join('')}${o.typing ? '<div class="ob_typ ob_glass" aria-label="입력 중"><i></i><i></i><i></i></div>' : ''}${o.fail ? `<div class="ob_fail"><span>답장을 못 받았어요</span><span class="ob_retry na_ob_retry" role="button" tabindex="0" data-id="${esc(o.fail.id)}">다시</span></div>` : ''}</div></div>
       ${o.asOwner ? '' : `<div class="ob_inp ob_glass"><input type="text" class="ax_in ob_in na_ob_in" placeholder="메시지" enterkeyhint="send" value="${esc(o.draft || '')}" aria-label="메시지"><span class="ob_send na_ob_send" role="button" tabindex="0" aria-label="보내기">${ic('send', 18, '#fff', 2.3)}</span></div>`}
       ${axInd('#fff')}`;
 }

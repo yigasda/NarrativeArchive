@@ -2203,7 +2203,7 @@ test('다녀간 곳 (the map): a reflection puts the places the owner went to on
 
 test('다녀간 곳: making a phone asks for the newest visits; the prompts that make up an ordinary day never do', () => {
     for (const s of [data.AI_SYS_PHONE, data.AI_SYS_PHONE_APPS, data.updateSystem({ split: true })]) assert.ok(s.includes('"visits": [{ "place": a place the owner really went to'), s.slice(0, 40));
-    assert.ok(data.AI_SYS_PHONE.includes('the 12 newest visits'));
+    assert.ok(data.AI_SYS_PHONE.includes('the 30 newest visits'));
     for (const life of [false, true]) assert.match(data.coreSystem({ life }), /visit: "place": where they really went, as the story writes it \(never just their own city\)/);
     // (a visit of the owner's own life is none: a place is gone to in the story)
     const got0 = data.recordsCore({ now: '10-25 16:00', records: [{ type: 'scene', id: 'cafe', at: 2, quote: 'x', summary: 'cafe' }, { type: 'visit', at: 2, from: 'story', scene: 'cafe', place: 'Café Moka' }, { type: 'visit', at: 2, from: 'life', place: 'Gym' }] });
@@ -2294,4 +2294,24 @@ test('a name in a text: as a name is written, never part of another word (Korean
     for (const t of ['Mara said hi', 'with Mara.', 'Mara가 왔다', 'Mara한테']) assert.ok(data.namedIn(t, 'Mara'), t);
     for (const t of ['Maradona', 'Samara', 'Mara2']) assert.ok(!data.namedIn(t, 'Mara'), t);
     assert.ok(data.namedIn('(Dr. K) came', 'Dr. K') && !data.namedIn('x', 'a'));
+});
+
+test('a card already on the phone gets its bill day from an "account" record with no message number; money that moves still needs one', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'paid the taxi, 12000 won')]);
+    c.p.money.bank.accounts.push({ id: 'cc', kind: 'credit', name: '카드', last4: '1158', currency: 'KRW', balance: 0 });
+    migrateBank(c.m, c.p);
+    T.moneyAnswers = [{ records: [
+        { type: 'account', already: '1158', billDay: 25, paidFrom: '1111', made: ['billDay', 'paidFrom'] },
+        { type: 'account', already: '9999', billDay: 3 },
+        { type: 'payment', account: '1111', amount: -500, who: '번호 없는 결제', kind: 'card', occurrence: 'new' },
+    ] }];
+    await run(c.m, { now: '10-26 13:00', events: [{ id: 'taxi', at: 2, quote: 'paid the taxi', summary: '택시', date: '10-26', time: '12:40', phone: {}, money: true }] });
+    assert.equal(c.p.money.bank.accounts.find(a => a.last4 === '1158').billDay, 25);
+    assert.equal(c.bank(), 100000);
+    // (the account not on the phone and the payment with no number: left out, and said)
+    assert.ok(c.p.syncLast.notes.some(n => n.includes('돈 기록 2개는 어느 메시지인지 몰라서')));
+});
+
+test('다시 만들기: 지도(다녀간 곳)도 고를 수 있어요', () => {
+    assert.deepEqual(data.REMAKE.map, ['visits']);
 });

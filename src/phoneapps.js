@@ -647,11 +647,11 @@ export function setScreen(p, now, m, ui) {
 }
 // 설정 › 휴대폰 (docs/mockups/phone2-switch): 타임라인 (폰 1, the story's phone) · 실시간 (폰 2, the live phone), one line
 // under it saying what the chosen one is; with no 실시간 phone yet its side is faint, with a place for 시작하기 (5단계)
-function phoneModes({ live, has, shift }) {
+function phoneModes({ live, has, shift, err = '' }) {
     const seg = (v, t, on, off) => `<span role="button" tabindex="0" class="ax_pmseg na_ph_pmode${on ? ' on' : ''}${v === 'live' ? ' lv' : ''}${off ? ' off' : ''}" data-v="${v}" aria-pressed="${on}">${t}</span>`;
     return `<div class="ax_sec">휴대폰</div>
         <div class="ax_card ax_pmode"><div class="ax_pmsegs">${seg('story', '타임라인', !live, false)}${seg('live', '실시간', live, false)}</div></div>
-        <div class="ax_foot">${live ? `지금 내 시각으로 흘러가는 폰이에요. 메신저로 직접 연락해요.${shift ? ` · ${esc(shift)}` : ''}` : '이야기를 따라 흘러가는 폰이에요.'}</div>`;
+        <div class="ax_foot">${live ? `지금 내 시각으로 흘러가는 폰이에요. 메신저로 직접 연락해요.${shift ? ` · ${esc(shift)}` : ''}` : '이야기를 따라 흘러가는 폰이에요.'}</div>${live && err ? `<div class="ax_foot ax_pmerr">반영 못 함 · ${esc(err)}</div>` : ''}`;
 }
 // 날짜 및 시간: the phone's date as a real phone shows it; its year is the story's (set here, or none for a story that
 // never dates itself: then no year and no weekday anywhere on the phone)
@@ -893,7 +893,9 @@ export function setTheme(p, now) {
 // 다시 만들기: the apps ticked are made again from the whole story; the rest stay
 // apps made by their own request (채우기), offered alongside
 export const REMAKE_MORE = ['money', 'voice', 'invest', 'life', 'delivery', 'screen'];
-const REMAKE_IC = { screen: ['#7f9cd6', 'sandglass'], life: ['#3b4a8f', 'clock'], delivery: ['#2ac1bc', 'save'], invest: ['#73998a', 'card'], money: ['#6f86b3', 'card'], voice: ['#c9a581', 'mic'], msg: ['#89b892', 'cmt'], call: ['#89b892', 'call'], photo: ['#d89f98', 'photo'], note: ['#dcc680', 'pen'], search: ['#8faed1', 'search'], cal: ['#d494a7', 'cal'], sns: ['#d494a7', 'heart'], mail: ['#8faed1', 'mail'], diary: ['#a699c9', 'compose'] };
+// (지도: 홈의 지도 아이콘과 같은 접힌 지도 · 같은 초록)
+Object.assign(AX, { foldmap: 'M9 4L4 6v14l5-2 6 2 5-2V4l-5 2zM9 4v14M15 6v14' });
+const REMAKE_IC = { screen: ['#7f9cd6', 'sandglass'], life: ['#3b4a8f', 'clock'], delivery: ['#2ac1bc', 'save'], invest: ['#73998a', 'card'], money: ['#6f86b3', 'card'], voice: ['#c9a581', 'mic'], msg: ['#89b892', 'cmt'], call: ['#89b892', 'call'], photo: ['#d89f98', 'photo'], note: ['#dcc680', 'pen'], search: ['#8faed1', 'search'], cal: ['#d494a7', 'cal'], sns: ['#d494a7', 'heart'], mail: ['#8faed1', 'mail'], diary: ['#a699c9', 'compose'], map: ['#93ba97', 'foldmap'] };
 export function setRemake(p, now, ui, mForRemake = {}) {
     const all = [...Object.keys(REMAKE), ...REMAKE_MORE], n = ui.remake.size;
     return `${axBar(p, now)}

@@ -1292,7 +1292,7 @@ test('making a phone (and some apps again): people from the story, PEOPLE AROUND
         assert.ok(s.includes('- People: from the story, PEOPLE AROUND, or new plausible ones with local names (a colleague, a neighbour, a shop); no new relative or partner. A relationship word (girlfriend, ex, husband, boss) only if the archive or chat uses it for them.'), s.slice(0, 40));
         // (the owner's ordinary life around the story fills the lists, to about so many each; never "an empty list is fine")
         assert.ok(s.includes("- Around the story, the owner's ordinary life before its newest moment fills the rest:") && s.includes('Never a new event, relationship or secret.'));
-        assert.ok(s.includes('Fill each list to about: 10 threads of 6 to 15 messages, 20 calls, 15 photos, 10 notes, 15 searches (3 open at most), 10 events, 6 posts with up to 4 comments,\n10 mails, 8 diary entries, the 12 newest visits. Who they talk to, and how much, follows their character and PEOPLE AROUND.'));
+        assert.ok(s.includes('Fill each list to about: 10 threads of 6 to 15 messages, 20 calls, 15 photos, 10 notes, 15 searches (3 open at most), 10 events, 6 posts with up to 4 comments,\n10 mails, 8 diary entries, the 30 newest visits. Who they talk to, and how much, follows their character and PEOPLE AROUND.'));
         assert.doesNotMatch(s, /an empty list is fine|At most 6 threads/);
     }
     assert.ok(data.updateSystem({ split: true }).includes('- People: only people the story or PEOPLE AROUND has.'));
@@ -1709,4 +1709,15 @@ test('점검 7 (폰 만들기): 날짜 및 시간 on another phone moves the yea
         assert.deepEqual(p.around?.people?.map(x => x.name), ['Mara']);
         assert.equal(p.livesManual, true);
     } finally { delete globalThis.__ctx; delete globalThis.__whereAnswer; delete globalThis.__whereWait; }
+});
+
+test('다시 만들기 › 지도: the visits are written again from the story, the other apps stay', async () => {
+    globalThis.__rows = bigRows(4);
+    const p = { ...phoneOf(), notes: [{ title: 'Keep me', text: 'x', time: '10-24 09:00' }], visits: [{ place: 'Old cafe', city: 'Varo', time: '10-20 10:00' }] }, mm = { ...m, phones: { ren: p } };
+    globalThis.__menu = { calls: [], answers: [JSON.stringify({ visits: [{ place: 'Harbour office', city: 'Varo', time: '10-25 09:00' }, { place: 'Central station', city: 'Varo', time: '10-25 12:00' }], notes: [{ title: 'Not asked', text: 'y', time: '10-25 10:00' }] })], answer: '{}' };
+    await data.makePhone(mm, 'Ren', { apps: ['map'] });
+    const turn = globalThis.__menu.calls.find(c => c.sys === data.AI_SYS_PHONE_APPS);
+    assert.match(turn.input, /\[ONLY THESE\][^\n]*\n[^\n]*: visits\./);
+    assert.deepEqual(p.visits.map(x => x.place), ['Harbour office', 'Central station']);
+    assert.deepEqual(p.notes.map(x => x.title), ['Keep me']);
 });

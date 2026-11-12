@@ -136,5 +136,5 @@ test('끝난 일은 최근 것만 남겨요 (기다리는 것 · 실패한 것�
 
 test('폰 1은 이 파일을 안 불러요', async () => {
     const src = f => readFile(new URL(`../src/${f}`, import.meta.url), 'utf8');
-    for (const f of (await readdir(new URL('../src/', import.meta.url))).filter(f => f.endsWith('.js') && f !== 'phone2run.js')) assert.doesNotMatch(await src(f), /from '\.\/phone2run\.js'/, f);
+    for (const f of (await readdir(new URL('../src/', import.meta.url))).filter(f => f.endsWith('.js') && f !== 'phone2run.js' && f !== 'phone2go.js')) assert.doesNotMatch(await src(f), /from '\.\/phone2run\.js'/, f);
 });

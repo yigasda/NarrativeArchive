@@ -820,7 +820,8 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.ok(on.includes('PHONE NOW and ORDERS AND TICKETS') === false && data.coreSystem({ life: true, wallet: true }).includes('STORY NOW, PHONE NOW and ORDERS AND TICKETS: a parcel'));
     // (STEP 3: the cases)
     assert.match(on, /2\. A plan made → "calendar"\. A PHONE NOW plan the messages move → its calendar record again with "was"; called off or undone \(an order cancelled\) → "cancelled": true\. No booking, trip or purchase the story lacks\./);
-    assert.match(on, /3\. Each place the owner is at, in order, → one "visit": a scene that moves \(from the office to the station to a hotel in another city\) gives one at each\./);
+    assert.match(on, /3\. Each place the owner is at, in order, → one "visit": a scene that moves \(from the office to the station to a hotel in another city\) gives one at each; the rooms of one building are one visit\./);
+    assert.match(on, /visit: "place": [^\n]*, "area": its district or neighbourhood \(강서구, Kreuzberg\) or "", "city"/);
     assert.match(on, /→ that record\. A text exchange the messages already show: only its last 4 messages\./);
     assert.ok(on.includes('- Each text in the language its writer really uses, as long as that person really writes.') && !on.includes('Texts short'));
     // (no Korean asked of the reflection: the app adds it after, phonetr.js)
@@ -1098,8 +1099,9 @@ test('a records answer: scenes are events, story records on their scene, the own
     assert.equal(uni.group, true); assert.deepEqual(uni.members, ['Ivo', 'Lio']);
     assert.ok(uni.messages.every(x => x.src === 'guess'));
     assert.deepEqual(c.p.searches.map(x => [x.q, x.src]), [['pho recipe', 'guess']]);
-    // (a contact only for someone texted or called: Lio only texted in the group, so none)
-    assert.deepEqual(c.p.contacts.map(x => x.name), []);
+    // (a contact only for someone texted or called: Lio only texted in the group, so none; Mara, texted by name with no
+    // contact record given, is saved)
+    assert.deepEqual(c.p.contacts.map(x => x.name), ['Mara']);
     assert.ok(c.p.sync.done.flat().includes(3));
     // (the round says how many scenes, story and life records the answer had)
     assert.deepEqual(c.p.syncLast.records, { scenes: 1, story: 2, life: 4, nosaid: 2 });
@@ -1521,4 +1523,28 @@ test('fillKo: each line goes with who says it to whom, and the voice table, no e
     assert.ok(lc.system.startsWith('GOAL\nGive each note on how a person talks a short label for a list.') && lc.input.startsWith('[NOTES]\n1: Oscar: 어머니에게') && !lc.input.includes('[ARCHIVE]'));
     // (a label over 20 characters is not a label: left out, not cut)
     assert.equal(v.koVoice.find(r => r.who === 'Mother').label, undefined);
+});
+
+test('someone texted or called by name is saved in the contacts; a number, an unknown caller, a group and the owner are not', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'a busy day of calls and texts'), say('Mara', 'tell me later')]);
+    c.p.now = '10-26 09:00'; c.p.year = 2026; c.p.contacts = [{ name: 'Mara', saved: '마라' }];
+    await run(c.m, { now: '10-26 20:00', events: [{ id: 'busy', at: 2, quote: 'a busy day of calls and texts', summary: 'calls and texts', date: '10-26', time: '12:00', phone: {
+        threads: [{ with: 'Ivo', messages: [{ from: 'Ivo', text: 'lunch?', time: '10-26 11:00' }] }, { with: 'Mara', messages: [{ from: 'me', text: 'later', time: '10-26 11:05' }] },
+            { with: '+49 151 2345678', messages: [{ from: '+49 151 2345678', text: 'Ihr Paket', time: '10-26 11:10' }] }, { with: 'Team', group: true, members: ['Lio'], messages: [{ from: 'Lio', text: 'hi', time: '10-26 11:20' }] }],
+        calls: [{ with: 'Varo', type: 'in', time: '10-26 12:00', min: 4 }, { with: 'Unknown', type: 'missed', time: '10-26 12:30' }, { with: 'Ivo', type: 'out', time: '10-26 13:00', min: 1 }],
+    } }] });
+    assert.deepEqual(c.p.contacts.map(x => [x.name, x.saved ?? '']), [['Mara', '마라'], ['Ivo', ''], ['Varo', '']]);
+    // 되돌리기 takes them back with the round
+    await data.undoRound(c.m, c.p);
+    assert.deepEqual(c.p.contacts.map(x => x.name), ['Mara']);
+});
+
+test('a visit carries its district; the home keeps one district, given once', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'home, then the cafe by the station'), say('Mara', 'see you')]);
+    c.p.now = '10-26 09:00'; c.p.year = 2026;
+    await run(c.m, { now: '10-26 20:00', events: [{ id: 'day', at: 2, quote: 'home, then the cafe by the station', summary: 'home and cafe', date: '10-26', time: '12:00', phone: {
+        visits: [{ place: "Ren's flat", area: '강서구', city: 'Seoul', home: true, time: '10-26 10:00' }, { place: 'Station cafe', area: '마곡동', city: 'Seoul', time: '10-26 12:00' }, { place: 'Corner shop', city: 'Seoul', time: '10-26 13:00' }] } }] });
+    assert.deepEqual(c.p.visits.map(x => [x.place, x.area ?? '']), [["Ren's flat", '강서구'], ['Station cafe', '마곡동'], ['Corner shop', '']]);
+    // PHONE NOW shows it
+    assert.equal(data.phoneForModel(c.p).visits.find(x => x.place === 'Station cafe').area, '마곡동');
 });

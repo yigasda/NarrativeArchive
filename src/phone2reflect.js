@@ -26,7 +26,7 @@ import { feedRows, feedText, dropPersonaTalk } from './phone2feed.js';
 
 const one = v => String(v ?? '').replace(/\s+/g, ' ').trim();
 // how many messenger messages one round reads
-export const LIVE_ROUND = 40;
+export const LIVE_ROUND = 100;
 // a messenger message as one row of the round: its number and its lines (what was said, then what the owner did)
 const rowOf = (x, owner) => ({ index: x.n, text: [x.call ? `[#${x.n}] ${x.from} [Call]: ${Math.max(0, Math.round(Number(x.call.min) || 0))} min${one(x.call.summary) ? ` — ${one(x.call.summary)}` : ''}` : x.act && !one(x.text) ? '' : `[#${x.n}] ${x.from}: ${one(x.text)}`, ...(liveKey(x.from) === liveKey(owner) ? (x.does || []).filter(d => one(d?.what)).map(d => `[#${x.n}] ${owner} [${one(d.app)}]: ${one(d.what)}`) : [])].filter(Boolean).join('\n') });
 // the situations the answer wrote (where things stand): kept on the phone for the next reply (its SITUATIONS), the
@@ -72,6 +72,11 @@ export async function updateLive(real, m, owner, { tz = 'UTC', save = async () =
         // (the owner's state before this round: the last one they wrote before its first message)
         const before = [...feed].reverse().find(x => x.n < Math.min(...inRound) && liveKey(x.from) === liveKey(p.owner) && one(x.state))?.state || '';
         const talk = ns => feedText(real, p.owner, feed.filter(x => ns.has(x.n)), { tz, state: before });
+        // (a message's words as the request shows them: its own lines there, and the scene line it opens. The answer quotes
+        // the request, so the quote is looked for in these)
+        const shown = new Map();
+        for (const l of talk(inRound).split('\n')) { const n = Number(/^\[?#(\d+)\b/.exec(l)?.[1]); if (Number.isInteger(n) && inRound.has(n)) shown.set(n, [...(shown.get(n) || []), l]); }
+        for (const r of round.rows) if (shown.has(r.index)) r.text = shown.get(r.index).join('\n');
         const input = [
             `[NEW MESSAGES]\n${talk(inRound)}`,
             `[EVENTS ON THE PHONE]\n${events || '(none yet)'}`,

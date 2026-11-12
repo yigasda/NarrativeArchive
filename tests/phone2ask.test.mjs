@@ -74,5 +74,5 @@ test('지시문이 말하는 블록 이름과 같아요 (YOU GET)', async () => 
 test('폰 1은 이 파일을 안 불러요', async () => {
     const src = f => readFile(new URL(`../src/${f}`, import.meta.url), 'utf8');
     assert.doesNotMatch(await src('phone2ask.js'), /^\s*import\b/m);
-    for (const f of (await readdir(new URL('../src/', import.meta.url))).filter(f => f.endsWith('.js') && !['phone2ask.js', 'phone2live.js'].includes(f))) assert.doesNotMatch(await src(f), /phone2ask/, f);
+    for (const f of (await readdir(new URL('../src/', import.meta.url))).filter(f => f.endsWith('.js') && !['phone2ask.js', 'phone2live.js', 'phone2go.js'].includes(f))) assert.doesNotMatch(await src(f), /phone2ask/, f);
 });

@@ -91,5 +91,5 @@ test('없는 폰 · 없는 방 · 그 방에 없는 사람이면 아무것도 �
 
 test('폰 1은 이 파일을 안 불러요', async () => {
     const src = f => readFile(new URL(`../src/${f}`, import.meta.url), 'utf8');
-    for (const f of (await readdir(new URL('../src/', import.meta.url))).filter(f => f.endsWith('.js') && f !== 'phone2live.js')) assert.doesNotMatch(await src(f), /from '\.\/phone2live\.js'/, f);
+    for (const f of (await readdir(new URL('../src/', import.meta.url))).filter(f => f.endsWith('.js') && f !== 'phone2live.js' && f !== 'phone2go.js')) assert.doesNotMatch(await src(f), /from '\.\/phone2live\.js'/, f);
 });
