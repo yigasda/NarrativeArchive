@@ -1009,7 +1009,10 @@ export const homeWho = place => { const t = siteOf(place)[0], e = HOME_EN.exec(t
 // the words a town's visits give the map (which neighbourhood's map, where the tile map starts): each visit's area first
 // (구 · 동네 the reflection reads: "강서구" → the table's row that has 강서 → 화곡), then the places' own names
 const areaWords = (city, area) => { const t = String(townKo(city)).toLowerCase(), a = String(area || '').toLowerCase().trim(); if (!a) return [];
-    const a2 = a.replace(/(구|동|군|읍|면|区|區|-gu|-dong)$/u, ''), k = HINT.findIndex(h => h[0].split(' · ').includes(t) && (h[1].includes(a) || (a2.length >= 2 && h[1].includes(a2))));
+    const a2 = a.replace(/\s*(구|동|군|읍|면|区|區|-gu|-ku|-dong|bezirk|borough|district|arrondissement)$/u, '').replace(/^(bezirk|borough of|district of)\s+/u, ''), mine = HINT.map((h, k) => [h, k]).filter(([h]) => h[0].split(' · ').includes(t));
+    // the word itself, then without its 구 · 区 · Bezirk, then the longest row word inside it ("Bezirk Mitte" → mitte)
+    let k = (mine.find(([h]) => h[1].includes(a)) || mine.find(([h]) => a2.length >= 2 && h[1].includes(a2)) || [])[1] ?? -1;
+    if (k < 0) { let best = 2; for (const [h, i] of mine) for (const w of h[1]) if (w.length > best && a.includes(w)) { best = w.length; k = i; } }
     return k >= 0 ? [HINT[k][3], ...HINT[k][1], area] : [area]; };
 export const rowWords = (city, rows) => [...new Set([...rows.flatMap(r => areaWords(city, r.area)), ...rows.map(r => r.place)])];
 export const hoodWords = (city, hood) => { if (!hood) return []; const t = String(townKo(city)).toLowerCase(), k = HINT.findIndex(h => h[3] === hood && h[0].split(' · ').includes(t)); return k >= 0 ? [HINT[k][3], ...HINT[k][1]] : [hood]; };
