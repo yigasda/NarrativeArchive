@@ -11,7 +11,7 @@ import { shiftDay, weatherNow } from './phonelife.js';
 import { timerLeft, COUNTRY_TZ, apart, cityAt as cityOfPlace, mirrorHome, overlayNow } from './phonesynclife.js';
 import { decimalOf, fmtMoney, localeOf } from './phonemoney.js';
 import { nameKey } from './people.js';
-import { getMeta } from './core.js';
+import { phoneMeta } from './core.js';
 import { esc } from './util.js';
 import { DOT_C, DOT_R, DOTS, MAP_BOT, MAP_H, MAP_TOP, MAP_W, TZ_AT } from './worldmap.js';
 import { CAT, dishSvg, guessPic } from './phonefood.js';
@@ -1059,7 +1059,7 @@ function hereNow(lf) {
     const h = hereOwn(lf), p = OWNER.get(lf);
     if (!p || !h.place || !h.date) return h;
     let others = [];
-    try { others = Object.values(getMeta()?.phones || {}).filter(o => o && o !== p && o.owner !== p.owner && o.life?.weather); } catch { others = []; }
+    try { others = Object.values(phoneMeta()?.phones || {}).filter(o => o && o !== p && o.owner !== p.owner && o.life?.weather); } catch { others = []; }
     const at = x => `${x.date || ''} ${x.time || ''}`, same = (a, b) => !!cityOfPlace(a, [{ name: b }]);
     const best = others.map(o => hereOwn(L(o))).filter(x => x.place && x.date === h.date && same(h.place, x.place) && at(x) > at(h)).sort((a, b) => at(b).localeCompare(at(a)))[0];
     return best ? { ...best, place: h.place } : h;
@@ -1073,7 +1073,7 @@ function hereOwn(lf) {
     try { t = weatherNow(clockHeld(p) ? phoneAt(p) : undefined); } catch { t = null; }
     if (!t || !/^\d{2}-\d{2}$/.test(t.date || '') || !h.date) return h;
     let mine = false;
-    try { mine = p ? sceneHome(p, t.place, getMeta()) === true : !apart(h.place, t.place, lf.weather.cities); } catch { mine = false; }
+    try { mine = p ? sceneHome(p, t.place, phoneMeta()) === true : !apart(h.place, t.place, lf.weather.cities); } catch { mine = false; }
     if (!mine) return h;
     const gap = dayGap(h.date, t.date);
     if (gap < 0 || gap === 0 && !(t.time && (!h.time || t.time > h.time))) return h;
@@ -1095,7 +1095,7 @@ function cityView(p, lf, c) {
 const stamp = l => `${l.weather.here.date || ''} ${l.weather.here.time || ''}`;
 function shared(p, lf, c) {
     let others = [];
-    try { others = Object.values(getMeta()?.phones || {}).filter(o => o && o !== p && o.owner !== p.owner && o.life?.weather); } catch { others = []; }
+    try { others = Object.values(phoneMeta()?.phones || {}).filter(o => o && o !== p && o.owner !== p.owner && o.life?.weather); } catch { others = []; }
     if (!others.length) return c;
     const t = cityTime(p, lf, c), day = t.dayShift === '내일' ? shiftDay(t.date, 1) : t.dayShift === '어제' ? shiftDay(t.date, -1) : t.date;
     const there = others.map(o => ({ o, l: L(o) })).map(x => ({ ...x, h: hereOwn(x.l) })).filter(x => x.h.place && cityOfPlace(x.h.place, [c]) && x.h.date === day).sort((a, b) => stamp(b.l).localeCompare(stamp(a.l)))[0];

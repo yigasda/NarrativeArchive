@@ -87,6 +87,11 @@ export function getMeta() {
     delete md[MODULE].aiDraft; // AI compress removed in 2.4.0
     return md[MODULE];
 }
+// the meta the phone's screens read: the chat's own (타임라인), or 폰 2's drawer while the phone shows 실시간 (phone.js sets
+// it, and clears it when the phone closes). Screen helpers that can't be handed the meta (bank · weather · glossary) read this
+let phoneMetaNow = null;
+export const phoneMeta = () => phoneMetaNow || getMeta();
+export const setPhoneMeta = v => { phoneMetaNow = v || null; };
 
 export async function saveMeta() {
     await ctx().saveMetadata();

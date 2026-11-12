@@ -626,14 +626,14 @@ export function setScreen(p, now, m, ui) {
           <button type="button" class="ax_rw na_ph_looksbtn2">${si('#d89f98', 'user')}<span class="ax_tx"><span class="ax_n">외모</span></span><span class="ax_v">${nLooks ? `${nLooks}명` : ''}</span>${axChev}</button>
           <button type="button" class="ax_rw" data-go="setprofile">${si('#a2a7af', 'info')}<span class="ax_tx"><span class="ax_n">이 폰에 대해</span></span><span class="ax_v">${esc(PROFILE_SOURCES.find(x => x[0] === p.financeProfile?.type)?.[1] || '연결 안 함')}</span>${axChev}</button>
         </div>
-        <div class="ax_sec">아카이브</div>
+        <div class="ax_sec">${ui.phones?.live ? '로어북' : '아카이브'}</div>
         <div class="ax_card">
           <button type="button" class="ax_rw" data-go="setlore">${si('#dcc680', 'book')}<span class="ax_tx"><span class="ax_n">참고 로어북</span></span><span class="ax_v">${(n => (n ? `${n}권` : '없음'))(phoneLore(m).length)}</span>${axChev}</button>
           <button type="button" class="ax_rw na_ph_setinj">${si('#d494a7', 'in')}<span class="ax_tx"><span class="ax_n">롤플에 넣기</span></span><span class="ax_sw ${p.inject ? 'on' : ''}"></span></button>
           <button type="button" class="ax_rw" data-go="setsync">${si('#89b892', 'cmt')}<span class="ax_tx"><span class="ax_n">대화 반영 설정</span></span><span class="ax_v">${p.sync?.order === 'newest' ? '최신부터' : '오래된 순'} · ${p.sync?.limit || 12}개</span>${axChev}</button>
           <button type="button" class="ax_rw na_ph_setupd">${si('#8faed1', 'redo')}<span class="ax_tx"><span class="ax_n">새로 일어난 일 반영</span></span><span class="ax_v">${ui.syncN ? `남은 ${ui.syncN}개` : ''}</span></button>
         </div>
-        <div class="ax_foot">롤플에 넣기를 켜면 이 폰의 최근 문자 · 일정이 주입돼요.</div>
+        ${ui.phones?.live ? '' : '<div class="ax_foot">롤플에 넣기를 켜면 이 폰의 최근 문자 · 일정이 주입돼요.</div>'}
         <div class="ax_card">
           <button type="button" class="ax_rw ax_rwn" data-go="setremake"><span class="ax_tx"><span class="ax_n ax_blue">다시 만들기</span></span>${axChev}</button>
           <button type="button" class="ax_rw ax_rwn na_ph_storyreset"><span class="ax_tx"><span class="ax_n ax_red">이 방의 폰 새로 시작</span></span></button>
@@ -659,7 +659,8 @@ const dateLabel = (p, now, long = false) => {
     const y = !p.noYear && Number(p.year), d = y ? new Date(Date.UTC(y, mt[1] - 1, Number(mt[2]))) : null;
     return `${y ? fullDate(p, `${y}-${mt[1]}-${mt[2]}`) : fmtDate(p, `${mt[1]}-${mt[2]}`)}${long && d ? ` (${'일월화수목금토'[d.getUTCDay()]})` : ''}`;
 };
-export function setDate(p, now, m = null) {
+// (실시간: 메신저 시간대 is 타임라인's alone, so it isn't there)
+export function setDate(p, now, m = null, ui = {}) {
     // docs/mockups/phone-date C: the date in one line (with the year), the year as − 2026 + (hold for fast steps)
     const on = !p.noYear, mt = /^(\d{2})-(\d{2})/.exec(String(now || p.now || ''));
     const y = on && Number(p.year), d = y && mt ? new Date(Date.UTC(y, mt[1] - 1, Number(mt[2]))) : null;
@@ -676,8 +677,8 @@ export function setDate(p, now, m = null) {
         <div class="ax_card"><button type="button" class="ax_rw ax_rwn na_ph_yearshow"><span class="ax_tx"><span class="ax_n">연도 표시</span></span><span class="ax_sw ${on ? 'on' : ''}"></span></button>
           ${on ? row('연도', `<span class="ax_ys">${step(-1, '−')}<b class="cg_num na_ph_yval">${esc(String(p.year || ''))}</b>${step(1, '+')}</span>`) : ''}</div>
         <div class="ax_foot">연도를 알아야 요일이 맞게 나와요. 연도 없는 이야기만 꺼 주세요.</div>
-        <div class="ax_card"><button type="button" class="ax_rw ax_rwn" data-go="setscreenholder"><span class="ax_tx"><span class="ax_n">메신저 시간대</span></span><span class="ax_v">${esc(screenHolderLabel(m) || '미설정')}</span>${ax('chev', 16, '#bfc2c7')}</button></div>
-        <div class="ax_foot">캐릭터와 주고받는 메시지의 시간이 누구를 기준으로 하는지 골라 주세요.</div>
+        ${ui.phones?.live ? '' : `<div class="ax_card"><button type="button" class="ax_rw ax_rwn" data-go="setscreenholder"><span class="ax_tx"><span class="ax_n">메신저 시간대</span></span><span class="ax_v">${esc(screenHolderLabel(m) || '미설정')}</span>${ax('chev', 16, '#bfc2c7')}</button></div>
+        <div class="ax_foot">캐릭터와 주고받는 메시지의 시간이 누구를 기준으로 하는지 골라 주세요.</div>`}
         ${(o => `<div class="ax_sec">날짜 읽는 법</div><div class="ax_card"><div class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_n">순서</span></span><span class="ax_dseg">${[['md', '월.일'], ['dm', '일.월']].map(([v, t]) => `<span role="button" tabindex="0" class="na_ph_dord${o === v ? ' on' : ''}" data-v="${v}">${t}</span>`).join('')}</span></div></div>
         <div class="ax_foot">03.11. → ${o === 'dm' ? '11월 3일' : '3월 11일'}</div>`)(dateOrderOf(m))}
       </div>
@@ -1138,7 +1139,7 @@ const PROFILE_SOURCES = [
 ];
 // Drawn for persona selection: a person with a small name badge.
 const personaIcon = '<svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="3"/><path d="M3 20v-2a6 6 0 0 1 9-5.2"/><rect x="13" y="13" width="8" height="7" rx="1.6"/><path d="M15.5 16.5h3"/></svg>';
-export function setOwnerProfile(p, now, state) {
+export function setOwnerProfile(p, now, state, live = false) {
     const pane=state?.pane || 'about', binding=state?.binding || p.financeProfile || {type:'none'}, options=profileChoices(ctx());
     const sourceName=b=>PROFILE_SOURCES.find(x=>x[0]===b?.type)?.[1] || '연결 안 함';
     const personName=(b,label)=>b?.type==='lore' && label?.startsWith(`${b.book} · `) ? label.slice(b.book.length+3) : label || '선택';
@@ -1151,7 +1152,7 @@ export function setOwnerProfile(p, now, state) {
         const info=phoneDataInfo(p), d=p.device;
         const last=info.last?new Intl.DateTimeFormat('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(info.last)):'—';
         body=`<div class="ax_sec">인물 정보</div><div class="ax_card">${row('출처',saved?.type==='lore'?`로어북 · ${saved.book}`:sourceName(saved),'fp_open')}${saved?row('내용 보기',personName(saved,state?.resolved?.label || saved.label),'fp_content'):''}</div>${notice}
-        <div class="ax_sec">데이터 정보</div><div class="ax_card">${row('아카이브 반영',p.upto>=0?`#${p.upto}까지`:'—')}${row('마지막 생성',last)}${row('생성된 앱',`${info.count}개`,'fp_apps')}</div>
+        <div class="ax_sec">데이터 정보</div><div class="ax_card">${live ? '' : row('아카이브 반영',p.upto>=0?`#${p.upto}까지`:'—')}${row('마지막 생성',last)}${row('생성된 앱',`${info.count}개`,'fp_apps')}</div>
         <div class="ax_sec">기기 정보</div><div class="ax_card">${d?row('기기 이름',d.name || '—')+row('모델명',d.model || '—')+row('소프트웨어 버전',d.os || '—')+row('저장 용량',d.storage || '—')+row('일련번호',d.serial || '—'):row(state?.deviceBusy?'불러오는 중…':'기기 정보 불러오기','',state?.deviceBusy?'':'fp_device')}</div>
         ${state?.deviceError?`<div class="ax_foot">${esc(state.deviceError)}</div>`:''}
         ${saved?'<div class="ax_sec">관리</div><div class="ax_card"><button type="button" class="ax_rw ax_rwn fp_unlink"><span class="ax_tx"><span class="ax_n ax_red">연결 해제</span></span></button></div>':''}`;
