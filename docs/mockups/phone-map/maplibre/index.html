@@ -20,6 +20,8 @@ h1 { font-size: 18px; margin: 4px 0 0; }
 .chips button.on { background: var(--on); color: var(--onink); }
 .frame { position: relative; width: 100%; aspect-ratio: 390 / 560; border-radius: 22px; overflow: hidden; background: #faf6ee; box-shadow: 0 1px 2px rgba(22,27,34,.05), 0 10px 26px rgba(22,27,34,.12); }
 #map, #old { position: absolute; inset: 0; }
+/* a map nobody sees: the same place one zoom step closer, so its tiles hold the places this zoom's tiles leave out (dense cities keep only stations) */
+#deep { position: fixed; left: -10000px; top: 0; visibility: hidden; pointer-events: none; }
 #old { display: none; width: 100%; height: 100%; }
 .frame.showold #old { display: block; }
 .credit { position: absolute; right: 8px; bottom: 6px; font: 500 8.5px/1 -apple-system, 'Noto Sans KR', sans-serif; color: #8a8f98; text-shadow: 0 0 2px #fff, 0 0 2px #fff; pointer-events: auto; }
@@ -44,6 +46,7 @@ h1 { font-size: 18px; margin: 4px 0 0; }
   <div class="chips" id="places"></div>
   <div class="frame" id="frame">
     <div id="map"></div>
+    <div id="deep" aria-hidden="true"></div>
     <img id="old" alt="지금 지도">
     <div class="credit"><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenMapTiles © OpenStreetMap contributors</a></div>
   </div>
@@ -121,7 +124,7 @@ const W = (px, z0) => ['interpolate', ['exponential', 1.6], ['zoom'], z0 - 2, px
 const CJK = '-apple-system, "Noto Sans KR", "Hiragino Sans", "PingFang SC", sans-serif';
 // 장소: 종류별 색 동그라미 + 같은 색 글씨. 세 겹으로 놓아요(위 겹부터 자리를 잡아요): 볼거리 · 공원 → 역 · 관청 → 먹고 마시기(서로 멀리, 중요한 것만)
 const FOOD = ['food', 'cafe', 'bar', 'beer', 'bakery', 'wine'], TRANSIT = ['train', 'metro', 'tram', 'bus', 'ferry', 'cable', 'post', 'police', 'townhall', 'bank', 'info', 'school', 'shop'];
-const poi = (id, f, pad, maxRank) => ({ id, type: 'symbol', source: 't', 'source-layer': 'poi',
+const poi = (id, f, pad, maxRank) => ({ id, type: 'symbol', source: 'pois',
   filter: ['all', f, ['<=', ['coalesce', ['get', 'rank'], 30], maxRank], ['!', ['in', ['get', 'subclass'], ['literal', ['bus_stop', 'subway_entrance', 'platform', 'supermarket', 'convenience', 'fuel', 'parking']]]]],
   layout: { 'icon-image': kindExpr, 'icon-size': 1, 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Bold'], 'text-size': 10.5, 'text-anchor': 'left', 'text-offset': [0.95, 0],
     'symbol-sort-key': ['coalesce', ['get', 'rank'], 30], 'icon-padding': pad, 'text-padding': 6, 'text-optional': false, 'text-max-width': 9 },
@@ -136,6 +139,7 @@ function style(z0, P = C, main = '') {
     paint: { 'line-color': color, 'line-width': w, ...extra } });
   return { version: 8, glyphs: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
     sources: { t: { type: 'vector', url: 'https://tiles.openfreemap.org/planet' },
+      pois: { type: 'geojson', data: { type: 'FeatureCollection', features: [] } },
       ...(hill ? { dem: { type: 'raster-dem', tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'], encoding: 'terrarium', tileSize: 256, maxzoom: 15 } } : {}) },
     layers: [
       { id: 'land', type: 'background', paint: { 'background-color': C.land } },
@@ -185,7 +189,24 @@ function iconImage(k) {
 }
 const frame = document.getElementById('frame'), stat = document.getElementById('stat'), old = document.getElementById('old');
 const zoomFor = (lat, span) => Math.log2(78271.517 * Math.cos(lat * Math.PI / 180) * frame.clientWidth / span);
-let map, cur = 0, t0 = 0, palName = '';
+let map, deep, cur = 0, t0 = 0, palName = '';
+// the deeper map: twice the size at one zoom more covers the same ground; its poi features (in lng/lat) go into the main map's 'pois'
+function deepMap(center, zoom) {
+  const el = document.getElementById('deep'); el.style.width = frame.clientWidth * 2 + 'px'; el.style.height = frame.clientHeight * 2 + 'px';
+  if (deep) deep.remove();
+  deep = new maplibregl.Map({ container: el, interactive: false, attributionControl: false, center, zoom: zoom + 1,
+    style: { version: 8, sources: { t: { type: 'vector', url: 'https://tiles.openfreemap.org/planet' } },
+      layers: [{ id: 'p', type: 'circle', source: 't', 'source-layer': 'poi', paint: { 'circle-radius': 1, 'circle-opacity': 0 } }] } });
+  deep.on('idle', () => {
+    const seen = new Set(), out = [];
+    for (const f of deep.querySourceFeatures('t', { sourceLayer: 'poi' })) {
+      const p = f.properties, k = (p.name || '') + '|' + p.class + '|' + (p.subclass || '');
+      if (!p.name || seen.has(k)) continue; seen.add(k);
+      out.push({ type: 'Feature', geometry: f.geometry.type === 'Point' ? f.geometry : { type: 'Point', coordinates: f.geometry.coordinates.flat(3).slice(0, 2) }, properties: p });
+    }
+    const src = map && map.getSource('pois'); if (src) src.setData({ type: 'FeatureCollection', features: out });
+  });
+}
 function show(i, keep) {
   cur = i; const [, main, lat, lon, span, svg, type] = PLACES[i], z0 = zoomFor(lat, span);
   const [over, pn] = palFor(type, lat), P = { ...C, ...over }; palName = pn;
@@ -195,6 +216,8 @@ function show(i, keep) {
   if (map) map.remove();
   map = new maplibregl.Map({ container: 'map', style: style(z0, P, main), center: keep ? keep.c : [lon, lat], zoom: keep ? keep.z : z0, attributionControl: false, localIdeographFontFamily: CJK, dragRotate: false, pitchWithRotate: false });
   map.touchZoomRotate.disableRotation();
+  deepMap(keep ? keep.c : [lon, lat], keep ? keep.z : z0);
+  map.on('moveend', () => deep && deep.jumpTo({ center: map.getCenter(), zoom: map.getZoom() + 1 }));
   map.on('styleimagemissing', async e => { if (ICONS[e.id] && !map.hasImage(e.id)) { const im = await iconImage(e.id); if (!map.hasImage(e.id)) map.addImage(e.id, im, { pixelRatio: 2 }); } });
   map.on('load', () => { map.addSource('main', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'Point', coordinates: [lon, lat] }, properties: { n: main } } });
     map.addLayer(mainLayer(P)); });
