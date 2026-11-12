@@ -117,6 +117,19 @@ export function setLangs(p, line) {
     p.langs = { ...got, by: 'user' };
     return p.langs;
 }
+// 말투 › 언어 (docs/mockups/phone-voice-langs pick B): one language ticked on or off in 자주 쓰는 언어 (texts) or 가끔
+// 쓰는 언어 (knows), kept as the user's; 5 of a kind at most (a sixth does nothing), one in texts leaves knows. With none
+// left the phone has no languages, and the next voice reading fills them again. Returns whether it changed
+export function tickLang(p, kind, name) {
+    const k = kind === 'knows' ? 'knows' : 'texts', n = String(name ?? '').trim(), low = n.toLowerCase(), l = p?.langs || {};
+    if (!p || !n) return false;
+    const now = Array.isArray(l[k]) ? l[k] : [], has = now.some(x => String(x).toLowerCase() === low);
+    if (!has && now.length >= 5) return false;
+    const next = { texts: l.texts || [], knows: l.knows || [], [k]: has ? now.filter(x => String(x).toLowerCase() !== low) : [...now, n] };
+    const got = langsOf(next);
+    if (got) p.langs = { ...got, by: 'user' }; else delete p.langs;
+    return true;
+}
 async function askVoices(m, owner, p, names) {
     // (the cards and the persona whole; the owner's chosen profile only when it is a lorebook entry: a card or a persona is
     // in already)

@@ -22,6 +22,10 @@
 .ax .ax_dyfind { display: grid; place-items: center; padding: 0; }
 /* 설정 › 말투: the translator's names a little grey */
 .ax .ax_n.ax_kvauto { color: #6b7380; --axfg: #6b7380; }
+/* 말투 › 언어: the values on one line; a ticked language navy, the rest faint once 5 are ticked */
+.ax .ax_langv { max-width: 170px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ax .ax_langon .ax_n { color: #2c4a80; --axfg: #2c4a80; font-weight: 600; }
+.ax .ax_langoff { opacity: 0.4; }
 .ax .ax_p.ax_kvp { -webkit-line-clamp: 1; }
 .ax .ax_kvsec { display: flex; align-items: center; justify-content: space-between; } .ax .ax_kvall { font-size: 13px; --axfs: 13px; letter-spacing: normal; --axls: normal; cursor: pointer; } .ax .ax_kvx { font-size: 16px; --axfs: 16px; cursor: pointer; } .ax .na_ph_kvpick.on { opacity: .6; }
 .ax_diary .ax_find { margin-top: 4px; }

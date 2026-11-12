@@ -1507,6 +1507,13 @@ test('fillKo: each line goes with who says it to whom, and the voice table, no e
     assert.equal(tr.setLangs(v, '  '), null); assert.equal(v.langs, undefined); assert.equal(tr.langsLine(v), '');
     assert.deepEqual(tr.setLangs(v, '(Korean)'), { texts: [], knows: ['Korean'], by: 'user' }); assert.equal(tr.langsLine(v), '(Korean)');
     assert.equal(tr.langsOf({ texts: [], knows: [] }), null); assert.equal(tr.langsOf(null), null);
+    // 말투 › 언어: ticked on and off; one in 자주 leaves 가끔; a sixth does nothing; none left takes it off
+    assert.equal(tr.tickLang(v, 'texts', 'korean'), true); assert.deepEqual(v.langs, { texts: ['korean'], knows: [], by: 'user' });
+    assert.equal(tr.tickLang(v, 'texts', 'Korean'), true); assert.equal(v.langs, undefined);
+    ['A', 'B', 'C', 'D', 'E'].forEach(x => tr.tickLang(v, 'knows', x));
+    assert.equal(tr.tickLang(v, 'knows', 'F'), false); assert.deepEqual(v.langs.knows, ['A', 'B', 'C', 'D', 'E']);
+    tr.tickLang(v, 'texts', 'C'); assert.deepEqual(v.langs, { texts: ['C'], knows: ['A', 'B', 'D', 'E'], by: 'user' });
+    assert.equal(tr.tickLang(v, 'texts', ' '), false);
     const vc = K.voiceCalls[0];
     assert.ok(vc.system.startsWith('GOAL\nWork out how each person in WHO writes to the people they text, as the story shows it') && vc.system.includes('"evidence"') && vc.system.includes('LANGUAGES\n- "langs": the languages OWNER really texts in') && vc.system.includes('- CHARACTER CARD — name and PERSONA — name (sometimes): the chat\'s cards and the user\'s persona, as written, with how they speak.'));
     assert.match(vc.input, /\[WHO\]\n- Mother\n- Ivo/);
