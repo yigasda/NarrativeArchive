@@ -1,9 +1,10 @@
 # 실제 지도 한 장(osmmap.js의 svg)을 폰에 넣을 크기로 줄여요. 모양은 화면에서 그대로예요.
-#   python3 docs/mockups/phone-map/osm/shrink.py <osmmap out.html | .svg> <out.svg> [eps px, 0.5]
+#   python3 docs/mockups/phone-map/osm/shrink.py <osmmap out.html | .svg> <out.svg> [eps px, 0.5] [id 접두어, 기본은 파일 이름에서]
 # 1. 화면(390 × 560) 밖은 잘라요: 화면에 닿지 않는 조각은 빼고, 선은 화면 밖으로 이어지는 점 하나까지만 남겨요
 # 2. 0.5px 안의 굴곡은 점을 빼요(Ramer–Douglas–Peucker), 화면에서 3px²보다 작은 면도 빼요
 # 3. 좌표는 정수, 첫 점 뒤로는 앞 점에서의 거리(l)로 적어요
 # 4. 같은 좌표를 두 번 쓰는 길(테두리 + 안쪽)은 <defs>에 한 번 적고 <use>로 두 번 그려요
+# 5. id는 지도마다 다른 접두어를 붙여요: 한 화면에 지도가 여럿이어도 서로의 길을 끌어오지 않게요
 # 출처 표시(© OpenStreetMap contributors)와 이름표 · 아이콘은 손대지 않아요
 import re, sys
 src, out = sys.argv[1], sys.argv[2]; EPS = float(sys.argv[3]) if len(sys.argv) > 3 else 0.5
@@ -138,5 +139,11 @@ svg2 = re.sub(PATH, path_sub, svg)
 if defs: svg2 = re.sub(r'(<svg\b[^>]*>)', lambda m: m.group(1) + '<defs>' + ''.join(defs) + '</defs>', svg2, count=1)
 svg2 = re.sub(r'<!--H(\d+)-->', lambda m: held[int(m.group(1))], svg2)
 svg2 = re.sub(r'>\s+<', '><', svg2)
+# every id gets this map's own prefix (from the out file's name): two maps on one page (the phone, a contact sheet)
+# would otherwise share q1, q2 … and draw each other's roads
+import hashlib, os
+PFX = sys.argv[4] if len(sys.argv) > 4 else 'm' + hashlib.md5(os.path.basename(out).encode()).hexdigest()[:4]
+names = set(re.findall(r'\sid="([^"]+)"', svg2))
+svg2 = re.sub(r'(\sid="|href="#|url\(#)([^")]+)', lambda m: m.group(1) + (PFX + m.group(2) if m.group(2) in names else m.group(2)), svg2)
 open(out, 'w', encoding='utf-8').write(svg2)
 print(f'{len(svg)} → {len(svg2)} bytes')
