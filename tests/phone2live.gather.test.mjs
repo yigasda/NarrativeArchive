@@ -64,13 +64,21 @@ test('날씨가 오늘 것이 아니면 안 보내요; 언어 설정 · 지운 �
     assert.match(text, /\[TYPED AND DELETED\]\n- 보고 싶\n\n\[WHY NOW\]\njust woke up$/);
 });
 
-test('이야기: 끝에서부터 통째 장면만, 정한 길이 안에서', () => {
+test('이야기: 첫 메신저 대화 때만, 끝에서부터 통째 장면만, 정한 길이 안에서', () => {
     const long = Array.from({ length: 60 }, (_, i) => `## #${i * 10}–#${i * 10 + 9} — scene ${i}\n- ${'x'.repeat(300)}`).join('\n\n');
-    const d = ask(world(), { deps: { ...deps, story: () => long } });
+    let asked = 0;
+    const story = () => { asked++; return long; };
+    // (the owner has answered before: no story, not even asked for)
+    assert.equal(ask(world(), { deps: { ...deps, story } }).story, '');
+    assert.equal(asked, 0);
+    const x = world(); x.r.messages.splice(1, 1);
+    const d = ask(x, { deps: { ...deps, story } });
+    assert.equal(d.now.first, true);
     assert.ok(d.story.length <= G.LIVE_ASK.story);
     assert.match(d.story, /^## #\d+–#\d+ — scene \d+\n/);
     assert.match(d.story, /scene 59\n- x+$/);
-    assert.equal(ask(world(), { deps: { ...deps, story: () => '## #0–#3 — short\n- a' } }).story, '## #0–#3 — short\n- a');
+    const y = world(); y.r.messages.splice(1, 1);
+    assert.equal(ask(y, { deps: { ...deps, story: () => '## #0–#3 — short\n- a' } }).story, '## #0–#3 — short\n- a');
 });
 
 test('없는 폰 · 없는 방 · 그 방에 없는 사람이면 아무것도 안 만들고, 폰 1 · 폰 2는 그대로', () => {

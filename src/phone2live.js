@@ -45,7 +45,7 @@ function records(p, persona) {
 // the values of one reply request (phone2ask.js replyInput's d), or null when there is no such phone or room.
 // now: the real moment (ms); tz: where the owner is; deps: { clock(p, at) → the [OWNER'S CLOCK] block, around(p) → the
 // [PEOPLE AROUND] block, card(owner) → the card's text, place(p) → where the phone last had the owner, blind(owner) → the
-// [OWNER DOESN'T KNOW] block, story() → the story 폰 2 may read }; why · typed: as the caller has them
+// [OWNER DOESN'T KNOW] block, story() → the story 폰 2 may read (asked for the first chat only) }; why · typed: as the caller has them
 export function gatherReply(m, owner, roomId, { now = Date.now(), tz = 'UTC', deps = {}, why = '', typed = [] } = {}) {
     const w = liveWorld(m), p = livePhone(m, owner), room = w?.messenger?.rooms?.[roomId];
     if (!w || !p || !room || !room.members.some(n => same(n, owner))) return null;
@@ -64,7 +64,9 @@ export function gatherReply(m, owner, roomId, { now = Date.now(), tz = 'UTC', de
     const did = mine.flatMap(x => (Array.isArray(x.does) ? x.does : []).filter(d => one(d?.app)).map(d => ({ app: one(d.app).toLowerCase(), at: wall(x.at) }))).map(r => ({ ...r, order: order(r.at, today) }));
     const here = p.life?.weather?.here;
     const rain = Number(here?.hours?.[0]?.rain);
-    const story = String(deps.story?.() || '').trim();
+    // (the story: with the first chat on the messenger only; after it the phone, the people around and the chat carry it)
+    const first = !(room.messages || []).some(x => same(x.from, owner));
+    const story = first ? String(deps.story?.() || '').trim() : '';
     return {
         owner: p.owner, persona: P, langs: w.langs?.[liveKey(owner)] || null,
         messenger: (room.messages || []).slice(-LIVE_ASK.bubbles).map(x => ({ at: wall(x.at), from: x.from, text: x.call ? `(call ${Math.max(0, Math.round(Number(x.call.min) || 0))} min)` : x.text, state: x.state })),
@@ -73,7 +75,7 @@ export function gatherReply(m, owner, roomId, { now = Date.now(), tz = 'UTC', de
             today: evs.filter(e => one(e.date) === today).sort(byTime).map(e => line(e, false)), ahead: ahead.map(e => line(e, true)),
             recorded: newest ? `${newest.app} ${newest.at} ${newest.what}` : '',
             story: w.from === 'story' && ((p.contacts || []).some(c => same(c.name, P)) || (p.threads || []).some(t => same(t.with, P))),
-            first: !(room.messages || []).some(x => same(x.from, owner)),
+            first,
         },
         clock: deps.clock?.(p, at) || '',
         weather: here && one(here.date) === today && one(here.place) && Number.isFinite(Number(here.temp))
