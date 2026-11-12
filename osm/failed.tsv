@@ -1,0 +1,3 @@
+slug	what	note
+berlin-mitte	main	rest: whole: kumi http 504; overpass-api.de http 502 | 2x2 piece 1: kumi http 502; overpass-api.de http 504 | 3x3 piece 1: kumi http 504; overpass-api.de http 504 || building: whole: kumi http 502; overpass-api.de http 502 | 2x2 piece 1: kumi http 504; overpass-api.de http 504 | 3x3 piece 1: kumi http 504; overpass-api.de http 504
+muenchen-marienplatz	main	rest: whole: kumi http 504; overpass-api.de http 504 | 2x2 piece 2: kumi http 504; overpass-api.de http 502 | 3x3 piece 3: kumi http 502; overpass-api.de http 504 || building: whole: kumi http 504; overpass-api.de http 504 | 2x2 piece 2: kumi http 504; overpass-api.de http 504 | 3x3 piece 1: kumi http 504; overpass-api.de http 504
