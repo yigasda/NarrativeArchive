@@ -31,6 +31,9 @@ test('말만 오간 답장: 방에 들어가고 저장돼요. 반영은 안 돌�
     assert.ok(T.saves >= 1 && drew >= 1);
     // the request is the reply prompt with the messenger in it; the persona is marked as reached on the messenger
     assert.match(T.replyInput, /\[MESSENGER\]\n.* · Ren: 일어났냐/);
+    // (the clock block is the reply's: the time now with its weekday, not the reflection's "Saved phone time")
+    assert.match(T.replyInput, /\[OWNER'S CLOCK\]\nPhone owner: Mara\n[\s\S]*Time now: \d{2}-\d{2} \d{2}:\d{2} \((Sun|Mon|Tue|Wed|Thu|Fri|Sat)\)/);
+    assert.ok(!T.replyInput.includes('Saved phone time'));
     assert.ok(c.p.contacts.some(x => x.name === 'Ren' && x.messenger));
     assert.equal(G.liveUnreflected(c.real, 'Mara'), 2);
     assert.equal(JSON.stringify(c.real.phones), p1);

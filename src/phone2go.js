@@ -5,7 +5,7 @@
 // 폰 1은 이 파일을 안 불러요.
 
 import { ctx, saveMeta } from './core.js';
-import { askDraft, ownerClock, aroundBlock, ownerZone, cardBlocks } from './phonedata.js';
+import { askDraft, phone2Clock, aroundBlock, ownerZone, cardBlocks } from './phonedata.js';
 import { resolvePhoneProfile, ownerProfileBlock } from './phoneprofile.js';
 import { parseJson } from './phoneparse.js';
 import { nameKey } from './people.js';
@@ -44,7 +44,8 @@ export async function liveGo(real, { onChange = () => {} } = {}) {
             if (!w || !p) return null;
             const d0 = m(), card = await cardOf(p);
             const d = gatherReply(real, job.owner, job.room, { now: Date.now(), tz: tzOf(p), deps: {
-                clock: (ph, at) => ownerClock(ph, at, d0, null, []), around: aroundBlock, card: () => card,
+                // (the reply's own clock block: each place's time now and weekday, as the reply prompt was tuned with)
+                clock: (ph, at) => phone2Clock(ph, at, d0), around: aroundBlock, card: () => card,
                 place: ph => { const r = (ph.where?.people || []).find(x => nameKey(x?.name) === nameKey(ph.owner)); return String(r?.place || r?.city || '').trim(); },
                 story: () => liveStoryText(real, w),
             } });
