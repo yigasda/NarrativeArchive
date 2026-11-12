@@ -98,7 +98,7 @@ const PHONE_ITEMS = `  "contacts": [{ "name": name in the story, "saved": how th
               "comments": [{ "from": name, "text", "ko" }] }],
   "mails": [{ "from": sender, "to": only on a mail the owner sent ("from" is then the owner), "subject" ("Re: …" for an answer), "ks": Korean subject, "text", "ko", "time", "unread": true or false }],
   "diary": [{ "date": "MM-DD", "title", "kt": Korean title, "text", "ko" }],
-  "visits": [{ "place": a place the owner really went to, as the story writes it (a room, a shop, a house; a city alone when the story names nothing closer there, never the city they live in alone), "city": the city it is in, or "", "home": true when it is the owner's own home, "with": [the people there with them], "time", "already": the id of that same visit in PHONE NOW, else "" }] one for each place the owner is at, in order: a scene that moves (from the office to the station to a hotel in another city) gives one at each,
+  "visits": [{ "place": a place the owner really went to, as the story writes it (a shop, a house, an office; a city alone when the story names nothing closer there, never the city they live in alone), "area": its district or neighbourhood (강서구, Kreuzberg), or "", "city": the city it is in, or "", "home": true when it is the owner's own home, "with": [the people there with them], "time", "already": the id of that same visit in PHONE NOW, else "" }] one for each place the owner is at, in order: a scene that moves (from the office to the station to a hotel in another city) gives one at each; the rooms of one building are one visit,
   "voice": [{ "title", "kt", "text", "ko", "time", "sec", "place" }] only when the archive or chat shows the owner recorded one`;
 // (반영: a voice memo may be an everyday one too, so the 폰 만들기 limit is left off there)
 const VOICE_ONLY = ' only when the archive or chat shows the owner recorded one';
@@ -386,7 +386,7 @@ ${live ? `1. Each "<owner's name> [App]: …" line → its records in every app 
    - browsed a delivery app, ordered nothing → a search at most: no order or meal, no photo or diary of one
    The owner–${live} chat itself is never a text or call; a text or call with anyone else it tells of is ("I called Dad" → a call to Dad).` : '1. A phone action the messages show or say (a text, call, photo, search, mail, post, voice memo) → that record. A text exchange the messages already show: only its last 4 messages.'}
 2. A plan made → "calendar". A PHONE NOW plan the messages move → its calendar record again with "was"; called off or undone (an order cancelled) → "cancelled": true.${wallet ? ' Tickets go in the wallet; reservations and appointments in the calendar.' : ''} No booking, trip or purchase the story lacks.
-3. Each place the owner is at, in order, → one "visit": a scene that moves (from the office to the station to a hotel in another city) gives one at each.
+3. Each place the owner is at, in order, → one "visit": a scene that moves (from the office to the station to a hotel in another city) gives one at each; the rooms of one building are one visit.
 4. Someone new the owner meets and would save → "contact".${life ? `
 5. An alarm or file the messages set or change → that record.` : ''}
 A record says no more than its "said". Nothing else goes in "records".
@@ -460,7 +460,7 @@ post: "text", "photo", "time", "likes", "comments": [{ "from", "text" }]
 profile: "handle", "bio", "followers", "following"
 mail: "sender", "to": only on a mail the owner sends ("sender" is then the owner), "subject" ("Re: …" for an answer), "text", "time", "unread"
 diary: "date", "title", "text"
-visit: "place": where they really went, as the story writes it (never just their own city), "city", "home", "time", "already": that visit's id in PHONE NOW
+visit: "place": where they really went, as the story writes it (never just their own city), "area": its district or neighbourhood (강서구, Kreuzberg) or "", "city", "home", "time", "already": that visit's id in PHONE NOW
 voice: "title", "text", "time", "sec", "place"${life ? `
 alarm: "time": "HH:MM", "label", "days": [weekdays], or [] and "date" for one occasion, "on", "wake", "then", "snooze", "snoozeCount", "sound"
 timer: "label", "sec"
@@ -617,7 +617,7 @@ export function parsePhone(out, owner = '') {
             comments: arr(x?.comments).map(c => ({ from: line(c?.from, 40), text: line(c?.text, 300), ko: ko(c?.ko) })).filter(c => c.from && c.text).slice(0, CAP.comments) }, x)).filter(x => x.text || x.photo),
         mails: arr(raw.mails).map(x => tag({ from: line(x?.from, 60), ...(line(x?.to, 60) ? { to: line(x.to, 60) } : {}), subject: line(x?.subject, 120), ks: line(x?.ks, 120), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), unread: truthy(x?.unread) }, x)).filter(x => x.from && (x.subject || x.text)),
         diary: arr(raw.diary).map(x => tag({ date: when(x?.date).slice(0, 5), title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000) }, x)).filter(x => x.date && x.text),
-        visits: arr(raw.visits).map(x => tag({ place: line(x?.place, 60), city: line(x?.city, 60), ...(line(x?.already, 40) ? { already: line(x.already, 40) } : {}), ...(x?.home === true ? { home: true } : {}), with: [...new Set(oneOrMany(x?.with).map(n => line(n, 40)).filter(n => n && !mine(n)))].slice(0, 6), time: when(x?.time), src: 'story' }, x)).filter(x => x.place).slice(-CAP.visits),
+        visits: arr(raw.visits).map(x => tag({ place: line(x?.place, 60), ...(line(x?.area, 40) ? { area: line(x.area, 40) } : {}), city: line(x?.city, 60), ...(line(x?.already, 40) ? { already: line(x.already, 40) } : {}), ...(x?.home === true ? { home: true } : {}), with: [...new Set(oneOrMany(x?.with).map(n => line(n, 40)).filter(n => n && !mine(n)))].slice(0, 6), time: when(x?.time), src: 'story' }, x)).filter(x => x.place).slice(-CAP.visits),
         voice: arr(raw.voice).map(x => tag({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), sec: secOf(x?.sec), place: line(x?.place, 60), src: 'story' }, x)).filter(x => x.text),
     });
 }
@@ -1055,6 +1055,11 @@ export function mergePhone(p, add, { keepAll = false, m = null } = {}) {
     // row for as long as it is their home: a new one only when they live somewhere else)
     if (add.visits?.length) {
         const homes = (p.visits || []).filter(x => x.home).map(x => nameKey(x.place));
+        // (the owner's home is in one district: a home visit given none takes the one the phone already has for home)
+        const homeArea = [...(p.visits || []), ...add.visits].filter(x => x.home && x.area).at(-1)?.area;
+        if (homeArea) for (const x of add.visits) if (x.home && !x.area) x.area = homeArea;
+        // (and the home row already there, told its district now, takes it)
+        if (homeArea) for (const x of p.visits || []) if (x.home && !x.area) x.area = homeArea;
         add.visits = add.visits.filter(x => visitOk(p, x) && !(x.home && (homes.includes(nameKey(x.place)) || !homes.push(nameKey(x.place))))).map(x => visitWith(p, x, m));
     }
     for (const k of LISTS) p[k] = keep([...(p[k] || []), ...fresh(k, p[k] || [], add[k] || [])], CAP[k]);
@@ -1410,7 +1415,7 @@ export const phoneForModel = p => ({
     // so a memo already there isn't recorded again
     voice: real(p.voice || []).slice(-3).map(x => ev(x, { title: x.title, time: x.time })),
     // (the newest visits with their ids: the same visit told again is one of these, "already")
-    visits: real(p.visits || []).slice(-4).map(x => ev(x, { id: x.id, place: x.place, city: x.city, time: x.time })),
+    visits: real(p.visits || []).slice(-4).map(x => ev(x, { id: x.id, place: x.place, ...(x.area ? { area: x.area } : {}), city: x.city, time: x.time })),
     // (the owner's bank and its accounts by name only: a bank mail or alert names the right bank; the money itself is the money stage's)
     bank: p.money?.bank?.accounts?.length ? { name: p.money.bank.name, accounts: p.money.bank.accounts.map(a => ({ kind: a.kind, name: a.name, last4: a.last4 })) } : undefined,
 });

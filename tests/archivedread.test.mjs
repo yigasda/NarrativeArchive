@@ -820,7 +820,8 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.ok(on.includes('PHONE NOW and ORDERS AND TICKETS') === false && data.coreSystem({ life: true, wallet: true }).includes('STORY NOW, PHONE NOW and ORDERS AND TICKETS: a parcel'));
     // (STEP 3: the cases)
     assert.match(on, /2\. A plan made → "calendar"\. A PHONE NOW plan the messages move → its calendar record again with "was"; called off or undone \(an order cancelled\) → "cancelled": true\. No booking, trip or purchase the story lacks\./);
-    assert.match(on, /3\. Each place the owner is at, in order, → one "visit": a scene that moves \(from the office to the station to a hotel in another city\) gives one at each\./);
+    assert.match(on, /3\. Each place the owner is at, in order, → one "visit": a scene that moves \(from the office to the station to a hotel in another city\) gives one at each; the rooms of one building are one visit\./);
+    assert.match(on, /visit: "place": [^\n]*, "area": its district or neighbourhood \(강서구, Kreuzberg\) or "", "city"/);
     assert.match(on, /→ that record\. A text exchange the messages already show: only its last 4 messages\./);
     assert.ok(on.includes('- Each text in the language its writer really uses, as long as that person really writes.') && !on.includes('Texts short'));
     // (no Korean asked of the reflection: the app adds it after, phonetr.js)
@@ -1536,4 +1537,14 @@ test('someone texted or called by name is saved in the contacts; a number, an un
     // 되돌리기 takes them back with the round
     await data.undoRound(c.m, c.p);
     assert.deepEqual(c.p.contacts.map(x => x.name), ['Mara']);
+});
+
+test('a visit carries its district; the home keeps one district, given once', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'home, then the cafe by the station'), say('Mara', 'see you')]);
+    c.p.now = '10-26 09:00'; c.p.year = 2026;
+    await run(c.m, { now: '10-26 20:00', events: [{ id: 'day', at: 2, quote: 'home, then the cafe by the station', summary: 'home and cafe', date: '10-26', time: '12:00', phone: {
+        visits: [{ place: "Ren's flat", area: '강서구', city: 'Seoul', home: true, time: '10-26 10:00' }, { place: 'Station cafe', area: '마곡동', city: 'Seoul', time: '10-26 12:00' }, { place: 'Corner shop', city: 'Seoul', time: '10-26 13:00' }] } }] });
+    assert.deepEqual(c.p.visits.map(x => [x.place, x.area ?? '']), [["Ren's flat", '강서구'], ['Station cafe', '마곡동'], ['Corner shop', '']]);
+    // PHONE NOW shows it
+    assert.equal(data.phoneForModel(c.p).visits.find(x => x.place === 'Station cafe').area, '마곡동');
 });
