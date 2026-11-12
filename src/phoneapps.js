@@ -649,7 +649,7 @@ export function setScreen(p, now, m, ui) {
 function phoneModes({ live, has, shift }) {
     const seg = (v, t, on, off) => `<span role="button" tabindex="0" class="ax_pmseg na_ph_pmode${on ? ' on' : ''}${v === 'live' ? ' lv' : ''}${off ? ' off' : ''}" data-v="${v}" aria-pressed="${on}">${t}</span>`;
     return `<div class="ax_sec">휴대폰</div>
-        <div class="ax_card ax_pmode"><div class="ax_pmsegs">${seg('story', '타임라인', !live, false)}${seg('live', '실시간', live, !has)}</div>${has ? '' : '<div class="ax_pmnone">아직 실시간 폰이 없어요<span class="ax_pmstart" role="button" tabindex="0" data-go="livestart">시작하기</span></div>'}</div>
+        <div class="ax_card ax_pmode"><div class="ax_pmsegs">${seg('story', '타임라인', !live, false)}${seg('live', '실시간', live, false)}</div></div>
         <div class="ax_foot">${live ? `지금 내 시각으로 흘러가는 폰이에요. 메신저로 직접 연락해요.${shift ? ` · ${esc(shift)}` : ''}` : '이야기를 따라 흘러가는 폰이에요.'}</div>`;
 }
 // 날짜 및 시간: the phone's date as a real phone shows it; its year is the story's (set here, or none for a story that

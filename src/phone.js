@@ -779,7 +779,9 @@ export async function openPhone(who = null) {
     $root.on('click', '.na_ph_pmode', async function (e) {
         e.stopPropagation();
         const to = this.dataset.v === 'live' ? 'live' : 'story';
-        if (to === liveMode(realM) || (to === 'live' && !liveWorld(realM))) return;
+        if (to === liveMode(realM)) return;
+        // (실시간 폰이 아직 없으면: 실시간을 고르면 시작 화면)
+        if (to === 'live' && !liveWorld(realM)) { view = 'livestart'; sheet = false; draw(); return; }
         if (making || busyMake || investing || koBusy || filling.size || busy.fill || busy.sync) return toastr.info('다른 폰 작업이 끝난 뒤 바꿔 주세요', '캐릭터 휴대폰');
         setLiveMode(realM, to);
         useMode();
