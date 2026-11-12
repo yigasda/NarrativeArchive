@@ -128,7 +128,7 @@ export async function openPhone(who = null) {
         for (const r of all) if (!r.at) console.info('[narrative-archive] branch: story time at the branch point unknown, made records and clock kept', r.name);
         const shown = all.filter(r => (r.dropped || 0) + (r.items || 0) + (r.cut || 0) > 0);
         const n = shown.reduce((t, r) => t + (r.dropped || 0) + (r.items || 0) + (r.cut || 0), 0), kept = [...new Set(shown.flatMap(r => r.kept || []))];
-        const lines = [...(n ? [`갈라진 뒤 기록 ${n}개 뺐어요${kept.length ? ` · ${esc(kept.join(', '))} 남김` : ''}`] : []), ...(liveCut ? [`${n ? '실시간 폰은 ' : ''}갈라진 곳부터 다시`] : [])];
+        const lines = [...(n ? [`갈라진 뒤 기록 ${n}개 뺐어요${kept.length ? ` · ${esc(kept.join(', '))} 남김` : ''}`] : []), ...(liveCut ? [`${n ? '실시간 폰은 ' : ''}갈라진 곳부터 다시 시작해요`] : [])];
         if (lines.length) toastr.info(lines.join('<br>'), n ? `${esc([...new Set(shown.map(r => r.name))].join(' · '))} 폰` : '실시간 폰', { escapeHtml: false });
     }
     // a round this browser made that the saved chat doesn't have: kept, and offered in 설정 › 대화 반영; the phone opens anyway
