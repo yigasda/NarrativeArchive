@@ -37,6 +37,14 @@
 .ax .ob_dock { left: 50%; bottom: 34px; transform: translateX(-50%); padding: 13px 20px; font-size: 14px; }
 .ax .ob_go { left: 16px; right: 16px; bottom: 34px; height: 58px; font-size: 15.5px; }
 .ax .ob_go em { font-style: normal; font-weight: 500; opacity: 0.6; }
+/* 계정: 왼쪽 위 얼굴, 아래 시트 */
+.ax .ob_me { display: flex; border-radius: 50%; }
+.ax .ob_me.na_ob_acct { cursor: pointer; }
+.ax .ob_shade { position: absolute; inset: 0; z-index: 8; background: rgba(20, 22, 30, 0.28); }
+.ax .ob_sheet { position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 9; background: #fff; border-radius: 32px; padding: 10px 16px 28px; box-shadow: 0 -10px 30px rgba(20, 22, 30, 0.18); }
+.ax .ob_grab { display: block; width: 40px; height: 5px; border-radius: 3px; background: #d4d7dd; margin: 0 auto 12px; }
+.ax .ob_acc { display: flex; align-items: center; gap: 12px; padding: 10px 4px; cursor: pointer; }
+.ax .ob_acc + .ob_acc { border-top: 1px solid #eef0f3; }
 /* 새 대화 */
 .ax .ob_picked { display: flex; flex: none; gap: 14px; margin: 4px 4px 0; }
 .ax .ob_pk { position: relative; display: flex; flex-direction: column; align-items: center; gap: 5px; font-size: 12px; color: #3a3f47; cursor: pointer; }
@@ -61,7 +69,6 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax 
 .ax .ob_nm span { font-size: 12px; color: rgba(30, 32, 40, 0.62); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ax .ob_chips { display: flex; flex: none; justify-content: center; gap: 6px; margin-top: 10px; }
 .ax .ob_chip { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; color: #fff; background: rgba(20, 22, 30, 0.26); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius: 999px; padding: 5px 12px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2); }
-.ax .ob_chip.na_ob_as { cursor: pointer; }
 .ax .ob_msgs { padding: 0 14px; }
 .ax .ob_mi { display: flex; flex-direction: column; gap: 6px; margin-top: auto; padding: 12px 0 14px; }
 .ax .ob_msgs.ro .ob_mi { padding-bottom: 40px; }

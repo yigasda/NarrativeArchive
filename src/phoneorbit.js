@@ -65,30 +65,32 @@ export const orbitHomeWidget = (rooms, unread = 0) => `<div class="cg_glass ob_w
 const dots = lit => Array.from({ length: 24 }, (_, h) => `<i class="${h === lit ? 'h' : h < lit ? 'p' : ''}" style="height:${h < lit ? [9, 15, 22, 15][h % 4] : 4}px"></i>`).join('');
 
 // 방 목록 (시안 A): 맨 위 "지금 그 사람" 카드, 1:1 · 단체 고르기, 흰 목록, 아래 새 대화
-// o: { tab, hero: { name, city, local } | null, rooms: [{ id, title, group, last, lastWho, time, unread, typing }] }
+// o: { tab, acct: { name, ro, sheet, list: [{ name, sub, on }] }, hero: { name, city, local } | null, rooms: [{ id, title, group, last, lastWho, time, unread }] }
+// 왼쪽 위 얼굴 = 지금 계정(시안 phone2-account A): 누르면 아래 시트에서 페르소나 ↔ 이 폰 주인. 주인 계정은 읽기만(새 대화 · 안 읽음 없음)
 export function orbitList(p, now, o) {
     const tab = o.tab || 'all', rooms = o.rooms.filter(r => tab === 'all' || (tab === 'group') === r.group);
-    const h = o.hero, lit = h ? Number(String(h.local).slice(0, 2)) : -1;
+    const h = o.hero, lit = h ? Number(String(h.local).slice(0, 2)) : -1, a = o.acct || { name: '', list: [] }, many = a.list.length > 1;
     return `${axBar(p, now)}
-      <div class="ob_top"><span class="ob_cb" role="button" tabindex="0" data-go="home" aria-label="홈">${ic('back', 20)}</span><b class="ob_h1">메시지</b><span class="ob_cb" role="button" tabindex="0" data-go="orbitnew" aria-label="새 대화">${ic('pen', 19)}</span></div>
+      <div class="ob_top"><span class="ob_me${many ? ' na_ob_acct' : ''}"${many ? ' role="button" tabindex="0" aria-label="계정"' : ''}>${face(a.name, 46)}</span><b class="ob_h1">메시지</b>${a.ro ? '<span class="ob_cb0"></span>' : `<span class="ob_cb" role="button" tabindex="0" data-go="orbitnew" aria-label="새 대화">${ic('pen', 19)}</span>`}</div>
       <div class="ob_scroll ax_scroll">
         <div class="ob_seg">${[['all', '전체'], ['one', '1:1'], ['group', '단체']].map(([k, t]) => `<span role="button" tabindex="0" class="ob_sg na_ob_tab${tab === k ? ' on' : ''}" data-v="${k}">${t}</span>`).join('')}</div>
         ${h ? `<div class="ob_hero"><span class="ob_blob" style="background:${orbitBg(h.name)}"></span><span class="ob_gl"></span><div class="ob_in"><small>${esc(h.name)}${h.city ? ` · ${esc(h.city)}` : ''} 지금</small><div class="ob_big cg_num">${esc(h.local)}</div><div class="ob_dots">${dots(lit)}</div><div class="ob_dl"><span>0시</span><span>12시</span><span>24시</span></div></div></div>` : ''}
         ${rooms.length ? `<div class="ob_list">${rooms.map(r => `<div class="ob_rm" role="button" tabindex="0" data-go="orbitroom" data-i="${esc(r.id)}">${face(r.title, 50, r.group)}<span class="ob_t"><b>${esc(r.title)}</b><span class="ob_p">${r.last ? `${r.lastWho ? `${esc(r.lastWho)}: ` : ''}${esc(r.last)}` : ''}</span></span><span class="ob_r"><span class="cg_num">${esc(r.time || '')}</span>${r.unread ? `<span class="ob_un cg_num">${r.unread}</span>` : '<span class="ob_un0"></span>'}</span></div>`).join('')}</div>` : ''}
         <i class="ob_pad"></i>
       </div>
-      <span class="ob_dock" role="button" tabindex="0" data-go="orbitnew">${ic('plus', 16, '#fff', 2.4)}새 대화</span>
+      ${a.ro ? '' : `<span class="ob_dock" role="button" tabindex="0" data-go="orbitnew">${ic('plus', 16, '#fff', 2.4)}새 대화</span>`}
+      ${a.sheet ? `<div class="ob_shade na_ob_shade"></div><div class="ob_sheet"><i class="ob_grab"></i>${a.list.map(x => `<div class="ob_acc na_ob_who" role="button" tabindex="0" data-n="${esc(x.name)}">${face(x.name, 40)}<span class="ob_t"><b>${esc(x.name)}</b>${x.sub ? `<span class="ob_p">${esc(x.sub)}</span>` : ''}</span><span class="ob_ck${x.on ? ' on' : ''}">${x.on ? ic('chk', 14, '#fff', 3) : ''}</span></div>`).join('')}</div>` : ''}
       ${axInd()}`;
 }
 
 // 방 안 (시안 C): 그 사람 색 바탕, 유리 머리줄 · 말풍선 · 입력칸
-// o: { id, title, group, sub, chips: [{ icon, text, go? }], asOwner, msgs: [{ day } | { mine, from, text, ko, time, unread, id, open }], draft }
+// o: { id, title, group, sub, chips: [{ icon, text }], asOwner (주인 계정: 읽기만), msgs: [{ day } | { mine, from, text, ko, time, unread, id, open }], draft }
 export function orbitRoom(p, now, o) {
     const msg = x => x.day ? `<div class="ob_day">${esc(x.day)}</div>`
         : `${o.group && !x.mine && x.from ? `<div class="ob_sn">${esc(x.from)}</div>` : ''}<div class="ob_b ${x.mine ? 'me' : 'th ob_glass'}">${esc(x.text)}${x.ko ? (x.open ? `<span class="ob_ko na_ob_ko" role="button" tabindex="0" data-id="${esc(x.id)}">${esc(x.ko)}</span>` : `<span class="ob_kof na_ob_ko" role="button" tabindex="0" data-id="${esc(x.id)}">${ic('tr', 13)}번역 보기</span>`) : ''}</div>${x.mine && x.time ? `<div class="ob_rd">${x.unread ? `<b>${x.unread}</b> · ` : ''}<span class="cg_num">${esc(x.time)}</span></div>` : ''}`;
     return `<div class="ob_bg"><span class="ob_blob" style="background:${orbitBg(o.title, o.group)}"></span></div>${axBar(p, now, '#fff')}
       <div class="ob_ct ob_glass"><span class="ob_gb" role="button" tabindex="0" data-go="orbit" aria-label="뒤로">${ic('back', 21, '#1b1d24', 2.2)}</span>${face(o.title, 40, o.group)}<span class="ob_nm"><b>${esc(o.title)}</b>${o.sub ? `<span>${esc(o.sub)}</span>` : ''}</span></div>
-      ${o.chips.length ? `<div class="ob_chips">${o.chips.map(c => `<span class="ob_chip${c.go ? ' na_ob_as' : ''}"${c.go ? ' role="button" tabindex="0"' : ''}>${ic(c.icon, 13, '#fff')}${esc(c.text)}</span>`).join('')}</div>` : ''}
+      ${o.chips.length ? `<div class="ob_chips">${o.chips.map(c => `<span class="ob_chip">${ic(c.icon, 13, '#fff')}${esc(c.text)}</span>`).join('')}</div>` : ''}
       <div class="ob_msgs ax_scroll${o.asOwner ? ' ro' : ''}"><div class="ob_mi">${o.msgs.map(msg).join('')}</div></div>
       ${o.asOwner ? '' : `<div class="ob_inp ob_glass"><input type="text" class="ax_in ob_in na_ob_in" placeholder="메시지" enterkeyhint="send" value="${esc(o.draft || '')}" aria-label="메시지"><span class="ob_send na_ob_send" role="button" tabindex="0" aria-label="보내기">${ic('send', 18, '#fff', 2.3)}</span></div>`}
       ${axInd('#fff')}`;

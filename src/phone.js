@@ -36,7 +36,7 @@ const josa = w => { const c = w.charCodeAt(w.length - 1) - 0xac00; return c >= 0
 import { confirm, esc } from './util.js';
 import { liveMode, liveWorld, livePhone, liveMeta, setLiveMode, liveKey, liveRooms, ensureRoom, nameRoom, sendLive, readLive, unreadFor, unreadBy } from './phone2store.js';
 import { shiftLabel, liveWall, viewerWall } from './phone2clock.js';
-import { orbitList, orbitRoom, orbitNew, orbitHomeWidget, dayIcon } from './phoneorbit.js';
+import { orbitList, orbitRoom, orbitNew, orbitHomeWidget } from './phoneorbit.js';
 
 // other files keep importing these from here
 export { phoneBlock } from './phonedata.js';
@@ -136,49 +136,51 @@ export async function openPhone(who = null) {
     const useMode = () => { m = live() ? (drawer?.w === liveWorld(realM) ? drawer.d : (drawer = { w: liveWorld(realM), d: liveMeta(realM) }).d) : realM; setPhoneMeta(m === realM ? null : m); };
     useMode();
     const liveRoster = () => new Set(liveNames().map(nameKey));
-    // Orbit (실시간 폰의 메신저, docs/design/orbit.md): 늘 페르소나 계정으로 열고, 폰 주인이 있는 방은 위 칩으로 주인 보기(읽기만)
-    let obTab = 'all', obPick = [], obGname = '', obAs = false, obDraft = '';
+    // Orbit (실시간 폰의 메신저, docs/design/orbit.md): 계정은 페르소나(쓰기)와 이 폰 주인(읽기만) 둘. 왼쪽 위 얼굴 → 아래 시트로 바꿔요
+    let obTab = 'all', obPick = [], obGname = '', obWho = '', obSheet = false, obDraft = '';
     const obOpen = new Set();   // 한국어를 기본과 반대로 둔 말들
     const roomNow = () => (view.startsWith('orbitroom:') ? liveWorld(realM)?.messenger?.rooms?.[view.slice(10)] || null : null);
-    const obRo = name => (/[가-힣]$/.test(name) ? ((name.at(-1).charCodeAt(0) - 0xac00) % 28 && (name.at(-1).charCodeAt(0) - 0xac00) % 28 !== 8 ? '으로' : '로') : /[aeiouyl]$/i.test(name) ? '로' : '으로');
+    // 지금 계정: 폰 주인 계정은 주인이 페르소나가 아닐 때만, 그 폰을 보고 있을 때만
+    const obAcct = () => { const w = liveWorld(realM), me = w?.persona || ''; return obWho && owner && liveKey(obWho) === liveKey(owner) && liveKey(owner) !== liveKey(me) ? owner : me; };
     const orbitUi = () => {
         const w = liveWorld(realM);
         if (!live() || !w) return {};
-        const me = w.persona, sh = w.dayShift || 0, vw = ms => viewerWall(ms, sh).at, today = vw(Date.now()).slice(0, 5), yday = vw(Date.now() - 864e5).slice(0, 5);
+        const me = w.persona, who = obAcct(), ro = liveKey(who) !== liveKey(me), sh = w.dayShift || 0, vw = ms => viewerWall(ms, sh).at, today = vw(Date.now()).slice(0, 5), yday = vw(Date.now() - 864e5).slice(0, 5);
         const dayOf = a => (a.slice(0, 5) === today ? '오늘' : a.slice(0, 5) === yday ? '어제' : `${Number(a.slice(0, 2))}월 ${Number(a.slice(3, 5))}일`);
         const shortAt = ms => { const a = vw(ms), d = dayOf(a); return d === '오늘' ? a.slice(6) : d; };
         const tzOf = n => { const ph = livePhone(realM, n); return ph ? placeInfo(ph).owner.tz || '' : ''; };
         const cityOf = n => { const ph = livePhone(realM, n); return ph ? placeInfo(ph).owner.city || '' : ''; };
-        const others = r => r.members.filter(n => liveKey(n) !== liveKey(me));
-        const titleOf = r => r.name || others(r).join(', ');
-        const rooms = liveRooms(realM).map(r => ({ r, last: r.messages[r.messages.length - 1] })).sort((a, b) => (b.last?.at || 0) - (a.last?.at || 0));
-        const unread = rooms.reduce((n, x) => n + unreadFor(x.r, me), 0);
-        const brief = ({ r, last }) => ({ id: r.id, title: titleOf(r), group: others(r).length > 1, last: last?.text || '', lastWho: last ? (liveKey(last.from) === liveKey(me) ? '나' : others(r).length > 1 ? last.from : '') : '', time: last ? shortAt(last.at) : '', unread: unreadFor(r, me) });
-        const out = { orbitHome: orbitHomeWidget(rooms.slice(0, 2).map(brief), unread) };
+        const roomsOf = k => liveRooms(realM).filter(r => r.members.some(n => liveKey(n) === liveKey(k))).map(r => ({ r, last: r.messages[r.messages.length - 1] })).sort((a, b) => (b.last?.at || 0) - (a.last?.at || 0));
+        const view4 = k => {
+            const others = r => r.members.filter(n => liveKey(n) !== liveKey(k)), titleOf = r => r.name || others(r).join(', ');
+            const brief = ({ r, last }) => ({ id: r.id, title: titleOf(r), group: others(r).length > 1, last: last?.text || '', lastWho: last ? (liveKey(last.from) === liveKey(k) ? '나' : others(r).length > 1 ? last.from : '') : '', time: last ? shortAt(last.at) : '', unread: liveKey(k) === liveKey(me) ? unreadFor(r, me) : 0 });
+            return { others, titleOf, brief };
+        };
+        const mine4 = roomsOf(me), V = view4(who), rooms = ro ? roomsOf(who) : mine4;
+        const out = { orbitHome: orbitHomeWidget(mine4.slice(0, 2).map(view4(me).brief), mine4.reduce((n, x) => n + unreadFor(x.r, me), 0)) };
         const v = view.split(':')[0];
+        // 계정 시트: 페르소나 + (주인이 다르면) 이 폰 주인
+        const accts = [me, ...(owner && liveKey(owner) !== liveKey(me) ? [owner] : [])].map(n => ({ name: n, sub: livePhone(realM, n)?.profile?.handle || liveKey(n), on: liveKey(n) === liveKey(who) }));
         if (v === 'orbit') {
-            const hn = rooms.map(x => others(x.r).find(n => tzOf(n))).find(Boolean);
-            out.orbit = { tab: obTab, hero: hn ? { name: hn, city: cityOf(hn), local: liveWall(tzOf(hn), sh).at.slice(6) } : null,
-                rooms: rooms.map(brief) };
+            const hn = rooms.map(x => V.others(x.r).find(n => tzOf(n))).find(Boolean);
+            out.orbit = { tab: obTab, acct: { name: who, ro, sheet: obSheet && accts.length > 1, list: accts }, hero: hn ? { name: hn, city: cityOf(hn), local: liveWall(tzOf(hn), sh).at.slice(6) } : null, rooms: rooms.map(V.brief) };
         } else if (v === 'orbitnew') {
+            if (ro) { view = 'orbit'; return orbitUi(); }
             const names = [...new Map([...Object.values(w.phones || {}).map(p => p?.owner), ...Object.values(w.messenger?.accounts || {}).map(a => a?.name)].filter(n => n && liveKey(n) !== liveKey(me)).map(n => [liveKey(n), n])).values()];
             out.orbit = { people: names.map(n => ({ name: n, sub: cityOf(n) })), picked: obPick, gname: obGname };
         } else if (v === 'orbitroom') {
             const r = roomNow();
-            if (!r) { view = 'orbit'; return orbitUi(); }
-            const os = others(r), group = os.length > 1, canAs = !!owner && liveKey(owner) !== liveKey(me) && r.members.some(n => liveKey(n) === liveKey(owner));
-            const as = canAs && obAs, who = as ? owner : me, chips = [];
-            if (!group && tzOf(os[0])) { const there = liveWall(tzOf(os[0]), sh).at.slice(6), here = vw(Date.now()).slice(6); if (there !== here && !as) chips.push({ icon: 'clock', text: `${os[0]} 현지 ${there}` }); }
-            if (canAs) { const t = tzOf(owner) ? liveWall(tzOf(owner), sh).at.slice(6) : vw(Date.now()).slice(6); chips.push({ icon: dayIcon(t), text: as ? `${owner} 폰 · ${owner}${obRo(owner)} 보는 중` : `${owner} 폰으로 보기`, go: 1 }); }
+            if (!r || !r.members.some(n => liveKey(n) === liveKey(who))) { view = 'orbit'; return orbitUi(); }
+            const os = V.others(r), group = os.length > 1, chips = [];
+            if (!group && tzOf(os[0])) { const there = liveWall(tzOf(os[0]), sh).at.slice(6), here = vw(Date.now()).slice(6); if (there !== here) chips.push({ icon: 'clock', text: `${os[0]} 현지 ${there}` }); }
             const msgs = []; let day = '';
             for (const x of r.messages) {
                 const a = vw(x.at), d = dayOf(a);
                 if (d !== day) { msgs.push({ day: d }); day = d; }
                 const mine = liveKey(x.from) === liveKey(who);
-                msgs.push({ id: x.id, mine, from: x.from, text: x.text, ko: x.ko || '', open: koOn() !== obOpen.has(x.id), time: mine ? a.slice(6) : '', unread: mine ? unreadBy(r, x).length : 0 });
+                msgs.push({ id: x.id, mine, from: x.from, text: x.text, ko: x.ko || '', open: koOn() !== obOpen.has(x.id), time: mine ? a.slice(6) : '', unread: mine && !ro ? unreadBy(r, x).length : 0 });
             }
-            const title = as ? (group ? titleOf(r) : me) : titleOf(r);
-            out.orbit = { id: r.id, title, group, sub: group ? [...r.members.filter(n => liveKey(n) !== liveKey(who)), '나'].join(' · ') : '', chips, asOwner: as, msgs, draft: obDraft };
+            out.orbit = { id: r.id, title: V.titleOf(r), group, sub: group ? [...os, '나'].join(' · ') : '', chips, asOwner: ro, msgs, draft: obDraft };
         }
         return out;
     };
@@ -697,14 +699,16 @@ export async function openPhone(who = null) {
         const r = ensureRoom(realM, obPick);
         if (obPick.length > 1 && obGname.trim()) nameRoom(realM, r.id, obGname);
         readLive(realM, r.id, liveWorld(realM).persona);
-        obAs = false; obDraft = ''; view = `orbitroom:${r.id}`; draw(); obBottom();
+        obDraft = ''; view = `orbitroom:${r.id}`; draw(); obBottom();
         await saveMeta();
     });
-    $root.on('click', '.na_ob_as', function (e) { e.stopPropagation(); obAs = !obAs; drawPhone(); obBottom(); });
+    $root.on('click', '.na_ob_acct', function (e) { e.stopPropagation(); obSheet = !obSheet; drawPhone(true); });
+    $root.on('click', '.na_ob_shade', function (e) { e.stopPropagation(); obSheet = false; drawPhone(true); });
+    $root.on('click', '.na_ob_who', function (e) { e.stopPropagation(); obWho = this.dataset.n === liveWorld(realM)?.persona ? '' : this.dataset.n; obSheet = false; drawPhone(); });
     $root.on('click', '.na_ob_ko', function (e) { e.stopPropagation(); const id = this.dataset.id; if (obOpen.has(id)) obOpen.delete(id); else obOpen.add(id); const top = $root.find('.ob_msgs').scrollTop(); drawPhone(); $root.find('.ob_msgs').scrollTop(top); });
     const obSend = async () => {
         const r = roomNow(), t = String($root.find('.na_ob_in').val() || '').trim();
-        if (!live() || !r || !t || obAs) return;
+        if (!live() || !r || !t || obAcct() !== liveWorld(realM)?.persona) return;
         sendLive(realM, r.id, t);
         obDraft = ''; drawPhone(); obBottom(); $root.find('.na_ob_in').trigger('focus');
         await saveMeta();
@@ -795,7 +799,9 @@ export async function openPhone(who = null) {
         // picking another payment on 고정 지출 keeps the list where it was
         const stay = ['fixed', 'banksend', 'stmt', 'wallet', 'stime', 'map'].includes(go) && view.split(':')[0] === go ? $root.find('.ax_scroll').scrollTop() : null;
         if (go === 'orbitnew') { obPick = []; obGname = ''; }
-        if (go === 'orbitroom' && this.dataset.i) { obAs = false; obDraft = ''; const w = liveWorld(realM); if (w?.messenger?.rooms?.[this.dataset.i]) { readLive(realM, this.dataset.i, w.persona); saveMeta(); } }
+        if (go === 'orbitroom' && this.dataset.i) { obDraft = ''; const w = liveWorld(realM); if (w?.messenger?.rooms?.[this.dataset.i] && obAcct() === w.persona) { readLive(realM, this.dataset.i, w.persona); saveMeta(); } }
+        if (go === 'orbit') obSheet = false;
+        if (this.closest('.ob_w')) obWho = '';   // (홈 위젯은 늘 페르소나의 방)
         view = ['orbitroom', 'ivnotes', 'ivschedule', 'ivhistory', 'stock', 'ivprices', 'thread', 'groupinfo', 'draft', 'page', 'acct', 'tx', 'txdoc', 'card', 'pass', 'order', 'track', 'voiceone', 'callwho', 'contact', 'noteone', 'photoone', 'searchone', 'calone', 'mailone', 'diaryone', 'snspost', 'alarm', 'hsteps', 'hsleep', 'hwork', 'hheart', 'hwater', 'hweight', 'folder', 'file', 'wcity', 'dshop', 'dorder', 'ditem', 'drate', 'mapc'].includes(go) || (['cal', 'diary', 'shop', 'voice', 'invest', 'health', 'fixed', 'banksend', 'stmt', 'wallet', 'stime', 'map', 'mapq', 'mail'].includes(go) && this.dataset.i) ? `${go}:${['ivnotes', 'ivschedule', 'ivhistory', 'stock', 'ivprices'].includes(go) ? encodeURIComponent(this.dataset.i || '') : this.dataset.i}` : go;
         const mail = go === 'mailone' ? phone()?.mails?.[Number(this.dataset.i)] : null;
         if (mail?.unread) { mail.unread = false; saveMeta(); }
