@@ -52,4 +52,5 @@ HTML은 브라우저로 바로 열려요(Playwright로 찍을 때는 `file://` �
 
 claude.ai 아티팩트로 남은 시안은 `docs/DESIGN.md` › 9. 시안 그리기에 링크가 있어요.
 | `phone2-messenger/` | 실시간 폰 메신저 Orbit: 시안 A~D(`sheet.jpg`, `mock.html`), 고른 조합 목록 A + 방 안 C와 새 대화 · 자는 중 · 주인 보기(`pick.jpg`, `?only=A%2BC`), 실제 폰(`real.jpg`) |
+| `phone2-home/` | 실시간 폰 홈 위젯: 넓은 Orbit 위젯 1~4차(`mock.cjs`가 실제 폰 홈에 끼워 찍어요, `sheet.jpg`는 마지막 4차 · 고른 것 4번), 적용한 실제 화면(`real.jpg`: 방 없음 · 방 둘 · 줄 누르기 · 카드 누르기 · 타임라인 홈) |
 | `phone2-orbit/` | Orbit 홈 아이콘: 1~4차 시안(`icons.js`, `shot.cjs`가 실제 폰 홈 1쪽 아홉째 칸에 끼워 찍어요), 고른 것 4번 빛 꼬리 · O 82%(`sheet.jpg`) |

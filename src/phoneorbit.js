@@ -45,7 +45,7 @@ const ICON = (() => {
         const [x0, y0] = P(t0), [x1, y1] = P(t1);
         tail += `<path d="M${x0} ${y0}A${r.toFixed(2)} ${r.toFixed(2)} 0 0 1 ${x1} ${y1}" stroke="#fff" stroke-opacity="${(0.08 + 0.92 * (i / (N - 1)) ** 1.4).toFixed(3)}" stroke-width="${w}" fill="none"/>`;
     }
-    return `<svg aria-hidden="true" viewBox="0 0 64 64" width="62" height="62"><defs><linearGradient id="obi_bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f3c3a6"/><stop offset=".5" stop-color="#e8a7b8"/><stop offset="1" stop-color="#b5a3dd"/></linearGradient>`
+    return `<svg aria-hidden="true" viewBox="0 0 64 64" width="SZ" height="SZ"><defs><linearGradient id="obi_bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f3c3a6"/><stop offset=".5" stop-color="#e8a7b8"/><stop offset="1" stop-color="#b5a3dd"/></linearGradient>`
         + `<linearGradient id="obi_hl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/></linearGradient>`
         + `<radialGradient id="obi_gl"><stop offset="0" stop-color="#fff" stop-opacity=".85"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>`
         + `<filter id="obi_sh" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="1.6" stdDeviation="1.6" flood-color="#7a4a6a" flood-opacity=".28"/></filter>`
@@ -53,8 +53,14 @@ const ICON = (() => {
         + `<g filter="url(#obi_sh)">${tail}<circle cx="${dx}" cy="${dy}" r="${(9 * k).toFixed(2)}" fill="url(#obi_gl)"/><circle cx="${dx}" cy="${dy}" r="${(5 * k).toFixed(2)}" fill="#fff"/></g>`
         + `<rect width="64" height="64" fill="url(#obi_hl)"/></g></svg>`;
 })();
-// 홈 1쪽의 아홉째 칸(실시간 폰에서만 phone.js가 넘겨요)
-export const orbitHomeCell = (unread = 0) => `<div class="cg_cell"><button type="button" class="cg_ic ob_ic" data-go="orbit" aria-label="Orbit">${ICON}${unread ? `<span class="cg_badge cg_num">${unread}</span>` : ''}</button><span class="cg_lbl">Orbit</span></div>`;
+const icon = sz => ICON.replace(/"SZ"/g, `"${sz}"`);
+// 실시간 폰 홈 1쪽 위 위젯(시안 phone2-home 4차 "줄 간격 고르게 · 말 옅게"): 유리 카드 한 장, 머리줄은 Orbit 아이콘 · 이름 ·
+// 안 읽은 수, 최근 방 두 줄(얼굴 · 이름 · 마지막 말 · 시각 · 검정 숫자). 누르면 Orbit, 줄을 누르면 그 방. 방이 없으면 새 대화 한 줄
+export const orbitHomeWidget = (rooms, unread = 0) => `<div class="cg_glass ob_w" role="button" tabindex="0" data-go="orbit" aria-label="Orbit">
+      <div class="ob_wh"><span class="ob_wi">${icon(18)}</span>Orbit${unread ? `<em>안 읽음 ${unread}</em>` : ''}</div>
+      ${rooms.length ? rooms.map(r => `<div class="ob_wr" role="button" tabindex="0" data-go="orbitroom" data-i="${esc(r.id)}">${face(r.title, 32, r.group)}<span class="ob_wt"><b>${esc(r.title)}</b><span>${r.last ? `${r.lastWho ? `${esc(r.lastWho)}: ` : ''}${esc(r.last)}` : ''}</span></span><span class="ob_wn"><span class="cg_num">${esc(r.time || '')}</span>${r.unread ? `<span class="ob_wb cg_num">${r.unread}</span>` : ''}</span></div>`).join('')
+        : `<div class="ob_wr" role="button" tabindex="0" data-go="orbitnew"><span class="ob_wp">${ic('plus', 16, '#3a3f47', 2.2)}</span><span class="ob_wt"><b>새 대화</b></span></div>`}
+    </div>`;
 
 const dots = lit => Array.from({ length: 24 }, (_, h) => `<i class="${h === lit ? 'h' : h < lit ? 'p' : ''}" style="height:${h < lit ? [9, 15, 22, 15][h % 4] : 4}px"></i>`).join('');
 
