@@ -1006,6 +1006,12 @@ const HOME_KO = /^(?:(.+?)(?:네|의)\s*)?(?:집|자택|본가|원룸|오피스�
 export const homeWho = place => { const t = siteOf(place)[0], e = HOME_EN.exec(t), k = HOME_KO.exec(t); return e ? e[1].trim() : k ? (k[1] || '').trim() || '~' : null; };
 // a person's neighbourhood set by hand (설정 › 위치 정보 › 사는 동네): { [nameKey]: { city, hood } }; their home goes there
 // a neighbourhood's words (지도 표 HINT) for the tile map's middle: its row in that town, else the name as it is
+// the words a town's visits give the map (which neighbourhood's map, where the tile map starts): each visit's area first
+// (구 · 동네 the reflection reads: "강서구" → the table's row that has 강서 → 화곡), then the places' own names
+const areaWords = (city, area) => { const t = String(townKo(city)).toLowerCase(), a = String(area || '').toLowerCase().trim(); if (!a) return [];
+    const a2 = a.replace(/(구|동|군|읍|면|区|區|-gu|-dong)$/u, ''), k = HINT.findIndex(h => h[0].split(' · ').includes(t) && (h[1].includes(a) || (a2.length >= 2 && h[1].includes(a2))));
+    return k >= 0 ? [HINT[k][3], ...HINT[k][1], area] : [area]; };
+export const rowWords = (city, rows) => [...new Set([...rows.flatMap(r => areaWords(city, r.area)), ...rows.map(r => r.place)])];
 export const hoodWords = (city, hood) => { if (!hood) return []; const t = String(townKo(city)).toLowerCase(), k = HINT.findIndex(h => h[3] === hood && h[0].split(' · ').includes(t)); return k >= 0 ? [HINT[k][3], ...HINT[k][1]] : [hood]; };
 // the neighbourhoods one can pick for a town: its rows in the table (their names)
 export const townHoods = city => { const i = city ? townPlace(city) : -1; return i >= 0 ? placeHoods(i).map(k => HINT[k][3]) : []; };
@@ -1020,6 +1026,7 @@ function mapPlaces(m, p) {
         if (gone.has(nameKey(site))) continue;
         const r = row(site); r.vn++; if (v.home) r.home = true;
         if (part && !r.parts.some(x => nameKey(x) === nameKey(part))) r.parts.push(part);
+        if (v.area && (!r.area || !r.home)) r.area = String(v.area);
         for (const n of v.with || []) if (!r.with.some(w => nameKey(w) === nameKey(n))) r.with.push(n);
         const t = String(v.time || '');
         if (v.city && (!r.city || cmp(t, r.last) >= 0)) r.city = v.city;
@@ -1121,7 +1128,7 @@ export function mapTowns(p, m) {
     for (const g of groups) g.rows.sort((a, b) => (b.home === 'now') - (a.home === 'now'));
     groups.sort((a, b) => !a.city - !b.city);
     // the town's streets: by its name, never the same as another town's
-    const kinds = townKinds([...groups].reverse().map(x => ({ key: x.k || `~${p.owner}`, city: x.city || '', places: x.rows.map(r => r.place) })));
+    const kinds = townKinds([...groups].reverse().map(x => ({ key: x.k || `~${p.owner}`, city: x.city || '', places: x.rows.flatMap(r => [r.place, r.area].filter(Boolean)) })));
     return { pl, groups, kinds };
 }
 // a town's night: they were last there between 21 and 5
@@ -1155,7 +1162,7 @@ export function mapScreen(p, now, m, pick = '') {
     const other = others.length ? `<div class="ax_sec">다른 곳</div><div class="ax_card">${others.map(x => `<button type="button" class="ax_rw ax_place" data-go="map" data-i="${esc(x.k)}"><span class="ax_si" style="background: var(--axc)">${ax('pindot', 17, 'var(--axd)', 2.2)}</span><span class="ax_tx"><span class="ax_n">${esc(townKo(x.city) || '그 밖의 곳')}</span><span class="ax_p1">${x.rows.length}곳</span></span>${axChev}</button>`).join('')}</div>` : '';
     // a home set to its neighbourhood by hand (사는 동네): the map starts there
     const hw = hoodWords(g.city, g.rows.find(r => r.hood)?.hood);
-    return `<div class="mp_wx${dark ? ' mp_dark' : ''}"><div class="mp_bg"${tileAt(g.city, [...hw, ...g.rows.map(r => r.place)], shown.map(r => r.place))}>${art}</div>${axBar(p, now, dark ? '#fff' : '#111')}${axTop(axCb('home'), mapFindBtn())}
+    return `<div class="mp_wx${dark ? ' mp_dark' : ''}"><div class="mp_bg"${tileAt(g.city, [...hw, ...rowWords(g.city, g.rows)], shown.map(r => r.place))}>${art}</div>${axBar(p, now, dark ? '#fff' : '#111')}${axTop(axCb('home'), mapFindBtn())}
       <div class="ax_scroll"><i class="mp_gap"></i><div class="mp_sheet"><i class="mp_grab"></i>${TILE_CREDIT}
         ${mapStrip(p, now, m, pl, g.k)}
         <div class="mp_th">${townFlag(g.city)}<b>${esc(townKo(g.city) || '그 밖의 곳')}</b><span>${g.rows.length}곳${lastDay ? ` · 마지막 ${esc(fmtDate(p, lastDay))}` : ''}</span></div>
