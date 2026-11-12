@@ -309,7 +309,7 @@
 /* ===== 설정 › 휴대폰: 타임라인 · 실시간 (docs/mockups/phone2-switch), and the 실시간 phone's notch on every screen ===== */
 .ax .ax_pmode { padding: 6px; }
 .ax .ax_pmsegs { display: flex; gap: 4px; padding: 4px; border-radius: 17px; background: #eef0f3; }
-.ax .ax_pmseg { flex: 1; text-align: center; padding: 10px 0 9px; border-radius: 17px; color: #8a9099; font-size: 14.5px; font-weight: 600; cursor: pointer; }
+.ax .ax_pmseg { flex: 1; text-align: center; padding: 10px 0 9px; border-radius: 15px; color: #8a9099; font-size: 14.5px; font-weight: 600; cursor: pointer; }
 .ax .ax_pmseg.on { background: #fff; color: #3a3f47; box-shadow: 0 1px 2px rgba(22, 27, 34, 0.08), 0 4px 10px rgba(22, 27, 34, 0.06); }
 .ax .ax_pmseg.on.lv { color: #2c4a80; }
 .na_ph_notch { position: absolute; left: 50%; top: 11px; transform: translateX(-50%); width: 120px; height: 34px; border-radius: 17px; background: #000; z-index: 30; display: flex; align-items: center; justify-content: flex-end; padding-right: 12px; box-sizing: border-box; pointer-events: none; }
