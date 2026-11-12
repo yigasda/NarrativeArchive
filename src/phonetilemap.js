@@ -352,13 +352,14 @@ async function thumbOne(b) {
     if (!b.isConnected) return;
     const want = JSON.parse(b.dataset.tt), spot = spotIn(await loadSpots(), want.city, want.words || []);
     if (!spot) return;
-    const k = `${spot[0]}~${want.dark ? 1 : 0}`;
+    const w = Number(b.dataset.tw) || 96, h = Number(b.dataset.th) || 78, k = `${spot[0]}~${w}x${h}`;   // its size is written on it (measuring mid-draw reads 0)
     let pic = THUMB.get(k);
     if (!pic) {
         const gl = await loadLib();
-        const P = palette(spot[2], spot[3]), w = 96, h = 78, z0 = Math.log2(78271.517 * Math.cos(spot[3] * Math.PI / 180) * w / 900);
+        const P = palette(spot[2], spot[3]), z0 = Math.log2(78271.517 * Math.cos(spot[3] * Math.PI / 180) * w / 900);
         let el = document.getElementById('na_tm_thumb');
-        if (!el) { el = document.createElement('div'); el.id = 'na_tm_thumb'; el.setAttribute('aria-hidden', 'true'); el.style.cssText = `position: fixed; left: -10000px; top: 0; width: ${w}px; height: ${h}px; pointer-events: none;`; document.body.appendChild(el); }
+        if (!el) { el = document.createElement('div'); el.id = 'na_tm_thumb'; el.setAttribute('aria-hidden', 'true'); el.style.cssText = 'position: fixed; left: -10000px; top: 0; pointer-events: none;'; document.body.appendChild(el); }
+        if (el.style.width !== `${w}px` || el.style.height !== `${h}px`) { el.style.width = `${w}px`; el.style.height = `${h}px`; thumbMap?.resize(); }
         if (!thumbMap) thumbMap = new gl.Map({ container: el, interactive: false, attributionControl: false, preserveDrawingBuffer: true, pixelRatio: 2, fadeDuration: 0, style: thumbStyle(z0, P), center: [spot[4], spot[3]], zoom: z0 });
         else { thumbMap.setStyle(thumbStyle(z0, P)); thumbMap.jumpTo({ center: [spot[4], spot[3]], zoom: z0 }); }
         pic = await new Promise(res => { const t = setTimeout(() => res(''), 8000); thumbMap.once('idle', () => { clearTimeout(t); res(thumbMap.loaded() ? thumbMap.getCanvas().toDataURL('image/png') : ''); }); });
@@ -366,7 +367,7 @@ async function thumbOne(b) {
         THUMB.set(k, pic);
     }
     if (!b.isConnected) return;
-    const img = document.createElement('img'); img.src = pic; img.alt = ''; img.width = 96; img.height = 78; img.className = 'mq_timg';
+    const img = document.createElement('img'); img.src = pic; img.alt = ''; img.width = w; img.height = h; img.className = 'mq_timg';
     b.querySelector('.mq_tph, svg')?.replaceWith(img);   // the plain ground the button waits with
 }
 // for tools/dev (where the map is now): its middle, or null
