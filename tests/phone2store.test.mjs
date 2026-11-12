@@ -7,9 +7,10 @@ import * as L from '../src/phone2store.js';
 const src = f => readFile(new URL(`../src/${f}`, import.meta.url), 'utf8');
 const phone1 = () => ({ phones: { mara: { owner: 'Mara', now: '11-06 09:00', notes: [{ title: 'n', text: 't' }] } }, finance: { accounts: {} }, text: '## a', snapshots: [] });
 
-test('폰 2 저장: the file imports nothing, and no other file imports it yet', async () => {
+test('폰 2 저장: the file imports nothing, and no file but the phone window and 폰 2\'s story reader imports it', async () => {
     assert.doesNotMatch(await src('phone2store.js'), /^\s*import\b/m);
-    for (const f of (await readdir(new URL('../src/', import.meta.url))).filter(f => f.endsWith('.js') && f !== 'phone2store.js'))
+    const may = new Set(['phone2store.js', 'phone.js', 'phone2story.js']);   // 4-2: the phone's window; 5-1: phone2story.js (beginFromStory)
+    for (const f of (await readdir(new URL('../src/', import.meta.url))).filter(f => f.endsWith('.js') && !may.has(f)))
         assert.doesNotMatch(await src(f), /phone2store/, f);
 });
 
@@ -113,13 +114,17 @@ test('폰 2 저장: an m.live it can\'t read is left alone, never written over',
 const rich = () => ({ ...phone1(), phoneProfiles: { mara: { label: 'comfortable' } }, phonePre: { ivo: { owner: 'Ivo', year: 2026 } },
     phoneLore: ['World'], phoneLoreOff: { World: ['u1'] }, phoneScreenHolder: 'Mara', lastPhoneOwner: 'Mara', phoneStoryScope: 's1', phoneStoryRun: 3,
     glossary: 'Mara = 마라', dateOrder: 'md' });
+const MARK0 = { ranges: { '': [[0, 100]] }, titles: [], rawFrom: 101 };
 const objects = (v, out = new Set()) => { if (v && typeof v === 'object' && !out.has(v)) { out.add(v); for (const x of Object.values(v)) objects(x, out); } return out; };
 
 test('폰 2 이야기에서 시작: a deep copy of 폰 1\'s story keys, none of its objects shared, 폰 1 unchanged', () => {
     const m = rich(), before = JSON.stringify(m), mine = objects(Object.fromEntries(Object.keys(m).filter(k => k !== 'live').map(k => [k, m[k]])));
-    assert.throws(() => L.startFromStory(m, { persona: 'Ren' }), /어느 메시지까지/);
+    assert.throws(() => L.startFromStory(m, { persona: 'Ren', story: MARK0 }), /어느 메시지까지/);
+    assert.throws(() => L.startFromStory(m, { persona: 'Ren', upto: 482 }), /이야기 표시/);
     assert.equal(JSON.stringify(m), before);
-    const w = L.startFromStory(m, { persona: 'Ren', upto: 482, scope: 's1', now: 5 });
+    const w = L.startFromStory(m, { persona: 'Ren', upto: 482, scope: 's1', now: 5, story: MARK0 });
+    assert.deepEqual(w.story, MARK0);
+    assert.notEqual(w.story, MARK0);
     assert.deepEqual([w.from, w.storyUpto, w.scope, w.lastOwner], ['story', 482, 's1', 'Mara']);
     assert.deepEqual(w.phones, m.phones);
     assert.deepEqual(w.finance, m.finance);
@@ -138,14 +143,14 @@ test('폰 2 이야기에서 시작: a deep copy of 폰 1\'s story keys, none of 
 test('폰 2 처음부터 시작: an empty world, nothing of 폰 1 in it', () => {
     const m = rich(), before = JSON.stringify(m);
     const w = L.startFresh(m, { persona: 'Ren', scope: 's1' });
-    assert.deepEqual([w.from, w.storyUpto, w.phones, w.finance, w.profiles, w.pre, w.lore, w.loreOff, w.lastOwner], ['fresh', null, {}, null, {}, {}, [], {}, '']);
+    assert.deepEqual([w.from, w.storyUpto, w.story, w.phones, w.finance, w.profiles, w.pre, w.lore, w.loreOff, w.lastOwner], ['fresh', null, null, {}, null, {}, {}, [], {}, '']);
     const { live, ...rest } = m;
     assert.equal(JSON.stringify(rest), before);
 });
 
 test('폰 2 이야기에서 시작: a 폰 1 with only some keys copies those, the rest empty', () => {
     const m = { phones: {}, text: '' };
-    const w = L.startFromStory(m, { persona: 'Ren', upto: 0 });
+    const w = L.startFromStory(m, { persona: 'Ren', upto: 0, story: { ranges: {}, titles: [], rawFrom: 0 } });
     assert.deepEqual([w.phones, w.finance, w.profiles, w.lore, w.lastOwner], [{}, null, {}, [], '']);
 });
 
