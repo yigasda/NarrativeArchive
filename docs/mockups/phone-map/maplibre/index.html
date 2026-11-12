@@ -172,9 +172,7 @@ function style(z0, P = C, main = '') {
       { id: 'hood', type: 'symbol', source: 't', 'source-layer': 'place', filter: ['all', ['in', ['get', 'class'], ['literal', ['suburb', 'quarter', 'neighbourhood']]], ['!=', ['get', 'name'], main]],
         layout: { 'text-field': ['upcase', name], 'text-font': ['Noto Sans Bold'], 'text-size': 10, 'text-letter-spacing': 0.12, 'text-padding': 24 },
         paint: { 'text-color': C.hood, 'text-halo-color': '#ffffff', 'text-halo-width': 1.3 } },
-      poi('poiFood', ['in', kindExpr, ['literal', FOOD]], 90, 20),
-      poi('poiTransit', ['in', kindExpr, ['literal', TRANSIT]], 60, 99),
-      poi('poiSight', ['!', ['in', kindExpr, ['literal', [...FOOD, ...TRANSIT, '']]]], 26, 99),
+      poi('poi', ['!=', kindExpr, ''], 4, 999),
     ] };
 }
 // 큰 동네 이름(MAIN): 진한 차콜 15px 굵게, 가운데 하나 — 곳마다 우리가 아는 이름이라 타일 말고 따로 얹어요
@@ -189,7 +187,36 @@ function iconImage(k) {
 }
 const frame = document.getElementById('frame'), stat = document.getElementById('stat'), old = document.getElementById('old');
 const zoomFor = (lat, span) => Math.log2(78271.517 * Math.cos(lat * Math.PI / 180) * frame.clientWidth / span);
-let map, deep, cur = 0, t0 = 0, palName = '';
+let map, deep, cur = 0, t0 = 0, palName = '', z0now = 14, found = [];
+// 장소 고르기(지도 룰): 볼거리 → 먹고 마시기(하나) → 역(하나) → 그 밖, 한 화면 4개(확대하면 조금 더), 서로 120px 넘게, 큰 이름 둘레는 비워요
+const TIER = k => ['museum', 'gallery', 'theatre', 'cinema', 'music', 'castle', 'palace', 'monument', 'statue', 'ruin', 'view', 'tower', 'lighthouse', 'zoo', 'aquarium', 'wheel',
+  'park', 'garden', 'stadium', 'church', 'cathedral', 'mosque', 'temple', 'shrine', 'library', 'university', 'market', 'mall', 'beach', 'fountain', 'spring', 'mountain', 'harbour', 'airport'].includes(k) ? 0
+  : FOOD.includes(k) ? 1 : ['train', 'metro', 'ferry', 'cable'].includes(k) ? 2 : ['hotel', 'school', 'townhall', 'hospital'].includes(k) ? 3 : 9;
+const CAP = { 1: 1, 2: 1 };
+const NOT_PLACE = ['clinic', 'doctors', 'dentist', 'veterinary', 'hairdresser', 'beauty', 'optician', 'bus_stop', 'subway_entrance', 'platform', 'supermarket', 'convenience',
+  'fuel', 'parking', 'bicycle_parking', 'atm', 'toilets', 'post_box', 'charging_station', 'car_rental', 'car', 'laundry', 'dry_cleaning', 'mobile_phone', 'kiosk'];
+const kindOf = p => SUB[p.subclass] || KIND[p.class] || '';
+function pickPlaces() {
+  if (!map || !map.getSource('pois')) return;
+  const w = frame.clientWidth, h = frame.clientHeight, c = map.project(map.getCenter()), max = 4 + Math.max(0, Math.round((map.getZoom() - z0now) * 2));
+  const cand = [];
+  for (const f of found) {
+    const p = f.properties, k = kindOf(p); if (!k || !ICONS[k] || NOT_PLACE.includes(p.subclass)) continue;
+    if (k === 'hospital' && p.subclass !== 'hospital') continue;
+    const xy = map.project(f.geometry.coordinates); if (xy.x < 24 || xy.x > w - 110 || xy.y < 18 || xy.y > h - 40) continue;
+    if (Math.hypot(xy.x - c.x, xy.y - c.y) < 70) continue;
+    cand.push({ f, k, t: TIER(k), r: p.rank ?? 30, xy });
+  }
+  cand.sort((a, b) => a.t - b.t || a.r - b.r);
+  const out = [], per = {};
+  for (const x of cand) {
+    if (out.length >= max || x.t === 9) break;
+    if (CAP[x.t] && (per[x.t] || 0) >= CAP[x.t] + Math.floor((max - 4) / 2)) continue;
+    if (out.some(y => Math.hypot(y.xy.x - x.xy.x, y.xy.y - x.xy.y) < 120)) continue;
+    out.push(x); per[x.t] = (per[x.t] || 0) + 1;
+  }
+  map.getSource('pois').setData({ type: 'FeatureCollection', features: out.map(x => x.f) });
+}
 // the deeper map: twice the size at one zoom more covers the same ground; its poi features (in lng/lat) go into the main map's 'pois'
 function deepMap(center, zoom) {
   const el = document.getElementById('deep'); el.style.width = frame.clientWidth * 2 + 'px'; el.style.height = frame.clientHeight * 2 + 'px';
@@ -204,7 +231,7 @@ function deepMap(center, zoom) {
       if (!p.name || seen.has(k)) continue; seen.add(k);
       out.push({ type: 'Feature', geometry: f.geometry.type === 'Point' ? f.geometry : { type: 'Point', coordinates: f.geometry.coordinates.flat(3).slice(0, 2) }, properties: p });
     }
-    const src = map && map.getSource('pois'); if (src) src.setData({ type: 'FeatureCollection', features: out });
+    found = out; pickPlaces();
   });
 }
 function show(i, keep) {
@@ -217,7 +244,8 @@ function show(i, keep) {
   map = new maplibregl.Map({ container: 'map', style: style(z0, P, main), center: keep ? keep.c : [lon, lat], zoom: keep ? keep.z : z0, attributionControl: false, localIdeographFontFamily: CJK, dragRotate: false, pitchWithRotate: false });
   map.touchZoomRotate.disableRotation();
   deepMap(keep ? keep.c : [lon, lat], keep ? keep.z : z0);
-  map.on('moveend', () => deep && deep.jumpTo({ center: map.getCenter(), zoom: map.getZoom() + 1 }));
+  z0now = z0;
+  map.on('moveend', () => { pickPlaces(); deep && deep.jumpTo({ center: map.getCenter(), zoom: map.getZoom() + 1 }); });
   map.on('styleimagemissing', async e => { if (ICONS[e.id] && !map.hasImage(e.id)) { const im = await iconImage(e.id); if (!map.hasImage(e.id)) map.addImage(e.id, im, { pixelRatio: 2 }); } });
   map.on('load', () => { map.addSource('main', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'Point', coordinates: [lon, lat] }, properties: { n: main } } });
     map.addLayer(mainLayer(P)); });
