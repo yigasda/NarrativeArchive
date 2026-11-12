@@ -1954,6 +1954,80 @@ function clockExpected(raw, p, m, now, c, scene, fail) {
     return expected;
 }
 
+// 분기한 방: a phone copied into a branch of the chat it was read in still holds that chat's talk past the branch point,
+// which never happened here. When the phone opens (before anything reads it), that talk is taken off by itself: the same
+// reading a reflection would do (otherChat → realign → settleDropped, renumber), then 빼기 on each stretch it found (sure or
+// not: past the branch point it is all other talk). What 빼기 must leave (built on, changed by hand) stays and is said.
+// The read marks go with the talk (realign), so the next reflection reads this chat's own messages from the branch point.
+// Returns null when there is nothing to do (not a branch, never read, its start not found), else { dropped, items, kept }.
+export async function settleBranch(m, p) {
+    const s = p?.sync;
+    if (!s?.marks?.base || !otherChat(s)) return null;
+    // a phone made past the branch point: the message it began at is not in this chat. It begins at the branch's end
+    // instead, and everything it read is the other chat's talk
+    let rebased = false;
+    if (syncState(p) === 'lost') {
+        const end = chatEnd();
+        if (!(s.marks.base.index > end) || end < 0) return null;
+        s.marks.base = markAfter(end); rebased = true;
+        if (syncState(p) !== 'ok') return null;
+    }
+    const moved = realign(s, chatRows(), { other: true });
+    for (const d of moved.dropped) d.unsure = false;
+    const notes = [], had = new Set((s.dropped || []).map(d => d.key));
+    settleDropped(p, moved, notes);
+    s.readChat = chatMark() || s.readChat;
+    renumber(m, p, moved);
+    // (numbers moved with no round after it: the last rounds' 되돌리기 would put back the main chat's)
+    if (moved.changed.length || moved.dropped.length || Object.entries(moved.moved).some(([o, n]) => Number(o) !== n)) { delete p.syncUndo; delete p.syncUndos; }
+    let dropped = 0, items = 0;
+    const kept = [];
+    for (const d of [...(s.dropped || [])].filter(x => !had.has(x.key))) {
+        const r = await dropStretch(m, p, d.key);
+        dropped += r.gone; items += r.items; kept.push(...r.kept);
+    }
+    // what the phone was made with (no message as its source): it goes when its time is past the story's time at the
+    // branch point, and the phone's clock goes back to that time. That time: the status line there; else the newest
+    // record still here from a message (none: neither is done, and the result says so)
+    const end = brPoint(s), at = statusAt(p, end, m)?.at || brNewestFrom(p, end);
+    let cut = 0;
+    if (at) {
+        cut = brCutMadeAfter(p, at);
+        if (!p.now || laterThan(String(p.now), at)) p.now = at;
+    }
+    await saveMeta();
+    if (cut && p.inject) applyInjection();
+    return { dropped, items, kept, cut, at: at || '', rebased };
+}
+// the last message of this chat the phone still knows (read, or where it began): the branch point
+function brPoint(s) {
+    const end = chatEnd(), read = [...Object.keys(s.seen || {}), ...Object.keys(s.hiddenRead || {})].map(Number).filter(i => i <= end);
+    const base = s.marks?.base?.index;
+    return Math.max(...read, Number.isInteger(base) && base <= end ? base : -1, read.length || Number.isInteger(base) && base <= end ? -1 : end);
+}
+const brHasTime = v => /^\d{2}-\d{2}(?: \d{2}:\d{2})?$/.test(String(v || '').trim());
+const brItemTime = (k, x) => String((k === 'diary' ? x.date : x.time) || '').trim();
+// made with the phone: no source, or there before sources were kept (a reflection only told of it again)
+const brMadeWith = x => !Array.isArray(x?.froms) || !x.froms.length || x.froms.some(f => f.at === 'before');
+// the newest time on a record from a message at or before `end` (a status line can't be read there)
+function brNewestFrom(p, end) {
+    let best = '';
+    const look = (k, x) => { const t = brItemTime(k, x); if (brHasTime(t) && (x.froms || []).some(f => Number.isInteger(f.at) && f.at <= end) && (!best || laterThan(t, best))) best = t; };
+    for (const k of LISTS) for (const x of p[k] || []) look(k, x);
+    for (const t of p.threads || []) for (const x of t.messages || []) look('msg', x);
+    return best;
+}
+// records made with the phone and dated past `at` (events keep theirs: an event's date is when it happens, not when it was
+// written); a thread left empty goes. Returns how many went
+function brCutMadeAfter(p, at) {
+    let n = 0;
+    const past = (k, x) => brMadeWith(x) && brHasTime(brItemTime(k, x)) && laterThan(brItemTime(k, x), at);
+    for (const k of LISTS) if (k !== 'events' && Array.isArray(p[k])) p[k] = p[k].filter(x => { if (!past(k, x)) return true; n++; return false; });
+    for (const t of p.threads || []) t.messages = (t.messages || []).filter(x => { if (!past('msg', x)) return true; n++; return false; });
+    p.threads = (p.threads || []).filter(t => t.messages.length);
+    return n;
+}
+
 async function updatePhone(m, owner) {
     return exclusive('sync', async () => {
         const key = nameKey(owner), p = m.phones[key], scope = phoneChatScope(ctx());
