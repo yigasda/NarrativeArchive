@@ -109,6 +109,7 @@ const DLV = {
     { shop: 'Kumo Sushi', items: [ { name: 'Lachs Nigiri groß', qty: 1, price: 19.8 } ], fee: 2.9, tip: 1, discount: 0, mode: 'delivery', time: '10-25 17:20', arrived: '', to: 'home', address: 'Brückenstr. 4', status: 'on the way', account: '7710', for: 1 } ],
   cart: { shop: 'Pasta Nostra', items: [ { name: 'Tiramisu', qty: 2, price: 5.5 } ], noteShop: '', noteRider: '' },
 };
+let liveFailed = 0;
 http.createServer((req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*'); res.setHeader('Access-Control-Allow-Headers', '*'); res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   if (req.method === 'OPTIONS') { res.writeHead(204); return res.end(); }
@@ -116,6 +117,14 @@ http.createServer((req, res) => {
   if (req.method === 'GET' && /\/models\b/.test(req.url || '')) { res.writeHead(200, { 'content-type': 'application/json' }); return res.end(JSON.stringify({ object: 'list', data: ['fake', 'fake-large', 'fake-mini'].map(id => ({ id, object: 'model' })) })); }
   let b = ''; req.on('data', c => b += c); req.on('end', () => {
     last = b;
+    // 폰 2 답장(phone2reply.js): 2초 뒤에 와요. 마지막 말에 "실패해"가 있으면 처음 한 번은 읽을 수 없는 답,
+    // "말없이"가 있으면 말 없이 폰으로만 한 일(reply 없음, state · does만)
+    if (b.includes('is texting you on MESSENGER')) {
+      const fail = b.includes('실패해') && !liveFailed++, quiet = b.includes('말없이');
+      const content = fail ? 'sorry, no json here' : JSON.stringify(quiet ? { state: '집 · 소파', reply: [], ko: [], does: [{ app: 'Notes', what: '장 볼 목록 적음' }] }
+        : { state: '회사 · 점심 먹고 자리', reply: ['Ja klar, Samstag passt!', 'Bring Kuchen mit 😄'], ko: ['응 좋아, 토요일 괜찮아!', '케이크 가져와 😄'], does: [] });
+      return setTimeout(() => { res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ choices: [{ message: { role: 'assistant', content } }] })); require_log(b); }, 2000);
+    }
     const upd = b.includes('[UPDATE]');
     // 말투 뽑기 (phonetr.js askVoices): the story's people with the words that show it; anyone else in WHO comes back missing
     const VOICES = { people: [{ who: 'Ren', style: '늘 반말이고 장난스럽게 말끝을 길게 늘이며, 상대가 차갑게 굴면 일부러 더 들러붙고 이모티콘을 섞어 분위기를 풀려고 함', label: '장난 반말 · 능글', evidence: ['Why so cold? Come on, smile a little~'] }, { who: 'Anja', style: '반말, 다정하게, 걱정 많음', label: '다정한 반말', evidence: ['Did you eat? Don\'t skip dinner again'] }, { who: 'Ivo', style: '극도로 절제되고 격식 있는 문어체 존댓말 및 단호하고 간결한 명령형 어조. 문장 끝에 반드시 마침표를 찍음', label: '격식 존댓말 · 단호함', evidence: ['Bitte. Der Schlüssel liegt unter der Matte.'] }] };
