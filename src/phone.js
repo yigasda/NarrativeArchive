@@ -39,7 +39,7 @@ import { liveMode, liveWorld, livePhone, liveMeta, setLiveMode, resetLive, remem
 import { shiftLabel, liveWall, viewerWall, startShift } from './phone2clock.js';
 import { orbitList, orbitRoom, orbitNew, orbitHomeWidget, liveStart } from './phoneorbit.js';
 import { liveStoryText, beginFromStory, liveBranched, adoptChat, rebeginFromStory } from './phone2story.js';
-import { liveGo, liveReflect } from './phone2go.js';
+import { liveGo, liveReflect, liveCanUndo, liveUndo, liveUnreflected } from './phone2go.js';
 
 // other files keep importing these from here
 export { phoneBlock } from './phonedata.js';
@@ -467,7 +467,7 @@ export async function openPhone(who = null) {
         let html;
         tidyKo(p);
         if (view === 'livestart' && (live() || liveWorld(realM))) view = 'set';
-        try { html = screen(p, view, m, live() ? liveRoster() : roster, { ...orbitUi(), start: view === 'livestart' ? startPlan(p) : null, phones: { live: live(), has: !!liveWorld(realM), shift: shiftLabel(liveWorld(realM)?.dayShift), err: live() && p?.liveReflectError?.at ? viewerWall(p.liveReflectError.at, liveWorld(realM)?.dayShift || 0).at.slice(6) : '', names: live() ? liveNames() : null }, syncN: view === 'set' && !live() ? syncLeft(p, m) : null, syncRows: view.startsWith('setsync') ? syncRows() : [], syncWhy, syncPending, pickMore, loreExp, loreEnts, remake, contactBack, investing, profileState:profileStates.get(nameKey(p.owner)), placeReading, mapQ, msgHeld, msgPick, retr: retrKs, voicePick: view === 'setvoice' ? voicePick : null, voiceAdd, voiceBusy }); }
+        try { html = screen(p, view, m, live() ? liveRoster() : roster, { ...orbitUi(), start: view === 'livestart' ? startPlan(p) : null, phones: { live: live(), has: !!liveWorld(realM), shift: shiftLabel(liveWorld(realM)?.dayShift), canUndo: live() && !!p && liveCanUndo(realM, p.owner), held: live() && !!p && Number.isInteger(p.liveHeld) && liveUnreflected(realM, p.owner) > 0, err: live() && p?.liveReflectError?.at ? viewerWall(p.liveReflectError.at, liveWorld(realM)?.dayShift || 0).at.slice(6) : '', names: live() ? liveNames() : null }, syncN: view === 'set' && !live() ? syncLeft(p, m) : null, syncRows: view.startsWith('setsync') ? syncRows() : [], syncWhy, syncPending, pickMore, loreExp, loreEnts, remake, contactBack, investing, profileState:profileStates.get(nameKey(p.owner)), placeReading, mapQ, msgHeld, msgPick, retr: retrKs, voicePick: view === 'setvoice' ? voicePick : null, voiceAdd, voiceBusy }); }
         catch (err) {
             console.error('[narrative-archive] phone screen', view, err);
             toastr.error(`${view} 화면을 그리지 못했어요: ${err?.message || err}`, '캐릭터 휴대폰');
@@ -767,6 +767,30 @@ export async function openPhone(who = null) {
     } }).catch(err => console.error('[narrative-archive] live go', err));
     // 반영(소망 결정): 메신저를 나갈 때만 · 폰을 닫을 때 · 타임라인으로 바꿀 때. 실시간 폰의 인물마다 쌓인 대화를 한 번에(읽을 게 없으면 바로 끝)
     const obReflect = () => { const w = liveWorld(realM); if (!w) return; (async () => { for (const p of Object.values(w.phones || {})) if (p?.owner) await liveReflect(realM, p.owner, { onChange: () => { if (!phoneClosed && stillHere() && live()) drawPhone(true); } }); })().catch(err => console.error('[narrative-archive] live reflect', err)); };
+    // 실시간 폰 설정 › 지난 반영: 방금 반영 되돌리기 · 다시 반영 (다른 폰 작업 중엔 폰 1 되돌리기처럼 막아요)
+    $root.on('click', '.na_live_undo', async e => {
+        e.stopPropagation();
+        if (!live()) return;
+        if (making || busy.sync || busy.fill) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요');
+        const p = phone(), n = p?.syncLast?.checked || 0;
+        if (!p || !await askSheet('방금 반영을 되돌릴까요?', `대화 ${n}개를 다시 읽게 돼요.`, '되돌리기')) return;
+        if (making || busy.sync || busy.fill || phone() !== p || !live()) return;
+        try {
+            const kept = await liveUndo(realM, p.owner, { onChange: () => { if (!phoneClosed && stillHere() && live()) drawPhone(true); } });
+            if (!phoneClosed && stillHere()) drawPhone(true);
+            kept.length ? toastr.warning(`되돌렸어요. ${kept.join(', ')}은(는) 그 사이 바뀌어서 남겨뒀어요`, '캐릭터 휴대폰') : toastr.success('반영을 되돌렸어요', '캐릭터 휴대폰');
+        } catch (err) { toastr.warning(String(err?.message || err), '되돌리기'); }
+    });
+    $root.on('click', '.na_live_rerun', async e => {
+        e.stopPropagation();
+        if (!live()) return;
+        if (making || busy.sync || busy.fill) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요');
+        const p = phone();
+        if (!p) return;
+        try { await withSpinner($(e.currentTarget), '반영 중', () => liveReflect(realM, p.owner, { force: true, onChange: () => { if (!phoneClosed && stillHere() && live()) drawPhone(true); } })); }
+        catch (err) { console.error('[narrative-archive] live reflect', err); }
+        if (!phoneClosed && stillHere()) drawPhone(true);
+    });
     const obSend = async () => {
         const r = roomNow(), t = String($root.find('.na_ob_in').val() || '').trim();
         if (!live() || !r || !t || obAcct() !== liveWorld(realM)?.persona) return;
