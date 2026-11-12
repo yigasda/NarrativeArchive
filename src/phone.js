@@ -11,7 +11,7 @@ import { investmentScreen } from './investui.js';
 import { collectInvestmentRecords, fillInvestment, fillChartHistory, refreshMarket, refreshBankFX, investmentDate, validDate } from './investdata.js';
 import { migrateBank, selectPrice } from './finance.js';
 import { askDraft, draftReady, draftSettings, drLabel, listModels, vxModelList, withSpinner } from './ai.js';
-import { ctx, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
+import { ctx, getMeta, globalSettings, saveGlobal, saveMeta, setPhoneMeta } from './core.js';
 import { applyInjection } from './inject.js';
 import { faceHtml, nameKey, peopleList } from './people.js';
 import { drafting, drawing, drawPhoto, drawPost, filling, makeDraft, paging, retranslate, retranslating, recording, recordVoice, searching, searchPage, shooting, takePhoto, webPage, writeEntry, writing } from './phoneai.js';
@@ -34,6 +34,8 @@ import { dropVoice, fillKo, koAppOf, koScopeOf, labelVoices, learnVoices, pickVo
 // 을 / 를 after a word: by its last syllable's final consonant (a Latin ending, like SNS, reads as 를)
 const josa = w => { const c = w.charCodeAt(w.length - 1) - 0xac00; return c >= 0 && c < 11172 && c % 28 ? '을' : '를'; };
 import { confirm, esc } from './util.js';
+import { liveMode, liveWorld, livePhone, liveMeta, setLiveMode } from './phone2store.js';
+import { shiftLabel } from './phone2clock.js';
 
 // other files keep importing these from here
 export { phoneBlock } from './phonedata.js';
@@ -62,7 +64,7 @@ function screen(p, view, m, roster, ui) {
         : v === 'note' ? noteScreen(p, now) : v === 'noteone' ? noteOne(p, now, Number(i)) : v === 'search' ? searchScreen(p, now) : v === 'page' ? pageView(p, now, i || '', paging.has(`${nameKey(p.owner)}:${i}`)) : v === 'tabs' ? tabsScreen(p, now) : v === 'marks' || v === 'history' ? marksScreen(p, now, v === 'history') : v === 'searchone' ? searchOne(p, now, Number(i), searching.has(`${nameKey(p.owner)}:${i}`))
         : v === 'cal' ? calScreen(p, now, m, i || '') : v === 'calone' ? calOne(p, now, Number(i), m) : v === 'map' ? (mapTowns(p, m).groups.length ? mapScreen(p, now, m, i || '') : mapEmptyScreen(p, now, m)) : v === 'mapq' ? mapSearchScreen(p, now, m, i || '', ui.mapQ || '') : v === 'mapc' ? mapCityScreen(p, now, m, i || '')
         : v === 'sns' ? snsScreen(p, now) : v === 'snspost' ? snsPost(p, now, Number(i)) : v === 'mail' ? mailScreen(p, now, i) : v === 'mailone' ? mailOne(p, now, Number(i))
-        : v === 'diary' ? diaryScreen(p, now, i || '') : v === 'diaryone' ? diaryOne(p, now, Number(i)) : v === 'setsync' ? syncSettings(p, now, ui) : v === 'setsyncpick' ? syncPick(p, now, ui) : v === 'set' ? setScreen(p, now, m, ui) : v === 'stime' ? screenTimeScreen(p, now, i || '') : v === 'settheme' ? setTheme(p, now) : v === 'setscreenholder' ? setScreenHolderView(p, now, m, ui.holderBack) : v === 'setdate' ? setDate(p, now, m) : v === 'setplace' ? setPlace(p, now, m, ui) : v === 'setdraft' ? setDraft(p, now, draftUi(), ui.draftBack || 'set') : v === 'setdraftmodel' ? setDraftModels(p, now, draftIds(), draftSettings()[draftKey()] || '', draftSettings().mode === 'custom') : v === 'setvoice' ? setVoice(p, now, ui.voicePick, ui.voiceBusy) : v === 'setvoiceadd' ? setVoiceAdd(p, now, ui.voiceAdd, ui.voiceBusy) : v === 'prep' ? prepScreen(p, now, m, ui.prep) : v === 'setremake' ? setRemake(p, now, ui, m) : v === 'setprofile' ? setOwnerProfile(p,now,ui.profileState) : v === 'setwho' ? setWho(p, now, m) : v === 'setlore' ? setLore(p, now, m, ui)
+        : v === 'diary' ? diaryScreen(p, now, i || '') : v === 'diaryone' ? diaryOne(p, now, Number(i)) : v === 'setsync' ? syncSettings(p, now, ui) : v === 'setsyncpick' ? syncPick(p, now, ui) : v === 'set' ? setScreen(p, now, m, ui) : v === 'stime' ? screenTimeScreen(p, now, i || '') : v === 'settheme' ? setTheme(p, now) : v === 'setscreenholder' ? setScreenHolderView(p, now, m, ui.holderBack) : v === 'setdate' ? setDate(p, now, m, ui) : v === 'setplace' ? setPlace(p, now, m, ui) : v === 'setdraft' ? setDraft(p, now, draftUi(), ui.draftBack || 'set') : v === 'setdraftmodel' ? setDraftModels(p, now, draftIds(), draftSettings()[draftKey()] || '', draftSettings().mode === 'custom') : v === 'setvoice' ? setVoice(p, now, ui.voicePick, ui.voiceBusy) : v === 'setvoiceadd' ? setVoiceAdd(p, now, ui.voiceAdd, ui.voiceBusy) : v === 'prep' ? prepScreen(p, now, m, ui.prep) : v === 'setremake' ? setRemake(p, now, ui, m) : v === 'setprofile' ? setOwnerProfile(p,now,ui.profileState,!!ui.phones?.live) : v === 'setwho' ? setWho(p, now, m, ui) : v === 'setlore' ? setLore(p, now, m, ui)
         : v === 'cam' ? camScreen(p, now, i === undefined ? -1 : Number(i), shooting.has(nameKey(p.owner))) : homeScreen(p, now, m);
     // the home is the design board itself, at its own size, scaled to the screen (--k)
     // every app: drawn at the boards' size too, each its own app look
@@ -93,15 +95,18 @@ export function rememberPhoneSelection(m, owner, key, storage) {
 // ---- the window
 export async function openPhone(who = null) {
     const c = ctx();
-    const m = getMeta(), openingScope = phoneChatScope(c);
-    const stillHere = () => getMeta() === m && phoneChatScope(ctx()) === openingScope;
+    // realM: the chat's own meta. m: what the screens, drawing and buttons are given: realM in 타임라인 (폰 1), 폰 2's
+    // drawer (liveMeta) in 실시간, so nothing there reaches 폰 1. realM stays only for saveMeta · liveMode · setLiveMode · liveWorld
+    const realM = getMeta(), openingScope = phoneChatScope(c);
+    let m = realM;
+    const stillHere = () => getMeta() === realM && phoneChatScope(ctx()) === openingScope;
     if (!await ensurePhoneStory(m) || !stillHere()) return;
     await ensureScreenHolder(m, c);
     if (!stillHere()) return;
     // a round this browser made that the saved chat doesn't have: kept, and offered in 설정 › 대화 반영; the phone opens anyway
     let syncPending = 0;
     try { syncPending = tidyJournal(m, phoneChatScope(c)); } catch (err) { console.error('[narrative-archive] sync journal', err); }
-    if (syncPending) toastr.info('저장되지 않은 반영 기록이 있어요. 설정 › 대화 반영에서 복구할 수 있어요', '캐릭터 휴대폰');
+    if (syncPending && liveMode(realM) !== 'live') toastr.info('저장되지 않은 반영 기록이 있어요. 설정 › 대화 반영에서 복구할 수 있어요', '캐릭터 휴대폰');
     applyInjection();
     m.phones = m.phones && typeof m.phones === 'object' ? m.phones : {};
     // phones saved before records had ids get them now, once
@@ -110,8 +115,12 @@ export async function openPhone(who = null) {
     for (const p of Object.values(m.phones)) if (p?.owner && !names.some(n=>nameKey(n) === nameKey(p.owner))) names.push(p.owner);
     const roster = new Set(names.map(nameKey));
     const selectionKey = phoneSelectionKey(c);
-    let owner = selectedPhoneOwner(m, names, who, readPhoneSelection(selectionKey));
-    if (owner) { rememberPhoneSelection(m,owner,selectionKey); await saveMeta(); }
+    // 실시간 (폰 2): its own people and its own last owner (m.live only); 타임라인 (폰 1) as before
+    const live = () => liveMode(realM) === 'live';
+    const liveNames = () => Object.values(liveWorld(realM)?.phones || {}).map(p => p?.owner).filter(Boolean);
+    const liveOwner = () => { const ns = liveNames(), w = liveWorld(realM); return ns.find(n => nameKey(n) === nameKey(w?.lastOwner)) || ns[0] || null; };
+    let owner = live() ? liveOwner() : selectedPhoneOwner(m, names, who, readPhoneSelection(selectionKey));
+    if (owner && !live()) { rememberPhoneSelection(m,owner,selectionKey); await saveMeta(); }
     if (!stillHere()) return;
     let investing = false, making = false, busyMake = null, placeReading = false, prepLinking = false, prepOpen = false, prepFrom = false;  // 폰 만들기 준비: linking, 1~4 shown again, 인물 정보 opened from it
      // busyMake: 'sync' | 'make' while a reflection or a make runs
@@ -121,6 +130,11 @@ export async function openPhone(who = null) {
     if (!stillHere()) return;
     if (Object.values(m.phones).some(p => p.money)) await saveMeta();
     if (!stillHere()) return;
+    // 실시간: the drawer is made once for its world and kept (a new one each time would copy the glossary again)
+    let drawer = null;
+    const useMode = () => { m = live() ? (drawer?.w === liveWorld(realM) ? drawer.d : (drawer = { w: liveWorld(realM), d: liveMeta(realM) }).d) : realM; setPhoneMeta(m === realM ? null : m); };
+    useMode();
+    const liveRoster = () => new Set(liveNames().map(nameKey));
     let view = 'lock', mapQ = '', contactBack = '', sheet = false, adding = false, loreOpen = false;
     let syncWhy = '', pickMore = 30;
     const profileStates = new Map();
@@ -142,14 +156,17 @@ export async function openPhone(who = null) {
         </div>
       </div>`);
     const setSheet = on => { sheetOpen = on; $root.find('.na_phl_sheet, .na_phl_shade').prop('hidden', !on); };
-    const phone = () => (owner ? m.phones[nameKey(owner)] : null);
+    const phone = () => (owner ? (live() ? livePhone(realM, owner) : m.phones[nameKey(owner)]) : null);
+    // 실시간: 타임라인's data buttons (반영 · 되돌리기 · 복구 · 다시 만들기 · 채우기 · 번역 · 빼기) are off; a tap on one that is left does nothing
+    const LIVE_OFF = '.na_ph_kochip, .na_ph_trok, .na_sync_tr, .na_ph_screenholder, [data-go=setscreenholder], .na_ph_setupd, .na_ph_setinj, .na_ph_setremake, [data-go=setremake], [data-go=setsync], .na_ph_storyreset, .na_ph_setdel, .na_ph_fill, .na_ph_mretr, .na_sync_retr, .na_sync_restore, .na_sync_drop, .na_sync_undo';
+    $root.on('click', LIVE_OFF, e => { if (live()) { e.preventDefault(); e.stopImmediatePropagation(); } });
     // the Korean of what the phone has in another language (phonetr.js): after a reflection, from its report, or when
     // 한국어 is pressed. A failure is marked on the report (번역 못 함 · 다시 하기); the reflection itself stays
     let koBusy = false;
     // 설정 › 말투's 이야기에서 뽑기: the names chosen (lower case) while choosing, null otherwise; busy while the story is asked
     let voicePick = null, voiceAdd = new Set(), voiceBusy = false;
     const koRun = async (p, loud) => {
-        if (koBusy || !p) return;
+        if (koBusy || !p || live()) return;  // (실시간: 폰 2 gets its own translation later)
         koBusy = true;
         try {
             // (how the people who text sound, from the story, for anyone not in the table yet; a failure here only leaves it out)
@@ -185,6 +202,8 @@ export async function openPhone(who = null) {
         return profileDrafts.get(key);
     };
     const drawOwners = () => {
+        if (live()) { $root.find('.na_ph_owners').html(liveNames().map(n => `
+          <button type="button" class="na_ph_pick ${n === owner ? 'on' : ''}" data-n="${esc(n)}">${faceHtml(n, 40)}<span>${esc(n)}</span><i></i></button>`).join('')); $root.find('.na_ph_addrow').prop('hidden', true); return; }
         $root.find('.na_ph_owners').html(`${names.map(n => `
           <button type="button" class="na_ph_pick ${n === owner ? 'on' : ''}" data-n="${esc(n)}">${faceHtml(n, 40)}<span>${esc(n)}</span>${m.phones[nameKey(n)] ? '<i></i>' : ''}</button>`).join('')}
           <button type="button" class="na_ph_pick na_ph_addp" title="인물 넣기"><span class="na_ph_addic">${ic('plus', 18, 2)}</span><span>넣기</span></button>`);
@@ -319,6 +338,7 @@ export async function openPhone(who = null) {
                 </div></div>`);
             return;
         }
+        if (live() && !p) { $root.find('.na_ph_frame').html(`<div class="na_ph_scr glass w_dusk"><div class="na_ph_body na_ph_make"><div class="na_ph_makecard"><b>이 실시간 폰엔 아직 인물이 없어요</b></div></div></div>`); return; }
         // 메신저 시간대 opened from 폰 만들기 준비: the settings screen itself, back to the prep screen
         // 초안 모델 opened from 폰 만들기 준비: its screen, back to the prep screen
         if (!p && view === 'setdraftmodel') { $root.find('.na_ph_frame').html(screen(phonePre(m, owner) || pendingProfile(), view, m, roster, {})); return; }
@@ -347,13 +367,15 @@ export async function openPhone(who = null) {
         // a screen that can't be drawn says why (and in the console), instead of leaving the phone blank or on another screen
         let html;
         tidyKo(p);
-        try { html = screen(p, view, m, roster, { syncN: view === 'set' ? syncLeft(p, m) : null, syncRows: view.startsWith('setsync') ? syncRows() : [], syncWhy, syncPending, pickMore, loreExp, loreEnts, remake, contactBack, investing, profileState:profileStates.get(nameKey(p.owner)), placeReading, mapQ, msgHeld, msgPick, retr: retrKs, voicePick: view === 'setvoice' ? voicePick : null, voiceAdd, voiceBusy }); }
+        try { html = screen(p, view, m, live() ? liveRoster() : roster, { phones: { live: live(), has: !!liveWorld(realM), shift: shiftLabel(liveWorld(realM)?.dayShift), names: live() ? liveNames() : null }, syncN: view === 'set' && !live() ? syncLeft(p, m) : null, syncRows: view.startsWith('setsync') ? syncRows() : [], syncWhy, syncPending, pickMore, loreExp, loreEnts, remake, contactBack, investing, profileState:profileStates.get(nameKey(p.owner)), placeReading, mapQ, msgHeld, msgPick, retr: retrKs, voicePick: view === 'setvoice' ? voicePick : null, voiceAdd, voiceBusy }); }
         catch (err) {
             console.error('[narrative-archive] phone screen', view, err);
             toastr.error(`${view} 화면을 그리지 못했어요: ${err?.message || err}`, '캐릭터 휴대폰');
             html = `<div class="na_ph_scr glass w_dusk"><div class="na_ph_body na_ph_make"><div class="na_ph_makecard"><b>화면을 그리지 못했어요</b><p>${esc(`${view}: ${err?.message || err}`)}</p><button type="button" class="na_ph_makebtn" data-go="home">홈으로</button></div></div></div>`;
         }
         $root.find('.na_ph_frame').html(html);
+        // 실시간: the notch says which phone this is on every screen; 타임라인's data rows go
+        if (live()) { $root.find('.na_ph_frame .na_ph_scr').first().append('<span class="na_ph_notch" aria-label="실시간 폰"><i></i></span>'); $root.find(`.na_ph_frame :is(${LIVE_OFF})`).remove(); $root.find('.na_ph_frame .ax_card').filter((_, c) => !c.children.length).remove(); }
         if (sheet && (view === 'photo' || view === 'set')) $root.find('.na_ph_scr').append(looksSheet(m));
         placeAsk();
         trPop();
@@ -614,7 +636,20 @@ export async function openPhone(who = null) {
         drawPhone();await saveMeta();
     });
     $root.on('click','.na_ph_makeprofile',()=>{prepFrom=false;view='setprofile';editProfile();drawPhone();});
-    $root.on('click', '.na_ph_pick:not(.na_ph_addp), .ax_whopick', async function (e) { e.stopPropagation(); const same = owner === this.dataset.n; owner = this.dataset.n; rememberPhoneSelection(m,owner,selectionKey); if (!same) { view = 'lock'; sheet = false; draw(); setSheet(false); } await saveMeta(); });
+    $root.on('click', '.na_ph_pick:not(.na_ph_addp), .ax_whopick', async function (e) { e.stopPropagation(); const same = owner === this.dataset.n; owner = this.dataset.n; if (live()) liveWorld(realM).lastOwner = owner; else rememberPhoneSelection(m,owner,selectionKey); if (!same) { view = 'lock'; sheet = false; draw(); setSheet(false); } await saveMeta(); });
+    // 설정 › 휴대폰: 타임라인 (폰 1) · 실시간 (폰 2); 실시간 only once there is one
+    $root.on('click', '.na_ph_pmode', async function (e) {
+        e.stopPropagation();
+        const to = this.dataset.v === 'live' ? 'live' : 'story';
+        if (to === liveMode(realM) || (to === 'live' && !liveWorld(realM))) return;
+        if (making || busyMake || investing || koBusy || filling.size || busy.fill || busy.sync) return toastr.info('다른 폰 작업이 끝난 뒤 바꿔 주세요', '캐릭터 휴대폰');
+        setLiveMode(realM, to);
+        useMode();
+        owner = to === 'live' ? liveOwner() : selectedPhoneOwner(m, names, null, readPhoneSelection(selectionKey));
+        view = 'set'; sheet = false;
+        draw();
+        await saveMeta();
+    });
     $root.on('click', '.na_ph_makewho', () => { loreOpen = false; drawCtrl(); setSheet(true); });
     // a person only the lorebook knows: into the same list as 인물 도감's +
     $root.on('click', '.na_ph_addp', () => { adding = !adding; drawOwners(); if (adding) { setSheet(true); $root.find('.na_ph_addname').trigger('focus'); } });
@@ -781,6 +816,7 @@ export async function openPhone(who = null) {
         const $b = $(e.currentTarget);
         koHold = setTimeout(async () => {
             koHeld = true;
+            if (live()) return;
             const p = phone();
             if (!p || making || koBusy) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요');
             // (this screen's lines only: one chat, one note, one page …; a list screen its app's newest 40; 설정 the whole phone, asked first)
@@ -1412,9 +1448,9 @@ export async function openPhone(who = null) {
         if (making || busyMake || investing || filling.size || busy.fill || busy.sync) return toastr.info('반영이 끝난 뒤 바꿔 주세요', '캐릭터 휴대폰');
         const value = this.dataset.n;
         if (value !== '' && !screenHolderChoices(m).some(x => x.name === value)) return;
-        if (getMeta() !== m) return;
+        if (getMeta() !== realM || live()) return;
         await setScreenHolder(m, value);
-        if (!phoneClosed && getMeta() === m) { view = phone() ? 'setdate' : 'prep'; drawPhone(); }
+        if (!phoneClosed && getMeta() === realM) { view = phone() ? 'setdate' : 'prep'; drawPhone(); }
     });
     $root.on('click', '.na_ph_dord', async function (e) { e.stopPropagation(); if (making || busyMake || investing || filling.size || busy.fill || busy.sync) return toastr.info('반영이 끝난 뒤 바꿔 주세요', '캐릭터 휴대폰'); const v = this.dataset.v; if (v !== 'md' && v !== 'dm' || dateOrderOf(m) === v && !needsDateOrder(m)) return; await setDateOrder(m, v); drawPhone(true); });
     $root.on('click', '.na_ph_yearshow', async e => {
@@ -1459,7 +1495,7 @@ export async function openPhone(who = null) {
         if (making || busyMake || investing || filling.size || placeReading || prepLinking) return toastr.info('생성 중인 작업이 끝난 뒤 다시 시도해 주세요');
         const scope=phoneChatScope(ctx());
         if (!await askSheet('이 방의 폰을 새로 시작할까요?', '모든 인물의 폰이 지워져요.', '새로 시작')) return;
-        if(getMeta()!==m || phoneChatScope(ctx())!==scope || making || busyMake || investing || filling.size || placeReading || prepLinking) return toastr.info('생성 중인 작업이 끝난 뒤 다시 시도해 주세요');
+        if(getMeta()!==realM || phoneChatScope(ctx())!==scope || making || busyMake || investing || filling.size || placeReading || prepLinking) return toastr.info('생성 중인 작업이 끝난 뒤 다시 시도해 주세요');
         resetPhoneStory(m,scope);profileStates.clear();profileDrafts.clear();remake.clear();view='lock';
         await saveMeta();applyInjection();draw();
     });
@@ -1518,7 +1554,7 @@ export async function openPhone(who = null) {
         $root.on('click', '.na_ph_quit', e => { e.stopPropagation(); close(); });
         $root.on('click', '.na_ph_wrap', e => { if (e.target === e.currentTarget) { if (sheetOpen) setSheet(false); else close(); } });
         dlg.addEventListener('cancel', e => { e.preventDefault(); if (ask) ask.done(false); else if (sheetOpen) setSheet(false); else close(); });
-        dlg.addEventListener('close', () => { phoneClosed = true; ask?.done(false); done(); }, { once: true });
+        dlg.addEventListener('close', () => { phoneClosed = true; setPhoneMeta(null); ask?.done(false); done(); }, { once: true });
     });
     stopBusy(); madeWatch.delete(onMade);
     window.removeEventListener('resize', setH);

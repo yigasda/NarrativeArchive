@@ -7,7 +7,7 @@
 import { aroundBlock, cardBlocks, koGaps, refreshUndoAfter, roundObjects, sideRequest } from './phonedata.js';
 import { askDraft } from './ai.js';
 import { askTranslator, glossaryEntries, glossaryIn } from './translate.js';
-import { getMeta, hasChat } from './core.js';
+import { phoneMeta, hasChat } from './core.js';
 import { parseJson } from './phoneparse.js';
 
 export const AI_SYS_PHONE_KO = `GOAL
@@ -140,7 +140,7 @@ const voiceRows = p => (Array.isArray(p.koVoice) ? p.koVoice : []).filter(v => v
 // (no examples from the Korean already on the phone: what an older reflection wrote there is the uneven voice this
 // replaces; the voice table alone keeps it even)
 function inputOf(p, chunk) {
-    const voices = voiceRows(p), gloss = hasChat() ? glossaryIn(glossaryEntries(getMeta()), chunk.map(g => g.x[g.f]).join('\n')) : [];
+    const voices = voiceRows(p), gloss = hasChat() ? glossaryIn(glossaryEntries(phoneMeta()), chunk.map(g => g.x[g.f]).join('\n')) : [];
     return [
         `[OWNER]\n${p.owner || 'me'}`,
         aroundBlock(p),

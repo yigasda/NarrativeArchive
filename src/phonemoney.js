@@ -3,7 +3,7 @@
 // p.voice = memos (the story's, 채우기's from the archive, and 떠올리기's right now). Records with the same "ev" link to each other.
 
 import { creditAmount, creditLabel } from './finance.js';
-import { getMeta } from './core.js';
+import { phoneMeta } from './core.js';
 import { migrateBank, total, fx, price, finite, currency } from './finance.js';
 import { investmentDate } from './investdata.js';
 import { nameKey } from './people.js';
@@ -40,18 +40,18 @@ export const fmtIn = (p, n, cur, signed = false) => fmtMoney({ ...p, money: { cu
 // Display currency never changes an account's denomination or its ledger.
 const LOCAL_CURRENCY = {KR:'KRW',US:'USD',GB:'GBP',DE:'EUR',FR:'EUR',IT:'EUR',ES:'EUR',AT:'EUR',JP:'JPY',CN:'CNY',TW:'TWD',CA:'CAD',AU:'AUD',RU:'RUB',BR:'BRL',CH:'CHF'};
 export const bankDisplayCurrency = p => currency(p.money?.displayCurrency) || LOCAL_CURRENCY[homeCountry(p)] || p.money?.currency || 'EUR';
-const bankDate = p => p.money?.fxDate || investmentDate(getMeta(),p);
+const bankDate = p => p.money?.fxDate || investmentDate(phoneMeta(),p);
 function converted(p, a, brief = false) {
     const from = a.currency || p.money.currency, to = bankDisplayCurrency(p), date = bankDate(p);
     if (from === to) return '';
-    const meta = getMeta(), amount = a.kind === 'credit' ? creditAmount(a) : a.balance;
+    const meta = phoneMeta(), amount = a.kind === 'credit' ? creditAmount(a) : a.balance;
     const rate = fx(meta,from,to,date), q = price(meta,`FX:${from}/${to}`,date);
     if (!finite(amount) || rate === null) return `${esc(to)} 환산 대기`;
     if (brief) return `${esc(fmtIn(p,amount * rate,to))} 환산`;
     return `${esc(fmtIn(p,amount * rate,to))} 환산 · 1 ${esc(from)} = ${esc(fmtIn(p,rate,to))} · ${esc(date)}${q?.conflict ? ' · 환율 확인 필요' : ''}`;
 }
 function bankSum(p) {
-    const meta = getMeta(); migrateBank(meta,p);
+    const meta = phoneMeta(); migrateBank(meta,p);
     return total(meta,p.money.bank.accounts.filter(a=>a.kind !== 'credit').map(a=>({amount:a.balance,currency:a.currency || p.money.currency})),bankDisplayCurrency(p),bankDate(p));
 }
 const missingSum = (p,sum) => sum.missing.length ? `<span class="ax_fxwait">${sum.missing.map(x=>`${esc(fmtIn(p,x.amount,x.currency))} 환산 대기`).join(' · ')}</span>` : '';
@@ -149,7 +149,7 @@ export function bankAcct(p, now, key) {
     adjFor(p);
     const [i, f = 'all'] = String(key).split('.'), a = mo(p)?.bank?.accounts?.[Number(i)];
     if (!a) return bankHome(p, now);
-    migrateBank(getMeta(), p);
+    migrateBank(phoneMeta(), p);
     const all = newestTx(p).filter(x => x.account === a.last4), xs = all.filter(x => f === 'in' ? x.amount > 0 : f === 'out' ? x.amount < 0 : true);
     const pend = xs.filter(x => x.pending), done = xs.filter(x => !x.pending), days = [...new Set(done.map(x => x.time.slice(0, 5)))];
     const pendSum = all.filter(x => x.pending).reduce((s, x) => s + x.amount, 0);
@@ -427,7 +427,7 @@ const TIERS = [
     { k: 'GOLD', at: 40000, re: /gold|골드/i, sub: '우수 고객', ben: [['card2', 'ATM 수수료 면제', '한 달 10회'], ['globe', '환율 우대 50%', '해외 결제 할인']] },
 ];
 export function bankTier(p) {
-    migrateBank(getMeta(), p); // the balances the ledger holds now (an update round may have moved them)
+    migrateBank(phoneMeta(), p); // the balances the ledger holds now (an update round may have moved them)
     const M = mo(p), names = [M.bank.name, ...M.bank.accounts.map(a => a.name)].join(' ');
     const has = M.bank.accounts.filter(x => x.kind !== 'credit').reduce((n, x) => n + Math.max(0, Number(x.balance) || 0) / (SCALE[x.currency] || 1), 0);
     const t = TIERS.find(t => t.re.test(names)) || TIERS.find(t => has >= t.at) || null;
@@ -631,7 +631,7 @@ function qr(seed) {
 export function walletScreen(p, now, sel = '') {
     const M = mo(p);
     if (!M) return emptyApp(p, now, '지갑', 'money', '아직 지갑이 비어 있어요. 채우면 은행 · 지갑 · 쇼핑이 함께 생겨요.');
-    migrateBank(getMeta(),p);
+    migrateBank(phoneMeta(),p);
     const today = String(storyNow(p) || p.now || '').slice(0, 5), past = x => (!x.dayUnknown && x.date && gapDays(today, String(x.until && /^\d{2}-\d{2}/.test(String(x.until)) ? x.until : x.date)) < 0) || PASS_OVER(x.status);
     const when = x => (x.dayUnknown || !x.date ? 9999 : gapDays(today, x.date)), ps = [...M.passes].sort((a, b) => when(a) - when(b)), up = ps.filter(x => !past(x)), old = ps.filter(past);
     const t = bankTier(p).t, mc = t?.k === 'PRIVATE';
@@ -679,7 +679,7 @@ function spendMonth(p, all) {
 export function cardView(p, now, i) {
     const c = mo(p)?.cards?.[Number(i)];
     if (!c) return walletScreen(p, now);
-    migrateBank(getMeta(),p);
+    migrateBank(phoneMeta(),p);
     const a = acctOf(p, c.account), ai = mo(p).bank.accounts.indexOf(a), credit = a?.kind === 'credit';
     const all = newestTx(p).filter(x => x.account === c.account && x.kind === 'card'), xs = all.slice(0,5);
     const pending = all.filter(x=>x.pending).length, cur = a?.currency || mo(p).currency;
