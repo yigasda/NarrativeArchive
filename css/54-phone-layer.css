@@ -755,7 +755,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
    Buttons take --axbg / --axsh (the phone's theme guard paints every button with them); the field is an editable div (themes
    paint every input) and the wrapper draws the field */
 .ax .mq_wx > .mq_sheet { position: absolute; left: 0; right: 0; bottom: 0; top: 330px; z-index: 3; display: flex; flex-direction: column; background: #f4f5f7; border-radius: 22px 22px 0 0; box-shadow: 0 -6px 24px rgba(22, 27, 34, 0.14); padding-top: 8px; transition: top 0.25s ease; }
-.ax .mq_wx > .mq_sheet.mq_full { top: 96px; }
+.ax .mq_wx > .mq_sheet.mq_full { top: 96px; } .ax .mq_wx > .mq_sheet.mq_cty { top: 250px; }
 .mq_sheet .mp_grab { margin-bottom: 10px; }
 .mq_field { display: flex; align-items: center; gap: 8px; height: 44px; margin: 0 16px 6px; padding: 0 8px 0 12px; border-radius: 14px; background: #e9ecf0; flex: none; }
 .mq_in { flex: 1; min-width: 0; height: 40px; line-height: 40px; outline: none; color: #161b22; font-size: 16px; white-space: nowrap; overflow: hidden; cursor: text; -webkit-user-select: text; user-select: text; }
@@ -764,6 +764,8 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax .mq_x.on { display: grid; }
 .mq_kh { display: flex; align-items: center; gap: 8px; padding: 2px 26px 6px; }
 .mq_kh b { font-size: 18px; --axfs: 18px; font-weight: 600; }
+.mq_land { gap: 10px; padding: 4px 22px 8px; } .mq_land b { font-size: 22px; --axfs: 22px; font-weight: 700; } .ax .mq_land small { font-size: 13px; --axfs: 13px; color: #6b7380; --axfg: #6b7380; font-weight: 500; }
+.ax .mq_gi { width: 38px; height: 38px; border-radius: 12px; --axr: 12px; } .ax_card > .ax_rw:has(.mq_gi) + .ax_rw::before { left: 66px; }
 .ax .mq_res { flex: 1; min-height: 0; overflow-y: auto; }
 .mq_tip { padding: 28px 24px; text-align: center; font-size: 13.5px; --axfs: 13.5px; line-height: 1.55; color: #7b818c; --axfg: #7b818c; }
 .ax .mq_fl { background: #f1f2f5; }
@@ -780,7 +782,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .mq_tl { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 3px; }
 .mq_tl b { font-size: 28px; --axfs: 28px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.2; }
 .mq_nm { font-size: 12.5px; --axfs: 12.5px; color: #7b818c; --axfg: #7b818c; }
-.mq_ths { display: flex; gap: 10px; padding: 4px 16px 10px; overflow-x: auto; scrollbar-width: none; }
+.mq_ths { display: flex; gap: 10px; padding: 4px 16px 10px; overflow-x: auto; scrollbar-width: none; } .mq_bigs { display: flex; flex: none; gap: 10px; padding: 2px 16px 12px; overflow-x: auto; scrollbar-width: none; } .mq_bigs::-webkit-scrollbar { display: none; } .ax .mq_tc { flex: none; width: 128px; padding: 0; text-align: left; border-radius: 16px; --axr: 16px; overflow: hidden; --axbg: #fff; --axsh: 0 1px 2px rgba(22, 27, 34, 0.05), 0 6px 16px rgba(22, 27, 34, 0.1); } .mq_tc :is(.mq_tph, .mq_timg) { display: block; width: 128px; height: 84px; } .mq_tc b { display: block; padding: 8px 10px 10px; font-size: 13.5px; --axfs: 13.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .mq_rw .ax_n { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ax .mq_cnt { font-size: 13px; --axfs: 13px; color: #6b7380; --axfg: #6b7380; font-weight: 600; margin-right: 2px; }
 .mq_ths::-webkit-scrollbar { display: none; }
 .ax .mq_th { position: relative; width: 96px; height: 78px; padding: 0; border-radius: 14px; --axr: 14px; overflow: hidden; flex: none; --axbg: #e9ecf0; --axsh: 0 1px 2px rgba(22, 27, 34, 0.05), 0 6px 16px rgba(22, 27, 34, 0.1); }
 .mq_th :is(svg, .mq_timg) { display: block; }
