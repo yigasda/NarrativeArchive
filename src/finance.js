@@ -3,6 +3,11 @@ export const finite = v => typeof v === 'number' && Number.isFinite(v);
 export const currency = v => /^[A-Z]{3}$/.test(v || '') ? v : null;
 export const uid = () => globalThis.crypto.randomUUID();
 export const round = n => Math.round((n + Number.EPSILON) * 100) / 100;
+// a currency's own smallest unit: none below the won or the yen, cents for the euro (what Intl knows, else 2)
+const MINOR = new Map();
+export const minorOf = cur => { if (!MINOR.has(cur)) { let d = 2; try { d = new Intl.NumberFormat('en', { style: 'currency', currency: cur }).resolvedOptions().maximumFractionDigits; } catch { d = 2; } MINOR.set(cur, Number.isInteger(d) ? d : 2); } return MINOR.get(cur); };
+// an amount in that currency, rounded to its smallest unit (₩27,957.2 → ₩27,957; €18.886 → €18.89)
+export const roundIn = (n, cur) => { const f = 10 ** minorOf(cur); return Math.sign(n) * Math.round(Math.abs(n) * f * (1 + Number.EPSILON)) / f; };
 export function finance(m) {
     return m.finance ||= { version: 1, accounts: {}, transfers: {}, prices: {}, revisions: [] };
 }

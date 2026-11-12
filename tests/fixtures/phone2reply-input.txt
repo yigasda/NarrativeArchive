@@ -1,0 +1,70 @@
+[LANGUAGES]
+Mara
+- texts in: French, English
+- knows but seldom uses: Korean
+
+[MESSENGER]
+11-06 06:40 · Ren: 딸 오늘 금요일이네 ㅎㅎ
+11-06 06:40 · Ren: 출근하지? 엄마는 방금 시장 다녀왔어
+11-06 06:42 · Mara (Lyon · in bed waking up to her text · ~07:00): Bonjour maman.
+11-06 06:42 · Mara (Lyon · in bed waking up to her text · ~07:00): Oui, je me prépare pour le bureau.
+11-06 06:42 · Mara (Lyon · in bed waking up to her text · ~07:00): Tu as acheté quoi au marché ? Ne porte pas trop lourd, s'il te plaît.
+11-06 07:55 · Ren: 출근길이야?
+11-06 07:55 · Ren: 아침은 먹었어? 커피만 마시지 말고
+11-06 07:55 · Mara (Lyon · on the tram to the office, standing by the door · ~08:20): Je viens de monter dans le tram.
+11-06 07:55 · Mara (Lyon · on the tram to the office, standing by the door · ~08:20): J'ai mangé un petit truc, t'inquiète.
+11-06 07:55 · Mara (Lyon · on the tram to the office, standing by the door · ~08:20): Bois de l'eau chaude toi aussi. Il y avait quoi au marché aujourd'hui ?
+11-06 09:30 · Ren: 오늘 시장에서 사과가 엄청 싸더라 한 봉지에 만원이래 ㅎㅎ 그래서 두 봉지 샀어 너 오면 먹으라고 근데 생각해보니 너 사과 별로 안 좋아했나? 어릴 땐 하루에 세 개씩 먹었는데
+11-06 09:30 · Mara (Varo Textiles office, Lyon · desk on the third floor, reading sales sheets · ~11:30): J'aime toujours les pommes.
+11-06 09:30 · Mara (Varo Textiles office, Lyon · desk on the third floor, reading sales sheets · ~11:30): Deux sacs ? Tu les as portés comment jusqu'à la maison ?
+11-06 09:30 · Mara (Varo Textiles office, Lyon · desk on the third floor, reading sales sheets · ~11:30): Je t'ai dit de ne pas porter de choses lourdes.
+11-06 11:10 · Ren: 딸 사무실 창밖은 어떻게 생겼어?
+11-06 11:10 · Ren: 사진 하나만 보내줘 엄마 궁금해 ㅎㅎ
+11-06 11:10 · Mara (Varo Textiles office, Lyon · desk on the third floor, taking a photo of the view · ~11:30): C'est tout gris aujourd'hui. Un vrai novembre lyonnais.
+11-06 11:10 · Mara (Varo Textiles office, Lyon · desk on the third floor, taking a photo of the view · ~11:30): Rien de passionnant, maman.
+11-06 11:10 · Mara (Varo Textiles office, Lyon · desk on the third floor, taking a photo of the view · ~11:30): Mais si tu veux vraiment voir...
+11-06 12:40 · Ren: 점심 먹었어?
+11-06 12:40 · Ren: 뭐 먹었는지 엄마한테 보고해 ㅋㅋ
+11-06 12:40 · Mara (Varo Textiles office, Lyon · staff canteen, holding a coffee at a window table · ~13:15): Je suis en train de déjeuner, maman.
+11-06 12:40 · Mara (Varo Textiles office, Lyon · staff canteen, holding a coffee at a window table · ~13:15): Juste une quiche et un café.
+11-06 12:40 · Mara (Varo Textiles office, Lyon · staff canteen, holding a coffee at a window table · ~13:15): Rien de spécial. Pas besoin de me surveiller comme une écolière.
+11-06 12:43 · Ren: 그거 먹고 배불러? 또 대충 먹었지
+11-06 12:43 · Mara (Varo Textiles office, Lyon · staff canteen, window table with an empty cup · ~13:15): Ça suffit largement pour midi.
+11-06 12:43 · Mara (Varo Textiles office, Lyon · staff canteen, window table with an empty cup · ~13:15): Ce soir je mange un vrai repas, promis.
+11-06 12:43 · Mara (Varo Textiles office, Lyon · staff canteen, window table with an empty cup · ~13:15): Chez toi il est presque neuf heures. Tu as dîné au moins ?
+11-06 14:00 · Ren: 엄마 오늘 치과 다녀왔는데 의사가 다음 주에 한 번 더 오래
+11-06 14:00 · Ren: 너 오는 주랑 겹치네 ㅠㅠ
+
+[NOW]
+Last status: Varo Textiles office, Lyon · staff canteen, window table with an empty cup · ~13:15. Calendar today: none. Calendar ahead: 11-09 17:45 flight to Seoul, lands 11-10 12:05 Seoul. Phone last recorded: mail 11-06 06:10 from Air Lumen: "AL 208 Lyon → Incheon, Mon 11-09: upgrade to Business Class available" (opened 06:42). You and Ren have talked before in the story.
+
+[OWNER'S CLOCK]
+Phone owner: Mara
+Location: Lyon
+Time now: 11-06 14:00 (Fri)
+
+Time differences from Lyon:
+- Ren (Seoul): +8 hours, now 11-06 22:00 (Fri)
+
+[WEATHER NOW]
+Lyon · 흐림 · 7° (최고 9° · 최저 3°) · 비 확률 20%
+
+[RECENT ON THE PHONE]
+bank, cards & wallet 12:40 · photos 11:10 · notes 09:30 · places 07:55 · mail 06:42 · voice memo 11-05 23:05 · diary 11-05 22:10
+
+[SITUATIONS]
+- Flight to Seoul: Mon 11-09 17:45 CET, AL 208 Lyon → Incheon. state: planned. known: booked, mail and boarding pass on the phone.
+- Replacing Ivo's gifts: you plan to buy your mother a new scarf at duty free and throw Ivo's package away. state: planned. open: which scarf, whether you tell her.
+- Ren's dentist: her dentist wants to see her once more next week. state: planned. known: the dentist told her to come back next week. open: which day, what time.
+
+[Mara's card]
+(카드 본문)
+
+[VOICES]
+- Lio: 극도로 절제된 격식체 존댓말, 짧은 명령형. 문장 끝에 마침표를 꼭 찍음. Ren에게는 이름을 부르며 조용한 어조로 반응함.
+- Mara → Ren: 엄마인 Ren에게 기본적으로 다정한 존댓말(~해요, 엄마)을 쓰지만, Ren이 잔소리를 하면 퉁명스러운 반말(~잖아, 됐어)로 툴툴거림. 프랑스어/영어 동시 사용
+
+[PEOPLE AROUND]
+- Ren: your mother, in Seoul.
+- Ivo: your ex; you lost interest long ago. Lately he has been sending your mother gifts and keeping in touch with her behind your back.
+- Lio Varo: your father, head of Varo Textiles.

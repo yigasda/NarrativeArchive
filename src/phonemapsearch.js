@@ -77,9 +77,12 @@ export function mapResults(p, m, query = '', kind = '') {
 export function mapSearchScreen(p, now, m, i = '', query = '') {
     const { groups, kinds } = mapTowns(p, m), g = groups[0], kind = i.startsWith('@') ? i.slice(1) : i.startsWith('#') ? i : '';
     const dark = false, k = g ? kinds.get(g.k || `~${p.owner}`) : 'bigRiver';
-    const art = `<svg class="mp_art" viewBox="0 0 ${W} 430" width="100%" aria-hidden="true" data-z="${esc(`${k}~q`)}">${townSvg(k, W, 430, g ? g.k || p.owner : p.owner, dark, g ? g.rows.map(r => r.place).join(' ') : '')}</svg>`;
+    const art = '';   // 그림 지도는 안 써요(11-12): 지도 칸은 타일 지도만
     const full = kind || String(query).trim();
-    return `<div class="mp_wx mq_wx${dark ? ' mp_dark' : ''}"><div class="mp_bg"${g ? tileAt(g.city, g.rows.map(r => r.place), g.rows.slice(0, 7).map(r => r.place)) : ''}>${art}</div>${axBar(p, now, dark && !full ? '#fff' : '#111')}${axTop(axCb(kind ? 'mapq' : 'map'))}
+    // no visit yet: the town they live in (a country written as one: its capital), else the last town they looked at
+    const own = placeInfo(p).owner, home = own.city, cc = countryOf(home) || String(own.lives || ''), seenI = (p.mapSeen || []).map(townPlace).find(i => i >= 0);
+    const where = g ? tileAt(g.city, g.rows.map(r => r.place), g.rows.slice(0, 7).map(r => r.place)) : home || cc ? tileAt(countryOf(home) ? '' : home, [], [], cc) : seenI >= 0 ? tileAt(PLACE[seenI][0]) : '';
+    return `<div class="mp_wx mq_wx${dark ? ' mp_dark' : ''}"><div class="mp_bg"${where}>${art}</div>${axBar(p, now, dark && !full ? '#fff' : '#111')}${axTop(axCb(kind ? 'mapq' : 'map'))}
       <div class="mq_sheet${full ? ' mq_full' : ''}"><i class="mp_grab"></i>${TILE_CREDIT}
         ${kind[0] === '#' ? `<div class="mq_kh">${flagSvg(kind.slice(1), 22)}<b>${esc(FLAG_NAME[kind.slice(1)] || '')}</b></div>` : kind ? `<div class="mq_kh">${icon('mqmap', 16, 'var(--axd)', 2.2)}<b>${esc(kindName(kind))}</b></div>` : `<div class="mq_field">${ax('search', 17, '#8a929d', 2.2)}<div class="mq_in" contenteditable="true" role="searchbox" enterkeyhint="search" spellcheck="false" aria-label="도시 찾기" data-ph="도시 · 동네 찾기 (東京, Berlin, 홍대 …)">${esc(query)}</div><button type="button" class="mq_x${query ? ' on' : ''}" aria-label="지우기">${ax('x', 12, '#fff', 3)}</button></div>`}
         <div class="ax_scroll mq_res">${mapResults(p, m, query, kind)}</div>
@@ -93,7 +96,7 @@ export function mapCityScreen(p, now, m, i = '') {
     const L = look(p, m, place, hood, kind, night), { g, v, k, dark } = L;
     const H = v.hood ? 844 : 470;
     const pins = g ? (() => { const shown = g.rows.slice(0, 6); return pinSpots(shown.map(r => r.place), W, v.hood ? 220 : 150, v.hood ? 560 : 340).map(([x, y], n) => pinSvg(x, y, shown[n].place, dark)).join(''); })() : '';
-    const art = `<svg class="mp_art" viewBox="0 0 ${W} ${H}" width="100%" aria-hidden="true" data-z="${esc(`${k}~${L.seed}~${H}~${dark}`)}">${townSvg(k, W, H, L.seed, dark, L.hint)}</svg>${pinLayer(W, H, pins)}`;
+    const art = '';   // 그림 지도는 안 써요(11-12): 지도 칸은 타일 지도만
     const names = [v.names.lat, v.names.cjk, ...v.names.all.slice(1).filter(n => n !== v.names.lat.toLowerCase() && n !== v.names.cjk && !/^[a-z]/.test(n))].filter(Boolean);
     const nameLine = [...new Set(names)].slice(0, 4).join(' · ');
     const country = `<span class="mq_ct">${flagSvg(v.cc, 22)}<span>${esc(v.country)}${v.hood ? ` · ${esc(v.ko)}` : ''}</span></span>`;
@@ -108,7 +111,7 @@ export function mapCityScreen(p, now, m, i = '') {
           </div>${axInd(dark ? '#fff' : '#111')}</div>`;
     }
     // the town's neighbourhoods, each its own little map (the tile map draws it; till then, and offline, its drawn map)
-    const thumbs = v.hoods.slice(0, 8).map(h => `<button type="button" class="mq_th mq_hth" data-go="mapc" data-i="${at(place, h)}" aria-label="${esc(HINT[h][3])}" data-tt="${esc(JSON.stringify({ city: PLACE[place][0], words: [HINT[h][3], ...HINT[h][1]].slice(0, 10), dark }))}"><svg viewBox="0 0 ${W} 430" width="96" height="78" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${townSvg(HINT[h][2][0] || k, W, 430, `${L.seed}~${h}`, dark, HINT[h][1].join(' '))}</svg><span>${esc(HINT[h][3])}</span></button>`).join('');
+    const thumbs = v.hoods.slice(0, 8).map(h => `<button type="button" class="mq_th mq_hth" data-go="mapc" data-i="${at(place, h)}" aria-label="${esc(HINT[h][3])}" data-tt="${esc(JSON.stringify({ city: PLACE[place][0], words: [HINT[h][3], ...HINT[h][1]].slice(0, 10), dark }))}"><i class="mq_tph" aria-hidden="true"></i><span>${esc(HINT[h][3])}</span></button>`).join('');
     return `<div class="mp_wx mq_wx${dark ? ' mp_dark' : ''}"><div class="mp_bg mq_bgcity"${tileAt(PLACE[place][0], g ? g.rows.map(r => r.place) : [], g ? g.rows.slice(0, 6).map(r => r.place) : [])}>${art}</div>${axBar(p, now, dark ? '#fff' : '#111')}${axTop(axCb('mapq'), mapFindBtn())}
       <div class="ax_scroll"><i class="mp_gap mq_gap"></i><div class="mp_sheet"><i class="mp_grab"></i>${TILE_CREDIT}
         <div class="mq_hd">${country}
@@ -126,7 +129,7 @@ export function mapCityScreen(p, now, m, i = '') {
 export function mapEmptyScreen(p, now, m) {
     const own = placeInfo(p).owner, cc = String(own.lives || '').toLowerCase(), i = townPlace(own.city), v = i >= 0 ? placeView(i) : null;
     const k = v ? townCandidates(v.ko)[0] : 'gridLake', dark = false;
-    const art = `<svg class="mp_art" viewBox="0 0 ${W} 430" width="100%" aria-hidden="true" data-z="${esc(`${k}~empty`)}">${townSvg(k, W, 430, v ? nameKey(v.ko) : p.owner, dark, v ? v.names.all.join(' ') : '')}</svg>`;
+    const art = '';   // 그림 지도는 안 써요(11-12): 지도 칸은 타일 지도만
     const nowP = parts(now), mo = nowP?.mo || 1, days = new Date(Date.UTC(Number(p.year) || 2001, mo, 0)).getUTCDate();
     const st = stripSvg({ days, today: nowP?.d || 0, blocks: [] }), c = st.cell;
     const ghost = [[3, 5], [11, 12], [18, 21]].map(([a, b]) => `<rect x="${(a - 1) * c + 1}" y="${st.top + 2}" width="${(b - a + 1) * c - 2}" height="14" rx="5" fill="none" stroke="#c9cfd8" stroke-width="1.2" stroke-dasharray="3 3"/>`).join('');
@@ -138,7 +141,7 @@ export function mapEmptyScreen(p, now, m) {
     const hood = h => `<button type="button" class="ax_rw ax_place" data-go="mapc" data-i="${at(i, h)}"><span class="ax_si" style="background: var(--axc)">${ax('pindot', 17, 'var(--axd)', 2.2)}</span><span class="ax_tx"><span class="ax_n">${esc(HINT[h][3])}</span><span class="ax_p1">동네 지도 보기</span></span>${axChev}</button>`;
     const find = mapFindRow();
     const list = `<div class="ax_card">${(v ? v.hoods.slice(0, 2) : []).map(hood).join('')}${find}</div>`;
-    return `<div class="mp_wx"><div class="mp_bg"${v ? tileAt(v.ko) : own.city ? tileAt(own.city) : ''}>${art}</div>${axBar(p, now)}${axTop(axCb('home'), mapFindBtn())}
+    return `<div class="mp_wx"><div class="mp_bg"${v ? tileAt(v.ko) : tileAt(countryOf(own.city) ? '' : own.city, [], [], countryOf(own.city) || cc)}>${art}</div>${axBar(p, now)}${axTop(axCb('home'), mapFindBtn())}
       <div class="ax_scroll"><i class="mp_gap"></i><div class="mp_sheet"><i class="mp_grab"></i>${TILE_CREDIT}
         ${strip}${head}${list}<i class="ax_pad"></i></div></div>
       ${axInd()}</div>`;

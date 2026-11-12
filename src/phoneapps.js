@@ -1110,7 +1110,7 @@ export const mapFindRow = () => `<button type="button" class="ax_rw ax_place" da
 // the town's flag before its name (a town the city table knows)
 const townFlag = city => { const i = city ? townPlace(city) : -1; return i >= 0 && PLACE[i][3] ? flagSvg(PLACE[i][3], 22) : ''; };
 // a map box's place for the tile map (phonetilemap.js): the town, words naming its neighbourhood, the visits to pin
-export const tileAt = (city, words = [], pins = []) => (city ? ` data-tm="${esc(JSON.stringify({ city, words: words.slice(0, 12), pins: pins.slice(0, 7) }))}"` : '');
+export const tileAt = (city, words = [], pins = [], cc = '') => (city || cc ? ` data-tm="${esc(JSON.stringify({ city, words: words.slice(0, 12), pins: pins.slice(0, 7), cc }))}"` : '');
 // the tile map's credit (ODbL, always in sight): on the sheet's top edge, shown only while the tile map is there
 export const TILE_CREDIT = '<a class="mp_credit" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenMapTiles © OpenStreetMap contributors</a>';
 export function mapScreen(p, now, m, pick = '') {
@@ -1125,7 +1125,7 @@ export function mapScreen(p, now, m, pick = '') {
     const kind = kinds.get(g.k || `~${p.owner}`), dark = false;   // 밤 지도는 뺐어요(11-12)
     const shown = g.rows.slice(0, 7), W = 390, H = 430;
     const pins = pinSpots(shown.map(r => r.place), W, 150, 340).map(([x, y], k) => pinSvg(x, y, shown[k].place, dark)).join('');
-    const art = `<svg class="mp_art" viewBox="0 0 ${W} ${H}" width="100%" aria-hidden="true" data-z="${esc(`${kind}~${g.k}`)}">${townSvg(kind, W, H, g.k || p.owner, dark, g.rows.map(r => r.place).join(' '))}</svg>${pinLayer(W, H, pins)}`;
+    const art = '';   // 그림 지도는 안 써요(11-12): 지도 칸은 타일 지도만
     const lastDay = g.rows.map(r => r.day).filter(Boolean).sort(storyCmp(p.now)).at(-1);
     const others = groups.filter(x => x !== g);
     const other = others.length ? `<div class="ax_sec">다른 곳</div><div class="ax_card">${others.map(x => `<button type="button" class="ax_rw ax_place" data-go="map" data-i="${esc(x.k)}"><span class="ax_si" style="background: var(--axc)">${ax('pindot', 17, 'var(--axd)', 2.2)}</span><span class="ax_tx"><span class="ax_n">${esc(x.city || '그 밖의 곳')}</span><span class="ax_p1">${x.rows.length}곳</span></span>${axChev}</button>`).join('')}</div>` : '';

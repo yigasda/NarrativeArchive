@@ -1,7 +1,7 @@
 // 캐릭터 휴대폰 · 지도 화면(다녀간 곳 · 도시 찾기 · 도시 · 동네 · 빈 화면) › 타일 지도: MapLibre GL + OpenFreeMap 벡터 타일에
 // 지도 룰(docs/design/map.md › 타일 지도) 색을 입혀요. 시안 docs/mockups/phone-map/maplibre/index.html.
 // - 지도 칸(.mp_bg)에 data-tm(어느 도시 · 동네 · 장소)이 있으면 그 칸에 붙어요. 화면이 다시 그려져도 지도 하나를 옮겨 붙여요(새로 안 만들어요).
-// - 그리기 전엔, 그리고 못 그리면(인터넷이 없음 · 좌표 모름) 그 칸의 그림 지도가 그대로 보여요.
+// - 그림 지도는 안 써요(11-12 소망: 하나라도 있으면 안 돼요). 그리기 전엔 바탕색만, 못 그리면 바탕색에 한 줄(인터넷 · 지도에 없는 곳).
 // - MapLibre(assets/maplibre, 800KB)와 좌표 표(phonemapspots.js)는 지도 칸이 처음 나올 때 한 번만 불러와요.
 import { MAP_ICONS as ICONS } from './phonemapicons.js';
 import { PLACE } from './phonemapcity.js';
@@ -181,10 +181,11 @@ function placePins() {
     if (at.length && !live.fitted) {
         live.fitted = true;
         const pad = { top: 112, bottom: Math.max(0, live.el.clientHeight - h) + 36, left: 36, right: 150 };
+        const room = { ...pad, bottom: 36 };   // the map's own padding already keeps the sheet's part out
         const off = at.some(ll => { const q = map.project(ll); return q.x < pad.left || q.x > w - pad.right || q.y < pad.top || q.y > h - 36; });
         if (off) {
             const b = at.reduce((bb, ll) => bb.extend(ll), new window.maplibregl.LngLatBounds(at[0], at[0]));
-            const cam = map.cameraForBounds(b, { padding: pad, maxZoom: live.z0 });   // never more than one step further out than the town's own scale
+            const cam = map.cameraForBounds(b, { padding: room, maxZoom: live.z0 });   // never more than one step further out than the town's own scale
             if (cam) map.jumpTo({ center: cam.center, zoom: Math.max(live.z0 - 1, cam.zoom) });
         }
     }
@@ -208,13 +209,20 @@ function deepMap(gl, center, zoom) {
     });
 }
 // the map box on screen: <div class="mp_bg" data-tm='{"city","words":[…],"pins":[…],"vis":px}'>
+// a country without a town (they live "in Germany"): its capital's middle
+const CAPITAL = { de: 'berlin-mitte', kr: 'seoul-gwanghwamun', jp: 'tokyo-marunouchi', us: 'dc-mall', gb: 'london-westminster', fr: 'paris-saintgermain', it: 'rome-centro',
+    cn: 'beijing-tiananmen', au: 'sydney-circularquay', ca: 'ottawa', no: 'oslo-sentrum', hk: 'hk-central', mo: 'macau-senado' };
+const NO_PLACE = '지도에 없는 곳이에요', NO_NET = '지도를 불러오지 못했어요';
+const say = (host, msg) => { if (host?.isConnected && !host.classList.contains('mp_tiled')) host.dataset.msg = msg; };
 export async function mountTiles(root) {
     const host = root?.querySelector?.('.mp_bg[data-tm]');
-    if (!host) { if (live.el?.isConnected) live.el.remove(); return; }
+    if (!host) { if (live.el?.isConnected) live.el.remove(); const bare = root?.querySelector?.('.mp_bg:not([data-tm])'); if (bare) say(bare, NO_PLACE); return; }
     let want; try { want = JSON.parse(host.dataset.tm); } catch { return; }
-    const spot = spotIn(await loadSpots(), want.city, want.words || []);
-    if (!spot || !host.isConnected) return;
-    let gl; try { gl = await loadLib(); } catch { return; }
+    const S = await loadSpots(), cap = CAPITAL[String(want.cc || '').toLowerCase()];
+    const spot = (want.city && spotIn(S, want.city, want.words || [])) || (cap && S.find(s => s[0] === cap)) || null;
+    if (!spot) return say(host, NO_PLACE);
+    if (!host.isConnected) return;
+    let gl; try { gl = await loadLib(); } catch { return say(host, NO_NET); }
     if (!host.isConnected) return;
     const [slug, , kind, lat, lon] = spot, P = palette(kind, lat), pal = JSON.stringify(P);
     const wx = host.closest('.mp_wx');
@@ -234,8 +242,11 @@ export async function mountTiles(root) {
     const span = /도심/.test(kind) ? 1300 : 1550, w = host.clientWidth || 390;
     const z0 = live.z0 = Math.log2(78271.517 * Math.cos(lat * Math.PI / 180) * w / span);
     // the middle a little above the box's middle: the sheet covers its lower part
-    const map = live.map = new gl.Map({ container: live.el, style: tileStyle(z0, P), center: [lon, lat], zoom: z0, attributionControl: false,
-        localIdeographFontFamily: '-apple-system, "Noto Sans KR", "Hiragino Sans", "PingFang SC", sans-serif', dragRotate: false, pitchWithRotate: false, fadeDuration: 150 });
+    setTimeout(() => { if (live.map === map && !live.ready) say(live.el?.closest('.mp_bg'), NO_NET); }, 9000);
+    let map;
+    try { map = live.map = new gl.Map({ container: live.el, style: tileStyle(z0, P), center: [lon, lat], zoom: z0, attributionControl: false,
+        localIdeographFontFamily: '-apple-system, "Noto Sans KR", "Hiragino Sans", "PingFang SC", sans-serif', dragRotate: false, pitchWithRotate: false, fadeDuration: 150 }); }
+    catch { live.map = null; return say(host, NO_NET); }   // no WebGL
     map.touchZoomRotate.disableRotation();
     if (live.vis < host.clientHeight) map.setPadding({ bottom: host.clientHeight - live.vis });
     const color = getComputedStyle(host).getPropertyValue('--axd').trim() || '#3478f6';
@@ -247,8 +258,9 @@ export async function mountTiles(root) {
     map.once('load', async () => { if (!map.hasImage('vpin')) map.addImage('vpin', await pinImage(color), { pixelRatio: 2 }); });
     map.once('idle', () => {
         if (live.map !== map) return;
+        if (!map.queryRenderedFeatures().length) return say(live.el.closest('.mp_bg'), NO_NET);   // idle with nothing drawn: the tiles did not come
         live.ready = true;
-        const h = live.el.closest('.mp_bg'); h?.classList.add('mp_tiled'); h?.closest('.mp_wx')?.classList.add('mp_tiles');
+        const h = live.el.closest('.mp_bg'); if (h) delete h.dataset.msg; h?.classList.add('mp_tiled'); h?.closest('.mp_wx')?.classList.add('mp_tiles');
         placePins();
     });
     map.on('error', () => { if (!live.ready && live.map === map) { /* the drawn map stays */ } });
@@ -258,62 +270,69 @@ export async function mountTiles(root) {
 // the box grew or shrank (the sheet was pulled down or back up)
 export function resizeTiles(vis) { if (!live.map) return; if (vis) live.vis = vis; live.map.resize(); live.map.setPadding({ bottom: Math.max(0, live.el.clientHeight - live.vis) }); pickPlaces(); }
 // how much of the box is map you see: down to the sheet (or the search sheet, or the card on a neighbourhood's map)
+// (the phone is drawn on a 390 board and scaled to the window: on-screen lengths are turned back into the board's)
+const scaleOf = el => { const r = el.getBoundingClientRect(); return el.offsetHeight ? r.height / el.offsetHeight : 1; };
 function visOf(host) {
-    const wx = host.closest('.mp_wx'), top = host.getBoundingClientRect().top;
+    const wx = host.closest('.mp_wx'), top = host.getBoundingClientRect().top, k = scaleOf(host) || 1;
     const s = wx?.querySelector('.mp_sheet, .mq_sheet, .mq_fc');
-    const v = s ? s.getBoundingClientRect().top - top : host.clientHeight;
+    const v = s ? (s.getBoundingClientRect().top - top) / k : host.clientHeight;
     return Math.max(160, Math.min(host.clientHeight, v));
+}
+// a sheet shorter than the screen sits low (the map gets the rest), never with an empty stretch under it
+function fitSheet(root) {
+    const wx = root.querySelector('.mp_wx'), sc = wx?.querySelector(':scope > .ax_scroll'), gap = sc?.querySelector('.mp_gap'), sheet = sc?.querySelector('.mp_sheet');
+    if (!gap || !sheet || gap.dataset.fit || gap.dataset.room) return;
+    gap.dataset.fit = '1';
+    const kids = [...sheet.children].filter(e => e.offsetParent !== null && !e.classList.contains('ax_pad'));
+    if (!kids.length) return;
+    const used = (kids.at(-1).getBoundingClientRect().bottom - sheet.getBoundingClientRect().top) / (scaleOf(sheet) || 1) + 28, room = sc.clientHeight - gap.offsetHeight;
+    if (used >= room) return;
+    const h = Math.min(sc.clientHeight - 160, sc.clientHeight - used);
+    gap.style.height = `${h}px`;
 }
 // the phone's screens are drawn again and again: a new map box gets the one map (watched, the way phonemapzoom.js does)
 export function tileWatch(root) {
     let busy = false;
-    sheetPull(root);
     new MutationObserver(() => {
         tileThumbs(root);
         const host = root.querySelector('.mp_bg[data-tm]');
         if (!host) { if (live.el?.isConnected && !live.el.closest('.mp_bg[data-tm]')) live.el.remove(); return; }
         if (host._tm || busy) return;
         host._tm = true; busy = true;
-        requestAnimationFrame(() => { host.dataset.vis ||= String(Math.round(visOf(host))); const d = JSON.parse(host.dataset.tm); d.vis = Number(host.dataset.vis); host.dataset.tm = JSON.stringify(d);
+        requestAnimationFrame(() => { fitSheet(root); sheetRoom(root); host.dataset.vis ||= String(Math.round(visOf(host))); const d = JSON.parse(host.dataset.tm); d.vis = Number(host.dataset.vis); host.dataset.tm = JSON.stringify(d);
             mountTiles(root).catch(() => {}).finally(() => { busy = false; }); });
     }).observe(root, { childList: true, subtree: true });
 }
-// the sheet pulled down: the whole screen is map and the sheet is gone; a small "목록" pill at the bottom brings it back.
-// Nothing follows the finger (a style changed on every move makes the whole phone's styles be worked out again,
-// docs/DESIGN.md 4장 함정): the pull is measured, and when the finger lets go the sheet moves once, with a transition.
-const PEEK = 0;
-function setLow(wx, low) {
-    const sc = wx.querySelector(':scope > .ax_scroll'), gap = sc?.querySelector('.mp_gap'), host = wx.querySelector('.mp_bg');
-    if (!sc || !gap || !host) return;
-    if (low) { if (!gap.dataset.h) gap.dataset.h = String(gap.offsetHeight); sc.scrollTop = 0; gap.style.height = `${sc.clientHeight - PEEK}px`; }
-    else gap.style.height = '';
+// the sheet follows the finger: above it is a whole screen of scroll, and the screen opens scrolled to the sheet's place, so
+// pulling the sheet down is the browser's own scroll (smooth on any phone; nothing on the page changes while it moves, which
+// a style changed on every move would: docs/DESIGN.md 4장 함정). Two resting places: the sheet's place, and all the way down
+// (the sheet gone, the whole screen map) — there a "목록" pill brings it back.
+function sheetRoom(root) {
+    const wx = root.querySelector('.mp_wx'), sc = wx?.querySelector(':scope > .ax_scroll'), gap = sc?.querySelector('.mp_gap');
+    if (!gap || gap.dataset.room) return;
+    const full = sc.clientHeight, room = Math.max(0, full - gap.offsetHeight);
+    gap.dataset.room = String(room);
+    gap.style.height = `${full}px`;
+    for (const y of [0, room]) { const m = document.createElement('i'); m.className = 'mp_snap'; m.style.top = `${y}px`; sc.prepend(m); }
+    sc.classList.add('mp_room');
+    sc.scrollTop = room;
+    let t = 0;
+    sc.addEventListener('scroll', () => { clearTimeout(t); t = setTimeout(() => restAt(wx, sc, room), 120); }, { passive: true });
+}
+function restAt(wx, sc, room) {
+    const low = sc.scrollTop < 24;
+    if (wx.classList.contains('mp_low') === low) return;
     wx.classList.toggle('mp_low', low);
     let up = wx.querySelector(':scope > .mp_up');
     if (low && !up) {
         const n = live.shown.length;
         up = document.createElement('button'); up.type = 'button'; up.className = 'mp_up';
         up.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.1M4 12h.1M4 18h.1"/></svg>목록${n ? ` · ${n}곳` : ''}`;
-        up.addEventListener('click', e => { e.stopPropagation(); setLow(wx, false); });
+        up.addEventListener('click', e => { e.stopPropagation(); sc.scrollTo({ top: room, behavior: 'smooth' }); });
+        // the credit rides on the sheet's edge; with the sheet gone it stands over the pill
+        const cr = wx.querySelector('.mp_credit')?.cloneNode(true); if (cr) { cr.classList.add('mp_credit2'); wx.appendChild(cr); }
         wx.appendChild(up);
-    } else if (!low && up) up.remove();
-    const done = () => { const v = low ? host.clientHeight - PEEK : visOf(host); resizeTiles(Math.round(v)); };
-    gap.addEventListener('transitionend', done, { once: true }); setTimeout(done, 400);
-}
-function sheetPull(root) {
-    let g = null;
-    root.addEventListener('pointerdown', e => {
-        const sheet = e.target.closest?.('.mp_wx.mp_tiles .mp_sheet'); if (!sheet) return;
-        const wx = sheet.closest('.mp_wx'), sc = wx.querySelector(':scope > .ax_scroll');
-        if (!wx.classList.contains('mp_low') && sc && sc.scrollTop > 2) return;   // the list is scrolled: the finger scrolls it
-        g = { wx, x: e.clientX, y: e.clientY, low: wx.classList.contains('mp_low') };
-    }, true);
-    root.addEventListener('pointerup', e => {
-        if (!g) return;
-        const dx = e.clientX - g.x, dy = e.clientY - g.y, { wx, low } = g; g = null;
-        if (!low && dy > 48 && Math.abs(dy) > Math.abs(dx) * 1.4) setLow(wx, true);
-        else if (low && (dy < -24 || (Math.abs(dy) < 6 && Math.abs(dx) < 6))) setLow(wx, false);
-    }, true);
-    root.addEventListener('pointercancel', () => { g = null; }, true);
+    } else if (!low) { up?.remove(); wx.querySelector(':scope > .mp_credit2')?.remove(); }
 }
 // a town's neighbourhoods as little maps (찾은 도시 › 주변 동네): one hidden map goes to each in turn and takes a picture
 // (no labels: at that size they are noise); the drawn map stays where it cannot
@@ -345,5 +364,8 @@ async function thumbOne(b) {
     }
     if (!b.isConnected) return;
     const img = document.createElement('img'); img.src = pic; img.alt = ''; img.width = 96; img.height = 78; img.className = 'mq_timg';
-    b.querySelector('svg')?.replaceWith(img);
+    b.querySelector('.mq_tph, svg')?.replaceWith(img);   // the plain ground the button waits with
 }
+// for tools/dev (where the map is now): its middle, or null
+export const tileCenter = () => (live.map ? live.map.getCenter().toArray() : null);
+export const tileDebug = () => (live.map ? { zoom: live.map.getZoom(), z0: live.z0, vis: live.vis, h: live.el.clientHeight, pad: live.map.getPadding(), pins: [...live.pinAt].map(([n, ll]) => [n, Object.values(live.map.project(ll)).map(Math.round)]), fitted: live.fitted } : null);

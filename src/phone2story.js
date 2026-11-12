@@ -82,9 +82,48 @@ export const liveFitsChat = (w, lastIndex) => !w || w.from !== 'story' || !Numbe
 
 // 이야기에서 시작: 폰 2 begun at message `upto` (the newest one), with its mark of the story then; the one way to begin
 // from the story (startFromStory alone refuses without a mark)
-export const beginFromStory = (m, { persona, upto, scope = '', dayShift = 0, now = Date.now() } = {}) =>
-    startFromStory(m, { persona, upto, scope, dayShift, now, story: storyMark(m, upto) });
+// chat · fp: which chat this is and the words of message `upto` (phonedata.js chatStamp), kept so a branch is told apart
+export function beginFromStory(m, { persona, upto, scope = '', dayShift = 0, now = Date.now(), chat = null, fp = null } = {}) {
+    const w = startFromStory(m, { persona, upto, scope, dayShift, now, story: storyMark(m, upto) });
+    if (chat) w.chat = String(chat);
+    if (fp) w.storyFp = String(fp);
+    return w;
+}
 
+// 분기한 방의 폰 2 (7-4에서 바꿈): 폰 2 came here with a branch of the chat it began in?
+//   'none'   this is its own chat (or it began fresh, or nothing tells)
+//   'after'  a branch taken after the message it began at: this chat has all it knew. Nothing changes (adoptChat)
+//   'before' a branch taken before it: this chat doesn't have what it began from. 폰 1 is rewound first (settleBranch on
+//            폰 1's phones), then 폰 2 begins again from that 폰 1 (rebeginFromStory); the main chat keeps its own 폰 2
+// now: { chat, branch, fp } of this chat (phonedata.js chatStamp(w.storyUpto)): its mark, is it a branch, the words of
+// message storyUpto here (null: no such message). point: where 폰 1's phones found the branch (settleBranch), for a 폰 2
+// begun before marks were kept
+export function liveBranched(w, { chat = null, branch = false, fp = null, point = null } = {}) {
+    if (!w || w.from !== 'story' || !Number.isInteger(w.storyUpto)) return 'none';
+    if (!w.chat) return Number.isInteger(point) && point < w.storyUpto ? 'before' : 'none';
+    if (!chat || !branch || w.chat === String(chat)) return 'none';
+    return w.storyFp && fp && w.storyFp === String(fp) ? 'after' : 'before';
+}
+// 'after': 폰 2 is this chat's from now on (asked once)
+export function adoptChat(w, chat) { if (w && chat) w.chat = String(chat); return w; }
+// 'before': 폰 2 begins again here, from 폰 1 as it is now (already rewound). The 폰 2 that came with the branch goes (not
+// to the archive: it is the main chat's, which keeps its own); its persona and languages stay. opts: as beginFromStory
+// (persona left out: the one it had). 폰 1 with no phone: there is nothing to begin from, 폰 2 is taken off (returns null)
+export function rebeginFromStory(m, opts = {}) {
+    const old = liveWorld(m);
+    if (!old) throw new Error('아직 폰 2가 없어요');
+    const live = m.live, keep = { world: live.world, mode: live.mode };
+    if (!Object.values(m.phones || {}).some(p => p?.owner)) { live.world = null; live.mode = 'story'; return null; }
+    live.world = null;
+    try {
+        const w = beginFromStory(m, { ...opts, persona: opts.persona || old.persona });
+        if (old.langs) w.langs = structuredClone(old.langs);
+        live.mode = keep.mode;
+        return w;
+    } catch (err) { live.world = keep.world; live.mode = keep.mode; throw err; }
+}
+
+// (이전 방식, 화면이 새 방식으로 바뀌면 지워요: liveBranched · rebeginFromStory를 써요)
 // 분기한 방의 폰 2 (5-3): a branch taken before the message 폰 2 began at (point: the branch point, from settleBranch on
 // 폰 2's phones) holds none of what 폰 2 knew past it, nor anything said on its messenger (all of it came after it began).
 // 폰 2 then begins at the branch point instead: its mark keeps only the stretches up to there (a section reaching past it
