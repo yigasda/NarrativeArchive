@@ -194,9 +194,9 @@ function placePins() {
 function deepMap(gl, center, zoom) {
     let el = document.getElementById('na_tm_deep');
     if (!el) { el = document.createElement('div'); el.id = 'na_tm_deep'; el.setAttribute('aria-hidden', 'true'); el.style.cssText = 'position: fixed; left: -10000px; top: 0; visibility: hidden; pointer-events: none;'; document.body.appendChild(el); }
-    el.style.width = `${live.el.clientWidth * 2}px`; el.style.height = `${live.el.clientHeight * 2}px`;
+    el.style.width = `${live.el.clientWidth * 2}px`; el.style.height = `${Math.min(live.el.clientHeight, live.vis + 120) * 2}px`;
     if (live.deep) live.deep.remove();
-    live.deep = new gl.Map({ container: el, interactive: false, attributionControl: false, center, zoom: zoom + 1,
+    live.deep = new gl.Map({ container: el, interactive: false, attributionControl: false, pixelRatio: 1, center, zoom: zoom + 1,
         style: { version: 8, sources: { t: { type: 'vector', url: TILES } }, layers: [{ id: 'p', type: 'circle', source: 't', 'source-layer': 'poi', paint: { 'circle-radius': 1, 'circle-opacity': 0 } }] } });
     live.deep.on('idle', () => {
         const seen = new Set(), out = [];
@@ -215,6 +215,7 @@ const CAPITAL = { de: 'berlin-mitte', kr: 'seoul-gwanghwamun', jp: 'tokyo-maruno
 const NO_PLACE = '지도에 없는 곳이에요', NO_NET = '지도를 불러오지 못했어요';
 const say = (host, msg) => { if (host?.isConnected && !host.classList.contains('mp_tiled')) host.dataset.msg = msg; };
 export async function mountTiles(root) {
+    live.root = root;
     const host = root?.querySelector?.('.mp_bg[data-tm]');
     if (!host) { if (live.el?.isConnected) live.el.remove(); const bare = root?.querySelector?.('.mp_bg:not([data-tm])'); if (bare) say(bare, NO_PLACE); return; }
     let want; try { want = JSON.parse(host.dataset.tm); } catch { return; }
@@ -244,7 +245,7 @@ export async function mountTiles(root) {
     // the middle a little above the box's middle: the sheet covers its lower part
     setTimeout(() => { if (live.map === map && !live.ready) say(live.el?.closest('.mp_bg'), NO_NET); }, 9000);
     let map;
-    try { map = live.map = new gl.Map({ container: live.el, style: tileStyle(z0, P), center: [lon, lat], zoom: z0, attributionControl: false,
+    try { map = live.map = new gl.Map({ container: live.el, style: tileStyle(z0, P), center: [lon, lat], zoom: z0, attributionControl: false, pixelRatio: Math.min(2, window.devicePixelRatio || 1),
         localIdeographFontFamily: '-apple-system, "Noto Sans KR", "Hiragino Sans", "PingFang SC", sans-serif', dragRotate: false, pitchWithRotate: false, fadeDuration: 150 }); }
     catch { live.map = null; return say(host, NO_NET); }   // no WebGL
     map.touchZoomRotate.disableRotation();
@@ -264,6 +265,7 @@ export async function mountTiles(root) {
         placePins();
     });
     map.on('error', () => { if (!live.ready && live.map === map) { /* the drawn map stays */ } });
+    map.getCanvas().addEventListener('webglcontextlost', () => { if (live.map !== map) return; live.slug = ''; live.ready = false; setTimeout(() => { if (live.root) mountTiles(live.root).catch(() => {}); }, 400); });
     map.on('moveend', () => { pickPlaces(); live.deep?.jumpTo({ center: map.getCenter(), zoom: map.getZoom() + 1 }); });
     deepMap(gl, [lon, lat], z0);
 }
@@ -323,6 +325,7 @@ function restAt(wx, sc, room) {
     const low = sc.scrollTop < 24;
     if (wx.classList.contains('mp_low') === low) return;
     wx.classList.toggle('mp_low', low);
+    if (live.map) { live.map.resize(); live.map.triggerRepaint(); }
     let up = wx.querySelector(':scope > .mp_up');
     if (low && !up) {
         const n = live.shown.length;
@@ -356,7 +359,7 @@ async function thumbOne(b) {
         const P = palette(spot[2], spot[3]), w = 96, h = 78, z0 = Math.log2(78271.517 * Math.cos(spot[3] * Math.PI / 180) * w / 900);
         let el = document.getElementById('na_tm_thumb');
         if (!el) { el = document.createElement('div'); el.id = 'na_tm_thumb'; el.setAttribute('aria-hidden', 'true'); el.style.cssText = `position: fixed; left: -10000px; top: 0; width: ${w}px; height: ${h}px; pointer-events: none;`; document.body.appendChild(el); }
-        if (!thumbMap) thumbMap = new gl.Map({ container: el, interactive: false, attributionControl: false, preserveDrawingBuffer: true, fadeDuration: 0, style: thumbStyle(z0, P), center: [spot[4], spot[3]], zoom: z0 });
+        if (!thumbMap) thumbMap = new gl.Map({ container: el, interactive: false, attributionControl: false, preserveDrawingBuffer: true, pixelRatio: 2, fadeDuration: 0, style: thumbStyle(z0, P), center: [spot[4], spot[3]], zoom: z0 });
         else { thumbMap.setStyle(thumbStyle(z0, P)); thumbMap.jumpTo({ center: [spot[4], spot[3]], zoom: z0 }); }
         pic = await new Promise(res => { const t = setTimeout(() => res(''), 8000); thumbMap.once('idle', () => { clearTimeout(t); res(thumbMap.loaded() ? thumbMap.getCanvas().toDataURL('image/png') : ''); }); });
         if (!pic) return;

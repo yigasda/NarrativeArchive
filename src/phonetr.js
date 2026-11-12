@@ -143,7 +143,9 @@ function inputOf(p, chunk) {
     const voices = voiceRows(p), gloss = hasChat() ? glossaryIn(glossaryEntries(phoneMeta()), chunk.map(g => g.x[g.f]).join('\n')) : [];
     return [
         `[OWNER]\n${p.owner || 'me'}`,
-        aroundBlock(p),
+        // (who the people are to the owner settles a voice VOICES doesn't have: for texts and comments only; a request
+        // of notes, the bank or health lines doesn't carry it)
+        chunk.some(g => /^(text|comment)/.test(g.app)) ? aroundBlock(p) : '',
         voices.length ? `[VOICES]\n${voices.map(v => `- ${who(v)}: ${v.style}`).join('\n')}` : '',
         gloss.length ? `[GLOSSARY]\n${gloss.map(e => `- ${e.src} = ${e.ko}`).join('\n')}` : '',
         `[LINES]\n${chunk.map((g, i) => `${i + 1}: [${g.app} · ${g.who} → ${g.to}] ${JSON.stringify(String(g.x[g.f]))}`).join('\n')}`,
