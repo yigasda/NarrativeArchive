@@ -1780,7 +1780,8 @@ export async function moneyStage(m, p, owner, c) {
         return `${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getUTCDay()]}`;
     }) : [];
     const input = [
-        `[MESSAGES]\n${asked.filter(i => text.has(i)).map(modelText).join('\n\n') || '(none: these are read from the archive sections below)'}`,
+        // (c.messages: 폰 2's MESSENGER chat as its reflection reads it, in place of the chat's rows; none given: as ever)
+        `[MESSAGES]\n${c.messages ?? (asked.filter(i => text.has(i)).map(modelText).join('\n\n') || '(none: these are read from the archive sections below)')}`,
         `[EVENTS]\n${targets.map(t => `- ${t.id}: #${t.at} ${t.date || ''}${t.time ? ` ${t.time}` : ''} ${t.summary || ''}${t.quote ? ` ("${t.quote}")` : ''}${t.changed ? ' (changed)' : ''}`).join('\n') || '(none)'}`,
         archive.length ? `[ARCHIVE FOR THESE MESSAGES]\n${archive.join('\n\n')}` : '',
         money ? `[MONEY NOW]\n${JSON.stringify(money)}` : '', invest ? `[INVESTMENTS NOW]\n${JSON.stringify(invest)}` : '',
@@ -1792,7 +1793,8 @@ export async function moneyStage(m, p, owner, c) {
     ].filter(Boolean).join('\n\n');
     let raw = null, why = '';
     try {
-        const ans = await askDraft(input, { force: true, system: moneySystem({ delivery: !!(money && p.delivery), invest: !!invest }), maxTokens: 12000, effort: 'low' });
+        // (c.live: the persona's name on a 폰 2 phone; none given: '' as ever)
+        const ans = await askDraft(input, { force: true, system: moneySystem({ delivery: !!(money && p.delivery), invest: !!invest, live: c.live || '' }), maxTokens: 12000, effort: 'low' });
         why = c.check?.() || '';
         raw = why ? null : jsonOf(ans);
         if (!why && (!raw || !Array.isArray(raw.records) && !Array.isArray(raw.events))) why = '모델 답에서 결제를 찾지 못했어요';
