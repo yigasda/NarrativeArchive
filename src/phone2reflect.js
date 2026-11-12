@@ -72,6 +72,11 @@ export async function updateLive(real, m, owner, { tz = 'UTC', save = async () =
         // (the owner's state before this round: the last one they wrote before its first message)
         const before = [...feed].reverse().find(x => x.n < Math.min(...inRound) && liveKey(x.from) === liveKey(p.owner) && one(x.state))?.state || '';
         const talk = ns => feedText(real, p.owner, feed.filter(x => ns.has(x.n)), { tz, state: before });
+        // (a message's words as the request shows them: its own lines there, and the scene line it opens. The answer quotes
+        // the request, so the quote is looked for in these)
+        const shown = new Map();
+        for (const l of talk(inRound).split('\n')) { const n = Number(/^\[?#(\d+)\b/.exec(l)?.[1]); if (Number.isInteger(n) && inRound.has(n)) shown.set(n, [...(shown.get(n) || []), l]); }
+        for (const r of round.rows) if (shown.has(r.index)) r.text = shown.get(r.index).join('\n');
         const input = [
             `[NEW MESSAGES]\n${talk(inRound)}`,
             `[EVENTS ON THE PHONE]\n${events || '(none yet)'}`,
