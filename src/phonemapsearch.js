@@ -5,7 +5,7 @@
 // Routes: mapq (the sheet; mapq:@kind lists the towns a kind of map suits), mapc:place~hood~kind~night.
 import { rowWords, AX, ax, axBar, axCb, axChev, axInd, axTop, mapFindBtn, mapFindRow, mapTowns, tileAt, TILE_CREDIT } from './phoneapps.js';
 import { pinLayer, pinSpots, pinSvg, stripSvg, townCandidates, townPlace, townSvg } from './phonemapart.js';
-import { countryHoods, countryTowns, findCountries, findTowns, hoodTown, kindTowns, placeNames, placeView } from './phonemapfind.js';
+import { countryHoods, countryTowns, findCountries, findTowns, hoodTown, kindTowns, localName, placeNames, placeView } from './phonemapfind.js';
 import { HINT, PLACE } from './phonemapcity.js';
 import { TOWN_KO } from './phonemaptowns.js';
 import { flagSvg, FLAG_NAME } from './phoneflags.js';
@@ -116,7 +116,8 @@ export function mapCityScreen(p, now, m, i = '') {
     const pins = g ? (() => { const shown = g.rows.slice(0, 6); return pinSpots(shown.map(r => r.place), W, v.hood ? 220 : 150, v.hood ? 560 : 340).map(([x, y], n) => pinSvg(x, y, shown[n].place, dark)).join(''); })() : '';
     const art = '';   // 그림 지도는 안 써요(11-12): 지도 칸은 타일 지도만
     const names = [v.names.lat, v.names.cjk, ...v.names.all.slice(1).filter(n => n !== v.names.lat.toLowerCase() && n !== v.names.cjk && !/^[a-z]/.test(n))].filter(Boolean);
-    const nameLine = [...new Set(names)].slice(0, 4).join(' · ');
+    // the title in the town's own words (Frankfurt, 東京), its Korean name first under it (11-12)
+    const own = localName(place), nameLine = [...new Set([own !== v.ko ? v.ko : '', ...names].filter(n => n && n !== own))].slice(0, 4).join(' · ');
     const country = `<span class="mq_ct">${flagSvg(v.cc, 22)}<span>${esc(v.country)}${v.hood ? ` · ${esc(v.ko)}` : ''}</span></span>`;
     const seen = g ? `다녀간 곳 ${g.rows.length}` : '';
     const hoodChips = v.hoods.length ? v.hoods.map(h => `<button type="button" class="mq_chip${v.hood?.k === h ? ' on' : ''}" data-go="mapc" data-i="${v.hood?.k === h ? at(place) : at(place, h)}">${esc(HINT[h][3])}</button>`).join('') : '';
@@ -133,7 +134,7 @@ export function mapCityScreen(p, now, m, i = '') {
     return `<div class="mp_wx mq_wx${dark ? ' mp_dark' : ''}"><div class="mp_bg mq_bgcity"${tileAt(PLACE[place][0], g ? rowWords(g.city, g.rows) : [], g ? g.rows.slice(0, 6).map(r => r.place) : [])}>${art}</div>${axBar(p, now, dark ? '#fff' : '#111')}${axTop(axCb('mapq'), mapFindBtn())}
       <div class="ax_scroll"><i class="mp_gap mq_gap"></i><div class="mp_sheet"><i class="mp_grab"></i>${TILE_CREDIT}
         <div class="mq_hd">${country}
-          <div class="mq_tl"><b>${esc(v.ko)}</b></div>
+          <div class="mq_tl"><b>${esc(own)}</b></div>
           ${nameLine ? `<span class="mq_nm">${esc(nameLine)}</span>` : ''}
 </div>
         ${g ? `<div class="ax_card"><button type="button" class="ax_rw ax_place" data-go="map" data-i="${esc(g.k)}"><span class="ax_si" style="background: var(--axc)">${ax('pindot', 17, 'var(--axd)', 2.2)}</span><span class="ax_tx"><span class="ax_n">${seen}</span><span class="ax_p1">${esc(g.rows.slice(0, 3).map(r => r.place).join(' · '))}</span></span>${axChev}</button></div>` : ''}
