@@ -1959,7 +1959,8 @@ function clockExpected(raw, p, m, now, c, scene, fail) {
 // reading a reflection would do (otherChat → realign → settleDropped, renumber), then 빼기 on each stretch it found (sure or
 // not: past the branch point it is all other talk). What 빼기 must leave (built on, changed by hand) stays and is said.
 // The read marks go with the talk (realign), so the next reflection reads this chat's own messages from the branch point.
-// Returns null when there is nothing to do (not a branch, never read, its start not found), else { dropped, items, kept }.
+// Returns null when there is nothing to do (not a branch, never read, its start not found), else { dropped, items, kept,
+// cut, at, rebased, point } (point: the branch point, the last message of this chat the phone still knows).
 export async function settleBranch(m, p) {
     const s = p?.sync;
     if (!s?.marks?.base || !otherChat(s)) return null;
@@ -2000,7 +2001,7 @@ export async function settleBranch(m, p) {
     }
     await saveMeta();
     if (cut && p.inject) applyInjection();
-    return { dropped, items, kept, cut, at: at || '', rebased };
+    return { dropped, items, kept, cut, at: at || '', rebased, point: end };
 }
 // the last message of this chat the phone still knows (read, or where it began): the branch point
 function brPoint(s) {

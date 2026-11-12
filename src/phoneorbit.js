@@ -27,6 +27,7 @@ const I = {
     tr: 'M4 6h8M8 4v2c0 4-2 7-5 8M6 10c1.5 2 3.5 3.5 6 4M13 20l4-9 4 9M14.5 17h5', moon: 'M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z',
     sun: 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4',
     set: 'M7 15a5 5 0 0 1 10 0M3 15h2M19 15h2M5.6 9.6l1.4 1.4M18.4 9.6 17 11M12 6v2M4 19h16',
+    book: 'M5 4h9a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3zM5 17a3 3 0 0 1 3-3h9', spark: 'M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6',
 };
 const ic = (k, s = 20, c = 'currentColor', w = 2) => `<svg aria-hidden="true" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"><path d="${I[k]}"/></svg>`;
 // 그 사람 현지 시각의 아이콘: 05~17 해 · 17~21 저녁 · 21~05 달 (날씨 하늘과 같은 경계)
@@ -110,5 +111,20 @@ export function orbitNew(p, now, o) {
         <i class="ob_pad"></i>
       </div>
       ${n ? `<span class="ob_go na_ob_make" role="button" tabindex="0">${n > 1 ? `단체방 만들기 <em>· 나 포함 ${n + 1}명</em>` : '대화하기'}</span>` : ''}
+      ${axInd()}`;
+}
+
+// 실시간 폰 시작 (시안 docs/mockups/phone2-start C): 노을 카드(나 · 지금 시각 · 날짜 · 현실과의 차이), 고르기 두 줄, 검정 시작 알약.
+// 처음부터는 10단계(카드로 폰 만들기) 전까지 흐리게. o: { persona, local, date, shift, upto }
+export function liveStart(p, now, o) {
+    const row = (k, on, off, title, sub) => `<div class="ob_rm ls_opt${on ? ' on' : ''}${off ? ' off' : ''}"><span class="ls_ic ${k}">${ic(k === 'story' ? 'book' : 'spark', 18, k === 'story' ? '#2c4a80' : '#a0537a')}</span><span class="ob_t"><b>${esc(title)}</b>${sub ? `<span class="ob_p">${esc(sub)}</span>` : ''}</span><span class="ob_ck${on ? ' on' : ''}">${on ? ic('chk', 14, '#fff', 3) : ''}</span></div>`;
+    return `${axBar(p, now)}
+      <div class="ob_top"><span class="ob_cb" role="button" tabindex="0" data-go="set" aria-label="뒤로">${ic('back', 20)}</span><b class="ob_h1">실시간</b><span class="ob_cb0"></span></div>
+      <div class="ob_scroll ax_scroll">
+        <div class="ob_hero ls_hero"><span class="ob_blob ls_bg"></span><span class="ob_gl"></span><div class="ob_in"><small>${esc(o.persona)} 지금</small><div class="ob_big cg_num">${esc(o.local)}<em>${esc(o.date)}</em></div>${o.shift ? `<span class="ls_pill">${esc(o.shift)}</span>` : ''}</div></div>
+        <div class="ob_list">${row('story', true, false, '이야기에서 시작', o.upto)}${row('fresh', false, true, '처음부터', '곧')}</div>
+        <i class="ob_pad"></i>
+      </div>
+      <span class="ob_go na_ob_start" role="button" tabindex="0">시작</span>
       ${axInd()}`;
 }

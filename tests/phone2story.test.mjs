@@ -10,8 +10,8 @@ export const countTokens=s=>String(s).length;export const esc=s=>String(s);expor
 const src = async f => readFile(new URL(`../src/${f}`, import.meta.url), 'utf8');
 let sec = await src('sections.js');
 for (const f of ['./chats.js', './core.js', './inject.js', './panel.js', './router.js', './util.js']) sec = sec.replaceAll(`'${f}'`, `'${stub}'`);
-const store = new URL('../src/phone2store.js', import.meta.url).href;
-const S = await import(enc((await src('phone2story.js')).replace(`'./sections.js'`, `'${enc(sec)}'`).replace(`'./phone2store.js'`, `'${store}'`)));
+const store = new URL('../src/phone2store.js', import.meta.url).href, clock = new URL('../src/phone2clock.js', import.meta.url).href;
+const S = await import(enc((await src('phone2story.js')).replace(`'./sections.js'`, `'${enc(sec)}'`).replace(`'./phone2store.js'`, `'${store}'`).replace(`'./phone2clock.js'`, `'${clock}'`)));
 const L = await import(store);
 
 // an archive: a section from an older chat (Y1, its own numbers), this chat's sections, a note with no range, the state
@@ -26,7 +26,7 @@ const begun = (m, upto = 150) => S.beginFromStory(m, { persona: 'Lio', upto });
 
 test('시작할 때 적는 것: 장면 범위(앞말마다 합침) · 범위 없는 장면 제목 · 원래 메시지 첫 번호, 글은 안 적어요', () => {
     const m = meta(), before = JSON.stringify(m), w = begun(m);
-    assert.deepEqual(w.story, { ranges: { Y1: [[0, 300]], '': [[0, 130]] }, titles: ['People'], rawFrom: 131 });
+    assert.deepEqual(w.story, { ranges: { Y1: [[0, 300]], '': [[0, 130]] }, titles: ['People'], rawFrom: 131, own: [''] });
     assert.doesNotMatch(JSON.stringify(w.story), /Mara moved|flood|Mara is at home/);
     const { live, ...rest } = m;
     assert.equal(JSON.stringify(rest), before);
@@ -110,4 +110,71 @@ test('분기한 채팅에 폰 2가 시작한 번호가 있는지 (알려 주기�
     assert.equal(S.liveFitsChat(null, 3), true);
     assert.equal(S.liveFitsChat(L.startFresh(meta(), { persona: 'Lio' }), 0), true);
     assert.equal(JSON.stringify(m.live), was);
+});
+
+// 5-3: 분기한 방의 폰 2
+const withTalk = (m, upto) => {
+    const w = begun(m, upto);
+    L.ensureRoom(m, ['Ren']).messages.push({ id: 't1', from: 'Lio', text: 'hi', at: 1 }, { id: 't2', from: 'Ren', text: 'yo', at: 2 });
+    L.enqueueJob(m, { kind: 'reply', owner: 'Ren' });
+    return w;
+};
+test('시작한 곳보다 앞에서 분기: 책갈피는 분기한 곳으로, 그 뒤 장면은 안 읽고, 메신저는 비어요', () => {
+    const m = meta(), w = withTalk(m, 150), p1 = JSON.stringify({ ...m, live: undefined });
+    const r = S.settleLiveBranch(m, 100);
+    assert.deepEqual(r, { point: 100, rooms: 1 });
+    assert.equal(w.storyUpto, 100);
+    // (Y1 is another chat's: whole; this chat's 0–130 is cut at 100, so #61–#130 is not read and #61–#100 come as they are)
+    assert.deepEqual(w.story.ranges, { Y1: [[0, 300]], '': [[0, 100]] });
+    assert.equal(w.story.rawFrom, 61);
+    assert.deepEqual(S.liveRawRange(w), { from: 61, to: 100 });
+    const t = S.liveStoryText(m, w);
+    assert.match(t, /Spring/);
+    assert.match(t, /Y1 #0–#300/);
+    assert.doesNotMatch(t, /Summer|The flood/);
+    assert.deepEqual(L.liveRooms(m), []);
+    assert.deepEqual(Object.keys(w.messenger.accounts), ['lio']);
+    assert.deepEqual(w.queue.jobs, []);
+    assert.equal(JSON.stringify({ ...m, live: undefined }), p1);
+});
+test('시작한 곳보다 뒤에서 분기 · 처음부터 시작한 폰 2: 아무것도 안 바뀌어요', () => {
+    const m = meta(), w = withTalk(m, 150), was = JSON.stringify(m.live);
+    assert.equal(S.settleLiveBranch(m, 150), null);
+    assert.equal(S.settleLiveBranch(m, 200), null);
+    assert.equal(S.settleLiveBranch(m, undefined), null);
+    assert.equal(JSON.stringify(m.live), was);
+    const f = meta();
+    L.startFresh(f, { persona: 'Lio' });
+    L.ensureRoom(f, ['Ren']).messages.push({ id: 't', from: 'Ren', text: 'x', at: 1 });
+    const fw = JSON.stringify(f.live);
+    assert.equal(S.settleLiveBranch(f, 3), null);
+    assert.equal(JSON.stringify(f.live), fw);
+    assert.equal(w, L.liveWorld(m));
+});
+test('분기한 곳이 압축 안 된 구간 안이면: 장면은 그대로, 원래 메시지만 분기한 곳까지', () => {
+    const m = meta(), w = withTalk(m, 150);
+    S.settleLiveBranch(m, 140);
+    assert.deepEqual(w.story.ranges, { Y1: [[0, 300]], '': [[0, 130]] });
+    assert.deepEqual(S.liveRawRange(w), { from: 131, to: 140 });
+    assert.match(S.liveStoryText(m, w), /The flood/);
+});
+test('다른 채팅에서 가져온 앞말은 번호가 달라서 그대로 둬요 (logLinks)', () => {
+    const m = { ...meta(), logLinks: { Y1: 'old chat' } }, w = withTalk(m, 150);
+    S.settleLiveBranch(m, 20);
+    assert.deepEqual(w.story.ranges, { Y1: [[0, 300]], '': [[0, 20]] });
+    assert.equal(w.story.rawFrom, 0);
+    assert.doesNotMatch(S.liveStoryText(m, w), /Spring/);
+    assert.match(S.liveStoryText(m, w), /Y1 #0–#300/);
+});
+test('분기한 곳의 이야기 시각으로 날짜 차이(dayShift)를 다시 세요 (시각을 못 읽으면 그대로)', () => {
+    const m = meta(), w = withTalk(m, 150);
+    w.dayShift = 5;
+    S.settleLiveBranch(m, 100, { storyAt: '13-40 25:00', storyYear: 2026, tz: 'Asia/Seoul' });
+    assert.equal(w.dayShift, 5);
+    const m2 = meta(), w2 = withTalk(m2, 150);
+    S.settleLiveBranch(m2, 100, { dayShift: -2 });
+    assert.equal(w2.dayShift, -2);
+    const m3 = meta(), w3 = withTalk(m3, 150);
+    S.settleLiveBranch(m3, 100, { storyAt: '10-26 12:00', storyYear: 2026, tz: 'Asia/Seoul' });
+    assert.ok(Number.isInteger(w3.dayShift));
 });
