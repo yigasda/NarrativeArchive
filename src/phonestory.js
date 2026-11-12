@@ -1,7 +1,6 @@
 // Phone content and its financial ledger travel together, only by explicit choice.
 import { ctx, getMeta, saveMeta } from './core.js';
 import { journalWrite } from './phonesync.js';
-import { resetLive } from './phone2store.js';
 
 export const PHONE_STORY_KEYS = ['phones','phoneProfiles','phoneScreenHolder','finance','lastPhoneOwner','phoneLore','phoneLoreOff','phonePre','phoneStoryScope'];
 export function phoneChatScope(c) {
@@ -28,8 +27,7 @@ export function phoneTarget(m, p) {
 export function clearPhoneSelection(scope,storage) {
     try { if(scope) (storage || globalThis.localStorage)?.removeItem(scope); } catch { /* Metadata still works without browser storage. */ }
 }
-// live: what becomes of 폰 2 (실시간) when the story begins anew: 'chats' keeps its messenger only, 'all' takes it off whole
-export function resetPhoneStory(m,scope,{live='chats'}={}) {
+export function resetPhoneStory(m,scope) {
     m.phones={};delete m.phoneProfiles;delete m.finance;delete m.lastPhoneOwner;
     delete m.phoneLore;delete m.phoneLoreOff;delete m.phoneScreenHolder;
     // (what was read before a phone was made goes with the phones)
@@ -40,8 +38,6 @@ export function resetPhoneStory(m,scope,{live='chats'}={}) {
     clearPhoneSelection(scope);
     // (and this browser's record of rounds to put back (복구): the old story's, none of the new one's)
     journalWrite(scope,[]);
-    // (폰 2 read that story: it can't go on reading one that is gone. 폰 1's reset never fails for it)
-    try { resetLive(m,live==='all'?'all':'chats'); } catch { /* an m.live that can't be read stays as it is */ }
 }
 export function adoptPhoneStory(m,scope) {
     // Detach copied metadata from its source even if the host supplied shared objects.

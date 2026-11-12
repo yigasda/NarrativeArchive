@@ -2,6 +2,7 @@
 
 import { PHONE_STORY_KEYS, phoneChatScope, choosePhoneStory, resetPhoneStory, adoptPhoneStory, clearPhoneSelection } from './phonestory.js';
 import { MODULE, SETTING_KEYS, commitText, ctx, getMeta, hasChat, saveMeta } from './core.js';
+import { resetLive } from './phone2store.js';
 import { applyInjection } from './inject.js';
 import { setEditorDirty, syncPanel } from './panel.js';
 import { headingRanges, parseSections, RANGE_HEAD } from './sections.js';
@@ -44,6 +45,10 @@ export async function importArchive(src, label, fromChat = null) {
         const r = headingRanges(src.text);
         if (r.length) m.logLinks = { ...(m.logLinks || {}), [r[r.length - 1].prefix]: fromChat };
     }
+    // 폰 2 (실시간) began from the archive that is being replaced, and reads it by message numbers: with another chat's
+    // archive here those numbers are another story's. Its messenger stays, the rest of it goes (phone2store resetLive).
+    // The same text again changes nothing for it. 폰 1's import never fails for it.
+    if (String(src.text).replace(/\r\n/g, '\n') !== m.text) { try { resetLive(m, 'chats'); } catch { /* an m.live that can't be read stays as it is */ } }
     setEditorDirty(false);
     carryOffer = null;
     // a new chat restarts numbering, so the boundary is cleared and tracking turned off
