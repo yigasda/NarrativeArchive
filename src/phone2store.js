@@ -14,7 +14,8 @@
 //     finance, profiles, pre, lore, loreOff:      폰 1의 m.finance · phoneProfiles · phonePre · phoneLore · phoneLoreOff
 //                                                 에 해당하는 폰 2 것 (이야기에서 시작하면 그때의 깊은 복사)
 //     messenger: { accounts: { [name key]: { name } }, rooms: { [id]: { id, members: [name], messages: [], name?, read? } } },
-//       messages: [{ id, n (세계 전체의 메시지 번호), from: name, text, at (ms), ko? }], read: { [name key]: 마지막으로 읽은 시각 (ms) }, name: 단체방 이름
+//       messages: [{ id, n (세계 전체의 메시지 번호), from: name, text, at (ms), ko?, state? (주인이 답하며 적은 상태), does? [{ app, what }] (답하며 폰으로 한 일),
+//         act? (말 없이 한 일 · 상태만: 메신저 화면엔 안 그려요), call? }], read: { [name key]: 마지막으로 읽은 시각 (ms) }, name: 단체방 이름
 //       seq: 마지막으로 준 메시지 번호
 //     queue: { round, jobs: [{ id, world, round, kind, owner, at, state: 'waiting' | 'running' | 'done' | 'failed' | 'dropped', error, seen }] },
 //   },
@@ -224,13 +225,37 @@ export const unreadFor = (room, who) => { const k = liveKey(who), t = room?.read
 export const unreadBy = (room, msg) => (room?.members || []).filter(n => liveKey(n) !== liveKey(msg?.from) && !((room?.read?.[liveKey(n)] || 0) >= msg?.at));
 
 // 일의 줄: one at a time, each job tagged with its world and round; a failure stops the line until it is seen
-export function enqueueJob(m, { kind, owner = '', at = Date.now() } = {}) {
+// room: the messenger room a reply is for
+export function enqueueJob(m, { kind, owner = '', room = '', at = Date.now() } = {}) {
     const w = liveWorld(m);
     if (!w) throw new Error('아직 폰 2가 없어요');
     if (!['reply', 'reflect', 'first'].includes(kind)) throw new Error('일 종류는 reply · reflect · first예요');
-    const job = { id: newId('j'), world: w.id, round: ++w.queue.round, kind, owner: String(owner || ''), at, state: 'waiting' };
+    const job = { id: newId('j'), world: w.id, round: ++w.queue.round, kind, owner: String(owner || ''), ...(room ? { room: String(room) } : {}), at, state: 'waiting' };
     w.queue.jobs.push(job);
+    // (the line keeps its newest finished jobs only; waiting, running and failed ones always stay)
+    const old = w.queue.jobs.filter(j => j.state === 'done' || j.state === 'dropped');
+    if (old.length > JOBS_KEPT) { const gone = new Set(old.slice(0, old.length - JOBS_KEPT)); w.queue.jobs = w.queue.jobs.filter(j => !gone.has(j)); }
     return job;
+}
+export const JOBS_KEPT = 20;
+// the persona wrote in a room: each of the others in it owes an answer. One already waiting for that owner and room
+// answers these words too (it reads the room when it runs), so no second one is lined up. Returns the jobs lined up
+export function enqueueReplies(m, roomId, at = Date.now()) {
+    const w = liveWorld(m), room = w?.messenger?.rooms?.[roomId];
+    if (!room) throw new Error('없는 방이에요');
+    const out = [];
+    for (const n of room.members) {
+        if (liveKey(n) === liveKey(w.persona) || !w.phones?.[liveKey(n)]) continue;
+        if (w.queue.jobs.some(j => j.state === 'waiting' && j.kind === 'reply' && liveKey(j.owner) === liveKey(n) && j.room === roomId)) continue;
+        out.push(enqueueJob(m, { kind: 'reply', owner: n, room: roomId, at }));
+    }
+    return out;
+}
+// a job left "running" by a page that closed (nothing runs it any more) waits again: its result never came in
+export function reviveJobs(m) {
+    let n = 0;
+    for (const j of liveWorld(m)?.queue.jobs || []) if (j.state === 'running') { j.state = 'waiting'; n++; }
+    return n;
 }
 export const queueStopped = m => !!liveWorld(m)?.queue.jobs.some(j => j.state === 'failed' && !j.seen);
 // the next job to run, or null: none while one runs, none while a failure waits to be seen

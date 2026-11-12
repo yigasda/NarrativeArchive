@@ -9,7 +9,7 @@
 //   [#12] Lio: 오늘 왜 그랬어?
 //   [#13] Ren: …됐어. 나중에 얘기해.
 //   [#13] Ren [Diary]: 방금 들은 말 때문에 속상한 마음을 적음
-// 메시지 하나: { id, n, from, text, at (ms), ko?, state?, does?: [{ app, what }], call?: { min, summary } }
+// 메시지 하나: { id, n, from, text, at (ms), ko?, state?, does?: [{ app, what }], call?: { min, summary }, act? (말 없이 한 일만) }
 
 import { liveKey, liveWorld, numberLive } from './phone2store.js';
 import { liveWall } from './phone2clock.js';
@@ -60,7 +60,8 @@ export function feedText(m, owner, rows, { tz = 'UTC', state = '' } = {}) {
         for (const x of sc.rows) {
             // (the owner's state changing within a scene: a line of its own, at that answer)
             if (x !== first && same(x.from, owner) && one(x.state) && one(x.state) !== now) { now = one(x.state); out.push(`#${x.n} · ${liveWall(tz, w.dayShift, x.at).at} · ${owner} — ${now}`); }
-            out.push(said(x));
+            // (act: the owner did something on the phone without writing: only its lines)
+            if (!(x.act && !one(x.text))) out.push(said(x));
             if (same(x.from, owner)) for (const d of Array.isArray(x.does) ? x.does : []) if (one(d?.what)) out.push(`[#${x.n}] ${owner} [${appName(d.app) || 'Phone'}]: ${one(d.what)}`);
         }
     }
@@ -75,8 +76,8 @@ export function messengerNow(m, owner, { tz = 'UTC', per = 6 } = {}) {
     numberLive(w);
     const out = [];
     for (const room of Object.values(w.messenger?.rooms || {})) {
-        if (!room.members.some(n => same(n, owner)) || !(room.messages || []).length) continue;
-        out.push(`[Orbit · ${titleOf(room, owner)}]`, ...room.messages.slice(-per).map(x => `${liveWall(tz, w.dayShift, x.at).at} ${x.from}: ${x.call ? `(call ${Math.round(Number(x.call.min) || 0)} min)` : one(x.text)}`));
+        if (!room.members.some(n => same(n, owner)) || !(room.messages || []).some(x => !(x.act && !one(x.text)))) continue;
+        out.push(`[Orbit · ${titleOf(room, owner)}]`, ...room.messages.filter(x => !(x.act && !one(x.text))).slice(-per).map(x => `${liveWall(tz, w.dayShift, x.at).at} ${x.from}: ${x.call ? `(call ${Math.round(Number(x.call.min) || 0)} min)` : one(x.text)}`));
     }
     return out.join('\n');
 }
