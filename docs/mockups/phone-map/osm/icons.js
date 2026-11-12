@@ -33,6 +33,12 @@ const ICON = {
   forest: 'M8 3l4 7H4zM8 10v3M16 6l5 9H11zM16 15v5M3 21h18',
   mountain: 'M2 20l7-12 4 6 3-4 6 10zM8 10l1.5 2 1-1',
   view: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6',
+  // 명소(이름만 있는 곳)를 눈 하나로 그리지 않게(11-12): 문 · 높은 건물 · 광장 · 조각 · 별(그 밖의 명소)
+  gate: 'M4 21V9a8 8 0 0 1 16 0v12M8 21v-8a4 4 0 0 1 8 0v8M3 21h18',
+  skyscraper: 'M8 21V6l4-3 4 3v15M5 21v-9h3M16 21v-7h3M4 21h16M11 8h2M11 12h2M11 16h2',
+  square: 'M3 12h5M16 12h5M12 3v5M12 16v5M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8',
+  artwork: 'M7 21h10M12 21v-4M12 17c-3.5 0-5.5-2.5-4.8-5.5.8-3.5 5.3-3 5.8-7 2.8 2 4.6 4.8 3.8 7.8-.7 2.7-2.2 4.7-4.8 4.7z',
+  landmark: 'M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4l-5.3 3 1.2-6-4.5-4.1 6-.7z',
   beach: 'M4 20h16M6 20c2-6 6-9 12-10M10 12l-4-6M10 12a6 6 0 0 1 8-5',
   lake: 'M3 9c3-2 5 2 9 0s6 2 9 0M3 14c3-2 5 2 9 0s6 2 9 0M3 19c3-2 5 2 9 0s6 2 9 0',
   fountain: 'M12 13V5M12 5c-2 0-4 2-4 5M12 5c2 0 4 2 4 5M5 15h14l-2 5H7z',
@@ -133,6 +139,6 @@ function pick(t) {
   return null;
 }
 // OFF: how far each glyph moves so its real box sits in the middle of the 24 grid (iconbox.cjs measures it)
-const OFF = {"cathedral":[0,-1],"mosque":[0,-1],"shrine":[0,-1],"temple":[0,2],"pagoda":[0,0.5],"theatre":[0,0.75],"cinema":[0,1.97],"music":[0.5,0],"library":[-1.25,-0.2],"statue":[0,0.5],"castle":[0,-2.5],"palace":[0,-0.5],"ruin":[0,-1],"windmill":[0,-0.5],"observatory":[0,-0.5],"garden":[0,-1.5],"mountain":[0,-2],"beach":[0,-1],"lake":[0,-2],"fountain":[0,-0.5],"playground":[0,-1],"spring":[0,0.5],"camp":[0,-0.5],"golf":[1,0],"ski":[0,0.72],"bike":[0,-0.75],"shop":[0,0.5],"mall":[0,-0.5],"cafe":[1,1],"food":[1.5,0],"bar":[0,-0.5],"beer":[0.9,0.38],"hotel":[0,-0.5],"school":[0,1.25],"townhall":[0,0.5],"fire":[-1,-0.5],"bank":[0,0.5],"ferry":[0,-2.64],"harbour":[0,0.5],"airport":[0,-0.5],"cable":[0,2.5],"fuel":[-0.5,0],"bridge":[0,-1.75],"cemetery":[0,-1],"aquarium":[1,0]};
+const OFF = {"cathedral":[0,-1],"mosque":[0,-1],"shrine":[0,-1],"temple":[0,2],"pagoda":[0,0.5],"theatre":[0,0.75],"cinema":[0,1.97],"music":[0.5,0],"library":[-1.25,-0.2],"statue":[0,0.5],"castle":[0,-2.5],"palace":[0,-0.5],"ruin":[0,-1],"windmill":[0,-0.5],"observatory":[0,-0.5],"garden":[0,-1.5],"mountain":[0,-2],"gate":[0,1],"artwork":[0,-0.75],"landmark":[0,0.8],"beach":[0,-1],"lake":[0,-2],"fountain":[0,-0.5],"playground":[0,-1],"spring":[0,0.5],"camp":[0,-0.5],"golf":[1,0],"ski":[0,0.72],"bike":[0,-0.75],"shop":[0,0.5],"mall":[0,-0.5],"cafe":[1,1],"food":[1.5,0],"bar":[0,-0.5],"beer":[0.9,0.38],"hotel":[0,-0.5],"school":[0,1.25],"townhall":[0,0.5],"fire":[-1,-0.5],"bank":[0,0.5],"ferry":[0,-2.64],"harbour":[0,0.5],"airport":[0,-0.5],"cable":[0,2.5],"fuel":[-0.5,0],"bridge":[0,-1.75],"cemetery":[0,-1],"aquarium":[1,0]};
 const glyph = n => OFF[n] ? `<g transform="translate(${OFF[n][0]} ${OFF[n][1]})"><path d="${ICON[n]}"/></g>` : `<path d="${ICON[n]}"/>`;
 module.exports = { ICON, OFF, glyph, pick };
