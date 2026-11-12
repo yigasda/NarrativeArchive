@@ -2,7 +2,7 @@
 const { open } = require('../../../tools/dev/probe.cjs'); const { chromium } = require('playwright');
 const { ORBIT, CSS, orbitIcon } = require('./icons.js'); const path = require('path'), fs = require('fs');
 const OUT = __dirname, TMP = fs.mkdtempSync('/tmp/claude-0/orb');
-const NAME = { A: '오로라 · 행성 고리', B: '산호 노을 · 말풍선 O', C: '밤 유리 · 빛나는 고리', D: '초록 햇살 · 두 사람 궤도' };
+const NAME = { A: '고리가 지나가는 말풍선', B: '달이 도는 O', C: '밤의 궤도', D: '궤도 위의 점 셋' };
 (async () => {
   const s = await open('light', { out: TMP });
   await s.to('home');
