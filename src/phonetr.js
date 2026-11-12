@@ -49,8 +49,12 @@ VOICE
 - "evidence": the exact words in the story or a card that show it. Nothing shows it: "style": "" and "evidence": [].
 - "label": the same in two or three short Korean words joined with " · ", like "격식 존댓말 · 단호함", for a list.
 
+LANGUAGES
+- "langs": the languages OWNER really texts in, and those they know but seldom use, as the story or a card shows. Nothing shows it: both [].
+
 JSON (one object, nothing before or after it)
-{ "people": [{ "who", "style", "label", "evidence": [exact words from the story or a card] }] }`;
+{ "people": [{ "who", "style", "label", "evidence": [exact words from the story or a card] }],
+  "langs": { "texts": [language names in English], "knows": [] } }`;
 
 // who texts or comments in what is to be translated and has no row in the table: [names]
 export function voicesWanted(p, { all = false } = {}) {
@@ -95,12 +99,22 @@ export function dropVoice(p, i) {
 }
 // asks the story about these people (names); the rows it found: [{ who, style, evidence, by }]. A row needs the words
 // that show it (from the story or a card)
+// { texts, knows } as the answer gives them: names each once, 5 of a kind at most, a language in both only in "texts"; null when it names none
+export function langsOf(v) {
+    const list = x => (Array.isArray(x) ? x : []).map(y => String(y ?? '').replace(/\s+/g, ' ').trim().slice(0, 30)).filter((y, i, all) => y && all.findIndex(z => z.toLowerCase() === y.toLowerCase()) === i).slice(0, 5);
+    const texts = list(v?.texts), knows = list(v?.knows).filter(x => !texts.some(y => y.toLowerCase() === x.toLowerCase()));
+    return texts.length || knows.length ? { texts, knows } : null;
+}
 async function askVoices(m, owner, p, names) {
     // (the cards and the persona whole; the owner's chosen profile only when it is a lorebook entry: a card or a persona is
     // in already)
     const binding = p.financeProfile || m?.phoneProfiles?.[String(owner || '').toLowerCase()] || null;
     const input = await sideRequest(m, owner, [...cardBlocks(), `[WHO]\n${names.map(n => `- ${n}`).join('\n')}`], { profile: binding?.type === 'lore' ? binding : undefined });
     const got = parseJson(String(await askDraft(input, { force: true, system: AI_SYS_PHONE_VOICE, maxTokens: 3000, effort: 'low' })).replace(/^[^{]*/, '').replace(/[^}]*$/, ''), { salvage: true }) || {};
+    // (the owner's languages, read along with the voices: kept on the phone for 폰 2's replies; a reading that gives none
+    // keeps what the phone had)
+    const langs = langsOf(got.langs);
+    if (langs) p.langs = langs;
     const wanted = new Map(names.map(n => [n.toLowerCase(), n])), seen = new Set();
     return (Array.isArray(got.people) ? got.people : []).filter(v => v && wanted.has(whoKey(v)) && !seen.has(whoKey(v)) && String(v.style || '').trim()
         && (Array.isArray(v.evidence) ? v.evidence : []).some(e => String(e || '').trim()) && seen.add(whoKey(v)))
