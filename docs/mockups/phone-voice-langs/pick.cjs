@@ -39,14 +39,31 @@ const CSS = `
 .mk_wi.mid{color:#161b22;font-weight:600;font-size:19px}
 .mk_two{display:flex;gap:8px;margin:0 14px}.mk_two .mk_wh{flex:1;margin:4px 0 0}
 .mk_lab{display:flex;gap:8px;margin:2px 14px 0}.mk_lab span{flex:1;text-align:center;font-size:12.5px;color:#8a8f99;font-weight:600}
+
+/* D 바퀴 + 칩 */
+.mk_tabs{display:flex;gap:4px;margin:4px 14px 0;padding:4px;border-radius:15px;background:#e6e8ec}
+.mk_tabs b{flex:1;text-align:center;padding:8px 0 7px;border-radius:11px;font-size:13.5px;font-weight:600;color:#8a8f99}
+.mk_tabs b.on{background:#fff;color:#161b22;box-shadow:0 1px 2px rgba(22,27,34,.08),0 4px 10px rgba(22,27,34,.06)}
+.mk_chips{display:flex;flex-wrap:wrap;gap:6px;margin:12px 16px 2px;min-height:32px}
+.mk_chip{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 8px 0 12px;border-radius:16px;background:#fff;font-size:14px;font-weight:600;color:#2c4a80;box-shadow:0 1px 2px rgba(22,27,34,.06),0 3px 8px rgba(22,27,34,.06)}
+.mk_chip i{width:18px;height:18px;border-radius:50%;background:#e2e9f5;display:flex;align-items:center;justify-content:center}
+.mk_none{font-size:13px;color:#a2a7af;line-height:32px}
+.mk_whrow{display:flex;align-items:center;gap:10px;margin:2px 14px 0}.mk_whrow .mk_wh{flex:1;margin:0}
+.mk_add{height:44px;padding:0 16px;border-radius:13px;background:#15161a;color:#fff;font-size:14.5px;font-weight:600;display:flex;align-items:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.16)}
+.mk_add.dim{opacity:.35}
+.mk_wi.had{color:#c4c8ce}
 `;
 const list = sel => `<div class="mk_list">${LANGS.slice(0, 11).map(l => `<div class="mk_it${sel.has(l) ? ' on' : ''}">${l}${sel.has(l) ? chk('#2c4a80') : ''}</div>`).join('')}</div>`;
 const wheel = (arr, mid) => `<div class="mk_wh"><div class="mk_band"></div>${arr.map((l, i) => `<div class="mk_wi${i === mid ? ' mid' : ''}">${l}</div>`).join('')}</div>`;
+const xs = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#2c4a80" stroke-width="3.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+const chips = arr => `<div class="mk_chips">${arr.length ? arr.map(l => `<span class="mk_chip">${l}<i>${xs}</i></span>`).join('') : '<span class="mk_none">아직 없어요</span>'}</div>`;
+const wheel2 = (arr, mid, had = []) => `<div class="mk_wh"><div class="mk_band"></div>${arr.map((l, i) => `<div class="mk_wi${i === mid ? ' mid' : ''}${had.includes(l) ? ' had' : ''}">${l}</div>`).join('')}</div>`;
+const chipSheet = (tab, got, arr, mid, dim) => `<div class="mk_shade"></div><div class="mk_wheel"><i class="mk_grab"></i><div class="mk_sh"><b>언어</b><span>완료</span></div><div class="mk_tabs"><b class="${tab === 0 ? 'on' : ''}">자주 쓰는 언어</b><b class="${tab === 1 ? 'on' : ''}">가끔 쓰는 언어</b></div>${chips(got)}<div class="mk_whrow">${wheel2(arr, mid, got)}<span class="mk_add${dim ? ' dim' : ''}">추가</span></div></div>`;
 const V = {
-  card: { name: '말투 맨 아래: 언어', put: '' },
-  A: { name: 'A. 바텀 시트에서 여러 개 체크', put: `<div class="mk_shade"></div><div class="mk_sheet"><i class="mk_grab"></i><div class="mk_sh"><b>자주 쓰는 언어</b><span>완료</span></div>${list(on)}</div>` },
-  B: { name: 'B. 화면 하나에서 여러 개 체크', put: `<div class="mk_page"><div class="mk_top"><span class="mk_cb">${back}</span></div><div class="mk_h1">자주 쓰는 언어</div><div class="mk_sub">여러 개 고를 수 있어요</div>${list(on)}</div>` },
-  C: { name: 'C. 바퀴로 하나씩 (자주 · 가끔 같이)', put: `<div class="mk_shade"></div><div class="mk_wheel"><i class="mk_grab"></i><div class="mk_sh"><b>언어</b><span>완료</span></div><div class="mk_lab"><span>자주 쓰는 언어</span><span>가끔 쓰는 언어</span></div><div class="mk_two">${wheel(['English', '中文', 'Deutsch', 'Français', 'Español'], 2)}${wheel(['없음', 'English', '한국어', '日本語', '中文'], 2)}</div></div>` },
+  D1: { name: 'D1. 자주 쓰는 언어: 두 개 고름', put: chipSheet(0, ['Deutsch', 'English'], ['中文', 'English', 'Français', 'Español', 'Italiano'], 2) },
+  D2: { name: 'D2. 이미 고른 건 바퀴에서 흐리게', put: chipSheet(0, ['Deutsch', 'English'], ['한국어', 'English', 'Deutsch', '日本語', '中文'], 2, true) },
+  D3: { name: 'D3. 가끔 쓰는 언어 탭', put: chipSheet(1, ['한국어'], ['English', '日本語', '中文', 'Français', 'Español'], 2) },
+  card: { name: '닫은 뒤: 말투 맨 아래', put: '' },
 };
 (async () => {
   const s = await open('light', { out: TMP });
@@ -65,7 +82,7 @@ const V = {
     }
     const b = await chromium.launch(), p = await b.newPage({ deviceScaleFactor: 1 });
     await p.setContent(`<html><body style="margin:0;padding:24px;background:#d9dbe0;font-family:-apple-system,'Noto Sans KR',sans-serif;width:max-content"><div style="display:flex;gap:20px">${Object.keys(V).map(v => `<div><h2 style="font-size:19px;margin:0 0 10px">${V[v].name}</h2><img style="width:330px;display:block;border-radius:22px" src="data:image/png;base64,${fs.readFileSync(shots[v]).toString('base64')}"></div>`).join('')}</div></body></html>`);
-    await p.screenshot({ path: path.join(__dirname, 'pick.jpg'), fullPage: true, type: 'jpeg', quality: 86 }); await b.close();
+    await p.screenshot({ path: path.join(__dirname, 'pick2.jpg'), fullPage: true, type: 'jpeg', quality: 86 }); await b.close();
     console.log('ok', s.errors().slice(0, 3));
   } finally { await s.close(); reset(); }
 })().catch(e => { console.error(e); reset(); process.exit(1); });
