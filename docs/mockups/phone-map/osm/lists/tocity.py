@@ -112,6 +112,10 @@ subprocess.run(['python3', os.path.join(ROOT, 'docs', 'mockups', 'phone-map', 't
 known = json.loads(subprocess.run(['node', '-e', """import('%s').then(m=>console.log(JSON.stringify({p:m.PLACE.map(x=>[x[0],...x[1]].map(s=>s.toLowerCase())),h:m.HINT.map(x=>[x[0],x[1]])})))""" % os.path.abspath(os.path.join(ROOT, 'src', 'phonemapcity.js'))],
     capture_output=True, text=True, check=True).stdout)
 names = set(n for p in known['p'] for n in p)
+# the reflection's table (HOODS): a neighbourhood row only for a town it has a time-zone row for (tests/placehoods.test.mjs wants
+# every map town there); the other towns' neighbourhoods wait in HOODS-ADD.md till the reflection session adds the town
+hoods_cities = set(json.loads(subprocess.run(['node', '-e', """import('%s').then(m=>console.log(JSON.stringify(m.HOODS.flatMap(r=>r[0].split('|')))))""" % os.path.abspath(os.path.join(ROOT, 'src', 'placehoods.js'))],
+    capture_output=True, text=True, check=True).stdout))
 names |= set(w.lower() for _, ws in known['h'] for w in ws)   # a neighbourhood the table already has (베르사유 under 파리) is no new town
 hint_words = {}
 for t, ws in known['h']:
@@ -131,6 +135,8 @@ for cc in FILES:
             if not ws: continue
             if city.lower() not in names and city not in add_city:   # 표에 없는 도시: 도시 줄도 같이
                 add_city[city] = (cc, f'{city} {CITY_EN.get(city, "")}'.strip(), ['역 앞 번화가', '도심 업무지구', '골목 주택가', '큰 강 대도시'] if cc in ('kr', 'jp', 'cn') else ['유럽 소도시 광장', '옛 시내 + 새 시내', '큰 강 대도시', '역 앞 번화가'], [])
+            if city not in hoods_cities:
+                report.setdefault(cc, []).append((city, ' · '.join(ws), slug)); continue   # 반영 쪽 표에 도시 줄이 생기면 더해요
             add_hood.setdefault(cc, []).append((city, ws, maps(cc, kind, r), slug))
             if not r.get('표 동네'): report.setdefault(cc, []).append((city, ' · '.join(ws), slug))   # 표에 있던 동네는 반영 쪽이 이미 알아요
         else:

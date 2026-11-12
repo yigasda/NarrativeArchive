@@ -7,9 +7,9 @@ import * as L from '../src/phone2store.js';
 const src = f => readFile(new URL(`../src/${f}`, import.meta.url), 'utf8');
 const phone1 = () => ({ phones: { mara: { owner: 'Mara', now: '11-06 09:00', notes: [{ title: 'n', text: 't' }] } }, finance: { accounts: {} }, text: '## a', snapshots: [] });
 
-test('폰 2 저장: the file imports nothing, and no other file imports it yet', async () => {
+test('폰 2 저장: the file imports nothing, and no file but the phone window imports it', async () => {
     assert.doesNotMatch(await src('phone2store.js'), /^\s*import\b/m);
-    for (const f of (await readdir(new URL('../src/', import.meta.url))).filter(f => f.endsWith('.js') && f !== 'phone2store.js'))
+    for (const f of (await readdir(new URL('../src/', import.meta.url))).filter(f => f.endsWith('.js') && f !== 'phone2store.js' && f !== 'phone.js'))   // 4-2: only the phone's window (switch, picker, phone()) may call it
         assert.doesNotMatch(await src(f), /phone2store/, f);
 });
 
@@ -147,4 +147,62 @@ test('폰 2 이야기에서 시작: a 폰 1 with only some keys copies those, th
     const m = { phones: {}, text: '' };
     const w = L.startFromStory(m, { persona: 'Ren', upto: 0 });
     assert.deepEqual([w.phones, w.finance, w.profiles, w.lore, w.lastOwner], [{}, null, {}, [], '']);
+});
+
+// 폰 2 서랍 (liveMeta): 폰 1 full of a mark, beside a 폰 2; nothing of 폰 1 is reachable through the drawer, nothing written through it lands in 폰 1
+const P1 = 'POISON1';
+const poisoned1 = () => ({
+    phones: { mara: { owner: 'Mara', notes: [{ title: P1, text: `${P1} note` }], money: { tx: [{ who: P1 }] } } },
+    finance: { accounts: { [`chk:${P1}`]: { owner: 'Mara' } } }, phoneProfiles: { mara: { label: P1 } }, phonePre: { ren: { owner: P1 } },
+    phoneLore: [`${P1}Book`], phoneLoreOff: { [P1]: true }, lastPhoneOwner: `${P1}Mara`, phoneScreenHolder: P1, phoneStoryScope: P1, phoneStoryRun: { [P1]: 1 },
+    people: [`${P1}Ivo`], text: `## ${P1} section\n${P1} story`, snapshots: [{ text: P1 }], digests: [P1], knowledge: { [P1]: P1 }, lastEvents: [P1],
+    glossary: { Seoul: '서울' }, glossaryPeople: { Ren: '렌' }, dateOrder: 'mdy',
+});
+test('폰 2 서랍: 폰 1의 것은 하나도 안 보여요 (같이 쓰는 용어집 · 날짜 순서만 복사로)', () => {
+    const m = poisoned1();
+    L.startFresh(m, { persona: 'Lio' });
+    L.putLivePhone(m, { owner: 'Ren', notes: [{ title: 'live note' }] });
+    const v = L.liveMeta(m);
+    assert.ok(L.isLiveMeta(v));
+    assert.equal(L.isLiveMeta(m), false);
+    assert.doesNotMatch(JSON.stringify(v), /POISON1/);
+    for (const k of Object.keys(poisoned1())) assert.doesNotMatch(JSON.stringify(v[k] ?? null), /POISON1/, k);
+    assert.deepEqual(Object.keys(v.phones), ['ren']);
+    assert.equal(v.text, '');
+    assert.equal(v.people, undefined);
+    assert.equal(v.phoneScreenHolder, undefined);
+    assert.equal(v.live, undefined);
+    assert.deepEqual(v.glossary, { Seoul: '서울' });
+    assert.notEqual(v.glossary, m.glossary);
+    assert.equal('phones' in v, true);
+    assert.equal('phoneScreenHolder' in v, false);
+    assert.deepEqual({ ...v }.phones, v.phones);
+});
+test('폰 2 서랍: 쓰면 폰 2에만 (폰 1은 글자 하나 안 바뀌어요)', () => {
+    const m = poisoned1();
+    L.startFresh(m, { persona: 'Lio' });
+    const before = JSON.stringify({ ...m, live: undefined }), w = L.liveWorld(m), v = L.liveMeta(m);
+    v.phones.ren = { owner: 'Ren' };
+    v.finance = { version: 1, accounts: {} };
+    v.phoneLoreOff.Book = true;
+    v.phoneProfiles.ren = { label: 'r' };
+    v.lastPhoneOwner = 'Ren';
+    v.people = ['Ivo'];
+    v.phoneScreenHolder = 'Ren';
+    v.text = 'x';
+    v.glossary.Seoul = 'SEOUL';
+    v.dateOrder = 'dmy';
+    Object.assign(v, { knowledge: {} });
+    delete v.digests;
+    assert.equal(JSON.stringify({ ...m, live: undefined }), before);
+    assert.deepEqual(Object.keys(w.phones), ['ren']);
+    assert.deepEqual(w.finance, { version: 1, accounts: {} });
+    assert.equal(w.loreOff.Book, true);
+    assert.equal(w.lastOwner, 'Ren');
+    assert.equal(v.people[0], 'Ivo');
+    assert.equal(v.glossary.Seoul, 'SEOUL');
+    assert.equal(m.glossary.Seoul, '서울');
+});
+test('폰 2 서랍: 폰 2가 없으면 만들지 않아요', () => {
+    assert.throws(() => L.liveMeta({ phones: {} }), /폰 2/);
 });

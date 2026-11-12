@@ -1428,7 +1428,7 @@ test('fillKo: each line goes with who says it to whom, and the voice table, no e
     const trSrc = await readFile(new URL('../src/phonetr.js', import.meta.url), 'utf8');
     const trMap = { './phonedata.js': dataURL, './phoneparse.js': href('phoneparse.js'),
         './translate.js': encoded(`export const glossaryEntries=()=>[];export const glossaryIn=()=>[];export const askTranslator=async(input,o)=>{const K=globalThis.__ko;K.calls.push({input,system:o.system});return typeof K.answer==='function'?K.answer(input):K.answer;};`),
-        './core.js': encoded(`export const getMeta=()=>({});export const hasChat=()=>true;`),
+        './core.js': encoded(`export const getMeta=()=>({});export const phoneMeta=()=>({});export const hasChat=()=>true;`),
         './ai.js': encoded(`export const askDraft=async(input,o)=>{const K=globalThis.__ko;K.voiceCalls.push({input,system:o.system});return typeof K.voices==='function'?K.voices(input):K.voices;};`) };
     const tr = await import(encoded(trSrc.replace(/from '([^']+)'/g, (all, k) => `from '${trMap[k] || k}'`)));
     const K = (globalThis.__ko = { calls: [], voiceCalls: [] });
