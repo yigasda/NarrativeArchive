@@ -11,7 +11,7 @@ const encoded = s => 'data:text/javascript;base64,' + Buffer.from(s).toString('b
 const href = f => pathToFileURL(new URL(`../src/${f}`, import.meta.url).pathname).href;
 const T = (globalThis.__archTest = { chat: [], answers: [] });
 const map = { './extract.js': cleanMessageURL,
-    './phonesync.js': href('phonesync.js'), './phoneparse.js': href('phoneparse.js'), './phoneclock.js': href('phoneclock.js'), './phonemapcity.js': href('phonemapcity.js'), './phonesynclife.js': href('phonesynclife.js'), './phonesyncmoney.js': href('phonesyncmoney.js'), './finance.js': href('finance.js'),
+    './phonesync.js': href('phonesync.js'), './phoneparse.js': href('phoneparse.js'), './phoneclock.js': href('phoneclock.js'), './phonemapcity.js': href('phonemapcity.js'), './placehoods.js': href('placehoods.js'), './phonesynclife.js': href('phonesynclife.js'), './phonesyncmoney.js': href('phonesyncmoney.js'), './finance.js': href('finance.js'),
     './phoneprofile.js': href('phoneprofile.js'),
     './phonestory.js': encoded(`export const phoneTarget=()=>({scope:phoneChatScope(),check(){}});export const phoneChatScope=()=>globalThis.__archTest.scope||'test';`),
     './wealth.js': encoded(`export const ensureWealth=async()=>null;export const wealthBlock=()=>'';export const wealthDate=()=> '2026-10-26';export const wealthCheck=()=>null;export const addWealthFX=()=>{};`),
@@ -27,7 +27,7 @@ const map = { './extract.js': cleanMessageURL,
     './translate.js': encoded(`export const glossaryEntries=()=>[];export const glossaryPeople=()=>globalThis.__glossaryPeople||[];`), './world.js': encoded(`export const worldText=()=>'';`),
 };
 const src = await readFile(new URL('../src/phonedata.js', import.meta.url), 'utf8');
-const data = await import(encoded(src.replace(/from '([^']+)'/g, (all, k) => `from '${map[k] || k}'`)));
+const data = (await import('./phone2poison.mjs')).maybePoison(await import(encoded(src.replace(/from '([^']+)'/g, (all, k) => `from '${map[k] || k}'`))));
 // localStorage for the 복구 journal
 const store = new Map();
 globalThis.localStorage = { getItem: k => store.get(k) ?? null, setItem: (k, v) => store.set(k, v), removeItem: k => store.delete(k) };
@@ -417,12 +417,12 @@ test('dates written day first (26.10., 26/10/2026, Mo, 26.10.) read as October 2
     await withTrackers([{ ...trk(2, '21:45', 'Frankfurt · Küche'), date: '26.10.' }], async () => assert.equal(data.statusMoment(c.p).at, '10-26 21:45'));
 });
 
-test('a city of two words ("New York · flat", "New York City") is the owner\'s; a station or a district alone is not guessed', async () => {
+test('a city of two words ("New York · flat", "New York City") is the owner\'s; a station or a district is its city\'s when the phone knows that city', async () => {
     const c = setup([say('Ren', 'a'), say('Mara', 'b'), say('Ren', 'c')]);
     c.p.now = '10-26 08:00'; c.p.year = 2026;
     c.p.where = { at: 1, people: [{ name: 'Ren', city: 'New York', names: ['New York', '뉴욕'], lives: 'US', tz: 'America/New_York' },
         { name: 'Mara', city: 'Seoul', names: ['Seoul', '서울'], lives: 'KR', tz: 'Asia/Seoul' }] };
-    for (const [place, home] of [["New York · Ren's flat", true], ["New York City · Ren's flat", true], ['뉴욕 맨해튼 · 집', true], ['Seoul Station · platform', null]])
+    for (const [place, home] of [["New York · Ren's flat", true], ["New York City · Ren's flat", true], ['뉴욕 맨해튼 · 집', true], ['Seoul Station · platform', false], ['Manhattan · 집', true], ['Kreuzberg · Bar', null]])
         await withTrackers([trk(2, '09:10', place)], async () => assert.equal(data.sceneHome(c.p, place, c.m), home, place));
     // the owner's city from the weather app alone: its first word in a status line is the owner's
     const q = { owner: 'Ren', now: '10-26 08:00', year: 2026, life: { weather: { here: { place: 'Frankfurt am Main' }, cities: [{ name: 'Frankfurt am Main', tz: 'Europe/Berlin' }, { name: 'Seoul', ko: '서울', tz: 'Asia/Seoul' }] } } };
@@ -713,7 +713,7 @@ test('반영\'s everyday records: so many an answer and a day in each app, texts
     assert.ok(!T.sys.includes('only when the archive or chat shows the owner recorded one'));
     assert.ok(data.AI_SYS_PHONE.includes('only when the archive or chat shows the owner recorded one'));
     // (making a phone: what happened in the chat after the archive counts too)
-    assert.ok(data.AI_SYS_PHONE.includes('only if the archive, lorebook or chat has them') && data.AI_SYS_PHONE.includes('The diary holds only what the archive or chat shows happened'));
+    assert.ok(data.AI_SYS_PHONE.includes('only if the archive, lorebook or chat has them') && data.AI_SYS_PHONE.includes("A diary entry is a day the archive or chat shows, in the owner's own feelings about it; no new secrets or events.") && !/no new feelings|has no "everyday" entries/.test(data.AI_SYS_PHONE));
     assert.match(T.sys, /PEOPLE AROUND \(people in their life, where things stand\)/);
     assert.match(T.input, /\[PEOPLE AROUND\]\n- Ivo \(이보\): Ren's older brother/);
     // the rest of the day: Ivo up to 16 texts a day, notes up to 2
@@ -820,7 +820,7 @@ test('the reflection\'s own instructions: one list of records, the story\'s and 
     assert.ok(on.includes('PHONE NOW and ORDERS AND TICKETS') === false && data.coreSystem({ life: true, wallet: true }).includes('STORY NOW, PHONE NOW and ORDERS AND TICKETS: a parcel'));
     // (STEP 3: the cases)
     assert.match(on, /2\. A plan made → "calendar"\. A PHONE NOW plan the messages move → its calendar record again with "was"; called off or undone \(an order cancelled\) → "cancelled": true\. No booking, trip or purchase the story lacks\./);
-    assert.match(on, /3\. Each scene where the owner is somewhere → one "visit"\./);
+    assert.match(on, /3\. Each place the owner is at, in order, → one "visit": a scene that moves \(from the office to the station to a hotel in another city\) gives one at each\./);
     assert.match(on, /→ that record\. A text exchange the messages already show: only its last 4 messages\./);
     assert.ok(on.includes('- Each text in the language its writer really uses, as long as that person really writes.') && !on.includes('Texts short'));
     // (no Korean asked of the reflection: the app adds it after, phonetr.js)

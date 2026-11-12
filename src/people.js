@@ -24,8 +24,14 @@ export function headingPlaces(title, cals) {
     return text.split(/,|;/).flatMap(x => x.split(/\s*(?:→|->|⇒)\s*/)).map(x => x.trim()).filter(Boolean)
         .filter(x => !PLACE_SKIP.test(x) && !TIME_WORDS.some(([re]) => re.test(x) && x.split(/\s+/).length <= 3))
         .filter(x => !/^(?:month of|after|before|until|during|into)\b/i.test(x))
+        // a span of hours however long ("night to next afternoon", "early morning until late evening"): every word a
+        // time word or what joins them; and two places at once ("Seoul and Frankfurt": a call between two cities) is no
+        // place anyone went
+        .filter(x => !timeSpan(x) && !/\s(?:and|&)\s|\s&|&\s/i.test(x))
         .map(x => x.replace(/^(?:the|a|an)\s+/i, '').trim()).filter(Boolean);
 }
+const SPAN_JOIN = /^(?:to|till|until|through|thru|into|from|next|the|early|late|mid|following|same|of|in)$/i;
+const timeSpan = x => { const w = x.split(/[\s-]+/).filter(Boolean); return w.length > 1 && w.some(t => TIME_WORDS.some(([re]) => re.test(t))) && w.every(t => SPAN_JOIN.test(t) || TIME_WORDS.some(([re]) => re.test(t))); };
 
 // The roster is the STATE character headings plus names added by hand (m.people). Faces are kept in the global settings by name,
 // so they follow the story into the next chat: an uploaded picture shrunk to 96px, or the SillyTavern character/persona avatar.
@@ -158,7 +164,7 @@ export async function cropFace(file) {
     stage.addEventListener('pointercancel', up);
     draw();
     try {
-        const res = await c.callGenericPopup($root, c.POPUP_TYPE.CONFIRM, '', { okButton: '이대로 쓰기', cancelButton: '취소', leftAlign: true });
+        const res = await c.callGenericPopup($root, c.POPUP_TYPE.CONFIRM, '', { okButton: '이대로 쓰기', cancelButton: '취소', leftAlign: true, allowVerticalScrolling: true });
         if (res !== c.POPUP_RESULT.AFFIRMATIVE && res !== true) return null;
         return { sx: -tx / scale, sy: -ty / scale, ss: V / scale };
     } finally { URL.revokeObjectURL(url); }

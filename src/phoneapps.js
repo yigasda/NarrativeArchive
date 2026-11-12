@@ -6,7 +6,7 @@ import { investmentDate } from './investdata.js';
 import { profileChoices, phoneDataInfo } from './phoneprofile.js';
 import { faceHtml, nameKey, nameRe, peopleData, peopleList, personLine } from './people.js';
 import { autopic, autopicPeople, drafting, drawing, looksOf, writing } from './phoneai.js';
-import { bigClock, byStory, clockOf, COUNTRIES, fmtDate, fmtTime, fullDate, gapDays, hasKo, koOn, lastTime, listTime, localeOf, loreOff, MOODS, pad, parts, phoneLore, placesOf, REMAKE, rowDay, savedName, dateOrderOf, placeInfo, screenHolderLabel, screenHolderChoices } from './phonedata.js';
+import { bigClock, byStory, mailAnswered, statusAt, clockOf, COUNTRIES, fmtDate, fmtTime, fullDate, gapDays, hasKo, koOn, lastTime, listTime, localeOf, loreOff, MOODS, pad, parts, phoneLore, REMAKE, rowDay, savedName, dateOrderOf, placeInfo, screenHolderLabel, screenHolderChoices } from './phonedata.js';
 import { threadNew } from './phonehome.js';
 import { screenView } from './phonescreen.js';
 import { BUSY, pinLayer, pinSpots, pinSvg, STAY, stripSvg, townKinds, townPlace, townSvg } from './phonemapart.js';
@@ -203,7 +203,7 @@ const delRow = (kind, i, label) => `<div class="ax_card ax_delcard"><button type
 // a list row that slides left to show 삭제 (메시지 · 메일 · 통화)
 const swipeRow = (kind, i, row) => `<div class="ax_swp"><button type="button" class="na_ph_rm ax_swdel" data-kind="${kind}" data-i="${esc(String(i))}">${ax('trash2', 21, 'currentColor', 2)}<span>삭제</span></button>${row}</div>`;
 const delBtn = (kind, i, cls, inner) => `<button type="button" class="na_ph_rm ${cls}" data-kind="${kind}" data-i="${esc(String(i))}" aria-label="지우기">${inner}</button>`;
-export const AXB = { clock: 'clockc', timer: 'clockc', wclock: 'clockc', alarm: 'clockc', health: 'health', hsteps: 'health', hsleep: 'health', hcmp: 'health', hwork: 'health', hheart: 'health', hwater: 'health', hweight: 'health', files: 'files', folder: 'files', file: 'files', weather: 'sky', wcity: 'sky', wlist: 'sky', dlv: 'dlv', delivery: 'dlv', dshop: 'dlv', dcart: 'dlv', dorders: 'dlv', dorder: 'dlv', ditem: 'dlv', dpay: 'dlv', drate: 'dlv', setprofile: 'slate', ivnotes: 'invest', ivschedule: 'invest', ivhistory: 'invest', invest: 'invest', stock: 'invest', ivactivity: 'invest', ivwatch: 'invest', ivstakes: 'invest', ivcash: 'invest', ivprices: 'invest', msg: 'blue', thread: 'blue', call: 'blue', callmiss: 'blue', callwho: 'blue', contacts: 'blue', contact: 'blue', draft: 'blue', groupinfo: 'blue', page: 'sky', tabs: 'sky', marks: 'sky', history: 'sky', bank: 'bank', acct: 'bank', tx: 'bank', fixed: 'bank', banknote: 'bank', banksend: 'bank', stmt: 'bank', txdoc: 'bank', bankmore: 'bank', wallet: 'wallet', card: 'wallet', pass: 'wallet', shop: 'shop', order: 'shop', track: 'shop', voice: 'voice', voiceone: 'voice', photo: 'apri', photoone: 'apri', note: 'butter', noteone: 'butter', search: 'sky', searchone: 'sky', cal: 'brick', calone: 'brick', mail: 'sky', mailone: 'sky', set: 'slate', settheme: 'slate', setdate: 'slate', setscreenholder: 'slate', setplace: 'slate', prep: 'slate', setvoice: 'slate', setvoiceadd: 'slate', setlore: 'slate', setwho: 'slate', setremake: 'slate', setsync: 'slate', setsyncpick: 'slate', stime: 'stime', cam: 'apri', map: 'blue', mapq: 'blue', mapc: 'blue' };
+export const AXB = { clock: 'clockc', timer: 'clockc', wclock: 'clockc', alarm: 'clockc', health: 'health', hsteps: 'health', hsleep: 'health', hcmp: 'health', hwork: 'health', hheart: 'health', hwater: 'health', hweight: 'health', files: 'files', folder: 'files', file: 'files', weather: 'sky', wcity: 'sky', wlist: 'sky', dlv: 'dlv', delivery: 'dlv', dshop: 'dlv', dcart: 'dlv', dorders: 'dlv', dorder: 'dlv', ditem: 'dlv', dpay: 'dlv', drate: 'dlv', setprofile: 'slate', ivnotes: 'invest', ivschedule: 'invest', ivhistory: 'invest', invest: 'invest', stock: 'invest', ivactivity: 'invest', ivwatch: 'invest', ivstakes: 'invest', ivcash: 'invest', ivprices: 'invest', msg: 'blue', thread: 'blue', call: 'blue', callmiss: 'blue', callwho: 'blue', contacts: 'blue', contact: 'blue', draft: 'blue', groupinfo: 'blue', page: 'sky', tabs: 'sky', marks: 'sky', history: 'sky', bank: 'bank', acct: 'bank', tx: 'bank', fixed: 'bank', banknote: 'bank', banksend: 'bank', stmt: 'bank', txdoc: 'bank', bankmore: 'bank', wallet: 'wallet', card: 'wallet', pass: 'wallet', shop: 'shop', order: 'shop', track: 'shop', voice: 'voice', voiceone: 'voice', photo: 'apri', photoone: 'apri', note: 'butter', noteone: 'butter', search: 'sky', searchone: 'sky', cal: 'brick', calone: 'brick', mail: 'sky', mailone: 'sky', set: 'slate', settheme: 'slate', setdate: 'slate', setscreenholder: 'slate', setplace: 'slate', prep: 'slate', setvoice: 'slate', setvoiceadd: 'slate', setdraft: 'slate', setdraftmodel: 'slate', setlore: 'slate', setwho: 'slate', setremake: 'slate', setsync: 'slate', setsyncpick: 'slate', stime: 'stime', cam: 'apri', map: 'blue', mapq: 'blue', mapc: 'blue' };
 export const AXB_C = { clockc: ['#f5a524', '#3a3220'], health: ['#e0405f', '#fbe3e8'], files: ['#2f6fbf', '#dfeaf8'], dlv: ['#1fa8a3', '#d9f4f3'], invest: ['#17695d', '#d9eee5'], blue: ['#2f6bff', '#e1e9ff'], apri: ['#a65a4e', '#f7e3d7'], butter: ['#7f6a22', '#f6edcf'], sky: ['#3f6a9e', '#dde8f4'], brick: ['#a14a42', '#f3dcd9'], slate: ['#454d5a', '#e6e8ec'], bank: ['#2c4a80', '#e2e9f5'], wallet: ['#3d4a66', '#e3e7ef'], shop: ['#2f7d74', '#d9efec'], voice: ['#8a5a2e', '#f2e7d6'], stime: ['#3f8fd8', '#e3f1fd'] };
 // people outside the archive get a letter on one of the home icons' colours
 const AX_AV = ['#8faed1', '#a699c9', '#d89f98', '#89b892', '#d494a7', '#a2a7af', '#dcc680'];
@@ -557,35 +557,45 @@ export function calOne(p, now, k, m) {
       ${axInd()}`;
 }
 
-// 메일
-export function mailScreen(p, now) {
-    const ms = (p.mails || []).map((x, k) => [x, k]).reverse(), unread = ms.filter(([x]) => x.unread).length;
+// 메일 (docs/mockups/phone-mail thread, A's lists + D's reply): 받은편지함 · 보낸편지함 as the call app's bottom tabs; a mail
+// the owner sent has "to" (its from is the owner) and shows "받는 사람: {to}". A reply (phonedata.js mailAnswered) shows the mail it
+// answers as a grey quote; the mail answered lights the reply arrow, which opens the reply. The list's preview is the original
+// only (its Korean shows when the mail is opened)
+const mailSent = x => !!String(x?.to || '').trim();
+const mailWho = x => (mailSent(x) ? x.to : x.from);
+export function mailScreen(p, now, box = '') {
+    const sent = box === 'sent', all = (p.mails || []).map((x, k) => [x, k]).reverse(), ms = all.filter(([x]) => mailSent(x) === sent);
+    const unread = sent ? 0 : ms.filter(([x]) => x.unread).length;
     return `${axBar(p, now)}
       ${axTop(axCb('home'), axKp(p))}
       <div class="ax_scroll">
-        ${axH1('받은편지함', unread ? `안 읽음 ${unread}` : '')}
+        ${axH1(sent ? '보낸편지함' : '받은편지함', unread ? `안 읽음 ${unread}` : '')}
         ${axFind()}
         ${ms.length ? `<div class="ax_card">${ms.map(([x, k]) => swipeRow('mail', k, `
-          <button type="button" class="ax_rw ax_rwm" data-go="mailone" data-i="${k}">${x.unread ? '<i class="ax_dot"></i>' : ''}${axLetter(x.from, 42)}<span class="ax_tx">
-            <span class="ax_h"><b>${esc(x.from)}</b><small class="cg_num">${esc(listTime(p, x.time))}</small></span>
-            <span class="ax_s ${x.unread ? 'u' : ''}">${esc(x.subject)}</span><span class="ax_p">${axKo(x.text.replace(/\s+/g, ' '), x.ko ? x.ko.replace(/\s+/g, ' ') : '')}</span></span></button>`)).join('')}</div>` : '<div class="ax_empty">메일이 없어요</div>'}
-        <i class="ax_pad"></i>
+          <button type="button" class="ax_rw ax_rwm" data-go="mailone" data-i="${k}">${x.unread && !sent ? '<i class="ax_dot"></i>' : ''}${axLetter(mailWho(x), 42)}<span class="ax_tx">
+            <span class="ax_h"><b>${sent ? '<span class="ax_mto">받는 사람: </span>' : ''}${esc(mailWho(x))}</b><small class="cg_num">${esc(listTime(p, x.time))}</small></span>
+            <span class="ax_s ${x.unread && !sent ? 'u' : ''}">${esc(x.subject)}</span><span class="ax_p">${esc(x.text.replace(/\s+/g, ' '))}</span></span></button>`)).join('')}</div>` : `<div class="ax_empty">${sent ? '보낸 메일이 없어요' : '메일이 없어요'}</div>`}
+        <i class="ax_pad big"></i>
       </div>
+      <div class="ax_dock"><button type="button" class="${sent ? '' : 'on'}" data-go="mail">받은편지함</button><button type="button" class="${sent ? 'on' : ''}" data-go="mail" data-i="sent">보낸편지함</button></div>
       ${axInd()}`;
 }
 export function mailOne(p, now, k) {
-    const x = (p.mails || [])[k];
+    const list = p.mails || [], x = list[k];
     if (!x) return mailScreen(p, now);
+    const sent = mailSent(x), was = mailAnswered(p, x), reply = list.findIndex(y => y !== x && mailAnswered(p, y) === x);
+    const quote = was ? `<div class="ax_mq"><small class="cg_num">${esc(fmtDate(p, was.time, true))} ${esc(fmtTime(p, was.time))} · ${esc(was.from)}:</small>${esc(was.text)}</div>` : '';
     return `${axBar(p, now)}
-      ${axTop(axCb('mail'), axKp(p))}
+      ${axTop(axCb(sent ? 'mail:sent' : 'mail'), axKp(p))}
       <div class="ax_scroll">
-        <div class="ax_card ax_rw ax_mfrom">${axLetter(x.from, 44)}<span class="ax_tx"><b>${esc(x.from)}</b><span class="ax_p">받는 사람: ${esc(p.owner)}</span></span><small class="cg_num">${esc(fmtDate(p, x.time, true))} ${esc(fmtTime(p, x.time))}</small></div>
+        <div class="ax_card ax_rw ax_mfrom">${axLetter(x.from, 44)}<span class="ax_tx"><b>${esc(x.from)}</b><span class="ax_p">받는 사람: ${esc(sent ? x.to : p.owner)}</span></span><small class="cg_num">${esc(fmtDate(p, x.time, true))} ${esc(fmtTime(p, x.time))}</small></div>
         <div class="ax_msub">${axKo(x.subject, x.ks)}</div>
         <div class="ax_mbody">${esc(x.text)}</div>
+        ${quote}
         ${x.ko && koOn() ? `<div class="ax_mko">${esc(x.ko)}</div>` : ''}
         <i class="ax_pad big"></i>
       </div>
-      <div class="ax_ntool ax_mtool">${delBtn('mail', k, 'ax_ntb', ax('trash2', 22, 'currentColor', 1.9))}<span class="ax_ntc cg_num">받은편지함</span><span class="ax_ntb">${ax('reply', 22, 'currentColor', 1.9)}</span></div>
+      <div class="ax_ntool ax_mtool">${delBtn('mail', k, 'ax_ntb', ax('trash2', 22, 'currentColor', 1.9))}<span class="ax_ntc cg_num">${sent ? '보낸편지함' : '받은편지함'}</span>${reply >= 0 ? `<button type="button" class="ax_ntb" data-go="mailone" data-i="${reply}" aria-label="답장 보기">${ax('reply', 22, 'currentColor', 1.9)}</button>` : `<span class="ax_ntb off">${ax('reply', 22, 'currentColor', 1.9)}</span>`}</div>
       ${axInd()}`;
 }
 
@@ -782,43 +792,80 @@ export function prepScreen(p, now, m, ui = {}) {
     const blue = (t, cls, off = false) => `<div class="ax_card"><button type="button" class="ax_rw ax_rwn ${cls}"${off ? ' disabled' : ''}><span class="ax_tx"><span class="ax_n ${off ? 'ax_prep_off' : 'ax_blue'}">${t}</span></span></button></div>`;
     const wait = (n, sub) => `<div class="ax_card"><div class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_n ax_prep_wait">${n}</span><span class="ax_p ax_prep_sub">${sub}</span></span></div></div>`;
     const seg = `<span class="ax_dseg">${[['md', '월.일'], ['dm', '일.월']].map(([v, t]) => `<span role="button" tabindex="0" class="na_ph_dord${ui.order === v ? ' on' : ''}" data-v="${v}">${t}</span>`).join('')}</span>`;
+    // 1 · 초안 모델 first (docs/mockups/phone-prep-open steps): everything under it waits for it, the model reads the rest
+    const draft = ui.draft !== false;
+    const model = `<div class="ax_sec">1 · 초안 모델</div><div class="ax_card">${row('초안 모델', draft ? val(ui.draftName || '') : `<span class="ax_v"><span class="ax_blue">정하기</span></span>${axChev}`, 'na_ph_prepdraft')}</div>
+        <div class="ax_foot">폰을 채우고 반영하는 모델이에요. 확장 설정 › AI 모델과 같아요.</div>`;
     const steps = `
-        <div class="ax_sec">1 · 인물 정보</div><div class="ax_card">${row('프로필 연동', val(ui.profile || '연결 안 함'), 'na_ph_prepprofile')}</div>
-        <div class="ax_sec">2 · 참고 로어북 (선택)</div><div class="ax_card">${row('참고 로어북', val(ui.lore || '없음'), 'na_ph_makelore')}</div>
+        <div class="ax_sec">2 · 인물 정보</div><div class="ax_card">${row('프로필 연동', val(ui.profile || '연결 안 함'), 'na_ph_prepprofile')}</div>
+        <div class="ax_sec">3 · 참고 로어북 (선택)</div><div class="ax_card">${row('참고 로어북', val(ui.lore || '없음'), 'na_ph_makelore')}</div>
         <div class="ax_foot">안 고르면 아카이브와 본문만 읽어요.</div>
-        <div class="ax_sec">3 · 용어집 (선택)</div><div class="ax_card">${row('번역 용어집', val(ui.gloss ? `${ui.gloss}개` : '없음'), 'na_ph_gloss')}</div>
+        <div class="ax_sec">4 · 용어집</div><div class="ax_card">${row('번역 용어집', val(ui.gloss ? `${ui.gloss}개` : '없음'), 'na_ph_gloss')}</div>
         <div class="ax_foot">적어두면 이름이 그대로 나와요.</div>
-        <div class="ax_sec">4 · 날짜</div><div class="ax_card">${row('날짜 읽는 법', seg, '', 'div')}${row('메신저 시간대', val(ui.holder || '미설정'), 'na_ph_prepholder')}</div>`;
+        <div class="ax_sec">5 · 날짜</div><div class="ax_card">${row('날짜 읽는 법', seg, '', 'div')}${row('메신저 시간대', val(ui.holder || '미설정'), 'na_ph_prepholder')}</div>`;
     const sum = [ui.profile || '인물 정보 없음', ui.lore && ui.lore !== '없음' ? `로어북 ${ui.loreN}권` : '로어북 없음', `용어 ${ui.gloss || 0}개`, ui.order === 'dm' ? '일.월' : '월.일', ui.holder || '메신저 미설정'].join(' · ');
     const link = ui.linking ? `${busyHtml} 연동하는 중` : '';
     let body;
     if (!ui.pre) {
         body = `${steps}
-        <div class="ax_foot">위치는 1~4를 읽어서 정해요.</div>
-        <div class="ax_prep_gap"></div>${blue(link || '다음 · 위치 연동', 'na_ph_preplink', ui.linking)}
-        <div class="ax_sec">5 · 위치</div>${wait('위치', '위 단계를 마치면 열려요 · 연동한 뒤 직접 고칠 수 있어요')}
-        <div class="ax_sec">6 · 이야기 연도</div>${wait('연도', '위치 다음에 정해요')}
+        <div class="ax_foot">위치는 1~5를 읽어서 정해요.</div>
+        <div class="ax_prep_gap"></div>${blue(draft ? link || '다음 · 위치 연동' : '초안 모델을 먼저 정해 주세요', 'na_ph_preplink', ui.linking || !draft)}
+        <div class="ax_sec">6 · 위치</div>${wait('위치', '위 단계를 마치면 열려요 · 연동한 뒤 직접 고칠 수 있어요')}
+        <div class="ax_sec">7 · 이야기 연도</div>${wait('연도', '위치 다음에 정해요')}
         <div class="ax_prep_gap"></div>${blue('이대로 폰 만들기', 'na_ph_prepmake', true)}`;
     } else {
         const o = placeInfo(p).owner, on = !p.noYear;
         const warn = ui.stale === 'profile' ? '인물 정보가 바뀌었어요. 위치를 다시 연동해 주세요.' : ui.stale === 'lore' ? '참고 로어북이 바뀌었어요. 위치를 다시 연동해 주세요.' : !o.city || !o.tz ? '이야기에서 불러오지 못했어요. 폰 주인의 위치를 적어 주세요.' : '';
         const step = (dv, t) => `<span role="button" tabindex="0" class="ax_ystep na_ph_ystep" data-d="${dv}" aria-label="${dv < 0 ? '한 해 전' : '한 해 뒤'}">${t}</span>`;
-        body = `${ui.open ? `${steps}<div class="ax_card">${row('1~4 단계', val('접기'), 'na_ph_prepopen')}</div>` : `<div class="ax_card">${row('1~4 단계', val('다시 보기'), 'na_ph_prepopen')}</div>`}
+        body = `${ui.open ? `${steps}<div class="ax_card">${row('2~5 단계', val('접기'), 'na_ph_prepopen')}</div>` : `<div class="ax_card">${row('2~5 단계', val('다시 보기'), 'na_ph_prepopen')}</div>`}
         <div class="ax_foot">${ui.open ? '' : `${esc(sum)}<br>`}바꾸면 위치를 다시 연동해요.</div>
-        <div class="ax_sec">5 · 위치</div>
+        <div class="ax_sec">6 · 위치</div>
         ${placeBody(p, now, warn)}
         ${ui.stale || !o.city || !o.tz || placeInfo(p).failed ? blue(link || '다시 연동', 'na_ph_preplink', ui.linking) : ''}
-        <div class="ax_sec">6 · 이야기 연도</div>
+        <div class="ax_sec">7 · 이야기 연도</div>
         <div class="ax_card"><button type="button" class="ax_rw ax_rwn na_ph_yearshow"><span class="ax_tx"><span class="ax_n">연도 표시</span></span><span class="ax_sw ${on ? 'on' : ''}"></span></button>
           ${on ? row('연도', `<span class="ax_ys">${step(-1, '−')}<b class="cg_num na_ph_yval">${esc(String(p.year || ''))}</b>${step(1, '+')}</span>`, '', 'div') : ''}</div>
         <div class="ax_foot">연도를 알아야 요일이 맞게 나와요. 연도 없는 이야기만 꺼 주세요.</div>
-        <div class="ax_prep_gap"></div>${blue(ui.making ? `${busyHtml} 폰 만드는 중` : '이대로 폰 만들기', 'na_ph_prepmake', ui.linking || ui.making)}`;
+        <div class="ax_prep_gap"></div>${blue(ui.making ? `${busyHtml} 폰 만드는 중` : draft ? '이대로 폰 만들기' : '초안 모델을 먼저 정해 주세요', 'na_ph_prepmake', ui.linking || ui.making || !draft)}`;
     }
     return `${axBar(p, now)}
       ${axTop(`<button type="button" class="ax_cb na_ph_prepclose" aria-label="닫기">${ax('back', 18, 'currentColor', 2.3)}</button>`)}
       <div class="ax_scroll">${axH1('폰 만들기 준비')}
         <div class="ax_foot ax_prep_lead">${esc(p.owner)}의 폰을 위에서부터 채우고 만들어요.</div>
-        ${body}
+        ${model}
+        <div class="${draft ? '' : 'ax_prep_dim'}">${body}</div>
+        ${ui.noArch ? `<div class="ax_sec">아직 아카이브가 없어요</div><div class="ax_card"><button type="button" class="ax_rw ax_rwn na_ph_gocompress"><span class="ax_tx"><span class="ax_n ax_blue">압축하기</span></span></button></div><div class="ax_foot">압축해 두면 폰이 더 정확하고 싸게 만들어져요.</div>` : ''}
+        <i class="ax_pad"></i>
+      </div>
+      ${axInd()}`;
+}
+// 초안 모델 (docs/mockups/phone-prep-open draftset C): the model in use as a card (its name, the way · address, the last
+// test that answered), 연결 테스트, then what to change — the same values as 확장 설정 › AI 모델 › 초안 모델. d from phone.js
+export function setDraft(p, now, d = {}, back = 'prep') {
+    const row = (n, v, k) => `<div role="button" tabindex="0" class="ax_rw ax_rwn na_ph_drset" data-k="${k}"><span class="ax_tx"><span class="ax_n">${n}</span></span><span class="ax_v">${esc(v)}</span>${axChev}</div>`;
+    const way = { custom: '커스텀 API', vertex: 'Gemini · Vertex AI' }[d.mode] || '쓰지 않음', on = d.mode === 'custom' || d.mode === 'vertex';
+    const sub = d.mode === 'custom' ? [way, d.host].filter(Boolean).join(' · ') : d.mode === 'vertex' ? [way, d.vxLocation].filter(Boolean).join(' · ') : '정하면 폰을 채우고 반영할 수 있어요';
+    const fields = d.mode === 'custom' ? `${row('모델', d.model || '불러와서 고르기', 'model')}${row('주소', d.url || '정하기', 'url')}${row('API 키', d.keyTail || '없음', 'key')}${row('형식', { openai: 'OpenAI 호환', anthropic: 'Anthropic' }[d.fmt] || '주소 보고 자동', 'fmt')}`
+        : d.mode === 'vertex' ? `${row('모델', d.vxModel || '불러와서 고르기', 'vxModel')}${row('지역', d.vxLocation || '실리태번 설정 따라', 'vxLocation')}` : '';
+    return `${axBar(p, now)}
+      ${axTop(axCb(back))}
+      <div class="ax_scroll">${axH1('초안 모델')}
+        <div class="ax_card ax_drnow"><div class="dk">지금 쓰는 모델</div><b>${esc(on ? d.label || '' : '없음')}</b><div class="ds">${esc(sub)}</div>${on && d.okAt ? `<em>연결 확인됨 · ${esc(d.okAt)}</em>` : ''}</div>
+        ${on ? `<div class="ax_card"><div role="button" tabindex="0" class="ax_rw ax_rwn na_ph_drtest"><span class="ax_tx"><span class="ax_n ax_blue">연결 테스트</span></span></div></div>` : ''}
+        <div class="ax_sec">바꾸기</div>
+        <div class="ax_card">${row('방식', way, 'mode')}${fields}</div>
+        <div class="ax_foot">폰을 채우고 반영하는 모델이에요. 확장 설정 › AI 모델 › 초안 모델과 같은 값이에요.</div>
+        <i class="ax_pad"></i>
+      </div>
+      ${axInd()}`;
+}
+// 초안 모델 › 모델: the models the address (or SillyTavern's Vertex) lists, one to pick — never typed
+export function setDraftModels(p, now, ids = [], cur = '', reload = false) {
+    return `${axBar(p, now)}
+      ${axTop(axCb('setdraft'))}
+      <div class="ax_scroll">${axH1('모델', ids.length ? `${ids.length}개` : '')}
+        ${reload ? '<div class="ax_card"><div role="button" tabindex="0" class="ax_rw ax_rwn na_ph_drload"><span class="ax_tx"><span class="ax_n ax_blue">목록 다시 불러오기</span></span></div></div>' : ''}
+        <div class="ax_card">${ids.length ? ids.map(id => `<div role="button" tabindex="0" class="ax_rw ax_rwn na_ph_drpick" data-id="${esc(id)}"><span class="ax_tx"><span class="ax_n">${esc(id)}</span></span>${id === cur ? `<span class="ax_radio on">${ax('check', 14, '#fff', 3.4)}</span>` : ''}</div>`).join('') : '<div class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_p ax_kvp">불러온 모델이 없어요</span></span></div>'}</div>
         <i class="ax_pad"></i>
       </div>
       ${axInd()}`;
@@ -893,9 +940,22 @@ export function setLore(p, now, m, ui) {
       </div>
       ${axInd()}`;
 }
+// the camera's place: only the scene now — a status window on the newest shown message (or the newest character reply),
+// none from further back or hidden by a compression; and only the owner's own scene (statusAt: home, or the city they
+// are in), not the other end of a call
+function camPlace(p) {
+    const chat = ctx().chat || [], t = recentTrackers(1, { visibleOnly: true })[0];
+    if (!t?.place) return null;
+    const shown = [...chat.keys()].filter(i => chat[i] && !chat[i].is_system), last = shown.at(-1), reply = shown.filter(i => !chat[i].is_user).at(-1);
+    if (t.i !== last && t.i !== reply) return null;
+    const st = statusAt(p);
+    if (!st || st.i !== t.i) return null;
+    const here = String(placeInfo(p).owner?.city || '').trim().toLowerCase();
+    return st.home || (st.known && here && String(st.city || '').trim().toLowerCase() === here) ? t : null;
+}
 export function camScreen(p, now, k, busy) {
     const shot = k >= 0 ? p.photos[k] : null, last = p.photos[p.photos.length - 1], th = shot || last;
-    const t = recentTrackers(1)[0];
+    const t = camPlace(p);
     const modes = '<div class="ax_modes"><span>동영상</span><span class="on">사진</span><span>인물</span></div>';
     const bar = `<div class="ax_cbar"><button type="button" class="ax_cthumb" data-go="photo" aria-label="사진" style="--axbg: ${axFlat(th?.mood || 'green')}">${th?.img ? `<img src="${esc(th.img)}" alt="">` : ''}</button><button type="button" class="ax_shut na_ph_shutter" aria-label="찍기" ${busy ? 'disabled' : ''}><span>${busy ? busyHtml : ''}</span></button><span class="ax_flip" aria-hidden="true">${ax('flip', 22, '#fff')}</span></div>`;
     const top = pill => `<div class="ax_camtop">${ax('bolt', 22, '#fff')}<span class="ax_pill">${pill}</span><button type="button" class="ax_back" data-go="home" aria-label="닫기">${ax('x', 22, '#fff', 2.4)}</button></div>`;
@@ -913,8 +973,8 @@ export function camScreen(p, now, k, busy) {
       ${modes}${bar}${axInd('#fff')}`;
 }
 
-// 지도: where the owner was, newest first — the archive's headings (placesOf) and the visits the making and the reflections
-// read (p.visits), one row a place (nameKey), grouped by the city it is in: how many times, and who was there (the
+// 지도: where the owner was, newest first — the visits the making and the reflections read (p.visits; the archive's
+// headings are not read here: they doubled the visits and took time spans for places), one row a place (nameKey), grouped by the city it is in: how many times, and who was there (the
 // visits' "with"; a name with them at every place says nothing and is left out). No AI here
 // 과 / 와 after a name: by its Korean spelling (the glossary's, if there is one); a Latin name ending in l, m, n reads with
 // a final consonant (Ren → 렌과), the others without (Ivo → 이보와)
@@ -924,12 +984,7 @@ const waOf = (m, n) => { const ko = glossaryEntries(m).find(e => e.src.toLowerCa
 const storyCmp = now => byStory(now, x => x);
 function mapPlaces(m, p) {
     const gone = new Set(p.hiddenPlaces || []), rows = new Map(), cmp = storyCmp(p.now);
-    const row = place => { const k = nameKey(place); if (!rows.has(k)) rows.set(k, { place, an: 0, vn: 0, with: [], city: '', last: '', day: '', time: '', date: '' }); return rows.get(k); };
-    for (const x of placesOf(m, p.owner)) {
-        if (gone.has(nameKey(x.place))) continue;
-        const r = row(x.place); r.an += x.n;
-        if (!r.last || cmp(x.day || '', r.last) > 0) Object.assign(r, { last: x.day || '', day: x.day, date: x.date, time: x.time });
-    }
+    const row = place => { const k = nameKey(place); if (!rows.has(k)) rows.set(k, { place, vn: 0, with: [], city: '', last: '', day: '', time: '', date: '' }); return rows.get(k); };
     for (const v of p.visits || []) {
         if (!v?.place || gone.has(nameKey(v.place))) continue;
         const r = row(v.place); r.vn++; if (v.home) r.home = true;
@@ -938,8 +993,7 @@ function mapPlaces(m, p) {
         if (v.city && (!r.city || cmp(t, r.last) >= 0)) r.city = v.city;
         if (!r.last || cmp(t, r.last) > 0) Object.assign(r, { last: t, day: t.slice(0, 5), date: '', time: fmtTime(p, t) });
     }
-    // (the archive and the reflections can tell the same visit: the larger count, not both added)
-    const all = [...rows.values()].map(r => ({ ...r, n: Math.max(r.an, r.vn) })).sort((a, b) => cmp(b.last || '', a.last || ''));
+    const all = [...rows.values()].map(r => ({ ...r, n: r.vn })).sort((a, b) => cmp(b.last || '', a.last || ''));
     // a place with no city of its own: the city it is, when it is one the visits name
     const cities = new Map(all.filter(r => r.city).map(r => [nameKey(r.city), r.city]));
     for (const r of all) if (!r.city && cities.has(nameKey(r.place))) r.city = cities.get(nameKey(r.place));
@@ -952,7 +1006,7 @@ function mapPlaces(m, p) {
     return all;
 }
 const homeOf = p => (p.visits || []).filter(x => x?.home && x.place).at(-1);
-// the month's outings, one a place a day: the visits (their day) and the archive's headings (their newest day); a day
+// the month's outings, one a place a day: the visits (their day); a day
 // at home is no outing
 function mapDays(m, p, pl) {
     const gone = new Set([...(p.hiddenPlaces || []), ...(p.visits || []).filter(x => x?.home && x.place).map(x => nameKey(x.place))]), seen = new Set(), out = [], city = new Map(pl.map(r => [nameKey(r.place), r.city]));
@@ -980,7 +1034,15 @@ function mapStrip(p, now, m, pl, sel) {
         const tk = day => nameKey(byDay.get(day).at(-1).city || ''), rs = runs(tk, 2).filter(r => r.k);
         const col = t => STAY[Math.max(0, STAY.length - towns.length + towns.findIndex(x => nameKey(x) === t))];
         blocks = rs.map(r => [r.a, r.b, col(r.k)]);
-        towns.forEach((t, k) => { const r = rs.filter(x => x.k === nameKey(t)).at(-1); if (r) labels.push([(r.a + r.b) / 2, t, nameKey(t) === sel, towns.length > 3 && k % 2 ? 'down' : 'up']); });
+        // each town named over its last stay; a name that would touch one already above goes under (and one that would touch
+        // both is left off rather than written over another)
+        const placed = { up: [], down: [] };
+        for (const t of towns) {
+            const r = rs.filter(x => x.k === nameKey(t)).at(-1); if (!r) continue;
+            const mid = (r.a + r.b) / 2, w = t.length * 0.62 * 11.5 / (326 / days) / 2, hit = side => placed[side].some(([x, h]) => Math.abs(x - mid) < h + w + 0.6);
+            const side = !hit('up') ? 'up' : !hit('down') ? 'down' : ''; if (!side) continue;
+            placed[side].push([mid, w]); labels.push([mid, t, nameKey(t) === sel, side]);
+        }
         sub = `${towns.length}도시`;
     } else {
         const rs = runs(() => 1), many = day => new Set(byDay.get(day).map(x => nameKey(x.place))).size;

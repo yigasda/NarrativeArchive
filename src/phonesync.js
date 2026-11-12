@@ -34,7 +34,13 @@ export function makeMark(chat, index) {
     return { index, user, fp: user >= 0 ? fp(chat[user].mes) : '', tail: index > user && chat[index] ? fp(chat[index].mes) : '', ...(index > user && user >= 0 && chat[index] ? { mid: chat.slice(user + 1, index).map(x => fp(x?.mes)) } : {}) };
 }
 // 'ok', 'moved' (by `delta`), or 'lost'
+// (the user's message it was made at, hidden since (archived: SillyTavern makes it a system message), is still that
+// message: hiding is not deleting. Looked for among the visible ones first, as always; among the hidden too only then)
 export function findMark(chat, mk) {
+    const r = findMark0(chat, mk, isUser);
+    return r.state === 'lost' && mk && mk.user >= 0 ? findMark0(chat, mk, x => !!x && x.is_user) : r;
+}
+function findMark0(chat, mk, isUser) {
     if (!mk) return { state: 'lost' };
     if (mk.user < 0) return { state: 'ok', delta: 0 };
     let r;

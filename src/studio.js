@@ -725,7 +725,7 @@ async function addToNote(text) {
       </div>`);
     $d.find('.na_st_ntta').val(String(text || '').replace(/\s+/g, ' ').trim());
     $d.on('click', '.na_st_ntseg button', function () { part = this.dataset.p; $d.find('.na_st_ntseg button').removeClass('on'); $(this).addClass('on'); });
-    const r = await c.callGenericPopup($d, c.POPUP_TYPE.CONFIRM, '', { okButton: '추가', cancelButton: '취소' });
+    const r = await c.callGenericPopup($d, c.POPUP_TYPE.CONFIRM, '', { okButton: '추가', cancelButton: '취소', allowVerticalScrolling: true });
     const v = String($d.find('.na_st_ntta').val() || '').trim();
     if (!(r === c.POPUP_RESULT.AFFIRMATIVE || r === true) || !v) return;
     const m = getMeta();

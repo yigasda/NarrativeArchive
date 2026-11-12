@@ -60,7 +60,7 @@ export function phoneStoryChoiceHtml(importing=false,hasSource=true) {
 }
 export async function choosePhoneStory({importing=false,hasSource=true}={}) {
     const c=ctx(),$body=$(phoneStoryChoiceHtml(importing,hasSource));
-    const r=await c.callGenericPopup($body,c.POPUP_TYPE.CONFIRM,'',{okButton:'적용',cancelButton:'취소'});
+    const r=await c.callGenericPopup($body,c.POPUP_TYPE.CONFIRM,'',{okButton:'적용',cancelButton:'취소',allowVerticalScrolling:true});
     if(r!==true && r!==c.POPUP_RESULT.AFFIRMATIVE) return null;
     return $body.find('input:checked').val()==='fresh'?'fresh':'keep';
 }

@@ -23,11 +23,13 @@ const stub = {
     './translate.js': encoded(`export const glossaryEntries=()=>globalThis.__glossaryEntries||[];export const glossaryPeople=()=>globalThis.__glossaryPeople||[];`), './world.js': encoded(`export const worldText=()=>'';`),
     './anniv.js': encoded(`export const datedRows=()=>[];`),
 };
-const real = ['phonesync.js', 'phoneparse.js', 'phoneclock.js', 'phonemapcity.js', 'phonesynclife.js', 'phonesyncmoney.js', 'finance.js', 'phoneprofile.js', 'phonefood.js', 'phonescreen.js'];
+const real = ['phonesync.js', 'phoneparse.js', 'phoneclock.js', 'phonemapcity.js', 'placehoods.js', 'phonesynclife.js', 'phonesyncmoney.js', 'finance.js', 'phoneprofile.js', 'phonefood.js', 'phonescreen.js'];
 const map = { './extract.js': cleanMessageURL, ...stub, ...Object.fromEntries(real.map(f => [`./${f}`, href(f)])) };
 const rewrite = async f => (await readFile(new URL(f, SRC), 'utf8')).replace(/from '([^']+)'/g, (all, k) => `from '${map[k] || k}'`);
 map['./phonedata.js'] = encoded(await rewrite('phonedata.js'));
-const data = await import(map['./phonedata.js']);
+const data = (await import('./phone2poison.mjs')).maybePoison(await import(map['./phonedata.js']));
+// (a meta as 폰 1 sees it: the 폰 2 trap run (PHONE2_POISON) puts m.live beside it, which these checks leave out)
+const no2 = m => { const { live: _, ...rest } = m; return rest; };
 const life = await import(encoded(await rewrite('phonelife.js')));
 const invest = await import(encoded(await rewrite('investdata.js')));
 const fin = await import(href('finance.js'));
@@ -299,6 +301,26 @@ test('a second turn that fails keeps the first; a phone made anew has none (the 
     assert.equal(globalThis.__menu.calls.filter(c => c.sys === data.AI_SYS_PHONE).length, 1);
 });
 
+test('폰 만들기 under way: the same phone made again (the phone shut and opened mid-make) waits; another chat or person does not', async () => {
+    globalThis.__rows = bigRows(4);
+    globalThis.__menu = { calls: [], answers: [notesAnswer('A'), notesAnswer('B'), notesAnswer('C')], answer: '{}' };
+    const fresh = { ...m, phones: {} }, other = { ...m, phones: {} };
+    const first = data.makePhone(fresh, 'Ren');
+    assert.equal(data.phoneMaking(fresh, 'ren'), true);
+    assert.equal(data.phoneMaking(other, 'Ren'), false);
+    await assert.rejects(data.makePhone(fresh, 'Ren'), /만드는 중/);
+    const elsewhere = data.makePhone(other, 'Ren');
+    await first; await elsewhere;
+    assert.equal(data.phoneMaking(fresh, 'Ren'), false);
+    assert.equal(globalThis.__menu.calls.filter(c => c.sys === data.AI_SYS_PHONE).length, 2);
+    // (done: it lets go, and can be made again; one that throws lets go too)
+    globalThis.__menu = { calls: [], answers: [notesAnswer('D')], answer: '{}' };
+    await data.makePhone(fresh, 'Ren', { apps: ['note'] });
+    assert.equal(data.phoneMaking(fresh, 'Ren'), false);
+    await assert.rejects(data.makePhone(null, 'Ren'));
+    assert.equal(data.phoneMaking(null, 'Ren'), false);
+});
+
 // ---- 은행 채우기도 두 턴: 두 번째는 기록만, 잔액은 첫 번째 그대로
 const moneyAnswer = (who, balance, time) => JSON.stringify({ currency: 'EUR', bank: { name: 'Varo Bank', accounts: [{ id: '', kind: 'checking', name: 'Main', last4: '1111', currency: 'EUR', balance }] },
     cards: [{ account: '1111', exp: '09/29' }], tx: [{ account: '1111', who, amount: -12, time, kind: 'card' }], passes: [], orders: [{ shop: 'Ivo Books', item: who, price: 12, time, status: 'delivered' }] });
@@ -340,6 +362,23 @@ test('OWNER\'S CLOCK: where the owner is, their time, and the other saved cities
     assert.equal(data.clockBlock({ now: '11-03 04:33' }), '');
 });
 
+// 폰 2: the same block on the time now, each place's time beside its hours (the model adds nothing up), no time choices
+test('폰 2 OWNER\'S CLOCK: the time now with its weekday, every place\'s time now worked out, a day over midnight too', () => {
+    const p = zonePhone('11-06 06:40');
+    p.where = { people: [{ name: 'Mara', city: 'Seoul', tz: 'Asia/Seoul' }] };
+    const b = data.phone2Clock(p, '11-06 06:40');
+    assert.match(b, /^\[OWNER'S CLOCK\]\nPhone owner: Ren\nLocation: Frankfurt am Main\nTime now: 11-06 06:40 \(Fri\)\n\nTime differences from Frankfurt am Main:\n/);
+    assert.match(b, /- Mara \(Seoul\): \+8 hours, now 11-06 14:40 \(Fri\)/);
+    assert.match(b, /- New York: -6 hours, now 11-06 00:40 \(Fri\)/);
+    assert.doesNotMatch(b, /Saved phone time|Default screen viewpoint|Time choices/);
+    assert.match(data.phone2Clock(p, '11-06 23:10'), /- Mara \(Seoul\): \+8 hours, now 11-07 07:10 \(Sat\)/);
+    assert.match(data.phone2Clock(p, '12-31 20:00'), /now 01-01 04:00 \(Fri\)/);
+    // (one zone: the owner's own time all the same; no time: nothing)
+    const one = zonePhone('11-06 06:40'); one.life.weather.cities = one.life.weather.cities.slice(0, 1);
+    assert.equal(data.phone2Clock(one, '11-06 06:40'), "[OWNER'S CLOCK]\nPhone owner: Ren\nLocation: Frankfurt am Main\nTime now: 11-06 06:40 (Fri)");
+    assert.equal(data.phone2Clock(p, ''), '');
+});
+
 test('OWNER\'S CLOCK labels keep cities, people, viewpoint aliases and status conversion', () => {
     const p = zonePhone('11-05 03:38');
     p.where = { people: [{ name: 'Mara Park', aka: ['마라'], city: 'Seoul', tz: 'Asia/Seoul' }] };
@@ -357,7 +396,7 @@ Time differences from Frankfurt am Main:
 - New York: -6 hours (DST: -5 hours before 11-01 07:00)
 - Mara Park (Seoul): +8 hours
 The newest status line, 11-05 12:50 in Seoul, is 11-05 04:50 here.`);
-    assert.deepEqual({ p, m, st }, before);
+    assert.deepEqual({ p, m: no2(m), st }, before);
     for (const status of [null, { ...st, known: false }, { ...st, at: st.raw }]) {
         assert.doesNotMatch(data.clockBlock(p, p.now, m, status), /The newest status line/);
     }
@@ -383,8 +422,46 @@ test('OWNER\'S CLOCK combines a city with its people only in the output, keeping
     assert.deepEqual(data.zonesOf(p, p.now, m), offsets);
     assert.deepEqual(await data.reflectionClocks(p, rows, m), candidates);
     assert.ok(candidates.choices.some(x => x.names.includes('소망') && x.ownerTime === '11-05 04:38'));
-    assert.deepEqual({ p, m }, before);
+    assert.deepEqual({ p, m: no2(m) }, before);
     assert.equal(data.sceneZone(p, 'Seoul', m).tz, 'Asia/Seoul');
+});
+
+// a status line's place with its country first ("대한민국 서울 강서구"): the city after it, when the place as written is found nowhere
+test('a scene\'s city with its country before it is still that city; a place found as written stays as it was', () => {
+    const p = zonePhone('11-05 03:38');
+    for (const place of ['대한민국 서울', 'South Korea, Seoul', '대한민국 서울 → 본가', 'Korea Seoul']) assert.equal(data.sceneZone(p, place)?.tz, 'Asia/Seoul', place);
+    assert.equal(data.sceneZone(p, 'Germany Frankfurt am Main')?.tz, 'Europe/Berlin');
+    assert.equal(data.sceneZone(p, 'Deutschland Frankfurt am Main Westend')?.tz, 'Europe/Berlin');
+    // (another zone's city from the start of a longer name stays unknown, country or not: "New York Bagels, Gangnam")
+    assert.equal(data.sceneZone(p, '서울 강서구'), null);
+    assert.equal(data.sceneZone(p, '대한민국 서울 강서구'), null);
+    // (an owner in Seoul: the district of their own city is theirs, the country before it too)
+    const s = { ...zonePhone('11-05 03:38'), life: { weather: { here: { place: 'Seoul' }, cities: [{ name: 'Seoul', ko: '서울', tz: 'Asia/Seoul' }, { name: 'Frankfurt am Main', tz: 'Europe/Berlin' }] } } };
+    assert.equal(data.sceneZone(s, '대한민국 서울 강서구')?.tz, 'Asia/Seoul');
+    assert.equal(data.sceneZone(s, '대한민국 서울 강서구')?.own, true);
+    // (as written first: Seoul is Seoul; a country alone is no city)
+    assert.deepEqual(data.sceneZone(p, '대한민국 서울'), data.sceneZone(p, '서울'));
+    assert.equal(data.sceneZone(p, '대한민국'), null);
+    assert.equal(data.sceneZone(p, 'South Korea'), null);
+});
+
+// a neighbourhood only (src/placehoods.js): its city, when the phone knows that city and only one; never a shop's name
+test('a scene at a neighbourhood ("시부야 사거리", "Kreuzberg") is its city\'s when the phone knows that city; a shop named after one is not', () => {
+    const p = zonePhone('11-05 03:38');
+    // (Tokyo known to no one here: unknown, never a move guessed)
+    assert.equal(data.sceneZone(p, '시부야 사거리'), null);
+    p.life.weather.cities.push({ name: 'Tokyo', ko: '도쿄', tz: 'Asia/Tokyo' });
+    for (const place of ['시부야 사거리', 'Shibuya Crossing', '시부야역', '渋谷駅', '시부야사거리 · 카페']) {
+        const z = data.sceneZone(p, place);
+        assert.deepEqual([z?.tz, z?.name, z?.hood], ['Asia/Tokyo', 'Tokyo', true], place);
+    }
+    assert.equal(data.sceneZone(p, 'Shibuya Coffee'), null);
+    assert.equal(data.sceneZone(p, 'Manhattan · 집')?.tz, 'America/New_York');
+    assert.equal(data.sceneZone(p, 'Westend · Küche')?.own, true);
+    // (Chelsea is London's and New York's, both known: no guess)
+    assert.equal(data.sceneZone(p, 'Chelsea'), null);
+    // (a city's own name is found as before, not as a neighbourhood)
+    assert.equal(data.sceneZone(p, 'Tokyo · 호텔')?.hood, undefined);
 });
 
 test('OWNER\'S CLOCK keeps different cities with the same zone or current offset, and requires whole city names', () => {
@@ -1210,8 +1287,15 @@ test('위치 정보 before a phone is made: read once and kept, checked and set 
     } finally { delete globalThis.__ctx; delete globalThis.__whereAnswer; }
 });
 
-test('making a phone (and some apps again) takes its people from the story or PEOPLE AROUND, as the reflection does', () => {
-    for (const s of [data.AI_SYS_PHONE, data.AI_SYS_PHONE_APPS, data.updateSystem({ split: true })]) assert.ok(s.includes('- People: only people the story or PEOPLE AROUND has.'), s.slice(0, 40));
+test('making a phone (and some apps again): people from the story, PEOPLE AROUND or new plausible ones, as the reflection\'s everyday; no new relative or partner', () => {
+    for (const s of [data.AI_SYS_PHONE, data.AI_SYS_PHONE_APPS]) {
+        assert.ok(s.includes('- People: from the story, PEOPLE AROUND, or new plausible ones with local names (a colleague, a neighbour, a shop); no new relative or partner. A relationship word (girlfriend, ex, husband, boss) only if the archive or chat uses it for them.'), s.slice(0, 40));
+        // (the owner's ordinary life around the story fills the lists, to about so many each; never "an empty list is fine")
+        assert.ok(s.includes("- Around the story, the owner's ordinary life before its newest moment fills the rest:") && s.includes('Never a new event, relationship or secret.'));
+        assert.ok(s.includes('Fill each list to about: 10 threads of 6 to 15 messages, 20 calls, 15 photos, 10 notes, 15 searches (3 open at most), 10 events, 6 posts with up to 4 comments,\n10 mails, 8 diary entries, the 12 newest visits. Who they talk to, and how much, follows their character and PEOPLE AROUND.'));
+        assert.doesNotMatch(s, /an empty list is fine|At most 6 threads/);
+    }
+    assert.ok(data.updateSystem({ split: true }).includes('- People: only people the story or PEOPLE AROUND has.'));
 });
 
 test('the bank and voice memo fills get PEOPLE AROUND, and take their people from the story or it; life and delivery do not', async () => {

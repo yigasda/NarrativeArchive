@@ -112,6 +112,8 @@ const DLV = {
 http.createServer((req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*'); res.setHeader('Access-Control-Allow-Headers', '*'); res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   if (req.method === 'OPTIONS') { res.writeHead(204); return res.end(); }
+  // the model list (a connection's 모델 불러오기)
+  if (req.method === 'GET' && /\/models\b/.test(req.url || '')) { res.writeHead(200, { 'content-type': 'application/json' }); return res.end(JSON.stringify({ object: 'list', data: ['fake', 'fake-large', 'fake-mini'].map(id => ({ id, object: 'model' })) })); }
   let b = ''; req.on('data', c => b += c); req.on('end', () => {
     last = b;
     const upd = b.includes('[UPDATE]');
