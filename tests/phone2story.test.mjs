@@ -178,3 +178,68 @@ test('분기한 곳의 이야기 시각으로 날짜 차이(dayShift)를 다시 
     S.settleLiveBranch(m3, 100, { storyAt: '10-26 12:00', storyYear: 2026, tz: 'Asia/Seoul' });
     assert.ok(Number.isInteger(w3.dayShift));
 });
+
+// 7-4: 분기한 방의 폰 2는 폰 1을 먼저 되돌린 뒤 거기서 다시 시작해요
+test('분기 가리기: 자기 채팅 · 시작 뒤 분기 · 시작 앞 분기', async () => {
+    const S2 = S, L2 = L;
+    const m = { text: '', phones: { mara: { owner: 'Mara', notes: [] } } };
+    const w = S2.beginFromStory(m, { persona: 'Ren', upto: 120, scope: 's', chat: 'main', fp: 'abc' });
+    assert.equal(w.chat, 'main'); assert.equal(w.storyFp, 'abc');
+    // its own chat, whatever the words there now (an edit is not a branch)
+    assert.equal(S2.liveBranched(w, { chat: 'main', branch: false, fp: 'zzz' }), 'none');
+    assert.equal(S2.liveBranched(w, { chat: 'main', branch: true, fp: 'zzz' }), 'none');
+    // another mark that is no branch (a renamed copy, a backup): left alone
+    assert.equal(S2.liveBranched(w, { chat: 'other', branch: false, fp: null }), 'none');
+    // a branch that still has message 120 as it was: after the start
+    assert.equal(S2.liveBranched(w, { chat: 'br', branch: true, fp: 'abc' }), 'after');
+    // a branch without it, or with other words there: before the start
+    assert.equal(S2.liveBranched(w, { chat: 'br', branch: true, fp: null }), 'before');
+    assert.equal(S2.liveBranched(w, { chat: 'br', branch: true, fp: 'new words' }), 'before');
+    // 'after' is asked once
+    S2.adoptChat(w, 'br');
+    assert.equal(S2.liveBranched(w, { chat: 'br', branch: true, fp: 'new words' }), 'none');
+    // a 폰 2 from before marks: only what 폰 1's phones found
+    delete w.chat;
+    assert.equal(S2.liveBranched(w, { chat: 'br', branch: true, fp: null }), 'none');
+    assert.equal(S2.liveBranched(w, { chat: 'br', branch: true, fp: null, point: 100 }), 'before');
+    assert.equal(S2.liveBranched(w, { chat: 'br', branch: true, fp: null, point: 130 }), 'none');
+    // begun fresh: never
+    const f = { phones: {} }; L2.startFresh(f, { persona: 'Ren' });
+    assert.equal(S2.liveBranched(L2.liveWorld(f), { chat: 'br', branch: true, point: 1 }), 'none');
+});
+
+test('다시 시작: 되돌린 폰 1에서, 메신저 대화 · 예전 폰 2 기록 없이, 페르소나 · 언어는 그대로, 보관함에 안 넣어요', async () => {
+    const S2 = S, L2 = L;
+    const m = { text: '', phones: { mara: { owner: 'Mara', notes: [{ title: '월요일' }, { title: '수요일' }] } } };
+    const old = S2.beginFromStory(m, { persona: 'Ren', upto: 120, scope: 's', chat: 'main', fp: 'abc' });
+    old.langs = { mara: { texts: ['Korean'] } };
+    const room = L2.ensureRoom(m, ['Mara']); L2.sendLive(m, room.id, '수요일에 한 말');
+    old.phones.mara.notes.push({ title: '실시간에서 생긴 메모' });
+    L2.setLiveMode(m, 'live');
+    // (폰 1 rewound to Monday by settleBranch)
+    m.phones.mara.notes = [{ title: '월요일' }];
+    const w = S2.rebeginFromStory(m, { upto: 100, scope: 's2', dayShift: 3, chat: 'br', fp: 'mon' });
+    assert.notEqual(w.id, old.id);
+    assert.equal(w.persona, 'Ren'); assert.deepEqual(w.langs, { mara: { texts: ['Korean'] } });
+    assert.equal(w.storyUpto, 100); assert.equal(w.chat, 'br'); assert.equal(w.dayShift, 3);
+    assert.deepEqual(w.phones.mara.notes.map(x => x.title), ['월요일']);
+    assert.deepEqual(Object.keys(w.messenger.rooms), []);
+    assert.equal(L2.archivedWorlds(m).length, 0);
+    assert.equal(L2.liveMode(m), 'live');
+    // 폰 1 is only read
+    assert.deepEqual(m.phones.mara.notes.map(x => x.title), ['월요일']);
+    w.phones.mara.notes.push({ title: 'x' }); assert.equal(m.phones.mara.notes.length, 1);
+    assert.equal(S2.liveBranched(w, { chat: 'br', branch: true, fp: 'mon' }), 'none');
+});
+
+test('다시 시작: 폰 1에 폰이 없으면 폰 2는 내려요. 실패하면 있던 그대로', async () => {
+    const S2 = S, L2 = L;
+    const m = { text: '', phones: { mara: { owner: 'Mara' } } };
+    S2.beginFromStory(m, { persona: 'Ren', upto: 120, scope: 's' }); L2.setLiveMode(m, 'live');
+    const keep = L2.liveWorld(m);
+    assert.throws(() => S2.rebeginFromStory(m, { upto: -1 }));
+    assert.equal(L2.liveWorld(m), keep); assert.equal(L2.liveMode(m), 'live');
+    m.phones = {};
+    assert.equal(S2.rebeginFromStory(m, { upto: 100 }), null);
+    assert.equal(L2.liveWorld(m), null); assert.equal(L2.liveMode(m), 'story');
+});

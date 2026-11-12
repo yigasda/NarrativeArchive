@@ -104,5 +104,5 @@ test('연락처의 페르소나에 "메신저로만" 표시 (없으면 넣어요
 
 test('폰 1은 이 파일을 안 불러요', async () => {
     const src = f => readFile(new URL(`../src/${f}`, import.meta.url), 'utf8');
-    for (const f of (await readdir(new URL('../src/', import.meta.url))).filter(f => f.endsWith('.js') && f !== 'phone2feed.js')) assert.doesNotMatch(await src(f), /phone2feed/, f);
+    for (const f of (await readdir(new URL('../src/', import.meta.url))).filter(f => f.endsWith('.js') && f !== 'phone2feed.js' && f !== 'phone2reflect.js')) assert.doesNotMatch(await src(f), /phone2feed/, f);
 });

@@ -262,6 +262,8 @@ export function archivedUnread(s, sections, rows, all) {
     return sections.filter(sec => sec.last > base && !s.arch[sec.key] && !rows.some(r => r.index >= sec.first && r.index <= sec.last && r.index > base && !isDone(s, r.index)))
         .map(sec => ({ ...sec, hidden: hidden(sec) })).filter(sec => sec.hidden.length).sort((a, b) => a.first - b.first);
 }
+// how many messages those sections hold that the phone hasn't read (what the user sees as left: messages, not sections)
+export const hiddenLeft = secs => new Set(secs.flatMap(x => x.hidden || [])).size;
 // does this round read the newest message? (only then may the archive's current state go along: an older round must
 // not see what comes after it)
 export const reachesEnd = (s, rows, round) => { const last = rows[rows.length - 1]?.index ?? -1; return round.some(r => r.index === last); };
