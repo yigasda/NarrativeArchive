@@ -90,8 +90,19 @@ def town_ko(name):
     for d in DESC: t = re.sub(r'(^|\s)' + re.escape(d) + r'(?=\s|$)', ' ', t)
     t = re.sub(r'\s+', ' ', t).strip(' ·')
     return t if len(t) >= 2 else ko
+# 손으로 다듬은 이름(names.tsv: slug · 한국어 이름 · 그곳 이름): 목록의 이름은 설명이 섞여 있어서(브레머하펜 항구, Havenwelten) 이걸 먼저 써요
+NAMES = {}
+if os.path.exists(os.path.join(HERE, 'names.tsv')):
+    for l in open(os.path.join(HERE, 'names.tsv'), encoding='utf8').read().strip().split('\n'):
+        if l and not l.startswith('#'): sl, ko_, lo_ = l.split('\t'); NAMES[sl] = (ko_.strip(), lo_.strip())
 GENERIC_W = {'Markt', 'Hauptmarkt', 'Altstadt', '대성당', '컨테이너 항구', 'Downtown'}
 def hood_words(r, city):
+    if r['slug'] in NAMES:   # the clean name first (its label is the Korean words), then the list's Latin words to find it by
+        ko_, lo_ = NAMES[r['slug']]; ws = [w.strip() for w in ko_.split(' · ')] + [lo_]
+        for e in [fold(lo_)] + en_names(r['찾기']):
+            e2 = re.sub(r'\s+(Station|Centre|Center|Town Centre)$', '', e).strip()
+            if e2 and e2.lower() not in (x.lower() for x in ws): ws.append(e2)
+        return ws
     ko = town_ko(r['이름'])
     if ko.startswith(city): ko = ko[len(city):].strip()
     ws = [w.strip() for w in ko.split(' · ') if w.strip() and w.strip() not in DROP]
@@ -141,6 +152,7 @@ for cc in FILES:
             if not r.get('표 동네'): report.setdefault(cc, []).append((city, ' · '.join(ws), slug))   # 표에 있던 동네는 반영 쪽이 이미 알아요
         else:
             ko = town_ko(r['이름']).split(' · ')[0].strip(); ens = en_names(r['찾기'])   # one name: "속초 · 중앙시장" would make 중앙시장 a town
+            if slug in NAMES: ko, lo_ = NAMES[slug]; ens = [lo_] + [e for e in en_names(lo_) if e != lo_]
             if ko.lower() in names or any(e.lower() in names for e in ens): continue
             label = ' · '.join([f'{ko} {ens[0]}' if ens else ko] + ens[1:])
             add_city[slug] = (cc, label, maps(cc, kind, r), [])
