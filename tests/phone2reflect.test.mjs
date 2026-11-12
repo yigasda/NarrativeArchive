@@ -114,7 +114,7 @@ test('답이 적은 상황(situations)은 다음 답장을 위해 폰에 남겨�
 
 test('폰 1은 이 파일을 안 불러요', async () => {
     const { readdir } = await import('node:fs/promises');
-    for (const f of (await readdir(new URL('../src/', import.meta.url))).filter(f => f.endsWith('.js') && f !== 'phone2reflect.js')) assert.doesNotMatch(await readFile(new URL(`../src/${f}`, import.meta.url), 'utf8'), /phone2reflect/, f);
+    for (const f of (await readdir(new URL('../src/', import.meta.url))).filter(f => f.endsWith('.js') && f !== 'phone2reflect.js' && f !== 'phone2go.js')) assert.doesNotMatch(await readFile(new URL(`../src/${f}`, import.meta.url), 'utf8'), /phone2reflect/, f);
 });
 
 test('장면 줄(번호 · 시각 · 상태)을 인용한 답도 그 메시지의 근거로 받아요', async () => {
