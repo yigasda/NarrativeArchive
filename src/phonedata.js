@@ -696,6 +696,8 @@ export const isGuess = x => x?.src === 'guess';
 // the thread or contact a name the model wrote is: the very name, else the one the place reading knows by another of
 // that person's names ("소망" for "Somang Park", its aka), else the one name it is short for ("Somang" of "Somang Park");
 // only one: two that fit is no one (a new one is made as before)
+// a thread's or call's other side that is no person saved by name: a number, an unknown or hidden caller
+const NO_CONTACT = /^[\d\s+()\-.#*]+$|^(unknown|private|no caller id|withheld|blocked|spam|scam)\b|모르는|발신자|알 수 없|번호 없음|스팸/i;
 function personIn(p, list, get, name) {
     const k = nameKey(name), same = x => nameKey(get(x)) === k;
     if (!k) return undefined;
@@ -1060,6 +1062,13 @@ export function mergePhone(p, add, { keepAll = false, m = null } = {}) {
     for (const c of add.contacts) {
         const old = personIn(p, p.contacts, x => x.name, c.name);
         if (old) old.saved = c.saved || old.saved; else p.contacts.push(c);
+    }
+    // someone the owner texts or calls by name is saved on the phone (a name on a thread is a saved contact's): added
+    // when the answer gave no contact for them. Never a number, an unknown caller or a group room; no more than the list holds
+    for (const n of [...add.threads.filter(t => !t.group).map(t => t.with), ...arr(add.calls).map(c => c.with)]) {
+        const name = String(n || '').trim();
+        if (!name || p.contacts.length >= CAP.contacts || NO_CONTACT.test(name) || isOwnerName(p, m, name) || personIn(p, p.contacts, x => x.name, name)) continue;
+        p.contacts.push({ name });
     }
     p.contacts = keep(p.contacts, CAP.contacts);
     if (add.now) p.now = add.now;
