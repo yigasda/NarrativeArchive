@@ -35,7 +35,7 @@ import { dropVoice, fillKo, koAppOf, koScopeOf, labelVoices, learnVoices, pickVo
 // 을 / 를 after a word: by its last syllable's final consonant (a Latin ending, like SNS, reads as 를)
 const josa = w => { const c = w.charCodeAt(w.length - 1) - 0xac00; return c >= 0 && c < 11172 && c % 28 ? '을' : '를'; };
 import { confirm, esc } from './util.js';
-import { liveMode, liveWorld, livePhone, liveMeta, setLiveMode, resetLive, liveKey, liveRooms, ensureRoom, nameRoom, sendLive, readLive, unreadFor, unreadBy } from './phone2store.js';
+import { liveMode, liveWorld, livePhone, liveMeta, setLiveMode, resetLive, rememberLiveOwner, readLiveOwner, liveKey, liveRooms, ensureRoom, nameRoom, sendLive, readLive, unreadFor, unreadBy } from './phone2store.js';
 import { shiftLabel, liveWall, viewerWall, startShift } from './phone2clock.js';
 import { orbitList, orbitRoom, orbitNew, orbitHomeWidget, liveStart } from './phoneorbit.js';
 import { liveStoryText, beginFromStory, settleLiveBranch } from './phone2story.js';
@@ -146,7 +146,8 @@ export async function openPhone(who = null) {
     // 실시간 (폰 2): its own people and its own last owner (m.live only); 타임라인 (폰 1) as before
     const live = () => liveMode(realM) === 'live';
     const liveNames = () => Object.values(liveWorld(realM)?.phones || {}).map(p => p?.owner).filter(Boolean);
-    const liveOwner = () => { const ns = liveNames(), w = liveWorld(realM); return ns.find(n => nameKey(n) === nameKey(w?.lastOwner)) || ns[0] || null; };
+    // (5-4: 이 브라우저에 저장한 실시간 폰의 마지막 주인, 없으면 세계의 것, 없으면 첫 인물)
+    const liveOwner = () => { const ns = liveNames(), last = readLiveOwner(realM, selectionKey); return ns.find(n => nameKey(n) === nameKey(last)) || ns[0] || null; };
     let owner = live() ? liveOwner() : selectedPhoneOwner(m, names, who, readPhoneSelection(selectionKey));
     if (owner && !live()) { rememberPhoneSelection(m,owner,selectionKey); await saveMeta(); }
     if (!stillHere()) return;
@@ -720,7 +721,7 @@ export async function openPhone(who = null) {
         drawPhone();await saveMeta();
     });
     $root.on('click','.na_ph_makeprofile',()=>{prepFrom=false;view='setprofile';editProfile();drawPhone();});
-    $root.on('click', '.na_ph_pick:not(.na_ph_addp), .ax_whopick', async function (e) { e.stopPropagation(); const same = owner === this.dataset.n; owner = this.dataset.n; if (live()) liveWorld(realM).lastOwner = owner; else rememberPhoneSelection(m,owner,selectionKey); if (!same) { view = 'lock'; sheet = false; draw(); setSheet(false); } await saveMeta(); });
+    $root.on('click', '.na_ph_pick:not(.na_ph_addp), .ax_whopick', async function (e) { e.stopPropagation(); const same = owner === this.dataset.n; owner = this.dataset.n; if (live()) rememberLiveOwner(realM, owner, selectionKey); else rememberPhoneSelection(m,owner,selectionKey); if (!same) { view = 'lock'; sheet = false; draw(); setSheet(false); } await saveMeta(); });
     // Orbit: 목록 고르기 · 새 대화 사람 고르기 · 만들기 · 보내기 · 주인 보기 · 번역 접기
     const obDraw = () => { drawPhone(true); };
     const obBottom = () => { const e = $root.find('.ob_msgs')[0]; if (e) e.scrollTop = e.scrollHeight; };
