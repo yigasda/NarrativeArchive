@@ -19,7 +19,8 @@ import { runLive } from './phone2run.js';
 import { markPersona } from './phone2feed.js';
 import { updateLive, undoLive } from './phone2reflect.js';
 import { SHORT_PROMPT, fillPrompt, langBlock } from './prompts.js';
-import { digestDue, digestRaw, digestRequest, takeDigest, failDigest } from './phone2digest.js';
+import { AI_SYS_DIGEST } from './digest.js';
+import { digestDue, digestRaw, digestRequest, takeDigest, failDigest, foldChunk, foldRequest, takeFold, failFold } from './phone2digest.js';
 
 // rounds of reflection after one reply at most (messages piled up while only talking: 100 a round)
 export const LIVE_GO = { rounds: 3, replyTokens: 4000, digests: 2 };
@@ -111,7 +112,8 @@ export async function liveUndo(real, owner, { onChange = () => {} } = {}) {
 
 // 오래된 대화 요약: the owner's rooms whose unsummarized talk has piled up get their oldest stretch summarized (the
 // archive's short instruction, the draft model), up to LIVE_GO.digests stretches a go. A failure is noted on the room and
-// tried again after new talk or an hour; the replies go on without it. Returns how many stretches were summarized
+// tried again after new talk or an hour; the replies go on without it. A room's summary grown long has its older half
+// made short too (the archive's digest instruction). Returns how many stretches were summarized
 const digesting = new WeakSet();
 export async function liveDigest(real, owner) {
     const w = liveWorld(real), p = livePhone(real, owner);
@@ -133,6 +135,16 @@ export async function liveDigest(real, owner) {
             await saveMeta();
             if (!kept) break;
             done++;
+        }
+        // 요약의 요약: one room whose summary has grown long has its older half made short (one a go)
+        const long = liveWorld(real)?.id === w.id ? Object.values(w.messenger?.rooms || {}).filter(r => r.members.some(n => liveKey(n) === liveKey(owner))).map(room => ({ room, chunk: foldChunk(room) })).find(x => x.chunk) : null;
+        if (long) {
+            let answer;
+            try {
+                const story = liveStoryText(real, w);
+                answer = await askDraft(foldRequest(long.chunk, story ? langBlock(story, { tail: false, src: '' }) : ''), { force: true, system: AI_SYS_DIGEST, maxTokens: 4000 });
+            } catch (err) { if (liveWorld(real)?.id === w.id) { failFold(long.room, err?.message || err); await saveMeta(); } throw err; }
+            if (liveWorld(real)?.id === w.id) { takeFold(long.room, long.chunk, answer); await saveMeta(); }
         }
     } finally { digesting.delete(real); }
     return done;
