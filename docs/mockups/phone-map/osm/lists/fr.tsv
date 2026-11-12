@@ -1,0 +1,90 @@
+slug	받기	종류	이름	찾기	lat	lon	표 동네
+paris-marais	o	도심	파리 마레 · 바스티유	Place des Vosges, Paris	48.8565	2.3650	파리: 마레 · 바스티유
+paris-montmartre	o	도심	파리 몽마르트르 · 피갈	Sacré-Cœur, Paris	48.8845	2.3405	파리: 몽마르트르 · 피갈
+paris-champs	o	도심	파리 샹젤리제	Champs-Élysées, Paris	48.8698	2.3076	파리: 샹젤리제
+paris-saintgermain	o	도심	파리 생제르맹 · 라탱 지구 · 루브르	Pont des Arts, Paris	48.8540	2.3400	파리: 생제르맹 · 라탱 지구 · 루브르
+paris-belleville	o	도심	파리 벨빌	Belleville, Paris	48.8720	2.3770	파리: 벨빌
+paris-ladefense	o	일터	파리 라데팡스	La Défense	48.8920	2.2380	파리: 라데팡스
+paris-eiffel	o	도심	파리 에펠탑	Eiffel Tower	48.8584	2.2945	파리: 에펠탑
+paris-cdg	o	공항	샤를드골 공항	Charles de Gaulle Airport	49.0097	2.5479	파리: 샤를드골
+paris-orly	o	공항	오를리 공항	Orly Airport	48.7262	2.3652	파리: 오를리
+paris-canal	o	도심	파리 생마르탱 운하	Canal Saint-Martin, Paris	48.8710	2.3650	
+paris-batignolles	o	교외	파리 바티뇰	Batignolles, Paris	48.8840	2.3200	
+paris-montparnasse	o	도심	파리 몽파르나스	Montparnasse, Paris	48.8420	2.3210	
+paris-bercy	o	교외	파리 베르시	Bercy Village, Paris	48.8320	2.3860	
+paris-neuilly	o	교외	뇌이쉬르센 주택가	Neuilly-sur-Seine	48.8840	2.2690	
+paris-saintdenis	o	교외	생드니 스타드 드 프랑스	Stade de France	48.9245	2.3602	
+paris-sarcelles	o	교외	사르셀 아파트 단지	Sarcelles	48.9950	2.3800	
+vincennes	o	숲	뱅센 숲 · 성	Château de Vincennes	48.8430	2.4370	
+versailles	o	옛마을	베르사유	Château de Versailles	48.8049	2.1204	
+fontainebleau	o	숲	퐁텐블로	Château de Fontainebleau	48.4040	2.7010	
+disneyland-paris	o	일터	디즈니랜드 파리	Disneyland Paris	48.8722	2.7758	
+provins	o	옛마을	프로뱅	Provins	48.5600	3.2990	
+chartres	o	옛마을	샤르트르	Chartres Cathedral	48.4470	1.4880	
+giverny	o	시골	지베르니	Giverny	49.0750	1.5340	
+lyon-presquile	o	도심	리옹 옛 시내 · 프레스킬 · 벨쿠르	Place Bellecour, Lyon	45.7620	4.8320	리옹: 비유 리옹 · 프레스킬 · 테로 · 벨쿠르
+lyon-croixrousse	o	도심	리옹 크루아루스	Croix-Rousse, Lyon	45.7750	4.8310	리옹: 크루아루스
+lyon-partdieu	o	일터	리옹 파르디외	Lyon Part-Dieu	45.7606	4.8590	리옹: 파르디외
+lyon-confluence	o	교외	리옹 콩플뤼앙스	Lyon Confluence	45.7420	4.8180	리옹: 콩플뤼앙스
+nice	o	바다	니스 옛 시내 · 해변 산책로	Promenade des Anglais, Nice	43.6960	7.2700	니스: 프롬나드 데 장글레 · 비유 니스
+marseille	o	바다	마르세유 옛 항구	Vieux-Port, Marseille	43.2950	5.3740	
+bordeaux	o	도심	보르도 시내	Place de la Bourse, Bordeaux	44.8410	-0.5700	
+strasbourg	o	옛마을	스트라스부르 프티트 프랑스	Petite France, Strasbourg	48.5810	7.7410	
+toulouse	o	도심	툴루즈 카피톨	Capitole de Toulouse	43.6045	1.4440	
+lille	o	도심	릴 옛 시내	Vieux-Lille	50.6400	3.0630	
+nantes	o	도심	낭트 섬	Île de Nantes	47.2060	-1.5640	
+montpellier	o	도심	몽펠리에 코메디 광장	Place de la Comédie, Montpellier	43.6085	3.8800	
+avignon	o	옛마을	아비뇽	Palais des Papes, Avignon	43.9493	4.8055	
+rouen	o	옛마을	루앙	Rouen Cathedral	49.4410	1.0930	
+reims	o	옛마을	랭스	Reims Cathedral	49.2535	4.0340	
+annecy	o	호수	안시	Annecy Old Town	45.8990	6.1290	
+colmar	o	옛마을	콜마르	Little Venice, Colmar	48.0740	7.3580	
+cannes	o	바다	칸	La Croisette, Cannes	43.5513	7.0128	
+montsaintmichel	o	섬	몽생미셸	Mont-Saint-Michel	48.6361	-1.5115	
+gordes	o	시골	고르드	Gordes	43.9110	5.2000	
+roussillon	o	시골	루시용	Roussillon, Vaucluse	43.9020	5.2930	
+eze	o	옛마을	에즈	Èze	43.7280	7.3610	
+saintpaul	o	옛마을	생폴드방스	Saint-Paul-de-Vence	43.6960	7.1220	
+rocamadour	o	옛마을	로카마두르	Rocamadour	44.7990	1.6180	
+sarlat	o	옛마을	사를라	Sarlat-la-Canéda	44.8890	1.2160	
+riquewihr	o	시골	리크위르 포도밭 마을	Riquewihr	48.1670	7.2980	
+carcassonne	o	옛마을	카르카손 성	Cité de Carcassonne	43.2060	2.3640	
+saintemilion	o	시골	생테밀리옹	Saint-Émilion	44.8940	-0.1550	
+beaune	o	시골	본	Hospices de Beaune	47.0240	4.8400	
+valensole	o	시골	발랑솔 라벤더 밭	Valensole	43.8370	5.9830	
+collonges	o	시골	콜롱주라루주	Collonges-la-Rouge	45.0600	1.6550	
+conques	o	옛마을	콩크	Conques	44.5990	2.3980	
+amboise	o	옛마을	앙부아즈	Château d'Amboise	47.4130	0.9860	
+chenonceaux	o	강골짜기	슈농소	Château de Chenonceau	47.3250	1.0700	
+vezelay	o	옛마을	베즐레	Vézelay	47.4660	3.7480	
+yvoire	o	호수	이부아르	Yvoire	46.3700	6.3260	
+etretat	o	바다	에트르타	Étretat	49.7070	0.2050	
+honfleur	o	바다	옹플뢰르	Honfleur	49.4190	0.2330	
+deauville	o	바다	도빌	Deauville	49.3590	0.0750	
+sainttropez	o	바다	생트로페	Saint-Tropez	43.2720	6.6400	
+biarritz	o	바다	비아리츠	Grande Plage, Biarritz	43.4830	-1.5590	
+saintmalo	o	바다	생말로	Intra-Muros, Saint-Malo	48.6490	-2.0250	
+larochelle	o	바다	라로셸	Vieux-Port, La Rochelle	46.1560	-1.1530	
+iledere	o	섬	레섬 생마르탱	Saint-Martin-de-Ré	46.2030	-1.3670	
+arcachon	o	바다	아르카숑	Arcachon	44.6580	-1.1680	
+pilat	o	바다	필라 모래 언덕	Dune du Pilat	44.5890	-1.2130	
+bonifacio	o	섬	코르시카 보니파시오	Bonifacio	41.3870	9.1590	
+ajaccio	o	섬	코르시카 아작시오	Ajaccio	41.9190	8.7380	
+menton	o	바다	망통	Menton	43.7750	7.5000	
+belleile	o	섬	벨일 르팔레	Le Palais, Belle-Île	47.3470	-3.1550	
+cassis	o	바다	카시스	Cassis	43.2140	5.5380	
+collioure	o	바다	콜리우르	Collioure	42.5260	3.0830	
+porquerolles	o	섬	포르크롤섬	Porquerolles	43.0000	6.2010	
+chamonix	o	산	샤모니	Chamonix-Mont-Blanc	45.9237	6.8694	
+courchevel	o	산	쿠르슈벨	Courchevel 1850	45.4150	6.6340	
+valdisere	o	산	발디제르	Val-d'Isère	45.4480	6.9800	
+megeve	o	산	므제브	Megève	45.8570	6.6170	
+lourdes	o	산	루르드	Sanctuary of Our Lady of Lourdes	43.0950	-0.0560	
+moustiers	o	강골짜기	베르동 협곡 무스티에	Moustiers-Sainte-Marie	43.8460	6.2210	
+evian	o	호수	에비앙	Évian-les-Bains	46.4000	6.5900	
+aixlesbains	o	온천	엑스레뱅	Aix-les-Bains	45.6880	5.9150	
+gerardmer	o	호수	제라르메	Gérardmer	48.0730	6.8780	
+vichy	o	온천	비시	Vichy	46.1270	3.4260	
+toulouse-blagnac	o	일터	툴루즈 에어버스 공장	Airbus, Blagnac	43.6290	1.3640	
+sophia-antipolis	o	일터	소피아 앙티폴리스 연구 단지	Sophia Antipolis	43.6170	7.0560	
+lehavre-port	o	일터	르아브르 항구	Port of Le Havre	49.4830	0.1100	

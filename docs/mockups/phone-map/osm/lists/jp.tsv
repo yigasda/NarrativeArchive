@@ -1,0 +1,90 @@
+slug	받기	종류	이름	찾기	lat	lon	표 동네
+tokyo-shibuya	o	도심	도쿄 시부야	Shibuya Station, Tokyo	35.6595	139.7005	도쿄: 시부야
+tokyo-harajuku	o	도심	도쿄 하라주쿠 · 오모테산도 · 아오야마	Omotesando Station, Tokyo	35.6680	139.7120	도쿄: 하라주쿠 · 오모테산도 · 아오야마
+tokyo-shinjuku	o	도심	도쿄 신주쿠	Shinjuku Station, Tokyo	35.6900	139.7000	도쿄: 신주쿠
+tokyo-roppongi	o	도심	도쿄 롯폰기 · 아자부	Roppongi Station, Tokyo	35.6600	139.7330	도쿄: 롯폰기 · 아자부
+tokyo-ginza	o	도심	도쿄 긴자 · 유라쿠초 · 신바시 · 쓰키지	Ginza Station, Tokyo	35.6700	139.7640	도쿄: 긴자 · 유라쿠초 · 신바시 · 쓰키지
+tokyo-marunouchi	o	도심	도쿄역 · 마루노우치 · 니혼바시	Tokyo Station	35.6820	139.7690	도쿄: 마루노우치 · 도쿄역 · 니혼바시
+tokyo-akihabara	o	도심	도쿄 아키하바라	Akihabara Station, Tokyo	35.6984	139.7731	도쿄: 아키하바라
+tokyo-ueno	o	도심	도쿄 우에노	Ueno Station, Tokyo	35.7138	139.7773	도쿄: 우에노
+tokyo-asakusa	o	옛마을	도쿄 아사쿠사 · 스카이트리	Sensō-ji, Tokyo	35.7110	139.8030	도쿄: 아사쿠사 · 스카이트리
+tokyo-odaiba	o	바다	도쿄 오다이바	Odaiba, Tokyo	35.6270	139.7760	도쿄: 오다이바
+tokyo-shinagawa	o	도심	도쿄 시나가와	Shinagawa Station, Tokyo	35.6285	139.7387	도쿄: 시나가와
+tokyo-ebisu	o	도심	도쿄 에비스 · 나카메구로 · 다이칸야마	Ebisu Station, Tokyo	35.6467	139.7060	도쿄: 에비스 · 나카메구로 · 다이칸야마
+tokyo-shimokitazawa	o	도심	도쿄 시모키타자와	Shimokitazawa Station, Tokyo	35.6616	139.6680	도쿄: 시모키타자와
+tokyo-kichijoji	o	교외	도쿄 기치조지	Kichijōji Station, Tokyo	35.7030	139.5795	도쿄: 기치조지
+tokyo-ikebukuro	o	도심	도쿄 이케부쿠로	Ikebukuro Station, Tokyo	35.7295	139.7109	도쿄: 이케부쿠로
+tokyo-haneda	o	공항	하네다 공항	Haneda Airport	35.5494	139.7798	도쿄: 하네다
+narita-airport	o	공항	나리타 공항	Narita International Airport	35.7720	140.3929	도쿄: 나리타
+tokyo-koenji	o	교외	도쿄 고엔지	Kōenji Station, Tokyo	35.7056	139.6497	도쿄: 고엔지
+tokyo-toyosu	o	교외	도쿄 도요스	Toyosu Market, Tokyo	35.6550	139.7860	도쿄: 도요스
+tokyo-yanaka	o	옛마을	도쿄 야나카 골목	Yanaka Ginza, Tokyo	35.7270	139.7660	
+tokyo-okutama	o	산	도쿄 오쿠타마 산골	Okutama Station	35.8090	139.0960	
+yokohama-minatomirai	o	바다	요코하마 미나토미라이	Minato Mirai, Yokohama	35.4570	139.6320	요코하마: 미나토미라이
+yokohama-chinatown	o	도심	요코하마 중화거리 · 모토마치	Yokohama Chinatown	35.4420	139.6470	요코하마: 요코하마 중화거리 · 모토마치
+osaka-namba	o	도심	오사카 난바 · 도톤보리 · 신사이바시	Dotonbori, Osaka	34.6700	135.5010	오사카: 난바 · 도톤보리 · 신사이바시
+osaka-umeda	o	도심	오사카 우메다	Umeda Station, Osaka	34.7025	135.4959	오사카: 우메다
+osaka-tennoji	o	도심	오사카 덴노지 · 신세카이	Tsūtenkaku, Osaka	34.6500	135.5100	오사카: 덴노지 · 신세카이
+osaka-usj	o	일터	유니버설 스튜디오 재팬	Universal Studios Japan	34.6654	135.4323	오사카: 유니버설 스튜디오
+kansai-airport	o	공항	간사이 공항	Kansai International Airport	34.4320	135.2304	오사카: 간사이공항
+kyoto-gion	o	옛마을	교토 기온 · 가와라마치 · 기요미즈	Gion, Kyoto	35.0010	135.7760	교토: 기온 · 가와라마치 · 기요미즈
+kyoto-arashiyama	o	숲	교토 아라시야마	Arashiyama, Kyoto	35.0094	135.6668	교토: 아라시야마
+kyoto-fushimi	o	옛마을	교토 후시미	Fushimi Inari Taisha	34.9671	135.7727	교토: 후시미
+kyoto-ohara	o	시골	교토 오하라 산골 마을	Ōhara, Kyoto	35.1190	135.8360	
+fukuoka-tenjin	o	도심	후쿠오카 덴진 · 나카스	Tenjin, Fukuoka	33.5915	130.4020	후쿠오카: 덴진 · 나카스
+fukuoka-hakata	o	도심	후쿠오카 하카타	Hakata Station, Fukuoka	33.5902	130.4207	후쿠오카: 하카타
+sapporo-susukino	o	도심	삿포로 스스키노 · 오도리	Susukino, Sapporo	43.0580	141.3540	삿포로: 스스키노 · 오도리
+nagoya-sakae	o	도심	나고야 사카에	Sakae, Nagoya	35.1700	136.9080	나고야: 사카에
+nagoya-meieki	o	도심	나고야역	Nagoya Station	35.1709	136.8815	나고야: 메이에키
+hakone-yumoto	o	온천	하코네 유모토	Hakone-Yumoto Station	35.2330	139.1050	
+kusatsu-onsen	o	온천	구사쓰 온천	Kusatsu Onsen Yubatake	36.6220	138.5960	
+beppu	o	온천	벳푸 온천	Beppu Station	33.2840	131.4910	
+noboribetsu	o	온천	노보리베쓰 온천	Noboribetsu Onsen	42.4960	141.1450	
+ginzan-onsen	o	온천	긴잔 온천	Ginzan Onsen	38.5700	140.5300	
+kinosaki-onsen	o	온천	기노사키 온천	Kinosaki Onsen	35.6260	134.8110	
+atami	o	바다	아타미	Atami Station	35.0960	139.0720	
+yufuin	o	온천	유후인	Yufuin Station	33.2650	131.3570	
+nikko	o	산	닛코	Nikkō Tōshō-gū	36.7500	139.6000	
+kamikochi	o	산	가미코치	Kamikōchi Kappa Bridge	36.2470	137.6380	
+shirakawa-go	o	옛마을	시라카와고 합장 마을	Shirakawa-gō	36.2570	136.9060	
+takayama	o	옛마을	다카야마 옛 거리	Sanmachi Suji, Takayama	36.1410	137.2590	
+magome-juku	o	옛마을	마고메 역참 마을	Magome-juku	35.5250	137.5660	
+tsumago-juku	o	옛마을	쓰마고 역참 마을	Tsumago-juku	35.5770	137.5960	
+karuizawa	o	숲	가루이자와	Karuizawa Station	36.3420	138.6350	
+kawaguchiko	o	호수	후지 가와구치코	Kawaguchiko Station	35.5000	138.7690	
+kamakura	o	바다	가마쿠라	Kamakura Station	35.3190	139.5500	
+enoshima	o	섬	에노시마	Enoshima	35.3000	139.4800	
+miyajima	o	섬	미야지마	Itsukushima Shrine	34.2960	132.3200	
+naoshima	o	섬	나오시마	Miyanoura Port, Naoshima	34.4600	133.9950	
+okinawa-naha	o	도심	오키나와 나하 국제거리	Kokusai Street, Naha	26.2150	127.6850	
+okinawa-chatan	o	바다	오키나와 차탄 아메리칸 빌리지	American Village, Chatan	26.3160	127.7560	
+ishigaki	o	섬	이시가키섬	Ishigaki Port	24.3400	124.1560	
+yakushima	o	섬	야쿠시마	Miyanoura, Yakushima	30.4260	130.5700	
+shodoshima	o	섬	쇼도시마	Tonoshō Port, Shōdoshima	34.4860	134.1870	
+otaru	o	바다	오타루 운하	Otaru Canal	43.1980	141.0020	
+hakodate	o	바다	하코다테 항구	Hakodate Bay Area	41.7690	140.7170	
+nagasaki	o	바다	나가사키 데지마	Dejima, Nagasaki	32.7440	129.8730	
+shimoda	o	바다	이즈 시모다	Shimoda Station	34.6760	138.9450	
+onomichi	o	바다	오노미치 언덕 마을	Onomichi Station	34.4090	133.2050	
+kobe-harborland	o	도심	고베 하버랜드	Kobe Harborland	34.6790	135.1860	
+kobe-kitano	o	교외	고베 기타노 언덕	Kitano-chō, Kobe	34.6990	135.1910	
+mojiko	o	바다	모지코 레트로	Mojikō Station	33.9450	130.9620	
+aso	o	산	아소 초원	Aso Station	32.9480	131.0870	
+biei	o	시골	비에이 언덕 밭	Biei Station	43.5880	142.4670	
+furano	o	시골	후라노	Furano Station	43.3420	142.3830	
+tono	o	시골	도노 농촌	Tōno Station	39.3270	141.5330	
+iya-valley	o	강골짜기	이야 골짜기	Iya Kazurabashi	33.8750	133.8350	
+tama-newtown	o	교외	다마 뉴타운	Tama Center Station	35.6270	139.4250	
+musashikosugi	o	교외	무사시코스기 타워 아파트	Musashi-Kosugi Station	35.5760	139.6590	
+urayasu-disney	o	일터	도쿄 디즈니 리조트	Tokyo Disneyland	35.6330	139.8800	
+toyota-city	o	일터	도요타 공장 도시	Toyota City	35.0830	137.1560	
+tsukuba	o	일터	쓰쿠바 연구 도시	Tsukuba Station	36.0830	140.1100	
+makuhari	o	일터	마쿠하리 신도심	Makuhari Messe	35.6480	140.0420	
+sendai	o	도심	센다이 이치반초	Ichibanchō, Sendai	38.2610	140.8710	
+hiroshima	o	도심	히로시마 평화공원	Hiroshima Peace Memorial Park	34.3955	132.4536	
+kanazawa	o	옛마을	가나자와 히가시차야	Higashi Chaya, Kanazawa	36.5720	136.6670	
+nara-park	o	숲	나라 공원	Nara Park	34.6850	135.8430	
+kawagoe	o	옛마을	가와고에 옛 거리	Kawagoe Kurazukuri Street	35.9250	139.4850	
+kurashiki	o	옛마을	구라시키 운하 마을	Kurashiki Bikan Historical Quarter	34.5950	133.7720	
+matsumoto	o	옛마을	마쓰모토성	Matsumoto Castle	36.2380	137.9690	
+himeji	o	옛마을	히메지성	Himeji Castle	34.8390	134.6940	

@@ -1,0 +1,105 @@
+slug	받기	종류	이름	찾기	lat	lon	표 동네
+ny-midtown	o	도심	뉴욕 미드타운 · 타임스스퀘어 · 코리아타운	Times Square, New York	40.7540	-73.9860	뉴욕: 맨해튼 · 미드타운 · 타임스스퀘어 · 코리아타운
+ny-soho	o	도심	뉴욕 소호 · 트라이베카	SoHo, Manhattan	40.7210	-74.0040	뉴욕: 소호 · 트라이베카
+ny-chelsea	o	도심	뉴욕 첼시 · 첼시 마켓	Chelsea Market, New York	40.7440	-74.0030	뉴욕: 첼시 · 첼시 마켓
+ny-greenwich	o	도심	뉴욕 그리니치 빌리지	Washington Square Park, New York	40.7320	-73.9990	뉴욕: 그리니치 빌리지
+ny-eastvillage	o	도심	뉴욕 이스트 빌리지 · 로어 이스트 사이드	Tompkins Square Park, New York	40.7220	-73.9850	뉴욕: 이스트 빌리지 · 로어 이스트 사이드
+ny-ues	o	도심	뉴욕 어퍼 이스트 사이드	Upper East Side, Manhattan	40.7736	-73.9566	뉴욕: 어퍼 이스트 사이드
+ny-uws	o	도심	뉴욕 어퍼 웨스트 사이드	Upper West Side, Manhattan	40.7870	-73.9754	뉴욕: 어퍼 웨스트 사이드
+ny-centralpark	o	숲	뉴욕 센트럴파크	Central Park, New York	40.7812	-73.9665	뉴욕: 센트럴파크
+ny-harlem	o	도심	뉴욕 할렘	Harlem, Manhattan	40.8116	-73.9465	뉴욕: 할렘
+ny-wallstreet	o	도심	뉴욕 월스트리트	Wall Street, New York	40.7060	-74.0090	뉴욕: 월스트리트
+ny-dumbo	o	도심	브루클린 덤보	DUMBO, Brooklyn	40.7020	-73.9880	뉴욕: 브루클린 · 덤보
+ny-williamsburg	o	도심	브루클린 윌리엄스버그	Williamsburg, Brooklyn	40.7140	-73.9610	뉴욕: 윌리엄스버그
+ny-bushwick	o	교외	브루클린 부시윅	Bushwick, Brooklyn	40.6950	-73.9200	뉴욕: 부시윅
+ny-flushing	o	교외	퀸스 플러싱	Flushing, Queens	40.7590	-73.8300	뉴욕: 플러싱
+ny-astoria	o	교외	퀸스 아스토리아	Astoria, Queens	40.7640	-73.9230	뉴욕: 퀸스
+ny-bronx	o	교외	브롱크스 양키 스타디움 둘레	Yankee Stadium, Bronx	40.8270	-73.9260	뉴욕: 브롱크스
+ny-statenisland	o	섬	스태튼 아일랜드 세인트조지	St. George Ferry Terminal, Staten Island	40.6430	-74.0760	뉴욕: 스태튼 아일랜드
+ny-jfk	o	공항	JFK 공항	John F. Kennedy International Airport	40.6413	-73.7781	뉴욕: JFK
+ny-laguardia	o	공항	라과디아 공항	LaGuardia Airport	40.7769	-73.8740	뉴욕: 라과디아
+la-hollywood	o	도심	LA 할리우드	Hollywood Walk of Fame	34.1016	-118.3267	로스앤젤레스: 할리우드
+la-weho	o	도심	LA 웨스트 할리우드	West Hollywood	34.0900	-118.3617	로스앤젤레스: 웨스트 할리우드
+la-beverlyhills	o	교외	비버리힐스	Rodeo Drive, Beverly Hills	34.0700	-118.4004	로스앤젤레스: 비버리힐스
+la-santamonica	o	바다	산타모니카	Santa Monica Pier	34.0100	-118.4960	로스앤젤레스: 산타모니카
+la-venice	o	바다	베니스 비치	Venice Beach, Los Angeles	33.9850	-118.4695	로스앤젤레스: 베니스 비치
+la-dtla	o	도심	LA 다운타운	Downtown Los Angeles	34.0480	-118.2500	로스앤젤레스: 다운타운 LA
+la-silverlake	o	교외	LA 실버레이크	Silver Lake, Los Angeles	34.0870	-118.2700	로스앤젤레스: 실버레이크
+la-koreatown	o	도심	LA 코리아타운	Koreatown, Los Angeles	34.0610	-118.3000	로스앤젤레스: 코리아타운
+la-pasadena	o	교외	패서디나	Old Pasadena	34.1460	-118.1440	로스앤젤레스: 패서디나
+la-malibu	o	바다	말리부	Malibu Pier	34.0360	-118.6780	로스앤젤레스: 말리부
+la-lax	o	공항	LA 공항	Los Angeles International Airport	33.9416	-118.4085	로스앤젤레스: LAX
+sf-mission	o	도심	샌프란시스코 미션	Mission District, San Francisco	37.7599	-122.4148	샌프란시스코: Mission District
+sf-soma	o	도심	샌프란시스코 소마 · 유니언 스퀘어	Union Square, San Francisco	37.7820	-122.4060	샌프란시스코: SoMa · 유니언 스퀘어
+sf-haight	o	교외	샌프란시스코 헤이트 애시버리	Haight-Ashbury, San Francisco	37.7692	-122.4481	샌프란시스코: 헤이트 애시버리
+sf-castro	o	도심	샌프란시스코 카스트로	Castro District, San Francisco	37.7609	-122.4350	샌프란시스코: 카스트로
+sf-northbeach	o	바다	샌프란시스코 노스비치 · 피셔맨스 워프	Fisherman's Wharf, San Francisco	37.8070	-122.4140	샌프란시스코: 노스비치 · 피셔맨스 워프
+sf-marina	o	바다	샌프란시스코 마리나	Marina District, San Francisco	37.8030	-122.4370	샌프란시스코: Marina District
+seattle-capitolhill	o	도심	시애틀 캐피톨 힐	Capitol Hill, Seattle	47.6253	-122.3222	시애틀: 캐피톨 힐
+seattle-ballard	o	교외	시애틀 밸러드	Ballard, Seattle	47.6680	-122.3850	시애틀: 밸러드
+seattle-fremont	o	교외	시애틀 프리몬트	Fremont, Seattle	47.6510	-122.3500	시애틀: 프리몬트
+seattle-pikeplace	o	도심	시애틀 파이크 플레이스	Pike Place Market	47.6097	-122.3422	시애틀: 파이크 플레이스
+chicago-loop	o	도심	시카고 루프 · 리버 노스	The Loop, Chicago	41.8870	-87.6310	시카고: The Loop · 리버 노스
+chicago-goldcoast	o	도심	시카고 골드 코스트	Gold Coast, Chicago	41.9050	-87.6280	시카고: 골드 코스트
+chicago-lincolnpark	o	교외	시카고 링컨 파크	Lincoln Park, Chicago	41.9214	-87.6513	시카고: 링컨 파크
+chicago-wickerpark	o	교외	시카고 위커 파크	Wicker Park, Chicago	41.9088	-87.6796	시카고: 위커 파크
+chicago-ohare	o	공항	오헤어 공항	O'Hare International Airport	41.9742	-87.9073	시카고: 오헤어
+boston-backbay	o	도심	보스턴 백베이 · 비컨힐	Boston Common	42.3550	-71.0760	보스턴: 백베이 · 비컨힐
+boston-northend	o	도심	보스턴 노스엔드	North End, Boston	42.3647	-71.0542	보스턴: 노스엔드
+boston-southend	o	교외	보스턴 사우스엔드	South End, Boston	42.3410	-71.0770	보스턴: 사우스엔드
+dc-georgetown	o	옛마을	워싱턴 조지타운	Georgetown, Washington	38.9076	-77.0650	워싱턴: 조지타운
+dc-dupont	o	도심	워싱턴 듀폰 서클	Dupont Circle	38.9096	-77.0434	워싱턴: 듀폰 서클
+dc-mall	o	도심	워싱턴 내셔널 몰 · 캐피톨 힐	United States Capitol	38.8897	-77.0160	워싱턴: 캐피톨 힐 · 내셔널 몰
+miami-southbeach	o	바다	마이애미 사우스비치	South Beach, Miami Beach	25.7826	-80.1341	마이애미: 사우스비치
+miami-wynwood	o	도심	마이애미 윈우드	Wynwood Walls	25.8010	-80.1990	마이애미: 윈우드
+miami-brickell	o	도심	마이애미 브리켈	Brickell, Miami	25.7617	-80.1918	마이애미: 브리켈
+miami-littlehavana	o	도심	마이애미 리틀 하바나	Calle Ocho, Miami	25.7660	-80.2190	마이애미: 리틀 하바나
+vegas-strip	o	도심	라스베이거스 스트립	Las Vegas Strip	36.1147	-115.1728	라스베이거스: Las Vegas Strip
+vegas-fremont	o	도심	라스베이거스 프리몬트 스트리트	Fremont Street Experience	36.1700	-115.1440	라스베이거스: 프리몬트 스트리트
+yosemite-valley	o	산	요세미티 계곡	Yosemite Village	37.7456	-119.5936	
+grandcanyon-village	o	산	그랜드캐니언 마을	Grand Canyon Village	36.0570	-112.1390	
+yellowstone-oldfaithful	o	산	옐로스톤 올드 페이스풀	Old Faithful	44.4605	-110.8281	
+zion-springdale	o	산	자이언 아래 스프링데일	Springdale, Utah	37.1890	-112.9990	
+aspen	o	산	애스펀	Aspen, Colorado	39.1911	-106.8175	
+jackson-hole	o	산	잭슨 홀	Jackson, Wyoming	43.4799	-110.7624	
+gatlinburg	o	산	개틀린버그	Gatlinburg, Tennessee	35.7143	-83.5102	
+tahoe-south	o	호수	타호 호숫가	South Lake Tahoe	38.9399	-119.9772	
+moab	o	산	모압	Moab, Utah	38.5733	-109.5498	
+sedona	o	산	세도나	Sedona, Arizona	34.8697	-111.7610	
+keywest	o	섬	키웨스트	Duval Street, Key West	24.5551	-81.7800	
+honolulu-waikiki	o	바다	호놀룰루 와이키키	Waikiki Beach	21.2793	-157.8292	
+maui-paia	o	섬	마우이 파이아	Paia, Hawaii	20.9110	-156.3800	
+edgartown	o	섬	마서스 비니어드 에드가타운	Edgartown, Massachusetts	41.3890	-70.5130	
+nantucket	o	섬	낸터킷	Nantucket, Massachusetts	41.2835	-70.0995	
+provincetown	o	바다	케이프코드 프로빈스타운	Provincetown, Massachusetts	42.0526	-70.1867	
+carmel	o	바다	카멀바이더시	Carmel-by-the-Sea	36.5552	-121.9233	
+santabarbara	o	바다	산타바버라	State Street, Santa Barbara	34.4140	-119.6900	
+lagunabeach	o	바다	라구나 비치	Laguna Beach, California	33.5427	-117.7854	
+galveston	o	섬	갤버스턴	Galveston, Texas	29.3013	-94.7977	
+myrtlebeach	o	바다	머틀 비치	Myrtle Beach Boardwalk	33.6891	-78.8867	
+atlanticcity	o	바다	애틀랜틱시티	Atlantic City Boardwalk	39.3643	-74.4229	
+barharbor	o	바다	바 하버	Bar Harbor, Maine	44.3876	-68.2039	
+amish-intercourse	o	시골	아미시 마을 인터코스	Intercourse, Pennsylvania	40.0370	-76.1050	
+napa-yountville	o	시골	나파 포도밭 마을 욘트빌	Yountville, California	38.4016	-122.3608	
+sonoma	o	시골	소노마	Sonoma Plaza	38.2919	-122.4580	
+stowe	o	산	스토우	Stowe, Vermont	44.4654	-72.6874	
+woodstock-vt	o	시골	우드스톡(버몬트)	Woodstock, Vermont	43.6240	-72.5180	
+savannah	o	옛마을	서배너 옛 시내	Forsyth Park, Savannah	32.0780	-81.0920	
+charleston	o	옛마을	찰스턴 옛 시내	Charleston City Market	32.7765	-79.9311	
+neworleans	o	도심	뉴올리언스 프렌치 쿼터	French Quarter, New Orleans	29.9584	-90.0644	
+nashville	o	도심	내슈빌 브로드웨이	Broadway, Nashville	36.1610	-86.7770	
+austin	o	도심	오스틴 6번가	6th Street, Austin	30.2672	-97.7431	
+santafe	o	옛마을	산타페 플라자	Santa Fe Plaza	35.6870	-105.9378	
+marfa	o	시골	사막 마을 마파	Marfa, Texas	30.3090	-104.0210	
+seligman	o	시골	66번 도로 마을 셀리그먼	Seligman, Arizona	35.3260	-112.8770	
+pella	o	시골	아이오와 농촌 마을 펠라	Pella, Iowa	41.4080	-92.9160	
+levittown	o	교외	레빗타운 교외 주택가	Levittown, New York	40.7259	-73.5143	
+stanford	o	일터	스탠퍼드 · 팰로앨토	Stanford University	37.4275	-122.1697	
+mountainview	o	일터	마운틴뷰 실리콘밸리	Googleplex, Mountain View	37.4220	-122.0841	
+dearborn	o	일터	디어본 자동차 공장	Ford Rouge Factory, Dearborn	42.3050	-83.1640	
+houston-nasa	o	일터	휴스턴 NASA	Space Center Houston	29.5519	-95.0970	
+orlando-disney	o	일터	올랜도 디즈니월드	Magic Kingdom, Orlando	28.3772	-81.5707	
+anaheim-disneyland	o	일터	애너하임 디즈니랜드	Disneyland, Anaheim	33.8121	-117.9190	
+cambridge-harvard	o	일터	케임브리지 하버드	Harvard Square	42.3734	-71.1189	
+princeton	o	옛마을	프린스턴	Princeton University	40.3487	-74.6593	
+hoboken	o	교외	호보컨	Hoboken, New Jersey	40.7440	-74.0324	

@@ -1,0 +1,86 @@
+slug	받기	종류	이름	찾기	lat	lon	표 동네
+beijing-wangfujing	o	도심	베이징 왕푸징	Wangfujing, Beijing	39.9140	116.4110	베이징: 왕푸징
+beijing-tiananmen	o	도심	베이징 톈안먼 · 첸먼	Tiananmen Square	39.9030	116.3976	베이징: 톈안먼 · 첸먼
+beijing-sanlitun	o	도심	베이징 싼리툰	Sanlitun, Beijing	39.9360	116.4540	베이징: 싼리툰
+beijing-guomao	o	일터	베이징 궈마오 · 차오양	China World Trade Center, Beijing	39.9080	116.4600	베이징: 궈마오 · 차오양
+beijing-haidian	o	일터	베이징 하이뎬 중관춘	Zhongguancun, Beijing	39.9830	116.3070	베이징: 하이뎬
+beijing-nanluoguxiang	o	옛마을	베이징 난뤄구샹 골목	Nanluoguxiang, Beijing	39.9370	116.4030	
+beijing-houhai	o	호수	베이징 허우하이	Houhai, Beijing	39.9410	116.3860	
+beijing-798	o	일터	베이징 798 예술구	798 Art Zone, Beijing	39.9840	116.4950	
+beijing-airport	o	공항	베이징 서우두 공항	Beijing Capital International Airport	40.0799	116.6031	
+mutianyu	o	산	무톈위 만리장성	Mutianyu Great Wall	40.4320	116.5630	
+badaling	o	산	바다링 만리장성	Badaling Great Wall	40.3540	116.0200	
+shanghai-bund	o	도심	상하이 와이탄 · 난징루	The Bund, Shanghai	31.2385	121.4860	상하이: 와이탄 · 난징루
+shanghai-lujiazui	o	일터	상하이 루자쭈이 · 푸둥	Oriental Pearl Tower, Shanghai	31.2397	121.4998	상하이: 푸둥 · 루자쭈이
+shanghai-xintiandi	o	도심	상하이 신톈디	Xintiandi, Shanghai	31.2200	121.4740	상하이: 신톈디
+shanghai-jingan	o	도심	상하이 징안	Jing'an Temple, Shanghai	31.2240	121.4460	상하이: 징안
+shanghai-xujiahui	o	도심	상하이 쉬자후이	Xujiahui, Shanghai	31.1950	121.4370	상하이: 쉬자후이
+shanghai-hongqiao	o	공항	상하이 훙차오	Hongqiao Railway Station, Shanghai	31.1940	121.3200	상하이: 훙차오
+shanghai-pudong-airport	o	공항	상하이 푸둥 공항	Shanghai Pudong International Airport	31.1443	121.8083	
+shanghai-disney	o	일터	상하이 디즈니랜드	Shanghai Disneyland	31.1440	121.6570	
+zhujiajiao	o	옛마을	주자자오 물의 마을	Zhujiajiao	31.1100	121.0570	
+guangzhou-tianhe	o	도심	광저우 톈허 · 주장신청	Canton Tower, Guangzhou	23.1250	113.3250	광저우: 톈허 · 주장신청
+guangzhou-shamian	o	옛마을	광저우 사몐섬	Shamian Island, Guangzhou	23.1080	113.2440	
+shenzhen-nanshan	o	일터	선전 난산	Nanshan, Shenzhen	22.5330	113.9300	선전: 난산
+shenzhen-futian	o	도심	선전 푸톈	Futian, Shenzhen	22.5410	114.0540	선전: 푸톈
+shenzhen-luohu	o	도심	선전 뤄후	Luohu, Shenzhen	22.5480	114.1180	선전: 뤄후
+shenzhen-huaqiangbei	o	일터	선전 화창베이 전자상가	Huaqiangbei, Shenzhen	22.5440	114.0880	
+dongguan-songshanhu	o	일터	둥관 쑹산호 공장 단지	Songshan Lake, Dongguan	22.9200	113.8900	
+hk-central	o	도심	홍콩 센트럴 · 란콰이퐁 · 셩완	Central, Hong Kong	22.2830	114.1550	홍콩: 中環 · 란콰이퐁 · 셩완
+hk-wanchai	o	도심	홍콩 완차이 · 코즈웨이베이	Causeway Bay, Hong Kong	22.2785	114.1785	홍콩: 완차이 · 코즈웨이베이
+hk-tst	o	도심	홍콩 침사추이	Tsim Sha Tsui, Hong Kong	22.2980	114.1720	홍콩: 침사추이
+hk-mongkok	o	도심	홍콩 몽콕	Mong Kok, Hong Kong	22.3190	114.1690	홍콩: 몽콕
+hk-peak	o	산	홍콩 빅토리아 피크	Victoria Peak	22.2710	114.1500	홍콩: 빅토리아 피크
+hk-lantau	o	섬	홍콩 란타우 옹핑	Ngong Ping, Lantau	22.2540	113.9050	홍콩: 란타우
+hk-stanley	o	바다	홍콩 스탠리	Stanley, Hong Kong	22.2190	114.2100	
+hk-repulsebay	o	바다	홍콩 리펄스베이	Repulse Bay	22.2360	114.1970	
+hk-saikung	o	바다	홍콩 사이쿵	Sai Kung Town	22.3810	114.2730	
+hk-lamma	o	섬	홍콩 라마섬	Yung Shue Wan, Lamma Island	22.2270	114.1100	
+hk-cheungchau	o	섬	홍콩 청차우섬	Cheung Chau	22.2100	114.0280	
+hk-taio	o	바다	홍콩 타이오 어촌	Tai O	22.2530	113.8620	
+hk-shamshuipo	o	도심	홍콩 삼수이포	Sham Shui Po	22.3300	114.1620	
+hk-airport	o	공항	홍콩 공항	Hong Kong International Airport	22.3080	113.9185	
+hk-shatin	o	교외	홍콩 샤틴 신도시	Sha Tin	22.3830	114.1880	
+macau-senado	o	옛마을	마카오 세나도 광장	Senado Square, Macau	22.1930	113.5400	마카오: 세나도 광장
+macau-cotai	o	도심	마카오 코타이 · 타이파	Cotai Strip, Macau	22.1500	113.5600	마카오: 코타이 · 타이파
+macau-coloane	o	섬	마카오 콜로안	Coloane Village	22.1180	113.5510	
+chengdu-kuanzhai	o	옛마을	청두 콴자이샹쯔	Kuanzhai Alley, Chengdu	30.6700	104.0560	
+chengdu-chunxi	o	도심	청두 춘시루	Chunxi Road, Chengdu	30.6560	104.0800	
+chongqing	o	도심	충칭 제팡베이 · 훙야둥	Jiefangbei, Chongqing	29.5600	106.5780	
+xian	o	옛마을	시안 종루 · 성벽	Bell Tower, Xi'an	34.2610	108.9430	
+hangzhou	o	호수	항저우 시후	West Lake, Hangzhou	30.2500	120.1550	
+suzhou	o	옛마을	쑤저우 핑장루	Pingjiang Road, Suzhou	31.3150	120.6300	
+nanjing	o	옛마을	난징 푸쯔먀오	Fuzimiao, Nanjing	32.0200	118.7880	
+wuhan	o	도심	우한 장한루	Jianghan Road, Wuhan	30.5800	114.2900	
+harbin	o	도심	하얼빈 중앙대가	Central Street, Harbin	45.7740	126.6170	
+qingdao	o	바다	칭다오 옛 시내	Qingdao Old Town	36.0650	120.3190	
+qingdao-badaguan	o	바다	칭다오 바다관	Badaguan, Qingdao	36.0530	120.3460	
+tianjin	o	도심	톈진 이탈리아 거리	Italian Style Town, Tianjin	39.1360	117.2000	
+kunming	o	도심	쿤밍 시내	Cuihu Park, Kunming	25.0490	102.7080	
+changsha	o	도심	창사 우이광장	Wuyi Square, Changsha	28.1960	112.9770	
+xiamen-gulangyu	o	섬	샤먼 구랑위	Gulangyu	24.4470	118.0660	
+xiamen-zengcuoan	o	바다	샤먼 쩡춰안	Zengcuo'an, Xiamen	24.4320	118.1260	
+lijiang	o	옛마을	리장 고성	Lijiang Old Town	26.8720	100.2350	
+dali	o	옛마을	다리 고성	Dali Old Town	25.6950	100.1620	
+pingyao	o	옛마을	핑야오 고성	Pingyao Ancient City	37.2010	112.1810	
+wuzhen	o	옛마을	우전 물의 마을	Wuzhen	30.7440	120.4890	
+zhouzhuang	o	옛마을	저우좡 물의 마을	Zhouzhuang	31.1170	120.8460	
+xitang	o	옛마을	시탕 물의 마을	Xitang	30.9440	120.8880	
+hongcun	o	시골	훙춘 마을	Hongcun	30.0040	117.9870	
+fenghuang	o	옛마을	펑황 고성	Fenghuang Ancient Town	27.9510	109.6000	
+yangshuo	o	강골짜기	양숴	West Street, Yangshuo	24.7790	110.4920	
+longji	o	시골	룽지 다랑논	Longji Rice Terraces	25.7550	110.1100	
+shangrila	o	산	샹그릴라 두커쭝	Dukezong Ancient Town	27.8190	99.7030	
+tianluokeng	o	시골	푸젠 토루 마을	Tianluokeng Tulou	24.5920	117.0510	
+guilin	o	강골짜기	구이린 리강	Elephant Trunk Hill, Guilin	25.2740	110.2900	
+huangshan	o	산	황산 탕커우	Tangkou, Huangshan	30.0690	118.1590	
+zhangjiajie	o	산	장자제 우링위안	Wulingyuan	29.3480	110.5480	
+jiuzhaigou	o	산	주자이거우 입구	Jiuzhaigou	33.2600	103.9200	
+emeishan	o	산	어메이산 아래	Emeishan	29.5960	103.4840	
+lhasa	o	옛마을	라싸 바코르	Barkhor, Lhasa	29.6530	91.1320	
+sanya-yalong	o	바다	싼야 야룽만	Yalong Bay, Sanya	18.2290	109.6430	
+sanya-dadonghai	o	바다	싼야 다둥하이	Dadonghai, Sanya	18.2220	109.5180	
+beidaihe	o	바다	베이다이허	Beidaihe	39.8260	119.4880	
+dalian	o	바다	다롄 싱하이 광장	Xinghai Square, Dalian	38.8770	121.5800	
+putuoshan	o	섬	저우산 푸퉈산	Putuoshan	30.0050	122.3850	
+weihai	o	바다	웨이하이	Weihai	37.5000	122.1200	

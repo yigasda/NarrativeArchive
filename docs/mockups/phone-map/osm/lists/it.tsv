@@ -1,0 +1,90 @@
+slug	받기	종류	이름	찾기	lat	lon	표 동네
+rome-trastevere	o	도심	로마 트라스테베레	Trastevere, Rome	41.8880	12.4700	로마: 트라스테베레
+rome-testaccio	o	도심	로마 테스타치오	Testaccio, Rome	41.8770	12.4760	로마: 테스타치오
+rome-vatican	o	도심	바티칸	St. Peter's Square	41.9029	12.4534	로마: 바티칸
+rome-centro	o	도심	로마 트레비 · 스페인 광장 · 나보나	Trevi Fountain, Rome	41.9020	12.4790	로마: 트레비 · 스페인 광장 · 나보나
+rome-termini	o	도심	로마 테르미니 · 몬티	Roma Termini	41.8980	12.4970	로마: 테르미니 · 몬티
+rome-eur	o	교외	로마 에우르	EUR, Rome	41.8320	12.4690	
+rome-fiumicino	o	공항	로마 피우미치노 공항	Fiumicino Airport	41.8003	12.2389	
+rome-ostia	o	바다	로마 오스티아 해변	Lido di Ostia	41.7330	12.2870	
+rome-cinecitta	o	일터	로마 치네치타 영화 촬영소	Cinecittà	41.8520	12.5730	
+tivoli	o	옛마을	티볼리	Villa d'Este, Tivoli	41.9630	12.7980	
+milan-brera	o	도심	밀라노 브레라 · 포르타 누오바 · 이솔라	Brera, Milan	45.4800	9.1890	밀라노: 브레라 · 포르타 누오바 · 이솔라
+milan-navigli	o	도심	밀라노 나빌리	Navigli, Milan	45.4520	9.1760	밀라노: 나빌리
+milan-duomo	o	도심	밀라노 두오모	Milan Cathedral	45.4642	9.1900	
+milan-citylife	o	교외	밀라노 시티라이프	CityLife, Milan	45.4780	9.1560	
+milan-malpensa	o	공항	밀라노 말펜사 공항	Malpensa Airport	45.6301	8.7231	
+venice-sanmarco	o	도심	베네치아 산 마르코 · 리알토 · 도르소두로	Piazza San Marco, Venice	45.4340	12.3330	베네치아: 산 마르코 · 리알토 · 도르소두로
+venice-murano	o	섬	베네치아 무라노	Murano	45.4580	12.3530	베네치아: 무라노
+venice-burano	o	섬	베네치아 부라노	Burano	45.4850	12.4170	
+venice-lido	o	섬	베네치아 리도	Lido di Venezia	45.4100	12.3700	
+venice-mestre	o	교외	베네치아 메스트레	Mestre	45.4900	12.2420	
+florence-centro	o	도심	피렌체 산타 크로체 · 올트라르노 · 산 로렌초	Florence Cathedral	43.7700	11.2550	피렌체: 산타 크로체 · 올트라르노 · 산 로렌초
+fiesole	o	산	피에솔레	Fiesole	43.8070	11.2930	
+naples-centro	o	도심	나폴리 옛 시내	Spaccanapoli, Naples	40.8500	14.2580	
+naples-chiaia	o	바다	나폴리 키아이아	Chiaia, Naples	40.8350	14.2400	
+naples-vomero	o	교외	나폴리 보메로 언덕	Vomero, Naples	40.8470	14.2310	
+turin	o	도심	토리노 시내	Piazza Castello, Turin	45.0703	7.6869	
+turin-lingotto	o	일터	토리노 링고토	Lingotto, Turin	45.0300	7.6670	
+bologna	o	도심	볼로냐 시내	Piazza Maggiore, Bologna	44.4940	11.3430	
+genoa	o	바다	제노바 옛 항구	Porto Antico, Genoa	44.4100	8.9270	
+palermo	o	도심	팔레르모 시내	Quattro Canti, Palermo	38.1157	13.3615	
+verona	o	옛마을	베로나	Arena di Verona	45.4390	10.9940	
+siena	o	옛마을	시에나	Piazza del Campo, Siena	43.3180	11.3310	
+pisa	o	옛마을	피사	Piazza dei Miracoli, Pisa	43.7230	10.3966	
+lucca	o	옛마을	루카	Lucca	43.8430	10.5050	
+bari	o	바다	바리 옛 시내	Bari Vecchia	41.1290	16.8690	
+catania	o	도심	카타니아	Piazza del Duomo, Catania	37.5020	15.0870	
+trieste	o	바다	트리에스테	Piazza Unità d'Italia, Trieste	45.6500	13.7680	
+lecce	o	옛마을	레체	Lecce	40.3520	18.1700	
+padova	o	도심	파도바	Prato della Valle, Padua	45.4080	11.8770	
+bergamo	o	옛마을	베르가모 언덕 마을	Città Alta, Bergamo	45.7040	9.6620	
+mantova	o	옛마을	만토바	Mantua	45.1580	10.7940	
+ravenna	o	옛마을	라벤나	Ravenna	44.4170	12.2000	
+pompeii	o	옛마을	폼페이	Pompeii	40.7490	14.4860	
+sangimignano	o	옛마을	산지미냐노	San Gimignano	43.4677	11.0432	
+montepulciano	o	시골	몬테풀차노	Montepulciano	43.0920	11.7800	
+pienza	o	시골	피엔차	Pienza	43.0770	11.6790	
+bagnovignoni	o	온천	발도르차 바뇨비뇨니	Bagno Vignoni	43.0280	11.6180	
+greve	o	시골	키안티 그레베	Greve in Chianti	43.5840	11.3160	
+cortona	o	옛마을	코르토나	Cortona	43.2750	11.9870	
+assisi	o	옛마을	아시시	Basilica of San Francesco, Assisi	43.0700	12.6170	
+orvieto	o	옛마을	오르비에토	Orvieto	42.7180	12.1110	
+civita	o	옛마을	치비타 디 바뇨레조	Civita di Bagnoregio	42.6270	12.1130	
+alberobello	o	시골	알베로벨로 트룰리 마을	Alberobello	40.7840	17.2370	
+matera	o	옛마을	마테라 동굴 마을	Sassi di Matera	40.6660	16.6100	
+polignano	o	바다	폴리냐노 아 마레	Polignano a Mare	40.9960	17.2190	
+ostuni	o	옛마을	오스투니 하얀 마을	Ostuni	40.7290	17.5770	
+barolo	o	시골	랑게 바롤로 포도밭	Barolo	44.6110	7.9440	
+ortisei	o	산	돌로미티 오르티세이	Ortisei	46.5740	11.6730	
+cortina	o	산	코르티나 담페초	Cortina d'Ampezzo	46.5400	12.1360	
+courmayeur	o	산	쿠르마예르	Courmayeur	45.7920	6.9720	
+bolzano	o	산	볼차노	Bolzano	46.4980	11.3540	
+merano	o	온천	메라노	Merano	46.6710	11.1600	
+bellagio	o	호수	코모호 벨라조	Bellagio	45.9870	9.2610	
+como	o	호수	코모 시내	Como	45.8110	9.0850	
+varenna	o	호수	코모호 바렌나	Varenna	46.0100	9.2840	
+sirmione	o	호수	가르다호 시르미오네	Sirmione	45.4930	10.6080	
+rivadelgarda	o	호수	가르다호 리바	Riva del Garda	45.8850	10.8420	
+stresa	o	호수	마조레호 스트레사	Stresa	45.8840	8.5330	
+orta	o	호수	오르타호 오르타 산 줄리오	Orta San Giulio	45.7970	8.4070	
+amalfi	o	바다	아말피	Amalfi	40.6340	14.6030	
+positano	o	바다	포지타노	Positano	40.6280	14.4850	
+sorrento	o	바다	소렌토	Sorrento	40.6260	14.3750	
+capri	o	섬	카프리섬	Capri	40.5500	14.2430	
+ischia	o	섬	이스키아섬	Ischia Porto	40.7400	13.9440	
+procida	o	섬	프로치다섬	Procida	40.7610	14.0270	
+vernazza	o	바다	친퀘테레 베르나차	Vernazza	44.1350	9.6840	
+manarola	o	바다	친퀘테레 마나롤라	Manarola	44.1060	9.7290	
+portofino	o	바다	포르토피노	Portofino	44.3030	9.2090	
+sanremo	o	바다	산레모	Sanremo	43.8160	7.7760	
+taormina	o	바다	타오르미나	Taormina	37.8520	15.2880	
+cefalu	o	바다	체팔루	Cefalù	38.0390	14.0230	
+ortigia	o	섬	시라쿠사 오르티자	Ortigia, Syracuse	37.0600	15.2930	
+cagliari	o	바다	사르데냐 칼리아리	Cagliari	39.2160	9.1100	
+portocervo	o	바다	코스타 스메랄다 포르토 체르보	Porto Cervo	41.1350	9.5370	
+alghero	o	바다	사르데냐 알게로	Alghero	40.5580	8.3190	
+portoferraio	o	섬	엘바섬 포르토페라이오	Portoferraio	42.8130	10.3180	
+rimini	o	바다	리미니 해변	Rimini	44.0600	12.5770	
+viareggio	o	바다	비아레조	Viareggio	43.8670	10.2500	
+maranello	o	일터	마라넬로 페라리 공장	Ferrari Museum, Maranello	44.5260	10.8650	

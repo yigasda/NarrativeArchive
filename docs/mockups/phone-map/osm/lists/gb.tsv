@@ -1,0 +1,88 @@
+slug	받기	종류	이름	찾기	lat	lon	표 동네
+london-soho	o	도심	런던 소호 · 코벤트 가든 · 피카딜리	Piccadilly Circus, London	51.5125	-0.1320	런던: 소호 · 코벤트 가든 · 피카딜리 · 옥스퍼드 스트리트 · 웨스트엔드
+london-mayfair	o	도심	런던 메이페어	Mayfair, London	51.5100	-0.1470	런던: 메이페어
+london-westminster	o	도심	런던 웨스트민스터 · 사우스뱅크	Westminster Bridge, London	51.5030	-0.1200	런던: 웨스트민스터 · 사우스뱅크
+london-camden	o	도심	런던 캠든	Camden Market, London	51.5390	-0.1426	런던: 캠든
+london-kingscross	o	도심	런던 킹스크로스	King's Cross Station, London	51.5308	-0.1238	런던: 킹스크로스
+london-islington	o	교외	런던 이즐링턴	Upper Street, Islington	51.5362	-0.1030	런던: 이즐링턴
+london-shoreditch	o	도심	런던 쇼디치 · 브릭 레인	Brick Lane, London	51.5240	-0.0750	런던: 쇼디치 · 브릭 레인
+london-hackney	o	교외	런던 해크니	Hackney Central, London	51.5450	-0.0553	런던: 해크니
+london-city	o	도심	시티 오브 런던	Bank Station, London	51.5133	-0.0890	런던: 시티 오브 런던
+london-canarywharf	o	일터	런던 캐너리 워프	Canary Wharf, London	51.5054	-0.0235	런던: 캐너리 워프
+london-greenwich	o	옛마을	런던 그리니치	Cutty Sark, Greenwich	51.4826	-0.0077	런던: 그리니치
+london-nottinghill	o	교외	런던 노팅힐	Portobello Road, London	51.5150	-0.2050	런던: 노팅힐
+london-kensington	o	도심	런던 켄싱턴	South Kensington Station, London	51.4940	-0.1740	런던: 켄싱턴
+london-chelsea	o	교외	런던 첼시	King's Road, Chelsea	51.4875	-0.1687	런던: 첼시
+london-brixton	o	교외	런던 브릭스턴	Brixton Station, London	51.4613	-0.1156	런던: 브릭스턴
+london-heathrow	o	공항	히스로 공항	Heathrow Airport	51.4700	-0.4543	런던: 히스로
+london-gatwick	o	공항	개트윅 공항	Gatwick Airport	51.1537	-0.1821	런던: 개트윅
+london-hampstead	o	교외	런던 햄스테드	Hampstead, London	51.5560	-0.1780	
+london-richmond	o	교외	런던 리치먼드	Richmond, London	51.4613	-0.3037	
+london-wimbledon	o	교외	런던 윔블던	Wimbledon Village	51.4214	-0.2064	
+london-wembley	o	일터	런던 웸블리	Wembley Stadium	51.5560	-0.2796	
+london-stratford	o	교외	런던 스트랫퍼드 올림픽 공원	Queen Elizabeth Olympic Park	51.5430	-0.0160	
+london-croydon	o	교외	런던 크로이든	East Croydon Station	51.3760	-0.0980	
+london-ealing	o	교외	런던 일링	Ealing Broadway	51.5130	-0.3050	
+manchester-centre	o	도심	맨체스터 노던 쿼터 · 딘스게이트	Northern Quarter, Manchester	53.4815	-2.2420	맨체스터: 노던 쿼터 · 딘스게이트
+manchester-salford	o	일터	샐퍼드 미디어시티	MediaCityUK, Salford	53.4720	-2.2970	맨체스터: 샐퍼드
+edinburgh-oldtown	o	옛마을	에든버러 옛 시내 · 로열 마일	Royal Mile, Edinburgh	55.9500	-3.1880	에든버러: Edinburgh Old Town · 로열 마일
+edinburgh-leith	o	바다	에든버러 리스	The Shore, Leith	55.9755	-3.1700	에든버러: 리스
+liverpool-albertdock	o	바다	리버풀 앨버트 독	Royal Albert Dock, Liverpool	53.3997	-2.9920	
+bath	o	옛마을	바스	Roman Baths, Bath	51.3811	-2.3590	
+oxford	o	옛마을	옥스퍼드	Radcliffe Camera, Oxford	51.7534	-1.2540	
+cambridge	o	옛마을	케임브리지	King's College, Cambridge	52.2043	0.1149	
+york	o	옛마을	요크	York Minster	53.9620	-1.0819	
+brighton	o	바다	브라이턴	Brighton Palace Pier	50.8190	-0.1360	
+bristol-harbourside	o	바다	브리스틀 항구	Bristol Harbourside	51.4500	-2.6000	
+glasgow-merchant	o	도심	글래스고 머천트 시티	Merchant City, Glasgow	55.8580	-4.2450	
+cardiff-bay	o	바다	카디프 베이	Cardiff Bay	51.4640	-3.1630	
+belfast-cathedral	o	도심	벨파스트 캐서드럴 쿼터	Cathedral Quarter, Belfast	54.6020	-5.9260	
+birmingham	o	도심	버밍엄 시내	Bullring, Birmingham	52.4780	-1.8940	
+stratford-upon-avon	o	옛마을	스트랫퍼드어폰에이번	Shakespeare's Birthplace	52.1940	-1.7080	
+canterbury	o	옛마을	캔터베리	Canterbury Cathedral	51.2798	1.0830	
+windsor	o	옛마을	윈저	Windsor Castle	51.4839	-0.6044	
+durham	o	옛마을	더럼	Durham Cathedral	54.7740	-1.5760	
+chester	o	옛마을	체스터	Chester Rows	53.1900	-2.8910	
+standrews	o	바다	세인트앤드루스	St Andrews, Fife	56.3400	-2.7960	
+inverness	o	도심	인버네스	Inverness Castle	57.4780	-4.2250	
+norwich	o	옛마을	노리치	Norwich Market	52.6280	1.2930	
+portsmouth	o	바다	포츠머스 항구	Portsmouth Historic Dockyard	50.8000	-1.1080	
+newcastle-quayside	o	도심	뉴캐슬 강가	Newcastle Quayside	54.9690	-1.6060	
+bibury	o	시골	코츠월드 바이버리	Bibury	51.7590	-1.8330	
+castlecombe	o	시골	캐슬쿰	Castle Combe	51.4930	-2.2290	
+bourton	o	시골	버턴온더워터	Bourton-on-the-Water	51.8850	-1.7590	
+grasmere	o	호수	호수 지방 그래스미어	Grasmere	54.4590	-3.0240	
+ambleside	o	호수	호수 지방 앰블사이드	Ambleside	54.4280	-2.9610	
+keswick	o	호수	호수 지방 케직	Keswick	54.6010	-3.1350	
+castleton	o	산	피크 디스트릭트 캐슬턴	Castleton, Derbyshire	53.3440	-1.7770	
+hawes	o	시골	요크셔 데일스 호스	Hawes	54.3040	-2.1970	
+haworth	o	시골	하워스 황야 마을	Haworth	53.8300	-1.9560	
+rye	o	옛마을	라이	Rye, East Sussex	50.9500	0.7330	
+lavenham	o	시골	래븐엄	Lavenham	52.1080	0.7970	
+glastonbury	o	시골	글래스턴베리	Glastonbury	51.1460	-2.7140	
+stonehenge-amesbury	o	시골	스톤헨지 · 에임즈버리	Stonehenge	51.1789	-1.8262	
+haltwhistle	o	시골	하드리아누스 방벽 마을	Haltwhistle	54.9700	-2.4590	
+stives	o	바다	세인트아이브스	St Ives, Cornwall	50.2110	-5.4800	
+padstow	o	바다	패드스토	Padstow	50.5410	-4.9390	
+mousehole	o	바다	마우절 어촌	Mousehole	50.0840	-5.5390	
+tintagel	o	바다	틴타젤	Tintagel	50.6630	-4.7520	
+whitby	o	바다	휘트비	Whitby	54.4860	-0.6150	
+scarborough	o	바다	스카버러	Scarborough, North Yorkshire	54.2830	-0.4000	
+tenby	o	바다	텐비	Tenby	51.6720	-4.7020	
+dover	o	바다	도버	Dover	51.1260	1.3130	
+portree	o	섬	스카이섬 포트리	Portree, Isle of Skye	57.4130	-6.1940	
+tobermory-mull	o	섬	멀섬 토버모리	Tobermory, Isle of Mull	56.6230	-6.0650	
+kirkwall	o	섬	오크니 커크월	Kirkwall, Orkney	58.9820	-2.9600	
+cowes	o	섬	와이트섬 카우스	Cowes, Isle of Wight	50.7620	-1.2970	
+beaumaris	o	섬	앵글시 보마리스	Beaumaris	53.2640	-4.0930	
+llanberis	o	산	스노도니아 란베리스	Llanberis	53.1190	-4.1290	
+betws-y-coed	o	숲	베투스이코이드	Betws-y-Coed	53.0930	-3.8010	
+fortwilliam	o	산	벤네비스 아래 포트윌리엄	Fort William	56.8200	-5.1050	
+drumnadrochit	o	호수	네스호 드럼나드로킷	Drumnadrochit	57.3360	-4.4750	
+pitlochry	o	산	피틀로크리	Pitlochry	56.7040	-3.7340	
+aviemore	o	산	에비모어	Aviemore	57.1950	-3.8250	
+luss	o	호수	로몬드호 러스	Luss	56.1000	-4.6390	
+lyndhurst	o	숲	뉴 포레스트 린드허스트	Lyndhurst, Hampshire	50.8720	-1.5760	
+widecombe	o	시골	다트무어 와이드콤	Widecombe-in-the-Moor	50.5760	-3.8110	
+harrogate	o	온천	해러게이트	Harrogate	53.9920	-1.5410	
+miltonkeynes	o	교외	밀턴킨스 신도시	Milton Keynes Central	52.0430	-0.7600	
