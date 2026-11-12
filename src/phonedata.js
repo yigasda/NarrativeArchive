@@ -26,7 +26,7 @@ import { PLACE } from './phonemapcity.js';
 export { tidyKo, arr, gapDays, giftOf, hhmm, jsonOf, ko, last4, line, num, pad, pick, storyMin, byStory, str, when, withEv };
 import { COUNTRY_TZ, KR_ONLY, applyDays, applyLife, applyWeather, cardClock, cityAt, dayGap, dlvClock, fillDays, homeScreen, lifeClock, lifeNow, weatherFrom, zoneShift } from './phonesynclife.js';
 import { applyMoney, dlvTotal, investNow, moneyMissing, moneyNow, orderClock, payOrders, recordsMoney, regularClock, replayEffects, revertEffects } from './phonesyncmoney.js';
-import { isDone, pruneDropped, srcOf, addFrom, orphanOf, itemMark, edited, busy, exclusive, joinComments, realign, bodyMark, newSync, syncOf, makeMark, settleMarks, pickRound, unreadCount, addDone, settleRound, archiveRound, archivedUnread, readBefore, reachesEnd, quoted, journalAdd, journalRead, journalWrite } from './phonesync.js';
+import { isDone, pruneDropped, srcOf, addFrom, orphanOf, itemMark, edited, busy, exclusive, joinComments, realign, bodyMark, newSync, syncOf, makeMark, settleMarks, pickRound, unreadCount, addDone, settleRound, archiveRound, archivedUnread, hiddenLeft, readBefore, reachesEnd, quoted, journalAdd, journalRead, journalWrite } from './phonesync.js';
 
 export const WALLS = ['dusk', 'ocean', 'forest', 'rose', 'night', 'sand', 'mono', 'aurora'];
 export const ACCENTS = ['blue', 'green', 'orange', 'pink', 'purple', 'red'];
@@ -1673,7 +1673,7 @@ function firstMark(s) {
     return s.scope && main && s.scope !== phoneChatScope(ctx()) && chatName(s.scope) === main ? `before:${s.scope}` : chatMark();
 }
 // what is left to read: unread messages, and stretches archived before the phone read them (one each)
-export const syncLeft = (p, m = null) => { if (!p?.sync?.marks?.base) return null; const s = structuredClone(p.sync); realign(s, chatRows(), { other: otherChat(s) }); const rows = syncRows(); return unreadCount(s, rows) + (m ? archivedUnread(s, archSections(m), rows, chatRows()).length : 0); };
+export const syncLeft = (p, m = null) => { if (!p?.sync?.marks?.base) return null; const s = structuredClone(p.sync); realign(s, chatRows(), { other: otherChat(s) }); const rows = syncRows(); return unreadCount(s, rows) + (m ? hiddenLeft(archivedUnread(s, archSections(m), rows, chatRows())) : 0); };
 export const ITEM_KEYS = [...LISTS, 'threads', 'contacts'];
 export const sizes = p => Object.fromEntries(ITEM_KEYS.map(k => [k, k === 'threads' ? p.threads.reduce((n, t) => n + t.messages.length, 0) : k === 'posts' ? (p.posts || []).reduce((n, x) => n + 1 + (x.comments?.length || 0), 0) : (p[k] || []).length]));
 // every app item that can carry a source: list items, text messages, comments
@@ -2346,7 +2346,7 @@ async function updatePhone(m, owner) {
         if (p.money) migrateBank(m, p);
         const id = rid;
         s.rounds = [...(s.rounds || []).slice(-19), id];
-        p.syncLast = { checked: inRound.size + archIn.length, remaining: unreadCount(s, rows) + archivedUnread(s, sections, rows, chatRows()).length, apps: [...apps], failed: [...Object.entries(failed).map(([at, why]) => ({ at: Number(at), why, skipped: s.failed[at]?.tries >= 2 })), ...loose.map(why => ({ at: null, why }))], changes, notes, ...(recCount ? { records: { ...recCount, ...(advanced.length ? { advanced: advanced.length } : {}) }, ...(advanced.length ? { advanced } : {}) } : {}), at: Date.now() };
+        p.syncLast = { checked: inRound.size + hiddenLeft(archIn), remaining: unreadCount(s, rows) + hiddenLeft(archivedUnread(s, sections, rows, chatRows())), apps: [...apps], failed: [...Object.entries(failed).map(([at, why]) => ({ at: Number(at), why, skipped: s.failed[at]?.tries >= 2 })), ...loose.map(why => ({ at: null, why }))], changes, notes, ...(recCount ? { records: { ...recCount, ...(advanced.length ? { advanced: advanced.length } : {}) }, ...(advanced.length ? { advanced } : {}) } : {}), at: Date.now() };
         ensureIds(p);
         p.at = Date.now();
         pruneDropped(s, phoneItems(p));

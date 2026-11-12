@@ -58,7 +58,7 @@ const note = (at, quote, title) => ({ id: title.toLowerCase(), at, quote, summar
 
 test('a stretch archived before the phone read it comes in from its section, once', async () => {
     const { m, p } = archived();
-    assert.equal(data.syncLeft(p, m), 2); // #6, and the archived #2–#5
+    assert.equal(data.syncLeft(p, m), 5); // #6, and the archived #2–#5 (four messages)
     await run(m, { now: '10-26 13:00', events: [note(3, 'bought the poetry book', 'Book'), note(6, 'see you at the cafe', 'Cafe')] });
     assert.deepEqual(p.notes.map(x => x.title).sort(), ['Book', 'Cafe']);
     const s = p.sync;
@@ -92,7 +92,7 @@ test('whole sections only: past the limit a section waits for the next round, ne
     const first = Object.keys(c.p.sync.arch).length;
     assert.ok(first > 1 && first < 30, String(first));
     // every section read whole: the next round starts where this one stopped
-    assert.equal(data.syncLeft(c.p, c.m), 30 - first);
+    assert.equal(data.syncLeft(c.p, c.m), 2 * (30 - first));
     await run(c.m, { now: '10-26 13:00', events: [] });
     assert.ok(Object.keys(c.p.sync.arch).length > first);
 });
@@ -114,7 +114,7 @@ test('a round that read an archived stretch, taken back: the stretch is unread a
     await run(m, { now: '10-26 13:00', events: [note(3, 'bought the poetry book', 'Book'), note(6, 'see you at the cafe', 'Cafe')] });
     await data.undoRound(m, p);
     assert.equal(p.notes.length, 0);
-    assert.equal(data.syncLeft(p, m), 2);
+    assert.equal(data.syncLeft(p, m), 5);
     await run(m, { now: '10-26 13:00', events: [note(3, 'bought the poetry book', 'Book')] });
     assert.deepEqual(p.notes.map(x => x.title), ['Book']);
 });
@@ -483,7 +483,7 @@ test('an archive section after the read stretch is not sent as the story before 
     await run(c.m, { now: '10-26 13:00', events: [] });
     const i = T.input.indexOf('[ARCHIVE BEFORE]'), bf = i < 0 ? '' : T.input.slice(i, T.input.indexOf('\n\n[', i + 1) >>> 0 || undefined);
     assert.ok(!bf.includes('Busan'));
-    assert.equal(data.syncLeft(c.p, c.m), 1);
+    assert.equal(data.syncLeft(c.p, c.m), 2);
 });
 
 test('되돌리기 holds the screen clock where the phone was until the next 반영; otherwise it follows the newest status line', async () => {
