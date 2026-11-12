@@ -99,23 +99,17 @@ export function dropVoice(p, i) {
 }
 // asks the story about these people (names); the rows it found: [{ who, style, evidence, by }]. A row needs the words
 // that show it (from the story or a card)
+// a language by the name the phone's list shows (말투 › 언어 ticks these): the model's "German" and the list's "Deutsch" are
+// one; a language not in the list stays as written
+const LANG_NAMES = { korean: '한국어', english: 'English', german: 'Deutsch', japanese: '日本語', chinese: '中文', mandarin: '中文', french: 'Français', spanish: 'Español', italian: 'Italiano', portuguese: 'Português',
+    russian: 'Русский', dutch: 'Nederlands', polish: 'Polski', swedish: 'Svenska', turkish: 'Türkçe', vietnamese: 'Tiếng Việt', thai: 'ไทย', indonesian: 'Bahasa Indonesia', arabic: 'العربية', hindi: 'हिन्दी' };
+const LANG_SHOWN = new Map(Object.values(LANG_NAMES).map(n => [n.toLowerCase(), n]));
+export const langName = n => { const k = String(n ?? '').trim().toLowerCase(); return LANG_NAMES[k] || LANG_SHOWN.get(k) || String(n ?? '').trim(); };
 // { texts, knows } as the answer gives them: names each once, 5 of a kind at most, a language in both only in "texts"; null when it names none
 export function langsOf(v) {
-    const list = x => (Array.isArray(x) ? x : []).map(y => String(y ?? '').replace(/\s+/g, ' ').trim().slice(0, 30)).filter((y, i, all) => y && all.findIndex(z => z.toLowerCase() === y.toLowerCase()) === i).slice(0, 5);
+    const list = x => (Array.isArray(x) ? x : []).map(y => langName(String(y ?? '').replace(/\s+/g, ' ').trim().slice(0, 30))).filter((y, i, all) => y && all.findIndex(z => z.toLowerCase() === y.toLowerCase()) === i).slice(0, 5);
     const texts = list(v?.texts), knows = list(v?.knows).filter(x => !texts.some(y => y.toLowerCase() === x.toLowerCase()));
     return texts.length || knows.length ? { texts, knows } : null;
-}
-// 말투 › 나 › 쓰는 언어: the owner's languages as one line the user reads and writes, "한국어, English (Deutsch)": the ones
-// they text in, then in brackets those they know but seldom use. langsLine: the phone's, as that line ('' when none).
-// setLangs: the user's line kept on the phone (the voice reading leaves it alone from then on); an empty line takes it
-// off, and the next reading fills it again. Returns what is kept, or null
-export const langsLine = p => { const l = p?.langs, t = (l?.texts || []).join(', '), k = (l?.knows || []).join(', '); return `${t}${k ? `${t ? ' ' : ''}(${k})` : ''}`; };
-export function setLangs(p, line) {
-    const text = String(line ?? ''), inside = [...text.matchAll(/[(（]([^)）]*)[)）]/g)].map(x => x[1]).join(','), split = v => v.split(/[,\n·、，/]/);
-    const got = langsOf({ texts: split(text.replace(/[(（][^)）]*[)）]/g, ',')), knows: split(inside) });
-    if (!got) { delete p.langs; return null; }
-    p.langs = { ...got, by: 'user' };
-    return p.langs;
 }
 // 말투 › 언어 (docs/mockups/phone-voice-langs pick B): one language ticked on or off in 자주 쓰는 언어 (texts) or 가끔
 // 쓰는 언어 (knows), kept as the user's; 5 of a kind at most (a sixth does nothing), one in texts leaves knows. With none
