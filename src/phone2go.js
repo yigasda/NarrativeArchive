@@ -18,9 +18,11 @@ import { phone2ReplySystem } from './phone2reply.js';
 import { runLive } from './phone2run.js';
 import { markPersona } from './phone2feed.js';
 import { updateLive, undoLive } from './phone2reflect.js';
+import { SHORT_PROMPT, fillPrompt, langBlock } from './prompts.js';
+import { digestDue, digestRaw, digestRequest, takeDigest, failDigest } from './phone2digest.js';
 
 // rounds of reflection after one reply at most (messages piled up while only talking: 100 a round)
-export const LIVE_GO = { rounds: 3, replyTokens: 4000 };
+export const LIVE_GO = { rounds: 3, replyTokens: 4000, digests: 2 };
 const tzOf = p => ownerZone(p)?.tz || 'UTC';
 // the owner's card as the reply reads it: the profile the user chose for them, else their character card in this chat
 async function cardOf(p) {
@@ -65,7 +67,13 @@ export async function liveGo(real, { onChange = () => {} } = {}) {
 // whole the next time). A failure leaves the phone as it was and says why on it (p.liveReflectError); the messages stay
 // unread for the next time. Returns { rounds, left, waiting, error } (held: true when it waits after 되돌리기)
 const reflecting = new WeakSet();
-export async function liveReflect(real, owner, { onChange = () => {}, force = false } = {}) {
+export async function liveReflect(real, owner, o = {}) {
+    const out = await reflectTalk(real, owner, o);
+    // (then the old talk of the owner's rooms, when it is time: phone2digest.js)
+    try { await liveDigest(real, owner); } catch (err) { console.error('[narrative-archive] live digest', err); }
+    return out;
+}
+async function reflectTalk(real, owner, { onChange = () => {}, force = false } = {}) {
     const w = liveWorld(real), p = livePhone(real, owner), none = { rounds: 0, left: 0, waiting: false, error: '' };
     if (!w || !p || reflecting.has(real)) return none;
     if (!liveUnreflected(real, owner)) return none;
@@ -99,4 +107,33 @@ export async function liveUndo(real, owner, { onChange = () => {} } = {}) {
     const kept = await undoLive(real, liveMeta(real, { text: () => liveStoryText(real, liveWorld(real)) }), owner, { save: saveMeta });
     try { onChange(); } catch (err) { console.error('[narrative-archive] live draw', err); }
     return kept;
+}
+
+// 오래된 대화 요약: the owner's rooms whose unsummarized talk has piled up get their oldest stretch summarized (the
+// archive's short instruction, the draft model), up to LIVE_GO.digests stretches a go. A failure is noted on the room and
+// tried again after new talk or an hour; the replies go on without it. Returns how many stretches were summarized
+const digesting = new WeakSet();
+export async function liveDigest(real, owner) {
+    const w = liveWorld(real), p = livePhone(real, owner);
+    if (!w || !p || digesting.has(real)) return 0;
+    let done = 0;
+    digesting.add(real);
+    try {
+        for (; done < LIVE_GO.digests; ) {
+            const next = digestDue(real, owner)[0];
+            if (!next || liveWorld(real)?.id !== w.id) break;
+            const { room, chunk } = next;
+            let answer;
+            try {
+                const story = liveStoryText(real, w), lang = story ? langBlock(story, { tail: false }) : '';
+                answer = await askDraft(digestRequest(SHORT_PROMPT, fillPrompt, chunk, digestRaw(w, chunk.rows, tzOf(p)), lang), { force: true, maxTokens: 8000 });
+            } catch (err) { if (liveWorld(real)?.id === w.id) { failDigest(room, err?.message || err); await saveMeta(); } throw err; }
+            if (liveWorld(real)?.id !== w.id) break;
+            const kept = takeDigest(room, chunk, answer);
+            await saveMeta();
+            if (!kept) break;
+            done++;
+        }
+    } finally { digesting.delete(real); }
+    return done;
 }

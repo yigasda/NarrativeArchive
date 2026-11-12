@@ -4,6 +4,7 @@
 
 import { liveKey, liveWorld, livePhone, numberLive } from './phone2store.js';
 import { liveWall } from './phone2clock.js';
+import { digestOf } from './phone2digest.js';
 import { gapDays } from './phoneparse.js';
 
 const one = v => String(v ?? '').replace(/\s+/g, ' ').trim();
@@ -13,8 +14,9 @@ const AT = /^\d{2}-\d{2} \d{2}:\d{2}$/, DAY = /^\d{2}-\d{2}$/;
 const order = (at, today) => -gapDays(String(at).slice(0, 5), today) * 1440 + Number(String(at).slice(6, 8)) * 60 + Number(String(at).slice(9, 11));
 // what the sky is called on the weather line (as the weather app says it)
 const SKY = { clear: '맑음', partly: '구름 조금', cloudy: '흐림', drizzle: '이슬비', rain: '비', sleet: '진눈깨비', snow: '눈', fog: '안개', storm: '뇌우', wind: '강풍' };
-// how many of the newest bubbles the request carries, days ahead the calendar looks, story characters at most
-export const LIVE_ASK = { bubbles: 300, ahead: 14, aheadMax: 4, story: 8000 };
+// how many bubbles the request carries at most (the room's talk not summarized yet: up to 300, phone2digest.js; more only
+// while a summary keeps failing), days ahead the calendar looks, story characters at most
+export const LIVE_ASK = { bubbles: 400, ahead: 14, aheadMax: 4, story: 8000 };
 
 // the phone's lists as the apps the reply prompt names (phone2reply.js PHONE2_APPS, in small letters), each with what
 // tells its time and one line saying what it is
@@ -70,7 +72,9 @@ export function gatherReply(m, owner, roomId, { now = Date.now(), tz = 'UTC', de
     return {
         owner: p.owner, persona: P, // (the owner's languages: read with the voices, or set by the user in 말투; on the phone)
         langs: p.langs?.texts?.length || p.langs?.knows?.length ? p.langs : null,
-        messenger: (room.messages || []).slice(-LIVE_ASK.bubbles).map(x => ({ at: wall(x.at), from: x.from, text: x.call ? `(call ${Math.max(0, Math.round(Number(x.call.min) || 0))} min)` : x.text, state: x.state })),
+        // (the talk summarized already goes as CHAT SUMMARY; the rest as it was said)
+        summary: digestOf(room),
+        messenger: (room.messages || []).filter(x => !(x.n <= (room.digest?.upto ?? -1))).slice(-LIVE_ASK.bubbles).map(x => ({ at: wall(x.at), from: x.from, text: x.call ? `(call ${Math.max(0, Math.round(Number(x.call.min) || 0))} min)` : x.text, state: x.state })),
         now: {
             last: lastState || one(deps.place?.(p)),
             today: evs.filter(e => one(e.date) === today).sort(byTime).map(e => line(e, false)), ahead: ahead.map(e => line(e, true)),
