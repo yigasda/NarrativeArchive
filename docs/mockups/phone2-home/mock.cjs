@@ -65,6 +65,45 @@ const CSS = `
 .wb4 .w_t b{flex:none;font-size:13px}.wb4 .w_t span{font-size:12px}
 .wb4 .w_r{flex-direction:row;align-items:center;gap:6px}
 .wb4 .w_rm.un .w_t span{color:#1b1d24;font-weight:500}
+
+/* 3차: 큰 얼굴 · 큰 이름 · 빨간 배지 · 진짜 Orbit 아이콘 */
+.r_ic{display:inline-flex;border-radius:28%;overflow:hidden;box-shadow:0 1px 3px rgba(70,40,70,.2)}
+.r_ic svg{display:block}
+.r_bd{position:absolute;right:-4px;top:-4px;min-width:20px;height:20px;padding:0 6px;box-sizing:border-box;border-radius:999px;background:#e5484d;color:#fff;font:600 11.5px/20px 'Inter Tight',sans-serif;text-align:center;box-shadow:0 0 0 2px rgba(255,255,255,.92);z-index:2}
+.r_fw{position:relative;flex:none;display:inline-flex;align-self:flex-start;width:fit-content}
+.r_corner{position:absolute;right:14px;top:14px;z-index:3}
+/* R1 두 사람 나란히 */
+.r1{display:grid;grid-template-columns:1fr 1fr;padding:16px 14px 14px}
+.r1 .r_p{display:flex;flex-direction:column;gap:8px;padding:0 6px;min-width:0}
+.r1 .r_p+.r_p{border-left:1px solid rgba(40,50,70,.08);padding-left:14px}
+.r1 b{font-size:16px;font-weight:600;color:#1b1d24;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:4px}
+.r1 .r_m{font-size:13px;line-height:1.35;color:#5b606c;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+/* R2 한 사람 크게 + 옆 얼굴 */
+.r2{display:flex;gap:14px;padding:18px 16px}
+.r2 .r_main{flex:1;min-width:0;display:flex;flex-direction:column}
+.r2 .r_main .r_top{display:flex;align-items:center;gap:12px}
+.r2 .r_main b{font-size:19px;font-weight:600;color:#1b1d24}
+.r2 .r_main small{display:block;font:500 12px 'Inter Tight',sans-serif;color:#8a8f99;margin-top:2px}
+.r2 .r_main .r_m{margin-top:12px;font-size:14.5px;line-height:1.38;color:#2a2e36;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.r2 .r_main .r_m span{color:#7b808b;font-size:12.5px}
+.r2 .r_side{display:flex;flex-direction:column;justify-content:space-between;align-items:center;padding:2px 0 0;border-left:1px solid rgba(40,50,70,.08);padding-left:14px}
+/* R3 두 줄 크게 */
+.r3{padding:10px 16px;display:flex;flex-direction:column;justify-content:center}
+.r3 .r_rm{display:flex;align-items:center;gap:12px;padding:10px 0}
+.r3 .r_rm+.r_rm{border-top:1px solid rgba(40,50,70,.08)}
+.r3 .r_t{flex:1;min-width:0}.r3 .r_t b{display:block;font-size:16px;font-weight:600;color:#1b1d24}
+.r3 .r_t span{display:block;font-size:13.5px;color:#5b606c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.r3 .r_tm{font:500 12px 'Inter Tight',sans-serif;color:#8a8f99;align-self:flex-start;margin-top:3px;padding-right:30px}
+/* R4 그 사람 색 반반 */
+.r4{display:grid;grid-template-columns:1fr 1fr;gap:0;background:none;padding:0;box-shadow:0 14px 34px rgba(40,50,70,.14)}
+.r4 .r_half{position:relative;overflow:hidden;padding:16px 15px 14px;display:flex;flex-direction:column;color:#fff;min-width:0}
+.r4 .r_half .w_blob{inset:-30%;filter:blur(24px)}
+.r4 .r_half .r_gl{position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,0) 45%)}
+.r4 .r_half>*:not(.w_blob):not(.r_gl):not(.r_corner){position:relative;z-index:1}
+.r4 .r_half+.r_half{box-shadow:inset 1px 0 0 rgba(255,255,255,.35)}
+.r4 b{font-size:16px;font-weight:600;margin-top:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.r4 .r_m{font-size:13px;line-height:1.35;opacity:.95;margin-top:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.r4 .r_corner{right:12px;top:12px}
 /* D: 마지막 말 크게 (그 사람 색) */
 .wd{color:#fff;box-shadow:0 12px 30px rgba(70,80,140,.24)}
 .wd .w_bg{position:absolute;inset:-30%;filter:blur(26px);background:${bg('Mara')}}
@@ -78,13 +117,15 @@ const CSS = `
 `;
 const ic = (d, s, c) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"/></svg>`;
 const MOON = 'M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z', CLK = 'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM12 8v4l3 2', PLUS = 'M12 5v14M5 12h14', SUN = 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2';
+const FW = (r, sz) => `<span class="r_fw">${face(r.k, sz, r.l)}${r.un ? `<span class="r_bd">${r.un}</span>` : ''}</span>`;
+const [R1, R2, R3] = ROOMS;
 const W = {
-  A: `<div class="w_wide cg_glass wb"><div class="w_hd">${logo(18)}Orbit<em>안 읽음 5</em></div>${ROOMS.slice(0, 2).map(r => `<div class="w_rm">${face(r.k, 30, r.l)}<span class="w_t"><b>${r.name}</b><span>${r.last}</span></span><span class="w_r">${r.t}${r.un ? `<span class="w_n">${r.un}</span>` : ''}</span></div>`).join('')}</div>`,
-  B: `<div class="w_wide cg_glass wb wb2"><div class="w_hd">${logo(18)}Orbit<em>안 읽음 5</em></div>${ROOMS.slice(0, 2).map(r => `<div class="w_rm"><span class="w_fx"><span style="background:${bg(r.k)}"></span></span>${face(r.k, 30, r.l)}<span class="w_t"><b>${r.name}</b><span>${r.last}</span></span><span class="w_r">${r.t}${r.un ? `<span class="w_n">${r.un}</span>` : ''}</span></div>`).join('')}</div>`,
-  C: `<div class="w_wide wb wb3"><div class="w_hd">${logo(18)}Orbit<span class="w_pill">${ic(PLUS, 11, '#fff')}새 대화</span></div>${ROOMS.slice(0, 2).map(r => `<div class="w_rm">${face(r.k, 30, r.l)}<span class="w_t"><b>${r.name}</b><span>${r.last}</span></span><span class="w_r">${r.t}${r.un ? `<span class="w_n">${r.un}</span>` : ''}</span></div>`).join('')}</div>`,
-  D: `<div class="w_wide cg_glass wb wb4"><div class="w_hd">${logo(18)}Orbit<em>안 읽음 5</em></div>${ROOMS.map(r => `<div class="w_rm${r.un ? ' un' : ''}">${face(r.k, 26, r.l)}<span class="w_t"><b>${r.name}</b><span>${r.last}</span></span><span class="w_r">${r.t}${r.un ? `<span class="w_n">${r.un}</span>` : ''}</span></div>`).join('')}</div>`,
+  A: `<div class="w_wide cg_glass r1"><span class="r_corner r_ic">%ICON26%</span>${[R1, R2].map(r => `<div class="r_p">${FW(r, 50)}<b>${r.name}</b><span class="r_m">${r.last}</span></div>`).join('')}</div>`,
+  B: `<div class="w_wide cg_glass r2"><div class="r_main"><div class="r_top">${FW(R1, 56)}<div><b>${R1.name}</b><small>${R1.t}</small></div></div><div class="r_m">${R1.last}<br><span>${R1.ko}</span></div></div><div class="r_side"><span class="r_ic">%ICON26%</span>${FW(R2, 38)}${FW(R3, 38)}</div></div>`,
+  C: `<div class="w_wide cg_glass r3"><span class="r_corner r_ic">%ICON26%</span>${[R1, R2].map(r => `<div class="r_rm">${FW(r, 46)}<span class="r_t"><b>${r.name}</b><span>${r.last}</span></span><span class="r_tm">${r.t}</span></div>`).join('')}</div>`,
+  D: `<div class="w_wide r4">${[R1, R2].map((r, n) => `<div class="r_half"><span class="w_blob" style="background:${bg(r.k)}"></span><span class="r_gl"></span>${n ? '<span class="r_corner r_ic">%ICON26%</span>' : ''}${FW(r, 44)}<b>${r.name}</b><span class="r_m">${r.last}</span></div>`).join('')}</div>`,
 };
-const NAME = { A: 'B1. 유리 두 줄 (지금 B)', B: 'B2. 줄마다 색 번짐', C: 'B3. 흰 카드 + 새 대화', D: 'B4. 촘촘 세 줄' };
+const NAME = { A: 'R1. 두 사람 나란히', B: 'R2. 한 사람 크게 + 옆 얼굴', C: 'R3. 두 줄 크게', D: 'R4. 그 사람 색 반반' };
 (async () => {
   const s = await open('light', { out: TMP });
   try {
@@ -95,8 +136,10 @@ const NAME = { A: 'B1. 유리 두 줄 (지금 B)', B: 'B2. 줄마다 색 번짐'
       await s.to('home');
       await s.p.evaluate(([CSS, html]) => {
         if (!document.getElementById('w_css')) { const st = document.createElement('style'); st.id = 'w_css'; st.textContent = CSS; document.head.append(st); }
-        document.querySelector('.na_ph_frame .cg_widgets').innerHTML = html;
+        const ic = document.querySelector('.na_ph_frame .ob_ic svg');
+        const icon = sz => ic ? ic.outerHTML.replace('width="62" height="62"', `width="${sz}" height="${sz}"`) : '';
         document.querySelector('.na_ph_frame .ob_ic')?.closest('.cg_cell')?.remove();
+        document.querySelector('.na_ph_frame .cg_widgets').innerHTML = html.replace(/%ICON(\d+)%/g, (_, n) => icon(Number(n)));
       }, [CSS, W[v]]);
       await s.p.waitForTimeout(300); shots[v] = await s.shot('home_' + v);
     }
