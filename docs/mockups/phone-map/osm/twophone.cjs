@@ -1,0 +1,5 @@
+const { chromium } = require('playwright'); const fs = require('fs');
+(async () => { const d = process.argv[2]; const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 470, height: 900 }, deviceScaleFactor: 2 });
+  for (const n of ['BCD', 'BCD1']) { await p.goto('file://' + d + '/' + n + '.html'); await p.evaluate(() => { document.querySelector('.sh h2').textContent = '🇩🇪 Frankfurt am Main'; document.querySelector('.sh p').textContent = 'Bankenviertel · Hauptbahnhof'; }); await p.locator('.ph').screenshot({ path: d + '/' + n + '-ph.png' }); }
+  fs.writeFileSync(d + '/ph.html', `<!doctype html><meta charset=utf-8><body style="margin:0;padding:16px;background:#d9dce2;font:15px -apple-system,'Noto Sans KR',sans-serif"><div style="display:flex;gap:24px"><div><b>지금 색</b><br><img src="BCD-ph.png" width=408></div><div><b>한 단계 진하게</b><br><img src="BCD1-ph.png" width=408></div></div>`);
+  await p.setViewportSize({ width: 890, height: 920 }); await p.goto('file://' + d + '/ph.html'); await p.screenshot({ path: d + '/ph.png', fullPage: true }); await b.close(); })();
