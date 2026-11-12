@@ -1461,9 +1461,6 @@ export async function openPhone(who = null) {
         }
         drawPhone(true);
     };
-    // 사는 동네 (설정 › 위치 정보): by hand only, kept across a remake
-    $root.on('change', '.na_ph_plhood', async function (e) { e.stopPropagation(); const p = tgt(); if (!p) return; const own = placeInfo(p).owner, k = nameKey(p.owner), hs = { ...(p.homeHoods || {}) };
-        if (this.value) hs[k] = { city: own.city, hood: this.value }; else delete hs[k]; p.homeHoods = hs; await saveMeta(); drawPhone(true); });
     $root.on('change', '.na_ph_plives', async function (e) { e.stopPropagation(); if (placeLocked()) return drawPhone(true); if (this.value) await setOwnerLives(m, tgt(), this.value); drawPhone(true); });
     $root.on('click', '.na_ph_plcity', async function (e) { e.stopPropagation(); if (placeLocked()) return; await placeCity(this.dataset.n, placeInfo(tgt()).owner.city); });
     $root.on('click', '.na_ph_plrow', async function (e) {

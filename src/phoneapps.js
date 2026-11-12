@@ -764,13 +764,6 @@ function placeClock(p, now, h) {
     return { time: clockOf(p, `${String(Math.floor(mm / 60)).padStart(2, '0')}:${String(mm % 60).padStart(2, '0')}`), day: d > 0 ? '내일' : d < 0 ? '어제' : '' };
 }
 // the owner's card and the others: 위치 정보's, and 폰 만들기 준비's step 5 (warn: the line over the card)
-// 사는 동네: the neighbourhood of their town they live in (picked from the town's rows in the map table); their home on the
-// map goes there. Only for a town the table knows
-const hoodChip = (p, o) => {
-    const hs = townHoods(o.city); if (!hs.length) return '';
-    const cur = homeHoodOf(p, p.owner), on = cur && townPlace(cur.city) === townPlace(o.city) ? cur.hood : '';
-    return `<div class="ax_pl_chip ax_pl_hood"><span>사는 동네</span><b>${esc(on || '정하기')}</b><select class="na_ph_plhood ax_sel" aria-label="사는 동네"><option value=""${on ? '' : ' selected'}>정하기</option>${hs.map(h => `<option value="${esc(h)}"${h === on ? ' selected' : ''}>${esc(h)}</option>`).join('')}</select></div>`;
-};
 function placeBody(p, now, warn = '') {
     const info = placeInfo(p), o = info.owner, man = '<i class="ax_pl_man">수동</i>';
     const opts = Object.entries(COUNTRIES).map(([k, v]) => `<option value="${k}" ${k === o.lives ? 'selected' : ''}>${esc(v)}</option>`).join('') + (o.lives && !COUNTRIES[o.lives] ? `<option value="${esc(o.lives)}" selected>${esc(o.lives)}</option>` : '');
@@ -784,7 +777,6 @@ function placeBody(p, now, warn = '') {
           <div class="ax_pl_chips">
             <div class="ax_pl_chip"><span>사는 나라</span><b>${esc(COUNTRIES[o.lives] || o.lives || '정하기')}${o.livesManual ? man : ''}</b><select class="na_ph_plives ax_sel" aria-label="사는 나라">${o.lives ? '' : '<option value="" selected>정하기</option>'}${opts}</select></div>
             <div class="ax_pl_chip"><span>시간대</span><b>${esc(o.tz || '—')}</b></div>
-            ${hoodChip(p, o)}
           </div>
         </div>
         ${asks.length ? `<div class="ax_sec">주인인지 몰라요</div><div class="ax_card">${asks.map(n => `<div role="button" tabindex="0" class="ax_rw na_ph_plask" data-n="${esc(n)}"><span class="ax_si" style="background: #f3e8c9">${ax('info', 17, '#8a6a1f', 2.2)}</span><span class="ax_tx"><span class="ax_n">${esc(n)}</span><span class="ax_p1">${esc(o.name || p.owner)}인가요? · 눌러서 답하기</span></span>${axChev}</div>`).join('')}</div>` : ''}
