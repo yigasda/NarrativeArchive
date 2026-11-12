@@ -38,9 +38,8 @@ test('반영이 받는 모양: 방 줄 · 장면 줄(번호 · 주인 시각 · 
     const text = F.feedText(m, 'Ren', F.feedRows(m, 'Ren'), { tz: 'Asia/Seoul', state: '회사 · 퇴근길' });
     assert.equal(text, [
         '[Orbit · Lio]',
-        '#1 · 10-26 19:20 · Ren — 회사 · 퇴근길',
+        '#1 · 10-26 19:20 · Ren — 집 · 소파 · 저녁',
         '[#1] Lio: 오늘 왜 그랬어?',
-        '#2 · 10-26 19:22 · Ren — 집 · 소파 · 저녁',
         '[#2] Ren: …됐어. 나중에 얘기해.',
         '[#2] Ren [Diary]: 방금 들은 말 때문에 속상한 마음을 적음',
         '[#2] Ren [Delivery]: 혼자 먹으려고 치킨 주문',
@@ -55,6 +54,19 @@ test('반영이 받는 모양: 방 줄 · 장면 줄(번호 · 주인 시각 · 
     // (페르소나는 이름으로, "나"나 "me"는 없어요)
     assert.doesNotMatch(text, /\b(me|나):/);
     assert.equal(F.feedText(m, 'Ren', []), '');
+});
+
+test('장면 나누기: 30분 넘게 비면 새 장면, 주인이 아직 답 안 한 장면은 지난 상태로, 장면 안에서 상태가 바뀌면 그 자리에 한 줄', () => {
+    const { m, one } = world();
+    one.messages.push({ id: 'z1', from: 'Lio', text: '자?', at: at('2026-10-26T14:30:00Z') });
+    let t = F.feedText(m, 'Ren', F.feedRows(m, 'Ren'), { tz: 'Asia/Seoul', state: '회사' });
+    assert.match(t, /\[Orbit · Lio\]\n#5 · 10-26 20:00 · Ren — 집 · 소파 · 저녁\n\[#5\] Ren \[Call\]: 12 min — 사과했다\n#6 · 10-26 23:30 · Ren — 집 · 소파 · 저녁\n\[#6\] Lio: 자\?$/);
+    one.messages.push({ id: 'z2', from: 'Ren', text: '아니 이제 누웠어', at: at('2026-10-26T14:31:00Z'), state: '집 · 침대' });
+    t = F.feedText(m, 'Ren', F.feedRows(m, 'Ren'), { tz: 'Asia/Seoul' });
+    assert.match(t, /#6 · 10-26 23:30 · Ren — 집 · 침대\n\[#6\] Lio: 자\?\n\[#7\] Ren: 아니 이제 누웠어$/);
+    one.messages.push({ id: 'z3', from: 'Ren', text: '아 잠깐 편의점', at: at('2026-10-26T14:33:00Z'), state: '편의점' });
+    t = F.feedText(m, 'Ren', F.feedRows(m, 'Ren'), { tz: 'Asia/Seoul' });
+    assert.match(t, /\[#7\] Ren: 아니 이제 누웠어\n#8 · 10-26 23:33 · Ren — 편의점\n\[#8\] Ren: 아 잠깐 편의점$/);
 });
 
 test('날짜는 폰 2의 날짜 (현실보다 며칠 옮긴 만큼)', () => {
