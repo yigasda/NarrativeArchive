@@ -1662,6 +1662,9 @@ export function syncState(p) {
 // which chat the phone was last read in: SillyTavern gives a branch a new integrity mark (and names its main chat);
 // renaming a chat or importing a backup keeps the mark, so neither looks like a branch
 export const chatMark = () => ctx().chatMetadata?.integrity || null;
+// this chat as 폰 2 keeps it when it begins and asks it again later (phone2story.js beginFromStory · liveBranched): its
+// mark, is it a branch of another chat, the words of message i (null: no such message)
+export const chatStamp = i => { const r = chatRows().find(x => x.index === i); return { chat: chatMark(), branch: !!ctx().chatMetadata?.main_chat, fp: r ? bodyMark(r.text) : null }; };
 // a phone copied into a branch of the chat it was read in: messages past the branch point are other talk, never edits
 export const otherChat = s => { const now = chatMark(), read = s.readChat || firstMark(s); return !!read && !!now && read !== now && !!ctx().chatMetadata?.main_chat; };
 // a phone from before marks (3.140 and older) knows only the chat it was last read in, by name (its scope). When that
