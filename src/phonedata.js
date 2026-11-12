@@ -4,7 +4,7 @@
 import { ensureWealth, wealthBlock, wealthDate, wealthCheck, addWealthFX } from './wealth.js';
 import { askDraft as askDraftAny } from './ai.js';
 // the phone's requests give up after 5 minutes (a stuck call would hold 반영 and the fills for good)
-const askDraft = (input, o = {}) => askDraftAny(input, { timeout: 300000, ...o });
+export const askDraft = (input, o = {}) => askDraftAny(input, { timeout: 300000, ...o });
 import { ownerProfileBlock, resolvePhoneProfile } from './phoneprofile.js';
 import { migrateBank, finance, finite, cash, reviseBaseline, positions } from './finance.js';
 import { calendars, headingDate } from './calendar.js';
@@ -34,7 +34,7 @@ export const MOODS = ['warm', 'cool', 'green', 'dark', 'bright', 'pink'];
 export const COUNTRIES = { KR: '한국', US: '미국', GB: '영국', DE: '독일', FR: '프랑스', IT: '이탈리아', ES: '스페인', JP: '일본', CN: '중국', TW: '대만', CA: '캐나다', AU: '호주', RU: '러시아', BR: '브라질' };
 export const CAP = { threads: 12, messages: 40, calls: 30, photos: 24, notes: 12, searches: 20, events: 16, contacts: 30, posts: 20, comments: 8, mails: 20, diary: 20, voice: 12, visits: 60 };
 // visits: the places the owner went to (the map app), each visit its own record
-const LISTS = ['calls', 'photos', 'notes', 'searches', 'events', 'posts', 'mails', 'diary', 'voice', 'visits'];
+export const LISTS = ['calls', 'photos', 'notes', 'searches', 'events', 'posts', 'mails', 'diary', 'voice', 'visits'];
 
 const DEVICE_RULES = `- Use the device described in the story when there is one.
 - Otherwise choose a phone that suits the owner's means, work and habits, in the story's time. Choose the model and storage together; no fixed default capacity.
@@ -707,7 +707,7 @@ function personIn(p, list, get, name) {
 const EVERYDAY_KEYS = ['contacts', 'threads', 'calls', 'photos', 'notes', 'searches', 'mails', 'posts', 'diary', 'voice', 'events', 'alarms', 'files', 'timers'];
 // (the clock and files a day: an alarm, two timers, two files)
 const EVERYDAY_LIFE = { alarms: 1, timers: 2, files: 2 };
-function everydayOn(raw, rows, textAt) {
+export function everydayOn(raw, rows, textAt) {
     const ed = raw?.everyday && typeof raw.everyday === 'object' && !Array.isArray(raw.everyday) ? raw.everyday : null;
     if (!ed || !EVERYDAY_KEYS.some(k => arr(ed[k]).length)) return;
     // (a time after the round's now is the model running ahead: it is the now)
@@ -915,7 +915,7 @@ const capSoFar = (k, d, now) => {
     const [h, m] = hhmm(t.slice(6)).split(':').map(Number), part = Math.min(1, Math.max(0, (h + m / 60 - WAKE_FROM) / WAKE_HOURS));
     return Math.min(all, Math.max(k === 'threads' ? BUNDLE_LINES : 1, Math.ceil(all * part)));
 };
-function everydayOnly(p, add, day, daily, now = '') {
+export function everydayOnly(p, add, day, daily, now = '') {
     // (a group chat is a room of its own, never the person it may be named like)
     const room = th => `${th?.group ? 'group:' : ''}${nameKey(th?.with)}`;
     const who = (k, x, th) => (k === 'threads' ? room(th) : k === 'calls' ? nameKey(x.with) : '');
@@ -995,7 +995,7 @@ const withWho = (p, m, n) => {
     return { key: nameKey(r?.name || name), name: r?.name || name };
 };
 const visitWith = (p, x, m = null) => { const out = []; for (const n of arr(x.with)) { const who = withWho(p, m, n); if (who && !isOwnerName(p, m, n) && !isOwnerName(p, m, who.name) && !out.some(o => withWho(p, m, o)?.key === who.key)) out.push(who.name); } x.with = out; return x; };
-function mergePhone(p, add, { keepAll = false, m = null } = {}) {
+export function mergePhone(p, add, { keepAll = false, m = null } = {}) {
     if (!p.device && add.device) p.device = add.device;
     const keep = (list, n) => (keepAll ? list : list.slice(-n));
     const lk = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
@@ -1070,14 +1070,14 @@ const secEnd = s => { const mt = s.title.match(RANGE_HEAD); return mt ? Number(m
 const secFirst = s => { const mt = s.title.match(RANGE_HEAD); return mt ? Number(mt[2]) : -1; };
 const lastEnd = m => Math.max(-1, ...parseSections(String(m.text || '')).filter(s => !s.group).map(secEnd));
 // a reflection's background (the archive before its messages): the newest sections up to this, the rest is old news
-const BEFORE_MAX = 5_000;
+export const BEFORE_MAX = 5_000;
 // stretches archived before the phone read them, read from their sections: whole sections, up to this many tokens of
 // section text a round (about 20 sections of 250–280 words). A summary is nearly all events, about 4–5 to 1,000 tokens,
 // so they fit one answer's 40 events and 16,000 tokens (an answer cut short would lose the round). A section is never cut:
 // one past the limit waits whole for the next round, and one longer than the limit goes alone
-const ARCH_TOKENS = 8_000;
+export const ARCH_TOKENS = 8_000;
 // the archive's sections with a message range ("## #a–#b — …"): { key, first, last, text }
-const archSections = m => { const [body] = splitTail(String(m?.text || '')); return parseSections(body).filter(x => !x.group && RANGE_HEAD.test(x.title)).map(x => { const mt = x.title.match(RANGE_HEAD); return { key: `${mt[2]}-${mt[4]}:${x.title.length}`, first: Number(mt[2]), last: Number(mt[4]), text: body.slice(x.start, x.end).trim() }; }); };
+export const archSections = m => { const [body] = splitTail(String(m?.text || '')); return parseSections(body).filter(x => !x.group && RANGE_HEAD.test(x.title)).map(x => { const mt = x.title.match(RANGE_HEAD); return { key: `${mt[2]}-${mt[4]}:${x.title.length}`, first: Number(mt[2]), last: Number(mt[4]), text: body.slice(x.start, x.end).trim() }; }); };
 const ARCHIVE_MAX = 120_000; // characters: the state at the end, and as many of the newest sections as fit
 // a chat with no archive yet: its own messages stand in for it, from the start, the newest kept when there are too many
 // (tokens: making a phone reads up to 70,000; the life fill 40,000, its files and saved cities reaching far back (run37:
@@ -1323,7 +1323,7 @@ export const namesBlock = m => { const g = glossaryEntries(m); return g.length ?
 export const REMAKE = { msg: ['threads', 'contacts'], call: ['calls'], photo: ['photos'], note: ['notes'], search: ['searches'], cal: ['events'], sns: ['profile', 'posts'], mail: ['mails'], diary: ['diary'] };
 const onlyAsk = keys => `[ONLY THESE]\nThe phone already holds the rest. Write only these keys of the JSON, from the whole story: ${keys.join(', ')}.`;
 // 누가 아는가: what the owner doesn't know (or only suspects) stays off their phone
-const blindBlock = (m, owner) => {
+export const blindBlock = (m, owner) => {
     const me = n => nameKey(n) === nameKey(owner);
     const rows = knowledgeRows(m).flatMap(r => (r.unaware.some(me) ? [`- ${r.fact}`] : r.suspects.some(me) ? [`- ${r.fact} (only suspects)`] : []));
     return rows.length ? `[OWNER DOESN'T KNOW]\n${rows.join('\n')}` : '';
@@ -1383,7 +1383,7 @@ function phoneRequest(m, owner, p = null, lore = '', only = null, profile = '', 
 // what the model is shown of a phone it is updating: the newest of each list, without the Korean
 // PHONE NOW for the model: the newest of each list with its event tags; nothing 재구성, no ids
 const real = xs => (xs || []).filter(x => !isGuess(x));
-const ev = (x, o) => (x.ev ? { ...o, ev: x.ev } : o);
+export const ev = (x, o) => (x.ev ? { ...o, ev: x.ev } : o);
 export const phoneForModel = p => ({
     country: p.country, now: p.now,
     contacts: p.contacts.map(({ name, saved }) => ({ name, saved })),
@@ -1661,9 +1661,9 @@ export function syncState(p) {
 // counted on a copy: what changed since the last round is left for the round itself to see
 // which chat the phone was last read in: SillyTavern gives a branch a new integrity mark (and names its main chat);
 // renaming a chat or importing a backup keeps the mark, so neither looks like a branch
-const chatMark = () => ctx().chatMetadata?.integrity || null;
+export const chatMark = () => ctx().chatMetadata?.integrity || null;
 // a phone copied into a branch of the chat it was read in: messages past the branch point are other talk, never edits
-const otherChat = s => { const now = chatMark(), read = s.readChat || firstMark(s); return !!read && !!now && read !== now && !!ctx().chatMetadata?.main_chat; };
+export const otherChat = s => { const now = chatMark(), read = s.readChat || firstMark(s); return !!read && !!now && read !== now && !!ctx().chatMetadata?.main_chat; };
 // a phone from before marks (3.140 and older) knows only the chat it was last read in, by name (its scope). When that
 // name is this branch's main chat, the phone came here with the branch and still holds the main chat's later talk;
 // otherwise (read here already, a renamed chat, a backup) it is this chat's own
@@ -1674,14 +1674,14 @@ function firstMark(s) {
 }
 // what is left to read: unread messages, and stretches archived before the phone read them (one each)
 export const syncLeft = (p, m = null) => { if (!p?.sync?.marks?.base) return null; const s = structuredClone(p.sync); realign(s, chatRows(), { other: otherChat(s) }); const rows = syncRows(); return unreadCount(s, rows) + (m ? archivedUnread(s, archSections(m), rows, chatRows()).length : 0); };
-const ITEM_KEYS = [...LISTS, 'threads', 'contacts'];
-const sizes = p => Object.fromEntries(ITEM_KEYS.map(k => [k, k === 'threads' ? p.threads.reduce((n, t) => n + t.messages.length, 0) : k === 'posts' ? (p.posts || []).reduce((n, x) => n + 1 + (x.comments?.length || 0), 0) : (p[k] || []).length]));
+export const ITEM_KEYS = [...LISTS, 'threads', 'contacts'];
+export const sizes = p => Object.fromEntries(ITEM_KEYS.map(k => [k, k === 'threads' ? p.threads.reduce((n, t) => n + t.messages.length, 0) : k === 'posts' ? (p.posts || []).reduce((n, x) => n + 1 + (x.comments?.length || 0), 0) : (p[k] || []).length]));
 // every app item that can carry a source: list items, text messages, comments
-const phoneItems = p => [...LISTS.flatMap(k => (p[k] || []).map(x => ({ k, x }))), ...p.threads.flatMap(t => t.messages.map(x => ({ k: 'msg', x }))),
+export const phoneItems = p => [...LISTS.flatMap(k => (p[k] || []).map(x => ({ k, x }))), ...p.threads.flatMap(t => t.messages.map(x => ({ k: 'msg', x }))),
     ...(p.posts || []).flatMap(x => (x.comments || []).map(c => ({ k: 'comment', x: c })))];
 // after a merge: the phone's own copy of each item an event gave (new, or one already there) notes where it came from
 const ckey = c => `${String(c.from || '').toLowerCase()}|${c.text}`;
-function tagItems(p, add, src) {
+export function tagItems(p, add, src) {
     const tag = (k, x, a) => {
         if (!x) return;
         // an item already there with no sources (made with the phone, or before sources were kept) keeps that start
@@ -1696,7 +1696,7 @@ function tagItems(p, add, src) {
         for (const c of a.comments || []) tag('comment', own?.comments?.find(x => ckey(x) === ckey(c)), c);
     }
 }
-const APP_NAME = { threads: '문자', contacts: '연락처', calls: '통화', photos: '사진', notes: '메모', searches: '검색', events: '캘린더', posts: 'SNS', mails: '메일', diary: '일기', voice: '음성 메모', visits: '지도' };
+export const APP_NAME = { threads: '문자', contacts: '연락처', calls: '통화', photos: '사진', notes: '메모', searches: '검색', events: '캘린더', posts: 'SNS', mails: '메일', diary: '일기', voice: '음성 메모', visits: '지도' };
 // ---- 2단계 돈 (3.176~, docs/REFLECT-2STAGE-PLAN.md): every round, the round's messages (and ones owed from before) read
 // for what the owner's phone would now show. The answer is one list of records, each with the message it comes from;
 // the code puts each message's records on its event: core's one event at that message, else a money event of its own
@@ -1707,7 +1707,7 @@ const APP_NAME = { threads: '문자', contacts: '연락처', calls: '통화', ph
 // returns { late: [{ id, at, add, effects }] for the events it paid, owed: [{ at, tries }], notes, changes, apps }
 const OWED_TRIES = 2;
 // one list of records per event, its two steps together (되돌리기 keeps an event's records that can't go back)
-const byEvent = xs => { const out = new Map(); for (const x of xs) out.set(x.id, [...(out.get(x.id) || []), ...(x.effects || [])]); return [...out]; };
+export const byEvent = xs => { const out = new Map(); for (const x of xs) out.set(x.id, [...(out.get(x.id) || []), ...(x.effects || [])]); return [...out]; };
 const MONEY_PATH = /^(money|investment|delivery)\./;
 const SPAN_MAX = 60, ON_DAY = ['payment', 'order', 'trade', 'delivery'];
 // DAYS PASSED: the story days these messages moved past (from the phone's day before the round to the day before its new
@@ -1715,7 +1715,7 @@ const SPAN_MAX = 60, ON_DAY = ['payment', 'order', 'trade', 'delivery'];
 // 31 one by one, a longer stretch before them as one span
 const DAYS_EACH = 31;
 const WEEKDAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-function daysPassed(was, now, known, events, last) {
+export function daysPassed(was, now, known, events, last) {
     const a = String(was || '').slice(0, 5), b = String(now || '').slice(0, 5);
     if (!/^\d{2}-\d{2}$/.test(a) || !/^\d{2}-\d{2}$/.test(b) || !Number.isInteger(last) || last < 0) return null;
     const gap = dayGap(a, b);
@@ -1736,7 +1736,7 @@ function daysPassed(was, now, known, events, last) {
     const other = Math.max(1, Math.round(about / 3));
     return { text: [`${gap} day${gap > 1 ? 's' : ''}: about ${about} records in all, about ${other} of them not by card; most days one to three, some none; where, what and how money moves are this owner's (for instance card, mobile pay, money sent or received, cash taken out, payment abroad, refund, savings, currency exchange).`, ...lines].join('\n'), span };
 }
-async function moneyStage(m, p, owner, c) {
+export async function moneyStage(m, p, owner, c) {
     const s = p.sync, out = { late: [], owed: [], notes: [], changes: [], apps: new Set() };
     const owedBefore = arr(s.owed?.money).filter(o => Number.isInteger(o?.at));
     const text = new Map(c.rows.map(r => [r.index, r.text]));
@@ -2423,7 +2423,7 @@ export async function restoreRounds(m, scope) {
 
 // read messages gone (deleted, or a stretch written again): what they put on the phone stays and is offered to take off
 // (설정 › 대화 반영 › 빼기); unsure ones (the same words are still elsewhere) are only told
-function settleDropped(p, { dropped }, notes) {
+export function settleDropped(p, { dropped }, notes) {
     const s = p.sync;
     if (!dropped.length) return;
     s.dropped ||= [];
@@ -2511,7 +2511,7 @@ export async function dropStretch(m, p, k) {
 }
 export const canUndo = p => { const u = p?.syncUndo, s = p?.sync; return !!u && s?.rounds?.[s.rounds.length - 1] === u.round && p.money?.at === u.moneyAt && p.investment?.at === u.investAt; };
 // a message deleted before others: the events, failures and records that name a message number follow it
-function renumber(m, p, { moved, changed, dropped = [] }) {
+export function renumber(m, p, { moved, changed, dropped = [] }) {
     const map = { ...moved };
     for (const x of changed) map[x.old] = x.at;
     // a gone message's number may be taken by a new one: records from it no longer name it
@@ -2534,7 +2534,7 @@ function renumber(m, p, { moved, changed, dropped = [] }) {
 // a contact's saved name, the profile, a post's comments): kept before and after the round, so 되돌리기 puts back each one
 // still as the round left it (one changed by hand since stays)
 const sig = x => JSON.stringify([x.from, x.text, x.time]);
-function mergedState(p) {
+export function mergedState(p) {
     return {
         events: Object.fromEntries((p.events || []).filter(x => x.id).map(x => [x.id, { title: x.title, ko: x.ko ?? '', date: x.date ?? '', time: x.time ?? '', cancelled: !!x.cancelled }])),
         threads: Object.fromEntries((p.threads || []).filter(t => t.id).map(t => [t.id, { draft: t.draft ?? null, deleted: (t.messages || []).filter(x => x.deleted).map(sig) }])),
@@ -3008,7 +3008,7 @@ export async function readWhere(m, p, opts = {}) {
     return people;
 }
 // a read that fails is noted and not asked again (the clock goes by the phones and the countries); one already there stays
-const tryWhere = async (m, p, opts = {}) => { try { await readWhere(m, p, opts); } catch (err) { console.warn('[narrative-archive] where', err); p.where = { ...(p.where || { at: Date.now(), people: [] }), failed: true }; } };
+export const tryWhere = async (m, p, opts = {}) => { try { await readWhere(m, p, opts); } catch (err) { console.warn('[narrative-archive] where', err); p.where = { ...(p.where || { at: Date.now(), people: [] }), failed: true }; } };
 // the owner moved to another city in the story (the reflection says so): their row in the reading follows
 function ownerMoved(p, c) {
     const tz = realTz(c?.tz), city = line(c?.city, 60);
@@ -3125,7 +3125,7 @@ const glossRows = (m, rows) => {
 };
 // (the last rounds' 되돌리기 keep the reading as it was: their copies get the same names, so 되돌리기 still sees the reading
 // it left, and puts back the one before it)
-function glossAka(m, p) {
+export function glossAka(m, p) {
     if (!m || !glossRows(m, p?.where?.people)) return;
     for (const u of [p.syncUndo, ...arr(p.syncUndos)]) {
         if (!u) continue;
@@ -3150,7 +3150,7 @@ const whereOf = (p, name) => {
 // the parcels and the web go by (a Korean living in Germany banks in euros)
 export const homeCountry = p => String(p?.lives || whereOf(p, p?.owner)?.lives || p?.country || '').toUpperCase();
 // ---- 설정 › 위치 정보: the phone's own country (p.lives) follows the reading of where the owner lives, unless set by hand
-function syncLives(p) { const l = whereOf(p, p?.owner)?.lives; if (l && !p.livesManual) p.lives = String(l).toUpperCase(); }
+export function syncLives(p) { const l = whereOf(p, p?.owner)?.lives; if (l && !p.livesManual) p.lives = String(l).toUpperCase(); }
 // a city's time zone for one the user typed: a saved city/alias or a known city, never a guess from their residence.
 // A country can span zones, and the person may be travelling; an unknown city must not lock in the owner's clock.
 const ZONES = (() => { try { return Intl.supportedValuesOf('timeZone'); } catch { return []; } })();
@@ -3331,14 +3331,14 @@ export async function rereadPlaces(m, p, { all = false } = {}) {
 }
 // the model's weather for a place the phone knows is another's (Busan for an owner in Seoul, the city the scene was just
 // named as): not the owner's
-function weatherElsewhere(p, w, named, m = null) {
+export function weatherElsewhere(p, w, named, m = null) {
     const place = w && typeof w === 'object' ? line(w.place, 60) : '';
     if (!place) return false;
     return sceneHome(p, place, m) === false || !!named && named.own === false && pkey(named.name) === pkey(place);
 }
 // the owner's status line as the weather app takes it: a place that is no city the phone knows ("Mara's room", "Gangnam ·
 // cafe") leaves the app's own city as it is (the model's, else the one there); its sky, warmth and hour are the line's
-function homeTracker(p, t, w, m = null) {
+export function homeTracker(p, t, w, m = null) {
     // (a neighbourhood the phone placed, "Gangnam · cafe", is in a city, not one: the app keeps its city as for a room)
     if (!t || (z => z && !z.hood)(sceneZone(p, t.place, m))) return t;
     const city = line(w?.place, 60), here = p?.life?.weather?.here?.place;
@@ -3480,7 +3480,7 @@ export function zonesOf(p, at = p?.now, m = null, { wholeYear = false } = {}) {
 }
 // Display only: a person's city already labels that city's hours. Keep every person, and keep standalone cities
 // unless saved city names/aliases and time zones agree. A shared offset, a partial name or a country is not a city match.
-function clockRows(p, m, others) {
+export function clockRows(p, m, others) {
     const places = placesAround(p, m), zones = new Map();
     const zoneKey = tz => {
         if (!zones.has(tz)) {
@@ -3545,7 +3545,7 @@ export function phone2Clock(p, at, m = null) {
     return lines.join('\n');
 }
 // 3.171.16 clock context for archive-only reflection; retained for event-local times and legacy now.
-const archiveClockBlock = (p, at = p?.now, m = null, st = null) => {
+export const archiveClockBlock = (p, at = p?.now, m = null, st = null) => {
     const z = zonesOf(p, at, m);
     const hrs = h => `${Math.abs(h)} hour${Math.abs(h) === 1 ? '' : 's'} ${h > 0 ? 'ahead' : 'behind'}`;
     return z && z.others.some(c => c.hours) ? `[OWNER'S CLOCK]\nThe owner is in ${z.own.name}, ${z.at} now.\n${z.others.filter(c => c.hours).map(c => (c.where ? `${c.name} (in ${c.where}) is ${hrs(c.hours)}` : `${c.name} is ${hrs(c.hours)}`)).join(', ')}.${st?.known && st.at && st.at !== st.raw ? `\nThe newest status line, ${st.raw} in ${st.city}, is ${st.at} here.` : ''}` : '';
@@ -3732,7 +3732,7 @@ export function sceneHome(p, place, m = null, named = null) {
 }
 // the newest status line up to upto, on the owner's clock: at '' when its scene's zone is unknown (it may be someone
 // else's hour). named: the zone the reflection gave for it this round. null with no dated status line
-const hm = v => /^\d{2}-\d{2} \d{2}:\d{2}$/.test(String(v || ''));
+export const hm = v => /^\d{2}-\d{2} \d{2}:\d{2}$/.test(String(v || ''));
 const laterThan = (a, b) => { const g = dayGap(String(b).slice(0, 5), String(a).slice(0, 5)); return g > 0 || g === 0 && String(a).slice(6) > String(b).slice(6); };
 // the same, never throwing (no status window: null): for a fill's OWNER'S CLOCK
 export const statusAt = (p, upto = null, m = null) => { try { return statusMoment(p, upto, null, m); } catch { return null; } };
