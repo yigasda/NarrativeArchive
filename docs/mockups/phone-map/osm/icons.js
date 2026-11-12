@@ -32,7 +32,7 @@ const ICON = {
   garden: 'M12 21v-8M12 13c-4 0-6-3-6-7 4 0 6 3 6 7zM12 13c4 0 6-3 6-7-4 0-6 3-6 7zM8 21h8',
   forest: 'M8 3l4 7H4zM8 10v3M16 6l5 9H11zM16 15v5M3 21h18',
   mountain: 'M2 20l7-12 4 6 3-4 6 10zM8 10l1.5 2 1-1',
-  view: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6',
+  view: 'M5 9l10-4 2 4-10 4zM15 5l2-1 2 4-2 1M11 12l1 4M8 21l4-5 4 5M12 16v5',   // 전망대: 동전 망원경(11-12, 눈은 징그러워서)
   // 명소(이름만 있는 곳)를 눈 하나로 그리지 않게(11-12): 문 · 높은 건물 · 광장 · 조각 · 별(그 밖의 명소)
   gate: 'M4 21V9a8 8 0 0 1 16 0v12M8 21v-8a4 4 0 0 1 8 0v8M3 21h18',
   skyscraper: 'M8 21V6l4-3 4 3v15M5 21v-9h3M16 21v-7h3M4 21h16M11 8h2M11 12h2M11 16h2',
@@ -139,6 +139,6 @@ function pick(t) {
   return null;
 }
 // OFF: how far each glyph moves so its real box sits in the middle of the 24 grid (iconbox.cjs measures it)
-const OFF = {"cathedral":[0,-1],"mosque":[0,-1],"shrine":[0,-1],"temple":[0,2],"pagoda":[0,0.5],"theatre":[0,0.75],"cinema":[0,1.97],"music":[0.5,0],"library":[-1.25,-0.2],"statue":[0,0.5],"castle":[0,-2.5],"palace":[0,-0.5],"ruin":[0,-1],"windmill":[0,-0.5],"observatory":[0,-0.5],"garden":[0,-1.5],"mountain":[0,-2],"gate":[0,1],"artwork":[0,-0.75],"landmark":[0,0.8],"beach":[0,-1],"lake":[0,-2],"fountain":[0,-0.5],"playground":[0,-1],"spring":[0,0.5],"camp":[0,-0.5],"golf":[1,0],"ski":[0,0.72],"bike":[0,-0.75],"shop":[0,0.5],"mall":[0,-0.5],"cafe":[1,1],"food":[1.5,0],"bar":[0,-0.5],"beer":[0.9,0.38],"hotel":[0,-0.5],"school":[0,1.25],"townhall":[0,0.5],"fire":[-1,-0.5],"bank":[0,0.5],"ferry":[0,-2.64],"harbour":[0,0.5],"airport":[0,-0.5],"cable":[0,2.5],"fuel":[-0.5,0],"bridge":[0,-1.75],"cemetery":[0,-1],"aquarium":[1,0]};
+const OFF = {"cathedral":[0,-1],"mosque":[0,-1],"shrine":[0,-1],"temple":[0,2],"pagoda":[0,0.5],"theatre":[0,0.75],"cinema":[0,1.97],"music":[0.5,0],"library":[-1.25,-0.2],"statue":[0,0.5],"castle":[0,-2.5],"palace":[0,-0.5],"ruin":[0,-1],"windmill":[0,-0.5],"observatory":[0,-0.5],"garden":[0,-1.5],"mountain":[0,-2],"view":[0,-0.5],"gate":[0,1],"artwork":[0,-0.75],"landmark":[0,0.8],"beach":[0,-1],"lake":[0,-2],"fountain":[0,-0.5],"playground":[0,-1],"spring":[0,0.5],"camp":[0,-0.5],"golf":[1,0],"ski":[0,0.72],"bike":[0,-0.75],"shop":[0,0.5],"mall":[0,-0.5],"cafe":[1,1],"food":[1.5,0],"bar":[0,-0.5],"beer":[0.9,0.38],"hotel":[0,-0.5],"school":[0,1.25],"townhall":[0,0.5],"fire":[-1,-0.5],"bank":[0,0.5],"ferry":[0,-2.64],"harbour":[0,0.5],"airport":[0,-0.5],"cable":[0,2.5],"fuel":[-0.5,0],"bridge":[0,-1.75],"cemetery":[0,-1],"aquarium":[1,0]};
 const glyph = n => OFF[n] ? `<g transform="translate(${OFF[n][0]} ${OFF[n][1]})"><path d="${ICON[n]}"/></g>` : `<path d="${ICON[n]}"/>`;
 module.exports = { ICON, OFF, glyph, pick };
