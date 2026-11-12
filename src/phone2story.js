@@ -3,7 +3,7 @@
 //   ranges: 그때 아카이브에 있던 장면들의 메시지 범위, 번호 앞말(prefix)마다 합친 구간 { '': [[0, 130]], Y1: [[0, 300]] }
 //   titles: 범위 없는 장면(머리말 등)의 제목
 //   rawFrom: 그때 아직 압축 안 된 첫 메시지 번호(경계선 + 1), storyUpto(시작한 메시지 번호)까지는 원래 메시지로 읽어요
-//   own: 이 채팅의 메시지 번호를 쓰는 앞말(맨 뒤 장면의 앞말, 켜 둔 AU 이름). 분기할 때 이것만 잘라요
+//   own: 이 채팅의 메시지 번호를 쓰는 앞말(맨 뒤 장면의 앞말, 켜 둔 AU 이름)
 // 나중에 읽을 때(liveStoryText): 지금 아카이브의 장면 중, 범위가 시작 때 구간 안에 다 들어가는 것만(이름이 바뀌거나
 // 다시 압축돼 합쳐지거나 나뉘어도 안에 있으면 그대로), 범위 없는 장면은 시작 때 있던 제목만. 끝의 지금 상태(STATE ·
 // OPEN) 칸은 안 읽어요. 시작 뒤에 새로 압축된 장면은 안 읽고, 그 메시지들은 rawFrom ~ storyUpto 원래 메시지로 읽어요.
@@ -11,7 +11,6 @@
 
 import { headingRanges, parseSections, RANGE_HEAD, splitTail } from './sections.js';
 import { liveWorld, startFromStory } from './phone2store.js';
-import { startShift } from './phone2clock.js';
 
 // [[a, b], …] sorted, touching or overlapping ones joined ([0, 50] + [51, 100] → [0, 100])
 function joinSpans(spans) {
@@ -121,40 +120,4 @@ export function rebeginFromStory(m, opts = {}) {
         live.mode = keep.mode;
         return w;
     } catch (err) { live.world = keep.world; live.mode = keep.mode; throw err; }
-}
-
-// (이전 방식, 화면이 새 방식으로 바뀌면 지워요: liveBranched · rebeginFromStory를 써요)
-// 분기한 방의 폰 2 (5-3): a branch taken before the message 폰 2 began at (point: the branch point, from settleBranch on
-// 폰 2's phones) holds none of what 폰 2 knew past it, nor anything said on its messenger (all of it came after it began).
-// 폰 2 then begins at the branch point instead: its mark keeps only the stretches up to there (a section reaching past it
-// is not read; its messages are read as they are), no messenger talk, no job waiting. A branch after the start: nothing
-// changes (the branch has all 폰 2 knew). The main chat's 폰 2 is its own copy and stays as it is.
-// Only this chat's numbering is cut (st.own, else the newest section's prefix): an earlier chat's sections stay whole
-// Returns null (nothing to do) or { point, rooms } (how many messenger rooms went)
-// dayShift: 폰 2's days from the real ones again, from the story's time at the branch point (storyAt "MM-DD HH:MM",
-// storyYear, tz: where the owner is), as a start from the story counts them (phone2clock startShift); none: as it was
-// "MM-DD HH:MM" that is a real day and time (not "13-40 25:00")
-const realAt = v => { const t = /^(\d{2})-(\d{2}) (\d{2}):(\d{2})$/.exec(String(v || '')); return !!t && +t[1] >= 1 && +t[1] <= 12 && +t[2] >= 1 && +t[2] <= 31 && +t[3] < 24 && +t[4] < 60; };
-export function settleLiveBranch(m, point, { dayShift = null, storyAt = '', storyYear = null, tz = '' } = {}) {
-    const w = liveWorld(m);
-    if (!w || w.from !== 'story' || !Number.isInteger(point) || point < 0 || !Number.isInteger(w.storyUpto) || w.storyUpto <= point) return null;
-    const st = w.story && typeof w.story === 'object' ? w.story : { ranges: {}, titles: [], rawFrom: 0 };
-    const [body] = splitTail(String(m?.text || ''));
-    // (this chat's prefixes as they were when 폰 2 began; one another chat's archive brought in (logLinks) is never this chat's)
-    const links = new Set(Object.keys(m?.logLinks || {})), own = new Set((Array.isArray(st.own) ? st.own : ownPrefixes(m, body)).filter(k => !links.has(k)));
-    const other = { has: k => !own.has(k) };
-    const ranges = Object.fromEntries(Object.entries(st.ranges || {}).map(([k, spans]) => [k, other.has(k) ? spans
-        : (spans || []).filter(([a]) => a <= point).map(([a, b]) => [a, Math.min(b, point)])]).filter(([, v]) => v.length));
-    // (this chat's sections that reach past the branch point: their messages up to it are read as they are)
-    const straddle = headingRanges(body).filter(r => !other.has(r.prefix)).map(r => [Math.min(r.from, r.to), Math.max(r.from, r.to)]).filter(([a, b]) => a <= point && b > point).map(([a]) => a);
-    const rawFrom = Math.min(Number.isInteger(st.rawFrom) ? st.rawFrom : 0, point + 1, ...straddle);
-    w.story = { ...st, ranges, rawFrom };
-    w.storyUpto = point;
-    const rooms = Object.keys(w.messenger?.rooms || {}).length;
-    const me = String(w.persona || '').trim(), key = me.toLowerCase();
-    w.messenger = { accounts: me ? { [key]: w.messenger?.accounts?.[key] || { name: me } } : {}, rooms: {} };
-    w.queue = { round: (Number(w.queue?.round) || 0) + 1, jobs: [] };
-    if (Number.isInteger(dayShift)) w.dayShift = dayShift;
-    else if (realAt(storyAt) && Number.isInteger(Number(storyYear)) && tz) { try { w.dayShift = startShift({ storyAt, storyYear: Number(storyYear), tz }); } catch { /* an unreadable time: as it was */ } }
-    return { point, rooms };
 }

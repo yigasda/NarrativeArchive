@@ -1820,12 +1820,16 @@ export async function moneyStage(m, p, owner, c) {
         return here.length === 1 ? here[0].id : own;
     };
     const idKey = v => String(v ?? '').trim().replace(/^#/, '').toLowerCase();
+    const onPhone = v => { const k = String(v ?? '').trim(); return !!k && arr(p.money?.bank?.accounts).some(x => String(x?.last4 ?? '') === k || String(x?.id ?? '') === k); };
     if (Array.isArray(raw.records)) {
         const byAt = new Map();
         let bad = 0;
         for (const r of arr(raw.records)) {
             if (!r || typeof r !== 'object') continue;
-            const at = Number(String(r.at ?? '').replace(/^\s*#/, ''));
+            let at = Number(String(r.at ?? '').replace(/^\s*#/, ''));
+            // (what an account or card already on the phone is like, its bill day or the account that pays it, is said in
+            // no one message: given with no number, it is this reading's last message's. Money that moves always needs its own)
+            if (String(r.at ?? '').trim() === '' && ['account', 'card'].includes(String(r.type || '').toLowerCase()) && onPhone(r.already ?? r.account)) at = asked.at(-1) ?? evidence.at(-1)?.last ?? NaN;
             if (!Number.isInteger(at) || !allowed(at)) { bad++; continue; }
             // (an estimated price is the newest day's: the brokerage moves on to it)
             if (String(r.type || '').toLowerCase() === 'quote' && r.amountFrom === 'guess' && /^\d{2}-\d{2}$/.test(c.nowDay || '')) r.date = c.nowDay;
