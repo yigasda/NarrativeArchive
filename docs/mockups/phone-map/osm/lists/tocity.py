@@ -119,7 +119,7 @@ def load(cc):
 s = open(TABLE, encoding='utf8').read()
 if A in s: s = s[:s.index(A)] + s[s.index(B) + len(B) + 1:]
 open(TABLE, 'w', encoding='utf8').write(s)
-subprocess.run(['python3', os.path.join(ROOT, 'docs', 'mockups', 'phone-map', 'towns', 'gencity.py')], check=True, capture_output=True)
+subprocess.run(['python3', os.path.join(ROOT, 'docs', 'mockups', 'phone-map', 'towns', 'gencity.py')], check=True, capture_output=True, env={**os.environ, 'NO_AREAS': '1'})
 known = json.loads(subprocess.run(['node', '-e', """import('%s').then(m=>console.log(JSON.stringify({p:m.PLACE.map(x=>[x[0],...x[1]].map(s=>s.toLowerCase())),h:m.HINT.map(x=>[x[0],x[1]])})))""" % os.path.abspath(os.path.join(ROOT, 'src', 'phonemapcity.js'))],
     capture_output=True, text=True, check=True).stdout)
 names = set(n for p in known['p'] for n in p)
@@ -144,7 +144,8 @@ for cc in FILES:
             if re.search(r'-(zentrum|altstadt|mitte|centro|sentrum|downtown|cbd|dom)$', slug): continue   # the city's own centre: the city is enough
             if slug in NAMES:   # a clean name: the table already has the place when it has any of its Korean names (no 센트럴 · 소호 beside 센트럴 · 란콰이퐁); else the whole clean row
                 kos = [w.strip().lower() for w in NAMES[slug][0].split(' · ')]
-                ws = [] if any(k in hint_words.get(city, set()) for k in kos) else [w for w in hood_words(r, city) if w not in GENERIC_W]
+                sp = {w.replace(' ', '') for w in hint_words.get(city, set())} | {fold(w).replace(' ', '') for w in hint_words.get(city, set())}   # 캐피톨 힐 = 캐피톨힐
+                ws = [] if any(k.replace(' ', '') in sp for k in kos) or fold(NAMES[slug][1]).lower().replace(' ', '') in sp else [w for w in hood_words(r, city) if w not in GENERIC_W]
             else: ws = [w for w in hood_words(r, city) if w.lower() not in hint_words.get(city, set()) and w not in GENERIC_W]
             if not ws: continue
             if city.lower() not in names and city not in add_city:   # 표에 없는 도시: 도시 줄도 같이

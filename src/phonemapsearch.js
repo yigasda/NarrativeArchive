@@ -3,7 +3,7 @@
 // its names, the maps that suit it, its neighbourhoods, day ↔ night) and a neighbourhood (its map, full screen).
 // The field is an editable div, not an input: SillyTavern themes paint every input (with !important), never a div.
 // Routes: mapq (the sheet; mapq:@kind lists the towns a kind of map suits), mapc:place~hood~kind~night.
-import { AX, ax, axBar, axCb, axChev, axInd, axTop, mapFindBtn, mapFindRow, mapTowns, tileAt, TILE_CREDIT } from './phoneapps.js';
+import { rowWords, AX, ax, axBar, axCb, axChev, axInd, axTop, mapFindBtn, mapFindRow, mapTowns, tileAt, TILE_CREDIT } from './phoneapps.js';
 import { pinLayer, pinSpots, pinSvg, stripSvg, townCandidates, townPlace, townSvg } from './phonemapart.js';
 import { countryHoods, countryTowns, findCountries, findTowns, hoodTown, kindTowns, placeNames, placeView } from './phonemapfind.js';
 import { HINT, PLACE } from './phonemapcity.js';
@@ -28,7 +28,7 @@ function look(p, m, i, hood, kind, night) {
     const dark = false;   // 밤 지도는 뺐어요(11-12)
     const seed = v.hood ? `${v.ko}|${v.hood.label}` : g ? g.k : nameKey(v.ko);
     // the same hint 다녀간 곳 gives a visited town (its places), else the town's names (an Egypt sheet picks itself by them)
-    const hint = v.hood ? HINT[hood][1].join(' ') : g ? g.rows.map(r => r.place).join(' ') : v.names.all.join(' ');
+    const hint = v.hood ? HINT[hood][1].join(' ') : g ? g.rows.flatMap(r => [r.place, r.area].filter(Boolean)).join(' ') : v.names.all.join(' ');
     return { g, v, k, dark, seed, hint, maps: own && !v.maps.includes(own) ? [own, ...v.maps] : own ? [own, ...v.maps.filter(x => x !== own)] : v.maps };
 }
 const at = (i, hood = -1, kind = '', night = '') => `${i}~${hood >= 0 ? hood : ''}~${kind}~${night}`;
@@ -99,7 +99,7 @@ export function mapSearchScreen(p, now, m, i = '', query = '') {
     const own = placeInfo(p).owner, home = own.city, cc = countryOf(home) || String(own.lives || ''), seenI = (p.mapSeen || []).map(townPlace).find(i => i >= 0);
     const land = kind[0] === '#' ? kind.slice(1).split('~')[0] : '';
     if (land) query = FLAG_NAME[land] || '';
-    const where = land ? tileAt('', [], [], land) : g ? tileAt(g.city, g.rows.map(r => r.place), g.rows.slice(0, 7).map(r => r.place)) : home || cc ? tileAt(countryOf(home) ? '' : home, [], [], cc) : seenI >= 0 ? tileAt(PLACE[seenI][0]) : '';
+    const where = land ? tileAt('', [], [], land) : g ? tileAt(g.city, rowWords(g.city, g.rows), g.rows.slice(0, 7).map(r => r.place)) : home || cc ? tileAt(countryOf(home) ? '' : home, [], [], cc) : seenI >= 0 ? tileAt(PLACE[seenI][0]) : '';
     return `<div class="mp_wx mq_wx${dark ? ' mp_dark' : ''}"><div class="mp_bg"${where}>${art}</div>${axBar(p, now, dark && !full ? '#fff' : '#111')}${axTop(axCb(kind ? 'mapq' : 'map'))}
       <div class="mq_sheet${land ? ' mq_cty' : full ? ' mq_full' : ''}"><i class="mp_grab"></i>${TILE_CREDIT}
         ${kind && !land ? `<div class="mq_kh">${icon('mqmap', 16, 'var(--axd)', 2.2)}<b>${esc(kindName(kind))}</b></div>` : `<div class="mq_field">${ax('search', 17, '#8a929d', 2.2)}<div class="mq_in" contenteditable="true" role="searchbox" enterkeyhint="search" spellcheck="false" aria-label="도시 찾기" data-ph="도시 · 동네 찾기 (東京, Berlin, 홍대 …)">${esc(query)}</div><button type="button" class="mq_x${query ? ' on' : ''}" aria-label="지우기">${ax('x', 12, '#fff', 3)}</button></div>`}
@@ -130,7 +130,7 @@ export function mapCityScreen(p, now, m, i = '') {
     }
     // the town's neighbourhoods, each its own little map (the tile map draws it; till then, and offline, its drawn map)
     const thumbs = v.hoods.slice(0, 8).map(h => `<button type="button" class="mq_th mq_hth" data-go="mapc" data-i="${at(place, h)}" aria-label="${esc(HINT[h][3])}" data-tt="${esc(JSON.stringify({ city: PLACE[place][0], words: [HINT[h][3], ...HINT[h][1]].slice(0, 10), big: 1 }))}"><i class="mq_tph" aria-hidden="true"></i><span>${esc(HINT[h][3])}</span></button>`).join('');
-    return `<div class="mp_wx mq_wx${dark ? ' mp_dark' : ''}"><div class="mp_bg mq_bgcity"${tileAt(PLACE[place][0], g ? g.rows.map(r => r.place) : [], g ? g.rows.slice(0, 6).map(r => r.place) : [])}>${art}</div>${axBar(p, now, dark ? '#fff' : '#111')}${axTop(axCb('mapq'), mapFindBtn())}
+    return `<div class="mp_wx mq_wx${dark ? ' mp_dark' : ''}"><div class="mp_bg mq_bgcity"${tileAt(PLACE[place][0], g ? rowWords(g.city, g.rows) : [], g ? g.rows.slice(0, 6).map(r => r.place) : [])}>${art}</div>${axBar(p, now, dark ? '#fff' : '#111')}${axTop(axCb('mapq'), mapFindBtn())}
       <div class="ax_scroll"><i class="mp_gap mq_gap"></i><div class="mp_sheet"><i class="mp_grab"></i>${TILE_CREDIT}
         <div class="mq_hd">${country}
           <div class="mq_tl"><b>${esc(v.ko)}</b></div>

@@ -1,0 +1,410 @@
+# 구 · 区 · Bezirk · borough · arrondissement 낱말: 도시 · 동네 줄 이름(지도 표 HINT의 이름 그대로) · 낱말 | 낱말. gencity.py가 그 동네 줄 낱말에 더해요(그 도시 줄에만). 다녀간 곳의 area가 이걸로 동네를 찾아요.
+서울	강남 · 서초	gangnam-gu | seocho | seocho-gu
+서울	여의도 · 영등포	yeongdeungpo | yeongdeungpo-gu
+서울	홍대 · 연남	mapo | mapo-gu
+서울	신촌 · 이대	seodaemun | seodaemun-gu
+서울	노량진 · 신림	gwanak | gwanak-gu
+서울	성수 · 뚝섬	seongdong | seongdong-gu | gwangjin | gwangjin-gu
+서울	종로 · 북촌	jongno-gu
+서울	명동 · 을지로	jung-gu
+서울	잠실 · 송파	songpa | songpa-gu | gangdong | gangdong-gu
+서울	목동 · 상계	yangcheon | yangcheon-gu | mokdong
+서울	성북 · 평창동	seongbuk | seongbuk-gu
+서울	용산	yongsan-gu
+서울	동대문	dongdaemun-gu
+서울	화곡	gangseo | gangseo-gu
+서울	구로 · 가산	guro-gu | geumcheon | geumcheon-gu
+서울	사당	dongjak | dongjak-gu
+서울	연신내	eunpyeong | eunpyeong-gu
+서울	수유 · 강북	gangbuk | gangbuk-gu
+서울	도봉산	dobong | dobong-gu | nowon-gu
+서울	중랑	jungnang-gu
+부산	해운대 · 광안리	haeundae-gu | suyeong | suyeong-gu | 남구 | nam-gu | 기장군 | gijang | gijang-gun
+부산	감천 · 영도	saha | saha-gu | yeongdo | yeongdo-gu
+부산	서면 · 부산역	busanjin | busanjin-gu | dong-gu | 동래 | 동래구 | dongnae | dongnae-gu | 연제 | 연제구 | yeonje | yeonje-gu
+부산	남포동	jung-gu | 서구 | seo-gu
+인천	차이나타운 · 월미도	중구 | jung-gu | 동구 | dong-gu | 미추홀 | 미추홀구 | michuhol | michuhol-gu | 강화군 | ganghwa | ganghwa-gun
+인천	송도 · 청라	연수 | 연수구 | yeonsu | yeonsu-gu | 서구 | seo-gu
+인천	부평	부평구 | bupyeong-gu | 계양 | 계양구 | gyeyang | gyeyang-gu | 남동 | 남동구 | namdong | namdong-gu
+성남	분당 · 판교	분당구 | bundang-gu
+고양	일산 · 킨텍스	일산동구 | 일산서구 | ilsandong-gu | ilsanseo-gu
+화성	동탄	동탄구 | dongtan-gu
+제주	애월 · 함덕	애월읍 | 한림읍 | 조천 | 조천읍 | aewol | hamdeok | hallim | jocheon
+서귀포	중문 · 성산	중문동 | 성산읍 | 표선면 | 우도면 | jungmun | seongsan | pyoseon | udo
+경주	양동마을	강동면
+안동	하회	풍천 | 풍천면 | hahoe
+대구	동성로	중구 | jung-gu | 동구 | dong-gu | 서구 | seo-gu | 북구 | buk-gu
+대구	수성구	수성 | suseong-gu
+대구	김광석길	남구 | nam-gu | 대봉동
+대전	둔산	서구 | seo-gu
+대전	유성	유성구 | yuseong-gu
+대전	은행동	중구 | jung-gu | 동구 | dong-gu
+광주	충장로	동구 | dong-gu | 남구 | nam-gu | 북구 | buk-gu
+광주	상무지구	서구 | seo-gu
+수원	광교	영통 | 영통구 | yeongtong | yeongtong-gu
+수원	행궁동	팔달 | 팔달구 | paldal | paldal-gu | 장안 | 장안구 | jangan | jangan-gu
+수원	인계동	권선 | 권선구 | gwonseon | gwonseon-gu
+강릉	경포	경포동
+강릉	주문진	주문진읍
+전주	한옥마을	완산 | 완산구 | wansan | wansan-gu | 덕진 | 덕진구 | deokjin | deokjin-gu | 풍남동
+도쿄	신주쿠 · 가부키초	新宿区 | 新宿 | 신주쿠구 | shinjuku-ku | 豊島区 | 豊島 | 도시마 | 도시마구 | toshima | toshima-ku | 池袋
+도쿄	시부야 · 하라주쿠	渋谷区 | 渋谷 | 시부야구 | shibuya-ku | 原宿
+도쿄	긴자 · 마루노우치	中央区 | 주오 | 주오구 | chuo | chuo-ku | 港区 | 미나토 | 미나토구 | minato | minato-ku | 銀座
+도쿄	아사쿠사 · 우에노	台東区 | 台東 | 다이토 | 다이토구 | taito | taito-ku | 墨田区 | 墨田 | 스미다 | 스미다구 | sumida | sumida-ku | 荒川区 | 荒川 | 아라카와 | 아라카와구 | arakawa | arakawa-ku | 北区 | 기타구 | kita-ku
+도쿄	아키하바라 · 간다	千代田区 | 千代田 | 지요다 | 지요다구 | chiyoda | chiyoda-ku | 文京区 | 文京 | 분쿄 | 분쿄구 | bunkyo | bunkyo-ku | 秋葉原
+도쿄	시모키타자와 · 고엔지	中野区 | 中野 | 나카노구 | nakano | nakano-ku | 武蔵野市 | 武蔵野 | 무사시노 | musashino | 吉祥寺 | 高円寺
+도쿄	세타가야 · 메구로	世田谷区 | 世田谷 | 세타가야구 | setagaya-ku | 目黒区 | 目黒 | 메구로구 | meguro-ku | 杉並区 | 杉並 | 스기나미구 | suginami | suginami-ku | 練馬区 | 練馬 | 네리마구 | nerima | nerima-ku
+도쿄	오다이바 · 도요스	江東区 | 江東 | 고토 | 고토구 | koto | koto-ku | 品川区 | 品川 | 시나가와구 | shinagawa-ku | お台場
+도쿄	하네다 공항	大田区 | 大田 | 오타 | 오타구 | ota | ota-ku | 羽田
+도쿄	다마 · 다치카와	多摩市 | 多摩 | 立川市 | 立川 | 八王子市 | 八王子 | 町田市 | 町田 | 三鷹市 | 三鷹 | 国立市 | 国立 | 구니타치 | kunitachi | 日野市 | 히노 | hino | 昭島市 | 아키시마 | akishima | machida | mitaka
+도쿄	오쿠타마	奥多摩町 | 奥多摩 | 오쿠타마정
+오사카	난바 · 도톤보리	中央区 | 주오 | 주오구 | chuo-ku | 浪速区 | 浪速 | 나니와 | 나니와구 | naniwa | naniwa-ku | 西区 | 니시구 | nishi-ku | 大正区 | 大正 | 다이쇼구 | taisho-ku | 難波 | 道頓堀
+오사카	우메다 · 기타	北区 | 기타구 | kita-ku | 福島区 | 후쿠시마구 | fukushima-ku | 都島区 | 미야코지마 | 미야코지마구 | miyakojima | 淀川区 | 요도가와구 | yodogawa-ku | 梅田
+오사카	덴노지 · 쓰루하시	天王寺区 | 天王寺 | 덴노지구 | tennoji-ku | 生野区 | 生野 | 이쿠노 | 이쿠노구 | ikuno | ikuno-ku | 阿倍野区 | 阿倍野 | 아베노 | 아베노구 | abeno | abeno-ku | 東成区 | 히가시나리구 | higashinari | 西成区 | 西成 | 니시나리 | 니시나리구 | nishinari | 住吉区 | 스미요시구 | sumiyoshi | sumiyoshi-ku | 東住吉区 | 히가시스미요시구 | higashisumiyoshi
+오사카	유니버설 스튜디오 재팬	此花区 | 此花 | 고노하나 | 고노하나구 | konohana | konohana-ku | 港区 | 미나토구 | minato-ku | usj
+교토	기온 · 히가시야마	東山区 | 東山 | 히가시야마구 | higashiyama-ku | 山科区 | 山科 | 야마시나 | 야마시나구 | yamashina | 祇園
+교토	교토역 · 시조	中京区 | 中京 | 나카교 | 나카교구 | nakagyo | nakagyo-ku | 下京区 | 下京 | 시모교 | 시모교구 | shimogyo | shimogyo-ku | 南区 | 미나미구 | minami-ku | 上京区 | 上京 | 가미교 | 가미교구 | kamigyo | kamigyo-ku | 北区 | 기타구 | kita-ku | 河原町
+교토	아라시야마 · 사가노	右京区 | 右京 | 우쿄 | 우쿄구 | ukyo | ukyo-ku | 西京区 | 西京 | 니시쿄 | 니시쿄구 | nishikyo | 伏見区 | 伏見 | 후시미구 | fushimi-ku | 宇治 | 嵐山
+교토	오하라	左京区 | 左京 | 사쿄 | 사쿄구 | sakyo | sakyo-ku | 大原
+요코하마	미나토미라이 · 차이나타운	中区 | 나카구 | naka-ku | 西区 | 니시구 | nishi-ku | 南区 | 미나미구 | minami-ku | 神奈川区 | 가나가와구 | kanagawa-ku
+후쿠오카	하카타 · 텐진	博多区 | 博多 | 하카타구 | hakata-ku | 中央区 | 주오구 | chuo-ku | 早良区 | 사와라 | 사와라구 | sawara | sawara-ku | 天神
+삿포로	스스키노 · 오도리	中央区 | 주오구 | chuo-ku | 北区 | 기타구 | kita-ku | 豊平区 | 도요히라 | 도요히라구 | toyohira | toyohira-ku | すすきの
+나고야	사카에	中区 | 나카구 | naka-ku | 東区 | 히가시구 | higashi-ku | 千種区 | 지쿠사 | 지쿠사구 | chikusa | 昭和区 | 쇼와구 | showa-ku | 熱田区 | 熱田 | 아쓰타 | 아쓰타구 | atsuta | 北区 | 기타구 | kita-ku | 栄
+나고야	메이에키	中村区 | 中村 | 나카무라구 | nakamura-ku | 西区 | 니시구 | nishi-ku | 中川区 | 나카가와구 | nakagawa-ku
+베이징	왕푸징 · 톈안먼	东城区 | 东城 | 東城區 | 둥청 | 둥청구 | dongcheng | dongcheng district | 王府井 | 天安门
+베이징	후퉁 · 난뤄구샹	西城区 | 西城 | 西城區 | 시청구 | xicheng | xicheng district | 什刹海 | 南锣鼓巷
+베이징	궈마오 · 차오양	朝阳区 | 朝阳 | 朝陽區 | 차오양구 | chaoyang district | 国贸
+베이징	중관춘 · 우다오커우	海淀区 | 海淀 | 海澱區 | 하이뎬구 | haidian district | 中关村
+베이징	서우두 공항	顺义区 | 顺义 | 順義區 | 순이 | 순이구 | shunyi | shunyi district
+상하이	와이탄 · 난징루	黄浦区 | 黄浦 | 黃浦區 | 황푸 | 황푸구 | huangpu | huangpu district | 虹口区 | 虹口 | 훙커우 | 훙커우구 | hongkou | hongkou district | 外滩
+상하이	루자쭈이 · 푸둥	浦东新区 | 浦东 | 浦東 | 푸둥신구 | pudong new area | pudong new district | 陆家嘴
+상하이	신톈디 · 프랑스 조계	静安区 | 静安 | 靜安 | 징안구 | jing'an district | jingan | 新天地
+상하이	쉬자후이	徐汇区 | 徐汇 | 徐匯區 | 쉬후이 | 쉬후이구 | xuhui | xuhui district | 徐家汇
+상하이	훙차오	长宁区 | 长宁 | 長寧區 | 창닝 | 창닝구 | changning | changning district | 闵行区 | 闵行 | 閔行區 | 민항 | 민항구 | minhang | minhang district | 虹桥
+상하이	주자자오 · 치바오	青浦区 | 青浦 | 칭푸 | 칭푸구 | qingpu | qingpu district | 朱家角 | 七宝
+청두 · 충칭	춘시루 · 콴자이샹즈	锦江区 | 锦江 | 錦江區 | 진장 | 진장구 | jinjiang district | 渝中区 | 渝中 | 위중 | 위중구 | yuzhong | yuzhong district | 江北区 | 장베이구 | jiangbei district | 南岸区 | 난안구 | nan'an district | 春熙路 | 解放碑 | 洪崖洞
+청두	콴자이샹쯔	青羊区 | 青羊 | 칭양 | 칭양구 | qingyang | qingyang district | 武侯区 | 武侯 | 우허우 | 우허우구 | wuhou | wuhou district | 宽窄巷子
+광저우	톈허	天河区 | 톈허구 | tianhe district
+광저우	사몐	荔湾区 | 荔湾 | 리완 | 리완구 | liwan | liwan district | 越秀区 | 越秀 | 웨슈 | 웨슈구 | yuexiu | yuexiu district | 沙面
+광저우	주장신청	海珠区 | 海珠 | 하이주 | 하이주구 | haizhu | haizhu district
+선전	난산	南山区 | 난산구 | nanshan district
+선전	푸톈	福田区 | 푸톈구 | futian district
+선전	뤄후	罗湖区 | 뤄후구 | luohu district | 羅湖
+홍콩	센트럴 · 소호	中西區 | 中西区 | 중서구 | central and western | central and western district | 中環 | 上環 | sheung wan
+홍콩	몽콕 · 침사추이	油尖旺區 | 油尖旺 | 油尖旺区 | 야우침몽 | yau tsim mong | 九龍城區 | 九龍城 | 九龙城 | 구룡성 | kowloon city | 黃大仙區 | 黃大仙 | 黄大仙 | 웡타이신 | wong tai sin | 旺角 | 尖沙咀
+홍콩	란타우 · 라마섬	離島區 | 離島 | 离岛区 | islands district | 大嶼山 | 南丫島 | 西貢區 | 西貢 | 西贡 | sai kung district
+홍콩	완차이 · 코즈웨이베이	灣仔區 | 灣仔 | 湾仔 | wan chai district | wanchai | 東區 | 东区 | eastern district | 銅鑼灣 | 铜锣湾
+홍콩	리펄스베이	南區 | 南区 | southern district | 淺水灣
+홍콩	삼수이포	深水埗區 | 深水埗 | sham shui po district | shamshuipo | 葵青區 | 葵青 | 콰이칭 | kwai tsing
+홍콩	샤틴	沙田區 | 沙田 | 沙田区 | sha tin district | shatin
+홍콩	스탠리	赤柱
+마카오	세나도 광장	大堂區 | 大堂区 | sé | freguesia da sé | 聖安多尼堂區 | santo antónio | 望德堂區 | são lázaro | 風順堂區 | são lourenço | 花地瑪堂區 | nossa senhora de fátima | 澳門半島 | 澳门半岛 | 마카오반도 | macau peninsula | 議事亭前地
+마카오	타이파	嘉模堂區 | 嘉模 | nossa senhora do carmo | 凼仔
+마카오	콜로안	聖方濟各堂區 | 路環 | 路环 | são francisco xavier
+마카오	코타이	路氹城 | 路凼
+타이베이	시먼딩 · 신이	萬華區 | 萬華 | 万华区 | 완화 | 완화구 | wanhua | 中正區 | 中正 | 중정구 | zhongzheng | 大安區 | 大安 | 다안구 | daan | 信義區 | 信義 | 신이구 | xinyi district | 中山區 | 중산구 | zhongshan district | 大同區 | 大同 | 다퉁구 | datong district | 松山區 | 松山 | 쑹산구 | songshan district | 西門町
+타이베이	단수이 · 베이터우	北投區 | 北投 | 베이터우구 | beitou district | 士林區 | 士林 | 스린 | 스린구 | shilin | 淡水區 | 淡水 | 瑞芳區 | 瑞芳 | 루이팡 | ruifang | 平溪區 | 平溪 | pingxi | 九份
+뉴욕	맨해튼 · 미드타운	new york county | manhattan borough | 맨해튼구
+뉴욕	브루클린 · 윌리엄스버그	kings county | 브루클린구
+뉴욕	퀸스 · 브롱크스	queens county | bronx county | richmond county | the bronx | 더 브롱크스 | 스태튼 아일랜드 | 퀸스구 | 브롱크스구
+뉴욕	롱아일랜드 · 햄프턴스	nassau county | suffolk county | westchester county | 나소 카운티 | 서퍽 카운티 | 웨스트체스터 카운티
+뉴욕	첼시	hoboken | 호보컨
+뉴욕	그리니치빌리지 · 소호	jersey city | 저지시티
+로스앤젤레스	할리우드 · 비벌리힐스	west hollywood | weho | 웨스트 할리우드
+로스앤젤레스	산타모니카 · 베니스	culver city | 컬버시티 | 컬버 시티
+로스앤젤레스	로스앤젤레스 공항	inglewood | 잉글우드 | el segundo | 엘세군도
+시카고	루프 · 링컨파크	the loop | west town | near west side | near south side | 웨스트타운
+시카고	골드코스트	near north side | 니어노스사이드
+시카고	오헤어 공항	rosemont | 로즈몬트
+보스턴	백베이 · 비컨힐	brookline | 브루클라인 | somerville | 서머빌
+보스턴	사우스엔드	roxbury | 록스베리
+마이애미	사우스비치 · 리틀아바나	miami beach | 마이애미비치 | 마이애미 비치 | coral gables
+라스베이거스	스트립	paradise | 패러다이스 | winchester | 윈체스터
+라스베이거스	프리몬트 스트리트	north las vegas | 노스라스베이거스
+워싱턴	조지타운	arlington | 알링턴 | rosslyn | 로슬린
+토론토	다운타운	old toronto | 올드 토론토
+토론토	피어슨 공항	etobicoke | 에토비코 | 이토비코
+토론토	비치스	east york | 이스트요크 | 이스트 요크
+밴쿠버	노스밴쿠버	west vancouver | 웨스트밴쿠버 | 웨스트 밴쿠버 | district of north vancouver
+밴쿠버	버나비	new westminster | 뉴웨스트민스터 | 뉴 웨스트민스터
+몬트리올	올드 몬트리올	ville-marie | 빌마리 | 빌 마리 | le sud-ouest | sud-ouest | 쉬드우에스트 | verdun | 베르됭 | westmount | 웨스트마운트 | longueuil | 롱괴유
+몬트리올	플라토	le plateau-mont-royal | plateau-mont-royal | le plateau | 플라토몽루아얄 | 플라토 몽루아얄 | mercier–hochelaga-maisonneuve | hochelaga-maisonneuve | hochelaga | 오슐라가
+몬트리올	마일엔드	outremont | 우트르몽 | rosemont–la petite-patrie | rosemont | petite-patrie | 로즈몽 | côte-des-neiges–notre-dame-de-grâce | côte-des-neiges | cote-des-neiges | 코트데네주 | villeray–saint-michel–parc-extension | villeray | parc-extension | mont-royal | town of mount royal | 몽루아얄
+몬트리올	트뤼도 공항	dorval | 도르발 | saint-laurent | 생로랑 | lachine | 라신
+멕시코시티	소칼로	cuauhtémoc | cuauhtemoc | alcaldía cuauhtémoc | 쿠아우테목 | venustiano carranza | 베누스티아노 카란사
+멕시코시티	폴랑코	miguel hidalgo | alcaldía miguel hidalgo | 미겔 이달고 | 미겔이달고
+멕시코시티	콘데사	benito juárez | benito juarez | alcaldía benito juárez | 베니토 후아레스
+멕시코시티	코요아칸	alcaldía coyoacán | álvaro obregón | alvaro obregon | 알바로 오브레곤 | san ángel | san angel | 산앙헬
+상파울루	파울리스타	bela vista | 벨라비스타 | 벨라 비스타 | consolação | consolacao | 콘솔라상 | vila mariana | 빌라 마리아나
+상파울루	자르딘스	jardim paulista | 자르징 파울리스타 | itaim bibi | 이타임비비 | 이타임 비비
+상파울루	빌라 마달레나	pinheiros | 피녜이루스 | butantã | butanta | 부탄탕
+상파울루	리베르다지	sé | república | republica | 헤푸블리카 | mooca | 모오카
+리우데자네이루	코파카바나	zona sul | 소나 술 | leme | 레미 | botafogo | 보타포구 | urca | 우르카
+리우데자네이루	이파네마	lagoa | 라고아
+리우데자네이루	레블론	gávea | gavea | 가베아 | jardim botânico | jardim botanico | são conrado | sao conrado | rocinha | 호시냐
+리우데자네이루	라파	glória | gloria | 글로리아 | flamengo | 플라멩구 | catete | 카테치
+리우데자네이루	산타 테레사	laranjeiras | 라랑제이라스 | tijuca | 치주카
+부에노스아이레스	산텔모	comuna 1 | 코무나 1 | monserrat | 몬세라트 | san nicolás | san nicolas | microcentro | 마이크로센트로
+부에노스아이레스	레콜레타	comuna 2 | 코무나 2 | retiro | 레티로 | balvanera | 발바네라 | comuna 3 | 코무나 3
+부에노스아이레스	라 보카	comuna 4 | 코무나 4 | barracas | 바라카스 | avellaneda | 아베야네다
+부에노스아이레스	팔레르모	comuna 14 | 코무나 14 | belgrano | 벨그라노 | colegiales | villa crespo | 비야 크레스포 | chacarita | almagro | 알마그로 | comuna 13 | comuna 15 | comuna 5
+베를린	미테 · 알렉산더플라츠	미테구 | bezirk mitte | tiergarten | 티어가르텐 | moabit | 모아비트 | wedding | 베딩 | gesundbrunnen | pankow | 판코 | bezirk pankow | weißensee | weissensee | 바이센제
+베를린	크로이츠베르크 · 노이쾰른	friedrichshain-kreuzberg | 프리드리히스하인크로이츠베르크 | friedrichshain | 프리드리히스하인-크로이츠베르크 | neukolln | bezirk neukölln | treptow-köpenick | treptow-kopenick | treptow | 트렙토 | 트렙토쾨페니크
+베를린	샤를로텐부르크 · 쿠담	charlottenburg-wilmersdorf | 샤를로텐부르크빌머스도르프 | wilmersdorf | 빌머스도르프 | steglitz-zehlendorf | 슈테글리츠첼렌도르프 | steglitz | 슈테글리츠 | zehlendorf
+베를린	마르찬 · 헬러스도르프	marzahn-hellersdorf | 마르찬헬러스도르프 | hellersdorf | hohenschönhausen | hohenschonhausen | 호엔쇤하우젠
+뮌헨	마리엔플라츠 · 알트슈타트	altstadt-lehel | 알트슈타트레헬 | lehel | 레헬 | maxvorstadt | schwanthalerhöhe | 슈반탈러회에
+뮌헨	님펜부르크 · 영국정원	neuhausen-nymphenburg | 노이하우젠님펜부르크 | neuhausen | 노이하우젠 | bogenhausen | laim | 라임 | pasing | pasing-obermenzing | 파징 | moosach | 모자흐
+함부르크	장크트파울리 · 레퍼반	bezirk altona | ottensen | 오텐젠
+함부르크	하펜시티 · 슈파이허슈타트	hamburg-mitte | 함부르크미테 | bezirk hamburg-mitte | 미테
+쾰른 · 뒤셀도르프	돔 · 알트슈타트	altstadt | innenstadt | 인넨슈타트 | carlstadt | 카를슈타트 | unterbilk | 운터빌크
+프랑크푸르트	작센하우젠 · 뢰머	altstadt | 알트슈타트 | innenstadt | 인넨슈타트 | niederrad | 니더라트 | oberrad | 오버라트
+라이프치히 · 드레스덴	노이슈타트 · 알트슈타트	altstadt | äußere neustadt | aussere neustadt | pieschen | 피셴 | cotta | 코타 | plauen | 플라우엔
+프랑크푸르트	반호프스피어텔	gallus | 갈루스 | gutleut | gutleutviertel | 구틀로이트
+쾰른	벨기셰스 피어텔	innenstadt | 인넨슈타트 | stadtbezirk innenstadt
+라이프치히	노이슈타트 · 알트슈타트	lindenau | 린데나우 | schleußig | schleussig | 슐로이시히 | connewitz | 코네비츠 | südwest | mitte | 미테
+뮌헨	님펜부르크 · 영국정원	schwabing-west | 슈바빙베스트 | schwabing-freimann | 슈바빙프라이만 | milbertshofen | milbertshofen-am hart | 밀베르츠호펜
+베를린	쇠네베르크	tempelhof-schöneberg | tempelhof-schoneberg | 템펠호프쇠네베르크 | friedenau | 프리데나우
+뮌헨	글로켄바흐	ludwigsvorstadt-isarvorstadt | 루트비히스포어슈타트이자르포어슈타트 | isarvorstadt | 이자르포어슈타트 | ludwigsvorstadt | 루트비히스포어슈타트 | glockenbach | untergiesing-harlaching | untergiesing | harlaching | sendling | 젠들링 | sendling-westpark | thalkirchen | 탈키르헨
+뮌헨	하이트하우젠	au-haidhausen | 아우하이트하우젠 | berg am laim | 베르크암라임 | obergiesing | obergiesing-fasangarten | giesing | 기징
+프랑크푸르트	베스트엔트	westend-nord
+프랑크푸르트	보켄하임	rödelheim | rodelheim | 뢰델하임 | hausen
+프랑크푸르트	노르트엔트	nordend-west | nordend-ost | dornbusch | 도른부슈 | eschersheim
+프랑크푸르트	오스트엔트	bornheim | 보른하임 | fechenheim | 페헨하임 | riederwald | seckbach
+함부르크	아임스뷔텔	bezirk eimsbüttel | hamburg-nord | 함부르크노르트 | eppendorf | 에펜도르프 | winterhude | 빈터후데 | barmbek | 바름베크
+쾰른	에렌펠트	stadtbezirk ehrenfeld | nippes | 니페스
+쾰른	도이츠	kalk | 칼크 | mülheim | mulheim | 뮐하임
+베를린	슈판다우	bezirk spandau
+뮌헨	노이페를라흐	ramersdorf-perlach | 라머스도르프페를라흐 | perlach | 페를라흐 | ramersdorf | trudering-riem | trudering | 트루더링 | riem
+뮌헨	알리안츠 아레나	freimann | 프라이만 | fröttmaning | frottmaning | 프뢰트마닝
+함부르크	빌헬름스부르크	harburg | 하르부르크 | bezirk harburg
+쾰른	린덴탈	stadtbezirk lindenthal | sülz | 쥘츠
+드레스덴	블라제비츠	loschwitz | 로슈비츠 | weißer hirsch | leuben | 로이벤 | striesen | 슈트리젠
+뒤셀도르프	뒤셀도르프 공항	lohausen | 로하우젠 | kaiserswerth | 카이저스베르트
+빈	인네레 슈타트	1. bezirk | 1st district | 1구 | 인네레슈타트 | landstraße | landstrasse | 란트슈트라세 | 3. bezirk | 3구 | alsergrund | 알저그룬트 | 9. bezirk | 9구 | währing | wahring | 베링 | 18. bezirk | 18구 | döbling | dobling | 되블링 | 19. bezirk | 19구
+빈	노이바우	7. bezirk | 7th district | 7구 | josefstadt | 요제프슈타트 | 8. bezirk | 8구 | ottakring | 오타크링 | 16. bezirk | 16구 | hernals | 헤르날스 | 17. bezirk | 17구
+빈	레오폴트슈타트	2. bezirk | 2nd district | 2구 | brigittenau | 브리기테나우 | 20. bezirk | 20구 | floridsdorf | 플로리츠도르프 | 21. bezirk | 21구 | donaustadt | 도나우슈타트 | 22. bezirk | 22구
+빈	나슈마르크트	mariahilf | 마리아힐프 | 6. bezirk | 6구 | wieden | 비덴 | 4. bezirk | 4구 | margareten | 마르가레텐 | 5. bezirk | 5구 | favoriten | 파보리텐 | 10. bezirk | 10구
+빈	쇤브룬	hietzing | 히칭 | 13. bezirk | 13구 | meidling | 마이들링 | 12. bezirk | 12구 | penzing | 펜칭 | 14. bezirk | 14구 | rudolfsheim-fünfhaus | rudolfsheim-funfhaus | 루돌프스하임퓐프하우스 | 15. bezirk | 15구
+취리히	알트슈타트	kreis 1 | 크라이스 1 | 1구 | kreis 8 | 크라이스 8 | 8구 | seefeld | 제펠트 | riesbach
+취리히	니더도르프	kreis 6 | 크라이스 6 | 6구 | unterstrass | oberstrass | kreis 7 | 크라이스 7 | 7구 | fluntern | hottingen | kreis 11 | 크라이스 11 | 11구 | oerlikon | 외를리콘 | kreis 12 | 크라이스 12 | 12구 | schwamendingen
+취리히	반호프슈트라세	kreis 2 | 크라이스 2 | 2구 | enge | 엔게 | wollishofen | kreis 3 | 크라이스 3 | 3구 | wiedikon | 비디콘
+취리히	취리히 베스트	kreis 4 | 크라이스 4 | 4구 | aussersihl | langstrasse | 랑슈트라세 | kreis 5 | 크라이스 5 | 5구 | industriequartier | kreis 9 | 크라이스 9 | 9구 | altstetten | 알트슈테텐 | kreis 10 | 크라이스 10 | 10구 | wipkingen | höngg
+암스테르담	요르단	west | stadsdeel west | oud-west | westerpark
+암스테르담	데 피프	oost | 오스트 | stadsdeel oost | oosterpark
+암스테르담	담 광장	centrum | 센트룸 | stadsdeel centrum | binnenstad
+암스테르담	레이체플레인	nieuw-west | 니우베스트 | stadsdeel nieuw-west
+암스테르담	박물관 광장	zuid | 자위트 | stadsdeel zuid | oud-zuid | 아우트자위트
+암스테르담	노르트	stadsdeel noord
+암스테르담	스키폴	haarlemmermeer | 하를레메르메이르
+브뤼셀	그랑 플라스	anderlecht | 안데를레흐트 | molenbeek | molenbeek-saint-jean | sint-jans-molenbeek | 몰렌베이크 | koekelberg | 쿠켈베르흐 | schaerbeek | schaarbeek | 스하르베이크 | saint-josse | saint-josse-ten-noode | sint-joost-ten-node | 생조스 | jette | 제트 | evere | 에베르
+브뤼셀	익셀	elsene | etterbeek | 에테르베크 | auderghem | oudergem | 오데르겜 | watermael-boitsfort | watermaal-bosvoorde | 와테르말부아포르 | woluwe-saint-pierre | sint-pieters-woluwe | woluwe-saint-lambert | sint-lambrechts-woluwe | 볼뤼베
+브뤼셀	생질	sint-gillis | uccle | ukkel | 위클 | forest | vorst | 포레스트
+프라하	구시가지 광장	praha 1 | prague 1 | 프라하 1구 | staré město | stare mesto | 스타레 메스토 | josefov | 요세포프 | praha 7 | prague 7 | 프라하 7구 | holešovice | holesovice | 홀레쇼비체 | letná | letna
+프라하	말라 스트라나	hradčany | hradcany | 흐라드차니 | praha 5 | prague 5 | 프라하 5구 | smíchov | smichov | 스미호프 | praha 6 | prague 6 | 프라하 6구 | dejvice | 데이비체 | břevnov | brevnov
+프라하	바츨라프 광장	nové město | nove mesto | 노베 메스토 | new town
+프라하	지슈코프	praha 3 | prague 3 | 프라하 3구 | praha 8 | prague 8 | 프라하 8구 | karlín | karlin | 카를린 | libeň | liben | praha 9 | prague 9 | 프라하 9구 | vysočany | vysocany
+프라하	비노흐라디	praha 2 | prague 2 | 프라하 2구 | vyšehrad | vysehrad | 비셰흐라드 | praha 4 | prague 4 | 프라하 4구 | nusle | 누슬레 | praha 10 | prague 10 | 프라하 10구 | vršovice | vrsovice | 브르쇼비체
+바르샤바	구시가지	śródmieście | srodmiescie | 시루드미에시치에 | wola | 볼라 | żoliborz | zoliborz | 조리보시
+바르샤바	프라가	praga-północ | praga-polnoc | praga-południe | praga-poludnie | 프라가푸우노츠 | 프라가포우드니에 | targówek | targowek | 타르구베크
+바르샤바	모코투프	mokotow | ochota | 오호타 | ursynów | ursynow | 우르시누프
+부다페스트	유대인 지구	erzsébetváros | erzsebetvaros | 에르제베트바로시 | vii. kerület | 7th district | 7구 | józsefváros | jozsefvaros | 요제프바로시 | viii. kerület | 8th district | 8구 | ferencváros | ferencvaros | 페렌츠바로시 | ix. kerület | 9th district | 9구 | újbuda | ujbuda | 우이부다 | xi. kerület | 11th district | 11구
+부다페스트	언드라시	terézváros | terezvaros | 테레즈바로시 | vi. kerület | 6th district | 6구 | belváros-lipótváros | belvaros | belváros | lipótváros | 벨바로시 | v. kerület | 5th district | 5구 | újlipótváros | xiii. kerület | 13th district | 13구 | zugló | zuglo | 주글로 | xiv. kerület | 14th district | 14구 | budavár | várnegyed | 부다바르 | i. kerület | 1st district | 1구
+코펜하겐	뉘하운	østerbro | osterbro | 외스테르브로
+코펜하겐	뇌레브로	bispebjerg | 비스페비에르 | vanløse | vanlose | 반뢰세 | brønshøj | bronshoj
+코펜하겐	베스터브로	kongens enghave | 콩엔스 엥하우 | sydhavn | frederiksberg | 프레데릭스베르 | valby | 발뷔
+코펜하겐	크리스티아니아	christianshavn | 크리스티안스하운 | amager øst | amager ost | amager vest | amager | 아마게르
+코펜하겐	스트뢰에	indre by | 인드레 뷔 | indre by bydel
+스톡홀름	쇠데르말름	enskede-årsta-vantör | enskede | årsta | 엔스케데 | hägersten-liljeholmen | hägersten | liljeholmen | 릴리에홀멘 | skarpnäck | 스카르프네크
+스톡홀름	외스테르말름	djurgården | djurgarden | 유르고르덴
+스톡홀름	노르말름	kungsholmen | 쿵스홀멘 | vasastan | 바사스탄
+오슬로	아케르브뤼게 · 비요르비카	sentrum | 센트룸 | gamle oslo | 감레 오슬로 | østensjø | ostensjo | nordstrand | 노르스트란
+오슬로	그뤼네르뢰카 · 프로그네르	sagene | 사게네 | st. hanshaugen | st hanshaugen | 상트한스하우겐 | nordre aker | nydalen | bjerke | 비에르케 | økern
+베르겐	브뤼겐 · 플뢰엔	bergenhus | 베르겐후스 | årstad | arstad | 오르스타드 | laksevåg | laksevag | 락세보그 | fyllingsdalen
+트롬쇠 · 로포텐	트롬쇠위아 · 레이네	moskenes | 모스케네스 | vågan | vagan | 보간
+오슬로	마요르스투엔	ullern | 울레른 | vestre aker | 베스트레 아케르
+오슬로	그로루드	bydel grorud | stovner | 스토브네르 | alna | 알나 | furuset
+오슬로	가르데르모엔 공항	ullensaker | 울렌사케르
+헬싱키	칼리오	sörnäinen | sornainen | 쇠르내이넨 | vallila | alppiharju | keskinen
+헬싱키	카우파토리	kaartinkaupunki | kruununhaka | 크루누하카 | kluuvi | katajanokka | 카타야노카
+헬싱키	푸날라티	푸나부오리 | ullanlinna | 울란린나 | eira | kamppi | 캄피 | eteläinen
+모스크바	아르바트	арбат | хамовники | khamovniki | 하모브니키 | пресненский | presnensky | 프레스넨스키
+모스크바	붉은 광장	центральный административный округ | цао | central administrative okrug | 중앙행정구 | замоскворечье | zamoskvorechye | 자모스크보레치예 | якиманка | yakimanka
+모스크바	키타이고로드	китай-город | таганский | tagansky | taganka | 타간카 | басманный | basmanny | 바스만니 | красносельский | krasnoselsky
+모스크바	트베르스카야	тверская | тверской | tverskoy | 트베르스코이 | мещанский | meshchansky | 메샨스키
+런던	캠든 · 노팅힐	borough of camden | 바넷 | barnet
+런던	켄싱턴 · 첼시	켄싱턴 첼시 | 켄싱턴 앤드 첼시 | kensington and chelsea | royal borough of kensington and chelsea | rbkc | 해머스미스 | hammersmith | 풀럼 | fulham | hammersmith and fulham | 원즈워스 | wandsworth
+런던	웨스트민스터 · 사우스뱅크	city of westminster | 시티 오브 웨스트민스터 | 램버스 | lambeth | 서더크 | southwark | 사우스워크
+런던	크로이던 · 윔블던	서튼 | sutton | 머튼 | merton | 킹스턴 | kingston | kingston upon thames | richmond upon thames | 리치먼드 어폰 템스
+런던	이즐링턴	해링게이 | haringey
+런던	시티 · 카나리워프	the city | square mile | 스퀘어 마일
+런던	시티 · 카나리워프	타워햄리츠 | 타워 햄리츠 | tower hamlets | 루이셤 | lewisham
+런던	히스로 공항	힐링던 | hillingdon | 하운슬로 | hounslow
+런던	개트윅 공항	크롤리 | crawley
+런던	웸블리	브렌트 | brent | 해로 | harrow
+런던	스트랫퍼드	뉴엄 | newham | 월섬 포리스트 | waltham forest
+맨체스터	샐퍼드	트래퍼드 | trafford | city of salford
+더블린	템플 바	dublin 1 | d1 | dublin 7 | d7
+더블린	그래프턴 스트리트	dublin 2 | d2
+더블린	포르토벨로	dublin 8 | d8 | dublin 4 | d4 | dublin 6 | d6
+파리	마레 · 생제르맹	1구 | 1er | 1er arrondissement | 1st arrondissement | ier | 1ème | 1eme | 1ème arrondissement | 1e | 1e arrondissement | 1st | louvre | 2구 | 2e | 2e arrondissement | 2nd arrondissement | iie | 2ème | 2eme | 2ème arrondissement | bourse | 3구 | 3e | 3e arrondissement | 3rd arrondissement | iiie | 3ème | 3eme | 3ème arrondissement | 4구 | 4e | 4e arrondissement | 4th arrondissement | ive | 4ème | 4eme | 4ème arrondissement | hôtel-de-ville | 5구 | 5e | 5e arrondissement | 5th arrondissement | ve | 5ème | 5eme | 5ème arrondissement | panthéon | 6구 | 6e | 6e arrondissement | 6th arrondissement | vie | 6ème | 6eme | 6ème arrondissement
+파리	샹젤리제 · 개선문	8e | 8e arrondissement | 8th arrondissement | viiie | 8ème | 8eme | 8ème arrondissement | élysée | 16e | 16e arrondissement | 16th arrondissement | xvie | 16ème | 16eme | 16ème arrondissement | passy
+파리	몽마르트르 · 피갈	9구 | 9e | 9e arrondissement | 9th arrondissement | ixe | 9ème | 9eme | 9ème arrondissement | 18구 | 18e | 18e arrondissement | 18th arrondissement | xviiie | 18ème | 18eme | 18ème arrondissement | buttes-montmartre | 20구 | 20e | 20e arrondissement | 20th arrondissement | xxe | 20ème | 20eme | 20ème arrondissement
+파리	에펠탑 · 트로카데로	7구 | 7e | 7e arrondissement | 7th arrondissement | viie | 7ème | 7eme | 7ème arrondissement | palais-bourbon
+파리	라데팡스 · 생드니	퓌토 | puteaux | 쿠르브부아 | courbevoie | 낭테르 | nanterre | 센생드니 | seine-saint-denis
+파리	베르사유 · 퐁텐블로	이블린 | yvelines
+리옹	비유 리옹 · 푸르비에르	1구 | 1er | 1er arrondissement | 1st arrondissement | ier | 1ème | 1eme | 1ème arrondissement | 1e | 1e arrondissement | 1st | 4구 | 4e | 4e arrondissement | 4th arrondissement | ive | 4ème | 4eme | 4ème arrondissement | 5구 | 5e | 5e arrondissement | 5th arrondissement | ve | 5ème | 5eme | 5ème arrondissement | 9구 | 9e | 9e arrondissement | 9th arrondissement | ixe | 9ème | 9eme | 9ème arrondissement | vaise
+마르세유 · 니스	비유 포르 · 파니에	1구 | 1er | 1er arrondissement | 1st arrondissement | ier | 1ème | 1eme | 1ème arrondissement | 1e | 1e arrondissement | 1st | 2구 | 2e | 2e arrondissement | 2nd arrondissement | iie | 2ème | 2eme | 2ème arrondissement | 7구 | 7e | 7e arrondissement | 7th arrondissement | viie | 7ème | 7eme | 7ème arrondissement
+파리	샤를드골 공항	루아시 | roissy | roissy-en-france
+파리	오를리 공항	오를리 | orly | 발드마른 | val-de-marne
+파리	몽마르트르 · 피갈	10구 | 10e | 10e arrondissement | 10th arrondissement | xe | 10ème | 10eme | 10ème arrondissement | entrepôt | 11구 | 11e | 11e arrondissement | 11th arrondissement | xie | 11ème | 11eme | 11ème arrondissement | popincourt | 19구 | 19e | 19e arrondissement | 19th arrondissement | xixe | 19ème | 19eme | 19ème arrondissement | buttes-chaumont
+파리	바티뇰	17구 | 17e | 17e arrondissement | 17th arrondissement | xviie | 17ème | 17eme | 17ème arrondissement | batignolles-monceau
+파리	몽파르나스	14구 | 14e | 14e arrondissement | 14th arrondissement | xive | 14ème | 14eme | 14ème arrondissement | observatoire | 15구 | 15e | 15e arrondissement | 15th arrondissement | xve | 15ème | 15eme | 15ème arrondissement | vaugirard | 몽루주 | montrouge | 이시레물리노 | issy-les-moulineaux
+파리	베르시	12구 | 12e | 12e arrondissement | 12th arrondissement | xiie | 12ème | 12eme | 12ème arrondissement | reuilly | 13구 | 13e | 13e arrondissement | 13th arrondissement | xiiie | 13ème | 13eme | 13ème arrondissement | gobelins | 뱅센 | vincennes
+파리	뇌이쉬르센	르발루아 | levallois | levallois-perret | hauts-de-seine
+파리	사르셀	발두아즈 | val-d'oise | garges-lès-gonesse
+리옹	파르디외	3구 | 3e | 3e arrondissement | 3rd arrondissement | iiie | 3ème | 3eme | 3ème arrondissement | 6구 | 6e | 6e arrondissement | 6th arrondissement | vie | 6ème | 6eme | 6ème arrondissement | 8구 | 8e | 8e arrondissement | 8th arrondissement | viiie | 8ème | 8eme | 8ème arrondissement | 빌뢰르반 | villeurbanne | brotteaux
+리옹	콩플뤼앙스	2구 | 2e | 2e arrondissement | 2nd arrondissement | iie | 2ème | 2eme | 2ème arrondissement | 7구 | 7e | 7e arrondissement | 7th arrondissement | viie | 7ème | 7eme | 7ème arrondissement | gerland | guillotière
+마드리드	솔 광장	센트로 | centro | distrito centro
+마드리드	말라사냐	참베리 | chamberí | chamberi | 몽클로아 | moncloa | moncloa-aravaca | 테투안 | tetuán | tetuan
+마드리드	라바피에스	엠바하도레스 | embajadores | 아르간수엘라 | arganzuela | 우세라 | usera | 바예카스 | vallecas | puente de vallecas
+마드리드	살라망카	barrio de salamanca | distrito de salamanca | 레티로 | retiro | 차마르틴 | chamartín | chamartin | 시우다드 리네알 | ciudad lineal
+마드리드	라 라티나	라티나 | latina | 카라반첼 | carabanchel
+바르셀로나	고딕 지구	시우타트 베야 | ciutat vella | ciudad vieja
+바르셀로나	엘 보른	la ribera | sant pere | santa caterina
+바르셀로나	그라시아	vila de gràcia | 사리아 | sarrià | sarria | sant gervasi | sarrià-sant gervasi
+바르셀로나	에이샴플레	l'eixample | ensanche | 레스 코르츠 | les corts
+바르셀로나	라발	산츠 | sants | sants-montjuïc | 몬주익 | montjuïc | montjuic | poble-sec | 포블섹
+바르셀로나	바르셀로네타	산 마르티 | sant martí | sant marti | poblenou | 포블레노우
+바르셀로나	사그라다 파밀리아	오르타 | horta | guinardó | horta-guinardó | 산 안드레우 | sant andreu
+리스본	바이후 알투	미제리코르디아 | misericórdia | misericordia
+리스본	알파마	상 비센트 | são vicente | sao vicente | graça | graca | 그라사 | penha de frança | penha de franca | beato
+리스본	바이샤	santa maria maior | 산타 마리아 마이오르 | 아로이오스 | arroios | 알마다 | almada
+리스본	벨렝	알칸타라 | alcântara | alcantara | 아주다 | ajuda
+리스본	프린시프 헤알	santo antónio | santo antonio | 에스트렐라 | estrela | lapa | 라파 | campo de ourique | 캄푸 드 오리크 | avenidas novas | 아베니다스 노바스 | campolide | areeiro
+포르투	히베이라	vila nova de gaia | gaia | 가이아 | 빌라 노바 드 가이아 | são nicolau | miragaia | cedofeita | 세도페이타 | santo ildefonso | bonfim | campanhã | campanha
+포르투	보아비스타	massarelos | lordelo do ouro | ramalde | foz do douro | foz | 포즈 | aldoar | nevogilde | matosinhos | 마토지뉴스
+로마	트레비 · 판테온	municipio i | municipio 1 | centro storico | 첸트로 스토리코 | campo marzio | parioli | 파리올리 | flaminio | municipio ii
+로마	트라스테베레 · 몬티	esquilino | monteverde | 몬테베르데 | gianicolense | municipio xii | aurelio | 아우렐리오 | municipio xiii | monte mario | 몬테 마리오 | municipio xiv
+로마	에우르 · 오스티아	municipio ix | municipio x | lido di ostia | 리도 디 오스티아
+밀라노	두오모 · 브레라	municipio 1 | municipio 2 | municipio 3 | municipio 4 | municipio 5 | municipio 6 | municipio 7 | municipio 8 | municipio 9 | centro storico
+베네치아	산마르코 · 리알토	cannaregio | 칸나레조 | castello | 카스텔로 | dorsoduro | 도르소두로 | san polo | 산폴로 | santa croce | 산타크로체 | giudecca | 주데카 | marghera | 마르게라
+피렌체	두오모 · 폰테베키오	centro storico | campo di marte | 캄포 디 마르테 | gavinana | galluzzo | isolotto | legnaia | rifredi | 리프레디
+나폴리	스파카나폴리 · 키아이아	posillipo | 포실리포 | san ferdinando | montecalvario | arenella | 아레넬라 | san lorenzo | pendino | avvocata | vicaria | fuorigrotta | 푸오리그로타 | san carlo all'arena | quartieri spagnoli
+로마	테스타치오	municipio viii | garbatella | 가르바텔라 | ostiense | 오스티엔세 | aventino | 아벤티노 | portuense | municipio xi
+로마	피우미치노 공항	피우미치노 | fiumicino
+로마	치네치타	municipio vii | tuscolano | 투스콜라노
+밀라노	말펜사 공항	ferno | somma lombardo
+아테네	플라카	kallithea | 칼리테아 | nea smyrni | 네아 스미르니
+아테네	모나스티라키	tavros | 타브로스
+아테네	콜로나키	kaisariani | 카이사리아니 | zografou | 조그라푸 | vyronas | 비로나스
+아테네	엑사르히아	galatsi | 갈라치
+이스탄불	술탄아흐메트	파티흐 | fatih | eminönü | eminonu | 에미뇌뉘
+이스탄불	베식타시	위스퀴다르 | üsküdar | uskudar
+이스탄불	니샨타시	시실리 | şişli | sisli | kağıthane | kagithane | 카이트하네
+싱가포르	마리나 베이	downtown core | 다운타운 코어 | marina south | 마리나 사우스 | straits view
+싱가포르	오차드	river valley | 리버 밸리 | newton | 뉴턴 | tanglin | 탱글린
+싱가포르	센토사	southern islands | 서던 아일랜즈 | harbourfront | 하버프런트
+싱가포르	클락 키	singapore river | 싱가포르 리버 | outram | 아웃람 | chinatown | 차이나타운
+싱가포르	부기스	rochor | 로처 | 로초르 | geylang | 게일랑 | kallang | 칼랑
+싱가포르	리틀 인디아	novena | 노베나 | toa payoh | 토아 파요 | 토아파요
+싱가포르	창이	tampines | 탬피니스 | 탐피네스 | pasir ris | 파시르 리스 | bedok | 베독
+싱가포르	티옹바루	bukit merah | 부킷 메라 | queenstown | 퀸스타운
+마닐라	마카티	makati city | 마카티시 | mandaluyong | 만달루용 | mandaluyong city | san juan | 산후안
+마닐라	보니파시오	taguig | 타기그 | taguig city | pateros | 파테로스 | pasig | 파시그 | pasig city | ortigas | 오르티가스
+마닐라	말라테	ermita | 에르미타 | paco | 파코 | pandacan | 판다칸
+마닐라	인트라무로스	binondo | 비논도 | tondo | 톤도 | quiapo | 키아포 | sampaloc | 삼팔록 | port area | san nicolas
+마닐라	파사이	pasay city | 파사이시 | parañaque | paranaque | 파라냐케 | 파라냐케시
+자카르타	수디르만	jakarta pusat | central jakarta | 중부 자카르타 | 자카르타 중부 | tanah abang | 타나아방 | menteng | 멘텡 | setiabudi | 스티아부디 | kuningan | 쿠닝안 | thamrin | 탐린
+자카르타	스나얀	kebayoran baru | 크바요란 바루 | gelora | 글로라
+자카르타	끄망	jakarta selatan | south jakarta | 남부 자카르타 | 자카르타 남부 | mampang prapatan | 맘팡 프라파탄 | cilandak | 칠란닥
+발리	꾸따	badung | 바둥 | 바둥 리젠시 | legian | 르기안 | tuban | 투반
+발리	스미냑	denpasar | 덴파사르 | kerobokan | 크로보칸
+발리	짱구	kuta utara | north kuta | 북꾸따
+발리	짐바란	kuta selatan | south kuta | 남꾸따
+발리	누사두아	benoa | 브노아 | tanjung benoa
+발리	우붓	gianyar | 기안야르 | 기아냐르
+쿠알라룸푸르	부킷 빈탕	pudu | 푸두 | cheras | 체라스
+쿠알라룸푸르	페트로나스 타워	titiwangsa | 티티왕사 | kampung baru | 캄풍 바루
+쿠알라룸푸르	방사	lembah pantai | 렘바 판타이 | seputeh | 스푸테 | mid valley | 미드밸리 | petaling jaya | 페탈링 자야 | pj
+쿠알라룸푸르	몽키아라	segambut | 세감붓 | sri hartamas | 스리 하르타마스
+쿠알라룸푸르	차이나타운	brickfields | 브릭필즈 | kl sentral
+두바이	다운타운 두바이	difc | za'abeel | zabeel | 자빌 | trade centre | 트레이드 센터
+두바이	비즈니스 베이	al quoz | 알 쿠오즈 | al jaddaf | 알 자다프
+두바이	두바이 마리나	jlt | jumeirah lake towers | 주메이라 레이크 타워 | dubai media city | 미디어 시티 | dubai internet city | 인터넷 시티 | al sufouh | 알 수푸 | al barsha | 알 바르샤
+두바이	주메이라	umm suqeim | 움 수케임 | al wasl | 알 와슬 | al satwa | satwa | 사트와 | al safa | 알 사파
+두바이	데이라	al rigga | 알 리가 | al muraqqabat | 알 무라카바트 | al garhoud | 알 가르후드 | port saeed | naif | 나이프 | al muteena
+두바이	부르 두바이	al karama | karama | 카라마 | al mankhool | 알 만쿨 | al fahidi | 알 파히디 | oud metha | 오드 메타 | al raffa | al jafiliya
+케이프타운	캠프스 베이	atlantic seaboard | 애틀랜틱 시보드 | clifton | 클리프턴 | bakoven
+케이프타운	그린포인트	sea point | 시포인트 | 시 포인트 | mouille point | 무이 포인트
+케이프타운	보캅	city bowl | 시티 볼 | woodstock | 우드스톡 | gardens | 가든스 | tamboerskloof | 탐부르스클루프
+요하네스버그	샌튼	alexandra | 알렉산드라 | morningside | 모닝사이드
+요하네스버그	로즈뱅크	parktown | 파크타운 | melville | 멜빌
+요하네스버그	마보넹	braamfontein | 브람폰테인 | hillbrow | 힐브로
+요하네스버그	소웨토	orlando | 올랜도 | diepkloof | 딥클루프 | meadowlands
+라고스	빅토리아 아일랜드	eti-osa | eti osa | 에티오사 | oniru | 오니루
+라고스	이코이	lagos island | 라고스 아일랜드 | obalende | 오발렌데
+나이로비	웨스트랜즈	parklands | 파크랜즈 | starehe | 스타레헤
+나이로비	킬리마니	dagoretti north | 다고레티 노스 | kileleshwa | 킬렐레시와 | lavington | 라빙턴 | kibra | kibera | 키베라 | hurlingham
+마라케시	제마 엘프나	médina | medina | 메디나 | mechouar-kasbah | kasbah | 카스바 | sidi youssef ben ali
+마라케시	겔리즈	guéliz | ménara | menara | 메나라 | hivernage | 이베르나주 | ville nouvelle | 신시가지
+카이로	타흐리르	downtown | wust el balad | 우스트 엘 발라드 | 다운타운 | qasr el nil | 카스르 엘 닐 | garden city | 가든 시티 | abdeen | 압딘 | el gamaliya | 가말리야 | islamic cairo | khan el khalili | 칸 엘 칼릴리 | sayeda zeinab | 사이다 자이납 | old cairo | coptic cairo | 올드 카이로 | shubra | 슈브라
+카이로	자말렉	gezira | 게지라 | agouza | 아구자 | mohandessin | 모한데신 | dokki | 도키 | imbaba | 임바바 | bulaq | 불라크
+카이로	기자	al haram | haram | 하람 | 알 하람 | faisal | 파이살
+카이로	마아디	new maadi | 뉴 마아디 | degla | 데글라 | 마디
+오클랜드	바이어덕트	waitematā | waitemata | 와이테마타 | wynyard quarter | 윈야드 쿼터 | devonport | 데번포트
+오클랜드	폰손비	grey lynn | 그레이 린 | herne bay | 헌 베이 | freemans bay | 프리먼스 베이
+오클랜드	파넬	newmarket | 뉴마켓 | ōrākei | orakei | 오라케이 | remuera | 레무에라 | grafton | 그래프턴 | mount eden | mt eden | 마운트 이든
+시드니	뉴타운	inner west | 이너 웨스트 | marrickville | 매릭빌 | enmore
+시드니	발메인	leichhardt | 라이카트 | canada bay | 캐나다 베이 | drummoyne | 드러모인 | hunters hill | 헌터스 힐 | rozelle | 로젤
+시드니	본다이	waverley | 웨이벌리 | bondi junction | 본다이 정션
+시드니	쿠지	randwick | 랜드윅
+시드니	패딩턴	woollahra | 울라라 | double bay | 더블 베이
+시드니	서큘러 키	north sydney | 노스 시드니 | mosman | 모스먼
+시드니	채스우드	willoughby | 윌러비 | lane cove | 레인 코브
+시드니	맨리	northern beaches | 노던 비치스
+시드니	패러매타	cumberland | 컴벌랜드 | city of parramatta | merrylands | 메리랜즈
+시드니	크로눌라	sutherland shire | sutherland | 서덜랜드 샤이어 | 서덜랜드
+시드니	시드니 공항	bayside | 베이사이드 | mascot | 매스콧
+시드니	올림픽 파크	strathfield | 스트래스필드 | burwood | 버우드 | ryde | 라이드 | homebush | 홈부시
+시드니	달링 하버	pyrmont | 피어몬트 | ultimo | 울티모 | haymarket | 헤이마켓
+멜버른	리치먼드	yarra | 야라 | city of yarra | stonnington | 스토닝턴 | south yarra | 사우스 야라 | prahran | 프라란 | boroondara | 버룬다라 | hawthorn | 호손 | abbotsford | 애버츠퍼드
+멜버른	피츠로이	collingwood | 콜링우드 | darebin | 데어빈 | northcote | 노스코트
+멜버른	세인트킬다	port phillip | 포트 필립 | glen eira | 글렌 아이라 | elwood | 엘우드
+멜버른	사우스뱅크	south melbourne | 사우스 멜버른 | docklands | 도클랜즈
+멜버른	칼턴	north melbourne | 노스 멜버른 | parkville | 파크빌
+멜버른	브라이턴	bayside | 베이사이드 | city of bayside
+멜버른	박스힐	whitehorse | 화이트호스 | manningham | 매닝엄 | doncaster | 돈캐스터
+멜버른	브런즈윅	merri-bek | merribek | moreland | 메리벡 | 모어랜드 | coburg | 코버그
+멜버른	멜버른 공항	hume | 흄 | tullamarine | 툴라마린
+방콕	시암	pathum wan | pathumwan | 빠툼완 | 파툼완 | ratchathewi | 랏차테위 | 라차테위
+방콕	실롬	bang rak | 방락 | sathon | sathorn | 사톤 | 사톤구 | khlong san | 크롱산 | yan nawa | 얀나와 | bang kho laem | thon buri | thonburi | 톤부리
+방콕	카오산	phra nakhon | 프라나콘 | samphanthawong | yaowarat | 야오와랏 | 차이나타운 | pom prap sattru phai | dusit | 두싯 | bangkok noi | 방콕노이 | bangkok yai | 방콕야이
+방콕	수쿰빗	khlong toei | khlong toey | 크롱토이 | 끌렁떠이 | nana | 나나
+방콕	아속	huai khwang | 후아이쾅 | 훼이꽝 | din daeng | 딘댕
+방콕	통로	watthana | vadhana | 왓타나 | 와타나
+방콕	에까마이	phra khanong | 프라카농 | 프라까농 | bang na | 방나 | suan luang | 수안루앙
+방콕	짜뚜짝	phaya thai | 파야타이 | ari | 아리 | bang sue | 방수 | 방쓰 | lat phrao | 랏프라오 | 랏쁘라오
+방콕	수완나품	lat krabang | 랏끄라방 | 랏크라방 | bang phli | 방플리 | samut prakan | 사뭇쁘라깐
+하노이	호안끼엠	hoàn kiếm | quận hoàn kiếm | 호안끼엠군 | hai bà trưng | hai ba trung | 하이바쯩
+하노이	구시가지	phố cổ | pho co | old quarter | long biên | long bien | 롱비엔
+하노이	떠이호	tây hồ | quận tây hồ | 서호 | west lake
+하노이	바딘	ba đình | quận ba đình | đống đa | dong da | 동다 | cầu giấy | cau giay | 꺼우저이
+호찌민	1군	quận 1 | q1 | 3군 | district 3 | quận 3 | q3 | 4군 | district 4 | quận 4 | q4 | bình thạnh | binh thanh | 빈탄 | 빈타인 | phú nhuận | phu nhuan | 푸년 | 푸누언
+호찌민	벤탄	5군 | district 5 | quận 5 | q5 | chợ lớn | cho lon | 쩌런 | 10군 | district 10 | quận 10 | q10
+호찌민	2군	quận 2 | q2 | thủ đức | thu duc | 투득 | 투득시 | thu duc city
+다낭	미케	sơn trà | son tra | 선짜 | 손짜 | hải châu | hai chau | 하이쩌우 | 하이차우 | ngũ hành sơn | ngu hanh son | 응우한선 | thanh khê | thanh khe | 타인케
+다낭	호이안	quảng nam | quang nam | 꽝남 | 광남
+뭄바이	콜라바	south mumbai | sobo | 사우스 뭄바이 | fort | 포트 | churchgate | 처치게이트 | nariman point | 나리만 포인트
+뭄바이	로워 파렐	worli | 워를리 | 월리 | byculla | 바이쿨라 | dadar | 다다르 | prabhadevi
+뭄바이	반드라	bandra west | bandra east | khar | 카르 | mahim | 마힘 | bkc | bandra kurla complex | 반드라 쿠를라 콤플렉스
+뭄바이	주후	santacruz | 산타크루즈 | vile parle | 빌레 팔레 | 빌레파를레
+뭄바이	안데리	andheri east | andheri west | 안데리 이스트 | 안데리 웨스트
+델리	코넛 플레이스	new delhi | 뉴델리 | 뉴 델리 | rajiv chowk | 라지브 초크
+델리	파하르간지	central delhi | 센트럴 델리 | 중부 델리 | karol bagh | 카롤 바그
+델리	찬드니 초크	old delhi | 올드 델리 | daryaganj | 다리아간지 | north delhi | 노스 델리 | 북부 델리 | civil lines | kashmere gate | 카슈미르 게이트
+델리	사켓	south delhi | 사우스 델리 | 남부 델리 | malviya nagar | 말비야 나가르 | mehrauli | 메라울리
+델리	하우즈 카스	green park | 그린 파크 | south extension | 사우스 익스텐션 | lajpat nagar | 라지파트 나가르
+방갈로르	화이트필드	mahadevapura | 마하데바푸라 | itpl
+방갈로르	코라망갈라	hsr layout | hsr 레이아웃 | btm layout | btm 레이아웃 | jayanagar | 자야나가르
+방갈로르	인디라나가르	domlur | 돔루르 | halasuru | ulsoor | 울수르 | 할라수루
+방갈로르	엠지 로드	shivajinagar | 시바지나가르 | brigade road | 브리게이드 로드
