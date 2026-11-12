@@ -2,7 +2,7 @@
 const { open } = require('../../../tools/dev/probe.cjs'); const { chromium } = require('playwright');
 const { ORBIT, CSS, orbitIcon } = require('./icons.js'); const path = require('path'), fs = require('fs');
 const OUT = __dirname, TMP = fs.mkdtempSync('/tmp/claude-0/orb');
-const NAME = { A: '고리가 지나가는 말풍선', B: '달이 도는 O', C: '밤의 궤도', D: '궤도 위의 점 셋' };
+const NAME = { A: 'C1 진주', B: 'C2 라벤더 블루', C: 'C3 안개 파랑', D: 'C4 노을 안개' };
 (async () => {
   const s = await open('light', { out: TMP });
   await s.to('home');
@@ -21,7 +21,7 @@ const NAME = { A: '고리가 지나가는 말풍선', B: '달이 도는 O', C: '
   await s.close();
   // 한 장: 위에 큰 아이콘, 아래 실제 홈
   const b = await chromium.launch(), p = await b.newPage({ deviceScaleFactor: 1 });
-  const big = Object.keys(ORBIT).map(v => `<div class="col"><h2>${v}. ${NAME[v]}</h2><div class="bigs">${orbitIcon(v, 132)}${orbitIcon(v, 62)}${orbitIcon(v, 40)}</div><img src="data:image/png;base64,${fs.readFileSync(shots[Object.keys(ORBIT).indexOf(v)]).toString('base64')}"></div>`).join('');
+  const big = Object.keys(ORBIT).map(v => `<div class="col"><h2>${NAME[v]}</h2><div class="bigs">${orbitIcon(v, 132)}${orbitIcon(v, 62)}${orbitIcon(v, 40)}</div><img src="data:image/png;base64,${fs.readFileSync(shots[Object.keys(ORBIT).indexOf(v)]).toString('base64')}"></div>`).join('');
   await p.setContent(`<html><head><style>${CSS}body{margin:0;padding:26px;background:#d9dbe0;font-family:-apple-system,'Noto Sans KR',sans-serif;width:max-content}.row{display:flex;gap:26px}.col{width:412px}h2{font-size:22px;margin:0 0 14px}.bigs{display:flex;gap:18px;align-items:flex-end;margin-bottom:18px}img{width:412px;display:block;border-radius:24px}</style></head><body><div class="row">${big}</div></body></html>`);
   await p.waitForTimeout(500);
   await p.screenshot({ path: path.join(OUT, 'sheet.jpg'), fullPage: true, type: 'jpeg', quality: 88 });
