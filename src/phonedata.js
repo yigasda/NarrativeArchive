@@ -1992,8 +1992,11 @@ export async function settleBranch(m, p) {
     const end = brPoint(s), at = statusAt(p, end, m)?.at || brNewestFrom(p, end);
     let cut = 0;
     if (at) {
-        cut = brCutMadeAfter(p, at);
+        cut = brCutMadeAfter(p, at) + brCutAppsAfter(m, p, at);
         if (!p.now || laterThan(String(p.now), at)) p.now = at;
+        // (the bank's, investments', everyday and delivery apps' own reading marks: none past the branch point)
+        for (const g of ['money', 'invest', 'life', 'delivery']) if (s.marks?.[g] && s.marks[g].index > end) s.marks[g] = markAfter(end);
+        if (cut) { delete p.syncUndo; delete p.syncUndos; }
     }
     await saveMeta();
     if (cut && p.inject) applyInjection();
@@ -2019,6 +2022,48 @@ function brNewestFrom(p, end) {
 }
 // records made with the phone and dated past `at` (events keep theirs: an event's date is when it happens, not when it was
 // written); a thread left empty goes. Returns how many went
+// the bank, shopping, everyday, delivery and investment records an app fill made (no message as their source: a
+// reflection's carry one, and 빼기 took those): past `at` they go. A payment already in an account's opening balance (the
+// fill's history) gives its amount back to that balance; a card's spending and the holdings are worked out again from what
+// stays. Tickets and alarms stay (their date is when they are for). Returns how many went
+function brCutAppsAfter(m, p, at) {
+    let n = 0;
+    const made = x => !Number.isInteger(x?.sourceIndex), later = t => brHasTime(String(t || '').trim()) && laterThan(String(t).trim(), at);
+    const drop = (list, past) => (Array.isArray(list) ? list.filter(x => { if (!(made(x) && past(x))) return true; n++; return false; }) : list);
+    const mo = p.money;
+    if (mo) {
+        const f = finance(m), accts = mo.bank?.accounts || [];
+        mo.tx = drop(mo.tx, t => {
+            if (!later(t.time)) return false;
+            const a = accts.find(x => x.last4 === t.account), key = a && `${a.id}:${a.currency || mo.currency}`, L = key && f.accounts[key];
+            // (one the ledger holds as its own entry is a reflection's: not this)
+            if (L?.entries?.[t.id]) return false;
+            if (L && a.kind !== 'credit' && L.included.includes(t.id)) {
+                if (!finite(t.amount)) return false;
+                reviseBaseline(m, key, Math.round((L.amount - t.amount + Number.EPSILON) * 100) / 100, '분기한 곳으로 되돌림');
+                L.included = L.included.filter(id => id !== t.id);
+            }
+            return true;
+        });
+        mo.orders = drop(mo.orders, x => later(x.time));
+    }
+    const lf = p.life;
+    if (lf?.health?.days) lf.health.days = drop(lf.health.days, d => later(d.date));
+    if (lf?.files?.items) lf.files.items = drop(lf.files.items, x => later(x.time));
+    if (p.delivery?.orders) p.delivery.orders = drop(p.delivery.orders, x => later(x.time));
+    const inv = p.investment, y = p.noYear ? '' : String(p.year || '');
+    if (inv?.trades && /^\d{4}$/.test(y)) {
+        const day = `${y}-${at.slice(0, 5)}`, f = finance(m);
+        inv.trades = drop(inv.trades, t => {
+            if (!(String(t.date || '') > day)) return false;
+            const acc = (inv.accounts || []).find(a => a.currency === t.currency), L = acc && f.accounts[acc.key];
+            if (L?.entries) delete L.entries[t.id];
+            return true;
+        });
+    }
+    if (n && p.money) migrateBank(m, p);
+    return n;
+}
 function brCutMadeAfter(p, at) {
     let n = 0;
     const past = (k, x) => brMadeWith(x) && brHasTime(brItemTime(k, x)) && laterThan(brItemTime(k, x), at);

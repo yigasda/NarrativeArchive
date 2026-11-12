@@ -169,3 +169,60 @@ test('분기한 곳 전에 만든 폰: 만든 기록은 하나도 안 빠져요 
     assert.equal(r.cut, 0);
     assert.deepEqual(c.p.photos.map(x => x.id), ['old']);
 });
+
+// made with app fills past the branch point: the bank (its opening balance already counted the payments), a card, shopping,
+// the everyday and delivery apps, investments (each trade its own ledger entry)
+test('분기한 곳보다 뒤에 만든 은행 · 생활 · 배달 · 투자: 뒤의 것만 빠지고 잔액 · 보유가 그때로', async () => {
+    const c = madeCase(), p = c.p, m = c.m;
+    p.year = 2026;
+    p.money.bank.accounts.push({ id: 'crd', kind: 'credit', name: '카드', last4: '2222', currency: 'KRW', balance: 0 });
+    p.money.tx = [
+        { id: 'x1', account: '1111', amount: -5000, who: 'cafe mon', time: '10-26 09:30' },
+        { id: 'x2', account: '1111', amount: -20000, who: 'shop tue', time: '10-27 15:00' },
+        { id: 'x3', account: '2222', amount: -7000, who: 'card wed', time: '10-28 19:00', kind: 'card' },
+        { id: 'x4', account: '1111', amount: -3000, who: 'from a message', time: '10-28 08:00', sourceIndex: 1 },
+    ];
+    p.money.orders = [{ id: 'o1', shop: 'S', item: 'mon', time: '10-26 08:00' }, { id: 'o2', shop: 'S', item: 'wed', time: '10-28 08:00' }];
+    p.money.passes = [{ id: 't1', kind: 'train', by: 'DB', date: '10-29', time: '09:00' }];
+    // (the fill's history is in the opening balance: 100000 is the balance after x1 and x2)
+    migrateBank(m, p);
+    const L = m.finance.accounts['chk:KRW'];
+    L.included.push('x1', 'x2');
+    assert.equal(c.bank(), 100000);
+    p.life = { health: { days: [{ id: 'h1', date: '10-26', steps: 100 }, { id: 'h2', date: '10-27', steps: 200 }] }, files: { folders: [], items: [{ id: 'f1', name: 'a', time: '10-26 07:00' }, { id: 'f2', name: 'b', time: '10-28 07:00' }] }, clock: { alarms: [{ id: 'a1', time: '07:00' }] } };
+    p.delivery = { shops: [], orders: [{ id: 'dv1', shop: 'Pho', time: '10-26 11:00' }, { id: 'dv2', shop: 'Pho', time: '10-27 19:00' }] };
+    m.finance.accounts['brk:EUR'] = { id: 'brk', currency: 'EUR', amount: 1000, asOf: '2026-10-01', owner: 'Ren', entries: { tr1: { amount: -100, date: '2026-10-20' }, tr2: { amount: -200, date: '2026-10-27' } }, included: [] };
+    p.investment = { base: 'EUR', accounts: [{ key: 'brk:EUR', currency: 'EUR' }], securities: [{ symbol: 'X', currency: 'EUR' }],
+        trades: [{ id: 'tr1', kind: 'buy', symbol: 'X', currency: 'EUR', date: '2026-10-20', quantity: 1, price: 100, fee: 0 }, { id: 'tr2', kind: 'buy', symbol: 'X', currency: 'EUR', date: '2026-10-27', quantity: 2, price: 100, fee: 0 }] };
+    T.trackers = [{ date: '10-26', min: 12 * 60, place: '', i: 2 }];
+    branchAt(c, 2);
+    const r = await data.settleBranch(m, p);
+    T.trackers = null;
+    assert.ok(r.cut >= 8, String(r.cut));
+    assert.deepEqual(p.money.tx.map(x => x.id), ['x1', 'x4']);
+    // (x2 was in the opening balance: it gives its 20000 back; x4 came from a message the branch still has: stays)
+    assert.equal(c.bank(), 120000);
+    assert.deepEqual(L.included, ['x1']);
+    assert.ok(m.finance.revisions.some(v => v.reason === '분기한 곳으로 되돌림' && v.before === 100000 && v.after === 120000));
+    assert.equal(p.money.bank.accounts.find(a => a.last4 === '2222').spent || 0, 0);
+    assert.deepEqual(p.money.orders.map(x => x.id), ['o1']);
+    assert.deepEqual(p.money.passes.map(x => x.id), ['t1']);
+    assert.deepEqual(p.life.health.days.map(x => x.id), ['h1']);
+    assert.deepEqual(p.life.files.items.map(x => x.id), ['f1']);
+    assert.deepEqual(p.life.clock.alarms.map(x => x.id), ['a1']);
+    assert.deepEqual(p.delivery.orders.map(x => x.id), ['dv1']);
+    assert.deepEqual(p.investment.trades.map(x => x.id), ['tr1']);
+    assert.deepEqual(Object.keys(m.finance.accounts['brk:EUR'].entries), ['tr1']);
+    assert.equal(cash(m.finance.accounts['brk:EUR']), 900);
+});
+test('읽는 표시(은행 · 투자 · 생활 · 배달)도 분기한 곳을 넘지 않아요', async () => {
+    const c = madeCase();
+    for (const g of ['money', 'invest', 'life', 'delivery']) c.p.sync.marks[g] = makeMark(T.chat, 5);
+    c.p.sync.marks.life = makeMark(T.chat, 1);
+    T.trackers = [{ date: '10-26', min: 12 * 60, place: '', i: 2 }];
+    branchAt(c, 2);
+    await data.settleBranch(c.m, c.p);
+    T.trackers = null;
+    assert.deepEqual(['money', 'invest', 'delivery'].map(g => c.p.sync.marks[g].index), [2, 2, 2]);
+    assert.equal(c.p.sync.marks.life.index, 1);
+});
