@@ -12,7 +12,7 @@ const fit = (name, q) => { const n = norm(name); if (n === q) return 0; if (n.st
 // a place's other names to show beside its Korean one: the English (or local Latin) name, then a Japanese or Chinese one
 export function placeNames(i) {
     const [ko, al] = PLACE[i], lat = al.find(n => /^[A-Za-zÀ-ÿ]/.test(n)), cjk = al.find(n => /[぀-ヿ]/.test(n)) || al.find(n => /[一-鿿]/.test(n));
-    return { ko, lat: lat ? lat.replace(/(^|[\s\-.])(\p{Ll})/gu, (x, a, c) => a + c.toUpperCase()) : '', cjk: cjk || '', all: [ko, ...al] };
+    return { ko, lat: lat ? /[A-Z]/.test(lat) ? lat : lat.replace(/(^|[\s\-.])(\p{Ll})/gu, (x, a, c) => a + c.toUpperCase()) : '', cjk: cjk || '', all: [ko, ...al] };
 }
 // the neighbourhoods of a place: the HINT rows whose town is it (or its row's town)
 export const placeHoods = i => { const ko = norm(PLACE[i][0]); return HINT.map((h, k) => [h, k]).filter(([h]) => h[0].split(' · ').includes(ko)).map(([, k]) => k); };

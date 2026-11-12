@@ -142,7 +142,10 @@ for cc in FILES:
         # 표(HOODS)의 동네도 더해요: 지도 표에 그 낱말이 이미 있으면 아래에서 빠져요(찾은 도시 › 주변 동네가 목록의 동네를 다 보여 줘요)
         if city:
             if re.search(r'-(zentrum|altstadt|mitte|centro|sentrum|downtown|cbd|dom)$', slug): continue   # the city's own centre: the city is enough
-            ws = [w for w in hood_words(r, city) if w.lower() not in hint_words.get(city, set()) and w not in GENERIC_W]
+            if slug in NAMES:   # a clean name: the table already has the place when it has all its Korean names; else the whole clean row
+                kos = [w.strip().lower() for w in NAMES[slug][0].split(' · ')]
+                ws = [] if all(k in hint_words.get(city, set()) for k in kos) else [w for w in hood_words(r, city) if w not in GENERIC_W]
+            else: ws = [w for w in hood_words(r, city) if w.lower() not in hint_words.get(city, set()) and w not in GENERIC_W]
             if not ws: continue
             if city.lower() not in names and city not in add_city:   # 표에 없는 도시: 도시 줄도 같이
                 add_city[city] = (cc, f'{city} {CITY_EN.get(city, "")}'.strip(), ['역 앞 번화가', '도심 업무지구', '골목 주택가', '큰 강 대도시'] if cc in ('kr', 'jp', 'cn') else ['유럽 소도시 광장', '옛 시내 + 새 시내', '큰 강 대도시', '역 앞 번화가'], [])
