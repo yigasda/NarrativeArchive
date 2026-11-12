@@ -277,16 +277,24 @@ export function tileWatch(root) {
             mountTiles(root).catch(() => {}).finally(() => { busy = false; }); });
     }).observe(root, { childList: true, subtree: true });
 }
-// the sheet pulled down: the whole screen is map, the sheet's top edge stays in sight (pull it up or tap it to bring it back).
+// the sheet pulled down: the whole screen is map and the sheet is gone; a small "목록" pill at the bottom brings it back.
 // Nothing follows the finger (a style changed on every move makes the whole phone's styles be worked out again,
 // docs/DESIGN.md 4장 함정): the pull is measured, and when the finger lets go the sheet moves once, with a transition.
-const PEEK = 96;
+const PEEK = 0;
 function setLow(wx, low) {
     const sc = wx.querySelector(':scope > .ax_scroll'), gap = sc?.querySelector('.mp_gap'), host = wx.querySelector('.mp_bg');
     if (!sc || !gap || !host) return;
     if (low) { if (!gap.dataset.h) gap.dataset.h = String(gap.offsetHeight); sc.scrollTop = 0; gap.style.height = `${sc.clientHeight - PEEK}px`; }
     else gap.style.height = '';
     wx.classList.toggle('mp_low', low);
+    let up = wx.querySelector(':scope > .mp_up');
+    if (low && !up) {
+        const n = live.shown.length;
+        up = document.createElement('button'); up.type = 'button'; up.className = 'mp_up';
+        up.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.1M4 12h.1M4 18h.1"/></svg>목록${n ? ` · ${n}곳` : ''}`;
+        up.addEventListener('click', e => { e.stopPropagation(); setLow(wx, false); });
+        wx.appendChild(up);
+    } else if (!low && up) up.remove();
     const done = () => { const v = low ? host.clientHeight - PEEK : visOf(host); resizeTiles(Math.round(v)); };
     gap.addEventListener('transitionend', done, { once: true }); setTimeout(done, 400);
 }

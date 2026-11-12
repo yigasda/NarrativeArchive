@@ -13,6 +13,6 @@ const { route } = require('./faketiles.cjs');
   const sh = await p.evaluate(() => { const r = document.querySelector('.na_ph_frame .mp_sheet').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + 30 }; });
   await p.mouse.move(sh.x, sh.y); await p.mouse.down(); await p.mouse.move(sh.x, sh.y + 120, { steps: 6 }); await p.mouse.up(); await p.waitForTimeout(1500);
   const low = await p.evaluate(() => !!document.querySelector('.na_ph_frame .mp_wx.mp_low')); await s.shot('tile_low');
-  await p.mouse.click(sh.x, 1100 - 0 > 0 ? (await p.evaluate(() => document.querySelector('.na_ph_frame .mp_sheet').getBoundingClientRect().top + 20)) : 0); await p.waitForTimeout(1200);
+  const pill = await p.evaluate(() => document.querySelector('.na_ph_frame .mp_up')?.textContent || ''); await p.click('.na_ph_frame .mp_up'); await p.waitForTimeout(1200);
   const back = await p.evaluate(() => !document.querySelector('.na_ph_frame .mp_wx.mp_low')); await s.shot('tile_back');
-  console.log(JSON.stringify({ st, low, back }), JSON.stringify(s.errors()).slice(0, 300), logs.slice(0, 5)); await s.close(); })().catch(e => { console.error(String(e).slice(0, 500)); process.exit(1); });
+  console.log(JSON.stringify({ st, low, pill, back }), JSON.stringify(s.errors()).slice(0, 300), logs.slice(0, 5)); await s.close(); })().catch(e => { console.error(String(e).slice(0, 500)); process.exit(1); });
