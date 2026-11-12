@@ -150,6 +150,27 @@ export function liveMeta(m, { text = null } = {}) {
     });
 }
 
+// 브라우저 저장 (5-4): what 폰 1 keeps in this browser per chat (the last phone owner, 복구's journal) is keyed by the chat
+// (phoneChatScope). 폰 2 keeps its own under its own key, the chat's and its world's: "<scope>:live:<world id>", so neither
+// reads or overwrites the other, and a new 폰 2 never reads an old one's. null without a chat or a 폰 2
+export const liveScope = (scope, m) => { const w = liveWorld(m); return scope && w?.id ? `${scope}:live:${w.id}` : null; };
+// the last owner 폰 2 showed: in its world (saved with the chat) and in this browser too (a reload may come before the
+// chat is saved); read back from the browser first, as 폰 1 does
+export function rememberLiveOwner(m, owner, scope, storage = globalThis.localStorage) {
+    const w = liveWorld(m), k = liveScope(scope, m);
+    if (!w || !String(owner || '').trim()) return;
+    w.lastOwner = String(owner).trim();
+    try { if (k) storage?.setItem(k, w.lastOwner); } catch { /* the chat's own save still holds it */ }
+}
+export function readLiveOwner(m, scope, storage = globalThis.localStorage) {
+    const w = liveWorld(m), k = liveScope(scope, m);
+    if (!w) return null;
+    let saved = null;
+    try { saved = k ? storage?.getItem(k) : null; } catch { saved = null; }
+    const has = n => !!n && Object.values(w.phones || {}).some(p => liveKey(p?.owner) === liveKey(n));
+    return has(saved) ? saved : has(w.lastOwner) ? w.lastOwner : null;
+}
+
 // 메신저: every room has the persona in it (the persona's own rooms only); people get an account when they first join
 export function ensureAccount(m, name) {
     const w = liveWorld(m), n = String(name || '').trim();
