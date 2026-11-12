@@ -315,7 +315,10 @@ function sheetRoom(root) {
     const full = sc.clientHeight, room = Math.max(0, full - gap.offsetHeight);
     gap.dataset.room = String(room);
     gap.style.height = `${full}px`;
-    for (const y of [0, room]) { const m = document.createElement('i'); m.className = 'mp_snap'; m.style.top = `${y}px`; sc.prepend(m); }
+    // the sheet's resting place is one tall snap area from its place to the list's end: anywhere above its place the list
+    // rests where the finger left it (a 1px place pulled it back down, 11-12); below it, the two places pull
+    const tall = Math.max(full, sc.scrollHeight - room);
+    for (const [y, h] of [[0, 1], [room, tall]]) { const m = document.createElement('i'); m.className = 'mp_snap'; m.style.top = `${y}px`; m.style.height = `${h}px`; sc.prepend(m); }
     sc.classList.add('mp_room');
     sc.scrollTop = room;
     let t = 0;

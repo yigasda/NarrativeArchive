@@ -11,7 +11,7 @@ import { threadNew } from './phonehome.js';
 import { screenView } from './phonescreen.js';
 import { BUSY, pinLayer, pinSpots, pinSvg, STAY, stripSvg, townKinds, townPlace, townSvg } from './phonemapart.js';
 import { HINT, PLACE } from './phonemapcity.js';
-import { placeHoods } from './phonemapfind.js';
+import { localName, placeHoods } from './phonemapfind.js';
 import { flagSvg } from './phoneflags.js';
 import { recentTrackers } from './scenes.js';
 import { sectionKey } from './sections.js';
@@ -1083,7 +1083,7 @@ function mapStrip(p, now, m, pl, sel) {
         const placed = { up: [], down: [] };
         for (const t of towns) {
             const r = rs.filter(x => x.k === nameKey(t)).at(-1); if (!r) continue;
-            const tn = townKo(t), mid = (r.a + r.b) / 2, w = tn.length * (/[가-힣]/.test(tn) ? 1 : 0.62) * 11.5 / (326 / days) / 2, hit = side => placed[side].some(([x, h]) => Math.abs(x - mid) < h + w + 0.6);
+            const tn = townShown(t), mid = (r.a + r.b) / 2, w = tn.length * (/[가-힣]/.test(tn) ? 1 : 0.62) * 11.5 / (326 / days) / 2, hit = side => placed[side].some(([x, h]) => Math.abs(x - mid) < h + w + 0.6);
             const side = !hit('up') ? 'up' : !hit('down') ? 'down' : ''; if (!side) continue;
             placed[side].push([mid, w]); labels.push([mid, tn, nameKey(t) === sel, side]);
         }
@@ -1110,7 +1110,7 @@ function mapStrip(p, now, m, pl, sel) {
                 if (placed[side].some(([x, h]) => Math.abs(x - mid) < h + w + 0.6)) continue;
                 placed[side].push([mid, w]); labels.push([mid, t, r === lastRun || r.b === lastRun.b, side]);
             }
-            sub = towns.length ? `${townKo(towns[0])} 안에서` : '';
+            sub = towns.length ? `${townShown(towns[0])} 안에서` : '';
             extra = `<div class="mp_key">적게 ${BUSY.slice(1).map(c => `<i style="background: ${c}"></i>`).join('')} 많이 · 그날 간 곳 수</div>`;
         }
     }
@@ -1142,6 +1142,8 @@ export const mapFindRow = () => `<button type="button" class="ax_rw ax_place" da
 // the town's flag before its name (a town the city table knows)
 // a town as the table writes it in Korean (Seoul → 서울); a town it does not know, as the story wrote it
 export const townKo = city => { const i = city ? townPlace(city) : -1; return i >= 0 ? PLACE[i][0] : city || ''; };
+// a town as shown: in its own country's words (Frankfurt, 東京; Korean towns in Korean), a town the table does not know as written
+export const townShown = city => { const i = city ? townPlace(city) : -1; return i >= 0 ? localName(i) : city || ''; };
 const townFlag = city => { const i = city ? townPlace(city) : -1; return i >= 0 && PLACE[i][3] ? flagSvg(PLACE[i][3], 22) : ''; };
 // a map box's place for the tile map (phonetilemap.js): the town, words naming its neighbourhood, the visits to pin
 export const tileAt = (city, words = [], pins = [], cc = '') => (city || cc ? ` data-tm="${esc(JSON.stringify({ city, words: words.slice(0, 12), pins: pins.slice(0, 7), cc }))}"` : '');
@@ -1162,13 +1164,13 @@ export function mapScreen(p, now, m, pick = '') {
     const art = '';   // 그림 지도는 안 써요(11-12): 지도 칸은 타일 지도만
     const lastDay = g.rows.map(r => r.day).filter(Boolean).sort(storyCmp(p.now)).at(-1);
     const others = groups.filter(x => x !== g);
-    const other = others.length ? `<div class="ax_sec">다른 곳</div><div class="ax_card">${others.map(x => `<button type="button" class="ax_rw ax_place" data-go="map" data-i="${esc(x.k)}"><span class="ax_si" style="background: var(--axc)">${ax('pindot', 17, 'var(--axd)', 2.2)}</span><span class="ax_tx"><span class="ax_n">${esc(townKo(x.city) || '그 밖의 곳')}</span><span class="ax_p1">${x.rows.length}곳</span></span>${axChev}</button>`).join('')}</div>` : '';
+    const other = others.length ? `<div class="ax_sec">다른 곳</div><div class="ax_card">${others.map(x => `<button type="button" class="ax_rw ax_place" data-go="map" data-i="${esc(x.k)}"><span class="ax_si" style="background: var(--axc)">${ax('pindot', 17, 'var(--axd)', 2.2)}</span><span class="ax_tx"><span class="ax_n">${esc(townShown(x.city) || '그 밖의 곳')}</span><span class="ax_p1">${x.rows.length}곳</span></span>${axChev}</button>`).join('')}</div>` : '';
     // a home set to its neighbourhood by hand (사는 동네): the map starts there
     const hw = hoodWords(g.city, g.rows.find(r => r.hood)?.hood);
     return `<div class="mp_wx${dark ? ' mp_dark' : ''}"><div class="mp_bg"${tileAt(g.city, [...hw, ...rowWords(g.city, g.rows)], shown.map(r => r.place))}>${art}</div>${axBar(p, now, dark ? '#fff' : '#111')}${axTop(axCb('home'), mapFindBtn())}
       <div class="ax_scroll"><i class="mp_gap"></i><div class="mp_sheet"><i class="mp_grab"></i>${TILE_CREDIT}
         ${mapStrip(p, now, m, pl, g.k)}
-        <div class="mp_th">${townFlag(g.city)}<b>${esc(townKo(g.city) || '그 밖의 곳')}</b><span>${g.rows.length}곳${lastDay ? ` · 마지막 ${esc(fmtDate(p, lastDay))}` : ''}</span></div>
+        <div class="mp_th">${townFlag(g.city)}<b>${esc(townShown(g.city) || '그 밖의 곳')}</b><span>${townShown(g.city) !== townKo(g.city) ? `${esc(townKo(g.city))} · ` : ''}${g.rows.length}곳${lastDay ? ` · 마지막 ${esc(fmtDate(p, lastDay))}` : ''}</span></div>
         <div class="ax_card">${g.rows.map(rowHtml).join('')}</div>${other}<div class="ax_card">${mapFindRow()}</div><i class="ax_pad"></i></div></div>
       ${axInd()}</div>`;
 }

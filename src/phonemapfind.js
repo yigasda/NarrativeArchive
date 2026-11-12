@@ -14,6 +14,26 @@ export function placeNames(i) {
     const [ko, al] = PLACE[i], lat = al.find(n => /^[A-Za-zÀ-ÿ]/.test(n)), cjk = al.find(n => /[぀-ヿ]/.test(n)) || al.find(n => /[一-鿿]/.test(n));
     return { ko, lat: lat ? /[A-Z]/.test(lat) ? lat : lat.replace(/(^|[\s\-.])(\p{Ll})/gu, (x, a, c) => a + c.toUpperCase()) : '', cjk: cjk || '', all: [ko, ...al] };
 }
+// a town as its own country writes it (11-12 소망: 한국 밖은 그 나라 말로): Korean towns in Korean, Japan · China · Taiwan ·
+// Hong Kong · Macau in their characters, the rest in their own Latin spelling (Zürich, not Zurich; Roma, not Rome)
+const OWN = { 하노버: 'Hannover', 슈바르츠발트: 'Schwarzwald', 스카이섬: 'Skye', 브르타뉴: 'Bretagne', 부르고뉴: 'Bourgogne', 코르시카: 'Corse', 로마: 'Roma',
+    베네치아: 'Venezia', 피렌체: 'Firenze', 토리노: 'Torino', 시칠리아: 'Sicilia', 돌로미티: 'Dolomiti', 사르데냐: 'Sardegna', 세비야: 'Sevilla', 카나리아: 'Canarias',
+    헤이그: 'Den Haag', 브뤼헤: 'Brugge', 겐트: 'Gent', 앤트워프: 'Antwerpen', 제네바: 'Genève', 루체른: 'Luzern', 프라하: 'Praha', 바르샤바: 'Warszawa',
+    모스크바: 'Moskva', 상트페테르부르크: 'Sankt-Peterburg', 예테보리: 'Göteborg', 코펜하겐: 'København', 아테네: 'Athína', 이스탄불: 'İstanbul', 이즈미르: 'İzmir',
+    카파도키아: 'Kapadokya', 마라케시: 'Marrakech', 페스: 'Fès', 멕시코시티: 'Ciudad de México', 리우데자네이루: 'Rio de Janeiro', 하바나: 'La Habana',
+    하노이: 'Hà Nội', 호찌민: 'Hồ Chí Minh', 호이안: 'Hội An', 후에: 'Huế', 하롱베이: 'Hạ Long', 방갈로르: 'Bengaluru', 로스앤젤레스: 'Los Angeles',
+    '오클랜드~nz': 'Auckland', '오클랜드~us': 'Oakland', 더블린: 'Dublin', 발렌시아: 'València', 키이우: 'Kyiv' };
+const fold = t => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+export function localName(i) {
+    const [ko, al, , cc] = PLACE[i] || []; if (!ko || cc === 'kr' || !cc) return ko || '';
+    if (OWN[`${ko}~${cc}`] || OWN[ko]) return OWN[`${ko}~${cc}`] || OWN[ko];
+    const n = placeNames(i);
+    if (cc === 'jp') return al.find(a => /[぀-ヿ一-鿿]/.test(a) && !/[a-z]/i.test(a)) || n.lat || ko;
+    if (['cn', 'tw', 'hk', 'mo'].includes(cc)) return al.find(a => /[一-鿿]/.test(a)) || n.lat || ko;
+    if (!n.lat) return ko;
+    const acc = al.find(a => /^[A-Za-zÀ-ɏ]/.test(a) && /[^\x00-\x7f]/.test(a) && fold(a) === fold(n.lat));   // zurich → zürich
+    return acc ? (/[A-Z]/.test(acc) ? acc : acc.replace(/(^|[\s\-.])(\p{Ll})/gu, (x, a, c) => a + c.toUpperCase())) : n.lat;
+}
 // the neighbourhoods of a place: the HINT rows whose town is it (or its row's town)
 export const placeHoods = i => { const ko = norm(PLACE[i][0]); return HINT.map((h, k) => [h, k]).filter(([h]) => h[0].split(' · ').includes(ko)).map(([, k]) => k); };
 const hoodTown = k => { const t = HINT[k][0].split(' · ')[0]; return PLACE.findIndex(x => norm(x[0]) === t); };
