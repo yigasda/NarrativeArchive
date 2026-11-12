@@ -887,7 +887,7 @@ export async function openPhone(who = null) {
         if (go === 'setprofile') editProfile();
     });
     // 도시 찾기: the results follow the typing (only the results are drawn again, so the field keeps its focus)
-    const mapType = el => { mapQ = el.textContent.replace(/\s+/g, ' '); const p = phone(); if (!p) return; $root.find('.mq_res').html(mapResults(p, m, mapQ)).scrollTop(0); $root.find('.mq_sheet').toggleClass('mq_full', !!mapQ.trim()); $root.find('.mq_x').toggleClass('on', !!mapQ); };
+    const mapType = el => { mapQ = el.textContent.replace(/\s+/g, ' '); const p = phone(); if (!p) return; $root.find('.mq_res').html(mapResults(p, m, mapQ)).scrollTop(0); const land = !!$root.find('.mq_res .mq_land').length; $root.find('.mq_sheet').toggleClass('mq_cty', land).toggleClass('mq_full', !land && !!mapQ.trim()); $root.find('.mq_x').toggleClass('on', !!mapQ); };
     $root.on('input', '.mq_in', function () { mapType(this); });
     $root.on('keydown', '.mq_in', function (e) { e.stopPropagation(); if (e.key === 'Enter' && !e.originalEvent?.isComposing && e.keyCode !== 229) { e.preventDefault(); $root.find('.mq_res [data-go]').first().trigger('click'); } });
     $root.on('click', '.mq_x', function (e) { e.stopPropagation(); const f = $root.find('.mq_in')[0]; if (!f) return; f.textContent = ''; mapType(f); f.focus(); });

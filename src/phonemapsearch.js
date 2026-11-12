@@ -42,14 +42,19 @@ const hoodLine = (k, q) => { const t = hoodTown(k), words = q ? HINT[k][1].filte
 // the rest folded by what kind of place they are (a row opens its list in place); names only, no description
 const GROUPS = [['도시', ['도심', '교외', '일터', '공항']], ['바닷가 · 섬', ['바다', '섬']], ['산 · 호수', ['산', '호수', '숲', '온천']], ['마을 · 옛 시내', ['옛마을', '시골', '강골짜기']]];
 const groupOf = i => { const sp = spotIn(SPOTS, PLACE[i][0], []), k = sp ? sp[2].split('·')[0] : '도심'; const g = GROUPS.findIndex(([, ks]) => ks.includes(k)); return g < 0 ? 0 : g; };
-const bigCard = i => `<button type="button" class="mq_tc mq_hth" data-tw="128" data-th="84" data-go="mapc" data-i="${at(i)}" aria-label="${esc(PLACE[i][0])}" data-tt="${esc(JSON.stringify({ city: PLACE[i][0], words: [] }))}"><i class="mq_tph" aria-hidden="true"></i><b>${esc(PLACE[i][0])}</b></button>`;
+// each fold's mark (시안 country-list B: a coloured square with what kind of place it is)
+const GMARK = [['#e2e9f5', '#2c4a80', 'M4 21V9l5-3v15M9 21V4l6 3v14M15 21v-9l5 2v7M3 21h18'], ['#dff1f4', '#1f7f8c', 'M3 17c2-1.5 3 1.5 5 0s3 1.5 5 0 3 1.5 5 0 3 1.5 3 0M6 13c1-4 4-6 8-6'],
+    ['#dcefdf', '#3f7d50', 'M2 20l7-12 4 6 3-4 6 10z'], ['#f4ead9', '#8a6a3a', 'M4 21V11l4-3 4 3v10M12 21V8l4-4 4 4v13M3 21h18'], ['#f1e6f1', '#7d4a7d', 'M12 21s-6-5.4-6-10.5a6 6 0 0 1 12 0C18 15.6 12 21 12 21zM12 12.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4z']];
+const gMark = g => { const [bg, fg, d] = GMARK[g]; return `<span class="ax_si mq_gi" style="--axbg: ${bg}; background: ${bg}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${fg}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg></span>`; };
+const bigCard = i => `<button type="button" class="mq_tc mq_hth" data-tw="128" data-th="84" data-go="mapc" data-i="${at(i)}" aria-label="${esc(PLACE[i][0])}" data-tt="${esc(JSON.stringify({ city: PLACE[i][0], words: [], big: 1 }))}"><i class="mq_tph" aria-hidden="true"></i><b>${esc(PLACE[i][0])}</b></button>`;
 const countryView = (cc, open = -1) => { const ts = countryTowns(cc), hs = countryHoods(cc);
     const big = ts.filter(i => placeView(i).hoods.length >= 3), rest = ts.filter(i => !big.includes(i));
-    const groups = GROUPS.map(([name], g) => [name, rest.filter(i => groupOf(i) === g)]).filter(([, l]) => l.length);
-    const fold = groups.map(([name, l], g) => { const on = g === open;
-        return `<button type="button" class="ax_rw mq_rw mq_fold${on ? ' on' : ''}" data-go="mapq" data-i="#${cc}${on ? '' : `~${g}`}"><span class="ax_tx"><span class="ax_n">${esc(name)}</span><span class="ax_p1">${esc(l.slice(0, 3).map(i => PLACE[i][0]).join(' · '))}${l.length > 3 ? ' …' : ''}</span></span><span class="mq_cnt cg_num">${l.length}</span>${axChev}</button>${on ? l.map(i => townRow(i, '', '')).join('') : ''}`; }).join('');
-    const hoodFold = hs.length ? `<button type="button" class="ax_rw mq_rw mq_fold${open === 9 ? ' on' : ''}" data-go="mapq" data-i="#${cc}${open === 9 ? '' : '~9'}"><span class="ax_tx"><span class="ax_n">동네</span><span class="ax_p1">${esc(hs.slice(0, 3).map(k => HINT[k][3]).join(' · '))}${hs.length > 3 ? ' …' : ''}</span></span><span class="mq_cnt cg_num">${hs.length}</span>${axChev}</button>${open === 9 ? hs.map(k => hoodLine(k, '')).join('') : ''}` : '';
-    return `${big.length ? `<div class="ax_sec">큰 도시 · ${big.length}</div><div class="mq_bigs">${big.map(bigCard).join('')}</div>` : ''}
+    const groups = GROUPS.map(([name], g) => [name, rest.filter(i => groupOf(i) === g), g]).filter(([, l]) => l.length);
+    const fold = groups.map(([name, l, g]) => { const on = g === open;
+        return `<button type="button" class="ax_rw mq_rw mq_fold${on ? ' on' : ''}" data-go="mapq" data-i="#${cc}${on ? '' : `~${g}`}">${gMark(g)}<span class="ax_tx"><span class="ax_n">${esc(name)}</span><span class="ax_p1">${esc(l.slice(0, 3).map(i => PLACE[i][0]).join(' · '))}${l.length > 3 ? ' …' : ''}</span></span><span class="mq_cnt cg_num">${l.length}</span>${axChev}</button>${on ? l.map(i => townRow(i, '', '')).join('') : ''}`; }).join('');
+    const hoodFold = hs.length ? `<button type="button" class="ax_rw mq_rw mq_fold${open === 9 ? ' on' : ''}" data-go="mapq" data-i="#${cc}${open === 9 ? '' : '~9'}">${gMark(4)}<span class="ax_tx"><span class="ax_n">동네</span><span class="ax_p1">${esc(hs.slice(0, 3).map(k => HINT[k][3]).join(' · '))}${hs.length > 3 ? ' …' : ''}</span></span><span class="mq_cnt cg_num">${hs.length}</span>${axChev}</button>${open === 9 ? hs.map(k => hoodLine(k, '')).join('') : ''}` : '';
+    const head = `<div class="mq_kh mq_land">${flagSvg(cc, 28)}<b>${esc(FLAG_NAME[cc] || '')}</b><small>${ts.length}곳</small></div>`;
+    return `${head}${big.length ? `<div class="ax_sec">큰 도시 · ${big.length}</div><div class="mq_bigs">${big.map(bigCard).join('')}</div>` : ''}
       ${fold || hoodFold ? `<div class="ax_sec">${big.length ? `그 밖의 곳 · ${rest.length}` : `도시 · ${ts.length}`}</div><div class="ax_card">${fold}${hoodFold}</div>` : ''}`; };
 const countryRow = cc => `<button type="button" class="ax_rw mq_rw" data-go="mapq" data-i="#${cc}">${flagTile(cc)}<span class="ax_tx"><span class="ax_n">${esc(FLAG_NAME[cc])}</span><span class="ax_p1">도시 ${countryTowns(cc).length}곳${countryHoods(cc).length ? ` · 동네 ${countryHoods(cc).length}곳` : ''}</span></span>${axChev}</button>`;
 const sub = i => FLAG_NAME[PLACE[i][3]] || '';
@@ -76,7 +81,7 @@ export function mapResults(p, m, query = '', kind = '') {
     const towns = found.towns.filter(i => !mine.has(PLACE[i][2])), hoods = found.hoods.filter(k => !hoodsOf.has(k)), kinds = found.kinds;
     const others = lands.filter(c => c !== named);
     if (!named && !others.length && !towns.length && !hoods.length) return '<div class="mq_tip">찾는 곳이 표에 없어요</div>';
-    const land = named ? `<div class="mq_kh">${flagSvg(named.cc, 22)}<b>${esc(FLAG_NAME[named.cc])}</b></div>${countryView(named.cc)}` : '';
+    const land = named ? countryView(named.cc) : '';
     const landRows = others.length ? `<div class="ax_sec">나라</div><div class="ax_card">${others.map(c => countryRow(c.cc)).join('')}</div>` : '';
     const hoodRow = k => hoodLine(k, q);
     return `${land}${towns.length ? `<div class="ax_sec">${named ? '다른 도시' : '도시'}</div><div class="ax_card">${towns.map(i => townRow(i, q, sub(i))).join('')}</div>` : ''}
@@ -92,10 +97,12 @@ export function mapSearchScreen(p, now, m, i = '', query = '') {
     const full = kind || String(query).trim();
     // no visit yet: the town they live in (a country written as one: its capital), else the last town they looked at
     const own = placeInfo(p).owner, home = own.city, cc = countryOf(home) || String(own.lives || ''), seenI = (p.mapSeen || []).map(townPlace).find(i => i >= 0);
-    const where = g ? tileAt(g.city, g.rows.map(r => r.place), g.rows.slice(0, 7).map(r => r.place)) : home || cc ? tileAt(countryOf(home) ? '' : home, [], [], cc) : seenI >= 0 ? tileAt(PLACE[seenI][0]) : '';
+    const land = kind[0] === '#' ? kind.slice(1).split('~')[0] : '';
+    if (land) query = FLAG_NAME[land] || '';
+    const where = land ? tileAt('', [], [], land) : g ? tileAt(g.city, g.rows.map(r => r.place), g.rows.slice(0, 7).map(r => r.place)) : home || cc ? tileAt(countryOf(home) ? '' : home, [], [], cc) : seenI >= 0 ? tileAt(PLACE[seenI][0]) : '';
     return `<div class="mp_wx mq_wx${dark ? ' mp_dark' : ''}"><div class="mp_bg"${where}>${art}</div>${axBar(p, now, dark && !full ? '#fff' : '#111')}${axTop(axCb(kind ? 'mapq' : 'map'))}
-      <div class="mq_sheet${full ? ' mq_full' : ''}"><i class="mp_grab"></i>${TILE_CREDIT}
-        ${kind[0] === '#' ? `<div class="mq_kh">${flagSvg(kind.slice(1).split('~')[0], 22)}<b>${esc(FLAG_NAME[kind.slice(1).split('~')[0]] || '')}</b></div>` : kind ? `<div class="mq_kh">${icon('mqmap', 16, 'var(--axd)', 2.2)}<b>${esc(kindName(kind))}</b></div>` : `<div class="mq_field">${ax('search', 17, '#8a929d', 2.2)}<div class="mq_in" contenteditable="true" role="searchbox" enterkeyhint="search" spellcheck="false" aria-label="도시 찾기" data-ph="도시 · 동네 찾기 (東京, Berlin, 홍대 …)">${esc(query)}</div><button type="button" class="mq_x${query ? ' on' : ''}" aria-label="지우기">${ax('x', 12, '#fff', 3)}</button></div>`}
+      <div class="mq_sheet${land ? ' mq_cty' : full ? ' mq_full' : ''}"><i class="mp_grab"></i>${TILE_CREDIT}
+        ${kind && !land ? `<div class="mq_kh">${icon('mqmap', 16, 'var(--axd)', 2.2)}<b>${esc(kindName(kind))}</b></div>` : `<div class="mq_field">${ax('search', 17, '#8a929d', 2.2)}<div class="mq_in" contenteditable="true" role="searchbox" enterkeyhint="search" spellcheck="false" aria-label="도시 찾기" data-ph="도시 · 동네 찾기 (東京, Berlin, 홍대 …)">${esc(query)}</div><button type="button" class="mq_x${query ? ' on' : ''}" aria-label="지우기">${ax('x', 12, '#fff', 3)}</button></div>`}
         <div class="ax_scroll mq_res">${mapResults(p, m, query, kind)}</div>
       </div>${axInd(dark && !full ? '#fff' : '#111')}</div>`;
 }
