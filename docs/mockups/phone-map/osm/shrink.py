@@ -139,6 +139,8 @@ svg2 = re.sub(PATH, path_sub, svg)
 if defs: svg2 = re.sub(r'(<svg\b[^>]*>)', lambda m: m.group(1) + '<defs>' + ''.join(defs) + '</defs>', svg2, count=1)
 svg2 = re.sub(r'<!--H(\d+)-->', lambda m: held[int(m.group(1))], svg2)
 svg2 = re.sub(r'>\s+<', '><', svg2)
+# a file of its own (an <img>, a download) needs the namespace; inline in HTML it is harmless
+if 'xmlns=' not in svg2[:200]: svg2 = svg2.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"', 1)
 # every id gets this map's own prefix (from the out file's name): two maps on one page (the phone, a contact sheet)
 # would otherwise share q1, q2 … and draw each other's roads
 import hashlib, os
