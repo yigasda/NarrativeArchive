@@ -161,6 +161,20 @@ test('되돌린 뒤 새 대화가 오면 기다리던 메시지도 같이 읽어
     assert.match(T.input, /첫 얘기[\s\S]*둘째 얘기[\s\S]*셋째 얘기/);
 });
 
+test('은행이 없는 실시간 폰: 되돌려도 없던 장부가 생기지 않아요', async () => {
+    const c = world();
+    delete c.p.money; L.liveWorld(c.real).finance = null;
+    send(c, '뭐해');
+    T.replies = [{ state: '집', reply: ['메모 중'], does: [{ app: 'notes', what: '장 볼 것 적음' }] }];
+    await G.liveGo(c.real);
+    T.answers = [{ events: [{ id: 'list', at: 2, quote: '장 볼 것 적음', summary: '장보기 메모', date: '11-11', time: '13:00', phone: { notes: [{ title: '장 볼 것', text: 'x', time: '11-11 13:00' }] } }] }];
+    await G.liveReflect(c.real, 'Mara');
+    assert.equal(c.p.notes.length, 1);
+    await G.liveUndo(c.real, 'Mara');
+    assert.equal(c.p.notes.length, 0);
+    assert.equal(L.liveWorld(c.real).finance, null);
+});
+
 test('폰 1은 이 파일을 안 불러요', async () => {
     for (const f of (await readdir(new URL('../src/', import.meta.url))).filter(f => f.endsWith('.js') && f !== 'phone2go.js' && f !== 'phone.js')) assert.doesNotMatch(await readFile(new URL(`../src/${f}`, import.meta.url), 'utf8'), /phone2go/, f);
 });
