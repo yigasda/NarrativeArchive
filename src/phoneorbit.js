@@ -57,7 +57,7 @@ const ICON = (() => {
 const icon = sz => ICON.replace(/"SZ"/g, `"${sz}"`);
 // 실시간 폰 홈 1쪽 위 위젯(시안 phone2-home 4차 "줄 간격 고르게 · 말 옅게"): 유리 카드 한 장, 머리줄은 Orbit 아이콘 · 이름 ·
 // 안 읽은 수, 최근 방 두 줄(얼굴 · 이름 · 마지막 말 · 시각 · 검정 숫자). 누르면 Orbit, 줄을 누르면 그 방. 방이 없으면 새 대화 한 줄
-export const orbitHomeWidget = (rooms, unread = 0) => `<div class="cg_glass ob_w" role="button" tabindex="0" data-go="orbit" aria-label="Orbit">
+export const orbitHomeWidget = (rooms, unread = 0) => `<div class="cg_glass ob_w" tabindex="0" data-go="orbit" aria-label="Orbit">
       <div class="ob_wh"><span class="ob_wi">${icon(18)}</span>Orbit${unread ? `<em>안 읽음 ${unread}</em>` : ''}</div>
       ${rooms.length ? rooms.map(r => `<div class="ob_wr" role="button" tabindex="0" data-go="orbitroom" data-i="${esc(r.id)}">${face(r.title, 32, r.group)}<span class="ob_wt"><b>${esc(r.title)}</b><span>${r.last ? `${r.lastWho ? `${esc(r.lastWho)}: ` : ''}${esc(r.last)}` : ''}</span></span><span class="ob_wn"><span class="cg_num">${esc(r.time || '')}</span>${r.unread ? `<span class="ob_wb cg_num">${r.unread}</span>` : ''}</span></div>`).join('')
         : `<div class="ob_wr" role="button" tabindex="0" data-go="orbitnew"><span class="ob_wp">${ic('plus', 16, '#3a3f47', 2.2)}</span><span class="ob_wt"><b>새 대화</b></span></div>`}
@@ -72,14 +72,14 @@ export function orbitList(p, now, o) {
     const tab = o.tab || 'all', rooms = o.rooms.filter(r => tab === 'all' || (tab === 'group') === r.group);
     const h = o.hero, lit = h ? Number(String(h.local).slice(0, 2)) : -1, a = o.acct || { name: '', list: [] }, many = a.list.length > 1;
     return `${axBar(p, now)}
-      <div class="ob_top"><span class="ob_me${many ? ' na_ob_acct' : ''}"${many ? ' role="button" tabindex="0" aria-label="계정"' : ''}>${face(a.name, 46)}</span><b class="ob_h1">메시지</b>${a.ro ? '<span class="ob_cb0"></span>' : `<span class="ob_cb" role="button" tabindex="0" data-go="orbitnew" aria-label="새 대화">${ic('pen', 19)}</span>`}</div>
+      <div class="ob_top">${many ? `<button type="button" class="ob_me na_ob_acct" aria-label="계정">${face(a.name, 46)}</button>` : `<span class="ob_me">${face(a.name, 46)}</span>`}<b class="ob_h1">메시지</b>${a.ro ? '<span class="ob_cb0"></span>' : `<button type="button" class="ob_cb" data-go="orbitnew" aria-label="새 대화">${ic('pen', 19)}</button>`}</div>
       <div class="ob_scroll ax_scroll">
-        <div class="ob_seg">${[['all', '전체'], ['one', '1:1'], ['group', '단체']].map(([k, t]) => `<span role="button" tabindex="0" class="ob_sg na_ob_tab${tab === k ? ' on' : ''}" data-v="${k}">${t}</span>`).join('')}</div>
+        <div class="ob_seg">${[['all', '전체'], ['one', '1:1'], ['group', '단체']].map(([k, t]) => `<button type="button" class="ob_sg na_ob_tab${tab === k ? ' on' : ''}" data-v="${k}">${t}</button>`).join('')}</div>
         ${h ? `<div class="ob_hero"><span class="ob_blob" style="background:${orbitBg(h.name)}"></span><span class="ob_gl"></span><div class="ob_in"><small>${esc(h.name)}${h.city ? ` · ${esc(h.city)}` : ''} 지금</small><div class="ob_big cg_num">${esc(h.local)}</div><div class="ob_dots">${dots(lit)}</div><div class="ob_dl"><span>0시</span><span>12시</span><span>24시</span></div></div></div>` : ''}
         ${rooms.length ? `<div class="ob_list">${rooms.map(r => `<div class="ob_rm" role="button" tabindex="0" data-go="orbitroom" data-i="${esc(r.id)}">${face(r.title, 50, r.group)}<span class="ob_t"><b>${esc(r.title)}</b><span class="ob_p">${r.last ? `${r.lastWho ? `${esc(r.lastWho)}: ` : ''}${esc(r.last)}` : ''}</span></span><span class="ob_r"><span class="cg_num">${esc(r.time || '')}</span>${r.unread ? `<span class="ob_un cg_num">${r.unread}</span>` : '<span class="ob_un0"></span>'}</span></div>`).join('')}</div>` : ''}
         <i class="ob_pad"></i>
       </div>
-      ${a.ro ? '' : `<span class="ob_dock" role="button" tabindex="0" data-go="orbitnew">${ic('plus', 16, '#fff', 2.4)}새 대화</span>`}
+      ${a.ro ? '' : `<button type="button" class="ob_dock" data-go="orbitnew">${ic('plus', 16, '#fff', 2.4)}새 대화</button>`}
       ${a.sheet ? `<div class="ob_shade na_ob_shade"></div><div class="ob_sheet"><i class="ob_grab"></i>${a.list.map(x => `<div class="ob_acc na_ob_who" role="button" tabindex="0" data-n="${esc(x.name)}">${face(x.name, 40)}<span class="ob_t"><b>${esc(x.name)}</b>${x.sub ? `<span class="ob_p">${esc(x.sub)}</span>` : ''}</span><span class="ob_ck${x.on ? ' on' : ''}">${x.on ? ic('chk', 14, '#fff', 3) : ''}</span></div>`).join('')}</div>` : ''}
       ${axInd()}`;
 }
@@ -90,10 +90,10 @@ export function orbitRoom(p, now, o) {
     const msg = x => x.day ? `<div class="ob_day">${esc(x.day)}</div>`
         : `${o.group && !x.mine && x.from ? `<div class="ob_sn">${esc(x.from)}</div>` : ''}<div class="ob_b ${x.mine ? 'me' : 'th ob_glass'}">${esc(x.text)}${x.ko ? (x.open ? `<span class="ob_ko na_ob_ko" role="button" tabindex="0" data-id="${esc(x.id)}">${esc(x.ko)}</span>` : `<span class="ob_kof na_ob_ko" role="button" tabindex="0" data-id="${esc(x.id)}">${ic('tr', 13)}번역 보기</span>`) : ''}</div>${x.mine && x.time ? `<div class="ob_rd">${x.unread ? `<b>${x.unread}</b> · ` : ''}<span class="cg_num">${esc(x.time)}</span></div>` : ''}`;
     return `<div class="ob_bg"><span class="ob_blob" style="background:${orbitBg(o.title, o.group)}"></span></div>${axBar(p, now, '#fff')}
-      <div class="ob_ct ob_glass"><span class="ob_gb" role="button" tabindex="0" data-go="orbit" aria-label="뒤로">${ic('back', 21, '#1b1d24', 2.2)}</span>${face(o.title, 40, o.group)}<span class="ob_nm"><b>${esc(o.title)}</b>${o.sub ? `<span>${esc(o.sub)}</span>` : ''}</span></div>
+      <div class="ob_ct ob_glass"><button type="button" class="ob_gb" data-go="orbit" aria-label="뒤로">${ic('back', 21, '#1b1d24', 2.2)}</button>${face(o.title, 40, o.group)}<span class="ob_nm"><b>${esc(o.title)}</b>${o.sub ? `<span>${esc(o.sub)}</span>` : ''}</span></div>
       ${o.chips.length ? `<div class="ob_chips">${o.chips.map(c => `<span class="ob_chip">${ic(c.icon, 13, '#fff')}${esc(c.text)}</span>`).join('')}</div>` : ''}
-      <div class="ob_msgs ax_scroll${o.asOwner ? ' ro' : ''}"><div class="ob_mi">${o.msgs.map(msg).join('')}${o.typing ? '<div class="ob_typ ob_glass" aria-label="입력 중"><i></i><i></i><i></i></div>' : ''}${o.fail ? `<div class="ob_fail"><span>답장을 못 받았어요</span><span class="ob_retry na_ob_retry" role="button" tabindex="0" data-id="${esc(o.fail.id)}">다시</span></div>` : ''}</div></div>
-      ${o.asOwner ? '' : `<div class="ob_inp ob_glass"><input type="text" class="ax_in ob_in na_ob_in" placeholder="메시지" enterkeyhint="send" value="${esc(o.draft || '')}" aria-label="메시지"><span class="ob_send na_ob_send" role="button" tabindex="0" aria-label="보내기">${ic('send', 18, '#fff', 2.3)}</span></div>`}
+      <div class="ob_msgs ax_scroll${o.asOwner ? ' ro' : ''}"><div class="ob_mi">${o.msgs.map(msg).join('')}${o.typing ? '<div class="ob_typ ob_glass" aria-label="입력 중"><i></i><i></i><i></i></div>' : ''}${o.fail ? `<div class="ob_fail"><span>답장을 못 받았어요</span><button type="button" class="ob_retry na_ob_retry" data-id="${esc(o.fail.id)}">다시</button></div>` : ''}</div></div>
+      ${o.asOwner ? '' : `<div class="ob_inp ob_glass"><div class="ob_msgin na_ob_in" contenteditable="true" role="textbox" enterkeyhint="send" spellcheck="false" data-ph="메시지" aria-label="메시지">${esc(o.draft || '')}</div><button type="button" class="ob_send na_ob_send" aria-label="보내기">${ic('send', 18, '#fff', 2.3)}</button></div>`}
       ${axInd('#fff')}`;
 }
 
@@ -102,15 +102,15 @@ export function orbitRoom(p, now, o) {
 export function orbitNew(p, now, o) {
     const on = n => o.picked.some(x => x.toLowerCase() === n.toLowerCase()), n = o.picked.length;
     return `${axBar(p, now)}
-      <div class="ob_top"><span class="ob_cb" role="button" tabindex="0" data-go="orbit" aria-label="뒤로">${ic('back', 20)}</span><b class="ob_h1">새 대화</b><span class="ob_cb0"></span></div>
+      <div class="ob_top"><button type="button" class="ob_cb" data-go="orbit" aria-label="뒤로">${ic('back', 20)}</button><b class="ob_h1">새 대화</b><span class="ob_cb0"></span></div>
       <div class="ob_scroll ax_scroll">
         ${n ? `<div class="ob_picked">${o.picked.map(x => `<span class="ob_pk na_ob_pick" role="button" tabindex="0" data-n="${esc(x)}">${face(x, 52)}<span class="ob_x">${ic('x', 11, '#fff', 3)}</span>${esc(x)}</span>`).join('')}</div>` : ''}
-        ${n > 1 ? `<div class="ob_gname"><span class="ob_blob" style="background:${orbitBg('', true)}"></span><span class="ob_gl"></span><label class="ob_in"><small>단체방 이름</small><input type="text" class="ax_in ob_gin na_ob_gname" value="${esc(o.gname || '')}" placeholder="${esc(o.picked.join(', '))}" enterkeyhint="done"></label></div>` : ''}
+        ${n > 1 ? `<div class="ob_gname"><span class="ob_blob" style="background:${orbitBg('', true)}"></span><span class="ob_gl"></span><div class="ob_in0"><small>단체방 이름</small><div class="ob_gin na_ob_gname" contenteditable="true" role="textbox" enterkeyhint="done" spellcheck="false" data-ph="${esc(o.picked.join(', '))}">${esc(o.gname || '')}</div></div></div>` : ''}
         <div class="ob_sec">사람</div>
         <div class="ob_list">${o.people.map(x => `<div class="ob_rm na_ob_pick" role="button" tabindex="0" data-n="${esc(x.name)}">${face(x.name, 46)}<span class="ob_t"><b>${esc(x.name)}</b>${x.sub ? `<span class="ob_p">${esc(x.sub)}</span>` : ''}</span><span class="ob_ck${on(x.name) ? ' on' : ''}">${on(x.name) ? ic('chk', 15, '#fff', 3) : ''}</span></div>`).join('')}</div>
         <i class="ob_pad"></i>
       </div>
-      ${n ? `<span class="ob_go na_ob_make" role="button" tabindex="0">${n > 1 ? `단체방 만들기 <em>· 나 포함 ${n + 1}명</em>` : '대화하기'}</span>` : ''}
+      ${n ? `<button type="button" class="ob_go na_ob_make">${n > 1 ? `단체방 만들기 <em>· 나 포함 ${n + 1}명</em>` : '대화하기'}</button>` : ''}
       ${axInd()}`;
 }
 
@@ -119,12 +119,12 @@ export function orbitNew(p, now, o) {
 export function liveStart(p, now, o) {
     const row = (k, on, off, title, sub) => `<div class="ob_rm ls_opt${on ? ' on' : ''}${off ? ' off' : ''}"><span class="ls_ic ${k}">${ic(k === 'story' ? 'book' : 'spark', 18, k === 'story' ? '#2c4a80' : '#a0537a')}</span><span class="ob_t"><b>${esc(title)}</b>${sub ? `<span class="ob_p">${esc(sub)}</span>` : ''}</span><span class="ob_ck${on ? ' on' : ''}">${on ? ic('chk', 14, '#fff', 3) : ''}</span></div>`;
     return `${axBar(p, now)}
-      <div class="ob_top"><span class="ob_cb" role="button" tabindex="0" data-go="set" aria-label="뒤로">${ic('back', 20)}</span><b class="ob_h1">실시간</b><span class="ob_cb0"></span></div>
+      <div class="ob_top"><button type="button" class="ob_cb" data-go="set" aria-label="뒤로">${ic('back', 20)}</button><b class="ob_h1">실시간</b><span class="ob_cb0"></span></div>
       <div class="ob_scroll ax_scroll">
         <div class="ob_hero ls_hero"><span class="ob_blob ls_bg"></span><span class="ob_gl"></span><div class="ob_in"><small>${esc(o.persona)} 지금</small><div class="ob_big cg_num">${esc(o.local)}<em>${esc(o.date)}</em></div>${o.shift ? `<span class="ls_pill">${esc(o.shift)}</span>` : ''}</div></div>
         <div class="ob_list">${row('story', true, false, '이야기에서 시작', o.upto)}${row('fresh', false, true, '처음부터', '곧')}</div>
         <i class="ob_pad"></i>
       </div>
-      <span class="ob_go na_ob_start" role="button" tabindex="0">시작</span>
+      <button type="button" class="ob_go na_ob_start">시작</button>
       ${axInd()}`;
 }

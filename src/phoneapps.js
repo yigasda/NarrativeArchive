@@ -663,7 +663,7 @@ function liveLastSync(p, { canUndo, held }) {
 // 설정 › 휴대폰 (docs/mockups/phone2-switch): 타임라인 (폰 1, the story's phone) · 실시간 (폰 2, the live phone), one line
 // under it saying what the chosen one is; with no 실시간 phone yet its side is faint, with a place for 시작하기 (5단계)
 function phoneModes({ live, has, shift, err = '' }) {
-    const seg = (v, t, on, off) => `<span role="button" tabindex="0" class="ax_pmseg na_ph_pmode${on ? ' on' : ''}${v === 'live' ? ' lv' : ''}${off ? ' off' : ''}" data-v="${v}" aria-pressed="${on}">${t}</span>`;
+    const seg = (v, t, on, off) => `<button type="button" class="ax_pmseg na_ph_pmode${on ? ' on' : ''}${v === 'live' ? ' lv' : ''}${off ? ' off' : ''}" data-v="${v}" aria-pressed="${on}">${t}</button>`;
     return `<div class="ax_sec">휴대폰</div>
         <div class="ax_card ax_pmode"><div class="ax_pmsegs">${seg('story', '타임라인', !live, false)}${seg('live', '실시간', live, false)}</div></div>
         <div class="ax_foot">${live ? `지금 내 시각으로 흘러가는 폰이에요. 메신저로 직접 연락해요.${shift ? ` · ${esc(shift)}` : ''}` : '이야기를 따라 흘러가는 폰이에요.'}</div>${live && err ? `<div class="ax_foot ax_pmerr">반영 못 함 · ${esc(err)}</div>` : ''}`;

@@ -741,8 +741,12 @@ export async function openPhone(who = null) {
     const obDraw = () => { drawPhone(true); };
     const obBottom = () => { const e = $root.find('.ob_msgs')[0]; if (e) e.scrollTop = e.scrollHeight; };
     $root.on('click', '.na_ob_tab', function (e) { e.stopPropagation(); obTab = this.dataset.v || 'all'; obDraw(); });
-    $root.on('input', '.na_ob_gname', function () { obGname = this.value; });
-    $root.on('input', '.na_ob_in', function () { obDraft = this.value; });
+    // (입력칸은 contenteditable: 테마가 <input>에 테두리를 칠해서. 지도 검색과 같은 방식) 초점은 화면을 밀지 않게, 글 끝에
+    const obFocus = () => { const e = $root.find('.na_ob_in')[0]; if (!e) return; e.focus({ preventScroll: true }); try { const r = document.createRange(); r.selectNodeContents(e); r.collapse(false); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); } catch { /* (no caret) */ } };
+    $root.on('input', '.na_ob_gname', function () { obGname = this.textContent; });
+    $root.on('input', '.na_ob_in', function () { obDraft = this.textContent; });
+    $root.on('keydown', '.na_ob_gname', e => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); } });
+    $root.on('paste', '.na_ob_in, .na_ob_gname', e => { e.preventDefault(); const t = (e.originalEvent?.clipboardData || window.clipboardData)?.getData('text') || ''; document.execCommand('insertText', false, t.replace(/\s+/g, ' ')); });
     $root.on('click', '.na_ob_pick', function (e) { e.stopPropagation(); const n = this.dataset.n, k = liveKey(n); obPick = obPick.some(x => liveKey(x) === k) ? obPick.filter(x => liveKey(x) !== k) : [...obPick, n]; obDraw(); });
     $root.on('click', '.na_ob_make', async function (e) {
         e.stopPropagation();
@@ -763,7 +767,7 @@ export async function openPhone(who = null) {
         const typingNow = document.activeElement?.classList?.contains('na_ob_in'), atEnd = (e => !e || e.scrollHeight - e.scrollTop - e.clientHeight < 40)($root.find('.ob_msgs')[0]);
         drawPhone(true);
         if (view.startsWith('orbitroom') && atEnd) obBottom();
-        if (typingNow) $root.find('.na_ob_in').trigger('focus');
+        if (typingNow) obFocus();
     } }).catch(err => console.error('[narrative-archive] live go', err));
     // 반영(소망 결정): 메신저를 나갈 때만 · 폰을 닫을 때 · 타임라인으로 바꿀 때. 실시간 폰의 인물마다 쌓인 대화를 한 번에(읽을 게 없으면 바로 끝)
     const obReflect = () => { const w = liveWorld(realM); if (!w) return; (async () => { for (const p of Object.values(w.phones || {})) if (p?.owner) await liveReflect(realM, p.owner, { onChange: () => { if (!phoneClosed && stillHere() && live()) drawPhone(true); } }); })().catch(err => console.error('[narrative-archive] live reflect', err)); };
@@ -792,11 +796,11 @@ export async function openPhone(who = null) {
         if (!phoneClosed && stillHere()) drawPhone(true);
     });
     const obSend = async () => {
-        const r = roomNow(), t = String($root.find('.na_ob_in').val() || '').trim();
+        const r = roomNow(), t = String($root.find('.na_ob_in').text() || '').trim();
         if (!live() || !r || !t || obAcct() !== liveWorld(realM)?.persona) return;
         sendLive(realM, r.id, t);
         enqueueReplies(realM, r.id);
-        obDraft = ''; drawPhone(); obBottom(); $root.find('.na_ob_in').trigger('focus');
+        obDraft = ''; drawPhone(); obBottom(); obFocus();
         await saveMeta();
         obGo();
     };
@@ -811,7 +815,7 @@ export async function openPhone(who = null) {
         obGo();
     });
     $root.on('click', '.na_ob_send', e => { e.stopPropagation(); obSend(); });
-    $root.on('keydown', '.na_ob_in', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); e.stopPropagation(); obSend(); } });
+    $root.on('keydown', '.na_ob_in', e => { e.stopPropagation(); if (e.key === 'Enter' && !e.originalEvent?.isComposing && e.keyCode !== 229) { e.preventDefault(); obSend(); } });
     // 실시간 폰 시작: 이야기에서(마지막 메시지까지) → 실시간 홈
     $root.on('click', '.na_ob_start', async function (e) {
         e.stopPropagation();
@@ -1729,6 +1733,9 @@ export async function openPhone(who = null) {
     const fit = () => { const w = frame.clientWidth - 14; if (w > 0) frame.style.setProperty('--k', String(w / CG_W)); };
     const ro = new ResizeObserver(fit);
     ro.observe(frame);
+    // the phone's own boxes never scroll (overflow: hidden): a focused field makes the browser roll them up to show it (a
+    // phone's keyboard does too), and the frame keeps that across screens. Put back at once; the screens' own lists still scroll
+    frame.addEventListener('scroll', e => { const t = e.target; if (t instanceof Element && t.matches('.na_ph_frame, .na_ph_scr, .cg_canvas, .ax_canvas') && t.scrollTop) t.scrollTop = 0; }, true);
     cgFonts();
     const dlg = document.createElement('dialog');
     dlg.className = 'popup na_phl';
