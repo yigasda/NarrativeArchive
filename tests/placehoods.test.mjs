@@ -13,6 +13,11 @@ test('지도 표의 동네도 찾아요 (내 표에 없던 것)', () => {
     assert.deepEqual(names('우도'), ['서귀포']);
     assert.equal(hoodCities('동탄').every(c => c.tz === 'Asia/Seoul'), true);
 });
+test('지도와 내 표가 이름을 다르게 써도 한 도시 (호찌민 = 호치민, 방갈로르 = 벵갈루루)', () => {
+    assert.deepEqual(names('District 1'), ['호치민']);
+    assert.deepEqual(names('Bui Vien'), ['호치민']);
+    assert.deepEqual(names('Koramangala'), ['벵갈루루']);
+});
 test('두 도시가 같이 적힌 지도 줄은 둘 다 후보 (고르는 건 폰이 아는 도시로)', () => {
     assert.deepEqual(names('Königsallee').sort(), ['뒤셀도르프', '쾰른'].sort());
 });

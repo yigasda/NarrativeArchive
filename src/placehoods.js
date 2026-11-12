@@ -135,7 +135,9 @@ const ONE_TZ = { kr: 'Asia/Seoul', jp: 'Asia/Tokyo', cn: 'Asia/Shanghai', hk: 'A
 function mapCities(town, rows) {
     const out = [];
     for (const t of String(town || '').split(' · ').map(x => x.trim()).filter(Boolean)) {
-        const row = rows.find(c => c.names.some(n => key(n) === key(t))), pl = PLACE.find(x => x[0] === t);
+        // (the row of the same city under any of its names: 호찌민 is this table's 호치민 by "saigon", 방갈로르 its 벵갈루루)
+        const pl = PLACE.find(x => x[0] === t), ks = new Set([t, ...(pl?.[1] || [])].map(key).filter(Boolean));
+        const row = rows.find(c => (!pl || !ONE_TZ[pl[3]] || c.tz === ONE_TZ[pl[3]]) && c.names.some(n => ks.has(key(n))));
         const names = [...new Set([t, ...(row?.names || []), ...(pl?.[1] || [])])], tz = row?.tz || ONE_TZ[pl?.[3]];
         if (tz) out.push({ names, tz });
     }
