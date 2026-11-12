@@ -2567,7 +2567,7 @@ export function mergedState(p) {
         comments: Object.fromEntries((p.posts || []).filter(x => x.id).map(x => [x.id, x.comments || []])),
     };
 }
-function restoreMerged(p, before, after) {
+export function restoreMerged(p, before, after) {
     const same = (a, b) => JSON.stringify(a) === JSON.stringify(b), now = mergedState(p);
     for (const x of p.events || []) {
         const b = before.events[x.id];
@@ -2587,7 +2587,7 @@ function restoreMerged(p, before, after) {
     for (const x of p.posts || []) if (before.comments[x.id] && same(now.comments[x.id], after.comments[x.id])) x.comments = structuredClone(before.comments[x.id]);
 }
 const FX_APP = [[/^life\.weather/, '날씨'], [/^life\.health/, '건강'], [/^life\.clock/, '시계'], [/^life\.files/, '파일'], [/^delivery/, '배달'], [/^money\.(orders)/, '쇼핑'], [/^money\.passes/, '지갑'], [/^money/, '은행'], [/^investment/, '투자']];
-const fxApp = path => FX_APP.find(([re]) => re.test(String(path || '')))?.[1] || '';
+export const fxApp = path => FX_APP.find(([re]) => re.test(String(path || '')))?.[1] || '';
 export async function undoRound(m, p) {
     const target = phoneTarget(m, p);
     const u = p.syncUndo, s = p.sync;

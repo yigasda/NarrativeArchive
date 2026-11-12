@@ -17,7 +17,7 @@ import { replyInput } from './phone2ask.js';
 import { phone2ReplySystem } from './phone2reply.js';
 import { runLive } from './phone2run.js';
 import { markPersona } from './phone2feed.js';
-import { updateLive } from './phone2reflect.js';
+import { updateLive, undoLive } from './phone2reflect.js';
 
 // rounds of reflection after one reply at most (messages piled up while only talking: 100 a round)
 export const LIVE_GO = { rounds: 3, replyTokens: 4000 };
@@ -63,12 +63,14 @@ export async function liveGo(real, { onChange = () => {} } = {}) {
 // 메신저를 나갈 때: what was said on the messenger since the last time goes into the owner's 폰 2 (as many rounds as it
 // takes, LIVE_GO.rounds at most). Nothing to read: no model call. A reply still on its way: not now (its talk is read
 // whole the next time). A failure leaves the phone as it was and says why on it (p.liveReflectError); the messages stay
-// unread for the next time. Returns { rounds, left, waiting, error }
+// unread for the next time. Returns { rounds, left, waiting, error } (held: true when it waits after 되돌리기)
 const reflecting = new WeakSet();
-export async function liveReflect(real, owner, { onChange = () => {} } = {}) {
+export async function liveReflect(real, owner, { onChange = () => {}, force = false } = {}) {
     const w = liveWorld(real), p = livePhone(real, owner), none = { rounds: 0, left: 0, waiting: false, error: '' };
     if (!w || !p || reflecting.has(real)) return none;
     if (!liveUnreflected(real, owner)) return none;
+    // (after 되돌리기 the messages wait for new talk; force: the user asks for them now)
+    if (!force && Number.isInteger(p.liveHeld) && !Object.values(w.messenger?.rooms || {}).some(r => r.members.some(n => liveKey(n) === liveKey(owner)) && (r.messages || []).some(x => x.n > p.liveHeld))) return { ...none, left: liveUnreflected(real, owner), held: true };
     if ((w.queue?.jobs || []).some(j => liveKey(j.owner) === liveKey(owner) && (j.state === 'waiting' || j.state === 'running'))) return { ...none, left: liveUnreflected(real, owner), waiting: true };
     const tell = () => { try { onChange(); } catch (err) { console.error('[narrative-archive] live draw', err); } };
     const m = () => liveMeta(real, { text: () => liveStoryText(real, liveWorld(real)) });
@@ -88,3 +90,13 @@ export async function liveReflect(real, owner, { onChange = () => {} } = {}) {
 }
 // how many of the owner's messenger messages 폰 2 hasn't reflected yet (for a small label, if the screen wants one)
 export const liveUnreflected = (real, owner) => { const w = liveWorld(real), p = livePhone(real, owner); if (!w || !p) return 0; const done = p.sync?.done || [], base = p.sync?.marks?.base?.index ?? (Number.isInteger(w.storyUpto) ? w.storyUpto : 0); return Object.values(w.messenger?.rooms || {}).filter(r => r.members.some(n => liveKey(n) === liveKey(owner))).flatMap(r => r.messages || []).filter(x => Number.isInteger(x.n) && x.n > base && !done.some(([a, b]) => x.n >= a && x.n <= b)).length; };
+
+// 방금 반영 되돌리기 (폰 2): can the owner's last round be taken back, and doing it. kept: what couldn't go back (said to
+// the user as 폰 1 says it). After it the messages wait for new talk; liveReflect(real, owner, { force: true }) reads
+// them again now. Throws what 폰 1's 되돌리기 throws (nothing to undo; the bank made again since)
+export const liveCanUndo = (real, owner) => { const p = livePhone(real, owner); return !!p?.syncUndo && !!p.syncLast?.checked && p.sync?.rounds?.at(-1) === p.syncUndo.round; };
+export async function liveUndo(real, owner, { onChange = () => {} } = {}) {
+    const kept = await undoLive(real, liveMeta(real, { text: () => liveStoryText(real, liveWorld(real)) }), owner, { save: saveMeta });
+    try { onChange(); } catch (err) { console.error('[narrative-archive] live draw', err); }
+    return kept;
+}
