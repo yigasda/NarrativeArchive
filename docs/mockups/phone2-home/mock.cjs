@@ -48,6 +48,23 @@ const CSS = `
 .wc .w_p .w_wrap{position:relative}
 .wc .w_p b{font-size:12.5px;font-weight:600;color:#1b1d24}.wc .w_p span.w_s{font:500 11px 'Inter Tight',-apple-system,sans-serif;color:#6b707b;display:flex;gap:3px;align-items:center;margin-top:-3px}
 .wc .w_new{width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.55);display:flex;align-items:center;justify-content:center;box-shadow:inset 0 1px 0 #fff,0 2px 6px rgba(22,27,34,.08)}
+
+/* B2: 줄마다 그 사람 색이 오른쪽에서 번짐 */
+.wb2 .w_rm{position:relative;overflow:hidden;border-radius:14px;padding:8px 10px;margin:0 -6px}
+.wb2 .w_rm+.w_rm{border-top:0;margin-top:4px}
+.wb2 .w_fx{position:absolute;right:-10px;top:-14px;bottom:-14px;width:65%;-webkit-mask-image:linear-gradient(90deg,transparent,#000 75%);mask-image:linear-gradient(90deg,transparent,#000 75%);opacity:.55}
+.wb2 .w_fx span{position:absolute;inset:0;filter:blur(14px)}
+.wb2 .w_rm>*:not(.w_fx){position:relative;z-index:1}
+/* B3: 흰 카드 + 새 대화 알약 */
+.wb3{background:#fff;box-shadow:0 1px 2px rgba(22,27,34,.05),0 12px 28px rgba(40,50,70,.12)}
+.wb3 .w_pill{margin-left:auto;display:inline-flex;gap:4px;align-items:center;background:#15161a;color:#fff;border-radius:999px;padding:5px 10px 5px 8px;font-size:11.5px;font-weight:600;box-shadow:inset 0 1px 0 rgba(255,255,255,.16)}
+.wb3 .w_rm+.w_rm{border-top-color:#eef0f3}
+/* B4: 촘촘 세 줄 */
+.wb4 .w_rm{padding:4px 0;gap:9px}
+.wb4 .w_t{display:flex;align-items:baseline;gap:6px}
+.wb4 .w_t b{flex:none;font-size:13px}.wb4 .w_t span{font-size:12px}
+.wb4 .w_r{flex-direction:row;align-items:center;gap:6px}
+.wb4 .w_rm.un .w_t span{color:#1b1d24;font-weight:500}
 /* D: 마지막 말 크게 (그 사람 색) */
 .wd{color:#fff;box-shadow:0 12px 30px rgba(70,80,140,.24)}
 .wd .w_bg{position:absolute;inset:-30%;filter:blur(26px);background:${bg('Mara')}}
@@ -62,14 +79,12 @@ const CSS = `
 const ic = (d, s, c) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"/></svg>`;
 const MOON = 'M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z', CLK = 'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM12 8v4l3 2', PLUS = 'M12 5v14M5 12h14', SUN = 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2';
 const W = {
-  A: `<div class="w_wide wa"><span class="w_bg"></span><span class="w_gl"></span><div class="w_in"><small>Mara · Varo 지금</small><div class="w_big">14:10<em>회의 중</em></div><div class="w_dots">${dots(14)}</div></div>
-      <div class="w_faces">${ROOMS.map(r => `<span class="w_wrap">${face(r.k, 34, r.l)}${r.un ? `<span class="w_un">${r.un}</span>` : ''}</span>`).join('')}</div></div>`,
-  B: `<div class="w_wide cg_glass wb"><div class="w_hd">${logo(18)}Orbit<em>안 읽음 5</em></div>${ROOMS.slice(0, 2).map(r => `<div class="w_rm">${face(r.k, 30, r.l)}<span class="w_t"><b>${r.name}</b><span>${r.last}</span></span><span class="w_r">${r.t}${r.un ? `<span class="w_n">${r.un}</span>` : ''}</span></div>`).join('')}</div>`,
-  C: `<div class="w_wide cg_glass wc"><div class="w_hd">${logo(18)}Orbit</div><div class="w_row">${[['Mara', 'Mara', 2, CLK, '14:10'], ['V', 'Werkstatt', 3, '', '20:40'], ['Ren', 'Ren', 0, MOON, '21:10']].map(([k, n, u, i, t]) => `<span class="w_p"><span class="w_wrap">${face(k, 54, k === 'V' ? 'V' : k[0])}${u ? `<span class="w_un">${u}</span>` : ''}</span><b>${n}</b><span class="w_s">${i ? ic(i, 11, '#6b707b') : ''}${t}</span></span>`).join('')}<span class="w_p"><span class="w_new">${ic(PLUS, 22, '#3a3f47')}</span><b>새 대화</b><span class="w_s">&nbsp;</span></span></div></div>`,
-  D: `<div class="w_wide wd"><span class="w_bg"></span><span class="w_gl"></span><div class="w_in"><div class="w_top">${face('Mara', 26)}Mara<em>21:02</em></div><div class="w_bub">Ich erzähl's dir gleich<span>바로 말해 줄게</span></div>
-      <div class="w_more">${face('V', 20, 'V')}${face('Ren', 20)}<span>Varo Werkstatt · Ren</span></div></div></div>`,
+  A: `<div class="w_wide cg_glass wb"><div class="w_hd">${logo(18)}Orbit<em>안 읽음 5</em></div>${ROOMS.slice(0, 2).map(r => `<div class="w_rm">${face(r.k, 30, r.l)}<span class="w_t"><b>${r.name}</b><span>${r.last}</span></span><span class="w_r">${r.t}${r.un ? `<span class="w_n">${r.un}</span>` : ''}</span></div>`).join('')}</div>`,
+  B: `<div class="w_wide cg_glass wb wb2"><div class="w_hd">${logo(18)}Orbit<em>안 읽음 5</em></div>${ROOMS.slice(0, 2).map(r => `<div class="w_rm"><span class="w_fx"><span style="background:${bg(r.k)}"></span></span>${face(r.k, 30, r.l)}<span class="w_t"><b>${r.name}</b><span>${r.last}</span></span><span class="w_r">${r.t}${r.un ? `<span class="w_n">${r.un}</span>` : ''}</span></div>`).join('')}</div>`,
+  C: `<div class="w_wide wb wb3"><div class="w_hd">${logo(18)}Orbit<span class="w_pill">${ic(PLUS, 11, '#fff')}새 대화</span></div>${ROOMS.slice(0, 2).map(r => `<div class="w_rm">${face(r.k, 30, r.l)}<span class="w_t"><b>${r.name}</b><span>${r.last}</span></span><span class="w_r">${r.t}${r.un ? `<span class="w_n">${r.un}</span>` : ''}</span></div>`).join('')}</div>`,
+  D: `<div class="w_wide cg_glass wb wb4"><div class="w_hd">${logo(18)}Orbit<em>안 읽음 5</em></div>${ROOMS.map(r => `<div class="w_rm${r.un ? ' un' : ''}">${face(r.k, 26, r.l)}<span class="w_t"><b>${r.name}</b><span>${r.last}</span></span><span class="w_r">${r.t}${r.un ? `<span class="w_n">${r.un}</span>` : ''}</span></div>`).join('')}</div>`,
 };
-const NAME = { A: 'A. 지금 그 사람 + 얼굴', B: 'B. 최근 대화 목록', C: 'C. 사람 동그라미 줄', D: 'D. 마지막 말 크게' };
+const NAME = { A: 'B1. 유리 두 줄 (지금 B)', B: 'B2. 줄마다 색 번짐', C: 'B3. 흰 카드 + 새 대화', D: 'B4. 촘촘 세 줄' };
 (async () => {
   const s = await open('light', { out: TMP });
   try {
