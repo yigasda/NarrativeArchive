@@ -1,7 +1,7 @@
 // 캐릭터 휴대폰 · 지도 화면(다녀간 곳 · 도시 찾기 · 도시 · 동네 · 빈 화면) › 타일 지도: MapLibre GL + OpenFreeMap 벡터 타일에
 // 지도 룰(docs/design/map.md › 타일 지도) 색을 입혀요. 시안 docs/mockups/phone-map/maplibre/index.html.
 // - 지도 칸(.mp_bg)에 data-tm(어느 도시 · 동네 · 장소)이 있으면 그 칸에 붙어요. 화면이 다시 그려져도 지도 하나를 옮겨 붙여요(새로 안 만들어요).
-// - 그리기 전엔, 그리고 못 그리면(인터넷이 없음 · 좌표 모름) 그 칸의 그림 지도가 그대로 보여요.
+// - 그림 지도는 안 써요(11-12 소망: 하나라도 있으면 안 돼요). 그리기 전엔 바탕색만, 못 그리면 바탕색에 한 줄(인터넷 · 지도에 없는 곳).
 // - MapLibre(assets/maplibre, 800KB)와 좌표 표(phonemapspots.js)는 지도 칸이 처음 나올 때 한 번만 불러와요.
 import { MAP_ICONS as ICONS } from './phonemapicons.js';
 import { PLACE } from './phonemapcity.js';
@@ -208,13 +208,20 @@ function deepMap(gl, center, zoom) {
     });
 }
 // the map box on screen: <div class="mp_bg" data-tm='{"city","words":[…],"pins":[…],"vis":px}'>
+// a country without a town (they live "in Germany"): its capital's middle
+const CAPITAL = { de: 'berlin-mitte', kr: 'seoul-gwanghwamun', jp: 'tokyo-marunouchi', us: 'dc-mall', gb: 'london-westminster', fr: 'paris-saintgermain', it: 'rome-centro',
+    cn: 'beijing-tiananmen', au: 'sydney-circularquay', ca: 'ottawa', no: 'oslo-sentrum', hk: 'hk-central', mo: 'macau-senado' };
+const NO_PLACE = '지도에 없는 곳이에요', NO_NET = '지도를 불러오지 못했어요';
+const say = (host, msg) => { if (host?.isConnected && !host.classList.contains('mp_tiled')) host.dataset.msg = msg; };
 export async function mountTiles(root) {
     const host = root?.querySelector?.('.mp_bg[data-tm]');
-    if (!host) { if (live.el?.isConnected) live.el.remove(); return; }
+    if (!host) { if (live.el?.isConnected) live.el.remove(); const bare = root?.querySelector?.('.mp_bg:not([data-tm])'); if (bare) say(bare, NO_PLACE); return; }
     let want; try { want = JSON.parse(host.dataset.tm); } catch { return; }
-    const spot = spotIn(await loadSpots(), want.city, want.words || []);
-    if (!spot || !host.isConnected) return;
-    let gl; try { gl = await loadLib(); } catch { return; }
+    const S = await loadSpots(), cap = CAPITAL[String(want.cc || '').toLowerCase()];
+    const spot = (want.city && spotIn(S, want.city, want.words || [])) || (cap && S.find(s => s[0] === cap)) || null;
+    if (!spot) return say(host, NO_PLACE);
+    if (!host.isConnected) return;
+    let gl; try { gl = await loadLib(); } catch { return say(host, NO_NET); }
     if (!host.isConnected) return;
     const [slug, , kind, lat, lon] = spot, P = palette(kind, lat), pal = JSON.stringify(P);
     const wx = host.closest('.mp_wx');
@@ -234,8 +241,11 @@ export async function mountTiles(root) {
     const span = /도심/.test(kind) ? 1300 : 1550, w = host.clientWidth || 390;
     const z0 = live.z0 = Math.log2(78271.517 * Math.cos(lat * Math.PI / 180) * w / span);
     // the middle a little above the box's middle: the sheet covers its lower part
-    const map = live.map = new gl.Map({ container: live.el, style: tileStyle(z0, P), center: [lon, lat], zoom: z0, attributionControl: false,
-        localIdeographFontFamily: '-apple-system, "Noto Sans KR", "Hiragino Sans", "PingFang SC", sans-serif', dragRotate: false, pitchWithRotate: false, fadeDuration: 150 });
+    setTimeout(() => { if (live.map === map && !live.ready) say(live.el?.closest('.mp_bg'), NO_NET); }, 9000);
+    let map;
+    try { map = live.map = new gl.Map({ container: live.el, style: tileStyle(z0, P), center: [lon, lat], zoom: z0, attributionControl: false,
+        localIdeographFontFamily: '-apple-system, "Noto Sans KR", "Hiragino Sans", "PingFang SC", sans-serif', dragRotate: false, pitchWithRotate: false, fadeDuration: 150 }); }
+    catch { live.map = null; return say(host, NO_NET); }   // no WebGL
     map.touchZoomRotate.disableRotation();
     if (live.vis < host.clientHeight) map.setPadding({ bottom: host.clientHeight - live.vis });
     const color = getComputedStyle(host).getPropertyValue('--axd').trim() || '#3478f6';
@@ -247,8 +257,9 @@ export async function mountTiles(root) {
     map.once('load', async () => { if (!map.hasImage('vpin')) map.addImage('vpin', await pinImage(color), { pixelRatio: 2 }); });
     map.once('idle', () => {
         if (live.map !== map) return;
+        if (!map.queryRenderedFeatures().length) return say(live.el.closest('.mp_bg'), NO_NET);   // idle with nothing drawn: the tiles did not come
         live.ready = true;
-        const h = live.el.closest('.mp_bg'); h?.classList.add('mp_tiled'); h?.closest('.mp_wx')?.classList.add('mp_tiles');
+        const h = live.el.closest('.mp_bg'); if (h) delete h.dataset.msg; h?.classList.add('mp_tiled'); h?.closest('.mp_wx')?.classList.add('mp_tiles');
         placePins();
     });
     map.on('error', () => { if (!live.ready && live.map === map) { /* the drawn map stays */ } });
