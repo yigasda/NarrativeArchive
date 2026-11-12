@@ -166,7 +166,7 @@ JSON (one object, nothing before or after it)
 ${PHONE_ITEMS}
 }
 Fill each list to about: 10 threads of 6 to 15 messages, 20 calls, 15 photos, 10 notes, 15 searches (3 open at most), 10 events, 6 posts with up to 4 comments,
-10 mails, 8 diary entries, the 12 newest visits. Who they talk to, and how much, follows their character and PEOPLE AROUND.
+10 mails, 8 diary entries, the 30 newest visits. Who they talk to, and how much, follows their character and PEOPLE AROUND.
 Oldest first in every list.
 ${PHONE_LAST}`;
 export const AI_SYS_PHONE_APPS = `GOAL
@@ -205,7 +205,7 @@ JSON (one object, nothing before or after it)
 ${PHONE_ITEMS}
 }
 Fill each list to about: 10 threads of 6 to 15 messages, 20 calls, 15 photos, 10 notes, 15 searches (3 open at most), 10 events, 6 posts with up to 4 comments,
-10 mails, 8 diary entries, the 12 newest visits. Who they talk to, and how much, follows their character and PEOPLE AROUND.
+10 mails, 8 diary entries, the 30 newest visits. Who they talk to, and how much, follows their character and PEOPLE AROUND.
 Oldest first in every list.
 ${PHONE_LAST}`;
 
@@ -1320,7 +1320,7 @@ export async function loreFor(m, owner, skip = null) {
 // 번역 용어집: names as the user wants them, in the Korean and as full names
 export const namesBlock = m => { const g = glossaryEntries(m); return g.length ? `[NAMES]\nHow these names are written. Korean text uses the Korean form; a person's full name is the one given here.\n${g.map(e => `- ${e.src} = ${e.ko}`).join('\n')}` : ''; };
 // 다시 만들기, app by app: which JSON keys each app is drawn from
-export const REMAKE = { msg: ['threads', 'contacts'], call: ['calls'], photo: ['photos'], note: ['notes'], search: ['searches'], cal: ['events'], sns: ['profile', 'posts'], mail: ['mails'], diary: ['diary'] };
+export const REMAKE = { msg: ['threads', 'contacts'], call: ['calls'], photo: ['photos'], note: ['notes'], search: ['searches'], cal: ['events'], sns: ['profile', 'posts'], mail: ['mails'], diary: ['diary'], map: ['visits'] };
 const onlyAsk = keys => `[ONLY THESE]\nThe phone already holds the rest. Write only these keys of the JSON, from the whole story: ${keys.join(', ')}.`;
 // 누가 아는가: what the owner doesn't know (or only suspects) stays off their phone
 export const blindBlock = (m, owner) => {
