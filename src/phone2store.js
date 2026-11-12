@@ -194,12 +194,15 @@ export function ensureRoom(m, members) {
 }
 export const liveRooms = m => Object.values(liveWorld(m)?.messenger?.rooms || {});
 const roomOf = (m, id) => { const r = liveWorld(m)?.messenger?.rooms?.[id]; if (!r) throw new Error('없는 방이에요'); return r; };
-// every messenger message has a number of its own, one count for the whole world (the order they were said in): the
+// every messenger message has a number of its own, one count for the whole world (the order they were said in; after
+// the story's numbers when 폰 2 began from the story): the
 // reflection names a message by it, as 폰 1's names a chat message by its place. Messages from before numbers: numbered
 // once, in the order they were said (a number given is never changed)
 export function numberLive(w) {
     const ms = w.messenger, all = Object.values(ms.rooms || {}).flatMap(r => r.messages || []);
-    let top = Math.max(Number(ms.seq) || 0, ...all.map(x => (Number.isInteger(x.n) ? x.n : 0)));
+    // (a 폰 2 begun from the story counts on from the story's last message: its phones hold records that name the story's
+    // message numbers, and a messenger message with one of those numbers would be taken for that message)
+    let top = Math.max(Number(ms.seq) || 0, Number.isInteger(w.storyUpto) ? w.storyUpto : 0, ...all.map(x => (Number.isInteger(x.n) ? x.n : 0)));
     for (const x of all.filter(x => !Number.isInteger(x.n)).sort((a, b) => (a.at || 0) - (b.at || 0) || String(a.id).localeCompare(String(b.id)))) x.n = ++top;
     ms.seq = top;
     return top;

@@ -320,3 +320,16 @@ test('브라우저 저장: 폰 2는 채팅 · 세계마다 따로 된 키 (폰 1
     L.rememberLiveOwner(m, 'Ivo', scope, off);
     assert.equal(L.readLiveOwner(m, scope, off), 'Ivo');
 });
+
+test('메신저 번호: 이야기에서 시작한 폰 2는 이야기의 마지막 번호 다음부터 (처음부터 시작한 폰 2는 1번부터)', () => {
+    const m = rich();
+    L.startFromStory(m, { persona: 'Lio', upto: 150, story: MARK0 });
+    const r = L.ensureRoom(m, ['Ren']);
+    assert.equal(L.sendLive(m, r.id, 'a').n, 151);
+    r.messages.push({ id: 'x', from: 'Ren', text: 'b', at: Date.now() + 5 });
+    assert.equal(L.sendLive(m, r.id, 'c', Date.now() + 9).n, 153);
+    assert.deepEqual(r.messages.map(x => x.n), [151, 152, 153]);
+    const f = rich();
+    L.startFresh(f, { persona: 'Lio' });
+    assert.equal(L.sendLive(f, L.ensureRoom(f, ['Ren']).id, 'a').n, 1);
+});
