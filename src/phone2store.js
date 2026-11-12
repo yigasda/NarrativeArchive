@@ -1,5 +1,5 @@
 // 폰 2(실시간) 저장 자리 (docs/PHONE2-PLAN.md 단계 1). 폰 1 코드는 이 파일을 부르지 않고, 이 파일도 폰 1 것을
-// 하나도 부르거나 고치지 않아요: 채팅 메타의 m.live 한 칸만 봐요. 아직 화면 · 반영 어디서도 안 불러요.
+// 하나도 부르거나 고치지 않아요: 채팅 메타의 m.live 한 칸만 봐요. 휴대폰 창(phone.js)만 불러요(4-2).
 //
 // m.live = {
 //   v: 1,
@@ -92,6 +92,35 @@ export function putLivePhone(m, p) {
     if (Object.values(m.phones || {}).includes(p)) throw new Error('폰 1의 폰은 폰 2에 넣을 수 없어요');
     w.phones[liveKey(p.owner)] = p;
     return p;
+}
+
+// 폰 2's own drawer, in 폰 1's shape: what a screen is given in place of the chat's metadata while 실시간 is on, so the
+// same screens draw 폰 2 and can't reach 폰 1. Its phones · finance · phoneProfiles · phonePre · phoneLore ·
+// phoneLoreOff · lastPhoneOwner are this world's (reads and writes go there); glossary · glossaryPeople · dateOrder are
+// a copy of 폰 1's (shared, read only: a change stays in the copy); text (the story) is '' until 5단계 gives the part up
+// to storyUpto. Everything else of 폰 1 is not there at all (undefined), and anything written that isn't 폰 2's own stays
+// in the drawer, never in m.
+export const LIVE_OWN = { phones: 'phones', finance: 'finance', phoneProfiles: 'profiles', phonePre: 'pre', phoneLore: 'lore', phoneLoreOff: 'loreOff', lastPhoneOwner: 'lastOwner' };
+export const LIVE_SHARED = ['glossary', 'glossaryPeople', 'dateOrder'];
+const IS_LIVE = Symbol('폰 2 서랍');
+export const isLiveMeta = v => !!(v && typeof v === 'object' && v[IS_LIVE]);
+export function liveMeta(m) {
+    const w = liveWorld(m);
+    if (!w) throw new Error('아직 폰 2가 없어요');
+    const own = k => typeof k === 'string' && Object.hasOwn(LIVE_OWN, k), shared = k => typeof k === 'string' && LIVE_SHARED.includes(k);
+    const drawer = { text: '' }, copies = {};
+    const copy = k => (Object.hasOwn(copies, k) ? copies[k] : (copies[k] = m[k] === undefined ? undefined : structuredClone(m[k])));
+    const at = k => (own(k) ? w[LIVE_OWN[k]] : Object.hasOwn(drawer, k) ? drawer[k] : shared(k) ? copy(k) : undefined);
+    const keys = () => [...new Set([...Object.keys(LIVE_OWN).filter(k => w[LIVE_OWN[k]] !== undefined), ...LIVE_SHARED.filter(k => m[k] !== undefined), ...Object.keys(drawer)])];
+    return new Proxy(drawer, {
+        get: (_, k) => (k === IS_LIVE ? true : typeof k === 'symbol' ? undefined : at(k)),
+        set: (_, k, v) => { if (own(k)) w[LIVE_OWN[k]] = v; else if (shared(k) && !Object.hasOwn(drawer, k)) copies[k] = v; else drawer[k] = v; return true; },
+        deleteProperty: (_, k) => { if (own(k)) w[LIVE_OWN[k]] = undefined; else { delete drawer[k]; if (shared(k)) copies[k] = undefined; } return true; },
+        has: (_, k) => k === IS_LIVE || keys().includes(k),
+        ownKeys: () => keys(),
+        getOwnPropertyDescriptor: (_, k) => (keys().includes(k) ? { value: at(k), writable: true, enumerable: true, configurable: true } : undefined),
+        defineProperty: (_, k, d) => { if ('value' in d) { if (own(k)) w[LIVE_OWN[k]] = d.value; else drawer[k] = d.value; } return true; },
+    });
 }
 
 // 메신저: every room has the persona in it (the persona's own rooms only); people get an account when they first join
