@@ -608,6 +608,7 @@ export function setScreen(p, now, m, ui) {
       <div class="ax_scroll">
         ${axH1('설정')}
         <div class="ax_card"><button type="button" class="ax_rw ax_me" data-go="setwho">${axFace(p.owner, 56)}<span class="ax_tx"><b>${esc(p.owner)}</b><span class="ax_p">${esc(p.profile?.handle || '')}</span></span><span class="ax_v">인물 바꾸기</span>${axChev}</button></div>
+        ${ui.phones ? phoneModes(ui.phones) : ''}
         <div class="ax_sec">화면</div>
         <div class="ax_card">
           <button type="button" class="ax_rw" data-go="settheme">${si('#a699c9', 'palette')}<span class="ax_tx"><span class="ax_n">테마</span></span><span class="ax_v">${p.theme === 'gray' ? '화이트 그레이' : '컬러 젤'}</span>${axChev}</button>
@@ -641,6 +642,14 @@ export function setScreen(p, now, m, ui) {
         <i class="ax_pad"></i>
       </div>
       ${axInd()}`;
+}
+// 설정 › 휴대폰 (docs/mockups/phone2-switch): 타임라인 (폰 1, the story's phone) · 실시간 (폰 2, the live phone), one line
+// under it saying what the chosen one is; with no 실시간 phone yet its side is faint, with a place for 시작하기 (5단계)
+function phoneModes({ live, has, shift }) {
+    const seg = (v, t, on, off) => `<span role="button" tabindex="0" class="ax_pmseg na_ph_pmode${on ? ' on' : ''}${v === 'live' ? ' lv' : ''}${off ? ' off' : ''}" data-v="${v}" aria-pressed="${on}">${t}</span>`;
+    return `<div class="ax_sec">휴대폰</div>
+        <div class="ax_card ax_pmode"><div class="ax_pmsegs">${seg('story', '타임라인', !live, false)}${seg('live', '실시간', live, !has)}</div>${has ? '' : '<div class="ax_pmnone">아직 실시간 폰이 없어요<span class="ax_pmstart">시작하기</span></div>'}</div>
+        <div class="ax_foot">${live ? `지금 내 시각으로 흘러가는 폰이에요. 메신저로 직접 연락해요.${shift ? ` · ${esc(shift)}` : ''}` : '이야기를 따라 흘러가는 폰이에요.'}</div>`;
 }
 // 날짜 및 시간: the phone's date as a real phone shows it; its year is the story's (set here, or none for a story that
 // never dates itself: then no year and no weekday anywhere on the phone)
@@ -901,16 +910,17 @@ export function setRemake(p, now, ui, mForRemake = {}) {
       ${axInd()}`;
 }
 // 인물: whose phone this is; a person only the lorebook knows goes in at the bottom
-export function setWho(p, now, m) {
-    const names = peopleList(m);
+export function setWho(p, now, m, ui = {}) {
+    // 실시간: that phone's people only (ui.phones.names); 타임라인 as before
+    const liveNames = ui.phones?.live ? ui.phones.names || [] : null, names = liveNames || peopleList(m);
     return `${axBar(p, now)}
       ${axTop(axCb('set'))}
       <div class="ax_scroll">
         ${axH1('인물', `${names.length}명`)}
         <div class="ax_card">${names.map(n => { const on = nameKey(n) === nameKey(p.owner); return `
-          <button type="button" class="ax_rw ax_whopick" data-n="${esc(n)}">${axFace(n, 40)}<span class="ax_tx"><span class="ax_n">${esc(n)}</span><span class="ax_p1">${m.phones?.[nameKey(n)] ? '폰 있음' : '아직 폰 없음'}</span></span>${on ? `<span class="ax_radio on">${ax('check', 14, '#fff', 3.4)}</span>` : ''}</button>`; }).join('')}</div>
-        <div class="ax_sec">로어북에만 있는 인물</div>
-        <div class="ax_card"><div class="ax_rw ax_rwn ax_add na_ph_addbox"><input type="text" class="ax_in na_ph_addname" placeholder="이름" enterkeyhint="done"><button type="button" class="ax_addok na_ph_addok">넣기</button></div></div>
+          <button type="button" class="ax_rw ax_whopick" data-n="${esc(n)}">${axFace(n, 40)}<span class="ax_tx"><span class="ax_n">${esc(n)}</span><span class="ax_p1">${liveNames || m.phones?.[nameKey(n)] ? '폰 있음' : '아직 폰 없음'}</span></span>${on ? `<span class="ax_radio on">${ax('check', 14, '#fff', 3.4)}</span>` : ''}</button>`; }).join('')}</div>
+        ${liveNames ? '<div class="ax_foot">실시간 폰에 있는 사람만 보여요.</div>' : `<div class="ax_sec">로어북에만 있는 인물</div>
+        <div class="ax_card"><div class="ax_rw ax_rwn ax_add na_ph_addbox"><input type="text" class="ax_in na_ph_addname" placeholder="이름" enterkeyhint="done"><button type="button" class="ax_addok na_ph_addok">넣기</button></div></div>`}
         <i class="ax_pad"></i>
       </div>
       ${axInd()}`;

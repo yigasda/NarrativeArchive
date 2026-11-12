@@ -7,9 +7,9 @@ import * as L from '../src/phone2store.js';
 const src = f => readFile(new URL(`../src/${f}`, import.meta.url), 'utf8');
 const phone1 = () => ({ phones: { mara: { owner: 'Mara', now: '11-06 09:00', notes: [{ title: 'n', text: 't' }] } }, finance: { accounts: {} }, text: '## a', snapshots: [] });
 
-test('폰 2 저장: the file imports nothing, and no other file imports it yet', async () => {
+test('폰 2 저장: the file imports nothing, and no file but the phone window imports it', async () => {
     assert.doesNotMatch(await src('phone2store.js'), /^\s*import\b/m);
-    for (const f of (await readdir(new URL('../src/', import.meta.url))).filter(f => f.endsWith('.js') && f !== 'phone2store.js'))
+    for (const f of (await readdir(new URL('../src/', import.meta.url))).filter(f => f.endsWith('.js') && f !== 'phone2store.js' && f !== 'phone.js'))   // 4-2: only the phone's window (switch, picker, phone()) may call it
         assert.doesNotMatch(await src(f), /phone2store/, f);
 });
 
