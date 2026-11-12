@@ -9,11 +9,11 @@ const TMP = fs.mkdtempSync('/tmp/claude-0/voicelangs');
 const chev = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#bfc2c7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>';
 const globe = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.5 3.6 5.3 3.6 8.5s-1.1 6-3.6 8.5c-2.5-2.5-3.6-5.3-3.6-8.5s1.1-6 3.6-8.5z"/></svg>';
 const V = {
-  A: { name: 'A. 맨 위에 따로 한 줄', put: `<div class="ax_card mk_card"><button type="button" class="ax_rw"><span class="ax_si" style="background:#8fb0a4">${globe}</span><span class="ax_tx"><span class="ax_n">쓰는 언어</span><span class="ax_p">한국어, English (Deutsch)</span></span>${chev}</button></div>`, where: 'top' },
-  B: { name: 'B. 내가 정한 말투 맨 위', put: `<button type="button" class="ax_rw mk_row"><span class="mk_me">M</span><span class="ax_tx"><span class="ax_n">Mara · 쓰는 언어</span><span class="ax_p">한국어, English (Deutsch)</span></span>${chev}</button>`, where: 'mine' },
-  C: { name: 'C. 이야기에서 뽑기 아래 작은 줄', put: `<div class="ax_foot mk_foot">쓰는 언어 · 한국어, English (Deutsch) <span class="ax_blue">바꾸기</span></div>`, where: 'afterpick' },
+  A: { name: '1a. 나 줄 · 말투 없음', sub: '말투 없음', who: 'Mara' },
+  B: { name: '1b. 나 줄 · 쓰는 언어를 보조 줄로', sub: '한국어, English (Deutsch)', who: 'Mara' },
+  C: { name: '1c. 나 줄 · 이름 옆에 나', sub: '말투 없음', who: 'Mara', me: true },
 };
-const CSS = `.mk_me{width:36px;height:36px;border-radius:50%;display:inline-grid;place-items:center;flex:none;background:#c98f6a;color:#fff;font-weight:700;font-size:15px}.ax .mk_row{width:100%}`;
+const CSS = `.mk_tag{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;background:#e2e9f5;color:#2c4a80;font-size:11px;font-weight:600;vertical-align:1px}.mk_dim{color:#a2a7af!important}.mk_me{width:36px;height:36px;border-radius:50%;display:inline-grid;place-items:center;flex:none;background:#c98f6a;color:#fff;font-weight:700;font-size:15px}.ax .mk_row{width:100%}`;
 (async () => {
   const s = await open('light', { out: TMP });
   try {
@@ -23,10 +23,12 @@ const CSS = `.mk_me{width:36px;height:36px;border-radius:50%;display:inline-grid
       await s.to('setvoice');
       await s.p.evaluate(([CSS, x]) => {
         if (!document.getElementById('mk_css')) { const st = document.createElement('style'); st.id = 'mk_css'; st.textContent = CSS; document.head.append(st); }
-        const sc = document.querySelector('.na_ph_frame .ax_scroll'), cards = sc.querySelectorAll(':scope > .ax_card');
-        if (x.where === 'top') cards[0].insertAdjacentHTML('beforebegin', x.put);
-        if (x.where === 'afterpick') cards[0].insertAdjacentHTML('afterend', x.put);
-        if (x.where === 'mine') cards[1].insertAdjacentHTML('afterbegin', x.put);
+        // (지금 화면의 진짜 줄(Ren)을 복사해서 폰 주인 줄로: 같은 얼굴 · 같은 글자)
+        const sc = document.querySelector('.na_ph_frame .ax_scroll'), cards = sc.querySelectorAll(':scope > .ax_card'), ren = cards[1].firstElementChild, me = ren.cloneNode(true);
+        me.querySelectorAll('.ax_n').forEach(e => { e.textContent = x.who; if (x.me) e.insertAdjacentHTML('beforeend', ' <span class="mk_tag">나</span>'); });
+        const sub = me.querySelector('.ax_p, .ax_kvp'); if (sub) { sub.textContent = x.sub; sub.classList.add('mk_dim'); }
+        const face = me.querySelector('.ax_avc'); if (face) { face.textContent = 'M'; face.style.background = '#c98f6a'; }
+        cards[1].insertBefore(me, ren);
       }, [CSS, V[v]]);
       await s.p.waitForTimeout(250); shots[v] = await s.shot('voice_' + v);
     }
