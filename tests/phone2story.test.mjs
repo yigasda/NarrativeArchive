@@ -100,3 +100,14 @@ test('서랍의 text: 폰 2가 아는 이야기만, 쓰면 서랍에만', () => 
     assert.ok(Object.keys(v).includes('text'));
     assert.equal(w, L.liveWorld(m));
 });
+
+test('분기한 채팅에 폰 2가 시작한 번호가 있는지 (알려 주기만 해요, 지우지 않아요)', () => {
+    const m = meta(), w = begun(m, 150), was = JSON.stringify(m.live);
+    assert.equal(S.liveFitsChat(w, 150), true);
+    assert.equal(S.liveFitsChat(w, 300), true);
+    assert.equal(S.liveFitsChat(w, 100), false);
+    assert.equal(S.liveFitsChat(w, undefined), false);
+    assert.equal(S.liveFitsChat(null, 3), true);
+    assert.equal(S.liveFitsChat(L.startFresh(meta(), { persona: 'Lio' }), 0), true);
+    assert.equal(JSON.stringify(m.live), was);
+});

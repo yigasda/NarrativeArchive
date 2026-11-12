@@ -67,6 +67,11 @@ export function liveRawRange(w) {
     return from <= to ? { from, to } : null;
 }
 
+// does this chat still hold what 폰 2 began from? false when the chat ends before the message it began at (a branch
+// taken from an earlier message): its numbers are not this chat's. Only says so; what to do is the user's choice
+// (그대로 두기 · 대화만 남기기 · 통째로 지우기, phone2store resetLive). lastIndex: the chat's last message number
+export const liveFitsChat = (w, lastIndex) => !w || w.from !== 'story' || !Number.isInteger(w.storyUpto) || (Number.isInteger(lastIndex) && w.storyUpto <= lastIndex);
+
 // 이야기에서 시작: 폰 2 begun at message `upto` (the newest one), with its mark of the story then; the one way to begin
 // from the story (startFromStory alone refuses without a mark)
 export const beginFromStory = (m, { persona, upto, scope = '', dayShift = 0, now = Date.now() } = {}) =>
