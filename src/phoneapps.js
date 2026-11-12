@@ -1108,6 +1108,10 @@ export const mapFindBtn = () => `<button type="button" class="ax_cb mq_cb" data-
 export const mapFindRow = () => `<button type="button" class="ax_rw ax_place" data-go="mapq"><span class="ax_si" style="background: var(--axd)">${ax('search', 17, '#fff', 2.4)}</span><span class="ax_tx"><span class="ax_n" style="color: var(--axd); --axfg: var(--axd)">다른 도시 · 동네 찾기</span><span class="ax_p1">東京, Berlin, 홍대 … 어느 말로든</span></span>${axChev}</button>`;
 // the town's flag before its name (a town the city table knows)
 const townFlag = city => { const i = city ? townPlace(city) : -1; return i >= 0 && PLACE[i][3] ? flagSvg(PLACE[i][3], 22) : ''; };
+// a map box's place for the tile map (phonetilemap.js): the town, words naming its neighbourhood, the visits to pin
+export const tileAt = (city, words = [], pins = []) => (city ? ` data-tm="${esc(JSON.stringify({ city, words: words.slice(0, 12), pins: pins.slice(0, 7) }))}"` : '');
+// the tile map's credit (ODbL, always in sight): on the sheet's top edge, shown only while the tile map is there
+export const TILE_CREDIT = '<a class="mp_credit" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenMapTiles © OpenStreetMap contributors</a>';
 export function mapScreen(p, now, m, pick = '') {
     const { pl, groups, kinds } = mapTowns(p, m);
     const who = r => (r.with.length ? ` · ${esc(r.with.length > 2 ? `${r.with[0]} 외 ${r.with.length - 1}명` : r.with.join(' · '))}${r.with.length > 2 ? '과' : waOf(m, r.with[r.with.length - 1])}` : '');
@@ -1117,15 +1121,15 @@ export function mapScreen(p, now, m, pick = '') {
     // the town on the map: the one picked (a stay on the strip, a row under "다른 곳"), else where they were last
     const g = groups.find(x => x.k === pick) || groups[0];
     // a night map when they were last there at night
-    const kind = kinds.get(g.k || `~${p.owner}`), dark = mapNight(g, p.now);
+    const kind = kinds.get(g.k || `~${p.owner}`), dark = false;   // 밤 지도는 뺐어요(11-12)
     const shown = g.rows.slice(0, 7), W = 390, H = 430;
     const pins = pinSpots(shown.map(r => r.place), W, 150, 340).map(([x, y], k) => pinSvg(x, y, shown[k].place, dark)).join('');
     const art = `<svg class="mp_art" viewBox="0 0 ${W} ${H}" width="100%" aria-hidden="true" data-z="${esc(`${kind}~${g.k}`)}">${townSvg(kind, W, H, g.k || p.owner, dark, g.rows.map(r => r.place).join(' '))}</svg>${pinLayer(W, H, pins)}`;
     const lastDay = g.rows.map(r => r.day).filter(Boolean).sort(storyCmp(p.now)).at(-1);
     const others = groups.filter(x => x !== g);
     const other = others.length ? `<div class="ax_sec">다른 곳</div><div class="ax_card">${others.map(x => `<button type="button" class="ax_rw ax_place" data-go="map" data-i="${esc(x.k)}"><span class="ax_si" style="background: var(--axc)">${ax('pindot', 17, 'var(--axd)', 2.2)}</span><span class="ax_tx"><span class="ax_n">${esc(x.city || '그 밖의 곳')}</span><span class="ax_p1">${x.rows.length}곳</span></span>${axChev}</button>`).join('')}</div>` : '';
-    return `<div class="mp_wx${dark ? ' mp_dark' : ''}"><div class="mp_bg">${art}</div>${axBar(p, now, dark ? '#fff' : '#111')}${axTop(axCb('home'), mapFindBtn())}
-      <div class="ax_scroll"><i class="mp_gap"></i><div class="mp_sheet"><i class="mp_grab"></i>
+    return `<div class="mp_wx${dark ? ' mp_dark' : ''}"><div class="mp_bg"${tileAt(g.city, g.rows.map(r => r.place), shown.map(r => r.place))}>${art}</div>${axBar(p, now, dark ? '#fff' : '#111')}${axTop(axCb('home'), mapFindBtn())}
+      <div class="ax_scroll"><i class="mp_gap"></i><div class="mp_sheet"><i class="mp_grab"></i>${TILE_CREDIT}
         ${mapStrip(p, now, m, pl, g.k)}
         <div class="mp_th">${townFlag(g.city)}<b>${esc(g.city || '그 밖의 곳')}</b><span>${g.rows.length}곳${lastDay ? ` · 마지막 ${esc(fmtDate(p, lastDay))}` : ''}</span></div>
         <div class="ax_card">${g.rows.map(rowHtml).join('')}</div>${other}<div class="ax_card">${mapFindRow()}</div><i class="ax_pad"></i></div></div>

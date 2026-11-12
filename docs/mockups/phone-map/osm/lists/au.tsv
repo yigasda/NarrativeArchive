@@ -1,0 +1,86 @@
+slug	받기	종류	이름	찾기	lat	lon	표 동네
+sydney-circularquay	o	바다	시드니 서큘러 키 · 더 록스	Circular Quay, Sydney	-33.8600	151.2100	시드니: 서큘러 키 · 더 록스
+sydney-bondi	o	바다	시드니 본다이	Bondi Beach	-33.8910	151.2770	시드니: 본다이
+sydney-surryhills	o	도심	시드니 서리 힐스	Surry Hills, Sydney	-33.8860	151.2110	시드니: 서리 힐스
+sydney-newtown	o	도심	시드니 뉴타운	King Street, Newtown	-33.8970	151.1790	시드니: 뉴타운
+sydney-darlingharbour	o	도심	시드니 달링 하버	Darling Harbour, Sydney	-33.8740	151.2000	시드니: 달링 하버
+sydney-manly	o	바다	시드니 맨리	Manly Beach	-33.7970	151.2880	시드니: 맨리
+sydney-paddington	o	교외	시드니 패딩턴	Paddington, Sydney	-33.8840	151.2280	
+sydney-balmain	o	교외	시드니 발메인	Balmain, Sydney	-33.8580	151.1790	
+sydney-coogee	o	바다	시드니 쿠지	Coogee Beach	-33.9200	151.2570	
+sydney-cronulla	o	바다	시드니 크로눌라	Cronulla Beach	-34.0570	151.1530	
+sydney-parramatta	o	도심	시드니 패러매타	Parramatta, Sydney	-33.8150	151.0030	
+sydney-chatswood	o	교외	시드니 채스우드	Chatswood, Sydney	-33.7970	151.1810	
+sydney-blacktown	o	교외	시드니 블랙타운 교외	Blacktown, Sydney	-33.7690	150.9060	
+sydney-olympicpark	o	일터	시드니 올림픽 공원	Sydney Olympic Park	-33.8470	151.0630	
+sydney-airport	o	공항	시드니 공항	Sydney Airport	-33.9399	151.1753	
+melbourne-fitzroy	o	도심	멜버른 피츠로이 · 칼턴	Brunswick Street, Fitzroy	-37.8000	144.9730	멜버른: 피츠로이 · 칼턴
+melbourne-stkilda	o	바다	멜버른 세인트킬다	St Kilda Beach	-37.8670	144.9800	멜버른: 세인트킬다
+melbourne-southbank	o	도심	멜버른 사우스뱅크	Southbank, Melbourne	-37.8230	144.9640	멜버른: 사우스뱅크
+melbourne-cbd	o	도심	멜버른 시내 골목	Flinders Street Station	-37.8136	144.9631	
+melbourne-richmond	o	교외	멜버른 리치먼드	Richmond, Melbourne	-37.8230	144.9980	
+melbourne-brunswick	o	교외	멜버른 브런즈윅	Sydney Road, Brunswick	-37.7670	144.9600	
+melbourne-brighton	o	바다	멜버른 브라이턴 비치 오두막	Brighton Bathing Boxes	-37.9180	144.9870	
+melbourne-boxhill	o	교외	멜버른 박스힐 교외	Box Hill, Melbourne	-37.8190	145.1210	
+melbourne-airport	o	공항	멜버른 공항	Melbourne Airport	-37.6690	144.8410	
+brisbane	o	도심	브리즈번 사우스뱅크	South Bank, Brisbane	-27.4790	153.0220	
+perth	o	도심	퍼스 시내	Perth CBD	-31.9520	115.8600	
+fremantle	o	바다	프리맨틀	Fremantle	-32.0560	115.7470	
+adelaide	o	도심	애들레이드 시내	Rundle Mall, Adelaide	-34.9230	138.6010	
+hobart	o	바다	호바트 살라망카	Salamanca Place, Hobart	-42.8870	147.3330	
+darwin	o	바다	다윈 해안	Darwin Waterfront	-12.4650	130.8450	
+canberra	o	도심	캔버라 시빅	Civic, Canberra	-35.2810	149.1300	
+goldcoast	o	바다	골드코스트 서퍼스 파라다이스	Surfers Paradise	-28.0020	153.4310	
+cairns	o	바다	케언스 해안	Cairns Esplanade	-16.9190	145.7780	
+newcastle-nsw	o	바다	뉴캐슬(호주)	Newcastle Beach, NSW	-32.9270	151.7800	
+wollongong	o	바다	울런공	Wollongong	-34.4250	150.8930	
+geelong	o	바다	질롱	Geelong Waterfront	-38.1490	144.3600	
+townsville	o	바다	타운즈빌	Townsville	-19.2580	146.8170	
+mooloolaba	o	바다	선샤인코스트 물루라바	Mooloolaba	-26.6800	153.1190	
+katoomba	o	산	블루마운틴 카툼바	Katoomba	-33.7120	150.3110	
+pokolbin	o	시골	헌터 밸리 포도밭	Pokolbin	-32.7860	151.2880	
+byronbay	o	바다	바이런 베이	Byron Bay	-28.6440	153.6120	
+noosa	o	바다	누사	Noosa Heads	-26.3940	153.0900	
+airliebeach	o	바다	휫선데이 에얼리 비치	Airlie Beach	-20.2680	148.7180	
+hamiltonisland	o	섬	해밀턴섬	Hamilton Island	-20.3490	148.9560	
+portdouglas	o	바다	포트더글러스	Port Douglas	-16.4840	145.4650	
+capetribulation	o	숲	데인트리 케이프 트리뷸레이션	Cape Tribulation	-16.0870	145.4600	
+magneticisland	o	섬	마그네틱섬	Horseshoe Bay, Magnetic Island	-19.1240	146.8540	
+kgari	o	섬	크가리(프레이저섬)	Kingfisher Bay	-25.3880	153.0280	
+yulara	o	시골	울루루 율라라	Yulara	-25.2400	130.9850	
+alicesprings	o	시골	앨리스스프링스	Alice Springs	-23.6980	133.8810	
+cooberpedy	o	시골	쿠버페디 지하 마을	Coober Pedy	-29.0130	134.7550	
+brokenhill	o	시골	브로큰힐 광산 마을	Broken Hill	-31.9530	141.4530	
+katherine	o	시골	캐서린	Katherine, Northern Territory	-14.4650	132.2630	
+jabiru	o	숲	카카두 자비루	Jabiru	-12.6700	132.8350	
+kingscote	o	섬	캥거루섬 킹스코트	Kingscote	-35.6560	137.6380	
+tanunda	o	시골	바로사 밸리 타눈다	Tanunda	-34.5240	138.9600	
+margaretriver	o	시골	마거릿 리버	Margaret River	-33.9530	115.0750	
+lorne	o	바다	그레이트 오션 로드 론	Lorne	-38.5420	143.9750	
+apollobay	o	바다	아폴로 베이	Apollo Bay	-38.7590	143.6700	
+portcampbell	o	바다	12사도 포트캠벨	Port Campbell	-38.6200	142.9940	
+cowes-phillip	o	섬	필립섬 카우스	Cowes, Phillip Island	-38.4520	145.2390	
+healesville	o	시골	야라 밸리 힐스빌	Healesville	-37.6540	145.5150	
+daylesford	o	온천	데일스퍼드	Daylesford	-37.3420	144.1430	
+ballarat	o	옛마을	밸러랫 소버린 힐	Sovereign Hill	-37.5660	143.8620	
+bendigo	o	옛마을	벤디고	Bendigo	-36.7570	144.2790	
+bright	o	산	브라이트	Bright, Victoria	-36.7300	146.9600	
+mtbuller	o	산	마운트 불러	Mount Buller Village	-37.1460	146.4380	
+thredbo	o	산	스레드보	Thredbo	-36.5050	148.3060	
+lakesentrance	o	호수	레이크스 엔트런스	Lakes Entrance	-37.8810	147.9950	
+launceston	o	도심	론서스턴	Launceston	-41.4380	147.1380	
+colesbay	o	바다	프레이시넷 콜스 베이	Coles Bay	-42.1240	148.2850	
+portarthur	o	옛마을	포트아서	Port Arthur	-43.1480	147.8510	
+strahan	o	바다	스트래핸	Strahan	-42.1530	145.3270	
+broome	o	바다	브룸 케이블 비치	Cable Beach, Broome	-17.9330	122.2100	
+rottnest	o	섬	로트네스트섬	Rottnest Island	-32.0000	115.5400	
+exmouth	o	바다	엑스머스	Exmouth, Western Australia	-21.9300	114.1270	
+monkeymia	o	바다	몽키 마이어	Monkey Mia	-25.7930	113.7180	
+albany	o	바다	올버니(호주)	Albany, Western Australia	-35.0270	117.8840	
+esperance	o	바다	에스퍼런스	Esperance	-33.8610	121.8910	
+huskisson	o	바다	저비스 베이 허스키슨	Huskisson	-35.0400	150.6700	
+kiama	o	바다	카이아마	Kiama	-34.6710	150.8540	
+bowral	o	시골	보럴	Bowral	-34.4790	150.4180	
+mudgee	o	시골	머지	Mudgee	-32.5950	149.5870	
+lordhowe	o	섬	로드하우섬	Lord Howe Island	-31.5200	159.0700	
+porthedland	o	일터	포트헤드랜드 광산 항구	Port Hedland	-20.3110	118.6050	

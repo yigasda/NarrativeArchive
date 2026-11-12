@@ -29,6 +29,7 @@ import { mapCityScreen, mapEmptyScreen, mapResults, mapSearchScreen } from './ph
 import { placeNames } from './phonemapfind.js';
 import { FLAG_NAME, flagSvg } from './phoneflags.js';
 import { mapZoom } from './phonemapzoom.js';
+import { tileWatch } from './phonetilemap.js';
 import { glossaryEntries, openGlossary } from './translate.js';
 import { dropVoice, fillKo, koAppOf, koScopeOf, labelVoices, learnVoices, pickVoices, redoKo, roundScope } from './phonetr.js';
 // 을 / 를 after a word: by its last syllable's final consonant (a Latin ending, like SNS, reads as 를)
@@ -1114,6 +1115,7 @@ export async function openPhone(who = null) {
         sw = null;
     });
     mapZoom($root[0]);
+    tileWatch($root[0]);
     $root[0].addEventListener('click', e => {
         const r = e.target.closest?.('.ax_swp > .ax_rw');
         if (!r) { if (!e.target.closest?.('.ax_swdel')) swClose(); swMoved = false; return; }

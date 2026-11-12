@@ -1,0 +1,98 @@
+slug	받기	종류	이름	찾기	lat	lon	표 동네
+berlin-mitte	o	도심	베를린 미테	Alexanderplatz, Berlin	52.5205	13.4060	베를린: 미테 · 알렉산더플라츠
+berlin-schoeneberg	o	도심	베를린 쇠네베르크	Schöneberg, Berlin	52.4880	13.3530	베를린: 쇠네베르크
+berlin-potsdamerplatz	x	도심	(있음)				베를린: 브란덴부르크 문
+berlin-charlottenburg	x	도심	(있음)				베를린: 쿠담
+muenchen-marienplatz	o	도심	뮌헨 마리엔플라츠	Marienplatz, München	48.1374	11.5755	뮌헨: 마리엔플라츠
+muenchen-maxvorstadt	o	도심	뮌헨 막스포어슈타트	Maxvorstadt, München	48.1500	11.5700	뮌헨: 막스포어슈타트
+muenchen-glockenbach	o	도심	뮌헨 글로켄바흐	Glockenbachviertel, München	48.1300	11.5700	뮌헨: 글로켄바흐
+muenchen-haidhausen	o	도심	뮌헨 하이트하우젠	Haidhausen, München	48.1300	11.5950	뮌헨: 하이트하우젠
+muenchen-bogenhausen	o	교외	뮌헨 보겐하우젠	Bogenhausen, München	48.1500	11.6150	뮌헨: 보겐하우젠
+frankfurt-westend	o	도심	프랑크푸르트 베스트엔트	Westend-Süd, Frankfurt am Main	50.1180	8.6600	프랑크푸르트: 베스트엔트
+frankfurt-sachsenhausen	o	도심	프랑크푸르트 작센하우젠	Sachsenhausen, Frankfurt am Main	50.0990	8.6800	프랑크푸르트: 작센하우젠
+frankfurt-bockenheim	o	도심	프랑크푸르트 보켄하임	Bockenheim, Frankfurt am Main	50.1210	8.6450	프랑크푸르트: 보켄하임
+frankfurt-nordend	o	도심	프랑크푸르트 노르트엔트	Nordend, Frankfurt am Main	50.1250	8.6900	프랑크푸르트: 노르트엔트
+frankfurt-ostend	o	도심	프랑크푸르트 오스트엔트	Ostend, Frankfurt am Main	50.1130	8.7050	프랑크푸르트: 오스트엔트
+frankfurt-altstadt	x	도심	(있음)				프랑크푸르트: 차일 · 뢰머
+frankfurt-bankenviertel	x	도심	(있음)				프랑크푸르트: 반호프스피어텔
+frankfurt-flughafen	o	공항	프랑크푸르트 공항	Flughafen Frankfurt am Main	50.0379	8.5622	프랑크푸르트: 프랑크푸르트공항
+hamburg-stpauli	x	도심	(있음)				함부르크: 슈테른샨체
+hamburg-eimsbuettel	o	도심	함부르크 아임스뷔텔	Eimsbüttel, Hamburg	53.5750	9.9550	함부르크: 아임스뷔텔
+koeln-dom	o	도심	쾰른 대성당	Kölner Dom	50.9413	6.9583	
+koeln-ehrenfeld	o	도심	쾰른 에렌펠트	Ehrenfeld, Köln	50.9500	6.9170	쾰른: 에렌펠트
+koeln-deutz	o	도심	쾰른 도이츠	Deutz, Köln	50.9370	6.9750	쾰른: 도이츠
+leipzig-zentrum	o	도심	라이프치히 시내	Markt, Leipzig	51.3400	12.3740	
+nuernberg-altstadt	o	도심	뉘른베르크 옛 시내	Hauptmarkt, Nürnberg	49.4540	11.0770	
+luebeck-altstadt	o	도심	뤼베크 옛 시내	Altstadt, Lübeck	53.8660	10.6870	
+berlin-gropiusstadt	o	교외	베를린 그로피우스슈타트(아파트 단지)	Gropiusstadt, Berlin	52.4245	13.4630	
+berlin-zehlendorf	o	교외	베를린 첼렌도르프(주택가)	Zehlendorf, Berlin	52.4340	13.2590	
+berlin-spandau	o	도심	베를린 슈판다우 옛 시내	Altstadt Spandau, Berlin	52.5360	13.2040	
+berlin-tempelhof	o	교외	베를린 템펠호프 들판	Tempelhofer Feld, Berlin	52.4735	13.4030	
+berlin-flughafen	o	공항	베를린 공항(BER)	Flughafen Berlin Brandenburg	52.3667	13.5033	
+muenchen-neuperlach	o	교외	뮌헨 노이페를라흐(아파트 단지)	Neuperlach, München	48.1000	11.6460	
+muenchen-flughafen	o	공항	뮌헨 공항	Flughafen München	48.3538	11.7861	
+muenchen-allianzarena	o	교외	뮌헨 알리안츠 아레나 둘레	Allianz Arena, München	48.2188	11.6247	
+hamburg-wilhelmsburg	o	교외	함부르크 빌헬름스부르크	Wilhelmsburg, Hamburg	53.4990	10.0080	
+hamburg-containerhafen	o	일터	함부르크 컨테이너 항구	Waltershof, Hamburg	53.5300	9.9300	
+bremerhaven-havenwelten	o	바다	브레머하펜 항구	Havenwelten, Bremerhaven	53.5420	8.5780	
+wolfsburg-autostadt	o	일터	볼프스부르크 자동차 공장	Autostadt, Wolfsburg	52.4300	10.7950	
+ludwigshafen-basf	o	일터	루트비히스하펜 화학 공장	BASF, Ludwigshafen	49.5050	8.4250	
+duisburg-ruhrort	o	일터	뒤스부르크 강 항구	Ruhrort, Duisburg	51.4550	6.7350	
+essen-zollverein	o	일터	에센 촐페라인 탄광	Zeche Zollverein, Essen	51.4865	7.0440	
+aachen-zentrum	o	도심	아헨 시내 · 대학	Aachener Dom	50.7747	6.0839	
+garching-campus	o	일터	가르힝 대학 캠퍼스	Forschungszentrum Garching	48.2650	11.6710	
+karlsruhe-schloss	o	도심	카를스루에 성 · 부채꼴 시내	Schloss Karlsruhe	49.0135	8.4044	
+koeln-lindenthal	o	교외	쾰른 린덴탈(주택가)	Lindenthal, Köln	50.9300	6.9150	
+stuttgart-killesberg	o	교외	슈투트가르트 킬레스베르크(언덕 주택가)	Killesberg, Stuttgart	48.8000	9.1650	
+leipzig-gruenau	o	교외	라이프치히 그뤼나우(아파트 단지)	Grünau, Leipzig	51.3150	12.2830	
+dresden-blasewitz	o	교외	드레스덴 블라제비츠(강가 주택가)	Blasewitz, Dresden	51.0520	13.8080	
+potsdam-babelsberg	o	교외	포츠담 바벨스베르크	Babelsberg, Potsdam	52.3920	13.0950	
+hannover-messe	o	일터	하노버 박람회장	Messegelände Hannover	52.3200	9.8100	
+duesseldorf-flughafen	o	공항	뒤셀도르프 공항	Flughafen Düsseldorf	51.2870	6.7660	
+berchtesgaden	o	산	베르히테스가덴	Berchtesgaden	47.6310	13.0010	
+schoenau-koenigssee	o	호수	쾨니히스제	Schönau am Königssee	47.5900	12.9870	
+oberstdorf	o	산	오버스트도르프	Oberstdorf	47.4097	10.2797	
+mittenwald	o	산	미텐발트	Mittenwald	47.4420	11.2620	
+oberammergau	o	산	오버아머가우	Oberammergau	47.5980	11.0670	
+hohenschwangau	o	옛마을	노이슈반슈타인 아래 마을	Hohenschwangau, Schwangau	47.5555	10.7385	
+tegernsee	o	호수	테게른제	Tegernsee	47.7120	11.7580	
+schliersee	o	호수	슐리어제	Schliersee	47.7360	11.8600	
+prien-chiemsee	o	호수	킴제 프린	Prien am Chiemsee	47.8560	12.3460	
+lindau-insel	o	섬	린다우 섬	Lindau (Bodensee) Insel	47.5460	9.6830	
+konstanz-altstadt	o	호수	콘스탄츠 호숫가 시내	Altstadt, Konstanz	47.6600	9.1750	
+meersburg	o	호수	메어스부르크	Meersburg	47.6930	9.2710	
+starnberg	o	호수	슈타른베르크	Starnberg	47.9990	11.3420	
+waren-mueritz	o	호수	뮈리츠 호숫가 바렌	Waren (Müritz)	53.5180	12.6810	
+binz-ruegen	o	바다	뤼겐섬 빈츠	Binz	54.4020	13.6100	
+warnemuende	o	바다	바르네뮌데	Warnemünde, Rostock	54.1780	12.0830	
+heiligendamm	o	바다	하일리겐담	Heiligendamm	54.1450	11.8430	
+norderney	o	섬	노르더나이 섬	Norderney	53.7080	7.1500	
+helgoland	o	섬	헬골란트 섬	Helgoland	54.1810	7.8860	
+sankt-peter-ording	o	바다	장크트 페터오르딩	Sankt Peter-Ording	54.3070	8.6330	
+timmendorfer-strand	o	바다	티멘도르퍼 해변	Timmendorfer Strand	53.9930	10.7780	
+list-sylt	o	섬	질트섬 리스트 항구	List auf Sylt	55.0170	8.4300	
+greetsiel	o	바다	그레트질 어촌	Greetsiel	53.5010	7.0960	
+ahlbeck-usedom	o	바다	우제돔섬 알베크	Ahlbeck, Heringsdorf	53.9380	14.1920	
+burg-fehmarn	o	섬	페마른섬 부르크	Burg auf Fehmarn	54.4380	11.1950	
+cochem	o	강골짜기	모젤 강 코헴	Cochem	50.1460	7.1670	
+bernkastel-kues	o	강골짜기	모젤 강 베른카스텔	Bernkastel-Kues	49.9160	7.0700	
+bacharach	o	강골짜기	라인 골짜기 바하라흐	Bacharach	50.0580	7.7690	
+sankt-goarshausen	o	강골짜기	로렐라이 아래 마을	Sankt Goarshausen	50.1530	7.7180	
+deidesheim	o	시골	포도밭 마을 다이데스하임	Deidesheim	49.4080	8.1850	
+volkach	o	시골	마인 강 포도밭 마을 폴카흐	Volkach	49.8650	10.2270	
+quedlinburg	o	옛마을	크베들린부르크	Quedlinburg	51.7890	11.1410	
+dinkelsbuehl	o	옛마을	딩켈스뷜(성벽 마을)	Dinkelsbühl	49.0690	10.3190	
+wernigerode	o	옛마을	베르니게로데	Wernigerode	51.8350	10.7850	
+monschau	o	옛마을	몬샤우 골짜기 마을	Monschau	50.5550	6.2400	
+burg-eltz	o	숲	엘츠 성 숲	Burg Eltz	50.2056	7.3367	
+bad-kissingen	o	온천	바트 키싱엔	Bad Kissingen	50.2000	10.0770	
+bad-reichenhall	o	온천	바트 라이헨할	Bad Reichenhall	47.7250	12.8770	
+schierke-harz	o	숲	하르츠 숲속 마을 시르케	Schierke	51.7650	10.6650	
+triberg	o	숲	슈바르츠발트 트리베르크	Triberg im Schwarzwald	48.1300	8.2320	
+titisee	o	호수	티티제	Titisee-Neustadt	47.9000	8.1550	
+undeloh-heide	o	시골	뤼네부르크 황야 운델로	Undeloh	53.1960	9.9770	
+luebbenau-spreewald	o	시골	슈프레발트 물길 마을	Lübbenau/Spreewald	51.8670	13.9650	
+worpswede	o	시골	보릅스베데(늪 · 화가 마을)	Worpswede	53.2200	8.9300	
+pfronten	o	시골	알고이 농가 마을 프론텐	Pfronten	47.5800	10.5600	
+kurort-rathen	o	산	작센 스위스 라텐	Kurort Rathen	50.9580	14.0820	
+bodenmais	o	숲	바이에른 숲 보덴마이스	Bodenmais	49.0660	13.1030	

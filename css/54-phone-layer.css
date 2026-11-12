@@ -76,6 +76,11 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax 
 .ax .ax_cb.mq_cb, .ax .mp_dark .ax_cb.mq_cb { --axbg: var(--axd); --axsh: 0 1px 2px rgba(22, 27, 34, 0.08), 0 4px 12px color-mix(in srgb, var(--axd) 35%, transparent); color: #fff; --axfg: #fff; }
 .mp_gap { display: block; height: 266px; flex: none; touch-action: pan-y; }
 .mp_sheet { flex: 1 0 auto; padding-top: 8px; background: #f4f5f7; border-radius: 22px 22px 0 0; box-shadow: 0 -6px 24px rgba(22, 27, 34, 0.14); display: flex; flex-direction: column; }
+/* the tile map (phonetilemap.js): one MapLibre map moved into the map box on screen, over the drawn map (which stays when it cannot draw) */
+.mp_bg > .mp_tile, .mp_bg > .mp_tile.maplibregl-map { position: absolute; inset: 0; z-index: 1; } .mp_bg.mp_tiled > :is(.mp_art, .mp_pins, .mp_pic) { visibility: hidden; } .mp_sheet { position: relative; } .mp_credit { display: none; }
+.ax .mp_wx.mp_tiles > .ax_scroll { pointer-events: none; } .ax .mp_wx.mp_tiles .mp_sheet, .ax .mp_wx.mp_tiles .mp_sheet * { pointer-events: auto; }
+.mp_gap { transition: height 0.28s ease; } .ax .mp_wx > .mp_up { position: absolute; left: 50%; bottom: 34px; transform: translateX(-50%); z-index: 4; display: flex; align-items: center; gap: 6px; height: 36px; padding: 0 16px; border: 0; border-radius: 999px; --axr: 999px; --axbg: rgba(255, 255, 255, 0.96); --axsh: 0 1px 2px rgba(22, 27, 34, 0.06), 0 6px 16px rgba(22, 27, 34, 0.16); color: #161b22; --axfg: #161b22; font-size: 13px; --axfs: 13px; font-weight: 600; cursor: pointer; } .ax .mp_wx.mp_low > .ax_scroll { overflow: hidden; } .mp_wx.mp_low .mp_bg.mp_tiled { height: 100%; }
+.ax .mp_tiles .mp_credit { display: block; position: absolute; right: 12px; top: -15px; font-size: 8.5px; --axfs: 8.5px; line-height: 1; font-weight: 500; color: #8a8f98; --axfg: #8a8f98; text-decoration: none; text-shadow: 0 0 2px #fff, 0 0 2px #fff; white-space: nowrap; } .ax .mq_one.mp_tiles .mp_credit { top: -16px; right: 2px; } .ax .mp_low.mp_tiles .mp_credit { top: -84px; }
 .mp_grab { display: block; width: 38px; height: 5px; border-radius: 3px; background: #cfd4dc; margin: 0 auto 12px; flex: none; }
 .mp_month { padding: 16px 18px 0; }
 .mp_lbl { display: block; font-size: 12px; --axfs: 12px; color: #6b7380; --axfg: #6b7380; }
@@ -777,12 +782,11 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .mq_ct { display: flex; align-items: center; gap: 8px; font-size: 13px; --axfs: 13px; color: #6b7380; --axfg: #6b7380; }
 .mq_tl { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 3px; }
 .mq_tl b { font-size: 28px; --axfs: 28px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.2; }
-.ax .mq_dn { height: 32px; padding: 0 12px; border-radius: 999px; --axr: 999px; --axbg: #e9ecf0; --axsh: none; font-size: 12.5px; --axfs: 12.5px; font-weight: 600; color: #2a313b; --axfg: #2a313b; white-space: nowrap; flex: none; }
 .mq_nm { font-size: 12.5px; --axfs: 12.5px; color: #7b818c; --axfg: #7b818c; }
 .mq_ths { display: flex; gap: 10px; padding: 4px 16px 10px; overflow-x: auto; scrollbar-width: none; }
 .mq_ths::-webkit-scrollbar { display: none; }
 .ax .mq_th { position: relative; width: 96px; height: 78px; padding: 0; border-radius: 14px; --axr: 14px; overflow: hidden; flex: none; --axbg: #e9ecf0; --axsh: 0 1px 2px rgba(22, 27, 34, 0.05), 0 6px 16px rgba(22, 27, 34, 0.1); }
-.mq_th svg { display: block; }
+.mq_th :is(svg, .mq_timg) { display: block; }
 .mq_th span { position: absolute; left: 0; right: 0; bottom: 0; padding: 16px 7px 5px; background: linear-gradient(transparent, rgba(0, 0, 0, 0.5)); color: #fff; --axfg: #fff; font-size: 10.5px; --axfs: 10.5px; font-weight: 600; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ax .mq_th.on { outline: 2.5px solid var(--axd); outline-offset: 2px; }
 /* a neighbourhood: its map on the whole screen, a card over it */
@@ -790,8 +794,3 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .mq_one .mq_hc { position: relative; z-index: 3; display: flex; gap: 7px; padding: 6px 16px 0; overflow-x: auto; scrollbar-width: none; }
 .mq_one .mq_hc::-webkit-scrollbar { display: none; }
 .mq_fc { position: absolute; left: 16px; right: 16px; bottom: 34px; z-index: 3; padding: 16px 18px; border-radius: 22px; background: rgba(255, 255, 255, 0.97); box-shadow: 0 1px 2px rgba(22, 27, 34, 0.08), 0 12px 30px rgba(22, 27, 34, 0.25); display: flex; flex-direction: column; gap: 3px; }
-.mq_pill { height: 26px; padding: 0 10px; border-radius: 999px; background: var(--axc); color: var(--axd); --axfg: var(--axd); font-size: 12.5px; --axfs: 12.5px; font-weight: 600; display: inline-flex; align-items: center; flex: none; }
-.mq_btns { display: flex; gap: 8px; margin-top: 10px; }
-.ax .mq_b1, .ax .mq_b2 { flex: 1; height: 40px; border-radius: 999px; --axr: 999px; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 14px; --axfs: 14px; font-weight: 600; }
-.ax .mq_b2 { --axbg: #e9ecf0; --axsh: none; color: #161b22; --axfg: #161b22; }
-.ax .mq_b1 { --axbg: var(--axd); --axsh: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 4px 12px rgba(47, 107, 255, 0.28); color: #fff; --axfg: #fff; }

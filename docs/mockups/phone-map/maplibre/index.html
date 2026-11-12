@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>실제 지도 시험</title>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<style>
+/* 다녀간 곳 › 실제 지도 시험: MapLibre GL + OpenFreeMap 벡터 타일에 지도 룰(docs/design/map.md) 색을 입혀요. 지도는 폰처럼 390 × 560 */
+:root { --bg: #eef0f3; --card: #ffffff; --ink: #1d2433; --sub: #6b7280; --line: #e3e6eb; --on: #1d3461; --onink: #ffffff; color-scheme: light; }
+@media (prefers-color-scheme: dark) { :root { --bg: #17181c; --card: #23252b; --ink: #eceef2; --sub: #9aa0aa; --line: #34373e; --on: #e9dfcf; --onink: #1b1b1f; color-scheme: dark; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 -apple-system, 'SF Pro Text', 'Noto Sans KR', sans-serif;
+  padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 24px max(16px, env(safe-area-inset-left)); }
+.wrap { max-width: 420px; margin: 0 auto; display: grid; gap: 12px; }
+h1 { font-size: 18px; margin: 4px 0 0; }
+.sub { color: var(--sub); font-size: 12.5px; margin: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips button { border: 0; border-radius: 999px; padding: 7px 11px; font: 600 12.5px/1 inherit; font-family: inherit; background: var(--card); color: var(--ink); box-shadow: 0 1px 2px rgba(22,27,34,.06); cursor: pointer; }
+.chips button.on { background: var(--on); color: var(--onink); }
+.frame { position: relative; width: 100%; aspect-ratio: 390 / 560; border-radius: 22px; overflow: hidden; background: #faf6ee; box-shadow: 0 1px 2px rgba(22,27,34,.05), 0 10px 26px rgba(22,27,34,.12); }
+#map, #old { position: absolute; inset: 0; }
+/* a map nobody sees: the same place one zoom step closer, so its tiles hold the places this zoom's tiles leave out (dense cities keep only stations) */
+#deep { position: fixed; left: -10000px; top: 0; visibility: hidden; pointer-events: none; }
+#old { display: none; width: 100%; height: 100%; }
+.frame.showold #old { display: block; }
+.credit { position: absolute; right: 8px; bottom: 6px; font: 500 8.5px/1 -apple-system, 'Noto Sans KR', sans-serif; color: #8a8f98; text-shadow: 0 0 2px #fff, 0 0 2px #fff; pointer-events: auto; }
+.credit a { color: inherit; text-decoration: none; }
+.frame.showold .credit { display: none; }
+.frame.night .credit { color: #9aa3b0; text-shadow: 0 0 2px rgba(0,0,0,.6); }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.seg { display: inline-flex; background: var(--card); border-radius: 999px; padding: 3px; box-shadow: 0 1px 2px rgba(22,27,34,.06); }
+.seg button { border: 0; background: transparent; color: var(--ink); font: 600 12.5px/1 inherit; font-family: inherit; padding: 7px 12px; border-radius: 999px; cursor: pointer; }
+.seg button.on { background: var(--on); color: var(--onink); }
+.seg button:disabled { opacity: .35; cursor: default; }
+.stat { font-variant-numeric: tabular-nums; color: var(--sub); font-size: 12.5px; }
+.note { background: var(--card); border-radius: 16px; padding: 12px 14px; font-size: 12.5px; color: var(--sub); box-shadow: 0 1px 2px rgba(22,27,34,.04), 0 8px 24px rgba(22,27,34,.05); }
+.note b { color: var(--ink); }
+.err { color: #b8573a; }
+.maplibregl-ctrl-attrib { display: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>실제 지도 시험</h1>
+  <p class="sub">MapLibre + OpenFreeMap 타일에 지도 룰 색만 입혔어요. 손가락으로 움직이고 확대할 수 있어요.</p>
+  <div class="chips" id="places"></div>
+  <div class="frame" id="frame">
+    <div id="map"></div>
+    <div id="deep" aria-hidden="true"></div>
+    <img id="old" alt="지금 지도">
+    <div class="credit"><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenMapTiles © OpenStreetMap contributors</a></div>
+  </div>
+  <div class="row">
+    <div class="seg"><button id="bNew" class="on">새 지도</button><button id="bOld">지금 지도</button></div>
+    <span class="stat" id="stat">불러오는 중…</span>
+  </div>
+
+  <div class="note" id="note"><b>보는 법</b> · 독일 6곳은 "지금 지도"로 바꿔서 같은 자리를 비교할 수 있어요. 사막은 모래, 눈 덮인 곳은 눈(북쪽 먼바다는 깊은 물), 산호초 바다는 에메랄드로 저절로 칠해요. 처음 여는 곳은 타일을 받아서 조금 걸리고, 한 번 본 곳은 빨라요.</div>
+</div>
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script>
+// 곳: [이름, 큰 이름(MAIN), lat, lon, 폭 m(지금 지도와 같은 축척), 지금 지도 svg, 특수 색(desert · snow · tropic)]
+const PLACES = [
+  ['킬', 'Kiel', 54.32149, 10.13339, 1550, 'kiel-zentrum'],
+  ['함부르크 St. Georg', 'St. Georg', 53.55349, 10.01344, 1550, 'hamburg-stgeorg'],
+  ['하이델베르크', 'Heidelberg', 49.41182, 8.69863, 1328, 'heidelberg-altstadt'],
+  ['레겐스부르크', 'Regensburg', 49.01896, 12.09669, 1229, 'regensburg-altstadt'],
+  ['브레멘', 'Bremen', 53.07584, 8.80670, 1550, 'bremen-altstadt'],
+  ['베를린 크로이츠베르크', 'Kreuzberg', 52.49792, 13.41895, 1336, 'berlin-kreuzberg'],
+  ['서울 홍대', '홍대', 37.5563, 126.9236, 1300, ''],
+  ['도쿄 시부야', '渋谷', 35.6595, 139.7005, 1300, ''],
+  ['런던 소호', 'Soho', 51.5125, -0.1320, 1300, ''],
+  ['뉴욕 미드타운', 'Midtown', 40.7540, -73.9860, 1300, ''],
+  ['그랜드캐니언 마을', 'Grand Canyon Village', 36.0570, -112.1390, 1550, '', 'desert'],
+  ['모뉴먼트 밸리', 'Monument Valley', 36.9980, -110.0985, 1550, '', 'desert'],
+  ['데스밸리', 'Furnace Creek', 36.4570, -116.8670, 1550, '', 'desert'],
+  ['세도나', 'Sedona', 34.8697, -111.7610, 1550, '', 'desert'],
+  ['로포텐 레이네', 'Reine', 67.9330, 13.0890, 1550, '', 'snow'],
+  ['스발바르', 'Longyearbyen', 78.2230, 15.6470, 1550, '', 'snow'],
+  ['노르카프 호닝스보그', 'Honningsvåg', 70.9820, 25.9700, 1550, '', 'snow'],
+  ['미텐발트', 'Mittenwald', 47.4420, 11.2620, 1550, '', 'snow'],
+  ['하와이 와이키키', 'Waikiki', 21.2793, -157.8292, 1550, '', 'tropic'],
+  ['오키나와 차탄', '北谷', 26.3160, 127.7560, 1550, '', 'tropic'],
+];
+// 지도 룰 색(GPAL ACa)과 길 굵기(px, 이 축척에서의 최소)
+const C = { land: '#faf6ee', park: '#c3e9cc', forest: '#b1e0bc', vine: '#e6edc3', water: '#a7e4ee', road: '#ffffff', edge: '#e6dece',
+  major: '#fbe9b8', majorEdge: '#ecd59a', school: '#f4e7c6', works: '#efece6', shop: '#fbf0d6', rail: '#b8b6b2', railDash: '#f4efe6',
+  main: '#3c4043', hood: '#6f6f6f', street: '#7a7770', waterInk: '#2f8fb6', rock: '#faf6ee', sand: '#faf6ee', ice: '#ffffff' };
+// 특수 색(11-12 정함): 음영은 어디에도 없어요. 사막은 모래, 눈 덮인 곳은 눈(북쪽 먼바다는 깊은 물), 산호초 바다(위도 27° 안)는 에메랄드
+const SAND = { shop: '#f2e1c2', land: '#f4e8d2', forest: '#dfe0b8', park: '#e7e3c3', rock: '#ebcfae', sand: '#f1dfbd', school: '#efe0c2', edge: '#e8d8bf' };
+const SNOW = { shop: '#f3f0e8', land: '#f6f8fa', forest: '#dce9e3', park: '#e6efea', vine: '#e6efea', rock: '#e9edf1', sand: '#eef1f3', ice: '#ffffff', water: '#bfe2ee', edge: '#dde3e9', school: '#eef1f4', works: '#eceff2', major: '#f6ecd0', majorEdge: '#e2d5b3' };
+const DEEP = { water: '#8ec7dd', waterInk: '#2a7598' }, EMERALD = { water: '#7fd9cf', sand: '#f4e3bd', waterInk: '#1f8a80' };
+function palFor(type, lat) {
+  const a = Math.abs(lat), p = { ...(type === 'desert' ? SAND : type === 'snow' ? SNOW : {}) };
+  if (type === 'snow' && a >= 66) Object.assign(p, DEEP);
+  if (a < 27) Object.assign(p, EMERALD);
+  return [p, type === 'desert' ? '사막 · 모래' : type === 'snow' ? (a >= 66 ? '눈 · 깊은 바다' : '눈') : a < 27 ? '에메랄드 바다' : ''];
+}
+const ICONS = {"church":["M12 2v6M9 5h6M5 22V12l7-4 7 4v10M10 22v-5h4v5",[0,0],"#8a7465"],"cathedral":["M7 22V9l2-5 2 5v13M13 22V9l2-5 2 5v13M4 22h16M9 14h6",[0,-1],"#8a7465"],"chapel":["M12 3v4M10 5h4M7 21v-9l5-4 5 4v9zM11 21v-4h2v4",[0,0],"#8a7465"],"mosque":["M6 21v-7a6 6 0 0 1 12 0v7zM12 8V5M4 21V10M20 21V10M3 21h18",[0,-1],"#8a7465"],"synagogue":["M12 3l3.5 6h-7zM12 15l-3.5-6h7zM5 21V13h14v8",[0,0],"#8a7465"],"shrine":["M3 6h18M5 9h14M7 9v13M17 9v13M4 4l16 0",[0,-1],"#8a7465"],"temple":["M12 2l8 6H4zM6 8v10M18 8v10M3 18h18M9 18v-5h6v5",[0,2],"#8a7465"],"pagoda":["M12 2v3M6 8h12l-2-3H8zM7 13h10l-2-3H9zM8 18h8l-1.5-3h-5zM10 18v3h4v-3",[0,0.5],"#8a7465"],"museum":["M3 9l9-5 9 5M5 9v9M9 9v9M15 9v9M19 9v9M3 20h18",[0,0],"#1d8f9f"],"gallery":["M4 5h16v14H4zM4 15l5-5 4 4 2-2 5 5M15 9.5a1 1 0 1 0 0 .1",[0,0],"#1d8f9f"],"theatre":["M4 4h7v7a3.5 3.5 0 0 1-7 0zM13 8h7v7a3.5 3.5 0 0 1-7 0zM6 7.5h.5M8.5 7.5H9M15 11.5h.5M17.5 11.5h.5",[0,0.75],"#1d8f9f"],"cinema":["M4 7h12v10H4zM16 10l4-2v8l-4-2M7 4.5a1.5 1.5 0 1 0 0 .1M12 4.5a1.5 1.5 0 1 0 0 .1",[0,1.97],"#1d8f9f"],"music":["M9 18V5l11-2v13M9 18a3 3 0 1 1-3-3 3 3 0 0 1 3 3zM20 16a3 3 0 1 1-3-3 3 3 0 0 1 3 3z",[0.5,0],"#1d8f9f"],"library":["M4 4h4v16H4zM10 4h4v16h-4zM16 5l3.5-1 3 15.5-3.5.9z",[-1.25,-0.2],"#9a7449"],"monument":["M10 21V8l2-5 2 5v13M7 21h10",[0,0],"#1d8f9f"],"statue":["M10 4a2 2 0 1 0 4 0a2 2 0 1 0 -4 0M9 21v-6l-1-5h8l-1 5v6M7 21h10",[0,0.5],"#1d8f9f"],"castle":["M4 21V8h3v2h3V8h4v2h3V8h3v13zM10 21v-5h4v5",[0,-2.5],"#1d8f9f"],"palace":["M3 21V11l3-2 3 2V7l3-3 3 3v4l3-2 3 2v10zM10 21v-4h4v4",[0,-0.5],"#1d8f9f"],"ruin":["M4 21V9l2-2 2 2v5M10 21V5h4v8M16 21v-6l2-2 2 2v6M3 21h18",[0,-1],"#1d8f9f"],"tower":["M12 2l3 20H9zM10 9h4M9.4 14h5.2",[0,0],"#1d8f9f"],"clock":["M8 21V7l4-4 4 4v14zM9.5 10a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0 -5 0M12 10v1.5M6 21h12",[0,0],"#1d8f9f"],"lighthouse":["M10 21l1-12h2l1 12zM9 9h6M10 9V6h4v3M12 6V3M6 5l3 1M18 5l-3 1",[0,0],"#2f8fb6"],"windmill":["M12 9l-5-5M12 9l5-5M12 9l-5 5M12 9l5 5M9.5 21l1.5-9h2l1.5 9zM8 21h8",[0,-0.5],"#1d8f9f"],"observatory":["M4 15a8 8 0 0 1 16 0zM12 7l5-3M3 15h18v6H3z",[0,-0.5],"#1d8f9f"],"park":["M12 3l5 8h-3l4 6H6l4-6H7zM12 17v4",[0,0],"#3d8b3d"],"garden":["M12 21v-8M12 13c-4 0-6-3-6-7 4 0 6 3 6 7zM12 13c4 0 6-3 6-7-4 0-6 3-6 7zM8 21h8",[0,-1.5],"#3d8b3d"],"forest":["M8 3l4 7H4zM8 10v3M16 6l5 9H11zM16 15v5M3 21h18",[0,0],"#3d8b3d"],"mountain":["M2 20l7-12 4 6 3-4 6 10zM8 10l1.5 2 1-1",[0,-2],"#3d8b3d"],"view":["M5 9l10-4 2 4-10 4zM15 5l2-1 2 4-2 1M11 12l1 4M8 21l4-5 4 5M12 16v5",[0,-0.5],"#1d8f9f"],"gate":["M4 21V9a8 8 0 0 1 16 0v12M8 21v-8a4 4 0 0 1 8 0v8M3 21h18",[0,1],"#1d8f9f"],"skyscraper":["M8 21V6l4-3 4 3v15M5 21v-9h3M16 21v-7h3M4 21h16M11 8h2M11 12h2M11 16h2",[0,0],"#1d8f9f"],"square":["M3 12h5M16 12h5M12 3v5M12 16v5M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8",[0,0],"#1d8f9f"],"artwork":["M7 21h10M12 21v-4M12 17c-3.5 0-5.5-2.5-4.8-5.5.8-3.5 5.3-3 5.8-7 2.8 2 4.6 4.8 3.8 7.8-.7 2.7-2.2 4.7-4.8 4.7z",[0,-0.75],"#1d8f9f"],"landmark":["M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4l-5.3 3 1.2-6-4.5-4.1 6-.7z",[0,0.8],"#1d8f9f"],"beach":["M4 20h16M6 20c2-6 6-9 12-10M10 12l-4-6M10 12a6 6 0 0 1 8-5",[0,-1],"#2f8fb6"],"lake":["M3 9c3-2 5 2 9 0s6 2 9 0M3 14c3-2 5 2 9 0s6 2 9 0M3 19c3-2 5 2 9 0s6 2 9 0",[0,-2],"#2f8fb6"],"fountain":["M12 13V5M12 5c-2 0-4 2-4 5M12 5c2 0 4 2 4 5M5 15h14l-2 5H7z",[0,-0.5],"#2f8fb6"],"zoo":["M7 16.5c0-3 2.2-5 5-5s5 2 5 5c0 2.3-2 3.5-5 3.5s-5-1.2-5-3.5zM3.3 10.5a1.7 2.2 0 1 0 3.4 0a1.7 2.2 0 1 0 -3.4 0M7.5 6.2a1.7 2.2 0 1 0 3.4 0a1.7 2.2 0 1 0 -3.4 0M13.1 6.2a1.7 2.2 0 1 0 3.4 0a1.7 2.2 0 1 0 -3.4 0M17.3 10.5a1.7 2.2 0 1 0 3.4 0a1.7 2.2 0 1 0 -3.4 0",[0,0],"#3d8b3d"],"playground":["M4 21L9 5h6l5 16M7 14h10M12 5v4M10 13l-2 8",[0,-1],"#3d8b3d"],"spring":["M7 20c-3-3-3-7 0-9h10c3 2 3 6 0 9zM9 8c-1-2 1-3 0-5M12 8c-1-2 1-3 0-5M15 8c-1-2 1-3 0-5",[0,0.5],"#2f8fb6"],"camp":["M3 20l9-15 9 15zM12 5v15M9 20l3-6 3 6",[0,-0.5],"#3d8b3d"],"stadium":["M3 9c0-2 4-4 9-4s9 2 9 4v6c0 2-4 4-9 4s-9-2-9-4zM3 9c0 2 4 4 9 4s9-2 9-4",[0,0],"#2f9a78"],"sports":["M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3.5 9h17M3.5 15h17M12 3c-3 3-3 15 0 18M12 3c3 3 3 15 0 18",[0,0],"#2f9a78"],"swim":["M3 17c2-1.5 3 1.5 5 0s3 1.5 5 0 3 1.5 5 0 3 1.5 3 0M7 13l4-6 4 3M17 7.5a1.5 1.5 0 1 0 0 .1",[0,0],"#2f8fb6"],"golf":["M9 21V3l8 3-8 3M5 21h8",[1,0],"#3d8b3d"],"ski":["M4 20l16-6M7 4a1.5 1.5 0 1 0 0 .1M8 8l3 4 4-1M11 12l-2 5",[0,0.72],"#2f9a78"],"bike":["M2.5 16a3.5 3.5 0 1 0 7 0a3.5 3.5 0 1 0 -7 0M14.5 16a3.5 3.5 0 1 0 7 0a3.5 3.5 0 1 0 -7 0M6 16l4-7h5l3 7M10 9l2.5 7M15 9l-2.5 7M9 7h2.5M15 9l1-3h2",[0,-0.75],"#3a64b0"],"shop":["M5 8h14l-1.2 12H6.2zM9 8V6a3 3 0 0 1 6 0v2",[0,0.5],"#4a7cd6"],"market":["M3 9l2-5h14l2 5zM3 9c0 2 2 3 3 3s3-1 3-3c0 2 2 3 3 3s3-1 3-3c0 2 2 3 3 3s3-1 3-3M5 12v8h14v-8",[0,0],"#4a7cd6"],"mall":["M4 21V7h16v14M4 11h16M9 21v-5h6v5M8 7V4h8v3",[0,-0.5],"#4a7cd6"],"cafe":["M4 9h12v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5zM16 10h2a2 2 0 0 1 0 4h-2M8 3c-1 2 1 3 0 5M12 3c-1 2 1 3 0 5",[1,1],"#e0782a"],"food":["M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M16 3c-2 0-3 3-3 7h3v11",[1.5,0],"#e0782a"],"bar":["M6 4h12l-6 8zM12 12v7M8 21h8",[0,-0.5],"#e0782a"],"beer":["M6 7h9v13H6zM15 10h2a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-2M6 7c0-2 1-3 3-3 1-1 3-1 4 0 2 0 2 2 2 3",[0.9,0.38],"#e0782a"],"bakery":["M4 15c0-5 4-8 8-8s8 3 8 8c-2 2-14 2-16 0zM8 9l1 5M12 8v6M16 9l-1 5",[0,0],"#e0782a"],"wine":["M8 3h8c0 5-1 8-4 8s-4-3-4-8zM12 11v8M8 21h8",[0,0],"#e0782a"],"hotel":["M3 18V7M3 13h18v5M21 18v-3M5 11a2 2 0 1 0 4 0a2 2 0 1 0 -4 0M10 13V10h8a3 3 0 0 1 3 3",[0,-0.5],"#d4568c"],"hospital":["M9 4h6v5h5v6h-5v5H9v-5H4V9h5z",[0,0],"#d14a3e"],"pharmacy":["M4.9 19.1a4 4 0 0 1 0-5.7l8.5-8.5a4 4 0 0 1 5.7 5.7l-8.5 8.5a4 4 0 0 1-5.7 0zM8.8 8.8l6.4 6.4",[0,0],"#d14a3e"],"school":["M3 9l9-5 9 5-9 5zM7 11v5c3 2 7 2 10 0v-5",[0,1.25],"#9a7449"],"university":["M3 9l9-5 9 5M5 9v9M19 9v9M9 12v6M15 12v6M3 20h18M12 6.5h.1",[0,0],"#9a7449"],"townhall":["M4 21V10h16v11M2 10l10-6 10 6M12 4V2M9 21v-6h6v6M7 13v2M17 13v2",[0,0.5],"#6f7783"],"police":["M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6zM12 9l1 2h2l-1.5 1.5.5 2-2-1-2 1 .5-2L9 11h2z",[0,0],"#6f7783"],"fire":["M12 21c-4 0-6-3-6-6 0-4 4-6 4-11 3 2 6 5 6 9 1-1 1.5-2 1.5-3 1.5 1.5 2.5 3 2.5 5 0 3-3 6-8 6z",[-1,-0.5],"#d14a3e"],"post":["M3 6h18v12H3zM3 6l9 7 9-7",[0,0],"#4a7cd6"],"bank":["M3 9l9-5 9 5zM5 9v8M10 9v8M14 9v8M19 9v8M3 19h18",[0,0.5],"#4a7cd6"],"train":["M7 3h10a2 2 0 0 1 2 2v9a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V5a2 2 0 0 1 2-2zM5 10h14M8 21l1.5-4M16 21l-1.5-4M8.5 14h.1M15.5 14h.1",[0,0],"#3a64b0"],"tram":["M8 6h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2zM6 12h12M12 6V3M9 3h6M8 21l1-3M16 21l-1-3",[0,0],"#3a64b0"],"metro":["M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM7 16V8l5 6 5-6v8",[0,0],"#3a64b0"],"bus":["M6 4h12a2 2 0 0 1 2 2v11H4V6a2 2 0 0 1 2-2zM4 12h16M7 20v-3M17 20v-3M7.5 15h.1M16.5 15h.1",[0,0],"#3a64b0"],"boat":["M3 15h18l-3 5H6zM12 4v11M12 4l6 8h-6",[0,0],"#3a64b0"],"ferry":["M3 16l2 4h14l2-4zM6 16V11h12v5M9 11V7h6v4M3 22c2-1 3 1 5 0s3 1 5 0 3 1 5 0",[0,-2.64],"#3a64b0"],"harbour":["M10 5a2 2 0 1 0 4 0a2 2 0 1 0 -4 0M12 7v13M8 11h8M5 15c0 3 3 5 7 5s7-2 7-5",[0,0.5],"#2f8fb6"],"airport":["M21 15l-8-4V5a1 1 0 0 0-2 0v6l-8 4v2l8-2v4l-2 2h6l-2-2v-4l8 2z",[0,-0.5],"#3a64b0"],"cable":["M3 6l18-3M10 5v4M7 9h8v7H7zM7 13h8",[0,2.5],"#3a64b0"],"parking":["M5 3h14v18H5zM10 17V7h3a3 3 0 0 1 0 6h-3",[0,0],"#4a7cd6"],"fuel":["M5 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16M4 21h12M5 10h10M15 8l3 3v7a1.5 1.5 0 0 0 3 0V9l-3-3",[-0.5,0],"#4a7cd6"],"bridge":["M3 16h18M5 16c2-6 12-6 14 0M8 16v-3M16 16v-3",[0,-1.75],"#3a64b0"],"cemetery":["M8 21V9a4 4 0 0 1 8 0v12M5 21h14M12 10v5M10 12h4",[0,-1],"#5f8a6a"],"wheel":["M12 3a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM12 3v16M4 11h16M6.3 5.3l11.4 11.4M17.7 5.3L6.3 16.7M8 21l4-2 4 2",[0,0],"#1d8f9f"],"aquarium":["M3 12c3-5 8-6 12-3l4-3v12l-4-3c-4 3-9 2-12-3zM8 11h.1",[1,0],"#2f8fb6"],"info":["M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 11v6M12 7.5h.1",[0,0],"#6f7783"]};
+const KIND = { place_of_worship: 'church', museum: 'museum', art_gallery: 'gallery', theatre: 'theatre', cinema: 'cinema', music: 'music', library: 'library',
+  castle: 'castle', monument: 'monument', attraction: 'landmark', artwork: 'artwork', zoo: 'zoo', aquarium: 'aquarium', park: 'park', garden: 'garden', stadium: 'stadium',
+  swimming: 'swim', golf: 'golf', playground: 'playground', cafe: 'cafe', restaurant: 'food', fast_food: 'food', bar: 'bar', beer: 'beer', bakery: 'bakery',
+  lodging: 'hotel', hospital: 'hospital', pharmacy: 'pharmacy', college: 'university', school: 'school', town_hall: 'townhall', police: 'police',
+  fire_station: 'fire', post: 'post', bank: 'bank', bus: 'bus', ferry_terminal: 'ferry', harbor: 'harbour', aerialway: 'cable', railway: 'train',
+  cemetery: 'cemetery', information: 'info', campsite: 'camp', zoo_: 'zoo', marketplace: 'market', department_store: 'mall', shop: 'shop', lighthouse: 'lighthouse' };
+// the tiles' subclass is the OSM value itself (amenity=cafe → cafe): our 77 icons by it first, then by the broader class
+const SUB = { cafe: 'cafe', ice_cream: 'cafe', restaurant: 'food', fast_food: 'food', food_court: 'food', bar: 'bar', pub: 'beer', biergarten: 'beer', bakery: 'bakery',
+  wine: 'wine', museum: 'museum', gallery: 'gallery', arts_centre: 'gallery', theatre: 'theatre', cinema: 'cinema', concert_hall: 'music', music_venue: 'music',
+  library: 'library', castle: 'castle', palace: 'palace', ruins: 'ruin', monument: 'monument', memorial: 'monument', statue: 'statue', viewpoint: 'view',
+  attraction: 'landmark', artwork: 'artwork', zoo: 'zoo', aquarium: 'aquarium', theme_park: 'wheel', park: 'park', garden: 'garden', cemetery: 'cemetery', grave_yard: 'cemetery',
+  stadium: 'stadium', sports_centre: 'sports', swimming_pool: 'swim', water_park: 'swim', golf_course: 'golf', playground: 'playground', marketplace: 'market',
+  mall: 'mall', department_store: 'mall', hotel: 'hotel', hostel: 'hotel', guest_house: 'hotel', motel: 'hotel', hospital: 'hospital', pharmacy: 'pharmacy',
+  university: 'university', college: 'university', school: 'school', kindergarten: 'school', townhall: 'townhall', police: 'police', fire_station: 'fire',
+  post_office: 'post', bank: 'bank', bus_station: 'bus', ferry_terminal: 'ferry', marina: 'harbour', lighthouse: 'lighthouse', tower: 'tower', station: 'train',
+  halt: 'train', subway: 'metro', tram_stop: 'tram', camp_site: 'camp', information: 'info', fountain: 'fountain', place_of_worship: 'church', peak: 'mountain',
+  beach: 'beach', hot_spring: 'spring', public_bath: 'spring', books: 'shop', clothes: 'shop', gift: 'shop' };
+const pairs = (m, f) => Object.entries(m).flatMap(([k, v]) => ICONS[v] ? [k, f(v)] : []);
+const kindExpr = ['match', ['get', 'subclass'], ...pairs(SUB, v => v), ['match', ['get', 'class'], ...pairs(KIND, v => v), '']];
+const colorExpr = ['match', ['get', 'subclass'], ...pairs(SUB, v => ICONS[v][2]), ['match', ['get', 'class'], ...pairs(KIND, v => ICONS[v][2]), '#6f7783']];
+// stations, stops and shops wait behind sights, parks, cafés and museums (so the map is not all U-Bahn)
+const sortExpr = ['+', ['coalesce', ['get', 'rank'], 30], ['match', ['get', 'class'], ['railway', 'bus', 'aerialway', 'ferry_terminal'], 40, ['shop', 'clothing_store', 'grocery'], 25, 0]];
+// a width that is the rule's px at the place's scale and grows when the finger zooms in
+const W = (px, z0) => ['interpolate', ['exponential', 1.6], ['zoom'], z0 - 2, px * 0.45, z0, px, z0 + 4, px * 5];
+const CJK = '-apple-system, "Noto Sans KR", "Hiragino Sans", "PingFang SC", sans-serif';
+// 장소: 종류별 색 동그라미 + 같은 색 글씨. 세 겹으로 놓아요(위 겹부터 자리를 잡아요): 볼거리 · 공원 → 역 · 관청 → 먹고 마시기(서로 멀리, 중요한 것만)
+const FOOD = ['food', 'cafe', 'bar', 'beer', 'bakery', 'wine'], TRANSIT = ['train', 'metro', 'tram', 'bus', 'ferry', 'cable', 'post', 'police', 'townhall', 'bank', 'info', 'school', 'shop'];
+let HALO = '#ffffff';
+const lighter = h => '#' + [1, 3, 5].map(i => Math.round(parseInt(h.slice(i, i + 2), 16) * 0.5 + 255 * 0.5).toString(16).padStart(2, '0')).join('');
+const poi = (id, f, pad, maxRank) => ({ id, type: 'symbol', source: 'pois',
+  filter: ['all', f, ['<=', ['coalesce', ['get', 'rank'], 30], maxRank], ['!', ['in', ['get', 'subclass'], ['literal', ['bus_stop', 'subway_entrance', 'platform', 'supermarket', 'convenience', 'fuel', 'parking']]]]],
+  layout: { 'icon-image': ['get', 'k'], 'icon-size': 1, 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Bold'], 'text-size': 10.5, 'text-anchor': 'left', 'text-offset': [0.95, 0],
+    'symbol-sort-key': ['coalesce', ['get', 'rank'], 30], 'icon-padding': pad, 'text-padding': 6, 'text-optional': false, 'text-max-width': 9 },
+  paint: { 'text-color': ['get', 'col'], 'text-halo-color': HALO, 'text-halo-width': 1.5 } });
+function style(z0, P = C, main = '') {
+  const C = P, hill = 0;
+  const mid = ['secondary', 'tertiary'], maj = ['primary', 'trunk'], name = ['get', 'name'];
+  // a road class list; 'minor' also takes pedestrian streets (OpenMapTiles: class path, subclass pedestrian)
+  const pick = cls => cls.includes('minor') ? ['any', ['in', ['get', 'class'], ['literal', cls]], ['all', ['==', ['get', 'class'], 'path'], ['==', ['get', 'subclass'], 'pedestrian']]] : ['in', ['get', 'class'], ['literal', cls]];
+  const road = (id, cls, w, color, extra = {}) => ({ id, type: 'line', source: 't', 'source-layer': 'transportation',
+    filter: ['all', pick(cls), ['!=', ['get', 'brunnel'], 'tunnel']], layout: { 'line-cap': 'round', 'line-join': 'round' },
+    paint: { 'line-color': color, 'line-width': w, ...extra } });
+  return { version: 8, glyphs: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
+    sources: { t: { type: 'vector', url: 'https://tiles.openfreemap.org/planet' },
+      pois: { type: 'geojson', data: { type: 'FeatureCollection', features: [] } },
+      ...(hill ? { dem: { type: 'raster-dem', tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'], encoding: 'terrarium', tileSize: 256, maxzoom: 15 } } : {}) },
+    layers: [
+      { id: 'land', type: 'background', paint: { 'background-color': C.land } },
+      { id: 'cover', type: 'fill', source: 't', 'source-layer': 'landcover', paint: { 'fill-color': ['match', ['get', 'class'],
+          'wood', C.forest, 'grass', C.park, 'wetland', C.park, 'farmland', ['match', ['get', 'subclass'], 'vineyard', C.vine, C.school], 'ice', C.ice, 'rock', C.rock, 'sand', C.sand, C.land] } },
+      { id: 'use', type: 'fill', source: 't', 'source-layer': 'landuse', filter: ['in', ['get', 'class'], ['literal', ['railway', 'industrial', 'school', 'university', 'college', 'kindergarten', 'cemetery', 'pitch', 'stadium', 'playground', 'commercial', 'retail']]],
+        paint: { 'fill-color': ['match', ['get', 'class'], ['commercial', 'retail'], C.shop, ['railway', 'industrial'], C.works, ['cemetery', 'pitch', 'stadium', 'playground'], C.park, C.school] } },
+      ...(hill ? [{ id: 'hill', type: 'hillshade', source: 'dem', paint: { 'hillshade-exaggeration': hill, 'hillshade-shadow-color': C.shade || '#7a6a5a', 'hillshade-accent-color': C.shade || '#7a6a5a', 'hillshade-highlight-color': '#ffffff' } }] : []),
+      // 집 마당 수영장은 물로 안 칠해요(하와이 주택가가 물 조각투성이가 돼요)
+      { id: 'water', type: 'fill', source: 't', 'source-layer': 'water', filter: ['all', ['!=', ['get', 'brunnel'], 'tunnel'], ['!=', ['get', 'class'], 'swimming_pool']], paint: { 'fill-color': C.water } },
+      { id: 'river', type: 'line', source: 't', 'source-layer': 'waterway', filter: ['all', ['in', ['get', 'class'], ['literal', ['river', 'canal']]], ['!=', ['get', 'brunnel'], 'tunnel']],
+        paint: { 'line-color': C.water, 'line-width': W(2.5, z0) } },
+      // 이름 없는 구내 길 · 보행로는 안 그려요. 보행자 거리는 동네 길처럼
+      road('minorEdge', ['minor'], W(5.5 + 1.2, z0), C.edge), road('midEdge', mid, W(8 + 1.35, z0), C.edge),
+      road('minorRoad', ['minor'], W(5.5, z0), C.road), road('midRoad', mid, W(8, z0), C.road),
+      { id: 'railYard', type: 'line', source: 't', 'source-layer': 'transportation', filter: ['all', ['==', ['get', 'class'], 'rail'], ['has', 'service'], ['!=', ['get', 'brunnel'], 'tunnel']],
+        paint: { 'line-color': C.rail, 'line-width': W(1.3, z0), 'line-opacity': 0.75 } },
+      { id: 'rail', type: 'line', source: 't', 'source-layer': 'transportation', filter: ['all', ['==', ['get', 'class'], 'rail'], ['!', ['has', 'service']], ['!=', ['get', 'brunnel'], 'tunnel']],
+        paint: { 'line-color': C.rail, 'line-width': 2.2 } },
+      { id: 'railDash', type: 'line', source: 't', 'source-layer': 'transportation', filter: ['all', ['==', ['get', 'class'], 'rail'], ['!', ['has', 'service']], ['!=', ['get', 'brunnel'], 'tunnel']],
+        paint: { 'line-color': C.railDash, 'line-width': 0.9, 'line-dasharray': [6.7, 5.6] } },
+      road('majEdge', maj, W(10 + 1.35, z0), C.majorEdge), road('majRoad', maj, W(10, z0), C.major),
+      road('motEdge', ['motorway'], W(11 + 1.35, z0), C.majorEdge), road('motRoad', ['motorway'], W(11, z0), C.major),
+      { id: 'street', type: 'symbol', source: 't', 'source-layer': 'transportation_name', filter: ['in', ['get', 'class'], ['literal', ['primary', 'secondary', 'tertiary', 'minor']]],
+        layout: { 'symbol-placement': 'line', 'text-field': name, 'text-font': ['Noto Sans Regular'], 'text-size': 9.5, 'symbol-spacing': 320, 'text-max-angle': 28, 'text-padding': 6 },
+        paint: { 'text-color': C.street, 'text-halo-color': C.halo || '#ffffff', 'text-halo-width': 1.3 } },
+      { id: 'waterName', type: 'symbol', source: 't', 'source-layer': 'water_name', layout: { 'text-field': name, 'text-font': ['Noto Sans Italic'], 'text-size': 10.5 },
+        paint: { 'text-color': C.waterInk, 'text-halo-color': C.halo || '#ffffff', 'text-halo-width': 1.2 } },
+      { id: 'riverName', type: 'symbol', source: 't', 'source-layer': 'waterway', filter: ['==', ['get', 'class'], 'river'],
+        layout: { 'symbol-placement': 'line', 'text-field': name, 'text-font': ['Noto Sans Italic'], 'text-size': 10.5, 'symbol-spacing': 400 },
+        paint: { 'text-color': C.waterInk, 'text-halo-color': C.halo || '#ffffff', 'text-halo-width': 1.2 } },
+      // 장소: 종류별 색 동그라미 + 같은 색 글씨. 중요한 것부터, 서로 넉넉히 떨어지게
+      { id: 'hood', type: 'symbol', source: 't', 'source-layer': 'place', filter: ['all', ['in', ['get', 'class'], ['literal', ['suburb', 'quarter', 'neighbourhood']]], ['!=', ['get', 'name'], main]],
+        layout: { 'text-field': ['upcase', name], 'text-font': ['Noto Sans Bold'], 'text-size': 10, 'text-letter-spacing': 0.12, 'text-padding': 24 },
+        paint: { 'text-color': C.hood, 'text-halo-color': C.halo || '#ffffff', 'text-halo-width': 1.3 } },
+      poi('poi', ['has', 'k'], 4, 999),
+    ] };
+}
+// 큰 동네 이름(MAIN): 진한 차콜 15px 굵게, 가운데 하나 — 곳마다 우리가 아는 이름이라 타일 말고 따로 얹어요
+// 밤 지도는 뺐어요(11-12 소망: 시안 세 벌이 다 못생겨서)
+const NIGHT = [];
+const mainLayer = P => ({ id: 'main', type: 'symbol', source: 'main', layout: { 'text-field': ['get', 'n'], 'text-font': ['Noto Sans Bold'], 'text-size': 15, 'text-allow-overlap': true },
+  paint: { 'text-color': P.main, 'text-halo-color': P.halo || '#ffffff', 'text-halo-width': 1.5 } });
+// 아이콘: 지도 룰의 77종 중 쓰는 것, 색 동그라미(r 7.5) 위 흰 선 그림 — 필요할 때 만들어요
+function iconImage(k) {
+  const [d, off, col] = ICONS[k], s = 2;
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + 16 * s + '" height="' + 16 * s + '" viewBox="-8 -8 16 16"><circle r="7.5" fill="' + col + '"/>'
+    + '<g fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" transform="translate(-5 -5) scale(.42)"><g transform="translate(' + off[0] + ' ' + off[1] + ')"><path d="' + d + '"/></g></g></svg>';
+  return new Promise(res => { const im = new Image(16 * s, 16 * s); im.onload = () => res(im); im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); });
+}
+const frame = document.getElementById('frame'), stat = document.getElementById('stat'), old = document.getElementById('old');
+const zoomFor = (lat, span) => Math.log2(78271.517 * Math.cos(lat * Math.PI / 180) * frame.clientWidth / span);
+let map, deep, cur = 0, t0 = 0, palName = '', z0now = 14, found = [], night = 0;
+function nightRow() { const seg = document.getElementById('night'); seg.innerHTML = '';
+  ['낮', ...NIGHT.map(x => x[0])].forEach((n, k) => { const b = document.createElement('button'); b.textContent = n; b.classList.toggle('on', k === night);
+    b.onclick = () => { night = k; nightRow(); const v = map && { c: map.getCenter(), z: map.getZoom() }; show(cur, v); }; seg.appendChild(b); }); }
+// 장소 고르기(지도 룰): 볼거리 → 먹고 마시기(하나) → 역(하나) → 그 밖, 한 화면 4개(확대하면 조금 더), 서로 120px 넘게, 큰 이름 둘레는 비워요
+const TIER = k => ['landmark', 'gate', 'skyscraper', 'square', 'artwork', 'bridge', 'clock', 'windmill', 'observatory', 'chapel', 'synagogue', 'pagoda', 'museum', 'gallery', 'theatre', 'cinema', 'music', 'castle', 'palace', 'monument', 'statue', 'ruin', 'view', 'tower', 'lighthouse', 'zoo', 'aquarium', 'wheel',
+  'park', 'garden', 'stadium', 'church', 'cathedral', 'mosque', 'temple', 'shrine', 'library', 'university', 'market', 'mall', 'beach', 'fountain', 'spring', 'mountain', 'harbour', 'airport'].includes(k) ? 0
+  : FOOD.includes(k) ? 1 : ['train', 'metro', 'ferry', 'cable'].includes(k) ? 2 : ['hotel', 'school', 'townhall', 'hospital'].includes(k) ? 3 : 9;
+const CAP = { 1: 1, 2: 1 };
+const NOT_PLACE = ['clinic', 'doctors', 'dentist', 'veterinary', 'hairdresser', 'beauty', 'optician', 'bus_stop', 'subway_entrance', 'platform', 'supermarket', 'convenience',
+  'fuel', 'parking', 'bicycle_parking', 'atm', 'toilets', 'post_box', 'charging_station', 'car_rental', 'car', 'laundry', 'dry_cleaning', 'mobile_phone', 'kiosk'];
+// a place the tiles only call an attraction: its name says what it is (tower, bridge, gate …, in the languages the map meets); a viewpoint keeps the eye
+const GUESS = [[/bridge|brücke|brucke|pont\b|ponte|puente|橋|대교|다리$/i, 'bridge'], [/clock|uhrturm|시계/i, 'clock'], [/tower|turm|\btour\b|torre|タワー|타워|塔/i, 'tower'],
+  [/gate|\btor\b|tor$|porte\b|porta\b|puerta|門|문$/i, 'gate'], [/square|platz|^place |piazza|plaza|広場|광장/i, 'square'], [/fountain|brunnen|fontaine|fontana|噴水|분수/i, 'fountain'],
+  [/statue|statua|銅像|동상/i, 'statue'], [/memorial|denkmal|monument|mahnmal|記念|기념/i, 'monument'], [/mill|mühle|moulin|mulino|풍차/i, 'windmill'],
+  [/planetarium|observator|sternwarte|천문/i, 'observatory'], [/building|skyscraper|center$|centre$|hochhaus|빌딩|ビル/i, 'skyscraper'], [/castle|schloss|burg\b|château|castello|城$/i, 'castle'],
+  [/church|kirche|cathedral|\bdom\b|basilica|성당|교회/i, 'church'], [/market|markt|marché|mercato|市場|시장/i, 'market'], [/museum|musée|museo|미술관|박물관/i, 'museum'],
+  [/garden|garten|jardin|giardino|庭園|정원/i, 'garden'], [/sculpture|skulptur|art$/i, 'artwork']];
+const guess = n => (GUESS.find(([re]) => re.test(n || '')) || [])[1];
+const kindOf = p => (p.class === 'attraction' && p.subclass !== 'viewpoint' ? guess(p.name) || (p.subclass === 'artwork' ? 'artwork' : 'landmark') : '') || SUB[p.subclass] || KIND[p.class] || '';
+function pickPlaces() {
+  if (!map || !map.getSource('pois')) return;
+  const w = frame.clientWidth, h = frame.clientHeight, c = map.project(map.getCenter()), max = 4 + Math.max(0, Math.round((map.getZoom() - z0now) * 2));
+  const cand = [];
+  for (const f of found) {
+    const p = f.properties, k = kindOf(p); if (!k || !ICONS[k] || NOT_PLACE.includes(p.subclass)) continue;
+    if (k === 'hospital' && p.subclass !== 'hospital') continue;
+    const xy = map.project(f.geometry.coordinates); if (xy.x < 24 || xy.x > w - 110 || xy.y < 18 || xy.y > h - 40) continue;
+    if (Math.hypot(xy.x - c.x, xy.y - c.y) < 70) continue;
+    cand.push({ f: { ...f, properties: { ...p, k, col: night ? lighter(ICONS[k][2]) : ICONS[k][2] } }, k, t: TIER(k), r: p.rank ?? 30, xy });
+  }
+  cand.sort((a, b) => a.t - b.t || a.r - b.r);
+  const out = [], per = {};
+  for (const x of cand) {
+    if (out.length >= max || x.t === 9) break;
+    if (CAP[x.t] && (per[x.t] || 0) >= CAP[x.t] + Math.floor((max - 4) / 2)) continue;
+    if (out.some(y => Math.hypot(y.xy.x - x.xy.x, y.xy.y - x.xy.y) < 120)) continue;
+    out.push(x); per[x.t] = (per[x.t] || 0) + 1;
+  }
+  map.getSource('pois').setData({ type: 'FeatureCollection', features: out.map(x => x.f) });
+}
+// the deeper map: twice the size at one zoom more covers the same ground; its poi features (in lng/lat) go into the main map's 'pois'
+function deepMap(center, zoom) {
+  const el = document.getElementById('deep'); el.style.width = frame.clientWidth * 2 + 'px'; el.style.height = frame.clientHeight * 2 + 'px';
+  if (deep) deep.remove();
+  deep = new maplibregl.Map({ container: el, interactive: false, attributionControl: false, center, zoom: zoom + 1,
+    style: { version: 8, sources: { t: { type: 'vector', url: 'https://tiles.openfreemap.org/planet' } },
+      layers: [{ id: 'p', type: 'circle', source: 't', 'source-layer': 'poi', paint: { 'circle-radius': 1, 'circle-opacity': 0 } }] } });
+  deep.on('idle', () => {
+    const seen = new Set(), out = [];
+    for (const f of deep.querySourceFeatures('t', { sourceLayer: 'poi' })) {
+      const p = f.properties, k = (p.name || '') + '|' + p.class + '|' + (p.subclass || '');
+      if (!p.name || seen.has(k)) continue; seen.add(k);
+      out.push({ type: 'Feature', geometry: f.geometry.type === 'Point' ? f.geometry : { type: 'Point', coordinates: f.geometry.coordinates.flat(3).slice(0, 2) }, properties: p });
+    }
+    found = out; pickPlaces();
+  });
+}
+function show(i, keep) {
+  cur = i; const [, main, lat, lon, span, svg, type] = PLACES[i], z0 = zoomFor(lat, span);
+  const [over, pn] = palFor(type, lat), P = { ...C, ...over, ...(night ? NIGHT[night - 1][1] : {}) }; palName = pn + (night ? (pn ? ' · ' : '') + NIGHT[night - 1][0] : ''); HALO = P.halo || '#ffffff';
+  frame.style.background = P.land; frame.classList.toggle('night', !!night);
+  document.querySelectorAll('#places button').forEach((b, k) => b.classList.toggle('on', k === i));
+  document.getElementById('bOld').disabled = !svg; if (!svg) setOld(false); else old.src = 'svg/' + svg + '.svg';
+  stat.textContent = '불러오는 중…'; t0 = performance.now();
+  if (map) map.remove();
+  map = new maplibregl.Map({ container: 'map', style: style(z0, P, main), center: keep ? keep.c : [lon, lat], zoom: keep ? keep.z : z0, attributionControl: false, localIdeographFontFamily: CJK, dragRotate: false, pitchWithRotate: false });
+  map.touchZoomRotate.disableRotation();
+  deepMap(keep ? keep.c : [lon, lat], keep ? keep.z : z0);
+  z0now = z0;
+  map.on('moveend', () => { pickPlaces(); deep && deep.jumpTo({ center: map.getCenter(), zoom: map.getZoom() + 1 }); });
+  map.on('styleimagemissing', async e => { if (ICONS[e.id] && !map.hasImage(e.id)) { const im = await iconImage(e.id); if (!map.hasImage(e.id)) map.addImage(e.id, im, { pixelRatio: 2 }); } });
+  map.on('load', () => { map.addSource('main', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'Point', coordinates: [lon, lat] }, properties: { n: main } } });
+    map.addLayer(mainLayer(P)); });
+  map.once('idle', () => { stat.textContent = '다 그림 ' + ((performance.now() - t0) / 1000).toFixed(1) + '초' + (palName ? ' · ' + palName : ''); });
+  map.on('error', e => { stat.innerHTML = '<span class="err">타일을 못 받았어요: ' + String(e.error && e.error.message || e.error || '').slice(0, 80) + '</span>'; });
+}
+function setOld(on) { frame.classList.toggle('showold', on); document.getElementById('bOld').classList.toggle('on', on); document.getElementById('bNew').classList.toggle('on', !on); }
+document.getElementById('bNew').onclick = () => setOld(false);
+document.getElementById('bOld').onclick = () => { if (PLACES[cur][5]) setOld(true); };
+const box = document.getElementById('places');
+PLACES.forEach((p, i) => { const b = document.createElement('button'); b.textContent = p[0]; b.onclick = () => show(i); box.appendChild(b); });
+if (!window.maplibregl) stat.innerHTML = '<span class="err">MapLibre를 못 받았어요(인터넷 연결을 확인해 주세요)</span>'; else show(0);
+</script>
+</body>
+</html>

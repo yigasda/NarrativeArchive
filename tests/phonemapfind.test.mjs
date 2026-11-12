@@ -15,7 +15,9 @@ test('a town by its Korean, English, Japanese, Chinese or local name', () => {
     for (const q of ['카이로', 'cairo', 'القاهرة']) assert.equal(first(q), '카이로', q);
     assert.equal(first('Москва'), '모스크바');
     // the start of a name first, then a word's start, then inside it
-    assert.deepEqual(findTowns('베르').towns.slice(0, 2).map(ko), ['베르겐', '베르히테스가덴']);
+    const ber = findTowns('베르').towns.map(ko), starts = ber.map(n => n.startsWith('베르'));
+    assert.equal(ber[0], '베르겐'); assert.ok(ber.includes('베르히테스가덴'));
+    assert.ok(starts.indexOf(false) === -1 || starts.lastIndexOf(true) < starts.indexOf(false), ber.join(','));
     assert.deepEqual(findTowns(''), { towns: [], hoods: [], kinds: [] });
 });
 

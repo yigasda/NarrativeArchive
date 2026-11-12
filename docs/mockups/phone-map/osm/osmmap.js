@@ -77,20 +77,35 @@ function sea() {
     return [x - X0, (X1 - X0) + (y - Y0), (X1 - X0) + (Y1 - Y0) + (X1 - x), 2 * (X1 - X0) + (Y1 - Y0) + (Y1 - y)][k]; };
   const atT = t => { t = ((t % per) + per) % per; const a = X1 - X0, b = Y1 - Y0; return t < a ? [X0 + t, Y0] : t < a + b ? [X1, Y0 + t - a] : t < 2 * a + b ? [X1 - (t - a - b), Y1] : [X0, Y1 - (t - 2 * a - b)]; };
   const inside = (x, y, ps) => { let c = false; for (let i = 0, j = ps.length - 1; i < ps.length; j = i++) { const [a, b] = ps[i], [u, v] = ps[j]; if ((b > y) !== (v > y) && x < (u - a) * (y - b) / (v - b) + a) c = !c; } return c; };
+  // islands (closed rings) as they are; the open pieces are joined into rings along the frame: from where one piece leaves,
+  // round the frame to where the next one comes in, so a river with a coastline on both banks (the Weser at Bremen, the
+  // Elbe at Hamburg) is the water between them, not each bank's half of the world laid over the other
   let out = '';
+  const open = [];
   for (const c of chains) {
     const px = c.map(([lo, la]) => P(la, lo)).map(([x, y]) => [Math.max(X0, Math.min(X1, x)), Math.max(Y0, Math.min(Y1, y))]);
     if (px.length < 2) continue;
     if (same(c[0], c.at(-1))) { out += ring(px); continue; }   // an island: the ring itself is land, so the water is everything else
-    const tb = tOf(px.at(-1)), ta = tOf(px[0]), corners = [0, X1 - X0, X1 - X0 + Y1 - Y0, 2 * (X1 - X0) + Y1 - Y0];
-    const walk = dir => { const pts = []; let t = tb; const end = dir > 0 ? (ta - tb + per) % per : (tb - ta + per) % per;
-      const cs = corners.map(k => dir > 0 ? (k - tb + per) % per : (tb - k + per) % per).map((dd, i) => [dd, corners[i]]).filter(([dd]) => dd > 0 && dd < end).sort((a, b) => a[0] - b[0]);
-      for (const [, k] of cs) pts.push(atT(k)); return [...px, atT(tb), ...pts, atT(ta)]; };
-    // the water is on the coast's right (land on the left): test a point just right of the middle of the line
-    const m = Math.floor(c.length / 2), [lo0, la0] = c[Math.max(0, m - 1)], [lo1, la1] = c[Math.min(c.length - 1, m)], ddx = lo1 - lo0, ddy = la1 - la0, nn = Math.hypot(ddx, ddy) || 1;
-    const tp = P((la0 + la1) / 2 - ddx / nn * 0.0002, (lo0 + lo1) / 2 + ddy / nn * 0.0002);
-    const A = walk(1), B = walk(-1); out += ring(inside(tp[0], tp[1], A) ? A : B);
+    open.push({ c, px, ta: tOf(px[0]), tb: tOf(px.at(-1)) });
   }
+  if (!open.length) return out;
+  const corners = [0, X1 - X0, X1 - X0 + Y1 - Y0, 2 * (X1 - X0) + Y1 - Y0];
+  const along = (from, to, dir) => { const end = dir > 0 ? (to - from + per) % per : (from - to + per) % per;
+    return corners.map(k => [dir > 0 ? (k - from + per) % per : (from - k + per) % per, k]).filter(([dd]) => dd > 0 && dd < end).sort((a, b) => a[0] - b[0]).map(([, k]) => atT(k)); };
+  const build = dir => { const left = new Set(open.map((_, i) => i)), rings2 = [];
+    while (left.size) { let i = [...left][0]; const first = i, pts = [];
+      for (let guard = 0; guard <= open.length; guard++) { left.delete(i); const o = open[i]; pts.push(...o.px, atT(o.tb));
+        // the next piece that comes in, going round the frame from where this one left
+        let best = -1, bd = Infinity; for (const k of [...left, first]) { const dd = dir > 0 ? (open[k].ta - o.tb + per) % per : (o.tb - open[k].ta + per) % per; if (dd < bd) { bd = dd; best = k; } }
+        pts.push(...along(o.tb, open[best].ta, dir), atT(open[best].ta));
+        if (best === first) break; i = best; }
+      rings2.push(pts); }
+    return rings2; };
+  // the water is on the coast's right (land on the left): test a point just right of the middle of the first piece
+  const c0 = open[0].c, m = Math.floor(c0.length / 2), [lo0, la0] = c0[Math.max(0, m - 1)], [lo1, la1] = c0[Math.min(c0.length - 1, m)], ddx = lo1 - lo0, ddy = la1 - la0, nn = Math.hypot(ddx, ddy) || 1;
+  const tp = P((la0 + la1) / 2 - ddx / nn * 0.0002, (lo0 + lo1) / 2 + ddy / nn * 0.0002);
+  const A = build(1), Bw = build(-1), inAny = rs => rs.reduce((n, r) => n + (inside(tp[0], tp[1], r) ? 1 : 0), 0) % 2 === 1;
+  for (const r of (inAny(A) ? A : Bw)) out += ring(r);
   return out;
 }
 const area = e => e.type === 'relation' ? rings(e.members || []) : (e.geometry ? ring(pts(e.geometry)) : '');
@@ -347,7 +362,7 @@ function gmapMarks(labels) {
     if ((process.env.GPAL ?? 'ACa') && !big && col !== '#5a84ad') { o += `<text x="${f(x)}" y="${f(y)}" text-anchor="middle" font-family="-apple-system, 'Noto Sans KR', sans-serif" font-size="10" font-weight="600" letter-spacing=".12em" fill="#6f6f6f" stroke="#fff" stroke-width="2.6" paint-order="stroke">${n.toUpperCase()}</text>`; continue; }
     o += txt(x, y, n, z, big ? 700 : 600, col === '#5a84ad' ? (process.env.GPAL === 'B' ? '#3f5a63' : '#4a7fb5') : big ? '#3c4043' : '#5f6368'); }
   // every icon has its family's colour (no purple; faith a warm grey-brown, sights teal, water a water blue, getting about navy)
-  const CAT = { food: '#e0782a', cafe: '#e0782a', bar: '#e0782a', beer: '#e0782a', bakery: '#e0782a', wine: '#e0782a', shop: '#4a7cd6', mall: '#4a7cd6', market: '#4a7cd6', fuel: '#4a7cd6', parking: '#4a7cd6', bank: '#4a7cd6', post: '#4a7cd6', hotel: '#d4568c', school: '#9a7449', university: '#9a7449', library: '#9a7449', hospital: '#d14a3e', pharmacy: '#d14a3e', police: '#6f7783', fire: '#d14a3e', townhall: '#6f7783', park: '#3d8b3d', garden: '#3d8b3d', forest: '#3d8b3d', playground: '#3d8b3d', zoo: '#3d8b3d', golf: '#3d8b3d', camp: '#3d8b3d', mountain: '#3d8b3d', cemetery: '#5f8a6a', lake: '#2f8fb6', beach: '#2f8fb6', fountain: '#2f8fb6', spring: '#2f8fb6', swim: '#2f8fb6', aquarium: '#2f8fb6', harbour: '#2f8fb6', lighthouse: '#2f8fb6', metro: '#3a64b0', train: '#3a64b0', tram: '#3a64b0', bus: '#3a64b0', ferry: '#3a64b0', boat: '#3a64b0', airport: '#3a64b0', cable: '#3a64b0', bike: '#3a64b0', bridge: '#3a64b0', museum: '#1d8f9f', gallery: '#1d8f9f', theatre: '#1d8f9f', cinema: '#1d8f9f', music: '#1d8f9f', castle: '#1d8f9f', palace: '#1d8f9f', monument: '#1d8f9f', statue: '#1d8f9f', ruin: '#1d8f9f', view: '#1d8f9f', tower: '#1d8f9f', clock: '#1d8f9f', windmill: '#1d8f9f', observatory: '#1d8f9f', wheel: '#1d8f9f', church: '#8a7465', cathedral: '#8a7465', chapel: '#8a7465', mosque: '#8a7465', synagogue: '#8a7465', shrine: '#8a7465', temple: '#8a7465', pagoda: '#8a7465', stadium: '#2f9a78', sports: '#2f9a78', ski: '#2f9a78', info: '#6f7783' };
+  const CAT = { gate: '#1d8f9f', skyscraper: '#1d8f9f', square: '#1d8f9f', artwork: '#1d8f9f', landmark: '#1d8f9f', food: '#e0782a', cafe: '#e0782a', bar: '#e0782a', beer: '#e0782a', bakery: '#e0782a', wine: '#e0782a', shop: '#4a7cd6', mall: '#4a7cd6', market: '#4a7cd6', fuel: '#4a7cd6', parking: '#4a7cd6', bank: '#4a7cd6', post: '#4a7cd6', hotel: '#d4568c', school: '#9a7449', university: '#9a7449', library: '#9a7449', hospital: '#d14a3e', pharmacy: '#d14a3e', police: '#6f7783', fire: '#d14a3e', townhall: '#6f7783', park: '#3d8b3d', garden: '#3d8b3d', forest: '#3d8b3d', playground: '#3d8b3d', zoo: '#3d8b3d', golf: '#3d8b3d', camp: '#3d8b3d', mountain: '#3d8b3d', cemetery: '#5f8a6a', lake: '#2f8fb6', beach: '#2f8fb6', fountain: '#2f8fb6', spring: '#2f8fb6', swim: '#2f8fb6', aquarium: '#2f8fb6', harbour: '#2f8fb6', lighthouse: '#2f8fb6', metro: '#3a64b0', train: '#3a64b0', tram: '#3a64b0', bus: '#3a64b0', ferry: '#3a64b0', boat: '#3a64b0', airport: '#3a64b0', cable: '#3a64b0', bike: '#3a64b0', bridge: '#3a64b0', museum: '#1d8f9f', gallery: '#1d8f9f', theatre: '#1d8f9f', cinema: '#1d8f9f', music: '#1d8f9f', castle: '#1d8f9f', palace: '#1d8f9f', monument: '#1d8f9f', statue: '#1d8f9f', ruin: '#1d8f9f', view: '#1d8f9f', tower: '#1d8f9f', clock: '#1d8f9f', windmill: '#1d8f9f', observatory: '#1d8f9f', wheel: '#1d8f9f', church: '#8a7465', cathedral: '#8a7465', chapel: '#8a7465', mosque: '#8a7465', synagogue: '#8a7465', shrine: '#8a7465', temple: '#8a7465', pagoda: '#8a7465', stadium: '#2f9a78', sports: '#2f9a78', ski: '#2f9a78', info: '#6f7783' };
   const seen = new Set(), placed = []; let n = 0;
   for (const p of POIS.filter(q => q.name && q.name.length <= 22).sort((a, b) => b.pr - a.pr)) {
     if (seen.has(p.name)) continue; const [x, y] = p.at, col = CAT[p.ic] || '#6f6a64', w = p.name.length * 10.5 * 0.58 + 16;

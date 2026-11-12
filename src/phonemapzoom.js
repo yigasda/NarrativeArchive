@@ -18,7 +18,7 @@ let last = null; // { z, s, tx, ty }
 const onMap = (x, y, target) => {
     if (!target?.closest || target.closest('button, a, input, [contenteditable], .mp_sheet, .mq_sheet, .mq_fc, .mq_hc, .ax_top, .ax_sb')) return null;
     const svg = target.closest('.mp_wx')?.querySelector('.mp_bg > svg.mp_art[data-z]');
-    if (!svg) return null;
+    if (!svg || svg.parentElement.classList.contains('mp_tiled')) return null;   // the tile map has its own fingers
     const r = svg.parentElement.getBoundingClientRect();
     return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom ? svg : null;
 };

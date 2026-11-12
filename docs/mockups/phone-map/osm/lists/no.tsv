@@ -1,0 +1,81 @@
+slug	받기	종류	이름	찾기	lat	lon	표 동네
+oslo-grunerlokka	o	도심	오슬로 그뤼네르뢰카	Grünerløkka, Oslo	59.9230	10.7590	오슬로: 그뤼네르뢰카
+oslo-akerbrygge	o	바다	오슬로 아케르 브뤼게	Aker Brygge, Oslo	59.9100	10.7270	오슬로: 아케르 브뤼게
+oslo-majorstuen	o	도심	오슬로 마요르스투엔	Majorstuen, Oslo	59.9290	10.7140	오슬로: 마요르스투엔
+oslo-sentrum	o	도심	오슬로 시내 · 카를 요한스 거리	Karl Johans gate, Oslo	59.9130	10.7430	
+oslo-bjorvika	o	바다	오슬로 비요르비카 오페라하우스	Oslo Opera House	59.9070	10.7530	
+oslo-frogner	o	교외	오슬로 프로그네르 공원	Frognerparken	59.9270	10.7000	
+oslo-holmenkollen	o	산	오슬로 홀멘콜렌	Holmenkollen	59.9640	10.6670	
+oslo-bygdoy	o	섬	오슬로 뷔그되위	Bygdøy	59.9070	10.6830	
+oslo-grorud	o	교외	오슬로 그로루드 아파트 단지	Grorud, Oslo	59.9610	10.8810	
+oslo-airport	o	공항	오슬로 가르데르모엔 공항	Oslo Airport Gardermoen	60.1940	11.1000	
+bergen-bryggen	o	옛마을	베르겐 브뤼겐	Bryggen, Bergen	60.3970	5.3240	
+bergen-floyen	o	산	베르겐 플뢰엔	Fløyen	60.3950	5.3420	
+bergen-nordnes	o	교외	베르겐 노르네스	Nordnes, Bergen	60.3990	5.3110	
+trondheim-bakklandet	o	옛마을	트론헤임 바클란데트	Bakklandet, Trondheim	63.4300	10.4030	
+trondheim-solsiden	o	도심	트론헤임 솔시덴	Solsiden, Trondheim	63.4350	10.4120	
+stavanger-gamle	o	옛마을	스타방에르 옛 시가	Gamle Stavanger	58.9720	5.7270	
+stavanger-oil	o	일터	스타방에르 석유 박물관 · 항구	Norwegian Petroleum Museum	58.9720	5.7360	
+tromso	o	도심	트롬쇠	Tromsø	69.6490	18.9560	
+tromso-telegrafbukta	o	바다	트롬쇠 바닷가	Telegrafbukta, Tromsø	69.6380	18.9310	
+kristiansand	o	바다	크리스티안산	Kristiansand	58.1460	7.9950	
+alesund	o	바다	올레순 아르누보 시내	Ålesund	62.4720	6.1490	
+bodo	o	바다	보되	Bodø	67.2830	14.3800	
+drammen	o	도심	드람멘	Drammen	59.7440	10.2040	
+fredrikstad-gamlebyen	o	옛마을	프레드릭스타드 옛 성곽 마을	Gamlebyen, Fredrikstad	59.2050	10.9550	
+lillehammer	o	산	릴레함메르	Lillehammer	61.1150	10.4660	
+hamar	o	호수	하마르 미에사 호숫가	Hamar	60.7950	11.0680	
+tonsberg	o	바다	퇸스베르그	Tønsberg	59.2670	10.4080	
+kongsberg	o	일터	콩스베르그 광산 · 공장 도시	Kongsberg	59.6680	9.6500	
+reine	o	섬	로포텐 레이네	Reine	67.9330	13.0890	
+henningsvaer	o	섬	로포텐 헤닝스베르	Henningsvær	68.1530	14.2040	
+svolvaer	o	섬	로포텐 스볼베르	Svolvær	68.2340	14.5680	
+nusfjord	o	섬	로포텐 누스피오르 어촌	Nusfjord	68.0350	13.3500	
+a-lofoten	o	섬	로포텐 오 마을	Å i Lofoten	67.8790	12.9830	
+andenes	o	섬	베스테롤렌 안데네스	Andenes	69.3240	16.1190	
+geiranger	o	강골짜기	게이랑에르 피오르	Geiranger	62.1010	7.2060	
+flam	o	강골짜기	플롬	Flåm	60.8630	7.1140	
+gudvangen	o	강골짜기	구드방엔 피오르	Gudvangen	60.8800	6.8440	
+aurland	o	강골짜기	아울란 피오르 마을	Aurlandsvangen	60.9050	7.1880	
+balestrand	o	강골짜기	발레스트란	Balestrand	61.2080	6.5320	
+undredal	o	강골짜기	운드레달 산양 치즈 마을	Undredal	60.9510	7.1010	
+olden	o	강골짜기	올덴	Olden	61.8360	6.8070	
+loen	o	강골짜기	로엔	Loen	61.8680	6.8560	
+odda	o	강골짜기	하르당에르 오다	Odda	60.0690	6.5460	
+lofthus	o	시골	하르당에르 로프트후스 과수원	Lofthus, Ullensvang	60.3270	6.6540	
+eidfjord	o	강골짜기	에이드피오르	Eidfjord	60.4670	7.0710	
+preikestolen	o	산	프레이케스톨렌 아래	Preikestolen Fjellstue	58.9930	6.1420	
+lysebotn	o	강골짜기	뤼세피오르 뤼세보튼	Lysebotn	59.0560	6.6480	
+andalsnes	o	산	온달스네스 트롤스티겐 아래	Åndalsnes	62.5670	7.6870	
+trollstigen	o	산	트롤스티겐	Trollstigen	62.4560	7.6680	
+atlanterhavsveien	o	바다	대서양 도로	Atlantic Ocean Road	63.0170	7.3550	
+kristiansund	o	바다	크리스티안순	Kristiansund	63.1100	7.7280	
+roros	o	옛마을	뢰로스 광산 마을	Røros	62.5740	11.3840	
+lom	o	산	롬 목조 교회 마을	Lom, Innlandet	61.8380	8.5680	
+beitostolen	o	산	베이토스퇼렌 스키 마을	Beitostølen	61.2470	8.9090	
+geilo	o	산	게일로	Geilo	60.5340	8.2060	
+hemsedal	o	산	헴세달	Hemsedal	60.8630	8.5530	
+trysil	o	산	트뤼실 스키 마을	Trysil	61.3150	12.2640	
+finse	o	산	핀세 고원 역	Finse	60.6020	7.5040	
+rjukan	o	강골짜기	류칸 골짜기 공장 마을	Rjukan	59.8790	8.5930	
+heddal	o	시골	텔레마르크 헤달 목조 교회	Heddal Stave Church	59.5790	9.1770	
+setesdal-valle	o	시골	세테스달 발레	Valle, Setesdal	59.2100	7.5340	
+lillesand	o	바다	릴레산 하얀 마을	Lillesand	58.2490	8.3770	
+grimstad	o	바다	그림스타드	Grimstad	58.3410	8.5930	
+risor	o	바다	리쇠르	Risør	58.7200	9.2340	
+mandal	o	바다	만달 해변	Mandal	58.0290	7.4600	
+lindesnes	o	바다	린데스네스 등대	Lindesnes Lighthouse	57.9830	7.0480	
+egersund	o	바다	에게르순	Egersund	58.4510	5.9990	
+haugesund	o	바다	하우게순	Haugesund	59.4130	5.2680	
+skudeneshavn	o	섬	스쿠데네스하운 하얀 마을	Skudeneshavn	59.1480	5.2580	
+hamnoy	o	섬	함뇌위 붉은 오두막	Hamnøy	67.9440	13.1350	
+senja-hamn	o	섬	센야섬	Hamn i Senja	69.4190	17.1640	
+alta	o	시골	알타 오로라 마을	Alta, Norway	69.9690	23.2720	
+karasjok	o	시골	사미 마을 카라쇼크	Karasjok	69.4710	25.5110	
+kautokeino	o	시골	사미 마을 카우토케이노	Kautokeino	69.0110	23.0410	
+hammerfest	o	바다	함메르페스트	Hammerfest	70.6630	23.6820	
+honningsvag	o	바다	노르카프 호닝스보그	Honningsvåg	70.9820	25.9700	
+kirkenes	o	바다	키르케네스	Kirkenes	69.7270	30.0450	
+narvik	o	산	나르비크	Narvik	68.4380	17.4270	
+mo-i-rana	o	일터	모이라나 제철 도시	Mo i Rana	66.3130	14.1420	
+longyearbyen	o	섬	스발바르 롱위에아르뷔엔	Longyearbyen	78.2230	15.6470	
