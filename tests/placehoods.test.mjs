@@ -29,3 +29,15 @@ test('지도 표의 동네는 (어디에나 있는 말 말고) 다 찾아요', (
     const lost = HINT.flatMap(([, ws]) => ws).filter(w => !hoodCities(w).length);
     assert.ok(lost.length < 45, `${lost.length}: ${lost.join(',')}`);
 });
+test('지도의 도시는 하나도 빠짐없이 이 표에 시간대가 적힌 줄이 있어요 (지도에 도시가 늘면 여기에 줄을 더해요)', () => {
+    const lost = [];
+    for (const [town, words] of HINT) for (const t of town.split(' · ')) {
+        if (!words.some(w => hoodCities(w).some(c => c.names.includes(t)))) lost.push(t);
+    }
+    assert.deepEqual([...new Set(lost)], []);
+});
+test('도시마다 적힌 시간대 그대로 (나라로 짐작하지 않아요)', () => {
+    const tz = w => hoodCities(w).map(c => `${c.names[0]} ${c.tz}`);
+    assert.deepEqual(tz('우도'), ['서귀포 Asia/Seoul']);
+    assert.deepEqual(tz('브뤼겐'), ['베르겐 Europe/Oslo']);
+});

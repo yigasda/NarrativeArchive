@@ -115,6 +115,22 @@ export const HOODS = [
     ['라고스|Lagos', 'Africa/Lagos', '빅토리아 아일랜드|Victoria Island', '이코이|Ikoyi', '레키|Lekki'],
     ['나이로비|Nairobi', 'Africa/Nairobi', '웨스트랜즈|Westlands', '킬리마니|Kilimani'],
     ['마라케시|Marrakech|Marrakesh', 'Africa/Casablanca', '제마 엘프나|Jemaa el-Fnaa', '겔리즈|Gueliz'],
+    // 휴대폰 지도(HINT)에 있는 도시: 동네 이름은 지도 표에서 읽어요
+    ['화성|Hwaseong', 'Asia/Seoul'],
+    ['서귀포|Seogwipo', 'Asia/Seoul'],
+    ['안동|Andong', 'Asia/Seoul'],
+    ['청두|Chengdu|成都', 'Asia/Shanghai'],
+    ['충칭|Chongqing|重庆|重慶', 'Asia/Shanghai'],
+    ['뒤셀도르프|Düsseldorf|Dusseldorf', 'Europe/Berlin'],
+    ['라이프치히|Leipzig', 'Europe/Berlin'],
+    ['드레스덴|Dresden', 'Europe/Berlin'],
+    ['리버풀|Liverpool', 'Europe/London'],
+    ['글래스고|Glasgow', 'Europe/London'],
+    ['마르세유|Marseille', 'Europe/Paris'],
+    ['나폴리|Napoli|Naples', 'Europe/Rome'],
+    ['베르겐|Bergen', 'Europe/Oslo'],
+    ['트롬쇠|Tromsø|Tromso', 'Europe/Oslo'],
+    ['로포텐|Lofoten', 'Europe/Oslo'],
 ];
 
 const key = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
@@ -126,20 +142,14 @@ const AROUND = ['사거리', '삼거리', '오거리', '교차로', '역', '역�
 // the map's HINT words that are no one neighbourhood (an airport, a suburb, "the City", "Central", a cathedral's name)
 const NOT_HOOD = ['공항', '교외', '방리유', 'banlieue', '달동네', '산동네', '시티', '뱅크', '은행가', '시청', '오페라', 'opéra', '센트럴', 'central', '피크', 'the peak',
     '기타', '미션', 'mission', '루프', 'loop', '다마', 'tama', '101', '798', 'cbd', '수향', 'water town', '오로라', '8구', '16구', 'dom', '두오모', 'duomo', '구룡', 'kowloon'].map(key);
-// a country's one time zone, for a map town this table has no row for (a country with several is left out)
-const ONE_TZ = { kr: 'Asia/Seoul', jp: 'Asia/Tokyo', cn: 'Asia/Shanghai', hk: 'Asia/Hong_Kong', tw: 'Asia/Taipei', gb: 'Europe/London', de: 'Europe/Berlin',
-    fr: 'Europe/Paris', it: 'Europe/Rome', no: 'Europe/Oslo', es: 'Europe/Madrid', nl: 'Europe/Amsterdam', at: 'Europe/Vienna', ch: 'Europe/Zurich', cz: 'Europe/Prague',
-    ie: 'Europe/Dublin', be: 'Europe/Brussels', dk: 'Europe/Copenhagen', se: 'Europe/Stockholm', fi: 'Europe/Helsinki', gr: 'Europe/Athens', th: 'Asia/Bangkok',
-    vn: 'Asia/Ho_Chi_Minh', sg: 'Asia/Singapore', ph: 'Asia/Manila', in: 'Asia/Kolkata', tr: 'Europe/Istanbul', ae: 'Asia/Dubai', eg: 'Africa/Cairo', nz: 'Pacific/Auckland' };
-// the map's towns ("청두 · 충칭": each), as { names, tz }: this table's row of that city, else its names in PLACE and its country's zone
+// the map's towns ("청두 · 충칭": each), as { names, tz }: this table's row of that city (every town has one, with its zone)
 function mapCities(town, rows) {
     const out = [];
     for (const t of String(town || '').split(' · ').map(x => x.trim()).filter(Boolean)) {
         // (the row of the same city under any of its names: 호찌민 is this table's 호치민 by "saigon", 방갈로르 its 벵갈루루)
         const pl = PLACE.find(x => x[0] === t), ks = new Set([t, ...(pl?.[1] || [])].map(key).filter(Boolean));
-        const row = rows.find(c => (!pl || !ONE_TZ[pl[3]] || c.tz === ONE_TZ[pl[3]]) && c.names.some(n => ks.has(key(n))));
-        const names = [...new Set([t, ...(row?.names || []), ...(pl?.[1] || [])])], tz = row?.tz || ONE_TZ[pl?.[3]];
-        if (tz) out.push({ names, tz });
+        const row = rows.find(c => c.names.some(n => ks.has(key(n))));
+        if (row) out.push({ names: [...new Set([t, ...row.names, ...(pl?.[1] || [])])], tz: row.tz });
     }
     return out;
 }
@@ -147,7 +157,9 @@ let index = null;
 function hoodIndex() {
     if (index) return index;
     index = new Map();
-    const rows = [], put = (n, city) => { const k = key(n); if (!k) return; const at = index.get(k) || index.set(k, []).get(k); if (!at.some(c => c.tz === city.tz && c.names.some(x => city.names.includes(x)))) at.push(city); };
+    const rows = [], put = (n, city) => { const k = key(n); if (!k) return; const at = index.get(k) || index.set(k, []).get(k), same = at.find(c => c.tz === city.tz && c.names.some(x => city.names.includes(x)));
+        // (the same city met again under its map name: one city, knowing both names, 호치민 and 호찌민)
+        if (same) { for (const x of city.names) if (!same.names.includes(x)) same.names.push(x); } else at.push(city); };
     for (const [cities, tz, ...hoods] of HOODS) {
         const city = { names: cities.split('|'), tz };
         rows.push(city);
