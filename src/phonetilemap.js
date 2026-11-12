@@ -275,6 +275,21 @@ function visOf(host) {
     const v = s ? s.getBoundingClientRect().top - top : host.clientHeight;
     return Math.max(160, Math.min(host.clientHeight, v));
 }
+// a sheet shorter than the screen sits low (the map gets the rest), never with an empty stretch under it
+function fitSheet(root) {
+    const wx = root.querySelector('.mp_wx:not(.mp_low)'), sc = wx?.querySelector(':scope > .ax_scroll'), gap = sc?.querySelector('.mp_gap'), sheet = sc?.querySelector('.mp_sheet');
+    if (!gap || !sheet || gap.dataset.fit) return;
+    gap.dataset.fit = '1';
+    const kids = [...sheet.children].filter(e => e.offsetParent !== null && !e.classList.contains('ax_pad'));
+    if (!kids.length) return;
+    const used = kids.at(-1).getBoundingClientRect().bottom - sheet.getBoundingClientRect().top + 28, room = sc.clientHeight - gap.offsetHeight;
+    if (used >= room) return;
+    const h = Math.min(sc.clientHeight - 160, sc.clientHeight - used);
+    gap.style.transition = 'none'; gap.style.height = `${h}px`; gap.dataset.fh = gap.style.height; void gap.offsetHeight; gap.style.transition = '';
+    // the map box reaches down under the sheet's new top
+    const host = wx.querySelector('.mp_bg'), top = sheet.getBoundingClientRect().top - host.getBoundingClientRect().top;
+    if (host && top + 40 > host.clientHeight) host.style.height = `${Math.round(top + 40)}px`;
+}
 // the phone's screens are drawn again and again: a new map box gets the one map (watched, the way phonemapzoom.js does)
 export function tileWatch(root) {
     let busy = false;
@@ -285,7 +300,7 @@ export function tileWatch(root) {
         if (!host) { if (live.el?.isConnected && !live.el.closest('.mp_bg[data-tm]')) live.el.remove(); return; }
         if (host._tm || busy) return;
         host._tm = true; busy = true;
-        requestAnimationFrame(() => { host.dataset.vis ||= String(Math.round(visOf(host))); const d = JSON.parse(host.dataset.tm); d.vis = Number(host.dataset.vis); host.dataset.tm = JSON.stringify(d);
+        requestAnimationFrame(() => { fitSheet(root); host.dataset.vis ||= String(Math.round(visOf(host))); const d = JSON.parse(host.dataset.tm); d.vis = Number(host.dataset.vis); host.dataset.tm = JSON.stringify(d);
             mountTiles(root).catch(() => {}).finally(() => { busy = false; }); });
     }).observe(root, { childList: true, subtree: true });
 }
@@ -297,7 +312,7 @@ function setLow(wx, low) {
     const sc = wx.querySelector(':scope > .ax_scroll'), gap = sc?.querySelector('.mp_gap'), host = wx.querySelector('.mp_bg');
     if (!sc || !gap || !host) return;
     if (low) { if (!gap.dataset.h) gap.dataset.h = String(gap.offsetHeight); sc.scrollTop = 0; gap.style.height = `${sc.clientHeight - PEEK}px`; }
-    else gap.style.height = '';
+    else gap.style.height = gap.dataset.fh || '';
     wx.classList.toggle('mp_low', low);
     let up = wx.querySelector(':scope > .mp_up');
     if (low && !up) {
@@ -356,5 +371,5 @@ async function thumbOne(b) {
     }
     if (!b.isConnected) return;
     const img = document.createElement('img'); img.src = pic; img.alt = ''; img.width = 96; img.height = 78; img.className = 'mq_timg';
-    b.querySelector('svg')?.replaceWith(img);
+    b.querySelector('.mq_tph, svg')?.replaceWith(img);   // the plain ground the button waits with
 }
