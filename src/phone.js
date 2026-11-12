@@ -114,11 +114,12 @@ export async function openPhone(who = null) {
         const lw = liveWorld(realM);
         if (lw) { const d = liveMeta(realM, { text: () => liveStoryText(realM, liveWorld(realM)) }); for (const p of Object.values(lw.phones || {})) if (p?.owner) await settle(d, p); }
         if (!stillHere()) return;
-        if (done.length) {
-            const n = done.reduce((t, r) => t + (r.dropped || 0) + (r.items || 0) + (r.cut || 0), 0), kept = [...new Set(done.flatMap(r => r.kept || []))], noAt = done.some(r => !r.at);
-            const who = [...new Set(done.map(r => r.name))].join(' · ');
-            toastr.info(`${n ? `갈라진 뒤의 기록 ${n}개를 뺐어요.` : '갈라진 뒤의 기록은 없었어요.'} 원래 방의 폰은 그대로예요.${kept.length ? ` 남긴 것: ${kept.join(', ')}.` : ''}${noAt ? ' 갈라진 곳의 시각을 몰라서, 처음 만든 기록과 폰 시각은 그대로 뒀어요.' : ''}`,
-                `${who} 폰 · 이 방은 갈라진 곳까지`, { timeOut: 9000, extendedTimeOut: 4000 });
+        // 알림은 한 줄: 뺀 게 있을 때만(시각을 몰랐던 건 콘솔에만)
+        for (const r of done) if (!r.at) console.info('[narrative-archive] branch: story time at the branch point unknown, made records and clock kept', r.name);
+        const shown = done.filter(r => (r.dropped || 0) + (r.items || 0) + (r.cut || 0) > 0);
+        if (shown.length) {
+            const n = shown.reduce((t, r) => t + (r.dropped || 0) + (r.items || 0) + (r.cut || 0), 0), kept = [...new Set(shown.flatMap(r => r.kept || []))];
+            toastr.info(`갈라진 뒤 기록 ${n}개 뺐어요${kept.length ? ` · ${kept.join(', ')} 남김` : ''}`, `${[...new Set(shown.map(r => r.name))].join(' · ')} 폰`);
         }
     }
     // a round this browser made that the saved chat doesn't have: kept, and offered in 설정 › 대화 반영; the phone opens anyway
