@@ -206,3 +206,29 @@ test('폰 2 서랍: 쓰면 폰 2에만 (폰 1은 글자 하나 안 바뀌어요)
 test('폰 2 서랍: 폰 2가 없으면 만들지 않아요', () => {
     assert.throws(() => L.liveMeta({ phones: {} }), /폰 2/);
 });
+
+test('폰 2 메신저: 보내기 · 읽음 · 안 읽음 · 단체방 이름', () => {
+    const m = {};
+    L.startFresh(m, { persona: 'Yuna' });
+    const r = L.ensureRoom(m, ['Mara']), g = L.ensureRoom(m, ['Mara', 'Ivo']);
+    assert.throws(() => L.sendLive(m, r.id, '  '), /보낼 말/);
+    assert.throws(() => L.sendLive(m, 'nope', 'hi'), /없는 방/);
+    const a = L.sendLive(m, r.id, ' 안녕 ', 1000);
+    assert.deepEqual([a.from, a.text, a.at], ['Yuna', '안녕', 1000]);
+    assert.equal(L.unreadFor(r, 'Yuna'), 0);
+    assert.deepEqual(L.unreadBy(r, a), ['Mara']);
+    r.messages.push({ id: 'x', from: 'Mara', text: 'Hallo', at: 2000 });
+    assert.equal(L.unreadFor(r, 'Yuna'), 1);
+    L.readLive(m, r.id, 'yuna', 2500); L.readLive(m, r.id, 'Mara', 1500);
+    assert.equal(L.unreadFor(r, 'Yuna'), 0); assert.deepEqual(L.unreadBy(r, a), []);
+    L.readLive(m, r.id, 'Mara', 1200);   // (only forward)
+    assert.equal(r.read.mara, 1500);
+    L.readLive(m, r.id, 'Ivo', 9999);    // (not in the room: nothing)
+    assert.equal(r.read.ivo, undefined);
+    const b = L.sendLive(m, g.id, '토요일에 갈게', 3000);
+    L.readLive(m, g.id, 'Mara', 3100);
+    assert.deepEqual(L.unreadBy(g, b), ['Ivo']);
+    L.nameRoom(m, g.id, '  Varo Werkstatt '); assert.equal(g.name, 'Varo Werkstatt');
+    L.nameRoom(m, g.id, ''); assert.equal(g.name, undefined);
+    assert.equal(m.phones, undefined); assert.equal(m.finance, undefined);   // (폰 1 칸은 그대로)
+});

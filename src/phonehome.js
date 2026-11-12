@@ -79,7 +79,8 @@ function noteItems(n) {
 export const lastSig = t => { const x = t.messages[t.messages.length - 1]; return x ? `${x.time}|${x.text}` : ''; };
 export const threadNew = t => t.messages[t.messages.length - 1]?.from !== 'me' && t.seen !== lastSig(t);
 // wx: the weather widget for the second page, drawn by the weather app (passed in, so the home needs no app module)
-export function homeScreen(p, now, m, page = 1, wx = '') {
+// more: cells after the first page's apps (실시간 폰의 Orbit, from phone.js)
+export function homeScreen(p, now, m, page = 1, wx = '', more = '') {
     const mono = p.theme === 'gray';
     const day = String(now).slice(0, 5), x = parts(now);
     const anniv = annivToday(m, now, p.owner);
@@ -109,7 +110,7 @@ export function homeScreen(p, now, m, page = 1, wx = '') {
               <span class="cg_wh"><span class="cg_cap cg_capnote">메모</span><span class="cg_num cg_evw">${p.notes.length ? esc(fmtDate(p, note.time, true)) : ''}</span></span>
               ${items.length ? items.map(i => `<span class="cg_item ${i.done ? 'done' : ''}"><span class="cg_chk">${i.done ? '<svg aria-hidden="true" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>' : ''}</span><span class="cg_itx">${esc(i.text)}</span></span>`).join('') : '<span class="cg_evw">메모 없음</span>'}
             </button>`}</div>
-          <div class="cg_grid">${(page === 2 ? ['bank', 'wallet', 'shop', 'voice', 'invest', 'clock', 'health', 'files', 'weather', 'delivery'] : ['photo', 'cal', 'note', 'map', 'sns', 'mail', 'diary', 'set']).map(k => `<div class="cg_cell">${cgIcon(k, mono, badges[k] || 0, ue)}<span class="cg_lbl">${k === 'delivery' ? (ue ? 'Uber Eats' : '배달의민족') : APPS[k]}</span></div>`).join('')}</div>
+          <div class="cg_grid">${(page === 2 ? ['bank', 'wallet', 'shop', 'voice', 'invest', 'clock', 'health', 'files', 'weather', 'delivery'] : ['photo', 'cal', 'note', 'map', 'sns', 'mail', 'diary', 'set']).map(k => `<div class="cg_cell">${cgIcon(k, mono, badges[k] || 0, ue)}<span class="cg_lbl">${k === 'delivery' ? (ue ? 'Uber Eats' : '배달의민족') : APPS[k]}</span></div>`).join('')}${page === 2 ? '' : more}</div>
         </div>
         <div class="cg_fill"></div>
         <div class="cg_dots"><button type="button" class="${page === 1 ? 'on' : ''}" data-go="home" aria-label="홈 1쪽"></button><button type="button" class="${page === 2 ? 'on' : ''}" data-go="home2" aria-label="홈 2쪽"></button></div>

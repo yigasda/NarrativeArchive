@@ -1,0 +1,86 @@
+/* ===== Orbit: 실시간 폰의 메신저 (docs/design/orbit.md). 목록 · 새 대화 = 흰 카드 + 검정 알약, 방 안 = 그 사람 색 오로라 + 유리 ===== */
+.ax:is(.ax_orbit, .ax_orbitnew, .ax_orbitroom) .ax_canvas { position: relative; overflow: hidden; background: #f2f2f4; color: #15171c; --axfg: #15171c; }
+.ax .ob_blob { position: absolute; inset: -30%; filter: blur(26px); transform: translateZ(0); pointer-events: none; }
+.ax .ob_gl { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 40%); pointer-events: none; }
+.ax .ob_face { position: relative; overflow: hidden; border-radius: 50%; flex: none; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 2px 6px rgba(22, 27, 34, 0.12); }
+.ax .ob_face .ob_blob { filter: blur(8px); }
+.ax .ob_face b { position: relative; z-index: 1; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.12); }
+/* 위 줄 · 목록 */
+.ax .ob_top { display: flex; justify-content: space-between; align-items: center; padding: 6px 18px 12px; }
+.ax .ob_cb { width: 46px; height: 46px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 1px 2px rgba(22, 27, 34, 0.05), 0 6px 16px rgba(22, 27, 34, 0.07); }
+.ax .ob_cb0 { width: 46px; }
+.ax .ob_h1 { font-size: 21px; font-weight: 600; letter-spacing: -0.01em; }
+.ax .ob_scroll { padding: 0 16px; }
+.ax .ob_pad { flex: none; height: 110px; }
+.ax .ob_seg { display: flex; flex: none; background: #fff; border-radius: 999px; padding: 5px; box-shadow: 0 1px 2px rgba(22, 27, 34, 0.04), 0 6px 18px rgba(22, 27, 34, 0.05); }
+.ax .ob_sg { flex: 1; text-align: center; font-size: 14.5px; font-weight: 500; color: #6b707b; padding: 10px 0; border-radius: 999px; cursor: pointer; }
+.ax .ob_sg.on { background: #15161a; color: #fff; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16); }
+.ax .ob_hero { position: relative; overflow: hidden; flex: none; margin-top: 14px; height: 176px; border-radius: 26px; color: #fff; box-shadow: 0 10px 26px rgba(70, 80, 140, 0.22); }
+.ax .ob_hero .ob_in { position: relative; z-index: 1; padding: 18px 20px; }
+.ax .ob_hero small { font-size: 12px; opacity: 0.88; }
+.ax .ob_big { font-size: 48px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.05; margin-top: 6px; }
+.ax .ob_dots { display: flex; gap: 4.2px; align-items: flex-end; height: 30px; margin-top: 16px; }
+.ax .ob_dots i { width: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.5); }
+.ax .ob_dots i.p { background: rgba(255, 255, 255, 0.78); }
+.ax .ob_dots i.h { background: #fff; height: 30px; }
+.ax .ob_dl { display: flex; justify-content: space-between; font-size: 10.5px; opacity: 0.8; margin-top: 5px; }
+.ax .ob_list { flex: none; margin-top: 14px; background: #fff; border-radius: 24px; padding: 4px 0; box-shadow: 0 1px 2px rgba(22, 27, 34, 0.04), 0 8px 24px rgba(22, 27, 34, 0.05); }
+.ax .ob_rm { display: flex; gap: 12px; align-items: center; padding: 12px 16px; position: relative; cursor: pointer; }
+.ax .ob_rm + .ob_rm::before { content: ""; position: absolute; left: 76px; right: 16px; top: 0; height: 1px; background: #eef0f3; }
+.ax .ob_t { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.ax .ob_t b { font-size: 15.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ax .ob_p { font-size: 13.5px; color: #7b808b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+.ax .ob_r { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; font-size: 12px; color: #8a8f99; }
+.ax .ob_un { min-width: 21px; height: 21px; padding: 0 6px; border-radius: 999px; background: #15161a; color: #fff; font-size: 11.5px; font-weight: 600; line-height: 21px; text-align: center; box-sizing: border-box; }
+.ax .ob_un0 { height: 21px; }
+.ax :is(.ob_dock, .ob_go) { position: absolute; z-index: 4; display: flex; align-items: center; justify-content: center; gap: 6px; background: #15161a; color: #fff; font-weight: 600; border-radius: 999px; cursor: pointer; white-space: nowrap; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 10px 24px rgba(22, 27, 34, 0.2); }
+.ax .ob_dock { left: 50%; bottom: 34px; transform: translateX(-50%); padding: 13px 20px; font-size: 14px; }
+.ax .ob_go { left: 16px; right: 16px; bottom: 34px; height: 58px; font-size: 15.5px; }
+.ax .ob_go em { font-style: normal; font-weight: 500; opacity: 0.6; }
+/* 새 대화 */
+.ax .ob_picked { display: flex; flex: none; gap: 14px; margin: 4px 4px 0; }
+.ax .ob_pk { position: relative; display: flex; flex-direction: column; align-items: center; gap: 5px; font-size: 12px; color: #3a3f47; cursor: pointer; }
+.ax .ob_x { position: absolute; right: -4px; top: -3px; width: 20px; height: 20px; border-radius: 50%; background: #15161a; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px #f2f2f4; }
+.ax .ob_gname { position: relative; overflow: hidden; flex: none; margin-top: 16px; border-radius: 22px; color: #fff; box-shadow: 0 10px 24px rgba(70, 80, 140, 0.18); }
+.ax .ob_gname .ob_in { position: relative; z-index: 1; display: flex; flex-direction: column; padding: 14px 16px; }
+.ax .ob_gname small { font-size: 12px; opacity: 0.88; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax .ax_in.ob_gin { height: 30px; color: #fff; --axfg: #fff; font-size: 20px; --axfs: 20px; font-weight: 600; }
+.ax .ob_gin::placeholder { color: rgba(255, 255, 255, 0.6); }
+.ax .ob_sec { font-size: 12.5px; color: #8a8f99; margin: 18px 6px -6px; }
+.ax .ob_ck { width: 26px; height: 26px; border-radius: 50%; border: 2px solid #d4d7dd; box-sizing: border-box; display: flex; align-items: center; justify-content: center; flex: none; }
+.ax .ob_ck.on { border: 0; background: #15161a; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18); }
+/* 방 안: 그 사람 색 바탕 + 유리 */
+.ax .ob_bg { position: absolute; inset: 0; overflow: hidden; }
+.ax .ob_bg .ob_blob { inset: -20%; filter: blur(40px); }
+.ax_orbitroom .ax_sb, .ax .ob_ct, .ax .ob_chips, .ax .ob_msgs, .ax .ob_inp { position: relative; z-index: 1; }
+.ax .ob_glass { background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(18px) saturate(1.3); -webkit-backdrop-filter: blur(18px) saturate(1.3); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), inset 0 0 0 1px rgba(255, 255, 255, 0.35), 0 8px 24px rgba(40, 40, 80, 0.1); }
+.ax .ob_ct { display: flex; flex: none; align-items: center; gap: 10px; margin: 2px 10px 0; height: 62px; padding: 0 10px; border-radius: 24px; }
+.ax .ob_gb { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.ax .ob_nm { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.ax .ob_nm b { font-size: 16.5px; font-weight: 600; color: #1b1d24; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ax .ob_nm span { font-size: 12px; color: rgba(30, 32, 40, 0.62); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ax .ob_chips { display: flex; flex: none; justify-content: center; gap: 6px; margin-top: 10px; }
+.ax .ob_chip { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; color: #fff; background: rgba(20, 22, 30, 0.26); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius: 999px; padding: 5px 12px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2); }
+.ax .ob_chip.na_ob_as { cursor: pointer; }
+.ax .ob_msgs { padding: 0 14px; }
+.ax .ob_mi { display: flex; flex-direction: column; gap: 6px; margin-top: auto; padding: 12px 0 14px; }
+.ax .ob_msgs.ro .ob_mi { padding-bottom: 40px; }
+.ax .ob_day { align-self: center; font-size: 11.5px; color: #fff; opacity: 0.92; margin: 2px 0 4px; text-shadow: 0 1px 6px rgba(40, 40, 90, 0.2); }
+.ax .ob_b { max-width: 76%; padding: 10px 14px; border-radius: 22px; font-size: 15px; line-height: 1.38; overflow-wrap: anywhere; white-space: pre-wrap; }
+.ax .ob_b.th { align-self: flex-start; border-bottom-left-radius: 7px; color: #1b1d24; }
+.ax .ob_b.me { align-self: flex-end; border-bottom-right-radius: 7px; background: rgba(20, 22, 30, 0.78); color: #fff; backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 8px 22px rgba(20, 22, 40, 0.18); }
+.ax .ob_ko { display: block; font-size: 12.5px; line-height: 1.4; margin-top: 5px; padding-top: 5px; border-top: 1px solid rgba(30, 32, 40, 0.1); color: rgba(30, 32, 40, 0.62); cursor: pointer; }
+.ax .ob_b.me .ob_ko { border-top-color: rgba(255, 255, 255, 0.18); color: rgba(255, 255, 255, 0.72); }
+.ax .ob_kof { display: flex; align-items: center; gap: 3px; margin-top: 5px; font-size: 11.5px; font-weight: 600; color: #4c5ea8; cursor: pointer; }
+.ax .ob_b.me .ob_kof { color: rgba(255, 255, 255, 0.75); }
+.ax .ob_rd { align-self: flex-end; font-size: 10.5px; color: #fff; opacity: 0.85; margin: -2px 6px 2px; }
+.ax .ob_rd b { font-weight: 700; }
+.ax .ob_sn { font-size: 11.5px; font-weight: 600; color: #fff; margin: 5px 0 -2px 10px; text-shadow: 0 1px 6px rgba(40, 40, 90, 0.25); }
+.ax .ob_inp { display: flex; flex: none; align-items: center; gap: 10px; margin: 0 12px 30px; height: 54px; padding: 0 6px 0 16px; border-radius: 999px; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax .ax_in.ob_in { color: #1b1d24; --axfg: #1b1d24; font-size: 15px; --axfs: 15px; }
+.ax .ob_in::placeholder { color: rgba(30, 32, 40, 0.5); }
+.ax .ob_send { width: 42px; height: 42px; flex: none; border-radius: 50%; background: rgba(20, 22, 30, 0.85); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18); }
+/* 홈 1쪽의 Orbit 아이콘: 홈 아이콘과 같은 판 크기, 안은 그림 그대로 */
+.cg .cg_ic.ob_ic { overflow: visible; background: none; }
+.cg .cg_ic.ob_ic::before, .cg .cg_ic.ob_ic::after { display: none; }
+.cg .cg_ic.ob_ic svg { filter: none; border-radius: 18px; }

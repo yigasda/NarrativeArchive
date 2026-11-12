@@ -336,6 +336,7 @@ node --test tests/*.test.mjs
 - 날씨 앱 · 도시 카드 · 홈 날씨 위젯을 디자인할 때 → `docs/design/weather.md`
 - 건강 · 파일 · 쇼핑 · 배달 · 스크린타임 · 메시지 · 다녀간 곳 · 폰 안 확인 창 · 팝업 · 홈 2쪽을 디자인할 때 → `docs/design/phone-apps.md`
 - 다녀간 곳을 실제 지도(OpenStreetMap)로 그리는 작업을 할 때 → `docs/design/map.md`
+- 실시간 폰의 메신저 Orbit(목록 · 방 · 새 대화 · 아이콘)을 디자인할 때 → `docs/design/orbit.md`
 - 확장 패널의 확인 창 · 아카이브에 추가 · 빈 창 예시를 디자인할 때 → `docs/design/panel-windows.md`
 
 새 앱 · 화면의 기록도 여기 말고 `docs/design/`에 따로 쓰고, 위 목록에 한 줄을 더해요.

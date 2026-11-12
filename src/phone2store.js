@@ -12,7 +12,8 @@
 //     phones: { [name key]: phone },              모든 인물의 폰 2
 //     finance, profiles, pre, lore, loreOff:      폰 1의 m.finance · phoneProfiles · phonePre · phoneLore · phoneLoreOff
 //                                                 에 해당하는 폰 2 것 (이야기에서 시작하면 그때의 깊은 복사)
-//     messenger: { accounts: { [name key]: { name } }, rooms: { [id]: { id, members: [name], messages: [] } } },
+//     messenger: { accounts: { [name key]: { name } }, rooms: { [id]: { id, members: [name], messages: [], name?, read? } } },
+//       messages: [{ id, from: name, text, at (ms), ko? }], read: { [name key]: 마지막으로 읽은 시각 (ms) }, name: 단체방 이름
 //     queue: { round, jobs: [{ id, world, round, kind, owner, at, state: 'waiting' | 'running' | 'done' | 'failed' | 'dropped', error, seen }] },
 //   },
 //   archive: [world …],                            지난 폰 2들 (읽기만, 지우지 않아요)
@@ -143,6 +144,24 @@ export function ensureRoom(m, members) {
     return (w.messenger.rooms[id] = { id, members: names, messages: [] });
 }
 export const liveRooms = m => Object.values(liveWorld(m)?.messenger?.rooms || {});
+const roomOf = (m, id) => { const r = liveWorld(m)?.messenger?.rooms?.[id]; if (!r) throw new Error('없는 방이에요'); return r; };
+// 단체방 이름 (빈 글이면 이름 없음)
+export function nameRoom(m, id, name) { const r = roomOf(m, id), n = String(name || '').trim().slice(0, 40); if (n) r.name = n; else delete r.name; return r; }
+// 페르소나가 보내요: 메신저에만 남아요. 보낸 사람은 그때까지 읽은 걸로
+export function sendLive(m, id, text, at = Date.now()) {
+    const r = roomOf(m, id), w = liveWorld(m), t = String(text || '').trim();
+    if (!t) throw new Error('보낼 말이 없어요');
+    const msg = { id: newId('t'), from: w.persona, text: t.slice(0, 4000), at };
+    r.messages.push(msg);
+    (r.read ||= {})[liveKey(w.persona)] = at;
+    return msg;
+}
+// who가 이 방을 at까지 읽었어요 (앞으로만)
+export function readLive(m, id, who, at = Date.now()) { const r = roomOf(m, id), k = liveKey(who); if (!r.members.some(n => liveKey(n) === k)) return r; r.read ||= {}; if (!(r.read[k] >= at)) r.read[k] = at; return r; }
+// who가 아직 안 읽은 남의 말 수
+export const unreadFor = (room, who) => { const k = liveKey(who), t = room?.read?.[k] || 0; return (room?.messages || []).filter(x => liveKey(x.from) !== k && x.at > t).length; };
+// 이 말을 아직 안 읽은 사람들 (보낸 사람 빼고)
+export const unreadBy = (room, msg) => (room?.members || []).filter(n => liveKey(n) !== liveKey(msg?.from) && !((room?.read?.[liveKey(n)] || 0) >= msg?.at));
 
 // 일의 줄: one at a time, each job tagged with its world and round; a failure stops the line until it is seen
 export function enqueueJob(m, { kind, owner = '', at = Date.now() } = {}) {
