@@ -1,0 +1,135 @@
+slug	받기	종류	이름	찾기	lat	lon	표 동네
+seoul-gangnam	o	도심	서울 강남역	Gangnam Station, Seoul	37.4990	127.0320	서울: 강남 · 역삼
+seoul-seocho	o	도심	서울 서초	Seocho-gu Office, Seoul	37.4837	127.0324	서울: 서초
+seoul-samseong	o	도심	서울 삼성동 · 선릉	Samseong Station, Seoul	37.5070	127.0570	서울: 삼성동 · 선릉
+seoul-apgujeong	o	도심	서울 압구정 · 가로수길	Apgujeong Station, Seoul	37.5240	127.0260	서울: 압구정 · 신사
+seoul-cheongdam	o	도심	서울 청담	Cheongdam-dong, Seoul	37.5250	127.0480	서울: 청담
+seoul-jamsil	o	도심	서울 잠실	Jamsil Station, Seoul	37.5133	127.1001	서울: 잠실 · 송파
+seoul-yeouido	o	도심	서울 여의도	Yeouido, Seoul	37.5219	126.9245	서울: 여의도
+seoul-yeongdeungpo	o	도심	서울 영등포	Yeongdeungpo Station, Seoul	37.5157	126.9076	서울: 영등포
+seoul-hongdae	o	도심	서울 홍대 · 연남 · 상수	Hongik University Station, Seoul	37.5563	126.9236	서울: 홍대 · 연남 · 상수
+seoul-mangwon	o	도심	서울 망원 · 합정	Mangwon Market, Seoul	37.5540	126.9070	서울: 망원 · 합정
+seoul-mapo	o	도심	서울 마포 · 공덕	Gongdeok Station, Seoul	37.5440	126.9510	서울: 마포
+seoul-sinchon	o	도심	서울 신촌 · 이대	Sinchon Station, Seoul	37.5590	126.9430	서울: 신촌 · 이대
+seoul-itaewon	o	도심	서울 이태원 · 한남	Itaewon Station, Seoul	37.5345	126.9980	서울: 이태원 · 한남
+seoul-yongsan	o	도심	서울 용산	Yongsan Station, Seoul	37.5299	126.9648	서울: 용산
+seoul-myeongdong	o	도심	서울 명동 · 을지로	Myeongdong Station, Seoul	37.5640	126.9860	서울: 명동 · 을지로
+seoul-namsan	o	산	서울 남산	N Seoul Tower	37.5512	126.9882	서울: 남산
+seoul-gwanghwamun	o	도심	서울 광화문 · 종로 · 북촌	Gwanghwamun Square, Seoul	37.5745	126.9810	서울: 광화문 · 종로 · 인사동 · 청계천 · 경복궁 · 삼청동 · 북촌
+seoul-seongsu	o	도심	서울 성수	Seongsu Station, Seoul	37.5445	127.0560	서울: 성수
+seoul-kondae	o	도심	서울 건대	Konkuk University Station, Seoul	37.5404	127.0692	서울: 건대
+seoul-wangsimni	o	도심	서울 왕십리	Wangsimni Station, Seoul	37.5612	127.0371	서울: 왕십리
+seoul-dongdaemun	o	도심	서울 동대문	Dongdaemun Design Plaza	37.5663	127.0092	서울: 동대문
+seoul-daehangno	o	도심	서울 대학로 · 혜화	Hyehwa Station, Seoul	37.5822	127.0019	서울: 대학로 · 혜화
+seoul-nowon	o	교외	서울 노원(아파트 단지)	Nowon Station, Seoul	37.6551	127.0613	서울: 노원
+seoul-magok	o	교외	서울 마곡	Magoknaru Station, Seoul	37.5670	126.8270	서울: 마곡
+seoul-gangseo	o	교외	서울 강서 화곡	Hwagok Station, Seoul	37.5410	126.8400	서울: 강서구
+seoul-mokdong	o	교외	서울 목동	Mokdong, Seoul	37.5270	126.8750	서울: 목동
+seoul-guro	o	일터	서울 구로 · 가산 디지털단지	Guro Digital Complex Station, Seoul	37.4860	126.8930	서울: 구로 · 가산
+seoul-sillim	o	도심	서울 신림	Sillim Station, Seoul	37.4842	126.9297	서울: 신림
+seoul-snu	o	도심	서울 서울대입구 · 관악	Seoul National University Station	37.4812	126.9527	서울: 관악 · 서울대입구
+seoul-sadang	o	도심	서울 사당	Sadang Station, Seoul	37.4766	126.9816	서울: 사당
+seoul-noryangjin	o	도심	서울 노량진	Noryangjin Station, Seoul	37.5133	126.9425	서울: 노량진
+seoul-eunpyeong	o	교외	서울 은평 연신내	Yeonsinnae Station, Seoul	37.6190	126.9210	서울: 은평
+seoul-suyu	o	교외	서울 수유 · 강북	Suyu Station, Seoul	37.6380	127.0257	서울: 강북 · 수유
+seoul-seongbuk	o	교외	서울 성북동(언덕 주택가)	Seongbuk-dong, Seoul	37.5930	126.9960	서울: 성북
+seoul-dobong	o	산	서울 도봉산 아래	Dobongsan Station, Seoul	37.6896	127.0447	서울: 도봉
+seoul-jungnang	o	교외	서울 중랑	Jungnang Station, Seoul	37.6063	127.0927	서울: 중랑
+seoul-cheonho	o	교외	서울 천호 · 강동	Cheonho Station, Seoul	37.5386	127.1236	서울: 강동 · 천호
+seoul-station	o	도심	서울역	Seoul Station	37.5547	126.9707	서울: 서울역
+busan-haeundae	o	바다	부산 해운대	Haeundae Beach, Busan	35.1587	129.1604	부산: 해운대
+busan-songjeong	o	바다	부산 송정	Songjeong Beach, Busan	35.1786	129.1999	부산: 송정
+busan-gwangalli	o	바다	부산 광안리	Gwangalli Beach, Busan	35.1532	129.1187	부산: 광안리
+busan-seomyeon	o	도심	부산 서면 · 전포	Seomyeon Station, Busan	35.1570	129.0610	부산: 서면 · 전포
+busan-nampo	o	도심	부산 남포동	Nampo-dong, Busan	35.0979	129.0280	부산: 남포동
+busan-centum	o	도심	부산 센텀	Centum City, Busan	35.1690	129.1310	부산: 센텀
+busan-gijang	o	바다	부산 기장	Gijang, Busan	35.2445	129.2222	부산: 기장
+busan-yeongdo	o	섬	부산 영도	Huinnyeoul Culture Village, Busan	35.0880	129.0500	부산: 영도
+busan-gamcheon	o	옛마을	부산 감천문화마을	Gamcheon Culture Village	35.0975	129.0106	부산: 감천
+busan-station	o	도심	부산역	Busan Station	35.1152	129.0422	부산: 부산역
+incheon-songdo	o	교외	인천 송도	Songdo Central Park, Incheon	37.3925	126.6390	인천: 송도
+incheon-yeongjong	o	섬	인천 영종도	Yeongjong Sky City, Incheon	37.4910	126.5580	인천: 영종도
+incheon-airport	o	공항	인천공항	Incheon International Airport	37.4490	126.4510	인천: 인천공항
+incheon-bupyeong	o	도심	인천 부평	Bupyeong Station, Incheon	37.4895	126.7240	인천: 부평
+incheon-wolmido	o	바다	인천 월미도	Wolmido, Incheon	37.4750	126.5970	인천: 월미도
+daegu-dongseongro	o	도심	대구 동성로	Dongseong-ro, Daegu	35.8690	128.5950	대구: 동성로
+daegu-gimgwangseok	o	도심	대구 김광석길	Kim Kwang-seok Street, Daegu	35.8600	128.6070	대구: 김광석길
+daegu-suseong	o	교외	대구 수성못	Suseong Lake, Daegu	35.8280	128.6170	대구: 수성구
+daejeon-dunsan	o	도심	대전 둔산	Dunsan-dong, Daejeon	36.3510	127.3850	대전: 둔산
+daejeon-yuseong	o	온천	대전 유성 온천	Yuseong Spa Station, Daejeon	36.3550	127.3400	대전: 유성
+daejeon-eunhaeng	o	도심	대전 은행동	Eunhaeng-dong, Daejeon	36.3290	127.4270	대전: 은행동
+gwangju-chungjangro	o	도심	광주 충장로	Chungjang-ro, Gwangju	35.1490	126.9150	광주: 충장로
+gwangju-sangmu	o	교외	광주 상무지구	Sangmu-jigu, Gwangju	35.1520	126.8530	광주: 상무지구
+jeju-airport	o	공항	제주공항 · 제주시	Jeju International Airport	33.5070	126.4930	제주: 제주공항
+jeju-seogwipo	o	바다	서귀포 시내	Seogwipo Maeil Olle Market	33.2480	126.5630	제주: 서귀포
+jeju-aewol	o	바다	제주 애월	Aewol, Jeju	33.4630	126.3100	제주: 애월
+jeju-hamdeok	o	바다	제주 함덕	Hamdeok Beach, Jeju	33.5430	126.6690	제주: 함덕
+jeju-seongsan	o	바다	제주 성산	Seongsan Ilchulbong	33.4610	126.9350	제주: 성산
+jeju-jungmun	o	바다	제주 중문	Jungmun Resort, Jeju	33.2500	126.4120	제주: 중문
+jeju-hyeopjae	o	바다	제주 협재	Hyeopjae Beach, Jeju	33.3940	126.2390	제주: 협재
+suwon-gwanggyo	o	교외	수원 광교	Gwanggyo Lake Park, Suwon	37.2850	127.0500	수원: 광교
+suwon-haenggung	o	옛마을	수원 행궁동	Hwaseong Haenggung, Suwon	37.2830	127.0150	수원: 행궁동
+suwon-ingye	o	도심	수원 인계동	Ingye-dong, Suwon	37.2650	127.0300	수원: 인계동
+seongnam-pangyo	o	일터	판교 테크노밸리	Pangyo Techno Valley	37.4010	127.1080	성남: 판교
+seongnam-seohyeon	o	교외	분당 서현	Seohyeon Station, Seongnam	37.3850	127.1230	성남: 분당 · 서현
+seongnam-jeongja	o	교외	분당 정자동	Jeongja Station, Seongnam	37.3660	127.1080	성남: 정자동
+goyang-ilsan	o	교외	일산 호수공원	Ilsan Lake Park, Goyang	37.6600	126.7700	고양: 일산
+goyang-kintex	o	일터	킨텍스	KINTEX, Goyang	37.6690	126.7450	고양: 킨텍스
+gangneung-gyeongpo	o	바다	강릉 경포	Gyeongpo Beach, Gangneung	37.7950	128.9080	강릉: 경포
+gangneung-anmok	o	바다	강릉 안목	Anmok Beach, Gangneung	37.7720	128.9470	강릉: 안목
+gangneung-jumunjin	o	바다	강릉 주문진	Jumunjin Port, Gangneung	37.8930	128.8250	강릉: 주문진
+gyeongju-hwangnidan	o	옛마을	경주 황리단길	Hwangnidan-gil, Gyeongju	35.8380	129.2100	경주: 황리단길
+gyeongju-bomun	o	호수	경주 보문호	Bomun Lake, Gyeongju	35.8420	129.2850	경주: 보문
+jeonju-hanok	o	옛마을	전주 한옥마을	Jeonju Hanok Village	35.8150	127.1530	전주: 한옥마을
+seorak-sogongwon	o	산	설악산 소공원	Seoraksan Sogongwon	38.1720	128.4880	
+pyeongchang-daegwallyeong	o	산	평창 대관령 목장	Daegwallyeong Sheep Farm	37.6880	128.7530	
+jeongseon	o	산	정선 장터	Jeongseon Arirang Market	37.3800	128.6600	
+gurye-hwaeomsa	o	산	지리산 화엄사 아래	Hwaeomsa, Gurye	35.2560	127.4950	
+bukhansan-uidong	o	산	북한산 우이동	Ui-dong, Seoul	37.6600	127.0110	
+danyang	o	강골짜기	단양 남한강	Danyang	36.9840	128.3650	
+hapcheon-haeinsa	o	산	가야산 해인사 마을	Haeinsa, Hapcheon	35.8010	128.0980	
+sokcho	o	바다	속초 항구 · 중앙시장	Sokcho Jungang Market	38.2040	128.5910	
+yangyang-jukdo	o	바다	양양 죽도 해변(서핑)	Jukdo Beach, Yangyang	38.0270	128.7190	
+donghae-mukho	o	바다	동해 묵호	Mukho Port, Donghae	37.5500	129.1150	
+pohang-guryongpo	o	바다	포항 구룡포	Guryongpo, Pohang	35.9900	129.5560	
+ulleungdo-dodong	o	섬	울릉도 도동항	Dodong Port, Ulleung	37.4860	130.9060	
+tongyeong	o	바다	통영 항구	Tongyeong Jungang Market	34.8450	128.4230	
+geoje-jangseungpo	o	섬	거제 장승포	Jangseungpo, Geoje	34.8700	128.7300	
+namhae-germanvillage	o	시골	남해 독일마을	German Village, Namhae	34.7930	128.0400	
+yeosu-expo	o	바다	여수 엑스포 · 오동도	Yeosu Expo Station	34.7480	127.7480	
+boseong-greentea	o	시골	보성 녹차밭	Daehan Dawon, Boseong	34.7110	127.0820	
+wando	o	섬	완도 항구	Wando Port	34.3110	126.7550	
+mokpo-oldtown	o	바다	목포 옛 시내	Mokpo Modern History Museum	34.7880	126.3830	
+sinan-jeungdo	o	섬	신안 증도 염전	Jeungdo, Sinan	34.9980	126.1750	
+taean-anmyeondo	o	섬	태안 안면도 꽃지	Kkotji Beach, Taean	36.4980	126.3360	
+boryeong-daecheon	o	바다	보령 대천 해수욕장	Daecheon Beach, Boryeong	36.3080	126.5160	
+ganghwa	o	섬	강화도 읍내	Ganghwa-eup, Incheon	37.7470	126.4870	
+jeju-udo	o	섬	제주 우도	Udo, Jeju	33.5060	126.9540	
+jeju-seonheul	o	시골	제주 선흘 중산간 마을	Seonheul-ri, Jeju	33.5100	126.7100	
+jeju-eorimok	o	산	한라산 어리목	Eorimok, Hallasan	33.3920	126.4960	
+andong-hahoe	o	옛마을	안동 하회마을	Hahoe Village, Andong	36.5390	128.5180	
+gyeongju-yangdong	o	옛마을	경주 양동마을	Yangdong Village, Gyeongju	36.0030	129.2570	
+gochang	o	시골	고창 청보리밭 · 고인돌	Gochang Dolmen Site	35.4350	126.7020	
+icheon	o	시골	이천 논 · 도자기 마을	Icheon Ceramic Village	37.2790	127.4420	
+gimje-plain	o	시골	김제 들판	Byeokgolje, Gimje	35.7760	126.8440	
+hadong-hwagae	o	시골	하동 화개 차 마을	Hwagae Market, Hadong	35.1880	127.6250	
+damyang	o	숲	담양 대나무숲	Juknokwon, Damyang	35.3240	126.9870	
+suncheon-bay	o	시골	순천만 갈대밭	Suncheonman Bay Wetland	34.8870	127.5090	
+yeongwol	o	강골짜기	영월 동강	Yeongwol	37.1840	128.4620	
+chuncheon-namiseom	o	섬	남이섬	Nami Island	37.7900	127.5260	
+gapyeong-cheongpyeong	o	호수	가평 청평호	Cheongpyeong Lake	37.7330	127.4200	
+yangpyeong-dumulmeori	o	강골짜기	양평 두물머리	Dumulmeori, Yangpyeong	37.5380	127.3150	
+paju-heyri	o	시골	파주 헤이리 마을	Heyri Art Valley, Paju	37.7880	126.6990	
+paju-imjingak	o	시골	파주 임진각	Imjingak, Paju	37.8900	126.7400	
+gongju	o	옛마을	공주 옛 시내 · 공산성	Gongsanseong, Gongju	36.4600	127.1220	
+buyeo	o	옛마을	부여 읍내	Buyeo-eup	36.2780	126.9100	
+yongin-everland	o	일터	용인 에버랜드	Everland, Yongin	37.2940	127.2020	
+sejong	o	교외	세종 정부청사	Government Complex Sejong	36.5040	127.2650	
+hwaseong-dongtan	o	교외	동탄 신도시	Dongtan Station, Hwaseong	37.2010	127.0740	
+ulsan-mipo	o	일터	울산 조선소 · 공업 지역	Hyundai Heavy Industries, Ulsan	35.5100	129.4200	
+changwon-sangnam	o	도심	창원 상남동	Sangnam-dong, Changwon	35.2220	128.6810	
+pyeongtaek-anjeong	o	교외	평택 안정리(미군 기지 앞)	Anjeong-ri, Pyeongtaek	36.9640	127.0300	
+cheongju	o	도심	청주 성안길	Seongan-gil, Cheongju	36.6370	127.4890	
+chuncheon	o	도심	춘천 명동	Myeong-dong, Chuncheon	37.8810	127.7290	
+jinju	o	옛마을	진주성	Jinjuseong Fortress	35.1890	128.0790	
+andong-market	o	도심	안동 구시장	Andong Gu Market	36.5650	128.7270	
