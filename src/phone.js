@@ -16,7 +16,7 @@ import { applyInjection } from './inject.js';
 import { faceHtml, nameKey, peopleList } from './people.js';
 import { drafting, drawing, drawPhoto, drawPost, filling, makeDraft, paging, retranslate, retranslating, recording, recordVoice, searching, searchPage, shooting, takePhoto, webPage, writeEntry, writing } from './phoneai.js';
 import { setDraft, setDraftModels, setVoice, setVoiceAdd, voiceList, voicePeople, ax, axFind, groupInfo, APPS, AXB, AXB_C, busyHtml, setDate, setScreenHolderView, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, mapTowns, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setOwnerProfile, setWho, snsPost, snsScreen, statusBar, threadScreen, setPlace, prepScreen } from './phoneapps.js';
-import { phoneMaking, dropStretch, settleBranch, ownerZone, koGaps, savedName, ensureIds, ensureYear, hasDatedRecords, noArchive, setStoryYear, storyYear, fillDevice, fillMoney, fillVoice, koOn, loreOff, makePhone, tidyKo, markAfter, phoneLore, REMAKE, restoreRounds, retryMoney, showNow, storyNow, syncLeft, syncRows, syncState, tidyJournal, undoRound } from './phonedata.js';
+import { phoneMaking, dropStretch, settleBranch, chatStamp, koGaps, savedName, ensureIds, ensureYear, hasDatedRecords, noArchive, setStoryYear, storyYear, fillDevice, fillMoney, fillVoice, koOn, loreOff, makePhone, tidyKo, markAfter, phoneLore, REMAKE, restoreRounds, retryMoney, showNow, storyNow, syncLeft, syncRows, syncState, tidyJournal, undoRound } from './phonedata.js';
 import { busy, watchBusy, exclusive, journalRead, journalWrite, syncOf } from './phonesync.js';
 import { syncPick, syncSettings } from './phonesyncui.js';
 import { CG_W, homeScreen, lastSig, lockScreen, threadNew } from './phonehome.js';
@@ -38,7 +38,7 @@ import { confirm, esc } from './util.js';
 import { liveMode, liveWorld, livePhone, liveMeta, setLiveMode, resetLive, rememberLiveOwner, readLiveOwner, liveKey, liveRooms, ensureRoom, nameRoom, sendLive, readLive, unreadFor, unreadBy } from './phone2store.js';
 import { shiftLabel, liveWall, viewerWall, startShift } from './phone2clock.js';
 import { orbitList, orbitRoom, orbitNew, orbitHomeWidget, liveStart } from './phoneorbit.js';
-import { liveStoryText, beginFromStory, settleLiveBranch } from './phone2story.js';
+import { liveStoryText, beginFromStory, liveBranched, adoptChat, rebeginFromStory } from './phone2story.js';
 
 // other files keep importing these from here
 export { phoneBlock } from './phonedata.js';
@@ -106,29 +106,35 @@ export async function openPhone(who = null) {
     if (!await ensurePhoneStory(m) || !stillHere()) return;
     await ensureScreenHolder(m, c);
     if (!stillHere()) return;
-    // 분기한 방 (docs/PHONE2-PLAN.md 5-3 준비): 그 방에 없는 뒷이야기를 폰마다 한 번 빼요. 실시간 폰은 서랍을 넘겨요.
-    // 분기가 아니거나 이미 했으면 null이고, 아무것도 안 바뀌고 알림도 없어요
+    // 분기한 방 (docs/PHONE2-PLAN.md 5-3 · 7-4): 폰 1의 폰마다 그 방에 없는 뒷이야기를 한 번 빼요(settleBranch).
+    // 실시간 폰은 settleBranch에 넣지 않아요(메신저 번호로 읽은 자리를 적어서). 대신 가려내요(liveBranched):
+    // 'after' 이 방 것으로 삼기 · 'before' 되돌린 폰 1로 다시 시작 · 'none' 그대로. 분기가 아니면 아무것도 안 바뀌고 알림도 없어요
     {
-        const done = [], liveDone = [];
-        const settle = async (meta, p, into) => { try { const r = await settleBranch(meta, p); if (r) into.push({ name: p.owner, p, ...r }); } catch (err) { console.error('[narrative-archive] branch', p?.owner, err); } };
-        for (const p of Object.values(realM.phones || {})) if (p?.owner) await settle(realM, p, done);
+        const done = [];
+        for (const p of Object.values(realM.phones || {})) if (p?.owner) { try { const r = await settleBranch(realM, p); if (r) done.push({ name: p.owner, p, ...r }); } catch (err) { console.error('[narrative-archive] branch', p?.owner, err); } }
+        let rebegun = false;
         const lw = liveWorld(realM);
-        if (lw) { const d = liveMeta(realM, { text: () => liveStoryText(realM, liveWorld(realM)) }); for (const p of Object.values(lw.phones || {})) if (p?.owner) await settle(d, p, liveDone); }
-        // 실시간 폰 자체(5-3): 시작한 곳보다 앞에서 갈라졌으면 갈라진 곳부터 다시(메신저 대화는 원래 방에만). 서랍은 아래 useMode가 새로 만들어요
-        let liveCut = null;
-        const pts = liveDone.map(r => r.point).filter(Number.isInteger);
-        if (lw && pts.length) {
-            const r = liveDone.find(x => nameKey(x.name) === nameKey(lw.lastOwner)) || liveDone[0];
-            try { liveCut = settleLiveBranch(realM, Math.min(...pts), { storyAt: r.at, storyYear: r.p.year, tz: ownerZone(r.p)?.tz }); if (liveCut) await saveMeta(); }
-            catch (err) { console.error('[narrative-archive] live branch', err); }
+        if (lw) {
+            try {
+                const pts = done.map(r => r.point).filter(Number.isInteger), st = chatStamp(lw.storyUpto);
+                const how = liveBranched(lw, { ...st, point: pts.length ? Math.min(...pts) : null });
+                if (how === 'after') { adoptChat(lw, st.chat); await saveMeta(); }
+                if (how === 'before') {
+                    // (폰 1은 위에서 이미 되돌려졌어요: 시작 버튼과 같은 값으로, 그 폰 1에서 다시 시작)
+                    const base = realM.phones?.[nameKey(lw.lastOwner)] || Object.values(realM.phones || {}).find(p => p?.owner);
+                    const upto = Math.max(0, (ctx().chat?.length || 1) - 1), now = chatStamp(upto);
+                    rebeginFromStory(realM, { upto, scope: phoneChatScope(ctx()), dayShift: base ? startPlanOf(base).dayShift : 0, chat: now.chat, fp: now.fp });
+                    rebegun = true;   // (null이면 폰 1에 폰이 없어서 실시간 폰을 내렸어요: 모드는 타임라인)
+                    await saveMeta();
+                }
+            } catch (err) { console.error('[narrative-archive] live branch', err); }
         }
         if (!stillHere()) return;
-        // 알림은 한 줄: 뺀 게 있거나 실시간 폰이 갈라진 곳으로 돌아갔을 때만(시각을 몰랐던 건 콘솔에만)
-        const all = [...done, ...liveDone];
-        for (const r of all) if (!r.at) console.info('[narrative-archive] branch: story time at the branch point unknown, made records and clock kept', r.name);
-        const shown = all.filter(r => (r.dropped || 0) + (r.items || 0) + (r.cut || 0) > 0);
+        // 알림은 한 줄: 뺀 게 있거나 실시간 폰이 다시 시작했을 때만(시각을 몰랐던 건 콘솔에만)
+        for (const r of done) if (!r.at) console.info('[narrative-archive] branch: story time at the branch point unknown, made records and clock kept', r.name);
+        const shown = done.filter(r => (r.dropped || 0) + (r.items || 0) + (r.cut || 0) > 0);
         const n = shown.reduce((t, r) => t + (r.dropped || 0) + (r.items || 0) + (r.cut || 0), 0), kept = [...new Set(shown.flatMap(r => r.kept || []))];
-        const lines = [...(n ? [`갈라진 뒤 기록 ${n}개 뺐어요${kept.length ? ` · ${esc(kept.join(', '))} 남김` : ''}`] : []), ...(liveCut ? [`${n ? '실시간 폰은 ' : ''}갈라진 곳부터 다시 시작해요`] : [])];
+        const lines = [...(n ? [`갈라진 뒤 기록 ${n}개 뺐어요${kept.length ? ` · ${esc(kept.join(', '))} 남김` : ''}`] : []), ...(rebegun ? [`${n ? '실시간 폰은 ' : ''}갈라진 곳부터 다시 시작해요`] : [])];
         if (lines.length) toastr.info(lines.join('<br>'), n ? `${esc([...new Set(shown.map(r => r.name))].join(' · '))} 폰` : '실시간 폰', { escapeHtml: false });
     }
     // a round this browser made that the saved chat doesn't have: kept, and offered in 설정 › 대화 반영; the phone opens anyway
@@ -171,12 +177,13 @@ export async function openPhone(who = null) {
     // 지금 계정: 폰 주인 계정은 주인이 페르소나가 아닐 때만, 그 폰을 보고 있을 때만
     const obAcct = () => { const w = liveWorld(realM), me = w?.persona || ''; return obWho && owner && liveKey(obWho) === liveKey(owner) && liveKey(owner) !== liveKey(me) ? owner : me; };
     // 실시간 폰 시작 (5단계): 이야기 날짜 + 현실 시각(startShift), 마지막 메시지까지
-    const startPlan = p => {
+    function startPlanOf(p) {
         const at = String(storyNow(p) || p?.now || ''), tz = placeInfo(p).owner.tz || Intl.DateTimeFormat().resolvedOptions().timeZone;
         let dayShift = 0; try { dayShift = startShift({ storyAt: at.slice(0, 11), storyYear: Number(p?.year) || new Date().getFullYear(), tz }); } catch { dayShift = 0; }
         const w = viewerWall(Date.now(), dayShift).at, md = x => `${Number(x.slice(0, 2))}월 ${Number(x.slice(3, 5))}일`;
         return { dayShift, persona: ctx().name1 || 'Me', local: w.slice(6), date: md(w), shift: shiftLabel(dayShift), upto: /^\d{2}-\d{2} \d{2}:\d{2}/.test(at) ? `${md(at)} ${at.slice(6, 11)}까지` : '' };
-    };
+    }
+    const startPlan = startPlanOf;
     const orbitUi = () => {
         const w = liveWorld(realM);
         if (!live() || !w) return {};
@@ -758,7 +765,8 @@ export async function openPhone(who = null) {
         if (live() || liveWorld(realM) || !p) return;
         if (making || busyMake || investing || koBusy || filling.size || busy.fill || busy.sync) return toastr.info('다른 폰 작업이 끝난 뒤 시작해 주세요', '캐릭터 휴대폰');
         const plan = startPlan(p), upto = Math.max(0, (ctx().chat?.length || 1) - 1);
-        try { beginFromStory(realM, { persona: plan.persona, upto, scope: phoneChatScope(ctx()), dayShift: plan.dayShift }); }
+        const st = chatStamp(upto);
+        try { beginFromStory(realM, { persona: plan.persona, upto, scope: phoneChatScope(ctx()), dayShift: plan.dayShift, chat: st.chat, fp: st.fp }); }
         catch (err) { console.error('[narrative-archive] live start', err); return toastr.warning(String(err?.message || err), '캐릭터 휴대폰'); }
         setLiveMode(realM, 'live'); useMode(); owner = liveOwner(); view = 'home'; sheet = false;
         draw();
