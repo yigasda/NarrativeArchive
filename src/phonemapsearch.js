@@ -129,7 +129,7 @@ export function mapCityScreen(p, now, m, i = '') {
           </div>${axInd(dark ? '#fff' : '#111')}</div>`;
     }
     // the town's neighbourhoods, each its own little map (the tile map draws it; till then, and offline, its drawn map)
-    const thumbs = v.hoods.slice(0, 8).map(h => `<button type="button" class="mq_th mq_hth" data-go="mapc" data-i="${at(place, h)}" aria-label="${esc(HINT[h][3])}" data-tt="${esc(JSON.stringify({ city: PLACE[place][0], words: [HINT[h][3], ...HINT[h][1]].slice(0, 10), dark }))}"><i class="mq_tph" aria-hidden="true"></i><span>${esc(HINT[h][3])}</span></button>`).join('');
+    const thumbs = v.hoods.slice(0, 8).map(h => `<button type="button" class="mq_th mq_hth" data-go="mapc" data-i="${at(place, h)}" aria-label="${esc(HINT[h][3])}" data-tt="${esc(JSON.stringify({ city: PLACE[place][0], words: [HINT[h][3], ...HINT[h][1]].slice(0, 10), big: 1 }))}"><i class="mq_tph" aria-hidden="true"></i><span>${esc(HINT[h][3])}</span></button>`).join('');
     return `<div class="mp_wx mq_wx${dark ? ' mp_dark' : ''}"><div class="mp_bg mq_bgcity"${tileAt(PLACE[place][0], g ? g.rows.map(r => r.place) : [], g ? g.rows.slice(0, 6).map(r => r.place) : [])}>${art}</div>${axBar(p, now, dark ? '#fff' : '#111')}${axTop(axCb('mapq'), mapFindBtn())}
       <div class="ax_scroll"><i class="mp_gap mq_gap"></i><div class="mp_sheet"><i class="mp_grab"></i>${TILE_CREDIT}
         <div class="mq_hd">${country}
@@ -153,7 +153,7 @@ export function mapEmptyScreen(p, now, m) {
     const ghost = [[3, 5], [11, 12], [18, 21]].map(([a, b]) => `<rect x="${(a - 1) * c + 1}" y="${st.top + 2}" width="${(b - a + 1) * c - 2}" height="14" rx="5" fill="none" stroke="#c9cfd8" stroke-width="1.2" stroke-dasharray="3 3"/>`).join('');
     const strip = `<div class="ax_card mp_month"><div class="mp_mh"><span class="mp_lbl">${mo}월에 다닌 곳</span><span class="mp_big"><b class="cg_num">0</b><u>곳</u><span>이야기에서 어딘가 가면 여기 쌓여요</span></span></div><div class="mp_st">${st.svg.replace('</svg>', `${ghost}</svg>`)}</div></div>`;
     // then the same town heading as a visited town's: the flag and the town they live in (a city, never the country written as one)
-    const name = v ? v.ko : own.city && !countryOf(own.city) ? own.city : '', flag = cc || (i >= 0 ? PLACE[i][3] : '');
+    const name = v ? v.ko : own.city && !countryOf(own.city) ? own.city : '', flag = (name && i >= 0 ? PLACE[i][3] : '') || cc;   // the town's own flag (lives in Germany, staying in Seoul: 🇰🇷 서울)
     const head = name || flag ? `<div class="mp_th mq_eh">${flag ? flagSvg(flag, 22) : ''}<b>${esc(name || FLAG_NAME[flag] || '')}</b>${name ? '<span>사는 곳</span>' : ''}</div>` : '';
     // then the same list card as a visited town's: two of its neighbourhoods, and last, finding another town (always in sight)
     const hood = h => `<button type="button" class="ax_rw ax_place" data-go="mapc" data-i="${at(i, h)}"><span class="ax_si" style="background: var(--axc)">${ax('pindot', 17, 'var(--axd)', 2.2)}</span><span class="ax_tx"><span class="ax_n">${esc(HINT[h][3])}</span><span class="ax_p1">동네 지도 보기</span></span>${axChev}</button>`;
