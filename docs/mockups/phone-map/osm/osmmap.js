@@ -77,20 +77,35 @@ function sea() {
     return [x - X0, (X1 - X0) + (y - Y0), (X1 - X0) + (Y1 - Y0) + (X1 - x), 2 * (X1 - X0) + (Y1 - Y0) + (Y1 - y)][k]; };
   const atT = t => { t = ((t % per) + per) % per; const a = X1 - X0, b = Y1 - Y0; return t < a ? [X0 + t, Y0] : t < a + b ? [X1, Y0 + t - a] : t < 2 * a + b ? [X1 - (t - a - b), Y1] : [X0, Y1 - (t - 2 * a - b)]; };
   const inside = (x, y, ps) => { let c = false; for (let i = 0, j = ps.length - 1; i < ps.length; j = i++) { const [a, b] = ps[i], [u, v] = ps[j]; if ((b > y) !== (v > y) && x < (u - a) * (y - b) / (v - b) + a) c = !c; } return c; };
+  // islands (closed rings) as they are; the open pieces are joined into rings along the frame: from where one piece leaves,
+  // round the frame to where the next one comes in, so a river with a coastline on both banks (the Weser at Bremen, the
+  // Elbe at Hamburg) is the water between them, not each bank's half of the world laid over the other
   let out = '';
+  const open = [];
   for (const c of chains) {
     const px = c.map(([lo, la]) => P(la, lo)).map(([x, y]) => [Math.max(X0, Math.min(X1, x)), Math.max(Y0, Math.min(Y1, y))]);
     if (px.length < 2) continue;
     if (same(c[0], c.at(-1))) { out += ring(px); continue; }   // an island: the ring itself is land, so the water is everything else
-    const tb = tOf(px.at(-1)), ta = tOf(px[0]), corners = [0, X1 - X0, X1 - X0 + Y1 - Y0, 2 * (X1 - X0) + Y1 - Y0];
-    const walk = dir => { const pts = []; let t = tb; const end = dir > 0 ? (ta - tb + per) % per : (tb - ta + per) % per;
-      const cs = corners.map(k => dir > 0 ? (k - tb + per) % per : (tb - k + per) % per).map((dd, i) => [dd, corners[i]]).filter(([dd]) => dd > 0 && dd < end).sort((a, b) => a[0] - b[0]);
-      for (const [, k] of cs) pts.push(atT(k)); return [...px, atT(tb), ...pts, atT(ta)]; };
-    // the water is on the coast's right (land on the left): test a point just right of the middle of the line
-    const m = Math.floor(c.length / 2), [lo0, la0] = c[Math.max(0, m - 1)], [lo1, la1] = c[Math.min(c.length - 1, m)], ddx = lo1 - lo0, ddy = la1 - la0, nn = Math.hypot(ddx, ddy) || 1;
-    const tp = P((la0 + la1) / 2 - ddx / nn * 0.0002, (lo0 + lo1) / 2 + ddy / nn * 0.0002);
-    const A = walk(1), B = walk(-1); out += ring(inside(tp[0], tp[1], A) ? A : B);
+    open.push({ c, px, ta: tOf(px[0]), tb: tOf(px.at(-1)) });
   }
+  if (!open.length) return out;
+  const corners = [0, X1 - X0, X1 - X0 + Y1 - Y0, 2 * (X1 - X0) + Y1 - Y0];
+  const along = (from, to, dir) => { const end = dir > 0 ? (to - from + per) % per : (from - to + per) % per;
+    return corners.map(k => [dir > 0 ? (k - from + per) % per : (from - k + per) % per, k]).filter(([dd]) => dd > 0 && dd < end).sort((a, b) => a[0] - b[0]).map(([, k]) => atT(k)); };
+  const build = dir => { const left = new Set(open.map((_, i) => i)), rings2 = [];
+    while (left.size) { let i = [...left][0]; const first = i, pts = [];
+      for (let guard = 0; guard <= open.length; guard++) { left.delete(i); const o = open[i]; pts.push(...o.px, atT(o.tb));
+        // the next piece that comes in, going round the frame from where this one left
+        let best = -1, bd = Infinity; for (const k of [...left, first]) { const dd = dir > 0 ? (open[k].ta - o.tb + per) % per : (o.tb - open[k].ta + per) % per; if (dd < bd) { bd = dd; best = k; } }
+        pts.push(...along(o.tb, open[best].ta, dir), atT(open[best].ta));
+        if (best === first) break; i = best; }
+      rings2.push(pts); }
+    return rings2; };
+  // the water is on the coast's right (land on the left): test a point just right of the middle of the first piece
+  const c0 = open[0].c, m = Math.floor(c0.length / 2), [lo0, la0] = c0[Math.max(0, m - 1)], [lo1, la1] = c0[Math.min(c0.length - 1, m)], ddx = lo1 - lo0, ddy = la1 - la0, nn = Math.hypot(ddx, ddy) || 1;
+  const tp = P((la0 + la1) / 2 - ddx / nn * 0.0002, (lo0 + lo1) / 2 + ddy / nn * 0.0002);
+  const A = build(1), Bw = build(-1), inAny = rs => rs.reduce((n, r) => n + (inside(tp[0], tp[1], r) ? 1 : 0), 0) % 2 === 1;
+  for (const r of (inAny(A) ? A : Bw)) out += ring(r);
   return out;
 }
 const area = e => e.type === 'relation' ? rings(e.members || []) : (e.geometry ? ring(pts(e.geometry)) : '');
