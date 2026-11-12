@@ -215,6 +215,7 @@ export async function undoLive(real, m, owner, { save = async () => {} } = {}) {
         const u = p.syncUndo, s = p.sync;
         if (!u || s?.rounds?.[s.rounds.length - 1] !== u.round) throw new Error('되돌릴 반영이 없어요');
         if (!canUndo(p)) throw new Error('그 뒤에 은행이나 투자를 다시 만들어서 되돌릴 수 없어요');
+        const ledger = m.finance;
         const gone = new Set(u.items.map(([, id]) => id));
         for (const k of ITEM_KEYS) if (Array.isArray(p[k])) p[k] = p[k].filter(x => !gone.has(x.id));
         for (const [tid, sigs] of u.msgs) {
@@ -247,6 +248,8 @@ export async function undoLive(real, m, owner, { save = async () => {} } = {}) {
         if (!p.syncUndos?.length) delete p.syncUndos;
         if (prev) { p.syncUndo = prev; if (prev.last) p.syncLast = structuredClone(prev.last); else delete p.syncLast; } else { delete p.syncLast; delete p.syncUndo; }
         if (p.money) migrateBank(m, p);
+        // (a 폰 2 with no ledger stays without one: taking the money back only looked into it)
+        if (!ledger && m.finance && ![m.finance.accounts, m.finance.transfers, m.finance.prices].some(o => Object.keys(o || {}).length) && !(m.finance.revisions || []).length) m.finance = ledger;
         if (scope) journalWrite(scope, journalRead(scope).filter(r => r.round !== u.round));
         await save();
         return kept;
