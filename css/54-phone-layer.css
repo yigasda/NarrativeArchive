@@ -76,6 +76,11 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax 
 .ax .ax_cb.mq_cb, .ax .mp_dark .ax_cb.mq_cb { --axbg: var(--axd); --axsh: 0 1px 2px rgba(22, 27, 34, 0.08), 0 4px 12px color-mix(in srgb, var(--axd) 35%, transparent); color: #fff; --axfg: #fff; }
 .mp_gap { display: block; height: 266px; flex: none; touch-action: pan-y; }
 .mp_sheet { flex: 1 0 auto; padding-top: 8px; background: #f4f5f7; border-radius: 22px 22px 0 0; box-shadow: 0 -6px 24px rgba(22, 27, 34, 0.14); display: flex; flex-direction: column; }
+/* the tile map (phonetilemap.js): one MapLibre map moved into the map box on screen, over the drawn map (which stays when it cannot draw) */
+.mp_bg > .mp_tile, .mp_bg > .mp_tile.maplibregl-map { position: absolute; inset: 0; z-index: 1; } .mp_bg.mp_tiled > :is(.mp_art, .mp_pins, .mp_pic) { visibility: hidden; } .mp_sheet { position: relative; } .mp_credit { display: none; }
+.ax .mp_wx.mp_tiles > .ax_scroll { pointer-events: none; } .ax .mp_wx.mp_tiles .mp_sheet, .ax .mp_wx.mp_tiles .mp_sheet * { pointer-events: auto; }
+.mp_gap { transition: height 0.28s ease; } .ax .mp_wx.mp_low > .ax_scroll { overflow: hidden; } .mp_wx.mp_low .mp_bg.mp_tiled { height: 100%; }
+.ax .mp_tiles .mp_credit { display: block; position: absolute; right: 12px; top: -15px; font-size: 8.5px; --axfs: 8.5px; line-height: 1; font-weight: 500; color: #8a8f98; --axfg: #8a8f98; text-decoration: none; text-shadow: 0 0 2px #fff, 0 0 2px #fff; white-space: nowrap; } .ax .mq_one.mp_tiles .mp_credit { top: -16px; right: 2px; }
 .mp_grab { display: block; width: 38px; height: 5px; border-radius: 3px; background: #cfd4dc; margin: 0 auto 12px; flex: none; }
 .mp_month { padding: 16px 18px 0; }
 .mp_lbl { display: block; font-size: 12px; --axfs: 12px; color: #6b7380; --axfg: #6b7380; }

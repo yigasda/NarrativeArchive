@@ -1,0 +1,53 @@
+slug	받기	종류	이름	찾기	lat	lon	표 동네
+badenbaden-zentrum	x	온천	Baden-Baden	Baden-Baden	48.75959	8.24003	
+bamberg-altstadt	x	옛마을	Bamberg	Bamberg	49.89313	10.88706	
+berlin-charlottenburg	x	도심	베를린 Charlottenburg	Charlottenburg, Berlin	52.50307	13.32909	
+berlin-friedrichshain	x	도심	베를린 Friedrichshain	Friedrichshain, Berlin	52.51236	13.45955	
+berlin-kreuzberg	x	도심	베를린 Kreuzberg	Kreuzberg, Berlin	52.49792	13.41895	
+berlin-lichtenberg	x	도심	베를린 Lichtenberg	Lichtenberg, Berlin	52.51207	13.49860	
+berlin-marzahn	x	도심	베를린 Marzahn	Marzahn, Berlin	52.54306	13.56402	
+berlin-neukoelln	x	도심	베를린 Neukölln	Neukölln, Berlin	52.48555	13.43021	
+berlin-potsdamerplatz	x	도심	베를린 Potsdamer Platz	Potsdamer Platz, Berlin	52.50931	13.37648	
+berlin-prenzlauerberg	x	도심	베를린 Prenzlauer Berg	Prenzlauer Berg, Berlin	52.53654	13.41686	
+berlin-wannsee	x	호수	베를린 Wannsee	Wannsee, Berlin	52.42100	13.16093	
+bonn-zentrum	x	도심	Bonn	Bonn	50.73368	7.09800	
+bremen-altstadt	x	옛마을	Bremen	Bremen	53.07584	8.80670	
+dortmund-mitte	x	도심	Dortmund	Dortmund	51.51421	7.46442	
+dresden-altstadt	x	도심	드레스덴 Dresden	Dresden, Dresden	51.05336	13.74026	
+dresden-neustadt	x	도심	드레스덴 Äußere Neustadt	Äußere Neustadt, Dresden	51.06614	13.75141	
+duesseldorf-altstadt	x	도심	뒤셀도르프 Düsseldorf	Düsseldorf, Duesseldorf	51.22183	6.77831	
+duesseldorf-medienhafen	x	도심	뒤셀도르프 MedienHafen	MedienHafen, Duesseldorf	51.21225	6.75575	
+essen-mitte	x	도심	Essen	Essen	51.45666	7.01196	
+frankfurt-altstadt	x	도심	프랑크푸르트 Frankfurt	Frankfurt, Frankfurt	50.10688	8.68255	
+frankfurt-bankenviertel	x	도심	프랑크푸르트 Bahnhofsviertel	Bahnhofsviertel, Frankfurt	50.11018	8.67027	
+freiburg-altstadt	x	옛마을	Freiburg	Freiburg	47.99431	7.85029	
+fuessen-altstadt	x	산	Füssen	Füssen	47.57003	10.70043	
+garmisch-zentrum	x	산	Garmisch-Partenkirchen	Garmisch-Partenkirchen	47.49353	11.09591	
+goettingen-altstadt	x	옛마을	Göttingen	Göttingen	51.53350	9.93534	
+hamburg-alster	x	호수	함부르크 Alster	Alster, Hamburg	53.56358	10.00478	
+hamburg-altona	x	도심	함부르크 Altona	Altona, Hamburg	53.55236	9.93427	
+hamburg-blankenese	x	강골짜기	함부르크 Blankenese	Blankenese, Hamburg	53.56301	9.80597	
+hamburg-hafencity	x	바다	함부르크 HafenCity	HafenCity, Hamburg	53.54606	9.99525	
+hamburg-stgeorg	x	도심	함부르크 St. Georg	St. Georg, Hamburg	53.55349	10.01344	
+hamburg-stpauli	x	바다	함부르크 St. Pauli	St. Pauli, Hamburg	53.55257	9.96357	
+hannover-mitte	x	도심	Hannover	Hannover	52.37555	9.73827	
+heidelberg-altstadt	x	옛마을	Heidelberg	Heidelberg	49.41182	8.69863	
+kiel-zentrum	x	바다	Kiel	Kiel	54.32149	10.13339	
+koblenz-deutscheseck	x	강골짜기	Koblenz	Koblenz	50.35897	7.59635	
+koeln-belgischesviertel	x	도심	쾰른 Belgisches Viertel	Belgisches Viertel, Koeln	50.93795	6.93970	
+leipzig-connewitz	x	도심	라이프치히 Connewitz	Connewitz, Leipzig	51.31004	12.37715	
+leipzig-plagwitz	x	도심	라이프치히 Plagwitz	Plagwitz, Leipzig	51.32978	12.33675	
+marburg-altstadt	x	옛마을	Marburg	Marburg	50.80937	8.77026	
+muenchen-englischergarten	x	도심	뮌헨 Englischer Garten	Englischer Garten, Muenchen	48.15442	11.60298	
+muenchen-nymphenburg	x	도심	뮌헨 Nymphenburg	Nymphenburg, Muenchen	48.15838	11.50535	
+muenchen-olympiapark	x	도심	뮌헨 Olympiapark	Olympiapark, Muenchen	48.17389	11.55074	
+muenchen-schwabing	x	도심	뮌헨 Schwabing	Schwabing, Muenchen	48.15940	11.58085	
+passau-altstadt	x	강골짜기	Passau	Passau	48.57380	13.46474	
+potsdam-zentrum	x	도심	Potsdam	Potsdam	52.40084	13.04983	
+regensburg-altstadt	x	옛마을	Regensburg	Regensburg	49.01896	12.09669	
+rostock-altstadt	x	바다	Rostock	Rostock	54.08620	12.13529	
+rothenburg-altstadt	x	옛마을	Rothenburg ob der Tauber	Rothenburg ob der Tauber	49.37743	10.18154	
+ruedesheim-zentrum	x	강골짜기	Rüdesheim am Rhein	Rüdesheim am Rhein	49.98041	7.92572	
+stuttgart-mitte	x	도심	Stuttgart	Stuttgart	48.77677	9.17979	
+sylt-westerland	x	섬	Westerland	Westerland	54.90655	8.30856	
+tuebingen-altstadt	x	옛마을	Tübingen	Tübingen	48.51941	9.05572	
