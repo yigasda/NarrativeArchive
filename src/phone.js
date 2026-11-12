@@ -16,7 +16,7 @@ import { applyInjection } from './inject.js';
 import { faceHtml, nameKey, peopleList } from './people.js';
 import { drafting, drawing, drawPhoto, drawPost, filling, makeDraft, paging, retranslate, retranslating, recording, recordVoice, searching, searchPage, shooting, takePhoto, webPage, writeEntry, writing } from './phoneai.js';
 import { setDraft, setDraftModels, setVoice, setVoiceAdd, voiceList, voicePeople, ax, axFind, groupInfo, APPS, AXB, AXB_C, busyHtml, setDate, setScreenHolderView, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, mapTowns, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setOwnerProfile, setWho, snsPost, snsScreen, statusBar, threadScreen, setPlace, prepScreen } from './phoneapps.js';
-import { phoneMaking, dropStretch, koGaps, savedName, ensureIds, ensureYear, hasDatedRecords, noArchive, setStoryYear, storyYear, fillDevice, fillMoney, fillVoice, koOn, loreOff, makePhone, tidyKo, markAfter, phoneLore, REMAKE, restoreRounds, retryMoney, showNow, storyNow, syncLeft, syncRows, syncState, tidyJournal, undoRound } from './phonedata.js';
+import { phoneMaking, dropStretch, settleBranch, koGaps, savedName, ensureIds, ensureYear, hasDatedRecords, noArchive, setStoryYear, storyYear, fillDevice, fillMoney, fillVoice, koOn, loreOff, makePhone, tidyKo, markAfter, phoneLore, REMAKE, restoreRounds, retryMoney, showNow, storyNow, syncLeft, syncRows, syncState, tidyJournal, undoRound } from './phonedata.js';
 import { busy, watchBusy, exclusive, journalRead, journalWrite, syncOf } from './phonesync.js';
 import { syncPick, syncSettings } from './phonesyncui.js';
 import { CG_W, homeScreen, lastSig, lockScreen, threadNew } from './phonehome.js';
@@ -37,6 +37,7 @@ import { confirm, esc } from './util.js';
 import { liveMode, liveWorld, livePhone, liveMeta, setLiveMode, liveKey, liveRooms, ensureRoom, nameRoom, sendLive, readLive, unreadFor, unreadBy } from './phone2store.js';
 import { shiftLabel, liveWall, viewerWall } from './phone2clock.js';
 import { orbitList, orbitRoom, orbitNew, orbitHomeWidget } from './phoneorbit.js';
+import { liveStoryText } from './phone2story.js';
 
 // other files keep importing these from here
 export { phoneBlock } from './phonedata.js';
@@ -104,6 +105,22 @@ export async function openPhone(who = null) {
     if (!await ensurePhoneStory(m) || !stillHere()) return;
     await ensureScreenHolder(m, c);
     if (!stillHere()) return;
+    // 분기한 방 (docs/PHONE2-PLAN.md 5-3 준비): 그 방에 없는 뒷이야기를 폰마다 한 번 빼요. 실시간 폰은 서랍을 넘겨요.
+    // 분기가 아니거나 이미 했으면 null이고, 아무것도 안 바뀌고 알림도 없어요
+    {
+        const done = [];
+        const settle = async (meta, p) => { try { const r = await settleBranch(meta, p); if (r) done.push({ name: p.owner, ...r }); } catch (err) { console.error('[narrative-archive] branch', p?.owner, err); } };
+        for (const p of Object.values(realM.phones || {})) if (p?.owner) await settle(realM, p);
+        const lw = liveWorld(realM);
+        if (lw) { const d = liveMeta(realM, { text: () => liveStoryText(realM, liveWorld(realM)) }); for (const p of Object.values(lw.phones || {})) if (p?.owner) await settle(d, p); }
+        if (!stillHere()) return;
+        if (done.length) {
+            const n = done.reduce((t, r) => t + (r.dropped || 0) + (r.items || 0) + (r.cut || 0), 0), kept = [...new Set(done.flatMap(r => r.kept || []))], noAt = done.some(r => !r.at);
+            const who = [...new Set(done.map(r => r.name))].join(' · ');
+            toastr.info(`${n ? `갈라진 뒤의 기록 ${n}개를 뺐어요.` : '갈라진 뒤의 기록은 없었어요.'} 원래 방의 폰은 그대로예요.${kept.length ? ` 남긴 것: ${kept.join(', ')}.` : ''}${noAt ? ' 갈라진 곳의 시각을 몰라서, 처음 만든 기록과 폰 시각은 그대로 뒀어요.' : ''}`,
+                `${who} 폰 · 이 방은 갈라진 곳까지`, { timeOut: 9000, extendedTimeOut: 4000 });
+        }
+    }
     // a round this browser made that the saved chat doesn't have: kept, and offered in 설정 › 대화 반영; the phone opens anyway
     let syncPending = 0;
     try { syncPending = tidyJournal(m, phoneChatScope(c)); } catch (err) { console.error('[narrative-archive] sync journal', err); }
@@ -133,7 +150,7 @@ export async function openPhone(who = null) {
     if (!stillHere()) return;
     // 실시간: the drawer is made once for its world and kept (a new one each time would copy the glossary again)
     let drawer = null;
-    const useMode = () => { m = live() ? (drawer?.w === liveWorld(realM) ? drawer.d : (drawer = { w: liveWorld(realM), d: liveMeta(realM) }).d) : realM; setPhoneMeta(m === realM ? null : m); };
+    const useMode = () => { m = live() ? (drawer?.w === liveWorld(realM) ? drawer.d : (drawer = { w: liveWorld(realM), d: liveMeta(realM, { text: () => liveStoryText(realM, liveWorld(realM)) }) }).d) : realM; setPhoneMeta(m === realM ? null : m); };
     useMode();
     const liveRoster = () => new Set(liveNames().map(nameKey));
     // Orbit (실시간 폰의 메신저, docs/design/orbit.md): 계정은 페르소나(쓰기)와 이 폰 주인(읽기만) 둘. 왼쪽 위 얼굴 → 아래 시트로 바꿔요
