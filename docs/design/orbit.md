@@ -48,5 +48,6 @@
 - 눌리는 모양이 있는 건 진짜 `<button>`이에요(탭 · 새 대화 · 시작 · 보내기 · 다시 · 뒤로 · 계정 얼굴, 설정 스위치 탭). 배경 · 그림자 · 둥글기 · 글자색은 `--axbg` · `--axsh` · `--axr` · `--axfg`로 같이 적어요. `<span role="button">`은 테마가 모서리를 깎아서 네모가 됐어요.
 - 글자 크기는 `--axfs`를 같이 적어요(테마가 span 글자 크기를 바꿔서 배지 숫자가 어긋났어요). 배지는 flex로 가운데.
 - 입력칸은 `<input>` 대신 `contenteditable`(지도 검색과 같은 방식). `<input>`엔 테마가 테두리를 칠했어요.
+- **폰 판에 `position: relative`를 주지 않아요.** 판(`.cg_canvas`)은 왼쪽 위에 붙여 줄이는 방식이라, relative를 주면 좁은 폰에서 판이 밀려 위가 잘리고 아래가 하얗게 비어요(360px에서 139px). `tools/dev/phone2fit.cjs`로 화면마다 재요.
 - 초점은 `preventScroll`, 폰 틀(`.na_ph_frame` · `.na_ph_scr` · 캔버스)은 굴러가면 바로 0으로 돌려요. 키보드 · 초점이 틀을 위로 밀어 화면이 올라가 있었어요.
 - 확인: `node tools/dev/phone2theme.cjs <폴더> theme`(버튼 · 입력칸 · span을 !important로 칠하는 거친 테마) · `plain`으로 폰 2 화면 14장을 찍어요.
