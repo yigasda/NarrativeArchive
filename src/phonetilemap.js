@@ -181,10 +181,11 @@ function placePins() {
     if (at.length && !live.fitted) {
         live.fitted = true;
         const pad = { top: 112, bottom: Math.max(0, live.el.clientHeight - h) + 36, left: 36, right: 150 };
+        const room = { ...pad, bottom: 36 };   // the map's own padding already keeps the sheet's part out
         const off = at.some(ll => { const q = map.project(ll); return q.x < pad.left || q.x > w - pad.right || q.y < pad.top || q.y > h - 36; });
         if (off) {
             const b = at.reduce((bb, ll) => bb.extend(ll), new window.maplibregl.LngLatBounds(at[0], at[0]));
-            const cam = map.cameraForBounds(b, { padding: pad, maxZoom: live.z0 });   // never more than one step further out than the town's own scale
+            const cam = map.cameraForBounds(b, { padding: room, maxZoom: live.z0 });   // never more than one step further out than the town's own scale
             if (cam) map.jumpTo({ center: cam.center, zoom: Math.max(live.z0 - 1, cam.zoom) });
         }
     }
@@ -269,77 +270,69 @@ export async function mountTiles(root) {
 // the box grew or shrank (the sheet was pulled down or back up)
 export function resizeTiles(vis) { if (!live.map) return; if (vis) live.vis = vis; live.map.resize(); live.map.setPadding({ bottom: Math.max(0, live.el.clientHeight - live.vis) }); pickPlaces(); }
 // how much of the box is map you see: down to the sheet (or the search sheet, or the card on a neighbourhood's map)
+// (the phone is drawn on a 390 board and scaled to the window: on-screen lengths are turned back into the board's)
+const scaleOf = el => { const r = el.getBoundingClientRect(); return el.offsetHeight ? r.height / el.offsetHeight : 1; };
 function visOf(host) {
-    const wx = host.closest('.mp_wx'), top = host.getBoundingClientRect().top;
+    const wx = host.closest('.mp_wx'), top = host.getBoundingClientRect().top, k = scaleOf(host) || 1;
     const s = wx?.querySelector('.mp_sheet, .mq_sheet, .mq_fc');
-    const v = s ? s.getBoundingClientRect().top - top : host.clientHeight;
+    const v = s ? (s.getBoundingClientRect().top - top) / k : host.clientHeight;
     return Math.max(160, Math.min(host.clientHeight, v));
 }
 // a sheet shorter than the screen sits low (the map gets the rest), never with an empty stretch under it
 function fitSheet(root) {
-    const wx = root.querySelector('.mp_wx:not(.mp_low)'), sc = wx?.querySelector(':scope > .ax_scroll'), gap = sc?.querySelector('.mp_gap'), sheet = sc?.querySelector('.mp_sheet');
-    if (!gap || !sheet || gap.dataset.fit) return;
+    const wx = root.querySelector('.mp_wx'), sc = wx?.querySelector(':scope > .ax_scroll'), gap = sc?.querySelector('.mp_gap'), sheet = sc?.querySelector('.mp_sheet');
+    if (!gap || !sheet || gap.dataset.fit || gap.dataset.room) return;
     gap.dataset.fit = '1';
     const kids = [...sheet.children].filter(e => e.offsetParent !== null && !e.classList.contains('ax_pad'));
     if (!kids.length) return;
-    const used = kids.at(-1).getBoundingClientRect().bottom - sheet.getBoundingClientRect().top + 28, room = sc.clientHeight - gap.offsetHeight;
+    const used = (kids.at(-1).getBoundingClientRect().bottom - sheet.getBoundingClientRect().top) / (scaleOf(sheet) || 1) + 28, room = sc.clientHeight - gap.offsetHeight;
     if (used >= room) return;
     const h = Math.min(sc.clientHeight - 160, sc.clientHeight - used);
-    gap.style.transition = 'none'; gap.style.height = `${h}px`; gap.dataset.fh = gap.style.height; void gap.offsetHeight; gap.style.transition = '';
-    // the map box reaches down under the sheet's new top
-    const host = wx.querySelector('.mp_bg'), top = sheet.getBoundingClientRect().top - host.getBoundingClientRect().top;
-    if (host && top + 40 > host.clientHeight) host.style.height = `${Math.round(top + 40)}px`;
+    gap.style.height = `${h}px`;
 }
 // the phone's screens are drawn again and again: a new map box gets the one map (watched, the way phonemapzoom.js does)
 export function tileWatch(root) {
     let busy = false;
-    sheetPull(root);
     new MutationObserver(() => {
         tileThumbs(root);
         const host = root.querySelector('.mp_bg[data-tm]');
         if (!host) { if (live.el?.isConnected && !live.el.closest('.mp_bg[data-tm]')) live.el.remove(); return; }
         if (host._tm || busy) return;
         host._tm = true; busy = true;
-        requestAnimationFrame(() => { fitSheet(root); host.dataset.vis ||= String(Math.round(visOf(host))); const d = JSON.parse(host.dataset.tm); d.vis = Number(host.dataset.vis); host.dataset.tm = JSON.stringify(d);
+        requestAnimationFrame(() => { fitSheet(root); sheetRoom(root); host.dataset.vis ||= String(Math.round(visOf(host))); const d = JSON.parse(host.dataset.tm); d.vis = Number(host.dataset.vis); host.dataset.tm = JSON.stringify(d);
             mountTiles(root).catch(() => {}).finally(() => { busy = false; }); });
     }).observe(root, { childList: true, subtree: true });
 }
-// the sheet pulled down: the whole screen is map and the sheet is gone; a small "목록" pill at the bottom brings it back.
-// Nothing follows the finger (a style changed on every move makes the whole phone's styles be worked out again,
-// docs/DESIGN.md 4장 함정): the pull is measured, and when the finger lets go the sheet moves once, with a transition.
-const PEEK = 0;
-function setLow(wx, low) {
-    const sc = wx.querySelector(':scope > .ax_scroll'), gap = sc?.querySelector('.mp_gap'), host = wx.querySelector('.mp_bg');
-    if (!sc || !gap || !host) return;
-    if (low) { if (!gap.dataset.h) gap.dataset.h = String(gap.offsetHeight); sc.scrollTop = 0; gap.style.height = `${sc.clientHeight - PEEK}px`; }
-    else gap.style.height = gap.dataset.fh || '';
+// the sheet follows the finger: above it is a whole screen of scroll, and the screen opens scrolled to the sheet's place, so
+// pulling the sheet down is the browser's own scroll (smooth on any phone; nothing on the page changes while it moves, which
+// a style changed on every move would: docs/DESIGN.md 4장 함정). Two resting places: the sheet's place, and all the way down
+// (the sheet gone, the whole screen map) — there a "목록" pill brings it back.
+function sheetRoom(root) {
+    const wx = root.querySelector('.mp_wx'), sc = wx?.querySelector(':scope > .ax_scroll'), gap = sc?.querySelector('.mp_gap');
+    if (!gap || gap.dataset.room) return;
+    const full = sc.clientHeight, room = Math.max(0, full - gap.offsetHeight);
+    gap.dataset.room = String(room);
+    gap.style.height = `${full}px`;
+    for (const y of [0, room]) { const m = document.createElement('i'); m.className = 'mp_snap'; m.style.top = `${y}px`; sc.prepend(m); }
+    sc.classList.add('mp_room');
+    sc.scrollTop = room;
+    let t = 0;
+    sc.addEventListener('scroll', () => { clearTimeout(t); t = setTimeout(() => restAt(wx, sc, room), 120); }, { passive: true });
+}
+function restAt(wx, sc, room) {
+    const low = sc.scrollTop < 24;
+    if (wx.classList.contains('mp_low') === low) return;
     wx.classList.toggle('mp_low', low);
     let up = wx.querySelector(':scope > .mp_up');
     if (low && !up) {
         const n = live.shown.length;
         up = document.createElement('button'); up.type = 'button'; up.className = 'mp_up';
         up.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.1M4 12h.1M4 18h.1"/></svg>목록${n ? ` · ${n}곳` : ''}`;
-        up.addEventListener('click', e => { e.stopPropagation(); setLow(wx, false); });
+        up.addEventListener('click', e => { e.stopPropagation(); sc.scrollTo({ top: room, behavior: 'smooth' }); });
+        // the credit rides on the sheet's edge; with the sheet gone it stands over the pill
+        const cr = wx.querySelector('.mp_credit')?.cloneNode(true); if (cr) { cr.classList.add('mp_credit2'); wx.appendChild(cr); }
         wx.appendChild(up);
-    } else if (!low && up) up.remove();
-    const done = () => { const v = low ? host.clientHeight - PEEK : visOf(host); resizeTiles(Math.round(v)); };
-    gap.addEventListener('transitionend', done, { once: true }); setTimeout(done, 400);
-}
-function sheetPull(root) {
-    let g = null;
-    root.addEventListener('pointerdown', e => {
-        const sheet = e.target.closest?.('.mp_wx.mp_tiles .mp_sheet'); if (!sheet) return;
-        const wx = sheet.closest('.mp_wx'), sc = wx.querySelector(':scope > .ax_scroll');
-        if (!wx.classList.contains('mp_low') && sc && sc.scrollTop > 2) return;   // the list is scrolled: the finger scrolls it
-        g = { wx, x: e.clientX, y: e.clientY, low: wx.classList.contains('mp_low') };
-    }, true);
-    root.addEventListener('pointerup', e => {
-        if (!g) return;
-        const dx = e.clientX - g.x, dy = e.clientY - g.y, { wx, low } = g; g = null;
-        if (!low && dy > 48 && Math.abs(dy) > Math.abs(dx) * 1.4) setLow(wx, true);
-        else if (low && (dy < -24 || (Math.abs(dy) < 6 && Math.abs(dx) < 6))) setLow(wx, false);
-    }, true);
-    root.addEventListener('pointercancel', () => { g = null; }, true);
+    } else if (!low) { up?.remove(); wx.querySelector(':scope > .mp_credit2')?.remove(); }
 }
 // a town's neighbourhoods as little maps (찾은 도시 › 주변 동네): one hidden map goes to each in turn and takes a picture
 // (no labels: at that size they are noise); the drawn map stays where it cannot
@@ -375,3 +368,4 @@ async function thumbOne(b) {
 }
 // for tools/dev (where the map is now): its middle, or null
 export const tileCenter = () => (live.map ? live.map.getCenter().toArray() : null);
+export const tileDebug = () => (live.map ? { zoom: live.map.getZoom(), z0: live.z0, vis: live.vis, h: live.el.clientHeight, pad: live.map.getPadding(), pins: [...live.pinAt].map(([n, ll]) => [n, Object.values(live.map.project(ll)).map(Math.round)]), fitted: live.fitted } : null);
