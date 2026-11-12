@@ -26,7 +26,7 @@ import { feedRows, feedText, dropPersonaTalk } from './phone2feed.js';
 
 const one = v => String(v ?? '').replace(/\s+/g, ' ').trim();
 // how many messenger messages one round reads
-export const LIVE_ROUND = 40;
+export const LIVE_ROUND = 100;
 // a messenger message as one row of the round: its number and its lines (what was said, then what the owner did)
 const rowOf = (x, owner) => ({ index: x.n, text: [x.call ? `[#${x.n}] ${x.from} [Call]: ${Math.max(0, Math.round(Number(x.call.min) || 0))} min${one(x.call.summary) ? ` — ${one(x.call.summary)}` : ''}` : x.act && !one(x.text) ? '' : `[#${x.n}] ${x.from}: ${one(x.text)}`, ...(liveKey(x.from) === liveKey(owner) ? (x.does || []).filter(d => one(d?.what)).map(d => `[#${x.n}] ${owner} [${one(d.app)}]: ${one(d.what)}`) : [])].filter(Boolean).join('\n') });
 // the situations the answer wrote (where things stand): kept on the phone for the next reply (its SITUATIONS), the

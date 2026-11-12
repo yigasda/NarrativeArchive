@@ -18,7 +18,7 @@ import { runLive } from './phone2run.js';
 import { markPersona } from './phone2feed.js';
 import { updateLive } from './phone2reflect.js';
 
-// rounds of reflection after one reply at most (messages piled up while only talking: 40 a round)
+// rounds of reflection after one reply at most (messages piled up while only talking: 100 a round)
 export const LIVE_GO = { rounds: 3, replyTokens: 4000 };
 const tzOf = p => ownerZone(p)?.tz || 'UTC';
 // the owner's card as the reply reads it: the profile the user chose for them, else their character card in this chat
