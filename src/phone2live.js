@@ -14,7 +14,7 @@ const order = (at, today) => -gapDays(String(at).slice(0, 5), today) * 1440 + Nu
 // what the sky is called on the weather line (as the weather app says it)
 const SKY = { clear: '맑음', partly: '구름 조금', cloudy: '흐림', drizzle: '이슬비', rain: '비', sleet: '진눈깨비', snow: '눈', fog: '안개', storm: '뇌우', wind: '강풍' };
 // how many of the newest bubbles the request carries, days ahead the calendar looks, story characters at most
-export const LIVE_ASK = { bubbles: 60, ahead: 14, aheadMax: 4, story: 8000 };
+export const LIVE_ASK = { bubbles: 300, ahead: 14, aheadMax: 4, story: 8000 };
 
 // the phone's lists as the apps the reply prompt names (phone2reply.js PHONE2_APPS, in small letters), each with what
 // tells its time and one line saying what it is
