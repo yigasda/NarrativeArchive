@@ -399,6 +399,7 @@ THE PHONE — what they might do on it, and when
        - 최근 말풍선 60개, 앞으로의 일정은 14일 안 4개. 이야기(STORY)는 **첫 메신저 대화 때만** 보내요(끝에서부터 통째 장면만 8,000자까지). 그 뒤로는 폰 · 주변 사람 · 열린 일 · 대화가 이야기를 이어 가요(소망 결정. 실험 run13 · 14는 이야기 없이 가장 잘 나왔어요).
        - WEATHER NOW: 지금은 폰의 날씨 앱 기록(오늘 것일 때만). 진짜 날씨는 4-3에서.
        - SITUATIONS: 폰에 저장된 것(`p.situations`, 7-4의 폰 2 반영이 남겨요). 아직 없으면 `(none on the phone yet)`.
+       - LANGUAGES: 인물마다 사용자가 정해요(`setLiveLangs(m, owner, { texts, knows })` · `liveLangs`, `phone2store.js`). 안 정하면 블록이 없고 모델이 카드를 보고 골라요. 설정 칸은 디자인 세션 몫.
        - 아직 안 보내는 것: CHAT SUMMARY(9단계), OWNER DOESN'T KNOW(이야기의 "누가 아는가"를 폰 2로 어떻게 가져올지 정한 뒤).
 
    - 7-2 · 7-3 됐어요(`src/phone2run.js`, 모델 부르기 · 입력 모으기 · 저장은 부르는 쪽이 넘겨요. 아직 화면에 안 이어요).
