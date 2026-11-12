@@ -149,9 +149,9 @@ const dots = '0 0 0 0 0 0 0 1 2 3 3 3 2 3 3 2 1 3 3 3 2 2 1 0'.split(' ').map((v
 const list = css + sbar() + `<div class="top"><span class="cb">${ic('srch', 20)}</span><h1>메시지</h1><span class="cb">${ic('pen', 19)}</span></div>
  <div style="height:118px"></div>
  <div class="seg"><b class="on">전체</b><b>1:1</b><b>단체</b></div>
- <div class="hero"><span class="blob g-mara"></span><span class="gl"></span><span class="grain"></span><div class="in"><small>Mara · Varo 지금</small><div class="big num">14:10<em>회의 중 · 15:00까지</em></div><div class="dots">${dots}</div><div class="dl"><span>0시</span><span>깨어 있음</span><span>24시</span></div></div></div>
+ <div class="hero"><span class="blob g-mara"></span><span class="gl"></span><span class="grain"></span><div class="in"><small>Mara · Varo 지금</small><div class="big num">14:10<em>회의 중 · 15:00까지</em></div><div class="dots">${dots}</div><div class="dl"><span>0시</span><span>12시</span><span>24시</span></div></div></div>
  <div class="list">${ROOMS.map(r => `<div class="rm">${orb(r.k, 50)}<div class="t"><b>${r.name}</b><p class="${r.typing ? 'ty' : ''}">${r.typing ? 'Mara가 입력 중…' : (r.who ? r.who + ': ' : r.me ? '나: ' : '') + r.last}</p></div><div class="r"><span class="tx2 num">${r.t}</span>${r.un ? `<span class="un">${r.un}</span>` : r.k === 'ren' ? `<span class="st">${ic('moon', 12, '#8a8f99')}자는 중</span>` : '<span style="height:21px"></span>'}</div></div>`).join('')}</div>
- <div class="dock"><span class="tx2">유나로 보내요</span><span class="new">${ic('plus', 16, '#fff', 2.4)}새 대화</span></div>`;
+ <div class="dock" style="padding:6px"><span class="new">${ic('plus', 16, '#fff', 2.4)}새 대화</span></div>`;
 const msg = (m, grp) => m.d ? `<div class="day">${m.d}</div>` : m.typing ? `<div class="typ"><i></i><i></i><i></i></div>` : m.state ? `<div class="scard"><span class="blob g-ivo"></span><span class="gl"></span><div class="in">${ic('plane', 20, '#fff')}<div><b style="font-size:14px">Ivo는 비행 중이에요</b><small>Varo 22:40 도착 · 내리면 읽어요</small></div></div></div>`
   : `${grp && m.f !== 'me' ? `<div class="sn" style="color:${m.f === 'ivo' ? '#c4584f' : '#4c63b4'}">${nm(m.f)}</div>` : ''}<div class="b ${m.f === 'me' ? 'me' : 'th'}">${m.x}${m.ko ? (m.fold ? `<br><span class="kof">${ic('tr', 13, '#6d7fae')}번역 보기</span>` : `<span class="ko">${m.ko}</span>`) : ''}</div>${m.read ? `<div class="mt r">${m.read === 1 ? 'Mara 읽음' : '읽음'} · <span class="num">${m.t}</span></div>` : ''}`;
 const chat = css + sbar() + `<div class="chead"><span class="blob g-mara"></span><span class="gl"></span><span class="grain"></span><div class="in"><div class="tl"><span class="gbtn">${ic('back', 20, '#fff', 2.2)}</span><span class="gbtn">${ic('call', 18, '#fff')}</span></div><h3>Mara</h3><div class="sub">${ic('clock', 13, '#fff')}Varo 14:10 · 회의 중 · 15:00까지</div></div></div>
@@ -274,12 +274,12 @@ const list = css + `<div class="bg"><span class="blob" style="background:radial-
  <div class="srch glass">${ic('srch', 18, 'rgba(30,32,40,.5)')}이름 · 대화 찾기</div>
  <div class="list">${ROOMS.map(r => `<div class="rm glass"><span style="position:relative">${orb(r.k, 50)}${r.k !== 'grp' ? `<i class="pres" style="background:${pc[P[r.k].av]}"></i>` : ''}</span><div class="t"><b>${r.name}</b><p>${r.typing ? '입력 중…' : (r.who ? r.who + ': ' : r.me ? '나: ' : '') + r.last}</p></div><div class="r"><span class="num">${r.t}</span>${r.un ? `<span class="un">${r.un}</span>` : '<span style="height:21px"></span>'}</div></div>`).join('')}</div>
  <div class="fab">${ic('plus', 24, '#fff', 2.4)}</div>`;
-const msg = (m, grp) => m.d ? `<div class="day">${m.d}</div>` : m.typing ? `<div class="typ glass"><i></i><i></i><i></i></div>` : m.state ? `<div class="stl glass">${ic('plane', 20, '#1b1d24')}<div><b>Ivo는 비행 중</b><small>Varo 22:40 도착 · 내리면 읽어요</small></div></div>`
-  : `${grp && m.f !== 'me' ? `<div class="sn">${nm(m.f)}</div>` : ''}<div class="b ${m.f === 'me' ? 'me' : 'th glass'}">${m.x}${m.ko ? (m.fold ? `<br><span class="kof" style="color:#4c5ea8">${ic('tr', 13, '#4c5ea8')}번역 보기</span>` : `<span class="ko">${m.ko}</span>`) : ''}</div>${m.read ? `<div class="rd">${m.read === 1 ? '<b>1</b> 안 읽음 · ' : '읽음 · '}<span class="num">${m.t}</span></div>` : ''}`;
+const msg = (m, grp) => m.d ? `<div class="day">${m.d}</div>` : m.typing ? `<div class="typ glass"><i></i><i></i><i></i></div>` : m.state ? ''
+  : `${grp && m.f !== 'me' ? `<div class="sn">${nm(m.f)}</div>` : ''}<div class="b ${m.f === 'me' ? 'me' : 'th glass'}">${m.x}${m.ko ? (m.fold ? `<br><span class="kof" style="color:#4c5ea8">${ic('tr', 13, '#4c5ea8')}번역 보기</span>` : `<span class="ko">${m.ko}</span>`) : ''}</div>${m.read ? `<div class="rd">${m.read === 1 ? '<b>1</b> · ' : '읽음 · '}<span class="num">${m.t}</span></div>` : ''}`;
 const head = (k, name, sub) => `<div class="ct glass"><span class="gb">${ic('back', 21, '#1b1d24', 2.2)}</span>${orb(k, 40)}<div class="nm"><b>${name}</b><span>${sub}</span></div><span class="gb">${ic('call', 19, '#1b1d24')}</span></div>`;
 const inp = `<div class="inp glass"><span>메시지</span>${ic('mic', 21, 'rgba(30,32,40,.55)')}<span class="sendb">${ic('send', 18, '#fff', 2.3)}</span></div>`;
 const chat = css + bg('g-mara') + sbar(true) + head('mara', 'Mara', '회의 중 · 15:00까지') + `<div class="lt"><span>${ic('clock', 12, '#fff')}Mara 현지 14:10</span></div><div class="msgs">${CHAT.map(m => msg(m)).join('')}</div>` + inp;
-const grp = css + bg('g-grp') + sbar(true) + head('grp', 'Varo Werkstatt', 'Mara · Ivo · 나') + `<div class="lt"><span>${ic('clock', 12, '#fff')}Varo 14:10</span></div><div class="msgs">${GRP.map(m => msg(m, true)).join('')}</div>` + inp;
+const grp = css + bg('g-grp') + sbar(true) + head('grp', 'Varo Werkstatt', 'Mara · Ivo 비행 중 · 나') + `<div class="lt"><span>${ic('clock', 12, '#fff')}Varo 14:10</span></div><div class="msgs">${GRP.map(m => msg(m, true)).join('')}</div>` + inp;
 row('C', '유리 전체', '화면 바탕 전체가 그 사람 색 오로라(목록은 여러 색).<br>방 · 말풍선 · 입력칸이 다 반투명 유리. 아바타 옆 점이 지금 상태(바쁨 · 비행 · 잠).<br>단체방 안 읽음은 숫자(1).', [phone('C wht', list, '방 목록'), phone('C wht', chat, '1:1 · 입력 중 · 번역 접기'), phone('C wht', grp, '단체방 · 비행 중')]);
 G.C = { css, msg, head, inp, bg };
 }
@@ -382,18 +382,18 @@ const pick = css + G.A.css + sbar() + `<div class="top"><span class="cb">${ic('b
  <div style="height:118px"></div>
  <div class="srch">${ic('srch', 18, '#a2a7b0')}이름 찾기</div>
  <div class="picked">${['mara', 'ren'].map(k => `<span class="pk">${orb(k, 52)}<span class="x">${ic('plus', 12, '#fff', 3).replace('<path', '<path transform="rotate(45 12 12)"')}</span>${P[k].n}</span>`).join('')}</div>
- <div class="gname"><span class="blob g-grp"></span><span class="gl"></span><span class="grain"></span><div class="in"><small>단체방 이름 · 2명 이상이면</small><b>주말 Varo<u></u></b></div></div>
+ <div class="gname"><span class="blob g-grp"></span><span class="gl"></span><span class="grain"></span><div class="in"><small>단체방 이름</small><b>주말 Varo<u></u></b></div></div>
  <div class="sec">사람</div>
- <div class="list">${[['mara', 'Varo · 독일어', 1], ['ren', '서울', 1], ['ivo', 'Varo · 독일어', 0]].map(([k, sub, on]) => `<div class="rm">${orb(k, 46)}<div class="t"><b>${P[k].n}</b><p>${sub}</p></div><span class="ck ${on ? 'on' : ''}">${on ? ic('chk', 15, '#fff', 3) : ''}</span></div>`).join('')}</div>
- <div class="go">단체방 만들기 <em>· 나 포함 3명</em></div>`;
+ <div class="list">${[['mara', 'Varo', 1], ['ren', '서울', 1], ['ivo', 'Varo', 0]].map(([k, sub, on]) => `<div class="rm">${orb(k, 46)}<div class="t"><b>${P[k].n}</b><p>${sub}</p></div><span class="ck ${on ? 'on' : ''}">${on ? ic('chk', 15, '#fff', 3) : ''}</span></div>`).join('')}</div>
+ <div class="go">단체방 만들기 <em>· 3명</em></div>`;
 const LATE = [{ d: '오늘' }, { f: 'ren', t: '18:20', x: '오늘 진짜 피곤하다' }, { f: 'me', t: '18:40', x: '일찍 자 ㅋㅋ', read: true }, { f: 'ren', t: '19:02', x: '응 씻고 바로 잘 듯' },
   { f: 'me', t: '21:03', x: '아 맞다 내일 몇 시에 봐?', read: 1 }, { f: 'me', t: '21:04', x: '점심 같이 먹을까', read: 1 }, { sleep: 1 }];
-const msgL = m => m.sleep ? `<div class="stl glass">${ic('moon', 20, '#1b1d24')}<div><b>Ren은 자는 중이에요</b><small>07:00쯤 깨요 · 깨면 쌓인 걸 읽고 답해요</small></div></div>` : C.msg(m);
-const late = css + C.css + C.bg('g-ren') + sbar(true) + C.head('ren', 'Ren', '자는 중 · 07:00쯤 깸') + `<div class="msgs" style="top:130px">${LATE.map(msgL).join('')}</div>` + C.inp;
+const msgL = m => m.sleep ? '' : C.msg(m);
+const late = css + C.css + C.bg('g-ren') + sbar(true) + C.head('ren', 'Ren', '자는 중') + `<div class="msgs" style="top:130px">${LATE.map(msgL).join('')}</div>` + C.inp;
 // Ren 폰: Ren 계정으로 본 같은 방. Ren 말이 오른쪽(진한 유리), 유나 말이 왼쪽. 입력칸 없음
 const RO = [{ d: '어제' }, { f: 'yuna', t: '22:41', x: '오늘 고마웠어' }, { f: 'me', t: '22:50', x: '나도 ㅎㅎ 잘 들어가', read: true }, { d: '오늘' }, { f: 'me', t: '18:20', x: '오늘 진짜 피곤하다', read: true }, { f: 'yuna', t: '18:40', x: '일찍 자 ㅋㅋ' }, { f: 'me', t: '19:02', x: '응 씻고 바로 잘 듯' }, { f: 'yuna', t: '21:03', x: '아 맞다 내일 몇 시에 봐?' }, { f: 'yuna', t: '21:04', x: '점심 같이 먹을까' }];
 const msgR = m => m.f === 'yuna' ? `<div class="b th glass">${m.x}</div>` : m.f === 'me' ? `<div class="b me">${m.x}</div>${m.read ? `<div class="rd">읽음 · <span class="num">${m.t}</span></div>` : ''}` : C.msg(m);
-const ro = css + C.css + C.bg('g-yuna') + sbar(true) + C.head('yuna', '유나', '').replace(`<span class="gb">${ic('call', 19, '#1b1d24')}</span>`, '<span style="width:42px"></span>') + `<div class="who"><span>${ic('moon', 12, '#fff')}Ren 폰 · Ren으로 보는 중</span></div><div class="msgs" style="top:160px">${RO.map(msgR).join('')}</div><div class="ro glass">Ren 폰이라 여기선 읽기만 해요</div>`;
+const ro = css + C.css + C.bg('g-yuna') + sbar(true) + C.head('yuna', '유나', '').replace(`<span class="gb">${ic('call', 19, '#1b1d24')}</span>`, '<span style="width:42px"></span>') + `<div class="msgs" style="top:130px;bottom:40px">${RO.map(msgR).join('')}</div>`;
 row('A+C', '고른 것', '목록은 A 그대로, 방 안은 C 그대로.<br>새 대화는 A(흰 목록 + 검정 알약), 방 안 화면은 C(그 사람 색 바탕 + 유리).<br>Ren은 유나와 같은 시간대라 현지 시각 칩이 없어요(다를 때만 나와요).', [phone('A', A.list, '방 목록 (A)'), phone('A N', pick, '새 대화 · 여러 명 = 단체방'), phone('C wht', late, '자는 중 · 안 읽음 1 · 늦은 답'), phone('C wht', ro, 'Ren 폰 · 읽기만')]);
 }
 
