@@ -9,7 +9,7 @@ const phone1 = () => ({ phones: { mara: { owner: 'Mara', now: '11-06 09:00', not
 
 test('폰 2 저장: the file imports nothing, and no file but the phone window and 폰 2\'s story reader imports it', async () => {
     assert.doesNotMatch(await src('phone2store.js'), /^\s*import\b/m);
-    const may = new Set(['phone2store.js', 'phone.js', 'phone2story.js']);   // 4-2: the phone's window; 5-1: phone2story.js (beginFromStory)
+    const may = new Set(['phone2store.js', 'phone.js', 'phone2story.js', 'phone2feed.js']);   // 4-2: the phone's window; 5-1: phone2story.js (beginFromStory); 6: phone2feed.js (the messenger as the reflection reads it)
     for (const f of (await readdir(new URL('../src/', import.meta.url))).filter(f => f.endsWith('.js') && !may.has(f)))
         assert.doesNotMatch(await src(f), /phone2store/, f);
 });
@@ -285,4 +285,38 @@ test('새 이야기로 비우기: 폰 2가 없으면 아무것도 안 만들고,
     assert.equal(L.resetLive(other, 'all'), 'none');
     assert.equal(JSON.stringify(other), was);
     assert.throws(() => L.resetLive(m, 'some'), /all 또는 chats/);
+});
+
+// 5-4: this browser's keys
+const mem = () => { const d = new Map(); return { getItem: k => d.get(k) ?? null, setItem: (k, v) => d.set(k, String(v)), removeItem: k => d.delete(k), d }; };
+test('브라우저 저장: 폰 2는 채팅 · 세계마다 따로 된 키 (폰 1 키 · 복구 기록 키와 안 겹쳐요)', () => {
+    const m = rich(), st = mem(), scope = 'narrativearchive:phone-owner:["character","a.png","chat"]';
+    assert.equal(L.liveScope(scope, m), null);
+    const w = L.startFresh(m, { persona: 'Lio' });
+    L.putLivePhone(m, { owner: 'Ren' }); L.putLivePhone(m, { owner: 'Mara' });
+    const k = L.liveScope(scope, m);
+    assert.equal(k, `${scope}:live:${w.id}`);
+    assert.notEqual(k, scope);
+    assert.notEqual(`narrativearchive:sync:${k}`, `narrativearchive:sync:${scope}`);
+    assert.equal(L.liveScope('', m), null);
+    st.setItem(scope, 'Mara');   // (폰 1's own last owner, kept as it is)
+    L.rememberLiveOwner(m, 'Ren', scope, st);
+    assert.equal(w.lastOwner, 'Ren');
+    assert.equal(st.getItem(k), 'Ren');
+    assert.equal(st.getItem(scope), 'Mara');
+    assert.equal(m.lastPhoneOwner, 'Mara');
+    assert.equal(L.readLiveOwner(m, scope, st), 'Ren');
+    // (the browser's newer than the chat's save; one no 폰 2 phone has is not used; a new world reads none of the old one's)
+    w.lastOwner = 'Mara';
+    assert.equal(L.readLiveOwner(m, scope, st), 'Ren');
+    st.setItem(k, 'Nobody');
+    assert.equal(L.readLiveOwner(m, scope, st), 'Mara');
+    L.startFresh(m, { persona: 'Lio' });
+    assert.notEqual(L.liveScope(scope, m), k);
+    assert.equal(L.readLiveOwner(m, scope, st), null);
+    // (browser storage off: the chat's save still works)
+    const off = { getItem() { throw new Error('off'); }, setItem() { throw new Error('off'); } };
+    L.putLivePhone(m, { owner: 'Ivo' });
+    L.rememberLiveOwner(m, 'Ivo', scope, off);
+    assert.equal(L.readLiveOwner(m, scope, off), 'Ivo');
 });

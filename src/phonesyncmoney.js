@@ -13,7 +13,7 @@
 // - balances may go below zero; no money is made up to cover a payment
 // Every change is listed in `effects` (a copy of each record as it went in), so 복구 can add back what a save lost, and
 // 되돌리기 can tell a record the user changed since, without touching anything else.
-import { addPrice, baseline, cash, currency, finance, finite, fx, migrateBank, positions, price, round, uid } from './finance.js';
+import { addPrice, baseline, cash, currency, finance, finite, fx, migrateBank, positions, price, round, roundIn, uid } from './finance.js';
 import { boxAt, dayGap, lifeReplay, lifeRevert } from './phonesynclife.js';
 import { dishPic } from './phonefood.js';
 import { byStory, giftOf, hhmm, num, when } from './phoneparse.js';
@@ -396,7 +396,8 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
                 rate = fx(m, xc, acct.currency, full);
             }
             if (rate === null) { out.notes.push(`${xc}→${acct.currency} 환율이 없어서 ${xc} ${Math.abs(amount)} 결제는 넣지 않았어요`); return; }
-            const orig = amount; amount = round(amount * rate);
+            // (in the account's own smallest unit: a won account has no fraction of a won)
+            const orig = amount; amount = roundIn(amount * rate, acct.currency);
             x.memo = [txt(x.memo), `${xc} ${Math.abs(orig)}`].filter(Boolean).join(' · ');
         }
         // one leg per account, direction and payee: the same event told again may carry another payment on the same account
