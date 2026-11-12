@@ -2295,3 +2295,19 @@ test('a name in a text: as a name is written, never part of another word (Korean
     for (const t of ['Maradona', 'Samara', 'Mara2']) assert.ok(!data.namedIn(t, 'Mara'), t);
     assert.ok(data.namedIn('(Dr. K) came', 'Dr. K') && !data.namedIn('x', 'a'));
 });
+
+test('a card already on the phone gets its bill day from an "account" record with no message number; money that moves still needs one', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'paid the taxi, 12000 won')]);
+    c.p.money.bank.accounts.push({ id: 'cc', kind: 'credit', name: '카드', last4: '1158', currency: 'KRW', balance: 0 });
+    migrateBank(c.m, c.p);
+    T.moneyAnswers = [{ records: [
+        { type: 'account', already: '1158', billDay: 25, paidFrom: '1111', made: ['billDay', 'paidFrom'] },
+        { type: 'account', already: '9999', billDay: 3 },
+        { type: 'payment', account: '1111', amount: -500, who: '번호 없는 결제', kind: 'card', occurrence: 'new' },
+    ] }];
+    await run(c.m, { now: '10-26 13:00', events: [{ id: 'taxi', at: 2, quote: 'paid the taxi', summary: '택시', date: '10-26', time: '12:40', phone: {}, money: true }] });
+    assert.equal(c.p.money.bank.accounts.find(a => a.last4 === '1158').billDay, 25);
+    assert.equal(c.bank(), 100000);
+    // (the account not on the phone and the payment with no number: left out, and said)
+    assert.ok(c.p.syncLast.notes.some(n => n.includes('돈 기록 2개는 어느 메시지인지 몰라서')));
+});
