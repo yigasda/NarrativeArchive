@@ -373,3 +373,5 @@ async function thumbOne(b) {
     const img = document.createElement('img'); img.src = pic; img.alt = ''; img.width = 96; img.height = 78; img.className = 'mq_timg';
     b.querySelector('.mq_tph, svg')?.replaceWith(img);   // the plain ground the button waits with
 }
+// for tools/dev (where the map is now): its middle, or null
+export const tileCenter = () => (live.map ? live.map.getCenter().toArray() : null);
