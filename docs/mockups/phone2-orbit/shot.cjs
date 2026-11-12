@@ -2,7 +2,7 @@
 const { open } = require('../../../tools/dev/probe.cjs'); const { chromium } = require('playwright');
 const { ORBIT, CSS, orbitIcon } = require('./icons.js'); const path = require('path'), fs = require('fs');
 const OUT = __dirname, TMP = fs.mkdtempSync('/tmp/claude-0/orb');
-const NAME = { A: '1 유리 고리 · 진주 점', B: '2 진주빛 고리 · 민트 구슬', C: '3 입체 고리 · 자두 구슬', D: '4 빛 꼬리 · 빛나는 점' };
+const NAME = { A: '지금 크기', B: '90%', C: '82%', D: '75%' };
 (async () => {
   const s = await open('light', { out: TMP });
   await s.to('home');
