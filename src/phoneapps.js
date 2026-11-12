@@ -610,6 +610,7 @@ export function setScreen(p, now, m, ui) {
         ${axH1('설정')}
         <div class="ax_card"><button type="button" class="ax_rw ax_me" data-go="setwho">${axFace(p.owner, 56)}<span class="ax_tx"><b>${esc(p.owner)}</b><span class="ax_p">${esc(p.profile?.handle || '')}</span></span><span class="ax_v">인물 바꾸기</span>${axChev}</button></div>
         ${ui.phones ? phoneModes(ui.phones) : ''}
+        ${ui.phones?.live && (p.syncLast || ui.phones.held) ? liveLastSync(p, ui.phones) : ''}
         <div class="ax_sec">화면</div>
         <div class="ax_card">
           <button type="button" class="ax_rw" data-go="settheme">${si('#a699c9', 'palette')}<span class="ax_tx"><span class="ax_n">테마</span></span><span class="ax_v">${p.theme === 'gray' ? '화이트 그레이' : '컬러 젤'}</span>${axChev}</button>
@@ -644,6 +645,20 @@ export function setScreen(p, now, m, ui) {
         <i class="ax_pad"></i>
       </div>
       ${axInd()}`;
+}
+// 실시간 폰의 지난 반영 (폰 1 대화 반영 화면의 지난 반영 카드와 같은 결): 몇 개 확인 · 넣은 앱 · 알림 · 실패, 방금 반영 되돌리기,
+// 되돌려서 기다리는 대화가 있으면 다시 반영
+function liveLastSync(p, { canUndo, held }) {
+    const last = p.syncLast || { checked: 0, apps: [], notes: [], failed: [] };
+    return `<div class="ax_sec">지난 반영</div>
+        <div class="ax_card">
+          ${p.syncLast ? '' : '<!--'}<div class="ax_rw"><span class="ax_tx"><span class="ax_n">${last.checked || 0}개 확인</span><span class="ax_p">${esc((last.apps || []).length ? `${last.apps.join(' · ')}에 넣었어요` : '새로 넣은 건 없어요')}</span></span></div>${p.syncLast ? '' : '-->'}
+          ${(last.notes || []).map(n => `<div class="ax_rw"><span class="ax_tx"><span class="ax_p">${esc(n)}</span></span></div>`).join('')}
+          ${(last.failed || []).map(f => `<div class="ax_rw"><span class="ax_tx"><span class="ax_n ax_red">${f.at === null ? '넣지 못한 일' : f.skipped ? '건너뜀' : '다음에 한 번 더'}</span><span class="ax_p">${esc(f.why)}</span></span></div>`).join('')}
+          ${held ? '<button type="button" class="ax_rw ax_rwn na_live_rerun"><span class="ax_tx"><span class="ax_n ax_blue">다시 반영</span></span></button>' : ''}
+          ${canUndo ? '<button type="button" class="ax_rw ax_rwn na_live_undo"><span class="ax_tx"><span class="ax_n ax_red">방금 반영 되돌리기</span></span></button>' : ''}
+        </div>
+        ${held ? '<div class="ax_foot">새 대화가 오면 같이 반영돼요</div>' : ''}`;
 }
 // 설정 › 휴대폰 (docs/mockups/phone2-switch): 타임라인 (폰 1, the story's phone) · 실시간 (폰 2, the live phone), one line
 // under it saying what the chosen one is; with no 실시간 phone yet its side is faint, with a place for 시작하기 (5단계)

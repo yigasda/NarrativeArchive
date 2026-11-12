@@ -13,10 +13,10 @@
 // 폰 1은 이 파일을 안 불러요. 폰 1 반영을 고치면 여기도 같이 봐요(순서가 같은 300줄).
 
 import { askDraft, phoneForModel, coreSystem, moneyStage, daysPassed, aroundBlock, blindBlock, ownerClock, ordersBlock, parsePhone, recordsCore, recordCount, splitDays, homeScreens, cityIds,
-    ITEM_KEYS, LISTS, APP_NAME, mergedState, everydayOn, everydayOnly, sizes, mergePhone, tagItems, phoneItems, byEvent, ensureIds, homeCountry, syncLives, glossAka } from './phonedata.js';
-import { exclusive, pickRound, unreadCount, settleRound, pruneDropped, srcOf, bodyMark, quoted, journalAdd, newSync } from './phonesync.js';
+    ITEM_KEYS, LISTS, APP_NAME, mergedState, everydayOn, everydayOnly, sizes, mergePhone, tagItems, phoneItems, byEvent, ensureIds, homeCountry, syncLives, glossAka, canUndo, restoreMerged, fxApp } from './phonedata.js';
+import { exclusive, pickRound, unreadCount, settleRound, pruneDropped, srcOf, bodyMark, quoted, journalAdd, journalRead, journalWrite, newSync } from './phonesync.js';
 import { jsonOf, evOf, when, hhmm, line, arr, pad } from './phoneparse.js';
-import { applyMoney, moneyNow, investNow, orderClock, regularClock } from './phonesyncmoney.js';
+import { applyMoney, moneyNow, investNow, orderClock, regularClock, revertEffects } from './phonesyncmoney.js';
 import { applyLife, applyDays, fillDays, lifeClock, dlvClock, cardClock, lifeNow } from './phonesynclife.js';
 import { migrateBank } from './finance.js';
 import { nameKey } from './people.js';
@@ -114,7 +114,7 @@ export async function updateLive(real, m, owner, { tz = 'UTC', save = async () =
         ensureIds(p);
         const had = new Set(ITEM_KEYS.flatMap(k => (p[k] || []).map(x => x.id)).filter(Boolean)), msgs = new Map((p.threads || []).map(t => [t.id, new Set(t.messages.map(msgSig))]));
         const undo = { sync: structuredClone({ done: s.done, failed: s.failed, arch: s.arch, events: s.events, seen: s.seen, hiddenRead: s.hiddenRead || {}, owed: s.owed || { money: [] }, dropped: s.dropped || [] }), now: p.now, year: p.year, where: structuredClone(p.where ?? null), moneyAt: p.money?.at, investAt: p.investment?.at,
-            comments: (p.posts || []).filter(x => x.id).map(x => [x.id, x.comments?.length || 0]), before: structuredClone(mergedState(p)) };
+            comments: (p.posts || []).filter(x => x.id).map(x => [x.id, x.comments?.length || 0]), before: structuredClone(mergedState(p)), situations: structuredClone(p.situations ?? null) };
         let lastDay = when(raw.now).slice(0, 5);
         everydayOn(raw, round.rows, textAt);
         const used = new Set(), wants = new Map(), daily = new Map();
@@ -188,7 +188,7 @@ export async function updateLive(real, m, owner, { tz = 'UTC', save = async () =
         ensureIds(p);
         p.at = Date.now();
         pruneDropped(s, phoneItems(p));
-        delete p.clockHold;
+        delete p.clockHold; delete p.liveHeld;
         const below = p.syncUndo && s.rounds.at(-2) === p.syncUndo.round && p.money?.at === p.syncUndo.moneyAt && p.investment?.at === p.syncUndo.investAt;
         p.syncUndos = below ? [...(p.syncUndos || []), p.syncUndo].slice(-4) : [];
         if (!p.syncUndos.length) delete p.syncUndos;
@@ -200,4 +200,58 @@ export async function updateLive(real, m, owner, { tz = 'UTC', save = async () =
         await save();
         return p;
     }, { operation: 'reflect', owner, scope: liveScope(liveWorld(real)?.scope || 'live', real) });
+}
+
+// 방금 반영 되돌리기 (폰 2): the last round of 폰 2's reflection is taken back, as 폰 1's 되돌리기 does it (phonedata.js
+// undoRound, the same steps and the same helpers): the items it added go, what it merged is as it was, the money and the
+// everyday apps go back, the messages are unread again, the phone's clock and situations are as before. What can't go back
+// (changed by hand since, or built on) stays and is named. The round before comes up to be undone next (up to 4 back).
+// The messages wait: they are read again with the next talk, or when the user asks (liveReflect with force).
+// Returns the names of what stayed. Throws when there is nothing to undo
+export async function undoLive(real, m, owner, { save = async () => {} } = {}) {
+    return exclusive('sync', async () => {
+        const w = liveWorld(real), p = m.phones?.[nameKey(owner)], scope = liveScope(w?.scope || 'live', real);
+        if (!w || !p) throw new Error('실시간 폰이 없어요');
+        const u = p.syncUndo, s = p.sync;
+        if (!u || s?.rounds?.[s.rounds.length - 1] !== u.round) throw new Error('되돌릴 반영이 없어요');
+        if (!canUndo(p)) throw new Error('그 뒤에 은행이나 투자를 다시 만들어서 되돌릴 수 없어요');
+        const ledger = m.finance;
+        const gone = new Set(u.items.map(([, id]) => id));
+        for (const k of ITEM_KEYS) if (Array.isArray(p[k])) p[k] = p[k].filter(x => !gone.has(x.id));
+        for (const [tid, sigs] of u.msgs) {
+            const t = (p.threads || []).find(x => x.id === tid);
+            if (t) { const drop = new Set(sigs); t.messages = t.messages.filter(x => !drop.delete(JSON.stringify([x.from, x.text, x.time]))); }
+        }
+        p.threads = (p.threads || []).filter(t => t.messages.length);
+        if (u.before && u.after) restoreMerged(p, u.before, u.after);
+        for (const { x } of phoneItems(p)) if (x.froms) x.froms = x.froms.filter(f => f.r !== u.round);
+        const now = structuredClone(s.events), kept = [], droppedNow = structuredClone(s.dropped || []);
+        const left = new Set(revertEffects(m, p, u.effects).map(x => JSON.stringify(x)));
+        Object.assign(s, structuredClone(u.sync));
+        s.dropped = droppedNow;
+        for (const [id, e] of Object.entries(s.events)) if (now[id]) { const still = new Set((now[id].effects || []).map(x => JSON.stringify(x))); e.effects = (e.effects || []).filter(x => still.has(JSON.stringify(x))); }
+        for (const id of Object.keys(s.events)) if (!(id in now)) delete s.events[id];
+        for (const [id, effects] of u.byEvent || []) {
+            const rest = effects.filter(x => left.has(JSON.stringify(x)));
+            if (rest.length && now[id]) { s.events[id] = { ...now[id], effects: [...(s.events[id]?.effects || []), ...rest] }; kept.push(now[id].summary || id); }
+        }
+        const evFx = new Set((u.byEvent || []).flatMap(([, fx]) => fx.map(x => JSON.stringify(x))));
+        for (const x of u.effects) { const j = JSON.stringify(x); if (left.has(j) && !evFx.has(j)) { const app = fxApp(x.path); if (app && !kept.includes(app)) kept.push(app); } }
+        s.rounds.pop();
+        pruneDropped(s, phoneItems(p));
+        p.now = u.now;
+        if (u.year !== undefined) p.year = u.year;
+        if (u.situations !== undefined) { if (u.situations) p.situations = u.situations; else delete p.situations; }
+        // (the messages it read wait for the next talk: leaving the messenger again doesn't read them straight back)
+        p.liveHeld = Math.max(0, ...(u.read || []));
+        const prev = (p.syncUndos || []).pop();
+        if (!p.syncUndos?.length) delete p.syncUndos;
+        if (prev) { p.syncUndo = prev; if (prev.last) p.syncLast = structuredClone(prev.last); else delete p.syncLast; } else { delete p.syncLast; delete p.syncUndo; }
+        if (p.money) migrateBank(m, p);
+        // (a 폰 2 with no ledger stays without one: taking the money back only looked into it)
+        if (!ledger && m.finance && ![m.finance.accounts, m.finance.transfers, m.finance.prices].some(o => Object.keys(o || {}).length) && !(m.finance.revisions || []).length) m.finance = ledger;
+        if (scope) journalWrite(scope, journalRead(scope).filter(r => r.round !== u.round));
+        await save();
+        return kept;
+    }, { operation: 'undo', owner, scope: liveScope(liveWorld(real)?.scope || 'live', real) });
 }

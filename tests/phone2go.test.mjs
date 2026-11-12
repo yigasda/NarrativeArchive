@@ -101,6 +101,80 @@ test('답장이 실패하면 줄이 멈추고 이유가 일에 남아요. 반영
     assert.equal(c.p.liveReflectError, undefined);
 });
 
+test('방금 반영 되돌리기: 기록 · 돈 · 상황 · 읽은 자리가 반영 전으로, 메시지는 새 대화가 올 때까지 기다려요', async () => {
+    const c = world(), p1 = JSON.stringify(c.real.phones);
+    send(c, '더치페이 보내라');
+    T.replies = [{ state: '집', reply: ['지금 보낼게'], does: [{ app: 'bank', what: '더치페이 몫 32,000원 Ren에게 송금' }] }];
+    await G.liveGo(c.real);
+    assert.equal(G.liveCanUndo(c.real, 'Mara'), false);
+    const core = () => ({ events: [{ id: 'split', at: 2, quote: '더치페이 몫 32,000원', summary: 'Ren에게 보냄', date: '11-11', time: '13:11', money: true, phone: { notes: [{ title: '보냄', text: 'x', time: '11-11 13:11' }] } }], situations: [{ id: 'split', what: '더치페이', state: 'done' }] });
+    const money = () => [{ records: [{ type: 'payment', at: 2, account: '1111', amount: -32000, who: 'Ren', kind: 'transfer', occurrence: 'new' }] }];
+    const before = { now: c.p.now, notes: c.p.notes.length };
+    T.answers = [core()]; T.moneyAnswers = money();
+    await G.liveReflect(c.real, 'Mara');
+    assert.equal(c.bank(), 68000); assert.equal(c.p.notes.length, 1); assert.equal(c.p.situations.length, 1);
+    assert.equal(G.liveCanUndo(c.real, 'Mara'), true);
+    // 되돌리기
+    let drew = 0;
+    const kept = await G.liveUndo(c.real, 'Mara', { onChange: () => drew++ });
+    assert.deepEqual(kept, []);
+    assert.equal(c.bank(), 100000);
+    assert.equal(c.p.notes.length, before.notes); assert.equal(c.p.now, before.now);
+    assert.equal(c.p.situations, undefined);
+    assert.equal(c.p.money.tx.length, 0);
+    assert.equal(G.liveUnreflected(c.real, 'Mara'), 2);
+    assert.equal(G.liveCanUndo(c.real, 'Mara'), false);
+    assert.equal(drew, 1);
+    // 폰 1 is untouched; nothing more to undo
+    assert.equal(JSON.stringify(c.real.phones), p1);
+    await assert.rejects(G.liveUndo(c.real, 'Mara'), /되돌릴 반영이 없어요/);
+    // leaving the messenger again does not read them straight back
+    T.calls = 0;
+    assert.deepEqual(await G.liveReflect(c.real, 'Mara'), { rounds: 0, left: 2, waiting: false, error: '', held: true });
+    assert.equal(T.calls, 0);
+    // asked for: read again now
+    T.answers = [core()]; T.moneyAnswers = money();
+    const again = await G.liveReflect(c.real, 'Mara', { force: true });
+    assert.equal(again.rounds, 1); assert.equal(c.bank(), 68000); assert.equal(c.p.liveHeld, undefined);
+});
+
+test('되돌린 뒤 새 대화가 오면 기다리던 메시지도 같이 읽어요. 두 번 반영했으면 한 번씩 거슬러 되돌려요', async () => {
+    const c = world();
+    const talk = async (text, reply) => { send(c, text); T.replies = [{ state: '집', reply: [reply], does: [] }]; await G.liveGo(c.real); };
+    const note = (at, quote, title) => ({ events: [{ id: title, at, quote, summary: title, date: '11-11', time: '13:00', phone: { notes: [{ title, text: 'x', time: '11-11 13:00' }] } }] });
+    await talk('첫 얘기', '응 첫 답');
+    T.answers = [note(2, '응 첫 답', '첫째')]; await G.liveReflect(c.real, 'Mara');
+    await talk('둘째 얘기', '응 둘째 답');
+    T.answers = [note(4, '응 둘째 답', '둘째')]; await G.liveReflect(c.real, 'Mara');
+    assert.deepEqual(c.p.notes.map(x => x.title), ['첫째', '둘째']);
+    await G.liveUndo(c.real, 'Mara');
+    assert.deepEqual(c.p.notes.map(x => x.title), ['첫째']);
+    assert.equal(G.liveCanUndo(c.real, 'Mara'), true);
+    await G.liveUndo(c.real, 'Mara');
+    assert.deepEqual(c.p.notes.map(x => x.title), []);
+    assert.equal(G.liveUnreflected(c.real, 'Mara'), 4);
+    // new talk: all of it is read together
+    await talk('셋째 얘기', '응 셋째 답');
+    T.answers = [{ events: [] }]; T.calls = 0;
+    const got = await G.liveReflect(c.real, 'Mara');
+    assert.equal(got.rounds, 1); assert.equal(got.left, 0);
+    assert.match(T.input, /첫 얘기[\s\S]*둘째 얘기[\s\S]*셋째 얘기/);
+});
+
+test('은행이 없는 실시간 폰: 되돌려도 없던 장부가 생기지 않아요', async () => {
+    const c = world();
+    delete c.p.money; L.liveWorld(c.real).finance = null;
+    send(c, '뭐해');
+    T.replies = [{ state: '집', reply: ['메모 중'], does: [{ app: 'notes', what: '장 볼 것 적음' }] }];
+    await G.liveGo(c.real);
+    T.answers = [{ events: [{ id: 'list', at: 2, quote: '장 볼 것 적음', summary: '장보기 메모', date: '11-11', time: '13:00', phone: { notes: [{ title: '장 볼 것', text: 'x', time: '11-11 13:00' }] } }] }];
+    await G.liveReflect(c.real, 'Mara');
+    assert.equal(c.p.notes.length, 1);
+    await G.liveUndo(c.real, 'Mara');
+    assert.equal(c.p.notes.length, 0);
+    assert.equal(L.liveWorld(c.real).finance, null);
+});
+
 test('폰 1은 이 파일을 안 불러요', async () => {
     for (const f of (await readdir(new URL('../src/', import.meta.url))).filter(f => f.endsWith('.js') && f !== 'phone2go.js' && f !== 'phone.js')) assert.doesNotMatch(await readFile(new URL(`../src/${f}`, import.meta.url), 'utf8'), /phone2go/, f);
 });
