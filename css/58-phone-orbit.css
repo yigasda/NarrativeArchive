@@ -45,6 +45,15 @@
 .ax .ob_grab { display: block; width: 40px; height: 5px; border-radius: 3px; background: #d4d7dd; margin: 0 auto 12px; }
 .ax .ob_acc { display: flex; align-items: center; gap: 12px; padding: 10px 4px; cursor: pointer; }
 .ax .ob_acc + .ob_acc { border-top: 1px solid #eef0f3; }
+/* 실시간 폰 시작 */
+.ax:is(.ax_livestart) .ax_canvas { position: relative; overflow: hidden; background: #f2f2f4; color: #15171c; --axfg: #15171c; }
+.ax .ls_hero { height: 190px; }
+.ax .ls_bg { background: radial-gradient(40% 50% at 25% 35%, #f3c3a6 0, transparent 70%), radial-gradient(45% 55% at 75% 70%, #b5a3dd 0, transparent 70%), radial-gradient(40% 40% at 70% 20%, #e8a7b8 0, transparent 70%), #e8a7b8; }
+.ax .ls_hero .ob_big em { font-style: normal; font-size: 13px; font-weight: 500; opacity: 0.9; margin-left: 8px; letter-spacing: 0; }
+.ax .ls_pill { display: inline-block; margin-top: 14px; font-size: 12px; background: rgba(255, 255, 255, 0.28); border-radius: 999px; padding: 4px 10px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35); }
+.ax .ls_opt.off { opacity: 0.45; cursor: default; }
+.ax .ls_ic { width: 34px; height: 34px; border-radius: 11px; display: flex; align-items: center; justify-content: center; flex: none; background: #e2e9f5; }
+.ax .ls_ic.fresh { background: #f3e4ea; }
 /* 새 대화 */
 .ax .ob_picked { display: flex; flex: none; gap: 14px; margin: 4px 4px 0; }
 .ax .ob_pk { position: relative; display: flex; flex-direction: column; align-items: center; gap: 5px; font-size: 12px; color: #3a3f47; cursor: pointer; }

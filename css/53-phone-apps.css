@@ -314,6 +314,6 @@
 .ax .ax_pmseg.on.lv { color: #2c4a80; }
 .ax .ax_pmseg.off { opacity: 0.4; cursor: default; }
 .ax .ax_pmnone { display: flex; justify-content: space-between; align-items: center; margin: 10px 8px 6px; color: #8a9099; font-size: 12.5px; }
-.ax .ax_pmstart { padding: 6px 11px; border-radius: 999px; background: #e2e9f5; color: #2c4a80; font-weight: 600; opacity: 0.45; }
+.ax .ax_pmstart { padding: 6px 11px; border-radius: 999px; background: #e2e9f5; color: #2c4a80; font-weight: 600; cursor: pointer; }
 .na_ph_notch { position: absolute; left: 50%; top: 11px; transform: translateX(-50%); width: 120px; height: 34px; border-radius: 17px; background: #000; z-index: 30; display: flex; align-items: center; justify-content: flex-end; padding-right: 12px; box-sizing: border-box; pointer-events: none; }
 .na_ph_notch i { width: 6px; height: 6px; border-radius: 50%; background: #3ddc97; }
