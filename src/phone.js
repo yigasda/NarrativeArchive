@@ -256,8 +256,9 @@ export async function openPhone(who = null) {
       </div>`);
     const setSheet = on => { sheetOpen = on; $root.find('.na_phl_sheet, .na_phl_shade').prop('hidden', !on); };
     const phone = () => (owner ? (live() ? livePhone(realM, owner) : m.phones[nameKey(owner)]) : null);
-    // 실시간: 타임라인's data buttons (반영 · 되돌리기 · 복구 · 다시 만들기 · 채우기 · 번역 · 빼기) are off; a tap on one that is left does nothing
-    const LIVE_OFF = '.na_ph_kochip, .na_ph_trok, .na_sync_tr, .na_ph_screenholder, [data-go=setscreenholder], .na_ph_setupd, .na_ph_setinj, .na_ph_setremake, [data-go=setremake], [data-go=setsync], .na_ph_storyreset, .na_ph_setdel, .na_ph_fill, .na_ph_mretr, .na_sync_retr, .na_sync_restore, .na_sync_drop, .na_sync_undo';
+    // 실시간: 타임라인's data buttons (반영 · 되돌리기 · 복구 · 다시 만들기 · 채우기 · 번역 · 빼기, and the ones that read the
+    // roleplay chat: 연도 화살표 · 투자 새로고침 · 환율) are off; a tap on one that is left does nothing
+    const LIVE_OFF = '.na_ph_kochip, .na_ph_trok, .na_sync_tr, .na_ph_screenholder, [data-go=setscreenholder], .na_ph_setupd, .na_ph_setinj, .na_ph_setremake, [data-go=setremake], [data-go=setsync], .na_ph_storyreset, .na_ph_setdel, .na_ph_fill, .na_ph_mretr, .na_sync_retr, .na_sync_restore, .na_sync_drop, .na_sync_undo, .na_ph_ystep, .iv_refresh, .iv_sync, .bank_fxrefresh';
     $root.on('click', LIVE_OFF, e => { if (live()) { e.preventDefault(); e.stopImmediatePropagation(); } });
     // the Korean of what the phone has in another language (phonetr.js): after a reflection, from its report, or when
     // 한국어 is pressed. A failure is marked on the report (번역 못 함 · 다시 하기); the reflection itself stays
@@ -566,7 +567,7 @@ export async function openPhone(who = null) {
         if (!update) return toastr.success(`${owner}의 폰을 만들었어요`, '캐릭터 휴대폰');
         const r = p.syncLast;
         // the shops nearby, every 3 story days and 3 reflections (or at once on a move to another saved city): on their own, after the reflection
-        refreshNearby(m, p, { read: !!r?.checked }).then(n => { if (n && !phoneClosed && phone() === p && /^(dlv|delivery)/.test(view)) drawPhone(true); }).catch(err => toastr.warning(String(err?.message || err), '동네 가게'));
+        if (!live()) refreshNearby(m, p, { read: !!r?.checked }).then(n => { if (n && !phoneClosed && phone() === p && /^(dlv|delivery)/.test(view)) drawPhone(true); }).catch(err => toastr.warning(String(err?.message || err), '동네 가게'));
         if (!r?.checked) return toastr.info('새로 읽을 대화가 없어요', '캐릭터 휴대폰');
         koRun(p, false);
         const head = `${r.checked}개 확인 · 남은 ${r.remaining}개`;
@@ -605,7 +606,7 @@ export async function openPhone(who = null) {
     // 동네 가게 메뉴: normally filled right after the delivery app; one that failed is asked once more when the app is opened
     const menuTried = new Set();
     const autoMenu = async () => {
-        if (phoneClosed || making || !/^(dlv|delivery|dshop:)/.test(view)) return;
+        if (live() || phoneClosed || making || !/^(dlv|delivery|dshop:)/.test(view)) return;  // (실시간: these read the roleplay chat)
         const p = phone();
         if (!(p?.delivery?.shops || []).some(menuWanted) || menuTried.has(owner)) return;
         menuTried.add(owner);
@@ -613,7 +614,7 @@ export async function openPhone(who = null) {
         catch (err) { if (!phoneClosed && phone() === p) toastr.error(String(err?.message || err), '배달 메뉴'); }
     };
     const autoChart = async () => {
-        if (phoneClosed || making || investing || !view.startsWith('stock:')) return;
+        if (live() || phoneClosed || making || investing || !view.startsWith('stock:')) return;
         const p = phone(); if (!p?.investment) return;
         const [symbol,range='1m'] = decodeURIComponent(view.slice(6)).split('~');
         const request = `${owner}|${p.investment.date}|${symbol}|${range}`;
@@ -668,7 +669,7 @@ export async function openPhone(who = null) {
         profileRedraw(p,state);
     };
     const loadDevice = async (p,state) => {
-        if(p.profileDraft || state.deviceBusy || p.device) return;
+        if(live() || p.profileDraft || state.deviceBusy || p.device) return;  // (실시간: fillDevice reads the roleplay chat)
         state.deviceBusy=true;state.deviceError='';profileRedraw(p,state);
         try {await fillDevice(m,p);} catch(err) {state.deviceError=String(err?.message || err);}
         finally {state.deviceBusy=false;profileRedraw(p,state);}
