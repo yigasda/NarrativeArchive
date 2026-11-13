@@ -68,6 +68,16 @@ export async function liveGo(real, { onChange = () => {} } = {}) {
         },
     });
     tell();
+    // (talk that goes on without the messenger being left: a room that has piled up enough is summarized now, so what
+    // is not summarized yet never outgrows what a reply request carries. No reflection here: that waits for leaving)
+    const w = liveWorld(real);
+    if (out.ran && w && open(real)) {
+        for (const ph of Object.values(w.phones || {})) {
+            if (!ph?.owner || !digestDue(real, ph.owner).length) continue;
+            try { await liveDigest(real, ph.owner); } catch (err) { console.error('[narrative-archive] live digest', err); }
+        }
+        tell();
+    }
     return out;
 }
 // 메신저를 나갈 때: what was said on the messenger since the last time goes into the owner's 폰 2 (as many rounds as it
@@ -156,13 +166,14 @@ export async function liveDigest(real, owner) {
                     if (!isBlocked(err) || chunk.rows.length < 4) throw err;
                     const [a, b] = digestHalves(chunk), first = await ask(a);
                     if (!here(real, w)) break;
-                    if (!takeDigest(room, a, first)) { await saveMeta(); break; }
+                    // (an answer with no scene in it: noted on the room by takeDigest; the other rooms still get their turn)
+                    if (!takeDigest(room, a, first)) { await saveMeta(); if (++failures >= 3) break; continue; }
                     await saveMeta();
                     answer = await ask(b);
                     if (!here(real, w)) break;
                     const keptB = takeDigest(room, b, answer);
                     await saveMeta();
-                    if (!keptB) break;
+                    if (!keptB) { if (++failures >= 3) break; continue; }
                     done++;
                     continue;
                 }
@@ -177,7 +188,7 @@ export async function liveDigest(real, owner) {
             if (!here(real, w)) break;
             const kept = takeDigest(room, chunk, answer);
             await saveMeta();
-            if (!kept) break;
+            if (!kept) { if (++failures >= 3) break; continue; }
             done++;
         }
         // 요약의 요약: one room whose summary has grown long has its older half made short (one a go)
