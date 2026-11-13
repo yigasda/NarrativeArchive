@@ -61,7 +61,7 @@ const L = p => {
     return view;
 };
 const k1 = (k, cls = 'lf_k') => (k && koOn() ? `<span class="${cls}">${esc(k)}</span>` : '');
-const now5 = p => String(storyNow(p) || p.now || '');
+const now5 = p => String(storyNow(p, null, phoneMeta()) || p.now || '');
 const toMin = t => { const mt = String(t || '').match(/(\d{1,2}):(\d{2})/); return mt ? Number(mt[1]) * 60 + Number(mt[2]) : null; };
 // an order's arrival clock: "MM-DD HH:MM", or "HH:MM" alone (on the order's day)
 const arrHm = o => { const a = String(o.arrived || ''); return /^\d{2}:\d{2}$/.test(a) ? a : a.slice(6); };
@@ -75,7 +75,7 @@ let STORY = { year: new Date().getFullYear(), now: '', dot: false };
 export function setStory(p) {
     const y = Number(p?.year) || Number(String(p?.money?.asOf || p?.investment?.date || '').slice(0, 4)) || new Date().getFullYear();
     // known: the story dates itself (else weekdays aren't shown: a fantasy calendar or an undated story has none to show)
-    STORY = { year: y, known: !p?.noYear && !!(Number(p?.year) || /^\d{4}-/.test(String(p?.money?.asOf || p?.money?.fxDate || p?.investment?.date || ''))), now: String(storyNow(p) || p?.now || '').slice(0, 5), dot: decimalOf(p) === '.', loc: localeOf(p), p };
+    STORY = { year: y, known: !p?.noYear && !!(Number(p?.year) || /^\d{4}-/.test(String(p?.money?.asOf || p?.money?.fxDate || p?.investment?.date || ''))), now: String(storyNow(p, null, phoneMeta()) || p?.now || '').slice(0, 5), dot: decimalOf(p) === '.', loc: localeOf(p), p };
 }
 const n0 = v => (v === null || v === undefined ? '—' : Number(v).toLocaleString(STORY.loc || 'en-US'));
 const md = s => { const mt = String(s || '').match(/^(\d{2})-(\d{2})/); return mt ? { mo: Number(mt[1]), d: Number(mt[2]) } : null; };
@@ -1068,6 +1068,7 @@ function hereNow(lf) {
 // another person's room or an unknown place in the same zone leaves the saved weather alone
 function hereOwn(lf) {
     const h = lf.weather.here, p = OWNER.get(lf);
+    if (Number.isInteger(phoneMeta()?.phoneUpto)) return h;  // (실시간: the role-play's status line isn't this phone's weather)
     let t = null;
     // after an undo the phone stays where it was read up to (clockHeld): only status lines up to there
     try { t = weatherNow(clockHeld(p) ? phoneAt(p) : undefined); } catch { t = null; }
@@ -1476,7 +1477,7 @@ function cityMap(o, accent, bike) {
 }
 const SCOOT = '<g transform="translate(-11 -9) scale(.55)"><rect x="2" y="6" width="12" height="11" rx="2" fill="#3fd4c1"/><circle cx="9" cy="27" r="5" fill="#2b2b2b"/><circle cx="31" cy="27" r="5" fill="#2b2b2b"/><path d="M6 22 h22 l4 -8 h3 v4 l-4 4 v4 h-25z" fill="#3fd4c1"/><circle cx="22" cy="5" r="4.4" fill="#3fd4c1"/><path d="M18 9 h7 l2 9 h-9z" fill="#3a3a3a"/></g>';
 const BIKE = '<g transform="translate(-10 -7)" fill="none" stroke="#16181c" stroke-width="2"><circle cx="4" cy="11" r="3.6"/><circle cx="16" cy="11" r="3.6"/><path d="M4 11 L8 4 h5 L16 11 M8 4 L11 11 L13 4" stroke-linejoin="round"/></g>';
-const minsLeft = (p, o) => { const n = String(storyNow(p) || p.now || ''), a = o.time.slice(6), b = n.slice(6); if (!/^\d\d:\d\d/.test(a) || !/^\d\d:\d\d/.test(b) || n.slice(0, 5) !== o.time.slice(0, 5)) return 20; const m = (s => Number(s.slice(0, 2)) * 60 + Number(s.slice(3, 5))); return Math.max(3, m(a) + 35 - m(b)); };
+const minsLeft = (p, o) => { const n = String(storyNow(p, null, phoneMeta()) || p.now || ''), a = o.time.slice(6), b = n.slice(6); if (!/^\d\d:\d\d/.test(a) || !/^\d\d:\d\d/.test(b) || n.slice(0, 5) !== o.time.slice(0, 5)) return 20; const m = (s => Number(s.slice(0, 2)) * 60 + Number(s.slice(3, 5))); return Math.max(3, m(a) + 35 - m(b)); };
 export function orderScreen(p, now, id) {
     const d = D(p), o = d?.orders.find(x => x.id === id);
     if (!o) return ordersScreen(p, now);

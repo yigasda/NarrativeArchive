@@ -1,7 +1,7 @@
 // 캐릭터 휴대폰 · 앱 화면: every app, drawn at 390 × 844 like the home.
 
 import { annivsOf, datedRows } from './anniv.js';
-import { ctx } from './core.js';
+import { ctx, phoneMeta } from './core.js';
 import { investmentDate } from './investdata.js';
 import { profileChoices, phoneDataInfo } from './phoneprofile.js';
 import { faceHtml, nameKey, nameRe, peopleData, peopleList, personLine } from './people.js';
@@ -990,6 +990,7 @@ export function setLore(p, now, m, ui) {
 // none from further back or hidden by a compression; and only the owner's own scene (statusAt: home, or the city they
 // are in), not the other end of a call
 function camPlace(p) {
+    if (Number.isInteger(phoneMeta()?.phoneUpto)) return null;  // (실시간: no place from the role-play's status line)
     const chat = ctx().chat || [], t = recentTrackers(1, { visibleOnly: true })[0];
     if (!t?.place) return null;
     const shown = [...chat.keys()].filter(i => chat[i] && !chat[i].is_system), last = shown.at(-1), reply = shown.filter(i => !chat[i].is_user).at(-1);

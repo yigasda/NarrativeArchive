@@ -11,7 +11,7 @@ import { investmentScreen } from './investui.js';
 import { collectInvestmentRecords, fillInvestment, fillChartHistory, refreshMarket, refreshBankFX, investmentDate, validDate } from './investdata.js';
 import { migrateBank, selectPrice } from './finance.js';
 import { askDraft, draftReady, draftSettings, drLabel, listModels, vxModelList, withSpinner } from './ai.js';
-import { ctx, getMeta, globalSettings, saveGlobal, saveMeta, setPhoneMeta } from './core.js';
+import { ctx, getMeta, globalSettings, phoneMeta, saveGlobal, saveMeta, setPhoneMeta } from './core.js';
 import { applyInjection } from './inject.js';
 import { faceHtml, nameKey, peopleList } from './people.js';
 import { drafting, drawing, drawPhoto, drawPost, filling, makeDraft, paging, retranslate, retranslating, recording, recordVoice, searching, searchPage, shooting, takePhoto, webPage, writeEntry, writing } from './phoneai.js';
@@ -53,7 +53,7 @@ const draftIds = () => (draftSettings().mode === 'vertex' ? vxModelList() : draf
 // a make that ends tells every phone open now (one shut and opened again mid-make draws the phone it made)
 const madeWatch = new Set();
 function screen(p, view, m, roster, ui) {
-    const now = storyNow(p);
+    const now = storyNow(p, null, phoneMeta());
     showNow(now);
     setStory(p);
     // "view:id": an id may hold colons itself (a reflection's records are "sync:event:m0")
@@ -258,7 +258,7 @@ export async function openPhone(who = null) {
     const phone = () => (owner ? (live() ? livePhone(realM, owner) : m.phones[nameKey(owner)]) : null);
     // 실시간: 타임라인's data buttons (반영 · 되돌리기 · 복구 · 다시 만들기 · 채우기 · 번역 · 빼기, and 연도 화살표: each
     // reflection sets the year by the real date) are off; a tap on one that is left does nothing
-    const LIVE_OFF = '.na_ph_kochip, .na_ph_trok, .na_sync_tr, .na_ph_screenholder, [data-go=setscreenholder], .na_ph_setupd, .na_ph_setinj, .na_ph_setremake, [data-go=setremake], [data-go=setsync], .na_ph_storyreset, .na_ph_setdel, .na_ph_fill, .na_ph_mretr, .na_sync_retr, .na_sync_restore, .na_sync_drop, .na_sync_undo, .na_ph_ystep';
+    const LIVE_OFF = '.na_ph_kochip, .na_ph_trok, .na_sync_tr, .na_ph_screenholder, [data-go=setscreenholder], .na_ph_setupd, .na_ph_setinj, .na_ph_setremake, [data-go=setremake], [data-go=setsync], .na_ph_storyreset, .na_ph_setdel, .na_ph_fill, .na_ph_mretr, .na_sync_retr, .na_sync_restore, .na_sync_drop, .na_sync_undo, .na_ph_ystep, .na_ph_gloss';
     $root.on('click', LIVE_OFF, e => { if (live()) { e.preventDefault(); e.stopImmediatePropagation(); } });
     // the Korean of what the phone has in another language (phonetr.js): after a reflection, from its report, or when
     // 한국어 is pressed. A failure is marked on the report (번역 못 함 · 다시 하기); the reflection itself stays
@@ -421,6 +421,9 @@ export async function openPhone(who = null) {
     const drawPhone = (keep = false) => {
         queueMicrotask(placeAsk);  // every way out of a redraw (some return early) puts the open sheet back
         const p = phone();
+        // 실시간 with nobody on it (대화만 남기기 keeps the talk, not the phones): a way back to 타임라인 and to 새로 시작,
+        // never the 타임라인 picker (its name would be the 타임라인's choice)
+        if (live() && (!owner || !p)) { $root.find('.na_ph_frame').html(`<div class="na_ph_scr glass w_dusk"><div class="na_ph_body na_ph_make"><div class="na_ph_makecard"><b>이 실시간 폰엔 아직 인물이 없어요</b><button type="button" class="na_ph_makebtn na_ph_pmode" data-v="story">타임라인으로</button><div class="na_ph_makelinks"><button type="button" class="na_ph_livereset">실시간 폰 새로 시작</button></div></div></div></div>`); return; }
         // nobody to show yet (no people in the archive, no phone in this chat): the picker opens instead of a blank phone
         if (!owner) {
             $root.find('.na_ph_frame').html(`
@@ -438,7 +441,6 @@ export async function openPhone(who = null) {
                 </div></div>`);
             return;
         }
-        if (live() && !p) { $root.find('.na_ph_frame').html(`<div class="na_ph_scr glass w_dusk"><div class="na_ph_body na_ph_make"><div class="na_ph_makecard"><b>이 실시간 폰엔 아직 인물이 없어요</b></div></div></div>`); return; }
         // 메신저 시간대 opened from 폰 만들기 준비: the settings screen itself, back to the prep screen
         // 초안 모델 opened from 폰 만들기 준비: its screen, back to the prep screen
         if (!p && view === 'setdraftmodel') { $root.find('.na_ph_frame').html(screen(phonePre(m, owner) || pendingProfile(), view, m, roster, {})); return; }
@@ -476,7 +478,7 @@ export async function openPhone(who = null) {
         }
         $root.find('.na_ph_frame').html(html);
         // 실시간: the notch says which phone this is on every screen; 타임라인's data rows go
-        if (live()) { $root.find('.na_ph_frame .na_ph_scr').first().append('<span class="na_ph_notch" aria-label="실시간 폰"><i></i></span>'); $root.find(`.na_ph_frame :is(${LIVE_OFF})`).remove(); $root.find('.na_ph_frame .ax_card').filter((_, c) => !c.children.length).remove(); }
+        if (live()) { $root.find('.na_ph_frame .na_ph_scr').first().append('<span class="na_ph_notch" aria-label="실시간 폰"><i></i></span>'); $root.find(`.na_ph_frame :is(${LIVE_OFF})`).remove(); $root.find('.na_ph_frame .ax_card').filter((_, c) => !c.children.length && !c.textContent.trim()).remove(); }
         if (sheet && (view === 'photo' || view === 'set')) $root.find('.na_ph_scr').append(looksSheet(m));
         placeAsk();
         trPop();
@@ -869,7 +871,7 @@ export async function openPhone(who = null) {
         if (!v) return;
         const have = names.find(n => nameKey(n) === nameKey(v));
         if (!have) { m.people = [...(Array.isArray(m.people) ? m.people : []), v]; names.push(v); roster.add(nameKey(v)); }
-        owner = have || v; rememberPhoneSelection(m,owner,selectionKey); adding = false; view = 'lock'; sheet = false;
+        owner = have || v; if (!live()) rememberPhoneSelection(m,owner,selectionKey); adding = false; view = 'lock'; sheet = false;
         $root.find('.na_ph_addname').val('');
         draw();
         setSheet(false);
