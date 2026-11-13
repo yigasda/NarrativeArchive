@@ -115,12 +115,16 @@ test('토큰은 아카이브 압축이 세는 대로: 한글 한 글자 1, 나�
 test('메신저를 나갈 때 길어진 요약도 줄여요 (다이제스트 지시문, 한 번에 한 방)', async () => {
     const c = world(300);
     c.room.digest = { upto: 0, parts: [{ from: -520, to: -261, at: 1, text: `## 옛 것 하나\n- ${'가'.repeat(3000)}` }, { from: -260, to: 0, at: 2, text: `## 옛 것 둘\n- ${'나'.repeat(3000)}` }] };
-    T.digests = [SECTIONS(1, 260)]; T.folds = ['## 옛 것 — 줄임\nPLOT:\n- 짧게.']; T.answers = [{ events: [] }, { events: [] }, { events: [] }];
+    T.compress = [];
+    T.digests = [`<scenes>\n## not a section\n</scenes>\n${SECTIONS(1, 260)}`]; T.folds = ['<think>hm</think>## 옛 것 — 줄임\nPLOT:\n- 짧게.']; T.answers = [{ events: [] }, { events: [] }, { events: [] }];
     await G.liveReflect(c.real, 'Mara');
     assert.equal(T.digestCalls, 1); assert.equal(T.foldCalls, 1);
+    // (both asked the way the archive's compression is asked; the answer's thinking and scene list are taken off)
+    assert.deepEqual(T.compress, [{ system: '', guard: true }, { system: 'FOLD SYS', guard: false }]);
     assert.ok(T.foldInput.startsWith('SECTIONS:\n## 옛 것 하나') && T.foldInput.includes('TARGET: 1200'));
     assert.deepEqual(c.room.digest.parts.map(p => [p.from, p.to, !!p.folded]), [[-520, 0, true], [1, 260, false]]);
     assert.equal(c.room.digest.parts.at(-1).to, 260);
+    assert.ok(c.room.digest.parts.at(-1).text.startsWith('## #1–#260') && c.room.digest.parts[0].text.startsWith('## 옛 것 — 줄임'));
 });
 
 test('요약이 실패해도 답장 · 반영은 그대로예요. 다음에 다시 해요', async () => {

@@ -7,6 +7,7 @@
 
 import { ctx, saveMeta } from './core.js';
 import { askDraft, phone2Clock, aroundBlock, ownerZone, cardBlocks } from './phonedata.js';
+import { askCompress, stripThink, SECTION_GUARD } from './ai.js';
 import { resolvePhoneProfile, ownerProfileBlock } from './phoneprofile.js';
 import { parseJson } from './phoneparse.js';
 import { nameKey } from './people.js';
@@ -111,7 +112,7 @@ export async function liveUndo(real, owner, { onChange = () => {} } = {}) {
 }
 
 // 오래된 대화 요약: the owner's rooms whose unsummarized talk has piled up get their oldest stretch summarized (the
-// archive's short instruction, the draft model), up to LIVE_GO.digests stretches a go. A failure is noted on the room and
+// archive's short instruction, asked the way the archive's compression is: askCompress), up to LIVE_GO.digests stretches a go. A failure is noted on the room and
 // tried again after new talk or an hour; the replies go on without it. A room's summary grown long has its older half
 // made short too (the archive's digest instruction). Returns how many stretches were summarized
 const digesting = new WeakSet();
@@ -128,7 +129,8 @@ export async function liveDigest(real, owner) {
             let answer;
             try {
                 const story = liveStoryText(real, w), lang = story ? langBlock(story, { tail: false }) : '';
-                answer = await askDraft(digestRequest(SHORT_PROMPT, fillPrompt, chunk, digestRaw(w, chunk.rows, tzOf(p)), lang), { force: true, maxTokens: 8000 });
+                // (asked as the archive's compression asks: the same thinking level, room and refusal check; its thinking and scene list off)
+                answer = stripThink(await askCompress(digestRequest(SHORT_PROMPT, fillPrompt, chunk, digestRaw(w, chunk.rows, tzOf(p)), lang), { guard: SECTION_GUARD }));
             } catch (err) { if (liveWorld(real)?.id === w.id) { failDigest(room, err?.message || err); await saveMeta(); } throw err; }
             if (liveWorld(real)?.id !== w.id) break;
             const kept = takeDigest(room, chunk, answer);
@@ -142,7 +144,7 @@ export async function liveDigest(real, owner) {
             let answer;
             try {
                 const story = liveStoryText(real, w);
-                answer = await askDraft(foldRequest(long.chunk, story ? langBlock(story, { tail: false, src: '' }) : ''), { force: true, system: AI_SYS_DIGEST, maxTokens: 4000 });
+                answer = stripThink(await askCompress(foldRequest(long.chunk, story ? langBlock(story, { tail: false, src: '' }) : ''), { system: AI_SYS_DIGEST }));
             } catch (err) { if (liveWorld(real)?.id === w.id) { failFold(long.room, err?.message || err); await saveMeta(); } throw err; }
             if (liveWorld(real)?.id === w.id) { takeFold(long.room, long.chunk, answer); await saveMeta(); }
         }
