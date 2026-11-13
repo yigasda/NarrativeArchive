@@ -49,6 +49,26 @@ test('the chat after the archive, whole and oldest first', async () => {
     assert.ok(input.includes('[#11] Ren'));
 });
 
+test('폰 2 (a meta that says where it began and gives its messenger talk): the chat after the archive up to where it began, then the messenger; nothing after', async () => {
+    globalThis.__rows = rows(12);
+    const p = { owner: 'Ren', sync: { marks: { base: { index: 7 } }, done: [[8, 9]] } };
+    const live = { ...m, phones: { ren: p }, phoneUpto: 7, phoneRecent: (owner, n, o) => (o?.seen == null ? 'Ren: on the messenger\nRen: not read yet' : 'Ren: on the messenger') };
+    const g = data.windowOf(live, p);
+    assert.deepEqual([g.from, g.to, g.n, g.all, g.upto, g.mark], [4, 7, 4, true, 7, 9]);
+    const input = await data.sideRequest(live, 'Ren', []);
+    assert.match(input, /\[RECENT CHAT\]\n\[#4\] Ren/);
+    assert.ok(input.includes('[#7] Ren')); assert.ok(!input.includes('[#8] Ren')); assert.ok(!input.includes('[#11] Ren'));
+    assert.ok(input.indexOf('[#7] Ren') < input.indexOf('Ren: on the messenger')); assert.ok(input.includes('Ren: not read yet'));
+    assert.equal((input.match(/\[RECENT CHAT/g) || []).length, 1);
+    // an app that marks where it read: only the talk the reflection read; its mark is that messenger number
+    const read = {};
+    const fill = await data.sideRequest(live, 'Ren', [], { read });
+    assert.ok(fill.includes('Ren: on the messenger')); assert.ok(!fill.includes('Ren: not read yet')); assert.ok(!fill.includes('[#8] Ren'));
+    assert.deepEqual(data.readMark(read.gap), { index: 9, user: -1, fp: '', tail: '' });
+    // 폰 1: as it was
+    assert.equal(data.windowOf(m, p).mark, undefined);
+});
+
 test('past the budget: up to where it stops, the rest the reflection\'s', async () => {
     globalThis.__rows = rows(40);
     const g = data.chatAfterArchive(m, 300);

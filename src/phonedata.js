@@ -1113,9 +1113,15 @@ const phoneMessageText = (text, index = atOf(text)) => {
     return context ? `${text}\n${context}` : text;
 };
 const recentPhoneRows = (n, { upto = null, ...options } = {}) => chatUpto(recentForCheck(upto == null ? n : 1e9, options), upto).slice(-n);
-// the newest talk a request shows: the role-play chat's, or, given 폰 2's drawer, its messenger's (m.phoneRecent; the
-// chat past where 폰 2 began is never 폰 2's to read)
-export const recentOf = (m, owner, n, o = {}) => (typeof m?.phoneRecent === 'function' ? m.phoneRecent(owner, n, o) : recentPhoneText(n, o));
+// the newest talk a request shows: the role-play chat's, or, given 폰 2's drawer, the story up to where 폰 2 began and
+// then its messenger's (m.phoneRecent; the chat past where 폰 2 began is never 폰 2's to read)
+export function recentOf(m, owner, n, o = {}) {
+    if (typeof m?.phoneRecent !== 'function') return recentPhoneText(n, o);
+    // (폰 2: the messenger's talk, and before it, while there is room, the story's last messages up to where 폰 2 began)
+    const talk = m.phoneRecent(owner, n, o), k = talk ? talk.split('\n').length : 0, room = (o.maxChars ?? Infinity) - talk.length;
+    const before = k < n && room > 0 && Number.isInteger(m.phoneUpto) && m.phoneUpto >= 0 ? recentPhoneText(n - k, { maxChars: room, upto: m.phoneUpto }) : '';
+    return [before, talk].filter(Boolean).join('\n\n');
+}
 // how far into the role-play chat a phone's requests read: its clock, or with 폰 2's drawer where 폰 2 began (m.phoneUpto)
 export const readUpto = (m, p) => (Number.isInteger(m?.phoneUpto) ? m.phoneUpto : phoneAt(p));
 export function recentPhoneText(n, { maxChars = Infinity, ...options } = {}) {
@@ -1170,7 +1176,7 @@ export const phoneAt = p => { const s = p?.sync, b = s?.marks?.base?.index; retu
 const afterBlock = g => (g?.n ? `[RECENT CHAT${g.all && !g.later ? '' : ` — the story so far ends at #${nowAt(g)}; the messages after it are read later`}]\n${g.text}` : '');
 // what a phone's request reads after the archive (null: no archive, the chat goes as before)
 // p: the phone it is for (its clock bounds it); no archive: only that bound (the chat goes as before, up to it)
-export const windowOf = (m, p = null, from = null, budget = CHAT_TOKENS.phone, whole = true) => { const upto = readUpto(m, p); if (Number.isInteger(m?.phoneUpto)) return { ...(noArchive(m) ? { none: true } : {}), n: 0, all: true, upto, to: upto, mark: Math.max(upto, phoneAt(p) ?? upto) }; return noArchive(m) ? (upto == null ? null : { none: true, n: 0, all: true, upto }) : chatAfterArchive(m, budget, upto, from, whole); };
+export const windowOf = (m, p = null, from = null, budget = CHAT_TOKENS.phone, whole = true) => { const upto = readUpto(m, p); if (Number.isInteger(m?.phoneUpto)) return { ...(noArchive(m) ? { none: true, n: 0, all: true, upto } : chatAfterArchive(m, budget, upto, from, whole)), later: false, mark: Math.max(upto, phoneAt(p) ?? upto) }; return noArchive(m) ? (upto == null ? null : { none: true, n: 0, all: true, upto }) : chatAfterArchive(m, budget, upto, from, whole); };
 // what the phone's reflection took from the messages after `after` up to the phone's clock: each event's summary and the
 // words it came from. The part of a long stretch a fill can't read word for word goes like this (less detailed, nothing lost)
 // null when some message there was never read by a reflection (only the making read it, or a newest-first reflection
@@ -4010,7 +4016,9 @@ export async function sideRequest(m, owner, blocks, { profile, money = false, st
     // (폰 2, a request whose app marks where it read: only the talk the reflection has read, so nothing is taken twice)
     const recent = recentOf(m, owner, 6, { upto, maxChars: 6000, ...(read && Number.isInteger(gap?.mark) ? { seen: gap.mark } : {}) });
     if (read) read.gap = gap;
-    const arch = archiveBlock(m, archiveFor(m, -1, upto).text || '(empty)', 'ARCHIVE', story, upto), chat = afterBlock(gap) || (recent && !(story && noArchive(m)) ? `[RECENT CHAT]\n${recent}` : '');
+    const arch = archiveBlock(m, archiveFor(m, -1, upto).text || '(empty)', 'ARCHIVE', story, upto), talk = gap?.n && typeof m?.phoneRecent === 'function' ? m.phoneRecent(owner, 6, { maxChars: 6000, ...(read && Number.isInteger(gap?.mark) ? { seen: gap.mark } : {}) }) : '';
+    // (폰 2: the story after the archive up to where it began, then the messenger's talk, in the one block)
+    const chat = (afterBlock(gap) ? `${afterBlock(gap)}${talk ? `\n\n${talk}` : ''}` : '') || (recent && !(story && noArchive(m)) ? `[RECENT CHAT]\n${recent}` : '');
     const tales = [arch, world ? `[WORLD]\n${world}` : '', lore ? `[LOREBOOK]\n${lore}` : '', chat];
     const input = [...tales, yearBlock(m, ph, upto), `[OWNER]\n${owner}`, profileText, blindBlock(m, owner), ...blocks, namesBlock(m)].filter(Boolean).join('\n\n');
     // (the story part as it went in, for evidence: storyPart)

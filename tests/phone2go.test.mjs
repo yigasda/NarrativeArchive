@@ -303,7 +303,7 @@ test('실시간 폰에서 폰 1의 앱 요청을 불러도 시작 뒤의 롤플 
     const chat0 = T.chat;
     T.chat = ['옛날 이야기 하나', '옛날 이야기 둘', '시작 직전 이야기', '시작 뒤 롤플 하나', '시작 뒤 롤플 둘'].map((mes, i) => ({ name: i % 2 ? 'Mara' : 'Ren', is_user: !(i % 2), mes, extra: {} }));
     // (what 폰 1's reader gives as the chat's newest messages)
-    T.recent = ['#3 Mara: 시작 뒤 롤플 하나', '#4 Ren: 시작 뒤 롤플 둘'];
+    T.recent = ['[#1] Mara: 옛날 이야기 둘', '[#2] Ren: 시작 직전 이야기', '[#3] Mara: 시작 뒤 롤플 하나', '[#4] Ren: 시작 뒤 롤플 둘'];
     try {
         const real = { phones: { mara: phone() }, text: '' };
         L.startFromStory(real, { persona: 'Ren', upto: 2, scope: 'test', story: { ranges: {}, titles: [], rawFrom: 0, own: [''] } });
@@ -316,10 +316,14 @@ test('실시간 폰에서 폰 1의 앱 요청을 불러도 시작 뒤의 롤플 
         assert.equal(d.phoneRecent('Mara', 6, { maxChars: 6000 }), 'Ren: 메신저로 한 말');
         assert.equal(PD.readUpto(d, p), 2);
         assert.deepEqual([PD.windowOf(d, p).upto, PD.windowOf(d, p).n], [2, 0]);
-        assert.equal(PD.recentOf(d, 'Mara', 6, {}), 'Ren: 메신저로 한 말');
+        // (the newest talk: the story up to where 폰 2 began, then the messenger; never the chat after the start)
+        assert.equal(PD.recentOf(d, 'Mara', 6, {}), '[#1] Mara: 옛날 이야기 둘\n\n[#2] Ren: 시작 직전 이야기\n\nRen: 메신저로 한 말');
+        assert.equal(PD.recentOf(d, 'Mara', 1, {}), 'Ren: 메신저로 한 말');
         assert.equal(PD.storyNow(p, null, d), '11-12 21:30');
         const side = await PD.sideRequest(d, 'Mara', ['[TARGET]\nx']);
         assert.ok(side.includes('Ren: 메신저로 한 말'));
+        assert.ok(side.includes('시작 직전 이야기'));
+        assert.ok(side.indexOf('시작 직전 이야기') < side.indexOf('메신저로 한 말'));
         assert.ok(!side.includes('시작 뒤 롤플'));
         // an app that marks where it read (투자 처음 채우기): only the talk the reflection has read, and its mark is the
         // last message read, a messenger number (so the reflection gives the app what comes after, once)
@@ -328,7 +332,7 @@ test('실시간 폰에서 폰 1의 앱 요청을 불러도 시작 뒤의 롤플 
         p.sync = { scope: 'x', marks: { base: { index: 2, user: -1, fp: '', tail: '' } }, done: [[first, first]] };
         const read = {};
         const fill = await PD.sideRequest(d, 'Mara', ['[TARGET]\nx'], { read });
-        assert.ok(fill.includes('메신저로 한 말')); assert.ok(!fill.includes('아직 반영 안 된 말')); assert.ok(!fill.includes('시작 뒤 롤플'));
+        assert.ok(fill.includes('메신저로 한 말')); assert.ok(!fill.includes('아직 반영 안 된 말')); assert.ok(fill.includes('시작 직전 이야기')); assert.ok(!fill.includes('시작 뒤 롤플'));
         assert.deepEqual(PD.readMark(read.gap), { index: first, user: -1, fp: '', tail: '' });
         assert.equal(PD.nowAt(read.gap), 2);
         delete p.sync;
