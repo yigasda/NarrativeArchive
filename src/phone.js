@@ -38,7 +38,7 @@ import { confirm, esc } from './util.js';
 import { liveMode, liveWorld, livePhone, liveMeta, setLiveMode, resetLive, rememberLiveOwner, readLiveOwner, liveKey, liveRooms, ensureRoom, nameRoom, sendLive, readLive, unreadBy, enqueueReplies, seeFailure } from './phone2store.js';
 import { shiftLabel, liveWall, viewerWall, startShift } from './phone2clock.js';
 import { orbitList, orbitRoom, orbitNew, orbitHomeWidget, liveStart } from './phoneorbit.js';
-import { liveStoryText, beginFromStory, liveBranched, adoptChat, rebeginFromStory } from './phone2story.js';
+import { liveStoryText, beginFromStory, liveBranched, adoptChat, rebeginFromStory, rebeginKeepingChats } from './phone2story.js';
 import { liveGo, liveReflect, liveCanUndo, liveUndo, liveUnreflected } from './phone2go.js';
 
 // other files keep importing these from here (주입: 실시간 폰의 폰들도 같이, 주입이 꺼진 폰은 빼고)
@@ -843,6 +843,22 @@ export async function openPhone(who = null) {
         if (making || busyMake || investing || koBusy || filling.size || busy.fill || busy.sync) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요', '캐릭터 휴대폰');
         const how = await askChoice('실시간 폰 새로 시작', '', [{ v: 'chats', label: '대화만 남기기' }, { v: 'all', label: '전부 지우기', danger: true }], '취소');
         if (how !== 'chats' && how !== 'all') return;
+        // 대화만 남기기: the talk stays, the phones begin again from the 타임라인 phones as they are now (as 시작 does);
+        // still 실시간. With no 타임라인 phone there is nothing to begin from: 폰 2 stays as it was
+        if (how === 'chats') {
+            const lw = liveWorld(realM), base = realM.phones?.[nameKey(lw?.lastOwner)] || Object.values(realM.phones || {}).find(p => p?.owner);
+            const upto = Math.max(0, (ctx().chat?.length || 1) - 1), st = chatStamp(upto);
+            let w = null;
+            try { w = rebeginKeepingChats(realM, { upto, scope: phoneChatScope(ctx()), dayShift: base ? startPlanOf(base).dayShift : 0, chat: st.chat, fp: st.fp }); }
+            catch (err) { return toastr.error(String(err?.message || err), '캐릭터 휴대폰'); }
+            if (!w) return toastr.info('타임라인 폰을 먼저 만들어 주세요', '캐릭터 휴대폰');
+            obWho = ''; useMode();
+            owner = liveOwner(); view = 'set'; sheet = false;
+            draw();
+            await saveMeta();
+            obGo();
+            return;
+        }
         resetLive(realM, how); obWho = ''; useMode();
         owner = selectedPhoneOwner(realM, names, null, readPhoneSelection(selectionKey)); view = 'set'; sheet = false;
         draw();
