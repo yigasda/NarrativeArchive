@@ -39,7 +39,7 @@ import { liveMode, liveWorld, livePhone, liveMeta, setLiveMode, resetLive, remem
 import { shiftLabel, liveWall, viewerWall, startShift } from './phone2clock.js';
 import { orbitList, orbitRoom, orbitNew, orbitHomeWidget, liveStart } from './phoneorbit.js';
 import { liveStoryText, beginFromStory, liveBranched, adoptChat, rebeginFromStory, rebeginKeepingChats } from './phone2story.js';
-import { liveGo, liveReflect, liveCanUndo, liveUndo, liveUnreflected } from './phone2go.js';
+import { liveGo, liveReflect, liveCanUndo, liveUndo, liveUnreflected, liveNowOf } from './phone2go.js';
 
 // other files keep importing these from here (주입: 실시간 폰의 폰들도 같이, 주입이 꺼진 폰은 빼고)
 import { phoneBlock as phoneBlock0 } from './phonedata.js';
@@ -169,7 +169,7 @@ export async function openPhone(who = null) {
     if (!stillHere()) return;
     // 실시간: the drawer is made once for its world and kept (a new one each time would copy the glossary again)
     let drawer = null;
-    const useMode = () => { m = live() ? (drawer?.w === liveWorld(realM) ? drawer.d : (drawer = { w: liveWorld(realM), d: liveMeta(realM, { text: () => liveStoryText(realM, liveWorld(realM)) }) }).d) : realM; setPhoneMeta(m === realM ? null : m); };
+    const useMode = () => { m = live() ? (drawer?.w === liveWorld(realM) ? drawer.d : (drawer = { w: liveWorld(realM), d: liveMeta(realM, { text: () => liveStoryText(realM, liveWorld(realM)), now: liveNowOf(realM) }) }).d) : realM; setPhoneMeta(m === realM ? null : m); };
     useMode();
     const liveRoster = () => new Set(liveNames().map(nameKey));
     // Orbit (실시간 폰의 메신저, docs/design/orbit.md): 계정은 페르소나(쓰기)와 이 폰 주인(읽기만) 둘. 왼쪽 위 얼굴 → 아래 시트로 바꿔요
