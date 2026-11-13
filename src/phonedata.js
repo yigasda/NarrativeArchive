@@ -1412,7 +1412,10 @@ function phoneRequest(m, owner, p = null, lore = '', only = null, profile = '', 
         world ? `[WORLD]\n${world}` : '',
         lore ? `[LOREBOOK]\n${lore}` : '',
         aroundBlock(q),
-        afterBlock(gap) || (recent && !noArchive(m) ? `[RECENT CHAT]\n${recent}` : ''),
+        // (폰 2: after the story it began from, the messenger's talk its reflection has read — the summaries of the old
+        // talk, then the lines — so a phone or an app made again holds what was said there too)
+        ((story, talk) => (talk ? (story ? `${story}\n\n${talk}` : `[RECENT CHAT]\n${talk}`) : story))(afterBlock(gap) || (recent && !noArchive(m) ? `[RECENT CHAT]\n${recent}` : ''),
+            typeof m?.phoneRecent === 'function' && Number.isInteger(gap?.mark) ? m.phoneRecent(owner, 150, { maxChars: 12000, seen: gap.mark, summary: true }) : ''),
         yearBlock(m, q, upto),
         `[OWNER]\n${owner}`,
         profile, blindBlock(m, owner),
@@ -1545,7 +1548,9 @@ async function makePhone0(m, owner, { update = false, apps = null } = {}) {
     // (or, with more after the archive than one request reads, after the last message it read: the reflection goes on from there)
     // made again with its reading kept (some apps, or a phone whose bank or life apps stay): up to the phone's clock, like
     // a fill; made anew: up to now, and that becomes its clock
-    const cur = m.phones?.[key], keep = !!(apps && cur) || !!(cur?.sync?.marks?.base && ['money', 'invest', 'life', 'delivery'].some(g => cur.sync.marks[g]));
+    // (폰 2, a phone it already has: always with its reading kept — it is made again from the story it began from and the
+    // messenger talk read so far)
+    const cur = m.phones?.[key], keep = !!(apps && cur) || !!(cur?.sync?.marks?.base && (Number.isInteger(m?.phoneUpto) || ['money', 'invest', 'life', 'delivery'].some(g => cur.sync.marks[g])));
     const gap = keep ? windowOf(m, cur, null, CHAT_TOKENS.phone, false) : windowOf(m, null);
     // nothing shown after the archive (all of it archived and hidden): it read up to the archive's end, not -1 (no further
     // than the chat's last message: an archive longer than the chat leaves the messages written after for the reflection)
@@ -1651,12 +1656,18 @@ async function makePhone0(m, owner, { update = false, apps = null } = {}) {
         // the phone's own apps start reading again from here. With a bank, investments or the everyday apps kept (they
         // weren't made again), the reading state stays as it was: messages they haven't read yet are still theirs to read
         // (the phone's own items from those messages are told apart by their words, so nothing doubles)
-        if (was?.sync?.marks?.base && ['money', 'invest', 'life', 'delivery'].some(g => was.sync.marks[g])) base.sync = was.sync;
+        // (폰 2, a phone it already has made again: its reading of the messenger goes on where it was — the request showed
+        // the talk read so far — and its clock, the year the user picked and where things stand stay its own)
+        const liveAgain = Number.isInteger(m?.phoneUpto) && !!was?.sync?.marks?.base;
+        // (the unsaved rounds are under the meta's own key: 폰 2's drawer names its own, so 폰 1's are never touched)
+        const scope = typeof m.phoneJournal === 'string' ? m.phoneJournal : phoneChatScope(ctx());
+        if (liveAgain || was?.sync?.marks?.base && ['money', 'invest', 'life', 'delivery'].some(g => was.sync.marks[g])) base.sync = was.sync;
         else {
-            base.sync = newSync(phoneChatScope(ctx())); base.sync.marks.base = mark;
+            base.sync = newSync(scope); base.sync.marks.base = mark;
             // a reading started anew: the old one's unsaved rounds (복구) aren't this phone's
-            try { const scope = phoneChatScope(ctx()); journalWrite(scope, journalRead(scope).filter(r => nameKey(r.owner) !== key)); } catch { /* no journal here */ }
+            try { journalWrite(scope, journalRead(scope).filter(r => nameKey(r.owner) !== key)); } catch { /* no journal here */ }
         }
+        if (liveAgain) { for (const k of ['liveYearShift', 'situations', 'liveHeld']) if (was[k] !== undefined) base[k] = was[k]; if (was.now) { got.now = was.now; if (got2) got2.now = ''; } }
         m.phones[key] = mergePhone(base, got, { m });
         if (got2) mergePhone(m.phones[key], got2, { m });
     }
@@ -1665,7 +1676,7 @@ async function makePhone0(m, owner, { update = false, apps = null } = {}) {
     if (m.phonePre?.[key]) { delete m.phonePre[key]; if (!Object.keys(m.phonePre).length) delete m.phonePre; }
     ensureYear(m, p, nowAt(last));
     // (a year from the newest status line, read before the phone had its clock: on the owner's clock across New Year)
-    if (!pre?.yearSet && !p.yearSet && p.year && !p.noYear) { const st = trackerYear(nowAt(last)), sh = Number(p.yearShift) || 0; if (st && st.y + sh === p.year) p.year = acrossNewYear(st.y, st.day, p.now) + sh; }
+    if (!Number.isInteger(m?.phoneUpto) && !pre?.yearSet && !p.yearSet && p.year && !p.noYear) { const st = trackerYear(nowAt(last)), sh = Number(p.yearShift) || 0; if (st && st.y + sh === p.year) p.year = acrossNewYear(st.y, st.day, p.now) + sh; }
     if(m.phoneProfiles) delete m.phoneProfiles[key];
     ensureIds(p);
     p.upto = lastEnd(m);
@@ -4040,9 +4051,9 @@ export async function sideRequest(m, owner, blocks, { profile, money = false, st
     // (폰 2, a request whose app marks where it read: only the talk the reflection has read, so nothing is taken twice)
     // (폰 2, an app being filled: it marks all the reflected talk as known, so it is shown that talk and not six lines of it)
     const fill = !!read && Number.isInteger(gap?.mark), lines = fill ? 150 : 6, chars = fill ? 12000 : 6000;
-    const recent = recentOf(m, owner, lines, { upto, maxChars: chars, ...(fill ? { seen: gap.mark } : {}) });
+    const recent = recentOf(m, owner, lines, { upto, maxChars: chars, ...(fill ? { seen: gap.mark, summary: true } : {}) });
     if (read) read.gap = gap;
-    const arch = archiveBlock(m, archiveFor(m, -1, upto).text || '(empty)', 'ARCHIVE', story, upto), talk = gap?.n && typeof m?.phoneRecent === 'function' ? m.phoneRecent(owner, lines, { maxChars: chars, ...(fill ? { seen: gap.mark } : {}) }) : '';
+    const arch = archiveBlock(m, archiveFor(m, -1, upto).text || '(empty)', 'ARCHIVE', story, upto), talk = gap?.n && typeof m?.phoneRecent === 'function' ? m.phoneRecent(owner, lines, { maxChars: chars, ...(fill ? { seen: gap.mark, summary: true } : {}) }) : '';
     // (폰 2: the story after the archive up to where it began, then the messenger's talk, in the one block)
     const chat = (afterBlock(gap) ? `${afterBlock(gap)}${talk ? `\n\n${talk}` : ''}` : '') || (recent && !(story && noArchive(m)) ? `[RECENT CHAT]\n${recent}` : '');
     const tales = [arch, world ? `[WORLD]\n${world}` : '', lore ? `[LOREBOOK]\n${lore}` : '', chat];

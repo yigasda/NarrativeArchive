@@ -144,11 +144,16 @@ const IS_LIVE = Symbol('폰 2 서랍');
 export const isLiveMeta = v => !!(v && typeof v === 'object' && v[IS_LIVE]);
 // text: what 폰 2 may read of the story, a function asked each time (phone2story.js liveStoryText), else ''
 // the newest messenger talk of the rooms `owner` is in, oldest first, one line a message ("Name: words"), the last `n`
-// that fit in maxChars (seen: only up to that message number). What 폰 1's app requests show as RECENT CHAT when they
-// are given 폰 2's drawer
-export function liveRecent(w, owner, n = 12, { maxChars = Infinity, seen = null } = {}) {
+// that fit in maxChars (seen: only up to that message number; summary: with the rooms' summaries of older talk before
+// them). What 폰 1's app requests show as RECENT CHAT when they are given 폰 2's drawer
+export function liveRecent(w, owner, n = 12, { maxChars = Infinity, seen = null, summary = false } = {}) {
     const flat = v => String(v ?? '').replace(/\s+/g, ' ').trim(), k = liveKey(owner);
-    const all = Object.values(w?.messenger?.rooms || {}).filter(r => (r.members || []).some(x => liveKey(x) === k)).flatMap(r => r.messages || [])
+    const rooms = Object.values(w?.messenger?.rooms || {}).filter(r => (r.members || []).some(x => liveKey(x) === k));
+    // (summary: an app being filled or made again reads all the talk there was — the rooms' summaries of the old talk
+    // first, then the lines not summarized yet)
+    const short = summary ? rooms.map(r => (Array.isArray(r.digest?.parts) ? r.digest.parts : []).map(p => String(p?.text || '').trim()).filter(Boolean).join('\n\n')).filter(Boolean).join('\n\n').slice(-8000) : '';
+    const past = r => (summary && Number.isInteger(r.digest?.upto) ? r.digest.upto : -Infinity);
+    const all = rooms.flatMap(r => (r.messages || []).filter(x => (x.n ?? Infinity) > past(r)))
         .filter(x => (x.call || flat(x.text)) && (seen == null || (x.n ?? Infinity) <= seen)).sort((a, b) => (a.n ?? 0) - (b.n ?? 0) || (a.at ?? 0) - (b.at ?? 0)).slice(-Math.max(0, n));
     const out = [];
     let room = Math.max(0, maxChars);
@@ -158,7 +163,7 @@ export function liveRecent(w, owner, n = 12, { maxChars = Infinity, seen = null 
         out.unshift(t.slice(0, room)); room -= t.length + 1;
         if (room <= 0) break;
     }
-    return out.join('\n');
+    return [short ? `(earlier on the messenger, in short)\n${short}` : '', out.join('\n')].filter(Boolean).join('\n\n');
 }
 export function liveMeta(m, { text = null } = {}) {
     const w = liveWorld(m);
