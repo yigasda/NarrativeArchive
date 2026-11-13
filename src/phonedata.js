@@ -3759,7 +3759,8 @@ function hoodZone(p, place, m = null) {
     for (const c of cs) {
         const ks = new Set(c.names.map(pkey).filter(Boolean));
         // (the owner's own row and a saved row of the same city are one city: the owner's)
-        for (const z of zs) if (z.tz === c.tz && [z.name, ...(z.names || [])].some(n => ks.has(pkey(n)))) { const k = `${z.tz}|${pkey(z.name)}`; if (!hits.get(k)?.own) hits.set(k, z); }
+        // (a name many cities have, "Hyde Park", "Chinatown": only the owner's own city, never a move to another's)
+        for (const z of zs) if (z.tz === c.tz && (!c.shared || z.own) && [z.name, ...(z.names || [])].some(n => ks.has(pkey(n)))) { const k = `${z.tz}|${pkey(z.name)}`; if (!hits.get(k)?.own) hits.set(k, z); }
     }
     // (a name in two known cities, "Westend": the owner's own one when it is one of them; else no guess)
     const all = [...hits.values()], one = all.length === 1 ? all : all.filter(z => z.own);

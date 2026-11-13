@@ -25,9 +25,22 @@ test('어디에나 있는 말은 동네가 아니에요', () => {
     for (const w of ['공항', '교외', 'Central', '두오모', '시청', 'Loop']) assert.deepEqual(hoodCities(w), [], w);
     assert.deepEqual(hoodCities('Shibuya Coffee'), []);
 });
+test('여러 도시에 있는 이름(Hyde Park, Chinatown, Downtown, Old Town, Soho …)은 표시가 붙어요(주인 도시일 때만 써요). 도시 이름이 붙은 건 그대로 찾아요', () => {
+    for (const w of ['Hyde Park', 'Chinatown', '차이나타운', 'Downtown', '다운타운', 'Old Town', '올드타운', '구시가지', 'New Town', 'Soho', 'Chelsea', 'Midtown', 'West End', 'North End', 'Koreatown', 'Little India', 'Waterfront', 'Georgetown', 'Cambridge', 'Capitol Hill', 'Westend', 'Centro'])
+        assert.ok(hoodCities(w).every(c => c.shared === true), w);
+    assert.ok(hoodCities('Hyde Park').length && hoodCities('Westend').length);
+    for (const w of ['Downtown Toronto', 'Shibuya Crossing', 'Kreuzberg', 'Westminster']) assert.ok(hoodCities(w).every(c => !c.shared), w);
+    assert.deepEqual(names('Downtown Toronto'), ['토론토']);
+    assert.deepEqual(names('Downtown Dubai'), ['두바이']);
+    assert.deepEqual(names('Yokohama Chinatown'), ['요코하마']);
+    assert.deepEqual(names('Shibuya Crossing'), ['도쿄']);
+    assert.deepEqual(names('Kreuzberg'), ['베를린']);
+});
 test('지도 표의 동네는 (어디에나 있는 말 말고) 다 찾아요', () => {
-    const lost = HINT.flatMap(([, ws]) => ws).filter(w => !hoodCities(w).length);
+    // (each word once: the words that are no one neighbourhood, and the names many cities share)
+    const lost = [...new Set(HINT.flatMap(([, ws]) => ws).filter(w => !hoodCities(w).length))];
     assert.ok(lost.length < 45, `${lost.length}: ${lost.join(',')}`);
+    for (const w of ['Westminster', 'Central Park', 'Beacon Hill', 'East Village', 'Shoreditch', '홍대', '강남']) assert.ok(hoodCities(w).length, w);
 });
 test('지도의 도시는 하나도 빠짐없이 이 표에 시간대가 적힌 줄이 있어요 (지도에 도시가 늘면 여기에 줄을 더해요)', () => {
     const lost = [];

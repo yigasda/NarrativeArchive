@@ -142,6 +142,16 @@ const AROUND = ['사거리', '삼거리', '오거리', '교차로', '역', '역�
 // the map's HINT words that are no one neighbourhood (an airport, a suburb, "the City", "Central", a cathedral's name)
 const NOT_HOOD = ['공항', '교외', '방리유', 'banlieue', '달동네', '산동네', '시티', '뱅크', '은행가', '시청', '오페라', 'opéra', '센트럴', 'central', '피크', 'the peak',
     '기타', '미션', 'mission', '루프', 'loop', '다마', 'tama', '101', '798', 'cbd', '수향', 'water town', '오로라', '8구', '16구', 'dom', '두오모', 'duomo', '구룡', 'kowloon'].map(key);
+// names many cities have (a Chinatown, a Downtown, an Old Town, a Hyde Park, a Soho): on their own they say no city. The
+// city this table lists one under comes back marked shared: true, and is taken only when it is the owner's own (their
+// Westend), never as a move to someone else's city ("Downtown Toronto" is Toronto's alone and is not marked)
+const SHARED = ['차이나타운', 'chinatown', '코리아타운', 'koreatown', '리틀 인디아', 'little india', '리틀 이탈리아', 'little italy', 
+    '다운타운', 'downtown', '미드타운', 'midtown', 'uptown', '업타운', '올드타운', 'old town', '구시가지', 'old city', 'old quarter', '뉴타운', 'new town', 'newtown', '신시가지',
+    'centro', 'centrum', 'centro storico', 'centro histórico', 'city centre', 'city center', 'west', 'gardens', '가든스',
+    'west end', 'westend', 'east end', 'north end', 'south end', 'north beach', 'south beach', 'long beach', 'gold coast', 'south bank', 'southbank',
+    '워터프런트', 'waterfront', 'harbourfront', 'hyde park', 'green park', 'lincoln park', 'garden city', 'capitol hill',
+    '소호', 'soho', '첼시', 'chelsea', '조지타운', 'georgetown', '케임브리지', 'cambridge', 'newton', '퀸스타운', 'queenstown', 'kensington', 'richmond',
+    'woodstock', '우드스톡', 'clifton', '클리프턴', 'portobello', 'the beaches', 'university', '대학가'].map(key);
 // the map's towns ("청두 · 충칭": each), as { names, tz }: this table's row of that city (every town has one, with its zone)
 function mapCities(town, rows) {
     const out = [];
@@ -171,19 +181,20 @@ function hoodIndex() {
     }
     return index;
 }
-// the cities a place's neighbourhood may be ("시부야 사거리" → Tokyo), each { names, tz }; [] when the place names none.
+// the cities a place's neighbourhood may be ("시부야 사거리" → Tokyo), each { names, tz } (shared: true for a name many
+// cities have); [] when the place names none.
 // the place is the whole name, or a neighbourhood and words that keep it one ("…역", "… Crossing")
 export function hoodCities(place) {
     const p = String(place || '').trim(), whole = key(p);
     if (!whole) return [];
-    const idx = hoodIndex(), out = new Map(), add = cs => { for (const c of cs || []) out.set(c.names[0], c); };
-    add(idx.get(whole));
+    const idx = hoodIndex(), out = new Map(), add = k => { for (const c of idx.get(k) || []) out.set(c.names[0], SHARED.includes(k) ? { ...c, shared: true } : c); };
+    add(whole);
     const w = p.split(/\s+/).filter(Boolean);
     for (let k = w.length - 1; k >= 1; k--) {
         const head = key(w.slice(0, k).join(' ')), rest = w.slice(k).map(key);
-        if (idx.has(head) && rest.every(r => AROUND.includes(r))) add(idx.get(head));
+        if (idx.has(head) && rest.every(r => AROUND.includes(r))) add(head);
     }
     // (written together, Korean or Japanese: "시부야사거리", "渋谷駅")
-    if (!out.size) for (const a of AROUND) if (a && whole.endsWith(a) && whole.length > a.length) add(idx.get(whole.slice(0, -a.length)));
+    if (!out.size) for (const a of AROUND) if (a && whole.endsWith(a) && whole.length > a.length) add(whole.slice(0, -a.length));
     return [...out.values()];
 }

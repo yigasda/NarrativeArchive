@@ -446,6 +446,16 @@ test('OWNER\'S CLOCK combines a city with its people only in the output, keeping
     assert.equal(data.sceneZone(p, 'Seoul', m).tz, 'Asia/Seoul');
 });
 
+test('a neighbourhood name many cities have (Hyde Park, Chinatown, Downtown) moves the scene to no city; one that is a single city\'s still does', () => {
+    const at = (own, other) => ({ owner: 'Ren', now: '10-26 10:00', where: { people: [{ name: 'Ren', ...own }, { name: 'Mara', ...other }] } });
+    const london = { tz: 'Europe/London', city: 'London', lives: 'GB' }, chicago = { tz: 'America/Chicago', city: 'Chicago', lives: 'US' };
+    assert.equal(data.sceneZone(at(london, chicago), 'Hyde Park'), null);
+    assert.equal(data.sceneZone(at({ tz: 'America/New_York', city: 'New York', lives: 'US' }, { tz: 'Asia/Singapore', city: 'Singapore', lives: 'SG' }), 'Chinatown'), null);
+    assert.equal(data.sceneZone(at({ tz: 'America/Toronto', city: 'Toronto', lives: 'CA' }, { tz: 'Africa/Cairo', city: 'Cairo', lives: 'EG' }), 'Downtown'), null);
+    assert.equal(data.sceneZone(at({ tz: 'Asia/Seoul', city: 'Seoul', lives: 'KR' }, { tz: 'Asia/Tokyo', city: 'Tokyo', lives: 'JP' }), '시부야 사거리')?.tz, 'Asia/Tokyo');
+    assert.equal(data.sceneZone(at(london, chicago), 'Wicker Park')?.tz, 'America/Chicago');
+});
+
 // a status line's place with its country first ("대한민국 서울 강서구"): the city after it, when the place as written is found nowhere
 test('a scene\'s city with its country before it is still that city; a place found as written stays as it was', () => {
     const p = zonePhone('11-05 03:38');
