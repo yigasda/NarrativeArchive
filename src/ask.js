@@ -173,7 +173,9 @@ export async function openAsk() {
             ? log.map(x => `<div class="na_ask_item"><div class="na_ask_qq">${esc(x.q)}</div>${askSourceRows(askAnswerHtml(x.a, secs), secs, m.text)}</div>`).join('') + (pending ? waitHtml(pending) : '')
             : '');
         $root.toggleClass('na_ask3_new', !log.length && !pending);
-        $log.scrollTop($log[0].scrollHeight);
+        // the window scrolls (the log is not a scroll box of its own): newest answer in view
+        const sc = $root.closest('.popup-content')[0];
+        if (sc) sc.scrollTop = sc.scrollHeight;
     };
     $log.on('click', '.na_cite[data-start]', function () {
         const start = Number($(this).data('start'));
@@ -216,7 +218,7 @@ export async function openAsk() {
         const a = await withSpinner($root.find('.na_ask_go'), '', async () => {
             const cx = await askContext(m, q, { whole: !!g.askWhole });
             if (!g.askWhole) info(estTok(cx.prompt) + estTok(AI_SYS_ASK));
-            return askAI(cx.prompt, { system: AI_SYS_ASK, maxTokens: 1500 });
+            return askAI(cx.prompt, { system: AI_SYS_ASK, maxTokens: 5000 });
         });
         pending = '';
         if (a === null) { $q.val(q); draw(); return; }
