@@ -11,7 +11,7 @@ import { calendars } from './calendar.js';
 import { ctx, saveMeta } from './core.js';
 import { headingPlaces } from './people.js';
 import { FOOD_IDS, dishPic } from './phonefood.js';
-import { homeCountry, OWN_CLOCK, FILL_CLOCK_GET, FILL_CLOCK, clockBlock, fillClock, sceneHome, statusAt, arr, trackerWeather, readMark, turnsNote, secondTurn, soFarHead, windowOf, nowAt, CHAT_TOKENS, COUNTRIES, byStory, ensureIds, giftOf, hhmm, jsonOf, ko, last4, line, markNow, num, pad, pick, rowDay, sideRequest, storyNow, when, withEv } from './phonedata.js';
+import { homeCountry, OWN_CLOCK, FILL_CLOCK_GET, FILL_CLOCK, clockBlock, fillClock, sceneHome, statusAt, arr, trackerWeather, readMark, turnsNote, secondTurn, soFarHead, windowOf, nowAt, CHAT_TOKENS, COUNTRIES, byStory, ensureIds, giftOf, hhmm, jsonOf, ko, last4, line, markNow, num, pad, pick, rowDay, sideRequest, storyNow, when, withEv, isLivePhone } from './phonedata.js';
 import { cutShort } from './phoneparse.js';
 import { dlvTotal, payOrders, shopStats, unpayOrders } from './phonesyncmoney.js';
 import { alarmOf, cityAt, dayGap, fileOf, nightsToDays, overlayFresh, parseWeather, screenOf, usualScreenOf, weatherFrom } from './phonesynclife.js';
@@ -454,7 +454,7 @@ export const fillLife = (m, p, { screenAgain = false } = {}) => exclusive('fill'
     // one turn: its window, and what the turn before wrote (none for the first); stopped short, its now is where it stopped
     const turn = async (gap, soFar = null, short = null) => {
         // a status line from a scene the owner isn't in (or may not be): its place and sky go along, never as the owner's weather
-        const upto = nowAt(gap), w = weatherNow(upto), home = !w || sceneHome(p, w.place, m) === true, now = home ? w : null, days = storyDays(m, p, upto);
+        const upto = nowAt(gap), w = isLivePhone(p) ? null : weatherNow(upto), home = !w || sceneHome(p, w.place, m) === true, now = home ? w : null, days = storyDays(m, p, upto);
         const input = await sideRequest(m, p.owner, [`[PHONE NOW]\n${phoneNow(p, upto)}`, daysBlock(days),
             !soFar && Object.keys(body).length ? `[BODY ON THE PHONE NOW — keep it unless the story changed it]\n${JSON.stringify(body)}` : '',
             soFar ? `${soFarHead('LIFE', short)}\n${JSON.stringify(soFar)}` : '', short?.text || '',

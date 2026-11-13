@@ -341,6 +341,41 @@ test('폰 만들기 under way: the same phone made again (the phone shut and ope
     assert.equal(data.phoneMaking(null, 'Ren'), false);
 });
 
+// ---- 실시간 폰(폰 2)에서 앱 채우기: 롤플은 시작한 곳까지, 그 뒤는 반영된 메신저 대화, 시각은 폰 2의 것
+const livePhoneOf = () => {
+    const p = { owner: 'Ren', now: '11-12 21:30', country: 'DE', lives: 'DE', sync: { marks: { base: { index: 7 } }, done: [[8, 9]], hiddenRead: {}, events: {} } };
+    Object.defineProperty(p, Symbol.for('narrative-archive.live'), { value: true });
+    return p;
+};
+const liveMetaOf = p => ({ ...m, phones: { ren: p }, phoneUpto: 7, phoneRecent: (owner, n, o) => (o?.seen == null ? 'Ren: on the messenger\nRen: not read yet' : 'Ren: on the messenger') });
+test('실시간 폰에서 생활 · 은행 채우기: 시작 뒤의 롤플도 롤플 상태창도 안 읽고, 반영된 메신저 대화를 읽고, 읽는 표시는 메신저 번호', async () => {
+    globalThis.__rows = rows(12);
+    globalThis.__trackers = [{ i: 11, date: '2026-11-02', min: 20 * 60, place: 'Eastgate', weather: 'rain' }];
+    try {
+        const p = livePhoneOf(), mm = liveMetaOf(p);
+        globalThis.__menu = { calls: [], answers: [lifeAnswer('A')], answer: '{}' };
+        await life.fillLife(mm, p);
+        const turns = globalThis.__menu.calls.filter(c => c.sys === life.AI_SYS_LIFE);
+        assert.equal(turns.length, 1);
+        const input = turns[0].input;
+        assert.deepEqual(nums(input), [4, 5, 6, 7]);
+        assert.ok(input.includes('Ren: on the messenger') && !input.includes('Ren: not read yet'));
+        assert.ok(input.includes('"now":"11-12 21:30"'));
+        assert.ok(!input.includes('[WEATHER NOW]') && !input.includes('Eastgate') && !input.includes('[STORY YEAR]'));
+        assert.equal(p.life.at, '11-12 21:30');
+        assert.deepEqual(p.sync.marks.life, { index: 9, user: -1, fp: '', tail: '' });
+        // the bank
+        globalThis.__menu = { calls: [], answers: [moneyAnswer('Bakery', 500, '11-10 09:00')], answer: '{}' };
+        await data.fillMoney(mm, p);
+        const money = globalThis.__menu.calls.filter(c => c.sys === data.AI_SYS_MONEY);
+        assert.equal(money.length, 1);
+        assert.deepEqual(nums(money[0].input), [4, 5, 6, 7]);
+        assert.ok(money[0].input.includes('Ren: on the messenger') && !money[0].input.includes('Ren: not read yet') && !money[0].input.includes('Eastgate'));
+        assert.deepEqual(p.sync.marks.money, { index: 9, user: -1, fp: '', tail: '' });
+        assert.deepEqual(p.money.tx.map(t => t.who), ['Bakery']);
+    } finally { delete globalThis.__trackers; }
+});
+
 // ---- 은행 채우기도 두 턴: 두 번째는 기록만, 잔액은 첫 번째 그대로
 const moneyAnswer = (who, balance, time) => JSON.stringify({ currency: 'EUR', bank: { name: 'Varo Bank', accounts: [{ id: '', kind: 'checking', name: 'Main', last4: '1111', currency: 'EUR', balance }] },
     cards: [{ account: '1111', exp: '09/29' }], tx: [{ account: '1111', who, amount: -12, time, kind: 'card' }], passes: [], orders: [{ shop: 'Ivo Books', item: who, price: 12, time, status: 'delivered' }] });
