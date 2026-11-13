@@ -427,3 +427,15 @@ test('주입: 실시간 폰에서 켜면 그 폰도 롤플에 넣는 글에 들�
     const only = PD.phoneBlock(m, [two]);
     assert.ok(!only.includes('폰 1 메모') && !only.includes('# PHONES\n') && only.includes('# PHONES NOW (messenger)'));
 });
+
+test('실시간 폰의 "지금"은 흐르는 시계예요: 이야기 날짜(dayShift) + 현실 시각. 마지막 반영 때에 멈춰 있지 않아요', () => {
+    const c = world();
+    c.p.now = '11-10 22:00';
+    const d = L.liveMeta(c.real, { now: G.liveNowOf(c.real, () => Date.parse('2026-11-12T08:15:00Z')) });
+    assert.equal(PD.storyNow(c.p, null, d), '11-12 08:15');
+    L.liveWorld(c.real).dayShift = 3;
+    assert.equal(PD.storyNow(c.p, null, d), '11-15 08:15');
+    // a drawer given no clock, or the phone alone: the phone's own time, as before
+    assert.equal(PD.storyNow(c.p, null, L.liveMeta(c.real)), '11-10 22:00');
+    assert.equal(PD.storyNow(L.livePhone(c.real, 'Mara')), '11-10 22:00');
+});

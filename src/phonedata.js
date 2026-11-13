@@ -2913,7 +2913,9 @@ dateOrderSource(() => ctx()?.chatMetadata?.narrative_archive?.dateOrder);
 export const isLivePhone = p => !!p?.[Symbol.for('narrative-archive.live')];
 export function storyNow(p, upto = null, m = null) {
     // (폰 2: its own clock, the real time its last reflection set; never the role-play's status line)
-    if (isLivePhone(p) || Number.isInteger(m?.phoneUpto)) return p?.now || '';
+    // (the drawer's running clock when it gives one — the story's date and the real time, now — else the time its last
+    // reflection set)
+    if (isLivePhone(p) || Number.isInteger(m?.phoneUpto)) { let t = ''; try { t = typeof m?.phoneNow === 'function' ? m.phoneNow(p) : ''; } catch { t = ''; } return t || p?.now || ''; }
     if (upto == null && p?.clockHold) upto = phoneAt(p);
     let at = '';
     try { at = statusMoment(p, upto, null, m)?.at || ''; } catch { /* no status window */ }

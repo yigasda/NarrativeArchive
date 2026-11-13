@@ -15,6 +15,7 @@ import { parseJson } from './phoneparse.js';
 import { nameKey } from './people.js';
 import { liveWorld, livePhone, liveMeta, liveKey } from './phone2store.js';
 import { liveStoryText } from './phone2story.js';
+import { liveWall } from './phone2clock.js';
 import { gatherReply } from './phone2live.js';
 import { replyInput } from './phone2ask.js';
 import { phone2ReplySystem } from './phone2reply.js';
@@ -28,6 +29,9 @@ import { DIGEST_STATE, digestDue, digestRaw, digestSize, digestHalves, scenesSys
 // rounds of reflection after one reply at most (messages piled up while only talking: 100 a round)
 export const LIVE_GO = { rounds: 3, replyTokens: 4000, digests: 2 };
 const tzOf = p => ownerZone(p)?.tz || 'UTC';
+// the time it is now on a 폰 2 phone: the story's date (the world's dayShift) and the real clock where the owner is.
+// Given to liveMeta as `now`, so the phone's screens and app requests go by a clock that runs
+export const liveNowOf = (real, at = () => Date.now()) => p => { const w = liveWorld(real); return w && p ? liveWall(tzOf(p), w.dayShift, at()).at : ''; };
 // the owner's card as the reply reads it: the profile the user chose for them, else their character card in this chat
 async function cardOf(p) {
     const chosen = p.financeProfile ? await resolvePhoneProfile(ctx(), p.financeProfile).catch(() => null) : null;
@@ -44,7 +48,7 @@ const open = real => { const md = ctx().chatMetadata; return !md || md[MODULE] =
 // whether the 폰 2 a go began with is still there to write to
 const here = (real, w) => open(real) && liveWorld(real)?.id === w.id;
 export async function liveGo(real, { onChange = () => {} } = {}) {
-    const m = () => liveMeta(real, { text: () => liveStoryText(real, liveWorld(real)) });
+    const m = () => liveMeta(real, { text: () => liveStoryText(real, liveWorld(real)), now: liveNowOf(real) });
     const tell = () => { try { onChange(); } catch (err) { console.error('[narrative-archive] live draw', err); } };
     const out = await runLive(real, {
         save: saveMeta, alive: () => open(real),
@@ -100,7 +104,7 @@ async function reflectTalk(real, owner, { onChange = () => {}, force = false } =
     if (!force && Number.isInteger(p.liveHeld) && !Object.values(w.messenger?.rooms || {}).some(r => r.members.some(n => liveKey(n) === liveKey(owner)) && (r.messages || []).some(x => x.n > p.liveHeld && liveReads(x, owner)))) return { ...none, left: liveUnreflected(real, owner), held: true };
     if ((w.queue?.jobs || []).some(j => liveKey(j.owner) === liveKey(owner) && (j.state === 'waiting' || j.state === 'running'))) return { ...none, left: liveUnreflected(real, owner), waiting: true };
     const tell = () => { try { onChange(); } catch (err) { console.error('[narrative-archive] live draw', err); } };
-    const m = () => liveMeta(real, { text: () => liveStoryText(real, liveWorld(real)) });
+    const m = () => liveMeta(real, { text: () => liveStoryText(real, liveWorld(real)), now: liveNowOf(real) });
     let rounds = 0, error = '';
     reflecting.add(real);
     try {
@@ -126,7 +130,7 @@ export const liveUnreflected = (real, owner) => { const w = liveWorld(real), p =
 // (only a round 폰 2 made itself: one that came with the copy of 폰 1's phone is not offered)
 export const liveCanUndo = (real, owner) => { const p = livePhone(real, owner); return !!p?.syncUndo?.live && !!p.syncLast?.checked && p.sync?.rounds?.at(-1) === p.syncUndo.round; };
 export async function liveUndo(real, owner, { onChange = () => {} } = {}) {
-    const kept = await undoLive(real, liveMeta(real, { text: () => liveStoryText(real, liveWorld(real)) }), owner, { save: saveMeta });
+    const kept = await undoLive(real, liveMeta(real, { text: () => liveStoryText(real, liveWorld(real)), now: liveNowOf(real) }), owner, { save: saveMeta });
     try { onChange(); } catch (err) { console.error('[narrative-archive] live draw', err); }
     return kept;
 }

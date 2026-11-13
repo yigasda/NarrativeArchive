@@ -168,7 +168,9 @@ export function liveRecent(w, owner, n = 12, { maxChars = Infinity, seen = null,
     }
     return [short ? `(earlier on the messenger, in short)\n${short}` : '', out.join('\n')].filter(Boolean).join('\n\n');
 }
-export function liveMeta(m, { text = null } = {}) {
+// now: p => "MM-DD HH:MM", the time it is now on that phone's clock (the caller's: the story's date and the real clock),
+// answered as phoneNow
+export function liveMeta(m, { text = null, now = null } = {}) {
     const w = liveWorld(m);
     if (!w) throw new Error('아직 폰 2가 없어요');
     const own = k => typeof k === 'string' && Object.hasOwn(LIVE_OWN, k), shared = k => typeof k === 'string' && LIVE_SHARED.includes(k);
@@ -186,7 +188,7 @@ export function liveMeta(m, { text = null } = {}) {
     // (화면 주인, the chat's one setting of whose view the story's status line is: the same for 타임라인 and 실시간, so it
     // is read from and written to the chat's own meta)
     const pass = k => k === 'phoneScreenHolder';
-    const at = k => (pass(k) ? m[k] : k === 'phones' ? tagLive(w.phones) : own(k) ? w[LIVE_OWN[k]] : Object.hasOwn(drawer, k) ? drawer[k] : k === 'text' ? story() : k === 'phoneJournal' ? (liveScope(w.scope || 'live', m) || 'live') : k === 'phoneUpto' ? upto() : k === 'phoneRecent' ? (owner, n, o) => liveRecent(w, owner, n, o) : shared(k) ? copy(k) : undefined);
+    const at = k => (pass(k) ? m[k] : k === 'phones' ? tagLive(w.phones) : own(k) ? w[LIVE_OWN[k]] : Object.hasOwn(drawer, k) ? drawer[k] : k === 'text' ? story() : k === 'phoneJournal' ? (liveScope(w.scope || 'live', m) || 'live') : k === 'phoneUpto' ? upto() : k === 'phoneNow' ? (typeof now === 'function' ? now : undefined) : k === 'phoneRecent' ? (owner, n, o) => liveRecent(w, owner, n, o) : shared(k) ? copy(k) : undefined);
     const keys = () => [...new Set([...Object.keys(LIVE_OWN).filter(k => w[LIVE_OWN[k]] !== undefined), ...LIVE_SHARED.filter(k => m[k] !== undefined), 'text', ...Object.keys(drawer), ...(Object.hasOwn(m, 'phoneScreenHolder') ? ['phoneScreenHolder'] : [])])];
     return new Proxy(drawer, {
         get: (_, k) => (k === IS_LIVE ? true : typeof k === 'symbol' ? undefined : at(k)),
