@@ -383,7 +383,7 @@ export async function openPhone(who = null) {
     // the clock in a zone now: the story's time where the owner is, moved by the zones' gap (today's)
     const zoneOff = tz => { try { const d = new Date(), q = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).formatToParts(d).map(x => [x.type, x.value])); return Math.round((Date.UTC(q.year, q.month - 1, q.day, q.hour % 24, q.minute) - d.getTime()) / 6e4); } catch { return null; } };
     const clockIn = (p, tz) => {
-        const base = placeInfo(p).owner.tz, a = zoneOff(tz), b = base ? zoneOff(base) : null, t = /(\d{2}):(\d{2})/.exec(String(p?.now || ''));
+        const base = placeInfo(p).owner.tz, a = zoneOff(tz), b = base ? zoneOff(base) : null, t = /(\d{2}):(\d{2})/.exec(String(storyNow(p, null, phoneMeta()) || p?.now || ''));
         if (a === null) return '';
         const mins = t && b !== null ? Number(t[1]) * 60 + Number(t[2]) + a - b : null;
         if (mins === null) { const d = new Date(Date.now() + a * 6e4); return `지금 ${d.getUTCHours()}:${String(d.getUTCMinutes()).padStart(2, '0')}`; }
