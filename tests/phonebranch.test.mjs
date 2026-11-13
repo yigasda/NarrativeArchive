@@ -335,3 +335,21 @@ test('폰을 만든 답장 바로 앞의 내 메시지에서 분기: 폰의 시�
     await run(c.m, { now: '10-26 15:00', events: [taxi(1)] });
     assert.equal(c.bank(), 91000);
 });
+
+// 실시간 폰(폰 2)의 폰 객체는 표시가 붙어 있어요: 롤플 상태창을 시각 · 장소로 읽지 않아요
+test('실시간 폰의 폰은 지금 시각이 자기 시계예요. 롤플 상태창 · 마지막 메시지의 시계는 안 읽어요 (m 없이 불러도)', () => {
+    const c = setup([say('Ren', L('a0')), say('Mara', L('b1'))]);
+    T.trackers = [{ date: '11-02', min: 20 * 60, place: 'Eastgate', i: 1 }];
+    try {
+        const p1 = { owner: 'Ren', now: '10-26 09:00' };
+        assert.equal(data.storyNow(p1), '11-02 20:00');
+        assert.ok(data.statusAt(p1));
+        const p2 = { owner: 'Ren', now: '10-26 09:00' };
+        Object.defineProperty(p2, Symbol.for('narrative-archive.live'), { value: true });
+        assert.equal(data.isLivePhone(p2), true); assert.equal(data.isLivePhone(p1), false);
+        assert.equal(data.storyNow(p2), '10-26 09:00');
+        assert.equal(data.storyNow(p2, 1), '10-26 09:00');
+        assert.equal(data.statusAt(p2), null);
+        assert.deepEqual(data.fillClockRows(c.m, p2), []);
+    } finally { T.trackers = null; }
+});

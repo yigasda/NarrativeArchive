@@ -118,7 +118,11 @@ export function resetLive(m, how = 'chats') {
 }
 
 // 폰 2 phones: their own, never one of m.phones
-export const livePhone = (m, owner) => liveWorld(m)?.phones?.[liveKey(owner)] || null;
+// 폰 2's phone objects carry a mark (a symbol, never saved or copied): 폰 1's functions that are given only the phone
+// know by it that the role-play's status lines and clocks are not this phone's (its time is its own, p.now)
+const LIVE_PHONE = Symbol.for('narrative-archive.live');
+const tagLive = phones => { for (const x of Object.values(phones || {})) if (x && typeof x === 'object' && !x[LIVE_PHONE]) Object.defineProperty(x, LIVE_PHONE, { value: true, configurable: true }); return phones; };
+export const livePhone = (m, owner) => tagLive(liveWorld(m)?.phones)?.[liveKey(owner)] || null;
 export function putLivePhone(m, p) {
     const w = liveWorld(m);
     if (!w) throw new Error('아직 폰 2가 없어요');
@@ -171,7 +175,7 @@ export function liveMeta(m, { text = null } = {}) {
     // (phoneUpto · phoneRecent: what 폰 1's app requests read of the talk. The role-play chat only up to where 폰 2 began
     // (none of it for one begun fresh), and for the newest talk the messenger's, never the chat's)
     const upto = () => (w.from === 'story' && Number.isInteger(w.storyUpto) ? w.storyUpto : -1);
-    const at = k => (own(k) ? w[LIVE_OWN[k]] : Object.hasOwn(drawer, k) ? drawer[k] : k === 'text' ? story() : k === 'phoneJournal' ? (liveScope(w.scope || 'live', m) || 'live') : k === 'phoneUpto' ? upto() : k === 'phoneRecent' ? (owner, n, o) => liveRecent(w, owner, n, o) : shared(k) ? copy(k) : undefined);
+    const at = k => (k === 'phones' ? tagLive(w.phones) : own(k) ? w[LIVE_OWN[k]] : Object.hasOwn(drawer, k) ? drawer[k] : k === 'text' ? story() : k === 'phoneJournal' ? (liveScope(w.scope || 'live', m) || 'live') : k === 'phoneUpto' ? upto() : k === 'phoneRecent' ? (owner, n, o) => liveRecent(w, owner, n, o) : shared(k) ? copy(k) : undefined);
     const keys = () => [...new Set([...Object.keys(LIVE_OWN).filter(k => w[LIVE_OWN[k]] !== undefined), ...LIVE_SHARED.filter(k => m[k] !== undefined), 'text', ...Object.keys(drawer)])];
     return new Proxy(drawer, {
         get: (_, k) => (k === IS_LIVE ? true : typeof k === 'symbol' ? undefined : at(k)),
