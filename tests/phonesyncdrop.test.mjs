@@ -2315,7 +2315,7 @@ test('a card already on the phone gets its bill day from an "account" record wit
     ] }];
     await run(c.m, { now: '10-26 13:00', events: [{ id: 'taxi', at: 2, quote: 'paid the taxi', summary: '택시', date: '10-26', time: '12:40', phone: {}, money: true }] });
     const card = c.p.money.bank.accounts.find(a => a.last4 === '1158');
-    assert.equal(card.billDay, 25);
+    assert.equal(card.billDay, 25); assert.equal(card.paidFrom, "1111");
     // nothing but the bill day (and who pays it) changed on any account; no money moved, no card was added
     delete card.billDay; delete card.paidFrom;
     assert.equal(accounts(), before);

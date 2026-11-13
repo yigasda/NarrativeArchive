@@ -352,3 +352,40 @@ test('앱 요청(사진 · 일기 · 초안 · 녹음)은 최근 대화와 지�
     assert.ok(!/recentPhoneText\(/.test(src)); assert.ok(!/storyNow\(p\)/.test(src));
     assert.equal((src.match(/recentOf\(m, p\.owner, /g) || []).length, 4);
 });
+
+test('반영 요청이 나가 있는 사이 다른 채팅을 열면: 돌아온 답은 안 넣고, 더 묻지도 않아요', async () => {
+    const c = world();
+    T.metadata = { narrative_archive: c.real };
+    try {
+        send(c, '택시비 9000원 냈어');
+        T.replies = [{ state: '집', reply: ['응'], does: ['9000원을 보냈다'] }];
+        await G.liveGo(c.real);
+        const left = G.liveUnreflected(c.real, 'Mara'), bank = c.bank();
+        let asked = 0;
+        T.ask = async () => { asked++; T.metadata = { narrative_archive: {} }; return JSON.stringify({ now: '11-11 10:00', events: [] }); };
+        const r = await G.liveReflect(c.real, 'Mara', { force: true });
+        assert.equal(asked, 1);
+        assert.equal(r.rounds, 0);
+        assert.equal(c.p.liveReflectError, undefined);
+        assert.deepEqual(c.p.sync?.done || [], []); assert.equal(c.bank(), bank);
+        T.metadata = { narrative_archive: c.real };
+        assert.equal(G.liveUnreflected(c.real, 'Mara'), left);
+    } finally { delete T.ask; delete T.metadata; }
+});
+
+test('되돌리기 뒤에 상태만 바뀐 답(말도 한 일도 없음)이 와도 반영이 다시 돌지 않아요', async () => {
+    const c = world();
+    send(c, '하나');
+    T.replies = [{ state: '집', reply: ['응'], does: [] }];
+    await G.liveGo(c.real);
+    T.answers = [{ events: [] }];
+    await G.liveReflect(c.real, 'Mara');
+    await G.liveUndo(c.real, 'Mara');
+    assert.ok(Number.isInteger(c.p.liveHeld));
+    // a reply with only a new state: an act message with nothing to read
+    const no = L.liveNo(L.liveWorld(c.real));
+    c.room.messages.push({ id: `m${no}`, n: no, from: 'Mara', text: '', act: true, state: '침대', at: Date.now() });
+    const calls = T.calls;
+    const r = await G.liveReflect(c.real, 'Mara');
+    assert.equal(r.held, true); assert.equal(T.calls, calls);
+});

@@ -96,7 +96,7 @@ async function reflectTalk(real, owner, { onChange = () => {}, force = false } =
     if (!w || !p || reflecting.has(real)) return none;
     if (!liveUnreflected(real, owner)) return none;
     // (after 되돌리기 the messages wait for new talk; force: the user asks for them now)
-    if (!force && Number.isInteger(p.liveHeld) && !Object.values(w.messenger?.rooms || {}).some(r => r.members.some(n => liveKey(n) === liveKey(owner)) && (r.messages || []).some(x => x.n > p.liveHeld))) return { ...none, left: liveUnreflected(real, owner), held: true };
+    if (!force && Number.isInteger(p.liveHeld) && !Object.values(w.messenger?.rooms || {}).some(r => r.members.some(n => liveKey(n) === liveKey(owner)) && (r.messages || []).some(x => x.n > p.liveHeld && liveReads(x, owner)))) return { ...none, left: liveUnreflected(real, owner), held: true };
     if ((w.queue?.jobs || []).some(j => liveKey(j.owner) === liveKey(owner) && (j.state === 'waiting' || j.state === 'running'))) return { ...none, left: liveUnreflected(real, owner), waiting: true };
     const tell = () => { try { onChange(); } catch (err) { console.error('[narrative-archive] live draw', err); } };
     const m = () => liveMeta(real, { text: () => liveStoryText(real, liveWorld(real)) });
@@ -104,7 +104,7 @@ async function reflectTalk(real, owner, { onChange = () => {}, force = false } =
     reflecting.add(real);
     try {
         const profile = await ownerProfileBlock(ctx(), p.financeProfile, p.owner, { money: !!(p.money || p.investment) });
-        for (; rounds < LIVE_GO.rounds; rounds++) { if (!here(real, w) || !await updateLive(real, m(), p.owner, { tz: tzOf(p), save: saveMeta, profile })) break; tell(); }
+        for (; rounds < LIVE_GO.rounds; rounds++) { if (!here(real, w) || !await updateLive(real, m(), p.owner, { tz: tzOf(p), save: saveMeta, profile, alive: () => open(real) })) break; tell(); }
         if (p.liveReflectError) { delete p.liveReflectError; await saveMeta(); }
     } catch (err) {
         console.error('[narrative-archive] live reflect', err);

@@ -42,8 +42,8 @@ function keepSituations(p, list) {
 
 // one round of 폰 2's reflection for `owner`: the messenger messages not read yet (as many as a round takes). Returns
 // the phone, or null when nothing is left to read. tz: where the owner is; save: saves the chat; profile · world: as
-// 폰 1's reflection sends them (the caller's)
-export async function updateLive(real, m, owner, { tz = 'UTC', save = async () => {}, profile = '', world = '' } = {}) {
+// 폰 1's reflection sends them (the caller's); alive: whether the chat this is for is still the open one
+export async function updateLive(real, m, owner, { tz = 'UTC', save = async () => {}, profile = '', world = '', alive = () => true } = {}) {
     return exclusive('sync', async () => {
         const w = liveWorld(real), key = nameKey(owner), p = m.phones?.[key], scope = liveScope(w?.scope || 'live', real), P = w?.persona;
         if (!w || !p || !scope) throw new Error('실시간 폰이 없어요');
@@ -109,7 +109,8 @@ export async function updateLive(real, m, owner, { tz = 'UTC', save = async () =
         const recCount = Array.isArray(answer0?.records) || Array.isArray(answer0?.scenes) ? (sp => recordCount([...arr(answer0.scenes).filter(x => x && typeof x === 'object').map(x => ({ ...x, type: 'scene' })), ...arr(sp.recs)], sp.own))(splitDays(answer0.records, answer0.everyday)) : null;
         homeScreens(core0, !!homeCountry(p) && homeCountry(p) !== 'KR', p.life?.health?.usual?.screen);
         // the answer is for the 폰 2 and the messages it was asked about
-        const check = () => (liveWorld(real)?.id !== worldId || m.phones?.[key] !== p ? '반영하는 사이 실시간 폰이 바뀌었어요' : p.money?.at !== made.money || p.investment?.at !== made.invest ? '반영하는 사이 은행이나 투자가 새로 만들어졌어요' : '');
+        // (alive: false once another chat was opened while this was asked; nothing more is asked or put in)
+        const check = () => (!alive() ? '반영하는 사이 다른 채팅을 열었어요' : liveWorld(real)?.id !== worldId || m.phones?.[key] !== p ? '반영하는 사이 실시간 폰이 바뀌었어요' : p.money?.at !== made.money || p.investment?.at !== made.invest ? '반영하는 사이 은행이나 투자가 새로 만들어졌어요' : '');
         if (check()) throw new Error(`${check()}. 다시 해 주세요`);
         if (p.life !== made.life || p.delivery !== made.delivery) throw new Error('반영하는 사이 생활 앱이나 배달 앱이 새로 만들어졌어요. 다시 해 주세요');
         if (!core0 || !Array.isArray(core0.events)) throw new Error('모델 답에서 반영할 내용을 찾지 못했어요. 다시 해 주세요');

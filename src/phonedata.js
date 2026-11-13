@@ -1072,10 +1072,10 @@ export function mergePhone(p, add, { keepAll = false, m = null } = {}) {
     }
     // someone the owner texts or calls by name is saved on the phone (a name on a thread is a saved contact's): added
     // when the answer gave no contact for them. Never a number, an unknown caller or a group room, nor the label a
-    // contact is already saved under; no more than the list holds
+    // contact is already saved under, nor one the user deleted; no more than the list holds
     for (const n of [...add.threads.filter(t => !t.group).map(t => t.with), ...arr(add.calls).map(c => c.with)]) {
         const name = String(n || '').trim();
-        if (!name || p.contacts.length >= CAP.contacts || NO_CONTACT.test(name) || isOwnerName(p, m, name) || personIn(p, p.contacts, x => x.name, name) || p.contacts.some(x => x.saved && nameKey(x.saved) === nameKey(name))) continue;
+        if (!name || p.contacts.length >= CAP.contacts || NO_CONTACT.test(name) || isOwnerName(p, m, name) || arr(p.hiddenContacts).includes(nameKey(name)) || personIn(p, p.contacts, x => x.name, name) || p.contacts.some(x => x.saved && nameKey(x.saved) === nameKey(name))) continue;
         p.contacts.push({ name });
     }
     p.contacts = keep(p.contacts, CAP.contacts);
