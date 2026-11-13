@@ -271,7 +271,7 @@ export async function openSectionFix(s) {
     // the chat: each request and what came of it; ↶ 되돌리기 sits by the last request that changed the section
     const chat = [], steps = [];
     let view = 'old';
-    const tr = translateButton($root.find('.na_sf_diff'));
+    const tr = translateButton($root.find('.na_sf_diff'), { all: true });
     $root.find('.na_sf3_trrow').append(tr);
     const changeCount = (a2, b2) => { const rows = lineDiff(a2, b2), add = rows.filter(r => r.t === '+').length, del = rows.filter(r => r.t === '-').length; return { add, del, text: [add && `+${fmt(add)}줄`, del && `−${fmt(del)}줄`].filter(Boolean).join(' ') }; };
     const draw = () => {
@@ -283,7 +283,7 @@ export async function openSectionFix(s) {
         $root.find('.na_sf3_seg button').removeClass('on').filter(`[data-v="${view}"]`).addClass('on');
         $root.find('.na_sf3_seg [data-v="new"]').prop('disabled', !changed);
         tr.reset?.();
-        $root.find('.na_sf_diff').html(view === 'new' ? renderDiff(lineDiff(original, draft), 2, { src: false }) : `<div class="na_sf_plain">${esc(original)}</div>`);
+        $root.find('.na_sf_diff').html(view === 'new' ? renderDiff(lineDiff(original, draft), 2, { src: false }) : `<div class="na_sf_plain">${original.split('\n').map(l => `<div class="na_sf_ln"><div class="na_dl">${esc(l) || '&nbsp;'}</div></div>`).join('')}</div>`);
         $root.find('.na_sf_apply').prop('disabled', !changed);
         $root.find('.na_sf_undo').prop('disabled', !changed);
         const lastOk = chat.map(x => !!x.step).lastIndexOf(true);

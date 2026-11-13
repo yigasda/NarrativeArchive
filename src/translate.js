@@ -293,19 +293,23 @@ export const TR_LABEL = '<i class="fa-solid fa-language"></i> 한국어로 보�
 export const TR_HIDE = '<i class="fa-solid fa-language"></i> 번역 숨기기';
 
 // button that toggles Korean under the changed lines of $diff (any element holding renderDiff output)
-export function translateButton($diff) {
+// all: every line shown, not just the changed ones (unchanged diff rows and .na_sf_plain lines too)
+export function translateButton($diff, { all: every = false } = {}) {
     const $btn = $(`<button type="button" class="na_btn na_small na_tr_btn">${TR_LABEL}</button>`);
     $btn.on('click', async () => {
         if ($diff.find('.na_diff_tr').length) { $diff.find('.na_diff_tr').remove(); $btn.html(TR_LABEL); return; }
         // $diff is one diff box, or (section diffs) a host holding one .na_diff box per card: a blank
         // spacer between boxes keeps a − run at the end of one card from pairing with the next card's + run
         const boxes = $diff.is('.na_diff') || !$diff.find('.na_diff').length ? [$diff[0]] : $diff.find('.na_diff').toArray();
-        const all = boxes.flatMap((box, i) => [...(i ? [document.createElement('div')] : []), ...box.children]);
+        // a plain (not diff) view keeps its lines one level down, in .na_sf_plain
+        const kids = box => [...box.children].flatMap(el => el.classList.contains('na_sf_plain') ? [...el.children] : [el]);
+        const all = boxes.flatMap((box, i) => [...(i ? [document.createElement('div')] : []), ...kids(box)]);
         const lineOf = el => { const dl = el.querySelector('.na_dl'); return dl ? dl.textContent.trim() : el.textContent.replace(/^[+−-]/, '').trim(); };
-        const rows = all.filter(el => el.classList.contains('na_diff_add') || el.classList.contains('na_diff_del'))
+        const want = every ? ['na_diff_add', 'na_diff_del', 'na_diff_same', 'na_sf_ln'] : ['na_diff_add', 'na_diff_del'];
+        const rows = all.filter(el => want.some(k => el.classList.contains(k)))
             .map(el => ({ el, text: lineOf(el) }))
             .filter(r => /[\p{L}]{2,}/u.test(r.text));
-        if (!rows.length) return toastr.info('번역할 바뀐 줄이 없어요.');
+        if (!rows.length) return toastr.info(every ? '번역할 줄이 없어요.' : '번역할 바뀐 줄이 없어요.');
         // the same pairing renderDiff used: each '-' run against the '+' run right after it
         const shape = all.map(el => ({ t: el.classList.contains('na_diff_del') ? '-' : el.classList.contains('na_diff_add') ? '+' : ' ' }));
         const partner = new Map();
@@ -338,8 +342,8 @@ export function translateButton($diff) {
             const del = r.el.classList.contains('na_diff_del');
             const p = partner.get(r.el), pt = p && trOf.get(p);
             const mk = pt ? markedPair(del ? t : pt, del ? pt : t) : null;
-            const kind = del ? 'na_diff_tr_del' : 'na_diff_tr_add';
-            $(r.el).after(`<div class="na_diff_tr ${kind}"><span></span><div class="na_dl">${mk ? (del ? mk.old : mk.new) : esc(t)}</div></div>`);
+            const kind = del ? 'na_diff_tr_del' : r.el.classList.contains('na_diff_add') ? 'na_diff_tr_add' : 'na_diff_tr_same';
+            $(r.el).after(`<div class="na_diff_tr ${kind}">${r.el.classList.contains('na_sf_ln') ? '' : '<span></span>'}<div class="na_dl">${mk ? (del ? mk.old : mk.new) : esc(t)}</div></div>`);
         });
         $btn.html(TR_HIDE);
         const miss = rows.filter(r => !trOf.get(r.el)).length;

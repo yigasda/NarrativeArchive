@@ -901,7 +901,7 @@ body.na_darkui .na_diff_del > span:first-child { color: #F2948A; }
 .na_ask_src_body ul { margin: 0 0 6px; padding-left: 1.1em; }
 
 /* ---------- diff translation */
-.na_diff > .na_diff_tr {
+.na_diff > .na_diff_tr, .na_sf_plain > .na_diff_tr {
     font-family: var(--mainFontFamily, system-ui, sans-serif); --axff: var(--mainFontFamily, system-ui, sans-serif);
     font-size: 1.05em; --axfs: 1.05em;
     line-height: 1.5;
