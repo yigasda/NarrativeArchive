@@ -258,9 +258,9 @@ export async function openPhone(who = null) {
     const setSheet = on => { sheetOpen = on; $root.find('.na_phl_sheet, .na_phl_shade').prop('hidden', !on); };
     const phone = () => (owner ? (live() ? livePhone(realM, owner) : m.phones[nameKey(owner)]) : null);
 
-    // 실시간: 타임라인's 반영 · 반영 설정 · 되돌리기 · 복구 · 빼기 and 앱 다시 만들기 are off (소망: everything else is on
-    // both phones); a tap on one that is left does nothing
-    const LIVE_OFF = '.na_ph_setupd, .na_ph_setremake, [data-go=setremake], [data-go=setsync], .na_ph_storyreset, .na_sync_restore, .na_sync_drop, .na_sync_undo';
+    // 실시간: 타임라인's 반영 · 반영 설정 · 되돌리기 · 복구 · 빼기 and 이 방의 폰 새로 시작 are off (소망: everything else is
+    // on both phones; 폰 2 reflects on its own, has its own 되돌리기 and 실시간 폰 새로 시작); a tap on one that is left does nothing
+    const LIVE_OFF = '.na_ph_setupd, [data-go=setsync], .na_ph_storyreset, .na_sync_restore, .na_sync_drop, .na_sync_undo';
     $root.on('click', LIVE_OFF, e => { if (live()) { e.preventDefault(); e.stopImmediatePropagation(); } });
     // the Korean of what the phone has in another language (phonetr.js): after a reflection, from its report, or when
     // 한국어 is pressed. A failure is marked on the report (번역 못 함 · 다시 하기); the reflection itself stays
