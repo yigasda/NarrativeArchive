@@ -697,7 +697,8 @@ export const isGuess = x => x?.src === 'guess';
 // that person's names ("소망" for "Somang Park", its aka), else the one name it is short for ("Somang" of "Somang Park");
 // only one: two that fit is no one (a new one is made as before)
 // a thread's or call's other side that is no person saved by name: a number, an unknown or hidden caller
-const NO_CONTACT = /^[\d\s+()\-.#*]+$|^(unknown|private|no caller id|withheld|blocked|spam|scam)\b|모르는|발신자|알 수 없|번호 없음|스팸/i;
+// (private · hidden only as the whole name or with number/caller/call: "Private Kim" is a person)
+const NO_CONTACT = /^[\d\s+()\-.#*]+$|^(unknown|anonymous|restricted|no caller id|withheld|blocked|spam|scam)\b|^(private|hidden)( (number|caller|call|id))?$|모르는|발신자|발신번호|표시\s*제한|알 수 없|번호 없음|스팸/i;
 function personIn(p, list, get, name) {
     const k = nameKey(name), same = x => nameKey(get(x)) === k;
     if (!k) return undefined;
@@ -1055,11 +1056,12 @@ export function mergePhone(p, add, { keepAll = false, m = null } = {}) {
     // row for as long as it is their home: a new one only when they live somewhere else)
     if (add.visits?.length) {
         const homes = (p.visits || []).filter(x => x.home).map(x => nameKey(x.place));
-        // (the owner's home is in one district: a home visit given none takes the one the phone already has for home)
-        const homeArea = [...(p.visits || []), ...add.visits].filter(x => x.home && x.area).at(-1)?.area;
-        if (homeArea) for (const x of add.visits) if (x.home && !x.area) x.area = homeArea;
-        // (and the home row already there, told its district now, takes it)
-        if (homeArea) for (const x of p.visits || []) if (x.home && !x.area) x.area = homeArea;
+        // (a home is in one district: a visit to it given none takes the one known for that very home, and the home row
+        // the owner lives in now, told its district now, takes it. A home they lived in before is another place)
+        const cur = (p.visits || []).filter(x => x.home).at(-1), at = x => nameKey(x.place);
+        const areaOf = k => [...(cur && at(cur) === k ? [cur] : []), ...add.visits.filter(x => x.home && at(x) === k)].filter(x => x.area).at(-1)?.area;
+        for (const x of add.visits) if (x.home && !x.area && areaOf(at(x))) x.area = areaOf(at(x));
+        if (cur && !cur.area && areaOf(at(cur))) cur.area = areaOf(at(cur));
         add.visits = add.visits.filter(x => visitOk(p, x) && !(x.home && (homes.includes(nameKey(x.place)) || !homes.push(nameKey(x.place))))).map(x => visitWith(p, x, m));
     }
     for (const k of LISTS) p[k] = keep([...(p[k] || []), ...fresh(k, p[k] || [], add[k] || [])], CAP[k]);
@@ -1069,10 +1071,11 @@ export function mergePhone(p, add, { keepAll = false, m = null } = {}) {
         if (old) old.saved = c.saved || old.saved; else p.contacts.push(c);
     }
     // someone the owner texts or calls by name is saved on the phone (a name on a thread is a saved contact's): added
-    // when the answer gave no contact for them. Never a number, an unknown caller or a group room; no more than the list holds
+    // when the answer gave no contact for them. Never a number, an unknown caller or a group room, nor the label a
+    // contact is already saved under; no more than the list holds
     for (const n of [...add.threads.filter(t => !t.group).map(t => t.with), ...arr(add.calls).map(c => c.with)]) {
         const name = String(n || '').trim();
-        if (!name || p.contacts.length >= CAP.contacts || NO_CONTACT.test(name) || isOwnerName(p, m, name) || personIn(p, p.contacts, x => x.name, name)) continue;
+        if (!name || p.contacts.length >= CAP.contacts || NO_CONTACT.test(name) || isOwnerName(p, m, name) || personIn(p, p.contacts, x => x.name, name) || p.contacts.some(x => x.saved && nameKey(x.saved) === nameKey(name))) continue;
         p.contacts.push({ name });
     }
     p.contacts = keep(p.contacts, CAP.contacts);
@@ -1617,8 +1620,8 @@ async function makePhone0(m, owner, { update = false, apps = null } = {}) {
         if (was?.money) base.money = was.money;
         if (was?.investment) base.investment = was.investment;
         // the apps filled on their own (clock · health · files · weather, delivery) stay like the bank, and so does what the
-        // owner set: the year, hidden contacts and places, where they live, the voice table (말투)
-        for (const k of ['life', 'delivery', 'voiceAt', 'year', 'noYear', 'yearSet', 'yearShift', 'hiddenContacts', 'hiddenPlaces', 'homeHoods', 'lives', 'livesManual', 'where', 'around', 'koVoice', 'koVoiceAsked', 'koVoiceV']) if (was?.[k] !== undefined) base[k] = was[k];
+        // owner set: the year, hidden contacts and places, where they live, the voice table and languages (말투)
+        for (const k of ['life', 'delivery', 'voiceAt', 'year', 'noYear', 'yearSet', 'yearShift', 'hiddenContacts', 'hiddenPlaces', 'homeHoods', 'lives', 'livesManual', 'where', 'around', 'koVoice', 'koVoiceAsked', 'koVoiceV', 'langs']) if (was?.[k] !== undefined) base[k] = was[k];
         // (made for the first time: where everyone is and PEOPLE AROUND, as read before it)
         if (pre) for (const k of ['where', 'around', 'lives', 'livesManual', 'year', 'noYear', 'yearSet', 'yearShift']) if (pre[k] !== undefined) base[k] = structuredClone(pre[k]);
         // (the phone is set to the country its owner lives in, as read and checked, over the one the answer gave)
@@ -2585,6 +2588,7 @@ export function mergedState(p) {
         events: Object.fromEntries((p.events || []).filter(x => x.id).map(x => [x.id, { title: x.title, ko: x.ko ?? '', date: x.date ?? '', time: x.time ?? '', cancelled: !!x.cancelled }])),
         threads: Object.fromEntries((p.threads || []).filter(t => t.id).map(t => [t.id, { draft: t.draft ?? null, deleted: (t.messages || []).filter(x => x.deleted).map(sig) }])),
         contacts: Object.fromEntries((p.contacts || []).filter(x => x.id).map(x => [x.id, x.saved ?? null])),
+        homes: Object.fromEntries((p.visits || []).filter(x => x.id && x.home).map(x => [x.id, x.area ?? null])),
         profile: p.profile ? { handle: p.profile.handle ?? '', bio: p.profile.bio ?? '' } : null,
         comments: Object.fromEntries((p.posts || []).filter(x => x.id).map(x => [x.id, x.comments || []])),
     };
@@ -2605,6 +2609,8 @@ export function restoreMerged(p, before, after) {
         for (const x of t.messages) if (x.deleted && marked.has(sig(x))) delete x.deleted;
     }
     for (const x of p.contacts || []) if (x.id in before.contacts && same(now.contacts[x.id], after.contacts[x.id])) { if (before.contacts[x.id] === null) delete x.saved; else x.saved = before.contacts[x.id]; }
+    // (a home row told its district by the round: untold again, unless it has been changed since)
+    if (before.homes && after.homes) for (const x of p.visits || []) if (x.id in before.homes && before.homes[x.id] === null && now.homes[x.id] === after.homes[x.id]) delete x.area;
     if (same(now.profile, after.profile)) { if (before.profile) p.profile = { ...(p.profile || {}), ...before.profile }; else delete p.profile; }
     for (const x of p.posts || []) if (before.comments[x.id] && same(now.comments[x.id], after.comments[x.id])) x.comments = structuredClone(before.comments[x.id]);
 }

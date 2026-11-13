@@ -1551,6 +1551,28 @@ test('someone texted or called by name is saved in the contacts; a number, an un
     assert.deepEqual(c.p.contacts.map(x => x.name), ['Mara']);
 });
 
+test('the home district goes only to the home the owner lives in now, and 되돌리기 takes it back', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'back home after the move'), say('Mara', 'see you')]);
+    c.p.now = '10-26 09:00'; c.p.year = 2026;
+    c.p.visits = [{ id: 'v1', place: 'Old flat', city: 'Busan', home: true, time: '03-02 10:00' }, { id: 'v2', place: "Ren's flat", city: 'Seoul', home: true, time: '09-01 10:00' }];
+    await run(c.m, { now: '10-26 20:00', events: [{ id: 'day', at: 2, quote: 'back home after the move', summary: 'home', date: '10-26', time: '12:00', phone: {
+        visits: [{ place: "Ren's flat", area: '강서구', city: 'Seoul', home: true, time: '10-26 10:00' }] } }] });
+    assert.deepEqual(c.p.visits.map(x => [x.place, x.area ?? '']), [['Old flat', ''], ["Ren's flat", '강서구']]);
+    await data.undoRound(c.m, c.p);
+    assert.deepEqual(c.p.visits.map(x => [x.place, x.area ?? '']), [['Old flat', ''], ["Ren's flat", '']]);
+});
+
+test('auto-saved contacts: a hidden caller in any wording is not one, a name that starts like one is; the label a contact is saved under is that contact', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'a busy day of calls and texts'), say('Mara', 'tell me later')]);
+    c.p.now = '10-26 09:00'; c.p.year = 2026; c.p.contacts = [{ name: 'Mara', saved: '마라' }];
+    const call = (w, i) => ({ with: w, type: 'in', time: `10-26 12:${String(10 + i).padStart(2, '0')}`, min: 1 });
+    await run(c.m, { now: '10-26 20:00', events: [{ id: 'busy', at: 2, quote: 'a busy day of calls and texts', summary: 'calls and texts', date: '10-26', time: '12:00', phone: {
+        threads: [{ with: '마라', messages: [{ from: '마라', text: 'later', time: '10-26 11:05' }] }],
+        calls: ['발신번호 표시제한', 'Anonymous', 'Restricted', 'Hidden', 'Private number', 'Unknown caller', 'Private Kim'].map(call),
+    } }] });
+    assert.deepEqual(c.p.contacts.map(x => [x.name, x.saved ?? '']), [['Mara', '마라'], ['Private Kim', '']]);
+});
+
 test('a visit carries its district; the home keeps one district, given once', async () => {
     const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'home, then the cafe by the station'), say('Mara', 'see you')]);
     c.p.now = '10-26 09:00'; c.p.year = 2026;
