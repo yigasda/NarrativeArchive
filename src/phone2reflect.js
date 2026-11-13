@@ -52,6 +52,8 @@ export async function updateLive(real, m, owner, { tz = 'UTC', save = async () =
         glossAka(m, p);
         syncLives(p);
         const feed = feedRows(real, p.owner), byNo = new Map(feed.map(x => [x.n, x]));
+        // (a payment 폰 1 still owed a story message, copied with the phone: not 폰 2's to work out)
+        if (Array.isArray(s.owed?.money)) s.owed.money = s.owed.money.filter(o => byNo.has(o?.at));
         // (messenger messages are short and read oldest first, whatever 폰 1's reading was set to)
         const rows = feed.map(x => rowOf(x, p.owner)).filter(r => r.text), round = pickRound({ ...s, order: 'oldest', limit: LIVE_ROUND }, rows);
         if (!round.rows.length) return null;
@@ -62,7 +64,12 @@ export async function updateLive(real, m, owner, { tz = 'UTC', save = async () =
         if (p.money) migrateBank(m, p);
         const money = moneyNow(p), invest = investNow(m, p), life = lifeNow(p);
         const split = !!(money || invest);
+        // (the year is the wall's, for everything this round works out; a round that doesn't go in puts back the one the
+        // phone had, and 되돌리기 goes back to it too)
+        const yearWas = p.year;
+        let went = false;
         if (!p.noYear) p.year = wall.year;
+        try {
         const known = p.year && !p.noYear ? String(p.year) : '', year = known || String(new Date().getFullYear());
         const anchor = `${year}-${nowAt.slice(0, 5)}`;
         const today = nowAt.slice(0, 5), dayList = known ? Array.from({ length: 14 }, (_, k) => {
@@ -113,7 +120,7 @@ export async function updateLive(real, m, owner, { tz = 'UTC', save = async () =
         const msgSig = x => JSON.stringify([x.from, x.text, x.time]);
         ensureIds(p);
         const had = new Set(ITEM_KEYS.flatMap(k => (p[k] || []).map(x => x.id)).filter(Boolean)), msgs = new Map((p.threads || []).map(t => [t.id, new Set(t.messages.map(msgSig))]));
-        const undo = { sync: structuredClone({ done: s.done, failed: s.failed, arch: s.arch, events: s.events, seen: s.seen, hiddenRead: s.hiddenRead || {}, owed: s.owed || { money: [] }, dropped: s.dropped || [] }), now: p.now, year: p.year, where: structuredClone(p.where ?? null), moneyAt: p.money?.at, investAt: p.investment?.at,
+        const undo = { sync: structuredClone({ done: s.done, failed: s.failed, arch: s.arch, events: s.events, seen: s.seen, hiddenRead: s.hiddenRead || {}, owed: s.owed || { money: [] }, dropped: s.dropped || [] }), now: p.now, year: yearWas ?? null, where: structuredClone(p.where ?? null), moneyAt: p.money?.at, investAt: p.investment?.at,
             comments: (p.posts || []).filter(x => x.id).map(x => [x.id, x.comments?.length || 0]), before: structuredClone(mergedState(p)), situations: structuredClone(p.situations ?? null) };
         let lastDay = when(raw.now).slice(0, 5);
         everydayOn(raw, round.rows, textAt);
@@ -189,16 +196,19 @@ export async function updateLive(real, m, owner, { tz = 'UTC', save = async () =
         p.at = Date.now();
         pruneDropped(s, phoneItems(p));
         delete p.clockHold; delete p.liveHeld;
-        const below = p.syncUndo && s.rounds.at(-2) === p.syncUndo.round && p.money?.at === p.syncUndo.moneyAt && p.investment?.at === p.syncUndo.investAt;
+        // (only 폰 2's own rounds line up to be undone: one copied from 폰 1 is not this phone's to take back)
+        const below = p.syncUndo?.live && s.rounds.at(-2) === p.syncUndo.round && p.money?.at === p.syncUndo.moneyAt && p.investment?.at === p.syncUndo.investAt;
         p.syncUndos = below ? [...(p.syncUndos || []), p.syncUndo].slice(-4) : [];
         if (!p.syncUndos.length) delete p.syncUndos;
-        p.syncUndo = { ...undo, round: rid, last: structuredClone(p.syncLast), read: [...inRound], readFp: round.rows.map(r => bodyMark(r.text)), comments: undo.comments, whereAfter: JSON.stringify(p.where ?? null),
+        p.syncUndo = { ...undo, live: true, round: rid, last: structuredClone(p.syncLast), read: [...inRound], readFp: round.rows.map(r => bodyMark(r.text)), comments: undo.comments, whereAfter: JSON.stringify(p.where ?? null),
             items: ITEM_KEYS.flatMap(k => (p[k] || []).filter(x => x.id && !had.has(x.id)).map(x => [k, x.id])),
             msgs: (p.threads || []).filter(t => msgs.has(t.id)).map(t => [t.id, t.messages.map(msgSig).filter(sg => !msgs.get(t.id).has(sg))]).filter(([, xs]) => xs.length),
             effects: [...added.flatMap(x => x.effects || []), ...late.flatMap(x => x.effects || []), ...roundFx], byEvent: byEvent([...added, ...late]), after: structuredClone(mergedState(p)) };
         journalAdd(scope, { round: rid, owner: p.owner, at: Date.now(), now: p.now, year: p.year, back: false, where: structuredClone(p.where ?? null), events: [...added, ...late], ...(split ? { owed: s.owed } : {}), done: [...inRound], seen: round.rows.map(r => [r.index, bodyMark(r.text)]), failed: Object.fromEntries([...inRound].filter(i => s.failed[i]).map(i => [i, s.failed[i]])), arch: [], hidden: [], life: roundFx });
         await save();
+        went = true;
         return p;
+        } finally { if (!went) { if (yearWas === undefined) delete p.year; else p.year = yearWas; } }
     }, { operation: 'reflect', owner, scope: liveScope(liveWorld(real)?.scope || 'live', real) });
 }
 
@@ -213,7 +223,7 @@ export async function undoLive(real, m, owner, { save = async () => {} } = {}) {
         const w = liveWorld(real), p = m.phones?.[nameKey(owner)], scope = liveScope(w?.scope || 'live', real);
         if (!w || !p) throw new Error('실시간 폰이 없어요');
         const u = p.syncUndo, s = p.sync;
-        if (!u || s?.rounds?.[s.rounds.length - 1] !== u.round) throw new Error('되돌릴 반영이 없어요');
+        if (!u || !u.live || s?.rounds?.[s.rounds.length - 1] !== u.round) throw new Error('되돌릴 반영이 없어요');
         if (!canUndo(p)) throw new Error('그 뒤에 은행이나 투자를 다시 만들어서 되돌릴 수 없어요');
         const ledger = m.finance;
         const gone = new Set(u.items.map(([, id]) => id));
@@ -240,7 +250,7 @@ export async function undoLive(real, m, owner, { save = async () => {} } = {}) {
         s.rounds.pop();
         pruneDropped(s, phoneItems(p));
         p.now = u.now;
-        if (u.year !== undefined) p.year = u.year;
+        if (u.year === null) delete p.year; else if (u.year !== undefined) p.year = u.year;
         if (u.situations !== undefined) { if (u.situations) p.situations = u.situations; else delete p.situations; }
         // (the messages it read wait for the next talk: leaving the messenger again doesn't read them straight back)
         p.liveHeld = Math.max(0, ...(u.read || []));

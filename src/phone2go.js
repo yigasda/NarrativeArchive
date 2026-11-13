@@ -105,7 +105,8 @@ export const liveUnreflected = (real, owner) => { const w = liveWorld(real), p =
 // 방금 반영 되돌리기 (폰 2): can the owner's last round be taken back, and doing it. kept: what couldn't go back (said to
 // the user as 폰 1 says it). After it the messages wait for new talk; liveReflect(real, owner, { force: true }) reads
 // them again now. Throws what 폰 1's 되돌리기 throws (nothing to undo; the bank made again since)
-export const liveCanUndo = (real, owner) => { const p = livePhone(real, owner); return !!p?.syncUndo && !!p.syncLast?.checked && p.sync?.rounds?.at(-1) === p.syncUndo.round; };
+// (only a round 폰 2 made itself: one that came with the copy of 폰 1's phone is not offered)
+export const liveCanUndo = (real, owner) => { const p = livePhone(real, owner); return !!p?.syncUndo?.live && !!p.syncLast?.checked && p.sync?.rounds?.at(-1) === p.syncUndo.round; };
 export async function liveUndo(real, owner, { onChange = () => {} } = {}) {
     const kept = await undoLive(real, liveMeta(real, { text: () => liveStoryText(real, liveWorld(real)) }), owner, { save: saveMeta });
     try { onChange(); } catch (err) { console.error('[narrative-archive] live draw', err); }

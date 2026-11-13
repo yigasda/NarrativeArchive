@@ -4,7 +4,8 @@ import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import { migrateBank, cash } from '../src/finance.js';
 import * as L from '../src/phone2store.js';
-import { G, T } from './phone2reflect.load.mjs';
+import { G, T, PD } from './phone2reflect.load.mjs';
+import { journalRead, journalWrite } from '../src/phonesync.js';
 
 const phone = () => ({ owner: 'Mara', now: '11-10 22:00', year: 2026, contacts: [{ name: 'Ivo' }], threads: [], calls: [], photos: [], notes: [], searches: [], events: [], posts: [], mails: [], diary: [], voice: [],
     money: { currency: 'KRW', asOf: '2026-11-01', bank: { accounts: [{ id: 'chk', kind: 'checking', name: '입출금', last4: '1111', currency: 'KRW', balance: 100000 }] }, tx: [], orders: [], passes: [] } });
@@ -173,6 +174,89 @@ test('은행이 없는 실시간 폰: 되돌려도 없던 장부가 생기지 �
     await G.liveUndo(c.real, 'Mara');
     assert.equal(c.p.notes.length, 0);
     assert.equal(L.liveWorld(c.real).finance, null);
+});
+
+// ---- 점검에서 나온 것: 폰 2가 폰 1을 건드리던 곳
+const storyWorld = () => {
+    const p1 = { ...phone(), syncLast: { checked: 3, apps: ['메모'] }, syncUndo: { round: 'p1r2', items: [['notes', 'n1']], msgs: [], effects: [], read: [11, 12], moneyAt: undefined, investAt: undefined },
+        syncUndos: [{ round: 'p1r1', items: [], msgs: [], effects: [] }], notes: [{ id: 'n1', title: '이야기 메모', text: 'x', time: '11-09 10:00' }] };
+    const real = { text: '', phones: { mara: p1 } };
+    migrateBank(real, p1);
+    p1.sync = { v: 1, scope: 'test', order: 'oldest', limit: 12, marks: { base: { index: 1, user: -1, fp: '', tail: '' } }, done: [[2, 12]], failed: {}, arch: {}, rounds: ['p1r1', 'p1r2'],
+        events: { lunch: { at: 4, summary: 'STORY lunch paid 20000', quote: 'paid', effects: [] } }, owed: { money: [{ at: 4, date: '11-09', time: '12:30' }] } };
+    return real;
+};
+
+test('이야기에서 시작한 실시간 폰은 폰 1의 되돌리기 · 지난 반영 · 밀린 결제를 안 가져와요 (폰 1 것은 그대로)', async () => {
+    const real = storyWorld(), p1 = JSON.stringify(real.phones);
+    L.startFromStory(real, { persona: 'Ren', upto: 12, scope: 'test', story: { ranges: {}, titles: [], rawFrom: 0, own: [''] } });
+    const lp = L.livePhone(real, 'Mara');
+    assert.equal(lp.syncUndo, undefined); assert.equal(lp.syncUndos, undefined); assert.equal(lp.syncLast, undefined); assert.equal(lp.sync.owed, undefined);
+    assert.deepEqual(lp.notes.map(x => x.title), ['이야기 메모']); assert.deepEqual(lp.sync.done, [[2, 12]]);
+    assert.equal(JSON.stringify(real.phones), p1);
+    assert.equal(G.liveCanUndo(real, 'Mara'), false);
+    await assert.rejects(G.liveUndo(real, 'Mara'), /되돌릴 반영이 없어요/);
+});
+
+test('전에 시작해 둔 실시간 폰(폰 1의 되돌리기 · 밀린 결제가 복사돼 있음): 되돌리기는 실시간 반영만, 밀린 결제는 안 넣어요', async () => {
+    const real = storyWorld();
+    L.startFromStory(real, { persona: 'Ren', upto: 12, scope: 'test', story: { ranges: {}, titles: [], rawFrom: 0, own: [''] } });
+    // (as an older version left it: the copies still on the live phone)
+    const lp = L.livePhone(real, 'Mara'), src = real.phones.mara;
+    Object.assign(lp, structuredClone({ syncUndo: src.syncUndo, syncUndos: src.syncUndos, syncLast: src.syncLast }));
+    lp.sync.owed = structuredClone(src.sync.owed);
+    assert.equal(G.liveCanUndo(real, 'Mara'), false);
+    await assert.rejects(G.liveUndo(real, 'Mara'), /되돌릴 반영이 없어요/);
+    assert.deepEqual(lp.notes.map(x => x.title), ['이야기 메모']);
+    // a live round: the story's owed lunch is neither asked nor booked
+    const room = L.ensureRoom(real, ['Mara']);
+    Object.assign(T, { answers: [], moneyAnswers: [], replies: [], calls: 0, moneyInput: '' });
+    L.sendLive(real, room.id, '더치페이 보내라'); L.enqueueReplies(real, room.id);
+    T.replies = [{ state: '집', reply: ['보낼게'], does: [{ app: 'bank', what: '더치페이 몫 32,000원 Ren에게 송금' }] }];
+    await G.liveGo(real);
+    T.answers = [{ events: [{ id: 'split', at: 14, quote: '더치페이 몫 32,000원', summary: 'Ren에게 보냄', date: '11-11', time: '13:11', money: true, phone: {} }] }];
+    T.moneyAnswers = [{ records: [{ type: 'payment', at: 14, account: '1111', amount: -32000, who: 'Ren', kind: 'transfer', occurrence: 'new' }, { type: 'payment', at: 4, account: '1111', amount: -20000, who: 'Lunch place', kind: 'card', occurrence: 'new' }] }];
+    assert.equal((await G.liveReflect(real, 'Mara')).error, '');
+    assert.ok(!T.moneyInput.includes('STORY lunch'));
+    assert.equal(cash(L.liveWorld(real).finance.accounts['chk:KRW']), 68000);
+    assert.deepEqual(lp.money.tx.map(t => t.who), ['Ren']);
+    // 되돌리기: this round, and then no further (폰 1's round under it is not offered)
+    assert.equal(G.liveCanUndo(real, 'Mara'), true);
+    await G.liveUndo(real, 'Mara');
+    assert.equal(cash(L.liveWorld(real).finance.accounts['chk:KRW']), 100000);
+    assert.equal(G.liveCanUndo(real, 'Mara'), false);
+    assert.deepEqual(lp.notes.map(x => x.title), ['이야기 메모']);
+});
+
+test('실시간 폰에서 연도를 바꿔도 폰 1의 복구 기록은 그대로예요 (실시간 폰의 복구 기록만 옮겨요)', () => {
+    const real = { text: '', phones: { mara: { ...phone(), year: 2026 } } };
+    L.startFromStory(real, { persona: 'Ren', upto: 3, scope: 'test', story: { ranges: {}, titles: [], rawFrom: 0, own: [''] } });
+    const liveKey = L.liveScope('test', real), round = () => [{ round: 'r1', owner: 'Mara', year: 2026, events: [{ id: 'e', date: '2026-11-10' }], life: [] }];
+    journalWrite('test', round()); journalWrite(liveKey, round());
+    const before = JSON.stringify(journalRead('test')), d = L.liveMeta(real);
+    assert.equal(d.phoneJournal, liveKey);
+    PD.setStoryYear(d, d.phones.mara, 2027);
+    assert.equal(JSON.stringify(journalRead('test')), before);
+    assert.equal(journalRead(liveKey)[0].year, 2027);
+    assert.equal(real.phones.mara.year, 2026); assert.equal(d.phones.mara.year, 2027);
+    // 폰 1's own year change still moves 폰 1's journal, as before
+    PD.setStoryYear(real, real.phones.mara, 2028);
+    assert.equal(journalRead('test')[0].year, 2028); assert.equal(journalRead(liveKey)[0].year, 2027);
+    journalWrite('test', []); journalWrite(liveKey, []);
+});
+
+test('해가 바뀐 뒤의 반영: 되돌리면 연도도 돌아오고, 실패한 반영은 연도를 안 바꿔요', async () => {
+    const c = world();
+    c.p.now = '12-31 20:00'; c.p.year = 2026;
+    c.room.messages.push({ id: 'a', n: L.liveNo(L.liveWorld(c.real)), from: 'Ren', text: '새해 복', at: Date.parse('2027-01-01T00:05:00Z') }, { id: 'b', n: L.liveNo(L.liveWorld(c.real)), from: 'Mara', text: '너도', at: Date.parse('2027-01-01T00:06:00Z') });
+    T.answers = ['not json'];
+    assert.ok((await G.liveReflect(c.real, 'Mara')).error);
+    assert.equal(c.p.year, 2026); assert.equal(c.p.now, '12-31 20:00');
+    T.answers = [{ events: [] }];
+    assert.equal((await G.liveReflect(c.real, 'Mara', { force: true })).error, '');
+    assert.equal(c.p.year, 2027); assert.equal(c.p.now, '01-01 00:06');
+    await G.liveUndo(c.real, 'Mara');
+    assert.equal(c.p.year, 2026); assert.equal(c.p.now, '12-31 20:00');
 });
 
 test('폰 1은 이 파일을 안 불러요', async () => {

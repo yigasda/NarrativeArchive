@@ -32,6 +32,7 @@ const map = { './extract.js': cleanMessageURL,
 const swap = s => s.replace(/from '([^']+)'/g, (all, k) => `from '${map[k] || k}'`);
 map['./phonedata.js'] = encoded(swap(await readFile(new URL('../src/phonedata.js', import.meta.url), 'utf8')));
 map['./phone2reflect.js'] = encoded(swap(await readFile(new URL('../src/phone2reflect.js', import.meta.url), 'utf8')));
+export const PD = await import(map['./phonedata.js']);
 export const R = await import(map['./phone2reflect.js']);
 // 답장 돌리기(phone2go.js)도 같은 가짜 이웃으로: 답장 답은 T.replies에 넣어 둔 걸 차례로
 for (const f of ['phone2story.js', 'phone2live.js', 'phone2ask.js', 'phone2reply.js', 'phone2run.js', 'phone2digest.js']) map[`./${f}`] = href(f);

@@ -72,6 +72,13 @@ export function startFromStory(m, { persona, upto, scope = '', dayShift = 0, now
     const copy = Object.fromEntries(Object.keys(STORY_COPY).filter(k => m?.[k] !== undefined && m[k] !== null).map(k => [k, structuredClone(m[k])]));
     const w = newWorld(m, { from: 'story', persona, dayShift, scope, storyUpto: upto, now });
     for (const [k, to] of Object.entries(STORY_COPY)) if (k in copy) w[to] = copy[k];
+    // (the copies begin clean: 폰 1's last rounds can't be undone here, their result isn't 폰 2's, and a payment 폰 1 still
+    // owes a story message can't be worked out here, where the story's words are never sent)
+    for (const p of Object.values(w.phones || {})) {
+        if (!obj(p)) continue;
+        delete p.syncUndo; delete p.syncUndos; delete p.syncLast;
+        if (obj(p.sync)) delete p.sync.owed;
+    }
     w.story = structuredClone(story);
     if (typeof m.lastPhoneOwner === 'string') w.lastOwner = m.lastPhoneOwner;
     return w;
@@ -139,7 +146,9 @@ export function liveMeta(m, { text = null } = {}) {
     const drawer = {}, copies = {};
     const story = () => { const t = typeof text === 'function' ? text() : ''; return typeof t === 'string' ? t : ''; };
     const copy = k => (Object.hasOwn(copies, k) ? copies[k] : (copies[k] = m[k] === undefined ? undefined : structuredClone(m[k])));
-    const at = k => (own(k) ? w[LIVE_OWN[k]] : Object.hasOwn(drawer, k) ? drawer[k] : k === 'text' ? story() : shared(k) ? copy(k) : undefined);
+    // (phoneJournal: the browser key 폰 2's 복구 records are under. 폰 1's functions that touch the journal of the meta they
+    // are given ask for it, so with the drawer they never reach 폰 1's own)
+    const at = k => (own(k) ? w[LIVE_OWN[k]] : Object.hasOwn(drawer, k) ? drawer[k] : k === 'text' ? story() : k === 'phoneJournal' ? (liveScope(w.scope || 'live', m) || 'live') : shared(k) ? copy(k) : undefined);
     const keys = () => [...new Set([...Object.keys(LIVE_OWN).filter(k => w[LIVE_OWN[k]] !== undefined), ...LIVE_SHARED.filter(k => m[k] !== undefined), 'text', ...Object.keys(drawer)])];
     return new Proxy(drawer, {
         get: (_, k) => (k === IS_LIVE ? true : typeof k === 'symbol' ? undefined : at(k)),

@@ -1270,7 +1270,9 @@ export function setStoryYear(m, p, year) {
         for (const q of Object.values(m.phonePre || {})) if (q?.year && !q.noYear && !q.yearSet) { q.year += n; q.yearShift = (Number(q.yearShift) || 0) + n; }
         // this browser's record of unsaved rounds (복구) too
         try {
-            const scope = phoneChatScope(ctx()), owners = new Set(Object.values(m.phones || {}).map(q => q?.owner));
+            // (the journal of the meta given: the chat's, or the one a meta names itself — 폰 2's drawer, so its year never
+            // moves 폰 1's records)
+            const scope = typeof m.phoneJournal === 'string' ? m.phoneJournal : phoneChatScope(ctx()), owners = new Set(Object.values(m.phones || {}).map(q => q?.owner));
             journalWrite(scope, journalRead(scope).map(r => (owners.has(r.owner) ? { ...r, events: shiftAll(r.events || [], n), life: shiftAll(r.life || [], n), ...(r.year ? { year: r.year + n } : {}) } : r)));
         } catch { /* no journal here */ }
     }
