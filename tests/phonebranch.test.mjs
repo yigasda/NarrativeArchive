@@ -287,3 +287,51 @@ test('폰은 분기 전까지만 읽었고 은행만 분기 뒤에 만들었으�
     assert.equal(c.p.sync.marks.money.index, 5);
     assert.deepEqual(c.p.photos.map(x => x.id), ['made']); assert.equal(c.p.now, '10-26 12:00');
 });
+
+// 2차 점검에서 나온 것: 읽는 표시는 분기 장면 시각을 몰라도 분기한 곳으로 돌아와요
+const L = s => `${s} — a long enough line of talk here`;
+const taxi = at => ({ id: 'taxi', at, quote: 'paid the taxi', summary: '택시', date: '10-26', time: '14:00', phone: {}, money: { moves: [{ account: '1111', amount: -9000, who: '택시', occurrence: 'new' }] } });
+test('상태창이 없는 채팅에서 분기: 은행의 읽는 표시가 분기한 곳으로 돌아와서, 분기한 뒤의 결제가 들어가요', async () => {
+    const c = setup([say('Ren', L('a0')), say('Mara', L('b1')), say('Ren', L('c2')), say('Mara', 'I bought the book for 15000 won today'), say('Ren', L('e4')), say('Mara', L('f5'))]);
+    await run(c.m, { now: '10-26 13:00', events: [book(3, 'bought the book', [msg('A: 책 샀어?', '10-26 12:01')], 'new')] });
+    c.p.sync.marks.money = makeMark(T.chat, 5);
+    assert.equal(c.bank(), 85000);
+    branchAt(c, 2);
+    const r = await data.settleBranch(c.m, c.p);
+    assert.equal(r.at, ''); assert.equal(c.bank(), 100000);
+    assert.equal(c.p.sync.marks.money.index, 2);
+    T.chat.push(say('Mara', L('new3')), say('Ren', 'paid the taxi 9000 won just now'), say('Mara', L('new5')));
+    await run(c.m, { now: '10-26 15:00', events: [taxi(4)] });
+    assert.equal(c.bank(), 91000);
+});
+
+test('폰은 분기 전까지만 읽었고 은행만 분기 뒤에 만들었는데 분기 장면 시각을 모르면: 기록은 그대로 두고, 읽는 표시는 분기한 곳으로', async () => {
+    const c = setup([say('Ren', L('a0')), say('Mara', L('b1')), say('Ren', L('c2')), say('Mara', L('d3'))]);
+    await run(c.m, { now: '10-26 12:00', events: [] });
+    T.chat.push(say('Ren', L('e4')), say('Mara', L('f5')), say('Ren', L('g6')), say('Mara', L('h7')));
+    c.p.sync.marks.money = makeMark(T.chat, 7);
+    c.p.money.tx = [{ id: 'wed', account: '1111', amount: -3000, who: '수요일 가게', time: '10-28 10:00' }];
+    branchAt(c, 5);
+    const r = await data.settleBranch(c.m, c.p);
+    assert.deepEqual([r.at, r.cut], ['', 0]);
+    assert.deepEqual(c.p.money.tx.map(t => t.id), ['wed']);
+    assert.equal(c.p.sync.marks.money.index, 5);
+    // a payment said in the branch after it goes in
+    T.chat.push(say('Ren', 'paid the taxi 9000 won just now'));
+    const before = c.bank();
+    await run(c.m, { now: '10-26 15:00', events: [taxi(6)] });
+    assert.equal(c.bank(), before - 9000);
+});
+
+test('폰을 만든 답장 바로 앞의 내 메시지에서 분기: 폰의 시작이 분기 끝으로 와서, 분기에서 새로 온 답장을 읽어요', async () => {
+    const c = setup([say('Ren', L('a0')), say('Mara', L('b1')), say('Ren', L('c2')), say('Mara', 'I bought the book for 15000 won today'), say('Ren', L('e4')), say('Mara', L('f5'))]);
+    await run(c.m, { now: '10-26 13:00', events: [book(3, 'bought the book', [msg('A: 책 샀어?', '10-26 12:01')], 'new')] });
+    assert.equal(c.p.sync.marks.base.index, 1);
+    branchAt(c, 0);
+    const r = await data.settleBranch(c.m, c.p);
+    assert.equal(r.rebased, true); assert.equal(c.p.sync.marks.base.index, 0); assert.equal(c.bank(), 100000);
+    T.chat.push(say('Mara', 'I paid the taxi 9000 won in this branch'));
+    assert.equal(data.syncLeft(c.p, c.m), 1);
+    await run(c.m, { now: '10-26 15:00', events: [taxi(1)] });
+    assert.equal(c.bank(), 91000);
+});

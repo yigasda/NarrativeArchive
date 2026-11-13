@@ -2013,8 +2013,10 @@ export async function settleBranch(m, p) {
     if (!s?.marks?.base || !otherChat(s)) return null;
     // a phone made past the branch point: the message it began at is not in this chat. It begins at the branch's end
     // instead, and everything it read is the other chat's talk
+    // (its start still found by the user's message before it, but the start itself past this chat's end — a branch taken
+    // at that user message, the reply the phone was made at not here: the same, it begins at the branch's end)
     let rebased = false;
-    if (syncState(p) === 'lost') {
+    if (syncState(p) === 'lost' || s.marks.base.index > chatEnd()) {
         const end = chatEnd();
         if (!(s.marks.base.index > end) || end < 0) return null;
         s.marks.base = markAfter(end); rebased = true;
@@ -2054,11 +2056,13 @@ export async function settleBranch(m, p) {
         const groups = whole ? null : lostApps;
         cut = (whole ? brCutMadeAfter(p, at) : 0) + brCutAppsAfter(m, p, at, groups);
         if (whole && (!p.now || laterThan(String(p.now), at))) p.now = at;
-        // (an app's own reading mark that is past this chat: none past the branch point. One that is in this chat stays
-        // where it is: moved back, the payments its opening balance already holds would be read in again)
-        for (const g of apps) if (lostApps.has(g) || (readPast && s.marks[g].index > end)) s.marks[g] = markAfter(end);
         if (cut) { delete p.syncUndo; delete p.syncUndos; }
     }
+    // (an app's own reading mark that is past this chat: none past the branch point, whether or not the story's time
+    // there is known — left ahead, the reflection would pass over what is paid in this chat's messages up to it. One
+    // that is in this chat stays where it is: moved back, the payments its opening balance already holds would be read
+    // in again)
+    for (const g of apps) if (lostApps.has(g) || (readPast && s.marks[g].index > end)) s.marks[g] = markAfter(end);
     await saveMeta();
     if (cut && p.inject) applyInjection();
     return { dropped, items, kept, cut, at: at || '', rebased, point: end };
