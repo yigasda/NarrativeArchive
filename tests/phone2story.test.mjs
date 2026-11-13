@@ -175,3 +175,38 @@ test('다시 시작: 폰 1에 폰이 없으면 폰 2는 내려요. 실패하면 
     assert.equal(S2.rebeginFromStory(m, { upto: 100 }), null);
     assert.equal(L2.liveWorld(m), null); assert.equal(L2.liveMode(m), 'story');
 });
+
+test('실시간 폰 새로 시작 › 대화만 남기기: 메신저 대화는 남고, 폰은 지금의 폰 1에서 다시 채워져요. 남긴 대화는 다시 반영하지 않아요', () => {
+    const m = meta();
+    m.phones.mara.notes = [{ title: '월요일' }];
+    S.beginFromStory(m, { persona: 'Ren', upto: 100, scope: 's' });
+    const room = L.ensureRoom(m, ['Mara']);
+    L.sendLive(m, room.id, '하나'); L.sendLive(m, room.id, '둘');
+    L.liveWorld(m).phones.mara.notes.push({ title: '실시간에서 생긴 메모' });
+    room.digest = { upto: 101, parts: [{ text: '## #101–#101 — x\n- y' }] };
+    // the story went on meanwhile
+    m.phones.mara.notes = [{ title: '월요일' }, { title: '화요일' }];
+    // (Ivo's phone has a reading of the story already: the kept talk is a stretch done)
+    m.phones.ivo = { owner: 'Ivo', sync: { marks: { base: { index: 3 } }, done: [[4, 120]] } };
+    L.setLiveMode(m, 'live');
+    const w = S.rebeginKeepingChats(m, { upto: 140, scope: 's' });
+    assert.equal(w.persona, 'Ren'); assert.equal(w.storyUpto, 140); assert.equal(L.liveMode(m), 'live');
+    assert.deepEqual(w.phones.mara.notes.map(x => x.title), ['월요일', '화요일']);
+    const kept = Object.values(w.messenger.rooms)[0];
+    assert.deepEqual(kept.messages.map(x => x.text), ['하나', '둘']);
+    // (their numbers come after the story's, and the summary that named the old numbers goes)
+    assert.deepEqual(kept.messages.map(x => x.n), [141, 142]); assert.equal(kept.digest, undefined);
+    // the kept talk is read already for the new phones
+    assert.equal(w.phones.mara.sync.marks.base.index, 142);
+    assert.deepEqual(w.phones.ivo.sync.done, [[4, 120], [141, 142]]); assert.equal(w.phones.ivo.sync.marks.base.index, 3);
+    assert.equal(L.archivedWorlds(m).length, 0);
+    // a message sent after it goes on from there
+    assert.equal(L.sendLive(m, kept.id, '셋').n, 143);
+    // 폰 1 with no phone: nothing to begin from, the 폰 2 stays as it was
+    const n = meta(); n.phones = {};
+    L.startFresh(n, { persona: 'Ren', scope: 's' });
+    const r2 = L.ensureRoom(n, ['Mara']); L.sendLive(n, r2.id, '하나');
+    const before = JSON.stringify(n.live);
+    assert.equal(S.rebeginKeepingChats(n, { upto: 10 }), null);
+    assert.equal(JSON.stringify(n.live), before);
+});

@@ -1078,6 +1078,9 @@ export function mergePhone(p, add, { keepAll = false, m = null } = {}) {
         if (!name || p.contacts.length >= CAP.contacts || NO_CONTACT.test(name) || isOwnerName(p, m, name) || arr(p.hiddenContacts).includes(nameKey(name)) || personIn(p, p.contacts, x => x.name, name) || p.contacts.some(x => x.saved && nameKey(x.saved) === nameKey(name))) continue;
         p.contacts.push({ name });
     }
+    // (more than the list holds: the ones with no label of their own go first, oldest first; a contact the owner saved
+    // under a label, or reaches on the messenger, stays as long as there is room)
+    if (p.contacts.length > CAP.contacts) { let over = p.contacts.length - CAP.contacts; p.contacts = p.contacts.filter(x => !(over > 0 && !x.saved && !x.messenger && over--)); }
     p.contacts = keep(p.contacts, CAP.contacts);
     if (add.now) p.now = add.now;
     return p;

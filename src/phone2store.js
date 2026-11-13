@@ -48,7 +48,7 @@ export function setLiveMode(m, mode) {
     return mode;
 }
 
-// a new 폰 2: the one there goes to the archive first (never thrown away); the jobs waiting for it are dropped there
+// a new 폰 2: the one there goes to the archive first (the two newest are kept); the jobs waiting for it are dropped there
 export function newWorld(m, { from = 'fresh', persona = '', dayShift = 0, scope = '', storyUpto = null, now = Date.now() } = {}) {
     if (from !== 'story' && from !== 'fresh') throw new Error('시작은 story 또는 fresh예요');
     if (!String(persona || '').trim()) throw new Error('페르소나 이름이 필요해요');
@@ -85,6 +85,7 @@ export function startFromStory(m, { persona, upto, scope = '', dayShift = 0, now
 }
 // 처음부터 시작: an empty 폰 2 (its phones are made later from the cards)
 export const startFresh = (m, { persona, scope = '', now = Date.now() } = {}) => newWorld(m, { from: 'fresh', persona, scope, now });
+const ARCHIVE_KEPT = 2;
 export function archiveWorld(m, now = Date.now()) {
     const live = liveOf(m);
     if (!live?.world) return null;
@@ -92,6 +93,8 @@ export function archiveWorld(m, now = Date.now()) {
     for (const j of w.queue?.jobs || []) if (j.state === 'waiting' || j.state === 'running') { j.state = 'dropped'; j.error = '보관됨'; }
     w.archivedAt = now;
     live.archive.push(w);
+    // (the archive is a safety copy no screen opens: the two newest stay, so the chat's saved data doesn't grow each time)
+    if (live.archive.length > ARCHIVE_KEPT) live.archive = live.archive.slice(-ARCHIVE_KEPT);
     live.world = null;
     live.mode = 'story';
     return w;
@@ -247,7 +250,10 @@ export function numberLive(w) {
     // (a 폰 2 begun from the story counts on from the story's last message: its phones hold records that name the story's
     // message numbers, and a messenger message with one of those numbers would be taken for that message)
     let top = Math.max(Number(ms.seq) || 0, Number.isInteger(w.storyUpto) ? w.storyUpto : 0, ...all.map(x => (Number.isInteger(x.n) ? x.n : 0)));
-    for (const x of all.filter(x => !Number.isInteger(x.n)).sort((a, b) => (a.at || 0) - (b.at || 0) || String(a.id).localeCompare(String(b.id)))) x.n = ++top;
+    // (said at the same moment — the bubbles of one reply: in the order they stand in their room, never by their ids,
+    // which are random)
+    const place = new Map(all.map((x, i) => [x, i]));
+    for (const x of all.filter(x => !Number.isInteger(x.n)).sort((a, b) => (a.at || 0) - (b.at || 0) || place.get(a) - place.get(b))) x.n = ++top;
     ms.seq = top;
     return top;
 }

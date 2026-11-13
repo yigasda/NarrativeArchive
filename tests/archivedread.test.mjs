@@ -1551,6 +1551,18 @@ test('someone texted or called by name is saved in the contacts; a number, an un
     assert.deepEqual(c.p.contacts.map(x => x.name), ['Mara']);
 });
 
+test('the contact list full: a contact saved under a label stays; the ones with no label go first, oldest first', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'a busy day of calls and texts'), say('Mara', 'tell me later')]);
+    c.p.now = '10-26 09:00'; c.p.year = 2026;
+    c.p.contacts = [{ name: 'Old Friend', saved: '오래된 친구♥' }, ...Array.from({ length: 29 }, (_, i) => ({ name: `Person ${i}` }))];
+    await run(c.m, { now: '10-26 20:00', events: [{ id: 'busy', at: 2, quote: 'a busy day of calls and texts', summary: 'calls and texts', date: '10-26', time: '12:00', phone: {
+        contacts: [{ name: 'Lio', saved: '리오' }, { name: 'Varo', saved: '바로' }] } }] });
+    const names = c.p.contacts.map(x => x.name);
+    assert.equal(names.length, 30);
+    assert.ok(names.includes('Old Friend') && names.includes('Lio') && names.includes('Varo'));
+    assert.ok(!names.includes('Person 0') && !names.includes('Person 1') && names.includes('Person 2'));
+});
+
 test('the home district goes only to the home the owner lives in now, and 되돌리기 takes it back', async () => {
     const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'back home after the move'), say('Mara', 'see you')]);
     c.p.now = '10-26 09:00'; c.p.year = 2026;

@@ -9,7 +9,7 @@ const phone1 = () => ({ phones: { mara: { owner: 'Mara', now: '11-06 09:00', not
 
 test('폰 2 저장: the file imports nothing, and no file but the phone window and 폰 2\'s story reader imports it', async () => {
     assert.doesNotMatch(await src('phone2store.js'), /^\s*import\b/m);
-    const may = new Set(['phone2store.js', 'phone.js', 'phone2story.js', 'phone2feed.js', 'phone2live.js', 'phone2run.js', 'phone2reflect.js', 'phone2go.js', 'phone2digest.js']);   // 4-2: the phone's window; 5-1: phone2story.js (beginFromStory); 6: phone2feed.js (the messenger as the reflection reads it)
+    const may = new Set(['phone2store.js', 'phone.js', 'phonestory.js', 'phone2story.js', 'phone2feed.js', 'phone2live.js', 'phone2run.js', 'phone2reflect.js', 'phone2go.js', 'phone2digest.js']);   // 4-2: the phone's window; 5-1: phone2story.js (beginFromStory); 6: phone2feed.js (the messenger as the reflection reads it)
     for (const f of (await readdir(new URL('../src/', import.meta.url))).filter(f => f.endsWith('.js') && !may.has(f)))
         assert.doesNotMatch(await src(f), /phone2store/, f);
 });
@@ -36,7 +36,7 @@ test('폰 2 저장: reading and going back to 폰 1 never add m.live', () => {
     assert.deepEqual(m, before);
 });
 
-test('폰 2 저장: a new world beside 폰 1, the old one archived (never thrown away), phone 1 left as it was', () => {
+test('폰 2 저장: a new world beside 폰 1, the old one archived, phone 1 left as it was', () => {
     const m = phone1(), keep = structuredClone({ phones: m.phones, finance: m.finance, text: m.text });
     assert.throws(() => L.newWorld(m, {}), /페르소나/);
     const w = L.newWorld(m, { from: 'story', persona: 'Ren', dayShift: 2, storyUpto: 40, now: 1000 });
@@ -376,4 +376,11 @@ test('화면 주인은 채팅에 하나: 실시간 서랍에서 읽고 고치면
     assert.equal(Object.hasOwn(u, 'phoneScreenHolder'), false);
     u.phoneScreenHolder = '';
     assert.equal(Object.hasOwn(n, 'phoneScreenHolder'), true);
+});
+
+test('보관함은 가장 최근 것 2개만: 폰 2를 여러 번 새로 시작해도 저장 데이터가 끝없이 커지지 않아요', () => {
+    const m = { phones: {} };
+    for (let i = 1; i <= 5; i++) L.startFresh(m, { persona: `P${i}`, scope: 'test', now: i * 1000 });
+    assert.deepEqual(L.archivedWorlds(m).map(w => w.persona), ['P3', 'P4']);
+    assert.equal(L.liveWorld(m).persona, 'P5');
 });

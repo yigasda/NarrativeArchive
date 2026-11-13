@@ -39,3 +39,13 @@ test('섹션 제목의 장소: two places at once ("A and B", "A & B") is no pla
     assert.deepEqual(at('the office → home'), ['office', 'home']);
     assert.deepEqual(at('Café Mandarin, Westend'), ['Café Mandarin', 'Westend']);
 });
+
+test('섹션 제목의 장소: 이름에 and · &가 든 가게나 건물은 장소예요. 두 도시를 이은 것만 뺍니다', () => {
+    assert.deepEqual(at('Barnes & Noble'), ['Barnes & Noble']);
+    assert.deepEqual(at('Bread and Butter Café'), ['Bread and Butter Café']);
+    assert.deepEqual(at('Marks & Spencer, Westend'), ['Marks & Spencer', 'Westend']);
+    assert.deepEqual(at('Rose & Crown pub → home'), ['Rose & Crown pub', 'home']);
+    assert.deepEqual(at('Seoul and Frankfurt'), []);
+    assert.deepEqual(at('서울 & 도쿄'), []);
+    assert.deepEqual(at('Seoul, Berlin and Tokyo'), ['Seoul']);
+});

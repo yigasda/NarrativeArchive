@@ -163,6 +163,12 @@ function mapCities(town, rows) {
     }
     return out;
 }
+// whether a name is a city's own (this table's cities and the map's towns, under any of their names)
+let cityKeys = null;
+export function isCityName(name) {
+    cityKeys ||= new Set([...HOODS.flatMap(r => r[0].split('|')), ...PLACE.flatMap(p => [p[0], ...(p[1] || [])])].map(key).filter(Boolean));
+    return cityKeys.has(key(name));
+}
 let index = null;
 function hoodIndex() {
     if (index) return index;

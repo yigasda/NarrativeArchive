@@ -10,7 +10,7 @@
 // 폰 1은 이 파일을 부르지 않아요. 아카이브 글은 읽기만 해요.
 
 import { headingRanges, parseSections, RANGE_HEAD, splitTail } from './sections.js';
-import { liveWorld, startFromStory } from './phone2store.js';
+import { liveWorld, startFromStory, numberLive } from './phone2store.js';
 
 // [[a, b], …] sorted, touching or overlapping ones joined ([0, 50] + [51, 100] → [0, 100])
 function joinSpans(spans) {
@@ -119,4 +119,41 @@ export function rebeginFromStory(m, opts = {}) {
         live.mode = keep.mode;
         return w;
     } catch (err) { live.world = keep.world; live.mode = keep.mode; throw err; }
+}
+
+// 실시간 폰 새로 시작 › 대화만 남기기: 폰 2's phones begin again from 폰 1 as it is now (as beginFromStory copies them),
+// and the messenger stays: its rooms, messages, accounts and the persona. The kept talk is talk the new phones have
+// already read (it is not reflected into them again); what is said after is. opts: as beginFromStory (persona left out:
+// the one it had). 폰 1 with no phone: there is nothing to begin from, 폰 2 is left as it is (returns null)
+export function rebeginKeepingChats(m, opts = {}) {
+    const old = liveWorld(m);
+    if (!old) throw new Error('아직 폰 2가 없어요');
+    if (!Object.values(m.phones || {}).some(p => p?.owner)) return null;
+    const live = m.live, keep = { world: live.world, mode: live.mode, archive: live.archive };
+    live.world = null;
+    try {
+        const w = beginFromStory(m, { ...opts, persona: opts.persona || old.persona });
+        w.messenger = old.messenger;
+        w.queue = { round: (Number(old.queue?.round) || 0) + 1, jobs: [] };
+        const rooms = Object.values(w.messenger?.rooms || {}), all = rooms.flatMap(r => r.messages || []);
+        // (a number at or before where the story now ends would be taken for the story's own message: the kept messages
+        // are numbered again after it, in the order they were said, and a summary that names the old numbers goes)
+        if (all.some(x => !Number.isInteger(x.n) || x.n <= w.storyUpto)) {
+            // (by the numbers they had, so the bubbles of one reply, said at the same moment, keep their order)
+            const order = all.map((x, i) => ({ x, i })).sort((a, b) => (Number.isInteger(a.x.n) ? a.x.n : Infinity) - (Number.isInteger(b.x.n) ? b.x.n : Infinity) || (a.x.at || 0) - (b.x.at || 0) || a.i - b.i);
+            order.forEach(({ x }, k) => { x.n = w.storyUpto + 1 + k; });
+            for (const r of rooms) delete r.digest;
+            w.messenger.seq = w.storyUpto + order.length;
+        }
+        const top = numberLive(w), first = Math.min(top + 1, ...all.map(x => x.n));
+        // (the kept talk is read: a phone that has a reading takes it as a stretch done; one that never read anything
+        // begins its reading after it)
+        if (all.length) for (const p of Object.values(w.phones || {})) {
+            if (!p || typeof p !== 'object') continue;
+            if (p.sync?.marks?.base) (p.sync.done ||= []).push([first, top]);
+            else p.sync = { ...(p.sync || {}), marks: { ...(p.sync?.marks || {}), base: { index: top, user: -1, fp: '', tail: '' } } };
+        }
+        live.mode = keep.mode; live.archive = keep.archive || [];
+        return w;
+    } catch (err) { live.world = keep.world; live.mode = keep.mode; live.archive = keep.archive; throw err; }
 }
