@@ -226,3 +226,64 @@ test('읽는 표시(은행 · 투자 · 생활 · 배달)도 분기한 곳을 �
     assert.deepEqual(['money', 'invest', 'delivery'].map(g => c.p.sync.marks[g].index), [2, 2, 2]);
     assert.equal(c.p.sync.marks.life.index, 1);
 });
+
+// 점검에서 나온 것: 분기가 폰이 아는 것을 다 갖고 있으면 아무것도 빼지 않고 표시도 안 옮겨요
+test('채팅 맨 끝에서 통째로 분기: 뺄 대화가 없으면 만든 기록 · 폰 시각 · 되돌리기를 건드리지 않아요', async () => {
+    const c = await bookCase();
+    // (records a 다시 만들기 wrote, dated after the newest message's record; no status line anywhere)
+    c.p.photos.push({ id: 'made1', caption: 'remade photo', time: '10-26 12:50' });
+    c.p.notes = [{ id: 'n1', title: 'remade note', text: 'x', time: '10-26 12:55' }];
+    const now = c.p.now, undo = JSON.stringify(c.p.syncUndo), tx = JSON.stringify(c.p.money.tx), bank = c.bank();
+    branchAt(c, 5);
+    const r = await data.settleBranch(c.m, c.p);
+    assert.deepEqual([r.dropped, r.items, r.cut, r.at, r.rebased, r.point], [0, 0, 0, '', false, 5]);
+    assert.ok(c.p.photos.some(x => x.id === 'made1')); assert.deepEqual(c.p.notes.map(x => x.id), ['n1']);
+    assert.equal(c.p.now, now); assert.equal(JSON.stringify(c.p.syncUndo), undo);
+    assert.equal(JSON.stringify(c.p.money.tx), tx); assert.equal(c.bank(), bank);
+    assert.equal(c.p.sync.readChat, 'branch-mark');
+    // (a status line there changes nothing either: there is still nothing past the branch)
+    const d = await bookCase();
+    d.p.photos.push({ id: 'made1', caption: 'remade photo', time: '10-26 12:50' });
+    T.trackers = [{ date: '10-26', min: 12 * 60 + 30, place: '', i: 5 }];
+    branchAt(d, 5);
+    const r2 = await data.settleBranch(d.m, d.p);
+    T.trackers = null;
+    assert.equal(r2.cut, 0); assert.ok(d.p.photos.some(x => x.id === 'made1'));
+});
+
+test('통째로 분기한 뒤 반영해도 은행이 이미 잔액에 든 결제를 또 넣지 않아요 (읽는 표시를 뒤로 안 당겨요)', async () => {
+    const chat = [say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'going to the bookstore now'), say('Mara', 'I bought the book for 15000 won')];
+    const c = setup(chat);
+    await run(c.m, { now: '10-26 13:00', events: [book(3, 'bought the book', [msg('A: 책 샀어', '10-26 12:01')], 'new')] });
+    assert.equal(c.bank(), 85000);
+    // two more messages; the bank is made again at #5: its balance already holds the taxi of #4
+    T.chat.push(say('Ren', 'paid the taxi 9000 won'), say('Mara', 'ok'));
+    c.p.sync.marks.money = makeMark(T.chat, 5);
+    branchAt(c, 5);
+    const r = await data.settleBranch(c.m, c.p);
+    assert.equal(r.cut, 0); assert.equal(c.p.sync.marks.money.index, 5);
+    await run(c.m, { now: '10-26 15:00', events: [{ id: 'taxi', at: 4, quote: 'paid the taxi', summary: '택시', date: '10-26', time: '14:00', phone: {}, money: { moves: [{ account: '1111', amount: -9000, who: '택시', occurrence: 'new' }] } }] });
+    assert.equal(c.bank(), 85000);
+});
+
+test('폰은 분기 전까지만 읽었고 은행만 분기 뒤에 만들었으면: 은행의 뒤 기록만 빠지고, 폰이 만든 기록 · 폰 시각은 그대로', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'monday talk'), say('Mara', 'ok')]);
+    // (the phone read Monday; Tuesday and Wednesday were said after and never read)
+    await run(c.m, { now: '10-26 12:00', events: [] });
+    T.chat.push(say('Ren', 'tuesday talk'), say('Mara', 'fine'), say('Ren', 'wednesday talk'), say('Mara', 'bye'));
+    c.p.now = '10-26 12:00';
+    c.p.photos = [{ id: 'made', caption: 'made with the phone', time: '10-26 11:00' }];
+    // the bank was made on Wednesday (#7): its history has a Monday and a Wednesday payment, both in its opening balance
+    c.p.sync.marks.money = makeMark(T.chat, 7);
+    c.p.money.tx = [{ id: 'mon', account: '1111', amount: -1000, who: '월요일 가게', time: '10-26 10:00' }, { id: 'wed', account: '1111', amount: -3000, who: '수요일 가게', time: '10-28 10:00' }];
+    c.m.finance.accounts['chk:KRW'].included = ['mon', 'wed'];
+    T.trackers = [{ date: '10-27', min: 9 * 60, place: '', i: 5 }];
+    branchAt(c, 5);      // branched on Tuesday
+    const r = await data.settleBranch(c.m, c.p);
+    T.trackers = null;
+    assert.deepEqual([r.dropped, r.cut, r.at, r.point], [0, 1, '10-27 09:00', 5]);
+    assert.deepEqual(c.p.money.tx.map(t => t.id), ['mon']);
+    assert.equal(c.bank(), 103000);
+    assert.equal(c.p.sync.marks.money.index, 5);
+    assert.deepEqual(c.p.photos.map(x => x.id), ['made']); assert.equal(c.p.now, '10-26 12:00');
+});

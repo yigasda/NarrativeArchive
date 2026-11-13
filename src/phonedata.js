@@ -2011,16 +2011,29 @@ export async function settleBranch(m, p) {
         const r = await dropStretch(m, p, d.key);
         dropped += r.gone; items += r.items; kept.push(...r.kept);
     }
-    // what the phone was made with (no message as its source): it goes when its time is past the story's time at the
-    // branch point, and the phone's clock goes back to that time. That time: the status line there; else the newest
-    // record still here from a message (none: neither is done, and the result says so)
-    const end = brPoint(s), at = statusAt(p, end, m)?.at || brNewestFrom(p, end);
+    // what the phone was made with (no message as its source) knows the story up to where it was made: the phone's own
+    // start, and each app's (its mark). It is past this chat only when the phone read talk this chat doesn't have (it was
+    // filled at that later time), when the phone was made past the branch (rebased), or when an app's own start isn't in
+    // this chat. A branch that holds all the phone knew (taken at the chat's end, or after the last message read and
+    // every app's start) cuts nothing and moves no mark.
+    const chatLast = chatEnd(), apps = ['money', 'invest', 'life', 'delivery'].filter(g => s.marks?.[g]);
+    const lostApps = new Set([...settleMarks(s, ctx().chat || [], apps), ...apps.filter(g => s.marks[g].index > chatLast)]);
+    const readPast = moved.dropped.length > 0;
+    // where this chat stops being the one the phone knew: the last message it read that is still here, when it read past
+    // it; else this chat's end (the branch has every message the phone read)
+    const end = readPast ? brPoint(s) : chatLast;
+    const whole = readPast || rebased, need = whole || lostApps.size > 0;
+    // the story's time there: the status line; for a phone that read past it, else the newest record still here from a
+    // message (none: nothing is cut, and the result says so)
+    const at = need ? (statusAt(p, end, m)?.at || (readPast ? brNewestFrom(p, end) : '')) : '';
     let cut = 0;
     if (at) {
-        cut = brCutMadeAfter(p, at) + brCutAppsAfter(m, p, at);
-        if (!p.now || laterThan(String(p.now), at)) p.now = at;
-        // (the bank's, investments', everyday and delivery apps' own reading marks: none past the branch point)
-        for (const g of ['money', 'invest', 'life', 'delivery']) if (s.marks?.[g] && s.marks[g].index > end) s.marks[g] = markAfter(end);
+        const groups = whole ? null : lostApps;
+        cut = (whole ? brCutMadeAfter(p, at) : 0) + brCutAppsAfter(m, p, at, groups);
+        if (whole && (!p.now || laterThan(String(p.now), at))) p.now = at;
+        // (an app's own reading mark that is past this chat: none past the branch point. One that is in this chat stays
+        // where it is: moved back, the payments its opening balance already holds would be read in again)
+        for (const g of apps) if (lostApps.has(g) || (readPast && s.marks[g].index > end)) s.marks[g] = markAfter(end);
         if (cut) { delete p.syncUndo; delete p.syncUndos; }
     }
     await saveMeta();
@@ -2051,11 +2064,13 @@ function brNewestFrom(p, end) {
 // reflection's carry one, and 빼기 took those): past `at` they go. A payment already in an account's opening balance (the
 // fill's history) gives its amount back to that balance; a card's spending and the holdings are worked out again from what
 // stays. Tickets and alarms stay (their date is when they are for). Returns how many went
-function brCutAppsAfter(m, p, at) {
+function brCutAppsAfter(m, p, at, groups = null) {
     let n = 0;
+    // (groups: only these apps' — money · life · delivery · invest; none given: all of them)
+    const on = g => !groups || groups.has(g);
     const made = x => !Number.isInteger(x?.sourceIndex), later = t => brHasTime(String(t || '').trim()) && laterThan(String(t).trim(), at);
     const drop = (list, past) => (Array.isArray(list) ? list.filter(x => { if (!(made(x) && past(x))) return true; n++; return false; }) : list);
-    const mo = p.money;
+    const mo = on('money') ? p.money : null;
     if (mo) {
         const f = finance(m), accts = mo.bank?.accounts || [];
         mo.tx = drop(mo.tx, t => {
@@ -2072,11 +2087,11 @@ function brCutAppsAfter(m, p, at) {
         });
         mo.orders = drop(mo.orders, x => later(x.time));
     }
-    const lf = p.life;
+    const lf = on('life') ? p.life : null;
     if (lf?.health?.days) lf.health.days = drop(lf.health.days, d => later(d.date));
     if (lf?.files?.items) lf.files.items = drop(lf.files.items, x => later(x.time));
-    if (p.delivery?.orders) p.delivery.orders = drop(p.delivery.orders, x => later(x.time));
-    const inv = p.investment, y = p.noYear ? '' : String(p.year || '');
+    if (on('delivery') && p.delivery?.orders) p.delivery.orders = drop(p.delivery.orders, x => later(x.time));
+    const inv = on('invest') ? p.investment : null, y = p.noYear ? '' : String(p.year || '');
     if (inv?.trades && /^\d{4}$/.test(y)) {
         const day = `${y}-${at.slice(0, 5)}`, f = finance(m);
         inv.trades = drop(inv.trades, t => {
