@@ -258,7 +258,7 @@ export async function openPhone(who = null) {
     const phone = () => (owner ? (live() ? livePhone(realM, owner) : m.phones[nameKey(owner)]) : null);
     // 실시간: 타임라인's data buttons (반영 · 되돌리기 · 복구 · 다시 만들기 · 채우기 · 번역 · 빼기, and 연도 화살표: each
     // reflection sets the year by the real date) are off; a tap on one that is left does nothing
-    const LIVE_OFF = '.na_ph_kochip, .na_ph_trok, .na_sync_tr, .na_ph_screenholder, [data-go=setscreenholder], .na_ph_setupd, .na_ph_setinj, .na_ph_setremake, [data-go=setremake], [data-go=setsync], .na_ph_storyreset, .na_ph_setdel, .na_ph_fill, .na_ph_mretr, .na_sync_retr, .na_sync_restore, .na_sync_drop, .na_sync_undo, .na_ph_ystep, .na_ph_gloss';
+    const LIVE_OFF = '.na_ph_kochip, .na_ph_trok, .na_sync_tr, .na_ph_screenholder, [data-go=setscreenholder], .na_ph_setupd, .na_ph_setinj, .na_ph_setremake, [data-go=setremake], [data-go=setsync], .na_ph_storyreset, .na_ph_setdel, .na_ph_fill, .na_ph_mretr, .na_sync_retr, .na_sync_restore, .na_sync_drop, .na_sync_undo, .na_ph_ystep';
     $root.on('click', LIVE_OFF, e => { if (live()) { e.preventDefault(); e.stopImmediatePropagation(); } });
     // the Korean of what the phone has in another language (phonetr.js): after a reflection, from its report, or when
     // 한국어 is pressed. A failure is marked on the report (번역 못 함 · 다시 하기); the reflection itself stays
