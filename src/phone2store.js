@@ -162,7 +162,10 @@ export function liveMeta(m, { text = null } = {}) {
     const own = k => typeof k === 'string' && Object.hasOwn(LIVE_OWN, k), shared = k => typeof k === 'string' && LIVE_SHARED.includes(k);
     const drawer = {}, copies = {};
     const story = () => { const t = typeof text === 'function' ? text() : ''; return typeof t === 'string' ? t : ''; };
-    const copy = k => (Object.hasOwn(copies, k) ? copies[k] : (copies[k] = m[k] === undefined ? undefined : structuredClone(m[k])));
+    // (a copy of a shared key: taken again when the chat's own has changed since — the glossary edited on its screen,
+    // which writes the chat's meta — so the drawer never reads an old one)
+    const from = {}, sig = k => { try { return JSON.stringify(m[k]) ?? ''; } catch { return ''; } };
+    const copy = k => { const s = sig(k); if (!Object.hasOwn(copies, k) || from[k] !== s) { from[k] = s; copies[k] = m[k] === undefined ? undefined : structuredClone(m[k]); } return copies[k]; };
     // (phoneJournal: the browser key 폰 2's 복구 records are under. 폰 1's functions that touch the journal of the meta they
     // are given ask for it, so with the drawer they never reach 폰 1's own)
     // (phoneUpto · phoneRecent: what 폰 1's app requests read of the talk. The role-play chat only up to where 폰 2 began
@@ -172,8 +175,8 @@ export function liveMeta(m, { text = null } = {}) {
     const keys = () => [...new Set([...Object.keys(LIVE_OWN).filter(k => w[LIVE_OWN[k]] !== undefined), ...LIVE_SHARED.filter(k => m[k] !== undefined), 'text', ...Object.keys(drawer)])];
     return new Proxy(drawer, {
         get: (_, k) => (k === IS_LIVE ? true : typeof k === 'symbol' ? undefined : at(k)),
-        set: (_, k, v) => { if (own(k)) w[LIVE_OWN[k]] = v; else if (shared(k) && !Object.hasOwn(drawer, k)) copies[k] = v; else drawer[k] = v; return true; },
-        deleteProperty: (_, k) => { if (own(k)) w[LIVE_OWN[k]] = undefined; else { delete drawer[k]; if (shared(k)) copies[k] = undefined; } return true; },
+        set: (_, k, v) => { if (own(k)) w[LIVE_OWN[k]] = v; else if (shared(k) && !Object.hasOwn(drawer, k)) { copies[k] = v; from[k] = sig(k); } else drawer[k] = v; return true; },
+        deleteProperty: (_, k) => { if (own(k)) w[LIVE_OWN[k]] = undefined; else { delete drawer[k]; if (shared(k)) { copies[k] = undefined; from[k] = sig(k); } } return true; },
         has: (_, k) => k === IS_LIVE || keys().includes(k),
         ownKeys: () => keys(),
         getOwnPropertyDescriptor: (_, k) => (keys().includes(k) ? { value: at(k), writable: true, enumerable: true, configurable: true } : undefined),

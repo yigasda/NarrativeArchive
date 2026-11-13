@@ -333,3 +333,15 @@ test('메신저 번호: 이야기에서 시작한 폰 2는 이야기의 마지�
     L.startFresh(f, { persona: 'Lio' });
     assert.equal(L.sendLive(f, L.ensureRoom(f, ['Ren']).id, 'a').n, 1);
 });
+
+test('용어집을 화면에서 고치면(채팅 메타에 써요) 열려 있는 실시간 서랍도 바로 새 용어집을 읽어요', () => {
+    const m = { phones: {}, glossary: 'Mara = 마라', glossaryPeople: ['Mara'] };
+    L.startFresh(m, { persona: 'Ren', scope: 'test' });
+    const v = L.liveMeta(m);
+    assert.equal(v.glossary, 'Mara = 마라'); assert.deepEqual(v.glossaryPeople, ['Mara']);
+    m.glossary = 'Mara = 마라\nIvo = 이보'; m.glossaryPeople = ['Mara', 'Ivo'];
+    assert.equal(v.glossary, 'Mara = 마라\nIvo = 이보'); assert.deepEqual(v.glossaryPeople, ['Mara', 'Ivo']);
+    // (what a 폰 1 function writes through the drawer still never reaches the chat's own)
+    v.glossaryPeople.push('Varo');
+    assert.deepEqual(m.glossaryPeople, ['Mara', 'Ivo']);
+});
