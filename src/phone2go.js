@@ -7,7 +7,7 @@
 
 import { ctx, saveMeta } from './core.js';
 import { askDraft, phone2Clock, aroundBlock, ownerZone, cardBlocks } from './phonedata.js';
-import { askCompress, stripThink, SECTION_GUARD } from './ai.js';
+import { askCompress, stripThink, isBlocked, SECTION_GUARD } from './ai.js';
 import { resolvePhoneProfile, ownerProfileBlock } from './phoneprofile.js';
 import { parseJson } from './phoneparse.js';
 import { nameKey } from './people.js';
@@ -19,9 +19,9 @@ import { phone2ReplySystem } from './phone2reply.js';
 import { runLive } from './phone2run.js';
 import { markPersona } from './phone2feed.js';
 import { updateLive, undoLive } from './phone2reflect.js';
-import { SHORT_PROMPT, fillPrompt, langBlock } from './prompts.js';
+import { SHORT_PROMPT, compressParts, langBlock } from './prompts.js';
 import { AI_SYS_DIGEST } from './digest.js';
-import { digestDue, digestRaw, digestRequest, takeDigest, failDigest, foldChunk, foldRequest, takeFold, failFold } from './phone2digest.js';
+import { DIGEST_STATE, digestDue, digestRaw, digestSize, digestHalves, takeDigest, failDigest, foldChunk, foldRequest, takeFold, failFold } from './phone2digest.js';
 
 // rounds of reflection after one reply at most (messages piled up while only talking: 100 a round)
 export const LIVE_GO = { rounds: 3, replyTokens: 4000, digests: 2 };
@@ -115,6 +115,10 @@ export async function liveUndo(real, owner, { onChange = () => {} } = {}) {
 // archive's short instruction, asked the way the archive's compression is: askCompress), up to LIVE_GO.digests stretches a go. A failure is noted on the room and
 // tried again after new talk or an hour; the replies go on without it. A room's summary grown long has its older half
 // made short too (the archive's digest instruction). Returns how many stretches were summarized
+// one stretch's request, put together as the archive's compression puts its own (prompts.js compressParts: the rules in
+// the system message when that setting is on, the closing check last, the language of the story's archive), with the
+// messenger's own raw log, state note and size note: { system, prompt }
+export const digestAsk = (w, chunk, tz, story = '') => { const raw = digestRaw(w, chunk.rows, tz); return compressParts(SHORT_PROMPT, { raw, from: String(chunk.from), to: String(chunk.to), state: DIGEST_STATE, archive: '' }, { text: story || '' }, '', digestSize(chunk, raw)); };
 const digesting = new WeakSet();
 export async function liveDigest(real, owner) {
     const w = liveWorld(real), p = livePhone(real, owner);
@@ -125,12 +129,27 @@ export async function liveDigest(real, owner) {
         for (; done < LIVE_GO.digests; ) {
             const next = digestDue(real, owner)[0];
             if (!next || liveWorld(real)?.id !== w.id) break;
-            const { room, chunk } = next;
+            const { room, chunk } = next, story = liveStoryText(real, w);
+            // (asked as the archive's compression asks: the request put together the same way, the same thinking level,
+            // room and refusal check; a stretch refused whole goes again as two halves, as a blocked part does there)
+            const ask = async c => { const q = digestAsk(w, c, tzOf(p), story); return stripThink(await askCompress(q.prompt, { system: q.system, keepSystem: !!q.system, guard: SECTION_GUARD })); };
             let answer;
             try {
-                const story = liveStoryText(real, w), lang = story ? langBlock(story, { tail: false }) : '';
-                // (asked as the archive's compression asks: the same thinking level, room and refusal check; its thinking and scene list off)
-                answer = stripThink(await askCompress(digestRequest(SHORT_PROMPT, fillPrompt, chunk, digestRaw(w, chunk.rows, tzOf(p)), lang), { guard: SECTION_GUARD }));
+                try { answer = await ask(chunk); }
+                catch (err) {
+                    if (!isBlocked(err) || chunk.rows.length < 4) throw err;
+                    const [a, b] = digestHalves(chunk), first = await ask(a);
+                    if (liveWorld(real)?.id !== w.id) break;
+                    if (!takeDigest(room, a, first)) { await saveMeta(); break; }
+                    await saveMeta();
+                    answer = await ask(b);
+                    if (liveWorld(real)?.id !== w.id) break;
+                    const keptB = takeDigest(room, b, answer);
+                    await saveMeta();
+                    if (!keptB) break;
+                    done++;
+                    continue;
+                }
             } catch (err) { if (liveWorld(real)?.id === w.id) { failDigest(room, err?.message || err); await saveMeta(); } throw err; }
             if (liveWorld(real)?.id !== w.id) break;
             const kept = takeDigest(room, chunk, answer);

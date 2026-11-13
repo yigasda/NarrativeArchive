@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import * as L from '../src/phone2store.js';
 import * as D from '../src/phone2digest.js';
-import { G, T } from './phone2reflect.load.mjs';
+import { G, T, P } from './phone2reflect.load.mjs';
 
 const T0 = Date.parse('2026-11-11T01:00:00Z');
 // a 폰 2 with Mara's phone and her room with Ren (the persona), `n` messages said in turn, a minute apart
@@ -90,9 +90,14 @@ test('메신저를 나갈 때: 요약 요청은 짧은 압축 지시문 + 메신
     T.digests = [SECTIONS(1, 260)]; T.answers = [{ events: [] }, { events: [] }, { events: [] }];
     assert.equal((await G.liveReflect(c.real, 'Mara')).error, '');
     assert.equal(T.digestCalls, 1);
-    assert.match(T.digestInput, /^<raw_log range="#1–#260">\n\[1\] Ren \(\d\d-\d\d \d\d:\d\d\): 말 1\n/);
-    assert.ok(T.digestInput.includes('[260] Mara') && !T.digestInput.includes('[261]'));
-    assert.ok(T.digestInput.includes(D.DIGEST_STATE) && T.digestInput.includes('DIGEST RULES #1–#260'));
+    // the request is the archive's compression request, put together by its own function: the short instruction's rules,
+    // the messenger's raw log and state note, the size note, the closing check last
+    const want = P.compressParts(P.SHORT_PROMPT, { raw: D.digestRaw(c.w, c.room.messages.slice(0, 260), 'UTC'), from: '1', to: '260', state: D.DIGEST_STATE, archive: '' }, { text: '' }, '', D.digestSize({ from: 1, to: 260, rows: c.room.messages.slice(0, 260) }, D.digestRaw(c.w, c.room.messages.slice(0, 260), 'UTC')));
+    assert.equal(T.digestInput, want.prompt); assert.equal(T.digestSys, want.system);
+    assert.ok(T.digestInput.includes('<raw_log range="#1–#260">\n[1] Ren (') && T.digestInput.includes('[260] Mara') && !T.digestInput.includes('[261]'));
+    assert.ok(T.digestInput.includes(D.DIGEST_STATE) && !T.digestInput.includes('# NEW CHAT'));
+    assert.match(T.digestInput, /\[SIZE\] #1–#260 is 260 messenger messages \(short lines, about \d+ tokens\): write roughly \d+(–\d+)? sections? for it, cutting where the talk turns\./);
+    assert.ok(T.digestInput.trimEnd().endsWith('bring it back to what the log says.'));
     assert.equal(c.room.digest.upto, 260);
     assert.equal(c.real.text, story); assert.equal(c.real.boundary, undefined); assert.equal(JSON.stringify(c.real.phones), p1);
     // leaving again: nothing due, no call
@@ -151,9 +156,34 @@ test('실제 짧은 압축 지시문에 네 자리가 그대로 있어요. 폰 1
     assert.doesNotMatch(await readFile(new URL('../src/phone2digest.js', import.meta.url), 'utf8'), /from '\.\/(?!phone2store\.js|phone2clock\.js)/);
 });
 
-test('실제 지시문 꺼내기(시험용): 짧은 압축 지시문 · 다이제스트 지시문이 글자 그대로 나와요', async () => {
-    const R = await import('./phone2digest.real.mjs'), s = await R.shortPrompt(), d = await R.digestSystem();
-    assert.ok(s.startsWith('<raw_log range="#{{from}}–#{{to}}">\n{{raw}}\n</raw_log>') && s.includes('`---`') && !s.includes('\\`'));
+test('실제 지시문 꺼내기(시험용): 다이제스트 지시문이 글자 그대로 나와요', async () => {
+    const R = await import('./phone2digest.real.mjs'), d = await R.digestSystem();
     assert.ok(d.startsWith('GOAL\nCondense a run of story-archive sections') && d.endsWith('no comments.'));
-    assert.equal(R.fillPrompt('a {{from}} {{raw}}', { from: '1', raw: 'x' }), 'a 1 x');
 });
+
+test('규칙을 시스템 메시지로 보내는 설정이 켜져 있으면 요약 요청도 그렇게 가요', async () => {
+    const c = world(300);
+    T.settings = { rulesInSystem: true };
+    try {
+        T.digests = [SECTIONS(1, 260)]; T.answers = [{ events: [] }, { events: [] }, { events: [] }];
+        await G.liveReflect(c.real, 'Mara');
+    } finally { delete T.settings; }
+    assert.ok(T.digestSys.includes('long-term memory (the archive)') && !T.digestInput.includes('long-term memory (the archive)'));
+    assert.ok(T.digestInput.includes('[The rules for this job are in the system message. Follow them.]') && T.digestInput.includes('<raw_log range="#1–#260">'));
+    assert.equal(c.room.digest.upto, 260);
+});
+
+test('통째로 막히면 반으로 나눠 두 번 물어요 (압축이 하는 대로). 한쪽만 되면 거기까지', async () => {
+    const c = world(300), refused = Object.assign(new Error('막혔어요'), { refused: true });
+    T.digests = [refused, SECTIONS(1, 130), SECTIONS(131, 260)]; T.answers = [{ events: [] }, { events: [] }, { events: [] }];
+    await G.liveReflect(c.real, 'Mara');
+    assert.equal(T.digestCalls, 3);
+    assert.deepEqual(c.room.digest.parts.map(p => [p.from, p.to]), [[1, 130], [131, 260]]);
+    assert.equal(c.room.digest.upto, 260);
+    // (a refusal of a half: what was summarized stays, the rest waits)
+    const d = world(300);
+    T.digests = [refused, SECTIONS(1, 130), refused]; T.answers = [{ events: [] }, { events: [] }, { events: [] }];
+    await G.liveReflect(d.real, 'Mara');
+    assert.equal(d.room.digest.upto, 130); assert.ok(d.room.digest.failed);
+});
+

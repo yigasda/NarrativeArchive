@@ -1,7 +1,8 @@
 // 폰 2 메신저의 오래된 대화 요약 (docs/PHONE2-PLAN.md 단계 9의 요약): 방마다, 요약 안 된 말이 DIGEST.at개 쌓이면 그중
 // 오래된 DIGEST.take개를 요약해 방에 둬요. 나머지(가장 새 것 DIGEST.at - DIGEST.take개)는 원문 그대로 남아서, 요약과
 // 원문이 겹치지 않아요. 답장 요청은 요약(CHAT SUMMARY) + 요약 안 된 원문(MESSENGER)을 보내요.
-// 요약 글을 쓰는 지시문은 아카이브 압축의 짧은 지시문 그대로예요(prompts.js SHORT_PROMPT, 부르는 쪽이 넘겨요). 그 밖의
+// 요약 글을 쓰는 지시문은 아카이브 압축의 짧은 지시문 그대로, 요청을 짜고 부르는 것도 압축이 하는 대로예요(부르는 쪽:
+// prompts.js compressParts · ai.js askCompress). 그 밖의
 // 것(언제 · 무엇을 · 어디에)은 전부 폰 2 것: 이야기 아카이브 · 경계선 · 메시지 숨기기는 읽지도 쓰지도 않아요.
 // 방의 요약이 길어지면 오래된 절반을 한 장면으로 다시 줄여요(요약의 요약, 아카이브 다이제스트의 지시문 그대로).
 // 이 파일은 폰 2 저장 자리와 시계만 불러요. 모델은 부르는 쪽이 불러요. 폰 1은 이 파일을 안 불러요.
@@ -46,9 +47,14 @@ export function digestRaw(w, rows, tz = 'UTC') {
     }
     return out.join('\n');
 }
-// the request: the instruction with its four places filled (fill: prompts.js fillPrompt), and the language line when
-// the story's archive has one (lang: prompts.js langBlock of the story 폰 2 may read, or '')
-export const digestRequest = (tpl, fill, chunk, raw, lang = '') => `${fill(tpl, { from: String(chunk.from), to: String(chunk.to), raw, state: DIGEST_STATE })}${lang || ''}`;
+// how big the summary should be, said the way the archive's compression says it ([SIZE]), counted for messenger talk:
+// its lines are short, so by tokens of raw log (a section for every 1,200 to 2,000) rather than by messages
+export function digestSize(chunk, raw) {
+    const tok = digestTok(raw), lo = Math.max(1, Math.ceil(tok / 2000)), hi = Math.max(lo, Math.ceil(tok / 1200));
+    return `\n\n[SIZE] #${chunk.from}–#${chunk.to} is ${chunk.rows.length} messenger messages (short lines, about ${Math.round(tok / 100) * 100} tokens): write roughly ${lo === hi ? `${lo} section${lo > 1 ? 's' : ''}` : `${lo}–${hi} sections`} for it, cutting where the talk turns.`;
+}
+// the two halves of a stretch the model refused whole (as the archive's compression sends a blocked part again)
+export const digestHalves = chunk => { const h = Math.ceil(chunk.rows.length / 2), cut = rows => ({ rows, from: rows[0].n, to: rows.at(-1).n }); return [cut(chunk.rows.slice(0, h)), cut(chunk.rows.slice(h))]; };
 
 // the answer's sections: what comes before a `---` line (the state part, should the model write one), a title line or a
 // code fence off; '' when it holds no section
