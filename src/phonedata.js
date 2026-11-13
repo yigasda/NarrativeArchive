@@ -1170,7 +1170,7 @@ export const phoneAt = p => { const s = p?.sync, b = s?.marks?.base?.index; retu
 const afterBlock = g => (g?.n ? `[RECENT CHAT${g.all && !g.later ? '' : ` — the story so far ends at #${nowAt(g)}; the messages after it are read later`}]\n${g.text}` : '');
 // what a phone's request reads after the archive (null: no archive, the chat goes as before)
 // p: the phone it is for (its clock bounds it); no archive: only that bound (the chat goes as before, up to it)
-export const windowOf = (m, p = null, from = null, budget = CHAT_TOKENS.phone, whole = true) => { const upto = readUpto(m, p); if (Number.isInteger(m?.phoneUpto)) return { ...(noArchive(m) ? { none: true } : {}), n: 0, all: true, upto, to: upto }; return noArchive(m) ? (upto == null ? null : { none: true, n: 0, all: true, upto }) : chatAfterArchive(m, budget, upto, from, whole); };
+export const windowOf = (m, p = null, from = null, budget = CHAT_TOKENS.phone, whole = true) => { const upto = readUpto(m, p); if (Number.isInteger(m?.phoneUpto)) return { ...(noArchive(m) ? { none: true } : {}), n: 0, all: true, upto, to: upto, mark: Math.max(upto, phoneAt(p) ?? upto) }; return noArchive(m) ? (upto == null ? null : { none: true, n: 0, all: true, upto }) : chatAfterArchive(m, budget, upto, from, whole); };
 // what the phone's reflection took from the messages after `after` up to the phone's clock: each event's summary and the
 // words it came from. The part of a long stretch a fill can't read word for word goes like this (less detailed, nothing lost)
 // null when some message there was never read by a reflection (only the making read it, or a newest-first reflection
@@ -1209,7 +1209,9 @@ export const soFarHead = (what, short, only = '') => `[${what} SO FAR — what y
 // and clock stand there too, so it never writes a day it didn't read; the reflection moves them on from there
 export const nowAt = g => (!g ? null : !g.all ? g.to : g.upto ?? null);
 // where a request read up to, when it stopped short of now: its app's mark (null: it read to now)
-export const readMark = g => { const i = nowAt(g); return i == null ? null : markAfter(i); };
+// (폰 2: g.mark, the last messenger message its reflection read. The app then knows the talk up to there, and the
+// reflection gives it what comes after; a messenger number is no chat message, so the mark carries no fingerprint)
+export const readMark = g => { if (Number.isInteger(g?.mark)) return { index: g.mark, user: -1, fp: '', tail: '' }; const i = nowAt(g); return i == null ? null : markAfter(i); };
 export const readNote = g => { if (g && !g.all) globalThis.toastr?.info(g.upto != null ? `대화가 길어서 #${g.to}까지 읽었어요. 아카이브하고 다시 만들면 나머지도 들어가요.` : `대화가 길어서 #${g.to}까지 읽었어요. 나머지는 반영하면 들어가요.`, '캐릭터 휴대폰'); };
 // the story's year: the phone's own (carried over New Year), else one written in a date in the archive, the newest status
 // lines or (no archive) the chat; none for a story that never dates itself (a fantasy calendar, an undated present)
@@ -4005,7 +4007,8 @@ export async function sideRequest(m, owner, blocks, { profile, money = false, st
     const world = worldText(m), lore = await loreFor(m, owner, profile?.type === 'lore' ? profile : null);
     const profileText = await ownerProfileBlock(ctx(),profile,owner,{money});
     const ph = m.phones?.[nameKey(owner)] || null, gap = read && 'gap' in read ? read.gap : windowOf(m, ph), upto = nowAt(gap);
-    const recent = recentOf(m, owner, 6, { upto, maxChars: 6000 });
+    // (폰 2, a request whose app marks where it read: only the talk the reflection has read, so nothing is taken twice)
+    const recent = recentOf(m, owner, 6, { upto, maxChars: 6000, ...(read && Number.isInteger(gap?.mark) ? { seen: gap.mark } : {}) });
     if (read) read.gap = gap;
     const arch = archiveBlock(m, archiveFor(m, -1, upto).text || '(empty)', 'ARCHIVE', story, upto), chat = afterBlock(gap) || (recent && !(story && noArchive(m)) ? `[RECENT CHAT]\n${recent}` : '');
     const tales = [arch, world ? `[WORLD]\n${world}` : '', lore ? `[LOREBOOK]\n${lore}` : '', chat];

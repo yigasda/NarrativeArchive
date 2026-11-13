@@ -140,11 +140,12 @@ const IS_LIVE = Symbol('폰 2 서랍');
 export const isLiveMeta = v => !!(v && typeof v === 'object' && v[IS_LIVE]);
 // text: what 폰 2 may read of the story, a function asked each time (phone2story.js liveStoryText), else ''
 // the newest messenger talk of the rooms `owner` is in, oldest first, one line a message ("Name: words"), the last `n`
-// that fit in maxChars. What 폰 1's app requests show as RECENT CHAT when they are given 폰 2's drawer
-export function liveRecent(w, owner, n = 12, { maxChars = Infinity } = {}) {
+// that fit in maxChars (seen: only up to that message number). What 폰 1's app requests show as RECENT CHAT when they
+// are given 폰 2's drawer
+export function liveRecent(w, owner, n = 12, { maxChars = Infinity, seen = null } = {}) {
     const flat = v => String(v ?? '').replace(/\s+/g, ' ').trim(), k = liveKey(owner);
     const all = Object.values(w?.messenger?.rooms || {}).filter(r => (r.members || []).some(x => liveKey(x) === k)).flatMap(r => r.messages || [])
-        .filter(x => x.call || flat(x.text)).sort((a, b) => (a.n ?? 0) - (b.n ?? 0) || (a.at ?? 0) - (b.at ?? 0)).slice(-Math.max(0, n));
+        .filter(x => (x.call || flat(x.text)) && (seen == null || (x.n ?? Infinity) <= seen)).sort((a, b) => (a.n ?? 0) - (b.n ?? 0) || (a.at ?? 0) - (b.at ?? 0)).slice(-Math.max(0, n));
     const out = [];
     let room = Math.max(0, maxChars);
     for (let i = all.length - 1; i >= 0; i--) {

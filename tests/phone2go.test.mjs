@@ -321,6 +321,17 @@ test('실시간 폰에서 폰 1의 앱 요청을 불러도 시작 뒤의 롤플 
         const side = await PD.sideRequest(d, 'Mara', ['[TARGET]\nx']);
         assert.ok(side.includes('Ren: 메신저로 한 말'));
         assert.ok(!side.includes('시작 뒤 롤플'));
+        // an app that marks where it read (투자 처음 채우기): only the talk the reflection has read, and its mark is the
+        // last message read, a messenger number (so the reflection gives the app what comes after, once)
+        const first = room.messages[0].n;
+        L.sendLive(real, room.id, '아직 반영 안 된 말');
+        p.sync = { scope: 'x', marks: { base: { index: 2, user: -1, fp: '', tail: '' } }, done: [[first, first]] };
+        const read = {};
+        const fill = await PD.sideRequest(d, 'Mara', ['[TARGET]\nx'], { read });
+        assert.ok(fill.includes('메신저로 한 말')); assert.ok(!fill.includes('아직 반영 안 된 말')); assert.ok(!fill.includes('시작 뒤 롤플'));
+        assert.deepEqual(PD.readMark(read.gap), { index: first, user: -1, fp: '', tail: '' });
+        assert.equal(PD.nowAt(read.gap), 2);
+        delete p.sync;
         // 폰 1 (the chat's own meta): as before, the chat's newest messages
         const side1 = await PD.sideRequest(real, 'Mara', ['[TARGET]\nx']);
         assert.ok(side1.includes('시작 뒤 롤플 둘')); assert.ok(!side1.includes('메신저로 한 말'));

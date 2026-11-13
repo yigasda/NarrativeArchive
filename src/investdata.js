@@ -111,7 +111,7 @@ export function investmentDate(m, p) {
     if (validDate(p.investment?.date)) return p.investment.date;
     // the phone's year (never a guess from the dates the archive writes), on the story's day where an investment fill would
     // stop reading (now, when it reads to the end)
-    const day = storyNow(p, stopAt(m, p)).slice(0, 5), year = p.noYear ? '' : p.year ? String(p.year) : '';
+    const day = String(storyNow(p, stopAt(m, p), m) || '').slice(0, 5), year = p.noYear ? '' : p.year ? String(p.year) : '';
     // (a story with no year of its own: valued at the prices of the day it was first valued, that day kept on the brokerage)
     const date = p.noYear ? new Date().toISOString().slice(0, 10) : year && day ? `${year}-${day}` : '';
     if (p.noYear && p.investment && validDate(date)) p.investment.date = date;
