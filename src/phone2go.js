@@ -5,7 +5,7 @@
 // 쌓인 대화를 한 번에 읽어요. 잘게 나눠 읽으면 같은 날 일기 · 같은 상황이 여러 번 생기고 호출도 메시지마다 3번이 돼요.
 // 폰 1은 이 파일을 안 불러요.
 
-import { ctx, saveMeta } from './core.js';
+import { ctx, saveMeta, MODULE } from './core.js';
 import { askDraft, phone2Clock, aroundBlock, ownerZone, cardBlocks } from './phonedata.js';
 import { askAI, askCompress, stripThink, isBlocked, SECTION_GUARD } from './ai.js';
 import { SCENES_SYS, parseScenes } from './scenes.js';
@@ -19,7 +19,7 @@ import { replyInput } from './phone2ask.js';
 import { phone2ReplySystem } from './phone2reply.js';
 import { runLive } from './phone2run.js';
 import { markPersona } from './phone2feed.js';
-import { updateLive, undoLive } from './phone2reflect.js';
+import { updateLive, undoLive, liveReads } from './phone2reflect.js';
 import { SHORT_PROMPT, compressParts, langBlock } from './prompts.js';
 import { AI_SYS_DIGEST } from './digest.js';
 import { DIGEST_STATE, digestDue, digestRaw, digestSize, digestHalves, scenesSystem, scenesInput, scenesNote, takeDigest, failDigest, foldChunk, foldRequest, takeFold, failFold } from './phone2digest.js';
@@ -37,11 +37,16 @@ async function cardOf(p) {
 
 // runs the waiting replies of this chat's 폰 2, one at a time, each put into its room and saved. onChange(): called
 // whenever the screen should draw again (a reply came, a job failed). Returns runLive's { ran, failed, busy }
+// whether `real` is still the open chat's (another chat was opened while a request was out: what comes back has
+// nowhere to be saved, and nothing more is asked for it)
+const open = real => { const md = ctx().chatMetadata; return !md || md[MODULE] === real; };
+// whether the 폰 2 a go began with is still there to write to
+const here = (real, w) => open(real) && liveWorld(real)?.id === w.id;
 export async function liveGo(real, { onChange = () => {} } = {}) {
     const m = () => liveMeta(real, { text: () => liveStoryText(real, liveWorld(real)) });
     const tell = () => { try { onChange(); } catch (err) { console.error('[narrative-archive] live draw', err); } };
     const out = await runLive(real, {
-        save: saveMeta,
+        save: saveMeta, alive: () => open(real),
         parse: s => parseJson(s, { salvage: true }),
         ask: (input, { system }) => askDraft(input, { force: true, system, maxTokens: LIVE_GO.replyTokens, effort: 'low' }),
         gather: async job => {
@@ -89,18 +94,18 @@ async function reflectTalk(real, owner, { onChange = () => {}, force = false } =
     reflecting.add(real);
     try {
         const profile = await ownerProfileBlock(ctx(), p.financeProfile, p.owner, { money: !!(p.money || p.investment) });
-        for (; rounds < LIVE_GO.rounds; rounds++) { if (liveWorld(real)?.id !== w.id || !await updateLive(real, m(), p.owner, { tz: tzOf(p), save: saveMeta, profile })) break; tell(); }
+        for (; rounds < LIVE_GO.rounds; rounds++) { if (!here(real, w) || !await updateLive(real, m(), p.owner, { tz: tzOf(p), save: saveMeta, profile })) break; tell(); }
         if (p.liveReflectError) { delete p.liveReflectError; await saveMeta(); }
     } catch (err) {
         console.error('[narrative-archive] live reflect', err);
         error = String(err?.message || err);
-        if (liveWorld(real)?.id === w.id) { p.liveReflectError = { at: Date.now(), why: error }; await saveMeta(); }
+        if (here(real, w)) { p.liveReflectError = { at: Date.now(), why: error }; await saveMeta(); }
     } finally { reflecting.delete(real); }
     tell();
-    return { rounds, left: liveWorld(real)?.id === w.id ? liveUnreflected(real, owner) : 0, waiting: false, error };
+    return { rounds, left: here(real, w) ? liveUnreflected(real, owner) : 0, waiting: false, error };
 }
 // how many of the owner's messenger messages 폰 2 hasn't reflected yet (for a small label, if the screen wants one)
-export const liveUnreflected = (real, owner) => { const w = liveWorld(real), p = livePhone(real, owner); if (!w || !p) return 0; const done = p.sync?.done || [], base = p.sync?.marks?.base?.index ?? (Number.isInteger(w.storyUpto) ? w.storyUpto : 0); return Object.values(w.messenger?.rooms || {}).filter(r => r.members.some(n => liveKey(n) === liveKey(owner))).flatMap(r => r.messages || []).filter(x => Number.isInteger(x.n) && x.n > base && !done.some(([a, b]) => x.n >= a && x.n <= b)).length; };
+export const liveUnreflected = (real, owner) => { const w = liveWorld(real), p = livePhone(real, owner); if (!w || !p) return 0; const done = p.sync?.done || [], base = p.sync?.marks?.base?.index ?? (Number.isInteger(w.storyUpto) ? w.storyUpto : 0); return Object.values(w.messenger?.rooms || {}).filter(r => r.members.some(n => liveKey(n) === liveKey(owner))).flatMap(r => r.messages || []).filter(x => Number.isInteger(x.n) && x.n > base && liveReads(x, owner) && !done.some(([a, b]) => x.n >= a && x.n <= b)).length; };
 
 // 방금 반영 되돌리기 (폰 2): can the owner's last round be taken back, and doing it. kept: what couldn't go back (said to
 // the user as 폰 1 says it). After it the messages wait for new talk; liveReflect(real, owner, { force: true }) reads
@@ -139,7 +144,7 @@ export async function liveDigest(real, owner) {
     try {
         for (; done < LIVE_GO.digests; ) {
             const next = digestDue(real, owner)[0];
-            if (!next || liveWorld(real)?.id !== w.id) break;
+            if (!next || !here(real, w)) break;
             const { room, chunk } = next, story = liveStoryText(real, w);
             // (asked as the archive's compression asks: the request put together the same way, the same thinking level,
             // room and refusal check; a stretch refused whole goes again as two halves, as a blocked part does there)
@@ -150,11 +155,11 @@ export async function liveDigest(real, owner) {
                 catch (err) {
                     if (!isBlocked(err) || chunk.rows.length < 4) throw err;
                     const [a, b] = digestHalves(chunk), first = await ask(a);
-                    if (liveWorld(real)?.id !== w.id) break;
+                    if (!here(real, w)) break;
                     if (!takeDigest(room, a, first)) { await saveMeta(); break; }
                     await saveMeta();
                     answer = await ask(b);
-                    if (liveWorld(real)?.id !== w.id) break;
+                    if (!here(real, w)) break;
                     const keptB = takeDigest(room, b, answer);
                     await saveMeta();
                     if (!keptB) break;
@@ -164,26 +169,26 @@ export async function liveDigest(real, owner) {
             } catch (err) {
                 // (noted on the room, which then waits; the owner's other rooms and the fold still get their turn)
                 console.error('[narrative-archive] live digest', err);
-                if (liveWorld(real)?.id !== w.id) break;
+                if (!here(real, w)) break;
                 failDigest(room, err?.message || err); await saveMeta();
                 if (++failures >= 3) break;
                 continue;
             }
-            if (liveWorld(real)?.id !== w.id) break;
+            if (!here(real, w)) break;
             const kept = takeDigest(room, chunk, answer);
             await saveMeta();
             if (!kept) break;
             done++;
         }
         // 요약의 요약: one room whose summary has grown long has its older half made short (one a go)
-        const long = liveWorld(real)?.id === w.id ? Object.values(w.messenger?.rooms || {}).filter(r => r.members.some(n => liveKey(n) === liveKey(owner))).map(room => ({ room, chunk: foldChunk(room) })).find(x => x.chunk) : null;
+        const long = here(real, w) ? Object.values(w.messenger?.rooms || {}).filter(r => r.members.some(n => liveKey(n) === liveKey(owner))).map(room => ({ room, chunk: foldChunk(room) })).find(x => x.chunk) : null;
         if (long) {
             let answer;
             try {
                 const story = liveStoryText(real, w);
                 answer = stripThink(await askCompress(foldRequest(long.chunk, story ? langBlock(story, { tail: false, src: '' }) : ''), { system: AI_SYS_DIGEST }));
-            } catch (err) { console.error('[narrative-archive] live fold', err); if (liveWorld(real)?.id === w.id) { failFold(long.room, err?.message || err); await saveMeta(); } return done; }
-            if (liveWorld(real)?.id === w.id) { takeFold(long.room, long.chunk, answer); await saveMeta(); }
+            } catch (err) { console.error('[narrative-archive] live fold', err); if (here(real, w)) { failFold(long.room, err?.message || err); await saveMeta(); } return done; }
+            if (here(real, w)) { takeFold(long.room, long.chunk, answer); await saveMeta(); }
         }
     } finally { digesting.delete(real); }
     return done;

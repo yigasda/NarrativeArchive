@@ -262,3 +262,39 @@ test('해가 바뀐 뒤의 반영: 되돌리면 연도도 돌아오고, 실패�
 test('폰 1은 이 파일을 안 불러요', async () => {
     for (const f of (await readdir(new URL('../src/', import.meta.url))).filter(f => f.endsWith('.js') && f !== 'phone2go.js' && f !== 'phone.js')) assert.doesNotMatch(await readFile(new URL(`../src/${f}`, import.meta.url), 'utf8'), /phone2go/, f);
 });
+
+test('말도 한 일도 없이 상태만 바뀐 답은 반영할 게 아니에요: 반영한 뒤 "안 읽은 대화"가 남지 않아요', async () => {
+    const c = world();
+    send(c, '자냐');
+    T.replies = [{ state: '02:10 · 집 · 침대', reply: [], does: [] }];
+    await G.liveGo(c.real);
+    assert.equal(c.room.messages.length, 2); assert.ok(c.room.messages[1].act);
+    assert.equal(G.liveUnreflected(c.real, 'Mara'), 1);          // the persona's own line only
+    T.answers = [{ events: [] }];
+    const r = await G.liveReflect(c.real, 'Mara');
+    assert.equal(r.left, 0); assert.equal(G.liveUnreflected(c.real, 'Mara'), 0);
+});
+
+test('요청이 나가 있는 사이 다른 채팅을 열면 더 묻지 않아요. 답은 못 넣고, 일은 돌아왔을 때 다시 해요', async () => {
+    const c = world();
+    T.metadata = { narrative_archive: c.real };
+    try {
+        send(c, '하나'); send(c, '둘');
+        let asked = 0;
+        // (the first answer comes back after another chat was opened)
+        T.ask = async () => { asked++; T.metadata = { narrative_archive: {} }; return JSON.stringify({ state: '집', reply: ['응'], does: [] }); };
+        const r = await G.liveGo(c.real);
+        assert.equal(asked, 1); assert.equal(r.ran, 0);
+        assert.deepEqual(c.room.messages.map(x => x.text), ['하나', '둘']);
+        assert.ok(L.liveWorld(c.real).queue.jobs.every(j => j.state === 'waiting'));
+        // reflection and summaries: nothing is asked for a chat that isn't open
+        asked = 0;
+        const out = await G.liveReflect(c.real, 'Mara', { force: true });
+        assert.equal(asked, 0); assert.equal(out.rounds, 0);
+        // back in the chat: the reply is asked again
+        T.metadata = { narrative_archive: c.real };
+        T.ask = async () => { asked++; return JSON.stringify({ state: '집', reply: ['응'], does: [] }); };
+        await G.liveGo(c.real);
+        assert.ok(asked >= 1); assert.ok(c.room.messages.some(x => x.text === '응'));
+    } finally { delete T.ask; delete T.metadata; }
+});

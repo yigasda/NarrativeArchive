@@ -52,14 +52,15 @@ export function takeReply(m, owner, roomId, answer, { now = Date.now(), parse = 
 // why; the user sees it and lets the line go on). Returns { ran, failed }. One runner a chat at a time: a second call
 // while one runs does nothing ({ ran: 0, busy: true }).
 const running = new WeakSet();
-export async function runLive(m, { gather, ask, save = async () => {}, now = () => Date.now(), parse = null, after = null } = {}) {
+export async function runLive(m, { gather, ask, save = async () => {}, now = () => Date.now(), parse = null, after = null, alive = () => true } = {}) {
     if (!m || running.has(m)) return { ran: 0, failed: null, busy: true };
     running.add(m);
     let ran = 0, failed = null;
     try {
         // (a job a closed page left running: nothing runs it, it waits again)
         reviveJobs(m);
-        for (let job = nextJob(m); job; job = nextJob(m)) {
+        // (alive: false once the chat this is for is no longer the open one; the jobs left wait for it to come back)
+        for (let job = alive() && nextJob(m); job; job = alive() && nextJob(m)) {
             try {
                 if (job.kind !== 'reply') throw new Error(`아직 할 수 없는 일이에요: ${job.kind}`);
                 const req = await gather(job);
@@ -68,6 +69,8 @@ export async function runLive(m, { gather, ask, save = async () => {}, now = () 
                     const answer = await ask(req.input, { system: req.system });
                     // (the 폰 2 this was for is gone or another: the answer is dropped, nothing is put in)
                     if (liveWorld(m)?.id !== job.world) { finishJob(m, job); continue; }
+                    // (the chat was left while this was asked: nothing is saved there now; the job is asked again when it is open)
+                    if (!alive()) { job.state = 'waiting'; break; }
                     got = takeReply(m, job.owner, job.room, answer, { now: now(), parse });
                 }
                 finishJob(m, job);
