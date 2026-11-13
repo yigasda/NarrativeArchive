@@ -635,7 +635,7 @@ export function setScreen(p, now, m, ui) {
           <button type="button" class="ax_rw" data-go="setsync">${si('#89b892', 'cmt')}<span class="ax_tx"><span class="ax_n">대화 반영 설정</span></span><span class="ax_v">${p.sync?.order === 'newest' ? '최신부터' : '오래된 순'} · ${p.sync?.limit || 12}개</span>${axChev}</button>
           <button type="button" class="ax_rw na_ph_setupd">${si('#8faed1', 'redo')}<span class="ax_tx"><span class="ax_n">새로 일어난 일 반영</span></span><span class="ax_v">${ui.syncN ? `남은 ${ui.syncN}개` : ''}</span></button>
         </div>
-        ${ui.phones?.live ? '' : '<div class="ax_foot">롤플에 넣기를 켜면 이 폰의 최근 문자 · 일정이 주입돼요.</div>'}
+        <div class="ax_foot">롤플에 넣기를 켜면 이 폰의 최근 문자 · 일정이 주입돼요.</div>
         <div class="ax_card">
           <button type="button" class="ax_rw ax_rwn" data-go="setremake"><span class="ax_tx"><span class="ax_n ax_blue">다시 만들기</span></span>${axChev}</button>
           <button type="button" class="ax_rw ax_rwn na_ph_storyreset"><span class="ax_tx"><span class="ax_n ax_red">이 방의 폰 새로 시작</span></span></button>
@@ -694,8 +694,8 @@ export function setDate(p, now, m = null, ui = {}) {
         <div class="ax_card"><button type="button" class="ax_rw ax_rwn na_ph_yearshow"><span class="ax_tx"><span class="ax_n">연도 표시</span></span><span class="ax_sw ${on ? 'on' : ''}"></span></button>
           ${on ? row('연도', `<span class="ax_ys">${step(-1, '−')}<b class="cg_num na_ph_yval">${esc(String(p.year || ''))}</b>${step(1, '+')}</span>`) : ''}</div>
         <div class="ax_foot">연도를 알아야 요일이 맞게 나와요. 연도 없는 이야기만 꺼 주세요.</div>
-        ${ui.phones?.live ? '' : `<div class="ax_card"><button type="button" class="ax_rw ax_rwn" data-go="setscreenholder"><span class="ax_tx"><span class="ax_n">메신저 시간대</span></span><span class="ax_v">${esc(screenHolderLabel(m) || '미설정')}</span>${ax('chev', 16, '#bfc2c7')}</button></div>
-        <div class="ax_foot">캐릭터와 주고받는 메시지의 시간이 누구를 기준으로 하는지 골라 주세요.</div>`}
+        <div class="ax_card"><button type="button" class="ax_rw ax_rwn" data-go="setscreenholder"><span class="ax_tx"><span class="ax_n">메신저 시간대</span></span><span class="ax_v">${esc(screenHolderLabel(m) || '미설정')}</span>${ax('chev', 16, '#bfc2c7')}</button></div>
+        <div class="ax_foot">캐릭터와 주고받는 메시지의 시간이 누구를 기준으로 하는지 골라 주세요.</div>
         ${(o => `<div class="ax_sec">날짜 읽는 법</div><div class="ax_card"><div class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_n">순서</span></span><span class="ax_dseg">${[['md', '월.일'], ['dm', '일.월']].map(([v, t]) => `<span role="button" tabindex="0" class="na_ph_dord${o === v ? ' on' : ''}" data-v="${v}">${t}</span>`).join('')}</span></div></div>
         <div class="ax_foot">03.11. → ${o === 'dm' ? '11월 3일' : '3월 11일'}</div>`)(dateOrderOf(m))}
       </div>

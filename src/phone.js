@@ -41,8 +41,9 @@ import { orbitList, orbitRoom, orbitNew, orbitHomeWidget, liveStart } from './ph
 import { liveStoryText, beginFromStory, liveBranched, adoptChat, rebeginFromStory } from './phone2story.js';
 import { liveGo, liveReflect, liveCanUndo, liveUndo, liveUnreflected } from './phone2go.js';
 
-// other files keep importing these from here
-export { phoneBlock } from './phonedata.js';
+// other files keep importing these from here (주입: 실시간 폰의 폰들도 같이, 주입이 꺼진 폰은 빼고)
+import { phoneBlock as phoneBlock0 } from './phonedata.js';
+export const phoneBlock = m => phoneBlock0(m, Object.values(liveWorld(m)?.phones || {}));
 
 // what 초안 모델's screen shows (the key only by its last four)
 const draftUi = () => { const t = draftSettings(); let host = ''; try { host = t.url ? new URL(t.url).host : ''; } catch { host = t.url; }
@@ -256,9 +257,10 @@ export async function openPhone(who = null) {
       </div>`);
     const setSheet = on => { sheetOpen = on; $root.find('.na_phl_sheet, .na_phl_shade').prop('hidden', !on); };
     const phone = () => (owner ? (live() ? livePhone(realM, owner) : m.phones[nameKey(owner)]) : null);
-    // 실시간: 타임라인's data buttons (반영 · 되돌리기 · 복구 · 다시 만들기 · 빼기, and 연도 화살표: each
-    // reflection sets the year by the real date) are off; a tap on one that is left does nothing
-    const LIVE_OFF = '.na_ph_screenholder, [data-go=setscreenholder], .na_ph_setupd, .na_ph_setinj, .na_ph_setremake, [data-go=setremake], [data-go=setsync], .na_ph_storyreset, .na_ph_setdel, .na_sync_restore, .na_sync_drop, .na_sync_undo, .na_ph_ystep';
+
+    // 실시간: 타임라인's 반영 · 반영 설정 · 되돌리기 · 복구 · 빼기 and 앱 다시 만들기 are off (소망: everything else is on
+    // both phones); a tap on one that is left does nothing
+    const LIVE_OFF = '.na_ph_setupd, .na_ph_setremake, [data-go=setremake], [data-go=setsync], .na_ph_storyreset, .na_sync_restore, .na_sync_drop, .na_sync_undo';
     $root.on('click', LIVE_OFF, e => { if (live()) { e.preventDefault(); e.stopImmediatePropagation(); } });
     // the Korean of what the phone has in another language (phonetr.js): after a reflection, from its report, or when
     // 한국어 is pressed. A failure is marked on the report (번역 못 함 · 다시 하기); the reflection itself stays
@@ -774,7 +776,7 @@ export async function openPhone(who = null) {
         if (typingNow) obFocus();
     } }).catch(err => console.error('[narrative-archive] live go', err));
     // 반영(소망 결정): 메신저를 나갈 때만 · 폰을 닫을 때 · 타임라인으로 바꿀 때. 실시간 폰의 인물마다 쌓인 대화를 한 번에(읽을 게 없으면 바로 끝)
-    const obReflect = () => { const w = liveWorld(realM); if (!w) return; (async () => { for (const p of Object.values(w.phones || {})) if (p?.owner) { const r = await liveReflect(realM, p.owner, { onChange: () => { if (!phoneClosed && stillHere() && live()) drawPhone(true); } }); if (r?.rounds && koOn()) { const q = livePhone(realM, p.owner); if (q) await koRun(q, false, p.owner); } } })().catch(err => console.error('[narrative-archive] live reflect', err)); };
+    const obReflect = () => { const w = liveWorld(realM); if (!w) return; (async () => { for (const p of Object.values(w.phones || {})) if (p?.owner) { const r = await liveReflect(realM, p.owner, { onChange: () => { if (!phoneClosed && stillHere() && live()) drawPhone(true); } }); if (r?.rounds) { const q = livePhone(realM, p.owner); if (q) await koRun(q, false, p.owner); } } })().catch(err => console.error('[narrative-archive] live reflect', err)); };
     // 실시간 폰 설정 › 지난 반영: 방금 반영 되돌리기 · 다시 반영 (다른 폰 작업 중엔 폰 1 되돌리기처럼 막아요)
     $root.on('click', '.na_live_undo', async e => {
         e.stopPropagation();
@@ -1036,7 +1038,6 @@ export async function openPhone(who = null) {
         const $b = $(e.currentTarget);
         koHold = setTimeout(async () => {
             koHeld = true;
-            if (live()) return;
             const p = phone();
             if (!p || making || koBusy) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요');
             // (this screen's lines only: one chat, one note, one page …; a list screen its app's newest 40; 설정 the whole phone, asked first)
@@ -1675,7 +1676,7 @@ export async function openPhone(who = null) {
         if (making || busyMake || investing || filling.size || busy.fill || busy.sync) return toastr.info('반영이 끝난 뒤 바꿔 주세요', '캐릭터 휴대폰');
         const value = this.dataset.n;
         if (value !== '' && !screenHolderChoices(m).some(x => x.name === value)) return;
-        if (getMeta() !== realM || live()) return;
+        if (getMeta() !== realM) return;
         await setScreenHolder(m, value);
         if (!phoneClosed && getMeta() === realM) { view = phone() ? 'setdate' : 'prep'; drawPhone(); }
     });
@@ -1732,7 +1733,7 @@ export async function openPhone(who = null) {
         const was = phone()?.inject;
         delete m.phones[nameKey(owner)];
         // its unsaved rounds (복구) go with it
-        try { const sc = phoneChatScope(ctx()); journalWrite(sc, journalRead(sc).filter(r => nameKey(r.owner) !== nameKey(owner))); } catch { /* no journal here */ }
+        try { const sc = typeof m.phoneJournal === 'string' ? m.phoneJournal : phoneChatScope(ctx()); journalWrite(sc, journalRead(sc).filter(r => nameKey(r.owner) !== nameKey(owner))); } catch { /* no journal here */ }
         view = 'lock'; draw();
         await saveMeta();
         if (was) applyInjection();
