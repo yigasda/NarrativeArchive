@@ -71,7 +71,8 @@ export async function updateLive(real, m, owner, { tz = 'UTC', save = async () =
         // phone had, and 되돌리기 goes back to it too)
         const yearWas = p.year;
         let went = false;
-        if (!p.noYear) p.year = wall.year;
+        // (a year the user picked on this phone: kept that far from the real one)
+        if (!p.noYear) p.year = wall.year + (Number(p.liveYearShift) || 0);
         try {
         const known = p.year && !p.noYear ? String(p.year) : '', year = known || String(new Date().getFullYear());
         const anchor = `${year}-${nowAt.slice(0, 5)}`;

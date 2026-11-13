@@ -175,16 +175,19 @@ export function liveMeta(m, { text = null } = {}) {
     // (phoneUpto · phoneRecent: what 폰 1's app requests read of the talk. The role-play chat only up to where 폰 2 began
     // (none of it for one begun fresh), and for the newest talk the messenger's, never the chat's)
     const upto = () => (w.from === 'story' && Number.isInteger(w.storyUpto) ? w.storyUpto : -1);
-    const at = k => (k === 'phones' ? tagLive(w.phones) : own(k) ? w[LIVE_OWN[k]] : Object.hasOwn(drawer, k) ? drawer[k] : k === 'text' ? story() : k === 'phoneJournal' ? (liveScope(w.scope || 'live', m) || 'live') : k === 'phoneUpto' ? upto() : k === 'phoneRecent' ? (owner, n, o) => liveRecent(w, owner, n, o) : shared(k) ? copy(k) : undefined);
-    const keys = () => [...new Set([...Object.keys(LIVE_OWN).filter(k => w[LIVE_OWN[k]] !== undefined), ...LIVE_SHARED.filter(k => m[k] !== undefined), 'text', ...Object.keys(drawer)])];
+    // (화면 주인, the chat's one setting of whose view the story's status line is: the same for 타임라인 and 실시간, so it
+    // is read from and written to the chat's own meta)
+    const pass = k => k === 'phoneScreenHolder';
+    const at = k => (pass(k) ? m[k] : k === 'phones' ? tagLive(w.phones) : own(k) ? w[LIVE_OWN[k]] : Object.hasOwn(drawer, k) ? drawer[k] : k === 'text' ? story() : k === 'phoneJournal' ? (liveScope(w.scope || 'live', m) || 'live') : k === 'phoneUpto' ? upto() : k === 'phoneRecent' ? (owner, n, o) => liveRecent(w, owner, n, o) : shared(k) ? copy(k) : undefined);
+    const keys = () => [...new Set([...Object.keys(LIVE_OWN).filter(k => w[LIVE_OWN[k]] !== undefined), ...LIVE_SHARED.filter(k => m[k] !== undefined), 'text', ...Object.keys(drawer), ...(Object.hasOwn(m, 'phoneScreenHolder') ? ['phoneScreenHolder'] : [])])];
     return new Proxy(drawer, {
         get: (_, k) => (k === IS_LIVE ? true : typeof k === 'symbol' ? undefined : at(k)),
-        set: (_, k, v) => { if (own(k)) w[LIVE_OWN[k]] = v; else if (shared(k) && !Object.hasOwn(drawer, k)) { copies[k] = v; from[k] = sig(k); } else drawer[k] = v; return true; },
-        deleteProperty: (_, k) => { if (own(k)) w[LIVE_OWN[k]] = undefined; else { delete drawer[k]; if (shared(k)) { copies[k] = undefined; from[k] = sig(k); } } return true; },
+        set: (_, k, v) => { if (pass(k)) m[k] = v; else if (own(k)) w[LIVE_OWN[k]] = v; else if (shared(k) && !Object.hasOwn(drawer, k)) { copies[k] = v; from[k] = sig(k); } else drawer[k] = v; return true; },
+        deleteProperty: (_, k) => { if (pass(k)) delete m[k]; else if (own(k)) w[LIVE_OWN[k]] = undefined; else { delete drawer[k]; if (shared(k)) { copies[k] = undefined; from[k] = sig(k); } } return true; },
         has: (_, k) => k === IS_LIVE || keys().includes(k),
         ownKeys: () => keys(),
         getOwnPropertyDescriptor: (_, k) => (keys().includes(k) ? { value: at(k), writable: true, enumerable: true, configurable: true } : undefined),
-        defineProperty: (_, k, d) => { if ('value' in d) { if (own(k)) w[LIVE_OWN[k]] = d.value; else drawer[k] = d.value; } return true; },
+        defineProperty: (_, k, d) => { if ('value' in d) { if (pass(k)) m[k] = d.value; else if (own(k)) w[LIVE_OWN[k]] = d.value; else drawer[k] = d.value; } return true; },
     });
 }
 

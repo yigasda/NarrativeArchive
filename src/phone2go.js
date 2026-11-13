@@ -6,6 +6,7 @@
 // 폰 1은 이 파일을 안 불러요.
 
 import { ctx, saveMeta, MODULE } from './core.js';
+import { applyInjection } from './inject.js';
 import { askDraft, phone2Clock, aroundBlock, ownerZone, cardBlocks } from './phonedata.js';
 import { askAI, askCompress, stripThink, isBlocked, SECTION_GUARD } from './ai.js';
 import { SCENES_SYS, parseScenes } from './scenes.js';
@@ -106,6 +107,8 @@ async function reflectTalk(real, owner, { onChange = () => {}, force = false } =
         const profile = await ownerProfileBlock(ctx(), p.financeProfile, p.owner, { money: !!(p.money || p.investment) });
         for (; rounds < LIVE_GO.rounds; rounds++) { if (!here(real, w) || !await updateLive(real, m(), p.owner, { tz: tzOf(p), save: saveMeta, profile, alive: () => open(real) })) break; tell(); }
         if (p.liveReflectError) { delete p.liveReflectError; await saveMeta(); }
+        // (롤플에 넣기 is on for this phone: what the round put in goes into the role-play's prompt)
+        if (rounds && p.inject && open(real)) applyInjection();
     } catch (err) {
         console.error('[narrative-archive] live reflect', err);
         error = String(err?.message || err);

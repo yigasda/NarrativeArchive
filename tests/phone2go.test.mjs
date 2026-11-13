@@ -389,3 +389,41 @@ test('되돌리기 뒤에 상태만 바뀐 답(말도 한 일도 없음)이 와�
     const r = await G.liveReflect(c.real, 'Mara');
     assert.equal(r.held, true); assert.equal(T.calls, calls);
 });
+
+test('실시간 폰에서 연도를 직접 고르면 반영이 실제 연도로 덮어쓰지 않아요 (고른 만큼 차이를 지키고, 해가 바뀌면 같이 넘어가요)', async () => {
+    const c = world();
+    c.p.now = '11-10 22:00'; c.p.year = 2026;
+    // (the user picks 2031 in 날짜 및 시간: five years ahead of the real year the phone had)
+    PD.setStoryYear(c.m, c.p, 2031);
+    assert.equal(c.p.year, 2031); assert.equal(c.p.liveYearShift, 5);
+    c.room.messages.push({ id: 'a', n: L.liveNo(L.liveWorld(c.real)), from: 'Ren', text: '안녕', at: Date.parse('2026-11-11T01:00:00Z') });
+    T.answers = [{ events: [] }];
+    assert.equal((await G.liveReflect(c.real, 'Mara')).error, '');
+    assert.equal(c.p.year, 2031);
+    c.room.messages.push({ id: 'b', n: L.liveNo(L.liveWorld(c.real)), from: 'Ren', text: '새해 복', at: Date.parse('2027-01-01T00:05:00Z') });
+    T.answers = [{ events: [] }];
+    assert.equal((await G.liveReflect(c.real, 'Mara')).error, '');
+    assert.equal(c.p.year, 2032);
+    // back to the real year
+    PD.setStoryYear(c.m, c.p, 2027);
+    assert.equal(c.p.liveYearShift, undefined); assert.equal(c.p.year, 2027);
+});
+
+test('주입: 실시간 폰에서 켜면 그 폰도 롤플에 넣는 글에 들어가요 (따로 적힌 칸으로). 꺼져 있으면 폰 1 글 그대로예요', () => {
+    const one = { owner: 'Mara', inject: true, now: '10-26 12:00', contacts: [], calls: [], events: [], notes: [{ title: '폰 1 메모', text: 'x' }], threads: [] };
+    const two = { owner: 'Mara', inject: false, now: '11-12 21:30', contacts: [], calls: [], events: [], notes: [{ title: '실시간 메모', text: 'y' }], threads: [] };
+    const m = { phones: { mara: one } };
+    const before = PD.phoneBlock(m);
+    assert.ok(before.includes('폰 1 메모'));
+    // off on the live phone: letter for letter what it was
+    assert.equal(PD.phoneBlock(m, [two]), before);
+    assert.equal(PD.phoneBlock(m, []), before); assert.equal(PD.phoneBlock(m, null), before);
+    two.inject = true;
+    const both = PD.phoneBlock(m, [two]);
+    assert.ok(both.startsWith(before));
+    assert.match(both, /\n\n# PHONES NOW \(messenger\)\n_[^\n]+_\n## Mara's phone \(as of 11-12 21:30\)\n- Notes: 실시간 메모$/);
+    // only the live phone on
+    one.inject = false;
+    const only = PD.phoneBlock(m, [two]);
+    assert.ok(!only.includes('폰 1 메모') && !only.includes('# PHONES\n') && only.includes('# PHONES NOW (messenger)'));
+});

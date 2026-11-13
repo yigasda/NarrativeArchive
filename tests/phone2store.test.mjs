@@ -170,17 +170,18 @@ test('폰 2 서랍: 폰 1의 것은 하나도 안 보여요 (같이 쓰는 용�
     const v = L.liveMeta(m);
     assert.ok(L.isLiveMeta(v));
     assert.equal(L.isLiveMeta(m), false);
-    assert.doesNotMatch(JSON.stringify(v), /POISON1/);
-    for (const k of Object.keys(poisoned1())) assert.doesNotMatch(JSON.stringify(v[k] ?? null), /POISON1/, k);
+    assert.doesNotMatch(JSON.stringify({ ...v, phoneScreenHolder: undefined }), /POISON1/);
+    // (화면 주인 is the chat's one setting, the same for both phones: the drawer reads and writes the chat's own)
+    for (const k of Object.keys(poisoned1()).filter(k => k !== 'phoneScreenHolder')) assert.doesNotMatch(JSON.stringify(v[k] ?? null), /POISON1/, k);
     assert.deepEqual(Object.keys(v.phones), ['ren']);
     assert.equal(v.text, '');
     assert.equal(v.people, undefined);
-    assert.equal(v.phoneScreenHolder, undefined);
+    assert.equal(v.phoneScreenHolder, m.phoneScreenHolder);
     assert.equal(v.live, undefined);
     assert.deepEqual(v.glossary, { Seoul: '서울' });
     assert.notEqual(v.glossary, m.glossary);
     assert.equal('phones' in v, true);
-    assert.equal('phoneScreenHolder' in v, false);
+    assert.equal('phoneScreenHolder' in v, true);
     assert.deepEqual({ ...v }.phones, v.phones);
 });
 test('폰 2 서랍: 쓰면 폰 2에만 (폰 1은 글자 하나 안 바뀌어요)', () => {
@@ -193,7 +194,6 @@ test('폰 2 서랍: 쓰면 폰 2에만 (폰 1은 글자 하나 안 바뀌어요)
     v.phoneProfiles.ren = { label: 'r' };
     v.lastPhoneOwner = 'Ren';
     v.people = ['Ivo'];
-    v.phoneScreenHolder = 'Ren';
     v.text = 'x';
     v.glossary.Seoul = 'SEOUL';
     v.dateOrder = 'dmy';
@@ -359,4 +359,21 @@ test('실시간 폰의 폰 객체에는 표시가 붙어요 (저장 · 복사에
     assert.equal(JSON.stringify(v.phones.mara), '{"owner":"Mara","now":"11-12 10:00"}');
     assert.equal(structuredClone(v.phones.mara)[LIVE], undefined);
     assert.deepEqual(Object.keys(v.phones.mara), ['owner', 'now']);
+});
+
+test('화면 주인은 채팅에 하나: 실시간 서랍에서 읽고 고치면 채팅의 값이에요 (타임라인과 같은 값)', () => {
+    const m = { phones: {}, phoneScreenHolder: 'Mara' };
+    L.startFresh(m, { persona: 'Ren', scope: 'test' });
+    const v = L.liveMeta(m);
+    assert.equal(v.phoneScreenHolder, 'Mara'); assert.equal(Object.hasOwn(v, 'phoneScreenHolder'), true);
+    v.phoneScreenHolder = 'Ivo';
+    assert.equal(m.phoneScreenHolder, 'Ivo'); assert.equal(v.phoneScreenHolder, 'Ivo');
+    assert.doesNotMatch(JSON.stringify(m.live), /Ivo/);
+    // (a chat that never set it: not there, and set through the drawer it is the chat's)
+    const n = { phones: {} };
+    L.startFresh(n, { persona: 'Ren', scope: 'test' });
+    const u = L.liveMeta(n);
+    assert.equal(Object.hasOwn(u, 'phoneScreenHolder'), false);
+    u.phoneScreenHolder = '';
+    assert.equal(Object.hasOwn(n, 'phoneScreenHolder'), true);
 });
