@@ -51,7 +51,7 @@ body.na_darkui .na_ask2 .na_ask2_ans { background: #232328; box-shadow: inset 0 
 .na_sf3_seg button b:empty { display: none; }
 .na_sf3_trrow { display: flex; justify-content: flex-end; margin: -2px 0 -4px; }
 .na_sf3 .na_sf_view { padding: 0; max-height: min(46vh, 420px); background: transparent; border: 0; }
-.na_sf3 .na_sf_plain { padding: 10px 12px; border-radius: 12px; --axr: 12px; background: var(--na-card2); font-family: ui-monospace, var(--monoFontFamily, monospace); --axff: ui-monospace, var(--monoFontFamily, monospace); font-size: 12px; --axfs: 12px; line-height: 1.6}
+.na_sf3 .na_sf_plain { display: block; padding: 10px 12px; border-radius: 12px; --axr: 12px; background: var(--na-card2); font-family: ui-monospace, var(--monoFontFamily, monospace); --axff: ui-monospace, var(--monoFontFamily, monospace); font-size: 12px; --axfs: 12px; line-height: 1.6}
 .na_sf3 .na_sf_log { align-items: stretch; }
 .na_sf3 .na_ly_ask { border: 0; background: var(--na-card2); border-radius: 999px; --axr: 999px; padding: 4px 4px 4px 14px}
 .na_sf3 .na_ly_ask:focus-within { box-shadow: 0 0 0 2px color-mix(in srgb, var(--na-accent) 35%, transparent); }
