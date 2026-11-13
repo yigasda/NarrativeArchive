@@ -224,3 +224,34 @@ test('장면 시작 번호가 이 방의 메시지가 아니면 그다음 메시
     assert.ok(D.scenesNote(chunk, [{ start: 6, note: '뒤' }]).includes('- #1–#5\n- #6–#12 뒤'));
     assert.equal(D.scenesNote(chunk, [{ start: 1, note: '하나뿐' }]), null);
 });
+
+test('같은 곳에서 연달아 실패하면 점점 오래 기다려요: 1시간 → 4시간 → 16시간 → 하루. 새 말이 쌓여도 안 당겨져요', () => {
+    const c = world(300), H = D.DIGEST.waitMs;
+    D.failDigest(c.room, '막힘', T0);
+    c.add(20); assert.ok(D.digestChunk(c.room, T0 + 1000));                       // first failure: new talk is enough
+    D.failDigest(c.room, '막힘', T0);                                              // second in a row
+    c.add(40); assert.equal(D.digestChunk(c.room, T0 + H), null);
+    assert.ok(D.digestChunk(c.room, T0 + 4 * H));
+    D.failDigest(c.room, '막힘', T0); assert.equal(D.digestChunk(c.room, T0 + 15 * H), null); assert.ok(D.digestChunk(c.room, T0 + 16 * H));
+    D.failDigest(c.room, '막힘', T0); D.failDigest(c.room, '막힘', T0);
+    assert.equal(c.room.digest.failed.tries, 5);
+    assert.equal(D.digestChunk(c.room, T0 + 23 * H), null); assert.ok(D.digestChunk(c.room, T0 + 24 * H));
+    // a summary that works starts the count again
+    const ch = D.digestChunk(c.room, T0 + 24 * H);
+    assert.ok(D.takeDigest(c.room, ch, SECTIONS(ch.from, ch.to), T0)); assert.equal(c.room.digest.failed, undefined);
+    // the fold waits the same way
+    D.failFold(c.room, '막힘', T0); D.failFold(c.room, '막힘', T0);
+    assert.equal(c.room.digest.foldFailed.tries, 2);
+});
+
+test('한 방의 요약이 실패해도 다른 방은 요약해요', async () => {
+    const c = world(300);
+    const other = L.ensureRoom(c.real, ['Mara', 'Ivo']);
+    for (let i = 0; i < 300; i++) { const no = L.liveNo(c.w); other.messages.push({ id: `m${no}`, n: no, from: no % 2 ? 'Ren' : 'Ivo', text: `말 ${no}`, at: T0 + no * 60_000 }); }
+    const [first, second] = [c.room, other];
+    T.digests = [new Error('모델이 막았어요'), SECTIONS(301, 560), SECTIONS(1, 260)];
+    T.answers = Array.from({ length: 8 }, () => ({ events: [] }));
+    await G.liveReflect(c.real, 'Mara');
+    const ok = [first, second].filter(r => (r.digest?.upto ?? -1) > 0), bad = [first, second].filter(r => r.digest?.failed);
+    assert.equal(bad.length, 1); assert.equal(ok.length, 1);
+});

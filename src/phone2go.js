@@ -134,7 +134,7 @@ const digesting = new WeakSet();
 export async function liveDigest(real, owner) {
     const w = liveWorld(real), p = livePhone(real, owner);
     if (!w || !p || digesting.has(real)) return 0;
-    let done = 0;
+    let done = 0, failures = 0;
     digesting.add(real);
     try {
         for (; done < LIVE_GO.digests; ) {
@@ -161,7 +161,14 @@ export async function liveDigest(real, owner) {
                     done++;
                     continue;
                 }
-            } catch (err) { if (liveWorld(real)?.id === w.id) { failDigest(room, err?.message || err); await saveMeta(); } throw err; }
+            } catch (err) {
+                // (noted on the room, which then waits; the owner's other rooms and the fold still get their turn)
+                console.error('[narrative-archive] live digest', err);
+                if (liveWorld(real)?.id !== w.id) break;
+                failDigest(room, err?.message || err); await saveMeta();
+                if (++failures >= 3) break;
+                continue;
+            }
             if (liveWorld(real)?.id !== w.id) break;
             const kept = takeDigest(room, chunk, answer);
             await saveMeta();
@@ -175,7 +182,7 @@ export async function liveDigest(real, owner) {
             try {
                 const story = liveStoryText(real, w);
                 answer = stripThink(await askCompress(foldRequest(long.chunk, story ? langBlock(story, { tail: false, src: '' }) : ''), { system: AI_SYS_DIGEST }));
-            } catch (err) { if (liveWorld(real)?.id === w.id) { failFold(long.room, err?.message || err); await saveMeta(); } throw err; }
+            } catch (err) { console.error('[narrative-archive] live fold', err); if (liveWorld(real)?.id === w.id) { failFold(long.room, err?.message || err); await saveMeta(); } return done; }
             if (liveWorld(real)?.id === w.id) { takeFold(long.room, long.chunk, answer); await saveMeta(); }
         }
     } finally { digesting.delete(real); }
