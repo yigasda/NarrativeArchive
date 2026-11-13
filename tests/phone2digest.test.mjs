@@ -59,12 +59,12 @@ test('답에서 장면만 남겨요: 제목 줄 · --- 뒤의 상태 칸 · 코�
     c.add(20); assert.ok(D.digestChunk(c.room, T0 + 1000));
 });
 
-test('요약의 요약: 방의 요약이 길어지면 오래된 절반을 한 장면으로 줄여요. 가장 새 부분은 그대로, 줄인 것도 나중에 또 줄여요', () => {
+test('요약의 요약: 방의 요약이 5,000토큰을 넘으면 오래된 절반을 한 장면으로 줄여요. 가장 새 부분은 그대로, 줄인 것도 나중에 또 줄여요', () => {
     const c = world(0), part = (n, len) => `## #${n}–#${n + 259} — 구간\n- ${'가'.repeat(len)}`;
     const more = len => { c.add(300 - D.undigested(c.room).length); const ch = D.digestChunk(c.room); return D.takeDigest(c.room, ch, part(ch.from, len)); };
-    more(2500); assert.equal(D.foldChunk(c.room), null);          // one part: nothing to fold
-    more(2500); assert.equal(D.foldChunk(c.room), null);          // 5,000자: not long yet
-    more(2500);
+    more(2000); assert.equal(D.foldChunk(c.room), null);          // one part: nothing to fold
+    more(2000); assert.equal(D.foldChunk(c.room), null);          // 4,000토큰쯤: not long yet
+    more(2000);                                                   // 6,000토큰쯤: over 5,000
     const ch = D.foldChunk(c.room);
     assert.deepEqual([ch.parts.length, ch.from, ch.to], [2, 1, 520]);
     assert.equal(D.foldRequest(ch, '\n\n[LANG]'), `SECTIONS:\n${ch.src}\n\nTARGET: 1200\n\n[LANG]`);
@@ -106,6 +106,10 @@ test('메신저를 나갈 때: 요약 요청은 짧은 압축 지시문 + 메신
     const talk = T.replyInput.split('[MESSENGER]\n')[1].split('\n\n')[0].split('\n');
     assert.equal(talk.length, 41);
     assert.ok(talk[0].endsWith(': 말 261') && talk.at(-1).endsWith('Ren: 새 말'));
+});
+
+test('토큰은 아카이브 압축이 세는 대로: 한글 한 글자 1, 나머지는 3.6자에 1', () => {
+    assert.equal(D.digestTok('가나다'), 3); assert.equal(D.digestTok('abcdefg'), 2); assert.equal(D.digestTok(''), 0);
 });
 
 test('메신저를 나갈 때 길어진 요약도 줄여요 (다이제스트 지시문, 한 번에 한 방)', async () => {

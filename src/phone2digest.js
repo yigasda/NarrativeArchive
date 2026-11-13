@@ -10,12 +10,14 @@ import { liveWorld, numberLive } from './phone2store.js';
 import { liveWall } from './phone2clock.js';
 
 const one = v => String(v ?? '').replace(/\s+/g, ' ').trim();
+// about how many tokens a text is (as the archive's compression counts: a Hangul letter one, the rest 3.6 characters a token)
+export const digestTok = t => { const x = String(t ?? ''), h = (x.match(/[\u1100-\u11ff\u3130-\u318f\uac00-\ud7af]/g) || []).length; return Math.ceil(h + (x.length - h) / 3.6); };
 // at: unsummarized messages a room holds before it is summarized; take: how many of the oldest go into the summary then
-// (the newest at - take stay as they are); fold: characters of summary a room holds before its older half is made into
-// one short section (foldTo: the most tokens that section may take, the archive digest's own default); kept: the most a
-// room ever keeps, should folding keep failing (the oldest part goes whole); wait: after a failed try, this many new
+// (the newest at - take stay as they are); fold: tokens of summary a room holds before its older half is made into one
+// short section (foldTo: the most tokens that section may take, the archive digest's own default); kept: the most tokens
+// a room ever keeps, should folding keep failing (the oldest part goes whole); wait: after a failed try, this many new
 // messages or this long before the next
-export const DIGEST = { at: 300, take: 260, fold: 6000, foldTo: 1200, kept: 60000, waitNew: 20, waitMs: 60 * 60_000 };
+export const DIGEST = { at: 300, take: 260, fold: 5000, foldTo: 1200, kept: 40000, waitNew: 20, waitMs: 60 * 60_000 };
 // what a room's summary is told about the state blocks the archive keeps and the messenger doesn't
 export const DIGEST_STATE = '(The messenger keeps no STATE or OPEN blocks. Write the sections only: no title line, no `---`, nothing after the last section.)';
 
@@ -63,23 +65,23 @@ export function takeDigest(room, chunk, answer, now = Date.now()) {
     const part = { from: chunk.from, to: chunk.to, at: now, text };
     d.parts = [...(Array.isArray(d.parts) ? d.parts : []), part];
     // (folding keeps it short, foldChunk below; only should that keep failing does the oldest part go whole)
-    while (d.parts.length > 1 && d.parts.reduce((n, p) => n + p.text.length, 0) > DIGEST.kept) d.parts.shift();
+    while (d.parts.length > 1 && d.parts.reduce((n, p) => n + digestTok(p.text), 0) > DIGEST.kept) d.parts.shift();
     d.upto = chunk.to;
     delete d.failed;
     return part;
 }
 // a try that threw (the model, the network): noted the same way
 export function failDigest(room, why, now = Date.now()) { const d = (room.digest ||= { upto: -1, parts: [] }); d.failed = { at: now, left: undigested(room).length, why: one(why).slice(0, 200) }; }
-// 요약의 요약: a room's summary longer than DIGEST.fold has its older half (whole parts, oldest first; the newest part
+// 요약의 요약: a room's summary of more than DIGEST.fold tokens has its older half (whole parts, oldest first; the newest part
 // never) made into one short section, by the archive's digest instruction (digest.js AI_SYS_DIGEST, the caller's). An
 // older fold is folded again with what came after it, so the far past gets shorter and shorter and never drops off.
 // foldChunk: what to fold now, or null (not long enough, or a try just failed)
-const size = parts => parts.reduce((n, p) => n + String(p.text || '').length, 0);
+const size = parts => parts.reduce((n, p) => n + digestTok(p.text), 0);
 export function foldChunk(room, now = Date.now()) {
     const parts = Array.isArray(room?.digest?.parts) ? room.digest.parts : [], all = size(parts);
     if (parts.length < 2 || all <= DIGEST.fold) return null;
     const f = room.digest.foldFailed;
-    if (f && now - (f.at || 0) < DIGEST.waitMs && all - (f.size || 0) < 1000) return null;
+    if (f && now - (f.at || 0) < DIGEST.waitMs && all - (f.size || 0) < 800) return null;
     const take = [];
     for (const p of parts.slice(0, -1)) { take.push(p); if (size(take) >= all / 2) break; }
     return { parts: take, from: take[0].from, to: take.at(-1).to, src: take.map(p => String(p.text).trim()).join('\n\n') };
@@ -89,7 +91,7 @@ export const foldRequest = (chunk, lang = '') => `SECTIONS:\n${chunk.src}\n\nTAR
 // the answer in place of the parts it stands for; null when it holds no section or is no shorter (noted, tried later)
 export function takeFold(room, chunk, answer, now = Date.now()) {
     const d = room.digest, text = digestText(answer);
-    if (!text || text.length >= chunk.src.length) { d.foldFailed = { at: now, size: size(d.parts), why: text ? '줄인 글이 더 길어요' : '줄인 글에 장면이 없어요' }; return null; }
+    if (!text || digestTok(text) >= digestTok(chunk.src)) { d.foldFailed = { at: now, size: size(d.parts), why: text ? '줄인 글이 더 길어요' : '줄인 글에 장면이 없어요' }; return null; }
     const part = { from: chunk.from, to: chunk.to, at: now, text, folded: true };
     d.parts = [part, ...d.parts.filter(p => !chunk.parts.includes(p))];
     delete d.foldFailed;
