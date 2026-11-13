@@ -1113,6 +1113,11 @@ const phoneMessageText = (text, index = atOf(text)) => {
     return context ? `${text}\n${context}` : text;
 };
 const recentPhoneRows = (n, { upto = null, ...options } = {}) => chatUpto(recentForCheck(upto == null ? n : 1e9, options), upto).slice(-n);
+// the newest talk a request shows: the role-play chat's, or, given 폰 2's drawer, its messenger's (m.phoneRecent; the
+// chat past where 폰 2 began is never 폰 2's to read)
+export const recentOf = (m, owner, n, o = {}) => (typeof m?.phoneRecent === 'function' ? m.phoneRecent(owner, n, o) : recentPhoneText(n, o));
+// how far into the role-play chat a phone's requests read: its clock, or with 폰 2's drawer where 폰 2 began (m.phoneUpto)
+export const readUpto = (m, p) => (Number.isInteger(m?.phoneUpto) ? m.phoneUpto : phoneAt(p));
 export function recentPhoneText(n, { maxChars = Infinity, ...options } = {}) {
     const rows = recentPhoneRows(n, options), out = [];
     let room = Math.max(0, maxChars);
@@ -1165,7 +1170,7 @@ export const phoneAt = p => { const s = p?.sync, b = s?.marks?.base?.index; retu
 const afterBlock = g => (g?.n ? `[RECENT CHAT${g.all && !g.later ? '' : ` — the story so far ends at #${nowAt(g)}; the messages after it are read later`}]\n${g.text}` : '');
 // what a phone's request reads after the archive (null: no archive, the chat goes as before)
 // p: the phone it is for (its clock bounds it); no archive: only that bound (the chat goes as before, up to it)
-export const windowOf = (m, p = null, from = null, budget = CHAT_TOKENS.phone, whole = true) => { const upto = phoneAt(p); return noArchive(m) ? (upto == null ? null : { none: true, n: 0, all: true, upto }) : chatAfterArchive(m, budget, upto, from, whole); };
+export const windowOf = (m, p = null, from = null, budget = CHAT_TOKENS.phone, whole = true) => { const upto = readUpto(m, p); if (Number.isInteger(m?.phoneUpto)) return { ...(noArchive(m) ? { none: true } : {}), n: 0, all: true, upto, to: upto }; return noArchive(m) ? (upto == null ? null : { none: true, n: 0, all: true, upto }) : chatAfterArchive(m, budget, upto, from, whole); };
 // what the phone's reflection took from the messages after `after` up to the phone's clock: each event's summary and the
 // words it came from. The part of a long stretch a fill can't read word for word goes like this (less detailed, nothing lost)
 // null when some message there was never read by a reflection (only the making read it, or a newest-first reflection
@@ -2864,6 +2869,8 @@ export const needsDateOrder = m => !m?.dateOrder;
 export async function setDateOrder(m, order) { if (!m || !['md', 'dm'].includes(order)) return; m.dateOrder = order; await saveMeta(); }
 dateOrderSource(() => ctx()?.chatMetadata?.narrative_archive?.dateOrder);
 export function storyNow(p, upto = null, m = null) {
+    // (폰 2: its own clock, the real time its last reflection set; never the role-play's status line)
+    if (Number.isInteger(m?.phoneUpto)) return p?.now || '';
     if (upto == null && p?.clockHold) upto = phoneAt(p);
     let at = '';
     try { at = statusMoment(p, upto, null, m)?.at || ''; } catch { /* no status window */ }
@@ -2931,7 +2938,7 @@ const phonesOf = m => m?.phones || ctx()?.chatMetadata?.narrative_archive?.phone
 function whereRequest(m, p, { known = false } = {}) {
     const c = ctx(), g = c.groupId ? (c.groups || []).find(x => x.id === c.groupId) : null;
     const chars = g ? (g.members || []).map(a => (c.characters || []).find(x => x.avatar === a)).filter(Boolean) : [c.characters?.[c.characterId]].filter(Boolean);
-    const persona = String(c.powerUserSettings?.persona_description || '').trim(), upto = phoneAt(p);
+    const persona = String(c.powerUserSettings?.persona_description || '').trim(), upto = readUpto(m, p);
     const more = known || p.making ? [...chars.map(ch => ch.name || ch.data?.name), c.name1, screenHolderOf(m), ...glossaryPeople(m)] : [];
     // (each person once: two forms of one name in 용어집, "Ivo" and "이보", are one)
     const seen = [], people = [...(p.threads || []).map(t => t.with), ...(p.contacts || []).map(x => x.name), ...Object.values(m.phones || {}).map(q => q?.owner), ...more]
@@ -2941,7 +2948,7 @@ function whereRequest(m, p, { known = false } = {}) {
         ...chars.map(ch => `[CHARACTER CARD — ${ch.name || ch.data?.name || ''}]\n${cardText(ch) || '(empty)'}`),
         persona ? `[PERSONA — ${c.name1 || 'user'}]\n${persona}` : '',
         tail.trim() ? `[STORY NOW]\n${tail.trim()}` : '',
-        `[RECENT CHAT]\n${recentPhoneText(8, { upto, maxChars: 8000 }) || '(none yet)'}`,
+        `[RECENT CHAT]\n${recentOf(m, p.owner, 8, { upto, maxChars: 8000 }) || '(none yet)'}`,
         `[OWNER]\n${p.owner}`, `[PEOPLE]\n${people.join('\n') || '(none)'}`, blindBlock(m, p.owner),
     ] };
 }
@@ -3998,7 +4005,7 @@ export async function sideRequest(m, owner, blocks, { profile, money = false, st
     const world = worldText(m), lore = await loreFor(m, owner, profile?.type === 'lore' ? profile : null);
     const profileText = await ownerProfileBlock(ctx(),profile,owner,{money});
     const ph = m.phones?.[nameKey(owner)] || null, gap = read && 'gap' in read ? read.gap : windowOf(m, ph), upto = nowAt(gap);
-    const recent = recentPhoneText(6, { upto, maxChars: 6000 });
+    const recent = recentOf(m, owner, 6, { upto, maxChars: 6000 });
     if (read) read.gap = gap;
     const arch = archiveBlock(m, archiveFor(m, -1, upto).text || '(empty)', 'ARCHIVE', story, upto), chat = afterBlock(gap) || (recent && !(story && noArchive(m)) ? `[RECENT CHAT]\n${recent}` : '');
     const tales = [arch, world ? `[WORLD]\n${world}` : '', lore ? `[LOREBOOK]\n${lore}` : '', chat];

@@ -298,3 +298,42 @@ test('요청이 나가 있는 사이 다른 채팅을 열면 더 묻지 않아�
         assert.ok(asked >= 1); assert.ok(c.room.messages.some(x => x.text === '응'));
     } finally { delete T.ask; delete T.metadata; }
 });
+
+test('실시간 폰에서 폰 1의 앱 요청을 불러도 시작 뒤의 롤플 채팅은 안 읽어요. 최근 대화는 메신저 것이에요', async () => {
+    const chat0 = T.chat;
+    T.chat = ['옛날 이야기 하나', '옛날 이야기 둘', '시작 직전 이야기', '시작 뒤 롤플 하나', '시작 뒤 롤플 둘'].map((mes, i) => ({ name: i % 2 ? 'Mara' : 'Ren', is_user: !(i % 2), mes, extra: {} }));
+    // (what 폰 1's reader gives as the chat's newest messages)
+    T.recent = ['#3 Mara: 시작 뒤 롤플 하나', '#4 Ren: 시작 뒤 롤플 둘'];
+    try {
+        const real = { phones: { mara: phone() }, text: '' };
+        L.startFromStory(real, { persona: 'Ren', upto: 2, scope: 'test', story: { ranges: {}, titles: [], rawFrom: 0, own: [''] } });
+        const room = L.ensureRoom(real, ['Mara']);
+        L.sendLive(real, room.id, '메신저로 한 말');
+        const d = L.liveMeta(real), p = d.phones.mara;
+        p.now = '11-12 21:30';
+        // the drawer says how far the chat may be read and gives the messenger's talk
+        assert.equal(d.phoneUpto, 2);
+        assert.equal(d.phoneRecent('Mara', 6, { maxChars: 6000 }), 'Ren: 메신저로 한 말');
+        assert.equal(PD.readUpto(d, p), 2);
+        assert.deepEqual([PD.windowOf(d, p).upto, PD.windowOf(d, p).n], [2, 0]);
+        assert.equal(PD.recentOf(d, 'Mara', 6, {}), 'Ren: 메신저로 한 말');
+        assert.equal(PD.storyNow(p, null, d), '11-12 21:30');
+        const side = await PD.sideRequest(d, 'Mara', ['[TARGET]\nx']);
+        assert.ok(side.includes('Ren: 메신저로 한 말'));
+        assert.ok(!side.includes('시작 뒤 롤플'));
+        // 폰 1 (the chat's own meta): as before, the chat's newest messages
+        const side1 = await PD.sideRequest(real, 'Mara', ['[TARGET]\nx']);
+        assert.ok(side1.includes('시작 뒤 롤플 둘')); assert.ok(!side1.includes('메신저로 한 말'));
+        assert.equal(real.phoneUpto, undefined); assert.equal(real.phoneRecent, undefined);
+        // a 폰 2 begun fresh reads none of the chat
+        const fresh = { phones: {}, text: '' };
+        L.startFresh(fresh, { persona: 'Ren', scope: 'test' });
+        assert.equal(L.liveMeta(fresh).phoneUpto, -1);
+    } finally { T.chat = chat0; delete T.recent; }
+});
+
+test('앱 요청(사진 · 일기 · 초안 · 녹음)은 최근 대화와 지금 시각을 받은 메타에 물어요', async () => {
+    const src = await (await import('node:fs/promises')).readFile(new URL('../src/phoneai.js', import.meta.url), 'utf8');
+    assert.ok(!/recentPhoneText\(/.test(src)); assert.ok(!/storyNow\(p\)/.test(src));
+    assert.equal((src.match(/recentOf\(m, p\.owner, /g) || []).length, 4);
+});

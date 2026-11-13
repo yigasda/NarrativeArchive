@@ -139,6 +139,22 @@ export const LIVE_SHARED = ['glossary', 'glossaryPeople', 'dateOrder'];
 const IS_LIVE = Symbol('폰 2 서랍');
 export const isLiveMeta = v => !!(v && typeof v === 'object' && v[IS_LIVE]);
 // text: what 폰 2 may read of the story, a function asked each time (phone2story.js liveStoryText), else ''
+// the newest messenger talk of the rooms `owner` is in, oldest first, one line a message ("Name: words"), the last `n`
+// that fit in maxChars. What 폰 1's app requests show as RECENT CHAT when they are given 폰 2's drawer
+export function liveRecent(w, owner, n = 12, { maxChars = Infinity } = {}) {
+    const flat = v => String(v ?? '').replace(/\s+/g, ' ').trim(), k = liveKey(owner);
+    const all = Object.values(w?.messenger?.rooms || {}).filter(r => (r.members || []).some(x => liveKey(x) === k)).flatMap(r => r.messages || [])
+        .filter(x => x.call || flat(x.text)).sort((a, b) => (a.n ?? 0) - (b.n ?? 0) || (a.at ?? 0) - (b.at ?? 0)).slice(-Math.max(0, n));
+    const out = [];
+    let room = Math.max(0, maxChars);
+    for (let i = all.length - 1; i >= 0; i--) {
+        const x = all[i], t = `${x.from}: ${x.call ? `(call, ${Math.max(0, Math.round(Number(x.call.min) || 0))} min${flat(x.call.summary) ? ` — ${flat(x.call.summary)}` : ''})` : flat(x.text)}`;
+        if (out.length && t.length + 1 > room) break;
+        out.unshift(t.slice(0, room)); room -= t.length + 1;
+        if (room <= 0) break;
+    }
+    return out.join('\n');
+}
 export function liveMeta(m, { text = null } = {}) {
     const w = liveWorld(m);
     if (!w) throw new Error('아직 폰 2가 없어요');
@@ -148,7 +164,10 @@ export function liveMeta(m, { text = null } = {}) {
     const copy = k => (Object.hasOwn(copies, k) ? copies[k] : (copies[k] = m[k] === undefined ? undefined : structuredClone(m[k])));
     // (phoneJournal: the browser key 폰 2's 복구 records are under. 폰 1's functions that touch the journal of the meta they
     // are given ask for it, so with the drawer they never reach 폰 1's own)
-    const at = k => (own(k) ? w[LIVE_OWN[k]] : Object.hasOwn(drawer, k) ? drawer[k] : k === 'text' ? story() : k === 'phoneJournal' ? (liveScope(w.scope || 'live', m) || 'live') : shared(k) ? copy(k) : undefined);
+    // (phoneUpto · phoneRecent: what 폰 1's app requests read of the talk. The role-play chat only up to where 폰 2 began
+    // (none of it for one begun fresh), and for the newest talk the messenger's, never the chat's)
+    const upto = () => (w.from === 'story' && Number.isInteger(w.storyUpto) ? w.storyUpto : -1);
+    const at = k => (own(k) ? w[LIVE_OWN[k]] : Object.hasOwn(drawer, k) ? drawer[k] : k === 'text' ? story() : k === 'phoneJournal' ? (liveScope(w.scope || 'live', m) || 'live') : k === 'phoneUpto' ? upto() : k === 'phoneRecent' ? (owner, n, o) => liveRecent(w, owner, n, o) : shared(k) ? copy(k) : undefined);
     const keys = () => [...new Set([...Object.keys(LIVE_OWN).filter(k => w[LIVE_OWN[k]] !== undefined), ...LIVE_SHARED.filter(k => m[k] !== undefined), 'text', ...Object.keys(drawer)])];
     return new Proxy(drawer, {
         get: (_, k) => (k === IS_LIVE ? true : typeof k === 'symbol' ? undefined : at(k)),
