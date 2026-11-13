@@ -146,3 +146,10 @@ test('실제 짧은 압축 지시문에 네 자리가 그대로 있어요. 폰 1
     for (const f of (await readdir(new URL('../src/', import.meta.url))).filter(f => f.endsWith('.js') && !['phone2digest.js', 'phone2live.js', 'phone2go.js'].includes(f))) assert.doesNotMatch(await readFile(new URL(`../src/${f}`, import.meta.url), 'utf8'), /phone2digest/, f);
     assert.doesNotMatch(await readFile(new URL('../src/phone2digest.js', import.meta.url), 'utf8'), /from '\.\/(?!phone2store\.js|phone2clock\.js)/);
 });
+
+test('실제 지시문 꺼내기(시험용): 짧은 압축 지시문 · 다이제스트 지시문이 글자 그대로 나와요', async () => {
+    const R = await import('./phone2digest.real.mjs'), s = await R.shortPrompt(), d = await R.digestSystem();
+    assert.ok(s.startsWith('<raw_log range="#{{from}}–#{{to}}">\n{{raw}}\n</raw_log>') && s.includes('`---`') && !s.includes('\\`'));
+    assert.ok(d.startsWith('GOAL\nCondense a run of story-archive sections') && d.endsWith('no comments.'));
+    assert.equal(R.fillPrompt('a {{from}} {{raw}}', { from: '1', raw: 'x' }), 'a 1 x');
+});
