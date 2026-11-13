@@ -256,21 +256,22 @@ export async function openPhone(who = null) {
       </div>`);
     const setSheet = on => { sheetOpen = on; $root.find('.na_phl_sheet, .na_phl_shade').prop('hidden', !on); };
     const phone = () => (owner ? (live() ? livePhone(realM, owner) : m.phones[nameKey(owner)]) : null);
-    // 실시간: 타임라인's data buttons (반영 · 되돌리기 · 복구 · 다시 만들기 · 채우기 · 번역 · 빼기, and 연도 화살표: each
+    // 실시간: 타임라인's data buttons (반영 · 되돌리기 · 복구 · 다시 만들기 · 빼기, and 연도 화살표: each
     // reflection sets the year by the real date) are off; a tap on one that is left does nothing
-    const LIVE_OFF = '.na_ph_kochip, .na_ph_trok, .na_sync_tr, .na_ph_screenholder, [data-go=setscreenholder], .na_ph_setupd, .na_ph_setinj, .na_ph_setremake, [data-go=setremake], [data-go=setsync], .na_ph_storyreset, .na_ph_setdel, .na_ph_fill, .na_ph_mretr, .na_sync_retr, .na_sync_restore, .na_sync_drop, .na_sync_undo, .na_ph_ystep';
+    const LIVE_OFF = '.na_ph_screenholder, [data-go=setscreenholder], .na_ph_setupd, .na_ph_setinj, .na_ph_setremake, [data-go=setremake], [data-go=setsync], .na_ph_storyreset, .na_ph_setdel, .na_sync_restore, .na_sync_drop, .na_sync_undo, .na_ph_ystep';
     $root.on('click', LIVE_OFF, e => { if (live()) { e.preventDefault(); e.stopImmediatePropagation(); } });
     // the Korean of what the phone has in another language (phonetr.js): after a reflection, from its report, or when
     // 한국어 is pressed. A failure is marked on the report (번역 못 함 · 다시 하기); the reflection itself stays
     let koBusy = false;
     // 설정 › 말투's 이야기에서 뽑기: the names chosen (lower case) while choosing, null otherwise; busy while the story is asked
     let voicePick = null, voiceAdd = new Set(), voiceBusy = false;
-    const koRun = async (p, loud) => {
-        if (koBusy || !p || live()) return;  // (실시간: 폰 2 gets its own translation later)
+    // (who: whose phone it is; the one open unless a 실시간 reflection names another)
+    const koRun = async (p, loud, who = owner) => {
+        if (koBusy || !p) return;
         koBusy = true;
         try {
             // (how the people who text sound, from the story, for anyone not in the table yet; a failure here only leaves it out)
-            try { await learnVoices(m, owner, p); } catch (err) { console.warn('[narrative-archive] voices', err); }
+            try { await learnVoices(m, who, p); } catch (err) { console.warn('[narrative-archive] voices', err); }
             const n = await fillKo(p);
             if (p.syncLast?.trFailed) delete p.syncLast.trFailed;
             if (n || loud) await saveMeta();
@@ -773,7 +774,7 @@ export async function openPhone(who = null) {
         if (typingNow) obFocus();
     } }).catch(err => console.error('[narrative-archive] live go', err));
     // 반영(소망 결정): 메신저를 나갈 때만 · 폰을 닫을 때 · 타임라인으로 바꿀 때. 실시간 폰의 인물마다 쌓인 대화를 한 번에(읽을 게 없으면 바로 끝)
-    const obReflect = () => { const w = liveWorld(realM); if (!w) return; (async () => { for (const p of Object.values(w.phones || {})) if (p?.owner) await liveReflect(realM, p.owner, { onChange: () => { if (!phoneClosed && stillHere() && live()) drawPhone(true); } }); })().catch(err => console.error('[narrative-archive] live reflect', err)); };
+    const obReflect = () => { const w = liveWorld(realM); if (!w) return; (async () => { for (const p of Object.values(w.phones || {})) if (p?.owner) { const r = await liveReflect(realM, p.owner, { onChange: () => { if (!phoneClosed && stillHere() && live()) drawPhone(true); } }); if (r?.rounds && koOn()) { const q = livePhone(realM, p.owner); if (q) await koRun(q, false, p.owner); } } })().catch(err => console.error('[narrative-archive] live reflect', err)); };
     // 실시간 폰 설정 › 지난 반영: 방금 반영 되돌리기 · 다시 반영 (다른 폰 작업 중엔 폰 1 되돌리기처럼 막아요)
     $root.on('click', '.na_live_undo', async e => {
         e.stopPropagation();
