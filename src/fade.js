@@ -164,14 +164,15 @@ export const AI_SYS_LAYERS_REVISE = `GOAL
 Change the short version (and the gist) of a story-archive section the way the user asks — and nothing else.
 
 YOU GET
-SECTION: the full section. It is the only source of facts and quotes.
+SECTION: the full section.
+RAW LOG (sometimes): the messages the section was made from, each starting with [number] and the speaker.
 CURRENT SHORT and CURRENT LINE: the versions saved now.
 REQUEST: what the user wants changed (it may be in Korean).
 
 STEPS
 1. Do what REQUEST asks.
 2. Leave every other part of CURRENT SHORT exactly as it is, word for word.
-3. Anything you add comes from SECTION. A line in quotation marks is copied whole from SECTION — every word, same order.
+3. Anything you add comes from SECTION or RAW LOG. A line in quotation marks is copied whole from RAW LOG, or from SECTION when there is no RAW LOG — every word, same order.
 4. Keep the form of CURRENT SHORT: its label lines (PLOT: …) and bullets. Same language as SECTION.
 5. Change LINE only if REQUEST asks for it, or if your change makes LINE wrong.
 
@@ -282,7 +283,7 @@ export async function openLayers(s) {
           <div class="na_ly_pane" data-t="line"><div class="na_ly_view"></div><textarea class="text_pole na_ly_line" rows="5" spellcheck="false" hidden placeholder="- 누가 무엇을 했고, 무엇이 바뀌었는지 (불릿 2~4개)"></textarea></div>
         </div>
           ${draftReady() ? `<div class="na_ly_ask"><input type="text" class="na_ly_askq" placeholder="고쳐 달라고 하기 (예: 소망 대사는 원문 그대로)" aria-label="고쳐 달라고 하기" enterkeyhint="send"><button type="button" class="na_ly_askgo" aria-label="보내기" title="초안 모델에게 보내기">${svgA('M22 2L11 13M22 2l-7 20-4-9-9-4z', 17)}</button></div>` : ''}
-          ${draftReady() ? `<div class="na_ly3_foot"><button type="button" class="na_ly3_tool na_ly_draft">${svgA('<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/>', 13)}초안 모델로 ${L.short || L.line ? '다시 ' : ''}만들기</button></div>` : '<small class="na_v2_foot">⚙ 설정 → AI 모델 → 초안 모델을 정하면 여기서 바로 만들 수 있어요</small>'}
+          ${draftReady() ? `<div class="na_ly3_foot"><label class="na_ap3_raw na_ly_raw" title="고쳐 달라고 할 때 그 번호의 원문도 같이 보내요"><input type="checkbox" class="na_ly_rawon" checked>${svgA('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>', 13)}원문 포함<span class="na_ap3_tick">${svgA(ICO_A.check, 11, 3.2)}</span></label><button type="button" class="na_ly3_tool na_ly_draft">${svgA('<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/>', 13)}초안 모델로 ${L.short || L.line ? '다시 ' : ''}만들기</button></div>` : '<small class="na_v2_foot">⚙ 설정 → AI 모델 → 초안 모델을 정하면 여기서 바로 만들 수 있어요</small>'}
       </div>`);
     const startShort = L.short ? withTopLabel(m.text.slice(s.start, s.end), L.short) : '', startLine = L.line || '';
     $root.find('.na_ly_short').val(startShort);
@@ -347,12 +348,27 @@ export async function openLayers(s) {
         const r = await withSpinner($(this), '만드는 중…', () => draftLayers(m, s));
         if (r) { $root.find('.na_ly_short').val(r.short); $root.find('.na_ly_line').val(r.line); tab = 'short'; editing = false; korean = false; show(); tok(); }
     });
+    // the section's messages for 원문 포함, looked up once; a section without them greys the toggle out (with why)
+    let rawSrc = null;
+    const loadRaw = async () => {
+        if (rawSrc) return rawSrc;
+        const { rawFor } = await import('./retitle.js');
+        rawSrc = await rawFor(m, s);
+        const $l = $root.find('.na_ly_raw');
+        if (rawSrc.raw) $l.attr('title', `${rawSrc.label} · ${rawSrc.from} · 메시지 ${rawSrc.n}개 · 약 ${fmt(await countTokens(rawSrc.raw))} 토큰`);
+        else { $l.attr('title', rawSrc.why).find('input').prop({ checked: false, disabled: true }); }
+        return rawSrc;
+    };
+    if (draftReady()) loadRaw().catch(e => console.warn('[narrative-archive] layers raw', e));
     // "고쳐 달라고 하기": the draft model changes the short version / one line as asked; save still decides
     const askRevise = async () => {
         const req = String($root.find('.na_ly_askq').val() || '').trim();
         if (!req) return $root.find('.na_ly_askq').trigger('focus');
         const $go = $root.find('.na_ly_askgo');
-        const r = await withSpinner($go, '', () => reviseLayers(m, s, text('short'), text('line'), req));
+        const r = await withSpinner($go, '', async () => {
+            const raw = $root.find('.na_ly_rawon').prop('checked') ? (await loadRaw()).raw : '';
+            return reviseLayers(m, s, text('short'), text('line'), req, raw);
+        });
         if (!r) return;
         $root.find('.na_ly_short').val(r.short); $root.find('.na_ly_line').val(r.line);
         $root.find('.na_ly_askq').val('');
@@ -424,13 +440,14 @@ export async function fillFade($btn, only = null) {
 
 // hand-picked versions for many sections at once: v = 'auto' (back to the curve) | 'long' | 'short' | 'line'
 // the user's own change request for a section's versions ("소망 대사는 원문 그대로"): returns { short, line, changed }
-export async function reviseLayers(m, s, short, line, req) {
+// raw: the section's messages (원문 포함), or '' to send the section alone
+export async function reviseLayers(m, s, short, line, req, raw = '') {
     const section = m.text.slice(s.start, s.end).trim();
-    const out = stripThink(await askDraft(`SECTION:\n${section}\n\nCURRENT SHORT:\n${String(short || '').trim() || '(none)'}\n\nCURRENT LINE:\n${String(line || '').trim() || '(none)'}\n\nREQUEST:\n${req}`, { ...LAYER_ASK, system: AI_SYS_LAYERS_REVISE }));
+    const out = stripThink(await askDraft(`SECTION:\n${section}\n\n${raw ? `RAW LOG:\n${raw}\n\n` : ''}CURRENT SHORT:\n${String(short || '').trim() || '(none)'}\n\nCURRENT LINE:\n${String(line || '').trim() || '(none)'}\n\nREQUEST:\n${req}`, { ...LAYER_ASK, system: AI_SYS_LAYERS_REVISE }));
     const mt = parseLayers(out);
     if (!mt) throw new Error('답 형식이 달라요 (SHORT:/LINE: 없음). 다시 보내 주세요');
     const next = withTopLabel(section, mt[1].replace(/^\**\s*/, ''));
-    return { short: next, line: mt[2].trim().split('\n')[0].trim(), changed: changedQuotes(section, next) };
+    return { short: next, line: mt[2].trim().split('\n')[0].trim(), changed: changedQuotes(raw ? `${section}\n${raw}` : section, next) };
 }
 
 export async function setFadeForce(keys, v) {
