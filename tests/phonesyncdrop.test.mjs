@@ -2296,20 +2296,33 @@ test('a name in a text: as a name is written, never part of another word (Korean
     assert.ok(data.namedIn('(Dr. K) came', 'Dr. K') && !data.namedIn('x', 'a'));
 });
 
-test('a card already on the phone gets its bill day from an "account" record with no message number; money that moves still needs one', async () => {
+test('a card already on the phone gets its bill day from an "account" record with no message number; nothing else of such a record is taken', async () => {
     const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'paid the taxi, 12000 won')]);
     c.p.money.bank.accounts.push({ id: 'cc', kind: 'credit', name: '카드', last4: '1158', currency: 'KRW', balance: 0 });
     migrateBank(c.m, c.p);
+    const accounts = () => JSON.stringify(c.p.money.bank.accounts.map(a => [a.last4, a.balance, a.blocked ?? null, a.closed ?? null, a.status ?? null, a.name]));
+    const before = accounts();
     T.moneyAnswers = [{ records: [
-        { type: 'account', already: '1158', billDay: 25, paidFrom: '1111', made: ['billDay', 'paidFrom'] },
+        // the bill day, with things a record with no message may not carry: only the bill day and the paying account go in
+        { type: 'account', already: '1158', billDay: 25, paidFrom: '1111', balance: 999999, status: 'blocked', name: '바뀐 이름', made: ['billDay', 'paidFrom', 'balance'] },
+        // no bill day in it: a balance or a status alone needs its message
+        { type: 'account', account: '1111', balance: 40000, memo: 'guessed' },
+        { type: 'account', already: '1111', status: 'blocked', reason: 'x' },
+        // an account not on the phone, a new card, a payment: all need their message
         { type: 'account', already: '9999', billDay: 3 },
+        { type: 'card', account: '1111', exp: '12/30' },
         { type: 'payment', account: '1111', amount: -500, who: '번호 없는 결제', kind: 'card', occurrence: 'new' },
     ] }];
     await run(c.m, { now: '10-26 13:00', events: [{ id: 'taxi', at: 2, quote: 'paid the taxi', summary: '택시', date: '10-26', time: '12:40', phone: {}, money: true }] });
-    assert.equal(c.p.money.bank.accounts.find(a => a.last4 === '1158').billDay, 25);
+    const card = c.p.money.bank.accounts.find(a => a.last4 === '1158');
+    assert.equal(card.billDay, 25);
+    // nothing but the bill day (and who pays it) changed on any account; no money moved, no card was added
+    delete card.billDay; delete card.paidFrom;
+    assert.equal(accounts(), before);
     assert.equal(c.bank(), 100000);
-    // (the account not on the phone and the payment with no number: left out, and said)
-    assert.ok(c.p.syncLast.notes.some(n => n.includes('돈 기록 2개는 어느 메시지인지 몰라서')));
+    assert.equal(c.p.money.tx.length, 0);
+    assert.equal((c.p.money.cards || []).length, 0);
+    assert.ok(c.p.syncLast.notes.some(n => n.includes('돈 기록 5개는 어느 메시지인지 몰라서')));
 });
 
 test('다시 만들기: 지도(다녀간 곳)도 고를 수 있어요', () => {

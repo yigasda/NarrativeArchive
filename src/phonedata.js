@@ -1841,15 +1841,20 @@ export async function moneyStage(m, p, owner, c) {
         let bad = 0;
         for (const r of arr(raw.records)) {
             if (!r || typeof r !== 'object') continue;
-            let at = Number(String(r.at ?? '').replace(/^\s*#/, ''));
-            // (what an account or card already on the phone is like, its bill day or the account that pays it, is said in
-            // no one message: given with no number, it is this reading's last message's. Money that moves always needs its own)
-            if (String(r.at ?? '').trim() === '' && ['account', 'card'].includes(String(r.type || '').toLowerCase()) && onPhone(r.already ?? r.account)) at = asked.at(-1) ?? evidence.at(-1)?.last ?? NaN;
+            let rec = r, at = Number(String(r.at ?? '').replace(/^\s*#/, ''));
+            // (a card's bill day and the account that pays it, which the app itself asks for when a card has none, are said
+            // in no one message: an "account" record for an account already on the phone, given with no number, is this
+            // reading's last message's — and only those two things of it are taken. A balance, a status, a new card, money
+            // that moves: always with its own message)
+            if (String(r.at ?? '').trim() === '' && String(r.type || '').toLowerCase() === 'account' && onPhone(r.already ?? r.account) && (r.billDay !== undefined || r.paidFrom !== undefined)) {
+                rec = { type: 'account', already: r.already ?? r.account, ...(r.billDay !== undefined ? { billDay: r.billDay } : {}), ...(r.paidFrom !== undefined ? { paidFrom: r.paidFrom } : {}), ...(Array.isArray(r.made) ? { made: r.made.filter(k => k === 'billDay' || k === 'paidFrom') } : {}) };
+                at = asked.at(-1) ?? evidence.at(-1)?.last ?? NaN;
+            }
             if (!Number.isInteger(at) || !allowed(at)) { bad++; continue; }
             // (an estimated price is the newest day's: the brokerage moves on to it)
-            if (String(r.type || '').toLowerCase() === 'quote' && r.amountFrom === 'guess' && /^\d{2}-\d{2}$/.test(c.nowDay || '')) r.date = c.nowDay;
+            if (String(rec.type || '').toLowerCase() === 'quote' && rec.amountFrom === 'guess' && /^\d{2}-\d{2}$/.test(c.nowDay || '')) rec.date = c.nowDay;
             if (!byAt.has(at)) byAt.set(at, []);
-            byAt.get(at).push(r);
+            byAt.get(at).push(rec);
         }
         if (bad) out.notes.push(`돈 기록 ${bad}개는 어느 메시지인지 몰라서 넣지 않았어요`);
         // (a long stretch of skipped days: 20 records at most for it, the rest left out and said)
