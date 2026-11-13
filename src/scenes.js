@@ -253,7 +253,7 @@ PLOT:
 (The extension adds the log prefix${prefix ? ` "${prefix}"` : ''} and checks that the sections cover #${from}–#${to} exactly.)`;
 
 // 장면 나누기: the AI 기능 모델 reads the whole stretch once and names where the story turns
-const SCENES_SYS = `GOAL
+export const SCENES_SYS = `GOAL
 Find where the story turns in a stretch of role-play, so it can be summarized scene by scene.
 
 YOU GET

@@ -187,3 +187,40 @@ test('통째로 막히면 반으로 나눠 두 번 물어요 (압축이 하는 �
     assert.equal(d.room.digest.upto, 130); assert.ok(d.room.digest.failed);
 });
 
+
+test('장면 나누기: 압축의 장면 요청 그대로, 숫자만 메신저용으로. 받은 장면 목록이 요약 요청의 크기 줄 자리에 가요', async () => {
+    const real = await readFile(new URL('../src/scenes.js', import.meta.url), 'utf8'), a = real.indexOf('export const SCENES_SYS = `') + 27, sys = real.slice(a, real.indexOf('`;', a));
+    // only the sentence with the numbers differs
+    const mine = D.scenesSystem(sys);
+    assert.equal(mine, sys.replace('10–40 messages, but a sharp turn can be 3–5', '40–100 messages, but a sharp turn can be 10–20'));
+    assert.notEqual(mine, sys); assert.equal(D.scenesSystem('another instruction'), null);
+    const c = world(300);
+    T.scenes = ['#1 아침 인사\n#90 더치페이 얘기\n#200 약속 잡기']; T.digests = [SECTIONS(1, 260)]; T.answers = [{ events: [] }, { events: [] }, { events: [] }];
+    T.sceneCalls = 0;
+    await G.liveReflect(c.real, 'Mara');
+    assert.equal(T.sceneCalls, 1); assert.equal(T.sceneSys, mine);
+    assert.ok(T.sceneInput.startsWith('MESSAGES #1–#260:\n[1] Ren (') && T.sceneInput.includes('[260] Mara') && !T.sceneInput.includes('[261]'));
+    assert.ok(T.digestInput.includes('[SCENES] #1–#260 is 260 messenger messages (short lines). The talk turns at these points; write one section for each scene, in order:\n- #1–#89 아침 인사\n- #90–#199 더치페이 얘기\n- #200–#260 약속 잡기'));
+    assert.ok(!T.digestInput.includes('[SIZE]'));
+    assert.ok(T.digestInput.trimEnd().endsWith('bring it back to what the log says.'));
+    assert.equal(c.room.digest.upto, 260);
+});
+
+test('장면 나누기가 실패하거나 하나만 나오면 원문 길이로 정한 크기 줄로 요약해요', async () => {
+    for (const scenes of [[new Error('막힘')], ['#1 통째로'], ['아무 말']]) {
+        const c = world(300);
+        T.scenes = scenes; T.digests = [SECTIONS(1, 260)]; T.answers = [{ events: [] }, { events: [] }, { events: [] }];
+        await G.liveReflect(c.real, 'Mara');
+        assert.ok(T.digestInput.includes('[SIZE] #1–#260 is 260 messenger messages') && !T.digestInput.includes('[SCENES]'));
+        assert.equal(c.room.digest.upto, 260);
+    }
+});
+
+test('장면 시작 번호가 이 방의 메시지가 아니면 그다음 메시지로 옮겨요 (번호는 방들이 같이 써요)', () => {
+    const rows = [1, 2, 5, 6, 9, 12].map(n => ({ n })), chunk = { rows, from: 1, to: 12 };
+    assert.equal(D.scenesNote(chunk, [{ start: 1, note: '하나' }, { start: 3, note: '둘' }, { start: 4, note: '겹침' }, { start: 10, note: '셋' }, { start: 99, note: '밖' }]),
+        '\n\n[SCENES] #1–#12 is 6 messenger messages (short lines). The talk turns at these points; write one section for each scene, in order:\n- #1–#2 하나\n- #5–#9 둘\n- #12–#12 셋');
+    // (the first scene always begins at the stretch's first message)
+    assert.ok(D.scenesNote(chunk, [{ start: 6, note: '뒤' }]).includes('- #1–#5\n- #6–#12 뒤'));
+    assert.equal(D.scenesNote(chunk, [{ start: 1, note: '하나뿐' }]), null);
+});

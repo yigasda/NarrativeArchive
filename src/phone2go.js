@@ -7,7 +7,8 @@
 
 import { ctx, saveMeta } from './core.js';
 import { askDraft, phone2Clock, aroundBlock, ownerZone, cardBlocks } from './phonedata.js';
-import { askCompress, stripThink, isBlocked, SECTION_GUARD } from './ai.js';
+import { askAI, askCompress, stripThink, isBlocked, SECTION_GUARD } from './ai.js';
+import { SCENES_SYS, parseScenes } from './scenes.js';
 import { resolvePhoneProfile, ownerProfileBlock } from './phoneprofile.js';
 import { parseJson } from './phoneparse.js';
 import { nameKey } from './people.js';
@@ -21,7 +22,7 @@ import { markPersona } from './phone2feed.js';
 import { updateLive, undoLive } from './phone2reflect.js';
 import { SHORT_PROMPT, compressParts, langBlock } from './prompts.js';
 import { AI_SYS_DIGEST } from './digest.js';
-import { DIGEST_STATE, digestDue, digestRaw, digestSize, digestHalves, takeDigest, failDigest, foldChunk, foldRequest, takeFold, failFold } from './phone2digest.js';
+import { DIGEST_STATE, digestDue, digestRaw, digestSize, digestHalves, scenesSystem, scenesInput, scenesNote, takeDigest, failDigest, foldChunk, foldRequest, takeFold, failFold } from './phone2digest.js';
 
 // rounds of reflection after one reply at most (messages piled up while only talking: 100 a round)
 export const LIVE_GO = { rounds: 3, replyTokens: 4000, digests: 2 };
@@ -118,7 +119,16 @@ export async function liveUndo(real, owner, { onChange = () => {} } = {}) {
 // one stretch's request, put together as the archive's compression puts its own (prompts.js compressParts: the rules in
 // the system message when that setting is on, the closing check last, the language of the story's archive), with the
 // messenger's own raw log, state note and size note: { system, prompt }
-export const digestAsk = (w, chunk, tz, story = '') => { const raw = digestRaw(w, chunk.rows, tz); return compressParts(SHORT_PROMPT, { raw, from: String(chunk.from), to: String(chunk.to), state: DIGEST_STATE, archive: '' }, { text: story || '' }, '', digestSize(chunk, raw)); };
+// size: the note saying how many sections (the scenes the model named, digestScenes; else by the raw log's length)
+export const digestAsk = (w, chunk, tz, story = '', size = '') => { const raw = digestRaw(w, chunk.rows, tz); return compressParts(SHORT_PROMPT, { raw, from: String(chunk.from), to: String(chunk.to), state: DIGEST_STATE, archive: '' }, { text: story || '' }, '', size || digestSize(chunk, raw)); };
+// 장면 나누기: where the stretch's talk turns, asked as the archive asks it (its own instruction with the messenger's
+// numbers, the AI 기능 모델); the note for the summary request, or '' when it can't be had (the summary goes on without)
+export async function digestScenes(w, chunk, tz) {
+    const sys = scenesSystem(SCENES_SYS);
+    if (!sys) return '';
+    try { return scenesNote(chunk, parseScenes(await askAI(scenesInput(chunk, digestRaw(w, chunk.rows, tz)), { system: sys, maxTokens: 4000 }), chunk.from, chunk.to)) || ''; }
+    catch (err) { console.warn('[narrative-archive] live digest scenes', err); return ''; }
+}
 const digesting = new WeakSet();
 export async function liveDigest(real, owner) {
     const w = liveWorld(real), p = livePhone(real, owner);
@@ -132,7 +142,7 @@ export async function liveDigest(real, owner) {
             const { room, chunk } = next, story = liveStoryText(real, w);
             // (asked as the archive's compression asks: the request put together the same way, the same thinking level,
             // room and refusal check; a stretch refused whole goes again as two halves, as a blocked part does there)
-            const ask = async c => { const q = digestAsk(w, c, tzOf(p), story); return stripThink(await askCompress(q.prompt, { system: q.system, keepSystem: !!q.system, guard: SECTION_GUARD })); };
+            const ask = async c => { const q = digestAsk(w, c, tzOf(p), story, await digestScenes(w, c, tzOf(p))); return stripThink(await askCompress(q.prompt, { system: q.system, keepSystem: !!q.system, guard: SECTION_GUARD })); };
             let answer;
             try {
                 try { answer = await ask(chunk); }

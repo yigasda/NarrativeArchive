@@ -53,6 +53,25 @@ export function digestSize(chunk, raw) {
     const tok = digestTok(raw), lo = Math.max(1, Math.ceil(tok / 2000)), hi = Math.max(lo, Math.ceil(tok / 1200));
     return `\n\n[SIZE] #${chunk.from}–#${chunk.to} is ${chunk.rows.length} messenger messages (short lines, about ${Math.round(tok / 100) * 100} tokens): write roughly ${lo === hi ? `${lo} section${lo > 1 ? 's' : ''}` : `${lo}–${hi} sections`} for it, cutting where the talk turns.`;
 }
+// 장면 나누기: where the talk turns is asked first, by the archive's own scene request (scenes.js SCENES_SYS, the
+// caller's) with only its numbers changed: a messenger line is far shorter than a role-play message, so a scene runs
+// more of them. scenesSystem: that instruction for the messenger (null if the sentence with the numbers isn't there
+// any more: the caller then goes without scenes); scenesInput: what it reads (as the archive sends it)
+export const SCENE_NUMBERS = ['a scene usually runs 10–40 messages, but a sharp turn can be 3–5', 'a scene usually runs 40–100 messages, but a sharp turn can be 10–20'];
+export const scenesSystem = sys => (String(sys || '').includes(SCENE_NUMBERS[0]) ? String(sys).replace(SCENE_NUMBERS[0], SCENE_NUMBERS[1]) : null);
+export const scenesInput = (chunk, raw) => `MESSAGES #${chunk.from}–#${chunk.to}:\n${raw}`;
+// the scenes it named ([{ start, note }], scenes.js parseScenes) as the summary request's size note: one section a
+// scene, each with its messages. A start that is no message of this stretch moves to the next one that is; null when
+// it named fewer than two (the caller uses digestSize)
+export function scenesNote(chunk, list) {
+    const ns = chunk.rows.map(x => x.n), starts = [];
+    for (const s of Array.isArray(list) ? list : []) { const n = ns.find(x => x >= s?.start); if (n !== undefined && !starts.some(y => y.n === n)) starts.push({ n, note: one(s.note).slice(0, 80) }); }
+    starts.sort((a, b) => a.n - b.n);
+    if (!starts.length || starts[0].n !== chunk.from) starts.unshift({ n: chunk.from, note: starts[0]?.n === chunk.from ? starts[0].note : '' });
+    if (starts.length < 2) return null;
+    const lines = starts.map((s, k) => { const end = k + 1 < starts.length ? ns.filter(x => x < starts[k + 1].n).at(-1) : chunk.to; return `- #${s.n}–#${end}${s.note ? ` ${s.note}` : ''}`; });
+    return `\n\n[SCENES] #${chunk.from}–#${chunk.to} is ${chunk.rows.length} messenger messages (short lines). The talk turns at these points; write one section for each scene, in order:\n${lines.join('\n')}`;
+}
 // the two halves of a stretch the model refused whole (as the archive's compression sends a blocked part again)
 export const digestHalves = chunk => { const h = Math.ceil(chunk.rows.length / 2), cut = rows => ({ rows, from: rows[0].n, to: rows.at(-1).n }); return [cut(chunk.rows.slice(0, h)), cut(chunk.rows.slice(h))]; };
 
