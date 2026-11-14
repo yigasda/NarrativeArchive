@@ -82,3 +82,12 @@ test('P의 롤플에 넣기: 폰 1의 글은 폰 1 함수에 메타만 줘서, �
     assert.ok(src.includes('const phoneBlockP = (m, live = null) => phoneBlock(m) + liveNote(live);'));
     assert.ok(src.includes('phoneBlock: phoneBlockP,'));
 });
+
+test('P의 분기 알아채기: 폰 1의 폰은 폰 1 함수를 받은 인자 그대로, 실시간 서랍 · 실시간 폰은 폰 1 함수를 안 불러요', async () => {
+    const P = await loadP(), L = await import('../src/phone2store.js');
+    const real = { phones: { mara: { owner: 'Mara', now: '10-25 17:42' } }, text: '' };
+    L.startFromStory(real, { persona: 'Ren', upto: 2, scope: 'test', story: { ranges: {}, titles: [], rawFrom: 0, own: [''] } });
+    const p1 = real.phones.mara, d = L.liveMeta(real), q = d.phones.mara;
+    assert.deepEqual(await P.settleBranch(real, p1), { fn: 'settleBranch', a: [real, p1] });
+    assert.equal(await P.settleBranch(d, q), null); assert.equal(await P.settleBranch(real, q), null); assert.equal(await P.settleBranch(d, p1), null);
+});

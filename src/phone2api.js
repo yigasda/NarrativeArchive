@@ -39,6 +39,9 @@ const ensureYearP = (...a) => (isLiveMeta(a[0]) ? liveEnsureYear(a[0], a[1]) : (
 const setStoryYearP = (...a) => (isLiveMeta(a[0]) ? liveSetStoryYear(...a) : (guard(a[0], a[1]), setStoryYear(...a)));
 // 롤플에 넣기 (m: 채팅의 메타, live: 실시간 폰들): 폰 1의 글은 폰 1 함수 그대로, 그 뒤에 실시간 폰의 글
 const phoneBlockP = (m, live = null) => phoneBlock(m) + liveNote(live);
+// 분기 알아채기는 폰 1의 폰만 해요: 실시간 서랍 · 실시간 폰이면 폰 1 함수를 안 부르고 아무것도 안 해요(null)
+// (실시간 폰의 분기는 phone2story.js liveBranched가 가려요)
+const settleBranchP = async (...a) => (isLiveMeta(a[0]) || a[1]?.[LIVE_PHONE] ? null : settleBranch(...a));
 
 export const P = Object.freeze({
     // 폰 만들기 · 다시 만들기
@@ -52,5 +55,5 @@ export const P = Object.freeze({
     // 지금 · 연도 · 상태창
     storyNow: storyNowP, nowOn, statusAt: statusAtP, storyYear: storyYearP, setStoryYear: setStoryYearP, ensureYear: ensureYearP,
     // 분기 · 롤플에 넣기
-    settleBranch, phoneBlock: phoneBlockP,
+    settleBranch: settleBranchP, phoneBlock: phoneBlockP,
 });
