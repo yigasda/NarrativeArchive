@@ -9,7 +9,7 @@ const SRC = new URL('../src/', import.meta.url);
 const WORDS = /isLivePhone|phoneUpto|phoneNow|phoneRecent|phoneJournal|liveYear|liveAgain|liveHeld|liveMeta|resetLive|\.live\b|phone2|실시간|\bnowOn\b|\brecentOf\b|\breadUpto\b|\breadMark\b/;
 // file: [지금 허용, 폰 2 전]
 const LEFT = {
-    'chats.js': [2, 0], 'investdata.js': [5, 3], 'phonedata.js': [34, 5],
+    'chats.js': [2, 0], 'investdata.js': [5, 3], 'phonedata.js': [33, 5],
     'phonelife.js': [8, 7], 'phonestory.js': [2, 0],
 };
 // 폰 2 낱말이 하나도 없어야 하는 폰 1 데이터 파일

@@ -2729,18 +2729,11 @@ export async function retryMoney(m, owner) {
 }
 
 // ---- 롤플에 넣기: a short note of what the phones hold, after the archive
-// live: 폰 2's phones (실시간), given by the caller. One of them with 롤플에 넣기 on goes in too, under its own heading: what
-// the phone holds now, from the messenger, apart from the story's scenes
-export function phoneBlock(m, live = null) {
-    const story = phoneNote(Object.values(m?.phones || {}), `# PHONES\n_What these characters' phones hold, true to the archive. Background for when the scene touches a phone: do not bring it up unprompted, and do not build new events on it._`);
-    const now = phoneNote(arr(live), `# PHONES NOW (messenger)\n_What these characters' phones hold now, from their talk on a messenger outside the scenes. Background only: do not bring it up unprompted, and do not build new events on it._`);
-    return story + now;
-}
-function phoneNote(phones, head) {
-    const ps = phones.filter(p => p?.inject && p.owner);
+export function phoneBlock(m) {
+    const ps = Object.values(m?.phones || {}).filter(p => p?.inject && p.owner);
     if (!ps.length) return '';
     const said = (p, x) => (x.from === 'me' ? p.owner : x.from);
-    return `\n\n${head}\n${ps.map(p => {
+    return `\n\n# PHONES\n_What these characters' phones hold, true to the archive. Background for when the scene touches a phone: do not bring it up unprompted, and do not build new events on it._\n${ps.map(p => {
         const out = [];
         const saved = p.contacts.filter(c => c.saved && c.saved !== c.name).map(c => `${c.name} as "${c.saved}"`);
         if (saved.length) out.push(`Contacts saved: ${saved.join(', ')}`);

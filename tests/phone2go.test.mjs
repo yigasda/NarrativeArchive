@@ -4,7 +4,9 @@ import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import { migrateBank, cash } from '../src/finance.js';
 import * as L from '../src/phone2store.js';
-import { G, T, PD, Y } from './phone2reflect.load.mjs';
+import { G, T, PD, Y, N } from './phone2reflect.load.mjs';
+// 롤플에 넣는 글, 창구(P.phoneBlock)가 만드는 대로: 폰 1의 글(폰 1 함수) + 실시간 폰의 글(phone2note.js)
+const block = (m, live = null) => PD.phoneBlock(m) + N.liveNote(live);
 import { journalRead, journalWrite } from '../src/phonesync.js';
 
 const phone = () => ({ owner: 'Mara', now: '11-10 22:00', year: 2026, contacts: [{ name: 'Ivo' }], threads: [], calls: [], photos: [], notes: [], searches: [], events: [], posts: [], mails: [], diary: [], voice: [],
@@ -416,16 +418,37 @@ test('주입: 실시간 폰에서 켜면 그 폰도 롤플에 넣는 글에 들�
     const before = PD.phoneBlock(m);
     assert.ok(before.includes('폰 1 메모'));
     // off on the live phone: letter for letter what it was
-    assert.equal(PD.phoneBlock(m, [two]), before);
-    assert.equal(PD.phoneBlock(m, []), before); assert.equal(PD.phoneBlock(m, null), before);
+    assert.equal(block(m, [two]), before);
+    assert.equal(block(m, []), before); assert.equal(block(m, null), before);
     two.inject = true;
-    const both = PD.phoneBlock(m, [two]);
+    const both = block(m, [two]);
     assert.ok(both.startsWith(before));
     assert.match(both, /\n\n# PHONES NOW \(messenger\)\n_[^\n]+_\n## Mara's phone \(as of 11-12 21:30\)\n- Notes: 실시간 메모$/);
     // only the live phone on
     one.inject = false;
-    const only = PD.phoneBlock(m, [two]);
+    const only = block(m, [two]);
     assert.ok(!only.includes('폰 1 메모') && !only.includes('# PHONES\n') && only.includes('# PHONES NOW (messenger)'));
+    // 실시간 폰 한 대를 적는 방법은 폰 1과 같아요: 같은 폰을 폰 1 자리에 두면 제목만 달라요
+    const rich = { owner: 'Mara', inject: true, now: '11-12 21:30', contacts: [{ name: 'Ivo', saved: '이보' }], calls: [{ with: 'Ivo', type: 'missed', time: '11-12 20:00' }], events: [{ date: '11-13', time: '10:00', title: '병원' }],
+        notes: [{ title: '메모', text: 'y' }], threads: [{ with: 'Ivo', messages: [{ from: 'me', time: '11-12 19:00', text: '어디야' }, { from: 'Ivo', time: '11-12 19:01', text: '집' }] }] };
+    const asOne = PD.phoneBlock({ phones: { mara: rich } }), asLive = N.liveNote([rich]);
+    assert.ok(asOne.includes('Texts with Ivo') && asOne.includes('Missed calls') && asOne.includes('Calendar') && asOne.includes('Contacts saved'));
+    assert.equal(asLive.slice(asLive.indexOf('\n## ')), asOne.slice(asOne.indexOf('\n## ')));
+    assert.ok(asLive.startsWith(`\n\n${N.LIVE_NOTE_HEAD}\n## Mara's phone`));
+    // 실시간 폰이 망가져 있어도 폰 1의 글은 그대로 나가요
+    one.inject = true;
+    assert.equal(block(m, [{ owner: 'X', inject: true }]), before);
+    assert.equal(N.liveNote('x'), ''); assert.equal(N.liveNote(undefined), '');
+});
+
+test('폰 1의 롤플에 넣기(phonedata.js phoneBlock)는 폰 2 전 줄 그대로: 받는 건 메타 하나, 실시간 낱말이 없어요', async () => {
+    const src = await readFile(new URL('../src/phonedata.js', import.meta.url), 'utf8'), i = src.indexOf('export function phoneBlock('), body = src.slice(i, src.indexOf('\n}\n', i));
+    assert.ok(body.startsWith('export function phoneBlock(m) {'));
+    assert.doesNotMatch(body, /live|messenger|PHONES NOW/);
+    assert.ok(!src.includes('function phoneNote('));
+    // 실시간 폰을 둘째 인자로 줘도 폰 1 함수는 안 봐요
+    const one = { owner: 'Mara', inject: true, now: '10-26 12:00', contacts: [], calls: [], events: [], notes: [{ title: '폰 1 메모', text: 'x' }], threads: [] };
+    assert.equal(PD.phoneBlock({ phones: { mara: one } }, [{ ...one, notes: [{ title: '실시간 메모', text: 'y' }] }]), PD.phoneBlock({ phones: { mara: one } }));
 });
 
 test('실시간 폰의 "지금"은 흐르는 시계예요: 이야기 날짜(dayShift) + 현실 시각. 마지막 반영 때에 멈춰 있지 않아요', () => {
@@ -463,7 +486,7 @@ test('이야기에서 시작할 때 폰 1의 "롤플에 넣기"는 안 따라와
     assert.equal(L.liveWorld(real).phones.mara.inject, false);
     assert.equal(real.phones.mara.inject, true);
     const before = PD.phoneBlock(real);
-    assert.equal(PD.phoneBlock(real, Object.values(L.liveWorld(real).phones)), before);
+    assert.equal(block(real, Object.values(L.liveWorld(real).phones)), before);
 });
 
 test('실시간 폰 한 대의 연도를 고르면 다른 실시간 폰도 같은 만큼 옮겨지고, 반영 뒤에도 은행 날짜와 연도가 맞아요', async () => {

@@ -28,7 +28,7 @@ test('P: 화면이 부르는 이름이 다 있고, 타임라인 쪽은 폰 1 파
 async function loadP() {
     const srcs = await readFile(new URL('phone2api.js', SRC), 'utf8'), enc = t => 'data:text/javascript;base64,' + Buffer.from(t).toString('base64');
     const fakes = {};
-    for (const m of srcs.matchAll(/import \{([^}]*)\} from '(\.\/(?:phonedata|investdata|phoneai|phonelife|phonetr|phone2act|phone2year)\.js)'/g))
+    for (const m of srcs.matchAll(/import \{([^}]*)\} from '(\.\/(?:phonedata|investdata|phoneai|phonelife|phonetr|phone2act|phone2year|phone2note)\.js)'/g))
         fakes[m[2]] = enc(m[1].split(',').map(x => x.trim()).filter(Boolean).map(n => `export const ${n}=(...a)=>({fn:'${n}',a});`).join(''));
     fakes['./phone2store.js'] = new URL('phone2store.js', SRC).href;
     return (await import(enc(srcs.replace(/from '([^']+)'/g, (all, k) => `from '${fakes[k] || k}'`)))).P;
@@ -75,4 +75,10 @@ test('P의 연도: 타임라인은 폰 1 함수를 받은 인자 그대로, 실�
     const set = P.setStoryYear(d, q, 2030); assert.equal(set.fn, 'liveSetStoryYear'); assert.equal(set.a[0], d); assert.equal(set.a[1], q); assert.equal(set.a[2], 2030);
     // 실시간 폰 + 폰 1의 메타: 폰 1 함수를 부르지 않고 멈춰요
     for (const run of [() => P.storyYear(real, q), () => P.ensureYear(real, q), () => P.setStoryYear(real, q, 2030)]) assert.throws(run, /실시간 폰은 실시간 화면에서만 돼요/);
+});
+
+test('P의 롤플에 넣기: 폰 1의 글은 폰 1 함수에 메타만 줘서, 그 뒤에 실시간 폰의 글', async () => {
+    const src = await readFile(new URL('phone2api.js', SRC), 'utf8');
+    assert.ok(src.includes('const phoneBlockP = (m, live = null) => phoneBlock(m) + liveNote(live);'));
+    assert.ok(src.includes('phoneBlock: phoneBlockP,'));
 });

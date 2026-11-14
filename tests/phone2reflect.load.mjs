@@ -53,3 +53,5 @@ export const AI = await import(map['./phoneai.js']);
 export const ACT = await import(encoded(swap(await readFile(new URL('../src/phone2act.js', import.meta.url), 'utf8'))));
 // 실시간 폰의 연도 (phone2year.js)
 export const Y = await import(encoded(swap(await readFile(new URL('../src/phone2year.js', import.meta.url), 'utf8'))));
+// 실시간 폰의 롤플에 넣기 (phone2note.js)
+export const N = await import(encoded(swap(await readFile(new URL('../src/phone2note.js', import.meta.url), 'utf8'))));
