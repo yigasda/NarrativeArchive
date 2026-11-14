@@ -6,18 +6,17 @@
 
 import { AX, ax, axBar, axCb, axH1, axInd, axKp, axTint, axTop, busyHtml } from './phoneapps.js';
 import { filling } from './phoneai.js';
-import { byStory, clockHeld, clockNum, clockOf, fmtDate, halfOf, hourOf, koGaps, koOn, ownerZone, pad, phoneAt, sceneHome, storyNow } from './phonedata.js';
+import { byStory, clockHeld, clockNum, clockOf, fmtDate, halfOf, hourOf, koGaps, koOn, ownerZone, pad, phoneAt, sceneHome } from './phonedata.js';
 import { shiftDay, weatherNow } from './phonelife.js';
 import { timerLeft, COUNTRY_TZ, apart, cityAt as cityOfPlace, mirrorHome, overlayNow } from './phonesynclife.js';
 import { decimalOf, fmtMoney, localeOf } from './phonemoney.js';
 import { nameKey } from './people.js';
 import { phoneMeta } from './core.js';
-// 화면의 지금 (phonedata.js nowOn과 같은 갈림): 타임라인은 예전 그대로 storyNow(p), 실시간만 서랍의 흐르는 시계
-const nowOn = p => (Number.isInteger(phoneMeta()?.phoneUpto) ? storyNow(p, null, phoneMeta()) : storyNow(p));
 import { esc } from './util.js';
 import { DOT_C, DOT_R, DOTS, MAP_BOT, MAP_H, MAP_TOP, MAP_W, TZ_AT } from './worldmap.js';
 import { CAT, dishSvg, guessPic } from './phonefood.js';
 import { screenView } from './phonescreen.js';
+import { P } from './phone2api.js';
 
 Object.assign(AX, {
     alarm: 'M12 6a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM12 9v4l2 2M5 3L2 6M19 3l3 3', hourglass: 'M12 7a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM12 10v4M10 3h4', globe: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18',
@@ -63,7 +62,7 @@ const L = p => {
     return view;
 };
 const k1 = (k, cls = 'lf_k') => (k && koOn() ? `<span class="${cls}">${esc(k)}</span>` : '');
-const now5 = p => String(nowOn(p) || p.now || '');
+const now5 = p => String(P.nowOn(p, phoneMeta()) || p.now || '');
 const toMin = t => { const mt = String(t || '').match(/(\d{1,2}):(\d{2})/); return mt ? Number(mt[1]) * 60 + Number(mt[2]) : null; };
 // an order's arrival clock: "MM-DD HH:MM", or "HH:MM" alone (on the order's day)
 const arrHm = o => { const a = String(o.arrived || ''); return /^\d{2}:\d{2}$/.test(a) ? a : a.slice(6); };
@@ -77,7 +76,7 @@ let STORY = { year: new Date().getFullYear(), now: '', dot: false };
 export function setStory(p) {
     const y = Number(p?.year) || Number(String(p?.money?.asOf || p?.investment?.date || '').slice(0, 4)) || new Date().getFullYear();
     // known: the story dates itself (else weekdays aren't shown: a fantasy calendar or an undated story has none to show)
-    STORY = { year: y, known: !p?.noYear && !!(Number(p?.year) || /^\d{4}-/.test(String(p?.money?.asOf || p?.money?.fxDate || p?.investment?.date || ''))), now: String(nowOn(p) || p?.now || '').slice(0, 5), dot: decimalOf(p) === '.', loc: localeOf(p), p };
+    STORY = { year: y, known: !p?.noYear && !!(Number(p?.year) || /^\d{4}-/.test(String(p?.money?.asOf || p?.money?.fxDate || p?.investment?.date || ''))), now: String(P.nowOn(p, phoneMeta()) || p?.now || '').slice(0, 5), dot: decimalOf(p) === '.', loc: localeOf(p), p };
 }
 const n0 = v => (v === null || v === undefined ? '—' : Number(v).toLocaleString(STORY.loc || 'en-US'));
 const md = s => { const mt = String(s || '').match(/^(\d{2})-(\d{2})/); return mt ? { mo: Number(mt[1]), d: Number(mt[2]) } : null; };
@@ -1479,7 +1478,7 @@ function cityMap(o, accent, bike) {
 }
 const SCOOT = '<g transform="translate(-11 -9) scale(.55)"><rect x="2" y="6" width="12" height="11" rx="2" fill="#3fd4c1"/><circle cx="9" cy="27" r="5" fill="#2b2b2b"/><circle cx="31" cy="27" r="5" fill="#2b2b2b"/><path d="M6 22 h22 l4 -8 h3 v4 l-4 4 v4 h-25z" fill="#3fd4c1"/><circle cx="22" cy="5" r="4.4" fill="#3fd4c1"/><path d="M18 9 h7 l2 9 h-9z" fill="#3a3a3a"/></g>';
 const BIKE = '<g transform="translate(-10 -7)" fill="none" stroke="#16181c" stroke-width="2"><circle cx="4" cy="11" r="3.6"/><circle cx="16" cy="11" r="3.6"/><path d="M4 11 L8 4 h5 L16 11 M8 4 L11 11 L13 4" stroke-linejoin="round"/></g>';
-const minsLeft = (p, o) => { const n = String(nowOn(p) || p.now || ''), a = o.time.slice(6), b = n.slice(6); if (!/^\d\d:\d\d/.test(a) || !/^\d\d:\d\d/.test(b) || n.slice(0, 5) !== o.time.slice(0, 5)) return 20; const m = (s => Number(s.slice(0, 2)) * 60 + Number(s.slice(3, 5))); return Math.max(3, m(a) + 35 - m(b)); };
+const minsLeft = (p, o) => { const n = String(P.nowOn(p, phoneMeta()) || p.now || ''), a = o.time.slice(6), b = n.slice(6); if (!/^\d\d:\d\d/.test(a) || !/^\d\d:\d\d/.test(b) || n.slice(0, 5) !== o.time.slice(0, 5)) return 20; const m = (s => Number(s.slice(0, 2)) * 60 + Number(s.slice(3, 5))); return Math.max(3, m(a) + 35 - m(b)); };
 export function orderScreen(p, now, id) {
     const d = D(p), o = d?.orders.find(x => x.id === id);
     if (!o) return ordersScreen(p, now);

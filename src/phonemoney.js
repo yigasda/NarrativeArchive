@@ -4,18 +4,16 @@
 
 import { creditAmount, creditLabel } from './finance.js';
 import { phoneMeta } from './core.js';
-// 화면의 지금 (phonedata.js nowOn과 같은 갈림): 타임라인은 예전 그대로 storyNow(p), 실시간만 서랍의 흐르는 시계
-const nowOn = p => (Number.isInteger(phoneMeta()?.phoneUpto) ? storyNow(p, null, phoneMeta()) : storyNow(p));
 import { migrateBank, total, fx, price, finite, currency } from './finance.js';
-import { investmentDate } from './investdata.js';
 import { nameKey } from './people.js';
 import { filling, recording } from './phoneai.js';
 import { AX, ax, axBar, axCb, axDay, axFind, axH1, axInd, axKp, axLetter, axTint, axTop, busyHtml } from './phoneapps.js';
-import { byStory, clockOf, fmtDate, fmtTime, fullDate, gapDays, homeCountry, koOn, listTime, localeOf, storyNow } from './phonedata.js';
+import { byStory, clockOf, fmtDate, fmtTime, fullDate, gapDays, homeCountry, koOn, listTime, localeOf } from './phonedata.js';
 import { esc } from './util.js';
 import { prodSvg } from './phoneprod.js';
 import { passMotif } from './phonepassart.js';
 import { dlvApp, monthSoFar, PASS_OVER } from './phonesyncmoney.js';
+import { P } from './phone2api.js';
 
 Object.assign(AX, {
     plane: 'M2 13l20-6-3 4-8 3-3 6-2-5z', train: 'M6 4h12v11a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3zM6 10h12M9 21l1-3M15 21l-1-3', bed: 'M3 18v-9M3 13h18v5M7 13V9h6a4 4 0 0 1 4 4',
@@ -42,7 +40,7 @@ export const fmtIn = (p, n, cur, signed = false) => fmtMoney({ ...p, money: { cu
 // Display currency never changes an account's denomination or its ledger.
 const LOCAL_CURRENCY = {KR:'KRW',US:'USD',GB:'GBP',DE:'EUR',FR:'EUR',IT:'EUR',ES:'EUR',AT:'EUR',JP:'JPY',CN:'CNY',TW:'TWD',CA:'CAD',AU:'AUD',RU:'RUB',BR:'BRL',CH:'CHF'};
 export const bankDisplayCurrency = p => currency(p.money?.displayCurrency) || LOCAL_CURRENCY[homeCountry(p)] || p.money?.currency || 'EUR';
-const bankDate = p => p.money?.fxDate || investmentDate(phoneMeta(),p);
+const bankDate = p => p.money?.fxDate || P.investmentDate(phoneMeta(),p);
 function converted(p, a, brief = false) {
     const from = a.currency || p.money.currency, to = bankDisplayCurrency(p), date = bankDate(p);
     if (from === to) return '';
@@ -220,7 +218,7 @@ const PAYDAY = /\blohn\b|gehalt|salary|payroll|\bwage|월급|급여|給料|给�
 // one payee whatever language a record names it in: its Korean name when it has one ("Netflix" with ko "넷플릭스" is 넷플릭스)
 const payee = x => String(x.ko || x.who || '').toLowerCase().replace(/[^\p{L}\p{N}&+]+/gu, ' ').trim().split(' ').slice(0, 2).join(' ');
 // a record's year: the phone's, or the one before for a month past the story's now (December, read in January)
-const yearOf = (p, mm) => { if (!p.year || p.noYear) return null; const n = Number(String(nowOn(p) || p.now || '').slice(0, 2)); return p.year - (n && Number(mm) > n ? 1 : 0); };
+const yearOf = (p, mm) => { if (!p.year || p.noYear) return null; const n = Number(String(P.nowOn(p, phoneMeta()) || p.now || '').slice(0, 2)); return p.year - (n && Number(mm) > n ? 1 : 0); };
 // a paper's day: with its year when the story has one (2026. 10. 30. · 10/30/2026 · 30.10.2026), else the short date
 const paperDay = (p, mm, dd) => { const y = yearOf(p, mm), md = `${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`; return y ? fullDate(p, `${y}-${md}`) : fmtDate(p, md, true); };
 const daysIn = (p, mm) => new Date(Date.UTC(Number(p.year) || 2025, Number(mm), 0)).getUTCDate();
@@ -263,7 +261,7 @@ export function fixedScreen(p, now, arg = '') {
     const M = mo(p); if (!M) return bankHome(p, now);
     // 'a~key': a is the account (from its screen, only its payments), key the one opened
     const [af, key] = String(arg).includes('~') ? String(arg).split('~') : ['', String(arg)], fa = af !== '' ? M.bank.accounts[Number(af)] : null;
-    const list = fixedCosts(p).filter(f => !fa || f.account === fa.last4), today = String(nowOn(p) || p.now || ''), mm = today.slice(0, 2), td = Number(today.slice(3, 5)) || 1, dim = daysIn(p, mm);
+    const list = fixedCosts(p).filter(f => !fa || f.account === fa.last4), today = String(P.nowOn(p, phoneMeta()) || p.now || ''), mm = today.slice(0, 2), td = Number(today.slice(3, 5)) || 1, dim = daysIn(p, mm);
     const st = f => {
         if (f.stopped) return ['해지', 'g', ''];
         if (f.fq === 'weekly') return ['매주', 'g', ''];
@@ -317,7 +315,7 @@ const NOTE_K = { in: ['down2', '#dcefdf', '#3f7d50', '입금'], card: ['card2', 
 export function bankNotes(p, now) {
     adjFor(p);
     const M = mo(p); if (!M) return bankHome(p, now);
-    const bal = balancesAfter(p), xs = newestTx(p).slice(0, 24), today = String(nowOn(p) || p.now || ''), td = Number(today.slice(3, 5)) || 1;
+    const bal = balancesAfter(p), xs = newestTx(p).slice(0, 24), today = String(P.nowOn(p, phoneMeta()) || p.now || ''), td = Number(today.slice(3, 5)) || 1;
     // within a week, the first days of next month too (the 2nd, read on the 28th)
     const dim = daysIn(p, today.slice(0, 2)), until = f => (f.day >= td ? f.day - td : dim - td + f.day);
     const soon = fixedCosts(p).filter(f => !f.stopped && (f.fq || 'monthly') === 'monthly' && !f.xs.some(x => String(x.time).slice(0, 2) === today.slice(0, 2)) && until(f) <= 7);
@@ -353,7 +351,7 @@ export function bankSend(p, now, arg = '') {
         groups.set(k, [...(groups.get(k) || []), x]);
     }
     const ppl = [...groups].map(([k, xs]) => ({ k, xs, who: xs[0].who, out: xs.filter(x => x.amount < 0), in: xs.filter(x => x.amount > 0) })).sort((a, b) => b.xs.length - a.xs.length || byStory(p.now)(b.xs[0], a.xs[0]));
-    const mm = String(nowOn(p) || p.now || '').slice(0, 2), month = [...groups.values()].flat().filter(x => String(x.time).slice(0, 2) === mm && !x.pending);
+    const mm = String(P.nowOn(p, phoneMeta()) || p.now || '').slice(0, 2), month = [...groups.values()].flat().filter(x => String(x.time).slice(0, 2) === mm && !x.pending);
     const sent = Math.abs(month.filter(x => x.amount < 0).reduce((n, x) => n + x.amount, 0)), got = month.filter(x => x.amount > 0).reduce((n, x) => n + x.amount, 0);
     const sum = xs => xs.reduce((n, x) => n + Math.abs(x.amount), 0), sel = ppl.find(o => o.k === key);
     const cur = fa?.currency || M.currency, money = n => fmtIn(p, n, cur);
@@ -377,7 +375,7 @@ export function bankStmt(p, now, arg = '') {
     const ai = from ? Number(ai0) : Math.max(0, M.bank.accounts.findIndex(a => a.kind !== 'credit')), a = M.bank.accounts[ai];
     if (!a) return bankHome(p, now);
     // months in story order, across New Year too: how many months back from the story's now (December is 1 back in January)
-    const today = String(nowOn(p) || p.now || ''), nowM = Number(today.slice(0, 2)) || 0, back = m => (nowM - Number(m) + 12) % 12;
+    const today = String(P.nowOn(p, phoneMeta()) || p.now || ''), nowM = Number(today.slice(0, 2)) || 0, back = m => (nowM - Number(m) + 12) % 12;
     const all = newestTx(p).filter(x => x.account === a.last4 && !x.pending), months = [...new Set(all.map(x => String(x.time).slice(0, 2)))].sort((x, y) => back(y) - back(x));
     const mm = m0 || (months.includes(today.slice(0, 2)) ? today.slice(0, 2) : months[months.length - 1] || today.slice(0, 2));
     const xs = all.filter(x => String(x.time).slice(0, 2) === mm), later = all.filter(x => back(String(x.time).slice(0, 2)) < back(mm));
@@ -470,7 +468,7 @@ function wealthOf(p) {
         const v = conv(x.value, x.currency) * (x.whose === 'shared' ? 0.5 : 1);
         return { x, name: words(x) || kind, icon, sub: [kind, W_WHOSE[x.whose] || '', x.status === 'expected' ? '수령 예정' : x.status === 'blocked' ? '동결' : ''].filter(Boolean).join(' · '), v, out };
     });
-    const today = String(nowOn(p) || p.now || '').slice(0, 5);
+    const today = String(P.nowOn(p, phoneMeta()) || p.now || '').slice(0, 5);
     const debts = (M.debts || []).filter(x => !['paid', 'forgiven'].includes(x.status) && finite(Number(x.amount))).map(x => {
         const [icon, kind] = W_DB[x.kind] || W_DB.other, out = x.whose === 'family' ? '가족 부채' : x.whose === 'company' ? '법인 부채' : '';
         const v = -Math.abs(conv(x.amount, x.currency)) * (x.whose === 'shared' ? 0.5 : 1), gap = /^\d{2}-\d{2}/.test(String(x.due || '')) ? gapDays(today, String(x.due).slice(0, 5)) : null;
@@ -634,7 +632,7 @@ export function walletScreen(p, now, sel = '') {
     const M = mo(p);
     if (!M) return emptyApp(p, now, '지갑', 'money', '아직 지갑이 비어 있어요. 채우면 은행 · 지갑 · 쇼핑이 함께 생겨요.');
     migrateBank(phoneMeta(),p);
-    const today = String(nowOn(p) || p.now || '').slice(0, 5), past = x => (!x.dayUnknown && x.date && gapDays(today, String(x.until && /^\d{2}-\d{2}/.test(String(x.until)) ? x.until : x.date)) < 0) || PASS_OVER(x.status);
+    const today = String(P.nowOn(p, phoneMeta()) || p.now || '').slice(0, 5), past = x => (!x.dayUnknown && x.date && gapDays(today, String(x.until && /^\d{2}-\d{2}/.test(String(x.until)) ? x.until : x.date)) < 0) || PASS_OVER(x.status);
     const when = x => (x.dayUnknown || !x.date ? 9999 : gapDays(today, x.date)), ps = [...M.passes].sort((a, b) => when(a) - when(b)), up = ps.filter(x => !past(x)), old = ps.filter(past);
     const t = bankTier(p).t, mc = t?.k === 'PRIVATE';
     // a tap on one lying behind brings it out whole; a tap on the open one opens it
@@ -666,7 +664,7 @@ const SPEND = [['식비 · 카페', '#e0904a', /café|cafe|kaffee|coffee|bäck|b
     ['교통', '#5a8ac8', /bahn|\bdb\b|bvg|hvv|mvg|ubahn|u-bahn|metro|transit|uber\b|taxi|bolt|tank|shell|aral|esso|fuel|parking|parken|교통|지하철|버스|택시|주유|티머니|ktx|코레일|주차|suica|pasmo/i],
     ['쇼핑', '#2f9a8a', /amazon|zalando|otto|ebay|shop|store|markt\b|buch|book|apple|ikea|h&m|zara|uniqlo|쿠팡|무신사|올리브영|쇼핑|다이소|11번가|g마켓|楽天|淘宝/i]];
 function spendMonth(p, all) {
-    const mm = String(nowOn(p) || p.now || '').slice(0, 2), xs = all.filter(x => String(x.time).slice(0, 2) === mm && x.amount < 0 && !x.pending);
+    const mm = String(P.nowOn(p, phoneMeta()) || p.now || '').slice(0, 2), xs = all.filter(x => String(x.time).slice(0, 2) === mm && x.amount < 0 && !x.pending);
     if (xs.length < 2) return '';
     const tot = xs.reduce((n, x) => n - x.amount, 0), cats = SPEND.map(([n, c, re]) => [n, c, xs.filter(x => re.test(`${x.who} ${x.ko || ''} ${x.memo || ''}`))]);
     const other = xs.filter(x => !cats.some(([, , ys]) => ys.includes(x))), rows = [...cats, ['그 밖', '#9aa3ae', other]].map(([n, c, ys]) => [n, c, ys.reduce((m, x) => m - x.amount, 0)]).filter(r => r[2] > 0).sort((a, b) => b[2] - a[2]);

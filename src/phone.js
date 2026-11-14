@@ -5,24 +5,24 @@
 //   upto (the last message number the archive held), at, inject } }
 
 import { phoneChatScope, phoneTarget, ensurePhoneStory, resetPhoneStory } from './phonestory.js';
-import { prepareWealth, dateOrderOf, needsDateOrder, setDateOrder, setScreenHolder, ensureScreenHolder, screenHolderChoices, setOwnerLives, setPlaceCity, cityChoices, answerOwnerAsk, dropPlacePerson, rereadPlaces, placeInfo, countryOf, countryZones, phonePre, preparePhone, setPreYear, screenHolderLabel } from './phonedata.js';
+import { dateOrderOf, needsDateOrder, setDateOrder, setScreenHolder, ensureScreenHolder, screenHolderChoices, setOwnerLives, setPlaceCity, cityChoices, answerOwnerAsk, dropPlacePerson, placeInfo, countryOf, countryZones, phonePre, setPreYear, screenHolderLabel } from './phonedata.js';
 import { profileEntries, resolvePhoneProfile, currentPersonaBinding } from './phoneprofile.js';
 import { investmentScreen } from './investui.js';
-import { collectInvestmentRecords, fillInvestment, fillChartHistory, refreshMarket, refreshBankFX, investmentDate, validDate } from './investdata.js';
+import { validDate } from './investdata.js';
 import { migrateBank, selectPrice } from './finance.js';
 import { askDraft, draftReady, draftSettings, drLabel, listModels, vxModelList, withSpinner } from './ai.js';
 import { ctx, getMeta, globalSettings, phoneMeta, saveGlobal, saveMeta, setPhoneMeta } from './core.js';
 import { applyInjection } from './inject.js';
 import { faceHtml, nameKey, peopleList } from './people.js';
-import { drafting, drawing, drawPhoto, drawPost, filling, makeDraft, paging, retranslate, retranslating, recording, recordVoice, searching, searchPage, shooting, takePhoto, webPage, writeEntry, writing } from './phoneai.js';
+import { drafting, drawing, drawPhoto, drawPost, filling, paging, retranslate, retranslating, recording, searching, searchPage, shooting, webPage, writing } from './phoneai.js';
 import { setDraft, setDraftModels, setLang, setVoice, setVoiceAdd, voiceList, voicePeople, ax, axFind, groupInfo, APPS, AXB, AXB_C, busyHtml, setDate, setScreenHolderView, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, mapTowns, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setOwnerProfile, setWho, snsPost, snsScreen, statusBar, threadScreen, setPlace, prepScreen } from './phoneapps.js';
-import { phoneMaking, dropStretch, settleBranch, chatStamp, koGaps, savedName, ensureIds, ensureYear, hasDatedRecords, noArchive, setStoryYear, storyYear, fillDevice, fillMoney, fillVoice, koOn, loreOff, makePhone, tidyKo, markAfter, phoneLore, REMAKE, restoreRounds, retryMoney, showNow, storyNow, syncLeft, syncRows, syncState, tidyJournal, undoRound } from './phonedata.js';
+import { phoneMaking, dropStretch, chatStamp, koGaps, savedName, ensureIds, hasDatedRecords, noArchive, koOn, loreOff, tidyKo, markAfter, phoneLore, REMAKE, restoreRounds, showNow, syncLeft, syncRows, syncState, tidyJournal, undoRound } from './phonedata.js';
 import { busy, watchBusy, exclusive, journalRead, journalWrite, syncOf } from './phonesync.js';
 import { syncPick, syncSettings } from './phonesyncui.js';
 import { CG_W, homeScreen, lastSig, lockScreen, threadNew } from './phonehome.js';
 import { bankDisplayCurrency, bankAcct, bankHome, bankTx, fixedScreen, bankNotes, bankSend, bankStmt, txDoc, bankMore, cardView, orderView, passView, trackView, shopScreen, voiceOne, voiceScreen, walletScreen } from './phonemoney.js';
 import { marksScreen, pageView, searchOne, searchScreen, tabsScreen } from './phoneweb.js';
-import { fillDelivery, fillLife, fillScreen, fillShopMenus, menuWanted, refreshNearby } from './phonelife.js';
+import { fillShopMenus, menuWanted } from './phonelife.js';
 import { alarmScreen, setStory, cartScreen, cityList, cityScreen, clockScreen, compareScreen, dlvScreen, fileScreen, filesScreen, folderScreen, healthScreen, heartScreen, hereWidget, itemScreen, orderScreen, ordersScreen, payScreen, rateScreen, shopScreen2, sleepScreen, stepsScreen, timerScreen, waterScreen, weatherScreen, weightScreen, workScreen, worldScreen } from './phonelifeapps.js';
 import { screenTimeScreen } from './phonestime.js';
 import { mapCityScreen, mapEmptyScreen, mapResults, mapSearchScreen } from './phonemapsearch.js';
@@ -31,7 +31,7 @@ import { FLAG_NAME, flagSvg } from './phoneflags.js';
 import { mapZoom } from './phonemapzoom.js';
 import { tileWatch } from './phonetilemap.js';
 import { glossaryEntries, openGlossary } from './translate.js';
-import { dropVoice, fillKo, koAppOf, koScopeOf, labelVoices, learnVoices, pickVoices, redoKo, roundScope, tickLang } from './phonetr.js';
+import { dropVoice, fillKo, koAppOf, koScopeOf, labelVoices, redoKo, roundScope, tickLang } from './phonetr.js';
 // 을 / 를 after a word: by its last syllable's final consonant (a Latin ending, like SNS, reads as 를)
 const josa = w => { const c = w.charCodeAt(w.length - 1) - 0xac00; return c >= 0 && c < 11172 && c % 28 ? '을' : '를'; };
 import { confirm, esc } from './util.js';
@@ -40,10 +40,10 @@ import { shiftLabel, liveWall, viewerWall, startShift } from './phone2clock.js';
 import { orbitList, orbitRoom, orbitNew, orbitHomeWidget, liveStart } from './phoneorbit.js';
 import { liveStoryText, beginFromStory, liveBranched, adoptChat, rebeginFromStory, rebeginKeepingChats } from './phone2story.js';
 import { liveGo, liveReflect, liveCanUndo, liveUndo, liveUnreflected, liveNowOf } from './phone2go.js';
+import { P } from './phone2api.js';
 
 // other files keep importing these from here (주입: 실시간 폰의 폰들도 같이, 주입이 꺼진 폰은 빼고)
-import { phoneBlock as phoneBlock0, nowOn } from './phonedata.js';
-export const phoneBlock = m => phoneBlock0(m, Object.values(liveWorld(m)?.phones || {}));
+export const phoneBlock = m => P.phoneBlock(m, Object.values(liveWorld(m)?.phones || {}));
 
 // what 초안 모델's screen shows (the key only by its last four)
 const draftUi = () => { const t = draftSettings(); let host = ''; try { host = t.url ? new URL(t.url).host : ''; } catch { host = t.url; }
@@ -54,8 +54,8 @@ const draftIds = () => (draftSettings().mode === 'vertex' ? vxModelList() : draf
 // a make that ends tells every phone open now (one shut and opened again mid-make draws the phone it made)
 const madeWatch = new Set();
 function screen(p, view, m, roster, ui) {
-    // (타임라인은 예전 그대로 storyNow(p), 실시간만 서랍의 흐르는 시계)
-    const now = nowOn(p, phoneMeta());
+    // (타임라인은 예전 그대로 P.storyNow(p), 실시간만 서랍의 흐르는 시계)
+    const now = P.nowOn(p, phoneMeta());
     showNow(now);
     setStory(p);
     // "view:id": an id may hold colons itself (a reflection's records are "sync:event:m0")
@@ -114,7 +114,7 @@ export async function openPhone(who = null) {
     // 'after' 이 방 것으로 삼기 · 'before' 되돌린 폰 1로 다시 시작 · 'none' 그대로. 분기가 아니면 아무것도 안 바뀌고 알림도 없어요
     {
         const done = [];
-        for (const p of Object.values(realM.phones || {})) if (p?.owner) { try { const r = await settleBranch(realM, p); if (r) done.push({ name: p.owner, p, ...r }); } catch (err) { console.error('[narrative-archive] branch', p?.owner, err); } }
+        for (const p of Object.values(realM.phones || {})) if (p?.owner) { try { const r = await P.settleBranch(realM, p); if (r) done.push({ name: p.owner, p, ...r }); } catch (err) { console.error('[narrative-archive] branch', p?.owner, err); } }
         let rebegun = false;
         const lw = liveWorld(realM);
         if (lw) {
@@ -164,7 +164,7 @@ export async function openPhone(who = null) {
      // busyMake: 'sync' | 'make' while a reflection or a make runs
     for (const p of Object.values(m.phones)) migrateBank(m, p);
     // phones from before 날짜 및 시간 get their year (or none) once
-    if (Object.values(m.phones).filter(p => p?.owner).map(p => ensureYear(m, p)).some(Boolean)) await saveMeta();
+    if (Object.values(m.phones).filter(p => p?.owner).map(p => P.ensureYear(m, p)).some(Boolean)) await saveMeta();
     if (!stillHere()) return;
     if (Object.values(m.phones).some(p => p.money)) await saveMeta();
     if (!stillHere()) return;
@@ -181,7 +181,7 @@ export async function openPhone(who = null) {
     const obAcct = () => { const w = liveWorld(realM), me = w?.persona || ''; return obWho && owner && liveKey(obWho) === liveKey(owner) && liveKey(owner) !== liveKey(me) ? owner : me; };
     // 실시간 폰 시작 (5단계): 이야기 날짜 + 현실 시각(startShift), 마지막 메시지까지
     function startPlanOf(p) {
-        const at = String(storyNow(p) || p?.now || ''), tz = placeInfo(p).owner.tz || Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const at = String(P.storyNow(p) || p?.now || ''), tz = placeInfo(p).owner.tz || Intl.DateTimeFormat().resolvedOptions().timeZone;
         let dayShift = 0; try { dayShift = startShift({ storyAt: at.slice(0, 11), storyYear: Number(p?.year) || new Date().getFullYear(), tz }); } catch { dayShift = 0; }
         const w = viewerWall(Date.now(), dayShift).at, md = x => `${Number(x.slice(0, 2))}월 ${Number(x.slice(3, 5))}일`;
         return { dayShift, persona: ctx().name1 || 'Me', local: w.slice(6), date: md(w), shift: shiftLabel(dayShift), upto: /^\d{2}-\d{2} \d{2}:\d{2}/.test(at) ? `${md(at)} ${at.slice(6, 11)}까지` : '' };
@@ -274,7 +274,7 @@ export async function openPhone(who = null) {
         koBusy = true;
         try {
             // (how the people who text sound, from the story, for anyone not in the table yet; a failure here only leaves it out)
-            try { await learnVoices(m, who, p); } catch (err) { console.warn('[narrative-archive] voices', err); }
+            try { await P.learnVoices(m, who, p); } catch (err) { console.warn('[narrative-archive] voices', err); }
             const n = await fillKo(p);
             if (p.syncLast?.trFailed) delete p.syncLast.trFailed;
             if (n || loud) await saveMeta();
@@ -384,7 +384,7 @@ export async function openPhone(who = null) {
     // the clock in a zone now: the story's time where the owner is, moved by the zones' gap (today's)
     const zoneOff = tz => { try { const d = new Date(), q = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).formatToParts(d).map(x => [x.type, x.value])); return Math.round((Date.UTC(q.year, q.month - 1, q.day, q.hour % 24, q.minute) - d.getTime()) / 6e4); } catch { return null; } };
     const clockIn = (p, tz) => {
-        const base = placeInfo(p).owner.tz, a = zoneOff(tz), b = base ? zoneOff(base) : null, t = /(\d{2}):(\d{2})/.exec(String((live() ? storyNow(p, null, phoneMeta()) || p?.now : p?.now) || ''));
+        const base = placeInfo(p).owner.tz, a = zoneOff(tz), b = base ? zoneOff(base) : null, t = /(\d{2}):(\d{2})/.exec(String((live() ? P.storyNow(p, null, phoneMeta()) || p?.now : p?.now) || ''));
         if (a === null) return '';
         const mins = t && b !== null ? Number(t[1]) * 60 + Number(t[2]) + a - b : null;
         if (mins === null) { const d = new Date(Date.now() + a * 6e4); return `지금 ${d.getUTCHours()}:${String(d.getUTCMinutes()).padStart(2, '0')}`; }
@@ -566,14 +566,14 @@ export async function openPhone(who = null) {
         if (!prepared) await askDateOrder();
         busyMake = update ? 'sync' : 'make';
         let p;
-        try { p = await withSpinner($btn, update ? '반영하는 중' : '폰 만드는 중', () => makePhone(m, owner, { update })); } finally { busyMake = null; if (!update) for (const fn of [...madeWatch]) fn(m, owner); if (!phoneClosed && stillHere()) drawPhone(true); }
+        try { p = await withSpinner($btn, update ? '반영하는 중' : '폰 만드는 중', () => P.makePhone(m, owner, { update })); } finally { busyMake = null; if (!update) for (const fn of [...madeWatch]) fn(m, owner); if (!phoneClosed && stillHere()) drawPhone(true); }
         if (!p) return;
         if (!update) view = 'lock';
         draw();
         if (!update) return toastr.success(`${owner}의 폰을 만들었어요`, '캐릭터 휴대폰');
         const r = p.syncLast;
         // the shops nearby, every 3 story days and 3 reflections (or at once on a move to another saved city): on their own, after the reflection
-        refreshNearby(m, p, { read: !!r?.checked }).then(n => { if (n && !phoneClosed && phone() === p && /^(dlv|delivery)/.test(view)) drawPhone(true); }).catch(err => toastr.warning(String(err?.message || err), '동네 가게'));
+        P.refreshNearby(m, p, { read: !!r?.checked }).then(n => { if (n && !phoneClosed && phone() === p && /^(dlv|delivery)/.test(view)) drawPhone(true); }).catch(err => toastr.warning(String(err?.message || err), '동네 가게'));
         if (!r?.checked) return toastr.info('새로 읽을 대화가 없어요', '캐릭터 휴대폰');
         koRun(p, false);
         const head = `${r.checked}개 확인 · 남은 ${r.remaining}개`;
@@ -587,7 +587,7 @@ export async function openPhone(who = null) {
         if (investing) return;
         const p = phone(), date = $root.find('.iv_date').val();
         investing = true; drawPhone(true);
-        try { await (p.investment ? refreshMarket(m, p, date, checkStory) : fillInvestment(m, p, date)); }
+        try { await (p.investment ? P.refreshMarket(m, p, date, checkStory) : P.fillInvestment(m, p, date)); }
         catch (err) { toastr.error(String(err?.message || err), '투자'); }
         finally { investing = false; if (phone() === p) drawPhone(true); }
     };
@@ -604,7 +604,7 @@ export async function openPhone(who = null) {
         if (investing) return;
         const p = phone(), date = $root.find('.bank_fxdate').val(), base = bankDisplayCurrency(p);
         investing = true;
-        try { await withSpinner($(this),'',()=>refreshBankFX(m,p,date,base)); }
+        try { await withSpinner($(this),'',()=>P.refreshBankFX(m,p,date,base)); }
         catch (err) { toastr.error(String(err?.message || err),'환율'); }
         finally { investing = false; if (phone() === p) drawPhone(true); }
     });
@@ -626,7 +626,7 @@ export async function openPhone(who = null) {
         const request = `${owner}|${p.investment.date}|${symbol}|${range}`;
         if (chartAttempt === request) return;
         chartAttempt = request; investing = true; drawPhone(true);
-        try { await fillChartHistory(m,p,symbol,range); }
+        try { await P.fillChartHistory(m,p,symbol,range); }
         catch(err) { if (!phoneClosed && phone() === p) toastr.error(String(err?.message || err),'차트'); }
         finally { investing=false; if (!phoneClosed) drawPhone(true); }
     };
@@ -638,7 +638,7 @@ export async function openPhone(who = null) {
         const p = phone(), mode = 'records', target = this.dataset.target || '';
         investing = true; drawPhone(true);
         try {
-            const got = await collectInvestmentRecords(m, p, mode, target);
+            const got = await P.collectInvestmentRecords(m, p, mode, target);
             if (mode === 'records') toastr.info(got.schedules.length || got.history.length ? '투자 일정과 변경 기록을 확인했어요' : '새로 확인된 일정이나 변경 기록이 없어요');
         } catch (err) { toastr.error(String(err?.message || err), '투자 기록'); }
         finally { investing = false; if (phone() === p) drawPhone(true); }
@@ -677,7 +677,7 @@ export async function openPhone(who = null) {
     const loadDevice = async (p,state) => {
         if(p.profileDraft || state.deviceBusy || p.device) return;
         state.deviceBusy=true;state.deviceError='';profileRedraw(p,state);
-        try {await fillDevice(m,p);} catch(err) {state.deviceError=String(err?.message || err);}
+        try {await P.fillDevice(m,p);} catch(err) {state.deviceError=String(err?.message || err);}
         finally {state.deviceBusy=false;profileRedraw(p,state);}
     };
     $root.on('click','.fp_device',function(){const p=profilePhone(),state=profileStates.get(nameKey(p.owner));if(state) loadDevice(p,state);});
@@ -1036,7 +1036,7 @@ export async function openPhone(who = null) {
         const p = phone(), id = nameKey(p.owner);
         if (shooting.has(id)) return;
         shooting.add(id); drawPhone();
-        try { const k = await takePhoto(m, p); if (phone() === p) view = `cam:${k}`; toastr.success('사진을 찍었어요', '캐릭터 휴대폰'); }
+        try { const k = await P.takePhoto(m, p); if (phone() === p) view = `cam:${k}`; toastr.success('사진을 찍었어요', '캐릭터 휴대폰'); }
         catch (err) { console.error('[narrative-archive] camera', err); toastr.error(String(err?.message || err), '사진 찍기 실패'); }
         finally { shooting.delete(id); drawPhone(); }
     });
@@ -1063,7 +1063,7 @@ export async function openPhone(who = null) {
             if (!pick && !await askSheet('폰 전체를 다시 번역할까요?', '지금 한국어가 전부 새 번역으로 바뀌어요.', '다시 번역')) return;
             let n = 0;
             koBusy = true;
-            try { n = await withSpinner($b, '다시 번역 중', async () => { try { await learnVoices(m, owner, p, { all: true }); } catch (err) { console.warn('[narrative-archive] voices', err); } return redoKo(p, pick, !scope && only ? { max: 40, newest: true } : {}); }); if (p.syncLast?.trFailed) delete p.syncLast.trFailed; await saveMeta(); }
+            try { n = await withSpinner($b, '다시 번역 중', async () => { try { await P.learnVoices(m, owner, p, { all: true }); } catch (err) { console.warn('[narrative-archive] voices', err); } return redoKo(p, pick, !scope && only ? { max: 40, newest: true } : {}); }); if (p.syncLast?.trFailed) delete p.syncLast.trFailed; await saveMeta(); }
             catch (err) { toastr.warning(`다시 번역하지 못했어요 · 원래 한국어는 그대로예요 (${String(err?.message || err)})`, '캐릭터 휴대폰'); }
             finally { koBusy = false; }
             const g = globalSettings(); g.phoneKo = true; saveGlobal();
@@ -1174,7 +1174,7 @@ export async function openPhone(who = null) {
         e.stopPropagation(); if (prepBusy()) return;
         if (needsDateOrder(m)) await setDateOrder(m, dateOrderOf(m));
         prepLinking = true; drawPhone(true);
-        try { await preparePhone(m, owner, { again: !!phonePre(m, owner) }); prepOpen = false; }
+        try { await P.preparePhone(m, owner, { again: !!phonePre(m, owner) }); prepOpen = false; }
         catch (err) { toastr.error(String(err?.message || err), '위치 연동'); }
         finally { prepLinking = false; if (!phoneClosed && stillHere()) drawPhone(true); }
     });
@@ -1199,7 +1199,7 @@ export async function openPhone(who = null) {
         if (writing.has(id)) return;
         writing.add(id); drawPhone(true);
         try {
-            const k = await writeEntry(m, p, kind);
+            const k = await P.writeEntry(m, p, kind);
             if (phone() === p && [kind, `${kind}one`].includes(view.split(':')[0])) view = `${kind === 'diary' ? 'diaryone' : 'noteone'}:${k}`;
             toastr.success(kind === 'diary' ? '일기를 썼어요' : '메모를 썼어요', '캐릭터 휴대폰');
         } catch (err) { console.error('[narrative-archive] write', err); toastr.error(String(err?.message || err), kind === 'diary' ? '일기 쓰기 실패' : '메모 쓰기 실패'); }
@@ -1277,7 +1277,7 @@ export async function openPhone(who = null) {
         const p = phone(), k = this.dataset.k, id = `${nameKey(p.owner)}:${k}`;
         if (filling.has(id)) return;
         filling.add(id); drawPhone(true);
-        try { await ({ money: fillMoney, life: fillLife, delivery: fillDelivery, screen: fillScreen }[k] || fillVoice)(m, p); toastr.success(`${{ money: '은행 · 지갑 · 쇼핑', life: '시계 · 건강 · 파일 · 날씨', delivery: '배달', screen: '스크린타임' }[k] || '음성 메모'}을 채웠어요`, '캐릭터 휴대폰'); }
+        try { await ({ money: P.fillMoney, life: P.fillLife, delivery: P.fillDelivery, screen: P.fillScreen }[k] || P.fillVoice)(m, p); toastr.success(`${{ money: '은행 · 지갑 · 쇼핑', life: '시계 · 건강 · 파일 · 날씨', delivery: '배달', screen: '스크린타임' }[k] || '음성 메모'}을 채웠어요`, '캐릭터 휴대폰'); }
         catch (err) { console.error('[narrative-archive] fill', err); toastr.error(String(err?.message || err), '채우기 실패'); }
         finally { filling.delete(id); if (phone() === p) drawPhone(true); }
     });
@@ -1286,7 +1286,7 @@ export async function openPhone(who = null) {
         const p = phone(), id = nameKey(p.owner);
         if (recording.has(id)) return;
         recording.add(id); drawPhone(true);
-        try { const k = await recordVoice(m, p); if (phone() === p && view.startsWith('voice')) view = `voice:${p.voice[k].id}`; toastr.success('음성 메모를 떠올렸어요', '캐릭터 휴대폰'); }
+        try { const k = await P.recordVoice(m, p); if (phone() === p && view.startsWith('voice')) view = `voice:${p.voice[k].id}`; toastr.success('음성 메모를 떠올렸어요', '캐릭터 휴대폰'); }
         catch (err) { console.error('[narrative-archive] voice', err); toastr.error(String(err?.message || err), '떠올리기 실패'); }
         finally { recording.delete(id); if (phone() === p) drawPhone(true); }
     });
@@ -1309,7 +1309,7 @@ export async function openPhone(who = null) {
         const id = `${nameKey(p.owner)}:${t.id || i}`;
         if (drafting.has(id)) return;
         drafting.add(id); drawPhone(true);
-        try { await makeDraft(m, p, i); toastr.success('보내지 않은 메시지를 떠올렸어요', '캐릭터 휴대폰'); }
+        try { await P.makeDraft(m, p, i); toastr.success('보내지 않은 메시지를 떠올렸어요', '캐릭터 휴대폰'); }
         catch (err) { console.error('[narrative-archive] draft', err); toastr.error(String(err?.message || err), '떠올리기 실패'); }
         finally { drafting.delete(id); if (phone() === p) drawPhone(true); }
     });
@@ -1496,7 +1496,7 @@ export async function openPhone(who = null) {
         if (making || busy.sync || busy.fill) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요');
         const p = phone();
         try {
-            const r = await withSpinner($(e.currentTarget), '결제 읽는 중', () => retryMoney(m, owner));
+            const r = await withSpinner($(e.currentTarget), '결제 읽는 중', () => P.retryMoney(m, owner));
             if (phone() === p) drawPhone();
             r.owed ? toastr.warning(`메시지 ${r.paid}개의 결제를 넣었어요. ${r.owed}개는 다음 반영 때 다시 해요`, '캐릭터 휴대폰') : toastr.success(r.paid ? `메시지 ${r.paid}개의 결제를 넣었어요` : '넣을 결제가 없었어요', '캐릭터 휴대폰');
         } catch (err) { toastr.error(String(err?.message || err), '결제 다시 읽기'); }
@@ -1515,7 +1515,7 @@ export async function openPhone(who = null) {
         if (!p || !(y >= 1900 && y <= 2100) || y === p.year) { drawPhone(true); return; }
         // the bank's and investments' dates move with it (the whole chat's), so their order holds
         if (p.year && hasDatedRecords(m) && !await askSheet(`${y}년으로 바꿀까요?`, '기록 날짜와 다른 폰도 같이 바뀌어요.', '바꾸기', true)) { drawPhone(true); return; }
-        setStoryYear(m, p, y);
+        P.setStoryYear(m, p, y);
         drawPhone(true); await saveMeta();
     };
     let yHold = null;
@@ -1568,7 +1568,7 @@ export async function openPhone(who = null) {
         if (v !== 'keep' && v !== 'all') return;
         if (v === 'all' && !await askSheet('위치가 모두 바뀌어요', '수동 위치 · 뺀 사람도 다시 연동해요.', '새로 연동')) return;
         const p = phone(); placeReading = true; drawPhone(true);
-        try { await rereadPlaces(m, p, { all: v === 'all' }); toastr.success('위치를 연동했어요', '위치 정보'); }
+        try { await P.rereadPlaces(m, p, { all: v === 'all' }); toastr.success('위치를 연동했어요', '위치 정보'); }
         catch (err) { toastr.error(String(err?.message || err), '위치 정보'); }
         finally { placeReading = false; if (!phoneClosed) drawPhone(true); }
     });
@@ -1626,7 +1626,7 @@ export async function openPhone(who = null) {
         if (!names.length) return;
         voiceBusy = true; voiceDraw();
         let got = null;
-        try { got = await pickVoices(m, owner, p, names); await saveMeta(); }
+        try { got = await P.pickVoices(m, owner, p, names); await saveMeta(); }
         catch (err) { console.warn('[narrative-archive] voices', err); toastr.warning(`말투를 못 뽑았어요 (${String(err?.message || err)})`, '캐릭터 휴대폰'); }
         finally { voiceBusy = false; }
         if (got) { voicePick = null; if (got.found.length) toastr.success(`${got.found.join(', ')} · 뽑았어요`, '말투'); if (got.missing.length) toastr.info(`${got.missing.join(', ')} · 이야기에서 말투를 못 찾았어요`, '말투'); }
@@ -1665,7 +1665,7 @@ export async function openPhone(who = null) {
         names.forEach(n => p.koVoice.push({ who: n.slice(0, 40), style: '', by: 'user' }));
         voiceBusy = true; voiceDraw();
         let got = null;
-        try { got = await pickVoices(m, owner, p, names); }
+        try { got = await P.pickVoices(m, owner, p, names); }
         catch (err) { console.warn('[narrative-archive] voices', err); toastr.warning(`말투를 못 뽑았어요 (${String(err?.message || err)})`, '캐릭터 휴대폰'); }
         finally { voiceBusy = false; }
         await saveMeta();
@@ -1701,8 +1701,8 @@ export async function openPhone(who = null) {
     $root.on('click', '.na_ph_yearshow', async e => {
         e.stopPropagation();
         const pre = !phone() && view === 'prep' ? phonePre(m, owner) : null;
-        if (pre) { await setPreYear(m, owner, pre.noYear ? Number(storyYear(m, { ...pre, year: 0, noYear: false })) || new Date().getFullYear() : null); return drawPhone(true); }
-        const p = phone(); if (!p) return; p.noYear = !p.noYear; if (!p.noYear && !p.year) p.year = Number(storyYear(m, { ...p, year: 0 })) || new Date().getFullYear(); drawPhone(true); await saveMeta(); });
+        if (pre) { await setPreYear(m, owner, pre.noYear ? Number(P.storyYear(m, { ...pre, year: 0, noYear: false })) || new Date().getFullYear() : null); return drawPhone(true); }
+        const p = phone(); if (!p) return; p.noYear = !p.noYear; if (!p.noYear && !p.year) p.year = Number(P.storyYear(m, { ...p, year: 0 })) || new Date().getFullYear(); drawPhone(true); await saveMeta(); });
     $root.on('click', '.na_ph_setinj', async e => { e.stopPropagation(); const p = phone(); p.inject = !p.inject; drawPhone(true); await saveMeta(); applyInjection(); });
     // what opens under the phone scrolls into sight, so the tap visibly does something
     $root.on('change', '.na_ph_country', async function () { phone().country = this.value; drawPhone(); await saveMeta(); });
@@ -1716,7 +1716,7 @@ export async function openPhone(who = null) {
         if (making) return toastr.info('폰을 다시 만드는 중이에요');
         if (investing) return toastr.info('시세·환율 작업이 진행 중이에요. 완료 후 다시 눌러 주세요');
         const apps = Object.keys(REMAKE).filter(k => remake.has(k)), more = REMAKE_MORE.filter(k => remake.has(k)), whole = apps.length === Object.keys(REMAKE).length;
-        const date=more.includes('invest') ? ($root.find('.ax_investdate').val() || investmentDate(m,phone())) : '';
+        const date=more.includes('invest') ? ($root.find('.ax_investdate').val() || P.investmentDate(m,phone())) : '';
         if(more.includes('invest') && !validDate(date)) {toastr.warning('투자 기준일을 입력해 주세요');return;}
         const target = phone(), targetOwner = owner, keep = target.inject;
         making = true;
@@ -1725,10 +1725,10 @@ export async function openPhone(who = null) {
             if (phone() !== target || investing) {toastr.info('폰이나 진행 중인 작업이 바뀌었어요. 다시 눌러 주세요');return;}
             if (apps.length) await askDateOrder();
             drawPhone(true);
-            const p = apps.length ? await makePhone(m, targetOwner, whole ? {} : { apps }) : target;
+            const p = apps.length ? await P.makePhone(m, targetOwner, whole ? {} : { apps }) : target;
             if (!p) throw new Error('생성 결과를 받지 못했어요. 다시 시도해 주세요');
-            const wealthPlan = more.some(k=>k==='money'||k==='invest') ? await prepareWealth(m,p,true) : null;
-            for (const k of more.filter(k => !(k === 'screen' && more.includes('life')))) await (k === 'money' ? fillMoney(m,p,{regenerateBalances:true,wealthPlan}) : k === 'invest' ? fillInvestment(m,p,date,{regenerate:true,wealthPlan}) : k === 'life' ? fillLife(m,p,{screenAgain:more.includes('screen')}) : k === 'delivery' ? fillDelivery(m,p) : k === 'screen' ? fillScreen(m,p,{again:true}) : fillVoice(m,p));
+            const wealthPlan = more.some(k=>k==='money'||k==='invest') ? await P.prepareWealth(m,p,true) : null;
+            for (const k of more.filter(k => !(k === 'screen' && more.includes('life')))) await (k === 'money' ? P.fillMoney(m,p,{regenerateBalances:true,wealthPlan}) : k === 'invest' ? P.fillInvestment(m,p,date,{regenerate:true,wealthPlan}) : k === 'life' ? P.fillLife(m,p,{screenAgain:more.includes('screen')}) : k === 'delivery' ? P.fillDelivery(m,p) : k === 'screen' ? P.fillScreen(m,p,{again:true}) : P.fillVoice(m,p));
             if (whole && keep) { p.inject = true; await saveMeta(); applyInjection(); }
             if (phone() === p && !phoneClosed) {remake.clear(); view = whole ? 'lock' : 'set'; draw();}
             toastr.success(whole ? `${targetOwner}의 폰을 다시 만들었어요` : '고른 앱을 다시 만들었어요', '캐릭터 휴대폰');

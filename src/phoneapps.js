@@ -2,11 +2,10 @@
 
 import { annivsOf, datedRows } from './anniv.js';
 import { ctx, phoneMeta } from './core.js';
-import { investmentDate } from './investdata.js';
 import { profileChoices, phoneDataInfo } from './phoneprofile.js';
 import { faceHtml, nameKey, nameRe, peopleData, peopleList, personLine } from './people.js';
 import { autopic, autopicPeople, drafting, drawing, looksOf, writing } from './phoneai.js';
-import { bigClock, byStory, mailAnswered, statusAt, clockOf, COUNTRIES, fmtDate, fmtTime, fullDate, gapDays, hasKo, koOn, lastTime, listTime, localeOf, loreOff, MOODS, pad, parts, phoneLore, REMAKE, rowDay, savedName, dateOrderOf, placeInfo, screenHolderLabel, screenHolderChoices } from './phonedata.js';
+import { bigClock, byStory, mailAnswered, clockOf, COUNTRIES, fmtDate, fmtTime, fullDate, gapDays, hasKo, koOn, lastTime, listTime, localeOf, loreOff, MOODS, pad, parts, phoneLore, REMAKE, rowDay, savedName, dateOrderOf, placeInfo, screenHolderLabel, screenHolderChoices } from './phonedata.js';
 import { threadNew } from './phonehome.js';
 import { screenView } from './phonescreen.js';
 import { BUSY, pinLayer, pinSpots, pinSvg, STAY, stripSvg, townKinds, townPlace, townSvg } from './phonemapart.js';
@@ -17,6 +16,7 @@ import { recentTrackers } from './scenes.js';
 import { sectionKey } from './sections.js';
 import { glossaryEntries } from './translate.js';
 import { esc } from './util.js';
+import { P } from './phone2api.js';
 
 // ---- drawing
 const ICO = {
@@ -938,7 +938,7 @@ export function setRemake(p, now, ui, mForRemake = {}) {
         </div>
         <div class="ax_card">${all.map(k => { const on = ui.remake.has(k); return `
           <button type="button" class="ax_rw ax_rmpick" data-k="${k}"><span class="ax_si" style="background: ${REMAKE_IC[k][0]}">${ax(REMAKE_IC[k][1], 17, '#fff')}</span><span class="ax_tx"><span class="ax_n">${APPS[k]}</span></span><span class="ax_radio ${on ? 'on' : ''}">${on ? ax('check', 14, '#fff', 3.4) : ''}</span></button>`; }).join('')}</div>
-        ${ui.remake.has('invest') ? `<div class="ax_card"><label class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_n">투자 기준일</span></span><input type="date" class="ax_in ax_investdate" aria-label="투자 기준일" value="${esc(investmentDate(mForRemake,p))}"></label></div>` : ''}
+        ${ui.remake.has('invest') ? `<div class="ax_card"><label class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_n">투자 기준일</span></span><input type="date" class="ax_in ax_investdate" aria-label="투자 기준일" value="${esc(P.investmentDate(mForRemake,p))}"></label></div>` : ''}
         <div class="ax_foot">고른 앱만 새로 채워요.</div>
         <div class="ax_card"><button type="button" class="ax_rw ax_rwn na_ph_setremake" ${n ? '' : 'disabled'}><span class="ax_tx"><span class="ax_n ${n ? 'ax_red' : 'ax_off'}">${n ? `${n}개 다시 만들기` : '앱을 골라 주세요'}</span></span></button></div>
         <i class="ax_pad"></i>
@@ -995,7 +995,7 @@ function camPlace(p) {
     if (!t?.place) return null;
     const shown = [...chat.keys()].filter(i => chat[i] && !chat[i].is_system), last = shown.at(-1), reply = shown.filter(i => !chat[i].is_user).at(-1);
     if (t.i !== last && t.i !== reply) return null;
-    const st = statusAt(p);
+    const st = P.statusAt(p);
     if (!st || st.i !== t.i) return null;
     const here = String(placeInfo(p).owner?.city || '').trim().toLowerCase();
     return st.home || (st.known && here && String(st.city || '').trim().toLowerCase() === here) ? t : null;
