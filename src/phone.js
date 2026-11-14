@@ -40,6 +40,7 @@ import { shiftLabel, liveWall, viewerWall, startShift } from './phone2clock.js';
 import { orbitList, orbitRoom, orbitNew, orbitHomeWidget, liveStart } from './phoneorbit.js';
 import { liveStoryText, beginFromStory, liveBranched, adoptChat, rebeginFromStory, rebeginKeepingChats } from './phone2story.js';
 import { liveGo, liveReflect, liveCanUndo, liveUndo, liveUnreflected, liveNowOf } from './phone2go.js';
+import { liveYearsNow } from './phone2year.js';
 import { P } from './phone2api.js';
 
 // other files keep importing these from here (주입: 실시간 폰의 폰들도 같이, 주입이 꺼진 폰은 빼고)
@@ -171,7 +172,11 @@ export async function openPhone(who = null) {
     // 실시간: the drawer is made once for its world and kept (a new one each time would copy the glossary again)
     let drawer = null;
     const useMode = () => { m = live() ? (drawer?.w === liveWorld(realM) ? drawer.d : (drawer = { w: liveWorld(realM), d: liveMeta(realM, { text: () => liveStoryText(realM, liveWorld(realM)), now: liveNowOf(realM) }) }).d) : realM; setPhoneMeta(m === realM ? null : m); };
+    // 실시간: the phones' year by the running clock once the drawer is ready, before anything is drawn (a new year since
+    // the last reflection shows at once); saved only when one changed
+    const yearsNow = async () => { if (!live()) return; try { if (liveYearsNow(m)) await saveMeta(); } catch (err) { console.warn('[narrative-archive] live years', err); } };
     useMode();
+    await yearsNow();
     const liveRoster = () => new Set(liveNames().map(nameKey));
     // Orbit (실시간 폰의 메신저, docs/design/orbit.md): 계정은 페르소나(쓰기)와 이 폰 주인(읽기만) 둘. 왼쪽 위 얼굴 → 아래 시트로 바꿔요
     let obTab = 'all', obPick = [], obGname = '', obWho = '', obSheet = false, obDraft = '';
@@ -833,7 +838,7 @@ export async function openPhone(who = null) {
         const st = chatStamp(upto);
         try { beginFromStory(realM, { persona: plan.persona, upto, scope: phoneChatScope(ctx()), dayShift: plan.dayShift, chat: st.chat, fp: st.fp }); }
         catch (err) { console.error('[narrative-archive] live start', err); return toastr.warning(String(err?.message || err), '캐릭터 휴대폰'); }
-        setLiveMode(realM, 'live'); useMode(); owner = liveOwner(); view = 'home'; sheet = false;
+        setLiveMode(realM, 'live'); useMode(); await yearsNow(); owner = liveOwner(); view = 'home'; sheet = false;
         draw();
         await saveMeta();
     });
@@ -853,7 +858,7 @@ export async function openPhone(who = null) {
             try { w = rebeginKeepingChats(realM, { upto, scope: phoneChatScope(ctx()), dayShift: base ? startPlanOf(base).dayShift : 0, chat: st.chat, fp: st.fp }); }
             catch (err) { return toastr.error(String(err?.message || err), '캐릭터 휴대폰'); }
             if (!w) return toastr.info('타임라인 폰을 먼저 만들어 주세요', '캐릭터 휴대폰');
-            obWho = ''; useMode();
+            obWho = ''; useMode(); await yearsNow();
             owner = liveOwner(); view = 'set'; sheet = false;
             draw();
             await saveMeta();
@@ -876,6 +881,7 @@ export async function openPhone(who = null) {
         const fromLive = live();
         setLiveMode(realM, to);
         useMode();
+        await yearsNow();
         if (fromLive && to === 'story') obReflect();
         owner = to === 'live' ? liveOwner() : selectedPhoneOwner(m, names, null, readPhoneSelection(selectionKey));
         view = 'set'; sheet = false;
