@@ -126,7 +126,8 @@ test('폰 2 이야기에서 시작: a deep copy of 폰 1\'s story keys, none of 
     assert.deepEqual(w.story, MARK0);
     assert.notEqual(w.story, MARK0);
     assert.deepEqual([w.from, w.storyUpto, w.scope, w.lastOwner], ['story', 482, 's1', 'Mara']);
-    assert.deepEqual(w.phones, m.phones);
+    // (a copy of each phone; 롤플에 넣기 starts off on the copy, whatever it was on 폰 1)
+    assert.deepEqual(w.phones, Object.fromEntries(Object.entries(m.phones).map(([k, p]) => [k, { ...p, inject: false }])));
     assert.deepEqual(w.finance, m.finance);
     assert.deepEqual([w.profiles, w.pre, w.lore, w.loreOff], [m.phoneProfiles, m.phonePre, m.phoneLore, m.phoneLoreOff]);
     for (const o of objects(w)) assert.ok(!mine.has(o), 'an object of 폰 1 in 폰 2');

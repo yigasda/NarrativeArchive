@@ -1078,9 +1078,6 @@ export function mergePhone(p, add, { keepAll = false, m = null } = {}) {
         if (!name || p.contacts.length >= CAP.contacts || NO_CONTACT.test(name) || isOwnerName(p, m, name) || arr(p.hiddenContacts).includes(nameKey(name)) || personIn(p, p.contacts, x => x.name, name) || p.contacts.some(x => x.saved && nameKey(x.saved) === nameKey(name))) continue;
         p.contacts.push({ name });
     }
-    // (more than the list holds: the ones with no label of their own go first, oldest first; a contact the owner saved
-    // under a label, or reaches on the messenger, stays as long as there is room)
-    if (p.contacts.length > CAP.contacts) { let over = p.contacts.length - CAP.contacts; p.contacts = p.contacts.filter(x => !(over > 0 && !x.saved && !x.messenger && over--)); }
     p.contacts = keep(p.contacts, CAP.contacts);
     if (add.now) p.now = add.now;
     return p;
@@ -1229,8 +1226,9 @@ export function storyYear(m, p = null, upto = null) {
     // the owner's own choice in 날짜 및 시간: this year, or none
     if (p?.noYear) return '';
     if (p?.year) return String(p.year);
-    // (폰 2: its year is the real one its reflection sets; never a role-play status line's)
-    if (isLivePhone(p)) return '';
+    // (폰 2, by the phone's mark or its drawer: its year is the real one, as far off as the user picked; never a
+    // role-play status line's)
+    if (isLivePhone(p) || Number.isInteger(m?.phoneUpto)) return String(new Date().getFullYear() + (Number(p?.liveYearShift) || 0));
     // (the newest status line that writes a year: it is the story's now; else, for a phone being made, the year the reading
     // of where everyone is read from the story; else none: never guessed from the dates a text writes, a birthday, a memory
     // or a plan; the user sets it before the phone is made, or in 날짜 및 시간)
@@ -1274,12 +1272,15 @@ const shiftAll = (o, n) => (Array.isArray(o) ? o.map(x => shiftAll(x, n)) : o &&
 export const hasDatedRecords = m => !!m.finance || Object.values(m.phones || {}).some(p => p?.money || p?.investment);
 export function setStoryYear(m, p, year) {
     const n = p.year && !p.noYear ? year - p.year : 0;
+    const liveYears = Number.isInteger(m?.phoneUpto) || isLivePhone(p);
     if (n) {
         if (m.finance) m.finance = shiftAll(m.finance, n);
         for (const q of Object.values(m.phones || {})) {
             if (!q || typeof q !== 'object') continue;
             for (const k of ['money', 'investment']) if (q[k]) q[k] = shiftAll(q[k], n);
-            if (q !== p && q.year && !q.noYear) { q.year += n; q.yearShift = (Number(q.yearShift) || 0) + n; }
+            // (폰 2: its phones go by the real year, set again at each reflection, so a year moved is kept as how far it
+            // is from the real one — on every phone of it, as the records of every one moved)
+            if (q !== p && q.year && !q.noYear) { q.year += n; if (liveYears) { const off = (Number(q.liveYearShift) || 0) + n; if (off) q.liveYearShift = off; else delete q.liveYearShift; } else q.yearShift = (Number(q.yearShift) || 0) + n; }
             // the copies 되돌리기 and 빼기 compare against move too (else a moved record reads as changed by hand and stays),
             // and 되돌리기 puts back the year it had moved to
             if (q.syncUndo) { q.syncUndo = shiftAll(q.syncUndo, n); if (q.syncUndo.year) q.syncUndo.year += n; }
@@ -1299,7 +1300,7 @@ export function setStoryYear(m, p, year) {
     }
     // (폰 2: its year is the real one, set again at each reflection. A year the user picks is kept as how far it is from
     // the real one, so the reflection keeps it, New Year included)
-    if (Number.isInteger(m?.phoneUpto) || isLivePhone(p)) {
+    if (liveYears) {
         const real = p.year && !p.noYear ? p.year - (Number(p.liveYearShift) || 0) : new Date().getFullYear(), off = year - real;
         if (off) p.liveYearShift = off; else delete p.liveYearShift;
     }
@@ -2911,6 +2912,9 @@ export async function setDateOrder(m, order) { if (!m || !['md', 'dm'].includes(
 dateOrderSource(() => ctx()?.chatMetadata?.narrative_archive?.dateOrder);
 // a phone of 폰 2 (its store marks the phone objects it hands out): the role-play's status lines and clocks are not its own
 export const isLivePhone = p => !!p?.[Symbol.for('narrative-archive.live')];
+// the time an app action stamps (a photo, a note, a draft, a memo): for 타임라인 the call it always was, storyNow(p),
+// which never looks at the meta; for 폰 2 (its phone, or its drawer) its own clock
+export const nowOn = (p, m = null) => (isLivePhone(p) || Number.isInteger(m?.phoneUpto) ? storyNow(p, null, m) : storyNow(p));
 export function storyNow(p, upto = null, m = null) {
     // (폰 2: its own clock, the real time its last reflection set; never the role-play's status line)
     // (the drawer's running clock when it gives one — the story's date and the real time, now — else the time its last

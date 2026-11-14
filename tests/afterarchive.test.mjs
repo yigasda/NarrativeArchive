@@ -361,7 +361,9 @@ test('실시간 폰에서 생활 · 은행 채우기: 시작 뒤의 롤플도 �
         assert.deepEqual(nums(input), [4, 5, 6, 7]);
         assert.ok(input.includes('Ren: on the messenger') && !input.includes('Ren: not read yet'));
         assert.ok(input.includes('"now":"11-12 21:30"'));
-        assert.ok(!input.includes('[WEATHER NOW]') && !input.includes('Eastgate') && !input.includes('[STORY YEAR]'));
+        assert.ok(!input.includes('[WEATHER NOW]') && !input.includes('Eastgate'));
+        // (the year is the real one, never the role-play status line's 2026-11-02)
+        assert.ok(input.includes(`[STORY YEAR]\n${new Date().getFullYear()}`));
         assert.equal(p.life.at, '11-12 21:30');
         assert.deepEqual(p.sync.marks.life, { index: 9, user: -1, fp: '', tail: '' });
         // the bank
@@ -1829,4 +1831,25 @@ test('다시 만들기 › 지도: the visits are written again from the story, 
     assert.match(turn.input, /\[ONLY THESE\][^\n]*\n[^\n]*: visits\./);
     assert.deepEqual(p.visits.map(x => x.place), ['Harbour office', 'Central station']);
     assert.deepEqual(p.notes.map(x => x.title), ['Keep me']);
+});
+
+test('타임라인 폰의 사진 · 메모 · 초안 · 녹음 시각과 투자 날짜는 예전 그대로: 용어집에 인물로 적힌 이름이 상태창 장소에 나와도 달라지지 않아요', async () => {
+    const p = { owner: 'Ren', now: '10-26 09:00', year: 2026, where: { people: [{ name: 'Ren', city: 'Frankfurt', tz: 'Europe/Berlin' }, { name: 'Rose', city: 'Seoul', tz: 'Asia/Seoul' }] }, contacts: [], threads: [] };
+    const mm = { phones: { ren: p }, glossary: 'Rose = 장미', glossaryPeople: ['Rose'] };
+    globalThis.__glossaryEntries = [{ src: 'Rose', ko: '장미' }]; globalThis.__glossaryPeople = ['Rose'];
+    globalThis.__trackers = [{ date: '2026-10-26', min: 20 * 60 + 15, place: '장미의 방', i: 3 }];
+    try {
+        // (the two calls differ here: with the meta, the status line's place is read as Rose's city)
+        assert.equal(data.storyNow(p), '10-26 09:00'); assert.equal(data.storyNow(p, null, mm), '10-26 12:15');
+        // 타임라인: the call it always was
+        assert.equal(data.nowOn(p, mm), '10-26 09:00');
+        // 폰 2 (its phone, or its drawer): its own clock
+        const q = { ...p }; Object.defineProperty(q, Symbol.for('narrative-archive.live'), { value: true });
+        assert.equal(data.nowOn(q, mm), '10-26 09:00');
+        assert.equal(data.nowOn(p, { ...mm, phoneUpto: 3, phoneNow: () => '11-14 16:00' }), '11-14 16:00');
+    } finally { delete globalThis.__trackers; delete globalThis.__glossaryEntries; delete globalThis.__glossaryPeople; }
+    const src = f => readFile(new URL(`../src/${f}`, import.meta.url), 'utf8');
+    assert.doesNotMatch(await src('phoneai.js'), /storyNow\(/);
+    assert.equal(((await src('phoneai.js')).match(/nowOn\(p, m\)/g) || []).length, 7);
+    assert.match(await src('investdata.js'), /Number\.isInteger\(m\?\.phoneUpto\) \? storyNow\(p, stopAt\(m, p\), m\) : storyNow\(p, stopAt\(m, p\)\)/);
 });
