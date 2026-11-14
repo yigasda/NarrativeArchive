@@ -28,7 +28,7 @@ test('P: 화면이 부르는 이름이 다 있고, 타임라인 쪽은 폰 1 파
 async function loadP() {
     const srcs = await readFile(new URL('phone2api.js', SRC), 'utf8'), enc = t => 'data:text/javascript;base64,' + Buffer.from(t).toString('base64');
     const fakes = {};
-    for (const m of srcs.matchAll(/import \{([^}]*)\} from '(\.\/(?:phonedata|investdata|phoneai|phonelife|phonetr|phone2act)\.js)'/g))
+    for (const m of srcs.matchAll(/import \{([^}]*)\} from '(\.\/(?:phonedata|investdata|phoneai|phonelife|phonetr|phone2act|phone2year)\.js)'/g))
         fakes[m[2]] = enc(m[1].split(',').map(x => x.trim()).filter(Boolean).map(n => `export const ${n}=(...a)=>({fn:'${n}',a});`).join(''));
     fakes['./phone2store.js'] = new URL('phone2store.js', SRC).href;
     return (await import(enc(srcs.replace(/from '([^']+)'/g, (all, k) => `from '${fakes[k] || k}'`)))).P;
@@ -57,4 +57,22 @@ test('P의 지금 · 상태창: 타임라인은 폰 1 함수를 받은 인자 �
     assert.equal(P.statusAt(q), null); assert.equal(P.statusAt(q, null, d), null);
     // 폰 1의 폰은 그대로
     assert.equal(p1.now, '10-25 17:42');
+});
+
+test('P의 연도: 타임라인은 폰 1 함수를 받은 인자 그대로, 실시간 서랍이면 폰 2 것; 실시간 폰을 서랍 없이 주면 멈춰요', async () => {
+    const P = await loadP(), L = await import('../src/phone2store.js');
+    const real = { phones: { mara: { owner: 'Mara', now: '10-25 17:42', year: 2026 } }, text: '' };
+    L.startFromStory(real, { persona: 'Ren', upto: 2, scope: 'test', story: { ranges: {}, titles: [], rawFrom: 0, own: [''] } });
+    const p1 = real.phones.mara, d = L.liveMeta(real), q = d.phones.mara, copy = { ...q, year: 0 };
+    // 타임라인
+    assert.deepEqual(P.storyYear(real, p1), { fn: 'storyYear', a: [real, p1] });
+    assert.deepEqual(P.storyYear(real, p1, 4), { fn: 'storyYear', a: [real, p1, 4] });
+    assert.deepEqual(P.ensureYear(real, p1), { fn: 'ensureYear', a: [real, p1] });
+    assert.deepEqual(P.setStoryYear(real, p1, 2030), { fn: 'setStoryYear', a: [real, p1, 2030] });
+    // 실시간 (화면이 폰을 복사해서 줘도 서랍으로 갈라요)
+    assert.equal(P.storyYear(d, copy).fn, 'liveStoryYear'); assert.equal(P.storyYear(d, copy).a[1], copy);
+    assert.equal(P.ensureYear(d, q).fn, 'liveEnsureYear'); assert.equal(P.ensureYear(d, q).a[1], q);
+    const set = P.setStoryYear(d, q, 2030); assert.equal(set.fn, 'liveSetStoryYear'); assert.equal(set.a[0], d); assert.equal(set.a[1], q); assert.equal(set.a[2], 2030);
+    // 실시간 폰 + 폰 1의 메타: 폰 1 함수를 부르지 않고 멈춰요
+    for (const run of [() => P.storyYear(real, q), () => P.ensureYear(real, q), () => P.setStoryYear(real, q, 2030)]) assert.throws(run, /실시간 폰은 실시간 화면에서만 돼요/);
 });

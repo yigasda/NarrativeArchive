@@ -9,7 +9,7 @@ const phone1 = () => ({ phones: { mara: { owner: 'Mara', now: '11-06 09:00', not
 
 test('폰 2 저장: the file imports nothing, and no file but the phone window and 폰 2\'s story reader imports it', async () => {
     assert.doesNotMatch(await src('phone2store.js'), /^\s*import\b/m);
-    const may = new Set(['phone2store.js', 'phone.js', 'phonestory.js', 'phone2story.js', 'phone2feed.js', 'phone2live.js', 'phone2run.js', 'phone2reflect.js', 'phone2go.js', 'phone2digest.js', 'phone2act.js', 'phone2api.js']);   // 4-2: the phone's window; 5-1: phone2story.js (beginFromStory); 6: phone2feed.js (the messenger as the reflection reads it)
+    const may = new Set(['phone2store.js', 'phone.js', 'phonestory.js', 'phone2story.js', 'phone2feed.js', 'phone2live.js', 'phone2run.js', 'phone2reflect.js', 'phone2go.js', 'phone2digest.js', 'phone2act.js', 'phone2api.js', 'phone2year.js']);   // 4-2: the phone's window; 5-1: phone2story.js (beginFromStory); 6: phone2feed.js (the messenger as the reflection reads it)
     for (const f of (await readdir(new URL('../src/', import.meta.url))).filter(f => f.endsWith('.js') && !may.has(f)))
         assert.doesNotMatch(await src(f), /phone2store/, f);
 });

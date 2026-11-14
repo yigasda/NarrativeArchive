@@ -1268,19 +1268,16 @@ const shiftDay = (v, n) => {
     const y = Number(mt[1]) + n, d = mt[2] === '02' && mt[3] === '29' && new Date(Date.UTC(y, 1, 29)).getUTCMonth() !== 1 ? '28' : mt[3];
     return `${y}-${mt[2]}-${d}${mt[4]}`;
 };
-const shiftAll = (o, n) => (Array.isArray(o) ? o.map(x => shiftAll(x, n)) : o && typeof o === 'object' ? Object.fromEntries(Object.entries(o).map(([k, v]) => [shiftDay(k, n), shiftAll(v, n)])) : typeof o === 'string' ? shiftDay(o, n) : o);
+export const shiftAll = (o, n) => (Array.isArray(o) ? o.map(x => shiftAll(x, n)) : o && typeof o === 'object' ? Object.fromEntries(Object.entries(o).map(([k, v]) => [shiftDay(k, n), shiftAll(v, n)])) : typeof o === 'string' ? shiftDay(o, n) : o);
 export const hasDatedRecords = m => !!m.finance || Object.values(m.phones || {}).some(p => p?.money || p?.investment);
 export function setStoryYear(m, p, year) {
     const n = p.year && !p.noYear ? year - p.year : 0;
-    const liveYears = Number.isInteger(m?.phoneUpto) || isLivePhone(p);
     if (n) {
         if (m.finance) m.finance = shiftAll(m.finance, n);
         for (const q of Object.values(m.phones || {})) {
             if (!q || typeof q !== 'object') continue;
             for (const k of ['money', 'investment']) if (q[k]) q[k] = shiftAll(q[k], n);
-            // (폰 2: its phones go by the real year, set again at each reflection, so a year moved is kept as how far it
-            // is from the real one — on every phone of it, as the records of every one moved)
-            if (q !== p && q.year && !q.noYear) { q.year += n; if (liveYears) { const off = (Number(q.liveYearShift) || 0) + n; if (off) q.liveYearShift = off; else delete q.liveYearShift; } else q.yearShift = (Number(q.yearShift) || 0) + n; }
+            if (q !== p && q.year && !q.noYear) { q.year += n; q.yearShift = (Number(q.yearShift) || 0) + n; }
             // the copies 되돌리기 and 빼기 compare against move too (else a moved record reads as changed by hand and stays),
             // and 되돌리기 puts back the year it had moved to
             if (q.syncUndo) { q.syncUndo = shiftAll(q.syncUndo, n); if (q.syncUndo.year) q.syncUndo.year += n; }
@@ -1292,17 +1289,9 @@ export function setStoryYear(m, p, year) {
         for (const q of Object.values(m.phonePre || {})) if (q?.year && !q.noYear && !q.yearSet) { q.year += n; q.yearShift = (Number(q.yearShift) || 0) + n; }
         // this browser's record of unsaved rounds (복구) too
         try {
-            // (the journal of the meta given: the chat's, or the one a meta names itself — 폰 2's drawer, so its year never
-            // moves 폰 1's records)
-            const scope = typeof m.phoneJournal === 'string' ? m.phoneJournal : phoneChatScope(ctx()), owners = new Set(Object.values(m.phones || {}).map(q => q?.owner));
+            const scope = phoneChatScope(ctx()), owners = new Set(Object.values(m.phones || {}).map(q => q?.owner));
             journalWrite(scope, journalRead(scope).map(r => (owners.has(r.owner) ? { ...r, events: shiftAll(r.events || [], n), life: shiftAll(r.life || [], n), ...(r.year ? { year: r.year + n } : {}) } : r)));
         } catch { /* no journal here */ }
-    }
-    // (폰 2: its year is the real one, set again at each reflection. A year the user picks is kept as how far it is from
-    // the real one, so the reflection keeps it, New Year included)
-    if (liveYears) {
-        const real = p.year && !p.noYear ? p.year - (Number(p.liveYearShift) || 0) : new Date().getFullYear(), off = year - real;
-        if (off) p.liveYearShift = off; else delete p.liveYearShift;
     }
     // (this phone's year is the user's now: never worked out again over it)
     p.year = year; p.noYear = false; p.yearSet = true; delete p.yearShift;

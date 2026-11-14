@@ -51,3 +51,5 @@ const mapAI = { ...map, './people.js': encoded(`export const nameKey=s=>String(s
 map['./phoneai.js'] = encoded((await readFile(new URL('../src/phoneai.js', import.meta.url), 'utf8')).replace(/from '([^']+)'/g, (all, k) => `from '${mapAI[k] || k}'`));
 export const AI = await import(map['./phoneai.js']);
 export const ACT = await import(encoded(swap(await readFile(new URL('../src/phone2act.js', import.meta.url), 'utf8'))));
+// 실시간 폰의 연도 (phone2year.js)
+export const Y = await import(encoded(swap(await readFile(new URL('../src/phone2year.js', import.meta.url), 'utf8'))));
