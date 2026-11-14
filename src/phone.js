@@ -42,7 +42,7 @@ import { liveStoryText, beginFromStory, liveBranched, adoptChat, rebeginFromStor
 import { liveGo, liveReflect, liveCanUndo, liveUndo, liveUnreflected, liveNowOf } from './phone2go.js';
 
 // other files keep importing these from here (주입: 실시간 폰의 폰들도 같이, 주입이 꺼진 폰은 빼고)
-import { phoneBlock as phoneBlock0 } from './phonedata.js';
+import { phoneBlock as phoneBlock0, nowOn } from './phonedata.js';
 export const phoneBlock = m => phoneBlock0(m, Object.values(liveWorld(m)?.phones || {}));
 
 // what 초안 모델's screen shows (the key only by its last four)
@@ -54,7 +54,8 @@ const draftIds = () => (draftSettings().mode === 'vertex' ? vxModelList() : draf
 // a make that ends tells every phone open now (one shut and opened again mid-make draws the phone it made)
 const madeWatch = new Set();
 function screen(p, view, m, roster, ui) {
-    const now = storyNow(p, null, phoneMeta());
+    // (타임라인은 예전 그대로 storyNow(p), 실시간만 서랍의 흐르는 시계)
+    const now = nowOn(p, phoneMeta());
     showNow(now);
     setStory(p);
     // "view:id": an id may hold colons itself (a reflection's records are "sync:event:m0")
