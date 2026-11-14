@@ -1,6 +1,8 @@
 import { cleanMessageURL } from './cleanmessage.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
+// (two tests compare with today's date: one fixed day, so a run across midnight can't split them)
+const onDay = (fn, iso = '2026-11-14T10:00:00Z') => async (...a) => { const R = Date, at = R.parse(iso); globalThis.Date = class extends R { constructor(...x) { if (x.length) super(...x); else super(at); } static now() { return at; } }; try { return await fn(...a); } finally { globalThis.Date = R; } };
 import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import * as finance from '../src/finance.js';
@@ -508,15 +510,15 @@ test('the money fill dates its balances at the story\'s moment it read up to, no
     assert.equal(w.wealthDate({ text: '' }, { ...p, money: { fxDate: '2026-09-01' } }, '10-26 12:00'), '2026-09-01');
 });
 
-test('점검 6: a story with no year of its own values its money and investments at today\'s date; one with a year on the story\'s day; none known, none', async () => {
+test('점검 6: a story with no year of its own values its money and investments at today\'s date; one with a year on the story\'s day; none known, none', onDay(async () => {
     const W = await import(wealthURL), today = new Date().toISOString().slice(0, 10);
     assert.equal(W.wealthDate({ text: '' }, { noYear: true, now: '03-14 10:00' }), today);
     assert.equal(W.wealthDate({ text: '' }, { year: 2026, now: '03-14 10:00' }), '2026-03-14');
     assert.equal(W.wealthDate({ text: '## #0–#1 — 2025-03-14 Berlin\n' }, { now: '03-14 10:00' }), '');
     assert.equal(dataMod.investmentDate({ text: '' }, { noYear: true, now: '03-14 10:00' }), today);
-});
+}));
 
-test('점검 7: a story with no year keeps the day its money was first valued (tomorrow finds the same rates); evidence goes by the story part as sent, a [BANK] paragraph closing the last message too', async () => {
+test('점검 7: a story with no year keeps the day its money was first valued (tomorrow finds the same rates); evidence goes by the story part as sent, a [BANK] paragraph closing the last message too', onDay(async () => {
     const W = await import(wealthURL), today = new Date().toISOString().slice(0, 10);
     const p = { noYear: true, now: '03-14 10:00', money: { bank: { accounts: [] } } };
     assert.equal(W.wealthDate({ text: '' }, p), today);
@@ -532,4 +534,4 @@ test('점검 7: a story with no year keeps the day its money was first valued (t
     assert.ok(storyPart(input).includes('SAP 10주 매수 (주당 182.4)'));
     assert.ok(storyPart(input).includes('긴 하루였다.'));
     assert.ok(!storyPart(input).includes('{"accounts":[]}'));
-});
+}));

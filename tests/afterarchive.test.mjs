@@ -6,6 +6,8 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 
+// (these few go by today's real date where the story gives none: pinned to one day so they hold on any other — summer time, 02-29)
+const onDay = (fn, iso = '2026-11-14T10:00:00Z') => async (...a) => { const R = Date, at = R.parse(iso); globalThis.Date = class extends R { constructor(...x) { if (x.length) super(...x); else super(at); } static now() { return at; } }; try { return await fn(...a); } finally { globalThis.Date = R; } };
 const SRC = new URL('../src/', import.meta.url);
 const encoded = s => 'data:text/javascript;base64,' + Buffer.from(s).toString('base64');
 const href = f => pathToFileURL(new URL(f, SRC).pathname).href;
@@ -1311,7 +1313,7 @@ test('making a phone sets its clock as a reflection does (CLOCK FIRST, "clock", 
     assert.ok(data.updateSystem({ split: true }).includes(data.FILL_CLOCK.split('\n')[0]));
 });
 
-test('making a phone for the first time: where everyone is first (the people the chat already names, each once), then the phone, its OWNER\'S CLOCK and PEOPLE AROUND from it; the clock checked as a reflection\'s', async () => {
+test('making a phone for the first time: where everyone is first (the people the chat already names, each once), then the phone, its OWNER\'S CLOCK and PEOPLE AROUND from it; the clock checked as a reflection\'s', onDay(async () => {
     const setup = () => {
         const { m: mm } = htmlPhoneFixture();
         globalThis.__ctx.characters = [{ name: 'Mara' }]; globalThis.__ctx.characterId = 0; globalThis.__ctx.name1 = '소망';
@@ -1354,9 +1356,9 @@ test('making a phone for the first time: where everyone is first (the people the
             assert.equal(mm.phones.ren, undefined);
         }
     } finally { delete globalThis.__ctx; delete globalThis.__whereAnswer; delete globalThis.__glossaryPeople; }
-});
+}));
 
-test('위치 정보 before a phone is made: read once and kept, checked and set by the user (a city, the year), then the phone made from it, a make asked again reading nothing again', async () => {
+test('위치 정보 before a phone is made: read once and kept, checked and set by the user (a city, the year), then the phone made from it, a make asked again reading nothing again', onDay(async () => {
     try {
         const { m: mm } = htmlPhoneFixture(); mm.phones = {};
         globalThis.__ctx.characters = [{ name: 'Mara' }]; globalThis.__ctx.characterId = 0; globalThis.__ctx.name1 = '소망';
@@ -1396,7 +1398,7 @@ test('위치 정보 before a phone is made: read once and kept, checked and set 
         assert.equal(data.phonePre(mm, 'Ren'), null, 'gone once the phone is made');
         assert.ok(!('making' in p) && !('asked' in p));
     } finally { delete globalThis.__ctx; delete globalThis.__whereAnswer; }
-});
+}));
 
 test('making a phone (and some apps again): people from the story, PEOPLE AROUND or new plausible ones, as the reflection\'s everyday; no new relative or partner', () => {
     for (const s of [data.AI_SYS_PHONE, data.AI_SYS_PHONE_APPS]) {
@@ -1486,7 +1488,7 @@ test('reading where everyone is again: a person read back by the other form of t
 });
 const arr = v => (Array.isArray(v) ? v : []);
 
-test('making a phone for the first time (점검 수정): its hours on the story\'s day, the year checked before, an old phone\'s own year and country, a failed reading not asked again, a reading kept for a make asked again', async () => {
+test('making a phone for the first time (점검 수정): its hours on the story\'s day, the year checked before, an old phone\'s own year and country, a failed reading not asked again, a reading kept for a make asked again', onDay(async () => {
     const setup = (text, extra = {}) => {
         const { m: mm } = htmlPhoneFixture();
         globalThis.__ctx.characters = [{ name: 'Mara' }]; globalThis.__ctx.characterId = 0;
@@ -1543,7 +1545,7 @@ test('making a phone for the first time (점검 수정): its hours on the story\
         assert.equal(globalThis.__where.length, 1);
         assert.equal(data.phonePre(mm, 'Ren'), null);
     } finally { delete globalThis.__ctx; delete globalThis.__whereAnswer; }
-});
+}));
 
 test('점검 수정 2: a failed reading is read again on the next make; "Mara Lee" for a Mara read before needs no second reading; a reading kept for a phone gone since is not used; the year it read moves with 날짜 및 시간; a second turn with no "now" keeps its records', async () => {
     const setup = text => {
@@ -1646,7 +1648,7 @@ test('the story\'s year for a phone being made: a status line\'s, else the one t
     } finally { delete globalThis.__ctx; delete globalThis.__whereAnswer; delete globalThis.__trackers; }
 });
 
-test('점검 3: making a phone — a status line\'s year on the owner\'s clock across New Year, its time as the owner\'s; an old phone made anew goes by the story, not its old saved time; an owner placed nowhere is checked by no zone; 다시 연동 and a pre for a phone gone since keep what the user set', async () => {
+test('점검 3: making a phone — a status line\'s year on the owner\'s clock across New Year, its time as the owner\'s; an old phone made anew goes by the story, not its old saved time; an owner placed nowhere is checked by no zone; 다시 연동 and a pre for a phone gone since keep what the user set', onDay(async () => {
     const setup = (text = '## #0–#3 — Arrival\n- Ren came home (#1).\n') => {
         const { m: mm } = htmlPhoneFixture();
         globalThis.__ctx.characters = [{ name: 'Mara' }]; globalThis.__ctx.characterId = 0;
@@ -1698,7 +1700,7 @@ test('점검 3: making a phone — a status line\'s year on the owner\'s clock a
         assert.equal(globalThis.__where.length, 1);
         assert.equal(pre.year, 2021);
     } finally { delete globalThis.__ctx; delete globalThis.__whereAnswer; delete globalThis.__trackers; }
-});
+}));
 
 test('점검 4: an owner the reading placed nowhere is checked by no zone (the answer\'s country is where they live; away in Paris they are still right); a pre read for a phone gone since keeps the user\'s change, its year worked out anew', async () => {
     const setup = () => {
