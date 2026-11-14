@@ -1173,7 +1173,7 @@ export function chatAfterArchive(m, budget = CHAT_TOKENS.phone, upto0 = null, fr
 // reflection's to read, for all of them at once. null: a phone with no reading record (it reads to now, as it always did)
 export const phoneAt = p => { const s = p?.sync, b = s?.marks?.base?.index; return Number.isInteger(b) ? Math.max(b, ...(s.done || []).map(r => r[1]), ...Object.keys(s.hiddenRead || {}).map(Number)) : null; };
 // it as RECENT CHAT; cut short, the block says where the story stops for now
-const afterBlock = g => (g?.n ? `[RECENT CHAT${g.all && !g.later ? '' : ` — the story so far ends at #${nowAt(g)}; the messages after it are read later`}]\n${g.text}` : '');
+export const afterBlock = g => (g?.n ? `[RECENT CHAT${g.all && !g.later ? '' : ` — the story so far ends at #${nowAt(g)}; the messages after it are read later`}]\n${g.text}` : '');
 // what a phone's request reads after the archive (null: no archive, the chat goes as before)
 // p: the phone it is for (its clock bounds it); no archive: only that bound (the chat goes as before, up to it)
 export const windowOf = (m, p = null, from = null, budget = CHAT_TOKENS.phone, whole = true) => { const upto = readUpto(m, p); if (Number.isInteger(m?.phoneUpto)) return { ...(noArchive(m) ? { none: true, n: 0, all: true, upto } : chatAfterArchive(m, budget, upto, from, whole)), later: false, mark: Math.max(upto, phoneAt(p) ?? upto) }; return noArchive(m) ? (upto == null ? null : { none: true, n: 0, all: true, upto }) : chatAfterArchive(m, budget, upto, from, whole); };
@@ -1300,10 +1300,10 @@ export function setStoryYear(m, p, year) {
 // what the model is told of the year: a year in any text is this one (nothing when it is unknown)
 const yearBlock = (m, p, upto = null) => { const y = storyYear(m, p, upto); return y ? `[STORY YEAR]\n${y}` : ''; };
 // the archive block, or (budget) the chat in its place, then no RECENT CHAT: it is in there
-const archiveBlock = (m, ar, head, budget, upto = null) => (budget && noArchive(m) ? `[${head} — none written yet: the chat so far is the story]\n${chatStory(budget, upto) || '(empty)'}` : `[${head}]\n${ar}`);
+export const archiveBlock = (m, ar, head, budget, upto = null) => (budget && noArchive(m) ? `[${head} — none written yet: the chat so far is the story]\n${chatStory(budget, upto) || '(empty)'}` : `[${head}]\n${ar}`);
 // upto: no section that begins after that message (a fill reads up to the phone's clock), and then no current state
 // either (the tail tells the story's end, past the clock)
-function archiveFor(m, after = -1, upto = null, whole = true) {
+export function archiveFor(m, after = -1, upto = null, whole = true) {
     const [body, tail0] = splitTail(String(m.text || ''));
     const all = parseSections(body).filter(s => !s.group && (after < 0 || secEnd(s) > after));
     const secs = all.filter(s => upto == null || (whole ? secFirst(s) : secEnd(s)) <= upto), tail = secs.length === all.length ? tail0 : '';

@@ -8,17 +8,12 @@ import { askAI } from './ai.js';
 import { parseJson } from './phoneparse.js';
 import { ctx, saveMeta } from './core.js';
 import { AI_SYS_SHOT, AI_SYS_WRITE, AI_SYS_DRAFT, AI_SYS_VOICE } from './phoneai.js';
-import { recentPhoneText, CAP, ensureIds, secOf, ko, line, MOODS, namesBlock, pick, str } from './phonedata.js';
+import { CAP, ensureIds, secOf, ko, line, MOODS, namesBlock, pick, str } from './phonedata.js';
 import { isLiveMeta, liveNowText } from './phone2store.js';
+import { liveRecentText } from './phone2req.js';
 
 // 실시간 서랍이 아니면 여기 함수는 안 돌아요 (폰 1 것을 건드리지 않게)
 const need = m => { if (!isLiveMeta(m)) throw new Error('실시간 폰의 서랍이 아니에요'); return m; };
-// 최근 대화: 메신저 대화, 줄 수와 글자 수가 남으면 그 앞에 시작 전 이야기의 마지막 메시지
-export function liveRecentText(m, owner, n, o = {}) {
-    const talk = typeof m?.phoneRecent === 'function' ? m.phoneRecent(owner, n, o) : '', k = talk ? talk.split('\n').length : 0, room = (o.maxChars ?? Infinity) - talk.length;
-    const before = k < n && room > 0 && Number.isInteger(m?.phoneUpto) && m.phoneUpto >= 0 ? recentPhoneText(n - k, { maxChars: room, upto: m.phoneUpto }) : '';
-    return [before, talk].filter(Boolean).join('\n\n');
-}
 
 export async function liveTakePhoto(m, p) {
     need(m);

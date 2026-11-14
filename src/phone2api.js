@@ -1,6 +1,7 @@
 // 폰 화면이 부르는 창구 (P). 화면은 아래 이름들을 phonedata.js 등에서 직접 부르지 않고 P.이름(...)으로 불러요.
 // 타임라인(폰 1)일 때는 폰 1 함수를 그대로, 같은 인자로 불러요. 실시간(폰 2)일 때 다르게 해야 하는 일은
-// 폰 1 파일이 아니라 src/phone2*.js 안에서 해요. 옮긴 것: 사진 · 메모(일기) · 초안 · 녹음 (phone2act.js), 화면의 지금 · 상태창 (이 파일), 연도 (phone2year.js), 롤플에 넣기 (phone2note.js).
+// 폰 1 파일이 아니라 src/phone2*.js 안에서 해요. 옮긴 것: 사진 · 메모(일기) · 초안 · 녹음 (phone2act.js), 화면의 지금 · 상태창 (이 파일), 연도 (phone2year.js), 롤플에 넣기 (phone2note.js),
+// 기기 정보 · 자산 준비 (phone2fill.js, 요청 뼈대는 phone2req.js).
 // 아직 안 옮긴 이름은 폰 1 함수 그대로예요 (하는 일은 같아요).
 // (phoneai.js 먼저: phonedata.js와 서로 부르는 사이라, 이 순서여야 어디서 처음 불러도 읽혀요)
 import { makeDraft, recordVoice, takePhoto, writeEntry } from './phoneai.js';
@@ -15,6 +16,7 @@ import { isLiveMeta, liveNowText } from './phone2store.js';
 import { liveTakePhoto, liveWriteEntry, liveMakeDraft, liveRecordVoice } from './phone2act.js';
 import { liveStoryYear, liveEnsureYear, liveSetStoryYear } from './phone2year.js';
 import { liveNote } from './phone2note.js';
+import { liveFillDevice, livePrepareWealth } from './phone2fill.js';
 
 // 실시간 폰(꼬리표가 붙은 폰)을 실시간 서랍 없이 부르면 멈춰요: 폰 1 함수가 실시간 폰을 만지지 않게
 const LIVE_PHONE = Symbol.for('narrative-archive.live');
@@ -47,11 +49,11 @@ export const P = Object.freeze({
     // 폰 만들기 · 다시 만들기
     preparePhone, makePhone, rereadPlaces,
     // 앱 채우기
-    fillMoney, retryMoney, fillVoice, fillDevice, fillLife, fillDelivery, fillScreen, refreshNearby, learnVoices, pickVoices,
+    fillMoney, retryMoney, fillVoice, fillDevice: split(fillDevice, liveFillDevice), fillLife, fillDelivery, fillScreen, refreshNearby, learnVoices, pickVoices,
     // 앱 안에서 하나 만들기
     takePhoto: split(takePhoto, liveTakePhoto), writeEntry: split(writeEntry, liveWriteEntry), makeDraft: split(makeDraft, liveMakeDraft), recordVoice: split(recordVoice, liveRecordVoice),
     // 돈 · 투자
-    prepareWealth, collectInvestmentRecords, fillInvestment, fillChartHistory, refreshMarket, refreshBankFX, investmentDate,
+    prepareWealth: split(prepareWealth, livePrepareWealth), collectInvestmentRecords, fillInvestment, fillChartHistory, refreshMarket, refreshBankFX, investmentDate,
     // 지금 · 연도 · 상태창
     storyNow: storyNowP, nowOn, statusAt: statusAtP, storyYear: storyYearP, setStoryYear: setStoryYearP, ensureYear: ensureYearP,
     // 분기 · 롤플에 넣기
