@@ -45,3 +45,9 @@ export const G = await import(encoded(swap(await readFile(new URL('../src/phone2
 const store = new Map();
 globalThis.localStorage ||= { getItem: k => store.get(k) ?? null, setItem: (k, v) => store.set(k, v), removeItem: k => store.delete(k) };
 
+// 사진 · 메모 · 초안 · 녹음: 폰 1 것(phoneai.js)과 폰 2 것(phone2act.js)을 같은 가짜 이웃으로
+map['./anniv.js'] = encoded(`export const datedRows=()=>[];`);
+const mapAI = { ...map, './people.js': encoded(`export const nameKey=s=>String(s).toLowerCase();export const nameRe=s=>new RegExp(s,'i');export const headingPlaces=()=>[];export const peopleList=()=>[];`) };
+map['./phoneai.js'] = encoded((await readFile(new URL('../src/phoneai.js', import.meta.url), 'utf8')).replace(/from '([^']+)'/g, (all, k) => `from '${mapAI[k] || k}'`));
+export const AI = await import(map['./phoneai.js']);
+export const ACT = await import(encoded(swap(await readFile(new URL('../src/phone2act.js', import.meta.url), 'utf8'))));

@@ -7,7 +7,7 @@ import { datedRows } from './anniv.js';
 import { calendars } from './calendar.js';
 import { ctx, globalSettings, saveMeta } from './core.js';
 import { headingPlaces, nameKey, peopleList } from './people.js';
-import { recentOf, arr, CAP, COUNTRIES, homeCountry, ensureIds, gapDays, secOf, ko, line, MOODS, namesBlock, pad, parts, pick, rowDay, nowOn, str } from './phonedata.js';
+import { recentPhoneText, arr, CAP, COUNTRIES, homeCountry, ensureIds, gapDays, secOf, ko, line, MOODS, namesBlock, pad, parts, pick, rowDay, storyNow, str } from './phonedata.js';
 
 // ---- 사진 그리기: the AI 기능 모델 turns a caption into image tags, one line for the picture and one per person. With
 // AutoPic in 직접 생성 mode the picture goes through AutoPic (its model, vibes, registered looks; only the people in the
@@ -182,7 +182,7 @@ export async function drawPost(m, p, k) {
 }
 
 // ---- 카메라: one photo of this very moment, from the newest messages (the AI 기능 모델)
-const AI_SYS_SHOT = `GOAL
+export const AI_SYS_SHOT = `GOAL
 The owner of a phone in a long role-play takes one photo right now. Write what the photo shows.
 
 YOU GET
@@ -201,8 +201,8 @@ export const shooting = new Set(); // owner keys taking a photo now
 // the chat only: the archive is often summed up long after, so its end can be well behind this moment
 export async function takePhoto(m, p) {
     const prompt = [
-        `[OWNER]\n${p.owner}`, `[NOW]\n${nowOn(p, m) || p.now || ''}`,
-        `[RECENT CHAT]\n${recentOf(m, p.owner, 12, { maxChars: 9000 })}`,
+        `[OWNER]\n${p.owner}`, `[NOW]\n${storyNow(p) || p.now || ''}`,
+        `[RECENT CHAT]\n${recentPhoneText(12, { maxChars: 9000 })}`,
         `[PHOTOS SO FAR]\n${p.photos.slice(-3).map(x => `- ${x.caption}`).join('\n') || '(none)'}`,
         namesBlock(m),
     ].filter(Boolean).join('\n\n');
@@ -212,7 +212,7 @@ export async function takePhoto(m, p) {
     try { raw = a >= 0 && b > a ? parseJson(out.slice(a, b + 1)) : null; } catch { raw = null; }
     const caption = line(raw?.caption, 200);
     if (!caption) throw new Error('모델 답에서 사진 설명을 찾지 못했어요');
-    p.photos.push({ caption, ko: ko(raw?.ko), time: nowOn(p, m) || p.now || '', mood: pick(raw?.mood, MOODS, 'warm') });
+    p.photos.push({ caption, ko: ko(raw?.ko), time: storyNow(p) || p.now || '', mood: pick(raw?.mood, MOODS, 'warm') });
     p.photos = p.photos.slice(-CAP.photos);
     ensureIds(p);
     p.generatedAt = Date.now();
@@ -221,7 +221,7 @@ export async function takePhoto(m, p) {
 }
 
 // ---- 메모 · 일기 새로 쓰기: one new entry at this very moment, from the newest messages (the AI 기능 모델; the chat only, like the camera)
-const AI_SYS_WRITE = `GOAL
+export const AI_SYS_WRITE = `GOAL
 The owner of a phone in a long role-play writes one new entry on it right now: a note or a diary entry (WRITE says which). Write it.
 
 YOU GET
@@ -242,8 +242,8 @@ export async function writeEntry(m, p, kind) {
     const diary = kind === 'diary', list = diary ? (p.diary || []) : p.notes;
     const prompt = [
         await ownerProfileBlock(ctx(),p.financeProfile,p.owner),
-        `[OWNER]\n${p.owner}${p.country ? ` (phone set to ${p.country})` : ''}`, `[NOW]\n${nowOn(p, m) || p.now || ''}`, `[WRITE]\n${diary ? 'a diary entry' : 'a note'}`,
-        `[RECENT CHAT]\n${recentOf(m, p.owner, 12, { maxChars: 9000 })}`,
+        `[OWNER]\n${p.owner}${p.country ? ` (phone set to ${p.country})` : ''}`, `[NOW]\n${storyNow(p) || p.now || ''}`, `[WRITE]\n${diary ? 'a diary entry' : 'a note'}`,
+        `[RECENT CHAT]\n${recentPhoneText(12, { maxChars: 9000 })}`,
         `[SO FAR]\n${list.slice(-3).map(x => `- ${x.title ? `${x.title}: ` : ''}${x.text.slice(0, 300)}`).join('\n') || '(none)'}`,
         namesBlock(m),
     ].filter(Boolean).join('\n\n');
@@ -253,7 +253,7 @@ export async function writeEntry(m, p, kind) {
     try { raw = a >= 0 && b > a ? parseJson(out.slice(a, b + 1)) : null; } catch { raw = null; }
     const text = str(raw?.text, 2000);
     if (!text) throw new Error(`모델 답에서 ${diary ? '일기' : '메모'}를 찾지 못했어요`);
-    const now = nowOn(p, m) || p.now || '';
+    const now = storyNow(p) || p.now || '';
     const x = { title: line(raw?.title, 80), kt: line(raw?.kt, 80), text, ko: str(raw?.ko, 2000) };
     if (diary) { p.diary = [...(p.diary || []), { date: now.slice(0, 5), ...x }].slice(-CAP.diary); }
     else { p.notes.push({ ...x, time: now }); p.notes = p.notes.slice(-CAP.notes); }
@@ -326,7 +326,7 @@ ANSWER — one JSON object, nothing else:
 }`;
 // 미발송 초안 (떠올리기): what the owner might have typed to someone and held back. The model's imagining (src "guess"):
 // shown as such, never sent back to the model or into the role-play
-const AI_SYS_DRAFT = `GOAL
+export const AI_SYS_DRAFT = `GOAL
 In a long role-play, the owner of a phone started a text to someone and never sent it. Write that unsent text.
 
 YOU GET
@@ -351,7 +351,7 @@ export async function makeDraft(m, p, i) {
         await ownerProfileBlock(ctx(),p.financeProfile,p.owner),
         `[OWNER]\n${p.owner}`, `[TO]\n${t.with}`,
         `[THREAD]\n${t.messages.filter(x => x.src !== 'guess').slice(-12).map(x => `${said(x)} (${x.time}): ${x.text}`).join('\n')}`,
-        `[RECENT CHAT]\n${recentOf(m, p.owner, 8, { maxChars: 7000 })}`,
+        `[RECENT CHAT]\n${recentPhoneText(8, { maxChars: 7000 })}`,
         namesBlock(m),
     ].filter(Boolean).join('\n\n');
     const out = String(await askAI(prompt, { force: true, system: AI_SYS_DRAFT, maxTokens: 1200 }) || '').replace(/```(?:json)?/gi, '');
@@ -360,7 +360,7 @@ export async function makeDraft(m, p, i) {
     try { raw = a >= 0 && b > a ? parseJson(out.slice(a, b + 1)) : null; } catch { raw = null; }
     const text = str(raw?.text, 600);
     if (!text) throw new Error('모델 답에서 초안을 찾지 못했어요');
-    t.draft = { text, ko: ko(raw?.ko), time: nowOn(p, m) || p.now || '', src: 'guess' };
+    t.draft = { text, ko: ko(raw?.ko), time: storyNow(p) || p.now || '', src: 'guess' };
     p.generatedAt = Date.now();
     await saveMeta();
     return t.draft;
@@ -405,7 +405,7 @@ export async function retranslate(m, p, i, ks) {
     return n;
 }
 // 음성 메모 떠올리기 (the red button): one memo the owner records right now, spoken rather than written
-const AI_SYS_VOICE = `GOAL
+export const AI_SYS_VOICE = `GOAL
 The owner of a phone in a long role-play records a short voice memo to themselves right now. Write what they say.
 
 YOU GET
@@ -427,8 +427,8 @@ export const recording = new Set(); // owner keys recording a memo now
 export async function recordVoice(m, p) {
     const prompt = [
         await ownerProfileBlock(ctx(),p.financeProfile,p.owner),
-        `[OWNER]\n${p.owner}${p.country ? ` (phone set to ${p.country})` : ''}`, `[NOW]\n${nowOn(p, m) || p.now || ''}`,
-        `[RECENT CHAT]\n${recentOf(m, p.owner, 12, { maxChars: 9000 })}`,
+        `[OWNER]\n${p.owner}${p.country ? ` (phone set to ${p.country})` : ''}`, `[NOW]\n${storyNow(p) || p.now || ''}`,
+        `[RECENT CHAT]\n${recentPhoneText(12, { maxChars: 9000 })}`,
         `[SO FAR]\n${(p.voice || []).slice(-3).map(x => `- ${x.title}: ${x.text.slice(0, 200)}`).join('\n') || '(none)'}`,
         namesBlock(m),
     ].filter(Boolean).join('\n\n');
@@ -438,7 +438,7 @@ export async function recordVoice(m, p) {
     try { raw = a >= 0 && b > a ? parseJson(out.slice(a, b + 1)) : null; } catch { raw = null; }
     const text = str(raw?.text, 2000);
     if (!text) throw new Error('모델 답에서 음성 메모를 찾지 못했어요');
-    p.voice = [...(p.voice || []), { title: line(raw?.title, 80), kt: line(raw?.kt, 80), text, ko: str(raw?.ko, 2000), time: nowOn(p, m) || p.now || '', sec: secOf(raw?.sec), place: line(raw?.place, 60), src: 'guess', now: true }].slice(-CAP.voice);
+    p.voice = [...(p.voice || []), { title: line(raw?.title, 80), kt: line(raw?.kt, 80), text, ko: str(raw?.ko, 2000), time: storyNow(p) || p.now || '', sec: secOf(raw?.sec), place: line(raw?.place, 60), src: 'guess', now: true }].slice(-CAP.voice);
     ensureIds(p);
     p.generatedAt = Date.now();
     await saveMeta();

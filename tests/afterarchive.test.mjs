@@ -1851,7 +1851,8 @@ test('타임라인 폰의 사진 · 메모 · 초안 · 녹음 시각과 투자 
         assert.equal(data.nowOn(p, { ...mm, phoneUpto: 3, phoneNow: () => '11-14 16:00' }), '11-14 16:00');
     } finally { delete globalThis.__trackers; delete globalThis.__glossaryEntries; delete globalThis.__glossaryPeople; }
     const src = f => readFile(new URL(`../src/${f}`, import.meta.url), 'utf8');
-    assert.doesNotMatch(await src('phoneai.js'), /storyNow\(/);
-    assert.equal(((await src('phoneai.js')).match(/nowOn\(p, m\)/g) || []).length, 7);
+    // (phoneai.js: the lines it had before 폰 2 — storyNow(p), never the meta; 폰 2's own copies are in phone2act.js)
+    assert.doesNotMatch(await src('phoneai.js'), /nowOn\(|storyNow\(p, /);
+    assert.equal(((await src('phoneai.js')).match(/storyNow\(p\) \|\| p\.now \|\| ''/g) || []).length, 7);
     assert.match(await src('investdata.js'), /Number\.isInteger\(m\?\.phoneUpto\) \? storyNow\(p, stopAt\(m, p\), m\) : storyNow\(p, stopAt\(m, p\)\)/);
 });

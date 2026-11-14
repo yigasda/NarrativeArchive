@@ -347,10 +347,10 @@ test('실시간 폰에서 폰 1의 앱 요청을 불러도 시작 뒤의 롤플 
     } finally { T.chat = chat0; delete T.recent; }
 });
 
-test('앱 요청(사진 · 일기 · 초안 · 녹음)은 최근 대화와 지금 시각을 받은 메타에 물어요', async () => {
+test('앱 요청(사진 · 일기 · 초안 · 녹음): 폰 1 파일(phoneai.js)은 예전 줄 그대로, 실시간 것은 phone2act.js에 (시험은 phone2act.test.mjs)', async () => {
     const src = await (await import('node:fs/promises')).readFile(new URL('../src/phoneai.js', import.meta.url), 'utf8');
-    assert.ok(!/recentPhoneText\(/.test(src)); assert.ok(!/storyNow\(p\)/.test(src));
-    assert.equal((src.match(/recentOf\(m, p\.owner, /g) || []).length, 4);
+    assert.ok(!/recentOf\(|nowOn\(/.test(src));
+    assert.equal((src.match(/recentPhoneText\(\d+, /g) || []).length, 4); assert.equal((src.match(/storyNow\(p\) \|\| p\.now \|\| ''/g) || []).length, 7);
 });
 
 test('반영 요청이 나가 있는 사이 다른 채팅을 열면: 돌아온 답은 안 넣고, 더 묻지도 않아요', async () => {
