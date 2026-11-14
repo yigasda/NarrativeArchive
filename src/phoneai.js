@@ -7,7 +7,7 @@ import { datedRows } from './anniv.js';
 import { calendars } from './calendar.js';
 import { ctx, globalSettings, saveMeta } from './core.js';
 import { headingPlaces, nameKey, peopleList } from './people.js';
-import { recentOf, arr, CAP, COUNTRIES, homeCountry, ensureIds, gapDays, secOf, ko, line, MOODS, namesBlock, pad, parts, pick, rowDay, storyNow, str } from './phonedata.js';
+import { recentOf, arr, CAP, COUNTRIES, homeCountry, ensureIds, gapDays, secOf, ko, line, MOODS, namesBlock, pad, parts, pick, rowDay, nowOn, str } from './phonedata.js';
 
 // ---- 사진 그리기: the AI 기능 모델 turns a caption into image tags, one line for the picture and one per person. With
 // AutoPic in 직접 생성 mode the picture goes through AutoPic (its model, vibes, registered looks; only the people in the
@@ -201,7 +201,7 @@ export const shooting = new Set(); // owner keys taking a photo now
 // the chat only: the archive is often summed up long after, so its end can be well behind this moment
 export async function takePhoto(m, p) {
     const prompt = [
-        `[OWNER]\n${p.owner}`, `[NOW]\n${storyNow(p, null, m) || p.now || ''}`,
+        `[OWNER]\n${p.owner}`, `[NOW]\n${nowOn(p, m) || p.now || ''}`,
         `[RECENT CHAT]\n${recentOf(m, p.owner, 12, { maxChars: 9000 })}`,
         `[PHOTOS SO FAR]\n${p.photos.slice(-3).map(x => `- ${x.caption}`).join('\n') || '(none)'}`,
         namesBlock(m),
@@ -212,7 +212,7 @@ export async function takePhoto(m, p) {
     try { raw = a >= 0 && b > a ? parseJson(out.slice(a, b + 1)) : null; } catch { raw = null; }
     const caption = line(raw?.caption, 200);
     if (!caption) throw new Error('모델 답에서 사진 설명을 찾지 못했어요');
-    p.photos.push({ caption, ko: ko(raw?.ko), time: storyNow(p, null, m) || p.now || '', mood: pick(raw?.mood, MOODS, 'warm') });
+    p.photos.push({ caption, ko: ko(raw?.ko), time: nowOn(p, m) || p.now || '', mood: pick(raw?.mood, MOODS, 'warm') });
     p.photos = p.photos.slice(-CAP.photos);
     ensureIds(p);
     p.generatedAt = Date.now();
@@ -242,7 +242,7 @@ export async function writeEntry(m, p, kind) {
     const diary = kind === 'diary', list = diary ? (p.diary || []) : p.notes;
     const prompt = [
         await ownerProfileBlock(ctx(),p.financeProfile,p.owner),
-        `[OWNER]\n${p.owner}${p.country ? ` (phone set to ${p.country})` : ''}`, `[NOW]\n${storyNow(p, null, m) || p.now || ''}`, `[WRITE]\n${diary ? 'a diary entry' : 'a note'}`,
+        `[OWNER]\n${p.owner}${p.country ? ` (phone set to ${p.country})` : ''}`, `[NOW]\n${nowOn(p, m) || p.now || ''}`, `[WRITE]\n${diary ? 'a diary entry' : 'a note'}`,
         `[RECENT CHAT]\n${recentOf(m, p.owner, 12, { maxChars: 9000 })}`,
         `[SO FAR]\n${list.slice(-3).map(x => `- ${x.title ? `${x.title}: ` : ''}${x.text.slice(0, 300)}`).join('\n') || '(none)'}`,
         namesBlock(m),
@@ -253,7 +253,7 @@ export async function writeEntry(m, p, kind) {
     try { raw = a >= 0 && b > a ? parseJson(out.slice(a, b + 1)) : null; } catch { raw = null; }
     const text = str(raw?.text, 2000);
     if (!text) throw new Error(`모델 답에서 ${diary ? '일기' : '메모'}를 찾지 못했어요`);
-    const now = storyNow(p, null, m) || p.now || '';
+    const now = nowOn(p, m) || p.now || '';
     const x = { title: line(raw?.title, 80), kt: line(raw?.kt, 80), text, ko: str(raw?.ko, 2000) };
     if (diary) { p.diary = [...(p.diary || []), { date: now.slice(0, 5), ...x }].slice(-CAP.diary); }
     else { p.notes.push({ ...x, time: now }); p.notes = p.notes.slice(-CAP.notes); }
@@ -360,7 +360,7 @@ export async function makeDraft(m, p, i) {
     try { raw = a >= 0 && b > a ? parseJson(out.slice(a, b + 1)) : null; } catch { raw = null; }
     const text = str(raw?.text, 600);
     if (!text) throw new Error('모델 답에서 초안을 찾지 못했어요');
-    t.draft = { text, ko: ko(raw?.ko), time: storyNow(p, null, m) || p.now || '', src: 'guess' };
+    t.draft = { text, ko: ko(raw?.ko), time: nowOn(p, m) || p.now || '', src: 'guess' };
     p.generatedAt = Date.now();
     await saveMeta();
     return t.draft;
@@ -427,7 +427,7 @@ export const recording = new Set(); // owner keys recording a memo now
 export async function recordVoice(m, p) {
     const prompt = [
         await ownerProfileBlock(ctx(),p.financeProfile,p.owner),
-        `[OWNER]\n${p.owner}${p.country ? ` (phone set to ${p.country})` : ''}`, `[NOW]\n${storyNow(p, null, m) || p.now || ''}`,
+        `[OWNER]\n${p.owner}${p.country ? ` (phone set to ${p.country})` : ''}`, `[NOW]\n${nowOn(p, m) || p.now || ''}`,
         `[RECENT CHAT]\n${recentOf(m, p.owner, 12, { maxChars: 9000 })}`,
         `[SO FAR]\n${(p.voice || []).slice(-3).map(x => `- ${x.title}: ${x.text.slice(0, 200)}`).join('\n') || '(none)'}`,
         namesBlock(m),
@@ -438,7 +438,7 @@ export async function recordVoice(m, p) {
     try { raw = a >= 0 && b > a ? parseJson(out.slice(a, b + 1)) : null; } catch { raw = null; }
     const text = str(raw?.text, 2000);
     if (!text) throw new Error('모델 답에서 음성 메모를 찾지 못했어요');
-    p.voice = [...(p.voice || []), { title: line(raw?.title, 80), kt: line(raw?.kt, 80), text, ko: str(raw?.ko, 2000), time: storyNow(p, null, m) || p.now || '', sec: secOf(raw?.sec), place: line(raw?.place, 60), src: 'guess', now: true }].slice(-CAP.voice);
+    p.voice = [...(p.voice || []), { title: line(raw?.title, 80), kt: line(raw?.kt, 80), text, ko: str(raw?.ko, 2000), time: nowOn(p, m) || p.now || '', sec: secOf(raw?.sec), place: line(raw?.place, 60), src: 'guess', now: true }].slice(-CAP.voice);
     ensureIds(p);
     p.generatedAt = Date.now();
     await saveMeta();

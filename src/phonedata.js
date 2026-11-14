@@ -1078,9 +1078,6 @@ export function mergePhone(p, add, { keepAll = false, m = null } = {}) {
         if (!name || p.contacts.length >= CAP.contacts || NO_CONTACT.test(name) || isOwnerName(p, m, name) || arr(p.hiddenContacts).includes(nameKey(name)) || personIn(p, p.contacts, x => x.name, name) || p.contacts.some(x => x.saved && nameKey(x.saved) === nameKey(name))) continue;
         p.contacts.push({ name });
     }
-    // (more than the list holds: the ones with no label of their own go first, oldest first; a contact the owner saved
-    // under a label, or reaches on the messenger, stays as long as there is room)
-    if (p.contacts.length > CAP.contacts) { let over = p.contacts.length - CAP.contacts; p.contacts = p.contacts.filter(x => !(over > 0 && !x.saved && !x.messenger && over--)); }
     p.contacts = keep(p.contacts, CAP.contacts);
     if (add.now) p.now = add.now;
     return p;
@@ -2915,6 +2912,9 @@ export async function setDateOrder(m, order) { if (!m || !['md', 'dm'].includes(
 dateOrderSource(() => ctx()?.chatMetadata?.narrative_archive?.dateOrder);
 // a phone of 폰 2 (its store marks the phone objects it hands out): the role-play's status lines and clocks are not its own
 export const isLivePhone = p => !!p?.[Symbol.for('narrative-archive.live')];
+// the time an app action stamps (a photo, a note, a draft, a memo): for 타임라인 the call it always was, storyNow(p),
+// which never looks at the meta; for 폰 2 (its phone, or its drawer) its own clock
+export const nowOn = (p, m = null) => (isLivePhone(p) || Number.isInteger(m?.phoneUpto) ? storyNow(p, null, m) : storyNow(p));
 export function storyNow(p, upto = null, m = null) {
     // (폰 2: its own clock, the real time its last reflection set; never the role-play's status line)
     // (the drawer's running clock when it gives one — the story's date and the real time, now — else the time its last
