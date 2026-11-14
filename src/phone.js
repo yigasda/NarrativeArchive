@@ -426,7 +426,7 @@ export async function openPhone(who = null) {
         const p = phone();
         // 실시간 with nobody on it (대화만 남기기 keeps the talk, not the phones): a way back to 타임라인 and to 새로 시작,
         // never the 타임라인 picker (its name would be the 타임라인's choice)
-        if (live() && (!owner || !p)) { $root.find('.na_ph_frame').html(`<div class="na_ph_scr glass w_dusk"><div class="na_ph_body na_ph_make"><div class="na_ph_makecard"><b>이 실시간 폰엔 아직 인물이 없어요</b><button type="button" class="na_ph_makebtn na_ph_pmode" data-v="story">타임라인으로</button><div class="na_ph_makelinks"><button type="button" class="na_ph_livereset">실시간 폰 새로 시작</button></div></div></div></div>`); return; }
+        if (live() && (!owner || !p)) { $root.find('.na_ph_frame').html(`<div class="na_ph_scr glass w_dusk"><div class="na_ph_body na_ph_make"><div class="na_ph_makecard"><b>이 실시간 폰엔 아직 인물이 없어요</b><button type="button" class="na_ph_cardbtn na_ph_pmode" data-v="story">타임라인으로</button><div class="na_ph_makelinks"><button type="button" class="na_ph_livereset">실시간 폰 새로 시작</button></div></div></div></div>`); return; }
         // nobody to show yet (no people in the archive, no phone in this chat): the picker opens instead of a blank phone
         if (!owner) {
             $root.find('.na_ph_frame').html(`
@@ -477,7 +477,7 @@ export async function openPhone(who = null) {
         catch (err) {
             console.error('[narrative-archive] phone screen', view, err);
             toastr.error(`${view} 화면을 그리지 못했어요: ${err?.message || err}`, '캐릭터 휴대폰');
-            html = `<div class="na_ph_scr glass w_dusk"><div class="na_ph_body na_ph_make"><div class="na_ph_makecard"><b>화면을 그리지 못했어요</b><p>${esc(`${view}: ${err?.message || err}`)}</p><button type="button" class="na_ph_makebtn" data-go="home">홈으로</button></div></div></div>`;
+            html = `<div class="na_ph_scr glass w_dusk"><div class="na_ph_body na_ph_make"><div class="na_ph_makecard"><b>화면을 그리지 못했어요</b><p>${esc(`${view}: ${err?.message || err}`)}</p><button type="button" class="na_ph_cardbtn" data-go="home">홈으로</button></div></div></div>`;
         }
         $root.find('.na_ph_frame').html(html);
         // 실시간: the notch says which phone this is on every screen; 타임라인's data rows go
@@ -1750,6 +1750,8 @@ export async function openPhone(who = null) {
         delete m.phones[nameKey(owner)];
         // its unsaved rounds (복구) go with it
         try { const sc = typeof m.phoneJournal === 'string' ? m.phoneJournal : phoneChatScope(ctx()); journalWrite(sc, journalRead(sc).filter(r => nameKey(r.owner) !== nameKey(owner))); } catch { /* no journal here */ }
+        // (실시간: on to another 실시간 phone if there is one; none, the card that says so)
+        if (live()) owner = liveOwner();
         view = 'lock'; draw();
         await saveMeta();
         if (was) applyInjection();
