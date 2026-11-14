@@ -207,6 +207,9 @@ export function liveMeta(m, { text = null, now = null } = {}) {
     });
 }
 
+// 실시간 폰의 지금: 서랍의 흐르는 시계(phoneNow), 못 읽거나 서랍이 아니면 폰에 저장된 시각
+export const liveNowText = (m, p) => { let t = ''; try { t = typeof m?.phoneNow === 'function' ? m.phoneNow(p) : ''; } catch { t = ''; } return t || p?.now || ''; };
+
 // 브라우저 저장 (5-4): what 폰 1 keeps in this browser per chat (the last phone owner, 복구's journal) is keyed by the chat
 // (phoneChatScope). 폰 2 keeps its own under its own key, the chat's and its world's: "<scope>:live:<world id>", so neither
 // reads or overwrites the other, and a new 폰 2 never reads an old one's. null without a chat or a 폰 2

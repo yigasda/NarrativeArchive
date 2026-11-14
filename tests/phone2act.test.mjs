@@ -54,7 +54,7 @@ test('흐르는 시계를 못 읽으면 폰에 저장된 시각; 서랍이 아�
         await ACT.liveTakePhoto(d, d.phones.mara);
         assert.equal(d.phones.mara.photos.at(-1).time, '11-12 21:30');
         const broken = L.liveMeta(real, { now: () => { throw new Error('x'); } });
-        assert.equal(ACT.liveNowText(broken, broken.phones.mara), '11-12 21:30');
+        assert.equal(L.liveNowText(broken, broken.phones.mara), '11-12 21:30');
         // 폰 1의 메타(서랍 아님), 서랍 흉내만 낸 것: 모델을 부르기 전에 멈춰요
         const n = asked.length;
         for (const m of [real, { ...real, phoneUpto: 2, phoneRecent: () => 'x', phoneNow: () => '01-01 00:00' }]) {
