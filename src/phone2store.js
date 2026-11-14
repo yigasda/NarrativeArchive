@@ -209,6 +209,8 @@ export function liveMeta(m, { text = null, now = null } = {}) {
 
 // 실시간 폰의 지금: 서랍의 흐르는 시계(phoneNow), 못 읽거나 서랍이 아니면 폰에 저장된 시각
 export const liveNowText = (m, p) => { let t = ''; try { t = typeof m?.phoneNow === 'function' ? m.phoneNow(p) : ''; } catch { t = ''; } return t || p?.now || ''; };
+// 실시간 폰의 지금 연도: 서랍의 흐르는 시계가 알려 주는 연도 (이야기 날짜로 옮긴 날의 연도). 모르면 0
+export const liveNowYear = (m, p) => { let y = 0; try { y = Number(m?.phoneNow?.year?.(p)) || 0; } catch { y = 0; } return Number.isInteger(y) && y > 0 ? y : 0; };
 
 // 브라우저 저장 (5-4): what 폰 1 keeps in this browser per chat (the last phone owner, 복구's journal) is keyed by the chat
 // (phoneChatScope). 폰 2 keeps its own under its own key, the chat's and its world's: "<scope>:live:<world id>", so neither

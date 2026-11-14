@@ -31,7 +31,13 @@ export const LIVE_GO = { rounds: 3, replyTokens: 4000, digests: 2 };
 const tzOf = p => ownerZone(p)?.tz || 'UTC';
 // the time it is now on a 폰 2 phone: the story's date (the world's dayShift) and the real clock where the owner is.
 // Given to liveMeta as `now`, so the phone's screens and app requests go by a clock that runs
-export const liveNowOf = (real, at = () => Date.now()) => p => { const w = liveWorld(real); return w && p ? liveWall(tzOf(p), w.dayShift, at()).at : ''; };
+// (its .year(p): the year of that same moment — the story's, as the day shift moves it; 0 when there is no 폰 2 or phone)
+export const liveNowOf = (real, at = () => Date.now()) => {
+    const wall = p => { const w = liveWorld(real); return w && p ? liveWall(tzOf(p), w.dayShift, at()) : null; };
+    const now = p => wall(p)?.at || '';
+    now.year = p => wall(p)?.year || 0;
+    return now;
+};
 // the owner's card as the reply reads it: the profile the user chose for them, else their character card in this chat
 async function cardOf(p) {
     const chosen = p.financeProfile ? await resolvePhoneProfile(ctx(), p.financeProfile).catch(() => null) : null;
