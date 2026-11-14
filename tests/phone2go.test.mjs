@@ -439,3 +439,55 @@ test('실시간 폰의 "지금"은 흐르는 시계예요: 이야기 날짜(dayS
     assert.equal(PD.storyNow(c.p, null, L.liveMeta(c.real)), '11-10 22:00');
     assert.equal(PD.storyNow(L.livePhone(c.real, 'Mara')), '11-10 22:00');
 });
+
+test('채우기 · 다시 만들기가 읽는 요약은 반영된 데까지만: 아직 반영 안 된 대화의 요약은 안 들어가요 (같은 일이 두 번 안 들어가게)', () => {
+    const c = world();
+    const w = L.liveWorld(c.real), no = () => L.liveNo(w);
+    for (let i = 0; i < 30; i++) c.room.messages.push({ id: `k${i}`, n: no(), from: i % 2 ? 'Mara' : 'Ren', text: `말 ${i + 1}`, at: 1000 + i });
+    const n0 = c.room.messages[0].n;
+    // two summaries: the first 10 messages, then the next 15 (the second one ends past what the phone has read)
+    c.room.digest = { upto: n0 + 24, parts: [{ from: n0, to: n0 + 9, text: 'SUMMARY ONE (read)' }, { from: n0 + 10, to: n0 + 24, text: 'SUMMARY TWO: Ren paid 500 (not read yet)' }] };
+    const seen = n0 + 14;
+    const out = L.liveRecent(w, 'Mara', 150, { maxChars: 12000, seen, summary: true });
+    assert.ok(out.includes('SUMMARY ONE (read)')); assert.ok(!out.includes('SUMMARY TWO'));
+    // the lines after the summary it took, up to what was read: said word for word, none past it
+    assert.ok(out.includes(': 말 11') && out.includes(': 말 15')); assert.ok(!out.includes(': 말 16') && !out.includes(': 말 10\n'));
+    // (everything read: both summaries, then the lines after them)
+    const all = L.liveRecent(w, 'Mara', 150, { maxChars: 12000, seen: n0 + 29, summary: true });
+    assert.ok(all.includes('SUMMARY ONE') && all.includes('SUMMARY TWO') && all.includes(': 말 26') && !all.includes(': 말 25\n'));
+});
+
+test('이야기에서 시작할 때 폰 1의 "롤플에 넣기"는 안 따라와요: 실시간 폰에서 켠 적 없으면 프롬프트에 폰이 두 번 안 들어가요', () => {
+    const real = { phones: { mara: { ...phone(), inject: true } }, text: '' };
+    L.startFromStory(real, { persona: 'Ren', upto: 3, scope: 'test', story: { ranges: {}, titles: [], rawFrom: 0, own: [''] } });
+    assert.equal(L.liveWorld(real).phones.mara.inject, false);
+    assert.equal(real.phones.mara.inject, true);
+    const before = PD.phoneBlock(real);
+    assert.equal(PD.phoneBlock(real, Object.values(L.liveWorld(real).phones)), before);
+});
+
+test('실시간 폰 한 대의 연도를 고르면 다른 실시간 폰도 같은 만큼 옮겨지고, 반영 뒤에도 은행 날짜와 연도가 맞아요', async () => {
+    const c = world();
+    c.p.now = '11-10 22:00'; c.p.year = 2026;
+    const ivo = { ...phone(), owner: 'Ivo', now: '11-10 22:00', year: 2026 };
+    ivo.money.tx = [{ id: 't1', account: '1111', amount: -1000, who: '가게', time: '2026-11-09 09:00' }];
+    c.m.phones.ivo = ivo;
+    PD.setStoryYear(c.m, c.p, 2030);
+    const b = c.m.phones.ivo;
+    assert.deepEqual([c.p.year, c.p.liveYearShift, b.year, b.liveYearShift, b.yearShift], [2030, 4, 2030, 4, undefined]);
+    assert.equal(b.money.tx[0].time, '2030-11-09 09:00');
+    // Ivo's next reflection keeps the year the records are in
+    const room = L.ensureRoom(c.real, ['Ivo']);
+    room.messages.push({ id: 'a', n: L.liveNo(L.liveWorld(c.real)), from: 'Ren', text: '안녕', at: Date.parse('2026-11-11T01:00:00Z') });
+    T.answers = [{ events: [] }];
+    assert.equal((await G.liveReflect(c.real, 'Ivo')).error, '');
+    assert.equal(c.m.phones.ivo.year, 2030);
+});
+
+test('실시간 폰의 연도는 롤플 상태창에서 읽지 않아요: 폰만 주든 서랍만 주든 실제 연도 + 고른 차이', () => {
+    const c = world(), y = new Date().getFullYear();
+    assert.equal(PD.storyYear(c.m, { ...c.p, year: 0 }), String(y));
+    assert.equal(PD.storyYear(c.m, { ...c.p, year: 0, liveYearShift: 3 }), String(y + 3));
+    assert.equal(PD.storyYear(null, Object.assign(L.livePhone(c.real, 'Mara'), { year: 0 })), String(y));
+    assert.equal(PD.storyYear(c.m, { ...c.p, year: 0, noYear: true }), '');
+});

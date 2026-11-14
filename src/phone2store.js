@@ -78,6 +78,9 @@ export function startFromStory(m, { persona, upto, scope = '', dayShift = 0, now
         if (!obj(p)) continue;
         delete p.syncUndo; delete p.syncUndos; delete p.syncLast;
         if (obj(p.sync)) delete p.sync.owed;
+        // (롤플에 넣기 is each phone's own switch: 폰 2's copy starts with it off, so the same phone never goes into the
+        // role-play's prompt twice unless it is turned on here)
+        p.inject = false;
     }
     w.story = structuredClone(story);
     if (typeof m.lastPhoneOwner === 'string') w.lastOwner = m.lastPhoneOwner;
@@ -154,8 +157,11 @@ export function liveRecent(w, owner, n = 12, { maxChars = Infinity, seen = null,
     const rooms = Object.values(w?.messenger?.rooms || {}).filter(r => (r.members || []).some(x => liveKey(x) === k));
     // (summary: an app being filled or made again reads all the talk there was — the rooms' summaries of the old talk
     // first, then the lines not summarized yet)
-    const short = summary ? rooms.map(r => (Array.isArray(r.digest?.parts) ? r.digest.parts : []).map(p => String(p?.text || '').trim()).filter(Boolean).join('\n\n')).filter(Boolean).join('\n\n').slice(-8000) : '';
-    const past = r => (summary && Number.isInteger(r.digest?.upto) ? r.digest.upto : -Infinity);
+    // (only a summary whose talk was all read by then (seen): one that ends past it tells what the reflection has yet to
+    // read, and that would go into the phone twice. The lines it would have covered are said word for word instead)
+    const parts = r => (summary && Array.isArray(r.digest?.parts) ? r.digest.parts : []).filter(p => String(p?.text || '').trim() && (seen == null || (Number.isInteger(p.to) && p.to <= seen)));
+    const short = rooms.map(r => parts(r).map(p => String(p.text).trim()).join('\n\n')).filter(Boolean).join('\n\n').slice(-8000);
+    const past = r => Math.max(-Infinity, ...parts(r).map(p => (Number.isInteger(p.to) ? p.to : -Infinity)));
     const all = rooms.flatMap(r => (r.messages || []).filter(x => (x.n ?? Infinity) > past(r)))
         .filter(x => (x.call || flat(x.text)) && (seen == null || (x.n ?? Infinity) <= seen)).sort((a, b) => (a.n ?? 0) - (b.n ?? 0) || (a.at ?? 0) - (b.at ?? 0)).slice(-Math.max(0, n));
     const out = [];
