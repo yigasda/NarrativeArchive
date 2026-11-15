@@ -4,7 +4,8 @@ import {readFile} from 'node:fs/promises';
 const enc=s=>'data:text/javascript;base64,'+Buffer.from(s).toString('base64');
 const core=enc(`export const ctx=()=>globalThis.storyTest.context;export const getMeta=()=>globalThis.storyTest.meta;export const saveMeta=async()=>{globalThis.storyTest.saves++};`);
 const src=await readFile(new URL('../src/phonestory.js',import.meta.url),'utf8');
-const story=await import(enc(src.replace("'./core.js'",JSON.stringify(core)).replace("'./phonesync.js'",JSON.stringify(new URL('../src/phonesync.js',import.meta.url).href))));
+const story=await import(enc(src.replace("'./core.js'",JSON.stringify(core)).replace("'./phonesync.js'",JSON.stringify(new URL('../src/phonesync.js',import.meta.url).href)).replace("'./phone2store.js'",JSON.stringify(new URL('../src/phone2store.js',import.meta.url).href))));
+const L2=await import(new URL('../src/phone2store.js',import.meta.url).href);
 function setup(){
  const m={text:'Story archive',phoneScreenHolder:'Mara',phoneProfiles:{newPerson:{type:'character',id:'new.png'}},phones:{oscar:{owner:'Oscar',wealthPlan:{currency:'EUR'}}},finance:{accounts:{a:{amount:42}},prices:{},transfers:{}},lastPhoneOwner:'Oscar',phoneLore:['old'],phoneLoreOff:{old:[1]}};
  const state=globalThis.storyTest={meta:m,saves:0,prompts:0,choice:'keep',confirmed:true};
@@ -104,4 +105,19 @@ test('점검 7: 새로 시작 takes this browser\'s record of rounds to put back
   assert.equal(store.has('narrativearchive:sync:scope-x'),false);
   assert.equal(m.phoneStoryRun,run+1);
  } finally { globalThis.localStorage=was; }
+});
+
+test('새 이야기로 시작하면 실시간 폰은 대화만 남아요: 옛 이야기에서 온 폰 · 은행은 가고, 메신저는 그대로',async()=>{
+ const {m,state}=setup();m.phoneStoryScope='parent';state.choice='fresh';
+ L2.startFromStory(m,{persona:'Ren',upto:5,scope:'parent',story:{ranges:{},titles:[],rawFrom:0,own:['']}});
+ const room=L2.ensureRoom(m,['Oscar']);L2.sendLive(m,room.id,'안녕');L2.setLiveMode(m,'live');
+ assert.ok(L2.liveWorld(m).phones.oscar);
+ await story.ensurePhoneStory(m);
+ const w=L2.liveWorld(m);
+ assert.deepEqual(w.phones,{});assert.equal(w.finance,null);assert.equal(w.from,'fresh');
+ assert.deepEqual(Object.values(w.messenger.rooms)[0].messages.map(x=>x.text),['안녕']);
+ assert.equal(L2.liveMode(m),'story');
+ // no 폰 2 there: nothing is added
+ const b=setup();b.m.phoneStoryScope='parent';b.state.choice='fresh';
+ await story.ensurePhoneStory(b.m);assert.equal(b.m.live,undefined);
 });

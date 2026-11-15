@@ -6,6 +6,7 @@
 // 폰 1은 이 파일을 안 불러요.
 
 import { ctx, saveMeta, MODULE } from './core.js';
+import { applyInjection } from './inject.js';
 import { askDraft, phone2Clock, aroundBlock, ownerZone, cardBlocks } from './phonedata.js';
 import { askAI, askCompress, stripThink, isBlocked, SECTION_GUARD } from './ai.js';
 import { SCENES_SYS, parseScenes } from './scenes.js';
@@ -14,6 +15,7 @@ import { parseJson } from './phoneparse.js';
 import { nameKey } from './people.js';
 import { liveWorld, livePhone, liveMeta, liveKey } from './phone2store.js';
 import { liveStoryText } from './phone2story.js';
+import { liveWall } from './phone2clock.js';
 import { gatherReply } from './phone2live.js';
 import { replyInput } from './phone2ask.js';
 import { phone2ReplySystem } from './phone2reply.js';
@@ -27,6 +29,15 @@ import { DIGEST_STATE, digestDue, digestRaw, digestSize, digestHalves, scenesSys
 // rounds of reflection after one reply at most (messages piled up while only talking: 100 a round)
 export const LIVE_GO = { rounds: 3, replyTokens: 4000, digests: 2 };
 const tzOf = p => ownerZone(p)?.tz || 'UTC';
+// the time it is now on a 폰 2 phone: the story's date (the world's dayShift) and the real clock where the owner is.
+// Given to liveMeta as `now`, so the phone's screens and app requests go by a clock that runs
+// (its .year(p): the year of that same moment — the story's, as the day shift moves it; 0 when there is no 폰 2 or phone)
+export const liveNowOf = (real, at = () => Date.now()) => {
+    const wall = p => { const w = liveWorld(real); return w && p ? liveWall(tzOf(p), w.dayShift, at()) : null; };
+    const now = p => wall(p)?.at || '';
+    now.year = p => wall(p)?.year || 0;
+    return now;
+};
 // the owner's card as the reply reads it: the profile the user chose for them, else their character card in this chat
 async function cardOf(p) {
     const chosen = p.financeProfile ? await resolvePhoneProfile(ctx(), p.financeProfile).catch(() => null) : null;
@@ -43,7 +54,7 @@ const open = real => { const md = ctx().chatMetadata; return !md || md[MODULE] =
 // whether the 폰 2 a go began with is still there to write to
 const here = (real, w) => open(real) && liveWorld(real)?.id === w.id;
 export async function liveGo(real, { onChange = () => {} } = {}) {
-    const m = () => liveMeta(real, { text: () => liveStoryText(real, liveWorld(real)) });
+    const m = () => liveMeta(real, { text: () => liveStoryText(real, liveWorld(real)), now: liveNowOf(real) });
     const tell = () => { try { onChange(); } catch (err) { console.error('[narrative-archive] live draw', err); } };
     const out = await runLive(real, {
         save: saveMeta, alive: () => open(real),
@@ -68,6 +79,16 @@ export async function liveGo(real, { onChange = () => {} } = {}) {
         },
     });
     tell();
+    // (talk that goes on without the messenger being left: a room that has piled up enough is summarized now, so what
+    // is not summarized yet never outgrows what a reply request carries. No reflection here: that waits for leaving)
+    const w = liveWorld(real);
+    if (out.ran && w && open(real)) {
+        for (const ph of Object.values(w.phones || {})) {
+            if (!ph?.owner || !digestDue(real, ph.owner).length) continue;
+            try { await liveDigest(real, ph.owner); } catch (err) { console.error('[narrative-archive] live digest', err); }
+        }
+        tell();
+    }
     return out;
 }
 // 메신저를 나갈 때: what was said on the messenger since the last time goes into the owner's 폰 2 (as many rounds as it
@@ -86,16 +107,18 @@ async function reflectTalk(real, owner, { onChange = () => {}, force = false } =
     if (!w || !p || reflecting.has(real)) return none;
     if (!liveUnreflected(real, owner)) return none;
     // (after 되돌리기 the messages wait for new talk; force: the user asks for them now)
-    if (!force && Number.isInteger(p.liveHeld) && !Object.values(w.messenger?.rooms || {}).some(r => r.members.some(n => liveKey(n) === liveKey(owner)) && (r.messages || []).some(x => x.n > p.liveHeld))) return { ...none, left: liveUnreflected(real, owner), held: true };
+    if (!force && Number.isInteger(p.liveHeld) && !Object.values(w.messenger?.rooms || {}).some(r => r.members.some(n => liveKey(n) === liveKey(owner)) && (r.messages || []).some(x => x.n > p.liveHeld && liveReads(x, owner)))) return { ...none, left: liveUnreflected(real, owner), held: true };
     if ((w.queue?.jobs || []).some(j => liveKey(j.owner) === liveKey(owner) && (j.state === 'waiting' || j.state === 'running'))) return { ...none, left: liveUnreflected(real, owner), waiting: true };
     const tell = () => { try { onChange(); } catch (err) { console.error('[narrative-archive] live draw', err); } };
-    const m = () => liveMeta(real, { text: () => liveStoryText(real, liveWorld(real)) });
+    const m = () => liveMeta(real, { text: () => liveStoryText(real, liveWorld(real)), now: liveNowOf(real) });
     let rounds = 0, error = '';
     reflecting.add(real);
     try {
         const profile = await ownerProfileBlock(ctx(), p.financeProfile, p.owner, { money: !!(p.money || p.investment) });
-        for (; rounds < LIVE_GO.rounds; rounds++) { if (!here(real, w) || !await updateLive(real, m(), p.owner, { tz: tzOf(p), save: saveMeta, profile })) break; tell(); }
+        for (; rounds < LIVE_GO.rounds; rounds++) { if (!here(real, w) || !await updateLive(real, m(), p.owner, { tz: tzOf(p), save: saveMeta, profile, alive: () => open(real) })) break; tell(); }
         if (p.liveReflectError) { delete p.liveReflectError; await saveMeta(); }
+        // (롤플에 넣기 is on for this phone: what the round put in goes into the role-play's prompt)
+        if (rounds && p.inject && open(real)) applyInjection();
     } catch (err) {
         console.error('[narrative-archive] live reflect', err);
         error = String(err?.message || err);
@@ -113,7 +136,7 @@ export const liveUnreflected = (real, owner) => { const w = liveWorld(real), p =
 // (only a round 폰 2 made itself: one that came with the copy of 폰 1's phone is not offered)
 export const liveCanUndo = (real, owner) => { const p = livePhone(real, owner); return !!p?.syncUndo?.live && !!p.syncLast?.checked && p.sync?.rounds?.at(-1) === p.syncUndo.round; };
 export async function liveUndo(real, owner, { onChange = () => {} } = {}) {
-    const kept = await undoLive(real, liveMeta(real, { text: () => liveStoryText(real, liveWorld(real)) }), owner, { save: saveMeta });
+    const kept = await undoLive(real, liveMeta(real, { text: () => liveStoryText(real, liveWorld(real)), now: liveNowOf(real) }), owner, { save: saveMeta });
     try { onChange(); } catch (err) { console.error('[narrative-archive] live draw', err); }
     return kept;
 }
@@ -156,13 +179,14 @@ export async function liveDigest(real, owner) {
                     if (!isBlocked(err) || chunk.rows.length < 4) throw err;
                     const [a, b] = digestHalves(chunk), first = await ask(a);
                     if (!here(real, w)) break;
-                    if (!takeDigest(room, a, first)) { await saveMeta(); break; }
+                    // (an answer with no scene in it: noted on the room by takeDigest; the other rooms still get their turn)
+                    if (!takeDigest(room, a, first)) { await saveMeta(); if (++failures >= 3) break; continue; }
                     await saveMeta();
                     answer = await ask(b);
                     if (!here(real, w)) break;
                     const keptB = takeDigest(room, b, answer);
                     await saveMeta();
-                    if (!keptB) break;
+                    if (!keptB) { if (++failures >= 3) break; continue; }
                     done++;
                     continue;
                 }
@@ -177,7 +201,7 @@ export async function liveDigest(real, owner) {
             if (!here(real, w)) break;
             const kept = takeDigest(room, chunk, answer);
             await saveMeta();
-            if (!kept) break;
+            if (!kept) { if (++failures >= 3) break; continue; }
             done++;
         }
         // 요약의 요약: one room whose summary has grown long has its older half made short (one a go)

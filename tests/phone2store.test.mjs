@@ -9,7 +9,7 @@ const phone1 = () => ({ phones: { mara: { owner: 'Mara', now: '11-06 09:00', not
 
 test('폰 2 저장: the file imports nothing, and no file but the phone window and 폰 2\'s story reader imports it', async () => {
     assert.doesNotMatch(await src('phone2store.js'), /^\s*import\b/m);
-    const may = new Set(['phone2store.js', 'phone.js', 'phone2story.js', 'phone2feed.js', 'phone2live.js', 'phone2run.js', 'phone2reflect.js', 'phone2go.js', 'phone2digest.js']);   // 4-2: the phone's window; 5-1: phone2story.js (beginFromStory); 6: phone2feed.js (the messenger as the reflection reads it)
+    const may = new Set(['phone2store.js', 'phone.js', 'phonestory.js', 'phone2story.js', 'phone2feed.js', 'phone2live.js', 'phone2run.js', 'phone2reflect.js', 'phone2go.js', 'phone2digest.js', 'phone2act.js', 'phone2api.js', 'phone2year.js']);   // 4-2: the phone's window; 5-1: phone2story.js (beginFromStory); 6: phone2feed.js (the messenger as the reflection reads it)
     for (const f of (await readdir(new URL('../src/', import.meta.url))).filter(f => f.endsWith('.js') && !may.has(f)))
         assert.doesNotMatch(await src(f), /phone2store/, f);
 });
@@ -36,7 +36,7 @@ test('폰 2 저장: reading and going back to 폰 1 never add m.live', () => {
     assert.deepEqual(m, before);
 });
 
-test('폰 2 저장: a new world beside 폰 1, the old one archived (never thrown away), phone 1 left as it was', () => {
+test('폰 2 저장: a new world beside 폰 1, the old one archived, phone 1 left as it was', () => {
     const m = phone1(), keep = structuredClone({ phones: m.phones, finance: m.finance, text: m.text });
     assert.throws(() => L.newWorld(m, {}), /페르소나/);
     const w = L.newWorld(m, { from: 'story', persona: 'Ren', dayShift: 2, storyUpto: 40, now: 1000 });
@@ -126,7 +126,8 @@ test('폰 2 이야기에서 시작: a deep copy of 폰 1\'s story keys, none of 
     assert.deepEqual(w.story, MARK0);
     assert.notEqual(w.story, MARK0);
     assert.deepEqual([w.from, w.storyUpto, w.scope, w.lastOwner], ['story', 482, 's1', 'Mara']);
-    assert.deepEqual(w.phones, m.phones);
+    // (a copy of each phone; 롤플에 넣기 starts off on the copy, whatever it was on 폰 1)
+    assert.deepEqual(w.phones, Object.fromEntries(Object.entries(m.phones).map(([k, p]) => [k, { ...p, inject: false }])));
     assert.deepEqual(w.finance, m.finance);
     assert.deepEqual([w.profiles, w.pre, w.lore, w.loreOff], [m.phoneProfiles, m.phonePre, m.phoneLore, m.phoneLoreOff]);
     for (const o of objects(w)) assert.ok(!mine.has(o), 'an object of 폰 1 in 폰 2');
@@ -170,17 +171,18 @@ test('폰 2 서랍: 폰 1의 것은 하나도 안 보여요 (같이 쓰는 용�
     const v = L.liveMeta(m);
     assert.ok(L.isLiveMeta(v));
     assert.equal(L.isLiveMeta(m), false);
-    assert.doesNotMatch(JSON.stringify(v), /POISON1/);
-    for (const k of Object.keys(poisoned1())) assert.doesNotMatch(JSON.stringify(v[k] ?? null), /POISON1/, k);
+    assert.doesNotMatch(JSON.stringify({ ...v, phoneScreenHolder: undefined }), /POISON1/);
+    // (화면 주인 is the chat's one setting, the same for both phones: the drawer reads and writes the chat's own)
+    for (const k of Object.keys(poisoned1()).filter(k => k !== 'phoneScreenHolder')) assert.doesNotMatch(JSON.stringify(v[k] ?? null), /POISON1/, k);
     assert.deepEqual(Object.keys(v.phones), ['ren']);
     assert.equal(v.text, '');
     assert.equal(v.people, undefined);
-    assert.equal(v.phoneScreenHolder, undefined);
+    assert.equal(v.phoneScreenHolder, m.phoneScreenHolder);
     assert.equal(v.live, undefined);
     assert.deepEqual(v.glossary, { Seoul: '서울' });
     assert.notEqual(v.glossary, m.glossary);
     assert.equal('phones' in v, true);
-    assert.equal('phoneScreenHolder' in v, false);
+    assert.equal('phoneScreenHolder' in v, true);
     assert.deepEqual({ ...v }.phones, v.phones);
 });
 test('폰 2 서랍: 쓰면 폰 2에만 (폰 1은 글자 하나 안 바뀌어요)', () => {
@@ -193,7 +195,6 @@ test('폰 2 서랍: 쓰면 폰 2에만 (폰 1은 글자 하나 안 바뀌어요)
     v.phoneProfiles.ren = { label: 'r' };
     v.lastPhoneOwner = 'Ren';
     v.people = ['Ivo'];
-    v.phoneScreenHolder = 'Ren';
     v.text = 'x';
     v.glossary.Seoul = 'SEOUL';
     v.dateOrder = 'dmy';
@@ -332,4 +333,55 @@ test('메신저 번호: 이야기에서 시작한 폰 2는 이야기의 마지�
     const f = rich();
     L.startFresh(f, { persona: 'Lio' });
     assert.equal(L.sendLive(f, L.ensureRoom(f, ['Ren']).id, 'a').n, 1);
+});
+
+test('용어집을 화면에서 고치면(채팅 메타에 써요) 열려 있는 실시간 서랍도 바로 새 용어집을 읽어요', () => {
+    const m = { phones: {}, glossary: 'Mara = 마라', glossaryPeople: ['Mara'] };
+    L.startFresh(m, { persona: 'Ren', scope: 'test' });
+    const v = L.liveMeta(m);
+    assert.equal(v.glossary, 'Mara = 마라'); assert.deepEqual(v.glossaryPeople, ['Mara']);
+    m.glossary = 'Mara = 마라\nIvo = 이보'; m.glossaryPeople = ['Mara', 'Ivo'];
+    assert.equal(v.glossary, 'Mara = 마라\nIvo = 이보'); assert.deepEqual(v.glossaryPeople, ['Mara', 'Ivo']);
+    // (what a 폰 1 function writes through the drawer still never reaches the chat's own)
+    v.glossaryPeople.push('Varo');
+    assert.deepEqual(m.glossaryPeople, ['Mara', 'Ivo']);
+});
+
+test('실시간 폰의 폰 객체에는 표시가 붙어요 (저장 · 복사에는 안 따라가요)', () => {
+    const m = { phones: { mara: { owner: 'Mara' } } };
+    L.startFresh(m, { persona: 'Ren', scope: 'test' });
+    const v = L.liveMeta(m), LIVE = Symbol.for('narrative-archive.live');
+    v.phones = { mara: { owner: 'Mara', now: '11-12 10:00' } };
+    assert.equal(v.phones.mara[LIVE], true);
+    assert.equal(L.livePhone(m, 'Mara')[LIVE], true);
+    v.phones.ivo = { owner: 'Ivo' };
+    assert.equal(v.phones.ivo[LIVE], true);
+    assert.equal(m.phones.mara[LIVE], undefined);
+    assert.equal(JSON.stringify(v.phones.mara), '{"owner":"Mara","now":"11-12 10:00"}');
+    assert.equal(structuredClone(v.phones.mara)[LIVE], undefined);
+    assert.deepEqual(Object.keys(v.phones.mara), ['owner', 'now']);
+});
+
+test('화면 주인은 채팅에 하나: 실시간 서랍에서 읽고 고치면 채팅의 값이에요 (타임라인과 같은 값)', () => {
+    const m = { phones: {}, phoneScreenHolder: 'Mara' };
+    L.startFresh(m, { persona: 'Ren', scope: 'test' });
+    const v = L.liveMeta(m);
+    assert.equal(v.phoneScreenHolder, 'Mara'); assert.equal(Object.hasOwn(v, 'phoneScreenHolder'), true);
+    v.phoneScreenHolder = 'Ivo';
+    assert.equal(m.phoneScreenHolder, 'Ivo'); assert.equal(v.phoneScreenHolder, 'Ivo');
+    assert.doesNotMatch(JSON.stringify(m.live), /Ivo/);
+    // (a chat that never set it: not there, and set through the drawer it is the chat's)
+    const n = { phones: {} };
+    L.startFresh(n, { persona: 'Ren', scope: 'test' });
+    const u = L.liveMeta(n);
+    assert.equal(Object.hasOwn(u, 'phoneScreenHolder'), false);
+    u.phoneScreenHolder = '';
+    assert.equal(Object.hasOwn(n, 'phoneScreenHolder'), true);
+});
+
+test('보관함은 가장 최근 것 2개만: 폰 2를 여러 번 새로 시작해도 저장 데이터가 끝없이 커지지 않아요', () => {
+    const m = { phones: {} };
+    for (let i = 1; i <= 5; i++) L.startFresh(m, { persona: `P${i}`, scope: 'test', now: i * 1000 });
+    assert.deepEqual(L.archivedWorlds(m).map(w => w.persona), ['P3', 'P4']);
+    assert.equal(L.liveWorld(m).persona, 'P5');
 });

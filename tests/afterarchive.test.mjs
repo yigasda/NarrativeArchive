@@ -6,6 +6,8 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 
+// (these few go by today's real date where the story gives none: pinned to one day so they hold on any other — summer time, 02-29)
+const onDay = (fn, iso = '2026-11-14T10:00:00Z') => async (...a) => { const R = Date, at = R.parse(iso); globalThis.Date = class extends R { constructor(...x) { if (x.length) super(...x); else super(at); } static now() { return at; } }; try { return await fn(...a); } finally { globalThis.Date = R; } };
 const SRC = new URL('../src/', import.meta.url);
 const encoded = s => 'data:text/javascript;base64,' + Buffer.from(s).toString('base64');
 const href = f => pathToFileURL(new URL(f, SRC).pathname).href;
@@ -341,6 +343,84 @@ test('폰 만들기 under way: the same phone made again (the phone shut and ope
     assert.equal(data.phoneMaking(null, 'Ren'), false);
 });
 
+// ---- 실시간 폰(폰 2)에서 앱 채우기: 롤플은 시작한 곳까지, 그 뒤는 반영된 메신저 대화, 시각은 폰 2의 것
+const livePhoneOf = () => {
+    const p = { owner: 'Ren', now: '11-12 21:30', country: 'DE', lives: 'DE', sync: { marks: { base: { index: 7 } }, done: [[8, 9]], hiddenRead: {}, events: {} } };
+    Object.defineProperty(p, Symbol.for('narrative-archive.live'), { value: true });
+    return p;
+};
+const liveMetaOf = p => ({ ...m, phones: { ren: p }, phoneUpto: 7, phoneRecent: (owner, n, o) => (o?.seen == null ? 'Ren: on the messenger\nRen: not read yet' : o.seen >= 9 ? 'Ren: on the messenger' : '') });
+test('실시간 폰에서 생활 · 은행 채우기: 시작 뒤의 롤플도 롤플 상태창도 안 읽고, 반영된 메신저 대화를 읽고, 읽는 표시는 메신저 번호', async () => {
+    globalThis.__rows = rows(12);
+    globalThis.__trackers = [{ i: 11, date: '2026-11-02', min: 20 * 60, place: 'Eastgate', weather: 'rain' }];
+    try {
+        const p = livePhoneOf(), mm = liveMetaOf(p);
+        globalThis.__menu = { calls: [], answers: [lifeAnswer('A')], answer: '{}' };
+        await life.fillLife(mm, p);
+        const turns = globalThis.__menu.calls.filter(c => c.sys === life.AI_SYS_LIFE);
+        assert.equal(turns.length, 1);
+        const input = turns[0].input;
+        assert.deepEqual(nums(input), [4, 5, 6, 7]);
+        assert.ok(input.includes('Ren: on the messenger') && !input.includes('Ren: not read yet'));
+        assert.ok(input.includes('"now":"11-12 21:30"'));
+        assert.ok(!input.includes('[WEATHER NOW]') && !input.includes('Eastgate'));
+        // (the year is the real one, never the role-play status line's 2026-11-02)
+        assert.ok(input.includes(`[STORY YEAR]\n${new Date().getFullYear()}`));
+        assert.equal(p.life.at, '11-12 21:30');
+        assert.deepEqual(p.sync.marks.life, { index: 9, user: -1, fp: '', tail: '' });
+        // the bank
+        globalThis.__menu = { calls: [], answers: [moneyAnswer('Bakery', 500, '11-10 09:00')], answer: '{}' };
+        await data.fillMoney(mm, p);
+        const money = globalThis.__menu.calls.filter(c => c.sys === data.AI_SYS_MONEY);
+        assert.equal(money.length, 1);
+        assert.deepEqual(nums(money[0].input), [4, 5, 6, 7]);
+        assert.ok(money[0].input.includes('Ren: on the messenger') && !money[0].input.includes('Ren: not read yet') && !money[0].input.includes('Eastgate'));
+        assert.deepEqual(p.sync.marks.money, { index: 9, user: -1, fp: '', tail: '' });
+        assert.deepEqual(p.money.tx.map(t => t.who), ['Bakery']);
+    } finally { delete globalThis.__trackers; }
+});
+
+test('실시간 폰에서 앱 다시 만들기 · 폰 다시 만들기: 반영된 메신저 대화를 읽고, 읽은 표시 · 폰 시각 · 고른 연도는 그대로, 폰 1의 복구 기록은 안 건드려요', async () => {
+    const J = await import('../src/phonesync.js'), store = new Map(), had = globalThis.localStorage;
+    globalThis.localStorage = { getItem: k => store.get(k) ?? null, setItem: (k, v) => store.set(k, String(v)), removeItem: k => store.delete(k) };
+    globalThis.__rows = rows(12);
+    globalThis.__trackers = [{ i: 11, date: '2026-11-02', min: 20 * 60, place: 'Eastgate' }];
+    try {
+        J.journalWrite('test', [{ id: 'p1', owner: 'Ren', events: [] }]);
+        J.journalWrite('test:live:w1', [{ id: 'p2', owner: 'Ren', events: [] }]);
+        const lists = { contacts: [], threads: [], calls: [], photos: [], notes: [{ id: 'n0', title: 'Old note', text: 'x', time: '11-10 10:00' }], searches: [], events: [], posts: [], mails: [], diary: [], voice: [] };
+        const p = Object.assign(livePhoneOf(), lists, { year: 2031, liveYearShift: 5, situations: [{ id: 's', what: 'w' }] }), mm = { ...liveMetaOf(p), phoneJournal: 'test:live:w1' };
+        const sync = JSON.stringify(p.sync);
+        // one app
+        globalThis.__menu = { calls: [], answers: [JSON.stringify({ notes: [{ title: 'New note', text: 'y', time: '11-12 20:00' }] })], answer: '{}' };
+        await data.makePhone(mm, 'Ren', { apps: ['note'] });
+        const one = globalThis.__menu.calls.filter(c => c.sys === data.AI_SYS_PHONE_APPS);
+        assert.equal(one.length, 1);
+        assert.deepEqual(nums(one[0].input), [4, 5, 6, 7]);
+        assert.ok(one[0].input.includes('Ren: on the messenger') && !one[0].input.includes('Ren: not read yet') && !one[0].input.includes('Eastgate'));
+        assert.equal((one[0].input.match(/\[RECENT CHAT/g) || []).length, 1);
+        assert.deepEqual(p.notes.map(n => n.title), ['New note']);
+        assert.equal(JSON.stringify(p.sync), sync); assert.equal(p.now, '11-12 21:30');
+        // the whole phone
+        globalThis.__menu = { calls: [], answers: [JSON.stringify({ now: '10-26 09:00', notes: [{ title: 'Whole', text: 'z', time: '11-12 20:00' }] })], answer: '{}' };
+        const warn = console.warn; console.warn = () => {};
+        try { await data.makePhone(mm, 'Ren'); } finally { console.warn = warn; }
+        const q = mm.phones.ren;
+        assert.notEqual(q, p);
+        const whole = globalThis.__menu.calls.filter(c => c.sys === data.AI_SYS_PHONE);
+        assert.equal(whole.length, 1);
+        assert.ok(whole[0].input.includes('Ren: on the messenger') && !whole[0].input.includes('Ren: not read yet') && !whole[0].input.includes('Eastgate'));
+        assert.deepEqual(nums(whole[0].input), [4, 5, 6, 7]);
+        assert.deepEqual(q.notes.map(n => n.title), ['Whole']);
+        assert.equal(JSON.stringify(q.sync), sync);
+        assert.equal(q.now, '11-12 21:30');
+        assert.deepEqual([q.year, q.liveYearShift, q.situations], [2031, 5, [{ id: 's', what: 'w' }]]);
+        // 폰 1's unsaved rounds are where they were; 폰 2's too (its reading goes on)
+        assert.deepEqual(J.journalRead('test').map(r => r.id), ['p1']);
+        assert.deepEqual(J.journalRead('test:live:w1').map(r => r.id), ['p2']);
+    } finally { delete globalThis.__trackers; if (had === undefined) delete globalThis.localStorage; else globalThis.localStorage = had; }
+});
+
 // ---- 은행 채우기도 두 턴: 두 번째는 기록만, 잔액은 첫 번째 그대로
 const moneyAnswer = (who, balance, time) => JSON.stringify({ currency: 'EUR', bank: { name: 'Varo Bank', accounts: [{ id: '', kind: 'checking', name: 'Main', last4: '1111', currency: 'EUR', balance }] },
     cards: [{ account: '1111', exp: '09/29' }], tx: [{ account: '1111', who, amount: -12, time, kind: 'card' }], passes: [], orders: [{ shop: 'Ivo Books', item: who, price: 12, time, status: 'delivered' }] });
@@ -444,6 +524,16 @@ test('OWNER\'S CLOCK combines a city with its people only in the output, keeping
     assert.ok(candidates.choices.some(x => x.names.includes('소망') && x.ownerTime === '11-05 04:38'));
     assert.deepEqual({ p, m: no2(m) }, before);
     assert.equal(data.sceneZone(p, 'Seoul', m).tz, 'Asia/Seoul');
+});
+
+test('a neighbourhood name many cities have (Hyde Park, Chinatown, Downtown) moves the scene to no city; one that is a single city\'s still does', () => {
+    const at = (own, other) => ({ owner: 'Ren', now: '10-26 10:00', where: { people: [{ name: 'Ren', ...own }, { name: 'Mara', ...other }] } });
+    const london = { tz: 'Europe/London', city: 'London', lives: 'GB' }, chicago = { tz: 'America/Chicago', city: 'Chicago', lives: 'US' };
+    assert.equal(data.sceneZone(at(london, chicago), 'Hyde Park'), null);
+    assert.equal(data.sceneZone(at({ tz: 'America/New_York', city: 'New York', lives: 'US' }, { tz: 'Asia/Singapore', city: 'Singapore', lives: 'SG' }), 'Chinatown'), null);
+    assert.equal(data.sceneZone(at({ tz: 'America/Toronto', city: 'Toronto', lives: 'CA' }, { tz: 'Africa/Cairo', city: 'Cairo', lives: 'EG' }), 'Downtown'), null);
+    assert.equal(data.sceneZone(at({ tz: 'Asia/Seoul', city: 'Seoul', lives: 'KR' }, { tz: 'Asia/Tokyo', city: 'Tokyo', lives: 'JP' }), '시부야 사거리')?.tz, 'Asia/Tokyo');
+    assert.equal(data.sceneZone(at(london, chicago), 'Wicker Park')?.tz, 'America/Chicago');
 });
 
 // a status line's place with its country first ("대한민국 서울 강서구"): the city after it, when the place as written is found nowhere
@@ -1223,7 +1313,7 @@ test('making a phone sets its clock as a reflection does (CLOCK FIRST, "clock", 
     assert.ok(data.updateSystem({ split: true }).includes(data.FILL_CLOCK.split('\n')[0]));
 });
 
-test('making a phone for the first time: where everyone is first (the people the chat already names, each once), then the phone, its OWNER\'S CLOCK and PEOPLE AROUND from it; the clock checked as a reflection\'s', async () => {
+test('making a phone for the first time: where everyone is first (the people the chat already names, each once), then the phone, its OWNER\'S CLOCK and PEOPLE AROUND from it; the clock checked as a reflection\'s', onDay(async () => {
     const setup = () => {
         const { m: mm } = htmlPhoneFixture();
         globalThis.__ctx.characters = [{ name: 'Mara' }]; globalThis.__ctx.characterId = 0; globalThis.__ctx.name1 = '소망';
@@ -1266,9 +1356,9 @@ test('making a phone for the first time: where everyone is first (the people the
             assert.equal(mm.phones.ren, undefined);
         }
     } finally { delete globalThis.__ctx; delete globalThis.__whereAnswer; delete globalThis.__glossaryPeople; }
-});
+}));
 
-test('위치 정보 before a phone is made: read once and kept, checked and set by the user (a city, the year), then the phone made from it, a make asked again reading nothing again', async () => {
+test('위치 정보 before a phone is made: read once and kept, checked and set by the user (a city, the year), then the phone made from it, a make asked again reading nothing again', onDay(async () => {
     try {
         const { m: mm } = htmlPhoneFixture(); mm.phones = {};
         globalThis.__ctx.characters = [{ name: 'Mara' }]; globalThis.__ctx.characterId = 0; globalThis.__ctx.name1 = '소망';
@@ -1308,7 +1398,7 @@ test('위치 정보 before a phone is made: read once and kept, checked and set 
         assert.equal(data.phonePre(mm, 'Ren'), null, 'gone once the phone is made');
         assert.ok(!('making' in p) && !('asked' in p));
     } finally { delete globalThis.__ctx; delete globalThis.__whereAnswer; }
-});
+}));
 
 test('making a phone (and some apps again): people from the story, PEOPLE AROUND or new plausible ones, as the reflection\'s everyday; no new relative or partner', () => {
     for (const s of [data.AI_SYS_PHONE, data.AI_SYS_PHONE_APPS]) {
@@ -1398,7 +1488,7 @@ test('reading where everyone is again: a person read back by the other form of t
 });
 const arr = v => (Array.isArray(v) ? v : []);
 
-test('making a phone for the first time (점검 수정): its hours on the story\'s day, the year checked before, an old phone\'s own year and country, a failed reading not asked again, a reading kept for a make asked again', async () => {
+test('making a phone for the first time (점검 수정): its hours on the story\'s day, the year checked before, an old phone\'s own year and country, a failed reading not asked again, a reading kept for a make asked again', onDay(async () => {
     const setup = (text, extra = {}) => {
         const { m: mm } = htmlPhoneFixture();
         globalThis.__ctx.characters = [{ name: 'Mara' }]; globalThis.__ctx.characterId = 0;
@@ -1455,7 +1545,7 @@ test('making a phone for the first time (점검 수정): its hours on the story\
         assert.equal(globalThis.__where.length, 1);
         assert.equal(data.phonePre(mm, 'Ren'), null);
     } finally { delete globalThis.__ctx; delete globalThis.__whereAnswer; }
-});
+}));
 
 test('점검 수정 2: a failed reading is read again on the next make; "Mara Lee" for a Mara read before needs no second reading; a reading kept for a phone gone since is not used; the year it read moves with 날짜 및 시간; a second turn with no "now" keeps its records', async () => {
     const setup = text => {
@@ -1558,7 +1648,7 @@ test('the story\'s year for a phone being made: a status line\'s, else the one t
     } finally { delete globalThis.__ctx; delete globalThis.__whereAnswer; delete globalThis.__trackers; }
 });
 
-test('점검 3: making a phone — a status line\'s year on the owner\'s clock across New Year, its time as the owner\'s; an old phone made anew goes by the story, not its old saved time; an owner placed nowhere is checked by no zone; 다시 연동 and a pre for a phone gone since keep what the user set', async () => {
+test('점검 3: making a phone — a status line\'s year on the owner\'s clock across New Year, its time as the owner\'s; an old phone made anew goes by the story, not its old saved time; an owner placed nowhere is checked by no zone; 다시 연동 and a pre for a phone gone since keep what the user set', onDay(async () => {
     const setup = (text = '## #0–#3 — Arrival\n- Ren came home (#1).\n') => {
         const { m: mm } = htmlPhoneFixture();
         globalThis.__ctx.characters = [{ name: 'Mara' }]; globalThis.__ctx.characterId = 0;
@@ -1610,7 +1700,7 @@ test('점검 3: making a phone — a status line\'s year on the owner\'s clock a
         assert.equal(globalThis.__where.length, 1);
         assert.equal(pre.year, 2021);
     } finally { delete globalThis.__ctx; delete globalThis.__whereAnswer; delete globalThis.__trackers; }
-});
+}));
 
 test('점검 4: an owner the reading placed nowhere is checked by no zone (the answer\'s country is where they live; away in Paris they are still right); a pre read for a phone gone since keeps the user\'s change, its year worked out anew', async () => {
     const setup = () => {
@@ -1743,4 +1833,26 @@ test('다시 만들기 › 지도: the visits are written again from the story, 
     assert.match(turn.input, /\[ONLY THESE\][^\n]*\n[^\n]*: visits\./);
     assert.deepEqual(p.visits.map(x => x.place), ['Harbour office', 'Central station']);
     assert.deepEqual(p.notes.map(x => x.title), ['Keep me']);
+});
+
+test('타임라인 폰의 사진 · 메모 · 초안 · 녹음 시각과 투자 날짜는 예전 그대로: 용어집에 인물로 적힌 이름이 상태창 장소에 나와도 달라지지 않아요', async () => {
+    const p = { owner: 'Ren', now: '10-26 09:00', year: 2026, where: { people: [{ name: 'Ren', city: 'Frankfurt', tz: 'Europe/Berlin' }, { name: 'Rose', city: 'Seoul', tz: 'Asia/Seoul' }] }, contacts: [], threads: [] };
+    const mm = { phones: { ren: p }, glossary: 'Rose = 장미', glossaryPeople: ['Rose'] };
+    globalThis.__glossaryEntries = [{ src: 'Rose', ko: '장미' }]; globalThis.__glossaryPeople = ['Rose'];
+    globalThis.__trackers = [{ date: '2026-10-26', min: 20 * 60 + 15, place: '장미의 방', i: 3 }];
+    try {
+        // (the two calls differ here: with the meta, the status line's place is read as Rose's city)
+        assert.equal(data.storyNow(p), '10-26 09:00'); assert.equal(data.storyNow(p, null, mm), '10-26 12:15');
+        // 타임라인: the call it always was
+        assert.equal(data.nowOn(p, mm), '10-26 09:00');
+        // 폰 2 (its phone, or its drawer): its own clock
+        const q = { ...p }; Object.defineProperty(q, Symbol.for('narrative-archive.live'), { value: true });
+        assert.equal(data.nowOn(q, mm), '10-26 09:00');
+        assert.equal(data.nowOn(p, { ...mm, phoneUpto: 3, phoneNow: () => '11-14 16:00' }), '11-14 16:00');
+    } finally { delete globalThis.__trackers; delete globalThis.__glossaryEntries; delete globalThis.__glossaryPeople; }
+    const src = f => readFile(new URL(`../src/${f}`, import.meta.url), 'utf8');
+    // (phoneai.js: the lines it had before 폰 2 — storyNow(p), never the meta; 폰 2's own copies are in phone2act.js)
+    assert.doesNotMatch(await src('phoneai.js'), /nowOn\(|storyNow\(p, /);
+    assert.equal(((await src('phoneai.js')).match(/storyNow\(p\) \|\| p\.now \|\| ''/g) || []).length, 7);
+    assert.match(await src('investdata.js'), /Number\.isInteger\(m\?\.phoneUpto\) \? storyNow\(p, stopAt\(m, p\), m\) : storyNow\(p, stopAt\(m, p\)\)/);
 });

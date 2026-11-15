@@ -5,7 +5,7 @@ import { decimalOf, fmtIn, localeOf } from './phonemoney.js';
 import { fmtDate } from './phonedata.js';
 import { esc } from './util.js';
 import { baseCosts, cash, finance, finite, fx, positions, price, total } from './finance.js';
-import { investmentDate } from './investdata.js';
+import { P } from './phone2api.js';
 
 Object.assign(AX, { chart: 'M3 20h18M5 16l5-6 4 3 6-9M15 4h5v5' });
 
@@ -79,8 +79,8 @@ function frame(p, now, { back = 'invest', title = '', right = '', tab = '', body
 }
 // the evaluation day and the market calls, kept small: a real app has no such row, but the story's date is ours to set
 const tools = (m, p, busy) => p.investment
-    ? `<div class="iv_card iv_tools sm"><span class="iv_toolsl">시세 날짜</span><input type="date" class="iv_date" value="${esc(investmentDate(m, p))}"><button type="button" class="iv_refresh iv_link" ${busy ? 'disabled' : ''}>${busy ? '불러오는 중…' : '시세 갱신'}</button><button type="button" class="iv_sync iv_link">업데이트</button></div>`
-    : `<div class="iv_card iv_tools"><label><small>평가 날짜</small><input type="date" class="iv_date" value="${esc(investmentDate(m, p))}"></label><button type="button" class="iv_refresh iv_btn" ${busy ? 'disabled' : ''}>${busy ? '불러오는 중…' : '투자 앱 채우기'}</button></div>`;
+    ? `<div class="iv_card iv_tools sm"><span class="iv_toolsl">시세 날짜</span><input type="date" class="iv_date" value="${esc(P.investmentDate(m, p))}"><button type="button" class="iv_refresh iv_link" ${busy ? 'disabled' : ''}>${busy ? '불러오는 중…' : '시세 갱신'}</button><button type="button" class="iv_sync iv_link">업데이트</button></div>`
+    : `<div class="iv_card iv_tools"><label><small>평가 날짜</small><input type="date" class="iv_date" value="${esc(P.investmentDate(m, p))}"></label><button type="button" class="iv_refresh iv_btn" ${busy ? 'disabled' : ''}>${busy ? '불러오는 중…' : '투자 앱 채우기'}</button></div>`;
 const kv = (label, value, cls = '') => `<div class="iv_kv"><small>${label}</small><b class="cg_num ${cls}">${value}</b></div>`;
 const row = (label, value) => `<div class="iv_row"><span>${label}</span><b class="cg_num">${value}</b></div>`;
 const card = (s, cls = '') => `<div class="iv_card ${cls}">${s}</div>`;

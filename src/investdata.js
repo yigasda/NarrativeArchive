@@ -103,7 +103,7 @@ export const validDate = d => /^\d{4}-\d{2}-\d{2}$/.test(d || '') && !Number.isN
 // where a fill would stop reading, kept while the chat and the archive stay as they are: the bank screens ask on every draw
 let stopMemo = { key: '', at: null };
 function stopAt(m, p) {
-    const chat = ctx()?.chat || [], key = `${chat.length}|${String(m?.text || '').length}|${String(chat.at(-1)?.mes || '').length}|${p?.owner}|${JSON.stringify(p?.sync?.done || [])}|${Object.keys(p?.sync?.hiddenRead || {}).length}|${p?.sync?.marks?.base?.index}`;
+    const chat = ctx()?.chat || [], key = `${chat.length}|${String(m?.text || '').length}|${String(chat.at(-1)?.mes || '').length}|${p?.owner}|${JSON.stringify(p?.sync?.done || [])}|${Object.keys(p?.sync?.hiddenRead || {}).length}|${p?.sync?.marks?.base?.index}|${Number.isInteger(m?.phoneUpto) ? `live:${m.phoneUpto}` : ''}`;
     if (stopMemo.key !== key) stopMemo = { key, at: nowAt(windowOf(m, p)) };
     return stopMemo.at;
 }
@@ -111,7 +111,7 @@ export function investmentDate(m, p) {
     if (validDate(p.investment?.date)) return p.investment.date;
     // the phone's year (never a guess from the dates the archive writes), on the story's day where an investment fill would
     // stop reading (now, when it reads to the end)
-    const day = String(storyNow(p, stopAt(m, p), m) || '').slice(0, 5), year = p.noYear ? '' : p.year ? String(p.year) : '';
+    const day = String((Number.isInteger(m?.phoneUpto) ? storyNow(p, stopAt(m, p), m) : storyNow(p, stopAt(m, p))) || '').slice(0, 5), year = p.noYear ? '' : p.year ? String(p.year) : '';
     // (a story with no year of its own: valued at the prices of the day it was first valued, that day kept on the brokerage)
     const date = p.noYear ? new Date().toISOString().slice(0, 10) : year && day ? `${year}-${day}` : '';
     if (p.noYear && p.investment && validDate(date)) p.investment.date = date;

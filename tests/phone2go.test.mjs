@@ -4,7 +4,9 @@ import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import { migrateBank, cash } from '../src/finance.js';
 import * as L from '../src/phone2store.js';
-import { G, T, PD } from './phone2reflect.load.mjs';
+import { G, T, PD, Y, N } from './phone2reflect.load.mjs';
+// 롤플에 넣는 글, 창구(P.phoneBlock)가 만드는 대로: 폰 1의 글(폰 1 함수) + 실시간 폰의 글(phone2note.js)
+const block = (m, live = null) => PD.phoneBlock(m) + N.liveNote(live);
 import { journalRead, journalWrite } from '../src/phonesync.js';
 
 const phone = () => ({ owner: 'Mara', now: '11-10 22:00', year: 2026, contacts: [{ name: 'Ivo' }], threads: [], calls: [], photos: [], notes: [], searches: [], events: [], posts: [], mails: [], diary: [], voice: [],
@@ -235,7 +237,7 @@ test('실시간 폰에서 연도를 바꿔도 폰 1의 복구 기록은 그대�
     journalWrite('test', round()); journalWrite(liveKey, round());
     const before = JSON.stringify(journalRead('test')), d = L.liveMeta(real);
     assert.equal(d.phoneJournal, liveKey);
-    PD.setStoryYear(d, d.phones.mara, 2027);
+    Y.liveSetStoryYear(d, d.phones.mara, 2027);
     assert.equal(JSON.stringify(journalRead('test')), before);
     assert.equal(journalRead(liveKey)[0].year, 2027);
     assert.equal(real.phones.mara.year, 2026); assert.equal(d.phones.mara.year, 2027);
@@ -347,8 +349,247 @@ test('실시간 폰에서 폰 1의 앱 요청을 불러도 시작 뒤의 롤플 
     } finally { T.chat = chat0; delete T.recent; }
 });
 
-test('앱 요청(사진 · 일기 · 초안 · 녹음)은 최근 대화와 지금 시각을 받은 메타에 물어요', async () => {
+test('앱 요청(사진 · 일기 · 초안 · 녹음): 폰 1 파일(phoneai.js)은 예전 줄 그대로, 실시간 것은 phone2act.js에 (시험은 phone2act.test.mjs)', async () => {
     const src = await (await import('node:fs/promises')).readFile(new URL('../src/phoneai.js', import.meta.url), 'utf8');
-    assert.ok(!/recentPhoneText\(/.test(src)); assert.ok(!/storyNow\(p\)/.test(src));
-    assert.equal((src.match(/recentOf\(m, p\.owner, /g) || []).length, 4);
+    assert.ok(!/recentOf\(|nowOn\(/.test(src));
+    assert.equal((src.match(/recentPhoneText\(\d+, /g) || []).length, 4); assert.equal((src.match(/storyNow\(p\) \|\| p\.now \|\| ''/g) || []).length, 7);
+});
+
+test('반영 요청이 나가 있는 사이 다른 채팅을 열면: 돌아온 답은 안 넣고, 더 묻지도 않아요', async () => {
+    const c = world();
+    T.metadata = { narrative_archive: c.real };
+    try {
+        send(c, '택시비 9000원 냈어');
+        T.replies = [{ state: '집', reply: ['응'], does: ['9000원을 보냈다'] }];
+        await G.liveGo(c.real);
+        const left = G.liveUnreflected(c.real, 'Mara'), bank = c.bank();
+        let asked = 0;
+        T.ask = async () => { asked++; T.metadata = { narrative_archive: {} }; return JSON.stringify({ now: '11-11 10:00', events: [] }); };
+        const r = await G.liveReflect(c.real, 'Mara', { force: true });
+        assert.equal(asked, 1);
+        assert.equal(r.rounds, 0);
+        assert.equal(c.p.liveReflectError, undefined);
+        assert.deepEqual(c.p.sync?.done || [], []); assert.equal(c.bank(), bank);
+        T.metadata = { narrative_archive: c.real };
+        assert.equal(G.liveUnreflected(c.real, 'Mara'), left);
+    } finally { delete T.ask; delete T.metadata; }
+});
+
+test('되돌리기 뒤에 상태만 바뀐 답(말도 한 일도 없음)이 와도 반영이 다시 돌지 않아요', async () => {
+    const c = world();
+    send(c, '하나');
+    T.replies = [{ state: '집', reply: ['응'], does: [] }];
+    await G.liveGo(c.real);
+    T.answers = [{ events: [] }];
+    await G.liveReflect(c.real, 'Mara');
+    await G.liveUndo(c.real, 'Mara');
+    assert.ok(Number.isInteger(c.p.liveHeld));
+    // a reply with only a new state: an act message with nothing to read
+    const no = L.liveNo(L.liveWorld(c.real));
+    c.room.messages.push({ id: `m${no}`, n: no, from: 'Mara', text: '', act: true, state: '침대', at: Date.now() });
+    const calls = T.calls;
+    const r = await G.liveReflect(c.real, 'Mara');
+    assert.equal(r.held, true); assert.equal(T.calls, calls);
+});
+
+test('실시간 폰에서 연도를 직접 고르면 반영이 실제 연도로 덮어쓰지 않아요 (고른 만큼 차이를 지키고, 해가 바뀌면 같이 넘어가요)', async () => {
+    const c = world();
+    c.p.now = '11-10 22:00'; c.p.year = 2026;
+    // (the user picks 2031 in 날짜 및 시간: five years ahead of the real year the phone had)
+    Y.liveSetStoryYear(c.m, c.p, 2031);
+    assert.equal(c.p.year, 2031); assert.equal(c.p.liveYearShift, 5);
+    c.room.messages.push({ id: 'a', n: L.liveNo(L.liveWorld(c.real)), from: 'Ren', text: '안녕', at: Date.parse('2026-11-11T01:00:00Z') });
+    T.answers = [{ events: [] }];
+    assert.equal((await G.liveReflect(c.real, 'Mara')).error, '');
+    assert.equal(c.p.year, 2031);
+    c.room.messages.push({ id: 'b', n: L.liveNo(L.liveWorld(c.real)), from: 'Ren', text: '새해 복', at: Date.parse('2027-01-01T00:05:00Z') });
+    T.answers = [{ events: [] }];
+    assert.equal((await G.liveReflect(c.real, 'Mara')).error, '');
+    assert.equal(c.p.year, 2032);
+    // back to the real year
+    Y.liveSetStoryYear(c.m, c.p, 2027);
+    assert.equal(c.p.liveYearShift, undefined); assert.equal(c.p.year, 2027);
+});
+
+test('주입: 실시간 폰에서 켜면 그 폰도 롤플에 넣는 글에 들어가요 (따로 적힌 칸으로). 꺼져 있으면 폰 1 글 그대로예요', () => {
+    const one = { owner: 'Mara', inject: true, now: '10-26 12:00', contacts: [], calls: [], events: [], notes: [{ title: '폰 1 메모', text: 'x' }], threads: [] };
+    const two = { owner: 'Mara', inject: false, now: '11-12 21:30', contacts: [], calls: [], events: [], notes: [{ title: '실시간 메모', text: 'y' }], threads: [] };
+    const m = { phones: { mara: one } };
+    const before = PD.phoneBlock(m);
+    assert.ok(before.includes('폰 1 메모'));
+    // off on the live phone: letter for letter what it was
+    assert.equal(block(m, [two]), before);
+    assert.equal(block(m, []), before); assert.equal(block(m, null), before);
+    two.inject = true;
+    const both = block(m, [two]);
+    assert.ok(both.startsWith(before));
+    assert.match(both, /\n\n# PHONES NOW \(messenger\)\n_[^\n]+_\n## Mara's phone \(as of 11-12 21:30\)\n- Notes: 실시간 메모$/);
+    // only the live phone on
+    one.inject = false;
+    const only = block(m, [two]);
+    assert.ok(!only.includes('폰 1 메모') && !only.includes('# PHONES\n') && only.includes('# PHONES NOW (messenger)'));
+    // 실시간 폰 한 대를 적는 방법은 폰 1과 같아요: 같은 폰을 폰 1 자리에 두면 제목만 달라요
+    const rich = { owner: 'Mara', inject: true, now: '11-12 21:30', contacts: [{ name: 'Ivo', saved: '이보' }], calls: [{ with: 'Ivo', type: 'missed', time: '11-12 20:00' }], events: [{ date: '11-13', time: '10:00', title: '병원' }],
+        notes: [{ title: '메모', text: 'y' }], threads: [{ with: 'Ivo', messages: [{ from: 'me', time: '11-12 19:00', text: '어디야' }, { from: 'Ivo', time: '11-12 19:01', text: '집' }] }] };
+    const asOne = PD.phoneBlock({ phones: { mara: rich } }), asLive = N.liveNote([rich]);
+    assert.ok(asOne.includes('Texts with Ivo') && asOne.includes('Missed calls') && asOne.includes('Calendar') && asOne.includes('Contacts saved'));
+    assert.equal(asLive.slice(asLive.indexOf('\n## ')), asOne.slice(asOne.indexOf('\n## ')));
+    assert.ok(asLive.startsWith(`\n\n${N.LIVE_NOTE_HEAD}\n## Mara's phone`));
+    // 실시간 폰이 망가져 있어도 폰 1의 글은 그대로 나가요
+    one.inject = true;
+    assert.equal(block(m, [{ owner: 'X', inject: true }]), before);
+    assert.equal(N.liveNote('x'), ''); assert.equal(N.liveNote(undefined), '');
+});
+
+test('폰 1의 롤플에 넣기(phonedata.js phoneBlock)는 폰 2 전 줄 그대로: 받는 건 메타 하나, 실시간 낱말이 없어요', async () => {
+    const src = await readFile(new URL('../src/phonedata.js', import.meta.url), 'utf8'), i = src.indexOf('export function phoneBlock('), body = src.slice(i, src.indexOf('\n}\n', i));
+    assert.ok(body.startsWith('export function phoneBlock(m) {'));
+    assert.doesNotMatch(body, /live|messenger|PHONES NOW/);
+    assert.ok(!src.includes('function phoneNote('));
+    // 실시간 폰을 둘째 인자로 줘도 폰 1 함수는 안 봐요
+    const one = { owner: 'Mara', inject: true, now: '10-26 12:00', contacts: [], calls: [], events: [], notes: [{ title: '폰 1 메모', text: 'x' }], threads: [] };
+    assert.equal(PD.phoneBlock({ phones: { mara: one } }, [{ ...one, notes: [{ title: '실시간 메모', text: 'y' }] }]), PD.phoneBlock({ phones: { mara: one } }));
+});
+
+test('실시간 폰의 "지금"은 흐르는 시계예요: 이야기 날짜(dayShift) + 현실 시각. 마지막 반영 때에 멈춰 있지 않아요', () => {
+    const c = world();
+    c.p.now = '11-10 22:00';
+    const d = L.liveMeta(c.real, { now: G.liveNowOf(c.real, () => Date.parse('2026-11-12T08:15:00Z')) });
+    assert.equal(PD.storyNow(c.p, null, d), '11-12 08:15');
+    L.liveWorld(c.real).dayShift = 3;
+    assert.equal(PD.storyNow(c.p, null, d), '11-15 08:15');
+    // a drawer given no clock, or the phone alone: the phone's own time, as before
+    assert.equal(PD.storyNow(c.p, null, L.liveMeta(c.real)), '11-10 22:00');
+    assert.equal(PD.storyNow(L.livePhone(c.real, 'Mara')), '11-10 22:00');
+});
+
+test('채우기 · 다시 만들기가 읽는 요약은 반영된 데까지만: 아직 반영 안 된 대화의 요약은 안 들어가요 (같은 일이 두 번 안 들어가게)', () => {
+    const c = world();
+    const w = L.liveWorld(c.real), no = () => L.liveNo(w);
+    for (let i = 0; i < 30; i++) c.room.messages.push({ id: `k${i}`, n: no(), from: i % 2 ? 'Mara' : 'Ren', text: `말 ${i + 1}`, at: 1000 + i });
+    const n0 = c.room.messages[0].n;
+    // two summaries: the first 10 messages, then the next 15 (the second one ends past what the phone has read)
+    c.room.digest = { upto: n0 + 24, parts: [{ from: n0, to: n0 + 9, text: 'SUMMARY ONE (read)' }, { from: n0 + 10, to: n0 + 24, text: 'SUMMARY TWO: Ren paid 500 (not read yet)' }] };
+    const seen = n0 + 14;
+    const out = L.liveRecent(w, 'Mara', 150, { maxChars: 12000, seen, summary: true });
+    assert.ok(out.includes('SUMMARY ONE (read)')); assert.ok(!out.includes('SUMMARY TWO'));
+    // the lines after the summary it took, up to what was read: said word for word, none past it
+    assert.ok(out.includes(': 말 11') && out.includes(': 말 15')); assert.ok(!out.includes(': 말 16') && !out.includes(': 말 10\n'));
+    // (everything read: both summaries, then the lines after them)
+    const all = L.liveRecent(w, 'Mara', 150, { maxChars: 12000, seen: n0 + 29, summary: true });
+    assert.ok(all.includes('SUMMARY ONE') && all.includes('SUMMARY TWO') && all.includes(': 말 26') && !all.includes(': 말 25\n'));
+});
+
+test('이야기에서 시작할 때 폰 1의 "롤플에 넣기"는 안 따라와요: 실시간 폰에서 켠 적 없으면 프롬프트에 폰이 두 번 안 들어가요', () => {
+    const real = { phones: { mara: { ...phone(), inject: true } }, text: '' };
+    L.startFromStory(real, { persona: 'Ren', upto: 3, scope: 'test', story: { ranges: {}, titles: [], rawFrom: 0, own: [''] } });
+    assert.equal(L.liveWorld(real).phones.mara.inject, false);
+    assert.equal(real.phones.mara.inject, true);
+    const before = PD.phoneBlock(real);
+    assert.equal(block(real, Object.values(L.liveWorld(real).phones)), before);
+});
+
+test('실시간 폰 한 대의 연도를 고르면 다른 실시간 폰도 같은 만큼 옮겨지고, 반영 뒤에도 은행 날짜와 연도가 맞아요', async () => {
+    const c = world();
+    c.p.now = '11-10 22:00'; c.p.year = 2026;
+    const ivo = { ...phone(), owner: 'Ivo', now: '11-10 22:00', year: 2026 };
+    ivo.money.tx = [{ id: 't1', account: '1111', amount: -1000, who: '가게', time: '2026-11-09 09:00' }];
+    c.m.phones.ivo = ivo;
+    Y.liveSetStoryYear(c.m, c.p, 2030);
+    const b = c.m.phones.ivo;
+    assert.deepEqual([c.p.year, c.p.liveYearShift, b.year, b.liveYearShift, b.yearShift], [2030, 4, 2030, 4, undefined]);
+    assert.equal(b.money.tx[0].time, '2030-11-09 09:00');
+    // Ivo's next reflection keeps the year the records are in
+    const room = L.ensureRoom(c.real, ['Ivo']);
+    room.messages.push({ id: 'a', n: L.liveNo(L.liveWorld(c.real)), from: 'Ren', text: '안녕', at: Date.parse('2026-11-11T01:00:00Z') });
+    T.answers = [{ events: [] }];
+    assert.equal((await G.liveReflect(c.real, 'Ivo')).error, '');
+    assert.equal(c.m.phones.ivo.year, 2030);
+});
+
+test('실시간 폰의 연도는 롤플 상태창에서 읽지 않아요: 폰만 주든 서랍만 주든 실제 연도 + 고른 차이', () => {
+    const c = world(), y = new Date().getFullYear();
+    assert.equal(PD.storyYear(c.m, { ...c.p, year: 0 }), String(y));
+    assert.equal(PD.storyYear(c.m, { ...c.p, year: 0, liveYearShift: 3 }), String(y + 3));
+    assert.equal(PD.storyYear(null, Object.assign(L.livePhone(c.real, 'Mara'), { year: 0 })), String(y));
+    assert.equal(PD.storyYear(c.m, { ...c.p, year: 0, noYear: true }), '');
+    // 폰 2 파일의 것 (화면이 창구로 부르는 것): 같은 답
+    assert.equal(Y.liveStoryYear(c.m, { ...c.p, year: 0 }), String(y));
+    assert.equal(Y.liveStoryYear(c.m, { ...c.p, year: 0, liveYearShift: 3 }), String(y + 3));
+    assert.equal(Y.liveStoryYear(c.m, { ...c.p, year: 0, noYear: true }), '');
+    assert.equal(Y.liveStoryYear(c.m, { ...c.p, year: 2031 }), '2031');
+    const q = { owner: 'X' }; assert.equal(Y.liveEnsureYear(c.m, q), true); assert.equal(q.year, y); assert.equal(Y.liveEnsureYear(c.m, q), false);
+    const off = { owner: 'X', noYear: true }; assert.equal(Y.liveEnsureYear(c.m, off), false); assert.equal(off.year, undefined);
+});
+
+test('폰 1의 연도 바꾸기(phonedata.js setStoryYear)는 폰 2 전 줄 그대로: 실시간 낱말이 없고, 실시간 것은 서랍이 아니면 안 돌아요', async () => {
+    const src = await readFile(new URL('../src/phonedata.js', import.meta.url), 'utf8'), i = src.indexOf('export function setStoryYear('), body = src.slice(i, src.indexOf('\n}\n', i));
+    assert.doesNotMatch(body, /liveYear|phoneJournal|phoneUpto|isLivePhone/);
+    assert.ok(body.includes('const scope = phoneChatScope(ctx()), owners'));
+    // 실시간 것: 폰 1의 메타나 서랍 흉내로는 멈춰요 (폰 1의 기록 · 폰을 옮기지 않게)
+    const real = { text: '', phones: { mara: { ...phone(), year: 2026 } } }, was = JSON.stringify(real);
+    assert.throws(() => Y.liveSetStoryYear(real, real.phones.mara, 2030), /실시간 폰의 서랍이 아니에요/);
+    assert.throws(() => Y.liveSetStoryYear({ ...real, phoneUpto: 3, phoneJournal: 'test' }, real.phones.mara, 2030), /실시간 폰의 서랍이 아니에요/);
+    assert.equal(JSON.stringify(real), was);
+});
+
+// ---- 실시간 폰의 연도는 실시간 시계의 연도 (이야기 날짜로 옮긴 오늘의 연도) + 고른 차이
+// 현실 2026-11-12, 이야기는 150일 앞(2027-04-11): 실시간 시계의 연도는 2027
+const clockIn2027 = c => { L.liveWorld(c.real).dayShift = 150; return L.liveMeta(c.real, { now: G.liveNowOf(c.real, () => Date.parse('2026-11-12T08:15:00Z')) }); };
+
+test('실시간 시계는 연도도 알려 줘요: 날짜를 옮긴 날의 연도', () => {
+    const c = world(), at = () => Date.parse('2026-11-12T08:15:00Z');
+    const now = G.liveNowOf(c.real, at);
+    assert.equal(now(c.p), '11-12 08:15'); assert.equal(now.year(c.p), 2026);
+    L.liveWorld(c.real).dayShift = 150;
+    assert.equal(now(c.p), '04-11 08:15'); assert.equal(now.year(c.p), 2027);
+    // 폰이 없으면 '' · 0
+    assert.equal(now(null), ''); assert.equal(now.year(null), 0);
+    // 서랍으로 읽기: 시계가 있는 서랍, 없는 서랍, 서랍 아닌 것, 시계가 터지는 서랍
+    const d = L.liveMeta(c.real, { now });
+    assert.equal(L.liveNowYear(d, d.phones.mara), 2027);
+    assert.equal(L.liveNowYear(L.liveMeta(c.real), c.p), 0);
+    assert.equal(L.liveNowYear(c.real, c.p), 0); assert.equal(L.liveNowYear(null, c.p), 0);
+    const bad = () => '11-12 08:15'; bad.year = () => { throw new Error('x'); };
+    assert.equal(L.liveNowYear(L.liveMeta(c.real, { now: bad }), c.p), 0);
+});
+
+test('연도가 없는 실시간 폰 · 연도 표시를 껐다 켤 때: 브라우저의 올해가 아니라 실시간 시계의 연도 (+ 고른 차이)', () => {
+    const c = world(), d = clockIn2027(c), p = d.phones.mara;
+    // (화면이 연도 표시를 켤 때 부르는 모양: 폰을 복사해서 year 0으로)
+    assert.equal(Y.liveStoryYear(d, { ...p, year: 0 }), '2027');
+    assert.equal(Y.liveStoryYear(d, { ...p, year: 0, liveYearShift: 3 }), '2030');
+    assert.equal(Y.liveStoryYear(d, { ...p, year: 0, noYear: true }), '');
+    assert.equal(Y.liveStoryYear(d, { ...p, year: 2031 }), '2031');
+    // 연도가 없는 폰에 한 번 정하기
+    const q = { owner: 'X' }; assert.equal(Y.liveEnsureYear(d, q), true); assert.equal(q.year, 2027);
+    // 연도가 없는 폰에서 연도를 고르면: 차이는 실시간 시계의 연도에서
+    delete p.year; delete p.liveYearShift;
+    Y.liveSetStoryYear(d, p, 2029);
+    assert.deepEqual([p.year, p.liveYearShift], [2029, 2]);
+    // 시계가 없는 서랍: 전처럼 브라우저의 올해
+    const plain = L.liveMeta(c.real), y = new Date().getFullYear();
+    assert.equal(Y.liveStoryYear(plain, { owner: 'Mara', year: 0 }), String(y));
+});
+
+test('실시간 화면을 열 때 연도 맞추기(liveYearsNow): 새해를 넘긴 폰 · 연도 없는 폰은 시계의 연도 + 고른 차이로, 끈 폰은 그대로', () => {
+    const c = world(), d = clockIn2027(c), p = d.phones.mara;
+    d.phones.ivo = { ...phone(), owner: 'Ivo', year: 2026, liveYearShift: 4 };
+    d.phones.off = { ...phone(), owner: 'Off', year: 2026, noYear: true };
+    d.phones.none = { ...phone(), owner: 'None' }; delete d.phones.none.year;
+    p.year = 2026; delete p.liveYearShift;
+    const tx = JSON.stringify(p.money);
+    assert.equal(Y.liveYearsNow(d), true);
+    assert.deepEqual([p.year, d.phones.ivo.year, d.phones.ivo.liveYearShift, d.phones.off.year, d.phones.off.noYear, d.phones.none.year], [2027, 2031, 4, 2026, true, 2027]);
+    // 기록 날짜는 안 옮겨요 (해가 넘어간 것이지 사용자가 연도를 바꾼 게 아니에요), 폰 1의 폰도 그대로
+    assert.equal(JSON.stringify(p.money), tx);
+    assert.equal(c.real.phones.mara.year, undefined);
+    // 이미 맞으면 아무것도 안 바꿔요
+    assert.equal(Y.liveYearsNow(d), false);
+    // 반영이 쓰는 연도와 같은 계산이에요: 시계의 연도 + 고른 차이
+    assert.equal(d.phones.ivo.year, G.liveNowOf(c.real, () => Date.parse('2026-11-12T08:15:00Z')).year(d.phones.ivo) + 4);
+    // 시계가 없는 서랍: 아무것도 안 바꿔요. 서랍이 아니면 멈춰요
+    p.year = 2020;
+    assert.equal(Y.liveYearsNow(L.liveMeta(c.real)), false); assert.equal(p.year, 2020);
+    assert.throws(() => Y.liveYearsNow(c.real), /실시간 폰의 서랍이 아니에요/);
 });

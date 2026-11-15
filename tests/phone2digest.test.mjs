@@ -255,3 +255,24 @@ test('한 방의 요약이 실패해도 다른 방은 요약해요', async () =>
     const ok = [first, second].filter(r => (r.digest?.upto ?? -1) > 0), bad = [first, second].filter(r => r.digest?.failed);
     assert.equal(bad.length, 1); assert.equal(ok.length, 1);
 });
+
+test('한 방의 요약 답에 장면이 없어도(거절 글) 다른 방은 요약해요', async () => {
+    const c = world(300);
+    const other = L.ensureRoom(c.real, ['Mara', 'Ivo']);
+    for (let i = 0; i < 300; i++) { const no = L.liveNo(c.w); other.messages.push({ id: `m${no}`, n: no, from: no % 2 ? 'Ren' : 'Ivo', text: `말 ${no}`, at: T0 + no * 60_000 }); }
+    T.digests = ['죄송해요, 못 하겠어요', SECTIONS(301, 560), SECTIONS(1, 260)];
+    T.answers = Array.from({ length: 8 }, () => ({ events: [] }));
+    await G.liveReflect(c.real, 'Mara');
+    const rooms = [c.room, other];
+    assert.equal(rooms.filter(r => r.digest?.failed).length, 1);
+    assert.equal(rooms.filter(r => (r.digest?.upto ?? -1) > 0).length, 1);
+});
+
+test('메신저를 안 나가고 계속 얘기해도 300개가 쌓이면 답장 뒤에 요약해요 (요약 안 된 대화가 답장 요청 밖으로 밀려나지 않게)', async () => {
+    const c = world(299);
+    L.sendLive(c.real, c.room.id, '삼백 번째 말'); L.enqueueReplies(c.real, c.room.id);
+    T.replies = [{ state: '집', reply: ['응'], does: [] }]; T.digests = [SECTIONS(1, 260)];
+    await G.liveGo(c.real);
+    assert.equal(T.digestCalls, 1); assert.equal(c.room.digest.upto, 260);
+    assert.equal(T.calls, 0);          // (no reflection: that still waits for leaving the messenger)
+});

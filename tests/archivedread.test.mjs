@@ -1551,6 +1551,17 @@ test('someone texted or called by name is saved in the contacts; a number, an un
     assert.deepEqual(c.p.contacts.map(x => x.name), ['Mara']);
 });
 
+test('a reflection never drops a contact, however many there are (as it always was)', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'a busy day of calls and texts'), say('Mara', 'tell me later')]);
+    c.p.now = '10-26 09:00'; c.p.year = 2026;
+    c.p.contacts = [{ name: 'Old Friend', saved: '오래된 친구♥' }, ...Array.from({ length: 29 }, (_, i) => ({ name: `Person ${i}` }))];
+    await run(c.m, { now: '10-26 20:00', events: [{ id: 'busy', at: 2, quote: 'a busy day of calls and texts', summary: 'calls and texts', date: '10-26', time: '12:00', phone: {
+        contacts: [{ name: 'Lio', saved: '리오' }, { name: 'Varo', saved: '바로' }] } }] });
+    const names = c.p.contacts.map(x => x.name);
+    assert.equal(names.length, 32);
+    assert.deepEqual([names[0], names[1], names.at(-2), names.at(-1)], ['Old Friend', 'Person 0', 'Lio', 'Varo']);
+});
+
 test('the home district goes only to the home the owner lives in now, and 되돌리기 takes it back', async () => {
     const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'back home after the move'), say('Mara', 'see you')]);
     c.p.now = '10-26 09:00'; c.p.year = 2026;
@@ -1565,10 +1576,12 @@ test('the home district goes only to the home the owner lives in now, and 되돌
 test('auto-saved contacts: a hidden caller in any wording is not one, a name that starts like one is; the label a contact is saved under is that contact', async () => {
     const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'a busy day of calls and texts'), say('Mara', 'tell me later')]);
     c.p.now = '10-26 09:00'; c.p.year = 2026; c.p.contacts = [{ name: 'Mara', saved: '마라' }];
+    // (Varo was deleted from the contacts by the user: never added back by a call)
+    c.p.hiddenContacts = ['varo'];
     const call = (w, i) => ({ with: w, type: 'in', time: `10-26 12:${String(10 + i).padStart(2, '0')}`, min: 1 });
     await run(c.m, { now: '10-26 20:00', events: [{ id: 'busy', at: 2, quote: 'a busy day of calls and texts', summary: 'calls and texts', date: '10-26', time: '12:00', phone: {
         threads: [{ with: '마라', messages: [{ from: '마라', text: 'later', time: '10-26 11:05' }] }],
-        calls: ['발신번호 표시제한', 'Anonymous', 'Restricted', 'Hidden', 'Private number', 'Unknown caller', 'Private Kim'].map(call),
+        calls: ['발신번호 표시제한', 'Anonymous', 'Restricted', 'Hidden', 'Private number', 'Unknown caller', 'Private Kim', 'Varo'].map(call),
     } }] });
     assert.deepEqual(c.p.contacts.map(x => [x.name, x.saved ?? '']), [['Mara', '마라'], ['Private Kim', '']]);
 });

@@ -1,6 +1,7 @@
 // Phone content and its financial ledger travel together, only by explicit choice.
 import { ctx, getMeta, saveMeta } from './core.js';
 import { journalWrite } from './phonesync.js';
+import { resetLive } from './phone2store.js';
 
 export const PHONE_STORY_KEYS = ['phones','phoneProfiles','phoneScreenHolder','finance','lastPhoneOwner','phoneLore','phoneLoreOff','phonePre','phoneStoryScope'];
 export function phoneChatScope(c) {
@@ -38,6 +39,8 @@ export function resetPhoneStory(m,scope) {
     clearPhoneSelection(scope);
     // (and this browser's record of rounds to put back (복구): the old story's, none of the new one's)
     journalWrite(scope,[]);
+    // (폰 2 can't keep a story that is gone: its phones, ledger and story mark go; what was said on its messenger stays)
+    try { resetLive(m,'chats'); } catch { /* an m.live this version can't read is left as it is */ }
 }
 export function adoptPhoneStory(m,scope) {
     // Detach copied metadata from its source even if the host supplied shared objects.

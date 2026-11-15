@@ -10,6 +10,7 @@ import { sectionPeek } from './peek.js';
 import { openPhone } from './phone.js';
 import { RANGE_HEAD, parseSections, sectionKey, splitTail, tailBlocks } from './sections.js';
 import { confirm, esc, escRe } from './util.js';
+import { isCityName } from './placehoods.js';
 
 // Places from heading parentheses ("(Phamenoth 9, Thebes palace, after midnight)", "(Ombos → Thebes)"), shown by the calendar.
 
@@ -25,11 +26,12 @@ export function headingPlaces(title, cals) {
         .filter(x => !PLACE_SKIP.test(x) && !TIME_WORDS.some(([re]) => re.test(x) && x.split(/\s+/).length <= 3))
         .filter(x => !/^(?:month of|after|before|until|during|into)\b/i.test(x))
         // a span of hours however long ("night to next afternoon", "early morning until late evening"): every word a
-        // time word or what joins them; and two places at once ("Seoul and Frankfurt": a call between two cities) is no
-        // place anyone went
-        .filter(x => !timeSpan(x) && !/\s(?:and|&)\s|\s&|&\s/i.test(x))
+        // time word or what joins them; and two cities at once ("Seoul and Frankfurt": a call between them) is no place
+        // anyone went. A name with "and" or "&" in it is a place like any other ("Barnes & Noble", "Bread and Butter Café")
+        .filter(x => !timeSpan(x) && !twoCities(x))
         .map(x => x.replace(/^(?:the|a|an)\s+/i, '').trim()).filter(Boolean);
 }
+const twoCities = x => { const parts = x.split(/\s+and\s+|\s*&\s*/i).map(t => t.replace(/^(?:the|a|an)\s+/i, '').trim()).filter(Boolean); return parts.length > 1 && parts.every(isCityName); };
 const SPAN_JOIN = /^(?:to|till|until|through|thru|into|from|next|the|early|late|mid|following|same|of|in)$/i;
 const timeSpan = x => { const w = x.split(/[\s-]+/).filter(Boolean); return w.length > 1 && w.some(t => TIME_WORDS.some(([re]) => re.test(t))) && w.every(t => SPAN_JOIN.test(t) || TIME_WORDS.some(([re]) => re.test(t))); };
 

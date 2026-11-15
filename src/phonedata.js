@@ -1072,10 +1072,10 @@ export function mergePhone(p, add, { keepAll = false, m = null } = {}) {
     }
     // someone the owner texts or calls by name is saved on the phone (a name on a thread is a saved contact's): added
     // when the answer gave no contact for them. Never a number, an unknown caller or a group room, nor the label a
-    // contact is already saved under; no more than the list holds
+    // contact is already saved under, nor one the user deleted; no more than the list holds
     for (const n of [...add.threads.filter(t => !t.group).map(t => t.with), ...arr(add.calls).map(c => c.with)]) {
         const name = String(n || '').trim();
-        if (!name || p.contacts.length >= CAP.contacts || NO_CONTACT.test(name) || isOwnerName(p, m, name) || personIn(p, p.contacts, x => x.name, name) || p.contacts.some(x => x.saved && nameKey(x.saved) === nameKey(name))) continue;
+        if (!name || p.contacts.length >= CAP.contacts || NO_CONTACT.test(name) || isOwnerName(p, m, name) || arr(p.hiddenContacts).includes(nameKey(name)) || personIn(p, p.contacts, x => x.name, name) || p.contacts.some(x => x.saved && nameKey(x.saved) === nameKey(name))) continue;
         p.contacts.push({ name });
     }
     p.contacts = keep(p.contacts, CAP.contacts);
@@ -1226,6 +1226,9 @@ export function storyYear(m, p = null, upto = null) {
     // the owner's own choice in 날짜 및 시간: this year, or none
     if (p?.noYear) return '';
     if (p?.year) return String(p.year);
+    // (폰 2, by the phone's mark or its drawer: its year is the real one, as far off as the user picked; never a
+    // role-play status line's)
+    if (isLivePhone(p) || Number.isInteger(m?.phoneUpto)) return String(new Date().getFullYear() + (Number(p?.liveYearShift) || 0));
     // (the newest status line that writes a year: it is the story's now; else, for a phone being made, the year the reading
     // of where everyone is read from the story; else none: never guessed from the dates a text writes, a birthday, a memory
     // or a plan; the user sets it before the phone is made, or in 날짜 및 시간)
@@ -1265,7 +1268,7 @@ const shiftDay = (v, n) => {
     const y = Number(mt[1]) + n, d = mt[2] === '02' && mt[3] === '29' && new Date(Date.UTC(y, 1, 29)).getUTCMonth() !== 1 ? '28' : mt[3];
     return `${y}-${mt[2]}-${d}${mt[4]}`;
 };
-const shiftAll = (o, n) => (Array.isArray(o) ? o.map(x => shiftAll(x, n)) : o && typeof o === 'object' ? Object.fromEntries(Object.entries(o).map(([k, v]) => [shiftDay(k, n), shiftAll(v, n)])) : typeof o === 'string' ? shiftDay(o, n) : o);
+export const shiftAll = (o, n) => (Array.isArray(o) ? o.map(x => shiftAll(x, n)) : o && typeof o === 'object' ? Object.fromEntries(Object.entries(o).map(([k, v]) => [shiftDay(k, n), shiftAll(v, n)])) : typeof o === 'string' ? shiftDay(o, n) : o);
 export const hasDatedRecords = m => !!m.finance || Object.values(m.phones || {}).some(p => p?.money || p?.investment);
 export function setStoryYear(m, p, year) {
     const n = p.year && !p.noYear ? year - p.year : 0;
@@ -1286,9 +1289,7 @@ export function setStoryYear(m, p, year) {
         for (const q of Object.values(m.phonePre || {})) if (q?.year && !q.noYear && !q.yearSet) { q.year += n; q.yearShift = (Number(q.yearShift) || 0) + n; }
         // this browser's record of unsaved rounds (복구) too
         try {
-            // (the journal of the meta given: the chat's, or the one a meta names itself — 폰 2's drawer, so its year never
-            // moves 폰 1's records)
-            const scope = typeof m.phoneJournal === 'string' ? m.phoneJournal : phoneChatScope(ctx()), owners = new Set(Object.values(m.phones || {}).map(q => q?.owner));
+            const scope = phoneChatScope(ctx()), owners = new Set(Object.values(m.phones || {}).map(q => q?.owner));
             journalWrite(scope, journalRead(scope).map(r => (owners.has(r.owner) ? { ...r, events: shiftAll(r.events || [], n), life: shiftAll(r.life || [], n), ...(r.year ? { year: r.year + n } : {}) } : r)));
         } catch { /* no journal here */ }
     }
@@ -1404,7 +1405,10 @@ function phoneRequest(m, owner, p = null, lore = '', only = null, profile = '', 
         world ? `[WORLD]\n${world}` : '',
         lore ? `[LOREBOOK]\n${lore}` : '',
         aroundBlock(q),
-        afterBlock(gap) || (recent && !noArchive(m) ? `[RECENT CHAT]\n${recent}` : ''),
+        // (폰 2: after the story it began from, the messenger's talk its reflection has read — the summaries of the old
+        // talk, then the lines — so a phone or an app made again holds what was said there too)
+        ((story, talk) => (talk ? (story ? `${story}\n\n${talk}` : `[RECENT CHAT]\n${talk}`) : story))(afterBlock(gap) || (recent && !noArchive(m) ? `[RECENT CHAT]\n${recent}` : ''),
+            typeof m?.phoneRecent === 'function' && Number.isInteger(gap?.mark) ? m.phoneRecent(owner, 150, { maxChars: 12000, seen: gap.mark, summary: true }) : ''),
         yearBlock(m, q, upto),
         `[OWNER]\n${owner}`,
         profile, blindBlock(m, owner),
@@ -1537,7 +1541,9 @@ async function makePhone0(m, owner, { update = false, apps = null } = {}) {
     // (or, with more after the archive than one request reads, after the last message it read: the reflection goes on from there)
     // made again with its reading kept (some apps, or a phone whose bank or life apps stay): up to the phone's clock, like
     // a fill; made anew: up to now, and that becomes its clock
-    const cur = m.phones?.[key], keep = !!(apps && cur) || !!(cur?.sync?.marks?.base && ['money', 'invest', 'life', 'delivery'].some(g => cur.sync.marks[g]));
+    // (폰 2, a phone it already has: always with its reading kept — it is made again from the story it began from and the
+    // messenger talk read so far)
+    const cur = m.phones?.[key], keep = !!(apps && cur) || !!(cur?.sync?.marks?.base && (Number.isInteger(m?.phoneUpto) || ['money', 'invest', 'life', 'delivery'].some(g => cur.sync.marks[g])));
     const gap = keep ? windowOf(m, cur, null, CHAT_TOKENS.phone, false) : windowOf(m, null);
     // nothing shown after the archive (all of it archived and hidden): it read up to the archive's end, not -1 (no further
     // than the chat's last message: an archive longer than the chat leaves the messages written after for the reflection)
@@ -1643,12 +1649,18 @@ async function makePhone0(m, owner, { update = false, apps = null } = {}) {
         // the phone's own apps start reading again from here. With a bank, investments or the everyday apps kept (they
         // weren't made again), the reading state stays as it was: messages they haven't read yet are still theirs to read
         // (the phone's own items from those messages are told apart by their words, so nothing doubles)
-        if (was?.sync?.marks?.base && ['money', 'invest', 'life', 'delivery'].some(g => was.sync.marks[g])) base.sync = was.sync;
+        // (폰 2, a phone it already has made again: its reading of the messenger goes on where it was — the request showed
+        // the talk read so far — and its clock, the year the user picked and where things stand stay its own)
+        const liveAgain = Number.isInteger(m?.phoneUpto) && !!was?.sync?.marks?.base;
+        // (the unsaved rounds are under the meta's own key: 폰 2's drawer names its own, so 폰 1's are never touched)
+        const scope = typeof m.phoneJournal === 'string' ? m.phoneJournal : phoneChatScope(ctx());
+        if (liveAgain || was?.sync?.marks?.base && ['money', 'invest', 'life', 'delivery'].some(g => was.sync.marks[g])) base.sync = was.sync;
         else {
-            base.sync = newSync(phoneChatScope(ctx())); base.sync.marks.base = mark;
+            base.sync = newSync(scope); base.sync.marks.base = mark;
             // a reading started anew: the old one's unsaved rounds (복구) aren't this phone's
-            try { const scope = phoneChatScope(ctx()); journalWrite(scope, journalRead(scope).filter(r => nameKey(r.owner) !== key)); } catch { /* no journal here */ }
+            try { journalWrite(scope, journalRead(scope).filter(r => nameKey(r.owner) !== key)); } catch { /* no journal here */ }
         }
+        if (liveAgain) { for (const k of ['liveYearShift', 'situations', 'liveHeld']) if (was[k] !== undefined) base[k] = was[k]; if (was.now) { got.now = was.now; if (got2) got2.now = ''; } }
         m.phones[key] = mergePhone(base, got, { m });
         if (got2) mergePhone(m.phones[key], got2, { m });
     }
@@ -1657,7 +1669,7 @@ async function makePhone0(m, owner, { update = false, apps = null } = {}) {
     if (m.phonePre?.[key]) { delete m.phonePre[key]; if (!Object.keys(m.phonePre).length) delete m.phonePre; }
     ensureYear(m, p, nowAt(last));
     // (a year from the newest status line, read before the phone had its clock: on the owner's clock across New Year)
-    if (!pre?.yearSet && !p.yearSet && p.year && !p.noYear) { const st = trackerYear(nowAt(last)), sh = Number(p.yearShift) || 0; if (st && st.y + sh === p.year) p.year = acrossNewYear(st.y, st.day, p.now) + sh; }
+    if (!Number.isInteger(m?.phoneUpto) && !pre?.yearSet && !p.yearSet && p.year && !p.noYear) { const st = trackerYear(nowAt(last)), sh = Number(p.yearShift) || 0; if (st && st.y + sh === p.year) p.year = acrossNewYear(st.y, st.day, p.now) + sh; }
     if(m.phoneProfiles) delete m.phoneProfiles[key];
     ensureIds(p);
     p.upto = lastEnd(m);
@@ -2013,8 +2025,10 @@ export async function settleBranch(m, p) {
     if (!s?.marks?.base || !otherChat(s)) return null;
     // a phone made past the branch point: the message it began at is not in this chat. It begins at the branch's end
     // instead, and everything it read is the other chat's talk
+    // (its start still found by the user's message before it, but the start itself past this chat's end — a branch taken
+    // at that user message, the reply the phone was made at not here: the same, it begins at the branch's end)
     let rebased = false;
-    if (syncState(p) === 'lost') {
+    if (syncState(p) === 'lost' || s.marks.base.index > chatEnd()) {
         const end = chatEnd();
         if (!(s.marks.base.index > end) || end < 0) return null;
         s.marks.base = markAfter(end); rebased = true;
@@ -2054,11 +2068,13 @@ export async function settleBranch(m, p) {
         const groups = whole ? null : lostApps;
         cut = (whole ? brCutMadeAfter(p, at) : 0) + brCutAppsAfter(m, p, at, groups);
         if (whole && (!p.now || laterThan(String(p.now), at))) p.now = at;
-        // (an app's own reading mark that is past this chat: none past the branch point. One that is in this chat stays
-        // where it is: moved back, the payments its opening balance already holds would be read in again)
-        for (const g of apps) if (lostApps.has(g) || (readPast && s.marks[g].index > end)) s.marks[g] = markAfter(end);
         if (cut) { delete p.syncUndo; delete p.syncUndos; }
     }
+    // (an app's own reading mark that is past this chat: none past the branch point, whether or not the story's time
+    // there is known — left ahead, the reflection would pass over what is paid in this chat's messages up to it. One
+    // that is in this chat stays where it is: moved back, the payments its opening balance already holds would be read
+    // in again)
+    for (const g of apps) if (lostApps.has(g) || (readPast && s.marks[g].index > end)) s.marks[g] = markAfter(end);
     await saveMeta();
     if (cut && p.inject) applyInjection();
     return { dropped, items, kept, cut, at: at || '', rebased, point: end };
@@ -2876,9 +2892,16 @@ export const dateOrderOf = m => (m?.dateOrder === 'dm' ? 'dm' : 'md');
 export const needsDateOrder = m => !m?.dateOrder;
 export async function setDateOrder(m, order) { if (!m || !['md', 'dm'].includes(order)) return; m.dateOrder = order; await saveMeta(); }
 dateOrderSource(() => ctx()?.chatMetadata?.narrative_archive?.dateOrder);
+// a phone of 폰 2 (its store marks the phone objects it hands out): the role-play's status lines and clocks are not its own
+export const isLivePhone = p => !!p?.[Symbol.for('narrative-archive.live')];
+// the time an app action stamps (a photo, a note, a draft, a memo): for 타임라인 the call it always was, storyNow(p),
+// which never looks at the meta; for 폰 2 (its phone, or its drawer) its own clock
+export const nowOn = (p, m = null) => (isLivePhone(p) || Number.isInteger(m?.phoneUpto) ? storyNow(p, null, m) : storyNow(p));
 export function storyNow(p, upto = null, m = null) {
     // (폰 2: its own clock, the real time its last reflection set; never the role-play's status line)
-    if (Number.isInteger(m?.phoneUpto)) return p?.now || '';
+    // (the drawer's running clock when it gives one — the story's date and the real time, now — else the time its last
+    // reflection set)
+    if (isLivePhone(p) || Number.isInteger(m?.phoneUpto)) { let t = ''; try { t = typeof m?.phoneNow === 'function' ? m.phoneNow(p) : ''; } catch { t = ''; } return t || p?.now || ''; }
     if (upto == null && p?.clockHold) upto = phoneAt(p);
     let at = '';
     try { at = statusMoment(p, upto, null, m)?.at || ''; } catch { /* no status window */ }
@@ -3639,6 +3662,8 @@ export function ownerClock(p, at, m = null, st = null, rows = [], { quiet = fals
 // story: a request whose chat with no archive goes whole in place of the archive (sideRequest's story, making a phone):
 // its newest message is never cut short there
 export function fillClockRows(m, p, gap = null, short = null, { story = false } = {}) {
+    // (폰 2: no message of the role-play is its clock)
+    if (isLivePhone(p) || Number.isInteger(m?.phoneUpto)) return [];
     if (short?.text) return String(short.text).split('\n').flatMap(l => { const mt = /^#(\d+) · /.exec(l); return mt ? [{ index: Number(mt[1]), text: l }] : []; });
     const upto = nowAt(gap), row = gap?.n ? syncRows().find(r => r.index === gap.to) : null;
     const text = row ? row.text : recentPhoneRows(1, { upto }).at(-1), index = row ? row.index : atOf(text);
@@ -3755,7 +3780,8 @@ function hoodZone(p, place, m = null) {
     for (const c of cs) {
         const ks = new Set(c.names.map(pkey).filter(Boolean));
         // (the owner's own row and a saved row of the same city are one city: the owner's)
-        for (const z of zs) if (z.tz === c.tz && [z.name, ...(z.names || [])].some(n => ks.has(pkey(n)))) { const k = `${z.tz}|${pkey(z.name)}`; if (!hits.get(k)?.own) hits.set(k, z); }
+        // (a name many cities have, "Hyde Park", "Chinatown": only the owner's own city, never a move to another's)
+        for (const z of zs) if (z.tz === c.tz && (!c.shared || z.own) && [z.name, ...(z.names || [])].some(n => ks.has(pkey(n)))) { const k = `${z.tz}|${pkey(z.name)}`; if (!hits.get(k)?.own) hits.set(k, z); }
     }
     // (a name in two known cities, "Westend": the owner's own one when it is one of them; else no guess)
     const all = [...hits.values()], one = all.length === 1 ? all : all.filter(z => z.own);
@@ -3802,7 +3828,7 @@ export function sceneHome(p, place, m = null, named = null) {
 export const hm = v => /^\d{2}-\d{2} \d{2}:\d{2}$/.test(String(v || ''));
 const laterThan = (a, b) => { const g = dayGap(String(b).slice(0, 5), String(a).slice(0, 5)); return g > 0 || g === 0 && String(a).slice(6) > String(b).slice(6); };
 // the same, never throwing (no status window: null): for a fill's OWNER'S CLOCK
-export const statusAt = (p, upto = null, m = null) => { try { return statusMoment(p, upto, null, m); } catch { return null; } };
+export const statusAt = (p, upto = null, m = null) => { if (isLivePhone(p) || Number.isInteger(m?.phoneUpto)) return null; try { return statusMoment(p, upto, null, m); } catch { return null; } };
 export function statusMoment(p, upto = null, named = null, m = null) {
     const t = recentTrackers(1, { visibleOnly: true, ...(upto == null ? {} : { chat: (ctx().chat || []).slice(0, upto + 1) }) })[0];
     const d = t?.date ? monthDay(t.date) : null;
@@ -4014,9 +4040,11 @@ export async function sideRequest(m, owner, blocks, { profile, money = false, st
     const profileText = await ownerProfileBlock(ctx(),profile,owner,{money});
     const ph = m.phones?.[nameKey(owner)] || null, gap = read && 'gap' in read ? read.gap : windowOf(m, ph), upto = nowAt(gap);
     // (폰 2, a request whose app marks where it read: only the talk the reflection has read, so nothing is taken twice)
-    const recent = recentOf(m, owner, 6, { upto, maxChars: 6000, ...(read && Number.isInteger(gap?.mark) ? { seen: gap.mark } : {}) });
+    // (폰 2, an app being filled: it marks all the reflected talk as known, so it is shown that talk and not six lines of it)
+    const fill = !!read && Number.isInteger(gap?.mark), lines = fill ? 150 : 6, chars = fill ? 12000 : 6000;
+    const recent = recentOf(m, owner, lines, { upto, maxChars: chars, ...(fill ? { seen: gap.mark, summary: true } : {}) });
     if (read) read.gap = gap;
-    const arch = archiveBlock(m, archiveFor(m, -1, upto).text || '(empty)', 'ARCHIVE', story, upto), talk = gap?.n && typeof m?.phoneRecent === 'function' ? m.phoneRecent(owner, 6, { maxChars: 6000, ...(read && Number.isInteger(gap?.mark) ? { seen: gap.mark } : {}) }) : '';
+    const arch = archiveBlock(m, archiveFor(m, -1, upto).text || '(empty)', 'ARCHIVE', story, upto), talk = gap?.n && typeof m?.phoneRecent === 'function' ? m.phoneRecent(owner, lines, { maxChars: chars, ...(fill ? { seen: gap.mark, summary: true } : {}) }) : '';
     // (폰 2: the story after the archive up to where it began, then the messenger's talk, in the one block)
     const chat = (afterBlock(gap) ? `${afterBlock(gap)}${talk ? `\n\n${talk}` : ''}` : '') || (recent && !(story && noArchive(m)) ? `[RECENT CHAT]\n${recent}` : '');
     const tales = [arch, world ? `[WORLD]\n${world}` : '', lore ? `[LOREBOOK]\n${lore}` : '', chat];

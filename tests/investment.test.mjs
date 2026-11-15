@@ -1,6 +1,8 @@
 import { cleanMessageURL } from './cleanmessage.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
+// (two tests compare with today's date: one fixed day, so a run across midnight can't split them)
+const onDay = (fn, iso = '2026-11-14T10:00:00Z') => async (...a) => { const R = Date, at = R.parse(iso); globalThis.Date = class extends R { constructor(...x) { if (x.length) super(...x); else super(at); } static now() { return at; } }; try { return await fn(...a); } finally { globalThis.Date = R; } };
 import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import * as finance from '../src/finance.js';
@@ -16,9 +18,11 @@ const wealthSource=await readFile(new URL('../src/wealth.js',import.meta.url),'u
 const wealthURL=encoded(wealthSource.replace("'./ai.js'",JSON.stringify(ai)).replace("'./core.js'",JSON.stringify(core)).replace("'./finance.js'",JSON.stringify(financeURL)).replace("'./phoneparse.js'",JSON.stringify(new URL('../src/phoneparse.js',import.meta.url).href)));
 const dataMod=await load('investdata.js',{'./wealth.js':wealthURL,'./ai.js':ai,'./core.js':core,'./phonedata.js':data,'./finance.js':financeURL});
 const dataURL=encoded(`export const investmentDate=(m,p)=>p.investment?.date||'2026-10-30';`);
+// (화면은 32개 이름을 phone2api.js의 P로 불러요: 위의 가짜들로 만든 P)
+const api=encoded(`import * as D from ${JSON.stringify(dataURL)}; import * as PD from ${JSON.stringify(data)}; export const P={investmentDate:D.investmentDate,storyNow:PD.storyNow,nowOn:p=>PD.storyNow(p)};`);
 const fmtIn=encoded(`export const fmtIn=(p,n,c,signed)=>(signed&&n>0?'+':'')+new Intl.NumberFormat('ko-KR',{maximumFractionDigits:2}).format(n)+' '+(c||'');export const localeOf=()=>'en-US';export const decimalOf=()=>'.';`);
-const ui=await load('investui.js',{'./phoneapps.js':apps,'./util.js':util,'./finance.js':financeURL,'./investdata.js':dataURL,'./phonemoney.js':fmtIn,'./phonedata.js':data});
-const moneyUI=await load('phonemoney.js',{'./phoneprod.js':new URL('../src/phoneprod.js',import.meta.url).href,'./phonepassart.js':new URL('../src/phonepassart.js',import.meta.url).href,'./core.js':core,'./finance.js':financeURL,'./investdata.js':dataURL,'./people.js':encoded(`export const nameKey=s=>s;`),'./phoneai.js':encoded(`export const filling=new Set(),recording=new Set();`),'./phoneapps.js':apps,'./phonedata.js':data,'./util.js':util});
+const ui=await load('investui.js',{'./phoneapps.js':apps,'./util.js':util,'./finance.js':financeURL,'./investdata.js':dataURL,'./phonemoney.js':fmtIn,'./phonedata.js':data,'./phone2api.js':api});
+const moneyUI=await load('phonemoney.js',{'./phoneprod.js':new URL('../src/phoneprod.js',import.meta.url).href,'./phonepassart.js':new URL('../src/phonepassart.js',import.meta.url).href,'./core.js':core,'./finance.js':financeURL,'./investdata.js':dataURL,'./people.js':encoded(`export const nameKey=s=>s;`),'./phoneai.js':encoded(`export const filling=new Set(),recording=new Set();`),'./phoneapps.js':apps,'./phonedata.js':data,'./util.js':util,'./phone2api.js':api});
 function setup() {
  const m={text:'October 30, 2026. Public company X trades at 110 USD.'},p={owner:'A',now:'10-30',country:'US',searches:[],threads:[],photos:[],events:[]};
  globalThis.__investTest={saved:0,inputs:[],meta:m,answer:{base:'EUR',basis:'fiction',cash:[{currency:'USD',amount:2000}],securities:[{symbol:'NYSE:X',name:'X',currency:'USD'}],trades:[{kind:'buy',symbol:'NYSE:X',currency:'USD',date:'2026-10-29',quantity:10,price:100,fee:0}],watch:[{symbol:'NYSE:X',note:'long hold'}],stakes:[],quotes:[{symbol:'NYSE:X',date:'2026-10-30',value:110,source:'story',evidence:'Public company X trades at 110 USD.'}],fx:[{from:'USD',to:'EUR',date:'2026-10-29',value:0.9},{from:'USD',to:'EUR',date:'2026-10-30',value:0.95}]}};
@@ -508,15 +512,15 @@ test('the money fill dates its balances at the story\'s moment it read up to, no
     assert.equal(w.wealthDate({ text: '' }, { ...p, money: { fxDate: '2026-09-01' } }, '10-26 12:00'), '2026-09-01');
 });
 
-test('점검 6: a story with no year of its own values its money and investments at today\'s date; one with a year on the story\'s day; none known, none', async () => {
+test('점검 6: a story with no year of its own values its money and investments at today\'s date; one with a year on the story\'s day; none known, none', onDay(async () => {
     const W = await import(wealthURL), today = new Date().toISOString().slice(0, 10);
     assert.equal(W.wealthDate({ text: '' }, { noYear: true, now: '03-14 10:00' }), today);
     assert.equal(W.wealthDate({ text: '' }, { year: 2026, now: '03-14 10:00' }), '2026-03-14');
     assert.equal(W.wealthDate({ text: '## #0–#1 — 2025-03-14 Berlin\n' }, { now: '03-14 10:00' }), '');
     assert.equal(dataMod.investmentDate({ text: '' }, { noYear: true, now: '03-14 10:00' }), today);
-});
+}));
 
-test('점검 7: a story with no year keeps the day its money was first valued (tomorrow finds the same rates); evidence goes by the story part as sent, a [BANK] paragraph closing the last message too', async () => {
+test('점검 7: a story with no year keeps the day its money was first valued (tomorrow finds the same rates); evidence goes by the story part as sent, a [BANK] paragraph closing the last message too', onDay(async () => {
     const W = await import(wealthURL), today = new Date().toISOString().slice(0, 10);
     const p = { noYear: true, now: '03-14 10:00', money: { bank: { accounts: [] } } };
     assert.equal(W.wealthDate({ text: '' }, p), today);
@@ -532,4 +536,4 @@ test('점검 7: a story with no year keeps the day its money was first valued (t
     assert.ok(storyPart(input).includes('SAP 10주 매수 (주당 182.4)'));
     assert.ok(storyPart(input).includes('긴 하루였다.'));
     assert.ok(!storyPart(input).includes('{"accounts":[]}'));
-});
+}));
