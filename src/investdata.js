@@ -65,7 +65,7 @@ REBUILD means the user asked for the investment app to be made again.
 - New shares, trades, watch list and opening cash, from the story as it is now. The old amounts are not targets.
 - "cash" covers every currency in REBUILD; new currencies are fine.
 - MONEY ALREADY MOVED is money the app already recorded going in or out of the account. Leave it out of "trades"; the entries marked included are already in the opening cash. Trades after them must be affordable.`;
-const MARKET_SYS = `GOAL
+export const MARKET_SYS = `GOAL
 Give the public market prices and exchange rates for DATE in a long role-play's world, for one phone's investment app.
 
 YOU GET
@@ -82,7 +82,7 @@ ANSWER — one JSON object, nothing else:
 {"quotes":[{"symbol":"exchange:symbol","date":"YYYY-MM-DD","time":"","value":100,"source":"guess|story","evidence":"exact words from the story, for story"}],"fx":[{"from":"USD","to":"EUR","date":"YYYY-MM-DD","time":"","value":0.9,"source":"guess|story","evidence":""}]}
 Empty lists are fine.`;
 // a model's list of records (a null or a bare word in it is none) and its text (an object where text belongs is none)
-const list = x => Array.isArray(x) ? x.filter(v => v && typeof v === 'object' && !Array.isArray(v)) : [];
+export const list = x => Array.isArray(x) ? x.filter(v => v && typeof v === 'object' && !Array.isArray(v)) : [];
 const text = (s, n = 500) => (s !== null && typeof s === 'object' ? '' : String(s ?? '')).trim().slice(0, n);
 // a model's numbers, codes and dates in the shapes the checks below expect: "180.50" or "1,240" a number, "eur" a code,
 // "2027/01/05" a date (else a sound answer is turned down for how it wrote them)
@@ -98,7 +98,7 @@ const tidy = v => {
     }
     return v;
 };
-const json = out => { const s = String(out).replace(/```(?:json)?/gi, ''); return tidy(parseJson(s.slice(s.indexOf('{'), s.lastIndexOf('}') + 1))); };
+export const json = out => { const s = String(out).replace(/```(?:json)?/gi, ''); return tidy(parseJson(s.slice(s.indexOf('{'), s.lastIndexOf('}') + 1))); };
 export const validDate = d => /^\d{4}-\d{2}-\d{2}$/.test(d || '') && !Number.isNaN(Date.parse(d)) && new Date(d).toISOString().slice(0, 10) === d;
 // where a fill would stop reading, kept while the chat and the archive stay as they are: the bank screens ask on every draw
 let stopMemo = { key: '', at: null };
@@ -117,7 +117,7 @@ export function investmentDate(m, p) {
     if (p.noYear && p.investment && validDate(date)) p.investment.date = date;
     return validDate(date) ? date : '';
 }
-function ingestQuotes(m, raw, input, date, securities) {
+export function ingestQuotes(m, raw, input, date, securities) {
     const allowed = new Set(securities.map(s => s.symbol));
     const push = (key, x) => {
         if (!validDate(x.date) || x.date > date || !finite(x.value) || x.value <= 0) return;
@@ -395,7 +395,7 @@ export async function refreshBankFX(m,p,date,base) {
     await saveMeta();
 }
 
-const CHART_SYS = `GOAL
+export const CHART_SYS = `GOAL
 Fill the missing days of one share's price chart in a long role-play's world.
 
 YOU GET

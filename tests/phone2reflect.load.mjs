@@ -53,6 +53,18 @@ export const Y = await load2('phone2year.js');
 export const Q = await load2('phone2req.js');
 export const F = await load2('phone2fill.js');
 export const N = await load2('phone2note.js');
+// 투자 앱 요청 (phone2invest.js; 폰 1의 investdata.js도 같은 이웃으로, 자산 계산만 빈 것으로)
+const mapINV = { ...map, './wealth.js': encoded(`export const wealthBlock=()=>'';export const wealthCheck=()=>null;export const investmentWealthRows=()=>[];`) };
+map['./investdata.js'] = encoded((await readFile(new URL('../src/investdata.js', import.meta.url), 'utf8')).replace(/from '([^']+)'/g, (all, k) => `from '${mapINV[k] || k}'`));
+export const INV = await import(map['./investdata.js']);
+export const I2 = await load2('phone2invest.js');
+// 말투 읽기 (phone2voice.js; 폰 1의 phonetr.js도 같은 이웃으로)
+// (phonetr.js asks the translator and the open chat too: stand-ins that do nothing, beside the same phonedata.js)
+const mapTR = { ...map, './translate.js': encoded(`export const glossaryEntries=()=>[];export const glossaryPeople=()=>[];export const glossaryIn=()=>[];export const askTranslator=async()=>'';`),
+    './core.js': encoded(`export const phoneMeta=()=>null;export const hasChat=()=>false;`) };
+map['./phonetr.js'] = encoded((await readFile(new URL('../src/phonetr.js', import.meta.url), 'utf8')).replace(/from '([^']+)'/g, (all, k) => `from '${mapTR[k] || k}'`));
+export const TR = await import(map['./phonetr.js']);
+export const V = await load2('phone2voice.js');
 // 사진 · 메모 · 초안 · 녹음: 폰 1 것(phoneai.js)과 폰 2 것(phone2act.js)
 map['./anniv.js'] = encoded(`export const datedRows=()=>[];`);
 const mapAI = { ...map, './people.js': encoded(`export const nameKey=s=>String(s).toLowerCase();export const nameRe=s=>new RegExp(s,'i');export const headingPlaces=()=>[];export const peopleList=()=>[];`) };

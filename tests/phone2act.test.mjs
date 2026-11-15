@@ -92,6 +92,6 @@ test('phoneai.js는 폰 2가 생기기 전 내용 그대로예요 (폰 2 낱말 
 
 test('창구(P): 실시간 서랍이면 폰 2 것, 아니면 폰 1 것을 같은 인자로; 실시간 폰을 서랍 없이 부르면 멈춰요', async () => {
     const api = await src('phone2api.js');
-    assert.match(api, /const split = \(one, two\) => async \(\.\.\.a\) => \{\n    if \(isLiveMeta\(a\[0\]\)\) return two\(\.\.\.a\);\n    if \(a\[1\]\?\.\[LIVE_PHONE\]\) throw new Error\('실시간 폰은 실시간 화면에서만 돼요'\);\n    return one\(\.\.\.a\);\n\};/);
+    assert.match(api, /const split = \(one, two, at = 1\) => async \(\.\.\.a\) => \{\n    if \(isLiveMeta\(a\[0\]\)\) return two\(\.\.\.a\);\n    if \(a\[at\]\?\.\[LIVE_PHONE\]\) throw new Error\('실시간 폰은 실시간 화면에서만 돼요'\);\n    return one\(\.\.\.a\);\n\};/);
     for (const [one, two] of [['takePhoto', 'liveTakePhoto'], ['writeEntry', 'liveWriteEntry'], ['makeDraft', 'liveMakeDraft'], ['recordVoice', 'liveRecordVoice']]) assert.ok(api.includes(`${one}: split(${one}, ${two})`), one);
 });

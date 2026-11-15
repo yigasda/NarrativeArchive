@@ -167,8 +167,8 @@ export async function pickVoices(m, owner, p, names) {
 export const KO_MAX = 400;
 const KO_CHUNK = 60, KO_CHARS = 9000;
 
-const who = v => String(v?.who ?? v?.from ?? '').trim(), whoKey = v => who(v).toLowerCase();
-const voiceRows = p => (Array.isArray(p.koVoice) ? p.koVoice : []).filter(v => v && who(v) && String(v.style || '').trim());
+export const who = v => String(v?.who ?? v?.from ?? '').trim(), whoKey = v => who(v).toLowerCase();
+export const voiceRows = p => (Array.isArray(p.koVoice) ? p.koVoice : []).filter(v => v && who(v) && String(v.style || '').trim());
 
 // (no examples from the Korean already on the phone: what an older reflection wrote there is the uneven voice this
 // replaces; the voice table alone keeps it even)

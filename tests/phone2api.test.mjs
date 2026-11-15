@@ -14,7 +14,7 @@ test('P: 화면이 부르는 이름이 다 있고, 타임라인 쪽은 폰 1 파
     const body = src.slice(src.indexOf('export const P = Object.freeze({'), src.lastIndexOf('});'));
     // (an entry is a name; name: split(name, live…) once its 실시간 side has moved to a phone2 file; or name: nameP, the
     // same for the ones that are not async; nowOn is the gateway's own: 타임라인 is storyNow(p))
-    const entries = body.split('\n').filter(l => !/^\s*\/\//.test(l)).join(' ').replace(/^.*?\{/, '').replace(/split\((\w+), \w+\)/g, '=$1').split(',').map(s => s.trim()).filter(Boolean);
+    const entries = body.split('\n').filter(l => !/^\s*\/\//.test(l)).join(' ').replace(/^.*?\{/, '').replace(/split\((\w+), \w+(?:, \d)?\)/g, '=$1').split(',').map(s => s.trim()).filter(Boolean);
     const listed = new Set(entries.map(e => e.split(':')[0].trim()));
     assert.deepEqual([...listed].sort(), [...NAMES].sort());
     for (const e of entries.filter(e => e.includes(':'))) assert.match(e, /^(\w+): (=\1|\1P)$/, e);
@@ -28,7 +28,7 @@ test('P: 화면이 부르는 이름이 다 있고, 타임라인 쪽은 폰 1 파
 async function loadP() {
     const srcs = await readFile(new URL('phone2api.js', SRC), 'utf8'), enc = t => 'data:text/javascript;base64,' + Buffer.from(t).toString('base64');
     const fakes = {};
-    for (const m of srcs.matchAll(/import \{([^}]*)\} from '(\.\/(?:phonedata|investdata|phoneai|phonelife|phonetr|phone2act|phone2year|phone2note|phone2fill)\.js)'/g))
+    for (const m of srcs.matchAll(/import \{([^}]*)\} from '(\.\/(?:phonedata|investdata|phoneai|phonelife|phonetr|phone2act|phone2year|phone2note|phone2fill|phone2invest|phone2voice)\.js)'/g))
         fakes[m[2]] = enc(m[1].split(',').map(x => x.trim()).filter(Boolean).map(n => `export const ${n}=(...a)=>({fn:'${n}',a});`).join(''));
     fakes['./phone2store.js'] = new URL('phone2store.js', SRC).href;
     return (await import(enc(srcs.replace(/from '([^']+)'/g, (all, k) => `from '${fakes[k] || k}'`)))).P;
