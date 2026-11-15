@@ -97,7 +97,7 @@ STEPS
 1. Read the section. Mark what MUST survive:
    who did what · decisions · promises · secrets that came out · injuries · how a relationship changed ·
    facts later parts may depend on (names, places, objects, numbers like #346).
-2. SHORT: rewrite the section in about 60% of its length, never more than 85% of it
+2. SHORT: rewrite the section in about 80% of its length, never more than 90% of it
    (a section that is already short may stay near that limit, but must still be shorter).
    Same form as the original: bullets stay bullets, and every label line of the section (PLOT:, NOTES:, any line
    that ends with a colon) stays, in the same order, with its own shortened bullets under it. Keep every fact from step 1.
@@ -107,7 +107,7 @@ STEPS
    Keep WHOLE, however long, a line that turns the scene: one the section itself calls out ("the line that changed …"),
    or a confession, promise, vow, declaration, refusal or accusation that the rest of the section reacts to.
    Only minor lines may lose their quotation marks and be said in your own words.
-3. LINE: the gist, about half of SHORT (30% of the section): two to four bullets with who did what, what was decided and what changed. No label lines, no mood.
+3. LINE: the gist, about half of SHORT (40% of the section): two to four bullets with who did what, what was decided and what changed. No label lines, no mood.
 4. Same language as the section. Add nothing that is not in the section. No comments.
 
 EXAMPLE
@@ -279,7 +279,7 @@ export async function openLayers(s) {
             <button type="button" class="na_v2_pillbtn na_ly_tr"><i class="fa-solid fa-language"></i><span>한국어로</span></button>
           </div>
           <div class="na_ly_pane" data-t="long"><div class="na_ly_view na_ly_full"></div></div>
-          <div class="na_ly_pane" data-t="short"><div class="na_ly_view"></div><textarea class="text_pole na_ly_short" rows="8" spellcheck="false" hidden placeholder="원문을 1/3쯤으로 줄인 것. 직접 쓰거나 초안 모델로 만들어요."></textarea></div>
+          <div class="na_ly_pane" data-t="short"><div class="na_ly_view"></div><textarea class="text_pole na_ly_short" rows="8" spellcheck="false" hidden placeholder="원문을 80%쯤으로 줄인 것. 직접 쓰거나 초안 모델로 만들어요."></textarea></div>
           <div class="na_ly_pane" data-t="line"><div class="na_ly_view"></div><textarea class="text_pole na_ly_line" rows="5" spellcheck="false" hidden placeholder="- 누가 무엇을 했고, 무엇이 바뀌었는지 (불릿 2~4개)"></textarea></div>
         </div>
           ${draftReady() ? `<div class="na_ly_ask"><input type="text" class="na_ly_askq" placeholder="고쳐 달라고 하기 (예: 소망 대사는 원문 그대로)" aria-label="고쳐 달라고 하기" enterkeyhint="send"><button type="button" class="na_ly_askgo" aria-label="보내기" title="초안 모델에게 보내기">${svgA('M22 2L11 13M22 2l-7 20-4-9-9-4z', 17)}</button></div>` : ''}
