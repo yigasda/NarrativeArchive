@@ -35,7 +35,7 @@ function toRow(m, last) {
     if (!globalSettings().pickRange || m.boundary >= last) return '';
     const from = m.boundary + 1, def = Math.max(from, last - Math.max(0, Number(m.keep) || 0));
     const to = pickedTo(m, from, last) ?? def, n = to - from + 1, left = last - to;
-    return `<div class="na_cp_row na_cp_keep_row na_cp_to"><span class="na_cp_txt"><span>#${from}부터 어디까지</span><small>메시지 ${fmt(n)}개${left ? ` · 뒤 ${fmt(left)}개 남김` : ' · 끝까지'}</small></span><span class="na_cp_tostep"><button type="button" class="na_fd_btn na_cp_to_btn" data-d="-1" aria-label="줄이기">−</button><span class="na_cp_toval">#<input type="number" id="na_cp_to" class="text_pole" min="${from}" max="${last}" value="${to}" aria-label="끝 번호"></span><button type="button" class="na_fd_btn na_cp_to_btn" data-d="1" aria-label="늘리기">+</button></span></div>`;
+    return `<div class="na_cp_row na_cp_keep_row na_cp_to"><span class="na_cp_txt"><span>#${from}부터 어디까지</span><small>메시지 ${fmt(n)}개${left ? ` · 뒤 ${fmt(left)}개 남김` : ' · 끝까지'}</small></span><span class="na_cp_tostep"><button type="button" class="na_fd_btn na_cp_to_btn" data-d="-1" aria-label="줄이기">−</button><span class="na_cp_toval">#<span class="na_cp_tonum">${to}</span><input type="number" id="na_cp_to" class="text_pole" min="${from}" max="${last}" value="${to}" aria-label="끝 번호" inputmode="numeric"></span><button type="button" class="na_fd_btn na_cp_to_btn" data-d="1" aria-label="늘리기">+</button></span></div>`;
 }
 export async function refreshStatus() {
     if (!$('#na_meter').length) return;

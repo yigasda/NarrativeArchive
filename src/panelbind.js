@@ -391,6 +391,7 @@ export function bindPanel() {
         await saveMeta(); refreshStatus();
     };
     $('#na_since').on('change', '#na_cp_to', function () { setTo(parseInt(this.value, 10)); });
+    $('#na_since').on('input', '#na_cp_to', function () { $('#na_since .na_cp_tonum').text(this.value || ' '); });
     $('#na_since').on('click', '.na_cp_to_btn', function () { setTo((parseInt($('#na_cp_to').val(), 10) || 0) + Number(this.dataset.d)); });
     $('#na_scsize').on('change', function () { globalSettings().sceneSize = Number(this.value); saveGlobal(); });
     $('#na_worknote').on('click', needChat(() => openWorkNote()));
