@@ -195,6 +195,7 @@ export function renderPanel() {
                   </details>
                   <label class="na_cp_row" data-m="quick" title="지시문의 규칙은 시스템 메시지에, 원문 · 메모 · 마지막 점검은 요청에"><span class="na_cp_txt"><span>규칙은 시스템 메시지로</span><small>중계 서버가 버리면 끄세요</small></span><input type="checkbox" class="na_toggle" id="na_rules_sys"></label>
                   <label class="na_cp_row"><span class="na_cp_txt"><span>아카이브 따라가기</span><small id="na_track_info">마지막 제목 번호가 곧 경계선</small></span><input type="checkbox" id="na_track" class="na_toggle"></label>
+                  <label class="na_cp_row" title="켜면 위 카드에서 경계선 다음 어디까지 압축할지 정해요 (한 번에 · 작업실 · 마법사) · 경계선이 움직이면 다시 끝까지로"><span class="na_cp_txt"><span>범위 직접 고르기</span><small>위 카드에서 어디까지 압축할지</small></span><input type="checkbox" class="na_toggle" id="na_pick_range"></label>
                   <label class="na_cp_row" id="na_boundary_row" title="여기까지 아카이브에 담겼어요"><span class="na_cp_txt"><span>경계선 번호</span></span><span class="na_cp_hash"><span>#</span><input type="number" id="na_boundary" class="text_pole na_cp_num_in" min="0" placeholder="-"></span></label>
                   <div class="na_cp_row na_cp_keep_row"><span class="na_cp_txt"><span>숨길 때 남길 메시지</span><small>경계선 바로 앞 몇 개는 보이게</small></span><span class="na_fd_step na_cp_step"><button type="button" class="na_fd_btn na_keep_btn" data-d="-1" aria-label="줄이기">−</button><input type="number" id="na_keep" class="text_pole" min="0" max="50"><button type="button" class="na_fd_btn na_keep_btn" data-d="1" aria-label="늘리기">+</button></span></div>
                   </details>

@@ -302,6 +302,7 @@ export function syncPanel() {
     $('#na_boundary').val(m.boundary >= 0 ? m.boundary : '');
     $('#na_track').prop('checked', !!m.track);
     $('#na_rules_sys').prop('checked', !!globalSettings().rulesInSystem);
+    $('#na_pick_range').prop('checked', !!globalSettings().pickRange);
     $('#na_cmode').val(compressMode()); layoutCp();
     $('#na_scsize').val(String(sceneSize()));
     $('#na_style_sub').text(styleLabel(getMeta()));

@@ -382,6 +382,16 @@ export function bindPanel() {
         toastr.success(`${n}군데 바꿨어요`);
     }));
     $('#na_rules_sys').on('change', function () { globalSettings().rulesInSystem = this.checked; saveGlobal(); });
+    $('#na_pick_range').on('change', function () { globalSettings().pickRange = this.checked; saveGlobal(); refreshStatus(); });
+    // the picked end, kept with the boundary it was picked at (a moved boundary drops it)
+    const setTo = async v => {
+        if (!hasChat()) return;
+        const m = getMeta(), last = (ctx().chat?.length || 0) - 1, from = m.boundary + 1;
+        m.cpTo = { b: m.boundary, to: Math.min(last, Math.max(from, Number.isFinite(v) ? v : last)) };
+        await saveMeta(); refreshStatus();
+    };
+    $('#na_since').on('change', '#na_cp_to', function () { setTo(parseInt(this.value, 10)); });
+    $('#na_since').on('click', '.na_cp_to_btn', function () { setTo((parseInt($('#na_cp_to').val(), 10) || 0) + Number(this.dataset.d)); });
     $('#na_scsize').on('change', function () { globalSettings().sceneSize = Number(this.value); saveGlobal(); });
     $('#na_worknote').on('click', needChat(() => openWorkNote()));
     $('#na_stylesample').on('click', needChat(() => openStyleSamples()));
