@@ -9,7 +9,7 @@ import { ctx } from './core.js';
 import { nameKey } from './people.js';
 import { worldText } from './world.js';
 import { rememberStory } from './phoneparse.js';
-import { recentPhoneText, CHAT_TOKENS, noArchive, chatAfterArchive, phoneAt, nowAt, markAfter, loreFor, archiveBlock, archiveFor, afterBlock, blindBlock, namesBlock } from './phonedata.js';
+import { recentPhoneText, CHAT_TOKENS, MORE_TOKENS, noArchive, chatAfterArchive, phoneAt, nowAt, markAfter, loreFor, archiveBlock, archiveFor, afterBlock, blindBlock, namesBlock, ownerClock, toldShort } from './phonedata.js';
 import { isLiveMeta } from './phone2store.js';
 import { liveStoryYear } from './phone2year.js';
 
@@ -26,6 +26,18 @@ export function liveRecentText(m, owner, n, o = {}) {
 export const liveWindowOf = (m, p = null, from = null, budget = CHAT_TOKENS.phone, whole = true) => { const upto = needLive(m).phoneUpto; return { ...(noArchive(m) ? { none: true, n: 0, all: true, upto } : chatAfterArchive(m, budget, upto, from, whole)), later: false, mark: Math.max(upto, phoneAt(p) ?? upto) }; };
 // 앱이 읽은 자리로 적을 표시: 메신저 번호 (없으면 폰 1과 같은 방법)
 export const liveReadMark = g => { if (Number.isInteger(g?.mark)) return { index: g.mark, user: -1, fp: '', tail: '' }; const i = nowAt(g); return i == null ? null : markAfter(i); };
+// 채우기가 쓰는 "폰의 지금": 폰에 저장된 시각 (마지막 반영이 맞춘 것). 롤플 상태창은 안 읽어요
+export const liveSavedNow = p => p?.now || '';
+// 채우기 요청의 OWNER'S CLOCK: 실시간 폰에는 롤플 상태창도, 시각을 읽을 롤플 메시지도 없어요
+export const liveFillClock = (m, p, at, opts = {}) => ownerClock(p, at, m, null, [], opts);
+// 두 번째 차례의 읽는 범위 (시작 전 이야기가 길 때): 폰 1과 같은 계산, 읽는 범위만 실시간 것
+export function liveSecondTurn(m, p, first, whole = true) {
+    if (!first || first.all) return null;
+    const more = liveWindowOf(m, p, first.to, MORE_TOKENS, whole);
+    if (!more?.n) return null;
+    const short = more.all ? null : toldShort(p, more.to, more.upto);
+    return { more, short, cover: short ? { ...more, all: true } : more };
+}
 // 모델에게 알려 주는 연도
 const liveYearBlock = (m, p) => { const y = liveStoryYear(m, p); return y ? `[STORY YEAR]\n${y}` : ''; };
 

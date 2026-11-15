@@ -28,7 +28,7 @@ test('P: 화면이 부르는 이름이 다 있고, 타임라인 쪽은 폰 1 파
 async function loadP() {
     const srcs = await readFile(new URL('phone2api.js', SRC), 'utf8'), enc = t => 'data:text/javascript;base64,' + Buffer.from(t).toString('base64');
     const fakes = {};
-    for (const m of srcs.matchAll(/import \{([^}]*)\} from '(\.\/(?:phonedata|investdata|phoneai|phonelife|phonetr|phone2act|phone2year|phone2note|phone2fill|phone2invest|phone2voice)\.js)'/g))
+    for (const m of srcs.matchAll(/import \{([^}]*)\} from '(\.\/(?:phonedata|investdata|phoneai|phonelife|phonetr|phone2act|phone2year|phone2note|phone2fill|phone2invest|phone2voice|phone2money)\.js)'/g))
         fakes[m[2]] = enc(m[1].split(',').map(x => x.trim()).filter(Boolean).map(n => `export const ${n}=(...a)=>({fn:'${n}',a});`).join(''));
     fakes['./phone2store.js'] = new URL('phone2store.js', SRC).href;
     return (await import(enc(srcs.replace(/from '([^']+)'/g, (all, k) => `from '${fakes[k] || k}'`)))).P;
@@ -90,4 +90,12 @@ test('P의 분기 알아채기: 폰 1의 폰은 폰 1 함수를 받은 인자 �
     const p1 = real.phones.mara, d = L.liveMeta(real), q = d.phones.mara;
     assert.deepEqual(await P.settleBranch(real, p1), { fn: 'settleBranch', a: [real, p1] });
     assert.equal(await P.settleBranch(d, q), null); assert.equal(await P.settleBranch(real, q), null); assert.equal(await P.settleBranch(d, p1), null);
+});
+
+test('P의 결제 다시 읽기: 폰 1은 폰 1 함수 그대로, 실시간 서랍이면 폰 1 함수를 안 부르고 알려 줘요', async () => {
+    const P = await loadP(), L = await import('../src/phone2store.js');
+    const real = { phones: { mara: { owner: 'Mara', now: '10-25 17:42' } }, text: '' };
+    L.startFromStory(real, { persona: 'Ren', upto: 2, scope: 'test', story: { ranges: {}, titles: [], rawFrom: 0, own: [''] } });
+    assert.deepEqual(await P.retryMoney(real, 'Mara'), { fn: 'retryMoney', a: [real, 'Mara'] });
+    await assert.rejects(() => P.retryMoney(L.liveMeta(real), 'Mara'), /실시간 폰은 다음 반영 때 결제를 다시 읽어요/);
 });

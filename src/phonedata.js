@@ -3999,7 +3999,7 @@ JSON (one object, nothing before or after it)
 Numbers are plain JSON numbers, without separators.`;
 
 // 은행 새로 만들기: the same accounts, everything else made again
-const MONEY_REBUILD = `
+export const MONEY_REBUILD = `
 
 REBUILD
 REBUILD ACCOUNTS means the user asked for the money apps to be made again.
@@ -4076,7 +4076,7 @@ export function parseMoney(raw, country = '') {
 // what a money fill's second turn adds: history only, put after the first's (the same payment, pass or order told again is
 // that one). Its payments count as in the balance already (the first's balances are as of the story's now)
 const MORE_CAP = { cards: 6, tx: 40, passes: 14, orders: 16 };
-function moneyMore(m, p, n, tx) {
+export function moneyMore(m, p, n, tx) {
     // the same payment told again a few minutes off (the same account and amount within half an hour), the same order on
     // the same day, is the one there
     const mins = t => (/^\d{2}-\d{2} \d{2}:\d{2}/.test(String(t || '')) ? Number(t.slice(6, 8)) * 60 + Number(t.slice(9, 11)) : NaN);
@@ -4093,7 +4093,7 @@ function moneyMore(m, p, n, tx) {
     }
 }
 // what the phone already holds, so the money side reuses its event tags
-const moneyContext = (p, now = p.now) => JSON.stringify({ now, mails: (p.mails || []).slice(-8).map(x => ev(x, { from: x.from, subject: x.subject, time: x.time })), events: real(p.events).slice(-8).map(x => ev(x, { title: x.title, date: x.date, time: x.time })), searches: real(p.searches).slice(-6).map(x => ev(x, { q: x.q, time: x.time })),
+export const moneyContext = (p, now = p.now) => JSON.stringify({ now, mails: (p.mails || []).slice(-8).map(x => ev(x, { from: x.from, subject: x.subject, time: x.time })), events: real(p.events).slice(-8).map(x => ev(x, { title: x.title, date: x.date, time: x.time })), searches: real(p.searches).slice(-6).map(x => ev(x, { q: x.q, time: x.time })),
     ...(p.delivery?.orders?.length ? { deliveries: p.delivery.orders.filter(o => o.status !== 'cancelled').slice(-12).map(o => ev(o, { shop: o.shop, time: o.time, total: dlvTotal(o) })) } : {}) });
 export const prepareWealth = (m,p,refresh=false) => ensureWealth(m,p,()=>sideRequest(m,p.owner,[`[OWNER COUNTRY]\n${homeCountry(p)}`,`[ACCOUNT CURRENCIES]\n${JSON.stringify((p.money?.bank?.accounts || []).map(a=>a.currency))}`],{profile:p.financeProfile,money:true}),{refresh});
 export const fillMoney = (m, p, opts = {}) => exclusive('fill', () => makeMoney(m, p, opts));
