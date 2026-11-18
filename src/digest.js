@@ -246,8 +246,8 @@ export async function openDigest(group = null, keys = null) {
         if (!sp) return;
         const keep = $it.find('.na_dg_droppick input').toArray().map((x, i) => (x.checked ? i : -1)).filter(i => i >= 0);
         if (keep.length === sp.secs.length) return $it.find('.na_dg_droppick').prop('hidden', true).empty();
-        if (!keep.length) return toastr.info('하나는 남겨야 해요. 다 빼려면 지우기를 눌러 주세요.', '다이제스트');
-        if (keep.some((v, i) => i && v !== keep[i - 1] + 1)) return toastr.info('가운데 섹션은 뺄 수 없어요. 맨 앞이나 맨 뒤부터 빼 주세요.', '다이제스트');
+        if (!keep.length) return toastr.info('하나는 남겨야 해요', '다이제스트');
+        if (keep.some((v, i) => i && v !== keep[i - 1] + 1)) return toastr.info('맨 앞이나 맨 뒤만 뺄 수 있어요', '다이제스트');
         const left = keep.map(i => sp.secs[i]), gone = sp.secs.filter((x, i) => !keep.includes(i));
         const a = rangeOf(left[0].title), b = rangeOf(left[left.length - 1].title);
         d.keys = left.map(sectionKey);
@@ -260,7 +260,7 @@ export async function openDigest(group = null, keys = null) {
         $nit.find('.na_dg_edit').prop('hidden', false).trigger('focus');
         $nit.find('.na_dg_view').text('고친 것 저장');
         const gl = gone.map(x => rangeOf(x.title)).map(r => `#${r.from}–#${r.to}`).join(', ');
-        toastr.info(`범위를 #${a.from}–#${b.to}로 줄였어요. ${gl} 이야기는 글에서 직접 지우고 "고친 것 저장"을 눌러 주세요.`, '다이제스트', { timeOut: 9000 });
+        toastr.info(`${gl} 이야기는 직접 지워 주세요`, '다이제스트');
     });
     $root.on('click', '.na_dg_del', async function () {
         const i = Number($(this).closest('.na_dg_item').data('i'));
