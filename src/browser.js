@@ -124,6 +124,22 @@ export function mountSectionBrowser($host) {
         $root.find('.na_sel_toggle').add($view.find('.na_sel_toggle')).toggleClass('na_sel_active', selecting);
     };
     const setSelecting = on => { selecting = on; selected.clear(); $root.toggleClass('na_selecting', on); render(true); syncSel(); };
+    // holding a card down (about half a second, without moving) starts 고르기 with that card picked
+    let holdTimer = null, holdAt = null, holdSwallow = false;
+    const holdStart = (e, key) => {
+        holdSwallow = false;
+        if (selecting || (e.button ?? 0) > 0 || $(e.target).closest('.na_sw, button, input, a').length) return;
+        holdAt = [e.clientX, e.clientY];
+        clearTimeout(holdTimer);
+        holdTimer = setTimeout(() => {
+            holdTimer = null; holdSwallow = true;
+            navigator.vibrate?.(15);
+            selecting = true; selected.clear(); selected.add(key);
+            $root.addClass('na_selecting'); render(true); syncSel();
+        }, 450);
+    };
+    const holdMove = e => { if (holdTimer && holdAt && Math.hypot(e.clientX - holdAt[0], e.clientY - holdAt[1]) > 10) { clearTimeout(holdTimer); holdTimer = null; } };
+    const holdEnd = () => { clearTimeout(holdTimer); holdTimer = null; };
     // the list's toggle lives in the tab row (moved out of $root), the timeline's in its toolbar
     $root.on('click', '.na_sel_toggle', () => setSelecting(!selecting));
     $view.on('click', '.na_sel_toggle', () => setSelecting(!selecting));
@@ -498,7 +514,12 @@ export function mountSectionBrowser($host) {
                 $card.addClass('na_selcard').toggleClass('na_sel_on', selected.has(key));
                 $card.find('.na_card_head').first().prepend(`<input type="checkbox" class="na_sel_cb" tabindex="-1" ${selected.has(key) ? 'checked' : ''} aria-label="고르기">`);
             }
+            $card.find('.na_card_head').first()
+                .on('pointerdown', e => holdStart(e, key)).on('pointermove', holdMove).on('pointerup pointercancel', holdEnd)
+                .on('contextmenu', e => { if (holdTimer || holdSwallow) e.preventDefault(); });
             $card.find('.na_card_head').on('click', e => {
+                // the click that ends a hold that started 고르기 is not a pick
+                if (holdSwallow) { holdSwallow = false; return; }
                 if (selecting) {
                     if ($(e.target).closest('.na_sw').length) return;
                     selected.has(key) ? selected.delete(key) : selected.add(key);
