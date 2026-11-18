@@ -363,7 +363,6 @@ export function mountSectionBrowser($host) {
             const $g = $(`
               <div class="na_month ${isOpen ? 'na_g_open' : ''} ${off ? 'na_off' : ''} ${parentOff ? 'na_off_parent' : ''}">
                 <div class="na_month_head">
-                  <span class="na_month_chev" aria-hidden="true">${isOpen ? '▾' : '▸'}</span>
                   <div class="na_head_main">
                     <span class="na_month_t">${f.mo ? `${f.mo}월` : '날짜 없음'}${f.place ? ` · ${esc(f.place)}` : ''}</span>
                     <span class="na_group_meta"></span>
