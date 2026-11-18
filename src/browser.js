@@ -394,8 +394,7 @@ export function mountSectionBrowser($host) {
             });
             $g[0].dataset.key = f.id;
             $parent.append($g);
-            const tail = f.keys.some(k => digested.has(k)) ? ' · 다이제스트로 들어감' : '';
-            const g = { level: 1.5, month: true, fid: f.id, lead, tail, title: '', $items: $g.children('.na_month_items'), $el: $g, off: off || parentOff, tok: [] };
+            const g = { level: 1.5, month: true, fid: f.id, lead, title: '', $items: $g.children('.na_month_items'), $el: $g, off: off || parentOff, tok: [] };
             groupStack.push(g);
             allGroups.push(g);
         };
@@ -655,7 +654,7 @@ export function mountSectionBrowser($host) {
             if ((q || filter !== 'all') && !n && !(q && g.$el.find('> .na_group_head mark, > .na_group_note mark').length)) { g.$el.remove(); return; }
             Promise.all(g.tok).then(ns => {
                 const sum = ns.reduce((x, y) => x + (y || 0), 0);
-                if (myId === renderId) $meta.text(`${lead}섹션 ${n}${unit} · ${(tl && sum < 10000) || g.month ? fmt(sum) : shortNum(sum)} 토큰${g.tail || ''}`);
+                if (myId === renderId) $meta.text(`${lead}섹션 ${n}${unit} · ${(tl && sum < 10000) || g.month ? fmt(sum) : shortNum(sum)} 토큰`);
                 // list mode: a thin bar under the group head, its share of all tokens
                 if (!tl) Promise.all(allJobs).then(all => {
                     const total = all.reduce((x, y) => x + (y || 0), 0);
