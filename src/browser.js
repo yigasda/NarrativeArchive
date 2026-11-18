@@ -361,23 +361,19 @@ export function mountSectionBrowser($host) {
             const ra = sections[f.idx[0]].title.match(RANGE_HEAD), rb = sections[f.idx[f.idx.length - 1]].title.match(RANGE_HEAD);
             const lead = ra && rb ? `#${Math.min(+ra[2], +ra[4])}–#${Math.max(+rb[2], +rb[4])} · ` : '';
             const $g = $(`
-              <div class="na_group na_lv2 na_month ${isOpen ? 'na_g_open' : ''} ${off ? 'na_off' : ''} ${parentOff ? 'na_off_parent' : ''}">
-                <div class="na_group_head">
-                  <span class="na_group_chev">${svgA(isOpen ? ICO_A.down : ICO_A.right, 14, 2.4)}</span>
+              <div class="na_month ${isOpen ? 'na_g_open' : ''} ${off ? 'na_off' : ''} ${parentOff ? 'na_off_parent' : ''}">
+                <div class="na_month_head">
+                  <span class="na_group_chev">${svgA(isOpen ? ICO_A.down : ICO_A.right, 13, 2.4)}</span>
                   <div class="na_head_main">
-                    <span class="na_group_title">${f.mo ? `${f.mo}월` : '날짜 없음'}${f.place ? ` · ${esc(f.place)}` : ''}</span>
+                    <span class="na_month_t">${f.mo ? `${f.mo}월` : '날짜 없음'}${f.place ? ` · ${esc(f.place)}` : ''}</span>
                     <span class="na_group_meta"></span>
                   </div>
-                  <div class="na_head_ctrl">
-                    <button type="button" class="na_icon na_icon_sm na_group_digest" title="이 달에서 다이제스트 만들기" aria-label="다이제스트">${svgA(ICO_A.compress, 14)}</button>
-                    ${sw(!off, off ? '이 달 주입 켜기' : '이 달 통째로 주입에서 빼기')}
-                  </div>
+                  ${sw(!off, off ? '이 달 주입 켜기' : '이 달 통째로 주입에서 빼기')}
                 </div>
-                <div class="na_group_bar"><i></i></div>
-                <div class="na_group_items" ${isOpen ? '' : 'hidden'}></div>
+                <div class="na_month_items" ${isOpen ? '' : 'hidden'}></div>
               </div>`);
-            if (selecting) $g.find('> .na_group_head').prepend(`<input type="checkbox" class="na_sel_cb na_sel_gcb" tabindex="-1" aria-label="이 달 모두 고르기" ${f.keys.every(k => selected.has(k)) ? 'checked' : ''}>`);
-            const $h = $g.find('> .na_group_head');
+            if (selecting) $g.find('> .na_month_head').prepend(`<input type="checkbox" class="na_sel_cb na_sel_gcb" tabindex="-1" aria-label="이 달 모두 고르기" ${f.keys.every(k => selected.has(k)) ? 'checked' : ''}>`);
+            const $h = $g.find('> .na_month_head');
             // held down: 고르기 with the whole month picked
             $h.on('pointerdown', e => holdStart(e, f.keys)).on('pointermove', holdMove).on('pointerup pointercancel', holdEnd)
                 .on('contextmenu', e => { if (holdTimer || holdSwallow) e.preventDefault(); });
@@ -397,10 +393,9 @@ export function mountSectionBrowser($host) {
                 f.keys.forEach(k => (off ? set.delete(k) : set.add(k)));
                 mm.muted = [...set]; await saveMeta(); applyInjection(); render(true);
             });
-            $h.find('.na_group_digest').on('click', async e => { e.stopPropagation(); await openDigest(null, f.keys); render(true); });
             $g[0].dataset.key = f.id;
             $parent.append($g);
-            const g = { level: 1.5, month: true, fid: f.id, lead, title: '', $items: $g.children('.na_group_items'), $el: $g, off: off || parentOff, tok: [] };
+            const g = { level: 1.5, month: true, fid: f.id, lead, title: '', $items: $g.children('.na_month_items'), $el: $g, off: off || parentOff, tok: [] };
             groupStack.push(g);
             allGroups.push(g);
         };
@@ -655,8 +650,8 @@ export function mountSectionBrowser($host) {
                 if (sm) lead = `${sm[1]} 기준 · `;
                 else if (rs.length) lead = `#${Math.min(...rs.map(e => +e.dataset.a))} – #${Math.max(...rs.map(e => +e.dataset.b))} · `;
             }
-            const unit = '';
-            const $meta = g.$el.find('> .na_group_head .na_group_meta').text(`${lead}섹션 ${n}${unit}`);
+            const unit = g.month ? '개' : '';
+            const $meta = g.$el.find('> .na_group_head .na_group_meta, > .na_month_head .na_group_meta').text(`${lead}섹션 ${n}${unit}`);
             if ((q || filter !== 'all') && !n && !(q && g.$el.find('> .na_group_head mark, > .na_group_note mark').length)) { g.$el.remove(); return; }
             Promise.all(g.tok).then(ns => {
                 const sum = ns.reduce((x, y) => x + (y || 0), 0);
