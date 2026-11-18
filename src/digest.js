@@ -188,7 +188,8 @@ export async function openDigest(group = null, keys = null) {
     });
     $root.on('click', '.na_mg_pickhead .na_pchip', function () { picked = this.dataset.all === '1' ? new Set(secsNow().map((x, i) => i)) : new Set(); drawList(); });
     $root.find('.na_dg_group').on('change', function () { gi = Number(this.value); picked = new Set(); drawList(); });
-    const saveAndInject = async () => { await saveMeta(); applyInjection(); };
+    // the panel's token numbers come from the injection, so they are drawn again once it is rebuilt
+    const saveAndInject = async () => { await saveMeta(); await applyInjection(); (await import('./status.js')).refreshStatusSoon(); };
     $root.on('change', '.na_dg_on', async function () {
         const d = m.digests[Number($(this).closest('.na_dg_item').data('i'))];
         if (!d) return;
