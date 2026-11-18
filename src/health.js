@@ -23,13 +23,15 @@ export function selfNearMisses(text) {
     return out;
 }
 
+// days and months are capitalised but not names, and some sit one or two letters apart (Thursday / Tuesday, June / July)
+const CALENDAR_WORDS = new Set('Monday Tuesday Wednesday Thursday Friday Saturday Sunday January February March April May June July August September October November December'.split(' '));
 export function selfNearMissesRaw(text) {
     const counts = new Map();
     // names only: a word that also shows up in lower case ("Sending" / "sending") is an ordinary word
     // and it must be capitalised mid-sentence at least once, so a sentence-opening "Seeing" does not count
     const lower = new Set((text.match(/\b[a-z][a-z'’]+\b/g) || []));
     const mid = new Set([...text.matchAll(/[a-z,;]\s+([A-Z][a-z][A-Za-z'’]*)/g)].map(x => x[1].replace(/['’]s$/, '')));
-    capWords(text).filter(w => w.length >= 4 && mid.has(w) && !lower.has(w.toLowerCase())).forEach(w => counts.set(w, (counts.get(w) || 0) + 1));
+    capWords(text).filter(w => w.length >= 4 && mid.has(w) && !lower.has(w.toLowerCase()) && !CALENDAR_WORDS.has(w)).forEach(w => counts.set(w, (counts.get(w) || 0) + 1));
     const words = [...counts.keys()];
     const out = [];
     for (const w of words) {
