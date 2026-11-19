@@ -338,13 +338,12 @@ test('폰을 만든 답장 바로 앞의 내 메시지에서 분기: 폰의 시�
 
 // 실시간 폰(폰 2)의 폰 객체는 표시가 붙어 있어요: 롤플 상태창을 시각 · 장소로 읽지 않아요
 test('폰 1의 지금 · 상태창 함수는 롤플 상태창을 읽어요 (타임라인); 실시간 폰의 것은 창구가 답해요 (tests/phone2api.test.mjs)', () => {
-    const c = setup([say('Ren', L('a0')), say('Mara', L('b1'))]);
+    setup([say('Ren', L('a0')), say('Mara', L('b1'))]);
     T.trackers = [{ date: '11-02', min: 20 * 60, place: 'Eastgate', i: 1 }];
     try {
         const p1 = { owner: 'Ren', now: '10-26 09:00' };
         assert.equal(data.storyNow(p1), '11-02 20:00');
         assert.ok(data.statusAt(p1));
         assert.equal(data.isLivePhone, undefined); assert.equal(data.nowOn, undefined);
-        void c;
     } finally { T.trackers = null; }
 });

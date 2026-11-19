@@ -301,7 +301,7 @@ test('요청이 나가 있는 사이 다른 채팅을 열면 더 묻지 않아�
     } finally { delete T.ask; delete T.metadata; }
 });
 
-test('실시간 폰에서 폰 1의 앱 요청을 불러도 시작 뒤의 롤플 채팅은 안 읽어요. 최근 대화는 메신저 것이에요', async () => {
+test('실시간 폰의 앱 요청은 시작 뒤의 롤플 채팅을 안 읽어요. 최근 대화는 메신저 것이에요', async () => {
     const chat0 = T.chat;
     T.chat = ['옛날 이야기 하나', '옛날 이야기 둘', '시작 직전 이야기', '시작 뒤 롤플 하나', '시작 뒤 롤플 둘'].map((mes, i) => ({ name: i % 2 ? 'Mara' : 'Ren', is_user: !(i % 2), mes, extra: {} }));
     // (what 폰 1's reader gives as the chat's newest messages)

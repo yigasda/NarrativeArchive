@@ -58,7 +58,7 @@ test('음성 메모 채우기: 요청 글 · 결과가 옮기기 전과 같아�
     } finally { done(); }
 });
 
-test('스크린타임 채우기: 요청 글 · 결과가 옮기기 전과 같아요; 오늘은 폰에 저장된 시각의 날', async () => {
+test('스크린타임 채우기: 시작 뒤 롤플은 안 읽고, 결과가 실시간 폰의 건강 기록에 남아요; 오늘은 폰에 저장된 시각의 날', async () => {
     try {
         const answer = JSON.stringify({ usual: { daily: [{ app: 'YouTube', min: 60 }, { app: 'Messages', min: 30 }] }, days: [{ date: '11-10', apps: [{ app: 'YouTube', min: 90 }], pickups: 40 }, { date: '11-11', apps: [{ app: 'Messages', min: 45 }], pickups: 30 }] });
         const r = await same(c => L2.liveFillScreen(c.d, c.p), c => LIFE.fillScreen(c.d, c.p), [answer]);
@@ -66,7 +66,9 @@ test('스크린타임 채우기: 요청 글 · 결과가 옮기기 전과 같아
         assert.ok(r.asked[0][1].includes('시작 직전 이야기') && !r.asked[0][1].includes('시작 뒤 롤플'));
         // (오늘 11-12는 빼고 그 전 주의 날들)
         assert.ok(r.asked[0][1].includes('"date":"11-11"') && r.asked[0][1].includes('"date":"11-09"') && !r.asked[0][1].includes('"date":"11-12"'));
-        await same(c => L2.liveFillScreen(c.d, c.p, { again: true }), c => LIFE.fillScreen(c.d, c.p, { again: true }), [answer]);
+        assert.equal(r.out.value, 2); assert.deepEqual(r.phone.life.health.days.map(d => [d.date, d.screen?.pickups ?? null]), [['11-09', null], ['11-10', 40], ['11-11', 30]]); assert.deepEqual(r.phone.life.health.days[1].screen.apps, { YouTube: 90 });
+        const ag = await same(c => L2.liveFillScreen(c.d, c.p, { again: true }), c => LIFE.fillScreen(c.d, c.p, { again: true }), [answer]);
+        assert.equal(ag.out.value, 2); assert.equal(ag.asked.length, 1); assert.equal(ag.asked[0][0], LIFE.AI_SYS_SCREEN); assert.ok(!ag.asked[0][1].includes('시작 뒤 롤플'));
         // 건강 앱이 없으면 묻지 않고 같은 말로 멈춰요
         const none = await same(c => { delete c.p.life; return L2.liveFillScreen(c.d, c.p); }, c => { delete c.p.life; return LIFE.fillScreen(c.d, c.p); }, [answer]);
         assert.equal(none.out.error, '건강 앱을 먼저 채워 주세요'); assert.equal(none.asked.length, 0);
@@ -115,7 +117,8 @@ test('시계 · 건강 · 파일 · 날씨 채우기: 요청 글 · 결과 · �
         // 답이 비었으면 같은 말로 멈추고 폰은 그대로
         const none = await same(c => L2.liveFillLife(c.d, c.p), c => LIFE.fillLife(c.d, c.p), ['{}']);
         assert.equal(none.out.error, '모델 답에서 시계 · 건강 · 파일 · 날씨 내용(JSON)을 찾지 못했어요');
-        await same(c => L2.liveFillLife(c.d, c.p, { screenAgain: true }), c => LIFE.fillLife(c.d, c.p, { screenAgain: true }), [lifeAnswer, screen]);
+        const sa = await same(c => L2.liveFillLife(c.d, c.p, { screenAgain: true }), c => LIFE.fillLife(c.d, c.p, { screenAgain: true }), [lifeAnswer, screen]);
+        assert.equal(sa.out.error, undefined); assert.equal(sa.asked.at(-1)[0], LIFE.AI_SYS_SCREEN); assert.ok(sa.asked.every(([, input]) => !input.includes('시작 뒤 롤플')));
     } finally { done(); }
 });
 

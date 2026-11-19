@@ -38,16 +38,17 @@ const fin = await import(href('finance.js'));
 // 폰 2의 요청 뼈대 · 은행 채우기도 같은 이웃(아카이브와 상태창이 있는 채팅)으로 불러요. 서랍은 진짜(phone2store.js)
 const live2 = await import(href('phone2store.js'));
 map['./phone2store.js'] = href('phone2store.js');
-for (const f of ['phone2year.js', 'phone2req.js', 'phone2fill.js', 'phone2money.js']) map[`./${f}`] = encoded(await rewrite(f));
-const req2 = await import(map['./phone2req.js']), money2 = await import(map['./phone2money.js']);
+map['./phonelife.js'] = encoded(await rewrite('phonelife.js')); map['./investdata.js'] = encoded(await rewrite('investdata.js'));
+for (const f of ['phone2year.js', 'phone2req.js', 'phone2fill.js', 'phone2money.js', 'phone2life.js', 'phone2invest.js']) map[`./${f}`] = encoded(await rewrite(f));
+const req2 = await import(map['./phone2req.js']), money2 = await import(map['./phone2money.js']), life2 = await import(map['./phone2life.js']), invest2 = await import(map['./phone2invest.js']);
 // 이야기 #7에서 시작한 실시간 폰: 메신저에 두 마디, 반영은 첫 마디까지 읽음
-const liveOf = (p, mm) => {
+const liveOf = (p, mm, upto = 7) => {
     const real = { ...no2(mm), phones: { ren: p } };
-    live2.startFromStory(real, { persona: 'Me', upto: 7, scope: 'test', story: { ranges: {}, titles: [], rawFrom: 0, own: [String(mm.text || '')] } });
+    live2.startFromStory(real, { persona: 'Me', upto, scope: 'test', story: { ranges: {}, titles: [], rawFrom: 0, own: [String(mm.text || '')] } });
     const room = live2.ensureRoom(real, ['Ren']);
     live2.sendLive(real, room.id, 'on the messenger'); live2.sendLive(real, room.id, 'not read yet');
     const d = live2.liveMeta(real, { text: () => String(mm.text || '') }), q = d.phones.ren, first = room.messages[0].n;
-    q.sync = { ...(q.sync || {}), marks: { base: { index: 7 } }, done: [[first, first]] };
+    q.sync = { ...(q.sync || {}), marks: { base: { index: upto } }, done: [[first, first]] };
     return { real, d, p: q, first };
 };
 globalThis.__menu = {};
@@ -379,6 +380,48 @@ test('실시간 폰에서 은행 채우기 (진짜 서랍, 아카이브가 있�
         assert.deepEqual(p.sync.marks.money, { index: first, user: -1, fp: '', tail: '' });
         assert.deepEqual(p.money.tx.map(t => t.who), ['Bakery']);
         assert.equal(JSON.stringify(real.phones), p1);
+    } finally { delete globalThis.__trackers; }
+});
+
+// 실시간에서도 긴 이야기는 두 번에 나눠 읽어요: 두 번째도 폰 2의 창(liveSecondTurn)으로, 시작한 곳까지만
+const afterStart = (n, from) => bigRows(n).map(r => (r.index > from ? { ...r, text: `[#${r.index}] Ren: AFTERSTART ${r.index}\n2026-11-20 20:00, Eastgate` } : r));
+test('실시간 폰에서 생활 · 은행 채우기 (진짜 서랍, 긴 이야기): 두 번에 나눠 읽고, 두 번째도 시작한 곳까지만, 롤플 상태창은 안 읽어요', async () => {
+    // (첫 번째 창은 #4–#17, 두 번째는 #18부터: 시작한 곳 #21에서 멈춰야 해요. 폰 1의 창은 반영한 적 없는 폰이면 #23까지 읽어요)
+    globalThis.__rows = afterStart(46, 21);
+    // (롤플 상태창은 폰에 저장된 시각보다 뒤: 그걸 읽으면 "now"가 달라져요)
+    globalThis.__trackers = [{ i: 45, date: '2026-11-20', min: 20 * 60, place: 'Eastgate', weather: 'rain' }];
+    const base = () => ({ owner: 'Ren', now: '11-12 21:30', country: 'DE', lives: 'DE', sync: { marks: { base: { index: 21 } }, done: [], hiddenRead: {}, events: {} } });
+    const check = (turns, real, p1) => {
+        assert.equal(turns.length, 2);
+        const a = nums(turns[0].input), b = nums(turns[1].input);
+        assert.equal(a[0], 4); assert.ok(b.length && b.length < a.length);
+        assert.deepEqual([...a, ...b], Array.from({ length: a.length + b.length }, (_, i) => i + 4));
+        assert.equal(b.at(-1), 21);
+        for (const t of turns) assert.ok(!t.input.includes('AFTERSTART') && !t.input.includes('Eastgate') && !t.input.includes('11-20'), 'after the start');
+        assert.equal(JSON.stringify(real.phones), p1);
+    };
+    try {
+        for (const fresh of [false, true]) {
+            const { real, d, p } = liveOf(base(), m, 21), p1 = JSON.stringify(real.phones);
+            // (fresh: 반영한 적 없는 폰. 폰 1의 창은 그런 폰이면 채팅 끝까지 읽어요)
+            if (fresh) delete p.sync;
+            globalThis.__menu = { calls: [], answers: [lifeAnswer('A'), lifeAnswer('B')], answer: '{}' };
+            await life2.liveFillLife(d, p);
+            const turns = globalThis.__menu.calls.filter(c => c.sys === life.AI_SYS_LIFE);
+            check(turns, real, p1);
+            assert.ok(turns[0].input.includes('"now":"11-12 21:30"') && turns[1].input.includes('[LIFE SO FAR'));
+            assert.deepEqual(p.life.clock.alarms.map(x => x.label), ['A', 'B']);
+        }
+        for (const fresh of [false, true]) {
+            const { real, d, p } = liveOf(base(), m, 21), p1 = JSON.stringify(real.phones);
+            if (fresh) delete p.sync;
+            globalThis.__menu = { calls: [], answers: [moneyAnswer('Bakery', 500, '11-10 09:00'), moneyAnswer('Kiosk', 900, '11-11 09:00')], answer: '{}' };
+            await money2.liveFillMoney(d, p);
+            const turns = globalThis.__menu.calls.filter(c => c.sys === data.AI_SYS_MONEY || c.sys === data.AI_SYS_MONEY_MORE);
+            check(turns, real, p1);
+            assert.ok(turns[0].input.includes('"now":"11-12 21:30"'));
+            assert.equal(p.money.bank.accounts[0].balance, 500);
+        }
     } finally { delete globalThis.__trackers; }
 });
 
@@ -1817,4 +1860,21 @@ test('타임라인 폰의 사진 · 메모 · 초안 · 녹음 시각과 투자 
     // (investdata.js: the line it had before 폰 2 — never the meta; 폰 2's own date is in phone2invest.js)
     assert.ok((await src('investdata.js')).includes('const day = storyNow(p, stopAt(m, p)).slice(0, 5)'));
     assert.doesNotMatch(await src('investdata.js'), /phoneUpto/);
+});
+
+// 실시간 채우기의 OWNER'S CLOCK에는 롤플 메시지의 시각 후보가 없어요 (폰 1 채우기는 맨 새 메시지의 시각을 후보로 실어요)
+test('실시간 폰의 채우기 (진짜 서랍): 롤플 메시지에 적힌 시각을 시각 후보로 싣지 않아요, 시작 뒤 메시지 것도', async () => {
+    try {
+        for (const [name, run, answer, system] of [['life', (d, p) => life2.liveFillLife(d, p), lifeAnswer('Wake'), life.AI_SYS_LIFE], ['money', (d, p) => money2.liveFillMoney(d, p), moneyAnswer('Ticket', 500, '11-03 03:03'), data.AI_SYS_MONEY]]) {
+            const f = clockFixture('Mara looks at her phone. <span class="time">11월 3일 오후 4시 15분</span>');
+            const { real, d, p } = liveOf(f.p, f.m, 5), p1 = JSON.stringify(real.phones);
+            globalThis.__menu = { calls: [], answer };
+            try { await run(d, p); } catch { /* the inputs are what this checks */ }
+            const call = globalThis.__menu.calls.find(x => x.sys === system);
+            assert.ok(call, name);
+            assert.match(call.input, /\[OWNER'S CLOCK\]\nPhone owner: Ren\n/, name);
+            assert.doesNotMatch(call.input, /Time choices\.|22:59|On Mara's clock/, name);
+            assert.equal(JSON.stringify(real.phones), p1, name);
+        }
+    } finally { delete globalThis.__ctx; }
 });
