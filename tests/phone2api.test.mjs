@@ -74,7 +74,7 @@ test('P의 연도: 타임라인은 폰 1 함수를 받은 인자 그대로, 실�
     assert.equal(P.ensureYear(d, q).fn, 'liveEnsureYear'); assert.equal(P.ensureYear(d, q).a[1], q);
     const set = P.setStoryYear(d, q, 2030); assert.equal(set.fn, 'liveSetStoryYear'); assert.equal(set.a[0], d); assert.equal(set.a[1], q); assert.equal(set.a[2], 2030);
     // 실시간 폰 + 폰 1의 메타: 폰 1 함수를 부르지 않고 멈춰요
-    for (const run of [() => P.storyYear(real, q), () => P.ensureYear(real, q), () => P.setStoryYear(real, q, 2030)]) assert.throws(run, /실시간 폰은 실시간 화면에서만 돼요/);
+    for (const run of [() => P.storyYear(real, q), () => P.ensureYear(real, q), () => P.setStoryYear(real, q, 2030), () => P.investmentDate(real, q)]) assert.throws(run, /실시간 폰은 실시간 화면에서만 돼요/);
 });
 
 test('P의 롤플에 넣기: 폰 1의 글은 폰 1 함수에 메타만 줘서, 그 뒤에 실시간 폰의 글', async () => {
