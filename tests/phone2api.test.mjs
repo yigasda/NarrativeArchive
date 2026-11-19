@@ -77,6 +77,32 @@ test('P의 연도: 타임라인은 폰 1 함수를 받은 인자 그대로, 실�
     for (const run of [() => P.storyYear(real, q), () => P.ensureYear(real, q), () => P.setStoryYear(real, q, 2030), () => P.investmentDate(real, q)]) assert.throws(run, /실시간 폰은 실시간 화면에서만 돼요/);
 });
 
+test('P: 실시간 서랍에 타임라인의 폰을 주면(화면을 바꾸는 틈에 걸린 요청) 폰 2 함수를 부르지 않고 멈춰요', async () => {
+    const P = await loadP(), L = await import('../src/phone2store.js');
+    const real = { phones: { mara: { owner: 'Mara', now: '10-25 17:42', year: 2026 } }, phonePre: { ivo: { owner: 'Ivo', making: true } }, text: '' };
+    L.startFromStory(real, { persona: 'Ren', upto: 2, scope: 'test', story: { ranges: {}, titles: [], rawFrom: 0, own: [''] } });
+    const p1 = real.phones.mara, pre1 = real.phonePre.ivo, d = L.liveMeta(real), q = d.phones.mara, before = JSON.stringify(real.phones);
+    assert.notEqual(q, p1);
+    for (const p of [p1, pre1]) {
+        for (const name of ['fillDevice', 'fillMoney', 'fillVoice', 'fillLife', 'fillDelivery', 'fillScreen', 'refreshNearby', 'rereadPlaces', 'takePhoto', 'writeEntry', 'makeDraft', 'recordVoice', 'prepareWealth', 'collectInvestmentRecords', 'fillInvestment', 'fillChartHistory', 'refreshMarket', 'refreshBankFX'])
+            await assert.rejects(() => P[name](d, p), /타임라인 폰은 타임라인 화면에서만 돼요/, name);
+        for (const name of ['learnVoices', 'pickVoices']) await assert.rejects(() => P[name](d, 'Mara', p), /타임라인 폰은 타임라인 화면에서만 돼요/, name);
+        assert.throws(() => P.setStoryYear(d, p, 2030), /타임라인 폰은 타임라인 화면에서만 돼요/);
+    }
+    assert.equal(JSON.stringify(real.phones), before);
+    // 실시간의 폰, 화면이 만든 빈 초안(어느 쪽 것도 아닌 객체), 폰의 복사본은 전처럼 폰 2 함수로
+    assert.equal((await P.fillDevice(d, q)).fn, 'liveFillDevice');
+    assert.equal((await P.fillDevice(d, { owner: 'Mara', profileDraft: true })).fn, 'liveFillDevice');
+    assert.equal((await P.fillDevice(d, { ...p1 })).fn, 'liveFillDevice');
+    // 실시간에서 만드는 중인 폰(실시간 서랍의 것)도 전처럼
+    d.phonePre = { lio: { owner: 'Lio', making: true } };
+    assert.equal((await P.rereadPlaces(d, d.phonePre.lio)).fn, 'liveRereadPlaces');
+    // 타임라인은 그대로
+    assert.deepEqual(await P.fillDevice(real, p1), { fn: 'fillDevice', a: [real, p1] });
+    // 서랍이 아닌 것에는 답하지 않아요
+    assert.equal(L.isStoryPhone(real, p1), false); assert.equal(L.isStoryPhone(d, null), false); assert.equal(L.isStoryPhone(d, q), false); assert.equal(L.isStoryPhone(d, p1), true);
+});
+
 test('P의 롤플에 넣기: 폰 1의 글은 폰 1 함수에 메타만 줘서, 그 뒤에 실시간 폰의 글', async () => {
     const src = await readFile(new URL('phone2api.js', SRC), 'utf8');
     assert.ok(src.includes('const phoneBlockP = (m, live = null) => phoneBlock(m) + liveNote(live);'));

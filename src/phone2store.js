@@ -151,6 +151,8 @@ export function putLivePhone(m, p) {
 export const LIVE_OWN = { phones: 'phones', finance: 'finance', phoneProfiles: 'profiles', phonePre: 'pre', phoneLore: 'lore', phoneLoreOff: 'loreOff', lastPhoneOwner: 'lastOwner' };
 export const LIVE_SHARED = ['glossary', 'glossaryPeople', 'dateOrder'];
 const IS_LIVE = Symbol('폰 2 서랍');
+// (each drawer's chat meta, for isStoryPhone only: never handed out)
+const CHAT_OF = new WeakMap();
 export const isLiveMeta = v => !!(v && typeof v === 'object' && v[IS_LIVE]);
 // text: what 폰 2 may read of the story, a function asked each time (phone2story.js liveStoryText), else ''
 // the newest messenger talk of the rooms `owner` is in, oldest first, one line a message ("Name: words"), the last `n`
@@ -200,7 +202,7 @@ export function liveMeta(m, { text = null, now = null } = {}) {
     const pass = k => k === 'phoneScreenHolder';
     const at = k => (pass(k) ? m[k] : k === 'phones' ? tagLive(w.phones) : own(k) ? w[LIVE_OWN[k]] : Object.hasOwn(drawer, k) ? drawer[k] : k === 'text' ? story() : k === 'phoneJournal' ? (liveScope(w.scope || 'live', m) || 'live') : k === 'phoneUpto' ? upto() : k === 'phoneNow' ? (typeof now === 'function' ? now : undefined) : k === 'phoneRecent' ? (owner, n, o) => liveRecent(w, owner, n, o) : shared(k) ? copy(k) : undefined);
     const keys = () => [...new Set([...Object.keys(LIVE_OWN).filter(k => w[LIVE_OWN[k]] !== undefined), ...LIVE_SHARED.filter(k => m[k] !== undefined), 'text', ...Object.keys(drawer), ...(Object.hasOwn(m, 'phoneScreenHolder') ? ['phoneScreenHolder'] : [])])];
-    return new Proxy(drawer, {
+    const made = new Proxy(drawer, {
         get: (_, k) => (k === IS_LIVE ? true : typeof k === 'symbol' ? undefined : at(k)),
         set: (_, k, v) => { if (pass(k)) m[k] = v; else if (own(k)) w[LIVE_OWN[k]] = v; else if (shared(k) && !Object.hasOwn(drawer, k)) { copies[k] = v; from[k] = sig(k); } else drawer[k] = v; return true; },
         deleteProperty: (_, k) => { if (pass(k)) delete m[k]; else if (own(k)) w[LIVE_OWN[k]] = undefined; else { delete drawer[k]; if (shared(k)) { copies[k] = undefined; from[k] = sig(k); } } return true; },
@@ -209,6 +211,15 @@ export function liveMeta(m, { text = null, now = null } = {}) {
         getOwnPropertyDescriptor: (_, k) => (keys().includes(k) ? { value: at(k), writable: true, enumerable: true, configurable: true } : undefined),
         defineProperty: (_, k, d) => { if ('value' in d) { if (pass(k)) m[k] = d.value; else if (own(k)) w[LIVE_OWN[k]] = d.value; else drawer[k] = d.value; } return true; },
     });
+    CHAT_OF.set(made, m);
+    return made;
+}
+// is `p` one of the chat's own (폰 1's) phones or phones being made, by the drawer of that chat? (the very object: a 폰 2
+// function given one would write 폰 2's story onto 폰 1's phone)
+export function isStoryPhone(drawer, p) {
+    const m = CHAT_OF.get(drawer);
+    if (!m || !p || typeof p !== 'object') return false;
+    return [m.phones, m.phonePre].some(list => list && typeof list === 'object' && Object.values(list).includes(p));
 }
 
 // 실시간 폰의 지금: 서랍의 흐르는 시계(phoneNow), 못 읽거나 서랍이 아니면 폰에 저장된 시각

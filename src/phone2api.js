@@ -14,7 +14,7 @@ import {
 import { collectInvestmentRecords, fillInvestment, fillChartHistory, refreshMarket, refreshBankFX, investmentDate } from './investdata.js';
 import { fillDelivery, fillLife, fillScreen, refreshNearby } from './phonelife.js';
 import { learnVoices, pickVoices } from './phonetr.js';
-import { isLiveMeta, liveNowText } from './phone2store.js';
+import { isLiveMeta, isStoryPhone, liveNowText } from './phone2store.js';
 import { liveTakePhoto, liveWriteEntry, liveMakeDraft, liveRecordVoice } from './phone2act.js';
 import { liveStoryYear, liveEnsureYear, liveSetStoryYear } from './phone2year.js';
 import { liveNote } from './phone2note.js';
@@ -31,7 +31,8 @@ const LIVE_PHONE = Symbol.for('narrative-archive.live');
 // 갈림 하나: 첫 인자가 실시간 서랍이면 폰 2 함수, 아니면 폰 1 함수를 같은 인자로 그대로
 // (at: 폰이 몇째 인자인지. 대개 둘째(1), 말투 읽기는 (m, owner, p)라 셋째(2))
 const split = (one, two, at = 1) => async (...a) => {
-    if (isLiveMeta(a[0])) return two(...a);
+    // (서랍인데 폰이 타임라인의 폰이면 — 화면을 바꾸는 틈에 걸린 요청 — 폰 2 함수가 폰 1의 폰에 쓰게 돼요: 멈춰요)
+    if (isLiveMeta(a[0])) { if (isStoryPhone(a[0], a[at])) throw new Error('타임라인 폰은 타임라인 화면에서만 돼요'); return two(...a); }
     if (a[at]?.[LIVE_PHONE]) throw new Error('실시간 폰은 실시간 화면에서만 돼요');
     return one(...a);
 };
@@ -47,7 +48,7 @@ const statusAtP = (...a) => (liveP(a[0], a[2]) ? null : statusAt(...a));
 const guard = (m, p) => { if (!isLiveMeta(m) && p?.[LIVE_PHONE]) throw new Error('실시간 폰은 실시간 화면에서만 돼요'); };
 const storyYearP = (...a) => (isLiveMeta(a[0]) ? liveStoryYear(a[0], a[1]) : (guard(a[0], a[1]), storyYear(...a)));
 const ensureYearP = (...a) => (isLiveMeta(a[0]) ? liveEnsureYear(a[0], a[1]) : (guard(a[0], a[1]), ensureYear(...a)));
-const setStoryYearP = (...a) => (isLiveMeta(a[0]) ? liveSetStoryYear(...a) : (guard(a[0], a[1]), setStoryYear(...a)));
+const setStoryYearP = (...a) => { if (isLiveMeta(a[0]) && isStoryPhone(a[0], a[1])) throw new Error('타임라인 폰은 타임라인 화면에서만 돼요'); return isLiveMeta(a[0]) ? liveSetStoryYear(...a) : (guard(a[0], a[1]), setStoryYear(...a)); };
 // 롤플에 넣기 (m: 채팅의 메타, live: 실시간 폰들): 폰 1의 글은 폰 1 함수 그대로, 그 뒤에 실시간 폰의 글
 const phoneBlockP = (m, live = null) => phoneBlock(m) + liveNote(live);
 // 분기 알아채기는 폰 1의 폰만 해요: 실시간 서랍 · 실시간 폰이면 폰 1 함수를 안 부르고 아무것도 안 해요(null)
