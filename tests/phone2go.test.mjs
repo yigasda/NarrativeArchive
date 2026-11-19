@@ -588,6 +588,22 @@ test('실시간 화면을 열 때 연도 맞추기(liveYearsNow): 새해를 넘�
     assert.throws(() => Y.liveYearsNow(c.real), /실시간 폰의 서랍이 아니에요/);
 });
 
+test('화면에 보이는 연도(liveShownYear): 흐르는 시계의 연도 + 고른 차이; 끈 폰 · 시계 없는 서랍 · 막 가져온 폰은 폰에 있는 것', () => {
+    const c = world(), d = clockIn2027(c), p = d.phones.mara;
+    p.year = 2026; delete p.liveYearShift;
+    assert.equal(Y.liveShownYear(d, p), 2027);
+    p.liveYearShift = 3; assert.equal(Y.liveShownYear(d, p), 2030);
+    assert.equal(Y.liveShownYear(d, { ...p, noYear: true }), 2026);
+    assert.equal(Y.liveShownYear(d, { ...p, liveYearKeep: true }), 2026);
+    assert.equal(Y.liveShownYear(L.liveMeta(c.real), p), 2026);
+    assert.equal(Y.liveShownYear(d, null), undefined);
+    // 읽기만 해요
+    assert.deepEqual([p.year, p.liveYearShift], [2026, 3]);
+    // 화면을 열 때 맞춘 뒤에는 폰의 연도와 같아요 (지금 화면이 p.year를 읽는 것과 같은 값)
+    Y.liveYearsNow(d);
+    for (const q of Object.values(d.phones)) assert.equal(Y.liveShownYear(d, q), q.year);
+});
+
 test('이야기에서 가져온 폰의 연도는 지켜요: 시계의 연도와 다른 폰은 그만큼 떨어진 채로 (화면을 열 때 · 새해 · 연도 고르기)', () => {
     const at = { ms: Date.parse('2026-11-12T08:15:00Z') };
     const start = () => {

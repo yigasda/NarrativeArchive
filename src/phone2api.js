@@ -16,7 +16,7 @@ import { fillDelivery, fillLife, fillScreen, refreshNearby } from './phonelife.j
 import { learnVoices, pickVoices } from './phonetr.js';
 import { isLiveMeta, isStoryPhone, liveNowText } from './phone2store.js';
 import { liveTakePhoto, liveWriteEntry, liveMakeDraft, liveRecordVoice } from './phone2act.js';
-import { liveStoryYear, liveEnsureYear, liveSetStoryYear } from './phone2year.js';
+import { liveStoryYear, liveEnsureYear, liveSetStoryYear, liveShownYear } from './phone2year.js';
 import { liveNote } from './phone2note.js';
 import { liveFillDevice, livePrepareWealth, liveFillVoice } from './phone2fill.js';
 import { liveFillScreen, liveRefreshNearby, liveFillLife, liveFillDelivery } from './phone2life.js';
@@ -46,6 +46,8 @@ const storyNowP = (...a) => (liveP(a[0], a[2]) ? liveNowText(a[2], a[0]) : story
 const statusAtP = (...a) => (liveP(a[0], a[2]) ? null : statusAt(...a));
 // 연도 (인자: 서랍 m, 폰 p, …): 실시간 서랍이면 폰 2의 것. 화면이 폰을 복사해서 넘기기도 해서({ ...p, year: 0 }) 서랍으로 갈라요
 const guard = (m, p) => { if (!isLiveMeta(m) && p?.[LIVE_PHONE]) throw new Error('실시간 폰은 실시간 화면에서만 돼요'); };
+// 화면에 보이는 연도 (p.year를 화면이 직접 읽던 자리): 타임라인은 폰의 연도 그대로, 실시간 서랍이면 흐르는 시계의 연도
+const yearOn = (p, m = null) => (isLiveMeta(m) ? liveShownYear(m, p) : p?.year);
 const storyYearP = (...a) => (isLiveMeta(a[0]) ? liveStoryYear(a[0], a[1]) : (guard(a[0], a[1]), storyYear(...a)));
 const ensureYearP = (...a) => (isLiveMeta(a[0]) ? liveEnsureYear(a[0], a[1]) : (guard(a[0], a[1]), ensureYear(...a)));
 const setStoryYearP = (...a) => { if (isLiveMeta(a[0]) && isStoryPhone(a[0], a[1])) throw new Error('타임라인 폰은 타임라인 화면에서만 돼요'); return isLiveMeta(a[0]) ? liveSetStoryYear(...a) : (guard(a[0], a[1]), setStoryYear(...a)); };
@@ -77,7 +79,7 @@ export const P = Object.freeze({
     fillChartHistory: split(fillChartHistory, liveFillChartHistory), refreshMarket: split(refreshMarket, liveRefreshMarket), refreshBankFX: split(refreshBankFX, liveRefreshBankFX),
     investmentDate: investmentDateP,
     // 지금 · 연도 · 상태창
-    storyNow: storyNowP, nowOn, statusAt: statusAtP, storyYear: storyYearP, setStoryYear: setStoryYearP, ensureYear: ensureYearP,
+    storyNow: storyNowP, nowOn, yearOn, statusAt: statusAtP, storyYear: storyYearP, setStoryYear: setStoryYearP, ensureYear: ensureYearP,
     // 분기 · 롤플에 넣기
     settleBranch: settleBranchP, phoneBlock: phoneBlockP,
 });

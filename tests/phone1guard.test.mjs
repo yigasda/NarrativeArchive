@@ -58,7 +58,7 @@ test('화면 파일은 창구의 이름을 폰 1 파일에서 직접 가져오�
         if (!code.includes("'./phone2api.js'")) continue;
         users++;
         const direct = [...code.matchAll(/import\s*\{([^}]*)\}\s*from\s*'\.\/(?:phonedata|investdata|phoneai|phonelife|phonetr)\.js'/g)].flatMap(m => m[1].split(',').map(x => x.trim().split(/\s+as\s+/)[0]));
-        for (const n of names.filter(n => n !== 'nowOn')) assert.ok(!direct.includes(n), `${f}: ${n}을 폰 1 파일에서 직접 가져와요. P.${n}으로 불러요.`);
+        for (const n of names.filter(n => n !== 'nowOn' && n !== 'yearOn')) assert.ok(!direct.includes(n), `${f}: ${n}을 폰 1 파일에서 직접 가져와요. P.${n}으로 불러요.`);
     }
     assert.ok(users >= 5, String(users));
 });

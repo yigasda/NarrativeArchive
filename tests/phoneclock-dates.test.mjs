@@ -12,7 +12,7 @@ const stubs = {
     AX: '{}', filling: 'new Set()', storyNow: 'p=>p.now', decimalOf: '()=>"."', localeOf: '()=>"en-US"',
     pad: 'x=>String(x).padStart(2,"0")', esc: 'x=>String(x)', clockOf: '(p,x)=>String(x)',
     // (phone2api.js의 P: storyNow · nowOn은 위와 같은 가짜, 나머지는 다른 가짜처럼 빈 함수)
-    P: 'new Proxy({ storyNow: p=>p.now, nowOn: p=>p.now }, { get: (t, k) => t[k] || (()=>"") })',
+    P: 'new Proxy({ storyNow: p=>p.now, nowOn: p=>p.now, yearOn: p=>p?.year }, { get: (t, k) => t[k] || (()=>"") })',
 };
 const loaded = source.replace(/import \{([^}]+)\} from '([^']+)';/g, (_, names, path) => {
     if (path === './phonesynclife.js') return `import {${names}} from '${actualSync}';`;

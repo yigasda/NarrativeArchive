@@ -19,7 +19,7 @@ const wealthURL=encoded(wealthSource.replace("'./ai.js'",JSON.stringify(ai)).rep
 const dataMod=await load('investdata.js',{'./wealth.js':wealthURL,'./ai.js':ai,'./core.js':core,'./phonedata.js':data,'./finance.js':financeURL});
 const dataURL=encoded(`export const investmentDate=(m,p)=>p.investment?.date||'2026-10-30';`);
 // (화면은 32개 이름을 phone2api.js의 P로 불러요: 위의 가짜들로 만든 P)
-const api=encoded(`import * as D from ${JSON.stringify(dataURL)}; import * as PD from ${JSON.stringify(data)}; export const P={investmentDate:D.investmentDate,storyNow:PD.storyNow,nowOn:p=>PD.storyNow(p)};`);
+const api=encoded(`import * as D from ${JSON.stringify(dataURL)}; import * as PD from ${JSON.stringify(data)}; export const P={investmentDate:D.investmentDate,storyNow:PD.storyNow,nowOn:p=>PD.storyNow(p),yearOn:p=>p?.year};`);
 const fmtIn=encoded(`export const fmtIn=(p,n,c,signed)=>(signed&&n>0?'+':'')+new Intl.NumberFormat('ko-KR',{maximumFractionDigits:2}).format(n)+' '+(c||'');export const localeOf=()=>'en-US';export const decimalOf=()=>'.';`);
 const ui=await load('investui.js',{'./phoneapps.js':apps,'./util.js':util,'./finance.js':financeURL,'./investdata.js':dataURL,'./phonemoney.js':fmtIn,'./phonedata.js':data,'./phone2api.js':api});
 const moneyUI=await load('phonemoney.js',{'./phoneprod.js':new URL('../src/phoneprod.js',import.meta.url).href,'./phonepassart.js':new URL('../src/phonepassart.js',import.meta.url).href,'./core.js':core,'./finance.js':financeURL,'./investdata.js':dataURL,'./people.js':encoded(`export const nameKey=s=>s;`),'./phoneai.js':encoded(`export const filling=new Set(),recording=new Set();`),'./phoneapps.js':apps,'./phonedata.js':data,'./util.js':util,'./phone2api.js':api});

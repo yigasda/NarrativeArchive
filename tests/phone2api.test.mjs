@@ -6,7 +6,7 @@ import { readFile } from 'node:fs/promises';
 const SRC = new URL('../src/', import.meta.url);
 const NAMES = ['preparePhone', 'makePhone', 'rereadPlaces', 'fillMoney', 'retryMoney', 'fillVoice', 'fillDevice', 'fillLife', 'fillDelivery', 'fillScreen', 'refreshNearby',
     'learnVoices', 'pickVoices', 'takePhoto', 'writeEntry', 'makeDraft', 'recordVoice', 'prepareWealth', 'collectInvestmentRecords', 'fillInvestment', 'fillChartHistory',
-    'refreshMarket', 'refreshBankFX', 'investmentDate', 'storyNow', 'nowOn', 'statusAt', 'storyYear', 'setStoryYear', 'ensureYear', 'settleBranch', 'phoneBlock'];
+    'refreshMarket', 'refreshBankFX', 'investmentDate', 'storyNow', 'nowOn', 'yearOn', 'statusAt', 'storyYear', 'setStoryYear', 'ensureYear', 'settleBranch', 'phoneBlock'];
 
 test('P: 화면이 부르는 이름이 다 있고, 타임라인 쪽은 폰 1 파일에서 가져온 그 함수예요', async () => {
     const src = await readFile(new URL('phone2api.js', SRC), 'utf8');
@@ -18,8 +18,9 @@ test('P: 화면이 부르는 이름이 다 있고, 타임라인 쪽은 폰 1 파
     const listed = new Set(entries.map(e => e.split(':')[0].trim()));
     assert.deepEqual([...listed].sort(), [...NAMES].sort());
     for (const e of entries.filter(e => e.includes(':'))) assert.match(e, /^(\w+): (=\1|\1P)$/, e);
-    for (const n of NAMES.filter(n => n !== 'nowOn')) assert.ok(imported.has(n), n);
-    assert.ok(!imported.has('nowOn'));
+    // (nowOn · yearOn은 창구의 것: 폰 1 파일에 그런 함수는 없어요)
+    for (const n of NAMES.filter(n => n !== 'nowOn' && n !== 'yearOn')) assert.ok(imported.has(n), n);
+    assert.ok(!imported.has('nowOn') && !imported.has('yearOn'));
     // 창구는 폰 1 파일을 읽기만 해요: 폰 1 파일이 창구를 부르면 안 돼요
     for (const f of ['phonedata.js', 'investdata.js', 'phoneai.js', 'phonelife.js', 'phonetr.js', 'phonesync.js']) assert.ok(!(await readFile(new URL(f, SRC), 'utf8')).includes('phone2api'), f);
 });
@@ -73,6 +74,10 @@ test('P의 연도: 타임라인은 폰 1 함수를 받은 인자 그대로, 실�
     assert.equal(P.storyYear(d, copy).fn, 'liveStoryYear'); assert.equal(P.storyYear(d, copy).a[1], copy);
     assert.equal(P.ensureYear(d, q).fn, 'liveEnsureYear'); assert.equal(P.ensureYear(d, q).a[1], q);
     const set = P.setStoryYear(d, q, 2030); assert.equal(set.fn, 'liveSetStoryYear'); assert.equal(set.a[0], d); assert.equal(set.a[1], q); assert.equal(set.a[2], 2030);
+    // 화면에 보이는 연도: 타임라인은 폰의 연도 그대로(없으면 없는 대로), 실시간 서랍이면 폰 2의 것
+    assert.equal(P.yearOn(p1, real), 2026); assert.equal(P.yearOn(p1), 2026); assert.equal(P.yearOn({ owner: 'X' }, real), undefined); assert.equal(P.yearOn(null, real), undefined);
+    assert.equal(P.yearOn(q), q.year);
+    assert.deepEqual(P.yearOn(q, d), { fn: 'liveShownYear', a: [d, q] });
     // 실시간 폰 + 폰 1의 메타: 폰 1 함수를 부르지 않고 멈춰요
     for (const run of [() => P.storyYear(real, q), () => P.ensureYear(real, q), () => P.setStoryYear(real, q, 2030), () => P.investmentDate(real, q)]) assert.throws(run, /실시간 폰은 실시간 화면에서만 돼요/);
 });

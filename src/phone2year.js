@@ -59,6 +59,13 @@ export function liveSetStoryYear(m, p, year) {
     p.year = year; p.noYear = false; p.yearSet = true; delete p.yearShift;
     return n;
 }
+// 화면에 보이는 연도 (달력 · 날짜 표시가 흐르는 시계의 날짜 옆에 쓰는 연도): 흐르는 시계의 연도 + 고른 차이.
+// 연도 표시를 끈 폰, 시계를 모르는 서랍, 이야기에서 막 가져와 아직 차이를 안 적은 폰은 폰에 있는 것 그대로
+export function liveShownYear(m, p) {
+    if (!p || typeof p !== 'object' || p.noYear || p.liveYearKeep) return p?.year;
+    const base = liveNowYear(m, p);
+    return base ? base + (Number(p.liveYearShift) || 0) : p.year;
+}
 // 실시간 폰들의 연도를 지금의 실시간 시계에 맞춰요 (실시간 화면을 열 때): 새해를 넘겼거나 연도가 아직 없는 폰.
 // 반영이 하는 것과 같은 계산이에요(시계의 연도 + 고른 차이). 연도 표시를 끈 폰, 시계를 모르는 서랍은 그대로. 바꿨으면 true
 export function liveYearsNow(m) {
