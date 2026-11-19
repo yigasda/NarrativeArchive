@@ -52,6 +52,11 @@ export const Y = await load2('phone2year.js');
 // 요청 뼈대 (phone2req.js), 앱 채우기 (phone2fill.js), 롤플에 넣기 (phone2note.js)
 export const Q = await load2('phone2req.js');
 export const F = await load2('phone2fill.js');
+// 생활 쪽 채우기 (phone2life.js; 폰 1의 phonelife.js도 같은 이웃으로)
+map['./anniv.js'] = encoded(`export const datedRows=()=>[];`);
+map['./phonefood.js'] = href('phonefood.js'); map['./phonescreen.js'] = href('phonescreen.js');
+export const LIFE = await load2('phonelife.js');
+export const L2 = await load2('phone2life.js');
 // 은행 채우기 (phone2money.js)
 export const M2 = await load2('phone2money.js');
 export const N = await load2('phone2note.js');
@@ -69,7 +74,6 @@ map['./phonetr.js'] = encoded((await readFile(new URL('../src/phonetr.js', impor
 export const TR = await import(map['./phonetr.js']);
 export const V = await load2('phone2voice.js');
 // 사진 · 메모 · 초안 · 녹음: 폰 1 것(phoneai.js)과 폰 2 것(phone2act.js)
-map['./anniv.js'] = encoded(`export const datedRows=()=>[];`);
 const mapAI = { ...map, './people.js': encoded(`export const nameKey=s=>String(s).toLowerCase();export const nameRe=s=>new RegExp(s,'i');export const headingPlaces=()=>[];export const peopleList=()=>[];`) };
 map['./phoneai.js'] = encoded((await readFile(new URL('../src/phoneai.js', import.meta.url), 'utf8')).replace(/from '([^']+)'/g, (all, k) => `from '${mapAI[k] || k}'`));
 export const AI = await import(map['./phoneai.js']);

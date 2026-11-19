@@ -238,7 +238,7 @@ const dish = x => {
 };
 // tx: the bank's rows the model may point at ("paidBy": this order's payment is already there)
 // a shop's dishes as the model writes them, each with its picture
-const menuOf = (xs, n) => arr(xs).map(x => { const m = { name: line(x?.name, 60), ko: ko(x?.ko), desc: line(x?.desc, 100), price: num(x?.price) ?? 0, top: yes(x?.top) }, pic = dishPic(x?.pic, m, true); return pic ? { ...m, pic } : m; }).filter(x => x.name).slice(0, n);
+export const menuOf = (xs, n) => arr(xs).map(x => { const m = { name: line(x?.name, 60), ko: ko(x?.ko), desc: line(x?.desc, 100), price: num(x?.price) ?? 0, top: yes(x?.top) }, pic = dishPic(x?.pic, m, true); return pic ? { ...m, pic } : m; }).filter(x => x.name).slice(0, n);
 export function parseDelivery(raw, accounts = [], tx = [], now = '') {
     if (!raw || typeof raw !== 'object' || Object.keys(raw).length && !Array.isArray(raw.shops) && !Array.isArray(raw.orders)) throw new Error('모델 답에서 배달 내용(JSON)을 찾지 못했어요');
     // a bank row it points at: that row is the payment, and its account is the order's
@@ -320,9 +320,9 @@ export async function fillShopMenus(m, p) {
 // reflection still asks at most every third one), 1 or 2 shops open and 1 or 2 of the
 // ones nearby go; the owner moving to another of their saved cities makes it that city's shops. One short request of its
 // own, the shops alone with their menus (no story)
-const NEARBY_DAYS = 3, NEARBY_ROUNDS = 3, NEARBY_MAX = 8;
+export const NEARBY_DAYS = 3, NEARBY_ROUNDS = 3, NEARBY_MAX = 8;
 // the saved city the owner is in now (the weather's place read against the saved cities), or ''
-const homeCity = p => cityAt(p.life?.weather?.here?.place || '', p.life?.weather?.cities || [])?.name || '';
+export const homeCity = p => cityAt(p.life?.weather?.here?.place || '', p.life?.weather?.cities || [])?.name || '';
 export const AI_SYS_NEARBY = `GOAL
 Keep the shops near one character up to date on the food delivery app of their phone in a long role-play, as the days go by.
 
@@ -535,8 +535,8 @@ Numbers are plain JSON numbers.`;
 // apps only Korea has (카카오톡, 네이버, 쿠팡, 배민, 토스 …) on a phone whose owner lives elsewhere: taken out by the code
 // whatever the model wrote (a Korean role-play calls any message "카톡"); their minutes go to an app of the same kind
 const abroad = p => String(livesIn(p) || '').toUpperCase() !== 'KR' && !!livesIn(p);
-const homeApps = (p, usual) => homeUsual(abroad(p), usual);
-const homeDay = (p, sc, usual) => homeScreen(abroad(p), sc, usual);
+export const homeApps = (p, usual) => homeUsual(abroad(p), usual);
+export const homeDay = (p, sc, usual) => homeScreen(abroad(p), sc, usual);
 export const fillScreen = (m, p, { again = false } = {}) => exclusive('fill', async () => {
     const h = p.life?.health;
     if (!h) throw new Error('건강 앱을 먼저 채워 주세요');

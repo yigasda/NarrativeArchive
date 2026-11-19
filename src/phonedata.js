@@ -665,7 +665,7 @@ const twinOf = (k, list, a) => {
     const key = JSON.stringify(NEAR[k](a)).toLowerCase(), t = nearMin(a.time);
     return t === null ? null : list.find(x => JSON.stringify(NEAR[k](x)).toLowerCase() === key && (k !== 'visits' || sameCityText(x.city, a.city)) && nearMin(x.time) !== null && Math.abs(nearMin(x.time) - t) <= NEAR_MIN[k]) || null;
 };
-const fresh = (k, old, add) => { const out = []; for (const x of add) if (!twinOf(k, old, x) && !twinOf(k, out, x)) { delete x.already; out.push(x); } return out; };
+export const fresh = (k, old, add) => { const out = []; for (const x of add) if (!twinOf(k, old, x) && !twinOf(k, out, x)) { delete x.already; out.push(x); } return out; };
 // an update's new items go after the old ones; every list keeps its newest, the threads the ones written in last
 // every record gets the app's own id (not the model's): links between apps point at it, and it survives trimming and 다시 만들기.
 // Phones saved before ids get theirs when next opened or made
