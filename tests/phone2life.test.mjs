@@ -1,4 +1,4 @@
-// 폰 2의 음성 메모 채우기 (phone2fill.js), 스크린타임 · 동네 가게 새로고침 (phone2life.js). 서랍은 진짜, 모델만 가짜예요.
+// 폰 2의 음성 메모 채우기 (phone2fill.js), 생활 · 배달 · 스크린타임 · 동네 가게 새로고침 (phone2life.js). 서랍은 진짜, 모델만 가짜예요.
 // 옮기기 전의 실시간 갈림이 아직 phonedata.js에 있는 동안은, 똑같이 만든 두 실시간 폰에서 폰 2 것과 옮기기 전 것을
 // 돌려 요청 글 · 결과 · 폰이 같은지 봐요.
 import test from 'node:test';
@@ -91,12 +91,56 @@ test('동네 가게 새로고침: 요청 글 · 결과가 옮기기 전과 같�
     } finally { done(); }
 });
 
+test('시계 · 건강 · 파일 · 날씨 채우기: 요청 글 · 결과 · 읽은 자리가 옮기기 전과 같아요; 롤플 상태창의 날씨는 안 실어요', async () => {
+    try {
+        const lifeAnswer = JSON.stringify({ clock: { alarms: [{ time: '07:00', label: 'A', days: ['mon'], on: true }] }, health: { usual: { height: 170, weight: 60 }, days: [{ date: '11-11', sleep: '23:30', wake: '07:10', steps: 6400 }] }, files: { items: [{ name: '여권 사본.pdf', kind: 'pdf', time: '11-10 09:00' }, { name: '내일 것.pdf', kind: 'pdf', time: '11-13 09:00' }] }, weather: null });
+        const screen = JSON.stringify({ usual: { apps: [{ app: 'YouTube', kind: 'video', min: 60 }] }, days: [] });
+        const r = await same(c => L2.liveFillLife(c.d, c.p), c => LIFE.fillLife(c.d, c.p), [lifeAnswer, screen]);
+        assert.equal(r.out.error, undefined);
+        const asked = r.asked.filter(([sys]) => sys === LIFE.AI_SYS_LIFE);
+        assert.equal(asked.length, 1);
+        const input = asked[0][1];
+        assert.ok(input.includes('시작 직전 이야기') && !input.includes('시작 뒤 롤플') && !input.includes('[WEATHER NOW]'));
+        // 폰의 지금은 폰에 저장된 시각; 그 뒤의 파일은 안 들어가요
+        assert.ok(input.includes('"now":"11-12 21:30"'));
+        assert.equal(r.phone.life.at, '11-12 21:30');
+        assert.deepEqual(r.phone.life.files.items.map(x => x.name), ['여권 사본.pdf']);
+        assert.equal(r.phone.life.clock.alarms[0].label, 'A');
+        // 읽은 자리: 반영한 적 없는 폰은 시작한 곳 (메신저 번호 자리)
+        assert.deepEqual(r.phone.sync.marks.life, { index: 2, user: -1, fp: '', tail: '' });
+        // 스크린타임이 바로 뒤따라요 (같은 실시간 뼈대로)
+        assert.equal(r.asked.at(-1)[0], LIFE.AI_SYS_SCREEN);
+        // 답이 비었으면 같은 말로 멈추고 폰은 그대로
+        const none = await same(c => L2.liveFillLife(c.d, c.p), c => LIFE.fillLife(c.d, c.p), ['{}']);
+        assert.equal(none.out.error, '모델 답에서 시계 · 건강 · 파일 · 날씨 내용(JSON)을 찾지 못했어요');
+        await same(c => L2.liveFillLife(c.d, c.p, { screenAgain: true }), c => LIFE.fillLife(c.d, c.p, { screenAgain: true }), [lifeAnswer, screen]);
+    } finally { done(); }
+});
+
+test('배달 채우기: 요청 글 · 결과 · 읽은 자리가 옮기기 전과 같아요', async () => {
+    try {
+        const dlv = JSON.stringify({ shops: [{ name: 'Uno', cuisine: 'pizza', menu: [{ name: 'Margherita', price: 9 }] }], orders: [{ shop: 'Uno', items: [{ name: 'Margherita', price: 9 }], time: '11-11 19:00', status: 'delivered' }, { shop: 'Uno', items: [{ name: 'Margherita', price: 9 }], time: '11-13 19:00', status: 'delivered' }], cart: null });
+        // (은행이 없는 폰: 주문 값은 은행에 안 적어요)
+        const r = await same(c => { delete c.p.money; return L2.liveFillDelivery(c.d, c.p); }, c => { delete c.p.money; return LIFE.fillDelivery(c.d, c.p); }, [dlv]);
+        assert.equal(r.out.error, undefined);
+        const asked = r.asked.filter(([sys]) => sys === LIFE.AI_SYS_DELIVERY);
+        assert.equal(asked.length, 1);
+        assert.ok(asked[0][1].includes('시작 직전 이야기') && !asked[0][1].includes('시작 뒤 롤플') && asked[0][1].includes('"now":"11-12 21:30"'));
+        // 폰의 지금 뒤의 주문은 안 들어가요
+        assert.deepEqual(r.phone.delivery.orders.map(o => o.time), ['11-11 19:00']);
+        assert.equal(r.phone.delivery.at, '11-12 21:30'); assert.equal(r.phone.delivery.nearbyAt, '11-12');
+        assert.deepEqual(r.phone.sync.marks.delivery, { index: 2, user: -1, fp: '', tail: '' });
+        const none = await same(c => { delete c.p.money; return L2.liveFillDelivery(c.d, c.p); }, c => { delete c.p.money; return LIFE.fillDelivery(c.d, c.p); }, ['{}']);
+        assert.equal(none.out.error, '모델 답에서 배달 내용(JSON)을 찾지 못했어요');
+    } finally { done(); }
+});
+
 test('서랍이 아니면 모델을 부르기 전에 멈춰요; 사본은 폰 1 줄과 정해진 곳만 달라요', async () => {
     try {
         const c = world(); let asked = 0;
         T.ask = async () => { asked++; return '{}'; };
         const p = c.real.phones.mara, was = JSON.stringify(p);
-        for (const m of [c.real, { ...c.real, phoneUpto: 2, phoneRecent: () => 'x' }]) for (const go of [() => F.liveFillVoice(m, p), () => L2.liveFillScreen(m, p), () => L2.liveRefreshNearby(m, p)]) await assert.rejects(go, /실시간 폰의 서랍이 아니에요/);
+        for (const m of [c.real, { ...c.real, phoneUpto: 2, phoneRecent: () => 'x' }]) for (const go of [() => F.liveFillVoice(m, p), () => L2.liveFillScreen(m, p), () => L2.liveRefreshNearby(m, p), () => L2.liveFillLife(m, p), () => L2.liveFillDelivery(m, p)]) await assert.rejects(go, /실시간 폰의 서랍이 아니에요/);
         assert.equal(asked, 0); assert.equal(JSON.stringify(p), was);
     } finally { done(); }
     const a = await src('phonedata.js'), lf = await src('phonelife.js'), f = await src('phone2fill.js'), l2 = await src('phone2life.js'), api = await src('phone2api.js');
@@ -111,5 +155,19 @@ test('서랍이 아니면 모델을 부르기 전에 멈춰요; 사본은 폰 1 
     assert.equal(cut(l2, 'export function liveNearbyDue(').replace('function liveNearbyDue(', 'function nearbyDue(').replace('liveSavedNow(p)', 'storyNow(p)'), cut(lf, 'export function nearbyDue('));
     assert.equal(cut(l2, 'export async function liveRefreshNearby(').replace('function liveRefreshNearby(', 'function refreshNearby(').replace(need, '').replace('liveSavedNow(p)', 'storyNow(p)').replace('liveNearbyDue(p)', 'nearbyDue(p)')
         .replaceAll('liveLately(p, d, s.name)', 'lately(p, d, s.name)'), cut(lf, 'export async function refreshNearby('));
+    // 생활 · 배달: 폰 1 줄과 정해진 곳만
+    assert.equal(cut(l2, 'export function liveStoryDays(').replace('function liveStoryDays(', 'function storyDays(').replace('liveSavedNow(p)', 'storyNow(p, upto)'), cut(lf, 'export function storyDays('));
+    assert.equal(cut(l2, 'const livePhoneNow = ', '\n});\n').replace('const livePhoneNow = ', 'const phoneNow = ').replace('liveSavedNow(p)', 'storyNow(p, upto)'), cut(lf, 'const phoneNow = ', '\n});\n'));
+    assert.equal(cut(l2, 'export const liveFillLife = ', '\n});\n').replace('export const liveFillLife = ', 'export const fillLife = ').replace(`\n${need.slice(0, -1)}`, '')
+        .replace('w = null,', 'w = weatherNow(upto),').replace('days = liveStoryDays(m, p, upto)', 'days = storyDays(m, p, upto)').replace('livePhoneNow(p, upto)', 'phoneNow(p, upto)').replace('liveSideRequest(', 'sideRequest(')
+        .replace('liveFillClock(m, p, liveNowText(m, p) || p.now, { story: true })', 'fillClock(m, p, storyNow(p, upto, m) || p.now, statusAt(p, upto, m), gap, short, { story: true })')
+        .replace("const at = liveSavedNow(p) || p.now || '';", "const at = storyNow(p, upto) || p.now || '';").replace('const first = liveWindowOf(m, p);', 'const first = windowOf(m, p);').replace('liveSecondTurn(m, p, first)', 'secondTurn(m, p, first)')
+        .replaceAll('liveReadMark(', 'readMark(').replace('liveSavedNow(p)', 'storyNow(p, nowAt(last))').replace('await liveFillScreen(m, p,', 'await fillScreen(m, p,'), cut(lf, 'export const fillLife = ', '\n});\n'));
+    assert.equal(cut(l2, 'export const liveFillDelivery = ', '\n});\n').replace('export const liveFillDelivery = ', 'export const fillDelivery = ').replace(`\n${need.slice(0, -1)}`, '')
+        .replace("at = liveSavedNow(p) || p.now || '';", "at = storyNow(p, upto) || p.now || '';").replace('livePhoneNow(p, upto)', 'phoneNow(p, upto)').replace('liveStoryDays(m, p, upto)', 'storyDays(m, p, upto)')
+        .replace('liveFillClock(m, p, at, { story: true })', 'fillClock(m, p, at, statusAt(p, upto, m), gap, short, { story: true })').replace('liveSideRequest(', 'sideRequest(').replace('const first = liveWindowOf(m, p);', 'const first = windowOf(m, p);')
+        .replace('liveSecondTurn(m, p, first)', 'secondTurn(m, p, first)').replace('liveSavedNow(p)', 'storyNow(p, nowAt(last))').replace('liveReadMark(', 'readMark('), cut(lf, 'export const fillDelivery = ', '\n});\n'));
+    assert.doesNotMatch(lf, /isLivePhone|phoneUpto|phoneNow\(p\)|phone2/);
+    for (const x of ['fillLife: split(fillLife, liveFillLife)', 'fillDelivery: split(fillDelivery, liveFillDelivery)']) assert.ok(api.includes(x), x);
     for (const x of ['fillVoice: split(fillVoice, liveFillVoice)', 'fillScreen: split(fillScreen, liveFillScreen)', 'refreshNearby: split(refreshNearby, liveRefreshNearby)']) assert.ok(api.includes(x), x);
 });

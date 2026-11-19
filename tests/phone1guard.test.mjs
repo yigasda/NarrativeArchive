@@ -10,7 +10,7 @@ const WORDS = /isLivePhone|phoneUpto|phoneNow|phoneRecent|phoneJournal|liveYear|
 // file: [지금 허용, 폰 2 전]
 const LEFT = {
     'chats.js': [2, 0], 'investdata.js': [3, 3], 'phonedata.js': [33, 5],
-    'phonelife.js': [8, 7], 'phonestory.js': [2, 0],
+    'phonelife.js': [7, 7], 'phonestory.js': [2, 0],
 };
 // 폰 2 낱말이 하나도 없어야 하는 폰 1 데이터 파일
 const CLEAN = ['phoneai.js', 'phonesync.js', 'phonesynclife.js', 'phonesyncmoney.js', 'phonetr.js', 'phoneparse.js', 'phoneclock.js', 'wealth.js', 'finance.js', 'people.js', 'placehoods.js', 'phonestime.js', 'phoneflags.js'];

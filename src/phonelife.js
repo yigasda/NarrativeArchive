@@ -11,7 +11,7 @@ import { calendars } from './calendar.js';
 import { ctx, saveMeta } from './core.js';
 import { headingPlaces } from './people.js';
 import { FOOD_IDS, dishPic } from './phonefood.js';
-import { homeCountry, OWN_CLOCK, FILL_CLOCK_GET, FILL_CLOCK, clockBlock, fillClock, sceneHome, statusAt, arr, trackerWeather, readMark, turnsNote, secondTurn, soFarHead, windowOf, nowAt, CHAT_TOKENS, COUNTRIES, byStory, ensureIds, giftOf, hhmm, jsonOf, ko, last4, line, markNow, num, pad, pick, rowDay, sideRequest, storyNow, when, withEv, isLivePhone } from './phonedata.js';
+import { homeCountry, OWN_CLOCK, FILL_CLOCK_GET, FILL_CLOCK, clockBlock, fillClock, sceneHome, statusAt, arr, trackerWeather, readMark, turnsNote, secondTurn, soFarHead, windowOf, nowAt, CHAT_TOKENS, COUNTRIES, byStory, ensureIds, giftOf, hhmm, jsonOf, ko, last4, line, markNow, num, pad, pick, rowDay, sideRequest, storyNow, when, withEv } from './phonedata.js';
 import { cutShort } from './phoneparse.js';
 import { dlvTotal, payOrders, shopStats, unpayOrders } from './phonesyncmoney.js';
 import { alarmOf, cityAt, dayGap, fileOf, nightsToDays, overlayFresh, parseWeather, screenOf, usualScreenOf, weatherFrom } from './phonesynclife.js';
@@ -164,7 +164,7 @@ Numbers are plain JSON numbers. "ev" is a word tag, never a number: the "ev" of 
 
 // ---- inputs
 const DAY = 864e5;
-const md = s => { const mt = String(s || '').match(/^(\d{2})-(\d{2})/); return mt ? { mo: Number(mt[1]), d: Number(mt[2]) } : null; };
+export const md = s => { const mt = String(s || '').match(/^(\d{2})-(\d{2})/); return mt ? { mo: Number(mt[1]), d: Number(mt[2]) } : null; };
 // a story day moved by n days (MM-DD; the story's dates carry no year, so a leap year is assumed)
 export const shiftDay = (day, n) => { const x = md(day); if (!x) return ''; const t = new Date(Date.UTC(x.mo === 2 && x.d === 29 ? 2000 : 2001, x.mo - 1, x.d) + n * DAY); return `${pad(t.getUTCMonth() + 1)}-${pad(t.getUTCDate())}`; };
 // the last 14 story days, each with the places its archive sections name
@@ -192,7 +192,7 @@ const phoneNow = (p, upto = null) => JSON.stringify({
     tickets: (p.money?.passes || []).map(x => ({ kind: x.kind, by: x.by, from: x.from, to: x.to, date: x.date, ...(x.dayUnknown ? { dayUnknown: true } : {}), time: x.time, ...(x.ev ? { ev: x.ev } : {}) })),
     orders: (p.money?.orders || []).slice(-6).map(x => ({ shop: x.shop, item: x.item, time: x.time, ...(x.ev ? { ev: x.ev } : {}) })),
 });
-const daysBlock = days => `[STORY DAYS]\n${days.map(d => `${d.day}${d.places.length ? `: ${d.places.join(', ')}` : ''}`).join('\n') || '(unknown)'}`;
+export const daysBlock = days => `[STORY DAYS]\n${days.map(d => `${d.day}${d.places.length ? `: ${d.places.join(', ')}` : ''}`).join('\n') || '(unknown)'}`;
 
 // ---- 생활: parse (one record at a time in phonesynclife.js, the same for a reflection)
 const int = (v, lo, hi) => { const n = num(v); return n === null ? null : Math.max(lo, Math.min(hi, Math.round(n))); };
@@ -402,7 +402,7 @@ export const payDeliveries = (m, p) => payOrders(m, p, yearOf(m, p));
 export { unpayOrders as unpayDeliveries };
 
 // a "MM-DD HH:MM" after another (across New Year the short way round)
-const later = (t, now) => { const g = dayGap(String(now).slice(0, 5), String(t).slice(0, 5)); return g > 0 || g === 0 && String(t).slice(6, 11) > String(now).slice(6, 11) && !!String(now).slice(6, 11); };
+export const later = (t, now) => { const g = dayGap(String(now).slice(0, 5), String(t).slice(0, 5)); return g > 0 || g === 0 && String(t).slice(6, 11) > String(now).slice(6, 11) && !!String(now).slice(6, 11); };
 // ---- the fills: two turns at most (secondTurn, phonedata.js)
 const byKey = (xs, ys, key) => [...xs.filter(x => !ys.some(y => key(y) === key(x))), ...ys];
 const given = o => Object.fromEntries(Object.entries(o || {}).filter(([, v]) => v !== null && v !== undefined && v !== ''));
@@ -412,7 +412,7 @@ const given = o => Object.fromEntries(Object.entries(o || {}).filter(([, v]) => 
 // a habit only where it says something. The weather is the second's when the model wrote one, else the first's with the
 // newest status line over it; the saved cities joined by name. The timer running is the second's (at its now)
 // what the model's own answer to a turn was (its raw JSON) and the status line it had: what merging tells apart by
-const said = new WeakMap();
+export const said = new WeakMap();
 const filled = v => v !== null && v !== undefined && v !== '' && !(Array.isArray(v) && !v.length);
 const NIGHT = ['bed', 'sleep', 'wake', 'woke'];
 // a day's fields the model wrote (the night only when it gave one; "from" and "ev" when the story told it)
@@ -454,7 +454,7 @@ export const fillLife = (m, p, { screenAgain = false } = {}) => exclusive('fill'
     // one turn: its window, and what the turn before wrote (none for the first); stopped short, its now is where it stopped
     const turn = async (gap, soFar = null, short = null) => {
         // a status line from a scene the owner isn't in (or may not be): its place and sky go along, never as the owner's weather
-        const upto = nowAt(gap), w = isLivePhone(p) ? null : weatherNow(upto), home = !w || sceneHome(p, w.place, m) === true, now = home ? w : null, days = storyDays(m, p, upto);
+        const upto = nowAt(gap), w = weatherNow(upto), home = !w || sceneHome(p, w.place, m) === true, now = home ? w : null, days = storyDays(m, p, upto);
         const input = await sideRequest(m, p.owner, [`[PHONE NOW]\n${phoneNow(p, upto)}`, daysBlock(days),
             !soFar && Object.keys(body).length ? `[BODY ON THE PHONE NOW — keep it unless the story changed it]\n${JSON.stringify(body)}` : '',
             soFar ? `${soFarHead('LIFE', short)}\n${JSON.stringify(soFar)}` : '', short?.text || '',
