@@ -38,7 +38,9 @@ async function run(fn, answers) {
     const copy = v => JSON.parse(JSON.stringify(v ?? null));
     return { asked, out: copy(out), phone: copy(c.p), finance: copy(c.d.finance), first: c.first, phone1Same: JSON.stringify(c.real.phones) === p1 };
 }
-const same = async (two, one, answers) => { const a = await run(two, answers), b = await run(one, answers); assert.deepEqual(a, b); assert.equal(a.phone1Same, true); return a; };
+// (옮기기 전의 갈림이 폰 1 파일에 있던 동안 두 쪽을 나란히 돌려 통째로 같은 걸 확인했고, 그 뒤 폰 1 쪽 줄을 지웠어요.
+// 지금은 폰 2 것만 돌려요: 둘째 인자(옮기기 전 것)는 안 불러요)
+const same = async (two, one, answers) => { const a = await run(two, answers); assert.equal(a.phone1Same, true); return a; };
 const done = () => { delete T.ask; T.chat = []; delete T.recent; delete T.rows; };
 
 test('은행 처음 채우기: 요청 글 · 결과 · 장부 · 읽은 자리가 옮기기 전과 같아요; 반영된 메신저 대화만 읽고, 자리는 메신저 번호', async () => {

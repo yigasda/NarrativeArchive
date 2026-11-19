@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import { migrateBank, cash } from '../src/finance.js';
 import * as L from '../src/phone2store.js';
-import { G, T, PD, Y, N } from './phone2reflect.load.mjs';
+import { G, T, PD, Y, N, Q } from './phone2reflect.load.mjs';
 // 롤플에 넣는 글, 창구(P.phoneBlock)가 만드는 대로: 폰 1의 글(폰 1 함수) + 실시간 폰의 글(phone2note.js)
 const block = (m, live = null) => PD.phoneBlock(m) + N.liveNote(live);
 import { journalRead, journalWrite } from '../src/phonesync.js';
@@ -316,13 +316,12 @@ test('실시간 폰에서 폰 1의 앱 요청을 불러도 시작 뒤의 롤플 
         // the drawer says how far the chat may be read and gives the messenger's talk
         assert.equal(d.phoneUpto, 2);
         assert.equal(d.phoneRecent('Mara', 6, { maxChars: 6000 }), 'Ren: 메신저로 한 말');
-        assert.equal(PD.readUpto(d, p), 2);
-        assert.deepEqual([PD.windowOf(d, p).upto, PD.windowOf(d, p).n], [2, 0]);
+        assert.deepEqual([Q.liveWindowOf(d, p).upto, Q.liveWindowOf(d, p).n], [2, 0]);
         // (the newest talk: the story up to where 폰 2 began, then the messenger; never the chat after the start)
-        assert.equal(PD.recentOf(d, 'Mara', 6, {}), '[#1] Mara: 옛날 이야기 둘\n\n[#2] Ren: 시작 직전 이야기\n\nRen: 메신저로 한 말');
-        assert.equal(PD.recentOf(d, 'Mara', 1, {}), 'Ren: 메신저로 한 말');
-        assert.equal(PD.storyNow(p, null, d), '11-12 21:30');
-        const side = await PD.sideRequest(d, 'Mara', ['[TARGET]\nx']);
+        assert.equal(Q.liveRecentText(d, 'Mara', 6, {}), '[#1] Mara: 옛날 이야기 둘\n\n[#2] Ren: 시작 직전 이야기\n\nRen: 메신저로 한 말');
+        assert.equal(Q.liveRecentText(d, 'Mara', 1, {}), 'Ren: 메신저로 한 말');
+        assert.equal(L.liveNowText(d, p), '11-12 21:30');
+        const side = await Q.liveSideRequest(d, 'Mara', ['[TARGET]\nx']);
         assert.ok(side.includes('Ren: 메신저로 한 말'));
         assert.ok(side.includes('시작 직전 이야기'));
         assert.ok(side.indexOf('시작 직전 이야기') < side.indexOf('메신저로 한 말'));
@@ -333,9 +332,9 @@ test('실시간 폰에서 폰 1의 앱 요청을 불러도 시작 뒤의 롤플 
         L.sendLive(real, room.id, '아직 반영 안 된 말');
         p.sync = { scope: 'x', marks: { base: { index: 2, user: -1, fp: '', tail: '' } }, done: [[first, first]] };
         const read = {};
-        const fill = await PD.sideRequest(d, 'Mara', ['[TARGET]\nx'], { read });
+        const fill = await Q.liveSideRequest(d, 'Mara', ['[TARGET]\nx'], { read });
         assert.ok(fill.includes('메신저로 한 말')); assert.ok(!fill.includes('아직 반영 안 된 말')); assert.ok(fill.includes('시작 직전 이야기')); assert.ok(!fill.includes('시작 뒤 롤플'));
-        assert.deepEqual(PD.readMark(read.gap), { index: first, user: -1, fp: '', tail: '' });
+        assert.deepEqual(Q.liveReadMark(read.gap), { index: first, user: -1, fp: '', tail: '' });
         assert.equal(PD.nowAt(read.gap), 2);
         delete p.sync;
         // 폰 1 (the chat's own meta): as before, the chat's newest messages
@@ -455,12 +454,12 @@ test('실시간 폰의 "지금"은 흐르는 시계예요: 이야기 날짜(dayS
     const c = world();
     c.p.now = '11-10 22:00';
     const d = L.liveMeta(c.real, { now: G.liveNowOf(c.real, () => Date.parse('2026-11-12T08:15:00Z')) });
-    assert.equal(PD.storyNow(c.p, null, d), '11-12 08:15');
+    assert.equal(L.liveNowText(d, c.p), '11-12 08:15');
     L.liveWorld(c.real).dayShift = 3;
-    assert.equal(PD.storyNow(c.p, null, d), '11-15 08:15');
+    assert.equal(L.liveNowText(d, c.p), '11-15 08:15');
     // a drawer given no clock, or the phone alone: the phone's own time, as before
-    assert.equal(PD.storyNow(c.p, null, L.liveMeta(c.real)), '11-10 22:00');
-    assert.equal(PD.storyNow(L.livePhone(c.real, 'Mara')), '11-10 22:00');
+    assert.equal(L.liveNowText(L.liveMeta(c.real), c.p), '11-10 22:00');
+    assert.equal(L.liveNowText(null, L.livePhone(c.real, 'Mara')), '11-10 22:00');
 });
 
 test('채우기 · 다시 만들기가 읽는 요약은 반영된 데까지만: 아직 반영 안 된 대화의 요약은 안 들어가요 (같은 일이 두 번 안 들어가게)', () => {
@@ -509,11 +508,6 @@ test('실시간 폰 한 대의 연도를 고르면 다른 실시간 폰도 같�
 
 test('실시간 폰의 연도는 롤플 상태창에서 읽지 않아요: 폰만 주든 서랍만 주든 실제 연도 + 고른 차이', () => {
     const c = world(), y = new Date().getFullYear();
-    assert.equal(PD.storyYear(c.m, { ...c.p, year: 0 }), String(y));
-    assert.equal(PD.storyYear(c.m, { ...c.p, year: 0, liveYearShift: 3 }), String(y + 3));
-    assert.equal(PD.storyYear(null, Object.assign(L.livePhone(c.real, 'Mara'), { year: 0 })), String(y));
-    assert.equal(PD.storyYear(c.m, { ...c.p, year: 0, noYear: true }), '');
-    // 폰 2 파일의 것 (화면이 창구로 부르는 것): 같은 답
     assert.equal(Y.liveStoryYear(c.m, { ...c.p, year: 0 }), String(y));
     assert.equal(Y.liveStoryYear(c.m, { ...c.p, year: 0, liveYearShift: 3 }), String(y + 3));
     assert.equal(Y.liveStoryYear(c.m, { ...c.p, year: 0, noYear: true }), '');

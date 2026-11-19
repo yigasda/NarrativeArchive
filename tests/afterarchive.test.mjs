@@ -35,6 +35,21 @@ const no2 = m => { const { live: _, ...rest } = m; return rest; };
 const life = await import(encoded(await rewrite('phonelife.js')));
 const invest = await import(encoded(await rewrite('investdata.js')));
 const fin = await import(href('finance.js'));
+// 폰 2의 요청 뼈대 · 은행 채우기도 같은 이웃(아카이브와 상태창이 있는 채팅)으로 불러요. 서랍은 진짜(phone2store.js)
+const live2 = await import(href('phone2store.js'));
+map['./phone2store.js'] = href('phone2store.js');
+for (const f of ['phone2year.js', 'phone2req.js', 'phone2fill.js', 'phone2money.js']) map[`./${f}`] = encoded(await rewrite(f));
+const req2 = await import(map['./phone2req.js']), money2 = await import(map['./phone2money.js']);
+// 이야기 #7에서 시작한 실시간 폰: 메신저에 두 마디, 반영은 첫 마디까지 읽음
+const liveOf = (p, mm) => {
+    const real = { ...no2(mm), phones: { ren: p } };
+    live2.startFromStory(real, { persona: 'Me', upto: 7, scope: 'test', story: { ranges: {}, titles: [], rawFrom: 0, own: [String(mm.text || '')] } });
+    const room = live2.ensureRoom(real, ['Ren']);
+    live2.sendLive(real, room.id, 'on the messenger'); live2.sendLive(real, room.id, 'not read yet');
+    const d = live2.liveMeta(real, { text: () => String(mm.text || '') }), q = d.phones.ren, first = room.messages[0].n;
+    q.sync = { ...(q.sync || {}), marks: { base: { index: 7 } }, done: [[first, first]] };
+    return { real, d, p: q, first };
+};
 globalThis.__menu = {};
 
 const rows = n => Array.from({ length: n }, (_, i) => ({ index: i, user: i % 2 === 0, hidden: i <= 3, text: `[#${i}] Ren: ${'word '.repeat(40)}${i}` }));
@@ -51,24 +66,28 @@ test('the chat after the archive, whole and oldest first', async () => {
     assert.ok(input.includes('[#11] Ren'));
 });
 
-test('폰 2 (a meta that says where it began and gives its messenger talk): the chat after the archive up to where it began, then the messenger; nothing after', async () => {
+test('폰 2 (진짜 서랍): the chat after the archive up to where it began, then the messenger; nothing after', async () => {
     globalThis.__rows = rows(12);
-    const p = { owner: 'Ren', sync: { marks: { base: { index: 7 } }, done: [[8, 9]] } };
-    const live = { ...m, phones: { ren: p }, phoneUpto: 7, phoneRecent: (owner, n, o) => (o?.seen == null ? 'Ren: on the messenger\nRen: not read yet' : 'Ren: on the messenger') };
-    const g = data.windowOf(live, p);
-    assert.deepEqual([g.from, g.to, g.n, g.all, g.upto, g.mark], [4, 7, 4, true, 7, 9]);
-    const input = await data.sideRequest(live, 'Ren', []);
+    const { d, p, first } = liveOf({ owner: 'Ren', sync: { marks: { base: { index: 7 } }, done: [] } }, m);
+    assert.equal(first, 8);
+    const g = req2.liveWindowOf(d, p);
+    assert.deepEqual([g.from, g.to, g.n, g.all, g.upto, g.later, g.mark], [4, 7, 4, true, 7, false, 8]);
+    const input = await req2.liveSideRequest(d, 'Ren', []);
     assert.match(input, /\[RECENT CHAT\]\n\[#4\] Ren/);
     assert.ok(input.includes('[#7] Ren')); assert.ok(!input.includes('[#8] Ren')); assert.ok(!input.includes('[#11] Ren'));
-    assert.ok(input.indexOf('[#7] Ren') < input.indexOf('Ren: on the messenger')); assert.ok(input.includes('Ren: not read yet'));
+    assert.ok(input.indexOf('[#7] Ren') < input.indexOf('Me: on the messenger')); assert.ok(input.includes('Me: not read yet'));
     assert.equal((input.match(/\[RECENT CHAT/g) || []).length, 1);
     // an app that marks where it read: only the talk the reflection read; its mark is that messenger number
     const read = {};
-    const fill = await data.sideRequest(live, 'Ren', [], { read });
-    assert.ok(fill.includes('Ren: on the messenger')); assert.ok(!fill.includes('Ren: not read yet')); assert.ok(!fill.includes('[#8] Ren'));
-    assert.deepEqual(data.readMark(read.gap), { index: 9, user: -1, fp: '', tail: '' });
-    // 폰 1: as it was
-    assert.equal(data.windowOf(m, p).mark, undefined);
+    const fill = await req2.liveSideRequest(d, 'Ren', [], { read });
+    assert.ok(fill.includes('Me: on the messenger')); assert.ok(!fill.includes('Me: not read yet')); assert.ok(!fill.includes('[#8] Ren'));
+    assert.deepEqual(req2.liveReadMark(read.gap), { index: 8, user: -1, fp: '', tail: '' });
+    // 폰 1 (its own functions, the chat's own meta): as it was — and a meta that only looks like a drawer is nothing to them
+    const p1 = { owner: 'Ren', sync: { marks: { base: { index: 7 } }, done: [[8, 9]] } };
+    assert.equal(data.windowOf(m, p1).mark, undefined);
+    const fake = { ...m, phones: { ren: p1 }, phoneUpto: 7, phoneRecent: () => 'Ren: on the messenger' };
+    assert.deepEqual(data.windowOf(fake, p1), data.windowOf({ ...m, phones: { ren: p1 } }, p1));
+    assert.ok(!(await data.sideRequest(fake, 'Ren', [])).includes('on the messenger'));
 });
 
 test('past the budget: up to where it stops, the rest the reflection\'s', async () => {
@@ -344,28 +363,22 @@ test('폰 만들기 under way: the same phone made again (the phone shut and ope
 });
 
 // ---- 실시간 폰(폰 2)에서 앱 채우기: 롤플은 시작한 곳까지, 그 뒤는 반영된 메신저 대화, 시각은 폰 2의 것
-const livePhoneOf = () => {
-    const p = { owner: 'Ren', now: '11-12 21:30', country: 'DE', lives: 'DE', sync: { marks: { base: { index: 7 } }, done: [[8, 9]], hiddenRead: {}, events: {} } };
-    Object.defineProperty(p, Symbol.for('narrative-archive.live'), { value: true });
-    return p;
-};
-const liveMetaOf = p => ({ ...m, phones: { ren: p }, phoneUpto: 7, phoneRecent: (owner, n, o) => (o?.seen == null ? 'Ren: on the messenger\nRen: not read yet' : o.seen >= 9 ? 'Ren: on the messenger' : '') });
-test('실시간 폰에서 은행 채우기 (옮기기 전 갈림): 시작 뒤의 롤플도 롤플 상태창도 안 읽고, 반영된 메신저 대화를 읽고, 읽는 표시는 메신저 번호', async () => {
+test('실시간 폰에서 은행 채우기 (진짜 서랍, 아카이브가 있는 채팅): 시작 뒤의 롤플도 롤플 상태창도 안 읽고, 반영된 메신저 대화를 읽고, 읽는 표시는 메신저 번호', async () => {
     globalThis.__rows = rows(12);
     globalThis.__trackers = [{ i: 11, date: '2026-11-02', min: 20 * 60, place: 'Eastgate', weather: 'rain' }];
     try {
-        const p = livePhoneOf(), mm = liveMetaOf(p);
-        // (생활 채우기의 실시간 쪽은 phone2life.js로 옮겼어요: 진짜 서랍으로 tests/phone2life.test.mjs가 봐요. phonelife.js는
-        // 폰 2 전 줄 그대로라 서랍 흉내를 줘도 폰 2 것을 안 봐요)
-        // the bank
+        const { real, d, p, first } = liveOf({ owner: 'Ren', now: '11-12 21:30', country: 'DE', lives: 'DE', sync: { marks: { base: { index: 7 } }, done: [], hiddenRead: {}, events: {} } }, m);
+        const p1 = JSON.stringify(real.phones);
         globalThis.__menu = { calls: [], answers: [moneyAnswer('Bakery', 500, '11-10 09:00')], answer: '{}' };
-        await data.fillMoney(mm, p);
+        await money2.liveFillMoney(d, p);
         const money = globalThis.__menu.calls.filter(c => c.sys === data.AI_SYS_MONEY);
         assert.equal(money.length, 1);
         assert.deepEqual(nums(money[0].input), [4, 5, 6, 7]);
-        assert.ok(money[0].input.includes('Ren: on the messenger') && !money[0].input.includes('Ren: not read yet') && !money[0].input.includes('Eastgate'));
-        assert.deepEqual(p.sync.marks.money, { index: 9, user: -1, fp: '', tail: '' });
+        assert.ok(money[0].input.includes('Me: on the messenger') && !money[0].input.includes('Me: not read yet') && !money[0].input.includes('Eastgate'));
+        assert.ok(money[0].input.includes('"now":"11-12 21:30"'));
+        assert.deepEqual(p.sync.marks.money, { index: first, user: -1, fp: '', tail: '' });
         assert.deepEqual(p.money.tx.map(t => t.who), ['Bakery']);
+        assert.equal(JSON.stringify(real.phones), p1);
     } finally { delete globalThis.__trackers; }
 });
 
@@ -1794,16 +1807,12 @@ test('타임라인 폰의 사진 · 메모 · 초안 · 녹음 시각과 투자 
     try {
         // (the two calls differ here: with the meta, the status line's place is read as Rose's city)
         assert.equal(data.storyNow(p), '10-26 09:00'); assert.equal(data.storyNow(p, null, mm), '10-26 12:15');
-        // 타임라인: the call it always was
-        assert.equal(data.nowOn(p, mm), '10-26 09:00');
-        // 폰 2 (its phone, or its drawer): its own clock
-        const q = { ...p }; Object.defineProperty(q, Symbol.for('narrative-archive.live'), { value: true });
-        assert.equal(data.nowOn(q, mm), '10-26 09:00');
-        assert.equal(data.nowOn(p, { ...mm, phoneUpto: 3, phoneNow: () => '11-14 16:00' }), '11-14 16:00');
+        // (화면은 창구의 nowOn을 불러요: 타임라인이면 storyNow(p)만 — tests/phone2api.test.mjs)
     } finally { delete globalThis.__trackers; delete globalThis.__glossaryEntries; delete globalThis.__glossaryPeople; }
     const src = f => readFile(new URL(`../src/${f}`, import.meta.url), 'utf8');
     // (phoneai.js: the lines it had before 폰 2 — storyNow(p), never the meta; 폰 2's own copies are in phone2act.js)
     assert.doesNotMatch(await src('phoneai.js'), /nowOn\(|storyNow\(p, /);
+    assert.doesNotMatch(await src('phonedata.js'), /\bnowOn\b|isLivePhone|phoneUpto|phoneRecent|phoneNow\b(?!\()/);
     assert.equal(((await src('phoneai.js')).match(/storyNow\(p\) \|\| p\.now \|\| ''/g) || []).length, 7);
     // (investdata.js: the line it had before 폰 2 — never the meta; 폰 2's own date is in phone2invest.js)
     assert.ok((await src('investdata.js')).includes('const day = storyNow(p, stopAt(m, p)).slice(0, 5)'));

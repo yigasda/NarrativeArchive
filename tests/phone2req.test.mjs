@@ -1,5 +1,5 @@
 // 폰 2의 요청 뼈대(phone2req.js)와 작은 채우기(phone2fill.js). 서랍은 진짜(phone2store.js liveMeta), 모델만 가짜예요.
-// 옮기기 전의 실시간 갈림이 아직 phonedata.js에 있는 동안은, 같은 서랍으로 두 쪽을 불러 글자 그대로 같은지도 봐요.
+// (옮기기 전의 갈림이 phonedata.js에 있던 동안 같은 서랍으로 두 쪽을 불러 글자 그대로 같은 걸 확인했고, 그 뒤 폰 1 쪽 줄을 지웠어요)
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
@@ -28,16 +28,15 @@ test('읽는 범위 · 읽은 자리: 시작한 곳까지만, 뒤는 없음, 표
         const { d, p, first } = world();
         const g = Q.liveWindowOf(d, p);
         assert.deepEqual([g.upto, g.n, g.later, g.mark], [2, 0, false, 2]);
-        assert.deepEqual(g, PD.windowOf(d, p));
         assert.deepEqual(Q.liveReadMark(g), { index: 2, user: -1, fp: '', tail: '' });
         // 반영이 메신저 첫 마디까지 읽은 폰: 표시는 그 번호
         p.sync = { scope: 'x', marks: { base: { index: 2, user: -1, fp: '', tail: '' } }, done: [[first, first]] };
         const g2 = Q.liveWindowOf(d, p);
-        assert.equal(g2.mark, first); assert.deepEqual(g2, PD.windowOf(d, p));
-        assert.deepEqual(Q.liveReadMark(g2), PD.readMark(g2));
+        assert.equal(g2.mark, first);
+        assert.deepEqual(Q.liveReadMark(g2), { index: first, user: -1, fp: '', tail: '' });
         // 새로 시작한 실시간 폰: 롤플은 하나도 안 읽어요
         const f = world({ fresh: true });
-        assert.equal(Q.liveWindowOf(f.d, f.p).upto, -1); assert.deepEqual(Q.liveWindowOf(f.d, f.p), PD.windowOf(f.d, f.p));
+        assert.equal(Q.liveWindowOf(f.d, f.p).upto, -1);
         // 서랍이 아니면 멈춰요 (서랍 흉내도)
         assert.throws(() => Q.liveWindowOf(f.real, f.p), /실시간 폰의 서랍이 아니에요/);
         assert.throws(() => Q.liveWindowOf({ ...f.real, phoneUpto: 2 }, f.p), /실시간 폰의 서랍이 아니에요/);
@@ -52,22 +51,18 @@ test('요청 글: 시작 전 이야기 + 메신저 대화, 시작 뒤 롤플은 
         assert.ok(side.indexOf('시작 직전 이야기') < side.indexOf('메신저로 한 말'));
         assert.ok(!side.includes('시작 뒤 롤플'));
         assert.ok(side.includes('[STORY YEAR]\n2026') && side.includes('[OWNER]\nMara') && side.includes('[TARGET]\nx'));
-        assert.equal(side, await PD.sideRequest(d, 'Mara', ['[TARGET]\nx']));
         // 읽은 자리를 적는 앱 (투자 처음 채우기 등): 반영이 읽은 대화만 보여요
         p.sync = { scope: 'x', marks: { base: { index: 2, user: -1, fp: '', tail: '' } }, done: [[first, first]] };
-        const read = {}, read1 = {};
+        const read = {};
         const fill = await Q.liveSideRequest(d, 'Mara', ['[TARGET]\nx'], { read });
         assert.ok(fill.includes('메신저로 한 말') && !fill.includes('아직 반영 안 된 말') && fill.includes('시작 직전 이야기') && !fill.includes('시작 뒤 롤플'));
-        assert.equal(fill, await PD.sideRequest(d, 'Mara', ['[TARGET]\nx'], { read: read1 }));
-        assert.deepEqual(read.gap, read1.gap);
         assert.deepEqual(Q.liveReadMark(read.gap), { index: first, user: -1, fp: '', tail: '' });
-        // 돈 요청 · 아카이브 대신 채팅을 읽는 요청도 같은 글
-        for (const o of [{ money: true }, { story: 5000 }, { profile: null, money: true, story: 2000 }]) assert.equal(await Q.liveSideRequest(d, 'Mara', ['[A]\n1', '[B]\n2'], o), await PD.sideRequest(d, 'Mara', ['[A]\n1', '[B]\n2'], o));
+        // 돈 요청 · 아카이브 대신 채팅을 읽는 요청도 메신저 뼈대로 (시작 뒤 롤플 없음)
+        for (const o of [{ money: true }, { story: 5000 }, { profile: null, money: true, story: 2000 }]) assert.ok(!(await Q.liveSideRequest(d, 'Mara', ['[A]\n1', '[B]\n2'], o)).includes('시작 뒤 롤플'));
         // 새로 시작한 실시간 폰
         const f = world({ fresh: true });
         const fs = await Q.liveSideRequest(f.d, 'Mara', ['[TARGET]\nx']);
         assert.ok(fs.includes('메신저로 한 말') && !fs.includes('이야기'));
-        assert.equal(fs, await PD.sideRequest(f.d, 'Mara', ['[TARGET]\nx']));
         // 폰 1의 폰은 그대로, 서랍이 아니면 멈춰요
         assert.equal(JSON.stringify(real.phones), p1);
         await assert.rejects(() => Q.liveSideRequest(real, 'Mara', []), /실시간 폰의 서랍이 아니에요/);
@@ -112,9 +107,21 @@ test('폰 2 사본은 폰 1 줄과 정해진 곳만 달라요 (한쪽만 고치�
     const body = (s, start) => { const i = s.indexOf(start), j = s.indexOf('\n}\n', i); assert.ok(i >= 0 && j > i, start); return s.slice(i, j + 2); };
     const line = (s, start) => { const l = s.split('\n').find(x => x.startsWith(start)); assert.ok(l, start); return l; };
     // sideRequest: 뼈대 셋(읽는 범위 · 최근 대화 · 연도)만
+    const LIVE_TALK = `    // (폰 2, a request whose app marks where it read: only the talk the reflection has read, so nothing is taken twice)
+    // (폰 2, an app being filled: it marks all the reflected talk as known, so it is shown that talk and not six lines of it)
+    const fill = !!read && Number.isInteger(gap?.mark), lines = fill ? 150 : 6, chars = fill ? 12000 : 6000;
+    const recent = liveRecentText(m, owner, lines, { upto, maxChars: chars, ...(fill ? { seen: gap.mark, summary: true } : {}) });
+    if (read) read.gap = gap;
+    const arch = archiveBlock(m, archiveFor(m, -1, upto).text || '(empty)', 'ARCHIVE', story, upto), talk = gap?.n && typeof m?.phoneRecent === 'function' ? m.phoneRecent(owner, lines, { maxChars: chars, ...(fill ? { seen: gap.mark, summary: true } : {}) }) : '';
+    // (폰 2: the story after the archive up to where it began, then the messenger's talk, in the one block)
+    const chat = (afterBlock(gap) ? \`\${afterBlock(gap)}\${talk ? \`\\n\\n\${talk}\` : ''}\` : '') || (recent && !(story && noArchive(m)) ? \`[RECENT CHAT]\\n\${recent}\` : '');
+`, PHONE1_TALK = `    const recent = recentPhoneText(6, { upto, maxChars: 6000 });
+    if (read) read.gap = gap;
+    const arch = archiveBlock(m, archiveFor(m, -1, upto).text || '(empty)', 'ARCHIVE', story, upto), chat = afterBlock(gap) || (recent && !(story && noArchive(m)) ? \`[RECENT CHAT]\\n\${recent}\` : '');
+`;
     assert.equal(body(q, 'export async function liveSideRequest(').replace('liveSideRequest(', 'sideRequest(').replace('    needLive(m);\n', '').replace('liveWindowOf(m, ph)', 'windowOf(m, ph)')
-        .replace('liveRecentText(m, owner, ', 'recentOf(m, owner, ').replace('liveYearBlock(m, ph)', 'yearBlock(m, ph, upto)'), body(a, 'export async function sideRequest('));
-    assert.equal(line(q, 'export const liveReadMark').replace('liveReadMark', 'readMark'), line(a, 'export const readMark'));
+        .replace(LIVE_TALK, PHONE1_TALK).replace('liveYearBlock(m, ph)', 'yearBlock(m, ph, upto)'), body(a, 'export async function sideRequest('));
+    assert.equal(line(q, 'export const liveReadMark').replace('liveReadMark', 'readMark').replace("if (Number.isInteger(g?.mark)) return { index: g.mark, user: -1, fp: '', tail: '' }; ", ''), line(a, 'export const readMark'));
     // 기기 정보 · 자산 준비: 요청 뼈대만
     assert.equal(body(f, 'export async function liveFillDevice(').replace('liveFillDevice(', 'fillDevice(').replace('    needLive(m);\n', '').replace('liveSideRequest(', 'sideRequest('), body(a, 'export async function fillDevice('));
     assert.equal(line(f, 'export const livePrepareWealth').replace('livePrepareWealth', 'prepareWealth').replace('ensureWealth(needLive(m),', 'ensureWealth(m,').replace('liveSideRequest(', 'sideRequest('), line(a, 'export const prepareWealth'));
