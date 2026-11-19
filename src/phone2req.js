@@ -23,7 +23,10 @@ export function liveRecentText(m, owner, n, o = {}) {
 }
 // 요청이 롤플에서 읽는 범위: 아카이브 뒤부터 실시간 폰을 시작한 곳까지. 그 뒤는 없어요(later: false).
 // mark: 이 폰이 읽은 자리 (메신저 번호; 아직 반영한 적 없으면 시작한 곳)
-export const liveWindowOf = (m, p = null, from = null, budget = CHAT_TOKENS.phone, whole = true) => { const upto = needLive(m).phoneUpto; return { ...(noArchive(m) ? { none: true, n: 0, all: true, upto } : chatAfterArchive(m, budget, upto, from, whole)), later: false, mark: Math.max(upto, phoneAt(p) ?? upto) }; };
+// (an archive section that begins before the start and runs past it moves 폰 1's clock to its end; 폰 2's stays at the
+// start — what is after it is never its to read — so where the window reads up to is never past it)
+const atStart = (g, upto) => ({ ...g, ...(Number.isInteger(g.upto) && g.upto > upto ? { upto } : {}), ...(Number.isInteger(g.to) && g.to > upto ? { to: upto } : {}) });
+export const liveWindowOf = (m, p = null, from = null, budget = CHAT_TOKENS.phone, whole = true) => { const upto = needLive(m).phoneUpto; return { ...(noArchive(m) ? { none: true, n: 0, all: true, upto } : atStart(chatAfterArchive(m, budget, upto, from, whole), upto)), later: false, mark: Math.max(upto, phoneAt(p) ?? upto) }; };
 // 앱이 읽은 자리로 적을 표시: 메신저 번호 (없으면 폰 1과 같은 방법)
 export const liveReadMark = g => { if (Number.isInteger(g?.mark)) return { index: g.mark, user: -1, fp: '', tail: '' }; const i = nowAt(g); return i == null ? null : markAfter(i); };
 // 채우기가 쓰는 "폰의 지금": 폰에 저장된 시각 (마지막 반영이 맞춘 것). 롤플 상태창은 안 읽어요

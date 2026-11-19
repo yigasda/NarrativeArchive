@@ -1999,3 +1999,34 @@ test('실시간 폰의 채우기 (진짜 서랍): 롤플 메시지에 적힌 시
         }
     } finally { delete globalThis.__ctx; }
 });
+
+// 아카이브 구간이 시작한 곳을 걸쳐 끝나도(분기 · 메시지 삭제) 실시간 폰은 시작 뒤의 롤플을 안 읽어요
+test('실시간 폰 다시 만들기 · 채우기 (진짜 서랍): 시작한 곳을 걸친 아카이브 구간이 있어도 시작 뒤 롤플은 안 들어가요', async () => {
+    globalThis.__rows = Array.from({ length: 12 }, (_, i) => ({ index: i, user: i % 2 === 0, hidden: i <= 3 || (i >= 5 && i <= 9), text: i > 7 ? `[#${i}] Ren: AFTERSTART ${i}` : `[#${i}] Ren: before ${i}` }));
+    const mm = { text: '## #0–#3 — Arrival\n- Ren came home.\n## #5–#9 — The trip\n- Ren wrote down the RE 7 (#8).\n' };
+    const start = () => liveOf({ ...phoneOf(), now: '11-12 21:30', year: 2026, where: { at: 1, people: [{ name: 'Ren', city: 'Frankfurt am Main', tz: 'Europe/Berlin', names: ['Frankfurt'] }] } }, mm, 7);
+    {
+        const { d, p } = start();
+        const g = req2.liveWindowOf(d, p);
+        assert.equal(g.upto, 7); assert.equal(g.to, 7);
+    }
+    for (const fresh of [true, false]) {
+        // (fresh: 반영한 적 없는 폰 — 통째로 새로 만드는 갈래. 최근 대화 6줄도 시작한 곳까지만)
+        const { real, d, p } = start(), p1 = JSON.stringify(real.phones);
+        if (fresh) delete p.sync;
+        globalThis.__menu = { calls: [], answers: [notesAnswer('A')], answer: '{}' };
+        await make2.liveMakePhone(d, 'Ren');
+        assert.ok(globalThis.__menu.calls.length >= 1);
+        for (const c of globalThis.__menu.calls) assert.ok(!c.input.includes('AFTERSTART'), `${fresh}: ${String(c.sys).slice(0, 30)}`);
+        // (새로 만드는 갈래의 최근 대화: 시작한 #7까지)
+        if (fresh) assert.ok(globalThis.__menu.calls.some(c => c.input.includes('Ren: before 7')));
+        assert.equal(JSON.stringify(real.phones), p1);
+    }
+    for (const run of [(d, p) => life2.liveFillLife(d, p), (d, p) => money2.liveFillMoney(d, p)]) {
+        const { d, p } = start();
+        globalThis.__menu = { calls: [], answers: [], answer: '{}' };
+        try { await run(d, p); } catch { /* the inputs are what this checks */ }
+        assert.ok(globalThis.__menu.calls.length >= 1);
+        for (const c of globalThis.__menu.calls) assert.ok(!c.input.includes('AFTERSTART'));
+    }
+});
