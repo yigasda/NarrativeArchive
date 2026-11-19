@@ -2,7 +2,8 @@
 // 타임라인(폰 1)일 때는 폰 1 함수를 그대로, 같은 인자로 불러요. 실시간(폰 2)일 때 다르게 해야 하는 일은
 // 폰 1 파일이 아니라 src/phone2*.js 안에서 해요. 옮긴 것: 사진 · 메모(일기) · 초안 · 녹음 (phone2act.js), 화면의 지금 · 상태창 (이 파일), 연도 (phone2year.js), 롤플에 넣기 (phone2note.js),
 // 기기 정보 · 자산 준비 (phone2fill.js), 투자 채우기 · 시세 업데이트 · 평가 날짜 · 기록 모으기 · 차트 시세 · 은행 환율 (phone2invest.js), 말투 읽기 (phone2voice.js),
-// 은행 채우기 (phone2money.js), 음성 메모 (phone2fill.js), 생활 · 배달 · 스크린타임 · 동네 가게 (phone2life.js).
+// 은행 채우기 (phone2money.js), 음성 메모 (phone2fill.js), 생활 · 배달 · 스크린타임 · 동네 가게 (phone2life.js),
+// 위치 다시 연동 (phone2where.js).
 // 요청 뼈대는 phone2req.js.
 // 아직 안 옮긴 이름은 폰 1 함수 그대로예요 (하는 일은 같아요).
 // (phoneai.js 먼저: phonedata.js와 서로 부르는 사이라, 이 순서여야 어디서 처음 불러도 읽혀요)
@@ -23,6 +24,7 @@ import { liveFillScreen, liveRefreshNearby, liveFillLife, liveFillDelivery } fro
 import { liveCollectInvestmentRecords, liveFillChartHistory, liveRefreshBankFX, liveFillInvestment, liveRefreshMarket, liveInvestmentDate } from './phone2invest.js';
 import { liveLearnVoices, livePickVoices } from './phone2voice.js';
 import { liveFillMoney } from './phone2money.js';
+import { liveRereadPlaces } from './phone2where.js';
 
 // 실시간 폰(꼬리표가 붙은 폰)을 실시간 서랍 없이 부르면 멈춰요: 폰 1 함수가 실시간 폰을 만지지 않게
 const LIVE_PHONE = Symbol.for('narrative-archive.live');
@@ -55,10 +57,12 @@ const settleBranchP = async (...a) => (isLiveMeta(a[0]) || a[1]?.[LIVE_PHONE] ? 
 const retryMoneyP = async (...a) => { if (isLiveMeta(a[0])) throw new Error('실시간 폰은 다음 반영 때 결제를 다시 읽어요'); return retryMoney(...a); };
 // 평가 날짜 (m, p): 실시간 서랍이면 폰 2의 것 (흐르는 시계의 날). 화면이 그릴 때마다 물어서 오류 없이 바로 답해요
 const investmentDateP = (...a) => (isLiveMeta(a[0]) ? liveInvestmentDate(...a) : (guard(a[0], a[1]), investmentDate(...a)));
+// 폰 만들기 준비(위치 · 연도를 먼저 읽는 화면)는 폰이 없을 때의 것이에요. 실시간에서는 폰을 처음 만들지 않아서 안 열려요
+const preparePhoneP = async (...a) => { if (isLiveMeta(a[0])) throw new Error('실시간 폰에서는 폰 만들기 준비를 하지 않아요'); return preparePhone(...a); };
 
 export const P = Object.freeze({
     // 폰 만들기 · 다시 만들기
-    preparePhone, makePhone, rereadPlaces,
+    preparePhone: preparePhoneP, makePhone, rereadPlaces: split(rereadPlaces, liveRereadPlaces),
     // 앱 채우기
     fillMoney: split(fillMoney, liveFillMoney), retryMoney: retryMoneyP, fillVoice: split(fillVoice, liveFillVoice), fillDevice: split(fillDevice, liveFillDevice),
     fillLife: split(fillLife, liveFillLife), fillDelivery: split(fillDelivery, liveFillDelivery), fillScreen: split(fillScreen, liveFillScreen), refreshNearby: split(refreshNearby, liveRefreshNearby),

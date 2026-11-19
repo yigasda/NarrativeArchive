@@ -57,6 +57,8 @@ map['./anniv.js'] = encoded(`export const datedRows=()=>[];`);
 map['./phonefood.js'] = href('phonefood.js'); map['./phonescreen.js'] = href('phonescreen.js');
 export const LIFE = await load2('phonelife.js');
 export const L2 = await load2('phone2life.js');
+// 위치 읽기 (phone2where.js)
+export const W2 = await load2('phone2where.js');
 // 은행 채우기 (phone2money.js)
 export const M2 = await load2('phone2money.js');
 export const N = await load2('phone2note.js');

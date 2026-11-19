@@ -10,7 +10,7 @@ import { phoneChatScope } from './phonestory.js';
 import { jsonOf, last4, num } from './phoneparse.js';
 import { payOrders } from './phonesyncmoney.js';
 import { exclusive, syncOf } from './phonesync.js';
-import { askDraft, markNow, nowAt, AI_SYS_MONEY, MONEY_REBUILD, moneyContext, moneyMore, aroundBlock, parseMoney, homeCountry, ensureIds, soFarHead, turnsNote, readNote } from './phonedata.js';
+import { askDraft, markNow, AI_SYS_MONEY, MONEY_REBUILD, moneyContext, moneyMore, aroundBlock, parseMoney, homeCountry, ensureIds, soFarHead, turnsNote, readNote } from './phonedata.js';
 import { liveSideRequest, liveWindowOf, liveReadMark, liveSecondTurn, liveSavedNow, liveFillClock, needLive } from './phone2req.js';
 import { livePrepareWealth } from './phone2fill.js';
 

@@ -2954,7 +2954,7 @@ JSON (one object, nothing before or after it)
 const realTz = v => { const z = String(v || '').trim(); if (!/^[A-Za-z]+(?:\/[A-Za-z_+-]+){1,2}$/.test(z)) return ''; try { return new Intl.DateTimeFormat('en-US', { timeZone: z }).resolvedOptions().timeZone || z; } catch { return ''; } };
 // the cards as they are: every field the story can say where someone is in, nothing summed up
 const CARD_KEYS = ['description', 'personality', 'scenario', 'first_mes', 'mes_example'];
-const cardText = ch => CARD_KEYS.map(k => { const v = ch?.data?.[k] ?? ch?.[k]; return v ? `[${k}]\n${v}` : ''; }).filter(Boolean).join('\n\n');
+export const cardText = ch => CARD_KEYS.map(k => { const v = ch?.data?.[k] ?? ch?.[k]; return v ? `[${k}]\n${v}` : ''; }).filter(Boolean).join('\n\n');
 // the chat's character cards and the persona, whole, as blocks (the phone's voice table reads how people talk in them)
 export function cardBlocks() {
     const c = ctx(), g = c?.groupId ? (c.groups || []).find(x => x.id === c.groupId) : null;
@@ -2984,14 +2984,14 @@ function whereRequest(m, p, { known = false } = {}) {
     ] };
 }
 // the names a city goes by: as the chat writes it, in English and in Korean (an older reading's one "local" counts too)
-const namesOf = x => [...new Set([x?.city, x?.local, ...arr(x?.names)].map(v => line(v, 60)).filter(Boolean))].slice(0, 8);
-const akaOf = x => [...new Set(arr(x?.aka).map(v => line(v, 40)).filter(v => v && nameKey(v) !== nameKey(x?.name)))].slice(0, 6);
+export const namesOf = x => [...new Set([x?.city, x?.local, ...arr(x?.names)].map(v => line(v, 60)).filter(Boolean))].slice(0, 8);
+export const akaOf = x => [...new Set(arr(x?.aka).map(v => line(v, 40)).filter(v => v && nameKey(v) !== nameKey(x?.name)))].slice(0, 6);
 // a ticket's details the model made up to fit (a booking number, a seat, a day): shown, never proof of another ticket, the
 // story's own when it gives them later
 export const MADE_FIELDS = ['no', 'seat', 'gate', 'date', 'time', 'from', 'to'];
 const madeOf = x => [...new Set(arr(x?.made).map(v => String(v || '').trim()).filter(v => MADE_FIELDS.includes(v)))];
 const cc2 = v => (/^[A-Za-z]{2}$/.test(String(v || '').trim()) ? String(v).trim().toUpperCase() : '');
-const whereRow = x => ({ name: line(x?.name, 60), ...(akaOf(x).length ? { aka: akaOf(x) } : {}), city: line(x?.city, 60), names: namesOf(x), lives: cc2(x?.lives), ...(cc2(x?.in) ? { in: cc2(x.in) } : {}), tz: realTz(x?.tz) });
+export const whereRow = x => ({ name: line(x?.name, 60), ...(akaOf(x).length ? { aka: akaOf(x) } : {}), city: line(x?.city, 60), names: namesOf(x), lives: cc2(x?.lives), ...(cc2(x?.in) ? { in: cc2(x.in) } : {}), tz: realTz(x?.tz) });
 // opts.known: see whereRequest; opts.asked is set to the people it asked about
 export async function readWhere(m, p, opts = {}) {
     const r = whereRequest(m, p, opts), binding = p.financeProfile;
@@ -3124,8 +3124,8 @@ const glossMap = m => {
     if (glossMemo.text !== text || !text) { const map = new Map(); for (const e of glossaryEntries(m)) { const a = nameKey(e.src), b = nameKey(e.ko); if (a && b && a !== b) { if (!map.has(a)) map.set(a, e.ko); if (!map.has(b)) map.set(b, e.src); } } glossMemo = { text, map }; }
     return glossMemo.map;
 };
-const glossTwin = (m, n) => { const k = nameKey(n); return k && m ? glossMap(m).get(k) || '' : ''; };
-const sameName = (m, a, b) => samePerson(a, b) || (t => !!t && samePerson(t, b))(glossTwin(m, a));
+export const glossTwin = (m, n) => { const k = nameKey(n); return k && m ? glossMap(m).get(k) || '' : ''; };
+export const sameName = (m, a, b) => samePerson(a, b) || (t => !!t && samePerson(t, b))(glossTwin(m, a));
 // one person by the very same name only: equal, or one the 용어집 other form of the other ("Ren" and "렌"; never "Ren"
 // and "Ren Kim", who may be someone else)
 const strictSame = (m, a, b) => { const x = nameKey(a), y = nameKey(b); return !!x && !!y && (x === y || nameKey(glossTwin(m, a)) === y || nameKey(glossTwin(m, b)) === x); };
@@ -3135,7 +3135,7 @@ const hasRow = (p, m, n) => { const who = personOf(p, m, n); return !!(who && (p
 // the owner by a name of theirs: their own, their 위치 정보 row's aka, the 용어집 other form of either; never another
 // whose first name is theirs ("Ren Kim" for an owner Ren is asked about, kept, and with them)
 const ownerRow = p => whereOf(p, p?.owner);
-const isOwnerName = (p, m, n) => {
+export const isOwnerName = (p, m, n) => {
     if (!nameKey(n) || !p?.owner) return false;
     const row = ownerRow(p), own = new Set(withTwins(m, [p.owner, row?.name, ...arr(row?.aka)].filter(Boolean)).map(nameKey));
     return withTwins(m, [n]).some(x => own.has(nameKey(x)));
@@ -3184,10 +3184,10 @@ const peopleTwins = (m, names) => {
     return withTwins(m, own).filter(n => own.includes(n) || people(n));
 };
 // names with their 용어집 other forms added (each once)
-const withTwins = (m, names) => { const out = []; for (const n of [...names, ...(m ? names.map(x => glossTwin(m, x)) : [])]) if (n && !out.some(x => nameKey(x) === nameKey(n))) out.push(n); return out; };
+export const withTwins = (m, names) => { const out = []; for (const n of [...names, ...(m ? names.map(x => glossTwin(m, x)) : [])]) if (n && !out.some(x => nameKey(x) === nameKey(n))) out.push(n); return out; };
 // one person by any of their names: the 위치 정보 row they are on (by its name or an aka, or the 용어집 other form of
 // one), else the name itself; { key, name } with the row's name as the one to show
-function personOf(p, m, n) {
+export function personOf(p, m, n) {
     const k = nameKey(n);
     if (!k) return null;
     // (a row by its own name first; else the one row that has it as an aka: a short name two rows share is no one's)
@@ -3196,7 +3196,7 @@ function personOf(p, m, n) {
     return row ? { key: nameKey(row.name), name: row.name } : { key: keys.slice().sort()[0], name: n };
 }
 // every form of one row's person: its name, its aka, their 용어집 other forms
-const rowForms = (m, r) => withTwins(m, [r?.name, ...arr(r?.aka)].filter(Boolean)).map(nameKey);
+export const rowForms = (m, r) => withTwins(m, [r?.name, ...arr(r?.aka)].filter(Boolean)).map(nameKey);
 // 용어집 forms not yet on a 위치 정보 row are put on it as its aka ("Ivo = 이보" added after it was read), so every place
 // that finds a person by their aka (texts, the clock, the default screen) finds them by both. Code only, no request
 // (the forms it puts there are marked, glossAka: when 용어집 changes, "Rose = 장미" to "Rose = 로즈", "장미" goes)
@@ -3226,7 +3226,7 @@ export function glossAka(m, p) {
 // (by the short name only when it is one person's: "Ivo" with an Ivo Kim and an Ivo Park is neither)
 // (the owner's row: by their own name or one of its aka, never another's who shares their first name ("Ren Kim"), and
 // no one else's row is the owner's)
-const whereOf = (p, name) => {
+export const whereOf = (p, name) => {
     const rows = p?.where?.people || [], k = nameKey(name), own = nameKey(p?.owner), exact = rows.find(x => nameKey(x.name) === k);
     if (exact || !k) return exact;
     if (k === own) {
@@ -3731,7 +3731,7 @@ function reflectionClocks0(p, rows, m, at = p?.now) {
     const body = `Time choices.\nTime alone does not identify the viewpoint.\nKeep the default viewpoint unless the surrounding narration shifts to another screen or scene.\n\nDate order: ${dateOrderOf(m) === 'dm' ? 'day.month' : 'month.day'}.\n${lines.join('\n')}`;
     return { choices, identity, body, text: `${identity}\n\n${clockBlock(p, at, m) ? '' : `${clockBlock(p, at, m, null, true)}\n\n`}${body}` };
 }
-const pkey = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+export const pkey = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
 // a place that is someone's own: their name (or their first name) then 's · 의 · 네, or a room, a home after it
 const OWNED = /^(?:'s|’s|s'|’|의|네|\s*(?:방|집|사무실|작업실|차)(?![가-힣])|\s+(?:room|bedroom|house|home|flat|apartment|place|office|studio|car)\b)/i;
 function ownedBy(scene, name) {
