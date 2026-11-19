@@ -45,10 +45,10 @@ async function run(fn, answers, opts) {
     journalWrite('test', []); journalWrite(liveKey, []);
     return r;
 }
-const same = async (two, one, answers, opts) => { const a = await run(two, answers, opts), b = await run(one, answers, opts); assert.deepEqual(a, b); assert.equal(a.phone1Same, true); return a; };
 const done = () => { delete T.ask; T.chat = []; delete T.recent; delete T.rows; };
-const OLD = process.env.PHONE2_MAKE_OLD === '1';   // (옮기기 전의 갈림이 phonedata.js에 있을 때만: 두 쪽을 나란히 돌려 비교)
-const both = (two, one, answers, opts) => (OLD ? same(two, one, answers, opts) : run(two, answers, opts));
+// (옮기기 전의 갈림이 phonedata.js에 있던 동안 두 쪽을 나란히 돌려(same) 네 경우 모두 통째로 같은 걸 확인했고, 그 뒤 폰 1 쪽
+// 줄을 지웠어요. 지금은 폰 2 것만 돌려서 기대하는 값과 비교해요)
+const both = (two, one, answers, opts) => run(two, answers, opts);
 
 test('고른 앱 다시 만들기: 반영된 메신저 대화를 읽고, 그 앱만 바뀌고, 읽은 자리 · 폰 시각 · 연도는 그대로', async () => {
     try {
@@ -116,4 +116,56 @@ test('같은 폰을 만드는 중이면 기다리라고 해요; 반영(update)�
         for (const m of [c.real, { ...c.real, phoneUpto: 2, phoneRecent: () => 'x', phoneJournal: 'test' }]) await assert.rejects(() => MK.liveMakePhone(m, 'Mara'), /실시간 폰의 서랍이 아니에요/);
         assert.equal(asked, 1); assert.equal(JSON.stringify(p1), was);
     } finally { done(); }
+});
+
+test('사본은 폰 1 줄과 정해진 곳만 달라요 (한쪽만 고치면 실패); 폰 1의 만들기는 폰 2를 몰라요', async () => {
+    const a = await src('phonedata.js'), b = await src('phone2make.js'), api = await src('phone2api.js');
+    const cut = (s, start, end = '\n}\n') => { const i = s.indexOf(start), j = s.indexOf(end, i); assert.ok(i >= 0 && j > i, start); return s.slice(i, j + end.length - 1); };
+    const line = (s, start) => { const l = s.split('\n').find(x => x.startsWith(start)); assert.ok(l, start); return l; };
+    // 다시 만들기 본체
+    const back = cut(b, '\nasync function liveMakePhone0(').replace('async function liveMakePhone0(', 'async function makePhone0(').replace('    needLive(m);\n', '')
+        .replace("    if (update) throw new Error('실시간 폰은 메신저를 나갈 때 반영해요');", '    if (update && m.phones?.[key]) return updatePhone(m, owner);')
+        .replace('    // (폰 2, a phone it already has: always with its reading kept — it is made again from the story it began from and the\n    // messenger talk read so far)\n', '')
+        .replace('keep = !!(apps && cur) || !!cur?.sync?.marks?.base;', "keep = !!(apps && cur) || !!(cur?.sync?.marks?.base && ['money', 'invest', 'life', 'delivery'].some(g => cur.sync.marks[g]));")
+        .replace('liveWindowOf(m, cur, null, CHAT_TOKENS.phone, false) : liveWindowOf(m, null)', 'windowOf(m, cur, null, CHAT_TOKENS.phone, false) : windowOf(m, null)').replace('liveReadMark(gap)', 'readMark(gap)')
+        .replace('liveKeepPre(m, owner, binding)', 'keepPre(m, owner, binding)').replaceAll('livePreClock(m, pre)', 'preClock(m, pre)').replaceAll('liveEnsureYear(m, pre)', 'ensureYear(m, pre, nowAt(gap))')
+        .replaceAll('await liveTryWhere(', 'await tryWhere(').replace('askDraft(livePhoneRequest(', 'askDraft(phoneRequest(').replace('liveSecondTurn(m, cur, gap, false)', 'secondTurn(m, cur, gap, false)')
+        .replace(`        // (폰 2, a phone it already has made again: its reading of the messenger goes on where it was — the request showed
+        // the talk read so far — and its clock, the year the user picked and where things stand stay its own)
+        const liveAgain = !!was?.sync?.marks?.base;
+        // (the unsaved rounds are under the meta's own key: 폰 2's drawer names its own, so 폰 1's are never touched)
+        const scope = m.phoneJournal;
+        if (liveAgain) base.sync = was.sync;
+        else {
+            base.sync = newSync(scope); base.sync.marks.base = mark;
+            // a reading started anew: the old one's unsaved rounds (복구) aren't this phone's
+            try { journalWrite(scope, journalRead(scope).filter(r => nameKey(r.owner) !== key)); } catch { /* no journal here */ }
+        }
+        if (liveAgain) { for (const k of ['liveYearShift', 'situations', 'liveHeld']) if (was[k] !== undefined) base[k] = was[k]; if (was.now) { got.now = was.now; if (got2) got2.now = ''; } }
+`, `        if (was?.sync?.marks?.base && ['money', 'invest', 'life', 'delivery'].some(g => was.sync.marks[g])) base.sync = was.sync;
+        else {
+            base.sync = newSync(phoneChatScope(ctx())); base.sync.marks.base = mark;
+            // a reading started anew: the old one's unsaved rounds (복구) aren't this phone's
+            try { const scope = phoneChatScope(ctx()); journalWrite(scope, journalRead(scope).filter(r => nameKey(r.owner) !== key)); } catch { /* no journal here */ }
+        }
+`).replace('    liveEnsureYear(m, p);\n', `    ensureYear(m, p, nowAt(last));
+    // (a year from the newest status line, read before the phone had its clock: on the owner's clock across New Year)
+    if (!pre?.yearSet && !p.yearSet && p.year && !p.noYear) { const st = trackerYear(nowAt(last)), sh = Number(p.yearShift) || 0; if (st && st.y + sh === p.year) p.year = acrossNewYear(st.y, st.day, p.now) + sh; }
+`);
+    assert.equal(back, cut(a, '\nasync function makePhone0('));
+    assert.equal(cut(b, '\nexport function liveMakePhone(').replace('export function liveMakePhone(', 'export function makePhone(').replaceAll('liveMakePhone0(m, owner, opts)', 'makePhone0(m, owner, opts)'), cut(a, '\nexport function makePhone('));
+    assert.equal(cut(b, '\nfunction liveKeepPre(').replace('function liveKeepPre(', 'function keepPre(').replace('liveEnsureYear(m, kept);', 'ensureYear(m, kept, nowAt(windowOf(m, null)));'), cut(a, '\nfunction keepPre('));
+    assert.equal(line(b, 'const livePreClock = ').replace('const livePreClock = ', 'const preClock = ').replace('nowAt(liveWindowOf(m, null))', 'nowAt(windowOf(m, null))').replace('st = null', 'st = statusAt(pre, upto, m)'), line(a, 'const preClock = '));
+    // 요청 글: 시계 블록 · 연도 · 메신저 대화
+    assert.equal(cut(b, '\nfunction livePhoneRequest(').replace('function livePhoneRequest(', 'function phoneRequest(')
+        .replace("return liveFillClock(m, q, story || (day ? `${day} 12:00` : todayWall()), { story: true, quiet: story ? false : day ? 'day' : true });", "return fillClock(m, q, story || (day ? `${day} 12:00` : todayWall()), st, gap, { text: extra.find(x => String(x).startsWith('[TOLD SHORT')) || '' }, { story: true, quiet: story ? false : day ? 'day' : true });")
+        .replace('})(upto == null ? undefined : liveNowText(m, q) || undefined, null),', '})(upto == null ? undefined : storyNow(q, upto, m) || undefined, statusAt(q, upto, m)),').replace('liveYearBlock(m, q)', 'yearBlock(m, q, upto)')
+        .replace(`        // (폰 2: after the story it began from, the messenger's talk its reflection has read — the summaries of the old
+        // talk, then the lines — so a phone or an app made again holds what was said there too)
+        ((story, talk) => (talk ? (story ? \`\${story}\\n\\n\${talk}\` : \`[RECENT CHAT]\\n\${talk}\`) : story))(afterBlock(gap) || (recent && !noArchive(m) ? \`[RECENT CHAT]\\n\${recent}\` : ''),
+            typeof m?.phoneRecent === 'function' && Number.isInteger(gap?.mark) ? m.phoneRecent(owner, 150, { maxChars: 12000, seen: gap.mark, summary: true }) : ''),
+`, "        afterBlock(gap) || (recent && !noArchive(m) ? `[RECENT CHAT]\\n${recent}` : ''),\n"), cut(a, '\nfunction phoneRequest('));
+    // 폰 1의 만들기 · 요청 · 위치 요청에는 폰 2 낱말이 없어요
+    for (const f of ['\nasync function makePhone0(', '\nfunction phoneRequest(', '\nfunction whereRequest(', '\nfunction keepPre(']) assert.doesNotMatch(cut(a, f), /phoneUpto|phoneRecent|phoneJournal|liveAgain|liveYearShift|isLivePhone/, f.trim());
+    assert.ok(api.includes('const makePhoneP = (...a) => (isLiveMeta(a[0]) ? liveMakePhone(...a) : makePhone(...a));') && api.includes('makePhone: makePhoneP'));
 });

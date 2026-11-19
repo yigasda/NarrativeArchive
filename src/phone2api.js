@@ -3,7 +3,7 @@
 // 폰 1 파일이 아니라 src/phone2*.js 안에서 해요. 옮긴 것: 사진 · 메모(일기) · 초안 · 녹음 (phone2act.js), 화면의 지금 · 상태창 (이 파일), 연도 (phone2year.js), 롤플에 넣기 (phone2note.js),
 // 기기 정보 · 자산 준비 (phone2fill.js), 투자 채우기 · 시세 업데이트 · 평가 날짜 · 기록 모으기 · 차트 시세 · 은행 환율 (phone2invest.js), 말투 읽기 (phone2voice.js),
 // 은행 채우기 (phone2money.js), 음성 메모 (phone2fill.js), 생활 · 배달 · 스크린타임 · 동네 가게 (phone2life.js),
-// 위치 다시 연동 (phone2where.js).
+// 위치 다시 연동 (phone2where.js), 폰 다시 만들기 (phone2make.js).
 // 요청 뼈대는 phone2req.js.
 // 아직 안 옮긴 이름은 폰 1 함수 그대로예요 (하는 일은 같아요).
 // (phoneai.js 먼저: phonedata.js와 서로 부르는 사이라, 이 순서여야 어디서 처음 불러도 읽혀요)
@@ -25,6 +25,7 @@ import { liveCollectInvestmentRecords, liveFillChartHistory, liveRefreshBankFX, 
 import { liveLearnVoices, livePickVoices } from './phone2voice.js';
 import { liveFillMoney } from './phone2money.js';
 import { liveRereadPlaces } from './phone2where.js';
+import { liveMakePhone } from './phone2make.js';
 
 // 실시간 폰(꼬리표가 붙은 폰)을 실시간 서랍 없이 부르면 멈춰요: 폰 1 함수가 실시간 폰을 만지지 않게
 const LIVE_PHONE = Symbol.for('narrative-archive.live');
@@ -59,10 +60,12 @@ const retryMoneyP = async (...a) => { if (isLiveMeta(a[0])) throw new Error('실
 const investmentDateP = (...a) => (isLiveMeta(a[0]) ? liveInvestmentDate(...a) : (guard(a[0], a[1]), investmentDate(...a)));
 // 폰 만들기 준비(위치 · 연도를 먼저 읽는 화면)는 폰이 없을 때의 것이에요. 실시간에서는 폰을 처음 만들지 않아서 안 열려요
 const preparePhoneP = async (...a) => { if (isLiveMeta(a[0])) throw new Error('실시간 폰에서는 폰 만들기 준비를 하지 않아요'); return preparePhone(...a); };
+// 폰 만들기 (m, owner, opts): 실시간 서랍이면 폰 2의 다시 만들기, 아니면 폰 1 함수를 같은 인자로
+const makePhoneP = (...a) => (isLiveMeta(a[0]) ? liveMakePhone(...a) : makePhone(...a));
 
 export const P = Object.freeze({
     // 폰 만들기 · 다시 만들기
-    preparePhone: preparePhoneP, makePhone, rereadPlaces: split(rereadPlaces, liveRereadPlaces),
+    preparePhone: preparePhoneP, makePhone: makePhoneP, rereadPlaces: split(rereadPlaces, liveRereadPlaces),
     // 앱 채우기
     fillMoney: split(fillMoney, liveFillMoney), retryMoney: retryMoneyP, fillVoice: split(fillVoice, liveFillVoice), fillDevice: split(fillDevice, liveFillDevice),
     fillLife: split(fillLife, liveFillLife), fillDelivery: split(fillDelivery, liveFillDelivery), fillScreen: split(fillScreen, liveFillScreen), refreshNearby: split(refreshNearby, liveRefreshNearby),

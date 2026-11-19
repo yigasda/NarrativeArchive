@@ -1405,10 +1405,7 @@ function phoneRequest(m, owner, p = null, lore = '', only = null, profile = '', 
         world ? `[WORLD]\n${world}` : '',
         lore ? `[LOREBOOK]\n${lore}` : '',
         aroundBlock(q),
-        // (폰 2: after the story it began from, the messenger's talk its reflection has read — the summaries of the old
-        // talk, then the lines — so a phone or an app made again holds what was said there too)
-        ((story, talk) => (talk ? (story ? `${story}\n\n${talk}` : `[RECENT CHAT]\n${talk}`) : story))(afterBlock(gap) || (recent && !noArchive(m) ? `[RECENT CHAT]\n${recent}` : ''),
-            typeof m?.phoneRecent === 'function' && Number.isInteger(gap?.mark) ? m.phoneRecent(owner, 150, { maxChars: 12000, seen: gap.mark, summary: true }) : ''),
+        afterBlock(gap) || (recent && !noArchive(m) ? `[RECENT CHAT]\n${recent}` : ''),
         yearBlock(m, q, upto),
         `[OWNER]\n${owner}`,
         profile, blindBlock(m, owner),
@@ -1541,9 +1538,7 @@ async function makePhone0(m, owner, { update = false, apps = null } = {}) {
     // (or, with more after the archive than one request reads, after the last message it read: the reflection goes on from there)
     // made again with its reading kept (some apps, or a phone whose bank or life apps stay): up to the phone's clock, like
     // a fill; made anew: up to now, and that becomes its clock
-    // (폰 2, a phone it already has: always with its reading kept — it is made again from the story it began from and the
-    // messenger talk read so far)
-    const cur = m.phones?.[key], keep = !!(apps && cur) || !!(cur?.sync?.marks?.base && (Number.isInteger(m?.phoneUpto) || ['money', 'invest', 'life', 'delivery'].some(g => cur.sync.marks[g])));
+    const cur = m.phones?.[key], keep = !!(apps && cur) || !!(cur?.sync?.marks?.base && ['money', 'invest', 'life', 'delivery'].some(g => cur.sync.marks[g]));
     const gap = keep ? windowOf(m, cur, null, CHAT_TOKENS.phone, false) : windowOf(m, null);
     // nothing shown after the archive (all of it archived and hidden): it read up to the archive's end, not -1 (no further
     // than the chat's last message: an archive longer than the chat leaves the messages written after for the reflection)
@@ -1649,18 +1644,12 @@ async function makePhone0(m, owner, { update = false, apps = null } = {}) {
         // the phone's own apps start reading again from here. With a bank, investments or the everyday apps kept (they
         // weren't made again), the reading state stays as it was: messages they haven't read yet are still theirs to read
         // (the phone's own items from those messages are told apart by their words, so nothing doubles)
-        // (폰 2, a phone it already has made again: its reading of the messenger goes on where it was — the request showed
-        // the talk read so far — and its clock, the year the user picked and where things stand stay its own)
-        const liveAgain = Number.isInteger(m?.phoneUpto) && !!was?.sync?.marks?.base;
-        // (the unsaved rounds are under the meta's own key: 폰 2's drawer names its own, so 폰 1's are never touched)
-        const scope = typeof m.phoneJournal === 'string' ? m.phoneJournal : phoneChatScope(ctx());
-        if (liveAgain || was?.sync?.marks?.base && ['money', 'invest', 'life', 'delivery'].some(g => was.sync.marks[g])) base.sync = was.sync;
+        if (was?.sync?.marks?.base && ['money', 'invest', 'life', 'delivery'].some(g => was.sync.marks[g])) base.sync = was.sync;
         else {
-            base.sync = newSync(scope); base.sync.marks.base = mark;
+            base.sync = newSync(phoneChatScope(ctx())); base.sync.marks.base = mark;
             // a reading started anew: the old one's unsaved rounds (복구) aren't this phone's
-            try { journalWrite(scope, journalRead(scope).filter(r => nameKey(r.owner) !== key)); } catch { /* no journal here */ }
+            try { const scope = phoneChatScope(ctx()); journalWrite(scope, journalRead(scope).filter(r => nameKey(r.owner) !== key)); } catch { /* no journal here */ }
         }
-        if (liveAgain) { for (const k of ['liveYearShift', 'situations', 'liveHeld']) if (was[k] !== undefined) base[k] = was[k]; if (was.now) { got.now = was.now; if (got2) got2.now = ''; } }
         m.phones[key] = mergePhone(base, got, { m });
         if (got2) mergePhone(m.phones[key], got2, { m });
     }
@@ -1669,7 +1658,7 @@ async function makePhone0(m, owner, { update = false, apps = null } = {}) {
     if (m.phonePre?.[key]) { delete m.phonePre[key]; if (!Object.keys(m.phonePre).length) delete m.phonePre; }
     ensureYear(m, p, nowAt(last));
     // (a year from the newest status line, read before the phone had its clock: on the owner's clock across New Year)
-    if (!Number.isInteger(m?.phoneUpto) && !pre?.yearSet && !p.yearSet && p.year && !p.noYear) { const st = trackerYear(nowAt(last)), sh = Number(p.yearShift) || 0; if (st && st.y + sh === p.year) p.year = acrossNewYear(st.y, st.day, p.now) + sh; }
+    if (!pre?.yearSet && !p.yearSet && p.year && !p.noYear) { const st = trackerYear(nowAt(last)), sh = Number(p.yearShift) || 0; if (st && st.y + sh === p.year) p.year = acrossNewYear(st.y, st.day, p.now) + sh; }
     if(m.phoneProfiles) delete m.phoneProfiles[key];
     ensureIds(p);
     p.upto = lastEnd(m);
@@ -2969,7 +2958,7 @@ const phonesOf = m => m?.phones || ctx()?.chatMetadata?.narrative_archive?.phone
 function whereRequest(m, p, { known = false } = {}) {
     const c = ctx(), g = c.groupId ? (c.groups || []).find(x => x.id === c.groupId) : null;
     const chars = g ? (g.members || []).map(a => (c.characters || []).find(x => x.avatar === a)).filter(Boolean) : [c.characters?.[c.characterId]].filter(Boolean);
-    const persona = String(c.powerUserSettings?.persona_description || '').trim(), upto = readUpto(m, p);
+    const persona = String(c.powerUserSettings?.persona_description || '').trim(), upto = phoneAt(p);
     const more = known || p.making ? [...chars.map(ch => ch.name || ch.data?.name), c.name1, screenHolderOf(m), ...glossaryPeople(m)] : [];
     // (each person once: two forms of one name in 용어집, "Ivo" and "이보", are one)
     const seen = [], people = [...(p.threads || []).map(t => t.with), ...(p.contacts || []).map(x => x.name), ...Object.values(m.phones || {}).map(q => q?.owner), ...more]
@@ -2979,7 +2968,7 @@ function whereRequest(m, p, { known = false } = {}) {
         ...chars.map(ch => `[CHARACTER CARD — ${ch.name || ch.data?.name || ''}]\n${cardText(ch) || '(empty)'}`),
         persona ? `[PERSONA — ${c.name1 || 'user'}]\n${persona}` : '',
         tail.trim() ? `[STORY NOW]\n${tail.trim()}` : '',
-        `[RECENT CHAT]\n${recentOf(m, p.owner, 8, { upto, maxChars: 8000 }) || '(none yet)'}`,
+        `[RECENT CHAT]\n${recentPhoneText(8, { upto, maxChars: 8000 }) || '(none yet)'}`,
         `[OWNER]\n${p.owner}`, `[PEOPLE]\n${people.join('\n') || '(none)'}`, blindBlock(m, p.owner),
     ] };
 }

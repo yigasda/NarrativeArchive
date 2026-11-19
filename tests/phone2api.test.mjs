@@ -28,7 +28,7 @@ test('P: 화면이 부르는 이름이 다 있고, 타임라인 쪽은 폰 1 파
 async function loadP() {
     const srcs = await readFile(new URL('phone2api.js', SRC), 'utf8'), enc = t => 'data:text/javascript;base64,' + Buffer.from(t).toString('base64');
     const fakes = {};
-    for (const m of srcs.matchAll(/import \{([^}]*)\} from '(\.\/(?:phonedata|investdata|phoneai|phonelife|phonetr|phone2act|phone2year|phone2note|phone2fill|phone2invest|phone2voice|phone2money|phone2life|phone2where)\.js)'/g))
+    for (const m of srcs.matchAll(/import \{([^}]*)\} from '(\.\/(?:phonedata|investdata|phoneai|phonelife|phonetr|phone2act|phone2year|phone2note|phone2fill|phone2invest|phone2voice|phone2money|phone2life|phone2where|phone2make)\.js)'/g))
         fakes[m[2]] = enc(m[1].split(',').map(x => x.trim()).filter(Boolean).map(n => `export const ${n}=(...a)=>({fn:'${n}',a});`).join(''));
     fakes['./phone2store.js'] = new URL('phone2store.js', SRC).href;
     return (await import(enc(srcs.replace(/from '([^']+)'/g, (all, k) => `from '${fakes[k] || k}'`)))).P;

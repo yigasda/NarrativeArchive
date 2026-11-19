@@ -5,7 +5,7 @@
 //   복구 기록은 실시간 서랍의 것만 (폰 1의 기록은 안 건드려요)
 //   위치 읽기 · 연도: 실시간 것 (phone2where.js · phone2year.js). 롤플 상태창의 연도 · 시각은 안 읽어요
 //   요청의 OWNER'S CLOCK: 서랍의 흐르는 시계로, 롤플 상태창 · 롤플 메시지 없이
-//   반영(update)은 여기서 안 해요: 실시간 폰의 반영은 메신저를 나갈 때 (phone2reflect.js)
+//   반영(update)은 여기서 안 해요: 실시간 폰의 반영은 메신저를 나갈 때 따로 돌아요
 // 폰 1 파일은 여기서 읽기만 해요.
 import { ownerProfileBlock } from './phoneprofile.js';
 import { ctx, saveMeta } from './core.js';

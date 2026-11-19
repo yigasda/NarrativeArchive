@@ -369,46 +369,8 @@ test('실시간 폰에서 은행 채우기 (옮기기 전 갈림): 시작 뒤의
     } finally { delete globalThis.__trackers; }
 });
 
-test('실시간 폰에서 앱 다시 만들기 · 폰 다시 만들기: 반영된 메신저 대화를 읽고, 읽은 표시 · 폰 시각 · 고른 연도는 그대로, 폰 1의 복구 기록은 안 건드려요', async () => {
-    const J = await import('../src/phonesync.js'), store = new Map(), had = globalThis.localStorage;
-    globalThis.localStorage = { getItem: k => store.get(k) ?? null, setItem: (k, v) => store.set(k, String(v)), removeItem: k => store.delete(k) };
-    globalThis.__rows = rows(12);
-    globalThis.__trackers = [{ i: 11, date: '2026-11-02', min: 20 * 60, place: 'Eastgate' }];
-    try {
-        J.journalWrite('test', [{ id: 'p1', owner: 'Ren', events: [] }]);
-        J.journalWrite('test:live:w1', [{ id: 'p2', owner: 'Ren', events: [] }]);
-        const lists = { contacts: [], threads: [], calls: [], photos: [], notes: [{ id: 'n0', title: 'Old note', text: 'x', time: '11-10 10:00' }], searches: [], events: [], posts: [], mails: [], diary: [], voice: [] };
-        const p = Object.assign(livePhoneOf(), lists, { year: 2031, liveYearShift: 5, situations: [{ id: 's', what: 'w' }] }), mm = { ...liveMetaOf(p), phoneJournal: 'test:live:w1' };
-        const sync = JSON.stringify(p.sync);
-        // one app
-        globalThis.__menu = { calls: [], answers: [JSON.stringify({ notes: [{ title: 'New note', text: 'y', time: '11-12 20:00' }] })], answer: '{}' };
-        await data.makePhone(mm, 'Ren', { apps: ['note'] });
-        const one = globalThis.__menu.calls.filter(c => c.sys === data.AI_SYS_PHONE_APPS);
-        assert.equal(one.length, 1);
-        assert.deepEqual(nums(one[0].input), [4, 5, 6, 7]);
-        assert.ok(one[0].input.includes('Ren: on the messenger') && !one[0].input.includes('Ren: not read yet') && !one[0].input.includes('Eastgate'));
-        assert.equal((one[0].input.match(/\[RECENT CHAT/g) || []).length, 1);
-        assert.deepEqual(p.notes.map(n => n.title), ['New note']);
-        assert.equal(JSON.stringify(p.sync), sync); assert.equal(p.now, '11-12 21:30');
-        // the whole phone
-        globalThis.__menu = { calls: [], answers: [JSON.stringify({ now: '10-26 09:00', notes: [{ title: 'Whole', text: 'z', time: '11-12 20:00' }] })], answer: '{}' };
-        const warn = console.warn; console.warn = () => {};
-        try { await data.makePhone(mm, 'Ren'); } finally { console.warn = warn; }
-        const q = mm.phones.ren;
-        assert.notEqual(q, p);
-        const whole = globalThis.__menu.calls.filter(c => c.sys === data.AI_SYS_PHONE);
-        assert.equal(whole.length, 1);
-        assert.ok(whole[0].input.includes('Ren: on the messenger') && !whole[0].input.includes('Ren: not read yet') && !whole[0].input.includes('Eastgate'));
-        assert.deepEqual(nums(whole[0].input), [4, 5, 6, 7]);
-        assert.deepEqual(q.notes.map(n => n.title), ['Whole']);
-        assert.equal(JSON.stringify(q.sync), sync);
-        assert.equal(q.now, '11-12 21:30');
-        assert.deepEqual([q.year, q.liveYearShift, q.situations], [2031, 5, [{ id: 's', what: 'w' }]]);
-        // 폰 1's unsaved rounds are where they were; 폰 2's too (its reading goes on)
-        assert.deepEqual(J.journalRead('test').map(r => r.id), ['p1']);
-        assert.deepEqual(J.journalRead('test:live:w1').map(r => r.id), ['p2']);
-    } finally { delete globalThis.__trackers; if (had === undefined) delete globalThis.localStorage; else globalThis.localStorage = had; }
-});
+// (실시간 폰의 앱 다시 만들기 · 폰 다시 만들기는 phone2make.js로 옮겼어요: 진짜 서랍으로 tests/phone2make.test.mjs가 봐요.
+// phonedata.js의 makePhone은 폰 2 전 줄 그대로라 서랍 흉내를 줘도 폰 2 것을 안 봐요)
 
 // ---- 은행 채우기도 두 턴: 두 번째는 기록만, 잔액은 첫 번째 그대로
 const moneyAnswer = (who, balance, time) => JSON.stringify({ currency: 'EUR', bank: { name: 'Varo Bank', accounts: [{ id: '', kind: 'checking', name: 'Main', last4: '1111', currency: 'EUR', balance }] },
