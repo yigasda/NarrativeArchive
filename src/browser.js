@@ -18,6 +18,15 @@ export const tlPreview = body => body.replace(/^#{1,2} [^\n]*\n?/, '').split('\n
     .map(l => l.trim()).filter(l => l && !/^[A-Z][A-Z /&'’-]{1,30}:$/.test(l) && !/^-{3,}$/.test(l))
     .map(l => l.replace(/^[-*•]\s+/, '')).join(' ');
 
+// 달마다 접기: the month and place in a section title's "(…)" — whole month words or their short forms only,
+// capitalised as titles write them, so a place such as Marseille or Augsburg, or a lower-case "may", is not a month
+const MONTH_RE = /\b(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept|Sep|Oct|Nov|Dec)\b\.?|(\d{1,2})월/;
+const MONTH_N = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+const TIME_WORD = /^(?:early |late )?(?:morning|noon|afternoon|evening|night|midnight|dawn|dusk|day|later)$/i;
+const parenOf = t => (String(t).match(/\(([^()]*)\)\s*(?:\[[^\]]*\])?\s*$/) || [])[1] || '';
+export const monthIn = t => { const mt = parenOf(t).match(MONTH_RE); return mt ? (mt[2] ? Number(mt[2]) : MONTH_N[mt[1].slice(0, 3).toLowerCase()]) : 0; };
+export const placeIn = t => { const last = parenOf(t).split('→')[0].split(',').map(x => x.trim()).filter(Boolean).pop() || ''; return /\d/.test(last) || TIME_WORD.test(last) || MONTH_RE.test(last) ? '' : last; };
+
 export function mountSectionBrowser($host) {
     const g0 = globalSettings();
     const $root = $(`
@@ -281,14 +290,8 @@ export function mountSectionBrowser($host) {
     };
     $list.on('click', '.na_ref_chip', function (e) { e.stopPropagation(); focus(Number(this.dataset.start)); });
 
-    // 달마다 접기: a long run of cards (list view) is folded by the month in its titles; a title with no month joins
-    // the one before. Only where a run holds 2+ months and enough cards; the newest month starts open.
-    const MONTH_RE = /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*\.?\b|(\d{1,2})월/i;
-    const MONTH_N = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, sept: 9, oct: 10, nov: 11, dec: 12 };
-    const TIME_WORD = /^(?:early |late )?(?:morning|noon|afternoon|evening|night|midnight|dawn|dusk|day|later)$/i;
-    const parenOf = t => (String(t).match(/\(([^()]*)\)\s*(?:\[[^\]]*\])?\s*$/) || [])[1] || '';
-    const monthIn = t => { const mt = parenOf(t).match(MONTH_RE); return mt ? (mt[2] ? Number(mt[2]) : MONTH_N[mt[1].toLowerCase()]) : 0; };
-    const placeIn = t => { const last = parenOf(t).split('→')[0].split(',').map(x => x.trim()).filter(Boolean).pop() || ''; return /\d/.test(last) || TIME_WORD.test(last) || MONTH_RE.test(last) ? '' : last; };
+    // a long run of cards (list view) is folded by the month in its titles; a title with no month joins the one
+    // before. Only where a run holds 2+ months and enough cards; the newest month starts open.
     const MONTH_MIN_CARDS = 12;
     function monthFolders(sections) {
         const out = new Map(); // card index → folder
@@ -356,7 +359,7 @@ export function mountSectionBrowser($host) {
         const hasOpen = sections.some(x => !x.group && /^OPEN\b/.test(x.title));
         const monthHead = (f, newest) => {
             const $parent = groupStack.length ? groupStack[groupStack.length - 1].$items : $list;
-            const isOpen = monthOpen()[f.id] ?? newest;
+            const isOpen = (monthOpen()[f.id] ?? newest) || f.idx.some(i => sections[i].start === pendingEdit);
             const off = f.keys.every(k => muted.has(k)), parentOff = groupStack.some(g => g.off);
             const ra = sections[f.idx[0]].title.match(RANGE_HEAD), rb = sections[f.idx[f.idx.length - 1]].title.match(RANGE_HEAD);
             const lead = ra && rb ? `#${Math.min(+ra[2], +ra[4])}–#${Math.max(+rb[2], +rb[4])} · ` : '';
@@ -690,6 +693,9 @@ export function mountSectionBrowser($host) {
             if (x.group) stack.push(x);
         }
         if (stack.some(g => set.delete(sectionKey(g)))) setCollapsed(set);
+        // and its month, when the list is folded by month
+        const all = parseSections(getMeta().text), f = monthFolders(all).get(all.findIndex(x => x.start === start));
+        if (f && !monthOpen()[f.id]) { const mm = getMeta(); mm.monthOpen = { ...monthOpen(), [f.id]: true }; saveMeta(); }
         render();
         const el = $list.find(`.na_card[data-start="${start}"]`)[0];
         if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.classList.add('na_flash'); setTimeout(() => el.classList.remove('na_flash'), 1400); }
