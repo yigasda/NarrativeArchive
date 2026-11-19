@@ -1,7 +1,7 @@
 // 폰 화면이 부르는 창구 (P). 화면은 아래 이름들을 phonedata.js 등에서 직접 부르지 않고 P.이름(...)으로 불러요.
 // 타임라인(폰 1)일 때는 폰 1 함수를 그대로, 같은 인자로 불러요. 실시간(폰 2)일 때 다르게 해야 하는 일은
 // 폰 1 파일이 아니라 src/phone2*.js 안에서 해요. 옮긴 것: 사진 · 메모(일기) · 초안 · 녹음 (phone2act.js), 화면의 지금 · 상태창 (이 파일), 연도 (phone2year.js), 롤플에 넣기 (phone2note.js),
-// 기기 정보 · 자산 준비 (phone2fill.js), 투자 기록 모으기 · 차트 시세 · 은행 환율 (phone2invest.js), 말투 읽기 (phone2voice.js),
+// 기기 정보 · 자산 준비 (phone2fill.js), 투자 채우기 · 시세 업데이트 · 평가 날짜 · 기록 모으기 · 차트 시세 · 은행 환율 (phone2invest.js), 말투 읽기 (phone2voice.js),
 // 은행 채우기 (phone2money.js).
 // 요청 뼈대는 phone2req.js.
 // 아직 안 옮긴 이름은 폰 1 함수 그대로예요 (하는 일은 같아요).
@@ -19,7 +19,7 @@ import { liveTakePhoto, liveWriteEntry, liveMakeDraft, liveRecordVoice } from '.
 import { liveStoryYear, liveEnsureYear, liveSetStoryYear } from './phone2year.js';
 import { liveNote } from './phone2note.js';
 import { liveFillDevice, livePrepareWealth } from './phone2fill.js';
-import { liveCollectInvestmentRecords, liveFillChartHistory, liveRefreshBankFX } from './phone2invest.js';
+import { liveCollectInvestmentRecords, liveFillChartHistory, liveRefreshBankFX, liveFillInvestment, liveRefreshMarket, liveInvestmentDate } from './phone2invest.js';
 import { liveLearnVoices, livePickVoices } from './phone2voice.js';
 import { liveFillMoney } from './phone2money.js';
 
@@ -52,6 +52,8 @@ const phoneBlockP = (m, live = null) => phoneBlock(m) + liveNote(live);
 const settleBranchP = async (...a) => (isLiveMeta(a[0]) || a[1]?.[LIVE_PHONE] ? null : settleBranch(...a));
 // 결제 다시 읽기는 폰 1 반영의 것이에요(롤플 메시지를 다시 읽어요). 실시간 폰은 메신저 반영이 다음 차례에 다시 읽어요
 const retryMoneyP = async (...a) => { if (isLiveMeta(a[0])) throw new Error('실시간 폰은 다음 반영 때 결제를 다시 읽어요'); return retryMoney(...a); };
+// 평가 날짜 (m, p): 실시간 서랍이면 폰 2의 것 (흐르는 시계의 날). 화면이 그릴 때마다 물어서 오류 없이 바로 답해요
+const investmentDateP = (...a) => (isLiveMeta(a[0]) ? liveInvestmentDate(...a) : (guard(a[0], a[1]), investmentDate(...a)));
 
 export const P = Object.freeze({
     // 폰 만들기 · 다시 만들기
@@ -62,8 +64,9 @@ export const P = Object.freeze({
     // 앱 안에서 하나 만들기
     takePhoto: split(takePhoto, liveTakePhoto), writeEntry: split(writeEntry, liveWriteEntry), makeDraft: split(makeDraft, liveMakeDraft), recordVoice: split(recordVoice, liveRecordVoice),
     // 돈 · 투자
-    prepareWealth: split(prepareWealth, livePrepareWealth), collectInvestmentRecords: split(collectInvestmentRecords, liveCollectInvestmentRecords), fillInvestment,
-    fillChartHistory: split(fillChartHistory, liveFillChartHistory), refreshMarket, refreshBankFX: split(refreshBankFX, liveRefreshBankFX), investmentDate,
+    prepareWealth: split(prepareWealth, livePrepareWealth), collectInvestmentRecords: split(collectInvestmentRecords, liveCollectInvestmentRecords), fillInvestment: split(fillInvestment, liveFillInvestment),
+    fillChartHistory: split(fillChartHistory, liveFillChartHistory), refreshMarket: split(refreshMarket, liveRefreshMarket), refreshBankFX: split(refreshBankFX, liveRefreshBankFX),
+    investmentDate: investmentDateP,
     // 지금 · 연도 · 상태창
     storyNow: storyNowP, nowOn, statusAt: statusAtP, storyYear: storyYearP, setStoryYear: setStoryYearP, ensureYear: ensureYearP,
     // 분기 · 롤플에 넣기

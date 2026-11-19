@@ -1854,5 +1854,7 @@ test('타임라인 폰의 사진 · 메모 · 초안 · 녹음 시각과 투자 
     // (phoneai.js: the lines it had before 폰 2 — storyNow(p), never the meta; 폰 2's own copies are in phone2act.js)
     assert.doesNotMatch(await src('phoneai.js'), /nowOn\(|storyNow\(p, /);
     assert.equal(((await src('phoneai.js')).match(/storyNow\(p\) \|\| p\.now \|\| ''/g) || []).length, 7);
-    assert.match(await src('investdata.js'), /Number\.isInteger\(m\?\.phoneUpto\) \? storyNow\(p, stopAt\(m, p\), m\) : storyNow\(p, stopAt\(m, p\)\)/);
+    // (investdata.js: the line it had before 폰 2 — never the meta; 폰 2's own date is in phone2invest.js)
+    assert.ok((await src('investdata.js')).includes('const day = storyNow(p, stopAt(m, p)).slice(0, 5)'));
+    assert.doesNotMatch(await src('investdata.js'), /phoneUpto/);
 });

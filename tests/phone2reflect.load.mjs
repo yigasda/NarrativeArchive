@@ -59,7 +59,8 @@ export const N = await load2('phone2note.js');
 const mapINV = { ...map, './wealth.js': encoded(`export const wealthBlock=()=>'';export const wealthCheck=()=>null;export const investmentWealthRows=()=>[];`) };
 map['./investdata.js'] = encoded((await readFile(new URL('../src/investdata.js', import.meta.url), 'utf8')).replace(/from '([^']+)'/g, (all, k) => `from '${mapINV[k] || k}'`));
 export const INV = await import(map['./investdata.js']);
-export const I2 = await load2('phone2invest.js');
+map['./phone2invest.js'] = encoded((await readFile(new URL('../src/phone2invest.js', import.meta.url), 'utf8')).replace(/from '([^']+)'/g, (all, k) => `from '${k === './investdata.js' ? map[k] : mapINV[k] || k}'`));
+export const I2 = await import(map['./phone2invest.js']);
 // 말투 읽기 (phone2voice.js; 폰 1의 phonetr.js도 같은 이웃으로)
 // (phonetr.js asks the translator and the open chat too: stand-ins that do nothing, beside the same phonedata.js)
 const mapTR = { ...map, './translate.js': encoded(`export const glossaryEntries=()=>[];export const glossaryPeople=()=>[];export const glossaryIn=()=>[];export const askTranslator=async()=>'';`),

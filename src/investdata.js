@@ -58,7 +58,7 @@ ANSWER — one JSON object, nothing else:
 "fx":[{"from":"USD","to":"EUR","date":"YYYY-MM-DD","time":"","value":0.9,"source":"guess|story","evidence":""}]}
 At most 10 shares, 30 trades, 8 watched, 8 stakes and 150 quotes. Fewer is fine; cash may stay uninvested. Plain JSON numbers, without separators.`;
 // 투자 새로 만들기: the same account currencies, everything else made again
-const INVEST_REBUILD = `
+export const INVEST_REBUILD = `
 
 REBUILD
 REBUILD means the user asked for the investment app to be made again.
@@ -83,7 +83,7 @@ ANSWER — one JSON object, nothing else:
 Empty lists are fine.`;
 // a model's list of records (a null or a bare word in it is none) and its text (an object where text belongs is none)
 export const list = x => Array.isArray(x) ? x.filter(v => v && typeof v === 'object' && !Array.isArray(v)) : [];
-const text = (s, n = 500) => (s !== null && typeof s === 'object' ? '' : String(s ?? '')).trim().slice(0, n);
+export const text = (s, n = 500) => (s !== null && typeof s === 'object' ? '' : String(s ?? '')).trim().slice(0, n);
 // a model's numbers, codes and dates in the shapes the checks below expect: "180.50" or "1,240" a number, "eur" a code,
 // "2027/01/05" a date (else a sound answer is turned down for how it wrote them)
 const NUMS = new Set(['value', 'amount', 'quantity', 'price', 'fee', 'percent', 'cash', 'min', 'max']), CODES = new Set(['base', 'currency', 'from', 'to']);
@@ -103,7 +103,7 @@ export const validDate = d => /^\d{4}-\d{2}-\d{2}$/.test(d || '') && !Number.isN
 // where a fill would stop reading, kept while the chat and the archive stay as they are: the bank screens ask on every draw
 let stopMemo = { key: '', at: null };
 function stopAt(m, p) {
-    const chat = ctx()?.chat || [], key = `${chat.length}|${String(m?.text || '').length}|${String(chat.at(-1)?.mes || '').length}|${p?.owner}|${JSON.stringify(p?.sync?.done || [])}|${Object.keys(p?.sync?.hiddenRead || {}).length}|${p?.sync?.marks?.base?.index}|${Number.isInteger(m?.phoneUpto) ? `live:${m.phoneUpto}` : ''}`;
+    const chat = ctx()?.chat || [], key = `${chat.length}|${String(m?.text || '').length}|${String(chat.at(-1)?.mes || '').length}|${p?.owner}|${JSON.stringify(p?.sync?.done || [])}|${Object.keys(p?.sync?.hiddenRead || {}).length}|${p?.sync?.marks?.base?.index}`;
     if (stopMemo.key !== key) stopMemo = { key, at: nowAt(windowOf(m, p)) };
     return stopMemo.at;
 }
@@ -111,7 +111,7 @@ export function investmentDate(m, p) {
     if (validDate(p.investment?.date)) return p.investment.date;
     // the phone's year (never a guess from the dates the archive writes), on the story's day where an investment fill would
     // stop reading (now, when it reads to the end)
-    const day = String((Number.isInteger(m?.phoneUpto) ? storyNow(p, stopAt(m, p), m) : storyNow(p, stopAt(m, p))) || '').slice(0, 5), year = p.noYear ? '' : p.year ? String(p.year) : '';
+    const day = storyNow(p, stopAt(m, p)).slice(0, 5), year = p.noYear ? '' : p.year ? String(p.year) : '';
     // (a story with no year of its own: valued at the prices of the day it was first valued, that day kept on the brokerage)
     const date = p.noYear ? new Date().toISOString().slice(0, 10) : year && day ? `${year}-${day}` : '';
     if (p.noYear && p.investment && validDate(date)) p.investment.date = date;
@@ -131,11 +131,11 @@ export function ingestQuotes(m, raw, input, date, securities) {
     for (const x of list(raw.fx).slice(0, 30)) if (currency(x.from) && currency(x.to) && x.from !== x.to) push(`FX:${x.from}/${x.to}`, x);
 }
 // a model's records, as the app keeps them
-const securityOf = s => ({ symbol: text(s.symbol, 80), name: text(s.name, 100), ko: text(s.ko, 100), currency: currency(s.currency) });
-const tradeOf = t => ({ id: uid(), kind: t.kind, symbol: text(t.symbol, 80), currency: t.currency, date: t.date, quantity: t.quantity, price: t.price, fee: finite(t.fee) ? t.fee : t.kind === 'dividend' ? undefined : 0, amount: t.amount, source: 'guess' });
-const moved = t => (t.kind === 'buy' ? -(t.quantity * t.price + t.fee) : t.kind === 'sell' ? t.quantity * t.price - t.fee : t.amount);
-const stakesOf = (raw, input) => list(raw.stakes).slice(0, 8).filter(s => s.evidence && storyPart(input).includes(String(s.evidence))).map(s => ({ id: uid(), company: text(s.company, 100), listed: typeof s.listed === 'boolean' ? s.listed : null, percent: finite(s.percent) && s.percent >= 0 && s.percent <= 100 ? s.percent : null, holder: text(s.holder), voter: text(s.voter), beneficiary: text(s.beneficiary), restriction: text(s.restriction), value: finite(s.value) && s.value >= 0 ? s.value : null, currency: currency(s.currency), evidence: text(s.evidence, 2000), source: 'story' }));
-const watchOf = (raw, securities) => list(raw.watch).slice(0, 8).filter(w => securities.some(s => s.symbol === w.symbol)).map(w => ({ symbol: w.symbol, note: text(w.note), ko: text(w.ko), query: text(w.query, 120), source: 'guess' }));
+export const securityOf = s => ({ symbol: text(s.symbol, 80), name: text(s.name, 100), ko: text(s.ko, 100), currency: currency(s.currency) });
+export const tradeOf = t => ({ id: uid(), kind: t.kind, symbol: text(t.symbol, 80), currency: t.currency, date: t.date, quantity: t.quantity, price: t.price, fee: finite(t.fee) ? t.fee : t.kind === 'dividend' ? undefined : 0, amount: t.amount, source: 'guess' });
+export const moved = t => (t.kind === 'buy' ? -(t.quantity * t.price + t.fee) : t.kind === 'sell' ? t.quantity * t.price - t.fee : t.amount);
+export const stakesOf = (raw, input) => list(raw.stakes).slice(0, 8).filter(s => s.evidence && storyPart(input).includes(String(s.evidence))).map(s => ({ id: uid(), company: text(s.company, 100), listed: typeof s.listed === 'boolean' ? s.listed : null, percent: finite(s.percent) && s.percent >= 0 && s.percent <= 100 ? s.percent : null, holder: text(s.holder), voter: text(s.voter), beneficiary: text(s.beneficiary), restriction: text(s.restriction), value: finite(s.value) && s.value >= 0 ? s.value : null, currency: currency(s.currency), evidence: text(s.evidence, 2000), source: 'story' }));
+export const watchOf = (raw, securities) => list(raw.watch).slice(0, 8).filter(w => securities.some(s => s.symbol === w.symbol)).map(w => ({ symbol: w.symbol, note: text(w.note), ko: text(w.ko), query: text(w.query, 120), source: 'guess' }));
 // the day a second turn reads up to, after the first's DATE (across New Year the short way round); DATE when unknown
 function laterDate(p, gap, date) {
     const d = String(storyNow(p, nowAt(gap)) || '').slice(0, 5);
