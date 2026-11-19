@@ -5,7 +5,7 @@
 // 기록(은행 · 투자 · 장부)과 복구 기록은 실시간 서랍의 것만 옮겨요. 폰 1의 것은 건드리지 않아요.
 import { shiftAll } from './phonedata.js';
 import { journalRead, journalWrite } from './phonesync.js';
-import { isLiveMeta, liveNowYear } from './phone2store.js';
+import { isLiveMeta, liveNowYear, liveYearAt } from './phone2store.js';
 
 const need = m => { if (!isLiveMeta(m)) throw new Error('실시간 폰의 서랍이 아니에요'); return m; };
 
@@ -27,6 +27,8 @@ export function liveEnsureYear(m, p) {
 // 연도를 바꿔요 (설정 › 날짜 및 시간): 실시간의 모든 폰이 같이 움직이고, 은행 · 투자 · 장부의 날짜도 같은 햇수만큼
 export function liveSetStoryYear(m, p, year) {
     need(m);
+    // (phones just copied from the story: the year they had there is set down first, so it is kept below)
+    for (const q of Object.values(m.phones || {})) { const b = q && typeof q === 'object' && q.liveYearKeep ? liveNowYear(m, q) : 0; if (b) liveYearAt(q, b); }
     const n = p.year && !p.noYear ? year - p.year : 0;
     if (n) {
         if (m.finance) m.finance = shiftAll(m.finance, n);
@@ -66,7 +68,7 @@ export function liveYearsNow(m) {
         if (!p || typeof p !== 'object' || !p.owner || p.noYear) continue;
         const base = liveNowYear(m, p);
         if (!base) continue;
-        const want = base + (Number(p.liveYearShift) || 0);
+        const want = liveYearAt(p, base);
         if (p.year !== want) { p.year = want; changed = true; }
     }
     return changed;

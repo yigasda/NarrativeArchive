@@ -81,6 +81,10 @@ export function startFromStory(m, { persona, upto, scope = '', dayShift = 0, now
         // (롤플에 넣기 is each phone's own switch: 폰 2's copy starts with it off, so the same phone never goes into the
         // role-play's prompt twice unless it is turned on here)
         p.inject = false;
+        // (the year the phone had in the story is kept: 폰 2's clock gets its year from the phone it began on, and a copied
+        // phone that stands in another year stays that far from it — worked out the first time the clock is asked, liveYearAt)
+        delete p.liveYearShift; delete p.liveYearKeep;
+        if (Number.isInteger(p.year) && !p.noYear) p.liveYearKeep = true;
     }
     w.story = structuredClone(story);
     if (typeof m.lastPhoneOwner === 'string') w.lastOwner = m.lastPhoneOwner;
@@ -210,6 +214,15 @@ export function liveMeta(m, { text = null, now = null } = {}) {
 // 실시간 폰의 지금: 서랍의 흐르는 시계(phoneNow), 못 읽거나 서랍이 아니면 폰에 저장된 시각
 export const liveNowText = (m, p) => { let t = ''; try { t = typeof m?.phoneNow === 'function' ? m.phoneNow(p) : ''; } catch { t = ''; } return t || p?.now || ''; };
 // 실시간 폰의 지금 연도: 서랍의 흐르는 시계가 알려 주는 연도 (이야기 날짜로 옮긴 날의 연도). 모르면 0
+// the year a 폰 2 phone has when its clock stands in year `base`: the clock's year and how far the phone is from it (a year
+// the user picked, or — a phone just copied from the story, liveYearKeep — the year it had there, set down once here)
+export function liveYearAt(p, base) {
+    if (p.liveYearKeep) {
+        delete p.liveYearKeep;
+        if (Number.isInteger(p.year) && !p.noYear) { const off = p.year - base; if (off) p.liveYearShift = off; else delete p.liveYearShift; }
+    }
+    return base + (Number(p.liveYearShift) || 0);
+}
 export const liveNowYear = (m, p) => { let y = 0; try { y = Number(m?.phoneNow?.year?.(p)) || 0; } catch { y = 0; } return Number.isInteger(y) && y > 0 ? y : 0; };
 
 // 브라우저 저장 (5-4): what 폰 1 keeps in this browser per chat (the last phone owner, 복구's journal) is keyed by the chat

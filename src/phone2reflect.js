@@ -20,7 +20,7 @@ import { applyMoney, moneyNow, investNow, orderClock, regularClock, revertEffect
 import { applyLife, applyDays, fillDays, lifeClock, dlvClock, cardClock, lifeNow } from './phonesynclife.js';
 import { migrateBank } from './finance.js';
 import { nameKey } from './people.js';
-import { liveWorld, liveScope, liveKey } from './phone2store.js';
+import { liveWorld, liveScope, liveKey, liveYearAt } from './phone2store.js';
 import { liveWall } from './phone2clock.js';
 import { feedRows, feedText, dropPersonaTalk } from './phone2feed.js';
 
@@ -72,7 +72,7 @@ export async function updateLive(real, m, owner, { tz = 'UTC', save = async () =
         const yearWas = p.year;
         let went = false;
         // (a year the user picked on this phone: kept that far from the real one)
-        if (!p.noYear) p.year = wall.year + (Number(p.liveYearShift) || 0);
+        if (!p.noYear) p.year = liveYearAt(p, wall.year);
         try {
         const known = p.year && !p.noYear ? String(p.year) : '', year = known || String(new Date().getFullYear());
         const anchor = `${year}-${nowAt.slice(0, 5)}`;
