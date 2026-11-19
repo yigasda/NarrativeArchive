@@ -60,6 +60,21 @@ test('한 구간: 메신저 줄이 요청에 가고, 메모 · 송금이 폰 2�
     assert.equal(T.calls, 1);
 });
 
+test('새해를 넘긴 뒤의 첫 반영: 폰 시각과 연도를 같이 옮겨요 (그 전까지 폰의 연도는 저장된 시각의 연도)', async () => {
+    const c = world(), move = Date.parse('2027-01-02T04:10:00Z') - Date.parse('2026-11-11T04:10:00Z');
+    c.p.now = '12-30 21:00'; c.p.year = 2026;
+    for (const x of c.room.messages) x.at += move;
+    const n = c.first + 1;
+    T.answers = [{ events: [{ id: 'split', at: n, quote: '더치페이 몫 32,000원', summary: 'Ren에게 더치페이 몫을 보냈다', date: '01-02', time: '13:11', money: true,
+        phone: { notes: [{ title: '갚을 것', text: '(없음)', time: '01-02 13:11' }] } }] }];
+    T.moneyAnswers = pay(n); T.calls = 0;
+    const p = await R.updateLive(c.real, c.m, 'Mara', { tz: 'Asia/Seoul' });
+    assert.deepEqual([p.now, p.year], ['01-02 13:11', 2027]);
+    assert.equal(c.bank(), 68000);
+    // (돈 기록의 날짜도 새해 것)
+    assert.ok(JSON.stringify(c.m.finance).includes('2027-01-02') && !JSON.stringify(c.m.finance).includes('2027-12-30') && !JSON.stringify(c.m.finance).includes('2026-01-02'));
+});
+
 test('다음 구간은 새 메시지만 읽어요', async () => {
     const c = world();
     T.answers = [answer(c.first + 1)]; T.moneyAnswers = pay(c.first + 1);

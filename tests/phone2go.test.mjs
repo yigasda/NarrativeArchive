@@ -557,51 +557,127 @@ test('연도가 없는 실시간 폰 · 연도 표시를 껐다 켤 때: 브라�
     assert.equal(Y.liveStoryYear(d, { ...p, year: 2031 }), '2031');
     // 연도가 없는 폰에 한 번 정하기
     const q = { owner: 'X' }; assert.equal(Y.liveEnsureYear(d, q), true); assert.equal(q.year, 2027);
+    // (저장된 시각이 새해 전이면 그 시각의 연도)
+    const q2 = { owner: 'X', now: '12-20 10:00' }; assert.equal(Y.liveEnsureYear(d, q2), true); assert.equal(q2.year, 2026);
     // 연도가 없는 폰에서 연도를 고르면: 차이는 실시간 시계의 연도에서
     delete p.year; delete p.liveYearShift;
     Y.liveSetStoryYear(d, p, 2029);
-    assert.deepEqual([p.year, p.liveYearShift], [2029, 2]);
+    // (고른 2029는 화면에 보이는 연도. 폰에 저장된 시각 11-10은 시계가 새해를 넘기기 전이라 폰의 연도는 한 해 전)
+    assert.deepEqual([p.year, p.liveYearShift, Y.liveShownYear(d, p)], [2028, 2, 2029]);
     // 시계가 없는 서랍: 전처럼 브라우저의 올해
     const plain = L.liveMeta(c.real), y = new Date().getFullYear();
     assert.equal(Y.liveStoryYear(plain, { owner: 'Mara', year: 0 }), String(y));
 });
 
-test('실시간 화면을 열 때 연도 맞추기(liveYearsNow): 새해를 넘긴 폰 · 연도 없는 폰은 시계의 연도 + 고른 차이로, 끈 폰은 그대로', () => {
+test('실시간 화면을 열 때 연도 맞추기(liveYearsNow): 폰의 연도는 폰에 저장된 시각의 연도 (시계의 연도 + 고른 차이, 새해를 넘겼으면 한 해 전); 끈 폰은 그대로', () => {
     const c = world(), d = clockIn2027(c), p = d.phones.mara;
     d.phones.ivo = { ...phone(), owner: 'Ivo', year: 2026, liveYearShift: 4 };
     d.phones.off = { ...phone(), owner: 'Off', year: 2026, noYear: true };
     d.phones.none = { ...phone(), owner: 'None' }; delete d.phones.none.year;
+    // (시계는 2027-04-11. 저장된 시각이 그 해 것인 폰, 전에 시계의 연도로 올려 둔 폰)
+    d.phones.late = { ...phone(), owner: 'Late', now: '04-10 09:00', year: 2026 };
+    d.phones.old = { ...phone(), owner: 'Old', year: 2027 };
     p.year = 2026; delete p.liveYearShift;
     const tx = JSON.stringify(p.money);
     assert.equal(Y.liveYearsNow(d), true);
-    assert.deepEqual([p.year, d.phones.ivo.year, d.phones.ivo.liveYearShift, d.phones.off.year, d.phones.off.noYear, d.phones.none.year], [2027, 2031, 4, 2026, true, 2027]);
+    // 저장된 시각 11-10은 새해 전: 폰의 연도는 2026 그대로 (고른 차이 4면 2030). 화면에는 2027 · 2031
+    assert.deepEqual([p.year, d.phones.ivo.year, d.phones.ivo.liveYearShift, d.phones.off.year, d.phones.off.noYear, d.phones.none.year, d.phones.late.year, d.phones.old.year], [2026, 2030, 4, 2026, true, 2026, 2027, 2026]);
+    assert.deepEqual(['mara', 'ivo', 'off', 'none', 'late', 'old'].map(k => Y.liveShownYear(d, d.phones[k])), [2027, 2031, 2026, 2027, 2027, 2027]);
     // 기록 날짜는 안 옮겨요 (해가 넘어간 것이지 사용자가 연도를 바꾼 게 아니에요), 폰 1의 폰도 그대로
     assert.equal(JSON.stringify(p.money), tx);
     assert.equal(c.real.phones.mara.year, undefined);
     // 이미 맞으면 아무것도 안 바꿔요
     assert.equal(Y.liveYearsNow(d), false);
-    // 반영이 쓰는 연도와 같은 계산이에요: 시계의 연도 + 고른 차이
-    assert.equal(d.phones.ivo.year, G.liveNowOf(c.real, () => Date.parse('2026-11-12T08:15:00Z')).year(d.phones.ivo) + 4);
+    // 화면의 연도는 반영이 쓰는 것과 같은 계산이에요: 시계의 연도 + 고른 차이
+    assert.equal(Y.liveShownYear(d, d.phones.ivo), G.liveNowOf(c.real, () => Date.parse('2026-11-12T08:15:00Z')).year(d.phones.ivo) + 4);
     // 시계가 없는 서랍: 아무것도 안 바꿔요. 서랍이 아니면 멈춰요
     p.year = 2020;
     assert.equal(Y.liveYearsNow(L.liveMeta(c.real)), false); assert.equal(p.year, 2020);
     assert.throws(() => Y.liveYearsNow(c.real), /실시간 폰의 서랍이 아니에요/);
 });
 
-test('화면에 보이는 연도(liveShownYear): 흐르는 시계의 연도 + 고른 차이; 끈 폰 · 시계 없는 서랍 · 막 가져온 폰은 폰에 있는 것', () => {
+test('화면에 보이는 연도(liveShownYear): 흐르는 시계의 연도 + 고른 차이; 끈 폰은 폰에 있는 것, 시계 없는 서랍 · 막 가져온 폰은 저장된 시각의 연도에서', () => {
     const c = world(), d = clockIn2027(c), p = d.phones.mara;
     p.year = 2026; delete p.liveYearShift;
     assert.equal(Y.liveShownYear(d, p), 2027);
     p.liveYearShift = 3; assert.equal(Y.liveShownYear(d, p), 2030);
     assert.equal(Y.liveShownYear(d, { ...p, noYear: true }), 2026);
-    assert.equal(Y.liveShownYear(d, { ...p, liveYearKeep: true }), 2026);
+    // (막 가져온 폰: 저장된 시각 11-10의 연도 2026, 시계는 새해를 넘긴 04-11 → 2027. 저장된 시각이 같은 해면 그대로)
+    assert.equal(Y.liveShownYear(d, { ...p, liveYearKeep: true }), 2027);
+    assert.equal(Y.liveShownYear(d, { ...p, now: '04-10 09:00', liveYearKeep: true }), 2026);
     assert.equal(Y.liveShownYear(L.liveMeta(c.real), p), 2026);
     assert.equal(Y.liveShownYear(d, null), undefined);
     // 읽기만 해요
     assert.deepEqual([p.year, p.liveYearShift], [2026, 3]);
-    // 화면을 열 때 맞춘 뒤에는 폰의 연도와 같아요 (지금 화면이 p.year를 읽는 것과 같은 값)
+    // 화면을 열 때 맞춘 뒤: 폰의 연도 + (시계가 저장된 시각 뒤로 새해를 넘겼으면 1)
     Y.liveYearsNow(d);
-    for (const q of Object.values(d.phones)) assert.equal(Y.liveShownYear(d, q), q.year);
+    for (const q of Object.values(d.phones)) assert.equal(Y.liveShownYear(d, q), q.year + L.liveCross(q.now, d.phoneNow(q)));
+    assert.deepEqual([p.year, Y.liveShownYear(d, p)], [2029, 2030]);
+});
+
+test('새해를 넘긴 뒤 다음 반영 전: 폰의 연도는 저장된 시각의 연도, 화면 · 흐르는 시계 쪽은 그 다음 해 (은행 날짜가 1년 뒤로 찍히던 것)', async () => {
+    // liveCross: 저장된 시각 뒤로 시계가 새해를 넘겼나
+    assert.equal(L.liveCross('12-30 21:00', '01-02 10:00'), 1);
+    assert.equal(L.liveCross('11-10 22:00', '04-11 08:15'), 1);
+    assert.equal(L.liveCross('12-30 21:00', '12-31 09:00'), 0);
+    assert.equal(L.liveCross('12-30 21:00', '12-30 21:00'), 0);
+    assert.equal(L.liveCross('03-01 10:00', '11-01 10:00'), 0);
+    // (다른 시간대의 날짜라 저장된 날이 하루 이틀 앞선 것은 새해가 아니에요)
+    assert.equal(L.liveCross('06-11 00:10', '06-10 23:00'), 0);
+    assert.equal(L.liveCross('01-01 00:30', '12-31 23:50'), 0);
+    assert.equal(L.liveCross('', '01-02 10:00'), 0); assert.equal(L.liveCross('12-30 21:00', ''), 0); assert.equal(L.liveCross(null, undefined), 0);
+    // 마지막 반영 12-30 (2026), 지금 01-02 (2027)
+    const clock = { at: '12-30 22:00', y: 2026 }, now = () => clock.at; now.year = () => clock.y;
+    const real = { text: '', phones: { mara: { ...phone(), now: '12-30 21:00', year: 2026 } } };
+    L.startFromStory(real, { persona: 'Ren', upto: 2, scope: 'test', story: { ranges: {}, titles: [], rawFrom: 0, own: [''] } });
+    const d = L.liveMeta(real, { now }), p = d.phones.mara;
+    Y.liveYearsNow(d);
+    assert.deepEqual([p.year, p.liveYearShift, Y.liveShownYear(d, p)], [2026, undefined, 2026]);
+    clock.at = '01-02 10:00'; clock.y = 2027;
+    assert.equal(Y.liveYearsNow(d), false);
+    assert.deepEqual([p.year, p.now, Y.liveShownYear(d, p)], [2026, '12-30 21:00', 2027]);
+    // 폰 1의 은행 날짜 계산(wealth.js wealthDate, 진짜 줄 그대로): 저장된 시각 + 폰의 연도 → 2026-12-30
+    const src = await readFile(new URL('../src/wealth.js', import.meta.url), 'utf8'), i = src.indexOf('export function wealthDate('), j = src.indexOf('\n}\n', i);
+    assert.ok(i >= 0 && j > i);
+    const wealthDate = new Function(`${src.slice(i, j + 2).replace('export function', 'return function')}`)();
+    const bare = { ...p, money: { ...p.money } }; delete bare.money.fxDate; delete bare.investment;
+    assert.equal(wealthDate({}, bare, bare.now), '2026-12-30');
+    // (전에는 화면을 열 때 폰의 연도를 2027로 올려서 2027-12-30이 됐어요)
+    assert.equal(wealthDate({}, { ...bare, year: 2027 }, bare.now), '2027-12-30');
+    // 전에 올려 둔 폰은 화면을 열 때 저장된 시각의 연도로 돌아와요
+    p.year = 2027;
+    assert.equal(Y.liveYearsNow(d), true); assert.equal(p.year, 2026);
+    // 흐르는 시계와 붙여 쓰는 곳은 그 시각의 연도로: 그 순간만 바꿨다가 바로 되돌려요
+    assert.equal(L.liveYearFor(p, '01-02 10:00'), 2027); assert.equal(L.liveYearFor(p, '12-30 21:00'), 2026); assert.equal(L.liveYearFor({ ...p, noYear: true }, '01-02 10:00'), 2026);
+    let seen = 0;
+    assert.equal(L.liveAtYear(p, '01-02 10:00', () => { seen = p.year; return 'x'; }), 'x');
+    assert.deepEqual([seen, p.year], [2027, 2026]);
+    assert.throws(() => L.liveAtYear(p, '01-02 10:00', () => { throw new Error('boom'); }), /boom/); assert.equal(p.year, 2026);
+    // 답장의 시계 글 · 채우기의 OWNER'S CLOCK: 01-02의 요일은 2027년 것 (토요일), 저장된 시각 12-30은 2026년 것 (수요일)
+    assert.match(L.liveAtYear(p, '01-02 10:00', () => PD.phone2Clock(p, '01-02 10:00', d)), /Time now: 01-02 10:00 \(Sat\)/);
+    assert.match(L.liveAtYear(p, '12-30 21:00', () => PD.phone2Clock(p, '12-30 21:00', d)), /Time now: 12-30 21:00 \(Wed\)/);
+    assert.equal(p.year, 2026);
+    // (그 두 곳이 실제로 그렇게 불러요: 답장의 시계 글, 채우기의 OWNER'S CLOCK)
+    assert.ok((await readFile(new URL('../src/phone2go.js', import.meta.url), 'utf8')).includes('clock: (ph, at) => liveAtYear(ph, at, () => phone2Clock(ph, at, d0)),'));
+    assert.ok((await readFile(new URL('../src/phone2req.js', import.meta.url), 'utf8')).includes('export const liveFillClock = (m, p, at, opts = {}) => liveAtYear(p, at, () => ownerClock(p, at, m, null, [], opts));'));
+    // 연도를 고르면 (화면에 보이는 2027 → 2030): 폰의 연도는 저장된 시각 쪽 2029, 차이 3, 기록 날짜는 3년
+    const asOf = p.money.asOf;
+    assert.equal(Y.liveSetStoryYear(d, p, 2030), 3);
+    assert.deepEqual([p.year, p.liveYearShift, Y.liveShownYear(d, p), p.money.asOf], [2029, 3, 2030, `${Number(asOf.slice(0, 4)) + 3}${asOf.slice(4)}`]);
+    // 같은 연도를 다시 고르면 아무것도 안 움직여요
+    assert.equal(Y.liveSetStoryYear(d, p, 2030), 0); assert.deepEqual([p.year, p.liveYearShift], [2029, 3]);
+    // 폰 1의 폰은 그대로
+    assert.equal(real.phones.mara.year, 2026);
+});
+
+test('이야기의 12-31에 시작해서 실시간 시계가 바로 새해인 폰: 가져온 연도는 그대로, 화면은 새해', () => {
+    const now = () => '01-01 09:00'; now.year = () => 2027;
+    const real = { text: '', phones: { mara: { ...phone(), now: '12-31 15:00', year: 2026 }, ivo: { ...phone(), owner: 'Ivo', now: '12-31 15:00', year: 2029 } } };
+    L.startFromStory(real, { persona: 'Ren', upto: 2, scope: 'test', story: { ranges: {}, titles: [], rawFrom: 0, own: [''] } });
+    const d = L.liveMeta(real, { now });
+    assert.deepEqual([Y.liveShownYear(d, d.phones.mara), Y.liveShownYear(d, d.phones.ivo)], [2027, 2030]);
+    Y.liveYearsNow(d);
+    assert.deepEqual(['mara', 'ivo'].map(k => [d.phones[k].year, d.phones[k].liveYearShift, Y.liveShownYear(d, d.phones[k])]), [[2026, undefined, 2027], [2029, 3, 2030]]);
 });
 
 test('이야기에서 가져온 폰의 연도는 지켜요: 시계의 연도와 다른 폰은 그만큼 떨어진 채로 (화면을 열 때 · 새해 · 연도 고르기)', () => {
@@ -617,10 +693,11 @@ test('이야기에서 가져온 폰의 연도는 지켜요: 시계의 연도와 
         Y.liveYearsNow(d);
         assert.deepEqual(['mara', 'ivo', 'off', 'none'].map(k => [d.phones[k].year, d.phones[k].liveYearShift, d.phones[k].liveYearKeep]), [[2026, undefined, undefined], [2029, 3, undefined], [2029, undefined, undefined], [2026, undefined, undefined]]);
         assert.equal(JSON.stringify(d.phones.ivo.money), money);
-        // 새해를 넘기면 둘 다 한 해씩
+        // 시계가 새해를 넘기면: 화면은 둘 다 한 해씩, 폰의 연도는 저장된 시각(11-10)의 연도 그대로
         L.liveWorld(real).dayShift = 150;
-        Y.liveYearsNow(d);
-        assert.deepEqual([d.phones.mara.year, d.phones.ivo.year, d.phones.off.year], [2027, 2030, 2029]);
+        assert.equal(Y.liveYearsNow(d), false);
+        assert.deepEqual([d.phones.mara.year, d.phones.ivo.year, d.phones.off.year], [2026, 2029, 2029]);
+        assert.deepEqual([Y.liveShownYear(d, d.phones.mara), Y.liveShownYear(d, d.phones.ivo)], [2027, 2030]);
         assert.equal(JSON.stringify(real.phones), p1);
     }
     {

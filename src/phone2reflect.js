@@ -72,7 +72,7 @@ export async function updateLive(real, m, owner, { tz = 'UTC', save = async () =
         const yearWas = p.year;
         let went = false;
         // (a year the user picked on this phone: kept that far from the real one)
-        if (!p.noYear) p.year = liveYearAt(p, wall.year);
+        if (!p.noYear) p.year = liveYearAt(p, wall.year, wall.at);
         try {
         const known = p.year && !p.noYear ? String(p.year) : '', year = known || String(new Date().getFullYear());
         const anchor = `${year}-${nowAt.slice(0, 5)}`;

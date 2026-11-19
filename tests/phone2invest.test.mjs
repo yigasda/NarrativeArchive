@@ -82,6 +82,12 @@ test('평가 날짜: 실시간은 흐르는 시계의 날 + 폰의 연도; 저�
         assert.equal(I2.liveInvestmentDate(d, p), '2026-11-14');
         // 시계가 없는 서랍: 폰에 저장된 시각의 날
         assert.equal(I2.liveInvestmentDate(L.liveMeta(real), p), '2026-11-12');
+        // 시계가 새해를 넘겼으면(저장된 시각 12-30, 폰의 연도 2026, 지금 01-02): 흐르는 시계의 날 + 그 다음 해
+        const ny = L.liveMeta(real, { now: () => '01-02 10:00' }), was = [p.now, p.year];
+        p.now = '12-30 21:00'; p.year = 2026;
+        assert.equal(I2.liveInvestmentDate(ny, ny.phones.mara), '2027-01-02');
+        assert.equal(p.year, 2026);
+        [p.now, p.year] = was;
         // 저장된 평가 날짜가 있으면 그대로
         p.investment = { date: '2026-10-01' };
         assert.equal(I2.liveInvestmentDate(d, p), '2026-10-01');
@@ -118,7 +124,7 @@ test('서랍이 아니면 모델을 부르기 전에 멈춰요; 사본은 폰 1 
         .replace("told = liveTold(told, await liveInvestMore(m, p, told, two, plan), ['securities', 'trades', 'watch', 'stakes']);", 'await investMore(m, p, raw, two, plan);')
         .replace("second turn', err); break; }", "second turn', err); }").replace('if (two0) turnsNote(', 'if (two) turnsNote('), body(a, 'async function makeInvestment('));
     assert.equal(body(b, 'export async function liveRefreshMarket(').replace('function liveRefreshMarket(', 'function refreshMarket(').replace(need, '').replace('return liveFillInvestment(', 'return fillInvestment(').replace('liveSideRequest(', 'sideRequest('), body(a, 'export async function refreshMarket('));
-    assert.equal(body(b, 'export function liveInvestmentDate(').replace('function liveInvestmentDate(', 'function investmentDate(').replace(need, '').replace("String(liveNowText(m, p) || '').slice(0, 5)", 'storyNow(p, stopAt(m, p)).slice(0, 5)'), body(a, 'export function investmentDate('));
+    assert.equal(body(b, 'export function liveInvestmentDate(').replace('function liveInvestmentDate(', 'function investmentDate(').replace(need, '').replace("String(liveNowText(m, p) || '').slice(0, 5)", 'storyNow(p, stopAt(m, p)).slice(0, 5)').replace('String(liveYearFor(p, day))', 'String(p.year)'), body(a, 'export function investmentDate('));
     assert.ok(b.includes("export const liveFillInvestment = (m, p, date, opts = {}) => exclusive('fill', () => liveMakeInvestment(m, p, date, opts));") && a.includes("export const fillInvestment = (m, p, date, opts = {}) => exclusive('fill', () => makeInvestment(m, p, date, opts));"));
     assert.ok(api.includes('fillInvestment: split(fillInvestment, liveFillInvestment)') && api.includes('refreshMarket: split(refreshMarket, liveRefreshMarket)') && api.includes('investmentDate: investmentDateP'));
 });

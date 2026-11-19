@@ -227,12 +227,34 @@ export const liveNowText = (m, p) => { let t = ''; try { t = typeof m?.phoneNow 
 // 실시간 폰의 지금 연도: 서랍의 흐르는 시계가 알려 주는 연도 (이야기 날짜로 옮긴 날의 연도). 모르면 0
 // the year a 폰 2 phone has when its clock stands in year `base`: the clock's year and how far the phone is from it (a year
 // the user picked, or — a phone just copied from the story, liveYearKeep — the year it had there, set down once here)
-export function liveYearAt(p, base) {
+// (run: the clock's time then, "MM-DD …". The phone's own year is the year of its saved time, p.now: a clock that has
+// passed New Year since then stands one year on, so the phone's year is measured against the year before)
+export function liveYearAt(p, base, run = '') {
     if (p.liveYearKeep) {
         delete p.liveYearKeep;
-        if (Number.isInteger(p.year) && !p.noYear) { const off = p.year - base; if (off) p.liveYearShift = off; else delete p.liveYearShift; }
+        if (Number.isInteger(p.year) && !p.noYear) { const off = p.year + liveCross(p.now, run) - base; if (off) p.liveYearShift = off; else delete p.liveYearShift; }
     }
     return base + (Number(p.liveYearShift) || 0);
+}
+// 폰에 저장된 연도(p.year)는 폰에 저장된 시각(p.now, 마지막 반영 때)의 연도예요: 폰 1의 계산들이 그 둘을 붙여서 날짜를
+// 만들어요. 흐르는 시계는 그 뒤로 새해를 넘겼을 수 있어요.
+// has a later moment (at, "MM-DD …": the running clock) passed New Year since the saved one (saved)? 1 or 0. A saved day a
+// few days ahead of it (another time zone's date) is no New Year
+export function liveCross(saved, at) {
+    const a = /^(\d{2})-(\d{2})/.exec(String(saved || '')), b = /^(\d{2})-(\d{2})/.exec(String(at || ''));
+    if (!a || !b || `${a[1]}-${a[2]}` <= `${b[1]}-${b[2]}`) return 0;
+    const day = x => Date.UTC(2001, Number(x[1]) - 1, Number(x[2])) / 864e5;
+    return (day(b) - day(a) + 365) % 365 < 360 ? 1 : 0;
+}
+// the year of a moment `at` on this phone ("MM-DD …", at or after its saved time): its own year, one more past New Year
+export const liveYearFor = (p, at) => (p && !p.noYear && Number.isInteger(p.year) ? p.year + liveCross(p.now, at) : p?.year);
+// run fn with the phone's year set to that moment's (put back at once, nothing waits in between): for the 폰 1 helpers
+// that read p.year beside a time they are given, when that time is the running clock's
+export function liveAtYear(p, at, fn) {
+    const y = liveYearFor(p, at);
+    if (!p || y === p.year) return fn();
+    const was = p.year; p.year = y;
+    try { return fn(); } finally { p.year = was; }
 }
 export const liveNowYear = (m, p) => { let y = 0; try { y = Number(m?.phoneNow?.year?.(p)) || 0; } catch { y = 0; } return Number.isInteger(y) && y > 0 ? y : 0; };
 

@@ -10,7 +10,7 @@ import { nameKey } from './people.js';
 import { worldText } from './world.js';
 import { rememberStory } from './phoneparse.js';
 import { recentPhoneText, CHAT_TOKENS, MORE_TOKENS, noArchive, chatAfterArchive, phoneAt, nowAt, markAfter, loreFor, archiveBlock, archiveFor, afterBlock, blindBlock, namesBlock, ownerClock, toldShort } from './phonedata.js';
-import { isLiveMeta } from './phone2store.js';
+import { isLiveMeta, liveAtYear } from './phone2store.js';
 import { liveStoryYear } from './phone2year.js';
 
 export const needLive = m => { if (!isLiveMeta(m)) throw new Error('실시간 폰의 서랍이 아니에요'); return m; };
@@ -32,7 +32,9 @@ export const liveReadMark = g => { if (Number.isInteger(g?.mark)) return { index
 // 채우기가 쓰는 "폰의 지금": 폰에 저장된 시각 (마지막 반영이 맞춘 것). 롤플 상태창은 안 읽어요
 export const liveSavedNow = p => p?.now || '';
 // 채우기 요청의 OWNER'S CLOCK: 실시간 폰에는 롤플 상태창도, 시각을 읽을 롤플 메시지도 없어요
-export const liveFillClock = (m, p, at, opts = {}) => ownerClock(p, at, m, null, [], opts);
+// (the block works out weekdays and summer time from p.year: for a time on the running clock that has passed New Year
+// since the phone's saved time, the year after)
+export const liveFillClock = (m, p, at, opts = {}) => liveAtYear(p, at, () => ownerClock(p, at, m, null, [], opts));
 // 두 번째 차례의 읽는 범위 (시작 전 이야기가 길 때): 폰 1과 같은 계산, 읽는 범위만 실시간 것
 // what the turns so far wrote, as the next turn is shown it (… SO FAR): each list with the later turn's rows after it
 // (keys not given: every list the later turn wrote)

@@ -13,14 +13,14 @@ import { askDraft, readNote, turnsNote, soFarHead } from './phonedata.js';
 import { json, list, text, CHART_SYS, MARKET_SYS, INVEST_SYS, INVEST_REBUILD, INVEST_NOTES_SYS, INVEST_RECORDS_SYS, securityOf, tradeOf, moved, stakesOf, watchOf, investmentTargets, parseInvestmentRecords, mergeInvestmentRecords, chartDates, ingestQuotes, validDate } from './investdata.js';
 import { liveSideRequest, liveReadMark, liveSecondTurn, liveTold, liveSavedNow, needLive } from './phone2req.js';
 import { livePrepareWealth } from './phone2fill.js';
-import { liveNowText } from './phone2store.js';
+import { liveNowText, liveYearFor } from './phone2store.js';
 
 export function liveInvestmentDate(m, p) {
     needLive(m);
     if (validDate(p.investment?.date)) return p.investment.date;
     // the phone's year (never a guess from the dates the archive writes), on the story's day where an investment fill would
     // stop reading (now, when it reads to the end)
-    const day = String(liveNowText(m, p) || '').slice(0, 5), year = p.noYear ? '' : p.year ? String(p.year) : '';
+    const day = String(liveNowText(m, p) || '').slice(0, 5), year = p.noYear ? '' : p.year ? String(liveYearFor(p, day)) : '';
     // (a story with no year of its own: valued at the prices of the day it was first valued, that day kept on the brokerage)
     const date = p.noYear ? new Date().toISOString().slice(0, 10) : year && day ? `${year}-${day}` : '';
     if (p.noYear && p.investment && validDate(date)) p.investment.date = date;

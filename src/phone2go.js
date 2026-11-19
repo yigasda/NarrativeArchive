@@ -13,7 +13,7 @@ import { SCENES_SYS, parseScenes } from './scenes.js';
 import { resolvePhoneProfile, ownerProfileBlock } from './phoneprofile.js';
 import { parseJson } from './phoneparse.js';
 import { nameKey } from './people.js';
-import { liveWorld, livePhone, liveMeta, liveKey } from './phone2store.js';
+import { liveWorld, livePhone, liveMeta, liveKey, liveAtYear } from './phone2store.js';
 import { liveStoryText } from './phone2story.js';
 import { liveWall } from './phone2clock.js';
 import { gatherReply } from './phone2live.js';
@@ -66,7 +66,9 @@ export async function liveGo(real, { onChange = () => {} } = {}) {
             const d0 = m(), card = await cardOf(p);
             const d = gatherReply(real, job.owner, job.room, { now: Date.now(), tz: tzOf(p), deps: {
                 // (the reply's own clock block: each place's time now and weekday, as the reply prompt was tuned with)
-                clock: (ph, at) => phone2Clock(ph, at, d0), around: aroundBlock, card: () => card,
+                // (the weekday is worked out from the phone's year: its saved time's, so the year after once the clock
+                // has passed New Year)
+                clock: (ph, at) => liveAtYear(ph, at, () => phone2Clock(ph, at, d0)), around: aroundBlock, card: () => card,
                 place: ph => { const r = (ph.where?.people || []).find(x => nameKey(x?.name) === nameKey(ph.owner)); return String(r?.place || r?.city || '').trim(); },
                 story: () => liveStoryText(real, w),
             } });
