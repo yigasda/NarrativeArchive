@@ -58,10 +58,14 @@ export async function branchNotice() {
     await findBranchPoint();
     if (!hasChat()) return;
     const m = getMeta(), b = branchState(m);
-    if (!b.parent || !b.ahead.length || m.branchNoticed === b.parent) return;
+    // the parent not found: whether sections are mixed in can't be told, so any section is reason enough to say so
+    const has = b.missing ? parseSections(m.text).some(x => !x.group && RANGE_HEAD.test(x.title)) : b.ahead.length > 0;
+    if (!b.parent || !has || m.branchNoticed === b.parent) return;
     m.branchNoticed = b.parent;
     await saveMeta();
-    if (await confirm('분기', `이 채팅은 #${b.last}에서 갈라졌는데, 아카이브에 그 뒤 이야기가 든 섹션 ${b.ahead.length}개가 있어요.`, '분기 정리', { no: '닫기' })) openBranches();
+    const text = b.missing ? '이 채팅은 분기인데 원본 채팅을 못 찾았어요. 몇 번에서 갈라졌는지 적으면 섞인 섹션을 찾아 줘요.'
+        : `이 채팅은 #${b.last}에서 갈라졌는데, 아카이브에 그 뒤 이야기가 든 섹션 ${b.ahead.length}개가 있어요.`;
+    if (await confirm('분기', text, '분기 정리', { no: '닫기' })) openBranches();
 }
 
 export function branchState(m) {
