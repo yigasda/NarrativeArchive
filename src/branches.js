@@ -5,7 +5,7 @@ import { MODULE, commitText, ctx, getMeta, hasChat, saveMeta } from './core.js';
 import { openDiff } from './diff.js';
 import { lastIndex } from './hide.js';
 import { syncPanel } from './panel.js';
-import { RANGE_HEAD, headingRanges, lastRangeEnd, parseSections } from './sections.js';
+import { RANGE_HEAD, headingRanges, lastRangeEnd, parseSections, sectionKey } from './sections.js';
 import { confirm, esc, fmt, timeLabel } from './util.js';
 
 // SillyTavern copies the chat metadata (and so the archive) into a branch. If the branch starts before the
@@ -17,7 +17,9 @@ import { confirm, esc, fmt, timeLabel } from './util.js';
 // and after that a parent's later sections would read as this branch's past. Found once by reading the parent:
 // SillyTavern writes the branch's name on the parent message it was made from (extra.branches), which holds even
 // after earlier parent messages are edited or swiped. A branch made before that list existed: the last message the
-// two still share. When the parent can't be read: the chat's end when first seen.
+// two still share. When the parent can't be read, no number is guessed: the 분기 window asks for it.
+// Only sections that are also in the parent's archive count as the parent's future: a section this branch wrote
+// itself after going on past the branch point is its own story (keys: the parent's section titles, when it has any).
 export const branchPointOf = (m, parent) => (parent && m.branchAt?.parent === parent && Number.isFinite(m.branchAt.at) ? m.branchAt.at : null);
 let branchSeeking = '';
 export async function findBranchPoint() {
@@ -27,9 +29,11 @@ export async function findBranchPoint() {
     branchSeeking = parent;
     const mine = c.chat || [];
     let at = mine.length - 1, how = 'end';
-    let read = false;
+    let read = false, keys = null;
     try {
-        const theirs = (await fetchOtherChat(parent)).messages || [];
+        const got = await fetchOtherChat(parent), theirs = got.messages || [];
+        const ptext = String(got.meta?.[MODULE]?.text || '');
+        if (ptext.trim()) keys = parseSections(ptext).filter(x => !x.group).map(sectionKey);
         // a chat that isn't there comes back empty rather than failing
         read = theirs.length > 0;
         const name = currentChatId();
@@ -46,7 +50,7 @@ export async function findBranchPoint() {
     // the chat may have changed while the parent was read
     if (ctx().chatMetadata?.main_chat !== parent || getMeta() !== m) return;
     // not read (renamed or deleted): no number is guessed; the 분기 window asks for it, and the next open tries again
-    m.branchAt = read ? { parent, at, how } : { parent, at: null, how: 'missing' };
+    m.branchAt = read ? { parent, at, how, ...(keys ? { keys } : {}) } : { parent, at: null, how: 'missing' };
     await saveMeta();
     syncPanel();
 }
@@ -76,13 +80,18 @@ export function branchState(m) {
     const ranges = headingRanges(m.text);
     const cur = ranges.length ? ranges[ranges.length - 1].prefix : '';
     const secs = parseSections(m.text).filter(x => !x.group);
+    const fromParent = m.branchAt?.parent === parent && Array.isArray(m.branchAt.keys) ? new Set(m.branchAt.keys) : null;
     const ahead = !parent || missing ? [] : secs.map(x => ({ s: x, r: x.title.match(RANGE_HEAD) }))
-        .filter(x => x.r && (x.r[1] || '').trim() === cur && Math.max(+x.r[2], +x.r[4]) > last)
+        .filter(x => x.r && (x.r[1] || '').trim() === cur && Math.max(+x.r[2], +x.r[4]) > last && (!fromParent || fromParent.has(sectionKey(x.s))))
         .map(x => ({ s: x.s, from: Math.min(+x.r[2], +x.r[4]), to: Math.max(+x.r[2], +x.r[4]) }));
     // the newest restore point whose numbers stop inside this branch
     const fit = ahead.length ? (m.snapshots || []).find(sn => { const rr = headingRanges(sn.text).filter(x => x.prefix === cur); return rr.length && rr[rr.length - 1].to <= last; }) : null;
     const keepTo = ahead.length ? Math.min(last, Math.min(...ahead.map(x => x.from)) - 1) : last;
-    return { parent, last, cur, ahead, fit, keepTo, missing, typed: m.branchAt?.parent === parent && m.branchAt.how === 'user' };
+    // this branch's own sections after the ones that go (it went on and compressed): the first one's start
+    const gone = new Set(ahead.map(x => x.s.start));
+    const own = ahead.length ? secs.map(x => ({ x, r: x.title.match(RANGE_HEAD) })).filter(({ x, r }) => r && !gone.has(x.start) && (r[1] || '').trim() === cur && Math.min(+r[2], +r[4]) > keepTo).map(({ r }) => Math.min(+r[2], +r[4])) : [];
+    const ownFrom = own.length ? Math.min(...own) : null;
+    return { parent, last, cur, ahead, fit, keepTo, ownFrom, missing, typed: m.branchAt?.parent === parent && m.branchAt.how === 'user' };
 }
 
 export async function openBranches() {
@@ -137,7 +146,7 @@ export async function openBranches() {
               <button type="button" class="na_v2_pillbtn danger na_bn2_drop" data-i="${i}">빼기</button></div>`).join('')}
           </div>
           <div class="na_bn2_acts">
-            <button type="button" class="na_v2_btn primary na_br_cut">${nWord(b.ahead.length)} 빼고 #${b.keepTo}까지로 맞추기</button>
+            <button type="button" class="na_v2_btn primary na_br_cut">${b.ownFrom !== null ? `${nWord(b.ahead.length)} 빼기` : `${nWord(b.ahead.length)} 빼고 #${b.keepTo}까지로 맞추기`}</button>
             ${b.fit ? `<button type="button" class="na_v2_btn na_br_restore" title="${esc(timeLabel(b.fit.at))} · ${esc(b.fit.reason)}">#${fitTo} 무렵 복구 지점으로 되돌리기</button>` : ''}
           </div>
           <div class="na_v2_note na_bn2_note">맞춘 뒤 STATE · OPEN도 확인해 주세요</div>` : ''}
@@ -163,8 +172,11 @@ export async function openBranches() {
         const secs = parseSections(m.text);
         const next = secs.filter(x => !drop.has(x.start)).map(x => m.text.slice(x.start, x.end)).join('');
         const end = lastRangeEnd(next);
-        await commitText(next, '분기 정리 전', { boundary: m.boundary >= 0 ? Math.min(m.boundary, end ?? b.keepTo, b.last) : m.boundary });
-        toastr.success(`${n}개 뺐어요. STATE·OPEN이 맞는지 확인해 주세요.`); render();
+        await commitText(next, '분기 정리 전', { boundary: m.boundary >= 0 ? Math.min(m.boundary, end ?? b.keepTo) : m.boundary });
+        // this branch's own sections further on keep the boundary there; the messages in between had the parent's
+        // sections and now have none (압축 › 빠진 구간 doesn't see a hole in the middle)
+        const hole = b.ownFrom !== null && b.ownFrom > b.keepTo + 1 ? ` · #${b.keepTo + 1}–#${b.ownFrom - 1} 구간은 마법사로 다시 압축해 주세요` : '';
+        toastr.success(hole ? `${n}개 뺐어요${hole}` : `${n}개 뺐어요. STATE·OPEN이 맞는지 확인해 주세요.`, '', hole ? { timeOut: 10000 } : {}); render();
     };
     $root.on('click', '.na_bn2_drop', async function () {
         const x = branchState(m).ahead[Number(this.dataset.i)];
