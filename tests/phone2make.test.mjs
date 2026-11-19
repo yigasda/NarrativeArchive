@@ -1,0 +1,119 @@
+// 폰 2의 폰 다시 만들기 (phone2make.js): 고른 앱 · 폰 전체. 서랍은 진짜, 모델만 가짜예요.
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import * as L from '../src/phone2store.js';
+import { journalRead, journalWrite } from '../src/phonesync.js';
+import { T, PD, MK } from './phone2reflect.load.mjs';
+
+const src = f => readFile(new URL(`../src/${f}`, import.meta.url), 'utf8');
+const phone = () => ({ owner: 'Mara', now: '11-12 21:30', year: 2026, country: 'DE', lives: 'DE', inject: false, wall: 'dusk', accent: 'blue', contacts: [{ name: 'Ivo' }], threads: [{ with: 'Ivo', messages: [{ from: 'Ivo', time: '11-12 20:00', text: 'hi' }] }],
+    calls: [], photos: [], notes: [{ title: '옛 메모', text: 'x', time: '11-10 10:00' }], searches: [], events: [], posts: [], mails: [], diary: [], voice: [],
+    where: { at: 1, people: [{ name: 'Mara', city: 'Frankfurt', tz: 'Europe/Berlin', lives: 'DE' }, { name: 'Ivo', city: 'Berlin', tz: 'Europe/Berlin', lives: 'DE' }] } });
+const clock = at => ({ basis: 'Default used', finalViewpoint: 'Mara', elapsedTime: null, sceneTime: at, messageSender: null });
+const whole = (now = '11-13 08:00') => JSON.stringify({ country: 'DE', now, clock: clock(now), contacts: [{ name: 'Ivo' }, { name: 'Ren' }], notes: [{ title: '새 메모', text: '다시 만든 것', time: '11-12 09:00' }], threads: [{ with: 'Ivo', messages: [{ from: 'Ivo', time: '11-12 20:00', text: 'hi' }] }] });
+const notes = JSON.stringify({ notes: [{ title: '앱만 다시', text: '고른 앱', time: '11-12 09:30' }] });
+function world({ where = true } = {}) {
+    T.chat = ['옛날 이야기 하나', '옛날 이야기 둘', '시작 직전 이야기', '시작 뒤 롤플 하나', '시작 뒤 롤플 둘'].map((mes, i) => ({ name: i % 2 ? 'Mara' : 'Ren', is_user: !(i % 2), mes, extra: {} }));
+    T.recent = ['[#1] Mara: 옛날 이야기 둘', '[#2] Ren: 시작 직전 이야기', '[#3] Mara: 시작 뒤 롤플 하나', '[#4] Ren: 시작 뒤 롤플 둘'];
+    T.rows = T.chat.map((x, i) => ({ index: i, user: x.is_user, hidden: false, text: `[#${i}] ${x.name}: ${x.mes}` }));
+    const real = { phones: { mara: phone() }, text: '' };
+    L.startFromStory(real, { persona: 'Ren', upto: 2, scope: 'test', now: 1763000000000, story: { ranges: {}, titles: [], rawFrom: 0, own: [''] } });
+    const room = L.ensureRoom(real, ['Mara']);
+    L.sendLive(real, room.id, '메신저로 한 말'); L.sendLive(real, room.id, '아직 반영 안 된 말');
+    const d = L.liveMeta(real, { now: () => '11-14 16:05' }), p = d.phones.mara, first = room.messages[0].n;
+    // (반영이 메신저 첫 마디까지 읽은 폰: 사용자가 연도를 3년 뒤로 골랐고, 상황이 하나 있어요)
+    p.sync = { scope: 'x', marks: { base: { index: 2, user: -1, fp: '', tail: '' } }, done: [[first, first]], events: {} };
+    Object.assign(p, { year: 2029, liveYearShift: 3, situations: [{ id: 's', what: 'w' }], liveHeld: { a: 1 } });
+    if (!where) delete p.where;
+    return { real, d, first };
+}
+async function run(fn, answers, opts) {
+    const c = world(opts), asked = [], p1 = JSON.stringify(c.real.phones), rnd = Math.random, uuid = globalThis.crypto.randomUUID, now = Date.now, warn = console.warn;
+    let k = 0, u = 0;
+    Math.random = () => ((++k * 7919) % 100003) / 100003; globalThis.crypto.randomUUID = () => `00000000-0000-4000-8000-${String(++u).padStart(12, '0')}`; Date.now = () => 1763100000000; console.warn = () => {};
+    // 복구 기록: 폰 1 것과 실시간 것에 Mara의 줄을 하나씩 둬요
+    const liveKey = c.d.phoneJournal, round = () => [{ round: 'r1', owner: 'Mara', events: [], life: [] }];
+    journalWrite('test', round()); journalWrite(liveKey, round());
+    const queue = [...answers];
+    T.ask = async (input, o) => { asked.push([o.system, input]); const a = queue.shift(); if (a instanceof Error) throw a; return typeof a === 'function' ? a(input) : a ?? '{}'; };
+    let out;
+    try { const v = await fn(c); out = { value: v === c.d.phones.mara ? 'the phone' : v }; } catch (err) { out = { error: String(err?.message || err) }; }
+    finally { delete T.ask; Math.random = rnd; globalThis.crypto.randomUUID = uuid; Date.now = now; console.warn = warn; }
+    const copy = v => JSON.parse(JSON.stringify(v ?? null));
+    const r = { asked, out: copy(out), phone: copy(c.d.phones.mara), pre: copy(c.d.phonePre), first: c.first, journal1: journalRead('test').length, journal2: journalRead(liveKey).length, phone1Same: JSON.stringify(c.real.phones) === p1 };
+    journalWrite('test', []); journalWrite(liveKey, []);
+    return r;
+}
+const same = async (two, one, answers, opts) => { const a = await run(two, answers, opts), b = await run(one, answers, opts); assert.deepEqual(a, b); assert.equal(a.phone1Same, true); return a; };
+const done = () => { delete T.ask; T.chat = []; delete T.recent; delete T.rows; };
+const OLD = process.env.PHONE2_MAKE_OLD === '1';   // (옮기기 전의 갈림이 phonedata.js에 있을 때만: 두 쪽을 나란히 돌려 비교)
+const both = (two, one, answers, opts) => (OLD ? same(two, one, answers, opts) : run(two, answers, opts));
+
+test('고른 앱 다시 만들기: 반영된 메신저 대화를 읽고, 그 앱만 바뀌고, 읽은 자리 · 폰 시각 · 연도는 그대로', async () => {
+    try {
+        const r = await both(c => MK.liveMakePhone(c.d, 'Mara', { apps: ['note'] }), c => PD.makePhone(c.d, 'Mara', { apps: ['note'] }), [notes]);
+        assert.equal(r.out.error, undefined); assert.equal(r.out.value, 'the phone');
+        assert.equal(r.asked.length, 1); assert.equal(r.asked[0][0], PD.AI_SYS_PHONE_APPS);
+        const input = r.asked[0][1];
+        assert.ok(input.includes('메신저로 한 말') && !input.includes('아직 반영 안 된 말') && input.includes('시작 직전 이야기') && !input.includes('시작 뒤 롤플'));
+        assert.ok(input.includes('[STORY YEAR]\n2029') && input.includes("[OWNER'S CLOCK]") && input.includes('[ONLY THESE]'));
+        assert.deepEqual(r.phone.notes.map(n => n.title), ['앱만 다시']);
+        assert.equal(r.phone.threads.length, 1); assert.equal(r.phone.now, '11-12 21:30');
+        assert.deepEqual([r.phone.year, r.phone.liveYearShift], [2029, 3]);
+        assert.deepEqual(r.phone.sync.done, [[r.first, r.first]]); assert.equal(r.phone.sync.marks.base.index, 2);
+        assert.equal(r.phone1Same, true); assert.deepEqual([r.journal1, r.journal2], [1, 1]);
+    } finally { done(); }
+});
+
+test('폰 전체 다시 만들기: 읽은 자리 · 폰 시각 · 고른 연도 · 상황이 그대로, 폰 1의 폰 · 복구 기록은 안 건드려요', async () => {
+    try {
+        const r = await both(c => MK.liveMakePhone(c.d, 'Mara'), c => PD.makePhone(c.d, 'Mara'), [whole()]);
+        assert.equal(r.out.error, undefined); assert.equal(r.out.value, 'the phone');
+        assert.equal(r.asked[0][0], PD.AI_SYS_PHONE);
+        const input = r.asked[0][1];
+        assert.ok(input.includes('메신저로 한 말') && !input.includes('아직 반영 안 된 말') && !input.includes('시작 뒤 롤플'));
+        assert.deepEqual(r.phone.notes.map(n => n.title), ['새 메모']);
+        // 모델이 준 시각(11-13 08:00)이 아니라 폰이 갖고 있던 시각
+        assert.equal(r.phone.now, '11-12 21:30');
+        assert.deepEqual([r.phone.year, r.phone.liveYearShift, r.phone.situations, r.phone.liveHeld], [2029, 3, [{ id: 's', what: 'w' }], { a: 1 }]);
+        assert.deepEqual(r.phone.sync.done, [[r.first, r.first]]); assert.equal(r.phone.sync.scope, 'x');
+        assert.equal(r.phone.where.people.length >= 2, true);
+        assert.equal(r.phone1Same, true); assert.deepEqual([r.journal1, r.journal2], [1, 1]);
+        // 답의 시각이 장면 시각과 안 맞으면 폰은 그대로 (같은 말로 멈춰요)
+        const bad = JSON.stringify({ ...JSON.parse(whole()), clock: clock('11-13 03:00') });
+        const off = await both(c => MK.liveMakePhone(c.d, 'Mara'), c => PD.makePhone(c.d, 'Mara'), [bad]);
+        assert.match(off.out.error, /시간 판독 답이 맞지 않아요/); assert.deepEqual(off.phone.notes.map(n => n.title), ['옛 메모']);
+    } finally { done(); }
+});
+
+test('위치 정보가 없던 실시간 폰을 통째로 다시 만들기: 위치를 먼저 읽고(실시간 뼈대로) 만들어요', async () => {
+    try {
+        const where = JSON.stringify({ people: [{ name: 'Mara', city: 'Frankfurt am Main', tz: 'Europe/Berlin', lives: 'DE' }, { name: 'Ivo', city: 'Seoul', tz: 'Asia/Seoul', lives: 'KR' }], around: [{ name: 'Ivo', about: '친구' }], year: 2026 });
+        const r = await both(c => MK.liveMakePhone(c.d, 'Mara'), c => PD.makePhone(c.d, 'Mara'), [where, whole(), where], { where: false });
+        assert.equal(r.out.error, undefined);
+        assert.equal(r.asked[0][0], PD.AI_SYS_WHERE); assert.equal(r.asked[1][0], PD.AI_SYS_PHONE);
+        assert.ok(r.asked.every(([, input]) => !input.includes('시작 뒤 롤플')));
+        assert.ok(r.asked[0][1].includes('메신저로 한 말'));
+        assert.equal(r.phone.where.people.find(x => x.name === 'Ivo').city, 'Seoul');
+        assert.deepEqual([r.phone.year, r.phone.liveYearShift, r.phone.now], [2029, 3, '11-12 21:30']);
+        assert.equal(r.pre, null); assert.equal(r.phone1Same, true);
+    } finally { done(); }
+});
+
+test('같은 폰을 만드는 중이면 기다리라고 해요; 반영(update)은 여기서 안 해요; 서랍이 아니면 멈춰요', async () => {
+    try {
+        const c = world(); let asked = 0, go;
+        T.ask = () => new Promise(res => { asked++; go = () => res(notes); });
+        const first = MK.liveMakePhone(c.d, 'Mara', { apps: ['note'] });
+        await new Promise(r => setTimeout(r, 20));
+        assert.equal(PD.phoneMaking(c.d, 'Mara'), true);
+        await assert.rejects(() => MK.liveMakePhone(c.d, 'Mara', { apps: ['note'] }), /이 폰을 만드는 중이에요/);
+        go(); await first;
+        assert.equal(PD.phoneMaking(c.d, 'Mara'), false); assert.equal(asked, 1);
+        await assert.rejects(() => MK.liveMakePhone(c.d, 'Mara', { update: true }), /실시간 폰은 메신저를 나갈 때 반영해요/);
+        const p1 = c.real.phones.mara, was = JSON.stringify(p1);
+        for (const m of [c.real, { ...c.real, phoneUpto: 2, phoneRecent: () => 'x', phoneJournal: 'test' }]) await assert.rejects(() => MK.liveMakePhone(m, 'Mara'), /실시간 폰의 서랍이 아니에요/);
+        assert.equal(asked, 1); assert.equal(JSON.stringify(p1), was);
+    } finally { done(); }
+});

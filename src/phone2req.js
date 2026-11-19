@@ -39,7 +39,7 @@ export function liveSecondTurn(m, p, first, whole = true) {
     return { more, short, cover: short ? { ...more, all: true } : more };
 }
 // 모델에게 알려 주는 연도
-const liveYearBlock = (m, p) => { const y = liveStoryYear(m, p); return y ? `[STORY YEAR]\n${y}` : ''; };
+export const liveYearBlock = (m, p) => { const y = liveStoryYear(m, p); return y ? `[STORY YEAR]\n${y}` : ''; };
 
 // story: how many tokens of chat stand in for a missing archive (0: the recent chat only, as with an archive)
 // read: an object to put what was read in ({ gap }), for a request whose app marks where it read up to

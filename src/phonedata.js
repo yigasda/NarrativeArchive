@@ -679,7 +679,7 @@ export function ensureIds(p) {
 }
 // 다시 만들기 of an app: a record that comes back the same keeps what the user did with it (its id, picture, read state, results page)
 const CARRY = ['id', 'img', 'tags', 'via', 'seen', 'results', 'draft', 'closed', 'marks', 'unmark'];
-function carryOver(k, was, now) {
+export function carryOver(k, was, now) {
     const keyOf = k === 'threads' ? t => nameKey(t.with) : k === 'contacts' ? c => nameKey(c.name) : SIG[k] ? x => sigOf(k, x) : null;
     if (!keyOf || !Array.isArray(was)) return;
     const old = new Map(was.map(x => [keyOf(x), x]));
@@ -1084,9 +1084,9 @@ export function mergePhone(p, add, { keepAll = false, m = null } = {}) {
 }
 
 // ---- the request
-const secEnd = s => { const mt = s.title.match(RANGE_HEAD); return mt ? Number(mt[4]) : -1; };
-const secFirst = s => { const mt = s.title.match(RANGE_HEAD); return mt ? Number(mt[2]) : -1; };
-const lastEnd = m => Math.max(-1, ...parseSections(String(m.text || '')).filter(s => !s.group).map(secEnd));
+export const secEnd = s => { const mt = s.title.match(RANGE_HEAD); return mt ? Number(mt[4]) : -1; };
+export const secFirst = s => { const mt = s.title.match(RANGE_HEAD); return mt ? Number(mt[2]) : -1; };
+export const lastEnd = m => Math.max(-1, ...parseSections(String(m.text || '')).filter(s => !s.group).map(secEnd));
 // a reflection's background (the archive before its messages): the newest sections up to this, the rest is old news
 export const BEFORE_MAX = 5_000;
 // stretches archived before the phone read them, read from their sections: whole sections, up to this many tokens of
@@ -1355,7 +1355,7 @@ export async function loreFor(m, owner, skip = null) {
 export const namesBlock = m => { const g = glossaryEntries(m); return g.length ? `[NAMES]\nHow these names are written. Korean text uses the Korean form; a person's full name is the one given here.\n${g.map(e => `- ${e.src} = ${e.ko}`).join('\n')}` : ''; };
 // 다시 만들기, app by app: which JSON keys each app is drawn from
 export const REMAKE = { msg: ['threads', 'contacts'], call: ['calls'], photo: ['photos'], note: ['notes'], search: ['searches'], cal: ['events'], sns: ['profile', 'posts'], mail: ['mails'], diary: ['diary'], map: ['visits'] };
-const onlyAsk = keys => `[ONLY THESE]\nThe phone already holds the rest. Write only these keys of the JSON, from the whole story: ${keys.join(', ')}.`;
+export const onlyAsk = keys => `[ONLY THESE]\nThe phone already holds the rest. Write only these keys of the JSON, from the whole story: ${keys.join(', ')}.`;
 // 누가 아는가: what the owner doesn't know (or only suspects) stays off their phone
 export const blindBlock = (m, owner) => {
     const me = n => nameKey(n) === nameKey(owner);
@@ -1367,7 +1367,7 @@ export const blindBlock = (m, owner) => {
 // a day the story is on (MM-DD), for a phone with no time yet: the newest status line's date only (a date in the archive
 // may be a memory, "they first met on 2025-07-01", a heading a stretch of days or another calendar's: with none, the
 // hours go with every change in the year)
-function storyDayOf(m, upto = null, st = null) {
+export function storyDayOf(m, upto = null, st = null) {
     const d0 = monthDay(st?.date || '');
     if (d0) return `${pad(d0.mo)}-${pad(d0.d)}`;
     try { const t = recentTrackers(1, { visibleOnly: true, ...(upto == null ? {} : { chat: (ctx().chat || []).slice(0, upto + 1) }) })[0], d = monthDay(t?.date || ''); if (d) return `${pad(d.mo)}-${pad(d.d)}`; } catch { /* no status lines */ }
@@ -1383,7 +1383,7 @@ const yearOr = (t, y) => {
     while (!isLeap(v)) v++;
     return v;
 };
-const todayWall = () => { const d = new Date(); return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+export const todayWall = () => { const d = new Date(); return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
 function phoneRequest(m, owner, p = null, lore = '', only = null, profile = '', gap = null, extra = [], pre = null, { anew = false } = {}) {
     // (made again keeping its reading, a phone with no 위치 정보 read before it: its own time still)
     const cur0 = m.phones?.[nameKey(owner)], q0 = p || (pre ? (!anew && cur0?.now ? { ...pre, now: cur0.now } : pre) : cur0) || { owner }, q = anew && q0.now ? { ...q0, now: '' } : q0;
@@ -1449,22 +1449,22 @@ export const phoneForModel = p => ({
 // (kept while what the reading read is the same: the owner's 인물 정보, the 참고 로어북 picked and the entries left out)
 const loreKey = m => JSON.stringify(phoneLore(m).slice().sort().map(b => [b, [...loreOff(m, b)].sort()]));
 // (and while the phone it was read for is the same: one read for an old phone, gone since, is not the new one's)
-const sameBinding = (pre, binding, m) => JSON.stringify(pre?.financeProfile ?? null) === JSON.stringify(binding ?? null) && (pre?.lore ?? loreKey(m)) === loreKey(m) && !!pre?.base === !!m?.phones?.[nameKey(pre?.owner)];
+export const sameBinding = (pre, binding, m) => JSON.stringify(pre?.financeProfile ?? null) === JSON.stringify(binding ?? null) && (pre?.lore ?? loreKey(m)) === loreKey(m) && !!pre?.base === !!m?.phones?.[nameKey(pre?.owner)];
 export const phonePre = (m, owner) => m?.phonePre?.[nameKey(owner)] || null;
 // the time 위치 정보 shows a phone not made yet its hours at: the one its request will go by (the newest status line's
 // time, else its day at noon), else '' (today's, as the request's then)
 const preClock = (m, pre) => { const upto = nowAt(windowOf(m, null)), st = statusAt(pre, upto, m), t = stTime(st); if (t) return t; const day = storyDayOf(m, upto, st); return day ? `${day} 12:00` : ''; };
 // a status line's time on the owner's clock (one it can't place: as written)
-const stTime = st => (st?.known && hm(st.at) ? st.at : hm(st?.raw) ? st.raw : '');
+export const stTime = st => (st?.known && hm(st.at) ? st.at : hm(st?.raw) ? st.raw : '');
 // (an old phone made again whole, one with no 위치 정보: its year and where it lives, as the owner left them)
-const seedPre = (m, owner, binding) => {
+export const seedPre = (m, owner, binding) => {
     const cur = m.phones?.[nameKey(owner)], pre = { owner, making: true, lore: loreKey(m), base: !!cur, ...(binding ? { financeProfile: structuredClone(binding) } : {}) };
     if (cur) for (const k of ['year', 'noYear', 'lives', 'livesManual', 'country']) if (cur[k] !== undefined) pre[k] = cur[k];
     return pre;
 };
 // what the user set on what was read before (a city by hand, someone taken off, the year, the country) goes on what is read
 // anew when it can't be kept as it is (the owner's 인물 정보 or 참고 로어북 changed)
-const carryEdits = (pre, old) => {
+export const carryEdits = (pre, old) => {
     if (!old) return pre;
     const manual = arr(old.where?.people).filter(r => r?.manual), removed = arr(old.where?.removed);
     if (manual.length || removed.length) pre.where = { at: old.where?.at || Date.now(), people: structuredClone(manual), ...(removed.length ? { removed: [...removed] } : {}) };
@@ -1475,7 +1475,7 @@ const carryEdits = (pre, old) => {
 // what was read before for this owner, while it is still theirs (see sameBinding). Read for an old phone gone since, it
 // is the new phone's all the same when the user changed it (a city by hand, someone taken off, the country, the year):
 // what they set is kept, never read over
-const preEdited = pre => !!(pre?.yearSet || pre?.livesManual || pre?.where?.removed?.length || pre?.where?.people?.some(r => r?.manual));
+export const preEdited = pre => !!(pre?.yearSet || pre?.livesManual || pre?.where?.removed?.length || pre?.where?.people?.some(r => r?.manual));
 function keepPre(m, owner, binding) {
     const kept = phonePre(m, owner), base = !!m?.phones?.[nameKey(owner)];
     if (!kept) return null;
@@ -1489,8 +1489,8 @@ function keepPre(m, owner, binding) {
     return null;
 }
 // (새로 시작 while a reading or a making waits: what comes back is the old story's, never put in the new one)
-const storyRun = m => Number(m.phoneStoryRun) || 0;
-const stillRun = (m, run) => { if (storyRun(m) !== run) throw new Error('새로 시작해서 멈췄어요'); };
+export const storyRun = m => Number(m.phoneStoryRun) || 0;
+export const stillRun = (m, run) => { if (storyRun(m) !== run) throw new Error('새로 시작해서 멈췄어요'); };
 export async function preparePhone(m, owner, { again = false } = {}) {
     const key = nameKey(owner), run = storyRun(m);
     await ensureScreenHolder(m);
@@ -1522,7 +1522,7 @@ export async function setPreYear(m, owner, year) {
 // apps: some of REMAKE's names, made again from the whole story while the rest of the phone stays as it is
 // 폰 만들기 under way, by chat (its meta) and owner: the phone shut and opened again mid-make knows it, and a second
 // make of the same phone waits for the first (a reflection of a phone there is guarded by busy.sync already)
-const makingNow = new WeakMap();
+export const makingNow = new WeakMap();
 export const phoneMaking = (m, owner) => !!(m && makingNow.get(m)?.has(nameKey(owner)));
 export function makePhone(m, owner, opts = {}) {
     if (opts.update && m?.phones?.[nameKey(owner)]) return withDateOrder(dateOrderOf(m), () => makePhone0(m, owner, opts));
@@ -1688,7 +1688,7 @@ async function makePhone0(m, owner, { update = false, apps = null } = {}) {
 // ---- 새로 일어난 일 반영
 // every message the phone may read, numbered (system messages and offstage ones left out)
 // the chat's last message, hidden or not (-1: none)
-const chatEnd = () => chatRows().at(-1)?.index ?? -1;
+export const chatEnd = () => chatRows().at(-1)?.index ?? -1;
 export const syncRows = () => chatRows().filter(r => !r.hidden).map(({ index, text }) => ({ index, text }));
 export const markNow = () => { const rows = syncRows(); return makeMark(ctx().chat || [], rows.length ? rows[rows.length - 1].index : -1); };
 export const markAfter = index => makeMark(ctx().chat || [], index);
@@ -1974,7 +1974,7 @@ export function reflectionClockPlan(raw, original, m, { round, roundEnd = null, 
     return { now: p.now, year: p.year, where: p.where, st, sceneOwn, named, setBack };
 }
 
-function validateReflectionClock(raw, p, m, now) {
+export function validateReflectionClock(raw, p, m, now) {
     const r = clockCheck(raw, p, m, now);
     if (r.why) { const e = new Error(`시간 판독 답이 맞지 않아요 (${r.why}). 이번 답은 반영하지 않았어요. 다시 시도해 주세요`); e.code = 'CLOCK_INVALID'; throw e; }
 }
@@ -3128,10 +3128,10 @@ export const glossTwin = (m, n) => { const k = nameKey(n); return k && m ? gloss
 export const sameName = (m, a, b) => samePerson(a, b) || (t => !!t && samePerson(t, b))(glossTwin(m, a));
 // one person by the very same name only: equal, or one the 용어집 other form of the other ("Ren" and "렌"; never "Ren"
 // and "Ren Kim", who may be someone else)
-const strictSame = (m, a, b) => { const x = nameKey(a), y = nameKey(b); return !!x && !!y && (x === y || nameKey(glossTwin(m, a)) === y || nameKey(glossTwin(m, b)) === x); };
+export const strictSame = (m, a, b) => { const x = nameKey(a), y = nameKey(b); return !!x && !!y && (x === y || nameKey(glossTwin(m, a)) === y || nameKey(glossTwin(m, b)) === x); };
 // a 위치 정보 row for this name: by the row's name, an aka, a 용어집 form, or the one row whose first name it is ("Mara
 // Lee" for a row Mara): no reading needed for them
-const hasRow = (p, m, n) => { const who = personOf(p, m, n); return !!(who && (p?.where?.people || []).some(r => nameKey(r.name) === who.key)) || !!whereOf(p, n); };
+export const hasRow = (p, m, n) => { const who = personOf(p, m, n); return !!(who && (p?.where?.people || []).some(r => nameKey(r.name) === who.key)) || !!whereOf(p, n); };
 // the owner by a name of theirs: their own, their 위치 정보 row's aka, the 용어집 other form of either; never another
 // whose first name is theirs ("Ren Kim" for an owner Ren is asked about, kept, and with them)
 const ownerRow = p => whereOf(p, p?.owner);
