@@ -1,7 +1,7 @@
 // Branches: sections that belong after the branch point.
 
 import { currentChatId, fetchOtherChat, listOtherChats } from './chats.js';
-import { MODULE, commitText, ctx, getMeta } from './core.js';
+import { MODULE, commitText, ctx, getMeta, hasChat, saveMeta } from './core.js';
 import { openDiff } from './diff.js';
 import { lastIndex } from './hide.js';
 import { syncPanel } from './panel.js';
@@ -13,10 +13,37 @@ import { confirm, esc, fmt, timeLabel } from './util.js';
 // past the branch point (#121–#131 when the branch is at #127) carries some of it too, so it goes as well and the
 // boundary comes back to the section before it: its earlier messages are compressed again from this chat.
 
+// The branch point is kept with the chat: the chat's own last message is only right until the branch goes on,
+// and after that a parent's later sections would read as this branch's past. Found once by reading the parent and
+// taking the last message the two still share; when the parent can't be read, the chat's end when first seen.
+export const branchPointOf = (m, parent) => (parent && m.branchAt?.parent === parent && Number.isFinite(m.branchAt.at) ? m.branchAt.at : null);
+let branchSeeking = '';
+export async function findBranchPoint() {
+    if (!hasChat()) return;
+    const c = ctx(), m = getMeta(), parent = c.chatMetadata?.main_chat || null;
+    if (!parent || branchPointOf(m, parent) !== null || branchSeeking === parent) return;
+    branchSeeking = parent;
+    const mine = c.chat || [];
+    let at = mine.length - 1, how = 'end';
+    try {
+        const theirs = (await fetchOtherChat(parent)).messages || [];
+        const same = (a, b) => a && b && String(a.mes ?? '') === String(b.mes ?? '') && !!a.is_user === !!b.is_user;
+        let i = 0;
+        while (i < mine.length && i < theirs.length && same(mine[i], theirs[i])) i++;
+        if (i > 0) { at = i - 1; how = 'parent'; }
+    } catch (e) { console.warn('[NarrativeArchive] branch point: parent not read', e); }
+    finally { branchSeeking = ''; }
+    // the chat may have changed while the parent was read
+    if (ctx().chatMetadata?.main_chat !== parent || getMeta() !== m) return;
+    m.branchAt = { parent, at, how };
+    await saveMeta();
+    syncPanel();
+}
+
 export function branchState(m) {
     const c = ctx();
     const parent = c.chatMetadata?.main_chat || null;
-    const last = lastIndex();
+    const last = branchPointOf(m, parent) ?? lastIndex();
     const ranges = headingRanges(m.text);
     const cur = ranges.length ? ranges[ranges.length - 1].prefix : '';
     const secs = parseSections(m.text).filter(x => !x.group);
@@ -41,6 +68,7 @@ export async function openBranches() {
     const ICON_WARN = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>';
     const ICON_OK = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
     const nWord = n => n === 1 ? '이 섹션' : n <= 4 ? `${['', '', '두', '세', '네'][n]} 섹션` : `섹션 ${n}개`;
+    await findBranchPoint();
     const render = () => {
         const b = branchState(m);
         const parentName = b.parent ? esc(String(b.parent).replace(/\s*-\s*\d{4}-\d{1,2}-\d{1,2}.*$/, '') || b.parent) : '';
@@ -56,7 +84,7 @@ export async function openBranches() {
             <div class="na_bn2_flow">
               <div class="na_bn2_node">${icon('', ICON_CHAT)}<b>원본</b><small title="${esc(b.parent)}">${esc(String(b.parent).replace(/@[^@]*$/, '').replace(/ - /, ' – '))}</small></div>
               <div class="na_bn2_link"><b>#${b.last}에서 갈라짐</b><span></span></div>
-              <div class="na_bn2_node">${icon('here', ICON_BRANCH)}<b>이 채팅</b><small title="${esc(String(here || ''))} · 메시지 ${fmt(b.last + 1)}개">${esc(hereName) || `메시지 ${fmt(b.last + 1)}개`}</small></div>
+              <div class="na_bn2_node">${icon('here', ICON_BRANCH)}<b>이 채팅</b><small title="${esc(String(here || ''))} · 메시지 ${fmt(lastIndex() + 1)}개">${esc(hereName) || `메시지 ${fmt(lastIndex() + 1)}개`}</small></div>
             </div>
             ${b.ahead.length ? `<div class="na_bn2_warn">${ICON_WARN}<span>분기 뒤 이야기가 섹션 ${b.ahead.length}개에 섞여 있어요 · 이 채팅에선 없던 일이에요</span></div>`
               : `<div class="na_bn2_ok">${ICON_OK}<span>분기 지점 뒤에 쓴 섹션이 없어요.</span></div>`}
