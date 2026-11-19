@@ -295,7 +295,7 @@ export function syncPanel() {
     }
     const br = hasChat() ? branchState(getMeta()) : null;
     $('#na_branch_card').prop('hidden', !br?.ahead.length);
-    if (br?.ahead.length) $('#na_branch_desc').text(`이 채팅은 #${br.last}까지인데 아카이브에 그 뒤 이야기가 든 섹션 ${br.ahead.length}개가 있어요. 분기하기 전 원본의 내용이에요.`);
+    if (br?.ahead.length) $('#na_branch_desc').text(`이 채팅은 #${br.last}에서 갈라졌는데, 아카이브에 그 뒤 이야기가 든 섹션 ${br.ahead.length}개가 있어요. 분기하기 전 원본의 내용이에요.`);
     $('#na_branches_sub').text(br?.parent ? `이 채팅은 분기예요 · 원본: ${br.parent}` : '원본·갈라진 채팅과 비교, 분기 정리');
     if (carryOffer) $('#na_carry_desc').text(`방금 있던 채팅의 아카이브 (${fmt(carryOffer.text.length)}자)를 이 채팅에 가져와요.`);
     rememberArchive();

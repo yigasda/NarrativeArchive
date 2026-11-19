@@ -40,6 +40,18 @@ export async function findBranchPoint() {
     syncPanel();
 }
 
+// opening a branch whose archive carries what came after the branch point: say so once, in the middle of the
+// chat, with the way to the 분기 window (where the sections are taken out)
+export async function branchNotice() {
+    await findBranchPoint();
+    if (!hasChat()) return;
+    const m = getMeta(), b = branchState(m);
+    if (!b.parent || !b.ahead.length || m.branchNoticed === b.parent) return;
+    m.branchNoticed = b.parent;
+    await saveMeta();
+    if (await confirm('분기', `이 채팅은 #${b.last}에서 갈라졌는데, 아카이브에 그 뒤 이야기가 든 섹션 ${b.ahead.length}개가 있어요.`, '분기 정리', { no: '닫기' })) openBranches();
+}
+
 export function branchState(m) {
     const c = ctx();
     const parent = c.chatMetadata?.main_chat || null;
