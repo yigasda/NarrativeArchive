@@ -14,8 +14,10 @@ import { confirm, esc, fmt, timeLabel } from './util.js';
 // boundary comes back to the section before it: its earlier messages are compressed again from this chat.
 
 // The branch point is kept with the chat: the chat's own last message is only right until the branch goes on,
-// and after that a parent's later sections would read as this branch's past. Found once by reading the parent and
-// taking the last message the two still share; when the parent can't be read, the chat's end when first seen.
+// and after that a parent's later sections would read as this branch's past. Found once by reading the parent:
+// SillyTavern writes the branch's name on the parent message it was made from (extra.branches), which holds even
+// after earlier parent messages are edited or swiped. A branch made before that list existed: the last message the
+// two still share. When the parent can't be read: the chat's end when first seen.
 export const branchPointOf = (m, parent) => (parent && m.branchAt?.parent === parent && Number.isFinite(m.branchAt.at) ? m.branchAt.at : null);
 let branchSeeking = '';
 export async function findBranchPoint() {
@@ -27,10 +29,15 @@ export async function findBranchPoint() {
     let at = mine.length - 1, how = 'end';
     try {
         const theirs = (await fetchOtherChat(parent)).messages || [];
-        const same = (a, b) => a && b && String(a.mes ?? '') === String(b.mes ?? '') && !!a.is_user === !!b.is_user;
-        let i = 0;
-        while (i < mine.length && i < theirs.length && same(mine[i], theirs[i])) i++;
-        if (i > 0) { at = i - 1; how = 'parent'; }
+        const name = currentChatId();
+        const marked = name ? theirs.findIndex(x => Array.isArray(x?.extra?.branches) && x.extra.branches.includes(name)) : -1;
+        if (marked >= 0) { at = marked; how = 'mark'; }
+        else {
+            const same = (a, b) => a && b && String(a.mes ?? '') === String(b.mes ?? '') && !!a.is_user === !!b.is_user;
+            let i = 0;
+            while (i < mine.length && i < theirs.length && same(mine[i], theirs[i])) i++;
+            if (i > 0) { at = i - 1; how = 'parent'; }
+        }
     } catch (e) { console.warn('[NarrativeArchive] branch point: parent not read', e); }
     finally { branchSeeking = ''; }
     // the chat may have changed while the parent was read
