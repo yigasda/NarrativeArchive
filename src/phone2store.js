@@ -1,5 +1,5 @@
 // 폰 2(실시간) 저장 자리 (docs/PHONE2-PLAN.md 단계 1). 폰 1 코드는 이 파일을 부르지 않고, 이 파일도 폰 1 것을
-// 하나도 부르거나 고치지 않아요: 채팅 메타의 m.live 한 칸만 봐요. 휴대폰 창(phone.js)만 불러요(4-2).
+// 하나도 부르거나 고치지 않아요: 채팅 메타의 m.live 한 칸만 봐요. 휴대폰 창(phone.js)과 폰 2 파일(phone2*.js)만 불러요.
 //
 // m.live = {
 //   v: 1,
@@ -124,8 +124,8 @@ export function resetLive(m, how = 'chats') {
 }
 
 // 폰 2 phones: their own, never one of m.phones
-// 폰 2's phone objects carry a mark (a symbol, never saved or copied): 폰 1's functions that are given only the phone
-// know by it that the role-play's status lines and clocks are not this phone's (its time is its own, p.now)
+// 폰 2's phone objects carry a mark (a symbol, never saved or copied): the gateway (phone2api.js), given only the phone,
+// knows by it that the role-play's status lines and clocks are not this phone's (its time is its own, p.now)
 const LIVE_PHONE = Symbol.for('narrative-archive.live');
 const tagLive = phones => { for (const x of Object.values(phones || {})) if (x && typeof x === 'object' && !x[LIVE_PHONE]) Object.defineProperty(x, LIVE_PHONE, { value: true, configurable: true }); return phones; };
 export const livePhone = (m, owner) => tagLive(liveWorld(m)?.phones)?.[liveKey(owner)] || null;
@@ -151,7 +151,7 @@ export const isLiveMeta = v => !!(v && typeof v === 'object' && v[IS_LIVE]);
 // text: what 폰 2 may read of the story, a function asked each time (phone2story.js liveStoryText), else ''
 // the newest messenger talk of the rooms `owner` is in, oldest first, one line a message ("Name: words"), the last `n`
 // that fit in maxChars (seen: only up to that message number; summary: with the rooms' summaries of older talk before
-// them). What 폰 1's app requests show as RECENT CHAT when they are given 폰 2's drawer
+// them). What 폰 2's app requests (phone2req.js) show as RECENT CHAT
 export function liveRecent(w, owner, n = 12, { maxChars = Infinity, seen = null, summary = false } = {}) {
     const flat = v => String(v ?? '').replace(/\s+/g, ' ').trim(), k = liveKey(owner);
     const rooms = Object.values(w?.messenger?.rooms || {}).filter(r => (r.members || []).some(x => liveKey(x) === k));
@@ -186,9 +186,9 @@ export function liveMeta(m, { text = null, now = null } = {}) {
     // which writes the chat's meta — so the drawer never reads an old one)
     const from = {}, sig = k => { try { return JSON.stringify(m[k]) ?? ''; } catch { return ''; } };
     const copy = k => { const s = sig(k); if (!Object.hasOwn(copies, k) || from[k] !== s) { from[k] = s; copies[k] = m[k] === undefined ? undefined : structuredClone(m[k]); } return copies[k]; };
-    // (phoneJournal: the browser key 폰 2's 복구 records are under. 폰 1's functions that touch the journal of the meta they
-    // are given ask for it, so with the drawer they never reach 폰 1's own)
-    // (phoneUpto · phoneRecent: what 폰 1's app requests read of the talk. The role-play chat only up to where 폰 2 began
+    // (phoneJournal: the browser key 폰 2's 복구 records are under. 폰 2's functions write their records there, and the
+    // shared helpers that touch the journal of the meta they are given ask for it, so they never reach 폰 1's own)
+    // (phoneUpto · phoneRecent: what 폰 2's app requests (phone2req.js) read of the talk. The role-play chat only up to where 폰 2 began
     // (none of it for one begun fresh), and for the newest talk the messenger's, never the chat's)
     const upto = () => (w.from === 'story' && Number.isInteger(w.storyUpto) ? w.storyUpto : -1);
     // (화면 주인, the chat's one setting of whose view the story's status line is: the same for 타임라인 and 실시간, so it

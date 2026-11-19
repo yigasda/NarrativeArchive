@@ -5,7 +5,6 @@
 // 은행 채우기 (phone2money.js), 음성 메모 (phone2fill.js), 생활 · 배달 · 스크린타임 · 동네 가게 (phone2life.js),
 // 위치 다시 연동 (phone2where.js), 폰 다시 만들기 (phone2make.js).
 // 요청 뼈대는 phone2req.js.
-// 아직 안 옮긴 이름은 폰 1 함수 그대로예요 (하는 일은 같아요).
 // (phoneai.js 먼저: phonedata.js와 서로 부르는 사이라, 이 순서여야 어디서 처음 불러도 읽혀요)
 import { makeDraft, recordVoice, takePhoto, writeEntry } from './phoneai.js';
 import {

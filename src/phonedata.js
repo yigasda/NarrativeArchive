@@ -1204,8 +1204,6 @@ export const soFarHead = (what, short, only = '') => `[${what} SO FAR — what y
 // and clock stand there too, so it never writes a day it didn't read; the reflection moves them on from there
 export const nowAt = g => (!g ? null : !g.all ? g.to : g.upto ?? null);
 // where a request read up to, when it stopped short of now: its app's mark (null: it read to now)
-// (폰 2: g.mark, the last messenger message its reflection read. The app then knows the talk up to there, and the
-// reflection gives it what comes after; a messenger number is no chat message, so the mark carries no fingerprint)
 export const readMark = g => { const i = nowAt(g); return i == null ? null : markAfter(i); };
 export const readNote = g => { if (g && !g.all) globalThis.toastr?.info(g.upto != null ? `대화가 길어서 #${g.to}까지 읽었어요. 아카이브하고 다시 만들면 나머지도 들어가요.` : `대화가 길어서 #${g.to}까지 읽었어요. 나머지는 반영하면 들어가요.`, '캐릭터 휴대폰'); };
 // the story's year: the phone's own (carried over New Year), else one written in a date in the archive, the newest status
