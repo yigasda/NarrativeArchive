@@ -9,7 +9,9 @@ import { RANGE_HEAD, headingRanges, lastRangeEnd, parseSections } from './sectio
 import { confirm, esc, fmt, timeLabel } from './util.js';
 
 // SillyTavern copies the chat metadata (and so the archive) into a branch. If the branch starts before the
-// archive's last section, the copy carries sections of a future this branch no longer has.
+// archive's last section, the copy carries sections of a future this branch no longer has. A section that runs
+// past the branch point (#121–#131 when the branch is at #127) carries some of it too, so it goes as well and the
+// boundary comes back to the section before it: its earlier messages are compressed again from this chat.
 
 export function branchState(m) {
     const c = ctx();
@@ -19,11 +21,12 @@ export function branchState(m) {
     const cur = ranges.length ? ranges[ranges.length - 1].prefix : '';
     const secs = parseSections(m.text).filter(x => !x.group);
     const ahead = !parent ? [] : secs.map(x => ({ s: x, r: x.title.match(RANGE_HEAD) }))
-        .filter(x => x.r && (x.r[1] || '').trim() === cur && Math.min(+x.r[2], +x.r[4]) > last)
+        .filter(x => x.r && (x.r[1] || '').trim() === cur && Math.max(+x.r[2], +x.r[4]) > last)
         .map(x => ({ s: x.s, from: Math.min(+x.r[2], +x.r[4]), to: Math.max(+x.r[2], +x.r[4]) }));
     // the newest restore point whose numbers stop inside this branch
     const fit = ahead.length ? (m.snapshots || []).find(sn => { const rr = headingRanges(sn.text).filter(x => x.prefix === cur); return rr.length && rr[rr.length - 1].to <= last; }) : null;
-    return { parent, last, cur, ahead, fit };
+    const keepTo = ahead.length ? Math.min(last, Math.min(...ahead.map(x => x.from)) - 1) : last;
+    return { parent, last, cur, ahead, fit, keepTo };
 }
 
 export async function openBranches() {
@@ -75,7 +78,7 @@ export async function openBranches() {
               <button type="button" class="na_v2_pillbtn danger na_bn2_drop" data-i="${i}">빼기</button></div>`).join('')}
           </div>
           <div class="na_bn2_acts">
-            <button type="button" class="na_v2_btn primary na_br_cut">${nWord(b.ahead.length)} 빼고 #${b.last}까지로 맞추기</button>
+            <button type="button" class="na_v2_btn primary na_br_cut">${nWord(b.ahead.length)} 빼고 #${b.keepTo}까지로 맞추기</button>
             ${b.fit ? `<button type="button" class="na_v2_btn na_br_restore" title="${esc(timeLabel(b.fit.at))} · ${esc(b.fit.reason)}">#${fitTo} 무렵 복구 지점으로 되돌리기</button>` : ''}
           </div>
           <div class="na_v2_note na_bn2_note">맞춘 뒤 STATE · OPEN도 확인해 주세요</div>` : ''}
@@ -90,7 +93,7 @@ export async function openBranches() {
         const secs = parseSections(m.text);
         const next = secs.filter(x => !drop.has(x.start)).map(x => m.text.slice(x.start, x.end)).join('');
         const end = lastRangeEnd(next);
-        await commitText(next, '분기 정리 전', { boundary: m.boundary >= 0 ? Math.min(m.boundary, end ?? b.last, b.last) : m.boundary });
+        await commitText(next, '분기 정리 전', { boundary: m.boundary >= 0 ? Math.min(m.boundary, end ?? b.keepTo, b.last) : m.boundary });
         toastr.success(`${n}개 뺐어요. STATE·OPEN이 맞는지 확인해 주세요.`); render();
     };
     $root.on('click', '.na_bn2_drop', async function () {
