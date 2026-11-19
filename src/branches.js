@@ -27,8 +27,11 @@ export async function findBranchPoint() {
     branchSeeking = parent;
     const mine = c.chat || [];
     let at = mine.length - 1, how = 'end';
+    let read = false;
     try {
         const theirs = (await fetchOtherChat(parent)).messages || [];
+        // a chat that isn't there comes back empty rather than failing
+        read = theirs.length > 0;
         const name = currentChatId();
         const marked = name ? theirs.findIndex(x => Array.isArray(x?.extra?.branches) && x.extra.branches.includes(name)) : -1;
         if (marked >= 0) { at = marked; how = 'mark'; }
@@ -42,10 +45,12 @@ export async function findBranchPoint() {
     finally { branchSeeking = ''; }
     // the chat may have changed while the parent was read
     if (ctx().chatMetadata?.main_chat !== parent || getMeta() !== m) return;
-    m.branchAt = { parent, at, how };
+    // not read (renamed or deleted): no number is guessed; the 분기 window asks for it, and the next open tries again
+    m.branchAt = read ? { parent, at, how } : { parent, at: null, how: 'missing' };
     await saveMeta();
     syncPanel();
 }
+export const branchMissing = (m, parent) => !!parent && m.branchAt?.parent === parent && m.branchAt.how === 'missing';
 
 // opening a branch whose archive carries what came after the branch point: say so once, in the middle of the
 // chat, with the way to the 분기 window (where the sections are taken out)
@@ -62,17 +67,18 @@ export async function branchNotice() {
 export function branchState(m) {
     const c = ctx();
     const parent = c.chatMetadata?.main_chat || null;
+    const missing = branchMissing(m, parent);
     const last = branchPointOf(m, parent) ?? lastIndex();
     const ranges = headingRanges(m.text);
     const cur = ranges.length ? ranges[ranges.length - 1].prefix : '';
     const secs = parseSections(m.text).filter(x => !x.group);
-    const ahead = !parent ? [] : secs.map(x => ({ s: x, r: x.title.match(RANGE_HEAD) }))
+    const ahead = !parent || missing ? [] : secs.map(x => ({ s: x, r: x.title.match(RANGE_HEAD) }))
         .filter(x => x.r && (x.r[1] || '').trim() === cur && Math.max(+x.r[2], +x.r[4]) > last)
         .map(x => ({ s: x.s, from: Math.min(+x.r[2], +x.r[4]), to: Math.max(+x.r[2], +x.r[4]) }));
     // the newest restore point whose numbers stop inside this branch
     const fit = ahead.length ? (m.snapshots || []).find(sn => { const rr = headingRanges(sn.text).filter(x => x.prefix === cur); return rr.length && rr[rr.length - 1].to <= last; }) : null;
     const keepTo = ahead.length ? Math.min(last, Math.min(...ahead.map(x => x.from)) - 1) : last;
-    return { parent, last, cur, ahead, fit, keepTo };
+    return { parent, last, cur, ahead, fit, keepTo, missing, typed: m.branchAt?.parent === parent && m.branchAt.how === 'user' };
 }
 
 export async function openBranches() {
@@ -102,12 +108,14 @@ export async function openBranches() {
           <div class="na_v2_card na_bn2_map">
             <div class="na_bn2_flow">
               <div class="na_bn2_node">${icon('', ICON_CHAT)}<b>원본</b><small title="${esc(b.parent)}">${esc(String(b.parent).replace(/@[^@]*$/, '').replace(/ - /, ' – '))}</small></div>
-              <div class="na_bn2_link"><b>#${b.last}에서 갈라짐</b><span></span></div>
+              <div class="na_bn2_link"><b>${b.missing ? '?' : `#${b.last}`}에서 갈라짐</b><span></span></div>
               <div class="na_bn2_node">${icon('here', ICON_BRANCH)}<b>이 채팅</b><small title="${esc(String(here || ''))} · 메시지 ${fmt(lastIndex() + 1)}개">${esc(hereName) || `메시지 ${fmt(lastIndex() + 1)}개`}</small></div>
             </div>
-            ${b.ahead.length ? `<div class="na_bn2_warn">${ICON_WARN}<span>분기 뒤 이야기가 섹션 ${b.ahead.length}개에 섞여 있어요 · 이 채팅에선 없던 일이에요</span></div>`
+            ${b.missing || b.typed ? `<div class="na_cp_row na_cp_keep_row na_cp_to na_bn2_at"><span class="na_cp_txt"><span>원본 채팅을 못 찾았어요</span><small>몇 번에서 갈라졌나요?</small></span><span class="na_cp_tostep"><button type="button" class="na_fd_btn na_bn2_atbtn" data-d="-1" aria-label="줄이기">−</button><span class="na_cp_toval">#<span class="na_cp_tonum">${b.last}</span><input type="number" id="na_bn_at" class="text_pole" min="0" max="${lastIndex()}" value="${b.last}" aria-label="분기 번호" inputmode="numeric"></span><button type="button" class="na_fd_btn na_bn2_atbtn" data-d="1" aria-label="늘리기">+</button></span></div>
+            ${b.missing ? `<button type="button" class="na_v2_pillbtn na_bn2_atok">#${b.last}에서 갈라졌어요</button>` : ''}` : ''}
+            ${b.missing ? '' : b.ahead.length ? `<div class="na_bn2_warn">${ICON_WARN}<span>분기 뒤 이야기가 섹션 ${b.ahead.length}개에 섞여 있어요 · 이 채팅에선 없던 일이에요</span></div>`
               : `<div class="na_bn2_ok">${ICON_OK}<span>분기 지점 뒤에 쓴 섹션이 없어요.</span></div>`}
-            <button type="button" class="na_v2_pillbtn na_br_cmp_parent" title="원본 채팅의 아카이브와 나란히 비교해요">원본(${parentName}) 아카이브와 비교</button>
+            ${b.missing || b.typed ? '' : `<button type="button" class="na_v2_pillbtn na_br_cmp_parent" title="원본 채팅의 아카이브와 나란히 비교해요">원본(${parentName}) 아카이브와 비교</button>`}
           </div>` : `
           <div class="na_bn3_hello">
             <div class="na_bn3_tl">
@@ -135,6 +143,17 @@ export async function openBranches() {
             <div class="na_br_kids"></div>
           </div>`);
     };
+    // the branch point typed by hand (the parent wasn't found)
+    const setAt = async v => {
+        const p = branchState(m).parent;
+        if (!p) return;
+        m.branchAt = { parent: p, at: Math.min(lastIndex(), Math.max(0, Number.isFinite(v) ? v : lastIndex())), how: 'user' };
+        await saveMeta(); syncPanel(); render();
+    };
+    $root.on('change', '#na_bn_at', function () { setAt(parseInt(this.value, 10)); });
+    $root.on('input', '#na_bn_at', function () { $root.find('.na_bn2_at .na_cp_tonum').text(this.value || ' '); });
+    $root.on('click', '.na_bn2_atbtn', function () { setAt((parseInt($root.find('#na_bn_at').val(), 10) || 0) + Number(this.dataset.d)); });
+    $root.on('click', '.na_bn2_atok', () => setAt(parseInt($root.find('#na_bn_at').val(), 10)));
     const cutSections = async (drop, n) => {
         const b = branchState(m);
         const secs = parseSections(m.text);
