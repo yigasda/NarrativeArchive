@@ -19,7 +19,7 @@ import { askDraft, AI_SYS_PHONE, AI_SYS_PHONE_APPS, AI_SYS_PHONE_UPDATE, CHAT_TO
     markNow, markAfter, archiveEnd, chatEnd, nowAt, phoneAt, loreFor, glossAka, seedPre, carryEdits, phonePre, sameBinding, preEdited, stTime, storyDayOf, todayWall, parsePhone, validateReflectionClock,
     jsonOf, soFarHead, mergePhone, carryOver, secFirst, secEnd, lastEnd, fresh, ensureIds, turnsNote, readNote, isOwnerName, strictSame, hasRow, hm, recentPhoneText, archiveFor, archiveBlock, afterBlock,
     noArchive, phoneForModel, aroundBlock, blindBlock, namesBlock, onlyAsk } from './phonedata.js';
-import { liveWindowOf, liveReadMark, liveSecondTurn, liveFillClock, liveYearBlock, needLive } from './phone2req.js';
+import { liveWindowOf, liveReadMark, liveSecondTurn, liveTold, liveFillClock, liveYearBlock, needLive } from './phone2req.js';
 import { liveTryWhere } from './phone2where.js';
 import { liveEnsureYear } from './phone2year.js';
 import { liveNowText } from './phone2store.js';
@@ -141,17 +141,19 @@ async function liveMakePhone0(m, owner, { update = false, apps = null } = {}) {
         withDateOrderSync(dateOrderOf(m), () => validateReflectionClock(jsonOf(out, { salvage: true }) || {}, anew ? { ...q, now: '' } : q, m, got.now));
     }
     // made again up to the clock and stopped short: a second turn adds the rest (one that fails keeps the first)
-    const two = keep && !old ? liveSecondTurn(m, cur, gap, false) : null;
-    let got2 = null, last = gap, short = null;
-    if (two) {
+    const two0 = keep && !old ? liveSecondTurn(m, cur, gap, false) : null;
+    let got2 = null, last = gap, short = null, told = null;
+    const more = [];
+    // (실시간 폰: 시작한 곳까지 다 읽을 때까지 이어서 읽어요. 남은 이야기를 읽어 줄 반영이 없어요. 셋째 차례부터 쓴 것은 more에)
+    for (let two = two0; two; two = liveSecondTurn(m, cur, last, false)) {
         try {
-            const was = jsonOf(out, { salvage: true }), soFar = part && was ? Object.fromEntries(part.filter(k => was[k] !== undefined).map(k => [k, was[k]])) : was;
+            const was = told || jsonOf(out, { salvage: true }), soFar = part && was ? Object.fromEntries(part.filter(k => was[k] !== undefined).map(k => [k, was[k]])) : was;
             const out2 = await ask(two.cover, [`${soFarHead('PHONE', two.short)}\n${JSON.stringify(soFar)}`, two.short?.text || '']), g2 = parsePhone(out2, owner);
             // (made again whole: its clock checked as the first turn's; one that doesn't hold is left out, the first kept)
             // (a second answer with no "now" leaves the clock as the first set it: nothing to check)
             if (!part && g2.now) { const q = pre ? (!anew && cur?.now ? { ...pre, now: cur.now } : pre) : cur || { owner }; withDateOrderSync(dateOrderOf(m), () => validateReflectionClock(jsonOf(out2, { salvage: true }) || {}, q, m, g2.now)); }
-            got2 = g2; last = two.cover; short = two.short;
-        } catch (err) { console.warn('[narrative-archive] phone, second turn', err); }
+            if (got2) more.push(g2); else got2 = g2; last = two.cover; short = two.short; told = liveTold(was, jsonOf(out2, { salvage: true }));
+        } catch (err) { console.warn('[narrative-archive] phone, second turn', err); break; }
     }
     if(JSON.stringify(binding)!==JSON.stringify(m.phones?.[key]?.financeProfile || m.phoneProfiles?.[key])) throw new Error('생성 중 연결한 인물 정보가 변경됐어요. 다시 시도해 주세요');
     stillRun(m, run);
@@ -163,6 +165,7 @@ async function liveMakePhone0(m, owner, { update = false, apps = null } = {}) {
         const only = g => ({ ...g, ...Object.fromEntries([...LISTS, 'threads', 'contacts'].filter(k => !part.includes(k)).map(k => [k, []])), now: '' });
         mergePhone(p, { ...only(got), profile: null }, { m });
         if (got2) mergePhone(p, { ...only(got2), profile: part.includes('profile') ? got2.profile : null }, { m });
+        for (const g of more) mergePhone(p, { ...only(g), profile: part.includes('profile') ? g.profile : null }, { m });
         for (const k of part) if (k !== 'profile') carryOver(k, was[k], p[k]);
         // an archive section that runs past the clock isn't sent (it would tell what comes after), and its messages are
         // hidden: what a reflection put in from them, up to the clock, the remake never saw, so it stays
@@ -210,9 +213,10 @@ async function liveMakePhone0(m, owner, { update = false, apps = null } = {}) {
             // a reading started anew: the old one's unsaved rounds (복구) aren't this phone's
             try { journalWrite(scope, journalRead(scope).filter(r => nameKey(r.owner) !== key)); } catch { /* no journal here */ }
         }
-        if (liveAgain) { for (const k of ['liveYearShift', 'situations', 'liveHeld']) if (was[k] !== undefined) base[k] = was[k]; if (was.now) { got.now = was.now; if (got2) got2.now = ''; } }
+        if (liveAgain) { for (const k of ['liveYearShift', 'situations', 'liveHeld']) if (was[k] !== undefined) base[k] = was[k]; if (was.now) { got.now = was.now; if (got2) got2.now = ''; for (const g of more) g.now = ''; } }
         m.phones[key] = mergePhone(base, got, { m });
         if (got2) mergePhone(m.phones[key], got2, { m });
+        for (const g of more) mergePhone(m.phones[key], g, { m });
     }
     const p = m.phones[key];
     // (made whole: what was read before it for this owner is done with, whichever way it was made)
@@ -224,7 +228,7 @@ async function liveMakePhone0(m, owner, { update = false, apps = null } = {}) {
     p.at = Date.now();
     await saveMeta();
     if (p.inject) applyInjection();
-    if (two) turnsNote(last, '폰', short); else readNote(gap);
+    if (two0) turnsNote(last, '폰', short); else readNote(gap);
     // made for the first time: read again only for someone on it the reading before didn't ask about; made again: as before
     // (a reading that failed before it is not asked again: the clock goes by the phones and the countries, as for a reflection)
     const later = pre?.where?.failed ? [] : pre ? [...p.threads.map(t => t.with), ...p.contacts.map(x => x.name)].filter(n => n && !isOwnerName(p, m, n) && !(asked.asked || []).some(a => strictSame(m, a, n)) && !hasRow(p, m, n)) : null;

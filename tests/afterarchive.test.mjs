@@ -39,8 +39,8 @@ const fin = await import(href('finance.js'));
 const live2 = await import(href('phone2store.js'));
 map['./phone2store.js'] = href('phone2store.js');
 map['./phonelife.js'] = encoded(await rewrite('phonelife.js')); map['./investdata.js'] = encoded(await rewrite('investdata.js'));
-for (const f of ['phone2year.js', 'phone2req.js', 'phone2fill.js', 'phone2money.js', 'phone2life.js', 'phone2invest.js']) map[`./${f}`] = encoded(await rewrite(f));
-const req2 = await import(map['./phone2req.js']), money2 = await import(map['./phone2money.js']), life2 = await import(map['./phone2life.js']), invest2 = await import(map['./phone2invest.js']);
+for (const f of ['phone2year.js', 'phone2req.js', 'phone2fill.js', 'phone2money.js', 'phone2life.js', 'phone2invest.js', 'phone2where.js', 'phone2make.js']) map[`./${f}`] = encoded(await rewrite(f));
+const req2 = await import(map['./phone2req.js']), money2 = await import(map['./phone2money.js']), life2 = await import(map['./phone2life.js']), invest2 = await import(map['./phone2invest.js']), make2 = await import(map['./phone2make.js']);
 // 이야기 #7에서 시작한 실시간 폰: 메신저에 두 마디, 반영은 첫 마디까지 읽음
 const liveOf = (p, mm, upto = 7) => {
     const real = { ...no2(mm), phones: { ren: p } };
@@ -503,6 +503,45 @@ test('실시간 폰의 은행 · 투자 채우기 (진짜 서랍, 아주 긴 이
             assert.ok(turns[5].input.includes('[INVESTMENTS SO FAR') && sym.slice(0, 5).every(x => turns[5].input.split('[INVESTMENTS SO FAR')[1].includes(x)));
             assert.deepEqual(p.investment.trades.map(t => t.symbol), sym);
             assert.equal(fin.cash(d.finance.accounts[p.investment.accounts[0].key]), 10000 - 600);
+        }
+    } finally { delete globalThis.__trackers; }
+});
+
+test('실시간 폰의 앱 · 폰 다시 만들기 (진짜 서랍, 아주 긴 이야기): 시작한 곳까지 이어서 읽고, 차례마다 쓴 것이 다 들어가요', async () => {
+    globalThis.__rows = afterStart(46, 39);
+    globalThis.__trackers = [{ i: 45, date: '2026-11-20', min: 20 * 60, place: 'Eastgate', weather: 'rain' }];
+    const titles = ['Shopping', 'Train times', 'Gift ideas', 'Packing', 'Recipes', 'Passwords'];
+    try {
+        {
+            const { real, d, p } = liveOf({ ...phoneOf(), ...liveLong() }, m, 39), p1 = JSON.stringify(real.phones);
+            globalThis.__menu = { calls: [], answers: titles.map(notesAnswer), answer: '{}' };
+            await make2.liveMakePhone(d, 'Ren', { apps: ['note'] });
+            const turns = globalThis.__menu.calls.filter(c => c.sys === data.AI_SYS_PHONE_APPS);
+            assert.equal(turns.length, 6);
+            wholeRun(turns, real, p1);
+            assert.ok(turns[5].input.includes('[PHONE SO FAR') && titles.slice(0, 5).every(t => turns[5].input.includes(`"${t}"`)) && !turns[5].input.includes('"Passwords"'));
+            assert.deepEqual(d.phones.ren.notes.map(x => x.title).sort(), [...titles].sort());
+            assert.equal(d.phones.ren.now, '11-12 21:30');
+        }
+        {
+            // 가운데 차례가 실패하면 그 앞까지 쓴 것은 남아요
+            const { d } = liveOf({ ...phoneOf(), ...liveLong() }, m, 39);
+            globalThis.__menu = { calls: [], answers: [notesAnswer('Shopping'), notesAnswer('Train times'), notesAnswer('Gift ideas'), 'not json {', notesAnswer('Recipes')], answer: '{}' };
+            await make2.liveMakePhone(d, 'Ren', { apps: ['note'] });
+            assert.equal(globalThis.__menu.calls.filter(c => c.sys === data.AI_SYS_PHONE_APPS).length, 4);
+            assert.deepEqual(d.phones.ren.notes.map(x => x.title).sort(), ['Gift ideas', 'Shopping', 'Train times']);
+        }
+        {
+            const { real, d } = liveOf({ ...phoneOf(), ...liveLong(), year: 2026, where: { at: 1, people: [{ name: 'Ren', city: 'Frankfurt am Main', tz: 'Europe/Berlin', names: ['Frankfurt'] }] } }, m, 39), p1 = JSON.stringify(real.phones);
+            globalThis.__menu = { calls: [], answers: titles.map(notesAnswer), answer: '{}' };
+            await make2.liveMakePhone(d, 'Ren');
+            // 폰 전체 다시 만들기도 같아요
+            const turns = globalThis.__menu.calls.filter(c => c.sys === data.AI_SYS_PHONE);
+            assert.equal(turns.length, 6);
+            wholeRun(turns, real, p1);
+            assert.ok(turns[5].input.includes('[PHONE SO FAR') && titles.slice(0, 5).every(t => turns[5].input.includes(`"${t}"`)));
+            assert.deepEqual(d.phones.ren.notes.map(x => x.title).sort(), [...titles].sort());
+            assert.equal(d.phones.ren.now, '11-12 21:30');
         }
     } finally { delete globalThis.__trackers; }
 });

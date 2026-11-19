@@ -129,7 +129,13 @@ test('사본은 폰 1 줄과 정해진 곳만 달라요 (한쪽만 고치면 실
         .replace('keep = !!(apps && cur) || !!cur?.sync?.marks?.base;', "keep = !!(apps && cur) || !!(cur?.sync?.marks?.base && ['money', 'invest', 'life', 'delivery'].some(g => cur.sync.marks[g]));")
         .replace('liveWindowOf(m, cur, null, CHAT_TOKENS.phone, false) : liveWindowOf(m, null)', 'windowOf(m, cur, null, CHAT_TOKENS.phone, false) : windowOf(m, null)').replace('liveReadMark(gap)', 'readMark(gap)')
         .replace('liveKeepPre(m, owner, binding)', 'keepPre(m, owner, binding)').replaceAll('livePreClock(m, pre)', 'preClock(m, pre)').replaceAll('liveEnsureYear(m, pre)', 'ensureYear(m, pre, nowAt(gap))')
-        .replaceAll('await liveTryWhere(', 'await tryWhere(').replace('askDraft(livePhoneRequest(', 'askDraft(phoneRequest(').replace('liveSecondTurn(m, cur, gap, false)', 'secondTurn(m, cur, gap, false)')
+        .replaceAll('await liveTryWhere(', 'await tryWhere(').replace('askDraft(livePhoneRequest(', 'askDraft(phoneRequest(')
+        // (폰 1은 두 번까지, 실시간은 시작한 곳까지 이어서: 앞 차례들이 쓴 것을 told에 모으고, 셋째 차례부터 쓴 것은 more에)
+        .replace('const two0 = keep && !old ? liveSecondTurn(m, cur, gap, false)', 'const two = keep && !old ? secondTurn(m, cur, gap, false)').replace('short = null, told = null;\n    const more = [];\n', 'short = null;\n')
+        .replace("    // (실시간 폰: 시작한 곳까지 다 읽을 때까지 이어서 읽어요. 남은 이야기를 읽어 줄 반영이 없어요. 셋째 차례부터 쓴 것은 more에)\n    for (let two = two0; two; two = liveSecondTurn(m, cur, last, false)) {\n", '    if (two) {\n').replace('const was = told || jsonOf(out', 'const was = jsonOf(out')
+        .replace('if (got2) more.push(g2); else got2 = g2;', 'got2 = g2;').replace(' told = liveTold(was, jsonOf(out2, { salvage: true }));', '').replace("second turn', err); break; }", "second turn', err); }")
+        .replace("        for (const g of more) mergePhone(p, { ...only(g), profile: part.includes('profile') ? g.profile : null }, { m });\n", '').replace(" for (const g of more) g.now = '';", '')
+        .replace('        for (const g of more) mergePhone(m.phones[key], g, { m });\n', '').replace('if (two0) turnsNote(', 'if (two) turnsNote(')
         .replace(`        // (폰 2, a phone it already has made again: its reading of the messenger goes on where it was — the request showed
         // the talk read so far — and its clock, the year the user picked and where things stand stay its own)
         const liveAgain = !!was?.sync?.marks?.base;
