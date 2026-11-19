@@ -168,7 +168,7 @@ export function diaryScreen(p, now, pick = '') {
     const have = new Set((p.diary || []).map(d => d.date));
     // the week up to the story's today (no weekday names: the story's dates carry no year)
     const days = [];
-    const yr = (!p.noYear && Number(p.year)) || 2001; // the story's year when it has one, so a leap day counts
+    const yr = (!p.noYear && Number(P.yearOn(p, phoneMeta()))) || 2001; // the story's year when it has one, so a leap day counts
     if (x0) for (let n = 6; n >= 0; n--) { const d = new Date(yr, x0.mo - 1, x0.d - n); days.push(`${pad(d.getMonth() + 1)}-${pad(d.getDate())}`); }
     return `${axBar(p, now, '#3d3127')}
       <div class="ax_dytop"><button type="button" class="ax_back" data-go="home">${ax('back', 22, '#8a6d4a', 2.4)}</button><button type="button" class="ax_dyfind na_ph_dyfind" aria-label="검색">${ax('search', 22, '#8a6d4a')}</button></div>
@@ -521,7 +521,7 @@ export function calScreen(p, now, m, pick = '') {
     const passOn = d => pss.filter(q => runs(q, d));
     const pRow = (q, when = '') => `<button type="button" class="ax_ev" data-go="pass" data-i="${esc(q.x.id)}"><i style="background: #6b84a8"></i><span class="ax_tx"><b>${esc(q.x.by || q.x.to || '표')}</b><span class="ax_p">지갑${q.u ? ` · ${esc(fmtDate(p, q.d0, true))} ~ ${esc(fmtDate(p, q.u, true))}` : q.x.by && q.x.to ? ` · ${esc(q.x.to)}` : ''}</span></span><small class="cg_num">${q.x.time ? esc(clockOf(p, q.x.time)) : '하루 종일'}${when ? `<br>${esc(when)}` : ''}</small></button>`;
     const marked = new Set([...evs.map(x => x.e.date), ...an.map(a => a.date), ...pss.flatMap(q => q.days)]);
-    const len = new Date((!p.noYear && Number(p.year)) || 2000, x0.mo, 0).getDate(); // February: 29 days unless the story's year says 28
+    const len = new Date((!p.noYear && Number(P.yearOn(p, m || phoneMeta()))) || 2000, x0.mo, 0).getDate(); // February: 29 days unless the story's year says 28
     const grid = Array.from({ length: len }, (_, n) => { const d = `${pad(x0.mo)}-${pad(n + 1)}`; return dayBtn('cal', d, pick, `${d === (pick || day) ? 't' : ''} ${marked.has(d) ? 'e' : ''}`, n + 1); }).join('');
     const row = ({ e, k }, when = '') => `<button type="button" class="ax_ev" data-go="calone" data-i="${k}"><i style="background: ${AX_EVC[k % AX_EVC.length]}"></i><span class="ax_tx"><b>${esc(e.title)}</b>${e.ko && koOn() ? `<span class="ax_p">${esc(e.ko)}</span>` : ''}</span><small class="cg_num">${e.time ? esc(fmtTime(p, `${e.date} ${e.time}`)) : '하루 종일'}${when ? `<br>${esc(when)}` : ''}</small></button>`;
     const anRow = a => `<div class="ax_ev"><i style="background: #d494a7"></i><span class="ax_tx"><b>♥ ${esc(a.name)}</b><span class="ax_p">기념일 · 매년 ${esc(fmtDate(p, a.date))}</span></span></div>`;
@@ -673,14 +673,14 @@ function phoneModes({ live, has, shift, err = '' }) {
 const dateLabel = (p, now, long = false) => {
     const mt = /^(\d{2})-(\d{2})/.exec(String(now || p.now || ''));
     if (!mt) return '';
-    const y = !p.noYear && Number(p.year), d = y ? new Date(Date.UTC(y, mt[1] - 1, Number(mt[2]))) : null;
+    const y = !p.noYear && Number(P.yearOn(p, phoneMeta())), d = y ? new Date(Date.UTC(y, mt[1] - 1, Number(mt[2]))) : null;
     return `${y ? fullDate(p, `${y}-${mt[1]}-${mt[2]}`) : fmtDate(p, `${mt[1]}-${mt[2]}`)}${long && d ? ` (${'일월화수목금토'[d.getUTCDay()]})` : ''}`;
 };
 // (실시간: 메신저 시간대 is 타임라인's alone, so it isn't there)
 export function setDate(p, now, m = null, ui = {}) {
     // docs/mockups/phone-date C: the date in one line (with the year), the year as − 2026 + (hold for fast steps)
     const on = !p.noYear, mt = /^(\d{2})-(\d{2})/.exec(String(now || p.now || ''));
-    const y = on && Number(p.year), d = y && mt ? new Date(Date.UTC(y, mt[1] - 1, Number(mt[2]))) : null;
+    const y = on && Number(P.yearOn(p, m || phoneMeta())), d = y && mt ? new Date(Date.UTC(y, mt[1] - 1, Number(mt[2]))) : null;
     const day = mt ? `${y ? fullDate(p, `${y}-${mt[1]}-${mt[2]}`) : fmtDate(p, `${mt[1]}-${mt[2]}`)}${d ? ` (${'일월화수목금토'[d.getUTCDay()]})` : ''}` : '';
     const row = (n, v, tag = 'div', cls = '') => `<${tag} class="ax_rw ax_rwn${cls}"><span class="ax_tx"><span class="ax_n">${n}</span></span>${v}</${tag}>`;
     const step = (dv, t) => `<span role="button" tabindex="0" class="ax_ystep na_ph_ystep" data-d="${dv}" aria-label="${dv < 0 ? '한 해 전' : '한 해 뒤'}">${t}</span>`;
@@ -692,7 +692,7 @@ export function setDate(p, now, m = null, ui = {}) {
           ${row('시간', `<span class="ax_v cg_num">${esc(clockOf(p, String(now || p.now || '').slice(6, 11)))}</span>`)}
         </div>
         <div class="ax_card"><button type="button" class="ax_rw ax_rwn na_ph_yearshow"><span class="ax_tx"><span class="ax_n">연도 표시</span></span><span class="ax_sw ${on ? 'on' : ''}"></span></button>
-          ${on ? row('연도', `<span class="ax_ys">${step(-1, '−')}<b class="cg_num na_ph_yval">${esc(String(p.year || ''))}</b>${step(1, '+')}</span>`) : ''}</div>
+          ${on ? row('연도', `<span class="ax_ys">${step(-1, '−')}<b class="cg_num na_ph_yval">${esc(String(P.yearOn(p, m || phoneMeta()) || ''))}</b>${step(1, '+')}</span>`) : ''}</div>
         <div class="ax_foot">연도를 알아야 요일이 맞게 나와요. 연도 없는 이야기만 꺼 주세요.</div>
         <div class="ax_card"><button type="button" class="ax_rw ax_rwn" data-go="setscreenholder"><span class="ax_tx"><span class="ax_n">메신저 시간대</span></span><span class="ax_v">${esc(screenHolderLabel(m) || '미설정')}</span>${ax('chev', 16, '#bfc2c7')}</button></div>
         <div class="ax_foot">캐릭터와 주고받는 메시지의 시간이 누구를 기준으로 하는지 골라 주세요.</div>
@@ -867,7 +867,7 @@ export function prepScreen(p, now, m, ui = {}) {
         ${ui.stale || !o.city || !o.tz || placeInfo(p).failed ? blue(link || '다시 연동', 'na_ph_preplink', ui.linking) : ''}
         <div class="ax_sec">7 · 이야기 연도</div>
         <div class="ax_card"><button type="button" class="ax_rw ax_rwn na_ph_yearshow"><span class="ax_tx"><span class="ax_n">연도 표시</span></span><span class="ax_sw ${on ? 'on' : ''}"></span></button>
-          ${on ? row('연도', `<span class="ax_ys">${step(-1, '−')}<b class="cg_num na_ph_yval">${esc(String(p.year || ''))}</b>${step(1, '+')}</span>`, '', 'div') : ''}</div>
+          ${on ? row('연도', `<span class="ax_ys">${step(-1, '−')}<b class="cg_num na_ph_yval">${esc(String(P.yearOn(p, m || phoneMeta()) || ''))}</b>${step(1, '+')}</span>`, '', 'div') : ''}</div>
         <div class="ax_foot">연도를 알아야 요일이 맞게 나와요. 연도 없는 이야기만 꺼 주세요.</div>
         <div class="ax_prep_gap"></div>${blue(ui.making ? `${busyHtml} 폰 만드는 중` : draft ? '이대로 폰 만들기' : '초안 모델을 먼저 정해 주세요', 'na_ph_prepmake', ui.linking || ui.making || !draft)}`;
     }
@@ -1099,7 +1099,7 @@ function mapStrip(p, now, m, pl, sel) {
     const nowP = parts(now), latest = all.map(x => x.day).sort(storyCmp(p.now)).at(-1);
     const mo = all.some(x => nowP && Number(x.day.slice(0, 2)) === nowP.mo) ? nowP.mo : Number(latest.slice(0, 2));
     const month = all.filter(x => Number(x.day.slice(0, 2)) === mo), d = x => Number(x.day.slice(3));
-    const days = new Date(Date.UTC(Number(p.year) || 2001, mo, 0)).getUTCDate(), today = nowP && nowP.mo === mo ? nowP.d : 0;
+    const days = new Date(Date.UTC(Number(P.yearOn(p, m || phoneMeta())) || 2001, mo, 0)).getUTCDate(), today = nowP && nowP.mo === mo ? nowP.d : 0;
     const places = [...new Map(month.map(x => [nameKey(x.place), x.place])).values()];
     const towns = []; for (const x of [...month].sort((a, b) => d(a) - d(b))) if (x.city && !towns.some(t => nameKey(t) === nameKey(x.city))) towns.push(x.city);
     const byDay = new Map(); for (const x of month) { if (!byDay.has(d(x))) byDay.set(d(x), []); byDay.get(d(x)).push(x); }

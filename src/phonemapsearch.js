@@ -14,6 +14,8 @@ import { esc } from './util.js';
 import { SPOTS } from './phonemapspots.js';
 import { spotIn } from './phonetilemap.js';
 import { countryOf, parts, placeInfo } from './phonedata.js';
+import { phoneMeta } from './core.js';
+import { P } from './phone2api.js';
 
 // a folded map (a kind of map) and two arrows (another map)
 // (added on first use: this file can load while phoneapps.js is still loading)
@@ -149,7 +151,7 @@ export function mapEmptyScreen(p, now, m) {
     const own = placeInfo(p).owner, cc = String(own.lives || '').toLowerCase(), i = townPlace(own.city), v = i >= 0 ? placeView(i) : null;
     const k = v ? townCandidates(v.ko)[0] : 'gridLake', dark = false;
     const art = '';   // 그림 지도는 안 써요(11-12): 지도 칸은 타일 지도만
-    const nowP = parts(now), mo = nowP?.mo || 1, days = new Date(Date.UTC(Number(p.year) || 2001, mo, 0)).getUTCDate();
+    const nowP = parts(now), mo = nowP?.mo || 1, days = new Date(Date.UTC(Number(P.yearOn(p, m || phoneMeta())) || 2001, mo, 0)).getUTCDate();
     const st = stripSvg({ days, today: nowP?.d || 0, blocks: [] }), c = st.cell;
     const ghost = [[3, 5], [11, 12], [18, 21]].map(([a, b]) => `<rect x="${(a - 1) * c + 1}" y="${st.top + 2}" width="${(b - a + 1) * c - 2}" height="14" rx="5" fill="none" stroke="#c9cfd8" stroke-width="1.2" stroke-dasharray="3 3"/>`).join('');
     const strip = `<div class="ax_card mp_month"><div class="mp_mh"><span class="mp_lbl">${mo}월에 다닌 곳</span><span class="mp_big"><b class="cg_num">0</b><u>곳</u><span>이야기에서 어딘가 가면 여기 쌓여요</span></span></div><div class="mp_st">${st.svg.replace('</svg>', `${ghost}</svg>`)}</div></div>`;

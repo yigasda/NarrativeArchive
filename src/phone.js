@@ -1518,7 +1518,7 @@ export async function openPhone(who = null) {
     const commitYear = async y => {
         const p = phone(), pre = !p && view === 'prep' ? phonePre(m, owner) : null;
         if (pre) { if (y >= 1900 && y <= 2100 && y !== pre.year) await setPreYear(m, owner, y); drawPhone(true); return; }
-        if (!p || !(y >= 1900 && y <= 2100) || y === p.year) { drawPhone(true); return; }
+        if (!p || !(y >= 1900 && y <= 2100) || y === P.yearOn(p, m)) { drawPhone(true); return; }
         // the bank's and investments' dates move with it (the whole chat's), so their order holds
         if (p.year && hasDatedRecords(m) && !await askSheet(`${y}년으로 바꿀까요?`, '기록 날짜와 다른 폰도 같이 바뀌어요.', '바꾸기', true)) { drawPhone(true); return; }
         P.setStoryYear(m, p, y);
@@ -1532,13 +1532,13 @@ export async function openPhone(who = null) {
         e.preventDefault(); e.stopPropagation(); if (yHold) return;
         const p = tgt(); if (!p) return;
         const d = Number(this.dataset.d), $v = $root.find('.na_ph_yval');
-        yHold = { y: Number(p.year) || new Date().getFullYear(), t: 0, n: 0 };
+        yHold = { y: Number(P.yearOn(p, m)) || new Date().getFullYear(), t: 0, n: 0 };
         const tick = () => { if (!yHold) return; yHold.y = Math.max(1900, Math.min(2100, yHold.y + d)); yHold.n++; $v.text(String(yHold.y)); yHold.t = setTimeout(tick, yHold.n < 2 ? 420 : yHold.n < 12 ? 110 : 45); };
         tick();
         this.setPointerCapture?.(e.pointerId);
     });
     $root.on('pointerup pointercancel lostpointercapture', '.na_ph_ystep', e => { e.stopPropagation(); yStop(); });
-    $root.on('keydown', '.na_ph_ystep', function (e) { if (e.key !== 'Enter' && e.key !== ' ') return; e.preventDefault(); const p = tgt(); if (p) commitYear((Number(p.year) || new Date().getFullYear()) + Number(this.dataset.d)); });
+    $root.on('keydown', '.na_ph_ystep', function (e) { if (e.key !== 'Enter' && e.key !== ' ') return; e.preventDefault(); const p = tgt(); if (p) commitYear((Number(P.yearOn(p, m)) || new Date().getFullYear()) + Number(this.dataset.d)); });
     // 설정 › 위치 정보: locked while the phone is being made, reflected or filled, like the date order
     const placeLocked = () => { if (!(making || busyMake || investing || filling.size || busy.fill || busy.sync || placeReading || prepLinking)) return false; toastr.info('반영이 끝난 뒤 바꿔 주세요', '캐릭터 휴대폰'); return true; };
     const placeCity = async (name, now) => {
@@ -1708,7 +1708,9 @@ export async function openPhone(who = null) {
         e.stopPropagation();
         const pre = !phone() && view === 'prep' ? phonePre(m, owner) : null;
         if (pre) { await setPreYear(m, owner, pre.noYear ? Number(P.storyYear(m, { ...pre, year: 0, noYear: false })) || new Date().getFullYear() : null); return drawPhone(true); }
-        const p = phone(); if (!p) return; p.noYear = !p.noYear; if (!p.noYear && !p.year) p.year = Number(P.storyYear(m, { ...p, year: 0 })) || new Date().getFullYear(); drawPhone(true); await saveMeta(); });
+        const p = phone(); if (!p) return; p.noYear = !p.noYear; if (!p.noYear && !p.year) p.year = Number(P.storyYear(m, { ...p, year: 0 })) || new Date().getFullYear(); drawPhone(true); await saveMeta();
+        // (실시간: the year put in when turned on, set to the year of the phone's saved time)
+        if (live()) { await yearsNow(); drawPhone(true); } });
     $root.on('click', '.na_ph_setinj', async e => { e.stopPropagation(); const p = phone(); p.inject = !p.inject; drawPhone(true); await saveMeta(); applyInjection(); });
     // what opens under the phone scrolls into sight, so the tap visibly does something
     $root.on('change', '.na_ph_country', async function () { phone().country = this.value; drawPhone(); await saveMeta(); });
