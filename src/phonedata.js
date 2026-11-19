@@ -1094,6 +1094,10 @@ export const BEFORE_MAX = 5_000;
 // so they fit one answer's 40 events and 16,000 tokens (an answer cut short would lose the round). A section is never cut:
 // one past the limit waits whole for the next round, and one longer than the limit goes alone
 export const ARCH_TOKENS = 8_000;
+// and this many sections a round at most (소망 결정): a section is a stretch of the story, and a round's answer holds 40
+// events, so months of summaries in one answer left most of them out (and a section read once is not read again).
+// The token limit above stays as the ceiling for long sections
+export const ARCH_SECTIONS = 5;
 // the archive's sections with a message range ("## #a–#b — …"): { key, first, last, text }
 export const archSections = m => { const [body] = splitTail(String(m?.text || '')); return parseSections(body).filter(x => !x.group && RANGE_HEAD.test(x.title)).map(x => { const mt = x.title.match(RANGE_HEAD); return { key: `${mt[2]}-${mt[4]}:${x.title.length}`, first: Number(mt[2]), last: Number(mt[4]), text: body.slice(x.start, x.end).trim() }; }); };
 const ARCHIVE_MAX = 120_000; // characters: the state at the end, and as many of the newest sections as fit
@@ -1910,7 +1914,7 @@ export async function moneyStage(m, p, owner, c) {
 }
 
 // Resolve once on a detached phone: validation and failed downstream requests cannot move the live clock or locations.
-export function reflectionClockPlan(raw, original, m, { round, roundEnd = null, tracker = null, st = null, sceneOwn = true, askZone = false, archiveOnly = false }) {
+export function reflectionClockPlan(raw, original, m, { round, roundEnd = null, tracker = null, st = null, sceneOwn = true, askZone = false, archiveOnly = false, hold = false }) {
     const p = { ...original, where: structuredClone(original.where) };
     m = { ...m, phones: { ...m?.phones, [nameKey(p.owner)]: p } };
     // a now without its time ("2026-12-31", "1/2"): that day at the round's last event time, else the time it was
@@ -1938,7 +1942,9 @@ export function reflectionClockPlan(raw, original, m, { round, roundEnd = null, 
     // (set back 24 hours at most: 11-03 04:00 → 11-02 05:00 yes, → 11-01 23:00 no)
     const behind = hm(p.now) && hm(nowAt) ? -gap * 1440 + (Number(p.now.slice(6, 8)) - Number(nowAt.slice(6, 8))) * 60 + Number(p.now.slice(9, 11)) - Number(nowAt.slice(9, 11)) : 0;
     const setBack = fresh && laterThan(p.now, nowAt) && behind > 0 && behind <= 1440;
-    if (nowAt && (setBack || gap > 0 || gap < -60 || gap === 0 && nowAt.slice(6) > p.now.slice(6))) {
+    // (hold: an archived stretch behind the phone's clock. Its moment is before the phone's now, however far: the
+    // clock and the year stay)
+    if (nowAt && !hold && (setBack || gap > 0 || gap < -60 || gap === 0 && nowAt.slice(6) > p.now.slice(6))) {
         if (!setBack && p.year && p.now && nowAt.slice(0, 5) < p.now.slice(0, 5)) p.year++;
         // set back over New Year (01-01 to 12-31): the year before
         if (setBack && p.year && nowAt.slice(0, 5) > p.now.slice(0, 5)) p.year--;
@@ -2149,7 +2155,20 @@ async function updatePhone(m, owner) {
         // an older message changed: read again, tied to the events it already gave (no new payment from it)
         const reread = new Map(moved.changed.map(x => [x.at, Object.entries(s.events).filter(([, e]) => e.at === x.at || (e.effects || []).some(f => (f.item?.sourceIndex ?? f.sourceIndex) === x.at)).map(([id, e]) => ({ id, summary: e.summary }))]));
         if (reread.size) swiped.push(`바뀐 대화 ${reread.size}개를 다시 읽어요. 그 대화의 결제는 새로 넣지 않고 기존 기록만 고쳐요`);
-        const rows = syncRows(), round = pickRound(s, rows), archiveOnly = !round.rows.length, clockBefore = phoneAt(p) ?? -1;
+        const rows = syncRows(), clockBefore = phoneAt(p) ?? -1;
+        // the archive: sections covering this round are evidence; earlier ones are background; ones reaching unread messages stay out
+        const [, tail] = splitTail(String(m.text || ''));
+        const sections = archSections(m);
+        // stretches archived before the phone read them are read from their sections, oldest first, a few at a time
+        const archIn = [], archAll = archivedUnread(s, sections, rows, chatRows());
+        for (const x of archAll) { if (archIn.length && (archIn.length >= ARCH_SECTIONS || archIn.reduce((n, y) => n + estTok(y.text), 0) + estTok(x.text) > ARCH_TOKENS)) break; archIn.push(x); }
+        // (said once a round while more is left, so "남은 N개" after a round of a few sections is no surprise)
+        if (archIn.length && (archAll.length > archIn.length || unreadCount(s, rows) > 0)) swiped.push(`아카이브된 구간을 먼저, 한 번에 ${ARCH_SECTIONS}섹션씩 읽어요. 다시 반영하면 이어서 읽어요`);
+        // (and on their own: a round that has them reads no messages. Read together, the messages' words took the answer's
+        // 40 events and the summaries gave next to nothing. The messages are read once those stretches are done)
+        const round = archIn.length ? { rows: [], retry: [], remaining: unreadCount(s, rows) } : pickRound(s, rows), archiveOnly = !round.rows.length;
+        // (a stretch the phone's clock is already past — it read later messages first — never moves the clock)
+        const archBehind = archiveOnly && archIn.length > 0 && Math.max(...archIn.map(x => x.last)) <= clockBefore;
         const rawRows = new Map(rows.map(r => [r.index, ctx().chat?.[r.index]?.mes]));
         // Snapshot supplementary HTML hints with this round's visible messages, before any request can change the chat.
         // Archive evidence keeps its own text; its source index is never a reason to reopen hidden raw messages.
@@ -2158,12 +2177,6 @@ async function updatePhone(m, owner) {
             return { ...r, clockSource: raw, htmlTimeContext: htmlTimeContext(raw) };
         });
         // where everyone is: read once for a phone that never had it, and again below when the owner's city changes
-        // the archive: sections covering this round are evidence; earlier ones are background; ones reaching unread messages stay out
-        const [, tail] = splitTail(String(m.text || ''));
-        const sections = archSections(m);
-        // stretches archived before the phone read them go along as evidence, oldest first, a few at a time
-        const archIn = [];
-        for (const x of archivedUnread(s, sections, rows, chatRows())) { if (archIn.length && archIn.reduce((n, y) => n + estTok(y.text), 0) + estTok(x.text) > ARCH_TOKENS) break; archIn.push(x); }
         if (!round.rows.length && !archIn.length) {
             if (shifted) { delete p.syncUndo; delete p.syncUndos; }
             // nothing new: the last round's result stays up, with its 되돌리기 while it can still be undone
@@ -2263,7 +2276,7 @@ async function updatePhone(m, owner) {
         const nowText = new Map(syncRows().map(r => [r.index, r.text]));
         if (round.rows.some(r => nowText.get(r.index) !== r.text)) throw new Error('반영하는 사이 대화가 바뀌었어요. 다시 해 주세요');
         if (!core0 || !Array.isArray(core0.events)) throw new Error('모델 답에서 반영할 내용을 찾지 못했어요. 다시 해 주세요');
-        const clockPlan = reflectionClockPlan(core0, p, m, { round, roundEnd, tracker, st, sceneOwn, askZone, archiveOnly });
+        const clockPlan = reflectionClockPlan(core0, p, m, { round, roundEnd, tracker, st, sceneOwn, askZone, archiveOnly, hold: archBehind });
         // Archive-only records keep the 3.171.16 date fallback from the model's original now.
         // The separately guarded clockPlan still decides the phone's saved time.
         const raw = archiveOnly ? { ...core0 } : { ...core0, now: clockPlan.now };

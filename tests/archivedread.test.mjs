@@ -54,12 +54,27 @@ function archived() {
     c.m.text = SECTION;
     return c;
 }
+// a section whose last message is still shown and unread: it is read with the messages, as their evidence
+function mixed() {
+    const c = archived();
+    T.chat[5] = say('Mara', 'nice');
+    return c;
+}
 const note = (at, quote, title) => ({ id: title.toLowerCase(), at, quote, summary: title, date: '10-26', time: '12:00', phone: { notes: [{ title, text: title, time: '10-26 12:00' }] } });
 
 test('a stretch archived before the phone read it comes in from its section, once', async () => {
     const { m, p } = archived();
     assert.equal(data.syncLeft(p, m), 5); // #6, and the archived #2–#5 (four messages)
-    await run(m, { now: '10-26 13:00', events: [note(3, 'bought the poetry book', 'Book'), note(6, 'see you at the cafe', 'Cafe')] });
+    // the archived stretch on its own first: no message is read with it (an event at #6 is out of this round's range)
+    await run(m, JSON.stringify({ now: '10-26 12:00', events: [note(3, 'bought the poetry book', 'Book'), note(6, 'see you at the cafe', 'Cafe')] }));
+    assert.match(T.input, /\[NEW MESSAGES\]\n\(none: this round reads only stretches archived before the phone read them\)/);
+    assert.ok(!T.input.includes('see you at the cafe'));
+    assert.deepEqual(p.notes.map(x => x.title), ['Book']);
+    assert.equal(p.syncLast.checked, 4); assert.equal(p.syncLast.remaining, 1);
+    assert.equal(data.syncLeft(p, m), 1);
+    // then the message
+    await run(m, { now: '10-26 13:00', events: [note(6, 'see you at the cafe', 'Cafe')] });
+    assert.ok(T.input.includes('see you at the cafe') && !T.input.includes('[ARCHIVE FOR THESE MESSAGES]'));
     assert.deepEqual(p.notes.map(x => x.title).sort(), ['Book', 'Cafe']);
     const s = p.sync;
     assert.ok(Object.keys(s.arch).length === 1);
@@ -95,6 +110,65 @@ test('whole sections only: past the limit a section waits for the next round, ne
     assert.equal(data.syncLeft(c.p, c.m), 2 * (30 - first));
     await run(c.m, { now: '10-26 13:00', events: [] });
     assert.ok(Object.keys(c.p.sync.arch).length > first);
+});
+
+test('미뤄 둔 아카이브 구간: 한 번에 5섹션씩, 오래된 것부터, 원문과 섞지 않고; 다 읽은 뒤에 원문', async () => {
+    const chat = [say('Ren', 'start of the day'), say('Mara', 'morning')];
+    let text = '';
+    for (let k = 0; k < 12; k++) { chat.push(hide(say('Ren', `stretch ${k} one`)), hide(say('Mara', `stretch ${k} two`))); text += `## #${2 + 2 * k}–#${3 + 2 * k} — Part ${k}\n- Ren did thing ${k} (#${2 + 2 * k}).\n`; }
+    chat.push(say('Ren', 'newest one'), say('Mara', 'newest two'));
+    const c = setup(chat);
+    c.m.text = text;
+    c.p.sync.order = 'newest';
+    assert.equal(data.syncLeft(c.p, c.m), 26);
+    const thing = k => note(2 + 2 * k, `Ren did thing ${k}`, `Thing ${k}`);
+    // 1회차: 섹션 0–4만. 원문은 안 읽어요 (최신순이어도)
+    await run(c.m, JSON.stringify({ now: '10-26 12:00', events: [0, 1, 2, 3, 4, 5].map(thing) }));
+    assert.match(T.input, /\[NEW MESSAGES\]\n\(none: this round reads only stretches archived/);
+    assert.ok(T.input.includes('Part 4') && !T.input.includes('Part 5') && !T.input.includes('newest one'));
+    assert.deepEqual(Object.keys(c.p.sync.arch).length, 5);
+    // (섹션 5의 일은 이번 범위 밖이라 안 들어가요: 다음 회차에 읽혀요)
+    assert.deepEqual(c.p.notes.map(x => x.title), [0, 1, 2, 3, 4].map(k => `Thing ${k}`));
+    assert.deepEqual([c.p.syncLast.checked, c.p.syncLast.remaining], [10, 16]);
+    assert.ok(c.p.syncLast.notes.includes('아카이브된 구간을 먼저, 한 번에 5섹션씩 읽어요. 다시 반영하면 이어서 읽어요'));
+    // 2회차: 섹션 5–9
+    await run(c.m, JSON.stringify({ now: '10-26 14:00', events: [5, 6, 7, 8, 9].map(thing) }));
+    assert.ok(T.input.includes('Part 9') && !T.input.includes('Part 10') && !T.input.includes('newest one'));
+    assert.deepEqual([c.p.syncLast.checked, c.p.syncLast.remaining], [10, 6]);
+    // 3회차: 남은 섹션 10–11
+    await run(c.m, JSON.stringify({ now: '10-26 16:00', events: [10, 11].map(thing) }));
+    assert.ok(T.input.includes('Part 11') && !T.input.includes('newest one'));
+    assert.deepEqual([c.p.syncLast.checked, c.p.syncLast.remaining], [4, 2]);
+    assert.equal(c.p.notes.length, 12);
+    // 4회차: 이제 원문. 아카이브 구간은 다시 안 읽어요
+    await run(c.m, { now: '10-26 18:00', events: [note(26, 'newest one', 'Newest')] });
+    assert.ok(T.input.includes('newest one') && !T.input.includes('[ARCHIVE FOR THESE MESSAGES]'));
+    assert.deepEqual([c.p.syncLast.checked, c.p.syncLast.remaining], [2, 0]);
+    assert.ok(!c.p.syncLast.notes.some(x => x.includes('아카이브된 구간을 먼저')));
+    assert.equal(c.p.notes.length, 13);
+    assert.equal(c.p.now, '10-26 18:00');
+    assert.equal(data.syncLeft(c.p, c.m), 0);
+});
+
+test('폰 시계보다 앞에 있는 아카이브 구간(뒤 메시지를 먼저 읽은 폰)은 폰 시각 · 연도를 안 움직여요, 몇 달 전이어도', async () => {
+    const chat = [say('Ren', 'start of the day'), say('Mara', 'morning'), hide(say('Ren', 'going to the bookstore')), hide(say('Mara', 'did you get it')),
+        hide(say('Ren', 'yes the poetry one')), hide(say('Mara', 'nice'))];
+    for (let k = 0; k < 4; k++) chat.push(say(k % 2 ? 'Mara' : 'Ren', `line ${k} months later`));
+    for (const now of ['11-20 18:00', '02-20 18:00', '03-04 18:00']) {
+        const c = setup(chat);
+        c.m.text = SECTION;
+        // (the phone read #6–#9 first: its clock is past the section, in March of the next year)
+        c.p.sync.done = [[6, 9]]; c.p.now = '03-05 10:00'; c.p.year = 2027;
+        await run(c.m, JSON.stringify({ now, events: [{ ...note(3, 'bought the poetry book', 'Book'), date: now.slice(0, 5) }] }));
+        assert.deepEqual([c.p.now, c.p.year], ['03-05 10:00', 2027], now);
+        assert.deepEqual(c.p.notes.map(x => x.title), ['Book'], now);
+        assert.ok(readBefore(c.p.sync, 3));
+    }
+    // 폰 시계 뒤의 구간은 전처럼 시각을 앞으로 옮겨요 (해를 넘기면 연도도)
+    const c = setup(chat.slice(0, 6));
+    c.m.text = SECTION; c.p.now = '12-30 10:00'; c.p.year = 2026;
+    await run(c.m, JSON.stringify({ now: '01-02 09:00', events: [] }));
+    assert.deepEqual([c.p.now, c.p.year], ['01-02 09:00', 2027]);
 });
 
 test('a round behind the chat sees the status lines only up to its own last message', async () => {
@@ -483,7 +557,8 @@ test('an archive section after the read stretch is not sent as the story before 
     await run(c.m, { now: '10-26 13:00', events: [] });
     const i = T.input.indexOf('[ARCHIVE BEFORE]'), bf = i < 0 ? '' : T.input.slice(i, T.input.indexOf('\n\n[', i + 1) >>> 0 || undefined);
     assert.ok(!bf.includes('Busan'));
-    assert.equal(data.syncLeft(c.p, c.m), 2);
+    // (left: the second section's two messages, and #6 — the messages wait for the archived stretches)
+    assert.equal(data.syncLeft(c.p, c.m), 3);
 });
 
 test('되돌리기 holds the screen clock where the phone was until the next 반영; otherwise it follows the newest status line', async () => {
@@ -904,12 +979,12 @@ test('일상 is not asked for when the reflection\'s own answer can\'t be read (
 
 test('latest visible message alone supplies candidates without falling back to earlier archive evidence', async () => {
     for (const visibleHasClock of [false, true]) {
-        const c = archived();
+        const c = mixed();
         c.p.country = 'DE'; c.p.year = 2026; c.p.now = '11-05 03:38';
         c.p.where = { at: 1, people: [{ name: 'Ren', city: 'Berlin', tz: 'Europe/Berlin' }, { name: 'Mara', city: 'Seoul', tz: 'Asia/Seoul' }] };
         c.m.phoneScreenHolder = 'Mara'; c.m.dateOrder = 'md';
         c.m.text = SECTION.replace('- Ren', '- Mara: 11.05 12:27, then a flashback: 10.05 01:00.\n- Ren');
-        for (const i of [2, 3, 4, 5]) T.chat[i].mes += ' <time>23:59</time>';
+        for (const i of [2, 3, 4]) T.chat[i].mes += ' <time>23:59</time>';
         if (visibleHasClock) T.chat[6].mes += ' Mara <span class="time">11.05 13:27</span>';
         await run(c.m, { now: '11-05 05:27', events: [] });
         assert.equal((T.input.match(/Time text in #/g) || []).length, 0);
@@ -931,7 +1006,8 @@ for(let bits=0;bits<16;bits++)for(const order of ['oldest','newest'])for(const s
  try{
   const stamp=style==='dated'?'<div class="chat-timestamp">10.26, 14:12</div>':style==='bare'?'<div class="chat-timestamp">14:12</div>':'Ren walks outside under a dark sky.';
   const chat=[say('Ren','start'),say('Mara','hello'),...Array.from({length:5},(_,i)=>say('Ren',`message ${i+2}: ${stamp} I paid for tea.`))];
-  if(source!=='visible')for(let i=2;i<=5;i++)chat[i].is_system=true;
+  // (mixed: the section's last message is still shown, so the section is read with the messages)
+  if(source!=='visible')for(let i=2;i<=(source==='mixed'?4:5);i++)chat[i].is_system=true;
   if(source==='archive')chat.pop();
   const {m,p}=setup(chat);T.trackers=[];T.moneyAnswers=[];T.moneyCalls=0;T.clockAuditCalls=[];globalThis.__everyday={};store.clear();
   if(source!=='visible')m.text=`## #2–#5 — Tea\nRen paid for tea. ${style==='dated'?'10.26, 14:12':style==='bare'?'14:12':'A dark sky.'}\n`;
@@ -1044,7 +1120,7 @@ test('archive-only missing event dates use the legacy model now, not the guarded
 });
 
 test('mixed archive and visible messages still require the new clock response', async () => {
-    const c=archived();frankfurtPhone(c,{cities:false});const before=c.p.now;
+    const c=mixed();frankfurtPhone(c,{cities:false});const before=c.p.now;
     await assert.rejects(()=>run(c.m,JSON.stringify({now:'10-26 13:00',events:[]})),e=>e.code==='CLOCK_INVALID');
     assert.match(T.sys,/CLOCK FIRST/);assert.match(T.input,/\[ARCHIVE FOR THESE MESSAGES\]/);
     assert.equal(c.p.now,before);
