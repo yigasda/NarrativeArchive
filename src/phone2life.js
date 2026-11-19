@@ -144,11 +144,11 @@ export const liveFillLife = (m, p, { screenAgain = false } = {}) => exclusive('f
     };
     const first = liveWindowOf(m, p);
     let life = await turn(first), last = first, short = null;
-    const two = liveSecondTurn(m, p, first);
-    if (two) {
+    // (실시간 폰: 시작한 곳까지 다 읽을 때까지 이어서 읽어요. 남은 이야기를 읽어 줄 반영이 없어요)
+    for (let two = liveSecondTurn(m, p, first); two; two = liveSecondTurn(m, p, last)) {
         // a second turn that fails keeps what the first wrote
         try { life = mergeLife(life, await turn(two.cover, life, two.short)); last = two.cover; short = two.short; }
-        catch (err) { console.warn('[narrative-archive] life, second turn', err); }
+        catch (err) { console.warn('[narrative-archive] life, second turn', err); break; }
     }
     // what a reflection put in from messages past where this fill read (it reads newest first: a stretch read ahead of a
     // gap) stays: the fill never saw those messages, and they count as read
@@ -203,10 +203,10 @@ export const liveFillDelivery = (m, p) => exclusive('fill', async () => {
     };
     const first = liveWindowOf(m, p);
     let d = await turn(first), last = first, short = null;
-    const two = liveSecondTurn(m, p, first);
-    if (two) {
+    // (실시간 폰: 시작한 곳까지 다 읽을 때까지 이어서 읽어요. 남은 이야기를 읽어 줄 반영이 없어요)
+    for (let two = liveSecondTurn(m, p, first); two; two = liveSecondTurn(m, p, last)) {
         try { d = mergeDelivery(d, await turn(two.cover, { shops: d.shops, orders: d.orders, cart: d.cart || null }, two.short)); last = two.cover; short = two.short; }
-        catch (err) { console.warn('[narrative-archive] delivery, second turn', err); }
+        catch (err) { console.warn('[narrative-archive] delivery, second turn', err); break; }
     }
     const at = liveSavedNow(p) || p.now || '';
     if (p.delivery) unpayOrders(m, p);

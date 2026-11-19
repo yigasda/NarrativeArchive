@@ -91,7 +91,12 @@ test('서랍이 아니면 모델을 부르기 전에 멈춰요; 사본은 폰 1 
         .replace('liveWindowOf(m, p) }', 'windowOf(m, p) }').replace('liveSavedNow(p)', 'storyNow(p, nowAt(read.gap))').replace('liveSavedNow(p)', 'storyNow(p, nowAt(two.cover))')
         .replace('await livePrepareWealth(m,p,regenerateBalances)', 'await prepareWealth(m,p,regenerateBalances)')
         .replace('liveFillClock(m, p, at)', 'fillClock(m, p, at, statusAt(p, nowAt(read.gap), m), read.gap)').replace('liveFillClock(m, p, at2)', 'fillClock(m, p, at2, statusAt(p, nowAt(two.cover), m), two.cover, two.short)')
-        .replace('liveSecondTurn(m, p, read.gap)', 'secondTurn(m, p, read.gap)').replaceAll('liveReadMark(', 'readMark(').replaceAll('liveSideRequest(', 'sideRequest(');
+        // (폰 1은 두 번까지, 실시간은 시작한 곳까지 이어서: 앞 차례들이 쓴 것을 told에 모아 다음 차례에 보여 줘요)
+        .replace('const two0 = liveSecondTurn(m, p, read.gap)', 'const two = secondTurn(m, p, read.gap)').replace('short = null, told = raw;', 'short = null;')
+        .replace('        // (실시간 폰: 시작한 곳까지 다 읽을 때까지 이어서 읽어요. 남은 이야기를 읽어 줄 반영이 없어요)\n        for (let two = two0; two; two = liveSecondTurn(m, p, last)) {\n', '        if (two) {\n')
+        .replace('cards: told.cards, ...(tx ? { tx: told.tx } : {}), passes: told.passes, orders: told.orders', 'cards: raw.cards, ...(tx ? { tx: raw.tx } : {}), passes: raw.passes, orders: raw.orders')
+        .replace(" told = liveTold(told, raw2, ['cards', 'tx', 'passes', 'orders']);", '').replace("second turn', err); break; }", "second turn', err); }").replace('if (two0) turnsNote(', 'if (two) turnsNote(')
+        .replaceAll('liveReadMark(', 'readMark(').replaceAll('liveSideRequest(', 'sideRequest(');
     assert.equal(back, body(a, 'async function makeMoney('));
     assert.ok(b.includes("export const liveFillMoney = (m, p, opts = {}) => exclusive('fill', () => liveMakeMoney(m, p, opts));") && a.includes("export const fillMoney = (m, p, opts = {}) => exclusive('fill', () => makeMoney(m, p, opts));"));
     assert.equal(body(q, 'export function liveSecondTurn(').replace('liveSecondTurn(', 'secondTurn(').replace('liveWindowOf(m, p, first.to', 'windowOf(m, p, first.to'), body(a, 'export function secondTurn('));

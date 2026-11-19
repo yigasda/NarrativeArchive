@@ -160,18 +160,19 @@ test('서랍이 아니면 모델을 부르기 전에 멈춰요; 사본은 폰 1 
     assert.equal(cut(l2, 'export function liveNearbyDue(').replace('function liveNearbyDue(', 'function nearbyDue(').replace('liveSavedNow(p)', 'storyNow(p)'), cut(lf, 'export function nearbyDue('));
     assert.equal(cut(l2, 'export async function liveRefreshNearby(').replace('function liveRefreshNearby(', 'function refreshNearby(').replace(need, '').replace('liveSavedNow(p)', 'storyNow(p)').replace('liveNearbyDue(p)', 'nearbyDue(p)')
         .replaceAll('liveLately(p, d, s.name)', 'lately(p, d, s.name)'), cut(lf, 'export async function refreshNearby('));
-    // 생활 · 배달: 폰 1 줄과 정해진 곳만
+    // 생활 · 배달: 폰 1 줄과 정해진 곳만 (MORE: 폰 1은 두 번까지, 실시간은 시작한 곳까지 이어서)
+    const MORE = '    // (실시간 폰: 시작한 곳까지 다 읽을 때까지 이어서 읽어요. 남은 이야기를 읽어 줄 반영이 없어요)\n    for (let two = liveSecondTurn(m, p, first); two; two = liveSecondTurn(m, p, last)) {\n';
     assert.equal(cut(l2, 'export function liveStoryDays(').replace('function liveStoryDays(', 'function storyDays(').replace('liveSavedNow(p)', 'storyNow(p, upto)'), cut(lf, 'export function storyDays('));
     assert.equal(cut(l2, 'const livePhoneNow = ', '\n});\n').replace('const livePhoneNow = ', 'const phoneNow = ').replace('liveSavedNow(p)', 'storyNow(p, upto)'), cut(lf, 'const phoneNow = ', '\n});\n'));
     assert.equal(cut(l2, 'export const liveFillLife = ', '\n});\n').replace('export const liveFillLife = ', 'export const fillLife = ').replace(`\n${need.slice(0, -1)}`, '')
         .replace('w = null,', 'w = weatherNow(upto),').replace('days = liveStoryDays(m, p, upto)', 'days = storyDays(m, p, upto)').replace('livePhoneNow(p, upto)', 'phoneNow(p, upto)').replace('liveSideRequest(', 'sideRequest(')
         .replace('liveFillClock(m, p, liveNowText(m, p) || p.now, { story: true })', 'fillClock(m, p, storyNow(p, upto, m) || p.now, statusAt(p, upto, m), gap, short, { story: true })')
-        .replace("const at = liveSavedNow(p) || p.now || '';", "const at = storyNow(p, upto) || p.now || '';").replace('const first = liveWindowOf(m, p);', 'const first = windowOf(m, p);').replace('liveSecondTurn(m, p, first)', 'secondTurn(m, p, first)')
+        .replace("const at = liveSavedNow(p) || p.now || '';", "const at = storyNow(p, upto) || p.now || '';").replace('const first = liveWindowOf(m, p);', 'const first = windowOf(m, p);').replace(MORE, '    const two = secondTurn(m, p, first);\n    if (two) {\n').replace("second turn', err); break; }", "second turn', err); }")
         .replaceAll('liveReadMark(', 'readMark(').replace('liveSavedNow(p)', 'storyNow(p, nowAt(last))').replace('await liveFillScreen(m, p,', 'await fillScreen(m, p,'), cut(lf, 'export const fillLife = ', '\n});\n'));
     assert.equal(cut(l2, 'export const liveFillDelivery = ', '\n});\n').replace('export const liveFillDelivery = ', 'export const fillDelivery = ').replace(`\n${need.slice(0, -1)}`, '')
         .replace("at = liveSavedNow(p) || p.now || '';", "at = storyNow(p, upto) || p.now || '';").replace('livePhoneNow(p, upto)', 'phoneNow(p, upto)').replace('liveStoryDays(m, p, upto)', 'storyDays(m, p, upto)')
         .replace('liveFillClock(m, p, at, { story: true })', 'fillClock(m, p, at, statusAt(p, upto, m), gap, short, { story: true })').replace('liveSideRequest(', 'sideRequest(').replace('const first = liveWindowOf(m, p);', 'const first = windowOf(m, p);')
-        .replace('liveSecondTurn(m, p, first)', 'secondTurn(m, p, first)').replace('liveSavedNow(p)', 'storyNow(p, nowAt(last))').replace('liveReadMark(', 'readMark('), cut(lf, 'export const fillDelivery = ', '\n});\n'));
+        .replace(MORE, '    const two = secondTurn(m, p, first);\n    if (two) {\n').replace("second turn', err); break; }", "second turn', err); }").replace('liveSavedNow(p)', 'storyNow(p, nowAt(last))').replace('liveReadMark(', 'readMark('), cut(lf, 'export const fillDelivery = ', '\n});\n'));
     assert.doesNotMatch(lf, /isLivePhone|phoneUpto|phoneNow\(p\)|phone2/);
     for (const x of ['fillLife: split(fillLife, liveFillLife)', 'fillDelivery: split(fillDelivery, liveFillDelivery)']) assert.ok(api.includes(x), x);
     for (const x of ['fillVoice: split(fillVoice, liveFillVoice)', 'fillScreen: split(fillScreen, liveFillScreen)', 'refreshNearby: split(refreshNearby, liveRefreshNearby)']) assert.ok(api.includes(x), x);

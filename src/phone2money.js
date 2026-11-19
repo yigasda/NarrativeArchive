@@ -11,7 +11,7 @@ import { jsonOf, last4, num } from './phoneparse.js';
 import { payOrders } from './phonesyncmoney.js';
 import { exclusive, syncOf } from './phonesync.js';
 import { askDraft, markNow, AI_SYS_MONEY, MONEY_REBUILD, moneyContext, moneyMore, aroundBlock, parseMoney, homeCountry, ensureIds, soFarHead, turnsNote, readNote } from './phonedata.js';
-import { liveSideRequest, liveWindowOf, liveReadMark, liveSecondTurn, liveSavedNow, liveFillClock, needLive } from './phone2req.js';
+import { liveSideRequest, liveWindowOf, liveReadMark, liveSecondTurn, liveTold, liveSavedNow, liveFillClock, needLive } from './phone2req.js';
 import { livePrepareWealth } from './phone2fill.js';
 
 export const liveFillMoney = (m, p, opts = {}) => exclusive('fill', () => liveMakeMoney(m, p, opts));
@@ -89,11 +89,12 @@ async function liveMakeMoney(m, p, { regenerateBalances = false, wealthPlan = nu
         p.money = updated.money; m.finance = staged.finance;
         // stopped short of the phone's clock: a second turn adds the history the rest of the story has (cards, payments,
         // passes, orders); the accounts and their balances stay the first's. One that fails keeps the first
-        const two = liveSecondTurn(m, p, read.gap);
-        let last = read.gap, short = null;
-        if (two) {
+        const two0 = liveSecondTurn(m, p, read.gap);
+        let last = read.gap, short = null, told = raw;
+        // (실시간 폰: 시작한 곳까지 다 읽을 때까지 이어서 읽어요. 남은 이야기를 읽어 줄 반영이 없어요)
+        for (let two = two0; two; two = liveSecondTurn(m, p, last)) {
             try {
-                const at2 = liveSavedNow(p) || p.now, tx = !old || rebuild, soFar = { cards: raw.cards, ...(tx ? { tx: raw.tx } : {}), passes: raw.passes, orders: raw.orders };
+                const at2 = liveSavedNow(p) || p.now, tx = !old || rebuild, soFar = { cards: told.cards, ...(tx ? { tx: told.tx } : {}), passes: told.passes, orders: told.orders };
                 const only = `The bank, its accounts and their balances stay as they are: leave "bank" and "fx" out${tx ? '' : ', and "tx" too (the bank keeps its own)'}`;
                 const input2 = await liveSideRequest(m, p.owner, [`[PHONE NOW]\n${moneyContext(p, at2)}`, liveFillClock(m, p, at2), aroundBlock(p), `[EXISTING ACCOUNTS]\n${JSON.stringify(p.money.bank.accounts)}`, `[EVALUATION DATE]\n${date}`, rates(),
                     `${soFarHead('MONEY', two.short, only)}\n${JSON.stringify(soFar)}`, two.short?.text || ''], { profile: p.financeProfile, money: true, read: { gap: two.cover } });
@@ -105,15 +106,15 @@ async function liveMakeMoney(m, p, { regenerateBalances = false, wealthPlan = nu
                 if (!raw2 || typeof raw2 !== 'object' || !closed) throw new Error('모델 답에서 은행 내용(JSON)을 끝까지 찾지 못했어요');
                 if (p.money !== updated.money) throw new Error('생성 중 계좌가 변경됐어요');
                 moneyMore(m, p, parseMoney({ ...raw2, currency: p.money.currency, bank: p.money.bank }, homeCountry(p)), tx);
-                last = two.cover; short = two.short;
-            } catch (err) { console.warn('[narrative-archive] money, second turn', err); }
+                last = two.cover; short = two.short; told = liveTold(told, raw2, ['cards', 'tx', 'passes', 'orders']);
+            } catch (err) { console.warn('[narrative-archive] money, second turn', err); break; }
         }
         mark = liveReadMark(last) || mark0;
         // the delivery app's orders are paid from the bank now there is one
         payOrders(m, p, String(date || p.money.asOf || '').slice(0, 4) || String(new Date().getFullYear()));
         syncOf(p, phoneChatScope(ctx())).marks.money = mark;
         await saveMeta();
-        if (two) turnsNote(last, '은행', short); else readNote(read.gap);
+        if (two0) turnsNote(last, '은행', short); else readNote(read.gap);
         return p.money;
     }
 }

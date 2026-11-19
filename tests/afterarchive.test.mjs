@@ -425,6 +425,88 @@ test('실시간 폰에서 생활 · 은행 채우기 (진짜 서랍, 긴 이야�
     } finally { delete globalThis.__trackers; }
 });
 
+// 시작 전 이야기가 두 번으로도 다 안 읽힐 만큼 길면: 실시간 폰은 시작한 곳까지 이어서 읽어요 (남은 걸 읽어 줄 반영이 없어요)
+const liveLong = () => ({ owner: 'Ren', now: '11-12 21:30', country: 'DE', lives: 'DE', sync: { marks: { base: { index: 39 } }, done: [], hiddenRead: {}, events: {} } });
+const wholeRun = (turns, real, p1) => {
+    const got = turns.flatMap(t => nums(t.input));
+    // #4부터 시작한 곳 #39까지 한 번씩, 빠짐없이; 시작 뒤 것은 없어요
+    assert.deepEqual(got, Array.from({ length: 36 }, (_, i) => i + 4));
+    for (const t of turns) assert.ok(!t.input.includes('AFTERSTART') && !t.input.includes('Eastgate'), 'after the start');
+    assert.equal(JSON.stringify(real.phones), p1);
+};
+test('실시간 폰의 생활 · 배달 채우기 (진짜 서랍, 아주 긴 이야기): 시작한 곳까지 다 읽을 때까지 이어서 읽어요', async () => {
+    globalThis.__rows = afterStart(46, 39);
+    globalThis.__trackers = [{ i: 45, date: '2026-11-20', min: 20 * 60, place: 'Eastgate', weather: 'rain' }];
+    try {
+        {
+            const { real, d, p } = liveOf(liveLong(), m, 39), p1 = JSON.stringify(real.phones);
+            globalThis.__menu = { calls: [], answers: ['A', 'B', 'C', 'D', 'E', 'F'].map(lifeAnswer), answer: '{}' };
+            await life2.liveFillLife(d, p);
+            const turns = globalThis.__menu.calls.filter(c => c.sys === life.AI_SYS_LIFE);
+            // (첫 차례 7만 토큰, 그 뒤 3만 토큰씩)
+            assert.equal(turns.length, 6);
+            wholeRun(turns, real, p1);
+            // 뒤 차례는 앞 차례들이 쓴 것을 다 받아요
+            assert.ok(turns[5].input.includes('[LIFE SO FAR') && ['"A"', '"B"', '"C"', '"D"', '"E"'].every(x => turns[5].input.includes(`"label":${x}`)));
+            assert.deepEqual(p.life.clock.alarms.map(x => x.label), ['A', 'B', 'C', 'D', 'E', 'F']);
+        }
+        {
+            // 가운데 차례가 실패하면: 그 앞까지 쓴 것은 남고, 거기서 멈춰요
+            const { d, p } = liveOf(liveLong(), m, 39);
+            globalThis.__menu = { calls: [], answers: [lifeAnswer('A'), lifeAnswer('B'), 'not json {', lifeAnswer('D')], answer: '{}' };
+            await life2.liveFillLife(d, p);
+            const turns = globalThis.__menu.calls.filter(c => c.sys === life.AI_SYS_LIFE);
+            assert.equal(turns.length, 3);
+            assert.deepEqual(p.life.clock.alarms.map(x => x.label), ['A', 'B']);
+        }
+        {
+            const { real, d, p } = liveOf(liveLong(), m, 39), p1 = JSON.stringify(real.phones);
+            const dlv = (shop, time) => JSON.stringify({ shops: [{ name: shop, cuisine: 'pizza', menu: [{ name: 'Margherita', price: 9 }] }], orders: [{ shop, items: [{ name: 'Margherita', price: 9 }], time, status: 'delivered' }], cart: null });
+            globalThis.__menu = { calls: [], answers: [dlv('Uno', '11-01 19:00'), dlv('Due', '11-02 20:00'), dlv('Tre', '11-03 20:00'), dlv('Quattro', '11-04 20:00'), dlv('Cinque', '11-05 20:00'), dlv('Sei', '11-06 20:00')], answer: '{}' };
+            await life2.liveFillDelivery(d, p);
+            const turns = globalThis.__menu.calls.filter(c => c.sys === life.AI_SYS_DELIVERY);
+            assert.equal(turns.length, 6);
+            wholeRun(turns, real, p1);
+            assert.ok(turns[5].input.includes('[DELIVERY SO FAR') && ['Uno', 'Due', 'Tre', 'Quattro', 'Cinque'].every(x => turns[5].input.includes(x)));
+            assert.deepEqual(p.delivery.orders.map(o => o.shop), ['Uno', 'Due', 'Tre', 'Quattro', 'Cinque', 'Sei']);
+        }
+    } finally { delete globalThis.__trackers; }
+});
+
+test('실시간 폰의 은행 · 투자 채우기 (진짜 서랍, 아주 긴 이야기): 시작한 곳까지 이어서 읽고, 뒤 차례는 앞 차례들이 쓴 것을 다 받아요', async () => {
+    globalThis.__rows = afterStart(46, 39);
+    globalThis.__trackers = [{ i: 45, date: '2026-11-20', min: 20 * 60, place: 'Eastgate', weather: 'rain' }];
+    try {
+        {
+            const { real, d, p } = liveOf(liveLong(), m, 39), p1 = JSON.stringify(real.phones), who = ['Bakery', 'Cinema', 'Kiosk', 'Florist', 'Taxi', 'Cafe'];
+            globalThis.__menu = { calls: [], answers: who.map((w, i) => moneyAnswer(w, i ? 99999 : 500, `11-0${i + 1} 09:00`)), answer: '{}' };
+            await money2.liveFillMoney(d, p);
+            const turns = globalThis.__menu.calls.filter(c => c.sys === data.AI_SYS_MONEY);
+            assert.equal(turns.length, 6);
+            wholeRun(turns, real, p1);
+            assert.ok(turns[5].input.includes('[MONEY SO FAR') && who.slice(0, 5).every(w => turns[5].input.includes(`"who":"${w}"`)) && !turns[5].input.includes('"who":"Cafe"'));
+            assert.deepEqual(p.money.tx.map(t => t.who), who);
+            assert.equal(p.money.cards.length, 1);
+            // 잔액은 첫 차례 것 그대로
+            assert.equal(p.money.bank.accounts[0].balance, 500);
+        }
+        {
+            const { real, d, p } = liveOf(liveLong(), m, 39), p1 = JSON.stringify(real.phones), sym = ['SAP', 'BMW', 'SIE', 'ALV', 'BAS', 'DTE'].map(x => `XETRA:${x}`);
+            const turn = i => ({ ...(i ? {} : { base: 'EUR', cash: [{ currency: 'EUR', amount: 10000 }] }), securities: [{ symbol: sym[i], name: sym[i].slice(6), currency: 'EUR' }],
+                trades: [{ kind: 'buy', symbol: sym[i], currency: 'EUR', date: `2026-11-0${i + 1}`, quantity: 1, price: 100, fee: 0 }], watch: [], stakes: [],
+                quotes: sym.slice(0, i + 1).map(x => ({ symbol: x, date: '2026-11-12', value: 101, source: 'guess' })), fx: [] });
+            globalThis.__menu = { calls: [], answers: sym.map((_, i) => JSON.stringify(turn(i))), answer: '{}' };
+            await invest2.liveFillInvestment(d, p, '2026-11-12');
+            const turns = globalThis.__menu.calls.filter(c => c.sys === invest.INVEST_SYS);
+            assert.equal(turns.length, 6);
+            wholeRun(turns, real, p1);
+            assert.ok(turns[5].input.includes('[INVESTMENTS SO FAR') && sym.slice(0, 5).every(x => turns[5].input.split('[INVESTMENTS SO FAR')[1].includes(x)));
+            assert.deepEqual(p.investment.trades.map(t => t.symbol), sym);
+            assert.equal(fin.cash(d.finance.accounts[p.investment.accounts[0].key]), 10000 - 600);
+        }
+    } finally { delete globalThis.__trackers; }
+});
+
 // (실시간 폰의 앱 다시 만들기 · 폰 다시 만들기는 phone2make.js로 옮겼어요: 진짜 서랍으로 tests/phone2make.test.mjs가 봐요.
 // phonedata.js의 makePhone은 폰 2 전 줄 그대로라 서랍 흉내를 줘도 폰 2 것을 안 봐요)
 

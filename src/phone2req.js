@@ -31,6 +31,10 @@ export const liveSavedNow = p => p?.now || '';
 // 채우기 요청의 OWNER'S CLOCK: 실시간 폰에는 롤플 상태창도, 시각을 읽을 롤플 메시지도 없어요
 export const liveFillClock = (m, p, at, opts = {}) => ownerClock(p, at, m, null, [], opts);
 // 두 번째 차례의 읽는 범위 (시작 전 이야기가 길 때): 폰 1과 같은 계산, 읽는 범위만 실시간 것
+// what the turns so far wrote, as the next turn is shown it (… SO FAR): each list with the later turn's rows after it
+export const liveTold = (a, b, keys) => ({ ...a, ...Object.fromEntries(keys.map(k => [k, [...(Array.isArray(a?.[k]) ? a[k] : []), ...(Array.isArray(b?.[k]) ? b[k] : [])]])) });
+// (폰 1은 두 번까지 읽고 나머지는 반영이 읽어요. 실시간 폰에는 롤플을 읽는 반영이 없어서, 채우기가 시작한 곳까지
+// 이 창으로 이어서 읽어요: liveSecondTurn(m, p, 지난 창)을 더 읽을 게 없을 때까지)
 export function liveSecondTurn(m, p, first, whole = true) {
     if (!first || first.all) return null;
     const more = liveWindowOf(m, p, first.to, MORE_TOKENS, whole);

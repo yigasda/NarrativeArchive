@@ -11,7 +11,7 @@ import { phoneChatScope } from './phonestory.js';
 import { baseline, reviseBaseline, cash, currency, finance, finite, uid, positions, migrateBank, fx, price, quoteKey } from './finance.js';
 import { askDraft, readNote, turnsNote, soFarHead } from './phonedata.js';
 import { json, list, text, CHART_SYS, MARKET_SYS, INVEST_SYS, INVEST_REBUILD, INVEST_NOTES_SYS, INVEST_RECORDS_SYS, securityOf, tradeOf, moved, stakesOf, watchOf, investmentTargets, parseInvestmentRecords, mergeInvestmentRecords, chartDates, ingestQuotes, validDate } from './investdata.js';
-import { liveSideRequest, liveReadMark, liveSecondTurn, liveSavedNow, needLive } from './phone2req.js';
+import { liveSideRequest, liveReadMark, liveSecondTurn, liveTold, liveSavedNow, needLive } from './phone2req.js';
 import { livePrepareWealth } from './phone2fill.js';
 import { liveNowText } from './phone2store.js';
 
@@ -72,6 +72,7 @@ async function liveInvestMore(m, p, raw1, two, plan) {
     const watch = [...inv.watch, ...watchOf(raw, securities).filter(x => !inv.watch.some(y => y.symbol === x.symbol))].slice(0, 8);
     m.finance = scratch.finance;
     p.investment = { ...inv, securities, trades, stakes, watch, date, generatedDates: [...new Set([...inv.generatedDates, date])] };
+    return raw;
 }
 export const liveFillInvestment = (m, p, date, opts = {}) => exclusive('fill', () => liveMakeInvestment(m, p, date, opts));
 async function liveMakeInvestment(m, p, date, {regenerate = false, wealthPlan = null} = {}) {
@@ -140,16 +141,17 @@ async function liveMakeInvestment(m, p, date, {regenerate = false, wealthPlan = 
         m.finance = scratch.finance;
         p.investment = { at: Date.now(), version: 1, base: raw.base, date, basis: text(raw.basis, 2000), securities, accounts, trades, stakes, watch: watchOf(raw, securities), generatedDates: [date] };
         // stopped short of the phone's clock: a second turn adds the rest (one that fails keeps the first)
-        const two = liveSecondTurn(m, p, read.gap);
-        let last = read.gap, short = null;
-        if (two) {
-            try { await liveInvestMore(m, p, raw, two, plan); last = two.cover; short = two.short; }
-            catch (err) { console.warn('[narrative-archive] investments, second turn', err); }
+        const two0 = liveSecondTurn(m, p, read.gap);
+        let last = read.gap, short = null, told = raw;
+        // (실시간 폰: 시작한 곳까지 다 읽을 때까지 이어서 읽어요. 남은 이야기를 읽어 줄 반영이 없어요)
+        for (let two = two0; two; two = liveSecondTurn(m, p, last)) {
+            try { told = liveTold(told, await liveInvestMore(m, p, told, two, plan), ['securities', 'trades', 'watch', 'stakes']); last = two.cover; short = two.short; }
+            catch (err) { console.warn('[narrative-archive] investments, second turn', err); break; }
         }
         mark = liveReadMark(last) || mark0;
         syncOf(p, phoneChatScope(ctx())).marks.invest = mark;
         await saveMeta();
-        if (two) turnsNote(last, '투자', short); else readNote(read.gap);
+        if (two0) turnsNote(last, '투자', short); else readNote(read.gap);
         return;
     }
 }
