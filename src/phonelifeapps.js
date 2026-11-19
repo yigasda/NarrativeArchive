@@ -74,9 +74,9 @@ const durBig = min => `${Math.floor(min / 60)}<span>시간</span> ${min % 60}<sp
 let STORY = { year: new Date().getFullYear(), now: '', dot: false };
 // the phone being drawn: its year (carried over New Year by the reflection), its now and its number style
 export function setStory(p) {
-    const y = Number(p?.year) || Number(String(p?.money?.asOf || p?.investment?.date || '').slice(0, 4)) || new Date().getFullYear();
+    const y = Number(P.yearOn(p, phoneMeta())) || Number(String(p?.money?.asOf || p?.investment?.date || '').slice(0, 4)) || new Date().getFullYear();
     // known: the story dates itself (else weekdays aren't shown: a fantasy calendar or an undated story has none to show)
-    STORY = { year: y, known: !p?.noYear && !!(Number(p?.year) || /^\d{4}-/.test(String(p?.money?.asOf || p?.money?.fxDate || p?.investment?.date || ''))), now: String(P.nowOn(p, phoneMeta()) || p?.now || '').slice(0, 5), dot: decimalOf(p) === '.', loc: localeOf(p), p };
+    STORY = { year: y, known: !p?.noYear && !!(Number(P.yearOn(p, phoneMeta())) || /^\d{4}-/.test(String(p?.money?.asOf || p?.money?.fxDate || p?.investment?.date || ''))), now: String(P.nowOn(p, phoneMeta()) || p?.now || '').slice(0, 5), dot: decimalOf(p) === '.', loc: localeOf(p), p };
 }
 const n0 = v => (v === null || v === undefined ? '—' : Number(v).toLocaleString(STORY.loc || 'en-US'));
 const md = s => { const mt = String(s || '').match(/^(\d{2})-(\d{2})/); return mt ? { mo: Number(mt[1]), d: Number(mt[2]) } : null; };

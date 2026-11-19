@@ -218,10 +218,10 @@ const PAYDAY = /\blohn\b|gehalt|salary|payroll|\bwage|월급|급여|給料|给�
 // one payee whatever language a record names it in: its Korean name when it has one ("Netflix" with ko "넷플릭스" is 넷플릭스)
 const payee = x => String(x.ko || x.who || '').toLowerCase().replace(/[^\p{L}\p{N}&+]+/gu, ' ').trim().split(' ').slice(0, 2).join(' ');
 // a record's year: the phone's, or the one before for a month past the story's now (December, read in January)
-const yearOf = (p, mm) => { if (!p.year || p.noYear) return null; const n = Number(String(P.nowOn(p, phoneMeta()) || p.now || '').slice(0, 2)); return p.year - (n && Number(mm) > n ? 1 : 0); };
+const yearOf = (p, mm) => { const y = P.yearOn(p, phoneMeta()); if (!y || p.noYear) return null; const n = Number(String(P.nowOn(p, phoneMeta()) || p.now || '').slice(0, 2)); return y - (n && Number(mm) > n ? 1 : 0); };
 // a paper's day: with its year when the story has one (2026. 10. 30. · 10/30/2026 · 30.10.2026), else the short date
 const paperDay = (p, mm, dd) => { const y = yearOf(p, mm), md = `${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`; return y ? fullDate(p, `${y}-${md}`) : fmtDate(p, md, true); };
-const daysIn = (p, mm) => new Date(Date.UTC(Number(p.year) || 2025, Number(mm), 0)).getUTCDate();
+const daysIn = (p, mm) => new Date(Date.UTC(Number(P.yearOn(p, phoneMeta())) || 2025, Number(mm), 0)).getUTCDate();
 export function fixedCosts(p) {
     const M = mo(p); if (!M) return [];
     const groups = new Map();
