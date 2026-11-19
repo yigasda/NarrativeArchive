@@ -4,6 +4,7 @@
 
 import { compressNudge } from './src/wizard.js';
 import { onChatChanged } from './src/chats.js';
+import { branchNotice } from './src/branches.js';
 import { ctx, getMeta, hasChat } from './src/core.js';
 import { driftTick } from './src/drift.js';
 import { applyInjection } from './src/inject.js';
@@ -37,6 +38,7 @@ import { xrayArm, xrayCapture, xrayWorldInfo } from './src/xray.js';
 
     es.on(et.APP_READY, start);
     es.on(et.CHAT_CHANGED, onChatChanged);
+    es.on(et.CHAT_CHANGED, () => { branchNotice().catch(e => console.warn('[NarrativeArchive] branch notice', e)); });
     // a recall made for another chat never carries over
     es.on(et.CHAT_CHANGED, () => { c.setExtensionPrompt(RECALL_KEY, '', 1, 0); });
     if (et.GENERATION_STARTED) es.on(et.GENERATION_STARTED, xrayArm);

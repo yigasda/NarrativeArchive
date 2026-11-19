@@ -231,7 +231,10 @@ export async function openAsk() {
     $root.on('click', '.na_ask2_sugg button', function () { $q.val(this.textContent.trim()); go(); });
     $q.on('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); go(); } });
     draw();
-    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: false, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+    const shown = c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: false, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+    // opened again with earlier answers: the newest one in view (draw() ran before the window existed)
+    if (log.length) setTimeout(() => { const sc = $root.closest('.popup-content')[0]; if (sc) sc.scrollTop = sc.scrollHeight; }, 50);
+    await shown;
 }
 
 // Open the sections tab on one section

@@ -12,7 +12,7 @@ import { parseSections } from './sections.js';
 
 export const MODULE = 'narrative_archive';
 export const PROMPT_KEY = 'narrative_archive_injection';
-export const VERSION = '3.201.2';
+export const VERSION = '3.203.4';
 export const SNAPSHOT_MAX = 5;
 export const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -158,6 +158,13 @@ export async function commitText(text, reason, { boundary } = {}) {
 export const textHash = t => { let x = 5381; for (let i = 0; i < t.length; i++) x = ((x * 33) ^ t.charCodeAt(i)) >>> 0; return x.toString(36); };
 
 export const newId = () => `p${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+
+// 범위 직접 고르기: the end the user picked on the compress card, while the boundary it was picked at still holds
+export function pickedTo(m, from, last) {
+    if (!globalSettings().pickRange) return null;
+    const p = m.cpTo, t = Number(p?.to);
+    return p && p.b === m.boundary && Number.isFinite(t) ? Math.min(last, Math.max(from, t)) : null;
+}
 
 export function globalSettings() {
     const es = ctx().extensionSettings;

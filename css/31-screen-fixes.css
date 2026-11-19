@@ -68,6 +68,11 @@ body.na_darkui .na_group_bar i { background: #B8964E; }
 .na_browser:not(.na_tl) .na_list > .na_card:has(> .na_card_body[hidden]) + .na_card:has(> .na_card_body[hidden]) { margin-top: -12px; }
 .na_browser:not(.na_tl) :is(.na_list, .na_group_items) > .na_card:has(> .na_card_body[hidden]):has(+ .na_card > .na_card_body[hidden]) { border-bottom-width: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
 .na_browser:not(.na_tl) .na_list > .na_card.na_norange { border-radius: 16px; --axr: 16px}
+/* 달마다 접기 (docs/mockups/ext-month A): each month its own card, title over a small line, the month's cards as rows in it */
+.na_month { border-radius: 18px; --axr: 18px; background: var(--na-card); overflow: hidden; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); } body.na_darkui .na_month { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 8px 20px rgba(0, 0, 0, 0.35); }
+.na_month_head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; cursor: pointer; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; } .na_month_head .na_head_main { gap: 2px; } .na_month_head .na_group_meta { font-size: 12px; --axfs: 12px; opacity: 1; color: var(--na-dim); --axfg: var(--na-dim); overflow: hidden; text-overflow: ellipsis}
+.na_month_t { font-size: 15px; --axfs: 15px; font-weight: 700; line-height: 1.35; color: var(--na-ink); --axfg: var(--na-ink)} .na_month.na_off .na_month_t { opacity: 0.4; text-decoration: line-through; text-decoration-thickness: 1px; } .na_month_items[hidden] { display: none; }
+:is(#na_settings, .na_popup) .na_browser:not(.na_tl) .na_month_items > .na_card { margin: 0; border-radius: 0; --axr: 0; border-width: 0; box-shadow: none; --c-sh: none; } :is(#na_settings, .na_popup) .na_browser:not(.na_tl) .na_month_items > .na_card + .na_card { border-top: 1px solid var(--na-line2, var(--na-line)); } :is(#na_settings, .na_popup) .na_browser:not(.na_tl) .na_month_items > .na_card:has(> .na_card_body[hidden]) > .na_card_head { padding: 10px 14px; } :is(#na_settings, .na_popup) .na_browser:not(.na_tl) .na_month_items > .na_card .na_card_title { font-weight: 500; font-size: 14.5px; --axfs: 14.5px; line-height: 1.45}
 /* card row */
 .na_browser:not(.na_tl) .na_card_head { gap: 10px; }
 .na_browser:not(.na_tl) .na_card_head .na_head_main { gap: 0; line-height: 1.3; }
@@ -164,7 +169,11 @@ body.na_darkui .na_cp_num { color: #F0CF8E; --axfg: #F0CF8E}
 .na_cp_step { flex: none; }
 .na_cp_step .na_fd_btn { --c-bg: var(--na-softer); }
 .na_cp_step input#na_keep, body:not(.na_darkui) .na_cp_step input#na_keep { width: 30px; height: 30px; padding: 0 !important; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 0; --c-bg: transparent; --c-sh: none; font: inherit; font-weight: 700; --c-fg: inherit; text-align: center; -moz-appearance: textfield}
-.na_cp_step input::-webkit-inner-spin-button, .na_cp_step input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.na_cp_step input::-webkit-inner-spin-button, .na_cp_step input::-webkit-outer-spin-button, .na_cp_toval input::-webkit-inner-spin-button, .na_cp_toval input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+/* 범위 직접 고르기: "#from부터 어디까지 − # to +" on the compress card (docs/mockups: A), a soft box under the bar; # in the accent, the number in ink, drawn as text: the real input lies over it, invisible (themes reshape inputs) */
+:is(.na_cp_hero, .na_bn2) .na_cp_to { margin-top: 14px; padding: 10px 12px; border-top: 0; border-radius: 14px; --axr: 14px; background: var(--na-card2); } .na_cp_to .na_cp_txt > span { font-weight: 600; color: var(--na-ink); --axfg: var(--na-ink)} .na_cp_tostep { display: flex; align-items: center; gap: 4px; flex: none; }
+.na_cp_to .na_fd_btn { width: 30px; height: 30px; border-radius: 999px; --axr: 999px; --c-r: 999px; --c-bg: var(--na-card); --c-sh: 0 1px 2px rgba(0, 0, 0, 0.08); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); } .na_cp_toval { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-width: 54px; font-size: 15px; --axfs: 15px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--na-accent-ink, var(--na-accent)); --axfg: var(--na-accent-ink, var(--na-accent))}
+.na_cp_toval { position: relative; overflow: hidden; height: 30px; padding: 0 6px; border-radius: 8px; --axr: 8px; } .na_cp_toval:focus-within { background: var(--na-card); } .na_cp_tonum { color: var(--na-ink); --axfg: var(--na-ink)} :is(.na_v2, #na_settings) .na_cp_toval input:is(#na_cp_to, #na_bn_at) { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: text; }
 .na_cp_set .na_cp_sub textarea { --c-r: 12px; }
 
 /* ---- Settings (⚙): always-open groups, rows read "value ›" */

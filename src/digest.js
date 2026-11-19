@@ -154,7 +154,8 @@ export async function openDigest(group = null, keys = null) {
             return `<div class="na_dg_item ${ok ? '' : 'stale'}" data-i="${i}">
               <div class="na_dg_ihead"><span class="na_rt_txt"><small>${esc(spanLabel(m.text, d))} · 약 ${fmt(d.tok || 0)} 토큰${d.srcTok ? ` (원본 ${fmt(d.srcTok)})` : ''}</small><b>${esc(head)}</b></span>
                 <input type="checkbox" class="na_toggle na_dg_on" ${d.on && ok ? 'checked' : ''} ${ok ? '' : 'disabled'} title="${ok ? '켜면 주입에 이 다이제스트가 원본 대신 들어가요' : '가리키던 섹션이 지워졌거나 순서가 바뀌었어요'}"></div>
-              <div class="na_dg_iact"><button type="button" class="na_linkbtn na_dg_ko">한국어로</button><button type="button" class="na_linkbtn na_dg_view">보기 · 고치기</button>${ok ? '<button type="button" class="na_linkbtn na_dg_redo">다시 만들기</button>' : ''}<button type="button" class="na_linkbtn na_danger na_dg_del">지우기</button></div>
+              <div class="na_dg_iact"><button type="button" class="na_linkbtn na_dg_ko">한국어로</button><button type="button" class="na_linkbtn na_dg_view">보기 · 고치기</button>${ok ? '<button type="button" class="na_linkbtn na_dg_redo">다시 만들기</button>' : ''}${ok && d.keys.length > 1 ? '<button type="button" class="na_linkbtn na_dg_drop">섹션 빼기</button>' : ''}<button type="button" class="na_linkbtn na_danger na_dg_del">지우기</button></div>
+              <div class="na_dg_droppick" hidden></div>
               <div class="na_dg_kotext" hidden></div>
               <textarea class="text_pole na_dg_edit" rows="8" spellcheck="false" hidden>${esc(d.text)}</textarea>
             </div>`;
@@ -188,7 +189,8 @@ export async function openDigest(group = null, keys = null) {
     });
     $root.on('click', '.na_mg_pickhead .na_pchip', function () { picked = this.dataset.all === '1' ? new Set(secsNow().map((x, i) => i)) : new Set(); drawList(); });
     $root.find('.na_dg_group').on('change', function () { gi = Number(this.value); picked = new Set(); drawList(); });
-    const saveAndInject = async () => { await saveMeta(); applyInjection(); };
+    // the panel's token numbers come from the injection, so they are drawn again once it is rebuilt
+    const saveAndInject = async () => { await saveMeta(); await applyInjection(); (await import('./status.js')).refreshStatusSoon(); };
     $root.on('change', '.na_dg_on', async function () {
         const d = m.digests[Number($(this).closest('.na_dg_item').data('i'))];
         if (!d) return;
@@ -224,6 +226,41 @@ export async function openDigest(group = null, keys = null) {
         if (!/^#{1,3}\s/.test(v)) return toastr.warning('첫 줄은 "## #시작–#끝 — 제목" 헤더여야 해요.');
         d.text = v;
         countTokens(v).then(async t => { d.tok = t; await saveAndInject(); drawHave(); toastr.success('다이제스트를 고쳤어요'); });
+    });
+    // 섹션 빼기: untick the first or last sections; only the heading's range changes, the text opens to be trimmed by hand (no AI)
+    $root.on('click', '.na_dg_drop', function () {
+        const $it = $(this).closest('.na_dg_item'), d = m.digests[Number($it.data('i'))];
+        const sp = d && digestSpan(m.text, d), $box = $it.find('.na_dg_droppick');
+        if (!sp) return;
+        if (!$box.prop('hidden')) { $box.prop('hidden', true).empty(); return; }
+        $box.html(`<small class="na_dim">맨 앞이나 맨 뒤 섹션을 빼요 · 다이제스트 글은 그대로 열려요</small>${sp.secs.map((x, i) => {
+            const r = rangeOf(x.title), name = x.title.replace(RANGE_HEAD, '$5').replace(/^\s*[—–-]\s*/, '');
+            return `<label class="na_mg_row on"><input type="checkbox" data-k="${i}" checked><span class="na_rt_txt"><small>${esc(`${r.prefix ? `${r.prefix} ` : ''}#${r.from}–#${r.to}`)}</small><span>${esc(name)}</span></span></label>`;
+        }).join('')}<div class="na_dg_iact"><button type="button" class="na_linkbtn na_dg_dropok">빼기</button><button type="button" class="na_linkbtn na_dg_dropno">취소</button></div>`).prop('hidden', false);
+    });
+    $root.on('change', '.na_dg_droppick input', function () { $(this).closest('.na_mg_row').toggleClass('on', this.checked); });
+    $root.on('click', '.na_dg_dropno', function () { $(this).closest('.na_dg_droppick').prop('hidden', true).empty(); });
+    $root.on('click', '.na_dg_dropok', async function () {
+        const $it = $(this).closest('.na_dg_item'), d = m.digests[Number($it.data('i'))];
+        const sp = d && digestSpan(m.text, d);
+        if (!sp) return;
+        const keep = $it.find('.na_dg_droppick input').toArray().map((x, i) => (x.checked ? i : -1)).filter(i => i >= 0);
+        if (keep.length === sp.secs.length) return $it.find('.na_dg_droppick').prop('hidden', true).empty();
+        if (!keep.length) return toastr.info('하나는 남겨야 해요', '다이제스트');
+        if (keep.some((v, i) => i && v !== keep[i - 1] + 1)) return toastr.info('맨 앞이나 맨 뒤만 뺄 수 있어요', '다이제스트');
+        const left = keep.map(i => sp.secs[i]), gone = sp.secs.filter((x, i) => !keep.includes(i));
+        const a = rangeOf(left[0].title), b = rangeOf(left[left.length - 1].title);
+        d.keys = left.map(sectionKey);
+        // the heading's range follows; nothing else in the text is touched
+        d.text = String(d.text).replace(/^([^\n]*?)#\d+\s*[–—-]\s*#\d+/, `$1#${a.from}–#${b.to}`);
+        d.srcTok = await countTokens(left.map(x => sectionBody(m.text.slice(x.start, x.end))).join('\n\n'));
+        await saveAndInject(); drawHave(); drawList();
+        // open its text so what the dropped sections told can be taken out by hand
+        const $nit = $root.find('.na_dg_item').filter((_, x) => Number($(x).data('i')) === m.digests.indexOf(d));
+        $nit.find('.na_dg_edit').prop('hidden', false).trigger('focus');
+        $nit.find('.na_dg_view').text('고친 것 저장');
+        const gl = gone.map(x => rangeOf(x.title)).map(r => `#${r.from}–#${r.to}`).join(', ');
+        toastr.info(`${gl} 이야기는 직접 지워 주세요`, '다이제스트');
     });
     $root.on('click', '.na_dg_del', async function () {
         const i = Number($(this).closest('.na_dg_item').data('i'));

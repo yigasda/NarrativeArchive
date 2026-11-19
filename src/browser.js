@@ -18,6 +18,15 @@ export const tlPreview = body => body.replace(/^#{1,2} [^\n]*\n?/, '').split('\n
     .map(l => l.trim()).filter(l => l && !/^[A-Z][A-Z /&'’-]{1,30}:$/.test(l) && !/^-{3,}$/.test(l))
     .map(l => l.replace(/^[-*•]\s+/, '')).join(' ');
 
+// 달마다 접기: the month and place in a section title's "(…)" — whole month words or their short forms only,
+// capitalised as titles write them, so a place such as Marseille or Augsburg, or a lower-case "may", is not a month
+const MONTH_RE = /\b(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept|Sep|Oct|Nov|Dec)\b\.?|(\d{1,2})월/;
+const MONTH_N = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+const TIME_WORD = /^(?:early |late )?(?:morning|noon|afternoon|evening|night|midnight|dawn|dusk|day|later)$/i;
+const parenOf = t => (String(t).match(/\(([^()]*)\)\s*(?:\[[^\]]*\])?\s*$/) || [])[1] || '';
+export const monthIn = t => { const mt = parenOf(t).match(MONTH_RE); return mt ? (mt[2] ? Number(mt[2]) : MONTH_N[mt[1].slice(0, 3).toLowerCase()]) : 0; };
+export const placeIn = t => { const last = parenOf(t).split('→')[0].split(',').map(x => x.trim()).filter(Boolean).pop() || ''; return /\d/.test(last) || TIME_WORD.test(last) || MONTH_RE.test(last) ? '' : last; };
+
 export function mountSectionBrowser($host) {
     const g0 = globalSettings();
     const $root = $(`
@@ -124,6 +133,22 @@ export function mountSectionBrowser($host) {
         $root.find('.na_sel_toggle').add($view.find('.na_sel_toggle')).toggleClass('na_sel_active', selecting);
     };
     const setSelecting = on => { selecting = on; selected.clear(); $root.toggleClass('na_selecting', on); render(true); syncSel(); };
+    // holding a card down (about half a second, without moving) starts 고르기 with that card picked
+    let holdTimer = null, holdAt = null, holdSwallow = false;
+    const holdStart = (e, key) => {
+        holdSwallow = false;
+        if (selecting || (e.button ?? 0) > 0 || $(e.target).closest('.na_sw, button, input, a').length) return;
+        holdAt = [e.clientX, e.clientY];
+        clearTimeout(holdTimer);
+        holdTimer = setTimeout(() => {
+            holdTimer = null; holdSwallow = true;
+            navigator.vibrate?.(15);
+            selecting = true; selected.clear(); [].concat(key).forEach(k => selected.add(k));
+            $root.addClass('na_selecting'); render(true); syncSel();
+        }, 450);
+    };
+    const holdMove = e => { if (holdTimer && holdAt && Math.hypot(e.clientX - holdAt[0], e.clientY - holdAt[1]) > 10) { clearTimeout(holdTimer); holdTimer = null; } };
+    const holdEnd = () => { clearTimeout(holdTimer); holdTimer = null; };
     // the list's toggle lives in the tab row (moved out of $root), the timeline's in its toolbar
     $root.on('click', '.na_sel_toggle', () => setSelecting(!selecting));
     $view.on('click', '.na_sel_toggle', () => setSelecting(!selecting));
@@ -265,6 +290,25 @@ export function mountSectionBrowser($host) {
     };
     $list.on('click', '.na_ref_chip', function (e) { e.stopPropagation(); focus(Number(this.dataset.start)); });
 
+    // a long run of cards (list view) is folded by the month in its titles; a title with no month joins the one
+    // before. Only where a run holds 2+ months and enough cards; the newest month starts open.
+    const MONTH_MIN_CARDS = 12;
+    function monthFolders(sections) {
+        const out = new Map(); // card index → folder
+        let run = [];
+        const flush = () => {
+            const fs = [];
+            let mo = 0;
+            for (const i of run) { const n = monthIn(sections[i].title) || mo; if (!fs.length || (n && n !== mo)) fs.push({ mo: n, idx: [] }); if (n) mo = n; fs[fs.length - 1].idx.push(i); }
+            if (run.length >= MONTH_MIN_CARDS && fs.filter(f => f.mo).length >= 2) fs.forEach(f => { f.id = `mo:${sectionKey(sections[f.idx[0]])}`; f.place = placeIn(sections[f.idx[0]].title); f.keys = f.idx.map(i => sectionKey(sections[i])); f.idx.forEach(i => out.set(i, f)); });
+            run = [];
+        };
+        sections.forEach((x, i) => { if (x.group) flush(); else run.push(i); });
+        flush();
+        return out;
+    }
+    const monthOpen = () => (getMeta()?.monthOpen && typeof getMeta().monthOpen === 'object' ? getMeta().monthOpen : {});
+
     // force: from the editor's own save/cancel. Anything else (a reply arriving, keyword links, the router)
     // waits while a section editor is open, so unsaved typing isn't thrown away.
     function render(force = false) {
@@ -278,6 +322,8 @@ export function mountSectionBrowser($host) {
         const q = $search.val().trim();
         const sections = parseSections(m.text);
         const muted = mutedSet(m);
+        const folders = !q && filter === 'all' && !$root.hasClass('na_tl') ? monthFolders(sections) : new Map();
+        const lastFolder = [...folders.values()].pop();
         const pinned = pinnedSet(m);
         const links = linkedMap(m);
         const waiting = linkWaiting(m);
@@ -311,11 +357,61 @@ export function mountSectionBrowser($host) {
         const groupStack = [];
         $root.toggleClass('na_darkui', darkUI());
         const hasOpen = sections.some(x => !x.group && /^OPEN\b/.test(x.title));
+        const monthHead = (f, newest) => {
+            const $parent = groupStack.length ? groupStack[groupStack.length - 1].$items : $list;
+            const isOpen = (monthOpen()[f.id] ?? newest) || f.idx.some(i => sections[i].start === pendingEdit);
+            const off = f.keys.every(k => muted.has(k)), parentOff = groupStack.some(g => g.off);
+            const ra = sections[f.idx[0]].title.match(RANGE_HEAD), rb = sections[f.idx[f.idx.length - 1]].title.match(RANGE_HEAD);
+            const lead = ra && rb ? `#${Math.min(+ra[2], +ra[4])}–#${Math.max(+rb[2], +rb[4])} · ` : '';
+            const $g = $(`
+              <div class="na_month ${isOpen ? 'na_g_open' : ''} ${off ? 'na_off' : ''} ${parentOff ? 'na_off_parent' : ''}">
+                <div class="na_month_head">
+                  <div class="na_head_main">
+                    <span class="na_month_t">${f.mo ? `${f.mo}월` : '날짜 없음'}${f.place ? ` · ${esc(f.place)}` : ''}</span>
+                    <span class="na_group_meta"></span>
+                  </div>
+                  ${sw(!off, off ? '이 달 주입 켜기' : '이 달 통째로 주입에서 빼기')}
+                </div>
+                <div class="na_month_items" ${isOpen ? '' : 'hidden'}></div>
+              </div>`);
+            if (selecting) $g.find('> .na_month_head').prepend(`<input type="checkbox" class="na_sel_cb na_sel_gcb" tabindex="-1" aria-label="이 달 모두 고르기" ${f.keys.every(k => selected.has(k)) ? 'checked' : ''}>`);
+            const $h = $g.find('> .na_month_head');
+            // held down: 고르기 with the whole month picked
+            $h.on('pointerdown', e => holdStart(e, f.keys)).on('pointermove', holdMove).on('pointerup pointercancel', holdEnd)
+                .on('contextmenu', e => { if (holdTimer || holdSwallow) e.preventDefault(); });
+            $h.on('click', e => {
+                if (holdSwallow) { holdSwallow = false; return; }
+                if (selecting) {
+                    if ($(e.target).closest('.na_sw, .na_icon').length) return;
+                    const all = f.keys.every(k => selected.has(k));
+                    f.keys.forEach(k => (all ? selected.delete(k) : selected.add(k)));
+                    render(true); return syncSel();
+                }
+                const mm = getMeta(); mm.monthOpen = { ...monthOpen(), [f.id]: !isOpen }; saveMeta(); render();
+            });
+            $h.find('.na_sw').on('click', async e => {
+                e.stopPropagation();
+                const mm = getMeta(), set = mutedSet(mm);
+                f.keys.forEach(k => (off ? set.delete(k) : set.add(k)));
+                mm.muted = [...set]; await saveMeta(); applyInjection(); render(true);
+            });
+            $g[0].dataset.key = f.id;
+            $parent.append($g);
+            const g = { level: 1.5, month: true, fid: f.id, lead, title: '', $items: $g.children('.na_month_items'), $el: $g, off: off || parentOff, tok: [] };
+            groupStack.push(g);
+            allGroups.push(g);
+        };
         sections.forEach((s, idx) => {
             // on the timeline, "# OPEN AT …" sits inside the STATE group ("STATE · OPEN")
             const joinState = tl && !s.group && /^OPEN\b/.test(s.title) && groupStack.length && /^STATE\b/.test(groupStack[0].title);
             while (!joinState && groupStack.length && groupStack[groupStack.length - 1].level >= s.level) groupStack.pop();
             while (joinState && groupStack.length > 1) groupStack.pop();
+            // a card leaves the month folder it isn't in; the first card of a month opens its folder
+            if (!s.group) {
+                const f = folders.get(idx), top = groupStack[groupStack.length - 1];
+                if (top?.month && top.fid !== f?.id) groupStack.pop();
+                if (f && groupStack[groupStack.length - 1]?.fid !== f.id) monthHead(f, f === lastFolder);
+            }
             const $parent = groupStack.length ? groupStack[groupStack.length - 1].$items : $list;
             const parentOff = groupStack.some(g => g.off);
             const off = muted.has(sectionKey(s));
@@ -498,7 +594,12 @@ export function mountSectionBrowser($host) {
                 $card.addClass('na_selcard').toggleClass('na_sel_on', selected.has(key));
                 $card.find('.na_card_head').first().prepend(`<input type="checkbox" class="na_sel_cb" tabindex="-1" ${selected.has(key) ? 'checked' : ''} aria-label="고르기">`);
             }
+            $card.find('.na_card_head').first()
+                .on('pointerdown', e => holdStart(e, key)).on('pointermove', holdMove).on('pointerup pointercancel', holdEnd)
+                .on('contextmenu', e => { if (holdTimer || holdSwallow) e.preventDefault(); });
             $card.find('.na_card_head').on('click', e => {
+                // the click that ends a hold that started 고르기 is not a pick
+                if (holdSwallow) { holdSwallow = false; return; }
                 if (selecting) {
                     if ($(e.target).closest('.na_sw').length) return;
                     selected.has(key) ? selected.delete(key) : selected.add(key);
@@ -544,19 +645,19 @@ export function mountSectionBrowser($host) {
         allGroups.forEach(g => {
             const n = g.$el.find('.na_card').length;
             // timeline: "#0 – #590 · 섹션 24 · 9,340 토큰", STATE: "Y2 #604 기준 · 섹션 6 · …"
-            let lead = '';
+            let lead = g.lead || '';
             if (tl) {
                 const rs = g.$el.find('.na_card[data-a]').toArray();
                 const sm = g.state && g.title.match(/((?:\S{1,12}\s)?#\d+)/);
                 if (sm) lead = `${sm[1]} 기준 · `;
                 else if (rs.length) lead = `#${Math.min(...rs.map(e => +e.dataset.a))} – #${Math.max(...rs.map(e => +e.dataset.b))} · `;
             }
-            const unit = '';
-            const $meta = g.$el.find('> .na_group_head .na_group_meta').text(`${lead}섹션 ${n}${unit}`);
+            const unit = g.month ? '개' : '';
+            const $meta = g.$el.find('> .na_group_head .na_group_meta, > .na_month_head .na_group_meta').text(`${lead}섹션 ${n}${unit}`);
             if ((q || filter !== 'all') && !n && !(q && g.$el.find('> .na_group_head mark, > .na_group_note mark').length)) { g.$el.remove(); return; }
             Promise.all(g.tok).then(ns => {
                 const sum = ns.reduce((x, y) => x + (y || 0), 0);
-                if (myId === renderId) $meta.text(`${lead}섹션 ${n}${unit} · ${tl && sum < 10000 ? fmt(sum) : shortNum(sum)} 토큰`);
+                if (myId === renderId) $meta.text(`${lead}섹션 ${n}${unit} · ${(tl && sum < 10000) || g.month ? fmt(sum) : shortNum(sum)} 토큰`);
                 // list mode: a thin bar under the group head, its share of all tokens
                 if (!tl) Promise.all(allJobs).then(all => {
                     const total = all.reduce((x, y) => x + (y || 0), 0);
@@ -592,6 +693,9 @@ export function mountSectionBrowser($host) {
             if (x.group) stack.push(x);
         }
         if (stack.some(g => set.delete(sectionKey(g)))) setCollapsed(set);
+        // and its month, when the list is folded by month
+        const all = parseSections(getMeta().text), f = monthFolders(all).get(all.findIndex(x => x.start === start));
+        if (f && !monthOpen()[f.id]) { const mm = getMeta(); mm.monthOpen = { ...monthOpen(), [f.id]: true }; saveMeta(); }
         render();
         const el = $list.find(`.na_card[data-start="${start}"]`)[0];
         if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.classList.add('na_flash'); setTimeout(() => el.classList.remove('na_flash'), 1400); }

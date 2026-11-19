@@ -4,7 +4,7 @@ import { loreBlock } from './lore.js';
 import { offstageSet } from './recall.js';
 import { SECTION_GUARD, aiLabel, askAI, askCompress, compressEffort, drLabel, draftReady, isBlocked, withSpinner } from './ai.js';
 import { autoAppend, openAppend } from './append.js';
-import { commitText, ctx, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
+import { commitText, ctx, getMeta, globalSettings, pickedTo, saveGlobal, saveMeta } from './core.js';
 import { driftHtml } from './drift.js';
 import { hasChanges, resolveChanges } from './statechg.js';
 import { checkCounts, countCheckOn } from './rulecheck.js';
@@ -122,12 +122,14 @@ export const josaA = n => ('2459'.includes(String(n).slice(-1)) ? '를' : '을')
 
 // what to compress next: after the boundary, up to the messages that stay visible.
 // The wizard also skips past the last copied extract (it may be with another model); 한 번에 압축 goes by the boundary only.
-export function nextRange(c = ctx(), m = getMeta(), { afterExport = true } = {}) {
+// pick: the end picked on the compress card (범위 직접 고르기) wins over "all but the last few"
+export function nextRange(c = ctx(), m = getMeta(), { afterExport = true, pick = true } = {}) {
     const last = (c.chat?.length || 0) - 1;
     const le = afterExport ? m.lastExport : null;
     const after = Math.max(m.boundary, le && le.to <= last ? le.to : -1);
     const from = Math.min(after + 1, Math.max(0, last));
-    return { from, to: Math.max(from, last - Math.max(0, Number(m.keep) || 0)), last, after };
+    const picked = pick ? pickedTo(m, from, last) : null;
+    return { from, to: picked ?? Math.max(from, last - Math.max(0, Number(m.keep) || 0)), last, after, picked: picked !== null };
 }
 
 // the raw log of a range, as the wizard and 원문 뽑기 build it
@@ -267,7 +269,7 @@ export async function quickCompress() {
     if (quickBusy) return toastr.info('요약을 받는 중이에요.');
     const c = ctx(), m = getMeta(), g = globalSettings();
     if (!draftReady()) return toastr.info('⚙ 설정 → AI 모델 → 초안 모델을 먼저 정해 주세요.', '한 번에 압축');
-    let { from, to, last, after } = nextRange(c, m, { afterExport: false });
+    let { from, to, last, after, picked } = nextRange(c, m, { afterExport: false });
     // the archive's sections stop before the boundary (a summary that fell short): offer to pick up the gap
     const covered = lastRangeEnd(m.text);
     let gapTo = -1;
@@ -277,7 +279,7 @@ export async function quickCompress() {
             to = Math.max(to, from);
         }
     }
-    if (after >= last || to < from || after + 1 > last - Math.max(0, Number(m.keep) || 0)) return toastr.info(`${m.boundary >= 0 ? `경계선 #${m.boundary} 뒤에` : '이 채팅에'} 압축할 메시지가 없어요 (메시지 ${last + 1}개 · 마지막 ${m.keep}개는 남겨요).`, '한 번에 압축');
+    if (after >= last || to < from || (!picked && after + 1 > last - Math.max(0, Number(m.keep) || 0))) return toastr.info(`${m.boundary >= 0 ? `경계선 #${m.boundary} 뒤에` : '이 채팅에'} 압축할 메시지가 없어요 (메시지 ${last + 1}개 · 마지막 ${m.keep}개는 남겨요).`, '한 번에 압축');
     // a summary that came back but never went in (the tab slept, the window was closed): offer it before paying again
     const pend = m.pendingDraft;
     if (pend?.text && pend.from === from) {
@@ -658,7 +660,7 @@ export function compressNudge() {
     const c = ctx();
     if (!every || !(c.chatId || c.getCurrentChatId?.())) return;
     const m = getMeta();
-    const { from, to, after, last } = nextRange(c, m, { afterExport: false });
+    const { from, to, after, last } = nextRange(c, m, { afterExport: false, pick: false });
     const n = after >= last ? 0 : Math.max(0, to - from + 1);
     const id = String(c.getCurrentChatId?.() || c.chatId);
     const prev = nudged.get(id) || 0;
