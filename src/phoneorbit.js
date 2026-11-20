@@ -125,6 +125,6 @@ export function liveStart(p, now, o) {
         <div class="ob_list">${row('story', true, false, '이야기에서 시작', o.upto)}${row('fresh', false, true, '처음부터', '곧')}</div>
         <i class="ob_pad"></i>
       </div>
-      <button type="button" class="ob_go na_ob_start">시작</button>
+      <button type="button" class="ob_go na_ob_start"${o.busy ? ' disabled' : ''}>${o.busy ? esc(o.busy) : '시작'}</button>
       ${axInd()}`;
 }

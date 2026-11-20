@@ -39,6 +39,7 @@ import { liveMode, liveWorld, livePhone, liveMeta, setLiveMode, resetLive, remem
 import { shiftLabel, liveWall, viewerWall, startShift } from './phone2clock.js';
 import { orbitList, orbitRoom, orbitNew, orbitHomeWidget, liveStart } from './phoneorbit.js';
 import { liveStoryText, beginFromStory, liveBranched, adoptChat, rebeginFromStory, rebeginKeepingChats } from './phone2story.js';
+import { liveSnapNow } from './phone2snap.js';
 import { liveGo, liveReflect, liveCanUndo, liveUndo, liveUnreflected, liveNowOf } from './phone2go.js';
 import { liveYearsNow } from './phone2year.js';
 import { P } from './phone2api.js';
@@ -161,6 +162,8 @@ export async function openPhone(who = null) {
     let owner = live() ? liveOwner() : selectedPhoneOwner(m, names, who, readPhoneSelection(selectionKey));
     if (owner && !live()) { rememberPhoneSelection(m,owner,selectionKey); await saveMeta(); }
     if (!stillHere()) return;
+    // snapping: 실시간을 시작하기 전 이야기 요약본을 만드는 중 (그동안 다른 폰 작업은 기다려요); snapLabel: 시작 버튼 글
+    let snapping = false, snapLabel = '';
     let investing = false, making = false, busyMake = null, placeReading = false, prepLinking = false, prepOpen = false, prepFrom = false;  // 폰 만들기 준비: linking, 1~4 shown again, 인물 정보 opened from it
      // busyMake: 'sync' | 'make' while a reflection or a make runs
     for (const p of Object.values(m.phones)) migrateBank(m, p);
@@ -479,7 +482,7 @@ export async function openPhone(who = null) {
         let html;
         tidyKo(p);
         if (view === 'livestart' && (live() || liveWorld(realM))) view = 'set';
-        try { html = screen(p, view, m, live() ? liveRoster() : roster, { ...orbitUi(), start: view === 'livestart' ? startPlan(p) : null, phones: { live: live(), has: !!liveWorld(realM), shift: shiftLabel(liveWorld(realM)?.dayShift), canUndo: live() && !!p && liveCanUndo(realM, p.owner), held: live() && !!p && Number.isInteger(p.liveHeld) && liveUnreflected(realM, p.owner) > 0, err: live() && p?.liveReflectError?.at ? viewerWall(p.liveReflectError.at, liveWorld(realM)?.dayShift || 0).at.slice(6) : '', names: live() ? liveNames() : null }, syncN: view === 'set' && !live() ? syncLeft(p, m) : null, syncRows: view.startsWith('setsync') ? syncRows() : [], syncWhy, syncPending, pickMore, loreExp, loreEnts, remake, contactBack, investing, profileState:profileStates.get(nameKey(p.owner)), placeReading, mapQ, msgHeld, msgPick, retr: retrKs, voicePick: view === 'setvoice' ? voicePick : null, voiceAdd, voiceBusy }); }
+        try { html = screen(p, view, m, live() ? liveRoster() : roster, { ...orbitUi(), start: view === 'livestart' ? { ...startPlan(p), busy: snapping ? snapLabel : '' } : null, phones: { live: live(), snap: snapping ? snapLabel : '', has: !!liveWorld(realM), shift: shiftLabel(liveWorld(realM)?.dayShift), canUndo: live() && !!p && liveCanUndo(realM, p.owner), held: live() && !!p && Number.isInteger(p.liveHeld) && liveUnreflected(realM, p.owner) > 0, err: live() && p?.liveReflectError?.at ? viewerWall(p.liveReflectError.at, liveWorld(realM)?.dayShift || 0).at.slice(6) : '', names: live() ? liveNames() : null }, syncN: view === 'set' && !live() ? syncLeft(p, m) : null, syncRows: view.startsWith('setsync') ? syncRows() : [], syncWhy, syncPending, pickMore, loreExp, loreEnts, remake, contactBack, investing, profileState:profileStates.get(nameKey(p.owner)), placeReading, mapQ, msgHeld, msgPick, retr: retrKs, voicePick: view === 'setvoice' ? voicePick : null, voiceAdd, voiceBusy }); }
         catch (err) {
             console.error('[narrative-archive] phone screen', view, err);
             toastr.error(`${view} 화면을 그리지 못했어요: ${err?.message || err}`, '캐릭터 휴대폰');
@@ -588,7 +591,7 @@ export async function openPhone(who = null) {
     };
     // Investment calls are explicit; navigation and unresolved quote conflicts never trigger them.
     const investRun = async checkStory => {
-        if (making) return toastr.info('폰을 다시 만드는 중이에요');
+        if (making || snapping) return toastr.info('폰을 다시 만드는 중이에요');
         if (investing) return;
         const p = phone(), date = $root.find('.iv_date').val();
         investing = true; drawPhone(true);
@@ -605,7 +608,7 @@ export async function openPhone(who = null) {
     // the date sits unseen over its strip: open its calendar on a tap anywhere there
     $root.on('click', '.bank_fxdate', function () { try { this.showPicker?.(); } catch { /* not allowed here */ } });
     $root.on('click', '.bank_fxrefresh', async function () {
-        if (making) return toastr.info('폰을 다시 만드는 중이에요');
+        if (making || snapping) return toastr.info('폰을 다시 만드는 중이에요');
         if (investing) return;
         const p = phone(), date = $root.find('.bank_fxdate').val(), base = bankDisplayCurrency(p);
         investing = true;
@@ -617,7 +620,7 @@ export async function openPhone(who = null) {
     // 동네 가게 메뉴: normally filled right after the delivery app; one that failed is asked once more when the app is opened
     const menuTried = new Set();
     const autoMenu = async () => {
-        if (phoneClosed || making || !/^(dlv|delivery|dshop:)/.test(view)) return;
+        if (phoneClosed || making || snapping || !/^(dlv|delivery|dshop:)/.test(view)) return;
         const p = phone();
         if (!(p?.delivery?.shops || []).some(menuWanted) || menuTried.has(owner)) return;
         menuTried.add(owner);
@@ -625,7 +628,7 @@ export async function openPhone(who = null) {
         catch (err) { if (!phoneClosed && phone() === p) toastr.error(String(err?.message || err), '배달 메뉴'); }
     };
     const autoChart = async () => {
-        if (phoneClosed || making || investing || !view.startsWith('stock:')) return;
+        if (phoneClosed || making || snapping || investing || !view.startsWith('stock:')) return;
         const p = phone(); if (!p?.investment) return;
         const [symbol,range='1m'] = decodeURIComponent(view.slice(6)).split('~');
         const request = `${owner}|${p.investment.date}|${symbol}|${range}`;
@@ -638,7 +641,7 @@ export async function openPhone(who = null) {
     $root.on('click', '.iv_refresh', () => investRun(false));
     $root.on('click', '.iv_sync', () => investRun(true));
     $root.on('click', '.iv_records', async function () {
-        if (making) return toastr.info('폰을 다시 만드는 중이에요');
+        if (making || snapping) return toastr.info('폰을 다시 만드는 중이에요');
         if (investing) return;
         const p = phone(), mode = 'records', target = this.dataset.target || '';
         investing = true; drawPhone(true);
@@ -782,15 +785,15 @@ export async function openPhone(who = null) {
         if (typingNow) obFocus();
     } }).catch(err => console.error('[narrative-archive] live go', err));
     // 반영(소망 결정): 메신저를 나갈 때만 · 폰을 닫을 때 · 타임라인으로 바꿀 때. 실시간 폰의 인물마다 쌓인 대화를 한 번에(읽을 게 없으면 바로 끝)
-    const obReflect = () => { const w = liveWorld(realM); if (!w) return; (async () => { for (const p of Object.values(w.phones || {})) if (p?.owner) { const r = await liveReflect(realM, p.owner, { onChange: () => { if (!phoneClosed && stillHere() && live()) drawPhone(true); } }); if (r?.rounds) { const q = livePhone(realM, p.owner); if (q) await koRun(q, false, p.owner); } } })().catch(err => console.error('[narrative-archive] live reflect', err)); };
+    const obReflect = () => { const w = liveWorld(realM); if (!w || snapping) return; (async () => { for (const p of Object.values(w.phones || {})) if (p?.owner) { const r = await liveReflect(realM, p.owner, { onChange: () => { if (!phoneClosed && stillHere() && live()) drawPhone(true); } }); if (r?.rounds) { const q = livePhone(realM, p.owner); if (q) await koRun(q, false, p.owner); } } })().catch(err => console.error('[narrative-archive] live reflect', err)); };
     // 실시간 폰 설정 › 지난 반영: 방금 반영 되돌리기 · 다시 반영 (다른 폰 작업 중엔 폰 1 되돌리기처럼 막아요)
     $root.on('click', '.na_live_undo', async e => {
         e.stopPropagation();
         if (!live()) return;
-        if (making || busy.sync || busy.fill) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요');
+        if (making || snapping || busy.sync || busy.fill) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요');
         const p = phone(), n = p?.syncLast?.checked || 0;
         if (!p || !await askSheet('방금 반영을 되돌릴까요?', `대화 ${n}개를 다시 읽게 돼요.`, '되돌리기')) return;
-        if (making || busy.sync || busy.fill || phone() !== p || !live()) return;
+        if (making || snapping || busy.sync || busy.fill || phone() !== p || !live()) return;
         try {
             const kept = await liveUndo(realM, p.owner, { onChange: () => { if (!phoneClosed && stillHere() && live()) drawPhone(true); } });
             if (!phoneClosed && stillHere()) drawPhone(true);
@@ -800,7 +803,7 @@ export async function openPhone(who = null) {
     $root.on('click', '.na_live_rerun', async e => {
         e.stopPropagation();
         if (!live()) return;
-        if (making || busy.sync || busy.fill) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요');
+        if (making || snapping || busy.sync || busy.fill) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요');
         const p = phone();
         if (!p) return;
         try { await withSpinner($(e.currentTarget), '반영 중', () => liveReflect(realM, p.owner, { force: true, onChange: () => { if (!phoneClosed && stillHere() && live()) drawPhone(true); } })); }
@@ -829,40 +832,54 @@ export async function openPhone(who = null) {
     $root.on('click', '.na_ob_send', e => { e.stopPropagation(); obSend(); });
     $root.on('keydown', '.na_ob_in', e => { e.stopPropagation(); if (e.key === 'Enter' && !e.originalEvent?.isComposing && e.keyCode !== 229) { e.preventDefault(); obSend(); } });
     // 실시간 폰 시작: 이야기에서(마지막 메시지까지) → 실시간 홈
+    // 이야기 요약본 (phone2snap.js liveSnapNow): 마지막 메시지까지. 아카이브가 최신이면 요청 없이 바로, 밀려 있으면
+    // "이야기 정리 중"(나눠 보내면 k/total). 그동안 다른 폰 작업은 막아요. 실패하면 알림 한 줄, 아무것도 안 남겨요
+    const snapNow = async () => {
+        snapping = true; snapLabel = '이야기 정리 중'; if (!phoneClosed) drawPhone(true);
+        try { return await liveSnapNow(realM, { onStep: (k, total) => { snapLabel = total > 1 ? `이야기 정리 중 ${k + 1}/${total}` : '이야기 정리 중'; if (!phoneClosed && stillHere()) drawPhone(true); } }); }
+        catch (err) { console.warn('[narrative-archive] live snap', err); toastr.warning(String(err?.message || err), '캐릭터 휴대폰'); return null; }
+        finally { snapping = false; snapLabel = ''; }
+    };
+    // 실시간 폰 시작: 요약본을 만든 뒤 이야기에서(마지막 메시지까지) → 실시간 홈. 창을 닫았어도 같은 채팅이면 시작하고 저장해요
     $root.on('click', '.na_ob_start', async function (e) {
         e.stopPropagation();
         const p = phone();
         if (live() || liveWorld(realM) || !p) return;
-        if (making || busyMake || investing || koBusy || filling.size || busy.fill || busy.sync) return toastr.info('다른 폰 작업이 끝난 뒤 시작해 주세요', '캐릭터 휴대폰');
-        const plan = startPlan(p), upto = Math.max(0, (ctx().chat?.length || 1) - 1);
-        const st = chatStamp(upto);
-        try { beginFromStory(realM, { persona: plan.persona, upto, scope: phoneChatScope(ctx()), dayShift: plan.dayShift, chat: st.chat, fp: st.fp }); }
-        catch (err) { console.error('[narrative-archive] live start', err); return toastr.warning(String(err?.message || err), '캐릭터 휴대폰'); }
+        if (making || snapping || busyMake || investing || koBusy || filling.size || busy.fill || busy.sync) return toastr.info('다른 폰 작업이 끝난 뒤 시작해 주세요', '캐릭터 휴대폰');
+        const got = await snapNow();
+        if (!got) { if (!phoneClosed && stillHere()) drawPhone(true); return; }
+        // (기다린 뒤 다시: 같은 채팅, 아직 실시간 폰이 없음, 타임라인 폰 그대로)
+        if (!stillHere() || liveWorld(realM) || realM.phones?.[nameKey(p.owner)] !== p) { if (!phoneClosed && stillHere()) drawPhone(true); return; }
+        const plan = startPlan(p);
+        try { beginFromStory(realM, { persona: plan.persona, upto: got.upto, scope: phoneChatScope(ctx()), dayShift: plan.dayShift, chat: got.chat, fp: got.fp, snap: got.snap }); }
+        catch (err) { console.error('[narrative-archive] live start', err); toastr.warning(String(err?.message || err), '캐릭터 휴대폰'); if (!phoneClosed) drawPhone(true); return; }
         setLiveMode(realM, 'live'); useMode(); await yearsNow(); owner = liveOwner(); view = 'home'; sheet = false;
-        draw();
+        if (!phoneClosed) draw();
         await saveMeta();
     });
     // 실시간 폰 새로 시작 (5-2): 대화만 남기기 · 전부 지우기, 늘 사람이 골라요
     $root.on('click', '.na_ph_livereset', async function (e) {
         e.stopPropagation();
         if (!live()) return;
-        if (making || busyMake || investing || koBusy || filling.size || busy.fill || busy.sync) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요', '캐릭터 휴대폰');
+        if (making || snapping || busyMake || investing || koBusy || filling.size || busy.fill || busy.sync) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요', '캐릭터 휴대폰');
         const how = await askChoice('실시간 폰 새로 시작', '', [{ v: 'chats', label: '대화만 남기기' }, { v: 'all', label: '전부 지우기', danger: true }], '취소');
         if (how !== 'chats' && how !== 'all') return;
         // 대화만 남기기: the talk stays, the phones begin again from the 타임라인 phones as they are now (as 시작 does);
         // still 실시간. With no 타임라인 phone there is nothing to begin from: 폰 2 stays as it was
         if (how === 'chats') {
             const lw = liveWorld(realM), base = realM.phones?.[nameKey(lw?.lastOwner)] || Object.values(realM.phones || {}).find(p => p?.owner);
-            const upto = Math.max(0, (ctx().chat?.length || 1) - 1), st = chatStamp(upto);
+            if (!Object.values(realM.phones || {}).some(q => q?.owner)) return toastr.info('타임라인 폰을 먼저 만들어 주세요', '캐릭터 휴대폰');
+            const got = await snapNow();
+            if (!got || !stillHere() || !live() || liveWorld(realM) !== lw) { if (!phoneClosed && stillHere()) drawPhone(true); return; }
             let w = null;
-            try { w = rebeginKeepingChats(realM, { upto, scope: phoneChatScope(ctx()), dayShift: base ? startPlanOf(base).dayShift : 0, chat: st.chat, fp: st.fp }); }
+            try { w = rebeginKeepingChats(realM, { upto: got.upto, scope: phoneChatScope(ctx()), dayShift: base ? startPlanOf(base).dayShift : 0, chat: got.chat, fp: got.fp, snap: got.snap }); }
             catch (err) { return toastr.error(String(err?.message || err), '캐릭터 휴대폰'); }
             if (!w) return toastr.info('타임라인 폰을 먼저 만들어 주세요', '캐릭터 휴대폰');
             obWho = ''; useMode(); await yearsNow();
             owner = liveOwner(); view = 'set'; sheet = false;
-            draw();
+            if (!phoneClosed) draw();
             await saveMeta();
-            obGo();
+            if (!phoneClosed) obGo();
             return;
         }
         resetLive(realM, how); obWho = ''; useMode();
@@ -877,7 +894,7 @@ export async function openPhone(who = null) {
         if (to === liveMode(realM)) return;
         // (실시간 폰이 아직 없으면: 실시간을 고르면 시작 화면)
         if (to === 'live' && !liveWorld(realM)) { view = 'livestart'; sheet = false; draw(); return; }
-        if (making || busyMake || investing || koBusy || filling.size || busy.fill || busy.sync) return toastr.info('다른 폰 작업이 끝난 뒤 바꿔 주세요', '캐릭터 휴대폰');
+        if (making || snapping || busyMake || investing || koBusy || filling.size || busy.fill || busy.sync) return toastr.info('다른 폰 작업이 끝난 뒤 바꿔 주세요', '캐릭터 휴대폰');
         const fromLive = live();
         setLiveMode(realM, to);
         useMode();
@@ -1062,7 +1079,7 @@ export async function openPhone(who = null) {
         koHold = setTimeout(async () => {
             koHeld = true;
             const p = phone();
-            if (!p || making || koBusy) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요');
+            if (!p || making || snapping || koBusy) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요');
             // (this screen's lines only: one chat, one note, one page …; a list screen its app's newest 40; 설정 the whole phone, asked first)
             const scope = koScopeOf(p, view), only = koAppOf(view), pick = scope || (only ? g => only(g.app) : null);
             if (pick && !koGaps(p, { all: true }).some(pick)) return; // (nothing on this screen to translate again: quietly nothing)
@@ -1085,13 +1102,13 @@ export async function openPhone(who = null) {
         if (koHeld) { koHeld = false; return; }
         // something still without its Korean: 한국어 fills it (and stays on) instead of turning off
         const p = phone();
-        if (p && koGaps(p).length && !making) { if (koBusy) return; await withSpinner($(e.currentTarget), '번역 중', () => koRun(p, true)); const g = globalSettings(); g.phoneKo = true; saveGlobal(); return; }
+        if (p && koGaps(p).length && !making && !snapping) { if (koBusy) return; await withSpinner($(e.currentTarget), '번역 중', () => koRun(p, true)); const g = globalSettings(); g.phoneKo = true; saveGlobal(); return; }
         const g = globalSettings(); g.phoneKo = !koOn(); drawPhone(); if (view.startsWith('thread')) $root.find('.ax_scroll').scrollTop(1e6); saveGlobal();
     });
     $root.on('click keydown', '.na_ph_trok', async e => {
         if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
         e.preventDefault(); e.stopPropagation();
-        if (koBusy) return; if (making) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요');
+        if (koBusy) return; if (making || snapping) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요');
         const p = phone(); if (!p) return;
         const run = koRun(p, true); $(e.currentTarget).html(`${busyHtml} 번역 중`); await run;
     });
@@ -1105,7 +1122,7 @@ export async function openPhone(who = null) {
     $root.on('click', '.na_sync_retr', async e => {
         e.stopPropagation();
         const p = phone();
-        if (!p || making || koBusy) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요');
+        if (!p || making || snapping || koBusy) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요');
         const pick = roundScope(p);
         if (!pick || !koGaps(p, { all: true }).some(pick)) return toastr.info('이번 반영엔 다시 번역할 게 없어요', '캐릭터 휴대폰');
         let n = 0;
@@ -1116,10 +1133,10 @@ export async function openPhone(who = null) {
         if (!phoneClosed && phone() === p) drawPhone(true);
         if (n) toastr.success(`이번 반영 ${n}개를 다시 번역했어요`, '캐릭터 휴대폰');
     });
-    $root.on('click', '.na_sync_tr', async e => { e.stopPropagation(); if (making) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요'); await withSpinner($(e.currentTarget), '번역 중', () => koRun(phone(), true)); });
+    $root.on('click', '.na_sync_tr', async e => { e.stopPropagation(); if (making || snapping) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요'); await withSpinner($(e.currentTarget), '번역 중', () => koRun(phone(), true)); });
     $root.on('click', '.na_ph_makebtn', function () { make($(this), false); });
     // 폰 만들기 준비
-    const prepBusy = () => { if (!(making || busyMake || phoneMaking(m, owner) || investing || filling.size || busy.fill || busy.sync || placeReading || prepLinking)) return false; toastr.info('하던 일이 끝난 뒤 해 주세요', '캐릭터 휴대폰'); return true; };
+    const prepBusy = () => { if (!(making || snapping || busyMake || phoneMaking(m, owner) || investing || filling.size || busy.fill || busy.sync || placeReading || prepLinking)) return false; toastr.info('하던 일이 끝난 뒤 해 주세요', '캐릭터 휴대폰'); return true; };
     // 준비 화면's back: the phone picker (whose phone, or another person) — there is no screen behind it without a phone
     // 1 · 초안 모델: the extension's own setting (확장 설정 › AI 모델 › 초안 모델); the phone closes to show it
     $root.on('click', '.na_ph_prepdraft', e => { e.stopPropagation(); view = 'setdraft'; drawPhone(); });
@@ -1279,7 +1296,7 @@ export async function openPhone(who = null) {
     // 은행 · 지갑 · 쇼핑 / 음성 메모 채우기, and 음성 메모 떠올리기 (the red button)
     $root.on('click', '.na_ph_fill', async function (e) {
         e.stopPropagation();
-        if (making) return toastr.info('폰 반영이나 다시 만들기가 끝난 뒤 눌러 주세요');
+        if (making || snapping) return toastr.info('폰 반영이나 다시 만들기가 끝난 뒤 눌러 주세요');
         const p = phone(), k = this.dataset.k, id = `${nameKey(p.owner)}:${k}`;
         if (filling.has(id)) return;
         filling.add(id); drawPhone(true);
@@ -1451,7 +1468,7 @@ export async function openPhone(who = null) {
     });
     // 설정's rows: the busy text goes where the row's value is
     // one at a time: reflecting and making the bank or investment never overlap
-    const makeFrom = async ($at, update) => { if (koBusy) return toastr.info('번역하는 중이에요. 끝나면 다시 눌러 주세요', '캐릭터 휴대폰'); if (making || busy.sync) return toastr.info('폰 작업이 진행 중이에요. 끝나면 다시 눌러 주세요', '캐릭터 휴대폰'); if (investing || filling.size || busy.fill) return toastr.info('은행·투자를 만드는 중이에요. 끝난 뒤 눌러 주세요'); making = true; try { await make($at, update); } finally { making = false; } };
+    const makeFrom = async ($at, update) => { if (snapping) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요', '캐릭터 휴대폰'); if (koBusy) return toastr.info('번역하는 중이에요. 끝나면 다시 눌러 주세요', '캐릭터 휴대폰'); if (making || snapping || busy.sync) return toastr.info('폰 작업이 진행 중이에요. 끝나면 다시 눌러 주세요', '캐릭터 휴대폰'); if (investing || filling.size || busy.fill) return toastr.info('은행·투자를 만드는 중이에요. 끝난 뒤 눌러 주세요'); making = true; try { await make($at, update); } finally { making = false; } };
     $root.on('click', '.na_ph_setupd', function (e) { e.stopPropagation(); makeFrom($(this).find('.ax_v'), true); });
     // 설정 › 대화 반영
     $root.on('click', '.na_sync_order', async function (e) { e.stopPropagation(); syncOf(phone(), phoneChatScope(ctx())).order = this.dataset.v; drawPhone(true); await saveMeta(); });
@@ -1467,13 +1484,13 @@ export async function openPhone(who = null) {
         syncWhy = ''; view = 'setsync'; drawPhone(); await saveMeta();
         toastr.success(mark.index < 0 ? '첫 대화부터 반영해요' : `#${mark.index} 다음부터 반영해요`, '캐릭터 휴대폰');
     });
-    $root.on('click', '.na_sync_restore', async e => { e.stopPropagation(); if (making || busy.sync || busy.fill) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요'); const n = await restoreRounds(m, phoneChatScope(ctx())); syncPending = 0; drawPhone(); if (n && phone()) koRun(phone(), false); /* (what came back has no Korean yet) */ if (m.phones && Object.values(m.phones).some(p => p.inject)) applyInjection(); toastr.success(`반영 ${n}번을 복구했어요`, '캐릭터 휴대폰'); });
+    $root.on('click', '.na_sync_restore', async e => { e.stopPropagation(); if (making || snapping || busy.sync || busy.fill) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요'); const n = await restoreRounds(m, phoneChatScope(ctx())); syncPending = 0; drawPhone(); if (n && phone()) koRun(phone(), false); /* (what came back has no Korean yet) */ if (m.phones && Object.values(m.phones).some(p => p.inject)) applyInjection(); toastr.success(`반영 ${n}번을 복구했어요`, '캐릭터 휴대폰'); });
     $root.on('click', '.na_sync_drop', async function (e) {
         e.stopPropagation();
-        if (making || busy.sync || busy.fill) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요');
+        if (making || snapping || busy.sync || busy.fill) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요');
         const p = phone(), d = p.sync?.dropped?.[Number(this.dataset.k)];
         if (!d || !await askSheet(`대화 ${d.label}에서 넣은 일을 뺄까요?`, '문자 · 일정 · 돈 기록이 빠져요.', '빼기')) return;
-        if (making || busy.sync || busy.fill) return;
+        if (making || snapping || busy.sync || busy.fill) return;
         const r = await dropStretch(m, p, d.key);
         drawPhone();
         const did = [r.gone ? `일 ${r.gone}개` : '', r.items ? `앱 기록 ${r.items}개` : ''].filter(Boolean).join(' · ') || '뺄 것이 없어서 아무것도 안';
@@ -1483,13 +1500,13 @@ export async function openPhone(who = null) {
     $root.on('click', '.na_sync_undo', async e => {
         e.stopPropagation();
         // not while a reflection or a fill writes the same records
-        if (making || busy.sync || busy.fill) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요');
+        if (making || snapping || busy.sync || busy.fill) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요');
         try {
             const p = phone(), target = phoneTarget(m, p), round = p.syncUndo;
             const n = p.syncLast?.checked || 0;
             if (!await askSheet('방금 반영을 되돌릴까요?', `대화 ${n}개를 다시 읽게 돼요.`, '되돌리기')) return;
             target.check();
-            if (making || busy.sync || busy.fill || phone() !== p || p.syncUndo !== round) return;
+            if (making || snapping || busy.sync || busy.fill || phone() !== p || p.syncUndo !== round) return;
             const kept = await exclusive('sync', () => undoRound(m, p));
             drawPhone();
             kept.length ? toastr.warning(`되돌렸어요. ${kept.join(', ')}은(는) 그 사이 바뀌어서 남겨뒀어요`, '캐릭터 휴대폰') : toastr.success('반영을 되돌렸어요', '캐릭터 휴대폰');
@@ -1499,7 +1516,7 @@ export async function openPhone(who = null) {
     // 결제 다시 읽기: the money the last round couldn't put in, asked again and put on that round
     $root.on('click', '.na_sync_money', async e => {
         e.stopPropagation();
-        if (making || busy.sync || busy.fill) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요');
+        if (making || snapping || busy.sync || busy.fill) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요');
         const p = phone();
         try {
             const r = await withSpinner($(e.currentTarget), '결제 읽는 중', () => P.retryMoney(m, owner));
@@ -1540,7 +1557,7 @@ export async function openPhone(who = null) {
     $root.on('pointerup pointercancel lostpointercapture', '.na_ph_ystep', e => { e.stopPropagation(); yStop(); });
     $root.on('keydown', '.na_ph_ystep', function (e) { if (e.key !== 'Enter' && e.key !== ' ') return; e.preventDefault(); const p = tgt(); if (p) commitYear((Number(P.yearOn(p, m)) || new Date().getFullYear()) + Number(this.dataset.d)); });
     // 설정 › 위치 정보: locked while the phone is being made, reflected or filled, like the date order
-    const placeLocked = () => { if (!(making || busyMake || investing || filling.size || busy.fill || busy.sync || placeReading || prepLinking)) return false; toastr.info('반영이 끝난 뒤 바꿔 주세요', '캐릭터 휴대폰'); return true; };
+    const placeLocked = () => { if (!(making || snapping || busyMake || investing || filling.size || busy.fill || busy.sync || placeReading || prepLinking)) return false; toastr.info('반영이 끝난 뒤 바꿔 주세요', '캐릭터 휴대폰'); return true; };
     const placeCity = async (name, now) => {
         const v = await askInput(`${name}의 도시`, '시간대는 도시 이름으로 찾아요.', now || '');
         // the same name again is done, unless two towns share it (Portland): then which one is asked again
@@ -1696,14 +1713,14 @@ export async function openPhone(who = null) {
     });
     $root.on('click', '.na_ph_screenholder', async function (e) {
         e.stopPropagation();
-        if (making || busyMake || investing || filling.size || busy.fill || busy.sync) return toastr.info('반영이 끝난 뒤 바꿔 주세요', '캐릭터 휴대폰');
+        if (making || snapping || busyMake || investing || filling.size || busy.fill || busy.sync) return toastr.info('반영이 끝난 뒤 바꿔 주세요', '캐릭터 휴대폰');
         const value = this.dataset.n;
         if (value !== '' && !screenHolderChoices(m).some(x => x.name === value)) return;
         if (getMeta() !== realM) return;
         await setScreenHolder(m, value);
         if (!phoneClosed && getMeta() === realM) { view = phone() ? 'setdate' : 'prep'; drawPhone(); }
     });
-    $root.on('click', '.na_ph_dord', async function (e) { e.stopPropagation(); if (making || busyMake || investing || filling.size || busy.fill || busy.sync) return toastr.info('반영이 끝난 뒤 바꿔 주세요', '캐릭터 휴대폰'); const v = this.dataset.v; if (v !== 'md' && v !== 'dm' || dateOrderOf(m) === v && !needsDateOrder(m)) return; await setDateOrder(m, v); drawPhone(true); });
+    $root.on('click', '.na_ph_dord', async function (e) { e.stopPropagation(); if (making || snapping || busyMake || investing || filling.size || busy.fill || busy.sync) return toastr.info('반영이 끝난 뒤 바꿔 주세요', '캐릭터 휴대폰'); const v = this.dataset.v; if (v !== 'md' && v !== 'dm' || dateOrderOf(m) === v && !needsDateOrder(m)) return; await setDateOrder(m, v); drawPhone(true); });
     $root.on('click', '.na_ph_yearshow', async e => {
         e.stopPropagation();
         const pre = !phone() && view === 'prep' ? phonePre(m, owner) : null;
@@ -1721,7 +1738,7 @@ export async function openPhone(who = null) {
     $root.on('click', '.na_ph_setremake', async function (e) {
         e.stopPropagation();
         if (!remake.size) return;
-        if (making) return toastr.info('폰을 다시 만드는 중이에요');
+        if (making || snapping) return toastr.info('폰을 다시 만드는 중이에요');
         if (investing) return toastr.info('시세·환율 작업이 진행 중이에요. 완료 후 다시 눌러 주세요');
         const apps = Object.keys(REMAKE).filter(k => remake.has(k)), more = REMAKE_MORE.filter(k => remake.has(k)), whole = apps.length === Object.keys(REMAKE).length;
         const date=more.includes('invest') ? ($root.find('.ax_investdate').val() || P.investmentDate(m,phone())) : '';
@@ -1745,10 +1762,10 @@ export async function openPhone(who = null) {
     });
     $root.on('click', '.na_ph_storyreset', async e => {
         e.stopPropagation();
-        if (making || busyMake || investing || filling.size || placeReading || prepLinking) return toastr.info('생성 중인 작업이 끝난 뒤 다시 시도해 주세요');
+        if (making || snapping || busyMake || investing || filling.size || placeReading || prepLinking) return toastr.info('생성 중인 작업이 끝난 뒤 다시 시도해 주세요');
         const scope=phoneChatScope(ctx());
         if (!await askSheet('이 방의 폰을 새로 시작할까요?', '모든 인물의 폰이 지워져요.', '새로 시작')) return;
-        if(getMeta()!==realM || phoneChatScope(ctx())!==scope || making || busyMake || investing || filling.size || placeReading || prepLinking) return toastr.info('생성 중인 작업이 끝난 뒤 다시 시도해 주세요');
+        if(getMeta()!==realM || phoneChatScope(ctx())!==scope || making || snapping || busyMake || investing || filling.size || placeReading || prepLinking) return toastr.info('생성 중인 작업이 끝난 뒤 다시 시도해 주세요');
         resetPhoneStory(m,scope);profileStates.clear();profileDrafts.clear();remake.clear();view='lock';
         await saveMeta();applyInjection();draw();
     });

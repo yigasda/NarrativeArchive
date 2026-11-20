@@ -6,7 +6,7 @@ const chunk=source.slice(source.indexOf("    $root.on('click', '.na_ph_setremake
 function harness({busy=false,confirm=async()=>true,fill=async()=>{},both=false}={}) {
  const notices=[],p={owner:'A'},remake=new Set(both?['money','invest']:['money']);let handler,draws=0,calls=0,plans=0;const received=[];
  const init=new Function('$root','toastr','askSheet','fillMoney','drawPhone','draw','remake','p','prepareWealth','fillInvestment',`
- let making=false,investing=${busy},owner='A',phoneClosed=false,view='setremake';
+ let making=false,snapping=false,investing=${busy},owner='A',phoneClosed=false,view='setremake';
  const phone=()=>p,m={},REMAKE={},REMAKE_MORE=['money','invest'],APPS={money:'은행'},investmentDate=()=>'',validDate=()=>true,josa=()=>'을';
  const P={fillMoney,prepareWealth,fillInvestment,investmentDate};
  ${chunk}

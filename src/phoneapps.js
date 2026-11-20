@@ -640,7 +640,7 @@ export function setScreen(p, now, m, ui) {
           <button type="button" class="ax_rw ax_rwn" data-go="setremake"><span class="ax_tx"><span class="ax_n ax_blue">다시 만들기</span></span>${axChev}</button>
           <button type="button" class="ax_rw ax_rwn na_ph_storyreset"><span class="ax_tx"><span class="ax_n ax_red">이 방의 폰 새로 시작</span></span></button>
           <button type="button" class="ax_rw ax_rwn na_ph_setdel"><span class="ax_tx"><span class="ax_n ax_red">이 폰 지우기</span></span></button>
-          ${ui.phones?.live ? '<button type="button" class="ax_rw ax_rwn na_ph_livereset"><span class="ax_tx"><span class="ax_n ax_red">실시간 폰 새로 시작</span></span></button>' : ''}
+          ${ui.phones?.live ? `<button type="button" class="ax_rw ax_rwn na_ph_livereset"${ui.phones.snap ? ' disabled' : ''}><span class="ax_tx"><span class="ax_n ax_red">${ui.phones.snap ? `${busyHtml} ${esc(ui.phones.snap)}` : '실시간 폰 새로 시작'}</span></span></button>` : ''}
         </div>
         <i class="ax_pad"></i>
       </div>
