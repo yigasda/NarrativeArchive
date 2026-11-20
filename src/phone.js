@@ -909,7 +909,7 @@ export async function openPhone(who = null) {
         box.value = ''; box.focus({ preventScroll: true });
     });
     $root.on('input', '.ob_rein', function () { const v = this.value.trim(); if (!v) return; const msgId = this.dataset.id; this.value = ''; this.blur(); obReact(msgId, v); });
-    // 말 고치기 (시안 E2): 그 말풍선 자리에서 바로 고치고 밑의 ✕ · ✓. 원문을 고치면 한국어는 liveEditMessage가 지워요(재번역으로 다시)
+    // 말 고치기 (시안 E2): 그 말풍선 자리에서 바로 고치고 밑의 ✕ · ✓. 원문을 고치면 한국어는 liveEditMessage가 지우고, 한국어가 있던 말이면 바로 다시 번역해요
     const obFixFocus = () => {
         const e = $root.find(obFix?.at === 'k' ? '.na_ob_fk' : '.na_ob_ft')[0]; if (!e || document.activeElement === e) return;
         e.focus({ preventScroll: true }); try { const r = document.createRange(); r.selectNodeContents(e); r.collapse(false); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); } catch { /* (no caret) */ }
@@ -922,6 +922,8 @@ export async function openPhone(who = null) {
         if (f.hasK && k !== String(x.ko || '').trim() && !('text' in change)) change.ko = k;
         if (!Object.keys(change).length) { obFix = null; drawPhone(true); return; }
         try { await liveEditMessage(realM, id, f.id, change); obFix = null; } catch (err) { obWarn(err); return; }
+        // (원문을 고쳤고 한국어가 있던 말이면 바로 재번역: 칸은 닫고 "번역 중". 실패하면 알림만, 고친 원문은 그대로 — 반영 쪽 요청, 소망)
+        if ('text' in change && f.hasK) return obRetr([f.id]);
         if (!phoneClosed && stillHere()) drawPhone(true);
     };
     $root.on('click', '.na_ob_medit', function (e) {
