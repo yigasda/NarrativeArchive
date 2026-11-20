@@ -148,3 +148,26 @@
 .ax .wh_in:empty::before { content: attr(data-ph); color: #b3b7be; }
 .ax .wh_go { left: 22px; right: 22px; bottom: 92px; }
 .ax .wh_imp { position: absolute; left: 50%; bottom: 46px; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; padding: 6px 10px; font-size: 14px; font-weight: 600; color: #5b6170; white-space: nowrap; --axfg: #5b6170; --axfs: 14px; }
+/* 말 고치기 · 답장 넘기기 (시안 docs/mockups/phone2-edit M3 · W3) */
+.ax .ob_msgs.hold .ob_mi > :not(.held):not(.ob_pill) { opacity: 0.28; }
+.ax .ob_b.held { position: relative; z-index: 3; box-shadow: 0 10px 26px rgba(20, 22, 30, 0.22); }
+.ax .ob_pill { align-self: flex-start; display: flex; margin-bottom: 2px; border-radius: 14px; overflow: hidden; background: #15161a; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 10px 24px rgba(20, 22, 30, 0.3); position: relative; z-index: 3; }
+.ax .ob_pill.me { align-self: flex-end; }
+.ax .ob_pill button { padding: 11px 13px; color: #fff; font-size: 13px; font-weight: 600; white-space: nowrap; --axfg: #fff; --axfs: 13px; --axr: 0; }
+.ax .ob_pill button + button { border-left: 1px solid rgba(255, 255, 255, 0.14); }
+.ax .ob_pill .red { color: #ff8a7a; --axfg: #ff8a7a; }
+.ax .ob_wait { cursor: default; opacity: 0.75; }
+.ax .na_ob_sw { touch-action: pan-y; }
+.ax .ob_swd { align-self: flex-start; display: flex; gap: 5px; margin: 2px 0 2px 14px; padding: 6px 0; cursor: pointer; }
+.ax .ob_swd i { width: 6px; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.55); }
+.ax .ob_swd i.on { width: 16px; background: #fff; }
+.ax .ob_prow { display: flex; align-items: center; gap: 8px; }
+.ax .ob_prow.me { flex-direction: row-reverse; }
+.ax .ob_prow .ob_b { align-self: auto; }
+.ax .ob_pck { flex: none; width: 22px; height: 22px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.85); box-sizing: border-box; display: flex; align-items: center; justify-content: center; }
+.ax .ob_pck.on { background: #15161a; border-color: #15161a; }
+.ax .ob_pbar { justify-content: space-between; padding: 0 8px 0 18px; background: rgba(255, 255, 255, 0.92); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 10px 26px rgba(20, 22, 30, 0.18); color: #1b1d24; font-size: 14px; font-weight: 600; --axfs: 14px; }
+.ax .ob_pbtn { display: flex; gap: 6px; }
+.ax .ob_pbtn button { padding: 9px 13px; border-radius: 999px; background: #eef0f3; color: #1b1d24; font-size: 13.5px; font-weight: 600; --axbg: #eef0f3; --axfg: #1b1d24; --axr: 999px; --axfs: 13.5px; }
+.ax .ob_pbtn .red { background: #fbe9e6; color: #c0392b; --axbg: #fbe9e6; --axfg: #c0392b; }
+.ax .ob_pbtn button:disabled { opacity: 0.4; }
