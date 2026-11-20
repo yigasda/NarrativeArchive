@@ -894,10 +894,20 @@ export async function openPhone(who = null) {
         e.stopPropagation(); const who = this.dataset.n; if (!who) return;
         const album = fcAlbum(who), cur = globalSettings().faces?.[nameKey(who)], sel = album.indexOf(cur);
         obFc = { who, back: view, album, sel, src: '', file: null, W: 0, H: 0, scale: 1, min: 1, tx: 0, ty: 0, busy: false };
+        obSheet = false;
         view = 'orbitface'; drawPhone();
         if (sel >= 0) fcLoad(album[sel], null, sel);
     });
     $root.on('click', '.na_of_pic', function (e) { e.stopPropagation(); const i = Number(this.dataset.i), u = obFc?.album[i]; if (u) fcLoad(u, null, i); });
+    // 모아 둔 사진 지우기 (고른 칸의 ×): 한 번 묻고, 모아 둔 곳에서만 빼요 (지금 쓰는 프사는 그대로)
+    $root.on('click', '.na_of_del', async function (e) {
+        e.stopPropagation(); const f = obFc, i = Number(this.dataset.i); if (!f || f.busy || !f.album[i]) return;
+        if (!await askSheet('이 사진을 지울까요?', '', '지우기')) return;
+        if (obFc !== f) return;
+        f.album.splice(i, 1); fcKeep(f.who, f.album);
+        if (f.sel === i) Object.assign(f, { sel: -1, src: '', file: null, W: 0, H: 0 }); else if (f.sel > i) f.sel--;
+        const top = $root.find('.of_scroll').scrollTop(); drawPhone(true); $root.find('.of_scroll').scrollTop(top); fcPaint();
+    });
     // 더하기: 여러 장을 한 번에. 고른 사진은 가운데를 잘라 모아 두고(남아요), 첫 장을 틀에 올려요
     $root.on('click', '.na_of_add', e => {
         e.stopPropagation(); const f = obFc; if (!f || f.busy) return;

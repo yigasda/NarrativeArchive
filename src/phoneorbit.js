@@ -77,7 +77,7 @@ export function orbitList(p, now, o) {
     const tab = o.tab || 'all', rooms = o.rooms.filter(r => tab === 'all' || (tab === 'group') === r.group);
     const bk = o.back, h = o.hero, lit = h ? Number(String(h.local).slice(0, 2)) : -1, a = o.acct || { name: '', list: [] }, many = a.list.length > 1;
     return `${axBar(p, o.clock || now)}
-      <div class="ob_top">${many ? `<button type="button" class="ob_me na_ob_acct" aria-label="계정">${face(a.name, 46)}</button>` : `<span class="ob_me">${face(a.name, 46)}</span>`}<b class="ob_h1">메시지</b>${a.ro ? '<span class="ob_cb0"></span>' : `<span class="ob_tr">${bk ? `<button type="button" class="ob_cb ob_bk na_ob_back${bk.n || bk.busy ? '' : ' off'}" aria-label="${bk.busy ? '정리 중' : '롤플에 전하기'}"${bk.busy ? ' disabled' : ''}>${bk.busy ? '<i class="fa-solid fa-spinner fa-spin"></i>' : ic('tell', 20, '#1b1d24', 2.1)}${bk.n && !bk.busy ? `<span class="ob_un cg_num">${bk.n}</span>` : ''}</button>` : ''}<button type="button" class="ob_cb" data-go="orbitnew" aria-label="새 대화">${ic('pen', 19)}</button></span>`}</div>
+      <div class="ob_top">${many ? `<button type="button" class="ob_me na_ob_acct" aria-label="계정">${face(a.name, 46)}</button>` : a.ro ? `<span class="ob_me">${face(a.name, 46)}</span>` : `<button type="button" class="ob_me na_ob_face" data-n="${esc(a.name)}" aria-label="프사 바꾸기">${face(a.name, 46)}</button>`}<b class="ob_h1">메시지</b>${a.ro ? '<span class="ob_cb0"></span>' : `<span class="ob_tr">${bk ? `<button type="button" class="ob_cb ob_bk na_ob_back${bk.n || bk.busy ? '' : ' off'}" aria-label="${bk.busy ? '정리 중' : '롤플에 전하기'}"${bk.busy ? ' disabled' : ''}>${bk.busy ? '<i class="fa-solid fa-spinner fa-spin"></i>' : ic('tell', 20, '#1b1d24', 2.1)}${bk.n && !bk.busy ? `<span class="ob_un cg_num">${bk.n}</span>` : ''}</button>` : ''}<button type="button" class="ob_cb" data-go="orbitnew" aria-label="새 대화">${ic('pen', 19)}</button></span>`}</div>
       <div class="ob_scroll ax_scroll">
         <div class="ob_seg">${[['all', '전체'], ['one', '1:1'], ['group', '단체']].map(([k, t]) => `<button type="button" class="ob_sg na_ob_tab${tab === k ? ' on' : ''}" data-v="${k}">${t}</button>`).join('')}</div>
         ${h ? `<div class="ob_hero"><span class="ob_blob" style="background:${orbitBg(h.name)}"></span><span class="ob_gl"></span><div class="ob_in"><small>${esc(h.name)}${h.city ? ` · ${esc(h.city)}` : ''} 지금</small><div class="ob_big cg_num">${esc(h.local)}</div><div class="ob_dots">${dots(lit)}</div><div class="ob_dl"><span>0시</span><span>12시</span><span>24시</span></div></div></div>` : ''}
@@ -86,7 +86,7 @@ export function orbitList(p, now, o) {
       </div>
       ${a.ro ? '' : `<button type="button" class="ob_dock" data-go="orbitnew">${ic('plus', 16, '#fff', 2.4)}새 대화</button>`}
       ${bk?.sheet ? `<div class="ob_shade na_ob_bkno"></div><div class="ob_sheet ob_bks"><i class="ob_grab"></i><div class="ob_bkh"><b>롤플에 넣기</b><span>말 ${bk.sheet.count}개</span></div><div class="ob_bkt na_ob_bktx" contenteditable="true" role="textbox" aria-multiline="true" spellcheck="false" aria-label="넣을 글">${esc(bk.sheet.text)}</div>${bk.sheet.more ? `<div class="ob_bkm">남은 말 ${bk.sheet.more}개는 한 번 더</div>` : ''}<div class="ob_bkb"><button type="button" class="ob_bkno na_ob_bkno">취소</button><button type="button" class="ob_bkok na_ob_bkok"${bk.busy ? ' disabled' : ''}>넣기</button></div></div>` : ''}
-      ${a.sheet ? `<div class="ob_shade na_ob_shade"></div><div class="ob_sheet"><i class="ob_grab"></i>${a.list.map(x => `<div class="ob_acc na_ob_who" role="button" tabindex="0" data-n="${esc(x.name)}">${face(x.name, 40)}<span class="ob_t"><b>${esc(x.name)}</b>${x.sub ? `<span class="ob_p">${esc(x.sub)}</span>` : ''}</span><span class="ob_ck${x.on ? ' on' : ''}">${x.on ? ic('chk', 14, '#fff', 3) : ''}</span></div>`).join('')}</div>` : ''}
+      ${a.sheet ? `<div class="ob_shade na_ob_shade"></div><div class="ob_sheet"><i class="ob_grab"></i>${a.list.map(x => `<div class="ob_acc na_ob_who" role="button" tabindex="0" data-n="${esc(x.name)}"><button type="button" class="ob_fb na_ob_face" data-n="${esc(x.name)}" aria-label="프사 바꾸기">${face(x.name, 40)}</button><span class="ob_t"><b>${esc(x.name)}</b>${x.sub ? `<span class="ob_p">${esc(x.sub)}</span>` : ''}</span><span class="ob_ck${x.on ? ' on' : ''}">${x.on ? ic('chk', 14, '#fff', 3) : ''}</span></div>`).join('')}</div>` : ''}
       ${axInd()}`;
 }
 
@@ -171,7 +171,7 @@ export function whoScreen(now, o = {}) {
 }
 
 // 프사 바꾸기 (시안 docs/mockups/phone2-edit sheetCrop C1 + 소망이 그린 큰 네모 두 칸 갤러리): 그 사람 방 색 전체 화면.
-// 위는 사진 + 둥근 틀(끌어서 옮기고 막대 · 두 손가락으로 크기), 아래는 모아 둔 사진 두 칸 격자(맨 앞은 더하기), 아래로 굴려요. 맨 아래 "이대로 쓰기".
+// 위는 사진 + 둥근 틀(끌어서 옮기고 막대 · 두 손가락으로 크기), 아래는 모아 둔 사진 두 칸 격자(맨 앞은 더하기, 고른 칸의 오른쪽 위 ×로 지우기), 아래로 굴려요. 맨 아래 "이대로 쓰기".
 // o: { name, back (뒤로 갈 곳), src (틀에 올린 사진; 없으면 빈 틀), album: [{ url, on }], busy }
 export function orbitFace(p, now, o) {
     return `<div class="ob_bg"><span class="ob_blob" style="background:${orbitBg(o.name)}"></span></div>${axBar(p, o.clock || now, '#fff')}
@@ -179,7 +179,7 @@ export function orbitFace(p, now, o) {
       <div class="of_scroll ax_scroll">
         <div class="of_stage na_of_stage">${o.src ? `<img class="of_img na_of_img" src="${esc(o.src)}" alt="" draggable="false">` : ''}<i class="of_ring"></i></div>
         <div class="of_zoom${o.src ? '' : ' off'}"><span>작게</span><div class="of_tr na_of_tr" role="slider" tabindex="0" aria-label="크기"><i class="of_th na_of_th"></i></div><span>크게</span></div>
-        <div class="of_grid"><button type="button" class="of_add na_of_add" aria-label="사진 더하기">${ic('plus', 26, '#fff', 2.2)}</button>${o.album.map((x, i) => `<button type="button" class="of_pic na_of_pic${x.on ? ' on' : ''}" data-i="${i}"><img src="${esc(x.url)}" alt="" loading="lazy" decoding="async"></button>`).join('')}</div>
+        <div class="of_grid"><button type="button" class="of_add na_of_add" aria-label="사진 더하기">${ic('plus', 26, '#fff', 2.2)}</button>${o.album.map((x, i) => `<div class="of_cell"><button type="button" class="of_pic na_of_pic${x.on ? ' on' : ''}" data-i="${i}"><img src="${esc(x.url)}" alt="" loading="lazy" decoding="async"></button>${x.on ? `<button type="button" class="of_del na_of_del" data-i="${i}" aria-label="사진 지우기">${ic('x', 14, '#fff', 2.6)}</button>` : ''}</div>`).join('')}</div>
         <i class="of_pad"></i>
       </div>
       <button type="button" class="ob_go of_go na_of_ok"${o.busy || !o.src ? ' disabled' : ''}>이대로 쓰기</button>
