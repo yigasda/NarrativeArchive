@@ -2059,6 +2059,9 @@ export async function openPhone(who = null) {
     cgFonts();
     const dlg = document.createElement('dialog');
     dlg.className = 'popup na_phl';
+    // (실리태번이 팝업에 주는 둥근 모서리는 여기서 직접 없애요: 화면을 통째로 덮는 창이라 모서리가 둥글면 진한 화면에서만 귀퉁이가 깎여 보여요.
+    //  css의 border-radius: 0은 좁은 화면에서 실리태번 규칙에 밀렸어요)
+    dlg.style.setProperty('border-radius', '0', 'important');
     dlg.id = 'na_phl';
     dlg.append($root[0]);
     document.body.append(dlg);
