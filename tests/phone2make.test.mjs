@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import * as L from '../src/phone2store.js';
 import { journalRead, journalWrite } from '../src/phonesync.js';
-import { T, PD, MK, Y as YR, snapFor } from './phone2reflect.load.mjs';
+import { T, PD, MK, W2, Y as YR, snapFor } from './phone2reflect.load.mjs';
 
 const src = f => readFile(new URL(`../src/${f}`, import.meta.url), 'utf8');
 const phone = () => ({ owner: 'Mara', now: '11-12 21:30', year: 2026, country: 'DE', lives: 'DE', inject: false, wall: 'dusk', accent: 'blue', contacts: [{ name: 'Ivo' }], threads: [{ with: 'Ivo', messages: [{ from: 'Ivo', time: '11-12 20:00', text: 'hi' }] }],
@@ -135,10 +135,22 @@ test('폰 만들기 준비 (가져온 채팅뿐이라 폰이 없는 실시간 �
         await MK.livePreparePhone(other, 'Ivo'); const n = asked.length;
         other.phoneProfiles = { ivo: { type: 'card', id: 'ivo.png' } };
         assert.equal((await MK.livePreparePhone(other, 'Ivo')).financeProfile.id, 'ivo.png'); assert.equal(asked.length, n + 1);
+        // 준비 화면의 위치 정보: 사람 빼기 · 다시 읽기도 준비 값(아직 폰이 아닌 것)에 그대로 돼요
+        const both = JSON.stringify({ people: [{ name: 'Ivo', city: 'Seoul', tz: 'Asia/Seoul', lives: 'KR' }, { name: 'Mara', city: 'Hamburg', tz: 'Europe/Berlin', lives: 'DE' }], around: [], year: 2026 });
+        queue.push(both, both, both);
+        const pi = await MK.livePreparePhone(other, 'Ivo', { again: true });
+        assert.deepEqual(pi.where.people.map(x => x.name).sort(), ['Ivo', 'Mara']);
+        await PD.dropPlacePerson(other, pi, 'Mara');
+        await W2.liveRereadPlaces(other, pi);
+        assert.deepEqual([pi.where.people.map(x => x.name), pi.where.removed], [['Ivo'], ['mara']]);
+        await W2.liveRereadPlaces(other, pi, { all: true });
+        assert.deepEqual(pi.where.people.map(x => x.name).sort(), ['Ivo', 'Mara']); assert.equal(pi.where.removed, undefined);
+        assert.equal(L.liveWorld(real).pre.ivo, pi); assert.equal(real.phonePre, undefined);
+        const n2 = asked.length;
         // 서랍이 아니면 멈춰요
         const was = JSON.stringify(real);
         await assert.rejects(() => MK.livePreparePhone(real, 'Mara'), /실시간 폰의 서랍이 아니에요/);
-        assert.equal(asked.length, n + 1); assert.equal(JSON.stringify(real), was);
+        assert.equal(asked.length, n2); assert.equal(JSON.stringify(real), was);
     } finally { Date.now = now; console.warn = warn; done(); }
 });
 
