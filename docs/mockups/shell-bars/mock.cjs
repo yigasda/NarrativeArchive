@@ -13,6 +13,12 @@ const BASE = `.na_phl :is(.na_ph_frame, .na_ph_scr) { border-radius: 0 !importan
   .na_phl .ax_ind span, .na_phl .cg_ind span { visibility: hidden !important; }
   .na_phl .ob_top, .na_phl .ob_hd { margin-top: 6px; } .na_phl .ax_orbitroom .ax_canvas { padding-bottom: ${nb}px !important; box-sizing: border-box !important; }`;
 const BAR = ':is(.ax_sb, .cg_sb)';
+function NOTCH(w) { return `${BASE} .na_phl ${BAR} { height: 47px !important; padding: 2px 30px 0 34px !important; }
+  .na_phl .na_ph_notch { top: 0 !important; width: ${w}px !important; height: 31px !important; border-radius: 0 0 21px 21px !important; padding-right: 22px !important; overflow: visible !important; }
+  .na_phl .na_ph_notch i { width: 5px !important; height: 5px !important; }
+  .na_phl .na_ph_notch::before, .na_phl .na_ph_notch::after { content: ''; position: absolute; top: 0; width: 8px; height: 8px; }
+  .na_phl .na_ph_notch::before { left: -8px; background: radial-gradient(circle at 0 100%, transparent 7.5px, #000 8px); }
+  .na_phl .na_ph_notch::after { right: -8px; background: radial-gradient(circle at 100% 100%, transparent 7.5px, #000 8px); }`; }
 const OPT = {
   A: `${BASE} .na_phl ${BAR} { height: ${sb}px !important; padding: 0 !important; visibility: hidden; } .na_phl .na_ph_notch { display: none !important; }`,
   B: `${BASE} .na_phl ${BAR} { height: ${(+sb + 20).toFixed(1)}px !important; padding: ${sb}px 0 0 !important; justify-content: center !important; align-items: center !important; }
@@ -25,11 +31,14 @@ const OPT = {
   // 기기 상단바를 숨기고 가짜 바가 맨 위 (E: 지금 자리 그대로 · F: 섬을 카메라 구멍에 맞춰 올리고 바를 낮게)
   E: `${BASE}`,
   F: `${BASE} .na_phl ${BAR} { height: 42px !important; padding-top: 0 !important; } .na_phl .na_ph_notch { top: 4px !important; height: 29px !important; border-radius: 15px !important; width: 112px !important; }`,
+  // 예전 아이폰 노치: 화면 맨 위에 붙은 검은 홈, 아래 모서리 둥글고 위쪽 양옆은 안으로 휜 귀. G 넓은 노치(X~12) · H 좁은 노치(13~14)
+  G: NOTCH(209),
+  H: NOTCH(162),
 };
-const NOSB = { E: 1, F: 1 };
+const NOSB = { E: 1, F: 1, G: 2, H: 2 };
 // 기기 바 그림 (소망 폰: 왼쪽 KT 시간, 오른쪽 아이콘 · 아래 파란 버튼 셋 + 분홍 하트)
 const DEV = (ink, nosb) => `<div id="mk_dev" style="position:fixed;inset:0;pointer-events:none;z-index:99999;font-family:Roboto,'Noto Sans KR',sans-serif">
-  ${nosb ? `<i style="position:absolute;left:50%;top:${HOLE}px;width:11px;height:11px;margin:-5.5px 0 0 -5.5px;border-radius:50%;background:#050505;box-shadow:0 0 0 1.5px rgba(40,40,40,.6)"></i>` : ''}<div style="${nosb ? 'visibility:hidden;' : ''}position:absolute;left:0;right:0;top:0;height:${SB}px;display:flex;align-items:center;justify-content:space-between;padding:0 16px 0 22px;color:${ink};font-size:14px;font-weight:500">
+  ${nosb ? `<i style="position:absolute;left:50%;top:${HOLE}px;width:11px;height:11px;margin:-5.5px 0 0 -5.5px;border-radius:50%;background:#050505;${nosb === 2 ? "" : "box-shadow:0 0 0 1.5px rgba(40,40,40,.6)"}"></i>` : ''}<div style="${nosb ? 'visibility:hidden;' : ''}position:absolute;left:0;right:0;top:0;height:${SB}px;display:flex;align-items:center;justify-content:space-between;padding:0 16px 0 22px;color:${ink};font-size:14px;font-weight:500">
     <span>KT 12:09 &nbsp;•</span><span style="display:flex;gap:6px;align-items:center">
     <svg width="15" height="12" viewBox="0 0 15 12" fill="none" stroke="${ink}" stroke-width="1.6"><path d="M1 4a9 9 0 0 1 13 0M3.5 6.8a5.5 5.5 0 0 1 8 0"/><circle cx="7.5" cy="10" r="1.2" fill="${ink}" stroke="none"/></svg>
     <svg width="14" height="12" viewBox="0 0 14 12" fill="${ink}"><rect x="0" y="8" width="2.4" height="4" rx=".6"/><rect x="3.8" y="5.5" width="2.4" height="6.5" rx=".6"/><rect x="7.6" y="3" width="2.4" height="9" rx=".6"/><rect x="11.4" y="0" width="2.4" height="12" rx=".6"/></svg>
