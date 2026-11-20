@@ -225,19 +225,15 @@ public class MainActivity extends Activity {
         else setBars(barTop, barBottom);
         fitPhone();
     }
-    // 폰을 연 동안 하단 버튼 줄: 그 화면 아래 바탕색을 그대로 쓰되 채도만 20% 낮춰 조금 뿌옇게(밝기는 그대로). 흰색 섞기 · 투명 · 반투명 · 덧칠은 다 싫다(소망)
-    private static int haze(int c) {
-        int r = Color.red(c), g = Color.green(c), b = Color.blue(c), y = (int) Math.round(0.299 * r + 0.587 * g + 0.114 * b);
-        return Color.rgb(r + (y - r) / 5, g + (y - g) / 5, b + (y - b) / 5);
-    }
+    // 폰을 연 동안 하단 버튼 줄: 칠하지 않아요(투명). 텔레그램처럼 화면 배경이 버튼 줄까지 그대로 이어지고, 그 자리 내용만 페이지가 반쯤 비치게 해요.
+    // 버튼 색만 화면 아래가 밝으면 어둡게, 어두우면 밝게
     @SuppressWarnings("deprecation")
     private void phoneNav() {
         Window w = getWindow();
-        int c = haze(barBottom);
-        w.setNavigationBarColor(c);
+        w.setNavigationBarColor(Color.TRANSPARENT);
         if (Build.VERSION.SDK_INT >= 30) {
             WindowInsetsController ic = w.getInsetsController();
-            if (ic != null) ic.setSystemBarsAppearance(light(c) ? WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS : 0, WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS);
+            if (ic != null) ic.setSystemBarsAppearance(light(barBottom) ? WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS : 0, WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS);
         }
     }
     private void fitPhone() {
