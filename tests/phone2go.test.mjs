@@ -968,7 +968,7 @@ test('채팅 가져오기: 실시간 폰이 없으면 이야기 없이 시작한
         assert.deepEqual([w.from, w.persona, w.scope, w.storyUpto, w.snap], ['fresh', 'Ren', 'test', null, undefined]);
         assert.deepEqual(room.messages.map(x => [x.from, x.text]), [['Ren', 'Mara'], ['Mara', 'Yes?'], ['Mara', 'What is it']]);
         assert.ok(room.messages.every(x => x.told));
-        assert.deepEqual(w.imported.chat, 'chat-1');
+        assert.deepEqual(Object.keys(w.imports), ['chat-1']); assert.equal(w.imports['chat-1'].upto, 1);
         assert.ok(T.saves >= 1); assert.equal(asked, 0);
         // 롤플에 전할 말로 세지 않고, 이야기 요약본도 안 찾아요
         assert.equal(G.liveBackCount(real), 0);
@@ -995,7 +995,7 @@ test('채팅 가져오기: 다시 누르면 그 뒤에 온 메시지만. 새 메
         assert.deepEqual([out.started, out.count, out.from, out.to], [false, 1, 2, 2]);
         const room = L.liveWorld(real).messenger.rooms[out.room];
         assert.deepEqual(room.messages.map(x => x.text), ['Mara', 'Yes?', 'What is it', 'Lunch?']);
-        assert.equal(L.liveWorld(real).imported.count, 4);
+        assert.equal(L.liveWorld(real).imports['chat-1'].count, 4);
         // 다른 채팅에서는 처음부터 다시 가져와요
         T.metadata.integrity = 'chat-2';
         assert.deepEqual(G.liveImportPlan(real), { messages: 3, bubbles: 4, again: false });
@@ -1024,3 +1024,61 @@ test('채팅 가져오기: 가져올 게 없거나 · 메신저 모양 메시지
         assert.equal(JSON.stringify(real.live), was); assert.equal(T.saves, save);
     } finally { importDone(); }
 });
+
+// 내보낸 채팅 파일(.jsonl): 그 파일의 메시지 전부 (시간 칸이 없어도). 메신저로만 쓴 채팅을 고르는 길이에요
+const jsonl = (meta, msgs) => [JSON.stringify({ chat_metadata: meta, user_name: 'unused', character_name: 'unused' }), ...msgs.map(x => JSON.stringify(x)), ''].join('\n');
+const FILE = () => jsonl({ integrity: 'file-1' }, [
+    { name: 'Ren', is_user: true, send_date: '2026-11-18T10:00:00.000Z', mes: 'You up?' },
+    { name: 'Ivo', is_user: false, send_date: '2026-11-18T10:00:30.000Z', mes: 'Barely\n\nWhat do you need' },
+    { name: 'System', is_user: false, send_date: '2026-11-18T10:01:00.000Z', mes: 'a note', extra: { type: 'narrator' } },
+    { name: 'Ivo', is_user: false, is_system: true, send_date: '2026-11-18T10:02:00.000Z', mes: 'hidden' },
+    { name: 'Ren', is_user: true, send_date: '2026-11-18T10:03:00.000Z', mes: 'A lift on Friday' }]);
+
+test('파일에서 가져오기: 시간 칸이 없어도 그 파일의 메시지 전부(숨긴 것 · 해설만 빼고), 시간은 기록된 순간. 지금 열어 둔 채팅의 실시간 폰으로', async () => {
+    try {
+        const real = importChat();
+        let asked = 0; T.ask = async () => { asked++; return '{}'; };
+        assert.deepEqual(G.liveImportFilePlan(real, FILE()), { messages: 3, bubbles: 4, again: false, names: ['Ivo'] });
+        assert.equal(real.live, undefined);
+        const out = await G.liveImportFile(real, FILE(), { scope: 'test' });
+        const w = L.liveWorld(real), room = w.messenger.rooms[out.room];
+        assert.deepEqual([out.started, out.count, out.messages], [true, 4, 3]);
+        assert.deepEqual(room.members, ['Ren', 'Ivo']);
+        assert.deepEqual(room.messages.map(x => [x.from, x.text, new Date(x.at).toISOString()]), [['Ren', 'You up?', '2026-11-18T10:00:00.000Z'], ['Ivo', 'Barely', '2026-11-18T10:00:30.000Z'],
+            ['Ivo', 'What do you need', '2026-11-18T10:00:30.001Z'], ['Ren', 'A lift on Friday', '2026-11-18T10:03:00.000Z']]);
+        assert.equal(asked, 0); assert.ok(T.saves >= 1);
+        // 같은 파일을 다시: 새 메시지만. 없으면 알려 줘요
+        assert.deepEqual(G.liveImportFilePlan(real, FILE()), { messages: 0, bubbles: 0, again: true, names: [] });
+        await assert.rejects(() => G.liveImportFile(real, FILE()), /새로 가져올 메시지가 없어요/);
+        const more = FILE() + JSON.stringify({ name: 'Ivo', is_user: false, send_date: '2026-11-18T10:04:00.000Z', mes: 'Fine' }) + '\n';
+        assert.equal((await G.liveImportFile(real, more)).count, 1);
+        assert.equal(room.messages.at(-1).text, 'Fine');
+        // 열어 둔 채팅도 따로 가져올 수 있고(다른 채팅), 그 뒤에도 파일은 어디까지 가져왔는지 기억해요
+        const mine = await G.liveImportChat(real);
+        assert.notEqual(mine.room, out.room);
+        assert.deepEqual(Object.keys(w.imports).sort(), ['chat-1', 'file-1']);
+        assert.deepEqual(G.liveImportFilePlan(real, more), { messages: 0, bubbles: 0, again: true, names: [] });
+        assert.deepEqual(G.liveImportPlan(real), { messages: 0, bubbles: 0, again: true });
+    } finally { importDone(); }
+});
+
+test('파일에서 가져오기: 채팅 파일이 아니거나 메시지가 없으면 아무것도 안 바꿔요; 채팅 표시가 없는 파일도 같은 파일인지 알아봐요', async () => {
+    try {
+        const real = importChat();
+        for (const bad of ['', 'not a chat file', '{"chat_metadata":{}}\n', '[1,2,3]\n{broken']) {
+            await assert.rejects(() => G.liveImportFile(real, bad), /메시지를 찾지 못했어요/);
+            assert.throws(() => G.liveImportFilePlan(real, bad), /메시지를 찾지 못했어요/);
+            assert.equal(real.live, undefined);
+        }
+        await assert.rejects(() => G.liveImportFile(real, jsonl({}, [{ name: 'Ren', is_user: true, send_date: '2026-11-18T10:00:00.000Z', mes: 'only me' }])), /캐릭터가 한 말이 없어서/);
+        assert.equal(real.live, undefined);
+        // (표시가 없는 옛 파일: 첫 메시지로 가려요)
+        const old = jsonl({}, [{ name: 'Ivo', is_user: false, send_date: '2026-11-18T10:00:00.000Z', mes: 'Hi' }]);
+        await G.liveImportFile(real, old);
+        assert.deepEqual(G.liveImportFilePlan(real, old), { messages: 0, bubbles: 0, again: true, names: [] });
+        assert.equal(G.liveImportFilePlan(real, jsonl({}, [{ name: 'Ivo', is_user: false, send_date: '2026-11-19T10:00:00.000Z', mes: 'Other chat' }])).again, false);
+        // 깨진 줄이 섞여 있어도 읽을 수 있는 줄은 가져와요
+        assert.equal(G.liveImportFilePlan(real, `${jsonl({ integrity: 'f2' }, [{ name: 'Ivo', is_user: false, send_date: '2026-11-18T10:00:00.000Z', mes: 'One' }])}{broken\n${JSON.stringify({ name: 'Ivo', is_user: false, send_date: '2026-11-18T10:01:00.000Z', mes: 'Two' })}`).messages, 2);
+    } finally { importDone(); }
+});
+

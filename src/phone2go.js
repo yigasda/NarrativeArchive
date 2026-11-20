@@ -14,7 +14,7 @@ import { resolvePhoneProfile, ownerProfileBlock } from './phoneprofile.js';
 import { parseJson } from './phoneparse.js';
 import { nameKey } from './people.js';
 import { liveWorld, livePhone, liveMeta, liveKey, liveAtYear, isSnap, setStoryKeeper, startFresh } from './phone2store.js';
-import { importRows, importInto } from './phone2import.js';
+import { importRows, importInto, importFile, importedOf, chatKey } from './phone2import.js';
 import { liveChatTail, liveSnapBehind, liveSnapExtend, liveSnapNow } from './phone2snap.js';
 import { liveStoryText } from './phone2story.js';
 import { BACK, backLeft, backInput, phone2BackSystem, takeBack, backMessage, markTold } from './phone2back.js';
@@ -304,28 +304,51 @@ export async function liveBackPut(real, draft, text = draft?.text) {
 }
 
 // ---- 메신저 모양으로 쓴 채팅을 실시간 폰의 메신저로 통째로 가져오기 (phone2import.js). 사람이 버튼을 눌렀을 때만 해요.
-// 지금 열어 둔 채팅에서 가져와요. 한 번 가져온 채팅은 그 뒤에 온 메시지만 다시 가져와요.
-const importFrom = real => { const c = ctx(), w = liveWorld(real), chat = String(c.chatMetadata?.integrity || ''); const same = !!w?.imported && w.imported.chat === chat && Number.isInteger(w.imported.upto); return { c, w, chat, after: same ? w.imported.upto : -1, shift: same ? Number(w.imported.shift) || 0 : 0 }; };
-// 가져올 수 있는 것: { messages (채팅 메시지 수), bubbles (말풍선 수), again (전에 가져온 적이 있는 채팅인지) }
-export function liveImportPlan(real) {
-    if (!open(real)) return { messages: 0, bubbles: 0, again: false };
-    const { c, after, shift } = importFrom(real), rows = importRows(c.chat, { after, shift, order: real?.dateOrder === 'dm' ? 'dm' : 'md' });
-    return { messages: rows.length, bubbles: rows.reduce((n, r) => n + r.bubbles.length, 0), again: after >= 0 };
+// 두 가지 길이에요. 한 번 가져온 채팅은 그 뒤에 온 메시지만 다시 가져와요 (채팅마다 따로 적어요).
+//   열어 둔 채팅에서: 메신저 메시지만 (캐릭터 메시지는 시간 칸이 있는 것). 장면이 섞인 채팅도 괜찮아요
+//   내보낸 채팅 파일(.jsonl)에서: 그 파일의 메시지 전부. 파일을 고른 것이 "메신저로만 쓴 채팅"이라는 말이에요
+const orderOf = real => (real?.dateOrder === 'dm' ? 'dm' : 'md');
+// what would come in from a chat: { rows, key, again (brought in before), any (messages there at all) }
+function importFrom(real, chat, key, gate) {
+    const had = importedOf(liveWorld(real), key), o = { after: had ? had.upto : -1, shift: had ? Number(had.shift) || 0 : 0, order: orderOf(real) };
+    const rows = importRows(chat, { ...o, gate });
+    return { rows, key, again: !!had, any: rows.length > 0 || importRows(chat, { ...o, gate: false }).length > 0 };
 }
-// 가져오기. 실시간 폰이 아직 없으면 이야기 없이 처음부터 시작한 폰을 만들어요(persona: 페르소나 이름, scope: 이 채팅).
-// 실패하면 아무것도 안 남겨요 (새로 만든 폰도). 모델은 부르지 않아요
-//   → { room, count (말풍선 수), messages, from, to, started (실시간 폰을 새로 만들었는지) }
-export async function liveImportChat(real, { persona = '', scope = '' } = {}) {
+const openChat = real => { const c = ctx(), chat = Array.isArray(c.chat) ? c.chat : []; return importFrom(real, chat, chatKey(c.chatMetadata?.integrity, chat), true); };
+const planOf = f => ({ messages: f.rows.length, bubbles: f.rows.reduce((n, r) => n + r.bubbles.length, 0), again: f.again });
+// 열어 둔 채팅에서 가져올 수 있는 것: { messages (채팅 메시지 수), bubbles (말풍선 수), again (전에 가져온 적이 있는 채팅인지) }
+export function liveImportPlan(real) { return real && open(real) ? planOf(openChat(real)) : { messages: 0, bubbles: 0, again: false }; }
+// 고른 파일에서 가져올 수 있는 것 (파일의 글을 받아요): 위와 같은 모양에 names (그 파일에서 말한 캐릭터들)
+export function liveImportFilePlan(real, text) {
+    const file = importFile(text), f = importFrom(real, file.chat, file.key, false);
+    return { ...planOf(f), names: [...new Set(f.rows.filter(r => !r.user && r.name).map(r => r.name))] };
+}
+// the rows into 폰 2, saved. With no 폰 2 yet, one begun fresh (no story) is made for them; a failure leaves nothing
+async function bringIn(real, f, { persona = '', scope = '' } = {}) {
     if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않아요');
-    const { c, w, chat, after, shift } = importFrom(real), rows = importRows(c.chat, { after, shift, order: real.dateOrder === 'dm' ? 'dm' : 'md' });
-    // (messages there, but none the messenger's: a chat of scenes, not of texts)
-    if (!rows.length && importRows(c.chat, { after, gate: false }).length) throw new Error('메신저 모양으로 쓴 메시지가 없어요 (맨 위에 시간 칸이 있는 캐릭터 메시지를 가져와요)');
-    if (!rows.length) throw new Error(after >= 0 ? '새로 가져올 메시지가 없어요' : '가져올 메시지가 없어요');
-    const had = real.live === undefined ? undefined : structuredClone(real.live), name = String(persona || c.name1 || '').trim();
+    if (!f.rows.length) throw new Error(f.again ? '새로 가져올 메시지가 없어요' : '가져올 메시지가 없어요');
+    const w = liveWorld(real), had = real.live === undefined ? undefined : structuredClone(real.live), name = String(persona || ctx().name1 || '').trim();
     try {
         if (!w) { if (!name) throw new Error('페르소나 이름이 필요해요'); startFresh(real, { persona: name, scope }); }
-        const out = importInto(real, rows, { chat });
+        const out = importInto(real, f.rows, { chat: f.key });
         await saveMeta();
         return { ...out, started: !w };
     } catch (err) { if (had === undefined) delete real.live; else real.live = had; throw err; }
+}
+// 열어 둔 채팅에서 가져오기. 실시간 폰이 아직 없으면 이야기 없이 처음부터 시작한 폰을 만들어요(persona: 페르소나 이름,
+// scope: 이 채팅). 모델은 부르지 않아요
+//   → { room, count (말풍선 수), messages, from, to, started (실시간 폰을 새로 만들었는지) }
+export async function liveImportChat(real, opts = {}) {
+    if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않아요');
+    const f = openChat(real);
+    // (messages there, but none the messenger's: a chat of scenes, not of texts)
+    if (!f.rows.length && f.any) throw new Error('메신저 모양으로 쓴 메시지가 없어요 (맨 위에 시간 칸이 있는 캐릭터 메시지를 가져와요)');
+    return bringIn(real, f, opts);
+}
+// 내보낸 채팅 파일(.jsonl)에서 가져오기: 그 파일의 메시지 전부(숨긴 것 · 해설만 빼고)를 지금 열어 둔 채팅의 실시간 폰으로.
+// text: 파일의 글 (브라우저에서 읽은 것; 어디로도 안 보내요)
+export async function liveImportFile(real, text, opts = {}) {
+    if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않아요');
+    const file = importFile(text);
+    return bringIn(real, importFrom(real, file.chat, file.key, false), opts);
 }

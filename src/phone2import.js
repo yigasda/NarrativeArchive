@@ -115,9 +115,23 @@ export function importRows(chat, { after = -1, order = 'md', clock = LOCAL, shif
     return rows.map(({ i, user, name, at, off = null, bubbles: b }) => ({ i, user, name, at, off, bubbles: b }));
 }
 
+// 이 채팅(key)을 전에 가져온 기록: { room, upto (채팅의 어느 번호까지), shift (글의 시간으로 옮긴 만큼), count, at } | null
+export const importedOf = (w, key) => { const r = w?.imports?.[String(key || '')]; return r && typeof r === 'object' && Number.isInteger(r.upto) ? r : null; };
+// 어느 채팅인지 가리는 표시: 실리태번이 채팅마다 주는 표시(integrity), 없으면 첫 메시지의 보낸 때와 이름
+export const chatKey = (integrity, chat) => { const k = String(integrity || '').trim(), x = (Array.isArray(chat) ? chat : []).find(m => m && typeof m === 'object'); return k || (x ? `first:${String(x.send_date ?? '')}|${flat(x.name)}` : ''); };
+// 내보낸 채팅 파일(.jsonl)의 글 → { chat: [메시지], key }. 줄마다 JSON 하나: 첫 줄은 채팅 정보(chat_metadata), 나머지가 메시지.
+// 읽을 수 없는 줄은 건너뛰어요. 메시지가 하나도 없으면 오류
+export function importFile(text) {
+    const lines = [];
+    for (const l of String(text ?? '').split(/\r?\n/)) { if (!l.trim()) continue; try { const o = JSON.parse(l); if (o && typeof o === 'object' && !Array.isArray(o)) lines.push(o); } catch { /* not a line of the chat */ } }
+    const meta = lines.find(o => o.chat_metadata && typeof o.chat_metadata === 'object'), chat = lines.filter(o => typeof o.mes === 'string');
+    if (!chat.length) throw new Error('채팅 파일(.jsonl)에서 메시지를 찾지 못했어요');
+    return { chat, key: chatKey(meta?.chat_metadata?.integrity, chat) };
+}
+
 // 가져올 말을 실시간 폰의 방에 넣어요. 방은 그 채팅에서 말한 캐릭터들과 페르소나의 방 하나예요(없으면 만들어요).
 // 넣는 말은: 채팅 순서대로, 원래 시간으로, 이미 롤플에 전한 것(told)으로. 있던 폰들은 그 말을 이미 읽은 것으로 표시하고,
-// 나중에 만드는 폰은 그 말 뒤부터 읽어요(importTop). info: { chat (어느 채팅인지) }
+// 나중에 만드는 폰은 그 말 뒤부터 읽어요(importTop). info: { chat (어느 채팅인지: 채팅마다 어디까지 가져왔는지 따로 적어요) }
 //   → { room, count (말풍선 수), messages (채팅 메시지 수), from, to (채팅의 번호) }
 export function importInto(m, rows, { now = Date.now(), chat = '' } = {}) {
     const w = liveWorld(m);
@@ -127,7 +141,7 @@ export function importInto(m, rows, { now = Date.now(), chat = '' } = {}) {
     const P = liveKey(w.persona), names = [...new Map(list.filter(r => !r.user && r.name && liveKey(r.name) !== P).map(r => [liveKey(r.name), r.name])).values()];
     // (the room this chat was brought into before, when everyone speaking now is in it: a batch of the persona's own
     // words alone still has its room)
-    const before = w.imported && String(w.imported.chat || '') === String(chat || '') ? w.messenger?.rooms?.[w.imported.room] : null;
+    const key = String(chat || ''), had = importedOf(w, key), before = had ? w.messenger?.rooms?.[had.room] : null;
     const fits = !!before && names.every(n => before.members.some(x => liveKey(x) === liveKey(n)));
     if (!names.length && !fits) throw new Error('캐릭터가 한 말이 없어서 방을 만들 수 없어요');
     const room = fits ? before : ensureRoom(m, names), msgs = room.messages;
@@ -152,6 +166,6 @@ export function importInto(m, rows, { now = Date.now(), chat = '' } = {}) {
     }
     w.importTop = top;
     const off = [...list].reverse().find(r => Number.isFinite(r.off))?.off;
-    w.imported = { chat: String(chat || ''), room: room.id, upto: list[list.length - 1].i, at: now, count: (Number(w.imported?.count) || 0) + count, shift: off ?? (before ? Number(w.imported.shift) || 0 : 0) };
+    (w.imports ||= {})[key] = { room: room.id, upto: list[list.length - 1].i, at: now, count: (Number(had?.count) || 0) + count, shift: off ?? (Number(had?.shift) || 0) };
     return { room: room.id, count, messages: list.length, from: list[0].i, to: list[list.length - 1].i };
 }

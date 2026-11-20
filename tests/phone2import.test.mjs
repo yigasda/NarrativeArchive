@@ -137,14 +137,15 @@ test('방에 넣기: 채팅 순서 · 원래 시간 · 번역까지, 전한 것�
     assert.ok(room.messages.every((x, k) => x.told === 777 && Number.isInteger(x.n) && (k === 0 || (x.n === room.messages[k - 1].n + 1 && x.at >= room.messages[k - 1].at))));
     assert.equal(new Date(room.messages[3].at).toISOString(), '2026-11-20T07:29:06.350Z');
     assert.equal(room.messages[5].at - room.messages[3].at, 2);
-    assert.deepEqual([w.importTop, w.imported], [room.messages[5].n, { chat: 'c1', room: room.id, upto: 3, at: 777, count: 6, shift: 0 }]);
+    assert.deepEqual([w.importTop, w.imports], [room.messages[5].n, { c1: { room: room.id, upto: 3, at: 777, count: 6, shift: 0 } }]);
+    assert.equal(I.importedOf(w, 'c1'), w.imports.c1); assert.equal(I.importedOf(w, 'c2'), null); assert.equal(I.importedOf(null, 'c1'), null);
     assert.equal(room.read.ren, room.messages[5].at);
     // 서랍: 나중에 만드는 폰은 가져온 말 뒤부터 읽어요
     assert.equal(L.liveMeta(m).phoneReadFrom, w.importTop);
     assert.equal(L.liveMeta(m).phoneUpto, -1);
     // 같은 채팅에서 다시: 내 말뿐이어도 그 방으로 들어가요. 다른 채팅의 내 말뿐인 묶음은 방을 몰라요
     const more = I.importInto(m, I.importRows([...CHAT, me('one more', '2026-11-20T09:00:00.000Z')], { clock, after: 6 }), { now: 888, chat: 'c1' });
-    assert.equal(more.room, room.id); assert.equal(room.messages.at(-1).text, 'one more'); assert.equal(w.imported.count, 7);
+    assert.equal(more.room, room.id); assert.equal(room.messages.at(-1).text, 'one more'); assert.equal(w.imports.c1.count, 7);
     assert.throws(() => I.importInto(m, I.importRows([me('elsewhere', '2026-11-20T10:00:00.000Z')], { clock, gate: false }), { chat: 'c2' }), /캐릭터가 한 말이 없어서/);
 });
 
