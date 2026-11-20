@@ -14,6 +14,7 @@ import { resolvePhoneProfile, ownerProfileBlock } from './phoneprofile.js';
 import { parseJson } from './phoneparse.js';
 import { nameKey } from './people.js';
 import { liveWorld, livePhone, liveMeta, liveKey, liveAtYear, isSnap, setStoryKeeper, startFresh, enqueueReplies } from './phone2store.js';
+import { emojiOf, reactOf, putReact, quickReacts, noteRecent, messageOf } from './phone2react.js';
 import { dropMessages, settleSwipes, swipeInfo, swipeTo, swipeList, dropSwipe, dropSwipes, dropOtherSwipes, koRows, koChunks, koInput, takeKo } from './phone2edit.js';
 import { AI_SYS_PHONE_KO, voiceRows, who as voiceWho } from './phonetr.js';
 import { askTranslator, glossaryEntries, glossaryIn } from './translate.js';
@@ -426,3 +427,23 @@ export async function liveRetranslate(real, roomId, ids) {
     await saveMeta();
     return { count, left };
 }
+
+// ---- 이모지 반응 (phone2react.js). 사람이 눌렀을 때만 해요.
+// 반응 달기 · 바꾸기 · 지우기: by(방에 있는 사람)의 반응을 e로. 같은 걸 다시 달거나 e가 null(또는 '')이면 지워요.
+// 이모지는 아무거나 되지만 한 덩어리만 (글자 · 여러 개는 안 돼요). 저장까지 해요  → 바뀐 그 말
+export async function liveReact(real, roomId, msgId, by, e = null) {
+    if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않아요');
+    const { w, room, x } = messageOf(real, roomId, msgId);
+    if (!room.members.some(n => liveKey(n) === liveKey(by))) throw new Error('이 방에 없는 사람이에요');
+    if (x.act) throw new Error('반응을 달 수 없는 말이에요');
+    const want = e === null || e === undefined || e === '' ? '' : emojiOf(e);
+    if (!want && e) throw new Error('이모지 하나만 달 수 있어요');
+    const had = reactOf(x, by)?.e || '', next = want && want !== had ? want : '';
+    if (putReact(x, by, next)) {
+        if (next && liveKey(by) === liveKey(w.persona)) noteRecent(w, next);
+        await saveMeta();
+    }
+    return x;
+}
+// 바로 누르는 반응 줄: 페르소나가 최근에 쓴 이모지부터, 모자라면 ❤️ 😂 😮 😢 😡 👍로 채워서 6개
+export const liveReactQuick = real => quickReacts(liveWorld(real));

@@ -77,6 +77,10 @@ test('폰 2 reply prompt: owner and persona by name, no "user", every listed app
     assert.match(s, /\n- "reply" in one of the languages you text in, or a mix of two naturally; very rarely, one you know but seldom use\. With no LANGUAGES, the language you really text Ren in\.\n- "ko": the same bubbles in Korean, the way VOICES says you sound; "" for a bubble already in Korean\.\n/);
     assert.match(s, /\n"does":\n- What you do or leave on the phone right now because of this moment\. Most moments leave something small; \[\] only when truly nothing\. One short line each, with what it needs \(an amount, a shop, a person\)\. Name the act itself \(not "checks the parking charge" but "pays 3 EUR for parking"\)\. What follows from it by itself \(receipts, mails, charges, tickets\) fills in later\.\n- Look at RECENT ON THE PHONE: you seldom reach for the same app again so soon \(a third note within the hour\); the moment may call for another\.\n/);
     assert.doesNotMatch(s, /Opening or checking/);
+    // (이모지 반응: 받는 것 MESSENGER에 반응이 있다고, 규칙 한 줄, 답 모양에 칸 하나)
+    assert.match(s, /\n- MESSENGER: your chat with Ren so far, newest last, each turn with its time and your status then, and after it in \[ \] the emoji anyone reacted to it with\./);
+    assert.match(s, /\n- Now and then, instead of texting or as well, you put one emoji on the last text someone sent: "react", who sent it and any emoji that fits how you feel right then\. Most turns: ""\.\n/);
+    assert.match(s, /\n {2}"ko": the same bubbles in Korean,\n {2}"react": "" or \{ "to": "Ren", "emoji": "…" \},\n/);
     // (run1 again: the apps' last times only; a list of what is on the phone drew more of the same)
     assert.match(s, /- RECENT ON THE PHONE: when you last used each app\./);
     assert.match(s, /\n- Bank, cards & wallet: when money moves, however small \(a parking fee, a newspaper\): you pay, send, get paid, top up, use a ticket\.\n/);

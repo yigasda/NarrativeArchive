@@ -1209,3 +1209,54 @@ test('한국어 다시 받기: 번역 모델에 그 말만 다시 물어서 한�
         assert.equal(a.ko, '겨우 일어났어.'); assert.equal(T.saves, kept);
     } finally { delete T.tr; delete T.gloss; delete T.trCalls; }
 });
+
+test('반응 달기: 달고 · 바꾸고 · 같은 걸 다시 달면 지우고 · null이면 지워요. 저장, 내가 쓴 것은 바로 누르는 줄 맨 앞으로', async () => {
+    const c = world();
+    send(c, '케이크 사 와');
+    T.replies = [{ state: '집', reply: ['Bring Kuchen mit'], ko: ['케이크 가져갈게'], does: [] }];
+    await G.liveGo(c.real);
+    const [mine, hers] = c.room.messages, saves = T.saves;
+    assert.deepEqual(G.liveReactQuick(c.real), ['❤️', '😂', '😮', '😢', '😡', '👍']);
+    assert.equal(await G.liveReact(c.real, c.room.id, hers.id, 'Ren', '❤️'), hers);
+    assert.deepEqual(hers.reacts.map(r => [r.by, r.e]), [['Ren', '❤️']]); assert.equal(T.saves, saves + 1);
+    await G.liveReact(c.real, c.room.id, hers.id, 'Ren', '🥺');
+    assert.deepEqual(hers.reacts.map(r => [r.by, r.e]), [['Ren', '🥺']]);
+    assert.deepEqual(G.liveReactQuick(c.real), ['🥺', '❤️', '😂', '😮', '😢', '😡']);
+    // 다음 답장 요청에 보여요
+    send(c, '언제 와');
+    T.replies = [{ state: '집', reply: ['곧'], does: [] }];
+    await G.liveGo(c.real);
+    assert.match(T.replyInput, / · Mara \(집\): Bring Kuchen mit \[Ren 🥺\]\n/);
+    // 같은 걸 다시 · null: 지워요. 내 말에도 달 수 있어요
+    await G.liveReact(c.real, c.room.id, hers.id, 'Ren', '🥺');
+    assert.equal(hers.reacts, undefined);
+    await G.liveReact(c.real, c.room.id, mine.id, 'Ren', '😂');
+    assert.equal((await G.liveReact(c.real, c.room.id, mine.id, 'Ren', null)).reacts, undefined);
+    // 못 달 때: 아무것도 안 바뀌고 저장도 안 해요
+    const kept = T.saves, was = JSON.stringify(c.room);
+    await assert.rejects(() => G.liveReact(c.real, c.room.id, hers.id, 'Ren', 'lol'), /이모지 하나만 달 수 있어요/);
+    await assert.rejects(() => G.liveReact(c.real, c.room.id, hers.id, 'Ren', '😂😂'), /이모지 하나만 달 수 있어요/);
+    await assert.rejects(() => G.liveReact(c.real, c.room.id, hers.id, 'Lio', '😂'), /이 방에 없는 사람이에요/);
+    await assert.rejects(() => G.liveReact(c.real, c.room.id, 'none', 'Ren', '😂'), /없는 말이에요/);
+    await assert.rejects(() => G.liveReact(c.real, 'nope', hers.id, 'Ren', '😂'), /없는 방이에요/);
+    c.room.messages.push({ id: 'act', n: 999, from: 'Mara', text: '', at: Date.now(), act: true });
+    await assert.rejects(() => G.liveReact(c.real, c.room.id, 'act', 'Ren', '😂'), /반응을 달 수 없는 말이에요/);
+    c.room.messages.pop();
+    // (지울 게 없으면 저장 안 해요)
+    await G.liveReact(c.real, c.room.id, hers.id, 'Ren', null);
+    assert.equal(T.saves, kept); assert.equal(JSON.stringify(c.room), was);
+    T.metadata = { narrative_archive: {} };
+    try { await assert.rejects(() => G.liveReact(c.real, c.room.id, hers.id, 'Ren', '😂'), /이 채팅이 열려 있지 않아요/); } finally { delete T.metadata; }
+});
+
+test('캐릭터의 반응: 답장의 "react"가 내 말에 달려요; 반응만 한 답장은 말이 안 생겨요', async () => {
+    const c = world();
+    const x = send(c, '오늘 고마웠어');
+    T.replies = [{ state: '집', reply: [], react: { to: 'Ren', emoji: '🥺' }, does: [] }];
+    await G.liveGo(c.real);
+    assert.deepEqual(c.room.messages, [x]);
+    assert.deepEqual(x.reacts.map(r => [r.by, r.e, r.via]), [['Mara', '🥺', undefined]]);
+    assert.equal(G.liveSwipeInfo(c.real, c.room.id), null);
+    // 지시문: 반응 칸 하나, 받는 것의 MESSENGER에 반응 설명
+    assert.ok(T.replySys.includes('"react": "" or { "to": "Ren", "emoji": "…" },'));
+});

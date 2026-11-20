@@ -7,6 +7,7 @@
 // 폰 1 · 아카이브는 읽지도 쓰지도 않아요. 폰 1은 이 파일을 부르지 않아요.
 
 import { liveWorld, liveKey } from './phone2store.js';
+import { liftReacts, putBack } from './phone2react.js';
 
 // lines · chars: 번역 요청 하나에 싣는 말의 수 · 글자 수; max: 한 번에 다시 번역하는 말의 수
 export const EDIT = { lines: 60, chars: 9000, max: 240 };
@@ -62,7 +63,7 @@ export function settleSwipes(m, roomId) {
     rec.list.splice(rec.at, 1);
     if (!rec.list.length) { delete room.swipes[anchor.id]; if (!Object.keys(room.swipes).length) delete room.swipes; return true; }
     const k = Math.max(0, rec.at - 1);
-    room.messages.push(...rec.list[k]); rec.list[k] = null; rec.at = k;
+    room.messages.push(...rec.list[k]); putBack(room, rec.list[k]); rec.list[k] = null; rec.at = k;
     return true;
 }
 // 맨 끝 답장의 넘기기 상태: 넘길 답장이 없으면 null
@@ -86,8 +87,10 @@ export function swipeTo(m, roomId, dir) {
     if (fresh && !answerers(w, room).length) throw new Error('이 방에는 답장할 폰이 없어요');
     if (fresh && rec.list.length >= SWIPE.max) throw new Error(`받아 둔 답장이 ${SWIPE.max}개예요. 몇 개 지운 뒤 다시 받아 주세요`);
     rec.list[rec.at] = tail;
+    // (the reactions that answer put on the others' messages go out with it, and the ones of the answer shown come back)
+    liftReacts(room, tail);
     room.messages.length = i + 1;
-    if (fresh) rec.list.push(null); else { room.messages.push(...rec.list[k]); rec.list[k] = null; }
+    if (fresh) rec.list.push(null); else { room.messages.push(...rec.list[k]); putBack(room, rec.list[k]); rec.list[k] = null; }
     rec.at = k;
     (room.swipes ||= {})[anchor.id] = rec;
     return { at: k + 1, count: rec.list.length, fresh };
@@ -114,7 +117,7 @@ export function dropSwipes(m, roomId, nos) {
     const keep = list.map((v, k) => k).filter(k => !gone.has(k));
     // (the one to show: the one shown now when it stays; else the nearest kept before it, else the first kept after)
     const show = gone.has(at) ? (keep.filter(k => k < at).pop() ?? keep[0]) : at;
-    if (gone.has(at)) { room.messages.length = i + 1; if (show !== undefined) room.messages.push(...list[show]); }
+    if (gone.has(at)) { liftReacts(room, tail); room.messages.length = i + 1; if (show !== undefined) { room.messages.push(...list[show]); putBack(room, list[show]); } }
     if (keep.length > 1) (room.swipes ||= {})[anchor.id] = { list: keep.map(k => (k === show ? null : list[k])), at: keep.indexOf(show) };
     else if (room.swipes) { delete room.swipes[anchor.id]; if (!Object.keys(room.swipes).length) delete room.swipes; }
     return { dropped: gone.size, at: keep.length ? keep.indexOf(show) + 1 : 0, count: keep.length };

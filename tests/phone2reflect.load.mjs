@@ -39,7 +39,7 @@ map['./phone2reflect.js'] = encoded(swap(await readFile(new URL('../src/phone2re
 export const PD = await import(map['./phonedata.js']);
 export const R = await import(map['./phone2reflect.js']);
 // 답장 돌리기(phone2go.js)도 같은 가짜 이웃으로: 답장 답은 T.replies에 넣어 둔 걸 차례로
-for (const f of ['phone2story.js', 'phone2live.js', 'phone2ask.js', 'phone2reply.js', 'phone2run.js', 'phone2digest.js', 'phone2back.js', 'phone2import.js', 'phone2edit.js']) map[`./${f}`] = href(f);
+for (const f of ['phone2story.js', 'phone2live.js', 'phone2ask.js', 'phone2reply.js', 'phone2run.js', 'phone2digest.js', 'phone2back.js', 'phone2import.js', 'phone2edit.js', 'phone2react.js']) map[`./${f}`] = href(f);
 // (the phone's translator file: its instruction and its voice-table readers, as they are in phonetr.js — the file itself
 // needs the translator's settings and the screen)
 const trFile = await readFile(new URL('../src/phonetr.js', import.meta.url), 'utf8');

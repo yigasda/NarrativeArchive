@@ -18,10 +18,11 @@ export function languagesBlock(owner, langs) {
     return ['[LANGUAGES]', one(owner), ...(texts.length ? [`- texts in: ${texts.join(', ')}`] : []), ...(knows.length ? [`- knows but seldom uses: ${knows.join(', ')}`] : [])].join('\n');
 }
 // [MESSENGER]: one line a bubble, newest last. Another's: "MM-DD HH:MM · Ren: words"; the owner's carries their status
-// then: "MM-DD HH:MM · Mara (place · doing · ~until): words". rows: [{ at: "MM-DD HH:MM", from, text, state }]
+// then: "MM-DD HH:MM · Mara (place · doing · ~until): words"; the reactions on a bubble after it: " [Ren ❤️]".
+// rows: [{ at: "MM-DD HH:MM", from, text, state, reacts ("Ren ❤️, Ivo 😂") }]
 export function messengerBlock(owner, rows) {
     const me = one(owner).toLowerCase();
-    const lines = (Array.isArray(rows) ? rows : []).filter(x => one(x?.text)).map(x => `${one(x.at)} · ${one(x.from)}${one(x.from).toLowerCase() === me && one(x.state) ? ` (${one(x.state)})` : ''}: ${one(x.text)}`);
+    const lines = (Array.isArray(rows) ? rows : []).filter(x => one(x?.text)).map(x => `${one(x.at)} · ${one(x.from)}${one(x.from).toLowerCase() === me && one(x.state) ? ` (${one(x.state)})` : ''}: ${one(x.text)}${one(x.reacts) ? ` [${one(x.reacts)}]` : ''}`);
     return lines.length ? `[MESSENGER]\n${lines.join('\n')}` : '';
 }
 // [NOW]: one line. last: the owner's last status (no clock in it); today · ahead: calendar lines; recorded: what the

@@ -257,7 +257,7 @@ test('답 넣기: 번호대로 그 말의 한국어만 바꿔요. 답에 없는 
 
 test('이 파일은 폰 2 저장 자리만 불러요; 모델 · 저장은 안 불러요; 폰 1 파일은 이 파일을 안 불러요', async () => {
     const src = await readFile(new URL('phone2edit.js', SRC), 'utf8');
-    assert.deepEqual([...src.matchAll(/from '([^']+)'/g)].map(x => x[1]), ['./phone2store.js']);
+    assert.deepEqual([...src.matchAll(/from '([^']+)'/g)].map(x => x[1]), ['./phone2store.js', './phone2react.js']);
     assert.doesNotMatch(src, /saveMeta|ctx\(|askDraft|askTranslator|boundary/);
     for (const f of (await readdir(SRC)).filter(f => f.endsWith('.js') && !/^phone2/.test(f) && f !== 'phone.js')) assert.doesNotMatch(await readFile(new URL(f, SRC), 'utf8'), /phone2edit/, f);
 });

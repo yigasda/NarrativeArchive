@@ -19,7 +19,7 @@ const ANSWER = { state: '14:02 · office · canteen · ~14:30', reply: ['Oui mam
 
 test('답을 말풍선으로: 번호 · 실제 시각 · 한국어 · 상태(시각 뺀 것), 한 일은 마지막 말풍선에', () => {
     const { m, r } = world();
-    assert.deepEqual(R.takeReply(m, 'mara', r.id, ANSWER, { now: T0 + 60_000 }), { said: 2, does: 3, state: 'office · canteen · ~14:30' });
+    assert.deepEqual(R.takeReply(m, 'mara', r.id, ANSWER, { now: T0 + 60_000 }), { said: 2, does: 3, state: 'office · canteen · ~14:30', react: '' });
     const [, a, b] = r.messages;
     assert.deepEqual([a.n, a.from, a.text, a.ko, a.state, a.at, a.does], [2, 'Mara', 'Oui maman.', '응 엄마.', 'office · canteen · ~14:30', T0 + 60_000, undefined]);
     assert.deepEqual([b.n, b.text, b.ko, b.at], [3, '방금 먹었어', undefined, T0 + 60_001]);
@@ -44,7 +44,7 @@ test('글로 온 답도 읽어요(앞뒤 말 · 코드 울타리), 못 읽으면
 
 test('읽고 답 안 함: 말풍선 없이 한 일 · 상태만 남아요(act); 아무것도 없으면 읽음 표시만; 이미 한 말은 또 안 해요', () => {
     const { m, r } = world();
-    assert.deepEqual(R.takeReply(m, 'Mara', r.id, { state: 'tram', reply: [], does: [{ app: 'Diary', what: 'writes it down' }] }, { now: T0 + 5 }), { said: 0, does: 1, state: 'tram' });
+    assert.deepEqual(R.takeReply(m, 'Mara', r.id, { state: 'tram', reply: [], does: [{ app: 'Diary', what: 'writes it down' }] }, { now: T0 + 5 }), { said: 0, does: 1, state: 'tram', react: '' });
     assert.deepEqual([r.messages[1].act, r.messages[1].text, r.messages[1].does.length, r.messages[1].state], [true, '', 1, 'tram']);
     assert.match(feedText(m, 'Mara', feedRows(m, 'Mara'), { tz: 'UTC' }), /— tram\n\[#1\] Ren: 점심 먹었어\?\n\[#2\] Mara \[Diary\]: writes it down$/);
     const n = r.messages.length;

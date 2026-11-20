@@ -30,7 +30,7 @@ const ask = (x, o = {}) => G.gatherReply(x.m, 'Mara', x.r.id, { now: at('2026-11
 
 test('메신저 대화: 주인이 있는 곳의 시각, 주인 말엔 그때 상태', () => {
     const d = ask(world());
-    assert.deepEqual(d.messenger, [{ at: '11-06 12:40', from: 'Ren', text: '점심 먹었어?', state: undefined }, { at: '11-06 12:41', from: 'Mara', text: 'Juste une quiche.', state: 'office · canteen · ~13:15' }, { at: '11-06 14:00', from: 'Ren', text: '치과 다녀왔어', state: undefined }]);
+    assert.deepEqual(d.messenger, [{ at: '11-06 12:40', from: 'Ren', text: '점심 먹었어?', state: undefined, reacts: '' }, { at: '11-06 12:41', from: 'Mara', text: 'Juste une quiche.', state: 'office · canteen · ~13:15', reacts: '' }, { at: '11-06 14:00', from: 'Ren', text: '치과 다녀왔어', state: undefined, reacts: '' }]);
     assert.equal(d.owner, 'Mara');
     assert.equal(d.persona, 'Ren');
 });

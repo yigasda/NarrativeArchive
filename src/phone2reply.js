@@ -8,7 +8,7 @@ You are ${O}. ${P} is texting you on MESSENGER. Write what you text back from wh
 
 YOU GET
 - LANGUAGES (sometimes): the languages you text in and those you know but seldom use, as set on the phone.
-- MESSENGER: your chat with ${P} so far, newest last, each turn with its time and your status then. Sometimes CHAT SUMMARY: the days before.
+- MESSENGER: your chat with ${P} so far, newest last, each turn with its time and your status then, and after it in [ ] the emoji anyone reacted to it with. Sometimes CHAT SUMMARY: the days before.
 - NOW: where you are and what you are doing by your last status, your calendar today, what your phone last recorded, and whether you and ${P} have talked before.
 - OWNER'S CLOCK: where you are, your time now, and for the other saved cities and the people elsewhere, how many hours ahead or behind they are and their time now.
 - WEATHER NOW: the real weather where you are.
@@ -24,6 +24,7 @@ TEXTING
 - Nothing happens that the chat and NOW don't set up.
 - How you text ${P}, your words and how formal you are with them, comes from your card and your texts to them so far, kept as it is.
 - Not every text needs an answer or a question back. You may leave it on read: "reply": [].
+- Now and then, instead of texting or as well, you put one emoji on the last text someone sent: "react", who sent it and any emoji that fits how you feel right then. Most turns: "".
 - What SITUATIONS leaves "open" and what OWNER DOESN'T KNOW holds, you don't know: asked, you don't know. Weather is WEATHER NOW.
 - "reply" in one of the languages you text in, or a mix of two naturally; very rarely, one you know but seldom use. With no LANGUAGES, the language you really text ${P} in.
 - "ko": the same bubbles in Korean, the way VOICES says you sound; "" for a bubble already in Korean.
@@ -56,6 +57,7 @@ JSON (one object, nothing before or after it)
 { "state": "HH:MM · place · doing · ~until",
   "reply": the words you type now, one bubble each, none already in MESSENGER,
   "ko": the same bubbles in Korean,
+  "react": "" or { "to": "${P}", "emoji": "…" },
   "does": [{ "app": "Delivery", "what": "orders pad thai from the place downstairs, 14 EUR" }] }`;
 }
 // the apps "does" may name, the same as the reflection's record kinds can show (tests/phone2live.test.mjs keeps them in step)

@@ -3,6 +3,7 @@
 
 import { liveKey, liveWorld, liveNo, readLive, nextJob, finishJob, reviveJobs } from './phone2store.js';
 import { PHONE2_APPS, phone2Ko } from './phone2reply.js';
+import { replyReact, putReact } from './phone2react.js';
 
 const one = v => String(v ?? '').replace(/\s+/g, ' ').trim();
 const same = (a, b) => !!liveKey(a) && liveKey(a) === liveKey(b);
@@ -24,7 +25,8 @@ const appOf = a => PHONE2_APPS.find(x => x.toLowerCase() === one(a).toLowerCase(
 // 7-2. the model's answer into the room: each bubble a message of the owner's (its number, the real moment, its Korean,
 // the owner's state), what they did on the phone on the last one. No bubble but something done or a new state: one
 // message with no words (act: true; the messenger doesn't draw it, the reflection reads its lines). A bubble the owner
-// already said among their newest ones is not said again. The owner has read the room. Returns { said, does, state }.
+// already said among their newest ones is not said again. "react": an emoji on someone's last text (phone2react.js). The
+// owner has read the room. Returns { said, does, state, react }.
 // Throws when the answer can't be read (nothing is put in).
 export function takeReply(m, owner, roomId, answer, { now = Date.now(), parse = null } = {}) {
     const w = liveWorld(m), room = w?.messenger?.rooms?.[roomId];
@@ -37,13 +39,18 @@ export function takeReply(m, owner, roomId, answer, { now = Date.now(), parse = 
     const bubbles = raw.map((text, i) => ({ text: text.slice(0, REPLY_MAX.chars), ko: one(ko[i]) === one(text) ? '' : String(ko[i] ?? '').trim().slice(0, REPLY_MAX.chars) })).filter(b => one(b.text) && !had.has(one(b.text)));
     const does = (Array.isArray(o.does) ? o.does : []).map(d => ({ app: appOf(d?.app), what: one(d?.what).slice(0, REPLY_MAX.what) })).filter(d => d.app && d.what).slice(0, REPLY_MAX.does);
     const state = stateRest(o.state);
+    // (an emoji on someone's last text: on the room as it was before this answer)
+    const react = o.react === undefined || o.react === null || o.react === '' ? null : replyReact(o.react, { owner: name, persona: w.persona, members: room.members, messages: room.messages });
     const out = [], msg = (text, extra, k) => ({ id: `t${now.toString(36)}${k}${Math.random().toString(36).slice(2, 6)}`, n: liveNo(w), from: name, text, at: now + k, ...(state ? { state } : {}), ...extra });
     bubbles.forEach((b, k) => out.push(msg(b.text, b.ko ? { ko: b.ko } : {}, k)));
-    if (!out.length && (does.length || state)) out.push(msg('', { act: true }, 0));
+    // (an answer of an emoji alone, with nothing done on the phone, leaves no message: it is no answer to swipe or throw away)
+    if (!out.length && (does.length || (state && !react))) out.push(msg('', { act: true }, 0));
     if (does.length && out.length) out[out.length - 1].does = does;
     room.messages.push(...out);
+    // (one with words: the reaction goes with them, out and back when the answer is swiped; one alone stays)
+    if (react) putReact(react.on, name, react.e, { at: now, via: out.map(x => x.id) });
     readLive(m, roomId, name, now + out.length);
-    return { said: bubbles.length, does: does.length, state };
+    return { said: bubbles.length, does: does.length, state, react: react?.e || '' };
 }
 
 // 7-3. the line: one job at a time, in order, until none waits. A reply job: gather the request (gather(job) → { system,

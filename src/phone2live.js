@@ -5,6 +5,7 @@
 import { liveKey, liveWorld, livePhone, numberLive, isSnap } from './phone2store.js';
 import { liveWall } from './phone2clock.js';
 import { digestOf } from './phone2digest.js';
+import { reactLine } from './phone2react.js';
 import { gapDays } from './phoneparse.js';
 
 const one = v => String(v ?? '').replace(/\s+/g, ' ').trim();
@@ -79,7 +80,7 @@ export function gatherReply(m, owner, roomId, { now = Date.now(), tz = 'UTC', de
         langs: p.langs?.texts?.length || p.langs?.knows?.length ? p.langs : null,
         // (the talk summarized already goes as CHAT SUMMARY; the rest as it was said)
         summary: digestOf(room),
-        messenger: (room.messages || []).filter(x => !(x.n <= (room.digest?.upto ?? -1))).slice(-LIVE_ASK.bubbles).map(x => ({ at: wall(x.at), from: x.from, text: x.call ? `(call ${Math.max(0, Math.round(Number(x.call.min) || 0))} min)` : x.text, state: x.state })),
+        messenger: (room.messages || []).filter(x => !(x.n <= (room.digest?.upto ?? -1))).slice(-LIVE_ASK.bubbles).map(x => ({ at: wall(x.at), from: x.from, text: x.call ? `(call ${Math.max(0, Math.round(Number(x.call.min) || 0))} min)` : x.text, state: x.state, reacts: reactLine(x) })),
         now: {
             last: lastState || one(deps.place?.(p)),
             today: evs.filter(e => one(e.date) === today).sort(byTime).map(e => line(e, false)), ahead: ahead.map(e => line(e, true)),
