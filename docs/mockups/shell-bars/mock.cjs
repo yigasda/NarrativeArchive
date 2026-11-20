@@ -219,6 +219,8 @@ const INK = { home: '#1b1d22', bank: '#fff', orbitroom: '#fff', diary: '#1b1d22'
         await p.evaluate(({ html }) => { document.getElementById('mk_dev')?.remove(); const d = document.getElementById('na_phl'); d.insertAdjacentHTML('beforeend', html); const t = d.querySelector('.ax_sb .cg_num, .cg_sb .cg_num'); d.style.setProperty('--ct', JSON.stringify(t ? t.textContent : '')); }, { html: DEV(INK[v], NOSB[o]) });
         await p.waitForTimeout(300);
         await p.screenshot({ path: path.join(__dirname, `${o}_${v}.png`) });
+        if (o === 'R' && v === 'orbitroom') { const bx = await p.locator('.na_ph_frame .ob_b.th').nth(3).boundingBox(); await p.mouse.move(bx.x + 30, bx.y + 15); await p.mouse.down(); await p.waitForTimeout(700); await p.mouse.up(); await p.waitForTimeout(350); await p.screenshot({ path: path.join(__dirname, `${o}_${v}_held.png`) });
+          await p.click('.na_ph_frame .na_ob_mpick'); await p.waitForTimeout(350); await p.screenshot({ path: path.join(__dirname, `${o}_${v}_pick.png`) }); await p.click('.na_ph_frame .na_ob_pquit'); await p.waitForTimeout(300); }
         if (o === 'R' && v === 'orbitroom') { await p.evaluate(() => { const m = document.querySelector('.na_ph_frame .ob_msgs'); m.scrollTop = m.scrollTop - 170; }); await p.waitForTimeout(250); await p.screenshot({ path: path.join(__dirname, `${o}_${v}_up.png`) }); }
       }
     }

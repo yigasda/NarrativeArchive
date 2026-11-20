@@ -88,18 +88,17 @@
 .ax .ob_msgs { -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 22px, #000 calc(100% - 18px), transparent 100%); mask-image: linear-gradient(to bottom, transparent 0, #000 22px, #000 calc(100% - 18px), transparent 100%); }
 .ax .ob_chip { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; color: #fff; background: rgba(20, 22, 30, 0.26); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius: 999px; padding: 5px 12px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2); --axfs: 12px; }
 .ax .ob_msgs { padding: 0 14px; }
-.ax .ob_mi { display: flex; flex-direction: column; gap: 6px; margin-top: auto; padding: 12px 0 20px; }
+.ax .ob_mi { display: flex; flex-direction: column; gap: 3px; margin-top: auto; padding: 12px 0 20px; } .ax .ob_mi > .ob_b.g1:not(:first-child), .ax .ob_mi > .ob_prow:has(> .ob_b.g1) { margin-top: 7px; } .ax .ob_mi > :is(.ob_day, .ob_sn, .ob_pill) + .ob_b.g1 { margin-top: 0; }
 .ax .ob_msgs.ro .ob_mi { padding-bottom: 40px; }
 .ax .ob_day { align-self: center; font-size: 11.5px; color: #fff; opacity: 0.92; margin: 2px 0 4px; text-shadow: 0 1px 6px rgba(40, 40, 90, 0.2); --axfs: 11.5px; }
-.ax .ob_b { max-width: 76%; padding: 10px 14px; border-radius: 22px; font-size: 15px; line-height: 1.38; overflow-wrap: anywhere; white-space: pre-wrap; --axfs: 15px; }
-.ax .ob_b.th { align-self: flex-start; border-bottom-left-radius: 7px; color: #1b1d24; }
-.ax .ob_b.me { align-self: flex-end; border-bottom-right-radius: 7px; background: rgba(20, 22, 30, 0.78); color: #fff; backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 8px 22px rgba(20, 22, 40, 0.18); }
-.ax .ob_ko { display: block; font-size: 12.5px; line-height: 1.4; margin-top: 5px; padding-top: 5px; border-top: 1px solid rgba(30, 32, 40, 0.1); color: rgba(30, 32, 40, 0.62); cursor: pointer; --axfs: 12.5px; }
-.ax .ob_b.me .ob_ko { border-top-color: rgba(255, 255, 255, 0.18); color: rgba(255, 255, 255, 0.72); }
+.ax .ob_b { position: relative; max-width: 76%; padding: 7px 12px; border-radius: 18px; font-size: 15px; line-height: 1.38; overflow-wrap: anywhere; white-space: pre-wrap; --axfs: 15px; }
+.ax .ob_b.th { align-self: flex-start; margin-left: 44px; color: #1b1d24; } .ax .ob_b.th:not(.g1) { border-top-left-radius: 6px; } .ax .ob_b.th:not(.gL) { border-bottom-left-radius: 6px; } .ax .ob_b.me:not(.g1) { border-top-right-radius: 6px; } .ax .ob_b.me:not(.gL) { border-bottom-right-radius: 6px; } .ax .ob_av { position: absolute; left: -42px; bottom: 0; line-height: 0; } .ax .ob_msgs.picking .ob_b.th { margin-left: 0; } .ax .ob_msgs.picking .ob_av { display: none; } .ax .ob_pill:not(.me) { margin-left: 44px; } .ax .ob_msgs.picking .ob_swd { margin-left: 52px; }
+.ax .ob_b.me { align-self: flex-end; background: rgba(20, 22, 30, 0.78); color: #fff; backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 8px 22px rgba(20, 22, 40, 0.18); }
+.ax .ob_ko { display: block; font-size: 12px; line-height: 1.4; margin-top: 2px; color: rgba(30, 32, 40, 0.62); cursor: pointer; --axfs: 12px; }
+.ax .ob_b.me .ob_ko { color: rgba(255, 255, 255, 0.72); } .ax .ob_tin { float: right; margin: 6px -3px -3px 10px; font-size: 10.5px; line-height: 1.3; color: rgba(255, 255, 255, 0.58); white-space: nowrap; --axfs: 10.5px; } .ax .ob_tin b { color: #fff; font-weight: 700; }
 .ax .ob_kof { display: flex; align-items: center; gap: 3px; margin-top: 5px; font-size: 11.5px; font-weight: 600; color: #4c5ea8; cursor: pointer; --axfs: 11.5px; }
 .ax .ob_b.me .ob_kof { color: rgba(255, 255, 255, 0.75); }
-.ax .ob_rd { align-self: flex-end; font-size: 10.5px; color: #fff; opacity: 0.85; margin: -2px 6px 2px; --axfs: 10.5px; }
-.ax .ob_rd b { font-weight: 700; }
+.ax .ob_rd { align-self: flex-end; font-size: 10.5px; color: #fff; opacity: 0.85; margin: 1px 6px 2px; --axfs: 10.5px; }
 .ax .ob_typ { align-self: flex-start; display: flex; gap: 4px; padding: 13px 16px; border-radius: 22px; border-bottom-left-radius: 7px; }
 .ax .ob_typ i { width: 7px; height: 7px; border-radius: 50%; background: rgba(30, 32, 40, 0.45); animation: ob_typ 1.2s ease-in-out infinite; }
 .ax .ob_typ i:nth-child(2) { animation-delay: 0.15s; } .ax .ob_typ i:nth-child(3) { animation-delay: 0.3s; }
@@ -167,7 +166,7 @@
 .ax .ob_pill .red { color: #ff8a7a; --axfg: #ff8a7a; }
 .ax .ob_wait { cursor: default; opacity: 0.75; }
 .ax .na_ob_sw { touch-action: pan-y; }
-.ax .ob_swd { align-self: flex-start; display: flex; gap: 5px; margin: 2px 0 2px 14px; padding: 6px 0; cursor: pointer; }
+.ax .ob_swd { align-self: flex-start; display: flex; gap: 5px; margin: 2px 0 2px 56px; padding: 6px 0; cursor: pointer; }
 .ax .ob_swd i { width: 6px; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.55); }
 .ax .ob_swd i.on { width: 16px; background: #fff; }
 .ax .ob_prow { display: flex; align-items: center; gap: 8px; }
