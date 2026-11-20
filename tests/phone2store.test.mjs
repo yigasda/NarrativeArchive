@@ -114,17 +114,15 @@ test('폰 2 저장: an m.live it can\'t read is left alone, never written over',
 const rich = () => ({ ...phone1(), phoneProfiles: { mara: { label: 'comfortable' } }, phonePre: { ivo: { owner: 'Ivo', year: 2026 } },
     phoneLore: ['World'], phoneLoreOff: { World: ['u1'] }, phoneScreenHolder: 'Mara', lastPhoneOwner: 'Mara', phoneStoryScope: 's1', phoneStoryRun: 3,
     glossary: 'Mara = 마라', dateOrder: 'md' });
-const MARK0 = { ranges: { '': [[0, 100]] }, titles: [], rawFrom: 101 };
 const objects = (v, out = new Set()) => { if (v && typeof v === 'object' && !out.has(v)) { out.add(v); for (const x of Object.values(v)) objects(x, out); } return out; };
 
 test('폰 2 이야기에서 시작: a deep copy of 폰 1\'s story keys, none of its objects shared, 폰 1 unchanged', () => {
     const m = rich(), before = JSON.stringify(m), mine = objects(Object.fromEntries(Object.keys(m).filter(k => k !== 'live').map(k => [k, m[k]])));
-    assert.throws(() => L.startFromStory(m, { persona: 'Ren', story: MARK0 }), /어느 메시지까지/);
-    assert.throws(() => L.startFromStory(m, { persona: 'Ren', upto: 482 }), /이야기 표시/);
+    assert.throws(() => L.startFromStory(m, { persona: 'Ren' }), /어느 메시지까지/);
     assert.equal(JSON.stringify(m), before);
-    const w = L.startFromStory(m, { persona: 'Ren', upto: 482, scope: 's1', now: 5, story: MARK0 });
-    assert.deepEqual(w.story, MARK0);
-    assert.notEqual(w.story, MARK0);
+    const w = L.startFromStory(m, { persona: 'Ren', upto: 482, scope: 's1', now: 5 });
+    // (이야기 표시는 더 안 남겨요: 이야기는 요약본에 있어요)
+    assert.ok(!('story' in w));
     assert.deepEqual([w.from, w.storyUpto, w.scope, w.lastOwner], ['story', 482, 's1', 'Mara']);
     // (a copy of each phone; 롤플에 넣기 starts off on the copy, whatever it was on 폰 1)
     assert.deepEqual(w.phones, Object.fromEntries(Object.entries(m.phones).map(([k, p]) => [k, { ...p, inject: false }])));
@@ -144,14 +142,14 @@ test('폰 2 이야기에서 시작: a deep copy of 폰 1\'s story keys, none of 
 test('폰 2 처음부터 시작: an empty world, nothing of 폰 1 in it', () => {
     const m = rich(), before = JSON.stringify(m);
     const w = L.startFresh(m, { persona: 'Ren', scope: 's1' });
-    assert.deepEqual([w.from, w.storyUpto, w.story, w.phones, w.finance, w.profiles, w.pre, w.lore, w.loreOff, w.lastOwner], ['fresh', null, null, {}, null, {}, {}, [], {}, '']);
+    assert.deepEqual([w.from, w.storyUpto, w.snap, w.phones, w.finance, w.profiles, w.pre, w.lore, w.loreOff, w.lastOwner], ['fresh', null, undefined, {}, null, {}, {}, [], {}, '']);
     const { live, ...rest } = m;
     assert.equal(JSON.stringify(rest), before);
 });
 
 test('폰 2 이야기에서 시작: a 폰 1 with only some keys copies those, the rest empty', () => {
     const m = { phones: {}, text: '' };
-    const w = L.startFromStory(m, { persona: 'Ren', upto: 0, story: { ranges: {}, titles: [], rawFrom: 0 } });
+    const w = L.startFromStory(m, { persona: 'Ren', upto: 0 });
     assert.deepEqual([w.phones, w.finance, w.profiles, w.lore, w.lastOwner], [{}, null, {}, [], '']);
 });
 
@@ -241,9 +239,10 @@ test('폰 2 메신저: 보내기 · 읽음 · 안 읽음 · 단체방 이름', (
 // 5-2: 폰 1's story begins anew
 const withLive = () => {
     const m = rich();
-    L.startFromStory(m, { persona: 'Lio', upto: 150, story: MARK0, dayShift: 3 });
+    L.startFromStory(m, { persona: 'Lio', upto: 150, dayShift: 3 });
     L.archiveWorld(m);
-    const w = L.startFromStory(m, { persona: 'Lio', upto: 150, story: MARK0, dayShift: 3 });
+    const w = L.startFromStory(m, { persona: 'Lio', upto: 150, dayShift: 3 });
+    w.snap = { v: 1, at: 0, upto: 150, text: '## #0–#150 — s\n- a\n', recent: [], made: {} };
     const room = L.ensureRoom(m, ['Ren']);
     room.messages.push({ from: 'Lio', text: 'hello' }, { from: 'Ren', text: 'hi' });
     L.enqueueJob(m, { kind: 'reply', owner: 'Ren' });
@@ -255,7 +254,7 @@ test('새 이야기로 비우기 · 대화만 남기기: 메신저만 남고, �
     assert.equal(L.resetLive(m), 'chats');
     const n = L.liveWorld(m);
     assert.notEqual(n.id, w.id);
-    assert.deepEqual([n.from, n.storyUpto, n.story, n.dayShift, n.persona, n.lastOwner], ['fresh', null, null, 0, 'Lio', '']);
+    assert.deepEqual([n.from, n.storyUpto, n.snap, n.dayShift, n.persona, n.lastOwner], ['fresh', null, undefined, 0, 'Lio', '']);
     assert.deepEqual([n.phones, n.finance, n.profiles, n.pre, n.lore, n.loreOff], [{}, null, {}, {}, [], {}]);
     assert.deepEqual(L.liveRooms(m).map(r => r.messages.map(x => x.text)), [['hello', 'hi']]);
     assert.equal(L.liveRooms(m)[0].id, room.id);
@@ -324,7 +323,7 @@ test('브라우저 저장: 폰 2는 채팅 · 세계마다 따로 된 키 (폰 1
 
 test('메신저 번호: 이야기에서 시작한 폰 2는 이야기의 마지막 번호 다음부터 (처음부터 시작한 폰 2는 1번부터)', () => {
     const m = rich();
-    L.startFromStory(m, { persona: 'Lio', upto: 150, story: MARK0 });
+    L.startFromStory(m, { persona: 'Lio', upto: 150 });
     const r = L.ensureRoom(m, ['Ren']);
     assert.equal(L.sendLive(m, r.id, 'a').n, 151);
     r.messages.push({ id: 'x', from: 'Ren', text: 'b', at: Date.now() + 5 });

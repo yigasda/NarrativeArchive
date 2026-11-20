@@ -5,7 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import * as L from '../src/phone2store.js';
-import { T, INV, I2, TR, V } from './phone2reflect.load.mjs';
+import { T, INV, I2, TR, V, snapFor } from './phone2reflect.load.mjs';
 
 const src = f => readFile(new URL(`../src/${f}`, import.meta.url), 'utf8');
 const phone = () => ({ owner: 'Mara', now: '11-12 21:30', year: 2026, country: 'KR', contacts: [{ name: 'Ivo' }], threads: [{ with: 'Ivo', messages: [{ from: 'Ivo', time: '11-12 20:00', text: 'hi' }] }], calls: [], photos: [], notes: [], searches: [], events: [], posts: [], mails: [], diary: [], voice: [],
@@ -15,7 +15,7 @@ function world() {
     T.chat = ['옛날 이야기 하나', '옛날 이야기 둘', '시작 직전 이야기', '시작 뒤 롤플 하나', '시작 뒤 롤플 둘'].map((mes, i) => ({ name: i % 2 ? 'Mara' : 'Ren', is_user: !(i % 2), mes, extra: {} }));
     T.recent = ['[#1] Mara: 옛날 이야기 둘', '[#2] Ren: 시작 직전 이야기', '[#3] Mara: 시작 뒤 롤플 하나', '[#4] Ren: 시작 뒤 롤플 둘'];
     const real = { phones: { mara: phone() }, text: '' };
-    L.startFromStory(real, { persona: 'Ren', upto: 2, scope: 'test', now: 1763000000000, story: { ranges: {}, titles: [], rawFrom: 0, own: [''] } });
+    L.startFromStory(real, { persona: 'Ren', upto: 2, scope: 'test', now: 1763000000000 }).snap = snapFor(real, 2);
     const room = L.ensureRoom(real, ['Mara']);
     L.sendLive(real, room.id, '메신저로 한 말');
     const d = L.liveMeta(real, { now: () => '11-14 16:05' });

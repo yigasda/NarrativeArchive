@@ -1,6 +1,7 @@
 // 폰 2(실시간)의 폰 다시 만들기 (폰 전체 · 고른 앱). phonedata.js의 makePhone · makePhone0 · phoneRequest · keepPre · preClock을
 // 줄 그대로 옮긴 것이고, 다른 곳은 이것뿐이에요.
-//   읽는 범위 · 읽은 자리 · 두 번째 차례: 실시간 것 (phone2req.js). 롤플은 시작한 곳까지만, 읽은 자리는 메신저 번호
+//   읽는 범위 · 읽은 자리: 실시간 것 (phone2req.js). 이야기는 요약본의 글이고 롤플 채팅은 안 읽어요(그래서 폰 1의
+//   두 번째 차례가 없어요). 읽은 자리는 메신저 번호
 //   실시간 폰은 늘 읽은 자리를 지키며 다시 만들어요: 메신저 읽은 자리 · 폰 시각 · 고른 연도 · 상황(situations)이 그대로
 //   복구 기록은 실시간 서랍의 것만 (폰 1의 기록은 안 건드려요)
 //   위치 읽기 · 연도: 실시간 것 (phone2where.js · phone2year.js). 롤플 상태창의 연도 · 시각은 안 읽어요
@@ -15,11 +16,11 @@ import { parseSections, splitTail } from './sections.js';
 import { worldText } from './world.js';
 import { withDateOrder, withDateOrderSync } from './phoneparse.js';
 import { busy, newSync, journalRead, journalWrite } from './phonesync.js';
-import { askDraft, AI_SYS_PHONE, AI_SYS_PHONE_APPS, AI_SYS_PHONE_UPDATE, CHAT_TOKENS, CAP, COUNTRIES, LISTS, REMAKE, makingNow, dateOrderOf, ensureScreenHolder, storyRun, stillRun,
+import { askDraft, AI_SYS_PHONE, AI_SYS_PHONE_APPS, AI_SYS_PHONE_UPDATE, CAP, COUNTRIES, LISTS, REMAKE, makingNow, dateOrderOf, ensureScreenHolder, storyRun, stillRun,
     markNow, markAfter, archiveEnd, chatEnd, nowAt, phoneAt, loreFor, glossAka, seedPre, carryEdits, phonePre, sameBinding, preEdited, stTime, storyDayOf, todayWall, parsePhone, validateReflectionClock,
-    jsonOf, soFarHead, mergePhone, carryOver, secFirst, secEnd, lastEnd, fresh, ensureIds, turnsNote, readNote, isOwnerName, strictSame, hasRow, hm, recentPhoneText, archiveBlock, afterBlock,
-    noArchive, phoneForModel, aroundBlock, blindBlock, namesBlock, onlyAsk } from './phonedata.js';
-import { liveWindowOf, liveReadMark, liveSecondTurn, liveTold, liveFillClock, liveYearBlock, liveSnapOf, liveBefore, liveArchiveFor, needLive } from './phone2req.js';
+    jsonOf, mergePhone, carryOver, secFirst, secEnd, lastEnd, fresh, ensureIds, isOwnerName, strictSame, hasRow, hm, 
+    phoneForModel, aroundBlock, blindBlock, namesBlock, onlyAsk } from './phonedata.js';
+import { liveWindowOf, liveReadMark, liveFillClock, liveYearBlock, liveBefore, liveArchiveFor, liveStoryReady } from './phone2req.js';
 import { liveTryWhere } from './phone2where.js';
 import { liveEnsureYear } from './phone2year.js';
 import { liveNowText } from './phone2store.js';
@@ -29,8 +30,8 @@ function livePhoneRequest(m, owner, p = null, lore = '', only = null, profile = 
     // (made again keeping its reading, a phone with no 위치 정보 read before it: its own time still)
     const cur0 = m.phones?.[nameKey(owner)], q0 = p || (pre ? (!anew && cur0?.now ? { ...pre, now: cur0.now } : pre) : cur0) || { owner }, q = anew && q0.now ? { ...q0, now: '' } : q0;
     const world = worldText(m), upto = nowAt(gap);
-    const recent = liveSnapOf(m) ? liveBefore(m, 6, 6000) : recentPhoneText(6, { upto, maxChars: 6000 });
-    const ar = liveArchiveFor(m, p ? p.upto ?? -1 : -1, nowAt(gap), !gap?.cut);
+    const recent = liveBefore(m, 6, 6000);
+    const ar = liveArchiveFor(m, p ? p.upto ?? -1 : -1);
     const now = p ? JSON.stringify(phoneForModel(p)) : '';
     return [
         p ? `[PHONE NOW]\n${now}` : '', ((at, st) => {
@@ -42,13 +43,14 @@ function livePhoneRequest(m, owner, p = null, lore = '', only = null, profile = 
             return liveFillClock(m, q, story || (day ? `${day} 12:00` : todayWall()), { story: true, quiet: story ? false : day ? 'day' : true });
         })(upto == null ? undefined : liveNowText(m, q) || undefined, null),
         !p && m.phones?.[nameKey(owner)]?.device ? `[DEVICE — locked]\n${JSON.stringify(m.phones[nameKey(owner)].device)}` : '',
-        archiveBlock(m, ar.text || '(nothing new)', `ARCHIVE${p ? ' — the sections since PHONE NOW' : ''}`, CHAT_TOKENS.phone, upto),
+        // (폰 2: the story is its snapshot's text and nothing else; the role-play chat never stands in for it)
+        `[ARCHIVE${p ? ' — the sections since PHONE NOW' : ''}]\n${ar.text || '(nothing new)'}`,
         world ? `[WORLD]\n${world}` : '',
         lore ? `[LOREBOOK]\n${lore}` : '',
         aroundBlock(q),
         // (폰 2: after the story it began from, the messenger's talk its reflection has read — the summaries of the old
         // talk, then the lines — so a phone or an app made again holds what was said there too)
-        ((story, talk) => (talk ? (story ? `${story}\n\n${talk}` : `[RECENT CHAT]\n${talk}`) : story))(afterBlock(gap) || (recent && !noArchive(m) ? `[RECENT CHAT]\n${recent}` : ''),
+        ((story, talk) => (talk ? (story ? `${story}\n\n${talk}` : `[RECENT CHAT]\n${talk}`) : story))(recent ? `[RECENT CHAT]\n${recent}` : '',
             typeof m?.phoneRecent === 'function' && Number.isInteger(gap?.mark) ? m.phoneRecent(owner, 150, { maxChars: 12000, seen: gap.mark, summary: true }) : ''),
         liveYearBlock(m, q),
         `[OWNER]\n${owner}`,
@@ -81,7 +83,7 @@ export function liveMakePhone(m, owner, opts = {}) {
     return Promise.resolve().then(() => withDateOrder(dateOrderOf(m), () => liveMakePhone0(m, owner, opts))).finally(() => set?.delete(key));
 }
 async function liveMakePhone0(m, owner, { update = false, apps = null } = {}) {
-    needLive(m);
+    await liveStoryReady(m);
     const run = storyRun(m);
     await ensureScreenHolder(m);
     const key = nameKey(owner);
@@ -94,7 +96,7 @@ async function liveMakePhone0(m, owner, { update = false, apps = null } = {}) {
     // (폰 2, a phone it already has: always with its reading kept — it is made again from the story it began from and the
     // messenger talk read so far)
     const cur = m.phones?.[key], keep = !!(apps && cur) || !!cur?.sync?.marks?.base;
-    const gap = keep ? liveWindowOf(m, cur, null, CHAT_TOKENS.phone, false) : liveWindowOf(m, null);
+    const gap = liveWindowOf(m, keep ? cur : null);
     // nothing shown after the archive (all of it archived and hidden): it read up to the archive's end, not -1 (no further
     // than the chat's last message: an archive longer than the chat leaves the messages written after for the reflection)
     const mark = liveReadMark(gap) || (n => (a => (n.index < a ? markAfter(a) : n))(Math.min(archiveEnd(m), chatEnd())))(markNow());
@@ -140,21 +142,6 @@ async function liveMakePhone0(m, owner, { update = false, apps = null } = {}) {
         // where they live, and they may be away, so 위치 정보 asks the user where they are)
         withDateOrderSync(dateOrderOf(m), () => validateReflectionClock(jsonOf(out, { salvage: true }) || {}, anew ? { ...q, now: '' } : q, m, got.now));
     }
-    // made again up to the clock and stopped short: a second turn adds the rest (one that fails keeps the first)
-    const two0 = keep && !old ? liveSecondTurn(m, cur, gap, false) : null;
-    let got2 = null, last = gap, short = null, told = null;
-    const more = [];
-    // (실시간 폰: 시작한 곳까지 다 읽을 때까지 이어서 읽어요. 남은 이야기를 읽어 줄 반영이 없어요. 셋째 차례부터 쓴 것은 more에)
-    for (let two = two0; two; two = liveSecondTurn(m, cur, last, false)) {
-        try {
-            const was = told || jsonOf(out, { salvage: true }), soFar = part && was ? Object.fromEntries(part.filter(k => was[k] !== undefined).map(k => [k, was[k]])) : was;
-            const out2 = await ask(two.cover, [`${soFarHead('PHONE', two.short)}\n${JSON.stringify(soFar)}`, two.short?.text || '']), g2 = parsePhone(out2, owner);
-            // (made again whole: its clock checked as the first turn's; one that doesn't hold is left out, the first kept)
-            // (a second answer with no "now" leaves the clock as the first set it: nothing to check)
-            if (!part && g2.now) { const q = pre ? (!anew && cur?.now ? { ...pre, now: cur.now } : pre) : cur || { owner }; withDateOrderSync(dateOrderOf(m), () => validateReflectionClock(jsonOf(out2, { salvage: true }) || {}, q, m, g2.now)); }
-            if (got2) more.push(g2); else got2 = g2; last = two.cover; short = two.short; told = liveTold(was, jsonOf(out2, { salvage: true }));
-        } catch (err) { console.warn('[narrative-archive] phone, second turn', err); break; }
-    }
     if(JSON.stringify(binding)!==JSON.stringify(m.phones?.[key]?.financeProfile || m.phoneProfiles?.[key])) throw new Error('생성 중 연결한 인물 정보가 변경됐어요. 다시 시도해 주세요');
     stillRun(m, run);
     m.phones = m.phones && typeof m.phones === 'object' ? m.phones : {};
@@ -164,8 +151,6 @@ async function liveMakePhone0(m, owner, { update = false, apps = null } = {}) {
         for (const k of part) p[k] = k === 'profile' ? (got.profile || p.profile) : [];
         const only = g => ({ ...g, ...Object.fromEntries([...LISTS, 'threads', 'contacts'].filter(k => !part.includes(k)).map(k => [k, []])), now: '' });
         mergePhone(p, { ...only(got), profile: null }, { m });
-        if (got2) mergePhone(p, { ...only(got2), profile: part.includes('profile') ? got2.profile : null }, { m });
-        for (const g of more) mergePhone(p, { ...only(g), profile: part.includes('profile') ? g.profile : null }, { m });
         for (const k of part) if (k !== 'profile') carryOver(k, was[k], p[k]);
         // an archive section that runs past the clock isn't sent (it would tell what comes after), and its messages are
         // hidden: what a reflection put in from them, up to the clock, the remake never saw, so it stays
@@ -179,7 +164,6 @@ async function liveMakePhone0(m, owner, { update = false, apps = null } = {}) {
         p.at = Date.now();
         await saveMeta();
         if (p.inject) applyInjection();
-        turnsNote(last, '앱', short);
         return p;
     }
     if (old) mergePhone(old, got, { m });
@@ -213,10 +197,8 @@ async function liveMakePhone0(m, owner, { update = false, apps = null } = {}) {
             // a reading started anew: the old one's unsaved rounds (복구) aren't this phone's
             try { journalWrite(scope, journalRead(scope).filter(r => nameKey(r.owner) !== key)); } catch { /* no journal here */ }
         }
-        if (liveAgain) { for (const k of ['liveYearShift', 'situations', 'liveHeld']) if (was[k] !== undefined) base[k] = was[k]; if (was.now) { got.now = was.now; if (got2) got2.now = ''; for (const g of more) g.now = ''; } }
+        if (liveAgain) { for (const k of ['liveYearShift', 'situations', 'liveHeld']) if (was[k] !== undefined) base[k] = was[k]; if (was.now) got.now = was.now; }
         m.phones[key] = mergePhone(base, got, { m });
-        if (got2) mergePhone(m.phones[key], got2, { m });
-        for (const g of more) mergePhone(m.phones[key], g, { m });
     }
     const p = m.phones[key];
     // (made whole: what was read before it for this owner is done with, whichever way it was made)
@@ -228,7 +210,6 @@ async function liveMakePhone0(m, owner, { update = false, apps = null } = {}) {
     p.at = Date.now();
     await saveMeta();
     if (p.inject) applyInjection();
-    if (two0) turnsNote(last, '폰', short); else readNote(gap);
     // made for the first time: read again only for someone on it the reading before didn't ask about; made again: as before
     // (a reading that failed before it is not asked again: the clock goes by the phones and the countries, as for a reflection)
     const later = pre?.where?.failed ? [] : pre ? [...p.threads.map(t => t.with), ...p.contacts.map(x => x.name)].filter(n => n && !isOwnerName(p, m, n) && !(asked.asked || []).some(a => strictSame(m, a, n)) && !hasRow(p, m, n)) : null;

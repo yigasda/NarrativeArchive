@@ -372,7 +372,13 @@ THE PHONE — what they might do on it, and when
    - (완료, 디자인 세션) 시작 버튼 · "대화만 남기기"가 `liveSnapNow`를 거쳐요. 그동안 "이야기 정리 중"이 보이고 다른 폰 작업은 막혀요(`snapping`). 요약본 보기는 실시간 설정 › 지난 반영 머리의 "시작한 이야기 ›"예요.
    - 분기한 방에서 폰을 열 때 저절로 다시 시작하는 자리(`rebeginFromStory`)는 요약본 없이 시작하고, 첫 답장 때 요약본을 받아요(아래).
    - (완료, 3.204.2) 이미 시작한 폰의 넘어가기: 이야기에서 시작했는데 요약본이 없는 폰은 첫 답장 전에 지금 이야기의 끝까지 요약본을 만들어 넣어요(`keepUpStory` → `liveSnapNow`). 그동안 방에 "이야기 정리 중"이 보여요. 실패하면 답장은 옛 방식대로 가고, 롤플이 더 진행되면 다시 해요. 분기한 방에서 저절로 다시 시작한 폰도 같은 길로 요약본을 받아요.
-4. 옛 읽기 코드(범위 · 번호 · 이어 읽기 · 분기 번호 맞추기)를 지워요. 문서 · 시험.
+4. (완료, 3.204.3) 옛 읽기 코드를 지웠어요.
+   - 규칙 하나: **이야기에서 시작한 폰은 요약본이 있어야만 움직여요.** 요약본이 아직 없는 폰은 요청을 만들기 전에 받아요 — 답장은 `keepUpStory`, 채우기 · 다시 만들기 · 위치 읽기 · 사진/메모/초안/녹음은 `liveStoryReady(m)`(서랍의 `phoneStoryReady` → `setStoryKeeper`로 넣어 둔 함수). 못 받으면 요청을 보내지 않아요(답장은 실패로 남고 "다시"로 다시 해요, 채우기는 오류).
+   - 지운 것: `phone2req.js`의 채팅 창(`chatBound` · `atStart` · `liveSecondTurn` · `liveTold`)과 요약본 없는 갈래, `phone2story.js`의 이야기 표시(`storyMark` · 범위로 잘라 읽기 · `liveRawRange` · `liveFitsChat`), 월드의 `story` 칸, 채우기 · 다시 만들기의 이어 읽기(은행 · 투자 · 생활 · 배달 · 폰), `liveInvestMore` · `liveLaterDate`, 미리 보기 숫자 `liveSnapPlan`.
+   - 실시간 요청에는 롤플 채팅이 이야기 자리에 들어가는 길도 없어요: ARCHIVE는 늘 요약본의 글(`[ARCHIVE]`), RECENT CHAT은 요약본의 끝 메시지 + 메신저 대화.
+   - 사본 비교 시험은 "폰 1 쪽에서 두 번째 차례만 빼면 같다"를 봐요(`cutOut` · `cutLine`).
+   - 남긴 것: 분기 가리기(`liveBranched` · `adoptChat` · `rebeginFromStory`)와 `storyUpto`(메신저 번호의 바탕). 채팅을 읽는 코드가 아니에요.
+   - 화면(`phone.js`)이 `liveMeta`에 주는 `text`는 이제 안 써요(받아도 무시). 디자인 세션이 지우면 돼요.
 5. 실제 모델로 요약본과 그 뒤 답장 · 채우기를 봐요 (시험 세션, ㄱㄱ 뒤).
 6. 이야기 시각을 값 하나로 (따로 계획).
 

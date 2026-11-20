@@ -5,7 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import * as L from '../src/phone2store.js';
-import { T, PD, W2 } from './phone2reflect.load.mjs';
+import { T, PD, W2, snapFor } from './phone2reflect.load.mjs';
 
 const src = f => readFile(new URL(`../src/${f}`, import.meta.url), 'utf8');
 const phone = () => ({ owner: 'Mara', now: '11-12 21:30', year: 2026, country: 'DE', contacts: [{ name: 'Ivo' }, { name: 'Ren' }], threads: [{ with: 'Ivo', messages: [] }], calls: [], photos: [], notes: [], searches: [], events: [], posts: [], mails: [], diary: [], voice: [],
@@ -17,7 +17,7 @@ function world() {
     T.recent = ['[#1] Mara: 옛날 이야기 둘', '[#2] Ren: 시작 직전 이야기', '[#3] Mara: 시작 뒤 롤플 하나', '[#4] Ren: 시작 뒤 롤플 둘'];
     T.rows = T.chat.map((x, i) => ({ index: i, user: x.is_user, hidden: false, text: `[#${i}] ${x.name}: ${x.mes}` }));
     const real = { phones: { mara: phone() }, text: '' };
-    L.startFromStory(real, { persona: 'Ren', upto: 2, scope: 'test', now: 1763000000000, story: { ranges: {}, titles: [], rawFrom: 0, own: [''] } });
+    L.startFromStory(real, { persona: 'Ren', upto: 2, scope: 'test', now: 1763000000000 }).snap = snapFor(real, 2);
     const room = L.ensureRoom(real, ['Mara']);
     L.sendLive(real, room.id, '메신저로 한 말');
     const d = L.liveMeta(real, { now: () => '11-14 16:05' }), p = d.phones.mara;
@@ -76,13 +76,17 @@ test('서랍이 아니면 모델을 부르기 전에 멈춰요; 사본은 폰 1 
             await assert.rejects(() => W2.liveReadWhere(m, p), /실시간 폰의 서랍이 아니에요/);
         }
         assert.equal(asked, 0); assert.equal(JSON.stringify(p), was);
+        // 요약본이 아직 없는 폰(요약본 방식 전에 시작해 둔 폰): 요약본을 못 받으면 모델을 부르지 않아요
+        const n = world(); delete L.liveWorld(n.real).snap; L.setStoryKeeper(null);
+        await assert.rejects(() => W2.liveReadWhere(n.d, n.p), /이야기 요약본을 만들지 못했어요/);
+        assert.equal(asked, 0);
     } finally { done(); }
     const a = await src('phonedata.js'), b = await src('phone2where.js'), api = await src('phone2api.js');
     const cut = (s, start, end = '\n}\n') => { const i = s.indexOf(start), j = s.indexOf(end, i); assert.ok(i >= 0 && j > i, start); return s.slice(i, j + end.length - 1); };
     const line = (s, start) => { const l = s.split('\n').find(x => x.startsWith(start)); assert.ok(l, start); return l; };
     const need = '    needLive(m);\n';
     assert.equal(cut(b, 'function liveWhereRequest(').replace('function liveWhereRequest(', 'function whereRequest(').replace(need, '').replace('upto = m.phoneUpto;', 'upto = phoneAt(p);').replace('liveRecentText(m, p.owner, 8,', 'recentPhoneText(8,'), cut(a, 'function whereRequest('));
-    assert.equal(cut(b, 'export async function liveReadWhere(').replace('function liveReadWhere(', 'function readWhere(').replace('liveWhereRequest(m, p, opts)', 'whereRequest(m, p, opts)'), cut(a, 'export async function readWhere('));
+    assert.equal(cut(b, 'export async function liveReadWhere(').replace('function liveReadWhere(', 'function readWhere(').replace('    await liveStoryReady(m);\n', '').replace('liveWhereRequest(m, p, opts)', 'whereRequest(m, p, opts)'), cut(a, 'export async function readWhere('));
     assert.equal(line(b, 'export const liveTryWhere = ').replace('export const liveTryWhere = ', 'export const tryWhere = ').replace('await liveReadWhere(', 'await readWhere('), line(a, 'export const tryWhere = '));
     assert.equal(cut(b, 'export async function liveRereadPlaces(').replace('function liveRereadPlaces(', 'function rereadPlaces(').replace(need, '').replace('await liveReadWhere(', 'await readWhere(').replace('liveEnsureYear(m, p);', 'ensureYear(m, p, nowAt(windowOf(m, null)));'), cut(a, 'export async function rereadPlaces('));
     assert.ok(api.includes('rereadPlaces: split(rereadPlaces, liveRereadPlaces)') && api.includes('preparePhone: preparePhoneP'));

@@ -10,13 +10,13 @@ import { ctx, saveMeta } from './core.js';
 import { AI_SYS_SHOT, AI_SYS_WRITE, AI_SYS_DRAFT, AI_SYS_VOICE } from './phoneai.js';
 import { CAP, ensureIds, secOf, ko, line, MOODS, namesBlock, pick, str } from './phonedata.js';
 import { isLiveMeta, liveNowText } from './phone2store.js';
-import { liveRecentText } from './phone2req.js';
+import { liveRecentText, liveStoryReady } from './phone2req.js';
 
 // 실시간 서랍이 아니면 여기 함수는 안 돌아요 (폰 1 것을 건드리지 않게)
 const need = m => { if (!isLiveMeta(m)) throw new Error('실시간 폰의 서랍이 아니에요'); return m; };
 
 export async function liveTakePhoto(m, p) {
-    need(m);
+    need(m); await liveStoryReady(m);
     const prompt = [
         `[OWNER]\n${p.owner}`, `[NOW]\n${liveNowText(m, p)}`,
         `[RECENT CHAT]\n${liveRecentText(m, p.owner, 12, { maxChars: 9000 })}`,
@@ -38,7 +38,7 @@ export async function liveTakePhoto(m, p) {
 }
 
 export async function liveWriteEntry(m, p, kind) {
-    need(m);
+    need(m); await liveStoryReady(m);
     const diary = kind === 'diary', list = diary ? (p.diary || []) : p.notes;
     const prompt = [
         await ownerProfileBlock(ctx(),p.financeProfile,p.owner),
@@ -64,7 +64,7 @@ export async function liveWriteEntry(m, p, kind) {
 }
 
 export async function liveMakeDraft(m, p, i) {
-    need(m);
+    need(m); await liveStoryReady(m);
     const t = p.threads[i];
     if (!t) return null;
     const said = x => (x.from === 'me' ? p.owner : x.from);
@@ -88,7 +88,7 @@ export async function liveMakeDraft(m, p, i) {
 }
 
 export async function liveRecordVoice(m, p) {
-    need(m);
+    need(m); await liveStoryReady(m);
     const prompt = [
         await ownerProfileBlock(ctx(),p.financeProfile,p.owner),
         `[OWNER]\n${p.owner}${p.country ? ` (phone set to ${p.country})` : ''}`, `[NOW]\n${liveNowText(m, p)}`,

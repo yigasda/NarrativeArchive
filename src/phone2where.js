@@ -1,6 +1,6 @@
 // 폰 2(실시간)의 위치 읽기: 누가 어디 있는지 (폰 다시 만들기 · 위치 정보 다시 연동이 써요). phonedata.js의 whereRequest ·
 // readWhere · tryWhere · rereadPlaces를 줄 그대로 옮긴 것이고, 다른 곳은 이것뿐이에요.
-//   롤플은 실시간 폰을 시작한 곳까지만 읽고, 최근 대화는 메신저 것 (phone2req.js)
+//   롤플 채팅은 안 읽어요: 최근 대화는 요약본에 든 이야기의 마지막 메시지와 메신저 것 (phone2req.js)
 //   연도는 실시간 폰의 것 (phone2year.js)
 // 폰 1 파일은 여기서 읽기만 해요.
 import { ctx, saveMeta } from './core.js';
@@ -10,7 +10,7 @@ import { splitTail } from './sections.js';
 import { glossaryPeople } from './translate.js';
 import { COUNTRY_TZ } from './phonesynclife.js';
 import { AI_SYS_WHERE, askDraft, arr, jsonOf, line, str, blindBlock, loreFor, glossAka, glossTwin, isOwnerName, sameName, withTwins, rowForms, personOf, whereOf, namesOf, akaOf, whereRow, cardText, pkey, placeInfo, screenHolderOf, syncLives } from './phonedata.js';
-import { liveRecentText, needLive } from './phone2req.js';
+import { liveRecentText, liveStoryReady, needLive } from './phone2req.js';
 import { liveEnsureYear } from './phone2year.js';
 
 function liveWhereRequest(m, p, { known = false } = {}) {
@@ -32,6 +32,7 @@ function liveWhereRequest(m, p, { known = false } = {}) {
     ] };
 }
 export async function liveReadWhere(m, p, opts = {}) {
+    await liveStoryReady(m);
     const r = liveWhereRequest(m, p, opts), binding = p.financeProfile;
     opts.asked = r.people;
     if (p.making) p.asked = r.people;

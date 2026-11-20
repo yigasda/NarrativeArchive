@@ -4,16 +4,17 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import * as L from '../src/phone2store.js';
-import { T, PD, Q, F } from './phone2reflect.load.mjs';
+import { T, PD, Q, F, snapOf } from './phone2reflect.load.mjs';
 
 const src = f => readFile(new URL(`../src/${f}`, import.meta.url), 'utf8');
 const phone = () => ({ owner: 'Mara', now: '11-12 21:30', year: 2026, country: 'KR', contacts: [], threads: [], calls: [], photos: [], notes: [], searches: [], events: [], posts: [], mails: [], diary: [], voice: [] });
-// 이야기에서 시작한 실시간 폰: 롤플 #0~#2까지가 시작 전, #3~#4는 시작 뒤. 메신저에 두 마디(하나는 반영됨)
-function world({ fresh = false } = {}) {
+// 이야기에서 시작한 실시간 폰: 롤플 #0~#2까지가 시작 전(요약본에 든 것), #3~#4는 시작 뒤. 메신저에 두 마디(하나는 반영됨)
+// snap false: 요약본 방식 전에 시작해 둔 폰 (요약본이 아직 없음)
+function world({ fresh = false, snap = true } = {}) {
     T.chat = ['옛날 이야기 하나', '옛날 이야기 둘', '시작 직전 이야기', '시작 뒤 롤플 하나', '시작 뒤 롤플 둘'].map((mes, i) => ({ name: i % 2 ? 'Mara' : 'Ren', is_user: !(i % 2), mes, extra: {} }));
     T.recent = ['[#1] Mara: 옛날 이야기 둘', '[#2] Ren: 시작 직전 이야기', '[#3] Mara: 시작 뒤 롤플 하나', '[#4] Ren: 시작 뒤 롤플 둘'];
     const real = { phones: { mara: phone() }, text: '' };
-    if (fresh) L.startFresh(real, { persona: 'Ren', scope: 'test' }); else L.startFromStory(real, { persona: 'Ren', upto: 2, scope: 'test', story: { ranges: {}, titles: [], rawFrom: 0, own: [''] } });
+    if (fresh) L.startFresh(real, { persona: 'Ren', scope: 'test' }); else { const w = L.startFromStory(real, { persona: 'Ren', upto: 2, scope: 'test' }); if (snap) w.snap = snapOf(2, '## #0–#1 — 옛날\n- 옛날 이야기 요약\n', ['[#1] Mara: 옛날 이야기 둘', '[#2 · USER] Ren: 시작 직전 이야기']); }
     const d = L.liveMeta(real, { now: () => '11-14 16:05' });
     if (fresh) d.phones = { mara: phone() };
     const room = L.ensureRoom(real, ['Mara']);
@@ -23,11 +24,11 @@ function world({ fresh = false } = {}) {
 }
 const done = () => { delete T.ask; T.chat = []; delete T.recent; };
 
-test('읽는 범위 · 읽은 자리: 시작한 곳까지만, 뒤는 없음, 표시는 메신저 번호 (옮기기 전 것과 같은 답)', () => {
+test('읽는 범위 · 읽은 자리: 롤플 채팅에서 읽는 것은 없음, 표시는 메신저 번호', () => {
     try {
         const { d, p, first } = world();
         const g = Q.liveWindowOf(d, p);
-        assert.deepEqual([g.upto, g.n, g.later, g.mark], [2, 0, false, 2]);
+        assert.deepEqual(g, { none: true, n: 0, all: true, upto: -1, later: false, mark: 2 });
         assert.deepEqual(Q.liveReadMark(g), { index: 2, user: -1, fp: '', tail: '' });
         // 반영이 메신저 첫 마디까지 읽은 폰: 표시는 그 번호
         p.sync = { scope: 'x', marks: { base: { index: 2, user: -1, fp: '', tail: '' } }, done: [[first, first]] };
@@ -43,11 +44,13 @@ test('읽는 범위 · 읽은 자리: 시작한 곳까지만, 뒤는 없음, 표
     } finally { done(); }
 });
 
-test('요청 글: 시작 전 이야기 + 메신저 대화, 시작 뒤 롤플은 없음; 읽은 자리를 적는 앱은 반영된 대화만 (옮기기 전 것과 글자 그대로 같음)', async () => {
+test('요청 글: 요약본의 이야기 + 요약본의 시작 직전 메시지 + 메신저 대화, 롤플 채팅은 없음; 읽은 자리를 적는 앱은 반영된 대화만', async () => {
     try {
         const { real, d, p, first } = world(), p1 = JSON.stringify(real.phones);
         const side = await Q.liveSideRequest(d, 'Mara', ['[TARGET]\nx']);
-        assert.ok(side.includes('시작 직전 이야기') && side.includes('Ren: 메신저로 한 말') && side.includes('아직 반영 안 된 말'));
+        // (이 시험의 가짜 이웃은 아카이브 장면을 안 읽어요: 요약본의 글이 ARCHIVE로 가는 건 tests/afterarchive.test.mjs가 봐요)
+        assert.ok(side.includes('[RECENT CHAT]\n[#1] Mara: 옛날 이야기 둘\n\n[#2 · USER] Ren: 시작 직전 이야기\n\n') && side.includes('Ren: 메신저로 한 말') && side.includes('아직 반영 안 된 말'));
+        assert.ok(!side.includes('옛날 이야기 하나'));   // (채팅에는 있지만 요약본의 끝 메시지에 없는 것)
         assert.ok(side.indexOf('시작 직전 이야기') < side.indexOf('메신저로 한 말'));
         assert.ok(!side.includes('시작 뒤 롤플'));
         assert.ok(side.includes('[STORY YEAR]\n2026') && side.includes('[OWNER]\nMara') && side.includes('[TARGET]\nx'));
@@ -102,6 +105,29 @@ test('기기 정보 채우기: 요청은 실시간 뼈대로, 답은 실시간 �
     } finally { done(); }
 });
 
+test('요약본이 아직 없는 폰(요약본 방식 전에 시작해 둔 폰): 요청 전에 요약본을 받아요. 못 받으면 요청을 안 만들어요', async () => {
+    try {
+        // 챙겨 주는 쪽이 없으면 · 못 만들면: 요청 없이 오류
+        L.setStoryKeeper(null);
+        const a = world({ snap: false });
+        await assert.rejects(() => Q.liveSideRequest(a.d, 'Mara', []), /이야기 요약본을 만들지 못했어요/);
+        let asked = 0;
+        L.setStoryKeeper(async () => { asked++; });
+        await assert.rejects(() => Q.liveStoryReady(a.d), /이야기 요약본을 만들지 못했어요/);
+        assert.equal(asked, 1);
+        // 만들어 주면: 그 채팅의 것으로 불리고, 그 요약본으로 요청해요
+        L.setStoryKeeper(async real => { assert.equal(real, a.real); asked++; L.liveWorld(real).snap = snapOf(2, '## #0–#2 — 새로 뜬 요약\n- x\n', ['[#2 · USER] Ren: 시작 직전 이야기']); });
+        const side = await Q.liveSideRequest(a.d, 'Mara', []);
+        assert.equal(asked, 2);
+        assert.ok(side.includes('[RECENT CHAT]\n[#2 · USER] Ren: 시작 직전 이야기\n\n') && !side.includes('옛날 이야기 둘') && !side.includes('시작 뒤 롤플'));
+        assert.equal(a.d.text, '## #0–#2 — 새로 뜬 요약\n- x\n');
+        // 요약본이 있는 폰 · 처음부터 시작한 폰은 묻지 않아요
+        await Q.liveSideRequest(a.d, 'Mara', []); await Q.liveSideRequest(world().d, 'Mara', []); await Q.liveSideRequest(world({ fresh: true }).d, 'Mara', []);
+        assert.equal(asked, 2);
+        await assert.rejects(() => Q.liveStoryReady(a.real), /실시간 폰의 서랍이 아니에요/);
+    } finally { L.setStoryKeeper(null); done(); }
+});
+
 test('폰 2 사본은 폰 1 줄과 정해진 곳만 달라요 (한쪽만 고치면 실패)', async () => {
     const a = await src('phonedata.js'), q = await src('phone2req.js'), f = await src('phone2fill.js');
     const body = (s, start) => { const i = s.indexOf(start), j = s.indexOf('\n}\n', i); assert.ok(i >= 0 && j > i, start); return s.slice(i, j + 2); };
@@ -112,14 +138,14 @@ test('폰 2 사본은 폰 1 줄과 정해진 곳만 달라요 (한쪽만 고치�
     const fill = !!read && Number.isInteger(gap?.mark), lines = fill ? 150 : 6, chars = fill ? 12000 : 6000;
     const recent = liveRecentText(m, owner, lines, { upto, maxChars: chars, ...(fill ? { seen: gap.mark, summary: true } : {}) });
     if (read) read.gap = gap;
-    const arch = archiveBlock(m, liveArchiveFor(m, -1, upto).text || '(empty)', 'ARCHIVE', story, upto), talk = gap?.n && typeof m?.phoneRecent === 'function' ? m.phoneRecent(owner, lines, { maxChars: chars, ...(fill ? { seen: gap.mark, summary: true } : {}) }) : '';
-    // (폰 2: the story after the archive up to where it began, then the messenger's talk, in the one block)
-    const chat = (afterBlock(gap) ? \`\${afterBlock(gap)}\${talk ? \`\\n\\n\${talk}\` : ''}\` : '') || (recent && !(story && noArchive(m)) ? \`[RECENT CHAT]\\n\${recent}\` : '');
+    // (폰 2: the story is its snapshot's text and nothing else; the role-play chat never stands in for it)
+    const arch = \`[ARCHIVE]\\n\${liveArchiveFor(m, -1).text || '(empty)'}\`;
+    const chat = recent ? \`[RECENT CHAT]\\n\${recent}\` : '';
 `, PHONE1_TALK = `    const recent = recentPhoneText(6, { upto, maxChars: 6000 });
     if (read) read.gap = gap;
     const arch = archiveBlock(m, archiveFor(m, -1, upto).text || '(empty)', 'ARCHIVE', story, upto), chat = afterBlock(gap) || (recent && !(story && noArchive(m)) ? \`[RECENT CHAT]\\n\${recent}\` : '');
 `;
-    assert.equal(body(q, 'export async function liveSideRequest(').replace('liveSideRequest(', 'sideRequest(').replace('    needLive(m);\n', '').replace('liveWindowOf(m, ph)', 'windowOf(m, ph)')
+    assert.equal(body(q, 'export async function liveSideRequest(').replace('liveSideRequest(', 'sideRequest(').replace('    await liveStoryReady(m);\n', '').replace('{ profile, money = false, read = null }', '{ profile, money = false, story = 0, read = null }').replace('liveWindowOf(m, ph)', 'windowOf(m, ph)')
         .replace(LIVE_TALK, PHONE1_TALK).replace('liveYearBlock(m, ph)', 'yearBlock(m, ph, upto)'), body(a, 'export async function sideRequest('));
     assert.equal(line(q, 'export const liveReadMark').replace('liveReadMark', 'readMark').replace("if (Number.isInteger(g?.mark)) return { index: g.mark, user: -1, fp: '', tail: '' }; ", ''), line(a, 'export const readMark'));
     // 기기 정보 · 자산 준비: 요청 뼈대만

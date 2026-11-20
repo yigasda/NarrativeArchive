@@ -12,6 +12,10 @@ const SCENES_SRC = `${cutOut('export const SCENES_SYS = `', '`;')}\n${cutOut('ex
 const encoded = s => 'data:text/javascript;base64,' + Buffer.from(s).toString('base64');
 const href = f => pathToFileURL(new URL(`../src/${f}`, import.meta.url).pathname).href;
 export const T = (globalThis.__dropTest = { chat: [], answers: [] });
+// 이야기에서 시작한 실시간 폰의 요약본 (시험용): 이야기 글 · 시작 직전 메시지
+export const snapOf = (upto, text = '', recent = []) => ({ v: 1, at: 0, upto, text, recent, made: { from: 0, to: upto, count: 0, parts: 0 } });
+// (그 채팅의 것으로: 이야기 글은 채팅의 아카이브 글, 시작 직전 메시지는 T.recent에서 시작한 곳까지)
+export const snapFor = (real, upto) => snapOf(upto, String(real?.text || ''), (T.recent || []).filter(t => !(Number(/^\[#(\d+)/.exec(t)?.[1]) > upto)));
 const map = { './extract.js': cleanMessageURL,
     './phonesync.js': href('phonesync.js'), './phoneparse.js': href('phoneparse.js'), './phoneclock.js': href('phoneclock.js'), './phonemapcity.js': href('phonemapcity.js'), './placehoods.js': href('placehoods.js'), './phonesynclife.js': href('phonesynclife.js'), './phonesyncmoney.js': href('phonesyncmoney.js'), './finance.js': href('finance.js'),
     './phoneprofile.js': href('phoneprofile.js'), './phone2store.js': href('phone2store.js'), './phone2clock.js': href('phone2clock.js'), './phone2feed.js': href('phone2feed.js'),

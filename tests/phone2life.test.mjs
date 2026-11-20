@@ -5,7 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import * as L from '../src/phone2store.js';
-import { T, PD, F, LIFE, L2 } from './phone2reflect.load.mjs';
+import { T, PD, F, LIFE, L2, snapFor } from './phone2reflect.load.mjs';
 
 const src = f => readFile(new URL(`../src/${f}`, import.meta.url), 'utf8');
 const phone = () => ({ owner: 'Mara', now: '11-12 21:30', year: 2026, country: 'DE', lives: 'DE', contacts: [], threads: [], calls: [], photos: [], notes: [], searches: [], events: [], posts: [], mails: [], diary: [{ date: '11-10', title: '긴 하루', text: 'x' }], voice: [],
@@ -19,7 +19,7 @@ function world() {
     // (채우기는 롤플 채팅의 줄을 읽어요: 반영 시험이 막아 둔 것을 여기서만 열어요)
     T.rows = T.chat.map((x, i) => ({ index: i, user: x.is_user, hidden: false, text: `[#${i}] ${x.name}: ${x.mes}` }));
     const real = { phones: { mara: phone() }, text: '' };
-    L.startFromStory(real, { persona: 'Ren', upto: 2, scope: 'test', now: 1763000000000, story: { ranges: {}, titles: [], rawFrom: 0, own: [''] } });
+    L.startFromStory(real, { persona: 'Ren', upto: 2, scope: 'test', now: 1763000000000 }).snap = snapFor(real, 2);
     const room = L.ensureRoom(real, ['Mara']);
     L.sendLive(real, room.id, '메신저로 한 말');
     const d = L.liveMeta(real, { now: () => '11-14 16:05' }), p = d.phones.mara;
@@ -160,19 +160,40 @@ test('서랍이 아니면 모델을 부르기 전에 멈춰요; 사본은 폰 1 
     assert.equal(cut(l2, 'export function liveNearbyDue(').replace('function liveNearbyDue(', 'function nearbyDue(').replace('liveSavedNow(p)', 'storyNow(p)'), cut(lf, 'export function nearbyDue('));
     assert.equal(cut(l2, 'export async function liveRefreshNearby(').replace('function liveRefreshNearby(', 'function refreshNearby(').replace(need, '').replace('liveSavedNow(p)', 'storyNow(p)').replace('liveNearbyDue(p)', 'nearbyDue(p)')
         .replaceAll('liveLately(p, d, s.name)', 'lately(p, d, s.name)'), cut(lf, 'export async function refreshNearby('));
-    // 생활 · 배달: 폰 1 줄과 정해진 곳만 (MORE: 폰 1은 두 번까지, 실시간은 시작한 곳까지 이어서)
-    const MORE = '    // (실시간 폰: 시작한 곳까지 다 읽을 때까지 이어서 읽어요. 남은 이야기를 읽어 줄 반영이 없어요)\n    for (let two = liveSecondTurn(m, p, first); two; two = liveSecondTurn(m, p, last)) {\n';
+    // 생활 · 배달: 폰 1 줄과 정해진 곳만. 실시간 폰은 채팅을 이어 읽지 않아요(이야기는 요약본에 다 있어요): 폰 1의
+    // 두 번째 차례와 그 차례만 쓰는 줄(soFar · short · said)은 사본에 없어요. 폰 1 쪽에서 그 부분만 빼면 같아요
+    const cutOut = (t, from, to, put = '') => { const x = t.indexOf(from), y = t.indexOf(to, x); assert.ok(x >= 0 && y >= x, from); return t.slice(0, x) + put + t.slice(y + to.length); };
+    const swap = (t, pairs) => pairs.reduce((r, [a, b]) => { assert.ok(r.includes(a), a); return r.replace(a, b); }, t);
+    assert.ok(!/[sS]econdTurn|soFar|said\.|mergeLife|mergeDelivery/.test(l2));
     assert.equal(cut(l2, 'export function liveStoryDays(').replace('function liveStoryDays(', 'function storyDays(').replace('liveSavedNow(p)', 'storyNow(p, upto)'), cut(lf, 'export function storyDays('));
     assert.equal(cut(l2, 'const livePhoneNow = ', '\n});\n').replace('const livePhoneNow = ', 'const phoneNow = ').replace('liveSavedNow(p)', 'storyNow(p, upto)'), cut(lf, 'const phoneNow = ', '\n});\n'));
     assert.equal(cut(l2, 'export const liveFillLife = ', '\n});\n').replace('export const liveFillLife = ', 'export const fillLife = ').replace(`\n${need.slice(0, -1)}`, '')
         .replace('w = null,', 'w = weatherNow(upto),').replace('days = liveStoryDays(m, p, upto)', 'days = storyDays(m, p, upto)').replace('livePhoneNow(p, upto)', 'phoneNow(p, upto)').replace('liveSideRequest(', 'sideRequest(')
         .replace('liveFillClock(m, p, liveNowText(m, p) || p.now, { story: true })', 'fillClock(m, p, storyNow(p, upto, m) || p.now, statusAt(p, upto, m), gap, short, { story: true })')
-        .replace("const at = liveSavedNow(p) || p.now || '';", "const at = storyNow(p, upto) || p.now || '';").replace('const first = liveWindowOf(m, p);', 'const first = windowOf(m, p);').replace(MORE, '    const two = secondTurn(m, p, first);\n    if (two) {\n').replace("second turn', err); break; }", "second turn', err); }")
-        .replaceAll('liveReadMark(', 'readMark(').replace('liveSavedNow(p)', 'storyNow(p, nowAt(last))').replace('await liveFillScreen(m, p,', 'await fillScreen(m, p,'), cut(lf, 'export const fillLife = ', '\n});\n'));
+        .replace("const at = liveSavedNow(p) || p.now || '';", "const at = storyNow(p, upto) || p.now || '';").replace('const first = liveWindowOf(m, p);', 'const first = windowOf(m, p);')
+        .replaceAll('liveReadMark(', 'readMark(').replace('liveSavedNow(p)', 'storyNow(p, nowAt(first))').replace('await liveFillScreen(m, p,', 'await fillScreen(m, p,'),
+    swap(cutOut(cut(lf, 'export const fillLife = ', '\n});\n'), '    let life = await turn(first), last = first, short = null;\n', "        catch (err) { console.warn('[narrative-archive] life, second turn', err); }\n    }\n", '    let life = await turn(first);\n'), [
+        ['    // one turn: its window, and what the turn before wrote (none for the first); stopped short, its now is where it stopped\n    const turn = async (gap, soFar = null, short = null) => {', '    // the one request (실시간 폰은 채팅을 이어 읽지 않아요: 이야기는 요약본에 다 있어요)\n    const turn = async gap => {'],
+        ['            !soFar && Object.keys(body).length ?', '            Object.keys(body).length ?'],
+        ["            soFar ? `${soFarHead('LIFE', short)}\\n${JSON.stringify(soFar)}` : '', short?.text || '',\n", ''],
+        ["        if (!soFar && raw && typeof raw === 'object'", "        if (raw && typeof raw === 'object'"],
+        ['        said.set(next, { raw, now });\n', ''],
+        ['readMark(last)?.index', 'readMark(first)?.index'], ['storyNow(p, nowAt(last))', 'storyNow(p, nowAt(first))'], ['marks.life = readMark(last) || mark0;', 'marks.life = readMark(first) || mark0;'],
+        ["    turnsNote(last, '생활', short);\n", ''],
+    ]));
     assert.equal(cut(l2, 'export const liveFillDelivery = ', '\n});\n').replace('export const liveFillDelivery = ', 'export const fillDelivery = ').replace(`\n${need.slice(0, -1)}`, '')
         .replace("at = liveSavedNow(p) || p.now || '';", "at = storyNow(p, upto) || p.now || '';").replace('livePhoneNow(p, upto)', 'phoneNow(p, upto)').replace('liveStoryDays(m, p, upto)', 'storyDays(m, p, upto)')
         .replace('liveFillClock(m, p, at, { story: true })', 'fillClock(m, p, at, statusAt(p, upto, m), gap, short, { story: true })').replace('liveSideRequest(', 'sideRequest(').replace('const first = liveWindowOf(m, p);', 'const first = windowOf(m, p);')
-        .replace(MORE, '    const two = secondTurn(m, p, first);\n    if (two) {\n').replace("second turn', err); break; }", "second turn', err); }").replace('liveSavedNow(p)', 'storyNow(p, nowAt(last))').replace('liveReadMark(', 'readMark('), cut(lf, 'export const fillDelivery = ', '\n});\n'));
+        .replace('liveSavedNow(p)', 'storyNow(p, nowAt(first))').replace('liveReadMark(', 'readMark('),
+    swap(cutOut(cut(lf, 'export const fillDelivery = ', '\n});\n'), '    let d = await turn(first), last = first, short = null;\n', "        catch (err) { console.warn('[narrative-archive] delivery, second turn', err); }\n    }\n", '    const d = await turn(first);\n'), [
+        ['    // two turns at most, like the life fill (secondTurn)\n    const turn = async (gap, soFar = null, short = null) => {', '    // the one request, like the life fill\n    const turn = async gap => {'],
+        [" money,\n            soFar ? `${soFarHead('DELIVERY', short)}\\n${JSON.stringify(soFar)}` : '', short?.text || ''], {", ' money], {'],
+        ["        if (!soFar && got && typeof got === 'object'", "        if (got && typeof got === 'object'"],
+        ['        said.set(next, { raw: got });\n', ''],
+        ["        // the shops nearby go after the ones they order from (the app's 동네 인기 가게); the first turn sets them\n        if (!soFar) next.shops =", "        // the shops nearby go after the ones they order from (the app's 동네 인기 가게)\n        next.shops ="],
+        ['storyNow(p, nowAt(last))', 'storyNow(p, nowAt(first))'], ['marks.delivery = readMark(last) || mark0;', 'marks.delivery = readMark(first) || mark0;'],
+        ["    turnsNote(last, '배달', short);\n", ''],
+    ]));
     assert.doesNotMatch(lf, /isLivePhone|phoneUpto|phoneNow\(p\)|phone2/);
     for (const x of ['fillLife: split(fillLife, liveFillLife)', 'fillDelivery: split(fillDelivery, liveFillDelivery)']) assert.ok(api.includes(x), x);
     for (const x of ['fillVoice: split(fillVoice, liveFillVoice)', 'fillScreen: split(fillScreen, liveFillScreen)', 'refreshNearby: split(refreshNearby, liveRefreshNearby)']) assert.ok(api.includes(x), x);

@@ -13,7 +13,7 @@ import { SCENES_SYS, parseScenes } from './scenes.js';
 import { resolvePhoneProfile, ownerProfileBlock } from './phoneprofile.js';
 import { parseJson } from './phoneparse.js';
 import { nameKey } from './people.js';
-import { liveWorld, livePhone, liveMeta, liveKey, liveAtYear, isSnap } from './phone2store.js';
+import { liveWorld, livePhone, liveMeta, liveKey, liveAtYear, isSnap, setStoryKeeper } from './phone2store.js';
 import { liveChatTail, liveSnapBehind, liveSnapExtend, liveSnapNow } from './phone2snap.js';
 import { liveStoryText } from './phone2story.js';
 import { liveWall } from './phone2clock.js';
@@ -54,21 +54,21 @@ async function cardOf(p) {
 const open = real => { const md = ctx().chatMetadata; return !md || md[MODULE] === real; };
 // whether the 폰 2 a go began with is still there to write to
 const here = (real, w) => open(real) && liveWorld(real)?.id === w.id;
-// 이야기에서 시작한 폰의 요약본을 답장 전에 챙겨요 (phone2snap.js). 한 번에 하나만 돌고, 실패하면 답장은 그대로 가고
-// 롤플이 더 진행될 때까지 다시 하지 않아요.
+// 이야기에서 시작한 폰의 요약본을 챙겨요 (phone2snap.js). 한 번에 하나만 돌아요.
 //   요약본이 없는 폰(요약본 방식 전에 시작해 둔 폰 · 분기한 방에서 저절로 다시 시작한 폰): 지금 이야기의 끝까지 요약본을
-//     만들어 넣어요. 그때부터 그 폰도 롤플 채팅을 번호로 읽지 않아요.
-//   요약본이 있는 폰: 요약본 뒤로 롤플이 끝 메시지들에 다 안 담길 만큼 진행됐으면 요약본을 지금 끝까지 늘려요.
+//     만들어 넣어요. 못 만들면 그 폰은 요청을 보내지 않아요(답장은 실패로, 채우기는 오류로) — 다시 하면 다시 만들어요.
+//   요약본이 있는 폰, 답장 전에: 요약본 뒤로 롤플이 끝 메시지들에 다 안 담길 만큼 진행됐으면 요약본을 지금
+//     끝까지 늘려요. 실패하면 답장은 가진 요약본으로 가고, 롤플이 더 진행될 때까지 다시 하지 않아요.
 const extending = new WeakMap();
 // 요약본을 만들거나 늘리는 중인지 (화면의 "이야기 정리 중")
 export const liveSnapBusy = real => extending.has(real);
-async function keepUpStory(real, tell) {
+async function keepUpStory(real, tell = () => {}) {
     if (extending.has(real)) return extending.get(real);
     const w = liveWorld(real);
     if (!w || w.from !== 'story' || !open(real)) return null;
     const snapOf = () => (isSnap(w.snap) ? w.snap : null);
     const tail = liveChatTail(), had = snapOf();
-    if (w.snapTried === tail.end || (had && !liveSnapBehind(had, tail))) return null;
+    if (had && (w.snapTried === tail.end || !liveSnapBehind(had, tail))) return null;
     // (marked busy before anything is asked, so one asked meanwhile waits for this one)
     let done;
     extending.set(real, new Promise(r => { done = r; })); tell();
@@ -79,12 +79,16 @@ async function keepUpStory(real, tell) {
         if (here(real, w) && snapOf() === had) { w.snap = next; delete w.snapTried; await saveMeta(); }
     } catch (err) {
         console.warn('[narrative-archive] live story', err);
-        if (here(real, w)) w.snapTried = tail.end;
+        if (had && here(real, w)) w.snapTried = tail.end;
     } finally { extending.delete(real); done(); tell(); }
     return null;
 }
+// (a 폰 2 app request asks through its drawer, and only while there is no snapshot: made here, lengthened only before a reply)
+setStoryKeeper(real => keepUpStory(real));
+// the words a request is refused with while a 폰 2 begun from the story has no snapshot
+const NO_STORY = '이야기 요약본을 만들지 못했어요. 잠시 뒤 다시 해 주세요';
 export async function liveGo(real, { onChange = () => {} } = {}) {
-    const m = () => liveMeta(real, { text: () => liveStoryText(real, liveWorld(real)), now: liveNowOf(real) });
+    const m = () => liveMeta(real, { now: liveNowOf(real) });
     const tell = () => { try { onChange(); } catch (err) { console.error('[narrative-archive] live draw', err); } };
     const out = await runLive(real, {
         save: saveMeta, alive: () => open(real),
@@ -94,6 +98,7 @@ export async function liveGo(real, { onChange = () => {} } = {}) {
             await keepUpStory(real, tell);
             const w = liveWorld(real), p = livePhone(real, job.owner);
             if (!w || !p) return null;
+            if (w.from === 'story' && !isSnap(w.snap)) throw new Error(NO_STORY);
             const d0 = m(), card = await cardOf(p);
             const d = gatherReply(real, job.owner, job.room, { now: Date.now(), tz: tzOf(p), deps: {
                 // (the reply's own clock block: each place's time now and weekday, as the reply prompt was tuned with)
@@ -145,7 +150,7 @@ async function reflectTalk(real, owner, { onChange = () => {}, force = false } =
     if (!force && Number.isInteger(p.liveHeld) && !Object.values(w.messenger?.rooms || {}).some(r => r.members.some(n => liveKey(n) === liveKey(owner)) && (r.messages || []).some(x => x.n > p.liveHeld && liveReads(x, owner)))) return { ...none, left: liveUnreflected(real, owner), held: true };
     if ((w.queue?.jobs || []).some(j => liveKey(j.owner) === liveKey(owner) && (j.state === 'waiting' || j.state === 'running'))) return { ...none, left: liveUnreflected(real, owner), waiting: true };
     const tell = () => { try { onChange(); } catch (err) { console.error('[narrative-archive] live draw', err); } };
-    const m = () => liveMeta(real, { text: () => liveStoryText(real, liveWorld(real)), now: liveNowOf(real) });
+    const m = () => liveMeta(real, { now: liveNowOf(real) });
     let rounds = 0, error = '';
     reflecting.add(real);
     try {
@@ -171,7 +176,7 @@ export const liveUnreflected = (real, owner) => { const w = liveWorld(real), p =
 // (only a round 폰 2 made itself: one that came with the copy of 폰 1's phone is not offered)
 export const liveCanUndo = (real, owner) => { const p = livePhone(real, owner); return !!p?.syncUndo?.live && !!p.syncLast?.checked && p.sync?.rounds?.at(-1) === p.syncUndo.round; };
 export async function liveUndo(real, owner, { onChange = () => {} } = {}) {
-    const kept = await undoLive(real, liveMeta(real, { text: () => liveStoryText(real, liveWorld(real)), now: liveNowOf(real) }), owner, { save: saveMeta });
+    const kept = await undoLive(real, liveMeta(real, { now: liveNowOf(real) }), owner, { save: saveMeta });
     try { onChange(); } catch (err) { console.error('[narrative-archive] live draw', err); }
     return kept;
 }

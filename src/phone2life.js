@@ -1,6 +1,7 @@
 // 폰 2(실시간)의 생활 쪽 채우기: 시계 · 건강 · 파일 · 날씨, 배달, 스크린타임, 동네 가게 새로고침. phonelife.js의 같은 함수를
 // 줄 그대로 옮긴 것이고, 다른 곳은 이것뿐이에요.
-//   읽는 범위 · 읽은 자리 · 요청 뼈대 · 두 번째 차례: 실시간 것 (phone2req.js). 롤플은 시작한 곳까지만, 읽은 자리는 메신저 번호
+//   읽는 범위 · 읽은 자리 · 요청 뼈대: 실시간 것 (phone2req.js). 이야기는 요약본의 글이고 롤플 채팅은 안 읽어요(그래서
+//   폰 1의 두 번째 차례가 없어요). 읽은 자리는 메신저 번호
 //   폰의 지금: 폰에 저장된 시각 (롤플 상태창은 안 읽어요). 생활 요청의 OWNER'S CLOCK만 서랍의 흐르는 시계
 //   날씨: 롤플 상태창의 날씨는 실시간 폰의 것이 아니라 안 실어요
 // 폰 1 파일은 여기서 읽기만 해요.
@@ -13,10 +14,10 @@ import { phoneChatScope } from './phonestory.js';
 import { exclusive, syncOf } from './phonesync.js';
 import { dayGap, screenOf, usualScreenOf } from './phonesynclife.js';
 import { shopStats, unpayOrders } from './phonesyncmoney.js';
-import { askDraft, CHAT_TOKENS, COUNTRIES, arr, byStory, ensureIds, jsonOf, ko, line, markNow, nowAt, rowDay, sceneHome, soFarHead, turnsNote } from './phonedata.js';
-import { AI_SYS_LIFE, AI_SYS_DELIVERY, AI_SYS_SCREEN, AI_SYS_NEARBY, NEARBY_DAYS, NEARBY_ROUNDS, NEARBY_MAX, livesIn, deliveryLook, homeCity, homeApps, homeDay, menuOf, md, shiftDay, daysBlock, later, said,
-    parseLife, mergeLife, parseDelivery, mergeDelivery, nearbyShops, payDeliveries, fillShopMenus } from './phonelife.js';
-import { liveSideRequest, liveWindowOf, liveReadMark, liveSecondTurn, liveSavedNow, liveFillClock, needLive } from './phone2req.js';
+import { askDraft, CHAT_TOKENS, COUNTRIES, arr, byStory, ensureIds, jsonOf, ko, line, markNow, nowAt, rowDay, sceneHome } from './phonedata.js';
+import { AI_SYS_LIFE, AI_SYS_DELIVERY, AI_SYS_SCREEN, AI_SYS_NEARBY, NEARBY_DAYS, NEARBY_ROUNDS, NEARBY_MAX, livesIn, deliveryLook, homeCity, homeApps, homeDay, menuOf, md, shiftDay, daysBlock, later,
+    parseLife, parseDelivery, nearbyShops, payDeliveries, fillShopMenus } from './phonelife.js';
+import { liveSideRequest, liveWindowOf, liveReadMark, liveSavedNow, liveFillClock, needLive } from './phone2req.js';
 import { liveNowText } from './phone2store.js';
 
 // 이야기의 날들 (최근 14일) · 폰이 지금 담고 있는 것: 지금은 폰에 저장된 시각
@@ -121,38 +122,30 @@ export const liveFillLife = (m, p, { screenAgain = false } = {}) => exclusive('f
     const was = p.life?.health?.usual || {}, body = Object.fromEntries(['height', 'weight'].filter(k => Number.isFinite(was[k])).map(k => [k, was[k]]));
     // a booking the wallet holds is drawn from it: its file needs no line of its own
     const booked = new Set((p.money?.passes || []).map(x => x.ev).filter(Boolean));
-    // one turn: its window, and what the turn before wrote (none for the first); stopped short, its now is where it stopped
-    const turn = async (gap, soFar = null, short = null) => {
+    // the one request (실시간 폰은 채팅을 이어 읽지 않아요: 이야기는 요약본에 다 있어요)
+    const turn = async gap => {
         // a status line from a scene the owner isn't in (or may not be): its place and sky go along, never as the owner's weather
         const upto = nowAt(gap), w = null, home = !w || sceneHome(p, w.place, m) === true, now = home ? w : null, days = liveStoryDays(m, p, upto);
         const input = await liveSideRequest(m, p.owner, [`[PHONE NOW]\n${livePhoneNow(p, upto)}`, daysBlock(days),
-            !soFar && Object.keys(body).length ? `[BODY ON THE PHONE NOW — keep it unless the story changed it]\n${JSON.stringify(body)}` : '',
-            soFar ? `${soFarHead('LIFE', short)}\n${JSON.stringify(soFar)}` : '', short?.text || '',
+            Object.keys(body).length ? `[BODY ON THE PHONE NOW — keep it unless the story changed it]\n${JSON.stringify(body)}` : '',
             w ? `[WEATHER NOW]\n${JSON.stringify(home ? w : { place: w.place, weather: w.weather })}` : '', liveFillClock(m, p, liveNowText(m, p) || p.now, { story: true }), p.country ? `[PHONE COUNTRY]\n${COUNTRIES[p.country] || p.country}` : ''], { profile: p.financeProfile, story: CHAT_TOKENS.life, read: { gap } });
         // (an answer cut off before its end is not taken: what it read isn't all there, so the mark stays where it was)
         const ans = await askDraft(input, { force: true, system: AI_SYS_LIFE, maxTokens: 16000, effort: 'low' });
         if (cutShort(ans)) throw new Error('모델 답이 중간에 끊겼어요');
         const raw = jsonOf(ans, { salvage: true });
         // (a first turn with nothing in it is no life app: what the phone has stays)
-        if (!soFar && raw && typeof raw === 'object' && !Object.keys(raw).length) throw new Error('모델 답에서 시계 · 건강 · 파일 · 날씨 내용(JSON)을 찾지 못했어요');
+        if (raw && typeof raw === 'object' && !Object.keys(raw).length) throw new Error('모델 답에서 시계 · 건강 · 파일 · 날씨 내용(JSON)을 찾지 못했어요');
         const next = parseLife(raw, now, days.at(-1)?.day || '');
-        said.set(next, { raw, now });
         const at = liveSavedNow(p) || p.now || '';
         if (/^\d{2}-\d{2}/.test(at)) next.files.items = next.files.items.filter(x => !later(x.time, at));
         for (const x of next.files.items) if (x.ev && booked.has(x.ev)) x.preview = '';
         return next;
     };
     const first = liveWindowOf(m, p);
-    let life = await turn(first), last = first, short = null;
-    // (실시간 폰: 시작한 곳까지 다 읽을 때까지 이어서 읽어요. 남은 이야기를 읽어 줄 반영이 없어요)
-    for (let two = liveSecondTurn(m, p, first); two; two = liveSecondTurn(m, p, last)) {
-        // a second turn that fails keeps what the first wrote
-        try { life = mergeLife(life, await turn(two.cover, life, two.short)); last = two.cover; short = two.short; }
-        catch (err) { console.warn('[narrative-archive] life, second turn', err); break; }
-    }
+    let life = await turn(first);
     // what a reflection put in from messages past where this fill read (it reads newest first: a stretch read ahead of a
     // gap) stays: the fill never saw those messages, and they count as read
-    const upTo = liveReadMark(last)?.index, old = p.life, s0 = p.sync;
+    const upTo = liveReadMark(first)?.index, old = p.life, s0 = p.sync;
     if (old && Number.isInteger(upTo)) {
         const ahead = x => String(x?.id || '').startsWith('sync:') && (Number.isInteger(x.sourceIndex) ? x.sourceIndex : s0?.events?.[x.ev]?.at ?? -1) > upTo;
         const add = (to, from, same = () => false) => [...(to || []), ...(from || []).filter(x => ahead(x) && !(to || []).some(y => y.id === x.id || same(x, y)))];
@@ -165,10 +158,9 @@ export const liveFillLife = (m, p, { screenAgain = false } = {}) => exclusive('f
     delete p.syncUndo; delete p.syncUndos;
     // a reflection reads on from here (a phone with no reading record yet gets one, so it isn't read twice); with no
     // clock, the last message there was when the fill began, not one that came while it wrote
-    syncOf(p, phoneChatScope(ctx())).marks.life = liveReadMark(last) || mark0;
+    syncOf(p, phoneChatScope(ctx())).marks.life = liveReadMark(first) || mark0;
     ensureIds(p);
     await saveMeta();
-    turnsNote(last, '생활', short);
     // the screen time is its own request right after (its long app list stays out of this one); one that failed leaves
     // 설정 › 스크린타임 with its 채우기 button
     // (다시 만들기 with 스크린타임 picked too: that one remade here, not asked twice)
@@ -184,30 +176,23 @@ export const liveFillDelivery = (m, p) => exclusive('fill', async () => {
     // the bank's own rows (not the ones this app put there): a meal already paid there is pointed at, not paid again
     const tx = (p.money?.tx || []).filter(t => !String(t.id).startsWith('dlv-') && !t.delivery);
     const money = accounts.length ? `[MONEY NOW]\n${JSON.stringify({ accounts: accounts.map(a => ({ last4: a.last4, kind: a.kind, name: a.name, currency: a.currency })), tx: tx.slice(-20).map(t => ({ id: t.id, account: t.account, time: t.time, who: t.who, amount: t.amount })) })}` : '';
-    // two turns at most, like the life fill (secondTurn)
-    const turn = async (gap, soFar = null, short = null) => {
+    // the one request, like the life fill
+    const turn = async gap => {
         const upto = nowAt(gap), at = liveSavedNow(p) || p.now || '';
-        const input = await liveSideRequest(m, p.owner, [`[PHONE NOW]\n${livePhoneNow(p, upto)}`, daysBlock(liveStoryDays(m, p, upto)), liveFillClock(m, p, at, { story: true }), `[LIVES IN]\n${COUNTRIES[livesIn(p)] || livesIn(p) || '(unknown)'}`, money,
-            soFar ? `${soFarHead('DELIVERY', short)}\n${JSON.stringify(soFar)}` : '', short?.text || ''], { profile: p.financeProfile, story: CHAT_TOKENS.apps, read: { gap } });
+        const input = await liveSideRequest(m, p.owner, [`[PHONE NOW]\n${livePhoneNow(p, upto)}`, daysBlock(liveStoryDays(m, p, upto)), liveFillClock(m, p, at, { story: true }), `[LIVES IN]\n${COUNTRIES[livesIn(p)] || livesIn(p) || '(unknown)'}`, money], { profile: p.financeProfile, story: CHAT_TOKENS.apps, read: { gap } });
         const ans = await askDraft(input, { force: true, system: AI_SYS_DELIVERY, maxTokens: 12000, effort: 'low' });
         if (cutShort(ans)) throw new Error('모델 답이 중간에 끊겼어요');
         const got = jsonOf(ans, { salvage: 'whole' });
-        if (!soFar && got && typeof got === 'object' && !Object.keys(got).length) throw new Error('모델 답에서 배달 내용(JSON)을 찾지 못했어요');
+        if (got && typeof got === 'object' && !Object.keys(got).length) throw new Error('모델 답에서 배달 내용(JSON)을 찾지 못했어요');
         const next = parseDelivery(got, accounts, tx, at);
-        said.set(next, { raw: got });
-        // the shops nearby go after the ones they order from (the app's 동네 인기 가게); the first turn sets them
-        if (!soFar) next.shops = [...next.shops, ...nearbyShops(got, next.shops, (p.money?.currency || accounts[0]?.currency) === 'KRW')];
+        // the shops nearby go after the ones they order from (the app's 동네 인기 가게)
+        next.shops = [...next.shops, ...nearbyShops(got, next.shops, (p.money?.currency || accounts[0]?.currency) === 'KRW')];
         // nothing after the story's now
         if (/^\d{2}-\d{2}/.test(at)) next.orders = next.orders.filter(o => !later(o.time, at));
         return next;
     };
     const first = liveWindowOf(m, p);
-    let d = await turn(first), last = first, short = null;
-    // (실시간 폰: 시작한 곳까지 다 읽을 때까지 이어서 읽어요. 남은 이야기를 읽어 줄 반영이 없어요)
-    for (let two = liveSecondTurn(m, p, first); two; two = liveSecondTurn(m, p, last)) {
-        try { d = mergeDelivery(d, await turn(two.cover, { shops: d.shops, orders: d.orders, cart: d.cart || null }, two.short)); last = two.cover; short = two.short; }
-        catch (err) { console.warn('[narrative-archive] delivery, second turn', err); break; }
-    }
+    const d = await turn(first);
     const at = liveSavedNow(p) || p.now || '';
     if (p.delivery) unpayOrders(m, p);
     // orders a reflection put in stay (their payments are the bank's own rows); the fill's own telling of the same order
@@ -218,11 +203,10 @@ export const liveFillDelivery = (m, p) => exclusive('fill', async () => {
     const twin = o => kept.some(k => (o.ev && k.ev === o.ev) || !(o.ev && k.ev && o.ev !== k.ev) && plain(k.shop) === plain(o.shop) && dayGap(String(k.time).slice(0, 5), String(o.time).slice(0, 5)) === 0 && (mins(k.time) === null || mins(o.time) === null || Math.abs(mins(k.time) - mins(o.time)) <= 60));
     p.delivery = { ...d, orders: [...d.orders.filter(o => !twin(o)), ...kept].sort(byStory(p.now)), look: deliveryLook(p), at, nearbyAt: String(at).slice(0, 5), city: homeCity(p) };
     delete p.syncUndo; delete p.syncUndos;
-    syncOf(p, phoneChatScope(ctx())).marks.delivery = liveReadMark(last) || mark0;
+    syncOf(p, phoneChatScope(ctx())).marks.delivery = liveReadMark(first) || mark0;
     ensureIds(p);
     payDeliveries(m, p);
     await saveMeta();
-    turnsNote(last, '배달', short);
     // the shops nearby get their menus straight after, in a request of their own (a failure here leaves the app as filled)
     try { await fillShopMenus(m, p); } catch { /* asked again when the app is opened */ }
     return p.delivery;

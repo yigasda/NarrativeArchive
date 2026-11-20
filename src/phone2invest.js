@@ -1,6 +1,7 @@
 // 폰 2(실시간)의 투자 앱: 투자 채우기 · 다시 만들기, 시세 업데이트, 기록 · 노트 모으기, 차트 시세, 은행 환율, 평가 날짜.
 // investdata.js의 같은 함수를 줄 그대로 옮긴 것이고, 다른 곳은 이것뿐이에요.
-//   요청 뼈대 · 읽은 자리 · 두 번째 차례: 실시간 것 (phone2req.js). 롤플은 시작한 곳까지만, 읽은 자리는 메신저 번호
+//   요청 뼈대 · 읽은 자리: 실시간 것 (phone2req.js). 이야기는 요약본의 글이고 롤플 채팅은 안 읽어요(그래서 폰 1의 두 번째
+//   차례가 없어요). 읽은 자리는 메신저 번호
 //   폰의 지금: 채우기는 폰에 저장된 시각, 평가 날짜(화면)는 서랍의 흐르는 시계
 //   자산 준비: 실시간 것 (phone2fill.js)
 // 폰 1 파일은 여기서 읽기만 해요.
@@ -8,10 +9,10 @@ import { wealthBlock, wealthCheck, investmentWealthRows } from './wealth.js';
 import { ctx, saveMeta } from './core.js';
 import { syncOf, makeMark, exclusive } from './phonesync.js';
 import { phoneChatScope } from './phonestory.js';
-import { baseline, reviseBaseline, cash, currency, finance, finite, uid, positions, migrateBank, fx, price, quoteKey } from './finance.js';
-import { askDraft, readNote, turnsNote, soFarHead } from './phonedata.js';
+import { baseline, reviseBaseline, cash, currency, finance, finite, uid, positions, migrateBank, fx, quoteKey } from './finance.js';
+import { askDraft } from './phonedata.js';
 import { json, list, text, CHART_SYS, MARKET_SYS, INVEST_SYS, INVEST_REBUILD, INVEST_NOTES_SYS, INVEST_RECORDS_SYS, securityOf, tradeOf, moved, stakesOf, watchOf, investmentTargets, parseInvestmentRecords, mergeInvestmentRecords, chartDates, ingestQuotes, validDate } from './investdata.js';
-import { liveSideRequest, liveReadMark, liveSecondTurn, liveTold, liveSavedNow, needLive } from './phone2req.js';
+import { liveSideRequest, liveReadMark, needLive } from './phone2req.js';
 import { livePrepareWealth } from './phone2fill.js';
 import { liveNowText, liveYearFor } from './phone2store.js';
 
@@ -25,54 +26,6 @@ export function liveInvestmentDate(m, p) {
     const date = p.noYear ? new Date().toISOString().slice(0, 10) : year && day ? `${year}-${day}` : '';
     if (p.noYear && p.investment && validDate(date)) p.investment.date = date;
     return validDate(date) ? date : '';
-}
-function liveLaterDate(p, gap, date) {
-    const d = String(liveSavedNow(p) || '').slice(0, 5);
-    if (!/^\d{2}-\d{2}$/.test(d)) return date;
-    const y = Number(date.slice(0, 4));
-    let c = `${y}-${d}`;
-    if (c < date && d.startsWith('01') && date.slice(5, 7) === '12') c = `${y + 1}-${d}`;
-    return validDate(c) && c > date ? c : date;
-}
-async function liveInvestMore(m, p, raw1, two, plan) {
-    needLive(m);
-    const inv = p.investment, date = liveLaterDate(p, two.cover, inv.date);
-    const soFar = { base: raw1.base, securities: raw1.securities, trades: raw1.trades, watch: raw1.watch, stakes: raw1.stakes };
-    const only = 'The opening cash and "base" stay as they are: leave "cash" and "base" out. A share first bought in RECENT CHAT' + (two.short ? ' or TOLD SHORT' : '') + ' goes in "securities". "quotes" for every share held on DATE and "fx" on DATE are needed again, as DATE is new';
-    const input = await liveSideRequest(m, p.owner, [`[DATE]\n${date}`, `[BANK — separate locked balances]\n${JSON.stringify(p.money?.bank || {})}`,
-        `[EXISTING PUBLIC PRICES]\n${JSON.stringify(Object.fromEntries(Object.entries(finance(m).prices).map(([k, book]) => [k, book[date]])))}`,
-        `${soFarHead('INVESTMENTS', two.short, only)}\n${JSON.stringify(soFar)}`, two.short?.text || ''], { profile: p.financeProfile, money: true, read: { gap: two.cover } });
-    const before = JSON.stringify([m.finance, p.investment]);
-    const raw = json(await askDraft(input, { force: true, system: INVEST_SYS, maxTokens: 12000 }));
-    if (JSON.stringify([m.finance, p.investment]) !== before) throw new Error('생성 중 금융 정보가 변경됐어요');
-    const securities = [...inv.securities];
-    for (const x of list(raw.securities).map(securityOf)) if (x.symbol && x.name && x.currency && securities.length < 10 && !securities.some(y => y.symbol === x.symbol)) securities.push(x);
-    // a trade told again (the same kind, share, day and quantity) is the one there
-    const same = (a, b) => a.kind === b.kind && a.symbol === b.symbol && a.date === b.date && a.quantity === b.quantity;
-    const fresh = list(raw.trades).slice(0, 30).map(tradeOf).filter(t => !inv.trades.some(o => same(o, t)));
-    for (const t of fresh) if (!validDate(t.date) || t.date > date || !securities.some(s => s.symbol === t.symbol && s.currency === t.currency)) throw new Error('거래 날짜나 종목 통화가 맞지 않아요');
-    const trades = [...inv.trades, ...fresh].sort((a, b) => String(a.date).localeCompare(String(b.date)));
-    positions(trades); // rejects overselling before any mutation
-    const scratch = { finance: structuredClone(finance(m)) };
-    for (const t of fresh) {
-        const acc = inv.accounts.find(a => a.currency === t.currency), a = acc && scratch.finance.accounts[acc.key];
-        if (!a) throw new Error('거래 통화의 현금 계좌가 없어요');
-        a.entries[t.id] = { amount: moved(t), date: t.date };
-    }
-    if (inv.accounts.some(a => cash(scratch.finance.accounts[a.key]) < -0.01)) throw new Error('더한 거래에 필요한 현금이 부족해요');
-    ingestQuotes(scratch, raw, input, date, securities);
-    for (const t of fresh) t.rateAtTrade = fx(scratch, t.currency, inv.base, t.date);
-    // the app shows the holdings at DATE's prices: a new DATE needs a price for every share held and a rate for every
-    // other currency on it, and a new foreign trade its rate (its cost is kept at that rate for good); else only turn 1 stays
-    const held = positions(trades).filter(h => h.quantity > 1e-9);
-    if (date !== inv.date && (held.some(h => { const q = price(scratch, `STOCK:${h.symbol}`, date); return !q || q.stale; })
-        || [...new Set([...inv.accounts.map(a => a.currency), ...held.map(h => h.currency)])].some(c => c !== inv.base && fx(scratch, c, inv.base, date) == null))) throw new Error('새 날짜의 시세 · 환율이 없어요');
-    if (fresh.some(t => t.currency !== inv.base && !finite(t.rateAtTrade))) throw new Error('새 거래의 환율이 없어요');
-    const stakes = [...inv.stakes, ...stakesOf(raw, input).filter(x => !inv.stakes.some(y => y.company.toLowerCase() === x.company.toLowerCase()))].slice(0, 8);
-    const watch = [...inv.watch, ...watchOf(raw, securities).filter(x => !inv.watch.some(y => y.symbol === x.symbol))].slice(0, 8);
-    m.finance = scratch.finance;
-    p.investment = { ...inv, securities, trades, stakes, watch, date, generatedDates: [...new Set([...inv.generatedDates, date])] };
-    return raw;
 }
 export const liveFillInvestment = (m, p, date, opts = {}) => exclusive('fill', () => liveMakeInvestment(m, p, date, opts));
 async function liveMakeInvestment(m, p, date, {regenerate = false, wealthPlan = null} = {}) {
@@ -140,18 +93,9 @@ async function liveMakeInvestment(m, p, date, {regenerate = false, wealthPlan = 
         if(correction) {if(attempt===0) {correction += '\n[PREVIOUS CANDIDATE]\n'+JSON.stringify(raw);continue;}throw new Error('투자 규모를 재력 기준에 맞추지 못했어요. 기존 금융 데이터는 유지돼요');}
         m.finance = scratch.finance;
         p.investment = { at: Date.now(), version: 1, base: raw.base, date, basis: text(raw.basis, 2000), securities, accounts, trades, stakes, watch: watchOf(raw, securities), generatedDates: [date] };
-        // stopped short of the phone's clock: a second turn adds the rest (one that fails keeps the first)
-        const two0 = liveSecondTurn(m, p, read.gap);
-        let last = read.gap, short = null, told = raw;
-        // (실시간 폰: 시작한 곳까지 다 읽을 때까지 이어서 읽어요. 남은 이야기를 읽어 줄 반영이 없어요)
-        for (let two = two0; two; two = liveSecondTurn(m, p, last)) {
-            try { told = liveTold(told, await liveInvestMore(m, p, told, two, plan), ['securities', 'trades', 'watch', 'stakes']); last = two.cover; short = two.short; }
-            catch (err) { console.warn('[narrative-archive] investments, second turn', err); break; }
-        }
-        mark = liveReadMark(last) || mark0;
+        mark = liveReadMark(read.gap) || mark0;
         syncOf(p, phoneChatScope(ctx())).marks.invest = mark;
         await saveMeta();
-        if (two0) turnsNote(last, '투자', short); else readNote(read.gap);
         return;
     }
 }

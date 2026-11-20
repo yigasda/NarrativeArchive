@@ -1,22 +1,25 @@
 // 실시간 폰이 들고 가는 이야기 요약본 (docs/PHONE2-PLAN.md "요약본으로 시작").
-// 실시간을 시작하는 순간의 이야기를 한 번 적어서 실시간 폰에 넣어 둬요. 그 뒤로 실시간 폰은 롤플 채팅도 아카이브도
-// 다시 읽지 않아요: 롤플에서 메시지를 고치든 지우든 분기하든 실시간 폰이 아는 이야기는 그대로예요.
+// 이야기에서 시작한 실시간 폰은 이야기를 요약본 한 장으로 알아요. 롤플 채팅과 아카이브를 메시지 번호로 따라가지 않아서,
+// 롤플에서 메시지를 고치든 지우든 분기하든 읽은 자리가 어긋날 일이 없어요.
+//   시작할 때: 그때 이야기의 끝까지 요약본을 만들어요 (liveSnapNow).
+//   롤플이 더 진행됐을 때: 답장마다 그 순간 롤플의 끝 메시지들을 읽고(liveChatTail), 그것으로 다 안 담길 만큼
+//     진행됐으면 요약본 뒤로 진행된 구간만 요약해 붙여요 (liveSnapExtend).
 //
 // 요약본에 드는 것 (snap):
 //   text    지금까지의 이야기. 아카이브 글 + 아직 아카이브 안 된 구간의 요약 + 그때의 STATE · OPEN.
 //           아카이브의 "한 번에 압축"이 받는 초안을 그대로 받아서(같은 지시문 · 같은 모델 · 같은 나누기), 그 초안을
 //           아카이브에 넣었을 때의 글을 만들어요. 진짜 아카이브에는 넣지 않아요: 롤플은 아무것도 안 바뀌어요.
-//   recent  시작 직전의 메시지 몇 개, 글자 그대로 (말투 · 직전 분위기). 메시지마다 한 칸인 목록이에요.
-//   upto    어느 메시지까지의 이야기인지 (그때의 마지막 메시지 번호). 기록용이에요: 이 번호로 채팅을 다시 읽지 않아요.
-// 이 파일은 요약본을 "만들기만" 해요. 저장은 시작할 때(phone2story.js) 해요. 폰 1은 이 파일을 부르지 않아요.
+//   recent  그때 이야기의 마지막 메시지 몇 개, 글자 그대로 (말투 · 직전 분위기). 메시지마다 한 칸인 목록이에요.
+//   upto    어느 메시지까지의 이야기인지 (그때의 마지막 메시지 번호). 요약본을 늘릴 때 "그 뒤"를 정하는 데만 써요.
+// 이 파일은 요약본을 "만들기만" 해요. 저장은 부르는 쪽이 해요 (시작: phone2story.js, 늘리기: 답장을 돌리는 파일).
+// 폰 1은 이 파일을 부르지 않아요.
 
 import { ctx, globalSettings } from './core.js';
-import { estTok } from './recall.js';
 import { activePrompt, auFix } from './prompts.js';
 import { lastRangeEnd, splitTail, stripCites, trimEnd } from './sections.js';
 import { hasChanges, resolveChanges } from './statechg.js';
 import { placeAppend } from './appendtext.js';
-import { chunkItems, draftCompress, rangeRaw } from './wizard.js';
+import { draftCompress, rangeRaw } from './wizard.js';
 import { chatStamp, recentPhoneText } from './phonedata.js';
 import { isSnap } from './phone2store.js';
 
@@ -38,18 +41,6 @@ function unarchived(m, upto) {
 }
 // the instruction the archive's 한 번에 압축 uses
 const promptOf = g => (g.prompts || []).find(x => x.id === g.wizPrompt) || activePrompt(g);
-
-// 시작 전에 보여 줄 숫자 (요청을 보내기 전에): 요약할 구간 · 메시지 수 · 요청 수 · 보낼 양(어림)
-//   { from, to, count, parts, tokens } — count 0이면 요약할 게 없어요 (요청 0번, 아카이브 글 그대로)
-export function liveSnapPlan(m, upto) {
-    if (!Number.isInteger(upto) || upto < 0) throw new Error('이야기의 어느 메시지까지인지 필요해요');
-    const u = unarchived(m, upto);
-    if (!u.items.length) return { from: u.from, to: u.to, count: 0, parts: 0, tokens: 0 };
-    const g = globalSettings(), p = promptOf(g), parts = chunkItems(u.items).length;
-    // (as the archive's own estimate: the raw log once, and with each request the archive and the instruction)
-    const tokens = Math.round(estTok(u.raw) + parts * (estTok(String(m?.text || '')) + estTok(p?.text || '')));
-    return { from: u.from, to: u.to, count: u.items.length, parts, tokens };
-}
 
 // 글 `base` 뒤에 구간 `u`의 요약을 붙인 글 → { text, parts }. 아카이브의 "한 번에 압축"이 받는 초안을 그대로 받아서
 // (같은 지시문 · 같은 모델 · 같은 나누기), "바로 넣기"가 넣었을 때의 글을 만들어요. 구간이 비었으면 요청 없이 base 그대로.

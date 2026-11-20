@@ -5,7 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import * as L from '../src/phone2store.js';
-import { T, INV, I2 } from './phone2reflect.load.mjs';
+import { T, INV, I2, snapFor } from './phone2reflect.load.mjs';
 
 const src = f => readFile(new URL(`../src/${f}`, import.meta.url), 'utf8');
 const phone = () => ({ owner: 'Mara', now: '11-12 21:30', year: 2026, country: 'DE', contacts: [], threads: [], calls: [], photos: [], notes: [], searches: [], events: [], posts: [], mails: [], diary: [], voice: [] });
@@ -16,7 +16,7 @@ function world() {
     // (채우기는 롤플 채팅의 줄을 읽어요: 반영 시험이 막아 둔 것을 여기서만 열어요)
     T.rows = T.chat.map((x, i) => ({ index: i, user: x.is_user, hidden: false, text: `[#${i}] ${x.name}: ${x.mes}` }));
     const real = { phones: { mara: phone() }, text: '' };
-    L.startFromStory(real, { persona: 'Ren', upto: 2, scope: 'test', now: 1763000000000, story: { ranges: {}, titles: [], rawFrom: 0, own: [''] } });
+    L.startFromStory(real, { persona: 'Ren', upto: 2, scope: 'test', now: 1763000000000 }).snap = snapFor(real, 2);
     const room = L.ensureRoom(real, ['Mara']);
     L.sendLive(real, room.id, '메신저로 한 말'); L.sendLive(real, room.id, '아직 반영 안 된 말');
     const d = L.liveMeta(real, { now: () => '11-14 16:05' }), p = d.phones.mara, first = room.messages[0].n;
@@ -115,14 +115,14 @@ test('서랍이 아니면 모델을 부르기 전에 멈춰요; 사본은 폰 1 
     const a = await src('investdata.js'), b = await src('phone2invest.js'), api = await src('phone2api.js');
     const body = (s, start) => { const i = s.indexOf(start), j = s.indexOf('\n}\n', i); assert.ok(i >= 0 && j > i, start); return s.slice(i, j + 2); };
     const need = '    needLive(m);\n';
-    assert.equal(body(b, 'function liveLaterDate(').replace('function liveLaterDate(', 'function laterDate(').replace('liveSavedNow(p)', 'storyNow(p, nowAt(gap))'), body(a, 'function laterDate('));
-    assert.equal(body(b, 'async function liveInvestMore(').replace('async function liveInvestMore(', 'async function investMore(').replace(need, '').replace('liveLaterDate(', 'laterDate(').replace('liveSideRequest(', 'sideRequest(').replace('    return raw;\n', ''), body(a, 'async function investMore('));
+    // 실시간 폰은 채팅을 이어 읽지 않아요 (이야기는 요약본에 다 있어요): 폰 1의 두 번째 차례는 사본에 없어요.
+    // 폰 1 쪽에서 그 부분만 빼면 같아요
+    const cutOut = (t, from, to, put = '') => { const x = t.indexOf(from), y = t.indexOf(to, x); assert.ok(x >= 0 && y >= x, from); return t.slice(0, x) + put + t.slice(y + to.length); };
+    const cutLine = (t, l) => { assert.ok(t.includes(l), l); return t.replace(l, ''); };
+    assert.ok(!b.includes('liveInvestMore') && !b.includes('liveLaterDate') && !/[sS]econdTurn/.test(b));
     assert.equal(body(b, 'async function liveMakeInvestment(').replace('async function liveMakeInvestment(', 'async function makeInvestment(').replace(need, '').replace('await livePrepareWealth(', 'await prepareWealth(').replace('liveSideRequest(', 'sideRequest(')
-        // (폰 1은 두 번까지, 실시간은 시작한 곳까지 이어서: 앞 차례들이 쓴 것을 told에 모아 다음 차례에 보여 줘요)
-        .replaceAll('liveReadMark(', 'readMark(').replace('const two0 = liveSecondTurn(m, p, read.gap)', 'const two = secondTurn(m, p, read.gap)').replace('short = null, told = raw;', 'short = null;')
-        .replace('        // (실시간 폰: 시작한 곳까지 다 읽을 때까지 이어서 읽어요. 남은 이야기를 읽어 줄 반영이 없어요)\n        for (let two = two0; two; two = liveSecondTurn(m, p, last)) {\n', '        if (two) {\n')
-        .replace("told = liveTold(told, await liveInvestMore(m, p, told, two, plan), ['securities', 'trades', 'watch', 'stakes']);", 'await investMore(m, p, raw, two, plan);')
-        .replace("second turn', err); break; }", "second turn', err); }").replace('if (two0) turnsNote(', 'if (two) turnsNote('), body(a, 'async function makeInvestment('));
+        .replaceAll('liveReadMark(', 'readMark('),
+    cutLine(cutOut(body(a, 'async function makeInvestment('), "        // stopped short of the phone's clock: a second turn adds the rest", '        mark = readMark(last) || mark0;\n', '        mark = readMark(read.gap) || mark0;\n'), "        if (two) turnsNote(last, '투자', short); else readNote(read.gap);\n"));
     assert.equal(body(b, 'export async function liveRefreshMarket(').replace('function liveRefreshMarket(', 'function refreshMarket(').replace(need, '').replace('return liveFillInvestment(', 'return fillInvestment(').replace('liveSideRequest(', 'sideRequest('), body(a, 'export async function refreshMarket('));
     assert.equal(body(b, 'export function liveInvestmentDate(').replace('function liveInvestmentDate(', 'function investmentDate(').replace(need, '').replace("String(liveNowText(m, p) || '').slice(0, 5)", 'storyNow(p, stopAt(m, p)).slice(0, 5)').replace('String(liveYearFor(p, day))', 'String(p.year)'), body(a, 'export function investmentDate('));
     assert.ok(b.includes("export const liveFillInvestment = (m, p, date, opts = {}) => exclusive('fill', () => liveMakeInvestment(m, p, date, opts));") && a.includes("export const fillInvestment = (m, p, date, opts = {}) => exclusive('fill', () => makeInvestment(m, p, date, opts));"));

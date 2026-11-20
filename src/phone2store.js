@@ -7,8 +7,9 @@
 //   world: null | {                               지금 폰 2 하나
 //     id, from: 'story' | 'fresh', startedAt (ms), dayShift (현실보다 며칠 앞인지),
 //     scope: the chat it belongs to (phoneChatScope), storyUpto: 이야기에서 시작했으면 그때의 마지막 메시지 번호
-//       (폰 2는 이야기를 그 번호까지만 읽어요; 글을 복사하지 않아요), else null,
-//     story: 이야기에서 시작했으면 그때의 이야기 표시 { ranges, titles, rawFrom } (phone2story.js), else null,
+//       (메신저 번호가 그 뒤부터 이어져요; 롤플 채팅을 이 번호로 읽지 않아요), else null,
+//     snap: 이야기에서 시작했으면 그 폰이 아는 이야기 요약본 { v, at, upto, text, recent: [메시지], made } (phone2snap.js).
+//       롤플이 더 진행되면 늘어나요. 요약본 방식 전에 시작해 둔 폰은 처음 움직일 때 받아요,
 //     persona: the persona's name, lastOwner: 마지막으로 연 폰 주인,
 //     phones: { [name key]: phone },              모든 인물의 폰 2
 //     finance, profiles, pre, lore, loreOff:      폰 1의 m.finance · phoneProfiles · phonePre · phoneLore · phoneLoreOff
@@ -57,7 +58,7 @@ export function newWorld(m, { from = 'fresh', persona = '', dayShift = 0, scope 
     if (live.world) archiveWorld(m, now);
     const name = String(persona).trim();
     live.world = { id: newId('w'), from, startedAt: now, dayShift: Number(dayShift) || 0, scope: String(scope || ''), storyUpto: from === 'story' ? storyUpto : null,
-        story: null, persona: name, lastOwner: '', phones: {}, finance: null, profiles: {}, pre: {}, lore: [], loreOff: {},
+        persona: name, lastOwner: '', phones: {}, finance: null, profiles: {}, pre: {}, lore: [], loreOff: {},
         messenger: { accounts: { [liveKey(name)]: { name } }, rooms: {} }, queue: { round: 0, jobs: [] } };
     return live.world;
 }
@@ -65,10 +66,9 @@ export function newWorld(m, { from = 'fresh', persona = '', dayShift = 0, scope 
 // phoneStoryRun are 폰 1's alone; glossary, dateOrder and the settings stay shared, read only)
 export const STORY_COPY = { phones: 'phones', finance: 'finance', phoneProfiles: 'profiles', phonePre: 'pre', phoneLore: 'lore', phoneLoreOff: 'loreOff' };
 // 이야기에서 시작: a new 폰 2 from 폰 1 as it is now, nothing shared with it (폰 1 is only read)
-// story: what the story was then (phone2story.js storyMark: its ranges, titles, first raw message), so 폰 2 reads no further
-export function startFromStory(m, { persona, upto, scope = '', dayShift = 0, now = Date.now(), story = null } = {}) {
+// upto: the story's last message then. 폰 2's messenger numbers go on from it; the chat is not read by it
+export function startFromStory(m, { persona, upto, scope = '', dayShift = 0, now = Date.now() } = {}) {
     if (!(Number.isInteger(upto) && upto >= 0)) throw new Error('이야기의 어느 메시지까지인지 필요해요');
-    if (!obj(story) || !obj(story.ranges) || !Array.isArray(story.titles) || !Number.isInteger(story.rawFrom)) throw new Error('시작할 때의 이야기 표시가 필요해요');
     const copy = Object.fromEntries(Object.keys(STORY_COPY).filter(k => m?.[k] !== undefined && m[k] !== null).map(k => [k, structuredClone(m[k])]));
     const w = newWorld(m, { from: 'story', persona, dayShift, scope, storyUpto: upto, now });
     for (const [k, to] of Object.entries(STORY_COPY)) if (k in copy) w[to] = copy[k];
@@ -86,7 +86,6 @@ export function startFromStory(m, { persona, upto, scope = '', dayShift = 0, now
         delete p.liveYearShift; delete p.liveYearKeep;
         if (Number.isInteger(p.year) && !p.noYear) p.liveYearKeep = true;
     }
-    w.story = structuredClone(story);
     if (typeof m.lastPhoneOwner === 'string') w.lastOwner = m.lastPhoneOwner;
     return w;
 }
@@ -119,7 +118,7 @@ export function resetLive(m, how = 'chats') {
     if (!live) return 'none';
     const w = live.world, rooms = Object.keys(w?.messenger?.rooms || {}).length;
     if (how === 'all' || !w || !rooms) { delete m.live; return w || live.archive?.length ? 'all' : 'none'; }
-    live.world = { id: newId('w'), from: 'fresh', startedAt: w.startedAt, dayShift: 0, scope: w.scope, storyUpto: null, story: null,
+    live.world = { id: newId('w'), from: 'fresh', startedAt: w.startedAt, dayShift: 0, scope: w.scope, storyUpto: null,
         persona: w.persona, lastOwner: '', phones: {}, finance: null, profiles: {}, pre: {}, lore: [], loreOff: {},
         messenger: w.messenger, queue: { round: (Number(w.queue?.round) || 0) + 1, jobs: [] } };
     live.archive = [];
@@ -156,7 +155,6 @@ const IS_LIVE = Symbol('폰 2 서랍');
 // (each drawer's chat meta, for isStoryPhone only: never handed out)
 const CHAT_OF = new WeakMap();
 export const isLiveMeta = v => !!(v && typeof v === 'object' && v[IS_LIVE]);
-// text: what 폰 2 may read of the story, a function asked each time (phone2story.js liveStoryText), else ''
 // the newest messenger talk of the rooms `owner` is in, oldest first, one line a message ("Name: words"), the last `n`
 // that fit in maxChars (seen: only up to that message number; summary: with the rooms' summaries of older talk before
 // them). What 폰 2's app requests (phone2req.js) show as RECENT CHAT
@@ -182,30 +180,33 @@ export function liveRecent(w, owner, n = 12, { maxChars = Infinity, seen = null,
     }
     return [short ? `(earlier on the messenger, in short)\n${short}` : '', out.join('\n')].filter(Boolean).join('\n\n');
 }
+// 이야기 요약본을 챙기는 함수 (답장을 돌리는 파일이 넣어 둬요): 서랍이 자기 채팅의 것으로 불러요 (phoneStoryReady)
+let storyKeeper = null;
+export const setStoryKeeper = fn => { storyKeeper = typeof fn === 'function' ? fn : null; };
 // now: p => "MM-DD HH:MM", the time it is now on that phone's clock (the caller's: the story's date and the real clock),
 // answered as phoneNow
-export function liveMeta(m, { text = null, now = null } = {}) {
+export function liveMeta(m, { now = null } = {}) {
     const w = liveWorld(m);
     if (!w) throw new Error('아직 폰 2가 없어요');
     const own = k => typeof k === 'string' && Object.hasOwn(LIVE_OWN, k), shared = k => typeof k === 'string' && LIVE_SHARED.includes(k);
     const drawer = {}, copies = {};
-    const story = () => { const t = typeof text === 'function' ? text() : ''; return typeof t === 'string' ? t : ''; };
     // (a copy of a shared key: taken again when the chat's own has changed since — the glossary edited on its screen,
     // which writes the chat's meta — so the drawer never reads an old one)
     const from = {}, sig = k => { try { return JSON.stringify(m[k]) ?? ''; } catch { return ''; } };
     const copy = k => { const s = sig(k); if (!Object.hasOwn(copies, k) || from[k] !== s) { from[k] = s; copies[k] = m[k] === undefined ? undefined : structuredClone(m[k]); } return copies[k]; };
     // (phoneJournal: the browser key 폰 2's 복구 records are under. 폰 2's functions write their records there, and the
     // shared helpers that touch the journal of the meta they are given ask for it, so they never reach 폰 1's own)
-    // (phoneUpto · phoneRecent: what 폰 2's app requests (phone2req.js) read of the talk. The role-play chat only up to where 폰 2 began
-    // (none of it for one begun fresh), and for the newest talk the messenger's, never the chat's)
+    // (phoneUpto: where 폰 2's messenger numbers begin (-1: begun fresh). phoneRecent: the newest talk for its app
+    // requests (phone2req.js): the messenger's, never the chat's)
     const upto = () => (w.from === 'story' && Number.isInteger(w.storyUpto) ? w.storyUpto : -1);
-    // (phoneSnap: the story as 폰 2 took it when it began (phone2snap.js), when it has one. Then that is its story text,
-    // whatever the caller gives as `text`, and its requests read no chat at all)
+    // (phoneSnap: the story 폰 2 knows (phone2snap.js); its `text` is that snapshot's text, '' with none. The role-play
+    // chat and the archive are never read through the drawer. phoneStoryReady: asks for the snapshot to be made for a
+    // 폰 2 begun from the story that has none yet)
     const snap = () => (isSnap(w.snap) ? w.snap : undefined);
     // (화면 주인, the chat's one setting of whose view the story's status line is: the same for 타임라인 and 실시간, so it
     // is read from and written to the chat's own meta)
     const pass = k => k === 'phoneScreenHolder';
-    const at = k => (pass(k) ? m[k] : k === 'phones' ? tagLive(w.phones) : own(k) ? w[LIVE_OWN[k]] : Object.hasOwn(drawer, k) ? drawer[k] : k === 'text' ? (snap() ? snap().text : story()) : k === 'phoneSnap' ? snap() : k === 'phoneJournal' ? (liveScope(w.scope || 'live', m) || 'live') : k === 'phoneUpto' ? upto() : k === 'phoneNow' ? (typeof now === 'function' ? now : undefined) : k === 'phoneRecent' ? (owner, n, o) => liveRecent(w, owner, n, o) : shared(k) ? copy(k) : undefined);
+    const at = k => (pass(k) ? m[k] : k === 'phones' ? tagLive(w.phones) : own(k) ? w[LIVE_OWN[k]] : Object.hasOwn(drawer, k) ? drawer[k] : k === 'text' ? (snap()?.text ?? '') : k === 'phoneSnap' ? snap() : k === 'phoneStoryReady' ? () => (w.from === 'story' && !snap() && storyKeeper ? storyKeeper(m) : null) : k === 'phoneJournal' ? (liveScope(w.scope || 'live', m) || 'live') : k === 'phoneUpto' ? upto() : k === 'phoneNow' ? (typeof now === 'function' ? now : undefined) : k === 'phoneRecent' ? (owner, n, o) => liveRecent(w, owner, n, o) : shared(k) ? copy(k) : undefined);
     const keys = () => [...new Set([...Object.keys(LIVE_OWN).filter(k => w[LIVE_OWN[k]] !== undefined), ...LIVE_SHARED.filter(k => m[k] !== undefined), 'text', ...Object.keys(drawer), ...(Object.hasOwn(m, 'phoneScreenHolder') ? ['phoneScreenHolder'] : [])])];
     const made = new Proxy(drawer, {
         get: (_, k) => (k === IS_LIVE ? true : typeof k === 'symbol' ? undefined : at(k)),

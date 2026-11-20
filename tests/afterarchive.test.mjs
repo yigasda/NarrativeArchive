@@ -42,11 +42,11 @@ map['./phonelife.js'] = encoded(await rewrite('phonelife.js')); map['./investdat
 for (const f of ['phone2year.js', 'phone2req.js', 'phone2fill.js', 'phone2money.js', 'phone2life.js', 'phone2invest.js', 'phone2where.js', 'phone2make.js']) map[`./${f}`] = encoded(await rewrite(f));
 const req2 = await import(map['./phone2req.js']), money2 = await import(map['./phone2money.js']), life2 = await import(map['./phone2life.js']), invest2 = await import(map['./phone2invest.js']), make2 = await import(map['./phone2make.js']), where2 = await import(map['./phone2where.js']);
 // 이야기 #7에서 시작한 실시간 폰: 메신저에 두 마디, 반영은 첫 마디까지 읽음
-// (snap: 이야기 요약본으로 시작한 폰 — beginFromStory가 하듯 월드에 넣어요)
+// (snap: 그 폰이 아는 이야기 요약본 — beginFromStory가 하듯 월드에 넣어요. 안 주면 그 채팅의 아카이브 글 그대로인 요약본)
 const liveOf = (p, mm, upto = 7, snap = null) => {
     const real = { ...no2(mm), phones: { ren: p } };
-    live2.startFromStory(real, { persona: 'Me', upto, scope: 'test', story: { ranges: {}, titles: [], rawFrom: 0, own: [String(mm.text || '')] } });
-    if (snap) live2.liveWorld(real).snap = structuredClone(snap);
+    live2.startFromStory(real, { persona: 'Me', upto, scope: 'test' });
+    live2.liveWorld(real).snap = structuredClone(snap || { v: 1, at: 0, upto, text: String(mm.text || ''), recent: [], made: { from: 0, to: upto, count: 0, parts: 0 } });
     const room = live2.ensureRoom(real, ['Ren']);
     live2.sendLive(real, room.id, 'on the messenger'); live2.sendLive(real, room.id, 'not read yet');
     const d = live2.liveMeta(real, { text: () => String(mm.text || '') }), q = d.phones.ren, first = room.messages[0].n;
@@ -69,21 +69,24 @@ test('the chat after the archive, whole and oldest first', async () => {
     assert.ok(input.includes('[#11] Ren'));
 });
 
-test('폰 2 (진짜 서랍): the chat after the archive up to where it began, then the messenger; nothing after', async () => {
+test('폰 2 (진짜 서랍): 롤플 채팅은 안 읽어요. 이야기는 요약본의 글, 최근 대화는 요약본의 끝 메시지 뒤에 메신저 대화', async () => {
     globalThis.__rows = rows(12);
-    const { d, p, first } = liveOf({ owner: 'Ren', sync: { marks: { base: { index: 7 } }, done: [] } }, m);
+    const snap = { v: 1, at: 0, upto: 7, text: m.text, recent: ['[#6] Ren: KEPT six', '[#7 · USER] Me: KEPT seven'], made: { from: 0, to: 7, count: 0, parts: 0 } };
+    const { d, p, first } = liveOf({ owner: 'Ren', sync: { marks: { base: { index: 7 } }, done: [] } }, m, 7, snap);
     assert.equal(first, 8);
-    const g = req2.liveWindowOf(d, p);
-    assert.deepEqual([g.from, g.to, g.n, g.all, g.upto, g.later, g.mark], [4, 7, 4, true, 7, false, 8]);
+    assert.deepEqual(req2.liveWindowOf(d, p), { none: true, n: 0, all: true, upto: -1, later: false, mark: 8 });
     const input = await req2.liveSideRequest(d, 'Ren', []);
-    assert.match(input, /\[RECENT CHAT\]\n\[#4\] Ren/);
-    assert.ok(input.includes('[#7] Ren')); assert.ok(!input.includes('[#8] Ren')); assert.ok(!input.includes('[#11] Ren'));
-    assert.ok(input.indexOf('[#7] Ren') < input.indexOf('Me: on the messenger')); assert.ok(input.includes('Me: not read yet'));
+    // (채팅의 줄은 하나도 없어요: 시작 앞 것도, 뒤 것도)
+    assert.deepEqual([...input.matchAll(/^\[#(\d+)[^\]]*\] /gm)].map(x => Number(x[1])), [6, 7]);
+    assert.ok(!/\[#\d+\] Ren: (?!KEPT)/.test(input));
+    assert.ok(input.includes(`[ARCHIVE]\n${data.archiveFor(m, -1, null).text}`));
+    assert.match(input, /\[RECENT CHAT\]\n\[#6\] Ren: KEPT six\n\n\[#7 · USER\] Me: KEPT seven\n\n/);
+    assert.ok(input.indexOf('KEPT seven') < input.indexOf('Me: on the messenger')); assert.ok(input.includes('Me: not read yet'));
     assert.equal((input.match(/\[RECENT CHAT/g) || []).length, 1);
     // an app that marks where it read: only the talk the reflection read; its mark is that messenger number
     const read = {};
     const fill = await req2.liveSideRequest(d, 'Ren', [], { read });
-    assert.ok(fill.includes('Me: on the messenger')); assert.ok(!fill.includes('Me: not read yet')); assert.ok(!fill.includes('[#8] Ren'));
+    assert.ok(fill.includes('Me: on the messenger')); assert.ok(!fill.includes('Me: not read yet')); assert.ok(!/\[#\d+\] Ren: (?!KEPT)/.test(fill));
     assert.deepEqual(req2.liveReadMark(read.gap), { index: 8, user: -1, fp: '', tail: '' });
     // 폰 1 (its own functions, the chat's own meta): as it was — and a meta that only looks like a drawer is nothing to them
     const p1 = { owner: 'Ren', sync: { marks: { base: { index: 7 } }, done: [[8, 9]] } };
@@ -366,7 +369,7 @@ test('폰 만들기 under way: the same phone made again (the phone shut and ope
 });
 
 // ---- 실시간 폰(폰 2)에서 앱 채우기: 롤플은 시작한 곳까지, 그 뒤는 반영된 메신저 대화, 시각은 폰 2의 것
-test('실시간 폰에서 은행 채우기 (진짜 서랍, 아카이브가 있는 채팅): 시작 뒤의 롤플도 롤플 상태창도 안 읽고, 반영된 메신저 대화를 읽고, 읽는 표시는 메신저 번호', async () => {
+test('실시간 폰에서 은행 채우기 (진짜 서랍, 아카이브가 있는 채팅): 롤플 채팅도 롤플 상태창도 안 읽고, 반영된 메신저 대화를 읽고, 읽는 표시는 메신저 번호', async () => {
     globalThis.__rows = rows(12);
     globalThis.__trackers = [{ i: 11, date: '2026-11-02', min: 20 * 60, place: 'Eastgate', weather: 'rain' }];
     try {
@@ -376,175 +379,13 @@ test('실시간 폰에서 은행 채우기 (진짜 서랍, 아카이브가 있�
         await money2.liveFillMoney(d, p);
         const money = globalThis.__menu.calls.filter(c => c.sys === data.AI_SYS_MONEY);
         assert.equal(money.length, 1);
-        assert.deepEqual(nums(money[0].input), [4, 5, 6, 7]);
+        assert.deepEqual(nums(money[0].input), []);
+        assert.ok(money[0].input.includes(`[ARCHIVE]\n${data.archiveFor(m, -1, null).text}`));
         assert.ok(money[0].input.includes('Me: on the messenger') && !money[0].input.includes('Me: not read yet') && !money[0].input.includes('Eastgate'));
         assert.ok(money[0].input.includes('"now":"11-12 21:30"'));
         assert.deepEqual(p.sync.marks.money, { index: first, user: -1, fp: '', tail: '' });
         assert.deepEqual(p.money.tx.map(t => t.who), ['Bakery']);
         assert.equal(JSON.stringify(real.phones), p1);
-    } finally { delete globalThis.__trackers; }
-});
-
-// 실시간에서도 긴 이야기는 두 번에 나눠 읽어요: 두 번째도 폰 2의 창(liveSecondTurn)으로, 시작한 곳까지만
-const afterStart = (n, from) => bigRows(n).map(r => (r.index > from ? { ...r, text: `[#${r.index}] Ren: AFTERSTART ${r.index}\n2026-11-20 20:00, Eastgate` } : r));
-test('실시간 폰에서 생활 · 은행 채우기 (진짜 서랍, 긴 이야기): 두 번에 나눠 읽고, 두 번째도 시작한 곳까지만, 롤플 상태창은 안 읽어요', async () => {
-    // (첫 번째 창은 #4–#17, 두 번째는 #18부터: 시작한 곳 #21에서 멈춰야 해요. 폰 1의 창은 반영한 적 없는 폰이면 #23까지 읽어요)
-    globalThis.__rows = afterStart(46, 21);
-    // (롤플 상태창은 폰에 저장된 시각보다 뒤: 그걸 읽으면 "now"가 달라져요)
-    globalThis.__trackers = [{ i: 45, date: '2026-11-20', min: 20 * 60, place: 'Eastgate', weather: 'rain' }];
-    const base = () => ({ owner: 'Ren', now: '11-12 21:30', country: 'DE', lives: 'DE', sync: { marks: { base: { index: 21 } }, done: [], hiddenRead: {}, events: {} } });
-    const check = (turns, real, p1) => {
-        assert.equal(turns.length, 2);
-        const a = nums(turns[0].input), b = nums(turns[1].input);
-        assert.equal(a[0], 4); assert.ok(b.length && b.length < a.length);
-        assert.deepEqual([...a, ...b], Array.from({ length: a.length + b.length }, (_, i) => i + 4));
-        assert.equal(b.at(-1), 21);
-        for (const t of turns) assert.ok(!t.input.includes('AFTERSTART') && !t.input.includes('Eastgate') && !t.input.includes('11-20'), 'after the start');
-        assert.equal(JSON.stringify(real.phones), p1);
-    };
-    try {
-        for (const fresh of [false, true]) {
-            const { real, d, p } = liveOf(base(), m, 21), p1 = JSON.stringify(real.phones);
-            // (fresh: 반영한 적 없는 폰. 폰 1의 창은 그런 폰이면 채팅 끝까지 읽어요)
-            if (fresh) delete p.sync;
-            globalThis.__menu = { calls: [], answers: [lifeAnswer('A'), lifeAnswer('B')], answer: '{}' };
-            await life2.liveFillLife(d, p);
-            const turns = globalThis.__menu.calls.filter(c => c.sys === life.AI_SYS_LIFE);
-            check(turns, real, p1);
-            assert.ok(turns[0].input.includes('"now":"11-12 21:30"') && turns[1].input.includes('[LIFE SO FAR'));
-            assert.deepEqual(p.life.clock.alarms.map(x => x.label), ['A', 'B']);
-        }
-        for (const fresh of [false, true]) {
-            const { real, d, p } = liveOf(base(), m, 21), p1 = JSON.stringify(real.phones);
-            if (fresh) delete p.sync;
-            globalThis.__menu = { calls: [], answers: [moneyAnswer('Bakery', 500, '11-10 09:00'), moneyAnswer('Kiosk', 900, '11-11 09:00')], answer: '{}' };
-            await money2.liveFillMoney(d, p);
-            const turns = globalThis.__menu.calls.filter(c => c.sys === data.AI_SYS_MONEY || c.sys === data.AI_SYS_MONEY_MORE);
-            check(turns, real, p1);
-            assert.ok(turns[0].input.includes('"now":"11-12 21:30"'));
-            assert.equal(p.money.bank.accounts[0].balance, 500);
-        }
-    } finally { delete globalThis.__trackers; }
-});
-
-// 시작 전 이야기가 두 번으로도 다 안 읽힐 만큼 길면: 실시간 폰은 시작한 곳까지 이어서 읽어요 (남은 걸 읽어 줄 반영이 없어요)
-const liveLong = () => ({ owner: 'Ren', now: '11-12 21:30', country: 'DE', lives: 'DE', sync: { marks: { base: { index: 39 } }, done: [], hiddenRead: {}, events: {} } });
-const wholeRun = (turns, real, p1) => {
-    const got = turns.flatMap(t => nums(t.input));
-    // #4부터 시작한 곳 #39까지 한 번씩, 빠짐없이; 시작 뒤 것은 없어요
-    assert.deepEqual(got, Array.from({ length: 36 }, (_, i) => i + 4));
-    for (const t of turns) assert.ok(!t.input.includes('AFTERSTART') && !t.input.includes('Eastgate'), 'after the start');
-    assert.equal(JSON.stringify(real.phones), p1);
-};
-test('실시간 폰의 생활 · 배달 채우기 (진짜 서랍, 아주 긴 이야기): 시작한 곳까지 다 읽을 때까지 이어서 읽어요', async () => {
-    globalThis.__rows = afterStart(46, 39);
-    globalThis.__trackers = [{ i: 45, date: '2026-11-20', min: 20 * 60, place: 'Eastgate', weather: 'rain' }];
-    try {
-        {
-            const { real, d, p } = liveOf(liveLong(), m, 39), p1 = JSON.stringify(real.phones);
-            globalThis.__menu = { calls: [], answers: ['A', 'B', 'C', 'D', 'E', 'F'].map(lifeAnswer), answer: '{}' };
-            await life2.liveFillLife(d, p);
-            const turns = globalThis.__menu.calls.filter(c => c.sys === life.AI_SYS_LIFE);
-            // (첫 차례 7만 토큰, 그 뒤 3만 토큰씩)
-            assert.equal(turns.length, 6);
-            wholeRun(turns, real, p1);
-            // 뒤 차례는 앞 차례들이 쓴 것을 다 받아요
-            assert.ok(turns[5].input.includes('[LIFE SO FAR') && ['"A"', '"B"', '"C"', '"D"', '"E"'].every(x => turns[5].input.includes(`"label":${x}`)));
-            assert.deepEqual(p.life.clock.alarms.map(x => x.label), ['A', 'B', 'C', 'D', 'E', 'F']);
-        }
-        {
-            // 가운데 차례가 실패하면: 그 앞까지 쓴 것은 남고, 거기서 멈춰요
-            const { d, p } = liveOf(liveLong(), m, 39);
-            globalThis.__menu = { calls: [], answers: [lifeAnswer('A'), lifeAnswer('B'), 'not json {', lifeAnswer('D')], answer: '{}' };
-            await life2.liveFillLife(d, p);
-            const turns = globalThis.__menu.calls.filter(c => c.sys === life.AI_SYS_LIFE);
-            assert.equal(turns.length, 3);
-            assert.deepEqual(p.life.clock.alarms.map(x => x.label), ['A', 'B']);
-        }
-        {
-            const { real, d, p } = liveOf(liveLong(), m, 39), p1 = JSON.stringify(real.phones);
-            const dlv = (shop, time) => JSON.stringify({ shops: [{ name: shop, cuisine: 'pizza', menu: [{ name: 'Margherita', price: 9 }] }], orders: [{ shop, items: [{ name: 'Margherita', price: 9 }], time, status: 'delivered' }], cart: null });
-            globalThis.__menu = { calls: [], answers: [dlv('Uno', '11-01 19:00'), dlv('Due', '11-02 20:00'), dlv('Tre', '11-03 20:00'), dlv('Quattro', '11-04 20:00'), dlv('Cinque', '11-05 20:00'), dlv('Sei', '11-06 20:00')], answer: '{}' };
-            await life2.liveFillDelivery(d, p);
-            const turns = globalThis.__menu.calls.filter(c => c.sys === life.AI_SYS_DELIVERY);
-            assert.equal(turns.length, 6);
-            wholeRun(turns, real, p1);
-            assert.ok(turns[5].input.includes('[DELIVERY SO FAR') && ['Uno', 'Due', 'Tre', 'Quattro', 'Cinque'].every(x => turns[5].input.includes(x)));
-            assert.deepEqual(p.delivery.orders.map(o => o.shop), ['Uno', 'Due', 'Tre', 'Quattro', 'Cinque', 'Sei']);
-        }
-    } finally { delete globalThis.__trackers; }
-});
-
-test('실시간 폰의 은행 · 투자 채우기 (진짜 서랍, 아주 긴 이야기): 시작한 곳까지 이어서 읽고, 뒤 차례는 앞 차례들이 쓴 것을 다 받아요', async () => {
-    globalThis.__rows = afterStart(46, 39);
-    globalThis.__trackers = [{ i: 45, date: '2026-11-20', min: 20 * 60, place: 'Eastgate', weather: 'rain' }];
-    try {
-        {
-            const { real, d, p } = liveOf(liveLong(), m, 39), p1 = JSON.stringify(real.phones), who = ['Bakery', 'Cinema', 'Kiosk', 'Florist', 'Taxi', 'Cafe'];
-            globalThis.__menu = { calls: [], answers: who.map((w, i) => moneyAnswer(w, i ? 99999 : 500, `11-0${i + 1} 09:00`)), answer: '{}' };
-            await money2.liveFillMoney(d, p);
-            const turns = globalThis.__menu.calls.filter(c => c.sys === data.AI_SYS_MONEY);
-            assert.equal(turns.length, 6);
-            wholeRun(turns, real, p1);
-            assert.ok(turns[5].input.includes('[MONEY SO FAR') && who.slice(0, 5).every(w => turns[5].input.includes(`"who":"${w}"`)) && !turns[5].input.includes('"who":"Cafe"'));
-            assert.deepEqual(p.money.tx.map(t => t.who), who);
-            assert.equal(p.money.cards.length, 1);
-            // 잔액은 첫 차례 것 그대로
-            assert.equal(p.money.bank.accounts[0].balance, 500);
-        }
-        {
-            const { real, d, p } = liveOf(liveLong(), m, 39), p1 = JSON.stringify(real.phones), sym = ['SAP', 'BMW', 'SIE', 'ALV', 'BAS', 'DTE'].map(x => `XETRA:${x}`);
-            const turn = i => ({ ...(i ? {} : { base: 'EUR', cash: [{ currency: 'EUR', amount: 10000 }] }), securities: [{ symbol: sym[i], name: sym[i].slice(6), currency: 'EUR' }],
-                trades: [{ kind: 'buy', symbol: sym[i], currency: 'EUR', date: `2026-11-0${i + 1}`, quantity: 1, price: 100, fee: 0 }], watch: [], stakes: [],
-                quotes: sym.slice(0, i + 1).map(x => ({ symbol: x, date: '2026-11-12', value: 101, source: 'guess' })), fx: [] });
-            globalThis.__menu = { calls: [], answers: sym.map((_, i) => JSON.stringify(turn(i))), answer: '{}' };
-            await invest2.liveFillInvestment(d, p, '2026-11-12');
-            const turns = globalThis.__menu.calls.filter(c => c.sys === invest.INVEST_SYS);
-            assert.equal(turns.length, 6);
-            wholeRun(turns, real, p1);
-            assert.ok(turns[5].input.includes('[INVESTMENTS SO FAR') && sym.slice(0, 5).every(x => turns[5].input.split('[INVESTMENTS SO FAR')[1].includes(x)));
-            assert.deepEqual(p.investment.trades.map(t => t.symbol), sym);
-            assert.equal(fin.cash(d.finance.accounts[p.investment.accounts[0].key]), 10000 - 600);
-        }
-    } finally { delete globalThis.__trackers; }
-});
-
-test('실시간 폰의 앱 · 폰 다시 만들기 (진짜 서랍, 아주 긴 이야기): 시작한 곳까지 이어서 읽고, 차례마다 쓴 것이 다 들어가요', async () => {
-    globalThis.__rows = afterStart(46, 39);
-    globalThis.__trackers = [{ i: 45, date: '2026-11-20', min: 20 * 60, place: 'Eastgate', weather: 'rain' }];
-    const titles = ['Shopping', 'Train times', 'Gift ideas', 'Packing', 'Recipes', 'Passwords'];
-    try {
-        {
-            const { real, d, p } = liveOf({ ...phoneOf(), ...liveLong() }, m, 39), p1 = JSON.stringify(real.phones);
-            globalThis.__menu = { calls: [], answers: titles.map(notesAnswer), answer: '{}' };
-            await make2.liveMakePhone(d, 'Ren', { apps: ['note'] });
-            const turns = globalThis.__menu.calls.filter(c => c.sys === data.AI_SYS_PHONE_APPS);
-            assert.equal(turns.length, 6);
-            wholeRun(turns, real, p1);
-            assert.ok(turns[5].input.includes('[PHONE SO FAR') && titles.slice(0, 5).every(t => turns[5].input.includes(`"${t}"`)) && !turns[5].input.includes('"Passwords"'));
-            assert.deepEqual(d.phones.ren.notes.map(x => x.title).sort(), [...titles].sort());
-            assert.equal(d.phones.ren.now, '11-12 21:30');
-        }
-        {
-            // 가운데 차례가 실패하면 그 앞까지 쓴 것은 남아요
-            const { d } = liveOf({ ...phoneOf(), ...liveLong() }, m, 39);
-            globalThis.__menu = { calls: [], answers: [notesAnswer('Shopping'), notesAnswer('Train times'), notesAnswer('Gift ideas'), 'not json {', notesAnswer('Recipes')], answer: '{}' };
-            await make2.liveMakePhone(d, 'Ren', { apps: ['note'] });
-            assert.equal(globalThis.__menu.calls.filter(c => c.sys === data.AI_SYS_PHONE_APPS).length, 4);
-            assert.deepEqual(d.phones.ren.notes.map(x => x.title).sort(), ['Gift ideas', 'Shopping', 'Train times']);
-        }
-        {
-            const { real, d } = liveOf({ ...phoneOf(), ...liveLong(), year: 2026, where: { at: 1, people: [{ name: 'Ren', city: 'Frankfurt am Main', tz: 'Europe/Berlin', names: ['Frankfurt'] }] } }, m, 39), p1 = JSON.stringify(real.phones);
-            globalThis.__menu = { calls: [], answers: titles.map(notesAnswer), answer: '{}' };
-            await make2.liveMakePhone(d, 'Ren');
-            // 폰 전체 다시 만들기도 같아요
-            const turns = globalThis.__menu.calls.filter(c => c.sys === data.AI_SYS_PHONE);
-            assert.equal(turns.length, 6);
-            wholeRun(turns, real, p1);
-            assert.ok(turns[5].input.includes('[PHONE SO FAR') && titles.slice(0, 5).every(t => turns[5].input.includes(`"${t}"`)));
-            assert.deepEqual(d.phones.ren.notes.map(x => x.title).sort(), [...titles].sort());
-            assert.equal(d.phones.ren.now, '11-12 21:30');
-        }
     } finally { delete globalThis.__trackers; }
 });
 
@@ -2002,37 +1843,6 @@ test('실시간 폰의 채우기 (진짜 서랍): 롤플 메시지에 적힌 시
     } finally { delete globalThis.__ctx; }
 });
 
-// 아카이브 구간이 시작한 곳을 걸쳐 끝나도(분기 · 메시지 삭제) 실시간 폰은 시작 뒤의 롤플을 안 읽어요
-test('실시간 폰 다시 만들기 · 채우기 (진짜 서랍): 시작한 곳을 걸친 아카이브 구간이 있어도 시작 뒤 롤플은 안 들어가요', async () => {
-    globalThis.__rows = Array.from({ length: 12 }, (_, i) => ({ index: i, user: i % 2 === 0, hidden: i <= 3 || (i >= 5 && i <= 9), text: i > 7 ? `[#${i}] Ren: AFTERSTART ${i}` : `[#${i}] Ren: before ${i}` }));
-    const mm = { text: '## #0–#3 — Arrival\n- Ren came home.\n## #5–#9 — The trip\n- Ren wrote down the RE 7 (#8).\n' };
-    const start = () => liveOf({ ...phoneOf(), now: '11-12 21:30', year: 2026, where: { at: 1, people: [{ name: 'Ren', city: 'Frankfurt am Main', tz: 'Europe/Berlin', names: ['Frankfurt'] }] } }, mm, 7);
-    {
-        const { d, p } = start();
-        const g = req2.liveWindowOf(d, p);
-        assert.equal(g.upto, 7); assert.equal(g.to, 7);
-    }
-    for (const fresh of [true, false]) {
-        // (fresh: 반영한 적 없는 폰 — 통째로 새로 만드는 갈래. 최근 대화 6줄도 시작한 곳까지만)
-        const { real, d, p } = start(), p1 = JSON.stringify(real.phones);
-        if (fresh) delete p.sync;
-        globalThis.__menu = { calls: [], answers: [notesAnswer('A')], answer: '{}' };
-        await make2.liveMakePhone(d, 'Ren');
-        assert.ok(globalThis.__menu.calls.length >= 1);
-        for (const c of globalThis.__menu.calls) assert.ok(!c.input.includes('AFTERSTART'), `${fresh}: ${String(c.sys).slice(0, 30)}`);
-        // (새로 만드는 갈래의 최근 대화: 시작한 #7까지)
-        if (fresh) assert.ok(globalThis.__menu.calls.some(c => c.input.includes('Ren: before 7')));
-        assert.equal(JSON.stringify(real.phones), p1);
-    }
-    for (const run of [(d, p) => life2.liveFillLife(d, p), (d, p) => money2.liveFillMoney(d, p)]) {
-        const { d, p } = start();
-        globalThis.__menu = { calls: [], answers: [], answer: '{}' };
-        try { await run(d, p); } catch { /* the inputs are what this checks */ }
-        assert.ok(globalThis.__menu.calls.length >= 1);
-        for (const c of globalThis.__menu.calls) assert.ok(!c.input.includes('AFTERSTART'));
-    }
-});
-
 // ---- 요약본으로 시작한 실시간 폰 (phone2snap.js): 이야기는 요약본의 글, 롤플 채팅은 안 읽어요
 const SNAP = { v: 1, at: 1, upto: 7, made: { from: 4, to: 7, count: 4, parts: 1 },
     text: '## #0–#3 — Arrival\n- Ren came home (#1).\n\n## #4–#7 — The flat\n- SNAPSECTION Ren signed for a flat on Lindenweg (#6).\n\n---\n# STATE AT #7\n## People\n- SNAPSTATE Ren: has a flat on Lindenweg.\n\n# OPEN AT #7\n- SNAPOPEN What happens on Friday.\n',
@@ -2105,17 +1915,6 @@ test('요약본으로 시작한 실시간 폰: 롤플에서 시작한 자리의 
     // 아카이브가 다시 압축돼 글이 바뀜
     globalThis.__rows = chatRowsOf(30);
     assert.equal(JSON.stringify(await snapRun({ text: '## #0–#20 — Everything\n- REARCHIVED all of it (#9).\n' })), before);
-});
-
-test('요약본이 없는 실시간 폰(전에 시작한 것)은 전처럼 채팅을 시작한 곳까지 읽어요', async () => {
-    globalThis.__rows = chatRowsOf(12).map(r => ({ ...r, text: r.text.slice(0, 40) }));
-    const mm = { text: '## #0–#3 — Arrival\n- Ren came home (#1).\n' };
-    const { d, p } = liveOf(snapPhone(), mm, 7);
-    assert.equal(d.phoneSnap, undefined);
-    globalThis.__menu = { calls: [], answers: [lifeAnswer('A')], answer: '{}' };
-    await life2.liveFillLife(d, p);
-    const input = globalThis.__menu.calls.find(c => c.sys === life.AI_SYS_LIFE).input;
-    assert.ok(input.includes('CHATROW 7') && !input.includes('CHATROW 8') && !input.includes('SNAPSECTION'));
 });
 
 test('시작 직전 메시지 고르기(liveBefore): 끝에서 n개, 글자 수 안에서, 메시지를 자르지 않아요', () => {

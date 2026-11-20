@@ -1,5 +1,5 @@
 // 폰 2(실시간)의 앱 채우기. phonedata.js 등의 채우기 함수를 줄 그대로 옮긴 것이고, 다른 곳은 요청을 만드는
-// 뼈대뿐이에요(sideRequest → liveSideRequest: 롤플은 시작한 곳까지만, 최근 대화는 메신저 것. phone2req.js).
+// 뼈대뿐이에요(sideRequest → liveSideRequest: 이야기는 요약본의 글, 최근 대화는 메신저 것. phone2req.js).
 // 폰 1 파일은 여기서 읽기만 해요.
 import { ensureWealth } from './wealth.js';
 import { saveMeta } from './core.js';

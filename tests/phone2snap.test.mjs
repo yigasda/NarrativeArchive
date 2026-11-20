@@ -64,7 +64,6 @@ test('아카이브 안 된 구간이 없으면: 요청 없이 아카이브 글 �
     const m = chat(); m.boundary = 7;
     for (let i = 4; i < 8; i++) T.chat[i].is_system = true;
     m.text = ARCHIVE.replace('#0–#3', '#0–#7').replace(/AT #3/g, 'AT #7');
-    assert.deepEqual(S.liveSnapPlan(m, 7), { from: 8, to: 7, count: 0, parts: 0, tokens: 0 });
     const snap = await S.liveSnapDraft(m, { upto: 7, now: 111 });
     assert.equal(T.calls.length, 0);
     assert.equal(snap.text, m.text);
@@ -76,7 +75,6 @@ test('아카이브 안 된 구간: 아카이브의 "한 번에 압축"으로 요
     const m = chat(), before = m.text;
     T.draft = { text: DRAFT, parts: 1, doneTo: 7, error: null };
     const steps = [];
-    assert.deepEqual(S.liveSnapPlan(m, 7), { from: 4, to: 7, count: 4, parts: 1, tokens: Math.round(Math.ceil('#4 I found the flat on Lindenweg\n#5 Then take it\n#6 I signed today\n#7 See you Friday'.length / 4) + Math.ceil(before.length / 4) + Math.ceil('PROMPT'.length / 4)) });
     const snap = await S.liveSnapDraft(m, { upto: 7, now: 222, onStep: (...a) => steps.push(a) });
     // 요청: 경계선 뒤 #4–#7, 압축 지시문, 지금의 아카이브
     assert.deepEqual(T.calls, [{ from: 4, to: 7, n: 4, prompt: 'PROMPT', text: before }]);
@@ -131,16 +129,14 @@ test('요약이 실패 · 비어 있음 · 새 장면 없음: 아무것도 안 �
     T.g.prompts = []; T.g.activePrompt = '';
     await assert.rejects(() => S.liveSnapDraft(m, { upto: 7 }), /압축 지시문이 없어요/);
     T.g.prompts = [{ id: 'short', text: 'PROMPT' }]; T.g.activePrompt = 'short';
-    assert.throws(() => S.liveSnapPlan(m, -1), /어느 메시지까지/);
     await assert.rejects(() => S.liveSnapDraft(m, {}), /어느 메시지까지/);
     assert.equal(m.text, before);
 });
 
-test('긴 구간: 나눠 보내는 수가 미리 보이고, 압축 설정의 지시문(wizPrompt)을 써요', async () => {
+test('긴 구간: 압축 설정의 지시문(wizPrompt)을 쓰고, 몇 번에 나눠 받았는지 적어 둬요', async () => {
     const m = chat(); T.per = 2;
     T.g.prompts = [{ id: 'short', text: 'PROMPT' }, { id: 'mine', text: 'MY PROMPT' }]; T.g.wizPrompt = 'mine';
     try {
-        assert.equal(S.liveSnapPlan(m, 7).parts, 2);
         T.draft = { text: DRAFT, parts: 2, doneTo: 7, error: null };
         const snap = await S.liveSnapDraft(m, { upto: 7 });
         assert.equal(T.calls[0].prompt, 'MY PROMPT');

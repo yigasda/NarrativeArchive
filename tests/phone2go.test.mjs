@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import { migrateBank, cash } from '../src/finance.js';
 import * as L from '../src/phone2store.js';
-import { G, T, PD, Y, N, Q } from './phone2reflect.load.mjs';
+import { G, T, PD, Y, N, Q, snapFor } from './phone2reflect.load.mjs';
 // 롤플에 넣는 글, 창구(P.phoneBlock)가 만드는 대로: 폰 1의 글(폰 1 함수) + 실시간 폰의 글(phone2note.js)
 const block = (m, live = null) => PD.phoneBlock(m) + N.liveNote(live);
 import { journalRead, journalWrite } from '../src/phonesync.js';
@@ -191,7 +191,7 @@ const storyWorld = () => {
 
 test('이야기에서 시작한 실시간 폰은 폰 1의 되돌리기 · 지난 반영 · 밀린 결제를 안 가져와요 (폰 1 것은 그대로)', async () => {
     const real = storyWorld(), p1 = JSON.stringify(real.phones);
-    L.startFromStory(real, { persona: 'Ren', upto: 12, scope: 'test', story: { ranges: {}, titles: [], rawFrom: 0, own: [''] } });
+    L.startFromStory(real, { persona: 'Ren', upto: 12, scope: 'test' }).snap = snapFor(real, 12);
     const lp = L.livePhone(real, 'Mara');
     assert.equal(lp.syncUndo, undefined); assert.equal(lp.syncUndos, undefined); assert.equal(lp.syncLast, undefined); assert.equal(lp.sync.owed, undefined);
     assert.deepEqual(lp.notes.map(x => x.title), ['이야기 메모']); assert.deepEqual(lp.sync.done, [[2, 12]]);
@@ -202,7 +202,7 @@ test('이야기에서 시작한 실시간 폰은 폰 1의 되돌리기 · 지난
 
 test('전에 시작해 둔 실시간 폰(폰 1의 되돌리기 · 밀린 결제가 복사돼 있음): 되돌리기는 실시간 반영만, 밀린 결제는 안 넣어요', async () => {
     const real = storyWorld();
-    L.startFromStory(real, { persona: 'Ren', upto: 12, scope: 'test', story: { ranges: {}, titles: [], rawFrom: 0, own: [''] } });
+    L.startFromStory(real, { persona: 'Ren', upto: 12, scope: 'test' }).snap = snapFor(real, 12);
     // (as an older version left it: the copies still on the live phone)
     const lp = L.livePhone(real, 'Mara'), src = real.phones.mara;
     Object.assign(lp, structuredClone({ syncUndo: src.syncUndo, syncUndos: src.syncUndos, syncLast: src.syncLast }));
@@ -232,7 +232,7 @@ test('전에 시작해 둔 실시간 폰(폰 1의 되돌리기 · 밀린 결제�
 
 test('실시간 폰에서 연도를 바꿔도 폰 1의 복구 기록은 그대로예요 (실시간 폰의 복구 기록만 옮겨요)', () => {
     const real = { text: '', phones: { mara: { ...phone(), year: 2026 } } };
-    L.startFromStory(real, { persona: 'Ren', upto: 3, scope: 'test', story: { ranges: {}, titles: [], rawFrom: 0, own: [''] } });
+    L.startFromStory(real, { persona: 'Ren', upto: 3, scope: 'test' }).snap = snapFor(real, 3);
     const liveKey = L.liveScope('test', real), round = () => [{ round: 'r1', owner: 'Mara', year: 2026, events: [{ id: 'e', date: '2026-11-10' }], life: [] }];
     journalWrite('test', round()); journalWrite(liveKey, round());
     const before = JSON.stringify(journalRead('test')), d = L.liveMeta(real);
@@ -308,15 +308,15 @@ test('실시간 폰의 앱 요청은 시작 뒤의 롤플 채팅을 안 읽어�
     T.recent = ['[#1] Mara: 옛날 이야기 둘', '[#2] Ren: 시작 직전 이야기', '[#3] Mara: 시작 뒤 롤플 하나', '[#4] Ren: 시작 뒤 롤플 둘'];
     try {
         const real = { phones: { mara: phone() }, text: '' };
-        L.startFromStory(real, { persona: 'Ren', upto: 2, scope: 'test', story: { ranges: {}, titles: [], rawFrom: 0, own: [''] } });
+        L.startFromStory(real, { persona: 'Ren', upto: 2, scope: 'test' }).snap = snapFor(real, 2);
         const room = L.ensureRoom(real, ['Mara']);
         L.sendLive(real, room.id, '메신저로 한 말');
         const d = L.liveMeta(real), p = d.phones.mara;
         p.now = '11-12 21:30';
-        // the drawer says how far the chat may be read and gives the messenger's talk
+        // the drawer says where the messenger's numbers begin and gives the messenger's talk; nothing is read of the chat
         assert.equal(d.phoneUpto, 2);
         assert.equal(d.phoneRecent('Mara', 6, { maxChars: 6000 }), 'Ren: 메신저로 한 말');
-        assert.deepEqual([Q.liveWindowOf(d, p).upto, Q.liveWindowOf(d, p).n], [2, 0]);
+        assert.deepEqual([Q.liveWindowOf(d, p).upto, Q.liveWindowOf(d, p).n], [-1, 0]);
         // (the newest talk: the story up to where 폰 2 began, then the messenger; never the chat after the start)
         assert.equal(Q.liveRecentText(d, 'Mara', 6, {}), '[#1] Mara: 옛날 이야기 둘\n\n[#2] Ren: 시작 직전 이야기\n\nRen: 메신저로 한 말');
         assert.equal(Q.liveRecentText(d, 'Mara', 1, {}), 'Ren: 메신저로 한 말');
@@ -335,7 +335,7 @@ test('실시간 폰의 앱 요청은 시작 뒤의 롤플 채팅을 안 읽어�
         const fill = await Q.liveSideRequest(d, 'Mara', ['[TARGET]\nx'], { read });
         assert.ok(fill.includes('메신저로 한 말')); assert.ok(!fill.includes('아직 반영 안 된 말')); assert.ok(fill.includes('시작 직전 이야기')); assert.ok(!fill.includes('시작 뒤 롤플'));
         assert.deepEqual(Q.liveReadMark(read.gap), { index: first, user: -1, fp: '', tail: '' });
-        assert.equal(PD.nowAt(read.gap), 2);
+        assert.equal(PD.nowAt(read.gap), -1);
         delete p.sync;
         // 폰 1 (the chat's own meta): as before, the chat's newest messages
         const side1 = await PD.sideRequest(real, 'Mara', ['[TARGET]\nx']);
@@ -481,7 +481,7 @@ test('채우기 · 다시 만들기가 읽는 요약은 반영된 데까지만: 
 
 test('이야기에서 시작할 때 폰 1의 "롤플에 넣기"는 안 따라와요: 실시간 폰에서 켠 적 없으면 프롬프트에 폰이 두 번 안 들어가요', () => {
     const real = { phones: { mara: { ...phone(), inject: true } }, text: '' };
-    L.startFromStory(real, { persona: 'Ren', upto: 3, scope: 'test', story: { ranges: {}, titles: [], rawFrom: 0, own: [''] } });
+    L.startFromStory(real, { persona: 'Ren', upto: 3, scope: 'test' }).snap = snapFor(real, 3);
     assert.equal(L.liveWorld(real).phones.mara.inject, false);
     assert.equal(real.phones.mara.inject, true);
     const before = PD.phoneBlock(real);
@@ -629,7 +629,7 @@ test('새해를 넘긴 뒤 다음 반영 전: 폰의 연도는 저장된 시각�
     // 마지막 반영 12-30 (2026), 지금 01-02 (2027)
     const clock = { at: '12-30 22:00', y: 2026 }, now = () => clock.at; now.year = () => clock.y;
     const real = { text: '', phones: { mara: { ...phone(), now: '12-30 21:00', year: 2026 } } };
-    L.startFromStory(real, { persona: 'Ren', upto: 2, scope: 'test', story: { ranges: {}, titles: [], rawFrom: 0, own: [''] } });
+    L.startFromStory(real, { persona: 'Ren', upto: 2, scope: 'test' }).snap = snapFor(real, 2);
     const d = L.liveMeta(real, { now }), p = d.phones.mara;
     Y.liveYearsNow(d);
     assert.deepEqual([p.year, p.liveYearShift, Y.liveShownYear(d, p)], [2026, undefined, 2026]);
@@ -673,7 +673,7 @@ test('새해를 넘긴 뒤 다음 반영 전: 폰의 연도는 저장된 시각�
 test('이야기의 12-31에 시작해서 실시간 시계가 바로 새해인 폰: 가져온 연도는 그대로, 화면은 새해', () => {
     const now = () => '01-01 09:00'; now.year = () => 2027;
     const real = { text: '', phones: { mara: { ...phone(), now: '12-31 15:00', year: 2026 }, ivo: { ...phone(), owner: 'Ivo', now: '12-31 15:00', year: 2029 } } };
-    L.startFromStory(real, { persona: 'Ren', upto: 2, scope: 'test', story: { ranges: {}, titles: [], rawFrom: 0, own: [''] } });
+    L.startFromStory(real, { persona: 'Ren', upto: 2, scope: 'test' }).snap = snapFor(real, 2);
     const d = L.liveMeta(real, { now });
     assert.deepEqual([Y.liveShownYear(d, d.phones.mara), Y.liveShownYear(d, d.phones.ivo)], [2027, 2030]);
     Y.liveYearsNow(d);
@@ -684,7 +684,7 @@ test('이야기에서 가져온 폰의 연도는 지켜요: 시계의 연도와 
     const at = { ms: Date.parse('2026-11-12T08:15:00Z') };
     const start = () => {
         const real = { text: '', phones: { mara: { ...phone(), year: 2026 }, ivo: { ...phone(), owner: 'Ivo', year: 2029, yearSet: true }, off: { ...phone(), owner: 'Off', year: 2029, noYear: true }, none: { ...phone(), owner: 'None', year: undefined } } };
-        L.startFromStory(real, { persona: 'Ren', upto: 2, scope: 'test', story: { ranges: {}, titles: [], rawFrom: 0, own: [''] } });
+        L.startFromStory(real, { persona: 'Ren', upto: 2, scope: 'test' }).snap = snapFor(real, 2);
         return { real, d: L.liveMeta(real, { now: G.liveNowOf(real, () => at.ms) }) };
     };
     {
@@ -756,9 +756,9 @@ test('롤플이 끝 메시지들에 다 안 담길 만큼 진행됐으면: 답�
     delete T.metadata;
 });
 
-test('끝 메시지들에 다 담기면 · 롤플이 그대로면 · 요약본 없는 폰 · 새로 시작한 폰이면 안 늘려요', async () => {
+test('끝 메시지들에 다 담기면 · 롤플이 그대로면 · 새로 시작한 폰이면 안 늘려요', async () => {
     for (const set of [c => { T.tail = { lines: ['[#4] Ren: hi', '[#5] Mara: hey'], first: 4, end: 5 }; }, c => { T.tail = { lines: ['[#3] Mara: see you'], first: 3, end: 3 }; }, c => { T.tail = { lines: ['[#1] Ren: x'], first: 1, end: 1 }; },
-        c => { delete c.w.snap; }, c => { c.w.from = 'fresh'; }]) {
+        c => { c.w.from = 'fresh'; }]) {
         const c = snapWorld(); set(c);
         said(c, '어디야');
         await G.liveGo(c.real);
@@ -800,7 +800,7 @@ test('늘리는 동안 실시간 폰이 새로 시작됐으면 그 폰에는 안
     delete T.metadata;
 });
 
-test('요약본 없이 시작해 둔 폰: 첫 답장 전에 지금 이야기의 끝까지 요약본을 만들어 넣어요. 실패하면 답장은 가고, 롤플이 더 진행될 때까지 다시 안 해요', async () => {
+test('요약본 없이 시작해 둔 폰: 첫 답장 전에 지금 이야기의 끝까지 요약본을 만들어 넣어요. 못 만들면 답장을 안 받고(실패로 남아요), 다시 하면 다시 만들어요', async () => {
     const c = snapWorld(); delete c.w.snap;
     T.starts = 0; T.start = async m => { assert.equal(m, c.real); assert.ok(G.liveSnapBusy(c.real)); return { snap: structuredClone(SNAP1), upto: 40, chat: 'c1', fp: 'x' }; };
     said(c, '어디야');
@@ -814,27 +814,44 @@ test('요약본 없이 시작해 둔 폰: 첫 답장 전에 지금 이야기의 
     said(c, '알겠어');
     await G.liveGo(c.real);
     assert.deepEqual([T.starts, T.extends], [1, 0]);
-    // 실패
+    // 못 만들면: 모델에게 답장을 묻지 않아요. 일은 실패로 남고, 폰에는 아무것도 안 생겨요
     const d = snapWorld(); delete d.w.snap;
     T.starts = 0; T.start = new Error('모델이 답을 안 줬어요');
     said(d, '어디야');
-    await G.liveGo(d.real);
+    const asked = T.replyCalls, r = await G.liveGo(d.real);
     assert.equal(T.starts, 1);
-    assert.ok(!('snap' in d.w) && d.w.snapTried === 40);
-    assert.equal(d.room.messages.at(-1).text, '응');
-    assert.ok(!T.replyInput.includes('[LAST MESSAGES]'));
-    said(d, '아직?');
-    await G.liveGo(d.real);
-    assert.equal(T.starts, 1);
-    T.tail = { lines: ['[#41] Ren: here'], first: 41, end: 41 }; T.start = { snap: { ...structuredClone(SNAP1), upto: 41 } };
-    said(d, '왔어?');
+    assert.equal(T.replyCalls, asked);
+    assert.ok(!('snap' in d.w) && !('snapTried' in d.w));
+    assert.equal(d.room.messages.at(-1).text, '어디야');
+    assert.match(r.failed.error, /이야기 요약본을 만들지 못했어요/);
+    // 다시 (롤플이 그대로여도): 다시 만들어요
+    T.start = { snap: structuredClone(SNAP1) }; T.replies = [{ state: '집', reply: ['응'], does: [] }];
+    L.seeFailure(d.real, r.failed.job.id); L.enqueueReplies(d.real, d.room.id);   // (방의 "다시" 버튼이 하는 일)
     await G.liveGo(d.real);
     assert.equal(T.starts, 2);
-    assert.equal(d.w.snap.upto, 41);
+    assert.equal(d.w.snap.upto, 40);
+    assert.equal(d.room.messages.at(-1).text, '응');
     // 처음부터 시작한 폰은 요약본을 안 만들어요
     const f = snapWorld(); delete f.w.snap; f.w.from = 'fresh'; T.starts = 0;
     said(f, '어디야');
     await G.liveGo(f.real);
     assert.equal(T.starts, 0);
+    assert.equal(f.room.messages.at(-1).text, '응');
+    delete T.metadata; delete T.start;
+});
+
+test('앱 요청(채우기 · 다시 만들기)이 서랍으로 요약본을 달라고 하면: 없는 폰은 만들어 주고, 있는 폰은 늘리지 않아요', async () => {
+    const c = snapWorld(); delete c.w.snap;
+    T.starts = 0; T.start = { snap: structuredClone(SNAP1) };
+    const d = L.liveMeta(c.real);
+    assert.equal(d.text, '');
+    await d.phoneStoryReady();
+    assert.deepEqual([T.starts, T.extends], [1, 0]);
+    assert.equal(d.text, SNAP1.text);
+    // (요약본이 있으면: 롤플이 많이 진행됐어도 여기서는 안 늘려요. 늘리는 건 답장 전이에요)
+    T.tail = { lines: ['[#90] Ren: far'], first: 90, end: 90 };
+    assert.equal(d.phoneStoryReady(), null);
+    await Q.liveStoryReady(d);
+    assert.deepEqual([T.starts, T.extends], [1, 0]);
     delete T.metadata; delete T.start;
 });

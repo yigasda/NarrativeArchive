@@ -24,97 +24,45 @@ const ARCH = [
 const meta = (text = ARCH, boundary = 130) => ({ text, boundary, phones: { mara: { owner: 'Mara' } } });
 const begun = (m, upto = 150) => S.beginFromStory(m, { persona: 'Lio', upto });
 
-test('시작할 때 적는 것: 장면 범위(앞말마다 합침) · 범위 없는 장면 제목 · 원래 메시지 첫 번호, 글은 안 적어요', () => {
-    const m = meta(), before = JSON.stringify(m), w = begun(m);
-    assert.deepEqual(w.story, { ranges: { Y1: [[0, 300]], '': [[0, 130]] }, titles: ['People'], rawFrom: 131, own: [''] });
-    assert.doesNotMatch(JSON.stringify(w.story), /Mara moved|flood|Mara is at home/);
-    const { live, ...rest } = m;
-    assert.equal(JSON.stringify(rest), before);
-    assert.deepEqual(S.liveRawRange(w), { from: 131, to: 150 });
-});
+const SNAP = { v: 1, at: 5, upto: 150, text: '## #0–#150 — All\n- SNAP the story so far.\n\n---\n# STATE AT #150\n- SNAP state.\n', recent: ['[#149] Mara: last', '[#150 · USER] Ren: words'], made: { from: 131, to: 150, count: 20, parts: 1 } };
 
-test('읽는 것: 시작 때의 장면만, 지금 상태 칸 없이', () => {
-    const m = meta(), w = begun(m), t = S.liveStoryText(m, w);
-    assert.match(t, /Y1 #0–#300/);
-    assert.match(t, /#0–#60 — Spring/);
-    assert.match(t, /#61–#130 — Summer/);
-    assert.match(t, /## People/);
-    assert.doesNotMatch(t, /STATE AT|Mara is at home|# OPEN|The key/);
-    assert.doesNotMatch(t, /── Y/);
-});
-
-test('폰 1 이야기가 이어져도 폰 2는 시작 뒤를 몰라요 (새 장면 · 걸친 장면 · 새 상태)', () => {
-    const m = meta(), w = begun(m, 150);
-    m.text = ARCH.replace('# STATE AT #130', '## #131–#160 — The storm\n- Ren left for Lyon.\n\n## #161–#200 — Autumn\n- A letter came.\n\n# STATE AT #200').replace('- Mara is at home.', '- Mara is alone.');
-    m.boundary = 200;
-    const t = S.liveStoryText(m, w);
-    assert.doesNotMatch(t, /storm|Ren left|Autumn|A letter|Mara is alone/);
-    assert.match(t, /The flood/);
-    // (131–150 come as they are, from the chat: the range stays where it began)
-    assert.deepEqual(S.liveRawRange(w), { from: 131, to: 150 });
-});
-
-test('다시 압축하거나 이름을 바꿔도 시작 때 범위 안이면 그대로 읽어요 (합침 · 나눔 · 제목 · 내용 고침)', () => {
+test('이야기 글: 요약본의 글만. 요약본이 아직 없는 폰 · 처음부터 시작한 폰은 빈 글이고, 아카이브는 안 읽어요', () => {
     const m = meta(), w = begun(m);
-    m.text = ARCH.replace('## #0–#60 — Spring\n- Ren met Mara.\n\n## #61–#130 — Summer\n- The flood.', '## #0–#130 — Spring and summer\n- Ren met Mara. The flood.')
-        .replace('## Y1 #0–#300 — The first year\n- Mara moved to Varo.', '## Y1 #0–#150 — Year one, early\n- Mara moved.\n\n## Y1 #151–#300 — Year one, late\n- Mara settled.');
-    const t = S.liveStoryText(m, w);
-    assert.match(t, /Spring and summer/);
-    assert.match(t, /Year one, early/);
-    assert.match(t, /Year one, late/);
-    // (a range reaching past where it began is not read: #120–#140 holds what came after)
-    m.text = ARCH.replace('## #61–#130 — Summer', '## #61–#140 — Summer, longer');
-    assert.doesNotMatch(S.liveStoryText(m, w), /Summer, longer/);
-    // (a section with no range made after the start is not read)
-    m.text = ARCH.replace('## People', '## Secrets\n- Mara lied.\n\n## People');
-    assert.doesNotMatch(S.liveStoryText(m, w), /Secrets|Mara lied/);
-});
-
-test('경계선이 없거나 시작 번호보다 뒤면: 원래 메시지는 0번부터 / 없음', () => {
-    const w0 = begun(meta(ARCH, -1), 150);
-    assert.deepEqual(S.liveRawRange(w0), { from: 0, to: 150 });
-    const w1 = begun(meta(ARCH, 400), 150);
-    assert.equal(S.liveRawRange(w1), null);
-});
-
-test('처음부터 시작한 폰 2 · 표시 없는 폰 2는 이야기를 하나도 안 읽어요', () => {
-    const m = meta();
-    const w = L.startFresh(m, { persona: 'Lio' });
+    // (요약본 방식 전에 시작해 둔 폰: 요약본을 받기 전에는 아는 이야기가 없어요. 표시(ranges · titles)도 안 남겨요)
     assert.equal(S.liveStoryText(m, w), '');
-    assert.equal(S.liveRawRange(w), null);
-    assert.equal(S.liveStoryText(m, { from: 'story', storyUpto: 3 }), '');
-    assert.throws(() => S.storyMark(m, -1), /어느 메시지까지/);
+    assert.ok(!('story' in w) && w.storyUpto === 150);
+    w.snap = structuredClone(SNAP);
+    assert.equal(S.liveStoryText(m, w), SNAP.text);
+    m.text = '## #0–#999 — Rewritten\n- other.'; assert.equal(S.liveStoryText(m, w), SNAP.text);
+    // 모양이 틀린 요약본 · 처음부터 시작한 폰 · 폰 없음
+    assert.equal(S.liveStoryText(m, { from: 'story', storyUpto: 3, snap: { text: 'x', recent: 'no', upto: 3 } }), '');
+    assert.equal(S.liveStoryText(m, { ...L.startFresh(meta(), { persona: 'Lio' }), snap: SNAP }), '');
+    assert.equal(S.liveStoryText(m, null), '');
+    assert.throws(() => S.beginFromStory(meta(), { persona: 'Lio', upto: -1 }), /어느 메시지까지/);
 });
 
-test('서랍의 text: 폰 2가 아는 이야기만, 쓰면 서랍에만', () => {
-    const m = meta(), w = begun(m);
-    const v = L.liveMeta(m, { text: () => S.liveStoryText(m, L.liveWorld(m)) });
-    assert.match(v.text, /The flood/);
-    assert.doesNotMatch(v.text, /STATE AT/);
+test('서랍의 text: 요약본의 글 (채팅의 아카이브가 아니에요), 쓰면 서랍에만', () => {
+    const m = meta(), w = S.beginFromStory(m, { persona: 'Lio', upto: 150, snap: SNAP });
+    const v = L.liveMeta(m);
+    assert.equal(v.text, SNAP.text);
+    assert.doesNotMatch(v.text, /The flood/);
     m.text += '\n## #131–#150 — Later\n- later';
-    assert.doesNotMatch(v.text, /Later/);
+    assert.equal(v.text, SNAP.text);
     v.text = 'x';
     assert.equal(v.text, 'x');
     assert.match(m.text, /The flood/);
-    assert.equal(L.liveMeta(m).text, '');
+    assert.equal(w.snap.text, SNAP.text);
+    assert.equal(L.liveMeta(m).text, SNAP.text);
     assert.ok(Object.keys(v).includes('text'));
-    assert.equal(w, L.liveWorld(m));
-});
-
-test('분기한 채팅에 폰 2가 시작한 번호가 있는지 (알려 주기만 해요, 지우지 않아요)', () => {
-    const m = meta(), w = begun(m, 150), was = JSON.stringify(m.live);
-    assert.equal(S.liveFitsChat(w, 150), true);
-    assert.equal(S.liveFitsChat(w, 300), true);
-    assert.equal(S.liveFitsChat(w, 100), false);
-    assert.equal(S.liveFitsChat(w, undefined), false);
-    assert.equal(S.liveFitsChat(null, 3), true);
-    assert.equal(S.liveFitsChat(L.startFresh(meta(), { persona: 'Lio' }), 0), true);
-    assert.equal(JSON.stringify(m.live), was);
+    // 요약본이 없으면 빈 글 (아카이브를 대신 주지 않아요)
+    const m2 = meta(); begun(m2);
+    assert.equal(L.liveMeta(m2).text, '');
+    assert.equal(L.liveMeta(m2, { text: () => 'the caller\'s text' }).text, '');
 });
 
 // 요약본으로 시작 (phone2snap.js가 만든 것): 이야기 글은 그 요약본. 아카이브를 다시 읽지 않아요
 test('요약본으로 시작한 폰 2: 요약본을 복사해 두고, 이야기 글은 그 글 그대로; 아카이브가 바뀌어도 그대로', () => {
-    const m = meta(), snap = { v: 1, at: 5, upto: 150, text: '## #0–#150 — All\n- SNAP the story so far.\n\n---\n# STATE AT #150\n- SNAP state.\n', recent: ['[#149] Mara: last', '[#150] Ren: words'], made: { from: 131, to: 150, count: 20, parts: 1 } };
+    const m = meta(), snap = structuredClone(SNAP);
     const before = JSON.stringify(m.phones), w = S.beginFromStory(m, { persona: 'Lio', upto: 150, snap });
     assert.deepEqual(w.snap, snap); assert.notEqual(w.snap, snap); assert.notEqual(w.snap.recent, snap.recent);
     // (준 요약본을 나중에 고쳐도 폰 2의 것은 그대로)
@@ -124,8 +72,8 @@ test('요약본으로 시작한 폰 2: 요약본을 복사해 두고, 이야기 
     // 아카이브가 통째로 바뀌어도, 비워져도
     m.text = '## #0–#999 — Rewritten\n- other.'; assert.equal(S.liveStoryText(m, w), w.snap.text);
     m.text = ''; assert.equal(S.liveStoryText(m, w), w.snap.text);
-    // 서랍: 이야기 글은 요약본 (호출하는 쪽이 준 글보다 먼저), 요약본을 알려 줘요, 시작한 번호는 그대로
-    const d = L.liveMeta(m, { text: () => 'the caller\'s text' });
+    // 서랍: 이야기 글은 요약본, 요약본을 알려 줘요, 시작한 번호는 그대로
+    const d = L.liveMeta(m);
     assert.equal(d.text, w.snap.text); assert.equal(d.phoneSnap, w.snap); assert.equal(d.phoneUpto, 150);
     // 폰 1의 폰은 그대로
     assert.equal(JSON.stringify(m.phones), before);
@@ -135,9 +83,17 @@ test('요약본으로 시작한 폰 2: 요약본을 복사해 두고, 이야기 
         assert.throws(() => S.beginFromStory(m2, { persona: 'Lio', upto: 150, snap: bad }), /이야기 요약본이 이 시작 자리의 것이 아니에요/);
         assert.equal(L.liveWorld(m2), null);
     }
-    // 요약본 없이 시작한 폰 2는 전처럼 (요약본 자리 없음, 이야기 글은 그때 알던 장면)
-    const m3 = meta(), w3 = begun(m3), d3 = L.liveMeta(m3, { text: () => S.liveStoryText(m3, w3) });
-    assert.equal(w3.snap, undefined); assert.equal(d3.phoneSnap, undefined); assert.ok(d3.text.includes('## #61–#130 — Summer'));
+    // 요약본 없이 시작한 폰 2 (분기한 방에서 저절로 다시 시작한 폰): 요약본 자리가 없고, 처음 움직일 때 받아요
+    const m3 = meta(), w3 = begun(m3), d3 = L.liveMeta(m3);
+    assert.equal(w3.snap, undefined); assert.equal(d3.phoneSnap, undefined); assert.equal(d3.text, '');
+    let asked = null;
+    L.setStoryKeeper(real => { asked = real; return 'made'; });
+    assert.equal(d3.phoneStoryReady(), 'made'); assert.equal(asked, m3);
+    // (요약본이 있는 폰 · 처음부터 시작한 폰은 묻지 않아요)
+    asked = null;
+    assert.equal(d.phoneStoryReady(), null); assert.equal(L.liveMeta((x => (L.startFresh(x, { persona: 'Lio' }), x))(meta())).phoneStoryReady(), null); assert.equal(asked, null);
+    L.setStoryKeeper(null);
+    assert.equal(d3.phoneStoryReady(), null);
     // 다시 시작(대화만 남기기 · 분기)도 요약본을 받아요
     const m4 = meta(); S.beginFromStory(m4, { persona: 'Lio', upto: 150 }); L.setLiveMode(m4, 'live');
     const w4 = S.rebeginKeepingChats(m4, { upto: 150, snap: w.snap });

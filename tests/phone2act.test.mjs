@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import * as L from '../src/phone2store.js';
-import { T, AI, ACT } from './phone2reflect.load.mjs';
+import { T, AI, ACT, snapFor } from './phone2reflect.load.mjs';
 
 const src = f => readFile(new URL(`../src/${f}`, import.meta.url), 'utf8');
 const phone = () => ({ owner: 'Mara', now: '11-12 21:30', year: 2026, contacts: [], threads: [{ with: 'Ivo', messages: [{ from: 'Ivo', time: '11-12 20:00', text: 'hi' }] }], calls: [], photos: [], notes: [], searches: [], events: [], posts: [], mails: [], diary: [], voice: [] });
@@ -13,7 +13,7 @@ function world() {
     T.chat = ['옛날 이야기 하나', '옛날 이야기 둘', '시작 직전 이야기', '시작 뒤 롤플 하나', '시작 뒤 롤플 둘'].map((mes, i) => ({ name: i % 2 ? 'Mara' : 'Ren', is_user: !(i % 2), mes, extra: {} }));
     T.recent = ['[#1] Mara: 옛날 이야기 둘', '[#2] Ren: 시작 직전 이야기', '[#3] Mara: 시작 뒤 롤플 하나', '[#4] Ren: 시작 뒤 롤플 둘'];
     const real = { phones: { mara: phone() }, text: '' };
-    L.startFromStory(real, { persona: 'Ren', upto: 2, scope: 'test', story: { ranges: {}, titles: [], rawFrom: 0, own: [''] } });
+    L.startFromStory(real, { persona: 'Ren', upto: 2, scope: 'test' }).snap = snapFor(real, 2);
     const room = L.ensureRoom(real, ['Mara']);
     L.sendLive(real, room.id, '메신저로 한 말');
     const d = L.liveMeta(real, { now: () => '11-14 16:05' });
@@ -84,7 +84,7 @@ test('phoneai.js는 폰 2가 생기기 전 내용 그대로예요 (폰 2 낱말 
     assert.doesNotMatch(a, /nowOn|recentOf|phoneUpto|phoneRecent|phoneNow|isLivePhone|phone2/);
     const body = (s, name) => { const i = s.indexOf(`export async function ${name}(`), j = s.indexOf('\n}\n', i); assert.ok(i >= 0 && j > i, name); return s.slice(i, j + 2); };
     for (const [one, two] of [['takePhoto', 'liveTakePhoto'], ['writeEntry', 'liveWriteEntry'], ['makeDraft', 'liveMakeDraft'], ['recordVoice', 'liveRecordVoice']]) {
-        const back = body(b, two).replace(`export async function ${two}(`, `export async function ${one}(`).replace('    need(m);\n', '')
+        const back = body(b, two).replace(`export async function ${two}(`, `export async function ${one}(`).replace('    need(m); await liveStoryReady(m);\n', '')
             .replaceAll('liveNowText(m, p)', 'storyNow(p) || p.now || \'\'').replaceAll('liveRecentText(m, p.owner, ', 'recentPhoneText(');
         assert.equal(back, body(a, one), one);
     }
