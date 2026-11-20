@@ -92,15 +92,41 @@ export function swipeTo(m, roomId, dir) {
     (room.swipes ||= {})[anchor.id] = rec;
     return { at: k + 1, count: rec.list.length, fresh };
 }
-// 보이는 답장 하나 지우기: 받아 둔 다른 답장이 있으면 앞의 것(없으면 다음 것)이 보여요  → { dropped (지운 말 수), at, count (남은 수: 0이면 답장이 없어요) }
-export function dropSwipe(m, roomId) {
+// 받아 둔 답장 목록 (아무것도 안 바꿔요): 번호순으로 [{ no (1부터, swipeInfo의 at과 같은 번호), now (지금 방에 보이는 것),
+// bubbles: [{ text, ko }] }]. 넘길 답장이 없으면 []. 글이 없는 말(폰으로 한 일만 · 통화)은 말풍선에 안 넣어요
+export function swipeList(m, roomId) {
+    if (!liveWorld(m)?.messenger?.rooms?.[roomId]) return [];
+    const { tail, rec } = endOf(m, roomId);
+    if (!tail.length && !rec) return [];
+    const at = rec ? rec.at : 0;
+    return (rec ? rec.list.map((v, k) => (k === at ? tail : v)) : [tail]).map((v, k) => ({ no: k + 1, now: k === at,
+        bubbles: v.filter(x => !x.call && !x.act && one(x.text)).map(x => ({ text: String(x.text), ko: String(x.ko || '') })) }));
+}
+// 고른 답장들 지우기 (nos: 번호 하나 또는 여럿, 1부터). 보이는 답장을 지우면 남은 것 중 앞의 것(없으면 다음 것)이 보여요.
+// 전부 지우면 답장이 없어져요. 없는 번호는 건너뛰어요  → { dropped (지운 답장 수), at, count (남은 수: 0이면 답장이 없어요) }
+export function dropSwipes(m, roomId, nos) {
     if (replyComing(m, roomId)) throw new Error('답장이 오는 중이에요. 온 뒤에 지워 주세요');
-    const { room, i, tail } = endOf(m, roomId);
+    const { room, i, anchor, tail, rec } = endOf(m, roomId);
     if (!tail.length) throw new Error('지울 답장이 없어요');
-    room.messages.length = i + 1;
-    settleSwipes(m, roomId);
-    const now = swipeInfo(m, roomId);
-    return { dropped: tail.length, at: now?.at || 0, count: now?.count || 0 };
+    const list = rec ? rec.list : [null], at = rec ? rec.at : 0;
+    const gone = new Set((Array.isArray(nos) ? nos : [nos]).map(Number).filter(n => Number.isInteger(n) && n >= 1 && n <= list.length).map(n => n - 1));
+    if (!gone.size) return { dropped: 0, at: at + 1, count: list.length };
+    const keep = list.map((v, k) => k).filter(k => !gone.has(k));
+    // (the one to show: the one shown now when it stays; else the nearest kept before it, else the first kept after)
+    const show = gone.has(at) ? (keep.filter(k => k < at).pop() ?? keep[0]) : at;
+    if (gone.has(at)) { room.messages.length = i + 1; if (show !== undefined) room.messages.push(...list[show]); }
+    if (keep.length > 1) (room.swipes ||= {})[anchor.id] = { list: keep.map(k => (k === show ? null : list[k])), at: keep.indexOf(show) };
+    else if (room.swipes) { delete room.swipes[anchor.id]; if (!Object.keys(room.swipes).length) delete room.swipes; }
+    return { dropped: gone.size, at: keep.length ? keep.indexOf(show) + 1 : 0, count: keep.length };
+}
+// 보이는 답장 하나 지우기  → { dropped, at, count }
+export const dropSwipe = (m, roomId) => dropSwipes(m, roomId, [(endOf(m, roomId).rec?.at ?? 0) + 1]);
+// 지금 보이는 답장만 남기고 받아 둔 다른 답장을 모두 지워요  → { dropped, at, count }
+export function dropOtherSwipes(m, roomId) {
+    if (replyComing(m, roomId)) throw new Error('답장이 오는 중이에요. 온 뒤에 지워 주세요');
+    const { tail, rec } = endOf(m, roomId);
+    if (!tail.length) throw new Error('남길 답장이 없어요');
+    return dropSwipes(m, roomId, (rec ? rec.list : [null]).map((v, k) => k + 1).filter(n => n !== (rec ? rec.at : 0) + 1));
 }
 
 // 한국어를 다시 받을 말: 고른 것 중 글이 있는 말(통화 · 폰으로 한 일만 있는 말은 빼요), 방에 있는 순서대로

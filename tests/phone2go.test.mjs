@@ -1135,19 +1135,43 @@ test('답장 넘기기: 맨 뒤에서 넘기면 새 답장을 줄 세우고(그 
     T.replies = [new Error('모델이 답을 안 줬어요')];
     const bad = await G.liveGo(c.real);
     assert.ok(bad.failed);
+    // (목록을 먼저 봐도 · 지우기를 먼저 눌러도 같은 상태에서 시작해요: 못 받은 자리는 없어지고 앞의 답장이 보여요)
+    assert.deepEqual(G.liveSwipeList(c.real, c.room.id).map(v => [v.no, v.now, v.bubbles.map(b => b.text).join('|')]), [[1, false, '아직|너는'], [2, true, '먹었지']]);
     assert.deepEqual(G.liveSwipeInfo(c.real, c.room.id), { at: 2, count: 2, coming: false, prev: true, next: true });
     assert.deepEqual(c.room.messages.map(x => x.text), ['일어났냐', '방금', '밥은', '먹었지']);
+    for (const j of L.liveWorld(c.real).queue.jobs.filter(x => x.state === 'failed')) L.seeFailure(c.real, j.id);
+    await G.liveSwipe(c.real, c.room.id, 1);
+    T.replies = [new Error('모델이 답을 안 줬어요')];
+    await G.liveGo(c.real);
+    assert.deepEqual(c.room.messages.map(x => x.text), ['일어났냐', '방금', '밥은']);
+    assert.deepEqual(await G.liveSwipeDropMany(c.real, c.room.id, [9]), { dropped: 0, at: 2, count: 2 });
+    assert.deepEqual(c.room.messages.map(x => x.text), ['일어났냐', '방금', '밥은', '먹었지']);
     // 말 지우기로 보이는 답장의 말을 다 지우면: 받아 둔 다른 답장이 바로 보여요
-    L.seeFailure(c.real);
+    for (const j of L.liveWorld(c.real).queue.jobs.filter(x => x.state === 'failed')) assert.equal(L.seeFailure(c.real, j.id), true);
     assert.equal(await G.liveDropMessages(c.real, c.room.id, c.room.messages.slice(3).map(x => x.id)), 1);
     assert.deepEqual(c.room.messages.slice(3), first);
+    // 받아 둔 답장 목록 · 골라 지우기 · 지금 것만 남기기: 저장까지 (지운 게 없으면 저장 안 해요)
+    await G.liveSwipe(c.real, c.room.id, 1);
+    T.replies = [{ state: '집', reply: ['벌써'], ko: ['벌써'], does: [] }];
+    await G.liveGo(c.real);
+    await G.liveSwipe(c.real, c.room.id, 1);
+    T.replies = [{ state: '집', reply: ['Later'], ko: ['나중에'], does: [] }];
+    await G.liveGo(c.real);
+    assert.deepEqual(G.liveSwipeList(c.real, c.room.id), [{ no: 1, now: false, bubbles: [{ text: '아직', ko: '' }, { text: '너는', ko: '' }] }, { no: 2, now: false, bubbles: [{ text: '벌써', ko: '' }] }, { no: 3, now: true, bubbles: [{ text: 'Later', ko: '나중에' }] }]);
+    let stored = T.saves;
+    assert.deepEqual(await G.liveSwipeDropMany(c.real, c.room.id, [2]), { dropped: 1, at: 2, count: 2 }); assert.equal(T.saves, ++stored);
+    assert.deepEqual(await G.liveSwipeDropMany(c.real, c.room.id, [7]), { dropped: 0, at: 2, count: 2 }); assert.equal(T.saves, stored);
+    assert.deepEqual(await G.liveSwipeDropOthers(c.real, c.room.id), { dropped: 1, at: 1, count: 1 }); assert.equal(T.saves, ++stored);
+    assert.deepEqual(c.room.messages.map(x => x.text), ['일어났냐', '방금', '밥은', 'Later']);
+    assert.deepEqual(await G.liveSwipeDropOthers(c.real, c.room.id), { dropped: 0, at: 1, count: 1 }); assert.equal(T.saves, stored);
     // 보이는 답장 지우기: 하나뿐이면 답장이 없어져요
-    assert.deepEqual(await G.liveSwipeDrop(c.real, c.room.id), { dropped: 2, at: 0, count: 0 });
+    assert.deepEqual(await G.liveSwipeDrop(c.real, c.room.id), { dropped: 1, at: 0, count: 0 });
     assert.deepEqual(c.room.messages.map(x => x.text), ['일어났냐', '방금', '밥은']);
+    assert.deepEqual(G.liveSwipeList(c.real, c.room.id), []);
     assert.equal(G.liveSwipeInfo(c.real, c.room.id), null);
     await assert.rejects(() => G.liveSwipe(c.real, c.room.id, 1), /넘길 답장이 없어요/);
     T.metadata = { narrative_archive: {} };
-    try { assert.equal(G.liveSwipeInfo(c.real, c.room.id), null); await assert.rejects(() => G.liveSwipe(c.real, c.room.id, 1), /이 채팅이 열려 있지 않아요/); await assert.rejects(() => G.liveSwipeDrop(c.real, c.room.id), /이 채팅이 열려 있지 않아요/); } finally { delete T.metadata; }
+    try { assert.equal(G.liveSwipeInfo(c.real, c.room.id), null); await assert.rejects(() => G.liveSwipe(c.real, c.room.id, 1), /이 채팅이 열려 있지 않아요/); await assert.rejects(() => G.liveSwipeDrop(c.real, c.room.id), /이 채팅이 열려 있지 않아요/); await assert.rejects(() => G.liveSwipeDropMany(c.real, c.room.id, [1]), /이 채팅이 열려 있지 않아요/); await assert.rejects(() => G.liveSwipeDropOthers(c.real, c.room.id), /이 채팅이 열려 있지 않아요/); assert.deepEqual(G.liveSwipeList(c.real, c.room.id), []); } finally { delete T.metadata; }
 });
 
 test('한국어 다시 받기: 번역 모델에 그 말만 다시 물어서 한국어만 바꿔요. 실패하면 그대로', async () => {

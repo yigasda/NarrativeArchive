@@ -449,7 +449,11 @@ Orbit 방에서 말을 지우고, 맨 끝 답장을 넘겨서 다시 받고, 한
     - 답장 = 방의 맨 끝에서 **내 마지막 말 뒤에 온 말들**(말풍선 여러 개가 한 묶음). 내 말이 하나도 없는 방은 넘길 답장이 없어요.
     - `liveSwipeInfo(real, roomId)` → `{ at, count, coming, prev, next }` 또는 `null`. 지금 몇 번째인지, 받아 둔 수, 답장이 오는 중인지, 앞 · 뒤로 넘길 수 있는지.
     - `liveSwipe(real, roomId, dir)` → `{ at, count, fresh, jobs }`. 받아 둔 답장이면 바로 바뀌고(모델 없음), 맨 뒤에서 한 번 더 넘기면 보이던 답장을 받아 두고 새 답장을 줄 세워요(`fresh`). 답장은 여기서 안 받아요: 화면이 말을 보낸 뒤처럼 `liveGo`를 불러요.
-    - `liveSwipeDrop(real, roomId)` → `{ dropped, at, count }`. 보이는 답장 하나를 지워요. 받아 둔 다른 답장이 있으면 앞의 것(없으면 다음 것)이 보여요.
+    - `liveSwipeList(real, roomId)` → `[{ no, now, bubbles: [{ text, ko }] }]`. 받아 둔 답장을 번호순으로(번호는 `liveSwipeInfo`의 `at`과 같아요). 아무것도 안 지워요.
+    - 지우기 셋, 모두 `{ dropped (지운 답장 수), at, count (남은 수) }`를 돌려주고 저장해요. 보이는 답장을 지우면 남은 것 중 바로 앞의 것(없으면 다음 것)이 보여요. 전부 지우면 `count`가 0이에요.
+      - `liveSwipeDrop(real, roomId)`: 보이는 답장 하나.
+      - `liveSwipeDropMany(real, roomId, 번호들)`: 고른 답장들.
+      - `liveSwipeDropOthers(real, roomId)`: 지금 보이는 것만 남기고 나머지.
     - 받아 둔 답장은 방의 `swipes[내 말의 id] = { list, at }`에 있어요(`list[at]`은 null: 지금 방에 보이는 답장의 자리). 내가 다음 말을 보낸 뒤에도 남아 있고, 그 뒤의 말을 지워서 다시 맨 끝이 되면 또 넘길 수 있어요. 내 말을 지우면 그 말의 것도 같이 가요.
     - 새 답장을 못 받으면 앞의 답장이 다시 보여요. 답장이 오는 중에는 못 넘겨요. 한 답장에 50개까지 받아 둬요.
     - 캐릭터 폰에는 **메신저를 나갈 때 방에 보이던 답장**만 들어가요. 받아 둔 답장은 답장 요청 · 반영 · 롤플에 전하기 어디에도 안 실려요. 이미 폰에 반영된 답장을 뒤에 바꿔도 폰 내용은 그대로예요.

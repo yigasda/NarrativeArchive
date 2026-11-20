@@ -124,8 +124,9 @@ test('보이는 답장 지우기 · 새 답장을 못 받았을 때: 앞의 답�
     assert.deepEqual(E.dropSwipe(m, a.id), { dropped: 1, at: 1, count: 2 });
     assert.deepEqual(a.messages, [...head, ...first]);
     // 첫 것을 지우면 다음 것이 보여요
-    assert.deepEqual(E.dropSwipe(m, a.id), { dropped: 3, at: 1, count: 1 });
+    assert.deepEqual(E.dropSwipe(m, a.id), { dropped: 1, at: 1, count: 1 });
     assert.deepEqual(a.messages, [...head, ...third]);
+    assert.equal(a.swipes, undefined);
     // 새로 받으려다 못 받았으면(오는 답장이 없는데 자리가 비었으면) 앞의 답장이 다시 보여요
     E.swipeTo(m, a.id, 1);
     assert.deepEqual(a.messages, head);
@@ -141,6 +142,59 @@ test('보이는 답장 지우기 · 새 답장을 못 받았을 때: 앞의 답�
     say(a, 'Mara', 'again', 8000);
     a.swipes = { [head[2].id]: { list: [null, null], at: 0 } };
     assert.deepEqual(E.swipeInfo(m, a.id), { at: 1, count: 1, coming: false, prev: false, next: true });
+});
+
+test('받아 둔 답장 목록 · 골라 지우기 · 지금 것만 남기기', () => {
+    const { m, w, a, say } = world(), first = a.messages.slice(3), head = a.messages.slice(0, 3);
+    // 받아 둔 게 없어도 지금 답장 하나가 목록이에요; 글 없는 말(폰으로 한 일)은 말풍선에 없어요
+    assert.deepEqual(E.swipeList(m, a.id), [{ no: 1, now: true, bubbles: [{ text: 'Did you eat', ko: '밥 먹었어' }, { text: 'Answer me', ko: '대답해' }] }]);
+    E.swipeTo(m, a.id, 1); const second = [say(a, 'Mara', 'two', 6000)];
+    E.swipeTo(m, a.id, 1); const third = [say(a, 'Mara', 'three', 7000, { ko: '셋' })];
+    E.swipeTo(m, a.id, 1); const fourth = [say(a, 'Mara', 'four', 8000)];
+    E.swipeTo(m, a.id, -1);
+    const was = JSON.stringify(a);
+    assert.deepEqual(E.swipeList(m, a.id).map(v => [v.no, v.now, v.bubbles.map(b => b.text).join('|'), v.bubbles[0].ko]), [[1, false, 'Did you eat|Answer me', '밥 먹었어'], [2, false, 'two', ''], [3, true, 'three', '셋'], [4, false, 'four', '']]);
+    assert.equal(E.swipeList(m, a.id).find(v => v.now).no, E.swipeInfo(m, a.id).at);
+    assert.equal(JSON.stringify(a), was);
+    // 보이지 않는 것만 골라 지우기: 보이는 답장은 그대로, 번호가 당겨져요. 없는 번호는 건너뛰어요
+    assert.deepEqual(E.dropSwipes(m, a.id, [2, 9, 0, 2, 'x']), { dropped: 1, at: 2, count: 3 });
+    assert.deepEqual(a.messages, [...head, ...third]);
+    assert.deepEqual(a.swipes[head[2].id], { list: [first, null, fourth], at: 1 });
+    assert.deepEqual(E.dropSwipes(m, a.id, []), { dropped: 0, at: 2, count: 3 });
+    // 보이는 것까지 지우기: 남은 것 중 앞의 것이 보여요 (앞이 없으면 다음 것)
+    assert.deepEqual(E.dropSwipes(m, a.id, [2, 3]), { dropped: 2, at: 1, count: 1 });
+    assert.deepEqual(a.messages, [...head, ...first]); assert.equal(a.swipes, undefined);
+    E.swipeTo(m, a.id, 1); const fifth = [say(a, 'Mara', 'five', 9000)];
+    E.swipeTo(m, a.id, -1);
+    assert.deepEqual(E.dropSwipes(m, a.id, 1), { dropped: 1, at: 1, count: 1 });
+    assert.deepEqual(a.messages, [...head, ...fifth]);
+    // (보이는 것을 지우면 바로 앞에 남은 것이 보여요: 첫 것이 아니라)
+    E.swipeTo(m, a.id, 1); const p2 = [say(a, 'Mara', 'p2', 9100)];
+    E.swipeTo(m, a.id, 1); say(a, 'Mara', 'p3', 9200);
+    E.swipeTo(m, a.id, 1); say(a, 'Mara', 'p4', 9300);
+    E.swipeTo(m, a.id, -1);
+    assert.deepEqual(E.dropSwipes(m, a.id, [3]), { dropped: 1, at: 2, count: 3 });
+    assert.deepEqual(a.messages, [...head, ...p2]);
+    assert.deepEqual(E.dropSwipes(m, a.id, [1, 3]), { dropped: 2, at: 1, count: 1 });
+    // 지금 것만 남기기
+    E.swipeTo(m, a.id, 1); say(a, 'Mara', 'six', 10000);
+    E.swipeTo(m, a.id, 1); say(a, 'Mara', 'seven', 11000);
+    E.swipeTo(m, a.id, -1);
+    assert.deepEqual(E.dropOtherSwipes(m, a.id), { dropped: 2, at: 1, count: 1 });
+    assert.deepEqual(texts(a).slice(3), ['six']); assert.equal(a.swipes, undefined);
+    assert.deepEqual(E.dropOtherSwipes(m, a.id), { dropped: 0, at: 1, count: 1 });
+    assert.deepEqual(E.swipeList(m, a.id).map(v => [v.no, v.now]), [[1, true]]);
+    // 전부 지우면 답장이 없어져요
+    E.swipeTo(m, a.id, 1); say(a, 'Mara', 'eight', 12000);
+    assert.deepEqual(E.dropSwipes(m, a.id, [1, 2]), { dropped: 2, at: 0, count: 0 });
+    assert.deepEqual(a.messages, head); assert.equal(a.swipes, undefined); assert.deepEqual(E.swipeList(m, a.id), []);
+    // 답장이 오는 중 · 답장이 없을 때는 아무것도 안 바꿔요
+    assert.throws(() => E.dropSwipes(m, a.id, [1]), /지울 답장이 없어요/); assert.throws(() => E.dropOtherSwipes(m, a.id), /남길 답장이 없어요/);
+    say(a, 'Mara', 'nine', 13000); L.enqueueReplies(m, a.id);
+    const still = JSON.stringify(w.messenger.rooms);
+    assert.throws(() => E.dropSwipes(m, a.id, [1]), /답장이 오는 중이에요/); assert.throws(() => E.dropOtherSwipes(m, a.id), /답장이 오는 중이에요/);
+    assert.equal(JSON.stringify(w.messenger.rooms), still);
+    assert.deepEqual(E.swipeList(m, 'nope'), []);
 });
 
 test('한국어를 다시 받을 말: 고른 것 중 글이 있는 말만, 방의 순서대로; 누구의 말투 표를 쓸지', () => {

@@ -14,7 +14,7 @@ import { resolvePhoneProfile, ownerProfileBlock } from './phoneprofile.js';
 import { parseJson } from './phoneparse.js';
 import { nameKey } from './people.js';
 import { liveWorld, livePhone, liveMeta, liveKey, liveAtYear, isSnap, setStoryKeeper, startFresh, enqueueReplies } from './phone2store.js';
-import { dropMessages, settleSwipes, swipeInfo, swipeTo, dropSwipe, koRows, koChunks, koInput, takeKo } from './phone2edit.js';
+import { dropMessages, settleSwipes, swipeInfo, swipeTo, swipeList, dropSwipe, dropSwipes, dropOtherSwipes, koRows, koChunks, koInput, takeKo } from './phone2edit.js';
 import { AI_SYS_PHONE_KO, voiceRows, who as voiceWho } from './phonetr.js';
 import { askTranslator, glossaryEntries, glossaryIn } from './translate.js';
 import { importRows, importInto, importFile, importedOf, chatKey } from './phone2import.js';
@@ -382,12 +382,26 @@ export async function liveSwipe(real, roomId, dir) {
     await saveMeta();
     return { ...out, jobs };
 }
-// 보이는 답장 하나 지우기: 받아 둔 다른 답장이 있으면 그게 보여요  → { dropped, at, count }
-export async function liveSwipeDrop(real, roomId) {
+// 받아 둔 답장을 지우는 세 가지. 모두 { dropped (지운 답장 수), at, count (남은 수: 0이면 답장이 없어요) }를 돌려주고 저장해요.
+// 보이는 답장을 지우면 남은 것 중 앞의 것(없으면 다음 것)이 보여요. 답장이 오는 중에는 못 지워요
+async function swipeDrop(real, roomId, drop) {
     if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않아요');
-    const out = dropSwipe(real, roomId);
-    await saveMeta();
+    settleSwipes(real, roomId);
+    const out = drop();
+    if (out.dropped) await saveMeta();
     return out;
+}
+// 보이는 답장 하나 지우기
+export const liveSwipeDrop = (real, roomId) => swipeDrop(real, roomId, () => dropSwipe(real, roomId));
+// 고른 답장들 지우기 (nos: liveSwipeList의 번호 하나 또는 여럿)
+export const liveSwipeDropMany = (real, roomId, nos) => swipeDrop(real, roomId, () => dropSwipes(real, roomId, nos));
+// 지금 보이는 답장만 남기고 받아 둔 다른 답장을 모두 지우기
+export const liveSwipeDropOthers = (real, roomId) => swipeDrop(real, roomId, () => dropOtherSwipes(real, roomId));
+// 받아 둔 답장 목록: 번호순으로 [{ no (1부터, liveSwipeInfo의 at과 같은 번호), now (지금 보이는 것), bubbles: [{ text, ko }] }].
+// 넘길 답장이 없으면 []. liveSwipeInfo와 같은 상태를 봐요 (그릴 때마다 불러도 돼요)
+export function liveSwipeList(real, roomId) {
+    if (!real || !open(real)) return [];
+    try { settleSwipes(real, roomId); return swipeList(real, roomId); } catch { return []; }
 }
 // 한국어 다시 받기 (ids: 말의 id 하나 또는 여럿): 번역 모델에 다시 물어서 그 말들의 한국어만 바꿔요. 폰 1의 번역 지시문
 // 그대로, 그 방 캐릭터의 말투 표 · 주변 인물 · 용어집을 같이 보내요. 실패하면 있던 한국어가 그대로예요.
