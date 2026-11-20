@@ -1897,6 +1897,8 @@ export async function openPhone(who = null) {
     if (!toasts) { toasts = document.createElement('div'); toasts.id = 'toast-container'; if (toastr.options?.positionClass) toasts.classList.add(toastr.options.positionClass); }
     dlg.append(toasts);
     dlg.showModal();
+    // (창을 열 때 브라우저가 첫 글 칸에 초점을 줘서 키보드가 따라 올라와요: 칸은 직접 눌렀을 때만)
+    { const a = document.activeElement; if (a && dlg.contains(a) && (a.isContentEditable || a.matches('input, textarea'))) a.blur(); }
     // the phone's height is the screen's, but not while typing: a keyboard that shrinks the page (some phones' browsers)
     // would shrink the whole phone, so the height taken before the keyboard stays and the keyboard covers the bottom
     const typing = () => { const a = document.activeElement; return !!a && dlg.contains(a) && (a.matches('input, textarea, select') || a.isContentEditable); };
