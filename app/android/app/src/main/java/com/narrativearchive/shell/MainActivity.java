@@ -75,10 +75,18 @@ public class MainActivity extends Activity {
         "function send(){try{var m=document.querySelector('meta[name=\"theme-color\"]');var t=m?m.content:'';" +
         "var b=bg(document.body)||bg(document.documentElement)||t;var k=t+'|'+b;if(k!==last){last=k;NAShell.setBars(t||b,b||t);}}catch(e){}}" +
         "var q=0;function kick(){if(q)return;q=1;setTimeout(function(){q=0;send();},120);}" +
-        "new MutationObserver(kick).observe(document.documentElement,{subtree:true,attributes:true,attributeFilter:['content','style','class'],childList:true});" +
+        // (페이지 전체를 지켜보면 실리태번이 켜질 때 만드는 수천 개 조각마다 불려서 느려졌어요: theme-color가 있는 head, html · body 바탕만)
+        "var mo=new MutationObserver(kick);mo.observe(document.head,{subtree:true,childList:true,attributes:true,attributeFilter:['content']});" +
+        "mo.observe(document.documentElement,{attributes:true,attributeFilter:['style','class']});if(document.body)mo.observe(document.body,{attributes:true,attributeFilter:['style','class']});" +
         "setInterval(send,1500);send();" +
         "window.__naBack=function(){var p=document.getElementById('na_phl');if(p&&p.open){p.close();return 1;}" +
         "var d=[].slice.call(document.querySelectorAll('dialog[open]')).pop();if(d){var c=d.querySelector('.popup-button-cancel,.popup-button-close,.menu_button_cancel');if(c){c.click();}else{d.close();}return 1;}return 0;};})();";
+
+    // 실리태번이 처음 켜지는 동안(#preloader가 있는 동안: 첫 로딩이 끝나면 실리태번이 지워요)엔 로딩 화면 · 배경만 보이게: 다른 확장 창이 그 위에 잠깐 그려졌다 사라지며 깜박였어요(음악 확장)
+    private static final String GUARD_JS =
+        "(function(){if(!/^http/.test(location.href)||!document.documentElement)return 0;if(document.getElementById('na_guard'))return 1;" +
+        "var s=document.createElement('style');s.id='na_guard';s.textContent='body:has(> #preloader) > :not(#preloader, #bg1, #bg_custom, :has(#loader)) { visibility: hidden !important; }';" +
+        "(document.head||document.documentElement).appendChild(s);return 1;})()";
 
     @Override
     protected void onCreate(Bundle saved) {
@@ -118,7 +126,9 @@ public class MainActivity extends Activity {
         s.setSupportZoom(false);
         web.addJavascriptInterface(new Bridge(), "NAShell");
         web.setWebViewClient(new WebViewClient() {
-            @Override public void onPageFinished(WebView v, String url) { if (url != null && url.startsWith("http")) { cacheRetried = false; v.evaluateJavascript(BRIDGE_JS, null); sendNav(); } }
+            // (새 페이지가 막 시작됐을 땐 문서가 아직 없을 수 있어서, 처음 1.5초 동안 몇 번 넣어 봐요. 이미 있으면 그대로)
+            @Override public void onPageStarted(WebView v, String url, android.graphics.Bitmap icon) { if (url != null && url.startsWith("http")) guard(v, 0); }
+            @Override public void onPageFinished(WebView v, String url) { if (url != null && url.startsWith("http")) { cacheRetried = false; v.evaluateJavascript(GUARD_JS, null); v.evaluateJavascript(BRIDGE_JS, null); sendNav(); } }
             @Override public void onReceivedError(WebView v, WebResourceRequest req, WebResourceError err) {
                 if (!req.isForMainFrame()) return;
                 // (ERR_CACHE_MISS: 다시 보내야 하는 페이지를 되살릴 때 나요. 주소로 한 번 새로 열어요)
@@ -160,6 +170,12 @@ public class MainActivity extends Activity {
                 return true;
             }
         });
+    }
+
+    private void guard(WebView v, int n) {
+        if (v != web || n > 50) return;
+        v.evaluateJavascript(GUARD_JS, null);
+        ui.postDelayed(() -> guard(v, n + 1), 30);
     }
 
     // ---- 앱이 꺼질 때 이유 적어 두기 → 다음에 켤 때 보여주기
