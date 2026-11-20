@@ -1096,11 +1096,11 @@ test('말 지우기: 메신저에서만 지우고 저장해요. 이미 반영된
     // 지울 게 없으면 저장도 안 해요; 다른 채팅이 열려 있으면 아무것도 안 해요
     assert.equal(await G.liveDropMessages(c.real, c.room.id, ['none']), 0); assert.equal(T.saves, saves + 1);
     T.metadata = { narrative_archive: {} };
-    try { await assert.rejects(() => G.liveDropMessages(c.real, c.room.id, [b.id]), /이 채팅이 열려 있지 않아요/); assert.equal(G.liveRedoCount(c.real, c.room.id), 0); } finally { delete T.metadata; }
+    try { await assert.rejects(() => G.liveDropMessages(c.real, c.room.id, [b.id]), /이 채팅이 열려 있지 않아요/); } finally { delete T.metadata; }
     assert.deepEqual(c.room.messages, [mine, b]);
 });
 
-test('답장 다시 받기: 맨 끝 답장을 지우고 새 답장을 줄 세워요. 그 뒤 liveGo가 새 답장을 받아요', async () => {
+test('답장 넘기기: 맨 뒤에서 넘기면 새 답장을 줄 세우고(그 뒤 liveGo가 받아요), 받아 둔 답장으로 돌아갈 수 있어요', async () => {
     const c = world();
     send(c, '일어났냐');
     T.replies = [{ state: '집', reply: ['방금'], does: [] }];
@@ -1109,24 +1109,45 @@ test('답장 다시 받기: 맨 끝 답장을 지우고 새 답장을 줄 세워
     T.replies = [{ state: '집', reply: ['아직', '너는'], does: [{ app: 'notes', what: '장 볼 것 적음' }] }];
     await G.liveGo(c.real);
     assert.deepEqual(c.room.messages.map(x => x.text), ['일어났냐', '방금', '밥은', '아직', '너는']);
-    assert.equal(G.liveRedoCount(c.real, c.room.id), 2);
-    const saves = T.saves, calls = T.replyCalls, kept = c.room.messages.slice(0, 3).map(x => ({ ...x }));
-    assert.deepEqual(await G.liveRedoReply(c.real, c.room.id), { dropped: 2, jobs: 1 });
-    // (여기서는 모델을 안 불러요: 지우고, 줄 세우고, 저장만)
+    assert.deepEqual(G.liveSwipeInfo(c.real, c.room.id), { at: 1, count: 1, coming: false, prev: false, next: true });
+    const saves = T.saves, calls = T.replyCalls, kept = c.room.messages.slice(0, 3).map(x => ({ ...x })), first = c.room.messages.slice(3);
+    assert.deepEqual(await G.liveSwipe(c.real, c.room.id, 1), { at: 2, count: 2, fresh: true, jobs: 1 });
+    // (여기서는 모델을 안 불러요: 보이던 답장을 받아 두고, 줄 세우고, 저장만)
     assert.equal(T.replyCalls, calls); assert.equal(T.saves, saves + 1);
     assert.deepEqual(c.room.messages.map(x => ({ ...x })), kept);
-    assert.equal(G.liveRedoCount(c.real, c.room.id), 0);
-    await assert.rejects(() => G.liveRedoReply(c.real, c.room.id), /답장이 오는 중이에요/);
+    assert.deepEqual(G.liveSwipeInfo(c.real, c.room.id), { at: 2, count: 2, coming: true, prev: false, next: false });
+    await assert.rejects(() => G.liveSwipe(c.real, c.room.id, -1), /답장이 오는 중이에요/);
     T.replies = [{ state: '집', reply: ['먹었지'], does: [] }];
     const r = await G.liveGo(c.real);
     assert.equal(r.ran, 1); assert.equal(T.replyCalls, calls + 1);
     assert.deepEqual(c.room.messages.map(x => x.text), ['일어났냐', '방금', '밥은', '먹었지']);
-    // (새 답장 요청에는 지운 답장이 없어요)
+    // (새 답장 요청에는 받아 둔 답장이 없어요)
     assert.ok(T.replyInput.includes('밥은') && !T.replyInput.includes('아직') && !T.replyInput.includes('너는'));
-    // 맨 끝이 내 말이면 다시 받을 게 없어요
-    send(c, '뭐');
-    for (const j of L.liveWorld(c.real).queue.jobs) j.state = 'done';
-    await assert.rejects(() => G.liveRedoReply(c.real, c.room.id), /다시 받을 답장이 없어요/);
+    assert.deepEqual(G.liveSwipeInfo(c.real, c.room.id), { at: 2, count: 2, coming: false, prev: true, next: true });
+    // 앞의 답장으로: 모델 없이 바로, 그 말들이 그대로 돌아와요
+    assert.deepEqual(await G.liveSwipe(c.real, c.room.id, -1), { at: 1, count: 2, fresh: false, jobs: 0 });
+    assert.equal(T.replyCalls, calls + 1);
+    assert.deepEqual(c.room.messages.slice(3), first);
+    // 폰에는 메신저를 나갈 때 보이던 답장만 들어가요: 받아 둔 답장(먹었지)은 안 읽어요
+    assert.equal(G.liveUnreflected(c.real, 'Mara'), 5);
+    // 새 답장을 못 받으면 앞의 답장이 다시 보여요
+    await G.liveSwipe(c.real, c.room.id, 1); await G.liveSwipe(c.real, c.room.id, 1);
+    T.replies = [new Error('모델이 답을 안 줬어요')];
+    const bad = await G.liveGo(c.real);
+    assert.ok(bad.failed);
+    assert.deepEqual(G.liveSwipeInfo(c.real, c.room.id), { at: 2, count: 2, coming: false, prev: true, next: true });
+    assert.deepEqual(c.room.messages.map(x => x.text), ['일어났냐', '방금', '밥은', '먹었지']);
+    // 말 지우기로 보이는 답장의 말을 다 지우면: 받아 둔 다른 답장이 바로 보여요
+    L.seeFailure(c.real);
+    assert.equal(await G.liveDropMessages(c.real, c.room.id, c.room.messages.slice(3).map(x => x.id)), 1);
+    assert.deepEqual(c.room.messages.slice(3), first);
+    // 보이는 답장 지우기: 하나뿐이면 답장이 없어져요
+    assert.deepEqual(await G.liveSwipeDrop(c.real, c.room.id), { dropped: 2, at: 0, count: 0 });
+    assert.deepEqual(c.room.messages.map(x => x.text), ['일어났냐', '방금', '밥은']);
+    assert.equal(G.liveSwipeInfo(c.real, c.room.id), null);
+    await assert.rejects(() => G.liveSwipe(c.real, c.room.id, 1), /넘길 답장이 없어요/);
+    T.metadata = { narrative_archive: {} };
+    try { assert.equal(G.liveSwipeInfo(c.real, c.room.id), null); await assert.rejects(() => G.liveSwipe(c.real, c.room.id, 1), /이 채팅이 열려 있지 않아요/); await assert.rejects(() => G.liveSwipeDrop(c.real, c.room.id), /이 채팅이 열려 있지 않아요/); } finally { delete T.metadata; }
 });
 
 test('한국어 다시 받기: 번역 모델에 그 말만 다시 물어서 한국어만 바꿔요. 실패하면 그대로', async () => {

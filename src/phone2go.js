@@ -14,7 +14,7 @@ import { resolvePhoneProfile, ownerProfileBlock } from './phoneprofile.js';
 import { parseJson } from './phoneparse.js';
 import { nameKey } from './people.js';
 import { liveWorld, livePhone, liveMeta, liveKey, liveAtYear, isSnap, setStoryKeeper, startFresh, enqueueReplies } from './phone2store.js';
-import { dropMessages, redoCount, dropReplyTail, koRows, koChunks, koInput, takeKo } from './phone2edit.js';
+import { dropMessages, settleSwipes, swipeInfo, swipeTo, dropSwipe, koRows, koChunks, koInput, takeKo } from './phone2edit.js';
 import { AI_SYS_PHONE_KO, voiceRows, who as voiceWho } from './phonetr.js';
 import { askTranslator, glossaryEntries, glossaryIn } from './translate.js';
 import { importRows, importInto, importFile, importedOf, chatKey } from './phone2import.js';
@@ -361,18 +361,33 @@ export async function liveImportFile(real, text, opts = {}) {
 export async function liveDropMessages(real, roomId, ids) {
     if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않아요');
     const n = dropMessages(real, roomId, ids);
-    if (n) await saveMeta();
+    // (the answer shown is gone, every bubble of it: another one kept for that message shows)
+    if (n) { settleSwipes(real, roomId); await saveMeta(); }
     return n;
 }
-// 답장 다시 받기: 다시 받을 수 있는 말의 수 (0이면 못 받아요: 버튼을 흐리게)
-export const liveRedoCount = (real, roomId) => (real && open(real) ? redoCount(real, roomId) : 0);
-// 답장 다시 받기: 맨 끝 답장(내 마지막 말 뒤에 온 말들)을 지우고 새 답장을 줄 세워요. 저장까지 해요.
-// 답장은 여기서 받지 않아요: 화면이 말을 보낸 뒤처럼 liveGo를 불러요.  → { dropped (지운 수), jobs (줄 세운 답장 수) }
-export async function liveRedoReply(real, roomId) {
+// 답장 넘기기(스와이프): 맨 끝 답장의 상태. 넘길 답장이 없으면 null
+//   → { at (지금 몇 번째, 1부터), count (받아 둔 수), coming (답장이 오는 중), prev · next (그쪽으로 넘길 수 있는지) }
+// (새 답장을 못 받았으면 여기서 앞의 답장을 다시 보여 줘요)
+export function liveSwipeInfo(real, roomId) {
+    if (!real || !open(real)) return null;
+    try { settleSwipes(real, roomId); return swipeInfo(real, roomId); } catch { return null; }
+}
+// 넘기기 (dir: -1 앞 · +1 뒤). 받아 둔 답장이면 바로 바뀌고, 맨 뒤에서 한 번 더 넘기면 새 답장을 줄 세워요(fresh: true).
+// 답장은 여기서 안 받아요: fresh면 화면이 말을 보낸 뒤처럼 liveGo를 불러요. 받아 둔 답장은 버리지 않아요.
+//   → { at, count, fresh, jobs (줄 세운 답장 수) }
+export async function liveSwipe(real, roomId, dir) {
     if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않아요');
-    const dropped = dropReplyTail(real, roomId), jobs = enqueueReplies(real, roomId).length;
+    settleSwipes(real, roomId);
+    const out = swipeTo(real, roomId, dir), jobs = out.fresh ? enqueueReplies(real, roomId).length : 0;
     await saveMeta();
-    return { dropped, jobs };
+    return { ...out, jobs };
+}
+// 보이는 답장 하나 지우기: 받아 둔 다른 답장이 있으면 그게 보여요  → { dropped, at, count }
+export async function liveSwipeDrop(real, roomId) {
+    if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않아요');
+    const out = dropSwipe(real, roomId);
+    await saveMeta();
+    return out;
 }
 // 한국어 다시 받기 (ids: 말의 id 하나 또는 여럿): 번역 모델에 다시 물어서 그 말들의 한국어만 바꿔요. 폰 1의 번역 지시문
 // 그대로, 그 방 캐릭터의 말투 표 · 주변 인물 · 용어집을 같이 보내요. 실패하면 있던 한국어가 그대로예요.
