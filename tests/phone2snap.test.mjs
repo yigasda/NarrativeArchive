@@ -21,7 +21,8 @@ const stub = {
         export const rangeRaw=(c,g,from,to,keep)=>{S.ranges.push([from,to,keep]);const items=c.chat.map((x,i)=>({i,text:x.mes,hidden:!!x.is_system})).filter(x=>x.i>=from&&x.i<=to&&!(x.hidden&&x.i>keep));return{items,raw:items.map(x=>'#'+x.i+' '+x.text).join('\\n')};};
         export const chunkItems=items=>{const out=[];for(let i=0;i<items.length;i+=S.per||1000)out.push(items.slice(i,i+(S.per||1000)));return out;};
         export const draftCompress=async a=>{S.calls.push({from:a.items[0].i,to:a.items.at(-1).i,n:a.items.length,prompt:a.p.text,text:a.m.text});a.onStep?.(0,1,a.items[0].i,a.items.at(-1).i);return typeof S.draft==='function'?S.draft(a):S.draft;};`),
-    './phonedata.js': enc(`export const recentPhoneText=(n,o)=>{const S=globalThis.__snap;S.recentAsk=[n,o];return S.chat.map((x,i)=>({i,x})).filter(r=>!r.x.is_system&&r.i<=o.upto).slice(-n).map(r=>'[#'+r.i+'] '+r.x.name+': '+r.x.mes).join('\\n\\n').slice(-o.maxChars);};`),
+    './phonedata.js': enc(`export const recentPhoneText=(n,o)=>{const S=globalThis.__snap;S.recentAsk=[n,o];return S.chat.map((x,i)=>({i,x})).filter(r=>!r.x.is_system&&r.i<=o.upto).slice(-n).map(r=>'[#'+r.i+'] '+r.x.name+': '+r.x.mes).join('\\n\\n').slice(-o.maxChars);};
+        export const chatStamp=i=>{const S=globalThis.__snap,x=S.chat[i];return{chat:S.mark||'c1',branch:false,fp:x?x.mes:null};};`),
 };
 // (the archive's own text code, as it is: its neighbours that need the page are the stubs above)
 const real = {};
@@ -145,6 +146,38 @@ test('긴 구간: 나눠 보내는 수가 미리 보이고, 압축 설정의 지
         assert.equal(T.calls[0].prompt, 'MY PROMPT');
         assert.equal(snap.made.parts, 2);
     } finally { T.g.prompts = [{ id: 'short', text: 'PROMPT' }]; delete T.g.wizPrompt; }
+});
+
+test('버튼 한 번(liveSnapNow): 마지막 메시지까지의 요약본과, 시작에 넘길 자리 · 채팅 표시 · 끝 메시지 표시', async () => {
+    const m = chat();
+    T.draft = { text: DRAFT, parts: 1, doneTo: 7, error: null };
+    const steps = [], got = await S.liveSnapNow(m, { now: 333, onStep: (...a) => steps.push(a) });
+    assert.deepEqual([got.upto, got.chat, got.fp, got.snap.upto, got.snap.at], [7, 'c1', 'See you Friday', 7, 333]);
+    assert.ok(S.isSnap(got.snap) && got.snap.text.includes('## #4–#7 — The flat'));
+    assert.deepEqual(steps, [[0, 1, 4, 7]]);
+    // 빈 채팅: 요청 없이, 빈 요약본으로
+    T.chat = []; T.calls = [];
+    const none = await S.liveSnapNow({ text: '', boundary: -1 });
+    assert.deepEqual([none.upto, none.fp, none.snap.text, none.snap.recent, T.calls.length], [0, null, '', [], 0]);
+});
+
+test('버튼 한 번: 정리하는 동안 채팅이 달라졌으면 요약본을 버리고 오류 (메시지가 늘었음 · 줄었음 · 끝 메시지가 고쳐짐 · 다른 채팅)', async () => {
+    const during = [
+        () => T.chat.push(say('Ren', 'one more')),
+        () => T.chat.pop(),
+        () => { T.chat[7] = say('Mara', 'See you Saturday'); },
+        () => { T.mark = 'c2'; },
+    ];
+    for (const change of during) {
+        const m = chat(); T.mark = 'c1';
+        T.draft = () => { change(); return { text: DRAFT, parts: 1, doneTo: 7, error: null }; };
+        await assert.rejects(() => S.liveSnapNow(m), /정리하는 동안 채팅이 바뀌었어요/);
+    }
+    // 그대로였으면 돼요 (앞쪽 메시지가 고쳐진 건 시작 자리를 안 바꿔요)
+    const m = chat(); T.mark = 'c1';
+    T.draft = () => { T.chat[4] = say('Ren', 'I found the flat on Birkenweg'); return { text: DRAFT, parts: 1, doneTo: 7, error: null }; };
+    assert.equal((await S.liveSnapNow(m)).upto, 7);
+    T.mark = '';
 });
 
 test('요약본 모양 검사(isSnap)', () => {

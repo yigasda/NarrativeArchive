@@ -17,7 +17,7 @@ import { lastRangeEnd, splitTail, stripCites, trimEnd } from './sections.js';
 import { hasChanges, resolveChanges } from './statechg.js';
 import { placeAppend } from './appendtext.js';
 import { chunkItems, draftCompress, rangeRaw } from './wizard.js';
-import { recentPhoneText } from './phonedata.js';
+import { chatStamp, recentPhoneText } from './phonedata.js';
 import { isSnap } from './phone2store.js';
 
 export { isSnap };
@@ -77,6 +77,19 @@ export async function liveSnapDraft(m, { upto, onStep = () => {}, now = Date.now
     // split is at the next message's "[#n]" head)
     const recent = String(recentPhoneText(SNAP_RECENT.lines, { upto, maxChars: SNAP_RECENT.chars }) || '').split(/\n\n(?=\[#\d+\])/).filter(x => x.trim());
     return { v: 1, at: now, upto, text: text.trim() ? `${trimEnd(text)}\n` : '', recent, made: { from: u.from, to: u.to, count: u.items.length, parts } };
+}
+
+// 버튼 한 번으로 시작할 때: 지금 이야기의 끝(마지막 메시지)까지 요약본을 만들어서, 시작에 넘길 것을 돌려줘요.
+// 만드는 동안 채팅이 달라졌으면(다른 채팅으로 갔거나, 메시지가 늘거나 줄었거나, 끝 메시지가 고쳐졌으면) 그 요약본은
+// 버리고 오류를 던져요: 요약본은 "시작한 그 순간"의 이야기여야 해요.
+//   → { snap, upto, chat, fp } — beginFromStory · rebeginKeepingChats에 그대로 넘겨요 (phone2story.js)
+export async function liveSnapNow(m, { onStep = () => {}, now = Date.now() } = {}) {
+    const last = () => Math.max(0, (ctx().chat?.length || 1) - 1);
+    const upto = last(), was = chatStamp(upto);
+    const snap = await liveSnapDraft(m, { upto, onStep, now });
+    const is = chatStamp(upto);
+    if (last() !== upto || is.chat !== was.chat || is.fp !== was.fp) throw new Error('이야기를 정리하는 동안 채팅이 바뀌었어요. 다시 시작해 주세요');
+    return { snap, upto, chat: was.chat, fp: was.fp };
 }
 
 // 요약본의 두 부분: 장면들(body)과 끝의 STATE · OPEN(state)
