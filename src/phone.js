@@ -40,7 +40,7 @@ import { shiftLabel, liveWall, viewerWall, startShift } from './phone2clock.js';
 import { orbitList, orbitRoom, orbitNew, orbitHomeWidget, liveStart, whoScreen } from './phoneorbit.js';
 import { beginFromStory, liveBranched, adoptChat, rebeginFromStory, rebeginKeepingChats } from './phone2story.js';
 import { liveSnapNow, snapParts } from './phone2snap.js';
-import { liveGo, liveReflect, liveCanUndo, liveUndo, liveUnreflected, liveNowOf, liveSnapBusy, liveBackCount, liveBackDraft, liveBackPut, liveImportPlan, liveImportFilePlan, liveImportChat, liveImportFile } from './phone2go.js';
+import { liveGo, liveReflect, liveCanUndo, liveUndo, liveUnreflected, liveNowOf, liveSnapBusy, liveBackCount, liveBackDraft, liveBackPut, liveImportPlan, liveImportFilePlan, liveImportChat, liveImportFile, liveDropMessages, liveSwipeInfo, liveSwipe, liveSwipeDrop, liveRetranslate } from './phone2go.js';
 import { liveYearsNow } from './phone2year.js';
 import { P } from './phone2api.js';
 
@@ -200,6 +200,9 @@ export async function openPhone(who = null) {
     // Orbit (실시간 폰의 메신저, docs/design/orbit.md): 계정은 페르소나(쓰기)와 이 폰 주인(읽기만) 둘. 왼쪽 위 얼굴 → 아래 시트로 바꿔요
     let obTab = 'all', obPick = [], obGname = '', obWho = '', obSheet = false, obDraft = '';
     const obOpen = new Set();   // 한국어를 기본과 반대로 둔 말들
+    // 말 고치기 (시안 phone2-edit M3 · W3): obHeld = 길게 눌린 말의 id, obPicks = 고르는 중인 말들(Set) 또는 null, obTr = 번역 중인 말들, obEditAt = 그 방
+    let obHeld = null, obPicks = null, obEditAt = '';
+    const obTr = new Set();
     const roomNow = () => (view.startsWith('orbitroom:') ? liveWorld(realM)?.messenger?.rooms?.[view.slice(10)] || null : null);
     // 지금 계정: 폰 주인 계정은 주인이 페르소나가 아닐 때만, 그 폰을 보고 있을 때만
     const obAcct = () => { const w = liveWorld(realM), me = w?.persona || ''; return obWho && owner && liveKey(obWho) === liveKey(owner) && liveKey(owner) !== liveKey(me) ? owner : me; };
@@ -214,6 +217,7 @@ export async function openPhone(who = null) {
     const orbitUi = () => {
         const w = liveWorld(realM);
         if (!live() || !w) return {};
+        if (obEditAt !== view) { obHeld = null; obPicks = null; obEditAt = view; }
         const me = w.persona, who = obAcct(), ro = liveKey(who) !== liveKey(me), sh = w.dayShift || 0, vw = ms => viewerWall(ms, sh).at, today = vw(Date.now()).slice(0, 5), yday = vw(Date.now() - 864e5).slice(0, 5);
         const dayOf = a => (a.slice(0, 5) === today ? '오늘' : a.slice(0, 5) === yday ? '어제' : `${Number(a.slice(0, 2))}월 ${Number(a.slice(3, 5))}일`);
         const shortAt = ms => { const a = vw(ms), d = dayOf(a); return d === '오늘' ? a.slice(6) : d; };
@@ -245,19 +249,24 @@ export async function openPhone(who = null) {
             const os = V.others(r), group = os.length > 1, chips = [];
             if (!group && tzOf(os[0])) { const there = liveWall(tzOf(os[0]), sh).at.slice(6), here = vw(Date.now()).slice(6); if (there !== here) chips.push({ icon: 'clock', text: `${os[0]} 현지 ${there}` }); }
             const msgs = []; let day = '';
+            // 맨 끝 답장 묶음: 내 마지막 말 뒤에 온 말들 (넘길 수 있을 때만 표시해요)
+            const sw = ro ? null : liveSwipeInfo(realM, r.id), shown = r.messages.filter(seen), lastMine = shown.map(x => liveKey(x.from) === liveKey(me)).lastIndexOf(true);
+            const reply = new Set(sw ? shown.slice(lastMine + 1).map(x => x.id) : []), lastReply = sw ? shown.at(-1)?.id : null;
             for (const x of r.messages) {
                 if (!seen(x)) continue;
                 const a = vw(x.at), d = dayOf(a);
                 if (d !== day) { msgs.push({ day: d }); day = d; }
                 const mine = liveKey(x.from) === liveKey(who);
-                msgs.push({ id: x.id, mine, from: x.from, text: x.text, ko: x.ko || '', open: koOn() !== obOpen.has(x.id), time: mine ? a.slice(6) : '', unread: mine && !ro ? unreadBy(r, x).length : 0 });
+                msgs.push({ id: x.id, mine, from: x.from, text: x.text, ko: x.ko || '', open: koOn() !== obOpen.has(x.id), time: mine ? a.slice(6) : '', unread: mine && !ro ? unreadBy(r, x).length : 0, held: !ro && obHeld === x.id, pick: !ro && obPicks ? obPicks.has(x.id) : undefined, wait: obTr.has(x.id), reply: reply.has(x.id), dots: reply.has(x.id) && x.id === lastReply });
             }
             // 답장을 기다리는 중이면 입력 중, 멈춘 실패가 있으면 그 줄(다시는 사람이 누를 때만). 1:1 머리 아래는 상대의 가장 최근 상태
             const jobs = w.queue?.jobs || [], typing = !ro && jobs.some(j => j.room === r.id && (j.state === 'waiting' || j.state === 'running'));
             const fail = ro ? null : jobs.find(j => j.room === r.id && j.state === 'failed' && !j.seen) || null;
             const state = group ? '' : [...r.messages].reverse().find(x => liveKey(x.from) === liveKey(os[0]) && String(x.state || '').trim())?.state || '';
-            out.orbit = { id: r.id, title: V.titleOf(r), group, sub: group ? [...os, '나'].join(' · ') : state, chips, asOwner: ro, msgs, draft: obDraft, typing, snapBusy: typing && liveSnapBusy(realM), fail: fail ? { id: fail.id } : null };
+            out.orbit = { id: r.id, title: V.titleOf(r), group, sub: group ? [...os, '나'].join(' · ') : state, chips, asOwner: ro, msgs, draft: obDraft, typing, snapBusy: typing && liveSnapBusy(realM), fail: fail ? { id: fail.id } : null, swipe: sw && !sw.coming ? { at: sw.at, count: sw.count } : null, picking: !ro && obPicks ? obPicks.size : null };
         }
+        // 위쪽 시계: 내 계정으로 볼 때는 내 시간 (캐릭터 시간은 방 가운데 칩에만). 주인 계정으로 볼 때는 그 폰의 시간 그대로
+        if (out.orbit && !ro) out.orbit.clock = vw(Date.now());
         return out;
     };
     let view = 'lock', mapQ = '', contactBack = '', sheet = false, adding = false, loreOpen = false;
@@ -792,7 +801,58 @@ export async function openPhone(who = null) {
     $root.on('click', '.na_ob_acct', function (e) { e.stopPropagation(); obSheet = !obSheet; drawPhone(true); });
     $root.on('click', '.na_ob_shade', function (e) { e.stopPropagation(); obSheet = false; drawPhone(true); });
     $root.on('click', '.na_ob_who', function (e) { e.stopPropagation(); obWho = this.dataset.n === liveWorld(realM)?.persona ? '' : this.dataset.n; obSheet = false; drawPhone(); });
-    $root.on('click', '.na_ob_ko', function (e) { e.stopPropagation(); const id = this.dataset.id; if (obOpen.has(id)) obOpen.delete(id); else obOpen.add(id); const top = $root.find('.ob_msgs').scrollTop(); drawPhone(); $root.find('.ob_msgs').scrollTop(top); });
+    $root.on('click', '.na_ob_ko', function (e) { if (obHeld || obPicks || obJustHeld()) return; e.stopPropagation(); const id = this.dataset.id; if (obOpen.has(id)) obOpen.delete(id); else obOpen.add(id); const top = $root.find('.ob_msgs').scrollTop(); drawPhone(); $root.find('.ob_msgs').scrollTop(top); });
+    // 말 고치기 · 답장 넘기기 (시안 phone2-edit M3 · W3). 주인 계정(읽기만)에서는 아무것도 안 열려요
+    let obHoldT = null, obDown = null, obHeldAt = 0;
+    const obJustHeld = () => Date.now() - obHeldAt < 500;
+    const obRoomId = () => (view.startsWith('orbitroom:') ? view.slice(10) : '');
+    const obCanEdit = () => live() && !!obRoomId() && obAcct() === liveWorld(realM)?.persona;
+    const obWarn = err => { console.warn('[narrative-archive] live edit', err); toastr.info(String(err?.message || err), '캐릭터 휴대폰'); };
+    const obHoldStop = () => { clearTimeout(obHoldT); obHoldT = null; };
+    $root.on('pointerdown', '.na_ob_b', function (e) {
+        if (!obCanEdit() || obPicks || e.target.closest('.na_ob_ko')) return;
+        const id = this.dataset.id; obDown = { id, x: e.clientX, y: e.clientY, sw: this.classList.contains('na_ob_sw') };
+        obHoldStop(); obHoldT = setTimeout(() => { obHoldT = null; obDown = null; obHeldAt = Date.now(); obHeld = id; navigator.vibrate?.(10); drawPhone(true); }, 480);
+    });
+    $root.on('pointermove', '.na_ob_b', e => { if (obDown && Math.hypot(e.clientX - obDown.x, e.clientY - obDown.y) > 8) obHoldStop(); });
+    $root.on('pointercancel', () => { obHoldStop(); obDown = null; });
+    $root.on('pointerleave', '.na_ob_b', () => { obHoldStop(); });
+    // (맨 끝 답장을 옆으로 밀면 넘겨요: 왼쪽으로 밀면 다음, 오른쪽으로 밀면 앞)
+    $root.on('pointerup', e => { obHoldStop(); const d = obDown; obDown = null; if (!d?.sw) return; const dx = e.clientX - d.x, dy = e.clientY - d.y; if (Math.abs(dx) > 44 && Math.abs(dx) > Math.abs(dy) * 1.5) obSwipe(dx < 0 ? 1 : -1); });
+    const obSwipe = async dir => {
+        const id = obRoomId(); if (!id || !obCanEdit() || obHeld || obPicks) return;
+        try { const r = await liveSwipe(realM, id, dir); if (!phoneClosed && stillHere()) { drawPhone(true); obBottom(); } if (r?.fresh) obGo(); }
+        catch (err) { obWarn(err); }
+    };
+    $root.on('click', '.na_ob_swd', function (e) { e.stopPropagation(); const dots = [...this.children], at = dots.findIndex(x => x.classList.contains('on')), i = dots.indexOf(e.target); obSwipe(i >= 0 && i < at ? -1 : 1); });
+    $root.on('click', '.na_ob_hold', e => { if (obJustHeld() || e.target.closest('.ob_pill')) return; e.stopPropagation(); obHeld = null; drawPhone(true); });
+    $root.on('click', '.na_ob_b', function (e) { if (!obPicks) return; e.stopPropagation(); const id = this.dataset.id; if (obPicks.has(id)) obPicks.delete(id); else obPicks.add(id); drawPhone(true); });
+    $root.on('click', '.na_ob_mpick', function (e) { e.stopPropagation(); obPicks = new Set([this.dataset.id]); obHeld = null; drawPhone(true); });
+    $root.on('click', '.na_ob_pquit', e => { e.stopPropagation(); obPicks = null; drawPhone(true); });
+    const obRetr = async ids => {
+        const id = obRoomId(); if (!id || !ids.length) return;
+        if (obTr.size) return toastr.info('번역하는 중이에요. 끝나면 다시 눌러 주세요', '캐릭터 휴대폰');
+        ids.forEach(x => obTr.add(x)); obHeld = null; obPicks = null; drawPhone(true);
+        try { const r = await liveRetranslate(realM, id, ids); if (r?.left > 0) toastr.info(`${r.left}개는 한 번 더 눌러 주세요`, '캐릭터 휴대폰'); }
+        catch (err) { console.warn('[narrative-archive] live retranslate', err); toastr.warning(String(err?.message || err), '캐릭터 휴대폰'); }
+        finally { obTr.clear(); if (!phoneClosed && stillHere()) drawPhone(true); }
+    };
+    const obDrop = async ids => {
+        const id = obRoomId(); if (!id || !ids.length) return;
+        if (!await askSheet(`${ids.length}개를 지울까요?`, '', '지우기')) return;
+        try { await liveDropMessages(realM, id, ids); } catch (err) { obWarn(err); }
+        obHeld = null; obPicks = null; if (!phoneClosed && stillHere()) drawPhone(true);
+    };
+    $root.on('click', '.na_ob_mtr', function (e) { e.stopPropagation(); obRetr([this.dataset.id]); });
+    $root.on('click', '.na_ob_ptr', e => { e.stopPropagation(); obRetr([...(obPicks || [])]); });
+    $root.on('click', '.na_ob_mdel', function (e) { e.stopPropagation(); obDrop([this.dataset.id]); });
+    $root.on('click', '.na_ob_pdel', e => { e.stopPropagation(); obDrop([...(obPicks || [])]); });
+    $root.on('click', '.na_ob_swdel', async e => {
+        e.stopPropagation(); const id = obRoomId(); if (!id) return;
+        if (!await askSheet('이 답장을 지울까요?', '', '지우기')) return;
+        try { await liveSwipeDrop(realM, id); } catch (err) { obWarn(err); }
+        obHeld = null; if (!phoneClosed && stillHere()) drawPhone(true);
+    });
     // 답장 돌리기 (7-5): liveGo 하나가 다 해요(이미 돌면 그냥 돌아와요). 그리기는 이 채팅 · 실시간일 때만, 입력하던 칸은 그대로
     const obGo = () => liveGo(realM, { onChange: () => {
         if (phoneClosed || !stillHere() || !live() || bkEditing()) return;
