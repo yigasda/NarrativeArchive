@@ -112,6 +112,18 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax 
 .ax_igtop > .ax_sp { flex: 1; }
 /* the phone has the whole height; the bar at the bottom of the home and lock screens closes it, with 닫기 over it */
 .na_phl .na_ph_frame { width: min(calc(100vw - 20px), calc((var(--na-phh, 100dvh) - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 390 / 844 + 14px), 470px); }
+/* 폰 틀 · 화면의 둥글기는 폰 크기를 따라가요 (고정 px이면 작게 그려진 폰에서 모서리만 커져 글자를 파먹고 곡선이 두 겹으로 보여요). 틀 안쪽의 가는 선은 뺐어요 */
+.na_phl .na_ph_frame { border-radius: calc(44px * var(--k, 0.81) + 7px); --axr: calc(44px * var(--k, 0.81) + 7px); box-shadow: 0 12px 30px rgba(50, 30, 15, 0.22); }
+.na_phl .na_ph_scr { border-radius: calc(44px * var(--k, 0.81)); --axr: calc(44px * var(--k, 0.81)); }
+/* 진짜 폰(좁은 화면 · 손가락)에서는 폰 창이 화면을 통째로 채워요 (시안 docs/mockups/phone-fit 1번: 까만 여백 · 테두리 없이, 가로는 보드 390 그대로,
+   세로는 폰 높이만큼). 넓은 화면에서는 폰이 가운데 떠 있어야 해서 테두리를 둬요 */
+@media (max-width: 600px) and (pointer: coarse) {
+    .na_phl_root { padding: 0; }
+    .na_phl .na_ph_wrap { padding: 0; align-items: stretch; }
+    .na_phl .na_ph_frame { width: 100%; height: 100%; padding: 0; border-radius: 0; --axr: 0; box-shadow: none; background: none; }
+    .na_phl .na_ph_scr { aspect-ratio: auto; height: 100%; border-radius: 0; --axr: 0; }
+    .na_phl .cg_canvas { height: calc(100% / var(--k, 0.92)); }
+}
 .cg .cg_ind.na_ph_quit { height: 38px; flex-direction: column; gap: 4px; justify-content: flex-end; padding-bottom: 9px; cursor: pointer; }
 .cg_ind.na_ph_quit small { font-size: 11px; font-weight: 600; color: rgba(22, 27, 34, 0.55); letter-spacing: 0.04em; }
 /* 도구 › 이야기: 캐릭터 휴대폰이 맨 위 큰 카드 */

@@ -24,9 +24,10 @@ PLOT:
 ## Ivo
 - Runs the workshop; wants his key back.
 `;
-async function open(theme = 'light', { width = 412, out = 'shots', video = '', make = true } = {}) {
+// mobile: 손가락 화면(진짜 폰)처럼 열어요 — 폰 창이 화면을 통째로 채우는 모양(좁은 화면 + pointer: coarse)을 볼 때. height: 창 높이
+async function open(theme = 'light', { width = 412, height = 1100, out = 'shots', video = '', make = true, mobile = false } = {}) {
     const b = await chromium.launch();
-    const ctx = await b.newContext({ viewport: { width, height: 1100 }, deviceScaleFactor: 2, ...(video ? { recordVideo: { dir: video, size: { width, height: 1100 } } } : {}) });
+    const ctx = await b.newContext({ viewport: { width, height }, deviceScaleFactor: 2, ...(mobile ? { isMobile: true, hasTouch: true } : {}), ...(video ? { recordVideo: { dir: video, size: { width, height } } } : {}) });
     const p = await ctx.newPage();
     const errs = []; p.on('pageerror', e => errs.push(String(e.stack || e))); p.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
     await p.goto(ST, { waitUntil: 'domcontentloaded' });

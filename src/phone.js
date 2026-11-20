@@ -2049,7 +2049,8 @@ export async function openPhone(who = null) {
     draw();
     // the home board is 390 px wide: --k scales it to whatever width the screen has now
     const frame = $root.find('.na_ph_frame')[0];
-    const fit = () => { const w = frame.clientWidth - 14; if (w > 0) frame.style.setProperty('--k', String(w / CG_W)); };
+    // (틀의 테두리 두께만큼 빼요: 화면을 통째로 채우는 폰에서는 0이에요)
+    const fit = () => { const cs = getComputedStyle(frame), w = frame.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0); if (w > 0) frame.style.setProperty('--k', String(w / CG_W)); };
     const ro = new ResizeObserver(fit);
     ro.observe(frame);
     // the phone's own boxes never scroll (overflow: hidden): a focused field makes the browser roll them up to show it (a
