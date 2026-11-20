@@ -1,6 +1,9 @@
 package com.narrativearchive.shell;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -12,6 +15,11 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
+import android.view.ViewGroup;
+import android.view.WindowInsets;
+import android.view.WindowManager;
+import android.webkit.RenderProcessGoneDetail;
+import android.widget.FrameLayout;
 import android.view.Window;
 import android.view.WindowInsetsController;
 import android.webkit.JavascriptInterface;
@@ -23,7 +31,13 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.net.HttpURLConnection;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.net.URL;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -33,6 +47,8 @@ import java.util.regex.Pattern;
  *  - 상단바 · 하단바 색을 페이지가 알려 주는 색으로 칠해요 (theme-color · 페이지 바탕). 확장이 폰 화면 색을 거기에 적어요
  *  - 실리태번이 꺼져 있으면 Termux에 켜는 명령을 보내고, 켜질 때까지 기다렸다가 띄워요
  *  - 파일 고르기(사진 · 채팅 파일, 여러 장)는 안드로이드 파일 창으로
+ *  - 캐릭터 폰을 열면(NAShell.phone(true)) 기기 상단바를 숨기고 하단 버튼 줄 밑까지 화면을 깔아요. 폰이 자기 상단바(노치)를 그려요
+ *  - 화면(WebView)이 죽어도 앱은 안 꺼지고 다시 불러와요. 앱이 꺼지면 이유를 적어 두고 다음에 켤 때 보여줘요
  * 실리태번 데이터는 Termux 쪽에 그대로 있어요. 이 앱은 주소와 켜는 명령만 기억해요.
  */
 public class MainActivity extends Activity {
@@ -41,6 +57,12 @@ public class MainActivity extends Activity {
     private static final String DEF_CMD = "cd ~/SillyTavern && ./start.sh";
 
     private WebView web;
+    private FrameLayout root;
+    private boolean phoneMode = false;
+    private int barTop = Color.parseColor("#333333"), barBottom = Color.parseColor("#333333");
+    private int imeBottom = 0, navBottom = 0;
+    private final long[] gone = new long[3];
+    private boolean cacheRetried = false;
     private SharedPreferences prefs;
     private ValueCallback<Uri[]> fileCb;
     private final Handler ui = new Handler(Looper.getMainLooper());
@@ -62,8 +84,31 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle saved) {
         super.onCreate(saved);
         prefs = getSharedPreferences("shell", MODE_PRIVATE);
+        catchCrashes();
+        if (Build.VERSION.SDK_INT >= 28) getWindow().getAttributes().layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+        root = new FrameLayout(this);
+        setContentView(root);
+        // 폰을 연 동안: 키보드가 올라온 만큼 화면을 줄이고, 하단 버튼 줄 높이를 페이지에 알려요(--na-nb)
+        if (Build.VERSION.SDK_INT >= 30) root.setOnApplyWindowInsetsListener((v, ins) -> {
+            imeBottom = ins.getInsets(WindowInsets.Type.ime()).bottom;
+            navBottom = ins.getInsets(WindowInsets.Type.navigationBars()).bottom;
+            fitPhone();
+            return ins;
+        });
+        makeWeb();
+        setBars(barTop, barBottom);
+        showLastCrash();
+        // (예전 페이지를 되살리지 않아요: 되살리면 "ERR_CACHE_MISS"가 떴어요. 늘 새로 열어요)
+        open();
+    }
+
+    // ---- 화면(WebView): 죽으면 새로 만들어요
+    private void makeWeb() {
+        if (web != null) { root.removeView(web); try { web.destroy(); } catch (Exception e) { /* 이미 죽었어요 */ } }
         web = new WebView(this);
-        setContentView(web);
+        root.addView(web, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        // (파일 창이 위에 떠 있어도 화면을 쉽게 죽이지 말라고 알려요)
+        web.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, false);
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
@@ -73,8 +118,26 @@ public class MainActivity extends Activity {
         s.setSupportZoom(false);
         web.addJavascriptInterface(new Bridge(), "NAShell");
         web.setWebViewClient(new WebViewClient() {
-            @Override public void onPageFinished(WebView v, String url) { if (url != null && url.startsWith("http")) v.evaluateJavascript(BRIDGE_JS, null); }
-            @Override public void onReceivedError(WebView v, WebResourceRequest req, WebResourceError err) { if (req.isForMainFrame()) showOffline(); }
+            @Override public void onPageFinished(WebView v, String url) { if (url != null && url.startsWith("http")) { cacheRetried = false; v.evaluateJavascript(BRIDGE_JS, null); sendNav(); } }
+            @Override public void onReceivedError(WebView v, WebResourceRequest req, WebResourceError err) {
+                if (!req.isForMainFrame()) return;
+                // (ERR_CACHE_MISS: 다시 보내야 하는 페이지를 되살릴 때 나요. 주소로 한 번 새로 열어요)
+                CharSequence d = err.getDescription();
+                if (!cacheRetried && d != null && d.toString().contains("CACHE_MISS")) { cacheRetried = true; v.loadUrl(url()); return; }
+                showOffline();
+            }
+            // 화면을 그리는 쪽이 죽었을 때(메모리 부족 등): 앱은 그대로 두고 새 화면으로 다시 열어요. 30초 안에 세 번째면 멈추고 안내 화면
+            @Override public boolean onRenderProcessGone(WebView v, RenderProcessGoneDetail det) {
+                long now = System.currentTimeMillis();
+                System.arraycopy(gone, 1, gone, 0, 2); gone[2] = now;
+                note("화면이 멈춰서 다시 불러왔어요 (" + (det.didCrash() ? "화면 오류" : "메모리 부족") + ")");
+                ui.post(() -> {
+                    phoneMode = false; applyMode();
+                    makeWeb();
+                    if (now - gone[0] < 30000) showOffline(); else { toastPage("화면이 멈춰서 다시 불러와요"); open(); }
+                });
+                return true;
+            }
             // (실리태번 밖의 주소는 브라우저로)
             @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest req) {
                 Uri u = req.getUrl(), home = Uri.parse(url());
@@ -87,17 +150,77 @@ public class MainActivity extends Activity {
             @Override public boolean onShowFileChooser(WebView v, ValueCallback<Uri[]> cb, FileChooserParams p) {
                 if (fileCb != null) fileCb.onReceiveValue(null);
                 fileCb = cb;
-                Intent i = p.createIntent();
+                Intent i;
+                try { i = p.createIntent(); } catch (Exception e) { i = new Intent(Intent.ACTION_GET_CONTENT); }
+                i.addCategory(Intent.CATEGORY_OPENABLE);
+                // (실리태번은 ".jsonl" 같은 확장자로 고르라고 해요: 안드로이드는 그걸 모르니 아무 파일이나)
+                if (i.getType() == null || i.getType().startsWith(".")) i.setType("*/*");
                 i.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, p.getMode() == FileChooserParams.MODE_OPEN_MULTIPLE);
-                try { startActivityForResult(i, FILE_REQ); } catch (ActivityNotFoundException e) { fileCb = null; return false; }
+                try { startActivityForResult(i, FILE_REQ); } catch (Exception e) { fileCb = null; cb.onReceiveValue(null); }
                 return true;
             }
         });
-        setBars(Color.parseColor("#333333"), Color.parseColor("#333333"));
-        if (saved != null) web.restoreState(saved); else open();
     }
 
-    @Override protected void onSaveInstanceState(Bundle out) { super.onSaveInstanceState(out); web.saveState(out); }
+    // ---- 앱이 꺼질 때 이유 적어 두기 → 다음에 켤 때 보여주기
+    private File crashFile() { return new File(getFilesDir(), "crash.txt"); }
+    private void catchCrashes() {
+        Thread.UncaughtExceptionHandler prev = Thread.getDefaultUncaughtExceptionHandler();
+        Thread.setDefaultUncaughtExceptionHandler((t, e) -> {
+            try (FileOutputStream o = new FileOutputStream(crashFile(), true)) {
+                StringWriter w = new StringWriter(); e.printStackTrace(new PrintWriter(w));
+                o.write(("앱이 꺼졌어요 · " + Build.MODEL + " · Android " + Build.VERSION.RELEASE + "\n" + w + "\n").getBytes(StandardCharsets.UTF_8));
+            } catch (Exception ignored) { /* 적지 못해도 꺼지는 건 그대로 */ }
+            if (prev != null) prev.uncaughtException(t, e);
+        });
+    }
+    private void note(String msg) {
+        try (FileOutputStream o = new FileOutputStream(crashFile(), true)) { o.write((msg + "\n").getBytes(StandardCharsets.UTF_8)); } catch (Exception ignored) { /* 기록만 못 해요 */ }
+    }
+    private void showLastCrash() {
+        File f = crashFile(); if (!f.exists()) return;
+        String t;
+        try { t = new String(Files.readAllBytes(f.toPath()), StandardCharsets.UTF_8); } catch (Exception e) { t = ""; }
+        f.delete();
+        if (!t.contains("앱이 꺼졌어요")) return; // (다시 불러오기만 한 건 안 보여줘요)
+        final String txt = t.length() > 6000 ? t.substring(t.length() - 6000) : t;
+        new AlertDialog.Builder(this).setTitle("지난번에 앱이 꺼졌어요").setMessage(txt)
+            .setPositiveButton("복사", (d, w) -> { ((ClipboardManager) getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("NarrativeArchive", txt)); toastPage("복사했어요"); })
+            .setNegativeButton("닫기", null).show();
+    }
+
+    // ---- 캐릭터 폰을 연 동안: 상단바 숨김 · 하단 버튼 줄 밑까지
+    @SuppressWarnings("deprecation")
+    private void applyMode() {
+        Window w = getWindow();
+        if (Build.VERSION.SDK_INT >= 30) {
+            w.setDecorFitsSystemWindows(!phoneMode);
+            WindowInsetsController ic = w.getInsetsController();
+            if (ic != null) {
+                if (phoneMode) { ic.setSystemBarsBehavior(WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE); ic.hide(WindowInsets.Type.statusBars()); }
+                else ic.show(WindowInsets.Type.statusBars());
+            }
+        } else {
+            View d = w.getDecorView();
+            int f = d.getSystemUiVisibility();
+            d.setSystemUiVisibility(phoneMode ? f | View.SYSTEM_UI_FLAG_FULLSCREEN : f & ~View.SYSTEM_UI_FLAG_FULLSCREEN);
+        }
+        if (phoneMode) { w.setNavigationBarColor(Color.TRANSPARENT); w.setStatusBarColor(Color.TRANSPARENT); }
+        else setBars(barTop, barBottom);
+        fitPhone();
+    }
+    private void fitPhone() {
+        if (web == null) return;
+        FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) web.getLayoutParams();
+        int m = phoneMode && Build.VERSION.SDK_INT >= 30 ? imeBottom : 0;
+        if (lp.bottomMargin != m) { lp.bottomMargin = m; web.setLayoutParams(lp); }
+        sendNav();
+    }
+    private void sendNav() {
+        if (web == null) return;
+        float dp = phoneMode && Build.VERSION.SDK_INT >= 30 && imeBottom == 0 ? navBottom / getResources().getDisplayMetrics().density : 0;
+        web.evaluateJavascript("document.documentElement.style.setProperty('--na-nb','" + Math.round(dp) + "px')", null);
+    }
 
     private String url() { return prefs.getString("url", DEF_URL); }
     private String cmd() { return prefs.getString("cmd", DEF_CMD); }
@@ -218,6 +341,8 @@ public class MainActivity extends Activity {
 
     @SuppressWarnings("deprecation")
     private void setBars(int top, int bottom) {
+        barTop = top; barBottom = bottom;
+        if (phoneMode) return;
         Window w = getWindow();
         w.setStatusBarColor(top);
         w.setNavigationBarColor(bottom);
@@ -251,6 +376,8 @@ public class MainActivity extends Activity {
         }
         @JavascriptInterface public void retry() { ui.post(() -> { waiting = false; open(); }); }
         @JavascriptInterface public void startTermux() { ui.post(MainActivity.this::startTermux); }
-        @JavascriptInterface public String version() { return "1"; }
+        // 캐릭터 폰을 열고 닫을 때 확장이 불러요
+        @JavascriptInterface public void phone(boolean on) { ui.post(() -> { if (phoneMode != on) { phoneMode = on; applyMode(); } }); }
+        @JavascriptInterface public String version() { return "2"; }
     }
 }

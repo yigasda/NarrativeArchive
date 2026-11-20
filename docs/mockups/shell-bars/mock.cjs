@@ -32,10 +32,12 @@ const OPT = {
   E: `${BASE}`,
   F: `${BASE} .na_phl ${BAR} { height: 42px !important; padding-top: 0 !important; } .na_phl .na_ph_notch { top: 4px !important; height: 29px !important; border-radius: 15px !important; width: 112px !important; }`,
   // 예전 아이폰 노치: 화면 맨 위에 붙은 검은 홈, 아래 모서리 둥글고 위쪽 양옆은 안으로 휜 귀. G 넓은 노치(X~12) · H 좁은 노치(13~14)
+  // R: 시안이 아니라 실제 코드(css/59-phone-shell.css) — 앱이 알려 주는 하단 버튼 줄 높이만 흉내 내요
+  R: '',
   G: NOTCH(209),
   H: NOTCH(162),
 };
-const NOSB = { E: 1, F: 1, G: 2, H: 2 };
+const NOSB = { E: 1, F: 1, G: 2, H: 2, R: 2 };
 // 기기 바 그림 (소망 폰: 왼쪽 KT 시간, 오른쪽 아이콘 · 아래 파란 버튼 셋 + 분홍 하트)
 const DEV = (ink, nosb) => `<div id="mk_dev" style="position:fixed;inset:0;pointer-events:none;z-index:99999;font-family:Roboto,'Noto Sans KR',sans-serif">
   ${nosb ? `<i style="position:absolute;left:50%;top:${HOLE}px;width:11px;height:11px;margin:-5.5px 0 0 -5.5px;border-radius:50%;background:#050505;${nosb === 2 ? "" : "box-shadow:0 0 0 1.5px rgba(40,40,40,.6)"}"></i>` : ''}<div style="${nosb ? 'visibility:hidden;' : ''}position:absolute;left:0;right:0;top:0;height:${SB}px;display:flex;align-items:center;justify-content:space-between;padding:0 16px 0 22px;color:${ink};font-size:14px;font-weight:500">
@@ -60,6 +62,7 @@ const INK = { home: '#1b1d22', bank: '#fff', orbitroom: '#fff' };
     const rid = await p.evaluate(async B => { const core = await import(B + 'core.js'), st = await import(B + 'phone2store.js'); const m = core.getMeta(), r = st.liveRooms(m)[0], me = st.liveWorld(m).persona; const T = [[me, '내일 열 시에 정비소 올 수 있어?', ''], ['Mara', 'Ja klar, Samstag passt!', '응 좋아, 토요일 괜찮아!'], ['Mara', 'Bring Kuchen mit 😄', '케이크 가져와 😄'], [me, '무슨 케이크', ''], ['Mara', 'Den mit Kirschen', '체리 든 거'], ['Mara', 'Vom Bäcker an der Ecke', '모퉁이 빵집 거'], [me, '거기 일찍 닫잖아', ''], ['Mara', 'Dann geh halt früher', '그럼 좀 일찍 가'], [me, '알겠어 내일 봐', ''], ['Mara', 'Bis morgen', '내일 봐']]; const t0 = Date.now() - T.length * 60000; r.messages = T.map(([from, text, ko], i) => ({ id: `mk${i}`, from, text, ko, at: t0 + i * 60000, told: true, ...(from === 'Mara' ? { state: '회사 · 점심 먹고 자리' } : {}) })); for (const n of r.members) (r.read ||= {})[st.liveKey(n)] = Date.now(); return r.id; }, B);
     const only = process.argv[2] ? process.argv[2].split(',') : Object.keys(OPT);
     for (const o of only) {
+      await p.evaluate(([nb, on]) => document.documentElement.style.setProperty('--na-nb', on ? `${nb}px` : '0px'), [NB, o === 'R']);
       await p.evaluate(css => { document.getElementById('mk_opt')?.remove(); const t = document.createElement('style'); t.id = 'mk_opt'; t.textContent = css; document.head.append(t); }, OPT[o]);
       for (const [v, i] of [['home'], ['bank'], ['orbitroom', rid]]) {
         if (v === 'orbitroom') await s.to('orbit');

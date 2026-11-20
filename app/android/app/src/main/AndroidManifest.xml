@@ -17,6 +17,7 @@
         android:usesCleartextTraffic="true"
         android:networkSecurityConfig="@xml/network"
         android:allowBackup="false"
+        android:largeHeap="true"
         android:supportsRtl="true">
 
         <activity

@@ -511,6 +511,8 @@ export async function openPhone(who = null) {
         }
         $root.find('.na_ph_frame').html(html);
         // 실시간: the notch says which phone this is on every screen; 타임라인's data rows go
+        // (껍데기 앱 안에서는 타임라인 폰에도 노치가 있어요: 기기 카메라 구멍을 가려요. 초록 점은 실시간 폰만)
+        if (!live() && window.NAShell) $root.find('.na_ph_frame .na_ph_scr').first().append('<span class="na_ph_notch" aria-hidden="true"></span>');
         if (live()) { $root.find('.na_ph_frame .na_ph_scr').first().append('<span class="na_ph_notch" aria-label="실시간 폰"><i></i></span>'); $root.find(`.na_ph_frame :is(${LIVE_OFF})`).remove(); $root.find('.na_ph_frame .ax_card').filter((_, c) => !c.children.length && !c.textContent.trim()).remove(); }
         if (sheet && (view === 'photo' || view === 'set')) $root.find('.na_ph_scr').append(looksSheet(m));
         placeAsk();
@@ -2075,6 +2077,9 @@ export async function openPhone(who = null) {
     dlg.append($root[0]);
     // 껍데기 앱 안: 기기 바가 폰 화면 색이라 아이폰 비율 · 위아래 틈 없이 화면을 통째로 채워요 (css 예산 대신 인라인)
     if (window.NAShell) {
+        // 앱에 폰을 열었다고 알려요: 기기 상단바를 숨기고 하단 버튼 줄 밑까지 깔아요(새 앱만 phone이 있어요)
+        document.documentElement.classList.add('na-shell');
+        try { window.NAShell.phone?.(true); } catch { /* 예전 앱 */ }
         $root[0].style.padding = '0';
         Object.assign(frame.style, { width: '100vw', height: 'var(--na-phh, 100dvh)', borderRadius: '0' });
         frame.style.setProperty('--axr', '0');
@@ -2137,6 +2142,7 @@ export async function openPhone(who = null) {
     });
     window.visualViewport?.removeEventListener('resize', kbSoon); window.visualViewport?.removeEventListener('scroll', kbSoon); window.removeEventListener('resize', kbSoon);
     barsUndo(dlg);
+    try { window.NAShell?.phone?.(false); } catch { /* 예전 앱 */ }
     stopBusy(); madeWatch.delete(onMade);
     window.removeEventListener('resize', setH);
     ro.disconnect();
