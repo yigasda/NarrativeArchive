@@ -37,7 +37,7 @@ const josa = w => { const c = w.charCodeAt(w.length - 1) - 0xac00; return c >= 0
 import { confirm, esc } from './util.js';
 import { liveMode, liveWorld, livePhone, liveMeta, setLiveMode, resetLive, rememberLiveOwner, readLiveOwner, liveKey, liveRooms, ensureRoom, nameRoom, sendLive, readLive, unreadBy, enqueueReplies, seeFailure } from './phone2store.js';
 import { shiftLabel, liveWall, viewerWall, startShift } from './phone2clock.js';
-import { orbitList, orbitRoom, orbitNew, orbitHomeWidget, liveStart, whoScreen, orbitFace } from './phoneorbit.js';
+import { orbitList, orbitRoom, orbitNew, orbitHomeWidget, liveStart, whoScreen, orbitFace, dayIcon } from './phoneorbit.js';
 import { beginFromStory, liveBranched, adoptChat, rebeginFromStory, rebeginKeepingChats } from './phone2story.js';
 import { liveSnapNow, snapParts } from './phone2snap.js';
 import { liveGo, liveReflect, liveCanUndo, liveUndo, liveUnreflected, liveNowOf, liveSnapBusy, liveBackCount, liveBackDraft, liveBackPut, liveImportPlan, liveImportFilePlan, liveImportChat, liveImportFile, liveDropMessages, liveSwipeInfo, liveSwipe, liveSwipeDrop, liveRetranslate, liveSwipeList, liveSwipeDropMany, liveSwipeDropOthers } from './phone2go.js';
@@ -247,7 +247,7 @@ export async function openPhone(who = null) {
             const r = roomNow();
             if (!r || !r.members.some(n => liveKey(n) === liveKey(who))) { view = 'orbit'; return orbitUi(); }
             const os = V.others(r), group = os.length > 1, chips = [];
-            if (!group && tzOf(os[0])) { const there = liveWall(tzOf(os[0]), sh).at.slice(6), here = vw(Date.now()).slice(6); if (there !== here) chips.push({ icon: 'clock', text: `${os[0]} 현지 ${there}` }); }
+            if (!group && tzOf(os[0])) { const there = liveWall(tzOf(os[0]), sh).at.slice(6), here = vw(Date.now()).slice(6); if (there !== here) chips.push({ icon: dayIcon(there), text: `현지 ${there}` }); }   // (이름은 머리줄에 이미 있어요. 그림은 그 사람의 낮 · 저녁 · 밤)
             const msgs = []; let day = '';
             // 맨 끝 답장 묶음: 내 마지막 말 뒤에 온 말들 (넘길 수 있을 때만 표시해요)
             const sw = ro ? null : liveSwipeInfo(realM, r.id), shown = r.messages.filter(seen), lastMine = shown.map(x => liveKey(x.from) === liveKey(me)).lastIndexOf(true);
