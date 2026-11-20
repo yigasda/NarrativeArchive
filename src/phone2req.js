@@ -47,8 +47,9 @@ export function liveBefore(m, n, maxChars = Infinity) {
 // 요청에 싣는 이야기 글: 요약본의 글 전부(끝의 STATE · OPEN까지). after: 이 번호보다 뒤의 장면만
 export const liveArchiveFor = (m, after = -1) => archiveFor(m, after, null);
 // 요청이 롤플 채팅에서 읽는 범위: 없어요 (이야기는 요약본에 다 있어요).
-// mark: 이 폰이 읽은 자리 (메신저 번호; 아직 반영한 적 없으면 메신저 번호가 시작하는 곳)
-export const liveWindowOf = (m, p = null) => { const base = needLive(m).phoneUpto; return { none: true, n: 0, all: true, upto: -1, later: false, mark: Math.max(base, phoneAt(p) ?? base) }; };
+// mark: 이 폰이 읽은 자리 (메신저 번호). 아직 반영한 적 없는 폰은 메신저 번호가 시작하는 곳, 채팅에서 가져온 말이
+// 있으면(phone2import.js) 그 말 뒤예요: 가져온 말은 이미 읽은 것으로 쳐요
+export const liveWindowOf = (m, p = null) => { const base = needLive(m).phoneUpto, from = Number.isInteger(m.phoneReadFrom) ? Math.max(base, m.phoneReadFrom) : base; return { none: true, n: 0, all: true, upto: -1, later: false, mark: Math.max(base, phoneAt(p) ?? from) }; };
 // 앱이 읽은 자리로 적을 표시: 메신저 번호 (없으면 폰 1과 같은 방법)
 export const liveReadMark = g => { if (Number.isInteger(g?.mark)) return { index: g.mark, user: -1, fp: '', tail: '' }; const i = nowAt(g); return i == null ? null : markAfter(i); };
 // 채우기가 쓰는 "폰의 지금": 폰에 저장된 시각 (마지막 반영이 맞춘 것). 롤플 상태창은 안 읽어요

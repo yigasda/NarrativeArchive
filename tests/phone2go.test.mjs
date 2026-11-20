@@ -942,3 +942,82 @@ test('롤플에 전하기: 그사이 실시간 폰이 바뀌었거나 · 글이 
         assert.equal(T.chat.length, 3); assert.ok(c.room.messages.every(x => x.told));
     } finally { backDone(); }
 });
+
+// ---- 메신저 모양으로 쓴 채팅을 실시간 폰의 메신저로 가져오기 (버튼을 눌렀을 때만, 모델은 안 불러요)
+const stampDiv = t => `<div class="chat-timestamp" style="opacity:.5;">${t}</div>`;
+function importChat() {
+    const real = { phones: {} };
+    T.chat = [{ name: 'Ren', is_user: true, send_date: '2026-11-20T07:27:59.000Z', mes: 'Mara\n\n' },
+        { name: 'Mara', is_user: false, send_date: '2026-11-20T07:28:07.000Z', mes: `${stampDiv('11.20, 16:28')}\n\nYes?\n\nWhat is it` }];
+    T.metadata = { narrative_archive: real, integrity: 'chat-1' };
+    T.st = { name1: 'Ren' };
+    Object.assign(T, { calls: 0, replyCalls: 0, saves: 0 });
+    return real;
+}
+const importDone = () => { delete T.st; delete T.metadata; delete T.ask; T.chat = []; };
+
+test('채팅 가져오기: 실시간 폰이 없으면 이야기 없이 시작한 폰을 만들고, 열어 둔 채팅을 방에 통째로 넣고 저장해요. 모델은 안 불러요', async () => {
+    try {
+        const real = importChat();
+        let asked = 0; T.ask = async () => { asked++; return '{}'; };
+        assert.deepEqual(G.liveImportPlan(real), { messages: 2, bubbles: 3, again: false });
+        assert.equal(real.live, undefined);
+        const out = await G.liveImportChat(real, { scope: 'test' });
+        const w = L.liveWorld(real), room = w.messenger.rooms[out.room];
+        assert.deepEqual([out.started, out.count, out.messages, out.from, out.to], [true, 3, 2, 0, 1]);
+        assert.deepEqual([w.from, w.persona, w.scope, w.storyUpto, w.snap], ['fresh', 'Ren', 'test', null, undefined]);
+        assert.deepEqual(room.messages.map(x => [x.from, x.text]), [['Ren', 'Mara'], ['Mara', 'Yes?'], ['Mara', 'What is it']]);
+        assert.ok(room.messages.every(x => x.told));
+        assert.deepEqual(w.imported.chat, 'chat-1');
+        assert.ok(T.saves >= 1); assert.equal(asked, 0);
+        // 롤플에 전할 말로 세지 않고, 이야기 요약본도 안 찾아요
+        assert.equal(G.liveBackCount(real), 0);
+        const d = L.liveMeta(real);
+        await Q.liveStoryReady(d);
+        // 나중에 만드는 폰은 가져온 말을 이미 읽은 것으로 시작해요 (요청에는 그 말이 보여요)
+        assert.equal(Q.liveWindowOf(d, null).mark, w.importTop);
+        assert.equal(Q.liveWindowOf(d, { owner: 'Mara' }).mark, w.importTop);
+        assert.ok((await Q.liveSideRequest(d, 'Mara', [], { read: {} })).includes('Mara: What is it'));
+    } finally { importDone(); }
+});
+
+test('채팅 가져오기: 다시 누르면 그 뒤에 온 메시지만. 새 메시지가 없으면 알려 주고 아무것도 안 바꿔요', async () => {
+    try {
+        const real = importChat();
+        await G.liveImportChat(real);
+        assert.deepEqual(G.liveImportPlan(real), { messages: 0, bubbles: 0, again: true });
+        const was = JSON.stringify(real);
+        await assert.rejects(() => G.liveImportChat(real), /새로 가져올 메시지가 없어요/);
+        assert.equal(JSON.stringify(real), was);
+        T.chat.push({ name: 'Ren', is_user: true, send_date: '2026-11-20T08:00:00.000Z', mes: 'Lunch?' });
+        assert.deepEqual(G.liveImportPlan(real), { messages: 1, bubbles: 1, again: true });
+        const out = await G.liveImportChat(real);
+        assert.deepEqual([out.started, out.count, out.from, out.to], [false, 1, 2, 2]);
+        const room = L.liveWorld(real).messenger.rooms[out.room];
+        assert.deepEqual(room.messages.map(x => x.text), ['Mara', 'Yes?', 'What is it', 'Lunch?']);
+        assert.equal(L.liveWorld(real).imported.count, 4);
+        // 다른 채팅에서는 처음부터 다시 가져와요
+        T.metadata.integrity = 'chat-2';
+        assert.deepEqual(G.liveImportPlan(real), { messages: 3, bubbles: 4, again: false });
+    } finally { importDone(); }
+});
+
+test('채팅 가져오기: 가져올 게 없거나 · 캐릭터 말이 없거나 · 페르소나 이름을 모르거나 · 다른 채팅이 열려 있으면 실시간 폰을 안 만들어요', async () => {
+    try {
+        const real = importChat();
+        const none = async (set, re) => { set(); await assert.rejects(() => G.liveImportChat(real), re); assert.equal(real.live, undefined); assert.equal(T.saves, 0); };
+        await none(() => { T.chat = [{ name: 'Ren', is_user: true, send_date: '2026-11-20T07:27:59.000Z', mes: 'only me' }]; }, /캐릭터가 한 말이 없어서/);
+        await none(() => { T.chat = [{ name: 'Mara', is_user: false, is_system: true, mes: 'hidden' }]; }, /가져올 메시지가 없어요/);
+        await none(() => { importChat(); Object.assign(real, { phones: {} }); T.metadata.narrative_archive = real; delete T.st.name1; }, /페르소나 이름이 필요해요/);
+        await none(() => { T.st.name1 = 'Ren'; T.metadata.narrative_archive = {}; }, /이 채팅이 열려 있지 않아요/);
+        assert.deepEqual(G.liveImportPlan(real), { messages: 0, bubbles: 0, again: false });
+        // 이미 있는 실시간 폰에 가져오다 실패해도 그 폰은 그대로
+        T.metadata.narrative_archive = real;
+        await G.liveImportChat(real);
+        const was = JSON.stringify(real.live);
+        T.chat.push({ name: 'Ren', is_user: true, send_date: '2026-11-20T09:00:00.000Z', mes: 'x' });
+        const save = T.saves; T.metadata.integrity = 'chat-9'; T.chat = [{ name: 'Ren', is_user: true, send_date: '2026-11-20T09:00:00.000Z', mes: 'only me again' }];
+        await assert.rejects(() => G.liveImportChat(real), /캐릭터가 한 말이 없어서/);
+        assert.equal(JSON.stringify(real.live), was); assert.equal(T.saves, save);
+    } finally { importDone(); }
+});

@@ -199,6 +199,8 @@ export function liveMeta(m, { now = null } = {}) {
     // (phoneUpto: where 폰 2's messenger numbers begin (-1: begun fresh). phoneRecent: the newest talk for its app
     // requests (phone2req.js): the messenger's, never the chat's)
     const upto = () => (w.from === 'story' && Number.isInteger(w.storyUpto) ? w.storyUpto : -1);
+    // (phoneReadFrom: the last messenger number of talk brought in from a chat (phone2import.js): a phone made after it
+    // begins its reading there)
     // (phoneSnap: the story 폰 2 knows (phone2snap.js); its `text` is that snapshot's text, '' with none. The role-play
     // chat and the archive are never read through the drawer. phoneStoryReady: asks for the snapshot to be made for a
     // 폰 2 begun from the story that has none yet)
@@ -206,7 +208,7 @@ export function liveMeta(m, { now = null } = {}) {
     // (화면 주인, the chat's one setting of whose view the story's status line is: the same for 타임라인 and 실시간, so it
     // is read from and written to the chat's own meta)
     const pass = k => k === 'phoneScreenHolder';
-    const at = k => (pass(k) ? m[k] : k === 'phones' ? tagLive(w.phones) : own(k) ? w[LIVE_OWN[k]] : Object.hasOwn(drawer, k) ? drawer[k] : k === 'text' ? (snap()?.text ?? '') : k === 'phoneSnap' ? snap() : k === 'phoneStoryReady' ? () => (w.from === 'story' && !snap() && storyKeeper ? storyKeeper(m) : null) : k === 'phoneJournal' ? (liveScope(w.scope || 'live', m) || 'live') : k === 'phoneUpto' ? upto() : k === 'phoneNow' ? (typeof now === 'function' ? now : undefined) : k === 'phoneRecent' ? (owner, n, o) => liveRecent(w, owner, n, o) : shared(k) ? copy(k) : undefined);
+    const at = k => (pass(k) ? m[k] : k === 'phones' ? tagLive(w.phones) : own(k) ? w[LIVE_OWN[k]] : Object.hasOwn(drawer, k) ? drawer[k] : k === 'text' ? (snap()?.text ?? '') : k === 'phoneSnap' ? snap() : k === 'phoneReadFrom' ? (Number.isInteger(w.importTop) ? w.importTop : undefined) : k === 'phoneStoryReady' ? () => (w.from === 'story' && !snap() && storyKeeper ? storyKeeper(m) : null) : k === 'phoneJournal' ? (liveScope(w.scope || 'live', m) || 'live') : k === 'phoneUpto' ? upto() : k === 'phoneNow' ? (typeof now === 'function' ? now : undefined) : k === 'phoneRecent' ? (owner, n, o) => liveRecent(w, owner, n, o) : shared(k) ? copy(k) : undefined);
     const keys = () => [...new Set([...Object.keys(LIVE_OWN).filter(k => w[LIVE_OWN[k]] !== undefined), ...LIVE_SHARED.filter(k => m[k] !== undefined), 'text', ...Object.keys(drawer), ...(Object.hasOwn(m, 'phoneScreenHolder') ? ['phoneScreenHolder'] : [])])];
     const made = new Proxy(drawer, {
         get: (_, k) => (k === IS_LIVE ? true : typeof k === 'symbol' ? undefined : at(k)),

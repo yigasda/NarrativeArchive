@@ -13,7 +13,8 @@ import { SCENES_SYS, parseScenes } from './scenes.js';
 import { resolvePhoneProfile, ownerProfileBlock } from './phoneprofile.js';
 import { parseJson } from './phoneparse.js';
 import { nameKey } from './people.js';
-import { liveWorld, livePhone, liveMeta, liveKey, liveAtYear, isSnap, setStoryKeeper } from './phone2store.js';
+import { liveWorld, livePhone, liveMeta, liveKey, liveAtYear, isSnap, setStoryKeeper, startFresh } from './phone2store.js';
+import { importRows, importInto } from './phone2import.js';
 import { liveChatTail, liveSnapBehind, liveSnapExtend, liveSnapNow } from './phone2snap.js';
 import { liveStoryText } from './phone2story.js';
 import { BACK, backLeft, backInput, phone2BackSystem, takeBack, backMessage, markTold } from './phone2back.js';
@@ -300,4 +301,29 @@ export async function liveBackPut(real, draft, text = draft?.text) {
     await c.saveChat();
     await saveMeta();
     return at;
+}
+
+// ---- 메신저 모양으로 쓴 채팅을 실시간 폰의 메신저로 통째로 가져오기 (phone2import.js). 사람이 버튼을 눌렀을 때만 해요.
+// 지금 열어 둔 채팅에서 가져와요. 한 번 가져온 채팅은 그 뒤에 온 메시지만 다시 가져와요.
+const importFrom = real => { const c = ctx(), w = liveWorld(real), chat = String(c.chatMetadata?.integrity || ''); const same = !!w?.imported && w.imported.chat === chat && Number.isInteger(w.imported.upto); return { c, w, chat, after: same ? w.imported.upto : -1, shift: same ? Number(w.imported.shift) || 0 : 0 }; };
+// 가져올 수 있는 것: { messages (채팅 메시지 수), bubbles (말풍선 수), again (전에 가져온 적이 있는 채팅인지) }
+export function liveImportPlan(real) {
+    if (!open(real)) return { messages: 0, bubbles: 0, again: false };
+    const { c, after, shift } = importFrom(real), rows = importRows(c.chat, { after, shift, order: real?.dateOrder === 'dm' ? 'dm' : 'md' });
+    return { messages: rows.length, bubbles: rows.reduce((n, r) => n + r.bubbles.length, 0), again: after >= 0 };
+}
+// 가져오기. 실시간 폰이 아직 없으면 이야기 없이 처음부터 시작한 폰을 만들어요(persona: 페르소나 이름, scope: 이 채팅).
+// 실패하면 아무것도 안 남겨요 (새로 만든 폰도). 모델은 부르지 않아요
+//   → { room, count (말풍선 수), messages, from, to, started (실시간 폰을 새로 만들었는지) }
+export async function liveImportChat(real, { persona = '', scope = '' } = {}) {
+    if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않아요');
+    const { c, w, chat, after, shift } = importFrom(real), rows = importRows(c.chat, { after, shift, order: real.dateOrder === 'dm' ? 'dm' : 'md' });
+    if (!rows.length) throw new Error(after >= 0 ? '새로 가져올 메시지가 없어요' : '가져올 메시지가 없어요');
+    const had = real.live === undefined ? undefined : structuredClone(real.live), name = String(persona || c.name1 || '').trim();
+    try {
+        if (!w) { if (!name) throw new Error('페르소나 이름이 필요해요'); startFresh(real, { persona: name, scope }); }
+        const out = importInto(real, rows, { chat });
+        await saveMeta();
+        return { ...out, started: !w };
+    } catch (err) { if (had === undefined) delete real.live; else real.live = had; throw err; }
 }
