@@ -220,3 +220,7 @@
 .ax .of_pad { display: block; height: 112px; }
 .ax .of_go { background: rgba(20, 22, 30, 0.78); --axbg: rgba(20, 22, 30, 0.78); }
 .ax .of_go:disabled { opacity: 0.45; }
+/* 키보드가 덮은 만큼 방을 올려요 (--obkb는 phone.js의 kbFix가 폰 틀에 적어요): 입력칸이 키보드 바로 위에 오고 말 목록이 그만큼 줄어요 */
+.ax_orbitroom .ax_canvas { padding-bottom: var(--obkb, 0px); box-sizing: border-box; }
+.na_ph_kb .ax_orbitroom .ob_inp { margin-bottom: 8px; }
+.na_ph_kb .ax_orbitroom .ax_ind { display: none; }

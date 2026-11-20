@@ -2081,6 +2081,19 @@ export async function openPhone(who = null) {
     };
     const afterType = () => setTimeout(setH, 350);
     setH(); window.addEventListener('resize', setH); dlg.addEventListener('focusout', afterType);
+    // 키보드가 폰 아래쪽을 덮은 만큼(--obkb, 보드 px): 폰 크기는 그대로 두고, Orbit 방은 그만큼 입력칸을 위로 올려 말이 보이게 해요
+    // (텔레그램처럼: 입력칸이 키보드 바로 위, 마지막 말이 그 위). 보이는 높이는 visualViewport가 알려 줘요
+    const kbFix = () => {
+        const scr = frame.querySelector('.na_ph_scr'), vv = window.visualViewport; if (!scr) return;
+        const seen = vv ? vv.offsetTop + vv.height : window.innerHeight, k = Number(frame.style.getPropertyValue('--k')) || 1;
+        const cover = typing() ? Math.max(0, Math.round((scr.getBoundingClientRect().bottom - seen) / k)) : 0, was = frame.style.getPropertyValue('--obkb');
+        if (was === `${cover}px`) return;
+        frame.style.setProperty('--obkb', `${cover}px`); frame.classList.toggle('na_ph_kb', cover > 0);
+        if (view.startsWith('orbitroom')) obBottom();
+    };
+    const kbSoon = () => { kbFix(); setTimeout(kbFix, 120); setTimeout(kbFix, 400); };
+    window.visualViewport?.addEventListener('resize', kbSoon); window.visualViewport?.addEventListener('scroll', kbSoon);
+    window.addEventListener('resize', kbSoon); dlg.addEventListener('focusin', kbSoon); dlg.addEventListener('focusout', kbSoon);
     // a make of this phone that another opening started: its end shows the phone (the prep screen's views give way to the lock)
     // (채팅의 진짜 메타로 견줘요: 실시간 서랍은 창을 열 때마다 새로 생겨서, 닫았다 연 창에서는 같은 서랍이 아니에요)
     const onMade = (mm, who, wasLive = false) => {
@@ -2103,6 +2116,7 @@ export async function openPhone(who = null) {
         dlg.addEventListener('cancel', e => { e.preventDefault(); if (ask) ask.done(false); else if (sheetOpen) setSheet(false); else close(); });
         dlg.addEventListener('close', () => { phoneClosed = true; setPhoneMeta(null); if (liveMode(realM) === 'live' && stillHere()) obReflect(); ask?.done(false); done(); }, { once: true });
     });
+    window.visualViewport?.removeEventListener('resize', kbSoon); window.visualViewport?.removeEventListener('scroll', kbSoon); window.removeEventListener('resize', kbSoon);
     stopBusy(); madeWatch.delete(onMade);
     window.removeEventListener('resize', setH);
     ro.disconnect();
