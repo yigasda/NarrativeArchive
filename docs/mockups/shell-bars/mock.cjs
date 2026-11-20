@@ -49,6 +49,40 @@ const BUB3 = BUB2 + ` .na_phl .ax .ob_b { position: relative; overflow: visible 
   .na_phl .ax .ob_b.th:not(:has(+ .ob_b.th))::after { content: ''; position: absolute; left: -8px; bottom: 0; width: 9px; height: 16px; background: inherit; -webkit-mask: radial-gradient(ellipse 8px 16px at 0 0, transparent 97%, #000 100%); mask: radial-gradient(ellipse 8px 16px at 0 0, transparent 97%, #000 100%); }
   .na_phl .ax .ob_b.me:not(:has(+ .ob_rd + .ob_b.me))::after { content: ''; position: absolute; right: -8px; bottom: 0; width: 9px; height: 16px; background: inherit; -webkit-mask: radial-gradient(ellipse 8px 16px at 100% 0, transparent 97%, #000 100%); mask: radial-gradient(ellipse 8px 16px at 100% 0, transparent 97%, #000 100%); }`;
 const BUB4 = BUB3 + ` .na_phl .ax .ob_b.th { background: rgba(255, 255, 255, 0.8) !important; } .na_phl .ax .ob_b.me { background: rgba(20, 22, 30, 0.9) !important; }`;
+// B2 바탕 구조 시안: U1 인스타식 묶음 · U2 왓츠앱식 · U3 B2 정리판 (구조는 화면을 그린 뒤 JS로 흉내)
+const PILL = ` .na_phl .ax .ob_day { background: rgba(255, 255, 255, 0.62); color: #3a3f48 !important; padding: 3px 11px; border-radius: 999px; text-shadow: none !important; opacity: 1 !important; font-weight: 600; box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 2px 8px rgba(40,40,80,.08); margin: 4px 0 8px !important; }`;
+const EMO = ` .na_phl .ax .ob_inp { padding-left: 8px !important; } .na_phl .ax .mk_emo { width: 38px; height: 38px; flex: none; display: grid; place-items: center; color: rgba(30,32,40,.55); }`;
+const REACT = ` .na_phl .ax .ob_b.mk_hasre { margin-bottom: 13px; position: relative; } .na_phl .ax .mk_re { position: absolute; bottom: -14px; display: inline-flex; gap: 2px; align-items: center; padding: 2px 6px; border-radius: 999px; font-size: 13px; line-height: 18px; background: rgba(255,255,255,.88); box-shadow: 0 2px 8px rgba(40,40,80,.14); color: #333; }
+  .na_phl .ax .ob_b.th .mk_re { left: 10px; } .na_phl .ax .ob_b.me .mk_re { right: 10px; } .na_phl .ax .ob_b.me.mk_hasre + .ob_rd { margin-top: -34px !important; margin-bottom: 16px !important; }`;
+const U1 = BUB2 + REACT + ` .na_phl .ax .ob_b.th { margin-left: 34px !important; position: relative; }
+  .na_phl .ax .ob_b.th:has(+ .ob_b.th) { border-bottom-left-radius: 6px !important; } .na_phl .ax .ob_b.th + .ob_b.th { border-top-left-radius: 6px !important; } .na_phl .ax .ob_b.th:not(:has(+ .ob_b.th)) { border-bottom-left-radius: 18px !important; }
+  .na_phl .ax .ob_b.me { padding-right: 12px !important; border-bottom-right-radius: 18px !important; } .na_phl .ax .ob_rd { display: none !important; } .na_phl .ax .ob_rd.mk_last { display: block !important; position: static !important; margin: 3px 6px 0 !important; font-size: 10.5px !important; opacity: .8 !important; }
+  .na_phl .ax .mk_av { position: absolute; left: -32px; bottom: 0; width: 26px; height: 26px; border-radius: 50%; overflow: hidden; display: grid; place-items: center; }
+  .na_phl .ax .mk_av { color: #fff; font: 700 11px/26px -apple-system, 'Noto Sans KR', sans-serif !important; --axfs: 11px; text-align: center; background: linear-gradient(140deg, #6cc477, #b9cf7c 60%, #e3c37e) !important; box-shadow: 0 2px 6px rgba(40,60,40,.18); }
+  .na_phl .ax .mk_sep { align-self: center; font-size: 11px; color: #fff; opacity: .9; margin: 8px 0 4px; text-shadow: 0 1px 6px rgba(40,40,90,.2); }`;
+const U2 = BUB2 + PILL + EMO + REACT + ` .na_phl .ax .ob_b.th { position: relative; padding-right: 50px !important; } .na_phl .ax .mk_t { position: absolute; right: 12px; bottom: 7px; font-size: 10px !important; --axfs: 10px; line-height: 1 !important; opacity: .5; }
+  .na_phl .ax .ob_b { overflow: visible !important; }
+  .na_phl .ax .ob_b.th:not(.ob_b.th + .ob_b.th) { border-top-left-radius: 0 !important; border-bottom-left-radius: 18px !important; } .na_phl .ax .ob_b.th + .ob_b.th { border-bottom-left-radius: 18px !important; }
+  .na_phl .ax .ob_b.me:not(.ob_rd + .ob_b.me) { border-top-right-radius: 0 !important; } .na_phl .ax .ob_b.me { border-bottom-right-radius: 18px !important; position: relative; }
+  .na_phl .ax .ob_b.th:not(.ob_b.th + .ob_b.th)::before { content: ''; position: absolute; left: -8px; top: 0; width: 9px; height: 12px; background: inherit; clip-path: polygon(0 0, 100% 0, 100% 100%); }
+  .na_phl .ax .ob_b.me:not(.ob_rd + .ob_b.me)::before { content: ''; position: absolute; right: -8px; top: 0; width: 9px; height: 12px; background: inherit; clip-path: polygon(0 0, 100% 0, 0 100%); }`;
+const U3 = BUB2 + PILL + EMO + REACT;
+const SMILE = `<span class="mk_emo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5c.9 1.2 2.1 1.8 3.5 1.8s2.6-.6 3.5-1.8"/><circle cx="9" cy="10" r=".6" fill="currentColor"/><circle cx="15" cy="10" r=".6" fill="currentColor"/></svg></span>`;
+const JSX = {
+  U1: ({ SMILE }) => { const mi = document.querySelector('.na_ph_frame .ob_mi'); const face = document.querySelector('.na_ph_frame .ob_fb');
+    mi.querySelectorAll('.ob_b.th').forEach(b => { const n = b.nextElementSibling; if (!(n && n.matches('.ob_b.th')) && face) { const src = [face, ...face.querySelectorAll('*')].find(x => { const c = getComputedStyle(x); return c.backgroundImage !== 'none' || (c.backgroundColor && !/rgba\(0, 0, 0, 0\)|transparent/.test(c.backgroundColor)); }); const a = document.createElement('span'); a.className = 'mk_av'; if (src) { const c = getComputedStyle(src); a.style.background = c.backgroundImage !== 'none' ? c.backgroundImage : c.backgroundColor; } a.textContent = (face.textContent || 'M').trim().slice(0, 1) || 'M'; b.append(a); } });
+    const rds = mi.querySelectorAll('.ob_rd'); const last = rds[rds.length - 1]; if (last) { last.classList.add('mk_last'); last.textContent = '읽음'; }
+    const t = rds[0]?.querySelector('.cg_num')?.textContent || ''; const d = mi.querySelector('.ob_day'); if (d) d.textContent = `오늘 ${t}`;
+    const rb = [...mi.querySelectorAll('.ob_b.th')].find(b => /Kuchen/.test(b.textContent)); if (rb) { rb.classList.add('mk_hasre'); rb.insertAdjacentHTML('beforeend', '<span class="mk_re">❤️</span>'); } },
+  U2: ({ SMILE }) => { const mi = document.querySelector('.na_ph_frame .ob_mi'); let last = '';
+    [...mi.children].forEach(e => { if (e.matches('.ob_rd')) last = e.querySelector('.cg_num')?.textContent || last; if (e.matches('.ob_b.th')) { const [h, m] = (last || '16:30').split(':').map(Number); const mm = (m + 1) % 60; e.insertAdjacentHTML('beforeend', `<span class="mk_t">${String(h + (m + 1 >= 60 ? 1 : 0)).padStart(2, '0')}:${String(mm).padStart(2, '0')}</span>`); } });
+    const inp = document.querySelector('.na_ph_frame .ob_inp'); inp.insertAdjacentHTML('afterbegin', SMILE);
+    const rb = [...mi.querySelectorAll('.ob_b.me')].find(b => /케이크/.test(b.textContent)); if (rb) { rb.classList.add('mk_hasre'); rb.insertAdjacentHTML('beforeend', '<span class="mk_re">😂</span>'); } },
+  U3: ({ SMILE }) => { const mi = document.querySelector('.na_ph_frame .ob_mi');
+    document.querySelector('.na_ph_frame .ob_inp').insertAdjacentHTML('afterbegin', SMILE);
+    const a = [...mi.querySelectorAll('.ob_b.th')].find(b => /Kuchen/.test(b.textContent)); if (a) { a.classList.add('mk_hasre'); a.insertAdjacentHTML('beforeend', '<span class="mk_re">❤️</span>'); }
+    const b = [...mi.querySelectorAll('.ob_b.me')].find(b => /케이크/.test(b.textContent)); if (b) { b.classList.add('mk_hasre'); b.insertAdjacentHTML('beforeend', '<span class="mk_re">😂 <b style="font-size:11px">2</b></span>'); } },
+};
 const OPT = {
   A: `${BASE} .na_phl ${BAR} { height: ${sb}px !important; padding: 0 !important; visibility: hidden; } .na_phl .na_ph_notch { display: none !important; }`,
   B: `${BASE} .na_phl ${BAR} { height: ${(+sb + 20).toFixed(1)}px !important; padding: ${sb}px 0 0 !important; justify-content: center !important; align-items: center !important; }
@@ -64,7 +98,7 @@ const OPT = {
   // 예전 아이폰 노치: 화면 맨 위에 붙은 검은 홈, 아래 모서리 둥글고 위쪽 양옆은 안으로 휜 귀. G 넓은 노치(X~12) · H 좁은 노치(13~14)
   // R: 시안이 아니라 실제 코드(css/59-phone-shell.css) — 앱이 알려 주는 하단 버튼 줄 높이만 흉내 내요
   R: '',
-  B1: BUB1, B2: BUB2, B3: BUB3, B4: BUB4,
+  B1: BUB1, B2: BUB2, B3: BUB3, B4: BUB4, U1, U2, U3,
   M1: MIST(0.55, 28), M2: MIST(0.75, 40), M3: MIST(0.9, 56),
   // 뿌연 하단 띠: S1 막대를 띠 맨 위 · S2 띠를 막대만큼 더 올려 그 안에 막대 · S3 띠만(앱은 막대 없음, 홈은 그대로)
   S1: GL(0, 7), S2: GL(22, 9), S3: GL(0, 0) + ' .na_phl .ax .ax_ind span { visibility: hidden !important; }',
@@ -73,7 +107,7 @@ const OPT = {
   G: NOTCH(209),
   H: NOTCH(162),
 };
-const NOSB = { B1: 2, B2: 2, B3: 2, B4: 2, M1: 2, M2: 2, M3: 2, E: 1, F: 1, G: 2, H: 2, R: 2, S1: 2, S2: 2, S3: 2, N1: 2, N2: 2, N3: 2, N4: 2 };
+const NOSB = { U1: 2, U2: 2, U3: 2, B1: 2, B2: 2, B3: 2, B4: 2, M1: 2, M2: 2, M3: 2, E: 1, F: 1, G: 2, H: 2, R: 2, S1: 2, S2: 2, S3: 2, N1: 2, N2: 2, N3: 2, N4: 2 };
 // 기기 바 그림 (소망 폰: 왼쪽 KT 시간, 오른쪽 아이콘 · 아래 파란 버튼 셋 + 분홍 하트)
 const DEV = (ink, nosb) => `<div id="mk_dev" style="position:fixed;inset:0;pointer-events:none;z-index:99999;font-family:Roboto,'Noto Sans KR',sans-serif">
   ${nosb ? `<i style="position:absolute;left:50%;top:${HOLE}px;width:11px;height:11px;margin:-5.5px 0 0 -5.5px;border-radius:50%;background:#050505;${nosb === 2 ? "" : "box-shadow:0 0 0 1.5px rgba(40,40,40,.6)"}"></i>` : ''}<div style="${nosb ? 'visibility:hidden;' : ''}position:absolute;left:0;right:0;top:0;height:${SB}px;display:flex;align-items:center;justify-content:space-between;padding:0 16px 0 22px;color:${ink};font-size:14px;font-weight:500">
@@ -100,11 +134,12 @@ const INK = { home: '#1b1d22', bank: '#fff', orbitroom: '#fff', diary: '#1b1d22'
     const rid = await p.evaluate(async B => { const core = await import(B + 'core.js'), st = await import(B + 'phone2store.js'); const m = core.getMeta(), r = st.liveRooms(m)[0], me = st.liveWorld(m).persona; const T = [[me, '내일 열 시에 정비소 올 수 있어?', ''], ['Mara', 'Ja klar, Samstag passt!', '응 좋아, 토요일 괜찮아!'], ['Mara', 'Bring Kuchen mit 😄', '케이크 가져와 😄'], [me, '무슨 케이크', ''], ['Mara', 'Den mit Kirschen', '체리 든 거'], ['Mara', 'Vom Bäcker an der Ecke', '모퉁이 빵집 거'], [me, '거기 일찍 닫잖아', ''], ['Mara', 'Dann geh halt früher', '그럼 좀 일찍 가'], [me, '알겠어 내일 봐', ''], ['Mara', 'Bis morgen', '내일 봐']]; const t0 = Date.now() - T.length * 60000; r.messages = T.map(([from, text, ko], i) => ({ id: `mk${i}`, from, text, ko, at: t0 + i * 60000, told: true, ...(from === 'Mara' ? { state: '회사 · 점심 먹고 자리' } : {}) })); for (const n of r.members) (r.read ||= {})[st.liveKey(n)] = Date.now(); return r.id; }, B);
     const only = process.argv[2] ? process.argv[2].split(',') : Object.keys(OPT);
     for (const o of only) {
-      await p.evaluate(([nb, on]) => document.documentElement.style.setProperty('--na-nb', on ? `${nb}px` : '0px'), [NB, o === 'R' || o[0] === 'N' || o[0] === 'S' || o[0] === 'M' || o[0] === 'B']);
+      await p.evaluate(([nb, on]) => document.documentElement.style.setProperty('--na-nb', on ? `${nb}px` : '0px'), [NB, o === 'R' || o[0] === 'N' || o[0] === 'S' || o[0] === 'M' || o[0] === 'B' || o[0] === 'U']);
       await p.evaluate(css => { document.getElementById('mk_opt')?.remove(); const t = document.createElement('style'); t.id = 'mk_opt'; t.textContent = css; document.head.append(t); }, OPT[o]);
-      for (const [v, i] of o[0] === 'B' ? [['orbitroom', rid]] : 'SMR'.includes(o[0]) ? [['home'], ['diary'], ['orbitroom', rid], ['bank']] : [['home'], ['bank'], ['orbitroom', rid]]) {
+      for (const [v, i] of 'BU'.includes(o[0]) ? [['orbitroom', rid]] : 'SMR'.includes(o[0]) ? [['home'], ['diary'], ['orbitroom', rid], ['bank']] : [['home'], ['bank'], ['orbitroom', rid]]) {
         if (v === 'orbitroom') await s.to('orbit');
         await s.to(v, i); await p.waitForTimeout(500);
+        if (JSX[o] && v === 'orbitroom') { await p.evaluate(`(${JSX[o]})(${JSON.stringify({ SMILE })})`); await p.evaluate(() => { const m = document.querySelector('.na_ph_frame .ob_msgs'); m.scrollTop = m.scrollHeight; }); await p.waitForTimeout(250); }
         await p.evaluate(({ html }) => { document.getElementById('mk_dev')?.remove(); const d = document.getElementById('na_phl'); d.insertAdjacentHTML('beforeend', html); const t = d.querySelector('.ax_sb .cg_num, .cg_sb .cg_num'); d.style.setProperty('--ct', JSON.stringify(t ? t.textContent : '')); }, { html: DEV(INK[v], NOSB[o]) });
         await p.waitForTimeout(300);
         await p.screenshot({ path: path.join(__dirname, `${o}_${v}.png`) });
