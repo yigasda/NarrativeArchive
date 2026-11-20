@@ -13,7 +13,8 @@ import { SCENES_SYS, parseScenes } from './scenes.js';
 import { resolvePhoneProfile, ownerProfileBlock } from './phoneprofile.js';
 import { parseJson } from './phoneparse.js';
 import { nameKey } from './people.js';
-import { liveWorld, livePhone, liveMeta, liveKey, liveAtYear } from './phone2store.js';
+import { liveWorld, livePhone, liveMeta, liveKey, liveAtYear, isSnap } from './phone2store.js';
+import { liveChatTail, liveSnapBehind, liveSnapExtend } from './phone2snap.js';
 import { liveStoryText } from './phone2story.js';
 import { liveWall } from './phone2clock.js';
 import { gatherReply } from './phone2live.js';
@@ -53,6 +54,31 @@ async function cardOf(p) {
 const open = real => { const md = ctx().chatMetadata; return !md || md[MODULE] === real; };
 // whether the 폰 2 a go began with is still there to write to
 const here = (real, w) => open(real) && liveWorld(real)?.id === w.id;
+// 롤플이 더 진행됐을 때 (요약본으로 시작한 폰): 답장을 받기 전에, 요약본 뒤로 롤플이 끝 메시지들에 다 안 담길 만큼
+// 진행됐으면 요약본을 지금 끝까지 늘려요(phone2snap.js liveSnapExtend). 한 번에 하나만 돌고, 실패하면 답장은 그대로
+// 가고(가진 요약본 + 지금의 끝 메시지) 롤플이 더 진행될 때까지 다시 하지 않아요.
+const extending = new WeakMap();
+// 요약본을 늘리는 중인지 (화면의 "이야기 정리 중")
+export const liveSnapBusy = real => extending.has(real);
+async function keepUpStory(real, tell) {
+    if (extending.has(real)) return extending.get(real);
+    const w = liveWorld(real);
+    if (!w || w.from !== 'story' || !isSnap(w.snap) || !open(real)) return null;
+    const tail = liveChatTail(), had = w.snap;
+    if (!liveSnapBehind(had, tail) || w.snapTried === tail.end) return null;
+    // (marked busy before anything is asked, so one asked meanwhile waits for this one)
+    let done;
+    extending.set(real, new Promise(r => { done = r; })); tell();
+    try {
+        const next = await liveSnapExtend(real, had);
+        // (written only to the 폰 2 and the snapshot it was made from)
+        if (here(real, w) && w.snap === had && isSnap(next)) { w.snap = next; delete w.snapTried; await saveMeta(); }
+    } catch (err) {
+        console.warn('[narrative-archive] live story', err);
+        if (here(real, w)) w.snapTried = tail.end;
+    } finally { extending.delete(real); done(); tell(); }
+    return null;
+}
 export async function liveGo(real, { onChange = () => {} } = {}) {
     const m = () => liveMeta(real, { text: () => liveStoryText(real, liveWorld(real)), now: liveNowOf(real) });
     const tell = () => { try { onChange(); } catch (err) { console.error('[narrative-archive] live draw', err); } };
@@ -61,6 +87,7 @@ export async function liveGo(real, { onChange = () => {} } = {}) {
         parse: s => parseJson(s, { salvage: true }),
         ask: (input, { system }) => askDraft(input, { force: true, system, maxTokens: LIVE_GO.replyTokens, effort: 'low' }),
         gather: async job => {
+            await keepUpStory(real, tell);
             const w = liveWorld(real), p = livePhone(real, job.owner);
             if (!w || !p) return null;
             const d0 = m(), card = await cardOf(p);
@@ -71,6 +98,8 @@ export async function liveGo(real, { onChange = () => {} } = {}) {
                 clock: (ph, at) => liveAtYear(ph, at, () => phone2Clock(ph, at, d0)), around: aroundBlock, card: () => card,
                 place: ph => { const r = (ph.where?.people || []).find(x => nameKey(x?.name) === nameKey(ph.owner)); return String(r?.place || r?.city || '').trim(); },
                 story: () => liveStoryText(real, w),
+                // (the role-play's last messages as they stand now: read at this moment, no place kept)
+                before: () => (open(real) ? liveChatTail().lines : []),
             } });
             return d ? { system: phone2ReplySystem({ owner: d.owner, persona: d.persona }), input: replyInput(d) } : null;
         },

@@ -723,3 +723,79 @@ test('이야기에서 가져온 폰의 연도는 지켜요: 시계의 연도와 
         assert.equal(d.phones.ivo.year, 2026);
     }
 });
+
+// ---- 롤플이 더 진행됐을 때 (요약본으로 시작한 폰): 답장 전에 요약본을 지금 끝까지 늘려요
+const SNAP0 = { v: 1, at: 1, upto: 3, text: '## #0–#3 — start\n- a\n', recent: ['[#3] Mara: see you'], made: { from: 0, to: 3, count: 4, parts: 1 } };
+const SNAP1 = { v: 1, at: 2, upto: 40, text: '## #0–#3 — start\n- a\n\n## #4–#40 — later\n- b\n', recent: ['[#40] Ren: the train is late'], made: { from: 4, to: 40, count: 37, parts: 1 } };
+function snapWorld() {
+    const c = world(), w = L.liveWorld(c.real);
+    w.from = 'story'; w.storyUpto = 3; w.snap = structuredClone(SNAP0);
+    Object.assign(T, { tail: { lines: ['[#39] Mara: hurry', '[#40] Ren: the train is late'], first: 39, end: 40 }, extend: structuredClone(SNAP1), extends: 0, story: '' });
+    T.metadata = { narrative_archive: c.real };
+    return { ...c, w };
+}
+const said = (c, text) => { send(c, text); T.replies = [{ state: '집', reply: ['응'], does: [] }]; };
+
+test('롤플이 끝 메시지들에 다 안 담길 만큼 진행됐으면: 답장 전에 요약본을 한 번 늘리고 저장, 답장에는 지금의 끝 메시지', async () => {
+    const c = snapWorld();
+    said(c, '어디야');
+    let busySeen = false;
+    T.extend = async (m, snap) => { busySeen = G.liveSnapBusy(c.real); assert.equal(m, c.real); assert.deepEqual(snap, SNAP0); return structuredClone(SNAP1); };
+    const saves = T.saves;
+    await G.liveGo(c.real);
+    assert.equal(T.extends, 1);
+    assert.ok(busySeen && !G.liveSnapBusy(c.real));
+    assert.deepEqual(c.w.snap, SNAP1);
+    assert.ok(T.saves > saves);
+    assert.ok(T.replyInput.includes('[LAST MESSAGES]\nMara: hurry\n\nRen: the train is late'));
+    assert.equal(c.w.storyUpto, 3);   // (the messenger's numbers start where they did)
+    // 그 뒤 답장: 더 진행되지 않았으면 다시 안 늘려요
+    said(c, '알겠어');
+    await G.liveGo(c.real);
+    assert.equal(T.extends, 1);
+    delete T.metadata;
+});
+
+test('끝 메시지들에 다 담기면 · 롤플이 그대로면 · 요약본 없는 폰 · 새로 시작한 폰이면 안 늘려요', async () => {
+    for (const set of [c => { T.tail = { lines: ['[#4] Ren: hi', '[#5] Mara: hey'], first: 4, end: 5 }; }, c => { T.tail = { lines: ['[#3] Mara: see you'], first: 3, end: 3 }; }, c => { T.tail = { lines: ['[#1] Ren: x'], first: 1, end: 1 }; },
+        c => { delete c.w.snap; }, c => { c.w.from = 'fresh'; }]) {
+        const c = snapWorld(); set(c);
+        said(c, '어디야');
+        await G.liveGo(c.real);
+        assert.equal(T.extends, 0);
+        assert.equal(c.room.messages.at(-1).text, '응');
+    }
+    delete T.metadata;
+});
+
+test('늘리기가 실패해도 답장은 가요(가진 요약본 + 지금의 끝 메시지). 롤플이 더 진행될 때까지 다시 하지 않아요', async () => {
+    const c = snapWorld();
+    T.extend = new Error('모델이 답을 안 줬어요');
+    said(c, '어디야');
+    await G.liveGo(c.real);
+    assert.equal(T.extends, 1);
+    assert.deepEqual(c.w.snap, SNAP0);
+    assert.equal(c.w.snapTried, 40);
+    assert.equal(c.room.messages.at(-1).text, '응');
+    assert.ok(T.replyInput.includes('[LAST MESSAGES]\nMara: hurry\n\nRen: the train is late'));
+    said(c, '아직?');
+    await G.liveGo(c.real);
+    assert.equal(T.extends, 1);
+    // 롤플이 더 진행됐으면 다시 해요
+    T.tail = { lines: ['[#44] Ren: here'], first: 44, end: 44 }; T.extend = { ...structuredClone(SNAP1), upto: 44 };
+    said(c, '왔어?');
+    await G.liveGo(c.real);
+    assert.equal(T.extends, 2);
+    assert.equal(c.w.snap.upto, 44);
+    assert.ok(!('snapTried' in c.w));
+    delete T.metadata;
+});
+
+test('늘리는 동안 실시간 폰이 새로 시작됐으면 그 폰에는 안 써요', async () => {
+    const c = snapWorld();
+    said(c, '어디야');
+    T.extend = async () => { c.w.snap = structuredClone({ ...SNAP0, upto: 50 }); return structuredClone(SNAP1); };
+    await G.liveGo(c.real);
+    assert.equal(c.w.snap.upto, 50);
+    delete T.metadata;
+});

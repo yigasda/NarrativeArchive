@@ -16,7 +16,7 @@ const order = (at, today) => -gapDays(String(at).slice(0, 5), today) * 1440 + Nu
 const SKY = { clear: '맑음', partly: '구름 조금', cloudy: '흐림', drizzle: '이슬비', rain: '비', sleet: '진눈깨비', snow: '눈', fog: '안개', storm: '뇌우', wind: '강풍' };
 // how many bubbles the request carries at most (the room's talk not summarized yet: up to 300, phone2digest.js; more only
 // while a summary keeps failing), days ahead the calendar looks, story characters at most
-export const LIVE_ASK = { bubbles: 400, ahead: 14, aheadMax: 4, story: 8000 };
+export const LIVE_ASK = { bubbles: 400, ahead: 14, aheadMax: 4, story: 40000 };
 
 // the phone's lists as the apps the reply prompt names (phone2reply.js PHONE2_APPS, in small letters), each with what
 // tells its time and one line saying what it is
@@ -47,7 +47,8 @@ function records(p, persona) {
 // the values of one reply request (phone2ask.js replyInput's d), or null when there is no such phone or room.
 // now: the real moment (ms); tz: where the owner is; deps: { clock(p, at) → the [OWNER'S CLOCK] block, around(p) → the
 // [PEOPLE AROUND] block, card(owner) → the card's text, place(p) → where the phone last had the owner, blind(owner) → the
-// [OWNER DOESN'T KNOW] block, story() → the story 폰 2 may read (asked for the first chat only) }; why · typed: as the caller has them
+// [OWNER DOESN'T KNOW] block, story() → the story 폰 2 may read, before() → the role-play's last messages as they stand
+// now (a 폰 2 begun with a snapshot only) }; why · typed: as the caller has them
 export function gatherReply(m, owner, roomId, { now = Date.now(), tz = 'UTC', deps = {}, why = '', typed = [] } = {}) {
     const w = liveWorld(m), p = livePhone(m, owner), room = w?.messenger?.rooms?.[roomId];
     if (!w || !p || !room || !room.members.some(n => same(n, owner))) return null;
@@ -66,12 +67,13 @@ export function gatherReply(m, owner, roomId, { now = Date.now(), tz = 'UTC', de
     const did = mine.flatMap(x => (Array.isArray(x.does) ? x.does : []).filter(d => one(d?.app)).map(d => ({ app: one(d.app).toLowerCase(), at: wall(x.at) }))).map(r => ({ ...r, order: order(r.at, today) }));
     const here = p.life?.weather?.here;
     const rain = Number(here?.hours?.[0]?.rain);
-    // (the story: with the first chat on the messenger only; after it the phone, the people around and the chat carry it)
     const first = !(room.messages || []).some(x => same(x.from, owner));
-    const story = first ? String(deps.story?.() || '').trim() : '';
-    // (begun with a snapshot of the story (phone2snap.js): its last messages as they were said, with the story; the
-    // message numbers are the role-play chat's, nothing here reads by them)
-    const before = first && w.from === 'story' && isSnap(w.snap) ? w.snap.recent.map(x => String(x).replace(/^\[#\d+\]\s*/, '').trim()).filter(Boolean).join('\n\n') : '';
+    // (the story goes with every reply, as the role-play's own turns carry it: the summary, and for a 폰 2 begun with a
+    // snapshot (phone2snap.js) the role-play's last messages as they stand now, else the ones kept when it began. The
+    // message numbers are the role-play chat's: taken off, nothing here reads by them)
+    const story = String(deps.story?.() || '').trim();
+    const said = w.from === 'story' && isSnap(w.snap) ? (now => (now.length ? now : w.snap.recent))((x => (Array.isArray(x) ? x : []).filter(t => String(t ?? '').trim()))(deps.before?.())) : [];
+    const before = said.map(x => String(x).replace(/^\[#\d+[^\]\n]*\]\s*/, '').trim()).filter(Boolean).join('\n\n');
     return {
         owner: p.owner, persona: P, // (the owner's languages: read with the voices, or set by the user in 말투; on the phone)
         langs: p.langs?.texts?.length || p.langs?.knows?.length ? p.langs : null,

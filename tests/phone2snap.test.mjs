@@ -21,7 +21,7 @@ const stub = {
         export const rangeRaw=(c,g,from,to,keep)=>{S.ranges.push([from,to,keep]);const items=c.chat.map((x,i)=>({i,text:x.mes,hidden:!!x.is_system})).filter(x=>x.i>=from&&x.i<=to&&!(x.hidden&&x.i>keep));return{items,raw:items.map(x=>'#'+x.i+' '+x.text).join('\\n')};};
         export const chunkItems=items=>{const out=[];for(let i=0;i<items.length;i+=S.per||1000)out.push(items.slice(i,i+(S.per||1000)));return out;};
         export const draftCompress=async a=>{S.calls.push({from:a.items[0].i,to:a.items.at(-1).i,n:a.items.length,prompt:a.p.text,text:a.m.text});a.onStep?.(0,1,a.items[0].i,a.items.at(-1).i);return typeof S.draft==='function'?S.draft(a):S.draft;};`),
-    './phonedata.js': enc(`export const recentPhoneText=(n,o)=>{const S=globalThis.__snap;S.recentAsk=[n,o];return S.chat.map((x,i)=>({i,x})).filter(r=>!r.x.is_system&&r.i<=o.upto).slice(-n).map(r=>'[#'+r.i+'] '+r.x.name+': '+r.x.mes).join('\\n\\n').slice(-o.maxChars);};
+    './phonedata.js': enc(`export const recentPhoneText=(n,o)=>{const S=globalThis.__snap;S.recentAsk=[n,o];return S.chat.map((x,i)=>({i,x})).filter(r=>!r.x.is_system&&(o.upto==null||r.i<=o.upto)).slice(-n).map(r=>'[#'+r.i+(r.x.is_user?' · USER':'')+'] '+r.x.name+': '+r.x.mes).join('\\n\\n').slice(-o.maxChars);};
         export const chatStamp=i=>{const S=globalThis.__snap,x=S.chat[i];return{chat:S.mark||'c1',branch:false,fp:x?x.mes:null};};`),
 };
 // (the archive's own text code, as it is: its neighbours that need the page are the stubs above)
@@ -89,7 +89,7 @@ test('아카이브 안 된 구간: 아카이브의 "한 번에 압축"으로 요
     assert.ok(state.includes('# OPEN AT #7') && state.includes('- Whether Mara will forgive Ren.') && state.includes('- What happens on Friday.'));
     assert.ok(!snap.text.includes('CHANGES') && !snap.text.includes('==>'));
     // 시작 직전 메시지: 보이는 것만, 글자 그대로
-    assert.deepEqual(snap.recent, ['[#4] Ren: I found the flat on Lindenweg', '[#5] Mara: Then take it', '[#6] Ren: I signed today', '[#7] Mara: See you Friday']);
+    assert.deepEqual(snap.recent, ['[#4 · USER] Ren: I found the flat on Lindenweg', '[#5] Mara: Then take it', '[#6 · USER] Ren: I signed today', '[#7] Mara: See you Friday']);
     assert.deepEqual(T.recentAsk, [S.SNAP_RECENT.lines, { upto: 7, maxChars: S.SNAP_RECENT.chars }]);
     assert.deepEqual(snap.made, { from: 4, to: 7, count: 4, parts: 1 });
     // 진짜 아카이브 · 경계선은 안 바뀌어요
@@ -177,6 +177,102 @@ test('버튼 한 번: 정리하는 동안 채팅이 달라졌으면 요약본을
     const m = chat(); T.mark = 'c1';
     T.draft = () => { T.chat[4] = say('Ren', 'I found the flat on Birkenweg'); return { text: DRAFT, parts: 1, doneTo: 7, error: null }; };
     assert.equal((await S.liveSnapNow(m)).upto, 7);
+    T.mark = '';
+});
+
+// ---- 롤플이 더 진행됐을 때
+const DRAFT2 = `## #8–#12 — Friday (Oct 30, Varo)
+- Mara came on Friday and they carried the boxes up together (#11).
+
+---
+# STATE CHANGES
+EDIT ## People :: - Ren: in Varo, has signed for a flat on Lindenweg. ==> - Ren: living in the flat on Lindenweg.
+
+# OPEN CHANGES
+DROP :: - What happens on Friday.
+`;
+async function started() {
+    const m = chat();
+    T.draft = { text: DRAFT, parts: 1, doneTo: 7, error: null };
+    const snap = await S.liveSnapDraft(m, { upto: 7, now: 1 });
+    T.calls = []; T.ranges = [];
+    return { m, snap };
+}
+const more = () => T.chat.push(say('Ren', 'Friday came'), say('Mara', 'I brought tape'), say('Ren', 'Third floor'), say('Mara', 'Last box'), say('Ren', 'Stay for tea'));
+
+test('지금 롤플의 끝 메시지들: 끝에서부터 통째로, 중간에 잘린 맨 앞 것은 빼고, 맨 앞 번호와 채팅의 끝', async () => {
+    const { snap } = await started();
+    assert.deepEqual(S.liveChatTail(), { lines: ['[#4 · USER] Ren: I found the flat on Lindenweg', '[#5] Mara: Then take it', '[#6 · USER] Ren: I signed today', '[#7] Mara: See you Friday'], first: 4, end: 7 });
+    assert.deepEqual(T.recentAsk, [S.SNAP_RECENT.lines, { maxChars: S.SNAP_RECENT.chars }]);
+    assert.equal(S.liveSnapBehind(snap), false);
+    // (롤플이 조금 진행: 끝 메시지들에 다 담겨요 → 요약본은 그대로)
+    more();
+    assert.equal(S.liveChatTail().end, 12);
+    assert.equal(S.liveSnapBehind(snap), false);
+    // (많이 진행: 요약본 뒤 첫 메시지가 끝 메시지들에 안 담겨요)
+    for (let i = 0; i < 8; i++) T.chat.push(say('Mara', `later ${i}`));
+    const tail = S.liveChatTail();
+    assert.deepEqual([tail.lines.length, tail.first, tail.end], [10, 11, 20]);
+    assert.equal(S.liveSnapBehind(snap, tail), true);
+    // (글자 한도에 걸려 맨 앞 메시지가 중간에서 잘리면 그 메시지는 빼요)
+    const keep = S.SNAP_RECENT.chars; S.SNAP_RECENT.chars = 45;
+    assert.deepEqual(S.liveChatTail().lines, ['[#19] Mara: later 6', '[#20] Mara: later 7']);
+    S.SNAP_RECENT.chars = keep;
+    // (채팅이 요약본보다 짧아졌거나 보이는 메시지가 없으면)
+    T.chat.length = 5;
+    assert.equal(S.liveSnapBehind(snap), false);
+    assert.equal(S.liveSnapBehind(snap, { lines: [], first: null, end: 30 }), true);
+    assert.equal(S.liveSnapBehind(null, { lines: [], first: null, end: 30 }), false);
+    // (경계: 요약본 바로 다음 메시지부터 담겼으면 빈 구간이 없어요; 하나라도 건너뛰면 있어요)
+    assert.equal(S.liveSnapBehind(snap, { lines: ['x'], first: 8, end: 20 }), false);
+    assert.equal(S.liveSnapBehind(snap, { lines: ['x'], first: 9, end: 20 }), true);
+    // (채팅이 요약본의 자리보다 짧으면 늘릴 게 없어요)
+    assert.equal(S.liveSnapBehind(snap, { lines: [], first: null, end: 5 }), false);
+    assert.equal(S.liveSnapBehind(snap, { lines: [], first: null, end: 7 }), false);
+});
+
+test('요약본 늘리기: 요약본 뒤로 진행된 구간만 요약해 요약본 뒤에 붙이고, 끝 메시지를 지금 것으로. 그사이 아카이브돼 숨겨진 메시지도 넣어요. 진짜 아카이브는 그대로', async () => {
+    const { m, snap } = await started(), archive = m.text;
+    more();
+    // (그사이 진짜 아카이브가 #10까지 압축돼 숨겨졌어요)
+    for (let i = 4; i <= 10; i++) T.chat[i].is_system = true;
+    m.boundary = 10; m.text = `${archive}\n(the archive went on by itself)`;
+    const after = m.text;
+    T.draft = { text: DRAFT2, parts: 1, doneTo: 12, error: null };
+    const next = await S.liveSnapExtend(m, snap, { now: 9 });
+    // 요청: 요약본 뒤 #8–#12 (경계선까지의 숨긴 메시지 포함), 요약본의 글을 아카이브 자리에
+    assert.deepEqual(T.ranges.at(-1), [8, 12, 10]);
+    assert.deepEqual(T.calls, [{ from: 8, to: 12, n: 5, prompt: 'PROMPT', text: snap.text }]);
+    const { body, state } = S.snapParts(next);
+    const scenes = t => t.replace(/\n-{3,}\s*$/, '').trim();   // (without the rule that ends the sections)
+    assert.ok(scenes(body).startsWith(scenes(S.snapParts(snap).body)) && body.includes('## #8–#12 — Friday') && body.indexOf('#4–#7') < body.indexOf('#8–#12'));
+    assert.ok(state.includes('# STATE AT #12') && state.includes('- Ren: living in the flat on Lindenweg.') && !state.includes('has signed for'));
+    assert.ok(state.includes('- Whether Mara will forgive Ren.') && !state.includes('What happens on Friday'));
+    assert.ok(!next.text.includes('went on by itself') && !next.text.includes('CHANGES'));
+    assert.deepEqual([next.upto, next.at, next.made], [12, 9, { from: 8, to: 12, count: 5, parts: 1 }]);
+    assert.deepEqual(next.recent, ['[#11] Mara: Last box', '[#12 · USER] Ren: Stay for tea']);
+    assert.ok(S.isSnap(next));
+    // 진짜 아카이브 · 경계선 · 먼저 있던 요약본은 안 바뀌어요
+    assert.equal(m.text, after); assert.equal(m.boundary, 10);
+    assert.equal(snap.upto, 7);
+});
+
+test('요약본 늘리기: 진행된 게 없으면 그대로 · 실패하면 오류 · 정리하는 동안 끝 메시지가 사라지거나 고쳐지거나 다른 채팅이면 버려요 (메시지가 더 온 건 괜찮아요)', async () => {
+    const { m, snap } = await started();
+    assert.equal(await S.liveSnapExtend(m, snap), snap);
+    T.chat.length = 5;
+    assert.equal(await S.liveSnapExtend(m, snap), snap);
+    assert.equal(T.calls.length, 0);
+    await assert.rejects(() => S.liveSnapExtend(m, null), /요약본이 없어요/);
+    const again = async during => { const x = await started(); more(); T.mark = 'c1'; T.draft = () => { during(); return { text: DRAFT2, parts: 1, doneTo: 12, error: null }; }; return x; };
+    for (const during of [() => T.chat.pop(), () => { T.chat[12] = say('Ren', 'Go home'); }, () => { T.mark = 'c2'; }]) {
+        const x = await again(during);
+        await assert.rejects(() => S.liveSnapExtend(x.m, x.snap), /정리하는 동안 채팅이 바뀌었어요/);
+    }
+    const y = await again(() => T.chat.push(say('Mara', 'Yes')));
+    assert.equal((await S.liveSnapExtend(y.m, y.snap)).upto, 12);
+    const z = await again(() => {}); T.draft = { text: '', parts: 0, doneTo: 9, error: new Error('모델 오류') };
+    await assert.rejects(() => S.liveSnapExtend(z.m, z.snap), /끝까지 받지 못했어요 \(#9까지 받음\): 모델 오류/);
     T.mark = '';
 });
 

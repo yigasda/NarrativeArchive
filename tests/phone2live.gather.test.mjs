@@ -64,42 +64,53 @@ test('날씨가 오늘 것이 아니면 안 보내요; 언어 설정 · 지운 �
     assert.match(text, /\[TYPED AND DELETED\]\n- 보고 싶\n\n\[WHY NOW\]\njust woke up$/);
 });
 
-test('이야기: 첫 메신저 대화 때만, 끝에서부터 통째 장면만, 정한 길이 안에서', () => {
-    const long = Array.from({ length: 60 }, (_, i) => `## #${i * 10}–#${i * 10 + 9} — scene ${i}\n- ${'x'.repeat(300)}`).join('\n\n');
+test('이야기: 답장마다, 끝에서부터 통째 장면만, 정한 길이 안에서', () => {
+    const long = Array.from({ length: 200 }, (_, i) => `## #${i * 10}–#${i * 10 + 9} — scene ${i}\n- ${'x'.repeat(300)}`).join('\n\n');
     let asked = 0;
     const story = () => { asked++; return long; };
-    // (the owner has answered before: no story, not even asked for)
-    assert.equal(ask(world(), { deps: { ...deps, story } }).story, '');
-    assert.equal(asked, 0);
-    const x = world(); x.r.messages.splice(1, 1);
-    const d = ask(x, { deps: { ...deps, story } });
-    assert.equal(d.now.first, true);
-    assert.ok(d.story.length <= G.LIVE_ASK.story);
+    // (the owner has answered before: the story still goes)
+    const d = ask(world(), { deps: { ...deps, story } });
+    assert.equal(d.now.first, false);
+    assert.equal(asked, 1);
+    assert.ok(long.length > G.LIVE_ASK.story && d.story.length <= G.LIVE_ASK.story && d.story.length > G.LIVE_ASK.story - 400);
     assert.match(d.story, /^## #\d+–#\d+ — scene \d+\n/);
-    assert.match(d.story, /scene 59\n- x+$/);
-    const y = world(); y.r.messages.splice(1, 1);
+    assert.match(d.story, /scene 199\n- x+$/);
+    // (the first chat: the same)
+    const x = world(); x.r.messages.splice(1, 1);
+    assert.equal(ask(x, { deps: { ...deps, story } }).story, d.story);
+    const y = world();
     assert.equal(ask(y, { deps: { ...deps, story: () => '## #0–#3 — short\n- a' } }).story, '## #0–#3 — short\n- a');
+    assert.ok(replyInput(ask(y, { deps: { ...deps, story: () => '## #0–#3 — short\n- a' } })).includes('[STORY]\n## #0–#3 — short\n- a'));
 });
 
-test('요약본으로 시작한 폰: 첫 대화에 시작 직전 메시지가 말한 그대로 (번호만 떼고), 주인이 답한 뒤 · 요약본 없는 폰 · 새로 시작한 폰은 없음', () => {
-    const snap = { v: 1, at: 1, upto: 3, text: '## #0–#3 — s\n- a\n', recent: ['[#2] Ren: "Are you coming Friday?"\n\nHe waited.', '[#3] Mara: *She nodded.* "I will."', '  '], made: { from: 0, to: 3, count: 4, parts: 1 } };
-    // (the first chat: the owner has not answered in this room yet)
-    const x = world(); x.w.snap = snap; x.r.messages.splice(1, 1);
-    const d = ask(x);
-    assert.equal(d.before, 'Ren: "Are you coming Friday?"\n\nHe waited.\n\nMara: *She nodded.* "I will."');
-    const text = replyInput({ ...d, story: '## #0–#3 — s\n- a' });
-    assert.ok(text.includes('[STORY]\n## #0–#3 — s\n- a\n\n[LAST MESSAGES]\nRen: "Are you coming Friday?"\n\nHe waited.\n\nMara: *She nodded.* "I will."'));
-    // (answered once: the chat carries it from there)
-    const y = world(); y.w.snap = snap;
-    assert.equal(ask(y).before, '');
-    assert.ok(!replyInput(ask(y)).includes('[LAST MESSAGES]'));
-    // (no snapshot, a broken one, a phone begun fresh: nothing, and the chat is not read for it)
-    const z = world(); z.r.messages.splice(1, 1);
-    assert.equal(ask(z).before, '');
+test('요약본으로 시작한 폰: 답장마다 롤플의 지금 끝 메시지가 말한 그대로 (번호만 떼고). 지금 읽을 게 없으면 시작 때 것. 요약본 없는 폰 · 새로 시작한 폰은 없음', () => {
+    const snap = { v: 1, at: 1, upto: 3, text: '## #0–#3 — s\n- a\n', recent: ['[#2 · USER] Ren: "Are you coming Friday?"\n\nHe waited.', '[#3] Mara: *She nodded.* "I will."', '  '], made: { from: 0, to: 3, count: 4, parts: 1 } };
+    const nowSaid = ['[#8 · USER] Ren: The train is late.', '[#9] Mara: Then I will wait.\n\nShe sat down.', ''];
+    // (the role-play has moved on: what it says now, on the first chat and after the owner has answered alike)
+    for (const first of [true, false]) {
+        const x = world(); x.w.snap = snap; if (first) x.r.messages.splice(1, 1);
+        const d = ask(x, { deps: { ...deps, before: () => nowSaid } });
+        assert.equal(d.now.first, first);
+        assert.equal(d.before, 'Ren: The train is late.\n\nMara: Then I will wait.\n\nShe sat down.');
+        const text = replyInput({ ...d, story: '## #0–#3 — s\n- a' });
+        assert.ok(text.includes('[STORY]\n## #0–#3 — s\n- a\n\n[LAST MESSAGES]\nRen: The train is late.\n\nMara: Then I will wait.\n\nShe sat down.'));
+    }
+    // (nothing to read now, or nobody to ask: the messages kept when it began)
+    for (const before of [() => [], () => null, undefined]) {
+        const y = world(); y.w.snap = snap;
+        assert.equal(ask(y, { deps: { ...deps, before } }).before, 'Ren: "Are you coming Friday?"\n\nHe waited.\n\nMara: *She nodded.* "I will."');
+    }
+    // (no snapshot, a broken one, a phone begun fresh: nothing, and the chat is not asked for)
+    let asked = 0;
+    const before = () => { asked++; return nowSaid; };
+    const z = world();
+    assert.equal(ask(z, { deps: { ...deps, before } }).before, '');
     z.w.snap = { text: 'x', recent: 'not a list', upto: 3 };
-    assert.equal(ask(z).before, '');
+    assert.equal(ask(z, { deps: { ...deps, before } }).before, '');
     z.w.snap = snap; z.w.from = 'fresh';
-    assert.equal(ask(z).before, '');
+    assert.equal(ask(z, { deps: { ...deps, before } }).before, '');
+    assert.equal(asked, 0);
+    assert.ok(!replyInput(ask(z, { deps: { ...deps, before } })).includes('[LAST MESSAGES]'));
 });
 
 test('없는 폰 · 없는 방 · 그 방에 없는 사람이면 아무것도 안 만들고, 폰 1 · 폰 2는 그대로', () => {

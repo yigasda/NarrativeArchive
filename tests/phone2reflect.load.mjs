@@ -41,6 +41,11 @@ map['./digest.js'] = encoded(`export const AI_SYS_DIGEST='FOLD SYS';`);
 map['./prompts.js'] = encoded(swap(await readFile(new URL('../src/prompts.js', import.meta.url), 'utf8')));
 export const P = await import(map['./prompts.js']);
 map['./phone2story.js'] = encoded(`export const liveStoryText=()=>globalThis.__dropTest.story||'';`);
+// (the story snapshot's keep-up: T.tail is the role-play's end now, T.extend the lengthened snapshot (or an Error, or a function))
+map['./phone2snap.js'] = encoded(`const T=globalThis.__dropTest;
+export const liveChatTail=()=>T.tail||{lines:[],first:null,end:0};
+export const liveSnapBehind=(snap,t)=>!!snap&&t.end>snap.upto&&(t.first===null||t.first>snap.upto+1);
+export const liveSnapExtend=async(m,snap)=>{T.extends=(T.extends||0)+1;T.extendArgs=[m,snap];const a=T.extend;if(a instanceof Error)throw a;return typeof a==='function'?a(m,snap):a;};`);
 export const G = await import(encoded(swap(await readFile(new URL('../src/phone2go.js', import.meta.url), 'utf8'))));
 const store = new Map();
 globalThis.localStorage ||= { getItem: k => store.get(k) ?? null, setItem: (k, v) => store.set(k, v), removeItem: k => store.delete(k) };
