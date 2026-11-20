@@ -120,6 +120,7 @@ const JSX = {
     const a = [...mi.querySelectorAll('.ob_b.th')].find(b => /Kuchen/.test(b.textContent)); if (a) { a.classList.add('mk_hasre'); a.insertAdjacentHTML('beforeend', '<span class="mk_re">❤️</span>'); }
     const b = [...mi.querySelectorAll('.ob_b.me')].find(b => /케이크/.test(b.textContent)); if (b) { b.classList.add('mk_hasre'); b.insertAdjacentHTML('beforeend', '<span class="mk_re">😂 <b style="font-size:11px">2</b></span>'); } },
 };
+const FLCSS = ` .na_phl .ax img.mk_fe { width: 1.25em; height: 1.25em; vertical-align: -0.25em; display: inline-block; } .na_phl .ax .mk_re2 img.mk_fe { width: 15px; height: 15px; vertical-align: 0; }`;
 const OPT = {
   A: `${BASE} .na_phl ${BAR} { height: ${sb}px !important; padding: 0 !important; visibility: hidden; } .na_phl .na_ph_notch { display: none !important; }`,
   B: `${BASE} .na_phl ${BAR} { height: ${(+sb + 20).toFixed(1)}px !important; padding: ${sb}px 0 0 !important; justify-content: center !important; align-items: center !important; }
@@ -135,7 +136,7 @@ const OPT = {
   // 예전 아이폰 노치: 화면 맨 위에 붙은 검은 홈, 아래 모서리 둥글고 위쪽 양옆은 안으로 휜 귀. G 넓은 노치(X~12) · H 좁은 노치(13~14)
   // R: 시안이 아니라 실제 코드(css/59-phone-shell.css) — 앱이 알려 주는 하단 버튼 줄 높이만 흉내 내요
   R: '',
-  B1: BUB1, B2: BUB2, B3: BUB3, B4: BUB4, U1, U2, U3, U1B, U1C, U1T,
+  B1: BUB1, B2: BUB2, B3: BUB3, B4: BUB4, U1, U2, U3, U1B, U1C, U1T, F1: '', F2: '',
   M1: MIST(0.55, 28), M2: MIST(0.75, 40), M3: MIST(0.9, 56),
   // 뿌연 하단 띠: S1 막대를 띠 맨 위 · S2 띠를 막대만큼 더 올려 그 안에 막대 · S3 띠만(앱은 막대 없음, 홈은 그대로)
   S1: GL(0, 7), S2: GL(22, 9), S3: GL(0, 0) + ' .na_phl .ax .ax_ind span { visibility: hidden !important; }',
@@ -144,7 +145,12 @@ const OPT = {
   G: NOTCH(209),
   H: NOTCH(162),
 };
-const NOSB = { V: 2, U1T: 2, U1C: 2, U1B: 2, U1: 2, U2: 2, U3: 2, B1: 2, B2: 2, B3: 2, B4: 2, M1: 2, M2: 2, M3: 2, E: 1, F: 1, G: 2, H: 2, R: 2, S1: 2, S2: 2, S3: 2, N1: 2, N2: 2, N3: 2, N4: 2 };
+// 이모지를 그림으로 고정: Fluent(마이크로소프트, MIT) 3D · 플랫. 시안에서만 세션 임시 폴더에서 읽어요
+const FL_DIR = process.env.FLUENT_DIR || '';
+const FL = (kind) => { if (!FL_DIR) return {}; const f = (d, n) => path.join(FL_DIR, 'assets', d, kind === '3d' ? '3D' : 'Color', `${n}_${kind === '3d' ? '3d.png' : 'color.svg'}`);
+  const uri = file => `data:${file.endsWith('.png') ? 'image/png' : 'image/svg+xml'};base64,${fs.readFileSync(file).toString('base64')}`;
+  return { '❤️': uri(f('Red heart', 'red_heart')), '😂': uri(f('Face with tears of joy', 'face_with_tears_of_joy')), '😄': uri(f('Grinning face with smiling eyes', 'grinning_face_with_smiling_eyes')) }; };
+const NOSB = { F1: 2, F2: 2, V: 2, U1T: 2, U1C: 2, U1B: 2, U1: 2, U2: 2, U3: 2, B1: 2, B2: 2, B3: 2, B4: 2, M1: 2, M2: 2, M3: 2, E: 1, F: 1, G: 2, H: 2, R: 2, S1: 2, S2: 2, S3: 2, N1: 2, N2: 2, N3: 2, N4: 2 };
 // 기기 바 그림 (소망 폰: 왼쪽 KT 시간, 오른쪽 아이콘 · 아래 파란 버튼 셋 + 분홍 하트)
 const DEV = (ink, nosb) => `<div id="mk_dev" style="position:fixed;inset:0;pointer-events:none;z-index:99999;font-family:Roboto,'Noto Sans KR',sans-serif">
   ${nosb ? `<i style="position:absolute;left:50%;top:${HOLE}px;width:11px;height:11px;margin:-5.5px 0 0 -5.5px;border-radius:50%;background:#050505;${nosb === 2 ? "" : "box-shadow:0 0 0 1.5px rgba(40,40,40,.6)"}"></i>` : ''}<div style="${nosb ? 'visibility:hidden;' : ''}position:absolute;left:0;right:0;top:0;height:${SB}px;display:flex;align-items:center;justify-content:space-between;padding:0 16px 0 22px;color:${ink};font-size:14px;font-weight:500">
@@ -196,12 +202,20 @@ const INK = { home: '#1b1d22', bank: '#fff', orbitroom: '#fff', diary: '#1b1d22'
         require('child_process').execFileSync('ffmpeg', ['-y', '-v', 'error', '-framerate', String(FPS), '-i', path.join(dir, 'f%04d.png'), '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '18', path.join(__dirname, 'U1C_motion.mp4')]);
         continue;
       }
-      await p.evaluate(([nb, on]) => document.documentElement.style.setProperty('--na-nb', on ? `${nb}px` : '0px'), [NB, o === 'R' || o[0] === 'N' || o[0] === 'S' || o[0] === 'M' || o[0] === 'B' || o[0] === 'U']);
+      await p.evaluate(([nb, on]) => document.documentElement.style.setProperty('--na-nb', on ? `${nb}px` : '0px'), [NB, o === 'R' || o[0] === 'N' || o[0] === 'S' || o[0] === 'M' || o[0] === 'B' || o[0] === 'U' || o[0] === 'F']);
       await p.evaluate(css => { document.getElementById('mk_opt')?.remove(); const t = document.createElement('style'); t.id = 'mk_opt'; t.textContent = css; document.head.append(t); }, OPT[o]);
-      for (const [v, i] of 'BU'.includes(o[0]) ? [['orbitroom', rid]] : 'SMR'.includes(o[0]) ? [['home'], ['diary'], ['orbitroom', rid], ['bank']] : [['home'], ['bank'], ['orbitroom', rid]]) {
+      for (const [v, i] of 'BUF'.includes(o[0]) ? [['orbitroom', rid]] : 'SMR'.includes(o[0]) ? [['home'], ['diary'], ['orbitroom', rid], ['bank']] : [['home'], ['bank'], ['orbitroom', rid]]) {
         if (v === 'orbitroom') await s.to('orbit');
         await s.to(v, i); await p.waitForTimeout(500);
-        if (JSX[o] && v === 'orbitroom') { await p.evaluate(`(${JSX[o]})(${JSON.stringify({ SMILE })})`); await p.evaluate(() => { const m = document.querySelector('.na_ph_frame .ob_msgs'); m.scrollTop = m.scrollHeight; }); await p.waitForTimeout(250); }
+        if ((o === 'F1' || o === 'F2') && v === 'orbitroom') {
+          await p.evaluate(css => { document.getElementById('mk_opt')?.remove(); const t = document.createElement('style'); t.id = 'mk_opt'; t.textContent = css; document.head.append(t); }, OPT.U1C + FLCSS);
+          await s.to(v, i); await p.waitForTimeout(400);
+          await p.evaluate(`(${JSX.U1C})(${JSON.stringify({ SMILE })})`);
+          await p.evaluate(map => { const root = document.querySelector('.na_ph_frame .ob_mi'); const re = new RegExp(Object.keys(map).map(k => k.replace(/[\uFE0F]/g, '\uFE0F?')).join('|'), 'gu');
+            const walk = n => { for (const c of [...n.childNodes]) { if (c.nodeType === 3 && re.test(c.data)) { re.lastIndex = 0; const frag = document.createDocumentFragment(); let last = 0; c.data.replace(re, (m, off) => { frag.append(c.data.slice(last, off)); const key = Object.keys(map).find(k => k.replace(/\uFE0F/g, '') === m.replace(/\uFE0F/g, '')); const im = document.createElement('img'); im.className = 'mk_fe'; im.src = map[key]; im.alt = m; frag.append(im); last = off + m.length; }); frag.append(c.data.slice(last)); c.replaceWith(frag); } else if (c.nodeType === 1) walk(c); } };
+            walk(root); }, FL(o === 'F1' ? '3d' : 'flat'));
+          await p.evaluate(() => { const m = document.querySelector('.na_ph_frame .ob_msgs'); m.scrollTop = m.scrollHeight; }); await p.waitForTimeout(300);
+        } else if (JSX[o] && v === 'orbitroom') { await p.evaluate(`(${JSX[o]})(${JSON.stringify({ SMILE })})`); await p.evaluate(() => { const m = document.querySelector('.na_ph_frame .ob_msgs'); m.scrollTop = m.scrollHeight; }); await p.waitForTimeout(250); }
         await p.evaluate(({ html }) => { document.getElementById('mk_dev')?.remove(); const d = document.getElementById('na_phl'); d.insertAdjacentHTML('beforeend', html); const t = d.querySelector('.ax_sb .cg_num, .cg_sb .cg_num'); d.style.setProperty('--ct', JSON.stringify(t ? t.textContent : '')); }, { html: DEV(INK[v], NOSB[o]) });
         await p.waitForTimeout(300);
         await p.screenshot({ path: path.join(__dirname, `${o}_${v}.png`) });
