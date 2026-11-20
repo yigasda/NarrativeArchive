@@ -246,8 +246,8 @@ export async function openPhone(who = null) {
         } else if (v === 'orbitroom') {
             const r = roomNow();
             if (!r || !r.members.some(n => liveKey(n) === liveKey(who))) { view = 'orbit'; return orbitUi(); }
-            const os = V.others(r), group = os.length > 1, chips = [];
-            if (!group && tzOf(os[0])) { const there = liveWall(tzOf(os[0]), sh).at.slice(6), here = vw(Date.now()).slice(6); if (there !== here) chips.push({ icon: dayIcon(there), text: `현지 ${there}` }); }   // (이름은 머리줄에 이미 있어요. 그림은 그 사람의 낮 · 저녁 · 밤)
+            const os = V.others(r), group = os.length > 1, chips = []; let thereAt = null;
+            if (!group && tzOf(os[0])) { const there = liveWall(tzOf(os[0]), sh).at.slice(6), here = vw(Date.now()).slice(6); if (there !== here) thereAt = { icon: dayIcon(there), time: there }; }   // (머리줄 이름 바로 옆: 그 사람의 낮 · 저녁 · 밤 그림 + 현지 시각)
             const msgs = []; let day = '';
             // 맨 끝 답장 묶음: 내 마지막 말 뒤에 온 말들 (넘길 수 있을 때만 표시해요)
             const sw = ro ? null : liveSwipeInfo(realM, r.id), shown = r.messages.filter(seen), lastMine = shown.map(x => liveKey(x.from) === liveKey(me)).lastIndexOf(true);
@@ -263,7 +263,7 @@ export async function openPhone(who = null) {
             const jobs = w.queue?.jobs || [], typing = !ro && jobs.some(j => j.room === r.id && (j.state === 'waiting' || j.state === 'running'));
             const fail = ro ? null : jobs.find(j => j.room === r.id && j.state === 'failed' && !j.seen) || null;
             const state = group ? '' : [...r.messages].reverse().find(x => liveKey(x.from) === liveKey(os[0]) && String(x.state || '').trim())?.state || '';
-            out.orbit = { id: r.id, title: V.titleOf(r), group, faceOf: !group && !ro ? os[0] : '', sub: group ? [...os, '나'].join(' · ') : state, chips, asOwner: ro, msgs, draft: obDraft, typing, snapBusy: typing && liveSnapBusy(realM), fail: fail ? { id: fail.id } : null, swipe: sw && !sw.coming ? { at: sw.at, count: sw.count } : null, picking: !ro && obPicks ? obPicks.size : null,
+            out.orbit = { id: r.id, title: V.titleOf(r), group, there: thereAt, faceOf: !group && !ro ? os[0] : '', sub: group ? [...os, '나'].join(' · ') : state, chips, asOwner: ro, msgs, draft: obDraft, typing, snapBusy: typing && liveSnapBusy(realM), fail: fail ? { id: fail.id } : null, swipe: sw && !sw.coming ? { at: sw.at, count: sw.count } : null, picking: !ro && obPicks ? obPicks.size : null,
                 list: !ro && obList ? (items => ({ items, picks: [...obList].filter(n => items.some(x => x.no === n)), busy: !!sw?.coming }))(liveSwipeList(realM, r.id)) : null };
         }
         if (v === 'orbitface') { if (!obFc) { view = 'orbit'; return orbitUi(); } out.orbit = { name: obFc.who, back: obFc.back, src: obFc.src, album: obFc.album.map((url, i) => ({ url, on: i === obFc.sel })), busy: obFc.busy }; }

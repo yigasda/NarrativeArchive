@@ -91,7 +91,7 @@ export function orbitList(p, now, o) {
 }
 
 // 방 안 (시안 C): 그 사람 색 바탕, 유리 머리줄 · 말풍선 · 입력칸
-// o: { id, title, group, sub, chips: [{ icon, text }], asOwner (주인 계정: 읽기만), draft, clock, faceOf (1:1 · 내 계정: 머리줄 얼굴을 누르면 그 사람 프사 바꾸기),
+// o: { id, title, group, sub, there: { icon, time } (1:1 상대의 현지 시각이 내 시각과 다를 때: 이름 바로 옆에 낮 · 저녁 · 밤 그림 + 시각, 시안 sheetCut2의 6), chips: [{ icon, text }], asOwner (주인 계정: 읽기만), draft, clock, faceOf (1:1 · 내 계정: 머리줄 얼굴을 누르면 그 사람 프사 바꾸기),
 //      msgs: [{ day } | { mine, from, text, ko, time, unread, id, open, held (길게 눌린 말), pick (고르는 중: true | false), wait (번역 중), reply (맨 끝 답장 묶음), dots (그 묶음의 마지막 말) }],
 //      swipe: { at, count } | null (맨 끝 답장 넘기기), picking: 고른 수 | null,
 //      list: { items: [{ no, now, bubbles: [{ text, ko }] }], picks: [no], busy (답장이 오는 중: 지우기 막힘) } | null (받아 둔 답장 창) }
@@ -111,7 +111,7 @@ export function orbitRoom(p, now, o) {
         <div class="ob_bkb"><button type="button" class="ob_bkno na_ob_slkeep"${L.busy || L.items.length < 2 ? ' disabled' : ''}>지금 것만 남기기</button><button type="button" class="ob_bkok na_ob_sldrop"${L.busy || !L.picks.length ? ' disabled' : ''}>${L.picks.length ? `${L.picks.length}개 ` : ''}버리기</button></div></div>`;
     const holding = o.msgs.some(x => x.held);
     return `<div class="ob_bg"><span class="ob_blob" style="background:${orbitBg(o.title, o.group)}"></span></div>${axBar(p, o.clock || now, '#fff')}
-      <div class="ob_ct ob_glass"><button type="button" class="ob_gb" data-go="orbit" aria-label="뒤로">${ic('back', 21, '#1b1d24', 2.2)}</button>${o.faceOf ? `<button type="button" class="ob_fb na_ob_face" data-n="${esc(o.faceOf)}" aria-label="프사 바꾸기">${face(o.title, 40, o.group)}</button>` : face(o.title, 40, o.group)}<span class="ob_nm"><b>${esc(o.title)}</b>${o.sub ? `<span>${esc(o.sub)}</span>` : ''}</span></div>
+      <div class="ob_ct ob_glass"><button type="button" class="ob_gb" data-go="orbit" aria-label="뒤로">${ic('back', 21, '#1b1d24', 2.2)}</button>${o.faceOf ? `<button type="button" class="ob_fb na_ob_face" data-n="${esc(o.faceOf)}" aria-label="프사 바꾸기">${face(o.title, 40, o.group)}</button>` : face(o.title, 40, o.group)}<span class="ob_nm"><b><i>${esc(o.title)}</i>${o.there ? `<em class="ob_lt cg_num">${ic(o.there.icon, 13)}${esc(o.there.time)}</em>` : ''}</b>${o.sub ? `<span>${esc(o.sub)}</span>` : ''}</span></div>
       ${o.chips.length ? `<div class="ob_chips">${o.chips.map(c => `<span class="ob_chip">${ic(c.icon, 13, '#fff')}${esc(c.text)}</span>`).join('')}</div>` : ''}
       <div class="ob_msgs ax_scroll${o.asOwner ? ' ro' : ''}${holding ? ' hold na_ob_hold' : ''}${o.picking != null ? ' picking' : ''}"><div class="ob_mi">${o.msgs.map(msg).join('')}${o.snapBusy ? '<div class="ob_fail ob_note"><span>이야기 정리 중</span></div>' : o.typing ? '<div class="ob_typ ob_glass" aria-label="입력 중"><i></i><i></i><i></i></div>' : ''}${o.fail ? `<div class="ob_fail"><span>답장을 못 받았어요</span><button type="button" class="ob_retry na_ob_retry" data-id="${esc(o.fail.id)}">다시</button></div>` : ''}</div></div>
       ${o.asOwner ? '' : o.picking != null ? `<div class="ob_inp ob_pbar"><span>${o.picking}개 선택</span><span class="ob_pbtn"><button type="button" class="na_ob_ptr"${o.picking ? '' : ' disabled'}>재번역</button><button type="button" class="na_ob_pdel red"${o.picking ? '' : ' disabled'}>삭제</button><button type="button" class="na_ob_pquit">취소</button></span></div>`

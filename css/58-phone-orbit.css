@@ -76,7 +76,9 @@
 .ax .ob_ct { display: flex; flex: none; align-items: center; gap: 10px; margin: 2px 10px 0; height: 62px; padding: 0 10px; border-radius: 24px; }
 .ax .ob_gb { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; --axr: 50%; }
 .ax .ob_nm { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.ax .ob_nm b { font-size: 16.5px; font-weight: 600; color: #1b1d24; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; --axfs: 16.5px; }
+.ax .ob_nm b { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 16.5px; font-weight: 600; color: #1b1d24; white-space: nowrap; --axfs: 16.5px; }
+.ax .ob_nm b i { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-style: normal; }
+.ax .ob_lt { flex: none; display: inline-flex; align-items: center; gap: 4px; font-style: normal; font-size: 12.5px; font-weight: 600; color: rgba(30, 32, 40, 0.6); --axfs: 12.5px; }
 .ax .ob_nm span { font-size: 12px; color: rgba(30, 32, 40, 0.62); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; --axfs: 12px; }
 /* 칩은 말 위에 떠 있어요 (시안 docs/mockups/phone2-edit sheetCut T2): 자리를 차지하지 않아서 말이 머리줄 바로 밑까지 올라가고
    칩 뒤로 지나가요. 말 목록의 맨 위는 서서히 옅어져서 말풍선이 딱 잘려 보이지 않아요 */
