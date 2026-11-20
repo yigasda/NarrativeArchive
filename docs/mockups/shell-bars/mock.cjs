@@ -25,6 +25,19 @@ function NSVG(W, H, r2, r1 = 6) { const X = r1, k = 0.45;
   return `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='${W + 2 * X}' height='${H}' viewBox='0 0 ${W + 2 * X} ${H}'><path d='${d}' fill='#000'/></svg>`)}")`; }
 function N2(W, H, r2) { return `.na_phl .na_ph_notch { width: ${W + 12}px !important; height: ${H}px !important; border-radius: 0 !important; background: ${NSVG(W, H, r2)} no-repeat !important; padding-right: ${Math.round(W * 0.12) + 6}px !important; }
   .na_phl .na_ph_notch::before, .na_phl .na_ph_notch::after { display: none !important; }`; }
+// 하단바 자리에 뿌연 유리 띠 (텔레그램처럼). top: 띠 위로 더 올릴 높이(px), pill: 막대를 띠 맨 위에 그리기
+function GL(extra, pill) { const h = `calc(var(--na-nb, 0px) + ${extra}px)`;
+  const PILL = `url("data:image/svg+xml,${encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' width='142' height='5'><rect width='142' height='5' rx='2.5' fill='rgba(20,22,28,0.8)'/></svg>")}")`;
+  // (실리태번 '빠른 UI'가 흐림을 꺼서 흐림 없이도 뿌옇게 보이게: 반투명 흰 막)
+  return `.na_phl .na_ph_scr::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: ${h}; z-index: 40; pointer-events: none;
+    background: ${pill ? `${PILL} center ${pill}px / 142px 5px no-repeat, ` : ''}linear-gradient(rgba(255,255,255,.5), rgba(255,255,255,.66));
+    -webkit-backdrop-filter: blur(18px) saturate(1.6); backdrop-filter: blur(18px) saturate(1.6); box-shadow: inset 0 0.5px 0 rgba(255,255,255,.7), 0 -0.5px 0 rgba(0,0,0,.06); border-radius: 0 !important; }
+  ${extra ? `.na_phl .na_ph_scr { --nbk: calc((var(--na-nb, 0px) + ${extra - 8}px) / var(--k, 1)) !important; }` : ''}
+  ${pill !== null ? `.na_phl .ax .ax_ind span, .na_phl .cg_ind span { visibility: hidden !important; }` : ''}`; }
+// 하단 안개 (텔레그램): 경계선 없이 위는 투명 → 아래로 갈수록 뿌옇게. 띠가 아니라 그라데이션 하나. a: 맨 아래 진하기, up: 버튼 줄 위로 번지는 높이(px)
+function MIST(a, up) { return `.na_phl .na_ph_scr > .cg_canvas::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: calc((var(--na-nb, 0px) + ${up}px) / var(--k, 1)); z-index: 3; pointer-events: none;
+    background: linear-gradient(rgba(255,255,255,0), rgba(255,255,255,${(a * 0.6).toFixed(2)}) 45%, rgba(255,255,255,${a})); }
+  .na_phl .na_ph_scr > .cg_canvas { position: relative; } .na_phl .ax .ob_inp { z-index: 4; }`; }
 const OPT = {
   A: `${BASE} .na_phl ${BAR} { height: ${sb}px !important; padding: 0 !important; visibility: hidden; } .na_phl .na_ph_notch { display: none !important; }`,
   B: `${BASE} .na_phl ${BAR} { height: ${(+sb + 20).toFixed(1)}px !important; padding: ${sb}px 0 0 !important; justify-content: center !important; align-items: center !important; }
@@ -40,12 +53,15 @@ const OPT = {
   // 예전 아이폰 노치: 화면 맨 위에 붙은 검은 홈, 아래 모서리 둥글고 위쪽 양옆은 안으로 휜 귀. G 넓은 노치(X~12) · H 좁은 노치(13~14)
   // R: 시안이 아니라 실제 코드(css/59-phone-shell.css) — 앱이 알려 주는 하단 버튼 줄 높이만 흉내 내요
   R: '',
+  M1: MIST(0.55, 28), M2: MIST(0.75, 40), M3: MIST(0.9, 56),
+  // 뿌연 하단 띠: S1 막대를 띠 맨 위 · S2 띠를 막대만큼 더 올려 그 안에 막대 · S3 띠만(앱은 막대 없음, 홈은 그대로)
+  S1: GL(0, 7), S2: GL(22, 9), S3: GL(0, 0) + ' .na_phl .ax .ax_ind span { visibility: hidden !important; }',
   // 노치 다시 (실제 코드 위에): N1 폭 140 · N2 124 · N3 124 낮고 납작 · N4 108 작게
   N1: N2(140, 30, 18), N2: N2(124, 30, 18), N3: N2(124, 26, 12), N4: N2(108, 27, 15),
   G: NOTCH(209),
   H: NOTCH(162),
 };
-const NOSB = { E: 1, F: 1, G: 2, H: 2, R: 2, N1: 2, N2: 2, N3: 2, N4: 2 };
+const NOSB = { M1: 2, M2: 2, M3: 2, E: 1, F: 1, G: 2, H: 2, R: 2, S1: 2, S2: 2, S3: 2, N1: 2, N2: 2, N3: 2, N4: 2 };
 // 기기 바 그림 (소망 폰: 왼쪽 KT 시간, 오른쪽 아이콘 · 아래 파란 버튼 셋 + 분홍 하트)
 const DEV = (ink, nosb) => `<div id="mk_dev" style="position:fixed;inset:0;pointer-events:none;z-index:99999;font-family:Roboto,'Noto Sans KR',sans-serif">
   ${nosb ? `<i style="position:absolute;left:50%;top:${HOLE}px;width:11px;height:11px;margin:-5.5px 0 0 -5.5px;border-radius:50%;background:#050505;${nosb === 2 ? "" : "box-shadow:0 0 0 1.5px rgba(40,40,40,.6)"}"></i>` : ''}<div style="${nosb ? 'visibility:hidden;' : ''}position:absolute;left:0;right:0;top:0;height:${SB}px;display:flex;align-items:center;justify-content:space-between;padding:0 16px 0 22px;color:${ink};font-size:14px;font-weight:500">
@@ -58,21 +74,22 @@ const DEV = (ink, nosb) => `<div id="mk_dev" style="position:fixed;inset:0;point
     <svg width="28" height="24" viewBox="0 0 24 22" fill="none" stroke="#f29bb0" stroke-width="2.6"><path d="M12 20s-8-5-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 9c0 6-8 11-8 11z"/></svg>
     <svg width="14" height="20" viewBox="0 0 14 20" fill="none" stroke="#7b93dd" stroke-width="2.4" stroke-linecap="round"><path d="M11 2 3 10l8 8"/></svg></div></div>`;
 const HOLE = 16; // 갤럭시 카메라 구멍 가운데 (위에서 dp, 기종마다 조금 달라요)
-const INK = { home: '#1b1d22', bank: '#fff', orbitroom: '#fff' };
+const INK = { home: '#1b1d22', bank: '#fff', orbitroom: '#fff', diary: '#1b1d22' };
 (async () => {
   reset();
   const s = await open('light', { out: os.tmpdir(), width: W, height: H, mobile: true, init: true }); const p = s.p;
   try {
     await s.run(SAMPLE_MONEY);
+    await s.run(async ({ ph }) => { ph.diary = [['11-13', 'Akzeptabel', '알겠다', 'Ich habe Albrecht den Umstrukturierungsplan übergeben. Vierzig Seiten Risikominderung. Er las die Zusammenfassung schweigend und klappte die Ledermappe zu.'], ['11-15', 'Videoanruf', '영상통화', 'Sie hatte die Haare locker hochgesteckt. Im Hintergrund redeten Leute auf Koreanisch, irgendein Café in Seoul.'], ['11-17', 'Seoul', '서울 지사', 'Ich habe mir die Organigramme des Seouler Büros noch einmal angesehen. Ich könnte mich versetzen lassen.'], ['11-18', 'Das Foto', '사진', 'Bevor ich die Wohnung verließ, rückte ich den Silberrahmen auf der Konsole im Flur zurecht.'], ['11-20', '08:00', '오전 8시', 'Eckbüro im 34. Stock. Die Sonne steigt durch den Dunst über dem Bankenviertel. Mein Bildschirm leuchtet mit ihrer Nachricht auf.']].map(([date, title, kt, text]) => ({ date, title, kt, text })); });
     await s.run(async ({ m }) => { const n = SillyTavern.getContext().chat.length - 1; const t = String(m.text), cut = t.search(/\n# STATE/), add = `\n## #26–#${n} — Am Fluss (Oct 25, night, Varo)\n- Sie redeten.\n`; m.text = cut >= 0 ? t.slice(0, cut).replace(/\s*$/, '') + '\n' + add + t.slice(cut) : t + add; m.boundary = n; });
     await s.to('set'); await p.click('.na_ph_pmode[data-v=live]'); await p.waitForTimeout(600); await p.click('.na_ob_start'); await p.waitForTimeout(2000);
     await s.to('orbitnew'); await p.waitForTimeout(400); await p.locator('.na_ph_frame .na_ob_pick', { hasText: 'Mara' }).first().click(); await p.waitForTimeout(300); await p.click('.na_ph_frame .na_ob_make'); await p.waitForTimeout(500);
     const rid = await p.evaluate(async B => { const core = await import(B + 'core.js'), st = await import(B + 'phone2store.js'); const m = core.getMeta(), r = st.liveRooms(m)[0], me = st.liveWorld(m).persona; const T = [[me, '내일 열 시에 정비소 올 수 있어?', ''], ['Mara', 'Ja klar, Samstag passt!', '응 좋아, 토요일 괜찮아!'], ['Mara', 'Bring Kuchen mit 😄', '케이크 가져와 😄'], [me, '무슨 케이크', ''], ['Mara', 'Den mit Kirschen', '체리 든 거'], ['Mara', 'Vom Bäcker an der Ecke', '모퉁이 빵집 거'], [me, '거기 일찍 닫잖아', ''], ['Mara', 'Dann geh halt früher', '그럼 좀 일찍 가'], [me, '알겠어 내일 봐', ''], ['Mara', 'Bis morgen', '내일 봐']]; const t0 = Date.now() - T.length * 60000; r.messages = T.map(([from, text, ko], i) => ({ id: `mk${i}`, from, text, ko, at: t0 + i * 60000, told: true, ...(from === 'Mara' ? { state: '회사 · 점심 먹고 자리' } : {}) })); for (const n of r.members) (r.read ||= {})[st.liveKey(n)] = Date.now(); return r.id; }, B);
     const only = process.argv[2] ? process.argv[2].split(',') : Object.keys(OPT);
     for (const o of only) {
-      await p.evaluate(([nb, on]) => document.documentElement.style.setProperty('--na-nb', on ? `${nb}px` : '0px'), [NB, o === 'R' || o[0] === 'N']);
+      await p.evaluate(([nb, on]) => document.documentElement.style.setProperty('--na-nb', on ? `${nb}px` : '0px'), [NB, o === 'R' || o[0] === 'N' || o[0] === 'S' || o[0] === 'M']);
       await p.evaluate(css => { document.getElementById('mk_opt')?.remove(); const t = document.createElement('style'); t.id = 'mk_opt'; t.textContent = css; document.head.append(t); }, OPT[o]);
-      for (const [v, i] of [['home'], ['bank'], ['orbitroom', rid]]) {
+      for (const [v, i] of 'SM'.includes(o[0]) ? [['home'], ['diary'], ['orbitroom', rid], ['bank']] : [['home'], ['bank'], ['orbitroom', rid]]) {
         if (v === 'orbitroom') await s.to('orbit');
         await s.to(v, i); await p.waitForTimeout(500);
         await p.evaluate(({ html }) => { document.getElementById('mk_dev')?.remove(); const d = document.getElementById('na_phl'); d.insertAdjacentHTML('beforeend', html); const t = d.querySelector('.ax_sb .cg_num, .cg_sb .cg_num'); d.style.setProperty('--ct', JSON.stringify(t ? t.textContent : '')); }, { html: DEV(INK[v], NOSB[o]) });
