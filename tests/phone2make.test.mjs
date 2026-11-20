@@ -162,8 +162,14 @@ test('같은 폰을 만드는 중이면 기다리라고 해요; 반영(update)�
         await new Promise(r => setTimeout(r, 20));
         assert.equal(PD.phoneMaking(c.d, 'Mara'), true);
         await assert.rejects(() => MK.liveMakePhone(c.d, 'Mara', { apps: ['note'] }), /이 폰을 만드는 중이에요/);
+        // 폰을 닫았다 다시 열면 서랍이 새로 생겨요: 새 서랍도 만드는 중인 걸 알고, 두 번 만들지 않아요. 다른 채팅의 폰은 몰라요
+        const again = L.liveMeta(c.real, { now: () => '11-14 16:05' }), other = world();
+        assert.notEqual(again, c.d);
+        assert.equal(PD.phoneMaking(again, 'Mara'), true); assert.equal(PD.phoneMaking(again, 'Ivo'), false); assert.equal(PD.phoneMaking(other.d, 'Mara'), false);
+        await assert.rejects(() => MK.liveMakePhone(again, 'Mara', { apps: ['note'] }), /이 폰을 만드는 중이에요/);
+        assert.equal(asked, 1);
         go(); await first;
-        assert.equal(PD.phoneMaking(c.d, 'Mara'), false); assert.equal(asked, 1);
+        assert.equal(PD.phoneMaking(c.d, 'Mara'), false); assert.equal(PD.phoneMaking(again, 'Mara'), false); assert.equal(asked, 1);
         await assert.rejects(() => MK.liveMakePhone(c.d, 'Mara', { update: true }), /실시간 폰은 메신저를 나갈 때 반영해요/);
         const p1 = c.real.phones.mara, was = JSON.stringify(p1);
         for (const m of [c.real, { ...c.real, phoneUpto: 2, phoneRecent: () => 'x', phoneJournal: 'test' }]) await assert.rejects(() => MK.liveMakePhone(m, 'Mara'), /실시간 폰의 서랍이 아니에요/);

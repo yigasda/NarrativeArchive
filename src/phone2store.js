@@ -185,6 +185,10 @@ let storyKeeper = null;
 export const setStoryKeeper = fn => { storyKeeper = typeof fn === 'function' ? fn : null; };
 // now: p => "MM-DD HH:MM", the time it is now on that phone's clock (the caller's: the story's date and the real clock),
 // answered as phoneNow
+// 새 서랍이 생길 때마다 불러요 (서랍, 그 세계): 서랍에 붙여 두는 표시("폰 만드는 중")를 세계마다 하나로 두려는 것.
+// 폰을 닫았다 열면 서랍이 새로 생겨서, 서랍에만 붙인 표시는 안 보여요
+let drawerSeed = null;
+export const setDrawerSeed = fn => { drawerSeed = typeof fn === 'function' ? fn : null; };
 export function liveMeta(m, { now = null } = {}) {
     const w = liveWorld(m);
     if (!w) throw new Error('아직 폰 2가 없어요');
@@ -220,6 +224,7 @@ export function liveMeta(m, { now = null } = {}) {
         defineProperty: (_, k, d) => { if ('value' in d) { if (pass(k)) m[k] = d.value; else if (own(k)) w[LIVE_OWN[k]] = d.value; else drawer[k] = d.value; } return true; },
     });
     CHAT_OF.set(made, m);
+    drawerSeed?.(made, w);
     return made;
 }
 // is `p` one of the chat's own (폰 1's) phones or phones being made, by the drawer of that chat? (the very object: a 폰 2
