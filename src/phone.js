@@ -38,7 +38,7 @@ import { confirm, esc } from './util.js';
 import { liveMode, liveWorld, livePhone, liveMeta, setLiveMode, resetLive, rememberLiveOwner, readLiveOwner, liveKey, liveRooms, ensureRoom, nameRoom, sendLive, readLive, unreadBy, enqueueReplies, seeFailure } from './phone2store.js';
 import { shiftLabel, liveWall, viewerWall, startShift } from './phone2clock.js';
 import { orbitList, orbitRoom, orbitNew, orbitHomeWidget, liveStart } from './phoneorbit.js';
-import { liveStoryText, beginFromStory, liveBranched, adoptChat, rebeginFromStory, rebeginKeepingChats } from './phone2story.js';
+import { beginFromStory, liveBranched, adoptChat, rebeginFromStory, rebeginKeepingChats } from './phone2story.js';
 import { liveSnapNow, snapParts } from './phone2snap.js';
 import { liveGo, liveReflect, liveCanUndo, liveUndo, liveUnreflected, liveNowOf, liveSnapBusy } from './phone2go.js';
 import { liveYearsNow } from './phone2year.js';
@@ -174,7 +174,7 @@ export async function openPhone(who = null) {
     if (!stillHere()) return;
     // 실시간: the drawer is made once for its world and kept (a new one each time would copy the glossary again)
     let drawer = null;
-    const useMode = () => { m = live() ? (drawer?.w === liveWorld(realM) ? drawer.d : (drawer = { w: liveWorld(realM), d: liveMeta(realM, { text: () => liveStoryText(realM, liveWorld(realM)), now: liveNowOf(realM) }) }).d) : realM; setPhoneMeta(m === realM ? null : m); };
+    const useMode = () => { m = live() ? (drawer?.w === liveWorld(realM) ? drawer.d : (drawer = { w: liveWorld(realM), d: liveMeta(realM, { now: liveNowOf(realM) }) }).d) : realM; setPhoneMeta(m === realM ? null : m); };
     // 실시간: the phones' year by the running clock once the drawer is ready, before anything is drawn (a new year since
     // the last reflection shows at once); saved only when one changed
     const yearsNow = async () => { if (!live()) return; try { if (liveYearsNow(m)) await saveMeta(); } catch (err) { console.warn('[narrative-archive] live years', err); } };
