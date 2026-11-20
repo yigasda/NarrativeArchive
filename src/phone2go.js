@@ -14,7 +14,7 @@ import { resolvePhoneProfile, ownerProfileBlock } from './phoneprofile.js';
 import { parseJson } from './phoneparse.js';
 import { nameKey } from './people.js';
 import { liveWorld, livePhone, liveMeta, liveKey, liveAtYear, isSnap } from './phone2store.js';
-import { liveChatTail, liveSnapBehind, liveSnapExtend } from './phone2snap.js';
+import { liveChatTail, liveSnapBehind, liveSnapExtend, liveSnapNow } from './phone2snap.js';
 import { liveStoryText } from './phone2story.js';
 import { liveWall } from './phone2clock.js';
 import { gatherReply } from './phone2live.js';
@@ -54,25 +54,29 @@ async function cardOf(p) {
 const open = real => { const md = ctx().chatMetadata; return !md || md[MODULE] === real; };
 // whether the 폰 2 a go began with is still there to write to
 const here = (real, w) => open(real) && liveWorld(real)?.id === w.id;
-// 롤플이 더 진행됐을 때 (요약본으로 시작한 폰): 답장을 받기 전에, 요약본 뒤로 롤플이 끝 메시지들에 다 안 담길 만큼
-// 진행됐으면 요약본을 지금 끝까지 늘려요(phone2snap.js liveSnapExtend). 한 번에 하나만 돌고, 실패하면 답장은 그대로
-// 가고(가진 요약본 + 지금의 끝 메시지) 롤플이 더 진행될 때까지 다시 하지 않아요.
+// 이야기에서 시작한 폰의 요약본을 답장 전에 챙겨요 (phone2snap.js). 한 번에 하나만 돌고, 실패하면 답장은 그대로 가고
+// 롤플이 더 진행될 때까지 다시 하지 않아요.
+//   요약본이 없는 폰(요약본 방식 전에 시작해 둔 폰 · 분기한 방에서 저절로 다시 시작한 폰): 지금 이야기의 끝까지 요약본을
+//     만들어 넣어요. 그때부터 그 폰도 롤플 채팅을 번호로 읽지 않아요.
+//   요약본이 있는 폰: 요약본 뒤로 롤플이 끝 메시지들에 다 안 담길 만큼 진행됐으면 요약본을 지금 끝까지 늘려요.
 const extending = new WeakMap();
-// 요약본을 늘리는 중인지 (화면의 "이야기 정리 중")
+// 요약본을 만들거나 늘리는 중인지 (화면의 "이야기 정리 중")
 export const liveSnapBusy = real => extending.has(real);
 async function keepUpStory(real, tell) {
     if (extending.has(real)) return extending.get(real);
     const w = liveWorld(real);
-    if (!w || w.from !== 'story' || !isSnap(w.snap) || !open(real)) return null;
-    const tail = liveChatTail(), had = w.snap;
-    if (!liveSnapBehind(had, tail) || w.snapTried === tail.end) return null;
+    if (!w || w.from !== 'story' || !open(real)) return null;
+    const snapOf = () => (isSnap(w.snap) ? w.snap : null);
+    const tail = liveChatTail(), had = snapOf();
+    if (w.snapTried === tail.end || (had && !liveSnapBehind(had, tail))) return null;
     // (marked busy before anything is asked, so one asked meanwhile waits for this one)
     let done;
     extending.set(real, new Promise(r => { done = r; })); tell();
     try {
-        const next = await liveSnapExtend(real, had);
-        // (written only to the 폰 2 and the snapshot it was made from)
-        if (here(real, w) && w.snap === had && isSnap(next)) { w.snap = next; delete w.snapTried; await saveMeta(); }
+        const next = had ? await liveSnapExtend(real, had) : (await liveSnapNow(real))?.snap;
+        if (!isSnap(next)) throw new Error('이야기 요약본을 받지 못했어요');
+        // (written only to the 폰 2 it was made for, and only if its snapshot is still the one this began from)
+        if (here(real, w) && snapOf() === had) { w.snap = next; delete w.snapTried; await saveMeta(); }
     } catch (err) {
         console.warn('[narrative-archive] live story', err);
         if (here(real, w)) w.snapTried = tail.end;

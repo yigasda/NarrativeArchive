@@ -799,3 +799,42 @@ test('늘리는 동안 실시간 폰이 새로 시작됐으면 그 폰에는 안
     assert.equal(c.w.snap.upto, 50);
     delete T.metadata;
 });
+
+test('요약본 없이 시작해 둔 폰: 첫 답장 전에 지금 이야기의 끝까지 요약본을 만들어 넣어요. 실패하면 답장은 가고, 롤플이 더 진행될 때까지 다시 안 해요', async () => {
+    const c = snapWorld(); delete c.w.snap;
+    T.starts = 0; T.start = async m => { assert.equal(m, c.real); assert.ok(G.liveSnapBusy(c.real)); return { snap: structuredClone(SNAP1), upto: 40, chat: 'c1', fp: 'x' }; };
+    said(c, '어디야');
+    const saves = T.saves;
+    await G.liveGo(c.real);
+    assert.deepEqual([T.starts, T.extends], [1, 0]);
+    assert.deepEqual(c.w.snap, SNAP1);
+    assert.ok(T.saves > saves && !G.liveSnapBusy(c.real));
+    assert.equal(c.w.storyUpto, 3);
+    assert.ok(T.replyInput.includes('[LAST MESSAGES]\nMara: hurry\n\nRen: the train is late'));
+    said(c, '알겠어');
+    await G.liveGo(c.real);
+    assert.deepEqual([T.starts, T.extends], [1, 0]);
+    // 실패
+    const d = snapWorld(); delete d.w.snap;
+    T.starts = 0; T.start = new Error('모델이 답을 안 줬어요');
+    said(d, '어디야');
+    await G.liveGo(d.real);
+    assert.equal(T.starts, 1);
+    assert.ok(!('snap' in d.w) && d.w.snapTried === 40);
+    assert.equal(d.room.messages.at(-1).text, '응');
+    assert.ok(!T.replyInput.includes('[LAST MESSAGES]'));
+    said(d, '아직?');
+    await G.liveGo(d.real);
+    assert.equal(T.starts, 1);
+    T.tail = { lines: ['[#41] Ren: here'], first: 41, end: 41 }; T.start = { snap: { ...structuredClone(SNAP1), upto: 41 } };
+    said(d, '왔어?');
+    await G.liveGo(d.real);
+    assert.equal(T.starts, 2);
+    assert.equal(d.w.snap.upto, 41);
+    // 처음부터 시작한 폰은 요약본을 안 만들어요
+    const f = snapWorld(); delete f.w.snap; f.w.from = 'fresh'; T.starts = 0;
+    said(f, '어디야');
+    await G.liveGo(f.real);
+    assert.equal(T.starts, 0);
+    delete T.metadata; delete T.start;
+});
