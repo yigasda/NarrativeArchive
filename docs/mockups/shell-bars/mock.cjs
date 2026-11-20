@@ -62,6 +62,12 @@ const U1 = BUB2 + REACT + ` .na_phl .ax .ob_b.th { margin-left: 34px !important;
   .na_phl .ax .mk_sep { align-self: center; font-size: 11px; color: #fff; opacity: .9; margin: 8px 0 4px; text-shadow: 0 1px 6px rgba(40,40,90,.2); }`;
 const IGRE = ` .na_phl .ax .ob_b.mk_hasre { margin-bottom: 12px !important; position: relative; } .na_phl .ax .mk_re { position: absolute; bottom: -13px; left: 10px !important; right: auto !important; display: inline-grid; place-items: center; min-width: 26px; height: 22px; padding: 0 5px; box-sizing: border-box; border-radius: 999px; font-size: 12px !important; --axfs: 12px; line-height: 1 !important; background: rgba(244, 245, 247, 0.92); box-shadow: 0 0 0 2.5px rgba(255, 255, 255, 0.85); }`;
 const U1B = U1.replace(REACT, '') + IGRE + ` .na_phl .ax .ob_b.th { margin-left: 44px !important; } .na_phl .ax .mk_av { left: -42px !important; width: 34px !important; height: 34px !important; font-size: 14px !important; --axfs: 14px; line-height: 34px !important; }`;
+// U1C: 인스타처럼 배지를 말풍선에서 파낸 자리에 — 말풍선에 동그란 홈(mask), 배지는 불투명 연회색, 말풍선 밖 형제로 둬요(말풍선 마스크에 안 잘리게)
+const PILLHOLE = `url("data:image/svg+xml,${encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' width='38' height='31'><rect width='38' height='31' rx='15.5' fill='#000'/></svg>")}")`;
+const IGRE2 = ` .na_phl .ax .ob_b.mk_hasre { margin-bottom: 22px !important; -webkit-mask: ${PILLHOLE} left 10px bottom -20px / 38px 31px no-repeat, linear-gradient(#000, #000); -webkit-mask-composite: xor; mask: ${PILLHOLE} left 10px bottom -20px / 38px 31px no-repeat exclude, linear-gradient(#000, #000); }
+  .na_phl .ax .mk_rew { position: relative; height: 0; flex: none; } .na_phl .ax .mk_rew .mk_av { top: -59px; bottom: auto; }
+  .na_phl .ax .mk_re2 { position: absolute; left: 13px; top: -33px; width: 32px; height: 25px; border-radius: 12.5px; display: grid; place-items: center; font-size: 13.5px !important; --axfs: 13.5px; line-height: 1 !important; background: #f3f4f5; box-shadow: 0 1px 2px rgba(20, 24, 30, 0.1); }`;
+const U1C = U1.replace(REACT, '') + IGRE2 + ` .na_phl .ax .ob_b.th { margin-left: 44px !important; } .na_phl .ax .mk_av { left: -42px !important; width: 34px !important; height: 34px !important; font-size: 14px !important; --axfs: 14px; line-height: 34px !important; }`;
 const U2 = BUB2 + PILL + EMO + REACT + ` .na_phl .ax .ob_b.th { position: relative; padding-right: 50px !important; } .na_phl .ax .mk_t { position: absolute; right: 12px; bottom: 7px; font-size: 10px !important; --axfs: 10px; line-height: 1 !important; opacity: .5; }
   .na_phl .ax .ob_b { overflow: visible !important; }
   .na_phl .ax .ob_b.th:not(.ob_b.th + .ob_b.th) { border-top-left-radius: 0 !important; border-bottom-left-radius: 18px !important; } .na_phl .ax .ob_b.th + .ob_b.th { border-bottom-left-radius: 18px !important; }
@@ -82,6 +88,13 @@ const JSX = {
     const t = rds[0]?.querySelector('.cg_num')?.textContent || ''; const d = mi.querySelector('.ob_day'); if (d) d.textContent = `오늘 ${t}`;
     const ra = [...mi.querySelectorAll('.ob_b.th')].find(b => /Kuchen/.test(b.textContent)); if (ra) { ra.classList.add('mk_hasre'); ra.insertAdjacentHTML('beforeend', '<span class="mk_re">❤️</span>'); }
     const rb = [...mi.querySelectorAll('.ob_b.me')].find(b => /케이크/.test(b.textContent)); if (rb) { rb.classList.add('mk_hasre'); rb.insertAdjacentHTML('beforeend', '<span class="mk_re">😂</span>'); } },
+  U1C: ({ SMILE }) => { const mi = document.querySelector('.na_ph_frame .ob_mi');
+    mi.querySelectorAll('.ob_b.th').forEach(b => { const n = b.nextElementSibling; if (!(n && n.matches('.ob_b.th'))) { const a = document.createElement('span'); a.className = 'mk_av'; a.textContent = 'M'; b.append(a); } });
+    const rds = mi.querySelectorAll('.ob_rd'); const last = rds[rds.length - 1]; if (last) { last.classList.add('mk_last'); last.textContent = '읽음'; }
+    const t = rds[0]?.querySelector('.cg_num')?.textContent || ''; const d = mi.querySelector('.ob_day'); if (d) d.textContent = `오늘 ${t}`;
+    const put = (b, e) => { if (!b) return; b.classList.add('mk_hasre'); const w = document.createElement('div'); w.className = 'mk_rew'; w.style.width = b.offsetWidth + 'px'; w.style.alignSelf = getComputedStyle(b).alignSelf; w.style.marginLeft = getComputedStyle(b).marginLeft; w.innerHTML = `<span class="mk_re2">${e}</span>`; const av = b.querySelector('.mk_av'); if (av) w.append(av); b.after(w); };
+    put([...mi.querySelectorAll('.ob_b.th')].find(b => /Kuchen/.test(b.textContent)), '❤️');
+    put([...mi.querySelectorAll('.ob_b.me')].find(b => /케이크/.test(b.textContent)), '😂'); },
   U2: ({ SMILE }) => { const mi = document.querySelector('.na_ph_frame .ob_mi'); let last = '';
     [...mi.children].forEach(e => { if (e.matches('.ob_rd')) last = e.querySelector('.cg_num')?.textContent || last; if (e.matches('.ob_b.th')) { const [h, m] = (last || '16:30').split(':').map(Number); const mm = (m + 1) % 60; e.insertAdjacentHTML('beforeend', `<span class="mk_t">${String(h + (m + 1 >= 60 ? 1 : 0)).padStart(2, '0')}:${String(mm).padStart(2, '0')}</span>`); } });
     const inp = document.querySelector('.na_ph_frame .ob_inp'); inp.insertAdjacentHTML('afterbegin', SMILE);
@@ -106,7 +119,7 @@ const OPT = {
   // 예전 아이폰 노치: 화면 맨 위에 붙은 검은 홈, 아래 모서리 둥글고 위쪽 양옆은 안으로 휜 귀. G 넓은 노치(X~12) · H 좁은 노치(13~14)
   // R: 시안이 아니라 실제 코드(css/59-phone-shell.css) — 앱이 알려 주는 하단 버튼 줄 높이만 흉내 내요
   R: '',
-  B1: BUB1, B2: BUB2, B3: BUB3, B4: BUB4, U1, U2, U3, U1B,
+  B1: BUB1, B2: BUB2, B3: BUB3, B4: BUB4, U1, U2, U3, U1B, U1C,
   M1: MIST(0.55, 28), M2: MIST(0.75, 40), M3: MIST(0.9, 56),
   // 뿌연 하단 띠: S1 막대를 띠 맨 위 · S2 띠를 막대만큼 더 올려 그 안에 막대 · S3 띠만(앱은 막대 없음, 홈은 그대로)
   S1: GL(0, 7), S2: GL(22, 9), S3: GL(0, 0) + ' .na_phl .ax .ax_ind span { visibility: hidden !important; }',
@@ -115,7 +128,7 @@ const OPT = {
   G: NOTCH(209),
   H: NOTCH(162),
 };
-const NOSB = { U1B: 2, U1: 2, U2: 2, U3: 2, B1: 2, B2: 2, B3: 2, B4: 2, M1: 2, M2: 2, M3: 2, E: 1, F: 1, G: 2, H: 2, R: 2, S1: 2, S2: 2, S3: 2, N1: 2, N2: 2, N3: 2, N4: 2 };
+const NOSB = { U1C: 2, U1B: 2, U1: 2, U2: 2, U3: 2, B1: 2, B2: 2, B3: 2, B4: 2, M1: 2, M2: 2, M3: 2, E: 1, F: 1, G: 2, H: 2, R: 2, S1: 2, S2: 2, S3: 2, N1: 2, N2: 2, N3: 2, N4: 2 };
 // 기기 바 그림 (소망 폰: 왼쪽 KT 시간, 오른쪽 아이콘 · 아래 파란 버튼 셋 + 분홍 하트)
 const DEV = (ink, nosb) => `<div id="mk_dev" style="position:fixed;inset:0;pointer-events:none;z-index:99999;font-family:Roboto,'Noto Sans KR',sans-serif">
   ${nosb ? `<i style="position:absolute;left:50%;top:${HOLE}px;width:11px;height:11px;margin:-5.5px 0 0 -5.5px;border-radius:50%;background:#050505;${nosb === 2 ? "" : "box-shadow:0 0 0 1.5px rgba(40,40,40,.6)"}"></i>` : ''}<div style="${nosb ? 'visibility:hidden;' : ''}position:absolute;left:0;right:0;top:0;height:${SB}px;display:flex;align-items:center;justify-content:space-between;padding:0 16px 0 22px;color:${ink};font-size:14px;font-weight:500">
