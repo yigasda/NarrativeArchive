@@ -89,12 +89,12 @@ export function orbitList(p, now, o) {
 // o: { id, title, group, sub, chips: [{ icon, text }], asOwner (주인 계정: 읽기만), draft, clock,
 //      msgs: [{ day } | { mine, from, text, ko, time, unread, id, open, held (길게 눌린 말), pick (고르는 중: true | false), wait (번역 중), reply (맨 끝 답장 묶음), dots (그 묶음의 마지막 말) }],
 //      swipe: { at, count } | null (맨 끝 답장 넘기기), picking: 고른 수 | null }
-// 말 고치기 (시안 docs/mockups/phone2-edit M3 · W3): 길게 누르면 그 말 위 검정 알약(재번역 · 선택 · 삭제, 맨 끝 답장이면 답장 삭제도),
+// 말 고치기 (시안 docs/mockups/phone2-edit M3 · W3): 길게 누르면 그 말 위 검정 알약(재번역 · 선택 · 삭제, 맨 끝 답장이면 빨간 "답장 버리기"도. 빨강은 그것 하나만),
 // 선택이면 말마다 동그라미 + 입력칸 자리의 줄, 맨 끝 답장 아래 점(옆으로 밀어서 넘겨요)
 export function orbitRoom(p, now, o) {
     const koOf = x => (x.wait ? `<span class="ob_ko ob_wait"><i class="fa-solid fa-spinner fa-spin"></i> 번역 중</span>`
         : x.ko ? (x.open ? `<span class="ob_ko na_ob_ko" role="button" tabindex="0" data-id="${esc(x.id)}">${esc(x.ko)}</span>` : `<span class="ob_kof na_ob_ko" role="button" tabindex="0" data-id="${esc(x.id)}">${ic('tr', 13)}번역 보기</span>`) : '');
-    const pill = x => `<div class="ob_pill${x.mine ? ' me' : ''}">${[['na_ob_mtr', '재번역', ''], ['na_ob_mpick', '선택', ''], ['na_ob_mdel', '삭제', ' red'], ...(x.reply ? [['na_ob_swdel', '답장 삭제', ' red']] : [])].map(([c, l, r]) => `<button type="button" class="${c}${r}" data-id="${esc(x.id)}">${l}</button>`).join('')}</div>`;
+    const pill = x => `<div class="ob_pill${x.mine ? ' me' : ''}">${[['na_ob_mtr', '재번역', ''], ['na_ob_mpick', '선택', ''], ['na_ob_mdel', '삭제', ''], ...(x.reply ? [['na_ob_swdel', '답장 버리기', ' red']] : [])].map(([c, l, r]) => `<button type="button" class="${c}${r}" data-id="${esc(x.id)}">${l}</button>`).join('')}</div>`;
     const dots = w => `<div class="ob_swd na_ob_swd" aria-label="답장 ${w.at}/${w.count}">${Array.from({ length: Math.min(w.count, 9) }, (_, i) => `<i class="${i === Math.min(w.at, 9) - 1 ? 'on' : ''}"></i>`).join('')}</div>`;
     const msg = x => { if (x.day) return `<div class="ob_day">${esc(x.day)}</div>`;
         const bb = `<div class="ob_b na_ob_b ${x.mine ? 'me' : 'th ob_glass'}${x.held ? ' held' : ''}${x.reply ? ' na_ob_sw' : ''}" data-id="${esc(x.id)}">${esc(x.text)}${koOf(x)}</div>`;
