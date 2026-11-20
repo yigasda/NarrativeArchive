@@ -22,10 +22,14 @@ const OPT = {
       .na_phl .na_ph_notch { top: ${(+sb + 6).toFixed(1)}px !important; width: 96px !important; height: 30px !important; border-radius: 15px !important; justify-content: center !important; padding: 0 !important; gap: 7px; }
       .na_phl .na_ph_notch::before { content: var(--ct); color: #fff; font: 600 13px 'Inter Tight', sans-serif; letter-spacing: .01em; }`,
   D: `${BASE} .na_phl ${BAR} { height: ${(+sb + 54).toFixed(1)}px !important; padding-top: ${sb}px !important; } .na_phl .na_ph_notch { top: ${(+sb + 11).toFixed(1)}px !important; }`,
+  // 기기 상단바를 숨기고 가짜 바가 맨 위 (E: 지금 자리 그대로 · F: 섬을 카메라 구멍에 맞춰 올리고 바를 낮게)
+  E: `${BASE}`,
+  F: `${BASE} .na_phl ${BAR} { height: 42px !important; padding-top: 0 !important; } .na_phl .na_ph_notch { top: 4px !important; height: 29px !important; border-radius: 15px !important; width: 112px !important; }`,
 };
+const NOSB = { E: 1, F: 1 };
 // 기기 바 그림 (소망 폰: 왼쪽 KT 시간, 오른쪽 아이콘 · 아래 파란 버튼 셋 + 분홍 하트)
-const DEV = (ink) => `<div id="mk_dev" style="position:fixed;inset:0;pointer-events:none;z-index:99999;font-family:Roboto,'Noto Sans KR',sans-serif">
-  <div style="position:absolute;left:0;right:0;top:0;height:${SB}px;display:flex;align-items:center;justify-content:space-between;padding:0 16px 0 22px;color:${ink};font-size:14px;font-weight:500">
+const DEV = (ink, nosb) => `<div id="mk_dev" style="position:fixed;inset:0;pointer-events:none;z-index:99999;font-family:Roboto,'Noto Sans KR',sans-serif">
+  ${nosb ? `<i style="position:absolute;left:50%;top:${HOLE}px;width:11px;height:11px;margin:-5.5px 0 0 -5.5px;border-radius:50%;background:#050505;box-shadow:0 0 0 1.5px rgba(40,40,40,.6)"></i>` : ''}<div style="${nosb ? 'visibility:hidden;' : ''}position:absolute;left:0;right:0;top:0;height:${SB}px;display:flex;align-items:center;justify-content:space-between;padding:0 16px 0 22px;color:${ink};font-size:14px;font-weight:500">
     <span>KT 12:09 &nbsp;•</span><span style="display:flex;gap:6px;align-items:center">
     <svg width="15" height="12" viewBox="0 0 15 12" fill="none" stroke="${ink}" stroke-width="1.6"><path d="M1 4a9 9 0 0 1 13 0M3.5 6.8a5.5 5.5 0 0 1 8 0"/><circle cx="7.5" cy="10" r="1.2" fill="${ink}" stroke="none"/></svg>
     <svg width="14" height="12" viewBox="0 0 14 12" fill="${ink}"><rect x="0" y="8" width="2.4" height="4" rx=".6"/><rect x="3.8" y="5.5" width="2.4" height="6.5" rx=".6"/><rect x="7.6" y="3" width="2.4" height="9" rx=".6"/><rect x="11.4" y="0" width="2.4" height="12" rx=".6"/></svg>
@@ -34,6 +38,7 @@ const DEV = (ink) => `<div id="mk_dev" style="position:fixed;inset:0;pointer-eve
     <svg width="20" height="18" viewBox="0 0 20 18" stroke="#7b93dd" stroke-width="2.2" stroke-linecap="round"><path d="M4 2v14M10 2v14M16 2v14"/></svg>
     <svg width="28" height="24" viewBox="0 0 24 22" fill="none" stroke="#f29bb0" stroke-width="2.6"><path d="M12 20s-8-5-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 9c0 6-8 11-8 11z"/></svg>
     <svg width="14" height="20" viewBox="0 0 14 20" fill="none" stroke="#7b93dd" stroke-width="2.4" stroke-linecap="round"><path d="M11 2 3 10l8 8"/></svg></div></div>`;
+const HOLE = 16; // 갤럭시 카메라 구멍 가운데 (위에서 dp, 기종마다 조금 달라요)
 const INK = { home: '#1b1d22', bank: '#fff', orbitroom: '#fff' };
 (async () => {
   reset();
@@ -50,7 +55,7 @@ const INK = { home: '#1b1d22', bank: '#fff', orbitroom: '#fff' };
       for (const [v, i] of [['home'], ['bank'], ['orbitroom', rid]]) {
         if (v === 'orbitroom') await s.to('orbit');
         await s.to(v, i); await p.waitForTimeout(500);
-        await p.evaluate(({ html }) => { document.getElementById('mk_dev')?.remove(); const d = document.getElementById('na_phl'); d.insertAdjacentHTML('beforeend', html); const t = d.querySelector('.ax_sb .cg_num, .cg_sb .cg_num'); d.style.setProperty('--ct', JSON.stringify(t ? t.textContent : '')); }, { html: DEV(INK[v]) });
+        await p.evaluate(({ html }) => { document.getElementById('mk_dev')?.remove(); const d = document.getElementById('na_phl'); d.insertAdjacentHTML('beforeend', html); const t = d.querySelector('.ax_sb .cg_num, .cg_sb .cg_num'); d.style.setProperty('--ct', JSON.stringify(t ? t.textContent : '')); }, { html: DEV(INK[v], NOSB[o]) });
         await p.waitForTimeout(300);
         await p.screenshot({ path: path.join(__dirname, `${o}_${v}.png`) });
       }
