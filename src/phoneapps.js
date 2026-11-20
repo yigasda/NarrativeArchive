@@ -899,6 +899,7 @@ export function prepScreen(p, now, m, ui = {}) {
         ${model}
         <div class="${draft ? '' : 'ax_prep_dim'}">${body}</div>
         ${ui.noArch ? `<div class="ax_sec">아직 아카이브가 없어요</div><div class="ax_card"><button type="button" class="ax_rw ax_rwn na_ph_gocompress"><span class="ax_tx"><span class="ax_n ax_blue">압축하기</span></span></button></div><div class="ax_foot">압축해 두면 폰이 더 정확하고 싸게 만들어져요.</div>` : ''}
+        ${ui.imp === 'go' ? `<div class="ax_prep_gap"></div><div class="ax_card"><button type="button" class="ax_rw ax_rwn" data-go="livestart"><span class="ax_tx"><span class="ax_n">메신저 채팅 가져오기</span></span>${axChev}</button></div>` : ui.imp === 'live' ? `<div class="ax_prep_gap"></div><div class="ax_card"><button type="button" class="ax_rw ax_rwn na_ph_pmode" data-v="live"><span class="ax_tx"><span class="ax_n">실시간 폰으로</span></span>${axChev}</button></div>` : ''}
         <i class="ax_pad"></i>
       </div>
       ${axInd()}`;

@@ -144,11 +144,3 @@ export function whoScreen(now, o = {}) {
       ${o.live ? `<button type="button" class="wh_imp na_ph_pmode" data-v="live">${ic('chat', 15, '#5b6170')}실시간 폰으로</button>` : `<button type="button" class="wh_imp" data-go="livestart">${ic('chat', 15, '#5b6170')}메신저 채팅 가져오기</button>`}
       ${axInd()}`;
 }
-
-// 가져온 채팅의 캐릭터에게 아직 실시간 폰이 없을 때 (첫 화면과 같은 결): 얼굴 · 큰 제목 · 검정 알약. o: { name, busy }
-export function liveMakeScreen(now, o) {
-    return `${axBar({}, now)}
-      <div class="wh_body">${face(o.name, 62)}<b class="wh_h">${esc(o.name)}의<br>폰 만들기</b></div>
-      <button type="button" class="ob_go wh_go wh_go1 na_lm_make"${o.busy ? ' disabled' : ''}>${o.busy ? '<i class="fa-solid fa-spinner fa-spin"></i> 폰 만드는 중' : '폰 만들기'}</button>
-      ${axInd()}`;
-}

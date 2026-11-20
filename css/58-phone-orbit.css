@@ -148,4 +148,3 @@
 .ax .wh_in:empty::before { content: attr(data-ph); color: #b3b7be; }
 .ax .wh_go { left: 22px; right: 22px; bottom: 92px; }
 .ax .wh_imp { position: absolute; left: 50%; bottom: 46px; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; padding: 6px 10px; font-size: 14px; font-weight: 600; color: #5b6170; white-space: nowrap; --axfg: #5b6170; --axfs: 14px; }
-.ax .wh_go1 { bottom: 46px; }

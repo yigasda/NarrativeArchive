@@ -37,7 +37,7 @@ const josa = w => { const c = w.charCodeAt(w.length - 1) - 0xac00; return c >= 0
 import { confirm, esc } from './util.js';
 import { liveMode, liveWorld, livePhone, liveMeta, setLiveMode, resetLive, rememberLiveOwner, readLiveOwner, liveKey, liveRooms, ensureRoom, nameRoom, sendLive, readLive, unreadBy, enqueueReplies, seeFailure } from './phone2store.js';
 import { shiftLabel, liveWall, viewerWall, startShift } from './phone2clock.js';
-import { orbitList, orbitRoom, orbitNew, orbitHomeWidget, liveStart, whoScreen, liveMakeScreen } from './phoneorbit.js';
+import { orbitList, orbitRoom, orbitNew, orbitHomeWidget, liveStart, whoScreen } from './phoneorbit.js';
 import { beginFromStory, liveBranched, adoptChat, rebeginFromStory, rebeginKeepingChats } from './phone2story.js';
 import { liveSnapNow, snapParts } from './phone2snap.js';
 import { liveGo, liveReflect, liveCanUndo, liveUndo, liveUnreflected, liveNowOf, liveSnapBusy, liveBackCount, liveBackDraft, liveBackPut, liveImportPlan, liveImportFilePlan, liveImportChat, liveImportFile } from './phone2go.js';
@@ -176,7 +176,7 @@ export async function openPhone(who = null) {
         const w = liveWorld(realM), story = !w && !!p, chat = liveImportPlan(realM);
         const base = story ? startPlan(p) : { persona: w?.persona || ctx().name1 || 'Me', ...wallNow(w?.dayShift || 0), shift: shiftLabel(w?.dayShift || 0) };
         const ok = { story, chat: chat.messages > 0, file: !!lsFile }, pick = lsPick && ok[lsPick] ? lsPick : story ? 'story' : ok.chat ? 'chat' : ok.file ? 'file' : '';
-        return { ...base, upto: story ? base.upto : null, pick, chat, file: lsFile, back: w ? 'orbitnew' : p ? 'set' : 'who', title: w ? '채팅 가져오기' : '실시간', busy: snapping ? snapLabel : '' };
+        return { ...base, upto: story ? base.upto : null, pick, chat, file: lsFile, back: w ? 'orbitnew' : p ? 'set' : owner ? 'prep' : 'who', title: w ? '채팅 가져오기' : '실시간', busy: snapping ? snapLabel : '' };
     };
     const appWrap = (v, body) => `<div class="na_ph_scr app ax ax_${v} v_${v}"><div class="cg_canvas ax_canvas">${body}</div></div>`;
     let investing = false, making = false, busyMake = null, placeReading = false, prepLinking = false, prepOpen = false, prepFrom = false;  // 폰 만들기 준비: linking, 1~4 shown again, 인물 정보 opened from it
@@ -451,8 +451,6 @@ export async function openPhone(who = null) {
         // 실시간 with nobody on it (대화만 남기기 keeps the talk, not the phones): a way back to 타임라인 and to 새로 시작,
         // never the 타임라인 picker (its name would be the 타임라인's choice)
         if (live() && !owner) { $root.find('.na_ph_frame').html(`<div class="na_ph_scr glass w_dusk"><div class="na_ph_body na_ph_make"><div class="na_ph_makecard"><b>이 실시간 폰엔 아직 인물이 없어요</b><button type="button" class="na_ph_cardbtn na_ph_pmode" data-v="story">타임라인으로</button><div class="na_ph_makelinks"><button type="button" class="na_ph_livereset">실시간 폰 새로 시작</button></div></div></div></div>`); return; }
-        // 실시간, 방은 있는데 그 캐릭터의 폰이 없음 (채팅을 가져온 직후): 폰 만들기 준비는 실시간에서 안 열려서, 여기서 바로 만들어요
-        if (live() && !p) { view = 'livemake'; $root.find('.na_ph_frame').html(appWrap('who', liveMakeScreen(wallNow(liveWorld(realM)?.dayShift || 0).at, { name: owner, busy: busyMake === 'make' || phoneMaking(m, owner) }))); placeAsk(); return; }
         // nobody to show yet (no people in the archive, no phone in this chat): the picker opens instead of a blank phone
         if (!owner) {
             // (시안 phone2-import R3) 이름 적기, 또는 메신저 채팅 가져오기(S1 화면). 실시간 폰이 이미 있으면 그리로
@@ -471,13 +469,15 @@ export async function openPhone(who = null) {
             $root.find('.na_ph_frame').html(screen(draft,view,m,roster,{profileState:profileStates.get(nameKey(owner))}));
             return;
         }
+        // 인물은 있는데 타임라인 폰이 없는 채팅: 준비 화면의 "메신저 채팅 가져오기" → 가져오기 화면
+        if (!p && !live() && view === 'livestart' && !liveWorld(realM)) { $root.find('.na_ph_frame').html(appWrap('livestart', liveStart({}, wallNow().at, startUi(null)))); placeAsk(); return; }
         // no phone yet: always 폰 만들기 준비 (the old 폰 만들기 card is gone; reopening the phone lands here too)
         if (!p && view !== 'prep' && view !== 'setdraft' && view !== 'setdraftmodel') { view = 'prep'; ensureScreenHolder(m).then(() => { if (!phoneClosed && !phone() && view === 'prep') drawPhone(true); }).catch(() => {}); }
         if (!p && view === 'prep') {
             const pre = phonePre(m, owner), key = nameKey(owner), bound = m.phoneProfiles?.[key], n = phoneLore(m).length;
             const stale = !pre ? '' : JSON.stringify(pre.financeProfile ?? null) !== JSON.stringify(bound ?? null) ? 'profile' : (pre.lore ?? loreKey()) !== loreKey() ? 'lore' : '';
             const top = keep ? $root.find('.ax_scroll').scrollTop() : 0;
-            $root.find('.na_ph_frame').html(screen(pre || pendingProfile(), 'prep', m, roster, { prep: { pre: !!pre, open: !pre || prepOpen, profile: bound?.label || '', lore: n ? `${n}권` : '없음', loreN: n, gloss: glossaryEntries(m).length, order: dateOrderOf(m), holder: screenHolderLabel(m), stale, linking: prepLinking, making: busyMake === 'make' || phoneMaking(m, owner), draft: draftReady(), draftName: drLabel(), noArch: noArchive(m) } }));
+            $root.find('.na_ph_frame').html(screen(pre || pendingProfile(), 'prep', m, roster, { prep: { pre: !!pre, open: !pre || prepOpen, profile: bound?.label || '', lore: n ? `${n}권` : '없음', loreN: n, gloss: glossaryEntries(m).length, order: dateOrderOf(m), holder: screenHolderLabel(m), stale, linking: prepLinking, making: busyMake === 'make' || phoneMaking(m, owner), draft: draftReady(), draftName: drLabel(), noArch: noArchive(m), imp: live() ? '' : liveWorld(realM) ? 'live' : 'go' } }));
             if (keep) $root.find('.ax_scroll').scrollTop(top);
             return;
         }
@@ -916,25 +916,11 @@ export async function openPhone(who = null) {
         // 실시간으로 바꾸고 그 방을 열어요. 폰이 하나도 없으면(이야기 없이 시작한 폰) 그 캐릭터의 폰 만들기 준비로
         if (!live()) { setLiveMode(realM, 'live'); useMode(); await yearsNow(); }
         owner = liveOwner(); obWho = ''; obDraft = ''; sheet = false;
-        view = phone() ? `orbitroom:${got.room}` : 'livemake';
+        view = phone() ? `orbitroom:${got.room}` : 'prep';
         toastr.success(`말풍선 ${got.count}개를 가져왔어요`, '캐릭터 휴대폰');
         if (!phoneClosed) { draw(); if (phone()) obBottom(); }
         await saveMeta();
     };
-    // 가져온 뒤 그 캐릭터의 실시간 폰 만들기 (가져온 메신저 대화를 보고 만들어져요) → 그 방으로
-    $root.on('click', '.na_lm_make', async function (e) {
-        e.stopPropagation();
-        if (!live() || phone() || !owner) return;
-        if (making || snapping || busyMake || investing || koBusy || filling.size || busy.fill || busy.sync) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요', '캐릭터 휴대폰');
-        making = true;
-        try { await make($(this), false, true); }
-        catch (err) { console.warn('[narrative-archive] live make', err); toastr.warning(String(err?.message || err), '캐릭터 휴대폰'); }
-        finally { making = false; }
-        if (!phone() || phoneClosed || !stillHere()) { if (!phoneClosed && stillHere()) drawPhone(true); return; }
-        const w = liveWorld(realM), r = liveRooms(realM).find(x => x.members.some(n => liveKey(n) === liveKey(owner)) && x.members.some(n => liveKey(n) === liveKey(w?.persona)));
-        if (r) { obWho = ''; obDraft = ''; view = `orbitroom:${r.id}`; draw(); obBottom(); }
-        obGo();
-    });
     // 첫 화면 (폰도 인물도 없는 채팅): 이름 적고 폰 보기
     $root.on('input', '.na_who_in', function () { whoName = this.textContent; });
     $root.on('paste', '.na_who_in', e => { e.preventDefault(); const t = (e.originalEvent?.clipboardData || window.clipboardData)?.getData('text') || ''; document.execCommand('insertText', false, t.replace(/\s+/g, ' ')); });
@@ -1317,6 +1303,12 @@ export async function openPhone(who = null) {
         if (needsDateOrder(m)) await setDateOrder(m, dateOrderOf(m));
         prepOpen = false;
         await make($(this), false, true);
+        // 실시간(가져온 채팅의 캐릭터): 폰이 만들어지면 그 사람과의 방을 열어요
+        if (live() && phone() && !phoneClosed && stillHere()) {
+            const w = liveWorld(realM), r = liveRooms(realM).find(x => x.members.some(n => liveKey(n) === liveKey(owner)) && x.members.some(n => liveKey(n) === liveKey(w?.persona)));
+            if (r) { obWho = ''; obDraft = ''; view = `orbitroom:${r.id}`; draw(); obBottom(); }
+            obGo();
+        }
     });
     // the screen can change while it writes; the new entry opens if its app is still showing
     $root.on('click', '.na_ph_write', async function (e) {
