@@ -13,7 +13,7 @@ import { migrateBank, selectPrice } from './finance.js';
 import { askDraft, draftReady, draftSettings, drLabel, listModels, vxModelList, withSpinner } from './ai.js';
 import { ctx, getMeta, globalSettings, phoneMeta, saveGlobal, saveMeta, setPhoneMeta } from './core.js';
 import { applyInjection } from './inject.js';
-import { faceHtml, nameKey, peopleList, shrinkFace } from './people.js';
+import { faceHtml, faceOf, stFace, nameKey, peopleList, shrinkFace } from './people.js';
 import { drafting, drawing, drawPhoto, drawPost, filling, paging, retranslate, retranslating, recording, searching, searchPage, shooting, webPage, writing } from './phoneai.js';
 import { setDraft, setDraftModels, setLang, setSnap, setVoice, setVoiceAdd, voiceList, voicePeople, ax, axFind, groupInfo, APPS, AXB, AXB_C, busyHtml, setDate, setScreenHolderView, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, mapTowns, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setOwnerProfile, setWho, snsPost, snsScreen, statusBar, threadScreen, setPlace, prepScreen } from './phoneapps.js';
 import { phoneMaking, dropStretch, chatStamp, koGaps, savedName, ensureIds, hasDatedRecords, noArchive, koOn, loreOff, tidyKo, markAfter, phoneLore, REMAKE, restoreRounds, showNow, syncLeft, syncRows, syncState, tidyJournal, undoRound } from './phonedata.js';
@@ -872,12 +872,12 @@ export async function openPhone(who = null) {
     // 프사 바꾸기 (시안 phone2-edit sheetCrop C1 + 두 칸 갤러리): 1:1 방 머리줄의 얼굴 → 그 사람 색 전체 화면.
     // 사진은 인물 도감과 같은 저장소(확장 설정 faces, 모든 채팅이 같이 써요)에 들어가고, 모아 둔 사진은 faceAlbum[이름]에 남아요(사람마다 FACE_KEEP장까지).
     // obFc: { who, back, album: [데이터 URL], sel (고른 칸, -1 = 새 사진), src (틀에 올린 사진의 주소), file (새로 고른 파일), W, H, scale, min, tx, ty, busy }
-    const FACE_V = 230, FACE_KEEP = 12;   // (FACE_V: 틀의 크기, css의 .of_stage와 같아야 해요)
+    const FACE_S = 190, FACE_M = 12, FACE_V = FACE_S - FACE_M * 2, FACE_KEEP = 12;   // (FACE_S: 네모 틀, FACE_M: 틀과 동그라미 사이, FACE_V: 동그라미 = 잘라 쓰는 네모. css의 .of_stage · .of_ring과 같아야 해요)
     let obFc = null;
     const fcK = () => Number(frame?.style.getPropertyValue('--k')) || 1;
-    const fcClamp = () => { const f = obFc; f.tx = Math.min(0, Math.max(FACE_V - f.W * f.scale, f.tx)); f.ty = Math.min(0, Math.max(FACE_V - f.H * f.scale, f.ty)); };
+    const fcClamp = () => { const f = obFc; f.tx = Math.min(FACE_M, Math.max(FACE_M + FACE_V - f.W * f.scale, f.tx)); f.ty = Math.min(FACE_M, Math.max(FACE_M + FACE_V - f.H * f.scale, f.ty)); };
     const fcPaint = () => { const f = obFc; if (!f?.W) return; fcClamp(); $root.find('.na_of_img').css({ width: `${f.W * f.scale}px`, height: `${f.H * f.scale}px`, transform: `translate(${f.tx}px, ${f.ty}px)` }); $root.find('.na_of_th').css('--z', String(Math.min(1, Math.max(0, (f.scale / f.min - 1) / 4)))); };
-    const fcZoom = (next, px = FACE_V / 2, py = FACE_V / 2) => { const f = obFc; if (!f?.W) return; next = Math.min(f.min * 5, Math.max(f.min, next)); f.tx = px - (px - f.tx) * next / f.scale; f.ty = py - (py - f.ty) * next / f.scale; f.scale = next; fcPaint(); };
+    const fcZoom = (next, px = FACE_S / 2, py = FACE_S / 2) => { const f = obFc; if (!f?.W) return; next = Math.min(f.min * 5, Math.max(f.min, next)); f.tx = px - (px - f.tx) * next / f.scale; f.ty = py - (py - f.ty) * next / f.scale; f.scale = next; fcPaint(); };
     // a picture onto the frame: its size is read first (a tall one starts nearer its top, where the face is)
     const fcLoad = async (src, file = null, sel = -1) => {
         const f = obFc; if (!f) return;
@@ -885,14 +885,15 @@ export async function openPhone(who = null) {
         try { await im.decode(); } catch { toastr.error('그림을 못 읽었어요', '캐릭터 휴대폰'); return; }
         if (obFc !== f) return;
         Object.assign(f, { src, file, sel, W: im.naturalWidth, H: im.naturalHeight });
-        f.min = FACE_V / Math.min(f.W, f.H); f.scale = f.min; f.tx = (FACE_V - f.W * f.scale) / 2; f.ty = (FACE_V - f.H * f.scale) * 0.25;
+        f.min = FACE_V / Math.min(f.W, f.H); f.scale = f.min; f.tx = FACE_M + (FACE_V - f.W * f.scale) / 2; f.ty = FACE_M + (FACE_V - f.H * f.scale) * 0.25;
         if (!phoneClosed && view === 'orbitface') { const top = $root.find('.of_scroll').scrollTop(); drawPhone(true); $root.find('.of_scroll').scrollTop(top); fcPaint(); }
     };
-    const fcAlbum = who => { const g = globalSettings(), k = nameKey(who), a = Array.isArray(g.faceAlbum?.[k]) ? g.faceAlbum[k].filter(x => typeof x === 'string' && x.startsWith('data:')) : [], cur = g.faces?.[k]; return typeof cur === 'string' && cur.startsWith('data:') && !a.includes(cur) ? [cur, ...a] : a; };
-    const fcKeep = (who, album) => { const g = globalSettings(); g.faceAlbum = g.faceAlbum || {}; g.faceAlbum[nameKey(who)] = album.slice(0, FACE_KEEP); saveGlobal(); };
+    // (지금 쓰는 프사는 늘 맨 앞 칸에 있어요. 실리태번 아바타면 주소 그대로 — 이번에 열어 둔 동안만, 저장은 안 해요)
+    const fcAlbum = who => { const g = globalSettings(), k = nameKey(who), a = Array.isArray(g.faceAlbum?.[k]) ? g.faceAlbum[k].filter(x => typeof x === 'string' && x.startsWith('data:')) : [], cur = faceOf(who, true), st = stFace(who, true), out = cur && !a.includes(cur) ? [cur, ...a] : a; return st && !out.includes(st) ? [...out, st] : out; };   // (실리태번 아바타는 따로 정한 프사를 쓰는 중에도 맨 끝 칸에 남아요: 그걸로 되돌릴 수 있게)
+    const fcKeep = (who, album) => { const g = globalSettings(); g.faceAlbum = g.faceAlbum || {}; g.faceAlbum[nameKey(who)] = album.filter(x => x.startsWith('data:')).slice(0, FACE_KEEP); saveGlobal(); };
     $root.on('click', '.na_ob_face', function (e) {
         e.stopPropagation(); const who = this.dataset.n; if (!who) return;
-        const album = fcAlbum(who), cur = globalSettings().faces?.[nameKey(who)], sel = album.indexOf(cur);
+        const album = fcAlbum(who), sel = album.indexOf(faceOf(who, true));
         obFc = { who, back: view, album, sel, src: '', file: null, W: 0, H: 0, scale: 1, min: 1, tx: 0, ty: 0, busy: false };
         obSheet = false;
         view = 'orbitface'; drawPhone();
@@ -948,9 +949,10 @@ export async function openPhone(who = null) {
         try {
             const blob = f.file || await (await fetch(f.src)).blob();
             // (모아 둔 사진을 손대지 않고 그대로 쓰면 그 그림 그대로: 다시 줄여 새 칸을 만들지 않아요)
-            const asIs = !f.file && f.sel >= 0 && f.W === f.H && Math.abs(f.scale - f.min) < 1e-6;
-            const url = asIs ? f.album[f.sel] : await shrinkFace(blob, { sx: -f.tx / f.scale, sy: -f.ty / f.scale, ss: FACE_V / f.scale });
-            const g = globalSettings(); g.faces = g.faces || {}; g.faces[nameKey(f.who)] = url;
+            const asIs = !f.file && f.sel >= 0 && Math.abs(f.scale - f.min) < 1e-6 && (f.W === f.H || !f.album[f.sel].startsWith('data:'));
+            const url = asIs ? f.album[f.sel] : await shrinkFace(blob, { sx: (FACE_M - f.tx) / f.scale, sy: (FACE_M - f.ty) / f.scale, ss: FACE_V / f.scale });
+            // (실리태번 아바타를 그대로 고르면: 따로 정한 프사를 지워서 그 아바타가 다시 나오게)
+            const g = globalSettings(); g.faces = g.faces || {}; if (url.startsWith('data:')) g.faces[nameKey(f.who)] = url; else delete g.faces[nameKey(f.who)];
             if (f.file) f.album[0] = url; else if (!f.album.includes(url)) f.album = [url, ...f.album];
             fcKeep(f.who, f.album);
             if (f.blob) URL.revokeObjectURL(f.blob);

@@ -179,7 +179,7 @@ export function orbitFace(p, now, o) {
       <div class="of_scroll ax_scroll">
         <div class="of_stage na_of_stage">${o.src ? `<img class="of_img na_of_img" src="${esc(o.src)}" alt="" draggable="false">` : ''}<i class="of_ring"></i></div>
         <div class="of_zoom${o.src ? '' : ' off'}"><span>작게</span><div class="of_tr na_of_tr" role="slider" tabindex="0" aria-label="크기"><i class="of_th na_of_th"></i></div><span>크게</span></div>
-        <div class="of_grid"><button type="button" class="of_add na_of_add" aria-label="사진 더하기">${ic('plus', 26, '#fff', 2.2)}</button>${o.album.map((x, i) => `<div class="of_cell"><button type="button" class="of_pic na_of_pic${x.on ? ' on' : ''}" data-i="${i}"><img src="${esc(x.url)}" alt="" loading="lazy" decoding="async"></button>${x.on ? `<button type="button" class="of_del na_of_del" data-i="${i}" aria-label="사진 지우기">${ic('x', 14, '#fff', 2.6)}</button>` : ''}</div>`).join('')}</div>
+        <div class="of_grid"><button type="button" class="of_add na_of_add" aria-label="사진 더하기">${ic('plus', 22, '#fff', 2.2)}</button>${o.album.map((x, i) => `<div class="of_cell"><button type="button" class="of_pic na_of_pic${x.on ? ' on' : ''}" data-i="${i}"><img src="${esc(x.url)}" alt="" loading="lazy" decoding="async"></button>${x.on && x.url.startsWith('data:') ? `<button type="button" class="of_del na_of_del" data-i="${i}" aria-label="사진 지우기">${ic('x', 14, '#fff', 2.6)}</button>` : ''}</div>`).join('')}</div>
         <i class="of_pad"></i>
       </div>
       <button type="button" class="ob_go of_go na_of_ok"${o.busy || !o.src ? ' disabled' : ''}>이대로 쓰기</button>
