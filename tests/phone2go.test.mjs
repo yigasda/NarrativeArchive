@@ -894,7 +894,8 @@ test('롤플에 전하기 1) 글 받기: 아직 안 전한 메신저 대화와 �
 test('롤플에 전하기 2) 넣기: 롤플 채팅 맨 끝에 해설 메시지 하나, 실었던 말에 전했다고 표시, 채팅과 폰을 저장. 같은 말은 다시 안 전해요', async () => {
     try {
         const c = backWorld();
-        T.ask = async () => '{ "note": "Mara agreed to come on Friday." }';
+        // (the answer in a code fence, as a real model gave it)
+        T.ask = async () => '```json\n{ "note": "Mara agreed to come on Friday." }\n```';
         const d = await G.liveBackDraft(c.real), saves = T.saves, p1 = JSON.stringify(c.real.phones);
         // (그사이 새 말이 왔어요: 이번 글에 없는 말)
         send(c, '그리고 하나 더');

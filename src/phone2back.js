@@ -58,9 +58,11 @@ export function backInput(w, left, { wall = () => '', tail = [] } = {}) {
 }
 
 // 모델의 답에서 글만: 없거나 비었으면 오류. parse: 답 글 → 객체
+// (the object is the first { … } in the answer: a model often puts it in a ```json fence, or a line before it)
 export function takeBack(answer, parse = JSON.parse) {
+    const t = String(answer ?? ''), a = t.indexOf('{'), b = t.lastIndexOf('}');
     let got = null;
-    try { got = parse(String(answer ?? '')); } catch { got = null; }
+    try { got = a >= 0 && b > a ? parse(t.slice(a, b + 1)) : null; } catch { got = null; }
     const note = String(got?.note ?? '').replace(/\r\n/g, '\n').trim();
     if (!note) throw new Error('모델 답에서 전할 글을 찾지 못했어요');
     return note;
