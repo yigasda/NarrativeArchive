@@ -74,6 +74,7 @@ const DEV = (ink, nosb) => `<div id="mk_dev" style="position:fixed;inset:0;point
     <svg width="28" height="24" viewBox="0 0 24 22" fill="none" stroke="#f29bb0" stroke-width="2.6"><path d="M12 20s-8-5-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 9c0 6-8 11-8 11z"/></svg>
     <svg width="14" height="20" viewBox="0 0 14 20" fill="none" stroke="#7b93dd" stroke-width="2.4" stroke-linecap="round"><path d="M11 2 3 10l8 8"/></svg></div></div>`;
 const HOLE = 16; // 갤럭시 카메라 구멍 가운데 (위에서 dp, 기종마다 조금 달라요)
+const INKX = 0;
 const INK = { home: '#1b1d22', bank: '#fff', orbitroom: '#fff', diary: '#1b1d22' };
 (async () => {
   reset();
@@ -89,12 +90,13 @@ const INK = { home: '#1b1d22', bank: '#fff', orbitroom: '#fff', diary: '#1b1d22'
     for (const o of only) {
       await p.evaluate(([nb, on]) => document.documentElement.style.setProperty('--na-nb', on ? `${nb}px` : '0px'), [NB, o === 'R' || o[0] === 'N' || o[0] === 'S' || o[0] === 'M']);
       await p.evaluate(css => { document.getElementById('mk_opt')?.remove(); const t = document.createElement('style'); t.id = 'mk_opt'; t.textContent = css; document.head.append(t); }, OPT[o]);
-      for (const [v, i] of 'SM'.includes(o[0]) ? [['home'], ['diary'], ['orbitroom', rid], ['bank']] : [['home'], ['bank'], ['orbitroom', rid]]) {
+      for (const [v, i] of 'SMR'.includes(o[0]) ? [['home'], ['diary'], ['orbitroom', rid], ['bank']] : [['home'], ['bank'], ['orbitroom', rid]]) {
         if (v === 'orbitroom') await s.to('orbit');
         await s.to(v, i); await p.waitForTimeout(500);
         await p.evaluate(({ html }) => { document.getElementById('mk_dev')?.remove(); const d = document.getElementById('na_phl'); d.insertAdjacentHTML('beforeend', html); const t = d.querySelector('.ax_sb .cg_num, .cg_sb .cg_num'); d.style.setProperty('--ct', JSON.stringify(t ? t.textContent : '')); }, { html: DEV(INK[v], NOSB[o]) });
         await p.waitForTimeout(300);
         await p.screenshot({ path: path.join(__dirname, `${o}_${v}.png`) });
+        if (o === 'R' && v === 'orbitroom') { await p.evaluate(() => { const m = document.querySelector('.na_ph_frame .ob_msgs'); m.scrollTop = m.scrollTop - 170; }); await p.waitForTimeout(250); await p.screenshot({ path: path.join(__dirname, `${o}_${v}_up.png`) }); }
       }
     }
     console.log('errors', s.errors ? s.errors() : s.errs);
