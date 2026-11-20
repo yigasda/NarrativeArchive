@@ -855,3 +855,89 @@ test('앱 요청(채우기 · 다시 만들기)이 서랍으로 요약본을 달
     assert.deepEqual([T.starts, T.extends], [1, 0]);
     delete T.metadata; delete T.start;
 });
+
+// ---- 메신저에서 나눈 이야기를 롤플에 전하기 (버튼을 눌렀을 때만): 글 받기 → 보여 주기 → 넣기
+function backWorld() {
+    const c = snapWorld();
+    send(c, '금요일에 올 거지?');
+    c.room.messages.push({ id: 'b1', from: 'Mara', text: '갈게. 열쇠 챙겨 와.', at: Date.now() + 1, state: '사무실 · 짐 싸는 중' });
+    L.numberLive(c.w);
+    T.chat = [{ name: 'Ren', is_user: true, mes: 'earlier' }, { name: 'Mara', mes: 'later' }];
+    T.tail = { lines: ['[#0 · USER] Ren: earlier', '[#1] Mara: later'], first: 0, end: 1 };
+    const st = { shown: [], emits: [], saves: 0 };
+    T.st = { addOneMessage: x => st.shown.push(x), saveChat: async () => { st.saves++; }, eventSource: { emit: async (...a) => { st.emits.push(a); } }, eventTypes: { MESSAGE_SENT: 'message_sent', USER_MESSAGE_RENDERED: 'user_message_rendered' }, humanizedDateTime: () => 'STAMP' };
+    return { ...c, st };
+}
+const backDone = () => { delete T.st; delete T.ask; delete T.metadata; T.chat = []; };
+
+test('롤플에 전하기 1) 글 받기: 아직 안 전한 메신저 대화와 롤플의 끝 메시지로 요청 1번, 아무것도 안 바꿔요', async () => {
+    try {
+        const c = backWorld(), asked = [];
+        T.ask = async (input, o) => { asked.push([o.system, input]); return '{ "note": "마라는 금요일에 오기로 했고, 렌에게 열쇠를 챙겨 오라고 했다." }'; };
+        assert.equal(G.liveBackCount(c.real), 2);
+        const was = JSON.stringify([c.real, T.chat]);
+        const d = await G.liveBackDraft(c.real);
+        assert.equal(asked.length, 1);
+        assert.ok(asked[0][0].startsWith('GOAL\nThe story\'s characters also text each other on a messenger') && asked[0][0].includes('Ren is a person in the story'));
+        assert.match(asked[0][1], /^\[MESSENGER\]\n— Ren · Mara —\n\d{2}-\d{2} \d{2}:\d{2} · Ren: 금요일에 올 거지\?\n\d{2}-\d{2} \d{2}:\d{2} · Mara \(사무실 · 짐 싸는 중\): 갈게\. 열쇠 챙겨 와\.\n\n\[LAST MESSAGES\]\nRen: earlier\n\nMara: later$/);
+        assert.equal(d.text, '*(그동안 메신저에서)*\n\n마라는 금요일에 오기로 했고, 렌에게 열쇠를 챙겨 오라고 했다.');
+        assert.deepEqual([d.count, d.more, d.world], [2, 0, c.w.id]);
+        assert.equal(JSON.stringify([c.real, T.chat]), was);
+        assert.deepEqual([c.st.shown.length, c.st.saves], [0, 0]);
+        // 모델이 글을 안 주면 오류 (아무것도 안 바뀜)
+        T.ask = async () => '{}';
+        await assert.rejects(() => G.liveBackDraft(c.real), /전할 글을 찾지 못했어요/);
+        assert.equal(JSON.stringify([c.real, T.chat]), was);
+    } finally { backDone(); }
+});
+
+test('롤플에 전하기 2) 넣기: 롤플 채팅 맨 끝에 해설 메시지 하나, 실었던 말에 전했다고 표시, 채팅과 폰을 저장. 같은 말은 다시 안 전해요', async () => {
+    try {
+        const c = backWorld();
+        T.ask = async () => '{ "note": "Mara agreed to come on Friday." }';
+        const d = await G.liveBackDraft(c.real), saves = T.saves, p1 = JSON.stringify(c.real.phones);
+        // (그사이 새 말이 왔어요: 이번 글에 없는 말)
+        send(c, '그리고 하나 더');
+        const at = await G.liveBackPut(c.real, d, '*(그동안 메신저에서)*\n\n고친 글이에요.  ');
+        assert.equal(at, 2);
+        assert.equal(T.chat.length, 3);
+        assert.deepEqual(T.chat[2], { name: 'System', is_user: false, is_system: false, send_date: 'STAMP', mes: '*(그동안 메신저에서)*\n\n고친 글이에요.', force_avatar: 'img/five.png', extra: { ...T.chat[2].extra, type: 'narrator', api: 'manual', model: 'narrative-archive' } });
+        assert.deepEqual(c.st.shown, [T.chat[2]]);
+        assert.deepEqual(c.st.emits, [['message_sent', 2], ['user_message_rendered', 2]]);
+        assert.equal(c.st.saves, 1); assert.ok(T.saves > saves);
+        assert.deepEqual(c.room.messages.map(x => !!x.told), [true, true, false]);
+        assert.equal(G.liveBackCount(c.real), 1);
+        assert.equal(JSON.stringify(c.real.phones), p1);
+        // 고치지 않으면 받은 글 그대로; 다 전한 뒤에는 요청도 안 해요
+        const d2 = await G.liveBackDraft(c.real);
+        await G.liveBackPut(c.real, d2);
+        assert.equal(T.chat[3].mes, '*(Meanwhile, on the messenger)*\n\nMara agreed to come on Friday.');
+        let asked = 0; T.ask = async () => { asked++; return '{}'; };
+        await assert.rejects(() => G.liveBackDraft(c.real), /전할 새 메신저 대화가 없어요/);
+        assert.equal(asked, 0);
+    } finally { backDone(); }
+});
+
+test('롤플에 전하기: 그사이 실시간 폰이 바뀌었거나 · 글이 비었거나 · 넣을 길이 없으면 아무것도 안 넣고 표시도 안 해요', async () => {
+    try {
+        const c = backWorld();
+        T.ask = async () => '{ "note": "Mara agreed to come on Friday." }';
+        const d = await G.liveBackDraft(c.real);
+        const clean = () => { assert.equal(T.chat.length, 2); assert.ok(c.room.messages.every(x => !x.told)); assert.equal(c.st.saves, 0); };
+        await assert.rejects(() => G.liveBackPut(c.real, d, '   '), /넣을 글이 비어 있어요/); clean();
+        await assert.rejects(() => G.liveBackPut(c.real, { ...d, world: 'other' }), /채팅이나 실시간 폰이 바뀌었어요/); clean();
+        await assert.rejects(() => G.liveBackPut(c.real, null), /채팅이나 실시간 폰이 바뀌었어요/); clean();
+        const add = T.st.addOneMessage; delete T.st.addOneMessage;
+        await assert.rejects(() => G.liveBackPut(c.real, d), /롤플 채팅에 넣을 수 없어요/); clean();
+        T.st.addOneMessage = add;
+        // 다른 채팅이 열려 있으면
+        T.metadata = { narrative_archive: {} };
+        await assert.rejects(() => G.liveBackPut(c.real, d), /채팅이나 실시간 폰이 바뀌었어요/); clean();
+        await assert.rejects(() => G.liveBackDraft(c.real), /이 채팅의 실시간 폰이 아니에요/);
+        T.metadata = { narrative_archive: c.real };
+        // 이벤트를 받는 쪽이 실패해도 메시지는 들어가요
+        T.st.eventSource.emit = async () => { throw new Error('listener'); };
+        assert.equal(await G.liveBackPut(c.real, d), 2);
+        assert.equal(T.chat.length, 3); assert.ok(c.room.messages.every(x => x.told));
+    } finally { backDone(); }
+});

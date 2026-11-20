@@ -16,6 +16,7 @@ import { nameKey } from './people.js';
 import { liveWorld, livePhone, liveMeta, liveKey, liveAtYear, isSnap, setStoryKeeper } from './phone2store.js';
 import { liveChatTail, liveSnapBehind, liveSnapExtend, liveSnapNow } from './phone2snap.js';
 import { liveStoryText } from './phone2story.js';
+import { BACK, backLeft, backInput, phone2BackSystem, takeBack, backMessage, markTold } from './phone2back.js';
 import { liveWall } from './phone2clock.js';
 import { gatherReply } from './phone2live.js';
 import { replyInput } from './phone2ask.js';
@@ -256,4 +257,47 @@ export async function liveDigest(real, owner) {
         }
     } finally { digesting.delete(real); }
     return done;
+}
+
+// ---- 메신저에서 나눈 이야기를 롤플에 전하기 (phone2back.js). 사람이 버튼을 눌렀을 때만 해요: 받은 글을 보여 주고
+// (고칠 수 있어요), "넣기"를 눌러야 롤플 채팅에 들어가요.
+// 아직 롤플에 안 전한 말 수 (화면의 버튼)
+export const liveBackCount = real => { const left = backLeft(liveWorld(real)); return left.count + left.more; };
+// 1) 전할 글 받기 (모델 요청 1번). 아무것도 바꾸지 않아요
+//   → { world, left (실은 말들: 넣을 때 표시해요), text (넣을 메시지의 글 전체), count, more (이번에 못 실은 말 수) }
+export async function liveBackDraft(real) {
+    const w = liveWorld(real);
+    if (!w || !open(real)) throw new Error('이 채팅의 실시간 폰이 아니에요');
+    const left = backLeft(w);
+    if (!left.count) throw new Error('롤플에 전할 새 메신저 대화가 없어요');
+    const first = Object.values(w.phones || {}).find(p => p?.owner), tz = first ? tzOf(first) : 'UTC';
+    // (the role-play's last messages, whole ones from the end: the note is written in their language)
+    const tail = [];
+    let room = BACK.tail.chars;
+    for (const t of liveChatTail().lines.slice(-BACK.tail.lines).reverse()) { if (t.length > room) break; tail.unshift(t); room -= t.length; }
+    const input = backInput(w, left, { wall: ms => liveWall(tz, w.dayShift, ms).at, tail });
+    const answer = await askDraft(input, { force: true, system: phone2BackSystem({ persona: w.persona }), maxTokens: BACK.tokens, effort: 'low' });
+    return { world: w.id, left, text: backMessage(takeBack(answer, x => parseJson(x, { salvage: true }))), count: left.count, more: left.more };
+}
+// 2) 넣기: 롤플 채팅 맨 끝에 해설 메시지 하나로 (실리태번의 /sys가 넣는 것과 같은 모양), 실었던 말에 전했다고 표시.
+//    text: 사람이 고친 글 (안 주면 받은 글 그대로). 그사이 다른 채팅이 열렸거나 실시간 폰이 바뀌었으면 아무것도 안 해요
+//   → 넣은 메시지의 번호
+export async function liveBackPut(real, draft, text = draft?.text) {
+    const w = liveWorld(real), c = ctx(), words = String(text ?? '').trim();
+    if (!w || !open(real) || w.id !== draft?.world) throw new Error('그사이 채팅이나 실시간 폰이 바뀌었어요. 다시 해 주세요');
+    if (!words) throw new Error('넣을 글이 비어 있어요');
+    if (!Array.isArray(c.chat) || typeof c.addOneMessage !== 'function' || typeof c.saveChat !== 'function') throw new Error('이 실리태번에서는 롤플 채팅에 넣을 수 없어요');
+    const message = { name: c.chatMetadata?.narrator_name || 'System', is_user: false, is_system: false,
+        send_date: typeof c.humanizedDateTime === 'function' ? c.humanizedDateTime() : new Date().toISOString(),
+        mes: words, force_avatar: 'img/five.png', extra: { type: 'narrator', gen_id: Date.now(), api: 'manual', model: 'narrative-archive' } };
+    c.chat.push(message);
+    const at = c.chat.length - 1, emit = async name => { try { if (name && c.eventSource?.emit) await c.eventSource.emit(name, at); } catch (err) { console.warn('[narrative-archive] live back', err); } };
+    await emit(c.eventTypes?.MESSAGE_SENT);
+    c.addOneMessage(message);
+    await emit(c.eventTypes?.USER_MESSAGE_RENDERED);
+    // (the talk is marked told once the message stands in the chat; then both are saved)
+    markTold(draft.left);
+    await c.saveChat();
+    await saveMeta();
+    return at;
 }
