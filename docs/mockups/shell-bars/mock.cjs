@@ -184,17 +184,14 @@ const INK = { home: '#1b1d22', bank: '#fff', orbitroom: '#fff', diary: '#1b1d22'
         await p.evaluate(({ html }) => { document.getElementById('mk_dev')?.remove(); document.getElementById('na_phl').insertAdjacentHTML('beforeend', html); }, { html: DEV(INK.orbitroom, 2) });
         const ats = await p.evaluate(async B => { const core = await import(B + 'core.js'), st = await import(B + 'phone2store.js'); const r = st.liveRooms(core.getMeta())[0]; return Object.fromEntries(r.messages.map(x => [x.id, new Date(x.at).toTimeString().slice(0, 5)])); }, B);
         await p.evaluate(ats => { const mi = document.querySelector('.na_ph_frame .ob_mi'); const m = document.querySelector('.na_ph_frame .ob_msgs'); m.scrollTop = m.scrollHeight;
-          const st = document.createElement('style'); st.textContent = `.mk_tc { position: absolute; right: 2px; transform: translate(calc(var(--d, 0) * 1px + 62px), -50%); width: 52px; text-align: right; font-size: 11px; color: #fff; opacity: calc(var(--d, 0) / -62 * .85); text-shadow: 0 1px 5px rgba(30,50,40,.25); pointer-events: none; }
+          const st = document.createElement('style'); st.textContent = `.mk_tc { position: absolute; left: 6px; transform: translateY(-50%); font-size: 10px !important; --axfs: 10px; color: #fff; opacity: calc(var(--d, 0) / 46 * .85); text-shadow: 0 1px 5px rgba(30,50,40,.25); pointer-events: none; }
             .ax .ob_mi { position: relative; } .mk_mv { transform: translateX(calc(var(--d, 0) * 1px)); }`; document.head.append(st);
-          const bubs = [...mi.querySelectorAll('.ob_b')], lastReply = bubs.filter(b => b.classList.contains('na_ob_sw'));
-          const scope = bubs.filter(b => !lastReply.includes(b));
+          const bubs = [...mi.querySelectorAll('.ob_b.th')].filter(b => !b.classList.contains('na_ob_sw'));
           const mr = mi.getBoundingClientRect();
-          scope.forEach(b => { if (b.classList.contains('me')) { b.classList.add('mk_mv'); const tin = b.querySelector('.ob_tin'); if (tin) tin.style.opacity = 'calc(1 + var(--d, 0) / 62)'; }
-            const t = document.createElement('span'); t.className = 'mk_tc cg_num'; t.textContent = ats[b.dataset.id] || ''; const r = b.getBoundingClientRect(); t.style.top = (r.top - mr.top + r.height / 2) / (r.width / b.offsetWidth) + 'px'; mi.append(t); });
-          mi.querySelectorAll('.ob_rd').forEach(e => e.classList.add('mk_mv')); }, ats);
+          bubs.forEach(b => { b.classList.add('mk_mv'); const t = document.createElement('span'); t.className = 'mk_tc cg_num'; t.textContent = ats[b.dataset.id] || ''; const r = b.getBoundingClientRect(); t.style.top = (r.top - mr.top + r.height / 2) / (r.width / b.offsetWidth) + 'px'; mi.append(t); }); }, ats);
         const dir = path.join(os.tmpdir(), 'mk_frames2'); fs.rmSync(dir, { recursive: true, force: true }); fs.mkdirSync(dir);
         const FPS = 30, ease = t => 1 - Math.pow(1 - t, 3); let k = 0;
-        const track = [...Array(10).fill(0), ...Array.from({ length: 18 }, (_, i) => -62 * ease((i + 1) / 18)), ...Array(30).fill(-62), ...Array.from({ length: 12 }, (_, i) => -62 * (1 - ease((i + 1) / 12))), ...Array(8).fill(0)];
+        const track = [...Array(10).fill(0), ...Array.from({ length: 18 }, (_, i) => 46 * ease((i + 1) / 18)), ...Array(30).fill(46), ...Array.from({ length: 12 }, (_, i) => 46 * (1 - ease((i + 1) / 12))), ...Array(8).fill(0)];
         for (const d of track) { await p.evaluate(d => document.querySelector('.na_ph_frame .ob_mi').style.setProperty('--d', d), d); await p.waitForTimeout(20);
           await p.screenshot({ path: path.join(dir, `f${String(k++).padStart(4, '0')}.png`), clip: { x: 0, y: 120, width: W, height: 640 } }); }
         require('child_process').execFileSync('ffmpeg', ['-y', '-v', 'error', '-framerate', String(FPS), '-i', path.join(dir, 'f%04d.png'), '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '18', path.join(__dirname, 'time_drag.mp4')]);
