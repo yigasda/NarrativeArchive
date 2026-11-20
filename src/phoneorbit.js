@@ -22,7 +22,7 @@ export const orbitBg = (name, group) => auraBg(auraOf(name, group));
 
 // 선 아이콘(24 판)
 const I = {
-    back: 'M15 5l-7 7 7 7', plus: 'M12 5v14M5 12h14', send: 'M5 12h13M13 6l6 6-6 6', srch: 'M11 5a6 6 0 1 0 0 12 6 6 0 0 0 0-12zM20 20l-4.3-4.3', pen: 'M4 20h4L19 9l-4-4L4 16z',
+    back: 'M15 5l-7 7 7 7', plus: 'M12 5v14M5 12h14', send: 'M5 12h13M13 6l6 6-6 6', srch: 'M11 5a6 6 0 1 0 0 12 6 6 0 0 0 0-12zM20 20l-4.3-4.3', pen: 'M4 20h4L19 9l-4-4L4 16z', tell: 'M4 15V7a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v4M8 20H4v-4M4 20l7-7h9M17 10l3 3-3 3',
     clock: 'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM12 8v4l3 2', chk: 'M4 12.5l4.5 4.5L20 6', x: 'M6 6l12 12M18 6L6 18',
     tr: 'M4 6h8M8 4v2c0 4-2 7-5 8M6 10c1.5 2 3.5 3.5 6 4M13 20l4-9 4 9M14.5 17h5', moon: 'M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z',
     sun: 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4',
@@ -66,13 +66,13 @@ export const orbitHomeWidget = (rooms, unread = 0) => `<div class="cg_glass ob_w
 const dots = lit => Array.from({ length: 24 }, (_, h) => `<i class="${h === lit ? 'h' : h < lit ? 'p' : ''}" style="height:${h < lit ? [9, 15, 22, 15][h % 4] : 4}px"></i>`).join('');
 
 // 방 목록 (시안 A): 맨 위 "지금 그 사람" 카드, 1:1 · 단체 고르기, 흰 목록, 아래 새 대화
-// o: { tab, acct: { name, ro, sheet, list: [{ name, sub, on }] }, hero: { name, city, local } | null, rooms: [{ id, title, group, last, lastWho, time, unread }] }
+// o: { tab, back: { n (안 전한 말), busy, sheet: { text, count, more } | null }, acct: { name, ro, sheet, list: [{ name, sub, on }] }, hero: { name, city, local } | null, rooms: [{ id, title, group, last, lastWho, time, unread }] }
 // 왼쪽 위 얼굴 = 지금 계정(시안 phone2-account A): 누르면 아래 시트에서 페르소나 ↔ 이 폰 주인. 주인 계정은 읽기만(새 대화 · 안 읽음 없음)
 export function orbitList(p, now, o) {
     const tab = o.tab || 'all', rooms = o.rooms.filter(r => tab === 'all' || (tab === 'group') === r.group);
-    const h = o.hero, lit = h ? Number(String(h.local).slice(0, 2)) : -1, a = o.acct || { name: '', list: [] }, many = a.list.length > 1;
+    const bk = o.back, h = o.hero, lit = h ? Number(String(h.local).slice(0, 2)) : -1, a = o.acct || { name: '', list: [] }, many = a.list.length > 1;
     return `${axBar(p, now)}
-      <div class="ob_top">${many ? `<button type="button" class="ob_me na_ob_acct" aria-label="계정">${face(a.name, 46)}</button>` : `<span class="ob_me">${face(a.name, 46)}</span>`}<b class="ob_h1">메시지</b>${a.ro ? '<span class="ob_cb0"></span>' : `<button type="button" class="ob_cb" data-go="orbitnew" aria-label="새 대화">${ic('pen', 19)}</button>`}</div>
+      <div class="ob_top">${many ? `<button type="button" class="ob_me na_ob_acct" aria-label="계정">${face(a.name, 46)}</button>` : `<span class="ob_me">${face(a.name, 46)}</span>`}<b class="ob_h1">메시지</b>${a.ro ? '<span class="ob_cb0"></span>' : `<span class="ob_tr">${bk ? `<button type="button" class="ob_cb ob_bk na_ob_back${bk.n || bk.busy ? '' : ' off'}" aria-label="${bk.busy ? '정리 중' : '롤플에 전하기'}"${bk.busy ? ' disabled' : ''}>${bk.busy ? '<i class="fa-solid fa-spinner fa-spin"></i>' : ic('tell', 20, '#1b1d24', 2.1)}${bk.n && !bk.busy ? `<span class="ob_un cg_num">${bk.n}</span>` : ''}</button>` : ''}<button type="button" class="ob_cb" data-go="orbitnew" aria-label="새 대화">${ic('pen', 19)}</button></span>`}</div>
       <div class="ob_scroll ax_scroll">
         <div class="ob_seg">${[['all', '전체'], ['one', '1:1'], ['group', '단체']].map(([k, t]) => `<button type="button" class="ob_sg na_ob_tab${tab === k ? ' on' : ''}" data-v="${k}">${t}</button>`).join('')}</div>
         ${h ? `<div class="ob_hero"><span class="ob_blob" style="background:${orbitBg(h.name)}"></span><span class="ob_gl"></span><div class="ob_in"><small>${esc(h.name)}${h.city ? ` · ${esc(h.city)}` : ''} 지금</small><div class="ob_big cg_num">${esc(h.local)}</div><div class="ob_dots">${dots(lit)}</div><div class="ob_dl"><span>0시</span><span>12시</span><span>24시</span></div></div></div>` : ''}
@@ -80,6 +80,7 @@ export function orbitList(p, now, o) {
         <i class="ob_pad"></i>
       </div>
       ${a.ro ? '' : `<button type="button" class="ob_dock" data-go="orbitnew">${ic('plus', 16, '#fff', 2.4)}새 대화</button>`}
+      ${bk?.sheet ? `<div class="ob_shade na_ob_bkno"></div><div class="ob_sheet ob_bks"><i class="ob_grab"></i><div class="ob_bkh"><b>롤플에 넣기</b><span>말 ${bk.sheet.count}개</span></div><div class="ob_bkt na_ob_bktx" contenteditable="true" role="textbox" aria-multiline="true" spellcheck="false" aria-label="넣을 글">${esc(bk.sheet.text)}</div>${bk.sheet.more ? `<div class="ob_bkm">남은 말 ${bk.sheet.more}개는 한 번 더</div>` : ''}<div class="ob_bkb"><button type="button" class="ob_bkno na_ob_bkno">취소</button><button type="button" class="ob_bkok na_ob_bkok"${bk.busy ? ' disabled' : ''}>넣기</button></div></div>` : ''}
       ${a.sheet ? `<div class="ob_shade na_ob_shade"></div><div class="ob_sheet"><i class="ob_grab"></i>${a.list.map(x => `<div class="ob_acc na_ob_who" role="button" tabindex="0" data-n="${esc(x.name)}">${face(x.name, 40)}<span class="ob_t"><b>${esc(x.name)}</b>${x.sub ? `<span class="ob_p">${esc(x.sub)}</span>` : ''}</span><span class="ob_ck${x.on ? ' on' : ''}">${x.on ? ic('chk', 14, '#fff', 3) : ''}</span></div>`).join('')}</div>` : ''}
       ${axInd()}`;
 }

@@ -40,7 +40,7 @@ import { shiftLabel, liveWall, viewerWall, startShift } from './phone2clock.js';
 import { orbitList, orbitRoom, orbitNew, orbitHomeWidget, liveStart } from './phoneorbit.js';
 import { beginFromStory, liveBranched, adoptChat, rebeginFromStory, rebeginKeepingChats } from './phone2story.js';
 import { liveSnapNow, snapParts } from './phone2snap.js';
-import { liveGo, liveReflect, liveCanUndo, liveUndo, liveUnreflected, liveNowOf, liveSnapBusy } from './phone2go.js';
+import { liveGo, liveReflect, liveCanUndo, liveUndo, liveUnreflected, liveNowOf, liveSnapBusy, liveBackCount, liveBackDraft, liveBackPut } from './phone2go.js';
 import { liveYearsNow } from './phone2year.js';
 import { P } from './phone2api.js';
 
@@ -164,6 +164,8 @@ export async function openPhone(who = null) {
     if (!stillHere()) return;
     // snapping: 실시간을 시작하기 전 이야기 요약본을 만드는 중 (그동안 다른 폰 작업은 기다려요); snapLabel: 시작 버튼 글
     let snapping = false, snapLabel = '';
+    // 롤플에 전하기: backing = 글 받는 중(snapping도 같이 켜서 다른 폰 작업을 막아요), obBack = 미리 보기 { draft, text }
+    let backing = false, obBack = null;
     let investing = false, making = false, busyMake = null, placeReading = false, prepLinking = false, prepOpen = false, prepFrom = false;  // 폰 만들기 준비: linking, 1~4 shown again, 인물 정보 opened from it
      // busyMake: 'sync' | 'make' while a reflection or a make runs
     for (const p of Object.values(m.phones)) migrateBank(m, p);
@@ -218,7 +220,7 @@ export async function openPhone(who = null) {
         const accts = [me, ...(owner && liveKey(owner) !== liveKey(me) ? [owner] : [])].map(n => ({ name: n, sub: livePhone(realM, n)?.profile?.handle || liveKey(n), on: liveKey(n) === liveKey(who) }));
         if (v === 'orbit') {
             const hn = rooms.map(x => V.others(x.r).find(n => tzOf(n))).find(Boolean);
-            out.orbit = { tab: obTab, acct: { name: who, ro, sheet: obSheet && accts.length > 1, list: accts }, hero: hn ? { name: hn, city: cityOf(hn), local: liveWall(tzOf(hn), sh).at.slice(6) } : null, rooms: rooms.map(V.brief) };
+            out.orbit = { tab: obTab, back: ro ? null : { n: liveBackCount(realM), busy: backing, sheet: obBack ? { text: obBack.text, count: obBack.draft.count, more: obBack.draft.more } : null }, acct: { name: who, ro, sheet: obSheet && accts.length > 1, list: accts }, hero: hn ? { name: hn, city: cityOf(hn), local: liveWall(tzOf(hn), sh).at.slice(6) } : null, rooms: rooms.map(V.brief) };
         } else if (v === 'orbitnew') {
             if (ro) { view = 'orbit'; return orbitUi(); }
             const names = [...new Map([...Object.values(w.phones || {}).map(p => p?.owner), ...Object.values(w.messenger?.accounts || {}).map(a => a?.name)].filter(n => n && liveKey(n) !== liveKey(me)).map(n => [liveKey(n), n])).values()];
@@ -778,14 +780,45 @@ export async function openPhone(who = null) {
     $root.on('click', '.na_ob_ko', function (e) { e.stopPropagation(); const id = this.dataset.id; if (obOpen.has(id)) obOpen.delete(id); else obOpen.add(id); const top = $root.find('.ob_msgs').scrollTop(); drawPhone(); $root.find('.ob_msgs').scrollTop(top); });
     // 답장 돌리기 (7-5): liveGo 하나가 다 해요(이미 돌면 그냥 돌아와요). 그리기는 이 채팅 · 실시간일 때만, 입력하던 칸은 그대로
     const obGo = () => liveGo(realM, { onChange: () => {
-        if (phoneClosed || !stillHere() || !live()) return;
+        if (phoneClosed || !stillHere() || !live() || bkEditing()) return;
         const typingNow = document.activeElement?.classList?.contains('na_ob_in'), atEnd = (e => !e || e.scrollHeight - e.scrollTop - e.clientHeight < 40)($root.find('.ob_msgs')[0]);
         drawPhone(true);
         if (view.startsWith('orbitroom') && atEnd) obBottom();
         if (typingNow) obFocus();
     } }).catch(err => console.error('[narrative-archive] live go', err));
     // 반영(소망 결정): 메신저를 나갈 때만 · 폰을 닫을 때 · 타임라인으로 바꿀 때. 실시간 폰의 인물마다 쌓인 대화를 한 번에(읽을 게 없으면 바로 끝)
-    const obReflect = () => { const w = liveWorld(realM); if (!w || snapping) return; (async () => { for (const p of Object.values(w.phones || {})) if (p?.owner) { const r = await liveReflect(realM, p.owner, { onChange: () => { if (!phoneClosed && stillHere() && live()) drawPhone(true); } }); if (r?.rounds) { const q = livePhone(realM, p.owner); if (q) await koRun(q, false, p.owner); } } })().catch(err => console.error('[narrative-archive] live reflect', err)); };
+    const obReflect = () => { const w = liveWorld(realM); if (!w || (snapping && !backing)) return; (async () => { for (const p of Object.values(w.phones || {})) if (p?.owner) { const r = await liveReflect(realM, p.owner, { onChange: () => { if (!phoneClosed && stillHere() && live()) drawPhone(true); } }); if (r?.rounds) { const q = livePhone(realM, p.owner); if (q) await koRun(q, false, p.owner); } } })().catch(err => console.error('[narrative-archive] live reflect', err)); };
+    // 롤플에 전하기 (시안 phone2-back A): 누르면 글 받기(그동안 버튼은 정리 중, 다른 폰 작업은 막혀요) → 미리 보기(고칠 수 있음) → 넣기.
+    // 취소하면 아무것도 안 바뀌어요. 다시 누르면 글을 새로 받아요
+    const bkEditing = () => !!obBack && document.activeElement?.classList?.contains('na_ob_bktx');
+    $root.on('click', '.na_ob_back', async function (e) {
+        e.stopPropagation();
+        if (backing) return;
+        if (making || snapping || busyMake || investing || koBusy || filling.size || busy.fill || busy.sync) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요', '캐릭터 휴대폰');
+        if (!live() || !liveBackCount(realM)) return toastr.info('롤플에 전할 새 메신저 대화가 없어요', '캐릭터 휴대폰');
+        backing = snapping = true; obBack = null; obSheet = false; drawPhone(true);
+        let d = null;
+        try { d = await liveBackDraft(realM); }
+        catch (err) { console.warn('[narrative-archive] live back', err); toastr.warning(String(err?.message || err), '캐릭터 휴대폰'); }
+        finally { backing = snapping = false; }
+        if (d && stillHere() && live()) obBack = { draft: d, text: d.text };
+        if (!phoneClosed && stillHere()) drawPhone(true);
+    });
+    $root.on('input', '.na_ob_bktx', function () { if (obBack) obBack.text = this.innerText; });
+    $root.on('keydown', '.na_ob_bktx', e => e.stopPropagation());
+    $root.on('paste', '.na_ob_bktx', e => { e.preventDefault(); const t = (e.originalEvent?.clipboardData || window.clipboardData)?.getData('text') || ''; document.execCommand('insertText', false, t); });
+    $root.on('click', '.na_ob_bkno', function (e) { e.stopPropagation(); obBack = null; drawPhone(true); });
+    $root.on('click', '.na_ob_bkok', async function (e) {
+        e.stopPropagation();
+        if (!obBack || backing) return;
+        const b = obBack, t = $root.find('.na_ob_bktx')[0];
+        if (t) b.text = t.innerText;
+        backing = snapping = true;
+        try { await liveBackPut(realM, b.draft, b.text); obBack = null; toastr.success('롤플에 넣었어요', '캐릭터 휴대폰'); }
+        catch (err) { console.warn('[narrative-archive] live back put', err); toastr.warning(String(err?.message || err), '캐릭터 휴대폰'); if (/바뀌었어요/.test(String(err?.message))) obBack = null; }
+        finally { backing = snapping = false; }
+        if (!phoneClosed) drawPhone(true);
+    });
     // 실시간 폰 설정 › 지난 반영: 방금 반영 되돌리기 · 다시 반영 (다른 폰 작업 중엔 폰 1 되돌리기처럼 막아요)
     $root.on('click', '.na_live_undo', async e => {
         e.stopPropagation();

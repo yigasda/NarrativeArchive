@@ -16,6 +16,8 @@ small { opacity: .5 !important; font-size: 9px !important; }
   const s = await open('light', { out: o }); const p = s.p;
   try {
     if (mode === 'theme') await p.addStyleTag({ content: THEME });
+    // (롤플에 전하기: 가짜 모델은 이 지시문을 몰라서 여기서 답해요)
+    await p.route('**/v1/chat/completions', async route => { if (!/text each other on a messenger, outside the scenes/.test(route.request().postData() || '')) return route.continue(); return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ choices: [{ message: { role: 'assistant', content: JSON.stringify({ note: 'Mara schrieb Ren, ob er Samstag Zeit hat; Ren sagte zu.' }) } }] }) }); });
     const shot = async n => { await p.waitForTimeout(350); await (await p.$('.na_ph_frame')).screenshot({ path: path.join(o, `p2t_${n}.png`) }); };
     const scrolled = () => p.evaluate(async () => { const f = document.querySelector('.na_ph_frame'), r = f.getBoundingClientRect(); let e = f, sc = []; while (e) { if (e.scrollTop) sc.push(`${e.className || e.tagName}:${e.scrollTop}`); e = e.parentElement; } for (const x of f.querySelectorAll('.na_ph_scr, .cg_canvas, .ax_canvas')) if (x.scrollTop) sc.push(`in ${x.className.split(' ')[0]}:${x.scrollTop}`);
       // (and a push from outside, as a keyboard would: it must come back)
@@ -35,6 +37,7 @@ small { opacity: .5 !important; font-size: 9px !important; }
     await p.click('.na_ob_in'); await p.keyboard.type('실패해'); await p.keyboard.press('Enter'); await p.waitForTimeout(3500); await shot('07_fail');
     // 목록 · 계정 시트 · 단체방
     await s.to('orbit'); await shot('08_list');
+    await p.click('.na_ob_back'); await p.waitForSelector('.na_ob_bktx'); await shot('08b_back'); await p.click('.na_ob_bkno');
     if (await p.$('.na_ob_acct')) { await p.click('.na_ob_acct'); await shot('09_sheet'); await p.click('.na_ob_shade'); }
     await p.locator('.ob_rm').filter({ hasText: 'Werkstatt' }).first().click(); await p.waitForTimeout(400); await shot('10_group');
     // 홈 위젯 · 설정 · 새로 시작
