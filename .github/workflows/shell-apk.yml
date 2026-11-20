@@ -22,7 +22,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
+      # (안드로이드 SDK는 GitHub 기본 머신에 이미 있어요: 따로 까는 단계가 'tools' 꾸러미를 못 찾아 멈췄어요)
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.7'
