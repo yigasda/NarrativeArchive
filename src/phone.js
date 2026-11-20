@@ -808,6 +808,11 @@ export async function openPhone(who = null) {
     // 말 고치기 · 답장 넘기기 (시안 phone2-edit M3 · W3). 주인 계정(읽기만)에서는 아무것도 안 열려요
     let obHoldT = null, obDown = null, obHeldAt = 0;
     const obJustHeld = () => Date.now() - obHeldAt < 500;
+    // 길게 누르면 알약이 말 위에 생기면서 말이 아래로 밀려, 손가락을 뗀 자리가 알약 단추가 돼요(재번역 · 선택 · 삭제가 저절로 눌렸어요).
+    // 그래서 길게 누른 그 손짓의 클릭은 한 번 삼켜요. 새로 누르면 풀려요
+    let obSwallow = false;
+    $root[0].addEventListener('pointerdown', () => { obSwallow = false; }, true);
+    $root[0].addEventListener('click', e => { if (!obSwallow) return; obSwallow = false; e.preventDefault(); e.stopPropagation(); }, true);
     const obRoomId = () => (view.startsWith('orbitroom:') ? view.slice(10) : '');
     const obCanEdit = () => live() && !!obRoomId() && obAcct() === liveWorld(realM)?.persona;
     const obWarn = err => { console.warn('[narrative-archive] live edit', err); toastr.info(String(err?.message || err), '캐릭터 휴대폰'); };
@@ -815,7 +820,7 @@ export async function openPhone(who = null) {
     $root.on('pointerdown', '.na_ob_b', function (e) {
         if (!obCanEdit() || obPicks || e.target.closest('.na_ob_ko')) return;
         const id = this.dataset.id; obDown = { id, x: e.clientX, y: e.clientY, sw: this.classList.contains('na_ob_sw') };
-        obHoldStop(); obHoldT = setTimeout(() => { obHoldT = null; obDown = null; obHeldAt = Date.now(); obHeld = id; navigator.vibrate?.(10); drawPhone(true); }, 480);
+        obHoldStop(); obHoldT = setTimeout(() => { obHoldT = null; obDown = null; obHeldAt = Date.now(); obHeld = id; obSwallow = true; navigator.vibrate?.(10); drawPhone(true); }, 480);
     });
     $root.on('pointermove', '.na_ob_b', e => { if (obDown && Math.hypot(e.clientX - obDown.x, e.clientY - obDown.y) > 8) obHoldStop(); });
     $root.on('pointercancel', () => { obHoldStop(); obDown = null; });
@@ -842,7 +847,8 @@ export async function openPhone(who = null) {
     $root.on('click', '.na_ob_slkeep', e => { e.stopPropagation(); obListDrop('지금 것만 남기고 버릴까요?', id => liveSwipeDropOthers(realM, id)); });
     $root.on('click', '.na_ob_sldrop', e => { e.stopPropagation(); const ns = [...(obList || [])]; if (ns.length) obListDrop(`${ns.length}개를 버릴까요?`, id => liveSwipeDropMany(realM, id, ns)); });
     $root.on('click', '.na_ob_hold', e => { if (obJustHeld() || e.target.closest('.ob_pill')) return; e.stopPropagation(); obHeld = null; drawPhone(true); });
-    $root.on('click', '.na_ob_b', function (e) { if (!obPicks) return; e.stopPropagation(); const id = this.dataset.id; if (obPicks.has(id)) obPicks.delete(id); else obPicks.add(id); drawPhone(true); });
+    // (고르는 중엔 줄 전체가 눌려요: 말풍선 · 동그라미 · 옆 빈 곳 어디든. 동그라미만 누르면 안 켜졌어요)
+    $root.on('click', '.na_ob_prow', function (e) { if (!obPicks) return; e.stopPropagation(); const id = this.dataset.id; if (obPicks.has(id)) obPicks.delete(id); else obPicks.add(id); drawPhone(true); });
     $root.on('click', '.na_ob_mpick', function (e) { e.stopPropagation(); obPicks = new Set([this.dataset.id]); obHeld = null; drawPhone(true); });
     $root.on('click', '.na_ob_pquit', e => { e.stopPropagation(); obPicks = null; drawPhone(true); });
     const obRetr = async ids => {
