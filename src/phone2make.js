@@ -23,7 +23,12 @@ import { askDraft, AI_SYS_PHONE, AI_SYS_PHONE_APPS, AI_SYS_PHONE_UPDATE, CAP, CO
 import { needLive, liveWindowOf, liveReadMark, liveFillClock, liveYearBlock, liveBefore, liveArchiveFor, liveStoryReady } from './phone2req.js';
 import { liveTryWhere } from './phone2where.js';
 import { liveEnsureYear } from './phone2year.js';
-import { liveNowText } from './phone2store.js';
+import { liveNowText, setDrawerSeed } from './phone2store.js';
+
+// "폰 만드는 중" 표시는 실시간 폰(세계)마다 하나예요: 폰을 닫았다 다시 열면 서랍이 새로 생기는데, 새 서랍도 같은 표시를
+// 봐요. 그래서 다시 열어도 만드는 중으로 보이고, 같은 폰을 두 번 만들지 않아요 (폰 1은 채팅의 메타에 붙여서 원래 그래요)
+const makingOf = new WeakMap();
+setDrawerSeed((d, w) => makingNow.set(d, makingOf.get(w) || makingOf.set(w, new Set()).get(w)));
 
 // 요청 글
 function livePhoneRequest(m, owner, p = null, lore = '', only = null, profile = '', gap = null, extra = [], pre = null, { anew = false } = {}) {
