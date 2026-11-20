@@ -68,6 +68,14 @@ const IGRE2 = ` .na_phl .ax .ob_b.mk_hasre { margin-bottom: 17px !important; }
   .na_phl .ax .mk_rew { position: relative; height: 0; flex: none; } .na_phl .ax .mk_rew .mk_av { top: -54px; bottom: auto; }
   .na_phl .ax .mk_re2 { position: absolute; left: 12px; top: -27px; width: 28px; height: 22px; box-sizing: border-box; border: 2px solid #fff; border-radius: 11px; display: grid; place-items: center; font-size: 11.5px !important; --axfs: 11.5px; line-height: 1 !important; background: #f1f1f2; }`;
 const U1C = U1.replace(REACT, '') + IGRE2 + ` .na_phl .ax .ob_b.th { margin-left: 44px !important; } .na_phl .ax .mk_av { left: -42px !important; width: 34px !important; height: 34px !important; font-size: 14px !important; --axfs: 14px; line-height: 34px !important; }`;
+// U1T: 텔레그램처럼 반응이 말풍선 안 아래 줄에 — 방 색 알약(이모지 + 반응한 사람 얼굴), 같은 줄 오른쪽 끝에 시간
+const TGRE = ` .na_phl .ax .mk_trow { display: flex; align-items: center; gap: 8px; margin-top: 7px; }
+  .na_phl .ax .mk_tre { display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 3px 0 8px; border-radius: 13px; background: var(--mk_acc); box-shadow: inset 0 1px 0 rgba(255,255,255,.22); }
+  .na_phl .ax .ob_b.me .mk_tre { background: rgba(255, 255, 255, 0.16); }
+  .na_phl .ax .mk_tre .e { font-size: 15px !important; --axfs: 15px; line-height: 1 !important; }
+  .na_phl .ax .mk_tre .a { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; color: #fff; font: 700 9.5px/20px -apple-system, 'Noto Sans KR', sans-serif !important; --axfs: 9.5px; }
+  .na_phl .ax .mk_trow .t { margin-left: auto; font-size: 10px !important; --axfs: 10px; opacity: .5; }`;
+const U1T = U1.replace(REACT, '') + TGRE + ` .na_phl .ax .ob_b.th { margin-left: 44px !important; } .na_phl .ax .mk_av { left: -42px !important; width: 34px !important; height: 34px !important; font-size: 14px !important; --axfs: 14px; line-height: 34px !important; }`;
 const U2 = BUB2 + PILL + EMO + REACT + ` .na_phl .ax .ob_b.th { position: relative; padding-right: 50px !important; } .na_phl .ax .mk_t { position: absolute; right: 12px; bottom: 7px; font-size: 10px !important; --axfs: 10px; line-height: 1 !important; opacity: .5; }
   .na_phl .ax .ob_b { overflow: visible !important; }
   .na_phl .ax .ob_b.th:not(.ob_b.th + .ob_b.th) { border-top-left-radius: 0 !important; border-bottom-left-radius: 18px !important; } .na_phl .ax .ob_b.th + .ob_b.th { border-bottom-left-radius: 18px !important; }
@@ -95,6 +103,14 @@ const JSX = {
     const put = (b, e) => { if (!b) return; b.classList.add('mk_hasre'); const w = document.createElement('div'); w.className = 'mk_rew'; w.style.width = b.offsetWidth + 'px'; w.style.alignSelf = getComputedStyle(b).alignSelf; w.style.marginLeft = getComputedStyle(b).marginLeft; w.innerHTML = `<span class="mk_re2">${e}</span>`; const av = b.querySelector('.mk_av'); if (av) w.append(av); b.after(w); };
     put([...mi.querySelectorAll('.ob_b.th')].find(b => /Kuchen/.test(b.textContent)), '❤️');
     put([...mi.querySelectorAll('.ob_b.me')].find(b => /케이크/.test(b.textContent)), '😂'); },
+  U1T: ({ SMILE }) => { const mi = document.querySelector('.na_ph_frame .ob_mi');
+    mi.querySelectorAll('.ob_b.th').forEach(b => { const n = b.nextElementSibling; if (!(n && n.matches('.ob_b.th'))) { const a = document.createElement('span'); a.className = 'mk_av'; a.textContent = 'M'; b.append(a); } });
+    const rds = mi.querySelectorAll('.ob_rd'); const last = rds[rds.length - 1]; if (last) { last.classList.add('mk_last'); last.textContent = '읽음'; }
+    const blob = document.querySelector('.na_ph_frame .ob_bg .ob_blob'); const n = (getComputedStyle(blob).backgroundColor.match(/[\d.]+/g) || [90, 160, 110]).map(Number);
+    const [r, g, bb] = n.map(v => v / 255), mx = Math.max(r, g, bb), mn = Math.min(r, g, bb), d = mx - mn; let h = 0; if (d) h = mx === r ? ((g - bb) / d) % 6 : mx === g ? (bb - r) / d + 2 : (r - g) / d + 4; h = (h * 60 + 360) % 360; const acc = `hsl(${Math.round(h)} 36% 52%)`; document.querySelector('.na_ph_frame').style.setProperty('--mk_acc', acc);
+    const row = (e, who, bg, t) => `<span class="mk_trow"><span class="mk_tre"><span class="e">${e}</span><span class="a" style="background:${bg}">${who}</span></span>${t ? `<span class="t">${t}</span>` : ''}</span>`;
+    const a = [...mi.querySelectorAll('.ob_b.th')].find(b => /Kuchen/.test(b.textContent)); if (a) a.querySelector('.mk_av') ? a.querySelector('.mk_av').insertAdjacentHTML('beforebegin', row('❤️', '나', 'linear-gradient(140deg,#8a8f99,#5b606a)', '')) : a.insertAdjacentHTML('beforeend', row('❤️', '나', 'linear-gradient(140deg,#8a8f99,#5b606a)', ''));
+    const b = [...mi.querySelectorAll('.ob_b.me')].find(b => /케이크/.test(b.textContent)); if (b) { const tm = b.nextElementSibling?.matches('.ob_rd') ? b.nextElementSibling.querySelector('.cg_num')?.textContent : ''; b.insertAdjacentHTML('beforeend', row('😂', 'M', 'linear-gradient(140deg,#6cc477,#b9cf7c 60%,#e3c37e)', tm)); } },
   U2: ({ SMILE }) => { const mi = document.querySelector('.na_ph_frame .ob_mi'); let last = '';
     [...mi.children].forEach(e => { if (e.matches('.ob_rd')) last = e.querySelector('.cg_num')?.textContent || last; if (e.matches('.ob_b.th')) { const [h, m] = (last || '16:30').split(':').map(Number); const mm = (m + 1) % 60; e.insertAdjacentHTML('beforeend', `<span class="mk_t">${String(h + (m + 1 >= 60 ? 1 : 0)).padStart(2, '0')}:${String(mm).padStart(2, '0')}</span>`); } });
     const inp = document.querySelector('.na_ph_frame .ob_inp'); inp.insertAdjacentHTML('afterbegin', SMILE);
@@ -119,7 +135,7 @@ const OPT = {
   // 예전 아이폰 노치: 화면 맨 위에 붙은 검은 홈, 아래 모서리 둥글고 위쪽 양옆은 안으로 휜 귀. G 넓은 노치(X~12) · H 좁은 노치(13~14)
   // R: 시안이 아니라 실제 코드(css/59-phone-shell.css) — 앱이 알려 주는 하단 버튼 줄 높이만 흉내 내요
   R: '',
-  B1: BUB1, B2: BUB2, B3: BUB3, B4: BUB4, U1, U2, U3, U1B, U1C,
+  B1: BUB1, B2: BUB2, B3: BUB3, B4: BUB4, U1, U2, U3, U1B, U1C, U1T,
   M1: MIST(0.55, 28), M2: MIST(0.75, 40), M3: MIST(0.9, 56),
   // 뿌연 하단 띠: S1 막대를 띠 맨 위 · S2 띠를 막대만큼 더 올려 그 안에 막대 · S3 띠만(앱은 막대 없음, 홈은 그대로)
   S1: GL(0, 7), S2: GL(22, 9), S3: GL(0, 0) + ' .na_phl .ax .ax_ind span { visibility: hidden !important; }',
@@ -128,7 +144,7 @@ const OPT = {
   G: NOTCH(209),
   H: NOTCH(162),
 };
-const NOSB = { U1C: 2, U1B: 2, U1: 2, U2: 2, U3: 2, B1: 2, B2: 2, B3: 2, B4: 2, M1: 2, M2: 2, M3: 2, E: 1, F: 1, G: 2, H: 2, R: 2, S1: 2, S2: 2, S3: 2, N1: 2, N2: 2, N3: 2, N4: 2 };
+const NOSB = { U1T: 2, U1C: 2, U1B: 2, U1: 2, U2: 2, U3: 2, B1: 2, B2: 2, B3: 2, B4: 2, M1: 2, M2: 2, M3: 2, E: 1, F: 1, G: 2, H: 2, R: 2, S1: 2, S2: 2, S3: 2, N1: 2, N2: 2, N3: 2, N4: 2 };
 // 기기 바 그림 (소망 폰: 왼쪽 KT 시간, 오른쪽 아이콘 · 아래 파란 버튼 셋 + 분홍 하트)
 const DEV = (ink, nosb) => `<div id="mk_dev" style="position:fixed;inset:0;pointer-events:none;z-index:99999;font-family:Roboto,'Noto Sans KR',sans-serif">
   ${nosb ? `<i style="position:absolute;left:50%;top:${HOLE}px;width:11px;height:11px;margin:-5.5px 0 0 -5.5px;border-radius:50%;background:#050505;${nosb === 2 ? "" : "box-shadow:0 0 0 1.5px rgba(40,40,40,.6)"}"></i>` : ''}<div style="${nosb ? 'visibility:hidden;' : ''}position:absolute;left:0;right:0;top:0;height:${SB}px;display:flex;align-items:center;justify-content:space-between;padding:0 16px 0 22px;color:${ink};font-size:14px;font-weight:500">
