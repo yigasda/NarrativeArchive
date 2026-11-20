@@ -165,7 +165,7 @@
 .ax .ob_pill button + button { border-left: 1px solid rgba(255, 255, 255, 0.14); }
 .ax .ob_pill .red { color: #ff8a7a; --axfg: #ff8a7a; }
 .ax .ob_wait { cursor: default; opacity: 0.75; }
-.ax .na_ob_sw { touch-action: pan-y; }
+.ax :is(.na_ob_sw, .ob_msgs) { touch-action: pan-y; } .ax .ob_tl { position: absolute; right: calc(100% + 7px); top: 50%; transform: translateY(-50%); font-size: 10px; line-height: 1; letter-spacing: 0.01em; color: rgba(255, 255, 255, 0.62); opacity: 0; pointer-events: none; white-space: nowrap; --axfs: 10px; } .ax .ob_tdrag .ob_b.th:not(.na_ob_sw) { transform: translateX(calc(var(--obt, 0) * 16px)); } .ax .ob_tdrag .ob_tl { opacity: calc(var(--obt, 0) * 1.4 - 0.4); } .ax .ob_tdrag .ob_b.th:not(.na_ob_sw) .ob_av { opacity: calc(1 - var(--obt, 0) * 1.6); }
 .ax .ob_swd { align-self: flex-start; display: flex; gap: 5px; margin: 2px 0 2px 56px; padding: 6px 0; cursor: pointer; }
 .ax .ob_swd i { width: 6px; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.55); }
 .ax .ob_swd i.on { width: 16px; background: #fff; }

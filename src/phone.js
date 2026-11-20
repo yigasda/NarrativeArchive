@@ -257,7 +257,7 @@ export async function openPhone(who = null) {
                 const a = vw(x.at), d = dayOf(a);
                 if (d !== day) { msgs.push({ day: d }); day = d; }
                 const mine = liveKey(x.from) === liveKey(who);
-                msgs.push({ id: x.id, mine, from: x.from, text: x.text, ko: x.ko || '', open: koOn() !== obOpen.has(x.id), time: mine ? a.slice(6) : '', unread: mine && !ro ? unreadBy(r, x).length : 0, held: !ro && obHeld === x.id, pick: !ro && obPicks ? obPicks.has(x.id) : undefined, wait: obTr.has(x.id), reply: reply.has(x.id), dots: reply.has(x.id) && x.id === lastReply });
+                msgs.push({ id: x.id, mine, from: x.from, text: x.text, ko: x.ko || '', open: koOn() !== obOpen.has(x.id), time: mine ? a.slice(6) : '', tl: mine ? '' : a.slice(6), unread: mine && !ro ? unreadBy(r, x).length : 0, held: !ro && obHeld === x.id, pick: !ro && obPicks ? obPicks.has(x.id) : undefined, wait: obTr.has(x.id), reply: reply.has(x.id), dots: reply.has(x.id) && x.id === lastReply });
             }
             // 답장을 기다리는 중이면 입력 중, 멈춘 실패가 있으면 그 줄(다시는 사람이 누를 때만). 1:1 머리 아래는 상대의 가장 최근 상태
             const jobs = w.queue?.jobs || [], typing = !ro && jobs.some(j => j.room === r.id && (j.state === 'waiting' || j.state === 'running'));
@@ -830,6 +830,30 @@ export async function openPhone(who = null) {
     $root.on('pointerleave', '.na_ob_b', () => { obHoldStop(); });
     // (맨 끝 답장을 옆으로 밀면 넘겨요: 왼쪽으로 밀면 다음, 오른쪽으로 밀면 앞)
     $root.on('pointerup', e => { obHoldStop(); const d = obDown; obDown = null; if (!d?.sw) return; const dx = e.clientX - d.x, dy = e.clientY - d.y; if (Math.abs(dx) > 44 && Math.abs(dx) > Math.abs(dy) * 1.5) obSwipe(dx < 0 ? 1 : -1); });
+    // 시간 보기 (시안 docs/mockups/shell-bars time_drag.mp4, 소망): 캐릭터 말 위에서 오른쪽으로 끌면 말풍선이 16px 밀리고 얼굴 칸이 시간 칸이 돼요(--obt 0 → 1).
+    // 맨 끝 답장 묶음은 밀면 답장을 넘기니까 빼요. 끝에서 살짝 무겁게 넘치고, 놓으면 살짝 튕기며 돌아가요. 세로로 먼저 움직이면 스크롤이에요
+    let obT = null;
+    const obTSet = v => { const mi = obT?.mi; if (!mi) return; obT.v = v; if (!obT.raf) obT.raf = requestAnimationFrame(() => { if (obT) { obT.raf = 0; mi.style.setProperty('--obt', obT.v.toFixed(3)); } }); };
+    const obTEnd = () => {
+        const t = obT; obT = null; if (!t?.on) return;
+        if (t.raf) cancelAnimationFrame(t.raf);
+        const done = () => { t.mi.style.removeProperty('--obt'); t.mi.classList.remove('ob_tdrag'); };
+        if (matchMedia('(prefers-reduced-motion: reduce)').matches) return done();
+        const v0 = t.v, t0 = performance.now(), D = 380;
+        const step = now => { const k = Math.min(1, (now - t0) / D), v = v0 * Math.exp(-5.5 * k) * Math.cos(8 * k); if (k >= 1 || !t.mi.isConnected) return done(); t.mi.style.setProperty('--obt', Math.max(-0.04, v).toFixed(3)); requestAnimationFrame(step); };
+        requestAnimationFrame(step);
+    };
+    $root.on('pointerdown', '.v_orbitroom .ob_msgs', function (e) {
+        if (obHeld || obPicks || e.target.closest('.na_ob_sw, .na_ob_ko, .ob_pill, .na_ob_swd')) return;
+        const mi = this.querySelector('.ob_mi'); if (!mi || !mi.querySelector('.ob_tl')) return;
+        obT = { mi, x: e.clientX, y: e.clientY, on: false, v: 0, raf: 0 };
+    });
+    $root.on('pointermove', e => {
+        const t = obT; if (!t) return; const dx = e.clientX - t.x, dy = e.clientY - t.y;
+        if (!t.on) { if (Math.abs(dy) > 8 && Math.abs(dy) > Math.abs(dx)) { obT = null; return; } if (dx > 8 && dx > Math.abs(dy) * 1.3) { t.on = true; t.x = e.clientX; obHoldStop(); obDown = null; obSwallow = true; t.mi.classList.add('ob_tdrag'); } else return; }
+        const u = Math.max(0, e.clientX - t.x) / 56; obTSet(u <= 1 ? u : 1 + 0.08 * (1 - 1 / (1 + (u - 1) * 2)));
+    });
+    $root.on('pointerup pointercancel', () => { if (obT) obTEnd(); });
     const obSwipe = async dir => {
         const id = obRoomId(); if (!id || !obCanEdit() || obHeld || obPicks) return;
         try { const r = await liveSwipe(realM, id, dir); if (!phoneClosed && stillHere()) { drawPhone(true); obBottom(); } if (r?.fresh) obGo(); }
