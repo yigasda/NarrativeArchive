@@ -115,14 +115,18 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax 
 /* 폰 틀 · 화면의 둥글기는 폰 크기를 따라가요 (고정 px이면 작게 그려진 폰에서 모서리만 커져 글자를 파먹고 곡선이 두 겹으로 보여요). 틀 안쪽의 가는 선은 뺐어요 */
 .na_phl .na_ph_frame { border-radius: calc(44px * var(--k, 0.81) + 7px); --axr: calc(44px * var(--k, 0.81) + 7px); box-shadow: 0 12px 30px rgba(50, 30, 15, 0.22); }
 .na_phl .na_ph_scr { border-radius: calc(44px * var(--k, 0.81)); --axr: calc(44px * var(--k, 0.81)); }
-/* 진짜 폰(좁은 화면 · 손가락)에서는 테두리와 큰 여백 없이, 세로를 꽉 채우고 가로는 아이폰 비율(390:844)만큼만 써요
+/* 진짜 폰(좁은 화면 · 손가락)에서는 테두리와 큰 여백 없이, 세로를 꽉 채우고 가로는 아이폰 비율(390:844, 짧은 화면에서는 390:780까지)만큼만 써요
    (시안 docs/mockups/phone-fit r1_*.png). 폰 비율이 덜 길쭉하면 양옆에 가는 띠가 남아요. 화면을 통째로 채우면(가로까지) 넓적해 보여서 되돌렸어요.
    넓은 화면에서는 폰이 가운데 떠 있어야 해서 테두리를 둬요 */
 @media (max-width: 600px) and (pointer: coarse) {
     /* (위아래 8px은 남겨요: 폰이 기기의 상단바 · 아래 버튼 줄에 딱 붙으면 뚫고 들어간 것처럼 보여요) */
     .na_phl_root { padding: max(8px, env(safe-area-inset-top)) 0 max(8px, env(safe-area-inset-bottom)); }
     .na_phl .na_ph_wrap { padding: 0; }
-    .na_phl .na_ph_frame { width: min(100vw, calc((var(--na-phh, 100dvh) - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 390 / 844)); padding: 0; border-radius: calc(44px * var(--k, 0.87)); --axr: calc(44px * var(--k, 0.87)); box-shadow: none; background: none; }
+    .na_phl .na_ph_scr { aspect-ratio: auto; height: 100%; }
+    .na_phl .cg_canvas { height: calc(100% / var(--k, 0.87)); }
+    /* (세로가 짧은 화면 — 크롬처럼 주소창이 있을 때 — 에서는 폰 화면 세로를 보드 780까지 줄이고 가로를 지켜요: 띠가 두꺼워지지 않게.
+        780보다 짧아지면 넓적해 보여서 거기서 멈추고, 그 뒤로는 띠가 다시 두꺼워져요. 시안 docs/mockups/phone-fit c_*.png) */
+    .na_phl .na_ph_frame { --phh: calc(var(--na-phh, 100dvh) - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); height: var(--phh); width: min(calc(100vw - 20px), calc(var(--phh) * 390 / 780)); padding: 0; border-radius: calc(44px * var(--k, 0.87)); --axr: calc(44px * var(--k, 0.87)); box-shadow: none; background: none; }
 }
 .cg .cg_ind.na_ph_quit { height: 38px; flex-direction: column; gap: 4px; justify-content: flex-end; padding-bottom: 9px; cursor: pointer; }
 .cg_ind.na_ph_quit small { font-size: 11px; font-weight: 600; color: rgba(22, 27, 34, 0.55); letter-spacing: 0.04em; }
