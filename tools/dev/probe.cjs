@@ -24,10 +24,12 @@ PLOT:
 ## Ivo
 - Runs the workshop; wants his key back.
 `;
-// mobile: 손가락 화면(진짜 폰)처럼 열어요 — 폰 창이 화면을 통째로 채우는 모양(좁은 화면 + pointer: coarse)을 볼 때. height: 창 높이
-async function open(theme = 'light', { width = 412, height = 1100, out = 'shots', video = '', make = true, mobile = false } = {}) {
+// init: 껍데기 앱 흉내(아래). mobile: 손가락 화면(진짜 폰)처럼 열어요 — 폰 창이 화면을 통째로 채우는 모양(좁은 화면 + pointer: coarse)을 볼 때. height: 창 높이
+async function open(theme = 'light', { width = 412, height = 1100, out = 'shots', video = '', make = true, mobile = false, init = false } = {}) {
     const b = await chromium.launch();
     const ctx = await b.newContext({ viewport: { width, height }, deviceScaleFactor: 2, ...(mobile ? { isMobile: true, hasTouch: true } : {}), ...(video ? { recordVideo: { dir: video, size: { width, height } } } : {}) });
+    // init: 껍데기 앱(app/android) 안처럼 — window.NAShell이 있으면 폰이 화면을 통째로 채우고 바를 칠해요
+    if (init) await ctx.addInitScript(() => { window.NAShell = { setBars() {}, version: () => '1' }; document.addEventListener('DOMContentLoaded', () => document.documentElement.classList.add('na-shell')); });
     const p = await ctx.newPage();
     const errs = []; p.on('pageerror', e => errs.push(String(e.stack || e))); p.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
     await p.goto(ST, { waitUntil: 'domcontentloaded' });
