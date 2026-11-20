@@ -10,10 +10,10 @@ import { applyInjection } from './inject.js';
 import { askDraft, phone2Clock, aroundBlock, ownerZone, cardBlocks } from './phonedata.js';
 import { askAI, askCompress, stripThink, isBlocked, SECTION_GUARD } from './ai.js';
 import { SCENES_SYS, parseScenes } from './scenes.js';
-import { resolvePhoneProfile, ownerProfileBlock } from './phoneprofile.js';
+import { resolvePhoneProfile, ownerProfileBlock, personaBlock } from './phoneprofile.js';
 import { parseJson } from './phoneparse.js';
 import { nameKey } from './people.js';
-import { liveWorld, livePhone, liveMeta, liveKey, liveAtYear, isSnap, setStoryKeeper, startFresh, enqueueReplies } from './phone2store.js';
+import { liveWorld, livePhone, liveMeta, liveKey, liveAtYear, isSnap, setStoryKeeper, startFresh, enqueueReplies, renamePersona, setDrawerSeed } from './phone2store.js';
 import { emojiOf, reactOf, putReact, quickReacts, noteRecent, messageOf } from './phone2react.js';
 import { dropMessages, settleSwipes, swipeInfo, swipeTo, swipeList, dropSwipe, dropSwipes, dropOtherSwipes, koRows, koChunks, koInput, takeKo } from './phone2edit.js';
 import { AI_SYS_PHONE_KO, voiceRows, who as voiceWho } from './phonetr.js';
@@ -89,6 +89,15 @@ async function keepUpStory(real, tell = () => {}) {
     } finally { extending.delete(real); done(); tell(); }
     return null;
 }
+// 실리태번에서 페르소나를 바꿨으면 실시간 폰의 "나"도 그 이름으로 (열어 둔 채팅의 폰만). 바꿨으면 저장하고 true.
+// 실시간 서랍이 생길 때마다(폰을 열 때 · 답장을 돌릴 때) 저절로 불려요
+export function liveFollowPersona(real) {
+    if (!real || !liveWorld(real) || !ctx().chatMetadata || !open(real)) return false;
+    if (!renamePersona(real, ctx().name1)) return false;
+    Promise.resolve().then(() => saveMeta()).catch(err => console.warn('[narrative-archive] live persona', err));
+    return true;
+}
+setDrawerSeed((d, w, real) => { liveFollowPersona(real); });
 // (a 폰 2 app request asks through its drawer, and only while there is no snapshot: made here, lengthened only before a reply)
 setStoryKeeper(real => keepUpStory(real));
 // the words a request is refused with while a 폰 2 begun from the story has no snapshot
@@ -111,6 +120,8 @@ export async function liveGo(real, { onChange = () => {} } = {}) {
                 // (the weekday is worked out from the phone's year: its saved time's, so the year after once the clock
                 // has passed New Year)
                 clock: (ph, at) => liveAtYear(ph, at, () => phone2Clock(ph, at, d0)), around: aroundBlock, card: () => card,
+                // (who the persona is, as the user wrote them: the same block every phone request carries)
+                who: owner => personaBlock(ctx(), owner, card),
                 place: ph => { const r = (ph.where?.people || []).find(x => nameKey(x?.name) === nameKey(ph.owner)); return String(r?.place || r?.city || '').trim(); },
                 story: () => liveStoryText(real, w),
                 // (the role-play's last messages as they stand now: read at this moment, no place kept)

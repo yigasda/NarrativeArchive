@@ -4012,7 +4012,8 @@ Oldest first.`;
 // read: an object to put what was read in ({ gap }), for a request whose app marks where it read up to
 export async function sideRequest(m, owner, blocks, { profile, money = false, story = 0, read = null } = {}) {
     const world = worldText(m), lore = await loreFor(m, owner, profile?.type === 'lore' ? profile : null);
-    const profileText = await ownerProfileBlock(ctx(),profile,owner,{money});
+    // (a request that carries the cards as blocks has the persona among them already)
+    const profileText = await ownerProfileBlock(ctx(),profile,owner,{money,persona:!blocks.some(b=>String(b).startsWith('[PERSONA — '))});
     const ph = m.phones?.[nameKey(owner)] || null, gap = read && 'gap' in read ? read.gap : windowOf(m, ph), upto = nowAt(gap);
     const recent = recentPhoneText(6, { upto, maxChars: 6000 });
     if (read) read.gap = gap;

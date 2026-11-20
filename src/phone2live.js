@@ -93,7 +93,7 @@ export function gatherReply(m, owner, roomId, { now = Date.now(), tz = 'UTC', de
             ? `${one(here.place)} · ${SKY[here.cond] || one(here.cond)} · ${Math.round(Number(here.temp))}°${Number.isFinite(Number(here.hi)) && Number.isFinite(Number(here.lo)) ? ` (최고 ${Math.round(Number(here.hi))}° · 최저 ${Math.round(Number(here.lo))}°)` : ''}${Number.isFinite(rain) && here.hours?.length ? ` · 비 확률 ${Math.round(rain)}%` : ''}` : '',
         recent: [...recs, ...did], today,
         situations: (Array.isArray(p.situations) ? p.situations : []).filter(s => one(s?.what) && (one(s.state) !== 'done' || one(s.open))).map(s => ({ title: one(s.id) || one(s.what).slice(0, 40), what: s.what, state: s.state, known: s.known, open: s.open })),
-        card: deps.card?.(p.owner) || '',
+        card: deps.card?.(p.owner) || '', who: deps.who?.(p.owner) || '',
         voices: (Array.isArray(p.koVoice) ? p.koVoice : []).map(v => ({ who: v?.who ?? v?.from, style: v?.style })),
         around: deps.around?.(p) || '', blind: deps.blind?.(p.owner) || '',
         // (the newest of the story: whole sections from the end, as many as fit)

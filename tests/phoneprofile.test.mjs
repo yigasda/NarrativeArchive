@@ -84,3 +84,19 @@ test('pre-generation source picker saves a chat-scoped binding without generatin
  await handlers.get('.fp_pick').call({dataset:{type:'character',id:'one.png'}});await new Promise(r=>setTimeout(r,0));
  await handlers.get('.fp_save')();assert.equal(m.phoneProfiles.alex.id,'one.png');assert.equal(m.phones,undefined);assert.equal(deviceCalls,0);
 });
+test('persona block: the active persona word for word, once; none without text, a name, or when it is the owner\'s own profile',async()=>{
+ const {personaBlock}=await import('../src/phoneprofile.js');
+ const c={name1:'Ren',powerUserSettings:{persona_description:' Lives in Gangseo-gu. ',personas:{'ren.png':'Ren'},persona_descriptions:{'ren.png':{description:'Lives in Gangseo-gu.'}}}};
+ const block=personaBlock(c,'Mara');
+ assert.ok(block.startsWith('[PERSONA — Ren]\nLives in Gangseo-gu.\n[PERSONA USE]\nWho Ren is: '));assert.match(block,/It gives no events/);assert.match(block,/the story wins/);
+ assert.ok(block.endsWith("- What Ren keeps to themselves, the owner doesn't know."));assert.doesNotMatch(block,/\buser\b/i);
+ // the persona's own phone: no line about what the owner doesn't know
+ assert.doesNotMatch(personaBlock(c,' ren '),/keeps to themselves/);
+ // beside another profile: after it; the same persona as the owner's profile: only once, as OWNER PROFILE
+ const both=await ownerProfileBlock({...c,loadWorldInfo:async()=>({entries:{4:{uid:4,content:'Runs a shop.'}}})},{type:'lore',book:'B',id:'4'},'Mara');
+ assert.ok(both.startsWith('[OWNER PROFILE — chosen by the user for Mara]')&&both.endsWith(`\n\n${block}`));
+ const own=await ownerProfileBlock(c,{type:'persona',id:'ren.png'},'Ren');
+ assert.match(own,/^\[OWNER PROFILE/);assert.doesNotMatch(own,/\[PERSONA — /);
+ assert.equal(await ownerProfileBlock(c,null,'Mara'),block);assert.equal(await ownerProfileBlock(c,null,'Mara',{persona:false}),'');
+ for(const bad of [{}, {name1:'Ren'}, {name1:'',powerUserSettings:{persona_description:'x'}}, {name1:'Ren',powerUserSettings:{persona_description:'  '}}, null]) assert.equal(personaBlock(bad,'Mara'),'');
+});

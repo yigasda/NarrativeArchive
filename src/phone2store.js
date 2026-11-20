@@ -185,10 +185,10 @@ let storyKeeper = null;
 export const setStoryKeeper = fn => { storyKeeper = typeof fn === 'function' ? fn : null; };
 // now: p => "MM-DD HH:MM", the time it is now on that phone's clock (the caller's: the story's date and the real clock),
 // answered as phoneNow
-// 새 서랍이 생길 때마다 불러요 (서랍, 그 세계): 서랍에 붙여 두는 표시("폰 만드는 중")를 세계마다 하나로 두려는 것.
+// 새 서랍이 생길 때마다 불러요 (서랍, 그 세계, 채팅의 메타): 서랍에 붙여 두는 표시("폰 만드는 중")를 세계마다 하나로 두려는 것.
 // 폰을 닫았다 열면 서랍이 새로 생겨서, 서랍에만 붙인 표시는 안 보여요
-let drawerSeed = null;
-export const setDrawerSeed = fn => { drawerSeed = typeof fn === 'function' ? fn : null; };
+const drawerSeeds = [];
+export const setDrawerSeed = fn => { if (typeof fn === 'function' && !drawerSeeds.includes(fn)) drawerSeeds.push(fn); };
 export function liveMeta(m, { now = null } = {}) {
     const w = liveWorld(m);
     if (!w) throw new Error('아직 폰 2가 없어요');
@@ -224,7 +224,7 @@ export function liveMeta(m, { now = null } = {}) {
         defineProperty: (_, k, d) => { if ('value' in d) { if (pass(k)) m[k] = d.value; else if (own(k)) w[LIVE_OWN[k]] = d.value; else drawer[k] = d.value; } return true; },
     });
     CHAT_OF.set(made, m);
-    drawerSeed?.(made, w);
+    for (const fn of drawerSeeds) fn(made, w, m);
     return made;
 }
 // is `p` one of the chat's own (폰 1's) phones or phones being made, by the drawer of that chat? (the very object: a 폰 2
@@ -310,6 +310,42 @@ export function ensureRoom(m, members) {
     for (const n of names) ensureAccount(m, n);
     const id = newId('r');
     return (w.messenger.rooms[id] = { id, members: names, messages: [] });
+}
+// 페르소나의 이름이 바뀌었어요 (실리태번에서 다른 페르소나를 골랐을 때): 실시간 폰의 "나"를 그 이름으로. 같은 사람으로
+// 보고, 방의 사람 · 지난 말 · 읽은 자리 · 반응 · 받아 둔 답장 · 계정과, 폰들의 연락처 · 위치 정보 · 주변 인물 · 말투 줄의
+// 이름까지 같이 바꿔요. 요약본 · 줄여 둔 옛 대화 · 폰 기록의 글 속 이름은 그대로예요.
+// 안 바꾸는 때(false): 이름이 그대로이거나, 그 이름이 이미 다른 사람(폰 주인 · 방의 사람)의 것일 때
+export function renamePersona(m, name) {
+    const w = liveWorld(m), next = String(name || '').trim();
+    if (!w || !next || next === w.persona) return false;
+    const a = liveKey(w.persona), b = liveKey(next), is = v => liveKey(v) === a;
+    if (a !== b && (w.phones?.[b] || Object.values(w.messenger?.rooms || {}).some(r => (r.members || []).some(n => liveKey(n) === b)))) return false;
+    w.persona = next;
+    const acc = w.messenger?.accounts;
+    if (acc?.[a]) { const x = acc[a]; delete acc[a]; acc[b] = { ...x, name: next }; }
+    const fix = x => {
+        if (!x || typeof x !== 'object') return;
+        if (is(x.from)) x.from = next;
+        for (const k of ['reacts', 'reactsOut']) for (const r of Array.isArray(x[k]) ? x[k] : []) if (is(r?.by)) r.by = next;
+    };
+    for (const r of Object.values(w.messenger?.rooms || {})) {
+        r.members = (r.members || []).map(n => (is(n) ? next : n));
+        (r.messages || []).forEach(fix);
+        if (r.read && a !== b && a in r.read) { r.read[b] = Math.max(Number(r.read[b]) || 0, Number(r.read[a]) || 0); delete r.read[a]; }
+        for (const rec of Object.values(r.swipes || {})) for (const v of Array.isArray(rec?.list) ? rec.list : []) (Array.isArray(v) ? v : []).forEach(fix);
+    }
+    for (const p of Object.values(w.phones || {})) {
+        if (!p || typeof p !== 'object') continue;
+        // (a contact under the new name already: the old one goes, its messenger mark stays)
+        if (Array.isArray(p.contacts)) {
+            const had = p.contacts.find(c => liveKey(c?.name) === b && !is(c?.name)), old = p.contacts.filter(c => is(c?.name));
+            if (had && old.length) { if (old.some(c => c.messenger)) had.messenger = true; p.contacts = p.contacts.filter(c => !old.includes(c)); }
+            else for (const c of old) c.name = next;
+        }
+        for (const row of [...(Array.isArray(p.where?.people) ? p.where.people : []), ...(Array.isArray(p.around?.people) ? p.around.people : [])]) if (is(row?.name)) row.name = next;
+        for (const v of Array.isArray(p.koVoice) ? p.koVoice : []) for (const k of ['who', 'from']) if (typeof v?.[k] === 'string') v[k] = v[k].split(' → ').map(n => (is(n) ? next : n)).join(' → ');
+    }
+    return true;
 }
 export const liveRooms = m => Object.values(liveWorld(m)?.messenger?.rooms || {});
 const roomOf = (m, id) => { const r = liveWorld(m)?.messenger?.rooms?.[id]; if (!r) throw new Error('없는 방이에요'); return r; };

@@ -4,7 +4,7 @@
 // 글로만 바꿔요(모으는 건 phone2live.js). 폰 1은 이 파일을 안 불러요.
 //
 // 블록 순서(있는 것만, 블록 사이는 빈 줄 하나): LANGUAGES · MESSENGER · CHAT SUMMARY · NOW · OWNER'S CLOCK · WEATHER NOW ·
-// RECENT ON THE PHONE · SITUATIONS · [<주인>'s card] · VOICES · PEOPLE AROUND · OWNER DOESN'T KNOW · STORY ·
+// RECENT ON THE PHONE · SITUATIONS · [<주인>'s card] · PERSONA · VOICES · PEOPLE AROUND · OWNER DOESN'T KNOW · STORY ·
 // LAST MESSAGES · TYPED AND DELETED · WHY NOW
 
 const one = v => String(v ?? '').replace(/\s+/g, ' ').trim();
@@ -63,7 +63,7 @@ export function voicesBlock(rows) {
 }
 
 // the whole input. d: { owner, persona, langs, messenger, summary, now, clock (the [OWNER'S CLOCK] block), weather (one
-// line), recent, today, situations, card, voices, around (the [PEOPLE AROUND] block), blind (the [OWNER DOESN'T KNOW]
+// line), recent, today, situations, card, who (the [PERSONA — name] block), voices, around (the [PEOPLE AROUND] block), blind (the [OWNER DOESN'T KNOW]
 // block), story, before (the story's last messages as they were said), typed: [words], why }
 export function replyInput(d) {
     const O = one(d.owner), body = String(d.card ?? '').trim(), typed = list(d.typed);
@@ -77,6 +77,7 @@ export function replyInput(d) {
         recentBlock(d.recent, d.today),
         situationsBlock(d.situations),
         body ? `[${O}'s card]\n${body}` : '',
+        String(d.who || '').trim(),
         voicesBlock(d.voices),
         String(d.around || '').trim(),
         String(d.blind || '').trim(),

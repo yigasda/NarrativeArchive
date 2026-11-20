@@ -33,6 +33,7 @@ Numbers are plain JSON numbers.
    - OWNER PROFILE을 안 넘기는 요청이면 그 이름만 빼요.
 4. **OWNER DOESN'T KNOW를 받는 지시문에는 "폰에 아는 것처럼 쓰지 않기" 규칙이 꼭 있어야 해요.**
 5. 블록 안에 설명이 같이 들어가는 블록(NAMES, ONLY THESE, BODY ON THE PHONE NOW …)은 목록에 없어도 돼요.
+6. **PERSONA(페르소나 설명)는 폰 요청 전부에 같은 블록으로 들어가요.** `ownerProfileBlock`이 OWNER PROFILE 뒤에 `[PERSONA — 이름]` + `[PERSONA USE]`를 붙여요(`src/phoneprofile.js`의 `personaBlock`). 쓰는 법이 블록 안에 있어서 목록에 없어도 돼요. 카드를 블록으로 싣는 요청(말투 · 위치 읽기)은 그 안에 페르소나가 이미 있어서 또 넣지 않아요. 답장 지시문은 목록에 PERSONA를 적어요.
 
 ## 잘 따르게 쓰는 법
 
@@ -58,3 +59,4 @@ Numbers are plain JSON numbers.
 ## 기록
 
 - 3.170.28: 폰 지시문 25개를 대조해서 맞췄어요. 생활 · 배달 · 은행 · 음성 메모 · 기기 · 스크린타임 채우기에 OWNER DOESN'T KNOW 규칙이 빠져 있었어요.
+- 3.211.0: 페르소나 설명이 위치 · 말투 읽기에만 들어가서, 반영 · 채우기 · 폰 만들기 · 답장이 페르소나가 사는 곳을 지어냈어요. 모든 폰 요청에 같은 PERSONA 블록을 넣었어요.

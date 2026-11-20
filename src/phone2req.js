@@ -66,7 +66,8 @@ export const liveYearBlock = (m, p) => { const y = liveStoryYear(m, p); return y
 export async function liveSideRequest(m, owner, blocks, { profile, money = false, read = null } = {}) {
     await liveStoryReady(m);
     const world = worldText(m), lore = await loreFor(m, owner, profile?.type === 'lore' ? profile : null);
-    const profileText = await ownerProfileBlock(ctx(),profile,owner,{money});
+    // (a request that carries the cards as blocks has the persona among them already)
+    const profileText = await ownerProfileBlock(ctx(),profile,owner,{money,persona:!blocks.some(b=>String(b).startsWith('[PERSONA — '))});
     const ph = m.phones?.[nameKey(owner)] || null, gap = read && 'gap' in read ? read.gap : liveWindowOf(m, ph), upto = nowAt(gap);
     // (폰 2, a request whose app marks where it read: only the talk the reflection has read, so nothing is taken twice)
     // (폰 2, an app being filled: it marks all the reflected talk as known, so it is shown that talk and not six lines of it)

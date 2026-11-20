@@ -33,15 +33,28 @@ export async function resolvePhoneProfile(c, binding) {
     return {label:String(label),text:body};
 }
 // Keep financeProfile as the saved binding key for backward compatibility.
+// the user's character (실리태번의 페르소나 설명), word for word, with how to read it: the one the owner texts and meets
+// most, so every request that writes a phone knows who they are (where they live, their work) and makes none of it up.
+// None when: there is no persona text, or the owner's own profile is that same text (it is OWNER PROFILE already)
+export function personaBlock(c, owner, profileText = '') {
+    const name = String(c?.name1 || '').trim(), text = String(c?.powerUserSettings?.persona_description || '').trim();
+    if (!name || !text || (profileText && String(profileText).trim() === text)) return '';
+    const own = name.toLowerCase() === String(owner || '').trim().toLowerCase();
+    return `[PERSONA — ${name}]\n${text}\n[PERSONA USE]
+Who ${name} is: where they live, their work, looks, people and ways.
+- It gives no events: nothing happened just because it makes it likely.
+- Where the story says otherwise, the story wins.${own ? '' : `\n- What ${name} keeps to themselves, the owner doesn't know.`}`;
+}
 // money: the bank, investment and wealth requests, which also read the profile for the owner's means
-export async function ownerProfileBlock(c,binding,owner,{money=false}={}) {
-    const profile=await resolvePhoneProfile(c,binding);
-    if (!profile) return '';
+// persona: false for a request that carries the persona itself (the cards as blocks)
+export async function ownerProfileBlock(c,binding,owner,{money=false,persona=true}={}) {
+    const profile=await resolvePhoneProfile(c,binding), who=persona ? personaBlock(c,owner,profile?.text) : '';
+    if (!profile) return who;
     return `[OWNER PROFILE — chosen by the user for ${owner}]\n${profile.label}\n${profile.text}\n[PROFILE USE]
 Background for who the owner is: personality, voice, body, relationships, interests, work${money ? ' and means' : ''}.
 - It gives no events: nothing happened just because the profile makes it likely.
 - Where the story says otherwise, the story wins.
-- What the profile keeps secret, other people don't know.${money ? '\n- Company and family money are not the owner\'s own.' : ''}`;
+- What the profile keeps secret, other people don't know.${money ? '\n- Company and family money are not the owner\'s own.' : ''}${who ? `\n\n${who}` : ''}`;
 }
 
 // Empty arrays are valid generated app data; absent fields are not generated.

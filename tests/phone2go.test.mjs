@@ -1260,3 +1260,85 @@ test('캐릭터의 반응: 답장의 "react"가 내 말에 달려요; 반응만 
     // 지시문: 반응 칸 하나, 받는 것의 MESSENGER에 반응 설명
     assert.ok(T.replySys.includes('"react": "" or { "to": "Ren", "emoji": "…" },'));
 });
+
+test('페르소나 설명: 답장 · 반영 · 채우기 요청에 같은 블록이 한 번씩 들어가요 (없으면 안 들어가요)', async () => {
+    const c = world(), text = 'Lives in Gangseo-gu, Seoul. Works at a bakery.';
+    const BLOCK = `[PERSONA — Ren]\n${text}\n[PERSONA USE]\nWho Ren is: where they live, their work, looks, people and ways.\n- It gives no events: nothing happened just because it makes it likely.\n- Where the story says otherwise, the story wins.\n- What Ren keeps to themselves, the owner doesn't know.`;
+    const count = s => String(s).split('[PERSONA — Ren]').length - 1;
+    Object.assign(T, { st: { name1: 'Ren', powerUserSettings: { persona_description: `  ${text}\n` } }, rows: [], chat: [] });
+    try {
+        // 답장: 카드 바로 뒤에
+        send(c, '어디야');
+        T.replies = [{ state: '집', reply: ['집'], does: [] }];
+        await G.liveGo(c.real);
+        assert.ok(T.replyInput.includes(`\n\n${BLOCK}\n\n`) || T.replyInput.endsWith(BLOCK)); assert.equal(count(T.replyInput), 1);
+        assert.ok(T.replySys.includes("- Mara's card, PERSONA (who Ren is), VOICES ("));
+        // 반영
+        T.answers = [{ events: [] }];
+        await G.liveReflect(c.real, 'Mara');
+        assert.ok(T.input.includes(BLOCK)); assert.equal(count(T.input), 1);
+        // 채우기: 실시간 · 타임라인 둘 다. 카드를 블록으로 싣는 요청(말투 읽기)은 그 안에 이미 있어서 또 안 넣어요
+        const d = L.liveMeta(c.real);
+        const side = await Q.liveSideRequest(d, 'Mara', ['[TARGET]\nx']);
+        assert.ok(side.includes(BLOCK)); assert.equal(count(side), 1);
+        const cards = await Q.liveSideRequest(d, 'Mara', [`[PERSONA — Ren]\n${text}`, '[WHO]\n- Ren']);
+        assert.equal(count(cards), 1); assert.ok(!cards.includes('[PERSONA USE]'));
+        const one = await PD.sideRequest(c.real, 'Mara', ['[TARGET]\nx']);
+        assert.ok(String(one).includes(BLOCK)); assert.equal(count(one), 1);
+        assert.ok(!String(await PD.sideRequest(c.real, 'Mara', [`[PERSONA — Ren]\n${text}`])).includes('[PERSONA USE]'));
+        // 페르소나 설명이 비었으면 블록이 없어요
+        T.st = { name1: 'Ren', powerUserSettings: { persona_description: '  ' } };
+        assert.equal(count(await Q.liveSideRequest(d, 'Mara', [])), 0);
+        send(c, '뭐해');
+        T.replies = [{ state: '집', reply: ['쉬어'], does: [] }];
+        await G.liveGo(c.real);
+        assert.equal(count(T.replyInput), 0);
+    } finally { delete T.st; delete T.rows; T.chat = []; }
+});
+
+test('실리태번에서 페르소나를 바꾸면 실시간 폰의 "나"도 따라와요: 방 · 지난 말 · 읽은 자리 · 반응 · 받아 둔 답장 · 연락처', async () => {
+    const c = world();
+    send(c, '일어났냐');
+    T.replies = [{ state: '집', reply: ['방금'], react: '😂', does: [] }];
+    await G.liveGo(c.real);
+    await G.liveReact(c.real, c.room.id, c.room.messages[1].id, 'Ren', '❤️');
+    await G.liveSwipe(c.real, c.room.id, 1);
+    T.replies = [{ state: '집', reply: ['응'], does: [] }];
+    await G.liveGo(c.real);
+    const w = L.liveWorld(c.real), saves = T.saves;
+    c.p.where = { at: 1, people: [{ name: 'Mara', city: 'Seoul' }, { name: 'Ren', city: 'Seoul' }] };
+    c.p.around = { people: [{ name: 'Ren', about: '친구' }] };
+    c.p.koVoice = [{ who: 'Mara → Ren', style: '반말' }, { who: 'Ren', style: '존댓말' }];
+    // 다른 채팅이 열려 있으면 안 바꿔요; 이름이 그대로여도 안 바꿔요
+    Object.assign(T, { metadata: { narrative_archive: {} }, st: { name1: 'Somang' } });
+    try {
+        assert.equal(G.liveFollowPersona(c.real), false); assert.equal(w.persona, 'Ren');
+        T.metadata = { narrative_archive: c.real };
+        T.st = { name1: 'Ren' };
+        L.liveMeta(c.real); assert.equal(w.persona, 'Ren');
+        // 실시간 서랍이 생길 때(폰을 열 때 · 답장을 돌릴 때) 저절로 따라와요
+        T.st = { name1: ' Somang ' };
+        L.liveMeta(c.real);
+        await Promise.resolve(); await Promise.resolve();
+        assert.equal(w.persona, 'Somang'); assert.equal(T.saves, saves + 1);
+        assert.deepEqual(c.room.members, ['Somang', 'Mara']);
+        assert.deepEqual(c.room.messages.map(x => x.from), ['Somang', 'Mara']);
+        assert.ok(c.room.read.somang > 0 && !('ren' in c.room.read));
+        assert.deepEqual(w.messenger.accounts.somang, { name: 'Somang' }); assert.equal(w.messenger.accounts.ren, undefined);
+        // (받아 둔 답장과 그 답장이 맡아 둔 반응까지)
+        const kept = Object.values(c.room.swipes)[0].list.find(Boolean);
+        assert.deepEqual(kept.map(x => x.from), ['Mara']); assert.deepEqual(kept[0].reacts.map(r => r.by), ['Somang']);
+        assert.deepEqual(c.p.contacts.filter(x => x.messenger).map(x => x.name), ['Somang']);
+        assert.deepEqual([c.p.where.people.map(x => x.name), c.p.around.people.map(x => x.name), c.p.koVoice.map(v => v.who)], [['Mara', 'Somang'], ['Somang'], ['Mara → Somang', 'Somang']]);
+        // 그 뒤로는 새 이름으로 보내고 답장도 새 이름을 알아요
+        send(c, '나 이름 바꿨어');
+        T.replies = [{ state: '집', reply: ['알아'], does: [] }];
+        await G.liveGo(c.real);
+        assert.match(T.replySys, /^GOAL\nYou are Mara\. Somang is texting you on MESSENGER\./);
+        assert.match(T.replyInput, / · Somang: 나 이름 바꿨어/); assert.ok(!T.replyInput.includes('Ren:'));
+        // 그 이름이 이미 다른 사람의 것이면 안 바꿔요 (두 사람이 한 사람이 돼요)
+        T.st = { name1: 'mara' };
+        assert.equal(G.liveFollowPersona(c.real), false); assert.equal(w.persona, 'Somang');
+        assert.equal(L.renamePersona(c.real, ''), false); assert.equal(L.renamePersona({ phones: {} }, 'X'), false);
+    } finally { delete T.st; delete T.metadata; }
+});
