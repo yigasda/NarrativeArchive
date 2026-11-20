@@ -169,3 +169,20 @@ export function whoScreen(now, o = {}) {
       ${o.live ? `<button type="button" class="wh_imp na_ph_pmode" data-v="live">${ic('chat', 15, '#5b6170')}실시간 폰으로</button>` : `<button type="button" class="wh_imp" data-go="livestart">${ic('chat', 15, '#5b6170')}메신저 채팅 가져오기</button>`}
       ${axInd()}`;
 }
+
+// 프사 바꾸기 (시안 docs/mockups/phone2-edit sheetCrop C1 + 소망이 그린 큰 네모 두 칸 갤러리): 그 사람 방 색 전체 화면.
+// 위는 사진 + 둥근 틀(끌어서 옮기고 막대 · 두 손가락으로 크기), 아래는 모아 둔 사진 두 칸 격자(맨 앞은 더하기), 아래로 굴려요. 맨 아래 "이대로 쓰기".
+// o: { name, back (뒤로 갈 곳), src (틀에 올린 사진; 없으면 빈 틀), album: [{ url, on }], busy }
+export function orbitFace(p, now, o) {
+    return `<div class="ob_bg"><span class="ob_blob" style="background:${orbitBg(o.name)}"></span></div>${axBar(p, o.clock || now, '#fff')}
+      <div class="of_top"><button type="button" class="ob_cb of_cb" data-go="${esc(o.back || 'orbit')}" aria-label="뒤로">${ic('back', 20, '#1b1d24', 2.2)}</button><b class="of_h">${esc(o.name)}</b><span class="ob_cb0"></span></div>
+      <div class="of_scroll ax_scroll">
+        <div class="of_stage na_of_stage">${o.src ? `<img class="of_img na_of_img" src="${esc(o.src)}" alt="" draggable="false">` : ''}<i class="of_ring"></i></div>
+        <div class="of_zoom${o.src ? '' : ' off'}"><span>작게</span><div class="of_tr na_of_tr" role="slider" tabindex="0" aria-label="크기"><i class="of_th na_of_th"></i></div><span>크게</span></div>
+        <div class="of_grid"><button type="button" class="of_add na_of_add" aria-label="사진 더하기">${ic('plus', 26, '#fff', 2.2)}</button>${o.album.map((x, i) => `<button type="button" class="of_pic na_of_pic${x.on ? ' on' : ''}" data-i="${i}"><img src="${esc(x.url)}" alt="" loading="lazy" decoding="async"></button>`).join('')}</div>
+        <i class="of_pad"></i>
+      </div>
+      <button type="button" class="ob_go of_go na_of_ok"${o.busy || !o.src ? ' disabled' : ''}>이대로 쓰기</button>
+      ${axInd('#fff')}`;
+}
+

@@ -13,7 +13,7 @@ import { migrateBank, selectPrice } from './finance.js';
 import { askDraft, draftReady, draftSettings, drLabel, listModels, vxModelList, withSpinner } from './ai.js';
 import { ctx, getMeta, globalSettings, phoneMeta, saveGlobal, saveMeta, setPhoneMeta } from './core.js';
 import { applyInjection } from './inject.js';
-import { faceHtml, nameKey, peopleList, cropFace, shrinkFace } from './people.js';
+import { faceHtml, nameKey, peopleList, shrinkFace } from './people.js';
 import { drafting, drawing, drawPhoto, drawPost, filling, paging, retranslate, retranslating, recording, searching, searchPage, shooting, webPage, writing } from './phoneai.js';
 import { setDraft, setDraftModels, setLang, setSnap, setVoice, setVoiceAdd, voiceList, voicePeople, ax, axFind, groupInfo, APPS, AXB, AXB_C, busyHtml, setDate, setScreenHolderView, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, mapTowns, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setOwnerProfile, setWho, snsPost, snsScreen, statusBar, threadScreen, setPlace, prepScreen } from './phoneapps.js';
 import { phoneMaking, dropStretch, chatStamp, koGaps, savedName, ensureIds, hasDatedRecords, noArchive, koOn, loreOff, tidyKo, markAfter, phoneLore, REMAKE, restoreRounds, showNow, syncLeft, syncRows, syncState, tidyJournal, undoRound } from './phonedata.js';
@@ -37,7 +37,7 @@ const josa = w => { const c = w.charCodeAt(w.length - 1) - 0xac00; return c >= 0
 import { confirm, esc } from './util.js';
 import { liveMode, liveWorld, livePhone, liveMeta, setLiveMode, resetLive, rememberLiveOwner, readLiveOwner, liveKey, liveRooms, ensureRoom, nameRoom, sendLive, readLive, unreadBy, enqueueReplies, seeFailure } from './phone2store.js';
 import { shiftLabel, liveWall, viewerWall, startShift } from './phone2clock.js';
-import { orbitList, orbitRoom, orbitNew, orbitHomeWidget, liveStart, whoScreen } from './phoneorbit.js';
+import { orbitList, orbitRoom, orbitNew, orbitHomeWidget, liveStart, whoScreen, orbitFace } from './phoneorbit.js';
 import { beginFromStory, liveBranched, adoptChat, rebeginFromStory, rebeginKeepingChats } from './phone2story.js';
 import { liveSnapNow, snapParts } from './phone2snap.js';
 import { liveGo, liveReflect, liveCanUndo, liveUndo, liveUnreflected, liveNowOf, liveSnapBusy, liveBackCount, liveBackDraft, liveBackPut, liveImportPlan, liveImportFilePlan, liveImportChat, liveImportFile, liveDropMessages, liveSwipeInfo, liveSwipe, liveSwipeDrop, liveRetranslate, liveSwipeList, liveSwipeDropMany, liveSwipeDropOthers } from './phone2go.js';
@@ -73,7 +73,7 @@ function screen(p, view, m, roster, ui) {
         : v === 'cal' ? calScreen(p, now, m, i || '') : v === 'calone' ? calOne(p, now, Number(i), m) : v === 'map' ? (mapTowns(p, m).groups.length ? mapScreen(p, now, m, i || '') : mapEmptyScreen(p, now, m)) : v === 'mapq' ? mapSearchScreen(p, now, m, i || '', ui.mapQ || '') : v === 'mapc' ? mapCityScreen(p, now, m, i || '')
         : v === 'sns' ? snsScreen(p, now) : v === 'snspost' ? snsPost(p, now, Number(i)) : v === 'mail' ? mailScreen(p, now, i) : v === 'mailone' ? mailOne(p, now, Number(i))
         : v === 'diary' ? diaryScreen(p, now, i || '') : v === 'diaryone' ? diaryOne(p, now, Number(i)) : v === 'setsync' ? syncSettings(p, now, ui) : v === 'setsyncpick' ? syncPick(p, now, ui) : v === 'set' ? setScreen(p, now, m, ui) : v === 'stime' ? screenTimeScreen(p, now, i || '') : v === 'settheme' ? setTheme(p, now) : v === 'setscreenholder' ? setScreenHolderView(p, now, m, ui.holderBack) : v === 'setdate' ? setDate(p, now, m, ui) : v === 'setplace' ? setPlace(p, now, m, ui) : v === 'setdraft' ? setDraft(p, now, draftUi(), ui.draftBack || 'set') : v === 'setdraftmodel' ? setDraftModels(p, now, draftIds(), draftSettings()[draftKey()] || '', draftSettings().mode === 'custom') : v === 'setvoice' ? setVoice(p, now, ui.voicePick, ui.voiceBusy) : v === 'setsnap' ? setSnap(p, now, phoneMeta()?.phoneSnap, snapParts(phoneMeta()?.phoneSnap)) : v === 'setlang' ? setLang(p, now, i) : v === 'setvoiceadd' ? setVoiceAdd(p, now, ui.voiceAdd, ui.voiceBusy) : v === 'prep' ? prepScreen(p, now, m, ui.prep) : v === 'setremake' ? setRemake(p, now, ui, m) : v === 'setprofile' ? setOwnerProfile(p,now,ui.profileState,!!ui.phones?.live) : v === 'setwho' ? setWho(p, now, m, ui) : v === 'setlore' ? setLore(p, now, m, ui)
-        : v === 'cam' ? camScreen(p, now, i === undefined ? -1 : Number(i), shooting.has(nameKey(p.owner))) : v === 'livestart' || v === 'liveimport' ? liveStart(p, now, ui.start) : v === 'orbit' ? orbitList(p, now, ui.orbit) : v === 'orbitroom' ? orbitRoom(p, now, ui.orbit) : v === 'orbitnew' ? orbitNew(p, now, ui.orbit) : homeScreen(p, now, m, 1, '', ui.orbitHome || '');
+        : v === 'cam' ? camScreen(p, now, i === undefined ? -1 : Number(i), shooting.has(nameKey(p.owner))) : v === 'livestart' || v === 'liveimport' ? liveStart(p, now, ui.start) : v === 'orbit' ? orbitList(p, now, ui.orbit) : v === 'orbitroom' ? orbitRoom(p, now, ui.orbit) : v === 'orbitnew' ? orbitNew(p, now, ui.orbit) : v === 'orbitface' ? orbitFace(p, now, ui.orbit) : homeScreen(p, now, m, 1, '', ui.orbitHome || '');
     // the home is the design board itself, at its own size, scaled to the screen (--k)
     // every app: drawn at the boards' size too, each its own app look
     if (!['home', 'home2', 'lock'].includes(v)) { const c = AXB_C[AXB[v]]; return `<div class="na_ph_scr app ax${['card', 'tx'].includes(v) ? '' : ` ax_${v}`} v_${v}${c ? ' axb' : ''}" style="--ph-acc:var(--ph-${p.accent})${c ? `; --axd: ${c[0]}; --axc: ${c[1]}` : ''}"><div class="cg_canvas ax_canvas">${body}</div></div>`; }
@@ -266,6 +266,7 @@ export async function openPhone(who = null) {
             out.orbit = { id: r.id, title: V.titleOf(r), group, faceOf: !group && !ro ? os[0] : '', sub: group ? [...os, '나'].join(' · ') : state, chips, asOwner: ro, msgs, draft: obDraft, typing, snapBusy: typing && liveSnapBusy(realM), fail: fail ? { id: fail.id } : null, swipe: sw && !sw.coming ? { at: sw.at, count: sw.count } : null, picking: !ro && obPicks ? obPicks.size : null,
                 list: !ro && obList ? (items => ({ items, picks: [...obList].filter(n => items.some(x => x.no === n)), busy: !!sw?.coming }))(liveSwipeList(realM, r.id)) : null };
         }
+        if (v === 'orbitface') { if (!obFc) { view = 'orbit'; return orbitUi(); } out.orbit = { name: obFc.who, back: obFc.back, src: obFc.src, album: obFc.album.map((url, i) => ({ url, on: i === obFc.sel })), busy: obFc.busy }; }
         // 위쪽 시계: 내 계정으로 볼 때는 내 시간 (캐릭터 시간은 방 가운데 칩에만). 주인 계정으로 볼 때는 그 폰의 시간 그대로
         if (out.orbit && !ro) out.orbit.clock = vw(Date.now());
         return out;
@@ -516,6 +517,7 @@ export async function openPhone(who = null) {
         trPop();
         notchPasses();
         if (keep) $root.find('.na_ph_body, .ax_scroll').scrollTop(top);
+        if (view === 'orbitface') fcPaint();
         if (making && view === 'setremake') $root.find('.na_ph_setremake .ax_n').html(`${busyHtml} 다시 만드는 중`);
         // a redraw mid-reflection (or mid-make) keeps saying so: withSpinner only dressed the button that was there
         if (busyMake === 'sync' || busy.sync && busy.operation === 'reflect' && busy.scope === openingScope && nameKey(busy.owner) === nameKey(owner)) $root.find('.na_ph_setupd .ax_v').html(`${busyHtml} 반영하는 중`);
@@ -867,16 +869,84 @@ export async function openPhone(who = null) {
         try { await liveSwipeDrop(realM, id); } catch (err) { obWarn(err); }
         obHeld = null; if (!phoneClosed && stillHere()) drawPhone(true);
     });
-    // 프사 바꾸기: 1:1 방 머리줄의 얼굴을 누르면 그림을 고르고 자리를 잡아요 (인물 도감과 같은 저장소: 확장 설정의 faces, 모든 채팅에서 같이 써요)
+    // 프사 바꾸기 (시안 phone2-edit sheetCrop C1 + 두 칸 갤러리): 1:1 방 머리줄의 얼굴 → 그 사람 색 전체 화면.
+    // 사진은 인물 도감과 같은 저장소(확장 설정 faces, 모든 채팅이 같이 써요)에 들어가고, 모아 둔 사진은 faceAlbum[이름]에 남아요(사람마다 FACE_KEEP장까지).
+    // obFc: { who, back, album: [데이터 URL], sel (고른 칸, -1 = 새 사진), src (틀에 올린 사진의 주소), file (새로 고른 파일), W, H, scale, min, tx, ty, busy }
+    const FACE_V = 230, FACE_KEEP = 12;   // (FACE_V: 틀의 크기, css의 .of_stage와 같아야 해요)
+    let obFc = null;
+    const fcK = () => Number(frame?.style.getPropertyValue('--k')) || 1;
+    const fcClamp = () => { const f = obFc; f.tx = Math.min(0, Math.max(FACE_V - f.W * f.scale, f.tx)); f.ty = Math.min(0, Math.max(FACE_V - f.H * f.scale, f.ty)); };
+    const fcPaint = () => { const f = obFc; if (!f?.W) return; fcClamp(); $root.find('.na_of_img').css({ width: `${f.W * f.scale}px`, height: `${f.H * f.scale}px`, transform: `translate(${f.tx}px, ${f.ty}px)` }); $root.find('.na_of_th').css('--z', String(Math.min(1, Math.max(0, (f.scale / f.min - 1) / 4)))); };
+    const fcZoom = (next, px = FACE_V / 2, py = FACE_V / 2) => { const f = obFc; if (!f?.W) return; next = Math.min(f.min * 5, Math.max(f.min, next)); f.tx = px - (px - f.tx) * next / f.scale; f.ty = py - (py - f.ty) * next / f.scale; f.scale = next; fcPaint(); };
+    // a picture onto the frame: its size is read first (a tall one starts nearer its top, where the face is)
+    const fcLoad = async (src, file = null, sel = -1) => {
+        const f = obFc; if (!f) return;
+        const im = new Image(); im.src = src;
+        try { await im.decode(); } catch { toastr.error('그림을 못 읽었어요', '캐릭터 휴대폰'); return; }
+        if (obFc !== f) return;
+        Object.assign(f, { src, file, sel, W: im.naturalWidth, H: im.naturalHeight });
+        f.min = FACE_V / Math.min(f.W, f.H); f.scale = f.min; f.tx = (FACE_V - f.W * f.scale) / 2; f.ty = (FACE_V - f.H * f.scale) * 0.25;
+        if (!phoneClosed && view === 'orbitface') { const top = $root.find('.of_scroll').scrollTop(); drawPhone(true); $root.find('.of_scroll').scrollTop(top); fcPaint(); }
+    };
+    const fcAlbum = who => { const g = globalSettings(), k = nameKey(who), a = Array.isArray(g.faceAlbum?.[k]) ? g.faceAlbum[k].filter(x => typeof x === 'string' && x.startsWith('data:')) : [], cur = g.faces?.[k]; return typeof cur === 'string' && cur.startsWith('data:') && !a.includes(cur) ? [cur, ...a] : a; };
+    const fcKeep = (who, album) => { const g = globalSettings(); g.faceAlbum = g.faceAlbum || {}; g.faceAlbum[nameKey(who)] = album.slice(0, FACE_KEEP); saveGlobal(); };
     $root.on('click', '.na_ob_face', function (e) {
         e.stopPropagation(); const who = this.dataset.n; if (!who) return;
-        const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
+        const album = fcAlbum(who), cur = globalSettings().faces?.[nameKey(who)], sel = album.indexOf(cur);
+        obFc = { who, back: view, album, sel, src: '', file: null, W: 0, H: 0, scale: 1, min: 1, tx: 0, ty: 0, busy: false };
+        view = 'orbitface'; drawPhone();
+        if (sel >= 0) fcLoad(album[sel], null, sel);
+    });
+    $root.on('click', '.na_of_pic', function (e) { e.stopPropagation(); const i = Number(this.dataset.i), u = obFc?.album[i]; if (u) fcLoad(u, null, i); });
+    // 더하기: 여러 장을 한 번에. 고른 사진은 가운데를 잘라 모아 두고(남아요), 첫 장을 틀에 올려요
+    $root.on('click', '.na_of_add', e => {
+        e.stopPropagation(); const f = obFc; if (!f || f.busy) return;
+        const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true;
         inp.addEventListener('change', async () => {
-            const f = inp.files?.[0]; if (!f) return;
-            try { const crop = await cropFace(f); if (!crop) return; const g = globalSettings(); g.faces = g.faces || {}; g.faces[nameKey(who)] = await shrinkFace(f, crop); saveGlobal(); if (!phoneClosed && stillHere()) drawPhone(true); }
+            const files = [...(inp.files || [])].slice(0, FACE_KEEP); if (!files.length || obFc !== f) return;
+            f.busy = true; let first = null;
+            try { for (const file of files.reverse()) { const url = await shrinkFace(file); f.album = [url, ...f.album.filter(x => x !== url)].slice(0, FACE_KEEP); first = file; } fcKeep(f.who, f.album); }
             catch (err) { toastr.error(`그림을 못 읽었어요: ${err?.message || err}`, '캐릭터 휴대폰'); }
+            finally { f.busy = false; }
+            if (obFc !== f) return;
+            if (first) { if (f.blob) URL.revokeObjectURL(f.blob); f.blob = URL.createObjectURL(first); await fcLoad(f.blob, first, 0); }
+            else if (!phoneClosed) drawPhone(true);
         });
         inp.click();
+    });
+    // 틀: 끌어서 옮기기 · 두 손가락으로 크기 · 휠, 막대: 끌어서 크기 (화면이 줄어든 만큼 손가락 거리를 나눠요)
+    const fcPts = new Map(); let fcPinch = null, fcBar = false;
+    $root.on('pointerdown', '.na_of_stage', function (e) { if (!obFc?.W) return; try { this.setPointerCapture(e.pointerId); } catch { /* (no capture) */ } fcPts.set(e.pointerId, { x: e.clientX, y: e.clientY }); fcPinch = null; });
+    $root.on('pointermove', '.na_of_stage', function (e) {
+        if (!fcPts.has(e.pointerId) || !obFc?.W) return;
+        const prev = fcPts.get(e.pointerId), k = fcK(); fcPts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (fcPts.size === 1) { obFc.tx += (e.clientX - prev.x) / k; obFc.ty += (e.clientY - prev.y) / k; fcPaint(); return; }
+        const [a, b] = [...fcPts.values()], d = Math.hypot(a.x - b.x, a.y - b.y), r = this.getBoundingClientRect();
+        if (fcPinch) fcZoom(obFc.scale * d / fcPinch, ((a.x + b.x) / 2 - r.left) / k, ((a.y + b.y) / 2 - r.top) / k);
+        fcPinch = d;
+    });
+    $root.on('pointerup pointercancel', '.na_of_stage', e => { fcPts.delete(e.pointerId); fcPinch = null; });
+    $root.on('wheel', '.na_of_stage', function (e) { if (!obFc?.W) return; e.preventDefault(); const o = e.originalEvent, r = this.getBoundingClientRect(), k = fcK(); fcZoom(obFc.scale * (o.deltaY < 0 ? 1.08 : 1 / 1.08), (o.clientX - r.left) / k, (o.clientY - r.top) / k); });
+    const fcBarTo = (el, x) => { const r = el.getBoundingClientRect(), pad = 12 * fcK(); fcZoom(obFc.min * (1 + 4 * Math.min(1, Math.max(0, (x - r.left - pad) / (r.width - pad * 2))))); };
+    $root.on('pointerdown', '.na_of_tr', function (e) { if (!obFc?.W) return; fcBar = true; try { this.setPointerCapture(e.pointerId); } catch { /* (no capture) */ } fcBarTo(this, e.clientX); });
+    $root.on('pointermove', '.na_of_tr', function (e) { if (fcBar && obFc?.W) fcBarTo(this, e.clientX); });
+    $root.on('pointerup pointercancel', '.na_of_tr', () => { fcBar = false; });
+    // 이대로 쓰기: 틀 안의 네모를 잘라 그 사람의 프사로 (새로 고른 사진이면 모아 둔 첫 칸도 그 모양으로)
+    $root.on('click', '.na_of_ok', async e => {
+        e.stopPropagation(); const f = obFc; if (!f?.W || f.busy) return;
+        f.busy = true; drawPhone(true); fcPaint();
+        try {
+            const blob = f.file || await (await fetch(f.src)).blob();
+            // (모아 둔 사진을 손대지 않고 그대로 쓰면 그 그림 그대로: 다시 줄여 새 칸을 만들지 않아요)
+            const asIs = !f.file && f.sel >= 0 && f.W === f.H && Math.abs(f.scale - f.min) < 1e-6;
+            const url = asIs ? f.album[f.sel] : await shrinkFace(blob, { sx: -f.tx / f.scale, sy: -f.ty / f.scale, ss: FACE_V / f.scale });
+            const g = globalSettings(); g.faces = g.faces || {}; g.faces[nameKey(f.who)] = url;
+            if (f.file) f.album[0] = url; else if (!f.album.includes(url)) f.album = [url, ...f.album];
+            fcKeep(f.who, f.album);
+            if (f.blob) URL.revokeObjectURL(f.blob);
+            if (obFc === f) { obFc = null; view = f.back; }
+        } catch (err) { f.busy = false; toastr.error(`그림을 못 읽었어요: ${err?.message || err}`, '캐릭터 휴대폰'); }
+        if (!phoneClosed && stillHere()) drawPhone();
     });
     // 답장 돌리기 (7-5): liveGo 하나가 다 해요(이미 돌면 그냥 돌아와요). 그리기는 이 채팅 · 실시간일 때만, 입력하던 칸은 그대로
     const obGo = () => liveGo(realM, { onChange: () => {
