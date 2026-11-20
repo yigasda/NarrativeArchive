@@ -225,14 +225,16 @@ public class MainActivity extends Activity {
         else setBars(barTop, barBottom);
         fitPhone();
     }
-    // 폰을 연 동안 하단 버튼 줄: 완전히 투명하면 버튼이 안 보였어요. 텔레그램처럼 화면 아래 색을 반투명(70%)으로 깔아서 뒤가 이어져 보이면서 뿌옇게
+    // 폰을 연 동안 하단 버튼 줄: 그 화면 아래 바탕색을 조금 더 뿌옇게(흰색 25% 섞기) 칠해요. 투명 · 반투명 · 흰색 · 덧칠은 다 싫다(소망)
+    private static int haze(int c) { return Color.rgb(Color.red(c) + (255 - Color.red(c)) / 4, Color.green(c) + (255 - Color.green(c)) / 4, Color.blue(c) + (255 - Color.blue(c)) / 4); }
     @SuppressWarnings("deprecation")
     private void phoneNav() {
         Window w = getWindow();
-        w.setNavigationBarColor(Color.argb(178, Color.red(barBottom), Color.green(barBottom), Color.blue(barBottom)));
+        int c = haze(barBottom);
+        w.setNavigationBarColor(c);
         if (Build.VERSION.SDK_INT >= 30) {
             WindowInsetsController ic = w.getInsetsController();
-            if (ic != null) ic.setSystemBarsAppearance(light(barBottom) ? WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS : 0, WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS);
+            if (ic != null) ic.setSystemBarsAppearance(light(c) ? WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS : 0, WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS);
         }
     }
     private void fitPhone() {
