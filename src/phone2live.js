@@ -2,7 +2,7 @@
 // 함수가 필요한 것(주인 시계, 주변 사람, 카드, 지금 있는 곳)은 부르는 쪽이 deps로 넘겨요: 이 파일은 폰 2 저장 자리와 날짜
 // 계산만 불러서 시험하기 쉬워요. 메신저 · 폰은 읽기만 해요. 폰 1은 이 파일을 안 불러요.
 
-import { liveKey, liveWorld, livePhone, numberLive } from './phone2store.js';
+import { liveKey, liveWorld, livePhone, numberLive, isSnap } from './phone2store.js';
 import { liveWall } from './phone2clock.js';
 import { digestOf } from './phone2digest.js';
 import { gapDays } from './phoneparse.js';
@@ -69,6 +69,9 @@ export function gatherReply(m, owner, roomId, { now = Date.now(), tz = 'UTC', de
     // (the story: with the first chat on the messenger only; after it the phone, the people around and the chat carry it)
     const first = !(room.messages || []).some(x => same(x.from, owner));
     const story = first ? String(deps.story?.() || '').trim() : '';
+    // (begun with a snapshot of the story (phone2snap.js): its last messages as they were said, with the story; the
+    // message numbers are the role-play chat's, nothing here reads by them)
+    const before = first && w.from === 'story' && isSnap(w.snap) ? w.snap.recent.map(x => String(x).replace(/^\[#\d+\]\s*/, '').trim()).filter(Boolean).join('\n\n') : '';
     return {
         owner: p.owner, persona: P, // (the owner's languages: read with the voices, or set by the user in 말투; on the phone)
         langs: p.langs?.texts?.length || p.langs?.knows?.length ? p.langs : null,
@@ -92,6 +95,6 @@ export function gatherReply(m, owner, roomId, { now = Date.now(), tz = 'UTC', de
         around: deps.around?.(p) || '', blind: deps.blind?.(p.owner) || '',
         // (the newest of the story: whole sections from the end, as many as fit)
         story: story.length <= LIVE_ASK.story ? story : (cut => cut.slice(Math.max(0, cut.search(/^## /m))))(story.slice(-LIVE_ASK.story)),
-        typed, why,
+        before, typed, why,
     };
 }

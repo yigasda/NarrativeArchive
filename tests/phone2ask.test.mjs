@@ -53,8 +53,9 @@ test('없는 블록은 안 보내요; 가끔 가는 블록은 자리와 이름�
     const t = A.replyInput(d);
     assert.deepEqual(t.match(/^\[[^\]]+\]$/gm), ['[MESSENGER]', '[NOW]', "[OWNER'S CLOCK]", '[SITUATIONS]']);
     assert.match(t, /\[SITUATIONS\]\n\(none on the phone yet\)$/);
-    const all = A.replyInput({ ...sample(), summary: 'Yesterday: …', blind: "[OWNER DOESN'T KNOW]\n- x", story: '## #0–#3 — s\n- a', typed: ['보고 싶', ' '], why: 'just woke up' });
-    assert.deepEqual(all.match(/^\[[^\]]+\]$/gm), ['[LANGUAGES]', '[MESSENGER]', '[CHAT SUMMARY]', '[NOW]', "[OWNER'S CLOCK]", '[WEATHER NOW]', '[RECENT ON THE PHONE]', '[SITUATIONS]', "[Mara's card]", '[VOICES]', '[PEOPLE AROUND]', "[OWNER DOESN'T KNOW]", '[STORY]', '[TYPED AND DELETED]', '[WHY NOW]']);
+    const all = A.replyInput({ ...sample(), summary: 'Yesterday: …', blind: "[OWNER DOESN'T KNOW]\n- x", story: '## #0–#3 — s\n- a', before: 'Ren: see you Friday', typed: ['보고 싶', ' '], why: 'just woke up' });
+    assert.deepEqual(all.match(/^\[[^\]]+\]$/gm), ['[LANGUAGES]', '[MESSENGER]', '[CHAT SUMMARY]', '[NOW]', "[OWNER'S CLOCK]", '[WEATHER NOW]', '[RECENT ON THE PHONE]', '[SITUATIONS]', "[Mara's card]", '[VOICES]', '[PEOPLE AROUND]', "[OWNER DOESN'T KNOW]", '[STORY]', '[LAST MESSAGES]', '[TYPED AND DELETED]', '[WHY NOW]']);
+    assert.ok(all.includes('[STORY]\n## #0–#3 — s\n- a\n\n[LAST MESSAGES]\nRen: see you Friday\n\n[TYPED AND DELETED]'));
     assert.match(all, /\[TYPED AND DELETED\]\n- 보고 싶\n\n\[WHY NOW\]\njust woke up$/);
     assert.doesNotMatch(all, /\n\n\n/);
 });
@@ -68,7 +69,7 @@ test('NOW: 처음 메신저 대화, 이야기에서 모르던 사이, 오늘 일
 test('지시문이 말하는 블록 이름과 같아요 (YOU GET)', async () => {
     const { phone2ReplySystem } = await import('../src/phone2reply.js');
     const sys = phone2ReplySystem({ owner: 'Mara', persona: 'Ren' }), get = sys.slice(sys.indexOf('YOU GET'), sys.indexOf('STATE FIRST'));
-    for (const b of ['LANGUAGES', 'MESSENGER', 'CHAT SUMMARY', 'NOW', "OWNER'S CLOCK", 'WEATHER NOW', 'RECENT ON THE PHONE', 'SITUATIONS', "Mara's card", 'VOICES', 'PEOPLE AROUND', "OWNER DOESN'T KNOW", 'STORY', 'TYPED AND DELETED', 'WHY NOW']) assert.ok(get.includes(b), b);
+    for (const b of ['LANGUAGES', 'MESSENGER', 'CHAT SUMMARY', 'NOW', "OWNER'S CLOCK", 'WEATHER NOW', 'RECENT ON THE PHONE', 'SITUATIONS', "Mara's card", 'VOICES', 'PEOPLE AROUND', "OWNER DOESN'T KNOW", 'STORY', 'LAST MESSAGES', 'TYPED AND DELETED', 'WHY NOW']) assert.ok(get.includes(b), b);
 });
 
 test('폰 1은 이 파일을 안 불러요', async () => {

@@ -81,6 +81,27 @@ test('이야기: 첫 메신저 대화 때만, 끝에서부터 통째 장면만, 
     assert.equal(ask(y, { deps: { ...deps, story: () => '## #0–#3 — short\n- a' } }).story, '## #0–#3 — short\n- a');
 });
 
+test('요약본으로 시작한 폰: 첫 대화에 시작 직전 메시지가 말한 그대로 (번호만 떼고), 주인이 답한 뒤 · 요약본 없는 폰 · 새로 시작한 폰은 없음', () => {
+    const snap = { v: 1, at: 1, upto: 3, text: '## #0–#3 — s\n- a\n', recent: ['[#2] Ren: "Are you coming Friday?"\n\nHe waited.', '[#3] Mara: *She nodded.* "I will."', '  '], made: { from: 0, to: 3, count: 4, parts: 1 } };
+    // (the first chat: the owner has not answered in this room yet)
+    const x = world(); x.w.snap = snap; x.r.messages.splice(1, 1);
+    const d = ask(x);
+    assert.equal(d.before, 'Ren: "Are you coming Friday?"\n\nHe waited.\n\nMara: *She nodded.* "I will."');
+    const text = replyInput({ ...d, story: '## #0–#3 — s\n- a' });
+    assert.ok(text.includes('[STORY]\n## #0–#3 — s\n- a\n\n[LAST MESSAGES]\nRen: "Are you coming Friday?"\n\nHe waited.\n\nMara: *She nodded.* "I will."'));
+    // (answered once: the chat carries it from there)
+    const y = world(); y.w.snap = snap;
+    assert.equal(ask(y).before, '');
+    assert.ok(!replyInput(ask(y)).includes('[LAST MESSAGES]'));
+    // (no snapshot, a broken one, a phone begun fresh: nothing, and the chat is not read for it)
+    const z = world(); z.r.messages.splice(1, 1);
+    assert.equal(ask(z).before, '');
+    z.w.snap = { text: 'x', recent: 'not a list', upto: 3 };
+    assert.equal(ask(z).before, '');
+    z.w.snap = snap; z.w.from = 'fresh';
+    assert.equal(ask(z).before, '');
+});
+
 test('없는 폰 · 없는 방 · 그 방에 없는 사람이면 아무것도 안 만들고, 폰 1 · 폰 2는 그대로', () => {
     const x = world(), was = JSON.stringify({ ...x.m, live: { ...x.m.live, world: { ...x.w, messenger: { ...x.w.messenger, seq: 0 } } } });
     assert.equal(G.gatherReply(x.m, 'Ivo', x.r.id, { deps }), null);
