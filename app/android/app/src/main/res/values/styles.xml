@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 상단바 · 하단바 색은 앱이 화면 따라 바꿔요 (MainActivity.setBars). 처음엔 실리태번 어두운 색 -->
+    <style name="Shell" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/start</item>
+        <item name="android:statusBarColor">@color/start</item>
+        <item name="android:navigationBarColor">@color/start</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+    <color name="start">#333333</color>
+    <color name="icon_bg">#2B2F63</color>
+</resources>

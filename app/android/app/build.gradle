@@ -1,0 +1,44 @@
+plugins {
+    id 'com.android.application'
+}
+
+// 버전 번호는 GitHub에서 만들 때 붙여요 (SHELL_VERSION_CODE · SHELL_VERSION_NAME). 손으로 만들면 1 · 0.1
+def vCode = (System.getenv('SHELL_VERSION_CODE') ?: '1') as int
+def vName = System.getenv('SHELL_VERSION_NAME') ?: '0.1'
+
+android {
+    namespace 'com.narrativearchive.shell'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'com.narrativearchive.shell'
+        minSdk 26
+        targetSdk 34
+        versionCode vCode
+        versionName vName
+    }
+
+    // 서명: GitHub 저장소 비밀(SHELL_KEYSTORE_B64 등)이 있으면 그 열쇠로, 없으면 안드로이드 기본 디버그 열쇠로.
+    // (디버그 열쇠는 만들 때마다 바뀌어서, 새 판을 깔려면 먼저 지워야 해요. 열쇠를 정하면 그 뒤로는 덮어 깔 수 있어요)
+    def ks = System.getenv('SHELL_KEYSTORE_FILE')
+    signingConfigs {
+        if (ks) {
+            fixed {
+                storeFile file(ks)
+                storePassword System.getenv('SHELL_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('SHELL_KEY_ALIAS')
+                keyPassword System.getenv('SHELL_KEY_PASSWORD')
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig ks ? signingConfigs.fixed : signingConfigs.debug
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

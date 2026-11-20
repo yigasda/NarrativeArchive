@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 노을 (실시간 폰 시작 화면과 같은 색) -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <gradient android:angle="315" android:startColor="#F2A6B5" android:centerColor="#E8A7C9" android:endColor="#A9A3E6" android:type="linear" />
+</shape>

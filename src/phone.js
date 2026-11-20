@@ -2073,6 +2073,12 @@ export async function openPhone(who = null) {
     dlg.style.setProperty('border-radius', '0', 'important');
     dlg.id = 'na_phl';
     dlg.append($root[0]);
+    // 껍데기 앱 안: 기기 바가 폰 화면 색이라 아이폰 비율 · 위아래 틈 없이 화면을 통째로 채워요 (css 예산 대신 인라인)
+    if (window.NAShell) {
+        $root[0].style.padding = '0';
+        Object.assign(frame.style, { width: '100vw', height: 'var(--na-phh, 100dvh)', borderRadius: '0' });
+        frame.style.setProperty('--axr', '0');
+    }
     document.body.append(dlg);
     // toasts sit in the top layer with the phone, then go back
     let toasts = document.getElementById('toast-container');
@@ -2164,8 +2170,9 @@ function barsUndo(dlg) {
 }
 function barsPaint(dlg, view) {
     const frame = dlg?.querySelector('.na_ph_frame'); if (!frame) return;
-    const v = String(view || '').split(':')[0], phone = matchMedia('(max-width: 600px) and (pointer: coarse)').matches;
-    if (!phone || !BARS_ON.has(v) || !frame.querySelector(v === 'bank' ? '.ax_canvas' : '.cg_canvas')) return barsUndo(dlg);
+    // (껍데기 앱(window.NAShell) 안에서는 폰이 화면을 통째로 채워서 모서리 · 띠가 없어요: 모든 화면에서 칠해요. 앱이 theme-color · 페이지 바탕을 읽어 기기 바에 칠해요)
+    const v = String(view || '').split(':')[0], shell = !!window.NAShell, phone = shell || matchMedia('(max-width: 600px) and (pointer: coarse)').matches;
+    if (!phone || (shell ? !frame.querySelector('.cg_canvas, .ax_canvas') : !BARS_ON.has(v) || !frame.querySelector(v === 'bank' ? '.ax_canvas' : '.cg_canvas'))) return barsUndo(dlg);
     const r = frame.getBoundingClientRect(), top = barColor(frame, r.top + 3), bot = barColor(frame, r.bottom - 3) || top;
     if (!top) return barsUndo(dlg);
     if (BARS.had === undefined) { BARS.meta = document.querySelector('meta[name="theme-color"]'); BARS.had = BARS.meta ? BARS.meta.content : null; if (!BARS.meta) { BARS.meta = document.createElement('meta'); BARS.meta.name = 'theme-color'; document.head.append(BARS.meta); } }
