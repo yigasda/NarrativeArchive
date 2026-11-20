@@ -64,9 +64,9 @@ const IGRE = ` .na_phl .ax .ob_b.mk_hasre { margin-bottom: 12px !important; posi
 const U1B = U1.replace(REACT, '') + IGRE + ` .na_phl .ax .ob_b.th { margin-left: 44px !important; } .na_phl .ax .mk_av { left: -42px !important; width: 34px !important; height: 34px !important; font-size: 14px !important; --axfs: 14px; line-height: 34px !important; }`;
 // U1C: 인스타처럼 배지를 말풍선에서 파낸 자리에 — 말풍선에 동그란 홈(mask), 배지는 불투명 연회색, 말풍선 밖 형제로 둬요(말풍선 마스크에 안 잘리게)
 const PILLHOLE = `url("data:image/svg+xml,${encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' width='38' height='31'><rect width='38' height='31' rx='15.5' fill='#000'/></svg>")}")`;
-const IGRE2 = ` .na_phl .ax .ob_b.mk_hasre { margin-bottom: 22px !important; }
-  .na_phl .ax .mk_rew { position: relative; height: 0; flex: none; } .na_phl .ax .mk_rew .mk_av { top: -59px; bottom: auto; }
-  .na_phl .ax .mk_re2 { position: absolute; left: 12px; top: -33px; width: 35px; height: 27px; box-sizing: border-box; border: 2.5px solid #fff; border-radius: 13.5px; display: grid; place-items: center; font-size: 14px !important; --axfs: 14px; line-height: 1 !important; background: #f1f1f2; }`;
+const IGRE2 = ` .na_phl .ax .ob_b.mk_hasre { margin-bottom: 17px !important; }
+  .na_phl .ax .mk_rew { position: relative; height: 0; flex: none; } .na_phl .ax .mk_rew .mk_av { top: -54px; bottom: auto; }
+  .na_phl .ax .mk_re2 { position: absolute; left: 12px; top: -27px; width: 28px; height: 22px; box-sizing: border-box; border: 2px solid #fff; border-radius: 11px; display: grid; place-items: center; font-size: 11.5px !important; --axfs: 11.5px; line-height: 1 !important; background: #f1f1f2; }`;
 const U1C = U1.replace(REACT, '') + IGRE2 + ` .na_phl .ax .ob_b.th { margin-left: 44px !important; } .na_phl .ax .mk_av { left: -42px !important; width: 34px !important; height: 34px !important; font-size: 14px !important; --axfs: 14px; line-height: 34px !important; }`;
 const U2 = BUB2 + PILL + EMO + REACT + ` .na_phl .ax .ob_b.th { position: relative; padding-right: 50px !important; } .na_phl .ax .mk_t { position: absolute; right: 12px; bottom: 7px; font-size: 10px !important; --axfs: 10px; line-height: 1 !important; opacity: .5; }
   .na_phl .ax .ob_b { overflow: visible !important; }
