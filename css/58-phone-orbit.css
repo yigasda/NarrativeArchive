@@ -171,3 +171,21 @@
 .ax .ob_pbtn button { padding: 9px 13px; border-radius: 999px; background: #eef0f3; color: #1b1d24; font-size: 13.5px; font-weight: 600; --axbg: #eef0f3; --axfg: #1b1d24; --axr: 999px; --axfs: 13.5px; }
 .ax .ob_pbtn .red { background: #fbe9e6; color: #c0392b; --axbg: #fbe9e6; --axfg: #c0392b; }
 .ax .ob_pbtn button:disabled { opacity: 0.4; }
+/* 받아 둔 답장 창 (시안 docs/mockups/phone2-edit sheetList2 D) */
+.ax .ob_sl { display: flex; flex-direction: column; max-height: 560px; padding: 10px 0 16px; background: #fbfbfc; color: #161b22; --axfg: #161b22; }
+.ax .ob_sl .ob_grab { flex: none; margin-bottom: 8px; }
+.ax .ob_slh { flex: none; display: flex; justify-content: space-between; align-items: baseline; padding: 2px 20px 12px; font-size: 17px; font-weight: 600; }
+.ax .ob_slh span { font-size: 13px; color: #8a8f99; }
+.ax .ob_sls { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.ax .ob_slr { display: flex; gap: 12px; align-items: flex-start; padding: 0 18px 16px; cursor: pointer; }
+.ax .ob_sln { flex: none; width: 30px; padding-top: 2px; text-align: center; font-size: 13px; font-weight: 600; color: #b0b5be; }
+.ax .ob_slr.now .ob_sln { color: #15161a; }
+.ax .ob_slb { flex: 1; min-width: 0; padding-left: 12px; border-left: 2px solid #e6e8ec; }
+.ax .ob_slr.now .ob_slb { border-left-color: #15161a; }
+.ax .ob_sll { font-size: 14.5px; line-height: 1.4; overflow-wrap: anywhere; }
+.ax .ob_sll + .ob_sll { margin-top: 6px; }
+.ax .ob_sll small { display: block; font-size: 12px; color: #8a8f99; }
+.ax .ob_sl .ob_pck { margin-top: 2px; border-color: #c9cdd4; }
+.ax .ob_sl .ob_pck.on { border-color: #15161a; }
+.ax .ob_sl .ob_bkb { flex: none; margin-top: 10px; }
+.ax .ob_sl .ob_bkb button:disabled { opacity: 0.4; }

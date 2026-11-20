@@ -88,7 +88,8 @@ export function orbitList(p, now, o) {
 // 방 안 (시안 C): 그 사람 색 바탕, 유리 머리줄 · 말풍선 · 입력칸
 // o: { id, title, group, sub, chips: [{ icon, text }], asOwner (주인 계정: 읽기만), draft, clock,
 //      msgs: [{ day } | { mine, from, text, ko, time, unread, id, open, held (길게 눌린 말), pick (고르는 중: true | false), wait (번역 중), reply (맨 끝 답장 묶음), dots (그 묶음의 마지막 말) }],
-//      swipe: { at, count } | null (맨 끝 답장 넘기기), picking: 고른 수 | null }
+//      swipe: { at, count } | null (맨 끝 답장 넘기기), picking: 고른 수 | null,
+//      list: { items: [{ no, now, bubbles: [{ text, ko }] }], picks: [no], busy (답장이 오는 중: 지우기 막힘) } | null (받아 둔 답장 창) }
 // 말 고치기 (시안 docs/mockups/phone2-edit M3 · W3): 길게 누르면 그 말 위 검정 알약(재번역 · 선택 · 삭제, 맨 끝 답장이면 빨간 "답장 버리기"도. 빨강은 그것 하나만),
 // 선택이면 말마다 동그라미 + 입력칸 자리의 줄, 맨 끝 답장 아래 점(옆으로 밀어서 넘겨요)
 export function orbitRoom(p, now, o) {
@@ -99,6 +100,10 @@ export function orbitRoom(p, now, o) {
     const msg = x => { if (x.day) return `<div class="ob_day">${esc(x.day)}</div>`;
         const bb = `<div class="ob_b na_ob_b ${x.mine ? 'me' : 'th ob_glass'}${x.held ? ' held' : ''}${x.reply ? ' na_ob_sw' : ''}" data-id="${esc(x.id)}">${esc(x.text)}${koOf(x)}</div>`;
         return `${o.group && !x.mine && x.from ? `<div class="ob_sn">${esc(x.from)}</div>` : ''}${x.held ? pill(x) : ''}${x.pick === undefined ? bb : `<div class="ob_prow${x.mine ? ' me' : ''}"><span class="ob_pck${x.pick ? ' on' : ''}">${x.pick ? ic('chk', 13, '#fff', 3) : ''}</span>${bb}</div>`}${x.mine && x.time ? `<div class="ob_rd">${x.unread ? `<b>${x.unread}</b> · ` : ''}<span class="cg_num">${esc(x.time)}</span></div>` : ''}${x.dots && o.swipe ? dots(o.swipe) : ''}`; };
+    // 받아 둔 답장 창 (시안 docs/mockups/phone2-edit sheetList2 D): 번호 줄 + 글만, 지금 것은 검정 줄. 창 안에서 굴리고 제목 · 버튼은 고정
+    const L = o.list, sheet = !L ? '' : `<div class="ob_shade na_ob_slx"></div><div class="ob_sheet ob_sl"><i class="ob_grab"></i><div class="ob_slh"><b>받아 둔 답장</b><span class="cg_num">${L.items.length}</span></div>
+        <div class="ob_sls">${L.items.map(x => `<div class="ob_slr na_ob_slr${x.now ? ' now' : ''}" role="button" tabindex="0" data-n="${x.no}"><span class="ob_sln cg_num">${x.no}</span><div class="ob_slb">${x.bubbles.length ? x.bubbles.map(b => `<div class="ob_sll">${esc(b.text)}${b.ko ? `<small>${esc(b.ko)}</small>` : ''}</div>`).join('') : '<div class="ob_sll"><small>오는 중</small></div>'}</div><span class="ob_pck${L.picks.includes(x.no) ? ' on' : ''}">${L.picks.includes(x.no) ? ic('chk', 13, '#fff', 3) : ''}</span></div>`).join('')}</div>
+        <div class="ob_bkb"><button type="button" class="ob_bkno na_ob_slkeep"${L.busy || L.items.length < 2 ? ' disabled' : ''}>지금 것만 남기기</button><button type="button" class="ob_bkok na_ob_sldrop"${L.busy || !L.picks.length ? ' disabled' : ''}>${L.picks.length ? `${L.picks.length}개 ` : ''}버리기</button></div></div>`;
     const holding = o.msgs.some(x => x.held);
     return `<div class="ob_bg"><span class="ob_blob" style="background:${orbitBg(o.title, o.group)}"></span></div>${axBar(p, o.clock || now, '#fff')}
       <div class="ob_ct ob_glass"><button type="button" class="ob_gb" data-go="orbit" aria-label="뒤로">${ic('back', 21, '#1b1d24', 2.2)}</button>${face(o.title, 40, o.group)}<span class="ob_nm"><b>${esc(o.title)}</b>${o.sub ? `<span>${esc(o.sub)}</span>` : ''}</span></div>
@@ -106,6 +111,7 @@ export function orbitRoom(p, now, o) {
       <div class="ob_msgs ax_scroll${o.asOwner ? ' ro' : ''}${holding ? ' hold na_ob_hold' : ''}${o.picking != null ? ' picking' : ''}"><div class="ob_mi">${o.msgs.map(msg).join('')}${o.snapBusy ? '<div class="ob_fail ob_note"><span>이야기 정리 중</span></div>' : o.typing ? '<div class="ob_typ ob_glass" aria-label="입력 중"><i></i><i></i><i></i></div>' : ''}${o.fail ? `<div class="ob_fail"><span>답장을 못 받았어요</span><button type="button" class="ob_retry na_ob_retry" data-id="${esc(o.fail.id)}">다시</button></div>` : ''}</div></div>
       ${o.asOwner ? '' : o.picking != null ? `<div class="ob_inp ob_pbar"><span>${o.picking}개 선택</span><span class="ob_pbtn"><button type="button" class="na_ob_ptr"${o.picking ? '' : ' disabled'}>재번역</button><button type="button" class="na_ob_pdel red"${o.picking ? '' : ' disabled'}>삭제</button><button type="button" class="na_ob_pquit">취소</button></span></div>`
         : `<div class="ob_inp ob_glass"><div class="ob_msgin na_ob_in" contenteditable="true" role="textbox" enterkeyhint="send" spellcheck="false" data-ph="메시지" aria-label="메시지">${esc(o.draft || '')}</div><button type="button" class="ob_send na_ob_send" aria-label="보내기">${ic('send', 18, '#fff', 2.3)}</button></div>`}
+      ${sheet}
       ${axInd('#fff')}`;
 }
 
