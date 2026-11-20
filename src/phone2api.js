@@ -24,7 +24,7 @@ import { liveCollectInvestmentRecords, liveFillChartHistory, liveRefreshBankFX, 
 import { liveLearnVoices, livePickVoices } from './phone2voice.js';
 import { liveFillMoney } from './phone2money.js';
 import { liveRereadPlaces } from './phone2where.js';
-import { liveMakePhone } from './phone2make.js';
+import { liveMakePhone, livePreparePhone } from './phone2make.js';
 
 // 실시간 폰(꼬리표가 붙은 폰)을 실시간 서랍 없이 부르면 멈춰요: 폰 1 함수가 실시간 폰을 만지지 않게
 const LIVE_PHONE = Symbol.for('narrative-archive.live');
@@ -60,8 +60,8 @@ const settleBranchP = async (...a) => (isLiveMeta(a[0]) || a[1]?.[LIVE_PHONE] ? 
 const retryMoneyP = async (...a) => { if (isLiveMeta(a[0])) throw new Error('실시간 폰은 다음 반영 때 결제를 다시 읽어요'); return retryMoney(...a); };
 // 평가 날짜 (m, p): 실시간 서랍이면 폰 2의 것 (흐르는 시계의 날). 화면이 그릴 때마다 물어서 오류 없이 바로 답해요
 const investmentDateP = (...a) => (isLiveMeta(a[0]) ? liveInvestmentDate(...a) : (guard(a[0], a[1]), investmentDate(...a)));
-// 폰 만들기 준비(위치 · 연도를 먼저 읽는 화면)는 폰이 없을 때의 것이에요. 실시간에서는 폰을 처음 만들지 않아서 안 열려요
-const preparePhoneP = async (...a) => { if (isLiveMeta(a[0])) throw new Error('실시간 폰에서는 폰 만들기 준비를 하지 않아요'); return preparePhone(...a); };
+// 폰 만들기 준비 (m, owner, opts): 위치 · 연도를 먼저 읽어 두기. 실시간 서랍이면 폰 2의 것 (채팅을 가져온 뒤 처음 만드는 폰)
+const preparePhoneP = async (...a) => (isLiveMeta(a[0]) ? livePreparePhone(...a) : preparePhone(...a));
 // 폰 만들기 (m, owner, opts): 실시간 서랍이면 폰 2의 다시 만들기, 아니면 폰 1 함수를 같은 인자로
 const makePhoneP = (...a) => (isLiveMeta(a[0]) ? liveMakePhone(...a) : makePhone(...a));
 

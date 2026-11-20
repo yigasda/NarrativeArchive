@@ -131,10 +131,11 @@ test('P의 결제 다시 읽기: 폰 1은 폰 1 함수 그대로, 실시간 서�
     await assert.rejects(() => P.retryMoney(L.liveMeta(real), 'Mara'), /실시간 폰은 다음 반영 때 결제를 다시 읽어요/);
 });
 
-test('P의 폰 만들기 준비: 폰 1은 폰 1 함수 그대로, 실시간 서랍이면 폰 1 함수를 안 불러요', async () => {
+test('P의 폰 만들기 준비: 폰 1은 폰 1 함수 그대로, 실시간 서랍이면 폰 2의 것 (폰 1 함수를 안 불러요)', async () => {
     const P = await loadP(), L = await import('../src/phone2store.js');
     const real = { phones: { mara: { owner: 'Mara', now: '10-25 17:42' } }, text: '' };
     L.startFromStory(real, { persona: 'Ren', upto: 2, scope: 'test', story: { ranges: {}, titles: [], rawFrom: 0, own: [''] } });
     assert.deepEqual(await P.preparePhone(real, 'Ivo', { again: false }), { fn: 'preparePhone', a: [real, 'Ivo', { again: false }] });
-    await assert.rejects(() => P.preparePhone(L.liveMeta(real), 'Ivo'), /실시간 폰에서는 폰 만들기 준비를 하지 않아요/);
+    const d = L.liveMeta(real);
+    assert.deepEqual(await P.preparePhone(d, 'Ivo', { again: true }), { fn: 'livePreparePhone', a: [d, 'Ivo', { again: true }] });
 });

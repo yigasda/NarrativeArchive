@@ -1432,7 +1432,7 @@ export const phoneForModel = p => ({
 // 정보 (setOwnerLives, setPlaceCity, dropPlacePerson and rereadPlaces take it as a phone) and the year (setPreYear), and
 // a make asked again (a clock check it didn't pass) reads none of it again. again: read anew
 // (kept while what the reading read is the same: the owner's 인물 정보, the 참고 로어북 picked and the entries left out)
-const loreKey = m => JSON.stringify(phoneLore(m).slice().sort().map(b => [b, [...loreOff(m, b)].sort()]));
+export const loreKey = m => JSON.stringify(phoneLore(m).slice().sort().map(b => [b, [...loreOff(m, b)].sort()]));
 // (and while the phone it was read for is the same: one read for an old phone, gone since, is not the new one's)
 export const sameBinding = (pre, binding, m) => JSON.stringify(pre?.financeProfile ?? null) === JSON.stringify(binding ?? null) && (pre?.lore ?? loreKey(m)) === loreKey(m) && !!pre?.base === !!m?.phones?.[nameKey(pre?.owner)];
 export const phonePre = (m, owner) => m?.phonePre?.[nameKey(owner)] || null;

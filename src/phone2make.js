@@ -1,4 +1,4 @@
-// 폰 2(실시간)의 폰 다시 만들기 (폰 전체 · 고른 앱). phonedata.js의 makePhone · makePhone0 · phoneRequest · keepPre · preClock을
+// 폰 2(실시간)의 폰 만들기 준비 · 폰 만들기 · 다시 만들기 (폰 전체 · 고른 앱). phonedata.js의 preparePhone · makePhone · makePhone0 · phoneRequest · keepPre · preClock을
 // 줄 그대로 옮긴 것이고, 다른 곳은 이것뿐이에요.
 //   읽는 범위 · 읽은 자리: 실시간 것 (phone2req.js). 이야기는 요약본의 글이고 롤플 채팅은 안 읽어요(그래서 폰 1의
 //   두 번째 차례가 없어요). 읽은 자리는 메신저 번호
@@ -17,10 +17,10 @@ import { worldText } from './world.js';
 import { withDateOrder, withDateOrderSync } from './phoneparse.js';
 import { busy, newSync, journalRead, journalWrite } from './phonesync.js';
 import { askDraft, AI_SYS_PHONE, AI_SYS_PHONE_APPS, AI_SYS_PHONE_UPDATE, CAP, COUNTRIES, LISTS, REMAKE, makingNow, dateOrderOf, ensureScreenHolder, storyRun, stillRun,
-    markNow, markAfter, archiveEnd, chatEnd, nowAt, phoneAt, loreFor, glossAka, seedPre, carryEdits, phonePre, sameBinding, preEdited, stTime, storyDayOf, todayWall, parsePhone, validateReflectionClock,
+    markNow, markAfter, archiveEnd, chatEnd, nowAt, phoneAt, loreFor, loreKey, glossAka, seedPre, carryEdits, phonePre, sameBinding, preEdited, stTime, storyDayOf, todayWall, parsePhone, validateReflectionClock,
     jsonOf, mergePhone, carryOver, secFirst, secEnd, lastEnd, fresh, ensureIds, isOwnerName, strictSame, hasRow, hm, 
     phoneForModel, aroundBlock, blindBlock, namesBlock, onlyAsk } from './phonedata.js';
-import { liveWindowOf, liveReadMark, liveFillClock, liveYearBlock, liveBefore, liveArchiveFor, liveStoryReady } from './phone2req.js';
+import { needLive, liveWindowOf, liveReadMark, liveFillClock, liveYearBlock, liveBefore, liveArchiveFor, liveStoryReady } from './phone2req.js';
 import { liveTryWhere } from './phone2where.js';
 import { liveEnsureYear } from './phone2year.js';
 import { liveNowText } from './phone2store.js';
@@ -73,6 +73,28 @@ function liveKeepPre(m, owner, binding) {
         return kept;
     }
     return null;
+}
+// 폰 만들기 준비: 실시간에서 폰을 처음 만들 때 (채팅을 메신저로 가져온 뒤 그 캐릭터의 폰). 위치 · 연도를 먼저 읽어서 화면이
+// 보여 주고 고칠 수 있게 해요. 폰 1의 preparePhone을 줄 그대로 옮긴 것이고, 위치 읽기 · 연도 · 시계만 실시간 것이에요
+export async function livePreparePhone(m, owner, { again = false } = {}) {
+    needLive(m);
+    const key = nameKey(owner), run = storyRun(m);
+    await ensureScreenHolder(m);
+    const binding = m.phones?.[key]?.financeProfile || m.phoneProfiles?.[key], kept = liveKeepPre(m, owner, binding);
+    if (kept && !again) { glossAka(m, kept); kept.clockAt = livePreClock(m, kept); return kept; }
+    // (read again, 다시 연동: what the user set by hand, who they took off and the year they chose stay, as for a phone)
+    const pre = kept ? Object.assign(structuredClone(kept), { lore: loreKey(m) }) : carryEdits(seedPre(m, owner, binding), phonePre(m, owner)), asked = { known: true };
+    if (pre.where) delete pre.where.failed;
+    if (kept && !pre.yearSet && !pre.base) { delete pre.year; delete pre.noYear; }
+    // (where everyone is first: its reading tells the year too, on the clock the phone will be at)
+    await liveTryWhere(m, pre, asked);
+    stillRun(m, run);
+    pre.clockAt = livePreClock(m, pre);
+    liveEnsureYear(m, pre);
+    pre.asked = asked.asked || [];
+    (m.phonePre ||= {})[key] = pre;
+    await saveMeta();
+    return pre;
 }
 // 다시 만들기: 같은 폰을 두 번 만들지 않게 (만드는 중 표시는 폰 1과 같은 곳에 적어요: 화면이 그걸 봐요)
 export function liveMakePhone(m, owner, opts = {}) {

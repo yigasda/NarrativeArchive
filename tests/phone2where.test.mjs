@@ -89,5 +89,5 @@ test('서랍이 아니면 모델을 부르기 전에 멈춰요; 사본은 폰 1 
     assert.equal(cut(b, 'export async function liveReadWhere(').replace('function liveReadWhere(', 'function readWhere(').replace('    await liveStoryReady(m);\n', '').replace('liveWhereRequest(m, p, opts)', 'whereRequest(m, p, opts)'), cut(a, 'export async function readWhere('));
     assert.equal(line(b, 'export const liveTryWhere = ').replace('export const liveTryWhere = ', 'export const tryWhere = ').replace('await liveReadWhere(', 'await readWhere('), line(a, 'export const tryWhere = '));
     assert.equal(cut(b, 'export async function liveRereadPlaces(').replace('function liveRereadPlaces(', 'function rereadPlaces(').replace(need, '').replace('await liveReadWhere(', 'await readWhere(').replace('liveEnsureYear(m, p);', 'ensureYear(m, p, nowAt(windowOf(m, null)));'), cut(a, 'export async function rereadPlaces('));
-    assert.ok(api.includes('rereadPlaces: split(rereadPlaces, liveRereadPlaces)') && api.includes('preparePhone: preparePhoneP'));
+    assert.ok(api.includes('rereadPlaces: split(rereadPlaces, liveRereadPlaces)') && api.includes('preparePhone: preparePhoneP') && api.includes('const preparePhoneP = async (...a) => (isLiveMeta(a[0]) ? livePreparePhone(...a) : preparePhone(...a));'));
 });

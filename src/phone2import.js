@@ -130,7 +130,7 @@ export function importFile(text) {
 }
 
 // 가져올 말을 실시간 폰의 방에 넣어요. 방은 그 채팅에서 말한 캐릭터들과 페르소나의 방 하나예요(없으면 만들어요).
-// 넣는 말은: 채팅 순서대로, 원래 시간으로, 이미 롤플에 전한 것(told)으로. 있던 폰들은 그 말을 이미 읽은 것으로 표시하고,
+// 넣는 말은: 채팅 순서대로, 원래 시간으로, 이미 롤플에 전한 것(told)으로, 방의 모두가 읽은 것으로. 있던 폰들은 그 말을 이미 읽은 것으로 표시하고,
 // 나중에 만드는 폰은 그 말 뒤부터 읽어요(importTop). info: { chat (어느 채팅인지: 채팅마다 어디까지 가져왔는지 따로 적어요) }
 //   → { room, count (말풍선 수), messages (채팅 메시지 수), from, to (채팅의 번호) }
 export function importInto(m, rows, { now = Date.now(), chat = '' } = {}) {
@@ -145,7 +145,7 @@ export function importInto(m, rows, { now = Date.now(), chat = '' } = {}) {
     const fits = !!before && names.every(n => before.members.some(x => liveKey(x) === liveKey(n)));
     if (!names.length && !fits) throw new Error('캐릭터가 한 말이 없어서 방을 만들 수 없어요');
     const room = fits ? before : ensureRoom(m, names), msgs = room.messages;
-    let first = null, top = null, count = 0;
+    let first = null, top = null, count = 0, topAt = 0;
     for (const r of list) r.bubbles.forEach((b, k) => {
         const n = liveNo(w), at = r.at + k;
         const msg = { id: `i${now.toString(36)}${n.toString(36)}${Math.random().toString(36).slice(2, 6)}`, n, from: r.user ? w.persona : r.name, text: b.text, at, ...(b.ko ? { ko: b.ko } : {}), told: now, imp: r.i };
@@ -153,10 +153,12 @@ export function importInto(m, rows, { now = Date.now(), chat = '' } = {}) {
         let at0 = msgs.length;
         while (at0 > 0 && (msgs[at0 - 1].at || 0) > at) at0--;
         msgs.splice(at0, 0, msg);
-        first ??= n; top = n; count++;
+        first ??= n; top = n; count++; topAt = Math.max(topAt, at);
     });
     const lastAt = Math.max(...msgs.map(x => x.at || 0));
     (room.read ||= {})[P] = Math.max(Number(room.read?.[P]) || 0, lastAt);
+    // (the others in the room have read the talk brought in: none of it shows as unread on the persona's side)
+    for (const n of room.members || []) { const k = liveKey(n); if (k !== P) room.read[k] = Math.max(Number(room.read[k]) || 0, topAt); }
     // (the talk brought in is read: a phone that has a reading takes it as a stretch done; one that never read anything
     // begins its reading after it — as the talk kept by 대화만 남기기)
     for (const p of Object.values(w.phones || {})) {

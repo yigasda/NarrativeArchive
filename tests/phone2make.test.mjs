@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import * as L from '../src/phone2store.js';
 import { journalRead, journalWrite } from '../src/phonesync.js';
-import { T, PD, MK, snapFor } from './phone2reflect.load.mjs';
+import { T, PD, MK, Y as YR, snapFor } from './phone2reflect.load.mjs';
 
 const src = f => readFile(new URL(`../src/${f}`, import.meta.url), 'utf8');
 const phone = () => ({ owner: 'Mara', now: '11-12 21:30', year: 2026, country: 'DE', lives: 'DE', inject: false, wall: 'dusk', accent: 'blue', contacts: [{ name: 'Ivo' }], threads: [{ with: 'Ivo', messages: [{ from: 'Ivo', time: '11-12 20:00', text: 'hi' }] }],
@@ -101,6 +101,47 @@ test('위치 정보가 없던 실시간 폰을 통째로 다시 만들기: 위�
     } finally { done(); }
 });
 
+test('폰 만들기 준비 (가져온 채팅뿐이라 폰이 없는 실시간 폰): 위치 · 연도를 먼저 읽어 두고, 만들 때 그걸 그대로 써요', async () => {
+    const asked = [], now = Date.now, warn = console.warn;
+    try {
+        Date.now = () => 1763100000000; console.warn = () => {};
+        const real = { phones: {}, text: '' };
+        L.startFresh(real, { persona: 'Ren', scope: 'test', now: 1763000000000 });
+        const room = L.ensureRoom(real, ['Mara']);
+        L.sendLive(real, room.id, '가져온 메신저 말');
+        const d = L.liveMeta(real, { now: () => '11-14 16:05' });
+        const where = city => JSON.stringify({ people: [{ name: 'Mara', city, tz: 'Europe/Berlin', lives: 'DE' }], around: [], year: 2026 });
+        const queue = [where('Frankfurt am Main'), where('Berlin'), whole('11-14 16:05'), where('Berlin')];
+        T.ask = async (input, o) => { asked.push([o.system, input]); return queue.shift() ?? '{}'; };
+        // 처음: 위치를 한 번 읽어서 실시간 폰 자리에 둬요 (폰 1 자리에는 아무것도 안 생겨요)
+        const pre = await MK.livePreparePhone(d, 'Mara');
+        assert.deepEqual(asked.map(x => x[0]), [PD.AI_SYS_WHERE]);
+        assert.ok(asked[0][1].includes('가져온 메신저 말'));
+        assert.deepEqual([pre.owner, pre.making, pre.base, pre.where.people[0].city, pre.noYear], ['Mara', true, false, 'Frankfurt am Main', undefined]);
+        // (연도는 실시간 것: 흐르는 시계의 해. 롤플 상태창은 안 읽어요)
+        assert.equal(pre.year, Number(YR.liveStoryYear(d, { ...pre, year: 0 })));
+        assert.equal(L.liveWorld(real).pre.mara, pre); assert.equal(real.phonePre, undefined); assert.deepEqual(real.phones, {});
+        // 다시 열면 읽어 둔 그대로 (모델을 안 불러요); "다시 연동"은 다시 읽어요
+        assert.equal(await MK.livePreparePhone(d, 'Mara'), pre); assert.equal(asked.length, 1);
+        const again = await MK.livePreparePhone(d, 'Mara', { again: true });
+        assert.equal(asked.length, 2); assert.equal(again.where.people[0].city, 'Berlin'); assert.equal(d.phonePre.mara, again);
+        // 만들기: 준비에서 읽은 위치로 바로 만들어요 (만들기 앞에 위치를 다시 읽지 않아요; 만든 뒤의 읽기는 폰 만들기의 것)
+        const p = await MK.liveMakePhone(d, 'Mara');
+        assert.deepEqual(asked.map(x => x[0]).slice(0, 3), [PD.AI_SYS_WHERE, PD.AI_SYS_WHERE, PD.AI_SYS_PHONE]);
+        assert.ok(asked.slice(3).every(x => x[0] === PD.AI_SYS_WHERE) && asked.length <= 4);
+        assert.equal(p.where.people[0].city, 'Berlin'); assert.equal(d.phones.mara, p); assert.deepEqual(real.phones, {});
+        // 인물 정보 연동이 바뀌면 읽어 둔 걸 안 쓰고 다시 읽어요
+        const other = L.liveMeta(real, { now: () => '11-14 16:05' });
+        await MK.livePreparePhone(other, 'Ivo'); const n = asked.length;
+        other.phoneProfiles = { ivo: { type: 'card', id: 'ivo.png' } };
+        assert.equal((await MK.livePreparePhone(other, 'Ivo')).financeProfile.id, 'ivo.png'); assert.equal(asked.length, n + 1);
+        // 서랍이 아니면 멈춰요
+        const was = JSON.stringify(real);
+        await assert.rejects(() => MK.livePreparePhone(real, 'Mara'), /실시간 폰의 서랍이 아니에요/);
+        assert.equal(asked.length, n + 1); assert.equal(JSON.stringify(real), was);
+    } finally { Date.now = now; console.warn = warn; done(); }
+});
+
 test('같은 폰을 만드는 중이면 기다리라고 해요; 반영(update)은 여기서 안 해요; 서랍이 아니면 멈춰요', async () => {
     try {
         const c = world(); let asked = 0, go;
@@ -165,6 +206,9 @@ test('사본은 폰 1 줄과 정해진 곳만 달라요 (한쪽만 고치면 실
         .reduce(cutLine, cutOut(cut(a, '\nasync function makePhone0('), '    // made again up to the clock and stopped short: a second turn adds the rest (one that fails keeps the first)\n', "        } catch (err) { console.warn('[narrative-archive] phone, second turn', err); }\n    }\n")).replaceAll('nowAt(last)', 'nowAt(gap)'));
     assert.equal(cut(b, '\nexport function liveMakePhone(').replace('export function liveMakePhone(', 'export function makePhone(').replaceAll('liveMakePhone0(m, owner, opts)', 'makePhone0(m, owner, opts)'), cut(a, '\nexport function makePhone('));
     assert.equal(cut(b, '\nfunction liveKeepPre(').replace('function liveKeepPre(', 'function keepPre(').replace('liveEnsureYear(m, kept);', 'ensureYear(m, kept, nowAt(windowOf(m, null)));'), cut(a, '\nfunction keepPre('));
+    assert.equal(cutLine(cut(b, '\nexport async function livePreparePhone('), '    needLive(m);\n').replace('export async function livePreparePhone(', 'export async function preparePhone(')
+        .replace('liveKeepPre(m, owner, binding)', 'keepPre(m, owner, binding)').replaceAll('livePreClock(m, ', 'preClock(m, ').replace('await liveTryWhere(m, pre, asked);', 'await tryWhere(m, pre, asked);')
+        .replace('liveEnsureYear(m, pre);', 'ensureYear(m, pre, nowAt(windowOf(m, null)));'), cut(a, '\nexport async function preparePhone('));
     assert.equal(line(b, 'const livePreClock = ').replace('const livePreClock = ', 'const preClock = ').replace('nowAt(liveWindowOf(m, null))', 'nowAt(windowOf(m, null))').replace('st = null', 'st = statusAt(pre, upto, m)'), line(a, 'const preClock = '));
     // 요청 글: 시계 블록 · 연도 · 메신저 대화
     assert.equal(cut(b, '\nfunction livePhoneRequest(').replace('function livePhoneRequest(', 'function phoneRequest(')
@@ -179,6 +223,6 @@ test('사본은 폰 1 줄과 정해진 곳만 달라요 (한쪽만 고치면 실
             typeof m?.phoneRecent === 'function' && Number.isInteger(gap?.mark) ? m.phoneRecent(owner, 150, { maxChars: 12000, seen: gap.mark, summary: true }) : ''),
 `, "        afterBlock(gap) || (recent && !noArchive(m) ? `[RECENT CHAT]\\n${recent}` : ''),\n"), cut(a, '\nfunction phoneRequest('));
     // 폰 1의 만들기 · 요청 · 위치 요청에는 폰 2 낱말이 없어요
-    for (const f of ['\nasync function makePhone0(', '\nfunction phoneRequest(', '\nfunction whereRequest(', '\nfunction keepPre(']) assert.doesNotMatch(cut(a, f), /phoneUpto|phoneRecent|phoneJournal|liveAgain|liveYearShift|isLivePhone/, f.trim());
+    for (const f of ['\nasync function makePhone0(', '\nfunction phoneRequest(', '\nfunction whereRequest(', '\nfunction keepPre(', '\nexport async function preparePhone(']) assert.doesNotMatch(cut(a, f), /phoneUpto|phoneRecent|phoneJournal|liveAgain|liveYearShift|isLivePhone/, f.trim());
     assert.ok(api.includes('const makePhoneP = (...a) => (isLiveMeta(a[0]) ? liveMakePhone(...a) : makePhone(...a));') && api.includes('makePhone: makePhoneP'));
 });

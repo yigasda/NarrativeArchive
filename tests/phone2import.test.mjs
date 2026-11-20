@@ -140,6 +140,9 @@ test('방에 넣기: 채팅 순서 · 원래 시간 · 번역까지, 전한 것�
     assert.deepEqual([w.importTop, w.imports], [room.messages[5].n, { c1: { room: room.id, upto: 3, at: 777, count: 6, shift: 0 } }]);
     assert.equal(I.importedOf(w, 'c1'), w.imports.c1); assert.equal(I.importedOf(w, 'c2'), null); assert.equal(I.importedOf(null, 'c1'), null);
     assert.equal(room.read.ren, room.messages[5].at);
+    // 가져온 말은 방의 모두가 읽은 것: 내 말풍선에 안 읽음 숫자가 안 붙어요
+    assert.equal(room.read.mara, room.messages[5].at);
+    assert.ok(room.messages.every(x => L.unreadBy(room, x).length === 0));
     // 서랍: 나중에 만드는 폰은 가져온 말 뒤부터 읽어요
     assert.equal(L.liveMeta(m).phoneReadFrom, w.importTop);
     assert.equal(L.liveMeta(m).phoneUpto, -1);
@@ -166,6 +169,8 @@ test('이미 대화가 있는 방: 시간 자리에 끼워 넣고, 있던 말은
     assert.deepEqual(room.messages.map(x => x.text), ['Mara', 'Yes?', 'said here before', 'What are you doing', 'I am at the office', 'And I am not & never was late', 'Did you just wake up', 'said here later']);
     assert.deepEqual(room.messages.filter(x => !x.imp && x.imp !== 0).map(x => ({ ...x })), had);
     assert.ok(!room.messages[2].told && !room.messages[7].told);
+    // (가져온 말 뒤에 내가 보낸 말은 아직 안 읽은 것 그대로)
+    assert.deepEqual(room.messages.map(x => L.unreadBy(room, x).length), [0, 0, 0, 0, 0, 0, 0, 1]);
     assert.equal(w.messenger.seq, Math.max(...room.messages.map(x => x.n)));
 });
 
@@ -173,6 +178,7 @@ test('단체 채팅은 단체방으로; 캐릭터 말이 없거나 가져올 게
     const { m, w } = world();
     const out = I.importInto(m, I.importRows([me('hi all', '2026-11-20T07:00:00.000Z'), her(`${div('11.20, 16:00')}\n\nhello`, '2026-11-20T07:00:10.000Z'), { name: 'Ivo', is_user: false, send_date: '2026-11-20T07:00:20.000Z', mes: `${div('11.20, 16:00')}\n\nhey` }], { clock }));
     assert.deepEqual(w.messenger.rooms[out.room].members, ['Ren', 'Mara', 'Ivo']);
+    assert.deepEqual(w.messenger.rooms[out.room].messages.map(x => L.unreadBy(w.messenger.rooms[out.room], x)), [[], [], []]);
     const was = JSON.stringify(m);
     assert.throws(() => I.importInto(m, I.importRows([me('only me', '2026-11-20T08:00:00.000Z')], { clock, gate: false }), { chat: 'another chat' }), /캐릭터가 한 말이 없어서/);
     assert.throws(() => I.importInto(m, []), /가져올 메시지가 없어요/);
