@@ -35,6 +35,7 @@ import { dropVoice, fillKo, koAppOf, koScopeOf, labelVoices, redoKo, roundScope,
 // 을 / 를 after a word: by its last syllable's final consonant (a Latin ending, like SNS, reads as 를)
 const josa = w => { const c = w.charCodeAt(w.length - 1) - 0xac00; return c >= 0 && c < 11172 && c % 28 ? '을' : '를'; };
 import { confirm, esc } from './util.js';
+import { emojiOf } from './phone2react.js';
 import { liveMode, liveWorld, livePhone, liveMeta, setLiveMode, resetLive, rememberLiveOwner, readLiveOwner, liveKey, liveRooms, ensureRoom, nameRoom, sendLive, readLive, unreadBy, enqueueReplies, seeFailure } from './phone2store.js';
 import { shiftLabel, liveWall, viewerWall, startShift } from './phone2clock.js';
 import { orbitList, orbitRoom, orbitNew, orbitHomeWidget, liveStart, whoScreen, orbitFace, dayIcon } from './phoneorbit.js';
@@ -252,12 +253,13 @@ export async function openPhone(who = null) {
             // 맨 끝 답장 묶음: 내 마지막 말 뒤에 온 말들 (넘길 수 있을 때만 표시해요)
             const sw = ro ? null : liveSwipeInfo(realM, r.id), shown = r.messages.filter(seen), lastMine = shown.map(x => liveKey(x.from) === liveKey(me)).lastIndexOf(true);
             const reply = new Set(sw ? shown.slice(lastMine + 1).map(x => x.id) : []), lastReply = sw ? shown.at(-1)?.id : null;
+            const reFresh = !OB_RE_SEEN.has(r.id);
             for (const x of r.messages) {
                 if (!seen(x)) continue;
                 const a = vw(x.at), d = dayOf(a);
                 if (d !== day) { msgs.push({ day: d }); day = d; }
                 const mine = liveKey(x.from) === liveKey(who);
-                msgs.push({ id: x.id, mine, from: x.from, text: x.text, ko: x.ko || '', open: koOn() !== obOpen.has(x.id), time: mine ? a.slice(6) : '', tl: mine ? '' : a.slice(6), unread: mine && !ro ? unreadBy(r, x).length : 0, held: !ro && obHeld === x.id, pick: !ro && obPicks ? obPicks.has(x.id) : undefined, wait: obTr.has(x.id), reply: reply.has(x.id), dots: reply.has(x.id) && x.id === lastReply });
+                msgs.push({ id: x.id, mine, from: x.from, text: x.text, ko: x.ko || '', open: koOn() !== obOpen.has(x.id), time: mine ? a.slice(6) : '', tl: mine ? '' : a.slice(6), re: obReacts(r.id, x, reFresh), unread: mine && !ro ? unreadBy(r, x).length : 0, held: !ro && obHeld === x.id, pick: !ro && obPicks ? obPicks.has(x.id) : undefined, wait: obTr.has(x.id), reply: reply.has(x.id), dots: reply.has(x.id) && x.id === lastReply });
             }
             // 답장을 기다리는 중이면 입력 중, 멈춘 실패가 있으면 그 줄(다시는 사람이 누를 때만). 1:1 머리 아래는 상대의 가장 최근 상태
             const jobs = w.queue?.jobs || [], typing = !ro && jobs.some(j => j.room === r.id && (j.state === 'waiting' || j.state === 'running'));
@@ -2180,6 +2182,18 @@ export async function openPhone(who = null) {
 //   하단바: 페이지 맨 바깥 바탕(html · body)을 화면 아래쪽 색으로 — 크롬은 하단바 색을 여기서 가져오는 것 같아요(블루레몬에이드가 그렇게 칠해요)
 // 위아래가 한 덩어리 색인 화면(BARS_ON: 잠금 · 홈 · 은행)에서만 해요. 흰 앱 화면은 둥근 모서리 · 띠가 오히려 드러나서 원래대로 둬요(소망).
 // 폰을 닫거나 다른 화면으로 가면 원래대로 돌려요
+// 이모지 반응 배지 (시안 docs/mockups/shell-bars U1C · U1C_motion.mp4): 같은 이모지는 하나로 모아 셋까지, 둘 이상이면 수.
+// 방을 처음 그릴 땐 다 본 것으로 치고, 그 뒤에 처음 보는 반응만 모션(0.7초). 그사이 화면을 다시 그려도 모션이 처음부터 다시 시작하지 않게
+// 지난 시간만큼 앞당겨 이어서 그려요(ago)
+const OB_RE_SEEN = new Map(), OB_RE_MS = 700;
+function obReacts(roomId, x, fresh) {
+    const rs = (Array.isArray(x.reacts) ? x.reacts : []).filter(r => emojiOf(r?.e)), seen = OB_RE_SEEN.get(roomId) || new Map(), now = Date.now();
+    let at = 0;
+    for (const r of rs) { const k = `${x.id}|${liveKey(r.by)}|${r.e}`; if (!seen.has(k)) seen.set(k, fresh ? 0 : now); at = Math.max(at, seen.get(k)); }
+    OB_RE_SEEN.set(roomId, seen);
+    const ago = at ? now - at : OB_RE_MS;
+    return rs.length ? { es: [...new Set(rs.map(r => r.e))].slice(0, 3), n: rs.length, isNew: ago < OB_RE_MS, ago } : null;
+}
 const BARS_ON = new Set(['lock', 'home', 'home2', 'bank']);
 const BARS = { meta: null, had: undefined, root: null };
 const barColor = (frame, y) => {
