@@ -518,6 +518,7 @@ export async function openPhone(who = null) {
         notchPasses();
         if (keep) $root.find('.na_ph_body, .ax_scroll').scrollTop(top);
         if (view === 'orbitface') fcPaint();
+        requestAnimationFrame(() => barsPaint(document.getElementById('na_phl')));
         if (making && view === 'setremake') $root.find('.na_ph_setremake .ax_n').html(`${busyHtml} 다시 만드는 중`);
         // a redraw mid-reflection (or mid-make) keeps saying so: withSpinner only dressed the button that was there
         if (busyMake === 'sync' || busy.sync && busy.operation === 'reflect' && busy.scope === openingScope && nameKey(busy.owner) === nameKey(owner)) $root.find('.na_ph_setupd .ax_v').html(`${busyHtml} 반영하는 중`);
@@ -2129,12 +2130,43 @@ export async function openPhone(who = null) {
         dlg.addEventListener('close', () => { phoneClosed = true; setPhoneMeta(null); if (liveMode(realM) === 'live' && stillHere()) obReflect(); ask?.done(false); done(); }, { once: true });
     });
     window.visualViewport?.removeEventListener('resize', kbSoon); window.visualViewport?.removeEventListener('scroll', kbSoon); window.removeEventListener('resize', kbSoon);
+    barsUndo();
     stopBusy(); madeWatch.delete(onMade);
     window.removeEventListener('resize', setH);
     ro.disconnect();
     const t = dlg.querySelector('#toast-container');
     if (t) { if (t.childNodes.length) document.body.append(t); else t.remove(); }
     dlg.remove();
+}
+// 기기의 상단바 · 하단바를 폰 화면 색으로 (시험판: 소망 폰에서 바가 끊어져 보였어요). 웹페이지는 바를 직접 못 그려서
+//   상단바: <meta name="theme-color">를 지금 화면 위쪽 색으로 (크롬은 주소창 · 상단바, 앱처럼 연 실리태번은 상단바가 그 색)
+//   하단바: viewport-fit=cover로 페이지가 하단바 밑까지 그리게 하고(되는 크롬에서만), 폰 창 바깥 바탕을 화면 위 · 아래 색으로 칠해요
+// 폰을 닫으면 원래대로 돌려요
+const BARS = { meta: null, had: null, vp: null, vpWas: null };
+const barColor = (frame, y) => {
+    // (Orbit 방 · 프사 화면: 바탕이 오로라라 그 바탕색. 오로라는 pointer-events가 없어서 아래 방법으로는 안 잡혀요)
+    const aura = frame.querySelector('.ob_bg .ob_blob'); if (aura) { const n = (getComputedStyle(aura).backgroundColor.match(/[\d.]+/g) || []).map(Number); if (n.length >= 3) return `rgb(${n[0]}, ${n[1]}, ${n[2]})`; }
+    const r = frame.getBoundingClientRect(), x = r.left + r.width / 2;
+    for (const e of document.elementsFromPoint(x, y)) {
+        if (!frame.contains(e)) continue;
+        const cs = getComputedStyle(e), all = `${cs.backgroundImage} ${cs.backgroundColor}`.match(/rgba?\([^)]+\)/g) || [];
+        for (const c of all.reverse()) { const n = c.match(/[\d.]+/g).map(Number); if ((n[3] ?? 1) > 0.5) return `rgb(${n[0]}, ${n[1]}, ${n[2]})`; }
+    }
+    return '';
+};
+function barsPaint(dlg) {
+    const frame = dlg?.querySelector('.na_ph_frame'); if (!frame) return;
+    const r = frame.getBoundingClientRect(), top = barColor(frame, r.top + 3), bot = barColor(frame, r.bottom - 3);
+    if (!BARS.meta) { BARS.meta = document.querySelector('meta[name="theme-color"]'); BARS.had = BARS.meta ? BARS.meta.content : null; if (!BARS.meta) { BARS.meta = document.createElement('meta'); BARS.meta.name = 'theme-color'; document.head.append(BARS.meta); } }
+    if (top) BARS.meta.content = top;
+    if (!BARS.vp) { BARS.vp = document.querySelector('meta[name="viewport"]'); BARS.vpWas = BARS.vp?.content ?? null; if (BARS.vp && !/viewport-fit/.test(BARS.vp.content)) BARS.vp.content += ', viewport-fit=cover'; }
+    // (폰 창 바깥 바탕: 진짜 폰에서만. 실리태번 팝업 규칙이 !important라 인라인으로 덮어요)
+    if ((top || bot) && matchMedia('(max-width: 600px) and (pointer: coarse)').matches) dlg.style.setProperty('background', `linear-gradient(to bottom, ${top || bot} 0 50%, ${bot || top} 50% 100%)`, 'important');
+}
+function barsUndo() {
+    if (BARS.meta) { if (BARS.had === null) BARS.meta.remove(); else BARS.meta.content = BARS.had; }
+    if (BARS.vp && BARS.vpWas !== null) BARS.vp.content = BARS.vpWas;
+    BARS.meta = BARS.had = BARS.vp = BARS.vpWas = null;
 }
 // the board's fonts (Inter Tight for numbers, Noto Sans KR), once
 function cgFonts() {
