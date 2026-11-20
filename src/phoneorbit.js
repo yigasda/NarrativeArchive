@@ -71,7 +71,7 @@ const dots = lit => Array.from({ length: 24 }, (_, h) => `<i class="${h === lit 
 export function orbitList(p, now, o) {
     const tab = o.tab || 'all', rooms = o.rooms.filter(r => tab === 'all' || (tab === 'group') === r.group);
     const bk = o.back, h = o.hero, lit = h ? Number(String(h.local).slice(0, 2)) : -1, a = o.acct || { name: '', list: [] }, many = a.list.length > 1;
-    return `${axBar(p, now)}
+    return `${axBar(p, o.clock || now)}
       <div class="ob_top">${many ? `<button type="button" class="ob_me na_ob_acct" aria-label="계정">${face(a.name, 46)}</button>` : `<span class="ob_me">${face(a.name, 46)}</span>`}<b class="ob_h1">메시지</b>${a.ro ? '<span class="ob_cb0"></span>' : `<span class="ob_tr">${bk ? `<button type="button" class="ob_cb ob_bk na_ob_back${bk.n || bk.busy ? '' : ' off'}" aria-label="${bk.busy ? '정리 중' : '롤플에 전하기'}"${bk.busy ? ' disabled' : ''}>${bk.busy ? '<i class="fa-solid fa-spinner fa-spin"></i>' : ic('tell', 20, '#1b1d24', 2.1)}${bk.n && !bk.busy ? `<span class="ob_un cg_num">${bk.n}</span>` : ''}</button>` : ''}<button type="button" class="ob_cb" data-go="orbitnew" aria-label="새 대화">${ic('pen', 19)}</button></span>`}</div>
       <div class="ob_scroll ax_scroll">
         <div class="ob_seg">${[['all', '전체'], ['one', '1:1'], ['group', '단체']].map(([k, t]) => `<button type="button" class="ob_sg na_ob_tab${tab === k ? ' on' : ''}" data-v="${k}">${t}</button>`).join('')}</div>
@@ -90,7 +90,7 @@ export function orbitList(p, now, o) {
 export function orbitRoom(p, now, o) {
     const msg = x => x.day ? `<div class="ob_day">${esc(x.day)}</div>`
         : `${o.group && !x.mine && x.from ? `<div class="ob_sn">${esc(x.from)}</div>` : ''}<div class="ob_b ${x.mine ? 'me' : 'th ob_glass'}">${esc(x.text)}${x.ko ? (x.open ? `<span class="ob_ko na_ob_ko" role="button" tabindex="0" data-id="${esc(x.id)}">${esc(x.ko)}</span>` : `<span class="ob_kof na_ob_ko" role="button" tabindex="0" data-id="${esc(x.id)}">${ic('tr', 13)}번역 보기</span>`) : ''}</div>${x.mine && x.time ? `<div class="ob_rd">${x.unread ? `<b>${x.unread}</b> · ` : ''}<span class="cg_num">${esc(x.time)}</span></div>` : ''}`;
-    return `<div class="ob_bg"><span class="ob_blob" style="background:${orbitBg(o.title, o.group)}"></span></div>${axBar(p, now, '#fff')}
+    return `<div class="ob_bg"><span class="ob_blob" style="background:${orbitBg(o.title, o.group)}"></span></div>${axBar(p, o.clock || now, '#fff')}
       <div class="ob_ct ob_glass"><button type="button" class="ob_gb" data-go="orbit" aria-label="뒤로">${ic('back', 21, '#1b1d24', 2.2)}</button>${face(o.title, 40, o.group)}<span class="ob_nm"><b>${esc(o.title)}</b>${o.sub ? `<span>${esc(o.sub)}</span>` : ''}</span></div>
       ${o.chips.length ? `<div class="ob_chips">${o.chips.map(c => `<span class="ob_chip">${ic(c.icon, 13, '#fff')}${esc(c.text)}</span>`).join('')}</div>` : ''}
       <div class="ob_msgs ax_scroll${o.asOwner ? ' ro' : ''}"><div class="ob_mi">${o.msgs.map(msg).join('')}${o.snapBusy ? '<div class="ob_fail ob_note"><span>이야기 정리 중</span></div>' : o.typing ? '<div class="ob_typ ob_glass" aria-label="입력 중"><i></i><i></i><i></i></div>' : ''}${o.fail ? `<div class="ob_fail"><span>답장을 못 받았어요</span><button type="button" class="ob_retry na_ob_retry" data-id="${esc(o.fail.id)}">다시</button></div>` : ''}</div></div>
@@ -102,7 +102,7 @@ export function orbitRoom(p, now, o) {
 // o: { people: [{ name, sub }], picked: [name], gname, imp: { messages } (맨 위 채팅 가져오기 줄) }
 export function orbitNew(p, now, o) {
     const on = n => o.picked.some(x => x.toLowerCase() === n.toLowerCase()), n = o.picked.length;
-    return `${axBar(p, now)}
+    return `${axBar(p, o.clock || now)}
       <div class="ob_top"><button type="button" class="ob_cb" data-go="orbit" aria-label="뒤로">${ic('back', 20)}</button><b class="ob_h1">새 대화</b><span class="ob_cb0"></span></div>
       <div class="ob_scroll ax_scroll">
         ${n ? `<div class="ob_picked">${o.picked.map(x => `<span class="ob_pk na_ob_pick" role="button" tabindex="0" data-n="${esc(x)}">${face(x, 52)}<span class="ob_x">${ic('x', 11, '#fff', 3)}</span>${esc(x)}</span>`).join('')}</div>` : ''}

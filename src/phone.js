@@ -258,6 +258,8 @@ export async function openPhone(who = null) {
             const state = group ? '' : [...r.messages].reverse().find(x => liveKey(x.from) === liveKey(os[0]) && String(x.state || '').trim())?.state || '';
             out.orbit = { id: r.id, title: V.titleOf(r), group, sub: group ? [...os, '나'].join(' · ') : state, chips, asOwner: ro, msgs, draft: obDraft, typing, snapBusy: typing && liveSnapBusy(realM), fail: fail ? { id: fail.id } : null };
         }
+        // 위쪽 시계: 내 계정으로 볼 때는 내 시간 (캐릭터 시간은 방 가운데 칩에만). 주인 계정으로 볼 때는 그 폰의 시간 그대로
+        if (out.orbit && !ro) out.orbit.clock = vw(Date.now());
         return out;
     };
     let view = 'lock', mapQ = '', contactBack = '', sheet = false, adding = false, loreOpen = false;
