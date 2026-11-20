@@ -13,7 +13,7 @@ import { migrateBank, selectPrice } from './finance.js';
 import { askDraft, draftReady, draftSettings, drLabel, listModels, vxModelList, withSpinner } from './ai.js';
 import { ctx, getMeta, globalSettings, phoneMeta, saveGlobal, saveMeta, setPhoneMeta } from './core.js';
 import { applyInjection } from './inject.js';
-import { faceHtml, nameKey, peopleList } from './people.js';
+import { faceHtml, nameKey, peopleList, cropFace, shrinkFace } from './people.js';
 import { drafting, drawing, drawPhoto, drawPost, filling, paging, retranslate, retranslating, recording, searching, searchPage, shooting, webPage, writing } from './phoneai.js';
 import { setDraft, setDraftModels, setLang, setSnap, setVoice, setVoiceAdd, voiceList, voicePeople, ax, axFind, groupInfo, APPS, AXB, AXB_C, busyHtml, setDate, setScreenHolderView, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, mapTowns, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setOwnerProfile, setWho, snsPost, snsScreen, statusBar, threadScreen, setPlace, prepScreen } from './phoneapps.js';
 import { phoneMaking, dropStretch, chatStamp, koGaps, savedName, ensureIds, hasDatedRecords, noArchive, koOn, loreOff, tidyKo, markAfter, phoneLore, REMAKE, restoreRounds, showNow, syncLeft, syncRows, syncState, tidyJournal, undoRound } from './phonedata.js';
@@ -263,7 +263,7 @@ export async function openPhone(who = null) {
             const jobs = w.queue?.jobs || [], typing = !ro && jobs.some(j => j.room === r.id && (j.state === 'waiting' || j.state === 'running'));
             const fail = ro ? null : jobs.find(j => j.room === r.id && j.state === 'failed' && !j.seen) || null;
             const state = group ? '' : [...r.messages].reverse().find(x => liveKey(x.from) === liveKey(os[0]) && String(x.state || '').trim())?.state || '';
-            out.orbit = { id: r.id, title: V.titleOf(r), group, sub: group ? [...os, '나'].join(' · ') : state, chips, asOwner: ro, msgs, draft: obDraft, typing, snapBusy: typing && liveSnapBusy(realM), fail: fail ? { id: fail.id } : null, swipe: sw && !sw.coming ? { at: sw.at, count: sw.count } : null, picking: !ro && obPicks ? obPicks.size : null,
+            out.orbit = { id: r.id, title: V.titleOf(r), group, faceOf: !group && !ro ? os[0] : '', sub: group ? [...os, '나'].join(' · ') : state, chips, asOwner: ro, msgs, draft: obDraft, typing, snapBusy: typing && liveSnapBusy(realM), fail: fail ? { id: fail.id } : null, swipe: sw && !sw.coming ? { at: sw.at, count: sw.count } : null, picking: !ro && obPicks ? obPicks.size : null,
                 list: !ro && obList ? (items => ({ items, picks: [...obList].filter(n => items.some(x => x.no === n)), busy: !!sw?.coming }))(liveSwipeList(realM, r.id)) : null };
         }
         // 위쪽 시계: 내 계정으로 볼 때는 내 시간 (캐릭터 시간은 방 가운데 칩에만). 주인 계정으로 볼 때는 그 폰의 시간 그대로
@@ -866,6 +866,17 @@ export async function openPhone(who = null) {
         if (!await askSheet('이 답장을 지울까요?', '', '지우기')) return;
         try { await liveSwipeDrop(realM, id); } catch (err) { obWarn(err); }
         obHeld = null; if (!phoneClosed && stillHere()) drawPhone(true);
+    });
+    // 프사 바꾸기: 1:1 방 머리줄의 얼굴을 누르면 그림을 고르고 자리를 잡아요 (인물 도감과 같은 저장소: 확장 설정의 faces, 모든 채팅에서 같이 써요)
+    $root.on('click', '.na_ob_face', function (e) {
+        e.stopPropagation(); const who = this.dataset.n; if (!who) return;
+        const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
+        inp.addEventListener('change', async () => {
+            const f = inp.files?.[0]; if (!f) return;
+            try { const crop = await cropFace(f); if (!crop) return; const g = globalSettings(); g.faces = g.faces || {}; g.faces[nameKey(who)] = await shrinkFace(f, crop); saveGlobal(); if (!phoneClosed && stillHere()) drawPhone(true); }
+            catch (err) { toastr.error(`그림을 못 읽었어요: ${err?.message || err}`, '캐릭터 휴대폰'); }
+        });
+        inp.click();
     });
     // 답장 돌리기 (7-5): liveGo 하나가 다 해요(이미 돌면 그냥 돌아와요). 그리기는 이 채팅 · 실시간일 때만, 입력하던 칸은 그대로
     const obGo = () => liveGo(realM, { onChange: () => {

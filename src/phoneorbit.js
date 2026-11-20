@@ -4,6 +4,7 @@
 // 설명 글은 쓰지 않아요(몰입이 깨져요). 화면에 나오는 건 이름 · 말 · 시각 · 상태 낱말뿐이에요.
 import { esc } from './util.js';
 import { axBar, axInd } from './phoneapps.js';
+import { faceOf, stFace } from './people.js';
 
 // 사람마다 고정된 색 오로라(이름 해시): [바탕 세 점, 바탕색]
 const AURA = [
@@ -34,7 +35,11 @@ const ic = (k, s = 20, c = 'currentColor', w = 2) => `<svg aria-hidden="true" wi
 export const dayIcon = hhmm => { const h = Number(String(hhmm || '').slice(0, 2)); return h >= 5 && h < 17 ? 'sun' : h >= 17 && h < 21 ? 'set' : 'moon'; };
 
 // 얼굴: 그 사람 색 동그라미 + 첫 글자
-const face = (name, s = 48, group = false) => `<span class="ob_face" style="width:${s}px;height:${s}px;font-size:${Math.round(s * 0.38)}px"><span class="ob_blob" style="background:${orbitBg(name, group)}"></span><b>${esc([...String(name || '?')][0] || '?')}</b></span>`;
+// 얼굴: 인물 도감에서 정한 프사(없으면 실리태번 아바타)가 있으면 그 그림, 없으면 색 동그라미 + 첫 글자. 단체방은 늘 보라 동그라미
+// (그림이 안 불러와지면 작은 그림 → 글자로 물러나요)
+const faceUrl = (name, s) => { try { const big = s * (globalThis.devicePixelRatio || 1) > 96, url = faceOf(name, big); return { url, fb: big && url && !url.startsWith('data:') ? stFace(name) : '' }; } catch { return { url: '', fb: '' }; } };
+const face = (name, s = 48, group = false) => { const f = group ? { url: '' } : faceUrl(name, s); return `<span class="ob_face" style="width:${s}px;height:${s}px;font-size:${Math.round(s * 0.38)}px"><span class="ob_blob" style="background:${orbitBg(name, group)}"></span><b>${esc([...String(name || '?')][0] || '?')}</b>${f.url ? `<img src="${esc(f.url)}"${f.fb && f.fb !== f.url ? ` data-fb="${esc(f.fb)}"` : ''} alt="" loading="lazy" decoding="async">` : ''}</span>`; };
+if (typeof document !== 'undefined') document.addEventListener('error', e => { const i = e.target; if (i?.tagName !== 'IMG' || !i.parentElement?.classList.contains('ob_face')) return; if (i.dataset.fb) { const fb = i.dataset.fb; delete i.dataset.fb; i.src = fb; } else i.remove(); }, true);
 
 // 홈 아이콘(시안 phone2-orbit 4번 · 82%): 노을 안개 판 + 점 뒤로 옅어지는 빛 꼬리 고리 + 빛나는 점
 const ICON = (() => {
@@ -86,7 +91,7 @@ export function orbitList(p, now, o) {
 }
 
 // 방 안 (시안 C): 그 사람 색 바탕, 유리 머리줄 · 말풍선 · 입력칸
-// o: { id, title, group, sub, chips: [{ icon, text }], asOwner (주인 계정: 읽기만), draft, clock,
+// o: { id, title, group, sub, chips: [{ icon, text }], asOwner (주인 계정: 읽기만), draft, clock, faceOf (1:1 · 내 계정: 머리줄 얼굴을 누르면 그 사람 프사 바꾸기),
 //      msgs: [{ day } | { mine, from, text, ko, time, unread, id, open, held (길게 눌린 말), pick (고르는 중: true | false), wait (번역 중), reply (맨 끝 답장 묶음), dots (그 묶음의 마지막 말) }],
 //      swipe: { at, count } | null (맨 끝 답장 넘기기), picking: 고른 수 | null,
 //      list: { items: [{ no, now, bubbles: [{ text, ko }] }], picks: [no], busy (답장이 오는 중: 지우기 막힘) } | null (받아 둔 답장 창) }
@@ -106,7 +111,7 @@ export function orbitRoom(p, now, o) {
         <div class="ob_bkb"><button type="button" class="ob_bkno na_ob_slkeep"${L.busy || L.items.length < 2 ? ' disabled' : ''}>지금 것만 남기기</button><button type="button" class="ob_bkok na_ob_sldrop"${L.busy || !L.picks.length ? ' disabled' : ''}>${L.picks.length ? `${L.picks.length}개 ` : ''}버리기</button></div></div>`;
     const holding = o.msgs.some(x => x.held);
     return `<div class="ob_bg"><span class="ob_blob" style="background:${orbitBg(o.title, o.group)}"></span></div>${axBar(p, o.clock || now, '#fff')}
-      <div class="ob_ct ob_glass"><button type="button" class="ob_gb" data-go="orbit" aria-label="뒤로">${ic('back', 21, '#1b1d24', 2.2)}</button>${face(o.title, 40, o.group)}<span class="ob_nm"><b>${esc(o.title)}</b>${o.sub ? `<span>${esc(o.sub)}</span>` : ''}</span></div>
+      <div class="ob_ct ob_glass"><button type="button" class="ob_gb" data-go="orbit" aria-label="뒤로">${ic('back', 21, '#1b1d24', 2.2)}</button>${o.faceOf ? `<button type="button" class="ob_fb na_ob_face" data-n="${esc(o.faceOf)}" aria-label="프사 바꾸기">${face(o.title, 40, o.group)}</button>` : face(o.title, 40, o.group)}<span class="ob_nm"><b>${esc(o.title)}</b>${o.sub ? `<span>${esc(o.sub)}</span>` : ''}</span></div>
       ${o.chips.length ? `<div class="ob_chips">${o.chips.map(c => `<span class="ob_chip">${ic(c.icon, 13, '#fff')}${esc(c.text)}</span>`).join('')}</div>` : ''}
       <div class="ob_msgs ax_scroll${o.asOwner ? ' ro' : ''}${holding ? ' hold na_ob_hold' : ''}${o.picking != null ? ' picking' : ''}"><div class="ob_mi">${o.msgs.map(msg).join('')}${o.snapBusy ? '<div class="ob_fail ob_note"><span>이야기 정리 중</span></div>' : o.typing ? '<div class="ob_typ ob_glass" aria-label="입력 중"><i></i><i></i><i></i></div>' : ''}${o.fail ? `<div class="ob_fail"><span>답장을 못 받았어요</span><button type="button" class="ob_retry na_ob_retry" data-id="${esc(o.fail.id)}">다시</button></div>` : ''}</div></div>
       ${o.asOwner ? '' : o.picking != null ? `<div class="ob_inp ob_pbar"><span>${o.picking}개 선택</span><span class="ob_pbtn"><button type="button" class="na_ob_ptr"${o.picking ? '' : ' disabled'}>재번역</button><button type="button" class="na_ob_pdel red"${o.picking ? '' : ' disabled'}>삭제</button><button type="button" class="na_ob_pquit">취소</button></span></div>`
