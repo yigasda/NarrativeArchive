@@ -225,8 +225,11 @@ public class MainActivity extends Activity {
         else setBars(barTop, barBottom);
         fitPhone();
     }
-    // 폰을 연 동안 하단 버튼 줄: 그 화면 아래 바탕색을 조금 더 뿌옇게(흰색 25% 섞기) 칠해요. 투명 · 반투명 · 흰색 · 덧칠은 다 싫다(소망)
-    private static int haze(int c) { return Color.rgb(Color.red(c) + (255 - Color.red(c)) / 4, Color.green(c) + (255 - Color.green(c)) / 4, Color.blue(c) + (255 - Color.blue(c)) / 4); }
+    // 폰을 연 동안 하단 버튼 줄: 그 화면 아래 바탕색을 그대로 쓰되 채도만 20% 낮춰 조금 뿌옇게(밝기는 그대로). 흰색 섞기 · 투명 · 반투명 · 덧칠은 다 싫다(소망)
+    private static int haze(int c) {
+        int r = Color.red(c), g = Color.green(c), b = Color.blue(c), y = (int) Math.round(0.299 * r + 0.587 * g + 0.114 * b);
+        return Color.rgb(r + (y - r) / 5, g + (y - g) / 5, b + (y - b) / 5);
+    }
     @SuppressWarnings("deprecation")
     private void phoneNav() {
         Window w = getWindow();
