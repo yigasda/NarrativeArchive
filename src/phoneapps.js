@@ -13,7 +13,7 @@ import { HINT, PLACE } from './phonemapcity.js';
 import { localName, placeHoods } from './phonemapfind.js';
 import { flagSvg } from './phoneflags.js';
 import { recentTrackers } from './scenes.js';
-import { sectionKey } from './sections.js';
+import { parseSections, sectionKey } from './sections.js';
 import { glossaryEntries } from './translate.js';
 import { esc } from './util.js';
 import { P } from './phone2api.js';
@@ -204,7 +204,7 @@ const delRow = (kind, i, label) => `<div class="ax_card ax_delcard"><button type
 // a list row that slides left to show 삭제 (메시지 · 메일 · 통화)
 const swipeRow = (kind, i, row) => `<div class="ax_swp"><button type="button" class="na_ph_rm ax_swdel" data-kind="${kind}" data-i="${esc(String(i))}">${ax('trash2', 21, 'currentColor', 2)}<span>삭제</span></button>${row}</div>`;
 const delBtn = (kind, i, cls, inner) => `<button type="button" class="na_ph_rm ${cls}" data-kind="${kind}" data-i="${esc(String(i))}" aria-label="지우기">${inner}</button>`;
-export const AXB = { clock: 'clockc', timer: 'clockc', wclock: 'clockc', alarm: 'clockc', health: 'health', hsteps: 'health', hsleep: 'health', hcmp: 'health', hwork: 'health', hheart: 'health', hwater: 'health', hweight: 'health', files: 'files', folder: 'files', file: 'files', weather: 'sky', wcity: 'sky', wlist: 'sky', dlv: 'dlv', delivery: 'dlv', dshop: 'dlv', dcart: 'dlv', dorders: 'dlv', dorder: 'dlv', ditem: 'dlv', dpay: 'dlv', drate: 'dlv', setprofile: 'slate', ivnotes: 'invest', ivschedule: 'invest', ivhistory: 'invest', invest: 'invest', stock: 'invest', ivactivity: 'invest', ivwatch: 'invest', ivstakes: 'invest', ivcash: 'invest', ivprices: 'invest', msg: 'blue', thread: 'blue', call: 'blue', callmiss: 'blue', callwho: 'blue', contacts: 'blue', contact: 'blue', draft: 'blue', groupinfo: 'blue', page: 'sky', tabs: 'sky', marks: 'sky', history: 'sky', bank: 'bank', acct: 'bank', tx: 'bank', fixed: 'bank', banknote: 'bank', banksend: 'bank', stmt: 'bank', txdoc: 'bank', bankmore: 'bank', wallet: 'wallet', card: 'wallet', pass: 'wallet', shop: 'shop', order: 'shop', track: 'shop', voice: 'voice', voiceone: 'voice', photo: 'apri', photoone: 'apri', note: 'butter', noteone: 'butter', search: 'sky', searchone: 'sky', cal: 'brick', calone: 'brick', mail: 'sky', mailone: 'sky', set: 'slate', settheme: 'slate', setdate: 'slate', setscreenholder: 'slate', setplace: 'slate', prep: 'slate', setvoice: 'slate', setvoiceadd: 'slate', setlang: 'slate', setdraft: 'slate', setdraftmodel: 'slate', setlore: 'slate', setwho: 'slate', setremake: 'slate', setsync: 'slate', setsyncpick: 'slate', stime: 'stime', cam: 'apri', map: 'blue', mapq: 'blue', mapc: 'blue' };
+export const AXB = { clock: 'clockc', timer: 'clockc', wclock: 'clockc', alarm: 'clockc', health: 'health', hsteps: 'health', hsleep: 'health', hcmp: 'health', hwork: 'health', hheart: 'health', hwater: 'health', hweight: 'health', files: 'files', folder: 'files', file: 'files', weather: 'sky', wcity: 'sky', wlist: 'sky', dlv: 'dlv', delivery: 'dlv', dshop: 'dlv', dcart: 'dlv', dorders: 'dlv', dorder: 'dlv', ditem: 'dlv', dpay: 'dlv', drate: 'dlv', setprofile: 'slate', ivnotes: 'invest', ivschedule: 'invest', ivhistory: 'invest', invest: 'invest', stock: 'invest', ivactivity: 'invest', ivwatch: 'invest', ivstakes: 'invest', ivcash: 'invest', ivprices: 'invest', msg: 'blue', thread: 'blue', call: 'blue', callmiss: 'blue', callwho: 'blue', contacts: 'blue', contact: 'blue', draft: 'blue', groupinfo: 'blue', page: 'sky', tabs: 'sky', marks: 'sky', history: 'sky', bank: 'bank', acct: 'bank', tx: 'bank', fixed: 'bank', banknote: 'bank', banksend: 'bank', stmt: 'bank', txdoc: 'bank', bankmore: 'bank', wallet: 'wallet', card: 'wallet', pass: 'wallet', shop: 'shop', order: 'shop', track: 'shop', voice: 'voice', voiceone: 'voice', photo: 'apri', photoone: 'apri', note: 'butter', noteone: 'butter', search: 'sky', searchone: 'sky', cal: 'brick', calone: 'brick', mail: 'sky', mailone: 'sky', set: 'slate', settheme: 'slate', setdate: 'slate', setscreenholder: 'slate', setplace: 'slate', prep: 'slate', setvoice: 'slate', setvoiceadd: 'slate', setlang: 'slate', setsnap: 'slate', setdraft: 'slate', setdraftmodel: 'slate', setlore: 'slate', setwho: 'slate', setremake: 'slate', setsync: 'slate', setsyncpick: 'slate', stime: 'stime', cam: 'apri', map: 'blue', mapq: 'blue', mapc: 'blue' };
 export const AXB_C = { clockc: ['#f5a524', '#3a3220'], health: ['#e0405f', '#fbe3e8'], files: ['#2f6fbf', '#dfeaf8'], dlv: ['#1fa8a3', '#d9f4f3'], invest: ['#17695d', '#d9eee5'], blue: ['#2f6bff', '#e1e9ff'], apri: ['#a65a4e', '#f7e3d7'], butter: ['#7f6a22', '#f6edcf'], sky: ['#3f6a9e', '#dde8f4'], brick: ['#a14a42', '#f3dcd9'], slate: ['#454d5a', '#e6e8ec'], bank: ['#2c4a80', '#e2e9f5'], wallet: ['#3d4a66', '#e3e7ef'], shop: ['#2f7d74', '#d9efec'], voice: ['#8a5a2e', '#f2e7d6'], stime: ['#3f8fd8', '#e3f1fd'] };
 // people outside the archive get a letter on one of the home icons' colours
 const AX_AV = ['#8faed1', '#a699c9', '#d89f98', '#89b892', '#d494a7', '#a2a7af', '#dcc680'];
@@ -610,7 +610,7 @@ export function setScreen(p, now, m, ui) {
         ${axH1('설정')}
         <div class="ax_card"><button type="button" class="ax_rw ax_me" data-go="setwho">${axFace(p.owner, 56)}<span class="ax_tx"><b>${esc(p.owner)}</b><span class="ax_p">${esc(p.profile?.handle || '')}</span></span><span class="ax_v">인물 바꾸기</span>${axChev}</button></div>
         ${ui.phones ? phoneModes(ui.phones) : ''}
-        ${ui.phones?.live && (p.syncLast || ui.phones.held) ? liveLastSync(p, ui.phones) : ''}
+        ${ui.phones?.live ? liveLastSync(p, ui.phones) : ''}
         <div class="ax_sec">화면</div>
         <div class="ax_card">
           <button type="button" class="ax_rw" data-go="settheme">${si('#a699c9', 'palette')}<span class="ax_tx"><span class="ax_n">테마</span></span><span class="ax_v">${p.theme === 'gray' ? '화이트 그레이' : '컬러 젤'}</span>${axChev}</button>
@@ -648,10 +648,31 @@ export function setScreen(p, now, m, ui) {
 }
 // 실시간 폰의 지난 반영 (폰 1 대화 반영 화면의 지난 반영 카드와 같은 결): 몇 개 확인 · 넣은 앱 · 알림 · 실패, 방금 반영 되돌리기,
 // 되돌려서 기다리는 대화가 있으면 다시 반영
-function liveLastSync(p, { canUndo, held }) {
+// 실시간 설정 › 지난 반영 › 시작한 이야기 (docs/mockups/phone2-snap 보기 화면): 실시간을 시작할 때의 요약본, 읽기만.
+// 맨 위는 사람마다 지금 상태(STATE), 그 아래 남은 일(OPEN), 장면은 최근 것부터(시각 · 제목 · 세 줄), 시작 직전 메시지.
+// parts: snapParts(m.phoneSnap) (phone2snap.js)
+const SNAP_HEAD = /^#(\d+)[–-]#(\d+)\s*—\s*(.*?)(?:\s*\(([^)]*)\))?\s*$/;
+export function setSnap(p, now, snap, parts) {
+    const scenes = parseSections(parts?.body || '').filter(x => !x.group && SNAP_HEAD.test(x.title)).map(x => { const h = SNAP_HEAD.exec(x.title); return { from: Number(h[1]), title: h[3], when: h[4] || '', text: String(x.note || '').replace(/^\s*-\s+/gm, '').replace(/\b[A-Z]{3,}:\s*/g, '').replace(/\s+/g, ' ').trim() }; }).sort((a, b) => b.from - a.from);
+    const state = parseSections(parts?.state || '').filter(x => !x.group && x.note);
+    const rows = xs => xs.map(x => `<div class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_n">${esc(x.title.replace(/^(STATE|OPEN)$/i, t => (/open/i.test(t) ? '남은 일' : '지금')))}</span><span class="ax_p ax_snf">${esc(x.note.replace(/^\s*-\s+/gm, '').replace(/\s+/g, ' ').trim())}</span></span></div>`).join('');
+    const recent = (snap?.recent || []).flatMap(r => String(r).split(/\n(?=\[#\d+)/)).filter(x => x.trim()).slice(-3).map(r => { const m = /^\[#\d+[^\]]*\]\s*([^:]+):\s*([\s\S]*)$/.exec(r.trim()); return `<div class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_p1 ax_snw">${esc(m ? m[1] : '')}</span><span class="ax_p ax_snp">${esc((m ? m[2] : r).replace(/\s+/g, ' ').trim())}</span></span></div>`; }).join('');
+    return `${axBar(p, now)}
+      ${axTop(axCb('set'))}
+      <div class="ax_scroll">${axH1('시작한 이야기', scenes.length ? `장면 ${scenes.length}개` : '')}
+        ${state.length ? `<div class="ax_card">${rows(state)}</div>` : ''}
+        ${scenes.length ? `<div class="ax_sec">장면</div><div class="ax_card">${scenes.map(x => `<div class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_p1 ax_snw">${esc(x.when)}</span><span class="ax_n">${esc(x.title)}</span><span class="ax_p ax_snp">${esc(x.text)}</span></span></div>`).join('')}</div>` : ''}
+        ${recent ? `<div class="ax_sec">시작 직전</div><div class="ax_card">${recent}</div>` : ''}
+        <i class="ax_pad"></i>
+      </div>
+      ${axInd()}`;
+}
+// 실시간 설정 › 지난 반영 (docs/mockups/phone2-snap B2): 늘 보여요. 요약본으로 시작한 폰이면 제목 오른쪽에 회색
+// "시작한 이야기 ›"(보기 화면 setsnap), 반영 전엔 "아직 없어요" 한 줄
+function liveLastSync(p, { canUndo, held, hasSnap }) {
     const last = p.syncLast || { checked: 0, apps: [], notes: [], failed: [] };
-    return `<div class="ax_sec">지난 반영</div>
-        <div class="ax_card">
+    return `<div class="ax_sec${hasSnap ? ' ax_kvsec' : ''}">지난 반영${hasSnap ? `<button type="button" class="ax_snaplink" data-go="setsnap">시작한 이야기${ax('chev', 12, 'currentColor', 2.4)}</button>` : ''}</div>
+        <div class="ax_card">${p.syncLast || held ? '' : '<div class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_p ax_kvp">아직 없어요</span></span></div>'}
           ${p.syncLast ? '' : '<!--'}<div class="ax_rw"><span class="ax_tx"><span class="ax_n">${last.checked || 0}개 확인</span><span class="ax_p">${esc((last.apps || []).length ? `${last.apps.join(' · ')}에 넣었어요` : '새로 넣은 건 없어요')}</span></span></div>${p.syncLast ? '' : '-->'}
           ${(last.notes || []).map(n => `<div class="ax_rw"><span class="ax_tx"><span class="ax_p">${esc(n)}</span></span></div>`).join('')}
           ${(last.failed || []).map(f => `<div class="ax_rw"><span class="ax_tx"><span class="ax_n ax_red">${f.at === null ? '넣지 못한 일' : f.skipped ? '건너뜀' : '다음에 한 번 더'}</span><span class="ax_p">${esc(f.why)}</span></span></div>`).join('')}
