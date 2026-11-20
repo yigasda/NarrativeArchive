@@ -170,6 +170,7 @@ export async function openPhone(who = null) {
     let backing = false, obBack = null;
     // 채팅을 메신저로 가져오기 (시안 phone2-import S1): lsPick = 고른 줄('story' | 'chat' | 'file', null이면 알아서), lsFile = 고른 파일 { text, names, messages, bubbles, again }, whoName = 첫 화면에 적던 이름
     let lsPick = null, lsFile = null, whoName = '';
+    const whoTint = Math.floor(Math.random() * 5);   // (첫 화면 타일 색: 열 때마다 다섯 중 하나, 소망이 정함)
     const wallNow = (sh = 0) => { const a = viewerWall(Date.now(), sh).at; return { at: a, local: a.slice(6), date: `${Number(a.slice(0, 2))}월 ${Number(a.slice(3, 5))}일` }; };
     // 시작 · 가져오기 화면의 글: story = 이야기에서 시작 줄이 있는지(타임라인 폰이 있고 실시간 폰이 없을 때)
     const startUi = p => {
@@ -455,7 +456,7 @@ export async function openPhone(who = null) {
         if (!owner) {
             // (시안 phone2-import R3) 이름 적기, 또는 메신저 채팅 가져오기(S1 화면). 실시간 폰이 이미 있으면 그리로
             if (view === 'livestart' && !liveWorld(realM)) $root.find('.na_ph_frame').html(appWrap('livestart', liveStart({}, wallNow().at, startUi(null))));
-            else { view = 'who'; $root.find('.na_ph_frame').html(appWrap('newph', whoScreen(wallNow().at, { name: whoName, live: !!liveWorld(realM) }))); }
+            else { view = 'who'; $root.find('.na_ph_frame').html(appWrap('newph', whoScreen(wallNow().at, { name: whoName, tint: whoTint, live: !!liveWorld(realM) }))); }
             placeAsk();
             return;
         }

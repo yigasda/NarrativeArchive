@@ -134,11 +134,14 @@ export function liveStart(p, now, o) {
       ${axInd()}`;
 }
 
-// 폰도 인물도 없는 채팅의 첫 화면 (시안 docs/mockups/phone2-import R3 + P의 파스텔 타일): 큰 제목, 밑줄 이름 칸, 검정 알약,
-// 그 아래 작은 "메신저 채팅 가져오기". o: { name (적던 이름), live (실시간 폰이 이미 있음: 가져오기 대신 그리로) }
+// 폰도 인물도 없는 채팅의 첫 화면 (시안 docs/mockups/phone2-import R3, 타일은 G5 장미 · 복숭아 그라데이션: 번지는 공이 티 나지 않게, 그림 없이): 큰 제목, 밑줄 이름 칸, 검정 알약,
+// 그 아래 작은 "메신저 채팅 가져오기". o: { name (적던 이름), tint (타일 색 번호), live (실시간 폰이 이미 있음: 가져오기 대신 그리로) }
+// 타일 색 다섯 (시안 sheetTile G1~G5: 산호 · 초록 살구 · 물빛 · 호박 · 장미 복숭아). 폰을 열 때마다 하나를 골라요(o.tint)
+const WH_TINT = [['#ee9184', '#f6c0a7'], ['#8ecf98', '#e6d29a'], ['#7fc4d4', '#abdcd4'], ['#e3b278', '#f2d1a3'], ['#f2a6b5', '#f6c2a8']];
 export function whoScreen(now, o = {}) {
+    const t = Math.abs(Math.trunc(Number(o.tint) || 0)) % WH_TINT.length;
     return `${axBar({}, now)}
-      <div class="wh_body"><span class="wh_ic">${ic('user', 28, '#2c4a80')}</span><b class="wh_h">누구의<br>폰인가요</b>
+      <div class="wh_body"><span class="wh_ic" style="--wa:${WH_TINT[t][0]};--wb:${WH_TINT[t][1]}"></span><b class="wh_h">누구의<br>폰인가요</b>
         <div class="wh_in na_who_in" contenteditable="true" role="textbox" enterkeyhint="done" spellcheck="false" data-ph="인물 이름" aria-label="인물 이름">${esc(o.name || '')}</div></div>
       <button type="button" class="ob_go wh_go na_who_ok">폰 보기</button>
       ${o.live ? `<button type="button" class="wh_imp na_ph_pmode" data-v="live">${ic('chat', 15, '#5b6170')}실시간 폰으로</button>` : `<button type="button" class="wh_imp" data-go="livestart">${ic('chat', 15, '#5b6170')}메신저 채팅 가져오기</button>`}
