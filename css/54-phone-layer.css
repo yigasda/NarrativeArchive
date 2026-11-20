@@ -119,9 +119,10 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax 
    (시안 docs/mockups/phone-fit r1_*.png). 폰 비율이 덜 길쭉하면 양옆에 가는 띠가 남아요. 화면을 통째로 채우면(가로까지) 넓적해 보여서 되돌렸어요.
    넓은 화면에서는 폰이 가운데 떠 있어야 해서 테두리를 둬요 */
 @media (max-width: 600px) and (pointer: coarse) {
-    .na_phl_root { padding: 0; }
+    /* (위아래 8px은 남겨요: 폰이 기기의 상단바 · 아래 버튼 줄에 딱 붙으면 뚫고 들어간 것처럼 보여요) */
+    .na_phl_root { padding: max(8px, env(safe-area-inset-top)) 0 max(8px, env(safe-area-inset-bottom)); }
     .na_phl .na_ph_wrap { padding: 0; }
-    .na_phl .na_ph_frame { width: min(100vw, calc(var(--na-phh, 100dvh) * 390 / 844)); padding: 0; border-radius: calc(44px * var(--k, 0.87)); --axr: calc(44px * var(--k, 0.87)); box-shadow: none; background: none; }
+    .na_phl .na_ph_frame { width: min(100vw, calc((var(--na-phh, 100dvh) - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 390 / 844)); padding: 0; border-radius: calc(44px * var(--k, 0.87)); --axr: calc(44px * var(--k, 0.87)); box-shadow: none; background: none; }
 }
 .cg .cg_ind.na_ph_quit { height: 38px; flex-direction: column; gap: 4px; justify-content: flex-end; padding-bottom: 9px; cursor: pointer; }
 .cg_ind.na_ph_quit small { font-size: 11px; font-weight: 600; color: rgba(22, 27, 34, 0.55); letter-spacing: 0.04em; }
