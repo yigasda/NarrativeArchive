@@ -839,7 +839,7 @@ export async function openPhone(who = null) {
     };
     const obDrop = async ids => {
         const id = obRoomId(); if (!id || !ids.length) return;
-        if (!await askSheet(`말 ${ids.length}개를 지울까요?`, '', '지우기')) return;
+        if (!await askSheet(`${ids.length}개를 지울까요?`, '', '지우기')) return;
         try { await liveDropMessages(realM, id, ids); } catch (err) { obWarn(err); }
         obHeld = null; obPicks = null; if (!phoneClosed && stillHere()) drawPhone(true);
     };
