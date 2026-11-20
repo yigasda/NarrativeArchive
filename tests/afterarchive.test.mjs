@@ -40,11 +40,13 @@ const live2 = await import(href('phone2store.js'));
 map['./phone2store.js'] = href('phone2store.js');
 map['./phonelife.js'] = encoded(await rewrite('phonelife.js')); map['./investdata.js'] = encoded(await rewrite('investdata.js'));
 for (const f of ['phone2year.js', 'phone2req.js', 'phone2fill.js', 'phone2money.js', 'phone2life.js', 'phone2invest.js', 'phone2where.js', 'phone2make.js']) map[`./${f}`] = encoded(await rewrite(f));
-const req2 = await import(map['./phone2req.js']), money2 = await import(map['./phone2money.js']), life2 = await import(map['./phone2life.js']), invest2 = await import(map['./phone2invest.js']), make2 = await import(map['./phone2make.js']);
+const req2 = await import(map['./phone2req.js']), money2 = await import(map['./phone2money.js']), life2 = await import(map['./phone2life.js']), invest2 = await import(map['./phone2invest.js']), make2 = await import(map['./phone2make.js']), where2 = await import(map['./phone2where.js']);
 // 이야기 #7에서 시작한 실시간 폰: 메신저에 두 마디, 반영은 첫 마디까지 읽음
-const liveOf = (p, mm, upto = 7) => {
+// (snap: 이야기 요약본으로 시작한 폰 — beginFromStory가 하듯 월드에 넣어요)
+const liveOf = (p, mm, upto = 7, snap = null) => {
     const real = { ...no2(mm), phones: { ren: p } };
     live2.startFromStory(real, { persona: 'Me', upto, scope: 'test', story: { ranges: {}, titles: [], rawFrom: 0, own: [String(mm.text || '')] } });
+    if (snap) live2.liveWorld(real).snap = structuredClone(snap);
     const room = live2.ensureRoom(real, ['Ren']);
     live2.sendLive(real, room.id, 'on the messenger'); live2.sendLive(real, room.id, 'not read yet');
     const d = live2.liveMeta(real, { text: () => String(mm.text || '') }), q = d.phones.ren, first = room.messages[0].n;
@@ -2029,4 +2031,103 @@ test('실시간 폰 다시 만들기 · 채우기 (진짜 서랍): 시작한 곳
         assert.ok(globalThis.__menu.calls.length >= 1);
         for (const c of globalThis.__menu.calls) assert.ok(!c.input.includes('AFTERSTART'));
     }
+});
+
+// ---- 요약본으로 시작한 실시간 폰 (phone2snap.js): 이야기는 요약본의 글, 롤플 채팅은 안 읽어요
+const SNAP = { v: 1, at: 1, upto: 7, made: { from: 4, to: 7, count: 4, parts: 1 },
+    text: '## #0–#3 — Arrival\n- Ren came home (#1).\n\n## #4–#7 — The flat\n- SNAPSECTION Ren signed for a flat on Lindenweg (#6).\n\n---\n# STATE AT #7\n## People\n- SNAPSTATE Ren: has a flat on Lindenweg.\n\n# OPEN AT #7\n- SNAPOPEN What happens on Friday.\n',
+    recent: ['[#5] Mara: SNAPRECENT five', '[#6] Ren: SNAPRECENT six', '[#7] Mara: SNAPRECENT seven'] };
+const chatRowsOf = n => Array.from({ length: n }, (_, i) => ({ index: i, user: i % 2 === 0, hidden: i <= 3, text: `[#${i}] Ren: CHATROW ${i} ${'word '.repeat(3000)}` }));
+const snapPhone = () => ({ ...phoneOf(), now: '11-12 21:30', year: 2026, country: 'DE', lives: 'DE', where: { at: 1, people: [{ name: 'Ren', city: 'Frankfurt am Main', tz: 'Europe/Berlin', names: ['Frankfurt'] }] }, sync: { marks: { base: { index: 7 } }, done: [], hiddenRead: {}, events: {} } });
+// (the requests of one run of every reader, in order: [system's first words, input])
+async function snapRun(mm, { fresh = false } = {}) {
+    const out = [];
+    const cases = [
+        ['life', (d, p) => life2.liveFillLife(d, p), [lifeAnswer('A')]],
+        ['money', (d, p) => money2.liveFillMoney(d, p), [moneyAnswer('Bakery', 500, '11-10 09:00')]],
+        ['apps', d => make2.liveMakePhone(d, 'Ren', { apps: ['note'] }), [notesAnswer('Shopping')]],
+        ['phone', d => make2.liveMakePhone(d, 'Ren'), [notesAnswer('Shopping')]],
+        ['where', (d, p) => where2.liveReadWhere(d, p, { all: true }), ['{"people":[]}']],
+    ];
+    for (const [name, run, answers] of cases) {
+        const { real, d, p } = liveOf(snapPhone(), mm, 7, SNAP), p1 = JSON.stringify(real.phones);
+        if (fresh) delete p.sync;
+        globalThis.__menu = { calls: [], answers: [...answers], answer: '{}' }; globalThis.__where = [];
+        try { await run(d, p); } catch { /* the inputs are what this checks */ }
+        // (the 위치 판독 request is recorded apart by this file's fake model)
+        const calls = [...globalThis.__menu.calls.map(c => [String(c.sys).slice(0, 40), c.input]), ...globalThis.__where.map(input => ['You read where', input])];
+        assert.ok(calls.length >= 1, name);
+        assert.equal(JSON.stringify(real.phones), p1, name);
+        out.push([name, calls]);
+    }
+    return out;
+}
+test('요약본으로 시작한 실시간 폰 (진짜 서랍): 채우기 · 다시 만들기 · 위치 읽기가 요약본만 보고, 롤플 채팅은 한 줄도 안 읽어요', async () => {
+    globalThis.__rows = chatRowsOf(60);
+    globalThis.__trackers = [{ i: 59, date: '2026-11-20', min: 20 * 60, place: 'Eastgate', weather: 'rain' }];
+    // (the chat's archive now is another text: the phone's story is the snapshot's, whatever the archive says)
+    const mm = { text: '## #0–#3 — Arrival\n- ARCHIVENOW Ren came home (#1).\n\n## #4–#30 — Later\n- ARCHIVENOW a later section (#20).\n' };
+    try {
+        for (const fresh of [false, true]) {
+            for (const [name, calls] of await snapRun(mm, { fresh })) {
+                const all = calls.map(c => c[1]).join('\n=====\n'), tag = `${name}${fresh ? ' (never reflected)' : ''}`;
+                // 채팅도, 지금의 아카이브도, 롤플 상태창도 없어요
+                assert.ok(!all.includes('CHATROW') && !all.includes('ARCHIVENOW') && !all.includes('Eastgate'), tag);
+                // 요약본의 장면이 들어가요 (위치 읽기는 장면을 안 싣고 끝의 지금 상태와 최근 대화만 실어요, 폰 1과 같아요)
+                if (name !== 'where') assert.ok(all.includes('SNAPSECTION'), tag);
+                // (끝의 STATE · OPEN도 같이 가요: 읽은 곳으로 장면을 거르지 않아서예요. 이 파일의 가짜 sections는 "---" 뒤를
+                // 따로 못 읽어서 여기서는 STATE의 "## People" 칸만 보여요; 진짜 글 붙이기는 tests/phone2snap.test.mjs)
+                if (!['apps', 'where'].includes(name)) assert.ok(all.includes('SNAPSTATE'), tag);
+                // 시작 직전 메시지: 그 요청 자신의 최근 대화 칸에 (다시 만들기에 딸린 위치 읽기 요청 것으로 세지 않아요)
+                const mine = { life: life.AI_SYS_LIFE, money: data.AI_SYS_MONEY, apps: data.AI_SYS_PHONE_APPS, phone: data.AI_SYS_PHONE, where: 'You read where' }[name];
+                const req = calls.find(c => c[0] === String(mine).slice(0, 40));
+                assert.ok(req, tag);
+                assert.match(req[1], /\[RECENT CHAT\]\n(?:[^\n]*\n)*?\[#7\] Mara: SNAPRECENT seven/, tag);
+                // 긴 채팅이어도 나눠 읽지 않아요 (읽을 채팅이 없어요)
+                // (생활 채우기 뒤에는 스크린타임 요청이 한 번 따라와요: 그건 따로)
+                const own = { life: life.AI_SYS_LIFE, money: data.AI_SYS_MONEY, apps: data.AI_SYS_PHONE_APPS }[name];
+                if (own) assert.equal(calls.filter(c => c[0] === String(own).slice(0, 40)).length, 1, tag);
+            }
+        }
+    } finally { delete globalThis.__trackers; }
+});
+
+test('요약본으로 시작한 실시간 폰: 롤플에서 시작한 자리의 메시지를 고치거나, 지우고 새로 쓰거나, 아카이브를 바꿔도 요청이 글자 하나 안 바뀌어요', async () => {
+    const mm = { text: '## #0–#3 — Arrival\n- Ren came home (#1).\n' };
+    globalThis.__rows = chatRowsOf(12);
+    const before = JSON.stringify(await snapRun(mm));
+    // 시작한 자리(#7)를 스와이프, 그 앞 둘을 지우고 새로 씀, 뒤에 롤플이 이어짐
+    globalThis.__rows = chatRowsOf(30).map(r => (r.index >= 5 ? { ...r, text: `[#${r.index}] Ren: REWRITTEN ${r.index}` } : r));
+    assert.equal(JSON.stringify(await snapRun(mm)), before);
+    // 메시지가 지워져 채팅이 시작한 자리보다 짧아짐
+    globalThis.__rows = chatRowsOf(3);
+    assert.equal(JSON.stringify(await snapRun(mm)), before);
+    // 아카이브가 다시 압축돼 글이 바뀜
+    globalThis.__rows = chatRowsOf(30);
+    assert.equal(JSON.stringify(await snapRun({ text: '## #0–#20 — Everything\n- REARCHIVED all of it (#9).\n' })), before);
+});
+
+test('요약본이 없는 실시간 폰(전에 시작한 것)은 전처럼 채팅을 시작한 곳까지 읽어요', async () => {
+    globalThis.__rows = chatRowsOf(12).map(r => ({ ...r, text: r.text.slice(0, 40) }));
+    const mm = { text: '## #0–#3 — Arrival\n- Ren came home (#1).\n' };
+    const { d, p } = liveOf(snapPhone(), mm, 7);
+    assert.equal(d.phoneSnap, undefined);
+    globalThis.__menu = { calls: [], answers: [lifeAnswer('A')], answer: '{}' };
+    await life2.liveFillLife(d, p);
+    const input = globalThis.__menu.calls.find(c => c.sys === life.AI_SYS_LIFE).input;
+    assert.ok(input.includes('CHATROW 7') && !input.includes('CHATROW 8') && !input.includes('SNAPSECTION'));
+});
+
+test('시작 직전 메시지 고르기(liveBefore): 끝에서 n개, 글자 수 안에서, 메시지를 자르지 않아요', () => {
+    const { d } = liveOf(snapPhone(), { text: '' }, 7, SNAP);
+    assert.equal(req2.liveBefore(d, 10), SNAP.recent.join('\n\n'));
+    assert.equal(req2.liveBefore(d, 2), SNAP.recent.slice(-2).join('\n\n'));
+    assert.equal(req2.liveBefore(d, 0), '');
+    assert.equal(req2.liveBefore(d, 10, SNAP.recent[2].length), SNAP.recent[2]);
+    assert.equal(req2.liveBefore(d, 10, SNAP.recent[2].length - 1), '');
+    assert.equal(req2.liveBefore(d, 10, SNAP.recent[2].length + 2 + SNAP.recent[1].length), SNAP.recent.slice(-2).join('\n\n'));
+    // 서랍이 요약본을 알려 줘요: 이야기 글은 호출하는 쪽이 준 것이 아니라 요약본의 글
+    assert.equal(d.text, SNAP.text); assert.deepEqual(d.phoneSnap.recent, SNAP.recent); assert.equal(d.phoneUpto, 7);
+    const w = req2.liveWindowOf(d, d.phones.ren);
+    assert.deepEqual([w.n, w.all, w.upto, w.later], [0, true, -1, false]);
 });

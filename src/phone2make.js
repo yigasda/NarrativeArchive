@@ -17,9 +17,9 @@ import { withDateOrder, withDateOrderSync } from './phoneparse.js';
 import { busy, newSync, journalRead, journalWrite } from './phonesync.js';
 import { askDraft, AI_SYS_PHONE, AI_SYS_PHONE_APPS, AI_SYS_PHONE_UPDATE, CHAT_TOKENS, CAP, COUNTRIES, LISTS, REMAKE, makingNow, dateOrderOf, ensureScreenHolder, storyRun, stillRun,
     markNow, markAfter, archiveEnd, chatEnd, nowAt, phoneAt, loreFor, glossAka, seedPre, carryEdits, phonePre, sameBinding, preEdited, stTime, storyDayOf, todayWall, parsePhone, validateReflectionClock,
-    jsonOf, soFarHead, mergePhone, carryOver, secFirst, secEnd, lastEnd, fresh, ensureIds, turnsNote, readNote, isOwnerName, strictSame, hasRow, hm, recentPhoneText, archiveFor, archiveBlock, afterBlock,
+    jsonOf, soFarHead, mergePhone, carryOver, secFirst, secEnd, lastEnd, fresh, ensureIds, turnsNote, readNote, isOwnerName, strictSame, hasRow, hm, recentPhoneText, archiveBlock, afterBlock,
     noArchive, phoneForModel, aroundBlock, blindBlock, namesBlock, onlyAsk } from './phonedata.js';
-import { liveWindowOf, liveReadMark, liveSecondTurn, liveTold, liveFillClock, liveYearBlock, needLive } from './phone2req.js';
+import { liveWindowOf, liveReadMark, liveSecondTurn, liveTold, liveFillClock, liveYearBlock, liveSnapOf, liveBefore, liveArchiveFor, needLive } from './phone2req.js';
 import { liveTryWhere } from './phone2where.js';
 import { liveEnsureYear } from './phone2year.js';
 import { liveNowText } from './phone2store.js';
@@ -29,8 +29,8 @@ function livePhoneRequest(m, owner, p = null, lore = '', only = null, profile = 
     // (made again keeping its reading, a phone with no 위치 정보 read before it: its own time still)
     const cur0 = m.phones?.[nameKey(owner)], q0 = p || (pre ? (!anew && cur0?.now ? { ...pre, now: cur0.now } : pre) : cur0) || { owner }, q = anew && q0.now ? { ...q0, now: '' } : q0;
     const world = worldText(m), upto = nowAt(gap);
-    const recent = recentPhoneText(6, { upto, maxChars: 6000 });
-    const ar = archiveFor(m, p ? p.upto ?? -1 : -1, nowAt(gap), !gap?.cut);
+    const recent = liveSnapOf(m) ? liveBefore(m, 6, 6000) : recentPhoneText(6, { upto, maxChars: 6000 });
+    const ar = liveArchiveFor(m, p ? p.upto ?? -1 : -1, nowAt(gap), !gap?.cut);
     const now = p ? JSON.stringify(phoneForModel(p)) : '';
     return [
         p ? `[PHONE NOW]\n${now}` : '', ((at, st) => {

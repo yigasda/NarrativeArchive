@@ -112,7 +112,7 @@ test('폰 2 사본은 폰 1 줄과 정해진 곳만 달라요 (한쪽만 고치�
     const fill = !!read && Number.isInteger(gap?.mark), lines = fill ? 150 : 6, chars = fill ? 12000 : 6000;
     const recent = liveRecentText(m, owner, lines, { upto, maxChars: chars, ...(fill ? { seen: gap.mark, summary: true } : {}) });
     if (read) read.gap = gap;
-    const arch = archiveBlock(m, archiveFor(m, -1, upto).text || '(empty)', 'ARCHIVE', story, upto), talk = gap?.n && typeof m?.phoneRecent === 'function' ? m.phoneRecent(owner, lines, { maxChars: chars, ...(fill ? { seen: gap.mark, summary: true } : {}) }) : '';
+    const arch = archiveBlock(m, liveArchiveFor(m, -1, upto).text || '(empty)', 'ARCHIVE', story, upto), talk = gap?.n && typeof m?.phoneRecent === 'function' ? m.phoneRecent(owner, lines, { maxChars: chars, ...(fill ? { seen: gap.mark, summary: true } : {}) }) : '';
     // (폰 2: the story after the archive up to where it began, then the messenger's talk, in the one block)
     const chat = (afterBlock(gap) ? \`\${afterBlock(gap)}\${talk ? \`\\n\\n\${talk}\` : ''}\` : '') || (recent && !(story && noArchive(m)) ? \`[RECENT CHAT]\\n\${recent}\` : '');
 `, PHONE1_TALK = `    const recent = recentPhoneText(6, { upto, maxChars: 6000 });

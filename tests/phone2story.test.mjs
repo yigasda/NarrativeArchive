@@ -112,6 +112,38 @@ test('분기한 채팅에 폰 2가 시작한 번호가 있는지 (알려 주기�
     assert.equal(JSON.stringify(m.live), was);
 });
 
+// 요약본으로 시작 (phone2snap.js가 만든 것): 이야기 글은 그 요약본. 아카이브를 다시 읽지 않아요
+test('요약본으로 시작한 폰 2: 요약본을 복사해 두고, 이야기 글은 그 글 그대로; 아카이브가 바뀌어도 그대로', () => {
+    const m = meta(), snap = { v: 1, at: 5, upto: 150, text: '## #0–#150 — All\n- SNAP the story so far.\n\n---\n# STATE AT #150\n- SNAP state.\n', recent: ['[#149] Mara: last', '[#150] Ren: words'], made: { from: 131, to: 150, count: 20, parts: 1 } };
+    const before = JSON.stringify(m.phones), w = S.beginFromStory(m, { persona: 'Lio', upto: 150, snap });
+    assert.deepEqual(w.snap, snap); assert.notEqual(w.snap, snap); assert.notEqual(w.snap.recent, snap.recent);
+    // (준 요약본을 나중에 고쳐도 폰 2의 것은 그대로)
+    snap.text = 'changed'; snap.recent.push('x');
+    assert.ok(w.snap.text.startsWith('## #0–#150') && w.snap.recent.length === 2);
+    assert.equal(S.liveStoryText(m, w), w.snap.text);
+    // 아카이브가 통째로 바뀌어도, 비워져도
+    m.text = '## #0–#999 — Rewritten\n- other.'; assert.equal(S.liveStoryText(m, w), w.snap.text);
+    m.text = ''; assert.equal(S.liveStoryText(m, w), w.snap.text);
+    // 서랍: 이야기 글은 요약본 (호출하는 쪽이 준 글보다 먼저), 요약본을 알려 줘요, 시작한 번호는 그대로
+    const d = L.liveMeta(m, { text: () => 'the caller\'s text' });
+    assert.equal(d.text, w.snap.text); assert.equal(d.phoneSnap, w.snap); assert.equal(d.phoneUpto, 150);
+    // 폰 1의 폰은 그대로
+    assert.equal(JSON.stringify(m.phones), before);
+    // 모양이 틀렸거나 다른 자리의 요약본이면 시작하지 않아요 (폰 2는 안 생겨요)
+    for (const bad of [{ ...w.snap, upto: 149 }, { text: 'x', recent: 'not a list', upto: 150 }, { recent: [], upto: 150 }, 'text']) {
+        const m2 = meta();
+        assert.throws(() => S.beginFromStory(m2, { persona: 'Lio', upto: 150, snap: bad }), /이야기 요약본이 이 시작 자리의 것이 아니에요/);
+        assert.equal(L.liveWorld(m2), null);
+    }
+    // 요약본 없이 시작한 폰 2는 전처럼 (요약본 자리 없음, 이야기 글은 그때 알던 장면)
+    const m3 = meta(), w3 = begun(m3), d3 = L.liveMeta(m3, { text: () => S.liveStoryText(m3, w3) });
+    assert.equal(w3.snap, undefined); assert.equal(d3.phoneSnap, undefined); assert.ok(d3.text.includes('## #61–#130 — Summer'));
+    // 다시 시작(대화만 남기기 · 분기)도 요약본을 받아요
+    const m4 = meta(); S.beginFromStory(m4, { persona: 'Lio', upto: 150 }); L.setLiveMode(m4, 'live');
+    const w4 = S.rebeginKeepingChats(m4, { upto: 150, snap: w.snap });
+    assert.deepEqual(w4.snap, w.snap);
+});
+
 // 7-4: 분기한 방의 폰 2는 폰 1을 먼저 되돌린 뒤 거기서 다시 시작해요
 test('분기 가리기: 자기 채팅 · 시작 뒤 분기 · 시작 앞 분기', async () => {
     const S2 = S, L2 = L;

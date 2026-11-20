@@ -164,6 +164,8 @@ test('사본은 폰 1 줄과 정해진 곳만 달라요 (한쪽만 고치면 실
     assert.equal(line(b, 'const livePreClock = ').replace('const livePreClock = ', 'const preClock = ').replace('nowAt(liveWindowOf(m, null))', 'nowAt(windowOf(m, null))').replace('st = null', 'st = statusAt(pre, upto, m)'), line(a, 'const preClock = '));
     // 요청 글: 시계 블록 · 연도 · 메신저 대화
     assert.equal(cut(b, '\nfunction livePhoneRequest(').replace('function livePhoneRequest(', 'function phoneRequest(')
+        // (요약본으로 시작한 폰: 최근 대화는 요약본에 든 시작 직전 메시지, 이야기 글은 요약본 전부)
+        .replace('const recent = liveSnapOf(m) ? liveBefore(m, 6, 6000) : recentPhoneText(6, { upto, maxChars: 6000 });', 'const recent = recentPhoneText(6, { upto, maxChars: 6000 });').replace('const ar = liveArchiveFor(', 'const ar = archiveFor(')
         .replace("return liveFillClock(m, q, story || (day ? `${day} 12:00` : todayWall()), { story: true, quiet: story ? false : day ? 'day' : true });", "return fillClock(m, q, story || (day ? `${day} 12:00` : todayWall()), st, gap, { text: extra.find(x => String(x).startsWith('[TOLD SHORT')) || '' }, { story: true, quiet: story ? false : day ? 'day' : true });")
         .replace('})(upto == null ? undefined : liveNowText(m, q) || undefined, null),', '})(upto == null ? undefined : storyNow(q, upto, m) || undefined, statusAt(q, upto, m)),').replace('liveYearBlock(m, q)', 'yearBlock(m, q, upto)')
         .replace(`        // (폰 2: after the story it began from, the messenger's talk its reflection has read — the summaries of the old

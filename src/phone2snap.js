@@ -6,7 +6,7 @@
 //   text    지금까지의 이야기. 아카이브 글 + 아직 아카이브 안 된 구간의 요약 + 그때의 STATE · OPEN.
 //           아카이브의 "한 번에 압축"이 받는 초안을 그대로 받아서(같은 지시문 · 같은 모델 · 같은 나누기), 그 초안을
 //           아카이브에 넣었을 때의 글을 만들어요. 진짜 아카이브에는 넣지 않아요: 롤플은 아무것도 안 바뀌어요.
-//   recent  시작 직전의 메시지 몇 개, 글자 그대로 (말투 · 직전 분위기).
+//   recent  시작 직전의 메시지 몇 개, 글자 그대로 (말투 · 직전 분위기). 메시지마다 한 칸인 목록이에요.
 //   upto    어느 메시지까지의 이야기인지 (그때의 마지막 메시지 번호). 기록용이에요: 이 번호로 채팅을 다시 읽지 않아요.
 // 이 파일은 요약본을 "만들기만" 해요. 저장은 시작할 때(phone2story.js) 해요. 폰 1은 이 파일을 부르지 않아요.
 
@@ -18,6 +18,9 @@ import { hasChanges, resolveChanges } from './statechg.js';
 import { placeAppend } from './appendtext.js';
 import { chunkItems, draftCompress, rangeRaw } from './wizard.js';
 import { recentPhoneText } from './phonedata.js';
+import { isSnap } from './phone2store.js';
+
+export { isSnap };
 
 // 시작 직전 메시지: 몇 개까지, 몇 글자까지
 export const SNAP_RECENT = { lines: 10, chars: 6000 };
@@ -70,11 +73,11 @@ export async function liveSnapDraft(m, { upto, onStep = () => {}, now = Date.now
         parts = r.parts || 1;
     }
     text = String(text || '').replace(/\r\n/g, '\n');
-    const recent = recentPhoneText(SNAP_RECENT.lines, { upto, maxChars: SNAP_RECENT.chars });
-    return { v: 1, at: now, upto, text: text.trim() ? `${trimEnd(text)}\n` : '', recent: String(recent || ''), made: { from: u.from, to: u.to, count: u.items.length, parts } };
+    // (one entry a message: the reader joins them with a blank line; a message's own text may hold blank lines, so the
+    // split is at the next message's "[#n]" head)
+    const recent = String(recentPhoneText(SNAP_RECENT.lines, { upto, maxChars: SNAP_RECENT.chars }) || '').split(/\n\n(?=\[#\d+\])/).filter(x => x.trim());
+    return { v: 1, at: now, upto, text: text.trim() ? `${trimEnd(text)}\n` : '', recent, made: { from: u.from, to: u.to, count: u.items.length, parts } };
 }
 
-// 요약본이 쓸 만한 모양인가 (저장하기 전에 봐요): 글이 문자열이고, 어디까지인지 번호가 있어요
-export const isSnap = s => !!s && typeof s === 'object' && typeof s.text === 'string' && typeof s.recent === 'string' && Number.isInteger(s.upto) && s.upto >= 0;
 // 요약본의 두 부분: 장면들(body)과 끝의 STATE · OPEN(state)
 export const snapParts = s => { const [body, state] = splitTail(String(s?.text || '')); return { body: trimEnd(body), state: String(state || '').trim() }; };

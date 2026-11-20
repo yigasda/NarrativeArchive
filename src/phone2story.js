@@ -10,7 +10,7 @@
 // 폰 1은 이 파일을 부르지 않아요. 아카이브 글은 읽기만 해요.
 
 import { headingRanges, parseSections, RANGE_HEAD, splitTail } from './sections.js';
-import { liveWorld, startFromStory, numberLive } from './phone2store.js';
+import { liveWorld, startFromStory, numberLive, isSnap } from './phone2store.js';
 
 // [[a, b], …] sorted, touching or overlapping ones joined ([0, 50] + [51, 100] → [0, 100])
 function joinSpans(spans) {
@@ -52,6 +52,8 @@ export function storyMark(m, upto) {
 const cut = new WeakMap();
 export function liveStoryText(m, w) {
     const st = w?.story;
+    // (begun with a snapshot of the story (phone2snap.js): that text, as it was taken; the archive is not read again)
+    if (w?.from === 'story' && isSnap(w.snap)) return w.snap.text;
     if (!w || w.from !== 'story' || !st || typeof st !== 'object') return '';
     const text = String(m?.text || ''), had = cut.get(w);
     if (had && had.text === text && had.st === st) return had.out;
@@ -82,10 +84,14 @@ export const liveFitsChat = (w, lastIndex) => !w || w.from !== 'story' || !Numbe
 // 이야기에서 시작: 폰 2 begun at message `upto` (the newest one), with its mark of the story then; the one way to begin
 // from the story (startFromStory alone refuses without a mark)
 // chat · fp: which chat this is and the words of message `upto` (phonedata.js chatStamp), kept so a branch is told apart
-export function beginFromStory(m, { persona, upto, scope = '', dayShift = 0, now = Date.now(), chat = null, fp = null } = {}) {
+// snap: the story as it stands now, taken by phone2snap.js liveSnapDraft for this same message (`upto`). With it 폰 2
+// never reads the chat or the archive again: its story is that text
+export function beginFromStory(m, { persona, upto, scope = '', dayShift = 0, now = Date.now(), chat = null, fp = null, snap = null } = {}) {
+    if (snap != null && (!isSnap(snap) || snap.upto !== upto)) throw new Error('이야기 요약본이 이 시작 자리의 것이 아니에요. 다시 만들어 주세요');
     const w = startFromStory(m, { persona, upto, scope, dayShift, now, story: storyMark(m, upto) });
     if (chat) w.chat = String(chat);
     if (fp) w.storyFp = String(fp);
+    if (snap) w.snap = structuredClone(snap);
     return w;
 }
 

@@ -21,12 +21,13 @@ const stub = {
         export const rangeRaw=(c,g,from,to,keep)=>{S.ranges.push([from,to,keep]);const items=c.chat.map((x,i)=>({i,text:x.mes,hidden:!!x.is_system})).filter(x=>x.i>=from&&x.i<=to&&!(x.hidden&&x.i>keep));return{items,raw:items.map(x=>'#'+x.i+' '+x.text).join('\\n')};};
         export const chunkItems=items=>{const out=[];for(let i=0;i<items.length;i+=S.per||1000)out.push(items.slice(i,i+(S.per||1000)));return out;};
         export const draftCompress=async a=>{S.calls.push({from:a.items[0].i,to:a.items.at(-1).i,n:a.items.length,prompt:a.p.text,text:a.m.text});a.onStep?.(0,1,a.items[0].i,a.items.at(-1).i);return typeof S.draft==='function'?S.draft(a):S.draft;};`),
-    './phonedata.js': enc(`export const recentPhoneText=(n,o)=>{const S=globalThis.__snap;S.recentAsk=[n,o];return S.chat.map((x,i)=>({i,x})).filter(r=>!r.x.is_system&&r.i<=o.upto).slice(-n).map(r=>'[#'+r.i+'] '+r.x.name+': '+r.x.mes).join('\\n').slice(-o.maxChars);};`),
+    './phonedata.js': enc(`export const recentPhoneText=(n,o)=>{const S=globalThis.__snap;S.recentAsk=[n,o];return S.chat.map((x,i)=>({i,x})).filter(r=>!r.x.is_system&&r.i<=o.upto).slice(-n).map(r=>'[#'+r.i+'] '+r.x.name+': '+r.x.mes).join('\\n\\n').slice(-o.maxChars);};`),
 };
 // (the archive's own text code, as it is: its neighbours that need the page are the stubs above)
 const real = {};
 const rewritten = async f => enc((await readFile(new URL(f, SRC), 'utf8')).replace(/from '([^']+)'/g, (all, k) => `from '${stub[k] || real[k] || k}'`));
 for (const f of ['sections.js', 'statechg.js', 'appendtext.js']) real[`./${f}`] = await rewritten(f);
+real['./phone2store.js'] = new URL('phone2store.js', SRC).href;
 const S = await import(await rewritten('phone2snap.js'));
 
 const ARCHIVE = `## #0–#3 — Arrival (Oct 24, Varo)
@@ -87,7 +88,7 @@ test('아카이브 안 된 구간: 아카이브의 "한 번에 압축"으로 요
     assert.ok(state.includes('# OPEN AT #7') && state.includes('- Whether Mara will forgive Ren.') && state.includes('- What happens on Friday.'));
     assert.ok(!snap.text.includes('CHANGES') && !snap.text.includes('==>'));
     // 시작 직전 메시지: 보이는 것만, 글자 그대로
-    assert.equal(snap.recent, '[#4] Ren: I found the flat on Lindenweg\n[#5] Mara: Then take it\n[#6] Ren: I signed today\n[#7] Mara: See you Friday');
+    assert.deepEqual(snap.recent, ['[#4] Ren: I found the flat on Lindenweg', '[#5] Mara: Then take it', '[#6] Ren: I signed today', '[#7] Mara: See you Friday']);
     assert.deepEqual(T.recentAsk, [S.SNAP_RECENT.lines, { upto: 7, maxChars: S.SNAP_RECENT.chars }]);
     assert.deepEqual(snap.made, { from: 4, to: 7, count: 4, parts: 1 });
     // 진짜 아카이브 · 경계선은 안 바뀌어요
@@ -99,7 +100,7 @@ test('시작한 메시지까지만: 그 뒤 메시지는 요약에도 시작 직
     T.draft = a => ({ text: DRAFT.replace('#4–#7', `#4–#${a.items.at(-1).i}`), parts: 1, doneTo: a.items.at(-1).i, error: null });
     const snap = await S.liveSnapDraft(m, { upto: 5 });
     assert.deepEqual([T.calls[0].from, T.calls[0].to], [4, 5]);
-    assert.ok(snap.text.includes('## #4–#5') && !snap.recent.includes('I signed today') && snap.recent.endsWith('[#5] Mara: Then take it'));
+    assert.ok(snap.text.includes('## #4–#5') && !snap.recent.join('\n').includes('I signed today') && snap.recent.at(-1) === '[#5] Mara: Then take it');
     assert.equal(snap.upto, 5);
 });
 
@@ -147,8 +148,8 @@ test('긴 구간: 나눠 보내는 수가 미리 보이고, 압축 설정의 지
 });
 
 test('요약본 모양 검사(isSnap)', () => {
-    assert.equal(S.isSnap({ text: 'x', recent: '', upto: 3 }), true);
-    for (const bad of [null, {}, { text: 'x', recent: '' }, { text: 1, recent: '', upto: 3 }, { text: 'x', recent: null, upto: 3 }, { text: 'x', recent: '', upto: -1 }]) assert.equal(S.isSnap(bad), false);
+    assert.equal(S.isSnap({ text: 'x', recent: [], upto: 3 }), true); assert.equal(S.isSnap({ text: '', recent: ['[#1] a'], upto: 0 }), true);
+    for (const bad of [null, {}, { text: 'x', recent: [] }, { text: 1, recent: [], upto: 3 }, { text: 'x', recent: 'a', upto: 3 }, { text: 'x', recent: [1], upto: 3 }, { text: 'x', recent: [], upto: -1 }]) assert.equal(S.isSnap(bad), false);
 });
 
 test('이 파일은 요약본을 만들기만 해요: 아카이브를 바꾸는 함수 · 저장을 부르지 않아요', async () => {
