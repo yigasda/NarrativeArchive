@@ -455,7 +455,7 @@ export async function openPhone(who = null) {
         if (!owner) {
             // (시안 phone2-import R3) 이름 적기, 또는 메신저 채팅 가져오기(S1 화면). 실시간 폰이 이미 있으면 그리로
             if (view === 'livestart' && !liveWorld(realM)) $root.find('.na_ph_frame').html(appWrap('livestart', liveStart({}, wallNow().at, startUi(null))));
-            else { view = 'who'; $root.find('.na_ph_frame').html(appWrap('who', whoScreen(wallNow().at, { name: whoName, live: !!liveWorld(realM) }))); }
+            else { view = 'who'; $root.find('.na_ph_frame').html(appWrap('newph', whoScreen(wallNow().at, { name: whoName, live: !!liveWorld(realM) }))); }
             placeAsk();
             return;
         }

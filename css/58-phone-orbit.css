@@ -140,7 +140,7 @@
 .ax .ls_ic.file { background: #efe9dc; }
 .ax .ls_opt { cursor: pointer; }
 .ax .ob_impl { margin-bottom: 14px; }
-.ax.ax_who .ax_canvas { overflow: hidden; background: #fbfbfc; color: #15161a; --axfg: #15161a; }
+.ax.ax_newph .ax_canvas { overflow: hidden; background: #fbfbfc; color: #15161a; --axfg: #15161a; }
 .ax .wh_body { padding: 104px 30px 0; display: flex; flex-direction: column; align-items: flex-start; }
 .ax .wh_ic { width: 62px; height: 62px; border-radius: 18px; background: #e2e9f5; display: flex; align-items: center; justify-content: center; }
 .ax .wh_h { font-size: 31px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.25; margin-top: 26px; }
