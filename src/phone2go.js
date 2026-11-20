@@ -15,7 +15,7 @@ import { parseJson } from './phoneparse.js';
 import { nameKey } from './people.js';
 import { liveWorld, livePhone, liveMeta, liveKey, liveAtYear, isSnap, setStoryKeeper, startFresh, enqueueReplies, renamePersona, setDrawerSeed } from './phone2store.js';
 import { emojiOf, reactOf, putReact, quickReacts, noteRecent, messageOf } from './phone2react.js';
-import { dropMessages, settleSwipes, swipeInfo, swipeTo, swipeList, dropSwipe, dropSwipes, dropOtherSwipes, koRows, koChunks, koInput, takeKo } from './phone2edit.js';
+import { dropMessages, editMessage, settleSwipes, swipeInfo, swipeTo, swipeList, dropSwipe, dropSwipes, dropOtherSwipes, koRows, koChunks, koInput, takeKo } from './phone2edit.js';
 import { AI_SYS_PHONE_KO, voiceRows, who as voiceWho } from './phonetr.js';
 import { askTranslator, glossaryEntries, glossaryIn } from './translate.js';
 import { importRows, importInto, importFile, importedOf, chatKey } from './phone2import.js';
@@ -376,6 +376,14 @@ export async function liveDropMessages(real, roomId, ids) {
     // (the answer shown is gone, every bubble of it: another one kept for that message shows)
     if (n) { settleSwipes(real, roomId); await saveMeta(); }
     return n;
+}
+// 말 고치기: 내 말이든 캐릭터 말이든 글을 바꿔요 ({ text } 원문, { ko } 한국어만, 둘 다도 돼요). 원문을 바꾸면 그 말의
+// 한국어는 지워져요(다시 받으려면 liveRetranslate). 답장을 다시 받지는 않아요. 저장까지 해요  → 바뀐 그 말 (바뀐 게 없으면 null)
+export async function liveEditMessage(real, roomId, msgId, change = {}) {
+    if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않아요');
+    const x = editMessage(real, roomId, msgId, change);
+    if (x) await saveMeta();
+    return x;
 }
 // 답장 넘기기(스와이프): 맨 끝 답장의 상태. 넘길 답장이 없으면 null
 //   → { at (지금 몇 번째, 1부터), count (받아 둔 수), coming (답장이 오는 중), prev · next (그쪽으로 넘길 수 있는지) }

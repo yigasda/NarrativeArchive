@@ -1,4 +1,4 @@
-// 폰 2(실시간) 메신저의 말 고치기: 지우기 · 답장 넘기기(스와이프) · 한국어 다시 받기 (docs/PHONE2-PLAN.md "메신저의 말 고치기").
+// 폰 2(실시간) 메신저의 말 고치기: 지우기 · 글 고치기 · 답장 넘기기(스와이프) · 한국어 다시 받기 (docs/PHONE2-PLAN.md "메신저의 말 고치기").
 // 이 파일은 방의 말만 바꾸고, 요청 글과 답 읽기를 만들어요. 모델을 부르고 저장하는 건 부르는 쪽(답장을 돌리는 파일)이 해요.
 //   지우기: 메신저에서만 지워요. 이미 캐릭터 폰에 반영된 것 · 롤플에 전한 것 · 줄여 둔 옛 대화(요약)는 그대로예요.
 //           남은 말의 번호는 안 바뀌어요.
@@ -30,6 +30,25 @@ export function dropMessages(m, roomId, ids) {
     for (const id of Object.keys(room.swipes || {})) if (gone.has(id)) delete room.swipes[id];
     if (room.swipes && !Object.keys(room.swipes).length) delete room.swipes;
     return was - room.messages.length;
+}
+
+// 말 고치기: 글을 바꿔요. 빈 글로는 못 바꿔요(지우기를 써요). 통화 · 말 없는 메시지는 못 고쳐요.
+//   text: 새 원문. 원문이 바뀌면 그 말의 한국어는 지워요(안 맞게 되니까): ko를 같이 주면 그걸로 둬요
+//   ko만 주면 한국어만 바꿔요 (''이면 지워요; 원문과 같으면 한국어 칸을 비워요)
+// 번호 · 시간 · 반응 · 표시는 그대로예요. 고친 때를 x.edited에 적어요  → 바뀐 그 말, 바뀐 게 없으면 null
+export function editMessage(m, roomId, msgId, { text, ko } = {}, at = Date.now()) {
+    const { room } = roomOf(m, roomId), x = room.messages.find(y => String(y.id) === String(msgId));
+    if (!x) throw new Error('없는 말이에요');
+    if (x.act || x.call) throw new Error('고칠 수 없는 말이에요');
+    const body = t => String(t ?? '').replace(/\r\n?/g, '\n').trim().slice(0, 4000);
+    const next = text === undefined ? x.text : body(text);
+    if (!one(next)) throw new Error('빈 글로는 바꿀 수 없어요. 지우기를 써 주세요');
+    const said = next !== x.text, tr = ko === undefined ? (said ? '' : x.ko || '') : body(ko), kept = one(tr) && one(tr) !== one(next) ? tr : '';
+    if (!said && kept === (x.ko || '')) return null;
+    x.text = next;
+    if (kept) x.ko = kept; else delete x.ko;
+    x.edited = at;
+    return x;
 }
 
 // 이 방의 답장이 오는 중인가 (기다리는 중이거나 받는 중)

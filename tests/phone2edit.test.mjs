@@ -37,6 +37,33 @@ test('지우기: 고른 말만 지우고 나머지는 번호 · 순서 · 표시
     assert.throws(() => E.dropMessages({ phones: {} }, a.id, ['x']), /아직 폰 2가 없어요/);
 });
 
+test('글 고치기: 원문을 바꾸면 한국어는 지워지고, 한국어만도 고쳐요. 번호 · 시간 · 반응은 그대로; 빈 글 · 말 없는 메시지는 안 돼요', () => {
+    const { m, w, a } = world(), [mine, hers, , , act] = a.messages, was = { ...hers };
+    hers.reacts = [{ by: 'Ren', e: '❤️', at: 1 }];
+    // 원문: 한국어는 지워져요
+    assert.equal(E.editMessage(m, a.id, hers.id, { text: '  Hardly.\r\nReally.  ' }, 77), hers);
+    assert.deepEqual([hers.text, hers.ko, hers.edited], ['Hardly.\nReally.', undefined, 77]);
+    assert.deepEqual([hers.id, hers.n, hers.at, hers.from, hers.reacts.length], [was.id, was.n, was.at, was.from, 1]);
+    // 한국어만 · 원문과 한국어를 같이
+    assert.equal(E.editMessage(m, a.id, hers.id, { ko: ' 겨우요. ' }, 78).ko, '겨우요.'); assert.equal(hers.text, 'Hardly.\nReally.');
+    E.editMessage(m, a.id, hers.id, { text: 'Barely.', ko: '간신히.' }, 79);
+    assert.deepEqual([hers.text, hers.ko, hers.edited], ['Barely.', '간신히.', 79]);
+    // 한국어를 비우거나 원문과 같게 하면 한국어 칸이 없어져요
+    E.editMessage(m, a.id, hers.id, { ko: 'Barely.' }); assert.equal(hers.ko, undefined);
+    E.editMessage(m, a.id, hers.id, { ko: '겨우' }); E.editMessage(m, a.id, hers.id, { ko: '' }); assert.equal(hers.ko, undefined);
+    // 내 말도 고쳐요; 바뀐 게 없으면 null (고친 때도 안 바뀌어요)
+    assert.equal(E.editMessage(m, a.id, mine.id, { text: 'You up?' }, 80).text, 'You up?');
+    assert.equal(E.editMessage(m, a.id, mine.id, { text: 'You up?' }, 81), null); assert.equal(E.editMessage(m, a.id, mine.id, {}, 82), null); assert.equal(mine.edited, 80);
+    // 못 고칠 때: 아무것도 안 바뀌어요
+    const still = JSON.stringify(w.messenger.rooms);
+    for (const t of ['', '   ', '\n']) assert.throws(() => E.editMessage(m, a.id, hers.id, { text: t }), /빈 글로는 바꿀 수 없어요/);
+    assert.throws(() => E.editMessage(m, a.id, act.id, { text: 'x' }), /고칠 수 없는 말이에요/);
+    assert.throws(() => E.editMessage(m, a.id, 'none', { text: 'x' }), /없는 말이에요/);
+    assert.throws(() => E.editMessage(m, 'nope', hers.id, { text: 'x' }), /없는 방이에요/);
+    assert.equal(JSON.stringify(w.messenger.rooms), still);
+    assert.equal(E.editMessage(m, a.id, hers.id, { text: 'x'.repeat(5000) }).text.length, 4000);
+});
+
 test('맨 끝 답장: 방의 맨 끝, 내 마지막 말 뒤에 온 말들 (폰으로 한 일만 있는 말도). 내 말이 없는 방 · 맨 끝이 내 말이면 없음', () => {
     const { m, a, g, say } = world();
     assert.deepEqual(E.replyTail(m, a.id).map(x => x.text || '(act)'), ['Did you eat', '(act)', 'Answer me']);

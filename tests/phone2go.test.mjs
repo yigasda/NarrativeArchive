@@ -1342,3 +1342,25 @@ test('실리태번에서 페르소나를 바꾸면 실시간 폰의 "나"도 따
         assert.equal(L.renamePersona(c.real, ''), false); assert.equal(L.renamePersona({ phones: {} }, 'X'), false);
     } finally { delete T.st; delete T.metadata; }
 });
+
+test('말 고치기: 글을 바꾸고 저장해요. 다음 답장 요청에는 고친 글이 가요; 답장을 다시 받지는 않아요', async () => {
+    const c = world();
+    send(c, '케이크 사 와');
+    T.replies = [{ state: '집', reply: ['Bring Kuchen mit'], ko: ['케이크 가져갈게'], does: [] }];
+    await G.liveGo(c.real);
+    const [mine, hers] = c.room.messages, saves = T.saves, calls = T.replyCalls;
+    assert.equal(await G.liveEditMessage(c.real, c.room.id, hers.id, { text: 'Bring Torte mit' }), hers);
+    assert.deepEqual([hers.text, hers.ko], ['Bring Torte mit', undefined]); assert.equal(T.saves, saves + 1);
+    await G.liveEditMessage(c.real, c.room.id, mine.id, { text: '타르트 사 와' });
+    assert.equal(T.replyCalls, calls); assert.equal(L.liveWorld(c.real).queue.jobs.filter(j => j.state === 'waiting').length, 0);
+    // (바뀐 게 없으면 저장 안 해요)
+    const kept = T.saves;
+    assert.equal(await G.liveEditMessage(c.real, c.room.id, mine.id, { text: '타르트 사 와' }), null); assert.equal(T.saves, kept);
+    await assert.rejects(() => G.liveEditMessage(c.real, c.room.id, mine.id, { text: ' ' }), /빈 글로는 바꿀 수 없어요/); assert.equal(T.saves, kept);
+    send(c, '몇 시에 와');
+    T.replies = [{ state: '집', reply: ['곧'], does: [] }];
+    await G.liveGo(c.real);
+    assert.ok(T.replyInput.includes('타르트 사 와') && T.replyInput.includes('Bring Torte mit') && !T.replyInput.includes('케이크 사 와') && !T.replyInput.includes('Kuchen'));
+    T.metadata = { narrative_archive: {} };
+    try { await assert.rejects(() => G.liveEditMessage(c.real, c.room.id, mine.id, { text: 'x' }), /이 채팅이 열려 있지 않아요/); } finally { delete T.metadata; }
+});
