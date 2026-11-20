@@ -184,14 +184,16 @@ const INK = { home: '#1b1d22', bank: '#fff', orbitroom: '#fff', diary: '#1b1d22'
         await p.evaluate(({ html }) => { document.getElementById('mk_dev')?.remove(); document.getElementById('na_phl').insertAdjacentHTML('beforeend', html); }, { html: DEV(INK.orbitroom, 2) });
         const ats = await p.evaluate(async B => { const core = await import(B + 'core.js'), st = await import(B + 'phone2store.js'); const r = st.liveRooms(core.getMeta())[0]; return Object.fromEntries(r.messages.map(x => [x.id, new Date(x.at).toTimeString().slice(0, 5)])); }, B);
         await p.evaluate(ats => { const mi = document.querySelector('.na_ph_frame .ob_mi'); const m = document.querySelector('.na_ph_frame .ob_msgs'); m.scrollTop = m.scrollHeight;
-          const st = document.createElement('style'); st.textContent = `.mk_tc { position: absolute; left: 6px; transform: translateY(-50%); font-size: 10px !important; --axfs: 10px; color: #fff; opacity: calc(var(--d, 0) / 46 * .85); text-shadow: 0 1px 5px rgba(30,50,40,.25); pointer-events: none; }
-            .ax .ob_mi { position: relative; } .mk_mv { transform: translateX(calc(var(--d, 0) * 1px)); }`; document.head.append(st);
+          // 얼굴 칸을 시간 칸으로: 말풍선은 16px만 밀리고, 얼굴은 사라지고, 시간이 말풍선 바로 왼쪽(세로 가운데)에 붙어요. --d: 0 → 1
+          const st = document.createElement('style'); st.textContent = `.ax .ob_mi { position: relative; } .mk_mv { transform: translateX(calc(var(--d, 0) * 16px)); } .mk_mv .ob_av { opacity: calc(1 - var(--d, 0) * 1.6); }
+            .mk_tc { position: absolute; transform: translate(calc(-100% - 7px + var(--d, 0) * 16px), -50%); font-size: 10px !important; --axfs: 10px; line-height: 1 !important; letter-spacing: 0.01em; color: rgba(255, 255, 255, 0.62); opacity: calc(var(--d, 0) * 1.4 - 0.4); pointer-events: none; white-space: nowrap; }`; document.head.append(st);
           const bubs = [...mi.querySelectorAll('.ob_b.th')].filter(b => !b.classList.contains('na_ob_sw'));
-          const mr = mi.getBoundingClientRect();
-          bubs.forEach(b => { b.classList.add('mk_mv'); const t = document.createElement('span'); t.className = 'mk_tc cg_num'; t.textContent = ats[b.dataset.id] || ''; const r = b.getBoundingClientRect(); t.style.top = (r.top - mr.top + r.height / 2) / (r.width / b.offsetWidth) + 'px'; mi.append(t); }); }, ats);
+          bubs.forEach(b => { b.classList.add('mk_mv'); const t = document.createElement('span'); t.className = 'mk_tc cg_num'; t.textContent = ats[b.dataset.id] || ''; t.style.left = b.offsetLeft + 'px'; t.style.top = (b.offsetTop + b.offsetHeight / 2) + 'px'; mi.append(t); }); }, ats);
         const dir = path.join(os.tmpdir(), 'mk_frames2'); fs.rmSync(dir, { recursive: true, force: true }); fs.mkdirSync(dir);
         const FPS = 30, ease = t => 1 - Math.pow(1 - t, 3); let k = 0;
-        const track = [...Array(10).fill(0), ...Array.from({ length: 18 }, (_, i) => 46 * ease((i + 1) / 18)), ...Array(30).fill(46), ...Array.from({ length: 12 }, (_, i) => 46 * (1 - ease((i + 1) / 12))), ...Array(8).fill(0)];
+        // 손가락 따라오다 갈수록 무겁게(끝에서 살짝 넘쳤다 멈춤), 놓으면 살짝 튕기며 돌아가요
+        const spring = (t) => 1 - Math.exp(-6 * t) * Math.cos(9 * t);
+        const track = [...Array(10).fill(0), ...Array.from({ length: 20 }, (_, i) => Math.min(1.06, 1.06 * ease((i + 1) / 20))), ...Array.from({ length: 6 }, (_, i) => 1.06 - 0.06 * ((i + 1) / 6)), ...Array(26).fill(1), ...Array.from({ length: 18 }, (_, i) => 1 - spring((i + 1) / 18 * 0.9)), ...Array(8).fill(0)];
         for (const d of track) { await p.evaluate(d => document.querySelector('.na_ph_frame .ob_mi').style.setProperty('--d', d), d); await p.waitForTimeout(20);
           await p.screenshot({ path: path.join(dir, `f${String(k++).padStart(4, '0')}.png`), clip: { x: 0, y: 120, width: W, height: 640 } }); }
         require('child_process').execFileSync('ffmpeg', ['-y', '-v', 'error', '-framerate', String(FPS), '-i', path.join(dir, 'f%04d.png'), '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '18', path.join(__dirname, 'time_drag.mp4')]);
