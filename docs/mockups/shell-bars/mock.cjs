@@ -177,6 +177,30 @@ const INK = { home: '#1b1d22', bank: '#fff', orbitroom: '#fff', diary: '#1b1d22'
     const rid = await p.evaluate(async B => { const core = await import(B + 'core.js'), st = await import(B + 'phone2store.js'); const m = core.getMeta(), r = st.liveRooms(m)[0], me = st.liveWorld(m).persona; const T = [[me, '내일 열 시에 정비소 올 수 있어?', ''], ['Mara', 'Ja klar, Samstag passt!', '응 좋아, 토요일 괜찮아!'], ['Mara', 'Bring Kuchen mit 😄', '케이크 가져와 😄'], [me, '무슨 케이크', ''], ['Mara', 'Den mit Kirschen', '체리 든 거'], ['Mara', 'Vom Bäcker an der Ecke', '모퉁이 빵집 거'], [me, '거기 일찍 닫잖아', ''], ['Mara', 'Dann geh halt früher', '그럼 좀 일찍 가'], [me, '알겠어 내일 봐', ''], ['Mara', 'Bis morgen', '내일 봐']]; const t0 = Date.now() - T.length * 60000; r.messages = T.map(([from, text, ko], i) => ({ id: `mk${i}`, from, text, ko, at: t0 + i * 60000, told: true, ...(from === 'Mara' ? { state: '회사 · 점심 먹고 자리' } : {}) })); for (const n of r.members) (r.read ||= {})[st.liveKey(n)] = Date.now(); return r.id; }, B);
     const only = process.argv[2] ? process.argv[2].split(',') : Object.keys(OPT);
     for (const o of only) {
+      if (o === 'TV') { // 아이메시지처럼 끌어서 시간 보기 영상: 맨 끝 답장 묶음 전 말들. 내 말은 왼쪽으로 밀리고, 오른쪽 끝에 모든 말의 시간이 나와요
+        await p.evaluate(([nb]) => document.documentElement.style.setProperty('--na-nb', `${nb}px`), [NB]);
+        await p.evaluate(() => { document.getElementById('mk_opt')?.remove(); });
+        await s.to('orbit'); await s.to('orbitroom', rid); await p.waitForTimeout(500);
+        await p.evaluate(({ html }) => { document.getElementById('mk_dev')?.remove(); document.getElementById('na_phl').insertAdjacentHTML('beforeend', html); }, { html: DEV(INK.orbitroom, 2) });
+        const ats = await p.evaluate(async B => { const core = await import(B + 'core.js'), st = await import(B + 'phone2store.js'); const r = st.liveRooms(core.getMeta())[0]; return Object.fromEntries(r.messages.map(x => [x.id, new Date(x.at).toTimeString().slice(0, 5)])); }, B);
+        await p.evaluate(ats => { const mi = document.querySelector('.na_ph_frame .ob_mi'); const m = document.querySelector('.na_ph_frame .ob_msgs'); m.scrollTop = m.scrollHeight;
+          const st = document.createElement('style'); st.textContent = `.mk_tc { position: absolute; right: 2px; transform: translate(calc(var(--d, 0) * 1px + 62px), -50%); width: 52px; text-align: right; font-size: 11px; color: #fff; opacity: calc(var(--d, 0) / -62 * .85); text-shadow: 0 1px 5px rgba(30,50,40,.25); pointer-events: none; }
+            .ax .ob_mi { position: relative; } .mk_mv { transform: translateX(calc(var(--d, 0) * 1px)); }`; document.head.append(st);
+          const bubs = [...mi.querySelectorAll('.ob_b')], lastReply = bubs.filter(b => b.classList.contains('na_ob_sw'));
+          const scope = bubs.filter(b => !lastReply.includes(b));
+          const mr = mi.getBoundingClientRect();
+          scope.forEach(b => { if (b.classList.contains('me')) { b.classList.add('mk_mv'); const tin = b.querySelector('.ob_tin'); if (tin) tin.style.opacity = 'calc(1 + var(--d, 0) / 62)'; }
+            const t = document.createElement('span'); t.className = 'mk_tc cg_num'; t.textContent = ats[b.dataset.id] || ''; const r = b.getBoundingClientRect(); t.style.top = (r.top - mr.top + r.height / 2) / (r.width / b.offsetWidth) + 'px'; mi.append(t); });
+          mi.querySelectorAll('.ob_rd').forEach(e => e.classList.add('mk_mv')); }, ats);
+        const dir = path.join(os.tmpdir(), 'mk_frames2'); fs.rmSync(dir, { recursive: true, force: true }); fs.mkdirSync(dir);
+        const FPS = 30, ease = t => 1 - Math.pow(1 - t, 3); let k = 0;
+        const track = [...Array(10).fill(0), ...Array.from({ length: 18 }, (_, i) => -62 * ease((i + 1) / 18)), ...Array(30).fill(-62), ...Array.from({ length: 12 }, (_, i) => -62 * (1 - ease((i + 1) / 12))), ...Array(8).fill(0)];
+        for (const d of track) { await p.evaluate(d => document.querySelector('.na_ph_frame .ob_mi').style.setProperty('--d', d), d); await p.waitForTimeout(20);
+          await p.screenshot({ path: path.join(dir, `f${String(k++).padStart(4, '0')}.png`), clip: { x: 0, y: 120, width: W, height: 640 } }); }
+        require('child_process').execFileSync('ffmpeg', ['-y', '-v', 'error', '-framerate', String(FPS), '-i', path.join(dir, 'f%04d.png'), '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '18', path.join(__dirname, 'time_drag.mp4')]);
+        await p.screenshot({ path: path.join(__dirname, 'time_drag_still.png') });
+        continue;
+      }
       if (o === 'V') { // 인스타식 반응 배지 모션 영상: 화면을 그린 뒤 배지를 넣고, 애니메이션을 멈춰 두고 한 장씩 찍어 이어 붙여요
         await p.evaluate(([nb]) => document.documentElement.style.setProperty('--na-nb', `${nb}px`), [NB]);
         await p.evaluate(css => { document.getElementById('mk_opt')?.remove(); const t = document.createElement('style'); t.id = 'mk_opt'; t.textContent = css; document.head.append(t); }, OPT.U1C);
