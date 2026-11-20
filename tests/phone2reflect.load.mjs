@@ -31,7 +31,7 @@ const map = { './extract.js': cleanMessageURL,
     './recall.js': encoded(`export const estTok=s=>s.length/4;`), './scenes.js': encoded(`export const recentTrackers=()=>[];\n${SCENES_SRC}`),
     './sections.js': encoded(`export const parseSections=()=>[];export const RANGE_HEAD=/#(\\d+)–#(\\d+)/;export const sectionKey=()=>'';export const splitTail=s=>[s,''];export const lastRangedSection=()=>null;`),
     './util.js': encoded(`export const confirm=async()=>true;export const esc=s=>String(s);`),
-    './translate.js': encoded(`export const glossaryEntries=()=>[];export const glossaryPeople=()=>[];`), './world.js': encoded(`export const worldText=()=>'';`),
+    './translate.js': encoded(`export const glossaryEntries=m=>globalThis.__dropTest.gloss||[];export const glossaryPeople=()=>[];export const glossaryIn=(es,t)=>es.filter(e=>String(t).toLowerCase().includes(e.src.toLowerCase()));export const askTranslator=async(p,o={})=>{const T=globalThis.__dropTest;T.trCalls=(T.trCalls||0)+1;T.trInput=p;T.trSys=o.system;T.trMax=o.maxTokens;const a=(T.tr||[]).shift();if(a instanceof Error)throw a;return typeof a==='string'?a:JSON.stringify(a??{});};`), './world.js': encoded(`export const worldText=()=>'';`),
 };
 const swap = s => s.replace(/from '([^']+)'/g, (all, k) => `from '${map[k] || k}'`);
 map['./phonedata.js'] = encoded(swap(await readFile(new URL('../src/phonedata.js', import.meta.url), 'utf8')));
@@ -39,7 +39,12 @@ map['./phone2reflect.js'] = encoded(swap(await readFile(new URL('../src/phone2re
 export const PD = await import(map['./phonedata.js']);
 export const R = await import(map['./phone2reflect.js']);
 // 답장 돌리기(phone2go.js)도 같은 가짜 이웃으로: 답장 답은 T.replies에 넣어 둔 걸 차례로
-for (const f of ['phone2story.js', 'phone2live.js', 'phone2ask.js', 'phone2reply.js', 'phone2run.js', 'phone2digest.js', 'phone2back.js', 'phone2import.js']) map[`./${f}`] = href(f);
+for (const f of ['phone2story.js', 'phone2live.js', 'phone2ask.js', 'phone2reply.js', 'phone2run.js', 'phone2digest.js', 'phone2back.js', 'phone2import.js', 'phone2edit.js']) map[`./${f}`] = href(f);
+// (the phone's translator file: its instruction and its voice-table readers, as they are in phonetr.js — the file itself
+// needs the translator's settings and the screen)
+const trFile = await readFile(new URL('../src/phonetr.js', import.meta.url), 'utf8');
+const trCut = (from, to) => { const a = trFile.indexOf(from), b = trFile.indexOf(to, a); if (a < 0 || b < 0) throw new Error(`phonetr.js: ${from}`); return trFile.slice(a, b + to.length); };
+map['./phonetr.js'] = encoded(`${trCut('export const AI_SYS_PHONE_KO = `', '`;')}\n${trCut('export const who = ', '\n')}${trCut('export const voiceRows = ', '\n')}`);
 map['./digest.js'] = encoded(`export const AI_SYS_DIGEST='FOLD SYS';`);
 // (the archive's own prompts.js, whole: the short instruction and the way a compression request is put together)
 map['./prompts.js'] = encoded(swap(await readFile(new URL('../src/prompts.js', import.meta.url), 'utf8')));

@@ -13,7 +13,10 @@ import { SCENES_SYS, parseScenes } from './scenes.js';
 import { resolvePhoneProfile, ownerProfileBlock } from './phoneprofile.js';
 import { parseJson } from './phoneparse.js';
 import { nameKey } from './people.js';
-import { liveWorld, livePhone, liveMeta, liveKey, liveAtYear, isSnap, setStoryKeeper, startFresh } from './phone2store.js';
+import { liveWorld, livePhone, liveMeta, liveKey, liveAtYear, isSnap, setStoryKeeper, startFresh, enqueueReplies } from './phone2store.js';
+import { dropMessages, redoCount, dropReplyTail, koRows, koChunks, koInput, takeKo } from './phone2edit.js';
+import { AI_SYS_PHONE_KO, voiceRows, who as voiceWho } from './phonetr.js';
+import { askTranslator, glossaryEntries, glossaryIn } from './translate.js';
 import { importRows, importInto, importFile, importedOf, chatKey } from './phone2import.js';
 import { liveChatTail, liveSnapBehind, liveSnapExtend, liveSnapNow } from './phone2snap.js';
 import { liveStoryText } from './phone2story.js';
@@ -351,4 +354,46 @@ export async function liveImportFile(real, text, opts = {}) {
     if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않아요');
     const file = importFile(text);
     return bringIn(real, importFrom(real, file.chat, file.key, false), opts);
+}
+
+// ---- 메신저의 말 고치기 (phone2edit.js). 사람이 눌렀을 때만 해요.
+// 말 지우기 (ids: 말의 id 하나 또는 여럿) → 지운 수. 메신저에서만 지워요: 이미 폰에 반영된 것 · 롤플에 전한 것은 그대로예요
+export async function liveDropMessages(real, roomId, ids) {
+    if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않아요');
+    const n = dropMessages(real, roomId, ids);
+    if (n) await saveMeta();
+    return n;
+}
+// 답장 다시 받기: 다시 받을 수 있는 말의 수 (0이면 못 받아요: 버튼을 흐리게)
+export const liveRedoCount = (real, roomId) => (real && open(real) ? redoCount(real, roomId) : 0);
+// 답장 다시 받기: 맨 끝 답장(내 마지막 말 뒤에 온 말들)을 지우고 새 답장을 줄 세워요. 저장까지 해요.
+// 답장은 여기서 받지 않아요: 화면이 말을 보낸 뒤처럼 liveGo를 불러요.  → { dropped (지운 수), jobs (줄 세운 답장 수) }
+export async function liveRedoReply(real, roomId) {
+    if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않아요');
+    const dropped = dropReplyTail(real, roomId), jobs = enqueueReplies(real, roomId).length;
+    await saveMeta();
+    return { dropped, jobs };
+}
+// 한국어 다시 받기 (ids: 말의 id 하나 또는 여럿): 번역 모델에 다시 물어서 그 말들의 한국어만 바꿔요. 폰 1의 번역 지시문
+// 그대로, 그 방 캐릭터의 말투 표 · 주변 인물 · 용어집을 같이 보내요. 실패하면 있던 한국어가 그대로예요.
+//   → { count (바뀐 수), left (한 번에 다 못 해서 남은 수) }
+export async function liveRetranslate(real, roomId, ids) {
+    if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않아요');
+    const w = liveWorld(real), { owner, rows, left } = koRows(real, roomId, ids);
+    if (!rows.length) throw new Error('번역할 말이 없어요');
+    const p = livePhone(real, owner), voices = p ? voiceRows(p).map(v => ({ who: voiceWho(v), style: v.style })) : [], entries = glossaryEntries(real);
+    let count = 0;
+    for (const chunk of koChunks(rows)) {
+        const input = koInput(chunk.rows, { owner, around: p ? aroundBlock(p) : '', voices, gloss: glossaryIn(entries, chunk.rows.map(r => r.x.text).join('\n')) });
+        const out = await askTranslator(input, { system: AI_SYS_PHONE_KO, maxTokens: Math.min(16384, 1500 + chunk.size * 3) });
+        // (the 폰 2 a request began with is gone: its answer is not put anywhere)
+        if (!here(real, w)) throw new Error('그사이 실시간 폰이 바뀌었어요');
+        // (the object is the first { … } of the answer; an answer that can't be read changes nothing)
+        let got = null;
+        try { got = parseJson(String(out).replace(/^[^{]*/, '').replace(/[^}]*$/, ''), { salvage: true }); } catch { got = null; }
+        count += takeKo(chunk.rows, got);
+    }
+    if (!count) throw new Error('번역을 받지 못했어요');
+    await saveMeta();
+    return { count, left };
 }

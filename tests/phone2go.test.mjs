@@ -1082,3 +1082,85 @@ test('파일에서 가져오기: 채팅 파일이 아니거나 메시지가 없�
     } finally { importDone(); }
 });
 
+
+test('말 지우기: 메신저에서만 지우고 저장해요. 이미 반영된 폰 · 롤플에 전한 표시는 그대로', async () => {
+    const c = world();
+    send(c, '일어났냐');
+    T.replies = [{ state: '집', reply: ['방금', '왜'], ko: ['방금', '왜'], does: [] }];
+    await G.liveGo(c.real);
+    const [mine, a, b] = c.room.messages, phone = JSON.stringify(c.p), saves = T.saves;
+    assert.equal(await G.liveDropMessages(c.real, c.room.id, [a.id, 'none']), 1);
+    assert.deepEqual(c.room.messages, [mine, b]);
+    assert.equal(T.saves, saves + 1); assert.equal(JSON.stringify(c.p), phone);
+    assert.equal(G.liveUnreflected(c.real, 'Mara'), 2);
+    // 지울 게 없으면 저장도 안 해요; 다른 채팅이 열려 있으면 아무것도 안 해요
+    assert.equal(await G.liveDropMessages(c.real, c.room.id, ['none']), 0); assert.equal(T.saves, saves + 1);
+    T.metadata = { narrative_archive: {} };
+    try { await assert.rejects(() => G.liveDropMessages(c.real, c.room.id, [b.id]), /이 채팅이 열려 있지 않아요/); assert.equal(G.liveRedoCount(c.real, c.room.id), 0); } finally { delete T.metadata; }
+    assert.deepEqual(c.room.messages, [mine, b]);
+});
+
+test('답장 다시 받기: 맨 끝 답장을 지우고 새 답장을 줄 세워요. 그 뒤 liveGo가 새 답장을 받아요', async () => {
+    const c = world();
+    send(c, '일어났냐');
+    T.replies = [{ state: '집', reply: ['방금'], does: [] }];
+    await G.liveGo(c.real);
+    send(c, '밥은');
+    T.replies = [{ state: '집', reply: ['아직', '너는'], does: [{ app: 'notes', what: '장 볼 것 적음' }] }];
+    await G.liveGo(c.real);
+    assert.deepEqual(c.room.messages.map(x => x.text), ['일어났냐', '방금', '밥은', '아직', '너는']);
+    assert.equal(G.liveRedoCount(c.real, c.room.id), 2);
+    const saves = T.saves, calls = T.replyCalls, kept = c.room.messages.slice(0, 3).map(x => ({ ...x }));
+    assert.deepEqual(await G.liveRedoReply(c.real, c.room.id), { dropped: 2, jobs: 1 });
+    // (여기서는 모델을 안 불러요: 지우고, 줄 세우고, 저장만)
+    assert.equal(T.replyCalls, calls); assert.equal(T.saves, saves + 1);
+    assert.deepEqual(c.room.messages.map(x => ({ ...x })), kept);
+    assert.equal(G.liveRedoCount(c.real, c.room.id), 0);
+    await assert.rejects(() => G.liveRedoReply(c.real, c.room.id), /답장이 오는 중이에요/);
+    T.replies = [{ state: '집', reply: ['먹었지'], does: [] }];
+    const r = await G.liveGo(c.real);
+    assert.equal(r.ran, 1); assert.equal(T.replyCalls, calls + 1);
+    assert.deepEqual(c.room.messages.map(x => x.text), ['일어났냐', '방금', '밥은', '먹었지']);
+    // (새 답장 요청에는 지운 답장이 없어요)
+    assert.ok(T.replyInput.includes('밥은') && !T.replyInput.includes('아직') && !T.replyInput.includes('너는'));
+    // 맨 끝이 내 말이면 다시 받을 게 없어요
+    send(c, '뭐');
+    for (const j of L.liveWorld(c.real).queue.jobs) j.state = 'done';
+    await assert.rejects(() => G.liveRedoReply(c.real, c.room.id), /다시 받을 답장이 없어요/);
+});
+
+test('한국어 다시 받기: 번역 모델에 그 말만 다시 물어서 한국어만 바꿔요. 실패하면 그대로', async () => {
+    const c = world();
+    send(c, 'you up?');
+    T.replies = [{ state: 'home', reply: ['Barely.', 'Why'], ko: ['겨우.', '왜'], does: [] }];
+    await G.liveGo(c.real);
+    c.p.koVoice = [{ who: 'Mara', style: '반말, 짧게' }];
+    c.p.around = { people: [{ name: 'Ren', about: '친구' }] };
+    const [mine, a, b] = c.room.messages, saves = T.saves, calls = T.replyCalls;
+    Object.assign(T, { tr: [{ lines: [{ n: 1, ko: '간신히.' }] }], trCalls: 0, gloss: [{ src: 'barely', ko: '간신히' }, { src: 'unused', ko: 'x' }] });
+    try {
+        assert.deepEqual(await G.liveRetranslate(c.real, c.room.id, a.id), { count: 1, left: 0 });
+        assert.equal(T.trCalls, 1); assert.equal(T.replyCalls, calls); assert.equal(T.saves, saves + 1);
+        assert.deepEqual([mine.ko, a.ko, b.ko], [undefined, '간신히.', '왜']);
+        assert.ok(T.trSys.startsWith('GOAL\nTranslate what a character\'s phone shows into natural Korean'));
+        assert.equal(T.trInput, '[OWNER]\nMara\n\n[PEOPLE AROUND]\n- Ren: 친구\n\n[VOICES]\n- Mara: 반말, 짧게\n\n[GLOSSARY]\n- barely = 간신히\n\n[LINES]\n1: [text · Mara → Ren] "Barely."');
+        // 여러 말을 한 번에 (내 말도): 요청 1번
+        T.tr = [{ lines: [{ n: 1, ko: '일어났어?' }, { n: 2, ko: '겨우 일어났어.' }, { n: 3, ko: '왜?' }] }];
+        assert.deepEqual(await G.liveRetranslate(c.real, c.room.id, [b.id, mine.id, a.id]), { count: 3, left: 0 });
+        assert.equal(T.trCalls, 2); assert.deepEqual([mine.ko, a.ko, b.ko], ['일어났어?', '겨우 일어났어.', '왜?']);
+        // 실패 · 못 읽는 답 · 번역할 말이 없음: 있던 한국어 그대로, 저장 안 해요
+        const kept = T.saves;
+        T.tr = [new Error('번역 모델이 빈 답을 돌려줬어요')];
+        await assert.rejects(() => G.liveRetranslate(c.real, c.room.id, a.id), /빈 답/);
+        T.tr = ['not json'];
+        await assert.rejects(() => G.liveRetranslate(c.real, c.room.id, a.id), /번역을 받지 못했어요/);
+        await assert.rejects(() => G.liveRetranslate(c.real, c.room.id, ['none']), /번역할 말이 없어요/);
+        assert.equal(T.trCalls, 4); assert.equal(T.saves, kept); assert.deepEqual([mine.ko, a.ko, b.ko], ['일어났어?', '겨우 일어났어.', '왜?']);
+        // 답을 기다리는 사이 실시간 폰이 새로 시작됐으면 안 넣어요
+        T.tr = [{ lines: [{ n: 1, ko: '늦은 답' }] }];
+        const going = G.liveRetranslate(c.real, c.room.id, a.id);
+        L.resetLive(c.real); L.startFresh(c.real, { persona: 'Ren', scope: 'test' });
+        await assert.rejects(() => going, /그사이 실시간 폰이 바뀌었어요/);
+        assert.equal(a.ko, '겨우 일어났어.'); assert.equal(T.saves, kept);
+    } finally { delete T.tr; delete T.gloss; delete T.trCalls; }
+});
