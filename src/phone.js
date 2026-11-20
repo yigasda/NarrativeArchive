@@ -584,7 +584,7 @@ export async function openPhone(who = null) {
         if (!prepared) await askDateOrder();
         busyMake = update ? 'sync' : 'make';
         let p;
-        try { p = await withSpinner($btn, update ? '반영하는 중' : '폰 만드는 중', () => P.makePhone(m, owner, { update })); } finally { busyMake = null; if (!update) for (const fn of [...madeWatch]) fn(m, owner); if (!phoneClosed && stillHere()) drawPhone(true); }
+        try { p = await withSpinner($btn, update ? '반영하는 중' : '폰 만드는 중', () => P.makePhone(m, owner, { update })); } finally { busyMake = null; if (!update) for (const fn of [...madeWatch]) fn(realM, owner, live()); if (!phoneClosed && stillHere()) drawPhone(true); }
         if (!p) return;
         if (!update) view = 'lock';
         draw();
@@ -764,6 +764,13 @@ export async function openPhone(who = null) {
     $root.on('click', '.na_ph_pick:not(.na_ph_addp), .ax_whopick', async function (e) { e.stopPropagation(); const same = owner === this.dataset.n; owner = this.dataset.n; if (live()) rememberLiveOwner(realM, owner, selectionKey); else rememberPhoneSelection(m,owner,selectionKey); if (!same) { view = 'lock'; sheet = false; draw(); setSheet(false); } await saveMeta(); });
     // Orbit: 목록 고르기 · 새 대화 사람 고르기 · 만들기 · 보내기 · 주인 보기 · 번역 접기
     const obDraw = () => { drawPhone(true); };
+    // 실시간: 막 만든 폰의 주인과 나의 방을 열어요 (방이 없으면 그대로)
+    const openOwnerRoom = () => {
+        const w = liveWorld(realM), r = liveRooms(realM).find(x => x.members.some(n => liveKey(n) === liveKey(owner)) && x.members.some(n => liveKey(n) === liveKey(w?.persona)));
+        if (r) { obWho = ''; obDraft = ''; view = `orbitroom:${r.id}`; draw(); obBottom(); }
+        obGo();
+        return !!r;
+    };
     const obBottom = () => { const e = $root.find('.ob_msgs')[0]; if (e) e.scrollTop = e.scrollHeight; };
     $root.on('click', '.na_ob_tab', function (e) { e.stopPropagation(); obTab = this.dataset.v || 'all'; obDraw(); });
     // (입력칸은 contenteditable: 테마가 <input>에 테두리를 칠해서. 지도 검색과 같은 방식) 초점은 화면을 밀지 않게, 글 끝에
@@ -1305,11 +1312,7 @@ export async function openPhone(who = null) {
         prepOpen = false;
         await make($(this), false, true);
         // 실시간(가져온 채팅의 캐릭터): 폰이 만들어지면 그 사람과의 방을 열어요
-        if (live() && phone() && !phoneClosed && stillHere()) {
-            const w = liveWorld(realM), r = liveRooms(realM).find(x => x.members.some(n => liveKey(n) === liveKey(owner)) && x.members.some(n => liveKey(n) === liveKey(w?.persona)));
-            if (r) { obWho = ''; obDraft = ''; view = `orbitroom:${r.id}`; draw(); obBottom(); }
-            obGo();
-        }
+        if (live() && phone() && !phoneClosed && stillHere()) openOwnerRoom();
     });
     // the screen can change while it writes; the new entry opens if its app is still showing
     $root.on('click', '.na_ph_write', async function (e) {
@@ -1914,9 +1917,13 @@ export async function openPhone(who = null) {
     const afterType = () => setTimeout(setH, 350);
     setH(); window.addEventListener('resize', setH); dlg.addEventListener('focusout', afterType);
     // a make of this phone that another opening started: its end shows the phone (the prep screen's views give way to the lock)
-    const onMade = (mm, who) => {
-        if (phoneClosed || mm !== m || nameKey(who) !== nameKey(owner) || !stillHere()) return;
-        if (phone() && ['prep', 'setdraft', 'setdraftmodel', 'setscreenholder', 'setprofile'].includes(view)) view = 'lock';
+    // (채팅의 진짜 메타로 견줘요: 실시간 서랍은 창을 열 때마다 새로 생겨서, 닫았다 연 창에서는 같은 서랍이 아니에요)
+    const onMade = (mm, who, wasLive = false) => {
+        if (phoneClosed || mm !== realM || wasLive !== live() || nameKey(who) !== nameKey(owner) || !stillHere()) return;
+        const fromPrep = phone() && ['prep', 'setdraft', 'setdraftmodel', 'setscreenholder', 'setprofile'].includes(view);
+        // 실시간: 잠금 화면 말고 그 사람과의 방 (준비 화면에서 바로 만들었을 때처럼)
+        if (fromPrep && live() && openOwnerRoom()) return;
+        if (fromPrep) view = 'lock';
         draw();
     };
     madeWatch.add(onMade);
