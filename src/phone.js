@@ -41,7 +41,7 @@ import { shiftLabel, liveWall, viewerWall, startShift } from './phone2clock.js';
 import { orbitList, orbitRoom, orbitNew, orbitHomeWidget, liveStart, whoScreen, orbitFace, dayIcon } from './phoneorbit.js';
 import { beginFromStory, liveBranched, adoptChat, rebeginFromStory, rebeginKeepingChats } from './phone2story.js';
 import { liveSnapNow, snapParts } from './phone2snap.js';
-import { liveReact, liveReactQuick, liveGo, liveReflect, liveCanUndo, liveUndo, liveUnreflected, liveNowOf, liveSnapBusy, liveBackCount, liveBackDraft, liveBackPut, liveImportPlan, liveImportFilePlan, liveImportChat, liveImportFile, liveDropMessages, liveSwipeInfo, liveSwipe, liveSwipeDrop, liveRetranslate, liveSwipeList, liveSwipeDropMany, liveSwipeDropOthers } from './phone2go.js';
+import { liveEditMessage, liveReact, liveReactQuick, liveGo, liveReflect, liveCanUndo, liveUndo, liveUnreflected, liveNowOf, liveSnapBusy, liveBackCount, liveBackDraft, liveBackPut, liveImportPlan, liveImportFilePlan, liveImportChat, liveImportFile, liveDropMessages, liveSwipeInfo, liveSwipe, liveSwipeDrop, liveRetranslate, liveSwipeList, liveSwipeDropMany, liveSwipeDropOthers } from './phone2go.js';
 import { liveYearsNow } from './phone2year.js';
 import { P } from './phone2api.js';
 
@@ -202,7 +202,8 @@ export async function openPhone(who = null) {
     let obTab = 'all', obPick = [], obGname = '', obWho = '', obSheet = false, obDraft = '';
     const obOpen = new Set();   // 한국어를 기본과 반대로 둔 말들
     // 말 고치기 (시안 phone2-edit M3 · W3): obHeld = 길게 눌린 말의 id, obPicks = 고르는 중인 말들(Set) 또는 null, obTr = 번역 중인 말들, obEditAt = 그 방
-    let obHeld = null, obPicks = null, obEditAt = '', obList = null;   // obList: 받아 둔 답장 창에서 고른 번호들(Set), 닫혀 있으면 null
+    // obFix: 고치는 중인 말 { id, t: 원문, k: 한국어, at: 'k'면 한국어 칸에 초점 } (시안 docs/mockups/shell-bars E2, 소망) 또는 null
+    let obHeld = null, obPicks = null, obEditAt = '', obList = null, obFix = null;   // obList: 받아 둔 답장 창에서 고른 번호들(Set), 닫혀 있으면 null
     const obTr = new Set();
     const roomNow = () => (view.startsWith('orbitroom:') ? liveWorld(realM)?.messenger?.rooms?.[view.slice(10)] || null : null);
     // 지금 계정: 폰 주인 계정은 주인이 페르소나가 아닐 때만, 그 폰을 보고 있을 때만
@@ -218,7 +219,7 @@ export async function openPhone(who = null) {
     const orbitUi = () => {
         const w = liveWorld(realM);
         if (!live() || !w) return {};
-        if (obEditAt !== view) { obHeld = null; obPicks = null; obList = null; obEditAt = view; }
+        if (obEditAt !== view) { obHeld = null; obPicks = null; obList = null; obFix = null; obEditAt = view; }
         const me = w.persona, who = obAcct(), ro = liveKey(who) !== liveKey(me), sh = w.dayShift || 0, vw = ms => viewerWall(ms, sh).at, today = vw(Date.now()).slice(0, 5), yday = vw(Date.now() - 864e5).slice(0, 5);
         const dayOf = a => (a.slice(0, 5) === today ? '오늘' : a.slice(0, 5) === yday ? '어제' : `${Number(a.slice(0, 2))}월 ${Number(a.slice(3, 5))}일`);
         const shortAt = ms => { const a = vw(ms), d = dayOf(a); return d === '오늘' ? a.slice(6) : d; };
@@ -259,13 +260,13 @@ export async function openPhone(who = null) {
                 const a = vw(x.at), d = dayOf(a);
                 if (d !== day) { msgs.push({ day: d }); day = d; }
                 const mine = liveKey(x.from) === liveKey(who);
-                msgs.push({ id: x.id, mine, from: x.from, text: x.text, ko: x.ko || '', open: koOn() !== obOpen.has(x.id), time: mine ? a.slice(6) : '', tl: mine ? '' : a.slice(6), re: obReacts(r.id, x, reFresh), myre: reactOf(x, who)?.e || '', unread: mine && !ro ? unreadBy(r, x).length : 0, held: !ro && obHeld === x.id, pick: !ro && obPicks ? obPicks.has(x.id) : undefined, wait: obTr.has(x.id), reply: reply.has(x.id), dots: reply.has(x.id) && x.id === lastReply });
+                msgs.push({ id: x.id, mine, from: x.from, text: x.text, ko: x.ko || '', open: koOn() !== obOpen.has(x.id), time: mine ? a.slice(6) : '', tl: mine ? '' : a.slice(6), re: obReacts(r.id, x, reFresh), myre: reactOf(x, who)?.e || '', edited: !!x.edited, fix: !ro && obFix?.id === x.id ? { t: obFix.t, k: obFix.k } : null, unread: mine && !ro ? unreadBy(r, x).length : 0, held: !ro && obHeld === x.id, pick: !ro && obPicks ? obPicks.has(x.id) : undefined, wait: obTr.has(x.id), reply: reply.has(x.id), dots: reply.has(x.id) && x.id === lastReply });
             }
             // 답장을 기다리는 중이면 입력 중, 멈춘 실패가 있으면 그 줄(다시는 사람이 누를 때만). 1:1 머리 아래는 상대의 가장 최근 상태
             const jobs = w.queue?.jobs || [], typing = !ro && jobs.some(j => j.room === r.id && (j.state === 'waiting' || j.state === 'running'));
             const fail = ro ? null : jobs.find(j => j.room === r.id && j.state === 'failed' && !j.seen) || null;
             const state = group ? '' : [...r.messages].reverse().find(x => liveKey(x.from) === liveKey(os[0]) && String(x.state || '').trim())?.state || '';
-            out.orbit = { id: r.id, quick: !ro && obHeld ? liveReactQuick(realM) : [], title: V.titleOf(r), group, there: thereAt, faceOf: !group && !ro ? os[0] : '', sub: group ? [...os, '나'].join(' · ') : state, chips, asOwner: ro, msgs, draft: obDraft, typing, snapBusy: typing && liveSnapBusy(realM), fail: fail ? { id: fail.id } : null, swipe: sw && !sw.coming ? { at: sw.at, count: sw.count } : null, picking: !ro && obPicks ? obPicks.size : null,
+            out.orbit = { id: r.id, fixing: !ro && !!obFix, quick: !ro && obHeld ? liveReactQuick(realM) : [], title: V.titleOf(r), group, there: thereAt, faceOf: !group && !ro ? os[0] : '', sub: group ? [...os, '나'].join(' · ') : state, chips, asOwner: ro, msgs, draft: obDraft, typing, snapBusy: typing && liveSnapBusy(realM), fail: fail ? { id: fail.id } : null, swipe: sw && !sw.coming ? { at: sw.at, count: sw.count } : null, picking: !ro && obPicks ? obPicks.size : null,
                 list: !ro && obList ? (items => ({ items, picks: [...obList].filter(n => items.some(x => x.no === n)), busy: !!sw?.coming }))(liveSwipeList(realM, r.id)) : null };
         }
         if (v === 'orbitface') { if (!obFc) { view = 'orbit'; return orbitUi(); } out.orbit = { name: obFc.who, back: obFc.back, src: obFc.src, album: obFc.album.map((url, i) => ({ url, on: i === obFc.sel })), busy: obFc.busy }; }
@@ -523,6 +524,7 @@ export async function openPhone(who = null) {
         if (keep) $root.find('.na_ph_body, .ax_scroll').scrollTop(top);
         if (view === 'orbitface') fcPaint();
         requestAnimationFrame(() => barsPaint(document.getElementById('na_phl'), view));
+        if (obFix && view.startsWith('orbitroom:')) obFixFocus();
         if (making && view === 'setremake') $root.find('.na_ph_setremake .ax_n').html(`${busyHtml} 다시 만드는 중`);
         // a redraw mid-reflection (or mid-make) keeps saying so: withSpinner only dressed the button that was there
         if (busyMake === 'sync' || busy.sync && busy.operation === 'reflect' && busy.scope === openingScope && nameKey(busy.owner) === nameKey(owner)) $root.find('.na_ph_setupd .ax_v').html(`${busyHtml} 반영하는 중`);
@@ -823,7 +825,7 @@ export async function openPhone(who = null) {
     const obWarn = err => { console.warn('[narrative-archive] live edit', err); toastr.info(String(err?.message || err), '캐릭터 휴대폰'); };
     const obHoldStop = () => { clearTimeout(obHoldT); obHoldT = null; };
     $root.on('pointerdown', '.na_ob_b', function (e) {
-        if (!obCanEdit() || obPicks || e.target.closest('.na_ob_ko')) return;
+        if (!obCanEdit() || obPicks || obFix || e.target.closest('.na_ob_ko')) return;
         const id = this.dataset.id; obDown = { id, x: e.clientX, y: e.clientY, sw: this.classList.contains('na_ob_sw') };
         obHoldStop(); obHoldT = setTimeout(() => { obHoldT = null; obDown = null; obHeldAt = Date.now(); obHeld = id; obSwallow = true; navigator.vibrate?.(10); drawPhone(true); }, 480);
     });
@@ -846,7 +848,7 @@ export async function openPhone(who = null) {
         requestAnimationFrame(step);
     };
     $root.on('pointerdown', '.v_orbitroom .ob_msgs', function (e) {
-        if (obHeld || obPicks || e.target.closest('.na_ob_sw, .na_ob_ko, .ob_pill, .na_ob_swd')) return;
+        if (obHeld || obPicks || obFix || e.target.closest('.na_ob_sw, .na_ob_ko, .ob_pill, .na_ob_swd')) return;
         const mi = this.querySelector('.ob_mi'); if (!mi || !mi.querySelector('.ob_tl')) return;
         obT = { mi, x: e.clientX, y: e.clientY, on: false, v: 0, raf: 0 };
     });
@@ -907,6 +909,31 @@ export async function openPhone(who = null) {
         box.value = ''; box.focus({ preventScroll: true });
     });
     $root.on('input', '.ob_rein', function () { const v = this.value.trim(); if (!v) return; const msgId = this.dataset.id; this.value = ''; this.blur(); obReact(msgId, v); });
+    // 말 고치기 (시안 E2): 그 말풍선 자리에서 바로 고치고 밑의 ✕ · ✓. 원문을 고치면 한국어는 liveEditMessage가 지워요(재번역으로 다시)
+    const obFixFocus = () => {
+        const e = $root.find(obFix?.at === 'k' ? '.na_ob_fk' : '.na_ob_ft')[0]; if (!e || document.activeElement === e) return;
+        e.focus({ preventScroll: true }); try { const r = document.createRange(); r.selectNodeContents(e); r.collapse(false); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); } catch { /* (no caret) */ }
+    };
+    const obFixOk = async () => {
+        const f = obFix, id = obRoomId(); if (!f || !id || !obCanEdit()) return;
+        const r = liveRooms(realM).find(x => x.id === id), x = r?.messages.find(y => y.id === f.id); if (!x) { obFix = null; drawPhone(true); return; }
+        const t = f.t.replace(/\u00a0/g, ' ').trim(), k = f.k.replace(/\u00a0/g, ' ').trim(), change = {};
+        if (t !== String(x.text || '').trim()) change.text = t;
+        if (f.hasK && k !== String(x.ko || '').trim() && !('text' in change)) change.ko = k;
+        if (!Object.keys(change).length) { obFix = null; drawPhone(true); return; }
+        try { await liveEditMessage(realM, id, f.id, change); obFix = null; } catch (err) { obWarn(err); return; }
+        if (!phoneClosed && stillHere()) drawPhone(true);
+    };
+    $root.on('click', '.na_ob_medit', function (e) {
+        e.stopPropagation(); if (!obCanEdit()) return;
+        const r = liveRooms(realM).find(x => x.id === obRoomId()), x = r?.messages.find(y => y.id === this.dataset.id); if (!x) return;
+        obFix = { id: x.id, t: String(x.text || ''), k: String(x.ko || ''), hasK: !!x.ko, at: 't' }; obHeld = null; drawPhone(true);
+    });
+    $root.on('input', '.na_ob_ft, .na_ob_fk', function () { if (!obFix) return; if (this.classList.contains('na_ob_fk')) obFix.k = this.innerText; else obFix.t = this.innerText; });
+    $root.on('focus', '.na_ob_ft, .na_ob_fk', function () { if (obFix) obFix.at = this.classList.contains('na_ob_fk') ? 'k' : 't'; });
+    $root.on('keydown', '.na_ob_ft, .na_ob_fk', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); obFixOk(); } else if (e.key === 'Escape') { obFix = null; drawPhone(true); } });
+    $root.on('click', '.na_ob_fok', e => { e.stopPropagation(); obFixOk(); });
+    $root.on('click', '.na_ob_fno', e => { e.stopPropagation(); obFix = null; drawPhone(true); });
     $root.on('click', '.na_ob_mtr', function (e) { e.stopPropagation(); obRetr([this.dataset.id]); });
     $root.on('click', '.na_ob_ptr', e => { e.stopPropagation(); obRetr([...(obPicks || [])]); });
     $root.on('click', '.na_ob_mdel', function (e) { e.stopPropagation(); obDrop([this.dataset.id]); });
