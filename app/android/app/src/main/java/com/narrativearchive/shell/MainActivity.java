@@ -221,9 +221,19 @@ public class MainActivity extends Activity {
             int f = d.getSystemUiVisibility();
             d.setSystemUiVisibility(phoneMode ? f | View.SYSTEM_UI_FLAG_FULLSCREEN : f & ~View.SYSTEM_UI_FLAG_FULLSCREEN);
         }
-        if (phoneMode) { w.setNavigationBarColor(Color.TRANSPARENT); w.setStatusBarColor(Color.TRANSPARENT); }
+        if (phoneMode) { w.setStatusBarColor(Color.TRANSPARENT); phoneNav(); }
         else setBars(barTop, barBottom);
         fitPhone();
+    }
+    // 폰을 연 동안 하단 버튼 줄: 완전히 투명하면 버튼이 안 보였어요. 텔레그램처럼 화면 아래 색을 반투명(70%)으로 깔아서 뒤가 이어져 보이면서 뿌옇게
+    @SuppressWarnings("deprecation")
+    private void phoneNav() {
+        Window w = getWindow();
+        w.setNavigationBarColor(Color.argb(178, Color.red(barBottom), Color.green(barBottom), Color.blue(barBottom)));
+        if (Build.VERSION.SDK_INT >= 30) {
+            WindowInsetsController ic = w.getInsetsController();
+            if (ic != null) ic.setSystemBarsAppearance(light(barBottom) ? WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS : 0, WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS);
+        }
     }
     private void fitPhone() {
         if (web == null) return;
@@ -358,7 +368,7 @@ public class MainActivity extends Activity {
     @SuppressWarnings("deprecation")
     private void setBars(int top, int bottom) {
         barTop = top; barBottom = bottom;
-        if (phoneMode) return;
+        if (phoneMode) { phoneNav(); return; }
         Window w = getWindow();
         w.setStatusBarColor(top);
         w.setNavigationBarColor(bottom);
