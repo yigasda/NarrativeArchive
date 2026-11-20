@@ -42,6 +42,28 @@ test('채팅 → 말풍선: 빈 줄마다 하나, 시간 칸 · 태그는 떼고
     assert.deepEqual(I.importRows(null), []);
 });
 
+test('메신저 메시지만 가져와요: 캐릭터 메시지는 시간 칸이 있는 것, 내 메시지는 바로 뒤 답장(없으면 바로 앞 캐릭터 메시지)이 메신저 메시지인 것', () => {
+    const scene = (name, mes, user = false) => ({ name, is_user: user, send_date: '2026-11-19T10:00:00.000Z', mes });
+    const mixed = [
+        scene('Ren', 'I walked into the cafe.', true),                                                 // 0 장면의 내 말 (뒤가 장면)
+        scene('Mara', 'She looked up from her cup.\n\n"You are late," she said.'),                     // 1 장면
+        me('Are you home yet', '2026-11-20T07:00:00.000Z'),                                            // 2 메신저 (뒤 답장이 메신저)
+        me('Hello?', '2026-11-20T07:00:30.000Z'),                                                      // 3 메신저 (같은 답장)
+        her(`${div('11.20, 16:01')}\n\nJust got in`, '2026-11-20T07:01:00.000Z'),                      // 4 메신저
+        scene('Mara', 'She put the phone down and went to bed.'),                                      // 5 장면
+        me('Good night', '2026-11-20T07:05:00.000Z'),                                                  // 6 메신저 (뒤 답장 없음, 앞 캐릭터 메시지가 장면) → 안 가져와요
+    ];
+    assert.deepEqual(I.importRows(mixed, { clock }).map(r => [r.i, r.bubbles.map(b => b.text)]), [[2, ['Are you home yet']], [3, ['Hello?']], [4, ['Just got in']]]);
+    // 맨 끝의 내 말: 바로 앞 캐릭터 메시지가 메신저 메시지면 가져와요
+    assert.deepEqual(I.importRows([...mixed.slice(0, 5), me('Good night', '2026-11-20T07:05:00.000Z')], { clock }).map(r => r.i), [2, 3, 4, 5]);
+    // 보통 장면만 있는 채팅 · 내 말만 있는 채팅: 하나도 안 가져와요 (가리지 않으면 있긴 해요)
+    assert.deepEqual(I.importRows(mixed.slice(0, 2), { clock }), []);
+    assert.equal(I.importRows(mixed.slice(0, 2), { clock, gate: false }).length, 2);
+    assert.deepEqual(I.importRows([me('only me', '2026-11-20T07:00:00.000Z')], { clock }), []);
+    // 시간 칸에 읽을 수 있는 시간이 없어도 칸이 있으면 메신저 메시지예요
+    assert.deepEqual(I.importRows([her(`${div('soon')}\n\nHi`, '2026-11-20T07:00:00.000Z')], { clock }).map(r => r.bubbles[0].text), ['Hi']);
+});
+
 test('시간: 글의 시간이 보낸 순간과 같으면(10분 안) 그 순간 그대로(초까지). 시간 칸이 없는 말은 기록된 순간', () => {
     const rows = I.importRows(CHAT, { clock });
     assert.deepEqual(rows.map(r => new Date(r.at).toISOString()), ['2026-11-20T07:27:59.474Z', '2026-11-20T07:28:07.747Z', '2026-11-20T07:28:27.587Z', '2026-11-20T07:29:06.350Z']);
@@ -71,10 +93,12 @@ test('시간: 글의 시간이 기록과 다르면 글 쪽으로. 연도는 보�
 test('글의 시간이 하나도 없는 묶음(내 말만 다시 가져올 때): 전에 옮긴 만큼 같이 옮겨요', () => {
     const first = I.importRows([me('Where are you', '2026-11-20T07:00:00.000Z'), her(`${div('03.05, 21:15')}\n\nAt home`, '2026-11-20T07:00:20.000Z')], { clock });
     assert.equal(first[0].off, first[1].off); assert.ok(first[1].off > 100 * 86400_000);
-    const later = I.importRows([me('Still there?', '2026-11-20T07:05:00.000Z')], { clock, shift: first[1].off });
+    const chat2 = [me('Where are you', '2026-11-20T07:00:00.000Z'), her(`${div('03.05, 21:15')}\n\nAt home`, '2026-11-20T07:00:20.000Z'), me('Still there?', '2026-11-20T07:05:00.000Z')];
+    const later = I.importRows(chat2, { clock, after: 1, shift: first[1].off });
+    assert.deepEqual(later.map(r => r.i), [2]);
     assert.equal(later[0].at - first[1].at, 280_000);
     // (옮긴 적이 없으면 기록된 순간 그대로)
-    assert.equal(I.importRows([me('Still there?', '2026-11-20T07:05:00.000Z')], { clock })[0].at, Date.parse('2026-11-20T07:05:00.000Z'));
+    assert.equal(I.importRows(chat2, { clock, after: 1 })[0].at, Date.parse('2026-11-20T07:05:00.000Z'));
 });
 
 test('시간 기록이 없거나 예전 모양이어도 읽어요; 글의 시간이 앞 말보다 이르면 순서를 지켜요', () => {
@@ -84,14 +108,15 @@ test('시간 기록이 없거나 예전 모양이어도 읽어요; 글의 시간
     assert.equal(I.sentAt(1234), 1234);
     for (const bad of ['', null, 'soon', NaN]) assert.equal(I.sentAt(bad), null);
     // 기록 없는 메시지: 앞 말 바로 뒤
-    const rows = I.importRows([me('one', '2026-11-20T07:00:00.000Z'), { name: 'Mara', is_user: false, mes: 'two\n\nthree' }, me('four', '2026-11-20T06:00:00.000Z')], { clock });
+    const rows = I.importRows([me('one', '2026-11-20T07:00:00.000Z'), { name: 'Mara', is_user: false, mes: `${div('later')}\n\ntwo\n\nthree` }, me('four', '2026-11-20T06:00:00.000Z')], { clock });
     assert.equal(rows[1].at - rows[0].at, 1000);
     assert.ok(rows[2].at > rows[1].at + 1);   // (말풍선 둘의 자리 뒤)
 });
 
 test('번역이 말풍선과 안 맞으면 번역만 빼요', () => {
-    const rows = I.importRows([her('One\n\nTwo', '2026-11-20T07:00:00.000Z', { display_text: tr([['하나', 'One']]) }), her('One\n\nTwo', '2026-11-20T07:01:00.000Z', { display_text: tr([['하나', 'One'], ['둘', 'Other words']]) }),
-        her('One', '2026-11-20T07:02:00.000Z', { display_text: tr([['One', 'One']]) }), her('One', '2026-11-20T07:03:00.000Z', {})], { clock });
+    const T0 = `${div('11.20, 16:00')}\n\n`;
+    const rows = I.importRows([her(`${T0}One\n\nTwo`, '2026-11-20T07:00:00.000Z', { display_text: tr([['하나', 'One']]) }), her(`${T0}One\n\nTwo`, '2026-11-20T07:01:00.000Z', { display_text: tr([['하나', 'One'], ['둘', 'Other words']]) }),
+        her(`${T0}One`, '2026-11-20T07:02:00.000Z', { display_text: tr([['One', 'One']]) }), her(`${T0}One`, '2026-11-20T07:03:00.000Z', {})], { clock });
     assert.deepEqual(rows.map(r => r.bubbles.map(b => b.ko)), [['', ''], ['', ''], [''], ['']]);
 });
 
@@ -118,9 +143,9 @@ test('방에 넣기: 채팅 순서 · 원래 시간 · 번역까지, 전한 것�
     assert.equal(L.liveMeta(m).phoneReadFrom, w.importTop);
     assert.equal(L.liveMeta(m).phoneUpto, -1);
     // 같은 채팅에서 다시: 내 말뿐이어도 그 방으로 들어가요. 다른 채팅의 내 말뿐인 묶음은 방을 몰라요
-    const more = I.importInto(m, I.importRows([me('one more', '2026-11-20T09:00:00.000Z')], { clock }), { now: 888, chat: 'c1' });
+    const more = I.importInto(m, I.importRows([...CHAT, me('one more', '2026-11-20T09:00:00.000Z')], { clock, after: 6 }), { now: 888, chat: 'c1' });
     assert.equal(more.room, room.id); assert.equal(room.messages.at(-1).text, 'one more'); assert.equal(w.imported.count, 7);
-    assert.throws(() => I.importInto(m, I.importRows([me('elsewhere', '2026-11-20T10:00:00.000Z')], { clock }), { chat: 'c2' }), /캐릭터가 한 말이 없어서/);
+    assert.throws(() => I.importInto(m, I.importRows([me('elsewhere', '2026-11-20T10:00:00.000Z')], { clock, gate: false }), { chat: 'c2' }), /캐릭터가 한 말이 없어서/);
 });
 
 test('있던 폰은 가져온 말을 이미 읽은 것으로: 읽던 폰은 읽은 구간으로, 한 번도 안 읽은 폰은 그 뒤부터', () => {
@@ -145,10 +170,10 @@ test('이미 대화가 있는 방: 시간 자리에 끼워 넣고, 있던 말은
 
 test('단체 채팅은 단체방으로; 캐릭터 말이 없거나 가져올 게 없거나 실시간 폰이 없으면 아무것도 안 바꿔요', () => {
     const { m, w } = world();
-    const out = I.importInto(m, I.importRows([me('hi all', '2026-11-20T07:00:00.000Z'), her('hello', '2026-11-20T07:00:10.000Z'), { name: 'Ivo', is_user: false, send_date: '2026-11-20T07:00:20.000Z', mes: 'hey' }], { clock }));
+    const out = I.importInto(m, I.importRows([me('hi all', '2026-11-20T07:00:00.000Z'), her(`${div('11.20, 16:00')}\n\nhello`, '2026-11-20T07:00:10.000Z'), { name: 'Ivo', is_user: false, send_date: '2026-11-20T07:00:20.000Z', mes: `${div('11.20, 16:00')}\n\nhey` }], { clock }));
     assert.deepEqual(w.messenger.rooms[out.room].members, ['Ren', 'Mara', 'Ivo']);
     const was = JSON.stringify(m);
-    assert.throws(() => I.importInto(m, I.importRows([me('only me', '2026-11-20T08:00:00.000Z')], { clock }), { chat: 'another chat' }), /캐릭터가 한 말이 없어서/);
+    assert.throws(() => I.importInto(m, I.importRows([me('only me', '2026-11-20T08:00:00.000Z')], { clock, gate: false }), { chat: 'another chat' }), /캐릭터가 한 말이 없어서/);
     assert.throws(() => I.importInto(m, []), /가져올 메시지가 없어요/);
     assert.equal(JSON.stringify(m), was);
     assert.throws(() => I.importInto({ phones: {} }, I.importRows(CHAT, { clock })), /아직 폰 2가 없어요/);

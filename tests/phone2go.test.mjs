@@ -1002,11 +1002,14 @@ test('채팅 가져오기: 다시 누르면 그 뒤에 온 메시지만. 새 메
     } finally { importDone(); }
 });
 
-test('채팅 가져오기: 가져올 게 없거나 · 캐릭터 말이 없거나 · 페르소나 이름을 모르거나 · 다른 채팅이 열려 있으면 실시간 폰을 안 만들어요', async () => {
+test('채팅 가져오기: 가져올 게 없거나 · 메신저 모양 메시지가 없거나 · 페르소나 이름을 모르거나 · 다른 채팅이 열려 있으면 실시간 폰을 안 만들어요', async () => {
     try {
         const real = importChat();
         const none = async (set, re) => { set(); await assert.rejects(() => G.liveImportChat(real), re); assert.equal(real.live, undefined); assert.equal(T.saves, 0); };
-        await none(() => { T.chat = [{ name: 'Ren', is_user: true, send_date: '2026-11-20T07:27:59.000Z', mes: 'only me' }]; }, /캐릭터가 한 말이 없어서/);
+        await none(() => { T.chat = [{ name: 'Ren', is_user: true, send_date: '2026-11-20T07:27:59.000Z', mes: 'only me' }]; }, /메신저 모양으로 쓴 메시지가 없어요/);
+        // 보통 장면만 있는 채팅 (시간 칸이 없는 캐릭터 메시지): 메신저가 아니에요
+        await none(() => { T.chat = [{ name: 'Ren', is_user: true, send_date: '2026-11-20T07:27:59.000Z', mes: 'I walked in.' }, { name: 'Mara', is_user: false, send_date: '2026-11-20T07:28:07.000Z', mes: 'She looked up.\n\n"You are late."' }]; }, /메신저 모양으로 쓴 메시지가 없어요/);
+        assert.deepEqual(G.liveImportPlan(real), { messages: 0, bubbles: 0, again: false });
         await none(() => { T.chat = [{ name: 'Mara', is_user: false, is_system: true, mes: 'hidden' }]; }, /가져올 메시지가 없어요/);
         await none(() => { importChat(); Object.assign(real, { phones: {} }); T.metadata.narrative_archive = real; delete T.st.name1; }, /페르소나 이름이 필요해요/);
         await none(() => { T.st.name1 = 'Ren'; T.metadata.narrative_archive = {}; }, /이 채팅이 열려 있지 않아요/);
@@ -1017,7 +1020,7 @@ test('채팅 가져오기: 가져올 게 없거나 · 캐릭터 말이 없거나
         const was = JSON.stringify(real.live);
         T.chat.push({ name: 'Ren', is_user: true, send_date: '2026-11-20T09:00:00.000Z', mes: 'x' });
         const save = T.saves; T.metadata.integrity = 'chat-9'; T.chat = [{ name: 'Ren', is_user: true, send_date: '2026-11-20T09:00:00.000Z', mes: 'only me again' }];
-        await assert.rejects(() => G.liveImportChat(real), /캐릭터가 한 말이 없어서/);
+        await assert.rejects(() => G.liveImportChat(real), /메신저 모양으로 쓴 메시지가 없어요/);
         assert.equal(JSON.stringify(real.live), was); assert.equal(T.saves, save);
     } finally { importDone(); }
 });

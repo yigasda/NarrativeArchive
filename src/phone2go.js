@@ -318,6 +318,8 @@ export function liveImportPlan(real) {
 export async function liveImportChat(real, { persona = '', scope = '' } = {}) {
     if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않아요');
     const { c, w, chat, after, shift } = importFrom(real), rows = importRows(c.chat, { after, shift, order: real.dateOrder === 'dm' ? 'dm' : 'md' });
+    // (messages there, but none the messenger's: a chat of scenes, not of texts)
+    if (!rows.length && importRows(c.chat, { after, gate: false }).length) throw new Error('메신저 모양으로 쓴 메시지가 없어요 (맨 위에 시간 칸이 있는 캐릭터 메시지를 가져와요)');
     if (!rows.length) throw new Error(after >= 0 ? '새로 가져올 메시지가 없어요' : '가져올 메시지가 없어요');
     const had = real.live === undefined ? undefined : structuredClone(real.live), name = String(persona || c.name1 || '').trim();
     try {

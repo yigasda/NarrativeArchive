@@ -1,6 +1,7 @@
 // 메신저 모양으로 쓴 채팅을 실시간 폰의 메신저로 통째로 가져오기 (docs/PHONE2-PLAN.md "채팅을 메신저로 가져오기").
 // 채팅 메시지 하나가 말풍선 여러 개예요: 빈 줄마다 하나. 맨 위의 시간 칸(<div class="chat-timestamp">11.20, 16:28</div>)이
-// 그 메시지의 시간이에요. 말마다 "보낸 순간"(전 세계 공통의 한 순간)을 저장해서, 폰마다 자기 시계로 보여 줘요.
+// 그 메시지의 시간이고, **그 칸이 있는 캐릭터 메시지만 메신저 메시지**예요: 보통 장면(지문 · 대사)은 안 가져와요.
+// 내 메시지에는 시간 칸이 없어서, 바로 뒤 답장이 메신저 메시지일 때만 같이 가져와요. 말마다 "보낸 순간"(전 세계 공통의 한 순간)을 저장해서, 폰마다 자기 시계로 보여 줘요.
 //   importRows: 채팅 → 가져올 말 (아무것도 안 바꿔요)
 //   importInto: 가져올 말 → 실시간 폰의 방 (이미 읽은 것 · 롤플에 이미 전한 것으로 표시)
 // 이 파일은 폰 2 저장 자리만 불러요. 채팅은 부르는 쪽이 건네줘요. 폰 1 · 아카이브는 읽지도 쓰지도 않아요.
@@ -71,17 +72,30 @@ function koOf(display, texts) {
 // 전에 가져올 때 옮긴 만큼: 그때와 같은 시계에 놓여요)
 //   → [{ i (채팅의 번호), user, name, at (보낸 순간 ms), off (기록된 순간에서 옮긴 만큼 | null), bubbles: [{ text, ko }] }]
 //     채팅 순서대로, 시간은 뒤로 가지 않아요.
-// 숨긴 메시지 · 해설(시스템) 메시지 · 말이 없는 메시지는 안 가져와요
-export function importRows(chat, { after = -1, order = 'md', clock = LOCAL, shift: shift0 = 0 } = {}) {
-    const rows = [];
+// 숨긴 메시지 · 해설(시스템) 메시지 · 말이 없는 메시지는 안 가져와요. 메신저 메시지만 가져와요:
+//   캐릭터 메시지는 시간 칸이 있는 것, 내 메시지는 바로 뒤 답장(없으면 바로 앞 캐릭터 메시지)이 메신저 메시지인 것.
+//   gate false: 가리지 않고 전부 (채팅에 메시지가 있기는 한지 볼 때만 써요)
+export function importRows(chat, { after = -1, order = 'md', clock = LOCAL, shift: shift0 = 0, gate = true } = {}) {
+    let rows = [];
     (Array.isArray(chat) ? chat : []).forEach((x, i) => {
-        if (i <= after || !x || x.is_system || x.extra?.type === 'narrator') return;
-        const mes = String(x.mes ?? ''), stamps = [...mes.matchAll(TIME_DIV)].map(m => stampOf(m[1], order)).filter(Boolean);
+        if (!x || x.is_system || x.extra?.type === 'narrator') return;
+        const mes = String(x.mes ?? ''), boxes = [...mes.matchAll(TIME_DIV)], stamps = boxes.map(m => stampOf(m[1], order)).filter(Boolean);
         const texts = bubbles(mes.replace(TIME_DIV, ''));
         if (!texts.length) return;
         const ko = x.is_user ? texts.map(() => '') : koOf(x.extra?.display_text, texts);
-        rows.push({ i, user: !!x.is_user, name: flat(x.name), sent: sentAt(x.send_date), stamp: stamps[0] || null, bubbles: texts.map((t, k) => ({ text: t.slice(0, IMPORT.chars), ko: ko[k].slice(0, IMPORT.chars) })) });
+        rows.push({ i, user: !!x.is_user, name: flat(x.name), sent: sentAt(x.send_date), stamp: stamps[0] || null, timed: boxes.length > 0, bubbles: texts.map((t, k) => ({ text: t.slice(0, IMPORT.chars), ko: ko[k].slice(0, IMPORT.chars) })) });
     });
+    // which of them are the messenger's: a character's message with the time box; the persona's by the answer after it
+    // (the first character message that follows), or with none after it, by the character message before
+    if (gate) {
+        const mine = rows.map((r, k) => {
+            if (!r.user) return r.timed;
+            const next = rows.slice(k + 1).find(q => !q.user), prev = rows.slice(0, k).reverse().find(q => !q.user);
+            return next ? next.timed : !!prev?.timed;
+        });
+        rows = rows.filter((r, k) => mine[k]);
+    }
+    rows = rows.filter(r => r.i > after);
     // each message's moment: its written time beside the moment it was sent; one with no written time goes by the
     // message after it (its answer), else the one before; one with no record of when it was sent, right after the last
     const shift = rows.map(r => (r.stamp && r.sent !== null ? momentOf(r.stamp, r.sent, clock, true) - r.sent : null));
