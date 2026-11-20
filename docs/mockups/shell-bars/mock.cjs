@@ -144,7 +144,7 @@ const OPT = {
   G: NOTCH(209),
   H: NOTCH(162),
 };
-const NOSB = { U1T: 2, U1C: 2, U1B: 2, U1: 2, U2: 2, U3: 2, B1: 2, B2: 2, B3: 2, B4: 2, M1: 2, M2: 2, M3: 2, E: 1, F: 1, G: 2, H: 2, R: 2, S1: 2, S2: 2, S3: 2, N1: 2, N2: 2, N3: 2, N4: 2 };
+const NOSB = { V: 2, U1T: 2, U1C: 2, U1B: 2, U1: 2, U2: 2, U3: 2, B1: 2, B2: 2, B3: 2, B4: 2, M1: 2, M2: 2, M3: 2, E: 1, F: 1, G: 2, H: 2, R: 2, S1: 2, S2: 2, S3: 2, N1: 2, N2: 2, N3: 2, N4: 2 };
 // 기기 바 그림 (소망 폰: 왼쪽 KT 시간, 오른쪽 아이콘 · 아래 파란 버튼 셋 + 분홍 하트)
 const DEV = (ink, nosb) => `<div id="mk_dev" style="position:fixed;inset:0;pointer-events:none;z-index:99999;font-family:Roboto,'Noto Sans KR',sans-serif">
   ${nosb ? `<i style="position:absolute;left:50%;top:${HOLE}px;width:11px;height:11px;margin:-5.5px 0 0 -5.5px;border-radius:50%;background:#050505;${nosb === 2 ? "" : "box-shadow:0 0 0 1.5px rgba(40,40,40,.6)"}"></i>` : ''}<div style="${nosb ? 'visibility:hidden;' : ''}position:absolute;left:0;right:0;top:0;height:${SB}px;display:flex;align-items:center;justify-content:space-between;padding:0 16px 0 22px;color:${ink};font-size:14px;font-weight:500">
@@ -171,6 +171,31 @@ const INK = { home: '#1b1d22', bank: '#fff', orbitroom: '#fff', diary: '#1b1d22'
     const rid = await p.evaluate(async B => { const core = await import(B + 'core.js'), st = await import(B + 'phone2store.js'); const m = core.getMeta(), r = st.liveRooms(m)[0], me = st.liveWorld(m).persona; const T = [[me, '내일 열 시에 정비소 올 수 있어?', ''], ['Mara', 'Ja klar, Samstag passt!', '응 좋아, 토요일 괜찮아!'], ['Mara', 'Bring Kuchen mit 😄', '케이크 가져와 😄'], [me, '무슨 케이크', ''], ['Mara', 'Den mit Kirschen', '체리 든 거'], ['Mara', 'Vom Bäcker an der Ecke', '모퉁이 빵집 거'], [me, '거기 일찍 닫잖아', ''], ['Mara', 'Dann geh halt früher', '그럼 좀 일찍 가'], [me, '알겠어 내일 봐', ''], ['Mara', 'Bis morgen', '내일 봐']]; const t0 = Date.now() - T.length * 60000; r.messages = T.map(([from, text, ko], i) => ({ id: `mk${i}`, from, text, ko, at: t0 + i * 60000, told: true, ...(from === 'Mara' ? { state: '회사 · 점심 먹고 자리' } : {}) })); for (const n of r.members) (r.read ||= {})[st.liveKey(n)] = Date.now(); return r.id; }, B);
     const only = process.argv[2] ? process.argv[2].split(',') : Object.keys(OPT);
     for (const o of only) {
+      if (o === 'V') { // 인스타식 반응 배지 모션 영상: 화면을 그린 뒤 배지를 넣고, 애니메이션을 멈춰 두고 한 장씩 찍어 이어 붙여요
+        await p.evaluate(([nb]) => document.documentElement.style.setProperty('--na-nb', `${nb}px`), [NB]);
+        await p.evaluate(css => { document.getElementById('mk_opt')?.remove(); const t = document.createElement('style'); t.id = 'mk_opt'; t.textContent = css; document.head.append(t); }, OPT.U1C);
+        await s.to('orbit'); await s.to('orbitroom', rid); await p.waitForTimeout(500);
+        await p.evaluate(({ html }) => { document.getElementById('mk_dev')?.remove(); document.getElementById('na_phl').insertAdjacentHTML('beforeend', html); }, { html: DEV(INK.orbitroom, 2) });
+        await p.evaluate(() => { const mi = document.querySelector('.na_ph_frame .ob_mi');
+          mi.querySelectorAll('.ob_b.th').forEach(b => { const n = b.nextElementSibling; if (!(n && n.matches('.ob_b.th'))) { const a = document.createElement('span'); a.className = 'mk_av'; a.textContent = 'M'; b.append(a); } });
+          const rds = mi.querySelectorAll('.ob_rd'); const last = rds[rds.length - 1]; if (last) { last.classList.add('mk_last'); last.textContent = '읽음'; }
+          const m = document.querySelector('.na_ph_frame .ob_msgs'); m.scrollTop = m.scrollHeight;
+          window.__an = [];
+          const put = (b, e, t0) => { b.classList.add('mk_hasre'); const w = document.createElement('div'); w.className = 'mk_rew'; w.style.width = b.offsetWidth + 'px'; w.style.alignSelf = getComputedStyle(b).alignSelf; w.style.marginLeft = getComputedStyle(b).marginLeft; w.innerHTML = `<span class="mk_re2"><span class="mk_e" style="display:inline-block">${e}</span></span>`; const av = b.querySelector('.mk_av'); if (av) w.append(av); b.after(w);
+            const re = w.querySelector('.mk_re2'), em = w.querySelector('.mk_e'), mb = getComputedStyle(b).marginBottom;
+            window.__an.push(b.animate([{ marginBottom: '3px' }, { marginBottom: mb }], { duration: 220, delay: t0, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'both' }));
+            window.__an.push(re.animate([{ transform: 'scale(0)', opacity: 0 }, { transform: 'scale(1.18)', opacity: 1, offset: .55 }, { transform: 'scale(.94)', offset: .8 }, { transform: 'scale(1)', opacity: 1 }], { duration: 420, delay: t0 + 40, easing: 'ease-out', fill: 'both' }));
+            window.__an.push(em.animate([{ transform: 'scale(1.35) rotate(-14deg)' }, { transform: 'scale(.92) rotate(9deg)', offset: .45 }, { transform: 'scale(1.06) rotate(-4deg)', offset: .75 }, { transform: 'scale(1) rotate(0)' }], { duration: 520, delay: t0 + 120, easing: 'ease-out', fill: 'both' })); };
+          put([...mi.querySelectorAll('.ob_b.th')].find(b => /Kuchen/.test(b.textContent)), '❤️', 400);
+          put([...mi.querySelectorAll('.ob_b.me')].find(b => /케이크/.test(b.textContent)), '😂', 1500);
+          window.__an.forEach(a => a.pause()); });
+        const dir = path.join(os.tmpdir(), 'mk_frames'); fs.rmSync(dir, { recursive: true, force: true }); fs.mkdirSync(dir);
+        const FPS = 30, T = 2600; let k = 0;
+        for (let t = 0; t <= T; t += 1000 / FPS) { await p.evaluate(t => window.__an.forEach(a => { a.currentTime = t; }), t); await p.waitForTimeout(30);
+          await p.screenshot({ path: path.join(dir, `f${String(k++).padStart(4, '0')}.png`), clip: { x: 0, y: 140, width: W, height: 380 } }); }
+        require('child_process').execFileSync('ffmpeg', ['-y', '-v', 'error', '-framerate', String(FPS), '-i', path.join(dir, 'f%04d.png'), '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '18', path.join(__dirname, 'U1C_motion.mp4')]);
+        continue;
+      }
       await p.evaluate(([nb, on]) => document.documentElement.style.setProperty('--na-nb', on ? `${nb}px` : '0px'), [NB, o === 'R' || o[0] === 'N' || o[0] === 'S' || o[0] === 'M' || o[0] === 'B' || o[0] === 'U']);
       await p.evaluate(css => { document.getElementById('mk_opt')?.remove(); const t = document.createElement('style'); t.id = 'mk_opt'; t.textContent = css; document.head.append(t); }, OPT[o]);
       for (const [v, i] of 'BU'.includes(o[0]) ? [['orbitroom', rid]] : 'SMR'.includes(o[0]) ? [['home'], ['diary'], ['orbitroom', rid], ['bank']] : [['home'], ['bank'], ['orbitroom', rid]]) {
