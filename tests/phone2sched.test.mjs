@@ -155,3 +155,60 @@ test('이 파일은 폰 2 저장 자리와 마리나라 파일만 불러요; 폰
     assert.doesNotMatch(src, /saveMeta|ctx\(|askDraft|boundary/);
     for (const f of (await readdir(SRC)).filter(f => f.endsWith('.js') && !/^phone2/.test(f) && f !== 'phone.js')) assert.doesNotMatch(await readFile(new URL(f, SRC), 'utf8'), /phone2sched/, f);
 });
+test('장소: 블록마다 따로 두고(place), 하는 일 글은 그대로예요. 하는 일이 같으면 같은 장소', async () => {
+    const { m } = world(), asked = [];
+    S.setSchedule(m, 'Mara', week([{ time: '00:00-08:00', activity: 'sleeping', status: 'offline' }, { time: '08:00-18:00', activity: 'Working', status: 'dnd' }, { time: '18:00-00:00', activity: 'free time', status: 'online' }]), NOW);
+    const ask = async messages => { asked.push(messages); return JSON.stringify({ places: { sleeping: 'home', working: "St. Mary's Hospital", 'free time': '' } }); };
+    assert.equal(await S.fillPlaces(m, 'Mara', { ask, card: 'a nurse', places: ['home', 'home'] }), 14);
+    assert.match(asked[0][0].content, /^GOAL\nMara has a weekly schedule\./);
+    assert.equal(asked[0][1].content, "[ACTIVITIES]\n- sleeping\n- Working\n- free time\n\n[Mara's card]\na nurse\n\n[PLACES]\n- home");
+    const mon = S.scheduleOf(m, 'Mara').days.Monday;
+    assert.deepEqual(mon.map(b => [b.activity, b.place]), [['sleeping', 'home'], ['Working', "St. Mary's Hospital"], ['free time', undefined]]);
+    await assert.rejects(S.fillPlaces(m, 'Mara', { ask: async () => '{"nope":1}' }), /장소 답/);
+    await assert.rejects(S.fillPlaces(m, 'Ivo', { ask }), /먼저 스케줄/);
+    // 마리나라의 상황 글에는 장소가 안 섞여요
+    assert.doesNotMatch(S.contextBlock(m, 'Mara', L.ensureRoom(m, ['Mara']).id, { now: NOW }), /Hospital/);
+});
+test('지금 블록: 열쇠는 블록이 바뀌면 달라지고, 글은 "장소 · 하는 일 · ~끝"이에요. 손으로 준 상태가 있으면 없어요', () => {
+    const { m } = world();
+    S.setSchedule(m, 'Mara', week([{ time: '00:00-08:00', activity: 'sleeping', status: 'offline', place: 'home' }, { time: '08:00-00:00', activity: 'working', status: 'dnd' }]), NOW);
+    const a = S.blockNow(m, 'Mara', { now: new Date('2026-11-23T03:00:00Z'), tz: 'UTC' }), b = S.blockNow(m, 'Mara', { now: new Date('2026-11-23T09:00:00Z'), tz: 'UTC' });
+    assert.equal(a.text, 'home · sleeping · ~08:00');
+    assert.equal(b.text, 'working · ~00:00');
+    assert.notEqual(a.key, b.key);
+    assert.equal(S.blockNow(m, 'Mara', { now: new Date('2026-11-23T04:00:00Z'), tz: 'UTC' }).key, a.key);
+    assert.notEqual(S.blockNow(m, 'Mara', { now: new Date('2026-11-24T03:00:00Z'), tz: 'UTC' }).key, a.key);   // (다음 날의 같은 시간)
+    S.setStatusOverride(m, 'Mara', { status: 'dnd', minutes: 60 }, new Date('2026-11-23T03:00:00Z'));
+    assert.equal(S.blockNow(m, 'Mara', { now: new Date('2026-11-23T03:10:00Z'), tz: 'UTC' }), null);
+    assert.equal(S.blockNow(m, 'Ivo', { now: NOW }), null);
+});
+test('스케줄 블록이 바뀌면 폰이 따라가요: 상태와 위치 정보의 주인 줄 (모델을 안 불러요)', () => {
+    const { m, w } = world(), p = w.phones.mara, t1 = Date.parse('2026-11-23T03:00:00Z'), t2 = Date.parse('2026-11-23T09:00:00Z');
+    p.where = { at: 1, people: [{ name: 'Mara', place: 'somewhere old', city: 'Seoul' }, { name: 'Ren', place: 'Gangseo' }] };
+    S.setSchedule(m, 'Mara', week([{ time: '00:00-08:00', activity: 'sleeping', status: 'offline', place: 'home' }, { time: '08:00-18:00', activity: 'working', status: 'dnd', place: 'the hospital' }, { time: '18:00-00:00', activity: 'walk', status: 'online' }]), NOW);
+    assert.equal(G.followSchedule(m, t1), 1);
+    assert.deepEqual(p.schedState, { text: 'home · sleeping · ~08:00', at: t1 });
+    assert.deepEqual(p.where.people, [{ name: 'Mara', place: 'home', city: 'Seoul' }, { name: 'Ren', place: 'Gangseo' }]);
+    assert.equal(G.followSchedule(m, t1 + 60_000), 0);                       // 같은 블록이면 그대로
+    assert.equal(G.followSchedule(m, t2), 1);
+    assert.equal(p.where.people[0].place, 'the hospital');
+    // 장소가 없는 블록: 상태만 바뀌고 장소는 그대로
+    assert.equal(G.followSchedule(m, Date.parse('2026-11-23T19:00:00Z')), 1);
+    assert.equal(p.schedState.text, 'walk · ~00:00');
+    assert.equal(p.where.people[0].place, 'the hospital');
+    // 위치 정보에 주인 줄이 없던 폰: 줄이 생겨요. 스케줄이 없는 폰은 안 건드려요
+    delete p.where; delete p.schedAt;
+    G.followSchedule(m, t1);
+    assert.deepEqual(p.where.people, [{ name: 'Mara', place: 'home' }]);
+    assert.equal(w.phones.ivo.schedState, undefined);
+});
+test('답장 요청의 NOW: 스케줄이 적은 상태가 마지막 답장의 상태보다 새것이면 그것을 써요', async () => {
+    const { gatherReply } = await at('phone2live.js');
+    const { m, w, a } = world(), p = w.phones.mara;
+    a.messages.push({ id: 'x1', n: 1, from: 'Ren', text: 'hi', at: 1000 }, { id: 'x2', n: 2, from: 'Mara', text: 'hey', at: 2000, state: 'cafe · reading' });
+    assert.equal(gatherReply(m, 'Mara', a.id, { now: 9000 }).now.last, 'cafe · reading');
+    p.schedState = { text: 'the hospital · working · ~18:00', at: 3000 };
+    assert.equal(gatherReply(m, 'Mara', a.id, { now: 9000 }).now.last, 'the hospital · working · ~18:00');
+    a.messages.push({ id: 'x3', n: 3, from: 'Mara', text: 'on break', at: 4000, state: 'the hospital · break room' });
+    assert.equal(gatherReply(m, 'Mara', a.id, { now: 9000 }).now.last, 'the hospital · break room');
+});
