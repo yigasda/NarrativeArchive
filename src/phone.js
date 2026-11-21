@@ -42,7 +42,7 @@ import { liveReady, keepState } from './phone2keepon.js';
 import { orbitList, orbitRoom, orbitNew, orbitHomeWidget, liveStart, whoScreen, orbitFace, dayIcon } from './phoneorbit.js';
 import { beginFromStory, liveBranched, adoptChat, rebeginFromStory, rebeginKeepingChats } from './phone2story.js';
 import { liveSnapNow, snapParts } from './phone2snap.js';
-import { liveEditMessage, liveReact, liveReactQuick, liveGo, liveReflect, liveCanUndo, liveUndo, liveUnreflected, liveNowOf, liveSnapBusy, liveBackCount, liveBackDraft, liveBackPut, liveImportPlan, liveImportFilePlan, liveImportChat, liveImportFile, liveDropMessages, liveSwipeInfo, liveSwipe, liveSwipeDrop, liveRetranslate, liveSwipeList, liveSwipeDropMany, liveSwipeDropOthers } from './phone2go.js';
+import { liveEditMessage, liveReact, liveReactQuick, liveGo, liveReflect, liveCanUndo, liveUndo, liveUnreflected, liveNowOf, liveSnapBusy, liveBackCount, liveBackDraft, liveBackPut, liveImportPlan, liveImportFilePlan, liveImportChat, liveImportFile, liveDropMessages, liveSwipeInfo, liveSwipe, liveSwipeDrop, liveRetranslate, liveSwipeList, liveSwipeDropMany, liveSwipeDropOthers, liveMark } from './phone2go.js';
 import { liveYearsNow } from './phone2year.js';
 import { P } from './phone2api.js';
 import { morph } from './morph.js';
@@ -238,11 +238,12 @@ export async function openPhone(who = null) {
     const startPlan = startPlanOf;
     // 어두운 방(⋯ 메뉴의 어둡게 · 밝게): 확장 설정에 남아요. 그릴 때마다 읽으니 설정을 그대로 읽어요(koOn과 같은 까닭)
     const obDark = () => (ctx().extensionSettings?.narrative_archive ?? globalSettings()).orbitDark === true;
-    let obMenu = false;
+    let obMenu = false, obSub = '', obNote = null;   // obSub: 길게 누른 판의 둘째 화면('re' 이모지 · 'mark' 북마크 줄), obNote: 메모 시트 { id, text }
     const orbitUi = () => {
         const w = liveWorld(realM);
         if (!live() || !w) return {};
-        if (obEditAt !== view) { obHeld = null; obPicks = null; obList = null; obFix = null; obFrom = null; obMenu = false; obEditAt = view; }
+        if (obEditAt !== view) { obHeld = null; obPicks = null; obList = null; obFix = null; obFrom = null; obMenu = false; obNote = null; obEditAt = view; }
+        if (!obHeld) obSub = '';
         const me = w.persona, who = obAcct(), ro = liveKey(who) !== liveKey(me), sh = w.dayShift || 0, vtz = Intl.DateTimeFormat().resolvedOptions().timeZone, vw = ms => viewerWall(ms, sh, vtz).at, today = vw(Date.now()).slice(0, 5), yday = vw(Date.now() - 864e5).slice(0, 5);
         const dayOf = a => (a.slice(0, 5) === today ? '오늘' : a.slice(0, 5) === yday ? '어제' : `${Number(a.slice(0, 2))}월 ${Number(a.slice(3, 5))}일`);
         const shortAt = ms => { const a = vw(ms), d = dayOf(a); return d === '오늘' ? a.slice(6) : d; };
@@ -284,13 +285,13 @@ export async function openPhone(who = null) {
                 const a = vw(x.at), d = dayOf(a);
                 if (d !== day) { msgs.push({ day: d }); day = d; }
                 const mine = liveKey(x.from) === liveKey(who);
-                msgs.push({ id: x.id, mine, from: x.from, text: x.text, ko: x.ko || '', open: koOn() !== obOpen.has(x.id), time: mine ? a.slice(6) : '', tl: mine ? '' : a.slice(6), re: obReacts(r.id, x, reFresh), myre: reactOf(x, who)?.e || '', edited: !!x.edited, fix: !ro && obFix?.id === x.id ? { t: obFix.t, k: obFix.k } : null, unread: mine && !ro ? unreadBy(r, x).length : 0, held: !ro && obHeld === x.id, pick: !ro && obPicks ? obPicks.has(x.id) : undefined, wait: obTr.has(x.id), reply: reply.has(x.id), dots: reply.has(x.id) && x.id === lastReply });
+                msgs.push({ id: x.id, mine, from: x.from, text: x.text, ko: x.ko || '', open: koOn() !== obOpen.has(x.id), time: mine ? a.slice(6) : '', tl: mine ? '' : a.slice(6), mk: x.extra ? { b: !!x.extra.bookmark, p: !!x.extra.pinnedToContext, n: !!x.extra.privateNote, h: !!x.extra.hiddenFromAI } : null, re: obReacts(r.id, x, reFresh), myre: reactOf(x, who)?.e || '', edited: !!x.edited, fix: !ro && obFix?.id === x.id ? { t: obFix.t, k: obFix.k } : null, unread: mine && !ro ? unreadBy(r, x).length : 0, held: !ro && obHeld === x.id, pick: !ro && obPicks ? obPicks.has(x.id) : undefined, wait: obTr.has(x.id), reply: reply.has(x.id), dots: reply.has(x.id) && x.id === lastReply });
             }
             // 답장을 기다리는 중이면 입력 중, 멈춘 실패가 있으면 그 줄(다시는 사람이 누를 때만). 1:1 머리 아래는 상대의 가장 최근 상태
             const jobs = w.queue?.jobs || [], typing = !ro && jobs.some(j => j.room === r.id && (j.state === 'waiting' || j.state === 'running'));
             const fail = ro ? null : jobs.find(j => j.room === r.id && j.state === 'failed' && !j.seen) || null;
             const state = group ? '' : [...r.messages].reverse().find(x => liveKey(x.from) === liveKey(os[0]) && String(x.state || '').trim())?.state || '';
-            out.orbit = { id: r.id, dark: obDark(), menu: obMenu, fixing: !ro && !!obFix, quick: !ro && obHeld ? liveReactQuick(realM) : [], title: V.titleOf(r), group, there: thereAt, faceOf: !group && !ro ? os[0] : '', sub: group ? [...os, '나'].join(' · ') : state, chips, asOwner: ro, msgs, draft: obDraft, typing, snapBusy: typing && liveSnapBusy(realM), fail: fail ? { id: fail.id } : null, swipe: sw && !sw.coming ? { at: sw.at, count: sw.count } : null, picking: !ro && obPicks ? obPicks.size : null,
+            out.orbit = { id: r.id, dark: obDark(), menu: obMenu, heldSub: obSub, note: !ro && obNote ? { text: obNote.text } : null, fixing: !ro && !!obFix, quick: !ro && obHeld ? liveReactQuick(realM) : [], title: V.titleOf(r), group, there: thereAt, faceOf: !group && !ro ? os[0] : '', sub: group ? [...os, '나'].join(' · ') : state, chips, asOwner: ro, msgs, draft: obDraft, typing, snapBusy: typing && liveSnapBusy(realM), fail: fail ? { id: fail.id } : null, swipe: sw && !sw.coming ? { at: sw.at, count: sw.count } : null, picking: !ro && obPicks ? obPicks.size : null,
                 list: !ro && obList ? (items => ({ items, picks: [...obList].filter(n => items.some(x => x.no === n)), busy: !!sw?.coming }))(liveSwipeList(realM, r.id)) : null };
         }
         if (v === 'orbitface') { if (!obFc) { view = 'orbit'; return orbitUi(); } out.orbit = { name: obFc.who, back: obFc.back, src: obFc.src, album: obFc.album.map((url, i) => ({ url, on: i === obFc.sel })), busy: obFc.busy }; }
@@ -912,7 +913,7 @@ export async function openPhone(who = null) {
         // (번역 줄 위에서 눌러도 길게 누르기가 돼요: 길게 누른 뒤의 클릭은 번역 접기로 안 가요 — obJustHeld · obSwallow)
         if (!obCanEdit() || obPicks || obFix) return;
         const id = this.dataset.id; obDown = { id, x: e.clientX, y: e.clientY, sw: this.classList.contains('na_ob_sw') };
-        obHoldStop(); obHoldT = setTimeout(() => { obHoldT = null; obDown = null; obHeldAt = Date.now(); obHeld = id; obSwallow = true; navigator.vibrate?.(10); ptrDown = false; drawPhone(true); }, 480);
+        obHoldStop(); obHoldT = setTimeout(() => { obHoldT = null; obDown = null; obHeldAt = Date.now(); obHeld = id; obSub = ''; obSwallow = true; navigator.vibrate?.(10); ptrDown = false; drawPhone(true); $root.find('.ob_pill')[0]?.scrollIntoView({ block: 'nearest' }); }, 480);
     });
     // (손가락은 누르고 있는 동안 조금 굴러요: 12px까지는 그대로 기다려요. 폰이 글자 선택 메뉴를 띄우면 길게 누르기가 취소돼서 말풍선은 글자 선택을 꺼 뒀어요)
     $root.on('pointermove', '.na_ob_b', e => { if (obDown && Math.hypot(e.clientX - obDown.x, e.clientY - obDown.y) > 12) obHoldStop(); });
@@ -971,6 +972,24 @@ export async function openPhone(who = null) {
     // (고르는 중엔 줄 전체가 눌려요: 말풍선 · 동그라미 · 옆 빈 곳 어디든. 동그라미만 누르면 안 켜졌어요)
     $root.on('click', '.na_ob_prow', function (e) { if (!obPicks) return; e.stopPropagation(); const id = this.dataset.id; if (obPicks.has(id)) obPicks.delete(id); else obPicks.add(id); drawPhone(true); });
     $root.on('click', '.na_ob_mpick', function (e) { e.stopPropagation(); obPicks = new Set([this.dataset.id]); obHeld = null; drawPhone(true); });
+    // 길게 누른 판 (시안 orbit-top M2): 복사 · 반응(이모지 줄로) · 북마크 줄(북마크 · 고정 · 메모) · AI에게 숨기기. 표시는 반영 쪽 liveMark가 저장해요
+    const obMsgOf = id => liveRooms(realM).find(r => r.id === obRoomId())?.messages.find(x => x.id === id);
+    const obMark = async (id, patch, keep) => {
+        const rid = obRoomId(); if (!rid || !obCanEdit()) return;
+        const pr = liveMark(realM, rid, [id], patch), bad = await obSoon(pr); if (bad) obWarn(bad);
+        if (!keep || bad) obHeld = null; if (!phoneClosed && stillHere()) drawPhone(true);
+        if (!bad) try { await pr; } catch (err) { obWarn(err); }
+    };
+    $root.on('click', '.na_ob_mcopy', async function (e) { e.stopPropagation(); const t = String(obMsgOf(this.dataset.id)?.text || ''); obHeld = null; drawPhone(true);
+        try { await navigator.clipboard.writeText(t); toastr.success('복사했어요', '캐릭터 휴대폰'); } catch { toastr.info('복사하지 못했어요', '캐릭터 휴대폰'); } });
+    $root.on('click', '.na_ob_mre, .na_ob_mmark', function (e) { e.stopPropagation(); obSub = this.classList.contains('na_ob_mre') ? 're' : 'mark'; drawPhone(true); $root.find('.ob_pill')[0]?.scrollIntoView({ block: 'nearest' }); });
+    $root.on('click', '.na_ob_mhide', function (e) { e.stopPropagation(); const id = this.dataset.id; obMark(id, { hiddenFromAI: !obMsgOf(id)?.extra?.hiddenFromAI }); });
+    $root.on('click', '.na_ob_mbm', function (e) { e.stopPropagation(); const id = this.dataset.id; obMark(id, { bookmark: obMsgOf(id)?.extra?.bookmark ? null : true }, true); });
+    $root.on('click', '.na_ob_mpin', function (e) { e.stopPropagation(); const id = this.dataset.id; obMark(id, { pinnedToContext: !obMsgOf(id)?.extra?.pinnedToContext }, true); });
+    $root.on('click', '.na_ob_mnote', function (e) { e.stopPropagation(); const id = this.dataset.id; obNote = { id, text: String(obMsgOf(id)?.extra?.privateNote || '') }; obHeld = null; drawPhone(true); $root.find('.na_ob_nttx')[0]?.focus({ preventScroll: true }); });
+    $root.on('input', '.na_ob_nttx', function () { if (obNote) obNote.text = this.innerText; });
+    $root.on('click', '.na_ob_ntx', e => { e.stopPropagation(); obNote = null; drawPhone(true); });
+    $root.on('click', '.na_ob_ntok', e => { e.stopPropagation(); if (!obNote) return; const { id, text } = obNote; obNote = null; obMark(id, { privateNote: text.trim() || null }); });
     $root.on('click', '.na_ob_pquit', e => { e.stopPropagation(); obPicks = null; drawPhone(true); });
     const obRetr = async ids => {
         const id = obRoomId(); if (!id || !ids.length) return;
@@ -2358,7 +2377,7 @@ export async function openPhone(who = null) {
             const v = String(view || '').split(':')[0];
             if (ask) ask.done(false);
             else if (sheetOpen) setSheet(false);
-            else if (obFix || obHeld || obPicks || obList || obMenu) { obFix = null; obHeld = null; obPicks = null; obList = null; obMenu = false; drawPhone(true); }
+            else if (obFix || obHeld || obPicks || obList || obMenu || obNote) { obFix = null; obHeld = null; obPicks = null; obList = null; obMenu = false; obNote = null; drawPhone(true); }
             else {
                 const b = $root.find('.na_ph_frame [data-go]').filter('[aria-label="뒤로"], [aria-label="닫기"]')[0];
                 if (b) b.click();
