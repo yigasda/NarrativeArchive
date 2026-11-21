@@ -6,6 +6,7 @@ const CHAT = path.join(os.homedir(), 'sillytavern/data/default-user/chats/defaul
 const B = '/scripts/extensions/third-party/NarrativeArchive/src/';
 const THEME = `
 [role=button] { border-radius: 4px !important; }
+button { padding: 6px 14px; min-height: 0; }   /* 버튼 안쪽 여백을 주는 테마(소망 테마가 그래요: 아이콘 단추가 찌그러졌어요) */
 button, label, input, select, textarea, .menu_button { border-radius: 4px !important; border: 2px solid #c33 !important; background: #2b2b33 !important; color: #ff0 !important; font-family: 'Comic Sans MS', 'Noto Sans KR', cursive !important; box-shadow: 0 0 0 2px #0a0 !important; padding: 3px 6px; }
 body span, body #chat span, html body div span { font-size: 19px !important; line-height: 2 !important; letter-spacing: 1px !important; }
 *:focus, *:focus-visible { outline: 3px solid #f0f !important; }

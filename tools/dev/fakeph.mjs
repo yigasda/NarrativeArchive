@@ -125,6 +125,9 @@ http.createServer((req, res) => {
         : { state: '회사 · 점심 먹고 자리', reply: ['Ja klar, Samstag passt!', 'Bring Kuchen mit 😄'], ko: ['응 좋아, 토요일 괜찮아!', '케이크 가져와 😄'], does: [] });
       return setTimeout(() => { res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ choices: [{ message: { role: 'assistant', content } }] })); require_log(b); }, 2000);
     }
+    // 스케줄(마리나라의 지시문): 하루만 다시 → { blocks }, 한 주 → { days … } (Orbit 스케줄 편집의 "재생성" · "주 조정" 확인용)
+    if (b.includes('Return only JSON in this exact shape') && b.includes('blocks')) { res.writeHead(200, { 'content-type': 'application/json' });
+      return res.end(JSON.stringify({ choices: [{ message: { role: 'assistant', content: JSON.stringify({ blocks: [{ time: '00:00-07:00', activity: 'Schlafen', status: 'offline' }, { time: '07:00-09:00', activity: 'Frühstück mit Freunden', status: 'online' }, { time: '09:00-17:00', activity: 'Werkstatt', status: 'dnd' }, { time: '17:00-00:00', activity: 'Abend mit Freunden', status: 'online' }] }) } }] })); }
     const upd = b.includes('[UPDATE]');
     // 말투 뽑기 (phonetr.js askVoices): the story's people with the words that show it; anyone else in WHO comes back missing
     const VOICES = { people: [{ who: 'Ren', style: '늘 반말이고 장난스럽게 말끝을 길게 늘이며, 상대가 차갑게 굴면 일부러 더 들러붙고 이모티콘을 섞어 분위기를 풀려고 함', label: '장난 반말 · 능글', evidence: ['Why so cold? Come on, smile a little~'] }, { who: 'Anja', style: '반말, 다정하게, 걱정 많음', label: '다정한 반말', evidence: ['Did you eat? Don\'t skip dinner again'] }, { who: 'Ivo', style: '극도로 절제되고 격식 있는 문어체 존댓말 및 단호하고 간결한 명령형 어조. 문장 끝에 반드시 마침표를 찍음', label: '격식 존댓말 · 단호함', evidence: ['Bitte. Der Schlüssel liegt unter der Matte.'] }] };

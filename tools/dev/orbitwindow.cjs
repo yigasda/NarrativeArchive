@@ -41,7 +41,7 @@ let bad = 0; const ok = (name, pass, info = '') => { if (!pass) bad++; console.l
   await p.evaluate(() => { const e = document.querySelector('.na_ph_frame .ob_msgs'); e.scrollTop = 0; }); await p.waitForTimeout(300);
   await hold('.na_ph_frame .ob_b.th[data-id="mk4"]'); await p.waitForTimeout(400);
   ok('옛 말 길게 누르기 → 카드', await p.evaluate(() => !!document.querySelector('.na_ph_frame .ob_pill')));
-  await tap('.na_ph_frame .ob_hr .na_ob_re'); await p.waitForTimeout(500);
+  await tap('.na_ph_frame .na_ob_mre'); await p.waitForTimeout(200); await tap('.na_ph_frame .ob_hr .na_ob_re'); await p.waitForTimeout(500);   // (판의 반응 → 이모지 줄 → 이모지)
   ok('옛 말에 반응 달기', await p.evaluate(() => !!document.querySelector('.na_ph_frame .ob_b[data-id="mk4"] .ob_re')));
   // 나갔다 다시 들어오면 다시 60개
   await tap('.na_ph_frame .ob_gb'); await p.waitForTimeout(500); await tap('.na_ph_frame .ob_rm'); await p.waitForTimeout(700);

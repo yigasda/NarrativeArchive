@@ -13,3 +13,14 @@ The files under `src/marinara/` and `plugin/marinara/` are ported from
 
 Each ported file names the Marinara file it came from and what was changed.
 "Marinara Engine" and its marks belong to their owners; this project is not affiliated with or endorsed by them.
+
+## Lucide
+
+Some icons in the Orbit messenger (`src/phoneorbit.js`, `LU`) are taken from [Lucide](https://lucide.dev).
+
+    ISC License
+    Copyright (c) for portions of Lucide are held by Cole Bemis 2013-2022 as part of Feather (MIT).
+    All other copyright (c) for Lucide are held by Lucide Contributors 2022.
+
+    Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby
+    granted, provided that the above copyright notice and this permission notice appear in all copies.
