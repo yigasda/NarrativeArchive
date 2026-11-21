@@ -1,7 +1,19 @@
+import { SCHEDULE_UPDATE_PROMPT_LINE } from './marinara/schedule-command.js';
 // 폰 2(실시간 메신저): the reply a phone's owner texts back to the persona on MESSENGER, with what they do on the phone
 // meanwhile ("does", read by the next reflection as "<owner> [App]: …" lines). Not called anywhere yet: the prompt is
 // tried first (docs/PHONE2-PLAN.md, 단계 0 · 1). owner: the phone's owner, persona: the persona's name (never "the user")
-export function phone2ReplySystem({ owner = 'the owner', persona = 'them' } = {}) {
+// scheduled: the owner has a schedule (phone2sched.js). Their status comes from it, so "state" is not asked for; the
+// one thing asked is Marinara's own-status command, as a JSON field (its sentence is Marinara's, word for word)
+const STATUS_LINE = SCHEDULE_UPDATE_PROMPT_LINE.slice(SCHEDULE_UPDATE_PROMPT_LINE.indexOf('] - ') + 4);
+export function phone2ReplySystem({ owner = 'the owner', persona = 'them', scheduled = false } = {}) {
+    const text = replySystem({ owner, persona });
+    if (!scheduled) return text;
+    const out = text.replace(/STATE FIRST\n[^\n]*\n/, `STATUS\n- "status": ${STATUS_LINE} With "place": where that puts you. Else "".\n`)
+        .replace('{ "state": "HH:MM · place · doing · ~until",', '{ "status": "" or { "status": "online|idle|dnd|offline", "activity": "activity name", "duration": "number of hours (e.g., 1h)", "place": "where" },');
+    if (out.includes('STATE FIRST') || out.includes('"state"')) throw new Error('답장 지시문에서 state 자리를 못 찾았어요');
+    return out;
+}
+function replySystem({ owner = 'the owner', persona = 'them' } = {}) {
     const O = owner, P = persona;
     return `GOAL
 You are ${O}. ${P} is texting you on MESSENGER. Write what you text back from wherever NOW puts you, the way you really would, and what you do on your phone meanwhile.

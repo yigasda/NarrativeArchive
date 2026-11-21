@@ -11,7 +11,7 @@ export async function tickOnce() {
     const m = getMeta(), w = m?.live?.world;
     if (!w) return 0;
     const waiting = !!w.queue?.jobs?.some(j => j.kind === 'reply' && j.state === 'waiting');
-    if (!w.presence?.on && !waiting) return 0;
+    if (!w.presence?.on && !waiting && !Object.keys(w.presence?.schedules || {}).length) return 0;
     busy = true;
     try {
         const G = await import('./phone2go.js'), tell = () => globalThis.document.dispatchEvent(new globalThis.CustomEvent('na-live-change'));

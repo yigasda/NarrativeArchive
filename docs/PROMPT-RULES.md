@@ -62,3 +62,4 @@ Numbers are plain JSON numbers.
 - 3.211.0: 페르소나 설명이 위치 · 말투 읽기에만 들어가서, 반영 · 채우기 · 폰 만들기 · 답장이 페르소나가 사는 곳을 지어냈어요. 모든 폰 요청에 같은 PERSONA 블록을 넣었어요.
 - 3.216.1: 답장 지시문의 문자 모양 줄을 시키는 말로 바꿨어요("끝난다 · 드물다" 같은 설명은 안 먹혔어요). 예외는 "누가 봐도 그런 캐릭터"만: "꼼꼼한 · 나이 든 · 격식 있는" 나열은 좀 딱딱한 캐릭터가 다 걸렸어요.
 - (작업 브랜치) 답장 요청에 `[CONTEXT]` 블록이 들어가요(스케줄 · 상태가 있는 사람만): 글은 마리나라의 것 그대로(`src/marinara/conversation-context-block.js`)라 고치지 않아요. 답장 지시문의 받는 것 목록에 CONTEXT 한 줄을 더했어요. 스케줄 만드는 지시문도 마리나라의 것 그대로예요(`src/marinara/schedule.service.js`).
+- (작업 브랜치) 스케줄 블록의 장소를 묻는 지시문 `placeSystem`(`src/phone2sched.js`)을 새로 썼어요: 받는 것은 ACTIVITIES · 카드 · PLACES. 스케줄이 있는 사람의 답장 지시문(`phone2ReplySystem({ scheduled: true })`)은 STATE FIRST · `"state"` 대신 STATUS 한 줄과 `"status"` 칸이에요: 문장은 마리나라의 `schedule_update` 줄 그대로, `place`만 우리 것.

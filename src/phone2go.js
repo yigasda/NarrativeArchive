@@ -25,7 +25,7 @@ import { liveStoryText } from './phone2story.js';
 import { BACK, backLeft, backInput, phone2BackSystem, takeBack, backMessage, markTold } from './phone2back.js';
 import { liveWall } from './phone2clock.js';
 import { gatherReply } from './phone2live.js';
-import { presenceOf, scheduleOf, setSchedule, setStatusOverride, setUserStatus, setAutonomous, statusNow, replyDelay, contextBlock, makeSchedule, checkProactive, noteProactive } from './phone2sched.js';
+import { presenceOf, scheduleOf, setSchedule, setStatusOverride, setUserStatus, setAutonomous, statusNow, replyDelay, contextBlock, makeSchedule, checkProactive, noteProactive, fillPlaces, stateNow, takeStatus } from './phone2sched.js';
 import { replyInput } from './phone2ask.js';
 import { phone2ReplySystem } from './phone2reply.js';
 import { runLive } from './phone2run.js';
@@ -117,7 +117,7 @@ export function saveLine(save = saveMeta) {
     };
 }
 export async function liveGo(real, { onChange = () => {} } = {}) {
-    holdReplies(real);
+    followSchedule(real); holdReplies(real);
     const m = () => liveMeta(real, { now: liveNowOf(real) });
     const tell = () => { try { onChange(); } catch (err) { console.error('[narrative-archive] live draw', err); } };
     const line = saveLine();
@@ -145,11 +145,15 @@ export async function liveGo(real, { onChange = () => {} } = {}) {
             } });
             // (Marinara's status · schedule lines, for an owner with a schedule or a status set by hand)
             if (d) { const room = w.messenger.rooms[job.room], last = [...(room?.messages || [])].reverse().find(x => x.text || x.call); d.context = contextBlock(real, job.owner, job.room, { tzOf: n => tzOf(livePhone(real, n) || p), lastRole: last && liveKey(last.from) === liveKey(w.persona) ? 'user' : 'assistant', said: !job.why, intentKey: job.intent || '' }); }
-            return d ? { system: phone2ReplySystem({ owner: d.owner, persona: d.persona }), input: replyInput(d) } : null;
+            return d ? { system: phone2ReplySystem({ owner: d.owner, persona: d.persona, scheduled: !!scheduleOf(real, job.owner) }), input: replyInput(d) } : null;
         },
-        after: async job => {
+        // (an owner with a schedule: the texts carry the schedule's state, not one the model wrote)
+        stateFor: job => { if (!scheduleOf(real, job.owner)) return undefined; const p = livePhone(real, job.owner); return stateNow(real, job.owner, { tz: p ? tzOf(p) : '' })?.text || ''; },
+        after: async (job, got) => {
             const w = liveWorld(real), p = livePhone(real, job.owner);
             if (w && p && w.id === job.world) markPersona(p, w.persona);
+            // (the owner changed their own status in the answer: a temporary one, and the phone follows it)
+            if (w && p && w.id === job.world && got?.status && scheduleOf(real, job.owner) && takeStatus(real, job.owner, got.status, { tz: tzOf(p) })) { followSchedule(real); await line.save(); }
             tell();
         },
     });
@@ -197,8 +201,34 @@ export async function liveMakeSchedule(real, owner, opts = {}) {
     const card = await cardOf(p);
     const ask = (messages, o) => askDraft(messages.filter(x => x.role !== 'system').map(x => x.content).join('\n\n'), { force: true, system: messages.filter(x => x.role === 'system').map(x => x.content).join('\n\n'), maxTokens: o?.maxTokens, effort: 'low' });
     const out = await makeSchedule(real, p.owner, { ...opts, ask, name: p.owner, description: String(card || ''), personality: '', tz: tzOf(p) });
-    if (open(real)) await saveMeta();
+    // (where each thing on it happens: asked once here, kept on the blocks. A failure leaves the schedule without places)
+    try { await fillPlaces(real, p.owner, { ask, parse: t => parseJson(t, { salvage: true }), card, places: knownPlaces(p) }); } catch (err) { console.warn('[narrative-archive] schedule places', err); }
+    delete p.schedAt;
+    if (open(real)) { followSchedule(real); await saveMeta(); }
     return out;
+}
+const ownerRow = p => (p.where?.people || []).find(x => nameKey(x?.name) === nameKey(p.owner)) || null;
+const knownPlaces = p => [ownerRow(p)?.place, ownerRow(p)?.city, ...(p.where?.people || []).map(x => x?.place)].filter(Boolean);
+// 스케줄 블록이 바뀌었으면 그 사람의 폰이 따라가요 (모델을 안 불러요): 상태(p.schedState: 답장 요청의 NOW가 읽어요)와,
+// 블록에 장소가 있으면 위치 정보의 주인 줄 → 바뀐 폰의 수. 저장은 부르는 쪽이 해요
+export function followSchedule(real, now = Date.now()) {
+    const w = liveWorld(real);
+    if (!w) return 0;
+    let n = 0;
+    for (const p of Object.values(w.phones || {})) {
+        if (!p?.owner) continue;
+        const at = stateNow(real, p.owner, { now: new Date(now), tz: tzOf(p) });
+        if (!at || p.schedAt === at.key) continue;
+        p.schedAt = at.key; p.schedState = { text: at.text, at: now };
+        const place = at.place;
+        if (place) {
+            const row = ownerRow(p);
+            if (row) row.place = place;
+            else p.where = { ...(p.where || { at: now }), people: [...(p.where?.people || []), { name: p.owner, place }] };
+        }
+        n++;
+    }
+    return n;
 }
 // 스케줄 손으로 넣기 · 지우기(null), 손으로 상태 주기({ status, activity, minutes } · {} 풀기), 내 상태, 먼저 말 걸기 켜기
 export const liveSetSchedule = async (real, owner, schedule) => { const out = setSchedule(mine(real), owner, schedule); await saveMeta(); return out; };
@@ -208,7 +238,10 @@ export const liveSetAutonomous = async (real, on) => { const out = setAutonomous
 // 1분마다: 먼저 말 걸 때가 된 방이 있으면 그 답장을 줄 세워요 → 줄 세운 수. 그 뒤 liveGo가 돌려요
 export async function liveAutonomous(real, { now = Date.now() } = {}) {
     const w = liveWorld(real);
-    if (!w || !open(real) || !w.presence?.on) return 0;
+    if (!w || !open(real)) return 0;
+    // (a schedule block that began: the phones follow it, whether or not characters write first)
+    if (followSchedule(real, now)) await saveMeta();
+    if (!w.presence?.on) return 0;
     let n = 0;
     for (const room of Object.values(w.messenger?.rooms || {})) {
         if (w.queue.jobs.some(j => j.room === room.id && j.kind === 'reply' && (j.state === 'waiting' || j.state === 'running'))) continue;

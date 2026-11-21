@@ -28,7 +28,8 @@ const appOf = a => PHONE2_APPS.find(x => x.toLowerCase() === one(a).toLowerCase(
 // already said among their newest ones is not said again. "react": an emoji on someone's last text (phone2react.js). The
 // owner has read the room. Returns { said, does, state, react }.
 // Throws when the answer can't be read (nothing is put in).
-export function takeReply(m, owner, roomId, answer, { now = Date.now(), parse = null } = {}) {
+export function takeReply(m, owner, roomId, answer, opts = {}) {
+    const { now = Date.now(), parse = null } = opts;
     const w = liveWorld(m), room = w?.messenger?.rooms?.[roomId];
     if (!w || !room || !room.members.some(n => same(n, owner))) throw new Error('답장을 넣을 방이 없어요');
     const o = objectOf(answer, parse);
@@ -38,19 +39,20 @@ export function takeReply(m, owner, roomId, answer, { now = Date.now(), parse = 
     const raw = (o.reply || []).map(x => (typeof x === 'string' ? x.trim() : '')).slice(0, REPLY_MAX.bubbles), ko = phone2Ko(raw, o.ko);
     const bubbles = raw.map((text, i) => ({ text: text.slice(0, REPLY_MAX.chars), ko: one(ko[i]) === one(text) ? '' : koLike(text, String(ko[i] ?? '').trim()).slice(0, REPLY_MAX.chars) })).filter(b => one(b.text) && !had.has(one(b.text)));
     const does = (Array.isArray(o.does) ? o.does : []).map(d => ({ app: appOf(d?.app), what: one(d?.what).slice(0, REPLY_MAX.what) })).filter(d => d.app && d.what).slice(0, REPLY_MAX.does);
-    const state = stateRest(o.state);
+    // (an owner with a schedule: the state is the schedule's, given by the caller; the answer has none)
+    const given = typeof opts.state === 'string', state = given ? one(opts.state) : stateRest(o.state);
     // (an emoji on someone's last text: on the room as it was before this answer)
     const react = o.react === undefined || o.react === null || o.react === '' ? null : replyReact(o.react, { owner: name, persona: w.persona, members: room.members, messages: room.messages });
     const out = [], msg = (text, extra, k) => ({ id: `t${now.toString(36)}${k}${Math.random().toString(36).slice(2, 6)}`, n: liveNo(w), from: name, text, at: now + k, ...(state ? { state } : {}), ...extra });
     bubbles.forEach((b, k) => out.push(msg(b.text, b.ko ? { ko: b.ko } : {}, k)));
     // (an answer of an emoji alone, with nothing done on the phone, leaves no message: it is no answer to swipe or throw away)
-    if (!out.length && (does.length || (state && !react))) out.push(msg('', { act: true }, 0));
+    if (!out.length && (does.length || (state && !given && !react))) out.push(msg('', { act: true }, 0));
     if (does.length && out.length) out[out.length - 1].does = does;
     room.messages.push(...out);
     // (one with words: the reaction goes with them, out and back when the answer is swiped; one alone stays)
     if (react) putReact(react.on, name, react.e, { at: now, via: out.map(x => x.id) });
     readLive(m, roomId, name, now + out.length);
-    return { said: bubbles.length, does: does.length, state, react: react?.e || '' };
+    return { said: bubbles.length, does: does.length, state, react: react?.e || '', ...(o.status && typeof o.status === 'object' && !Array.isArray(o.status) ? { status: o.status } : {}) };
 }
 
 // 7-3. the line: one job at a time, in order, until none waits. A reply job: gather the request (gather(job) → { system,
@@ -59,7 +61,7 @@ export function takeReply(m, owner, roomId, answer, { now = Date.now(), parse = 
 // why; the user sees it and lets the line go on). Returns { ran, failed }. One runner a chat at a time: a second call
 // while one runs does nothing ({ ran: 0, busy: true }).
 const running = new WeakSet();
-export async function runLive(m, { gather, ask, save = async () => {}, now = () => Date.now(), parse = null, after = null, alive = () => true } = {}) {
+export async function runLive(m, { gather, ask, save = async () => {}, now = () => Date.now(), parse = null, after = null, alive = () => true, stateFor = null } = {}) {
     if (!m || running.has(m)) return { ran: 0, failed: null, busy: true };
     running.add(m);
     let ran = 0, failed = null;
@@ -78,7 +80,7 @@ export async function runLive(m, { gather, ask, save = async () => {}, now = () 
                     if (liveWorld(m)?.id !== job.world) { finishJob(m, job); continue; }
                     // (the chat was left while this was asked: nothing is saved there now; the job is asked again when it is open)
                     if (!alive()) { job.state = 'waiting'; break; }
-                    got = takeReply(m, job.owner, job.room, answer, { now: now(), parse });
+                    got = takeReply(m, job.owner, job.room, answer, { now: now(), parse, state: stateFor ? stateFor(job) : undefined });
                 }
                 finishJob(m, job);
                 ran++;

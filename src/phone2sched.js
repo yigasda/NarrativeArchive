@@ -11,12 +11,13 @@
 
 import { liveWorld, liveKey } from './phone2store.js';
 import { generateCharacterSchedule, generateCharacterDaySchedule, getEffectiveCurrentStatus, getTodaySchedule, getDirectMessageDelay, getMonday, ScheduleDraftError } from './marinara/schedule.service.js';
-import { CONVERSATION_SCHEDULE_DAYS } from './marinara/conversation-presence.js';
+import { CONVERSATION_SCHEDULE_DAYS, getAdjacentScheduleBlocks, getActiveStatusOverride } from './marinara/conversation-presence.js';
 import { toZonedWallClockDate } from './marinara/timezone.js';
 import { buildConversationCurrentContextBlock } from './marinara/conversation-context-block.js';
 import { checkAutonomous, forgetAutonomousSeed } from './marinara/autonomous-check.js';
 import { clearChatActivity, clearGenerationInProgress, buildAutonomousDailyBudgetPatch } from './marinara/autonomous.service.js';
 import { buildIntentCooldownPatch, isMessageIntent } from './marinara/intent.service.js';
+import { applyCharacterStatusCommand } from './marinara/schedule-command.js';
 
 export { ScheduleDraftError, CONVERSATION_SCHEDULE_DAYS };
 const obj = v => v && typeof v === 'object' && !Array.isArray(v);
@@ -125,4 +126,81 @@ export function noteProactive(m, roomId, characterId, intentKey, now = new Date(
     Object.assign(p.meta, buildAutonomousDailyBudgetPatch(p.meta, characterId, now));
     if (isMessageIntent(intentKey)) Object.assign(p.meta, buildIntentCooldownPatch(p.meta, characterId, intentKey, now));
     clearGenerationInProgress(chatIdOf(m, roomId));
+}
+
+// ---- 장소 (마리나라의 스케줄에는 하는 일만 있어요: 어디서인지는 우리가 블록의 place 칸에 따로 둬요. 화면의 스케줄에는 안 나와요)
+const one = v => String(v ?? '').replace(/\s+/g, ' ').trim();
+// 장소를 묻는 지시문 (우리 것: docs/PROMPT-RULES.md의 형식)
+export function placeSystem({ owner = 'the owner' } = {}) {
+    const O = owner;
+    return `GOAL
+${O} has a weekly schedule. For each thing on it, say where ${O} is while doing it.
+
+YOU GET
+- ACTIVITIES: every different thing on the schedule, one a line.
+- ${O}'s card.
+- PLACES (sometimes): places already on ${O}'s phone.
+
+PLACES
+- One short place for each line of ACTIVITIES: a name the phone would show ("home", "St. Mary's Hospital", "the gym on 5th").
+- A place from PLACES or the card when it fits, in the same words. Else the plainest true one.
+- The same place in the same words every time.
+- "" when the activity can be anywhere.
+
+JSON (one object, nothing before or after it)
+{ "places": { "an activity as written": "where" } }`;
+}
+const activities = schedule => [...new Set(Object.values(schedule?.days || {}).flatMap(d => (Array.isArray(d) ? d : []).map(b => one(b?.activity))).filter(Boolean))];
+export function placeInput(schedule, { owner = '', card = '', places = [] } = {}) {
+    const known = [...new Set((Array.isArray(places) ? places : []).map(one).filter(Boolean))];
+    return [`[ACTIVITIES]\n${activities(schedule).map(a => `- ${a}`).join('\n')}`, String(card || '').trim() ? `[${one(owner)}'s card]\n${String(card).trim()}` : '', known.length ? `[PLACES]\n${known.map(x => `- ${x}`).join('\n')}` : ''].filter(Boolean).join('\n\n');
+}
+// 답을 블록에 넣어요: 하는 일이 같은 블록은 같은 장소. 답에 없는 일 · ""는 장소 없이 둬요 → 장소가 생긴 블록 수
+export function takePlaces(schedule, answer) {
+    const got = obj(answer?.places) ? answer.places : null;
+    if (!got) throw new Error('장소 답을 읽을 수 없어요');
+    const by = new Map(Object.entries(got).map(([k, v]) => [one(k).toLowerCase(), one(v).slice(0, 80)]));
+    let n = 0;
+    for (const d of Object.values(schedule.days || {})) for (const b of Array.isArray(d) ? d : []) {
+        const place = by.get(one(b?.activity).toLowerCase());
+        if (place) { b.place = place; n++; } else delete b.place;
+    }
+    return n;
+}
+// 스케줄의 블록마다 장소 채우기 (모델을 한 번 불러요). ask(messages) → 답 글; parse(글) → 객체
+export async function fillPlaces(m, owner, { ask, parse = JSON.parse, card = '', places = [] } = {}) {
+    const schedule = scheduleOf(m, owner);
+    if (!schedule) throw new Error('먼저 스케줄을 만들어 주세요');
+    if (!activities(schedule).length) return 0;
+    const text = await ask([{ role: 'system', content: placeSystem({ owner }) }, { role: 'user', content: placeInput(schedule, { owner, card, places }) }]);
+    return takePlaces(schedule, parse(text));
+}
+// 지금 스케줄 블록 → { key (요일 · 시간: 블록이 바뀌면 달라져요), block, text ("장소 · 하는 일 · ~끝나는 시각") } | null
+// (손으로 준 상태가 살아 있는 동안은 null: 스케줄을 따르는 중이 아니에요)
+export function blockNow(m, owner, { now = new Date(), tz = '' } = {}) {
+    const p = peek(m), k = liveKey(owner), schedule = p.schedules?.[k];
+    if (!schedule || getActiveStatusOverride(p.overrides?.[k], now)) return null;
+    const wall = toZonedWallClockDate(now, tz || undefined), block = getAdjacentScheduleBlocks(schedule, wall).current;
+    if (!block) return null;
+    const end = one(block.time).split('-')[1] || '';
+    return { key: `${wall.getDay()} ${block.time}`, block, text: [one(block.place), one(block.activity), end ? `~${end}` : ''].filter(Boolean).join(' · ') };
+}
+
+// 지금 그 사람의 상태 글과 장소: 살아 있는 임시 상태(손으로 준 것 · 캐릭터가 스스로 바꾼 것)가 있으면 그것, 없으면 지금 스케줄 블록
+//   → { key (바뀌면 달라져요), text ("장소 · 하는 일 …"), place } | null
+export function stateNow(m, owner, { now = new Date(), tz = '' } = {}) {
+    const p = peek(m), k = liveKey(owner), o = getActiveStatusOverride(p.overrides?.[k], now);
+    if (o) return { key: `o ${o.createdAt}`, text: [one(o.place), one(o.activity) || o.status].filter(Boolean).join(' · '), place: one(o.place) };
+    const at = blockNow(m, owner, { now, tz });
+    return at ? { key: at.key, text: at.text, place: one(at.block.place) } : null;
+}
+// 캐릭터가 답장에서 스스로 상태를 바꿨어요 (마리나라의 schedule_update 명령: 임시 상태로 두고, 시간이 지나면 스케줄로 돌아가요)
+//   cmd: { status, activity, duration ("1h"), place (우리 칸: 어디서) } → 새 임시 상태 | null (안 바뀜: 손으로 준 상태가 있거나 빈 명령)
+export function takeStatus(m, owner, cmd, { now = new Date(), tz = '' } = {}) {
+    if (!obj(cmd)) return null;
+    const p = presenceOf(m), k = liveKey(owner), status = STATUSES.includes(String(cmd.status || '').toLowerCase()) ? String(cmd.status).toLowerCase() : undefined;
+    const got = applyCharacterStatusCommand({ command: { type: 'schedule_update', status, activity: one(cmd.activity).slice(0, 120) || undefined, duration: one(cmd.duration) || undefined }, current: p.overrides[k], schedule: p.schedules[k], now, scheduleNow: toZonedWallClockDate(now, tz || undefined) });
+    if (!got) return null;
+    const place = one(cmd.place).slice(0, 80);
+    return (p.overrides[k] = { ...got, ...(place ? { place } : {}) });
 }

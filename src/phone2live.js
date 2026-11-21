@@ -57,7 +57,9 @@ export function gatherReply(m, owner, roomId, { now = Date.now(), tz = 'UTC', de
     numberLive(w);
     const P = w.persona, wall = ms => liveWall(tz, w.dayShift, ms).at, at = wall(now), today = at.slice(0, 5), nowOrder = order(at, today);
     const mine = Object.values(w.messenger.rooms).filter(r => r.members.some(n => same(n, owner))).flatMap(r => r.messages || []).filter(x => same(x.from, owner)).sort((a, b) => a.n - b.n);
-    const lastState = one([...mine].reverse().find(x => one(x.state))?.state);
+    // (a schedule block entered since the owner's last text: the state the schedule wrote then, followSchedule)
+    const stated = [...mine].reverse().find(x => one(x.state));
+    const lastState = one(p.schedState?.text) && Number(p.schedState.at) > (Number(stated?.at) || 0) ? one(p.schedState.text) : one(stated?.state);
     // the calendar: today's, then the days ahead (called-off plans left out)
     const evs = (p.events || []).filter(e => DAY.test(one(e.date)) && !e.cancelled && e?.src !== 'guess' && one(e.title));
     const line = (e, day) => `${day ? `${one(e.date)} ` : ''}${/^\d{2}:\d{2}$/.test(one(e.time)) ? `${one(e.time)} ` : ''}${one(e.title)}`;
