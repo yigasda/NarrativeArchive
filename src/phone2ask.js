@@ -5,7 +5,7 @@
 //
 // 블록 순서(있는 것만, 블록 사이는 빈 줄 하나): LANGUAGES · MESSENGER · CHAT SUMMARY · NOW · OWNER'S CLOCK · WEATHER NOW ·
 // RECENT ON THE PHONE · SITUATIONS · [<주인>'s card] · PERSONA · VOICES · PEOPLE AROUND · OWNER DOESN'T KNOW · STORY ·
-// LAST MESSAGES · TYPED AND DELETED · WHY NOW
+// LAST MESSAGES · TYPED AND DELETED · WHY NOW (and CONTEXT after NOW: Marinara's status · schedule lines, phone2sched.js)
 
 const one = v => String(v ?? '').replace(/\s+/g, ' ').trim();
 const list = v => (Array.isArray(v) ? v : []).map(one).filter(Boolean);
@@ -72,6 +72,7 @@ export function replyInput(d) {
         messengerBlock(O, d.messenger),
         one(d.summary) ? `[CHAT SUMMARY]\n${String(d.summary).trim()}` : '',
         nowBlock(d.persona, d.now),
+        String(d.context || '').trim() ? `[CONTEXT]\n${String(d.context).trim()}` : '',
         String(d.clock || '').trim(),
         one(d.weather) ? `[WEATHER NOW]\n${one(d.weather)}` : '',
         recentBlock(d.recent, d.today),

@@ -25,6 +25,7 @@ import { liveStoryText } from './phone2story.js';
 import { BACK, backLeft, backInput, phone2BackSystem, takeBack, backMessage, markTold } from './phone2back.js';
 import { liveWall } from './phone2clock.js';
 import { gatherReply } from './phone2live.js';
+import { presenceOf, scheduleOf, setSchedule, setStatusOverride, setUserStatus, setAutonomous, statusNow, replyDelay, contextBlock, makeSchedule, checkProactive, noteProactive } from './phone2sched.js';
 import { replyInput } from './phone2ask.js';
 import { phone2ReplySystem } from './phone2reply.js';
 import { runLive } from './phone2run.js';
@@ -116,6 +117,7 @@ export function saveLine(save = saveMeta) {
     };
 }
 export async function liveGo(real, { onChange = () => {} } = {}) {
+    holdReplies(real);
     const m = () => liveMeta(real, { now: liveNowOf(real) });
     const tell = () => { try { onChange(); } catch (err) { console.error('[narrative-archive] live draw', err); } };
     const line = saveLine();
@@ -141,6 +143,8 @@ export async function liveGo(real, { onChange = () => {} } = {}) {
                 // (the role-play's last messages as they stand now: read at this moment, no place kept)
                 before: () => (open(real) ? liveChatTail().lines : []),
             } });
+            // (Marinara's status · schedule lines, for an owner with a schedule or a status set by hand)
+            if (d) { const room = w.messenger.rooms[job.room], last = [...(room?.messages || [])].reverse().find(x => x.text || x.call); d.context = contextBlock(real, job.owner, job.room, { tzOf: n => tzOf(livePhone(real, n) || p), lastRole: last && liveKey(last.from) === liveKey(w.persona) ? 'user' : 'assistant', said: !job.why, intentKey: job.intent || '' }); }
             return d ? { system: phone2ReplySystem({ owner: d.owner, persona: d.persona }), input: replyInput(d) } : null;
         },
         after: async job => {
@@ -165,6 +169,63 @@ export async function liveGo(real, { onChange = () => {} } = {}) {
     }
     return out;
 }
+// ---- 스케줄 · 상태 · 먼저 말 걸기 · 늦은 답 (phone2sched.js: 판단과 지시문은 마리나라의 것)
+// 줄 선 답장마다 그 사람의 지금 상태로 때를 정해요: 바쁘면 그만큼 뒤로, 오프라인이면 돌아올 때까지 (1분마다 다시 봐요)
+export function holdReplies(real, now = Date.now()) {
+    const w = liveWorld(real);
+    if (!w) return 0;
+    let held = 0;
+    for (const j of w.queue.jobs) {
+        if (j.kind !== 'reply' || j.state !== 'waiting' || j.timed) continue;
+        const p = livePhone(real, j.owner), delay = replyDelay(real, j.owner, { now: new Date(now), tz: p ? tzOf(p) : '' });
+        if (delay === null) { j.notBefore = now + 60_000; j.away = true; held++; continue; }
+        delete j.away; j.timed = true;
+        if (delay > 0) { j.notBefore = (j.at || now) + delay; if (j.notBefore > now) held++; } else delete j.notBefore;
+    }
+    return held;
+}
+// 늦게 올 답장: [{ owner, room, until (ms; 오프라인이면 null), away }]
+export const liveReplyWait = (real, now = Date.now()) => (liveWorld(real)?.queue.jobs || []).filter(j => j.kind === 'reply' && j.state === 'waiting' && j.notBefore > now).map(j => ({ owner: j.owner, room: j.room, until: j.away ? null : j.notBefore, away: !!j.away }));
+// 지금 상태 { status, activity } | null · 스케줄 (마리나라의 WeekSchedule) | null
+export const liveStatus = (real, owner) => { const p = livePhone(real, owner); return statusNow(real, owner, { tz: p ? tzOf(p) : '' }); };
+export const liveSchedule = (real, owner) => scheduleOf(real, owner);
+export const livePresence = real => (liveWorld(real) ? presenceOf(real) : null);
+// 스케줄 만들기 (모델을 불러요). opts: { guidance, mode: 'rewrite'|'adjust'|'vary'|'repair', day: 'Monday'… (그날만) } → 스케줄
+export async function liveMakeSchedule(real, owner, opts = {}) {
+    const p = livePhone(mine(real), owner);
+    if (!p) throw new Error('그 사람의 폰이 없어요');
+    const card = await cardOf(p);
+    const ask = (messages, o) => askDraft(messages.filter(x => x.role !== 'system').map(x => x.content).join('\n\n'), { force: true, system: messages.filter(x => x.role === 'system').map(x => x.content).join('\n\n'), maxTokens: o?.maxTokens, effort: 'low' });
+    const out = await makeSchedule(real, p.owner, { ...opts, ask, name: p.owner, description: String(card || ''), personality: '', tz: tzOf(p) });
+    if (open(real)) await saveMeta();
+    return out;
+}
+// 스케줄 손으로 넣기 · 지우기(null), 손으로 상태 주기({ status, activity, minutes } · {} 풀기), 내 상태, 먼저 말 걸기 켜기
+export const liveSetSchedule = async (real, owner, schedule) => { const out = setSchedule(mine(real), owner, schedule); await saveMeta(); return out; };
+export const liveSetStatus = async (real, owner, o = {}) => { const out = setStatusOverride(mine(real), owner, o); for (const j of liveWorld(real).queue.jobs) if (j.state === 'waiting' && liveKey(j.owner) === liveKey(owner)) { delete j.timed; delete j.notBefore; } await saveMeta(); return out; };
+export const liveSetUserStatus = async (real, o = {}) => { const out = setUserStatus(mine(real), o); await saveMeta(); return out; };
+export const liveSetAutonomous = async (real, on) => { const out = setAutonomous(mine(real), on); await saveMeta(); return out; };
+// 1분마다: 먼저 말 걸 때가 된 방이 있으면 그 답장을 줄 세워요 → 줄 세운 수. 그 뒤 liveGo가 돌려요
+export async function liveAutonomous(real, { now = Date.now() } = {}) {
+    const w = liveWorld(real);
+    if (!w || !open(real) || !w.presence?.on) return 0;
+    let n = 0;
+    for (const room of Object.values(w.messenger?.rooms || {})) {
+        if (w.queue.jobs.some(j => j.room === room.id && j.kind === 'reply' && (j.state === 'waiting' || j.state === 'running'))) continue;
+        const cards = {};
+        for (const name of room.members) { const c = ctx().characters?.find(x => liveKey(x?.name) === liveKey(name)); if (c) cards[liveKey(name)] = c.data || c; }
+        const r = checkProactive(real, room.id, { now: new Date(now), tzOf: name => { const p = livePhone(real, name); return p ? tzOf(p) : ''; }, cards });
+        const k = r.shouldTrigger ? r.characterIds?.[0] : null, name = k && room.members.find(x => liveKey(x) === k);
+        if (!name) continue;
+        const job = enqueueJob(real, { kind: 'reply', owner: name, room: room.id, at: now, why: r.autonomousIntent || 'You have a free moment.' });
+        if (r.autonomousIntentKey) job.intent = r.autonomousIntentKey;
+        noteProactive(real, room.id, k, r.autonomousIntentKey, new Date(now));
+        n++;
+    }
+    if (n) await saveMeta();
+    return n;
+}
+
 // 메신저를 나갈 때: what was said on the messenger since the last time goes into the owner's 폰 2 (as many rounds as it
 // takes, LIVE_GO.rounds at most). Nothing to read: no model call. A reply still on its way: not now (its talk is read
 // whole the next time). A failure leaves the phone as it was and says why on it (p.liveReflectError); the messages stay

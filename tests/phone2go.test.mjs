@@ -262,7 +262,7 @@ test('해가 바뀐 뒤의 반영: 되돌리면 연도도 돌아오고, 실패�
 });
 
 test('폰 1은 이 파일을 안 불러요', async () => {
-    for (const f of (await readdir(new URL('../src/', import.meta.url))).filter(f => f.endsWith('.js') && f !== 'phone2go.js' && f !== 'phone.js')) assert.doesNotMatch(await readFile(new URL(`../src/${f}`, import.meta.url), 'utf8'), /phone2go/, f);
+    for (const f of (await readdir(new URL('../src/', import.meta.url))).filter(f => f.endsWith('.js') && f !== 'phone2go.js' && f !== 'phone2tick.js' && f !== 'phone.js')) assert.doesNotMatch(await readFile(new URL(`../src/${f}`, import.meta.url), 'utf8'), /phone2go/, f);
 });
 
 test('말도 한 일도 없이 상태만 바뀐 답은 반영할 게 아니에요: 반영한 뒤 "안 읽은 대화"가 남지 않아요', async () => {

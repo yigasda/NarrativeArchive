@@ -3,3 +3,5 @@
 export const logDebugOverride = () => {};
 export const isDebugAgentsEnabled = () => false;
 export const logger = { debug() {}, info() {}, warn() {}, error() {} };
+// (the ported context block is put under our own "[CONTEXT]" heading: nothing is wrapped here)
+export const wrapContent = content => String(content ?? '').trim();

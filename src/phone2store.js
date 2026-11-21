@@ -423,10 +423,11 @@ export function reviveJobs(m) {
 }
 export const queueStopped = m => !!liveWorld(m)?.queue.jobs.some(j => j.state === 'failed' && !j.seen);
 // the next job to run, or null: none while one runs, none while a failure waits to be seen
-export function nextJob(m) {
+// (a job with notBefore waits until then: a reply held back by its owner's schedule, phone2sched.js)
+export function nextJob(m, now = Date.now()) {
     const w = liveWorld(m);
     if (!w || queueStopped(m) || w.queue.jobs.some(j => j.state === 'running')) return null;
-    const j = w.queue.jobs.find(x => x.state === 'waiting');
+    const j = w.queue.jobs.find(x => x.state === 'waiting' && !(x.notBefore > now));
     if (j) j.state = 'running';
     return j || null;
 }
