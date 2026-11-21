@@ -336,7 +336,8 @@ export async function openPhone(who = null) {
             // 답장을 기다리는 중이면 입력 중, 멈춘 실패가 있으면 그 줄(다시는 사람이 누를 때만). 1:1 머리 아래는 상대의 가장 최근 상태
             const jobs = w.queue?.jobs || [], typing = !ro && jobs.some(j => j.room === r.id && (j.state === 'waiting' || j.state === 'running'));
             const fail = ro ? null : jobs.find(j => j.room === r.id && j.state === 'failed' && !j.seen) || null;
-            const state = group ? '' : [...r.messages].reverse().find(x => liveKey(x.from) === liveKey(os[0]) && String(x.state || '').trim())?.state || '';
+            // (이름 아래 줄: 스케줄이 있는 사람은 폰의 schedState("장소 · 하는 일 · ~끝나는 시각", 반영 쪽이 1분마다 맞춰요), 없는 사람은 답장의 state. 대화 상태 카드와 같은 얘기를 하게)
+            const state = group ? '' : (liveSchedule(realM, os[0]) && String(livePhone(realM, os[0])?.schedState?.text || '').trim()) || [...r.messages].reverse().find(x => liveKey(x.from) === liveKey(os[0]) && String(x.state || '').trim())?.state || '';
             const presUi = () => { if (!obPres || ro) return null; const on = !!livePresence(realM)?.on, waits = liveReplyWait(realM);
                 return { open: obPresOpen, people: os.map(n => { const st = liveStatus(realM, n), sc = liveSchedule(realM, n), last = [...r.messages].reverse().find(x => liveKey(x.from) === liveKey(n))?.at;
                     const any = sc && SCH_DAYS.some(d => sc.days?.[d]?.length), next = sc && on ? schNext(sc, tzOf(n)) : [];
