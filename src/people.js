@@ -53,12 +53,16 @@ export function peopleList(m) {
 }
 
 // SillyTavern's avatar: the small thumbnail, or (big) the full picture so a large face isn't blown up from a thumbnail
+// 지금 고른 페르소나의 사진 파일 (실리태번 personas.js의 user_avatar: 바뀔 때마다 따라와요). 이름이 같은 페르소나가 여럿이면
+// 이름으로 찾은 첫 사진이 나와서, 페르소나를 바꿔도 프사가 그대로였어요(소망). 브라우저에서만 읽어요
+let stPersonas = null;
+if (typeof window !== 'undefined') import('/scripts/personas.js').then(m => { stPersonas = m; }).catch(() => { /* (옛 실리태번: 이름으로 찾아요) */ });
 export function stFace(name, big = false) {
     const c = ctx(), k = nameKey(name);
     const ch = (c.characters || []).find(x => nameKey(x?.name) === k);
     if (ch?.avatar && ch.avatar !== 'none') return big ? `/characters/${encodeURIComponent(ch.avatar)}` : `/thumbnail?type=avatar&file=${encodeURIComponent(ch.avatar)}`;
-    const per = c.powerUserSettings?.personas || {};
-    const f = Object.keys(per).find(f => nameKey(per[f]) === k);
+    const per = c.powerUserSettings?.personas || {}, cur = stPersonas?.user_avatar;
+    const f = cur && per[cur] !== undefined && nameKey(c.name1) === k ? cur : Object.keys(per).find(f => nameKey(per[f]) === k);
     return f ? (big ? `/User%20Avatars/${encodeURIComponent(f)}` : `/thumbnail?type=persona&file=${encodeURIComponent(f)}`) : '';
 }
 

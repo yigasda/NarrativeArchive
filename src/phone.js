@@ -2226,6 +2226,24 @@ export async function openPhone(who = null) {
         $root.on('click', '.na_ph_quit', e => { e.stopPropagation(); close(); });
         $root.on('click', '.na_ph_wrap', e => { if (e.target === e.currentTarget) { if (sheetOpen) setSheet(false); else close(); } });
         dlg.addEventListener('cancel', e => { e.preventDefault(); if (ask) ask.done(false); else if (sheetOpen) setSheet(false); else close(); });
+        // 껍데기 앱의 기기 뒤로가기 (앱이 window.__naBack을 불러요): 폰 안에서 한 단계씩 — 떠 있는 것(물음 창 · 시트 · 길게 누른 카드 · 고치는 중 · 고르는 중)
+        // → 그 화면의 뒤로 버튼 → 홈 → (홈 · 잠금에서만) 폰 닫기. 홈 막대를 숨긴 뒤로 뒤로가기가 폰을 통째로 닫았어요(소망)
+        const backWas = window.__naBack;
+        if (window.NAShell) window.__naBack = () => {
+            if (!dlg.open) return backWas ? backWas() : 0;
+            const v = String(view || '').split(':')[0];
+            if (ask) ask.done(false);
+            else if (sheetOpen) setSheet(false);
+            else if (obFix || obHeld || obPicks || obList) { obFix = null; obHeld = null; obPicks = null; obList = null; drawPhone(true); }
+            else {
+                const b = $root.find('.na_ph_frame [data-go]').filter('[aria-label="뒤로"], [aria-label="닫기"]')[0];
+                if (b) b.click();
+                else if (!['home', 'home2', 'lock'].includes(v) && $root.find('.na_ph_frame .na_ph_scr').length) { const x = document.createElement('button'); x.dataset.go = 'home'; x.hidden = true; $root.find('.na_ph_frame .na_ph_scr')[0].append(x); x.click(); }
+                else close();
+            }
+            return 1;
+        };
+        dlg.addEventListener('close', () => { if (window.NAShell) window.__naBack = backWas; }, { once: true });
         dlg.addEventListener('close', () => { phoneClosed = true; setPhoneMeta(null); if (liveMode(realM) === 'live' && stillHere()) obReflect(); ask?.done(false); done(); }, { once: true });
     });
     window.visualViewport?.removeEventListener('resize', kbSoon); window.visualViewport?.removeEventListener('scroll', kbSoon); window.removeEventListener('resize', kbSoon);
