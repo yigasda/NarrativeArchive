@@ -71,9 +71,9 @@ const LI = {
 const li = (k, s = 18, w = 2) => `<svg aria-hidden="true" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round">${LI[k] || ''}</svg>`;
 
 // 맨 화면의 줄: [화면, 아이콘, 이름]. 값은 orbitSetRows가 붙여요
-export const ORBIT_SET_TITLES = { profile: '설정 프로필', branches: '채팅 분기', conn: '연결', preset: '프롬프트 프리셋', persona: '페르소나', people: '캐릭터', group: '단체 채팅', linked: '연결된 채팅', lore: '로어북', ctx: '활성 컨텍스트', agents: '에이전트', gallery: '갤러리', memory: '기억 회상', memlist: '이 채팅의 기억', tools: '기능 호출', trans: '번역', auto: '자율 메시지', tz: '스케줄 시간대', sum: '자동 요약', sumedit: '요약 편집', name: '채팅 제목' };
+export const ORBIT_SET_TITLES = { profile: '설정 프로필', branches: '채팅 분기', conn: '연결', preset: '프롬프트 프리셋', persona: '페르소나', people: '캐릭터', group: '단체 채팅', linked: '연결된 채팅', lore: '로어북', ctx: '활성 컨텍스트', agents: '에이전트', gallery: '갤러리', memory: '기억 회상', memlist: '이 채팅의 기억', trans: '번역', auto: '자율 메시지', tz: '스케줄 시간대', sum: '자동 요약', sumedit: '요약 편집', name: '채팅 제목' };
 const HELP = {
-    profile: '설정 프로필은 이 채팅의 제공자, 프롬프트, 에이전트, 도구, 번역, 기억 등의 설정을 저장해 다시 쓸 수 있게 합니다. 캐릭터, 스프라이트, 요약, 태그, 장면 프롬프트는 바꾸지 않습니다. 프로필의 페르소나, 로어북, 배경은 적용할 때 채팅으로 복사됩니다. 별표를 누르면 이 모드의 새 채팅에 사용됩니다.',
+    profile: '설정 프로필은 이 채팅의 제공자, 프롬프트, 에이전트, 번역, 기억 등의 설정을 저장해 다시 쓸 수 있게 합니다. 캐릭터, 스프라이트, 요약, 태그, 장면 프롬프트는 바꾸지 않습니다. 프로필의 페르소나, 로어북, 배경은 적용할 때 채팅으로 복사됩니다. 별표를 누르면 이 모드의 새 채팅에 사용됩니다.',
     name: '이 이름은 나에게만 보입니다. AI에게 전송되지 않으며 대화에 아무 영향도 주지 않습니다.',
     branches: '이 채팅의 분기를 전환, 이름 변경, 내보내기, 가져오기 합니다.',
     conn: '이 채팅이 사용하는 모델입니다. 여기서 고르면 이 채팅만 바뀝니다. \'기본값 사용\'은 메인 모델을 따르고, \'무작위\'는 무작위 풀에서 매번 다른 모델을 고릅니다.',
@@ -81,14 +81,13 @@ const HELP = {
     persona: '페르소나는 이 채팅에서 내가 누구인지 정의합니다. AI는 이 페르소나의 이름으로 나를 부르고 세부 정보를 맥락으로 사용합니다.',
     people: '이 채팅의 캐릭터입니다. 캐릭터마다 AI가 연기하는 고유한 성격이 있습니다.',
     group: '묶은 응답 하나 또는 캐릭터별 개별 차례 중에서 고릅니다. 개별 응답은 응답하는 캐릭터마다 모델 요청을 따로 사용합니다.',
-    linked: '이 채팅이 다른 채팅에 대해 무엇을 아는지 정하거나, 롤플레이 또는 게임에 연결합니다. 연결된 메시지는 자동으로 공유됩니다. 〈influence〉는 그쪽의 한 차례를 이끌고 〈note〉는 지울 때까지 남습니다.',
+    linked: '이 채팅이 다른 채팅에 대해 무엇을 아는지 정하거나, 롤플레이에 연결합니다. 연결된 메시지는 자동으로 공유됩니다. 〈influence〉는 그쪽의 한 차례를 이끌고 〈note〉는 지울 때까지 남습니다.',
     lore: '로어북에는 세계 정보, 배경 이야기, 설정이 담깁니다. 키워드가 채팅에 나오면 AI가 해당 항목을 받습니다.',
     ctx: '이 채팅에서 활성화된 로어북과 컨텍스트를 봅니다.',
     agents: '대화 명령, 사용자 지정 에이전트, 설치된 기능 패키지가 제공하는 설정을 구성합니다.',
     gallery: '이 채팅의 이미지와 동영상을 보고 만듭니다.',
     memory: '이전 대화에서 관련된 부분을 필요할 때 기억으로 불러옵니다. 로컬 임베딩 모델이 있으면 그것을, 없으면 임베딩 제공자를 사용합니다.',
-    tools: '켜면 AI가 대화 중에 주사위 굴림, 게임 상태 갱신, 로어북 검색 같은 내장 도구를 호출할 수 있습니다.',
-    trans: '이 채팅의 번역을 여기서 설정합니다. 제공자, 대상 언어, 게임 모드의 자동 응답 번역이 포함됩니다.',
+    trans: '이 채팅의 번역을 여기서 설정합니다. 제공자와 대상 언어가 포함됩니다.',
     auto: '캐릭터가 성격, 내 상태, 선택적 스케줄에 따라 먼저 메시지를 보낼 수 있습니다. 수다스러운 캐릭터는 내가 활동하지 않을 때 더 빨리 연락합니다.',
     sum: '요청을 작게 유지하려고 대화가 스스로 요약됩니다. 하루마다 일간 요약이 만들어지고, 여러 날은 주간 요약으로 합쳐집니다. AI는 주간 요약, 이번 주의 일간 요약, 오늘의 메시지를 봅니다. 아직 끌 수 없습니다.',
 };
@@ -148,16 +147,20 @@ export function orbitSetPage(T, face) {
                     + cd(tg('gTurn', '프롬프트에 차례 추가', g('gTurn', true) ? '개별 차례마다 응답하는 캐릭터에 대한 짧은 지시가 포함됩니다.' : '개별 차례는 차례 지시 없이 컨텍스트에 의존합니다.', true)) : ''); },
         // 연결된 채팅 (7535–7647)
         linked: () => H + cd(tg('cross', '채팅 간 인식', '캐릭터가 자신의 다른 채팅에서 일어나는 일을 압니다', true))
-            + (T.open === 'linkPick' ? cd(pad(`<div class="ot_r"><div class="os_q ot_q0" style="flex:1">${li('search', 16)}<div class="os_qi na_os_in" data-k="linkQ" contenteditable="true" role="textbox" enterkeyhint="search" spellcheck="false" data-ph="롤플레이 또는 게임 채팅 검색" aria-label="롤플레이 또는 게임 채팅 검색">${esc(g('linkQ', ''))}</div></div>${ib('x', '선택기 닫기', 'na_os_sel', ' data-k="linkPick"')}</div>`)) : `<button type="button" class="ot_add na_os_sel" data-k="linkPick" aria-label="롤플레이 또는 게임에 연결">${li('plus', 15, 2.2)}롤플레이 또는 게임에 연결</button>`)
-            + area('discord', 'Discord 미러', '', 'https://discord.com/api/webhooks/...', { rows: 1, hint: g('discord', '') && !/^https:\/\/(discord|discordapp)\.com\/api\/webhooks\/\d+\/.+/.test(String(g('discord', '')).trim()) ? '<span class="ot_err">웹훅 URL 형식이 올바르지 않습니다</span>' : '' }),
+            + (T.open === 'linkPick' ? cd(pad(`<div class="ot_r"><div class="os_q ot_q0" style="flex:1">${li('search', 16)}<div class="os_qi na_os_in" data-k="linkQ" contenteditable="true" role="textbox" enterkeyhint="search" spellcheck="false" data-ph="롤플레이 채팅 검색" aria-label="롤플레이 채팅 검색">${esc(g('linkQ', ''))}</div></div>${ib('x', '선택기 닫기', 'na_os_sel', ' data-k="linkPick"')}</div>`)) : `<button type="button" class="ot_add na_os_sel" data-k="linkPick" aria-label="롤플레이에 연결">${li('plus', 15, 2.2)}롤플레이에 연결</button>`),
         // 로어북 (LorebooksSection)
         lore: () => H + cd(inp('loreBudget', '로어북 토큰 예산', '', '기본값', { num: true })) + hp('이 채팅에서 활성화된 로어북 검색 결과의 컨텍스트 상한입니다. 0으로 설정하면 제한이 없습니다.')
             + none('이 채팅에 활성화된 로어북이 없습니다.')
             + (T.open === 'lorePick' ? cd(pad(`<div class="ot_r"><div class="os_q ot_q0" style="flex:1">${li('search', 16)}<div class="os_qi na_os_in" data-k="loreQ" contenteditable="true" role="textbox" enterkeyhint="search" spellcheck="false" data-ph="로어북 검색…" aria-label="로어북 검색">${esc(g('loreQ', ''))}</div></div>${ib('x', '선택기 닫기', 'na_os_sel', ' data-k="lorePick"')}</div>`), none('사용할 수 있는 로어북이 이미 모두 여기에 활성화되어 있습니다.')) : `<button type="button" class="ot_add na_os_sel" data-k="lorePick" aria-label="로어북 추가">${li('plus', 15, 2.2)}로어북 추가</button>`),
         // 활성 컨텍스트 (ActiveLorebookEntriesContent, 읽기 전용)
-        ctx: () => H + none('이 채팅에 활성 항목이 없습니다'),
+        ctx: () => { const C = T.ctx || { items: [] }, BD = { constant: 'CONST', selective: 'SELECT', normal: 'NORMAL' };
+            const row = (x, i) => `<div role="button" tabindex="0" class="os_rw ot_t ot_cx na_os_sel" data-k="ctx:${i}" aria-label="${esc(x.name)}"><i class="ot_dot ${x.st}"></i><span class="ot_x"><span class="ot_cl"><span class="os_l">${esc(x.name)}</span><span class="ot_chip">${BD[x.st] || 'NORMAL'}</span>${x.vector ? `<span class="ot_chip">벡터${x.score ? ` ${esc(x.score)}` : ''}</span>` : ''}${x.loc ? '<span class="ot_chip">위치</span>' : ''}<span class="ot_u cg_num">#${esc(String(x.order))}</span></span><span class="os_d">${esc(x.book)} · ${esc(x.src)}</span>${x.keys?.length ? `<span class="os_d">키: ${esc(x.keys.slice(0, 5).join(', '))}${x.keys.length > 5 ? ` +${x.keys.length - 5}` : ''}</span>` : ''}${x.hit ? `<span class="os_d">일치: ${esc(x.hit)}</span>` : ''}${T.open === `ctx:${i}` ? `<span class="ot_tx">${esc(x.text) || '(비어 있음)'}</span>` : ''}</span><button type="button" class="os_go na_ob_soon" aria-label="${esc(x.book)}에서 ${esc(x.name)} 열기">열기</button></div>`;
+            const loc = C.items.filter(x => x.loc), rest = C.items.filter(x => !x.loc), ix = x => C.items.indexOf(x);
+            return H + (C.items.length ? `<div class="ot_r"><span class="ot_cnt"><b>${C.items.length}</b>개 활성 • ~${esc(String(C.tokens || 0))} 토큰</span></div>`
+                + (C.skipped ? `<div class="ot_box warn">${li('triangle-alert', 15)}<span>일치하는 로어 항목 ${C.skipped}개가 토큰 예산으로 건너뛰어졌습니다</span></div>` : '')
+                + (loc.length ? cap('현재 위치') + cd(...loc.map(x => row(x, ix(x)))) : '') + (rest.length ? (loc.length ? cap('그 밖의 활성 로어') : '<div class="os_cap"></div>') + cd(...rest.map(x => row(x, ix(x)))) : '') : none('이 채팅에 활성 항목이 없습니다')); },
         // 에이전트 (대화 화면 7130–7532): 명령 카드 + 스케줄 생성 환경설정. 패키지가 있어야 뜨는 카드는 docs/MARINARA-PORT.md
-        agents: () => H + cap('명령') + cd(tg('cmds', '명령', '모델이 스케줄, 장면, 미디어, 반응, 게임 등 설치된 명령으로 나와 상호작용할 수 있게 합니다.', true), ...(g('cmds', true) ? COMMANDS.map(([k, l, d]) => tg(`cmd:${k}`, l, d, true)) : []))
+        agents: () => H + cap('명령') + cd(tg('cmds', '명령', '모델이 스케줄, 장면, 미디어, 반응 등 설치된 명령으로 나와 상호작용할 수 있게 합니다.', true), ...(g('cmds', true) ? COMMANDS.map(([k, l, d]) => tg(`cmd:${k}`, l, d, true)) : []))
             + area('schedPrefs', '스케줄 생성 환경설정', '', '예: 모두 자정 전에 자게 해 주세요. 캐릭터에게 오전 10시~정오에 자유 시간을 주세요. 저는 평일 9시~5시에 일합니다.', { rows: 4, hint: '전역 설정입니다. 모든 대화 채팅의 다음 스케줄 재생성(수동 또는 주간 자동)에 적용됩니다.' })
             + hp('캐릭터 스케줄을 생성하는 방식을 이끄는 자유 형식 지침입니다. 지시(\'자정 넘어서는 아무도 깨어 있지 않게\')와 사실 조건(\'나는 9시~5시에 일함\') 모두 됩니다.')
             + (String(g('schedPrefs', '')).trim() ? `<div class="ot_box"><b>스케줄 생성 환경설정 활성</b><span>“${esc(String(g('schedPrefs', '')).trim().slice(0, 120))}”</span><span>다음에 스케줄을 재생성할 때 적용됩니다.</span></div>` : ''),
@@ -174,12 +177,6 @@ export function orbitSetPage(T, face) {
         // 이 채팅의 기억 (MemoryRecallMemoriesModal)
         memlist: () => `<div class="ot_r"><span class="ot_cnt"><b>0</b> 기억 조각</span><i class="os_sp"></i>${ib('upload', '기억 내보내기', 'na_ob_soon', ' disabled')}${ib('download', '기억 가져오기')}${soon('모두 다시 벡터화', 'refresh-cw', 'os_go', { aria: '모든 기억 다시 벡터화' })}${ib('trash-2', '모든 기억 지우기', 'na_ob_soon', ' disabled')}</div>`
             + none('이 채팅에는 아직 회상 기억이 만들어지지 않았습니다. 생성 후 메시지 5개씩 묶어 만들어집니다.'),
-        // 기능 호출 (FunctionCallingSection, 대화 모드 부분)
-        tools: () => { const on = !!g('toolsOn', false);
-            return H + cd(tg('toolsOn', '도구 사용', 'AI가 함수(주사위 굴림, 게임 상태 등)를 호출할 수 있게 합니다', false)) + hp(on ? '켜면 이 채팅이 전역으로 켜 둔 도구(또는 아래에 추가한 도구)를 쓸 수 있습니다.' : '끄면 어떤 함수도 쓸 수 없습니다.')
-                + (on ? cd(tg('toolsForce', '도구 호출 강제', '호환되는 모델이 답하기 전에 켜진 함수 하나를 반드시 호출하게 합니다. 일부 모델은 이 요청을 무시할 수 있습니다.', false)) + hp('이 채팅에서 지원되는, 전역으로 켜 둔 도구를 모두 쓸 수 있습니다.')
-                    + (T.open === 'toolPick' ? cd(pad(`<div class="ot_r"><div class="os_q ot_q0" style="flex:1">${li('search', 16)}<div class="os_qi na_os_in" data-k="toolQ" contenteditable="true" role="textbox" enterkeyhint="search" spellcheck="false" data-ph="함수 검색…" aria-label="함수 검색">${esc(g('toolQ', ''))}</div></div>${ib('x', '선택기 닫기', 'na_os_sel', ' data-k="toolPick"')}</div>`), none('모든 함수가 이미 추가되었습니다.'), pad(`<div class="ot_r">${soon('새 사용자 지정 함수', 'file-plus-2')}<i class="os_sp"></i>${soon('선택 항목 추가', '', 'os_go', { off: true })}</div>`))
-                        : `<button type="button" class="ot_add na_os_sel" data-k="toolPick" aria-label="함수 추가">${li('plus', 15, 2.2)}함수 추가</button>${add('새 사용자 지정 함수', 'na_ob_soon', 'file-plus-2')}`) : ''); },
         // 번역 (TranslationSection)
         trans: () => { const sv = g('trSvc', 'google'), ai = sv === 'ai';
             return H + cd(sel('trSvc', '서비스', [['google', 'Google 번역'], ['deepl', 'DeepL API'], ['deeplx', 'DeepLX (자체 호스팅)'], ['ai', 'AI (연결 사용)']], 'google'), inp('trIn', '모델 언어', '', ai ? 'English' : 'en'), inp('trOut', '내 언어', '', ai ? 'Korean' : 'ko'))
