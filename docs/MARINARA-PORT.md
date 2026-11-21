@@ -31,7 +31,10 @@
 | routes/conversation.routes.ts | 예 (읽다가 찾은 것: 아래 "아직 마리나라와 다른 것"에 적음) |
 | client/hooks/use-autonomous-messaging.ts | 예. 찾은 것: 탭이 가려져 있으면 먼저 말 걸기 검사를 건너뜀, 실패하면 "걸고 있는 중" 표시를 풂 → 둘 다 넣음 |
 | services/generation/conversation-schedule-command-runtime.ts | 예. 빠진 것 없음 (공유 방 갈래는 우리에게 없음) |
-| routes/generate/conversation-presence-runtime.ts | 예. 아직 없는 것: 단체방에서 늦음이 짧은 사람부터 답하기(`orderConversationRespondersByDelay`), 장면 · 게임 중인 사람 빼기(그 기능이 우리에게 없음), 상태를 채팅에 적어 두기(`conversationCharacterStatuses`: 우리는 볼 때마다 계산) |
+| routes/generate/conversation-presence-runtime.ts | 예. 늦음이 짧은 사람부터 답하기 · 답한 뒤 부르기는 넣음. 없는 것: 장면 · 게임 중인 사람 빼기(그 기능이 우리에게 없음), 상태를 채팅에 적어 두기(`conversationCharacterStatuses`: 우리는 볼 때마다 계산) |
+| services/generation/smart-group-decision.ts | 예 |
+| services/generation/conversation-context-utils.ts | 예 |
+| routes/generate.routes.ts 의 단체방 고르기 (3210~3221, 5165~5170, 6215~6260, 8273~8715, 12062~12290줄) | 예 (그 줄들만. 파일 전체 13000줄은 아니오) |
 | services/storage/message-trash.storage.ts | 예. 찾은 것: 마리나라는 휴지통 수를 안 막음(우리는 100개로 막았음) → 막던 것 뺌. 목록에 받아 둔 답장 수(`swipeCount`) → 넣음. 로어 · 기억 조각 · 게임 · 변수 되돌리기는 그 기능이 우리에게 없음 |
 | services/conversation/server-autonomous-scheduler.service.ts | 예 (읽기만. 가져오기는 아직: "꼭 할 것"). 가져올 때 챙길 것: 60초마다(처음 20초 뒤), 창이 75초 안에 살아 있었으면 서버는 쉼, 오프라인 후속 2번까지, 한 번에 2방까지, 4xx 실패는 30분 쉼, 꺼 둔 이유 지키기, 안 읽음 표시 |
 | 나머지 "아직" 파일 전부 | 아니오 |
@@ -53,8 +56,9 @@
 | client/lib/user-status.ts · user-presence-activity.ts · hooks/use-idle-detection.ts | 110 | 다 | src/marinara/idle-detection.js · phone2sched.js userStore | |
 | services/conversation/server-autonomous-scheduler.service.ts | 507 | 아직 | | 실리 창을 닫아도 서버가 돌리기 (서버 플러그인) |
 | routes/generate/conversation-context-block.ts | 162 | 다 | src/marinara/conversation-context-block.js | |
-| routes/generate/conversation-presence-runtime.ts | 492 | 일부 | phone2go.js holdReplies | 늦음 · 오프라인 · @ 부름은 맞춤. 단체방에서 답할 사람 고르기, 답한 뒤 다른 사람 부르기(mentionResponderDelays)는 아직 |
-| services/generation/smart-group-decision.ts | 104 | 아직 | | 단체방에서 누가 답할지 |
+| routes/generate/conversation-presence-runtime.ts | 492 | 다 | phone2go.js holdReplies · pickResponders · handOff | 늦음 · 오프라인 · @ 부름 · 늦음이 짧은 사람부터 · 답한 뒤 부른 사람의 늦음(mentionResponderDelays). 장면 · 게임 중인 사람 빼기는 그 기능이 없어서 없음 |
+| services/generation/smart-group-decision.ts | 104 | 일부 | src/marinara/group-responders.js | `smartOrderQuestions` · `chooseSmartResponders`는 그대로. `smartOrderState`와 그걸 부르는 길(Decision 모델로 고르기)은 아직: 마리나라의 Decision 모델(`services/decision/`)이 우리에게 없음. 그래서 smart는 항상 채팅 모델에게 물음(마리나라에서 Decision 모델을 꺼 둔 것과 같음) |
+| routes/generate.routes.ts (단체방에서 누가 답하나) | 그 줄들 | 일부 | src/marinara/group-responders.js · phone2sched.js groupResponders · groupHandoff · phone2go.js pickResponders · handOff | 답하는 순서 3가지(sequential · smart · manual), @으로 부르면 그 사람만, smart 고르기 지시문 그대로(temperature 0.2), 못 고르면 한 사람, 늦음이 짧은 사람부터, 답에서 @이름으로 부른 사람이 다음 차례(한 차례에 한 번, 먼저 건 말이면 하루 상한 안에서), "@Name으로 부를 수 있다" 알림 글 그대로 + 끄기(`groupTurnPromptEnabled`). **없는 것**: Merged(한 요청이 여럿을 한꺼번에 씀: 우리는 사람마다 따로 답함), 말에 답장 달기로 그 사람 부르기(`replyTo`: 답장 달기 기능이 아직 없음), topP(우리 연결이 안 받음), 고르기 전용 연결 · 예비 연결("꼭 할 것"의 연결 일과 같이) |
 | services/generation/conversation-schedule-command-runtime.ts | 226 | 다 | src/marinara/schedule-command.js | (공유 방 갈래는 우리에게 없음) |
 
 ## 말 · 방
@@ -79,7 +83,7 @@
 | services/generation/conversation-side-effect-command-runtime.ts | 216 | 아직 | | |
 | services/generation/conversation-cross-post-command-runtime.ts | 67 | 아직 | | 다른 방에 말 보내기 |
 | services/generation/conversation-memory-context.ts | 80 | 아직 | | 기억 |
-| services/generation/conversation-context-utils.ts | 80 | 아직 | | |
+| services/generation/conversation-context-utils.ts | 80 | 일부 | src/marinara/group-responders.js | `formatSmartGroupCandidates`는 그대로. 나머지(스케줄 켜짐 읽기 · 상태 읽기)는 phone2sched.js가 같은 일을 함. `parsePromptPresetChoices`는 프리셋 기능이라 없음 |
 | services/conversation/impersonate-prompt.ts | 107 | 아직 | | 내 답 대신 써 주기 |
 | services/conversation/conversation-profiles.ts | 186 | 아직 | | 표시 이름 · 소개글 · 메신저 말투 |
 | services/conversation/awareness.service.ts | 349 | 아직 | | 다른 방 일 알기 |

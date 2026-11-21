@@ -19,10 +19,12 @@ import { scheduleDraft, scheduleSummary, scheduleGenerate } from './marinara/sch
 import { parseCharacterScheduleImport, createCharacterScheduleExport } from './marinara/character-schedule-transfer.js';
 import { buildConversationCurrentContextBlock } from './marinara/conversation-context-block.js';
 import { checkAutonomous, checkExchange, forgetAutonomousSeed } from './marinara/autonomous-check.js';
-import { clearChatActivity, clearGenerationInProgress, buildAutonomousDailyBudgetPatch, getActivityState, recordUserActivity, recordAssistantActivity, recordUserReaction } from './marinara/autonomous.service.js';
+import { clearChatActivity, clearGenerationInProgress, buildAutonomousDailyBudgetPatch, sharesAutonomousDailyBudget, isAutonomousDailyBudgetExhausted, getAutonomousDailyBudget, dailyCapForCharacter, getActivityState, recordUserActivity, recordAssistantActivity, recordUserReaction } from './marinara/autonomous.service.js';
 import { buildIntentCooldownPatch, isMessageIntent } from './marinara/intent.service.js';
 import { applyCharacterStatusCommand } from './marinara/schedule-command.js';
 import { restoreAvailableAfterUserMessage } from './marinara/idle-detection.js';
+import { isMessageHiddenFromAI } from './marinara/message-hidden.js';
+import { formatSmartGroupCandidates, parseSmartGroupSelectionIds, selectFallbackSmartGroupResponder, buildSmartGroupRecentTranscript, buildSmartGroupSelectionPrompt, getExplicitlyMentionedCharacterIds, resolveRespondingCharacterIds, routeMentionsAfterReply, orderConversationRespondersByDelay, SMART_GROUP_SELECTOR_DEFAULTS, GROUP_MENTION_INVITE_LINE } from './marinara/group-responders.js';
 
 export { ScheduleDraftError, CONVERSATION_SCHEDULE_DAYS };
 // (Marinara's reasons say "the user": here that is the persona, by name — 소망, 2026-11-21)
@@ -330,7 +332,9 @@ export async function renewSchedules(m, { ask, owners = [], cards = {}, automati
 
 // ---- 먼저 말 걸기의 방 전체 설정 (마리나라가 채팅 메타에 두는 열쇠 그대로, 준 것만 바꿔요)
 //   { autonomousDailyCapOverride: 하루 상한 (1 이상의 수 · null 풀기), groupChatMode: 'individual' (단체방에서 하루 상한을 같이 써요) · null,
-//     characterExchanges: 캐릭터끼리 주고받기 (true · false) }
+//     characterExchanges: 캐릭터끼리 주고받기 (true · false),
+//     groupResponseOrder: 단체방에서 누가 답하나 ('sequential' 있는 사람 모두 차례로 · 'smart' 모델이 고름 · 'manual' @으로 부른 사람만),
+//     groupTurnPromptEnabled: 단체방에서 "@이름으로 다음 사람을 부를 수 있다"고 알려 주기 (true · false, 기본 true) }
 export function setAutonomousOptions(m, o = {}) {
     const meta = presenceOf(m).meta;
     if (Object.hasOwn(o, 'autonomousDailyCapOverride')) {
@@ -341,9 +345,14 @@ export function setAutonomousOptions(m, o = {}) {
     }
     if (Object.hasOwn(o, 'groupChatMode')) { if (o.groupChatMode) meta.groupChatMode = String(o.groupChatMode); else delete meta.groupChatMode; }
     if (Object.hasOwn(o, 'characterExchanges')) { if (o.characterExchanges) meta.characterExchanges = true; else delete meta.characterExchanges; }
+    if (Object.hasOwn(o, 'groupResponseOrder')) {
+        if (!GROUP_ORDERS.includes(o.groupResponseOrder)) throw new Error('답하는 순서는 sequential · smart · manual 가운데 하나예요');
+        meta.groupResponseOrder = o.groupResponseOrder;
+    }
+    if (Object.hasOwn(o, 'groupTurnPromptEnabled')) meta.groupTurnPromptEnabled = !!o.groupTurnPromptEnabled;
     return autonomousOptions(m);
 }
-export const autonomousOptions = m => { const meta = peek(m).meta || {}; return { on: !!peek(m).on, schedulesEnabled: schedulesOn(m), autonomousDailyCapOverride: meta.autonomousDailyCapOverride ?? null, groupChatMode: meta.groupChatMode || null, characterExchanges: !!meta.characterExchanges }; };
+export const autonomousOptions = m => { const meta = peek(m).meta || {}; return { on: !!peek(m).on, schedulesEnabled: schedulesOn(m), autonomousDailyCapOverride: meta.autonomousDailyCapOverride ?? null, groupChatMode: meta.groupChatMode || null, characterExchanges: !!meta.characterExchanges, groupResponseOrder: groupOrder(m), groupTurnPromptEnabled: groupTurnPrompt(m) }; };
 // 단체방에서 한 캐릭터가 말한 뒤, 다른 캐릭터가 거기에 답할 때인가 (마리나라의 /autonomous/exchange 그대로) → 마리나라의 답
 export function checkExchangeFor(m, roomId, lastSpeaker, { now = new Date(), tzOf = () => '', cards = {} } = {}) {
     const w = need(m), room = w.messenger?.rooms?.[roomId], p = presenceOf(m);
@@ -386,3 +395,66 @@ export const noteReaction = (m, roomId) => recordUserReaction(chatIdOf(m, roomId
 export function forgetActivity(m, roomId) { const id = chatIdOf(m, roomId); clearChatActivity(id); forgetAutonomousSeed(id); }
 // 먼저 걸려던 말이 안 나왔어요 (실패 · 오프라인으로 뺌): "걸고 있는 중" 표시를 풀어요 (마리나라의 /autonomous/clear-in-progress)
 export const clearProgress = (m, roomId) => clearGenerationInProgress(chatIdOf(m, roomId));
+
+// ---- 단체방에서 누가 답하나 (마리나라의 Individual 단체방: generate.routes.ts의 고르기를 그대로, src/marinara/group-responders.js)
+//   마리나라의 Merged(한 번에 여럿을 쓰는 것)는 우리에게 없어요: 우리는 사람마다 따로 답해요
+const GROUP_ORDERS = ['sequential', 'smart', 'manual'];
+export const groupOrder = m => { const v = peek(m).meta?.groupResponseOrder; return GROUP_ORDERS.includes(v) ? v : 'sequential'; };
+export const groupTurnPrompt = m => peek(m).meta?.groupTurnPromptEnabled !== false;
+export { GROUP_MENTION_INVITE_LINE, orderConversationRespondersByDelay };
+// 방의 캐릭터들 (나 빼고, 폰이 있는 사람) → [폰 열쇠]
+const charKeys = (w, room) => { const P = liveKey(w.persona); return room.members.map(liveKey).filter(k => k !== P && w.phones?.[k]); };
+export const isGroupRoom = (m, roomId) => { const w = liveWorld(m), room = w?.messenger?.rooms?.[roomId]; return !!room && charKeys(w, room).length > 1; };
+// 지금 답할 수 있는 사람들 (오프라인이 아닌 사람: 마리나라의 availableGroupCharacters) → [{ id, name, talkativeness, status, activity, personality, description }]
+//   counted: 먼저 건 말의 차례면 하루 상한이 남은 사람만
+export function groupCandidates(m, roomId, { now = new Date(), tzOf = () => '', cards = {}, counted = false } = {}) {
+    const w = need(m), room = w.messenger?.rooms?.[roomId], p = peek(m);
+    if (!room) return [];
+    const budget = getAutonomousDailyBudget(p.meta || {}, now);
+    return charKeys(w, room).map(k => {
+        const name = room.members.find(n => liveKey(n) === k), schedule = activeSchedule(m, name), card = cards[k] || {};
+        const st = statusNow(m, name, { now, tz: tzOf(name) }) || { status: 'online', activity: '' };
+        return { id: k, name, talkativeness: schedule ? schedule.talkativeness : 50, status: st.status, activity: st.activity, personality: String(card.personality || '').slice(0, 500), description: String(card.description || '').slice(0, 500), schedule };
+    }).filter(c => c.status !== 'offline' && (!counted || (budget.counts[c.id] ?? 0) < dailyCapForCharacter(c.schedule, p.meta || {})));
+}
+const roomTurns = (w, room) => { const P = liveKey(w.persona); return (room.messages || []).filter(x => (x.text || x.call) && !isMessageHiddenFromAI(x)).map(x => ({ role: liveKey(x.from) === P ? 'user' : 'assistant', characterId: liveKey(x.from) === P ? null : liveKey(x.from), name: x.from, content: String(x.text || '') })); };
+// 이번 차례에 답할 사람들 → [폰 열쇠] (마리나라의 순서대로: @으로 부른 사람 → 저장된 순서)
+//   ask(messages, { temperature, topP }) → 모델의 답 글 (smart일 때만 불러요). 고르기가 실패하거나 아무도 못 고르면 마리나라처럼 한 사람(방금 말한 사람이 아닌 첫 사람)
+export async function groupResponders(m, roomId, { ask, now = new Date(), tzOf = () => '', cards = {} } = {}) {
+    const w = need(m), room = w.messenger?.rooms?.[roomId];
+    if (!room) throw new Error('없는 방이에요');
+    const available = groupCandidates(m, roomId, { now, tzOf, cards }), order = groupOrder(m), turns = roomTurns(w, room);
+    const explicit = mentionsIn(m, roomId).map(liveKey).filter(k => available.some(c => c.id === k));
+    let smartQueue = null;
+    if (!explicit.length && order === 'smart' && available.length) {
+        try {
+            const candidates = formatSmartGroupCandidates(available.map(c => ({ id: c.id, name: c.name, talkativeness: c.talkativeness, status: c.status, activity: c.activity, personality: c.personality, description: c.description })), true);
+            const prompt = buildSmartGroupSelectionPrompt({ chatMode: 'conversation', personaName: w.persona, candidates, recentTranscript: buildSmartGroupRecentTranscript(turns, t => (t.role === 'user' ? w.persona : t.name || 'Character')) });
+            smartQueue = parseSmartGroupSelectionIds(String(await ask(prompt, { ...SMART_GROUP_SELECTOR_DEFAULTS }) ?? ''), available);
+        } catch (err) { console.warn('[narrative-archive] group-smart: selector failed; using fallback', err); smartQueue = []; }
+        if (!smartQueue.length) smartQueue = selectFallbackSmartGroupResponder(available, turns);
+    }
+    return resolveRespondingCharacterIds({ explicitlyMentionedIds: explicit, order, availableIds: available.map(c => c.id), smartQueue });
+}
+// 단체방에서 한 사람이 답한 뒤: 그 답이 @이름으로 부른 사람이 다음 차례 (마리나라의 routeCharacterMentions)
+//   queue: 이번 차례의 사람들 [폰 열쇠] (이미 말한 사람 … 방금 말한 사람 … 기다리는 사람), index: 방금 말한 사람의 자리, text: 방금 한 말
+//   counted: 먼저 건 말의 차례 (부른 사람도 하루 상한에 들어가야 해요)
+//   → { queue, mentioned: [폰 열쇠], delays: { 폰 열쇠: ms }, changed }
+export function groupHandoff(m, roomId, { queue, index, text, counted = false, now = new Date(), tzOf = () => '', cards = {} } = {}) {
+    const p = presenceOf(m), candidates = groupCandidates(m, roomId, { now, tzOf, cards, counted });
+    const mentioned = getExplicitlyMentionedCharacterIds({ text, candidates });
+    let projectedMeta = p.meta;
+    const reserve = id => {
+        // Like /autonomous/check, a character without a schedule uses its card talkativeness.
+        const capSchedule = (schedulesOn(m) && p.schedules[id]) || { talkativeness: Math.round((cards[id]?.talkativeness ?? 0.5) * 100) };
+        const next = { ...projectedMeta, ...buildAutonomousDailyBudgetPatch(projectedMeta, id, now) };
+        // Like /autonomous/exchange, a handoff never takes a shared limit's last check-in.
+        const capMeta = sharesAutonomousDailyBudget(projectedMeta) ? next : projectedMeta;
+        if (isAutonomousDailyBudgetExhausted(id, capSchedule, capMeta, now)) return false;
+        projectedMeta = next;
+        return true;
+    };
+    const out = routeMentionsAfterReply({ queue, index, mentioned, reserve: counted ? reserve : undefined });
+    // (a first reply to someone may invite another: their delay is the mention delay; none on a counted turn, as the scheduler skips it)
+    return { ...out, delays: Object.fromEntries(out.mentioned.map(id => [id, counted ? 0 : getMentionDelay(candidates.find(c => c.id === id).status)])) };
+}
