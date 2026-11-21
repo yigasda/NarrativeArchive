@@ -43,3 +43,16 @@ test('온도: 요청마다 준 온도가 실려 가요. 안 주면 전과 같아
     await AI.callConn(an, 'S', 'hello', 256, 'low', true, false, null, 0.45);      // (생각을 시키는 요청에는 온도를 안 실어요)
     assert.deepEqual(bodies.map(b => b.temperature), [0.9, 0.3, 0.45, undefined, undefined]);
 });
+test('topP: 준 값이 실려 가요 (1까지, 음수 · 안 준 것은 안 실어요). Anthropic에는 온도가 없고 1보다 작을 때만', async () => {
+    const bodies = [];
+    globalThis.fetch = async (url, init = {}) => { bodies.push(JSON.parse(init.body)); return { ok: true, status: 200, text: async () => JSON.stringify({ choices: [{ message: { content: 'hi' } }], content: [{ type: 'text', text: 'hi' }] }), clone() { return this; }, json: async () => ({ choices: [{ message: { content: 'hi' } }], content: [{ type: 'text', text: 'hi' }] }) }; };
+    const oa = { mode: 'custom', url: 'https://relay.example/v1', key: 'k', model: 'm' }, an = { mode: 'custom', url: 'https://relay.example', key: 'k', model: 'm', fmt: 'anthropic', leanHeaders: true };
+    await AI.callConn(oa, 'S', 'hello', 256, '', true, false, null, 0.2, 1);
+    await AI.callConn(oa, 'S', 'hello', 256, '', true, false, null, 0.2, 1.7);
+    await AI.callConn(oa, 'S', 'hello', 256, '', true, false, null, 0.2, -1);
+    await AI.callConn(oa, 'S', 'hello', 256, '', true, false, null, 0.2);
+    await AI.callConn(an, 'S', 'hello', 256, '', true, false, null, 0.2, 1);
+    await AI.callConn(an, 'S', 'hello', 256, '', true, false, null, null, 0.8);
+    await AI.callConn(an, 'S', 'hello', 256, '', true, false, null, 0.2, 0.8);
+    assert.deepEqual(bodies.map(b => b.top_p), [1, 1, undefined, undefined, undefined, 0.8, undefined]);
+});

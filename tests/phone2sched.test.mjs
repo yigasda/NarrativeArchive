@@ -193,7 +193,7 @@ test('먼저 거는 말의 늦음은 마리나라의 getBusyDelay, 오프라인�
 test('이 파일은 폰 2 저장 자리와 마리나라 파일만 불러요; 폰 1 파일은 이 파일을 안 불러요', async () => {
     const { readFile, readdir } = await import('node:fs/promises'), SRC = new URL('../src/', import.meta.url);
     const src = await readFile(new URL('phone2sched.js', SRC), 'utf8');
-    for (const f of [...src.matchAll(/from '([^']+)'/g)].map(x => x[1])) assert.match(f, /^\.\/(phone2store\.js|marinara\/[a-z.-]+\.js)$/, f);
+    for (const f of [...src.matchAll(/from '([^']+)'/g)].map(x => x[1])) assert.match(f, /^\.\/(phone2store\.js|phone2room\.js|marinara\/[a-z.-]+\.js)$/, f);
     assert.doesNotMatch(src, /saveMeta|ctx\(|askDraft|boundary/);
     for (const f of (await readdir(SRC)).filter(f => f.endsWith('.js') && !/^phone2/.test(f) && f !== 'phone.js')) assert.doesNotMatch(await readFile(new URL(f, SRC), 'utf8'), /phone2sched/, f);
 });
@@ -666,6 +666,7 @@ test('마리나라의 단체방 함수: 늦음이 짧은 사람부터, 확률로
 test('단체방 줄: 고르지 않은 사람의 답장은 빠지고, 늦음이 짧은 사람이 앞에 서요', async () => {
     const { m, w, g, t } = group();
     S.setSchedule(m, 'Mara', { ...all('dnd', 'working'), dndResponseDelayMinutes: 30 }, NOW);
+    S.setAutonomousOptions(m, { groupChatMode: 'individual' });
     for (const n of ['Mara', 'Ivo', 'Varo']) L.enqueueJob(m, { kind: 'reply', owner: n, room: g.id, at: t });
     assert.equal(await G.pickResponders(m, t), 0);                                 // (sequential: 그대로)
     G.holdReplies(m, t);
@@ -681,4 +682,51 @@ test('단체방 줄: 고르지 않은 사람의 답장은 빠지고, 늦음이 �
     for (const n of ['Mara', 'Ivo', 'Varo']) L.enqueueJob(m, { kind: 'reply', owner: n, room: g.id, at: t + 1 });
     await G.pickResponders(m, t + 1);
     assert.deepEqual(w.queue.jobs.map(j => j.owner), ['Ivo']);
+});
+
+// ---- Merged 단체방 (마리나라의 기본 단체방 방식: 한 요청이 여럿의 말을 한꺼번에 써요)
+const RUN = await at('phone2run.js'), MC = await at('marinara/merged-conversation.js');
+test('Merged: 방의 답장들이 하나로 묶이고, 오프라인은 빠지고, @으로 부르면 그 사람만. 늦음은 마리나라의 계산', async () => {
+    const { m, w, g, t } = group();
+    assert.equal(S.groupMode(m), 'merged');                                        // (마리나라: individual이 아니면 merged)
+    S.setSchedule(m, 'Ivo', all('offline', 'asleep'), NOW);
+    S.setSchedule(m, 'Mara', { ...all('dnd', 'working'), dndResponseDelayMinutes: 30 }, NOW);
+    for (const n of ['Mara', 'Ivo', 'Varo']) L.enqueueJob(m, { kind: 'reply', owner: n, room: g.id, at: t });
+    await G.pickResponders(m, t);
+    assert.equal(w.queue.jobs.length, 1);
+    const j = w.queue.jobs[0];
+    assert.deepEqual([j.owner, j.merged, j.called, j.timed], ['Mara', ['mara', 'varo'], undefined, true]);
+    assert.equal(j.notBefore, t + 30 * 60_000);                                    // (가장 늦는 사람의 늦음)
+    G.holdReplies(m, t);
+    assert.equal(w.queue.jobs.length, 1);
+    // (@으로 부르면 그 사람만; 부른 사람이 오프라인이면 아무도 안 서고, 없었다고 남아요)
+    w.queue.jobs = [];
+    g.messages.push({ id: 'u2', n: 2, from: 'Ren', text: '@Varo you?', at: t + 1 });
+    for (const n of ['Mara', 'Ivo', 'Varo']) L.enqueueJob(m, { kind: 'reply', owner: n, room: g.id, at: t + 1 });
+    await G.pickResponders(m, t + 1);
+    assert.deepEqual(w.queue.jobs.map(x => [x.owner, x.merged, x.called]), [['Varo', ['varo'], ['varo']]]);
+    w.queue.jobs = [];
+    g.messages.push({ id: 'u3', n: 3, from: 'Ren', text: '@Ivo?', at: t + 2 });
+    for (const n of ['Mara', 'Ivo', 'Varo']) L.enqueueJob(m, { kind: 'reply', owner: n, room: g.id, at: t + 2 });
+    await G.pickResponders(m, t + 2);
+    assert.deepEqual(w.queue.jobs, []);
+    assert.deepEqual(Object.keys(g.away), ['ivo']);
+});
+test('Merged: 한 답을 마리나라의 나누기로 사람마다의 말로 넣어요. 이름이 없는 줄은 첫 사람의 것', () => {
+    const { m, g } = group(), before = g.messages.length;
+    const r = RUN.takeMerged(m, g.id, '[21:04] Mara: hey whats up\nyou there\nIvo: not much lol\nVARO:\nlate again', { names: ['Mara', 'Ivo', 'Varo'], lead: 'Mara', now: 5000, stateOf: n => (n === 'Ivo' ? 'home' : '') });
+    assert.deepEqual(g.messages.slice(before).map(x => [x.from, x.text, x.state]), [['Mara', 'hey whats up', undefined], ['Mara', 'you there', undefined], ['Ivo', 'not much lol', 'home'], ['Varo', 'late again', undefined]]);
+    assert.deepEqual([r.said, r.speakers], [4, ['Mara', 'Ivo', 'Varo']]);
+    const one = RUN.takeMerged(m, g.id, 'just one line with no name', { names: ['Mara', 'Ivo'], lead: 'Ivo', now: 6000 });
+    assert.deepEqual([one.speakers, g.messages.at(-1).from], [['Ivo'], 'Ivo']);
+    assert.throws(() => RUN.takeMerged(m, g.id, '  ', { names: ['Mara'], lead: 'Mara' }), /빈 답/);
+});
+test('Merged 지시문: 마리나라의 글 그대로 (기본 Conversation 지시문 + 단체방 줄 + 되풀이 금지 + Output Format)', () => {
+    const sys = MC.buildMergedConversationSystemPrompt({ convoCharNames: ['Mara', 'Ivo'], personaName: 'Ren' });
+    assert.match(sys, /^You are Mara, Ivo chatting with the user called Ren in a casual private DM conversation\. You are real and autonomous people\.\n/);
+    assert.match(sys, /\nThis is a group DM\. Each character responds in their own voice and personality\. Not every character needs to respond every time; only those who would naturally react\.\nIMPORTANT: Prefix each character's line with their name\. Example:\nMara: hey whats up\nIvo: not much lol\nIf a character sends multiple lines in a row, only prefix the first line:\nMara: so anyway\ni was thinking about that\nIvo: yeah\?\nDo not repeat a message you already sent in the recent conversation\. If your first draft repeats one, write a genuinely different response\.$/);
+    assert.equal(MC.formatConversationGroupOutputFormat({ wrapFormat: 'none', characterNames: ['Mara', 'Ivo'], userName: 'Ren' }), "Remember to prefix messages with `Name: message`!\nOnly respond for these characters: Mara, Ivo. Never respond for Ren or write Ren's messages.");
+    assert.equal(MC.mergedRespondersLine(['Mara']), '- Only Mara may respond this turn. Other participants are unavailable; do not write their messages.');
+    assert.equal(MC.mergedMentionLine(['Ivo']), "Respond ONLY as Ivo. The user's latest message explicitly @mentions Ivo, so no other character should reply to this turn.");
+    assert.equal(MC.mergedMentionLine(['Ivo', 'Mara']), "The user's latest message explicitly @mentions Ivo, Mara. Only those mentioned characters may reply to this turn. Do not include any response lines from any other character.");
 });

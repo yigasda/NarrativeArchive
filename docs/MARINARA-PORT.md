@@ -33,6 +33,12 @@
 | services/generation/conversation-schedule-command-runtime.ts | 예. 빠진 것 없음 (공유 방 갈래는 우리에게 없음) |
 | routes/generate/conversation-presence-runtime.ts | 예. 늦음이 짧은 사람부터 답하기 · 답한 뒤 부르기는 넣음. 없는 것: 장면 · 게임 중인 사람 빼기(그 기능이 우리에게 없음), 상태를 채팅에 적어 두기(`conversationCharacterStatuses`: 우리는 볼 때마다 계산) |
 | services/generation/smart-group-decision.ts | 예 |
+| shared/utils/speaker-segments.ts | 예 |
+| services/generation/message-reply.ts | 예 |
+| client/components/chat/MessageReplyPreview.tsx | 예 |
+| shared/constants/conversation-prompt.ts | 예 |
+| 답장 달기에 딸린 줄 (chat.schema.ts 54~58 · 82, types/chat.ts 954~961 · 987, chat.store.ts 274 · 809~815, slash-commands.ts 110~140, ConversationInput.tsx · ChatInput.tsx · use-generate.ts의 replyTo 줄, generate.routes.ts 1625~1665 · 2655~2670 · 8273~8300 · 12110~12140) | 예 (그 줄들만) |
+| Merged에 딸린 줄 (generate.routes.ts 4440~4500 · 6215~6262 · 9045~9068 · 12056~12060 · 12317~12372, conversation-prompt-formatting.ts 1~35, generate-route-utils.ts 131~137 · 1417~1425, types/chat.ts 31~37) | 예 (그 줄들만) |
 | services/generation/conversation-context-utils.ts | 예 |
 | routes/generate.routes.ts 의 단체방 고르기 (3210~3221, 5165~5170, 6215~6260, 8273~8715, 12062~12290줄) | 예 (그 줄들만. 파일 전체 13000줄은 아니오) |
 | services/storage/message-trash.storage.ts | 예. 찾은 것: 마리나라는 휴지통 수를 안 막음(우리는 100개로 막았음) → 막던 것 뺌. 목록에 받아 둔 답장 수(`swipeCount`) → 넣음. 로어 · 기억 조각 · 게임 · 변수 되돌리기는 그 기능이 우리에게 없음 |
@@ -58,7 +64,8 @@
 | routes/generate/conversation-context-block.ts | 162 | 다 | src/marinara/conversation-context-block.js | |
 | routes/generate/conversation-presence-runtime.ts | 492 | 다 | phone2go.js holdReplies · pickResponders · handOff | 늦음 · 오프라인 · @ 부름 · 늦음이 짧은 사람부터 · 답한 뒤 부른 사람의 늦음(mentionResponderDelays). 장면 · 게임 중인 사람 빼기는 그 기능이 없어서 없음 |
 | services/generation/smart-group-decision.ts | 104 | 일부 | src/marinara/group-responders.js | `smartOrderQuestions` · `chooseSmartResponders`는 그대로. `smartOrderState`와 그걸 부르는 길(Decision 모델로 고르기)은 아직: 마리나라의 Decision 모델(`services/decision/`)이 우리에게 없음. 그래서 smart는 항상 채팅 모델에게 물음(마리나라에서 Decision 모델을 꺼 둔 것과 같음) |
-| routes/generate.routes.ts (단체방에서 누가 답하나) | 그 줄들 | 일부 | src/marinara/group-responders.js · phone2sched.js groupResponders · groupHandoff · phone2go.js pickResponders · handOff | 답하는 순서 3가지(sequential · smart · manual), @으로 부르면 그 사람만, smart 고르기 지시문 그대로(temperature 0.2), 못 고르면 한 사람, 늦음이 짧은 사람부터, 답에서 @이름으로 부른 사람이 다음 차례(한 차례에 한 번, 먼저 건 말이면 하루 상한 안에서), "@Name으로 부를 수 있다" 알림 글 그대로 + 끄기(`groupTurnPromptEnabled`). **없는 것**: Merged(한 요청이 여럿을 한꺼번에 씀: 우리는 사람마다 따로 답함), 말에 답장 달기로 그 사람 부르기(`replyTo`: 답장 달기 기능이 아직 없음), topP(우리 연결이 안 받음), 고르기 전용 연결 · 예비 연결("꼭 할 것"의 연결 일과 같이) |
+| routes/generate.routes.ts (단체방에서 누가 답하나) | 그 줄들 | 일부 | src/marinara/group-responders.js · phone2sched.js groupResponders · groupHandoff · phone2go.js pickResponders · handOff | 답하는 순서 3가지(sequential · smart · manual), @으로 부르면 그 사람만, smart 고르기 지시문 그대로(temperature 0.2), 못 고르면 한 사람, 늦음이 짧은 사람부터, 답에서 @이름으로 부른 사람이 다음 차례(한 차례에 한 번, 먼저 건 말이면 하루 상한 안에서), "@Name으로 부를 수 있다" 알림 글 그대로 + 끄기(`groupTurnPromptEnabled`). 말에 답장을 달면 그 사람을 부른 것(`replyTo`), topP 1. **없는 것**: 고르기 전용 연결 · 예비 연결("꼭 할 것"의 연결 일과 같이). 저장된 연결 프로필(실리 Connection Manager)로 보낼 때는 topP가 안 실림 |
+| Merged 단체방 (generate.routes.ts · conversation-prompt.ts · conversation-prompt-formatting.ts · speaker-segments.ts) | | 일부 | src/marinara/merged-conversation.js · speaker-segments.js · phone2go.js mergeTurn · gatherMerged · phone2run.js takeMerged | 마리나라의 기본 단체방 방식. `groupChatMode`가 `individual`이 아니면 Merged(마리나라의 읽기 그대로). 한 요청이 답할 수 있는 사람 모두의 말을 `Name: 말`로 쓰고, 마리나라의 나누기(`parseGroupedSpeakerSegments`)로 사람마다의 말로 넣음. 지시문은 마리나라의 것 그대로(기본 Conversation 지시문 + 단체방 줄 + 되풀이 금지 + 끝에 Output Format, 오프라인이 있으면 "Only … may respond this turn", @으로 부르면 "Respond ONLY as …"). 늦음은 마리나라의 계산(가장 늦는 사람 · 부르면 가장 바쁜 사람의 부름 늦음). 다시 받기는 모두(오프라인도)에게 한 번에. **다른 것**: 입력은 우리 블록(MESSENGER · CHAT SUMMARY · CONTEXT · 카드 · PERSONA · STORY · LAST MESSAGES)이고 마리나라의 프로필 블록이 아님. 한 답을 한 말로 두지 않고 사람마다의 말로 나눠 저장함(우리 저장 모양). 먼저 건 말(자율)은 Merged 방에서도 한 사람이 우리 지시문으로 씀(마리나라는 그것도 Merged 요청). **지금 없는 것(우리 지시문으로 바꿀 때 채울 것)**: 번역(ko) · 폰에서 한 일(does) · 상태 줄 · 반응 · 상태 명령 |
 | services/generation/conversation-schedule-command-runtime.ts | 226 | 다 | src/marinara/schedule-command.js | (공유 방 갈래는 우리에게 없음) |
 
 ## 말 · 방
@@ -67,6 +74,7 @@
 |---|---|---|---|---|
 | shared/utils/message-marks.ts | 172 | 다 | src/marinara/message-marks.js · src/phone2room.js | (메모를 한 사람에게 보여 주기: 글은 마리나라의 appendRoleplayMessageNotes 그대로) |
 | routes/generate/generate-route-utils.ts (숨기기) | | 다 | src/marinara/message-hidden.js | |
+| services/generation/message-reply.ts · MessageReplyPreview.tsx · chat.schema.ts(messageReplySchema) | 13 · 77 | 다 (코드). 화면은 디자인 세션 | src/marinara/message-reply.js · phone2room.js replyTexts · replyDraftOf · repliedTo · phone2store.js sendLive(…, { replyTo }) · phone2go.js liveReplyTo · liveReplyDraft · liveCancelReply | 말에 답장 달기: 초안(방마다 하나, 창이 열려 있는 동안), 골라 둔 글만 인용, 글 없는 말에는 못 닮, 보낸 내 말에 그때의 글을 담아 둠(원래 말이 고쳐지거나 지워져도 남음), 답장 요청에는 내 마지막 말에만 `Replying to 이름:` 인용, 캐릭터의 말에 달면 그 사람을 부른 것. 슬래시 명령과 붙는 부분(`withComposerReplyAndAttachments`)은 슬래시 명령이 없어서 없음 |
 | services/storage/message-trash.storage.ts | 547 | 다 | src/phone2room.js (우리 코드) | 마리나라 코드는 그쪽 DB에 묶여 있어 코드는 우리 것. 동작은 맞춤: 되살리기(제자리 · 받아 둔 답장 · 고정 10개 넘으면 막기), 30일 뒤 비우기(타이머), 골라서/전부 아주 버리기. 안 맞춘 것: 지울 때 딸려 지워진 로어 되살리기(우리에게 없음) |
 | services/generation/prompt-message-scope.ts | 456 | 아직 | | 말마다 누구에게 보일지 정하기 |
 | routes/generate/conversation-history-runtime.ts | 763 | 아직 | | 요청에 넣을 대화 기록 다듬기 |
@@ -121,6 +129,8 @@
 - 생성 연결 고르기, 생성 중지가 요청을 끊기, 방 전체 설정(하루 상한 · 상한 같이 쓰기 · 캐릭터끼리 주고받기)
 
 ## 꼭 할 것 (소망이 "나중에 꼭 하셈"이라고 한 것, 2026-11-21)
+
+- [ ] **Merged 단체방의 지시문을 우리 지시문으로 바꾸기.** (소망, 2026-11-21: "일단 merged만 마리나라꺼 쓰셈", "꼭 우리 지시문으로 수정해야할 걸로 기록해두셈".) 지금 Merged 단체방은 마리나라의 Conversation 지시문을 그대로 써요(`src/marinara/merged-conversation.js`, 잇는 곳은 `src/phone2merged.js` · `phone2go.js gatherMerged`). 그래서 Merged 방의 답에는 번역(ko) · 폰에서 한 일(does) · 상태 줄 · 반응 · 상태 명령이 없어요. 우리 답장 지시문(`src/phone2reply.js`)에 "여럿의 말을 한꺼번에 쓰는" 모양을 만들어 바꿔야 해요. 바꿀 때 `docs/PROMPT-RULES.md`를 읽고, 답을 나누는 것은 `takeMerged` 자리에서 해요.
 
 - [ ] **무작위 연결과 예비 연결.** 마리나라는 연결을 "random"으로 두면 무작위 묶음에서 하나를 고르고, 연결이 실패하면 예비 연결로 다시 보내요(`resolveConversationScheduleConnection`, `withConnectionFallbackProvider`, `connections.listRandomPool` · `getFallbackForAgents`). 우리 확장에는 그런 연결 설정이 없어요. 연결 설정을 만들고 스케줄 요청이 그걸 쓰게 해요.
 - [ ] **꺼 둔 이유(`disabledAutonomousIntents`) 지키기.** 마리나라는 서버가 돌릴 때(`server-autonomous-scheduler.service.ts`의 `resolveAvailableIntent`)만 이걸 봐요. 서버 플러그인으로 그 파일을 가져올 때 같이 넣어요. 그 전까지는 꺼 둔 이유가 안 먹어요.

@@ -14,6 +14,7 @@
 
 import { liveWorld, liveKey, ensureAccount } from './phone2store.js';
 import { MAX_PINNED_CONTEXT_MESSAGES, MESSAGE_TRASH_RETENTION_DAYS, MESSAGE_MARK_EXTRA_KEYS, normalizeMessageMarkPatch, applyContextMessageLimitWithPins, isMessagePinnedToContext, readMessageBookmark, readMessagePrivateNote, readMessagePrivateNoteRecipientId } from './marinara/message-marks.js';
+import { withLatestMessageReply, messageReplySchema, canReplyToMessage, buildMessageReplyDraft } from './marinara/message-reply.js';
 import { isMessageHiddenFromAI, getMessageHiddenFromAICharacterIds, isMessageHiddenFromAIForCharacter } from './marinara/message-hidden.js';
 
 export const ROOM = { rooms: 5, keep: MESSAGE_TRASH_RETENTION_DAYS * 24 * 60 * 60 * 1000 };
@@ -193,4 +194,31 @@ export function purgeTrash(m, now = Date.now()) {
         if (keep.length) w.messenger.trash = keep; else delete w.messenger.trash;
     }
     return n;
+}
+
+// ---- 말에 답장 달기 (마리나라의 replyTo: src/marinara/message-reply.js)
+//   내 말의 x.extra.replyTo = { messageId, name, content }. 답장 요청에는 내 "마지막" 말에만 인용이 붙어요 (마리나라: 옛 말은 인용을 되풀이하지 않아요)
+// rows: 요청에 실을 말들 → 내 마지막 말의 글에 "Replying to 이름:" 인용을 붙인 글들 (rows와 같은 순서)
+export function replyTexts(rows, persona) {
+    const P = liveKey(persona);
+    let last = -1;
+    rows.forEach((x, i) => { if (liveKey(x.from) === P) last = i; });
+    return rows.map((x, i) => (liveKey(x.from) === P ? withLatestMessageReply(x.text, x.extra?.replyTo, i === last) : x.text));
+}
+// 이 말에 답장을 달 수 있나 (마리나라: 글이 없는 말은 안 돼요) · 답장 초안 (selected: 그 말 안에서 골라 둔 글, 없으면 말 전체)
+export const canReply = x => canReplyToMessage({ id: String(x?.id ?? ''), content: String(x?.text ?? '') });
+export function replyDraftOf(m, roomId, messageId, selected = '') {
+    const { room } = roomOf(m, roomId), x = (room.messages || []).find(y => String(y.id) === String(messageId));
+    if (!x || !canReply(x)) throw new Error('답장을 달 수 없는 말이에요');
+    return buildMessageReplyDraft({ id: String(x.id), content: String(x.text) }, String(x.from || ''), String(selected || '').trim());
+}
+// 내가 마지막에 보낸 말이 답장을 단 사람 (마리나라: 캐릭터의 말에 답장을 달면 @으로 부른 것과 같아요) → 이름 | ''
+export function repliedTo(m, roomId) {
+    const w = liveWorld(m), room = w?.messenger?.rooms?.[roomId];
+    if (!w || !room) return '';
+    const P = liveKey(w.persona), last = [...(room.messages || [])].reverse().find(x => liveKey(x.from) === P && x.text);
+    const reply = messageReplySchema.safeParse(last?.extra?.replyTo);
+    // (the whole room, since the quoted message may be hidden from the AI or past the context limit)
+    const quoted = reply.success ? (room.messages || []).find(x => String(x.id) === reply.data.messageId) : null;
+    return quoted && liveKey(quoted.from) !== P ? room.members.find(n => liveKey(n) === liveKey(quoted.from)) || '' : '';
 }

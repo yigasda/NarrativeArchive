@@ -11,6 +11,7 @@
 // 저장은 부르는 쪽이 해요. 폰 1 · 아카이브는 읽지도 쓰지도 않아요. 폰 1은 이 파일을 부르지 않아요.
 
 import { liveWorld, liveKey } from './phone2store.js';
+import { repliedTo } from './phone2room.js';
 import { generateCharacterSchedule, generateCharacterDaySchedule, getEffectiveCurrentStatus, getTodaySchedule, getDirectMessageDelay, getMentionDelay, getBusyDelay, getMonday, scheduleNeedsRefresh, ScheduleDraftError } from './marinara/schedule.service.js';
 import { normalizeTextForMatch } from './marinara/text-matching.js';
 import { CONVERSATION_SCHEDULE_DAYS, getAdjacentScheduleBlocks, getActiveStatusOverride } from './marinara/conversation-presence.js';
@@ -24,7 +25,7 @@ import { buildIntentCooldownPatch, isMessageIntent } from './marinara/intent.ser
 import { applyCharacterStatusCommand } from './marinara/schedule-command.js';
 import { restoreAvailableAfterUserMessage } from './marinara/idle-detection.js';
 import { isMessageHiddenFromAI } from './marinara/message-hidden.js';
-import { formatSmartGroupCandidates, parseSmartGroupSelectionIds, selectFallbackSmartGroupResponder, buildSmartGroupRecentTranscript, buildSmartGroupSelectionPrompt, getExplicitlyMentionedCharacterIds, resolveRespondingCharacterIds, routeMentionsAfterReply, orderConversationRespondersByDelay, SMART_GROUP_SELECTOR_DEFAULTS, GROUP_MENTION_INVITE_LINE } from './marinara/group-responders.js';
+import { formatSmartGroupCandidates, parseSmartGroupSelectionIds, selectFallbackSmartGroupResponder, buildSmartGroupRecentTranscript, buildSmartGroupSelectionPrompt, getExplicitlyMentionedCharacterIds, resolveRespondingCharacterIds, routeMentionsAfterReply, orderConversationRespondersByDelay, normalizeGroupChatMode, SMART_GROUP_SELECTOR_DEFAULTS, GROUP_MENTION_INVITE_LINE } from './marinara/group-responders.js';
 
 export { ScheduleDraftError, CONVERSATION_SCHEDULE_DAYS };
 // (Marinara's reasons say "the user": here that is the persona, by name — 소망, 2026-11-21)
@@ -138,12 +139,14 @@ export function mentionsIn(m, roomId) {
     const w = liveWorld(m), room = w?.messenger?.rooms?.[roomId];
     if (!w || !room) return [];
     const P = liveKey(w.persona), last = [...(room.messages || [])].reverse().find(x => liveKey(x.from) === P && x.text), text = normalizeTextForMatch(last?.text || '');
-    return text.includes('@') ? room.members.filter(n => liveKey(n) !== P && text.includes(`@${normalizeTextForMatch(n)}`)) : [];
+    // (replying to a character's message addresses that character, like an @mention — Marinara)
+    const replied = repliedTo(m, roomId);
+    return room.members.filter(n => liveKey(n) !== P && ((replied && liveKey(n) === liveKey(replied)) || (text.includes('@') && text.includes(`@${normalizeTextForMatch(n)}`))));
 }
 
 // 답장 요청에 넣는 마리나라의 상황 글 (상태 · 내 상태 · 오늘 스케줄 · 지금 시각). 마리나라처럼 항상 넣어요: 스케줄이 없는 사람은 "online"
 // tzOf(이름) → 그 사람의 시간대; lastRole: 방의 마지막 말이 'user'(나) | 'assistant'; said: 내가 새로 한 말이 있나
-export function contextBlock(m, owner, roomId, { now = new Date(), tzOf = () => '', lastRole = 'user', said = true, intentKey = '', mentions = [] } = {}) {
+export function contextBlock(m, owner, roomId, { now = new Date(), tzOf = () => '', lastRole = 'user', said = true, intentKey = '', mentions = [], merged = false } = {}) {
     const w = liveWorld(m), room = w?.messenger?.rooms?.[roomId], p = peek(m);
     if (!w || !room) return '';
     const info = room.members.filter(n => liveKey(n) !== liveKey(w.persona)).map(n => {
@@ -156,7 +159,7 @@ export function contextBlock(m, owner, roomId, { now = new Date(), tzOf = () => 
         nowInstant: now, promptTimeZone: tzOf(owner) || undefined, convoCharInfo: info, finalMessages: [{ role: lastRole }], personaName: w.persona,
         userMessage: said ? 'said' : '', userStatus: p.user?.status || 'active', userActivity: p.user?.activity || '',
         mentionedCharacterNames: mentions,
-        autonomousIntentKey: isMessageIntent(intentKey) ? intentKey : undefined, primaryCharacterId: liveKey(owner), wrapFormat: 'none',
+        autonomousIntentKey: isMessageIntent(intentKey) ? intentKey : undefined, primaryCharacterId: merged ? undefined : liveKey(owner), wrapFormat: 'none',
     }), w.persona);
 }
 
@@ -331,7 +334,8 @@ export async function renewSchedules(m, { ask, owners = [], cards = {}, automati
 }
 
 // ---- 먼저 말 걸기의 방 전체 설정 (마리나라가 채팅 메타에 두는 열쇠 그대로, 준 것만 바꿔요)
-//   { autonomousDailyCapOverride: 하루 상한 (1 이상의 수 · null 풀기), groupChatMode: 'individual' (단체방에서 하루 상한을 같이 써요) · null,
+//   { autonomousDailyCapOverride: 하루 상한 (1 이상의 수 · null 풀기),
+//     groupChatMode: 'individual' (단체방에서 사람마다 따로 답해요: 우리 답장 지시문) · 'merged' · null (한 요청이 여럿을 한꺼번에: 마리나라의 지시문. 마리나라의 기본값),
 //     characterExchanges: 캐릭터끼리 주고받기 (true · false),
 //     groupResponseOrder: 단체방에서 누가 답하나 ('sequential' 있는 사람 모두 차례로 · 'smart' 모델이 고름 · 'manual' @으로 부른 사람만),
 //     groupTurnPromptEnabled: 단체방에서 "@이름으로 다음 사람을 부를 수 있다"고 알려 주기 (true · false, 기본 true) }
@@ -397,10 +401,19 @@ export function forgetActivity(m, roomId) { const id = chatIdOf(m, roomId); clea
 export const clearProgress = (m, roomId) => clearGenerationInProgress(chatIdOf(m, roomId));
 
 // ---- 단체방에서 누가 답하나 (마리나라의 Individual 단체방: generate.routes.ts의 고르기를 그대로, src/marinara/group-responders.js)
-//   마리나라의 Merged(한 번에 여럿을 쓰는 것)는 우리에게 없어요: 우리는 사람마다 따로 답해요
+//   Merged(한 요청이 여럿을 한꺼번에 씀)는 답장 돌리는 파일의 mergeTurn · gatherMerged가 해요: 그때는 마리나라의 지시문을 써요
 const GROUP_ORDERS = ['sequential', 'smart', 'manual'];
 export const groupOrder = m => { const v = peek(m).meta?.groupResponseOrder; return GROUP_ORDERS.includes(v) ? v : 'sequential'; };
 export const groupTurnPrompt = m => peek(m).meta?.groupTurnPromptEnabled !== false;
+// 단체방 방식 (마리나라의 읽기 그대로: 'individual'이 아니면 전부 'merged' — 한 요청이 여럿의 말을 한꺼번에 써요)
+export const groupMode = m => normalizeGroupChatMode(peek(m).meta?.groupChatMode);
+// Merged 차례의 늦음 (마리나라의 계산): @으로 불렀으면 가장 바쁜 사람의 부름 늦음, 아니면 가장 늦는 사람의 늦음 → ms
+export function mergedDelay(m, names, { mention = false, now = new Date(), tzOf = () => '' } = {}) {
+    const rank = { online: 0, idle: 1, dnd: 2, offline: 3 };
+    const sts = names.map(n => ({ n, st: statusNow(m, n, { now, tz: tzOf(n) })?.status || 'online' }));
+    if (mention) return getMentionDelay(sts.reduce((worst, c) => ((rank[c.st] ?? 0) > (rank[worst] ?? 0) ? c.st : worst), 'online'));
+    return sts.reduce((max, c) => Math.max(max, getDirectMessageDelay(c.st, activeSchedule(m, c.n) || undefined)), 0);
+}
 export { GROUP_MENTION_INVITE_LINE, orderConversationRespondersByDelay };
 // 방의 캐릭터들 (나 빼고, 폰이 있는 사람) → [폰 열쇠]
 const charKeys = (w, room) => { const P = liveKey(w.persona); return room.members.map(liveKey).filter(k => k !== P && w.phones?.[k]); };
