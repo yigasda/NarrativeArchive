@@ -76,7 +76,7 @@ const HELP = {
     profile: '설정 프로필은 이 채팅의 제공자, 프롬프트, 에이전트, 번역, 기억 등의 설정을 저장해 다시 쓸 수 있게 합니다. 캐릭터, 스프라이트, 요약, 태그, 장면 프롬프트는 바꾸지 않습니다. 프로필의 페르소나, 로어북, 배경은 적용할 때 채팅으로 복사됩니다. 별표를 누르면 이 모드의 새 채팅에 사용됩니다.',
     name: '이 이름은 나에게만 보입니다. AI에게 전송되지 않으며 대화에 아무 영향도 주지 않습니다.',
     branches: '이 채팅의 분기를 전환, 이름 변경, 내보내기, 가져오기 합니다.',
-    conn: '이 채팅이 사용하는 모델입니다. 여기서 고르면 이 채팅만 바뀝니다. \'기본값 사용\'은 메인 모델을 따르고, \'무작위\'는 무작위 풀에서 매번 다른 모델을 고릅니다.',
+    conn: '이 채팅이 사용하는 모델입니다. 여기서 고르면 이 채팅만 바뀝니다. \'기본값 사용\'은 메인 모델을 따릅니다.',
     preset: '프리셋의 대화 프롬프트를 고른 뒤, 필요하면 이 채팅만의 사본을 편집합니다.',
     persona: '페르소나는 이 채팅에서 내가 누구인지 정의합니다. AI는 이 페르소나의 이름으로 나를 부르고 세부 정보를 맥락으로 사용합니다.',
     people: '이 채팅의 캐릭터입니다. 캐릭터마다 AI가 연기하는 고유한 성격이 있습니다.',
@@ -127,7 +127,7 @@ export function orbitSetPage(T, face) {
         conn: () => { const M = T.conns[0] || { name: '', sub: '' }, has = !!M.name && M.name !== '모델 없음';
             return H + cap('모델') + cd(`<div role="button" tabindex="0" class="os_rw ot_t na_os_sel" data-k="connOpen" aria-label="모델"><span class="ot_x"><span class="os_l">${has ? esc(M.name) : '설정된 모델 없음'}</span><span class="os_d">${has ? `메인을 따름${M.sub ? ` · ${esc(M.sub)}` : ''}` : '아직 메인 모델이 없습니다'}</span></span><i class="os_ch">${li('chevron-down', 16)}</i></div>`)
                 + (has ? hp('메인을 바꾸면 이 채팅도 바뀝니다.') : '')
-                + (T.open === 'connOpen' ? cap('지금 · 메인을 따름') + cd(pad(`<div class="ot_r">${soon('기본값 사용', 'house')}<i class="os_sp"></i>${ib('dices', '무작위 풀의 제공자 사용')}${ib('refresh-cw', '모델 목록 새로 고침')}</div>`), pad(`<div class="os_q ot_q0">${li('search', 16)}<div class="os_qi na_os_in" data-k="connQ" contenteditable="true" role="textbox" enterkeyhint="search" spellcheck="false" data-ph="모델 검색 또는 ID 붙여넣기…" aria-label="모든 모델 검색 또는 모델 ID 붙여넣기">${esc(g('connQ', ''))}</div></div>`))
+                + (T.open === 'connOpen' ? cap('지금 · 메인을 따름') + cd(pad(`<div class="ot_r">${soon('기본값 사용', 'house')}<i class="os_sp"></i>${ib('refresh-cw', '모델 목록 새로 고침')}</div>`), pad(`<div class="os_q ot_q0">${li('search', 16)}<div class="os_qi na_os_in" data-k="connQ" contenteditable="true" role="textbox" enterkeyhint="search" spellcheck="false" data-ph="모델 검색 또는 ID 붙여넣기…" aria-label="모든 모델 검색 또는 모델 ID 붙여넣기">${esc(g('connQ', ''))}</div></div>`))
                     + cap('모든 모델') + ((l => (l.length ? cd(...l.map((c, i) => `<div role="button" tabindex="0" class="os_rw ot_t na_ob_soon" aria-label="${esc(c.name)}"><span class="ot_x"><span class="os_l">${esc(c.name)}</span>${c.sub ? `<span class="os_d">${esc(c.sub)}</span>` : ''}</span>${i === 0 && !g('connQ', '') ? li('check', 16, 2.4) : ''}${ib('star', `${c.name} 별표`)}</div>`)) : none(T.conns.some(c => c.name && c.name !== '모델 없음') ? '여기에는 아직 모델이 없습니다.' : '아직 모델이 없습니다. 계정을 추가하면 생깁니다.')))(T.conns.filter(c => c.name && c.name !== '모델 없음' && (!g('connQ', '') || `${c.name} ${c.sub}`.toLowerCase().includes(String(g('connQ', '')).toLowerCase())))))
                     + cd(`<button type="button" class="os_rw na_ob_soon" aria-label="계정 추가">${li('plus', 18)}<span class="os_l">계정 추가</span></button>`) : ''); },
         // 프롬프트 프리셋 (ConversationPromptSection)
