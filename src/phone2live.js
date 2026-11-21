@@ -2,6 +2,7 @@
 // 함수가 필요한 것(주인 시계, 주변 사람, 카드, 지금 있는 곳)은 부르는 쪽이 deps로 넘겨요: 이 파일은 폰 2 저장 자리와 날짜
 // 계산만 불러서 시험하기 쉬워요. 메신저 · 폰은 읽기만 해요. 폰 1은 이 파일을 안 불러요.
 
+import { askRows } from './phone2room.js';
 import { liveKey, liveWorld, livePhone, numberLive, isSnap } from './phone2store.js';
 import { liveWall } from './phone2clock.js';
 import { digestOf } from './phone2digest.js';
@@ -82,7 +83,7 @@ export function gatherReply(m, owner, roomId, { now = Date.now(), tz = 'UTC', de
         langs: p.langs?.texts?.length || p.langs?.knows?.length ? p.langs : null,
         // (the talk summarized already goes as CHAT SUMMARY; the rest as it was said)
         summary: digestOf(room),
-        messenger: (room.messages || []).filter(x => !(x.n <= (room.digest?.upto ?? -1))).slice(-LIVE_ASK.bubbles).map(x => ({ at: wall(x.at), from: x.from, text: x.call ? `(call ${Math.max(0, Math.round(Number(x.call.min) || 0))} min)` : x.text, state: x.state, reacts: reactLine(x, r => !same(r.by, owner) && Number(r.at) > spoke) })),
+        messenger: askRows(room, LIVE_ASK.bubbles, owner).map(x => ({ at: wall(x.at), from: x.from, text: x.call ? `(call ${Math.max(0, Math.round(Number(x.call.min) || 0))} min)` : x.text, state: x.state, reacts: reactLine(x, r => !same(r.by, owner) && Number(r.at) > spoke) })),
         now: {
             last: lastState || one(deps.place?.(p)),
             today: evs.filter(e => one(e.date) === today).sort(byTime).map(e => line(e, false)), ahead: ahead.map(e => line(e, true)),

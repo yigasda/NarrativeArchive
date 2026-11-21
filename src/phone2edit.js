@@ -6,6 +6,7 @@
 //   한국어 다시 받기: 고른 말의 한국어만. 지시문은 폰 1의 번역 지시문 그대로(같은 칸 이름으로 보내요).
 // 폰 1 · 아카이브는 읽지도 쓰지도 않아요. 폰 1은 이 파일을 부르지 않아요.
 
+import { toTrash } from './phone2room.js';
 import { liveWorld, liveKey } from './phone2store.js';
 import { liftReacts, putBack } from './phone2react.js';
 import { koLike } from './phone2reply.js';
@@ -26,9 +27,11 @@ const idSet = ids => new Set((Array.isArray(ids) ? ids : [ids]).map(x => String(
 export function dropMessages(m, roomId, ids) {
     const { room } = roomOf(m, roomId), gone = idSet(ids), was = room.messages.length;
     if (!gone.size) return 0;
+    const out = room.messages.filter(x => gone.has(String(x.id))), kept = {};
     room.messages = room.messages.filter(x => !gone.has(String(x.id)));
-    // (the answers kept for a message of mine go with that message)
-    for (const id of Object.keys(room.swipes || {})) if (gone.has(id)) delete room.swipes[id];
+    // (the answers kept for a message of mine go with that message, into the trash)
+    for (const id of Object.keys(room.swipes || {})) if (gone.has(id)) { kept[id] = room.swipes[id]; delete room.swipes[id]; }
+    toTrash(room, out, kept);
     if (room.swipes && !Object.keys(room.swipes).length) delete room.swipes;
     return was - room.messages.length;
 }

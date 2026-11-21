@@ -104,7 +104,7 @@ test('답에서 글 꺼내기: 없거나 비었으면 오류; 넣을 글은 첫 
 
 test('이 파일은 폰 2 저장 자리만 불러요; 폰 1 파일은 이 파일을 안 불러요', async () => {
     const src = await readFile(new URL('phone2back.js', SRC), 'utf8');
-    assert.deepEqual([...src.matchAll(/from '([^']+)'/g)].map(x => x[1]), ['./phone2store.js']);
+    assert.deepEqual([...src.matchAll(/from '([^']+)'/g)].map(x => x[1]), ['./phone2room.js', './phone2store.js']);
     assert.doesNotMatch(src, /saveMeta|ctx\(|askDraft|\.text\s*=[^=]|boundary/);
     for (const f of (await readdir(SRC)).filter(f => f.endsWith('.js') && !/^phone2/.test(f) && f !== 'phone.js')) assert.doesNotMatch(await readFile(new URL(f, SRC), 'utf8'), /phone2back/, f);
 });
