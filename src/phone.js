@@ -1259,7 +1259,7 @@ export async function openPhone(who = null) {
     $root.on('click', '.na_ob_mthink', function (e) { e.stopPropagation(); obThink = { text: String(obMsgOf(this.dataset.id)?.extra?.thinking || ''), copied: false }; obHeld = null; drawPhone(true); });
     $root.on('click', '.na_ok_x', e => { e.stopPropagation(); obThink = null; drawPhone(true); });
     $root.on('click', '.na_ok_copy', async e => { e.stopPropagation(); if (!obThink) return; try { await navigator.clipboard.writeText(obThink.text); obThink.copied = true; drawPhone(true); setTimeout(() => { if (obThink) { obThink.copied = false; if (!phoneClosed && stillHere()) drawPhone(true); } }, 1500); } catch { toastr.error('생각을 복사하지 못했습니다', '캐릭터 휴대폰'); } });
-    $root.on('click', '.na_ob_mpeek', function (e) { e.stopPropagation(); const c = obMsgOf(this.dataset.id)?.extra?.cachedPrompt; obHeld = null;
+    $root.on('click', '.na_ob_mpeek', function (e) { e.stopPropagation(); const c = (obMsgOf(this.dataset.id)?.extra?.cachedPrompt || []).filter?.(m => String(m?.role || '') !== 'system'); obHeld = null;   // (시스템 프롬프트는 화면에 안 보여 줘요: 찾기 · 복사에도 안 들어가요, 소망)
         if (!Array.isArray(c) || !c.length) { drawPhone(true); return toastr.error('이 차례에는 저장된 프롬프트가 없습니다', '캐릭터 휴대폰'); }
         obPeek = { exact: false, source: 'cached', messages: c.map(m => ({ role: String(m.role || ''), content: String(m.content || '') })), note: '', gen: null,   // (시스템 프롬프트는 안 보여 줄 거라 "보낸 그대로"라는 글 · 알약은 안 써요, 소망)
              q: '', at: 0, open: [] }; drawPhone(true); });
