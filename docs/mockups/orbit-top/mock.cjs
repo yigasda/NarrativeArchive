@@ -7,7 +7,7 @@ const CHAT = path.join(os.homedir(), 'sillytavern/data/default-user/chats/defaul
 const reset = () => fs.copyFileSync('/home/user/NarrativeArchive/tools/dev/na_test.jsonl', CHAT);
 const B = '/scripts/extensions/third-party/NarrativeArchive/src/', OUT = '/home/user/NarrativeArchive/docs/mockups/orbit-top/';
 const LU = process.env.LUCIDE || '/tmp/claude-0/-home-user-NarrativeArchive/357c6c89-df99-5c7b-a84f-806ab745fd2b/scratchpad/lucide/package/icons';
-const L = {}; for (const n of ['house', 'message-square', 'search', 'venetian-mask', 'moon', 'menu', 'sliders-horizontal', 'paperclip', 'chevron-up', 'smile', 'arrow-right', 'chevron-left', 'sun', 'ellipsis', 'settings', 'plus', 'settings-2', 'sliders-vertical', 'cog', 'bolt', 'bookmark', 'trash-2', 'type', 'git-branch', 'users', 'plug', 'file-text', 'braces', 'book-open', 'scan-text', 'link', 'chevron-right', 'x', 'copy', 'pencil', 'languages', 'pin', 'sticky-note', 'eye-off', 'circle-check', 'rotate-ccw']) L[n] = fs.readFileSync(path.join(LU, n + '.svg'), 'utf8').replace(/<!--[\s\S]*?-->/, '').replace(/<svg[\s\S]*?>/, '').replace('</svg>', '').replace(/\s+/g, ' ').trim();
+const L = {}; for (const n of ['house', 'message-square', 'search', 'venetian-mask', 'moon', 'menu', 'sliders-horizontal', 'paperclip', 'chevron-up', 'smile', 'arrow-right', 'chevron-left', 'sun', 'ellipsis', 'settings', 'plus', 'settings-2', 'sliders-vertical', 'cog', 'bolt', 'bookmark', 'trash-2', 'type', 'git-branch', 'users', 'plug', 'file-text', 'braces', 'book-open', 'scan-text', 'link', 'chevron-right', 'x', 'copy', 'pencil', 'languages', 'pin', 'sticky-note', 'eye-off', 'circle-check', 'rotate-ccw', 'reply', 'smile-plus', 'refresh-cw', 'brain']) L[n] = fs.readFileSync(path.join(LU, n + '.svg'), 'utf8').replace(/<!--[\s\S]*?-->/, '').replace(/<svg[\s\S]*?>/, '').replace('</svg>', '').replace(/\s+/g, ' ').trim();
 
 const SB_DARK = `.na_ph_frame .ax_orbitroom .ax_sb { color: #1e2026 !important; } .na_ph_frame .ax_orbitroom .ax_sb svg { filter: invert(1) brightness(.14); } .na_ph_frame .ax_orbitroom .ax_sb .cg_num { color: #1e2026 !important; }`;
 const BASE = `
@@ -115,7 +115,8 @@ const XS = {
 .lp_e { position: absolute; display: flex; align-items: center; gap: 2px; height: 44px; padding: 0 8px; border-radius: 999px; background: #fff; box-shadow: 0 1px 1.5px rgba(30,24,50,.05), 0 12px 32px rgba(30,24,50,.13); } .lp_e span { width: 36px; height: 36px; display: grid; place-items: center; font-family: NADeviceEmoji, sans-serif; font-size: 21px; } .lp_e i { width: 34px; height: 34px; display: grid; place-items: center; color: #8a8f99; }
 .lp_c { position: absolute; width: 214px; padding: 6px 0; border-radius: 18px; background: #fff; box-shadow: 0 1px 1.5px rgba(30,24,50,.05), 0 14px 36px rgba(30,24,50,.13); color: #3a3d45; }
 .lp_c .q { display: flex; padding: 2px 6px 4px; } .lp_c .q div { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 8px 0 6px; font-size: 11px; font-weight: 500; color: #4a4e57; }
-.lp_c .r { display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 16px; } .lp_c .r div { font-size: 13.5px; font-weight: 500; color: #26282e; } .lp_c .r.red, .lp_c .r.red div { color: #c4553f; } .lp_c hr { height: 1px; margin: 4px 16px; border: 0; background: rgba(27,29,36,.07); }
+.lp_c .r { display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 16px; } .lp_c .r div { font-size: 13.5px; font-weight: 500; color: #26282e; } .lp_c .r.red, .lp_c .r.red div { color: #c4553f; } .lp_g { position: absolute; display: grid; grid-template-columns: repeat(6, 40px); padding: 6px; border-radius: 18px; background: #fff; box-shadow: 0 1px 1.5px rgba(30,24,50,.05), 0 14px 36px rgba(30,24,50,.13); color: #3a3d45; } .lp_g i { width: 40px; height: 40px; display: grid; place-items: center; } .lp_g i.red { color: #c4553f; }
+.lp_c hr { height: 1px; margin: 4px 16px; border: 0; background: rgba(27,29,36,.07); }
 `;
   const over = async (name, kind) => { await draw(BASE + PALE + GLASS + TOPS.A.css + OV, TOPS.A.html.toString(), BAR.toString(), '_tmp');
     await p.evaluate(({ L, kind }) => { const ic = (n, s = 18, w = 2) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round">${L[n]}</svg>`;
@@ -141,8 +142,12 @@ const XS = {
         h = `<div class="ov mk_n"><div class="fog"></div><div class="lp_e" style="left:${x}px;top:${y - 52}px">${E}<i>${ic('plus', 18)}</i></div>${c.outerHTML}
           <div class="lp_c" style="left:${x}px;top:${y + r.height / k + 8}px"><div class="q"><div>${ic('copy', 18)}복사</div><div>${ic('pencil', 18)}수정</div><div>${ic('languages', 18)}재번역</div><div>${ic('circle-check', 18)}선택</div></div><hr>
           <div class="r">${ic('bookmark', 17)}<div>북마크</div></div><div class="r">${ic('pin', 17)}<div>고정</div></div><div class="r">${ic('sticky-note', 17)}<div>메모</div></div><div class="r">${ic('eye-off', 17)}<div>AI에게 숨기기</div></div><hr><div class="r red">${ic('trash-2', 17)}<div>삭제</div></div></div></div>`; }
+      // M2: 아이콘만 있는 작은 판(마리나라의 11가지 + 수정). 고정 · 메모는 북마크 안, 반응은 웃는 얼굴을 누르면 이모지 판
+      if (kind === 'M2') { const b = [...document.querySelectorAll('.na_ph_frame .ob_b.th')].find(e => e.textContent.includes('Den mit Kirschen')), hr = host.getBoundingClientRect(), r = b.getBoundingClientRect(), k = hr.width / host.offsetWidth;
+        const x = (r.left - hr.left) / k, y = (r.top - hr.top) / k, c = b.cloneNode(true); c.style.cssText = `position:absolute;left:${x}px;top:${y}px;margin:0;width:${r.width / k}px;box-sizing:border-box;background:#fff;`;
+        h = `<div class="ov mk_n"><div class="fog"></div>${c.outerHTML}<div class="lp_g" style="left:${x}px;top:${y + r.height / k + 8}px">${['copy', 'reply', 'smile-plus', 'languages', 'refresh-cw', 'bookmark', 'eye-off', 'scan-text', 'brain', 'git-branch', 'pencil'].map(n => `<i>${ic(n, 19, 1.8)}</i>`).join('')}<i class="red">${ic('trash-2', 19, 1.8)}</i></div></div>`; }
       host.insertAdjacentHTML('beforeend', h); }, { L, kind });
     await p.waitForTimeout(300); await p.screenshot({ path: OUT + name + '.png' }); console.log(name); };
-  if (process.env.ONLY !== 'base') for (const k of ['S1', 'S2', 'S3', 'M']) await over(k, k);
+  if (process.env.ONLY !== 'base') for (const k of (process.env.KINDS || 'S1,S2,S3,M,M2').split(',')) await over(k, k);
   fs.rmSync(OUT + '_tmp.png', { force: true });
  } finally { await s.close(); reset(); } })().catch(e => { console.error(e); reset(); process.exit(1); });
