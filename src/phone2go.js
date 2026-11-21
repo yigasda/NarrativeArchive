@@ -25,7 +25,7 @@ import { liveStoryText } from './phone2story.js';
 import { BACK, backLeft, backInput, phone2BackSystem, takeBack, backMessage, markTold } from './phone2back.js';
 import { liveWall } from './phone2clock.js';
 import { gatherReply } from './phone2live.js';
-import { presenceOf, scheduleOf, setSchedule, setStatusOverride, setUserStatus, setAutonomous, statusNow, replyDelay, contextBlock, makeSchedule, checkProactive, noteProactive, fillPlaces, stateNow, takeStatus, scheduleZone, setScheduleZone, draftSchedule, summarizeSchedule, repairSchedule, setAutoRenew, autoRenewOf, needsRefresh, renewSchedules, setAutonomousOptions, autonomousOptions, checkExchangeFor, mentionsIn, activeSchedule, schedulesOn, setSchedulesOn, exportSchedule, importSchedule, syncUser, noteAssistant, noteReaction, forgetActivity } from './phone2sched.js';
+import { presenceOf, scheduleOf, setSchedule, setStatusOverride, setUserStatus, setAutonomous, statusNow, replyDelay, contextBlock, makeSchedule, checkProactive, noteProactive, fillPlaces, stateNow, takeStatus, scheduleZone, setScheduleZone, draftSchedule, summarizeSchedule, repairSchedule, setAutoRenew, autoRenewOf, needsRefresh, renewSchedules, setAutonomousOptions, autonomousOptions, checkExchangeFor, mentionsIn, activeSchedule, schedulesOn, setSchedulesOn, exportSchedule, importSchedule, syncUser, noteAssistant, noteReaction, forgetActivity, setCardStore, setZoneStore, flushCards } from './phone2sched.js';
 import { replyInput } from './phone2ask.js';
 import { phone2ReplySystem } from './phone2reply.js';
 import { runLive } from './phone2run.js';
@@ -154,7 +154,7 @@ export async function liveGo(real, { onChange = () => {} } = {}) {
             const w = liveWorld(real), p = livePhone(real, job.owner);
             if (w && p && w.id === job.world) markPersona(p, w.persona);
             // (the owner changed their own status in the answer: a temporary one, and the phone follows it)
-            if (w && p && w.id === job.world && got?.status && activeSchedule(real, job.owner) && takeStatus(real, job.owner, got.status, { tz: zoneOf(real, p) })) { followSchedule(real); await line.save(); }
+            if (w && p && w.id === job.world && got?.status && activeSchedule(real, job.owner) && takeStatus(real, job.owner, got.status, { tz: zoneOf(real, p) })) { followSchedule(real); await flushCards(); await line.save(); }
             if (w && w.id === job.world && got?.said) { const room = w.messenger?.rooms?.[job.room]; if (room?.away) { delete room.away[liveKey(job.owner)]; if (!Object.keys(room.away).length) delete room.away; } }
             // (Marinara records an assistant message when it is saved, not for a regenerated one; the character only when it wrote first)
             if (w && w.id === job.world && got?.said && !job.regen) noteAssistant(real, job.room, job.auto ? job.owner : '');
@@ -191,6 +191,18 @@ export async function liveGo(real, { onChange = () => {} } = {}) {
     return out;
 }
 // ---- 스케줄 · 상태 · 먼저 말 걸기 · 늦은 답 (phone2sched.js: 판단과 지시문은 마리나라의 것)
+// 스케줄 · 손으로 준 상태 · 매주 갱신은 캐릭터 카드에 둬요 (마리나라처럼 모든 채팅에 공통): 실리 카드의 data.extensions.narrative_archive_convo
+const CARD_KEY = 'narrative_archive_convo';
+const cardIndex = name => { const list = ctx().characters; return Array.isArray(list) ? list.findIndex(x => liveKey(x?.name) === liveKey(name)) : -1; };
+setCardStore({
+    get: name => { const i = cardIndex(name); if (i < 0 || typeof ctx().writeExtensionField !== 'function') return null; const e = ctx().characters[i]?.data?.extensions?.[CARD_KEY]; return e && typeof e === 'object' ? e : {}; },
+    set: async (name, patch) => { const i = cardIndex(name); if (i < 0) return; const was = ctx().characters[i]?.data?.extensions?.[CARD_KEY]; await ctx().writeExtensionField(i, CARD_KEY, { ...(was && typeof was === 'object' ? was : {}), ...patch }); },
+});
+// 스케줄의 시간대는 확장 설정에 하나 (마리나라처럼 모든 채팅에 공통)
+setZoneStore({
+    get: () => String(ctx().extensionSettings?.[MODULE]?.conversationTimeZone || ''),
+    set: tz => { const es = ctx().extensionSettings; if (!es) return; es[MODULE] = es[MODULE] && typeof es[MODULE] === 'object' ? es[MODULE] : {}; if (tz) es[MODULE].conversationTimeZone = tz; else delete es[MODULE].conversationTimeZone; ctx().saveSettingsDebounced?.(); },
+});
 // (스케줄의 시간대: 마리나라처럼 스케줄 전체에 하나를 정했으면 그것, 아니면 그 사람 폰의 시간대)
 const zoneOf = (real, p) => scheduleZone(real) || tzOf(p);
 // 줄 선 답장마다 그 사람의 지금 상태로 때를 정해요: 바쁘면 그만큼 뒤로, 오프라인이면 돌아올 때까지 (1분마다 다시 봐요)
@@ -310,7 +322,7 @@ export async function liveScheduleSummary(real, owner, { schedule, guidance = ''
 // 실패한 답을 손으로 고친 글 → 고쳐진 초안 (못 읽으면 오류). day를 주면 그날만
 export const liveRepairSchedule = (text, current, day = '') => repairSchedule(text, current, day);
 // 매주 갱신 켜기 · 끄기, 그 사람의 스케줄 사정 { autoRenew, needsRefresh (이번 주 것이 아님), timeZone }
-export const liveSetAutoRenew = async (real, owner, on) => { const out = setAutoRenew(mine(real), owner, on); await saveMeta(); return out; };
+export const liveSetAutoRenew = async (real, owner, on) => { const out = setAutoRenew(mine(real), owner, on); await flushCards(); await saveMeta(); return out; };
 export const liveScheduleInfo = (real, owner) => { const p = livePhone(real, owner), tz = p ? zoneOf(real, p) : ''; return { autoRenew: autoRenewOf(real, owner), needsRefresh: needsRefresh(real, owner, { tz }), timeZone: tz }; };
 // 갱신 (마리나라의 /schedule/generate): 지난 스케줄을 이어받아 새 주 것을 만들어 넣어요 (모델을 불러요)
 //   opts: { owners (없으면 스케줄이 있는 사람 전부), automatic: 매주 갱신을 켠 사람만 (갱신이 필요할 때), forceRefresh, guidance, signal }
@@ -332,6 +344,7 @@ export async function liveRenewSchedules(real, { owners = null, automatic = fals
         try { await fillPlaces(real, p.owner, { ask: askSched, parse: t => parseJson(t, { salvage: true }), card: cards[liveKey(p.owner)].description, places: knownPlaces(p) }); } catch (err) { console.warn('[narrative-archive] schedule places', err); }
         delete p.schedAt;
     }
+    await flushCards();
     if (open(real)) { followSchedule(real); await saveMeta(); }
     return done;
 }
@@ -354,10 +367,11 @@ export async function liveSetSchedule(real, owner, schedule) {
         try { await fillPlaces(real, p.owner, { ask: askVia(real), parse: t => parseJson(t, { salvage: true }), card: await cardOf(p), places: knownPlaces(p) }); out.placedFor = acts; } catch (err) { console.warn('[narrative-archive] schedule places', err); }
     }
     if (p) delete p.schedAt;
+    await flushCards();
     if (open(real)) { followSchedule(real); await saveMeta(); }
     return out;
 }
-export const liveSetStatus = async (real, owner, o = {}) => { const out = setStatusOverride(mine(real), owner, o); for (const j of liveWorld(real).queue.jobs) if (j.state === 'waiting' && liveKey(j.owner) === liveKey(owner)) { delete j.timed; delete j.notBefore; } await saveMeta(); return out; };
+export const liveSetStatus = async (real, owner, o = {}) => { const out = setStatusOverride(mine(real), owner, o); for (const j of liveWorld(real).queue.jobs) if (j.state === 'waiting' && liveKey(j.owner) === liveKey(owner)) { delete j.timed; delete j.notBefore; } await flushCards(); await saveMeta(); return out; };
 export const liveSetUserStatus = async (real, o = {}) => { const out = setUserStatus(mine(real), o); await saveMeta(); return out; };
 export const liveSetAutonomous = async (real, on) => { const out = setAutonomous(mine(real), on); await saveMeta(); return out; };
 // 스케줄 쓰기 켜고 끄기 (마리나라의 conversationSchedulesEnabled): 끄면 스케줄은 남아 있고 상태 · 늦음 · 먼저 말 걸기가 안 읽어요
@@ -645,7 +659,7 @@ export async function liveDropMessages(real, roomId, ids) {
 }
 // ---- 말 · 방 다루기 (phone2room.js). 사람이 눌렀을 때만 해요. 바뀐 것이 있으면 저장까지 해요.
 const mine = real => { if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않아요'); return real; };
-const kept = async v => { if (v) await saveMeta(); return v; };
+const kept = async v => { if (v) { await flushCards(); await saveMeta(); } return v; };
 // 말의 표시 (마리나라의 열쇠 그대로, 준 것만 바꿔요) → 바뀐 말의 수
 //   { hiddenFromAI: true|false, hiddenFromAICharacterIds: [이름] | null, pinnedToContext: true|false, bookmark: true | { label } | null, privateNote: 글 | null }
 export const liveMark = async (real, roomId, ids, patch) => kept(markMessages(mine(real), roomId, ids, patch));

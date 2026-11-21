@@ -25,17 +25,58 @@ import { applyCharacterStatusCommand } from './marinara/schedule-command.js';
 import { restoreAvailableAfterUserMessage } from './marinara/idle-detection.js';
 
 export { ScheduleDraftError, CONVERSATION_SCHEDULE_DAYS };
+// (Marinara's reasons say "the user": here that is the persona, by name — 소망, 2026-11-21)
+const named = (text, persona) => String(text ?? '').replace(/\b([Tt])he user\b/g, String(persona || 'them'));
 const obj = v => v && typeof v === 'object' && !Array.isArray(v);
 const STATUSES = ['online', 'idle', 'dnd', 'offline'], USER = ['active', 'idle', 'dnd', 'invisible'];
 
 function need(m) { const w = liveWorld(m); if (!w) throw new Error('아직 폰 2가 없어요'); return w; }
+
+// ---- 스케줄의 주인은 캐릭터 카드예요 (마리나라처럼: 그 캐릭터가 나오는 모든 채팅에서 같은 스케줄 · 손으로 준 상태 · 매주 갱신).
+// 채팅의 w.presence.schedules · overrides · autoRenew는 카드에서 읽어 온 사본이에요(마리나라의 "the chat's schedule map is only a cache").
+// 카드가 없는 사람(실리에 캐릭터로 없는 사람)은 채팅의 것만 써요.
+//   cards: { get(이름) → { conversationSchedule, conversationStatusOverride, conversationScheduleAutoRenew } | null (카드 없음), set(이름, patch) → Promise }
+//   zones: { get() → 시간대 | '', set(시간대 | '') } 스케줄의 시간대 (마리나라처럼 모든 채팅에 하나)
+let cards = null, zones = null, writes = [];
+export const setCardStore = s => { cards = s && typeof s.get === 'function' ? s : null; };
+export const setZoneStore = s => { zones = s && typeof s.get === 'function' ? s : null; };
+// 카드에 쓰는 일이 다 끝났을 때 (저장하기 전에 기다려요)
+export async function flushCards() { const w = writes; writes = []; await Promise.all(w); }
+function toCard(owner, patch) {
+    if (!cards || !cards.get(owner)) return;
+    try { writes.push(Promise.resolve(cards.set(owner, patch)).catch(err => console.warn('[narrative-archive] card schedule', err))); } catch (err) { console.warn('[narrative-archive] card schedule', err); }
+}
+// 카드의 것을 채팅의 사본으로 (마리나라의 resolveConversationPresenceState). 카드에 아직 없고 채팅에만 있던 예전 것은 카드로 올려요
+function resolveCards(m) {
+    const w = liveWorld(m);
+    if (!cards || !w) return;
+    for (const ph of Object.values(w.phones || {})) {
+        const ext = ph?.owner ? cards.get(ph.owner) : null;
+        if (!ext) continue;
+        const k = liveKey(ph.owner), has = key => Object.hasOwn(ext, key);
+        const p = obj(w.presence) ? w.presence : null, any = has('conversationSchedule') || has('conversationStatusOverride') || has('conversationScheduleAutoRenew');
+        if (!p && !any) continue;
+        const q = p || (w.presence = {});
+        q.schedules = obj(q.schedules) ? q.schedules : {}; q.overrides = obj(q.overrides) ? q.overrides : {}; q.autoRenew = obj(q.autoRenew) ? q.autoRenew : {};
+        if (obj(ext.conversationSchedule)) q.schedules[k] = ext.conversationSchedule;
+        else if (has('conversationSchedule')) delete q.schedules[k];
+        else if (q.schedules[k]) toCard(ph.owner, { conversationSchedule: q.schedules[k] });
+        if (obj(ext.conversationStatusOverride)) q.overrides[k] = ext.conversationStatusOverride;
+        else if (has('conversationStatusOverride')) delete q.overrides[k];
+        else if (q.overrides[k]) toCard(ph.owner, { conversationStatusOverride: q.overrides[k] });
+        if (ext.conversationScheduleAutoRenew === true) q.autoRenew[k] = true;
+        else if (has('conversationScheduleAutoRenew')) delete q.autoRenew[k];
+        else if (q.autoRenew[k]) toCard(ph.owner, { conversationScheduleAutoRenew: true });
+    }
+}
 export function presenceOf(m) {
+    resolveCards(m);
     const w = need(m), p = (w.presence = obj(w.presence) ? w.presence : {});
     p.schedules = obj(p.schedules) ? p.schedules : {}; p.overrides = obj(p.overrides) ? p.overrides : {};
     p.meta = obj(p.meta) ? p.meta : {}; p.user = obj(p.user) ? p.user : {};
     return p;
 }
-const peek = m => { const p = liveWorld(m)?.presence; return obj(p) ? p : {}; };
+const peek = m => { resolveCards(m); const p = liveWorld(m)?.presence; return obj(p) ? p : {}; };
 export const scheduleOf = (m, owner) => peek(m).schedules?.[liveKey(owner)] || null;
 // 스케줄을 쓰는가 (마리나라의 conversationSchedulesEnabled: 정한 적이 없으면 스케줄이 하나라도 있을 때 켜진 것)
 export const schedulesOn = m => { const p = peek(m); return typeof p.meta?.conversationSchedulesEnabled === 'boolean' ? p.meta.conversationSchedulesEnabled : Object.keys(p.schedules || {}).length > 0; };
@@ -47,18 +88,22 @@ export const chatIdOf = (m, roomId) => `${liveWorld(m)?.id}:${roomId}`;
 // 스케줄 넣기 (모델이 만든 것 · 손으로 고친 것): 마리나라의 WeekSchedule 모양. null이면 지워요
 export function setSchedule(m, owner, schedule, now = new Date()) {
     const p = presenceOf(m), k = liveKey(owner);
-    if (!schedule) { delete p.schedules[k]; return null; }
+    if (!schedule) { delete p.schedules[k]; toCard(owner, { conversationSchedule: null }); return null; }
     if (!obj(schedule.days)) throw new Error('스케줄에 요일이 없어요');
     // (a block typed as ending 24:00: Marinara's clock reads 00:00-23:59, so it is kept as 00:00)
     for (const d of Object.values(schedule.days)) for (const b of Array.isArray(d) ? d : []) if (typeof b?.time === 'string' && b.time.endsWith('-24:00')) b.time = `${b.time.slice(0, -5)}00:00`;
-    return (p.schedules[k] = { ...schedule, weekStart: schedule.weekStart || getMonday(now).toISOString() });
+    p.schedules[k] = { ...schedule, weekStart: schedule.weekStart || getMonday(now).toISOString() };
+    toCard(owner, { conversationSchedule: p.schedules[k] });
+    return p.schedules[k];
 }
 // 손으로 상태 주기 (minutes 뒤에 풀려요; 0 · 없음이면 풀 때까지). status가 없으면 풀어요
 export function setStatusOverride(m, owner, { status, activity = '', minutes = 0 } = {}, now = new Date()) {
     const p = presenceOf(m), k = liveKey(owner);
-    if (!status) { delete p.overrides[k]; return null; }
+    if (!status) { delete p.overrides[k]; toCard(owner, { conversationStatusOverride: null }); return null; }
     if (!STATUSES.includes(status)) throw new Error('상태는 online · idle · dnd · offline 가운데 하나예요');
-    return (p.overrides[k] = { status, activity: String(activity || '').trim().slice(0, 120) || null, createdAt: now.toISOString(), ...(minutes > 0 ? { expiresAt: new Date(now.getTime() + minutes * 60_000).toISOString() } : {}) });
+    p.overrides[k] = { status, activity: String(activity || '').trim().slice(0, 120) || null, createdAt: now.toISOString(), ...(minutes > 0 ? { expiresAt: new Date(now.getTime() + minutes * 60_000).toISOString() } : {}) };
+    toCard(owner, { conversationStatusOverride: p.overrides[k] });
+    return p.overrides[k];
 }
 // 내 상태 · 먼저 말 걸기 켜기
 export function setUserStatus(m, { status = 'active', activity = '' } = {}) {
@@ -105,12 +150,12 @@ export function contextBlock(m, owner, roomId, { now = new Date(), tzOf = () => 
         return { charId: liveKey(n), name: n, status: st.status, activity: st.activity, todaySchedule: schedule ? getTodaySchedule(schedule, toZonedWallClockDate(now, tzOf(n) || undefined)) : '' };
     });
     if (!info.some(c => c.charId === liveKey(owner))) return '';
-    return buildConversationCurrentContextBlock({
+    return named(buildConversationCurrentContextBlock({
         nowInstant: now, promptTimeZone: tzOf(owner) || undefined, convoCharInfo: info, finalMessages: [{ role: lastRole }], personaName: w.persona,
         userMessage: said ? 'said' : '', userStatus: p.user?.status || 'active', userActivity: p.user?.activity || '',
         mentionedCharacterNames: mentions,
         autonomousIntentKey: isMessageIntent(intentKey) ? intentKey : undefined, primaryCharacterId: liveKey(owner), wrapFormat: 'none',
-    });
+    }), w.persona);
 }
 
 // 스케줄 만들기 (마리나라의 지시문 그대로). ask(messages, { temperature, maxTokens }) → 모델의 답 글
@@ -139,12 +184,13 @@ export function checkProactive(m, roomId, { now = new Date(), tzOf = () => '', c
     if (!ids.length) return { shouldTrigger: false, characterIds: [], reason: 'none', inactivityMs: 0 };
     syncUser(m, roomId);
     const first = ids[0], name = room.members.find(n => liveKey(n) === first);
-    return checkAutonomous({
+    const out = checkAutonomous({
         chatId, meta: { ...p.meta, autonomousMessages: !!p.on }, characterIds: ids,
         schedules: schedulesOn(m) ? Object.fromEntries(ids.filter(k => p.schedules[k]).map(k => [k, p.schedules[k]])) : {}, statusOverrides: p.overrides, cards,
         messages: () => (room.messages || []).filter(x => x.text || x.call).map(x => ({ role: liveKey(x.from) === P ? 'user' : 'assistant', characterId: liveKey(x.from) === P ? null : liveKey(x.from), createdAt: new Date(x.at || 0).toISOString() })),
         userStatus: p.user?.status === 'invisible' ? 'active' : p.user?.status, maxFollowups, source, promptTimeZone: tzOf(name) || undefined, nowInstant: now,
     });
+    return out.autonomousIntent ? { ...out, autonomousIntent: named(out.autonomousIntent, w.persona), autonomousIntentPrompt: named(out.autonomousIntentPrompt, w.persona) } : out;
 }
 // 먼저 말 걸기를 줄 세웠어요: 오늘 센 수 · 그 이유의 쉬는 시간을 적어요 (마리나라가 채팅 메타에 적는 것 그대로)
 export function noteProactive(m, roomId, characterId, intentKey, now = new Date()) {
@@ -228,17 +274,21 @@ export function takeStatus(m, owner, cmd, { now = new Date(), tz = '' } = {}) {
     const got = applyCharacterStatusCommand({ command: { type: 'schedule_update', status, activity: one(cmd.activity).slice(0, 120) || undefined, duration: one(cmd.duration) || undefined }, current: p.overrides[k], schedule: activeSchedule(m, owner) || undefined, now, scheduleNow: toZonedWallClockDate(now, tz || undefined) });
     if (!got) return null;
     const place = one(cmd.place).slice(0, 80);
-    return (p.overrides[k] = { ...got, ...(place ? { place } : {}) });
+    p.overrides[k] = { ...got, ...(place ? { place } : {}) };
+    toCard(owner, { conversationStatusOverride: p.overrides[k] });
+    return p.overrides[k];
 }
 
 // ---- 마리나라의 스케줄 요청들 (src/marinara/schedule-routes.js)을 우리 데이터로 부르기
 // 시간대: 마리나라처럼 스케줄 전체에 하나(meta.conversationTimeZone). 안 정했으면 '' (부르는 쪽이 그 사람 폰의 시간대를 써요)
-export const scheduleZone = m => resolveConversationTimeZone(peek(m).meta || {}) || '';
+export const scheduleZone = m => normalizePromptTimeZone(zones?.get()) || resolveConversationTimeZone(peek(m).meta || {}) || '';
 export function setScheduleZone(m, tz) {
     const p = presenceOf(m);
-    if (!tz) { delete p.meta.conversationTimeZone; return ''; }
+    if (!tz) { delete p.meta.conversationTimeZone; zones?.set(''); return ''; }
     const z = normalizePromptTimeZone(tz);
     if (!z) throw new Error('시간대가 맞지 않아요');
+    // (Marinara's rememberConversationTimeZone: one zone for every conversation)
+    zones?.set(z);
     return (p.meta.conversationTimeZone = z);
 }
 // (the model is asked through ask(messages, opts); a stop asked for while it answers drops the answer)
@@ -261,7 +311,7 @@ export function repairSchedule(text, current, day = '') {
     return { ...current, days: result.schedule.days };
 }
 // 매주 갱신 (마리나라의 conversationScheduleAutoRenew): 사람마다 켜고 꺼요
-export function setAutoRenew(m, owner, on) { const p = presenceOf(m), k = liveKey(owner); p.autoRenew = obj(p.autoRenew) ? p.autoRenew : {}; if (on) p.autoRenew[k] = true; else delete p.autoRenew[k]; return !!on; }
+export function setAutoRenew(m, owner, on) { const p = presenceOf(m), k = liveKey(owner); p.autoRenew = obj(p.autoRenew) ? p.autoRenew : {}; if (on) p.autoRenew[k] = true; else delete p.autoRenew[k]; toCard(owner, { conversationScheduleAutoRenew: !!on }); return !!on; }
 export const autoRenewOf = (m, owner) => peek(m).autoRenew?.[liveKey(owner)] === true;
 // 이번 주 것이 아닌 스케줄인가 (마리나라의 scheduleNeedsRefresh)
 export const needsRefresh = (m, owner, { now = new Date(), tz = '' } = {}) => { const s = scheduleOf(m, owner); return !!s && scheduleNeedsRefresh(s, toZonedWallClockDate(now, tz || undefined)); };
@@ -274,7 +324,7 @@ export async function renewSchedules(m, { ask, owners = [], cards = {}, automati
         meta: p.meta, characterIds: ids, existingSchedules: p.schedules, forceRefresh, automatic, scheduleGenerationPreferences: guidance, timeZone, provider: providerOf(ask), signal, nowInstant: now,
         cards: Object.fromEntries(ids.map(k => [k, cards[k] ? { ...cards[k], extensions: { ...(cards[k].extensions || {}), conversationScheduleAutoRenew: p.autoRenew?.[k] === true } } : null]).filter(([, v]) => v)),
     });
-    for (const [k, r] of Object.entries(out.results)) if (r.status === 'generated' && r.schedule) p.schedules[k] = r.schedule;
+    for (const [k, r] of Object.entries(out.results)) if (r.status === 'generated' && r.schedule) { p.schedules[k] = r.schedule; const name = owners.find(n => liveKey(n) === k); if (name) toCard(name, { conversationSchedule: r.schedule }); }
     return out;
 }
 

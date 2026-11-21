@@ -535,3 +535,60 @@ test('저절로 자리 비움(마리나라의 idle detection): 손으로 고른 
     assert.equal(S.syncUser(m, a.id), true);
     assert.equal(S.presenceOf(m).user.status, 'active');
 });
+test('스케줄의 주인은 캐릭터 카드예요(마리나라처럼): 한 채팅에서 만든 스케줄 · 상태 · 매주 갱신이 다른 채팅에서도 보여요', async () => {
+    const card = { mara: {} }, wrote = [];
+    S.setCardStore({ get: n => card[String(n).toLowerCase()] || null, set: async (n, patch) => { wrote.push([n, Object.keys(patch)[0]]); Object.assign(card[String(n).toLowerCase()], patch); } });
+    try {
+        const one = world(), two = world();
+        S.setSchedule(one.m, 'Mara', all('dnd', 'working'), NOW);
+        S.setStatusOverride(one.m, 'Mara', { status: 'idle', activity: 'coffee', minutes: 30 }, NOW);
+        S.setAutoRenew(one.m, 'Mara', true);
+        await S.flushCards();
+        assert.deepEqual(wrote, [['Mara', 'conversationSchedule'], ['Mara', 'conversationStatusOverride'], ['Mara', 'conversationScheduleAutoRenew']]);
+        // 다른 채팅: 카드의 것을 그대로 읽어요
+        assert.equal(S.scheduleOf(two.m, 'Mara').days.Monday[0].activity, 'working');
+        assert.equal(S.statusNow(two.m, 'Mara', { now: NOW }).activity, 'coffee');
+        assert.equal(S.autoRenewOf(two.m, 'Mara'), true);
+        // 다른 채팅에서 지우면 처음 채팅에서도 없어져요
+        S.setSchedule(two.m, 'Mara', null);
+        S.setStatusOverride(two.m, 'Mara', {});
+        await S.flushCards();
+        assert.equal(S.scheduleOf(one.m, 'Mara'), null);
+        assert.equal(S.statusNow(one.m, 'Mara', { now: NOW }), null);
+        // 카드가 없는 사람(Ivo)은 그 채팅의 것만 써요
+        S.setSchedule(one.m, 'Ivo', all('online', 'free'), NOW);
+        assert.equal(S.scheduleOf(one.m, 'Ivo').days.Monday[0].activity, 'free');
+        assert.equal(S.scheduleOf(two.m, 'Ivo'), null);
+        // 카드에 아직 없고 채팅에만 있던 예전 스케줄은 카드로 올라가요
+        delete card.mara.conversationSchedule;
+        const old = world();
+        old.w.presence = { schedules: { mara: { ...all('online', 'legacy'), weekStart: 'W' } } };
+        assert.equal(S.scheduleOf(old.m, 'Mara').days.Monday[0].activity, 'legacy');
+        await S.flushCards();
+        assert.equal(card.mara.conversationSchedule.days.Monday[0].activity, 'legacy');
+    } finally { S.setCardStore(null); }
+});
+test('시간대는 모든 채팅에 하나(마리나라처럼)', () => {
+    let zone = '';
+    S.setZoneStore({ get: () => zone, set: z => { zone = z; } });
+    try {
+        const one = world(), two = world();
+        S.setScheduleZone(one.m, 'Europe/Berlin');
+        assert.equal(zone, 'Europe/Berlin');
+        assert.equal(S.scheduleZone(two.m), 'Europe/Berlin');
+        S.setScheduleZone(two.m, '');
+        assert.equal(S.scheduleZone(two.m), '');
+    } finally { S.setZoneStore(null); }
+});
+test('말 거는 이유의 "the user"는 페르소나 이름으로 들어가요', () => {
+    const { m, a } = world(), t = Date.now();
+    a.messages.push({ id: 'x1', n: 1, from: 'Ren', text: 'hi', at: t - 20 * 60_000 }, { id: 'x2', n: 2, from: 'Mara', text: 'hey', at: t - 19 * 60_000 });
+    S.setSchedule(m, 'Mara', all('online', 'free'), new Date(t));
+    S.setAutonomous(m, true);
+    const r = S.checkProactive(m, a.id, { now: new Date() });
+    assert.equal(r.autonomousIntent, 'You have a free moment and Ren has been quiet.');
+    assert.equal(r.autonomousIntentPrompt, 'What prompted this message: You have a free moment and Ren has been quiet.');
+    const c = S.contextBlock(m, 'Mara', a.id, { now: NOW, lastRole: 'assistant', said: false, intentKey: 'long_absence_check_in' });
+    assert.match(c, /What prompted this message: Ren has been away for a long while\. Check in with them\./);
+    assert.doesNotMatch(c, /the user/i);
+});
