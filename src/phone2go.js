@@ -102,11 +102,24 @@ setDrawerSeed((d, w, real) => { liveFollowPersona(real); });
 setStoryKeeper(real => keepUpStory(real));
 // the words a request is refused with while a 폰 2 begun from the story has no snapshot
 const NO_STORY = '이야기 요약본을 만들지 못했어요. 잠시 뒤 다시 해 주세요';
+// 저장을 줄 세워요. 채팅 저장은 느려요(폰에서는 한 번에 몇 초): 일(답장 하나 · 반영 한 라운드)이 끝날 때마다 저장은 그대로
+// 하되, 화면과 다음 일이 그 저장을 기다리지 않아요.
+//   save(): 저장을 시작하고 바로 돌아와요. 앞의 저장이 아직 돌고 있으면 그것만 기다렸다가 시작해요(한 번에 하나).
+//           그래서 저장은 늘 일이 끝난 자리에서 시작해요: 반쯤 바뀐 폰이 저장되는 일이 없어요
+//   done(): 마지막 저장이 끝날 때까지 기다려요. 저장이 실패했으면 그 오류를 던져요
+export function saveLine(save = saveMeta) {
+    let running = null, failed = null;
+    return {
+        save: async () => { while (running) await running; running = Promise.resolve().then(save).catch(err => { failed ||= err; }).finally(() => { running = null; }); },
+        done: async () => { while (running) await running; if (failed) { const e = failed; failed = null; throw e; } },
+    };
+}
 export async function liveGo(real, { onChange = () => {} } = {}) {
     const m = () => liveMeta(real, { now: liveNowOf(real) });
     const tell = () => { try { onChange(); } catch (err) { console.error('[narrative-archive] live draw', err); } };
+    const line = saveLine();
     const out = await runLive(real, {
-        save: saveMeta, alive: () => open(real),
+        save: line.save, alive: () => open(real),
         parse: s => parseJson(s, { salvage: true }),
         ask: (input, { system }) => askDraft(input, { force: true, system, maxTokens: LIVE_GO.replyTokens, effort: 'low' }),
         gather: async job => {
@@ -136,6 +149,9 @@ export async function liveGo(real, { onChange = () => {} } = {}) {
         },
     });
     tell();
+    // (the replies are on the screen already; their last save ends here. One that failed: the talk is still there in
+    // memory and the next save takes it; told as saveError)
+    try { await line.done(); } catch (err) { console.error('[narrative-archive] live save', err); out.saveError = String(err?.message || err); }
     // (talk that goes on without the messenger being left: a room that has piled up enough is summarized now, so what
     // is not summarized yet never outgrows what a reply request carries. No reflection here: that waits for leaving)
     const w = liveWorld(real);
@@ -172,8 +188,11 @@ async function reflectTalk(real, owner, { onChange = () => {}, force = false } =
     reflecting.add(real);
     try {
         const profile = await ownerProfileBlock(ctx(), p.financeProfile, p.owner, { money: !!(p.money || p.investment) });
-        for (; rounds < LIVE_GO.rounds; rounds++) { if (!here(real, w) || !await updateLive(real, m(), p.owner, { tz: tzOf(p), save: saveMeta, profile, alive: () => open(real) })) break; tell(); }
-        if (p.liveReflectError) { delete p.liveReflectError; await saveMeta(); }
+        // (each round is saved, but the next round and the screen don't wait for it: saveLine)
+        const line = saveLine();
+        for (; rounds < LIVE_GO.rounds; rounds++) { if (!here(real, w) || !await updateLive(real, m(), p.owner, { tz: tzOf(p), save: line.save, profile, alive: () => open(real) })) break; tell(); }
+        if (p.liveReflectError && here(real, w)) { delete p.liveReflectError; await line.save(); }
+        await line.done();
         // (롤플에 넣기 is on for this phone: what the round put in goes into the role-play's prompt)
         if (rounds && p.inject && open(real)) applyInjection();
     } catch (err) {
