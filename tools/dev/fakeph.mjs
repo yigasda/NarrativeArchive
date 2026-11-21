@@ -125,6 +125,11 @@ http.createServer((req, res) => {
         : { state: '회사 · 점심 먹고 자리', reply: ['Ja klar, Samstag passt!', 'Bring Kuchen mit 😄'], ko: ['응 좋아, 토요일 괜찮아!', '케이크 가져와 😄'], does: [] });
       return setTimeout(() => { res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ choices: [{ message: { role: 'assistant', content } }] })); require_log(b); }, 2000);
     }
+    // 스케줄: 한 주 → { days, talkativeness … }, 루틴 요약 → 한 문장. "스케줄실패"가 지침에 있으면 못 읽는 글(고쳐 넣기 확인), "스케줄천천히"면 4초 뒤(중지 확인)
+    const SCH_DAY = [{ time: '00:00-07:00', activity: 'Schlafen', status: 'offline', place: 'Zuhause' }, { time: '07:00-09:00', activity: 'Frühstück', status: 'idle', place: 'Zuhause' }, { time: '09:00-17:00', activity: 'Werkstatt', status: 'dnd', place: 'Werkstatt' }, { time: '17:00-00:00', activity: 'Feierabend', status: 'online', place: 'Zuhause' }];
+    const schSend = (content, ms = 0) => setTimeout(() => { if (res.writableEnded || res.destroyed) return; res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ choices: [{ message: { role: 'assistant', content } }] })); }, ms);
+    if (b.includes('Generate a schedule for each day of the week')) return schSend(b.includes('스케줄실패') ? '{"days":{"Monday":[{"time":"00:00-07:00","activity":"Schlafen"' : JSON.stringify({ days: Object.fromEntries(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(d => [d, SCH_DAY])), talkativeness: 60, inactivityThresholdMinutes: 90 }), b.includes('스케줄천천히') ? 4000 : 0);
+    if (b.includes('Summarize the routine')) return schSend('Mara schraubt tagsüber in der Werkstatt und kocht abends zu Hause.');
     // 스케줄(마리나라의 지시문): 하루만 다시 → { blocks }, 한 주 → { days … } (Orbit 스케줄 편집의 "재생성" · "주 조정" 확인용)
     if (b.includes('Return only JSON in this exact shape') && b.includes('blocks')) { res.writeHead(200, { 'content-type': 'application/json' });
       return res.end(JSON.stringify({ choices: [{ message: { role: 'assistant', content: JSON.stringify({ blocks: [{ time: '00:00-07:00', activity: 'Schlafen', status: 'offline' }, { time: '07:00-09:00', activity: 'Frühstück mit Freunden', status: 'online' }, { time: '09:00-17:00', activity: 'Werkstatt', status: 'dnd' }, { time: '17:00-00:00', activity: 'Abend mit Freunden', status: 'online' }] }) } }] })); }
