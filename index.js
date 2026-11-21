@@ -11,6 +11,7 @@ import { applyInjection } from './src/inject.js';
 import { addWandMenu, renderPanel, sectionPanel } from './src/panel.js';
 import { addPhoneMenu } from './src/phonemenu.js';
 import { keepStart } from './src/phone2keepon.js';
+import { tickStart } from './src/phone2tick.js';
 import { RECALL_KEY } from './src/recall.js';
 import { onGenerationStarted, onMessageSent } from './src/router.js';
 import { linkedMap } from './src/sections.js';
@@ -35,6 +36,7 @@ import { xrayArm, xrayCapture, xrayWorldInfo } from './src/xray.js';
         addPhoneMenu();
         watchPopups();
         keepStart();
+        tickStart();
         onChatChanged();
     };
 

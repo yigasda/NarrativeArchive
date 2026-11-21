@@ -581,6 +581,18 @@ Orbit이 버벅이는 제일 큰 이유는 저장이에요: Orbit 데이터가 �
 - 화면이 부르는 것(`phone2go.js`): `liveMark` · `liveMarked` · `liveTrash` · `liveRestore` · `liveEmptyTrash` · `liveDropRoom` · `liveRoomTrash` · `liveRestoreRoom` · `liveEmptyRoomTrash` · `liveAddMember` · `liveRemoveMember`.
 - 아직: 메모를 한 캐릭터에게 보여 주기(`privateNoteRecipientId`), 화면.
 
+## 스케줄 · 먼저 말 걸기 · 늦은 답 (마리나라에서 가져옴)
+
+판단과 지시문은 전부 마리나라의 것이에요(`src/marinara/`, 타입만 뗌). 우리가 쓴 것은 마리나라가 자기 DB에서 읽던 자리에 우리 방 · 폰을 넘겨주는 `src/phone2sched.js`와, 답장 흐름에 끼우는 `phone2go.js`의 몇 함수예요.
+
+- 가져온 파일: `schedule.service.js`(스케줄 만드는 지시문 · 답이 늦는 시간), `conversation-presence.js`(지금 상태), `autonomous.service.js` · `autonomous-check.js`(먼저 말 걸 때인지), `intent.service.js`(말 거는 이유 8가지와 그 문장 · 쉬는 시간), `timezone.js`, `conversation-context-block.js`(지시문에 넣는 상황 글), `text-matching.js`. `zod-lite.js` · `shims.js`는 그 파일들이 찾는 것을 채워 주는 우리 파일이에요.
+- 저장: `w.presence = { on, schedules, overrides, meta, user }`. 마리나라의 "채팅"은 우리 방 하나, "캐릭터 id"는 폰 열쇠예요.
+- 답장 요청: 스케줄이나 손으로 준 상태가 있는 사람이면 NOW 뒤에 `[CONTEXT]`로 마리나라의 상황 글이 들어가요(상태 · 내 상태 · 오늘 스케줄 · 지금 시각). 답장 지시문의 받는 것 목록에 CONTEXT 한 줄을 더했어요(이 줄만 우리 글).
+- 늦은 답: 줄 선 답장마다 그 사람의 지금 상태로 때를 정해요(`holdReplies`). 바쁘면 마리나라가 정한 만큼 뒤, 오프라인이면 돌아올 때까지. 스케줄이 없는 사람은 지금처럼 바로 답해요.
+- 먼저 말 걸기: 1분마다(`src/phone2tick.js`) 방마다 마리나라의 판단을 물어서, 때가 되면 그 사람의 답장을 이유(WHY NOW)와 같이 줄 세워요. 하루 수 · 이유마다 쉬는 시간은 마리나라가 채팅 메타에 적는 그대로 `w.presence.meta`에 있어요.
+- 지금은 실리 창이 열려 있는 동안만 돌아요. 창을 닫아도 돌게 하는 것(서버 플러그인에서 돌리기)이 다음이에요.
+- 화면이 부르는 것(`phone2go.js`): `liveMakeSchedule` · `liveSetSchedule` · `liveSchedule` · `liveStatus` · `liveSetStatus` · `liveSetUserStatus` · `liveSetAutonomous` · `livePresence` · `liveReplyWait`.
+
 ## 정할 것
 
 1. **대화 밖 생활을 얼마나 자주 반영할지.** 후보: 하루 토막마다(아침 · 낮 · 저녁 · 잠들 때) / 앱을 보고 있는 동안 한 시간마다 / 잠들 때 한 번. 설정으로 고르게 할지, 기본값은 뭘로 할지.
