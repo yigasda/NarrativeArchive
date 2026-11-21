@@ -464,3 +464,41 @@ test('스케줄 내보내기 · 가져오기(마리나라의 파일 모양 그�
     assert.deepEqual(S.importSchedule({ kind: 'marinara.character-schedule', version: 9, schedule: {} }), { ok: false, reason: 'unsupported-version' });
     assert.throws(() => S.exportSchedule(m, 'Ivo'), /스케줄이 없어요/);
 });
+test('따라 묻기는 마리나라처럼 점점 뜸해지고 세 번에서 멈춰요 (판단할 때마다 기억을 지우지 않아요)', () => {
+    const { m, a } = world(), t = Date.now();
+    a.messages.push({ id: 'x1', n: 1, from: 'Ren', text: 'hi', at: t - 20 * 60_000 }, { id: 'x2', n: 2, from: 'Mara', text: 'hey', at: t - 19 * 60_000 });
+    S.setSchedule(m, 'Mara', { ...all('online', 'free'), inactivityThresholdMinutes: 15, talkativeness: 80 }, new Date(t));
+    S.setAutonomous(m, true);
+    const ask = () => S.checkProactive(m, a.id, { now: new Date() });
+    const fire = r => { S.noteAssistant(m, a.id, 'Mara'); S.noteProactive(m, a.id, 'mara', r.autonomousIntentKey); };
+    let r = ask();
+    assert.equal(r.shouldTrigger, true);                        // 15분 넘게 조용함: 첫 번째
+    fire(r);
+    assert.equal(ask().shouldTrigger, false);                   // 방금 걸었어요: 다음은 30분 뒤 (두 배)
+    // 내가 다시 말하면 수가 처음으로 돌아가요
+    a.messages.push({ id: 'x3', n: 3, from: 'Ren', text: 'back', at: Date.now() - 1 });
+    assert.equal(S.syncUser(m, a.id), true);
+    assert.equal(S.syncUser(m, a.id), false);
+    // (답이 없는 내 말이 마지막이면 마리나라는 바로 따라잡아요: 여기서는 캐릭터가 답한 것으로 해요)
+    a.messages.push({ id: 'x4', n: 4, from: 'Mara', text: 'welcome back', at: Date.now() });
+    S.noteAssistant(m, a.id);
+    assert.equal(ask().shouldTrigger, false);                   // 방금 말했으니 아직 조용하지 않아요
+    // 방의 말을 손으로 바꾸면 기억을 지우고 방에서 다시 읽어요
+    S.forgetActivity(m, a.id);
+    a.messages.length = 2;
+    assert.equal(ask().shouldTrigger, true);
+});
+test('이모지만 달면 첫 번째 먼저 걸기가 빨라져요 (마리나라의 reaction gate)', () => {
+    const { m, a } = world(), t = Date.now();
+    a.messages.push({ id: 'x1', n: 1, from: 'Ren', text: 'hi', at: t - 6 * 60_000 }, { id: 'x2', n: 2, from: 'Mara', text: 'hey', at: t - 5.9 * 60_000 });
+    S.setSchedule(m, 'Mara', { ...all('online', 'free'), inactivityThresholdMinutes: 15, talkativeness: 80 }, new Date(t));
+    S.setAutonomous(m, true);
+    assert.equal(S.checkProactive(m, a.id, { now: new Date() }).shouldTrigger, false);     // 6분: 15분이 안 됐어요
+    S.noteReaction(m, a.id);
+    assert.equal(S.checkProactive(m, a.id, { now: new Date() }).shouldTrigger, false);     // 반응한 지 얼마 안 됐어요
+    const real = Date.now; Date.now = () => real() + 6 * 60_000;                           // (반응하고 6분 뒤: 15분의 34%가 지났어요)
+    try {
+        const r = S.checkProactive(m, a.id, { now: new Date() });
+        assert.deepEqual([r.shouldTrigger, r.reason], [true, 'user_reaction']);
+    } finally { Date.now = real; }
+});

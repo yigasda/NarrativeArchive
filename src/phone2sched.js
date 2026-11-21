@@ -18,7 +18,7 @@ import { scheduleDraft, scheduleSummary, scheduleGenerate } from './marinara/sch
 import { parseCharacterScheduleImport, createCharacterScheduleExport } from './marinara/character-schedule-transfer.js';
 import { buildConversationCurrentContextBlock } from './marinara/conversation-context-block.js';
 import { checkAutonomous, checkExchange, forgetAutonomousSeed } from './marinara/autonomous-check.js';
-import { clearChatActivity, clearGenerationInProgress, buildAutonomousDailyBudgetPatch } from './marinara/autonomous.service.js';
+import { clearChatActivity, clearGenerationInProgress, buildAutonomousDailyBudgetPatch, getActivityState, recordUserActivity, recordAssistantActivity, recordUserReaction } from './marinara/autonomous.service.js';
 import { buildIntentCooldownPatch, isMessageIntent } from './marinara/intent.service.js';
 import { applyCharacterStatusCommand } from './marinara/schedule-command.js';
 
@@ -131,8 +131,7 @@ export function checkProactive(m, roomId, { now = new Date(), tzOf = () => '', c
     if (!room) throw new Error('없는 방이에요');
     const P = liveKey(w.persona), ids = room.members.map(liveKey).filter(k => k !== P && w.phones?.[k]), chatId = chatIdOf(m, roomId);
     if (!ids.length) return { shouldTrigger: false, characterIds: [], reason: 'none', inactivityMs: 0 };
-    // (the room's talk is the truth: the tracker is read from it again each time, so a deleted or imported message counts)
-    clearChatActivity(chatId); forgetAutonomousSeed(chatId);
+    syncUser(m, roomId);
     const first = ids[0], name = room.members.find(n => liveKey(n) === first);
     return checkAutonomous({
         chatId, meta: { ...p.meta, autonomousMessages: !!p.on }, characterIds: ids,
@@ -294,7 +293,7 @@ export function checkExchangeFor(m, roomId, lastSpeaker, { now = new Date(), tzO
     const w = need(m), room = w.messenger?.rooms?.[roomId], p = presenceOf(m);
     if (!room) throw new Error('없는 방이에요');
     const P = liveKey(w.persona), ids = room.members.map(liveKey).filter(k => k !== P && w.phones?.[k]), chatId = chatIdOf(m, roomId);
-    clearChatActivity(chatId); forgetAutonomousSeed(chatId);
+    syncUser(m, roomId);
     const name = room.members.find(n => liveKey(n) === liveKey(lastSpeaker));
     return checkExchange({
         chatId, meta: p.meta, characterIds: ids, lastSpeakerCharId: liveKey(lastSpeaker),
@@ -308,3 +307,22 @@ export function checkExchangeFor(m, roomId, lastSpeaker, { now = new Date(), tzO
 //   내보내기 → 파일에 쓸 객체; 가져오기(값) → { ok: true, schedule, format } | { ok: false, reason: 'invalid' | 'unsupported-version' }
 export const exportSchedule = (m, owner) => { const s = scheduleOf(m, owner); if (!s) throw new Error('스케줄이 없어요'); return createCharacterScheduleExport(s, String(owner || '')); };
 export const importSchedule = value => parseCharacterScheduleImport(value);
+
+// ---- 마리나라가 기억해 두는 방의 움직임 (autonomous.service.js의 activityStates: 페이지가 떠 있는 동안만, 마리나라 서버처럼)
+// 내가 마지막으로 말한 때 · 캐릭터가 먼저 건 수(몇 번째 따라 묻기인지) · 내가 이모지만 단 때. 마리나라가 적는 때에 똑같이 적어요.
+// 내가 방에 새로 말했으면 따라잡아요 (마리나라는 내 말을 저장할 때 recordUserActivity를 불러요): 판단하기 전마다 불러요
+export function syncUser(m, roomId) {
+    const w = liveWorld(m), room = w?.messenger?.rooms?.[roomId];
+    if (!w || !room) return false;
+    const P = liveKey(w.persona), last = [...(room.messages || [])].reverse().find(x => liveKey(x.from) === P && (x.text || x.call)), st = getActivityState(chatIdOf(m, roomId));
+    // (no state yet: the first check reads the room's messages, as Marinara does after a restart)
+    if (!st || !last || !(Number(last.at) > st.lastUserMessageAt)) return false;
+    recordUserActivity(chatIdOf(m, roomId), { occurredAt: Number(last.at) });
+    return true;
+}
+// 캐릭터의 말이 들어왔어요 (마리나라: 다시 받은 답이 아닐 때. owner는 먼저 건 말일 때만 줘요: 따라 묻기 수가 올라가요)
+export const noteAssistant = (m, roomId, owner = '', at = Date.now()) => recordAssistantActivity(chatIdOf(m, roomId), owner ? liveKey(owner) : undefined, at);
+// 내가 이모지를 달았어요 (마리나라: 말 없이 반응만 하면 첫 번째 먼저 걸기가 조금 빨라져요)
+export const noteReaction = (m, roomId) => recordUserReaction(chatIdOf(m, roomId));
+// 방이 없어졌거나 방의 말을 손으로 크게 바꿨어요 (지우기 · 가져오기 · 되살리기): 기억을 지우고 다음 판단 때 방에서 다시 읽어요
+export function forgetActivity(m, roomId) { const id = chatIdOf(m, roomId); clearChatActivity(id); forgetAutonomousSeed(id); }

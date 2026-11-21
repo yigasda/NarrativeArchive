@@ -25,7 +25,7 @@ import { liveStoryText } from './phone2story.js';
 import { BACK, backLeft, backInput, phone2BackSystem, takeBack, backMessage, markTold } from './phone2back.js';
 import { liveWall } from './phone2clock.js';
 import { gatherReply } from './phone2live.js';
-import { presenceOf, scheduleOf, setSchedule, setStatusOverride, setUserStatus, setAutonomous, statusNow, replyDelay, contextBlock, makeSchedule, checkProactive, noteProactive, fillPlaces, stateNow, takeStatus, scheduleZone, setScheduleZone, draftSchedule, summarizeSchedule, repairSchedule, setAutoRenew, autoRenewOf, needsRefresh, renewSchedules, setAutonomousOptions, autonomousOptions, checkExchangeFor, mentionsIn, activeSchedule, schedulesOn, setSchedulesOn, exportSchedule, importSchedule } from './phone2sched.js';
+import { presenceOf, scheduleOf, setSchedule, setStatusOverride, setUserStatus, setAutonomous, statusNow, replyDelay, contextBlock, makeSchedule, checkProactive, noteProactive, fillPlaces, stateNow, takeStatus, scheduleZone, setScheduleZone, draftSchedule, summarizeSchedule, repairSchedule, setAutoRenew, autoRenewOf, needsRefresh, renewSchedules, setAutonomousOptions, autonomousOptions, checkExchangeFor, mentionsIn, activeSchedule, schedulesOn, setSchedulesOn, exportSchedule, importSchedule, syncUser, noteAssistant, noteReaction, forgetActivity } from './phone2sched.js';
 import { replyInput } from './phone2ask.js';
 import { phone2ReplySystem } from './phone2reply.js';
 import { runLive } from './phone2run.js';
@@ -118,6 +118,7 @@ export function saveLine(save = saveMeta) {
 }
 export async function liveGo(real, { onChange = () => {} } = {}) {
     followSchedule(real); holdReplies(real);
+    for (const id of Object.keys(liveWorld(real)?.messenger?.rooms || {})) syncUser(real, id);
     const m = () => liveMeta(real, { now: liveNowOf(real) });
     const tell = () => { try { onChange(); } catch (err) { console.error('[narrative-archive] live draw', err); } };
     const line = saveLine();
@@ -155,6 +156,8 @@ export async function liveGo(real, { onChange = () => {} } = {}) {
             // (the owner changed their own status in the answer: a temporary one, and the phone follows it)
             if (w && p && w.id === job.world && got?.status && activeSchedule(real, job.owner) && takeStatus(real, job.owner, got.status, { tz: zoneOf(real, p) })) { followSchedule(real); await line.save(); }
             if (w && w.id === job.world && got?.said) { const room = w.messenger?.rooms?.[job.room]; if (room?.away) { delete room.away[liveKey(job.owner)]; if (!Object.keys(room.away).length) delete room.away; } }
+            // (Marinara records an assistant message when it is saved, not for a regenerated one; the character only when it wrote first)
+            if (w && w.id === job.world && got?.said && !job.regen) noteAssistant(real, job.room, job.auto ? job.owner : '');
             // (a message a character wrote first counts toward the day and its reason rests, once it is really there — Marinara's
             // recordSavedAutonomousGeneration; and the room's failure pause ends)
             if (w && w.id === job.world && job.auto && got?.said) { noteProactive(real, job.room, liveKey(job.owner), job.intent || ''); const room = w.messenger?.rooms?.[job.room]; if (room) delete room.autoFail; await line.save(); }
@@ -634,6 +637,7 @@ export async function liveImportFile(real, text, opts = {}) {
 export async function liveDropMessages(real, roomId, ids) {
     if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않아요');
     const n = dropMessages(real, roomId, ids);
+    if (n) forgetActivity(real, roomId);
     // (the answer shown is gone, every bubble of it: another one kept for that message shows)
     if (n) { settleSwipes(real, roomId); await saveMeta(); }
     return n;
@@ -648,10 +652,10 @@ export const liveMark = async (real, roomId, ids, patch) => kept(markMessages(mi
 export const liveMarked = (real, roomId = '') => markedMessages(real, roomId);
 // 휴지통: 지운 말 보기 [{ x, at }] · 되살리기 · 비우기 (ids 없으면 전부) → 수
 export const liveTrash = (real, roomId) => trashOf(real, roomId);
-export async function liveRestore(real, roomId, ids) { const n = restoreMessages(mine(real), roomId, ids); if (n) { settleSwipes(real, roomId); await saveMeta(); } return n; }
+export async function liveRestore(real, roomId, ids) { const n = restoreMessages(mine(real), roomId, ids); if (n) { forgetActivity(real, roomId); settleSwipes(real, roomId); await saveMeta(); } return n; }
 export const liveEmptyTrash = async (real, roomId, ids = null) => kept(emptyTrash(mine(real), roomId, ids));
 // 방 지우기(휴지통으로) · 지운 방들 [{ room, at }] · 되살리기 · 아주 버리기 (roomId 없으면 전부)
-export const liveDropRoom = async (real, roomId) => kept(dropRoom(mine(real), roomId));
+export const liveDropRoom = async (real, roomId) => { forgetActivity(mine(real), roomId); return kept(dropRoom(real, roomId)); };
 export const liveRoomTrash = real => roomTrash(real);
 export const liveRestoreRoom = async (real, roomId) => kept(restoreRoom(mine(real), roomId));
 export const liveEmptyRoomTrash = async (real, roomId = '') => kept(emptyRoomTrash(mine(real), roomId));
@@ -682,7 +686,7 @@ export async function liveSwipe(real, roomId, dir) {
     settleSwipes(real, roomId);
     // (a new answer asked for by hand: no waiting, and an owner who is offline answers too — Marinara's regenerate)
     const out = swipeTo(real, roomId, dir), made = out.fresh ? enqueueReplies(real, roomId) : [], jobs = made.length;
-    for (const j of made) j.timed = true;
+    for (const j of made) { j.timed = true; j.regen = true; }
     await saveMeta();
     return { ...out, jobs };
 }
@@ -746,7 +750,7 @@ export async function liveReact(real, roomId, msgId, by, e = null) {
     const had = reactOf(x, by)?.e || '', next = want && want !== had ? want : '';
     if (putReact(x, by, next)) {
         const mine = liveKey(by) === liveKey(w.persona);
-        if (next && mine) noteRecent(w, next);
+        if (next && mine) { noteRecent(w, next); noteReaction(real, roomId); }
         // (the persona put an emoji on what a character just said and wrote nothing: the character gets to see it now
         // and answer it, react back or let it be. Only on the talk since the persona's last text; an emoji on older
         // talk waits for the next reply, where it shows as new. One already waiting for them here sees it too)
