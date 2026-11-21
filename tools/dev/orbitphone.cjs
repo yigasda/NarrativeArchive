@@ -4,7 +4,7 @@ const { open } = require('./probe.cjs');
 const fs = require('fs'), path = require('path'), os = require('os');
 const CHAT = path.join(os.homedir(), 'sillytavern/data/default-user/chats/default_Seraphina/na_test.jsonl');
 const reset = () => fs.copyFileSync(path.join(__dirname, 'na_test.jsonl'), CHAT);
-const B = '/scripts/extensions/third-party/NarrativeArchive/src/', SLOW = Number(process.env.SAVE_MS || 4000);
+const B = '/scripts/extensions/third-party/NarrativeArchive/src/', SLOW = Number(process.env.SAVE_MS || 4000), MSGS = Number(process.env.N || 30);   // (N=300: 말이 많은 방 — 최근 60개만 그리는 조건)
 (async () => { reset(); const s = await open('light', { out: os.tmpdir(), width: 412, height: 915, mobile: true, init: true }); const p = s.p; const out = [];
  try {
   await p.evaluate(() => document.documentElement.style.setProperty('--na-nb', '48px'));
@@ -12,7 +12,7 @@ const B = '/scripts/extensions/third-party/NarrativeArchive/src/', SLOW = Number
   await s.run(async ({ m }) => { const n = SillyTavern.getContext().chat.length - 1; m.text = String(m.text).replace(/\n# STATE/, `\n## #26–#${n} — Am Fluss (Oct 25, night, Varo)\n- Sie redeten.\n\n# STATE`); m.boundary = n; });
   await s.to('set'); await p.click('.na_ph_pmode[data-v=live]'); await p.waitForTimeout(600); await p.click('.na_ob_start'); await p.waitForTimeout(2000);
   await s.to('orbitnew'); await p.waitForTimeout(400); await p.locator('.na_ph_frame .na_ob_pick', { hasText: 'Mara' }).first().click(); await p.waitForTimeout(300); await p.click('.na_ph_frame .na_ob_make'); await p.waitForTimeout(500);
-  const rid = await p.evaluate(async B => { const core = await import(B + 'core.js'), st = await import(B + 'phone2store.js'); const m = core.getMeta(), r = st.liveRooms(m)[0], me = st.liveWorld(m).persona; const T = []; for (let i = 0; i < 30; i++) T.push(i % 3 ? ['Mara', `Nachricht Nummer ${i} 😄`, `메시지 ${i}번 😄`] : [me, `내 말 ${i}`, '']); const t0 = Date.now() - T.length * 60000; r.messages = T.map(([from, text, ko], i) => ({ id: `mk${i}`, from, text, ko, at: t0 + i * 60000, told: true })); for (const n of r.members) (r.read ||= {})[st.liveKey(n)] = Date.now(); await core.saveMeta(); return r.id; }, B);
+  const rid = await p.evaluate(async ([B, N]) => { const core = await import(B + 'core.js'), st = await import(B + 'phone2store.js'); const m = core.getMeta(), r = st.liveRooms(m)[0], me = st.liveWorld(m).persona; const T = []; for (let i = 0; i < N; i++) T.push(i % 3 ? ['Mara', `Nachricht Nummer ${i} 😄`, `메시지 ${i}번 😄`] : [me, `내 말 ${i}`, '']); const t0 = Date.now() - T.length * 60000; r.messages = T.map(([from, text, ko], i) => ({ id: `mk${i}`, from, text, ko, at: t0 + i * 60000, told: true })); for (const n of r.members) (r.read ||= {})[st.liveKey(n)] = Date.now(); await core.saveMeta(); return r.id; }, [B, MSGS]);
   // 저장을 느리게 (폰에서 4초쯤)
   await p.route(/\/api\/chats\/(save|group\/save)|savemetadata/i, async r => { await new Promise(z => setTimeout(z, SLOW)); await r.continue(); });
   // 누른 뒤 cond가 참이 될 때까지 걸린 시간

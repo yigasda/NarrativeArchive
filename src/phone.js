@@ -206,6 +206,18 @@ export async function openPhone(who = null) {
     // obFix: 고치는 중인 말 { id, t: 원문, k: 한국어, at: 'k'면 한국어 칸에 초점 } (시안 docs/mockups/shell-bars E2, 소망) 또는 null
     let obHeld = null, obPicks = null, obEditAt = '', obList = null, obFix = null;   // obList: 받아 둔 답장 창에서 고른 번호들(Set), 닫혀 있으면 null
     const obTr = new Set();
+    // 방은 최근 말만 그려요(마리나라처럼): 처음엔 마지막 OB_PAGE개, 위쪽 끝 가까이(OB_NEAR px) 굴리면 OB_PAGE개씩 더. 말이 300개인 방을
+    // 다 그리면 요소가 1300개가 넘어서, 뭘 누를 때마다 모양 · 자리 계산이 한참 걸렸어요(소망: 버벅임).
+    // obFrom = 위에 안 그린 말 수(방을 열 때 정해요, null = 아직), obDrawn = 마지막으로 그린 방과 그때의 obFrom, obGrow = 방금 위로 늘렸어요(그린 뒤 자리 맞추기)
+    const OB_PAGE = 60, OB_NEAR = 1200;
+    let obFrom = null, obDrawn = null, obGrow = false;
+    const obMore = el => {
+        if (phoneClosed || !obFrom || obFix || !obDrawn || obDrawn.v !== view || obDrawn.from !== obFrom) return;   // (obDrawn.from !== obFrom: 늘린 게 아직 안 그려졌어요)
+        el = el || $root.find('.ob_msgs')[0];
+        if (!el || !el.clientHeight || el.scrollTop > OB_NEAR) return;
+        obFrom = Math.max(0, obFrom - OB_PAGE); obGrow = true;
+        drawPhone(true);
+    };
     const roomNow = () => (view.startsWith('orbitroom:') ? liveWorld(realM)?.messenger?.rooms?.[view.slice(10)] || null : null);
     // 지금 계정: 폰 주인 계정은 주인이 페르소나가 아닐 때만, 그 폰을 보고 있을 때만
     const obAcct = () => { const w = liveWorld(realM), me = w?.persona || ''; return obWho && owner && liveKey(obWho) === liveKey(owner) && liveKey(owner) !== liveKey(me) ? owner : me; };
@@ -220,8 +232,8 @@ export async function openPhone(who = null) {
     const orbitUi = () => {
         const w = liveWorld(realM);
         if (!live() || !w) return {};
-        if (obEditAt !== view) { obHeld = null; obPicks = null; obList = null; obFix = null; obEditAt = view; }
-        const me = w.persona, who = obAcct(), ro = liveKey(who) !== liveKey(me), sh = w.dayShift || 0, vw = ms => viewerWall(ms, sh).at, today = vw(Date.now()).slice(0, 5), yday = vw(Date.now() - 864e5).slice(0, 5);
+        if (obEditAt !== view) { obHeld = null; obPicks = null; obList = null; obFix = null; obFrom = null; obEditAt = view; }
+        const me = w.persona, who = obAcct(), ro = liveKey(who) !== liveKey(me), sh = w.dayShift || 0, vtz = Intl.DateTimeFormat().resolvedOptions().timeZone, vw = ms => viewerWall(ms, sh, vtz).at, today = vw(Date.now()).slice(0, 5), yday = vw(Date.now() - 864e5).slice(0, 5);
         const dayOf = a => (a.slice(0, 5) === today ? '오늘' : a.slice(0, 5) === yday ? '어제' : `${Number(a.slice(0, 2))}월 ${Number(a.slice(3, 5))}일`);
         const shortAt = ms => { const a = vw(ms), d = dayOf(a); return d === '오늘' ? a.slice(6) : d; };
         const tzOf = n => { const ph = livePhone(realM, n); return ph ? placeInfo(ph).owner.tz || '' : ''; };
@@ -256,8 +268,9 @@ export async function openPhone(who = null) {
             const sw = ro ? null : liveSwipeInfo(realM, r.id), shown = r.messages.filter(seen), lastMine = shown.map(x => liveKey(x.from) === liveKey(me)).lastIndexOf(true);
             const reply = new Set(sw ? shown.slice(lastMine + 1).map(x => x.id) : []), lastReply = sw ? shown.at(-1)?.id : null;
             const reFresh = !OB_RE_SEEN.has(r.id);
-            for (const x of r.messages) {
-                if (!seen(x)) continue;
+            if (obFrom === null || obFrom >= shown.length) obFrom = Math.max(0, shown.length - OB_PAGE);
+            for (let i = 0; i < obFrom; i++) if (shown[i].reacts?.length) obReacts(r.id, shown[i], true);   // (안 그린 옛 말의 반응은 본 것으로 쳐요: 나중에 위로 굴려 그릴 때 새 반응처럼 튀지 않게)
+            for (const x of shown.slice(obFrom)) {
                 const a = vw(x.at), d = dayOf(a);
                 if (d !== day) { msgs.push({ day: d }); day = d; }
                 const mine = liveKey(x.from) === liveKey(who);
@@ -529,6 +542,9 @@ export async function openPhone(who = null) {
         if (view === 'setvoice') voiceFill(p);
         if (view !== 'setvoiceadd' && !voiceBusy) voiceAdd = new Set();
         const top = keep ? $root.find('.na_ph_body, .ax_scroll').scrollTop() : 0;
+        // (Orbit 방에서 위로 옛 말을 더 그릴 때: 지금 맨 위 말풍선이 화면 어디 있는지 적어 둬요. 그린 뒤 그 말이 같은 자리에 오게 굴려요)
+        const obAnc = keep && obGrow ? (b => (b ? { id: b.dataset.id, y: b.getBoundingClientRect().top } : null))($root.find('.ob_msgs .ob_b[data-id]')[0]) : null;
+        obGrow = false;
         // a screen that can't be drawn says why (and in the console), instead of leaving the phone blank or on another screen
         let html;
         tidyKo(p);
@@ -569,6 +585,12 @@ export async function openPhone(who = null) {
         trPop();
         notchPasses();
         if (keep) $root.find('.na_ph_body, .ax_scroll').scrollTop(top);
+        // (폰은 화면에 맞춰 조금 늘려 그려요: 화면 px ÷ 배율 = 굴림 px. 배율은 큰 요소(말 목록)로 재요 — 작은 말풍선으로 재면 반올림 탓에 1%쯤 틀려서,
+        // 한 번에 3000px 넘게 맞추면 30px씩 튀었어요. 남은 차이가 없을 때까지 최대 3번 맞춰요)
+        if (obAnc) { const b = [...$root.find('.ob_msgs .ob_b[data-id]')].find(e => e.dataset.id === obAnc.id), box = b?.closest('.ob_msgs'); if (box) { const k = box.offsetHeight ? box.getBoundingClientRect().height / box.offsetHeight : 1; for (let i = 0; i < 3; i++) { const d = b.getBoundingClientRect().top - obAnc.y; if (Math.abs(d) < 0.5) break; box.scrollTop += d / k; } } }
+        // (방을 그렸으면 적어 둬요. 그린 말이 화면을 못 채우거나 이미 위쪽 끝 가까이면 바로 더 그려요: 부른 쪽이 맨 아래로 굴린 뒤에 봐요)
+        obDrawn = view.startsWith('orbitroom:') ? { v: view, from: obFrom } : null;
+        if (obDrawn && obFrom) setTimeout(obMore, 0);
         if (view === 'orbitface') fcPaint();
         requestAnimationFrame(() => barsPaint(document.getElementById('na_phl'), view));
         if (obFix && view.startsWith('orbitroom:')) obFixFocus();
@@ -838,6 +860,8 @@ export async function openPhone(who = null) {
         return !!r;
     };
     const obBottom = () => { const e = $root.find('.ob_msgs')[0]; if (e) e.scrollTop = e.scrollHeight; };
+    // (굴리기는 위로 안 올라오는 이벤트라 잡는 단계에서 들어요) 방을 위쪽 끝 가까이 굴리면 옛 말을 더 그려요
+    $root[0].addEventListener('scroll', e => { if (e.target.classList?.contains('ob_msgs')) obMore(e.target); }, true);
     $root.on('click', '.na_ob_tab', function (e) { e.stopPropagation(); obTab = this.dataset.v || 'all'; obDraw(); });
     // (입력칸은 contenteditable: 테마가 <input>에 테두리를 칠해서. 지도 검색과 같은 방식) 초점은 화면을 밀지 않게, 글 끝에
     const obFocus = () => { const e = $root.find('.na_ob_in')[0]; if (!e) return; e.focus({ preventScroll: true }); try { const r = document.createRange(); r.selectNodeContents(e); r.collapse(false); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); } catch { /* (no caret) */ } };

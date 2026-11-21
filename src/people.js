@@ -68,7 +68,8 @@ export function stFace(name, big = false) {
 
 // stored: a data URL, or 'none' for "letter only"; nothing stored means "the SillyTavern avatar if there is one"
 export function faceOf(name, big = false) {
-    const f = globalSettings().faces?.[nameKey(name)];
+    // (얼굴마다 불려요: faces는 globalSettings()의 정리가 건드리지 않는 값이라 설정을 그대로 읽어요 — phonedata.js koOn과 같은 까닭)
+    const f = (ctx().extensionSettings?.narrative_archive ?? globalSettings()).faces?.[nameKey(name)];
     return f === 'none' ? '' : f || stFace(name, big);
 }
 
