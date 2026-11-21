@@ -1122,9 +1122,29 @@ export async function openPhone(who = null) {
         catch (err) { console.error('[narrative-archive] live reflect', err); }
         if (!phoneClosed && stillHere()) drawPhone(true);
     });
+    // 임시 시험 화면: 같은 이모지를 조건만 바꿔서. 번호를 보고 어느 조건에서 기기 이모지가 아닌지 봐요
+    const obEmojiTest = () => {
+        const E = '😘😂❤️', K = '그게 뭐예요 ', rows = [
+            ['1 div 15px', `<div style="font-size:15px">${E}</div>`], ['2 div 12px', `<div style="font-size:12px">${E}</div>`], ['3 div 20px', `<div style="font-size:20px">${E}</div>`],
+            ['4 span 15px', `<span style="font-size:15px">${E}</span>`], ['5 span 12px', `<span style="font-size:12px">${E}</span>`], ['6 i 12px', `<i style="font-size:12px;font-style:normal">${E}</i>`],
+            ['7 div 15px 흐린색', `<div style="font-size:15px;color:rgba(30,32,40,.62)">${E}</div>`], ['8 div 12px 흐린색', `<div style="font-size:12px;color:rgba(30,32,40,.62)">${E}</div>`], ['9 div 15px 회색', `<div style="font-size:15px;color:#555a63">${E}</div>`],
+            ['10 한글 뒤 15px', `<div style="font-size:15px">${K}${E}</div>`], ['11 한글 뒤 12px', `<div style="font-size:12px">${K}${E}</div>`], ['12 영어 뒤 12px', `<div style="font-size:12px">What is that ${E}</div>`],
+            ['13 굵게 12px', `<div style="font-size:12px;font-weight:600">${E}</div>`], ['14 굵게 15px', `<div style="font-size:15px;font-weight:600">${E}</div>`],
+            ['15 글꼴: 기기만', `<div style="font-size:15px;font-family:NADeviceEmoji,sans-serif">${E}</div>`], ['16 글꼴: sans만', `<div style="font-size:15px;font-family:sans-serif">${E}</div>`], ['17 기기만 12px', `<div style="font-size:12px;font-family:NADeviceEmoji,sans-serif">${E}</div>`],
+            ['18 번역 줄 그대로', `<div class="ob_b th ob_glass" style="margin:0">x<span class="ob_ko">${K}${E}</span></div>`], ['19 원문 줄 그대로', `<div class="ob_b th ob_glass" style="margin:0">What ${E}</div>`], ['20 배지 그대로', `<span class="ob_re" style="position:static"><span class="ob_ree">😂</span></span>`],
+            ['21 button 20px', `<button type="button" style="font-size:20px">${E}</button>`], ['22 button 12px', `<button type="button" style="font-size:12px">${E}</button>`],
+        ];
+        const host = $root.find('.na_ph_frame .cg_canvas')[0]; if (!host) return;
+        const el = document.createElement('div');
+        el.style.cssText = 'position:absolute;inset:0;z-index:99;overflow-y:auto;background:#f4f1ea;color:#1b1d24;padding:56px 14px 80px;font-size:13px';
+        el.innerHTML = `<div style="font-weight:700;margin-bottom:8px">이모지 시험 (누르면 닫혀요)</div>${rows.map(([l, h]) => `<div style="display:flex;align-items:center;gap:10px;min-height:30px;border-top:1px solid rgba(0,0,0,.08)"><span style="flex:none;width:118px;font-size:11px;color:#666">${l}</span>${h}</div>`).join('')}`;
+        el.addEventListener('click', () => el.remove());
+        host.append(el);
+    };
     const obSend = async () => {
         const r = roomNow(), t = String($root.find('.na_ob_in').text() || '').trim();
         if (!live() || !r || !t || obAcct() !== liveWorld(realM)?.persona) return;
+        if (t === '!emoji') return obEmojiTest(); // (임시: 기기 이모지가 어디서 바뀌는지 보는 시험 화면. 원인을 찾으면 지워요)
         sendLive(realM, r.id, t);
         enqueueReplies(realM, r.id);
         obDraft = ''; drawPhone(); obBottom(); obFocus();
