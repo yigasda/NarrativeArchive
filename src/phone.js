@@ -36,13 +36,14 @@ import { dropVoice, fillKo, koAppOf, koScopeOf, labelVoices, redoKo, roundScope,
 const josa = w => { const c = w.charCodeAt(w.length - 1) - 0xac00; return c >= 0 && c < 11172 && c % 28 ? '을' : '를'; };
 import { confirm, esc } from './util.js';
 import { emojiOf, reactOf } from './phone2react.js';
+import { toConversationScheduleWallClockDate as zonedNow, CONVERSATION_SCHEDULE_DAYS as SCH_DAYS } from './marinara/conversation-presence.js';
 import { liveMode, liveWorld, livePhone, liveMeta, setLiveMode, resetLive, rememberLiveOwner, readLiveOwner, liveKey, liveRooms, ensureRoom, nameRoom, sendLive, readLive, unreadBy, enqueueReplies, seeFailure } from './phone2store.js';
 import { shiftLabel, liveWall, viewerWall, startShift } from './phone2clock.js';
 import { liveReady, keepState } from './phone2keepon.js';
 import { orbitList, orbitRoom, orbitNew, orbitHomeWidget, liveStart, whoScreen, orbitFace, dayIcon } from './phoneorbit.js';
 import { beginFromStory, liveBranched, adoptChat, rebeginFromStory, rebeginKeepingChats } from './phone2story.js';
 import { liveSnapNow, snapParts } from './phone2snap.js';
-import { liveEditMessage, liveReact, liveReactQuick, liveGo, liveReflect, liveCanUndo, liveUndo, liveUnreflected, liveNowOf, liveSnapBusy, liveBackCount, liveBackDraft, liveBackPut, liveImportPlan, liveImportFilePlan, liveImportChat, liveImportFile, liveDropMessages, liveSwipeInfo, liveSwipe, liveSwipeDrop, liveRetranslate, liveSwipeList, liveSwipeDropMany, liveSwipeDropOthers, liveMark, liveMarked, liveTrash, liveRestore, liveEmptyTrash, liveDropRoom, liveAddMember, liveRemoveMember } from './phone2go.js';
+import { liveEditMessage, liveReact, liveReactQuick, liveGo, liveReflect, liveCanUndo, liveUndo, liveUnreflected, liveNowOf, liveSnapBusy, liveBackCount, liveBackDraft, liveBackPut, liveImportPlan, liveImportFilePlan, liveImportChat, liveImportFile, liveDropMessages, liveSwipeInfo, liveSwipe, liveSwipeDrop, liveRetranslate, liveSwipeList, liveSwipeDropMany, liveSwipeDropOthers, liveMark, liveMarked, liveTrash, liveRestore, liveEmptyTrash, liveDropRoom, liveAddMember, liveRemoveMember, liveStatus, liveSchedule, livePresence, liveMakeSchedule, liveSetSchedule, liveSetStatus, liveReplyWait } from './phone2go.js';
 import { liveYearsNow } from './phone2year.js';
 import { P } from './phone2api.js';
 import { morph } from './morph.js';
@@ -249,11 +250,32 @@ export async function openPhone(who = null) {
         if (obEmo.tab === 'kao') { const cs = L.KAOMOJI_CATEGORIES; t.cats = cs.map(c => ({ label: EMO_KO[c.id] || c.label })); const c = cs[Math.min(obEmo.cat, cs.length - 1)]; t.items = (q ? L.searchKaomoji(q) : c.items).map(x => x.value); }
         else { const cs = L.EMOJI_CATEGORIES; t.cats = cs.map((c, i) => ({ lu: EMO_LU[i] || 'smile', label: EMO_KO[c.label] || c.label })); const c = cs[Math.min(obEmo.cat, cs.length - 1)]; t.title = q ? '' : EMO_KO[c.label] || c.label; t.items = q ? cs.flatMap(x => x.emojis).filter(e => L.matchesEmojiQuery(q, e)).slice(0, 160) : c.emojis; }
         return t; };
+    // 대화 상태 카드 · 스케줄 편집 (시안 orbit-sched, docs/design/orbit-marinara.md 1-4). obPres: 카드가 열렸나, obSch: 편집 중인 초안
+    //   obSch = { owner, draft (마리나라 WeekSchedule), page: 'main' | 'tune' | 'ai', open: 펼친 요일, mode, guide, dguide: { 요일: 글 }, menu: { d, i } | null, busy, dirty }
+    let obPres = false, obPresOpen = false, obPresMenu = '', obSch = null;
+    const SCH_KO = { Monday: '월요일', Tuesday: '화요일', Wednesday: '수요일', Thursday: '목요일', Friday: '금요일', Saturday: '토요일', Sunday: '일요일' };
+    const SCH_TALK = [10, 30, 50, 70, 90], SCH_MOMENT = [['good_morning', '아침 인사'], ['good_night', '굿나잇'], ['meal_break', '식사 시간'], ['after_busy', '바쁜 뒤'], ['long_absence_check_in', '오랜 부재']];
+    // "H:MM-H:MM" → [[시작 분, 끝 분]] (자정을 넘으면 둘, 같으면 하루 전체). 읽을 수 없으면 [] (마리나라의 막대와 같은 규칙)
+    const schSpan = t => { const m = /^(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})$/.exec(String(t || '').trim()); if (!m) return [];
+        const a = +m[1] * 60 + +m[2]; let b = +m[3] * 60 + +m[4]; if (a > 1440 || b > 1440 || +m[2] > 59 || +m[4] > 59) return []; if (a === b) return [[0, 1440]]; if (b === 0) b = 1440; return a < b ? [[a, b]] : [[a, 1440], [0, b]]; };
+    const schNow = tz => { const d = zonedNow(new Date(), tz || undefined); return { day: SCH_DAYS[(d.getDay() + 6) % 7], min: d.getHours() * 60 + d.getMinutes() }; };
+    const schHm = m => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+    const schTzLabel = tz => { if (!tz) return '기기 시간대'; let off = ''; try { off = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'longOffset' }).formatToParts(new Date()).find(p => p.type === 'timeZoneName')?.value || ''; } catch { /* 모르는 시간대면 이름만 */ } return `${tz.replace(/_/g, ' ').replace(/\//g, ' / ')}${off ? ` (${off === 'GMT' ? 'GMT+00:00' : off})` : ''}`; };
+    const schAgo = at => { const s = Math.max(0, (Date.now() - at) / 1000); return s < 60 ? '방금' : s < 3600 ? `${Math.floor(s / 60)}분 전` : s < 86400 ? `${Math.floor(s / 3600)}시간 전` : `${Math.floor(s / 86400)}일 전`; };
+    // 다가올 블록 셋(그 사람 시간대의 지금부터 엿새 뒤까지, 시작이 지금보다 뒤인 것만 — 마리나라의 "다음" 줄)
+    const schNext = (sc, tz) => { const now = schNow(tz), k0 = SCH_DAYS.indexOf(now.day), out = [];
+        for (let k = 0; k < 7 && out.length < 3; k++) { const day = SCH_DAYS[(k0 + k) % 7];
+            for (const b of [...(sc.days?.[day] || [])].map(b => ({ b, sp: schSpan(b.time)[0] })).filter(x => x.sp && (k || x.sp[0] > now.min)).sort((x, y) => x.sp[0] - y.sp[0])) { if (out.length >= 3) break;
+                out.push({ st: b.b.status, day, act: String(b.b.activity || '').trim() || { online: '온라인', idle: '자리 비움', dnd: '바쁨', offline: '오프라인' }[b.b.status] || '', when: `${k === 0 ? '오늘' : k === 1 ? '내일' : SCH_KO[day]} · ${schHm(b.sp[0])} – ${b.sp[1] === 1440 ? '24:00' : schHm(b.sp[1])}` }); } }
+        return out; };
+    const schBlank = () => ({ days: Object.fromEntries(SCH_DAYS.map(d => [d, []])), talkativeness: 50, inactivityThresholdMinutes: 120 });
+    const schOpen = (owner, day = null) => { const had = liveSchedule(realM, owner); obSch = { owner, draft: structuredClone(had || schBlank()), page: 'main', open: SCH_DAYS.includes(day) ? day : null, mode: had ? 'adjust' : 'rewrite', guide: '', dguide: {}, menu: null, busy: false, dirty: false };
+        for (const d of SCH_DAYS) if (!Array.isArray(obSch.draft.days?.[d])) (obSch.draft.days ||= {})[d] = []; };
     let obMenu = false, obSub = '', obNote = null;   // obSub: 길게 누른 판의 둘째 화면('re' 이모지 · 'mark' 북마크 줄), obNote: 메모 시트 { id, text }
     const orbitUi = () => {
         const w = liveWorld(realM);
         if (!live() || !w) return {};
-        if (obEditAt !== view) { obHeld = null; obPicks = null; obList = null; obFix = null; obFrom = null; obMenu = false; obNote = null; obSet = ''; obFindQ = ''; obEmo = null; obEditAt = view; }
+        if (obEditAt !== view) { obHeld = null; obPicks = null; obList = null; obFix = null; obFrom = null; obMenu = false; obNote = null; obSet = ''; obFindQ = ''; obEmo = null; obPres = false; obPresMenu = ''; obSch = null; obEditAt = view; }
         if (!obHeld) obSub = '';
         const me = w.persona, who = obAcct(), ro = liveKey(who) !== liveKey(me), sh = w.dayShift || 0, vtz = Intl.DateTimeFormat().resolvedOptions().timeZone, vw = ms => viewerWall(ms, sh, vtz).at, today = vw(Date.now()).slice(0, 5), yday = vw(Date.now() - 864e5).slice(0, 5);
         const dayOf = a => (a.slice(0, 5) === today ? '오늘' : a.slice(0, 5) === yday ? '어제' : `${Number(a.slice(0, 2))}월 ${Number(a.slice(3, 5))}일`);
@@ -315,7 +337,22 @@ export async function openPhone(who = null) {
             const jobs = w.queue?.jobs || [], typing = !ro && jobs.some(j => j.room === r.id && (j.state === 'waiting' || j.state === 'running'));
             const fail = ro ? null : jobs.find(j => j.room === r.id && j.state === 'failed' && !j.seen) || null;
             const state = group ? '' : [...r.messages].reverse().find(x => liveKey(x.from) === liveKey(os[0]) && String(x.state || '').trim())?.state || '';
-            out.orbit = { id: r.id, dark: obDark(), menu: obMenu, set: setUi(), emo: ro ? null : obEmoUi(), heldSub: obSub, note: !ro && obNote ? { text: obNote.text } : null, fixing: !ro && !!obFix, quick: !ro && obHeld ? liveReactQuick(realM) : [], title: V.titleOf(r), group, there: thereAt, faceOf: !group && !ro ? os[0] : '', sub: group ? [...os, '나'].join(' · ') : state, chips, asOwner: ro, msgs, draft: obDraft, typing, snapBusy: typing && liveSnapBusy(realM), fail: fail ? { id: fail.id } : null, swipe: sw && !sw.coming ? { at: sw.at, count: sw.count } : null, picking: !ro && obPicks ? obPicks.size : null,
+            const presUi = () => { if (!obPres || ro) return null; const on = !!livePresence(realM)?.on, waits = liveReplyWait(realM);
+                return { open: obPresOpen, people: os.map(n => { const st = liveStatus(realM, n), sc = liveSchedule(realM, n), last = [...r.messages].reverse().find(x => liveKey(x.from) === liveKey(n))?.at;
+                    const any = sc && SCH_DAYS.some(d => sc.days?.[d]?.length), next = sc && on ? schNext(sc, tzOf(n)) : [];
+                    return { name: n, st: st?.status || 'online', act: st?.activity || '', ov: !!st?.override, menu: obPresMenu === n, badge: !on ? '꺼짐' : sc ? '활성화됨' : '준비됨', next,
+                        sub: [st?.override ? '수동 재정의' : sc ? '스케줄 따르는 중' : '', last ? `마지막 연락 ${schAgo(last)}` : ''].filter(Boolean).join(' · '),
+                        note: !on ? (sc ? '자율 스케줄이 꺼져 있습니다' : '자율 스케줄이 꺼져 있고 아직 스케줄이 없습니다') : !sc ? '아직 스케줄이 없습니다' : !any ? '스케줄은 있지만 예정된 블록이 없습니다' : next.length ? '' : '다가올 블록이 없습니다',
+                        wait: waits.some(j => j.room === r.id && liveKey(j.owner) === liveKey(n)) }; }) }; };
+            const schUi = () => { if (!obSch || ro) return null; const S = obSch, D = S.draft, tz = tzOf(S.owner), now = schNow(tz), dev = Intl.DateTimeFormat().resolvedOptions().timeZone, off = new Set(D.disabledAutonomousIntents || []);
+                const talk = SCH_TALK.reduce((b, v, i) => (Math.abs(v - (D.talkativeness ?? 50)) < Math.abs(SCH_TALK[b] - (D.talkativeness ?? 50)) ? i : b), 0), onN = SCH_MOMENT.filter(([k]) => !off.has(k)).length;
+                return { owner: S.owner, page: S.page, dirty: S.dirty, busy: S.busy, tz: schTzLabel(tz), dev: tz && dev !== tz ? dev : '', summary: String(D.routineSummary || ''), mode: S.mode, guide: S.guide, talk,
+                    wait: String(D.inactivityThresholdMinutes ?? 120), moments: SCH_MOMENT.map(([k, label]) => ({ k, label, on: !off.has(k) })), cap: D.autonomousDailyCapOverride == null ? '' : String(D.autonomousDailyCapOverride), idle: D.idleResponseDelayMinutes == null ? '' : String(D.idleResponseDelayMinutes), dnd: D.dndResponseDelayMinutes == null ? '' : String(D.dndResponseDelayMinutes),
+                    tuneSum: `${['드물게', '조용히', '보통', '사교적', '매우 자주'][talk]} · ${onN === 5 ? '자연스러운 모먼트' : onN ? `모먼트 ${onN}개` : '기본 체크인만'}${D.autonomousDailyCapOverride ? ` · 하루 ${D.autonomousDailyCapOverride}회` : ''}`,
+                    aiSum: `${{ rewrite: '재작성', adjust: '조정', vary: '변주', repair: '수리' }[S.mode]}${S.guide.trim() ? ' · 지침 있음' : ''}`,
+                    days: SCH_DAYS.map(d => ({ key: d, name: SCH_KO[d], open: S.open === d, guide: S.dguide[d] || '', now: d === now.day ? now.min : null, segs: (D.days[d] || []).flatMap(b => schSpan(b.time).map(([a, e]) => ({ st: b.status, a, b: e }))),
+                        blocks: (D.days[d] || []).map((b, i) => ({ st: b.status, time: String(b.time || ''), act: String(b.activity || ''), menu: !!S.menu && S.menu.d === d && S.menu.i === i })) })) }; };
+            out.orbit = { id: r.id, dark: obDark(), menu: obMenu, set: setUi(), emo: ro ? null : obEmoUi(), pres: presUi(), sch: schUi(), heldSub: obSub, note: !ro && obNote ? { text: obNote.text } : null, fixing: !ro && !!obFix, quick: !ro && obHeld ? liveReactQuick(realM) : [], title: V.titleOf(r), group, there: thereAt, faceOf: !group && !ro ? os[0] : '', sub: group ? [...os, '나'].join(' · ') : state, chips, asOwner: ro, msgs, draft: obDraft, typing, snapBusy: typing && liveSnapBusy(realM), fail: fail ? { id: fail.id } : null, swipe: sw && !sw.coming ? { at: sw.at, count: sw.count } : null, picking: !ro && obPicks ? obPicks.size : null,
                 list: !ro && obList ? (items => ({ items, picks: [...obList].filter(n => items.some(x => x.no === n)), busy: !!sw?.coming }))(liveSwipeList(realM, r.id)) : null };
         }
         if (v === 'orbitface') { if (!obFc) { view = 'orbit'; return orbitUi(); } out.orbit = { name: obFc.who, back: obFc.back, src: obFc.src, album: obFc.album.map((url, i) => ({ url, on: i === obFc.sel })), busy: obFc.busy }; }
@@ -996,6 +1033,75 @@ export async function openPhone(who = null) {
     // (고르는 중엔 줄 전체가 눌려요: 말풍선 · 동그라미 · 옆 빈 곳 어디든. 동그라미만 누르면 안 켜졌어요)
     $root.on('click', '.na_ob_prow', function (e) { if (!obPicks) return; e.stopPropagation(); const id = this.dataset.id; if (obPicks.has(id)) obPicks.delete(id); else obPicks.add(id); drawPhone(true); });
     $root.on('click', '.na_ob_mpick', function (e) { e.stopPropagation(); obPicks = new Set([this.dataset.id]); obHeld = null; drawPhone(true); });
+    // 대화 상태 카드 (시안 orbit-sched P1 · P1b): 머리줄 이름을 누르면. 상태 · 활동을 바꾸면 손으로 준 상태(풀 때까지)가 돼요
+    const obBusyUi = () => obFix || obHeld || obPicks || obList;
+    $root.on('click', '.na_ob_pres', e => { e.stopPropagation(); if (obBusyUi() || !obCanEdit()) return; obMenu = false; obPres = !obPres; obPresMenu = ''; obPresOpen = false; drawPhone(true); });
+    $root.on('click', '.na_op_x', e => { e.stopPropagation(); if (obPresMenu) obPresMenu = ''; else obPres = false; drawPhone(true); });
+    $root.on('click', '.na_op_ref', e => { e.stopPropagation(); obPresMenu = ''; drawPhone(true); });
+    $root.on('click', '.na_op_more', e => { e.stopPropagation(); obPresOpen = !obPresOpen; drawPhone(true); });
+    $root.on('click', '.na_op_pk', function (e) { e.stopPropagation(); obPresMenu = obPresMenu === this.dataset.n ? '' : this.dataset.n; drawPhone(true); });
+    const obPresSet = async (n, o) => { if (!obCanEdit()) return; const pr = liveSetStatus(realM, n, o), bad = await obSoon(pr); if (bad) obWarn(bad); obPresMenu = ''; if (!phoneClosed && stillHere()) drawPhone(true); if (!bad) try { await pr; } catch (err) { obWarn(err); } };
+    $root.on('click', '.na_op_pick', function (e) { e.stopPropagation(); const n = this.dataset.n, st = liveStatus(realM, n); if (st?.status === this.dataset.v && st?.override) { obPresMenu = ''; return drawPhone(true); } obPresSet(n, { status: this.dataset.v, activity: st?.activity || '' }); });
+    $root.on('click', '.na_op_clr', function (e) { e.stopPropagation(); obPresSet(this.dataset.n, {}); });
+    $root.on('keydown', '.na_op_act', function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.blur(); } else if (e.key === 'Escape') { this.textContent = liveStatus(realM, this.dataset.n)?.activity || ''; this.blur(); } });
+    $root.on('focusout', '.na_op_act', function () { const n = this.dataset.n, st = liveStatus(realM, n), t = this.innerText.replace(/\s+/g, ' ').trim(); if (t === String(st?.activity || '')) return; obPresSet(n, { status: st?.status || 'online', activity: t }); });
+    $root.on('click', '.na_op_edit', function (e) { e.stopPropagation(); if (!obCanEdit()) return; obPres = false; obPresMenu = ''; schOpen(this.dataset.n, this.dataset.d); drawPhone(true); });
+    // 스케줄 편집 (시안 orbit-sched P2~P6): 고친 것은 초안(obSch.draft)에만 있고 "스케줄 저장"을 눌러야 들어가요. 모델이 만든 것만 바로 저장돼요(반영 쪽 liveMakeSchedule)
+    const schTouch = () => { if (obSch) obSch.dirty = true; };
+    const schRedraw = () => { if (!phoneClosed && stillHere()) drawPhone(true); };
+    $root.on('click', '.na_ss_x', e => { e.stopPropagation(); if (!obSch || obSch.busy) return; if (obSch.menu) obSch.menu = null; else obSch = null; drawPhone(true); });
+    $root.on('click', '.na_ss_back', e => { e.stopPropagation(); if (!obSch || obSch.busy) return; obSch.page = 'main'; drawPhone(true); });
+    $root.on('click', '.na_ss_go', function (e) { e.stopPropagation(); if (!obSch) return; obSch.page = this.dataset.v; obSch.menu = null; drawPhone(true); $root.find('.os_sh.ss .os_bd').scrollTop(0); });
+    $root.on('click', '.na_ss_day', function (e) { e.stopPropagation(); if (!obSch) return; const d = this.dataset.d; obSch.open = obSch.open === d ? null : d; obSch.menu = null; drawPhone(true); });
+    $root.on('click', '.na_ss_step', function (e) { e.stopPropagation(); if (!obSch) return; obSch.draft.talkativeness = SCH_TALK[Number(this.dataset.i)] ?? 50; schTouch(); drawPhone(true); });
+    $root.on('click', '.na_ss_chip', function (e) { e.stopPropagation(); if (!obSch) return; const k = this.dataset.k, off = new Set(obSch.draft.disabledAutonomousIntents || []); if (off.has(k)) off.delete(k); else off.add(k); obSch.draft.disabledAutonomousIntents = [...off]; schTouch(); drawPhone(true); });
+    $root.on('click', '.na_ss_opt', function (e) { e.stopPropagation(); if (!obSch) return; obSch.mode = this.dataset.v; drawPhone(true); });
+    $root.on('click', '.na_ss_pk', function (e) { e.stopPropagation(); if (!obSch) return; const d = this.dataset.d, i = Number(this.dataset.i), m = obSch.menu; obSch.menu = m && m.d === d && m.i === i ? null : { d, i }; drawPhone(true); });
+    $root.on('click', '.na_ss_pick', function (e) { e.stopPropagation(); const b = obSch?.draft.days[this.dataset.d]?.[Number(this.dataset.i)]; if (!b) return; b.status = this.dataset.v; obSch.menu = null; schTouch(); drawPhone(true); });
+    $root.on('click', '.na_ss_del', function (e) { e.stopPropagation(); const a = obSch?.draft.days[this.dataset.d]; if (!a) return; a.splice(Number(this.dataset.i), 1); obSch.menu = null; schTouch(); drawPhone(true); });
+    $root.on('click', '.na_ss_add', function (e) { e.stopPropagation(); const a = obSch?.draft.days[this.dataset.d]; if (!a) return; a.push({ time: '09:00-10:00', activity: 'Free time', status: 'online' }); obSch.menu = null; schTouch(); drawPhone(true); });
+    // 칸에 쓰는 동안은 초안에만 적고 다시 그리지 않아요(커서가 튀어요). 칸을 나갈 때 한 번 그려요(막대 · 요약이 따라와요)
+    $root.on('input', '.na_ss_in', function () { const S = obSch; if (!S) return; const f = this.dataset.f, d = this.dataset.d, i = Number(this.dataset.i), t = this.innerText.replace(/\n/g, ' '), D = S.draft;
+        const n = (lo, hi) => { const v = Math.round(Number(t.trim())); return t.trim() && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : null; };
+        if (f === 'guide') return void (S.guide = t); if (f === 'dguide') return void (S.dguide[d] = t);
+        if (f === 'time') { const b = D.days[d]?.[i]; if (b) b.time = t.replace(/\s*[–-]\s*/, '-').trim(); }
+        else if (f === 'act') { const b = D.days[d]?.[i]; if (b) b.activity = t.trim(); }
+        else if (f === 'wait') { const v = n(15, 360); if (v != null) D.inactivityThresholdMinutes = v; }
+        else if (f === 'cap') { const v = n(1, 999); if (v == null) D.autonomousDailyCapOverride = null; else D.autonomousDailyCapOverride = v; }
+        else if (f === 'idle' || f === 'dnd') { const k = f === 'idle' ? 'idleResponseDelayMinutes' : 'dndResponseDelayMinutes', v = n(0, 120); if (v == null) delete D[k]; else D[k] = v; }
+        schTouch(); });
+    $root.on('keydown', '.na_ss_in', function (e) { if (e.key === 'Enter') { e.preventDefault(); this.blur(); } });
+    $root.on('focusout', '.na_ss_in', () => { if (obSch) setTimeout(() => { if (obSch && !phoneClosed && !document.activeElement?.classList?.contains('na_ss_in')) drawPhone(true); }, 0); });
+    // 모델로 만들기: 한 주(스케줄 AI의 행동) · 하루(그 요일의 가이드). 고친 초안이 있으면 먼저 저장하고 그 위에 만들어요. 실패해도 초안은 그대로
+    const schMake = async day => { const S = obSch; if (!S || S.busy || !obCanEdit()) return; S.busy = true; S.menu = null; drawPhone(true);
+        try { if (S.dirty) await liveSetSchedule(realM, S.owner, schClean(S.draft));
+            const before = JSON.stringify(S.draft.days[day] || null), got = await liveMakeSchedule(realM, S.owner, { guidance: day ? [S.guide, S.dguide[day]].map(x => String(x || '').trim()).filter(Boolean).join('\n') : S.guide.trim(), mode: S.mode, ...(day ? { day } : {}) });
+            if (obSch !== S) return; S.draft = structuredClone(got); for (const d of SCH_DAYS) if (!Array.isArray(S.draft.days?.[d])) (S.draft.days ||= {})[d] = []; S.dirty = false;
+            if (day) toastr[JSON.stringify(S.draft.days[day]) === before ? 'info' : 'success'](JSON.stringify(S.draft.days[day]) === before ? '모델이 같은 하루를 돌려줬어요. 가이드를 더 분명하게 적어 보세요' : `${SCH_KO[day]} 재생성했어요`, '캐릭터 휴대폰');
+            else { S.page = 'main'; toastr.success('스케줄을 만들었어요', '캐릭터 휴대폰'); } }
+        catch (err) { toastr.error(`스케줄 생성에 실패했어요. 초안은 그대로예요: ${err?.message || err}`, '캐릭터 휴대폰'); }
+        finally { S.busy = false; if (obSch === S) schRedraw(); } };
+    $root.on('click', '.na_ss_run', e => { e.stopPropagation(); schMake(''); });
+    $root.on('click', '.na_ss_regen', function (e) { e.stopPropagation(); schMake(this.dataset.d); });
+    // 저장할 모양으로 다듬기(마리나라의 범위: 대기 15~360분, 수다 0~100, 지연 0~120분, 한도 1 이상)
+    const schClean = D => { const c = (v, lo, hi, dflt) => (Number.isFinite(Number(v)) ? Math.min(hi, Math.max(lo, Math.round(Number(v)))) : dflt), out = { ...D, days: Object.fromEntries(SCH_DAYS.map(d => [d, (D.days?.[d] || []).map(b => ({ time: String(b.time || '').trim(), activity: String(b.activity || '').trim(), status: ['online', 'idle', 'dnd', 'offline'].includes(b.status) ? b.status : 'online' }))])),
+            talkativeness: c(D.talkativeness, 0, 100, 50), inactivityThresholdMinutes: c(D.inactivityThresholdMinutes, 15, 360, 120) };
+        for (const k of ['idleResponseDelayMinutes', 'dndResponseDelayMinutes']) if (out[k] == null) delete out[k]; else out[k] = c(out[k], 0, 120, 0);
+        out.autonomousDailyCapOverride = Number.isInteger(out.autonomousDailyCapOverride) && out.autonomousDailyCapOverride >= 1 ? out.autonomousDailyCapOverride : null; return out; };
+    $root.on('click', '.na_ss_save', async e => { e.stopPropagation(); const S = obSch; if (!S || S.busy || !obCanEdit()) return; S.busy = true;
+        try { await liveSetSchedule(realM, S.owner, schClean(S.draft)); if (obSch === S) obSch = null; toastr.success('스케줄을 저장했어요', '캐릭터 휴대폰'); } catch (err) { obWarn(err); } finally { S.busy = false; schRedraw(); } });
+    // 내보내기 · 가져오기: 마리나라의 파일 모양 그대로({ kind: "marinara.character-schedule", version: 1, … }), 가져온 것은 초안으로만
+    $root.on('click', '.na_ss_exp', e => { e.stopPropagation(); const S = obSch; if (!S) return; const sc = schClean(S.draft), name = String(S.owner).trim().replace(/[^a-zA-Z0-9_-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 80) || 'character';
+        const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify({ kind: 'marinara.character-schedule', version: 1, exportedAt: new Date().toISOString(), characterName: S.owner, schedule: sc }, null, 2)], { type: 'application/json' })); a.download = `${name}.marinara-schedule.json`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); toastr.success('스케줄을 내보냈어요', '캐릭터 휴대폰'); });
+    $root.on('click', '.na_ss_imp', e => { e.stopPropagation(); const S = obSch; if (!S || S.busy) return; const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json,application/json';
+        inp.onchange = async () => { const f = inp.files?.[0]; if (!f || obSch !== S) return; if (f.size > 1024 * 1024) return toastr.info('스케줄 파일은 1MB보다 작아야 해요', '캐릭터 휴대폰');
+            try { const j = JSON.parse(await f.text()), sc = j?.kind === 'marinara.character-schedule' ? j.schedule : j; if (j?.kind === 'marinara.character-schedule' && j.version !== 1) throw new Error('newer');
+                if (!sc || typeof sc.days !== 'object' || !SCH_DAYS.every(d => sc.days[d] == null || (Array.isArray(sc.days[d]) && sc.days[d].every(b => typeof b?.time === 'string' && typeof b?.activity === 'string' && ['online', 'idle', 'dnd', 'offline'].includes(b?.status))))) throw new Error('shape');
+                S.draft = schClean({ ...sc, weekStart: undefined }); delete S.draft.weekStart; S.dirty = true; S.menu = null; toastr.success('스케줄을 저장되지 않은 초안으로 가져왔어요', '캐릭터 휴대폰'); schRedraw(); }
+            catch (err) { toastr.info(err?.message === 'newer' ? '더 새 버전의 마리나라에서 만든 스케줄 파일이에요' : '올바른 캐릭터 스케줄 파일이 아니에요', '캐릭터 휴대폰'); } };
+        inp.click(); });
+    // 1분마다 도는 타이머가 답장을 받으면(반영 쪽 'na-live-change') 메신저를 다시 그려요. 무언가 고치는 중이면 그대로 둬요
+    $(document).off('na-live-change.naob').on('na-live-change.naob', () => { if (phoneClosed || !live() || !String(view).startsWith('orbit') || obSch || obBusyUi() || document.activeElement?.isContentEditable) return; drawPhone(true); });
     // 방 설정 시트 (시안 orbit-top S1~S3): 머리의 설정 단추로 열고, 줄을 누르면 시트 안에서 그 화면으로
     const obSetGo = async (pr, after) => { try { await pr; } catch (err) { obWarn(err); } if (after) after(); if (!phoneClosed && stillHere()) drawPhone(true); };
     $root.on('click', '.na_ob_set', e => { e.stopPropagation(); if (obFix || obHeld || obPicks || obList || !obCanEdit()) return; obMenu = false; obSet = 'main'; drawPhone(true); });
@@ -2440,7 +2546,8 @@ export async function openPhone(who = null) {
             if (ask) ask.done(false);
             else if (sheetOpen) setSheet(false);
             else if (obSet && obSet !== 'main') { obSet = 'main'; drawPhone(true); }
-            else if (obFix || obHeld || obPicks || obList || obMenu || obNote || obSet || obEmo) { obFix = null; obHeld = null; obPicks = null; obList = null; obMenu = false; obNote = null; obSet = ''; obEmo = null; drawPhone(true); }
+            else if (obSch && !obSch.busy && (obSch.menu || obSch.page !== 'main')) { obSch.menu = null; obSch.page = 'main'; drawPhone(true); }
+            else if (obFix || obHeld || obPicks || obList || obMenu || obNote || obSet || obEmo || obPres || obSch) { if (obSch?.busy) return; obFix = null; obHeld = null; obPicks = null; obList = null; obMenu = false; obNote = null; obSet = ''; obEmo = null; obPres = false; obSch = null; drawPhone(true); }
             else {
                 const b = $root.find('.na_ph_frame [data-go]').filter('[aria-label="뒤로"], [aria-label="닫기"]')[0];
                 if (b) b.click();

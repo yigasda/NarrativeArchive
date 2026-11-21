@@ -88,7 +88,14 @@
 
 `A.png`(흰 말풍선)과 B · C · D, X1 · X3은 고르지 않은 시안이에요.
 
-## 1-4. 스케줄 · 대화 상태 (시안 `docs/mockups/orbit-sched/`, 아직 코드에 안 넣음)
+## 1-4. 스케줄 · 대화 상태 (시안 `docs/mockups/orbit-sched/`, 3.218.0에 코드에 넣음)
+
+**코드:** 화면은 `src/phoneorbit.js`(orbitRoom의 `pres` · `sched`), 동작은 `src/phone.js`(`obPres` · `obSch`, `na_op_*` · `na_ss_*`), 스타일은 `css/58-phone-orbit.css`의 `.ss` · `.sc`(시안의 CSS를 그대로 옮김). 실제 폰 화면은 `docs/mockups/orbit-sched/real/`.
+- 머리줄 이름을 누르면 대화 상태 카드. 고친 스케줄은 초안(`obSch.draft`)에만 있고 "스케줄 저장"을 눌러야 들어가요. "저장되지 않은 초안" 배지는 고친 것이 있을 때만 떠요(마리나라는 늘 떠 있지만 거짓이 돼서).
+- 모델로 만든 스케줄(주 · 하루)은 **바로 저장돼요**(반영 쪽 `liveMakeSchedule`이 그렇게 해요). 그래서 스케줄 AI 화면의 글도 "생성한 스케줄은 바로 저장됩니다"예요. 고친 초안이 있으면 먼저 저장한 뒤 그 위에 만들어요.
+- 지금 시각 표시와 "다음" 줄은 그 사람 시간대(`placeInfo(...).owner.tz`)로 계산해요.
+- 아직 `na_ob_soon`(알림만): 스케줄 시간대 고르기 · 기기 설정 사용 · 요약 생성 · 생성 연결 · 주간 생성 방식 · 자율 메시지 설정(카드 머리) · 지금 답장.
+- 확인한 것(로컬 폰 화면): 카드 열기 · 다음 블록 펼치기 · 상태 고르기 · 활동 고치기 · 재정의 지우기 · 편집 열기 · 요일 펼치기 · 블록 상태 · 활동 고치기 · 조정 · 저장 · 취소, 밝은 방 · 어두운 방. 확인 못 한 것: 모델로 만들기(주 · 하루), 가져오기 · 내보내기, 단체방.
 
 마리나라의 네 파일(`CharacterScheduleEditorModal` · `CharacterScheduleManagerModal` · `ConversationPresenceCard` · `ConversationPresenceScheduleSection`, fc0333c)을 통째로 읽고 기능을 뽑았어요. 소망: "레이아웃은 마리나라, 디자인은 베끼지 말고 우리 것으로. 기능은 캡처 없이 마리나라 코드를 보고."
 
