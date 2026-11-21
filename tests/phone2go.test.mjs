@@ -1407,3 +1407,85 @@ test('내가 캐릭터의 최근 말에 이모지만 달아도 캐릭터가 봐�
     // (예전 말에 단 것은 다음 답장 때 새것으로 보여요)
     assert.equal(a.reacts.find(x => x.by === 'Ren').e, '👍');
 });
+
+test('저장 줄: 저장을 시작하고 바로 돌아와요. 한 번에 하나만 돌고, 끝은 done이 기다려요; 실패는 done이 던져요', async () => {
+    const log = [], gates = [];
+    const slow = () => new Promise((res, rej) => { log.push('start'); gates.push({ res: () => { log.push('end'); res(); }, rej }); });
+    const line = G.saveLine(slow);
+    await line.save();
+    await Promise.resolve();
+    assert.deepEqual(log, ['start']);
+    // 둘째 저장은 첫째가 끝난 뒤에 시작해요 (겹치지 않아요)
+    let second = false;
+    const s2 = line.save().then(() => { second = true; });
+    await new Promise(r => setTimeout(r, 5));
+    assert.equal(second, false); assert.deepEqual(log, ['start']);
+    gates[0].res(); await s2; await Promise.resolve();
+    assert.deepEqual(log, ['start', 'end', 'start']);
+    let finished = false;
+    const d = line.done().then(() => { finished = true; });
+    await new Promise(r => setTimeout(r, 5));
+    assert.equal(finished, false);
+    gates[1].res(); await d;
+    assert.deepEqual(log, ['start', 'end', 'start', 'end']);
+    await line.done();
+    // 실패: 다음 저장은 그대로 돌고, done이 그 오류를 한 번 던져요
+    await line.save(); await Promise.resolve();
+    gates[2].rej(new Error('저장 실패'));
+    await assert.rejects(() => line.done(), /저장 실패/);
+    await line.done();
+});
+
+test('답장은 저장을 기다리지 않고 화면에 나와요; liveGo는 마지막 저장이 끝난 뒤에 돌아와요', async () => {
+    const c = world();
+    send(c, '일어났냐');
+    T.replies = [{ state: '집', reply: ['방금'], does: [] }];
+    let open = null; T.saveHold = new Promise(res => { open = res; });
+    const saves = T.saves, seen = [];
+    let done = false;
+    const going = G.liveGo(c.real, { onChange: () => seen.push(c.room.messages.length) }).then(r => { done = true; return r; });
+    try {
+        await new Promise(r => setTimeout(r, 30));
+        // 저장이 아직 안 끝났는데 답장은 이미 그려졌어요
+        assert.equal(T.saves, saves + 1); assert.ok(seen.includes(2)); assert.equal(done, false);
+    } finally { open(); delete T.saveHold; }
+    const r = await going;
+    assert.equal(r.ran, 1); assert.equal(r.saveError, undefined); assert.equal(T.saves, saves + 1);
+    // 저장이 실패하면: 답장은 그대로 남고 saveError로 알려요
+    send(c, '밥은');
+    T.replies = [{ state: '집', reply: ['아직'], does: [] }];
+    T.saveFail = new Error('서버가 저장을 거절했어요');
+    const warn = console.error; console.error = () => {};
+    try {
+        const bad = await G.liveGo(c.real);
+        assert.equal(bad.ran, 1); assert.match(bad.saveError, /서버가 저장을 거절했어요/);
+        assert.equal(c.room.messages.at(-1).text, '아직');
+    } finally { console.error = warn; delete T.saveFail; }
+});
+
+test('반영 라운드도 저장을 기다리지 않아요: 라운드마다 저장은 하고, 끝에서 마지막 저장을 기다려요', async () => {
+    const c = world();
+    send(c, '더치페이 보내라');
+    T.replies = [{ state: '집', reply: ['보낼게'], does: [] }];
+    await G.liveGo(c.real);
+    T.answers = [{ events: [] }];
+    let open = null; T.saveHold = new Promise(res => { open = res; });
+    const saves = T.saves; let drew = 0, done = false;
+    const going = G.liveReflect(c.real, 'Mara', { onChange: () => drew++ }).then(r => { done = true; return r; });
+    try {
+        await new Promise(r => setTimeout(r, 30));
+        assert.equal(T.saves, saves + 1); assert.ok(drew >= 1); assert.equal(done, false);
+        assert.equal(G.liveUnreflected(c.real, 'Mara'), 0);
+    } finally { open(); delete T.saveHold; }
+    const r = await going;
+    assert.equal(r.rounds, 1); assert.equal(r.error, '');
+    // 저장이 실패하면 폰에 이유를 적어요
+    send(c, '보냈어?');
+    T.replies = [{ state: '집', reply: ['응'], does: [] }];
+    await G.liveGo(c.real);
+    T.answers = [{ events: [] }];
+    T.saveFail = new Error('서버가 저장을 거절했어요');
+    const warn = console.error; console.error = () => {};
+    try { const bad = await G.liveReflect(c.real, 'Mara'); assert.match(bad.error, /서버가 저장을 거절했어요/); assert.match(c.p.liveReflectError.why, /서버가 저장을 거절했어요/); }
+    finally { console.error = warn; delete T.saveFail; }
+});
