@@ -236,10 +236,13 @@ export async function openPhone(who = null) {
         return { dayShift, persona: ctx().name1 || 'Me', local: w.slice(6), date: md(w), shift: shiftLabel(dayShift), upto: /^\d{2}-\d{2} \d{2}:\d{2}/.test(at) ? `${md(at)} ${at.slice(6, 11)}까지` : '' };
     }
     const startPlan = startPlanOf;
+    // 어두운 방(⋯ 메뉴의 어둡게 · 밝게): 확장 설정에 남아요. 그릴 때마다 읽으니 설정을 그대로 읽어요(koOn과 같은 까닭)
+    const obDark = () => (ctx().extensionSettings?.narrative_archive ?? globalSettings()).orbitDark === true;
+    let obMenu = false;
     const orbitUi = () => {
         const w = liveWorld(realM);
         if (!live() || !w) return {};
-        if (obEditAt !== view) { obHeld = null; obPicks = null; obList = null; obFix = null; obFrom = null; obEditAt = view; }
+        if (obEditAt !== view) { obHeld = null; obPicks = null; obList = null; obFix = null; obFrom = null; obMenu = false; obEditAt = view; }
         const me = w.persona, who = obAcct(), ro = liveKey(who) !== liveKey(me), sh = w.dayShift || 0, vtz = Intl.DateTimeFormat().resolvedOptions().timeZone, vw = ms => viewerWall(ms, sh, vtz).at, today = vw(Date.now()).slice(0, 5), yday = vw(Date.now() - 864e5).slice(0, 5);
         const dayOf = a => (a.slice(0, 5) === today ? '오늘' : a.slice(0, 5) === yday ? '어제' : `${Number(a.slice(0, 2))}월 ${Number(a.slice(3, 5))}일`);
         const shortAt = ms => { const a = vw(ms), d = dayOf(a); return d === '오늘' ? a.slice(6) : d; };
@@ -287,7 +290,7 @@ export async function openPhone(who = null) {
             const jobs = w.queue?.jobs || [], typing = !ro && jobs.some(j => j.room === r.id && (j.state === 'waiting' || j.state === 'running'));
             const fail = ro ? null : jobs.find(j => j.room === r.id && j.state === 'failed' && !j.seen) || null;
             const state = group ? '' : [...r.messages].reverse().find(x => liveKey(x.from) === liveKey(os[0]) && String(x.state || '').trim())?.state || '';
-            out.orbit = { id: r.id, fixing: !ro && !!obFix, quick: !ro && obHeld ? liveReactQuick(realM) : [], title: V.titleOf(r), group, there: thereAt, faceOf: !group && !ro ? os[0] : '', sub: group ? [...os, '나'].join(' · ') : state, chips, asOwner: ro, msgs, draft: obDraft, typing, snapBusy: typing && liveSnapBusy(realM), fail: fail ? { id: fail.id } : null, swipe: sw && !sw.coming ? { at: sw.at, count: sw.count } : null, picking: !ro && obPicks ? obPicks.size : null,
+            out.orbit = { id: r.id, dark: obDark(), menu: obMenu, fixing: !ro && !!obFix, quick: !ro && obHeld ? liveReactQuick(realM) : [], title: V.titleOf(r), group, there: thereAt, faceOf: !group && !ro ? os[0] : '', sub: group ? [...os, '나'].join(' · ') : state, chips, asOwner: ro, msgs, draft: obDraft, typing, snapBusy: typing && liveSnapBusy(realM), fail: fail ? { id: fail.id } : null, swipe: sw && !sw.coming ? { at: sw.at, count: sw.count } : null, picking: !ro && obPicks ? obPicks.size : null,
                 list: !ro && obList ? (items => ({ items, picks: [...obList].filter(n => items.some(x => x.no === n)), busy: !!sw?.coming }))(liveSwipeList(realM, r.id)) : null };
         }
         if (v === 'orbitface') { if (!obFc) { view = 'orbit'; return orbitUi(); } out.orbit = { name: obFc.who, back: obFc.back, src: obFc.src, album: obFc.album.map((url, i) => ({ url, on: i === obFc.sel })), busy: obFc.busy }; }
@@ -888,6 +891,9 @@ export async function openPhone(who = null) {
     });
     $root.on('click', '.na_ob_acct', function (e) { e.stopPropagation(); obSheet = !obSheet; drawPhone(true); });
     $root.on('click', '.na_ob_shade', function (e) { e.stopPropagation(); obSheet = false; drawPhone(true); });
+    // 방 머리의 ⋯: 작은 메뉴(지금은 어둡게 · 밝게). 바깥을 누르면 닫혀요
+    $root.on('click', '.na_ob_more, .na_ob_mx', function (e) { e.stopPropagation(); if (obFix || obHeld || obPicks || obList) return; obMenu = !obMenu && this.classList.contains('na_ob_more'); drawPhone(true); });
+    $root.on('click', '.na_ob_dark', function (e) { e.stopPropagation(); const g = globalSettings(); g.orbitDark = !obDark(); obMenu = false; drawPhone(true); saveGlobal(); });
     $root.on('click', '.na_ob_who', function (e) { e.stopPropagation(); obWho = this.dataset.n === liveWorld(realM)?.persona ? '' : this.dataset.n; obSheet = false; drawPhone(); });
     $root.on('click', '.na_ob_ko', function (e) { if (obHeld || obPicks || obJustHeld()) return; e.stopPropagation(); const id = this.dataset.id; if (obOpen.has(id)) obOpen.delete(id); else obOpen.add(id); const top = $root.find('.ob_msgs').scrollTop(); drawPhone(); $root.find('.ob_msgs').scrollTop(top); });
     // 말 고치기 · 답장 넘기기 (시안 phone2-edit M3 · W3). 주인 계정(읽기만)에서는 아무것도 안 열려요
@@ -2352,7 +2358,7 @@ export async function openPhone(who = null) {
             const v = String(view || '').split(':')[0];
             if (ask) ask.done(false);
             else if (sheetOpen) setSheet(false);
-            else if (obFix || obHeld || obPicks || obList) { obFix = null; obHeld = null; obPicks = null; obList = null; drawPhone(true); }
+            else if (obFix || obHeld || obPicks || obList || obMenu) { obFix = null; obHeld = null; obPicks = null; obList = null; obMenu = false; drawPhone(true); }
             else {
                 const b = $root.find('.na_ph_frame [data-go]').filter('[aria-label="뒤로"], [aria-label="닫기"]')[0];
                 if (b) b.click();
@@ -2395,6 +2401,7 @@ function obReacts(roomId, x, fresh) {
 const BARS_ON = new Set(['lock', 'home', 'home2', 'bank']);
 const BARS = { meta: null, had: undefined, root: null };
 const barColor = (frame, y) => {
+    const bar = frame.querySelector('.ob_bg')?.dataset.bar; if (bar) return bar;   // Orbit 방: 연한 · 어두운 바탕에 맞춘 색(phoneorbit.js)
     const aura = frame.querySelector('.ob_bg .ob_blob'); if (aura) { const n = (getComputedStyle(aura).backgroundColor.match(/[\d.]+/g) || []).map(Number); if (n.length >= 3) return `rgb(${n[0]}, ${n[1]}, ${n[2]})`; }
     const r = frame.getBoundingClientRect(), x = r.left + r.width / 2;
     for (const e of document.elementsFromPoint(x, y)) {

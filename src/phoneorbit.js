@@ -31,6 +31,17 @@ const I = {
     book: 'M5 4h9a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3zM5 17a3 3 0 0 1 3-3h9', spark: 'M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6',
 };
 const ic = (k, s = 20, c = 'currentColor', w = 2) => `<svg aria-hidden="true" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"><path d="${I[k]}"/></svg>`;
+// Lucide 아이콘(https://lucide.dev, ISC License, Copyright (c) Lucide Contributors · NOTICE.md): 방 화면의 새 아이콘은 손으로 그리지 않고 여기서 가져와요(24 판의 안쪽 그림 그대로)
+const LU = {
+    'chevron-left': '<path d="m15 18-6-6 6-6" />',
+    'ellipsis': '<circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" />',
+    'moon': '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />',
+    'sun': '<circle cx="12" cy="12" r="4" /><path d="M12 2v2" /><path d="M12 20v2" /><path d="m4.93 4.93 1.41 1.41" /><path d="m17.66 17.66 1.41 1.41" /><path d="M2 12h2" /><path d="M20 12h2" /><path d="m6.34 17.66-1.41 1.41" /><path d="m19.07 4.93-1.41 1.41" />',
+    'arrow-right': '<path d="M5 12h14" /><path d="m12 5 7 7-7 7" />',
+};
+const lu = (k, s = 18, w = 2) => `<svg aria-hidden="true" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round">${LU[k]}</svg>`;
+// 두 색 섞기(#rrggbb, t = 뒤 색의 몫): 껍데기 앱의 기기 바 색을 방 바탕에 맞춰요
+const mix = (a, b, t) => `#${[1, 3, 5].map(i => Math.round(parseInt(a.slice(i, i + 2), 16) * (1 - t) + parseInt(b.slice(i, i + 2), 16) * t).toString(16).padStart(2, '0')).join('')}`;
 // 그 사람 현지 시각의 아이콘: 05~17 해 · 17~21 저녁 · 21~05 달 (날씨 하늘과 같은 경계)
 export const dayIcon = hhmm => { const h = Number(String(hhmm || '').slice(0, 2)); return h >= 5 && h < 17 ? 'sun' : h >= 17 && h < 21 ? 'set' : 'moon'; };
 
@@ -125,14 +136,18 @@ export function orbitRoom(p, now, o) {
         <div class="ob_sls">${L.items.map(x => `<div class="ob_slr na_ob_slr${x.now ? ' now' : ''}" role="button" tabindex="0" data-n="${x.no}"><span class="ob_sln cg_num">${x.no}</span><div class="ob_slb">${x.bubbles.length ? x.bubbles.map(b => `<div class="ob_sll">${esc(b.text)}${b.ko ? `<small>${esc(b.ko)}</small>` : ''}</div>`).join('') : '<div class="ob_sll"><small>오는 중</small></div>'}</div><span class="ob_pck${L.picks.includes(x.no) ? ' on' : ''}">${L.picks.includes(x.no) ? ic('chk', 13, '#fff', 3) : ''}</span></div>`).join('')}</div>
         <div class="ob_bkb"><button type="button" class="ob_bkno na_ob_slkeep"${L.busy || L.items.length < 2 ? ' disabled' : ''}>지금 것만 남기기</button><button type="button" class="ob_bkok na_ob_sldrop"${L.busy || !L.picks.length ? ' disabled' : ''}>${L.picks.length ? `${L.picks.length}개 ` : ''}버리기</button></div></div>`;
     const holding = o.msgs.some(x => x.held);
-    return `<div class="ob_bg"><span class="ob_blob" style="background:${orbitBg(o.title, o.group)}"></span></div>${axBar(p, o.clock || now, '#fff')}
-      <div class="ob_ct ob_glass"><button type="button" class="ob_gb" data-go="orbit" aria-label="뒤로">${ic('back', 21, '#1b1d24', 2.2)}</button>${o.faceOf ? `<button type="button" class="ob_fb na_ob_face" data-n="${esc(o.faceOf)}" aria-label="프사 바꾸기">${face(o.title, 40, o.group)}</button>` : face(o.title, 40, o.group)}<span class="ob_nm"><b><i>${esc(o.title)}</i>${o.there ? `<em class="ob_lt cg_num">${ic(o.there.icon, 13)}${esc(o.there.time)}</em>` : ''}</b>${o.sub ? `<span>${esc(o.sub)}</span>` : ''}</span></div>
+    // 방 화면(시안 docs/mockups/orbit-top A_glass · X2, docs/design/orbit-marinara.md 1-3): 연한 바탕 + 그 사람 빛, 작은 유리 머리 한 줄(‹ · 얼굴 · 이름 · ⋯).
+    // 어두운 방(o.dark)은 .ob_bg.dk 뒤의 형제들로 색을 바꿔요. --obc = 그 사람 색(어두운 방의 내 말풍선 · 보내기에 섞어요)
+    const au = auraOf(o.title, o.group), fg = o.dark ? '#fff' : '#1e2026', obc = o.dark ? ` style="--obc:${au[3]}"` : '';
+    return `<div class="ob_bg${o.dark ? ' dk' : ''}" data-bar="${o.dark ? '#131417' : mix('#f5f2f3', au[3], 0.3)}"><span class="ob_blob" style="background:${orbitBg(o.title, o.group)}"></span></div>${axBar(p, o.clock || now, fg)}
+      <div class="ob_ct"><button type="button" class="ob_gb" data-go="orbit" aria-label="뒤로">${lu('chevron-left', 20)}</button>${o.faceOf ? `<button type="button" class="ob_fb na_ob_face" data-n="${esc(o.faceOf)}" aria-label="프사 바꾸기">${face(o.title, 28, o.group)}</button>` : face(o.title, 28, o.group)}<span class="ob_nm"><b><i>${esc(o.title)}</i>${o.there ? `<em class="ob_lt cg_num">${ic(o.there.icon, 11, 'currentColor', 2.2)}${esc(o.there.time)}</em>` : ''}</b>${o.sub ? `<span>${esc(o.sub)}</span>` : ''}</span><button type="button" class="ob_tb na_ob_more${o.menu ? ' on' : ''}" aria-label="더 보기">${lu('ellipsis', 18)}</button></div>
+      ${o.menu ? `<div class="ob_mx na_ob_mx"></div><div class="ob_menu"><button type="button" class="ob_mr na_ob_dark">${lu(o.dark ? 'sun' : 'moon', 17)}<span>${o.dark ? '밝게' : '어둡게'}</span></button></div>` : ''}
       ${o.chips.length ? `<div class="ob_chips">${o.chips.map(c => `<span class="ob_chip">${ic(c.icon, 13, '#fff')}${esc(c.text)}</span>`).join('')}</div>` : ''}
-      <div class="ob_msgs ax_scroll${o.fixing ? ' fixing' : ''}${o.asOwner ? ' ro' : ''}${holding ? ' hold na_ob_hold' : ''}${o.picking != null ? ' picking' : ''}"><div class="ob_mi">${o.msgs.map((x, i) => msg(x, i)).join('')}${o.snapBusy ? '<div class="ob_fail ob_note"><span>이야기 정리 중</span></div>' : o.typing ? '<div class="ob_typ ob_glass" aria-label="입력 중"><i></i><i></i><i></i></div>' : ''}${o.fail ? `<div class="ob_fail"><span>답장을 못 받았어요</span><button type="button" class="ob_retry na_ob_retry" data-id="${esc(o.fail.id)}">다시</button></div>` : ''}</div></div>
+      <div${obc} class="ob_msgs ax_scroll${o.fixing ? ' fixing' : ''}${o.asOwner ? ' ro' : ''}${holding ? ' hold na_ob_hold' : ''}${o.picking != null ? ' picking' : ''}"><div class="ob_mi">${o.msgs.map((x, i) => msg(x, i)).join('')}${o.snapBusy ? '<div class="ob_fail ob_note"><span>이야기 정리 중</span></div>' : o.typing ? '<div class="ob_typ ob_glass" aria-label="입력 중"><i></i><i></i><i></i></div>' : ''}${o.fail ? `<div class="ob_fail"><span>답장을 못 받았어요</span><button type="button" class="ob_retry na_ob_retry" data-id="${esc(o.fail.id)}">다시</button></div>` : ''}</div></div>
       ${o.asOwner ? '' : o.picking != null ? `<div class="ob_inp ob_pbar"><span>${o.picking}개 선택</span><span class="ob_pbtn"><button type="button" class="na_ob_ptr"${o.picking ? '' : ' disabled'}>재번역</button><button type="button" class="na_ob_pdel red"${o.picking ? '' : ' disabled'}>삭제</button><button type="button" class="na_ob_pquit">취소</button></span></div>`
-        : `<div class="ob_inp ob_glass"><div class="ob_msgin na_ob_in" contenteditable="true" role="textbox" enterkeyhint="send" spellcheck="false" data-ph="메시지" aria-label="메시지">${esc(o.draft || '')}</div><button type="button" class="ob_send na_ob_send" aria-label="보내기">${ic('send', 18, '#fff', 2.3)}</button></div>`}
+        : `<div${obc} class="ob_inp"><div class="ob_msgin na_ob_in" contenteditable="true" role="textbox" enterkeyhint="send" spellcheck="false" data-ph="메시지" aria-label="메시지">${esc(o.draft || '')}</div><button type="button" class="ob_send na_ob_send" aria-label="보내기">${lu('arrow-right', 19, 2.4)}</button></div>`}
       ${sheet}
-      ${axInd('#fff')}`;
+      ${axInd(fg)}`;
 }
 
 // 새 대화 (시안 A): 사람 고르기, 둘 이상이면 단체방 이름
