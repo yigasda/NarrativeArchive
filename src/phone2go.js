@@ -15,7 +15,7 @@ import { parseJson } from './phoneparse.js';
 import { nameKey } from './people.js';
 import { liveWorld, livePhone, liveMeta, liveKey, liveAtYear, isSnap, setStoryKeeper, startFresh, enqueueReplies, enqueueJob, renamePersona, setDrawerSeed } from './phone2store.js';
 import { emojiOf, reactOf, putReact, quickReacts, noteRecent, messageOf } from './phone2react.js';
-import { replyDraftOf, purgeTrash, markMessages, markedMessages, trashOf, restoreMessages, emptyTrash, dropRoom, roomTrash, restoreRoom, emptyRoomTrash, addMember, removeMember } from './phone2room.js';
+import { branchRoom, replyDraftOf, purgeTrash, markMessages, markedMessages, trashOf, restoreMessages, emptyTrash, dropRoom, roomTrash, restoreRoom, emptyRoomTrash, addMember, removeMember } from './phone2room.js';
 import { dropMessages, editMessage, replyTail, settleSwipes, swipeInfo, swipeTo, swipeList, dropSwipe, dropSwipes, dropOtherSwipes, koRows, koChunks, koInput, takeKo } from './phone2edit.js';
 import { AI_SYS_PHONE_KO, voiceRows, who as voiceWho } from './phonetr.js';
 import { askTranslator, glossaryEntries, glossaryIn } from './translate.js';
@@ -26,7 +26,7 @@ import { BACK, backLeft, backInput, phone2BackSystem, takeBack, backMessage, mar
 import { liveWall } from './phone2clock.js';
 import { gatherReply } from './phone2live.js';
 import { presenceOf, scheduleOf, setSchedule, setStatusOverride, setUserStatus, setAutonomous, statusNow, replyDelay, contextBlock, makeSchedule, checkProactive, noteProactive, fillPlaces, stateNow, takeStatus, scheduleZone, setScheduleZone, draftSchedule, summarizeSchedule, repairSchedule, setAutoRenew, autoRenewOf, needsRefresh, renewSchedules, setAutonomousOptions, autonomousOptions, checkExchangeFor, mentionsIn, activeSchedule, schedulesOn, setSchedulesOn, exportSchedule, importSchedule, syncUser, noteAssistant, noteReaction, forgetActivity, setCardStore, setZoneStore, flushCards, clearProgress, groupOrder, groupTurnPrompt, isGroupRoom, groupResponders, groupHandoff, GROUP_MENTION_INVITE_LINE, orderConversationRespondersByDelay, groupMode, mergedDelay, groupCandidates } from './phone2sched.js';
-import { buildMergedConversationSystemPrompt, formatConversationGroupOutputFormat, mergedRespondersLine, mergedMentionLine } from './phone2merged.js';
+import { buildMergedConversationSystemPrompt, formatConversationGroupOutputFormat, mergedRespondersLine, mergedMentionLine, extractLeadingThinkingBlocks, buildGenerationInfoExtra, sanitizeBranchedMessageExtra } from './phone2merged.js';
 import { replyInput, messengerBlock } from './phone2ask.js';
 import { phone2ReplySystem } from './phone2reply.js';
 import { runLive, takeMerged } from './phone2run.js';
@@ -120,38 +120,16 @@ export function saveLine(save = saveMeta) {
 export async function liveGo(real, { onChange = () => {} } = {}) {
     followSchedule(real); await pickResponders(real); holdReplies(real);
     for (const id of Object.keys(liveWorld(real)?.messenger?.rooms || {})) syncUser(real, id);
-    const m = () => liveMeta(real, { now: liveNowOf(real) });
     const tell = () => { try { onChange(); } catch (err) { console.error('[narrative-archive] live draw', err); } };
     const line = saveLine();
+    let asked = null;
     const out = await runLive(real, {
         save: line.save, alive: () => open(real),
         parse: s => parseJson(s, { salvage: true }),
-        ask: (input, { system }) => askDraft(input, { force: true, system, maxTokens: LIVE_GO.replyTokens, effort: 'low' }),
-        gather: async job => {
-            await keepUpStory(real, tell);
-            const w = liveWorld(real), p = livePhone(real, job.owner);
-            if (!w || !p) return null;
-            if (w.from === 'story' && !isSnap(w.snap)) throw new Error(NO_STORY);
-            const d0 = m(), card = await cardOf(p);
-            if (job.merged) return gatherMerged(real, job, { card, d0 });
-            const d = gatherReply(real, job.owner, job.room, { now: Date.now(), tz: tzOf(p), why: job.why || '', deps: {
-                // (the reply's own clock block: each place's time now and weekday, as the reply prompt was tuned with)
-                // (the weekday is worked out from the phone's year: its saved time's, so the year after once the clock
-                // has passed New Year)
-                clock: (ph, at) => liveAtYear(ph, at, () => phone2Clock(ph, at, d0)), around: aroundBlock, card: () => card,
-                // (who the persona is, as the user wrote them: the same block every phone request carries)
-                who: owner => personaBlock(ctx(), owner, card),
-                place: ph => { const r = (ph.where?.people || []).find(x => nameKey(x?.name) === nameKey(ph.owner)); return String(r?.place || r?.city || '').trim(); },
-                story: () => liveStoryText(real, w),
-                // (the role-play's last messages as they stand now: read at this moment, no place kept)
-                before: () => (open(real) ? liveChatTail().lines : []),
-            } });
-            // (Marinara's status · schedule lines: always there, as in Marinara; an owner with no schedule reads "online")
-            if (d) { const room = w.messenger.rooms[job.room], last = [...(room?.messages || [])].reverse().find(x => x.text || x.call); d.context = contextBlock(real, job.owner, job.room, { tzOf: n => zoneOf(real, livePhone(real, n) || p), lastRole: last && liveKey(last.from) === liveKey(w.persona) ? 'user' : 'assistant', said: !job.why, intentKey: job.intent || '', mentions: job.auto ? [] : mentionsIn(real, job.room) });
-                // (a group room: each responder is told it may hand the turn on with @Name — Marinara's line, as it is)
-                if (d.context && isGroupRoom(real, job.room) && groupTurnPrompt(real)) d.context += `\n${GROUP_MENTION_INVITE_LINE}`; }
-            return d ? { system: phone2ReplySystem({ owner: d.owner, persona: d.persona, scheduled: !!activeSchedule(real, job.owner) }), input: replyInput(d) } : null;
-        },
+        // (what was sent and what came with the answer, kept for the reply it becomes: Marinara's cachedPrompt · thinking · generationInfo)
+        ask: (input, { system }) => { asked = { system, input, meta: {} }; return askDraft(input, { force: true, system, maxTokens: LIVE_GO.replyTokens, effort: 'low', meta: asked.meta }); },
+        gather: async job => { await keepUpStory(real, tell); return gatherJob(real, job); },
+        took: (job, got) => { const w = liveWorld(real); if (w && w.id === job.world && got?.said && asked) keepAsked(w, w.messenger?.rooms?.[job.room], job, asked); asked = null; },
         // (an owner with a schedule: the texts carry the schedule's state, not one the model wrote)
         stateFor: job => { if (!activeSchedule(real, job.owner)) return undefined; const p = livePhone(real, job.owner); return stateNow(real, job.owner, { tz: p ? zoneOf(real, p) : '' })?.text || ''; },
         after: async (job, got) => {
@@ -259,6 +237,59 @@ export async function pickResponders(real, now = Date.now()) {
         }
     } finally { picking.delete(real); }
     return n;
+}
+// 답장 한 번의 요청 { system, input, take? } | null (답할 것이 없으면). liveGo가 보내고, 프롬프트 보기(livePeekPrompt)가 보내지 않고 보여 줘요
+async function gatherJob(real, job) {
+    const w = liveWorld(real), p = livePhone(real, job.owner);
+    if (!w || !p) return null;
+    if (w.from === 'story' && !isSnap(w.snap)) throw new Error(NO_STORY);
+    const d0 = liveMeta(real, { now: liveNowOf(real) }), card = await cardOf(p);
+    if (job.merged) return gatherMerged(real, job, { card, d0 });
+    const d = gatherReply(real, job.owner, job.room, { now: Date.now(), tz: tzOf(p), why: job.why || '', deps: {
+        // (the reply's own clock block: each place's time now and weekday, as the reply prompt was tuned with)
+        // (the weekday is worked out from the phone's year: its saved time's, so the year after once the clock
+        // has passed New Year)
+        clock: (ph, at) => liveAtYear(ph, at, () => phone2Clock(ph, at, d0)), around: aroundBlock, card: () => card,
+        // (who the persona is, as the user wrote them: the same block every phone request carries)
+        who: owner => personaBlock(ctx(), owner, card),
+        place: ph => { const r = (ph.where?.people || []).find(x => nameKey(x?.name) === nameKey(ph.owner)); return String(r?.place || r?.city || '').trim(); },
+        story: () => liveStoryText(real, w),
+        // (the role-play's last messages as they stand now: read at this moment, no place kept)
+        before: () => (open(real) ? liveChatTail().lines : []),
+    } });
+    // (Marinara's status · schedule lines: always there, as in Marinara; an owner with no schedule reads "online")
+    if (d) { const room = w.messenger.rooms[job.room], last = [...(room?.messages || [])].reverse().find(x => x.text || x.call); d.context = contextBlock(real, job.owner, job.room, { tzOf: n => zoneOf(real, livePhone(real, n) || p), lastRole: last && liveKey(last.from) === liveKey(w.persona) ? 'user' : 'assistant', said: !job.why, intentKey: job.intent || '', mentions: job.auto ? [] : mentionsIn(real, job.room) });
+        // (a group room: each responder is told it may hand the turn on with @Name — Marinara's line, as it is)
+        if (d.context && isGroupRoom(real, job.room) && groupTurnPrompt(real)) d.context += `\n${GROUP_MENTION_INVITE_LINE}`; }
+    return d ? { system: phone2ReplySystem({ owner: d.owner, persona: d.persona, scheduled: !!activeSchedule(real, job.owner) }), input: replyInput(d) } : null;
+}
+// 답장을 받은 뒤: 그 답의 마지막 말에 마리나라가 남기는 값을 남겨요 (generate.routes.ts "Persist thinking/reasoning and generation info")
+//   extra.thinking: 모델의 생각 (제공자가 따로 준 것 + 답 맨 앞의 <think> 같은 블록; 없으면 null)
+//   extra.cachedPrompt: 보낸 요청 그대로 [{ role, content }]  ·  extra.generationInfo: 모델 · 온도 · 토큰 · 걸린 시간 …
+//   마리나라처럼 cachedPrompt는 방의 마지막 두 답에만 둬요 (저장을 아끼려고)
+function keepAsked(w, room, job, asked) {
+    if (!room) return;
+    const names = new Set((job.merged || [liveKey(job.owner)]).map(k => liveKey(k)));
+    const last = [...(room.messages || [])].reverse().find(x => names.has(liveKey(x.from)));
+    if (!last) return;
+    const meta = asked.meta || {}, inline = extractLeadingThinkingBlocks(String(meta.raw || ''));
+    const fullThinking = [String(meta.thinking || '').trim(), inline.thinking].filter(Boolean).join('\n\n');
+    const u = meta.usage || null;
+    const info = buildGenerationInfoExtra({
+        chatMode: 'conversation', gameOutcomeNarrationFailed: false, marketWorldPlace: undefined, gameToolPlan: null, gameToolConnection: null,
+        generationProviderOrigin: { model: String(meta.model || ''), provider: String(meta.provider || '') },
+        temperature: typeof meta.temperature === 'number' ? meta.temperature : undefined, effectiveMaxTokensForSend: meta.maxTokens ?? undefined, suppressModelParameters: false,
+        effectiveMaxContext: null, connectionMaxContext: null, showThoughts: true, resolvedEffort: meta.reasoningEffort || null, reasoningEffort: null, verbosity: null, serviceTier: null,
+        assistantPrefill: '', assistantReasoningPrefill: '', customParameters: {},
+        usage: u ? { promptTokens: u.promptTokens ?? undefined, completionTokens: u.completionTokens ?? undefined, completionReasoningTokens: u.reasoningTokens ?? undefined, cachedPromptTokens: u.cachedPromptTokens ?? undefined } : undefined,
+        tokensContext: null, tokensLastRequestInput: u?.promptTokens ?? null, requestCount: 1, durationMs: meta.durationMs ?? 0, reasoningDurationMs: null,
+        finishReason: meta.finishReason || undefined, lastContextFit: null, fullThinking, geminiResponseParts: null, chatCompletionsReasoning: null, encryptedReasoningItems: undefined, contextInjections: [],
+    });
+    last.extra = { ...(last.extra || {}), thinking: info.thinking, generationInfo: info.generationInfo, cachedPrompt: [...(asked.system ? [{ role: 'system', content: asked.system }] : []), { role: 'user', content: asked.input }] };
+    if (last.extra.thinking === null) delete last.extra.thinking;
+    // (keep the last two)
+    const P = liveKey(w.persona), holders = (room.messages || []).filter(x => liveKey(x.from) !== P && x.extra?.cachedPrompt);
+    for (const x of holders.slice(0, -2)) { delete x.extra.cachedPrompt; if (!Object.keys(x.extra).length) delete x.extra; }
 }
 // Merged 차례의 요청: 지시문은 마리나라의 것 (src/marinara/merged-conversation.js: 기본 Conversation 지시문 + 단체방 줄 + 되풀이 금지),
 // 입력은 우리 블록 (MESSENGER · CHAT SUMMARY · CONTEXT · 사람마다 카드 · PERSONA · STORY · LAST MESSAGES) + 맨 끝에 마리나라의 Output Format.
@@ -927,3 +958,38 @@ const replyDrafts = new Map(), draftKey = (real, roomId) => `${liveWorld(real)?.
 export function liveReplyTo(real, roomId, messageId, selected = '') { const d = replyDraftOf(mine(real), roomId, messageId, selected); replyDrafts.set(draftKey(real, roomId), d); return d; }
 export const liveReplyDraft = (real, roomId) => replyDrafts.get(draftKey(real, roomId)) || null;
 export const liveCancelReply = (real, roomId) => replyDrafts.delete(draftKey(real, roomId));
+
+// ---- 프롬프트 보기 (마리나라의 POST /chats/:id/peek-prompt 그대로): 저장된 요청이 있으면 그것을, 없으면 지금 보낼 요청을 보내지 않고 조립해서
+//   opts.messageId: 그 말의 요청 (저장된 것이 없으면 오류) · opts.current: 저장된 것을 건너뛰고 지금 것을
+//   → { messages: [{ role, content }], chatMode, parameters, source: 'cached' | 'live_preview', exact, characterId, generationInfo, agentNote }
+export async function livePeekPrompt(real, roomId, { messageId = '', current = false } = {}) {
+    const w = liveWorld(mine(real)), room = w.messenger?.rooms?.[roomId];
+    if (!room) throw new Error('없는 방이에요');
+    const P = liveKey(w.persona), id = !current && typeof messageId === 'string' ? messageId.trim() : '';
+    const requested = id ? (room.messages || []).find(x => String(x.id) === id) || null : null;
+    if (id && !requested) throw new Error('이 방에 없는 말이에요');
+    const latestVisible = [...(room.messages || [])].reverse().find(x => !x.extra?.hiddenFromAI) || null, source = requested ?? latestVisible;
+    if (source && liveKey(source.from) !== P && !current) {
+        const cached = (Array.isArray(source.extra?.cachedPrompt) ? source.extra.cachedPrompt : []).filter(e => e && typeof e.role === 'string' && typeof e.content === 'string').map(e => ({ role: e.role, content: e.content }));
+        if (cached.length) return {
+            messages: cached, chatMode: 'conversation', parameters: null, source: 'cached', exact: true, characterId: liveKey(source.from),
+            generationInfo: source.extra.generationInfo && typeof source.extra.generationInfo === 'object' ? source.extra.generationInfo : null, gameToolPlanning: null,
+            agentNote: requested ? 'This is the exact cached text prompt sent for the selected turn.' : 'This is the cached text prompt saved after provider preparation for the active assistant swipe.',
+        };
+    }
+    if (requested) throw new Error('이 말에는 저장된 요청이 없어요 (No exact saved prompt is available for this turn)');
+    // (the live preview: what the next reply here would be sent with. Whoever would answer first; a Merged group as one request)
+    const chars = room.members.filter(n => liveKey(n) !== P && w.phones?.[liveKey(n)]);
+    if (!chars.length) throw new Error('이 방에는 답할 사람이 없어요');
+    const merged = chars.length > 1 && groupMode(real) === 'merged';
+    const req = await gatherJob(real, { world: w.id, kind: 'reply', owner: chars[0], room: roomId, ...(merged ? { merged: chars.map(liveKey) } : {}) });
+    return {
+        messages: req ? [...(req.system ? [{ role: 'system', content: req.system }] : []), { role: 'user', content: req.input }] : [],
+        chatMode: 'conversation', parameters: null, source: 'live_preview', exact: false, characterId: liveKey(chars[0]), generationInfo: null,
+        ...(current ? {} : { agentNote: 'No saved model request was available, so this is a live best-effort preview assembled without sending.' }),
+    };
+}
+
+// ---- 여기서 분기 (마리나라의 branch): 그 말까지를 복사한 새 방을 만들어요 → 새 방의 id. 화면은 확인 창 뒤에 부르고 새 방으로 옮겨요
+//   messageId를 안 주면 방 전체. 새 방의 room.branch = { name: 'New Branch', parentRoomId, parentMessageId, messageId }
+export async function liveBranchRoom(real, roomId, messageId = '') { const room = branchRoom(mine(real), roomId, messageId); await saveMeta(); return room.id; }

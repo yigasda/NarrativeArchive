@@ -14,6 +14,7 @@
 
 import { liveWorld, liveKey, ensureAccount } from './phone2store.js';
 import { MAX_PINNED_CONTEXT_MESSAGES, MESSAGE_TRASH_RETENTION_DAYS, MESSAGE_MARK_EXTRA_KEYS, normalizeMessageMarkPatch, applyContextMessageLimitWithPins, isMessagePinnedToContext, readMessageBookmark, readMessagePrivateNote, readMessagePrivateNoteRecipientId } from './marinara/message-marks.js';
+import { sanitizeBranchedMessageExtra } from './marinara/saved-message-extra.js';
 import { withLatestMessageReply, messageReplySchema, canReplyToMessage, buildMessageReplyDraft } from './marinara/message-reply.js';
 import { isMessageHiddenFromAI, getMessageHiddenFromAICharacterIds, isMessageHiddenFromAIForCharacter } from './marinara/message-hidden.js';
 
@@ -221,4 +222,44 @@ export function repliedTo(m, roomId) {
     // (the whole room, since the quoted message may be hidden from the AI or past the context limit)
     const quoted = reply.success ? (room.messages || []).find(x => String(x.id) === reply.data.messageId) : null;
     return quoted && liveKey(quoted.from) !== P ? room.members.find(n => liveKey(n) === liveKey(quoted.from)) || '' : '';
+}
+
+// ---- 여기서 분기 (마리나라의 POST /chats/:id/branch { upToMessageId }): 그 말까지를 복사한 새 방 → 새 방
+//   새 방은 같은 사람들의 방이에요. room.branch = { name, parentRoomId, parentMessageId, messageId (새 방에서 그 말의 id) }
+//   말은 순서 · 시각 · 번호(n)를 그대로 두고 id만 새로 받아요. 받아 둔 답장(swipes)도 같이 가요. 요청 기록(cachedPrompt · generationInfo …)은 안 가요 (마리나라)
+//   복사한 말은 x.copyOf = 원래 말의 id: 폰 반영 · 롤플에 전하기는 원래 방의 말만 읽어요 (같은 말을 두 번 읽지 않게: 우리 쪽에만 있는 것)
+//   요약(digest)은 복사한 말 안에서 끝난 것만 물려받아요 (마리나라: 잘린 뒤의 말을 담은 요약은 버려요). 휴지통 · 늦은 답 · 없던 사람 표시는 안 가요
+export function branchRoom(m, roomId, upToMessageId = '') {
+    const w = liveWorld(m), { room } = roomOf(m, roomId), msgs = room.messages || [];
+    if (upToMessageId && !msgs.some(x => String(x.id) === String(upToMessageId))) throw new Error('그 말이 이 방에 없어요');
+    const cut = upToMessageId ? msgs.findIndex(x => String(x.id) === String(upToMessageId)) : msgs.length - 1, copied = msgs.slice(0, cut + 1);
+    const ids = new Map(), fresh = () => `t${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+    const copyOne = x => {
+        const y = JSON.parse(JSON.stringify(x)), id = fresh();
+        ids.set(String(x.id), id);
+        y.id = id; y.copyOf = String(x.copyOf || x.id);
+        if (y.extra) { y.extra = sanitizeBranchedMessageExtra(y.extra); if (!Object.keys(y.extra).length) delete y.extra; }
+        return y;
+    };
+    const messages = copied.map(copyOne), id = `r${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`, last = copied.at(-1);
+    // (a reply quoting a copied message points at its copy)
+    for (const y of messages) if (y.extra?.replyTo?.messageId && ids.has(y.extra.replyTo.messageId)) y.extra.replyTo.messageId = ids.get(y.extra.replyTo.messageId);
+    const swipes = {};
+    for (const [anchor, rec] of Object.entries(room.swipes || {})) {
+        if (!ids.has(String(anchor))) continue;
+        const r = JSON.parse(JSON.stringify(rec));
+        for (const answer of r.list || []) for (const y of Array.isArray(answer) ? answer : []) { y.copyOf = String(y.copyOf || y.id); y.id = fresh(); if (y.extra) { y.extra = sanitizeBranchedMessageExtra(y.extra); if (!Object.keys(y.extra).length) delete y.extra; } }
+        swipes[ids.get(String(anchor))] = r;
+    }
+    const lastN = Math.max(-1, ...copied.map(x => (Number.isInteger(x.n) ? x.n : -1)));
+    const made = {
+        id, members: [...room.members], messages, ...(room.name ? { name: room.name } : {}),
+        ...(room.read ? { read: { ...room.read } } : {}),
+        ...(Object.keys(swipes).length ? { swipes } : {}),
+        ...(room.digest && Number.isInteger(room.digest.upto) && room.digest.upto <= lastN ? { digest: JSON.parse(JSON.stringify(room.digest)) } : {}),
+        branch: { name: 'New Branch', parentRoomId: room.id, parentMessageId: last ? String(last.id) : null, messageId: last ? ids.get(String(last.id)) : null },
+    };
+    if (made.digest) delete made.digest.failed;
+    w.messenger.rooms[id] = made;
+    return made;
 }

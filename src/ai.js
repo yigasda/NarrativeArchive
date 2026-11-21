@@ -32,10 +32,14 @@ export const apiFormat = t => t.fmt === 'anthropic' || t.fmt === 'openai' ? t.fm
 // force: the job's effort wins over the connection's, '' then meaning the model's own (compression asks for its own level;
 // the phone's jobs keep theirs whatever the connection says)
 // signal: an AbortSignal that stops the request itself (생성 중지); temperature · topP: numbers for this request alone
+// meta: an object the caller gives to learn about the request (the Orbit prompt viewer and model thoughts): filled with
+//   { raw (the answer before thinking tags are taken out), thinking (the provider's own reasoning text), model, provider,
+//     temperature, maxTokens, reasoningEffort, usage: { promptTokens, completionTokens, reasoningTokens, cachedPromptTokens }, finishReason, durationMs }
 // (none: what each API used before — 0.3, or the API's own for the Anthropic format)
-export async function callConn(t, system, prompt, maxTokens, effort = '', force = false, keepSystem = false, signal = null, temperature = null, topP = null) {
+export async function callConn(t, system, prompt, maxTokens, effort = '', force = false, keepSystem = false, signal = null, temperature = null, topP = null, meta = null) {
+    const began = Date.now(), note = raw => { if (meta) Object.assign(meta, { raw: String(raw ?? ''), model: String((t.mode === 'vertex' ? t.vxModel : t.model) || meta.model || ''), provider: t.mode === 'vertex' ? 'vertex' : apiFormat(t) === 'anthropic' ? 'anthropic' : 'openai-compatible', temperature: typeof temperature === 'number' ? temperature : null, maxTokens, reasoningEffort: e || null, durationMs: Date.now() - began }); return raw; };
     const e = force ? effort : (t.effort || effort);
-    if (t.mode === 'vertex') return stripThink(await callVertex(t, system, prompt, maxTokens, e, signal, temperature, topP));
+    if (t.mode === 'vertex') return stripThink(note(await callVertex(t, system, prompt, maxTokens, e, signal, temperature, topP, meta)));
     // the instructions go at the top of the first message instead of the system part: some relays drop the system part
     // without a word, and the model then answers the bare request (a digest taken for "write the next section").
     // keepSystem: 규칙은 시스템 메시지로 is on, so the user asked for the real system part
@@ -43,7 +47,7 @@ export async function callConn(t, system, prompt, maxTokens, effort = '', force 
         const turns = turnsOf(prompt);
         if (turns.length) { turns[0] = { ...turns[0], content: `[INSTRUCTIONS]\n${system}\n[/INSTRUCTIONS]\n\n${turns[0].content}` }; prompt = turns; system = ''; }
     }
-    return stripThink(apiFormat(t) === 'anthropic' ? await callAnthropic(t, system, prompt, maxTokens, e, signal, temperature, topP) : await callOpenAICompat(t, system, prompt, maxTokens, e, signal, temperature, topP));
+    return stripThink(note(apiFormat(t) === 'anthropic' ? await callAnthropic(t, system, prompt, maxTokens, e, signal, temperature, topP, meta) : await callOpenAICompat(t, system, prompt, maxTokens, e, signal, temperature, topP, meta)));
 }
 
 // prompt: one user message, or a whole conversation [{ role: 'user' | 'assistant', content }] (압축 작업실).
@@ -93,7 +97,7 @@ async function anthropicFetch(t, url, init = {}) {
     return r;
 }
 
-export async function callAnthropic(t, system, prompt, maxTokens, effort = '', signal = null, temperature = null, topP = null) {
+export async function callAnthropic(t, system, prompt, maxTokens, effort = '', signal = null, temperature = null, topP = null, meta = null) {
     if (!t.model) throw new Error('모델 이름을 넣어 주세요 (⚙ 설정 → AI 모델)');
     const endpoint = `${anthropicBase(t.url)}/v1/messages`;
     const send = withEffort => anthropicFetch(t, endpoint, { method: 'POST', signal, body: JSON.stringify({
@@ -121,6 +125,7 @@ export async function callAnthropic(t, system, prompt, maxTokens, effort = '', s
     if (!r.ok) throw new Error(`API 오류 ${r.status}: ${body.slice(0, 200)}`);
     let j; try { j = JSON.parse(body); } catch { throw new Error('API 답을 읽지 못했어요 — 이 주소가 Anthropic 형식을 받는지 확인해 주세요'); }
     const out = (Array.isArray(j?.content) ? j.content : []).filter(b => b?.type === 'text').map(b => b.text || '').join('');
+    if (meta) Object.assign(meta, { thinking: (Array.isArray(j?.content) ? j.content : []).filter(b => b?.type === 'thinking').map(b => b.thinking || '').join('\n\n'), finishReason: j?.stop_reason || null, usage: j?.usage ? { promptTokens: j.usage.input_tokens ?? null, completionTokens: j.usage.output_tokens ?? null, reasoningTokens: null, cachedPromptTokens: j.usage.cache_read_input_tokens ?? null } : null });
     if (j?.stop_reason === 'refusal') throw new Error('모델이 이 요청을 거절했어요 (refusal)');
     if (!out.trim() && j?.stop_reason === 'max_tokens') throw new Error(`답 길이 한도(${maxTokens} 토큰)를 생각하는 데 다 써서 빈 답이 왔어요 — 생각 강도를 낮추거나 최대 길이를 늘려 주세요`);
     if (j?.usage) console.info('[narrative-archive] tokens', t.model, `in ${j.usage.input_tokens} · out ${j.usage.output_tokens}`, effort ? `· effort ${effort}` : '');
@@ -173,7 +178,7 @@ export async function listModels(t) {
 
 // (as Marinara's normalizeTopP: none for a missing or negative one, 1 at most)
 const topPOf = v => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? Math.min(v, 1) : undefined);
-export async function callOpenAICompat(t, system, prompt, maxTokens, effort = '', signal = null, temperature = null, topP = null) {
+export async function callOpenAICompat(t, system, prompt, maxTokens, effort = '', signal = null, temperature = null, topP = null, meta = null) {
     const { url, key, model } = t;
     const endpoint = chatCompletionsUrl(url);
     if (!endpoint || !model) throw new Error('커스텀 API의 URL과 모델 이름을 넣어 주세요 (⚙ 설정 → AI 모델)');
@@ -206,6 +211,7 @@ export async function callOpenAICompat(t, system, prompt, maxTokens, effort = ''
         : Array.isArray(msg?.content) ? msg.content.map(p => p?.text || '').join('') : (j?.choices?.[0]?.text || '');
     // say why an answer is empty: a length cut usually means the model spent the limit thinking
     const why = j?.choices?.[0]?.finish_reason;
+    if (meta) Object.assign(meta, { thinking: [msg?.reasoning_content, msg?.reasoning].find(v => typeof v === 'string' && v.trim()) || '', finishReason: why || null, model: String(j?.model || model || ''), usage: j?.usage ? { promptTokens: j.usage.prompt_tokens ?? null, completionTokens: j.usage.completion_tokens ?? null, reasoningTokens: j.usage.completion_tokens_details?.reasoning_tokens ?? null, cachedPromptTokens: j.usage.prompt_tokens_details?.cached_tokens ?? null } : null });
     if (!String(out).trim() && why === 'length') throw new Error(`답 길이 한도(${maxTokens} 토큰)에 걸려 빈 답이 왔어요. 생각하는 데 다 쓴 것 같아요 — ⚙ 설정 → AI 모델에서 최대 길이를 늘려 주세요`);
     if (!String(out).trim() && why && why !== 'stop') throw new Error(`모델이 빈 답을 돌려줬어요 (멈춘 이유: ${why})`);
     return out;
@@ -223,15 +229,15 @@ export const vxRegion = t => String(t.vxLocation || '').trim() || ctx().chatComp
 
 // a model that a region does not carry answers 404 "Publisher model … not found": try the other usual regions once,
 // and keep the one that worked
-export async function callVertex(t, system, prompt, maxTokens, effort = '', signal = null, temperature = null, topP = null) {
+export async function callVertex(t, system, prompt, maxTokens, effort = '', signal = null, temperature = null, topP = null, meta = null) {
     const first = vxRegion(t);
     const others = ['global', 'us-central1', 'us-east5', 'europe-west4'].filter(x => x !== first);
-    try { return await callVertexAt(t, first, system, prompt, maxTokens, effort, signal, temperature, topP); }
+    try { return await callVertexAt(t, first, system, prompt, maxTokens, effort, signal, temperature, topP, meta); }
     catch (e) {
         if (!/Vertex 오류 404/.test(String(e?.message))) throw e;
         for (const loc of others) {
             try {
-                const out = await callVertexAt(t, loc, system, prompt, maxTokens, effort, signal, temperature, topP);
+                const out = await callVertexAt(t, loc, system, prompt, maxTokens, effort, signal, temperature, topP, meta);
                 t.vxLocation = loc; saveGlobal();
                 toastr.info(`Vertex 지역 ${first}에 이 모델이 없어서 ${loc}로 바꿨어요`, '서사 아카이브');
                 return out;
@@ -240,7 +246,7 @@ export async function callVertex(t, system, prompt, maxTokens, effort = '', sign
         throw e;
     }
 }
-async function callVertexAt(t, loc, system, prompt, maxTokens, job = '', signal = null, temperature = null, topP = null) {
+async function callVertexAt(t, loc, system, prompt, maxTokens, job = '', signal = null, temperature = null, topP = null, meta = null) {
     const model = String(t.vxModel || '').trim();
     if (!model) throw new Error('Vertex 모델을 골라 주세요 (예: gemini-2.5-flash)');
     // callConn already chose between the connection's setting and the job's; nothing chosen: the model decides
@@ -265,6 +271,7 @@ async function callVertexAt(t, loc, system, prompt, maxTokens, job = '', signal 
         if (/blocked|SAFETY|PROHIBITED|RECITATION|candidate/i.test(msg)) throw new Error(`Vertex가 답을 막았어요 (${msg.slice(0, 120)})`);
         throw new Error(`Vertex 오류 ${r.status}${msg && msg !== 'true' ? `: ${msg.slice(0, 200)}` : ' · 실리태번 서버 창에 자세한 내용이 있어요'}`);
     }
+    if (meta) Object.assign(meta, { thinking: [j?.choices?.[0]?.message?.reasoning_content, j?.choices?.[0]?.message?.reasoning].find(v => typeof v === 'string' && v.trim()) || '', finishReason: j?.choices?.[0]?.finish_reason || null, usage: j?.usage ? { promptTokens: j.usage.prompt_tokens ?? null, completionTokens: j.usage.completion_tokens ?? null, reasoningTokens: j.usage.completion_tokens_details?.reasoning_tokens ?? null, cachedPromptTokens: null } : null });
     return String(j?.choices?.[0]?.message?.content || '');
 }
 
@@ -316,11 +323,11 @@ export const draftReady = () => ['custom', 'vertex'].includes(draftSettings().mo
 // timeout (ms, optional): a request that hasn't answered by then is given up (its late answer is not used), so a stuck call
 // doesn't hold the phone's work for good. Not passed by compression, which may think for long
 export async function askDraft(prompt, opts = {}) {
-    const { system = '', maxTokens = 0, effort = '', force = false, guard = null, keepSystem = false, timeout = 0, signal = null, temperature = null, topP = null } = opts;
+    const { system = '', maxTokens = 0, effort = '', force = false, guard = null, keepSystem = false, timeout = 0, signal = null, temperature = null, topP = null, meta = null } = opts;
     const t = draftSettings();
     if (!draftReady()) throw new Error('초안 모델이 없어요. ⚙ 설정 → AI 모델 → 초안 모델에서 정해 주세요.');
     try {
-        const call = callConn(t, system, prompt, Math.max(256, Number(maxTokens) || Number(t.max) || 16000), effort, force, keepSystem, signal, temperature, topP);
+        const call = callConn(t, system, prompt, Math.max(256, Number(maxTokens) || Number(t.max) || 16000), effort, force, keepSystem, signal, temperature, topP, meta);
         const out = timeout > 0 ? await Promise.race([call, new Promise((_, no) => setTimeout(() => no(Object.assign(new Error(`모델이 ${Math.round(timeout / 60000)}분 넘게 답하지 않아서 멈췄어요. 다시 해 주세요`), { timedOut: true })), timeout))]) : await call;
         if (!out) throw new Error('초안 모델이 빈 답을 돌려줬어요');
         if (looksRefused(out, guard)) throw refusedError('초안 모델');
@@ -357,14 +364,14 @@ export async function askAI(prompt, opts = {}) {
     try { return await askAIOnce(prompt, opts); }
     catch (e) { if (opts.signal?.aborted) throw e; return viaFallback(e, 'ai', prompt, opts); }
 }
-async function askAIOnce(prompt, { system = '', maxTokens = 0, effort = '', force = false, guard = null, keepSystem = false, signal = null, temperature = null, topP = null } = {}) {
+async function askAIOnce(prompt, { system = '', maxTokens = 0, effort = '', force = false, guard = null, keepSystem = false, signal = null, temperature = null, topP = null, meta = null } = {}) {
     const c = ctx();
     const g = globalSettings();
     const max = Math.max(64, Number(maxTokens) || Number(g.aiMaxTokens) || 8192);
     let out;
     const a = connSettings('ai');
     if (a.mode === 'custom' || a.mode === 'vertex') {
-        out = await callConn(a, system, prompt, max, effort, force, keepSystem, signal, temperature, topP);
+        out = await callConn(a, system, prompt, max, effort, force, keepSystem, signal, temperature, topP, meta);
     } else if (g.aiProfile) {
         const p = aiProfiles().find(x => x.id === g.aiProfile);
         if (!p) throw new Error('고른 연결 프로필을 찾을 수 없어요. ⚙ 설정 → AI 모델에서 다시 골라 주세요.');

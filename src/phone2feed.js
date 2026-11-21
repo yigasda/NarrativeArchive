@@ -30,7 +30,7 @@ export function feedRows(m, owner, { after = 0, upto = Infinity } = {}) {
     const out = [];
     for (const room of Object.values(w.messenger?.rooms || {})) {
         if (!room.members.some(n => same(n, owner))) continue;
-        for (const x of room.messages || []) if (x.n > after && x.n <= upto && aiReads(x, owner)) out.push({ ...x, room });
+        for (const x of room.messages || []) if (x.n > after && x.n <= upto && aiReads(x, owner) && !x.copyOf) out.push({ ...x, room });
     }
     return out.sort((a, b) => a.n - b.n);
 }

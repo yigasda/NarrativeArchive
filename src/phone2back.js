@@ -18,7 +18,7 @@ const said = x => (x?.call ? `(call ${Math.max(0, Math.round(Number(x.call.min) 
 // 아직 롤플에 안 전한 말: 방마다 [{ room, names, rows: [message] }], 말한 순서대로. 오래된 것부터 BACK.lines개까지
 //   → { rooms, count, more (그보다 많아서 이번에 못 실은 새 말 수: 다음에 이어서 전해요) }
 export function backLeft(w) {
-    const all = Object.values(w?.messenger?.rooms || {}).flatMap(r => (r.messages || []).filter(x => !x.told && allRead(x) && said(x)).map(x => ({ r, x })));
+    const all = Object.values(w?.messenger?.rooms || {}).flatMap(r => (r.messages || []).filter(x => !x.told && !x.copyOf && allRead(x) && said(x)).map(x => ({ r, x })));
     all.sort((a, b) => (a.x.at || 0) - (b.x.at || 0) || (a.x.n || 0) - (b.x.n || 0));
     const kept = all.slice(0, BACK.lines), by = new Map();
     for (const { r, x } of kept) { if (!by.has(r)) by.set(r, []); by.get(r).push(x); }

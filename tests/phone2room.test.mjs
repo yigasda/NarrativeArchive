@@ -205,7 +205,7 @@ test('사람 빼기: 나는 못 빼고, 둘만 남은 방에서는 못 빼요. �
 test('이 파일은 폰 2 저장 자리만 불러요; 모델 · 저장은 안 불러요; 폰 1 파일은 이 파일을 안 불러요', async () => {
     const { readFile, readdir } = await import('node:fs/promises'), SRC = new URL('../src/', import.meta.url);
     const src = await readFile(new URL('phone2room.js', SRC), 'utf8');
-    assert.deepEqual([...src.matchAll(/from '([^']+)'/g)].map(x => x[1]), ['./phone2store.js', './marinara/message-marks.js', './marinara/message-reply.js', './marinara/message-hidden.js']);
+    assert.deepEqual([...src.matchAll(/from '([^']+)'/g)].map(x => x[1]), ['./phone2store.js', './marinara/message-marks.js', './marinara/saved-message-extra.js', './marinara/message-reply.js', './marinara/message-hidden.js']);
     assert.doesNotMatch(src, /saveMeta|ctx\(|askDraft|askTranslator|boundary/);
     for (const f of (await readdir(SRC)).filter(f => f.endsWith('.js') && !/^phone2/.test(f) && f !== 'phone.js')) assert.doesNotMatch(await readFile(new URL(f, SRC), 'utf8'), /phone2room/, f);
 });
@@ -285,4 +285,29 @@ test('답장 달기: 요청에는 내 마지막 말에만 인용이 붙고, 캐�
     assert.equal(R.repliedTo(m, a.id), '');
     L.sendLive(m, a.id, 'fourth', 9003, { replyTo: { messageId: 'gone', name: 'Mara', content: 'x' } });
     assert.equal(R.repliedTo(m, a.id), '');
+});
+
+// ---- 여기서 분기 (마리나라의 branch)
+test('분기: 그 말까지를 복사한 새 방. 요청 기록은 안 가고, 복사한 말은 폰 반영이 다시 읽지 않아요', () => {
+    const { m, w, a, x2, x3 } = world();
+    x2.extra = { cachedPrompt: [{ role: 'user', content: 'p' }], generationInfo: { model: 'm' }, thinking: 'hm', bookmark: { label: 'b' } };
+    a.digest = { upto: x2.n, parts: ['s'] };
+    const b = R.branchRoom(m, a.id, x3.id);
+    assert.notEqual(b.id, a.id);
+    assert.deepEqual(b.members, a.members);
+    assert.deepEqual(texts(b), ['Are you up?', 'Barely', 'my secret plan']);
+    assert.deepEqual(b.messages.map(x => [x.n, x.at]), a.messages.slice(0, 3).map(x => [x.n, x.at]));
+    assert.ok(b.messages.every((x, i) => x.id !== a.messages[i].id && x.copyOf === a.messages[i].id));
+    assert.deepEqual(b.messages[1].extra, { thinking: 'hm', bookmark: { label: 'b' } });      // (마리나라: cachedPrompt · generationInfo는 두고 가요)
+    assert.deepEqual(b.branch, { name: 'New Branch', parentRoomId: a.id, parentMessageId: x3.id, messageId: b.messages[2].id });
+    assert.deepEqual(b.digest, { upto: x2.n, parts: ['s'] });
+    assert.equal(a.messages.length, 4);                                               // (원래 방은 그대로)
+    assert.equal(L.ensureRoom(m, ['Mara']).id, a.id);                                 // (같은 사람들의 방을 찾으면 원래 방)
+    assert.equal(FEED.feedRows(m, 'Mara').filter(x => x.text === 'Barely').length, 1);
+    // (요약이 잘린 뒤의 말까지 담았으면 안 물려받아요; 없는 말로는 못 나눠요)
+    a.digest = { upto: a.messages[3].n, parts: ['s'] };
+    assert.equal(R.branchRoom(m, a.id, x3.id).digest, undefined);
+    assert.throws(() => R.branchRoom(m, a.id, 'nope'), /이 방에 없/);
+    assert.equal(R.branchRoom(m, a.id).messages.length, 4);
+    assert.equal(Object.keys(w.messenger.rooms).length >= 4, true);
 });

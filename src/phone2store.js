@@ -307,7 +307,8 @@ export function ensureRoom(m, members) {
     const names = [...new Map([w.persona, ...(members || [])].map(n => String(n || '').trim()).filter(Boolean).map(n => [liveKey(n), n])).values()];
     if (names.length < 2) throw new Error('방에는 페르소나 말고 한 사람 이상이 필요해요');
     const keys = names.map(liveKey).sort().join('|');
-    const room = Object.values(w.messenger.rooms).find(r => r.members.map(liveKey).sort().join('|') === keys);
+    // (a branch of a room has the same people: the room itself comes first, never its branch)
+    const same = Object.values(w.messenger.rooms).filter(r => r.members.map(liveKey).sort().join('|') === keys), room = same.find(r => !r.branch) || same[0];
     if (room) return room;
     for (const n of names) ensureAccount(m, n);
     const id = newId('r');

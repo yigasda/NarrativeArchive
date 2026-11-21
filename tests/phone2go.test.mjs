@@ -1527,3 +1527,31 @@ test('Merged 단체방: 한 요청으로 여럿이 답해요. 지시문은 마�
     assert.deepEqual(g.turn.spoke, ['mara', 'ivo']);
     assert.equal(L.liveWorld(c.real).queue.jobs.filter(j => j.state === 'waiting').length, 0);
 });
+
+test('답장에 남는 것: 모델 생각 · 보낸 요청 그대로 · 생성 정보 (마리나라의 thinking · cachedPrompt · generationInfo). 프롬프트 보기', async () => {
+    const c = world();
+    // (아직 답이 없을 때: 지금 보낼 요청을 보내지 않고 보여 줘요)
+    send(c, '일어났냐');
+    const live = await G.livePeekPrompt(c.real, c.room.id);
+    assert.deepEqual([live.source, live.exact, live.messages.map(x => x.role)], ['live_preview', false, ['system', 'user']]);
+    assert.match(live.agentNote, /^No saved model request was available/);
+    assert.equal(T.replyCalls, 0);
+    T.ask = async (input, o) => { Object.assign(o.meta, { raw: '<think>short answer</think>{"reply":["방금"]}', thinking: 'native', model: 'mm', provider: 'pp', temperature: null, maxTokens: 4000, reasoningEffort: 'low', durationMs: 12, finishReason: 'stop', usage: { promptTokens: 100, completionTokens: 9, reasoningTokens: 4, cachedPromptTokens: null } }); return JSON.stringify({ state: '집', reply: ['방금'], does: [] }); };
+    try { await G.liveGo(c.real); } finally { delete T.ask; }
+    const x = c.room.messages.at(-1);
+    assert.equal(x.extra.thinking, 'native\n\nshort answer');
+    assert.deepEqual(x.extra.cachedPrompt.map(e => e.role), ['system', 'user']);
+    assert.match(x.extra.cachedPrompt[1].content, /일어났냐/);
+    assert.deepEqual([x.extra.generationInfo.model, x.extra.generationInfo.provider, x.extra.generationInfo.maxTokens, x.extra.generationInfo.reasoningEffort, x.extra.generationInfo.tokensPrompt, x.extra.generationInfo.tokensReasoning, x.extra.generationInfo.tokensVisibleCompletion, x.extra.generationInfo.finishReason, x.extra.generationInfo.durationMs], ['mm', 'pp', 4000, 'low', 100, 4, 5, 'stop', 12]);
+    const peek = await G.livePeekPrompt(c.real, c.room.id);
+    assert.deepEqual([peek.source, peek.exact, peek.characterId, peek.generationInfo.model], ['cached', true, 'mara', 'mm']);
+    assert.deepEqual(peek.messages, x.extra.cachedPrompt);
+    assert.equal((await G.livePeekPrompt(c.real, c.room.id, { messageId: x.id })).agentNote, 'This is the exact cached text prompt sent for the selected turn.');
+    assert.equal((await G.livePeekPrompt(c.real, c.room.id, { current: true })).source, 'live_preview');
+    await assert.rejects(G.livePeekPrompt(c.real, c.room.id, { messageId: c.room.messages[0].id }), /저장된 요청이 없/);
+    // (마지막 두 답에만 남아요)
+    for (const t of ['둘', '셋']) { send(c, t); T.replies = [{ state: '집', reply: [`답 ${t}`], does: [] }]; await G.liveGo(c.real); }
+    assert.equal(c.room.messages.filter(y => y.extra?.cachedPrompt).length, 2);
+    assert.equal(x.extra.cachedPrompt, undefined);
+    assert.equal(x.extra.thinking, 'native\n\nshort answer');
+});

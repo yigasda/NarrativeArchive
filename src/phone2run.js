@@ -90,7 +90,7 @@ export function takeMerged(m, roomId, answer, { names = [], lead = '', now = Dat
 // why; the user sees it and lets the line go on). Returns { ran, failed }. One runner a chat at a time: a second call
 // while one runs does nothing ({ ran: 0, busy: true }).
 const running = new WeakSet();
-export async function runLive(m, { gather, ask, save = async () => {}, now = () => Date.now(), parse = null, after = null, alive = () => true, stateFor = null } = {}) {
+export async function runLive(m, { gather, ask, save = async () => {}, now = () => Date.now(), parse = null, after = null, alive = () => true, stateFor = null, took = null } = {}) {
     if (!m || running.has(m)) return { ran: 0, failed: null, busy: true };
     running.add(m);
     let ran = 0, failed = null;
@@ -111,6 +111,8 @@ export async function runLive(m, { gather, ask, save = async () => {}, now = () 
                     if (!alive()) { job.state = 'waiting'; break; }
                     // (a request that brings its own way in — a Merged group turn — is put in that way)
                     got = req.take ? req.take(answer, { now: now() }) : takeReply(m, job.owner, job.room, answer, { now: now(), parse, state: stateFor ? stateFor(job) : undefined });
+                    // (took: what the caller keeps beside the answer, saved with it)
+                    if (took) took(job, got);
                 }
                 finishJob(m, job);
                 ran++;
