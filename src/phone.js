@@ -273,7 +273,7 @@ export async function openPhone(who = null) {
     // 고를 수 있는 연결을 마리나라처럼 모델 이름 + 제공자로 (소망: 우리 설정의 칸 이름을 화면에 쓰지 않아요). id는 liveConnections 것 그대로
     const obConns = () => { const slot = t => (t.mode === 'custom' ? { name: t.model || '모델 없음', sub: '커스텀 API' } : t.mode === 'vertex' ? { name: t.vxModel || '모델 없음', sub: 'Vertex' } : null);
         return liveConnections().map(c => { if (!c.id) return { id: '', roles: ['메인'], ...(slot(draftSettings()) || { name: '모델 없음', sub: '' }) };
-            if (c.id === 'ai') return { id: 'ai', roles: ['에이전트'], ...(slot(connSettings('ai')) || { name: aiLabel(), sub: 'SillyTavern' }) };
+            if (c.id === 'ai') return { id: 'ai', roles: ['기능'], ...(slot(connSettings('ai')) || { name: aiLabel(), sub: 'SillyTavern' }) };
             const p = aiProfiles().find(x => `profile:${x.id}` === c.id); return { id: c.id, name: p?.model || c.name, sub: p?.model ? [c.name, p.api].filter(Boolean).join(' · ') : (p?.api || '') }; }); };
     const schOpen = (owner, day = null) => { const had = liveSchedule(realM, owner); obSch = { owner, draft: structuredClone(had || schBlank()), page: 'main', open: SCH_DAYS.includes(day) ? day : null, mode: had ? 'adjust' : 'rewrite', gen: 'week', guide: '', dguide: {}, menu: null, busy: '', busyText: '', ctl: null, err: null, stale: false, tzQ: '', dirty: false };
         for (const d of SCH_DAYS) if (!Array.isArray(obSch.draft.days?.[d])) (obSch.draft.days ||= {})[d] = []; };

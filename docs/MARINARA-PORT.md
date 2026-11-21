@@ -128,5 +128,5 @@
 | components/characters/CharacterPickerList.tsx | 652 | 일부 | 검색 · 더 보기 | 검색 · 없음 줄 · 페르소나 줄(사진 · 제목 · ✓) · 50개씩 더 보기 · 빈 상태 · 안 맞을 때 "검색 지우기"는 다 있어요. 고르기는 저장되지 않아요. 없는 것: 페르소나 폴더, "캐릭터로 플레이" 묶음(실리태번에 그 개념이 없음) |
 | components/connections/ModelRow.tsx · ServiceRow.tsx · ListFrame.tsx · chat/ContextBudgetIndicator.tsx | 334 · 177 · 183 · 70 | (위 화면의 부품) | | 제공자 타일은 없음(소망이 뺌) |
 
-역할 알약: 답장에 쓰는 칸은 "메인", AI 기능에 쓰는 칸은 "에이전트"로 적었어요(마리나라의 Main · Agents에 맞춘 제 대응이에요).
+역할 알약: 답장에 쓰는 칸은 "메인", AI 기능에 쓰는 칸은 "기능"으로 적었어요(마리나라의 Main · Agents 자리. "기능"은 소망이 정한 이름).
 
