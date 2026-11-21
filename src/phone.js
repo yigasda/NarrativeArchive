@@ -239,7 +239,7 @@ export async function openPhone(who = null) {
     const startPlan = startPlanOf;
     // 어두운 방(⋯ 메뉴의 어둡게 · 밝게): 확장 설정에 남아요. 그릴 때마다 읽으니 설정을 그대로 읽어요(koOn과 같은 까닭)
     const obDark = () => (ctx().extensionSettings?.narrative_archive ?? globalSettings()).orbitDark === true;
-    let obSet = '', obFindTab = 'marks', obFindQ = '', obJump = null;   // 방 설정 시트: obSet = '' | 'main' | 'find' | 'name' | 'people', obJump = 찾아갈 말의 id
+    let obSet = '', obFindTab = 'marks', obFindQ = '', obJump = null, obSetUi = { v: {}, open: '', tzQ: '', busy: false };   // obSetUi: 채팅 설정 화면들의 아직 안 이어진 조작 값(시트가 열린 동안만) · 펼친 고르기 · 시간대 검색   // 방 설정 시트: obSet = '' | 'main' | 'find' | 'name' | 'people', obJump = 찾아갈 말의 id
     // 이모지 판: obEmo = { tab: 'emoji' | 'kao', cat, q } | null. 목록 · 검색(마리나라 것, 130KB)은 처음 열 때 불러와요
     let obEmo = null, obEmoLib = null;
     const EMO_KO = { 'Smileys & Emotion': '스마일리 및 감정', 'People & Body': '사람 및 신체', 'Animals & Nature': '동물 및 자연', 'Food & Drink': '음식 및 음료', 'Travel & Places': '여행 및 장소', Activities: '활동', Objects: '사물', Symbols: '기호', Flags: '깃발',
@@ -324,8 +324,12 @@ export async function openPhone(who = null) {
                 if (obSet === 'find') { t.tab = obFindTab;
                     t.items = obFindTab === 'marks' ? liveMarked(realM, r.id).map(k => ({ ...row(k.x), note: k.note || '', pin: !!k.x.extra?.pinnedToContext })).reverse()
                         : liveTrash(realM, r.id).map(k => ({ ...row(k.x), when: `${Math.max(0, Math.ceil((k.until - Date.now()) / 864e5))}일 남음` })); }
-                if (obSet === 'name') { t.name = r.name || ''; t.auto = [...os].join(', '); }
-                if (obSet === 'people') { t.members = os; const all = [...new Map([...Object.values(w.phones || {}).map(p => p?.owner), ...Object.values(w.messenger?.accounts || {}).map(a => a?.name)].filter(n => n && liveKey(n) !== liveKey(me)).map(n => [liveKey(n), n])).values()]; t.more = all.filter(n => !os.some(m => liveKey(m) === liveKey(n))); }
+                t.v = obSetUi.v; t.open = obSetUi.open; t.roomId = r.id; t.members = os; t.auto.ind = A.groupChatMode === 'individual';
+                if (obSet === 'name') { t.name = r.name || ''; t.autoName = [...os].join(', '); }
+                if (obSet === 'auto' || obSet === 'tz') { const zone = liveScheduleZone(realM), dev = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', q = obSetUi.tzQ.trim().toLowerCase();
+                    t.sched = { any: os.some(n => SCH_DAYS.some(d => liveSchedule(realM, n)?.days?.[d]?.length)), list: os.map(n => ({ n, days: SCH_DAYS.filter(d => liveSchedule(realM, n)?.days?.[d]?.length).length })), zone: schTzLabel(zone || dev), device: dev, differs: !!zone && zone !== dev, busy: obSetUi.busy };
+                    t.tzQ = obSetUi.tzQ; t.tzList = obSet === 'tz' ? ['UTC', ...Intl.supportedValuesOf('timeZone')].filter((z, i, a) => a.indexOf(z) === i && (!q || z.toLowerCase().replace(/_/g, ' ').includes(q))).slice(0, 60).map(z => ({ id: z, label: schTzLabel(z), on: z === (zone || dev) })) : []; }
+                if (obSet === 'people') { const all = [...new Map([...Object.values(w.phones || {}).map(p => p?.owner), ...Object.values(w.messenger?.accounts || {}).map(a => a?.name)].filter(n => n && liveKey(n) !== liveKey(me)).map(n => [liveKey(n), n])).values()]; t.more = all.filter(n => !os.some(m => liveKey(m) === liveKey(n))); }
                 return t; };
             for (let i = 0; i < obFrom; i++) if (shown[i].reacts?.length) obReacts(r.id, shown[i], true);   // (안 그린 옛 말의 반응은 본 것으로 쳐요: 나중에 위로 굴려 그릴 때 새 반응처럼 튀지 않게)
             for (const x of shown.slice(obFrom)) {
@@ -1168,8 +1172,23 @@ export async function openPhone(who = null) {
     $root.on('click', '.na_ob_mregen', async e => { e.stopPropagation(); const id = obRoomId(), sw = id && obCanEdit() ? liveSwipeInfo(realM, id) : null;
         if (!sw || sw.coming || !$(e.currentTarget).closest('.ob_mi').find('.ob_b.held').hasClass('na_ob_sw')) return toastr.info('마지막 답장만 재생성할 수 있어요', '캐릭터 휴대폰');
         obHeld = null; try { let r = null; for (let k = sw.at; k <= sw.count && !r?.fresh; k++) r = await liveSwipe(realM, id, 1); if (!phoneClosed && stillHere()) { drawPhone(true); obBottom(); } if (r?.fresh) obGo(); } catch (err) { obWarn(err); if (!phoneClosed && stillHere()) drawPhone(true); } });
-    $root.on('click', '.na_ob_sx', e => { e.stopPropagation(); obSet = ''; obFindQ = ''; drawPhone(true); });
-    $root.on('click', '.na_ob_sback', e => { e.stopPropagation(); obSet = 'main'; drawPhone(true); });
+    $root.on('click', '.na_ob_sx', e => { e.stopPropagation(); obSet = ''; obFindQ = ''; obSetUi = { v: {}, open: '', tzQ: '', busy: false }; drawPhone(true); });
+    const OB_SET_UP = { memlist: 'memory', sumedit: 'sum', tz: 'auto' };
+    $root.on('click', '.na_ob_sback', e => { e.stopPropagation(); obSet = OB_SET_UP[obSet] || 'main'; obSetUi.open = ''; drawPhone(true); });
+    // 채팅 설정 화면들의 조작(src/phoneorbitset.js). 아직 동작이 없는 것: 값만 이 시트가 열린 동안 기억하고 알림을 띄워요
+    const obNotYet = el => toastr.info(`${el.getAttribute('aria-label') || el.querySelector('.os_l')?.textContent || el.textContent.trim() || '이 기능'}: 아직 연결되지 않았어요`, '캐릭터 휴대폰');
+    $root.on('click', '.na_os_tg', function (e) { e.stopPropagation(); const k = this.dataset.k, def = this.dataset.on === '1'; obSetUi.v[k] = k in obSetUi.v ? !obSetUi.v[k] : !def; if (k !== 'addOpen') obNotYet(this); drawPhone(true); });
+    $root.on('click', '.na_os_sel', function (e) { e.stopPropagation(); const k = this.dataset.k; obSetUi.open = obSetUi.open === k ? '' : k; drawPhone(true); });
+    $root.on('click', '.na_os_opt, .na_os_seg', function (e) { e.stopPropagation(); obSetUi.v[this.dataset.k] = this.dataset.v; if (this.classList.contains('na_os_opt')) obSetUi.open = ''; obNotYet(this); drawPhone(true); });
+    $root.on('keydown', '.na_os_in', function (e) { if (e.key === 'Enter' && this.getAttribute('enterkeyhint')) { e.preventDefault(); this.blur(); } });
+    $root.on('focusout', '.na_os_in', function () { const k = this.dataset.k, v = this.innerText.replace(/\n$/, ''); if (String(obSetUi.v[k] ?? '') === v) return; obSetUi.v[k] = v; if (stillHere() && !phoneClosed) drawPhone(true); });
+    $root.on('click', '.na_os_copyid', async function (e) { e.stopPropagation(); try { await navigator.clipboard.writeText(obRoomId() || ''); toastr.success('채팅 ID를 복사했어요', '캐릭터 휴대폰'); } catch { toastr.error('채팅 ID를 복사하지 못했어요', '캐릭터 휴대폰'); } });
+    $root.on('click', '.na_os_capm', function (e) { e.stopPropagation(); obSetUi.open = ''; obAuto({ autonomousDailyCapOverride: this.dataset.v === 'numeric' ? (liveAutonomousOptions(realM)?.autonomousDailyCapOverride ?? 8) : null }); });
+    $root.on('click', '.na_os_regen', async e => { e.stopPropagation(); const rid = obRoomId(), r = rid && liveWorld(realM)?.messenger?.rooms?.[rid]; if (!r || !obCanEdit() || obSetUi.busy) return; const owners = r.members.filter(n => liveKey(n) !== liveKey(liveWorld(realM)?.persona));
+        obSetUi.busy = true; drawPhone(true); try { await liveRenewSchedules(realM, { owners, forceRefresh: true, connectionId: liveScheduleConnection(realM) }); toastr.success('스케줄이 준비됐어요', '캐릭터 휴대폰'); } catch (err) { obWarn(err); } obSetUi.busy = false; if (!phoneClosed && stillHere()) drawPhone(true); });
+    $root.on('input', '.na_os_tzq', function () { obSetUi.tzQ = this.innerText; clearTimeout(this._t); this._t = setTimeout(() => { if (phoneClosed || !stillHere() || obSet !== 'tz') return; drawPhone(true); const el = $root.find('.na_os_tzq')[0]; if (el) { el.focus({ preventScroll: true }); const s = window.getSelection(); s.selectAllChildren(el); s.collapseToEnd(); } }, 250); });
+    $root.on('click', '.na_os_tz, .na_os_tzdev', function (e) { e.stopPropagation(); if (!obCanEdit()) return; const dev = this.classList.contains('na_os_tzdev'); obSetUi.tzQ = ''; obSet = 'auto'; obSetGo(liveSetScheduleZone(realM, dev ? '' : this.dataset.v)); });
+    $root.on('click', '.na_os_sched', function (e) { e.stopPropagation(); if (!obCanEdit()) return; obSet = ''; schOpen(this.dataset.n); drawPhone(true); });
     $root.on('click', '.na_ob_srow', function (e) { e.stopPropagation(); const v = this.dataset.v; if (v === 'marks' || v === 'trash') { obSet = 'find'; obFindTab = v; } else obSet = v; drawPhone(true); if (obSet === 'name') $root.find('.na_ob_snm')[0]?.focus({ preventScroll: true }); });
     $root.on('click', '.na_ob_stab', function (e) { e.stopPropagation(); obFindTab = this.dataset.v; drawPhone(true); });
     let obFindT = null;
@@ -1178,6 +1197,7 @@ export async function openPhone(who = null) {
     $root.on('keydown', '.na_ob_sq, .na_ob_snm', function (e) { if (e.key !== 'Enter') return; e.preventDefault(); if (this.classList.contains('na_ob_snm')) $root.find('.na_ob_snok').trigger('click'); else this.blur(); });
     $root.on('click', '.na_ob_sgo', function (e) { e.stopPropagation(); const id = this.dataset.id; obJump = id; obSet = ''; obFindQ = ''; drawPhone(true); obJump = null;
         const el = [...$root.find('.ob_msgs .ob_b')].find(b => b.dataset.id === id); if (!el) return; el.scrollIntoView({ block: 'center' }); el.classList.add('ob_flash'); setTimeout(() => el.classList.remove('ob_flash'), 1400); });
+    $root.on('click', '.na_ob_srestall', e => { e.stopPropagation(); const rid = obRoomId(); if (rid && obCanEdit()) obSetGo(liveRestore(realM, rid, liveTrash(realM, rid).map(k => k.x.id))); });
     $root.on('click', '.na_ob_srest', function (e) { e.stopPropagation(); const rid = obRoomId(); if (rid && obCanEdit()) obSetGo(liveRestore(realM, rid, [this.dataset.id])); });
     $root.on('click', '.na_ob_sempty', async e => { e.stopPropagation(); const rid = obRoomId(); if (!rid || !obCanEdit() || !await askSheet('휴지통을 비울까요?', '', '비우기')) return; obSetGo(liveEmptyTrash(realM, rid)); });
     $root.on('click', '.na_ob_snok', e => { e.stopPropagation(); const rid = obRoomId(); if (!rid || !obCanEdit()) return; try { nameRoom(realM, rid, String($root.find('.na_ob_snm')[0]?.innerText || '')); } catch (err) { return obWarn(err); } obSet = 'main'; drawPhone(true); saveMeta().catch(obWarn); });
@@ -2589,7 +2609,7 @@ export async function openPhone(who = null) {
             const v = String(view || '').split(':')[0];
             if (ask) ask.done(false);
             else if (sheetOpen) setSheet(false);
-            else if (obSet && obSet !== 'main') { obSet = 'main'; drawPhone(true); }
+            else if (obSet && obSet !== 'main') { obSet = OB_SET_UP[obSet] || 'main'; obSetUi.open = ''; drawPhone(true); }
             else if (obSch && !obSch.busy && (obSch.menu || obSch.page !== 'main')) { obSch.menu = null; obSch.page = 'main'; drawPhone(true); }
             else if (obFix || obHeld || obPicks || obList || obMenu || obNote || obSet || obEmo || obPres || obSch) { if (obSch?.busy) return; obFix = null; obHeld = null; obPicks = null; obList = null; obMenu = false; obNote = null; obSet = ''; obEmo = null; obPres = false; obSch = null; drawPhone(true); }
             else {
