@@ -8,6 +8,7 @@
 
 import { liveWorld, liveKey } from './phone2store.js';
 import { liftReacts, putBack } from './phone2react.js';
+import { koLike } from './phone2reply.js';
 
 // lines · chars: 번역 요청 하나에 싣는 말의 수 · 글자 수; max: 한 번에 다시 번역하는 말의 수
 export const EDIT = { lines: 60, chars: 9000, max: 240 };
@@ -184,12 +185,12 @@ export function koInput(rows, { owner = '', around = '', voices = [], gloss = []
     ].filter(Boolean).join('\n\n');
 }
 // 답을 그 말들에 넣어요 → 바뀐 수. got: { lines: [{ n, ko }] }. 답에 없는 줄은 그대로 둬요.
-// 한국어가 원문과 같으면(이미 한국어인 말) 한국어 칸을 비워요
+// 한국어가 원문과 같으면(이미 한국어인 말) 한국어 칸을 비워요. 원문에 없는 마침표 · 쉼표는 떼요
 export function takeKo(rows, got) {
     let n = 0;
     const seen = new Set();
     for (const r of Array.isArray(got?.lines) ? got.lines : []) {
-        const row = rows[Number(r?.n) - 1], ko = String(r?.ko ?? '').trim().slice(0, 4000);
+        const row = rows[Number(r?.n) - 1], ko = row ? koLike(row.x.text, String(r?.ko ?? '').trim()).slice(0, 4000) : '';
         if (!row || !ko || seen.has(row)) continue;
         seen.add(row);
         if (one(ko) === one(row.x.text)) delete row.x.ko; else row.x.ko = ko;

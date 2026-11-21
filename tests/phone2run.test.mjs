@@ -138,3 +138,13 @@ test('폰 1은 이 파일을 안 불러요', async () => {
     const src = f => readFile(new URL(`../src/${f}`, import.meta.url), 'utf8');
     for (const f of (await readdir(new URL('../src/', import.meta.url))).filter(f => f.endsWith('.js') && f !== 'phone2run.js' && f !== 'phone2go.js')) assert.doesNotMatch(await src(f), /from '\.\/phone2run\.js'/, f);
 });
+
+test('답장의 한국어는 원문과 같은 모양으로: 원문에 없는 마침표 · 쉼표는 떼고, 있으면 둬요', () => {
+    const m = { phones: {} };
+    L.startFresh(m, { persona: 'Ren', scope: 'test' });
+    L.liveWorld(m).phones = { mara: { owner: 'Mara' } };
+    const r = L.ensureRoom(m, ['Mara']);
+    L.sendLive(m, r.id, 'hi', 1);
+    R.takeReply(m, 'Mara', r.id, { state: 'home', reply: ['I was thinking maybe we should go', 'Fine.', 'ok'], ko: ['생각해 봤는데, 우리 가는 게 좋겠어.', '알았어.', '응.'] }, { now: 5 });
+    assert.deepEqual(r.messages.slice(1).map(x => x.ko), ['생각해 봤는데 우리 가는 게 좋겠어', '알았어.', '응']);
+});

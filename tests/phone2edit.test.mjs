@@ -280,11 +280,14 @@ test('답 넣기: 번호대로 그 말의 한국어만 바꿔요. 답에 없는 
     // (한국어 말고는 아무것도 안 바뀌어요)
     assert.deepEqual(a.messages.map(({ ko, ...x }) => x), was.map(({ ko, ...x }) => x));
     for (const bad of [null, {}, { lines: 'x' }, { lines: [null, { n: 'a', ko: 'x' }] }]) assert.equal(E.takeKo(rows, bad), 0);
+    // 원문에 없는 마침표 · 쉼표는 번역에서 떼요 (원문에 있으면 그대로)
+    E.takeKo(rows, { lines: [{ n: 4, ko: '밥은, 먹었어.' }, { n: 2, ko: '겨우, 일어났어.' }] });
+    assert.deepEqual([a.messages[3].ko, a.messages[1].ko], ['밥은 먹었어', '겨우 일어났어.']);
 });
 
 test('이 파일은 폰 2 저장 자리만 불러요; 모델 · 저장은 안 불러요; 폰 1 파일은 이 파일을 안 불러요', async () => {
     const src = await readFile(new URL('phone2edit.js', SRC), 'utf8');
-    assert.deepEqual([...src.matchAll(/from '([^']+)'/g)].map(x => x[1]), ['./phone2store.js', './phone2react.js']);
+    assert.deepEqual([...src.matchAll(/from '([^']+)'/g)].map(x => x[1]), ['./phone2store.js', './phone2react.js', './phone2reply.js']);
     assert.doesNotMatch(src, /saveMeta|ctx\(|askDraft|askTranslator|boundary/);
     for (const f of (await readdir(SRC)).filter(f => f.endsWith('.js') && !/^phone2/.test(f) && f !== 'phone.js')) assert.doesNotMatch(await readFile(new URL(f, SRC), 'utf8'), /phone2edit/, f);
 });

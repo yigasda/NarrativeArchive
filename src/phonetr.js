@@ -27,6 +27,7 @@ VOICE
 
 LINES
 - Translate every line in full, with its meaning, length, line breaks and emoji. No notes, no explanations.
+- Texts and comments keep the punctuation they were typed with: no full stop or comma the original doesn't have.
 - Names of people and places in Korean script, the GLOSSARY spelling when given. Brand and app names as Korean users write them.
 
 JSON (one object, nothing before or after it)

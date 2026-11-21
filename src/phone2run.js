@@ -2,7 +2,7 @@
 // 입력 모으기 · 저장은 부르는 쪽이 넘겨요(여기선 폰 2 저장 자리만 다뤄요). 폰 1은 이 파일을 안 불러요.
 
 import { liveKey, liveWorld, liveNo, readLive, nextJob, finishJob, reviveJobs } from './phone2store.js';
-import { PHONE2_APPS, phone2Ko } from './phone2reply.js';
+import { PHONE2_APPS, phone2Ko, koLike } from './phone2reply.js';
 import { replyReact, putReact } from './phone2react.js';
 
 const one = v => String(v ?? '').replace(/\s+/g, ' ').trim();
@@ -36,7 +36,7 @@ export function takeReply(m, owner, roomId, answer, { now = Date.now(), parse = 
     const name = room.members.find(n => same(n, owner));
     const had = new Set((room.messages || []).filter(x => same(x.from, name)).slice(-12).map(x => one(x.text)));
     const raw = (o.reply || []).map(x => (typeof x === 'string' ? x.trim() : '')).slice(0, REPLY_MAX.bubbles), ko = phone2Ko(raw, o.ko);
-    const bubbles = raw.map((text, i) => ({ text: text.slice(0, REPLY_MAX.chars), ko: one(ko[i]) === one(text) ? '' : String(ko[i] ?? '').trim().slice(0, REPLY_MAX.chars) })).filter(b => one(b.text) && !had.has(one(b.text)));
+    const bubbles = raw.map((text, i) => ({ text: text.slice(0, REPLY_MAX.chars), ko: one(ko[i]) === one(text) ? '' : koLike(text, String(ko[i] ?? '').trim()).slice(0, REPLY_MAX.chars) })).filter(b => one(b.text) && !had.has(one(b.text)));
     const does = (Array.isArray(o.does) ? o.does : []).map(d => ({ app: appOf(d?.app), what: one(d?.what).slice(0, REPLY_MAX.what) })).filter(d => d.app && d.what).slice(0, REPLY_MAX.does);
     const state = stateRest(o.state);
     // (an emoji on someone's last text: on the room as it was before this answer)
