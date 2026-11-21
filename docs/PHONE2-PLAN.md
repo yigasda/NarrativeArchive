@@ -607,6 +607,13 @@ Orbit이 버벅이는 제일 큰 이유는 저장이에요: Orbit 데이터가 �
   - 방 전체(`w.presence.meta`, 마리나라의 열쇠 그대로): 켜기(`on`), 하루 상한 `autonomousDailyCapOverride`, 단체방에서 상한 같이 쓰기 `groupChatMode: 'individual'`, 캐릭터끼리 주고받기 `characterExchanges`. `liveAutonomousOptions` · `liveSetAutonomousOptions`.
   - 캐릭터마다(스케줄 안): `talkativeness` · `inactivityThresholdMinutes` · `idleResponseDelayMinutes` · `dndResponseDelayMinutes` · `autonomousDailyCapOverride` · `disabledAutonomousIntents`. 스케줄을 저장할 때 같이 들어가요.
   - 캐릭터끼리 주고받기(마리나라의 `/autonomous/exchange`): 단체방에서 한 캐릭터가 답한 뒤 다른 캐릭터가 거기에 답할 때인지 마리나라의 판단으로 봐서 그 답장을 줄 세워요.
+- 마리나라와 맞춰 본 것(2026-11-21, 마리나라의 `use-autonomous-messaging.ts` · `conversation-presence-runtime.ts`와 대조):
+  - 늦음 세 가지: 내 말에 답 `getDirectMessageDelay`, 내가 @으로 부름 `getMentionDelay`, 먼저 거는 말 `getBusyDelay`.
+  - 오프라인이면 답하지 않아요(답장을 줄에서 빼요). 방에 누가 자리에 없었는지 남기고(`room.away`, `liveAway`), 먼저 말 걸기가 켜져 있으면 돌아왔을 때 따라잡아요(마리나라의 "came back online"). 꺼져 있으면 다음에 내가 말할 때까지 답이 없어요.
+  - @으로 부르면 부른 사람만 답하고, 상황 글에 마리나라의 mention 줄이 들어가요.
+  - 손으로 다시 받은 답(스와이프)은 기다리지 않고, 오프라인이어도 와요(마리나라의 regenerate).
+  - 캐릭터끼리 주고받기는 캐릭터가 먼저 건 말 뒤에만, 2~5초 뒤에 해요.
+  - 30초마다 봐요(처음은 10초 뒤).
 - 지금은 실리 창이 열려 있는 동안만 돌아요. 창을 닫아도 돌게 하는 것(서버 플러그인에서 돌리기)이 다음이에요.
 - 화면이 부르는 것(`phone2go.js`): `liveMakeSchedule` · `liveSetSchedule` · `liveSchedule` · `liveStatus` · `liveSetStatus` · `liveSetUserStatus` · `liveSetAutonomous` · `livePresence` · `liveReplyWait`.
 

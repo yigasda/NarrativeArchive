@@ -10,7 +10,8 @@
 // 저장은 부르는 쪽이 해요. 폰 1 · 아카이브는 읽지도 쓰지도 않아요. 폰 1은 이 파일을 부르지 않아요.
 
 import { liveWorld, liveKey } from './phone2store.js';
-import { generateCharacterSchedule, generateCharacterDaySchedule, getEffectiveCurrentStatus, getTodaySchedule, getDirectMessageDelay, getMonday, scheduleNeedsRefresh, ScheduleDraftError } from './marinara/schedule.service.js';
+import { generateCharacterSchedule, generateCharacterDaySchedule, getEffectiveCurrentStatus, getTodaySchedule, getDirectMessageDelay, getMentionDelay, getBusyDelay, getMonday, scheduleNeedsRefresh, ScheduleDraftError } from './marinara/schedule.service.js';
+import { normalizeTextForMatch } from './marinara/text-matching.js';
 import { CONVERSATION_SCHEDULE_DAYS, getAdjacentScheduleBlocks, getActiveStatusOverride } from './marinara/conversation-presence.js';
 import { toZonedWallClockDate, normalizePromptTimeZone, resolveConversationTimeZone } from './marinara/timezone.js';
 import { scheduleDraft, scheduleSummary, scheduleGenerate } from './marinara/schedule-routes.js';
@@ -65,17 +66,26 @@ export function statusNow(m, owner, { now = new Date(), tz = '' } = {}) {
     if (!schedule && !override) return null;
     return getEffectiveCurrentStatus(schedule, override, now, 'free time', toZonedWallClockDate(now, tz || undefined));
 }
-// 답장이 늦어지는 시간(ms): 0 바로 · null 지금은 답 안 함(offline). 스케줄이 없는 사람은 0
-export function replyDelay(m, owner, opts = {}) {
+// 답장이 늦어지는 시간(ms), 마리나라의 계산 그대로: 0 바로 · null 오프라인(지금은 답 안 함). 스케줄도 상태도 없는 사람은 0
+//   kind: 'direct' 내가 보낸 말에 답 (getDirectMessageDelay) · 'mention' 내가 @으로 부름 (getMentionDelay) · 'auto' 먼저 말 걸기 (getBusyDelay)
+export function replyDelay(m, owner, { kind = 'direct', ...opts } = {}) {
     const st = statusNow(m, owner, opts);
     if (!st) return 0;
     if (st.status === 'offline') return null;
-    return getDirectMessageDelay(st.status, scheduleOf(m, owner) || undefined);
+    const schedule = scheduleOf(m, owner) || undefined;
+    return kind === 'mention' ? getMentionDelay(st.status) : kind === 'auto' ? getBusyDelay(st.status, schedule) : getDirectMessageDelay(st.status, schedule);
+}
+// 내가 마지막에 보낸 말에서 @으로 부른 방의 사람들 (마리나라의 mentionedCharacterNames) → [이름]
+export function mentionsIn(m, roomId) {
+    const w = liveWorld(m), room = w?.messenger?.rooms?.[roomId];
+    if (!w || !room) return [];
+    const P = liveKey(w.persona), last = [...(room.messages || [])].reverse().find(x => liveKey(x.from) === P && x.text), text = normalizeTextForMatch(last?.text || '');
+    return text.includes('@') ? room.members.filter(n => liveKey(n) !== P && text.includes(`@${normalizeTextForMatch(n)}`)) : [];
 }
 
 // 답장 요청에 넣는 마리나라의 상황 글 (상태 · 내 상태 · 오늘 스케줄 · 지금 시각). 스케줄 · 상태가 아무도 없으면 ''
 // tzOf(이름) → 그 사람의 시간대; lastRole: 방의 마지막 말이 'user'(나) | 'assistant'; said: 내가 새로 한 말이 있나
-export function contextBlock(m, owner, roomId, { now = new Date(), tzOf = () => '', lastRole = 'user', said = true, intentKey = '' } = {}) {
+export function contextBlock(m, owner, roomId, { now = new Date(), tzOf = () => '', lastRole = 'user', said = true, intentKey = '', mentions = [] } = {}) {
     const w = liveWorld(m), room = w?.messenger?.rooms?.[roomId], p = peek(m);
     if (!w || !room) return '';
     const info = room.members.filter(n => liveKey(n) !== liveKey(w.persona)).map(n => {
@@ -86,6 +96,7 @@ export function contextBlock(m, owner, roomId, { now = new Date(), tzOf = () => 
     return buildConversationCurrentContextBlock({
         nowInstant: now, promptTimeZone: tzOf(owner) || undefined, convoCharInfo: info, finalMessages: [{ role: lastRole }], personaName: w.persona,
         userMessage: said ? 'said' : '', userStatus: p.user?.status || 'active', userActivity: p.user?.activity || '',
+        mentionedCharacterNames: mentions,
         autonomousIntentKey: isMessageIntent(intentKey) ? intentKey : undefined, primaryCharacterId: liveKey(owner), wrapFormat: 'none',
     });
 }

@@ -25,7 +25,7 @@ import { liveStoryText } from './phone2story.js';
 import { BACK, backLeft, backInput, phone2BackSystem, takeBack, backMessage, markTold } from './phone2back.js';
 import { liveWall } from './phone2clock.js';
 import { gatherReply } from './phone2live.js';
-import { presenceOf, scheduleOf, setSchedule, setStatusOverride, setUserStatus, setAutonomous, statusNow, replyDelay, contextBlock, makeSchedule, checkProactive, noteProactive, fillPlaces, stateNow, takeStatus, scheduleZone, setScheduleZone, draftSchedule, summarizeSchedule, repairSchedule, setAutoRenew, autoRenewOf, needsRefresh, renewSchedules, setAutonomousOptions, autonomousOptions, checkExchangeFor } from './phone2sched.js';
+import { presenceOf, scheduleOf, setSchedule, setStatusOverride, setUserStatus, setAutonomous, statusNow, replyDelay, contextBlock, makeSchedule, checkProactive, noteProactive, fillPlaces, stateNow, takeStatus, scheduleZone, setScheduleZone, draftSchedule, summarizeSchedule, repairSchedule, setAutoRenew, autoRenewOf, needsRefresh, renewSchedules, setAutonomousOptions, autonomousOptions, checkExchangeFor, mentionsIn } from './phone2sched.js';
 import { replyInput } from './phone2ask.js';
 import { phone2ReplySystem } from './phone2reply.js';
 import { runLive } from './phone2run.js';
@@ -144,7 +144,7 @@ export async function liveGo(real, { onChange = () => {} } = {}) {
                 before: () => (open(real) ? liveChatTail().lines : []),
             } });
             // (Marinara's status · schedule lines, for an owner with a schedule or a status set by hand)
-            if (d) { const room = w.messenger.rooms[job.room], last = [...(room?.messages || [])].reverse().find(x => x.text || x.call); d.context = contextBlock(real, job.owner, job.room, { tzOf: n => zoneOf(real, livePhone(real, n) || p), lastRole: last && liveKey(last.from) === liveKey(w.persona) ? 'user' : 'assistant', said: !job.why, intentKey: job.intent || '' }); }
+            if (d) { const room = w.messenger.rooms[job.room], last = [...(room?.messages || [])].reverse().find(x => x.text || x.call); d.context = contextBlock(real, job.owner, job.room, { tzOf: n => zoneOf(real, livePhone(real, n) || p), lastRole: last && liveKey(last.from) === liveKey(w.persona) ? 'user' : 'assistant', said: !job.why, intentKey: job.intent || '', mentions: job.auto ? [] : mentionsIn(real, job.room) }); }
             return d ? { system: phone2ReplySystem({ owner: d.owner, persona: d.persona, scheduled: !!scheduleOf(real, job.owner) }), input: replyInput(d) } : null;
         },
         // (an owner with a schedule: the texts carry the schedule's state, not one the model wrote)
@@ -154,8 +154,9 @@ export async function liveGo(real, { onChange = () => {} } = {}) {
             if (w && p && w.id === job.world) markPersona(p, w.persona);
             // (the owner changed their own status in the answer: a temporary one, and the phone follows it)
             if (w && p && w.id === job.world && got?.status && scheduleOf(real, job.owner) && takeStatus(real, job.owner, got.status, { tz: zoneOf(real, p) })) { followSchedule(real); await line.save(); }
-            // (a group room: another character may answer this one, as Marinara's exchange check decides)
-            if (w && p && w.id === job.world && got?.said && exchangeAfter(real, job)) { holdReplies(real); await line.save(); }
+            if (w && w.id === job.world && got?.said) { const room = w.messenger?.rooms?.[job.room]; if (room?.away) { delete room.away[liveKey(job.owner)]; if (!Object.keys(room.away).length) delete room.away; } }
+            // (a group room, after a message a character wrote first: another may answer it, as Marinara's loop does)
+            if (w && p && w.id === job.world && job.auto && got?.said && exchangeAfter(real, job)) await line.save();
             tell();
         },
     });
@@ -183,17 +184,27 @@ export function holdReplies(real, now = Date.now()) {
     const w = liveWorld(real);
     if (!w) return 0;
     let held = 0;
+    const gone = new Set();
     for (const j of w.queue.jobs) {
         if (j.kind !== 'reply' || j.state !== 'waiting' || j.timed) continue;
-        const p = livePhone(real, j.owner), delay = replyDelay(real, j.owner, { now: new Date(now), tz: p ? zoneOf(real, p) : '' });
-        if (delay === null) { j.notBefore = now + 60_000; j.away = true; held++; continue; }
-        delete j.away; j.timed = true;
+        const p = livePhone(real, j.owner), room = w.messenger?.rooms?.[j.room];
+        // (I called someone with @: only they answer, sooner than usual — Marinara's mention scope and delay)
+        const called = j.auto ? [] : mentionsIn(real, j.room);
+        if (called.length && !called.some(n => liveKey(n) === liveKey(j.owner))) { gone.add(j); continue; }
+        const delay = replyDelay(real, j.owner, { now: new Date(now), tz: p ? zoneOf(real, p) : '', kind: j.auto ? 'auto' : called.length ? 'mention' : 'direct' });
+        // (offline, as Marinara does: no answer now. The room keeps who was away; they catch up when they are back, if
+        // characters may write first)
+        if (delay === null) { gone.add(j); if (room && !j.auto) (room.away ||= {})[liveKey(j.owner)] = now; continue; }
+        j.timed = true;
         if (delay > 0) { j.notBefore = (j.at || now) + delay; if (j.notBefore > now) held++; } else delete j.notBefore;
     }
+    if (gone.size) w.queue.jobs = w.queue.jobs.filter(j => !gone.has(j));
     return held;
 }
 // 늦게 올 답장: [{ owner, room, until (ms; 오프라인이면 null), away }]
-export const liveReplyWait = (real, now = Date.now()) => (liveWorld(real)?.queue.jobs || []).filter(j => j.kind === 'reply' && j.state === 'waiting' && j.notBefore > now).map(j => ({ owner: j.owner, room: j.room, until: j.away ? null : j.notBefore, away: !!j.away }));
+export const liveReplyWait = (real, now = Date.now()) => (liveWorld(real)?.queue.jobs || []).filter(j => j.kind === 'reply' && j.state === 'waiting' && j.notBefore > now).map(j => ({ owner: j.owner, room: j.room, until: j.notBefore, away: false }));
+// 오프라인이라 답하지 않은 사람들 (마리나라의 "offline" 알림): [{ owner, at }]. 그 사람이 다시 말하면 없어져요
+export const liveAway = (real, roomId) => { const w = liveWorld(real), room = w?.messenger?.rooms?.[roomId]; return Object.entries(room?.away || {}).map(([k, at]) => ({ owner: room.members.find(n => liveKey(n) === k) || k, at })); };
 // 지금 상태 { status, activity } | null · 스케줄 (마리나라의 WeekSchedule) | null
 export const liveStatus = (real, owner) => { const p = livePhone(real, owner); return statusNow(real, owner, { tz: p ? zoneOf(real, p) : '' }); };
 export const liveSchedule = (real, owner) => scheduleOf(real, owner);
@@ -345,7 +356,9 @@ function exchangeAfter(real, job) {
     const r = checkExchangeFor(real, room.id, job.owner, { tzOf: name => { const p = livePhone(real, name); return p ? zoneOf(real, p) : ''; }, cards: cardsOf(room) });
     const k = r.shouldTrigger ? r.characterIds?.[0] : null, name = k && room.members.find(x => liveKey(x) === k);
     if (!name) return '';
-    enqueueJob(real, { kind: 'reply', owner: name, room: room.id, why: `No new message from ${w.persona} was sent in this request; this is a proactive/autonomous turn. Do not write ${w.persona}'s side of the conversation.` });
+    const next = enqueueJob(real, { kind: 'reply', owner: name, room: room.id, why: `No new message from ${w.persona} was sent in this request; this is a proactive/autonomous turn. Do not write ${w.persona}'s side of the conversation.` });
+    // (Marinara: a short delay to feel natural, then the exchange; no presence delay on it)
+    next.auto = true; next.timed = true; next.notBefore = Date.now() + 2000 + Math.random() * 3000;
     noteProactive(real, room.id, k, '');
     return name;
 }
@@ -364,6 +377,7 @@ export async function liveAutonomous(real, { now = Date.now() } = {}) {
         const k = r.shouldTrigger ? r.characterIds?.[0] : null, name = k && room.members.find(x => liveKey(x) === k);
         if (!name) continue;
         const job = enqueueJob(real, { kind: 'reply', owner: name, room: room.id, at: now, why: r.autonomousIntent || 'You have a free moment.' });
+        job.auto = true;
         if (r.autonomousIntentKey) job.intent = r.autonomousIntentKey;
         noteProactive(real, room.id, k, r.autonomousIntentKey, new Date(now));
         n++;
@@ -646,7 +660,9 @@ export function liveSwipeInfo(real, roomId) {
 export async function liveSwipe(real, roomId, dir) {
     if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않아요');
     settleSwipes(real, roomId);
-    const out = swipeTo(real, roomId, dir), jobs = out.fresh ? enqueueReplies(real, roomId).length : 0;
+    // (a new answer asked for by hand: no waiting, and an owner who is offline answers too — Marinara's regenerate)
+    const out = swipeTo(real, roomId, dir), made = out.fresh ? enqueueReplies(real, roomId) : [], jobs = made.length;
+    for (const j of made) j.timed = true;
     await saveMeta();
     return { ...out, jobs };
 }

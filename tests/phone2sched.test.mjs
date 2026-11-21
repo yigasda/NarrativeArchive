@@ -127,9 +127,9 @@ test('줄: 때가 안 된 답장은 건너뛰고, 때가 되면 돌려요', () =
     assert.equal(L.nextJob(m, 5000).id, j.id);
     assert.equal(w.queue.jobs[0].state, 'running');
 });
-test('늦은 답 정하기: 바쁘면 그만큼 뒤, 오프라인이면 돌아올 때까지 1분마다 다시 봐요', () => {
+test('늦은 답 정하기(마리나라의 계산): 바쁘면 그만큼 뒤. 오프라인이면 답하지 않고 방에 적어 둬요', () => {
     const { m, w, a } = world(), t = NOW.getTime();
-    const j = L.enqueueJob(m, { kind: 'reply', owner: 'Mara', room: a.id, at: t });
+    let j = L.enqueueJob(m, { kind: 'reply', owner: 'Mara', room: a.id, at: t });
     assert.equal(G.holdReplies(m, t), 0);                       // 스케줄이 없으면 바로
     assert.equal(j.notBefore, undefined);
     delete j.timed;
@@ -139,14 +139,54 @@ test('늦은 답 정하기: 바쁘면 그만큼 뒤, 오프라인이면 돌아�
     assert.deepEqual(G.liveReplyWait(m, t), [{ owner: 'Mara', room: a.id, until: t + 7 * 60_000, away: false }]);
     assert.equal(G.holdReplies(m, t + 60_000), 0);              // (한 번 정한 때는 그대로)
     assert.equal(j.notBefore, t + 7 * 60_000);
-    delete j.timed; delete j.notBefore;
+    // 오프라인: 그 답장은 없어지고(마리나라는 답하지 않아요), 방에 누가 자리에 없었는지 남아요
+    w.queue.jobs = [];
+    j = L.enqueueJob(m, { kind: 'reply', owner: 'Mara', room: a.id, at: t });
     S.setSchedule(m, 'Mara', all('offline', 'sleeping'), NOW);
-    assert.equal(G.holdReplies(m, t), 1);
-    assert.deepEqual(G.liveReplyWait(m, t), [{ owner: 'Mara', room: a.id, until: null, away: true }]);
-    S.setSchedule(m, 'Mara', all('online'), NOW);
-    assert.equal(G.holdReplies(m, t + 120_000), 0);
-    assert.equal(j.notBefore, undefined);
-    assert.equal(w.queue.jobs[0].away, undefined);
+    assert.equal(G.holdReplies(m, t), 0);
+    assert.equal(w.queue.jobs.length, 0);
+    assert.deepEqual(G.liveAway(m, a.id), [{ owner: 'Mara', at: t }]);
+    assert.deepEqual(G.liveReplyWait(m, t), []);
+});
+test('@으로 부르면(마리나라의 mention): 부른 사람만 답하고, 바빠도 빨리 와요. 상황 글에 그 줄이 들어가요', async () => {
+    const SV = await at('marinara/schedule.service.js');
+    const { m, w } = world(), g = L.ensureRoom(m, ['Mara', 'Ivo']), t = NOW.getTime();
+    S.setSchedule(m, 'Mara', { ...all('dnd', 'working'), dndResponseDelayMinutes: 30 }, NOW);
+    S.setSchedule(m, 'Ivo', all('online', 'free'), NOW);
+    g.messages.push({ id: 'u1', n: 1, from: 'Ren', text: 'hey @mara are you there', at: t });
+    assert.deepEqual(S.mentionsIn(m, g.id), ['Mara']);
+    const jm = L.enqueueJob(m, { kind: 'reply', owner: 'Mara', room: g.id, at: t });
+    L.enqueueJob(m, { kind: 'reply', owner: 'Ivo', room: g.id, at: t });
+    G.holdReplies(m, t);
+    assert.deepEqual(w.queue.jobs.map(j => j.owner), ['Mara']);
+    // (마리나라의 부름 늦음에는 운이 섞여 있어요: 손으로 정한 30분보다 훨씬 짧기만 하면 돼요)
+    assert.ok(jm.notBefore > t && jm.notBefore - t < 10 * 60_000 && SV.getMentionDelay('dnd') < 10 * 60_000);
+    assert.match(S.contextBlock(m, 'Mara', g.id, { now: NOW, mentions: S.mentionsIn(m, g.id) }), /Ren @mentioned: Mara — this is an urgent ping/);
+    // 안 불렀으면 모두 답해요
+    g.messages.push({ id: 'u2', n: 2, from: 'Ren', text: 'never mind', at: t + 1 });
+    assert.deepEqual(S.mentionsIn(m, g.id), []);
+});
+test('먼저 거는 말의 늦음은 마리나라의 getBusyDelay, 오프라인이면 안 걸어요. 손으로 다시 받은 답은 기다리지 않아요', async () => {
+    const SV = await at('marinara/schedule.service.js');
+    const { m, w, a } = world(), t = NOW.getTime(), sched = { ...all('dnd', 'working'), dndResponseDelayMinutes: 7 };
+    S.setSchedule(m, 'Mara', sched, NOW);
+    const j = L.enqueueJob(m, { kind: 'reply', owner: 'Mara', room: a.id, at: t, why: 'x' });
+    j.auto = true;
+    G.holdReplies(m, t);
+    assert.equal(j.notBefore - t, 7 * 60_000);          // (getBusyDelay: 손으로 정한 바쁨 늦음 7분)
+    assert.equal(SV.getBusyDelay('dnd', S.scheduleOf(m, 'Mara')), 7 * 60_000);
+    w.queue.jobs = [];
+    const k = L.enqueueJob(m, { kind: 'reply', owner: 'Mara', room: a.id, at: t, why: 'x' });
+    k.auto = true;
+    S.setSchedule(m, 'Mara', all('offline', 'sleeping'), NOW);
+    G.holdReplies(m, t);
+    assert.equal(w.queue.jobs.length, 0);
+    assert.deepEqual(G.liveAway(m, a.id), []);                   // (먼저 거는 말은 "자리에 없었음"으로 안 남겨요)
+    // 손으로 다시 받기(스와이프)로 줄 세운 답: 이미 때가 정해진 것으로 봐요
+    const r = L.enqueueJob(m, { kind: 'reply', owner: 'Mara', room: a.id, at: t });
+    r.timed = true;
+    G.holdReplies(m, t);
+    assert.deepEqual([w.queue.jobs.length, r.notBefore], [1, undefined]);
 });
 test('이 파일은 폰 2 저장 자리와 마리나라 파일만 불러요; 폰 1 파일은 이 파일을 안 불러요', async () => {
     const { readFile, readdir } = await import('node:fs/promises'), SRC = new URL('../src/', import.meta.url);
@@ -342,7 +382,7 @@ test('지금 답장: 기다리던 늦은 답을 바로 돌릴 수 있게 풀어�
     const { m, a } = world(), t = Date.now();
     globalThis.__dropTest.metadata = { narrative_archive: m };
     const j = L.enqueueJob(m, { kind: 'reply', owner: 'Mara', room: a.id, at: t });
-    S.setSchedule(m, 'Mara', all('offline', 'sleeping'), NOW);
+    S.setSchedule(m, 'Mara', { ...all('dnd', 'working'), dndResponseDelayMinutes: 30 }, new Date(t));
     G.holdReplies(m, t);
     assert.equal(L.nextJob(m, t), null);
     assert.equal(await G.liveReplyNow(m, a.id, 'Ivo'), 0);
