@@ -10,6 +10,7 @@ YOU GET
 - LANGUAGES (sometimes): the languages you text in and those you know but seldom use, as set on the phone.
 - MESSENGER: your chat with ${P} so far, newest last, each turn with its time and your status then, and after it in [ ] the emoji anyone reacted to it with (new: put there since you last texted). Sometimes CHAT SUMMARY: the days before.
 - NOW: where you are and what you are doing by your last status, your calendar today, what your phone last recorded, and whether you and ${P} have talked before.
+- CONTEXT (sometimes): your status and schedule today, ${P}'s status, and the time.
 - OWNER'S CLOCK: where you are, your time now, and for the other saved cities and the people elsewhere, how many hours ahead or behind they are and their time now.
 - WEATHER NOW: the real weather where you are.
 - RECENT ON THE PHONE: when you last used each app.
