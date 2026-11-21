@@ -272,8 +272,10 @@ export async function liveSetScheduleConnection(real, id = '') {
 const askVia = (real, connectionId) => async (messages, o) => {
     const id = connectionId === undefined || connectionId === null ? liveScheduleConnection(real) : String(connectionId);
     const system = messages.filter(x => x.role === 'system').map(x => x.content).join('\n\n'), input = messages.filter(x => x.role !== 'system').map(x => x.content).join('\n\n');
-    if (!id) return askDraft(input, { force: true, system, maxTokens: o?.maxTokens, effort: 'low', signal: o?.signal || null });
-    if (id === 'ai') return askAI(input, { force: true, system, maxTokens: o?.maxTokens, effort: 'low', noFallback: true, signal: o?.signal || null });
+    // (what Marinara asks for with each request: its temperature (0.45 repair … 0.9 vary) and, for the routine summary, low reasoning)
+    const how = { force: true, system, maxTokens: o?.maxTokens, effort: o?.reasoningEffort || '', signal: o?.signal || null, temperature: typeof o?.temperature === 'number' ? o.temperature : null };
+    if (!id) return askDraft(input, how);
+    if (id === 'ai') return askAI(input, { ...how, noFallback: true });
     const p = aiProfiles().find(x => `profile:${x.id}` === id);
     if (!p) throw new Error('고른 연결 프로필을 찾을 수 없어요');
     const r = await ctx().ConnectionManagerRequestService.sendRequest(p.id, [...(system ? [{ role: 'system', content: system }] : []), { role: 'user', content: input }], Math.max(256, Number(o?.maxTokens) || 8192), { stream: false, extractData: true, includePreset: true, includeInstruct: true, ...(o?.signal ? { signal: o.signal } : {}) });

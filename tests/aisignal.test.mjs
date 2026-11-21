@@ -19,7 +19,7 @@ function fakeFetch() {
     });
     return seen;
 }
-for (const [name, t] of [['OpenAI 형식', { mode: 'custom', url: 'https://relay.example/v1', key: 'k', model: 'm' }], ['Anthropic 형식', { mode: 'custom', url: 'https://relay.example', key: 'k', model: 'm', format: 'anthropic', leanHeaders: true }], ['Vertex', { mode: 'vertex', vxModel: 'gemini-x' }]]) {
+for (const [name, t] of [['OpenAI 형식', { mode: 'custom', url: 'https://relay.example/v1', key: 'k', model: 'm' }], ['Anthropic 형식', { mode: 'custom', url: 'https://relay.example', key: 'k', model: 'm', fmt: 'anthropic', leanHeaders: true }], ['Vertex', { mode: 'vertex', vxModel: 'gemini-x' }]]) {
     test(`${name}: 신호가 요청에 실려 가고, 멈추면 요청이 끊겨요 (연결 오류 글로 바뀌지 않아요)`, async () => {
         const seen = fakeFetch(), stop = new AbortController();
         const call = AI.callConn(t, 'SYS', 'hello', 256, '', false, false, stop.signal);
@@ -32,3 +32,14 @@ for (const [name, t] of [['OpenAI 형식', { mode: 'custom', url: 'https://relay
         assert.equal(seen.length, 1);                    // 다시 보내지 않아요
     });
 }
+test('온도: 요청마다 준 온도가 실려 가요. 안 주면 전과 같아요(0.3)', async () => {
+    const bodies = [];
+    globalThis.fetch = async (url, init = {}) => { bodies.push(JSON.parse(init.body)); return { ok: true, status: 200, text: async () => JSON.stringify({ choices: [{ message: { content: 'hi' } }], content: [{ type: 'text', text: 'hi' }] }), clone() { return this; }, json: async () => ({ choices: [{ message: { content: 'hi' } }] }) }; };
+    const oa = { mode: 'custom', url: 'https://relay.example/v1', key: 'k', model: 'm' }, an = { mode: 'custom', url: 'https://relay.example', key: 'k', model: 'm', fmt: 'anthropic', leanHeaders: true };
+    await AI.callConn(oa, 'S', 'hello', 256, '', true, false, null, 0.9);
+    await AI.callConn(oa, 'S', 'hello', 256, '', true, false);
+    await AI.callConn(an, 'S', 'hello', 256, '', true, false, null, 0.45);
+    await AI.callConn(an, 'S', 'hello', 256, '', true, false);
+    await AI.callConn(an, 'S', 'hello', 256, 'low', true, false, null, 0.45);      // (생각을 시키는 요청에는 온도를 안 실어요)
+    assert.deepEqual(bodies.map(b => b.temperature), [0.9, 0.3, 0.45, undefined, undefined]);
+});

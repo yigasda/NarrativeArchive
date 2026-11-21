@@ -23,7 +23,7 @@
 | client/lib/character-schedule-transfer.ts | 예 |
 | routes/generate/conversation-context-block.ts | 예 |
 | client/lib/user-status.ts | 예 |
-| services/conversation/schedule.service.ts | 아니오 (1~275줄, 396~460줄만) |
+| services/conversation/schedule.service.ts | 예 (읽다가 찾은 것: 요청마다의 온도 · 생각 정도가 모델에 안 가고 있었음 → 넣음) |
 | services/conversation/autonomous.service.ts | 아니오 (앞부분과 함수 목록만) |
 | services/conversation/intent.service.ts | 아니오 (40~153줄만) |
 | services/conversation/timezone.ts | 아니오 (함수 목록만) |
@@ -106,6 +106,7 @@
 - 스케줄 쓰기 켜고 끄기(`conversationSchedulesEnabled`), 스케줄 내보내기 · 가져오기
 - 먼저 건 말을 세는 때 · 이유의 쉬는 시간(말이 실제로 나온 뒤), 실패하면 쉬었다 다시
 - 상황 글(CONTEXT)을 마리나라처럼 항상 넣기: 스케줄이 없는 사람은 "online". 내 상태 · @ 부름 · 먼저 거는 차례 줄이 스케줄 없는 사람에게도 가요
+- 스케줄 요청의 온도(수리 0.45 · 조정 0.7 · 새로 0.8 · 변주 0.9, 요약 0.55)와 요약의 낮은 생각 정도가 모델에 가게 (`src/ai.js`가 `temperature`를 받아요)
 - 생성 연결 고르기, 생성 중지가 요청을 끊기, 방 전체 설정(하루 상한 · 상한 같이 쓰기 · 캐릭터끼리 주고받기)
 
 ## 아직 마리나라와 다른 것 (이미 넣은 기능 안에서)
