@@ -45,10 +45,5 @@ const B = '/scripts/extensions/third-party/NarrativeArchive/src/', SLOW = Number
   await p.waitForTimeout(Number(process.env.GAP || 800)); // (밀기 직후 0.2초 안의 톡은 브라우저가 클릭으로 안 쳐요: 시험에서는 조금 기다려요)
   await p.evaluate(() => { window.__ev = []; for (const t of ['pointerdown', 'pointerup', 'pointercancel', 'click']) window.addEventListener(t, e => window.__ev.push(t + ':' + (e.target.className || e.target.tagName).toString().slice(0, 24)), true); });
   await timed('뒤로 → 목록', () => tap('.na_ph_frame .ob_gb'), () => !!document.querySelector('.na_ph_frame .ob_dock'));
-  console.log('         events:', await p.evaluate(() => window.__ev.join(' ')));
-  await p.waitForTimeout(3500);
-  await timed('뒤로 → 목록 (다시, 3.5초 뒤)', () => tap('.na_ph_frame .ob_gb'), () => !!document.querySelector('.na_ph_frame .ob_dock'), 3000);
-  console.log('         top element at back button:', await p.evaluate(() => { const b = document.querySelector('.na_ph_frame .ob_gb'); if (!b) return 'no button'; const r = b.getBoundingClientRect(); const e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return e ? e.tagName + '.' + e.className : 'none'; }));
-  console.log('         뒤로 뒤 화면:', await p.evaluate(() => document.querySelector('.na_ph_frame .na_ph_scr').className + ' | open=' + document.getElementById('na_phl')?.open));
   console.log('errors', JSON.stringify(s.errors ? s.errors() : s.errs));
  } finally { await s.close(); reset(); } })().catch(e => { console.error(e); reset(); process.exit(1); });

@@ -2244,10 +2244,12 @@ export async function openPhone(who = null) {
     const kbFix = () => {
         const scr = frame.querySelector('.na_ph_scr'), vv = window.visualViewport; if (!scr) return;
         const seen = vv ? vv.offsetTop + vv.height : window.innerHeight, k = Number(frame.style.getPropertyValue('--k')) || 1;
-        const cover = typing() ? Math.max(0, Math.round((scr.getBoundingClientRect().bottom - seen) / k)) : 0, was = frame.style.getPropertyValue('--obkb');
+        // (키보드가 올라오는 도중 한순간 엉뚱하게 큰 값이 나오면 말 목록이 0으로 눌려 화면이 번쩍였어요: 화면의 60%까지만)
+        const cover = typing() ? Math.min(Math.round(scr.offsetHeight * 0.6), Math.max(0, Math.round((scr.getBoundingClientRect().bottom - seen) / k))) : 0, was = frame.style.getPropertyValue('--obkb');
         if (was === `${cover}px`) return;
         frame.style.setProperty('--obkb', `${cover}px`); frame.classList.toggle('na_ph_kb', cover > 0);
-        if (view.startsWith('orbitroom')) obBottom();
+        // (말을 고치는 중이면 맨 아래로 굴리지 않아요: 고치는 말풍선이 보이게만. 맨 아래로 갔다가 다시 올라오며 튀었어요)
+        if (view.startsWith('orbitroom')) { if (obFix) obFixShow(); else obBottom(); }
     };
     const kbSoon = () => { kbFix(); setTimeout(kbFix, 120); setTimeout(kbFix, 400); };
     window.visualViewport?.addEventListener('resize', kbSoon); window.visualViewport?.addEventListener('scroll', kbSoon);
