@@ -38,6 +38,7 @@ import { confirm, esc } from './util.js';
 import { emojiOf, reactOf } from './phone2react.js';
 import { liveMode, liveWorld, livePhone, liveMeta, setLiveMode, resetLive, rememberLiveOwner, readLiveOwner, liveKey, liveRooms, ensureRoom, nameRoom, sendLive, readLive, unreadBy, enqueueReplies, seeFailure } from './phone2store.js';
 import { shiftLabel, liveWall, viewerWall, startShift } from './phone2clock.js';
+import { liveReady, keepState } from './phone2keepon.js';
 import { orbitList, orbitRoom, orbitNew, orbitHomeWidget, liveStart, whoScreen, orbitFace, dayIcon } from './phoneorbit.js';
 import { beginFromStory, liveBranched, adoptChat, rebeginFromStory, rebeginKeepingChats } from './phone2story.js';
 import { liveSnapNow, snapParts } from './phone2snap.js';
@@ -110,6 +111,12 @@ export async function openPhone(who = null) {
     const realM = getMeta(), openingScope = phoneChatScope(c);
     let m = realM;
     const stillHere = () => getMeta() === realM && phoneChatScope(ctx()) === openingScope;
+    // Orbit 데이터(m.live)가 서버 플러그인에 있는 채팅: 다 읽은 뒤에 열어요. 채팅을 바꾼 직후 잠깐은 읽는 중이라 m.live가 비어 있어서,
+    // 안 기다리면 실시간 폰이 있는데도 타임라인 폰이 열렸어요(플러그인이 없으면 바로 지나가요 — docs/PHONE2-PLAN.md 서버 플러그인 2단계)
+    await liveReady();
+    if (!stillHere()) return;
+    // (플러그인에 옮긴 채팅인데 플러그인이 꺼져 있어요: 실시간 폰이 안 보이는 까닭을 알려요)
+    if (keepState() === 'off') toastr.warning('이 채팅의 Orbit 데이터는 서버 플러그인에 있어요. 플러그인을 켜 주세요', '캐릭터 휴대폰');
     if (!await ensurePhoneStory(m) || !stillHere()) return;
     await ensureScreenHolder(m, c);
     if (!stillHere()) return;
