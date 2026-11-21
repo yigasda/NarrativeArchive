@@ -262,3 +262,91 @@ test('답 넣기: 스케줄의 상태를 받으면 그걸 말에 적고, 답의 
     assert.match(a.messages.at(-1).state, /cafe · reading/);
     assert.equal(b.status, undefined);
 });
+const weekAnswer = day => JSON.stringify({ talkativeness: 30, inactivityThresholdMinutes: 90, days: Object.fromEntries(DAYS.map(d => [d, day])) });
+const DAY = [{ time: '00:00-07:00', activity: 'sleeping', status: 'offline' }, { time: '07:00-00:00', activity: 'reading', status: 'online' }];
+test('초안 만들기(마리나라의 /schedule/draft): 저장하지 않고 결과만. 주 · 하루, 초안을 이어받고 손으로 정한 값은 남아요', async () => {
+    const { m } = world(), asked = [], card = { name: 'Mara', description: 'a nurse', personality: '' };
+    const ask = async messages => { asked.push(messages[0].content); return weekAnswer(DAY); };
+    const got = await S.draftSchedule(m, { ask, charData: card, mode: 'week', guidance: 'nights', draftMode: 'rewrite', timeZone: 'Asia/Seoul' });
+    assert.equal(S.scheduleOf(m, 'Mara'), null);                               // 저장 안 함
+    assert.equal(got.schedule.days.Monday.length, 2);
+    assert.ok(got.schedule.weekStart);
+    assert.match(asked[0], /Schedule timezone: Asia\/Seoul/);
+    // 초안을 주면: "Current draft schedule"로 이어받고, 손으로 정한 값은 초안의 것
+    const draft = { ...got.schedule, talkativeness: 77, dndResponseDelayMinutes: 9, routineSummary: 'old' };
+    const again = await S.draftSchedule(m, { ask, charData: card, mode: 'week', schedule: draft, draftMode: 'adjust' });
+    assert.match(asked[1], /Draft action: Adjust current week\./);
+    assert.match(asked[1], /Current draft schedule:\n- Monday: 00:00-07:00 sleeping \(offline\); 07:00-00:00 reading \(online\)/);
+    assert.deepEqual([again.schedule.talkativeness, again.schedule.dndResponseDelayMinutes, again.schedule.routineSummary], [77, 9, null]);
+    // 하루만
+    const one = await S.draftSchedule(m, { ask: async () => JSON.stringify({ blocks: [{ time: '00:00-00:00', activity: 'day off', status: 'online' }] }), charData: card, mode: 'day', day: 'Sunday', schedule: draft });
+    assert.deepEqual([one.day, one.blocks[0].activity], ['Sunday', 'day off']);
+    await assert.rejects(S.draftSchedule(m, { ask, charData: card, mode: 'day', day: 'Funday', schedule: draft }), /Invalid schedule day/);
+    // 실패: 오류에 모델의 답 원문이 실려요. 멈추라고 했으면 답을 버려요
+    const bad = await S.draftSchedule(m, { ask: async () => 'not json at all', charData: card, mode: 'week' }).catch(e => e);
+    assert.equal(bad.rawResponse, 'not json at all');
+    const stop = new AbortController(); stop.abort();
+    await assert.rejects(S.draftSchedule(m, { ask, charData: card, mode: 'week', signal: stop.signal }));
+});
+test('루틴 요약(마리나라의 /schedule/summary)과 고친 답 넣기(편집 창의 applyRepairedOutput)', async () => {
+    const { m } = world(), sched = { ...week(DAY), weekStart: 'W' };
+    const got = await S.summarizeSchedule(m, { ask: async messages => { assert.match(messages[0].content, /^You summarize a fictional character's weekly autonomous conversation routine\./); return ' Sleeps till seven, reads all day. '; }, charData: { name: 'Mara' }, schedule: sched });
+    assert.equal(got.summary, 'Sleeps till seven, reads all day.');
+    assert.ok(got.generatedAt);
+    const fixed = S.repairSchedule(JSON.stringify({ blocks: [{ time: '00:00-00:00', activity: 'off', status: 'online', place: ' home ' }] }), sched, 'Monday');
+    assert.deepEqual(fixed.days.Monday, [{ time: '00:00-00:00', activity: 'off', status: 'online', place: 'home' }]);
+    assert.equal(fixed.days.Tuesday.length, 2);
+    assert.equal(S.repairSchedule(JSON.stringify({ days: { Tuesday: [{ time: '00:00-00:00', activity: 'x', status: 'dnd' }] } }), sched).days.Tuesday[0].status, 'dnd');
+    assert.throws(() => S.repairSchedule('{"days": []}', sched));
+    assert.throws(() => S.repairSchedule(JSON.stringify({ blocks: [{ time: '00:00-00:00', activity: 'x', status: 'asleep' }] }), sched, 'Monday'));
+    assert.throws(() => S.repairSchedule('nope', sched));
+});
+test('시간대는 마리나라처럼 스케줄 전체에 하나: 안 정하면 비어 있고, 틀린 것은 안 받아요. 끝 24:00은 00:00으로 둬요', () => {
+    const { m } = world();
+    assert.equal(S.scheduleZone(m), '');
+    assert.equal(S.setScheduleZone(m, 'Europe/Berlin'), 'Europe/Berlin');
+    assert.equal(S.scheduleZone(m), 'Europe/Berlin');
+    assert.throws(() => S.setScheduleZone(m, 'Mars/Olympus'), /시간대/);
+    assert.equal(S.setScheduleZone(m, ''), '');
+    assert.equal(S.scheduleZone(m), '');
+    S.setSchedule(m, 'Mara', week([{ time: '00:00-22:00', activity: 'day', status: 'online' }, { time: '22:00-24:00', activity: 'late', status: 'idle' }]), NOW);
+    assert.equal(S.scheduleOf(m, 'Mara').days.Monday[1].time, '22:00-00:00');
+    assert.equal(S.statusNow(m, 'Mara', { now: new Date('2026-11-23T23:00:00Z'), tz: 'UTC' }).activity, 'late');
+});
+test('매주 갱신(마리나라의 /schedule/generate): 켠 사람만, 주가 바뀌었을 때만. 지난 스케줄을 이어받고 손으로 정한 값은 남아요', async () => {
+    const { m } = world(), asked = [], ask = async messages => { asked.push(messages[0].content); return weekAnswer(DAY); };
+    const old = new Date('2026-11-16T03:00:00Z'), cards = { mara: { name: 'Mara', description: 'a nurse' }, ivo: { name: 'Ivo', description: 'a cook' } };
+    S.setSchedule(m, 'Mara', { ...all('dnd', 'working'), dndResponseDelayMinutes: 4 }, old);
+    S.setSchedule(m, 'Ivo', all('online', 'cooking'), old);
+    assert.equal(S.needsRefresh(m, 'Mara', { now: NOW }), true);
+    assert.equal(S.needsRefresh(m, 'Mara', { now: old }), false);
+    let out = await S.renewSchedules(m, { ask, owners: ['Mara', 'Ivo'], cards, automatic: true, now: NOW });
+    assert.deepEqual([out.results.mara.status, out.results.ivo.status, asked.length], ['renewal_disabled', 'renewal_disabled', 0]);
+    S.setAutoRenew(m, 'Mara', true);
+    assert.equal(S.autoRenewOf(m, 'Mara'), true);
+    out = await S.renewSchedules(m, { ask, owners: ['Mara', 'Ivo'], cards, automatic: true, now: NOW });
+    assert.deepEqual([out.results.mara.status, out.results.ivo.status, asked.length], ['generated', 'renewal_disabled', 1]);
+    assert.match(asked[0], /<previous_schedule weekStart="[^"]+">\n- Monday: 00:00-00:00 working \(dnd\)/);
+    const now = S.scheduleOf(m, 'Mara');
+    assert.deepEqual([now.days.Monday[1].activity, now.dndResponseDelayMinutes, S.needsRefresh(m, 'Mara', { now: NOW })], ['reading', 4, false]);
+    assert.equal(S.scheduleOf(m, 'Ivo').days.Monday[0].activity, 'cooking');
+    // 이번 주 것이면 다시 안 만들어요; forceRefresh면 켜지 않은 사람도 만들어요
+    out = await S.renewSchedules(m, { ask, owners: ['Mara'], cards, automatic: true, now: NOW });
+    assert.deepEqual([out.results.mara.status, asked.length], ['fresh', 1]);
+    out = await S.renewSchedules(m, { ask, owners: ['Ivo'], cards, forceRefresh: true, now: NOW });
+    assert.equal(out.results.ivo.status, 'generated');
+    S.setAutoRenew(m, 'Mara', false);
+    assert.equal(S.autoRenewOf(m, 'Mara'), false);
+});
+test('지금 답장: 기다리던 늦은 답을 바로 돌릴 수 있게 풀어요', async () => {
+    const { m, a } = world(), t = Date.now();
+    globalThis.__dropTest.metadata = { narrative_archive: m };
+    const j = L.enqueueJob(m, { kind: 'reply', owner: 'Mara', room: a.id, at: t });
+    S.setSchedule(m, 'Mara', all('offline', 'sleeping'), NOW);
+    G.holdReplies(m, t);
+    assert.equal(L.nextJob(m, t), null);
+    assert.equal(await G.liveReplyNow(m, a.id, 'Ivo'), 0);
+    assert.equal(await G.liveReplyNow(m, a.id, 'Mara'), 1);
+    assert.equal(G.holdReplies(m, t), 0);                 // (다시 붙잡지 않아요)
+    assert.equal(L.nextJob(m, t).id, j.id);
+});

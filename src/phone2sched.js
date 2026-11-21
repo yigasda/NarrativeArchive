@@ -10,9 +10,11 @@
 // 저장은 부르는 쪽이 해요. 폰 1 · 아카이브는 읽지도 쓰지도 않아요. 폰 1은 이 파일을 부르지 않아요.
 
 import { liveWorld, liveKey } from './phone2store.js';
-import { generateCharacterSchedule, generateCharacterDaySchedule, getEffectiveCurrentStatus, getTodaySchedule, getDirectMessageDelay, getMonday, ScheduleDraftError } from './marinara/schedule.service.js';
+import { generateCharacterSchedule, generateCharacterDaySchedule, getEffectiveCurrentStatus, getTodaySchedule, getDirectMessageDelay, getMonday, scheduleNeedsRefresh, ScheduleDraftError } from './marinara/schedule.service.js';
 import { CONVERSATION_SCHEDULE_DAYS, getAdjacentScheduleBlocks, getActiveStatusOverride } from './marinara/conversation-presence.js';
-import { toZonedWallClockDate } from './marinara/timezone.js';
+import { toZonedWallClockDate, normalizePromptTimeZone, resolveConversationTimeZone } from './marinara/timezone.js';
+import { scheduleDraft, scheduleSummary, scheduleGenerate } from './marinara/schedule-routes.js';
+import { parseCharacterScheduleImport } from './marinara/character-schedule-transfer.js';
 import { buildConversationCurrentContextBlock } from './marinara/conversation-context-block.js';
 import { checkAutonomous, forgetAutonomousSeed } from './marinara/autonomous-check.js';
 import { clearChatActivity, clearGenerationInProgress, buildAutonomousDailyBudgetPatch } from './marinara/autonomous.service.js';
@@ -39,6 +41,8 @@ export function setSchedule(m, owner, schedule, now = new Date()) {
     const p = presenceOf(m), k = liveKey(owner);
     if (!schedule) { delete p.schedules[k]; return null; }
     if (!obj(schedule.days)) throw new Error('스케줄에 요일이 없어요');
+    // (a block typed as ending 24:00: Marinara's clock reads 00:00-23:59, so it is kept as 00:00)
+    for (const d of Object.values(schedule.days)) for (const b of Array.isArray(d) ? d : []) if (typeof b?.time === 'string' && b.time.endsWith('-24:00')) b.time = `${b.time.slice(0, -5)}00:00`;
     return (p.schedules[k] = { ...schedule, weekStart: schedule.weekStart || getMonday(now).toISOString() });
 }
 // 손으로 상태 주기 (minutes 뒤에 풀려요; 0 · 없음이면 풀 때까지). status가 없으면 풀어요
@@ -203,4 +207,51 @@ export function takeStatus(m, owner, cmd, { now = new Date(), tz = '' } = {}) {
     if (!got) return null;
     const place = one(cmd.place).slice(0, 80);
     return (p.overrides[k] = { ...got, ...(place ? { place } : {}) });
+}
+
+// ---- 마리나라의 스케줄 요청들 (src/marinara/schedule-routes.js)을 우리 데이터로 부르기
+// 시간대: 마리나라처럼 스케줄 전체에 하나(meta.conversationTimeZone). 안 정했으면 '' (부르는 쪽이 그 사람 폰의 시간대를 써요)
+export const scheduleZone = m => resolveConversationTimeZone(peek(m).meta || {}) || '';
+export function setScheduleZone(m, tz) {
+    const p = presenceOf(m);
+    if (!tz) { delete p.meta.conversationTimeZone; return ''; }
+    const z = normalizePromptTimeZone(tz);
+    if (!z) throw new Error('시간대가 맞지 않아요');
+    return (p.meta.conversationTimeZone = z);
+}
+// (the model is asked through ask(messages, opts); a stop asked for while it answers drops the answer)
+const providerOf = ask => ({ chatComplete: async (messages, o) => { const content = await ask(messages, o); o?.signal?.throwIfAborted(); return { content }; } });
+// 초안 만들기 (POST /schedule/draft 그대로: 저장하지 않아요). args: { mode: 'week' | 'day', day, schedule (지금 초안), guidance, dayGuidance,
+//   draftMode, timeZone, signal } → { schedule } | { day, blocks, weekStart }. 실패하면 오류에 rawResponse(모델의 답 원문)가 실려요
+export const draftSchedule = (m, { ask, charData, ...args }) => scheduleDraft({ ...args, provider: providerOf(ask), charData, meta: peek(m).meta || {} });
+// 루틴 요약 (POST /schedule/summary 그대로) → { summary, generatedAt }
+export const summarizeSchedule = (m, { ask, charData, ...args }) => scheduleSummary({ ...args, provider: providerOf(ask), charData });
+// 실패한 답을 손으로 고쳐서 넣기 (마리나라 편집 창의 applyRepairedOutput 그대로): text는 JSON 글, day를 주면 그날의 { blocks } → 고쳐진 초안
+export function repairSchedule(text, current, day = '') {
+    const parsed = JSON.parse(text);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error();
+    const value = parsed;
+    if (day && !Array.isArray(value.blocks)) throw new Error();
+    const candidate = { ...current, days: day ? { ...current.days, [day]: value.blocks } : { ...current.days, ...value.days } };
+    if (!day && (!value.days || typeof value.days !== 'object' || Array.isArray(value.days))) throw new Error();
+    const result = parseCharacterScheduleImport(candidate, current.weekStart);
+    if (!result.ok) throw new Error();
+    return { ...current, days: result.schedule.days };
+}
+// 매주 갱신 (마리나라의 conversationScheduleAutoRenew): 사람마다 켜고 꺼요
+export function setAutoRenew(m, owner, on) { const p = presenceOf(m), k = liveKey(owner); p.autoRenew = obj(p.autoRenew) ? p.autoRenew : {}; if (on) p.autoRenew[k] = true; else delete p.autoRenew[k]; return !!on; }
+export const autoRenewOf = (m, owner) => peek(m).autoRenew?.[liveKey(owner)] === true;
+// 이번 주 것이 아닌 스케줄인가 (마리나라의 scheduleNeedsRefresh)
+export const needsRefresh = (m, owner, { now = new Date(), tz = '' } = {}) => { const s = scheduleOf(m, owner); return !!s && scheduleNeedsRefresh(s, toZonedWallClockDate(now, tz || undefined)); };
+// 스케줄 만들기 · 갱신 (POST /schedule/generate 그대로): 지난 스케줄을 이어받아 새 주 것을 만들어 넣어요
+//   owners: 이름들; cards: { 폰 열쇠: { name, description, personality } }; automatic: 매주 갱신을 켠 사람만; forceRefresh: 이번 주 것이어도
+//   → { results: { 폰 열쇠: { status, schedule? } } }
+export async function renewSchedules(m, { ask, owners = [], cards = {}, automatic = false, forceRefresh = false, guidance = '', timeZone, signal, now = new Date() } = {}) {
+    const p = presenceOf(m), ids = owners.map(liveKey);
+    const out = await scheduleGenerate({
+        meta: p.meta, characterIds: ids, existingSchedules: p.schedules, forceRefresh, automatic, scheduleGenerationPreferences: guidance, timeZone, provider: providerOf(ask), signal, nowInstant: now,
+        cards: Object.fromEntries(ids.map(k => [k, cards[k] ? { ...cards[k], extensions: { ...(cards[k].extensions || {}), conversationScheduleAutoRenew: p.autoRenew?.[k] === true } } : null]).filter(([, v]) => v)),
+    });
+    for (const [k, r] of Object.entries(out.results)) if (r.status === 'generated' && r.schedule) p.schedules[k] = r.schedule;
+    return out;
 }

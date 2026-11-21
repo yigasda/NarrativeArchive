@@ -597,6 +597,12 @@ Orbit이 버벅이는 제일 큰 이유는 저장이에요: Orbit 데이터가 �
   - 캐릭터가 스스로 상태 바꾸기(마리나라의 `schedule_update` 명령, `src/marinara/schedule-command.js`): 답장 JSON의 `"status": "" 또는 { status, activity, duration, place }`. 설명 문장은 마리나라 것 그대로이고 `place`만 우리가 붙였어요. 임시 상태가 되고(시간을 안 주면 1시간) 지나면 스케줄로 돌아가요. 내가 손으로 준 상태(끝 시간 없음)가 있으면 캐릭터가 못 바꿔요. 장소가 있으면 폰 장소도 따라가요.
   - 답장 요청의 NOW는 스케줄이 적은 상태와 마지막 답장의 상태 가운데 새것을 써요.
   - 손으로 준 상태가 살아 있는 동안은 스케줄을 안 따라가요.
+- 스케줄 편집 창이 부르는 것(마리나라의 요청 처리 코드 `src/marinara/schedule-routes.js` · `character-schedule-transfer.js`를 가져옴):
+  - `liveDraftSchedule`(초안만 만들기: 주 · 하루, 저장 안 함, 실패하면 오류에 `rawResponse`), `liveScheduleSummary`(루틴 요약), `liveRepairSchedule`(실패한 답을 고쳐서 넣기), `liveRenewSchedules`(매주 갱신: 지난 스케줄을 이어받음), `liveSetAutoRenew` · `liveScheduleInfo`, `liveScheduleZone` · `liveSetScheduleZone` · `liveTimeZone`, `liveReplyNow`.
+  - 시간대는 마리나라처럼 스케줄 전체에 하나(`w.presence.meta.conversationTimeZone`)예요. 안 정하면 사람마다 폰의 시간대를 써요.
+  - "하루에 요청 1회"는 마리나라도 화면이 `mode: 'day'`를 일곱 번 불러요. 멈추기는 `signal`: 모델 요청 자체는 못 끊고, 온 답을 버려요.
+  - 스케줄을 저장할 때(`liveSetSchedule`) 하는 일이 바뀌었으면 장소를 한 번 물어요. 끝 `24:00`은 `00:00`으로 바꿔 둬요.
+  - 생성 연결 고르기는 없어요: 우리는 확장 설정의 초안 연결 하나를 써요.
 - 지금은 실리 창이 열려 있는 동안만 돌아요. 창을 닫아도 돌게 하는 것(서버 플러그인에서 돌리기)이 다음이에요.
 - 화면이 부르는 것(`phone2go.js`): `liveMakeSchedule` · `liveSetSchedule` · `liveSchedule` · `liveStatus` · `liveSetStatus` · `liveSetUserStatus` · `liveSetAutonomous` · `livePresence` · `liveReplyWait`.
 

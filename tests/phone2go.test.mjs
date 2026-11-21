@@ -1216,6 +1216,7 @@ test('반응 달기: 달고 · 바꾸고 · 같은 걸 다시 달면 지우고 �
     T.replies = [{ state: '집', reply: ['Bring Kuchen mit'], ko: ['케이크 가져갈게'], does: [] }];
     await G.liveGo(c.real);
     const [mine, hers] = c.room.messages, saves = T.saves;
+    await new Promise(r => setTimeout(r, 20));   // (a reaction counts as new only when it is later than the owner's last text)
     assert.deepEqual(G.liveReactQuick(c.real), ['❤️', '😂', '😮', '😢', '😡', '👍']);
     assert.equal(await G.liveReact(c.real, c.room.id, hers.id, 'Ren', '❤️'), hers);
     assert.deepEqual(hers.reacts.map(r => [r.by, r.e]), [['Ren', '❤️']]); assert.equal(T.saves, saves + 1);

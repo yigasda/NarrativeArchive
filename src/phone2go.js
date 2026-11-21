@@ -25,7 +25,7 @@ import { liveStoryText } from './phone2story.js';
 import { BACK, backLeft, backInput, phone2BackSystem, takeBack, backMessage, markTold } from './phone2back.js';
 import { liveWall } from './phone2clock.js';
 import { gatherReply } from './phone2live.js';
-import { presenceOf, scheduleOf, setSchedule, setStatusOverride, setUserStatus, setAutonomous, statusNow, replyDelay, contextBlock, makeSchedule, checkProactive, noteProactive, fillPlaces, stateNow, takeStatus } from './phone2sched.js';
+import { presenceOf, scheduleOf, setSchedule, setStatusOverride, setUserStatus, setAutonomous, statusNow, replyDelay, contextBlock, makeSchedule, checkProactive, noteProactive, fillPlaces, stateNow, takeStatus, scheduleZone, setScheduleZone, draftSchedule, summarizeSchedule, repairSchedule, setAutoRenew, autoRenewOf, needsRefresh, renewSchedules } from './phone2sched.js';
 import { replyInput } from './phone2ask.js';
 import { phone2ReplySystem } from './phone2reply.js';
 import { runLive } from './phone2run.js';
@@ -144,16 +144,16 @@ export async function liveGo(real, { onChange = () => {} } = {}) {
                 before: () => (open(real) ? liveChatTail().lines : []),
             } });
             // (Marinara's status · schedule lines, for an owner with a schedule or a status set by hand)
-            if (d) { const room = w.messenger.rooms[job.room], last = [...(room?.messages || [])].reverse().find(x => x.text || x.call); d.context = contextBlock(real, job.owner, job.room, { tzOf: n => tzOf(livePhone(real, n) || p), lastRole: last && liveKey(last.from) === liveKey(w.persona) ? 'user' : 'assistant', said: !job.why, intentKey: job.intent || '' }); }
+            if (d) { const room = w.messenger.rooms[job.room], last = [...(room?.messages || [])].reverse().find(x => x.text || x.call); d.context = contextBlock(real, job.owner, job.room, { tzOf: n => zoneOf(real, livePhone(real, n) || p), lastRole: last && liveKey(last.from) === liveKey(w.persona) ? 'user' : 'assistant', said: !job.why, intentKey: job.intent || '' }); }
             return d ? { system: phone2ReplySystem({ owner: d.owner, persona: d.persona, scheduled: !!scheduleOf(real, job.owner) }), input: replyInput(d) } : null;
         },
         // (an owner with a schedule: the texts carry the schedule's state, not one the model wrote)
-        stateFor: job => { if (!scheduleOf(real, job.owner)) return undefined; const p = livePhone(real, job.owner); return stateNow(real, job.owner, { tz: p ? tzOf(p) : '' })?.text || ''; },
+        stateFor: job => { if (!scheduleOf(real, job.owner)) return undefined; const p = livePhone(real, job.owner); return stateNow(real, job.owner, { tz: p ? zoneOf(real, p) : '' })?.text || ''; },
         after: async (job, got) => {
             const w = liveWorld(real), p = livePhone(real, job.owner);
             if (w && p && w.id === job.world) markPersona(p, w.persona);
             // (the owner changed their own status in the answer: a temporary one, and the phone follows it)
-            if (w && p && w.id === job.world && got?.status && scheduleOf(real, job.owner) && takeStatus(real, job.owner, got.status, { tz: tzOf(p) })) { followSchedule(real); await line.save(); }
+            if (w && p && w.id === job.world && got?.status && scheduleOf(real, job.owner) && takeStatus(real, job.owner, got.status, { tz: zoneOf(real, p) })) { followSchedule(real); await line.save(); }
             tell();
         },
     });
@@ -174,6 +174,8 @@ export async function liveGo(real, { onChange = () => {} } = {}) {
     return out;
 }
 // ---- 스케줄 · 상태 · 먼저 말 걸기 · 늦은 답 (phone2sched.js: 판단과 지시문은 마리나라의 것)
+// (스케줄의 시간대: 마리나라처럼 스케줄 전체에 하나를 정했으면 그것, 아니면 그 사람 폰의 시간대)
+const zoneOf = (real, p) => scheduleZone(real) || tzOf(p);
 // 줄 선 답장마다 그 사람의 지금 상태로 때를 정해요: 바쁘면 그만큼 뒤로, 오프라인이면 돌아올 때까지 (1분마다 다시 봐요)
 export function holdReplies(real, now = Date.now()) {
     const w = liveWorld(real);
@@ -181,7 +183,7 @@ export function holdReplies(real, now = Date.now()) {
     let held = 0;
     for (const j of w.queue.jobs) {
         if (j.kind !== 'reply' || j.state !== 'waiting' || j.timed) continue;
-        const p = livePhone(real, j.owner), delay = replyDelay(real, j.owner, { now: new Date(now), tz: p ? tzOf(p) : '' });
+        const p = livePhone(real, j.owner), delay = replyDelay(real, j.owner, { now: new Date(now), tz: p ? zoneOf(real, p) : '' });
         if (delay === null) { j.notBefore = now + 60_000; j.away = true; held++; continue; }
         delete j.away; j.timed = true;
         if (delay > 0) { j.notBefore = (j.at || now) + delay; if (j.notBefore > now) held++; } else delete j.notBefore;
@@ -191,7 +193,7 @@ export function holdReplies(real, now = Date.now()) {
 // 늦게 올 답장: [{ owner, room, until (ms; 오프라인이면 null), away }]
 export const liveReplyWait = (real, now = Date.now()) => (liveWorld(real)?.queue.jobs || []).filter(j => j.kind === 'reply' && j.state === 'waiting' && j.notBefore > now).map(j => ({ owner: j.owner, room: j.room, until: j.away ? null : j.notBefore, away: !!j.away }));
 // 지금 상태 { status, activity } | null · 스케줄 (마리나라의 WeekSchedule) | null
-export const liveStatus = (real, owner) => { const p = livePhone(real, owner); return statusNow(real, owner, { tz: p ? tzOf(p) : '' }); };
+export const liveStatus = (real, owner) => { const p = livePhone(real, owner); return statusNow(real, owner, { tz: p ? zoneOf(real, p) : '' }); };
 export const liveSchedule = (real, owner) => scheduleOf(real, owner);
 export const livePresence = real => (liveWorld(real) ? presenceOf(real) : null);
 // 스케줄 만들기 (모델을 불러요). opts: { guidance, mode: 'rewrite'|'adjust'|'vary'|'repair', day: 'Monday'… (그날만) } → 스케줄
@@ -200,7 +202,7 @@ export async function liveMakeSchedule(real, owner, opts = {}) {
     if (!p) throw new Error('그 사람의 폰이 없어요');
     const card = await cardOf(p);
     const ask = (messages, o) => askDraft(messages.filter(x => x.role !== 'system').map(x => x.content).join('\n\n'), { force: true, system: messages.filter(x => x.role === 'system').map(x => x.content).join('\n\n'), maxTokens: o?.maxTokens, effort: 'low' });
-    const out = await makeSchedule(real, p.owner, { ...opts, ask, name: p.owner, description: String(card || ''), personality: '', tz: tzOf(p) });
+    const out = await makeSchedule(real, p.owner, { ...opts, ask, name: p.owner, description: String(card || ''), personality: '', tz: zoneOf(real, p) });
     // (where each thing on it happens: asked once here, kept on the blocks. A failure leaves the schedule without places)
     try { await fillPlaces(real, p.owner, { ask, parse: t => parseJson(t, { salvage: true }), card, places: knownPlaces(p) }); } catch (err) { console.warn('[narrative-archive] schedule places', err); }
     delete p.schedAt;
@@ -217,7 +219,7 @@ export function followSchedule(real, now = Date.now()) {
     let n = 0;
     for (const p of Object.values(w.phones || {})) {
         if (!p?.owner) continue;
-        const at = stateNow(real, p.owner, { now: new Date(now), tz: tzOf(p) });
+        const at = stateNow(real, p.owner, { now: new Date(now), tz: zoneOf(real, p) });
         if (!at || p.schedAt === at.key) continue;
         p.schedAt = at.key; p.schedState = { text: at.text, at: now };
         const place = at.place;
@@ -230,8 +232,76 @@ export function followSchedule(real, now = Date.now()) {
     }
     return n;
 }
+// ---- 마리나라의 스케줄 편집 창이 부르던 요청들 (phone2sched.js → src/marinara/schedule-routes.js)
+const askSched = (messages, o) => askDraft(messages.filter(x => x.role !== 'system').map(x => x.content).join('\n\n'), { force: true, system: messages.filter(x => x.role === 'system').map(x => x.content).join('\n\n'), maxTokens: o?.maxTokens, effort: 'low' });
+const cardData = async p => ({ name: p.owner, description: String(await cardOf(p) || ''), personality: '' });
+// 스케줄의 시간대 ('' = 사람마다 폰의 시간대) · 바꾸기 (tz '' 이면 풀기) · 그 사람의 스케줄이 쓰는 시간대
+export const liveScheduleZone = real => scheduleZone(real);
+export const liveSetScheduleZone = async (real, tz) => { const out = setScheduleZone(mine(real), tz); for (const p of Object.values(liveWorld(real).phones || {})) delete p.schedAt; followSchedule(real); await saveMeta(); return out; };
+export const liveTimeZone = (real, owner) => { const p = livePhone(real, owner); return p ? zoneOf(real, p) : scheduleZone(real); };
+// 초안 만들기: 저장하지 않고 결과만 돌려줘요 (마리나라의 /schedule/draft)
+//   opts: { mode: 'week' | 'day', day, schedule (지금 초안), guidance, dayGuidance, draftMode: 'rewrite'|'adjust'|'vary'|'repair', signal }
+//   → mode 'week': { schedule } · mode 'day': { day, blocks, weekStart }. 실패한 오류에는 rawResponse(모델의 답 원문)가 있어요
+export async function liveDraftSchedule(real, owner, opts = {}) {
+    const p = livePhone(mine(real), owner);
+    if (!p) throw new Error('그 사람의 폰이 없어요');
+    return draftSchedule(real, { ...opts, ask: askSched, charData: await cardData(p), timeZone: zoneOf(real, p) });
+}
+// 루틴 요약: 저장하지 않고 결과만 (마리나라의 /schedule/summary) → { summary, generatedAt }
+export async function liveScheduleSummary(real, owner, { schedule, guidance = '', signal } = {}) {
+    const p = livePhone(mine(real), owner);
+    if (!p) throw new Error('그 사람의 폰이 없어요');
+    return summarizeSchedule(real, { schedule, guidance, signal, ask: askSched, charData: await cardData(p) });
+}
+// 실패한 답을 손으로 고친 글 → 고쳐진 초안 (못 읽으면 오류). day를 주면 그날만
+export const liveRepairSchedule = (text, current, day = '') => repairSchedule(text, current, day);
+// 매주 갱신 켜기 · 끄기, 그 사람의 스케줄 사정 { autoRenew, needsRefresh (이번 주 것이 아님), timeZone }
+export const liveSetAutoRenew = async (real, owner, on) => { const out = setAutoRenew(mine(real), owner, on); await saveMeta(); return out; };
+export const liveScheduleInfo = (real, owner) => { const p = livePhone(real, owner), tz = p ? zoneOf(real, p) : ''; return { autoRenew: autoRenewOf(real, owner), needsRefresh: needsRefresh(real, owner, { tz }), timeZone: tz }; };
+// 갱신 (마리나라의 /schedule/generate): 지난 스케줄을 이어받아 새 주 것을 만들어 넣어요 (모델을 불러요)
+//   opts: { owners (없으면 스케줄이 있는 사람 전부), automatic: 매주 갱신을 켠 사람만 (갱신이 필요할 때), forceRefresh, guidance, signal }
+//   → { 이름: 'generated' | 'fresh' | 'renewal_disabled' | 'error: …' }
+export async function liveRenewSchedules(real, { owners = null, automatic = false, forceRefresh = false, guidance = '', signal } = {}) {
+    const w = liveWorld(mine(real)), phones = Object.values(w.phones || {}).filter(p => p?.owner && (owners ? owners.some(n => liveKey(n) === liveKey(p.owner)) : scheduleOf(real, p.owner)));
+    // (the weekly renewal: nothing is asked when nobody's week has turned)
+    const due = automatic ? phones.filter(p => autoRenewOf(real, p.owner) && needsRefresh(real, p.owner, { tz: zoneOf(real, p) })) : phones;
+    if (!due.length) return {};
+    const cards = {};
+    for (const p of due) cards[liveKey(p.owner)] = await cardData(p);
+    const out = await renewSchedules(real, { ask: askSched, owners: due.map(p => p.owner), cards, automatic, forceRefresh, guidance, timeZone: scheduleZone(real) || undefined, signal });
+    const done = {};
+    for (const p of due) {
+        const r = out.results[liveKey(p.owner)];
+        done[p.owner] = r?.status || 'not_found';
+        if (r?.status !== 'generated') continue;
+        try { await fillPlaces(real, p.owner, { ask: askSched, parse: t => parseJson(t, { salvage: true }), card: cards[liveKey(p.owner)].description, places: knownPlaces(p) }); } catch (err) { console.warn('[narrative-archive] schedule places', err); }
+        delete p.schedAt;
+    }
+    if (open(real)) { followSchedule(real); await saveMeta(); }
+    return done;
+}
+// 늦게 올 답장을 지금 받기: 그 방(owner를 주면 그 사람만)의 기다리는 답장을 바로 돌릴 수 있게 해요 → 푼 수. 그 뒤 liveGo
+export async function liveReplyNow(real, roomId, owner = '') {
+    let n = 0;
+    for (const j of liveWorld(mine(real)).queue.jobs) {
+        if (j.kind !== 'reply' || j.state !== 'waiting' || j.room !== roomId || (owner && liveKey(j.owner) !== liveKey(owner)) || !(j.notBefore > Date.now())) continue;
+        delete j.notBefore; delete j.away; j.timed = true; n++;
+    }
+    if (n) await saveMeta();
+    return n;
+}
 // 스케줄 손으로 넣기 · 지우기(null), 손으로 상태 주기({ status, activity, minutes } · {} 풀기), 내 상태, 먼저 말 걸기 켜기
-export const liveSetSchedule = async (real, owner, schedule) => { const out = setSchedule(mine(real), owner, schedule); await saveMeta(); return out; };
+export async function liveSetSchedule(real, owner, schedule) {
+    const out = setSchedule(mine(real), owner, schedule), p = livePhone(real, owner);
+    // (things to do that the places were not asked for yet: asked now, once. A failure leaves them without a place)
+    const acts = out ? [...new Set(Object.values(out.days).flatMap(d => (Array.isArray(d) ? d : []).map(b => String(b?.activity || '').trim().toLowerCase())).filter(Boolean))].sort().join('|') : '';
+    if (out && p && acts && out.placedFor !== acts) {
+        try { await fillPlaces(real, p.owner, { ask: askSched, parse: t => parseJson(t, { salvage: true }), card: await cardOf(p), places: knownPlaces(p) }); out.placedFor = acts; } catch (err) { console.warn('[narrative-archive] schedule places', err); }
+    }
+    if (p) delete p.schedAt;
+    if (open(real)) { followSchedule(real); await saveMeta(); }
+    return out;
+}
 export const liveSetStatus = async (real, owner, o = {}) => { const out = setStatusOverride(mine(real), owner, o); for (const j of liveWorld(real).queue.jobs) if (j.state === 'waiting' && liveKey(j.owner) === liveKey(owner)) { delete j.timed; delete j.notBefore; } await saveMeta(); return out; };
 export const liveSetUserStatus = async (real, o = {}) => { const out = setUserStatus(mine(real), o); await saveMeta(); return out; };
 export const liveSetAutonomous = async (real, on) => { const out = setAutonomous(mine(real), on); await saveMeta(); return out; };
@@ -247,7 +317,7 @@ export async function liveAutonomous(real, { now = Date.now() } = {}) {
         if (w.queue.jobs.some(j => j.room === room.id && j.kind === 'reply' && (j.state === 'waiting' || j.state === 'running'))) continue;
         const cards = {};
         for (const name of room.members) { const c = ctx().characters?.find(x => liveKey(x?.name) === liveKey(name)); if (c) cards[liveKey(name)] = c.data || c; }
-        const r = checkProactive(real, room.id, { now: new Date(now), tzOf: name => { const p = livePhone(real, name); return p ? tzOf(p) : ''; }, cards });
+        const r = checkProactive(real, room.id, { now: new Date(now), tzOf: name => { const p = livePhone(real, name); return p ? zoneOf(real, p) : ''; }, cards });
         const k = r.shouldTrigger ? r.characterIds?.[0] : null, name = k && room.members.find(x => liveKey(x) === k);
         if (!name) continue;
         const job = enqueueJob(real, { kind: 'reply', owner: name, room: room.id, at: now, why: r.autonomousIntent || 'You have a free moment.' });
