@@ -1,0 +1,7 @@
+{
+    "name": "narrative-archive",
+    "private": true,
+    "type": "module",
+    "main": "plugin/index.mjs",
+    "description": "NarrativeArchive: SillyTavern 확장(index.js · src) + 서버 플러그인(plugin)"
+}

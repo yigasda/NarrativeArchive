@@ -12,7 +12,7 @@ import { parseSections } from './sections.js';
 
 export const MODULE = 'narrative_archive';
 export const PROMPT_KEY = 'narrative_archive_injection';
-export const VERSION = '3.215.0';
+export const VERSION = '3.216.1';
 export const SNAPSHOT_MAX = 5;
 export const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -103,12 +103,24 @@ export const setPhoneMeta = v => { phoneMetaNow = v ? { d: v, m: getMeta() } : n
 let stScript = null;
 if (typeof window !== 'undefined') import('/script.js').then(m => { stScript = m; }).catch(() => { /* (못 읽으면 기다리지 않고 저장해요) */ });
 let saving = null, savingNext = null;
-const saveNow = async () => { for (let i = 0; i < 200 && stScript?.isChatSaving; i++) await new Promise(r => setTimeout(r, 100)); await ctx().saveMetadata(); };
+let saveHook = null;
+// saveHook: 실리 저장 앞에 한 번 (phone2keepon.js: Orbit 데이터는 서버 플러그인에 따로 저장해요).
+//   → null | { skip: 실리 저장을 건너뛰어도 돼요 (채팅 파일에 들어갈 것이 안 바뀌었어요), error, saved() }
+const saveNow = async () => {
+    const kept = saveHook ? await saveHook() : null;
+    if (!kept?.skip) {
+        for (let i = 0; i < 200 && stScript?.isChatSaving; i++) await new Promise(r => setTimeout(r, 100));
+        await ctx().saveMetadata();
+        kept?.saved?.();
+    }
+    if (kept?.error) throw kept.error;
+};
 export function saveMeta() {
     if (savingNext) return savingNext;   // (다음 저장이 이미 줄 서 있어요: 같이 써요)
     if (!saving) return (saving = saveNow().finally(() => { saving = null; }));
     return (savingNext = saving.catch(() => {}).then(() => { savingNext = null; return saveMeta(); }));
 }
+export const setSaveHook = fn => { saveHook = fn; };
 
 export const HISTORY_MAX = 30;
 
