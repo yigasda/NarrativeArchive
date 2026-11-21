@@ -13,9 +13,9 @@ import { SCENES_SYS, parseScenes } from './scenes.js';
 import { resolvePhoneProfile, ownerProfileBlock, personaBlock } from './phoneprofile.js';
 import { parseJson } from './phoneparse.js';
 import { nameKey } from './people.js';
-import { liveWorld, livePhone, liveMeta, liveKey, liveAtYear, isSnap, setStoryKeeper, startFresh, enqueueReplies, renamePersona, setDrawerSeed } from './phone2store.js';
+import { liveWorld, livePhone, liveMeta, liveKey, liveAtYear, isSnap, setStoryKeeper, startFresh, enqueueReplies, enqueueJob, renamePersona, setDrawerSeed } from './phone2store.js';
 import { emojiOf, reactOf, putReact, quickReacts, noteRecent, messageOf } from './phone2react.js';
-import { dropMessages, editMessage, settleSwipes, swipeInfo, swipeTo, swipeList, dropSwipe, dropSwipes, dropOtherSwipes, koRows, koChunks, koInput, takeKo } from './phone2edit.js';
+import { dropMessages, editMessage, replyTail, settleSwipes, swipeInfo, swipeTo, swipeList, dropSwipe, dropSwipes, dropOtherSwipes, koRows, koChunks, koInput, takeKo } from './phone2edit.js';
 import { AI_SYS_PHONE_KO, voiceRows, who as voiceWho } from './phonetr.js';
 import { askTranslator, glossaryEntries, glossaryIn } from './translate.js';
 import { importRows, importInto, importFile, importedOf, chatKey } from './phone2import.js';
@@ -115,7 +115,7 @@ export async function liveGo(real, { onChange = () => {} } = {}) {
             if (!w || !p) return null;
             if (w.from === 'story' && !isSnap(w.snap)) throw new Error(NO_STORY);
             const d0 = m(), card = await cardOf(p);
-            const d = gatherReply(real, job.owner, job.room, { now: Date.now(), tz: tzOf(p), deps: {
+            const d = gatherReply(real, job.owner, job.room, { now: Date.now(), tz: tzOf(p), why: job.why || '', deps: {
                 // (the reply's own clock block: each place's time now and weekday, as the reply prompt was tuned with)
                 // (the weekday is worked out from the phone's year: its saved time's, so the year after once the clock
                 // has passed New Year)
@@ -450,6 +450,8 @@ export async function liveRetranslate(real, roomId, ids) {
 // ---- 이모지 반응 (phone2react.js). 사람이 눌렀을 때만 해요.
 // 반응 달기 · 바꾸기 · 지우기: by(방에 있는 사람)의 반응을 e로. 같은 걸 다시 달거나 e가 null(또는 '')이면 지워요.
 // 이모지는 아무거나 되지만 한 덩어리만 (글자 · 여러 개는 안 돼요). 저장까지 해요  → 바뀐 그 말
+// 내가 캐릭터의 최근 말(내 마지막 말 뒤에 온 말)에 달면 그 캐릭터의 답장을 줄 세워요: 화면이 이어서 liveGo를 불러요.
+// 캐릭터는 말로 받거나, 이모지로 받거나, 그냥 넘겨요
 export async function liveReact(real, roomId, msgId, by, e = null) {
     if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않아요');
     const { w, room, x } = messageOf(real, roomId, msgId);
@@ -459,7 +461,14 @@ export async function liveReact(real, roomId, msgId, by, e = null) {
     if (!want && e) throw new Error('이모지 하나만 달 수 있어요');
     const had = reactOf(x, by)?.e || '', next = want && want !== had ? want : '';
     if (putReact(x, by, next)) {
-        if (next && liveKey(by) === liveKey(w.persona)) noteRecent(w, next);
+        const mine = liveKey(by) === liveKey(w.persona);
+        if (next && mine) noteRecent(w, next);
+        // (the persona put an emoji on what a character just said and wrote nothing: the character gets to see it now
+        // and answer it, react back or let it be. Only on the talk since the persona's last text; an emoji on older
+        // talk waits for the next reply, where it shows as new. One already waiting for them here sees it too)
+        if (next && mine && liveKey(x.from) !== liveKey(w.persona) && w.phones?.[liveKey(x.from)] && replyTail(real, roomId).includes(x)
+            && !w.queue.jobs.some(j => j.state === 'waiting' && j.kind === 'reply' && liveKey(j.owner) === liveKey(x.from) && j.room === roomId))
+            enqueueJob(real, { kind: 'reply', owner: x.from, room: roomId, why: `${w.persona} put ${next} on your text "${String(x.text || '').replace(/\s+/g, ' ').trim().slice(0, 120)}" just now and wrote nothing.` });
         await saveMeta();
     }
     return x;

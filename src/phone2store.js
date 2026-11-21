@@ -387,11 +387,12 @@ export const unreadBy = (room, msg) => (room?.members || []).filter(n => liveKey
 
 // 일의 줄: one at a time, each job tagged with its world and round; a failure stops the line until it is seen
 // room: the messenger room a reply is for
-export function enqueueJob(m, { kind, owner = '', room = '', at = Date.now() } = {}) {
+// why: for a reply nobody texted for (the persona only put an emoji on a text): what it answers, one line
+export function enqueueJob(m, { kind, owner = '', room = '', at = Date.now(), why = '' } = {}) {
     const w = liveWorld(m);
     if (!w) throw new Error('아직 폰 2가 없어요');
     if (!['reply', 'reflect', 'first'].includes(kind)) throw new Error('일 종류는 reply · reflect · first예요');
-    const job = { id: newId('j'), world: w.id, round: ++w.queue.round, kind, owner: String(owner || ''), ...(room ? { room: String(room) } : {}), at, state: 'waiting' };
+    const job = { id: newId('j'), world: w.id, round: ++w.queue.round, kind, owner: String(owner || ''), ...(room ? { room: String(room) } : {}), ...(String(why || '').trim() ? { why: String(why).replace(/\s+/g, ' ').trim().slice(0, 400) } : {}), at, state: 'waiting' };
     w.queue.jobs.push(job);
     // (the line keeps its newest finished jobs only; waiting, running and failed ones always stay)
     const old = w.queue.jobs.filter(j => j.state === 'done' || j.state === 'dropped');
