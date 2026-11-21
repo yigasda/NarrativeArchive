@@ -238,7 +238,7 @@ export async function openPhone(who = null) {
     const startPlan = startPlanOf;
     // 어두운 방(⋯ 메뉴의 어둡게 · 밝게): 확장 설정에 남아요. 그릴 때마다 읽으니 설정을 그대로 읽어요(koOn과 같은 까닭)
     const obDark = () => (ctx().extensionSettings?.narrative_archive ?? globalSettings()).orbitDark === true;
-    let obSet = '', obFindTab = 'search', obFindQ = '', obJump = null;   // 방 설정 시트: obSet = '' | 'main' | 'find' | 'name' | 'people', obJump = 찾아갈 말의 id
+    let obSet = '', obFindTab = 'marks', obFindQ = '', obJump = null;   // 방 설정 시트: obSet = '' | 'main' | 'find' | 'name' | 'people', obJump = 찾아갈 말의 id
     let obMenu = false, obSub = '', obNote = null;   // obSub: 길게 누른 판의 둘째 화면('re' 이모지 · 'mark' 북마크 줄), obNote: 메모 시트 { id, text }
     const orbitUi = () => {
         const w = liveWorld(realM);
@@ -286,9 +286,10 @@ export async function openPhone(who = null) {
             const setUi = () => { if (!obSet || ro) return null;
                 const row = x => { const a = vw(x.at); return { id: x.id, from: liveKey(x.from) === liveKey(me) ? '나' : x.from, text: x.text, ko: x.ko || '', when: `${dayOf(a)} ${a.slice(6)}` }; };
                 const t = { page: obSet, title: V.titleOf(r), group, count: os.length, me, marks: liveMarked(realM, r.id).length };
-                if (obSet === 'find') { t.tab = obFindTab; t.q = obFindQ; const q = obFindQ.trim().toLowerCase();
-                    t.items = obFindTab === 'search' ? (q ? shown.filter(x => `${x.text}\n${x.ko || ''}`.toLowerCase().includes(q)).slice(-50).reverse().map(row) : [])
-                        : obFindTab === 'marks' ? liveMarked(realM, r.id).map(k => ({ ...row(k.x), note: k.note || '', pin: !!k.x.extra?.pinnedToContext })).reverse()
+                if (obSet === 'main') { t.q = obFindQ; t.trashN = liveTrash(realM, r.id).length; const q = obFindQ.trim().toLowerCase();
+                    t.items = q ? shown.filter(x => `${x.text}\n${x.ko || ''}`.toLowerCase().includes(q)).slice(-50).reverse().map(row) : []; }
+                if (obSet === 'find') { t.tab = obFindTab;
+                    t.items = obFindTab === 'marks' ? liveMarked(realM, r.id).map(k => ({ ...row(k.x), note: k.note || '', pin: !!k.x.extra?.pinnedToContext })).reverse()
                         : liveTrash(realM, r.id).map(k => ({ ...row(k.x), when: `${Math.max(0, Math.ceil((k.until - Date.now()) / 864e5))}일 남음` })); }
                 if (obSet === 'name') { t.name = r.name || ''; t.auto = [...os].join(', '); }
                 if (obSet === 'people') { t.members = os; const all = [...new Map([...Object.values(w.phones || {}).map(p => p?.owner), ...Object.values(w.messenger?.accounts || {}).map(a => a?.name)].filter(n => n && liveKey(n) !== liveKey(me)).map(n => [liveKey(n), n])).values()]; t.more = all.filter(n => !os.some(m => liveKey(m) === liveKey(n))); }
@@ -989,7 +990,7 @@ export async function openPhone(who = null) {
     const obSetGo = async (pr, after) => { try { await pr; } catch (err) { obWarn(err); } if (after) after(); if (!phoneClosed && stillHere()) drawPhone(true); };
     $root.on('click', '.na_ob_set', e => { e.stopPropagation(); if (obFix || obHeld || obPicks || obList || !obCanEdit()) return; obMenu = false; obSet = 'main'; drawPhone(true); });
     // 머리의 찾기: 방 설정 시트의 찾기 화면으로 바로. 아직 동작이 없는 단추(na_ob_soon)는 알림만 떠요(자리는 시안대로 다 있어요, 소망)
-    $root.on('click', '.na_ob_find', e => { e.stopPropagation(); if (obFix || obHeld || obPicks || obList || !obCanEdit()) return; obMenu = false; obSet = 'find'; obFindTab = 'search'; drawPhone(true); $root.find('.na_ob_sq')[0]?.focus({ preventScroll: true }); });
+    $root.on('click', '.na_ob_find', e => { e.stopPropagation(); if (obFix || obHeld || obPicks || obList || !obCanEdit()) return; obMenu = false; obSet = 'main'; drawPhone(true); $root.find('.na_ob_sq')[0]?.focus({ preventScroll: true }); });
     $root.on('click', '.na_ob_soon', function (e) { e.stopPropagation(); toastr.info(`${this.getAttribute('aria-label') || '이 기능'}: 아직 연결되지 않았어요`, '캐릭터 휴대폰'); });
     // 다시 받기: 맨 끝 답장 묶음에서만. 받아 둔 답장의 끝으로 넘긴 뒤 새 답장을 받아요(밀어서 넘기기와 같은 길)
     $root.on('click', '.na_ob_mregen', async e => { e.stopPropagation(); const id = obRoomId(), sw = id && obCanEdit() ? liveSwipeInfo(realM, id) : null;
@@ -997,10 +998,10 @@ export async function openPhone(who = null) {
         obHeld = null; try { let r = null; for (let k = sw.at; k <= sw.count && !r?.fresh; k++) r = await liveSwipe(realM, id, 1); if (!phoneClosed && stillHere()) { drawPhone(true); obBottom(); } if (r?.fresh) obGo(); } catch (err) { obWarn(err); if (!phoneClosed && stillHere()) drawPhone(true); } });
     $root.on('click', '.na_ob_sx', e => { e.stopPropagation(); obSet = ''; obFindQ = ''; drawPhone(true); });
     $root.on('click', '.na_ob_sback', e => { e.stopPropagation(); obSet = 'main'; drawPhone(true); });
-    $root.on('click', '.na_ob_srow', function (e) { e.stopPropagation(); obSet = this.dataset.v; if (obSet === 'find') obFindTab = 'search'; drawPhone(true); if (obSet === 'name') $root.find('.na_ob_snm')[0]?.focus({ preventScroll: true }); });
+    $root.on('click', '.na_ob_srow', function (e) { e.stopPropagation(); const v = this.dataset.v; if (v === 'marks' || v === 'trash') { obSet = 'find'; obFindTab = v; } else obSet = v; drawPhone(true); if (obSet === 'name') $root.find('.na_ob_snm')[0]?.focus({ preventScroll: true }); });
     $root.on('click', '.na_ob_stab', function (e) { e.stopPropagation(); obFindTab = this.dataset.v; drawPhone(true); });
     let obFindT = null;
-    $root.on('input', '.na_ob_sq', function () { obFindQ = this.innerText.replace(/\n/g, ' '); clearTimeout(obFindT); obFindT = setTimeout(() => { if (phoneClosed || obSet !== 'find') return; drawPhone(true);
+    $root.on('input', '.na_ob_sq', function () { obFindQ = this.innerText.replace(/\n/g, ' '); clearTimeout(obFindT); obFindT = setTimeout(() => { if (phoneClosed || obSet !== 'main') return; drawPhone(true);
         const el = $root.find('.na_ob_sq')[0]; if (el && document.activeElement !== el) { el.focus({ preventScroll: true }); const sel = getSelection(); sel.selectAllChildren(el); sel.collapseToEnd(); } }, 250); });
     $root.on('keydown', '.na_ob_sq, .na_ob_snm', function (e) { if (e.key !== 'Enter') return; e.preventDefault(); if (this.classList.contains('na_ob_snm')) $root.find('.na_ob_snok').trigger('click'); else this.blur(); });
     $root.on('click', '.na_ob_sgo', function (e) { e.stopPropagation(); const id = this.dataset.id; obJump = id; obSet = ''; obFindQ = ''; drawPhone(true); obJump = null;
