@@ -143,7 +143,7 @@ export async function liveGo(real, { onChange = () => {} } = {}) {
                 // (the role-play's last messages as they stand now: read at this moment, no place kept)
                 before: () => (open(real) ? liveChatTail().lines : []),
             } });
-            // (Marinara's status · schedule lines, for an owner with a schedule or a status set by hand)
+            // (Marinara's status · schedule lines: always there, as in Marinara; an owner with no schedule reads "online")
             if (d) { const room = w.messenger.rooms[job.room], last = [...(room?.messages || [])].reverse().find(x => x.text || x.call); d.context = contextBlock(real, job.owner, job.room, { tzOf: n => zoneOf(real, livePhone(real, n) || p), lastRole: last && liveKey(last.from) === liveKey(w.persona) ? 'user' : 'assistant', said: !job.why, intentKey: job.intent || '', mentions: job.auto ? [] : mentionsIn(real, job.room) }); }
             return d ? { system: phone2ReplySystem({ owner: d.owner, persona: d.persona, scheduled: !!activeSchedule(real, job.owner) }), input: replyInput(d) } : null;
         },

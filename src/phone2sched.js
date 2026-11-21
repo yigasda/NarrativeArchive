@@ -88,15 +88,16 @@ export function mentionsIn(m, roomId) {
     return text.includes('@') ? room.members.filter(n => liveKey(n) !== P && text.includes(`@${normalizeTextForMatch(n)}`)) : [];
 }
 
-// 답장 요청에 넣는 마리나라의 상황 글 (상태 · 내 상태 · 오늘 스케줄 · 지금 시각). 스케줄 · 상태가 아무도 없으면 ''
+// 답장 요청에 넣는 마리나라의 상황 글 (상태 · 내 상태 · 오늘 스케줄 · 지금 시각). 마리나라처럼 항상 넣어요: 스케줄이 없는 사람은 "online"
 // tzOf(이름) → 그 사람의 시간대; lastRole: 방의 마지막 말이 'user'(나) | 'assistant'; said: 내가 새로 한 말이 있나
 export function contextBlock(m, owner, roomId, { now = new Date(), tzOf = () => '', lastRole = 'user', said = true, intentKey = '', mentions = [] } = {}) {
     const w = liveWorld(m), room = w?.messenger?.rooms?.[roomId], p = peek(m);
     if (!w || !room) return '';
     const info = room.members.filter(n => liveKey(n) !== liveKey(w.persona)).map(n => {
-        const st = statusNow(m, n, { now, tz: tzOf(n) }), schedule = activeSchedule(m, n);
-        return st ? { charId: liveKey(n), name: n, status: st.status, activity: st.activity, todaySchedule: schedule ? getTodaySchedule(schedule, toZonedWallClockDate(now, tzOf(n) || undefined)) : '' } : null;
-    }).filter(Boolean);
+        // (no schedule and no status set by hand: "online", as Marinara's resolveConversationPromptCharacters gives)
+        const st = statusNow(m, n, { now, tz: tzOf(n) }) || { status: 'online', activity: '' }, schedule = activeSchedule(m, n);
+        return { charId: liveKey(n), name: n, status: st.status, activity: st.activity, todaySchedule: schedule ? getTodaySchedule(schedule, toZonedWallClockDate(now, tzOf(n) || undefined)) : '' };
+    });
     if (!info.some(c => c.charId === liveKey(owner))) return '';
     return buildConversationCurrentContextBlock({
         nowInstant: now, promptTimeZone: tzOf(owner) || undefined, convoCharInfo: info, finalMessages: [{ role: lastRole }], personaName: w.persona,

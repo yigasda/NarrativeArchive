@@ -54,9 +54,11 @@ test('시간대: 그 사람의 시간으로 스케줄을 읽어요', () => {
     assert.equal(S.statusNow(m, 'Mara', { now: t, tz: 'Asia/Seoul' }).status, 'online');        // 서울 19:00
     assert.equal(S.statusNow(m, 'Mara', { now: t, tz: 'America/New_York' }).status, 'offline'); // 뉴욕 05:00
 });
-test('상황 글: 마리나라의 줄 그대로 답장 요청의 CONTEXT에 들어가요. 스케줄 · 상태가 없는 사람에게는 안 넣어요', () => {
+test('상황 글: 마리나라의 줄 그대로 답장 요청의 CONTEXT에 항상 들어가요', () => {
     const { m, a } = world();
-    assert.equal(S.contextBlock(m, 'Mara', a.id, { now: NOW }), '');
+    // 스케줄이 없어도 마리나라처럼 항상 들어가요: "online"
+    assert.match(S.contextBlock(m, 'Mara', a.id, { now: NOW, tzOf: () => 'UTC' }), /^Your current status: online\.\nRen's status: online\.\nThe current time and date: 03:00, /);
+    assert.equal(S.contextBlock(m, 'Nobody', a.id, { now: NOW }), '');
     S.setSchedule(m, 'Mara', all('dnd', 'working'), NOW);
     S.setUserStatus(m, { status: 'idle', activity: '  cooking   dinner ' });
     const t = S.contextBlock(m, 'Mara', a.id, { now: NOW, tzOf: () => 'Asia/Seoul', lastRole: 'user', said: true });
@@ -446,7 +448,7 @@ test('스케줄 쓰기 끄기(마리나라의 conversationSchedulesEnabled): 스
     S.setSchedulesOn(m, false);
     assert.equal(S.scheduleOf(m, 'Mara').days.Monday[0].activity, 'working');
     assert.deepEqual([S.activeSchedule(m, 'Mara'), S.statusNow(m, 'Mara', { now: NOW }), S.replyDelay(m, 'Mara', { now: NOW }), S.blockNow(m, 'Mara', { now: NOW })], [null, null, 0, null]);
-    assert.equal(S.contextBlock(m, 'Mara', a.id, { now: NOW }), '');
+    assert.match(S.contextBlock(m, 'Mara', a.id, { now: NOW }), /^Your current status: online\.\n/);   // (스케줄이 꺼져 있으면 "online")
     assert.equal(S.autonomousOptions(m).schedulesEnabled, false);
     S.setSchedulesOn(m, true);
     assert.equal(S.statusNow(m, 'Mara', { now: NOW }).status, 'dnd');
