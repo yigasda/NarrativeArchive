@@ -33,6 +33,8 @@ export const liveOf = m => (obj(m?.live) && m.live.v === 1 ? m.live : null);
 function ensureLive(m) {
     if (!obj(m)) throw new Error('채팅 정보가 없어요');
     if (!liveOf(m)) {
+        // (kept in the server plugin and not read yet, or the plugin is off: a new one would hide the kept one)
+        if (m.live === undefined && m.liveRef) throw new Error('Orbit 데이터를 아직 못 읽었어요. 서버 플러그인이 켜져 있는지 봐 주세요');
         if (m.live !== undefined) throw new Error('폰 2 저장 자리를 읽을 수 없어요');
         m.live = { v: 1, mode: 'story', world: null, archive: [] };
     }

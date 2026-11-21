@@ -10,6 +10,7 @@ import { driftTick } from './src/drift.js';
 import { applyInjection } from './src/inject.js';
 import { addWandMenu, renderPanel, sectionPanel } from './src/panel.js';
 import { addPhoneMenu } from './src/phonemenu.js';
+import { keepStart } from './src/phone2keepon.js';
 import { RECALL_KEY } from './src/recall.js';
 import { onGenerationStarted, onMessageSent } from './src/router.js';
 import { linkedMap } from './src/sections.js';
@@ -33,6 +34,7 @@ import { xrayArm, xrayCapture, xrayWorldInfo } from './src/xray.js';
         addWandMenu();
         addPhoneMenu();
         watchPopups();
+        keepStart();
         onChatChanged();
     };
 

@@ -55,3 +55,30 @@ test('실리태번 자기 저장이 도는 중이면 끝난 뒤에 저장해요'
     assert.deepEqual(o.log, [1]);
     assert.equal(o.dropped, 0);
 });
+
+// 저장 앞에 끼우는 것(setSaveHook: Orbit 데이터는 서버 플러그인에 따로 저장해요)
+function rigHook(hook) {
+    const o = { st: 0 }, ctx = () => ({ saveMetadata: async () => { o.st++; } });
+    o.saveMeta = new Function('ctx', 'stScript', 'hook', `${code}; saveHook = hook; return saveMeta;`)(ctx, { isChatSaving: false }, hook);
+    return o;
+}
+test('끼운 것이 건너뛰라고 하면 실리 저장을 안 해요', async () => {
+    let saved = 0;
+    const o = rigHook(async () => ({ skip: true, saved: () => { saved++; } }));
+    await o.saveMeta();
+    assert.deepEqual([o.st, saved], [0, 0]);
+});
+test('끼운 것이 건너뛰지 말라고 하면 실리 저장을 하고, 됐다고 알려요', async () => {
+    let saved = 0;
+    const o = rigHook(async () => ({ skip: false, saved: () => { saved++; } }));
+    await o.saveMeta();
+    assert.deepEqual([o.st, saved], [1, 1]);
+    const p = rigHook(async () => null);
+    await p.saveMeta();
+    assert.equal(p.st, 1);
+});
+test('끼운 것의 오류는 실리 저장을 한 뒤에 나와요', async () => {
+    const o = rigHook(async () => ({ skip: false, error: new Error('플러그인') }));
+    await assert.rejects(o.saveMeta(), /플러그인/);
+    assert.equal(o.st, 1);
+});
