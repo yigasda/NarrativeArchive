@@ -539,6 +539,28 @@ Orbit 방의 말에 이모지 반응을 달아요. 나도 달고, 캐릭터도 �
 
 어려운 것: 방마다 페르소나(실시간 폰 하나에 "나"가 하나고 반영이 그 기준이에요).
 
+## 서버 플러그인 (소망 결정, 진행 중)
+
+Orbit이 버벅이는 제일 큰 이유는 저장이에요: Orbit 데이터가 실리 채팅 파일 안에 있어서, 말 하나를 저장해도 실리가 롤플 채팅을 통째로 다시 써요(폰에서 몇 초). 마리나라는 자체 서버의 DB에 말 하나씩 저장해요. 그래서 기능보다 먼저 저장을 옮겨요.
+
+실리 서버 플러그인 (실리 1.19.1 소스 `src/plugin-loader.js`로 확인)
+- 실리의 `plugins/` 폴더 안의 폴더 하나. `package.json`의 `main`(없으면 `index.js` · `.cjs` · `.mjs`)을 읽어요.
+- `info { id, name, description }`와 `init(router)`를 내보내요(`exit`는 선택). 길은 `/api/plugins/<id>/…`.
+- `config.yaml`의 `enableServerPlugins: true`여야 켜져요. `enableServerPluginsAutoUpdate`(기본 켜짐)면 실리를 켤 때 git으로 받은 플러그인을 저절로 올려요.
+- 실리의 로그인 · CSRF 확인 뒤에 붙어요: `req.user.directories.root`가 그 사용자의 폴더. 브라우저는 `getRequestHeaders()`로 불러요.
+
+우리 것
+- 이 저장소 하나가 확장이자 플러그인이에요. 루트 `package.json`의 `main`이 `plugin/index.mjs`. 소망은 이 저장소를 실리 `plugins/`에 한 번 더 받으면 돼요.
+- 1단계 (됨): 저장 `plugin/store.mjs` · 길 `plugin/index.mjs`
+  - `<사용자 폴더>/NarrativeArchive/orbit/<id>/`에 조각 파일들과 `index.json`. 바뀐 조각만 받아서 그 파일만 다시 써요.
+  - 길: `GET /ping`, `POST /store/load · rev · save · fork · drop`.
+  - `rev`: 저장할 때마다 1 올라가요. 저장하는 쪽이 본 rev(`base`)가 다르면 409로 거절해요: 브라우저와 서버가 서로 덮어쓰지 않아요.
+  - 실제 실리 1.19.1에 꽂아서 확인: 플러그인이 올라오고, 저장 · 읽기 · 거절 · CSRF 없는 요청 막힘. 말 200개짜리 조각 저장 7ms(이 컴퓨터).
+- 2단계 (다음): 브라우저 쪽. 플러그인이 있으면 Orbit 데이터를 채팅 파일에서 빼서 플러그인에 두고, 바뀐 조각만 보내요. Orbit에서 말을 보내거나 답장이 와도 실리 채팅 저장을 안 불러요. 플러그인이 없으면 지금 방식 그대로.
+  - 어느 채팅의 것인지: 실리의 `chat_metadata.integrity`. 이름을 바꿔도 그대로이고, 분기하면 새로 생겨요(실리 `bookmarks.js`). 분기한 채팅은 `fork`로 복사해요.
+  - 값: Orbit 대화가 채팅 파일 밖에 있어서, 채팅을 내보내거나 백업할 때 따로 챙겨야 해요.
+- 3단계: 스케줄 · 먼저 말 걸기를 플러그인에서 돌리기.
+
 ## 정할 것
 
 1. **대화 밖 생활을 얼마나 자주 반영할지.** 후보: 하루 토막마다(아침 · 낮 · 저녁 · 잠들 때) / 앱을 보고 있는 동안 한 시간마다 / 잠들 때 한 번. 설정으로 고르게 할지, 기본값은 뭘로 할지.
