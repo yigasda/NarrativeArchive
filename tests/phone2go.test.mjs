@@ -1555,3 +1555,44 @@ test('답장에 남는 것: 모델 생각 · 보낸 요청 그대로 · 생성 �
     assert.equal(x.extra.cachedPrompt, undefined);
     assert.equal(x.extra.thinking, 'native\n\nshort answer');
 });
+
+test('빠른 전환기: 이 방이 쓸 모델 (마리나라의 PUT /chats/:id/model) — 고름 · 최근 두 개 · 기본값으로 · 답장이 그 모델로 가요', async () => {
+    const c = world(), id = c.room.id;
+    assert.deepEqual(G.liveRoomModel(c.real, id), { current: null, recent: [], followsMain: true });
+    assert.deepEqual((await G.liveSetRoomModel(c.real, id, { connectionId: 'ai' })).current, { connectionId: 'ai' });
+    const two = await G.liveSetRoomModel(c.real, id, { connectionId: 'dr', model: 'other-model', name: 'Other' });
+    assert.deepEqual(two, { current: { connectionId: 'dr', model: 'other-model', name: 'Other' }, recent: [{ connectionId: 'ai' }], followsMain: false });
+    // (그 연결이 이미 쓰는 모델을 고르면 그 연결 그대로)
+    assert.deepEqual((await G.liveSetRoomModel(c.real, id, { connectionId: 'dr', model: 'draft-model' })).current, { connectionId: 'dr' });
+    assert.deepEqual(G.liveRoomModel(c.real, id).recent, [{ connectionId: 'dr', model: 'other-model', name: 'Other' }, { connectionId: 'ai' }]);
+    await assert.rejects(G.liveSetRoomModel(c.real, id, { connectionId: 'nope' }), /없는 연결/);
+    await assert.rejects(G.liveSetRoomModel(c.real, id, { connectionId: 'dr', model: '' }), /읽지 못했/);
+    // (고른 모델로 답장을 받아요: 그 연결의 키 · 주소에 모델만 바꿔서)
+    await G.liveSetRoomModel(c.real, id, { connectionId: 'dr', model: 'other-model' });
+    send(c, '일어났냐');
+    T.conn = []; T.replies = [{ state: '집', reply: ['방금'], does: [] }];
+    await G.liveGo(c.real);
+    assert.equal(T.conn.length, 1);
+    assert.equal(T.conn[0].t.model, 'other-model');
+    assert.equal(c.room.messages.at(-1).text, '방금');
+    assert.equal(c.room.messages.at(-1).extra.generationInfo.model, 'other-model');
+    // (기본값으로: 초안 모델, 전처럼)
+    assert.deepEqual((await G.liveSetRoomModel(c.real, id, null)).current, null);
+    assert.equal(G.liveRoomModel(c.real, id).followsMain, true);
+    send(c, '둘'); T.conn = []; T.replies = [{ state: '집', reply: ['응'], does: [] }];
+    await G.liveGo(c.real);
+    assert.equal(T.conn.length, 0);
+});
+test('빠른 전환기: 즐겨찾기는 순서가 있고 위 · 아래로 옮겨요 (마리나라의 reorderStars)', () => {
+    world();
+    const st = (T.st ||= {}); st.extensionSettings = {};
+    const a = { connectionId: 'dr' }, b = { connectionId: 'dr', model: 'x', name: 'X' }, d = { connectionId: 'ai' };
+    assert.deepEqual(G.liveStars(), []);
+    assert.equal(G.liveToggleStar(a), true); assert.equal(G.liveToggleStar(b), true); assert.equal(G.liveToggleStar(d), true);
+    assert.deepEqual(G.liveStars(), [a, b, d]);
+    assert.equal(G.liveMoveStar(d, -1), true);
+    assert.deepEqual(G.liveStars(), [a, d, b]);
+    assert.equal(G.liveMoveStar(a, -1), false);
+    assert.equal(G.liveToggleStar(d), false);
+    assert.deepEqual(G.liveStars(), [a, b]);
+});

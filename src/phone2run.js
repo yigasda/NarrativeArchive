@@ -104,7 +104,7 @@ export async function runLive(m, { gather, ask, save = async () => {}, now = () 
                 const req = await gather(job);
                 let got = null;
                 if (req) {
-                    const answer = await ask(req.input, { system: req.system });
+                    const answer = await ask(req.input, { system: req.system, req });
                     // (the 폰 2 this was for is gone or another: the answer is dropped, nothing is put in)
                     if (liveWorld(m)?.id !== job.world) { finishJob(m, job); continue; }
                     // (the chat was left while this was asked: nothing is saved there now; the job is asked again when it is open)
