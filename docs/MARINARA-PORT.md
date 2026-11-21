@@ -11,6 +11,30 @@
 
 상태: **다** · **일부** · **아직** · **안 함**(소망이 정한 것)
 
+## 끝까지 읽었나 (2026-11-21 기준, 사실대로)
+
+"다"라고 적힌 파일도 처음에는 필요한 줄만 골라 읽고 가져왔어요. 그래서 빠진 것이 뒤늦게 나왔어요.
+아래 "아니오"인 파일은 **가져온 코드는 원문 그대로지만, 그 파일이 하는 일을 우리 쪽에 전부 이었는지는 아직 확인하지 못한 것**이에요. 끝까지 읽고 대 본 뒤에 "예"로 바꿔요.
+
+| 마리나라 파일 | 끝까지 읽음 |
+|---|---|
+| shared/utils/conversation-presence.ts | 예 |
+| shared/utils/message-marks.ts | 예 |
+| client/lib/character-schedule-transfer.ts | 예 |
+| routes/generate/conversation-context-block.ts | 예 |
+| client/lib/user-status.ts | 예 |
+| services/conversation/schedule.service.ts | 아니오 (1~275줄, 396~460줄만) |
+| services/conversation/autonomous.service.ts | 아니오 (앞부분과 함수 목록만) |
+| services/conversation/intent.service.ts | 아니오 (40~153줄만) |
+| services/conversation/timezone.ts | 아니오 (함수 목록만) |
+| routes/conversation.routes.ts | 아니오 (84~94, 107~264, 342~413, 507~1236, 1251~1352줄) |
+| client/hooks/use-autonomous-messaging.ts | 아니오 (1~60, 100~280줄) |
+| services/generation/conversation-schedule-command-runtime.ts | 아니오 (40~226줄) |
+| routes/generate/conversation-presence-runtime.ts | 아니오 (68~352줄) |
+| services/storage/message-trash.storage.ts | 아니오 (1~80, 301~330줄과 함수 목록) |
+| services/conversation/server-autonomous-scheduler.service.ts | 아니오 (25~66, 150~200, 300~420줄) |
+| 나머지 "아직" 파일 전부 | 아니오 |
+
 ## 스케줄 · 상태 · 먼저 말 걸기
 
 | 마리나라 파일 | 줄 | 상태 | 우리 쪽 | 빠진 것 |
