@@ -392,11 +392,11 @@ test('지금 답장: 기다리던 늦은 답을 바로 돌릴 수 있게 풀어�
     assert.equal(G.holdReplies(m, t), 0);                 // (다시 붙잡지 않아요)
     assert.equal(L.nextJob(m, t).id, j.id);
 });
-test('생성 연결(마리나라의 connectionId): 초안 모델 · AI 기능 모델 · 실리 연결 프로필 가운데 고르고, 고른 것이 남아요', async () => {
+test('생성 연결(마리나라의 connectionId): 확장에 넣어 둔 연결 · 실리 연결 프로필 가운데 고르고, 고른 것이 남아요. 이름은 모델 이름', async () => {
     const { m } = world(), T = globalThis.__dropTest;
     T.metadata = { narrative_archive: m };
     T.profiles = [{ id: 'p1', name: 'Gemini Pro' }];
-    assert.deepEqual(G.liveConnections(), [{ id: '', name: '초안 모델' }, { id: 'ai', name: 'AI 기능 모델' }, { id: 'profile:p1', name: 'Gemini Pro' }]);
+    assert.deepEqual(G.liveConnections(), [{ id: '', name: 'draft-model', model: 'draft-model', provider: 'custom' }, { id: 'ai', name: 'ai-model', model: 'ai-model', provider: 'custom' }, { id: 'profile:p1', name: 'Gemini Pro', model: '', provider: '' }]);
     assert.equal(G.liveScheduleConnection(m), '');
     assert.equal(await G.liveSetScheduleConnection(m, 'profile:p1'), 'profile:p1');
     assert.equal(G.liveScheduleConnection(m), 'profile:p1');

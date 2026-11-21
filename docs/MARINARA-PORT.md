@@ -130,15 +130,17 @@
 
 ## 꼭 할 것 (소망이 "나중에 꼭 하셈"이라고 한 것, 2026-11-21)
 
+- [x] **연결 목록에 우리 확장의 칸 이름("초안 모델" · "AI 기능 모델")을 내지 않아요. 이름은 모델 이름이에요.** (소망, 2026-11-21.) 키는 새로 받지 않고 확장에 넣어 둔 것과 실리태번의 것을 그대로 써요(소망: "Api키는 실리 꺼랑 확장꺼 그대로"). 빠른 전환기의 "이 방이 쓸 모델 · 기본값으로 · 최근 두 개 · 즐겨찾기(순서)"는 마리나라의 `PUT /chats/:id/model` · `readChatModelOverride` · `applyChatModelOverride` · `reorderStars`를 그대로 써요(`src/marinara/chat-model.js`). 스케줄의 "생성 연결 고르기"도 같은 목록이에요. **마리나라와 다른 것**: 연결을 추가 · 삭제하는 화면, 모델 목록(catalog) 받아 오기, 저장한 모델 · 기본 모델 바꾸기는 없어요(연결은 확장 설정과 실리태번에서 정해요).
+
 - [ ] **Merged 단체방의 지시문을 우리 지시문으로 바꾸기.** (소망, 2026-11-21: "일단 merged만 마리나라꺼 쓰셈", "꼭 우리 지시문으로 수정해야할 걸로 기록해두셈".) 지금 Merged 단체방은 마리나라의 Conversation 지시문을 그대로 써요(`src/marinara/merged-conversation.js`, 잇는 곳은 `src/phone2merged.js` · `phone2go.js gatherMerged`). 그래서 Merged 방의 답에는 번역(ko) · 폰에서 한 일(does) · 상태 줄 · 반응 · 상태 명령이 없어요. 우리 답장 지시문(`src/phone2reply.js`)에 "여럿의 말을 한꺼번에 쓰는" 모양을 만들어 바꿔야 해요. 바꿀 때 `docs/PROMPT-RULES.md`를 읽고, 답을 나누는 것은 `takeMerged` 자리에서 해요.
 
-- [ ] **무작위 연결과 예비 연결.** 마리나라는 연결을 "random"으로 두면 무작위 묶음에서 하나를 고르고, 연결이 실패하면 예비 연결로 다시 보내요(`resolveConversationScheduleConnection`, `withConnectionFallbackProvider`, `connections.listRandomPool` · `getFallbackForAgents`). 우리 확장에는 그런 연결 설정이 없어요. 연결 설정을 만들고 스케줄 요청이 그걸 쓰게 해요.
+- [ ] **예비 연결.** 마리나라는 연결이 실패하면 예비 연결(fallback)로 한 번 더 해요. 아직 없어요. (무작위 연결은 안 쓰는 기능이라 뺐어요 — 소망, 2026-11-21: "무작위 연결은 안 쓸 기능이야 빼".)
 - [ ] **꺼 둔 이유(`disabledAutonomousIntents`) 지키기.** 마리나라는 서버가 돌릴 때(`server-autonomous-scheduler.service.ts`의 `resolveAvailableIntent`)만 이걸 봐요. 서버 플러그인으로 그 파일을 가져올 때 같이 넣어요. 그 전까지는 꺼 둔 이유가 안 먹어요.
 
 ## 아직 마리나라와 다른 것 (이미 넣은 기능 안에서)
 
 - 캐릭터 명령 켜고 끄기(방마다): 명령을 더 가져올 때 같이 넣어요(`conversation-command-runtime.ts`).
-- 연결: 마리나라는 "random"(무작위 묶음에서 하나)과 실패했을 때 쓸 예비 연결이 있어요. 우리는 없어요.
+- 연결: 마리나라는 실패했을 때 쓸 예비 연결이 있어요. 우리는 없어요. 무작위 연결("random")은 안 쓰는 기능이라 가져오지 않아요(소망, 2026-11-21).
 - 꺼 둔 이유(`disabledAutonomousIntents`): 마리나라는 서버가 돌릴 때(`server-autonomous-scheduler`)만 봐요. 창이 열려 있을 때의 길에는 그 검사가 없어요. 우리도 지금은 안 봐요: 서버 쪽을 가져올 때 같이 넣어요.
 - 방에 사람 넣고 빼기: 마리나라는 들어오고 나갈 때 카드 변수를 채우고 지워요. 우리에게는 카드 변수가 없어서 그 처리가 없어요.
 - 대화 요약: 마리나라는 요약한 말을 `hiddenFromAI`로 바꿔요. 우리는 우리 요약(`phone2digest.js`)을 써요. 아직 안 대 봤어요.

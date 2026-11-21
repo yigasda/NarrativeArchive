@@ -1596,3 +1596,9 @@ test('빠른 전환기: 즐겨찾기는 순서가 있고 위 · 아래로 옮겨
     assert.equal(G.liveToggleStar(d), false);
     assert.deepEqual(G.liveStars(), [a, b]);
 });
+test('연결 목록: 이름은 모델 이름이에요. 확장 안쪽의 칸 이름은 내지 않아요', () => {
+    world();
+    const rows = G.liveModelConnections();
+    assert.deepEqual(rows, [{ id: 'dr', name: 'draft-model', model: 'draft-model', provider: 'custom' }, { id: 'ai', name: 'ai-model', model: 'ai-model', provider: 'custom' }]);
+    assert.doesNotMatch(JSON.stringify([rows, G.liveConnections()]), /초안|기능/);
+});

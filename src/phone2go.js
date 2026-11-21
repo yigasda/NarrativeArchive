@@ -444,9 +444,9 @@ export function followSchedule(real, now = Date.now()) {
     return n;
 }
 // ---- 마리나라의 스케줄 편집 창이 부르던 요청들 (phone2sched.js → src/marinara/schedule-routes.js)
-// 생성 연결 (마리나라의 connectionId): 스케줄을 만들 때 쓸 연결을 골라요. '' = 초안 모델(기본), 'ai' = AI 기능 모델,
+// 생성 연결 (마리나라의 connectionId): 스케줄을 만들 때 쓸 연결을 골라요. 목록은 liveModelConnections와 같아요 (이름은 모델 이름). '' = 기본 연결,
 // 'profile:<id>' = 실리태번 연결 프로필. 고른 것은 w.presence.meta.scheduleConnectionId에 남아요
-export const liveConnections = () => [{ id: '', name: '초안 모델' }, { id: 'ai', name: 'AI 기능 모델' }, ...aiProfiles().map(p => ({ id: `profile:${p.id}`, name: String(p.name || p.id) }))];
+export const liveConnections = () => liveModelConnections().map(c => ({ ...c, id: c.id === 'dr' ? '' : c.id }));
 export const liveScheduleConnection = real => { const id = String(liveWorld(real)?.presence?.meta?.scheduleConnectionId || ''); return liveConnections().some(c => c.id === id) ? id : ''; };
 export async function liveSetScheduleConnection(real, id = '') {
     if (!liveConnections().some(c => c.id === id)) throw new Error('없는 연결이에요');
@@ -998,11 +998,22 @@ export async function liveBranchRoom(real, roomId, messageId = '') { const room 
 // ---- 빠른 전환기 (마리나라의 QuickSwitcherMobile: 이 방이 쓸 모델 · 즐겨찾기 · 페르소나)
 // 1) 이 방이 쓸 모델 (PUT /chats/:id/model 그대로). 방에 room.connectionId 와 room.model = { modelOverride, recentModels, followsMainModel } 로 남아요
 //    고름(choice) = { connectionId, model?, name?, maxContext?, maxTokensOverride? }
-//      connectionId: liveModelConnections()의 id ('dr' 초안 모델 · 'ai' AI 기능 모델 · 'profile:<id>' 실리 연결 프로필)
+//      connectionId: liveModelConnections()의 id
 //      model: 그 연결의 키 · 주소로 다른 모델을 이 방에서만 돌려요 (마리나라의 catalog pick). 커스텀 API · Vertex 연결에서만 돼요
 //    liveRoomModel(real, 방 id) → { current: 고름 | null (기본값을 따름), recent: [고름, 고름] (새것 먼저), followsMain }
-//    liveSetRoomModel(real, 방 id, 고름 | null) → 위와 같은 값. null: 기본값(초안 모델)으로 돌아가요
-export const liveModelConnections = () => [{ id: 'dr', name: '초안 모델' }, { id: 'ai', name: 'AI 기능 모델' }, ...aiProfiles().map(p => ({ id: `profile:${p.id}`, name: String(p.name || p.id) }))];
+//    liveSetRoomModel(real, 방 id, 고름 | null) → 위와 같은 값. null: 기본값으로 돌아가요 (마리나라의 "Use default")
+// 연결 목록 (마리나라의 연결 줄 모양: { id, name, model, provider }). 키는 새로 받지 않아요: 확장에 넣어 둔 것과 실리태번의 것을 그대로 써요
+//   이름은 모델 이름이에요 (확장 안쪽의 칸 이름은 화면에 내지 않아요 — 소망, 2026-11-21). 실리 연결 프로필은 그 프로필의 이름
+//   id: 'dr' · 'ai' (확장에 넣어 둔 두 연결) · 'profile:<id>' (실리 연결 프로필). 안쪽에서만 쓰는 값이에요
+const connRow = id => {
+    const t = connSettings(id);
+    if (t.mode === 'vertex') return { id, name: String(t.vxModel || ''), model: String(t.vxModel || ''), provider: 'google_vertex' };
+    if (t.mode === 'custom') return { id, name: String(t.model || ''), model: String(t.model || ''), provider: t.fmt === 'anthropic' ? 'anthropic' : 'custom' };
+    // (SillyTavern's own connection: the model it is set to now)
+    const c = ctx(), model = String((c.mainApi === 'openai' ? c.getChatCompletionModel?.() : '') || c.onlineStatus || '');
+    return id === 'ai' ? { id, name: model, model, provider: String(c.mainApi || 'sillytavern') } : null;
+};
+export const liveModelConnections = () => [connRow('dr'), connRow('ai'), ...aiProfiles().map(p => ({ id: `profile:${p.id}`, name: String(p.name || p.id), model: String(p.model || ''), provider: String(p.api || '') }))].filter(Boolean);
 const roomChat = room => ({ connectionId: room.connectionId || null, metadata: room.model || {} });
 export function liveRoomModel(real, roomId) {
     const room = liveWorld(real)?.messenger?.rooms?.[roomId];
