@@ -31,9 +31,10 @@ export const apiFormat = t => t.fmt === 'anthropic' || t.fmt === 'openai' ? t.fm
 // Sent as output_config.effort (Anthropic format) or reasoning_effort (OpenAI format, and Vertex through SillyTavern).
 // force: the job's effort wins over the connection's, '' then meaning the model's own (compression asks for its own level;
 // the phone's jobs keep theirs whatever the connection says)
-export async function callConn(t, system, prompt, maxTokens, effort = '', force = false, keepSystem = false) {
+// signal: an AbortSignal that stops the request itself (생성 중지)
+export async function callConn(t, system, prompt, maxTokens, effort = '', force = false, keepSystem = false, signal = null) {
     const e = force ? effort : (t.effort || effort);
-    if (t.mode === 'vertex') return stripThink(await callVertex(t, system, prompt, maxTokens, e));
+    if (t.mode === 'vertex') return stripThink(await callVertex(t, system, prompt, maxTokens, e, signal));
     // the instructions go at the top of the first message instead of the system part: some relays drop the system part
     // without a word, and the model then answers the bare request (a digest taken for "write the next section").
     // keepSystem: 규칙은 시스템 메시지로 is on, so the user asked for the real system part
@@ -41,7 +42,7 @@ export async function callConn(t, system, prompt, maxTokens, effort = '', force 
         const turns = turnsOf(prompt);
         if (turns.length) { turns[0] = { ...turns[0], content: `[INSTRUCTIONS]\n${system}\n[/INSTRUCTIONS]\n\n${turns[0].content}` }; prompt = turns; system = ''; }
     }
-    return stripThink(apiFormat(t) === 'anthropic' ? await callAnthropic(t, system, prompt, maxTokens, e) : await callOpenAICompat(t, system, prompt, maxTokens, e));
+    return stripThink(apiFormat(t) === 'anthropic' ? await callAnthropic(t, system, prompt, maxTokens, e, signal) : await callOpenAICompat(t, system, prompt, maxTokens, e, signal));
 }
 
 // prompt: one user message, or a whole conversation [{ role: 'user' | 'assistant', content }] (압축 작업실).
@@ -84,17 +85,17 @@ function anthropicHeaders(t, lean = false) {
 async function anthropicFetch(t, url, init = {}) {
     if (!t.leanHeaders) {
         try { return await fetch(url, { ...init, headers: anthropicHeaders(t) }); }
-        catch (e) { if (isAnthropicHost(t)) throw e; }
+        catch (e) { if (isAnthropicHost(t) || init.signal?.aborted) throw e; }
     }
     const r = await fetch(url, { ...init, headers: anthropicHeaders(t, true) });
     if (!t.leanHeaders) { t.leanHeaders = true; saveGlobal(); }
     return r;
 }
 
-export async function callAnthropic(t, system, prompt, maxTokens, effort = '') {
+export async function callAnthropic(t, system, prompt, maxTokens, effort = '', signal = null) {
     if (!t.model) throw new Error('모델 이름을 넣어 주세요 (⚙ 설정 → AI 모델)');
     const endpoint = `${anthropicBase(t.url)}/v1/messages`;
-    const send = withEffort => anthropicFetch(t, endpoint, { method: 'POST', body: JSON.stringify({
+    const send = withEffort => anthropicFetch(t, endpoint, { method: 'POST', signal, body: JSON.stringify({
         model: t.model, max_tokens: maxTokens,
         ...(system ? { system } : {}),
         messages: turnsOf(prompt),
@@ -107,6 +108,7 @@ export async function callAnthropic(t, system, prompt, maxTokens, effort = '') {
         // an older model without effort gets the plain request, and is remembered
         if (tryEffort && r.status === 400 && /effort|output_config/i.test(await r.clone().text())) { t.noEffort = true; saveGlobal(); r = await send(false); }
     } catch (e) {
+        if (signal?.aborted) throw e;
         throw new Error(`주소에 연결하지 못했어요. 주소가 맞는지, 이 주소가 Anthropic 형식(/v1/messages)을 받는지 확인해 주세요. (${e.message || e})`);
     }
     const body = await r.text();
@@ -165,7 +167,7 @@ export async function listModels(t) {
     return ids;
 }
 
-export async function callOpenAICompat(t, system, prompt, maxTokens, effort = '') {
+export async function callOpenAICompat(t, system, prompt, maxTokens, effort = '', signal = null) {
     const { url, key, model } = t;
     const endpoint = chatCompletionsUrl(url);
     if (!endpoint || !model) throw new Error('커스텀 API의 URL과 모델 이름을 넣어 주세요 (⚙ 설정 → AI 모델)');
@@ -173,7 +175,7 @@ export async function callOpenAICompat(t, system, prompt, maxTokens, effort = ''
     if (key) headers.Authorization = `Bearer ${key}`;
     let r;
     try {
-        const send = withEffort => fetch(endpoint, { method: 'POST', headers, body: JSON.stringify({
+        const send = withEffort => fetch(endpoint, { method: 'POST', headers, signal, body: JSON.stringify({
             model, max_tokens: maxTokens, temperature: 0.3, stream: false,
             ...(withEffort ? { reasoning_effort: effort } : {}),
             messages: [...(system ? [{ role: 'system', content: system }] : []), ...turnsOf(prompt)],
@@ -187,6 +189,7 @@ export async function callOpenAICompat(t, system, prompt, maxTokens, effort = ''
             if (/reasoning|effort|temperature|unknown|unrecognized|not supported|extra/i.test(msg)) { t.noEffort = true; saveGlobal(); r = await send(false); }
         }
     } catch (e) {
+        if (signal?.aborted) throw e;
         throw new Error(`주소에 연결하지 못했어요. 브라우저에서 바로 부를 수 없는(CORS) API일 수 있어요. (${e.message || e})`);
     }
     const body = await r.text();
@@ -214,15 +217,15 @@ export const vxRegion = t => String(t.vxLocation || '').trim() || ctx().chatComp
 
 // a model that a region does not carry answers 404 "Publisher model … not found": try the other usual regions once,
 // and keep the one that worked
-export async function callVertex(t, system, prompt, maxTokens, effort = '') {
+export async function callVertex(t, system, prompt, maxTokens, effort = '', signal = null) {
     const first = vxRegion(t);
     const others = ['global', 'us-central1', 'us-east5', 'europe-west4'].filter(x => x !== first);
-    try { return await callVertexAt(t, first, system, prompt, maxTokens, effort); }
+    try { return await callVertexAt(t, first, system, prompt, maxTokens, effort, signal); }
     catch (e) {
         if (!/Vertex 오류 404/.test(String(e?.message))) throw e;
         for (const loc of others) {
             try {
-                const out = await callVertexAt(t, loc, system, prompt, maxTokens, effort);
+                const out = await callVertexAt(t, loc, system, prompt, maxTokens, effort, signal);
                 t.vxLocation = loc; saveGlobal();
                 toastr.info(`Vertex 지역 ${first}에 이 모델이 없어서 ${loc}로 바꿨어요`, '서사 아카이브');
                 return out;
@@ -231,13 +234,13 @@ export async function callVertex(t, system, prompt, maxTokens, effort = '') {
         throw e;
     }
 }
-async function callVertexAt(t, loc, system, prompt, maxTokens, job = '') {
+async function callVertexAt(t, loc, system, prompt, maxTokens, job = '', signal = null) {
     const model = String(t.vxModel || '').trim();
     if (!model) throw new Error('Vertex 모델을 골라 주세요 (예: gemini-2.5-flash)');
     // callConn already chose between the connection's setting and the job's; nothing chosen: the model decides
     const effort = ['low', 'medium', 'high'].find(x => x === job) || 'auto';
     const r = await fetch('/api/backends/chat-completions/generate', {
-        method: 'POST',
+        method: 'POST', signal,
         headers: ctx().getRequestHeaders(),
         body: JSON.stringify({
             chat_completion_source: 'vertexai', vertexai_auth_mode: ctx().chatCompletionSettings?.vertexai_auth_mode || 'full', vertexai_express_project_id: ctx().chatCompletionSettings?.vertexai_express_project_id, vertexai_region: loc, model,
@@ -307,16 +310,16 @@ export const draftReady = () => ['custom', 'vertex'].includes(draftSettings().mo
 // timeout (ms, optional): a request that hasn't answered by then is given up (its late answer is not used), so a stuck call
 // doesn't hold the phone's work for good. Not passed by compression, which may think for long
 export async function askDraft(prompt, opts = {}) {
-    const { system = '', maxTokens = 0, effort = '', force = false, guard = null, keepSystem = false, timeout = 0 } = opts;
+    const { system = '', maxTokens = 0, effort = '', force = false, guard = null, keepSystem = false, timeout = 0, signal = null } = opts;
     const t = draftSettings();
     if (!draftReady()) throw new Error('초안 모델이 없어요. ⚙ 설정 → AI 모델 → 초안 모델에서 정해 주세요.');
     try {
-        const call = callConn(t, system, prompt, Math.max(256, Number(maxTokens) || Number(t.max) || 16000), effort, force, keepSystem);
+        const call = callConn(t, system, prompt, Math.max(256, Number(maxTokens) || Number(t.max) || 16000), effort, force, keepSystem, signal);
         const out = timeout > 0 ? await Promise.race([call, new Promise((_, no) => setTimeout(() => no(Object.assign(new Error(`모델이 ${Math.round(timeout / 60000)}분 넘게 답하지 않아서 멈췄어요. 다시 해 주세요`), { timedOut: true })), timeout))]) : await call;
         if (!out) throw new Error('초안 모델이 빈 답을 돌려줬어요');
         if (looksRefused(out, guard)) throw refusedError('초안 모델');
         return out;
-    } catch (e) { if (e?.timedOut) throw e; return viaFallback(e, 'dr', prompt, opts); }
+    } catch (e) { if (e?.timedOut || signal?.aborted) throw e; return viaFallback(e, 'dr', prompt, opts); }
 }
 // Compression reads a long raw log and ties causes together: it gets its own thinking level (default high) and
 // room for that thinking (32,000 tokens, or the draft limit if that is larger). 'conn' = the connection's own setting.
@@ -346,21 +349,21 @@ export const stripThink = t => String(t ?? '').replace(/<(think|thinking|reasoni
 // Sends one request: to the chosen Connection Manager profile, or to whatever is connected now.
 export async function askAI(prompt, opts = {}) {
     try { return await askAIOnce(prompt, opts); }
-    catch (e) { return viaFallback(e, 'ai', prompt, opts); }
+    catch (e) { if (opts.signal?.aborted) throw e; return viaFallback(e, 'ai', prompt, opts); }
 }
-async function askAIOnce(prompt, { system = '', maxTokens = 0, effort = '', force = false, guard = null, keepSystem = false } = {}) {
+async function askAIOnce(prompt, { system = '', maxTokens = 0, effort = '', force = false, guard = null, keepSystem = false, signal = null } = {}) {
     const c = ctx();
     const g = globalSettings();
     const max = Math.max(64, Number(maxTokens) || Number(g.aiMaxTokens) || 8192);
     let out;
     const a = connSettings('ai');
     if (a.mode === 'custom' || a.mode === 'vertex') {
-        out = await callConn(a, system, prompt, max, effort, force, keepSystem);
+        out = await callConn(a, system, prompt, max, effort, force, keepSystem, signal);
     } else if (g.aiProfile) {
         const p = aiProfiles().find(x => x.id === g.aiProfile);
         if (!p) throw new Error('고른 연결 프로필을 찾을 수 없어요. ⚙ 설정 → AI 모델에서 다시 골라 주세요.');
         const msgs = [...(system ? [{ role: 'system', content: system }] : []), ...turnsOf(prompt)];
-        const r = await c.ConnectionManagerRequestService.sendRequest(p.id, msgs, max, { stream: false, extractData: true, includePreset: true, includeInstruct: true });
+        const r = await c.ConnectionManagerRequestService.sendRequest(p.id, msgs, max, { stream: false, extractData: true, includePreset: true, includeInstruct: true, ...(signal ? { signal } : {}) });
         out = typeof r === 'string' ? r : r?.content;
     } else {
         if (typeof c.generateRaw !== 'function') throw new Error('이 실리태번 버전에서는 AI 호출을 쓸 수 없어요');

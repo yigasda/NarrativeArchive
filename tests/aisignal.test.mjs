@@ -1,0 +1,34 @@
+// 생성 중지: 멈추라는 신호(AbortSignal)가 모델 요청까지 가서 요청 자체를 끊어요 (src/ai.js)
+import test from 'node:test';
+import assert from 'node:assert/strict';
+
+import { readFile } from 'node:fs/promises';
+
+// (ai.js as it is, with what it imports stood in for: nothing here needs the settings or the screen)
+const src = (await readFile(new URL('../src/ai.js', import.meta.url), 'utf8')).replace(/^import [^;]+;\n/gm, '');
+const stubs = `const ctx=()=>({getRequestHeaders:()=>({})});const globalSettings=()=>({});const saveGlobal=()=>{};const MODULE='x';const toastr={info(){},warning(){},error(){}};`;
+const AI = await import('data:text/javascript;base64,' + Buffer.from(stubs + src).toString('base64'));
+
+function fakeFetch() {
+    const seen = [];
+    globalThis.fetch = (url, init = {}) => new Promise((ok, no) => {
+        seen.push({ url, signal: init.signal });
+        if (init.signal?.aborted) return no(Object.assign(new Error('aborted'), { name: 'AbortError' }));
+        init.signal?.addEventListener('abort', () => no(Object.assign(new Error('aborted'), { name: 'AbortError' })));
+        if (!init.signal) ok({ ok: true, status: 200, text: async () => JSON.stringify({ choices: [{ message: { content: 'hi' } }], content: [{ type: 'text', text: 'hi' }] }), clone() { return this; }, json: async () => ({ choices: [{ message: { content: 'hi' } }] }) });
+    });
+    return seen;
+}
+for (const [name, t] of [['OpenAI 형식', { mode: 'custom', url: 'https://relay.example/v1', key: 'k', model: 'm' }], ['Anthropic 형식', { mode: 'custom', url: 'https://relay.example', key: 'k', model: 'm', format: 'anthropic', leanHeaders: true }], ['Vertex', { mode: 'vertex', vxModel: 'gemini-x' }]]) {
+    test(`${name}: 신호가 요청에 실려 가고, 멈추면 요청이 끊겨요 (연결 오류 글로 바뀌지 않아요)`, async () => {
+        const seen = fakeFetch(), stop = new AbortController();
+        const call = AI.callConn(t, 'SYS', 'hello', 256, '', false, false, stop.signal);
+        await new Promise(r => setTimeout(r, 5));
+        assert.equal(seen.length, 1);
+        assert.equal(seen[0].signal, stop.signal);
+        stop.abort();
+        const err = await call.catch(e => e);
+        assert.equal(err.name, 'AbortError');
+        assert.equal(seen.length, 1);                    // 다시 보내지 않아요
+    });
+}

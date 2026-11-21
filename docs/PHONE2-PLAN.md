@@ -600,7 +600,7 @@ Orbit이 버벅이는 제일 큰 이유는 저장이에요: Orbit 데이터가 �
 - 스케줄 편집 창이 부르는 것(마리나라의 요청 처리 코드 `src/marinara/schedule-routes.js` · `character-schedule-transfer.js`를 가져옴):
   - `liveDraftSchedule`(초안만 만들기: 주 · 하루, 저장 안 함, 실패하면 오류에 `rawResponse`), `liveScheduleSummary`(루틴 요약), `liveRepairSchedule`(실패한 답을 고쳐서 넣기), `liveRenewSchedules`(매주 갱신: 지난 스케줄을 이어받음), `liveSetAutoRenew` · `liveScheduleInfo`, `liveScheduleZone` · `liveSetScheduleZone` · `liveTimeZone`, `liveReplyNow`.
   - 시간대는 마리나라처럼 스케줄 전체에 하나(`w.presence.meta.conversationTimeZone`)예요. 안 정하면 사람마다 폰의 시간대를 써요.
-  - "하루에 요청 1회"는 마리나라도 화면이 `mode: 'day'`를 일곱 번 불러요. 멈추기는 `signal`: 모델 요청 자체는 못 끊고, 온 답을 버려요.
+  - "하루에 요청 1회"는 마리나라도 화면이 `mode: 'day'`를 일곱 번 불러요. 멈추기는 `signal`: 모델 요청 자체를 끊어요(`src/ai.js`의 `callConn` · `askDraft` · `askAI`가 `signal`을 받아요, `tests/aisignal.test.mjs`).
   - 스케줄을 저장할 때(`liveSetSchedule`) 하는 일이 바뀌었으면 장소를 한 번 물어요. 끝 `24:00`은 `00:00`으로 바꿔 둬요.
   - 생성 연결(마리나라의 `connectionId`): 초안 모델(기본) · AI 기능 모델 · 실리태번 연결 프로필 가운데 골라요(`liveConnections` · `liveScheduleConnection` · `liveSetScheduleConnection`). 요청마다 `connectionId`로 따로 줄 수도 있어요.
 - 지금은 실리 창이 열려 있는 동안만 돌아요. 창을 닫아도 돌게 하는 것(서버 플러그인에서 돌리기)이 다음이에요.
