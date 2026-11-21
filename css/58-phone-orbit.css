@@ -247,8 +247,7 @@
 .ax .ob_ci.on { background: rgba(27, 29, 36, 0.07); --axbg: rgba(27, 29, 36, 0.07); }
 /* 스케줄 · 대화 상태 (시안 docs/mockups/orbit-sched, docs/design/orbit-marinara.md 1-4): 대화 상태 카드(.sc)와 스케줄 편집 시트(.os_sh.ss).
    시트 · 흰 카드 · 줄 · 알약 단추는 채팅 설정의 것(os_*)을 그대로 쓰고, 새 부품(상태 점 · 칩 · 단계 막대 · 하루 막대 · 블록 줄 · 고르는 줄)만 여기서 한 번씩 정해요. 어두운 방은 .dk */
-/* (테마가 div의 줄 높이를 크게 잡으면 눈금자 숫자가 카드 밖으로 밀려났어요 — 소망 화면. 이 화면들의 줄 높이는 여기서 정해요) */
-.ax .ss div, .ax .sc div { --axfs: inherit; line-height: 1.35; }
+.ax .ss div, .ax .sc div { --axfs: inherit; line-height: 1.35; } /* (줄 높이는 여기서 정해요: 테마가 div의 줄 높이를 크게 잡으면 눈금자 숫자가 카드 밖으로 밀려났어요 — 소망 화면) */
 .ax .ss { --on: #8fb59b; --idle: #e0c48c; --dnd: #cf9488; --off: #c3c5cb; } .ax .sc { --on: #8fb59b; --idle: #e0c48c; --dnd: #cf9488; --off: #c3c5cb; }
 .ax .ss .dot, .ax .sc .dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--on); } .ax :is(.ss, .sc) .dot.idle { background: var(--idle); } .ax :is(.ss, .sc) .dot.dnd { background: var(--dnd); } .ax :is(.ss, .sc) .dot.off { background: var(--off); }
 .ax .sc { position: absolute; z-index: 9; left: 10px; right: 10px; top: 104px; padding: 6px 14px 14px; border-radius: 22px; background: #fff; box-shadow: 0 1px 1.5px rgba(30,24,50,.05), 0 14px 36px rgba(30,24,50,.13); color: #3a3d45; }
