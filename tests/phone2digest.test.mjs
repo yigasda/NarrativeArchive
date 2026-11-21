@@ -153,7 +153,7 @@ test('실제 짧은 압축 지시문에 네 자리가 그대로 있어요. 폰 1
     const dg = await readFile(new URL('../src/digest.js', import.meta.url), 'utf8');
     assert.ok(dg.includes('export const AI_SYS_DIGEST = `') && dg.includes('- SECTIONS: the sections in order') && dg.includes('- TARGET: the most tokens the digest may use'));
     for (const f of (await readdir(new URL('../src/', import.meta.url))).filter(f => f.endsWith('.js') && !['phone2digest.js', 'phone2live.js', 'phone2go.js'].includes(f))) assert.doesNotMatch(await readFile(new URL(`../src/${f}`, import.meta.url), 'utf8'), /phone2digest/, f);
-    assert.doesNotMatch(await readFile(new URL('../src/phone2digest.js', import.meta.url), 'utf8'), /from '\.\/(?!phone2store\.js|phone2clock\.js)/);
+    assert.doesNotMatch(await readFile(new URL('../src/phone2digest.js', import.meta.url), 'utf8'), /from '\.\/(?!phone2store\.js|phone2clock\.js|phone2room\.js)/);
 });
 
 test('실제 지시문 꺼내기(시험용): 다이제스트 지시문이 글자 그대로 나와요', async () => {

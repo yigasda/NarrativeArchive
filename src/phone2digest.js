@@ -7,6 +7,7 @@
 // 방의 요약이 길어지면 오래된 절반을 한 장면으로 다시 줄여요(요약의 요약, 아카이브 다이제스트의 지시문 그대로).
 // 이 파일은 폰 2 저장 자리와 시계만 불러요. 모델은 부르는 쪽이 불러요. 폰 1은 이 파일을 안 불러요.
 
+import { allRead } from './phone2room.js';
 import { liveWorld, numberLive } from './phone2store.js';
 import { liveWall } from './phone2clock.js';
 
@@ -25,7 +26,7 @@ export const DIGEST_STATE = '(The messenger keeps no STATE or OPEN blocks. Write
 // how long after a failed try the next may be: an hour, then four times longer each failure in a row, a day at most
 const failWait = f => Math.min(DIGEST.waitMax, DIGEST.waitMs * 4 ** Math.max(0, (f?.tries || 1) - 1));
 // a message that is something said (or a call): one the owner only did things in, with no words, is not talk
-const said = x => !!x && (!!x.call || !!one(x.text));
+const said = x => allRead(x) && (!!x.call || !!one(x.text));
 // the room's messages not summarized yet, oldest first
 export const undigested = room => (room?.messages || []).filter(x => Number.isInteger(x.n) && x.n > (room.digest?.upto ?? -1) && said(x));
 // the stretch to summarize now: the oldest DIGEST.take of them once DIGEST.at wait; null when it isn't time, or a try

@@ -4,6 +4,7 @@
 // 이 파일은 무엇을 전할지 고르고, 요청 글과 넣을 글을 만들고, 전했다고 표시만 해요. 모델을 부르고 롤플 채팅에 넣는 건
 // 부르는 쪽(답장을 돌리는 파일)이 해요. 폰 1 · 아카이브는 읽지도 쓰지도 않아요. 폰 1은 이 파일을 부르지 않아요.
 
+import { allRead } from './phone2room.js';
 import { liveKey } from './phone2store.js';
 
 // lines: 한 번에 전하는 말 수(오래된 것부터: 남은 건 다음에 이어서); tail: 같이 보여 주는 롤플의 끝 메시지(말투 · 언어를 맞추게); words: 글의 길이
@@ -17,7 +18,7 @@ const said = x => (x?.call ? `(call ${Math.max(0, Math.round(Number(x.call.min) 
 // 아직 롤플에 안 전한 말: 방마다 [{ room, names, rows: [message] }], 말한 순서대로. 오래된 것부터 BACK.lines개까지
 //   → { rooms, count, more (그보다 많아서 이번에 못 실은 새 말 수: 다음에 이어서 전해요) }
 export function backLeft(w) {
-    const all = Object.values(w?.messenger?.rooms || {}).flatMap(r => (r.messages || []).filter(x => !x.told && said(x)).map(x => ({ r, x })));
+    const all = Object.values(w?.messenger?.rooms || {}).flatMap(r => (r.messages || []).filter(x => !x.told && allRead(x) && said(x)).map(x => ({ r, x })));
     all.sort((a, b) => (a.x.at || 0) - (b.x.at || 0) || (a.x.n || 0) - (b.x.n || 0));
     const kept = all.slice(0, BACK.lines), by = new Map();
     for (const { r, x } of kept) { if (!by.has(r)) by.set(r, []); by.get(r).push(x); }

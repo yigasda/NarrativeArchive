@@ -11,6 +11,7 @@
 //   [#13] Ren [Diary]: 방금 들은 말 때문에 속상한 마음을 적음
 // 메시지 하나: { id, n, from, text, at (ms), ko?, state?, does?: [{ app, what }], call?: { min, summary }, act? (말 없이 한 일만) }
 
+import { aiReads } from './phone2room.js';
 import { liveKey, liveWorld, numberLive } from './phone2store.js';
 import { liveWall } from './phone2clock.js';
 
@@ -29,7 +30,7 @@ export function feedRows(m, owner, { after = 0, upto = Infinity } = {}) {
     const out = [];
     for (const room of Object.values(w.messenger?.rooms || {})) {
         if (!room.members.some(n => same(n, owner))) continue;
-        for (const x of room.messages || []) if (x.n > after && x.n <= upto) out.push({ ...x, room });
+        for (const x of room.messages || []) if (x.n > after && x.n <= upto && aiReads(x, owner)) out.push({ ...x, room });
     }
     return out.sort((a, b) => a.n - b.n);
 }
@@ -76,8 +77,8 @@ export function messengerNow(m, owner, { tz = 'UTC', per = 6 } = {}) {
     numberLive(w);
     const out = [];
     for (const room of Object.values(w.messenger?.rooms || {})) {
-        if (!room.members.some(n => same(n, owner)) || !(room.messages || []).some(x => !(x.act && !one(x.text)))) continue;
-        out.push(`[Orbit · ${titleOf(room, owner)}]`, ...room.messages.filter(x => !(x.act && !one(x.text))).slice(-per).map(x => `${liveWall(tz, w.dayShift, x.at).at} ${x.from}: ${x.call ? `(call ${Math.round(Number(x.call.min) || 0)} min)` : one(x.text)}`));
+        if (!room.members.some(n => same(n, owner)) || !(room.messages || []).some(x => aiReads(x, owner) && !(x.act && !one(x.text)))) continue;
+        out.push(`[Orbit · ${titleOf(room, owner)}]`, ...room.messages.filter(x => aiReads(x, owner) && !(x.act && !one(x.text))).slice(-per).map(x => `${liveWall(tz, w.dayShift, x.at).at} ${x.from}: ${x.call ? `(call ${Math.round(Number(x.call.min) || 0)} min)` : one(x.text)}`));
     }
     return out.join('\n');
 }

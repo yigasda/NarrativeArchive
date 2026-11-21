@@ -15,6 +15,7 @@ import { parseJson } from './phoneparse.js';
 import { nameKey } from './people.js';
 import { liveWorld, livePhone, liveMeta, liveKey, liveAtYear, isSnap, setStoryKeeper, startFresh, enqueueReplies, enqueueJob, renamePersona, setDrawerSeed } from './phone2store.js';
 import { emojiOf, reactOf, putReact, quickReacts, noteRecent, messageOf } from './phone2react.js';
+import { markMessages, markedMessages, trashOf, restoreMessages, emptyTrash, dropRoom, roomTrash, restoreRoom, emptyRoomTrash, addMember, removeMember } from './phone2room.js';
 import { dropMessages, editMessage, replyTail, settleSwipes, swipeInfo, swipeTo, swipeList, dropSwipe, dropSwipes, dropOtherSwipes, koRows, koChunks, koInput, takeKo } from './phone2edit.js';
 import { AI_SYS_PHONE_KO, voiceRows, who as voiceWho } from './phonetr.js';
 import { askTranslator, glossaryEntries, glossaryIn } from './translate.js';
@@ -396,6 +397,27 @@ export async function liveDropMessages(real, roomId, ids) {
     if (n) { settleSwipes(real, roomId); await saveMeta(); }
     return n;
 }
+// ---- 말 · 방 다루기 (phone2room.js). 사람이 눌렀을 때만 해요. 바뀐 것이 있으면 저장까지 해요.
+const mine = real => { if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않아요'); return real; };
+const kept = async v => { if (v) await saveMeta(); return v; };
+// 말의 표시 (마리나라의 열쇠 그대로, 준 것만 바꿔요) → 바뀐 말의 수
+//   { hiddenFromAI: true|false, hiddenFromAICharacterIds: [이름] | null, pinnedToContext: true|false, bookmark: true | { label } | null, privateNote: 글 | null }
+export const liveMark = async (real, roomId, ids, patch) => kept(markMessages(mine(real), roomId, ids, patch));
+// 북마크 · 메모한 말 모아 보기 (roomId 없으면 모든 방) → [{ room, x, bookmark, note }]
+export const liveMarked = (real, roomId = '') => markedMessages(real, roomId);
+// 휴지통: 지운 말 보기 [{ x, at }] · 되살리기 · 비우기 (ids 없으면 전부) → 수
+export const liveTrash = (real, roomId) => trashOf(real, roomId);
+export async function liveRestore(real, roomId, ids) { const n = restoreMessages(mine(real), roomId, ids); if (n) { settleSwipes(real, roomId); await saveMeta(); } return n; }
+export const liveEmptyTrash = async (real, roomId, ids = null) => kept(emptyTrash(mine(real), roomId, ids));
+// 방 지우기(휴지통으로) · 지운 방들 [{ room, at }] · 되살리기 · 아주 버리기 (roomId 없으면 전부)
+export const liveDropRoom = async (real, roomId) => kept(dropRoom(mine(real), roomId));
+export const liveRoomTrash = real => roomTrash(real);
+export const liveRestoreRoom = async (real, roomId) => kept(restoreRoom(mine(real), roomId));
+export const liveEmptyRoomTrash = async (real, roomId = '') => kept(emptyRoomTrash(mine(real), roomId));
+// 방에 사람 넣기 · 빼기 → 방
+export const liveAddMember = async (real, roomId, name) => kept(addMember(mine(real), roomId, name));
+export const liveRemoveMember = async (real, roomId, name) => kept(removeMember(mine(real), roomId, name));
+
 // 말 고치기: 내 말이든 캐릭터 말이든 글을 바꿔요 ({ text } 원문, { ko } 한국어만, 둘 다도 돼요). 원문을 바꾸면 그 말의
 // 한국어는 지워져요(다시 받으려면 liveRetranslate). 답장을 다시 받지는 않아요. 저장까지 해요  → 바뀐 그 말 (바뀐 게 없으면 null)
 export async function liveEditMessage(real, roomId, msgId, change = {}) {

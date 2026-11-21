@@ -12,6 +12,7 @@
 // m: 폰 2 서랍(liveMeta: 폰 · 장부는 폰 2 것), real: 채팅의 진짜 메타(메신저 · 세계는 여기서 읽어요).
 // 폰 1은 이 파일을 안 불러요. 폰 1 반영을 고치면 여기도 같이 봐요(순서가 같은 300줄).
 
+import { aiReads } from './phone2room.js';
 import { askDraft, phoneForModel, coreSystem, moneyStage, daysPassed, aroundBlock, blindBlock, ownerClock, ordersBlock, parsePhone, recordsCore, recordCount, splitDays, homeScreens, cityIds,
     ITEM_KEYS, LISTS, APP_NAME, mergedState, everydayOn, everydayOnly, sizes, mergePhone, tagItems, phoneItems, byEvent, ensureIds, homeCountry, syncLives, glossAka, canUndo, restoreMerged, fxApp } from './phonedata.js';
 import { exclusive, pickRound, unreadCount, settleRound, pruneDropped, srcOf, bodyMark, quoted, journalAdd, journalRead, journalWrite, newSync } from './phonesync.js';
@@ -31,7 +32,7 @@ export const LIVE_ROUND = 100;
 const rowOf = (x, owner) => ({ index: x.n, text: [x.call ? `[#${x.n}] ${x.from} [Call]: ${Math.max(0, Math.round(Number(x.call.min) || 0))} min${one(x.call.summary) ? ` — ${one(x.call.summary)}` : ''}` : x.act && !one(x.text) ? '' : `[#${x.n}] ${x.from}: ${one(x.text)}`, ...(liveKey(x.from) === liveKey(owner) ? (x.does || []).filter(d => one(d?.what)).map(d => `[#${x.n}] ${owner} [${one(d.app)}]: ${one(d.what)}`) : [])].filter(Boolean).join('\n') });
 // whether the reflection has anything to read in a message (a reply that only changed the state, or what another
 // member did on their own phone, is no row)
-export const liveReads = (x, owner) => !!rowOf(x, owner).text;
+export const liveReads = (x, owner) => aiReads(x, owner) && !!rowOf(x, owner).text;
 // the situations the answer wrote (where things stand): kept on the phone for the next reply (its SITUATIONS), the
 // newest state of each id
 function keepSituations(p, list) {

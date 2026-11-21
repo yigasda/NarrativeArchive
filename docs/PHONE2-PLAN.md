@@ -569,6 +569,18 @@ Orbit이 버벅이는 제일 큰 이유는 저장이에요: Orbit 데이터가 �
   - 남은 것: 폰을 여는 쪽(디자인)이 `liveReady()`를 기다리기, `'off'`일 때 알려 주기.
 - 3단계: 스케줄 · 먼저 말 걸기를 플러그인에서 돌리기.
 
+## 말 · 방 다루기 (마리나라에서 가져옴)
+
+마리나라 코드를 가져와서 우리 저장 모양에 맞게만 고쳐요(AGPL-3.0: `LICENSE`, `NOTICE.md`). 가져온 파일은 `src/marinara/`에 있고, 파일마다 어디서 왔고 뭘 바꿨는지 적혀 있어요.
+
+- 가져온 것: `message-marks.js`(북마크 · 고정 · 메모 · 고정한 말을 요청에 넣기), `message-hidden.js`(AI에게 숨기기 · 한 사람에게만 숨기기). 타입만 뗐어요.
+- 우리 쪽 잇기(`src/phone2room.js`): 표시는 마리나라 열쇠 그대로 말의 `x.extra`에 둬요(`hiddenFromAI`, `hiddenFromAICharacterIds`, `pinnedToContext`, `bookmark`, `privateNote`).
+  - 숨긴 말: 답장 요청 · 반영 · 대화 요약 · 롤플에 전하기가 안 읽어요. 한 사람에게만 숨긴 말은 그 사람의 답장 · 반영만 안 읽고, 여럿이 같이 읽는 요약 · 전하기에는 안 들어가요.
+  - 고정한 말: 요약으로 넘어간 뒤에도 MESSENGER에 들어가요(방마다 10개, 글 앞에 마리나라의 표시 줄).
+- 휴지통 · 방 지우기 · 사람 넣고 빼기는 우리 저장 모양으로 썼어요. 마리나라의 휴지통 코드는 그쪽 DB에 묶여 있어서 못 가져왔고, 동작(지운 말 되살리기, 30일 뒤 비우기)만 맞췄어요.
+- 화면이 부르는 것(`phone2go.js`): `liveMark` · `liveMarked` · `liveTrash` · `liveRestore` · `liveEmptyTrash` · `liveDropRoom` · `liveRoomTrash` · `liveRestoreRoom` · `liveEmptyRoomTrash` · `liveAddMember` · `liveRemoveMember`.
+- 아직: 메모를 한 캐릭터에게 보여 주기(`privateNoteRecipientId`), 화면.
+
 ## 정할 것
 
 1. **대화 밖 생활을 얼마나 자주 반영할지.** 후보: 하루 토막마다(아침 · 낮 · 저녁 · 잠들 때) / 앱을 보고 있는 동안 한 시간마다 / 잠들 때 한 번. 설정으로 고르게 할지, 기본값은 뭘로 할지.
