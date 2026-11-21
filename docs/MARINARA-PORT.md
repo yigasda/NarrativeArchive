@@ -116,6 +116,11 @@
 - 스케줄 요청의 온도(수리 0.45 · 조정 0.7 · 새로 0.8 · 변주 0.9, 요약 0.55)와 요약의 낮은 생각 정도가 모델에 가게 (`src/ai.js`가 `temperature`를 받아요)
 - 생성 연결 고르기, 생성 중지가 요청을 끊기, 방 전체 설정(하루 상한 · 상한 같이 쓰기 · 캐릭터끼리 주고받기)
 
+## 꼭 할 것 (소망이 "나중에 꼭 하셈"이라고 한 것, 2026-11-21)
+
+- [ ] **무작위 연결과 예비 연결.** 마리나라는 연결을 "random"으로 두면 무작위 묶음에서 하나를 고르고, 연결이 실패하면 예비 연결로 다시 보내요(`resolveConversationScheduleConnection`, `withConnectionFallbackProvider`, `connections.listRandomPool` · `getFallbackForAgents`). 우리 확장에는 그런 연결 설정이 없어요. 연결 설정을 만들고 스케줄 요청이 그걸 쓰게 해요.
+- [ ] **꺼 둔 이유(`disabledAutonomousIntents`) 지키기.** 마리나라는 서버가 돌릴 때(`server-autonomous-scheduler.service.ts`의 `resolveAvailableIntent`)만 이걸 봐요. 서버 플러그인으로 그 파일을 가져올 때 같이 넣어요. 그 전까지는 꺼 둔 이유가 안 먹어요.
+
 ## 아직 마리나라와 다른 것 (이미 넣은 기능 안에서)
 
 - 캐릭터 명령 켜고 끄기(방마다): 명령을 더 가져올 때 같이 넣어요(`conversation-command-runtime.ts`).
