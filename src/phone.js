@@ -1180,7 +1180,7 @@ export async function openPhone(who = null) {
     $root.on('click', '.na_ob_sx', e => { e.stopPropagation(); obSet = ''; obFindQ = ''; obSetUi = { v: {}, open: '', tzQ: '', busy: false }; drawPhone(true); });
     // 빠른 전환기 (입력칸의 ^): 모델 · 페르소나. 고르기 · 별표는 아직 동작이 없어요(별표는 시트가 열린 동안만 기억)
     const swFocus = sel => { const el = $root.find(sel)[0]; if (el) { el.focus({ preventScroll: true }); const s = window.getSelection(); s.selectAllChildren(el); s.collapseToEnd(); } };
-    $root.on('click', '.na_ob_sw', e => { e.stopPropagation(); if (obFix || obHeld || obPicks || obList || !obCanEdit()) return; obMenu = false; obEmo = null; obSw = obSw ? null : { tab: 'models', q: '', pq: '', drilled: true, pane: null, order: false, stars: [], limit: 50 }; drawPhone(true); });
+    $root.on('click', '.na_ob_sw', e => { e.stopPropagation(); if (obFix || obHeld || obPicks || obList || !obCanEdit()) return; obMenu = false; obEmo = null; obSw = obSw ? null : { tab: 'models', q: '', pq: '', drilled: false, pane: null, order: false, stars: [], limit: 50 }; drawPhone(true); });
     $root.on('click', '.na_ow_x', e => { e.stopPropagation(); obSw = null; drawPhone(true); });
     $root.on('click', '.na_ow_tab', function (e) { e.stopPropagation(); if (obSw) { obSw.tab = this.dataset.v; drawPhone(true); } });
     $root.on('input', '.na_ow_q, .na_ow_pq', function () { if (!obSw) return; const m = this.classList.contains('na_ow_q'); obSw[m ? 'q' : 'pq'] = this.innerText.replace(/\n/g, ''); if (!m) obSw.limit = 50; clearTimeout(this._t); this._t = setTimeout(() => { if (phoneClosed || !stillHere() || !obSw) return; drawPhone(true); swFocus(m ? '.na_ow_q' : '.na_ow_pq'); }, 220); });
@@ -1188,7 +1188,7 @@ export async function openPhone(who = null) {
     $root.on('click', '.na_ow_qx, .na_ow_pqx', function (e) { e.stopPropagation(); if (!obSw) return; const m = this.classList.contains('na_ow_qx'); obSw[m ? 'q' : 'pq'] = ''; drawPhone(true); swFocus(m ? '.na_ow_q' : '.na_ow_pq'); });
     $root.on('click', '.na_ow_back', e => { e.stopPropagation(); if (obSw) { obSw.drilled = false; obSw.order = false; drawPhone(true); } });
     $root.on('click', '.na_ow_pane', function (e) { e.stopPropagation(); if (obSw) { obSw.pane = this.dataset.v; obSw.drilled = true; obSw.order = false; drawPhone(true); } });
-    $root.on('click', '.na_ow_qall', e => { e.stopPropagation(); if (obSw) { obSw.pane = 'starred'; drawPhone(true); swFocus('.na_ow_q'); } });
+    $root.on('click', '.na_ow_qall', e => { e.stopPropagation(); if (obSw) { obSw.pane = null; obSw.drilled = false; drawPhone(true); swFocus('.na_ow_q'); } });
     $root.on('click', '.na_ow_order', e => { e.stopPropagation(); if (obSw) { obSw.order = !obSw.order; drawPhone(true); } });
     $root.on('click', '.na_ow_star', function (e) { e.stopPropagation(); if (!obSw) return; const id = this.dataset.id, at = obSw.stars.indexOf(id); if (at < 0) obSw.stars.push(id); else obSw.stars.splice(at, 1); obNotYet(this); drawPhone(true); });
     $root.on('click', '.na_ow_mv', function (e) { e.stopPropagation(); if (!obSw) return; const a = obSw.stars, at = a.indexOf(this.dataset.id), to = at + Number(this.dataset.by); if (at < 0 || to < 0 || to >= a.length) return; [a[at], a[to]] = [a[to], a[at]]; drawPhone(true); });
