@@ -24,7 +24,7 @@ const B = '/scripts/extensions/third-party/NarrativeArchive/src/', SLOW = Number
   await timed('목록 → 방 열기', () => tap('.na_ph_frame .ob_rm'), () => !!document.querySelector('.na_ph_frame .ob_msgs'));
   await p.waitForTimeout(500);
   await timed('길게 누르기 → 카드', () => hold('.na_ph_frame .ob_b.th >> nth=-2'), () => !!document.querySelector('.na_ph_frame .ob_pill'));
-  await timed('이모지 누르기 → 배지', () => tap('.na_ph_frame .ob_hr .na_ob_re'), () => !!document.querySelector('.na_ph_frame .ob_re') && !document.querySelector('.na_ph_frame .ob_pill'));
+  await timed('이모지 누르기 → 배지', async () => { await tap('.na_ph_frame .na_ob_mre'); await p.waitForTimeout(200); await tap('.na_ph_frame .ob_hr .na_ob_re'); }, () => !!document.querySelector('.na_ph_frame .ob_re') && !document.querySelector('.na_ph_frame .ob_pill'));
   await p.waitForTimeout(300);
   await timed('길게 누르기(내 말) → 카드', () => hold('.na_ph_frame .ob_b.me >> nth=-1'), () => !!document.querySelector('.na_ph_frame .ob_pill'));
   await timed('수정 → 고치는 칸', () => tap('.na_ph_frame .na_ob_medit'), () => document.activeElement?.classList.contains('na_ob_ft'));
