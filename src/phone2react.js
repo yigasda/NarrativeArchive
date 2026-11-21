@@ -29,8 +29,9 @@ export function putReact(x, who, e, { at = Date.now(), via = null } = {}) {
     if (rest.length) x.reacts = rest; else delete x.reacts;
     return (had?.e || '') !== (e || '');
 }
-// 답장 요청의 MESSENGER 줄 끝에 붙는 글: "Ren ❤️, Ivo 😂" ('' 없으면)
-export const reactLine = x => (Array.isArray(x?.reacts) ? x.reacts : []).filter(r => one(r?.by) && emojiOf(r?.e)).map(r => `${one(r.by)} ${r.e}`).join(', ');
+// 답장 요청의 MESSENGER 줄 끝에 붙는 글: "Ren ❤️, Ivo 😂 (new)" ('' 없으면)
+// fresh(r): a reaction to mark as new (put there since the owner last texted): "Ren 😡 (new)"
+export const reactLine = (x, fresh = null) => (Array.isArray(x?.reacts) ? x.reacts : []).filter(r => one(r?.by) && emojiOf(r?.e)).map(r => `${one(r.by)} ${r.e}${fresh?.(r) ? ' (new)' : ''}`).join(', ');
 
 // 바로 누르는 줄: 페르소나가 최근에 쓴 것부터, 모자라면 처음 줄로 채워서 REACT.recent개
 export function quickReacts(w) {

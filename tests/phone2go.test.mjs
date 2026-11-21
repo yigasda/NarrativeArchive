@@ -1226,7 +1226,7 @@ test('반응 달기: 달고 · 바꾸고 · 같은 걸 다시 달면 지우고 �
     send(c, '언제 와');
     T.replies = [{ state: '집', reply: ['곧'], does: [] }];
     await G.liveGo(c.real);
-    assert.match(T.replyInput, / · Mara \(집\): Bring Kuchen mit \[Ren 🥺\]\n/);
+    assert.match(T.replyInput, / · Mara \(집\): Bring Kuchen mit \[Ren 🥺 \(new\)\]\n/);
     // 같은 걸 다시 · null: 지워요. 내 말에도 달 수 있어요
     await G.liveReact(c.real, c.room.id, hers.id, 'Ren', '🥺');
     assert.equal(hers.reacts, undefined);
@@ -1302,6 +1302,8 @@ test('실리태번에서 페르소나를 바꾸면 실시간 폰의 "나"도 따
     T.replies = [{ state: '집', reply: ['방금'], react: '😂', does: [] }];
     await G.liveGo(c.real);
     await G.liveReact(c.real, c.room.id, c.room.messages[1].id, 'Ren', '❤️');
+    // (그 반응에 답할 차례는 이 시험과 상관없어요)
+    for (const j of L.liveWorld(c.real).queue.jobs) if (j.state === 'waiting') j.state = 'done';
     await G.liveSwipe(c.real, c.room.id, 1);
     T.replies = [{ state: '집', reply: ['응'], does: [] }];
     await G.liveGo(c.real);
@@ -1363,4 +1365,45 @@ test('말 고치기: 글을 바꾸고 저장해요. 다음 답장 요청에는 �
     assert.ok(T.replyInput.includes('타르트 사 와') && T.replyInput.includes('Bring Torte mit') && !T.replyInput.includes('케이크 사 와') && !T.replyInput.includes('Kuchen'));
     T.metadata = { narrative_archive: {} };
     try { await assert.rejects(() => G.liveEditMessage(c.real, c.room.id, mine.id, { text: 'x' }), /이 채팅이 열려 있지 않아요/); } finally { delete T.metadata; }
+});
+
+test('내가 캐릭터의 최근 말에 이모지만 달아도 캐릭터가 봐요: 답장을 줄 세우고, 왜 지금인지와 새 반응 표시를 같이 보내요', async () => {
+    const c = world(), jobs = () => L.liveWorld(c.real).queue.jobs.filter(j => j.state === 'waiting');
+    send(c, '늦었네');
+    T.replies = [{ state: '집', reply: ['또 늦게 자지 마', '내일 일찍 일어나'], does: [] }];
+    await G.liveGo(c.real);
+    const [mine, a, b] = c.room.messages, calls = T.replyCalls;
+    // (말풍선은 받은 순간부터 1ms씩 뒤로 찍혀요: 반응은 그보다 뒤에 달아요)
+    await new Promise(res => setTimeout(res, 20));
+    // 최근 말(내 마지막 말 뒤에 온 말)에 달면: 그 캐릭터의 답장이 하나 줄 서요. 모델은 liveGo가 불러요
+    await G.liveReact(c.real, c.room.id, b.id, 'Ren', '😡');
+    assert.deepEqual(jobs().map(j => [j.kind, j.owner, j.room, j.why]), [['reply', 'Mara', c.room.id, 'Ren put 😡 on your text "내일 일찍 일어나" just now and wrote nothing.']]);
+    assert.equal(T.replyCalls, calls);
+    // (바꿔 달아도 · 다른 최근 말에 달아도 기다리는 답장은 하나)
+    await G.liveReact(c.real, c.room.id, b.id, 'Ren', '🙄'); await G.liveReact(c.real, c.room.id, a.id, 'Ren', '😡');
+    assert.equal(jobs().length, 1);
+    T.replies = [{ state: '집', reply: ['그런 거 단다고 네가 잘한 게 되진 않아'], does: [] }];
+    const r = await G.liveGo(c.real);
+    assert.equal(r.ran, 1); assert.equal(T.replyCalls, calls + 1);
+    assert.match(T.replyInput, /\[WHY NOW\]\nRen put 😡 on your text "내일 일찍 일어나" just now and wrote nothing\./);
+    assert.match(T.replyInput, / · Mara \(집\): 또 늦게 자지 마 \[Ren 😡 \(new\)\]\n.* · Mara \(집\): 내일 일찍 일어나 \[Ren 🙄 \(new\)\]/);
+    assert.equal(c.room.messages.at(-1).text, '그런 거 단다고 네가 잘한 게 되진 않아');
+    // 캐릭터가 말한 뒤에는 그 반응이 새것이 아니에요; 다음 답장에는 왜 지금인지도 없어요
+    send(c, '알았어');
+    T.replies = [{ state: '집', reply: ['응'], does: [] }];
+    await G.liveGo(c.real);
+    assert.ok(T.replyInput.includes('내일 일찍 일어나 [Ren 🙄]') && !T.replyInput.includes('(new)') && !T.replyInput.includes('[WHY NOW]'));
+    // 줄 안 세우는 때: 예전 말(내가 그 뒤에 말했음) · 내 말 · 반응 지우기 · 폰 없는 캐릭터의 말
+    await G.liveReact(c.real, c.room.id, a.id, 'Ren', '👍'); await G.liveReact(c.real, c.room.id, mine.id, 'Ren', '😂');
+    const last = c.room.messages.at(-1);
+    await G.liveReact(c.real, c.room.id, last.id, 'Ren', '❤️');
+    assert.equal(jobs().length, 1);
+    for (const j of jobs()) j.state = 'done';
+    await G.liveReact(c.real, c.room.id, last.id, 'Ren', null);
+    assert.equal(jobs().length, 0);
+    delete L.liveWorld(c.real).phones.mara;
+    await G.liveReact(c.real, c.room.id, last.id, 'Ren', '❤️');
+    assert.equal(jobs().length, 0);
+    // (예전 말에 단 것은 다음 답장 때 새것으로 보여요)
+    assert.equal(a.reacts.find(x => x.by === 'Ren').e, '👍');
 });

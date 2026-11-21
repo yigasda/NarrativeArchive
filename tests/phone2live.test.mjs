@@ -80,7 +80,8 @@ test('폰 2 reply prompt: owner and persona by name, no "user", every listed app
     // (문자답게: 마침표 · 쉼표를 아끼고, 기분대로 흐트러지고, 반듯한 글은 그런 사람만. 지금까지의 문자를 따르는 줄보다 앞에)
     assert.match(s, /\n- Texts look typed on a phone: a bubble ends without a full stop unless you mean it flat or cold, commas are rare\.\n- Typed the way you would in that mood: a slip, a dropped word, a run-on, loose spacing, slang or a short form, where that is like you\.\n- Clean spelling and full punctuation only when your card makes you someone who texts that way: exacting, older, formal\.\n- How you text Ren, /);
     // (이모지 반응: 받는 것 MESSENGER에 반응이 있다고, 규칙 한 줄, 답 모양에 칸 하나)
-    assert.match(s, /\n- MESSENGER: your chat with Ren so far, newest last, each turn with its time and your status then, and after it in \[ \] the emoji anyone reacted to it with\./);
+    assert.match(s, /\n- MESSENGER: your chat with Ren so far, newest last, each turn with its time and your status then, and after it in \[ \] the emoji anyone reacted to it with \(new: put there since you last texted\)\./);
+    assert.match(s, /WHY NOW \(Ren sent no new text: you write first for this reason, or it is what Ren just did\)\./);
     assert.match(s, /\n- An emoji on the last text someone sent, when it truly fits how you feel right then: "react", who sent it and the emoji\. Along with what you text, or by itself\. Or none: ""\.\n/);
     assert.match(s, /\n {2}"ko": the same bubbles in Korean,\n {2}"react": "" or \{ "to": "Ren", "emoji": "…" \},\n/);
     // (run1 again: the apps' last times only; a list of what is on the phone drew more of the same)

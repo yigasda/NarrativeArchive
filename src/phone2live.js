@@ -69,6 +69,8 @@ export function gatherReply(m, owner, roomId, { now = Date.now(), tz = 'UTC', de
     const here = p.life?.weather?.here;
     const rain = Number(here?.hours?.[0]?.rain);
     const first = !(room.messages || []).some(x => same(x.from, owner));
+    // (when the owner last texted in this room: a reaction put on a text since then is new to them)
+    const spoke = Math.max(0, ...(room.messages || []).filter(x => same(x.from, owner)).map(x => Number(x.at) || 0));
     // (the story goes with every reply, as the role-play's own turns carry it: the summary, and for a 폰 2 begun with a
     // snapshot (phone2snap.js) the role-play's last messages as they stand now, else the ones kept when it began. The
     // message numbers are the role-play chat's: taken off, nothing here reads by them)
@@ -80,7 +82,7 @@ export function gatherReply(m, owner, roomId, { now = Date.now(), tz = 'UTC', de
         langs: p.langs?.texts?.length || p.langs?.knows?.length ? p.langs : null,
         // (the talk summarized already goes as CHAT SUMMARY; the rest as it was said)
         summary: digestOf(room),
-        messenger: (room.messages || []).filter(x => !(x.n <= (room.digest?.upto ?? -1))).slice(-LIVE_ASK.bubbles).map(x => ({ at: wall(x.at), from: x.from, text: x.call ? `(call ${Math.max(0, Math.round(Number(x.call.min) || 0))} min)` : x.text, state: x.state, reacts: reactLine(x) })),
+        messenger: (room.messages || []).filter(x => !(x.n <= (room.digest?.upto ?? -1))).slice(-LIVE_ASK.bubbles).map(x => ({ at: wall(x.at), from: x.from, text: x.call ? `(call ${Math.max(0, Math.round(Number(x.call.min) || 0))} min)` : x.text, state: x.state, reacts: reactLine(x, r => !same(r.by, owner) && Number(r.at) > spoke) })),
         now: {
             last: lastState || one(deps.place?.(p)),
             today: evs.filter(e => one(e.date) === today).sort(byTime).map(e => line(e, false)), ahead: ahead.map(e => line(e, true)),
