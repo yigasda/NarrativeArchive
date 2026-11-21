@@ -8,6 +8,7 @@ const B = '/scripts/extensions/third-party/NarrativeArchive/src/', SLOW = Number
 (async () => { reset(); const s = await open('light', { out: os.tmpdir(), width: 412, height: 915, mobile: true, init: true }); const p = s.p; const out = [];
  try {
   await p.evaluate(() => document.documentElement.style.setProperty('--na-nb', '48px'));
+  await p.evaluate(() => { window.NA_MORPH_CHECK = true; }); // (바뀐 부분만 고친 화면이 통째로 그린 화면과 같은지 매번 견줘요)
   await s.run(async ({ m }) => { const n = SillyTavern.getContext().chat.length - 1; m.text = String(m.text).replace(/\n# STATE/, `\n## #26–#${n} — Am Fluss (Oct 25, night, Varo)\n- Sie redeten.\n\n# STATE`); m.boundary = n; });
   await s.to('set'); await p.click('.na_ph_pmode[data-v=live]'); await p.waitForTimeout(600); await p.click('.na_ob_start'); await p.waitForTimeout(2000);
   await s.to('orbitnew'); await p.waitForTimeout(400); await p.locator('.na_ph_frame .na_ob_pick', { hasText: 'Mara' }).first().click(); await p.waitForTimeout(300); await p.click('.na_ph_frame .na_ob_make'); await p.waitForTimeout(500);
@@ -38,12 +39,16 @@ const B = '/scripts/extensions/third-party/NarrativeArchive/src/', SLOW = Number
   await timed('지우기 → 말이 사라짐', () => tap('.na_ph_frame .pcf_ok'), () => !document.querySelector('.na_ph_frame .pcf') && !document.querySelector('.na_ph_frame .ob_pbar'));
   await p.waitForTimeout(400);
   await timed('보내기 → 내 말이 보임', async () => { await tap('.na_ph_frame .na_ob_in'); await p.keyboard.type('시험'); await tap('.na_ph_frame .na_ob_send'); }, () => [...document.querySelectorAll('.na_ph_frame .ob_b.me')].some(b => b.textContent.includes('시험')));
+  await p.keyboard.type('abc'); // (답장이 오는 동안에도 치던 글 · 커서가 그대로인지)
   await timed('보내기 → 입력 중 점', async () => {}, () => !!document.querySelector('.na_ph_frame .ob_typ'), 12000);
   await timed('보내기 → 답장 도착', async () => {}, () => { const b = document.querySelectorAll('.na_ph_frame .ob_b'); return b.length && b[b.length - 1].classList.contains('th') && !document.querySelector('.na_ph_frame .ob_typ'); }, 20000);
+  await p.keyboard.type('def');
+  console.log('         답장이 오는 동안 치던 글:', JSON.stringify(await p.evaluate(() => { const e = document.querySelector('.na_ph_frame .na_ob_in'); return { text: e.textContent, focused: document.activeElement === e }; })), '(abcdef · true여야 해요)');
   await p.waitForTimeout(600);
   await timed('답장 밀어서 넘기기', async () => { const b = await p.locator('.na_ph_frame .na_ob_sw').last().boundingBox(), y = b.y + b.height / 2; await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: b.x + 120, y }] }); for (let i = 1; i <= 6; i++) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: b.x + 120 - i * 15, y }] }); await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); }, () => !!document.querySelector('.na_ph_frame .ob_typ') || document.querySelectorAll('.na_ph_frame .ob_swd i').length > 1, 12000);
   await p.waitForTimeout(Number(process.env.GAP || 800)); // (밀기 직후 0.2초 안의 톡은 브라우저가 클릭으로 안 쳐요: 시험에서는 조금 기다려요)
   await p.evaluate(() => { window.__ev = []; for (const t of ['pointerdown', 'pointerup', 'pointercancel', 'click']) window.addEventListener(t, e => window.__ev.push(t + ':' + (e.target.className || e.target.tagName).toString().slice(0, 24)), true); });
   await timed('뒤로 → 목록', () => tap('.na_ph_frame .ob_gb'), () => !!document.querySelector('.na_ph_frame .ob_dock'));
+  console.log('         바뀐 부분만 고쳐 그린 횟수:', await p.evaluate(() => window.NA_MORPH_N || 0));
   console.log('errors', JSON.stringify(s.errors ? s.errors() : s.errs));
  } finally { await s.close(); reset(); } })().catch(e => { console.error(e); reset(); process.exit(1); });

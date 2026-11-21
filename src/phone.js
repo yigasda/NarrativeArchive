@@ -44,6 +44,7 @@ import { liveSnapNow, snapParts } from './phone2snap.js';
 import { liveEditMessage, liveReact, liveReactQuick, liveGo, liveReflect, liveCanUndo, liveUndo, liveUnreflected, liveNowOf, liveSnapBusy, liveBackCount, liveBackDraft, liveBackPut, liveImportPlan, liveImportFilePlan, liveImportChat, liveImportFile, liveDropMessages, liveSwipeInfo, liveSwipe, liveSwipeDrop, liveRetranslate, liveSwipeList, liveSwipeDropMany, liveSwipeDropOthers } from './phone2go.js';
 import { liveYearsNow } from './phone2year.js';
 import { P } from './phone2api.js';
+import { morph } from './morph.js';
 
 // other files keep importing these from here (주입: 실시간 폰의 폰들도 같이, 주입이 꺼진 폰은 빼고)
 export const phoneBlock = m => P.phoneBlock(m, Object.values(liveWorld(m)?.phones || {}));
@@ -471,6 +472,22 @@ export async function openPhone(who = null) {
     const ptrUp = () => { ptrDown = false; if (drawWait !== null) setTimeout(() => { if (drawWait !== null && !ptrDown && !phoneClosed) { const k = drawWait; drawWait = null; drawNow(k); } }, 60); };
     $root[0].addEventListener('pointerdown', () => { ptrDown = true; ptrAt = Date.now(); }, true);
     for (const ev of ['pointerup', 'pointercancel']) window.addEventListener(ev, ptrUp, true);
+    // 통째로 가는 화면 (코드가 그린 뒤에 직접 채우는 것): 다녀간 곳 지도 · 날씨 도시 · 프사 자르기
+    const MORPH_OFF = /^(map|mapq|mapc|wcity|weather|orbitface)(:|$)/;
+    // 시험용(window.NA_MORPH_CHECK): 바뀐 부분만 고친 화면이 통째로 그린 화면과 같은지 견줘요. 다르면 콘솔 오류
+    const morphCheck = (frameEl, html, morphed) => {
+        if (!morphed) return;
+        const t = document.createElement('template'); t.innerHTML = html; const $t = $(t.content);
+        if (!live() && window.NAShell) $t.find('.na_ph_scr').first().append('<span class="na_ph_notch" aria-hidden="true"></span>');
+        if (live()) { $t.find('.na_ph_scr').first().append('<span class="na_ph_notch" aria-label="실시간 폰"><i></i></span>'); $t.find(`:is(${LIVE_OFF})`).remove(); $t.find('.ax_card').filter((_, c) => !c.children.length && !c.textContent.trim()).remove(); }
+        if (sheet && (view === 'photo' || view === 'set')) $t.find('.na_ph_scr').append(looksSheet(m));
+        // (속성 순서만 다른 건 같은 화면이에요: 이름순으로 다시 적어서 견줘요)
+        const norm = root => { for (const e of root.querySelectorAll('*')) { const at = [...e.attributes].map(x => [x.name, x.value]).sort((x, y) => (x[0] < y[0] ? -1 : 1)); for (const [n] of at) e.removeAttribute(n); for (const [n, v] of at) e.setAttribute(n, v); } return root.innerHTML; };
+        const c = frameEl.cloneNode(true); c.querySelectorAll('.pcf').forEach(e => e.remove());
+        const a = norm(c), b = (() => { const d = document.createElement('div'); d.append(t.content); return norm(d); })();
+        window.NA_MORPH_N = (window.NA_MORPH_N || 0) + 1;
+        if (a !== b) { let i = 0; while (i < a.length && a[i] === b[i]) i++; console.error(`[narrative-archive] MORPH MISMATCH ${view} @${i}\n got: ${a.slice(Math.max(0, i - 80), i + 120)}\n want: ${b.slice(Math.max(0, i - 80), i + 120)}`); }
+    };
     const drawNow = (keep = false) => {
         queueMicrotask(placeAsk);  // every way out of a redraw (some return early) puts the open sheet back
         const p = phone();
@@ -523,12 +540,31 @@ export async function openPhone(who = null) {
             toastr.error(`${view} 화면을 그리지 못했어요: ${err?.message || err}`, '캐릭터 휴대폰');
             html = `<div class="na_ph_scr glass w_dusk"><div class="na_ph_body na_ph_make"><div class="na_ph_makecard"><b>화면을 그리지 못했어요</b><p>${esc(`${view}: ${err?.message || err}`)}</p><button type="button" class="na_ph_cardbtn" data-go="home">홈으로</button></div></div></div>`;
         }
-        $root.find('.na_ph_frame').html(html);
+        // 새 화면은 먼저 따로 만들어요(tpl: 화면에 붙기 전이라 그림도 안 받아요). 아래 손질까지 끝낸 뒤에 화면에 올려요
+        const tpl = document.createElement('template'); tpl.innerHTML = html;
+        const $new = $(tpl.content), frameEl = $root.find('.na_ph_frame')[0];
         // 실시간: the notch says which phone this is on every screen; 타임라인's data rows go
         // (껍데기 앱 안에서는 타임라인 폰에도 노치가 있어요: 기기 카메라 구멍을 가려요. 초록 점은 실시간 폰만)
-        if (!live() && window.NAShell) $root.find('.na_ph_frame .na_ph_scr').first().append('<span class="na_ph_notch" aria-hidden="true"></span>');
-        if (live()) { $root.find('.na_ph_frame .na_ph_scr').first().append('<span class="na_ph_notch" aria-label="실시간 폰"><i></i></span>'); $root.find(`.na_ph_frame :is(${LIVE_OFF})`).remove(); $root.find('.na_ph_frame .ax_card').filter((_, c) => !c.children.length && !c.textContent.trim()).remove(); }
-        if (sheet && (view === 'photo' || view === 'set')) $root.find('.na_ph_scr').append(looksSheet(m));
+        if (!live() && window.NAShell) $new.find('.na_ph_scr').first().append('<span class="na_ph_notch" aria-hidden="true"></span>');
+        if (live()) { $new.find('.na_ph_scr').first().append('<span class="na_ph_notch" aria-label="실시간 폰"><i></i></span>'); $new.find(`:is(${LIVE_OFF})`).remove(); $new.find('.ax_card').filter((_, c) => !c.children.length && !c.textContent.trim()).remove(); }
+        if (sheet && (view === 'photo' || view === 'set')) $new.find('.na_ph_scr').append(looksSheet(m));
+        // 같은 화면을 다시 그릴 때는 바뀐 부분만 고쳐요(morph.js): 통째로 갈면 폰에서 버벅이고 깜빡였어요(소망).
+        // 다른 화면으로 갈 때 · 코드가 직접 그림을 그려 넣는 화면(지도 · 프사 자르기 · canvas가 있는 화면)은 예전처럼 통째로 갈아요.
+        // 못 고치면(오류) 통째로 갈아요
+        const was = frameEl.firstElementChild, now = tpl.content.firstElementChild;
+        const same = !!was && !!now && tpl.content.childElementCount === 1 && frameEl.childElementCount === 1 && was.className === now.className
+            && !MORPH_OFF.test(view) && !frameEl.querySelector('canvas, video, iframe, .maplibregl-map') && !tpl.content.querySelector('canvas, video, iframe');
+        let morphed = false;
+        if (same) {
+            try {
+                morph(frameEl, tpl.content, { keepNode: n => n.classList.contains('pcf') });
+                morphed = true;
+                // (통째로 갈 때처럼: 위치를 지키라는 말이 없으면 맨 위에서 시작해요)
+                if (!keep) for (const e of frameEl.querySelectorAll('*')) { if (e.scrollTop) e.scrollTop = 0; if (e.scrollLeft) e.scrollLeft = 0; }
+            } catch (err) { console.error('[narrative-archive] phone morph', view, err); }
+        }
+        if (!morphed) $(frameEl).empty().append(tpl.content);
+        if (window.NA_MORPH_CHECK) morphCheck(frameEl, html, morphed);
         placeAsk();
         trPop();
         notchPasses();
