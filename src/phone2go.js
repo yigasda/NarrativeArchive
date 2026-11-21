@@ -15,7 +15,7 @@ import { parseJson } from './phoneparse.js';
 import { nameKey } from './people.js';
 import { liveWorld, livePhone, liveMeta, liveKey, liveAtYear, isSnap, setStoryKeeper, startFresh, enqueueReplies, enqueueJob, renamePersona, setDrawerSeed } from './phone2store.js';
 import { emojiOf, reactOf, putReact, quickReacts, noteRecent, messageOf } from './phone2react.js';
-import { markMessages, markedMessages, trashOf, restoreMessages, emptyTrash, dropRoom, roomTrash, restoreRoom, emptyRoomTrash, addMember, removeMember } from './phone2room.js';
+import { purgeTrash, markMessages, markedMessages, trashOf, restoreMessages, emptyTrash, dropRoom, roomTrash, restoreRoom, emptyRoomTrash, addMember, removeMember } from './phone2room.js';
 import { dropMessages, editMessage, replyTail, settleSwipes, swipeInfo, swipeTo, swipeList, dropSwipe, dropSwipes, dropOtherSwipes, koRows, koChunks, koInput, takeKo } from './phone2edit.js';
 import { AI_SYS_PHONE_KO, voiceRows, who as voiceWho } from './phonetr.js';
 import { askTranslator, glossaryEntries, glossaryIn } from './translate.js';
@@ -25,7 +25,7 @@ import { liveStoryText } from './phone2story.js';
 import { BACK, backLeft, backInput, phone2BackSystem, takeBack, backMessage, markTold } from './phone2back.js';
 import { liveWall } from './phone2clock.js';
 import { gatherReply } from './phone2live.js';
-import { presenceOf, scheduleOf, setSchedule, setStatusOverride, setUserStatus, setAutonomous, statusNow, replyDelay, contextBlock, makeSchedule, checkProactive, noteProactive, fillPlaces, stateNow, takeStatus, scheduleZone, setScheduleZone, draftSchedule, summarizeSchedule, repairSchedule, setAutoRenew, autoRenewOf, needsRefresh, renewSchedules, setAutonomousOptions, autonomousOptions, checkExchangeFor, mentionsIn } from './phone2sched.js';
+import { presenceOf, scheduleOf, setSchedule, setStatusOverride, setUserStatus, setAutonomous, statusNow, replyDelay, contextBlock, makeSchedule, checkProactive, noteProactive, fillPlaces, stateNow, takeStatus, scheduleZone, setScheduleZone, draftSchedule, summarizeSchedule, repairSchedule, setAutoRenew, autoRenewOf, needsRefresh, renewSchedules, setAutonomousOptions, autonomousOptions, checkExchangeFor, mentionsIn, activeSchedule, schedulesOn, setSchedulesOn, exportSchedule, importSchedule } from './phone2sched.js';
 import { replyInput } from './phone2ask.js';
 import { phone2ReplySystem } from './phone2reply.js';
 import { runLive } from './phone2run.js';
@@ -145,21 +145,32 @@ export async function liveGo(real, { onChange = () => {} } = {}) {
             } });
             // (Marinara's status · schedule lines, for an owner with a schedule or a status set by hand)
             if (d) { const room = w.messenger.rooms[job.room], last = [...(room?.messages || [])].reverse().find(x => x.text || x.call); d.context = contextBlock(real, job.owner, job.room, { tzOf: n => zoneOf(real, livePhone(real, n) || p), lastRole: last && liveKey(last.from) === liveKey(w.persona) ? 'user' : 'assistant', said: !job.why, intentKey: job.intent || '', mentions: job.auto ? [] : mentionsIn(real, job.room) }); }
-            return d ? { system: phone2ReplySystem({ owner: d.owner, persona: d.persona, scheduled: !!scheduleOf(real, job.owner) }), input: replyInput(d) } : null;
+            return d ? { system: phone2ReplySystem({ owner: d.owner, persona: d.persona, scheduled: !!activeSchedule(real, job.owner) }), input: replyInput(d) } : null;
         },
         // (an owner with a schedule: the texts carry the schedule's state, not one the model wrote)
-        stateFor: job => { if (!scheduleOf(real, job.owner)) return undefined; const p = livePhone(real, job.owner); return stateNow(real, job.owner, { tz: p ? zoneOf(real, p) : '' })?.text || ''; },
+        stateFor: job => { if (!activeSchedule(real, job.owner)) return undefined; const p = livePhone(real, job.owner); return stateNow(real, job.owner, { tz: p ? zoneOf(real, p) : '' })?.text || ''; },
         after: async (job, got) => {
             const w = liveWorld(real), p = livePhone(real, job.owner);
             if (w && p && w.id === job.world) markPersona(p, w.persona);
             // (the owner changed their own status in the answer: a temporary one, and the phone follows it)
-            if (w && p && w.id === job.world && got?.status && scheduleOf(real, job.owner) && takeStatus(real, job.owner, got.status, { tz: zoneOf(real, p) })) { followSchedule(real); await line.save(); }
+            if (w && p && w.id === job.world && got?.status && activeSchedule(real, job.owner) && takeStatus(real, job.owner, got.status, { tz: zoneOf(real, p) })) { followSchedule(real); await line.save(); }
             if (w && w.id === job.world && got?.said) { const room = w.messenger?.rooms?.[job.room]; if (room?.away) { delete room.away[liveKey(job.owner)]; if (!Object.keys(room.away).length) delete room.away; } }
+            // (a message a character wrote first counts toward the day and its reason rests, once it is really there — Marinara's
+            // recordSavedAutonomousGeneration; and the room's failure pause ends)
+            if (w && w.id === job.world && job.auto && got?.said) { noteProactive(real, job.room, liveKey(job.owner), job.intent || ''); const room = w.messenger?.rooms?.[job.room]; if (room) delete room.autoFail; await line.save(); }
             // (a group room, after a message a character wrote first: another may answer it, as Marinara's loop does)
             if (w && p && w.id === job.world && job.auto && got?.said && exchangeAfter(real, job)) await line.save();
             tell();
         },
     });
+    if (out.failed?.job?.auto) {
+        const w = liveWorld(real), room = w?.messenger?.rooms?.[out.failed.job.room];
+        if (w) w.queue.jobs = w.queue.jobs.filter(j => j.id !== out.failed.job.id);
+        if (room) { const attempts = (room.autoFail?.attempts || 0) + 1; room.autoFail = { attempts, nextAllowedAt: Date.now() + Math.min(AUTO_FAIL.max, AUTO_FAIL.base * 2 ** Math.max(0, attempts - 1)), lastError: String(out.failed.error || '').slice(0, 200) }; }
+        console.warn('[narrative-archive] live autonomous', out.failed.error);
+        out.failed = null;
+        try { await line.save(); } catch { /* told below */ }
+    }
     tell();
     // (the replies are on the screen already; their last save ends here. One that failed: the talk is still there in
     // memory and the next save takes it; told as saveError)
@@ -343,6 +354,12 @@ export async function liveSetSchedule(real, owner, schedule) {
 export const liveSetStatus = async (real, owner, o = {}) => { const out = setStatusOverride(mine(real), owner, o); for (const j of liveWorld(real).queue.jobs) if (j.state === 'waiting' && liveKey(j.owner) === liveKey(owner)) { delete j.timed; delete j.notBefore; } await saveMeta(); return out; };
 export const liveSetUserStatus = async (real, o = {}) => { const out = setUserStatus(mine(real), o); await saveMeta(); return out; };
 export const liveSetAutonomous = async (real, on) => { const out = setAutonomous(mine(real), on); await saveMeta(); return out; };
+// 스케줄 쓰기 켜고 끄기 (마리나라의 conversationSchedulesEnabled): 끄면 스케줄은 남아 있고 상태 · 늦음 · 먼저 말 걸기가 안 읽어요
+export const liveSchedulesOn = real => schedulesOn(real);
+export const liveSetSchedulesOn = async (real, on) => { const out = setSchedulesOn(mine(real), on); for (const p of Object.values(liveWorld(real).phones || {})) delete p.schedAt; followSchedule(real); await saveMeta(); return out; };
+// 스케줄 내보내기 → 파일에 쓸 객체 · 가져오기(파일에서 읽은 값) → { ok: true, schedule } | { ok: false, reason } (저장은 liveSetSchedule로)
+export const liveExportSchedule = (real, owner) => exportSchedule(real, owner);
+export const liveImportSchedule = value => importSchedule(value);
 // 먼저 말 걸기의 방 전체 설정 (마리나라의 열쇠 그대로, 준 것만 바꿔요) → { on, autonomousDailyCapOverride, groupChatMode, characterExchanges }
 //   { autonomousDailyCapOverride: 하루 상한 (수 · null), groupChatMode: 'individual' (단체방에서 하루 상한을 같이 써요) · null, characterExchanges: 캐릭터끼리 주고받기 }
 export const liveAutonomousOptions = real => autonomousOptions(real);
@@ -359,19 +376,21 @@ function exchangeAfter(real, job) {
     const next = enqueueJob(real, { kind: 'reply', owner: name, room: room.id, why: `No new message from ${w.persona} was sent in this request; this is a proactive/autonomous turn. Do not write ${w.persona}'s side of the conversation.` });
     // (Marinara: a short delay to feel natural, then the exchange; no presence delay on it)
     next.auto = true; next.timed = true; next.notBefore = Date.now() + 2000 + Math.random() * 3000;
-    noteProactive(real, room.id, k, '');
     return name;
 }
-// 1분마다: 먼저 말 걸 때가 된 방이 있으면 그 답장을 줄 세워요 → 줄 세운 수. 그 뒤 liveGo가 돌려요
+// (Marinara's server-autonomous-scheduler: AUTONOMOUS_FAILURE_BASE_BACKOFF_MS · AUTONOMOUS_FAILURE_MAX_BACKOFF_MS)
+const AUTO_FAIL = { base: 5 * 60_000, max: 60 * 60_000 };
+// 30초마다: 먼저 말 걸 때가 된 방이 있으면 그 답장을 줄 세워요 → 줄 세운 수. 그 뒤 liveGo가 돌려요
 export async function liveAutonomous(real, { now = Date.now() } = {}) {
     const w = liveWorld(real);
     if (!w || !open(real)) return 0;
     // (a schedule block that began: the phones follow it, whether or not characters write first)
-    if (followSchedule(real, now)) await saveMeta();
+    if (followSchedule(real, now) + purgeTrash(real, now)) await saveMeta();
     if (!w.presence?.on) return 0;
     let n = 0;
     for (const room of Object.values(w.messenger?.rooms || {})) {
         if (w.queue.jobs.some(j => j.room === room.id && j.kind === 'reply' && (j.state === 'waiting' || j.state === 'running'))) continue;
+        if (room.autoFail?.nextAllowedAt > now) continue;
         const cards = cardsOf(room);
         const r = checkProactive(real, room.id, { now: new Date(now), tzOf: name => { const p = livePhone(real, name); return p ? zoneOf(real, p) : ''; }, cards });
         const k = r.shouldTrigger ? r.characterIds?.[0] : null, name = k && room.members.find(x => liveKey(x) === k);
@@ -379,7 +398,6 @@ export async function liveAutonomous(real, { now = Date.now() } = {}) {
         const job = enqueueJob(real, { kind: 'reply', owner: name, room: room.id, at: now, why: r.autonomousIntent || 'You have a free moment.' });
         job.auto = true;
         if (r.autonomousIntentKey) job.intent = r.autonomousIntentKey;
-        noteProactive(real, room.id, k, r.autonomousIntentKey, new Date(now));
         n++;
     }
     if (n) await saveMeta();

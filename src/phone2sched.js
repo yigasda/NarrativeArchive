@@ -15,7 +15,7 @@ import { normalizeTextForMatch } from './marinara/text-matching.js';
 import { CONVERSATION_SCHEDULE_DAYS, getAdjacentScheduleBlocks, getActiveStatusOverride } from './marinara/conversation-presence.js';
 import { toZonedWallClockDate, normalizePromptTimeZone, resolveConversationTimeZone } from './marinara/timezone.js';
 import { scheduleDraft, scheduleSummary, scheduleGenerate } from './marinara/schedule-routes.js';
-import { parseCharacterScheduleImport } from './marinara/character-schedule-transfer.js';
+import { parseCharacterScheduleImport, createCharacterScheduleExport } from './marinara/character-schedule-transfer.js';
 import { buildConversationCurrentContextBlock } from './marinara/conversation-context-block.js';
 import { checkAutonomous, checkExchange, forgetAutonomousSeed } from './marinara/autonomous-check.js';
 import { clearChatActivity, clearGenerationInProgress, buildAutonomousDailyBudgetPatch } from './marinara/autonomous.service.js';
@@ -35,6 +35,11 @@ export function presenceOf(m) {
 }
 const peek = m => { const p = liveWorld(m)?.presence; return obj(p) ? p : {}; };
 export const scheduleOf = (m, owner) => peek(m).schedules?.[liveKey(owner)] || null;
+// 스케줄을 쓰는가 (마리나라의 conversationSchedulesEnabled: 정한 적이 없으면 스케줄이 하나라도 있을 때 켜진 것)
+export const schedulesOn = m => { const p = peek(m); return typeof p.meta?.conversationSchedulesEnabled === 'boolean' ? p.meta.conversationSchedulesEnabled : Object.keys(p.schedules || {}).length > 0; };
+export const setSchedulesOn = (m, on) => (presenceOf(m).meta.conversationSchedulesEnabled = !!on);
+// 지금 쓰이는 스케줄 (꺼져 있으면 없음: 스케줄은 그대로 남아 있고 상태 · 늦음 · 먼저 말 걸기가 안 읽어요)
+export const activeSchedule = (m, owner) => (schedulesOn(m) ? scheduleOf(m, owner) : null);
 export const chatIdOf = (m, roomId) => `${liveWorld(m)?.id}:${roomId}`;
 
 // 스케줄 넣기 (모델이 만든 것 · 손으로 고친 것): 마리나라의 WeekSchedule 모양. null이면 지워요
@@ -62,7 +67,7 @@ export const setAutonomous = (m, on) => (presenceOf(m).on = !!on);
 
 // 지금 상태 → { status, activity, override? } (스케줄도 손으로 준 상태도 없으면 null). tz: 그 사람의 시간대
 export function statusNow(m, owner, { now = new Date(), tz = '' } = {}) {
-    const p = peek(m), k = liveKey(owner), schedule = p.schedules?.[k] || null, override = p.overrides?.[k] || null;
+    const p = peek(m), k = liveKey(owner), schedule = activeSchedule(m, owner), override = p.overrides?.[k] || null;
     if (!schedule && !override) return null;
     return getEffectiveCurrentStatus(schedule, override, now, 'free time', toZonedWallClockDate(now, tz || undefined));
 }
@@ -72,7 +77,7 @@ export function replyDelay(m, owner, { kind = 'direct', ...opts } = {}) {
     const st = statusNow(m, owner, opts);
     if (!st) return 0;
     if (st.status === 'offline') return null;
-    const schedule = scheduleOf(m, owner) || undefined;
+    const schedule = activeSchedule(m, owner) || undefined;
     return kind === 'mention' ? getMentionDelay(st.status) : kind === 'auto' ? getBusyDelay(st.status, schedule) : getDirectMessageDelay(st.status, schedule);
 }
 // 내가 마지막에 보낸 말에서 @으로 부른 방의 사람들 (마리나라의 mentionedCharacterNames) → [이름]
@@ -89,7 +94,7 @@ export function contextBlock(m, owner, roomId, { now = new Date(), tzOf = () => 
     const w = liveWorld(m), room = w?.messenger?.rooms?.[roomId], p = peek(m);
     if (!w || !room) return '';
     const info = room.members.filter(n => liveKey(n) !== liveKey(w.persona)).map(n => {
-        const st = statusNow(m, n, { now, tz: tzOf(n) }), schedule = scheduleOf(m, n);
+        const st = statusNow(m, n, { now, tz: tzOf(n) }), schedule = activeSchedule(m, n);
         return st ? { charId: liveKey(n), name: n, status: st.status, activity: st.activity, todaySchedule: schedule ? getTodaySchedule(schedule, toZonedWallClockDate(now, tzOf(n) || undefined)) : '' } : null;
     }).filter(Boolean);
     if (!info.some(c => c.charId === liveKey(owner))) return '';
@@ -130,7 +135,7 @@ export function checkProactive(m, roomId, { now = new Date(), tzOf = () => '', c
     const first = ids[0], name = room.members.find(n => liveKey(n) === first);
     return checkAutonomous({
         chatId, meta: { ...p.meta, autonomousMessages: !!p.on }, characterIds: ids,
-        schedules: Object.fromEntries(ids.filter(k => p.schedules[k]).map(k => [k, p.schedules[k]])), statusOverrides: p.overrides, cards,
+        schedules: schedulesOn(m) ? Object.fromEntries(ids.filter(k => p.schedules[k]).map(k => [k, p.schedules[k]])) : {}, statusOverrides: p.overrides, cards,
         messages: () => (room.messages || []).filter(x => x.text || x.call).map(x => ({ role: liveKey(x.from) === P ? 'user' : 'assistant', characterId: liveKey(x.from) === P ? null : liveKey(x.from), createdAt: new Date(x.at || 0).toISOString() })),
         userStatus: p.user?.status === 'invisible' ? 'active' : p.user?.status, maxFollowups, source, promptTimeZone: tzOf(name) || undefined, nowInstant: now,
     });
@@ -193,7 +198,7 @@ export async function fillPlaces(m, owner, { ask, parse = JSON.parse, card = '',
 // 지금 스케줄 블록 → { key (요일 · 시간: 블록이 바뀌면 달라져요), block, text ("장소 · 하는 일 · ~끝나는 시각") } | null
 // (손으로 준 상태가 살아 있는 동안은 null: 스케줄을 따르는 중이 아니에요)
 export function blockNow(m, owner, { now = new Date(), tz = '' } = {}) {
-    const p = peek(m), k = liveKey(owner), schedule = p.schedules?.[k];
+    const p = peek(m), k = liveKey(owner), schedule = activeSchedule(m, owner);
     if (!schedule || getActiveStatusOverride(p.overrides?.[k], now)) return null;
     const wall = toZonedWallClockDate(now, tz || undefined), block = getAdjacentScheduleBlocks(schedule, wall).current;
     if (!block) return null;
@@ -214,7 +219,7 @@ export function stateNow(m, owner, { now = new Date(), tz = '' } = {}) {
 export function takeStatus(m, owner, cmd, { now = new Date(), tz = '' } = {}) {
     if (!obj(cmd)) return null;
     const p = presenceOf(m), k = liveKey(owner), status = STATUSES.includes(String(cmd.status || '').toLowerCase()) ? String(cmd.status).toLowerCase() : undefined;
-    const got = applyCharacterStatusCommand({ command: { type: 'schedule_update', status, activity: one(cmd.activity).slice(0, 120) || undefined, duration: one(cmd.duration) || undefined }, current: p.overrides[k], schedule: p.schedules[k], now, scheduleNow: toZonedWallClockDate(now, tz || undefined) });
+    const got = applyCharacterStatusCommand({ command: { type: 'schedule_update', status, activity: one(cmd.activity).slice(0, 120) || undefined, duration: one(cmd.duration) || undefined }, current: p.overrides[k], schedule: activeSchedule(m, owner) || undefined, now, scheduleNow: toZonedWallClockDate(now, tz || undefined) });
     if (!got) return null;
     const place = one(cmd.place).slice(0, 80);
     return (p.overrides[k] = { ...got, ...(place ? { place } : {}) });
@@ -282,7 +287,7 @@ export function setAutonomousOptions(m, o = {}) {
     if (Object.hasOwn(o, 'characterExchanges')) { if (o.characterExchanges) meta.characterExchanges = true; else delete meta.characterExchanges; }
     return autonomousOptions(m);
 }
-export const autonomousOptions = m => { const meta = peek(m).meta || {}; return { on: !!peek(m).on, autonomousDailyCapOverride: meta.autonomousDailyCapOverride ?? null, groupChatMode: meta.groupChatMode || null, characterExchanges: !!meta.characterExchanges }; };
+export const autonomousOptions = m => { const meta = peek(m).meta || {}; return { on: !!peek(m).on, schedulesEnabled: schedulesOn(m), autonomousDailyCapOverride: meta.autonomousDailyCapOverride ?? null, groupChatMode: meta.groupChatMode || null, characterExchanges: !!meta.characterExchanges }; };
 // 단체방에서 한 캐릭터가 말한 뒤, 다른 캐릭터가 거기에 답할 때인가 (마리나라의 /autonomous/exchange 그대로) → 마리나라의 답
 export function checkExchangeFor(m, roomId, lastSpeaker, { now = new Date(), tzOf = () => '', cards = {} } = {}) {
     const w = need(m), room = w.messenger?.rooms?.[roomId], p = presenceOf(m);
@@ -292,8 +297,13 @@ export function checkExchangeFor(m, roomId, lastSpeaker, { now = new Date(), tzO
     const name = room.members.find(n => liveKey(n) === liveKey(lastSpeaker));
     return checkExchange({
         chatId, meta: p.meta, characterIds: ids, lastSpeakerCharId: liveKey(lastSpeaker),
-        schedules: Object.fromEntries(ids.filter(k => p.schedules[k]).map(k => [k, p.schedules[k]])), statusOverrides: p.overrides, cards,
+        schedules: schedulesOn(m) ? Object.fromEntries(ids.filter(k => p.schedules[k]).map(k => [k, p.schedules[k]])) : {}, statusOverrides: p.overrides, cards,
         messages: () => (room.messages || []).filter(x => x.text || x.call).map(x => ({ role: liveKey(x.from) === P ? 'user' : 'assistant', characterId: liveKey(x.from) === P ? null : liveKey(x.from), createdAt: new Date(x.at || 0).toISOString() })),
         promptTimeZone: tzOf(name) || undefined, nowInstant: now,
     });
 }
+
+// 스케줄 내보내기 · 가져오기 (마리나라의 character-schedule-transfer 그대로)
+//   내보내기 → 파일에 쓸 객체; 가져오기(값) → { ok: true, schedule, format } | { ok: false, reason: 'invalid' | 'unsupported-version' }
+export const exportSchedule = (m, owner) => { const s = scheduleOf(m, owner); if (!s) throw new Error('스케줄이 없어요'); return createCharacterScheduleExport(s, String(owner || '')); };
+export const importSchedule = value => parseCharacterScheduleImport(value);

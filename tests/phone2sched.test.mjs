@@ -408,14 +408,14 @@ test('생성 연결(마리나라의 connectionId): 초안 모델 · AI 기능 �
 });
 test('먼저 말 걸기의 방 전체 설정: 마리나라의 열쇠 그대로 (하루 상한 · 단체방 상한 같이 쓰기 · 캐릭터끼리 주고받기)', async () => {
     const { m } = world(), A = await at('marinara/autonomous.service.js');
-    assert.deepEqual(S.autonomousOptions(m), { on: false, autonomousDailyCapOverride: null, groupChatMode: null, characterExchanges: false });
+    assert.deepEqual(S.autonomousOptions(m), { on: false, schedulesEnabled: false, autonomousDailyCapOverride: null, groupChatMode: null, characterExchanges: false });
     S.setAutonomous(m, true);
-    assert.deepEqual(S.setAutonomousOptions(m, { autonomousDailyCapOverride: 3.9, groupChatMode: 'individual', characterExchanges: true }), { on: true, autonomousDailyCapOverride: 3, groupChatMode: 'individual', characterExchanges: true });
+    assert.deepEqual(S.setAutonomousOptions(m, { autonomousDailyCapOverride: 3.9, groupChatMode: 'individual', characterExchanges: true }), { on: true, schedulesEnabled: false, autonomousDailyCapOverride: 3, groupChatMode: 'individual', characterExchanges: true });
     const meta = S.presenceOf(m).meta;
     assert.equal(A.dailyCapForCharacter({ talkativeness: 90 }, meta), 3);            // (마리나라가 그 열쇠를 읽어요)
     assert.equal(A.sharesAutonomousDailyBudget(meta), true);
     assert.throws(() => S.setAutonomousOptions(m, { autonomousDailyCapOverride: 0 }), /1 이상/);
-    assert.deepEqual(S.setAutonomousOptions(m, { autonomousDailyCapOverride: null, groupChatMode: null, characterExchanges: false }), { on: true, autonomousDailyCapOverride: null, groupChatMode: null, characterExchanges: false });
+    assert.deepEqual(S.setAutonomousOptions(m, { autonomousDailyCapOverride: null, groupChatMode: null, characterExchanges: false }), { on: true, schedulesEnabled: false, autonomousDailyCapOverride: null, groupChatMode: null, characterExchanges: false });
     assert.deepEqual(Object.keys(meta).filter(k => /Cap|groupChat|Exchanges/.test(k)), []);
 });
 test('캐릭터끼리 주고받기(마리나라의 /autonomous/exchange): 켜야 하고, 단체방에서만. 하루 상한을 넘으면 안 해요', () => {
@@ -437,4 +437,28 @@ test('캐릭터끼리 주고받기(마리나라의 /autonomous/exchange): 켜야
         S.setSchedule(m, 'Ivo', all('offline', 'sleeping'), now);
         assert.equal(S.checkExchangeFor(m, g.id, 'Mara', { now }).shouldTrigger, false);
     } finally { Math.random = orig; }
+});
+test('스케줄 쓰기 끄기(마리나라의 conversationSchedulesEnabled): 스케줄은 남고, 상태 · 늦음 · 먼저 말 걸기가 안 읽어요', () => {
+    const { m, a } = world();
+    assert.equal(S.schedulesOn(m), false);                     // 스케줄이 하나도 없으면 꺼진 것
+    S.setSchedule(m, 'Mara', all('dnd', 'working'), NOW);
+    assert.equal(S.schedulesOn(m), true);                      // 정한 적 없으면 스케줄이 있을 때 켜진 것
+    S.setSchedulesOn(m, false);
+    assert.equal(S.scheduleOf(m, 'Mara').days.Monday[0].activity, 'working');
+    assert.deepEqual([S.activeSchedule(m, 'Mara'), S.statusNow(m, 'Mara', { now: NOW }), S.replyDelay(m, 'Mara', { now: NOW }), S.blockNow(m, 'Mara', { now: NOW })], [null, null, 0, null]);
+    assert.equal(S.contextBlock(m, 'Mara', a.id, { now: NOW }), '');
+    assert.equal(S.autonomousOptions(m).schedulesEnabled, false);
+    S.setSchedulesOn(m, true);
+    assert.equal(S.statusNow(m, 'Mara', { now: NOW }).status, 'dnd');
+});
+test('스케줄 내보내기 · 가져오기(마리나라의 파일 모양 그대로)', () => {
+    const { m } = world();
+    S.setSchedule(m, 'Mara', all('online', 'free'), NOW);
+    const out = S.exportSchedule(m, 'Mara');
+    assert.deepEqual([out.kind, out.version, out.characterName], ['marinara.character-schedule', 1, 'Mara']);
+    const back = S.importSchedule(JSON.parse(JSON.stringify(out)));
+    assert.equal(back.ok, true);
+    assert.equal(back.schedule.days.Monday[0].activity, 'free');
+    assert.deepEqual(S.importSchedule({ kind: 'marinara.character-schedule', version: 9, schedule: {} }), { ok: false, reason: 'unsupported-version' });
+    assert.throws(() => S.exportSchedule(m, 'Ivo'), /스케줄이 없어요/);
 });

@@ -5,6 +5,7 @@
 //   pinnedToContext: true            고정: 요약으로 넘어간 뒤에도 답장 요청의 MESSENGER에 들어가요 (방마다 MAX_PINNED_CONTEXT_MESSAGES개)
 //   bookmark: { label, createdAt }   북마크
 //   privateNote: 글                   혼자 보는 메모. AI에게는 안 가요
+//   privateNoteRecipientId: 이름       그 메모를 보여 줄 한 사람 (liveKey로): 그 사람의 답장 요청에서만 그 말 뒤에 마리나라의 글로 붙어요
 // 휴지통 (마리나라처럼 MESSAGE_TRASH_RETENTION_DAYS일 뒤에 비워요; 마리나라의 휴지통 코드는 그쪽 DB에 묶여 있어 우리 저장 모양으로 썼어요)
 //   room.trash = [{ x: 지운 말, at: 지운 때, swipes?: 그 말에 받아 둔 답장 }] (방마다 ROOM.trash개까지)
 //   w.messenger.trash = [{ room: 지운 방, at }] (ROOM.rooms개까지)
@@ -12,7 +13,7 @@
 // 이 파일은 방의 것만 바꿔요. 저장은 부르는 쪽이 해요. 폰 1 · 아카이브는 읽지도 쓰지도 않아요. 폰 1은 이 파일을 부르지 않아요.
 
 import { liveWorld, liveKey, ensureAccount } from './phone2store.js';
-import { MAX_PINNED_CONTEXT_MESSAGES, MESSAGE_TRASH_RETENTION_DAYS, MESSAGE_MARK_EXTRA_KEYS, normalizeMessageMarkPatch, applyContextMessageLimitWithPins, isMessagePinnedToContext, readMessageBookmark, readMessagePrivateNote } from './marinara/message-marks.js';
+import { MAX_PINNED_CONTEXT_MESSAGES, MESSAGE_TRASH_RETENTION_DAYS, MESSAGE_MARK_EXTRA_KEYS, normalizeMessageMarkPatch, applyContextMessageLimitWithPins, isMessagePinnedToContext, readMessageBookmark, readMessagePrivateNote, readMessagePrivateNoteRecipientId } from './marinara/message-marks.js';
 import { isMessageHiddenFromAI, getMessageHiddenFromAICharacterIds, isMessageHiddenFromAIForCharacter } from './marinara/message-hidden.js';
 
 export const ROOM = { trash: 100, rooms: 5, keep: MESSAGE_TRASH_RETENTION_DAYS * 24 * 60 * 60 * 1000 };
@@ -36,18 +37,22 @@ export function askRows(room, max, owner) {
     const all = (room?.messages || []).filter(x => aiReads(x, owner)), upto = room?.digest?.upto ?? -1;
     const n = all.filter(x => !(x.n <= upto)).slice(-max).length;
     if (!n) return [];
-    return applyContextMessageLimitWithPins(all.map(x => ({ x, content: x.text, extra: x.extra })), n).map(r => (r.content === r.x.text ? r.x : { ...r.x, text: r.content }));
+    // (a note shared with this owner goes with its message, in Marinara's words: appendRoleplayMessageNotes)
+    const noted = x => { const note = readMessagePrivateNote(x.extra); return note && readMessagePrivateNoteRecipientId(x.extra) === liveKey(owner) ? `${x.text ?? ''}\n\n[The user's private note on this message, shown only to you]\n${note}\n[End of private note]` : x.text; };
+    return applyContextMessageLimitWithPins(all.map(x => ({ x, content: noted(x), extra: x.extra })), n).map(r => (r.content === r.x.text ? r.x : { ...r.x, text: r.content }));
 }
 
 // 말의 표시 바꾸기. patch: 마리나라의 표시 열쇠 가운데 준 것만
-//   { hiddenFromAI: true|false, hiddenFromAICharacterIds: [이름] | null, pinnedToContext: true|false, bookmark: true | { label } | null, privateNote: 글 | null }
+//   { hiddenFromAI: true|false, hiddenFromAICharacterIds: [이름] | null, pinnedToContext: true|false, bookmark: true | { label } | null, privateNote: 글 | null,
+//     privateNoteRecipientId: 이름 | null (메모를 보여 줄 한 사람) }
 // → 바뀐 말의 수
-const KEYS = ['hiddenFromAI', 'hiddenFromAICharacterIds', ...MESSAGE_MARK_EXTRA_KEYS.filter(k => k !== 'privateNoteRecipientId')];
+const KEYS = ['hiddenFromAI', 'hiddenFromAICharacterIds', ...MESSAGE_MARK_EXTRA_KEYS];
 export function markMessages(m, roomId, ids, patch = {}) {
     const { room } = roomOf(m, roomId), want = idSet(ids), given = {};
     for (const k of KEYS) if (Object.hasOwn(patch || {}, k)) given[k] = patch[k];
     if (Object.hasOwn(given, 'hiddenFromAI') && typeof given.hiddenFromAI !== 'boolean') throw new Error('hiddenFromAI는 true 또는 false예요');
     if (Object.hasOwn(given, 'hiddenFromAICharacterIds')) given.hiddenFromAICharacterIds = [...new Set((Array.isArray(given.hiddenFromAICharacterIds) ? given.hiddenFromAICharacterIds : []).map(liveKey).filter(Boolean))];
+    if (typeof given.privateNoteRecipientId === 'string') { given.privateNoteRecipientId = liveKey(given.privateNoteRecipientId); if (!room.members.some(n => liveKey(n) === given.privateNoteRecipientId)) throw new Error('방에 없는 사람이에요'); }
     const got = normalizeMessageMarkPatch(given);
     if (got.error) throw new Error(got.error);
     const hits = room.messages.filter(x => want.has(String(x.id)));
@@ -63,6 +68,8 @@ export function markMessages(m, roomId, ids, patch = {}) {
             if (k === 'bookmark' && v && next.bookmark && patch.bookmark === true) continue;
             if (v === null || v === false || (Array.isArray(v) && !v.length)) delete next[k]; else next[k] = v;
         }
+        // (a note that is gone takes its recipient with it)
+        if (!next.privateNote) delete next.privateNoteRecipientId;
         if (JSON.stringify(next) === was) continue;
         if (Object.keys(next).length) x.extra = next; else delete x.extra;
         n++;
@@ -92,6 +99,8 @@ export function restoreMessages(m, roomId, ids) {
     const { room } = roomOf(m, roomId), want = idSet(ids), list = Array.isArray(room.trash) ? room.trash : [];
     const back = list.filter(t => want.has(String(t.x?.id)) && !room.messages.some(y => String(y.id) === String(t.x.id)));
     if (!back.length) return 0;
+    // (Marinara: a restore that would go past the pin limit is refused)
+    if (room.messages.filter(x => isMessagePinnedToContext(x.extra)).length + back.filter(t => isMessagePinnedToContext(t.x.extra)).length > MAX_PINNED_CONTEXT_MESSAGES) throw new Error(`되살리면 고정이 ${MAX_PINNED_CONTEXT_MESSAGES}개를 넘어요. 고정을 하나 풀어 주세요`);
     const before = (a, b) => (Number.isInteger(a.n) && Number.isInteger(b.n) ? a.n < b.n : (a.at || 0) < (b.at || 0));
     for (const t of back) {
         const i = room.messages.findIndex(y => before(t.x, y));
@@ -165,4 +174,23 @@ export function removeMember(m, roomId, name) {
     if (room.read) delete room.read[k];
     if (w.queue?.jobs) w.queue.jobs = w.queue.jobs.filter(j => !(j.room === roomId && liveKey(j.owner) === k && j.state === 'waiting'));
     return room;
+}
+
+// 날짜가 지난 휴지통 비우기 (마리나라는 한 시간마다 해요; 우리는 타이머가 돌 때마다) → 버린 수
+export function purgeTrash(m, now = Date.now()) {
+    const w = liveWorld(m);
+    if (!w?.messenger) return 0;
+    let n = 0;
+    for (const room of Object.values(w.messenger.rooms || {})) {
+        if (!Array.isArray(room.trash)) continue;
+        const keep = room.trash.filter(t => now - (t.at || 0) < ROOM.keep);
+        n += room.trash.length - keep.length;
+        if (keep.length) room.trash = keep; else delete room.trash;
+    }
+    if (Array.isArray(w.messenger.trash)) {
+        const keep = w.messenger.trash.filter(t => now - (t.at || 0) < ROOM.keep);
+        n += w.messenger.trash.length - keep.length;
+        if (keep.length) w.messenger.trash = keep; else delete w.messenger.trash;
+    }
+    return n;
 }

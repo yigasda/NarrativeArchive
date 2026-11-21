@@ -218,3 +218,35 @@ test('휴지통은 마리나라처럼 30일 뒤에 비워요', () => {
     assert.deepEqual(w.messenger.trash.map(t => t.room.id), [r2.id]);
     assert.deepEqual(R.roomTrash(m, 1000 + 62 * day), []);
 });
+test('메모를 한 사람에게 보여 주기(마리나라의 privateNoteRecipientId): 그 사람의 답장 요청에서만, 마리나라의 글로 붙어요', () => {
+    const { m, g, say } = world();
+    const y = say(g, 'Ren', 'see you at six', 2500);
+    say(g, 'Ivo', 'ok', 2600);
+    R.markMessages(m, g.id, y.id, { privateNote: 'she hates being late', privateNoteRecipientId: 'Ivo' });
+    assert.deepEqual(y.extra, { privateNote: 'she hates being late', privateNoteRecipientId: 'ivo' });
+    const ask = who => gatherReply(m, who, g.id, { now: 9000 }).messenger.map(x => x.text);
+    assert.deepEqual(ask('Ivo'), ["see you at six\n\n[The user's private note on this message, shown only to you]\nshe hates being late\n[End of private note]", 'ok']);
+    assert.deepEqual(ask('Mara'), ['see you at six', 'ok']);
+    assert.equal(y.text, 'see you at six');
+    assert.throws(() => R.markMessages(m, g.id, y.id, { privateNoteRecipientId: 'Nobody' }), /방에 없는 사람/);
+    // 메모를 지우면 받는 사람도 같이 없어져요
+    R.markMessages(m, g.id, y.id, { privateNote: null });
+    assert.equal('extra' in y, false);
+});
+test('휴지통에서 되살릴 때 고정이 열 개를 넘으면 막아요(마리나라처럼). 날짜가 지난 휴지통은 타이머가 비워요', () => {
+    const { m, w, a, say } = world();
+    const made = Array.from({ length: 11 }, (_, i) => say(a, 'Mara', `p${i}`, 5000 + i));
+    R.markMessages(m, a.id, made[10].id, { pinnedToContext: true });
+    E.dropMessages(m, a.id, made[10].id);
+    R.markMessages(m, a.id, made.slice(0, 10).map(x => x.id), { pinnedToContext: true });
+    assert.throws(() => R.restoreMessages(m, a.id, made[10].id), /고정이 10개를 넘어요/);
+    R.markMessages(m, a.id, made[0].id, { pinnedToContext: false });
+    assert.equal(R.restoreMessages(m, a.id, made[10].id), 1);
+    // 날짜 지난 것 비우기
+    const day = 24 * 60 * 60 * 1000;
+    R.toTrash(a, [made[1]], {}, 1000);
+    w.messenger.trash = [{ room: { id: 'old', members: ['Ren', 'X'] }, at: 1000 }];
+    assert.equal(R.purgeTrash(m, 1000 + 29 * day), 0);
+    assert.equal(R.purgeTrash(m, 1000 + 31 * day), 2);
+    assert.deepEqual([a.trash, w.messenger.trash], [undefined, undefined]);
+});

@@ -23,7 +23,7 @@
 | services/conversation/autonomous-candidates.ts | 35 | 아직 | | |
 | routes/conversation.routes.ts | 1353 | 일부 | src/marinara/autonomous-check.js · schedule-routes.js | /status(마지막 연락 · 상태 맞추기), /activity/* 는 우리 방의 말에서 다시 읽는 것으로 대신함. /busy-delay는 replyDelay('auto')로. 나머지 길은 가져옴 |
 | client/lib/character-schedule-transfer.ts | 171 | 다 | src/marinara/character-schedule-transfer.js | (스케줄 내보내기 · 가져오기 함수도 들어 있음: 화면에서 부르면 됨) |
-| client/hooks/use-autonomous-messaging.ts | 303 | 일부 | src/phone2tick.js · phone2go.js liveAutonomous | 순서 · 주기 · 늦음은 맞춤. 코드는 우리 줄(queue)에 맞춰 다시 짬 |
+| client/hooks/use-autonomous-messaging.ts | 303 | 일부 | src/phone2tick.js · phone2go.js liveAutonomous | 순서 · 주기(30초) · 늦음 · 주고받기(2~5초 뒤) · 세는 때(말이 실제로 나온 뒤) · 실패하면 쉬었다 다시(5분부터 두 배, 1시간까지)는 맞춤. 코드는 우리 줄(queue)에 맞춰 다시 짬. 안 맞춘 것: 실패 종류에 따라 더 길게 쉬기(hard failure) |
 | client/hooks/use-background-autonomous.ts | 400 | 아직 | | 다른 방(안 보고 있는 방)에서도 먼저 말 걸기 |
 | client/lib/user-status.ts · user-presence-activity.ts | 40 | 일부 | phone2sched.js setUserStatus | 내가 한동안 안 건드리면 저절로 "자리 비움" 되는 것 |
 | services/conversation/server-autonomous-scheduler.service.ts | 507 | 아직 | | 실리 창을 닫아도 서버가 돌리기 (서버 플러그인) |
@@ -36,9 +36,9 @@
 
 | 마리나라 파일 | 줄 | 상태 | 우리 쪽 | 빠진 것 |
 |---|---|---|---|---|
-| shared/utils/message-marks.ts | 172 | 일부 | src/marinara/message-marks.js | 메모를 한 캐릭터에게 보여 주기(privateNoteRecipientId) |
+| shared/utils/message-marks.ts | 172 | 다 | src/marinara/message-marks.js · src/phone2room.js | (메모를 한 사람에게 보여 주기: 글은 마리나라의 appendRoleplayMessageNotes 그대로) |
 | routes/generate/generate-route-utils.ts (숨기기) | | 다 | src/marinara/message-hidden.js | |
-| services/storage/message-trash.storage.ts | 547 | 일부 | src/phone2room.js (우리 코드) | 마리나라 코드는 그쪽 DB에 묶여 있음. 동작(되살리기 · 30일)만 맞춤 |
+| services/storage/message-trash.storage.ts | 547 | 일부 | src/phone2room.js (우리 코드) | 마리나라 코드는 그쪽 DB에 묶여 있어 코드는 우리 것. 동작은 맞춤: 되살리기(제자리 · 받아 둔 답장 · 고정 10개 넘으면 막기), 30일 뒤 비우기(타이머), 골라서/전부 아주 버리기. 안 맞춘 것: 지울 때 딸려 지워진 로어 되살리기(우리에게 없음) |
 | services/generation/prompt-message-scope.ts | 456 | 아직 | | 말마다 누구에게 보일지 정하기 |
 | routes/generate/conversation-history-runtime.ts | 763 | 아직 | | 요청에 넣을 대화 기록 다듬기 |
 | services/conversation/transcript-sanitize.ts | 102 | 아직 | | |
@@ -76,7 +76,24 @@
 | routes/custom-stickers.routes.ts | 310 | 아직 | | 스티커 |
 | routes/generate/conversation-custom-assets.ts | 694 | 아직 | | 내 이모지 · 스티커를 캐릭터가 쓰기 |
 
+## 2026-11-21에 다시 대 보고 채운 것
+
+- 메모를 한 사람에게 보여 주기, 되살릴 때 고정 수 막기, 날짜 지난 휴지통 비우기
+- 스케줄 쓰기 켜고 끄기(`conversationSchedulesEnabled`), 스케줄 내보내기 · 가져오기
+- 먼저 건 말을 세는 때 · 이유의 쉬는 시간(말이 실제로 나온 뒤), 실패하면 쉬었다 다시
+- 생성 연결 고르기, 생성 중지가 요청을 끊기, 방 전체 설정(하루 상한 · 상한 같이 쓰기 · 캐릭터끼리 주고받기)
+
+## 아직 마리나라와 다른 것 (이미 넣은 기능 안에서)
+
+- 캐릭터 명령 켜고 끄기(방마다): 명령을 더 가져올 때 같이 넣어요(`conversation-command-runtime.ts`).
+- 상황 글: 마리나라는 스케줄이 없어도 항상 넣어요. 우리는 스케줄 · 상태가 있는 사람에게만 넣어요(우리 답장 지시문에 NOW · 시계 블록이 따로 있어서).
+- 내가 한동안 안 건드리면 저절로 "자리 비움": 아직.
+- 방에 사람 넣고 빼기: 마리나라는 들어오고 나갈 때 카드 변수를 채우고 지워요. 우리에게는 카드 변수가 없어서 그 처리가 없어요.
+- 대화 요약: 마리나라는 요약한 말을 `hiddenFromAI`로 바꿔요. 우리는 우리 요약(`phone2digest.js`)을 써요. 아직 안 대 봤어요.
+
 ## 우리가 덧붙인 것 (마리나라에 없음)
+
+- 지운 방 되살리기(방 휴지통).
 
 - 스케줄 블록의 `place`(어디서): 폰 장소를 바꾸려고. 장소를 묻는 지시문 `placeSystem`은 우리 것.
 - 끝 시각 `24:00`을 `00:00`으로 바꿔 저장.
