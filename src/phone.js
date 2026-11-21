@@ -335,7 +335,7 @@ export async function openPhone(who = null) {
                 msgs.push({ id: x.id, mine, from: x.from, text: x.text, ko: x.ko || '', open: koOn() !== obOpen.has(x.id), time: mine ? a.slice(6) : '', tl: mine ? '' : a.slice(6), mk: x.extra ? { b: !!x.extra.bookmark, p: !!x.extra.pinnedToContext, n: !!x.extra.privateNote, h: !!x.extra.hiddenFromAI } : null, re: obReacts(r.id, x, reFresh), myre: reactOf(x, who)?.e || '', edited: !!x.edited, fix: !ro && obFix?.id === x.id ? { t: obFix.t, k: obFix.k } : null, unread: mine && !ro ? unreadBy(r, x).length : 0, held: !ro && obHeld === x.id, pick: !ro && obPicks ? obPicks.has(x.id) : undefined, wait: obTr.has(x.id), reply: reply.has(x.id), dots: reply.has(x.id) && x.id === lastReply });
             }
             // 답장을 기다리는 중이면 입력 중, 멈춘 실패가 있으면 그 줄(다시는 사람이 누를 때만). 1:1 머리 아래는 상대의 가장 최근 상태
-            const jobs = w.queue?.jobs || [], typing = !ro && jobs.some(j => j.room === r.id && (j.state === 'waiting' || j.state === 'running'));
+            const jobs = w.queue?.jobs || [], typing = !ro && jobs.some(j => j.room === r.id && (j.state === 'running' || (j.state === 'waiting' && !(j.notBefore > Date.now()))));   // (미뤄진 답장은 입력 중이 아니에요: 알림 줄이 말해요)
             const fail = ro ? null : jobs.find(j => j.room === r.id && j.state === 'failed' && !j.seen) || null;
             // (이름 아래 줄: 스케줄이 있는 사람은 지금 하는 일(liveStatus의 activity — 대화 상태 카드에 뜨는 것과 같은 글), 없는 사람은 답장의 state. 폰의 schedState는 장소 · 끝나는 시각이 붙은 안쪽 값이라 쓰지 않아요)
             const state = group ? '' : (liveSchedule(realM, os[0]) && String(liveStatus(realM, os[0])?.activity || '').trim()) || [...r.messages].reverse().find(x => liveKey(x.from) === liveKey(os[0]) && String(x.state || '').trim())?.state || '';
