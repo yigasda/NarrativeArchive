@@ -16,7 +16,7 @@ import { toZonedWallClockDate, normalizePromptTimeZone, resolveConversationTimeZ
 import { scheduleDraft, scheduleSummary, scheduleGenerate } from './marinara/schedule-routes.js';
 import { parseCharacterScheduleImport } from './marinara/character-schedule-transfer.js';
 import { buildConversationCurrentContextBlock } from './marinara/conversation-context-block.js';
-import { checkAutonomous, forgetAutonomousSeed } from './marinara/autonomous-check.js';
+import { checkAutonomous, checkExchange, forgetAutonomousSeed } from './marinara/autonomous-check.js';
 import { clearChatActivity, clearGenerationInProgress, buildAutonomousDailyBudgetPatch } from './marinara/autonomous.service.js';
 import { buildIntentCooldownPatch, isMessageIntent } from './marinara/intent.service.js';
 import { applyCharacterStatusCommand } from './marinara/schedule-command.js';
@@ -254,4 +254,35 @@ export async function renewSchedules(m, { ask, owners = [], cards = {}, automati
     });
     for (const [k, r] of Object.entries(out.results)) if (r.status === 'generated' && r.schedule) p.schedules[k] = r.schedule;
     return out;
+}
+
+// ---- 먼저 말 걸기의 방 전체 설정 (마리나라가 채팅 메타에 두는 열쇠 그대로, 준 것만 바꿔요)
+//   { autonomousDailyCapOverride: 하루 상한 (1 이상의 수 · null 풀기), groupChatMode: 'individual' (단체방에서 하루 상한을 같이 써요) · null,
+//     characterExchanges: 캐릭터끼리 주고받기 (true · false) }
+export function setAutonomousOptions(m, o = {}) {
+    const meta = presenceOf(m).meta;
+    if (Object.hasOwn(o, 'autonomousDailyCapOverride')) {
+        const v = o.autonomousDailyCapOverride;
+        if (v === null || v === '' || v === undefined) delete meta.autonomousDailyCapOverride;
+        else if (typeof v === 'number' && Number.isFinite(v) && v >= 1) meta.autonomousDailyCapOverride = Math.floor(v);
+        else throw new Error('하루 상한은 1 이상의 수예요');
+    }
+    if (Object.hasOwn(o, 'groupChatMode')) { if (o.groupChatMode) meta.groupChatMode = String(o.groupChatMode); else delete meta.groupChatMode; }
+    if (Object.hasOwn(o, 'characterExchanges')) { if (o.characterExchanges) meta.characterExchanges = true; else delete meta.characterExchanges; }
+    return autonomousOptions(m);
+}
+export const autonomousOptions = m => { const meta = peek(m).meta || {}; return { on: !!peek(m).on, autonomousDailyCapOverride: meta.autonomousDailyCapOverride ?? null, groupChatMode: meta.groupChatMode || null, characterExchanges: !!meta.characterExchanges }; };
+// 단체방에서 한 캐릭터가 말한 뒤, 다른 캐릭터가 거기에 답할 때인가 (마리나라의 /autonomous/exchange 그대로) → 마리나라의 답
+export function checkExchangeFor(m, roomId, lastSpeaker, { now = new Date(), tzOf = () => '', cards = {} } = {}) {
+    const w = need(m), room = w.messenger?.rooms?.[roomId], p = presenceOf(m);
+    if (!room) throw new Error('없는 방이에요');
+    const P = liveKey(w.persona), ids = room.members.map(liveKey).filter(k => k !== P && w.phones?.[k]), chatId = chatIdOf(m, roomId);
+    clearChatActivity(chatId); forgetAutonomousSeed(chatId);
+    const name = room.members.find(n => liveKey(n) === liveKey(lastSpeaker));
+    return checkExchange({
+        chatId, meta: p.meta, characterIds: ids, lastSpeakerCharId: liveKey(lastSpeaker),
+        schedules: Object.fromEntries(ids.filter(k => p.schedules[k]).map(k => [k, p.schedules[k]])), statusOverrides: p.overrides, cards,
+        messages: () => (room.messages || []).filter(x => x.text || x.call).map(x => ({ role: liveKey(x.from) === P ? 'user' : 'assistant', characterId: liveKey(x.from) === P ? null : liveKey(x.from), createdAt: new Date(x.at || 0).toISOString() })),
+        promptTimeZone: tzOf(name) || undefined, nowInstant: now,
+    });
 }

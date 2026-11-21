@@ -366,3 +366,35 @@ test('생성 연결(마리나라의 connectionId): 초안 모델 · AI 기능 �
     await G.liveSetScheduleConnection(m, '');
     assert.equal('scheduleConnectionId' in S.presenceOf(m).meta, false);
 });
+test('먼저 말 걸기의 방 전체 설정: 마리나라의 열쇠 그대로 (하루 상한 · 단체방 상한 같이 쓰기 · 캐릭터끼리 주고받기)', async () => {
+    const { m } = world(), A = await at('marinara/autonomous.service.js');
+    assert.deepEqual(S.autonomousOptions(m), { on: false, autonomousDailyCapOverride: null, groupChatMode: null, characterExchanges: false });
+    S.setAutonomous(m, true);
+    assert.deepEqual(S.setAutonomousOptions(m, { autonomousDailyCapOverride: 3.9, groupChatMode: 'individual', characterExchanges: true }), { on: true, autonomousDailyCapOverride: 3, groupChatMode: 'individual', characterExchanges: true });
+    const meta = S.presenceOf(m).meta;
+    assert.equal(A.dailyCapForCharacter({ talkativeness: 90 }, meta), 3);            // (마리나라가 그 열쇠를 읽어요)
+    assert.equal(A.sharesAutonomousDailyBudget(meta), true);
+    assert.throws(() => S.setAutonomousOptions(m, { autonomousDailyCapOverride: 0 }), /1 이상/);
+    assert.deepEqual(S.setAutonomousOptions(m, { autonomousDailyCapOverride: null, groupChatMode: null, characterExchanges: false }), { on: true, autonomousDailyCapOverride: null, groupChatMode: null, characterExchanges: false });
+    assert.deepEqual(Object.keys(meta).filter(k => /Cap|groupChat|Exchanges/.test(k)), []);
+});
+test('캐릭터끼리 주고받기(마리나라의 /autonomous/exchange): 켜야 하고, 단체방에서만. 하루 상한을 넘으면 안 해요', () => {
+    const { m, a } = world(), g = L.ensureRoom(m, ['Mara', 'Ivo']), t = Date.now(), now = new Date(t);
+    for (const r of [a, g]) r.messages.push({ id: `u${r.id}`, n: 1, from: 'Ren', text: 'hi', at: t - 120_000 }, { id: `c${r.id}`, n: 2, from: 'Mara', text: 'hey', at: t - 1000 });
+    S.setSchedule(m, 'Mara', { ...all('online', 'free'), talkativeness: 100 }, now);
+    S.setSchedule(m, 'Ivo', { ...all('online', 'free'), talkativeness: 100 }, now);
+    assert.equal(S.checkExchangeFor(m, g.id, 'Mara', { now }).reason, 'exchanges_disabled');
+    S.setAutonomousOptions(m, { characterExchanges: true });
+    assert.equal(S.checkExchangeFor(m, a.id, 'Mara', { now }).reason, 'not_group');
+    // (마리나라의 판단에는 운이 섞여 있어요: 여러 번 물으면 걸려요. 걸리면 말한 사람이 아닌 쪽이에요)
+    const orig = Math.random; Math.random = () => 0;
+    try {
+        const r = S.checkExchangeFor(m, g.id, 'Mara', { now });
+        assert.deepEqual([r.shouldTrigger, r.characterIds], [true, ['ivo']]);
+        S.setSchedule(m, 'Ivo', { ...all('online', 'free'), talkativeness: 100, autonomousDailyCapOverride: 1 }, now);
+        S.noteProactive(m, g.id, 'ivo', '', now);
+        assert.equal(S.checkExchangeFor(m, g.id, 'Mara', { now }).reason, 'daily_budget_exhausted');
+        S.setSchedule(m, 'Ivo', all('offline', 'sleeping'), now);
+        assert.equal(S.checkExchangeFor(m, g.id, 'Mara', { now }).shouldTrigger, false);
+    } finally { Math.random = orig; }
+});

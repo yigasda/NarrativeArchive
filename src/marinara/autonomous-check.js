@@ -4,9 +4,12 @@
 //   - the helpers above the routes (hasSchedules … resolveLongAbsenceCandidate) are as they are, TypeScript types removed;
 //   - checkAutonomous is the POST /autonomous/check handler: the chat's metadata, characters, schedules, overrides,
 //     card data and messages come as arguments instead of the Marinara database, it returns the answer instead of
-//     sending it, and the multiplayer, scene and turn-game branches are left out (NarrativeArchive has none of them).
+//     sending it, and the multiplayer, scene and turn-game branches are left out (NarrativeArchive has none of them);
+//   - checkExchange is the POST /autonomous/exchange handler, adapted the same way.
 import {
+  buildAutonomousDailyBudgetPatch,
   checkAutonomousMessaging,
+  checkCharacterExchange,
   getActivityState,
   getAutonomousDailyBudget,
   initializeActivityFromMessages,
@@ -304,6 +307,59 @@ export function checkAutonomous(args) {
     }
   }
 
+  return result;
+}
+
+/**
+ * Check if a character should answer another character (the POST /autonomous/exchange handler).
+ *   chatId, meta (characterExchanges, groupChatMode, autonomousDailyBudget, …), characterIds, lastSpeakerCharId,
+ *   schedules, statusOverrides, cards, messages (() => the chat's messages), promptTimeZone, nowInstant
+ */
+export function checkExchange(args) {
+  const { chatId, meta, characterIds, lastSpeakerCharId } = args;
+
+  // Only relevant for group chats
+  if (characterIds.length < 2) {
+    return { shouldTrigger: false, characterIds: [], reason: "not_group", inactivityMs: 0 };
+  }
+
+  // Respect the characterExchanges toggle
+  if (!meta.characterExchanges) {
+    return { shouldTrigger: false, characterIds: [], reason: "exchanges_disabled", inactivityMs: 0 };
+  }
+
+  const schedules = args.schedules ?? {};
+  const statusOverrides = args.statusOverrides ?? {};
+  // Exchanges only read status and talkativeness, so the user status here does not matter.
+  const autonomySchedules = withSchedulelessAutonomySchedules(characterIds, schedules, "idle", args.cards);
+  const now = args.nowInstant ?? new Date();
+  const scheduleNow = toZonedWallClockDate(now, args.promptTimeZone);
+  const filteredSchedules = { ...autonomySchedules };
+  initializeActivityFromMessages(chatId, args.messages ? args.messages() : []);
+
+  const result = checkCharacterExchange(chatId, lastSpeakerCharId, filteredSchedules, statusOverrides, now, scheduleNow);
+  if (result.shouldTrigger) {
+    // With a shared limit, a reply never takes the day's last check-in, so a
+    // check-in and its exchanges cannot spend the whole day at once (#7055).
+    const allowedCharacterId = result.characterIds.find(
+      (characterId) =>
+        !isAutonomousDailyBudgetExhausted(
+          characterId,
+          autonomySchedules[characterId],
+          sharesAutonomousDailyBudget(meta) ? { ...meta, ...buildAutonomousDailyBudgetPatch(meta, characterId) } : meta,
+        ),
+    );
+    if (!allowedCharacterId) {
+      return {
+        shouldTrigger: false,
+        characterIds: [],
+        reason: "daily_budget_exhausted",
+        inactivityMs: 0,
+      };
+    }
+    const generationStartedAt = markGenerationInProgress(chatId);
+    return { ...result, characterIds: [allowedCharacterId], generationStartedAt };
+  }
   return result;
 }
 

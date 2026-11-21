@@ -603,6 +603,10 @@ Orbit이 버벅이는 제일 큰 이유는 저장이에요: Orbit 데이터가 �
   - "하루에 요청 1회"는 마리나라도 화면이 `mode: 'day'`를 일곱 번 불러요. 멈추기는 `signal`: 모델 요청 자체를 끊어요(`src/ai.js`의 `callConn` · `askDraft` · `askAI`가 `signal`을 받아요, `tests/aisignal.test.mjs`).
   - 스케줄을 저장할 때(`liveSetSchedule`) 하는 일이 바뀌었으면 장소를 한 번 물어요. 끝 `24:00`은 `00:00`으로 바꿔 둬요.
   - 생성 연결(마리나라의 `connectionId`): 초안 모델(기본) · AI 기능 모델 · 실리태번 연결 프로필 가운데 골라요(`liveConnections` · `liveScheduleConnection` · `liveSetScheduleConnection`). 요청마다 `connectionId`로 따로 줄 수도 있어요.
+- 먼저 말 걸기의 설정(마리나라의 것 전부):
+  - 방 전체(`w.presence.meta`, 마리나라의 열쇠 그대로): 켜기(`on`), 하루 상한 `autonomousDailyCapOverride`, 단체방에서 상한 같이 쓰기 `groupChatMode: 'individual'`, 캐릭터끼리 주고받기 `characterExchanges`. `liveAutonomousOptions` · `liveSetAutonomousOptions`.
+  - 캐릭터마다(스케줄 안): `talkativeness` · `inactivityThresholdMinutes` · `idleResponseDelayMinutes` · `dndResponseDelayMinutes` · `autonomousDailyCapOverride` · `disabledAutonomousIntents`. 스케줄을 저장할 때 같이 들어가요.
+  - 캐릭터끼리 주고받기(마리나라의 `/autonomous/exchange`): 단체방에서 한 캐릭터가 답한 뒤 다른 캐릭터가 거기에 답할 때인지 마리나라의 판단으로 봐서 그 답장을 줄 세워요.
 - 지금은 실리 창이 열려 있는 동안만 돌아요. 창을 닫아도 돌게 하는 것(서버 플러그인에서 돌리기)이 다음이에요.
 - 화면이 부르는 것(`phone2go.js`): `liveMakeSchedule` · `liveSetSchedule` · `liveSchedule` · `liveStatus` · `liveSetStatus` · `liveSetUserStatus` · `liveSetAutonomous` · `livePresence` · `liveReplyWait`.
 

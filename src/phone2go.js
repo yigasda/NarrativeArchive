@@ -25,7 +25,7 @@ import { liveStoryText } from './phone2story.js';
 import { BACK, backLeft, backInput, phone2BackSystem, takeBack, backMessage, markTold } from './phone2back.js';
 import { liveWall } from './phone2clock.js';
 import { gatherReply } from './phone2live.js';
-import { presenceOf, scheduleOf, setSchedule, setStatusOverride, setUserStatus, setAutonomous, statusNow, replyDelay, contextBlock, makeSchedule, checkProactive, noteProactive, fillPlaces, stateNow, takeStatus, scheduleZone, setScheduleZone, draftSchedule, summarizeSchedule, repairSchedule, setAutoRenew, autoRenewOf, needsRefresh, renewSchedules } from './phone2sched.js';
+import { presenceOf, scheduleOf, setSchedule, setStatusOverride, setUserStatus, setAutonomous, statusNow, replyDelay, contextBlock, makeSchedule, checkProactive, noteProactive, fillPlaces, stateNow, takeStatus, scheduleZone, setScheduleZone, draftSchedule, summarizeSchedule, repairSchedule, setAutoRenew, autoRenewOf, needsRefresh, renewSchedules, setAutonomousOptions, autonomousOptions, checkExchangeFor } from './phone2sched.js';
 import { replyInput } from './phone2ask.js';
 import { phone2ReplySystem } from './phone2reply.js';
 import { runLive } from './phone2run.js';
@@ -154,6 +154,8 @@ export async function liveGo(real, { onChange = () => {} } = {}) {
             if (w && p && w.id === job.world) markPersona(p, w.persona);
             // (the owner changed their own status in the answer: a temporary one, and the phone follows it)
             if (w && p && w.id === job.world && got?.status && scheduleOf(real, job.owner) && takeStatus(real, job.owner, got.status, { tz: zoneOf(real, p) })) { followSchedule(real); await line.save(); }
+            // (a group room: another character may answer this one, as Marinara's exchange check decides)
+            if (w && p && w.id === job.world && got?.said && exchangeAfter(real, job)) { holdReplies(real); await line.save(); }
             tell();
         },
     });
@@ -330,6 +332,23 @@ export async function liveSetSchedule(real, owner, schedule) {
 export const liveSetStatus = async (real, owner, o = {}) => { const out = setStatusOverride(mine(real), owner, o); for (const j of liveWorld(real).queue.jobs) if (j.state === 'waiting' && liveKey(j.owner) === liveKey(owner)) { delete j.timed; delete j.notBefore; } await saveMeta(); return out; };
 export const liveSetUserStatus = async (real, o = {}) => { const out = setUserStatus(mine(real), o); await saveMeta(); return out; };
 export const liveSetAutonomous = async (real, on) => { const out = setAutonomous(mine(real), on); await saveMeta(); return out; };
+// 먼저 말 걸기의 방 전체 설정 (마리나라의 열쇠 그대로, 준 것만 바꿔요) → { on, autonomousDailyCapOverride, groupChatMode, characterExchanges }
+//   { autonomousDailyCapOverride: 하루 상한 (수 · null), groupChatMode: 'individual' (단체방에서 하루 상한을 같이 써요) · null, characterExchanges: 캐릭터끼리 주고받기 }
+export const liveAutonomousOptions = real => autonomousOptions(real);
+export const liveSetAutonomousOptions = async (real, o = {}) => { const out = setAutonomousOptions(mine(real), o); await saveMeta(); return out; };
+const cardsOf = room => { const cards = {}; for (const name of room.members) { const c = ctx().characters?.find(x => liveKey(x?.name) === liveKey(name)); if (c) cards[liveKey(name)] = c.data || c; } return cards; };
+// 단체방에서 한 캐릭터가 답한 뒤: 다른 캐릭터가 거기에 답할 때면(마리나라의 판단) 그 답장을 줄 세워요 → 줄 세운 이름 | ''
+function exchangeAfter(real, job) {
+    const w = liveWorld(real), room = w?.messenger?.rooms?.[job.room];
+    if (!w || !room || !w.presence?.meta?.characterExchanges) return '';
+    if (w.queue.jobs.some(j => j.room === room.id && j.kind === 'reply' && j.state === 'waiting')) return '';
+    const r = checkExchangeFor(real, room.id, job.owner, { tzOf: name => { const p = livePhone(real, name); return p ? zoneOf(real, p) : ''; }, cards: cardsOf(room) });
+    const k = r.shouldTrigger ? r.characterIds?.[0] : null, name = k && room.members.find(x => liveKey(x) === k);
+    if (!name) return '';
+    enqueueJob(real, { kind: 'reply', owner: name, room: room.id, why: `No new message from ${w.persona} was sent in this request; this is a proactive/autonomous turn. Do not write ${w.persona}'s side of the conversation.` });
+    noteProactive(real, room.id, k, '');
+    return name;
+}
 // 1분마다: 먼저 말 걸 때가 된 방이 있으면 그 답장을 줄 세워요 → 줄 세운 수. 그 뒤 liveGo가 돌려요
 export async function liveAutonomous(real, { now = Date.now() } = {}) {
     const w = liveWorld(real);
@@ -340,8 +359,7 @@ export async function liveAutonomous(real, { now = Date.now() } = {}) {
     let n = 0;
     for (const room of Object.values(w.messenger?.rooms || {})) {
         if (w.queue.jobs.some(j => j.room === room.id && j.kind === 'reply' && (j.state === 'waiting' || j.state === 'running'))) continue;
-        const cards = {};
-        for (const name of room.members) { const c = ctx().characters?.find(x => liveKey(x?.name) === liveKey(name)); if (c) cards[liveKey(name)] = c.data || c; }
+        const cards = cardsOf(room);
         const r = checkProactive(real, room.id, { now: new Date(now), tzOf: name => { const p = livePhone(real, name); return p ? zoneOf(real, p) : ''; }, cards });
         const k = r.shouldTrigger ? r.characterIds?.[0] : null, name = k && room.members.find(x => liveKey(x) === k);
         if (!name) continue;
