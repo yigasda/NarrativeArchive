@@ -919,24 +919,24 @@ export async function openPhone(who = null) {
     // 말 고치기 (시안 E2): 그 말풍선 자리에서 바로 고치고 밑의 ✕ · ✓. 원문을 고치면 한국어는 liveEditMessage가 지우고, 한국어가 있던 말이면 바로 다시 번역해요
     // 고치는 말풍선 + ✕ · ✓가 늘 보이게: 말 목록 안에서 위쪽 40% 언저리로 굴려요. 키보드가 올라오면 목록이 줄어서(--obkb) 그때마다 다시 맞춰요
     // (안 그러면 고치는 말이 화면 밖에 있고 다른 말만 옅게 보였어요, 소망)
-    const obFixShow = () => {
+    const obFixShow = (first = false) => {
         if (!obFix) return; const b = $root.find('.ob_fix')[0], box = b?.closest('.ob_msgs'); if (!b || !box) return;
         const bar = b.nextElementSibling?.classList.contains('ob_fbar') ? b.nextElementSibling : b, bt = b.getBoundingClientRect(), bb = bar.getBoundingClientRect(), r = box.getBoundingClientRect();
         // (보이는 아래 끝: 목록 끝 · 입력칸 위 · 키보드 위 중 가장 위)
         const inp = $root.find('.ob_inp')[0], vv = window.visualViewport;
-        const top = r.top, bot = Math.min(r.bottom, inp ? inp.getBoundingClientRect().top : r.bottom, vv ? vv.offsetTop + vv.height : r.bottom);
+        // (처음엔 키보드가 아직 안 올라왔어요: 키보드가 가릴 아래 절반은 없는 셈 치고 위쪽에 놓아요. 그래야 키보드가 올라올 때 다시 안 튀어요)
+        const top = r.top, bot0 = Math.min(r.bottom, inp ? inp.getBoundingClientRect().top : r.bottom, vv ? vv.offsetTop + vv.height : r.bottom), bot = first ? Math.min(bot0, top + r.height * 0.45) : bot0;
         const k = b.offsetHeight ? bt.height / b.offsetHeight : 1, h = bb.bottom - bt.top;
         if (bt.top >= top + 24 && bb.bottom <= bot - 16) return;
-        box.scrollTop += (bt.top - (top + Math.max(24, (bot - top) * 0.4 - h / 2))) / k;
+        box.scrollTop += (bt.top - (top + Math.max(24, Math.min(64, (bot - top) * 0.4 - h / 2)))) / k;
     };
     let obVv = false;
     const obFixFocus = () => {
         if (!obVv && window.visualViewport) { obVv = true; window.visualViewport.addEventListener('resize', () => setTimeout(obFixShow, 60)); }
         const e = $root.find(obFix?.at === 'k' ? '.na_ob_fk' : '.na_ob_ft')[0]; if (!e) return;
-        obFixShow();
-        if (document.activeElement === e) return;
+        if (document.activeElement === e) return obFixShow();
+        obFixShow(true);
         e.focus({ preventScroll: true }); try { const r = document.createRange(); r.selectNodeContents(e); r.collapse(false); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); } catch { /* (no caret) */ }
-        [120, 380, 700].forEach(t => setTimeout(obFixShow, t));
     };
     const obFixOk = async () => {
         const f = obFix, id = obRoomId(); if (!f || !id || !obCanEdit()) return;
@@ -962,8 +962,9 @@ export async function openPhone(who = null) {
     $root.on('input', '.na_ob_ft, .na_ob_fk', function () { if (!obFix) return; if (this.classList.contains('na_ob_fk')) obFix.k = this.innerText; else obFix.t = this.innerText; });
     $root.on('focus', '.na_ob_ft, .na_ob_fk', function () { if (obFix) obFix.at = this.classList.contains('na_ob_fk') ? 'k' : 't'; });
     $root.on('keydown', '.na_ob_ft, .na_ob_fk', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); obFixOk(); } else if (e.key === 'Escape') { obFix = null; drawPhone(true); } });
-    $root.on('click', '.na_ob_fok', e => { e.stopPropagation(); obFixOk(); });
-    $root.on('click', '.na_ob_fno', e => { e.stopPropagation(); obFix = null; drawPhone(true); });
+    // (✕ · ✓는 누르는 순간 받아요: 손을 뗄 때까지 기다리면 칸이 초점을 잃어 키보드가 내려가고, 화면이 밀려 버튼이 손가락 밑에서 달아났어요 — 두 번 눌러야 했어요, 소망 녹화)
+    $root.on('pointerdown', '.na_ob_fok, .na_ob_fno', function (e) { e.preventDefault(); e.stopPropagation(); obSwallow = true; if (this.classList.contains('na_ob_fok')) obFixOk(); else { obFix = null; drawPhone(true); } });
+    $root.on('click', '.na_ob_fok, .na_ob_fno', e => { e.stopPropagation(); });
     $root.on('click', '.na_ob_mtr', function (e) { e.stopPropagation(); obRetr([this.dataset.id]); });
     $root.on('click', '.na_ob_ptr', e => { e.stopPropagation(); obRetr([...(obPicks || [])]); });
     $root.on('click', '.na_ob_mdel', function (e) { e.stopPropagation(); obDrop([this.dataset.id]); });
