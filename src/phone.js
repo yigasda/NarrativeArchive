@@ -913,9 +913,26 @@ export async function openPhone(who = null) {
     });
     $root.on('input', '.ob_rein', function () { const v = this.value.trim(); if (!v) return; const msgId = this.dataset.id; this.value = ''; this.blur(); obReact(msgId, v); });
     // 말 고치기 (시안 E2): 그 말풍선 자리에서 바로 고치고 밑의 ✕ · ✓. 원문을 고치면 한국어는 liveEditMessage가 지우고, 한국어가 있던 말이면 바로 다시 번역해요
+    // 고치는 말풍선 + ✕ · ✓가 늘 보이게: 말 목록 안에서 위쪽 40% 언저리로 굴려요. 키보드가 올라오면 목록이 줄어서(--obkb) 그때마다 다시 맞춰요
+    // (안 그러면 고치는 말이 화면 밖에 있고 다른 말만 옅게 보였어요, 소망)
+    const obFixShow = () => {
+        if (!obFix) return; const b = $root.find('.ob_fix')[0], box = b?.closest('.ob_msgs'); if (!b || !box) return;
+        const bar = b.nextElementSibling?.classList.contains('ob_fbar') ? b.nextElementSibling : b, bt = b.getBoundingClientRect(), bb = bar.getBoundingClientRect(), r = box.getBoundingClientRect();
+        // (보이는 아래 끝: 목록 끝 · 입력칸 위 · 키보드 위 중 가장 위)
+        const inp = $root.find('.ob_inp')[0], vv = window.visualViewport;
+        const top = r.top, bot = Math.min(r.bottom, inp ? inp.getBoundingClientRect().top : r.bottom, vv ? vv.offsetTop + vv.height : r.bottom);
+        const k = b.offsetHeight ? bt.height / b.offsetHeight : 1, h = bb.bottom - bt.top;
+        if (bt.top >= top + 24 && bb.bottom <= bot - 16) return;
+        box.scrollTop += (bt.top - (top + Math.max(24, (bot - top) * 0.4 - h / 2))) / k;
+    };
+    let obVv = false;
     const obFixFocus = () => {
-        const e = $root.find(obFix?.at === 'k' ? '.na_ob_fk' : '.na_ob_ft')[0]; if (!e || document.activeElement === e) return;
+        if (!obVv && window.visualViewport) { obVv = true; window.visualViewport.addEventListener('resize', () => setTimeout(obFixShow, 60)); }
+        const e = $root.find(obFix?.at === 'k' ? '.na_ob_fk' : '.na_ob_ft')[0]; if (!e) return;
+        obFixShow();
+        if (document.activeElement === e) return;
         e.focus({ preventScroll: true }); try { const r = document.createRange(); r.selectNodeContents(e); r.collapse(false); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); } catch { /* (no caret) */ }
+        [120, 380, 700].forEach(t => setTimeout(obFixShow, t));
     };
     const obFixOk = async () => {
         const f = obFix, id = obRoomId(); if (!f || !id || !obCanEdit()) return;
