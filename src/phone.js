@@ -460,7 +460,18 @@ export async function openPhone(who = null) {
     $root.on('paste', '.pcf_area', function (e) { e.preventDefault(); const t = (e.originalEvent?.clipboardData?.getData('text/plain') || '').replace(/\s+/g, ' '); document.execCommand('insertText', false, t); });
     $root.on('keydown', '.pcf_field', function (e) { e.stopPropagation(); if (e.key === 'Enter' && !e.originalEvent?.isComposing && e.keyCode !== 229) { e.preventDefault(); ask?.done(fieldVal(this) || false); } else if (e.key === 'Escape') ask?.done(false); });
     $root.on('keydown', '.pcf_ok, .pcf_no', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ask?.done(this.classList.contains('pcf_ok') ? (this.dataset.v || true) : false); } });
+    // 손가락이 화면에 닿아 있는 동안에는 다시 그리지 않아요: 그리면 화면이 통째로 바뀌어서, 누르던 버튼이 사라지고 그 누름이 먹히지 않았어요
+    // (답장이 오는 중 · 저장이 끝날 때 · 번역이 올 때처럼 뒤에서 그리는 일과 겹치면 "눌렀는데 안 됨", 소망). 손을 떼면 바로 그려요.
+    // 길게 누르기처럼 닿은 채로 그려야 하는 곳은 ptrDown을 먼저 풀어요. 3초 넘게 닿아 있으면(떼는 신호를 놓쳤을 때) 그냥 그려요
+    let ptrDown = false, ptrAt = 0, drawWait = null;
     const drawPhone = (keep = false) => {
+        if (ptrDown && Date.now() - ptrAt < 3000) { drawWait = drawWait === null ? keep : drawWait && keep; return; }
+        ptrDown = false; drawWait = null; drawNow(keep);
+    };
+    const ptrUp = () => { ptrDown = false; if (drawWait !== null) setTimeout(() => { if (drawWait !== null && !ptrDown && !phoneClosed) { const k = drawWait; drawWait = null; drawNow(k); } }, 60); };
+    $root[0].addEventListener('pointerdown', () => { ptrDown = true; ptrAt = Date.now(); }, true);
+    for (const ev of ['pointerup', 'pointercancel']) window.addEventListener(ev, ptrUp, true);
+    const drawNow = (keep = false) => {
         queueMicrotask(placeAsk);  // every way out of a redraw (some return early) puts the open sheet back
         const p = phone();
         // 실시간 with nobody on it (대화만 남기기 keeps the talk, not the phones): a way back to 타임라인 and to 새로 시작,
@@ -828,7 +839,7 @@ export async function openPhone(who = null) {
         // (번역 줄 위에서 눌러도 길게 누르기가 돼요: 길게 누른 뒤의 클릭은 번역 접기로 안 가요 — obJustHeld · obSwallow)
         if (!obCanEdit() || obPicks || obFix) return;
         const id = this.dataset.id; obDown = { id, x: e.clientX, y: e.clientY, sw: this.classList.contains('na_ob_sw') };
-        obHoldStop(); obHoldT = setTimeout(() => { obHoldT = null; obDown = null; obHeldAt = Date.now(); obHeld = id; obSwallow = true; navigator.vibrate?.(10); drawPhone(true); }, 480);
+        obHoldStop(); obHoldT = setTimeout(() => { obHoldT = null; obDown = null; obHeldAt = Date.now(); obHeld = id; obSwallow = true; navigator.vibrate?.(10); ptrDown = false; drawPhone(true); }, 480);
     });
     // (손가락은 누르고 있는 동안 조금 굴러요: 12px까지는 그대로 기다려요. 폰이 글자 선택 메뉴를 띄우면 길게 누르기가 취소돼서 말풍선은 글자 선택을 꺼 뒀어요)
     $root.on('pointermove', '.na_ob_b', e => { if (obDown && Math.hypot(e.clientX - obDown.x, e.clientY - obDown.y) > 12) obHoldStop(); });
@@ -863,8 +874,10 @@ export async function openPhone(who = null) {
     $root.on('pointerup pointercancel', () => { if (obT) obTEnd(); });
     const obSwipe = async dir => {
         const id = obRoomId(); if (!id || !obCanEdit() || obHeld || obPicks) return;
-        try { const r = await liveSwipe(realM, id, dir); if (!phoneClosed && stillHere()) { drawPhone(true); obBottom(); } if (r?.fresh) obGo(); }
-        catch (err) { obWarn(err); }
+        // (넘긴 답장은 바로 보여요: 저장은 폰에서 몇 초 걸려서 뒤에서 기다려요 — obSoon)
+        const pr = liveSwipe(realM, id, dir), bad = await obSoon(pr); if (bad) return obWarn(bad);
+        if (!phoneClosed && stillHere()) { drawPhone(true); obBottom(); }
+        try { const r = await pr; if (r?.fresh) obGo(); } catch (err) { obWarn(err); }
     };
     // 점을 누르면 받아 둔 답장 창 (넘기기는 밀어서). 창 안: 줄을 눌러 고르기, 지금 것만 남기기, 고른 것 버리기 — 지우기 전에 한 번 물어요
     const obListDraw = () => { const top = $root.find('.ob_sls').scrollTop(); drawPhone(true); $root.find('.ob_sls').scrollTop(top); };
@@ -874,9 +887,10 @@ export async function openPhone(who = null) {
     const obListDrop = async (ask, run) => {
         const id = obRoomId(); if (!id || !obList) return;
         if (!await askSheet(ask, '', '버리기')) return;
-        let r = null; try { r = await run(id); } catch (err) { obWarn(err); }
-        if (r) obList = r.count > 1 ? new Set() : null;
+        const pr = run(id), bad = await obSoon(pr); if (bad) return obWarn(bad);
+        const left = liveSwipeInfo(realM, id)?.count || 0; obList = left > 1 ? new Set() : null;
         if (!phoneClosed && stillHere()) obListDraw();
+        try { await pr; } catch (err) { obWarn(err); }
     };
     $root.on('click', '.na_ob_slkeep', e => { e.stopPropagation(); obListDrop('지금 것만 남기고 버릴까요?', id => liveSwipeDropOthers(realM, id)); });
     $root.on('click', '.na_ob_sldrop', e => { e.stopPropagation(); const ns = [...(obList || [])]; if (ns.length) obListDrop(`${ns.length}개를 버릴까요?`, id => liveSwipeDropMany(realM, id, ns)); });
@@ -896,8 +910,9 @@ export async function openPhone(who = null) {
     const obDrop = async ids => {
         const id = obRoomId(); if (!id || !ids.length) return;
         if (!await askSheet(`${ids.length}개를 지울까요?`, '', '지우기')) return;
-        try { await liveDropMessages(realM, id, ids); } catch (err) { obWarn(err); }
+        const pr = liveDropMessages(realM, id, ids), bad = await obSoon(pr); if (bad) obWarn(bad);
         obHeld = null; obPicks = null; if (!phoneClosed && stillHere()) drawPhone(true);
+        if (!bad) try { await pr; } catch (err) { obWarn(err); }
     };
     // 이모지 반응 (시안 docs/mockups/shell-bars Q2): 길게 누른 카드 윗줄. 같은 걸 다시 누르면 지워져요(liveReact가 해요).
     // "+"는 숨은 칸에 초점을 줘서 폰 키보드를 띄우고, 이모지 하나가 들어오면 달아요(글자는 liveReact가 거절해요)
@@ -963,7 +978,7 @@ export async function openPhone(who = null) {
     $root.on('focus', '.na_ob_ft, .na_ob_fk', function () { if (obFix) obFix.at = this.classList.contains('na_ob_fk') ? 'k' : 't'; });
     $root.on('keydown', '.na_ob_ft, .na_ob_fk', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); obFixOk(); } else if (e.key === 'Escape') { obFix = null; drawPhone(true); } });
     // (✕ · ✓는 누르는 순간 받아요: 손을 뗄 때까지 기다리면 칸이 초점을 잃어 키보드가 내려가고, 화면이 밀려 버튼이 손가락 밑에서 달아났어요 — 두 번 눌러야 했어요, 소망 녹화)
-    $root.on('pointerdown', '.na_ob_fok, .na_ob_fno', function (e) { e.preventDefault(); e.stopPropagation(); obSwallow = true; if (this.classList.contains('na_ob_fok')) obFixOk(); else { obFix = null; drawPhone(true); } });
+    $root.on('pointerdown', '.na_ob_fok, .na_ob_fno', function (e) { e.preventDefault(); e.stopPropagation(); obSwallow = true; ptrDown = false; if (this.classList.contains('na_ob_fok')) obFixOk(); else { obFix = null; drawPhone(true); } });
     $root.on('click', '.na_ob_fok, .na_ob_fno', e => { e.stopPropagation(); });
     $root.on('click', '.na_ob_mtr', function (e) { e.stopPropagation(); obRetr([this.dataset.id]); });
     $root.on('click', '.na_ob_ptr', e => { e.stopPropagation(); obRetr([...(obPicks || [])]); });
@@ -972,8 +987,9 @@ export async function openPhone(who = null) {
     $root.on('click', '.na_ob_swdel', async e => {
         e.stopPropagation(); const id = obRoomId(); if (!id) return;
         if (!await askSheet('이 답장을 지울까요?', '', '지우기')) return;
-        try { await liveSwipeDrop(realM, id); } catch (err) { obWarn(err); }
+        const pr = liveSwipeDrop(realM, id), bad = await obSoon(pr); if (bad) obWarn(bad);
         obHeld = null; if (!phoneClosed && stillHere()) drawPhone(true);
+        if (!bad) try { await pr; } catch (err) { obWarn(err); }
     });
     // 프사 바꾸기 (시안 phone2-edit sheetCrop C1 + 두 칸 갤러리): 1:1 방 머리줄의 얼굴 → 그 사람 색 전체 화면.
     // 사진은 인물 도감과 같은 저장소(확장 설정 faces, 모든 채팅이 같이 써요)에 들어가고, 모아 둔 사진은 faceAlbum[이름]에 남아요(사람마다 FACE_KEEP장까지).
@@ -1157,8 +1173,9 @@ export async function openPhone(who = null) {
         sendLive(realM, r.id, t);
         enqueueReplies(realM, r.id);
         obDraft = ''; drawPhone(); obBottom(); obFocus();
-        await saveMeta();
-        obGo();
+        // (답장 요청은 저장을 기다리지 않고 바로 시작해요: 폰에서 저장이 몇 초 걸려서 답장이 그만큼 늦게 왔어요. 답장을 받으면 liveGo가 다시 저장해요)
+        const sv = saveMeta(); obGo();
+        await sv;
     };
     $root.on('click', '.na_ob_retry', async function (e) {
         e.stopPropagation();
@@ -1167,8 +1184,8 @@ export async function openPhone(who = null) {
         seeFailure(realM, j.id);
         if (w.messenger?.rooms?.[j.room]) enqueueReplies(realM, j.room);
         drawPhone(); obBottom();
-        await saveMeta();
-        obGo();
+        const sv = saveMeta(); obGo();
+        await sv;
     });
     $root.on('click', '.na_ob_send', e => { e.stopPropagation(); obSend(); });
     $root.on('keydown', '.na_ob_in', e => { e.stopPropagation(); if (e.key === 'Enter' && !e.originalEvent?.isComposing && e.keyCode !== 229) { e.preventDefault(); obSend(); } });
@@ -1765,7 +1782,7 @@ export async function openPhone(who = null) {
     $root.on('pointerdown', '.na_ph_bb', function (e) {
         if (msgPick) return;
         const el = this; heldAt = [e.clientX, e.clientY]; clearTimeout(heldT);
-        heldT = setTimeout(() => { heldT = null; heldWhen = Date.now(); holding = true; msgHeld = { i: threadNo(), k: Number(el.dataset.k) }; navigator.vibrate?.(10); drawPhone(true); }, 480);
+        heldT = setTimeout(() => { heldT = null; heldWhen = Date.now(); holding = true; msgHeld = { i: threadNo(), k: Number(el.dataset.k) }; navigator.vibrate?.(10); ptrDown = false; drawPhone(true); }, 480);
     });
     $root.on('pointermove', '.na_ph_bb', e => { if (heldT && heldAt && Math.hypot(e.clientX - heldAt[0], e.clientY - heldAt[1]) > 8) { clearTimeout(heldT); heldT = null; } });
     $root.on('pointerup pointercancel pointerleave', '.na_ph_bb', () => { clearTimeout(heldT); heldT = null; });
@@ -2272,7 +2289,7 @@ export async function openPhone(who = null) {
             }
             return 1;
         };
-        dlg.addEventListener('close', () => { if (window.NAShell) window.__naBack = backWas; }, { once: true });
+        dlg.addEventListener('close', () => { if (window.NAShell) window.__naBack = backWas; for (const ev of ['pointerup', 'pointercancel']) window.removeEventListener(ev, ptrUp, true); }, { once: true });
         dlg.addEventListener('close', () => { phoneClosed = true; setPhoneMeta(null); if (liveMode(realM) === 'live' && stillHere()) obReflect(); ask?.done(false); done(); }, { once: true });
     });
     window.visualViewport?.removeEventListener('resize', kbSoon); window.visualViewport?.removeEventListener('scroll', kbSoon); window.removeEventListener('resize', kbSoon);
