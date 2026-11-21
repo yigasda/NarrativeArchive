@@ -286,7 +286,8 @@ const askVia = (real, connectionId) => async (messages, o) => {
     if (!out) throw new Error('모델이 빈 답을 돌려줬어요');
     return out;
 };
-const cardData = async p => ({ name: p.owner, description: String(await cardOf(p) || ''), personality: '' });
+// (Marinara reads the card's description and personality: SillyTavern's own fields when the character is there, else our card text)
+const cardData = async p => { const c = ctx().characters?.find(x => liveKey(x?.name) === liveKey(p.owner)), d = c?.data || c || {}; return String(d.description || '').trim() ? { name: p.owner, description: String(d.description).trim(), personality: String(d.personality || '').trim() } : { name: p.owner, description: String(await cardOf(p) || ''), personality: '' }; };
 // 스케줄의 시간대 ('' = 사람마다 폰의 시간대) · 바꾸기 (tz '' 이면 풀기) · 그 사람의 스케줄이 쓰는 시간대
 export const liveScheduleZone = real => scheduleZone(real);
 export const liveSetScheduleZone = async (real, tz) => { const out = setScheduleZone(mine(real), tz); for (const p of Object.values(liveWorld(real).phones || {})) delete p.schedAt; followSchedule(real); await saveMeta(); return out; };

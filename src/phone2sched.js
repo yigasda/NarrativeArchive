@@ -4,7 +4,8 @@
 //     on: 먼저 말 걸기를 켰나 (마리나라의 autonomousMessages),
 //     schedules: { 폰 열쇠: 마리나라의 WeekSchedule }, overrides: { 폰 열쇠: 손으로 준 상태 (ConversationStatusOverride) },
 //     meta: { autonomousDailyBudget, intentCooldowns, autonomousDailyCapOverride … } (마리나라가 채팅 메타에 두는 것 그대로),
-//     user: { status: 'active' | 'idle' | 'dnd' | 'invisible', activity } (내 상태)
+//     user: { status: 'active' | 'idle' | 'dnd' | 'invisible', manual: 내가 손으로 고른 상태, activity } (내 상태: 마리나라의 userStatus · userStatusManual.
+//       손으로 고른 것이 active일 때만 10분 가만히 있으면 status가 idle로 바뀌었다가, 움직이거나 말을 보내면 active로 돌아와요)
 //   }
 // 마리나라의 "채팅" = 우리 방 하나 (chatId = 세계 id:방 id), "캐릭터 id" = 폰 열쇠(liveKey).
 // 저장은 부르는 쪽이 해요. 폰 1 · 아카이브는 읽지도 쓰지도 않아요. 폰 1은 이 파일을 부르지 않아요.
@@ -21,6 +22,7 @@ import { checkAutonomous, checkExchange, forgetAutonomousSeed } from './marinara
 import { clearChatActivity, clearGenerationInProgress, buildAutonomousDailyBudgetPatch, getActivityState, recordUserActivity, recordAssistantActivity, recordUserReaction } from './marinara/autonomous.service.js';
 import { buildIntentCooldownPatch, isMessageIntent } from './marinara/intent.service.js';
 import { applyCharacterStatusCommand } from './marinara/schedule-command.js';
+import { restoreAvailableAfterUserMessage } from './marinara/idle-detection.js';
 
 export { ScheduleDraftError, CONVERSATION_SCHEDULE_DAYS };
 const obj = v => v && typeof v === 'object' && !Array.isArray(v);
@@ -61,7 +63,11 @@ export function setStatusOverride(m, owner, { status, activity = '', minutes = 0
 // 내 상태 · 먼저 말 걸기 켜기
 export function setUserStatus(m, { status = 'active', activity = '' } = {}) {
     if (!USER.includes(status)) throw new Error('내 상태는 active · idle · dnd · invisible 가운데 하나예요');
-    return (presenceOf(m).user = { status, activity: String(activity || '').replace(/\s+/g, ' ').trim().slice(0, 120) });
+    return (presenceOf(m).user = { status, manual: status, activity: String(activity || '').replace(/\s+/g, ' ').trim().slice(0, 120) });
+}
+// 내 상태를 마리나라의 UI 저장소 모양으로 (idle-detection.js가 읽고 써요): 저절로 바뀌는 것은 status만, 손으로 고른 것(manual)은 그대로
+export function userStore(m) {
+    return { getState: () => { const u = peek(m).user || {}; return { userStatus: u.status || 'active', userStatusManual: u.manual || u.status || 'active', setUserStatus: s => { if (liveWorld(m) && USER.includes(s)) presenceOf(m).user = { ...presenceOf(m).user, status: s, manual: u.manual || u.status || 'active' }; } }; } };
 }
 export const setAutonomous = (m, on) => (presenceOf(m).on = !!on);
 
@@ -317,6 +323,8 @@ export function syncUser(m, roomId) {
     const P = liveKey(w.persona), last = [...(room.messages || [])].reverse().find(x => liveKey(x.from) === P && (x.text || x.call)), st = getActivityState(chatIdOf(m, roomId));
     // (no state yet: the first check reads the room's messages, as Marinara does after a restart)
     if (!st || !last || !(Number(last.at) > st.lastUserMessageAt)) return false;
+    // (I sent a message while shown as idle: back to active, as Marinara's recordUserMessageActivity does)
+    restoreAvailableAfterUserMessage(userStore(m));
     recordUserActivity(chatIdOf(m, roomId), { occurredAt: Number(last.at) });
     return true;
 }

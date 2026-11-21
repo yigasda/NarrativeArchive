@@ -3,6 +3,8 @@
 // 화면은 document의 'na-live-change' 소식을 듣고 다시 그려요.
 
 import { getMeta, hasChat } from './core.js';
+import { startIdleDetection } from './marinara/idle-detection.js';
+import { userStore } from './phone2sched.js';
 
 export const TICK_MS = 30_000, TICK_FIRST_MS = 10_000;
 let timer = null, busy = false;
@@ -27,4 +29,6 @@ export function tickStart() {
     const run = () => { tickOnce().catch(err => console.warn('[narrative-archive] live tick', err)); };
     timer = globalThis.setInterval(run, TICK_MS);
     globalThis.setTimeout(run, TICK_FIRST_MS);
+    // (10 minutes without a touch: my status reads idle, until I move or send — Marinara's idle detection, on the open chat)
+    startIdleDetection({ getState: () => (hasChat() && getMeta()?.live?.world ? userStore(getMeta()).getState() : { userStatus: 'active', userStatusManual: 'dnd', setUserStatus() {} }) });
 }

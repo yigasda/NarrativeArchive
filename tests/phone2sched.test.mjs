@@ -502,3 +502,36 @@ test('이모지만 달면 첫 번째 먼저 걸기가 빨라져요 (마리나라
         assert.deepEqual([r.shouldTrigger, r.reason], [true, 'user_reaction']);
     } finally { Date.now = real; }
 });
+test('저절로 자리 비움(마리나라의 idle detection): 손으로 고른 게 active일 때만, 10분 가만히 있으면 idle · 움직이거나 말하면 active', async () => {
+    const ID = await at('marinara/idle-detection.js');
+    const { m, a } = world(), handlers = {}, timers = [];
+    const win = { addEventListener: (e, f) => { handlers[e] = f; }, removeEventListener: e => { delete handlers[e]; } }, doc = { hidden: false, addEventListener() {}, removeEventListener() {} };
+    const realSet = globalThis.setTimeout, realClear = globalThis.clearTimeout;
+    globalThis.setTimeout = (f, ms) => { timers.push({ f, ms }); return timers.length; }; globalThis.clearTimeout = () => {};
+    try {
+        const stop = ID.startIdleDetection(S.userStore(m), win, doc);
+        assert.equal(timers.at(-1).ms, 10 * 60 * 1000);
+        timers.at(-1).f();                                              // 10분이 지났어요
+        assert.deepEqual([S.presenceOf(m).user.status, S.presenceOf(m).user.manual], ['idle', 'active']);
+        assert.match(S.contextBlock(m, 'Mara', a.id, { now: NOW }), /Ren's status: idle \/ away from the computer\./);
+        handlers.keydown();                                             // 움직였어요
+        assert.equal(S.presenceOf(m).user.status, 'active');
+        // 손으로 방해 금지를 골랐으면 건드리지 않아요
+        S.setUserStatus(m, { status: 'dnd' });
+        timers.at(-1).f(); handlers.keydown();
+        assert.deepEqual([S.presenceOf(m).user.status, S.presenceOf(m).user.manual], ['dnd', 'dnd']);
+        stop();
+        assert.deepEqual(Object.keys(handlers), []);
+    } finally { globalThis.setTimeout = realSet; globalThis.clearTimeout = realClear; }
+    // 자리 비움으로 보이는 동안 말을 보내면 active로 (마리나라의 restoreAvailableAfterUserMessage)
+    S.setUserStatus(m, { status: 'active' });
+    S.userStore(m).getState().setUserStatus('idle');
+    const t = Date.now();
+    a.messages.push({ id: 'x1', n: 1, from: 'Ren', text: 'hi', at: t - 60_000 }, { id: 'x2', n: 2, from: 'Mara', text: 'hey', at: t - 50_000 });
+    S.setAutonomous(m, true);
+    S.checkProactive(m, a.id, { now: new Date() });                     // (방의 말에서 처음 읽어요)
+    S.userStore(m).getState().setUserStatus('idle');
+    a.messages.push({ id: 'x3', n: 3, from: 'Ren', text: 'back', at: Date.now() - 1 });
+    assert.equal(S.syncUser(m, a.id), true);
+    assert.equal(S.presenceOf(m).user.status, 'active');
+});

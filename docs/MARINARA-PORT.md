@@ -22,12 +22,13 @@
 | shared/utils/message-marks.ts | 예 |
 | client/lib/character-schedule-transfer.ts | 예 |
 | routes/generate/conversation-context-block.ts | 예 |
-| client/lib/user-status.ts | 예 |
+| client/lib/user-status.ts · user-presence-activity.ts | 예 |
+| client/hooks/use-idle-detection.ts | 예 (src/marinara/idle-detection.js로 가져옴) |
 | services/conversation/schedule.service.ts | 예 (읽다가 찾은 것: 요청마다의 온도 · 생각 정도가 모델에 안 가고 있었음 → 넣음) |
 | services/conversation/autonomous.service.ts | 예 (읽다가 찾은 것: 판단할 때마다 기억을 지워서 따라 묻기 수 · 반응한 때가 늘 0이었음 → 마리나라처럼 기억해 두고, 마리나라가 적는 때에 적게 고침) |
-| services/conversation/intent.service.ts | 아니오 (40~153줄만) |
-| services/conversation/timezone.ts | 아니오 (함수 목록만) |
-| routes/conversation.routes.ts | 아니오 (84~94, 107~264, 342~413, 507~1236, 1251~1352줄) |
+| services/conversation/intent.service.ts | 예 |
+| services/conversation/timezone.ts | 예 |
+| routes/conversation.routes.ts | 예 (읽다가 찾은 것: 아래 "아직 마리나라와 다른 것"에 적음) |
 | client/hooks/use-autonomous-messaging.ts | 아니오 (1~60, 100~280줄) |
 | services/generation/conversation-schedule-command-runtime.ts | 아니오 (40~226줄) |
 | routes/generate/conversation-presence-runtime.ts | 아니오 (68~352줄) |
@@ -49,7 +50,7 @@
 | client/lib/character-schedule-transfer.ts | 171 | 다 | src/marinara/character-schedule-transfer.js | (스케줄 내보내기 · 가져오기 함수도 들어 있음: 화면에서 부르면 됨) |
 | client/hooks/use-autonomous-messaging.ts | 303 | 일부 | src/phone2tick.js · phone2go.js liveAutonomous | 순서 · 주기(30초) · 늦음 · 주고받기(2~5초 뒤) · 세는 때(말이 실제로 나온 뒤) · 실패하면 쉬었다 다시(5분부터 두 배, 1시간까지)는 맞춤. 코드는 우리 줄(queue)에 맞춰 다시 짬. 안 맞춘 것: 실패 종류에 따라 더 길게 쉬기(hard failure) |
 | client/hooks/use-background-autonomous.ts | 400 | 아직 | | 다른 방(안 보고 있는 방)에서도 먼저 말 걸기 |
-| client/lib/user-status.ts · user-presence-activity.ts | 40 | 일부 | phone2sched.js setUserStatus | 내가 한동안 안 건드리면 저절로 "자리 비움" 되는 것 |
+| client/lib/user-status.ts · user-presence-activity.ts · hooks/use-idle-detection.ts | 110 | 다 | src/marinara/idle-detection.js · phone2sched.js userStore | |
 | services/conversation/server-autonomous-scheduler.service.ts | 507 | 아직 | | 실리 창을 닫아도 서버가 돌리기 (서버 플러그인) |
 | routes/generate/conversation-context-block.ts | 162 | 다 | src/marinara/conversation-context-block.js | |
 | routes/generate/conversation-presence-runtime.ts | 492 | 일부 | phone2go.js holdReplies | 늦음 · 오프라인 · @ 부름은 맞춤. 단체방에서 답할 사람 고르기, 답한 뒤 다른 사람 부르기(mentionResponderDelays)는 아직 |
@@ -107,13 +108,19 @@
 - 먼저 건 말을 세는 때 · 이유의 쉬는 시간(말이 실제로 나온 뒤), 실패하면 쉬었다 다시
 - 상황 글(CONTEXT)을 마리나라처럼 항상 넣기: 스케줄이 없는 사람은 "online". 내 상태 · @ 부름 · 먼저 거는 차례 줄이 스케줄 없는 사람에게도 가요
 - 따라 묻기가 마리나라처럼 점점 뜸해지고(두 배, 네 배) 세 번에서 멈추기, 이모지만 달면 첫 번째가 빨라지기: 방의 움직임을 기억해 두고(`syncUser` · `noteAssistant` · `noteReaction` · `forgetActivity`) 마리나라가 적는 때에 적어요
+- 저절로 "자리 비움"(마리나라의 idle detection: 10분) · 자리 비움 중에 말을 보내면 활동 중으로
+- 스케줄을 만들 때 카드의 설명 · 성격 칸을 마리나라처럼 따로 넘기기(실리 카드의 description · personality)
 - 스케줄 요청의 온도(수리 0.45 · 조정 0.7 · 새로 0.8 · 변주 0.9, 요약 0.55)와 요약의 낮은 생각 정도가 모델에 가게 (`src/ai.js`가 `temperature`를 받아요)
 - 생성 연결 고르기, 생성 중지가 요청을 끊기, 방 전체 설정(하루 상한 · 상한 같이 쓰기 · 캐릭터끼리 주고받기)
 
 ## 아직 마리나라와 다른 것 (이미 넣은 기능 안에서)
 
 - 캐릭터 명령 켜고 끄기(방마다): 명령을 더 가져올 때 같이 넣어요(`conversation-command-runtime.ts`).
-- 내가 한동안 안 건드리면 저절로 "자리 비움": 아직.
+- 스케줄이 누구 것인가: 마리나라는 **캐릭터 카드**가 스케줄 · 손으로 준 상태를 가져요(그 캐릭터가 나오는 모든 채팅에 공통). 우리는 채팅마다(실시간 폰 하나마다) 따로 둬요. 소망이 정할 것.
+- 시간대: 마리나라는 한 번 정하면 **모든 콘보 채팅**에 적어요(`rememberConversationTimeZone`). 우리는 채팅마다 따로예요. 안 정했을 때 마리나라는 기기 시간, 우리는 그 사람 폰의 시간대를 써요.
+- 연결: 마리나라는 "random"(무작위 묶음에서 하나)과 실패했을 때 쓸 예비 연결이 있어요. 우리는 없어요.
+- 꺼 둔 이유(`disabledAutonomousIntents`): 마리나라는 서버가 돌릴 때(`server-autonomous-scheduler`)만 봐요. 창이 열려 있을 때의 길에는 그 검사가 없어요. 우리도 지금은 안 봐요: 서버 쪽을 가져올 때 같이 넣어요.
+- 말 거는 이유의 글에 "the user"가 그대로 있어요(마리나라의 글). 우리 답장 지시문은 페르소나를 이름으로 부르는데, WHY NOW에는 "the user"로 들어가요.
 - 방에 사람 넣고 빼기: 마리나라는 들어오고 나갈 때 카드 변수를 채우고 지워요. 우리에게는 카드 변수가 없어서 그 처리가 없어요.
 - 대화 요약: 마리나라는 요약한 말을 `hiddenFromAI`로 바꿔요. 우리는 우리 요약(`phone2digest.js`)을 써요. 아직 안 대 봤어요.
 
