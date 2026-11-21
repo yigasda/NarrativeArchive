@@ -8,7 +8,7 @@
 import { ctx, saveMeta, MODULE } from './core.js';
 import { applyInjection } from './inject.js';
 import { askDraft, phone2Clock, aroundBlock, ownerZone, cardBlocks } from './phonedata.js';
-import { askAI, askCompress, stripThink, isBlocked, SECTION_GUARD, aiProfiles, callConn, connSettings } from './ai.js';
+import { askAI, askCompress, stripThink, isBlocked, SECTION_GUARD, aiProfiles } from './ai.js';
 import { SCENES_SYS, parseScenes } from './scenes.js';
 import { resolvePhoneProfile, ownerProfileBlock, personaBlock } from './phoneprofile.js';
 import { parseJson } from './phoneparse.js';
@@ -26,7 +26,7 @@ import { BACK, backLeft, backInput, phone2BackSystem, takeBack, backMessage, mar
 import { liveWall } from './phone2clock.js';
 import { gatherReply } from './phone2live.js';
 import { presenceOf, scheduleOf, setSchedule, setStatusOverride, setUserStatus, setAutonomous, statusNow, replyDelay, contextBlock, makeSchedule, checkProactive, noteProactive, fillPlaces, stateNow, takeStatus, scheduleZone, setScheduleZone, draftSchedule, summarizeSchedule, repairSchedule, setAutoRenew, autoRenewOf, needsRefresh, renewSchedules, setAutonomousOptions, autonomousOptions, checkExchangeFor, mentionsIn, activeSchedule, schedulesOn, setSchedulesOn, exportSchedule, importSchedule, syncUser, noteAssistant, noteReaction, forgetActivity, setCardStore, setZoneStore, flushCards, clearProgress, groupOrder, groupTurnPrompt, isGroupRoom, groupResponders, groupHandoff, GROUP_MENTION_INVITE_LINE, orderConversationRespondersByDelay, groupMode, mergedDelay, groupCandidates } from './phone2sched.js';
-import { buildMergedConversationSystemPrompt, formatConversationGroupOutputFormat, mergedRespondersLine, mergedMentionLine, extractLeadingThinkingBlocks, buildGenerationInfoExtra, chatModelChoiceSchema, readChatModelOverride, readChatRecentModels, applyChatModelPatch, applyChatModelOverride, reorderStars, CHAT_RECENT_MODELS_KEY, MAX_PINNED_MODELS } from './phone2merged.js';
+import { buildMergedConversationSystemPrompt, formatConversationGroupOutputFormat, mergedRespondersLine, mergedMentionLine, extractLeadingThinkingBlocks, buildGenerationInfoExtra } from './phone2merged.js';
 import { replyInput, messengerBlock } from './phone2ask.js';
 import { phone2ReplySystem } from './phone2reply.js';
 import { runLive, takeMerged } from './phone2run.js';
@@ -127,8 +127,7 @@ export async function liveGo(real, { onChange = () => {} } = {}) {
         save: line.save, alive: () => open(real),
         parse: s => parseJson(s, { salvage: true }),
         // (what was sent and what came with the answer, kept for the reply it becomes: Marinara's cachedPrompt · thinking · generationInfo)
-        // (the room's own model, when one was picked for it in the quick switcher: else the draft model, as before)
-        ask: (input, { system, req }) => { asked = { system, input, meta: {} }; return askRoom(real, req?.room, input, { force: true, system, maxTokens: LIVE_GO.replyTokens, effort: 'low', meta: asked.meta }); },
+        ask: (input, { system }) => { asked = { system, input, meta: {} }; return askDraft(input, { force: true, system, maxTokens: LIVE_GO.replyTokens, effort: 'low', meta: asked.meta }); },
         gather: async job => { await keepUpStory(real, tell); return gatherJob(real, job); },
         took: (job, got) => { const w = liveWorld(real); if (w && w.id === job.world && got?.said && asked) keepAsked(w, w.messenger?.rooms?.[job.room], job, asked); asked = null; },
         // (an owner with a schedule: the texts carry the schedule's state, not one the model wrote)
@@ -995,85 +994,7 @@ export async function livePeekPrompt(real, roomId, { messageId = '', current = f
 //   messageId를 안 주면 방 전체. 새 방의 room.branch = { name: 'New Branch', parentRoomId, parentMessageId, messageId }
 export async function liveBranchRoom(real, roomId, messageId = '') { const room = branchRoom(mine(real), roomId, messageId); await saveMeta(); return room.id; }
 
-// ---- 빠른 전환기 (마리나라의 QuickSwitcherMobile: 이 방이 쓸 모델 · 즐겨찾기 · 페르소나)
-// 1) 이 방이 쓸 모델 (PUT /chats/:id/model 그대로). 방에 room.connectionId 와 room.model = { modelOverride, recentModels, followsMainModel } 로 남아요
-//    고름(choice) = { connectionId, model?, name?, maxContext?, maxTokensOverride? }
-//      connectionId: liveModelConnections()의 id ('dr' 초안 모델 · 'ai' AI 기능 모델 · 'profile:<id>' 실리 연결 프로필)
-//      model: 그 연결의 키 · 주소로 다른 모델을 이 방에서만 돌려요 (마리나라의 catalog pick). 커스텀 API · Vertex 연결에서만 돼요
-//    liveRoomModel(real, 방 id) → { current: 고름 | null (기본값을 따름), recent: [고름, 고름] (새것 먼저), followsMain }
-//    liveSetRoomModel(real, 방 id, 고름 | null) → 위와 같은 값. null: 기본값(초안 모델)으로 돌아가요
-export const liveModelConnections = () => [{ id: 'dr', name: '초안 모델' }, { id: 'ai', name: 'AI 기능 모델' }, ...aiProfiles().map(p => ({ id: `profile:${p.id}`, name: String(p.name || p.id) }))];
-const roomChat = room => ({ connectionId: room.connectionId || null, metadata: room.model || {} });
-export function liveRoomModel(real, roomId) {
-    const room = liveWorld(real)?.messenger?.rooms?.[roomId];
-    if (!room) throw new Error('없는 방이에요');
-    const chat = roomChat(room);
-    return { current: chat.connectionId ? (readChatModelOverride(chat) ?? { connectionId: chat.connectionId }) : null, recent: readChatRecentModels(chat), followsMain: !chat.connectionId };
-}
-const slotOf = id => (id === 'dr' || id === 'ai' ? connSettings(id) : null);
-export async function liveSetRoomModel(real, roomId, pick = null) {
-    const room = liveWorld(mine(real)).messenger?.rooms?.[roomId];
-    if (!room) throw new Error('없는 방이에요');
-    let choice = null;
-    if (pick && pick.connectionId !== null) {
-        const parsed = chatModelChoiceSchema.safeParse(pick);
-        if (!parsed.success) throw new Error('모델 고름을 읽지 못했어요');
-        choice = parsed.data;
-        if (!liveModelConnections().some(c => c.id === choice.connectionId)) throw new Error('없는 연결이에요 (Model not found)');
-        const slot = slotOf(choice.connectionId), own = slot ? String((slot.mode === 'vertex' ? slot.vxModel : slot.model) || '') : '';
-        // (a model of its own needs a connection whose key and address we hold: a custom API or Vertex slot)
-        if (choice.model && !(slot && ['custom', 'vertex'].includes(slot.mode))) throw new Error('이 연결에서는 모델을 따로 고를 수 없어요 (A chat needs a chat Model to run on.)');
-        if (choice.model && own === choice.model) choice = { connectionId: choice.connectionId };
-    }
-    const chat = roomChat(room), previous = chat.connectionId ? (readChatModelOverride(chat) ?? { connectionId: chat.connectionId }) : null;
-    if (choice) room.connectionId = choice.connectionId; else delete room.connectionId;
-    room.model = { ...(room.model || {}), ...applyChatModelPatch({ choice, previous, stored: room.model?.[CHAT_RECENT_MODELS_KEY] }) };
-    await saveMeta();
-    return liveRoomModel(real, roomId);
-}
-// (a reply in a room with a model of its own goes there; with none, to the draft model as before)
-async function askRoom(real, roomId, input, how) {
-    const room = liveWorld(real)?.messenger?.rooms?.[roomId], chat = room ? roomChat(room) : null;
-    const id = chat?.connectionId && liveModelConnections().some(c => c.id === chat.connectionId) ? chat.connectionId : '';
-    if (!id) return askDraft(input, how);
-    const slot = slotOf(id), override = readChatModelOverride(chat);
-    if (slot && override && ['custom', 'vertex'].includes(slot.mode)) {
-        // (Marinara's applyChatModelOverride: the override's model on that connection's key and endpoint)
-        const conn = applyChatModelOverride({ ...slot, id }, override), t = { ...slot, [slot.mode === 'vertex' ? 'vxModel' : 'model']: conn.model, ...(conn.maxTokensOverride ? { max: conn.maxTokensOverride } : {}) };
-        const out = await callConn(t, how.system || '', input, Math.max(256, Number(how.maxTokens) || Number(t.max) || 16000), how.effort || '', true, false, how.signal || null, how.temperature ?? null, how.topP ?? null, how.meta || null);
-        if (!out) throw new Error('모델이 빈 답을 돌려줬어요');
-        return out;
-    }
-    if (id === 'dr') return askDraft(input, how);
-    if (id === 'ai') return askAI(input, { ...how, noFallback: true });
-    const p = aiProfiles().find(x => `profile:${x.id}` === id);
-    if (!p) throw new Error('고른 연결 프로필을 찾을 수 없어요');
-    const r = await ctx().ConnectionManagerRequestService.sendRequest(p.id, [...(how.system ? [{ role: 'system', content: how.system }] : []), { role: 'user', content: input }], Math.max(256, Number(how.maxTokens) || 8192), { stream: false, extractData: true, includePreset: true, includeInstruct: true, ...(how.signal ? { signal: how.signal } : {}) });
-    const raw = typeof r === 'string' ? r : r?.content, out = stripThink(raw);
-    if (how.meta) Object.assign(how.meta, { raw: String(raw ?? ''), model: String(p.model || p.name || ''), provider: String(p.api || 'profile') });
-    if (!out) throw new Error('모델이 빈 답을 돌려줬어요');
-    return out;
-}
-// 2) 즐겨찾기 (마리나라의 별: 순서가 있는 목록, 위 · 아래로 옮기기). 채팅과 상관없이 확장 설정에 남아요
-//    liveStars() → [고름] · liveToggleStar(고름) → 켜졌나 · liveMoveStar(고름, -1 | 1) → 옮겼나
-const starKey = c => `${c.connectionId}\n${c.model ?? ''}`;
-const starStore = () => { const s = (ctx().extensionSettings[MODULE] ||= {}); if (!Array.isArray(s.orbitStars)) s.orbitStars = []; return s; };
-export const liveStars = () => starStore().orbitStars.map(c => chatModelChoiceSchema.safeParse(c)).filter(r => r.success).map(r => r.data);
-export function liveToggleStar(choice) {
-    const parsed = chatModelChoiceSchema.safeParse(choice);
-    if (!parsed.success) throw new Error('모델 고름을 읽지 못했어요');
-    const s = starStore(), all = liveStars(), had = all.some(c => starKey(c) === starKey(parsed.data));
-    s.orbitStars = (had ? all.filter(c => starKey(c) !== starKey(parsed.data)) : [...all, parsed.data]).slice(0, MAX_PINNED_MODELS);
-    ctx().saveSettingsDebounced?.();
-    return !had;
-}
-export function liveMoveStar(choice, by) {
-    const all = liveStars(), next = reorderStars(all.map(starKey), starKey(choice), by < 0 ? -1 : 1);
-    if (!next) return false;
-    starStore().orbitStars = next.map(k => all.find(c => starKey(c) === k));
-    ctx().saveSettingsDebounced?.();
-    return true;
-}
+// ---- 빠른 전환기의 페르소나 바꾸기 (모델 고르기 · 즐겨찾기는 마리나라의 연결 코드를 그대로 가져온 뒤에 붙여요: docs/MARINARA-PORT.md "꼭 할 것")
 // 3) 페르소나 바꾸기: 실리태번의 페르소나를 바꿔요 (people.js stPersonaList()의 id). 실시간 폰의 "나"는 우리 쪽이 이름을 따라 바꿔요
 export async function liveSwitchPersona(avatarId) {
     const id = String(avatarId || '');

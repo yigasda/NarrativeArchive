@@ -4,5 +4,3 @@ export { buildMergedConversationSystemPrompt, formatConversationGroupOutputForma
 // 답장에 남기는 마리나라의 값: 모델 생각(extra.thinking) · 보낸 요청 그대로(extra.cachedPrompt) · 생성 정보(extra.generationInfo)
 export { extractLeadingThinkingBlocks } from './marinara/thinking-tags.js';
 export { buildGenerationInfoExtra, sanitizeBranchedMessageExtra } from './marinara/saved-message-extra.js';
-// 빠른 전환기: 방이 쓸 모델 고르기 · 최근 두 개 · 즐겨찾기 순서
-export { chatModelChoiceSchema, readChatModelOverride, readChatRecentModels, readChatFollowsMain, applyChatModelPatch, applyChatModelOverride, reorderStars, CHAT_MODEL_OVERRIDE_KEY, CHAT_RECENT_MODELS_KEY, CHAT_FOLLOWS_MAIN_KEY, MAX_PINNED_MODELS } from './marinara/chat-model.js';
