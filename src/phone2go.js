@@ -209,17 +209,6 @@ export async function liveMakeSchedule(real, owner, opts = {}) {
 }
 const ownerRow = p => (p.where?.people || []).find(x => nameKey(x?.name) === nameKey(p.owner)) || null;
 const knownPlaces = p => [ownerRow(p)?.place, ownerRow(p)?.city, ...(p.where?.people || []).map(x => x?.place)].filter(Boolean);
-// 이미 있는 스케줄에 장소만 채우기 (모델을 한 번 불러요) → 장소가 생긴 블록 수
-export async function liveFillPlaces(real, owner) {
-    const p = livePhone(mine(real), owner);
-    if (!p) throw new Error('그 사람의 폰이 없어요');
-    const card = await cardOf(p);
-    const ask = messages => askDraft(messages.filter(x => x.role !== 'system').map(x => x.content).join('\n\n'), { force: true, system: messages.filter(x => x.role === 'system').map(x => x.content).join('\n\n'), effort: 'low' });
-    const n = await fillPlaces(real, p.owner, { ask, parse: t => parseJson(t, { salvage: true }), card, places: knownPlaces(p) });
-    delete p.schedAt;
-    if (open(real)) { followSchedule(real); await saveMeta(); }
-    return n;
-}
 // 스케줄 블록이 바뀌었으면 그 사람의 폰이 따라가요 (모델을 안 불러요): 상태(p.schedState: 답장 요청의 NOW가 읽어요)와,
 // 블록에 장소가 있으면 위치 정보의 주인 줄 → 바뀐 폰의 수. 저장은 부르는 쪽이 해요
 export function followSchedule(real, now = Date.now()) {
