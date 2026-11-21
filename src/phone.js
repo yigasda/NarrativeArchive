@@ -983,6 +983,8 @@ export async function openPhone(who = null) {
         const pr = liveReact(realM, id, msgId, liveWorld(realM)?.persona, e), bad = await obSoon(pr);
         if (bad) obWarn(bad);
         obHeld = null; if (!phoneClosed && stillHere()) drawPhone(true);
+        // (캐릭터의 최근 말에 이모지만 달아도 그 캐릭터가 봐요: liveReact가 답장을 줄 세워 두니, 말을 보낸 뒤처럼 바로 돌려요. 줄 선 게 없으면 아무 일도 안 해요)
+        if (!bad && !phoneClosed && stillHere()) obGo();
         if (!bad) try { await pr; } catch (err) { obWarn(err); }
     };
     $root.on('click', '.na_ob_re', function (e) { e.stopPropagation(); obReact(this.dataset.id, this.dataset.e); });
@@ -1149,7 +1151,8 @@ export async function openPhone(who = null) {
         drawPhone(true);
         if (view.startsWith('orbitroom') && atEnd) obBottom();
         if (typingNow) obFocus();
-    } }).catch(err => console.error('[narrative-archive] live go', err));
+    // (답장 저장이 실패했으면(saveError): 답장은 방에 남아 있고 다음 저장 때 같이 저장돼요. 그래도 알려요 — 3.215, 저장은 답장 뒤에서 돌아요)
+    } }).then(r => { if (r?.saveError && !phoneClosed) toastr.error(`답장은 받았는데 저장을 못 했어요. 다음에 저장할 때 같이 저장돼요: ${r.saveError}`, '캐릭터 휴대폰'); }).catch(err => console.error('[narrative-archive] live go', err));
     // 반영(소망 결정): 메신저를 나갈 때만 · 폰을 닫을 때 · 타임라인으로 바꿀 때. 실시간 폰의 인물마다 쌓인 대화를 한 번에(읽을 게 없으면 바로 끝)
     const obReflect = () => { const w = liveWorld(realM); if (!w || (snapping && !backing)) return; (async () => { for (const p of Object.values(w.phones || {})) if (p?.owner) { const r = await liveReflect(realM, p.owner, { onChange: () => { if (!phoneClosed && stillHere() && live()) drawPhone(true); } }); if (r?.rounds) { const q = livePhone(realM, p.owner); if (q) await koRun(q, false, p.owner); } } })().catch(err => console.error('[narrative-archive] live reflect', err)); };
     // 롤플에 전하기 (시안 phone2-back A): 누르면 글 받기(그동안 버튼은 정리 중, 다른 폰 작업은 막혀요) → 미리 보기(고칠 수 있음) → 넣기.
