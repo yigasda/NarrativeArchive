@@ -163,8 +163,8 @@ export function orbitList(p, now, o) {
 // 선택이면 말마다 동그라미 + 입력칸 자리의 줄, 맨 끝 답장 아래 점(옆으로 밀어서 넘겨요)
 export function orbitRoom(p, now, o) {
     // (번역 줄 · 배지 이모지는 span이 아니에요: 소망 테마가 span의 글꼴을 따로 정해서, span 안의 이모지만 기기 이모지가 아니었어요 — !emoji 시험 화면으로 확인)
-    const koOf = x => (x.wait ? `<div class="ob_ko ob_wait"><i class="fa-solid fa-spinner fa-spin"></i> 번역 중</div>`
-        : x.ko ? (x.open ? `<div class="ob_ko na_ob_ko" role="button" tabindex="0" data-id="${esc(x.id)}">${esc(x.ko)}${x.edited && !x.mine ? '<span class="ob_edm">수정됨</span>' : ''}</div>` : `<span class="ob_kof na_ob_ko" role="button" tabindex="0" data-id="${esc(x.id)}">${ic('tr', 13)}번역 보기</span>`) : '');
+    const koOf = (x, tail = '') => (x.wait ? `<div class="ob_ko ob_wait"><i class="fa-solid fa-spinner fa-spin"></i> 번역 중</div>`
+        : x.ko ? (x.open ? `<div class="ob_ko na_ob_ko" role="button" tabindex="0" data-id="${esc(x.id)}">${esc(x.ko)}${tail}${x.edited && !x.mine ? '<span class="ob_edm">수정됨</span>' : ''}</div>` : `<span class="ob_kof na_ob_ko" role="button" tabindex="0" data-id="${esc(x.id)}">${ic('tr', 13)}번역 보기</span>`) : '');
     // 길게 누른 카드 (시안 docs/mockups/shell-bars Q2): 윗줄은 빠른 반응 6개 + "+"(폰 이모지 키보드), 아랫줄은 재번역 · 선택 · 삭제 (· 답장 버리기). 내가 단 반응은 동그랗게
     const reRow = x => (o.quick?.length ? `<div class="ob_hr">${o.quick.map(e => `<button type="button" class="na_ob_re${x.myre === e ? ' on' : ''}" data-id="${esc(x.id)}" data-e="${esc(e)}" aria-label="${esc(e)} 반응">${esc(e)}</button>`).join('')}<span class="ob_hp na_ob_reany${x.myre && !o.quick.includes(x.myre) ? ' on' : ''}" role="button" tabindex="0" aria-label="다른 이모지">${x.myre && !o.quick.includes(x.myre) ? esc(x.myre) : ic('plus', 17, 'currentColor', 2.2)}<input class="ob_rein" data-id="${esc(x.id)}" inputmode="text" enterkeyhint="done" autocomplete="off" aria-label="이모지 고르기"></span></div>` : '');
     // 길게 누른 판 (시안 docs/mockups/orbit-top M2): 말풍선 바로 아래 흰 판에 아이콘만. 반응을 누르면 같은 판이 이모지 줄로, 북마크를 누르면 북마크 · 고정 · 메모 줄로 바뀌어요(o.heldSub).
@@ -183,7 +183,8 @@ export function orbitRoom(p, now, o) {
     const msg = (x, i) => { if (x.day) return `<div class="ob_day">${esc(x.day)}</div>`;
         const g = `${ks[i - 1] !== ks[i] ? ' g1' : ''}${ks[i + 1] !== ks[i] ? ' gL' : ''}`;
         const ed = x.edited ? '<span class="ob_edm">수정됨</span>' : '';
-        // 표시(북마크 · 고정 · 메모 · AI에게 숨김): 작은 아이콘. 내 말은 시간 앞, 캐릭터 말은 글 끝. 숨긴 말은 말풍선도 옅게
+        // 표시(북마크 · 고정 · 메모 · AI에게 숨김): 작은 아이콘. 내 말은 시간 앞, 캐릭터 말은 한국어 줄 끝(없으면 원문 끝)의 오른쪽. 숨긴 말은 말풍선도 옅게
+        const koShown = !!(x.ko && x.open && !x.wait);
         const mk = x.mk || {}, mki = mk.b || mk.p || mk.n || mk.h ? `<span class="ob_mk">${mk.h ? lu('eye-off', 11, 2.2) : ''}${mk.p ? lu('pin', 11, 2.2) : ''}${mk.b ? lu('bookmark', 11, 2.2) : ''}${mk.n ? lu('sticky-note', 11, 2.2) : ''}</span>` : '';
         const tin = x.mine && x.time ? `<span class="ob_tin">${mki}${ed}${x.unread ? `<b>${x.unread}</b> ` : ''}<span class="cg_num">${esc(x.time)}</span></span>` : '';
         // 고치는 중(시안 E2): 원문 · 한국어가 그 자리에서 바로 고쳐지는 칸이 되고, 밑에 ✕ · ✓
@@ -191,7 +192,7 @@ export function orbitRoom(p, now, o) {
             + `<div class="ob_fbar${x.mine ? ' me' : ''}"><button type="button" class="ob_fno na_ob_fno" aria-label="그만 고치기">${ic('x', 14, '#333', 2.4)}</button><button type="button" class="ob_fok na_ob_fok" aria-label="고치기">${ic('chk', 17, '#fff', 2.6)}</button></div>`;
         const av = !x.mine && ks[i + 1] !== ks[i] ? `<span class="ob_av">${face(x.from || o.title, 34)}</span>` : '';
         const re = x.re ? `<span class="ob_re${x.re.isNew ? ' new' : ''}"${x.re.isNew ? ` style="--ret:-${x.re.ago}ms"` : ''}>${x.re.es.map(e => `<i class="ob_ree">${esc(e)}</i>`).join('')}${x.re.n > 1 ? `<b class="cg_num">${x.re.n}</b>` : ''}</span>` : '';
-        const bb = `<div class="ob_b na_ob_b ${x.mine ? 'me' : 'th ob_glass'}${g}${x.re ? ` has_re${x.re.isNew && x.re.ago < 220 ? ' re_new' : ''}` : ''}${x.held ? ' held' : ''}${mk.h ? ' hid' : ''}${x.reply ? ' na_ob_sw' : ''}" data-id="${esc(x.id)}">${esc(x.text)}${x.mine && x.time ? '' : mki}${x.edited && !x.mine && !(x.ko && x.open && !x.wait) ? ed : ''}${koOf(x)}${tin}${av}${re}${!x.mine && !x.reply && x.tl ? `<span class="ob_tl cg_num">${esc(x.tl)}</span>` : ''}</div>`;
+        const bb = `<div class="ob_b na_ob_b ${x.mine ? 'me' : 'th ob_glass'}${g}${x.re ? ` has_re${x.re.isNew && x.re.ago < 220 ? ' re_new' : ''}` : ''}${x.held ? ' held' : ''}${mk.h ? ' hid' : ''}${x.reply ? ' na_ob_sw' : ''}" data-id="${esc(x.id)}">${esc(x.text)}${(x.mine && x.time) || koShown ? '' : mki}${x.edited && !x.mine && !(x.ko && x.open && !x.wait) ? ed : ''}${koOf(x, !x.mine && koShown ? mki : '')}${tin}${av}${re}${!x.mine && !x.reply && x.tl ? `<span class="ob_tl cg_num">${esc(x.tl)}</span>` : ''}</div>`;
         return `${o.group && !x.mine && x.from ? `<div class="ob_sn">${esc(x.from)}</div>` : ''}${x.pick === undefined ? bb : `<div class="ob_prow na_ob_prow${x.mine ? ' me' : ''}" data-id="${esc(x.id)}"><span class="ob_pck${x.pick ? ' on' : ''}">${x.pick ? ic('chk', 13, '#fff', 3) : ''}</span>${bb}</div>`}${x.held ? pill(x) : ''}${i === lastMe && x.time && !x.unread ? '<div class="ob_rd">읽음</div>' : ''}${x.dots && o.swipe ? dots(o.swipe) : ''}`; };
     // 받아 둔 답장 창 (시안 docs/mockups/phone2-edit sheetGlass2 "G3 + 말풍선"): 옅은 유리 창, 답장마다 번호 + 유리 말풍선, 지금 것은 번호가 검정이고 말풍선이 더 밝아요. 창 안에서 굴리고 제목 · 버튼은 고정
     const L = o.list, sheet = !L ? '' : `<div class="ob_shade ob_shl na_ob_slx"></div><div class="ob_sheet ob_sl" style="--sla:${orbitBg(o.title, o.group)}"><i class="ob_grab"></i><div class="ob_slh"><b>받아 둔 답장</b><span class="cg_num">${L.items.length}</span></div>
