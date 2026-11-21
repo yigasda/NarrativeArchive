@@ -19,7 +19,8 @@ export async function tickOnce() {
         const G = await import('./phone2go.js'), tell = () => globalThis.document.dispatchEvent(new globalThis.CustomEvent('na-live-change'));
         // (the weekly renewal, for those who have it on and whose week has turned)
         try { await G.liveRenewSchedules(m, { automatic: true }); } catch (err) { console.warn('[narrative-archive] schedule renewal', err); }
-        const n = await G.liveAutonomous(m);
+        // (Marinara skips the check while the tab is hidden; replies already waiting still go when their time comes)
+        const n = globalThis.document?.hidden ? 0 : await G.liveAutonomous(m);
         if (n || waiting) await G.liveGo(m, { onChange: tell });
         return n;
     } finally { busy = false; }

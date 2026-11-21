@@ -29,11 +29,11 @@
 | services/conversation/intent.service.ts | 예 |
 | services/conversation/timezone.ts | 예 |
 | routes/conversation.routes.ts | 예 (읽다가 찾은 것: 아래 "아직 마리나라와 다른 것"에 적음) |
-| client/hooks/use-autonomous-messaging.ts | 아니오 (1~60, 100~280줄) |
-| services/generation/conversation-schedule-command-runtime.ts | 아니오 (40~226줄) |
-| routes/generate/conversation-presence-runtime.ts | 아니오 (68~352줄) |
-| services/storage/message-trash.storage.ts | 아니오 (1~80, 301~330줄과 함수 목록) |
-| services/conversation/server-autonomous-scheduler.service.ts | 아니오 (25~66, 150~200, 300~420줄) |
+| client/hooks/use-autonomous-messaging.ts | 예. 찾은 것: 탭이 가려져 있으면 먼저 말 걸기 검사를 건너뜀, 실패하면 "걸고 있는 중" 표시를 풂 → 둘 다 넣음 |
+| services/generation/conversation-schedule-command-runtime.ts | 예. 빠진 것 없음 (공유 방 갈래는 우리에게 없음) |
+| routes/generate/conversation-presence-runtime.ts | 예. 아직 없는 것: 단체방에서 늦음이 짧은 사람부터 답하기(`orderConversationRespondersByDelay`), 장면 · 게임 중인 사람 빼기(그 기능이 우리에게 없음), 상태를 채팅에 적어 두기(`conversationCharacterStatuses`: 우리는 볼 때마다 계산) |
+| services/storage/message-trash.storage.ts | 예. 찾은 것: 마리나라는 휴지통 수를 안 막음(우리는 100개로 막았음) → 막던 것 뺌. 목록에 받아 둔 답장 수(`swipeCount`) → 넣음. 로어 · 기억 조각 · 게임 · 변수 되돌리기는 그 기능이 우리에게 없음 |
+| services/conversation/server-autonomous-scheduler.service.ts | 예 (읽기만. 가져오기는 아직: "꼭 할 것"). 가져올 때 챙길 것: 60초마다(처음 20초 뒤), 창이 75초 안에 살아 있었으면 서버는 쉼, 오프라인 후속 2번까지, 한 번에 2방까지, 4xx 실패는 30분 쉼, 꺼 둔 이유 지키기, 안 읽음 표시 |
 | 나머지 "아직" 파일 전부 | 아니오 |
 
 ## 스케줄 · 상태 · 먼저 말 걸기
@@ -63,7 +63,7 @@
 |---|---|---|---|---|
 | shared/utils/message-marks.ts | 172 | 다 | src/marinara/message-marks.js · src/phone2room.js | (메모를 한 사람에게 보여 주기: 글은 마리나라의 appendRoleplayMessageNotes 그대로) |
 | routes/generate/generate-route-utils.ts (숨기기) | | 다 | src/marinara/message-hidden.js | |
-| services/storage/message-trash.storage.ts | 547 | 일부 | src/phone2room.js (우리 코드) | 마리나라 코드는 그쪽 DB에 묶여 있어 코드는 우리 것. 동작은 맞춤: 되살리기(제자리 · 받아 둔 답장 · 고정 10개 넘으면 막기), 30일 뒤 비우기(타이머), 골라서/전부 아주 버리기. 안 맞춘 것: 지울 때 딸려 지워진 로어 되살리기(우리에게 없음) |
+| services/storage/message-trash.storage.ts | 547 | 다 | src/phone2room.js (우리 코드) | 마리나라 코드는 그쪽 DB에 묶여 있어 코드는 우리 것. 동작은 맞춤: 되살리기(제자리 · 받아 둔 답장 · 고정 10개 넘으면 막기), 30일 뒤 비우기(타이머), 골라서/전부 아주 버리기. 안 맞춘 것: 지울 때 딸려 지워진 로어 되살리기(우리에게 없음) |
 | services/generation/prompt-message-scope.ts | 456 | 아직 | | 말마다 누구에게 보일지 정하기 |
 | routes/generate/conversation-history-runtime.ts | 763 | 아직 | | 요청에 넣을 대화 기록 다듬기 |
 | services/conversation/transcript-sanitize.ts | 102 | 아직 | | |

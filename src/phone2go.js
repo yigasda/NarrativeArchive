@@ -25,7 +25,7 @@ import { liveStoryText } from './phone2story.js';
 import { BACK, backLeft, backInput, phone2BackSystem, takeBack, backMessage, markTold } from './phone2back.js';
 import { liveWall } from './phone2clock.js';
 import { gatherReply } from './phone2live.js';
-import { presenceOf, scheduleOf, setSchedule, setStatusOverride, setUserStatus, setAutonomous, statusNow, replyDelay, contextBlock, makeSchedule, checkProactive, noteProactive, fillPlaces, stateNow, takeStatus, scheduleZone, setScheduleZone, draftSchedule, summarizeSchedule, repairSchedule, setAutoRenew, autoRenewOf, needsRefresh, renewSchedules, setAutonomousOptions, autonomousOptions, checkExchangeFor, mentionsIn, activeSchedule, schedulesOn, setSchedulesOn, exportSchedule, importSchedule, syncUser, noteAssistant, noteReaction, forgetActivity, setCardStore, setZoneStore, flushCards } from './phone2sched.js';
+import { presenceOf, scheduleOf, setSchedule, setStatusOverride, setUserStatus, setAutonomous, statusNow, replyDelay, contextBlock, makeSchedule, checkProactive, noteProactive, fillPlaces, stateNow, takeStatus, scheduleZone, setScheduleZone, draftSchedule, summarizeSchedule, repairSchedule, setAutoRenew, autoRenewOf, needsRefresh, renewSchedules, setAutonomousOptions, autonomousOptions, checkExchangeFor, mentionsIn, activeSchedule, schedulesOn, setSchedulesOn, exportSchedule, importSchedule, syncUser, noteAssistant, noteReaction, forgetActivity, setCardStore, setZoneStore, flushCards, clearProgress } from './phone2sched.js';
 import { replyInput } from './phone2ask.js';
 import { phone2ReplySystem } from './phone2reply.js';
 import { runLive } from './phone2run.js';
@@ -170,6 +170,8 @@ export async function liveGo(real, { onChange = () => {} } = {}) {
         const w = liveWorld(real), room = w?.messenger?.rooms?.[out.failed.job.room];
         if (w) w.queue.jobs = w.queue.jobs.filter(j => j.id !== out.failed.job.id);
         if (room) { const attempts = (room.autoFail?.attempts || 0) + 1; room.autoFail = { attempts, nextAllowedAt: Date.now() + Math.min(AUTO_FAIL.max, AUTO_FAIL.base * 2 ** Math.max(0, attempts - 1)), lastError: String(out.failed.error || '').slice(0, 200) }; }
+        // (Marinara: on a failed or empty autonomous generation the in-progress flag is cleared, so polling does not get stuck)
+        clearProgress(real, out.failed.job.room);
         console.warn('[narrative-archive] live autonomous', out.failed.error);
         out.failed = null;
         try { await line.save(); } catch { /* told below */ }
@@ -220,7 +222,7 @@ export function holdReplies(real, now = Date.now()) {
         const delay = replyDelay(real, j.owner, { now: new Date(now), tz: p ? zoneOf(real, p) : '', kind: j.auto ? 'auto' : called.length ? 'mention' : 'direct' });
         // (offline, as Marinara does: no answer now. The room keeps who was away; they catch up when they are back, if
         // characters may write first)
-        if (delay === null) { gone.add(j); if (room && !j.auto) (room.away ||= {})[liveKey(j.owner)] = now; continue; }
+        if (delay === null) { gone.add(j); if (j.auto) clearProgress(real, j.room); else if (room) (room.away ||= {})[liveKey(j.owner)] = now; continue; }
         j.timed = true;
         if (delay > 0) { j.notBefore = (j.at || now) + delay; if (j.notBefore > now) held++; } else delete j.notBefore;
     }

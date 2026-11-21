@@ -384,3 +384,5 @@ export const noteAssistant = (m, roomId, owner = '', at = Date.now()) => recordA
 export const noteReaction = (m, roomId) => recordUserReaction(chatIdOf(m, roomId));
 // 방이 없어졌거나 방의 말을 손으로 크게 바꿨어요 (지우기 · 가져오기 · 되살리기): 기억을 지우고 다음 판단 때 방에서 다시 읽어요
 export function forgetActivity(m, roomId) { const id = chatIdOf(m, roomId); clearChatActivity(id); forgetAutonomousSeed(id); }
+// 먼저 걸려던 말이 안 나왔어요 (실패 · 오프라인으로 뺌): "걸고 있는 중" 표시를 풀어요 (마리나라의 /autonomous/clear-in-progress)
+export const clearProgress = (m, roomId) => clearGenerationInProgress(chatIdOf(m, roomId));

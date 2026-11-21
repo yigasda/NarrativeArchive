@@ -127,15 +127,17 @@ test('휴지통: 지운 말이 들어가고, 되살리면 제자리로 와요. �
     R.restoreMessages(m, a.id, a.trash.map(t => t.x.id));
     assert.deepEqual(texts(a), ['Are you up?', 'Barely', 'my secret plan', 'Did you eat']);
 });
-test('휴지통: 방마다 정해진 수만 두고, 골라서 또는 통째로 비워요', () => {
+test('휴지통: 수는 안 막고, 골라서 또는 통째로 비워요', () => {
     const { m, a, say } = world();
-    const made = Array.from({ length: R.ROOM.trash + 5 }, (_, i) => say(a, 'Mara', `t${i}`, 5000 + i));
+    const made = Array.from({ length: 105 }, (_, i) => say(a, 'Mara', `t${i}`, 5000 + i));
     E.dropMessages(m, a.id, made.map(x => x.id));
-    assert.equal(a.trash.length, R.ROOM.trash);
-    assert.equal(a.trash[0].x.text, 't5');
-    assert.equal(R.emptyTrash(m, a.id, [made[5].id, made[6].id]), 2);
-    assert.equal(a.trash[0].x.text, 't7');
-    assert.equal(R.emptyTrash(m, a.id), R.ROOM.trash - 2);
+    assert.equal(a.trash.length, 105);
+    a.trash[104].swipes = { list: ['x', null, 'y'], at: 1 };
+    assert.equal(R.trashOf(m, a.id)[0].swipeCount, 3);
+    assert.equal(R.trashOf(m, a.id)[1].swipeCount, 0);
+    assert.equal(R.emptyTrash(m, a.id, [made[0].id, made[1].id]), 2);
+    assert.equal(a.trash[0].x.text, 't2');
+    assert.equal(R.emptyTrash(m, a.id), 103);
     assert.equal(a.trash, undefined);
     assert.equal(R.emptyTrash(m, a.id), 0);
 });

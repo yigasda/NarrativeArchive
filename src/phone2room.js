@@ -7,7 +7,7 @@
 //   privateNote: 글                   혼자 보는 메모. AI에게는 안 가요
 //   privateNoteRecipientId: 이름       그 메모를 보여 줄 한 사람 (liveKey로): 그 사람의 답장 요청에서만 그 말 뒤에 마리나라의 글로 붙어요
 // 휴지통 (마리나라처럼 MESSAGE_TRASH_RETENTION_DAYS일 뒤에 비워요; 마리나라의 휴지통 코드는 그쪽 DB에 묶여 있어 우리 저장 모양으로 썼어요)
-//   room.trash = [{ x: 지운 말, at: 지운 때, swipes?: 그 말에 받아 둔 답장 }] (방마다 ROOM.trash개까지)
+//   room.trash = [{ x: 지운 말, at: 지운 때, swipes?: 그 말에 받아 둔 답장 }] (마리나라처럼 수는 안 막아요: 30일이 지나면 비워요)
 //   w.messenger.trash = [{ room: 지운 방, at }] (ROOM.rooms개까지)
 // 사람: 방에 넣고 빼기. 페르소나는 못 빼요. 같은 사람들의 방이 이미 있으면 안 해요 (방은 사람들로 찾으니까)
 // 이 파일은 방의 것만 바꿔요. 저장은 부르는 쪽이 해요. 폰 1 · 아카이브는 읽지도 쓰지도 않아요. 폰 1은 이 파일을 부르지 않아요.
@@ -16,7 +16,7 @@ import { liveWorld, liveKey, ensureAccount } from './phone2store.js';
 import { MAX_PINNED_CONTEXT_MESSAGES, MESSAGE_TRASH_RETENTION_DAYS, MESSAGE_MARK_EXTRA_KEYS, normalizeMessageMarkPatch, applyContextMessageLimitWithPins, isMessagePinnedToContext, readMessageBookmark, readMessagePrivateNote, readMessagePrivateNoteRecipientId } from './marinara/message-marks.js';
 import { isMessageHiddenFromAI, getMessageHiddenFromAICharacterIds, isMessageHiddenFromAIForCharacter } from './marinara/message-hidden.js';
 
-export const ROOM = { trash: 100, rooms: 5, keep: MESSAGE_TRASH_RETENTION_DAYS * 24 * 60 * 60 * 1000 };
+export const ROOM = { rooms: 5, keep: MESSAGE_TRASH_RETENTION_DAYS * 24 * 60 * 60 * 1000 };
 
 const idSet = ids => new Set((Array.isArray(ids) ? ids : [ids]).map(x => String(x ?? '')).filter(Boolean));
 function roomOf(m, id) {
@@ -90,10 +90,10 @@ export function toTrash(room, gone, swipes = {}, at = Date.now()) {
     if (!gone.length) return;
     const list = Array.isArray(room.trash) ? room.trash : [];
     for (const x of gone) list.push({ x, at, ...(swipes[String(x.id)] ? { swipes: swipes[String(x.id)] } : {}) });
-    room.trash = list.filter(t => at - (t.at || 0) < ROOM.keep).slice(-ROOM.trash);
+    room.trash = list.filter(t => at - (t.at || 0) < ROOM.keep);
 }
 // 휴지통 (나중에 지운 것이 앞) → [{ x, at }]
-export const trashOf = (m, roomId, now = Date.now()) => [...(roomOf(m, roomId).room.trash || [])].filter(t => now - (t.at || 0) < ROOM.keep).reverse().map(t => ({ x: t.x, at: t.at, until: (t.at || 0) + ROOM.keep }));
+export const trashOf = (m, roomId, now = Date.now()) => [...(roomOf(m, roomId).room.trash || [])].filter(t => now - (t.at || 0) < ROOM.keep).reverse().map(t => ({ x: t.x, at: t.at, until: (t.at || 0) + ROOM.keep, swipeCount: Array.isArray(t.swipes?.list) ? t.swipes.list.length : 0 }));
 // 되살리기: 제자리(번호 순서, 번호가 없으면 시간 순서)로 → 되살린 수
 export function restoreMessages(m, roomId, ids) {
     const { room } = roomOf(m, roomId), want = idSet(ids), list = Array.isArray(room.trash) ? room.trash : [];
