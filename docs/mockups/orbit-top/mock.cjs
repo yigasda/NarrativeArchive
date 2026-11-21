@@ -7,7 +7,7 @@ const CHAT = path.join(os.homedir(), 'sillytavern/data/default-user/chats/defaul
 const reset = () => fs.copyFileSync('/home/user/NarrativeArchive/tools/dev/na_test.jsonl', CHAT);
 const B = '/scripts/extensions/third-party/NarrativeArchive/src/', OUT = '/home/user/NarrativeArchive/docs/mockups/orbit-top/';
 const LU = process.env.LUCIDE || '/tmp/claude-0/-home-user-NarrativeArchive/357c6c89-df99-5c7b-a84f-806ab745fd2b/scratchpad/lucide/package/icons';
-const L = {}; for (const n of ['house', 'message-square', 'search', 'venetian-mask', 'moon', 'menu', 'sliders-horizontal', 'paperclip', 'chevron-up', 'smile', 'arrow-right', 'chevron-left', 'sun', 'ellipsis', 'settings', 'plus', 'settings-2', 'sliders-vertical', 'cog', 'bolt']) L[n] = fs.readFileSync(path.join(LU, n + '.svg'), 'utf8').replace(/<!--[\s\S]*?-->/, '').replace(/<svg[\s\S]*?>/, '').replace('</svg>', '').replace(/\s+/g, ' ').trim();
+const L = {}; for (const n of ['house', 'message-square', 'search', 'venetian-mask', 'moon', 'menu', 'sliders-horizontal', 'paperclip', 'chevron-up', 'smile', 'arrow-right', 'chevron-left', 'sun', 'ellipsis', 'settings', 'plus', 'settings-2', 'sliders-vertical', 'cog', 'bolt', 'bookmark', 'trash-2', 'type', 'git-branch', 'users', 'plug', 'file-text', 'braces', 'book-open', 'scan-text', 'link', 'chevron-right', 'x', 'copy', 'pencil', 'languages', 'pin', 'sticky-note', 'eye-off', 'circle-check', 'rotate-ccw']) L[n] = fs.readFileSync(path.join(LU, n + '.svg'), 'utf8').replace(/<!--[\s\S]*?-->/, '').replace(/<svg[\s\S]*?>/, '').replace('</svg>', '').replace(/\s+/g, ' ').trim();
 
 const SB_DARK = `.na_ph_frame .ax_orbitroom .ax_sb { color: #1e2026 !important; } .na_ph_frame .ax_orbitroom .ax_sb svg { filter: invert(1) brightness(.14); } .na_ph_frame .ax_orbitroom .ax_sb .cg_num { color: #1e2026 !important; }`;
 const BASE = `
@@ -88,8 +88,61 @@ const XS = {
       document.querySelector('.na_ph_frame .ob_msgs').parentElement.insertAdjacentHTML('beforeend', (0, eval)('(function(BAR){ return (' + barSrc + ') })')(BAR)(ic));
       const e = document.querySelector('.na_ph_frame .ob_msgs'); e.scrollTop = e.scrollHeight; }, { css, topSrc, barSrc, barBase: BAR.toString(), L, set });
     await p.waitForTimeout(350); await p.screenshot({ path: OUT + name + '.png', ...(clip ? { clip } : {}) }); console.log(name); };
+  if (process.env.ONLY !== 'over') {
   for (const [k, v] of Object.entries(TOPS)) { await draw(BASE + PALE + WHITE + v.css, v.html.toString(), BAR.toString(), k); await draw(BASE + PALE + GLASS + v.css, v.html.toString(), BAR.toString(), k + '_glass'); }
   // 방 설정 아이콘 후보(머리만 잘라서): 밝은 것 · 어두운 것
   for (const n of ['settings-2', 'sliders-vertical', 'settings', 'bolt']) { await draw(BASE + PALE + GLASS + TOPS.A.css, TOPS.A.html.toString(), BAR.toString(), 'icon_' + n, n, { x: 0, y: 52, width: 412, height: 68 }); await draw(BASE + XS.X2.css, XS.X2.top.toString(), XS.X2.bar.toString(), 'icon_' + n + '_dark', n, { x: 0, y: 52, width: 412, height: 68 }); }
   for (const [k, v] of Object.entries(XS)) await draw(BASE + v.css, v.top.toString(), v.bar.toString(), k);
+  }
+
+  // 고른 방(A_glass) 위에: 방 설정 시트(S1) · 찾기 › 북마크(S2) · 휴지통(S3) · 길게 누르기(M)
+  const OV = `
+.ov { position: absolute; inset: 0; z-index: 30; } .ov .veil { position: absolute; inset: 0; background: rgba(30,32,38,.24); } .ov .fog { position: absolute; inset: 0; background: rgba(238,240,236,.62); }
+.ov div { --axfs: inherit; }
+.sh { position: absolute; left: 0; right: 0; top: 92px; bottom: 0; display: flex; flex-direction: column; overflow: hidden; border-radius: 26px 26px 0 0; background: #f3f2f4; box-shadow: 0 -8px 30px rgba(30,24,50,.12); color: #3a3d45; }
+.sh .grab { flex: none; width: 36px; height: 4px; margin: 8px auto 0; border-radius: 2px; background: rgba(27,29,36,.14); }
+.sh .hd { flex: none; display: flex; align-items: center; height: 50px; padding: 0 8px 0 20px; } .sh .hd .t { flex: 1; font-size: 15.5px; font-weight: 700; letter-spacing: -.01em; color: #1b1d24; } .sh .hd i { width: 38px; height: 38px; display: grid; place-items: center; } .sh .hd.sub { padding-left: 6px; }
+.sh .bd { padding: 0 14px 20px; }
+.sh .cap { margin: 14px 8px 6px; font-size: 11.5px; font-weight: 600; color: #8a8f99; } .sh .cap:first-child { margin-top: 2px; }
+.sh .cd { border-radius: 18px; background: #fff; box-shadow: 0 1px 1.5px rgba(30,24,50,.05), 0 4px 14px rgba(30,24,50,.04); }
+.sh .rw { position: relative; display: flex; align-items: center; gap: 12px; height: 46px; padding: 0 10px 0 14px; } .sh .rw + .rw::before { content: ''; position: absolute; left: 44px; right: 0; top: 0; height: 1px; background: rgba(27,29,36,.06); }
+.sh .rw .l { flex: 1; font-size: 14px; font-weight: 500; color: #26282e; } .sh .rw .v { font-size: 12.5px; color: #8a8f99; } .sh .rw .ch { display: grid; color: #c0c3ca; } .sh .rw.red, .sh .rw.red .l { color: #c4553f; }
+.sh .sg { display: flex; gap: 4px; margin: 2px 0 12px; padding: 4px; border-radius: 999px; background: rgba(27,29,36,.06); } .sh .sg div { flex: 1; height: 32px; display: grid; place-items: center; border-radius: 999px; font-size: 13px; font-weight: 600; color: #6c717b; } .sh .sg .on { background: rgba(20,22,30,.82); box-shadow: inset 0 1px 0 rgba(255,255,255,.16); color: #fff; }
+.sh .it { position: relative; padding: 12px 14px 11px; } .sh .it + .it::before { content: ''; position: absolute; left: 14px; right: 0; top: 0; height: 1px; background: rgba(27,29,36,.06); }
+.sh .it .x { font-size: 14px; line-height: 1.35; color: #26282e; } .sh .it .k { margin-top: 1px; font-size: 12.5px; color: #8a8f99; } .sh .it .m { display: flex; align-items: center; gap: 5px; margin-top: 7px; font-size: 11.5px; color: #9a9ea8; } .sh .it .m b { font-weight: 600; color: #6c717b; } .sh .it .m .sp { flex: 1; } .sh .it .m .go { display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 10px; border-radius: 999px; background: rgba(27,29,36,.06); font-weight: 600; color: #3a3d45; }
+.sh .nt { margin-top: 8px; padding: 8px 10px; border-radius: 10px; background: #f3f2f4; font-size: 12.5px; line-height: 1.35; color: #4a4e57; }
+.sh .ft { margin: 12px 8px 0; display: flex; align-items: center; font-size: 11.5px; color: #9a9ea8; } .sh .ft .sp { flex: 1; } .sh .ft .red { font-weight: 600; color: #c4553f; }
+.lp_e { position: absolute; display: flex; align-items: center; gap: 2px; height: 44px; padding: 0 8px; border-radius: 999px; background: #fff; box-shadow: 0 1px 1.5px rgba(30,24,50,.05), 0 12px 32px rgba(30,24,50,.13); } .lp_e span { width: 36px; height: 36px; display: grid; place-items: center; font-family: NADeviceEmoji, sans-serif; font-size: 21px; } .lp_e i { width: 34px; height: 34px; display: grid; place-items: center; color: #8a8f99; }
+.lp_c { position: absolute; width: 214px; padding: 6px 0; border-radius: 18px; background: #fff; box-shadow: 0 1px 1.5px rgba(30,24,50,.05), 0 14px 36px rgba(30,24,50,.13); color: #3a3d45; }
+.lp_c .q { display: flex; padding: 2px 6px 4px; } .lp_c .q div { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 8px 0 6px; font-size: 11px; font-weight: 500; color: #4a4e57; }
+.lp_c .r { display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 16px; } .lp_c .r div { font-size: 13.5px; font-weight: 500; color: #26282e; } .lp_c .r.red, .lp_c .r.red div { color: #c4553f; } .lp_c hr { height: 1px; margin: 4px 16px; border: 0; background: rgba(27,29,36,.07); }
+`;
+  const over = async (name, kind) => { await draw(BASE + PALE + GLASS + TOPS.A.css + OV, TOPS.A.html.toString(), BAR.toString(), '_tmp');
+    await p.evaluate(({ L, kind }) => { const ic = (n, s = 18, w = 2) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round">${L[n]}</svg>`;
+      const host = document.querySelector('.na_ph_frame .ob_msgs').parentElement, ch = `<span class="ch">${ic('chevron-right', 16)}</span>`;
+      const rw = (i, l, v = '', red = '') => `<div class="rw ${red}">${ic(i, 18)}<div class="l">${l}</div><div class="v">${v}</div>${red ? '' : ch}</div>`;
+      const sheet = (hd, bd) => `<div class="ov mk_n"><div class="veil"></div><div class="sh"><div class="grab"></div>${hd}<div class="bd">${bd}</div></div></div>`;
+      const seg = on => `<div class="sg">${['검색', '북마크', '휴지통'].map((t, i) => `<div class="${i === on ? 'on' : ''}">${t}</div>`).join('')}</div>`;
+      let h = '';
+      if (kind === 'S1') h = sheet(`<div class="hd"><div class="t">방 설정</div><i>${ic('ellipsis', 18)}</i><i>${ic('x', 19)}</i></div>`,
+        `<div class="cap">이 방</div><div class="cd">${rw('search', '찾기 · 북마크 · 휴지통', '북마크 2')}${rw('type', '방 이름', 'Mara')}${rw('users', '사람', '1')}${rw('git-branch', '분기', '1')}</div>
+         <div class="cap">답장</div><div class="cd">${rw('plug', '연결', 'gemini-4-argon')}${rw('file-text', '프리셋', '기본')}${rw('venetian-mask', '페르소나', '소망')}${rw('braces', '채팅 변수', '0')}${rw('book-open', '로어북', '2')}${rw('scan-text', '지금 들어간 내용')}</div>
+         <div class="cap">이어진 것</div><div class="cd">${rw('link', '롤플 채팅', '켜짐')}</div>
+         <div class="cap"></div><div class="cd">${rw('trash-2', '방 지우기', '', 'red')}</div>`);
+      if (kind === 'S2') h = sheet(`<div class="hd sub"><i>${ic('chevron-left', 20)}</i><div class="t">찾기</div><i>${ic('x', 19)}</i></div>`,
+        `${seg(1)}<div class="cd"><div class="it"><div class="x">Vom Bäcker an der Ecke. Der hat freitags immer die besten</div><div class="k">모퉁이 빵집 거. 거기 금요일엔 늘 제일 맛있어</div><div class="nt">토요일에 들르기. 체리 케이크</div><div class="m">${ic('pin', 12)}<b>Mara</b>오늘 13:36<span class="sp"></span><span class="go">말로 가기</span></div></div>
+         <div class="it"><div class="x">Ja klar, Samstag passt!</div><div class="k">응 좋아, 토요일 괜찮아!</div><div class="m"><b>Mara</b>오늘 13:32<span class="sp"></span><span class="go">말로 가기</span></div></div></div>`);
+      if (kind === 'S3') h = sheet(`<div class="hd sub"><i>${ic('chevron-left', 20)}</i><div class="t">찾기</div><i>${ic('x', 19)}</i></div>`,
+        `${seg(2)}<div class="cd"><div class="it"><div class="x">Oder doch lieber Sonntag?</div><div class="k">아니면 일요일이 나을까?</div><div class="m"><b>Mara</b>29일 남음<span class="sp"></span><span class="go">${ic('rotate-ccw', 12, 2.2)}되살리기</span></div></div>
+         <div class="it"><div class="x">아 잠깐만</div><div class="m"><b>나</b>30일 남음<span class="sp"></span><span class="go">${ic('rotate-ccw', 12, 2.2)}되살리기</span></div></div></div><div class="ft"><div>지운 말은 30일 뒤에 없어져요</div><span class="sp"></span><div class="red">휴지통 비우기</div></div>`);
+      if (kind === 'M') { const b = [...document.querySelectorAll('.na_ph_frame .ob_b.th')].find(e => e.textContent.includes('Den mit Kirschen')), hr = host.getBoundingClientRect(), r = b.getBoundingClientRect(), k = hr.width / host.offsetWidth;
+        const x = (r.left - hr.left) / k, y = (r.top - hr.top) / k, c = b.cloneNode(true); c.style.cssText = `position:absolute;left:${x}px;top:${y}px;margin:0;width:${r.width / k}px;box-sizing:border-box;background:#fff;`;
+        const E = ['❤️', '👍', '😂', '😮', '😢'].map(e => `<span>${e}</span>`).join('');
+        h = `<div class="ov mk_n"><div class="fog"></div><div class="lp_e" style="left:${x}px;top:${y - 52}px">${E}<i>${ic('plus', 18)}</i></div>${c.outerHTML}
+          <div class="lp_c" style="left:${x}px;top:${y + r.height / k + 8}px"><div class="q"><div>${ic('copy', 18)}복사</div><div>${ic('pencil', 18)}수정</div><div>${ic('languages', 18)}재번역</div><div>${ic('circle-check', 18)}선택</div></div><hr>
+          <div class="r">${ic('bookmark', 17)}<div>북마크</div></div><div class="r">${ic('pin', 17)}<div>고정</div></div><div class="r">${ic('sticky-note', 17)}<div>메모</div></div><div class="r">${ic('eye-off', 17)}<div>AI에게 숨기기</div></div><hr><div class="r red">${ic('trash-2', 17)}<div>삭제</div></div></div></div>`; }
+      host.insertAdjacentHTML('beforeend', h); }, { L, kind });
+    await p.waitForTimeout(300); await p.screenshot({ path: OUT + name + '.png' }); console.log(name); };
+  if (process.env.ONLY !== 'base') for (const k of ['S1', 'S2', 'S3', 'M']) await over(k, k);
+  fs.rmSync(OUT + '_tmp.png', { force: true });
  } finally { await s.close(); reset(); } })().catch(e => { console.error(e); reset(); process.exit(1); });
