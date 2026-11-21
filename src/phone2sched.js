@@ -17,6 +17,7 @@ import { buildConversationCurrentContextBlock } from './marinara/conversation-co
 import { checkAutonomous, forgetAutonomousSeed } from './marinara/autonomous-check.js';
 import { clearChatActivity, clearGenerationInProgress, buildAutonomousDailyBudgetPatch } from './marinara/autonomous.service.js';
 import { buildIntentCooldownPatch, isMessageIntent } from './marinara/intent.service.js';
+import { applyCharacterStatusCommand } from './marinara/schedule-command.js';
 
 export { ScheduleDraftError, CONVERSATION_SCHEDULE_DAYS };
 const obj = v => v && typeof v === 'object' && !Array.isArray(v);
@@ -183,4 +184,23 @@ export function blockNow(m, owner, { now = new Date(), tz = '' } = {}) {
     if (!block) return null;
     const end = one(block.time).split('-')[1] || '';
     return { key: `${wall.getDay()} ${block.time}`, block, text: [one(block.place), one(block.activity), end ? `~${end}` : ''].filter(Boolean).join(' · ') };
+}
+
+// 지금 그 사람의 상태 글과 장소: 살아 있는 임시 상태(손으로 준 것 · 캐릭터가 스스로 바꾼 것)가 있으면 그것, 없으면 지금 스케줄 블록
+//   → { key (바뀌면 달라져요), text ("장소 · 하는 일 …"), place } | null
+export function stateNow(m, owner, { now = new Date(), tz = '' } = {}) {
+    const p = peek(m), k = liveKey(owner), o = getActiveStatusOverride(p.overrides?.[k], now);
+    if (o) return { key: `o ${o.createdAt}`, text: [one(o.place), one(o.activity) || o.status].filter(Boolean).join(' · '), place: one(o.place) };
+    const at = blockNow(m, owner, { now, tz });
+    return at ? { key: at.key, text: at.text, place: one(at.block.place) } : null;
+}
+// 캐릭터가 답장에서 스스로 상태를 바꿨어요 (마리나라의 schedule_update 명령: 임시 상태로 두고, 시간이 지나면 스케줄로 돌아가요)
+//   cmd: { status, activity, duration ("1h"), place (우리 칸: 어디서) } → 새 임시 상태 | null (안 바뀜: 손으로 준 상태가 있거나 빈 명령)
+export function takeStatus(m, owner, cmd, { now = new Date(), tz = '' } = {}) {
+    if (!obj(cmd)) return null;
+    const p = presenceOf(m), k = liveKey(owner), status = STATUSES.includes(String(cmd.status || '').toLowerCase()) ? String(cmd.status).toLowerCase() : undefined;
+    const got = applyCharacterStatusCommand({ command: { type: 'schedule_update', status, activity: one(cmd.activity).slice(0, 120) || undefined, duration: one(cmd.duration) || undefined }, current: p.overrides[k], schedule: p.schedules[k], now, scheduleNow: toZonedWallClockDate(now, tz || undefined) });
+    if (!got) return null;
+    const place = one(cmd.place).slice(0, 80);
+    return (p.overrides[k] = { ...got, ...(place ? { place } : {}) });
 }

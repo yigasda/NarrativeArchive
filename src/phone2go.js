@@ -25,7 +25,7 @@ import { liveStoryText } from './phone2story.js';
 import { BACK, backLeft, backInput, phone2BackSystem, takeBack, backMessage, markTold } from './phone2back.js';
 import { liveWall } from './phone2clock.js';
 import { gatherReply } from './phone2live.js';
-import { presenceOf, scheduleOf, setSchedule, setStatusOverride, setUserStatus, setAutonomous, statusNow, replyDelay, contextBlock, makeSchedule, checkProactive, noteProactive, fillPlaces, blockNow } from './phone2sched.js';
+import { presenceOf, scheduleOf, setSchedule, setStatusOverride, setUserStatus, setAutonomous, statusNow, replyDelay, contextBlock, makeSchedule, checkProactive, noteProactive, fillPlaces, stateNow, takeStatus } from './phone2sched.js';
 import { replyInput } from './phone2ask.js';
 import { phone2ReplySystem } from './phone2reply.js';
 import { runLive } from './phone2run.js';
@@ -145,11 +145,15 @@ export async function liveGo(real, { onChange = () => {} } = {}) {
             } });
             // (Marinara's status · schedule lines, for an owner with a schedule or a status set by hand)
             if (d) { const room = w.messenger.rooms[job.room], last = [...(room?.messages || [])].reverse().find(x => x.text || x.call); d.context = contextBlock(real, job.owner, job.room, { tzOf: n => tzOf(livePhone(real, n) || p), lastRole: last && liveKey(last.from) === liveKey(w.persona) ? 'user' : 'assistant', said: !job.why, intentKey: job.intent || '' }); }
-            return d ? { system: phone2ReplySystem({ owner: d.owner, persona: d.persona }), input: replyInput(d) } : null;
+            return d ? { system: phone2ReplySystem({ owner: d.owner, persona: d.persona, scheduled: !!scheduleOf(real, job.owner) }), input: replyInput(d) } : null;
         },
-        after: async job => {
+        // (an owner with a schedule: the texts carry the schedule's state, not one the model wrote)
+        stateFor: job => { if (!scheduleOf(real, job.owner)) return undefined; const p = livePhone(real, job.owner); return stateNow(real, job.owner, { tz: p ? tzOf(p) : '' })?.text || ''; },
+        after: async (job, got) => {
             const w = liveWorld(real), p = livePhone(real, job.owner);
             if (w && p && w.id === job.world) markPersona(p, w.persona);
+            // (the owner changed their own status in the answer: a temporary one, and the phone follows it)
+            if (w && p && w.id === job.world && got?.status && scheduleOf(real, job.owner) && takeStatus(real, job.owner, got.status, { tz: tzOf(p) })) { followSchedule(real); await line.save(); }
             tell();
         },
     });
@@ -224,10 +228,10 @@ export function followSchedule(real, now = Date.now()) {
     let n = 0;
     for (const p of Object.values(w.phones || {})) {
         if (!p?.owner) continue;
-        const at = blockNow(real, p.owner, { now: new Date(now), tz: tzOf(p) });
+        const at = stateNow(real, p.owner, { now: new Date(now), tz: tzOf(p) });
         if (!at || p.schedAt === at.key) continue;
         p.schedAt = at.key; p.schedState = { text: at.text, at: now };
-        const place = String(at.block.place || '').trim();
+        const place = at.place;
         if (place) {
             const row = ownerRow(p);
             if (row) row.place = place;

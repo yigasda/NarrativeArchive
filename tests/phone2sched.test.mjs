@@ -212,3 +212,53 @@ test('답장 요청의 NOW: 스케줄이 적은 상태가 마지막 답장의 �
     a.messages.push({ id: 'x3', n: 3, from: 'Mara', text: 'on break', at: 4000, state: 'the hospital · break room' });
     assert.equal(gatherReply(m, 'Mara', a.id, { now: 9000 }).now.last, 'the hospital · break room');
 });
+test('스케줄이 있는 사람의 답장 지시문: state를 안 묻고, 마리나라의 상태 명령을 JSON 칸으로 물어요', async () => {
+    const RP = await at('phone2reply.js'), CMD = await at('marinara/schedule-command.js');
+    const plain = RP.phone2ReplySystem({ owner: 'Mara', persona: 'Ren' }), s = RP.phone2ReplySystem({ owner: 'Mara', persona: 'Ren', scheduled: true });
+    assert.match(plain, /\nSTATE FIRST\n"state": /);
+    assert.match(plain, /\n\{ "state": "HH:MM · place · doing · ~until",\n/);
+    assert.doesNotMatch(plain, /"status":/);
+    assert.doesNotMatch(s, /STATE FIRST|"state"/);
+    const said = CMD.SCHEDULE_UPDATE_PROMPT_LINE.split('] - ')[1];
+    assert.equal(said, "only if you change your own status/activity, for example, if the user asks you to stop what you're doing or if you decide to change them yourself.");
+    assert.ok(s.includes(`\nSTATUS\n- "status": ${said} With "place": where that puts you. Else "".\n\nTEXTING\n`));
+    assert.ok(s.includes('\n{ "status": "" or { "status": "online|idle|dnd|offline", "activity": "activity name", "duration": "number of hours (e.g., 1h)", "place": "where" },\n  "reply": '));
+});
+test('캐릭터가 스스로 상태를 바꾸면: 임시 상태가 되고(시간이 지나면 스케줄로), 장소도 따라가요. 손으로 준 상태는 못 바꿔요', () => {
+    const { m, w } = world(), p = w.phones.mara, t = Date.parse('2026-11-23T03:00:00Z'), now = new Date(t);
+    p.where = { at: 1, people: [{ name: 'Mara', place: 'home' }] };
+    S.setSchedule(m, 'Mara', all('online', 'free time'), NOW);
+    const o = S.takeStatus(m, 'Mara', { activity: 'driving over', duration: '2h', place: "Ren's street" }, { now });
+    assert.deepEqual(o, { status: 'online', activity: 'driving over', createdAt: now.toISOString(), expiresAt: new Date(t + 120 * 60_000).toISOString(), place: "Ren's street" });
+    assert.deepEqual(S.stateNow(m, 'Mara', { now }), { key: `o ${now.toISOString()}`, text: "Ren's street · driving over", place: "Ren's street" });
+    assert.equal(G.followSchedule(m, t), 1);
+    assert.equal(p.where.people[0].place, "Ren's street");
+    assert.equal(p.schedState.text, "Ren's street · driving over");
+    // 시간이 지나면 스케줄로 돌아가요
+    assert.equal(S.stateNow(m, 'Mara', { now: new Date(t + 121 * 60_000), tz: 'UTC' }).text, 'free time · ~00:00');
+    // 시간을 안 주면 한 시간, 못 읽는 상태 낱말은 지금 상태로
+    const d = S.takeStatus(m, 'Mara', { status: 'asleep', activity: 'nap' }, { now });
+    assert.equal(d.status, 'online');
+    assert.equal(Date.parse(d.expiresAt) - t, 60 * 60_000);
+    assert.equal(S.takeStatus(m, 'Mara', {}, { now }), null);
+    assert.equal(S.takeStatus(m, 'Mara', '', { now }), null);
+    // 내가 손으로 준 상태(끝 시간 없음)가 있으면 캐릭터가 못 바꿔요
+    S.setStatusOverride(m, 'Mara', { status: 'dnd', activity: 'do not disturb her' }, now);
+    assert.equal(S.takeStatus(m, 'Mara', { status: 'online', activity: 'x' }, { now }), null);
+    assert.equal(S.statusNow(m, 'Mara', { now }).status, 'dnd');
+});
+test('답 넣기: 스케줄의 상태를 받으면 그걸 말에 적고, 답의 state는 안 읽어요. 말 없는 답은 메시지를 안 남겨요', async () => {
+    const RUN = await at('phone2run.js');
+    const { m, a } = world();
+    a.messages.push({ id: 'x1', n: 1, from: 'Ren', text: 'hi', at: 1000 });
+    const got = RUN.takeReply(m, 'Mara', a.id, { state: '09:00 · model wrote this', reply: ['hey'], status: { activity: 'on my way', place: 'bus' } }, { now: 5000, state: 'the hospital · working · ~18:00' });
+    assert.equal(a.messages.at(-1).state, 'the hospital · working · ~18:00');
+    assert.deepEqual(got.status, { activity: 'on my way', place: 'bus' });
+    const n = a.messages.length;
+    assert.equal(RUN.takeReply(m, 'Mara', a.id, { reply: [], status: '' }, { now: 6000, state: 'the hospital · working · ~18:00' }).status, undefined);
+    assert.equal(a.messages.length, n);
+    // 스케줄이 없는 사람은 지금 그대로: 답의 state를 읽어요
+    const b = RUN.takeReply(m, 'Mara', a.id, { state: '09:00 · cafe · reading', reply: ['again'] }, { now: 7000 });
+    assert.match(a.messages.at(-1).state, /cafe · reading/);
+    assert.equal(b.status, undefined);
+});
