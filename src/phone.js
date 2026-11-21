@@ -10,7 +10,7 @@ import { profileEntries, resolvePhoneProfile, currentPersonaBinding } from './ph
 import { investmentScreen } from './investui.js';
 import { validDate } from './investdata.js';
 import { migrateBank, selectPrice } from './finance.js';
-import { askDraft, draftReady, draftSettings, drLabel, listModels, vxModelList, withSpinner } from './ai.js';
+import { askDraft, draftReady, draftSettings, drLabel, listModels, vxModelList, withSpinner, connSettings, aiLabel, aiProfiles } from './ai.js';
 import { ctx, getMeta, globalSettings, phoneMeta, saveGlobal, saveMeta, setPhoneMeta } from './core.js';
 import { applyInjection } from './inject.js';
 import { faceHtml, faceOf, stFace, nameKey, peopleList, shrinkFace } from './people.js';
@@ -270,6 +270,11 @@ export async function openPhone(who = null) {
                 out.push({ st: b.b.status, day, act: String(b.b.activity || '').trim() || { online: '온라인', idle: '자리 비움', dnd: '바쁨', offline: '오프라인' }[b.b.status] || '', when: `${k === 0 ? '오늘' : k === 1 ? '내일' : SCH_KO[day]} · ${schHm(b.sp[0])} – ${b.sp[1] === 1440 ? '24:00' : schHm(b.sp[1])}` }); } }
         return out; };
     const schBlank = () => ({ days: Object.fromEntries(SCH_DAYS.map(d => [d, []])), talkativeness: 50, inactivityThresholdMinutes: 120 });
+    // 고를 수 있는 연결을 마리나라처럼 모델 이름 + 제공자로 (소망: 우리 설정의 칸 이름을 화면에 쓰지 않아요). id는 liveConnections 것 그대로
+    const obConns = () => { const slot = t => (t.mode === 'custom' ? { name: t.model || '모델 없음', sub: '커스텀 API' } : t.mode === 'vertex' ? { name: t.vxModel || '모델 없음', sub: 'Vertex' } : null);
+        return liveConnections().map(c => { if (!c.id) return { id: '', ...(slot(draftSettings()) || { name: '모델 없음', sub: '' }) };
+            if (c.id === 'ai') return { id: 'ai', ...(slot(connSettings('ai')) || { name: aiLabel(), sub: 'SillyTavern' }) };
+            const p = aiProfiles().find(x => `profile:${x.id}` === c.id); return { id: c.id, name: p?.model || c.name, sub: p?.model ? [c.name, p.api].filter(Boolean).join(' · ') : (p?.api || '') }; }); };
     const schOpen = (owner, day = null) => { const had = liveSchedule(realM, owner); obSch = { owner, draft: structuredClone(had || schBlank()), page: 'main', open: SCH_DAYS.includes(day) ? day : null, mode: had ? 'adjust' : 'rewrite', gen: 'week', guide: '', dguide: {}, menu: null, busy: '', busyText: '', ctl: null, err: null, stale: false, tzQ: '', dirty: false };
         for (const d of SCH_DAYS) if (!Array.isArray(obSch.draft.days?.[d])) (obSch.draft.days ||= {})[d] = []; };
     let obMenu = false, obSub = '', obNote = null;   // obSub: 길게 누른 판의 둘째 화면('re' 이모지 · 'mark' 북마크 줄), obNote: 메모 시트 { id, text }
@@ -324,7 +329,7 @@ export async function openPhone(who = null) {
                 if (obSet === 'find') { t.tab = obFindTab;
                     t.items = obFindTab === 'marks' ? liveMarked(realM, r.id).map(k => ({ ...row(k.x), note: k.note || '', pin: !!k.x.extra?.pinnedToContext })).reverse()
                         : liveTrash(realM, r.id).map(k => ({ ...row(k.x), when: `${Math.max(0, Math.ceil((k.until - Date.now()) / 864e5))}일 남음` })); }
-                t.v = obSetUi.v; t.open = obSetUi.open; t.roomId = r.id; t.members = os; t.auto.ind = A.groupChatMode === 'individual';
+                t.v = obSetUi.v; t.open = obSetUi.open; if (obSet === 'conn') t.conns = obConns(); t.roomId = r.id; t.members = os; t.auto.ind = A.groupChatMode === 'individual';
                 if (obSet === 'name') { t.name = r.name || ''; t.autoName = [...os].join(', '); }
                 if (obSet === 'auto' || obSet === 'tz') { const zone = liveScheduleZone(realM), dev = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', q = obSetUi.tzQ.trim().toLowerCase();
                     t.sched = { any: os.some(n => SCH_DAYS.some(d => liveSchedule(realM, n)?.days?.[d]?.length)), list: os.map(n => ({ n, days: SCH_DAYS.filter(d => liveSchedule(realM, n)?.days?.[d]?.length).length })), zone: schTzLabel(zone || dev), device: dev, differs: !!zone && zone !== dev, busy: obSetUi.busy };
@@ -350,11 +355,11 @@ export async function openPhone(who = null) {
                         sub: [st?.override ? '수동 재정의' : old ? '갱신 필요' : sc ? '스케줄 따르는 중' : '', last ? `마지막 연락 ${schAgo(last)}` : ''].filter(Boolean).join(' · '),
                         note: !on ? (sc ? '자율 스케줄이 꺼져 있습니다' : '자율 스케줄이 꺼져 있고 아직 스케줄이 없습니다') : !sc ? '아직 스케줄이 없습니다' : !any ? '스케줄은 있지만 예정된 블록이 없습니다' : next.length ? '' : '다가올 블록이 없습니다',
                         wait: waits.some(j => j.room === r.id && liveKey(j.owner) === liveKey(n)) }; }) }; };
-            const schUi = () => { if (!obSch || ro) return null; const S = obSch, D = S.draft, tz = liveTimeZone(realM, S.owner), zone = liveScheduleZone(realM), now = schNow(tz), off = new Set(D.disabledAutonomousIntents || []), cid = liveScheduleConnection(realM), conns = liveConnections();
+            const schUi = () => { if (!obSch || ro) return null; const S = obSch, D = S.draft, tz = liveTimeZone(realM, S.owner), zone = liveScheduleZone(realM), now = schNow(tz), off = new Set(D.disabledAutonomousIntents || []), cid = liveScheduleConnection(realM), conns = obConns();
                 const zq = S.tzQ.trim().toLowerCase().replace(/\s+/g, ''), zones = S.page !== 'tz' ? [] : [...new Set(['UTC', ...(Intl.supportedValuesOf?.('timeZone') || []), ...(zone ? [zone] : [])])].filter(z => !zq || z.toLowerCase().replace(/[_/]/g, '').includes(zq.replace(/[_/]/g, ''))).slice(0, 80);
                 const talk = SCH_TALK.reduce((b, v, i) => (Math.abs(v - (D.talkativeness ?? 50)) < Math.abs(SCH_TALK[b] - (D.talkativeness ?? 50)) ? i : b), 0), onN = SCH_MOMENT.filter(([k]) => !off.has(k)).length;
                 return { owner: S.owner, page: S.page, dirty: S.dirty, busy: S.busy, busyText: S.busyText, tz: schTzLabel(tz), zone, phoneTz: tzOf(S.owner) || '기기 시간대', summary: String(D.routineSummary || ''), stale: S.stale, mode: S.mode, gen: S.gen, guide: S.guide, talk,
-                    conn: conns.find(c => c.id === cid)?.name || '초안 모델', conns: conns.map(c => ({ ...c, on: c.id === cid })), renew: !!liveScheduleInfo(realM, S.owner).autoRenew, tzQ: S.tzQ, tzList: zones.map(z => ({ id: z, label: schTzLabel(z), on: z === zone })),
+                    conn: conns.find(c => c.id === cid)?.name || '', connSub: conns.find(c => c.id === cid)?.sub || '', conns: conns.map(c => ({ ...c, on: c.id === cid })), renew: !!liveScheduleInfo(realM, S.owner).autoRenew, tzQ: S.tzQ, tzList: zones.map(z => ({ id: z, label: schTzLabel(z), on: z === zone })),
                     err: S.err ? { msg: S.err.msg, raw: !!S.err.raw, text: S.err.text } : null,
                     wait: String(D.inactivityThresholdMinutes ?? 120), moments: SCH_MOMENT.map(([k, label]) => ({ k, label, on: !off.has(k) })), cap: D.autonomousDailyCapOverride == null ? '' : String(D.autonomousDailyCapOverride), idle: D.idleResponseDelayMinutes == null ? '' : String(D.idleResponseDelayMinutes), dnd: D.dndResponseDelayMinutes == null ? '' : String(D.dndResponseDelayMinutes),
                     tuneSum: `${['드물게', '조용히', '보통', '사교적', '매우 자주'][talk]} · ${onN === 5 ? '자연스러운 모먼트' : onN ? `모먼트 ${onN}개` : '기본 체크인만'}${D.autonomousDailyCapOverride ? ` · 하루 ${D.autonomousDailyCapOverride}회` : ''}`,
