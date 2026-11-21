@@ -239,11 +239,20 @@ export async function openPhone(who = null) {
     // 어두운 방(⋯ 메뉴의 어둡게 · 밝게): 확장 설정에 남아요. 그릴 때마다 읽으니 설정을 그대로 읽어요(koOn과 같은 까닭)
     const obDark = () => (ctx().extensionSettings?.narrative_archive ?? globalSettings()).orbitDark === true;
     let obSet = '', obFindTab = 'marks', obFindQ = '', obJump = null;   // 방 설정 시트: obSet = '' | 'main' | 'find' | 'name' | 'people', obJump = 찾아갈 말의 id
+    // 이모지 판: obEmo = { tab: 'emoji' | 'kao', cat, q } | null. 목록 · 검색(마리나라 것, 130KB)은 처음 열 때 불러와요
+    let obEmo = null, obEmoLib = null;
+    const EMO_KO = { 'Smileys & Emotion': '스마일리 및 감정', 'People & Body': '사람 및 신체', 'Animals & Nature': '동물 및 자연', 'Food & Drink': '음식 및 음료', 'Travel & Places': '여행 및 장소', Activities: '활동', Objects: '사물', Symbols: '기호', Flags: '깃발',
+        happy: '기쁨', love: '사랑', sad: '슬픔', angry: '화남', surprised: '놀람', shrug: '으쓱 · 뒤집기', cute: '귀여움 · 기타' };
+    const obEmoUi = () => { if (!obEmo) return null; const L = obEmoLib, t = { tab: obEmo.tab, cat: obEmo.cat, q: obEmo.q, cats: [], title: '', items: [], busy: !L }; if (!L) return t;
+        const q = obEmo.q.trim();
+        if (obEmo.tab === 'kao') { const cs = L.KAOMOJI_CATEGORIES; t.cats = cs.map(c => ({ label: EMO_KO[c.id] || c.label })); const c = cs[Math.min(obEmo.cat, cs.length - 1)]; t.items = (q ? L.searchKaomoji(q) : c.items).map(x => x.value); }
+        else { const cs = L.EMOJI_CATEGORIES; t.cats = cs.map(c => ({ icon: c.icon, label: EMO_KO[c.label] || c.label })); const c = cs[Math.min(obEmo.cat, cs.length - 1)]; t.title = q ? '' : EMO_KO[c.label] || c.label; t.items = q ? cs.flatMap(x => x.emojis).filter(e => L.matchesEmojiQuery(q, e)).slice(0, 160) : c.emojis; }
+        return t; };
     let obMenu = false, obSub = '', obNote = null;   // obSub: 길게 누른 판의 둘째 화면('re' 이모지 · 'mark' 북마크 줄), obNote: 메모 시트 { id, text }
     const orbitUi = () => {
         const w = liveWorld(realM);
         if (!live() || !w) return {};
-        if (obEditAt !== view) { obHeld = null; obPicks = null; obList = null; obFix = null; obFrom = null; obMenu = false; obNote = null; obSet = ''; obFindQ = ''; obEditAt = view; }
+        if (obEditAt !== view) { obHeld = null; obPicks = null; obList = null; obFix = null; obFrom = null; obMenu = false; obNote = null; obSet = ''; obFindQ = ''; obEmo = null; obEditAt = view; }
         if (!obHeld) obSub = '';
         const me = w.persona, who = obAcct(), ro = liveKey(who) !== liveKey(me), sh = w.dayShift || 0, vtz = Intl.DateTimeFormat().resolvedOptions().timeZone, vw = ms => viewerWall(ms, sh, vtz).at, today = vw(Date.now()).slice(0, 5), yday = vw(Date.now() - 864e5).slice(0, 5);
         const dayOf = a => (a.slice(0, 5) === today ? '오늘' : a.slice(0, 5) === yday ? '어제' : `${Number(a.slice(0, 2))}월 ${Number(a.slice(3, 5))}일`);
@@ -305,7 +314,7 @@ export async function openPhone(who = null) {
             const jobs = w.queue?.jobs || [], typing = !ro && jobs.some(j => j.room === r.id && (j.state === 'waiting' || j.state === 'running'));
             const fail = ro ? null : jobs.find(j => j.room === r.id && j.state === 'failed' && !j.seen) || null;
             const state = group ? '' : [...r.messages].reverse().find(x => liveKey(x.from) === liveKey(os[0]) && String(x.state || '').trim())?.state || '';
-            out.orbit = { id: r.id, dark: obDark(), menu: obMenu, set: setUi(), heldSub: obSub, note: !ro && obNote ? { text: obNote.text } : null, fixing: !ro && !!obFix, quick: !ro && obHeld ? liveReactQuick(realM) : [], title: V.titleOf(r), group, there: thereAt, faceOf: !group && !ro ? os[0] : '', sub: group ? [...os, '나'].join(' · ') : state, chips, asOwner: ro, msgs, draft: obDraft, typing, snapBusy: typing && liveSnapBusy(realM), fail: fail ? { id: fail.id } : null, swipe: sw && !sw.coming ? { at: sw.at, count: sw.count } : null, picking: !ro && obPicks ? obPicks.size : null,
+            out.orbit = { id: r.id, dark: obDark(), menu: obMenu, set: setUi(), emo: ro ? null : obEmoUi(), heldSub: obSub, note: !ro && obNote ? { text: obNote.text } : null, fixing: !ro && !!obFix, quick: !ro && obHeld ? liveReactQuick(realM) : [], title: V.titleOf(r), group, there: thereAt, faceOf: !group && !ro ? os[0] : '', sub: group ? [...os, '나'].join(' · ') : state, chips, asOwner: ro, msgs, draft: obDraft, typing, snapBusy: typing && liveSnapBusy(realM), fail: fail ? { id: fail.id } : null, swipe: sw && !sw.coming ? { at: sw.at, count: sw.count } : null, picking: !ro && obPicks ? obPicks.size : null,
                 list: !ro && obList ? (items => ({ items, picks: [...obList].filter(n => items.some(x => x.no === n)), busy: !!sw?.coming }))(liveSwipeList(realM, r.id)) : null };
         }
         if (v === 'orbitface') { if (!obFc) { view = 'orbit'; return orbitUi(); } out.orbit = { name: obFc.who, back: obFc.back, src: obFc.src, album: obFc.album.map((url, i) => ({ url, on: i === obFc.sel })), busy: obFc.busy }; }
@@ -989,6 +998,18 @@ export async function openPhone(who = null) {
     // 방 설정 시트 (시안 orbit-top S1~S3): 머리의 설정 단추로 열고, 줄을 누르면 시트 안에서 그 화면으로
     const obSetGo = async (pr, after) => { try { await pr; } catch (err) { obWarn(err); } if (after) after(); if (!phoneClosed && stillHere()) drawPhone(true); };
     $root.on('click', '.na_ob_set', e => { e.stopPropagation(); if (obFix || obHeld || obPicks || obList || !obCanEdit()) return; obMenu = false; obSet = 'main'; drawPhone(true); });
+    // 이모지 판 (시안 orbit-emoji): 웃는 얼굴로 열고(키보드는 내려요), 같은 자리의 키보드 단추로 닫고 입력칸으로. 이모지를 누르면 입력칸 끝에 붙어요(다시 그리지 않아요: 판이 굴러간 자리 그대로)
+    $root.on('click', '.na_ob_emo', async e => { e.stopPropagation(); if (obFix || obHeld || obPicks || obList || !obCanEdit()) return;
+        if (obEmo) { obEmo = null; drawPhone(true); obBottom(); return obFocus(); }
+        obEmo = { tab: 'emoji', cat: 0, q: '' }; document.activeElement?.blur?.(); drawPhone(true); obBottom();
+        if (!obEmoLib) try { const [a, b, c] = await Promise.all([import('./marinara/emoji-catalog.generated.js'), import('./marinara/emoji-search.js'), import('./marinara/kaomoji-catalog.js')]); obEmoLib = { ...a, ...b, ...c }; if (obEmo && !phoneClosed && stillHere()) { drawPhone(true); obBottom(); } } catch (err) { obEmo = null; obWarn(err); if (!phoneClosed && stillHere()) drawPhone(true); } });
+    $root.on('click', '.na_ob_etab', function (e) { e.stopPropagation(); if (!obEmo) return; obEmo = { tab: this.dataset.v, cat: 0, q: '' }; drawPhone(true); $root.find('.oe_sc').scrollTop(0); });
+    $root.on('click', '.na_ob_ecat', function (e) { e.stopPropagation(); if (!obEmo) return; obEmo.cat = Number(this.dataset.i) || 0; drawPhone(true); $root.find('.oe_sc').scrollTop(0); });
+    let obEmoT = null;
+    $root.on('input', '.na_ob_eq', function () { if (!obEmo) return; obEmo.q = this.innerText.replace(/\n/g, ' '); clearTimeout(obEmoT); obEmoT = setTimeout(() => { if (phoneClosed || !obEmo) return; drawPhone(true); $root.find('.oe_sc').scrollTop(0);
+        const el = $root.find('.na_ob_eq')[0]; if (el && document.activeElement !== el) { el.focus({ preventScroll: true }); const sel = getSelection(); sel.selectAllChildren(el); sel.collapseToEnd(); } }, 250); });
+    $root.on('keydown', '.na_ob_eq', function (e) { if (e.key === 'Enter') { e.preventDefault(); this.blur(); } });
+    $root.on('click', '.na_ob_ei', function (e) { e.stopPropagation(); const el = $root.find('.na_ob_in')[0]; if (!el) return; el.textContent = `${el.textContent || ''}${this.dataset.e}`; obDraft = el.textContent; });
     // 머리의 찾기: 방 설정 시트의 찾기 화면으로 바로. 아직 동작이 없는 단추(na_ob_soon)는 알림만 떠요(자리는 시안대로 다 있어요, 소망)
     $root.on('click', '.na_ob_find', e => { e.stopPropagation(); if (obFix || obHeld || obPicks || obList || !obCanEdit()) return; obMenu = false; obSet = 'main'; drawPhone(true); $root.find('.na_ob_sq')[0]?.focus({ preventScroll: true }); });
     $root.on('click', '.na_ob_soon', function (e) { e.stopPropagation(); toastr.info(`${this.getAttribute('aria-label') || '이 기능'}: 아직 연결되지 않았어요`, '캐릭터 휴대폰'); });
@@ -2418,7 +2439,7 @@ export async function openPhone(who = null) {
             if (ask) ask.done(false);
             else if (sheetOpen) setSheet(false);
             else if (obSet && obSet !== 'main') { obSet = 'main'; drawPhone(true); }
-            else if (obFix || obHeld || obPicks || obList || obMenu || obNote || obSet) { obFix = null; obHeld = null; obPicks = null; obList = null; obMenu = false; obNote = null; obSet = ''; drawPhone(true); }
+            else if (obFix || obHeld || obPicks || obList || obMenu || obNote || obSet || obEmo) { obFix = null; obHeld = null; obPicks = null; obList = null; obMenu = false; obNote = null; obSet = ''; obEmo = null; drawPhone(true); }
             else {
                 const b = $root.find('.na_ph_frame [data-go]').filter('[aria-label="뒤로"], [aria-label="닫기"]')[0];
                 if (b) b.click();
