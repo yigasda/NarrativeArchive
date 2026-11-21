@@ -3836,7 +3836,9 @@ function zoneNamed(p, name, m = null) {
     return null;
 }
 
-export const koOn = () => globalSettings().phoneKo !== false;
+// (화면을 그리면서 말마다 불려요. globalSettings()는 부를 때마다 옛 설정 정리까지 해서, 말 300개인 방을 한 번 그리는 데 그리기 시간의
+// 절반을 썼어요. phoneKo는 정리가 건드리지 않는 값이라 설정을 그대로 읽어요: 'narrative_archive'는 core.js의 MODULE. 설정이 아직 없으면 예전처럼 만들어요)
+export const koOn = () => (ctx().extensionSettings?.narrative_archive ?? globalSettings()).phoneKo !== false;
 export const savedName = (p, n) => p.contacts.find(c => nameKey(c.name) === nameKey(n))?.saved || n;
 export const hasKo = p => [...p.threads.flatMap(t => t.messages), ...p.photos, ...p.notes, ...p.searches, ...p.events, ...(p.posts || []), ...(p.mails || []), ...(p.diary || [])].some(x => x.ko) || koGaps(p).length > 0;
 // what on the phone is written in another language and has no Korean yet: [{ x: the item, f: its field, k: the Korean's field }].

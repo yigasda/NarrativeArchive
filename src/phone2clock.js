@@ -8,9 +8,12 @@ const two = n => String(n).padStart(2, '0');
 const DAY = 864e5;
 
 // the wall clock in a time zone at a real instant: { y, mo, d, h, mi } (a zone that can't be read: UTC)
+// (시간대마다 시계 도구는 한 번만 만들어 두고 다시 써요: 만드는 게 느려서, 말마다 새로 만들면 긴 방을 그릴 때 한참 걸렸어요. 나오는 값은 같아요)
+const FMT = new Map();
+const fmtOf = tz => { let f = FMT.get(tz); if (!f) { f = new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' }); FMT.set(tz, f); } return f; };
 export function wallAt(tz, ms) {
     let parts;
-    try { parts = new Intl.DateTimeFormat('en-US', { timeZone: tz || 'UTC', hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' }).formatToParts(new Date(ms)); }
+    try { parts = fmtOf(tz || 'UTC').formatToParts(new Date(ms)); }
     catch { return wallAt('UTC', ms); }
     const g = t => Number(parts.find(p => p.type === t)?.value);
     return { y: g('year'), mo: g('month'), d: g('day'), h: g('hour') % 24, mi: g('minute') };
