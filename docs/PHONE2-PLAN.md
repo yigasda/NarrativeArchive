@@ -587,6 +587,7 @@ Orbit이 버벅이는 제일 큰 이유는 저장이에요: Orbit 데이터가 �
 
 - 가져온 파일: `schedule.service.js`(스케줄 만드는 지시문 · 답이 늦는 시간), `conversation-presence.js`(지금 상태), `autonomous.service.js` · `autonomous-check.js`(먼저 말 걸 때인지), `intent.service.js`(말 거는 이유 8가지와 그 문장 · 쉬는 시간), `timezone.js`, `conversation-context-block.js`(지시문에 넣는 상황 글), `text-matching.js`. `zod-lite.js` · `shims.js`는 그 파일들이 찾는 것을 채워 주는 우리 파일이에요.
 - 저장: `w.presence = { on, schedules, overrides, meta, user }`. 마리나라의 "채팅"은 우리 방 하나, "캐릭터 id"는 폰 열쇠예요.
+  - 스케줄 · 손으로 준 상태 · 매주 갱신의 주인은 **캐릭터 카드**예요(마리나라처럼 모든 채팅에 공통): 실리 카드의 `data.extensions.narrative_archive_convo`. `w.presence`의 것은 카드에서 읽어 온 사본이에요. 시간대는 확장 설정에 하나.
 - 답장 요청: 스케줄이나 손으로 준 상태가 있는 사람이면 NOW 뒤에 `[CONTEXT]`로 마리나라의 상황 글이 들어가요(상태 · 내 상태 · 오늘 스케줄 · 지금 시각). 답장 지시문의 받는 것 목록에 CONTEXT 한 줄을 더했어요(이 줄만 우리 글).
 - 늦은 답: 줄 선 답장마다 그 사람의 지금 상태로 때를 정해요(`holdReplies`). 바쁘면 마리나라가 정한 만큼 뒤, 오프라인이면 돌아올 때까지. 스케줄이 없는 사람은 지금처럼 바로 답해요.
 - 먼저 말 걸기: 1분마다(`src/phone2tick.js`) 방마다 마리나라의 판단을 물어서, 때가 되면 그 사람의 답장을 이유(WHY NOW)와 같이 줄 세워요. 하루 수 · 이유마다 쉬는 시간은 마리나라가 채팅 메타에 적는 그대로 `w.presence.meta`에 있어요.

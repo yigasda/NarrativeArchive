@@ -1,10 +1,11 @@
 // NarrativeArchive's stand-in for the "zod" package (not Marinara code): only the calls schedule.service.js makes.
-// z.string().trim().regex(re).min(n).optional() · z.object({ … }) · z.array(item).min(n).refine(fn) · schema.safeParse(value)
+// z.string().trim().regex(re).min(n).max(n).optional() · z.object({ … }) · z.array(item).min(n).refine(fn) · schema.safeParse(value)
 const make = (run, optional = false) => ({
     run: v => (v === undefined && optional ? { ok: true, value: undefined } : run(v)),
     trim() { return make(v => { const r = run(v); return r.ok && typeof r.value === 'string' ? { ok: true, value: r.value.trim() } : r; }, optional); },
     regex(re) { return make(v => { const r = run(v); return r.ok && re.test(r.value) ? r : { ok: false }; }, optional); },
     min(n) { return make(v => { const r = run(v); return r.ok && r.value.length >= n ? r : { ok: false }; }, optional); },
+    max(n) { return make(v => { const r = run(v); return r.ok && r.value.length <= n ? r : { ok: false }; }, optional); },
     optional() { return make(run, true); },
     refine(fn) { return make(v => { const r = run(v); return r.ok && fn(r.value) ? r : { ok: false }; }, optional); },
     safeParse(v) { const r = this.run(v); return r.ok ? { success: true, data: r.value } : { success: false }; },

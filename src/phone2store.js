@@ -372,10 +372,15 @@ export const liveNo = w => (w.messenger.seq = numberLive(w) + 1);
 // 단체방 이름 (빈 글이면 이름 없음)
 export function nameRoom(m, id, name) { const r = roomOf(m, id), n = String(name || '').trim().slice(0, 40); if (n) r.name = n; else delete r.name; return r; }
 // 페르소나가 보내요: 메신저에만 남아요. 보낸 사람은 그때까지 읽은 걸로
-export function sendLive(m, id, text, at = Date.now()) {
+// opts.replyTo: 답장을 다는 말 (마리나라의 MessageReply { messageId, name, content }: 그때의 글을 그대로 담아 둬요. 원래 말이 고쳐지거나 지워져도 남아요)
+export function sendLive(m, id, text, at = Date.now(), opts = {}) {
     const r = roomOf(m, id), w = liveWorld(m), t = String(text || '').trim();
     if (!t) throw new Error('보낼 말이 없어요');
-    const msg = { id: newId('t'), n: liveNo(w), from: w.persona, text: t.slice(0, 4000), at };
+    // (Marinara's messageReplySchema, by hand: this file imports nothing)
+    const q = opts?.replyTo, str = (v, max) => typeof v === 'string' && v.length >= 1 && v.length <= max;
+    const reply = q ? { success: obj(q) && str(q.messageId, 200) && str(q.name, 200) && str(q.content, 16000), data: obj(q) ? { messageId: q.messageId, name: q.name, content: q.content } : null } : null;
+    if (reply && !reply.success) throw new Error('답장을 다는 말을 읽지 못했어요');
+    const msg = { id: newId('t'), n: liveNo(w), from: w.persona, text: t.slice(0, 4000), at, ...(reply ? { extra: { replyTo: reply.data } } : {}) };
     r.messages.push(msg);
     (r.read ||= {})[liveKey(w.persona)] = at;
     return msg;

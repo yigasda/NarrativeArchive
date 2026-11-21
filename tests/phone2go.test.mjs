@@ -1490,3 +1490,40 @@ test('반영 라운드도 저장을 기다리지 않아요: 라운드마다 저�
     try { const bad = await G.liveReflect(c.real, 'Mara'); assert.match(bad.error, /서버가 저장을 거절했어요/); assert.match(c.p.liveReflectError.why, /서버가 저장을 거절했어요/); }
     finally { console.error = warn; delete T.saveFail; }
 });
+
+test('단체방: 답에서 @이름으로 부른 사람이 다음에 답하고, 차례 알림 글이 요청에 들어가요', async () => {
+    const c = world(), m = L.liveMeta(c.real);
+    m.phones.ivo = { ...phone(), owner: 'Ivo' }; migrateBank(m, m.phones.ivo);
+    m.phones.varo = { ...phone(), owner: 'Varo' }; migrateBank(m, m.phones.varo);
+    const g = L.ensureRoom(c.real, ['Mara', 'Ivo', 'Varo']);
+    await G.liveSetAutonomousOptions(c.real, { groupChatMode: 'individual', groupResponseOrder: 'manual' });
+    L.sendLive(c.real, g.id, '@Mara dinner?'); L.enqueueReplies(c.real, g.id);
+    const answers = [{ state: '집', reply: ['ask @Varo'], does: [] }, { state: '집', reply: ['sure'], does: [] }], inputs = [];
+    T.ask = async input => { inputs.push(input); return JSON.stringify(answers.shift()); };
+    let r;
+    try { r = await G.liveGo(c.real); } finally { delete T.ask; }
+    assert.equal(r.failed, null);
+    assert.equal(inputs.length, 2);
+    for (const x of inputs) assert.ok(x.includes('You may address another group member with @Name to invite their next reply. Each available character can reply once in this turn.'));
+    assert.deepEqual(g.messages.filter(x => x.from !== 'Ren').map(x => [x.from, x.text]), [['Mara', 'ask @Varo'], ['Varo', 'sure']]);
+    assert.deepEqual(g.turn.spoke, ['mara', 'varo']);
+});
+
+test('Merged 단체방: 한 요청으로 여럿이 답해요. 지시문은 마리나라의 것, 끝에 Output Format', async () => {
+    const c = world(), m = L.liveMeta(c.real);
+    m.phones.ivo = { ...phone(), owner: 'Ivo' }; migrateBank(m, m.phones.ivo);
+    const g = L.ensureRoom(c.real, ['Mara', 'Ivo']);
+    L.sendLive(c.real, g.id, 'dinner?'); L.enqueueReplies(c.real, g.id);
+    const asked = [];
+    T.ask = async (input, o) => { asked.push({ input, system: o.system }); return 'Mara: sure\nIvo: where\nat mine?'; };
+    let r;
+    try { r = await G.liveGo(c.real); } finally { delete T.ask; }
+    assert.equal(r.failed, null);
+    assert.equal(asked.length, 1);
+    assert.match(asked[0].system, /^You are Mara, Ivo chatting with the user called Ren/);
+    assert.match(asked[0].input, /^\[MESSENGER\]\n.*Ren: dinner\?/);
+    assert.match(asked[0].input, /\n\nRemember to prefix messages with `Name: message`!\nOnly respond for these characters: Mara, Ivo\. Never respond for Ren or write Ren's messages\.$/);
+    assert.deepEqual(g.messages.filter(x => x.from !== 'Ren').map(x => [x.from, x.text]), [['Mara', 'sure'], ['Ivo', 'where'], ['Ivo', 'at mine?']]);
+    assert.deepEqual(g.turn.spoke, ['mara', 'ivo']);
+    assert.equal(L.liveWorld(c.real).queue.jobs.filter(j => j.state === 'waiting').length, 0);
+});

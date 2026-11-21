@@ -4,6 +4,8 @@
 import { liveKey, liveWorld, liveNo, readLive, nextJob, finishJob, reviveJobs } from './phone2store.js';
 import { PHONE2_APPS, phone2Ko, koLike } from './phone2reply.js';
 import { replyReact, putReact } from './phone2react.js';
+import { parseGroupedSpeakerSegments, splitGroupedSegmentDisplayLines, stripLeadingMessageTimestamps } from './marinara/speaker-segments.js';
+import { normalizeTextForMatch } from './marinara/text-matching.js';
 
 const one = v => String(v ?? '').replace(/\s+/g, ' ').trim();
 const same = (a, b) => !!liveKey(a) && liveKey(a) === liveKey(b);
@@ -55,6 +57,33 @@ export function takeReply(m, owner, roomId, answer, opts = {}) {
     return { said: bubbles.length, does: does.length, state, react: react?.e || '', ...(o.status && typeof o.status === 'object' && !Array.isArray(o.status) ? { status: o.status } : {}) };
 }
 
+// A Merged group answer (Marinara's merged Conversation reply: several characters' turns in one text, as "Name: text"
+// lines or <speaker="Name"> tags) into the room: split by speaker with Marinara's parser, each line a message of that
+// speaker's. A part with no known speaker is the lead's (in Marinara the merged message belongs to its first character).
+//   names: the room's characters; lead: the one the turn is filed under; stateOf(name) → that speaker's state now ('' none)
+// Returns { said, speakers: [name] }. Throws when the answer is empty.
+export function takeMerged(m, roomId, answer, { names = [], lead = '', now = Date.now(), stateOf = () => '' } = {}) {
+    const w = liveWorld(m), room = w?.messenger?.rooms?.[roomId];
+    if (!w || !room) throw new Error('답장을 넣을 방이 없어요');
+    const content = stripLeadingMessageTimestamps(String(answer ?? ''));
+    if (!content) throw new Error('답장을 읽지 못했어요 (빈 답)');
+    const known = new Set(names.map(n => normalizeTextForMatch(n))), nameOf = s => names.find(n => normalizeTextForMatch(n) === normalizeTextForMatch(s || '')) || lead;
+    const groups = parseGroupedSpeakerSegments(content, known, lead) || [{ speaker: lead, lines: [content] }];
+    const out = [], speakers = [];
+    for (const g of groups) {
+        const name = nameOf(g.speaker), state = one(stateOf(name));
+        for (const line of splitGroupedSegmentDisplayLines(g).slice(0, REPLY_MAX.bubbles)) {
+            const k = out.length;
+            out.push({ id: `t${now.toString(36)}${k}${Math.random().toString(36).slice(2, 6)}`, n: liveNo(w), from: name, text: line.trim().slice(0, REPLY_MAX.chars), at: now + k, ...(state ? { state } : {}) });
+        }
+        if (!speakers.includes(name)) speakers.push(name);
+    }
+    if (!out.length) throw new Error('답장을 읽지 못했어요 (빈 답)');
+    room.messages.push(...out);
+    for (const name of speakers) readLive(m, roomId, name, now + out.length);
+    return { said: out.length, speakers, does: 0, state: '', react: '' };
+}
+
 // 7-3. the line: one job at a time, in order, until none waits. A reply job: gather the request (gather(job) → { system,
 // input }, or null when there is nothing to answer any more), ask the model (ask(input, { system }) → its answer),
 // put the answer in (only if this 폰 2 is still the one the job was for), save. A failure stops the line (the job says
@@ -80,7 +109,8 @@ export async function runLive(m, { gather, ask, save = async () => {}, now = () 
                     if (liveWorld(m)?.id !== job.world) { finishJob(m, job); continue; }
                     // (the chat was left while this was asked: nothing is saved there now; the job is asked again when it is open)
                     if (!alive()) { job.state = 'waiting'; break; }
-                    got = takeReply(m, job.owner, job.room, answer, { now: now(), parse, state: stateFor ? stateFor(job) : undefined });
+                    // (a request that brings its own way in — a Merged group turn — is put in that way)
+                    got = req.take ? req.take(answer, { now: now() }) : takeReply(m, job.owner, job.room, answer, { now: now(), parse, state: stateFor ? stateFor(job) : undefined });
                 }
                 finishJob(m, job);
                 ran++;

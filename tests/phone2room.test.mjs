@@ -127,15 +127,17 @@ test('휴지통: 지운 말이 들어가고, 되살리면 제자리로 와요. �
     R.restoreMessages(m, a.id, a.trash.map(t => t.x.id));
     assert.deepEqual(texts(a), ['Are you up?', 'Barely', 'my secret plan', 'Did you eat']);
 });
-test('휴지통: 방마다 정해진 수만 두고, 골라서 또는 통째로 비워요', () => {
+test('휴지통: 수는 안 막고, 골라서 또는 통째로 비워요', () => {
     const { m, a, say } = world();
-    const made = Array.from({ length: R.ROOM.trash + 5 }, (_, i) => say(a, 'Mara', `t${i}`, 5000 + i));
+    const made = Array.from({ length: 105 }, (_, i) => say(a, 'Mara', `t${i}`, 5000 + i));
     E.dropMessages(m, a.id, made.map(x => x.id));
-    assert.equal(a.trash.length, R.ROOM.trash);
-    assert.equal(a.trash[0].x.text, 't5');
-    assert.equal(R.emptyTrash(m, a.id, [made[5].id, made[6].id]), 2);
-    assert.equal(a.trash[0].x.text, 't7');
-    assert.equal(R.emptyTrash(m, a.id), R.ROOM.trash - 2);
+    assert.equal(a.trash.length, 105);
+    a.trash[104].swipes = { list: ['x', null, 'y'], at: 1 };
+    assert.equal(R.trashOf(m, a.id)[0].swipeCount, 3);
+    assert.equal(R.trashOf(m, a.id)[1].swipeCount, 0);
+    assert.equal(R.emptyTrash(m, a.id, [made[0].id, made[1].id]), 2);
+    assert.equal(a.trash[0].x.text, 't2');
+    assert.equal(R.emptyTrash(m, a.id), 103);
     assert.equal(a.trash, undefined);
     assert.equal(R.emptyTrash(m, a.id), 0);
 });
@@ -203,7 +205,7 @@ test('사람 빼기: 나는 못 빼고, 둘만 남은 방에서는 못 빼요. �
 test('이 파일은 폰 2 저장 자리만 불러요; 모델 · 저장은 안 불러요; 폰 1 파일은 이 파일을 안 불러요', async () => {
     const { readFile, readdir } = await import('node:fs/promises'), SRC = new URL('../src/', import.meta.url);
     const src = await readFile(new URL('phone2room.js', SRC), 'utf8');
-    assert.deepEqual([...src.matchAll(/from '([^']+)'/g)].map(x => x[1]), ['./phone2store.js', './marinara/message-marks.js', './marinara/message-hidden.js']);
+    assert.deepEqual([...src.matchAll(/from '([^']+)'/g)].map(x => x[1]), ['./phone2store.js', './marinara/message-marks.js', './marinara/message-reply.js', './marinara/message-hidden.js']);
     assert.doesNotMatch(src, /saveMeta|ctx\(|askDraft|askTranslator|boundary/);
     for (const f of (await readdir(SRC)).filter(f => f.endsWith('.js') && !/^phone2/.test(f) && f !== 'phone.js')) assert.doesNotMatch(await readFile(new URL(f, SRC), 'utf8'), /phone2room/, f);
 });
@@ -217,4 +219,70 @@ test('휴지통은 마리나라처럼 30일 뒤에 비워요', () => {
     R.dropRoom(m, r1.id, 1000); R.dropRoom(m, r2.id, 1000 + 31 * day);
     assert.deepEqual(w.messenger.trash.map(t => t.room.id), [r2.id]);
     assert.deepEqual(R.roomTrash(m, 1000 + 62 * day), []);
+});
+test('메모를 한 사람에게 보여 주기(마리나라의 privateNoteRecipientId): 그 사람의 답장 요청에서만, 마리나라의 글로 붙어요', () => {
+    const { m, g, say } = world();
+    const y = say(g, 'Ren', 'see you at six', 2500);
+    say(g, 'Ivo', 'ok', 2600);
+    R.markMessages(m, g.id, y.id, { privateNote: 'she hates being late', privateNoteRecipientId: 'Ivo' });
+    assert.deepEqual(y.extra, { privateNote: 'she hates being late', privateNoteRecipientId: 'ivo' });
+    const ask = who => gatherReply(m, who, g.id, { now: 9000 }).messenger.map(x => x.text);
+    assert.deepEqual(ask('Ivo'), ["see you at six\n\n[The user's private note on this message, shown only to you]\nshe hates being late\n[End of private note]", 'ok']);
+    assert.deepEqual(ask('Mara'), ['see you at six', 'ok']);
+    assert.equal(y.text, 'see you at six');
+    assert.throws(() => R.markMessages(m, g.id, y.id, { privateNoteRecipientId: 'Nobody' }), /방에 없는 사람/);
+    // 메모를 지우면 받는 사람도 같이 없어져요
+    R.markMessages(m, g.id, y.id, { privateNote: null });
+    assert.equal('extra' in y, false);
+});
+test('휴지통에서 되살릴 때 고정이 열 개를 넘으면 막아요(마리나라처럼). 날짜가 지난 휴지통은 타이머가 비워요', () => {
+    const { m, w, a, say } = world();
+    const made = Array.from({ length: 11 }, (_, i) => say(a, 'Mara', `p${i}`, 5000 + i));
+    R.markMessages(m, a.id, made[10].id, { pinnedToContext: true });
+    E.dropMessages(m, a.id, made[10].id);
+    R.markMessages(m, a.id, made.slice(0, 10).map(x => x.id), { pinnedToContext: true });
+    assert.throws(() => R.restoreMessages(m, a.id, made[10].id), /고정이 10개를 넘어요/);
+    R.markMessages(m, a.id, made[0].id, { pinnedToContext: false });
+    assert.equal(R.restoreMessages(m, a.id, made[10].id), 1);
+    // 날짜 지난 것 비우기
+    const day = 24 * 60 * 60 * 1000;
+    R.toTrash(a, [made[1]], {}, 1000);
+    w.messenger.trash = [{ room: { id: 'old', members: ['Ren', 'X'] }, at: 1000 }];
+    assert.equal(R.purgeTrash(m, 1000 + 29 * day), 0);
+    assert.equal(R.purgeTrash(m, 1000 + 31 * day), 2);
+    assert.deepEqual([a.trash, w.messenger.trash], [undefined, undefined]);
+});
+
+// ---- 말에 답장 달기 (마리나라의 replyTo)
+const S2 = await import(new URL('../src/phone2sched.js', import.meta.url));
+test('답장 달기: 초안은 그 말의 글(또는 골라 둔 글)을 담고, 보낸 내 말에 남아요. 글이 없는 말에는 못 달아요', () => {
+    const { m, a } = world(), x = a.messages.find(y => y.text === 'Barely');
+    assert.deepEqual(R.replyDraftOf(m, a.id, x.id), { messageId: x.id, name: 'Mara', content: 'Barely' });
+    assert.equal(R.replyDraftOf(m, a.id, x.id, ' are ').content, 'are');
+    assert.throws(() => R.replyDraftOf(m, a.id, 'nope'), /달 수 없는/);
+    a.messages.push({ id: 'act1', n: 99, from: 'Mara', text: '', act: true, at: 1 });
+    assert.throws(() => R.replyDraftOf(m, a.id, 'act1'), /달 수 없는/);
+    const sent = L.sendLive(m, a.id, 'still?', 9000, { replyTo: R.replyDraftOf(m, a.id, x.id) });
+    assert.deepEqual(sent.extra, { replyTo: { messageId: x.id, name: 'Mara', content: 'Barely' } });
+    assert.throws(() => L.sendLive(m, a.id, 'x', 9001, { replyTo: { messageId: '', name: 'Mara', content: 'y' } }), /읽지 못했/);
+    assert.equal(L.sendLive(m, a.id, 'plain', 9002).extra, undefined);
+});
+test('답장 달기: 요청에는 내 마지막 말에만 인용이 붙고, 캐릭터의 말에 달면 그 사람을 부른 것과 같아요', () => {
+    const { m, a } = world(), x = a.messages.find(y => y.text === 'Barely');
+    L.sendLive(m, a.id, 'first', 9000, { replyTo: { messageId: x.id, name: 'Mara', content: 'Barely\nline two' } });
+    assert.equal(R.repliedTo(m, a.id), 'Mara');
+    const rows = a.messages.filter(y => y.text), one = R.replyTexts(rows, 'Ren');
+    assert.equal(one.at(-1), 'Replying to Mara:\n> Barely\n> line two\n\nfirst');
+    assert.equal(asked(m, a).at(-1), 'Replying to Mara:\n> Barely\n> line two\n\nfirst');   // (답장 요청에 실려요)
+    assert.deepEqual(S2.mentionsIn(m, a.id), ['Mara']);
+    L.sendLive(m, a.id, 'second', 9001);
+    const two = R.replyTexts(a.messages.filter(y => y.text), 'Ren');
+    assert.deepEqual(two.slice(-2), ['first', 'second']);                         // (옛 말은 인용을 되풀이하지 않아요)
+    assert.equal(R.repliedTo(m, a.id), '');
+    // (내 말에 단 답장 · 지워진 말에 단 답장은 아무도 안 불러요)
+    const mine = a.messages.find(y => y.text === 'first');
+    L.sendLive(m, a.id, 'third', 9002, { replyTo: { messageId: mine.id, name: 'Ren', content: 'first' } });
+    assert.equal(R.repliedTo(m, a.id), '');
+    L.sendLive(m, a.id, 'fourth', 9003, { replyTo: { messageId: 'gone', name: 'Mara', content: 'x' } });
+    assert.equal(R.repliedTo(m, a.id), '');
 });
