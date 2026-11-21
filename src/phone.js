@@ -901,10 +901,14 @@ export async function openPhone(who = null) {
     };
     // 이모지 반응 (시안 docs/mockups/shell-bars Q2): 길게 누른 카드 윗줄. 같은 걸 다시 누르면 지워져요(liveReact가 해요).
     // "+"는 숨은 칸에 초점을 줘서 폰 키보드를 띄우고, 이모지 하나가 들어오면 달아요(글자는 liveReact가 거절해요)
+    // 바로 실패했는지만 보고(검사는 저장 전에 끝나요) 저장은 기다리지 않아요 → 실패면 그 오류, 아니면 null
+    const obSoon = async pr => { let err = null; pr.catch(e => { err = e; }); await null; await null; await null; return err; };
     const obReact = async (msgId, e) => {
         const id = obRoomId(); if (!id || !obCanEdit()) return;
-        try { await liveReact(realM, id, msgId, liveWorld(realM)?.persona, e); } catch (err) { obWarn(err); }
+        const pr = liveReact(realM, id, msgId, liveWorld(realM)?.persona, e), bad = await obSoon(pr);
+        if (bad) obWarn(bad);
         obHeld = null; if (!phoneClosed && stillHere()) drawPhone(true);
+        if (!bad) try { await pr; } catch (err) { obWarn(err); }
     };
     $root.on('click', '.na_ob_re', function (e) { e.stopPropagation(); obReact(this.dataset.id, this.dataset.e); });
     $root.on('click', '.na_ob_reany', function (e) {
@@ -941,7 +945,11 @@ export async function openPhone(who = null) {
         if (t !== String(x.text || '').trim()) change.text = t;
         if (f.hasK && k !== String(x.ko || '').trim() && !('text' in change)) change.ko = k;
         if (!Object.keys(change).length) { obFix = null; drawPhone(true); return; }
-        try { await liveEditMessage(realM, id, f.id, change); obFix = null; } catch (err) { obWarn(err); return; }
+        // (저장은 느려요 — 폰에서 4초쯤: 말은 바로 바뀌어 있으니 칸을 먼저 닫고 그리고, 저장은 뒤에서 기다려요. 못 고치는 글이면 저장 전에 바로 알려 줘요)
+        const pr = liveEditMessage(realM, id, f.id, change), bad = await obSoon(pr);
+        if (bad) { obWarn(bad); return; }
+        obFix = null; if (!phoneClosed && stillHere()) drawPhone(true);
+        try { await pr; } catch (err) { obWarn(err); return; }
         // (원문을 고쳤고 한국어가 있던 말이면 바로 재번역: 칸은 닫고 "번역 중". 실패하면 알림만, 고친 원문은 그대로 — 반영 쪽 요청, 소망)
         if ('text' in change && f.hasK) return obRetr([f.id]);
         if (!phoneClosed && stillHere()) drawPhone(true);
