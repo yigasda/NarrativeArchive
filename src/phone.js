@@ -243,10 +243,11 @@ export async function openPhone(who = null) {
     let obEmo = null, obEmoLib = null;
     const EMO_KO = { 'Smileys & Emotion': '스마일리 및 감정', 'People & Body': '사람 및 신체', 'Animals & Nature': '동물 및 자연', 'Food & Drink': '음식 및 음료', 'Travel & Places': '여행 및 장소', Activities: '활동', Objects: '사물', Symbols: '기호', Flags: '깃발',
         happy: '기쁨', love: '사랑', sad: '슬픔', angry: '화남', surprised: '놀람', shrug: '으쓱 · 뒤집기', cute: '귀여움 · 기타' };
+    const EMO_LU = ['smile', 'hand', 'paw-print', 'pizza', 'car', 'volleyball', 'lightbulb', 'shapes', 'flag'];   // 분류 줄의 선 아이콘(마리나라 분류 순서)
     const obEmoUi = () => { if (!obEmo) return null; const L = obEmoLib, t = { tab: obEmo.tab, cat: obEmo.cat, q: obEmo.q, cats: [], title: '', items: [], busy: !L }; if (!L) return t;
         const q = obEmo.q.trim();
         if (obEmo.tab === 'kao') { const cs = L.KAOMOJI_CATEGORIES; t.cats = cs.map(c => ({ label: EMO_KO[c.id] || c.label })); const c = cs[Math.min(obEmo.cat, cs.length - 1)]; t.items = (q ? L.searchKaomoji(q) : c.items).map(x => x.value); }
-        else { const cs = L.EMOJI_CATEGORIES; t.cats = cs.map(c => ({ icon: c.icon, label: EMO_KO[c.label] || c.label })); const c = cs[Math.min(obEmo.cat, cs.length - 1)]; t.title = q ? '' : EMO_KO[c.label] || c.label; t.items = q ? cs.flatMap(x => x.emojis).filter(e => L.matchesEmojiQuery(q, e)).slice(0, 160) : c.emojis; }
+        else { const cs = L.EMOJI_CATEGORIES; t.cats = cs.map((c, i) => ({ lu: EMO_LU[i] || 'smile', label: EMO_KO[c.label] || c.label })); const c = cs[Math.min(obEmo.cat, cs.length - 1)]; t.title = q ? '' : EMO_KO[c.label] || c.label; t.items = q ? cs.flatMap(x => x.emojis).filter(e => L.matchesEmojiQuery(q, e)).slice(0, 160) : c.emojis; }
         return t; };
     let obMenu = false, obSub = '', obNote = null;   // obSub: 길게 누른 판의 둘째 화면('re' 이모지 · 'mark' 북마크 줄), obNote: 메모 시트 { id, text }
     const orbitUi = () => {
