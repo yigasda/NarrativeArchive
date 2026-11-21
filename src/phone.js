@@ -993,7 +993,7 @@ export async function openPhone(who = null) {
     $root.on('click', '.na_ob_soon', function (e) { e.stopPropagation(); toastr.info(`${this.getAttribute('aria-label') || '이 기능'}: 아직 연결되지 않았어요`, '캐릭터 휴대폰'); });
     // 다시 받기: 맨 끝 답장 묶음에서만. 받아 둔 답장의 끝으로 넘긴 뒤 새 답장을 받아요(밀어서 넘기기와 같은 길)
     $root.on('click', '.na_ob_mregen', async e => { e.stopPropagation(); const id = obRoomId(), sw = id && obCanEdit() ? liveSwipeInfo(realM, id) : null;
-        if (!sw || sw.coming || !$(e.currentTarget).closest('.ob_mi').find('.ob_b.held').hasClass('na_ob_sw')) return toastr.info('맨 끝 답장만 다시 받을 수 있어요', '캐릭터 휴대폰');
+        if (!sw || sw.coming || !$(e.currentTarget).closest('.ob_mi').find('.ob_b.held').hasClass('na_ob_sw')) return toastr.info('마지막 답장만 재생성할 수 있어요', '캐릭터 휴대폰');
         obHeld = null; try { let r = null; for (let k = sw.at; k <= sw.count && !r?.fresh; k++) r = await liveSwipe(realM, id, 1); if (!phoneClosed && stillHere()) { drawPhone(true); obBottom(); } if (r?.fresh) obGo(); } catch (err) { obWarn(err); if (!phoneClosed && stillHere()) drawPhone(true); } });
     $root.on('click', '.na_ob_sx', e => { e.stopPropagation(); obSet = ''; obFindQ = ''; drawPhone(true); });
     $root.on('click', '.na_ob_sback', e => { e.stopPropagation(); obSet = 'main'; drawPhone(true); });
@@ -1009,7 +1009,7 @@ export async function openPhone(who = null) {
     $root.on('click', '.na_ob_sempty', async e => { e.stopPropagation(); const rid = obRoomId(); if (!rid || !obCanEdit() || !await askSheet('휴지통을 비울까요?', '', '비우기')) return; obSetGo(liveEmptyTrash(realM, rid)); });
     $root.on('click', '.na_ob_snok', e => { e.stopPropagation(); const rid = obRoomId(); if (!rid || !obCanEdit()) return; try { nameRoom(realM, rid, String($root.find('.na_ob_snm')[0]?.innerText || '')); } catch (err) { return obWarn(err); } obSet = 'main'; drawPhone(true); saveMeta().catch(obWarn); });
     $root.on('click', '.na_ob_padd, .na_ob_prem', function (e) { e.stopPropagation(); const rid = obRoomId(); if (!rid || !obCanEdit()) return; obSetGo((this.classList.contains('na_ob_padd') ? liveAddMember : liveRemoveMember)(realM, rid, this.dataset.n)); });
-    $root.on('click', '.na_ob_sdrop', async e => { e.stopPropagation(); const rid = obRoomId(); if (!rid || !obCanEdit() || !await askSheet('이 방을 지울까요?', '', '지우기')) return;
+    $root.on('click', '.na_ob_sdrop', async e => { e.stopPropagation(); const rid = obRoomId(); if (!rid || !obCanEdit() || !await askSheet('이 채팅을 삭제할까요?', '', '삭제')) return;
         let ok = true; try { await liveDropRoom(realM, rid); } catch (err) { ok = false; obWarn(err); } if (ok) { obSet = ''; view = 'orbit'; } if (!phoneClosed && stillHere()) drawPhone(ok ? undefined : true); });
     // 길게 누른 판 (시안 orbit-top M2): 복사 · 반응(이모지 줄로) · 북마크 줄(북마크 · 고정 · 메모) · AI에게 숨기기. 표시는 반영 쪽 liveMark가 저장해요
     const obMsgOf = id => liveRooms(realM).find(r => r.id === obRoomId())?.messages.find(x => x.id === id);
