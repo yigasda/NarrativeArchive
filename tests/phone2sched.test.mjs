@@ -350,3 +350,19 @@ test('지금 답장: 기다리던 늦은 답을 바로 돌릴 수 있게 풀어�
     assert.equal(G.holdReplies(m, t), 0);                 // (다시 붙잡지 않아요)
     assert.equal(L.nextJob(m, t).id, j.id);
 });
+test('생성 연결(마리나라의 connectionId): 초안 모델 · AI 기능 모델 · 실리 연결 프로필 가운데 고르고, 고른 것이 남아요', async () => {
+    const { m } = world(), T = globalThis.__dropTest;
+    T.metadata = { narrative_archive: m };
+    T.profiles = [{ id: 'p1', name: 'Gemini Pro' }];
+    assert.deepEqual(G.liveConnections(), [{ id: '', name: '초안 모델' }, { id: 'ai', name: 'AI 기능 모델' }, { id: 'profile:p1', name: 'Gemini Pro' }]);
+    assert.equal(G.liveScheduleConnection(m), '');
+    assert.equal(await G.liveSetScheduleConnection(m, 'profile:p1'), 'profile:p1');
+    assert.equal(G.liveScheduleConnection(m), 'profile:p1');
+    assert.equal(S.presenceOf(m).meta.scheduleConnectionId, 'profile:p1');
+    await assert.rejects(G.liveSetScheduleConnection(m, 'profile:gone'), /없는 연결/);
+    // 프로필이 없어지면 기본으로 돌아가요
+    T.profiles = [];
+    assert.equal(G.liveScheduleConnection(m), '');
+    await G.liveSetScheduleConnection(m, '');
+    assert.equal('scheduleConnectionId' in S.presenceOf(m).meta, false);
+});

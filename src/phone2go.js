@@ -8,7 +8,7 @@
 import { ctx, saveMeta, MODULE } from './core.js';
 import { applyInjection } from './inject.js';
 import { askDraft, phone2Clock, aroundBlock, ownerZone, cardBlocks } from './phonedata.js';
-import { askAI, askCompress, stripThink, isBlocked, SECTION_GUARD } from './ai.js';
+import { askAI, askCompress, stripThink, isBlocked, SECTION_GUARD, aiProfiles } from './ai.js';
 import { SCENES_SYS, parseScenes } from './scenes.js';
 import { resolvePhoneProfile, ownerProfileBlock, personaBlock } from './phoneprofile.js';
 import { parseJson } from './phoneparse.js';
@@ -201,7 +201,7 @@ export async function liveMakeSchedule(real, owner, opts = {}) {
     const p = livePhone(mine(real), owner);
     if (!p) throw new Error('그 사람의 폰이 없어요');
     const card = await cardOf(p);
-    const ask = (messages, o) => askDraft(messages.filter(x => x.role !== 'system').map(x => x.content).join('\n\n'), { force: true, system: messages.filter(x => x.role === 'system').map(x => x.content).join('\n\n'), maxTokens: o?.maxTokens, effort: 'low' });
+    const ask = askVia(real, opts.connectionId);
     const out = await makeSchedule(real, p.owner, { ...opts, ask, name: p.owner, description: String(card || ''), personality: '', tz: zoneOf(real, p) });
     // (where each thing on it happens: asked once here, kept on the blocks. A failure leaves the schedule without places)
     try { await fillPlaces(real, p.owner, { ask, parse: t => parseJson(t, { salvage: true }), card, places: knownPlaces(p) }); } catch (err) { console.warn('[narrative-archive] schedule places', err); }
@@ -233,7 +233,30 @@ export function followSchedule(real, now = Date.now()) {
     return n;
 }
 // ---- 마리나라의 스케줄 편집 창이 부르던 요청들 (phone2sched.js → src/marinara/schedule-routes.js)
-const askSched = (messages, o) => askDraft(messages.filter(x => x.role !== 'system').map(x => x.content).join('\n\n'), { force: true, system: messages.filter(x => x.role === 'system').map(x => x.content).join('\n\n'), maxTokens: o?.maxTokens, effort: 'low' });
+// 생성 연결 (마리나라의 connectionId): 스케줄을 만들 때 쓸 연결을 골라요. '' = 초안 모델(기본), 'ai' = AI 기능 모델,
+// 'profile:<id>' = 실리태번 연결 프로필. 고른 것은 w.presence.meta.scheduleConnectionId에 남아요
+export const liveConnections = () => [{ id: '', name: '초안 모델' }, { id: 'ai', name: 'AI 기능 모델' }, ...aiProfiles().map(p => ({ id: `profile:${p.id}`, name: String(p.name || p.id) }))];
+export const liveScheduleConnection = real => { const id = String(liveWorld(real)?.presence?.meta?.scheduleConnectionId || ''); return liveConnections().some(c => c.id === id) ? id : ''; };
+export async function liveSetScheduleConnection(real, id = '') {
+    if (!liveConnections().some(c => c.id === id)) throw new Error('없는 연결이에요');
+    const meta = presenceOf(mine(real)).meta;
+    if (id) meta.scheduleConnectionId = id; else delete meta.scheduleConnectionId;
+    await saveMeta();
+    return id;
+}
+// (connectionId: the one asked for with the request, else the one chosen for schedules)
+const askVia = (real, connectionId) => async (messages, o) => {
+    const id = connectionId === undefined || connectionId === null ? liveScheduleConnection(real) : String(connectionId);
+    const system = messages.filter(x => x.role === 'system').map(x => x.content).join('\n\n'), input = messages.filter(x => x.role !== 'system').map(x => x.content).join('\n\n');
+    if (!id) return askDraft(input, { force: true, system, maxTokens: o?.maxTokens, effort: 'low' });
+    if (id === 'ai') return askAI(input, { force: true, system, maxTokens: o?.maxTokens, effort: 'low', noFallback: true });
+    const p = aiProfiles().find(x => `profile:${x.id}` === id);
+    if (!p) throw new Error('고른 연결 프로필을 찾을 수 없어요');
+    const r = await ctx().ConnectionManagerRequestService.sendRequest(p.id, [...(system ? [{ role: 'system', content: system }] : []), { role: 'user', content: input }], Math.max(256, Number(o?.maxTokens) || 8192), { stream: false, extractData: true, includePreset: true, includeInstruct: true });
+    const out = stripThink(typeof r === 'string' ? r : r?.content);
+    if (!out) throw new Error('모델이 빈 답을 돌려줬어요');
+    return out;
+};
 const cardData = async p => ({ name: p.owner, description: String(await cardOf(p) || ''), personality: '' });
 // 스케줄의 시간대 ('' = 사람마다 폰의 시간대) · 바꾸기 (tz '' 이면 풀기) · 그 사람의 스케줄이 쓰는 시간대
 export const liveScheduleZone = real => scheduleZone(real);
@@ -245,13 +268,14 @@ export const liveTimeZone = (real, owner) => { const p = livePhone(real, owner);
 export async function liveDraftSchedule(real, owner, opts = {}) {
     const p = livePhone(mine(real), owner);
     if (!p) throw new Error('그 사람의 폰이 없어요');
-    return draftSchedule(real, { ...opts, ask: askSched, charData: await cardData(p), timeZone: zoneOf(real, p) });
+    const { connectionId, ...rest } = opts;
+    return draftSchedule(real, { ...rest, ask: askVia(real, connectionId), charData: await cardData(p), timeZone: zoneOf(real, p) });
 }
 // 루틴 요약: 저장하지 않고 결과만 (마리나라의 /schedule/summary) → { summary, generatedAt }
-export async function liveScheduleSummary(real, owner, { schedule, guidance = '', signal } = {}) {
+export async function liveScheduleSummary(real, owner, { schedule, guidance = '', signal, connectionId } = {}) {
     const p = livePhone(mine(real), owner);
     if (!p) throw new Error('그 사람의 폰이 없어요');
-    return summarizeSchedule(real, { schedule, guidance, signal, ask: askSched, charData: await cardData(p) });
+    return summarizeSchedule(real, { schedule, guidance, signal, ask: askVia(real, connectionId), charData: await cardData(p) });
 }
 // 실패한 답을 손으로 고친 글 → 고쳐진 초안 (못 읽으면 오류). day를 주면 그날만
 export const liveRepairSchedule = (text, current, day = '') => repairSchedule(text, current, day);
@@ -261,7 +285,8 @@ export const liveScheduleInfo = (real, owner) => { const p = livePhone(real, own
 // 갱신 (마리나라의 /schedule/generate): 지난 스케줄을 이어받아 새 주 것을 만들어 넣어요 (모델을 불러요)
 //   opts: { owners (없으면 스케줄이 있는 사람 전부), automatic: 매주 갱신을 켠 사람만 (갱신이 필요할 때), forceRefresh, guidance, signal }
 //   → { 이름: 'generated' | 'fresh' | 'renewal_disabled' | 'error: …' }
-export async function liveRenewSchedules(real, { owners = null, automatic = false, forceRefresh = false, guidance = '', signal } = {}) {
+export async function liveRenewSchedules(real, { owners = null, automatic = false, forceRefresh = false, guidance = '', signal, connectionId } = {}) {
+    const askSched = askVia(real, connectionId);
     const w = liveWorld(mine(real)), phones = Object.values(w.phones || {}).filter(p => p?.owner && (owners ? owners.some(n => liveKey(n) === liveKey(p.owner)) : scheduleOf(real, p.owner)));
     // (the weekly renewal: nothing is asked when nobody's week has turned)
     const due = automatic ? phones.filter(p => autoRenewOf(real, p.owner) && needsRefresh(real, p.owner, { tz: zoneOf(real, p) })) : phones;
@@ -296,7 +321,7 @@ export async function liveSetSchedule(real, owner, schedule) {
     // (things to do that the places were not asked for yet: asked now, once. A failure leaves them without a place)
     const acts = out ? [...new Set(Object.values(out.days).flatMap(d => (Array.isArray(d) ? d : []).map(b => String(b?.activity || '').trim().toLowerCase())).filter(Boolean))].sort().join('|') : '';
     if (out && p && acts && out.placedFor !== acts) {
-        try { await fillPlaces(real, p.owner, { ask: askSched, parse: t => parseJson(t, { salvage: true }), card: await cardOf(p), places: knownPlaces(p) }); out.placedFor = acts; } catch (err) { console.warn('[narrative-archive] schedule places', err); }
+        try { await fillPlaces(real, p.owner, { ask: askVia(real), parse: t => parseJson(t, { salvage: true }), card: await cardOf(p), places: knownPlaces(p) }); out.placedFor = acts; } catch (err) { console.warn('[narrative-archive] schedule places', err); }
     }
     if (p) delete p.schedAt;
     if (open(real)) { followSchedule(real); await saveMeta(); }
