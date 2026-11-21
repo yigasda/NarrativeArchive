@@ -44,6 +44,7 @@ import { liveSnapNow, snapParts } from './phone2snap.js';
 import { liveEditMessage, liveReact, liveReactQuick, liveGo, liveReflect, liveCanUndo, liveUndo, liveUnreflected, liveNowOf, liveSnapBusy, liveBackCount, liveBackDraft, liveBackPut, liveImportPlan, liveImportFilePlan, liveImportChat, liveImportFile, liveDropMessages, liveSwipeInfo, liveSwipe, liveSwipeDrop, liveRetranslate, liveSwipeList, liveSwipeDropMany, liveSwipeDropOthers } from './phone2go.js';
 import { liveYearsNow } from './phone2year.js';
 import { P } from './phone2api.js';
+import { morph } from './morph.js';
 
 // other files keep importing these from here (주입: 실시간 폰의 폰들도 같이, 주입이 꺼진 폰은 빼고)
 export const phoneBlock = m => P.phoneBlock(m, Object.values(liveWorld(m)?.phones || {}));
@@ -460,7 +461,34 @@ export async function openPhone(who = null) {
     $root.on('paste', '.pcf_area', function (e) { e.preventDefault(); const t = (e.originalEvent?.clipboardData?.getData('text/plain') || '').replace(/\s+/g, ' '); document.execCommand('insertText', false, t); });
     $root.on('keydown', '.pcf_field', function (e) { e.stopPropagation(); if (e.key === 'Enter' && !e.originalEvent?.isComposing && e.keyCode !== 229) { e.preventDefault(); ask?.done(fieldVal(this) || false); } else if (e.key === 'Escape') ask?.done(false); });
     $root.on('keydown', '.pcf_ok, .pcf_no', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ask?.done(this.classList.contains('pcf_ok') ? (this.dataset.v || true) : false); } });
+    // 손가락이 화면에 닿아 있는 동안에는 다시 그리지 않아요: 그리면 화면이 통째로 바뀌어서, 누르던 버튼이 사라지고 그 누름이 먹히지 않았어요
+    // (답장이 오는 중 · 저장이 끝날 때 · 번역이 올 때처럼 뒤에서 그리는 일과 겹치면 "눌렀는데 안 됨", 소망). 손을 떼면 바로 그려요.
+    // 길게 누르기처럼 닿은 채로 그려야 하는 곳은 ptrDown을 먼저 풀어요. 3초 넘게 닿아 있으면(떼는 신호를 놓쳤을 때) 그냥 그려요
+    let ptrDown = false, ptrAt = 0, drawWait = null;
     const drawPhone = (keep = false) => {
+        if (ptrDown && Date.now() - ptrAt < 3000) { drawWait = drawWait === null ? keep : drawWait && keep; return; }
+        ptrDown = false; drawWait = null; drawNow(keep);
+    };
+    const ptrUp = () => { ptrDown = false; if (drawWait !== null) setTimeout(() => { if (drawWait !== null && !ptrDown && !phoneClosed) { const k = drawWait; drawWait = null; drawNow(k); } }, 60); };
+    $root[0].addEventListener('pointerdown', () => { ptrDown = true; ptrAt = Date.now(); }, true);
+    for (const ev of ['pointerup', 'pointercancel']) window.addEventListener(ev, ptrUp, true);
+    // 통째로 가는 화면 (코드가 그린 뒤에 직접 채우는 것): 다녀간 곳 지도 · 날씨 도시 · 프사 자르기
+    const MORPH_OFF = /^(map|mapq|mapc|wcity|weather|orbitface)(:|$)/;
+    // 시험용(window.NA_MORPH_CHECK): 바뀐 부분만 고친 화면이 통째로 그린 화면과 같은지 견줘요. 다르면 콘솔 오류
+    const morphCheck = (frameEl, html, morphed) => {
+        if (!morphed) return;
+        const t = document.createElement('template'); t.innerHTML = html; const $t = $(t.content);
+        if (!live() && window.NAShell) $t.find('.na_ph_scr').first().append('<span class="na_ph_notch" aria-hidden="true"></span>');
+        if (live()) { $t.find('.na_ph_scr').first().append('<span class="na_ph_notch" aria-label="실시간 폰"><i></i></span>'); $t.find(`:is(${LIVE_OFF})`).remove(); $t.find('.ax_card').filter((_, c) => !c.children.length && !c.textContent.trim()).remove(); }
+        if (sheet && (view === 'photo' || view === 'set')) $t.find('.na_ph_scr').append(looksSheet(m));
+        // (속성 순서만 다른 건 같은 화면이에요: 이름순으로 다시 적어서 견줘요)
+        const norm = root => { for (const e of root.querySelectorAll('*')) { const at = [...e.attributes].map(x => [x.name, x.value]).sort((x, y) => (x[0] < y[0] ? -1 : 1)); for (const [n] of at) e.removeAttribute(n); for (const [n, v] of at) e.setAttribute(n, v); } return root.innerHTML; };
+        const c = frameEl.cloneNode(true); c.querySelectorAll('.pcf').forEach(e => e.remove());
+        const a = norm(c), b = (() => { const d = document.createElement('div'); d.append(t.content); return norm(d); })();
+        window.NA_MORPH_N = (window.NA_MORPH_N || 0) + 1;
+        if (a !== b) { let i = 0; while (i < a.length && a[i] === b[i]) i++; console.error(`[narrative-archive] MORPH MISMATCH ${view} @${i}\n got: ${a.slice(Math.max(0, i - 80), i + 120)}\n want: ${b.slice(Math.max(0, i - 80), i + 120)}`); }
+    };
+    const drawNow = (keep = false) => {
         queueMicrotask(placeAsk);  // every way out of a redraw (some return early) puts the open sheet back
         const p = phone();
         // 실시간 with nobody on it (대화만 남기기 keeps the talk, not the phones): a way back to 타임라인 and to 새로 시작,
@@ -512,12 +540,31 @@ export async function openPhone(who = null) {
             toastr.error(`${view} 화면을 그리지 못했어요: ${err?.message || err}`, '캐릭터 휴대폰');
             html = `<div class="na_ph_scr glass w_dusk"><div class="na_ph_body na_ph_make"><div class="na_ph_makecard"><b>화면을 그리지 못했어요</b><p>${esc(`${view}: ${err?.message || err}`)}</p><button type="button" class="na_ph_cardbtn" data-go="home">홈으로</button></div></div></div>`;
         }
-        $root.find('.na_ph_frame').html(html);
+        // 새 화면은 먼저 따로 만들어요(tpl: 화면에 붙기 전이라 그림도 안 받아요). 아래 손질까지 끝낸 뒤에 화면에 올려요
+        const tpl = document.createElement('template'); tpl.innerHTML = html;
+        const $new = $(tpl.content), frameEl = $root.find('.na_ph_frame')[0];
         // 실시간: the notch says which phone this is on every screen; 타임라인's data rows go
         // (껍데기 앱 안에서는 타임라인 폰에도 노치가 있어요: 기기 카메라 구멍을 가려요. 초록 점은 실시간 폰만)
-        if (!live() && window.NAShell) $root.find('.na_ph_frame .na_ph_scr').first().append('<span class="na_ph_notch" aria-hidden="true"></span>');
-        if (live()) { $root.find('.na_ph_frame .na_ph_scr').first().append('<span class="na_ph_notch" aria-label="실시간 폰"><i></i></span>'); $root.find(`.na_ph_frame :is(${LIVE_OFF})`).remove(); $root.find('.na_ph_frame .ax_card').filter((_, c) => !c.children.length && !c.textContent.trim()).remove(); }
-        if (sheet && (view === 'photo' || view === 'set')) $root.find('.na_ph_scr').append(looksSheet(m));
+        if (!live() && window.NAShell) $new.find('.na_ph_scr').first().append('<span class="na_ph_notch" aria-hidden="true"></span>');
+        if (live()) { $new.find('.na_ph_scr').first().append('<span class="na_ph_notch" aria-label="실시간 폰"><i></i></span>'); $new.find(`:is(${LIVE_OFF})`).remove(); $new.find('.ax_card').filter((_, c) => !c.children.length && !c.textContent.trim()).remove(); }
+        if (sheet && (view === 'photo' || view === 'set')) $new.find('.na_ph_scr').append(looksSheet(m));
+        // 같은 화면을 다시 그릴 때는 바뀐 부분만 고쳐요(morph.js): 통째로 갈면 폰에서 버벅이고 깜빡였어요(소망).
+        // 다른 화면으로 갈 때 · 코드가 직접 그림을 그려 넣는 화면(지도 · 프사 자르기 · canvas가 있는 화면)은 예전처럼 통째로 갈아요.
+        // 못 고치면(오류) 통째로 갈아요
+        const was = frameEl.firstElementChild, now = tpl.content.firstElementChild;
+        const same = !!was && !!now && tpl.content.childElementCount === 1 && frameEl.childElementCount === 1 && was.className === now.className
+            && !MORPH_OFF.test(view) && !frameEl.querySelector('canvas, video, iframe, .maplibregl-map') && !tpl.content.querySelector('canvas, video, iframe');
+        let morphed = false;
+        if (same) {
+            try {
+                morph(frameEl, tpl.content, { keepNode: n => n.classList.contains('pcf') });
+                morphed = true;
+                // (통째로 갈 때처럼: 위치를 지키라는 말이 없으면 맨 위에서 시작해요)
+                if (!keep) for (const e of frameEl.querySelectorAll('*')) { if (e.scrollTop) e.scrollTop = 0; if (e.scrollLeft) e.scrollLeft = 0; }
+            } catch (err) { console.error('[narrative-archive] phone morph', view, err); }
+        }
+        if (!morphed) $(frameEl).empty().append(tpl.content);
+        if (window.NA_MORPH_CHECK) morphCheck(frameEl, html, morphed);
         placeAsk();
         trPop();
         notchPasses();
@@ -825,11 +872,14 @@ export async function openPhone(who = null) {
     const obWarn = err => { console.warn('[narrative-archive] live edit', err); toastr.info(String(err?.message || err), '캐릭터 휴대폰'); };
     const obHoldStop = () => { clearTimeout(obHoldT); obHoldT = null; };
     $root.on('pointerdown', '.na_ob_b', function (e) {
-        if (!obCanEdit() || obPicks || obFix || e.target.closest('.na_ob_ko')) return;
+        // (번역 줄 위에서 눌러도 길게 누르기가 돼요: 길게 누른 뒤의 클릭은 번역 접기로 안 가요 — obJustHeld · obSwallow)
+        if (!obCanEdit() || obPicks || obFix) return;
         const id = this.dataset.id; obDown = { id, x: e.clientX, y: e.clientY, sw: this.classList.contains('na_ob_sw') };
-        obHoldStop(); obHoldT = setTimeout(() => { obHoldT = null; obDown = null; obHeldAt = Date.now(); obHeld = id; obSwallow = true; navigator.vibrate?.(10); drawPhone(true); }, 480);
+        obHoldStop(); obHoldT = setTimeout(() => { obHoldT = null; obDown = null; obHeldAt = Date.now(); obHeld = id; obSwallow = true; navigator.vibrate?.(10); ptrDown = false; drawPhone(true); }, 480);
     });
-    $root.on('pointermove', '.na_ob_b', e => { if (obDown && Math.hypot(e.clientX - obDown.x, e.clientY - obDown.y) > 8) obHoldStop(); });
+    // (손가락은 누르고 있는 동안 조금 굴러요: 12px까지는 그대로 기다려요. 폰이 글자 선택 메뉴를 띄우면 길게 누르기가 취소돼서 말풍선은 글자 선택을 꺼 뒀어요)
+    $root.on('pointermove', '.na_ob_b', e => { if (obDown && Math.hypot(e.clientX - obDown.x, e.clientY - obDown.y) > 12) obHoldStop(); });
+    $root.on('contextmenu', '.na_ob_b', e => e.preventDefault());
     $root.on('pointercancel', () => { obHoldStop(); obDown = null; });
     $root.on('pointerleave', '.na_ob_b', () => { obHoldStop(); });
     // (맨 끝 답장을 옆으로 밀면 넘겨요: 왼쪽으로 밀면 다음, 오른쪽으로 밀면 앞)
@@ -860,8 +910,10 @@ export async function openPhone(who = null) {
     $root.on('pointerup pointercancel', () => { if (obT) obTEnd(); });
     const obSwipe = async dir => {
         const id = obRoomId(); if (!id || !obCanEdit() || obHeld || obPicks) return;
-        try { const r = await liveSwipe(realM, id, dir); if (!phoneClosed && stillHere()) { drawPhone(true); obBottom(); } if (r?.fresh) obGo(); }
-        catch (err) { obWarn(err); }
+        // (넘긴 답장은 바로 보여요: 저장은 폰에서 몇 초 걸려서 뒤에서 기다려요 — obSoon)
+        const pr = liveSwipe(realM, id, dir), bad = await obSoon(pr); if (bad) return obWarn(bad);
+        if (!phoneClosed && stillHere()) { drawPhone(true); obBottom(); }
+        try { const r = await pr; if (r?.fresh) obGo(); } catch (err) { obWarn(err); }
     };
     // 점을 누르면 받아 둔 답장 창 (넘기기는 밀어서). 창 안: 줄을 눌러 고르기, 지금 것만 남기기, 고른 것 버리기 — 지우기 전에 한 번 물어요
     const obListDraw = () => { const top = $root.find('.ob_sls').scrollTop(); drawPhone(true); $root.find('.ob_sls').scrollTop(top); };
@@ -871,9 +923,10 @@ export async function openPhone(who = null) {
     const obListDrop = async (ask, run) => {
         const id = obRoomId(); if (!id || !obList) return;
         if (!await askSheet(ask, '', '버리기')) return;
-        let r = null; try { r = await run(id); } catch (err) { obWarn(err); }
-        if (r) obList = r.count > 1 ? new Set() : null;
+        const pr = run(id), bad = await obSoon(pr); if (bad) return obWarn(bad);
+        const left = liveSwipeInfo(realM, id)?.count || 0; obList = left > 1 ? new Set() : null;
         if (!phoneClosed && stillHere()) obListDraw();
+        try { await pr; } catch (err) { obWarn(err); }
     };
     $root.on('click', '.na_ob_slkeep', e => { e.stopPropagation(); obListDrop('지금 것만 남기고 버릴까요?', id => liveSwipeDropOthers(realM, id)); });
     $root.on('click', '.na_ob_sldrop', e => { e.stopPropagation(); const ns = [...(obList || [])]; if (ns.length) obListDrop(`${ns.length}개를 버릴까요?`, id => liveSwipeDropMany(realM, id, ns)); });
@@ -893,15 +946,20 @@ export async function openPhone(who = null) {
     const obDrop = async ids => {
         const id = obRoomId(); if (!id || !ids.length) return;
         if (!await askSheet(`${ids.length}개를 지울까요?`, '', '지우기')) return;
-        try { await liveDropMessages(realM, id, ids); } catch (err) { obWarn(err); }
+        const pr = liveDropMessages(realM, id, ids), bad = await obSoon(pr); if (bad) obWarn(bad);
         obHeld = null; obPicks = null; if (!phoneClosed && stillHere()) drawPhone(true);
+        if (!bad) try { await pr; } catch (err) { obWarn(err); }
     };
     // 이모지 반응 (시안 docs/mockups/shell-bars Q2): 길게 누른 카드 윗줄. 같은 걸 다시 누르면 지워져요(liveReact가 해요).
     // "+"는 숨은 칸에 초점을 줘서 폰 키보드를 띄우고, 이모지 하나가 들어오면 달아요(글자는 liveReact가 거절해요)
+    // 바로 실패했는지만 보고(검사는 저장 전에 끝나요) 저장은 기다리지 않아요 → 실패면 그 오류, 아니면 null
+    const obSoon = async pr => { let err = null; pr.catch(e => { err = e; }); await null; await null; await null; return err; };
     const obReact = async (msgId, e) => {
         const id = obRoomId(); if (!id || !obCanEdit()) return;
-        try { await liveReact(realM, id, msgId, liveWorld(realM)?.persona, e); } catch (err) { obWarn(err); }
+        const pr = liveReact(realM, id, msgId, liveWorld(realM)?.persona, e), bad = await obSoon(pr);
+        if (bad) obWarn(bad);
         obHeld = null; if (!phoneClosed && stillHere()) drawPhone(true);
+        if (!bad) try { await pr; } catch (err) { obWarn(err); }
     };
     $root.on('click', '.na_ob_re', function (e) { e.stopPropagation(); obReact(this.dataset.id, this.dataset.e); });
     $root.on('click', '.na_ob_reany', function (e) {
@@ -909,9 +967,26 @@ export async function openPhone(who = null) {
         box.value = ''; box.focus({ preventScroll: true });
     });
     $root.on('input', '.ob_rein', function () { const v = this.value.trim(); if (!v) return; const msgId = this.dataset.id; this.value = ''; this.blur(); obReact(msgId, v); });
-    // 말 고치기 (시안 E2): 그 말풍선 자리에서 바로 고치고 밑의 ✕ · ✓. 원문을 고치면 한국어는 liveEditMessage가 지워요(재번역으로 다시)
+    // 말 고치기 (시안 E2): 그 말풍선 자리에서 바로 고치고 밑의 ✕ · ✓. 원문을 고치면 한국어는 liveEditMessage가 지우고, 한국어가 있던 말이면 바로 다시 번역해요
+    // 고치는 말풍선 + ✕ · ✓가 늘 보이게: 말 목록 안에서 위쪽 40% 언저리로 굴려요. 키보드가 올라오면 목록이 줄어서(--obkb) 그때마다 다시 맞춰요
+    // (안 그러면 고치는 말이 화면 밖에 있고 다른 말만 옅게 보였어요, 소망)
+    const obFixShow = (first = false) => {
+        if (!obFix) return; const b = $root.find('.ob_fix')[0], box = b?.closest('.ob_msgs'); if (!b || !box) return;
+        const bar = b.nextElementSibling?.classList.contains('ob_fbar') ? b.nextElementSibling : b, bt = b.getBoundingClientRect(), bb = bar.getBoundingClientRect(), r = box.getBoundingClientRect();
+        // (보이는 아래 끝: 목록 끝 · 입력칸 위 · 키보드 위 중 가장 위)
+        const inp = $root.find('.ob_inp')[0], vv = window.visualViewport;
+        // (처음엔 키보드가 아직 안 올라왔어요: 키보드가 가릴 아래 절반은 없는 셈 치고 위쪽에 놓아요. 그래야 키보드가 올라올 때 다시 안 튀어요)
+        const top = r.top, bot0 = Math.min(r.bottom, inp ? inp.getBoundingClientRect().top : r.bottom, vv ? vv.offsetTop + vv.height : r.bottom), bot = first ? Math.min(bot0, top + r.height * 0.45) : bot0;
+        const k = b.offsetHeight ? bt.height / b.offsetHeight : 1, h = bb.bottom - bt.top;
+        if (bt.top >= top + 24 && bb.bottom <= bot - 16) return;
+        box.scrollTop += (bt.top - (top + Math.max(24, Math.min(64, (bot - top) * 0.4 - h / 2)))) / k;
+    };
+    let obVv = false;
     const obFixFocus = () => {
-        const e = $root.find(obFix?.at === 'k' ? '.na_ob_fk' : '.na_ob_ft')[0]; if (!e || document.activeElement === e) return;
+        if (!obVv && window.visualViewport) { obVv = true; window.visualViewport.addEventListener('resize', () => setTimeout(obFixShow, 60)); }
+        const e = $root.find(obFix?.at === 'k' ? '.na_ob_fk' : '.na_ob_ft')[0]; if (!e) return;
+        if (document.activeElement === e) return obFixShow();
+        obFixShow(true);
         e.focus({ preventScroll: true }); try { const r = document.createRange(); r.selectNodeContents(e); r.collapse(false); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); } catch { /* (no caret) */ }
     };
     const obFixOk = async () => {
@@ -921,7 +996,13 @@ export async function openPhone(who = null) {
         if (t !== String(x.text || '').trim()) change.text = t;
         if (f.hasK && k !== String(x.ko || '').trim() && !('text' in change)) change.ko = k;
         if (!Object.keys(change).length) { obFix = null; drawPhone(true); return; }
-        try { await liveEditMessage(realM, id, f.id, change); obFix = null; } catch (err) { obWarn(err); return; }
+        // (저장은 느려요 — 폰에서 4초쯤: 말은 바로 바뀌어 있으니 칸을 먼저 닫고 그리고, 저장은 뒤에서 기다려요. 못 고치는 글이면 저장 전에 바로 알려 줘요)
+        const pr = liveEditMessage(realM, id, f.id, change), bad = await obSoon(pr);
+        if (bad) { obWarn(bad); return; }
+        obFix = null; if (!phoneClosed && stillHere()) drawPhone(true);
+        try { await pr; } catch (err) { obWarn(err); return; }
+        // (원문을 고쳤고 한국어가 있던 말이면 바로 재번역: 칸은 닫고 "번역 중". 실패하면 알림만, 고친 원문은 그대로 — 반영 쪽 요청, 소망)
+        if ('text' in change && f.hasK) return obRetr([f.id]);
         if (!phoneClosed && stillHere()) drawPhone(true);
     };
     $root.on('click', '.na_ob_medit', function (e) {
@@ -932,8 +1013,9 @@ export async function openPhone(who = null) {
     $root.on('input', '.na_ob_ft, .na_ob_fk', function () { if (!obFix) return; if (this.classList.contains('na_ob_fk')) obFix.k = this.innerText; else obFix.t = this.innerText; });
     $root.on('focus', '.na_ob_ft, .na_ob_fk', function () { if (obFix) obFix.at = this.classList.contains('na_ob_fk') ? 'k' : 't'; });
     $root.on('keydown', '.na_ob_ft, .na_ob_fk', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); obFixOk(); } else if (e.key === 'Escape') { obFix = null; drawPhone(true); } });
-    $root.on('click', '.na_ob_fok', e => { e.stopPropagation(); obFixOk(); });
-    $root.on('click', '.na_ob_fno', e => { e.stopPropagation(); obFix = null; drawPhone(true); });
+    // (✕ · ✓는 누르는 순간 받아요: 손을 뗄 때까지 기다리면 칸이 초점을 잃어 키보드가 내려가고, 화면이 밀려 버튼이 손가락 밑에서 달아났어요 — 두 번 눌러야 했어요, 소망 녹화)
+    $root.on('pointerdown', '.na_ob_fok, .na_ob_fno', function (e) { e.preventDefault(); e.stopPropagation(); obSwallow = true; ptrDown = false; if (this.classList.contains('na_ob_fok')) obFixOk(); else { obFix = null; drawPhone(true); } });
+    $root.on('click', '.na_ob_fok, .na_ob_fno', e => { e.stopPropagation(); });
     $root.on('click', '.na_ob_mtr', function (e) { e.stopPropagation(); obRetr([this.dataset.id]); });
     $root.on('click', '.na_ob_ptr', e => { e.stopPropagation(); obRetr([...(obPicks || [])]); });
     $root.on('click', '.na_ob_mdel', function (e) { e.stopPropagation(); obDrop([this.dataset.id]); });
@@ -941,8 +1023,9 @@ export async function openPhone(who = null) {
     $root.on('click', '.na_ob_swdel', async e => {
         e.stopPropagation(); const id = obRoomId(); if (!id) return;
         if (!await askSheet('이 답장을 지울까요?', '', '지우기')) return;
-        try { await liveSwipeDrop(realM, id); } catch (err) { obWarn(err); }
+        const pr = liveSwipeDrop(realM, id), bad = await obSoon(pr); if (bad) obWarn(bad);
         obHeld = null; if (!phoneClosed && stillHere()) drawPhone(true);
+        if (!bad) try { await pr; } catch (err) { obWarn(err); }
     });
     // 프사 바꾸기 (시안 phone2-edit sheetCrop C1 + 두 칸 갤러리): 1:1 방 머리줄의 얼굴 → 그 사람 색 전체 화면.
     // 사진은 인물 도감과 같은 저장소(확장 설정 faces, 모든 채팅이 같이 써요)에 들어가고, 모아 둔 사진은 faceAlbum[이름]에 남아요(사람마다 FACE_KEEP장까지).
@@ -1100,14 +1183,35 @@ export async function openPhone(who = null) {
         catch (err) { console.error('[narrative-archive] live reflect', err); }
         if (!phoneClosed && stillHere()) drawPhone(true);
     });
+    // 임시 시험 화면: 같은 이모지를 조건만 바꿔서. 번호를 보고 어느 조건에서 기기 이모지가 아닌지 봐요
+    const obEmojiTest = () => {
+        const E = '😘😂❤️', K = '그게 뭐예요 ', rows = [
+            ['1 div 15px', `<div style="font-size:15px">${E}</div>`], ['2 div 12px', `<div style="font-size:12px">${E}</div>`], ['3 div 20px', `<div style="font-size:20px">${E}</div>`],
+            ['4 span 15px', `<span style="font-size:15px">${E}</span>`], ['5 span 12px', `<span style="font-size:12px">${E}</span>`], ['6 i 12px', `<i style="font-size:12px;font-style:normal">${E}</i>`],
+            ['7 div 15px 흐린색', `<div style="font-size:15px;color:rgba(30,32,40,.62)">${E}</div>`], ['8 div 12px 흐린색', `<div style="font-size:12px;color:rgba(30,32,40,.62)">${E}</div>`], ['9 div 15px 회색', `<div style="font-size:15px;color:#555a63">${E}</div>`],
+            ['10 한글 뒤 15px', `<div style="font-size:15px">${K}${E}</div>`], ['11 한글 뒤 12px', `<div style="font-size:12px">${K}${E}</div>`], ['12 영어 뒤 12px', `<div style="font-size:12px">What is that ${E}</div>`],
+            ['13 굵게 12px', `<div style="font-size:12px;font-weight:600">${E}</div>`], ['14 굵게 15px', `<div style="font-size:15px;font-weight:600">${E}</div>`],
+            ['15 글꼴: 기기만', `<div style="font-size:15px;font-family:NADeviceEmoji,sans-serif">${E}</div>`], ['16 글꼴: sans만', `<div style="font-size:15px;font-family:sans-serif">${E}</div>`], ['17 기기만 12px', `<div style="font-size:12px;font-family:NADeviceEmoji,sans-serif">${E}</div>`],
+            ['18 번역 줄 그대로', `<div class="ob_b th ob_glass" style="margin:0">x<span class="ob_ko">${K}${E}</span></div>`], ['19 원문 줄 그대로', `<div class="ob_b th ob_glass" style="margin:0">What ${E}</div>`], ['20 배지 그대로', `<span class="ob_re" style="position:static"><span class="ob_ree">😂</span></span>`],
+            ['21 button 20px', `<button type="button" style="font-size:20px">${E}</button>`], ['22 button 12px', `<button type="button" style="font-size:12px">${E}</button>`],
+        ];
+        const host = $root.find('.na_ph_frame .cg_canvas')[0]; if (!host) return;
+        const el = document.createElement('div');
+        el.style.cssText = 'position:absolute;inset:0;z-index:99;overflow-y:auto;background:#f4f1ea;color:#1b1d24;padding:56px 14px 80px;font-size:13px';
+        el.innerHTML = `<div style="font-weight:700;margin-bottom:8px">이모지 시험 (누르면 닫혀요)</div>${rows.map(([l, h]) => `<div style="display:flex;align-items:center;gap:10px;min-height:30px;border-top:1px solid rgba(0,0,0,.08)"><span style="flex:none;width:118px;font-size:11px;color:#666">${l}</span>${h}</div>`).join('')}`;
+        el.addEventListener('click', () => el.remove());
+        host.append(el);
+    };
     const obSend = async () => {
         const r = roomNow(), t = String($root.find('.na_ob_in').text() || '').trim();
         if (!live() || !r || !t || obAcct() !== liveWorld(realM)?.persona) return;
+        if (t === '!emoji') return obEmojiTest(); // (임시: 기기 이모지가 어디서 바뀌는지 보는 시험 화면. 원인을 찾으면 지워요)
         sendLive(realM, r.id, t);
         enqueueReplies(realM, r.id);
         obDraft = ''; drawPhone(); obBottom(); obFocus();
-        await saveMeta();
-        obGo();
+        // (답장 요청은 저장을 기다리지 않고 바로 시작해요: 폰에서 저장이 몇 초 걸려서 답장이 그만큼 늦게 왔어요. 답장을 받으면 liveGo가 다시 저장해요)
+        const sv = saveMeta(); obGo();
+        await sv;
     };
     $root.on('click', '.na_ob_retry', async function (e) {
         e.stopPropagation();
@@ -1116,8 +1220,8 @@ export async function openPhone(who = null) {
         seeFailure(realM, j.id);
         if (w.messenger?.rooms?.[j.room]) enqueueReplies(realM, j.room);
         drawPhone(); obBottom();
-        await saveMeta();
-        obGo();
+        const sv = saveMeta(); obGo();
+        await sv;
     });
     $root.on('click', '.na_ob_send', e => { e.stopPropagation(); obSend(); });
     $root.on('keydown', '.na_ob_in', e => { e.stopPropagation(); if (e.key === 'Enter' && !e.originalEvent?.isComposing && e.keyCode !== 229) { e.preventDefault(); obSend(); } });
@@ -1714,7 +1818,7 @@ export async function openPhone(who = null) {
     $root.on('pointerdown', '.na_ph_bb', function (e) {
         if (msgPick) return;
         const el = this; heldAt = [e.clientX, e.clientY]; clearTimeout(heldT);
-        heldT = setTimeout(() => { heldT = null; heldWhen = Date.now(); holding = true; msgHeld = { i: threadNo(), k: Number(el.dataset.k) }; navigator.vibrate?.(10); drawPhone(true); }, 480);
+        heldT = setTimeout(() => { heldT = null; heldWhen = Date.now(); holding = true; msgHeld = { i: threadNo(), k: Number(el.dataset.k) }; navigator.vibrate?.(10); ptrDown = false; drawPhone(true); }, 480);
     });
     $root.on('pointermove', '.na_ph_bb', e => { if (heldT && heldAt && Math.hypot(e.clientX - heldAt[0], e.clientY - heldAt[1]) > 8) { clearTimeout(heldT); heldT = null; } });
     $root.on('pointerup pointercancel pointerleave', '.na_ph_bb', () => { clearTimeout(heldT); heldT = null; });
@@ -2176,10 +2280,12 @@ export async function openPhone(who = null) {
     const kbFix = () => {
         const scr = frame.querySelector('.na_ph_scr'), vv = window.visualViewport; if (!scr) return;
         const seen = vv ? vv.offsetTop + vv.height : window.innerHeight, k = Number(frame.style.getPropertyValue('--k')) || 1;
-        const cover = typing() ? Math.max(0, Math.round((scr.getBoundingClientRect().bottom - seen) / k)) : 0, was = frame.style.getPropertyValue('--obkb');
+        // (키보드가 올라오는 도중 한순간 엉뚱하게 큰 값이 나오면 말 목록이 0으로 눌려 화면이 번쩍였어요: 화면의 60%까지만)
+        const cover = typing() ? Math.min(Math.round(scr.offsetHeight * 0.6), Math.max(0, Math.round((scr.getBoundingClientRect().bottom - seen) / k))) : 0, was = frame.style.getPropertyValue('--obkb');
         if (was === `${cover}px`) return;
         frame.style.setProperty('--obkb', `${cover}px`); frame.classList.toggle('na_ph_kb', cover > 0);
-        if (view.startsWith('orbitroom')) obBottom();
+        // (말을 고치는 중이면 맨 아래로 굴리지 않아요: 고치는 말풍선이 보이게만. 맨 아래로 갔다가 다시 올라오며 튀었어요)
+        if (view.startsWith('orbitroom')) { if (obFix) obFixShow(); else obBottom(); }
     };
     const kbSoon = () => { kbFix(); setTimeout(kbFix, 120); setTimeout(kbFix, 400); };
     window.visualViewport?.addEventListener('resize', kbSoon); window.visualViewport?.addEventListener('scroll', kbSoon);
@@ -2204,6 +2310,24 @@ export async function openPhone(who = null) {
         $root.on('click', '.na_ph_quit', e => { e.stopPropagation(); close(); });
         $root.on('click', '.na_ph_wrap', e => { if (e.target === e.currentTarget) { if (sheetOpen) setSheet(false); else close(); } });
         dlg.addEventListener('cancel', e => { e.preventDefault(); if (ask) ask.done(false); else if (sheetOpen) setSheet(false); else close(); });
+        // 껍데기 앱의 기기 뒤로가기 (앱이 window.__naBack을 불러요): 폰 안에서 한 단계씩 — 떠 있는 것(물음 창 · 시트 · 길게 누른 카드 · 고치는 중 · 고르는 중)
+        // → 그 화면의 뒤로 버튼 → 홈 → (홈 · 잠금에서만) 폰 닫기. 홈 막대를 숨긴 뒤로 뒤로가기가 폰을 통째로 닫았어요(소망)
+        const backWas = window.__naBack;
+        if (window.NAShell) window.__naBack = () => {
+            if (!dlg.open) return backWas ? backWas() : 0;
+            const v = String(view || '').split(':')[0];
+            if (ask) ask.done(false);
+            else if (sheetOpen) setSheet(false);
+            else if (obFix || obHeld || obPicks || obList) { obFix = null; obHeld = null; obPicks = null; obList = null; drawPhone(true); }
+            else {
+                const b = $root.find('.na_ph_frame [data-go]').filter('[aria-label="뒤로"], [aria-label="닫기"]')[0];
+                if (b) b.click();
+                else if (!['home', 'home2', 'lock'].includes(v) && $root.find('.na_ph_frame .na_ph_scr').length) { const x = document.createElement('button'); x.dataset.go = 'home'; x.hidden = true; $root.find('.na_ph_frame .na_ph_scr')[0].append(x); x.click(); }
+                else close();
+            }
+            return 1;
+        };
+        dlg.addEventListener('close', () => { if (window.NAShell) window.__naBack = backWas; for (const ev of ['pointerup', 'pointercancel']) window.removeEventListener(ev, ptrUp, true); }, { once: true });
         dlg.addEventListener('close', () => { phoneClosed = true; setPhoneMeta(null); if (liveMode(realM) === 'live' && stillHere()) obReflect(); ask?.done(false); done(); }, { once: true });
     });
     window.visualViewport?.removeEventListener('resize', kbSoon); window.visualViewport?.removeEventListener('scroll', kbSoon); window.removeEventListener('resize', kbSoon);

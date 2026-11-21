@@ -1,6 +1,6 @@
 /* ============ 휴대폰 메시지 · 전화 · 사진 · 메모 · 검색 · 캘린더 · 메일 · 설정 · 카메라 (v3.118): the boards' layout in the home's
    flat look — one colour per app (--axd deep, --axc light), round glass buttons, white cards, no gradients */
-.axb .ax_canvas { background: #f4f5f7; color: #161b22; --axfg: #161b22; font-family: 'Noto Sans KR', -apple-system, sans-serif; --axff: 'Noto Sans KR', -apple-system, sans-serif}
+.axb .ax_canvas { background: #f4f5f7; color: #161b22; --axfg: #161b22; font-family: 'Noto Sans KR', -apple-system, NADeviceEmoji, sans-serif; --axff: 'Noto Sans KR', -apple-system, NADeviceEmoji, sans-serif}
 .axb .ax_ko { color: #7c8592; --axfg: #7c8592; font-size: 0.86em; --axfs: 0.86em}
 .axb .ax_empty { color: #8a929d; --axfg: #8a929d}
 .ax_k { display: block; }
@@ -201,7 +201,7 @@
 .sc_top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; }
 .sc_lbl { font-size: 12px; --axfs: 12px; color: #7b818c; --axfg: #7b818c}
 .sc_big { font-family: 'Inter Tight', 'Inter', sans-serif; --axff: 'Inter Tight', 'Inter', sans-serif; font-size: 36px; --axfs: 36px; font-weight: 600; letter-spacing: -0.02em; --axls: -0.02em; line-height: 1.1; margin-top: 3px}
-.sc_big u, .sc_pkn u { text-decoration: none; font-family: -apple-system, 'SF Pro Text', 'Noto Sans KR', sans-serif; font-size: 21px; margin: 0 5px 0 2px; letter-spacing: 0; }
+.sc_big u, .sc_pkn u { text-decoration: none; font-family: -apple-system, 'SF Pro Text', 'Noto Sans KR', NADeviceEmoji, sans-serif; font-size: 21px; margin: 0 5px 0 2px; letter-spacing: 0; }
 .sc_big u:last-child { margin-right: 0; }
 .sc_chart { position: relative; }
 .sc_chart svg { display: block; overflow: visible; }

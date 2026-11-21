@@ -1,7 +1,7 @@
 /* ============ 휴대폰 SNS · 메일 · 일기 · 설정 · 카메라 (v3.116): the approved boards, drawn at 390 × 844 and scaled by --k.
    Buttons take their fill from --axbg / --axsh so a theme that paints every button can't cover them. */
 .na_ph_scr.ax { display: block; background: #fff; }
-.ax_canvas { display: flex; flex-direction: column; background: #fff; color: #111; --axfg: #111; font-family: -apple-system, 'SF Pro Text', 'Noto Sans KR', sans-serif; --axff: -apple-system, 'SF Pro Text', 'Noto Sans KR', sans-serif; font-size: 16px; --axfs: 16px; line-height: normal; letter-spacing: normal; --axls: normal}
+.ax_canvas { display: flex; flex-direction: column; background: #fff; color: #111; --axfg: #111; font-family: -apple-system, 'SF Pro Text', 'Noto Sans KR', NADeviceEmoji, sans-serif; --axff: -apple-system, 'SF Pro Text', 'Noto Sans KR', NADeviceEmoji, sans-serif; font-size: 16px; --axfs: 16px; line-height: normal; letter-spacing: normal; --axls: normal}
 .ax :where(button, label) { font: inherit; color: inherit; cursor: pointer; padding: 0; margin: 0; border: 0; background: var(--axbg, none); box-shadow: var(--axsh, none); text-align: left; width: auto; height: auto; min-height: 0; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax :is(button, label) { background: var(--axbg, transparent) !important; background-image: none; box-shadow: var(--axsh, none) !important; border-color: transparent !important; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax :is(.ax_tile, .ax_cthumb) { background: var(--axbg); }
