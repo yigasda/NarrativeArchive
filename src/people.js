@@ -57,6 +57,11 @@ export function peopleList(m) {
 // 이름으로 찾은 첫 사진이 나와서, 페르소나를 바꿔도 프사가 그대로였어요(소망). 브라우저에서만 읽어요
 let stPersonas = null;
 if (typeof window !== 'undefined') import('/scripts/personas.js').then(m => { stPersonas = m; }).catch(() => { /* (옛 실리태번: 이름으로 찾아요) */ });
+// 실리태번의 페르소나 목록 (빠른 전환기의 페르소나 탭): [{ id (사진 파일), name, title, src, cur (지금 고른 것) }], 이름순
+export function stPersonaList() {
+    const c = ctx(), per = c.powerUserSettings?.personas || {}, des = c.powerUserSettings?.persona_descriptions || {}, cur = stPersonas?.user_avatar;
+    return Object.keys(per).map(f => ({ id: f, name: String(per[f] || ''), title: String(des[f]?.title || ''), src: `/thumbnail?type=persona&file=${encodeURIComponent(f)}`, cur: f === cur })).sort((a, b) => a.name.localeCompare(b.name));
+}
 export function stFace(name, big = false) {
     const c = ctx(), k = nameKey(name);
     const ch = (c.characters || []).find(x => nameKey(x?.name) === k);

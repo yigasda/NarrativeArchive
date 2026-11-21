@@ -5,7 +5,7 @@
 import { esc } from './util.js';
 import { axBar, axInd } from './phoneapps.js';
 import { faceOf, stFace } from './people.js';
-import { orbitSetPage, ORBIT_SET_TITLES } from './phoneorbitset.js';
+import { orbitSetPage, orbitSwitcher, ORBIT_SET_TITLES } from './phoneorbitset.js';
 
 // 사람마다 고정된 색 오로라(이름 해시): [바탕 세 점, 바탕색]
 const AURA = [
@@ -278,8 +278,8 @@ export function orbitRoom(p, now, o) {
       <div${obc} class="ob_msgs ax_scroll${o.fixing ? ' fixing' : ''}${o.asOwner ? ' ro' : ''}${holding ? ' hold na_ob_hold' : ''}${o.picking != null ? ' picking' : ''}${o.emo && o.picking == null ? ' emo' : ''}"><div class="ob_mi">${o.msgs.map((x, i) => msg(x, i)).join('')}${o.snapBusy ? '<div class="ob_fail ob_note"><span>이야기 정리 중</span></div>' : o.typing ? '<div class="ob_typ ob_glass" aria-label="입력 중"><i></i><i></i><i></i></div>' : ''}${(o.notes || []).map(t => `<div class="ob_fail ob_note"><span>${esc(t)}</span></div>`).join('')}${o.fail ? `<div class="ob_fail"><span>답장을 못 받았어요</span><button type="button" class="ob_retry na_ob_retry" data-id="${esc(o.fail.id)}">다시</button></div>` : ''}</div></div>
       ${o.asOwner || o.picking != null ? '' : emo}
       ${o.asOwner ? '' : o.picking != null ? `<div class="ob_inp ob_pbar"><span>${o.picking}개 선택</span><span class="ob_pbtn"><button type="button" class="na_ob_ptr"${o.picking ? '' : ' disabled'}>재번역</button><button type="button" class="na_ob_pdel red"${o.picking ? '' : ' disabled'}>삭제</button><button type="button" class="na_ob_pquit">취소</button></span></div>`
-        : `<div${obc} class="ob_inp"><button type="button" class="ob_ci na_ob_soon" aria-label="사진 · 파일">${lu('paperclip', 21)}</button><button type="button" class="ob_ci na_ob_soon" aria-label="빠른 전환">${lu('chevron-up', 22, 2.2)}</button><div class="ob_msgin na_ob_in" contenteditable="true" role="textbox" enterkeyhint="send" spellcheck="false" data-ph="메시지" aria-label="메시지">${esc(o.draft || '')}</div><button type="button" class="ob_ci na_ob_emo${o.emo ? ' on' : ''}" aria-label="${o.emo ? '키보드' : '이모지'}">${lu(o.emo ? 'keyboard' : 'smile', o.emo ? 21 : 22)}</button><button type="button" class="ob_send na_ob_send" aria-label="보내기">${lu('arrow-right', 19, 2.4)}</button></div>`}
-      ${sheet}${setSheet}${pres}${sched}
+        : `<div${obc} class="ob_inp"><button type="button" class="ob_ci na_ob_soon" aria-label="사진 · 파일">${lu('paperclip', 21)}</button><button type="button" class="ob_ci na_ob_sw${o.sw ? ' on' : ''}" aria-label="빠른 전환기" aria-haspopup="dialog" aria-expanded="${!!o.sw}">${lu('chevron-up', 22, 2.2)}</button><div class="ob_msgin na_ob_in" contenteditable="true" role="textbox" enterkeyhint="send" spellcheck="false" data-ph="메시지" aria-label="메시지">${esc(o.draft || '')}</div><button type="button" class="ob_ci na_ob_emo${o.emo ? ' on' : ''}" aria-label="${o.emo ? '키보드' : '이모지'}">${lu(o.emo ? 'keyboard' : 'smile', o.emo ? 21 : 22)}</button><button type="button" class="ob_send na_ob_send" aria-label="보내기">${lu('arrow-right', 19, 2.4)}</button></div>`}
+      ${sheet}${setSheet}${pres}${sched}${o.sw ? orbitSwitcher(o.sw) : ''}
       ${o.note ? `<div class="ob_shade na_ob_ntx"></div><div class="ob_sheet ob_bks ob_nts"><i class="ob_grab"></i><div class="ob_bkh"><b>메모</b></div><div class="ob_bkt na_ob_nttx" contenteditable="true" role="textbox" aria-multiline="true" spellcheck="false" aria-label="메모">${esc(o.note.text)}</div><div class="ob_bkb"><button type="button" class="ob_bkno na_ob_ntx">취소</button><button type="button" class="ob_bkok na_ob_ntok">저장</button></div></div>` : ''}
       ${axInd(fg)}`;
 }

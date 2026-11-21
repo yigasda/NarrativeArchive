@@ -4,6 +4,9 @@
 // 아이콘: Lucide (ISC, NOTICE.md).
 import { esc } from './util.js';
 const LI = {
+    'arrow-up': '<path d="m5 12 7-7 7 7" /> <path d="M12 19V5" />',
+    'arrow-down': '<path d="M12 5v14" /> <path d="m19 12-7 7-7-7" />',
+    'sliders-horizontal': '<line x1="21" x2="14" y1="4" y2="4" /> <line x1="10" x2="3" y1="4" y2="4" /> <line x1="21" x2="12" y1="12" y2="12" /> <line x1="8" x2="3" y1="12" y2="12" /> <line x1="21" x2="16" y1="20" y2="20" /> <line x1="12" x2="3" y1="20" y2="20" /> <line x1="14" x2="14" y1="2" y2="6" /> <line x1="8" x2="8" y1="10" y2="14" /> <line x1="16" x2="16" y1="18" y2="22" />',
     'circle-help': '<circle cx="12" cy="12" r="10" /> <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /> <path d="M12 17h.01" />',
     'star': '<path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z" />',
     'lock-open': '<rect width="18" height="11" x="3" y="11" rx="2" ry="2" /> <path d="M7 11V7a5 5 0 0 1 9.9-1" />',
@@ -217,4 +220,58 @@ export function orbitSetPage(T, face) {
             + `<div class="ot_r ot_w ot_end"><button type="button" class="os_go na_ob_sback">취소</button>${soon('저장', '', 'os_go', { off: true })}</div>`,
     };
     return B[P] ? B[P]() : null;
+}
+
+// 빠른 전환기 (마리나라 QuickSwitcherMobile + ConnectionSwitcherBody + CharacterPickerList, fc0333c: 입력칸의 ^ 로 열어요).
+// 탭 둘: 모델(지금 줄 · 검색 · 왼쪽 목록[별표 · 계정] ↔ 오른쪽 목록[그 계정의 별표 · 모든 모델], 폰은 한 번에 한쪽) · 페르소나(검색 · 없음 · 목록).
+// 무작위(주사위 · 무작위 풀)는 소망이 뺐고, 컨텍스트 막대는 값을 줄 함수가 없어 W.ctx가 있을 때만 그려요.
+// W: { tab, q, pq, drilled, pane, order, stars: [id], conns: [{ id, name, sub, roles: [] }], personas: [{ id, name, title, src, cur }], limit, ctx: { used, max, pct } | null }
+export function orbitSwitcher(W) {
+    const none = t => `<div class="os_no">${t}</div>`, cap = (t, n) => `<div class="os_cap ow_cap"><span>${t}</span>${n === undefined ? '' : `<span class="cg_num">${n}</span>`}</div>`, cd = (...r) => `<div class="os_cd">${r.join('')}</div>`;
+    const tabs = `<div class="os_sg ow_sg">${[['models', 'link-2', '모델'], ['personas', 'user', '페르소나']].map(([k, ic, t]) => `<button type="button" class="na_ow_tab${W.tab === k ? ' on' : ''}" data-v="${k}">${li(ic, 13, 2.2)}${t}</button>`).join('')}</div>`;
+    let body = '';
+    if (W.tab === 'models') {
+        const all = W.conns.filter(c => c.name && c.name !== '모델 없음'), cur = all[0] || null, stars = new Set(W.stars), q = W.q.trim().toLowerCase();
+        const groups = []; for (const c of all) { const k = c.sub || c.name; let g = groups.find(x => x.key === k); if (!g) groups.push(g = { key: k, name: k, rows: [] }); g.rows.push(c); }
+        const groupOf = c => groups.find(g => g.rows.includes(c)), starred = W.stars.map(id => all.find(c => c.id === id)).filter(Boolean);
+        const paneKey = W.pane ?? (starred.length ? 'starred' : (cur ? groupOf(cur).key : 'starred')), paneGroup = groups.find(g => g.key === paneKey);
+        const tile = (c, sm) => `<span class="ow_tile${sm ? ' sm' : ''}">${esc(((c.sub || c.name || '?').match(/[A-Za-z가-힣0-9]/) || ['?'])[0].toUpperCase())}</span>`;
+        // 모델 한 줄 (ModelRow): 타일 · 이름 · 둘째 줄(어디서 도는지) · 역할 알약 · 지금 것이면 ✓ · [순서 ↑↓ | 설정 · 별표]
+        const row = (c, o = {}) => { const st = stars.has(c.id), is = c === cur, ord = W.order && o.order, sub = o.away ? (groupOf(c)?.name || '') : (o.sub ?? '');
+            return `<div class="os_pp ow_row${is && !o.now ? ' cur' : ''}"><div role="button" tabindex="0" class="ow_pick na_ow_pick" data-id="${esc(c.id)}" aria-label="${esc(c.name)}"${is ? ' aria-current="true"' : ''}>${tile(c, o.now)}<span class="ot_x"><span class="os_l">${esc(c.name)}</span>${sub ? `<span class="os_d">${esc(sub)}</span>` : ''}</span>${(c.roles || []).map((r, i) => `<span class="ot_chip${i ? '' : ' strong'}">${r}</span>`).join('')}${is && !o.now ? `<i class="ow_ck">${li('check', 15, 2.4)}</i>` : ''}</div>`
+                + (o.now ? '' : ord && st ? `<button type="button" class="os_ib na_ow_mv" data-id="${esc(c.id)}" data-by="-1" aria-label="${esc(c.name)} 위로 이동"${W.stars.indexOf(c.id) <= 0 ? ' disabled' : ''}>${li('arrow-up', 15)}</button><button type="button" class="os_ib na_ow_mv" data-id="${esc(c.id)}" data-by="1" aria-label="${esc(c.name)} 아래로 이동"${W.stars.indexOf(c.id) >= W.stars.length - 1 ? ' disabled' : ''}>${li('arrow-down', 15)}</button>`
+                    : `${st ? `<button type="button" class="os_ib na_ob_soon" aria-label="${esc(c.name)} 설정">${li('sliders-horizontal', 15)}</button>` : ''}<button type="button" class="os_ib ow_st na_ow_star${st ? ' on' : ''}" data-id="${esc(c.id)}" aria-pressed="${st}" aria-label="${esc(c.name)} 별표">${li('star', 16)}</button>`) + '</div>'; };
+        const orderBtn = `<div class="ot_r ot_end ow_ord"><button type="button" class="os_go na_ow_order" aria-pressed="${!!W.order}">${W.order ? '완료' : '순서 편집'}</button></div>`;
+        const now = `<div class="ow_now">${cur ? row(cur, { now: true, sub: ['지금 · 메인을 따름', groupOf(cur)?.name].filter(Boolean).join(' · ') }) : `<div class="os_cap ow_cap"><span>지금 · 메인을 따름</span></div><div class="ow_nx">모델 선택</div>`}</div>`;
+        const search = `<div class="os_q ow_q">${li('search', 16)}<div class="os_qi na_ow_q" contenteditable="true" role="textbox" enterkeyhint="go" spellcheck="false" autocapitalize="off" data-ph="${paneGroup ? `${esc(paneGroup.name)} 검색...` : '모델 검색 또는 ID 붙여넣기…'}" aria-label="모든 모델 검색 또는 모델 ID 붙여넣기">${esc(W.q)}</div>${W.q ? `<button type="button" class="os_ib na_ow_qx" aria-label="검색 지우기">${li('x', 15)}</button>` : ''}</div>`;
+        const add = cd(`<button type="button" class="os_rw na_ob_soon" aria-label="계정 추가">${li('plus', 18)}<span class="os_l">계정 추가</span></button>`);
+        if (!all.length) body = now + none('아직 모델이 없습니다. 계정을 추가하면 생깁니다.') + add;
+        else if (q) {   // 검색 결과: 별표 먼저, 계정별로, 마지막에 친 글자를 모델 ID로 (계정을 골라 둔 상태면 그 계정 안에서만)
+            const hit = c => `${c.name} ${c.sub}`.toLowerCase().includes(q), scope = paneGroup ? paneGroup.rows : all, hits = scope.filter(hit), typed = W.q.trim(), target = paneGroup || (cur && groupOf(cur)) || groups[0];
+            const secs = paneGroup ? [['별표', hits.filter(c => stars.has(c.id)), false], ['모든 모델', hits.filter(c => !stars.has(c.id)), false]]
+                : [['별표', hits.filter(c => stars.has(c.id)), true], ...groups.map(g => [esc(g.name), hits.filter(c => !stars.has(c.id) && g.rows.includes(c)), false])];
+            const use = target && !/\s/.test(typed) && !all.some(c => c.name === typed) ? cd(`<div role="button" tabindex="0" class="os_rw ot_t na_ob_soon" aria-label="“${esc(typed)}” 사용">${li('search', 17)}<span class="ot_x"><span class="os_l">“${esc(typed)}” 사용</span><span class="os_d">${esc(target.name)}에 이 ID 추가</span></span></div>`) : '';
+            body = now + search + secs.filter(s => s[1].length).map(([l, r, away]) => cap(l, r.length) + cd(...r.map(c => row(c, { away })))).join('') + use
+                + (hits.length || use ? '' : none('일치하는 모델이 없습니다.')) + (paneGroup ? cd(`<div role="button" tabindex="0" class="os_rw na_ow_qall" aria-label="모든 계정 검색">${li('search', 17)}<span class="os_l">모든 계정 검색</span></div>`) : ''); }
+        else if (!W.drilled) body = now + search   // 왼쪽 목록: 별표 · 계정들 · 계정 추가
+            + cd(`<div role="button" tabindex="0" class="os_rw na_ow_pane${paneKey === 'starred' ? ' cur' : ''}" data-v="starred" aria-pressed="${paneKey === 'starred'}"><span class="ow_tile star">${li('star', 15)}</span><span class="os_l">별표</span><span class="os_v cg_num">${starred.length}</span><i class="os_ch">${li('chevron-right', 16)}</i></div>`)
+            + cap('계정') + cd(...groups.map(g => `<div role="button" tabindex="0" class="os_rw ot_t na_ow_pane${paneKey === g.key ? ' cur' : ''}" data-v="${esc(g.key)}" aria-pressed="${paneKey === g.key}">${tile(g.rows[0])}<span class="ot_x"><span class="os_l">${esc(g.name)}</span><span class="os_d">모델 ${g.rows.length}개</span></span><i class="os_ch">${li('chevron-right', 16)}</i></div>`)) + add;
+        else { const back = `<button type="button" class="ow_back na_ow_back">${li('chevron-left', 16)}모든 연결</button>`;   // 오른쪽 목록: 별표 전체, 또는 한 계정의 별표 · 모든 모델
+            if (paneGroup) { const st = paneGroup.rows.filter(c => stars.has(c.id)).sort((a, b) => W.stars.indexOf(a.id) - W.stars.indexOf(b.id)), rest = paneGroup.rows.filter(c => !stars.has(c.id));
+                body = search + back + `<div class="os_pp ow_hd">${tile(paneGroup.rows[0])}<span class="ot_x"><span class="os_l">${esc(paneGroup.name)}</span><span class="os_d">모델 ${paneGroup.rows.length}개 · ${st.length ? `별표 ${st.length}개` : '별표 없음'}</span></span><button type="button" class="os_ib na_ob_soon" aria-label="모델 목록 새로 고침">${li('refresh-cw', 15)}</button></div>`
+                    + (st.length ? cap('별표', st.length) + (st.length > 1 ? orderBtn : '') + cd(...st.map(c => row(c, { order: st.length > 1 }))) : '') + (rest.length ? cap('모든 모델', rest.length) + cd(...rest.map(c => row(c))) : '') + (st.length + rest.length ? '' : none('여기에는 아직 모델이 없습니다.')); }
+            else body = search + back + `<div class="ow_ttl"><b>별표</b><span>모델 ${starred.length}개 · 계정 ${new Set(starred.map(c => groupOf(c).key)).size}개</span></div>`
+                + (starred.length > 1 ? orderBtn : '') + (starred.length ? cd(...starred.map(c => row(c, { away: true, order: starred.length > 1 }))) : none('아직 별표한 모델이 없습니다. 계정을 고르고 쓰는 모델에 별표하세요.')); }
+        if (W.ctx) body = `<div class="ow_ctx"><div><span>컨텍스트</span><b class="cg_num">${esc(W.ctx.used)} / ${esc(W.ctx.max)} 토큰</b></div><i><i style="width:${Math.max(0, Math.min(100, W.ctx.pct))}%"></i></i></div>` + body;
+    } else {   // 페르소나 (CharacterPickerList kind="persona"): 검색 · 없음 · 페르소나 줄(지금 것에 ✓) · 50개씩 더 보기
+        const q = W.pq.trim().toLowerCase(), list = W.personas.filter(p => !q || `${p.name} ${p.title || ''}`.toLowerCase().includes(q)), any = W.personas.some(p => p.cur);
+        const pr = (p, pick, ava) => `<div role="button" tabindex="0" class="os_pp ow_row ow_p na_ow_persona${pick ? ' cur' : ''}" data-id="${esc(p.id)}" aria-label="${esc(p.name)}"${pick ? ' aria-current="true"' : ''}>${ava}<span class="ot_x"><span class="os_l">${esc(p.name || '?')}</span>${p.title ? `<span class="os_d">${esc(p.title)}</span>` : ''}</span>${pick ? `<i class="ow_ck">${li('check', 15, 2.4)}</i>` : ''}</div>`;
+        const ava = p => (p.src ? `<span class="ow_av"><img src="${esc(p.src)}" alt="" loading="lazy"></span>` : `<span class="ow_av">${esc((p.name || '?')[0].toUpperCase())}</span>`);
+        body = `<div class="os_q ow_q">${li('search', 16)}<div class="os_qi na_ow_pq" contenteditable="true" role="textbox" enterkeyhint="search" spellcheck="false" data-ph="페르소나 검색" aria-label="페르소나 검색">${esc(W.pq)}</div></div>`
+            + (!W.personas.length ? `<div class="os_no ow_em"><span class="ow_tile">${li('user', 18)}</span>아직 페르소나가 없습니다.</div>`
+                : q && !list.length ? `<div class="os_no ow_em">"${esc(W.pq.trim())}"와 일치하는 항목이 없습니다.<button type="button" class="os_go na_ow_pqx">${li('x', 13, 2.2)}검색 지우기</button></div>`
+                : (q ? '' : cd(pr({ id: '', name: '없음', title: '페르소나가 선택되지 않았습니다' }, !any, `<span class="ow_av none">${li('ban', 14)}</span>`)))
+                    + (list.length ? cd(...list.slice(0, W.limit).map(p => pr(p, p.cur, ava(p))), ...(list.length > W.limit ? [`<button type="button" class="os_rw ot_c na_ow_more">${Math.min(50, list.length - W.limit)}개 더 보기</button>`] : [])) : ''));
+    }
+    return `<div class="ob_shade na_ow_x"></div><div class="ob_sheet os_sh ow"><i class="ob_grab"></i><div class="os_hd"><b>빠른 전환기</b><button type="button" class="os_ib na_ow_x" aria-label="빠른 전환기 닫기">${li('x', 19)}</button></div><div class="os_bd">${tabs}${body}</div></div>`;
 }
