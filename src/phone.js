@@ -825,11 +825,14 @@ export async function openPhone(who = null) {
     const obWarn = err => { console.warn('[narrative-archive] live edit', err); toastr.info(String(err?.message || err), '캐릭터 휴대폰'); };
     const obHoldStop = () => { clearTimeout(obHoldT); obHoldT = null; };
     $root.on('pointerdown', '.na_ob_b', function (e) {
-        if (!obCanEdit() || obPicks || obFix || e.target.closest('.na_ob_ko')) return;
+        // (번역 줄 위에서 눌러도 길게 누르기가 돼요: 길게 누른 뒤의 클릭은 번역 접기로 안 가요 — obJustHeld · obSwallow)
+        if (!obCanEdit() || obPicks || obFix) return;
         const id = this.dataset.id; obDown = { id, x: e.clientX, y: e.clientY, sw: this.classList.contains('na_ob_sw') };
         obHoldStop(); obHoldT = setTimeout(() => { obHoldT = null; obDown = null; obHeldAt = Date.now(); obHeld = id; obSwallow = true; navigator.vibrate?.(10); drawPhone(true); }, 480);
     });
-    $root.on('pointermove', '.na_ob_b', e => { if (obDown && Math.hypot(e.clientX - obDown.x, e.clientY - obDown.y) > 8) obHoldStop(); });
+    // (손가락은 누르고 있는 동안 조금 굴러요: 12px까지는 그대로 기다려요. 폰이 글자 선택 메뉴를 띄우면 길게 누르기가 취소돼서 말풍선은 글자 선택을 꺼 뒀어요)
+    $root.on('pointermove', '.na_ob_b', e => { if (obDown && Math.hypot(e.clientX - obDown.x, e.clientY - obDown.y) > 12) obHoldStop(); });
+    $root.on('contextmenu', '.na_ob_b', e => e.preventDefault());
     $root.on('pointercancel', () => { obHoldStop(); obDown = null; });
     $root.on('pointerleave', '.na_ob_b', () => { obHoldStop(); });
     // (맨 끝 답장을 옆으로 밀면 넘겨요: 왼쪽으로 밀면 다음, 오른쪽으로 밀면 앞)
