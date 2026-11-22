@@ -1633,7 +1633,7 @@ test('추론 레벨: 방의 모델이 받는 레벨만 나와요 (마리나라�
     assert.deepEqual(G.liveReasoning(c.real, id).choices.map(x => [x.name, x.title || '']), [['기본', '제공자 기본값: Minimal'], ['낮게', ''], ['보통', ''], ['높게', '']]);
     T.slots = { dr: { mode: 'custom', fmt: 'anthropic', model: 'claude-opus-4-7' } };
     assert.deepEqual(vals(G.liveReasoning(c.real, id)), ['low=low', 'medium=medium', 'high=high', 'xhigh=xhigh', 'maximum=max']);
-    // (Claude에는 끔 칩이 없어요: 어느 길로 보내도 생각이 안 꺼져요. 끔으로 저장해 둔 값은 안 정함으로 보이고, 저장은 그대로)
+    // (끔 칩은 끔이 진짜로 꺼지는 곳에만. Claude는 어느 길로 보내도 생각이 안 꺼져요. 끔으로 저장해 둔 값은 안 정함으로 보이고, 저장은 그대로)
     for (const m of ['claude-sonnet-5-5', 'claude-opus-5', 'claude-opus-4-8', 'claude-sonnet-4-6', 'claude-haiku-5-5']) {
         T.slots = { dr: { mode: 'custom', fmt: 'anthropic', model: m } };
         const r0 = G.liveReasoning(c.real, id);
@@ -1648,16 +1648,34 @@ test('추론 레벨: 방의 모델이 받는 레벨만 나와요 (마리나라�
     T.slots = { dr: { mode: 'source', source: 'claude', stModel: 'claude-opus-4-8' } };                     // (실리 연결 방식의 Claude도 같아요)
     assert.ok(!G.liveReasoning(c.real, id).choices.some(x => x.value === 'none'));
     T.slots = { dr: { mode: 'source', source: 'openai', stModel: 'gpt-4o' } };
-    assert.deepEqual(G.liveReasoning(c.real, id).choices, []);                                             // (레벨을 안 받는 모델)
+    assert.deepEqual([G.liveReasoning(c.real, id).choices, G.liveReasoning(c.real, id).why], [[], 'model']);   // (레벨을 안 받는 모델)
+    // (같은 모델이라도 보내는 길에 따라 달라요: 실리의 OpenAI 연결은 끔을 "none"으로 보내서 꺼지고, 우리 커스텀 호출은 아무것도 안 보내서 안 꺼져요)
+    T.slots = { dr: { mode: 'source', source: 'openai', stModel: 'gpt-5.5' } };
+    assert.equal(G.liveReasoning(c.real, id).choices[0].name, '끔');
+    T.slots = { dr: { mode: 'custom', fmt: 'openai', model: 'gpt-5.5' } };
+    assert.ok(!G.liveReasoning(c.real, id).choices.some(x => x.value === 'none')); assert.ok(G.liveReasoning(c.real, id).choices.length > 0);
+    T.slots = { dr: { mode: 'custom', fmt: 'openai', model: 'some-local-model' } };
+    assert.ok(!G.liveReasoning(c.real, id).choices.some(x => x.value === 'none'));
+    // (끔이 진짜로 꺼지는 곳: 실리가 그 연결 · 모델에서 끔을 "끄기"로 바꾸는 곳만)
+    const off = (via, model) => G.offTurnsOff({ via, model });
+    assert.deepEqual([off('vertex', 'gemini-2.5-flash'), off('source:makersuite', 'gemini-2.5-flash-lite'), off('source:vertexai', 'gemini-2.5-pro'), off('vertex', 'gemini-3-flash'), off('vertex', 'gemini-3.8-flash'), off('vertex', 'gemini-4-neon')], [true, true, false, false, false, false]);
+    assert.deepEqual([off('source:openai', 'gpt-5.5'), off('source:openai', 'gpt-5.6-sol'), off('source:openai', 'gpt-5.2'), off('source:openai', 'gpt-5'), off('source:openai', 'o3'), off('source:custom', 'gpt-5.5')], [true, true, false, false, false, false]);
+    assert.deepEqual([off('source:nanogpt', 'x'), off('source:claude', 'claude-opus-4-8'), off('source:openrouter', 'openai/gpt-5.5'), off('source:deepseek', 'deepseek-v4-pro'), off('source:xai', 'grok-4.5'), off('custom', 'gpt-5.5'), off('st', 'gemini-2.5-flash')], [true, false, false, false, false, false, false]);
+    // (연결 프로필 · 실리 연결: 실리 프리셋의 레벨을 써요. 우리 값이 안 가니 칩이 없어요)
+    T.profiles = [{ id: 'p1', name: 'P', api: 'makersuite', model: 'gemini-2.5-flash' }];
+    await G.liveSetRoomModel(c.real, id, { connectionId: 'profile:p1' });
+    await G.liveSetReasoning(c.real, id, 'high');
+    assert.deepEqual((({ choices, why, effort, sent }) => [choices, why, effort, sent])(G.liveReasoning(c.real, id)), [[], 'profile', '', '']);
+    await G.liveSetReasoning(c.real, id, ''); await G.liveSetRoomModel(c.real, id, null); delete T.profiles;
     // (방에 고른 모델이 있으면 그 모델 기준)
     T.sources = [{ id: 'deepseek', name: 'DeepSeek' }];
     await G.liveSetRoomModel(c.real, id, { connectionId: 'source:deepseek', model: 'deepseek-v4-pro' });
-    assert.deepEqual(vals(G.liveReasoning(c.real, id)), ['none=null', 'low=low', 'medium=high', 'maximum=max']);
+    assert.deepEqual(vals(G.liveReasoning(c.real, id)), ['low=low', 'medium=high', 'maximum=max']);       // (실리는 DeepSeek의 끔을 low로 보내요: 끔 칩 없음)
     // (칩 글자는 실제로 보내는 레벨: 이 모델에는 '보통' 칩이 없어요. 마리나라 화면 그대로)
-    assert.deepEqual(G.liveReasoning(c.real, id).choices.map(x => x.name), ['끔', '낮게', '높게', '최대']);
+    assert.deepEqual(G.liveReasoning(c.real, id).choices.map(x => x.name), ['낮게', '높게', '최대']);
     await G.liveSetReasoning(c.real, id, 'high');                                                          // (저장된 값의 칩에 불: 같은 묶음이면 그 값을 칩의 value로)
-    assert.deepEqual(vals({ choices: G.liveReasoning(c.real, id).roomChoices }), ['none=null', 'low=low', 'high=high', 'maximum=max']);
-    assert.deepEqual(vals({ choices: G.liveReasoning(c.real, id).allChoices }), ['none=null', 'low=low', 'medium=high', 'maximum=max']);
+    assert.deepEqual(vals({ choices: G.liveReasoning(c.real, id).roomChoices }), ['low=low', 'high=high', 'maximum=max']);
+    assert.deepEqual(vals({ choices: G.liveReasoning(c.real, id).allChoices }), ['low=low', 'medium=high', 'maximum=max']);
     await G.liveSetReasoning(c.real, id, '');
     assert.deepEqual([G.liveReasoning(c.real, id).provider, G.liveReasoning(c.real, id).model], ['deepseek', 'deepseek-v4-pro']);
     await G.liveSetRoomModel(c.real, id, null);
@@ -1679,7 +1697,7 @@ test('추론 레벨: 방의 모델이 받는 레벨만 나와요 (마리나라�
         await G.liveSetReasoning(c.real, id, 'none'); send(c, '둘'); await G.liveGo(c.real);
         await G.liveSetReasoning(c.real, id, ''); await G.liveSetReasoning(c.real, '', ''); send(c, '셋'); await G.liveGo(c.real);
     } finally { delete T.ask; delete T.slots; delete T.sources; }
-    assert.deepEqual(seen, ['high', 'medium', 'low']);                                                     // (이 모델은 끌 수 없어서 끔은 보통으로 가요. 안 정하면 전처럼 low)
+    assert.deepEqual(seen, ['high', 'medium', 'low']);                                                     // (이 모델은 끔 칩이 없어요: 끔은 안 정함이라 Orbit 전체 값(보통)이 가요. 둘 다 안 정하면 전처럼 low)
 });
 
 test('첨부 보내기: 올리고 → 글 없이도 보내고 → 답장 요청에 그림이 실려 가요. 말에는 주소만 남고, 뺄 수 있어요', async () => {

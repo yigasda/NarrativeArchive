@@ -276,7 +276,9 @@ async function callVertexAt(t, loc, system, prompt, maxTokens, job = '', signal 
     const model = String(t.vxModel || '').trim();
     if (!model) throw new Error('Vertex 모델을 골라 주세요 (예: gemini-2.5-flash)');
     // callConn already chose between the connection's setting and the job's; nothing chosen: the model decides
-    const effort = ['low', 'medium', 'high'].find(x => x === job) || 'auto';
+    // (none · min · xhigh · max go too, in SillyTavern's words — stEffort: before, only low · medium · high did and the rest fell to auto,
+    //  so Off and the top levels never reached a Vertex model)
+    const effort = ['none', 'min', 'low', 'medium', 'high', 'xhigh', 'max'].find(x => x === job) || 'auto';
     const r = await fetch('/api/backends/chat-completions/generate', {
         method: 'POST', signal,
         headers: ctx().getRequestHeaders(),

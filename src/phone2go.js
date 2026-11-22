@@ -1208,7 +1208,8 @@ export const liveSourceModels = source => stSourceModels(source);
 //   값(마리나라가 저장하는 이름): '' (안 정함) · 'none' (끔) · 'low' · 'medium' · 'high' · 'xhigh' · 'maximum'
 //   liveReasoning(real, 방 id '') → {
 //     effort (실제로 쓰는 값: 방에 정한 것, 없으면 Orbit 전체 것), room, all,
-//     Claude(provider 'anthropic')에는 끔 칩이 없어요: 우리가 보내는 어떤 값으로도 생각이 안 꺼져요. 전에 끔으로 저장해 둔 값은 안 정함('')으로 돌려줘요
+//     끔 칩은 끔이 진짜로 생각을 끄는 연결 · 모델에만 있어요 (offTurnsOff). 끔 칩이 없는 모델에서, 전에 끔으로 저장해 둔 값은 안 정함('')으로 돌려줘요
+//     칩이 없으면([]) why: 'model' (이 모델은 레벨을 안 받아요) | 'profile' (연결 프로필 · 실리 연결은 실리 프리셋의 레벨을 써요: 우리 값이 안 가요)
 //     choices: [{ value, label, name, title? }] 이 방의 모델이 받는 레벨만 (마리나라 화면 그대로). name이 칩에 쓸 글자예요 (실제로 보내는 레벨의 이름)
 //       value는 저장하는 값이라 칩 글자와 다를 수 있어요 (DeepSeek: 글자 '높게', value 'medium'). 글자를 value로 만들지 않아요
 //     roomChoices · allChoices: '이 채팅' 줄 · 'Orbit 전체' 줄에 그릴 칩 (그 줄에 저장된 값의 칩에 불이 켜지게 맞춘 것)
@@ -1223,40 +1224,64 @@ export const levelName = level => generationLevelLabel(level, k => LEVEL_KO[k.sp
 const oldLevel = v => ({ auto: '', min: 'none', max: 'maximum' }[v] ?? v);
 // the provider, in Marinara's names, and the model a connection runs (for the per-model rules)
 const ST_PROVIDER = { makersuite: 'google', vertexai: 'google_vertex', claude: 'anthropic', mistralai: 'mistral', openai: 'openai', openrouter: 'openrouter', cohere: 'cohere', deepseek: 'deepseek', xai: 'xai', nanogpt: 'nanogpt', zai: 'zai', custom: 'custom' };
-const kindOf = t => (t.mode === 'source' ? { provider: ST_PROVIDER[t.source] || 'custom', model: String(t.stModel || '') }
-    : t.mode === 'vertex' ? { provider: 'google_vertex', model: String(t.vxModel || '') }
-        : t.mode === 'custom' ? { provider: apiFormat(t) === 'anthropic' ? 'anthropic' : 'custom', model: String(t.model || '') } : null);
+// (via: the way the request goes out — 'custom' (our own call), 'vertex' · 'source:<source>' (through SillyTavern's server
+//  with the level we give), 'st' (a connection profile or SillyTavern's own connection: its preset's level, not ours))
+const kindOf = t => (t.mode === 'source' ? { provider: ST_PROVIDER[t.source] || 'custom', model: String(t.stModel || ''), via: `source:${t.source}` }
+    : t.mode === 'vertex' ? { provider: 'google_vertex', model: String(t.vxModel || ''), via: 'vertex' }
+        : t.mode === 'custom' ? { provider: apiFormat(t) === 'anthropic' ? 'anthropic' : 'custom', model: String(t.model || ''), via: 'custom' } : null);
+// 끔이 진짜로 생각을 끄는가: 우리가 실제로 보내는 요청으로 따져요 (칩이 있어도 안 꺼지면 그 칩은 거짓이에요. 소망, 2026-11-22)
+//   우리 커스텀 API 호출 (OpenAI 형식 · Anthropic 형식): 끔이면 레벨을 아예 안 보내요 → 모델의 기본대로 생각해요 → 안 꺼져요
+//   실리 서버로 가는 길 (Vertex · 실리 연결 방식): 끔을 실리의 가장 낮은 레벨(min)로 보내요. 실리가 그걸 "끄기"로 바꾸는 곳만 꺼져요
+//     (SillyTavern 1.19.1: public/scripts/openai.js getReasoningEffort · src/prompt-converters.js calculateGoogleBudgetTokens ·
+//      src/endpoints/backends/chat-completions.js)
+//     Google (AI Studio · Vertex): Gemini 2.x Flash · Flash-Lite 는 생각 예산 0 → 꺼져요. Pro 는 128, Gemini 3 은 minimal/low → 안 꺼져요
+//     OpenAI: gpt-5.4 · 5.5 · 5.6 은 "none" → 꺼져요. 그 밖(gpt-5 · 5.1 · 5.2 는 minimal, 나머지는 low) → 안 꺼져요
+//     NanoGPT: "none" → 꺼져요.  Claude: low(또는 예산 1024) → 안 꺼져요.  그 밖의 종류: low → 안 꺼져요
+const ST_OPENAI_NONE = new Set(['gpt-5.4', 'gpt-5.4-2026-03-05', 'gpt-5.4-mini', 'gpt-5.4-mini-2026-03-17', 'gpt-5.4-nano', 'gpt-5.4-nano-2026-03-17', 'gpt-5.5', 'gpt-5.5-2026-04-23', 'gpt-5.6', 'gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna']);
+export function offTurnsOff({ via = '', model = '' } = {}) {
+    const m = String(model || '').toLowerCase(), source = via === 'vertex' ? 'vertexai' : via.startsWith('source:') ? via.slice(7) : '';
+    if (source === 'makersuite' || source === 'vertexai') return /flash/.test(m) && !/gemini-3[.\d]*-(?:pro|flash)/.test(m);
+    if (source === 'openai' || source === 'azure_openai') return ST_OPENAI_NONE.has(m);
+    return source === 'nanogpt';
+}
 function roomKind(real, roomId) {
     const room = roomId ? liveWorld(real)?.messenger?.rooms?.[roomId] : null, chat = room ? roomChat(room) : null, id = chat?.connectionId || 'dr';
     const slot = slotOf(id), override = chat ? readChatModelOverride(chat) : null;
     if (slot) { const k = kindOf(override ? { ...slot, [modelKey(slot)]: override.model } : slot); if (k) return k; }
     // (SillyTavern's own connection, or one of its profiles)
     const p = aiProfiles().find(x => `profile:${x.id}` === id), c = ctx();
-    return p ? { provider: ST_PROVIDER[p.api] || 'custom', model: String(p.model || '') }
-        : { provider: ST_PROVIDER[c.chatCompletionSettings?.chat_completion_source] || 'custom', model: String((c.mainApi === 'openai' ? c.getChatCompletionModel?.() : '') || '') };
+    return p ? { provider: ST_PROVIDER[p.api] || 'custom', model: String(p.model || ''), via: 'st' }
+        : { provider: ST_PROVIDER[c.chatCompletionSettings?.chat_completion_source] || 'custom', model: String((c.mainApi === 'openai' ? c.getChatCompletionModel?.() : '') || ''), via: 'st' };
 }
 export function liveReasoning(real, roomId = '') {
     const w = liveWorld(real), room = roomId ? w?.messenger?.rooms?.[roomId] : null;
     const ok = v => { const x = oldLevel(String(v || '')); return REASONING_LEVELS.includes(x) ? x : ''; };
-    const { provider, model } = roomKind(real, roomId);
-    // (Claude: nothing we send turns its thinking off — our Anthropic request sends no level for Off, SillyTavern's server
-    //  sends its lowest — so there is no Off chip for it, and an Off stored earlier reads as not set. The stored value
-    //  is left alone: it is Off again on a model that can be turned off. 소망, 2026-11-22; not Marinara's rule)
-    const noOff = provider === 'anthropic', seen = v => (noOff && v === 'none' ? '' : v);
-    const mine_ = seen(ok(room?.chatParameters?.reasoningEffort)), all = seen(ok(w?.presence?.meta?.reasoningEffort)), effort = mine_ || all;
-    const takes = relevantGenerationParameters({ provider, model, ...(effort ? { reasoningEffort: effort === 'none' ? null : effort } : {}) }).has('reasoningEffort');
+    const { provider, model, via } = roomKind(real, roomId);
+    const raw = { room: ok(room?.chatParameters?.reasoningEffort), all: ok(w?.presence?.meta?.reasoningEffort) };
+    // (a connection profile or SillyTavern's own connection takes its level from its preset: no level of ours reaches it,
+    //  so no chip is offered)
+    const reach = via !== 'st', level = v => (v && v !== 'none' ? v : null);
+    const takes = reach && relevantGenerationParameters({ provider, model, ...(raw.room || raw.all ? { reasoningEffort: level(raw.room || raw.all) } : {}) }).has('reasoningEffort');
     // (the chips, as Marinara's GenerationParametersEditor draws them: reasoningEffortChoices with the row's own value as
-    //  `selected`, and no Off chip for Claude Opus 5.5. A chip's text is its label, the level the model really gets)
-    const chips = sel => (!takes ? [] : reasoningEffortChoices({ provider, model, selected: sel && sel !== 'none' ? sel : null })
-        .filter(c => c.value !== null || (!isClaudeOpus55Model(model ?? '') && !noOff))
+    //  `selected`, and no Off chip for Claude Opus 5.5. A chip's text is its label, the level the model really gets.
+    //  Ours on top: the Off chip only where Off, as we send it, turns thinking off — offTurnsOff. The "Default" chip
+    //  stays: it claims the provider's own level, which is what goes)
+    const offReal = offTurnsOff({ via, model });
+    const chips = sel => (!takes ? [] : reasoningEffortChoices({ provider, model, selected: level(sel) })
+        .filter(c => c.value !== null || c.kind === 'default' || (!isClaudeOpus55Model(model ?? '') && offReal))
         // (the chip's text, as the editor writes it: the level's name; for the no-level chip "Default" where it keeps the
         //  provider's own level, else "Off". title: the editor's tooltip, "Provider default: <level>" or the description)
         .map(c => ({ value: c.value === null ? 'none' : c.value, label: c.label, name: c.label !== null ? levelName(c.label) : c.kind === 'default' ? '기본' : '끔',
             ...(c.providerDefault ? { title: `제공자 기본값: ${levelName(c.providerDefault)}` } : c.description ? { title: c.description } : {}) })));
+    // (an Off stored earlier, on a model with no Off chip, reads as not set — and goes as not set. The stored value is
+    //  left alone: it is Off again on a model that can be turned off)
+    const hasOff = chips('').some(c => c.value === 'none'), seen = v => (v === 'none' && !hasOff ? '' : v);
+    const mine_ = takes ? seen(raw.room) : '', all = takes ? seen(raw.all) : '', effort = mine_ || all;
     const choices = chips(effort), roomChoices = chips(mine_), allChoices = chips(all);
     // (what goes out for this model: Marinara's resolveProviderReasoningEffort; a model that takes no level gets none)
     const sent = !effort || !takes ? '' : resolveProviderReasoningEffort({ provider, model, reasoningEffort: effort }) ?? (effort === 'none' ? 'none' : '');
-    return { effort, room: mine_, all, choices, roomChoices, allChoices, sent, provider, model };
+    // (why there are no chips: 'profile' = this connection uses its own preset's level, 'model' = the model takes none)
+    return { effort, room: mine_, all, choices, roomChoices, allChoices, sent, provider, model, ...(takes ? {} : { why: reach ? 'model' : 'profile' }) };
 }
 export async function liveSetReasoning(real, roomId = '', effort = '') {
     const w = liveWorld(mine(real)), v = oldLevel(String(effort || ''));   // (an older screen's words are taken too)

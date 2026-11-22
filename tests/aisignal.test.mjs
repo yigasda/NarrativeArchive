@@ -56,6 +56,13 @@ test('topP: 준 값이 실려 가요 (1까지, 음수 · 안 준 것은 안 실�
     await AI.callConn(an, 'S', 'hello', 256, '', true, false, null, 0.2, 0.8);
     assert.deepEqual(bodies.map(b => b.top_p), [1, 1, undefined, undefined, undefined, 0.8, undefined]);
 });
+test('Vertex: 끔 · 가장 높은 레벨도 실리의 말로 실려 가요 (전에는 낮게 · 보통 · 높게만 가고 나머지는 자동으로 떨어졌어요)', async () => {
+    const bodies = [];
+    globalThis.fetch = async (url, init = {}) => { bodies.push(JSON.parse(init.body)); return { ok: true, status: 200, text: async () => JSON.stringify({ choices: [{ message: { content: 'hi' } }] }), clone() { return this; }, json: async () => ({ choices: [{ message: { content: 'hi' } }] }) }; };
+    const vx = { mode: 'vertex', vxModel: 'gemini-2.5-flash', vxLocation: 'global' };
+    for (const e of ['none', 'low', 'medium', 'high', 'xhigh', 'max', '', 'weird']) await AI.callConn(vx, 'S', 'hello', 256, e, true, true);
+    assert.deepEqual(bodies.map(b => b.reasoning_effort), ['min', 'low', 'medium', 'high', 'max', 'max', 'auto', 'auto']);
+});
 test('그림 · 파일: 한 차례에 실어 준 것이 연결 방식마다 그 API의 모양으로 가요 (마리나라의 제공자 코드와 같은 순서)', async () => {
     const bodies = [];
     globalThis.fetch = async (url, init = {}) => { bodies.push(JSON.parse(init.body)); return { ok: true, status: 200, text: async () => JSON.stringify({ choices: [{ message: { content: 'hi' } }], content: [{ type: 'text', text: 'hi' }] }), clone() { return this; }, json: async () => ({ choices: [{ message: { content: 'hi' } }], content: [{ type: 'text', text: 'hi' }] }) }; };
