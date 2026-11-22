@@ -8,7 +8,7 @@
 import { ctx, saveMeta, MODULE } from './core.js';
 import { applyInjection } from './inject.js';
 import { askDraft, phone2Clock, aroundBlock, ownerZone, cardBlocks } from './phonedata.js';
-import { askAI, askCompress, stripThink, isBlocked, SECTION_GUARD, aiProfiles, callConn, connSettings, stSourceList, stSourceName, stSourceModels, OWN_MODES } from './ai.js';
+import { askAI, askCompress, stripThink, isBlocked, SECTION_GUARD, aiProfiles, callConn, connSettings, stSourceList, stSourceName, stSourceModels, OWN_MODES, apiFormat } from './ai.js';
 import { SCENES_SYS, parseScenes } from './scenes.js';
 import { resolvePhoneProfile, ownerProfileBlock, personaBlock } from './phoneprofile.js';
 import { parseJson } from './phoneparse.js';
@@ -26,7 +26,7 @@ import { BACK, backLeft, backInput, phone2BackSystem, takeBack, backMessage, mar
 import { liveWall } from './phone2clock.js';
 import { gatherReply } from './phone2live.js';
 import { presenceOf, scheduleOf, setSchedule, setStatusOverride, setUserStatus, setAutonomous, statusNow, replyDelay, contextBlock, makeSchedule, checkProactive, noteProactive, fillPlaces, stateNow, takeStatus, scheduleZone, setScheduleZone, draftSchedule, summarizeSchedule, repairSchedule, setAutoRenew, autoRenewOf, needsRefresh, renewSchedules, setAutonomousOptions, autonomousOptions, checkExchangeFor, mentionsIn, activeSchedule, schedulesOn, setSchedulesOn, exportSchedule, importSchedule, syncUser, noteAssistant, noteReaction, forgetActivity, setCardStore, setZoneStore, flushCards, clearProgress, groupOrder, groupTurnPrompt, isGroupRoom, groupResponders, groupHandoff, GROUP_MENTION_INVITE_LINE, orderConversationRespondersByDelay, groupMode, mergedDelay, groupCandidates } from './phone2sched.js';
-import { buildMergedConversationSystemPrompt, formatConversationGroupOutputFormat, mergedRespondersLine, mergedMentionLine, extractLeadingThinkingBlocks, buildGenerationInfoExtra, chatModelChoiceSchema, readChatModelOverride, readChatRecentModels, applyChatModelPatch, applyChatModelOverride, reorderStars, CHAT_RECENT_MODELS_KEY, MAX_PINNED_MODELS } from './phone2merged.js';
+import { buildMergedConversationSystemPrompt, formatConversationGroupOutputFormat, mergedRespondersLine, mergedMentionLine, extractLeadingThinkingBlocks, buildGenerationInfoExtra, chatModelChoiceSchema, readChatModelOverride, readChatRecentModels, applyChatModelPatch, applyChatModelOverride, reorderStars, CHAT_RECENT_MODELS_KEY, MAX_PINNED_MODELS, relevantGenerationParameters, reasoningEffortChoices, resolveProviderReasoningEffort } from './phone2merged.js';
 import { replyInput, messengerBlock } from './phone2ask.js';
 import { phone2ReplySystem } from './phone2reply.js';
 import { runLive, takeMerged } from './phone2run.js';
@@ -1053,8 +1053,8 @@ async function askRoom(real, roomId, input, how) {
     const room = liveWorld(real)?.messenger?.rooms?.[roomId], chat = room ? roomChat(room) : null;
     const id = chat?.connectionId && (sourceOf(chat.connectionId) || liveModelConnections().some(c => c.id === chat.connectionId)) ? chat.connectionId : '';
     // (the thinking level set for this room, or for Orbit as a whole; else what the caller asks for)
-    const level = liveReasoning(real, roomId).effort;
-    if (level) how = { ...how, effort: level === 'auto' ? '' : level };
+    const rs = liveReasoning(real, roomId);
+    if (rs.effort) how = { ...how, effort: rs.sent };
     if (!id) return askDraft(input, how);
     const slot = slotOf(id), override = readChatModelOverride(chat);
     if (slot && override && OWN_MODES.includes(slot.mode)) {
@@ -1109,18 +1109,44 @@ export async function liveSwitchPersona(avatarId) {
 export const liveSources = () => stSourceList();
 export const liveSourceModels = source => stSourceModels(source);
 // ---- 추론 레벨 (모델이 생각하는 정도): 방마다 정하거나 Orbit 전체에 정해요. 마리나라의 chatParameters.reasoningEffort 자리
-//   값: '' (안 정함: 방은 Orbit 전체 값을, Orbit 전체는 원래대로 'low'를 써요) · 'auto' (모델의 기본값) · 'min' · 'low' · 'medium' · 'high' · 'max'
-//   liveReasoning(real, 방 id '') → { effort (실제로 쓰는 값), room (방에 정한 값), all (Orbit 전체 값), options }
+//   고를 수 있는 레벨은 모델마다 달라요 (마리나라의 규칙 그대로: src/marinara/generation-parameter-relevance.js · model-lists.js)
+//   값(마리나라가 저장하는 이름): '' (안 정함) · 'none' (끔) · 'low' · 'medium' · 'high' · 'xhigh' · 'maximum'
+//   liveReasoning(real, 방 id '') → {
+//     effort (실제로 쓰는 값: 방에 정한 것, 없으면 Orbit 전체 것), room, all,
+//     choices: [{ value, label }] 이 방의 모델이 받는 레벨들. label은 그 모델에 실제로 보내는 이름 (끔은 label이 null)
+//       [] 이면 이 모델은 레벨을 안 받아요 (칩을 그리지 않아요)
+//     sent: 지금 값으로 요청에 실제로 보내는 이름 ('' = 안 보냄), provider · model (어느 모델 기준인지) }
 //   liveSetReasoning(real, 방 id | '' (Orbit 전체), 값)
-export const REASONING_LEVELS = ['auto', 'min', 'low', 'medium', 'high', 'max'];
+export const REASONING_LEVELS = ['none', 'low', 'medium', 'high', 'xhigh', 'maximum'];
+// (values an earlier version stored, in SillyTavern's words)
+const oldLevel = v => ({ auto: '', min: 'none', max: 'maximum' }[v] ?? v);
+// the provider, in Marinara's names, and the model a connection runs (for the per-model rules)
+const ST_PROVIDER = { makersuite: 'google', vertexai: 'google_vertex', claude: 'anthropic', mistralai: 'mistral', openai: 'openai', openrouter: 'openrouter', cohere: 'cohere', deepseek: 'deepseek', xai: 'xai', nanogpt: 'nanogpt', zai: 'zai', custom: 'custom' };
+const kindOf = t => (t.mode === 'source' ? { provider: ST_PROVIDER[t.source] || 'custom', model: String(t.stModel || '') }
+    : t.mode === 'vertex' ? { provider: 'google_vertex', model: String(t.vxModel || '') }
+        : t.mode === 'custom' ? { provider: apiFormat(t) === 'anthropic' ? 'anthropic' : 'custom', model: String(t.model || '') } : null);
+function roomKind(real, roomId) {
+    const room = roomId ? liveWorld(real)?.messenger?.rooms?.[roomId] : null, chat = room ? roomChat(room) : null, id = chat?.connectionId || 'dr';
+    const slot = slotOf(id), override = chat ? readChatModelOverride(chat) : null;
+    if (slot) { const k = kindOf(override ? { ...slot, [modelKey(slot)]: override.model } : slot); if (k) return k; }
+    // (SillyTavern's own connection, or one of its profiles)
+    const p = aiProfiles().find(x => `profile:${x.id}` === id), c = ctx();
+    return p ? { provider: ST_PROVIDER[p.api] || 'custom', model: String(p.model || '') }
+        : { provider: ST_PROVIDER[c.chatCompletionSettings?.chat_completion_source] || 'custom', model: String((c.mainApi === 'openai' ? c.getChatCompletionModel?.() : '') || '') };
+}
 export function liveReasoning(real, roomId = '') {
     const w = liveWorld(real), room = roomId ? w?.messenger?.rooms?.[roomId] : null;
-    const ok = v => (REASONING_LEVELS.includes(v) ? v : ''), mine_ = ok(room?.chatParameters?.reasoningEffort), all = ok(w?.presence?.meta?.reasoningEffort);
-    return { effort: mine_ || all, room: mine_, all, options: REASONING_LEVELS };
+    const ok = v => { const x = oldLevel(String(v || '')); return REASONING_LEVELS.includes(x) ? x : ''; };
+    const mine_ = ok(room?.chatParameters?.reasoningEffort), all = ok(w?.presence?.meta?.reasoningEffort), effort = mine_ || all;
+    const { provider, model } = roomKind(real, roomId), takes = relevantGenerationParameters({ provider, model }).has('reasoningEffort');
+    const choices = takes ? reasoningEffortChoices({ provider, model, selected: effort && effort !== 'none' ? effort : null }).map(c => ({ value: c.value === null ? 'none' : c.value, label: c.label })) : [];
+    // (what goes out for this model: Marinara's resolveProviderReasoningEffort; a model that takes no level gets none)
+    const sent = !effort || !takes ? '' : resolveProviderReasoningEffort({ provider, model, reasoningEffort: effort }) ?? (effort === 'none' ? 'none' : '');
+    return { effort, room: mine_, all, choices, sent, provider, model };
 }
 export async function liveSetReasoning(real, roomId = '', effort = '') {
-    const w = liveWorld(mine(real)), v = String(effort || '');
-    if (v && !REASONING_LEVELS.includes(v)) throw new Error('추론 레벨은 auto · min · low · medium · high · max 가운데 하나예요');
+    const w = liveWorld(mine(real)), v = oldLevel(String(effort || ''));   // (an older screen's words are taken too)
+    if (v && !REASONING_LEVELS.includes(v)) throw new Error('추론 레벨은 none · low · medium · high · xhigh · maximum 가운데 하나예요');
     if (roomId) {
         const room = w.messenger?.rooms?.[roomId];
         if (!room) throw new Error('없는 방이에요');

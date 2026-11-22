@@ -27,6 +27,8 @@ export function connSettings(which) {
 export const trSettings = () => connSettings('tr');
 
 // a custom API speaks OpenAI's chat/completions unless it is Anthropic's own Messages API
+// a thinking level in SillyTavern's own words (auto · min · low · medium · high · max): none (off) is its lowest, xhigh its highest
+const stEffort = e => ({ '': 'auto', none: 'min', xhigh: 'max' }[String(e || '')] ?? String(e));
 export const apiFormat = t => t.fmt === 'anthropic' || t.fmt === 'openai' ? t.fmt : /anthropic\.com/i.test(String(t.url || '')) ? 'anthropic' : 'openai';
 
 // effort: 'low' | 'medium' | 'high' — how hard a thinking model may think. The connection's own setting wins over the job's.
@@ -51,7 +53,7 @@ export async function callConn(t, system, prompt, maxTokens, effort = '', force 
         if (turns.length) { turns[0] = { ...turns[0], content: `[INSTRUCTIONS]\n${system}\n[/INSTRUCTIONS]\n\n${turns[0].content}` }; prompt = turns; system = ''; }
     }
     // (the levels SillyTavern names — auto · min · low · medium · high · max — in each API's own words)
-    const own = apiFormat(t) === 'anthropic' ? ({ auto: '', min: 'low' }[e] ?? e) : ({ auto: '', min: 'minimal', max: 'high' }[e] ?? e);
+    const own = apiFormat(t) === 'anthropic' ? ({ auto: '', none: '', min: 'low' }[e] ?? e) : ({ auto: '', none: '', min: 'minimal' }[e] ?? e);
     return stripThink(note(apiFormat(t) === 'anthropic' ? await callAnthropic(t, system, prompt, maxTokens, own, signal, temperature, topP, meta) : await callOpenAICompat(t, system, prompt, maxTokens, own, signal, temperature, topP, meta)));
 }
 
@@ -263,7 +265,7 @@ async function callVertexAt(t, loc, system, prompt, maxTokens, job = '', signal 
             chat_completion_source: 'vertexai', vertexai_auth_mode: ctx().chatCompletionSettings?.vertexai_auth_mode || 'full', vertexai_express_project_id: ctx().chatCompletionSettings?.vertexai_express_project_id, vertexai_region: loc, model,
             messages: [...(system ? [{ role: 'system', content: system }] : []), ...turnsOf(prompt)],
             use_sysprompt: true, max_tokens: maxTokens, temperature: typeof temperature === 'number' ? temperature : 0.3, ...(topPOf(topP) !== undefined ? { top_p: topPOf(topP) } : {}), stream: false,
-            reasoning_effort: effort, include_reasoning: false,
+            reasoning_effort: stEffort(effort), include_reasoning: false,
         }),
     });
     const body = await r.text();
@@ -336,7 +338,7 @@ export async function callStSource(t, system, prompt, maxTokens, effort = '', si
         ...O.oai_settings, chat_completion_source: source, stream_openai: false, n: 1, bias_preset_selected: '', seed: -1,
         temp_openai: typeof temperature === 'number' ? temperature : 0.3, top_p_openai: topPOf(topP) ?? 1, openai_max_tokens: maxTokens,
         freq_pen_openai: 0, pres_pen_openai: 0, top_k_openai: 0, min_p_openai: 0, top_a_openai: 0, repetition_penalty_openai: 1,
-        reasoning_effort: effort || 'auto', show_thoughts: !!meta, enable_web_search: false, request_images: false, function_calling: false,
+        reasoning_effort: stEffort(effort), show_thoughts: !!meta, enable_web_search: false, request_images: false, function_calling: false,
         assistant_prefill: '', assistant_impersonation: '',
     };
     const built = await O.createGenerationParameters(settings, model, 'quiet', messages);

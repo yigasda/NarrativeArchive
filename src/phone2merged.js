@@ -6,3 +6,6 @@ export { extractLeadingThinkingBlocks } from './marinara/thinking-tags.js';
 export { buildGenerationInfoExtra, sanitizeBranchedMessageExtra } from './marinara/saved-message-extra.js';
 // 빠른 전환기: 방이 쓸 모델 고르기 · 최근 두 개 · 즐겨찾기 순서
 export { chatModelChoiceSchema, readChatModelOverride, readChatRecentModels, readChatFollowsMain, applyChatModelPatch, applyChatModelOverride, reorderStars, CHAT_MODEL_OVERRIDE_KEY, CHAT_RECENT_MODELS_KEY, CHAT_FOLLOWS_MAIN_KEY, MAX_PINNED_MODELS } from './marinara/chat-model.js';
+// 모델마다 받는 추론 레벨 (마리나라의 규칙 그대로)
+export { relevantGenerationParameters, reasoningEffortChoices } from './marinara/generation-parameter-relevance.js';
+export { resolveProviderReasoningEffort } from './marinara/model-lists.js';

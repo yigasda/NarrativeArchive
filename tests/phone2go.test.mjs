@@ -1614,20 +1614,37 @@ test('실리태번의 연결 종류를 그대로: 종류 · 모델을 불러와�
     assert.deepEqual([T.conn[0].t.mode, T.conn[0].t.source, T.conn[0].t.stModel], ['source', 'claude', 'claude-a']);
     assert.equal(c.room.messages.at(-1).text, '방금');
 });
-test('추론 레벨: 방마다 정하거나 Orbit 전체에 정해요. 정하면 답장 요청이 그 레벨로 가요', async () => {
-    const c = world(), id = c.room.id;
-    assert.deepEqual(G.liveReasoning(c.real, id), { effort: '', room: '', all: '', options: ['auto', 'min', 'low', 'medium', 'high', 'max'] });
+test('추론 레벨: 방의 모델이 받는 레벨만 나와요 (마리나라의 규칙). 방마다 또는 Orbit 전체에 정하고, 요청에는 그 모델의 이름으로 가요', async () => {
+    const c = world(), id = c.room.id, vals = r => r.choices.map(x => `${x.value}=${x.label}`);
+    // (모델마다 다른 칩)
+    T.slots = { dr: { mode: 'vertex', vxModel: 'gemini-3.8-flash' } };
+    assert.deepEqual(vals(G.liveReasoning(c.real, id)), ['none=null', 'low=low', 'medium=medium', 'high=high']);
+    T.slots = { dr: { mode: 'vertex', vxModel: 'gemini-4-argon' } };
+    assert.deepEqual(vals(G.liveReasoning(c.real, id)), ['low=low', 'medium=medium', 'high=high']);       // (끌 수 없는 모델)
+    T.slots = { dr: { mode: 'custom', fmt: 'anthropic', model: 'claude-opus-4-7' } };
+    assert.deepEqual(vals(G.liveReasoning(c.real, id)), ['none=null', 'low=low', 'medium=medium', 'high=high', 'xhigh=xhigh', 'maximum=max']);
+    T.slots = { dr: { mode: 'source', source: 'openai', stModel: 'gpt-4o' } };
+    assert.deepEqual(G.liveReasoning(c.real, id).choices, []);                                             // (레벨을 안 받는 모델)
+    // (방에 고른 모델이 있으면 그 모델 기준)
+    T.sources = [{ id: 'deepseek', name: 'DeepSeek' }];
+    await G.liveSetRoomModel(c.real, id, { connectionId: 'source:deepseek', model: 'deepseek-v4-pro' });
+    assert.deepEqual(vals(G.liveReasoning(c.real, id)), ['none=null', 'low=low', 'medium=high', 'maximum=max']);
+    assert.deepEqual([G.liveReasoning(c.real, id).provider, G.liveReasoning(c.real, id).model], ['deepseek', 'deepseek-v4-pro']);
+    await G.liveSetRoomModel(c.real, id, null);
+    // (정하기: 방 값이 Orbit 전체 값보다 먼저)
+    T.slots = { dr: { mode: 'vertex', vxModel: 'gemini-3.8-flash' } };
     await G.liveSetReasoning(c.real, '', 'medium');
     assert.equal(G.liveReasoning(c.real, id).effort, 'medium');
-    await G.liveSetReasoning(c.real, id, 'high');
-    assert.deepEqual([G.liveReasoning(c.real, id).effort, G.liveReasoning(c.real, id).room, G.liveReasoning(c.real, id).all], ['high', 'high', 'medium']);
+    await G.liveSetReasoning(c.real, id, 'maximum');
+    const r = G.liveReasoning(c.real, id);
+    assert.deepEqual([r.effort, r.room, r.all, r.sent], ['maximum', 'maximum', 'medium', 'high']);         // (이 모델에는 high로 가요)
     await assert.rejects(G.liveSetReasoning(c.real, id, 'huge'), /추론 레벨/);
     const seen = [];
     T.ask = async (input, o) => { seen.push(o.effort); return JSON.stringify({ state: '집', reply: ['응'], does: [] }); };
     try {
         send(c, '하나'); await G.liveGo(c.real);
-        await G.liveSetReasoning(c.real, id, 'auto'); send(c, '둘'); await G.liveGo(c.real);
+        await G.liveSetReasoning(c.real, id, 'none'); send(c, '둘'); await G.liveGo(c.real);
         await G.liveSetReasoning(c.real, id, ''); await G.liveSetReasoning(c.real, '', ''); send(c, '셋'); await G.liveGo(c.real);
-    } finally { delete T.ask; }
-    assert.deepEqual(seen, ['high', '', 'low']);
+    } finally { delete T.ask; delete T.slots; delete T.sources; }
+    assert.deepEqual(seen, ['high', 'none', 'low']);                                                       // (안 정하면 전처럼 low)
 });
