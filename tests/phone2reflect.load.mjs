@@ -51,7 +51,7 @@ map['./prompts.js'] = encoded(swap(await readFile(new URL('../src/prompts.js', i
 export const P = await import(map['./prompts.js']);
 map['./phone2story.js'] = encoded(`export const liveStoryText=()=>globalThis.__dropTest.story||'';`);
 // (whether this chat's Orbit is kept in the server plugin: T.kept; the kit the server reads — phone2kit.js — as it is)
-map['./phone2keepon.js'] = encoded(`export const keepKept=()=>!!globalThis.__dropTest.kept;`);
+map['./phone2keepon.js'] = encoded(`export const keepKept=()=>!!globalThis.__dropTest.kept;export const keepServes=()=>!!globalThis.__dropTest.serves;export const keepAutoStatus=async()=>globalThis.__dropTest.autoStatus||{on:false,rooms:[]};`);
 map['./phone2kit.js'] = href('phone2kit.js');
 // (the story snapshot's keep-up: T.tail is the role-play's end now, T.extend the lengthened snapshot and T.start a first one's
 // { snap, … } (or an Error, or a function))

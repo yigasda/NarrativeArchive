@@ -62,7 +62,7 @@
 | routes/conversation.routes.ts | 1353 | 일부 | src/marinara/autonomous-check.js · schedule-routes.js | /status(마지막 연락 · 상태 맞추기), /activity/* 는 우리 방의 말에서 다시 읽는 것으로 대신함. /busy-delay는 replyDelay('auto')로. 나머지 길은 가져옴 |
 | client/lib/character-schedule-transfer.ts | 171 | 다 | src/marinara/character-schedule-transfer.js | (스케줄 내보내기 · 가져오기 함수도 들어 있음: 화면에서 부르면 됨) |
 | client/hooks/use-autonomous-messaging.ts | 303 | 일부 | src/phone2tick.js · phone2go.js liveAutonomous | 순서 · 주기(30초) · 늦음 · 주고받기(2~5초 뒤) · 세는 때(말이 실제로 나온 뒤) · 실패하면 쉬었다 다시(5분부터 두 배, 1시간까지)는 맞춤. 코드는 우리 줄(queue)에 맞춰 다시 짬. 안 맞춘 것: 실패 종류에 따라 더 길게 쉬기(hard failure) |
-| client/hooks/use-background-autonomous.ts | 400 | 아직 (끝까지 읽음) | | 마리나라의 "채팅"은 우리 방 하나예요. **지금 열린 실리 채팅 안의 방은 안 보고 있어도 이미 다 봐요**(`liveAutonomous`가 방마다 물어요). 아직인 것: 다른 실리 채팅의 Orbit, 그리고 알림(소리 · 떠 있는 알림 · 브라우저 알림 · 안 읽음 표시 올리기). 다른 채팅 것은 서버 플러그인에 저장된 것만 읽을 수 있어요 |
+| client/hooks/use-background-autonomous.ts | 400 | 일부 (끝까지 읽음. 코드는 안 가져옴: 아래 이유) | plugin/ (서버 일꾼) · src/phone2keepon.js | 마리나라의 "채팅"은 우리 방 하나예요. **지금 열린 실리 채팅 안의 방은 안 보고 있어도 브라우저가 다 봐요**(`liveAutonomous`가 방마다 물어요). **다른 실리 채팅의 Orbit**은 브라우저가 못 읽어요(그 채팅의 데이터는 그 채팅을 열어야 메모리에 있어요): 마리나라처럼 브라우저가 돌리지 않고, **서버 일꾼이 돌려요**(브라우저가 그 채팅을 안 보고 있으면 75초 뒤부터 서버 몫). 그래서 다른 것: 그런 방은 서버의 값으로 돌아요(후속 2번까지 · 내 상태는 `idle` · 연결 프로필 방은 안 됨). **아직 없는 것: 알림**(소리 · 떠 있는 알림 · 브라우저 알림 · 다른 채팅의 안 읽음 수 올리기). 안 읽은 먼저 건 말은 방에 적혀 있고(`liveAutonomousUnread`) 방을 읽으면 지워져요 |
 | client/lib/user-status.ts · user-presence-activity.ts · hooks/use-idle-detection.ts | 110 | 다 | src/marinara/idle-detection.js · phone2sched.js userStore | |
 | services/conversation/server-autonomous-scheduler.service.ts | 507 | 다 (작업 브랜치. 브라우저 쪽 3-3이 될 때까지 메인에 안 올려요) | plugin/marinara/server-autonomous-scheduler.service.js · plugin/auto.mjs · work.mjs · worker.mjs · host.mjs · bridge.mjs · screen.mjs · log.mjs · src/phone2kit.js | 파일은 통째로 가져왔고, 부르는 두 길(때가 됐나 · 답장 만들기)을 서버에서 브라우저와 같은 코드로 돌려요. **마리나라와 다른 것**: ① 연결 프로필 · 실리 자신의 연결로 나가는 방은 서버가 못 돌려요(실리의 브라우저 코드가 보내는 길이라서). ② 실리 연결 방식은 브라우저가 미리 남긴 요청 틀이 있어야 해요(그 채팅을 한 번 열어 두면 생겨요). ③ 서버는 이야기 요약본을 늘리지 않아요. ④ 카드 · 페르소나 · 롤플 끝 메시지는 브라우저가 마지막으로 남긴 것을 읽어요(그 뒤에 실리에서 고쳤어도 그 채팅을 다시 열기 전에는 예전 것). ⑤ 마리나라에 없는 것: 늦은 답장을 서버가 보내요(우리 줄 방식). 자세한 것은 `docs/PHONE2-PLAN.md` 3-2b |
 | routes/generate/conversation-context-block.ts | 162 | 다 | src/marinara/conversation-context-block.js | |
@@ -188,13 +188,13 @@
 - [ ] **Merged 단체방의 지시문을 우리 지시문으로 바꾸기.** (소망, 2026-11-21: "일단 merged만 마리나라꺼 쓰셈", "꼭 우리 지시문으로 수정해야할 걸로 기록해두셈".) 지금 Merged 단체방은 마리나라의 Conversation 지시문을 그대로 써요(`src/marinara/merged-conversation.js`, 잇는 곳은 `src/phone2merged.js` · `phone2go.js gatherMerged`). 그래서 Merged 방의 답에는 번역(ko) · 폰에서 한 일(does) · 상태 줄 · 반응 · 상태 명령이 없어요. 우리 답장 지시문(`src/phone2reply.js`)에 "여럿의 말을 한꺼번에 쓰는" 모양을 만들어 바꿔야 해요. 바꿀 때 `docs/PROMPT-RULES.md`를 읽고, 답을 나누는 것은 `takeMerged` 자리에서 해요.
 
 - [ ] **예비 연결.** 마리나라는 연결이 실패하면 예비 연결(fallback)로 한 번 더 해요. 아직 없어요. (무작위 연결은 안 쓰는 기능이라 뺐어요 — 소망, 2026-11-21: "무작위 연결은 안 쓸 기능이야 빼".)
-- [ ] **꺼 둔 이유(`disabledAutonomousIntents`) 지키기.** 마리나라는 서버가 돌릴 때(`server-autonomous-scheduler.service.ts`의 `resolveAvailableIntent`)만 이걸 봐요. 서버 플러그인으로 그 파일을 가져올 때 같이 넣어요. 그 전까지는 꺼 둔 이유가 안 먹어요.
+- [x] **꺼 둔 이유(`disabledAutonomousIntents`) 지키기.** (2026-11-22, 작업 브랜치.) 마리나라는 서버가 돌릴 때(`server-autonomous-scheduler.service.ts`의 `resolveAvailableIntent`)만 이걸 봐요. 그 파일을 통째로 가져와서 서버 일꾼이 돌릴 때 지켜요(`tests/pluginauto.test.mjs`). 브라우저가 돌릴 때는 마리나라처럼 안 봐요.
 
 ## 아직 마리나라와 다른 것 (이미 넣은 기능 안에서)
 
 - 캐릭터 명령 켜고 끄기(방마다): 명령을 더 가져올 때 같이 넣어요(`conversation-command-runtime.ts`).
 - 연결: 마리나라는 실패했을 때 쓸 예비 연결이 있어요. 우리는 없어요. 무작위 연결("random")은 안 쓰는 기능이라 가져오지 않아요(소망, 2026-11-21).
-- 꺼 둔 이유(`disabledAutonomousIntents`): 마리나라는 서버가 돌릴 때(`server-autonomous-scheduler`)만 봐요. 창이 열려 있을 때의 길에는 그 검사가 없어요. 우리도 지금은 안 봐요: 서버 쪽을 가져올 때 같이 넣어요.
+- 꺼 둔 이유(`disabledAutonomousIntents`): 마리나라는 서버가 돌릴 때(`server-autonomous-scheduler`)만 봐요. 창이 열려 있을 때의 길에는 그 검사가 없어요. 우리도 같아요: 서버 일꾼이 돌릴 때만 봐요.
 - 방에 사람 넣고 빼기: 마리나라는 들어오고 나갈 때 카드 변수를 채우고 지워요. 우리에게는 카드 변수가 없어서 그 처리가 없어요.
 - 대화 요약: 마리나라는 요약한 말을 `hiddenFromAI`로 바꿔요. 우리는 우리 요약(`phone2digest.js`)을 써요. 아직 안 대 봤어요.
 

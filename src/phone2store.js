@@ -393,7 +393,16 @@ export function sendLive(m, id, text, at = Date.now(), opts = {}) {
     return msg;
 }
 // who가 이 방을 at까지 읽었어요 (앞으로만)
-export function readLive(m, id, who, at = Date.now()) { const r = roomOf(m, id), k = liveKey(who); if (!r.members.some(n => liveKey(n) === k)) return r; r.read ||= {}; if (!(r.read[k] >= at)) r.read[k] = at; return r; }
+// (the persona reading the room also clears Marinara's "messages a character wrote first that you have not seen" — its
+//  clearAutonomousUnread, when the chat is looked at: the server plugin sets them while SillyTavern is closed)
+export function readLive(m, id, who, at = Date.now()) {
+    const r = roomOf(m, id), k = liveKey(who);
+    if (!r.members.some(n => liveKey(n) === k)) return r;
+    r.read ||= {};
+    if (!(r.read[k] >= at)) r.read[k] = at;
+    if (k === liveKey(liveWorld(m)?.persona)) { delete r.autonomousUnreadCount; delete r.autonomousUnreadCharacterIds; delete r.autonomousUnreadAt; }
+    return r;
+}
 // who가 아직 안 읽은 남의 말 수
 export const unreadFor = (room, who) => { const k = liveKey(who), t = room?.read?.[k] || 0; return (room?.messages || []).filter(x => liveKey(x.from) !== k && x.at > t).length; };
 // 이 말을 아직 안 읽은 사람들 (보낸 사람 빼고)

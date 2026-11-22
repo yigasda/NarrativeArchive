@@ -20,7 +20,7 @@ import { scheduleDraft, scheduleSummary, scheduleGenerate } from './marinara/sch
 import { parseCharacterScheduleImport, createCharacterScheduleExport } from './marinara/character-schedule-transfer.js';
 import { buildConversationCurrentContextBlock } from './marinara/conversation-context-block.js';
 import { checkAutonomous, checkExchange, forgetAutonomousSeed } from './marinara/autonomous-check.js';
-import { clearChatActivity, clearGenerationInProgress, buildAutonomousDailyBudgetPatch, sharesAutonomousDailyBudget, isAutonomousDailyBudgetExhausted, getAutonomousDailyBudget, dailyCapForCharacter, getActivityState, recordUserActivity, recordAssistantActivity, recordUserReaction } from './marinara/autonomous.service.js';
+import { initializeActivityFromMessages, recordAutonomousClientPresence, markGenerationInProgress, clearChatActivity, clearGenerationInProgress, buildAutonomousDailyBudgetPatch, sharesAutonomousDailyBudget, isAutonomousDailyBudgetExhausted, getAutonomousDailyBudget, dailyCapForCharacter, getActivityState, recordUserActivity, recordAssistantActivity, recordUserReaction } from './marinara/autonomous.service.js';
 import { buildIntentCooldownPatch, isMessageIntent, getIntentHint } from './marinara/intent.service.js';
 import { applyCharacterStatusCommand, applyRoomScheduleCommand } from './marinara/schedule-command.js';
 import { restoreAvailableAfterUserMessage } from './marinara/idle-detection.js';
@@ -191,12 +191,13 @@ export function checkProactive(m, roomId, { now = new Date(), tzOf = () => '', c
     if (!room) throw new Error('없는 방이에요');
     const P = liveKey(w.persona), ids = room.members.map(liveKey).filter(k => k !== P && w.phones?.[k]), chatId = chatIdOf(m, roomId);
     if (!ids.length) return { shouldTrigger: false, characterIds: [], reason: 'none', inactivityMs: 0 };
+    restoreFollowups(m, roomId);
     syncUser(m, roomId);
     const first = ids[0], name = room.members.find(n => liveKey(n) === first);
     const out = checkAutonomous({
         chatId, meta: { ...p.meta, autonomousMessages: !!p.on }, characterIds: ids,
         schedules: schedulesOn(m) ? Object.fromEntries(ids.filter(k => p.schedules[k]).map(k => [k, p.schedules[k]])) : {}, statusOverrides: p.overrides, cards,
-        messages: () => (room.messages || []).filter(x => x.text || x.call).map(x => ({ role: liveKey(x.from) === P ? 'user' : 'assistant', characterId: liveKey(x.from) === P ? null : liveKey(x.from), createdAt: new Date(x.at || 0).toISOString() })),
+        messages: () => activityRows(w, room),
         userStatus: userStatus ?? (p.user?.status === 'invisible' ? 'active' : p.user?.status), maxFollowups, source, promptTimeZone: tzOf(name) || undefined, nowInstant: now,
     });
     return out.autonomousIntent ? { ...out, autonomousIntent: named(out.autonomousIntent, w.persona), autonomousIntentPrompt: named(out.autonomousIntentPrompt, w.persona) } : out;
@@ -408,7 +409,7 @@ export function checkExchangeFor(m, roomId, lastSpeaker, { now = new Date(), tzO
     return checkExchange({
         chatId, meta: p.meta, characterIds: ids, lastSpeakerCharId: liveKey(lastSpeaker),
         schedules: schedulesOn(m) ? Object.fromEntries(ids.filter(k => p.schedules[k]).map(k => [k, p.schedules[k]])) : {}, statusOverrides: p.overrides, cards,
-        messages: () => (room.messages || []).filter(x => x.text || x.call).map(x => ({ role: liveKey(x.from) === P ? 'user' : 'assistant', characterId: liveKey(x.from) === P ? null : liveKey(x.from), createdAt: new Date(x.at || 0).toISOString() })),
+        messages: () => activityRows(w, room),
         promptTimeZone: tzOf(name) || undefined, nowInstant: now,
     });
 }
@@ -437,7 +438,43 @@ export const noteAssistant = (m, roomId, owner = '', at = Date.now()) => recordA
 // 내가 이모지를 달았어요 (마리나라: 말 없이 반응만 하면 첫 번째 먼저 걸기가 조금 빨라져요)
 export const noteReaction = (m, roomId) => recordUserReaction(chatIdOf(m, roomId));
 // 방이 없어졌거나 방의 말을 손으로 크게 바꿨어요 (지우기 · 가져오기 · 되살리기): 기억을 지우고 다음 판단 때 방에서 다시 읽어요
-export function forgetActivity(m, roomId) { const id = chatIdOf(m, roomId); clearChatActivity(id); forgetAutonomousSeed(id); }
+export function forgetActivity(m, roomId) { const id = chatIdOf(m, roomId); clearChatActivity(id); forgetAutonomousSeed(id); restored.delete(id); }
+// 방의 말을 마리나라가 읽는 모양으로 (글이나 통화가 있는 말만)
+function activityRows(w, room) {
+    const P = liveKey(w.persona);
+    return (room.messages || []).filter(x => x.text || x.call).map(x => ({ role: liveKey(x.from) === P ? 'user' : 'assistant', characterId: liveKey(x.from) === P ? null : liveKey(x.from), createdAt: new Date(x.at || 0).toISOString() }));
+}
+// 먼저 건 말의 수를 방의 말에서 되살려요 (우리 것). 마리나라는 서버 한 곳이 방의 움직임을 기억해요. 우리는 브라우저와 서버 플러그인이
+// 따로 기억해서, 한쪽이 건 말을 다른 쪽이 모르면 "아직 한 번도 안 걸었다"고 보고 곧바로 또 걸어요(실리를 다시 열자마자 한 번 더).
+// 그래서 먼저 건 말에는 표시(extra.autonomous: 답장을 돌리는 파일이 남겨요)가 있고, 방을 처음 판단할 때 · 다른 쪽이 방을 바꾼 뒤에
+// 그 표시로 "내 마지막 말 뒤에 누가 몇 번 걸었고 마지막이 언제인지"를 채워요. 이미 더 많이 세고 있으면 그대로 둬요
+const restored = new Set();
+function restoreFollowups(m, roomId) {
+    const chatId = chatIdOf(m, roomId), w = liveWorld(m), room = w?.messenger?.rooms?.[roomId];
+    if (!room || restored.has(chatId)) return;
+    restored.add(chatId);
+    // (Marinara's own first read of the room; a state that already has its times is left as it is)
+    initializeActivityFromMessages(chatId, activityRows(w, room));
+    const st = getActivityState(chatId);
+    if (!st) return;
+    const P = liveKey(w.persona), list = room.messages || [];
+    let from = 0;
+    for (let i = list.length - 1; i >= 0; i--) if (liveKey(list[i]?.from) === P && (list[i].text || list[i].call)) { from = i + 1; break; }
+    const sent = new Map();
+    for (const x of list.slice(from)) {
+        if (x?.extra?.autonomous !== true || liveKey(x.from) === P) continue;
+        const k = liveKey(x.from);
+        sent.set(k, { count: (sent.get(k)?.count || 0) + 1, lastSentAt: Number(x.at) || 0 });
+    }
+    for (const [k, v] of sent) if (!((st.autonomousMessages.get(k)?.count || 0) >= v.count)) st.autonomousMessages.set(k, v);
+}
+// 다른 쪽(브라우저 ↔ 서버 플러그인)이 방을 바꿨어요: 방의 말에서 다시 읽게 해요. "브라우저가 보고 있음" · "걸고 있는 중"은 그대로 둬요
+export function reseedActivity(m, roomId) {
+    const id = chatIdOf(m, roomId), st = getActivityState(id), presence = st?.clientPresence || null, busy = st?.generationInProgressSince || null;
+    clearChatActivity(id); forgetAutonomousSeed(id); restored.delete(id);
+    if (presence) { recordAutonomousClientPresence(id, presence.status); getActivityState(id).clientPresence.updatedAt = presence.updatedAt; }
+    if (busy) { markGenerationInProgress(id); getActivityState(id).generationInProgressSince = busy; }
+}
 // 먼저 걸려던 말이 안 나왔어요 (실패 · 오프라인으로 뺌): "걸고 있는 중" 표시를 풀어요 (마리나라의 /autonomous/clear-in-progress)
 export const clearProgress = (m, roomId) => clearGenerationInProgress(chatIdOf(m, roomId));
 

@@ -1872,3 +1872,17 @@ test('서버 묶음: 실리 연결 방식으로 나가는 방마다 요청 틀. 
         assert.deepEqual(c.real.live.kit.st, {});
     } finally { for (const k of ['kept', 'tpl', 'slots', 'sources', 'noTpl', 'tplFail', 'conn']) delete T[k]; }
 });
+
+test('먼저 건 말에는 표시가 남아요 (extra.autonomous). 내 말에 대한 답장에는 없어요', async () => {
+    const c = world(), w = L.liveWorld(c.real);
+    send(c, '뭐해'); T.replies = [{ state: '집', reply: ['그냥'], does: [] }];
+    await G.liveGo(c.real);
+    assert.equal(c.room.messages.at(-1).extra?.autonomous, undefined);
+    const job = L.enqueueJob(c.real, { kind: 'reply', owner: 'Mara', room: c.room.id, why: 'You have a free moment.' });
+    Object.assign(job, { auto: true, timed: true });
+    T.replies = [{ state: '집', reply: ['자?', '아직 안 자지'], does: [] }];
+    await G.liveGo(c.real);
+    const mine = c.room.messages.filter(x => x.from === 'Mara').slice(-2);
+    assert.deepEqual(mine.map(x => [x.text, x.extra?.autonomous]), [['자?', undefined], ['아직 안 자지', true]]);
+    void w;
+});

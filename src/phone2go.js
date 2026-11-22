@@ -10,7 +10,7 @@ import { applyInjection } from './inject.js';
 import { askDraft, phone2Clock, aroundBlock, ownerZone, cardBlocks } from './phonedata.js';
 import { askAI, askCompress, stripThink, isBlocked, SECTION_GUARD, aiProfiles, callConn, connSettings, stSourceList, stSourceName, stSourceModels, OWN_MODES, apiFormat, stLevelPayload, draftSettings, draftReady, stSourceTemplate } from './ai.js';
 import { buildKit, putKit } from './phone2kit.js';
-import { keepKept } from './phone2keepon.js';
+import { keepKept, keepAutoStatus, keepServes } from './phone2keepon.js';
 import { stReach, REACH_NAME } from './phone2stlevel.js';
 import { SCENES_SYS, parseScenes } from './scenes.js';
 import { resolvePhoneProfile, ownerProfileBlock, personaBlock } from './phoneprofile.js';
@@ -164,7 +164,14 @@ export async function liveGo(real, { onChange = () => {} } = {}) {
             if (w && w.id === job.world && got?.said && !job.regen) noteAssistant(real, job.room, job.auto ? job.owner : '');
             // (a message a character wrote first counts toward the day and its reason rests, once it is really there — Marinara's
             // recordSavedAutonomousGeneration; and the room's failure pause ends)
-            if (w && w.id === job.world && job.auto && got?.said) { noteProactive(real, job.room, liveKey(job.owner), job.intent || ''); const room = w.messenger?.rooms?.[job.room]; if (room) delete room.autoFail; await line.save(); }
+            // (the message is marked as one written first: the other side — the browser or the server plugin — reads how many
+            //  were sent since my last words from these marks, phone2sched.js restoreFollowups)
+            if (w && w.id === job.world && job.auto && got?.said) {
+                noteProactive(real, job.room, liveKey(job.owner), job.intent || '');
+                const room = w.messenger?.rooms?.[job.room];
+                if (room) { delete room.autoFail; const last = [...(room.messages || [])].reverse().find(x => liveKey(x.from) === liveKey(job.owner)); if (last) last.extra = { ...(last.extra || {}), autonomous: true }; }
+                await line.save();
+            }
             // (a group room: whoever this reply called with @Name answers next — Marinara's mention routing)
             if (w && w.id === job.world && got?.said && !job.regen && handOff(real, job)) await line.save();
             // (a group room, after a message a character wrote first: another may answer it, as Marinara's loop does)
@@ -1069,6 +1076,20 @@ export async function liveSetRoomModel(real, roomId, pick = null) {
 export function liveReplyPlan(real, roomId) {
     const r = replyRoute(real, roomId), effort = r.rs.effort ? r.rs.send : 'low';
     return { via: r.rs.via, t: r.t, maxTokens: LIVE_GO.replyTokens, effort, thoughts: effort !== 'none' };
+}
+// 실리를 닫아도 먼저 말 걸기 · 늦은 답장이 오는 방인가 (서버 플러그인의 일꾼에 물어요) → { on: 일꾼이 도나, rooms: { 방 id: { can, why } } }
+//   can이 false면 why에 이유 (연결 프로필 · 실리 자신의 연결로 나가는 방, 요청 틀이 아직 없는 실리 연결 방식, 묶음이 아직 없음)
+export async function liveServerStatus(real) {
+    if (!real || !open(real) || !liveWorld(real)) return { on: false, rooms: {} };
+    const r = await keepAutoStatus();
+    return { on: r.on, rooms: Object.fromEntries(r.rooms.map(x => [x.room, { can: !!x.can, why: String(x.why || '') }])) };
+}
+// 지금 서버 플러그인의 일꾼이 돌고 있나 (마지막으로 알렸을 때)
+export const liveServerOn = () => keepServes();
+// 실리를 닫은 동안 캐릭터가 먼저 건, 내가 아직 안 본 말 (마리나라의 autonomousUnread: 방을 읽으면 지워져요) → [{ room, count, by: [이름], at }]
+export function liveAutonomousUnread(real) {
+    const w = liveWorld(real);
+    return Object.values(w?.messenger?.rooms || {}).filter(r => r.autonomousUnreadCount > 0).map(r => ({ room: r.id, count: Math.floor(r.autonomousUnreadCount), by: (Array.isArray(r.autonomousUnreadCharacterIds) ? r.autonomousUnreadCharacterIds : []).map(k => r.members.find(n => liveKey(n) === k) || k), at: r.autonomousUnreadAt || '' }));
 }
 // ---- 서버 플러그인이 실리를 닫은 동안 읽을 묶음 (phone2kit.js): 이 채팅의 캐릭터 · 페르소나 · 롤플 끝 메시지에, 실리 연결 방식으로
 // 나가는 방들의 요청 틀(ai.js stSourceTemplate)을 더해요. 플러그인에 둔 채팅만 → 달라져서 넣었으면 true (저장은 부르는 쪽이)

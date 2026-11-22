@@ -804,3 +804,52 @@ test('Merged 지시문: 마리나라의 글 그대로 (기본 Conversation 지�
     assert.equal(MC.mergedMentionLine(['Ivo']), "Respond ONLY as Ivo. The user's latest message explicitly @mentions Ivo, so no other character should reply to this turn.");
     assert.equal(MC.mergedMentionLine(['Ivo', 'Mara']), "The user's latest message explicitly @mentions Ivo, Mara. Only those mentioned characters may reply to this turn. Do not include any response lines from any other character.");
 });
+
+// ---- 브라우저와 서버 플러그인이 따로 기억해도 같은 판단을 하게: 먼저 건 말의 표시로 되살려요
+test('먼저 건 말의 표시(extra.autonomous): 방을 처음 읽는 쪽도 "이미 걸었다"를 알아요. 표시가 없으면 한 번도 안 건 것으로 봐요', () => {
+    const mk = marks => {
+        const { m, w, a } = world(), t = Date.now();
+        w.presence = { on: true, schedules: {}, overrides: {}, meta: {}, user: {} };
+        L.sendLive(m, a.id, 'hey', t - 6 * 3600_000);
+        a.messages.push({ id: 'r1', n: 2, from: 'Mara', text: 'hi', at: t - 6 * 3600_000 + 60_000 });
+        marks.forEach((on, i) => a.messages.push({ id: `p${i}`, n: 3 + i, from: 'Mara', text: 'you there?', at: t - 120_000 + i * 1000, ...(on ? { extra: { autonomous: true } } : {}) }));
+        return { m, a };
+    };
+    // 표시 없이(예전 말 · 그냥 답장): 6시간 조용했으니 걸 때예요
+    const plain = mk([false]);
+    assert.equal(S.checkProactive(plain.m, plain.a.id, {}).shouldTrigger, true);
+    S.clearProgress(plain.m, plain.a.id);
+    // 방금(2분 전) 먼저 건 말이 하나 있으면: 따라 묻기는 한참 뒤예요
+    const one = mk([true]);
+    assert.equal(S.checkProactive(one.m, one.a.id, {}).shouldTrigger, false);
+    // 서버처럼 후속 2번까지: 이미 두 번 걸었으면, 다음 따라 묻기 때가 지났어도 더 안 걸어요 (브라우저처럼 3번까지면 걸어요)
+    const long = cap => { const x = mk([true, true]), t = Date.now(); x.a.messages[0].at = t - 17 * 3600_000; x.a.messages[1].at = t - 17 * 3600_000 + 60_000; x.a.messages[2].at = t - 16.5 * 3600_000; x.a.messages[3].at = t - 16.5 * 3600_000 + 1000; return S.checkProactive(x.m, x.a.id, { maxFollowups: cap, source: 'server', userStatus: 'idle' }).shouldTrigger; };
+    assert.equal(long(2), false);
+    assert.equal(long(3), true);
+    // 내가 그 뒤에 말했으면 표시는 지난 일이에요
+    const back = mk([true]);
+    L.sendLive(back.m, back.a.id, 'sorry, was out', Date.now() - 5 * 3600_000 + 1);
+    back.a.messages.sort((x, y) => x.at - y.at);
+    assert.equal(S.checkProactive(back.m, back.a.id, {}).shouldTrigger, false);   // (내 말이 마지막이고 캐릭터가 아직 답 안 함: 답장 줄의 일)
+});
+
+test('다른 쪽이 방을 바꾼 뒤(reseedActivity): 방에서 다시 읽어요. "브라우저가 보고 있음"은 남아요', async () => {
+    const A = await at('marinara/autonomous.service.js');
+    const { m, w, a } = world(), t = Date.now(), id = S.chatIdOf(m, a.id);
+    w.presence = { on: true, schedules: {}, overrides: {}, meta: {}, user: {} };
+    L.sendLive(m, a.id, 'hey', t - 6 * 3600_000);
+    a.messages.push({ id: 'r1', n: 2, from: 'Mara', text: 'hi', at: t - 6 * 3600_000 + 60_000 });
+    assert.equal(S.checkProactive(m, a.id, { source: 'server', userStatus: 'idle' }).shouldTrigger, true);
+    A.recordAutonomousClientPresence(id, 'active');
+    const seen = A.getActivityState(id).clientPresence.updatedAt;
+    // 그사이 다른 쪽이 먼저 건 말을 넣었어요
+    a.messages.push({ id: 'p1', n: 3, from: 'Mara', text: 'you there?', at: t - 60_000, extra: { autonomous: true } });
+    S.clearProgress(m, a.id);
+    assert.equal(S.checkProactive(m, a.id, { source: 'server', userStatus: 'idle' }).shouldTrigger, true);   // (아직 모름: 기억은 예전 것)
+    S.clearProgress(m, a.id);
+    S.reseedActivity(m, a.id);
+    assert.equal(A.getActivityState(id).clientPresence.updatedAt, seen);
+    assert.equal(S.checkProactive(m, a.id, { source: 'server', userStatus: 'idle' }).shouldTrigger, false);
+    assert.equal(A.getActivityState(id).autonomousMessages.get('mara').count, 1);
+    assert.equal(A.getActivityState(id).clientPresence.updatedAt, seen);
+});

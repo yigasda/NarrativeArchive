@@ -3,6 +3,7 @@
 // 화면은 document의 'na-live-change' 소식을 듣고 다시 그려요.
 
 import { getMeta, hasChat, saveMeta } from './core.js';
+import { keepServes } from './phone2keepon.js';
 import { startIdleDetection } from './marinara/idle-detection.js';
 import { userStore } from './phone2sched.js';
 
@@ -12,6 +13,9 @@ export async function tickOnce() {
     if (busy || !hasChat()) return 0;
     const m = getMeta(), w = m?.live?.world;
     if (!w) return 0;
+    // (nobody is looking and the server plugin's worker is running: this chat is the worker's until the tab shows again —
+    //  if both ran, a character would write first twice. Without the worker, as before: the browser does it all)
+    if (globalThis.document?.hidden && keepServes()) return 0;
     // (the role-play moved on, a card or the persona changed: what the server plugin reads while SillyTavern is closed follows)
     try { if (await (await import('./phone2go.js')).liveKitRefresh(m)) await saveMeta(); } catch (err) { console.warn('[narrative-archive] live kit', err); }
     const waiting = !!w.queue?.jobs?.some(j => j.kind === 'reply' && j.state === 'waiting');

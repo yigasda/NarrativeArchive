@@ -13,7 +13,7 @@
 
 import { joinLive, splitLive, sumOf } from '../src/phone2keep.js';
 import { liveWorld, liveKey } from '../src/phone2store.js';
-import { checkProactive, chatIdOf, schedulesOn } from '../src/phone2sched.js';
+import { checkProactive, chatIdOf, schedulesOn, reseedActivity } from '../src/phone2sched.js';
 import { recordAutonomousClientPresence } from '../src/marinara/autonomous.service.js';
 
 const obj = v => v && typeof v === 'object' && !Array.isArray(v);
@@ -40,6 +40,9 @@ export function makeAutoApp({ store, tzOf = () => '', cardsOf = () => ({}), gene
         let live;
         try { live = joinLive(got.parts); } catch { worlds.delete(sid); return null; }
         const e = { sid, rev: got.rev, real: { live }, sums: new Map(Object.entries(got.parts).map(([k, v]) => [k, sumOf(JSON.stringify(v))])) };
+        // (read again because the browser saved: what Marinara's tracker remembers of its rooms is read from the rooms again —
+        //  my new words, the messages the browser's characters wrote first. "The browser is watching" stays)
+        if (had) for (const id of Object.keys(liveWorld(e.real)?.messenger?.rooms || {})) reseedActivity(e.real, id);
         worlds.set(sid, e);
         return e;
     }
