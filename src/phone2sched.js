@@ -276,9 +276,20 @@ export function stateNow(m, owner, { now = new Date(), tz = '' } = {}) {
 export function takeStatus(m, owner, cmd, { now = new Date(), tz = '' } = {}) {
     if (!obj(cmd)) return null;
     const p = presenceOf(m), k = liveKey(owner), status = STATUSES.includes(String(cmd.status || '').toLowerCase()) ? String(cmd.status).toLowerCase() : undefined;
-    const got = applyCharacterStatusCommand({ command: { type: 'schedule_update', status, activity: one(cmd.activity).slice(0, 120) || undefined, duration: one(cmd.duration) || undefined }, current: p.overrides[k], schedule: activeSchedule(m, owner) || undefined, now, scheduleNow: toZonedWallClockDate(now, tz || undefined) });
+    const activity = one(cmd.activity).slice(0, 120), place = one(cmd.place).slice(0, 80);
+    // 우리 것: 방금 들은 자기 상태를 그대로 되돌려 쓴 것은 "바꾼 것"이 아니에요.
+    //   마리나라에서 이 명령은 캐릭터가 바꿀 때만 붙이는 꼬리표예요. 우리는 답장 JSON의 칸이라, 모델이 답장마다 요청의
+    //   CONTEXT에서 읽은 지금 상태("Your current status: …")를 그대로 채워 넣는 일이 잦아요. 그걸 새 명령으로 받으면
+    //   임시 상태가 답장마다 다시 걸려서 끝나지 않고, 스케줄이 영영 안 보여요 (밤에 쓴 "into the night"가 다음 날 낮에도 남음).
+    //   - 지금 상태와 하는 일 · 상태가 같으면: 아무것도 안 바꿔요
+    //   - 하는 일은 그대로인데 상태만 다르면: 상태만 바꾸고, 끝나는 때는 그대로 둬요 (늘리지 않아요)
+    const cur = getActiveStatusOverride(p.overrides[k], now), eff = statusNow(m, owner, { now, tz }), same = (x, y) => one(x).toLowerCase() === one(y).toLowerCase();
+    if (eff && (!activity || same(activity, eff.activity))) {
+        if (!status || status === eff.status) return null;
+        if (cur?.expiresAt) { p.overrides[k] = { ...cur, status, ...(place ? { place } : {}) }; toCard(owner, { conversationStatusOverride: p.overrides[k] }); return p.overrides[k]; }
+    }
+    const got = applyCharacterStatusCommand({ command: { type: 'schedule_update', status, activity: activity || undefined, duration: one(cmd.duration) || undefined }, current: p.overrides[k], schedule: activeSchedule(m, owner) || undefined, now, scheduleNow: toZonedWallClockDate(now, tz || undefined) });
     if (!got) return null;
-    const place = one(cmd.place).slice(0, 80);
     p.overrides[k] = { ...got, ...(place ? { place } : {}) };
     toCard(owner, { conversationStatusOverride: p.overrides[k] });
     return p.overrides[k];

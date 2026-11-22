@@ -266,6 +266,27 @@ test('스케줄이 있는 사람의 답장 지시문: state를 안 묻고, 마�
     assert.ok(s.includes(`\nSTATUS\n- "status": ${said} With "place": where that puts you. Else "".\n\nTEXTING\n`));
     assert.ok(s.includes('\n{ "status": "" or { "status": "online|idle|dnd|offline", "activity": "activity name", "duration": "number of hours (e.g., 1h)", "place": "where" },\n  "reply": '));
 });
+test('캐릭터가 방금 들은 자기 상태를 그대로 되돌려 쓴 것은 바꾼 게 아니에요: 임시 상태가 다시 걸리지 않고, 시간이 지나면 스케줄로 돌아가요', () => {
+    const { m } = world(), t = Date.parse('2026-11-23T03:00:00Z'), now = new Date(t), later = ms => new Date(t + ms), H = 3600_000;
+    S.setSchedule(m, 'Mara', all('online', 'free time'), NOW);
+    // (스케줄대로인 상태를 그대로 적어 보낸 답: 임시 상태를 만들지 않아요)
+    assert.equal(S.takeStatus(m, 'Mara', { status: 'online', activity: 'Free Time', duration: '8h' }, { now, tz: 'UTC' }), null);
+    assert.equal(S.statusNow(m, 'Mara', { now, tz: 'UTC' }).override, undefined);
+    // (밤에 스스로 바꿈: 2시간짜리)
+    const o = S.takeStatus(m, 'Mara', { status: 'dnd', activity: 'prolonged classical piano playing into the night', duration: '2h' }, { now, tz: 'UTC' });
+    assert.equal(Date.parse(o.expiresAt) - t, 2 * H);
+    // (다음 답장들이 그 상태를 그대로 되돌려 써도 — 긴 시간을 붙여서도 — 끝나는 때는 그대로)
+    assert.equal(S.takeStatus(m, 'Mara', { status: 'dnd', activity: 'prolonged classical piano playing into the night', duration: '12h' }, { now: later(H), tz: 'UTC' }), null);
+    assert.equal(S.takeStatus(m, 'Mara', { activity: ' Prolonged classical piano playing into the night ' }, { now: later(H), tz: 'UTC' }), null);
+    // (하는 일은 그대로인데 상태만 다르면: 상태만 바뀌고 끝나는 때는 안 늘어나요)
+    const s2 = S.takeStatus(m, 'Mara', { status: 'online', activity: 'prolonged classical piano playing into the night', duration: '12h' }, { now: later(H), tz: 'UTC' });
+    assert.deepEqual([s2.status, s2.expiresAt, s2.createdAt], ['online', o.expiresAt, o.createdAt]);
+    // (끝나면 스케줄로)
+    assert.deepEqual((({ status, activity, override }) => [status, activity, override])(S.statusNow(m, 'Mara', { now: later(2 * H + 1000), tz: 'UTC' })), ['online', 'free time', undefined]);
+    // (진짜로 바꾼 것은 전처럼 받아요)
+    const n = S.takeStatus(m, 'Mara', { status: 'idle', activity: 'taking a shower', duration: '30m' }, { now: later(H), tz: 'UTC' });
+    assert.deepEqual([n.status, n.activity, Date.parse(n.expiresAt) - (t + H)], ['idle', 'taking a shower', 30 * 60_000]);
+});
 test('캐릭터가 스스로 상태를 바꾸면: 임시 상태가 되고(시간이 지나면 스케줄로), 장소도 따라가요. 손으로 준 상태는 못 바꿔요', () => {
     const { m, w } = world(), p = w.phones.mara, t = Date.parse('2026-11-23T03:00:00Z'), now = new Date(t);
     p.where = { at: 1, people: [{ name: 'Mara', place: 'home' }] };
