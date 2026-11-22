@@ -181,13 +181,14 @@ export function orbitSetPage(T, face) {
                 + (T.slots || []).map(S => { const k = S.k, o = (f, more = {}) => ({ cls: 'na_oc_in', ...more }), mk = `om:${k}`, list = S.models.length ? S.models : (S.model ? [S.model] : []), mopts = list.slice(0, 200).map(x => [x, x]);
                     const load = `<div class="ot_r"><button type="button" class="os_go na_oc_load" data-k="${k}"${S.busy ? ' disabled' : ''}>${li('refresh-cw', 13, 2.2)}${S.busy ? '불러오는 중…' : S.models.length ? `모델 다시 불러오기 (${S.models.length}개)` : '모델 불러오기'}</button><i class="os_sp"></i><button type="button" class="os_go na_oc_test" data-k="${k}"${S.testing ? ' disabled' : ''}>${S.testing ? '확인하는 중…' : '연결 테스트'}</button></div>`;
                     const model = S.on ? (mopts.length ? sel(mk, '모델', mopts.some(x => x[0] === S.model) ? mopts : [[S.model, S.model || '고르기'], ...mopts], '', 'na_oc_model', S.model) : '') + inp(`${S.mf}:${k}`, mopts.length ? '모델 직접 입력' : '모델', S.model, '모델 ID', o()) : '';
-                    return cap(S.title) + cd(`<div class="os_rw ot_t"><span class="ot_x"><span class="os_l">${esc(S.label)}</span><span class="os_d">${esc(S.sub)}</span></span>${S.role ? `<span class="ot_chip strong">${S.role}</span>` : ''}</div>`,
-                        sel(`ow:${k}`, '방식', S.ways, '', 'na_oc_mode', S.way),
+                    const open = !!T.v[`oc:${k}`];   // (평소엔 접혀 있어요: 줄줄이 길어서, 소망)
+                    return cap(S.title) + cd(`<div role="button" tabindex="0" class="os_rw ot_t na_sc_dr" data-k="oc:${k}" aria-expanded="${open}" aria-label="${esc(S.title)} ${open ? '접기' : '펼치기'}"><span class="ot_x"><span class="os_l">${esc(S.label)}</span><span class="os_d">${esc(S.sub)}</span></span>${S.role ? `<span class="ot_chip strong">${S.role}</span>` : ''}<i class="os_ch${open ? ' up' : ''}">${li('chevron-down', 16)}</i></div>`,
+                        ...(!open ? [] : [sel(`ow:${k}`, '방식', S.ways, '', 'na_oc_mode', S.way),
                         S.mode === 'source' ? sel(`os:${k}`, '연결 종류', [['', '고르기'], ...S.sources], '', 'na_oc_src', S.source) : '',
                         S.mode === 'custom' ? inp(`url:${k}`, '주소', S.url, 'https://api.example.com/v1', o()) + inp(`key:${k}`, 'API 키', '', S.keyTail ? `저장됨 ${S.keyTail} · 바꾸려면 새 키` : 'sk-…', o()) + sel(`of:${k}`, '형식', [['', '주소 보고 자동'], ['openai', 'OpenAI 호환'], ['anthropic', 'Anthropic']], '', 'na_oc_fmt', S.fmt) : '',
                         S.mode === 'vertex' ? inp(`vxLocation:${k}`, '지역', S.vxLocation, '비우면 실리태번 설정 따라', o()) : '',
-                        model, S.on ? pad(load) : '')
-                        + (S.mode === 'source' ? hp('키와 주소는 실리태번의 API 연결에 넣어 둔 것을 그대로 씁니다.') : S.mode === 'custom' ? hp('키는 이 기기에만 저장됩니다.') : ''); }).join('')
+                        model, S.on ? pad(load) : '']))
+                        + (!open ? '' : S.mode === 'source' ? hp('키와 주소는 실리태번의 API 연결에 넣어 둔 것을 그대로 씁니다.') : S.mode === 'custom' ? hp('키는 이 기기에만 저장됩니다.') : ''); }).join('')
                 + (T.rs ? cap('추론 레벨') + cd(sel('rsRoom', '이 채팅', [['', `Orbit 전체 값 따름 (${RS[T.rs.all || 'low']})`], ...RSO], '', 'na_os_rs', T.rs.room), sel('rsAll', 'Orbit 전체', [['', '안 정함 (낮게)'], ...RSO], '', 'na_os_rs', T.rs.all)) + hp(`모델이 답하기 전에 생각하는 정도입니다. 지금 이 채팅은 <b>${RS[T.rs.effort || 'low']}</b>을(를) 씁니다.`) : '')
                 + cap('연결 설정') + cd(nav('stconn', 'API 연결', '키 · 주소 · 모델 · 연결 · 테스트 메시지', 'chevron-right')); },
         // 실리태번의 API 연결 (1-7): src/phonestconn.js가 실리의 진짜 칸을 읽어 준 목록(T.st)을 실리 순서대로 그려요. 소스마다 화면을 따로 짜지 않아요
