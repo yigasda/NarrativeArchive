@@ -14,6 +14,7 @@ import { askDraft, draftReady, draftSettings, drLabel, listModels, vxModelList, 
 import { ctx, getMeta, globalSettings, phoneMeta, saveGlobal, saveMeta, setPhoneMeta } from './core.js';
 import { applyInjection } from './inject.js';
 import { faceHtml, faceOf, stFace, stPersonaList, nameKey, peopleList, shrinkFace } from './people.js';
+import { stConnNodes, stConnSet, stConnToggleOption, stConnClick, stConnWatch } from './phonestconn.js';
 import { drafting, drawing, drawPhoto, drawPost, filling, paging, retranslate, retranslating, recording, searching, searchPage, shooting, webPage, writing } from './phoneai.js';
 import { setDraft, setDraftModels, setLang, setSnap, setVoice, setVoiceAdd, voiceList, voicePeople, ax, axFind, groupInfo, APPS, AXB, AXB_C, busyHtml, setDate, setScreenHolderView, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, mapTowns, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setOwnerProfile, setWho, snsPost, snsScreen, statusBar, threadScreen, setPlace, prepScreen } from './phoneapps.js';
 import { phoneMaking, dropStretch, chatStamp, koGaps, savedName, ensureIds, hasDatedRecords, noArchive, koOn, loreOff, tidyKo, markAfter, phoneLore, REMAKE, restoreRounds, showNow, syncLeft, syncRows, syncState, tidyJournal, undoRound } from './phonedata.js';
@@ -239,7 +240,8 @@ export async function openPhone(who = null) {
     const startPlan = startPlanOf;
     // 어두운 방(⋯ 메뉴의 어둡게 · 밝게): 확장 설정에 남아요. 그릴 때마다 읽으니 설정을 그대로 읽어요(koOn과 같은 까닭)
     const obDark = () => (ctx().extensionSettings?.narrative_archive ?? globalSettings()).orbitDark === true;
-    let obSet = '', obFindTab = 'marks', obFindQ = '', obJump = null, obSetUi = { v: {}, open: '', tzQ: '', busy: false }, obSw = null, obAtt = [], obThink = null, obPeek = null;   // obAtt: 붙여 둔 파일 [{ name, type, img }] · obThink: 생각 보기 { text, copied } · obPeek: 프롬프트 보기 · obSw: 빠른 전환기 { tab, q, pq, drilled, pane, order, stars, limit } · obSetUi: 채팅 설정 화면들의 아직 안 이어진 조작 값(시트가 열린 동안만) · 펼친 고르기 · 시간대 검색   // 방 설정 시트: obSet = '' | 'main' | 'find' | 'name' | 'people', obJump = 찾아갈 말의 id
+    let obSet = '', obFindTab = 'marks', obFindQ = '', obJump = null, obSetUi = { v: {}, open: '', tzQ: '', busy: false }, obSw = null, obAtt = [], obThink = null, obPeek = null, scStop = null, scDown = false, scPend = false, scT = 0;
+    const scWatch = on => { if (on && !scStop) scStop = stConnWatch(() => scDraw()); else if (!on && scStop) { scStop(); scStop = null; scPend = false; } };   // 실리 API 연결 화면이 떠 있는 동안만 실리 칸을 지켜봐요   // obAtt: 붙여 둔 파일 [{ name, type, img }] · obThink: 생각 보기 { text, copied } · obPeek: 프롬프트 보기 · obSw: 빠른 전환기 { tab, q, pq, drilled, pane, order, stars, limit } · obSetUi: 채팅 설정 화면들의 아직 안 이어진 조작 값(시트가 열린 동안만) · 펼친 고르기 · 시간대 검색   // 방 설정 시트: obSet = '' | 'main' | 'find' | 'name' | 'people', obJump = 찾아갈 말의 id
     // 이모지 판: obEmo = { tab: 'emoji' | 'kao', cat, q } | null. 목록 · 검색(마리나라 것, 130KB)은 처음 열 때 불러와요
     let obEmo = null, obEmoLib = null;
     const EMO_KO = { 'Smileys & Emotion': '스마일리 및 감정', 'People & Body': '사람 및 신체', 'Animals & Nature': '동물 및 자연', 'Food & Drink': '음식 및 음료', 'Travel & Places': '여행 및 장소', Activities: '활동', Objects: '사물', Symbols: '기호', Flags: '깃발',
@@ -319,7 +321,7 @@ export async function openPhone(who = null) {
             if (obFrom === null || obFrom >= shown.length) obFrom = Math.max(0, shown.length - OB_PAGE);
             if (obJump) { const k = shown.findIndex(x => x.id === obJump); if (k >= 0 && k < obFrom) obFrom = Math.max(0, k - 8); }   // (찾기 · 북마크에서 "말로 가기": 그 말이 안 그려진 옛 말이면 거기까지 그려요)
             // 방 설정 시트(시안 orbit-top S1~S3)에 줄 것: 찾은 말 · 북마크 · 휴지통은 반영 쪽 함수가 줘요
-            const setUi = () => { if (!obSet || ro) return null;
+            const setUi = () => { scWatch(obSet === 'stconn' && !ro); if (!obSet || ro) return null;
                 const row = x => { const a = vw(x.at); return { id: x.id, from: liveKey(x.from) === liveKey(me) ? '나' : x.from, text: x.text, ko: x.ko || '', when: `${dayOf(a)} ${a.slice(6)}` }; };
                 const A = liveAutonomousOptions(realM) || {}, t = { page: obSet, title: V.titleOf(r), group, count: os.length, me, autoOn: !!A.on, auto: { on: !!A.on, cap: A.autonomousDailyCapOverride == null ? '' : String(A.autonomousDailyCapOverride), ex: !!A.characterExchanges, ind: A.groupChatMode === 'individual' }, marks: liveMarked(realM, r.id).length };
                 if (obSet === 'main') { t.q = obFindQ; t.trashN = liveTrash(realM, r.id).length; const q = obFindQ.trim().toLowerCase();
@@ -327,7 +329,7 @@ export async function openPhone(who = null) {
                 if (obSet === 'find') { t.tab = obFindTab;
                     t.items = obFindTab === 'marks' ? liveMarked(realM, r.id).map(k => ({ ...row(k.x), note: k.note || '', pin: !!k.x.extra?.pinnedToContext })).reverse()
                         : liveTrash(realM, r.id).map(k => ({ ...row(k.x), when: `${Math.max(0, Math.ceil((k.until - Date.now()) / 864e5))}일 남음` })); }
-                t.v = obSetUi.v; t.open = obSetUi.open; if (obSet === 'conn') t.conns = obConns(); t.roomId = r.id; t.members = os; t.auto.ind = A.groupChatMode === 'individual'; t.auto.order = A.groupResponseOrder || 'sequential'; t.auto.turn = A.groupTurnPromptEnabled !== false;
+                t.v = obSetUi.v; t.open = obSetUi.open; if (obSet === 'conn') t.conns = obConns(); if (obSet === 'stconn') { t.st = stConnNodes(); t.scQ = obSetUi.scQ || ''; } t.roomId = r.id; t.members = os; t.auto.ind = A.groupChatMode === 'individual'; t.auto.order = A.groupResponseOrder || 'sequential'; t.auto.turn = A.groupTurnPromptEnabled !== false;
                 if (obSet === 'name') { t.name = r.name || ''; t.autoName = [...os].join(', '); }
                 if (obSet === 'auto' || obSet === 'tz') { const zone = liveScheduleZone(realM), dev = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', q = obSetUi.tzQ.trim().toLowerCase();
                     t.sched = { on: liveSchedulesOn(realM), any: os.some(n => SCH_DAYS.some(d => liveSchedule(realM, n)?.days?.[d]?.length)), list: os.map(n => ({ n, days: SCH_DAYS.filter(d => liveSchedule(realM, n)?.days?.[d]?.length).length })), zone: schTzLabel(zone || dev), device: dev, differs: !!zone && zone !== dev, busy: obSetUi.busy };
@@ -1199,12 +1201,30 @@ export async function openPhone(who = null) {
     $root.on('click', '.na_ow_default', e => { e.stopPropagation(); swPick(null, '이 채팅은 이제 메인 모델을 따릅니다'); });
     $root.on('click', '.na_ow_persona', async function (e) { e.stopPropagation(); if (this.getAttribute('aria-current') === 'true') { obSw = null; return drawPhone(true); } if (!this.dataset.id) return obNotYet(this);
         try { await liveSwitchPersona(this.dataset.id); obSw = null; } catch (err) { obWarn(err); } if (!phoneClosed && stillHere()) drawPhone(true); });
-    const OB_SET_UP = { memlist: 'memory', sumedit: 'sum', tz: 'auto' };
+    const OB_SET_UP = { memlist: 'memory', sumedit: 'sum', tz: 'auto', stconn: 'conn' };
+    // 실리태번 API 연결 화면 (src/phonestconn.js): 폰에서 누른 것을 실리의 진짜 칸에 그대로 넣어요. 실리 쪽이 바뀌면(상태 · 모델 목록 · 보이는 칸) 다시 그려요
+    //   글을 치는 중이거나 손가락이 내려가 있는 동안에는 다시 그리지 않아요(치던 글이 사라지거나, 누르던 단추가 바뀌어 눌림이 사라져요). 끝나면 그려요
+    const scBusy = () => scDown || !!document.activeElement?.closest?.('.na_sc_in, .na_sc_q');
+    const scDraw = () => { if (phoneClosed || !stillHere() || obSet !== 'stconn') return; if (scBusy()) { scPend = true; return; } scPend = false; drawPhone(true); };
+    const scLater = () => { clearTimeout(scT); scT = setTimeout(() => { if (scPend || obSet === 'stconn') scDraw(); }, 60); };
+    $root.on('pointerdown', '.os_sh', () => { scDown = true; }); $(document).on('pointerup.naSc pointercancel.naSc', () => { if (!scDown) return; scDown = false; if (scPend) scLater(); });
+    const scVal = el => el.innerText.replace(/\n/g, '');
+    $root.on('click', '.na_sc_opt', function (e) { e.stopPropagation(); if (this.classList.contains('off')) return; obSetUi.open = ''; obSetUi.scQ = ''; stConnSet(this.dataset.p, this.dataset.v); scLater(); });
+    $root.on('click', '.na_sc_mopt', function (e) { e.stopPropagation(); if (this.classList.contains('off')) return; stConnToggleOption(this.dataset.p, this.dataset.v); scLater(); });
+    $root.on('click', '.na_sc_tg', function (e) { e.stopPropagation(); stConnSet(this.dataset.p, this.dataset.on !== '1'); scLater(); });
+    $root.on('click', '.na_sc_pick', function (e) { e.stopPropagation(); obSetUi.open = ''; stConnSet(this.dataset.p, this.dataset.v); scLater(); });
+    $root.on('click', '.na_sc_btn', function (e) { e.stopPropagation(); if (!stConnClick(this.dataset.p)) toastr.info('지금은 누를 수 없어요', '캐릭터 휴대폰'); scLater(); });
+    $root.on('click', '.na_sc_link', function (e) { e.stopPropagation(); if (/^https?:/i.test(this.dataset.h || '')) window.open(this.dataset.h, '_blank', 'noopener'); });
+    $root.on('click', '.na_sc_dr', function (e) { e.stopPropagation(); const k = this.dataset.k; obSetUi.v[k] = !obSetUi.v[k]; drawPhone(true); });
+    $root.on('keydown', '.na_sc_in, .na_sc_q', function (e) { if (e.key === 'Enter') { e.preventDefault(); this.blur(); } });
+    $root.on('focusout', '.na_sc_in', function () { const v = scVal(this), p = this.dataset.p, real = document.querySelector(p); if (real && String(real.value ?? '') !== v) stConnSet(p, v); scLater(); });
+    $root.on('input', '.na_sc_q', function () { obSetUi.scQ = this.innerText; clearTimeout(this._t); this._t = setTimeout(() => { if (phoneClosed || !stillHere() || obSet !== 'stconn') return; drawPhone(true); const el = $root.find('.na_sc_q')[0]; if (el) { el.focus({ preventScroll: true }); const s = window.getSelection(); s.selectAllChildren(el); s.collapseToEnd(); } }, 250); });
+    $root.on('focusout', '.na_sc_q', () => scLater());
     $root.on('click', '.na_ob_sback', e => { e.stopPropagation(); obSet = OB_SET_UP[obSet] || 'main'; obSetUi.open = ''; drawPhone(true); });
     // 채팅 설정 화면들의 조작(src/phoneorbitset.js). 아직 동작이 없는 것: 값만 이 시트가 열린 동안 기억하고 알림을 띄워요
     const obNotYet = el => toastr.info(`${el.getAttribute('aria-label') || el.querySelector('.os_l')?.textContent || el.textContent.trim() || '이 기능'}: 아직 연결되지 않았어요`, '캐릭터 휴대폰');
     $root.on('click', '.na_os_tg', function (e) { e.stopPropagation(); const k = this.dataset.k, def = this.dataset.on === '1'; obSetUi.v[k] = k in obSetUi.v ? !obSetUi.v[k] : !def; if (k !== 'addOpen') obNotYet(this); drawPhone(true); });
-    $root.on('click', '.na_os_sel', function (e) { e.stopPropagation(); const k = this.dataset.k; obSetUi.open = obSetUi.open === k ? '' : k; drawPhone(true); });
+    $root.on('click', '.na_os_sel', function (e) { e.stopPropagation(); if (this.classList.contains('off')) return; const k = this.dataset.k; obSetUi.open = obSetUi.open === k ? '' : k; obSetUi.scQ = ''; drawPhone(true); });
     $root.on('click', '.na_os_opt, .na_os_seg', function (e) { e.stopPropagation(); obSetUi.v[this.dataset.k] = this.dataset.v; if (this.classList.contains('na_os_opt')) obSetUi.open = ''; obNotYet(this); drawPhone(true); });
     $root.on('keydown', '.na_os_in', function (e) { if (e.key === 'Enter' && this.getAttribute('enterkeyhint')) { e.preventDefault(); this.blur(); } });
     $root.on('focusout', '.na_os_in', function () { const k = this.dataset.k, v = this.innerText.replace(/\n$/, ''); if (String(obSetUi.v[k] ?? '') === v) return; obSetUi.v[k] = v; if (stillHere() && !phoneClosed) drawPhone(true); });
@@ -2704,7 +2724,7 @@ export async function openPhone(who = null) {
             return 1;
         };
         dlg.addEventListener('close', () => { if (window.NAShell) window.__naBack = backWas; for (const ev of ['pointerup', 'pointercancel']) window.removeEventListener(ev, ptrUp, true); }, { once: true });
-        dlg.addEventListener('close', () => { phoneClosed = true; setPhoneMeta(null); if (liveMode(realM) === 'live' && stillHere()) obReflect(); ask?.done(false); done(); }, { once: true });
+        dlg.addEventListener('close', () => { phoneClosed = true; scWatch(false); $(document).off('.naSc'); setPhoneMeta(null); if (liveMode(realM) === 'live' && stillHere()) obReflect(); ask?.done(false); done(); }, { once: true });
     });
     window.visualViewport?.removeEventListener('resize', kbSoon); window.visualViewport?.removeEventListener('scroll', kbSoon); window.removeEventListener('resize', kbSoon);
     barsUndo(dlg);

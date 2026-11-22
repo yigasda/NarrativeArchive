@@ -381,3 +381,10 @@
 .ax_orbitroom .ax_canvas { padding-bottom: var(--obkb, 0px); box-sizing: border-box; }
 .na_ph_kb .ax_orbitroom .ob_inp { margin-bottom: 8px; }
 .na_ph_kb .ax_orbitroom .ax_ind { display: none; }
+/* 실리태번 API 연결 화면 (1-7): 실리 칸을 읽어 그린 줄들. 부품은 시트 것 그대로, 여기는 간격 · 묶음 이름 · 가린 글만 */
+.ax .oc_cap { display: flex; align-items: center; gap: 4px; } .ax .oc_cap .os_ib { width: 26px; height: 26px; } .ax .oc_q { flex: 1; min-width: 0; margin: 0; } .ax .oc_mask { -webkit-text-security: disc; }
+.ax .oc_g { padding: 10px 14px 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.02em; color: #8a8e98; --axfs: 11px; --axfg: #8a8e98; } .ax .oc_in { padding: 0 0 6px; background: rgba(27, 29, 36, 0.025); }
+.ax .ot_r:is(.oc_pk, .oc_lk, .oc_bt) { margin: 0; } .ax .ot_r:is(.oc_pk, .oc_lk) { margin-top: 8px; } .ax .oc_pk .ot_chip { border: 0; cursor: pointer; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ax .os_rw:is(.oc_sel, .ot_o).off { opacity: 0.45; } .ax .oc_sel .os_l, .ax .oc_st .os_l { white-space: normal; } .ax .os_go.oc_x { color: #c0392b; --axfg: #c0392b; } .ax .os_ch.up svg { transform: rotate(180deg); }
+.ax .ot_dot.on { background: #3fae6a; } .ax .ot_dot.off { background: #c9ccd3; } .ax .oc_st .ot_dot { align-self: center; }
+.ax .ob_bg.dk ~ .os_sh .oc_in { background: rgba(255, 255, 255, 0.04); } .ax .ob_bg.dk ~ .os_sh .oc_g { color: rgba(255, 255, 255, 0.45); --axfg: rgba(255, 255, 255, 0.45); } .ax .ob_bg.dk ~ .os_sh .ot_dot.off { background: rgba(255, 255, 255, 0.25); }

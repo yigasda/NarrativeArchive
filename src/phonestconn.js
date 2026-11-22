@@ -24,7 +24,7 @@ const isBtn = el => el.matches('button, .menu_button, .api_button, .api_loading'
 
 // → [{ t, ... }] 화면에 그릴 것들 (보이는 것만, 실리 순서대로)
 //   cap { text, link? } · note { text, links, warn } · sel { p, label, value, text, options: [{ v, l, g, off }] } · multi { p, label, options: [{ v, l, on, off }] }
-//   in { p, value, ph, masked, list: [값], key (키 관리 단추의 주소) } · tg { p, label, on, title } · btn { p, text, icon, off } · link { text, href }
+//   in { p, value, ph, masked, list: [{ v, l }] (고를 수 있는 값: 지역 · 저장된 키), key (키 관리 단추의 주소) } · tg { p, label, on, title } · btn { p, text, icon, off } · link { text, href }
 //   drawer { p, title, kids } · status { ok, text }
 export function stConnNodes() {
     const R = root(); if (!R) return null;
@@ -32,19 +32,21 @@ export function stConnNodes() {
     const out = [];
     const walk = (el, into, top) => {
         if (!shown(el, top) || el.matches('script, style, datalist, option, optgroup, .select2, .select2-container, hr, br')) return;
-        if (el.matches('select')) { const multi = el.multiple, opts = [...el.options].filter(o => !o.hidden && o.style.display !== 'none').map(o => ({ v: o.value, l: txt(o), g: o.parentElement.tagName === 'OPTGROUP' ? (o.parentElement.label || '') : '', off: o.disabled, on: o.selected }));
+        if (el.matches('select')) { const multi = el.multiple, opts = [...el.options].filter(o => !o.hidden && o.style.display !== 'none' && !(o.parentElement.tagName === 'OPTGROUP' && (o.parentElement.hidden || o.parentElement.style.display === 'none'))).map(o => ({ v: o.value, l: txt(o), g: o.parentElement.tagName === 'OPTGROUP' ? (o.parentElement.label || '') : '', off: o.disabled, on: o.selected }));
             return void into.push(multi ? { t: 'multi', p: stPath(el), options: opts } : { t: 'sel', p: stPath(el), value: el.value, text: txt(el.selectedOptions[0]) || el.value, options: opts, off: el.disabled }); }
         if (el.matches('input[type=checkbox]')) return void into.push({ t: 'tg', p: stPath(el), label: txt(el.closest('label')) || el.title || '', on: el.checked, title: el.closest('label')?.title || '' });
         if (el.matches('input, textarea')) { if (el.type === 'hidden' || el.type === 'file') return; const dl = el.getAttribute('list') ? document.getElementById(el.getAttribute('list')) : null, key = el.parentElement?.querySelector(':scope > .manage-api-keys');
-            return void into.push({ t: 'in', p: stPath(el), value: el.value, ph: el.placeholder || '', masked: el.classList.contains('masked-secret'), list: dl ? [...dl.options].map(o => o.value).filter(Boolean).slice(0, 60) : [], key: key && shown(key, top) ? stPath(key) : '' }); }
+            return void into.push({ t: 'in', p: stPath(el), value: el.value, ph: el.placeholder || '', masked: el.classList.contains('masked-secret'), list: dl ? [...dl.options].filter(o => o.value).slice(0, 60).map(o => ({ v: o.value, l: txt(o) || o.value })) : [], key: key && shown(key, top) ? stPath(key) : '' }); }
         if (el.matches('.manage-api-keys')) return;   // (키 칸 옆에 같이 그려요)
-        if (el.matches('label.checkbox_label') && el.querySelector('input[type=checkbox], select')) return void [...el.children].forEach(c => walk(c, into, top));
-        if (el.matches('.inline-drawer')) { const kids = [], body = el.querySelector(':scope > .inline-drawer-content'); if (body) { const was = body.style.display; body.style.display = 'block'; [...body.children].forEach(c => walk(c, kids, body)); body.style.display = was; }
+        if (el.matches('label.checkbox_label') && el.querySelector('input[type=checkbox], select')) return void [...el.querySelectorAll('input[type=checkbox], select')].forEach(c => walk(c, into, top));   // (이름은 스위치 줄에 이미 들어가요)
+        if (el.matches('.inline-drawer')) { const kids = [], body = el.querySelector(':scope > .inline-drawer-content'); if (body) [...body.children].forEach(c => walk(c, kids, body));   // (접혀 있어도 안을 읽어요: body 자신의 display는 보지 않아요. 실리 칸을 건드리면 지켜보기가 그걸 변화로 잡아요)
             return void into.push({ t: 'drawer', p: stPath(el), title: txt(el.querySelector(':scope > .inline-drawer-toggle')), kids }); }
         if (el.matches('.online_status')) return void into.push({ t: 'status', ok: !!el.querySelector('.online_status_indicator.success'), text: txt(el.querySelector('.online_status_text')) });
         if (isBtn(el)) return void into.push({ t: 'btn', p: stPath(el), text: txt(el), icon: iconOf(el), title: el.title || '', off: el.classList.contains('disabled') || el.disabled === true, cancel: el.classList.contains('api_loading') });
+        if (el.matches('.openrouter_view_credits, .nanogpt_view_credits')) return void into.push({ t: 'btn', p: stPath(el), text: txt(el), icon: '', title: el.title || '' });   // (링크처럼 생겼지만 누르면 잔액을 불러와요)
+        if (el.matches('i.fa-circle-exclamation, i.fa-triangle-exclamation') && el.title) return void into.push({ t: 'note', text: el.title, links: [], warn: true });
         if (el.matches('a')) { const href = el.getAttribute('href') || ''; return void (/^https?:/i.test(href) ? into.push({ t: 'link', text: txt(el) || el.title || href, href: el.href }) : txt(el) && into.push({ t: 'btn', p: stPath(el), text: txt(el), icon: '', title: el.title || '' })); }
-        if (el.matches('h3, h4, label, b') && !el.querySelector('input, select, textarea, button, .menu_button')) { const t = txt(el), l = linksIn(el); return void (t ? into.push({ t: 'cap', text: t, link: l[0]?.href || '' }) : l[0] && into.push({ t: 'link', text: l[0].text || el.querySelector('a')?.title || '', href: l[0].href })); }
+        if (el.matches('h3, h4, label, b, .range-block-title') && !el.querySelector('input, select, textarea, button, .menu_button')) { const t = txt(el), l = linksIn(el); return void (t ? into.push({ t: 'cap', text: t, link: l[0]?.href || '' }) : l[0] && into.push({ t: 'link', text: l[0].text || el.querySelector('a')?.title || '', href: l[0].href })); }
         if (el.matches(TEXTY) && !el.querySelector('input, select, textarea, button, .menu_button')) { const t = txt(el); return void (t && into.push({ t: 'note', text: t, links: linksIn(el), warn: el.matches('.reverse_proxy_warning, .neutral_warning') })); }
         if (!el.children.length) { const t = txt(el); return void (t && into.push({ t: 'note', text: t, links: [] })); }
         [...el.children].forEach(c => walk(c, into, top));

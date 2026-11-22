@@ -70,11 +70,12 @@ const LI = {
     'info': '<circle cx="12" cy="12" r="10" /> <path d="M12 16v-4" /> <path d="M12 8h.01" />',
     'bookmark': '<path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />',
     'pin': '<path d="M12 17v5" /> <path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z" />',
+    'key-round': '<path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z" /> <circle cx="16.5" cy="7.5" r=".5" fill="currentColor" />',
 };
 const li = (k, s = 18, w = 2) => `<svg aria-hidden="true" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round">${LI[k] || ''}</svg>`;
 
 // 맨 화면의 줄: [화면, 아이콘, 이름]. 값은 orbitSetRows가 붙여요
-export const ORBIT_SET_TITLES = { profile: '설정 프로필', branches: '채팅 분기', conn: '연결', preset: '프롬프트 프리셋', persona: '페르소나', people: '캐릭터', group: '단체 채팅', linked: '연결된 채팅', lore: '로어북', ctx: '활성 컨텍스트', agents: '에이전트', gallery: '갤러리', memory: '기억 회상', memlist: '이 채팅의 기억', trans: '번역', auto: '자율 메시지', tz: '스케줄 시간대', sum: '자동 요약', sumedit: '요약 편집', name: '채팅 제목' };
+export const ORBIT_SET_TITLES = { profile: '설정 프로필', branches: '채팅 분기', conn: '연결', stconn: 'API 연결', preset: '프롬프트 프리셋', persona: '페르소나', people: '캐릭터', group: '단체 채팅', linked: '연결된 채팅', lore: '로어북', ctx: '활성 컨텍스트', agents: '에이전트', gallery: '갤러리', memory: '기억 회상', memlist: '이 채팅의 기억', trans: '번역', auto: '자율 메시지', tz: '스케줄 시간대', sum: '자동 요약', sumedit: '요약 편집', name: '채팅 제목' };
 const HELP = {
     profile: '설정 프로필은 이 채팅의 제공자, 프롬프트, 에이전트, 번역, 기억 등의 설정을 저장해 다시 쓸 수 있게 합니다. 캐릭터, 스프라이트, 요약, 태그, 장면 프롬프트는 바꾸지 않습니다. 프로필의 페르소나, 로어북, 배경은 적용할 때 채팅으로 복사됩니다. 별표를 누르면 이 모드의 새 채팅에 사용됩니다.',
     name: '이 이름은 나에게만 보입니다. AI에게 전송되지 않으며 대화에 아무 영향도 주지 않습니다.',
@@ -132,7 +133,42 @@ export function orbitSetPage(T, face) {
                 + (has ? hp('메인을 바꾸면 이 채팅도 바뀝니다.') : '')
                 + (T.open === 'connOpen' ? cap('지금 · 메인을 따름') + cd(pad(`<div class="ot_r">${soon('기본값 사용', 'house')}<i class="os_sp"></i>${ib('refresh-cw', '모델 목록 새로 고침')}</div>`), pad(`<div class="os_q ot_q0">${li('search', 16)}<div class="os_qi na_os_in" data-k="connQ" contenteditable="true" role="textbox" enterkeyhint="search" spellcheck="false" data-ph="모델 검색 또는 ID 붙여넣기…" aria-label="모든 모델 검색 또는 모델 ID 붙여넣기">${esc(g('connQ', ''))}</div></div>`))
                     + cap('모든 모델') + ((l => (l.length ? cd(...l.map((c, i) => `<div role="button" tabindex="0" class="os_rw ot_t na_ob_soon" aria-label="${esc(c.name)}"><span class="ot_x"><span class="os_l">${esc(c.name)}</span>${c.sub ? `<span class="os_d">${esc(c.sub)}</span>` : ''}</span>${i === 0 && !g('connQ', '') ? li('check', 16, 2.4) : ''}${ib('star', `${c.name} 즐겨찾기`)}</div>`)) : none(T.conns.some(c => c.name && c.name !== '모델 없음') ? '여기에는 아직 모델이 없습니다.' : '아직 모델이 없습니다. 계정을 추가하면 생깁니다.')))(T.conns.filter(c => c.name && c.name !== '모델 없음' && (!g('connQ', '') || `${c.name} ${c.sub}`.toLowerCase().includes(String(g('connQ', '')).toLowerCase())))))
-                    + cd(`<button type="button" class="os_rw na_ob_soon" aria-label="계정 추가">${li('plus', 18)}<span class="os_l">계정 추가</span></button>`) : ''); },
+                    + cd(`<button type="button" class="os_rw na_ob_soon" aria-label="계정 추가">${li('plus', 18)}<span class="os_l">계정 추가</span></button>`) : '')
+                + cap('연결 설정') + cd(nav('stconn', 'API 연결', '키 · 주소 · 모델 · 연결 · 테스트 메시지', 'chevron-right')); },
+        // 실리태번의 API 연결 (1-7): src/phonestconn.js가 실리의 진짜 칸을 읽어 준 목록(T.st)을 실리 순서대로 그려요. 소스마다 화면을 따로 짜지 않아요
+        stconn: () => { const N = T.st; if (!N) return none('실리태번의 API 연결 창을 찾지 못했어요.');
+            const A = p => ` data-p="${esc(p)}"`, lk = l => `<button type="button" class="os_go na_sc_link" data-h="${esc(l.href)}">${li('external-link', 13, 2.2)}${esc(l.text || '열기')}</button>`, Q = String(T.scQ || '').trim().toLowerCase();
+            const one = n => {
+                if (n.t === 'note') return n.warn ? `<div class="ot_box warn">${li('triangle-alert', 15)}<span>${esc(n.text)}</span></div>` : pad(`<div class="os_d">${esc(n.text)}</div>${n.links.length ? `<div class="ot_r ot_w oc_lk">${n.links.map(lk).join('')}</div>` : ''}`);
+                if (n.t === 'link') return pad(`<div class="ot_r">${lk(n)}</div>`);
+                if (n.t === 'status') return `<div class="os_rw oc_st"><i class="ot_dot ${n.ok ? 'on' : 'off'}"></i><span class="os_l">${esc(n.text)}</span></div>`;
+                if (n.t === 'tg') return `<div role="button" tabindex="0" class="os_rw ot_t na_sc_tg"${A(n.p)} data-on="${n.on ? 1 : 0}" aria-label="${esc(n.label)}" aria-pressed="${n.on}"><span class="ot_x"><span class="os_l">${esc(n.label)}</span>${n.title ? `<span class="os_d">${esc(n.title)}</span>` : ''}</span><i class="ot_sw${n.on ? ' on' : ''}"></i></div>`;
+                if (n.t === 'in') { const open = T.open === `l:${n.p}`;
+                    return pad(`<div class="ot_r"><div class="os_q ot_q0 oc_q"><div class="os_qi na_sc_in${n.masked ? ' oc_mask' : ''}"${A(n.p)} contenteditable="true" role="textbox" enterkeyhint="done" spellcheck="false" autocapitalize="off" data-ph="${esc(n.ph)}" aria-label="${esc(n.ph || '값')}">${esc(n.value)}</div></div>${n.list.length ? `<button type="button" class="os_ib na_os_sel" data-k="l:${esc(n.p)}" aria-label="고를 수 있는 값 ${n.list.length}개" title="고를 수 있는 값">${li('chevron-down', 16)}</button>` : ''}${n.key ? `<button type="button" class="os_ib na_sc_btn"${A(n.key)} aria-label="API 키 관리" title="API 키 관리">${li('key-round', 16)}</button>` : ''}</div>${open ? `<div class="ot_r ot_w oc_pk">${n.list.map(o => `<button type="button" class="ot_chip na_sc_pick"${A(n.p)} data-v="${esc(o.v)}">${esc(o.l)}</button>`).join('')}</div>` : ''}`); }
+                if (n.t === 'sel' || n.t === 'multi') { const k = `s:${n.p}`, open = T.open === k, multi = n.t === 'multi', picked = multi ? n.options.filter(o => o.on) : [];
+                    const val = multi ? (picked.length ? picked.map(o => o.l).join(', ') : '고른 것 없음') : (n.text || '고르기');
+                    const hit = open ? n.options.filter(o => !Q || `${o.l} ${o.v} ${o.g}`.toLowerCase().includes(Q)) : [], cut = hit.slice(0, 80); let grp = null;
+                    return `<div role="button" tabindex="0" class="os_rw na_os_sel oc_sel${n.off ? ' off' : ''}" data-k="${esc(k)}" aria-label="${esc(val)}" aria-expanded="${open}"><span class="os_l">${esc(val)}</span>${multi && picked.length ? `<span class="ot_chip">${picked.length}</span>` : ''}<i class="os_ch">${li('chevron-down', 16)}</i></div>`
+                        + (open ? (n.options.length > 12 ? pad(`<div class="os_q ot_q0">${li('search', 16)}<div class="os_qi na_sc_q" contenteditable="true" role="textbox" enterkeyhint="search" spellcheck="false" data-ph="검색" aria-label="검색">${esc(T.scQ || '')}</div></div>`) : '')
+                            + (cut.length ? cut.map(o => { const h = o.g && o.g !== grp ? `<div class="oc_g">${esc(o.g)}</div>` : ''; grp = o.g; const on = multi ? o.on : o.v === n.value;
+                                return `${h}<div role="button" tabindex="0" class="os_rw ot_o ${multi ? 'na_sc_mopt' : 'na_sc_opt'}${o.off ? ' off' : ''}"${A(n.p)} data-v="${esc(o.v)}" aria-pressed="${on}"><span class="os_l">${esc(o.l || o.v)}</span>${on ? li('check', 16, 2.4) : ''}</div>`; }).join('') : none('맞는 것이 없어요.'))
+                            + (hit.length > cut.length ? pad(`<div class="os_d">${hit.length - cut.length}개가 더 있어요. 검색해서 좁혀요.</div>`) : '') : ''); }
+                if (n.t === 'drawer') { const k = `d:${n.p}`, open = !!T.v[k];
+                    return `<div role="button" tabindex="0" class="os_rw na_sc_dr" data-k="${esc(k)}" aria-expanded="${open}"><span class="os_l">${esc(n.title)}</span><i class="os_ch${open ? ' up' : ''}">${li('chevron-down', 16)}</i></div>` + (open ? `<div class="oc_in">${group(n.kids, true)}</div>` : ''); }
+                return '';
+            };
+            const btn = b => b.text ? `<button type="button" class="${b.cancel ? 'os_go oc_x' : 'os_go'} na_sc_btn"${A(b.p)}${b.off ? ' disabled' : ''}${b.title ? ` title="${esc(b.title)}"` : ''}>${b.icon ? li(b.icon, 13, 2.2) : ''}${esc(b.text)}</button>` : `<button type="button" class="os_ib na_sc_btn"${A(b.p)}${b.off ? ' disabled' : ''} aria-label="${esc(b.title)}" title="${esc(b.title)}">${li(b.icon || 'circle-help', 16)}</button>`;
+            // 줄 → 카드: 머리글(cap)마다 새 카드. 잇닿은 단추는 한 줄로 모아요
+            const group = (list, inner) => { let out = '', card = [], run = [];
+                const flushRun = () => { if (run.length) { card.push(pad(`<div class="ot_r ot_w oc_bt">${run.map(btn).join('')}</div>`)); run = []; } };
+                const flush = () => { flushRun(); if (card.length) { out += inner ? card.join('') : cd(...card); card = []; } };
+                for (const n of list) {
+                    if (n.t === 'btn') { run.push(n); continue; } flushRun();
+                    if (n.t === 'cap') { flush(); out += inner ? `<div class="oc_g">${esc(n.text)}</div>` : `<div class="os_cap oc_cap"><span>${esc(n.text)}</span>${n.link ? `<button type="button" class="os_ib na_sc_link" data-h="${esc(n.link)}" aria-label="${esc(n.text)} 도움말" title="도움말">${li('circle-help', 14)}</button>` : ''}</div>`; continue; }
+                    card.push(one(n));
+                }
+                flush(); return out; };
+            return hp('실리태번의 API 연결 창을 그대로 조종합니다. 여기서 바꾸면 실리태번의 연결이 바뀝니다(롤플레이도 같은 연결을 씁니다). 키는 실리태번에만 저장됩니다.') + group(N, false); },
         // 프롬프트 프리셋 (ConversationPromptSection)
         preset: () => H + cd(sel('presetSrc', '프롬프트 소스', [['', '기본 대화 프롬프트']], ''))
             + area('presetText', '대화 프롬프트', '', '사용자 지정 대화 프롬프트를 입력하세요...', { rows: 6, mono: true, tail: `<span class="ot_chip">${g('presetText', '') ? '사용자 지정' : '기본값'}</span><i class="os_sp"></i>${g('presetText', '') ? ib('rotate-ccw', '기본 프롬프트로 초기화') : ''}${ib('maximize-2', '편집기 확장')}${ib('book-open', '매크로 참조')}`, hint: `~${Math.ceil(String(g('presetText', '')).length / 4)} 토큰` }),
