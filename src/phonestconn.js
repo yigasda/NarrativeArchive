@@ -26,11 +26,11 @@ const linksIn = el => [...el.querySelectorAll('a[href]')].filter(a => /^https?:/
 const TEXTY = 'small, p, li, td, th, code, .neutral_warning, .toggle-description, .reverse_proxy_warning, .info-block';
 const HOLDS = 'input, select, textarea, button, .menu_button, [data-action]';
 const isBtn = el => el.matches('button, .menu_button, .api_button, .api_loading, [data-action]') && !el.matches('label');
-const btnOf = el => ({ t: 'btn', p: stPath(el), text: txt(el), icon: iconOf(el), title: stKo(el.title || ''), off: el.classList.contains('disabled') || el.disabled === true, cancel: el.classList.contains('api_loading'), ok: el.classList.contains('popup-button-ok') });
+const btnOf = el => ({ t: 'btn', p: stPath(el), text: txt(el), icon: iconOf(el), title: stKo(el.title || ''), off: el.classList.contains('disabled') || el.disabled === true, cancel: el.classList.contains('api_loading'), ok: el.classList.contains('popup-button-ok'), main: el.classList.contains('api_button'), act: !!el.parentElement?.querySelector(':scope > .api_button') });   // act: 연결 단추와 같은 줄(연결 · 취소 · 인증 · 추가 매개변수 · 테스트 메시지) → 크게 그려요
 
 // 한 칸 → 그릴 것 (보이는 것만, 실리 순서대로)
 //   cap { text, link? } · note { text, links, warn } · sel { p, value, text, options: [{ v, l, g, off }] } · multi { p, options: [{ v, l, on, off }] }
-//   in { p, value, ph, masked, area, list: [{ v, l }] (고를 수 있는 값: 지역 · 저장된 키), key (키 관리 단추의 주소) } · tg { p, label, on, title } · btn { p, text, icon, title, off, cancel, ok } · link { text, href }
+//   in { p, value, ph, masked, area, list: [{ v, l }] (고를 수 있는 값: 지역 · 저장된 키), key (키 관리 단추의 주소) } · tg { p, label, on, title } · btn { p, text, icon, title, off, cancel, ok, main, act } · link { text, href }
 //   drawer { p, title, kids } · status { ok, text } · key { on, label, value, id, idp, btns } (키 관리의 저장된 키 한 줄)
 function walk(el, into, top) {
     if (!shown(el, top) || el.matches('script, style, datalist, option, optgroup, .select2, .select2-container, hr, br, img')) return;

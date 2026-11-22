@@ -126,7 +126,8 @@ function scGroup(T, list, inner) {
     };
     // 줄 → 카드: 머리글(cap)마다 새 카드. 잇닿은 단추는 한 줄로 모아요
     let out = '', card = [], run = [];
-    const flushRun = () => { if (run.length) { card.push(pad(`<div class="ot_r ot_w oc_bt">${run.map(btn).join('')}</div>`)); run = []; } };
+    const act = b => `<button type="button" class="oc_ab${b.main ? ' main' : b.cancel ? ' x' : ''} na_sc_btn"${A(b.p)}${b.off ? ' disabled' : ''}${b.title ? ` title="${esc(b.title)}"` : ''}>${esc(b.text)}</button>`;   // 연결 줄: 칩이 아니라 큰 단추(소망)
+    const flushRun = () => { if (run.length) { card.push(pad(run.some(b => b.act) ? `<div class="oc_act">${run.map(act).join('')}</div>` : `<div class="ot_r ot_w oc_bt">${run.map(btn).join('')}</div>`)); run = []; } };
     const flush = () => { flushRun(); if (card.length) { out += inner ? card.join('') : cd(...card); card = []; } };
     for (const n of list) {
         if (n.t === 'btn') { run.push(n); continue; } flushRun();
