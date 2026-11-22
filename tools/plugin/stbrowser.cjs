@@ -78,13 +78,15 @@ const log = (...a) => console.log(...a);
             delete document.hidden;
             await KO.keepBeat();
             const queued = await G.liveAutonomous(m);
-            return { before, after: room.messages.map(x => [x.from, x.text, x.extra?.autonomous === true]), unread: G.liveAutonomousUnread(m), queued, budget: m.live.world.presence.meta.autonomousDailyBudget };
+            const toast = [...document.querySelectorAll('#toast-container .toast-message')].map(x => x.textContent);
+            return { toast, before, after: room.messages.map(x => [x.from, x.text, x.extra?.autonomous === true]), unread: G.liveAutonomousUnread(m), queued, budget: m.live.world.presence.meta.autonomousDailyBudget };
         });
         log(JSON.stringify(r2));
         ok('browser had not seen it while hidden', r2.before === 2);
         ok('browser took the server\'s message in when the tab showed again', r2.after.length === 3 && r2.after[2][0] === 'Seraphina' && r2.after[2][2] === true);
         ok('unread mark and today\'s count came too', r2.unread[0]?.count === 1 && Object.values(r2.budget?.counts || {})[0] === 1);
         ok('the browser does not write first again right away', r2.queued === 0);
+        ok('the screen told me: a toast for the message the server wrote', r2.toast.some(x => /Seraphina님이 메시지를 보냈습니다/.test(x)), JSON.stringify(r2.toast));
         ok('no errors from the extension on the page', errors.filter(e => !/Internal S|^STACK\s*$/.test(e)).length === 0, errors.join(' || '));
         log('BAD RESPONSES', JSON.stringify(bad, null, 1));
     } catch (e) { fail++; log('THREW', String(e?.stack || e).slice(0, 600)); log(errors.join(' || ')); }
