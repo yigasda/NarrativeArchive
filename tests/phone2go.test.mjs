@@ -1632,7 +1632,21 @@ test('추론 레벨: 방의 모델이 받는 레벨만 나와요 (마리나라�
     T.slots = { dr: { mode: 'vertex', vxModel: 'gemini-3.5-flash-lite' } };                                // (끔 대신 '기본': 제공자의 기본 레벨을 그대로 둬요)
     assert.deepEqual(G.liveReasoning(c.real, id).choices.map(x => [x.name, x.title || '']), [['기본', '제공자 기본값: Minimal'], ['낮게', ''], ['보통', ''], ['높게', '']]);
     T.slots = { dr: { mode: 'custom', fmt: 'anthropic', model: 'claude-opus-4-7' } };
-    assert.deepEqual(vals(G.liveReasoning(c.real, id)), ['none=null', 'low=low', 'medium=medium', 'high=high', 'xhigh=xhigh', 'maximum=max']);
+    assert.deepEqual(vals(G.liveReasoning(c.real, id)), ['low=low', 'medium=medium', 'high=high', 'xhigh=xhigh', 'maximum=max']);
+    // (Claude에는 끔 칩이 없어요: 어느 길로 보내도 생각이 안 꺼져요. 끔으로 저장해 둔 값은 안 정함으로 보이고, 저장은 그대로)
+    for (const m of ['claude-sonnet-5-5', 'claude-opus-5', 'claude-opus-4-8', 'claude-sonnet-4-6', 'claude-haiku-5-5']) {
+        T.slots = { dr: { mode: 'custom', fmt: 'anthropic', model: m } };
+        const r0 = G.liveReasoning(c.real, id);
+        assert.ok(![...r0.choices, ...r0.roomChoices, ...r0.allChoices].some(x => x.value === 'none'), m);
+    }
+    await G.liveSetReasoning(c.real, id, 'none');
+    assert.deepEqual((({ effort, room, sent }) => [effort, room, sent])(G.liveReasoning(c.real, id)), ['', '', '']);
+    assert.equal(c.room.chatParameters.reasoningEffort, 'none');
+    T.slots = { dr: { mode: 'vertex', vxModel: 'gemini-2.5-flash' } };                                      // (끌 수 있는 모델로 바꾸면 다시 끔)
+    assert.deepEqual((({ effort, room, sent }) => [effort, room, sent])(G.liveReasoning(c.real, id)), ['none', 'none', 'none']);
+    await G.liveSetReasoning(c.real, id, '');
+    T.slots = { dr: { mode: 'source', source: 'claude', stModel: 'claude-opus-4-8' } };                     // (실리 연결 방식의 Claude도 같아요)
+    assert.ok(!G.liveReasoning(c.real, id).choices.some(x => x.value === 'none'));
     T.slots = { dr: { mode: 'source', source: 'openai', stModel: 'gpt-4o' } };
     assert.deepEqual(G.liveReasoning(c.real, id).choices, []);                                             // (레벨을 안 받는 모델)
     // (방에 고른 모델이 있으면 그 모델 기준)

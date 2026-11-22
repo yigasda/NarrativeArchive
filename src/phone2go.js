@@ -1208,6 +1208,7 @@ export const liveSourceModels = source => stSourceModels(source);
 //   값(마리나라가 저장하는 이름): '' (안 정함) · 'none' (끔) · 'low' · 'medium' · 'high' · 'xhigh' · 'maximum'
 //   liveReasoning(real, 방 id '') → {
 //     effort (실제로 쓰는 값: 방에 정한 것, 없으면 Orbit 전체 것), room, all,
+//     Claude(provider 'anthropic')에는 끔 칩이 없어요: 우리가 보내는 어떤 값으로도 생각이 안 꺼져요. 전에 끔으로 저장해 둔 값은 안 정함('')으로 돌려줘요
 //     choices: [{ value, label, name, title? }] 이 방의 모델이 받는 레벨만 (마리나라 화면 그대로). name이 칩에 쓸 글자예요 (실제로 보내는 레벨의 이름)
 //       value는 저장하는 값이라 칩 글자와 다를 수 있어요 (DeepSeek: 글자 '높게', value 'medium'). 글자를 value로 만들지 않아요
 //     roomChoices · allChoices: '이 채팅' 줄 · 'Orbit 전체' 줄에 그릴 칩 (그 줄에 저장된 값의 칩에 불이 켜지게 맞춘 것)
@@ -1237,12 +1238,17 @@ function roomKind(real, roomId) {
 export function liveReasoning(real, roomId = '') {
     const w = liveWorld(real), room = roomId ? w?.messenger?.rooms?.[roomId] : null;
     const ok = v => { const x = oldLevel(String(v || '')); return REASONING_LEVELS.includes(x) ? x : ''; };
-    const mine_ = ok(room?.chatParameters?.reasoningEffort), all = ok(w?.presence?.meta?.reasoningEffort), effort = mine_ || all;
-    const { provider, model } = roomKind(real, roomId), takes = relevantGenerationParameters({ provider, model, ...(effort ? { reasoningEffort: effort === 'none' ? null : effort } : {}) }).has('reasoningEffort');
+    const { provider, model } = roomKind(real, roomId);
+    // (Claude: nothing we send turns its thinking off — our Anthropic request sends no level for Off, SillyTavern's server
+    //  sends its lowest — so there is no Off chip for it, and an Off stored earlier reads as not set. The stored value
+    //  is left alone: it is Off again on a model that can be turned off. 소망, 2026-11-22; not Marinara's rule)
+    const noOff = provider === 'anthropic', seen = v => (noOff && v === 'none' ? '' : v);
+    const mine_ = seen(ok(room?.chatParameters?.reasoningEffort)), all = seen(ok(w?.presence?.meta?.reasoningEffort)), effort = mine_ || all;
+    const takes = relevantGenerationParameters({ provider, model, ...(effort ? { reasoningEffort: effort === 'none' ? null : effort } : {}) }).has('reasoningEffort');
     // (the chips, as Marinara's GenerationParametersEditor draws them: reasoningEffortChoices with the row's own value as
     //  `selected`, and no Off chip for Claude Opus 5.5. A chip's text is its label, the level the model really gets)
     const chips = sel => (!takes ? [] : reasoningEffortChoices({ provider, model, selected: sel && sel !== 'none' ? sel : null })
-        .filter(c => c.value !== null || !isClaudeOpus55Model(model ?? ''))
+        .filter(c => c.value !== null || (!isClaudeOpus55Model(model ?? '') && !noOff))
         // (the chip's text, as the editor writes it: the level's name; for the no-level chip "Default" where it keeps the
         //  provider's own level, else "Off". title: the editor's tooltip, "Provider default: <level>" or the description)
         .map(c => ({ value: c.value === null ? 'none' : c.value, label: c.label, name: c.label !== null ? levelName(c.label) : c.kind === 'default' ? '기본' : '끔',
