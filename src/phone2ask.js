@@ -22,7 +22,9 @@ export function languagesBlock(owner, langs) {
 // rows: [{ at: "MM-DD HH:MM", from, text, state, reacts ("Ren ❤️, Ivo 😂") }]
 export function messengerBlock(owner, rows) {
     const me = one(owner).toLowerCase();
-    const lines = (Array.isArray(rows) ? rows : []).filter(x => one(x?.text)).map(x => `${one(x.at)} · ${one(x.from)}${one(x.from).toLowerCase() === me && one(x.state) ? ` (${one(x.state)})` : ''}: ${one(x.text)}${one(x.reacts) ? ` [${one(x.reacts)}]` : ''}`);
+    // (attach: what a bubble's attachments put in the request — a text file's content, a picture's caption, which picture
+    //  of the request it is — under its line as it is, lines kept; a bubble may be attachments alone)
+    const lines = (Array.isArray(rows) ? rows : []).filter(x => one(x?.text) || String(x?.attach || '').trim()).map(x => `${one(x.at)} · ${one(x.from)}${one(x.from).toLowerCase() === me && one(x.state) ? ` (${one(x.state)})` : ''}: ${one(x.text)}${one(x.reacts) ? ` [${one(x.reacts)}]` : ''}${String(x.attach || '').trim() ? `\n${String(x.attach).trim()}` : ''}`);
     return lines.length ? `[MESSENGER]\n${lines.join('\n')}` : '';
 }
 // [NOW]: one line. last: the owner's last status (no clock in it); today · ahead: calendar lines; recorded: what the

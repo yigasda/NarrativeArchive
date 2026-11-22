@@ -376,12 +376,18 @@ export function nameRoom(m, id, name) { const r = roomOf(m, id), n = String(name
 // opts.replyTo: 답장을 다는 말 (마리나라의 MessageReply { messageId, name, content }: 그때의 글을 그대로 담아 둬요. 원래 말이 고쳐지거나 지워져도 남아요)
 export function sendLive(m, id, text, at = Date.now(), opts = {}) {
     const r = roomOf(m, id), w = liveWorld(m), t = String(text || '').trim();
-    if (!t) throw new Error('보낼 말이 없어요');
+    // (attachments, as Marinara's generate request takes them: [{ type, filename?, name? }] with the file's address in url —
+    //  phone2attach.js storeAttachments — or its data. A message may be attachments alone, as in Marinara)
+    const str = (v, max) => typeof v === 'string' && v.length >= 1 && v.length <= max;
+    const files = Array.isArray(opts?.attachments) ? opts.attachments : [];
+    if (!files.every(a => obj(a) && typeof a.type === 'string' && (str(a.url, 2000) || typeof a.data === 'string') && (a.filename === undefined || typeof a.filename === 'string') && (a.name === undefined || typeof a.name === 'string'))) throw new Error('첨부 파일을 읽지 못했어요');
+    if (!t && !files.length) throw new Error('보낼 말이 없어요');
     // (Marinara's messageReplySchema, by hand: this file imports nothing)
-    const q = opts?.replyTo, str = (v, max) => typeof v === 'string' && v.length >= 1 && v.length <= max;
+    const q = opts?.replyTo;
     const reply = q ? { success: obj(q) && str(q.messageId, 200) && str(q.name, 200) && str(q.content, 16000), data: obj(q) ? { messageId: q.messageId, name: q.name, content: q.content } : null } : null;
     if (reply && !reply.success) throw new Error('답장을 다는 말을 읽지 못했어요');
-    const msg = { id: newId('t'), n: liveNo(w), from: w.persona, text: t.slice(0, 4000), at, ...(reply ? { extra: { replyTo: reply.data } } : {}) };
+    const extra = { ...(files.length ? { attachments: files.map(a => ({ type: a.type, ...(a.url ? { url: a.url } : { data: a.data }), ...(a.filename ? { filename: a.filename } : {}), ...(a.name ? { name: a.name } : {}) })) } : {}), ...(reply ? { replyTo: reply.data } : {}) };
+    const msg = { id: newId('t'), n: liveNo(w), from: w.persona, text: t.slice(0, 4000), at, ...(Object.keys(extra).length ? { extra } : {}) };
     r.messages.push(msg);
     (r.read ||= {})[liveKey(w.persona)] = at;
     return msg;

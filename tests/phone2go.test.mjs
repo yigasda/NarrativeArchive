@@ -1667,3 +1667,53 @@ test('추론 레벨: 방의 모델이 받는 레벨만 나와요 (마리나라�
     } finally { delete T.ask; delete T.slots; delete T.sources; }
     assert.deepEqual(seen, ['high', 'medium', 'low']);                                                     // (이 모델은 끌 수 없어서 끔은 보통으로 가요. 안 정하면 전처럼 low)
 });
+
+test('첨부 보내기: 올리고 → 글 없이도 보내고 → 답장 요청에 그림이 실려 가요. 말에는 주소만 남고, 뺄 수 있어요', async () => {
+    const c = world(), id = c.room.id, PNG = 'data:image/png;base64,iVBORw0KGgo=';
+    const calls = [], store = new Map(), old = globalThis.fetch;
+    T.st = { ...(T.st || {}), getRequestHeaders: () => ({ 'Content-Type': 'application/json' }) };
+    globalThis.fetch = async (url, init = {}) => {
+        calls.push(url);
+        if (url === '/api/files/upload') { const b = JSON.parse(init.body); store.set(`/user/files/${b.name}`, b.data); return { ok: true, status: 200, json: async () => ({ path: `/user/files/${b.name}` }) }; }
+        if (url === '/api/files/delete') { store.delete(JSON.parse(init.body).path); return { ok: true, status: 200 }; }
+        return store.has(url) ? { ok: true, status: 200, arrayBuffer: async () => Uint8Array.from(Buffer.from(store.get(url), 'base64')).buffer } : { ok: false, status: 404 };
+    };
+    try {
+        const kept = await G.liveStoreAttachments([{ type: 'image/png', data: PNG, name: 'cat.png' }, { type: 'text/plain', data: `data:text/plain;base64,${Buffer.from('메모').toString('base64')}`, name: 'm.txt' }]);
+        assert.deepEqual(kept.map(a => [a.type, a.filename, a.name, 'data' in a]), [['image/png', 'cat.png', 'cat.png', false], ['text/plain', 'm.txt', 'm.txt', false]]);
+        assert.throws(() => L.sendLive(c.real, id, ''), /보낼 말이 없어요/);
+        assert.throws(() => L.sendLive(c.real, id, '봐', undefined, { attachments: [{ type: 'image/png' }] }), /첨부 파일을 읽지 못했어요/);
+        const x = L.sendLive(c.real, id, '', undefined, { attachments: kept }); L.enqueueReplies(c.real, id);   // (글 없이 첨부만)
+        assert.equal(x.text, ''); assert.deepEqual(x.extra.attachments, kept);
+        assert.doesNotMatch(JSON.stringify(c.real), /iVBORw0KGgo/);                                   // (그림 자체는 채팅 기록에 안 들어가요)
+        const seen = [], answers = [JSON.stringify({ state: '집', reply: ['귀엽네'], does: [] })];
+        T.ask = async input => { seen.push(input); return answers.shift(); };
+        await G.liveGo(c.real);
+        assert.equal(c.room.messages.at(-1).text, '귀엽네');
+        const sent = seen[0];
+        assert.ok(Array.isArray(sent)); assert.deepEqual(sent[0].images, [PNG]); assert.equal(sent[0].files, undefined);
+        assert.match(sent[0].content, /· Ren: \n<attached_file name="m\.txt" type="text\/plain">\n메모\n<\/attached_file>\n\n<attached_image name="cat\.png" type="image\/png">\n\(image 1 attached to this request\)\n<\/attached_image>/);
+        // (그림 설명을 켜면: 설명 요청이 먼저 가고, 답장 요청에는 그림 대신 설명이 들어가요. 설명은 말에 남아요)
+        assert.equal(G.liveCaptioning(c.real).enabled, false);
+        await assert.rejects(G.liveSetCaptioning(c.real, { connectionId: 'nope' }), /없는 연결/);
+        assert.deepEqual((({ enabled, connectionId, prompt }) => [enabled, connectionId, prompt])(await G.liveSetCaptioning(c.real, { enabled: true })), [true, '', '']);
+        send(c, '뭐 같아?'); seen.length = 0; answers.push('창가의 고양이.', JSON.stringify({ state: '집', reply: ['고양이네'], does: [] }));
+        await G.liveGo(c.real);
+        assert.equal(seen.length, 2);
+        assert.deepEqual(seen[0][0].images, [PNG]); assert.match(seen[0][0].content, /^Describe this image attachment named "cat\.png"/);
+        assert.equal(typeof seen[1], 'string'); assert.match(seen[1], /<attached_image name="cat\.png" type="image\/png">\n창가의 고양이\.\n<\/attached_image>/);
+        assert.equal(x.extra.attachments[0].imageCaption, '창가의 고양이.'); assert.ok(!('data' in x.extra.attachments[0]));
+        send(c, '또'); seen.length = 0; answers.push(JSON.stringify({ state: '집', reply: ['응'], does: [] }));
+        await G.liveGo(c.real);
+        assert.equal(seen.length, 1);                                                                 // (설명을 다시 묻지 않아요)
+        await G.liveSetCaptioning(c.real, { enabled: false });
+        // (말에서 첨부 빼기: 말은 남고, 실리의 파일도 지워요)
+        const url = x.extra.attachments[0].url;
+        assert.equal((await G.liveRemoveAttachment(c.real, id, x.id, 0)).length, 1);
+        assert.equal(x.extra.attachments.length, 1); assert.equal(store.has(url), false);
+        await G.liveRemoveAttachment(c.real, id, x.id, 0);
+        assert.equal(x.extra, undefined);
+        await assert.rejects(G.liveRemoveAttachment(c.real, id, x.id, 0), /없는 첨부/);
+        assert.match(G.LIVE_ATTACH_ACCEPT, /image\/\*/);
+    } finally { globalThis.fetch = old; delete T.ask; }
+});
