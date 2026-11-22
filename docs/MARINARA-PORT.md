@@ -228,3 +228,13 @@
 
 말 자체에서 아직 없는 것(마리나라에 있음): 얼굴 · 이름을 눌러 뜨는 About Me 창(채팅별 소개 고치기), 반응 알약에 올리면 누가 눌렀는지, 캐릭터 반응 지우기, 말마다 스와이프 조작(‹ n/m ›, 번호로 가기), 실패한 답장 줄("실패 · 다시 시도"), 대체 연결 표시, 장면 초대, 위 화살표로 마지막 말 고치기, 옆으로 밀어 스와이프.
 
+### 3.223.0에 이은 것 (반영 쪽 3a6658b)
+
+- 프롬프트 보기: `livePeekPrompt(real, 방, { messageId })`. 생성 정보(제공자 / 모델, Max Output Tokens, Reasoning, Temperature) 알약. 시스템 메시지는 화면에서 빼요. "현재 컨텍스트 보기"(current: true)는 아직 화면에 없어요.
+- 모델 생각: `x.extra.thinking`. 없으면 안내만.
+- 여기서 분기: `liveBranchRoom` → 새 방으로 옮겨요. 방 목록에 분기 이름(New Branch)을 보여 주는 것은 아직 없어요.
+- 채팅 설정 › 자율 메시지의 스케줄 스위치: `liveSchedulesOn` · `liveSetSchedulesOn`.
+- 빠른 전환기: 목록 `liveModelConnections`, 지금 것 `liveRoomModel`, 고르기 · 기본값 사용 `liveSetRoomModel`(고르면 닫히고 알림), 친 글자를 모델 ID로 쓰기(커스텀 API · Vertex만), 즐겨찾기 `liveStars` · `liveToggleStar` · `liveMoveStar`(확장 설정에 저장), 페르소나 `liveSwitchPersona`("없음"은 함수가 없어 그대로).
+- 없는 것: 고른 뒤 알림의 "되돌리기" · "메인 모델로 만들기", 최근 쓴 모델(`recent`) 줄, 모델을 따로 고른 즐겨찾기(connectionId + model) 표시.
+- 첨부 보내기는 반영 쪽이 다음에 줘요.
+

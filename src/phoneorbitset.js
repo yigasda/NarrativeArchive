@@ -192,12 +192,12 @@ export function orbitSetPage(T, face) {
                 + cap('') + cd(tg('trAuto', '응답 자동 번역', '생성 후 AI 응답을 자동으로 번역합니다.', false), tg('trMine', '내 메시지 번역', '보내기 전에 내 메시지를 대상 언어로 번역합니다.', false), tg('trBtn', '초안 번역 버튼 표시', '보내기 옆에 번역 바로가기를 추가합니다. 대화에서는 입력창 스마일 메뉴의 도구 탭에서 초안 번역을 늘 쓸 수 있습니다.', false), tg('trOnly', '번역만 표시', '메시지가 번역되면 원문과 번역을 함께 보여 주는 대신 번역만 그 자리에 보여 줍니다.', false))
                 + hp('이 번역 설정을 모든 모드의 새 채팅용으로 저장합니다. 설정 마법사와 채팅 프로필의 설정이 먼저 적용됩니다. 기존 채팅은 그대로입니다.') + `<div class="ot_r ot_w">${soon('번역기 기본값 저장', 'save')}</div>`; },
         // 자율 메시지 (6921–7127): 켜기 → 채팅 체크인 제한, 캐릭터 간 대화(단체), 스케줄, 상태 줄 + 재생성, 시간대, 스케줄 편집
-        auto: () => { const A = T.auto, S = T.sched, son = !!g('schedOn', S.any), num = A.cap !== '';
+        auto: () => { const A = T.auto, S = T.sched, son = !!S.on, num = A.cap !== '';
             return H + cd(tg('', '자율 메시지', '스케줄이 없어도 내가 활동하지 않을 때 캐릭터가 메시지를 보냅니다', false, 'na_ob_aon', A.on),
                 ...(A.on ? [sel('capMode', '채팅 체크인 제한', [['default', '기본 채팅 상한(수다스러움 기준)'], ['numeric', '숫자 값']], 'default', 'na_os_capm', num ? 'numeric' : 'default'), ...(num ? [inp('', '하루 체크인 수', A.cap, '8', { num: true, cls: 'na_ob_acap' })] : [])] : []))
                 + (A.on ? hp('채팅 전체의 상한을 설정하며 캐릭터별 상한은 이보다 낮출 수만 있습니다. 상한을 높이면 모델 요청과 알림이 많이 발생할 수 있습니다.') : '')
                 + (T.group ? cd(tg('', '캐릭터 간 대화', '단체 채팅에서 캐릭터끼리 대화합니다', false, 'na_ob_aex', A.ex)) : '')
-                + cap('') + cd(tg('schedOn', '스케줄', '활동 가능 시간 및 지연을 위한 선택적 캐릭터 루틴', S.any),
+                + cap('') + cd(tg('', '스케줄', '활동 가능 시간 및 지연을 위한 선택적 캐릭터 루틴', false, 'na_os_schon', son),
                     `<div class="os_rw ot_t ot_st"><span class="ot_x"><span class="os_l">${!son ? '스케줄 꺼짐: 자율성은 수다스러움과 내 상태를 사용합니다.' : S.any ? '스케줄 생성됨(상태는 캐릭터 루틴에서 결정됩니다)' : '스케줄 켜짐: 준비되면 루틴을 생성하세요.'}</span><span class="os_d">${son ? '기존 캐릭터 루틴이 재사용됩니다. 새 일정이 필요하면 새로 생성하세요.' : '활동 가능 시간과 바쁨 지연을 반영하려면 스케줄을 켜세요.'}</span></span><button type="button" class="os_go na_os_regen" aria-label="스케줄 생성"${S.busy || !T.members.length ? ' disabled' : ''}>${li('refresh-cw', 13, 2.2)}${S.busy ? '재생성 중…' : S.any ? '재생성' : '생성'}</button></div>`)
                 + cap('') + cd(`<div class="os_rw ot_i" style="cursor:default">${li('clock-3', 17)}<span class="os_l">스케줄 시간대</span><span class="os_v ot_ok">${li('check', 13, 2.4)}모든 대화</span></div>`, `<div role="button" tabindex="0" class="os_rw na_ob_srow" data-v="tz" aria-label="스케줄 시간대 고르기"><span class="os_l">${esc(S.zone)}</span><i class="os_ch">${li('chevron-down', 16)}</i></div>`, ...(S.differs ? [`<button type="button" class="os_rw ot_c na_os_tzdev" aria-label="기기 설정 사용">${li('locate-fixed', 16)}<span>기기 설정 사용</span></button>`] : []))
                 + hp(`온라인 상태와 자율 메시지는 이 시간대를 따릅니다. 현재 기기의 시간대: ${esc(S.device)}.`)
@@ -231,7 +231,7 @@ export function orbitSwitcher(W) {
     const tabs = `<div class="os_sg ow_sg">${[['models', '모델'], ['personas', '페르소나']].map(([k, t]) => `<button type="button" class="na_ow_tab${W.tab === k ? ' on' : ''}" data-v="${k}">${t}</button>`).join('')}</div>`;
     let body = '';
     if (W.tab === 'models') {
-        const all = W.conns.filter(c => c.name && c.name !== '모델 없음'), cur = all[0] || null, stars = new Set(W.stars), q = W.q.trim().toLowerCase();
+        const all = W.conns.filter(c => c.name && c.name !== '모델 없음'), cur = W.curName ? null : (all.find(c => c.id === W.cur) || null), nowLabel = W.follows ? '지금 · 메인을 따름' : '지금 · 이 채팅만', stars = new Set(W.stars), q = W.q.trim().toLowerCase();
         const groups = []; for (const c of all) { const k = c.sub || c.name; let g = groups.find(x => x.key === k); if (!g) groups.push(g = { key: k, name: k, rows: [] }); g.rows.push(c); }
         const groupOf = c => groups.find(g => g.rows.includes(c)), starred = W.stars.map(id => all.find(c => c.id === id)).filter(Boolean);
         const paneGroup = W.drilled ? groups.find(g => g.key === W.pane) : null, paneKey = paneGroup?.key;   // (즐겨찾기 화면은 따로 없어요: 맨 화면 맨 위에 있어요, 소망)
@@ -242,7 +242,8 @@ export function orbitSwitcher(W) {
                 + (o.now ? '' : ord && st ? `<button type="button" class="os_ib na_ow_mv" data-id="${esc(c.id)}" data-by="-1" aria-label="${esc(c.name)} 위로 이동"${W.stars.indexOf(c.id) <= 0 ? ' disabled' : ''}>${li('arrow-up', 15)}</button><button type="button" class="os_ib na_ow_mv" data-id="${esc(c.id)}" data-by="1" aria-label="${esc(c.name)} 아래로 이동"${W.stars.indexOf(c.id) >= W.stars.length - 1 ? ' disabled' : ''}>${li('arrow-down', 15)}</button>`
                     : `${st ? `<button type="button" class="os_ib na_ob_soon" aria-label="${esc(c.name)} 설정">${li('sliders-horizontal', 15)}</button>` : ''}<button type="button" class="os_ib ow_st na_ow_star${st ? ' on' : ''}" data-id="${esc(c.id)}" aria-pressed="${st}" aria-label="${esc(c.name)} 즐겨찾기">${li('star', 16)}</button>`) + '</div>'; };
         const orderBtn = `<div class="ot_r ot_end ow_ord"><button type="button" class="os_go na_ow_order" aria-pressed="${!!W.order}">${W.order ? '완료' : '순서 편집'}</button></div>`;
-        const now = `<div class="ow_now">${cur ? row(cur, { now: true, sub: ['지금 · 메인을 따름', groupOf(cur)?.name].filter(Boolean).join(' · ') }) : `<div class="os_cap ow_cap"><span>지금 · 메인을 따름</span></div><div class="ow_nx">모델 선택</div>`}</div>`;
+        const dflt = W.follows ? '' : `<button type="button" class="os_go na_ow_default" aria-label="기본값 사용">${li('house', 13, 2.2)}기본값 사용</button>`;
+        const now = `<div class="ow_now${dflt ? ' d' : ''}">${cur ? row(cur, { now: true, sub: [nowLabel, groupOf(cur)?.name].filter(Boolean).join(' · ') }) : `<div class="ow_nn"><div class="os_cap ow_cap"><span>${nowLabel}</span></div><div class="ow_nx">${W.curName ? esc(W.curName) : '모델 선택'}</div></div>`}${dflt}</div>`;
         const search = `<div class="os_q ow_q">${li('search', 16)}<div class="os_qi na_ow_q" contenteditable="true" role="textbox" enterkeyhint="go" spellcheck="false" autocapitalize="off" data-ph="${paneGroup ? `${esc(paneGroup.name)} 검색...` : '모델 검색 또는 ID 붙여넣기…'}" aria-label="모든 모델 검색 또는 모델 ID 붙여넣기">${esc(W.q)}</div>${W.q ? `<button type="button" class="os_ib na_ow_qx" aria-label="검색 지우기">${li('x', 15)}</button>` : ''}</div>`;
         const add = cd(`<button type="button" class="os_rw na_ob_soon" aria-label="계정 추가">${li('plus', 18)}<span class="os_l">계정 추가</span></button>`);
         if (!all.length) body = now + none('아직 모델이 없습니다. 계정을 추가하면 생깁니다.') + add;
@@ -250,7 +251,7 @@ export function orbitSwitcher(W) {
             const hit = c => `${c.name} ${c.sub}`.toLowerCase().includes(q), scope = paneGroup ? paneGroup.rows : all, hits = scope.filter(hit), typed = W.q.trim(), target = paneGroup || (cur && groupOf(cur)) || groups[0];
             const secs = paneGroup ? [['즐겨찾기', hits.filter(c => stars.has(c.id)), false], ['모든 모델', hits.filter(c => !stars.has(c.id)), false]]
                 : [['즐겨찾기', hits.filter(c => stars.has(c.id)), true], ...groups.map(g => [esc(g.name), hits.filter(c => !stars.has(c.id) && g.rows.includes(c)), false])];
-            const use = target && !/\s/.test(typed) && !all.some(c => c.name === typed) ? cd(`<div role="button" tabindex="0" class="os_rw ot_t na_ob_soon" aria-label="“${esc(typed)}” 사용">${li('search', 17)}<span class="ot_x"><span class="os_l">“${esc(typed)}” 사용</span><span class="os_d">${esc(target.name)}에 이 ID 추가</span></span></div>`) : '';
+            const use = target && !/\s/.test(typed) && !all.some(c => c.name === typed) ? cd(`<div role="button" tabindex="0" class="os_rw ot_t na_ow_use" data-id="${esc(target.rows[0].id)}" data-m="${esc(typed)}" aria-label="“${esc(typed)}” 사용">${li('search', 17)}<span class="ot_x"><span class="os_l">“${esc(typed)}” 사용</span><span class="os_d">${esc(target.name)}에 이 ID 추가</span></span></div>`) : '';
             body = now + search + secs.filter(s => s[1].length).map(([l, r, away]) => cap(l, r.length) + cd(...r.map(c => row(c, { away })))).join('') + use
                 + (hits.length || use ? '' : none('일치하는 모델이 없습니다.')) + (paneGroup ? cd(`<div role="button" tabindex="0" class="os_rw na_ow_qall" aria-label="모든 계정 검색">${li('search', 17)}<span class="os_l">모든 계정 검색</span></div>`) : ''); }
         else if (!paneGroup) body = now + search   // 맨 화면: 즐겨찾기(맨 위) · 계정들 · 계정 추가
