@@ -161,7 +161,7 @@ function cfgTiles(g) {
         const tr = trSettings().mode;
         return [
             ['AI 기능 모델', a1, a2 || '질문 · 점검 · 라우터', true, 'ai'],
-            ['초안 모델', draftReady() ? ({ vertex: 'Vertex', source: '실리태번' }[draftSettings().mode] || '커스텀') : '없음', draftReady() ? drLabel() : '압축 초안 · 짧은 버전', draftReady(), 'dr'],
+            ['초안 모델', draftReady() ? ({ vertex: 'Vertex', source: '실리태번' }[draftSettings().mode] || '커스텀') : '없음', draftReady() ? stKo(drLabel()) : '압축 초안 · 짧은 버전', draftReady(), 'dr'],
             ['번역 모델', tr === 'same' ? '같이' : split2(trLabel())[0], tr === 'same' ? 'AI 기능 모델' : split2(trLabel())[1], tr !== 'same', 'ai'],
             ['답 최대 길이', `${Number(val('na_ai_max') || 0).toLocaleString()}`, '토큰 · 잘리면 늘려요', true, 'ai'],
         ];
