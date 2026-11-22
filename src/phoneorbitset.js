@@ -75,7 +75,7 @@ const LI = {
 const li = (k, s = 18, w = 2) => `<svg aria-hidden="true" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round">${LI[k] || ''}</svg>`;
 
 // 맨 화면의 줄: [화면, 아이콘, 이름]. 값은 orbitSetRows가 붙여요
-export const ORBIT_SET_TITLES = { profile: '설정 프로필', branches: '채팅 분기', conn: '연결', stconn: 'API 연결', caption: '그림 설명', preset: '프롬프트 프리셋', persona: '페르소나', people: '캐릭터', group: '단체 채팅', linked: '연결된 채팅', lore: '로어북', ctx: '활성 컨텍스트', agents: '에이전트', gallery: '갤러리', memory: '기억 회상', memlist: '이 채팅의 기억', trans: '번역', auto: '자율 메시지', tz: '스케줄 시간대', sum: '자동 요약', sumedit: '요약 편집', name: '채팅 제목' };
+export const ORBIT_SET_TITLES = { profile: '설정 프로필', branches: '채팅 분기', conn: '연결', stconn: 'API 연결', caption: '그림 설명', notify: '알림', preset: '프롬프트 프리셋', persona: '페르소나', people: '캐릭터', group: '단체 채팅', linked: '연결된 채팅', lore: '로어북', ctx: '활성 컨텍스트', agents: '에이전트', gallery: '갤러리', memory: '기억 회상', memlist: '이 채팅의 기억', trans: '번역', auto: '자율 메시지', tz: '스케줄 시간대', sum: '자동 요약', sumedit: '요약 편집', name: '채팅 제목' };
 const HELP = {
     profile: '설정 프로필은 이 채팅의 제공자, 프롬프트, 에이전트, 번역, 기억 등의 설정을 저장해 다시 쓸 수 있게 합니다. 캐릭터, 스프라이트, 요약, 태그, 장면 프롬프트는 바꾸지 않습니다. 프로필의 페르소나, 로어북, 배경은 적용할 때 채팅으로 복사됩니다. 별표를 누르면 이 모드의 새 채팅에 사용됩니다.',
     name: '이 이름은 나에게만 보입니다. AI에게 전송되지 않으며 대화에 아무 영향도 주지 않습니다.',
@@ -197,6 +197,11 @@ export function orbitSetPage(T, face) {
                 + cap('연결 설정') + cd(nav('stconn', 'API 연결', '키 · 주소 · 모델 · 연결 · 테스트 메시지', 'chevron-right')); },
         // 실리의 API 연결 (1-7): src/phonestconn.js가 실리의 진짜 칸을 읽어 준 목록(T.st)을 실리 순서대로 그려요. 소스마다 화면을 따로 짜지 않아요
         stconn: () => (T.st ? hp('실리의 API 연결 창을 그대로 조종합니다. 여기서 바꾸면 실리의 연결이 바뀝니다(롤플레이도 같은 연결을 씁니다). 키는 실리에만 저장됩니다.') + scGroup(T, T.st, false) : none('실리의 API 연결 창을 찾지 못했어요.')),
+        // 알림 (마리나라의 ConversationSoundSetting 중 대화 모드에서 되는 것): 알림음 · 백그라운드 알림(브라우저). T.notify = { sound, unfocused, browser, perm }
+        notify: () => { const N = T.notify || {}, help = N.perm === 'insecure' ? '브라우저 알림은 HTTPS나 localhost에서만 됩니다.' : N.perm === 'denied' ? '브라우저 알림이 막혀 있습니다. 이 사이트의 알림 권한을 초기화한 뒤 다시 해 보세요.' : N.perm === 'unsupported' ? '이 환경에서는 브라우저 알림을 쓸 수 없습니다.' : '브라우저의 알림 권한을 사용합니다.';
+            return cap('알림음') + cd(tg('sound', '알림음', '캐릭터가 먼저 메시지를 보내면 알림음을 냅니다.', true, 'na_os_nt', !!N.sound), ...(N.sound ? [tg('unfocused', '창이 뒤에 있을 때만', '실리를 보고 있을 때는 알림음을 내지 않습니다.', false, 'na_os_nt', !!N.unfocused), pad(`<div class="ot_r"><button type="button" class="os_go na_os_ntplay">${li('refresh-cw', 13, 2.2)}미리 듣기</button></div>`)] : []))
+                + cap('백그라운드 알림') + cd(tg('browser', '브라우저', help, false, 'na_os_nt', !!N.browser && N.perm === 'granted'))
+                + hp('실리가 앞에 있지 않을 때 캐릭터가 먼저 건 메시지가 오면 운영체제 알림을 띄웁니다. 메시지 내용은 보이지 않습니다.'); },
         // 그림 설명 (마리나라의 Image captioning): 켜기 · 설명할 연결 · 설명 지시문. T.caption = liveCaptioning()
         caption: () => { const C = T.caption || { enabled: false, connectionId: '', prompt: '', defaultPrompt: '', connections: [] };
             return hp('켜면 그림을 그대로 보내지 않고, 글로 설명해서 보냅니다. 그림을 못 읽는 모델을 쓸 때 켜세요.')
@@ -262,9 +267,11 @@ export function orbitSetPage(T, face) {
                 + hp('이 번역 설정을 모든 모드의 새 채팅용으로 저장합니다. 설정 마법사와 채팅 프로필의 설정이 먼저 적용됩니다. 기존 채팅은 그대로입니다.') + `<div class="ot_r ot_w">${soon('번역기 기본값 저장', 'save')}</div>`; },
         // 자율 메시지 (6921–7127): 켜기 → 채팅 체크인 제한, 캐릭터 간 대화(단체), 스케줄, 상태 줄 + 재생성, 시간대, 스케줄 편집
         auto: () => { const A = T.auto, S = T.sched, son = !!S.on, num = A.cap !== '';
+            // (T.srv: 서버 플러그인이 돌 때만 와요. can이면 실리를 닫아도 이 방에 오고, 아니면 why에 이유. 플러그인이 없으면 아무 표시도 없어요)
+            const srv = !A.on || !T.srv ? '' : T.srv.can ? `<div class="ot_box"><b>실리를 닫아도 옵니다</b><span>실리를 닫거나 탭을 가려 둔 동안에도 이 방에는 캐릭터가 먼저 건 말과 늦은 답장이 옵니다.</span></div>` : `<div class="ot_box warn">${li('info', 15)}<span>이 방은 실리를 닫으면 오지 않습니다${T.srv.why ? `: ${esc(T.srv.why)}` : '.'}</span></div>`;
             return H + cd(tg('', '자율 메시지', '스케줄이 없어도 내가 활동하지 않을 때 캐릭터가 메시지를 보냅니다', false, 'na_ob_aon', A.on),
                 ...(A.on ? [sel('capMode', '채팅 체크인 제한', [['default', '기본 채팅 상한(수다스러움 기준)'], ['numeric', '숫자 값']], 'default', 'na_os_capm', num ? 'numeric' : 'default'), ...(num ? [inp('', '하루 체크인 수', A.cap, '8', { num: true, cls: 'na_ob_acap' })] : [])] : []))
-                + (A.on ? hp('채팅 전체의 상한을 설정하며 캐릭터별 상한은 이보다 낮출 수만 있습니다. 상한을 높이면 모델 요청과 알림이 많이 발생할 수 있습니다.') : '')
+                + (A.on ? hp('채팅 전체의 상한을 설정하며 캐릭터별 상한은 이보다 낮출 수만 있습니다. 상한을 높이면 모델 요청과 알림이 많이 발생할 수 있습니다.') : '') + srv
                 + (T.group ? cd(tg('', '캐릭터 간 대화', '단체 채팅에서 캐릭터끼리 대화합니다', false, 'na_ob_aex', A.ex)) : '')
                 + cap('') + cd(tg('', '스케줄', '활동 가능 시간 및 지연을 위한 선택적 캐릭터 루틴', false, 'na_os_schon', son),
                     `<div class="os_rw ot_t ot_st"><span class="ot_x"><span class="os_l">${!son ? '스케줄 꺼짐: 자율성은 수다스러움과 내 상태를 사용합니다.' : S.any ? '스케줄 생성됨(상태는 캐릭터 루틴에서 결정됩니다)' : '스케줄 켜짐: 준비되면 루틴을 생성하세요.'}</span><span class="os_d">${son ? '기존 캐릭터 루틴이 재사용됩니다. 새 일정이 필요하면 새로 생성하세요.' : '활동 가능 시간과 바쁨 지연을 반영하려면 스케줄을 켜세요.'}</span></span><button type="button" class="os_go na_os_regen" aria-label="스케줄 생성"${S.busy || !T.members.length ? ' disabled' : ''}>${li('refresh-cw', 13, 2.2)}${S.busy ? '재생성 중…' : S.any ? '재생성' : '생성'}</button></div>`)

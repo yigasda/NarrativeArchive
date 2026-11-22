@@ -315,3 +315,25 @@
 채팅 설정 › 에이전트 › 명령. 맨 위 "명령" 전체 스위치 + 명령마다의 스위치. `liveCommands` · `liveSetCommands`에 이었고, id는 마리나라의 이름(schedule_update · cross_post · memory · scene · influence · note · react)이에요.
 반영이 `works: false`로 주는 줄은 안 그려요(이 확장에 그 명령이 아직 없어서 켜도 아무 일이 없어요). 지금 그려지는 것: 스케줄 갱신 · 반응. 나머지(교차 게시 · 기억 · 장면 · 영향 · 노트)는 명령을 가져오면 저절로 나타나요.
 확인(실제 폰 틀): 반응 끄기 · 켜기, 전체 스위치를 끄면 아래 줄이 사라지고 켜면 다시 뜸, "아직 연결되지 않았어요" 알림이 안 뜸.
+
+
+## 먼저 건 말의 알림 (3.230.0, 반영 23dec1b의 신호 · 함수에 화면을 붙임)
+
+끝까지 읽은 마리나라 코드: `hooks/use-background-autonomous.ts`(전부) · `components/chat/ConversationAutonomousEffects.tsx`(전부) · `components/chat/ChatNotificationBubbles.tsx`(전부) · `stores/chat.store.ts`의 incrementUnread · hydrateUnread · clearUnread · addNotification · `components/layout/ChatSidebar.tsx` 616~650(안 읽음 수) · `components/panels/settings/SettingControls.tsx`의 ConversationSoundSetting · CustomNotificationSoundSetting(전부) · `lib/notification-sound.ts` · `lib/local-notifications.ts`(반영이 가져온 것).
+
+| 마리나라 | 우리 화면 | 상태 |
+|---|---|---|
+| 알림음 (playConfiguredNotificationPing) | 'na-live-auto'가 오면 `src/phone.js` 맨 위에서. 폰이 닫혀 있어도 울려요 | 됨 |
+| 지금 보는 방의 띠 "○○ messaged you" (5초, ✕) | 방 안 오른쪽 위 `ob_band` "○○님이 메시지를 보냈습니다" | 됨 |
+| 다른 방의 프사 방울 (누르면 그 방으로, ✕, 수) | 오른쪽 가장자리 `ob_nb` (Orbit의 목록 · 방 화면에서) | 됨. 여럿일 때 하나로 접는 것(모바일)은 없고 넷까지 세로로 |
+| 떠 있는 글 "○○ sent you a message" | toastr "○○님이 메시지를 보냈습니다" (그 방을 보고 있지 않을 때, 폰이 닫혀 있을 때도) | 됨 |
+| 브라우저 알림 (showLocalMessageNotification) | 설정에서 켜고 권한을 받은 뒤. 제목 "○○님의 새 메시지" | 됨 (권한을 받은 상태는 확인 못 함) |
+| 안 읽음 수 (incrementUnread · hydrateUnread) | 우리 방 목록의 안 읽음 수는 읽은 자리로 세서 그대로 늘어요. `liveAutonomousUnread`는 안 써요 | 됨(따로 만들지 않음) |
+| 알림 설정: Conversation 알림음 · 창이 뒤에 있을 때만 · 미리 듣기 | 채팅 설정 › 알림 | 됨 |
+| 알림 설정: 브라우저 (권한 흐름 · 도움말 넷) | 채팅 설정 › 알림 › 백그라운드 알림 | 됨 |
+| Roleplay · Game 알림음, 생성 완료 알림, 모바일 앱(Android) 알림, 사용자 지정 알림음(올리기 · 지우기), 알림 위치(위 · 아래) | 없음 | 안 가져옴: 되는 것만 보여요(소망). 롤플 · 게임은 여기 없고, Android 앱 · 서버에 알림음 저장하는 길이 없어요 |
+| 전화 알림 (addCallNotification) | 없음 | 안 가져옴 (전화 기능이 없어요) |
+
+"실리를 닫아도 와요" 표시: 채팅 설정 › 자율 메시지에 한 줄. `liveServerStatus`의 on이 false면 아무 표시도 없고, 그 방의 can이 true면 "실리를 닫아도 옵니다", false면 why를 보여 줘요. 답이 늦을 수 있어서 화면을 막지 않고 오면 다시 그려요.
+확인(실제 폰 틀, 신호를 손으로 쏨): 띠가 뜨고 5초 뒤 사라짐, 목록에서 방울 + 떠 있는 글, 방울을 누르면 그 방으로 · ✕로 지움, 알림음 켬/끔 · 창이 뒤에 있을 때만 · 미리 듣기, 브라우저 알림이 막힌 환경에서 안 켜지고 이유가 뜸, 플러그인이 없을 때 서버 줄이 안 뜸.
+확인 못 함: 서버 플러그인이 도는 상태(can true / false 줄), 진짜로 먼저 건 말, 브라우저 알림 권한을 받은 상태, 폰이 닫혀 있을 때의 떠 있는 글.
