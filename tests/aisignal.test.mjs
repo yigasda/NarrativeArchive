@@ -56,6 +56,25 @@ test('topP: 준 값이 실려 가요 (1까지, 음수 · 안 준 것은 안 실�
     await AI.callConn(an, 'S', 'hello', 256, '', true, false, null, 0.2, 0.8);
     assert.deepEqual(bodies.map(b => b.top_p), [1, 1, undefined, undefined, undefined, 0.8, undefined]);
 });
+test('그림 · 파일: 한 차례에 실어 준 것이 연결 방식마다 그 API의 모양으로 가요 (마리나라의 제공자 코드와 같은 순서)', async () => {
+    const bodies = [];
+    globalThis.fetch = async (url, init = {}) => { bodies.push(JSON.parse(init.body)); return { ok: true, status: 200, text: async () => JSON.stringify({ choices: [{ message: { content: 'hi' } }], content: [{ type: 'text', text: 'hi' }] }), clone() { return this; }, json: async () => ({ choices: [{ message: { content: 'hi' } }], content: [{ type: 'text', text: 'hi' }] }) }; };
+    const PNG = 'data:image/png;base64,iVBORw0KGgo=', PDF = 'data:application/pdf;base64,JVBERi0=';
+    const turn = [{ role: 'user', content: 'hello', images: [PNG], files: [{ type: 'application/pdf', data: PDF, filename: 'doc.pdf' }] }];
+    const oa = { mode: 'custom', url: 'https://relay.example/v1', key: 'k', model: 'm' }, an = { mode: 'custom', url: 'https://relay.example', key: 'k', model: 'm', fmt: 'anthropic', leanHeaders: true };
+    await AI.callConn(oa, 'S', turn, 256, '', true, true);
+    assert.deepEqual(bodies[0].messages, [{ role: 'system', content: 'S' }, { role: 'user', content: [{ type: 'file', file: { filename: 'doc.pdf', file_data: PDF } }, { type: 'text', text: 'hello' }, { type: 'image_url', image_url: { url: PNG } }] }]);
+    await AI.callConn(an, 'S', turn, 256, '', true, true);
+    assert.deepEqual(bodies[1].messages, [{ role: 'user', content: [{ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: 'JVBERi0=' }, title: 'doc.pdf' }, { type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'iVBORw0KGgo=' } }, { type: 'text', text: 'hello' }] }]);
+    // (규칙을 첫 말 위에 얹는 요청도 그림을 잃지 않아요; 그림 없는 요청은 전과 같이 글만)
+    await AI.callConn(oa, 'S', turn, 256, '', true, false);
+    assert.equal(bodies[2].messages[0].content[1].text, '[INSTRUCTIONS]\nS\n[/INSTRUCTIONS]\n\nhello'); assert.equal(bodies[2].messages[0].content[2].image_url.url, PNG);
+    await AI.callConn(oa, 'S', 'hello', 256, '', true, true);
+    assert.deepEqual(bodies[3].messages, [{ role: 'system', content: 'S' }, { role: 'user', content: 'hello' }]);
+    // (글 없이 그림만 있는 차례도 가요; 이어지는 같은 쪽 차례는 하나로)
+    assert.deepEqual(AI.turnsOf([{ role: 'user', content: '', images: [PNG] }, { role: 'user', content: '둘' }]), [{ role: 'user', content: '둘', images: [PNG] }]);
+    assert.deepEqual(AI.openAiTurn({ role: 'user', content: 'x', images: [PNG], files: [{ data: PDF }] }, false).content, [{ type: 'text', text: 'x' }, { type: 'image_url', image_url: { url: PNG } }]);   // (실리 서버로 가는 길: 그림만)
+});
 test('실리 연결 방식: 실리가 만든 요청({ generate_data … })을 그대로 보내고, 이 요청이 정한 값은 설정으로 넣어요', async () => {
     const seen = [], bodies = [];
     globalThis.document = { querySelectorAll: () => [] };

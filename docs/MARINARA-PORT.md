@@ -43,6 +43,8 @@
 | routes/generate.routes.ts 의 단체방 고르기 (3210~3221, 5165~5170, 6215~6260, 8273~8715, 12062~12290줄) | 예 (그 줄들만. 파일 전체 13000줄은 아니오) |
 | services/storage/message-trash.storage.ts | 예. 찾은 것: 마리나라는 휴지통 수를 안 막음(우리는 100개로 막았음) → 막던 것 뺌. 목록에 받아 둔 답장 수(`swipeCount`) → 넣음. 로어 · 기억 조각 · 게임 · 변수 되돌리기는 그 기능이 우리에게 없음 |
 | services/conversation/server-autonomous-scheduler.service.ts | 예 (읽기만. 가져오기는 아직: "꼭 할 것"). 가져올 때 챙길 것: 60초마다(처음 20초 뒤), 창이 75초 안에 살아 있었으면 서버는 쉼, 오프라인 후속 2번까지, 한 번에 2방까지, 4xx 실패는 30분 쉼, 꺼 둔 이유 지키기, 안 읽음 표시 |
+| 첨부 보내기 (2026-11-22, 마리나라 staging 32c47a1): client/lib/chat-attachment-images.ts(284줄) · services/generation/prompt-attachments.ts(194줄) · shared/constants/image-captioning-prompt.ts · services/generation/image-captioning-runtime.ts(712줄) · routes/generate/conversation-prompt-formatting.ts(317줄) | 예 (다섯 파일 모두 처음부터 끝까지) |
+| 첨부 보내기에 딸린 줄: ConversationInput.tsx(87~140 · 262~296 · 560~572 · 655~830 · 855~950 · 1027~1245 · 1356~1452 · 1804~1830 · 2168~2200 · 2242~2254), generate.routes.ts(1376~1385 · 1595~1697 · 2118~2198 · 2629~2759 · 12094~12095), generate-route-utils.ts(1204~1228), chat.schema.ts(123~133), types/chat.ts(969~984), slash-commands.ts(115~148), base-provider.ts(302~321 · 362~376), openai.provider.ts(492~512 · 2045~2082 · 2881~2890), anthropic.provider.ts(362~390 · 893~912), google.provider.ts(502~530), ConversationMessage.tsx(497~530), ConversationMessageShared.tsx(558~645), use-generate.ts(1321 · 1359~1360 · 1426 · 1517), chat-resource-drag.ts(141~143) | 예 (그 줄들만. 파일 전체는 아니오) |
 | 나머지 "아직" 파일 전부 | 아니오 |
 
 ## 스케줄 · 상태 · 먼저 말 걸기
@@ -79,6 +81,27 @@
 | services/generation/prompt-message-scope.ts | 456 | 아직 | | 말마다 누구에게 보일지 정하기 |
 | routes/generate/conversation-history-runtime.ts | 763 | 아직 | | 요청에 넣을 대화 기록 다듬기 |
 | services/conversation/transcript-sanitize.ts | 102 | 아직 | | |
+
+## 첨부 보내기 (2026-11-22)
+
+| 마리나라 파일 | 줄 | 상태 | 우리 쪽 | 빠진 것 |
+|---|---|---|---|---|
+| client/lib/chat-attachment-images.ts | 284 | 다 | src/marinara/chat-attachment-images.js | (그림 줄이기: 긴 변 1536px, GIF는 멈춘 그림으로) |
+| services/generation/prompt-attachments.ts | 194 | 다 | src/marinara/prompt-attachments.js | Node의 Buffer만 브라우저 것으로 바꿈 |
+| shared/constants/image-captioning-prompt.ts | 6 | 다 | src/marinara/image-captioning-prompt.js | 지시문 글자 그대로 |
+| services/generation/image-captioning-runtime.ts | 712 | 일부 | src/marinara/image-captioning.js · phone2go.js captioningOf | 가져온 것: 설명 만들기 · 저장한 설명 다시 쓰기 · 요청에 넣기(`resolvePromptAttachmentInputs`). **안 가져온 것**: ① "자동" (채팅 모델이 그림을 못 읽을 때만 설명): 마리나라의 모델 목록(그림을 읽는 모델인지)이 우리에게 없어요. 우리는 스위치를 켠 채팅만 설명해요. ② 모델이 그림을 거절하면 설명으로 다시 보내기(`withImageCaptionFallback`): "그림 읽기 기본 모델"이 우리에게 없어요. ③ 캐릭터가 보낸 셀카 설명(`captionSentSelfies`): 캐릭터가 그림을 보내는 기능이 없어요. ④ 무작위 연결 · 실패 시 다른 연결 |
+| ConversationInput.tsx (첨부 부분) | | 일부 | src/marinara/conversation-attachments.js | 가져온 것: 받는 종류 · 20MB · 읽는 순서 · 보낼 모양. 안 가져온 것: 채팅마다 첨부 초안을 따로 두기 · 보내기 실패 때 입력창 되돌리기(화면 몫: 디자인 세션) · GIF 고르기 · 명령어에 첨부 싣기(`withComposerReplyAndAttachments`) |
+| generate.routes.ts (첨부 부분) | | 일부 | src/phone2attach.js · phone2store.js sendLive · phone2go.js roomAttachments | 가져온 것: 말에 첨부 남기기 · 글 없이 첨부만 보내기 · 대화의 모든 말의 첨부를 요청에 넣기 · 새 설명을 말에 저장. 안 가져온 것: 내 말 다시 쓰기(regenerate)의 첨부 · 게임 방 |
+| conversation-prompt-formatting.ts (`appendSentMediaNotes` 등) | 317 | 안 함 | | 캐릭터가 보낸 사진 · 셀카 · 영상을 다음 요청에 적는 줄: 캐릭터가 파일을 보내는 기능이 없어서 쓸 곳이 없어요 |
+| 제공자 코드 (openai · anthropic · google .provider.ts 의 그림 · 파일) | | 일부 | src/ai.js openAiTurn · anthropicTurn | 커스텀 API(OpenAI 형식 · Anthropic 형식)는 마리나라와 같은 모양 · 순서로 보내요. **실리 서버로 가는 길(Vertex · 실리 연결 방식 · 연결 프로필)은 그림만 가요: 실리 서버가 PDF 조각을 안 받아요.** 그 길에서는 PDF를 안 보내고 그 말에 "this connection cannot read it"이라고 적어요 |
+| ConversationMessage*.tsx (보낸 첨부 그리기 · 빼기) | | 코드 다. 화면은 디자인 세션 | phone2go.js liveRemoveAttachment | |
+
+**우리 저장 모양에 맞춘 것** (소망 허락, 2026-11-22):
+- 마리나라는 파일을 말 안에 통째로 저장해요. 우리는 실리의 파일 저장소(`/api/files/upload`)에 올리고 말에는 주소만 남겨요(`extra.attachments[].url`). 채팅 파일이 그림마다 몇 MB씩 커지지 않게요.
+- 마리나라는 그림이 그 말에 붙어서 가요. 우리 답장 요청은 대화가 MESSENGER 블록 하나라서, 그 말의 줄 아래에 마리나라의 꼬리표 모양으로 `(image 1 attached to this request)`처럼 적어요.
+- 요약 · 롤플에 전하기 · 폰 반영은 말의 글만 읽어요. 첨부는 답장 요청에만 들어가요.
+- 말을 지우거나 방을 지워도 실리 저장소의 파일은 남아요. 말에서 첨부를 뺄 때(`liveRemoveAttachment`)만 지워요.
+- 진짜 모델로는 아직 안 돌려 봤어요(그림을 보고 답하는지, 실리 서버가 그림 조각을 연결 종류마다 잘 넘기는지).
 
 ## 답장 지시문 · 명령
 
@@ -239,5 +262,5 @@
 - 채팅 설정 › 자율 메시지의 스케줄 스위치: `liveSchedulesOn` · `liveSetSchedulesOn`.
 - 빠른 전환기: 목록 `liveModelConnections`, 지금 것 `liveRoomModel`, 고르기 · 기본값 사용 `liveSetRoomModel`(고르면 닫히고 알림), 친 글자를 모델 ID로 쓰기(커스텀 API · Vertex만), 즐겨찾기 `liveStars` · `liveToggleStar` · `liveMoveStar`(확장 설정에 저장), 페르소나 `liveSwitchPersona`("없음"은 함수가 없어 그대로).
 - 없는 것: 고른 뒤 알림의 "되돌리기" · "메인 모델로 만들기", 최근 쓴 모델(`recent`) 줄, 모델을 따로 고른 즐겨찾기(connectionId + model) 표시.
-- 첨부 보내기는 반영 쪽이 다음에 줘요.
+- 첨부 보내기: 반영 쪽이 줬어요(2026-11-22). 화면을 잇는 일이 남았어요: `liveReadFiles` → `liveStoreAttachments` → `sendLive(…, { attachments })`, 보낸 첨부 그리기 · 빼기, 그림 설명 설정(`liveCaptioning` · `liveSetCaptioning`).
 

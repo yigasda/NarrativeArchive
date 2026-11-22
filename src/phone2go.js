@@ -24,10 +24,12 @@ import { liveChatTail, liveSnapBehind, liveSnapExtend, liveSnapNow } from './pho
 import { liveStoryText } from './phone2story.js';
 import { BACK, backLeft, backInput, phone2BackSystem, takeBack, backMessage, markTold } from './phone2back.js';
 import { liveWall } from './phone2clock.js';
-import { gatherReply } from './phone2live.js';
+import { gatherReply, LIVE_ASK } from './phone2live.js';
 import { presenceOf, scheduleOf, setSchedule, setStatusOverride, setUserStatus, setAutonomous, statusNow, replyDelay, contextBlock, makeSchedule, checkProactive, noteProactive, fillPlaces, stateNow, takeStatus, scheduleZone, setScheduleZone, draftSchedule, summarizeSchedule, repairSchedule, setAutoRenew, autoRenewOf, needsRefresh, renewSchedules, setAutonomousOptions, autonomousOptions, checkExchangeFor, mentionsIn, activeSchedule, schedulesOn, setSchedulesOn, exportSchedule, importSchedule, syncUser, noteAssistant, noteReaction, forgetActivity, setCardStore, setZoneStore, flushCards, clearProgress, groupOrder, groupTurnPrompt, isGroupRoom, groupResponders, groupHandoff, GROUP_MENTION_INVITE_LINE, orderConversationRespondersByDelay, groupMode, mergedDelay, groupCandidates } from './phone2sched.js';
 import { buildMergedConversationSystemPrompt, formatConversationGroupOutputFormat, mergedRespondersLine, mergedMentionLine, extractLeadingThinkingBlocks, buildGenerationInfoExtra, chatModelChoiceSchema, readChatModelOverride, readChatRecentModels, applyChatModelPatch, applyChatModelOverride, reorderStars, CHAT_RECENT_MODELS_KEY, MAX_PINNED_MODELS, relevantGenerationParameters, reasoningEffortChoices, resolveProviderReasoningEffort, isClaudeOpus55Model, generationLevelLabel } from './phone2merged.js';
 import { replyInput, messengerBlock } from './phone2ask.js';
+import { readChatAttachments, toPendingAttachments, storeAttachments, attachmentInputs, DISABLED_IMAGE_CAPTIONING, DEFAULT_IMAGE_CAPTIONING_PROMPT, normalizePromptAttachments, CHAT_ATTACHMENT_ACCEPT } from './phone2attach.js';
+import { askRows } from './phone2room.js';
 import { phone2ReplySystem } from './phone2reply.js';
 import { runLive, takeMerged } from './phone2run.js';
 import { markPersona } from './phone2feed.js';
@@ -128,7 +130,7 @@ export async function liveGo(real, { onChange = () => {} } = {}) {
         parse: s => parseJson(s, { salvage: true }),
         // (what was sent and what came with the answer, kept for the reply it becomes: Marinara's cachedPrompt · thinking · generationInfo)
         // (the room's own model, when one was picked for it in the quick switcher: else the draft model, as before)
-        ask: (input, { system, req }) => { asked = { system, input, meta: {} }; return askRoom(real, req?.room, input, { force: true, system, maxTokens: LIVE_GO.replyTokens, effort: 'low', meta: asked.meta }); },
+        ask: (input, { system, req }) => { asked = { system, input, meta: {} }; return askRoom(real, req?.room, input, { force: true, system, maxTokens: LIVE_GO.replyTokens, effort: 'low', meta: asked.meta, images: req?.images, files: req?.files }); },
         gather: async job => { await keepUpStory(real, tell); return gatherJob(real, job); },
         took: (job, got) => { const w = liveWorld(real); if (w && w.id === job.world && got?.said && asked) keepAsked(w, w.messenger?.rooms?.[job.room], job, asked); asked = null; },
         // (an owner with a schedule: the texts carry the schedule's state, not one the model wrote)
@@ -245,8 +247,11 @@ async function gatherJob(real, job) {
     if (!w || !p) return null;
     if (w.from === 'story' && !isSnap(w.snap)) throw new Error(NO_STORY);
     const d0 = liveMeta(real, { now: liveNowOf(real) }), card = await cardOf(p);
-    if (job.merged) return gatherMerged(real, job, { card, d0 });
+    // (the attachments on the messages this request carries: read back, captioned if this chat asks for it)
+    const att = await roomAttachments(real, job);
+    if (job.merged) { const req = await gatherMerged(real, job, { card, d0, att }); return req ? { ...req, images: att.images, files: att.files } : req; }
     const d = gatherReply(real, job.owner, job.room, { now: Date.now(), tz: tzOf(p), why: job.why || '', deps: {
+        attach: x => att.blocks.get(x.id) || '',
         // (the reply's own clock block: each place's time now and weekday, as the reply prompt was tuned with)
         // (the weekday is worked out from the phone's year: its saved time's, so the year after once the clock
         // has passed New Year)
@@ -259,10 +264,10 @@ async function gatherJob(real, job) {
         before: () => (open(real) ? liveChatTail().lines : []),
     } });
     // (Marinara's status · schedule lines: always there, as in Marinara; an owner with no schedule reads "online")
-    if (d) { const room = w.messenger.rooms[job.room], last = [...(room?.messages || [])].reverse().find(x => x.text || x.call); d.context = contextBlock(real, job.owner, job.room, { tzOf: n => zoneOf(real, livePhone(real, n) || p), lastRole: last && liveKey(last.from) === liveKey(w.persona) ? 'user' : 'assistant', said: !job.why, intentKey: job.intent || '', mentions: job.auto ? [] : mentionsIn(real, job.room) });
+    if (d) { const room = w.messenger.rooms[job.room], last = [...(room?.messages || [])].reverse().find(x => x.text || x.call || x.extra?.attachments?.length); d.context = contextBlock(real, job.owner, job.room, { tzOf: n => zoneOf(real, livePhone(real, n) || p), lastRole: last && liveKey(last.from) === liveKey(w.persona) ? 'user' : 'assistant', said: !job.why, intentKey: job.intent || '', mentions: job.auto ? [] : mentionsIn(real, job.room) });
         // (a group room: each responder is told it may hand the turn on with @Name — Marinara's line, as it is)
         if (d.context && isGroupRoom(real, job.room) && groupTurnPrompt(real)) d.context += `\n${GROUP_MENTION_INVITE_LINE}`; }
-    return d ? { room: job.room, system: phone2ReplySystem({ owner: d.owner, persona: d.persona, scheduled: !!activeSchedule(real, job.owner) }), input: replyInput(d) } : null;
+    return d ? { room: job.room, system: phone2ReplySystem({ owner: d.owner, persona: d.persona, scheduled: !!activeSchedule(real, job.owner) }), input: replyInput(d), images: att.images, files: att.files } : null;
 }
 // 답장을 받은 뒤: 그 답의 마지막 말에 마리나라가 남기는 값을 남겨요 (generate.routes.ts "Persist thinking/reasoning and generation info")
 //   extra.thinking: 모델의 생각 (제공자가 따로 준 것 + 답 맨 앞의 <think> 같은 블록; 없으면 null)
@@ -295,16 +300,17 @@ function keepAsked(w, room, job, asked) {
 // Merged 차례의 요청: 지시문은 마리나라의 것 (src/marinara/merged-conversation.js: 기본 Conversation 지시문 + 단체방 줄 + 되풀이 금지),
 // 입력은 우리 블록 (MESSENGER · CHAT SUMMARY · CONTEXT · 사람마다 카드 · PERSONA · STORY · LAST MESSAGES) + 맨 끝에 마리나라의 Output Format.
 // **우리 답장 지시문(phone2reply.js)으로 바꿔야 해요** (docs/MARINARA-PORT.md "꼭 할 것"): 지금은 번역 · 폰에서 한 일 · 상태 줄 · 반응이 없어요
-async function gatherMerged(real, job, { card, d0 }) {
+async function gatherMerged(real, job, { card, d0, att = null }) {
     const w = liveWorld(real), room = w.messenger.rooms[job.room], P = liveKey(w.persona), p = livePhone(real, job.owner);
     const chars = room.members.filter(n => liveKey(n) !== P && w.phones?.[liveKey(n)]), can = job.merged.map(k => chars.find(n => liveKey(n) === k)).filter(Boolean);
     if (!can.length) return null;
     const d = gatherReply(real, job.owner, job.room, { now: Date.now(), tz: tzOf(p), why: '', deps: {
         clock: (ph, at) => liveAtYear(ph, at, () => phone2Clock(ph, at, d0)), around: aroundBlock, card: () => card, who: owner => personaBlock(ctx(), owner, card),
+        attach: x => att?.blocks.get(x.id) || '',
         place: () => '', story: () => liveStoryText(real, w), before: () => (open(real) ? liveChatTail().lines : []),
     } });
     if (!d) return null;
-    const last = [...(room.messages || [])].reverse().find(x => x.text || x.call), called = (job.called || []).map(k => chars.find(n => liveKey(n) === k)).filter(Boolean);
+    const last = [...(room.messages || [])].reverse().find(x => x.text || x.call || x.extra?.attachments?.length), called = (job.called || []).map(k => chars.find(n => liveKey(n) === k)).filter(Boolean);
     const context = contextBlock(real, job.owner, job.room, { tzOf: n => zoneOf(real, livePhone(real, n) || p), lastRole: last && liveKey(last.from) === P ? 'user' : 'assistant', said: true, mentions: called, merged: true });
     const cards = [];
     for (const n of chars) { const body = String(liveKey(n) === liveKey(job.owner) ? card : await cardOf(livePhone(real, n)) ?? '').trim(); if (body) cards.push(`[${n}'s card]\n${body}`); }
@@ -458,14 +464,16 @@ export async function liveSetScheduleConnection(real, id = '') {
 // (connectionId: the one asked for with the request, else the one chosen for schedules)
 const askVia = (real, connectionId) => async (messages, o) => {
     const id = connectionId === undefined || connectionId === null ? liveScheduleConnection(real) : String(connectionId);
-    const system = messages.filter(x => x.role === 'system').map(x => x.content).join('\n\n'), input = messages.filter(x => x.role !== 'system').map(x => x.content).join('\n\n');
+    const system = messages.filter(x => x.role === 'system').map(x => x.content).join('\n\n'), text = messages.filter(x => x.role !== 'system').map(x => x.content).join('\n\n');
+    // (a request with pictures — the caption request — keeps them on its one turn)
+    const images = messages.flatMap(x => x.images || []), input = images.length ? [{ role: 'user', content: text, images }] : text;
     // (what Marinara asks for with each request: its temperature (0.45 repair … 0.9 vary) and, for the routine summary, low reasoning)
     const how = { force: true, system, maxTokens: o?.maxTokens, effort: o?.reasoningEffort || '', signal: o?.signal || null, temperature: typeof o?.temperature === 'number' ? o.temperature : null, topP: typeof o?.topP === 'number' ? o.topP : null };
     if (!id) return askDraft(input, how);
     if (id === 'ai') return askAI(input, { ...how, noFallback: true });
     const p = aiProfiles().find(x => `profile:${x.id}` === id);
     if (!p) throw new Error('고른 연결 프로필을 찾을 수 없어요');
-    const r = await ctx().ConnectionManagerRequestService.sendRequest(p.id, [...(system ? [{ role: 'system', content: system }] : []), { role: 'user', content: input }], Math.max(256, Number(o?.maxTokens) || 8192), { stream: false, extractData: true, includePreset: true, includeInstruct: true, ...(o?.signal ? { signal: o.signal } : {}) });
+    const r = await ctx().ConnectionManagerRequestService.sendRequest(p.id, [...(system ? [{ role: 'system', content: system }] : []), profileTurn(input)], Math.max(256, Number(o?.maxTokens) || 8192), { stream: false, extractData: true, includePreset: true, includeInstruct: true, ...(o?.signal ? { signal: o.signal } : {}) });
     const out = stripThink(typeof r === 'string' ? r : r?.content);
     if (!out) throw new Error('모델이 빈 답을 돌려줬어요');
     return out;
@@ -1048,6 +1056,8 @@ export async function liveSetRoomModel(real, roomId, pick = null) {
     await saveMeta();
     return liveRoomModel(real, roomId);
 }
+// (a turn for a connection profile: SillyTavern's server reads picture parts, not file parts)
+const profileTurn = input => (!Array.isArray(input) ? { role: 'user', content: input } : (t => ({ role: 'user', content: [...(t.content ? [{ type: 'text', text: t.content }] : []), ...(t.images || []).map(url => ({ type: 'image_url', image_url: { url } }))] }))(input[0]));
 // (a reply in a room with a model of its own goes there; with none, to the draft model as before)
 async function askRoom(real, roomId, input, how) {
     const room = liveWorld(real)?.messenger?.rooms?.[roomId], chat = room ? roomChat(room) : null;
@@ -1055,6 +1065,9 @@ async function askRoom(real, roomId, input, how) {
     // (the thinking level set for this room, or for Orbit as a whole; else what the caller asks for)
     const rs = liveReasoning(real, roomId);
     if (rs.effort) how = { ...how, effort: rs.sent };
+    // (the request's pictures and files ride on its one turn: ai.js turnsOf)
+    const media = how.images?.length || how.files?.length ? { ...(how.images?.length ? { images: how.images } : {}), ...(how.files?.length ? { files: how.files } : {}) } : null;
+    if (media) input = [{ role: 'user', content: input, ...media }];
     if (!id) return askDraft(input, how);
     const slot = slotOf(id), override = readChatModelOverride(chat);
     if (slot && override && OWN_MODES.includes(slot.mode)) {
@@ -1068,7 +1081,7 @@ async function askRoom(real, roomId, input, how) {
     if (id === 'ai') return askAI(input, { ...how, noFallback: true });
     const p = aiProfiles().find(x => `profile:${x.id}` === id);
     if (!p) throw new Error('고른 연결 프로필을 찾을 수 없어요');
-    const r = await ctx().ConnectionManagerRequestService.sendRequest(p.id, [...(how.system ? [{ role: 'system', content: how.system }] : []), { role: 'user', content: input }], Math.max(256, Number(how.maxTokens) || 8192), { stream: false, extractData: true, includePreset: true, includeInstruct: true, ...(how.signal ? { signal: how.signal } : {}) });
+    const r = await ctx().ConnectionManagerRequestService.sendRequest(p.id, [...(how.system ? [{ role: 'system', content: how.system }] : []), profileTurn(input)], Math.max(256, Number(how.maxTokens) || 8192), { stream: false, extractData: true, includePreset: true, includeInstruct: true, ...(how.signal ? { signal: how.signal } : {}) });
     const raw = typeof r === 'string' ? r : r?.content, out = stripThink(raw);
     if (how.meta) Object.assign(how.meta, { raw: String(raw ?? ''), model: String(p.model || p.name || ''), provider: String(p.api || 'profile') });
     if (!out) throw new Error('모델이 빈 답을 돌려줬어요');
@@ -1103,6 +1116,88 @@ export async function liveSwitchPersona(avatarId) {
     return true;
 }
 
+// ---- 첨부 보내기 (마리나라의 첨부 기능: src/phone2attach.js · src/marinara/)
+//   받는 파일: 그림 · PDF · 글 파일(txt · md · markdown · json · jsonl · csv · log · xml · yaml · yml), 하나에 20MB까지
+//   1) 고른 파일 읽기: await liveReadFiles(파일들, { onError(이유, 이름), onRead() }) → [{ type, data, name }]
+//        이유: 'size' (20MB 넘음) · 'unsupported' (못 받는 종류) · 'prepare' (그림을 못 읽음) · 'read' (파일을 못 읽음)
+//        그림은 여기서 줄어요 (긴 변 1536px, GIF는 멈춘 그림으로). name은 화면에 보일 이름, type이 image/로 시작하면 그림
+//        파일 고르기 창의 accept 값: LIVE_ATTACH_ACCEPT
+//   2) 보낼 때: const kept = await liveStoreAttachments(읽어 둔 목록)  (실리의 파일 저장소에 올려요. 실패하면 던져요)
+//        sendLive(m, 방 id, 글, undefined, { replyTo, attachments: kept })  글이 없어도 첨부만으로 보낼 수 있어요
+//   3) 보낸 말: x.extra.attachments = [{ type, url, filename, name }]. 그림은 url을 그대로 <img>에 쓰면 돼요
+//   4) 말에서 첨부 하나 빼기: await liveRemoveAttachment(real, 방 id, 말 id, 몇 번째)
+export const LIVE_ATTACH_ACCEPT = CHAT_ATTACHMENT_ACCEPT;
+export const liveReadFiles = (files, on = {}) => readChatAttachments(files, on);
+const stPut = async (name, data) => {
+    const r = await fetch('/api/files/upload', { method: 'POST', headers: ctx().getRequestHeaders(), body: JSON.stringify({ name, data }) });
+    if (!r.ok) throw new Error(`첨부 파일을 실리에 올리지 못했어요 (${r.status})`);
+    return (await r.json())?.path;
+};
+const stGet = async url => { const r = await fetch(url); if (!r.ok) throw new Error(`첨부 파일을 불러오지 못했어요 (${r.status}): 실리의 파일 저장소에서 지워졌을 수 있어요`); return r.arrayBuffer(); };
+export const liveStoreAttachments = attachments => storeAttachments(toPendingAttachments(attachments || []), { put: stPut });
+export async function liveRemoveAttachment(real, roomId, messageId, index) {
+    const w = liveWorld(mine(real)), x = (w.messenger?.rooms?.[roomId]?.messages || []).find(y => String(y.id) === String(messageId));
+    const list = x && normalizePromptAttachments(x.extra);
+    if (!list || !list[index]) throw new Error('없는 첨부예요');
+    const gone = list[index], left = list.filter((_, i) => i !== index);
+    // (Marinara: the message stays, with the attachments that are left)
+    if (left.length) x.extra.attachments = left; else { delete x.extra.attachments; if (!Object.keys(x.extra).length) delete x.extra; }
+    await saveMeta();
+    // (the file itself goes from SillyTavern's file store too; a copy in a branched room keeps the same address, so only when nothing else points at it)
+    const used = Object.values(w.messenger?.rooms || {}).some(r => (r.messages || []).some(y => (y.extra?.attachments || []).some(a => a?.url === gone.url)));
+    if (gone.url && !used) { try { await fetch('/api/files/delete', { method: 'POST', headers: ctx().getRequestHeaders(), body: JSON.stringify({ path: gone.url }) }); } catch (err) { console.warn('[narrative-archive] attachment file not deleted', err); } }
+    return left;
+}
+// ---- 그림을 글로 설명해서 넣기 (마리나라의 Image captioning: 채팅마다 켜고 끄는 스위치 · 설명할 연결 · 설명 지시문)
+//   마리나라의 채팅 설정 이름 그대로 presence.meta에 둬요: imageCaptioningEnabled · imageCaptioningConnectionId · imageCaptioningPrompt
+//   liveCaptioning(real) → { enabled, connectionId ('' = 그 방의 모델), prompt ('' = 기본 지시문), defaultPrompt, connections: liveConnections() }
+//   liveSetCaptioning(real, { enabled?, connectionId?, prompt? })
+//   켜면: 그림을 그대로 보내지 않고, 설명할 연결이 그림을 글로 설명한 것을 그 말에 붙여 보내요. 설명은 첨부에 저장해 두고 다시 써요
+//   (설명할 연결 · 모델 · 지시문이 바뀌면 새로 만들어요). 설명에 실패하면 답장도 멈춰요 (마리나라: 그림을 몰래 그대로 보내지 않아요)
+export function liveCaptioning(real) {
+    const meta = presenceOf(real).meta || {};
+    return { enabled: meta.imageCaptioningEnabled === true, connectionId: typeof meta.imageCaptioningConnectionId === 'string' ? meta.imageCaptioningConnectionId.trim() : '', prompt: typeof meta.imageCaptioningPrompt === 'string' ? meta.imageCaptioningPrompt : '', defaultPrompt: DEFAULT_IMAGE_CAPTIONING_PROMPT, connections: liveConnections() };
+}
+export async function liveSetCaptioning(real, patch = {}) {
+    const meta = presenceOf(mine(real)).meta;
+    if ('enabled' in patch) { if (patch.enabled) meta.imageCaptioningEnabled = true; else delete meta.imageCaptioningEnabled; }
+    if ('connectionId' in patch) {
+        const id = String(patch.connectionId || '').trim();
+        if (id && !liveConnections().some(c => c.id === id)) throw new Error('없는 연결이에요');
+        if (id) meta.imageCaptioningConnectionId = id; else delete meta.imageCaptioningConnectionId;
+    }
+    if ('prompt' in patch) { const t = String(patch.prompt || ''); if (t.trim()) meta.imageCaptioningPrompt = t; else delete meta.imageCaptioningPrompt; }
+    await saveMeta();
+    return liveCaptioning(real);
+}
+// (Marinara's ImageCaptioningRuntime for a room: the chat's switch; the captioning connection is the chat's choice, else
+//  the room's own model. Its "Automatic" mode — caption only when the chat's model cannot read images — needs the
+//  Engine's model catalogs, which we do not have)
+function captioningOf(real, roomId) {
+    const set = liveCaptioning(real);
+    if (!set.enabled) return DISABLED_IMAGE_CAPTIONING;
+    const row = set.connectionId ? liveModelConnections().find(c => c.id === set.connectionId) : null, own = roomKind(real, roomId);
+    if (set.connectionId && !row) return { ...DISABLED_IMAGE_CAPTIONING, enabled: true, unavailableReason: 'the captioning connection was not found' };
+    return {
+        enabled: true, connectionId: set.connectionId || `room:${own.provider}`, connection: row ? { model: row.model, provider: row.provider } : { model: own.model, provider: own.provider }, prompt: set.prompt || null,
+        provider: { chatComplete: async (messages, o) => {
+            const system = messages.filter(x => x.role === 'system').map(x => x.content).join('\n\n'), text = messages.filter(x => x.role !== 'system').map(x => x.content).join('\n\n'), images = messages.flatMap(x => x.images || []);
+            return { content: set.connectionId ? await askVia(real, set.connectionId)(messages, o) : await askRoom(real, roomId, text, { force: true, system, maxTokens: o?.maxTokens, effort: '', temperature: o?.temperature ?? null, signal: o?.signal || null, images }) };
+        } },
+    };
+}
+// (does this room's connection take a PDF as it is: our own custom API does; SillyTavern's server reads picture parts only)
+const takesFiles = (real, roomId) => { const room = liveWorld(real)?.messenger?.rooms?.[roomId], id = room?.connectionId || 'dr'; return slotOf(id)?.mode === 'custom'; };
+// (the attachments on the messages a reply request carries)
+async function roomAttachments(real, job) {
+    const w = liveWorld(real), room = w?.messenger?.rooms?.[job.room];
+    const rows = room ? askRows(room, LIVE_ASK.bubbles, job.owner).filter(x => normalizePromptAttachments(x.extra)) : [];
+    if (!rows.length) return { blocks: new Map(), images: [], files: [], updated: new Map() };
+    const out = await attachmentInputs(rows, { captioning: captioningOf(real, job.room), get: stGet, signal: new globalThis.AbortController().signal, takesFiles: takesFiles(real, job.room) });
+    // (new captions stay with their attachment, so the next request does not ask for them again)
+    if (out.updated.size) { for (const x of room.messages || []) { const now = out.updated.get(x.id); if (now) x.extra = { ...(x.extra || {}), attachments: now }; } await saveMeta(); }
+    return out;
+}
 // ---- 연결 종류와 모델 불러오기 (실리가 가진 모든 연결 종류를, 실리에 넣어 둔 키와 설정 그대로)
 //   liveSources() → [{ id, name }] (실리의 API 고르기에 있는 것 전부) · liveSourceModels(연결 종류 id) → [{ id, name }] (모델을 불러와요)
 //   방의 모델로 고를 때: liveSetRoomModel(real, 방 id, { connectionId: 'source:<연결 종류 id>', model: '<모델 id>', name? })

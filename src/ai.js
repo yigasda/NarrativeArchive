@@ -64,13 +64,32 @@ export function turnsOf(prompt) {
     const out = [];
     for (const t of prompt) {
         const role = t.role === 'assistant' ? 'assistant' : 'user', content = String(t.content ?? '');
-        if (!content.trim()) continue;
-        if (out.length && out[out.length - 1].role === role) out[out.length - 1].content += `\n\n${content}`;
-        else out.push({ role, content });
+        // (a turn's pictures and files — data URLs — stay with it: images [url], files [{ type, data, filename }])
+        const images = Array.isArray(t.images) ? t.images.filter(x => typeof x === 'string' && x) : [], files = Array.isArray(t.files) ? t.files.filter(f => f && typeof f.data === 'string') : [];
+        if (!content.trim() && !images.length && !files.length) continue;
+        const last = out.length && out[out.length - 1].role === role ? out[out.length - 1] : null;
+        if (last) last.content = [last.content, content].filter(x => x.trim()).join('\n\n');
+        const turn = last || { role, content };
+        if (images.length) turn.images = [...(turn.images || []), ...images];
+        if (files.length) turn.files = [...(turn.files || []), ...files];
+        if (!last) out.push(turn);
     }
     while (out.length && out[0].role !== 'user') out.shift();
     return out;
 }
+// a turn's pictures and files in each API's own shape (as Marinara's providers send them: openai.provider.ts · anthropic.provider.ts)
+// OpenAI chat/completions: the files, then the text, then the pictures. files: false for SillyTavern's server, which reads picture parts only
+export const openAiTurn = (t, files = true) => (!(t.images?.length || t.files?.length) ? { role: t.role, content: t.content } : { role: t.role, content: [
+    ...(files ? (t.files || []).map(f => ({ type: 'file', file: { filename: f.filename ?? 'attachment.pdf', file_data: f.data } })) : []),
+    ...(t.content ? [{ type: 'text', text: t.content }] : []),
+    ...(t.images || []).map(url => ({ type: 'image_url', image_url: { url } })),
+] });
+// Anthropic Messages: PDF documents, then the pictures, then the text
+export const anthropicTurn = t => (!(t.images?.length || t.files?.length) ? { role: t.role, content: t.content } : { role: t.role, content: [
+    ...(t.files || []).flatMap(f => { const m = String(f.data).match(/^data:(application\/pdf);base64,(.+)$/); return m ? [{ type: 'document', source: { type: 'base64', media_type: m[1], data: m[2] }, ...(f.filename ? { title: f.filename } : {}) }] : []; }),
+    ...(t.images || []).flatMap(img => { const m = String(img).match(/^data:(image\/[^;]+);base64,(.+)$/); return m ? [{ type: 'image', source: { type: 'base64', media_type: m[1], data: m[2] } }] : []; }),
+    ...(t.content ? [{ type: 'text', text: t.content }] : []),
+] });
 
 // --- Anthropic Messages API, straight from the browser. Thinking on Claude Opus 5.5 can't be switched off;
 // effort is the only lever, and thinking tokens are billed as output, so a low effort is what keeps a draft cheap.
@@ -110,7 +129,7 @@ export async function callAnthropic(t, system, prompt, maxTokens, effort = '', s
     const send = withEffort => anthropicFetch(t, endpoint, { method: 'POST', signal, body: JSON.stringify({
         model: t.model, max_tokens: maxTokens,
         ...(system ? { system } : {}),
-        messages: turnsOf(prompt),
+        messages: turnsOf(prompt).map(anthropicTurn),
         // (a temperature goes only with a request that asks for no thinking: the API refuses the two together)
         ...(withEffort ? { output_config: { effort } } : typeof temperature === 'number' ? { temperature: Math.max(0, Math.min(1, temperature)) } : {}),
         // (top_p 1 is the API's own default, and newer models refuse a top_p beside a temperature: only a real one is sent)
@@ -196,7 +215,7 @@ export async function callOpenAICompat(t, system, prompt, maxTokens, effort = ''
         const send = withEffort => fetch(endpoint, { method: 'POST', headers, signal, body: JSON.stringify({
             model, max_tokens: maxTokens, temperature: typeof temperature === 'number' ? temperature : 0.3, ...(topPOf(topP) !== undefined ? { top_p: topPOf(topP) } : {}), stream: false,
             ...(withEffort ? { reasoning_effort: effort } : {}),
-            messages: [...(system ? [{ role: 'system', content: system }] : []), ...turnsOf(prompt)],
+            messages: [...(system ? [{ role: 'system', content: system }] : []), ...turnsOf(prompt).map(t => openAiTurn(t))],
         }) });
         // thinking models (Opus 5.5 can't switch thinking off) spend the answer limit thinking; a lower effort keeps short jobs short.
         // An API that doesn't take reasoning_effort (or this temperature with it) gets the plain request, and is remembered
@@ -263,7 +282,7 @@ async function callVertexAt(t, loc, system, prompt, maxTokens, job = '', signal 
         headers: ctx().getRequestHeaders(),
         body: JSON.stringify({
             chat_completion_source: 'vertexai', vertexai_auth_mode: ctx().chatCompletionSettings?.vertexai_auth_mode || 'full', vertexai_express_project_id: ctx().chatCompletionSettings?.vertexai_express_project_id, vertexai_region: loc, model,
-            messages: [...(system ? [{ role: 'system', content: system }] : []), ...turnsOf(prompt)],
+            messages: [...(system ? [{ role: 'system', content: system }] : []), ...turnsOf(prompt).map(t => openAiTurn(t, false))],
             use_sysprompt: true, max_tokens: maxTokens, temperature: typeof temperature === 'number' ? temperature : 0.3, ...(topPOf(topP) !== undefined ? { top_p: topPOf(topP) } : {}), stream: false,
             reasoning_effort: stEffort(effort), include_reasoning: false,
         }),
@@ -331,7 +350,7 @@ export async function callStSource(t, system, prompt, maxTokens, effort = '', si
     // (globalThis.__naStOpenai: the tests' stand-in for SillyTavern's module)
     const O = globalThis.__naStOpenai || await import('/scripts/openai.js');
     if (typeof O.createGenerationParameters !== 'function') throw new Error('이 실리 버전에서는 이 연결 방식을 쓸 수 없어요 (실리를 최신으로 올려 주세요)');
-    const messages = [...(system ? [{ role: 'system', content: system }] : []), ...turnsOf(prompt)];
+    const messages = [...(system ? [{ role: 'system', content: system }] : []), ...turnsOf(prompt).map(t => openAiTurn(t, false))];
     // (what this request decides goes in as settings, so SillyTavern's own rules for each source and model still apply to
     // it: some models take no temperature, some want max_completion_tokens. The role-play preset's sampling is not ours)
     const settings = {
@@ -467,7 +486,7 @@ async function askAIOnce(prompt, { system = '', maxTokens = 0, effort = '', forc
     } else if (g.aiProfile) {
         const p = aiProfiles().find(x => x.id === g.aiProfile);
         if (!p) throw new Error('고른 연결 프로필을 찾을 수 없어요. ⚙ 설정 → AI 모델에서 다시 골라 주세요.');
-        const msgs = [...(system ? [{ role: 'system', content: system }] : []), ...turnsOf(prompt)];
+        const msgs = [...(system ? [{ role: 'system', content: system }] : []), ...turnsOf(prompt).map(t => openAiTurn(t, false))];
         const r = await c.ConnectionManagerRequestService.sendRequest(p.id, msgs, max, { stream: false, extractData: true, includePreset: true, includeInstruct: true, ...(signal ? { signal } : {}) });
         out = typeof r === 'string' ? r : r?.content;
     } else {

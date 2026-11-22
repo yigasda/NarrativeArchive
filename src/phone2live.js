@@ -85,7 +85,8 @@ export function gatherReply(m, owner, roomId, { now = Date.now(), tz = 'UTC', de
         langs: p.langs?.texts?.length || p.langs?.knows?.length ? p.langs : null,
         // (the talk summarized already goes as CHAT SUMMARY; the rest as it was said)
         summary: digestOf(room),
-        messenger: (rows => { const quoted = replyTexts(rows, P); return rows.map((x, i) => ({ ...x, text: quoted[i] })); })(askRows(room, LIVE_ASK.bubbles, owner)).map(x => ({ at: wall(x.at), from: x.from, text: x.call ? `(call ${Math.max(0, Math.round(Number(x.call.min) || 0))} min)` : x.text, state: x.state, reacts: reactLine(x, r => !same(r.by, owner) && Number(r.at) > spoke) })),
+        // (deps.attach(말) → 그 말의 첨부를 요청에 넣는 글: 파일의 내용 · 그림 설명 · "몇 번째 그림" (phone2attach.js). 줄 아래에 그대로 붙어요)
+        messenger: (rows => { const quoted = replyTexts(rows, P); return rows.map((x, i) => ({ ...x, text: quoted[i], attach: deps.attach ? String(deps.attach(x) || '') : '' })); })(askRows(room, LIVE_ASK.bubbles, owner)).map(x => ({ ...(x.attach ? { attach: x.attach } : {}), at: wall(x.at), from: x.from, text: x.call ? `(call ${Math.max(0, Math.round(Number(x.call.min) || 0))} min)` : x.text, state: x.state, reacts: reactLine(x, r => !same(r.by, owner) && Number(r.at) > spoke) })),
         now: {
             last: lastState || one(deps.place?.(p)),
             today: evs.filter(e => one(e.date) === today).sort(byTime).map(e => line(e, false)), ahead: ahead.map(e => line(e, true)),
