@@ -101,10 +101,16 @@ test('실리 연결 방식: 실리가 만든 요청({ generate_data … })을 �
         assert.deepEqual([b.stop, b.logit_bias, b.max_tokens, b.temperature], [undefined, undefined, undefined, undefined]);   // (실리가 뺀 값을 다시 넣지 않아요)
         assert.deepEqual([st.temp_openai, st.top_p_openai, st.openai_max_tokens, st.freq_pen_openai, st.stream_openai, st.reverse_proxy, seen[0].type], [0.9, 1, 256, 0, false, 'p', 'quiet']);
         assert.deepEqual([meta.model, meta.provider, meta.thinking, meta.finishReason, meta.usage.promptTokens], ['fake-mini', 'custom', 'hm', 'stop', 3]);
+        // (끔: "생각 보기"도 꺼서 보내요. 그래야 꺼지는 연결이 있어요. 연결 프로필에 얹을 값도 실리의 함수로 만들어요)
+        await AI.callConn({ mode: 'source', source: 'custom', stModel: 'fake-mini' }, 'S', 'hello', 256, 'none', true, false, null, null, null, {});
+        assert.deepEqual([seen.at(-1).settings.reasoning_effort, seen.at(-1).settings.show_thoughts], ['min', false]);
+        assert.deepEqual(await AI.stLevelPayload('custom', 'fake-mini', 'none'), { reasoning_effort: 'min', include_reasoning: false });
+        assert.deepEqual([seen.at(-1).settings.chat_completion_source, seen.at(-1).model, seen.at(-1).type, seen.at(-1).settings.show_thoughts], ['custom', 'fake-mini', 'quiet', false]);
+        assert.deepEqual(await AI.stLevelPayload('custom', 'fake-mini', 'xhigh'), { reasoning_effort: 'max', include_reasoning: true });
         // (옛 실리: 요청 자체를 돌려줘도 돼요; 요청을 못 만들면 알려요)
         globalThis.__naStOpenai.createGenerationParameters = async (settings, model, type, messages) => ({ chat_completion_source: settings.chat_completion_source, model, messages });
         assert.equal(await AI.callConn({ mode: 'source', source: 'claude', stModel: 'c' }, 'S', 'hello', 256, '', true, false), 'hi');
-        assert.equal(bodies[1].body.chat_completion_source, 'claude');
+        assert.equal(bodies.at(-1).body.chat_completion_source, 'claude');
         globalThis.__naStOpenai.createGenerationParameters = async () => ({ stream: false });
         await assert.rejects(AI.callConn({ mode: 'source', source: 'claude', stModel: 'c' }, 'S', 'hello', 256, '', true, false), /요청을 만들지 못했/);
     } finally { delete globalThis.__naStOpenai; delete globalThis.document; }

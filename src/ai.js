@@ -344,6 +344,18 @@ export async function stSourceModels(source) {
     if (!rows.length) throw new Error('모델 목록을 받지 못했어요. 실리의 API 연결에서 이 연결의 키를 넣었는지 확인해 주세요');
     return [...new Map(rows.map(x => [x.id, x])).values()];
 }
+// A thinking level for a connection profile's request, in the shape SillyTavern's server expects for that source and
+// model: its own createGenerationParameters does the turning (getReasoningEffort and what it deletes afterwards), so
+// it follows whatever SillyTavern version is running. Off also switches "show thoughts" off: on some sources that
+// is what turns thinking off. → { reasoning_effort (undefined = SillyTavern sends none), include_reasoning }
+export async function stLevelPayload(source, model, effort) {
+    const O = globalThis.__naStOpenai || await import('/scripts/openai.js');
+    if (typeof O.createGenerationParameters !== 'function') throw new Error('이 실리 버전에서는 연결 프로필에 추론 레벨을 실을 수 없어요 (실리를 최신으로 올려 주세요)');
+    const thoughts = effort !== 'none';
+    const built = await O.createGenerationParameters({ ...O.oai_settings, chat_completion_source: source, stream_openai: false, n: 1, bias_preset_selected: '', function_calling: false, reasoning_effort: stEffort(effort), show_thoughts: thoughts }, model, 'quiet', []);
+    const data = built && typeof built === 'object' && built.generate_data ? built.generate_data : built;
+    return { reasoning_effort: data?.reasoning_effort, include_reasoning: thoughts };
+}
 // one request to a source. effort: '' (the source's own default) | min | low | medium | high | max
 export async function callStSource(t, system, prompt, maxTokens, effort = '', signal = null, temperature = null, topP = null, meta = null) {
     const source = String(t.source || ''), model = String(t.stModel || '').trim();
@@ -359,7 +371,7 @@ export async function callStSource(t, system, prompt, maxTokens, effort = '', si
         ...O.oai_settings, chat_completion_source: source, stream_openai: false, n: 1, bias_preset_selected: '', seed: -1,
         temp_openai: typeof temperature === 'number' ? temperature : 0.3, top_p_openai: topPOf(topP) ?? 1, openai_max_tokens: maxTokens,
         freq_pen_openai: 0, pres_pen_openai: 0, top_k_openai: 0, min_p_openai: 0, top_a_openai: 0, repetition_penalty_openai: 1,
-        reasoning_effort: stEffort(effort), show_thoughts: !!meta, enable_web_search: false, request_images: false, function_calling: false,
+        reasoning_effort: stEffort(effort), show_thoughts: effort === 'none' ? false : !!meta, enable_web_search: false, request_images: false, function_calling: false,
         assistant_prefill: '', assistant_impersonation: '',
     };
     const built = await O.createGenerationParameters(settings, model, 'quiet', messages);

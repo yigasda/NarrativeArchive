@@ -8,7 +8,8 @@
 import { ctx, saveMeta, MODULE } from './core.js';
 import { applyInjection } from './inject.js';
 import { askDraft, phone2Clock, aroundBlock, ownerZone, cardBlocks } from './phonedata.js';
-import { askAI, askCompress, stripThink, isBlocked, SECTION_GUARD, aiProfiles, callConn, connSettings, stSourceList, stSourceName, stSourceModels, OWN_MODES, apiFormat } from './ai.js';
+import { askAI, askCompress, stripThink, isBlocked, SECTION_GUARD, aiProfiles, callConn, connSettings, stSourceList, stSourceName, stSourceModels, OWN_MODES, apiFormat, stLevelPayload } from './ai.js';
+import { stReach, REACH_NAME } from './phone2stlevel.js';
 import { SCENES_SYS, parseScenes } from './scenes.js';
 import { resolvePhoneProfile, ownerProfileBlock, personaBlock } from './phoneprofile.js';
 import { parseJson } from './phoneparse.js';
@@ -26,7 +27,7 @@ import { BACK, backLeft, backInput, phone2BackSystem, takeBack, backMessage, mar
 import { liveWall } from './phone2clock.js';
 import { gatherReply, LIVE_ASK } from './phone2live.js';
 import { presenceOf, scheduleOf, setSchedule, setStatusOverride, setUserStatus, setAutonomous, statusNow, replyDelay, contextBlock, makeSchedule, checkProactive, noteProactive, fillPlaces, stateNow, takeStatus, scheduleZone, setScheduleZone, draftSchedule, summarizeSchedule, repairSchedule, setAutoRenew, autoRenewOf, needsRefresh, renewSchedules, setAutonomousOptions, autonomousOptions, checkExchangeFor, mentionsIn, activeSchedule, schedulesOn, setSchedulesOn, exportSchedule, importSchedule, syncUser, noteAssistant, noteReaction, forgetActivity, setCardStore, setZoneStore, flushCards, clearProgress, groupOrder, groupTurnPrompt, isGroupRoom, groupResponders, groupHandoff, GROUP_MENTION_INVITE_LINE, orderConversationRespondersByDelay, groupMode, mergedDelay, groupCandidates } from './phone2sched.js';
-import { buildMergedConversationSystemPrompt, formatConversationGroupOutputFormat, mergedRespondersLine, mergedMentionLine, extractLeadingThinkingBlocks, buildGenerationInfoExtra, chatModelChoiceSchema, readChatModelOverride, readChatRecentModels, applyChatModelPatch, applyChatModelOverride, reorderStars, CHAT_RECENT_MODELS_KEY, MAX_PINNED_MODELS, relevantGenerationParameters, reasoningEffortChoices, resolveProviderReasoningEffort, isClaudeOpus55Model, generationLevelLabel } from './phone2merged.js';
+import { buildMergedConversationSystemPrompt, formatConversationGroupOutputFormat, mergedRespondersLine, mergedMentionLine, extractLeadingThinkingBlocks, buildGenerationInfoExtra, chatModelChoiceSchema, readChatModelOverride, readChatRecentModels, applyChatModelPatch, applyChatModelOverride, reorderStars, CHAT_RECENT_MODELS_KEY, MAX_PINNED_MODELS, relevantGenerationParameters, reasoningEffortChoices, resolveProviderReasoningEffort, generationLevelLabel } from './phone2merged.js';
 import { replyInput, messengerBlock } from './phone2ask.js';
 import { readChatAttachments, toPendingAttachments, storeAttachments, attachmentInputs, DISABLED_IMAGE_CAPTIONING, DEFAULT_IMAGE_CAPTIONING_PROMPT, normalizePromptAttachments, CHAT_ATTACHMENT_ACCEPT } from './phone2attach.js';
 import { askRows } from './phone2room.js';
@@ -1064,7 +1065,7 @@ async function askRoom(real, roomId, input, how) {
     const id = chat?.connectionId && (sourceOf(chat.connectionId) || liveModelConnections().some(c => c.id === chat.connectionId)) ? chat.connectionId : '';
     // (the thinking level set for this room, or for Orbit as a whole; else what the caller asks for)
     const rs = liveReasoning(real, roomId);
-    if (rs.effort) how = { ...how, effort: rs.sent };
+    if (rs.effort) how = { ...how, effort: rs.send };
     // (the request's pictures and files ride on its one turn: ai.js turnsOf)
     const media = how.images?.length || how.files?.length ? { ...(how.images?.length ? { images: how.images } : {}), ...(how.files?.length ? { files: how.files } : {}) } : null;
     if (media) input = [{ role: 'user', content: input, ...media }];
@@ -1081,7 +1082,11 @@ async function askRoom(real, roomId, input, how) {
     if (id === 'ai') return askAI(input, { ...how, noFallback: true });
     const p = aiProfiles().find(x => `profile:${x.id}` === id);
     if (!p) throw new Error('고른 연결 프로필을 찾을 수 없어요');
-    const r = await ctx().ConnectionManagerRequestService.sendRequest(p.id, [...(how.system ? [{ role: 'system', content: how.system }] : []), profileTurn(input)], Math.max(256, Number(how.maxTokens) || 8192), { stream: false, extractData: true, includePreset: true, includeInstruct: true, ...(how.signal ? { signal: how.signal } : {}) });
+    // (a level picked for this room rides on the profile's request, over its preset's: SillyTavern's own
+    //  createGenerationParameters turns it into what its server expects for this source and model — ai.js stLevelPayload.
+    //  Nothing picked: the preset's level, as before)
+    const over = rs.effort && rs.via.startsWith('profile:') ? await stLevelPayload(rs.via.slice(8), String(p.model || ''), rs.send) : null;
+    const r = await ctx().ConnectionManagerRequestService.sendRequest(p.id, [...(how.system ? [{ role: 'system', content: how.system }] : []), profileTurn(input)], Math.max(256, Number(how.maxTokens) || 8192), { stream: false, extractData: true, includePreset: true, includeInstruct: true, ...(how.signal ? { signal: how.signal } : {}) }, ...(over ? [over] : []));
     const raw = typeof r === 'string' ? r : r?.content, out = stripThink(raw);
     if (how.meta) Object.assign(how.meta, { raw: String(raw ?? ''), model: String(p.model || p.name || ''), provider: String(p.api || 'profile') });
     if (!out) throw new Error('모델이 빈 답을 돌려줬어요');
@@ -1208,8 +1213,12 @@ export const liveSourceModels = source => stSourceModels(source);
 //   값(마리나라가 저장하는 이름): '' (안 정함) · 'none' (끔) · 'low' · 'medium' · 'high' · 'xhigh' · 'maximum'
 //   liveReasoning(real, 방 id '') → {
 //     effort (실제로 쓰는 값: 방에 정한 것, 없으면 Orbit 전체 것), room, all,
-//     끔 칩은 끔이 진짜로 생각을 끄는 연결 · 모델에만 있어요 (offTurnsOff). 끔 칩이 없는 모델에서, 전에 끔으로 저장해 둔 값은 안 정함('')으로 돌려줘요
-//     칩이 없으면([]) why: 'model' (이 모델은 레벨을 안 받아요) | 'profile' (연결 프로필 · 실리 연결은 실리 프리셋의 레벨을 써요: 우리 값이 안 가요)
+//     칩은 실제로 되는 것만 와요 (소망, 2026-11-22). 보내는 길마다 달라요:
+//       우리 커스텀 API 호출 → 마리나라의 규칙. 끔 칩은 없어요 (끔이면 레벨을 안 보내서 생각이 안 꺼져요)
+//       실리를 거치는 길 (Vertex 방식 · 실리 연결 방식 · 연결 프로필) → 실리가 그 연결 · 모델에 실제로 보내는 것만 (phone2stlevel.js)
+//       실리의 지금 연결을 그대로 쓰는 방 → 칩 없음 (우리 값을 실을 자리가 없어요)
+//     이 연결에 칩이 없는 값이 저장돼 있으면 안 정함('')으로 돌려줘요 (저장한 값은 그대로 둬요)
+//     칩이 없으면([]) why: 'model' (이 모델은 레벨을 안 받아요) | 'st' (실리가 이 연결 · 모델에는 레벨을 안 보내요) | 'main' (실리의 지금 연결을 쓰는 방)
 //     choices: [{ value, label, name, title? }] 이 방의 모델이 받는 레벨만 (마리나라 화면 그대로). name이 칩에 쓸 글자예요 (실제로 보내는 레벨의 이름)
 //       value는 저장하는 값이라 칩 글자와 다를 수 있어요 (DeepSeek: 글자 '높게', value 'medium'). 글자를 value로 만들지 않아요
 //     roomChoices · allChoices: '이 채팅' 줄 · 'Orbit 전체' 줄에 그릴 칩 (그 줄에 저장된 값의 칩에 불이 켜지게 맞춘 것)
@@ -1225,32 +1234,20 @@ const oldLevel = v => ({ auto: '', min: 'none', max: 'maximum' }[v] ?? v);
 // the provider, in Marinara's names, and the model a connection runs (for the per-model rules)
 const ST_PROVIDER = { makersuite: 'google', vertexai: 'google_vertex', claude: 'anthropic', mistralai: 'mistral', openai: 'openai', openrouter: 'openrouter', cohere: 'cohere', deepseek: 'deepseek', xai: 'xai', nanogpt: 'nanogpt', zai: 'zai', custom: 'custom' };
 // (via: the way the request goes out — 'custom' (our own call), 'vertex' · 'source:<source>' (through SillyTavern's server
-//  with the level we give), 'st' (a connection profile or SillyTavern's own connection: its preset's level, not ours))
+//  with the level we give), 'profile:<source>' (a chat-completion connection profile: our level rides on its request),
+//  'st' (SillyTavern's own connection as it is now, or a text-completion profile: no level of ours can reach it))
 const kindOf = t => (t.mode === 'source' ? { provider: ST_PROVIDER[t.source] || 'custom', model: String(t.stModel || ''), via: `source:${t.source}` }
     : t.mode === 'vertex' ? { provider: 'google_vertex', model: String(t.vxModel || ''), via: 'vertex' }
         : t.mode === 'custom' ? { provider: apiFormat(t) === 'anthropic' ? 'anthropic' : 'custom', model: String(t.model || ''), via: 'custom' } : null);
-// 끔이 진짜로 생각을 끄는가: 우리가 실제로 보내는 요청으로 따져요 (칩이 있어도 안 꺼지면 그 칩은 거짓이에요. 소망, 2026-11-22)
-//   우리 커스텀 API 호출 (OpenAI 형식 · Anthropic 형식): 끔이면 레벨을 아예 안 보내요 → 모델의 기본대로 생각해요 → 안 꺼져요
-//   실리 서버로 가는 길 (Vertex · 실리 연결 방식): 끔을 실리의 가장 낮은 레벨(min)로 보내요. 실리가 그걸 "끄기"로 바꾸는 곳만 꺼져요
-//     (SillyTavern 1.19.1: public/scripts/openai.js getReasoningEffort · src/prompt-converters.js calculateGoogleBudgetTokens ·
-//      src/endpoints/backends/chat-completions.js)
-//     Google (AI Studio · Vertex): Gemini 2.x Flash · Flash-Lite 는 생각 예산 0 → 꺼져요. Pro 는 128, Gemini 3 은 minimal/low → 안 꺼져요
-//     OpenAI: gpt-5.4 · 5.5 · 5.6 은 "none" → 꺼져요. 그 밖(gpt-5 · 5.1 · 5.2 는 minimal, 나머지는 low) → 안 꺼져요
-//     NanoGPT: "none" → 꺼져요.  Claude: low(또는 예산 1024) → 안 꺼져요.  그 밖의 종류: low → 안 꺼져요
-const ST_OPENAI_NONE = new Set(['gpt-5.4', 'gpt-5.4-2026-03-05', 'gpt-5.4-mini', 'gpt-5.4-mini-2026-03-17', 'gpt-5.4-nano', 'gpt-5.4-nano-2026-03-17', 'gpt-5.5', 'gpt-5.5-2026-04-23', 'gpt-5.6', 'gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna']);
-export function offTurnsOff({ via = '', model = '' } = {}) {
-    const m = String(model || '').toLowerCase(), source = via === 'vertex' ? 'vertexai' : via.startsWith('source:') ? via.slice(7) : '';
-    if (source === 'makersuite' || source === 'vertexai') return /flash/.test(m) && !/gemini-3[.\d]*-(?:pro|flash)/.test(m);
-    if (source === 'openai' || source === 'azure_openai') return ST_OPENAI_NONE.has(m);
-    return source === 'nanogpt';
-}
 function roomKind(real, roomId) {
     const room = roomId ? liveWorld(real)?.messenger?.rooms?.[roomId] : null, chat = room ? roomChat(room) : null, id = chat?.connectionId || 'dr';
     const slot = slotOf(id), override = chat ? readChatModelOverride(chat) : null;
     if (slot) { const k = kindOf(override ? { ...slot, [modelKey(slot)]: override.model } : slot); if (k) return k; }
     // (SillyTavern's own connection, or one of its profiles)
     const p = aiProfiles().find(x => `profile:${x.id}` === id), c = ctx();
-    return p ? { provider: ST_PROVIDER[p.api] || 'custom', model: String(p.model || ''), via: 'st' }
+    // (a profile's connection type: SillyTavern's CONNECT_API_MAP gives its chat-completion source)
+    const api = p ? c.CONNECT_API_MAP?.[p.api] : null, source = p ? (api ? (api.selected === 'openai' ? api.source : '') : String(p.api || '')) : '';
+    return p ? { provider: ST_PROVIDER[source] || 'custom', model: String(p.model || ''), via: source ? `profile:${source}` : 'st' }
         : { provider: ST_PROVIDER[c.chatCompletionSettings?.chat_completion_source] || 'custom', model: String((c.mainApi === 'openai' ? c.getChatCompletionModel?.() : '') || ''), via: 'st' };
 }
 export function liveReasoning(real, roomId = '') {
@@ -1258,30 +1255,49 @@ export function liveReasoning(real, roomId = '') {
     const ok = v => { const x = oldLevel(String(v || '')); return REASONING_LEVELS.includes(x) ? x : ''; };
     const { provider, model, via } = roomKind(real, roomId);
     const raw = { room: ok(room?.chatParameters?.reasoningEffort), all: ok(w?.presence?.meta?.reasoningEffort) };
-    // (a connection profile or SillyTavern's own connection takes its level from its preset: no level of ours reaches it,
-    //  so no chip is offered)
-    const reach = via !== 'st', level = v => (v && v !== 'none' ? v : null);
-    const takes = reach && relevantGenerationParameters({ provider, model, ...(raw.room || raw.all ? { reasoningEffort: level(raw.room || raw.all) } : {}) }).has('reasoningEffort');
-    // (the chips, as Marinara's GenerationParametersEditor draws them: reasoningEffortChoices with the row's own value as
-    //  `selected`, and no Off chip for Claude Opus 5.5. A chip's text is its label, the level the model really gets.
-    //  Ours on top: the Off chip only where Off, as we send it, turns thinking off — offTurnsOff. The "Default" chip
-    //  stays: it claims the provider's own level, which is what goes)
-    const offReal = offTurnsOff({ via, model });
-    const chips = sel => (!takes ? [] : reasoningEffortChoices({ provider, model, selected: level(sel) })
-        .filter(c => c.value !== null || c.kind === 'default' || (!isClaudeOpus55Model(model ?? '') && offReal))
-        // (the chip's text, as the editor writes it: the level's name; for the no-level chip "Default" where it keeps the
-        //  provider's own level, else "Off". title: the editor's tooltip, "Provider default: <level>" or the description)
-        .map(c => ({ value: c.value === null ? 'none' : c.value, label: c.label, name: c.label !== null ? levelName(c.label) : c.kind === 'default' ? '기본' : '끔',
-            ...(c.providerDefault ? { title: `제공자 기본값: ${levelName(c.providerDefault)}` } : c.description ? { title: c.description } : {}) })));
-    // (an Off stored earlier, on a model with no Off chip, reads as not set — and goes as not set. The stored value is
-    //  left alone: it is Off again on a model that can be turned off)
-    const hasOff = chips('').some(c => c.value === 'none'), seen = v => (v === 'none' && !hasOff ? '' : v);
-    const mine_ = takes ? seen(raw.room) : '', all = takes ? seen(raw.all) : '', effort = mine_ || all;
+    const level = v => (v && v !== 'none' ? v : null);
+    let chips, why = '', sendOf;
+    if (via === 'custom') {
+        // 우리 커스텀 API 호출: 칩은 마리나라의 규칙 그대로 (GenerationParametersEditor: reasoningEffortChoices 에 그 줄의 값을
+        // selected 로, Claude Opus 5.5 는 끔 없음, 칩 글자는 실제로 보내는 레벨). 끔 칩만은 없어요: 우리 호출은 끔이면 레벨을
+        // 아예 안 보내서 모델이 기본대로 생각해요 (OpenAI 형식 · Anthropic 형식 둘 다). "기본" 칩은 남아요: 말 그대로예요
+        const takes = relevantGenerationParameters({ provider, model, ...(raw.room || raw.all ? { reasoningEffort: level(raw.room || raw.all) } : {}) }).has('reasoningEffort');
+        chips = sel => (!takes ? [] : reasoningEffortChoices({ provider, model, selected: level(sel) })
+            .filter(c => c.value !== null || c.kind === 'default')
+            .map(c => ({ value: c.value === null ? 'none' : c.value, label: c.label, name: c.label !== null ? levelName(c.label) : '기본',
+                ...(c.providerDefault ? { title: `제공자 기본값: ${levelName(c.providerDefault)}` } : c.description ? { title: c.description } : {}) })));
+        if (!takes) why = 'model';
+        // (what goes out: Marinara's resolveProviderReasoningEffort)
+        sendOf = v => resolveProviderReasoningEffort({ provider, model, reasoningEffort: v }) ?? '';
+    } else if (via === 'st') {
+        // 실리의 지금 연결을 그대로 쓰는 방 (또는 글 완성 프로필): 실리 프리셋의 레벨이 가요. 우리 값을 실을 자리가 없어요
+        chips = () => []; why = 'main'; sendOf = () => '';
+    } else {
+        // 실리를 거쳐 가는 길 (Vertex 방식 · 실리 연결 방식 · 연결 프로필): 실리가 연결 종류 · 모델마다 레벨을 바꾸거나 빼요.
+        // 칩은 실제로 닿는 것만, 같은 것이 되는 레벨은 하나로 (phone2stlevel.js: 실리 코드를 옮긴 표)
+        const reach = v => stReach({ via, model, level: v === 'maximum' ? 'max' : v });
+        chips = sel => {
+            const out = [], at = new Map();
+            for (const v of REASONING_LEVELS) {
+                const r = reach(v);
+                if (r === null) continue;
+                if (at.has(r)) { if (v === sel) out[at.get(r)].value = v; continue; }
+                at.set(r, out.length); out.push({ value: v, label: r, name: REACH_NAME[r] || r });
+            }
+            // (one thing only, whatever is picked: nothing to choose)
+            return out.length > 1 ? out : [];
+        };
+        if (!chips('').length) why = 'st';
+        sendOf = v => (reach(v) === null ? '' : v === 'maximum' ? 'max' : v);
+    }
+    // (a stored value this connection has no chip for reads as not set, and goes as not set. The stored value is left
+    //  alone: it counts again on a connection that has it)
+    const reaches = v => !!v && (via === 'custom' ? chips(v).some(c => c.value === v) : via !== 'st' && chips(v).some(c => c.value === v));
+    const mine_ = reaches(raw.room) ? raw.room : '', all = reaches(raw.all) ? raw.all : '', effort = mine_ || all;
     const choices = chips(effort), roomChoices = chips(mine_), allChoices = chips(all);
-    // (what goes out for this model: Marinara's resolveProviderReasoningEffort; a model that takes no level gets none)
-    const sent = !effort || !takes ? '' : resolveProviderReasoningEffort({ provider, model, reasoningEffort: effort }) ?? (effort === 'none' ? 'none' : '');
-    // (why there are no chips: 'profile' = this connection uses its own preset's level, 'model' = the model takes none)
-    return { effort, room: mine_, all, choices, roomChoices, allChoices, sent, provider, model, ...(takes ? {} : { why: reach ? 'model' : 'profile' }) };
+    // (send: the word our model call is given — callConn's effort. sent: what reaches the model, for the screen)
+    const send = effort ? sendOf(effort) : '', sent = !effort ? '' : via === 'custom' ? send : choices.find(c => c.value === effort)?.label || '';
+    return { effort, room: mine_, all, choices, roomChoices, allChoices, sent, send, provider, model, via, ...(why ? { why } : {}) };
 }
 export async function liveSetReasoning(real, roomId = '', effort = '') {
     const w = liveWorld(mine(real)), v = oldLevel(String(effort || ''));   // (an older screen's words are taken too)
