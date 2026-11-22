@@ -104,7 +104,9 @@ export function setStatusOverride(m, owner, { status, activity = '', minutes = 0
     const p = presenceOf(m), k = liveKey(owner);
     if (!status) { delete p.overrides[k]; toCard(owner, { conversationStatusOverride: null }); return null; }
     if (!STATUSES.includes(status)) throw new Error('상태는 online · idle · dnd · offline 가운데 하나예요');
-    p.overrides[k] = { status, activity: String(activity || '').trim().slice(0, 120) || null, createdAt: now.toISOString(), ...(minutes > 0 ? { expiresAt: new Date(now.getTime() + minutes * 60_000).toISOString() } : {}) };
+    // (expiresAt: null and place: null are written out, as Marinara's card does: SillyTavern's server merges a card's
+    //  extension field key by key, so a key left out would keep the end time or place of the status before this one)
+    p.overrides[k] = { status, activity: String(activity || '').trim().slice(0, 120) || null, createdAt: now.toISOString(), expiresAt: minutes > 0 ? new Date(now.getTime() + minutes * 60_000).toISOString() : null, place: null };
     toCard(owner, { conversationStatusOverride: p.overrides[k] });
     return p.overrides[k];
 }
@@ -290,7 +292,7 @@ export function takeStatus(m, owner, cmd, { now = new Date(), tz = '' } = {}) {
     }
     const got = applyCharacterStatusCommand({ command: { type: 'schedule_update', status, activity: activity || undefined, duration: one(cmd.duration) || undefined }, current: p.overrides[k], schedule: activeSchedule(m, owner) || undefined, now, scheduleNow: toZonedWallClockDate(now, tz || undefined) });
     if (!got) return null;
-    p.overrides[k] = { ...got, ...(place ? { place } : {}) };
+    p.overrides[k] = { ...got, place: place || null };
     toCard(owner, { conversationStatusOverride: p.overrides[k] });
     return p.overrides[k];
 }

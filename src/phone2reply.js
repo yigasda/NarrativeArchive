@@ -8,9 +8,13 @@ const STATUS_LINE = SCHEDULE_UPDATE_PROMPT_LINE.slice(SCHEDULE_UPDATE_PROMPT_LIN
 export function phone2ReplySystem({ owner = 'the owner', persona = 'them', scheduled = false } = {}) {
     const text = replySystem({ owner, persona });
     if (!scheduled) return text;
-    const out = text.replace(/STATE FIRST\n[^\n]*\n/, `STATUS\n- "status": ${STATUS_LINE} With "place": where that puts you. Else "".\n`)
-        .replace('{ "state": "HH:MM · place · doing · ~until",', '{ "status": "" or { "status": "online|idle|dnd|offline", "activity": "activity name", "duration": "number of hours (e.g., 1h)", "place": "where" },');
-    if (out.includes('STATE FIRST') || out.includes('"state"')) throw new Error('답장 지시문에서 state 자리를 못 찾았어요');
+    // (the status is the LAST key and its example is "": as the first key with a filled-in example — where "state", a
+    //  must-fill, used to be — the model wrote a status on every reply, each one a new temporary status over the schedule.
+    //  In Marinara it is an optional tag added only on a change. The sentence itself is Marinara's)
+    const out = text.replace(/STATE FIRST\n[^\n]*\n/, `STATUS\n- Your status and what you are doing come from your schedule in CONTEXT, by themselves. "status" stays "".\n- Write a new one ${STATUS_LINE} Then "status": { "status": "online|idle|dnd|offline", "activity": "activity name", "duration": "number of hours (e.g., 1h)", "place": "where that puts you" }.\n`)
+        .replace('{ "state": "HH:MM · place · doing · ~until",\n  "reply": ', '{ "reply": ')
+        .replace(/(\n  "does": \[[^\n]*\]) \}$/, '$1,\n  "status": "" }');
+    if (out.includes('STATE FIRST') || out.includes('"state"') || !out.endsWith(',\n  "status": "" }')) throw new Error('답장 지시문에서 state 자리를 못 찾았어요');
     return out;
 }
 function replySystem({ owner = 'the owner', persona = 'them' } = {}) {

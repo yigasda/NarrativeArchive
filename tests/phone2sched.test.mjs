@@ -263,8 +263,11 @@ test('스케줄이 있는 사람의 답장 지시문: state를 안 묻고, 마�
     assert.doesNotMatch(s, /STATE FIRST|"state"/);
     const said = CMD.SCHEDULE_UPDATE_PROMPT_LINE.split('] - ')[1];
     assert.equal(said, "only if you change your own status/activity, for example, if the user asks you to stop what you're doing or if you decide to change them yourself.");
-    assert.ok(s.includes(`\nSTATUS\n- "status": ${said} With "place": where that puts you. Else "".\n\nTEXTING\n`));
-    assert.ok(s.includes('\n{ "status": "" or { "status": "online|idle|dnd|offline", "activity": "activity name", "duration": "number of hours (e.g., 1h)", "place": "where" },\n  "reply": '));
+    // (상태는 맨 끝 칸이고 기본이 "": 첫 칸에 채운 예시로 두면 모델이 답장마다 상태를 써서 스케줄이 가려져요)
+    assert.ok(s.includes(`\nSTATUS\n- Your status and what you are doing come from your schedule in CONTEXT, by themselves. "status" stays "".\n- Write a new one ${said} Then "status": { "status": "online|idle|dnd|offline", "activity": "activity name", "duration": "number of hours (e.g., 1h)", "place": "where that puts you" }.\n\nTEXTING\n`));
+    assert.ok(s.includes('\n{ "reply": the words you type now'));
+    assert.ok(s.endsWith('}],\n  "status": "" }'));
+    assert.equal(s.match(/"status"/g).length, 4);
 });
 test('캐릭터가 방금 들은 자기 상태를 그대로 되돌려 쓴 것은 바꾼 게 아니에요: 임시 상태가 다시 걸리지 않고, 시간이 지나면 스케줄로 돌아가요', () => {
     const { m } = world(), t = Date.parse('2026-11-23T03:00:00Z'), now = new Date(t), later = ms => new Date(t + ms), H = 3600_000;
