@@ -3,6 +3,7 @@
 // 실리 팝업은 화면 전체를 막는 창이라 폰 화면에 그릴 수 없어요(폰이 눌리지 않아요). 그래서 팝업 안에, 폰 자리에 딱 맞춰 그려요.
 import { stPopNodes, stConnSet, stConnToggleOption, stConnClick, stConnWatch } from './phonestconn.js';
 import { orbitStPop } from './phoneorbitset.js';
+import { stKo } from './phonestconnko.js';
 const imp = (el, o) => { for (const [k, v] of Object.entries(o)) el.style.setProperty(k, v, 'important'); };
 
 // canvas(): 폰의 화면 요소(크기 · 자리 · 배율을 따라요) · dark(): 어두운 Orbit인지 → 그만 보기
@@ -45,4 +46,12 @@ export function stPopWatch({ canvas, dark }) {
     const mo = new MutationObserver(() => { scan(); setTimeout(scan, 40); }); mo.observe(document.body, { childList: true, subtree: false, attributes: false });
     scan();
     return () => { mo.disconnect(); for (const d of [...live.keys()]) drop(d); };
+}
+
+// 실리가 띄우는 알림(토스트)의 글을 한국어로 (소망: "알림도 다 번역"). 표에 있는 글만 바꾸고, 모르는 글은 그대로 둬요 → 그만 보기
+export function stToastKo() {
+    const fix = el => { for (const e of el.matches?.('.toast-message, .toast-title') ? [el] : el.querySelectorAll?.('.toast-message, .toast-title') || []) { const a = e.textContent, b = stKo(a.replace(/\s+/g, ' ').trim()); if (b && b !== a.trim()) e.textContent = b; } };
+    const mo = new MutationObserver(ms => { for (const m of ms) for (const n of m.addedNodes) if (n.nodeType === 1) fix(n); });
+    mo.observe(document.documentElement, { childList: true, subtree: true });
+    return () => mo.disconnect();
 }
