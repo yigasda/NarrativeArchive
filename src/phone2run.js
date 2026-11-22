@@ -89,16 +89,38 @@ export function takeMerged(m, roomId, answer, { names = [], lead = '', now = Dat
 // put the answer in (only if this 폰 2 is still the one the job was for), save. A failure stops the line (the job says
 // why; the user sees it and lets the line go on). Returns { ran, failed }. One runner a chat at a time: a second call
 // while one runs does nothing ({ ran: 0, busy: true }).
+// enter(roomId) → a function that lets the room go | null: before the first job of a room, the room is entered — the room's
+// lock (Marinara's one generation a chat at a time: the browser and the server plugin's worker take turns), and what the
+// other side wrote there comes in first. null: the other side is writing in that room now; its jobs wait this time
+// (skip). Entered once, a room stays entered until the line ends; then each is let go
 const running = new WeakSet();
-export async function runLive(m, { gather, ask, save = async () => {}, now = () => Date.now(), parse = null, after = null, alive = () => true, stateFor = null, took = null } = {}) {
+export async function runLive(m, { gather, ask, save = async () => {}, now = () => Date.now(), parse = null, after = null, alive = () => true, stateFor = null, took = null, enter = null } = {}) {
     if (!m || running.has(m)) return { ran: 0, failed: null, busy: true };
     running.add(m);
     let ran = 0, failed = null;
+    const skip = new Set(), inside = new Map();
+    // the next job, its room entered first (null: none left that may run now)
+    const next = async () => {
+        for (;;) {
+            if (!alive()) return null;
+            const peek = nextJob(m, now(), { skip, take: false });
+            if (!peek) return null;
+            if (enter && !inside.has(peek.room)) {
+                const room = peek.room, out = await enter(room);
+                if (typeof out === 'function') inside.set(room, out); else skip.add(room);
+                // (what came in while entering may have changed the line: looked at again)
+                continue;
+            }
+            // (looked at and taken with nothing in between: the job taken is the one whose room was entered)
+            peek.state = 'running';
+            return peek;
+        }
+    };
     try {
         // (a job a closed page left running: nothing runs it, it waits again)
         reviveJobs(m);
         // (alive: false once the chat this is for is no longer the open one; the jobs left wait for it to come back)
-        for (let job = alive() && nextJob(m); job; job = alive() && nextJob(m)) {
+        for (let job = await next(); job; job = await next()) {
             try {
                 if (job.kind !== 'reply') throw new Error(`아직 할 수 없는 일이에요: ${job.kind}`);
                 const req = await gather(job);
@@ -125,6 +147,9 @@ export async function runLive(m, { gather, ask, save = async () => {}, now = () 
                 break;
             }
         }
-    } finally { running.delete(m); }
-    return { ran, failed };
+    } finally {
+        running.delete(m);
+        for (const out of inside.values()) { try { out(); } catch { /* let go either way */ } }
+    }
+    return { ran, failed, ...(skip.size ? { skipped: [...skip] } : {}) };
 }

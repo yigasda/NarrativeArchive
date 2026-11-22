@@ -299,6 +299,58 @@ test('일꾼: 그사이 브라우저가 저장했으면 덮어쓰지 않아요',
     assert.deepEqual((await S.get('sa')).messenger.rooms[a.room.id].messages.map(x => x.text), ['hey', 'hi', 'im back']);
 });
 
+test('일꾼 · 방 자물쇠: 브라우저 탭이 그 방을 쥐고 있으면 먼저 건 말을 안 만들어요(409: 스케줄러는 실패로 안 세요). 놓으면 만들어요', async t => {
+    const S = await stage(t), a = world();
+    await S.put('sa', a.m); await S.auto.list();
+    assert.deepEqual(await S.auto.claim('sa', a.room.id, 'browser:tab1'), { ok: true });
+    const r = await S.gen(a.id);
+    assert.deepEqual([r.statusCode, r.payload], [409, 'the browser is writing in this room now']);
+    assert.equal(S.asked.length, 0);
+    assert.equal((await S.get('sa')).messenger.rooms[a.room.id].messages.length, 2);
+    // (다른 저장의 같은 방 id는 따로예요)
+    assert.deepEqual(await S.auto.claim('other', a.room.id, 'server'), { ok: true });
+    await S.auto.release('other', a.room.id, 'server');
+    // 놓으면
+    await S.auto.release('sa', a.room.id, 'browser:tab1');
+    assert.match((await S.gen(a.id)).payload, /"message_saved"/);
+    assert.equal(S.asked.length, 1);
+});
+
+test('일꾼 · 방 자물쇠: 일꾼이 만드는 동안 브라우저 탭은 그 방을 못 잡아요(일꾼이 쥔 것을 알려요). 끝나면 놓아서 잡을 수 있어요', async t => {
+    let hold; const gate = new Promise(r => { hold = r; });
+    const S = await stage(t, { reply: async () => { await gate; return { reply: ['you there?'], status: '' }; } }), a = world();
+    await S.put('sa', a.m); await S.auto.list();
+    const going = S.gen(a.id);
+    while (!S.asked.length) await new Promise(r => setTimeout(r, 10));
+    assert.deepEqual(await S.auto.claim('sa', a.room.id, 'browser:tab1'), { ok: false, by: 'server', at: (await S.auto.claim('sa', a.room.id, 'browser:tab1')).at });
+    assert.equal((await S.auto.claim('sa', a.room.id, 'browser:tab1')).by, 'server');
+    // (이어 잡기도 안 돼요: 쥔 게 아니에요)
+    assert.equal(await S.auto.renew('sa', a.room.id, 'browser:tab1'), false);
+    hold();
+    assert.match((await going).payload, /"message_saved"/);
+    assert.deepEqual(await S.auto.claim('sa', a.room.id, 'browser:tab1'), { ok: true });
+    assert.equal(await S.auto.renew('sa', a.room.id, 'browser:tab1'), true);
+});
+
+test('일꾼 · 방 자물쇠: 늦은 답장을 돌릴 때 브라우저가 쥔 방은 이번엔 건너뛰고(그 일은 기다려요), 같은 Orbit의 다른 방은 돌려요', async t => {
+    const S = await stage(t, { reply: () => ({ reply: ['sorry, was busy'], status: '' }) });
+    const a = world({ hoursAgo: 0.2 }), other = ensureRoom(a.m, ['Mara', 'Ivo']);
+    putLivePhone(a.m, { owner: 'Ivo' });
+    sendLive(a.m, other.id, 'anyone?', Date.now() - 600_000);
+    for (const room of [a.room.id, other.id]) { const j = enqueueJob(a.m, { kind: 'reply', owner: 'Mara', room, at: Date.now() - 600_000 }); Object.assign(j, { timed: true, notBefore: Date.now() - 1000 }); }
+    await S.put('sa', a.m);
+    assert.deepEqual(await S.auto.claim('sa', a.room.id, 'browser:tab1'), { ok: true });
+    assert.equal(await S.auto.sweep(), 1);
+    const w = await S.get('sa');
+    assert.equal(w.messenger.rooms[a.room.id].messages.at(-1).text, 'hi');
+    assert.equal(w.messenger.rooms[other.id].messages.at(-1).text, 'sorry, was busy');
+    assert.deepEqual(w.queue.jobs.filter(j => j.state === 'waiting').map(j => j.room), [a.room.id]);
+    // 놓으면 다음 번에 돌아요
+    await S.auto.release('sa', a.room.id, 'browser:tab1');
+    assert.equal(await S.auto.sweep(), 1);
+    assert.equal((await S.get('sa')).messenger.rooms[a.room.id].messages.at(-1).text, 'sorry, was busy');
+});
+
 test('일꾼: 캐릭터가 상태를 바꾸면 카드에도 써요 (실리의 merge-attributes로)', async t => {
     const S = await stage(t, { reply: () => ({ reply: ['brb'], status: { status: 'dnd', activity: 'in a meeting', duration: '30m' } }) });
     const a = world({ schedule: week([{ time: '00:00-23:59', activity: 'free time', status: 'online' }]) });

@@ -84,38 +84,40 @@ export async function keepSync() {
     catch (err) { console.warn('[narrative-archive] Orbit 맞추기', err); return false; }
 }
 
-// ---- 세계 자물쇠 (마리나라의 채팅마다 하나뿐인 생성 자물쇠: generate.routes.ts activeGenerations, 둘째 요청은 409)
-// 이 채팅의 Orbit에서 답장을 만들 수 있는 것은 한 번에 하나: 이 브라우저 아니면 서버 플러그인의 일꾼. 자물쇠는 일꾼이 갖고 있어요.
-// 브라우저는 일하기 전에 받고(keepClaim), 일하는 동안 이어 잡고(keepRenew: 5분 동안 소식이 없으면 일꾼이 풀어요 — 탭이 닫혔을 때),
-// 끝나면 놓아요. 일꾼이 쥐고 있으면 { ok: false }: 그 일은 일꾼이 끝낸 뒤에 해요.
+// ---- 방 자물쇠 (plugin/lock.mjs: 마리나라의 채팅마다 하나뿐인 생성 자물쇠 activeGenerations — 걸려 있으면 둘째 요청은 409)
+// 이 채팅의 Orbit에서 한 방의 답장을 만들 수 있는 것은 한 번에 하나: 이 브라우저 탭 아니면 서버 플러그인의 일꾼. 자물쇠는 일꾼이 갖고 있어요.
+// 브라우저는 그 방에서 일하기 전에 받고(keepClaim), 일하는 동안 이어 잡고(keepRenew: 5분 동안 소식이 없으면 일꾼이 풀어요 — 탭이 닫혔을 때),
+// 끝나면 놓아요. 일꾼이 쥐고 있으면 { ok: false }: 그 방의 일은 일꾼이 끝낸 뒤에 해요.
 // 플러그인이 없거나 옛것이거나 답하지 않으면 { ok: true } (전처럼 브라우저가 다 해요: 저장이 rev로 부딪힘을 막아요)
 const TAB = `browser:${Math.random().toString(36).slice(2, 12)}`;
-const holding = new Map();   // (저장 id → 이 페이지가 겹쳐 잡은 수: 안쪽에서 다시 잡아도 바깥이 놓을 때 놓아요)
-export async function keepClaim() {
+const holding = new Map();   // ('저장 id/방 id' → { id, room, n: 이 페이지가 겹쳐 잡은 수 }: 이어 잡을 것)
+const free = { ok: true, release: () => {} };
+export async function keepClaim(room) {
     const id = keep.id();
-    if (!id) return { ok: true, release: () => {} };
+    room = String(room || '');
+    if (!id || !room) return free;
     let r = null;
-    try { r = await http('/auto/claim', J({ id, by: TAB })); } catch { r = null; }
+    try { r = await http('/auto/claim', J({ id, room, by: TAB })); } catch { r = null; }
     if (r && r.ok === false) return { ok: false, by: String(r.by || ''), release: () => {} };
-    holding.set(id, (holding.get(id) || 0) + 1);
+    // (no answer from the plugin: nothing is held there, nothing to let go)
+    if (!r) return free;
+    const key = `${id}/${room}`, had = holding.get(key);
+    if (had) had.n += 1; else holding.set(key, { id, room, n: 1 });
     let done = false;
     return {
         ok: true,
         release: () => {
             if (done) return;
             done = true;
-            const n = (holding.get(id) || 1) - 1;
-            if (n > 0) { holding.set(id, n); return; }
-            holding.delete(id);
-            http('/auto/release', J({ id, by: TAB })).catch(() => {});
+            const h = holding.get(key);
+            if (h && (h.n -= 1) <= 0) holding.delete(key);
+            http('/auto/release', J({ id, room, by: TAB })).catch(() => {});
         },
     };
 }
-// 잡고 있는 자물쇠를 이어 잡아요 (일이 길 때 답장 하나마다)
+// 잡고 있는 방들을 이어 잡아요 (일이 길 때: 답장 하나마다)
 export async function keepRenew() {
-    const id = keep.id();
-    if (!id || !holding.has(id)) return;
-    try { await http('/auto/claim', J({ id, by: TAB })); } catch { /* the next one tries again */ }
+    await Promise.all([...holding.values()].map(h => http('/auto/claim', J({ id: h.id, room: h.room, by: TAB, renew: true })).catch(() => {})));
 }
 let beating = null;
 // 30초마다 · 탭이 다시 보일 때 · 채팅을 열 때

@@ -201,6 +201,9 @@
 - 방에 사람 넣고 빼기: 마리나라는 들어오고 나갈 때 카드 변수를 채우고 지워요. 우리에게는 카드 변수가 없어서 그 처리가 없어요.
 - 대화 요약: 마리나라는 요약한 말을 `hiddenFromAI`로 바꿔요. 우리는 우리 요약(`phone2digest.js`)을 써요. 아직 안 대 봤어요.
 
+- 한 채팅에 답장을 만드는 것은 하나(`generate.routes.ts activeGenerations`, 2026-11-22에 1331 · 1505–1560 · 1895 · 16197–16262줄과 이 자물쇠를 보는 `chats.routes.ts` · `turn-games.routes.ts` · `index.ts` · `server-autonomous-scheduler.service.ts` 342~343줄을 읽음. generate.routes.ts 16,262줄 전체는 아니오): 우리는 `plugin/lock.mjs` 방 자물쇠(마리나라의 채팅 하나 = 우리 방 하나, 열쇠는 저장 id/방 id). 마리나라는 서버만 답장을 만들어서 서버 안의 Map 하나로 돼요. 우리는 브라우저 탭도 만들어서 탭도 같은 자물쇠를 받아요(`/auto/claim`). **다른 점**: ① 탭이 쥔 것은 5분 동안 소식이 없으면 풀려요(탭은 일하다 닫힐 수 있어서. 5분은 먼저 말 걸기 "만드는 중" 표시의 `GENERATION_TIMEOUT_MS`). 일꾼의 것은 마리나라처럼 시간 제한이 없어요. ② 같은 쪽은 겹쳐 잡을 수 있어요(일꾼의 `generate`가 잡은 방을 그 안의 `liveGo`가 또 잡아요). ③ 멈춘 생성이 놓을 때까지 10초 기다리기(`STOPPED_GENERATION_RELEASE_WAIT_MS`)는 없어요: 우리에게는 생성 멈추기(`/abort`)가 없어요.
+- "만드는 중" 표시(`markGenerationInProgress`): 마리나라는 서버 한 곳에 있어서 브라우저 · 스케줄러 둘 다 봐요. 우리는 브라우저와 일꾼에 **따로** 있어서 서로 안 보여요. 그래서 판단(`liveAutonomous`)을 방 자물쇠 안에서 최신 것을 받은 뒤에 하고, 줄 세운 먼저 건 말이 그 방을 기다리는 사이 다른 쪽이 먼저 걸었으면 버려요(`phone2go.js wroteSince`).
+
 ## 우리가 덧붙인 것 (마리나라에 없음)
 
 - 지운 방 되살리기(방 휴지통).

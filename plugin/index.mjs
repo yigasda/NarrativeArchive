@@ -71,11 +71,18 @@ export async function init(router) {
     router.post('/auto/presence', run(async ({ id, status }, s, req) => { const a = await autoFor(req.user); if (!a) return { on: false, rooms: 0 }; await a.ready; return { on: true, rooms: await a.presence(String(id || ''), status) }; }));
     // 이 저장의 방마다 서버가 실리를 닫은 동안 돌릴 수 있나 → { on, rooms: [{ id, room, can, why }] }
     router.post('/auto/status', run(async ({ id }, s, req) => { const a = await autoFor(req.user); if (!a) return { on: false, rooms: [] }; await a.ready; return { on: true, rooms: await a.status(String(id || '')) }; }));
-    // 세계 자물쇠 (마리나라의 채팅마다 하나뿐인 생성 자물쇠): 이 탭이 이 저장에서 답장을 만들어요 → { ok } | { ok: false, by }
-    // (일꾼이 없으면 늘 { ok: true }: 그때는 브라우저가 다 해요. 이름은 늘 'browser:…' — 일꾼의 것('server')은 여기서 못 잡아요)
+    // 방 자물쇠 (plugin/lock.mjs: 마리나라의 채팅마다 하나뿐인 생성 자물쇠): 이 탭이 이 저장의 그 방에서 답장을 만들어요 → { ok } | { ok: false, by }
+    //   { id: 저장 id, room: 방 id, by: 탭 이름, renew: 이어 잡기만 }. 이름은 늘 'browser:…' — 일꾼의 것('server')은 여기서 못 잡아요.
+    //   일꾼이 없으면 늘 { ok: true }: 그때는 브라우저가 다 해요
     const tab = by => `browser:${String(by || '').replace(/^browser:/, '').replace(/[^\w-]/g, '').slice(0, 40) || 'tab'}`;
-    router.post('/auto/claim', run(async ({ id, by }, s, req) => { const a = await autoFor(req.user); if (!a) return { ok: true }; await a.ready; return a.claim(String(id || ''), tab(by)); }));
-    router.post('/auto/release', run(async ({ id, by }, s, req) => { const a = await autoFor(req.user); if (!a) return { ok: true }; await a.ready; await a.release(String(id || ''), tab(by)); return { ok: true }; }));
+    router.post('/auto/claim', run(async ({ id, room, by, renew }, s, req) => {
+        const a = await autoFor(req.user);
+        if (!a) return { ok: true };
+        await a.ready;
+        if (renew === true) return { ok: !!await a.renew(String(id || ''), String(room || ''), tab(by)) };
+        return a.claim(String(id || ''), String(room || ''), tab(by));
+    }));
+    router.post('/auto/release', run(async ({ id, room, by }, s, req) => { const a = await autoFor(req.user); if (!a) return { ok: true }; await a.ready; await a.release(String(id || ''), String(room || ''), tab(by)); return { ok: true }; }));
     inside = typeof globalThis.DATA_ROOT === 'string' && !!globalThis.DATA_ROOT;
     if (inside) startAll();
     console.log('[narrative-archive plugin] ready');

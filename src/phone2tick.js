@@ -3,7 +3,7 @@
 // 화면은 document의 'na-live-change' 소식을 듣고 다시 그려요.
 
 import { getMeta, hasChat, saveMeta } from './core.js';
-import { keepServes, keepKept, keepClaim, keepSync } from './phone2keepon.js';
+import { keepServes, keepKept, keepSync } from './phone2keepon.js';
 import { startIdleDetection } from './marinara/idle-detection.js';
 import { userStore } from './phone2sched.js';
 
@@ -17,13 +17,11 @@ export async function tickOnce() {
     //  if both ran, a character would write first twice. Without the worker, as before: the browser does it all)
     if (globalThis.document?.hidden && keepServes()) return 0;
     busy = true;
-    // (the world's lock, as Marinara's per-chat generation lock: the worker is writing in this Orbit now → the next tick.
-    //  Then what the worker wrote meanwhile comes in before anything is judged: never from an old copy — the screen woke up
-    //  and the tick answered a message the worker had answered already, 2026-11-22)
-    const lease = keepKept() ? await keepClaim() : null;
-    if (lease && !lease.ok) { busy = false; return 0; }
     try {
-        if (lease) await keepSync();
+        // (what the server plugin's worker wrote meanwhile comes in before anything is judged: never from an old copy — the
+        //  screen woke up and the tick answered a message the worker had answered already, 2026-11-22. Each room's work then
+        //  takes that room's lock and reads again: phone2go.js liveGo · liveAutonomous)
+        if (keepKept()) await keepSync();
         const w = m.live?.world;
         if (!w) return 0;
         // (the role-play moved on, a card or the persona changed: what the server plugin reads while SillyTavern is closed follows)
@@ -31,7 +29,7 @@ export async function tickOnce() {
         const waiting = !!w.queue?.jobs?.some(j => j.kind === 'reply' && j.state === 'waiting');
         if (!w.presence?.on && !waiting && !Object.keys(w.presence?.schedules || {}).length) return 0;
         return await work(m, waiting);
-    } finally { busy = false; lease?.release(); }
+    } finally { busy = false; }
 }
 async function work(m, waiting) {
     const G = await import('./phone2go.js'), tell = () => globalThis.document.dispatchEvent(new globalThis.CustomEvent('na-live-change'));

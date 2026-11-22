@@ -15,7 +15,7 @@ const liveOf = (n = 450) => ({ v: 1, mode: 'live', archive: [{ world: { id: 'old
     messenger: { accounts: { mara: { name: 'Mara' } }, reactRecent: ['❤️'], rooms: { r1: { id: 'r1', members: ['Ren', 'Mara'], read: { ren: 3 }, messages: msgs(n) }, r2: { id: 'r2', members: ['Ren', 'Ivo'], messages: [] } } },
 } });
 // 가짜 서버: 진짜 저장(plugin/store.mjs)에 바로 이어요. calls에 부른 것을 적어요
-async function rig(t, { plugin = true } = {}) {
+async function rig(t, { plugin = true, synced = null } = {}) {
     const dir = await mkdtemp(path.join(tmpdir(), 'na-keep-'));
     t.after(() => rm(dir, { recursive: true, force: true }));
     const store = openStore(dir), o = { store, calls: [], on: plugin, at: null, fail: false };
@@ -32,7 +32,7 @@ async function rig(t, { plugin = true } = {}) {
         fork: async (from, to, { chat }) => { o.calls.push(['fork', from, to]); return store.fork(from, to, { chat }); },
         drop: async id => { o.calls.push(['drop', id]); return store.drop(id); },
     };
-    o.keep = makeKeep({ api, now: () => o.at });
+    o.keep = makeKeep({ api, now: () => o.at, synced });
     // 실리 저장 흉내: core.js saveMeta가 하는 순서 그대로. file = 채팅 파일에 든 우리 메타
     o.file = null; o.stSaves = 0;
     o.save = async () => {
@@ -245,6 +245,34 @@ test('맞추기: 서버가 답장을 넣는 사이에 내가 말을 보냈어도
     // 브라우저의 것도 같아요
     assert.deepEqual(m.live.world.messenger.rooms.r1.messages.map(x => x.id), ['x0', 'x1', 'x2', 's1', 'u1']);
     assert.deepEqual(copy(m.live.world), sw);
+});
+
+test('맞추기 신호(synced): 받을 때도, 저장하다 부딪혀 합칠 때도 — 맞추기 전의 것을 보고, 맞춘 뒤에 알려요 (화면이 다시 그려요). 바뀐 게 없으면 안 알려요', async t => {
+    const seen = [];
+    const synced = { before: m => { seen.push(['before', m.live.world.messenger.rooms.r1.messages.length]); return 'mark'; }, after: (m, mark) => seen.push(['after', mark, m.live.world.messenger.rooms.r1.messages.length]) };
+    const o = await rig(t, { synced }), m = await o.openChat({ live: liveOf(3) });
+    await o.save();
+    const id = m.liveRef.id;
+    assert.equal(await o.keep.sync(), false);
+    assert.deepEqual(seen, []);
+    // 받기
+    await serverDoes(o, id, w => { w.messenger.rooms.r1.messages.push({ id: 's1', n: 3, from: 'Mara', text: 'you there?', at: 5000 }); w.messenger.seq = 3; });
+    assert.equal(await o.keep.sync(), true);
+    assert.deepEqual(seen, [['before', 3], ['after', 'mark', 4]]);
+    // 저장하다 부딪혀 합치기 (서버가 또 썼는데 나는 몰라요): 그때도 알려요
+    seen.length = 0;
+    await serverDoes(o, id, w => { w.messenger.rooms.r1.messages.push({ id: 's2', n: 4, from: 'Mara', text: 'hello?', at: 6000 }); w.messenger.seq = 4; });
+    m.live.world.messenger.rooms.r1.messages.push({ id: 'u1', n: 4, from: 'Ren', text: 'im back', at: 7000 });
+    await o.save();
+    assert.deepEqual(seen, [['before', 5], ['after', 'mark', 6]]);
+    assert.deepEqual(m.live.world.messenger.rooms.r1.messages.map(x => x.id), ['x0', 'x1', 'x2', 's1', 's2', 'u1']);
+    // (신호를 받는 쪽이 오류를 내도 맞추기는 그대로)
+    const o2 = await rig(t, { synced: { before() { throw new Error('a'); }, after() { throw new Error('b'); } } }), m2 = await o2.openChat({ live: liveOf(3) });
+    await o2.save();
+    await serverDoes(o2, m2.liveRef.id, w => { w.messenger.rooms.r1.messages.push({ id: 's1', n: 3, from: 'Mara', text: 'x', at: 5000 }); w.messenger.seq = 3; });
+    const warn = console.warn; console.warn = () => {};
+    try { assert.equal(await o2.keep.sync(), true); } finally { console.warn = warn; }
+    assert.equal(m2.live.world.messenger.rooms.r1.messages.length, 4);
 });
 
 test('맞추기: 한쪽만 바꾼 것은 그쪽 것, 같은 것을 양쪽이 고쳤으면 서버 것. 내가 지운 말은 지워진 채로', async t => {
