@@ -14,6 +14,16 @@ The files under `src/marinara/` and `plugin/marinara/` are ported from
 Each ported file names the Marinara file it came from and what was changed.
 "Marinara Engine" and its marks belong to their owners; this project is not affiliated with or endorsed by them.
 
+## SillyTavern
+
+`src/stprofile.js` copies three small functions from [SillyTavern](https://github.com/SillyTavern/SillyTavern) 1.19.1
+(`extractMessageFromData` from `public/script.js`, `extractReasoningFromData` from `public/scripts/reasoning.js`, and the
+stop-string trimming of `TextCompletionService.processRequest` from `public/scripts/custom-request.js`), and
+`src/phone2stlevel.js` mirrors its reasoning-effort rules. The file names the lines it came from.
+
+    SillyTavern
+    Licensed under the GNU Affero General Public License v3.0.
+
 ## Lucide
 
 Some icons in the Orbit messenger (`src/phoneorbit.js`, `LU`) are taken from [Lucide](https://lucide.dev).

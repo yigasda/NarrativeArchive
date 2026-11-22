@@ -111,7 +111,8 @@ export async function profileTemplates({ send, profile, over = null, find = {} }
         const api = a.req.url === PT_URL.cc ? 'cc' : a.req.url === PT_URL.tc ? 'tc' : '';
         if (!api) throw refusal('이 연결 프로필은 서버에서 보낼 수 없는 길로 보내요');
         const A = JSON.parse(a.req.body), B = JSON.parse(b.req.body);
-        const tpl = { v: PT.v, api, url: a.req.url };
+        // (the order of SillyTavern's fields, so the server's request is the same text, not only the same fields)
+        const tpl = { v: PT.v, api, url: a.req.url, keys: Object.keys(A) };
         if (api === 'cc') {
             // (the messages must go out as they were given: SillyTavern changes them for some models — o1: system → user)
             if (!same(A.messages, a.messages) || !same(B.messages, b.messages)) throw refusal('이 연결 · 모델은 실리가 메시지를 고쳐 보내서 서버에서는 못 보내요');
@@ -176,14 +177,21 @@ export function fillProfileRequest(tpl, { messages, maxTokens, secret = () => un
             data[key] = s;
         } else if (v !== undefined) data[key] = v;
     }
-    if (tpl.api === 'cc') return { ...data, messages };
-    // (text completion: each message where SillyTavern's instruct formatting put the stand-in — custom-request.js constructPrompt)
-    const fill = { [PT_TOKEN.system]: messages.find(m => m.role === 'system')?.content, [PT_TOKEN.user]: messages.find(m => m.role === 'user')?.content };
-    let parts = [String(tpl.prompt)];
-    for (const [tok, text] of Object.entries(fill)) {
-        parts = parts.flatMap(p => (typeof p !== 'string' ? [p] : p.split(tok).flatMap((s, i) => (i ? [{ text: String(text ?? '') }, s] : [s]))));
+    if (tpl.api === 'cc') data.messages = messages;
+    else {
+        // (text completion: each message where SillyTavern's instruct formatting put the stand-in — custom-request.js constructPrompt)
+        const fill = { [PT_TOKEN.system]: messages.find(m => m.role === 'system')?.content, [PT_TOKEN.user]: messages.find(m => m.role === 'user')?.content };
+        let parts = [String(tpl.prompt)];
+        for (const [tok, text] of Object.entries(fill)) {
+            parts = parts.flatMap(p => (typeof p !== 'string' ? [p] : p.split(tok).flatMap((s, i) => (i ? [{ text: String(text ?? '') }, s] : [s]))));
+        }
+        data.prompt = parts.map(p => (typeof p === 'string' ? p : p.text)).join('');
     }
-    return { ...data, prompt: parts.map(p => (typeof p === 'string' ? p : p.text)).join('') };
+    // (in SillyTavern's order; anything not in it after)
+    const out = {};
+    for (const k of Array.isArray(tpl.keys) ? tpl.keys : []) if (Object.hasOwn(data, k)) out[k] = data[k];
+    for (const k of Object.keys(data)) if (!Object.hasOwn(out, k)) out[k] = data[k];
+    return out;
 }
 
 // 실리가 읽는 그대로 (custom-request.js ChatCompletionService.sendRequest 471–493 · TextCompletionService.sendRequest 127–144 · processRequest 331–382)

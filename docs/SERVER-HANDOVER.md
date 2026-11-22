@@ -1,4 +1,4 @@
-# 서버 플러그인 인수인계 (2026-11-22, 3.230.0 · `b8a8342` 기준)
+# 서버 플러그인 인수인계 (2026-11-22, 3.230.0 · 연결 프로필 길까지)
 
 "실리를 닫아도 · 탭을 가려도 캐릭터가 먼저 말을 걸고 늦은 답장이 온다"를 맡는 세션이 맨 먼저 읽는 글이에요.
 설계의 자세한 기록은 `docs/PHONE2-PLAN.md`의 "서버 플러그인" 3단계, 마리나라와의 대조는 `docs/MARINARA-PORT.md`에 있어요.
@@ -47,9 +47,9 @@ src/phone2tick.js 30초 틱                       플러그인 본체 (plugin/in
 | `host.mjs` | 48 | 본체 쪽. 사용자마다 일꾼 스레드 하나를 띄우고 말을 주고받아요. 일꾼이 부탁하는 저장 일(`list` · `revOf` · `load` · `save`)을 대신 해요. `list` · `inject` · `sweep` · `unread`는 테스트와 손 확인용 |
 | `worker.mjs` | 54 | 일꾼 스레드의 들머리. **순서가 중요해요**: `screen.mjs`를 먼저 불러야 해요. 전역 `fetch`를 바꿔서 `/`로 시작하는 주소를 다리로 넘겨요 |
 | `screen.mjs` | 37 | 아무것도 안 하는 화면: `document` · `$` · `toastr` 등에 "뭘 시켜도 자기 자신을 돌려주는 것"을 둬요. `SillyTavern.getContext()`는 `setContext()`로 그때그때 바꿔 끼워요. 일꾼 스레드에서만 불러요(본체에서 부르면 오류. 테스트는 `NA_SCREEN_ANYWHERE=1`) |
-| `work.mjs` | 266 | 핵심. 실리의 것을 서버 것으로(`contextOf`), 실리 연결 방식의 대역(`stStandIn`), 한 번에 한 세계(`withWorld`), 돌려도 되나(`blocked` · `cannot`), 먼저 건 말 만들기(`generate`), 늦은 답장(`sweepDue`), 화면용 상태(`status`), 보고 있음(`presence`) |
+| `work.mjs` | 329 | 핵심. 실리의 것을 서버 것으로(`contextOf`), 연결 프로필 요청의 대역(`profileService`: `sendRequest`), 실리 연결 방식 · 추론 레벨의 대역(`stStandIn`), 한 번에 한 세계(`withWorld`), 돌려도 되나(`blocked` · `cannot`), 먼저 건 말 만들기(`generate`), 늦은 답장(`sweepDue`), 화면용 상태(`status`), 보고 있음(`presence`) |
 | `auto.mjs` | 151 | 마리나라 스케줄러가 아는 `app`을 플러그인 저장 위에 만들어요. `chats.list/getById/resolveConversationPresenceState/markAutonomousUnread`, `inject`(때가 됐나 · 답장 만들기), 읽어 둔 세계(`open`: rev가 그대로면 다시 안 읽음), 쓰기(`write`: 바뀐 조각만) |
-| `bridge.mjs` | 52 | 127.0.0.1의 아무 포트에 실리 **자신의** 라우터를 붙여요. 실리를 켤 때마다 새로 만드는 토큰이 있어야 하고, 네 길만 열어요: `POST /api/backends/chat-completions/generate`, `POST /api/characters/merge-attributes`, `POST /api/worldinfo/get`, `GET /user/files/…` |
+| `bridge.mjs` | 54 | 127.0.0.1의 아무 포트에 실리 **자신의** 라우터를 붙여요. 실리를 켤 때마다 새로 만드는 토큰이 있어야 하고, 다섯 길만 열어요: `POST /api/backends/chat-completions/generate`, `POST /api/backends/text-completions/generate`, `POST /api/characters/merge-attributes`, `POST /api/worldinfo/get`, `GET /user/files/…` |
 | `log.mjs` | 30 | 마리나라 파일이 부르는 `logger` · `logRateLimited` |
 | `marinara/server-autonomous-scheduler.service.js` | 488 | 마리나라 파일 **통째**. 고친 것은 맨 위 머리말에 적힌 네 가지뿐. 다시 만들 때는 스크립트로(아래 8장) |
 | `marinara/autonomous-candidates.js` | 40 | 마리나라 파일 통째. 지금 부르는 곳은 테스트뿐 |
@@ -59,14 +59,15 @@ src/phone2tick.js 30초 틱                       플러그인 본체 (plugin/in
 | 파일 | 하는 일 |
 |---|---|
 | `phone2kit.js` (새) | 서버가 읽을 묶음. `buildKit(c, real, tail, { version })` · `putKit` · `kitOf` · `kitContext`. 실리 · 화면을 몰라요 |
+| `stprofile.js` (새) | 연결 프로필의 요청 틀. 브라우저: `profileTemplates`(실리 자신의 `sendRequest`가 보내려는 요청을 받아 두기). 서버: `fillProfileRequest` · `readProfileAnswer` · `profileSecret`. 실리에서 옮긴 `extractMessageFromData` · `extractReasoningFromData` · `trimTextCompletion`. 열쇠: `ptKey` · `ptFind` · `ptWhyKey` · `levelKey` (4장) |
 | `phone2keep.js` | 원래의 조각 저장에 더해: `merge3`(셋 비교 합치기) · `settleRooms`(순서 · 번호) · `into`(제자리 맞추기) · `sync` · 저장이 409면 합쳐서 다시(세 번째는 오류) |
 | `phone2keepon.js` | `keepBeat`(30초마다 · 다시 보일 때 · 채팅 열 때) · `keepPing` · `keepSync` · `keepServes` · `keepAutoStatus` · `keepKept` |
 | `phone2tick.js` | 가려져 있고 일꾼이 돌면 쉬어요. 30초마다 `liveKitRefresh` |
-| `phone2go.js` | `replyRoute` · `liveReplyPlan` · `liveKitRefresh` · `liveServerStatus` · `liveServerOn` · `liveAutonomousUnread`. 먼저 건 말에 `extra.autonomous` 표시와 `na-live-auto` 신호. `keepUpStory`는 `ctx().naServer`면 안 해요. `gatherJob`이 `job.user`를 넘겨요 |
+| `phone2go.js` | `replyRoute` · `liveReplyPlan`(`profile` · `raw`) · `liveKitRefresh`(`kit.st` · `kit.pt` · `kit.ptWhy` · `kit.levels`) · `liveServerStatus` · `liveServerOn` · `liveAutonomousUnread`. Orbit의 모델 요청에 `profileNow`. 먼저 건 말에 `extra.autonomous` 표시와 `na-live-auto` 신호. `keepUpStory`는 `ctx().naServer`면 안 해요. `gatherJob`이 `job.user`를 넘겨요 |
 | `phone2sched.js` | `checkProactive(…, { userStatus })` · `contextBlock(…, { user })` · `intentWhy` · `restoreFollowups` · `reseedActivity` |
 | `phone2snap.js` | `liveChatTail`: `ctx().naTail`이 있으면 그걸 줘요(서버만) |
 | `phone2store.js` | `readLive`: 페르소나가 읽으면 `autonomousUnread*` 세 칸을 지워요 |
-| `ai.js` | `stSourceData`(요청 만들기와 보내기를 나눔) · `stTemplateKey` · `stSourceTemplate` · `ST_TEMPLATE_SECRETS` |
+| `ai.js` | `stSourceData`(요청 만들기와 보내기를 나눔) · `stTemplateKey` · `stSourceTemplate` · `ST_TEMPLATE_SECRETS` · `aiProfileFor` · `askAI`의 `profileNow` · `stLevelPayload`의 서버 대역 자리(`levelPayload`) |
 | `marinara/notification-sound.js` · `local-notifications.js` (새) | 마리나라 파일 통째. 부르는 곳은 `src/phone.js`(디자인) |
 
 ## 3. 꼭 알아야 하는 설계 결정과 그 이유
@@ -86,7 +87,7 @@ src/phone2tick.js 30초 틱                       플러그인 본체 (plugin/in
 새 칸이 필요해지면: 그 값이 어디서 오는지 정하고(`kit` · `settings.json` · 다리) 넣어요. 함부로 `OPTIONAL`에 넣지 마세요.
 
 지금 주는 칸: `naServer` · `naTail` · `chatMetadata` · `chatId` · `characters` · `characterId` · `groupId` · `groups` · `name1` ·
-`powerUserSettings{personas, persona_descriptions, persona_description}` · `extensionSettings` · `ConnectionManagerRequestService.getSupportedProfiles` ·
+`powerUserSettings{personas, persona_descriptions, persona_description}` · `extensionSettings` · `ConnectionManagerRequestService.getSupportedProfiles` · `ConnectionManagerRequestService.sendRequest` ·
 `chatCompletionSettings` · `mainApi` · `saveMetadata` · `saveSettingsDebounced`(아무것도 안 함) · `setExtensionPrompt`(아무것도 안 함) ·
 `getRequestHeaders` · `writeExtensionField` · `loadWorldInfo`.
 **안 주는 칸**: `chat`(롤플 채팅). 서버에는 롤플 채팅이 없어요.
@@ -100,7 +101,9 @@ kit = { v: 1, ver (확장 버전), name1, persona (지금 고른 페르소나의
         chat: { avatar, group: { id, members }, file: { group, dir, id } },
         tail: { lines, first, end }   // liveChatTail()이 그 순간 읽은 롤플 끝
         meta: { glossary, glossaryPeople, dateOrder, phoneScreenHolder },
-        st: { 틀의 열쇠: { data, secrets } } }   // 실리 연결 방식의 요청 틀
+        st: { 틀의 열쇠: { data, secrets } },   // 실리 연결 방식의 요청 틀
+        pt: { 틀의 열쇠: 틀 }, ptWhy: { [프로필, 얹는 값]: 못 만든 이유 },   // 연결 프로필의 요청 틀 (4장)
+        levels: { [연결, 모델, 레벨]: 프로필 요청에 얹는 값 } }
 ```
 
 - 카드는 **이름으로 찾을 때 같은 카드가 먼저 나오게** 실리 목록의 순서를 지켜요(이름이 같은 카드가 둘일 수 있어요).
@@ -144,8 +147,8 @@ kit = { v: 1, ver (확장 버전), name1, persona (지금 고른 페르소나의
 | 커스텀 API (`mode: 'custom'`) | 됨 | 진짜 `ai.js`가 Node의 fetch로 바로 보내요. 키는 `settings.json`의 확장 설정 |
 | Vertex (`mode: 'vertex'`) | 됨 | 다리로 실리의 처리기에. 키는 실리가 붙여요 |
 | 실리 연결 방식 (`mode: 'source'`) | 됨 (틀이 있을 때) | 아래 |
-| 연결 프로필 (`profile:<id>`) | **안 됨** | 다음 일 (6장) |
-| 실리 자신의 연결 (`'ai'` 칸이 `st` 방식, 프로필도 없음) | **안 됨** | 다음 일 (6장) |
+| 연결 프로필 (`profile:<id>`) | 됨 (틀이 있을 때) | 아래 "연결 프로필의 요청 틀" |
+| 실리 쪽 (`'ai'` 칸이 `st` 방식) | 됨 (실리에서 고른 프로필이 있을 때) | ⚙ 설정에서 고른 프로필, 없으면 실리의 연결 관리자에서 지금 고른 프로필로 보내요 (`ai.js aiProfileFor`). 고른 프로필이 하나도 없으면 안 됨: 실리의 `generateRaw`는 브라우저 코드예요 |
 
 **실리 연결 방식의 요청 틀**: 요청을 실리의 **브라우저** 코드 `createGenerationParameters`(`public/scripts/openai.js` 2691~3128)가 만들어요.
 서버에는 그 코드가 없어서, 브라우저가 미리 "메시지만 빠진 요청"을 만들어 `kit.st`에 남겨요(`ai.js stSourceTemplate`).
@@ -155,6 +158,15 @@ kit = { v: 1, ver (확장 버전), name1, persona (지금 고른 페르소나의
 - 채워 넣은 메시지가 그대로 나오는지(`\u0001NA_SYSTEM\u0001` · `\u0001NA_USER\u0001`) 확인해요. 실리가 메시지를 고쳐 보내는 모델(o1: 시스템 → 유저)은 틀을 안 만들어요.
 - 비밀 칸(`proxy_password` · `custom_include_headers`)은 틀에 안 담고, 서버가 보낼 때 `settings.json`의 `oai_settings`에서 읽어요. 그 값에 `{{`가 있으면 서버는 못 보내요(실리가 브라우저에서 매크로를 채우는 칸).
 - 서버 쪽 대역: `work.mjs stStandIn`이 `globalThis.__naStOpenai`에 `{ oai_settings, createGenerationParameters }`를 둬요. 진짜 `ai.js`는 이 전역이 있으면 `/scripts/openai.js` 대신 이걸 써요(테스트도 같은 자리를 써요).
+
+**연결 프로필의 요청 틀** (`src/stprofile.js`, `PHONE2-PLAN.md` 3-2c에 자세히):
+- 브라우저(`liveKitRefresh` → `profileTemplates`)가 실리 자신의 `ConnectionManagerRequestService.sendRequest`를 답장 코드와 **같은 인자**로, 메시지 · 답 길이만 자리표시로 바꿔 불러요. `fetch`를 한 번 감싸 두고(풀지 않아요) 몸통에 자리표시의 표시가 든 요청만 받아 두고 빈 답을 돌려줘요. 실리의 다른 요청은 그대로 나가요.
+- 두 번 떠서 비교해요(자리표시 · 그 길이 · 답 길이를 바꿔서). 답 길이만 다른 칸은 자리를 적고(`max`), 다른 것이 다르면 틀을 안 만들어요(이유는 `kit.ptWhy` → `cannot`).
+- 비밀 칸(`PT_SECRETS`)은 빼고, 브라우저에서 실리 설정의 값과 같은지 확인해요(다르면 매크로: 안 만들어요). 서버는 `profileSecret`(프로필의 프록시 → 프리셋 → `oai_settings`, 실리 코드의 순서)으로 `settings.json` · `OpenAI Settings/<프리셋>.json`에서 읽어요.
+- 틀에 그때의 프로필(`of`)이 있어요. 서버는 `settings.json`의 프로필이 그것과 다르면 안 보내요.
+- 열쇠는 `[프로필 id, 얹는 값(JSON), 모양]`. 채팅 완성은 모양 `'*'`(메시지를 통째로 바꿔 넣어요), 글 완성은 `'su'` · `'u'`(지시 형식이 역할마다 감싸요).
+- 방의 추론 레벨을 얹는 프로필 요청: `askRoom`이 `stLevelPayload`를 불러요. 서버에는 `createGenerationParameters`가 없어서 브라우저가 만든 값(`kit.levels`)을 `stStandIn.levelPayload`가 돌려줘요.
+- 서버의 `sendRequest` 대역은 실리 것처럼 프로필을 찾고(`Profile not found`), 보낸 뒤의 오류는 `API request failed`로 감싸요(원인은 `cause`). 틀이 없거나 프로필이 바뀐 것은 감싸지 않고 이유 그대로 던져요.
 
 **프로필 방을 초안 모델로 답하지 않게**: `replyRoute`는 방의 `connectionId`가 목록에 없으면 "안 고른 방"으로 봐요. 서버에서는 프로필 목록이 비어서, 프로필 방이 초안 모델로 답할 뻔했어요. 그래서 `contextOf`가 `settings.json`의 `extension_settings.connectionManager.profiles`로 `getSupportedProfiles()`를 줘요. **이 줄을 빼면 다른 모델로 답해요**(테스트가 지켜요).
 
@@ -176,7 +188,9 @@ kit = { v: 1, ver (확장 버전), name1, persona (지금 고른 페르소나의
 ### 브라우저가 다시 보일 때
 `keepBeat` → `keepPing` → `keepSync` → 바뀌었으면 방마다 `reseedActivity` → `na-live-change` → 안 읽음이 늘어난 방이 있으면 `na-live-auto`(`from: 'server'`).
 
-## 6. 다음 일: 연결 프로필 · 실리 자신의 연결을 서버에서 되게 (소망: "이 루트를 제일 자주 씀")
+## 6. (됐어요, 2026-11-22) 연결 프로필 · 실리 쪽 방을 서버에서 되게 (소망: "이 루트를 제일 자주 씀")
+
+**한 것**: 4장의 표와 "연결 프로필의 요청 틀", `PHONE2-PLAN.md` 3-2c. 소망과 정한 것: 실리 쪽 방은 "실리에서 지금 고른 프로필"로 보내요(브라우저도 서버도). 아래는 시작할 때 적어 둔 계획이에요(기록으로 남겨 둬요).
 
 소망에게 한 말: "실리 연결 방식에 쓴 것과 같은 방법이에요. 브라우저가 열려 있을 때 실리 자신의 코드로 메시지 자리만 비운 요청을 미리 만들어 두고, 서버는 메시지만 채워 보내요. 실리 코드를 흉내 내지 않아요. 아직 안 해 봤어요." 소망의 "할까요?"에 대한 답은 아직 없어요(인수인계를 먼저 달라고 했어요). **시작하기 전에 소망에게 진행해도 되는지 확인하세요.**
 
@@ -229,7 +243,8 @@ npx eslint --no-config-lookup -c $S/lint/eslint.config.mjs src/phone2*.js src/ai
 서버 쪽 테스트:
 - `tests/pluginstore.test.mjs` 저장 · 길.
 - `tests/pluginauto.test.mjs` 스케줄러(가짜 app 13개) + 진짜 저장 위의 app 5개.
-- `tests/pluginwork.test.mjs` **일꾼을 실제로 띄워서** 10개(가짜 모델 HTTP 서버 · 가짜 다리).
+- `tests/pluginwork.test.mjs` **일꾼을 실제로 띄워서** 15개(가짜 모델 HTTP 서버 · 가짜 다리). 연결 프로필은 `tests/stfake.mjs`(실리의 `sendRequest`를 실리 코드의 순서대로 흉내 낸 것)로 틀을 떠요.
+- `tests/stprofile.test.mjs` 프로필 틀 · 채우기 · 답 읽기. `tests/aiprofile.test.mjs` 지금 고른 프로필.
 - `tests/phone2beat.test.mjs` 브라우저 쪽 진짜 파일 + 진짜 일꾼을 한 저장에.
 - `tests/phone2keep.test.mjs` 합치기 · 퍼즈. `tests/phone2kit.test.mjs` 묶음.
 
@@ -237,7 +252,9 @@ npx eslint --no-config-lookup -c $S/lint/eslint.config.mjs src/phone2*.js src/ai
 ```
 node tools/plugin/stsmoke.mjs <실리 폴더> <이 저장소>     # 브라우저 없이, 약 30초
 node tools/plugin/stbrowser.cjs <실리 폴더>               # 진짜 브라우저(Playwright)까지, 약 3분
+node tools/plugin/stprofile.cjs <실리 폴더>               # 진짜 연결 프로필 셋(채팅 완성 + 프록시 · 지금 고른 프로필 · 글 완성), 약 5분
 ```
+`stprofile.cjs`는 `settings.json` · 카드를 스스로 복사해 두고 되돌려요. 서버가 보낸 요청과 실리가 브라우저에서 같은 메시지로 보낸 요청이 글자까지 같은지 봐요.
 준비: 실리 1.19.1을 받아 `npm install`, `config.yaml`에서 `enableServerPlugins: true`,
 `plugins/NarrativeArchive`와 `data/default-user/extensions/NarrativeArchive`를 이 저장소로 잇기(`ln -s`).
 둘 다 `settings.json`과 `default_Seraphina.png`를 바꿔요: 돌리기 전에 복사해 두고 끝나면 되돌려요. `data/default-user/NarrativeArchive/orbit`도 지워요.
@@ -267,7 +284,9 @@ node tools/plugin/stbrowser.cjs <실리 폴더>               # 진짜 브라우
 - 카드 · 페르소나 · 롤플 끝은 브라우저가 마지막으로 남긴 것이에요.
 - 서버는 이야기 요약본을 늘리지 않고, 스케줄 매주 갱신도 안 해요.
 - 실리 버전이 올라가 `src/endpoints/…`의 자리가 바뀌면 다리가 안 열려요. 그때는 커스텀 API 방만 돌고, 실리 서버 창에 한 줄이 찍혀요.
-- 실리 연결 방식의 답 읽기: 서버에는 실리의 `extractMessageFromData`가 없어서 `ai.js`가 OpenAI · Claude · Google 모양을 손으로 읽어요.
+- 실리 연결 방식의 답 읽기: 서버에는 실리의 `extractMessageFromData`가 없어서 `ai.js`가 OpenAI · Claude · Google 모양을 손으로 읽어요. (연결 프로필 길은 `stprofile.js`에 옮겨 둔 실리 것을 써요.)
+- 연결 프로필: 틀을 뜬 뒤 30초 안에 프리셋 · 실리의 채팅 완성 설정을 바꾸고 곧바로 실리를 닫으면 서버는 예전 틀로 보내요(프로필 자체가 바뀐 것은 알아채요). 실리가 메시지를 고쳐 보내는 모델 · 요청마다 값이 달라지는 연결 · 글 완성 프로필로 그림이 든 요청 · 사용자 헤더의 매크로는 서버에서 못 보내요(이유를 알려요).
+- 실리 쪽 방이 실리에서 고른 프로필로 가면서, 실리의 `generateRaw`가 하던 것(우리 글의 `{{char}}` 같은 매크로 바꾸기, 정규식 확장 등으로 답 고치기)은 Orbit의 요청에서 빠졌어요. 방에 프로필을 고른 방은 원래 이랬어요.
 - PDF 첨부는 커스텀 API 길로만 가요(전부터).
 
 ## 10. 그 밖에 남은 일 (서버와 무관, `docs/MARINARA-PORT.md` "꼭 할 것")

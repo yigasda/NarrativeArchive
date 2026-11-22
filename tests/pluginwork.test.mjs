@@ -227,6 +227,11 @@ test('일꾼: 방의 추론 레벨을 얹은 프로필 요청 — 브라우저�
     assert.deepEqual(sent.body, st.build('p1', sent.body.messages, 4000, over).body);
     assert.equal(sent.body.reasoning_effort, 'high');
     assert.match((await S.auto.status('sb'))[0].why, /추론 레벨의 요청 값이 아직 없어요/);
+    // (브라우저에서 실리 코드가 그 레벨을 못 만들었으면: 그 이유가 그대로)
+    const c = world({ pt, levels: { [SP.levelKey('openrouter', 'or/model', 'high')]: { why: '이 실리 버전에서는 연결 프로필에 추론 레벨을 실을 수 없어요' } } });
+    Object.assign(liveWorld(c.m).messenger.rooms[c.room.id], { connectionId: 'profile:p1', chatParameters: { reasoningEffort: 'high' } });
+    await S.put('sc', c.m);
+    assert.match((await S.auto.status('sc'))[0].why, /연결 프로필에 추론 레벨을 실을 수 없어요/);
 });
 
 test('일꾼: 실리에서 프로필이 바뀌었거나 프리셋 파일이 없으면 예전 틀로 보내지 않아요', async t => {

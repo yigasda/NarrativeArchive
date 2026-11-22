@@ -33,6 +33,7 @@ test('채팅 완성 프로필: 실리가 만든 요청에서 메시지 · 비밀
     // 서버: 진짜 메시지 · 답 길이 · 설정 파일의 비밀 칸 → 실리가 이 메시지로 보낼 몸통과 같아요
     const body = SP.fillProfileRequest(tpl, { messages: MSG, maxTokens: 4000, secret: secretOf(st, tpl) });
     assert.deepEqual(body, st.build('p1', MSG, 4000, over).body);
+    assert.equal(JSON.stringify(body), JSON.stringify(st.build('p1', MSG, 4000, over).body));   // (같은 글: 칸의 순서까지)
     assert.equal(body.proxy_password, 'PROXY-PW');                                       // (프로필의 프록시가 이겨요)
     assert.equal(body.messages[1].content, '[MESSENGER]\nRen: hey {{user}}');           // (실리도 이 길에서는 매크로를 안 바꿔요)
     // 다른 요청은 그대로 나가요 (받아 두는 것은 자리표시가 든 요청뿐)
@@ -88,6 +89,7 @@ test('글 완성 프로필: 지시 형식이 감싼 글 속 자리 · 모양마�
     assert.deepEqual(su.max.map(p => p.join('.')).sort(), ['max_new_tokens', 'max_tokens']);
     assert.deepEqual(su.instruct, { stop_sequence: '</s>', input_sequence: '### Instruction:', output_sequence: '### Response:', last_output_sequence: '' });
     assert.deepEqual(SP.fillProfileRequest(su, { messages: MSG, maxTokens: 4000 }), st.build('t1', MSG, 4000).body);
+    assert.equal(JSON.stringify(SP.fillProfileRequest(su, { messages: MSG, maxTokens: 4000 })), JSON.stringify(st.build('t1', MSG, 4000).body));
     const one = [{ role: 'user', content: 'just text $& $1' }];
     assert.equal(SP.ptFind(pt, 't1', null, one), u);
     assert.deepEqual(SP.fillProfileRequest(u, { messages: one, maxTokens: 9 }), st.build('t1', one, 9).body);
@@ -100,6 +102,9 @@ test('글 완성 프로필: 지시 형식이 감싼 글 속 자리 · 모양마�
     assert.equal(read('### Response:\n{"a":1}</s>tail'), '\n{"a":1}');
     assert.throws(() => SP.readProfileAnswer(su, body, { error: { message: 'busy' } }), /busy/);
     assert.throws(() => SP.readProfileAnswer(su, body, {}, { ok: false }), /Response not OK/);
+    // (글의 길이가 요청에 들어가는 연결: 서버가 다른 길이의 글로 채우면 달라지니 틀을 안 만들어요)
+    const st2 = fakeSt({ profiles: [TC], instructs: { Alpaca: ins }, counted: true });
+    await assert.rejects(SP.profileTemplates({ send: sendOf(st2, 't1'), profile: TC, find: st2.find }), e => e.refusal && /글의 길이에 따라/.test(e.message));
 });
 
 test('실리에서 옮긴 답 읽기: 채팅 완성 · 글 완성의 모양, 생각 글은 실리의 지금 연결의 모양으로', () => {

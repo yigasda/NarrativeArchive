@@ -2,13 +2,13 @@
 //   shared.js ConnectionManagerRequestService.sendRequest 423–492 → custom-request.js createRequestData · processRequest ·
 //   presetToGeneratePayload → openai.js createGenerationParameters의 일부 · instruct-mode.js formatInstructModeChat · formatInstructModePrompt).
 // 진짜 실리 코드로는 tools/plugin/stbrowser.cjs가 확인해요. 여기서는 src/stprofile.js가 받아 두는 것 · 서버가 채우는 것을 대 봐요.
-//   random: 요청마다 달라지는 값 · mangle: 실리가 메시지를 고쳐 보내는 모델 (o1) · macro: 사용자 헤더에 매크로
+//   random: 요청마다 달라지는 값 · mangle: 실리가 메시지를 고쳐 보내는 모델 (o1) · counted: 글의 길이가 들어간 글 완성 요청
 import { PT_URL, extractMessageFromData } from '../src/stprofile.js';
 
 const clean = o => { for (const k of Object.keys(o)) if (o[k] === undefined) delete o[k]; return o; };
 const SRC = { openrouter: 'openrouter', custom: 'custom', claude: 'claude', deepseek: 'deepseek' };
 
-export function fakeSt({ profiles = [], oai = {}, presets = {}, tcPresets = {}, instructs = {}, proxies = [], name1 = 'Ren', name2 = 'Mara', random = false, mangle = false } = {}) {
+export function fakeSt({ profiles = [], oai = {}, presets = {}, tcPresets = {}, instructs = {}, proxies = [], name1 = 'Ren', name2 = 'Mara', random = false, mangle = false, counted = false } = {}) {
     const sub = s => String(s ?? '').replaceAll('{{user}}', name1).replaceAll('{{char}}', name2);
     // (instruct-mode.js formatInstructModeChat · formatInstructModePrompt, for wrap: true, names never, no macros)
     const chat = (role, mes, ins) => { const pre = role === 'system' ? ins.system_sequence : role === 'user' ? ins.input_sequence : ins.output_sequence; const suf = (role === 'system' ? ins.system_suffix : role === 'user' ? ins.input_suffix : ins.output_suffix) || '\n'; return [pre, mes + suf].filter(x => x).join('\n'); };
@@ -40,6 +40,7 @@ export function fakeSt({ profiles = [], oai = {}, presets = {}, tcPresets = {}, 
             if (ins) { text = prompt.map(m => chat(m.role, m.content, ins)).join('') + last(ins); stops = [`\n${ins.stop_sequence}`, `\n${ins.input_sequence}`]; }
             else text = prompt.map(x => x.content).join('\n\n');
         }
+        if (counted) text = `[${text.length} chars]\n${text}`;   // (a prompt that changes with the text's length)
         let req = clean({ stream: false, prompt: text, max_tokens: maxTokens, max_new_tokens: maxTokens, model: profile.model, api_type: profile.api, api_server: profile['api-url'], secret_id: profile['secret-id'], ...over });
         if (stops) { req.stop = stops; req.stopping_strings = stops; }
         const preset = profile.preset ? tcPresets[profile.preset] : undefined;
