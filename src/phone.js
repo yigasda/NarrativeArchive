@@ -10,7 +10,7 @@ import { profileEntries, resolvePhoneProfile, currentPersonaBinding } from './ph
 import { investmentScreen } from './investui.js';
 import { validDate } from './investdata.js';
 import { migrateBank, selectPrice } from './finance.js';
-import { askDraft, draftReady, draftSettings, drLabel, listModels, stSourceList, stSourceModels, stSourceName, vxModelList, withSpinner, connSettings, aiLabel, aiProfiles } from './ai.js';
+import { askAI, OWN_MODES, askDraft, draftReady, draftSettings, drLabel, listModels, stSourceList, stSourceModels, stSourceName, vxModelList, withSpinner, connSettings, aiLabel, aiProfiles } from './ai.js';
 import { ctx, getMeta, globalSettings, phoneMeta, saveGlobal, saveMeta, setPhoneMeta } from './core.js';
 import { applyInjection } from './inject.js';
 import { faceHtml, faceOf, stFace, stPersonaList, nameKey, peopleList, shrinkFace } from './people.js';
@@ -243,7 +243,7 @@ export async function openPhone(who = null) {
     const startPlan = startPlanOf;
     // 어두운 방(⋯ 메뉴의 어둡게 · 밝게): 확장 설정에 남아요. 그릴 때마다 읽으니 설정을 그대로 읽어요(koOn과 같은 까닭)
     const obDark = () => (ctx().extensionSettings?.narrative_archive ?? globalSettings()).orbitDark === true;
-    let obSet = '', obFindTab = 'marks', obFindQ = '', obJump = null, obSetUi = { v: {}, open: '', tzQ: '', busy: false }, obSw = null, obAtt = [], obThink = null, obPeek = null, obSrc = { models: {}, busy: '' }, scStop = null, scToast = null, scDown = false, scPend = false, scT = 0;
+    let obSet = '', obFindTab = 'marks', obFindQ = '', obJump = null, obSetUi = { v: {}, open: '', tzQ: '', busy: false }, obSw = null, obAtt = [], obThink = null, obPeek = null, obSrc = { models: {}, busy: '' }, ocBusy = '', scStop = null, scToast = null, scDown = false, scPend = false, scT = 0;
     const scWatch = on => { if (on) scToast ||= stToastKo();   // (알림은 화면을 나간 뒤에도 뜰 수 있어서(테스트 메시지 답), 폰을 닫을 때까지 봐요)
         if (on && !scStop) { const a = stConnWatch(() => scDraw()), b = stPopWatch({ canvas: () => $root.find('.ax_canvas')[0], dark: () => obDark() }); scStop = () => { a(); b(); }; } else if (!on && scStop) { scStop(); scStop = null; scPend = false; } };   // 실리 API 연결 화면이 떠 있는 동안만 실리 칸을 지켜봐요   // obAtt: 붙여 둔 파일 [{ name, type, img }] · obThink: 생각 보기 { text, copied } · obPeek: 프롬프트 보기 · obSw: 빠른 전환기 { tab, q, pq, drilled, pane, order, stars, limit } · obSetUi: 채팅 설정 화면들의 아직 안 이어진 조작 값(시트가 열린 동안만) · 펼친 고르기 · 시간대 검색   // 방 설정 시트: obSet = '' | 'main' | 'find' | 'name' | 'people', obJump = 찾아갈 말의 id
     // 이모지 판: obEmo = { tab: 'emoji' | 'kao', cat, q } | null. 목록 · 검색(마리나라 것, 130KB)은 처음 열 때 불러와요
@@ -293,7 +293,7 @@ export async function openPhone(who = null) {
     const swSrcLoad = async (src, open) => { if (obSrc.busy) return; obSrc.busy = src; drawPhone(true);
         try { obSrc.models[src] = await liveSourceModels(src); if (open && obSw) { obSw.pane = `실리태번 · ${swSrcAll()[src] || src}`; obSw.drilled = true; obSw.order = false; obSw.q = ''; } } catch (err) { obWarn(err); }
         obSrc.busy = ''; if (!phoneClosed && stillHere()) drawPhone(true); };
-    const obConns = (sched = false) => (sched ? liveConnections() : liveModelConnections()).map(c => ({ id: c.id, name: c.name || '모델 없음', sub: [c.model && c.model !== c.name ? c.model : '', OB_PROV[c.provider] || c.provider || ''].filter(Boolean).join(' · '), roles: c.id === 'dr' || c.id === '' ? ['메인'] : c.id === 'ai' ? ['기능'] : [] }));
+    const obConns = (sched = false) => (sched ? liveConnections() : liveModelConnections()).map(c => ({ id: c.id, name: c.name || '모델 없음', sub: [c.model && c.model !== c.name ? c.model : '', OB_PROV[c.provider] || stKo(c.provider || '')].filter(Boolean).join(' · '), roles: c.id === 'dr' || c.id === '' ? ['메인'] : c.id === 'ai' ? ['기능'] : [] }));
     const schOpen = (owner, day = null) => { const had = liveSchedule(realM, owner); obSch = { owner, draft: structuredClone(had || schBlank()), page: 'main', open: SCH_DAYS.includes(day) ? day : null, mode: had ? 'adjust' : 'rewrite', gen: 'week', guide: '', dguide: {}, menu: null, busy: '', busyText: '', ctl: null, err: null, stale: false, tzQ: '', dirty: false };
         for (const d of SCH_DAYS) if (!Array.isArray(obSch.draft.days?.[d])) (obSch.draft.days ||= {})[d] = []; };
     let obMenu = false, obSub = '', obNote = null;   // obSub: 길게 누른 판의 둘째 화면('re' 이모지 · 'mark' 북마크 줄), obNote: 메모 시트 { id, text }
@@ -348,7 +348,7 @@ export async function openPhone(who = null) {
                 if (obSet === 'find') { t.tab = obFindTab;
                     t.items = obFindTab === 'marks' ? liveMarked(realM, r.id).map(k => ({ ...row(k.x), note: k.note || '', pin: !!k.x.extra?.pinnedToContext })).reverse()
                         : liveTrash(realM, r.id).map(k => ({ ...row(k.x), when: `${Math.max(0, Math.ceil((k.until - Date.now()) / 864e5))}일 남음` })); }
-                t.v = obSetUi.v; t.open = obSetUi.open; if (obSet === 'conn') { t.conns = obConns(); t.rs = liveReasoning(realM, r.id); } if (obSet === 'stconn') { t.st = stConnNodes(); t.scQ = obSetUi.scQ || ''; } t.roomId = r.id; t.members = os; t.auto.ind = A.groupChatMode === 'individual'; t.auto.order = A.groupResponseOrder || 'sequential'; t.auto.turn = A.groupTurnPromptEnabled !== false;
+                t.v = obSetUi.v; t.open = obSetUi.open; if (obSet === 'conn') { t.conns = obConns(); t.rs = liveReasoning(realM, r.id); t.slots = ['dr', 'ai'].map(ocSlot); } if (obSet === 'stconn') { t.st = stConnNodes(); t.scQ = obSetUi.scQ || ''; } t.roomId = r.id; t.members = os; t.auto.ind = A.groupChatMode === 'individual'; t.auto.order = A.groupResponseOrder || 'sequential'; t.auto.turn = A.groupTurnPromptEnabled !== false;
                 if (obSet === 'name') { t.name = r.name || ''; t.autoName = [...os].join(', '); }
                 if (obSet === 'auto' || obSet === 'tz') { const zone = liveScheduleZone(realM), dev = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', q = obSetUi.tzQ.trim().toLowerCase();
                     t.sched = { on: liveSchedulesOn(realM), any: os.some(n => SCH_DAYS.some(d => liveSchedule(realM, n)?.days?.[d]?.length)), list: os.map(n => ({ n, days: SCH_DAYS.filter(d => liveSchedule(realM, n)?.days?.[d]?.length).length })), zone: schTzLabel(zone || dev), device: dev, differs: !!zone && zone !== dev, busy: obSetUi.busy };
@@ -1258,6 +1258,38 @@ export async function openPhone(who = null) {
     $root.on('click', '.na_os_gorder', function (e) { e.stopPropagation(); obAuto({ groupResponseOrder: this.dataset.v }); });
     $root.on('click', '.na_os_gturn', e => { e.stopPropagation(); obAuto({ groupTurnPromptEnabled: liveAutonomousOptions(realM)?.groupTurnPromptEnabled === false }); });
     $root.on('click', '.na_os_schon', e => { e.stopPropagation(); if (obCanEdit()) obSetGo(liveSetSchedulesOn(realM, !liveSchedulesOn(realM))); });
+// 메인 모델(dr) · 기능 모델(ai)을 채팅 설정 › 연결에서 바꾸기 (소망: Orbit을 나가지 않고). 값은 확장 설정 › AI 모델과 같은 것이에요(connSettings)
+    const OC_WAY = { same: '쓰지 않음', st: '지금 연결된 모델', source: '실리태번 연결', custom: '커스텀 API', vertex: 'Gemini · Vertex AI' };
+    const ocModelKey = t => ({ vertex: 'vxModel', source: 'stModel' }[t.mode] || 'model');
+    const ocSlot = k => { const t = connSettings(k), g = globalSettings(), on = OWN_MODES.includes(t.mode), profs = k === 'ai' ? aiProfiles() : [];
+        const way = k === 'ai' && t.mode === 'st' ? (g.aiProfile ? `profile:${g.aiProfile}` : 'st') : t.mode;
+        const ways = k === 'ai' ? [['st', OC_WAY.st], ...profs.map(p => [`profile:${p.id}`, `프로필: ${p.name}`]), ['source', OC_WAY.source], ['custom', OC_WAY.custom], ['vertex', OC_WAY.vertex]] : [['same', OC_WAY.same], ['source', OC_WAY.source], ['custom', OC_WAY.custom], ['vertex', OC_WAY.vertex]];
+        const models = t.mode === 'source' ? (t.stModelsOf === t.source ? t.stModels || [] : []) : t.mode === 'vertex' ? vxModelList() : t.mode === 'custom' ? t.models || [] : [];
+        let host = ''; try { host = t.url ? new URL(t.url).host : ''; } catch { host = t.url; }
+        return { k, title: k === 'dr' ? '메인 모델' : '기능 모델', role: k === 'dr' ? '메인' : '기능', label: on ? (t[ocModelKey(t)] || '모델 없음') : k === 'dr' ? '없음' : aiLabel(), sub: [ways.find(w => w[0] === way)?.[1] || OC_WAY[t.mode] || '', t.mode === 'source' && t.source ? stKo(stSourceName(t.source)) : t.mode === 'custom' ? host : t.mode === 'vertex' ? t.vxLocation : ''].filter(Boolean).join(' · '),
+            mode: t.mode, way, ways, on, sources: stSourceList().map(x => [x.id, stKo(x.name)]), source: t.source, mf: ocModelKey(t), model: t[ocModelKey(t)] || '', models, url: t.url, keyTail: t.key ? `…${String(t.key).slice(-4)}` : '', fmt: t.fmt || '', vxLocation: t.vxLocation, busy: ocBusy === `load:${k}`, testing: ocBusy === `test:${k}` }; };
+    const ocDone = async k => { delete connSettings(k).okAt; saveGlobal(); try { (await import('./panelcfg.js')).renderAiSettings(); } catch { /* 패널이 안 열려 있어요 */ } if (!phoneClosed && stillHere()) drawPhone(true); };
+    const ocK = el => String(el.dataset.k).split(':').pop();
+    $root.on('click', '.na_oc_mode', function (e) { e.stopPropagation(); const k = ocK(this), t = connSettings(k), v = this.dataset.v; obSetUi.open = '';
+        if (v === 'st' || v.startsWith('profile:')) { t.mode = 'st'; globalSettings().aiProfile = v === 'st' ? '' : v.slice(8); } else t.mode = v; ocDone(k); });
+    $root.on('click', '.na_oc_src', function (e) { e.stopPropagation(); const k = ocK(this), t = connSettings(k), v = this.dataset.v; obSetUi.open = ''; if (v !== t.source) { t.source = v; t.stModel = ''; delete t.stModels; delete t.stModelsOf; } ocDone(k); });
+    $root.on('click', '.na_oc_fmt', function (e) { e.stopPropagation(); const k = ocK(this), t = connSettings(k); obSetUi.open = ''; t.fmt = this.dataset.v; delete t.models; delete t.noEffort; delete t.leanHeaders; ocDone(k); });
+    $root.on('click', '.na_oc_model', function (e) { e.stopPropagation(); const k = ocK(this), t = connSettings(k); obSetUi.open = ''; t[ocModelKey(t)] = this.dataset.v; ocDone(k); });
+    $root.on('keydown', '.na_oc_in', function (e) { if (e.key === 'Enter') { e.preventDefault(); this.blur(); } });
+    $root.on('focusout', '.na_oc_in', function () { const [f, k] = String(this.dataset.k).split(':'), t = connSettings(k), v = this.innerText.replace(/\n/g, '').trim();
+        if (!['url', 'key', 'model', 'stModel', 'vxModel', 'vxLocation'].includes(f) || (f === 'key' && !v) || String(t[f] ?? '') === v) return;   // (키 칸은 비워 두면 그대로)
+        if (f === 'url') { delete t.models; delete t.noEffort; delete t.leanHeaders; } t[f] = v; ocDone(k); });
+    $root.on('click', '.na_oc_load', async function (e) { e.stopPropagation(); const k = this.dataset.k, t = connSettings(k); if (ocBusy) return;
+        if (t.mode === 'vertex') return toastr.info(`실리태번의 Vertex 모델 ${vxModelList().length}개`, '캐릭터 휴대폰');
+        if (t.mode === 'source' && !t.source) return toastr.warning('연결 종류를 먼저 골라 주세요', '캐릭터 휴대폰');
+        if (t.mode === 'custom' && !t.url) return toastr.warning('주소를 먼저 적어 주세요', '캐릭터 휴대폰');
+        ocBusy = `load:${k}`; drawPhone(true);
+        try { if (t.mode === 'source') { const rows = await stSourceModels(t.source); t.stModels = rows.map(x => x.id); t.stModelsOf = t.source; if (!t.stModel && rows.length === 1) t.stModel = rows[0].id; toastr.success(`모델 ${rows.length}개를 불러왔어요`, '캐릭터 휴대폰'); }
+            else { const ids = await listModels(t); if (ids?.length) { t.models = ids; if (!t.model && ids.length === 1) t.model = ids[0]; toastr.success(`모델 ${ids.length}개를 불러왔어요`, '캐릭터 휴대폰'); } else toastr.warning('모델을 못 불러왔어요', '캐릭터 휴대폰'); } } catch (err) { obWarn(err); }
+        ocBusy = ''; ocDone(k); });
+    $root.on('click', '.na_oc_test', async function (e) { e.stopPropagation(); const k = this.dataset.k; if (ocBusy) return; ocBusy = `test:${k}`; drawPhone(true);
+        try { const q = 'Reply with one short sentence: which model are you?', out = k === 'dr' ? await askDraft(q, { maxTokens: 300 }) : await askAI(q, { maxTokens: 300 }); if (out) toastr.success(String(out).slice(0, 160), `${k === 'dr' ? drLabel() : aiLabel()} 연결됨`); } catch (err) { obWarn(err); }
+        ocBusy = ''; if (!phoneClosed && stillHere()) drawPhone(true); });
     $root.on('click', '.na_os_rs', function (e) { e.stopPropagation(); obSetUi.open = ''; obSetGo(liveSetReasoning(realM, this.dataset.k === 'rsRoom' ? obRoomId() : '', this.dataset.v)); });   // 추론 레벨: 이 채팅 / Orbit 전체
     $root.on('click', '.na_os_capm', function (e) { e.stopPropagation(); obSetUi.open = ''; obAuto({ autonomousDailyCapOverride: this.dataset.v === 'numeric' ? (liveAutonomousOptions(realM)?.autonomousDailyCapOverride ?? 8) : null }); });
     $root.on('click', '.na_os_regen', async e => { e.stopPropagation(); const rid = obRoomId(), r = rid && liveWorld(realM)?.messenger?.rooms?.[rid]; if (!r || !obCanEdit() || obSetUi.busy) return; const owners = r.members.filter(n => liveKey(n) !== liveKey(liveWorld(realM)?.persona));
