@@ -8,4 +8,5 @@ export { buildGenerationInfoExtra, sanitizeBranchedMessageExtra } from './marina
 export { chatModelChoiceSchema, readChatModelOverride, readChatRecentModels, readChatFollowsMain, applyChatModelPatch, applyChatModelOverride, reorderStars, CHAT_MODEL_OVERRIDE_KEY, CHAT_RECENT_MODELS_KEY, CHAT_FOLLOWS_MAIN_KEY, MAX_PINNED_MODELS } from './marinara/chat-model.js';
 // 모델마다 받는 추론 레벨 (마리나라의 규칙 그대로)
 export { relevantGenerationParameters, reasoningEffortChoices } from './marinara/generation-parameter-relevance.js';
-export { resolveProviderReasoningEffort } from './marinara/model-lists.js';
+export { resolveProviderReasoningEffort, isClaudeOpus55Model } from './marinara/model-lists.js';
+export { generationLevelLabel } from './marinara/generation-level-label.js';

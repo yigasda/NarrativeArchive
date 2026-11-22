@@ -26,7 +26,7 @@ import { BACK, backLeft, backInput, phone2BackSystem, takeBack, backMessage, mar
 import { liveWall } from './phone2clock.js';
 import { gatherReply } from './phone2live.js';
 import { presenceOf, scheduleOf, setSchedule, setStatusOverride, setUserStatus, setAutonomous, statusNow, replyDelay, contextBlock, makeSchedule, checkProactive, noteProactive, fillPlaces, stateNow, takeStatus, scheduleZone, setScheduleZone, draftSchedule, summarizeSchedule, repairSchedule, setAutoRenew, autoRenewOf, needsRefresh, renewSchedules, setAutonomousOptions, autonomousOptions, checkExchangeFor, mentionsIn, activeSchedule, schedulesOn, setSchedulesOn, exportSchedule, importSchedule, syncUser, noteAssistant, noteReaction, forgetActivity, setCardStore, setZoneStore, flushCards, clearProgress, groupOrder, groupTurnPrompt, isGroupRoom, groupResponders, groupHandoff, GROUP_MENTION_INVITE_LINE, orderConversationRespondersByDelay, groupMode, mergedDelay, groupCandidates } from './phone2sched.js';
-import { buildMergedConversationSystemPrompt, formatConversationGroupOutputFormat, mergedRespondersLine, mergedMentionLine, extractLeadingThinkingBlocks, buildGenerationInfoExtra, chatModelChoiceSchema, readChatModelOverride, readChatRecentModels, applyChatModelPatch, applyChatModelOverride, reorderStars, CHAT_RECENT_MODELS_KEY, MAX_PINNED_MODELS, relevantGenerationParameters, reasoningEffortChoices, resolveProviderReasoningEffort } from './phone2merged.js';
+import { buildMergedConversationSystemPrompt, formatConversationGroupOutputFormat, mergedRespondersLine, mergedMentionLine, extractLeadingThinkingBlocks, buildGenerationInfoExtra, chatModelChoiceSchema, readChatModelOverride, readChatRecentModels, applyChatModelPatch, applyChatModelOverride, reorderStars, CHAT_RECENT_MODELS_KEY, MAX_PINNED_MODELS, relevantGenerationParameters, reasoningEffortChoices, resolveProviderReasoningEffort, isClaudeOpus55Model, generationLevelLabel } from './phone2merged.js';
 import { replyInput, messengerBlock } from './phone2ask.js';
 import { phone2ReplySystem } from './phone2reply.js';
 import { runLive, takeMerged } from './phone2run.js';
@@ -1113,11 +1113,16 @@ export const liveSourceModels = source => stSourceModels(source);
 //   값(마리나라가 저장하는 이름): '' (안 정함) · 'none' (끔) · 'low' · 'medium' · 'high' · 'xhigh' · 'maximum'
 //   liveReasoning(real, 방 id '') → {
 //     effort (실제로 쓰는 값: 방에 정한 것, 없으면 Orbit 전체 것), room, all,
-//     choices: [{ value, label }] 이 방의 모델이 받는 레벨들. label은 그 모델에 실제로 보내는 이름 (끔은 label이 null)
+//     choices: [{ value, label, name }] 이 방의 모델이 받는 레벨만 (마리나라 화면 그대로). name이 칩에 쓸 글자예요 (실제로 보내는 레벨의 이름)
+//       value는 저장하는 값이라 칩 글자와 다를 수 있어요 (DeepSeek: 글자 '높게', value 'medium'). 글자를 value로 만들지 않아요
+//     roomChoices · allChoices: '이 채팅' 줄 · 'Orbit 전체' 줄에 그릴 칩 (그 줄에 저장된 값의 칩에 불이 켜지게 맞춘 것)
 //       [] 이면 이 모델은 레벨을 안 받아요 (칩을 그리지 않아요)
 //     sent: 지금 값으로 요청에 실제로 보내는 이름 ('' = 안 보냄), provider · model (어느 모델 기준인지) }
 //   liveSetReasoning(real, 방 id | '' (Orbit 전체), 값)
 export const REASONING_LEVELS = ['none', 'low', 'medium', 'high', 'xhigh', 'maximum'];
+// (Marinara's generationLevelLabel, with its level words in Korean: Low · Medium · High · Extra high · Max · Maximum)
+const LEVEL_KO = { low: '낮게', medium: '보통', high: '높게', xhigh: '매우 높게', max: '최대', maximum: '최대' };
+export const levelName = level => generationLevelLabel(level, k => LEVEL_KO[k.split('.').pop()]);
 // (values an earlier version stored, in SillyTavern's words)
 const oldLevel = v => ({ auto: '', min: 'none', max: 'maximum' }[v] ?? v);
 // the provider, in Marinara's names, and the model a connection runs (for the per-model rules)
@@ -1139,10 +1144,15 @@ export function liveReasoning(real, roomId = '') {
     const ok = v => { const x = oldLevel(String(v || '')); return REASONING_LEVELS.includes(x) ? x : ''; };
     const mine_ = ok(room?.chatParameters?.reasoningEffort), all = ok(w?.presence?.meta?.reasoningEffort), effort = mine_ || all;
     const { provider, model } = roomKind(real, roomId), takes = relevantGenerationParameters({ provider, model }).has('reasoningEffort');
-    const choices = takes ? reasoningEffortChoices({ provider, model, selected: effort && effort !== 'none' ? effort : null }).map(c => ({ value: c.value === null ? 'none' : c.value, label: c.label })) : [];
+    // (the chips, as Marinara's GenerationParametersEditor draws them: reasoningEffortChoices with the row's own value as
+    //  `selected`, and no Off chip for Claude Opus 5.5. A chip's text is its label, the level the model really gets)
+    const chips = sel => (!takes ? [] : reasoningEffortChoices({ provider, model, selected: sel && sel !== 'none' ? sel : null })
+        .filter(c => c.value !== null || !isClaudeOpus55Model(model ?? ''))
+        .map(c => ({ value: c.value === null ? 'none' : c.value, label: c.label, name: c.label !== null ? levelName(c.label) : '끔' })));
+    const choices = chips(effort), roomChoices = chips(mine_), allChoices = chips(all);
     // (what goes out for this model: Marinara's resolveProviderReasoningEffort; a model that takes no level gets none)
     const sent = !effort || !takes ? '' : resolveProviderReasoningEffort({ provider, model, reasoningEffort: effort }) ?? (effort === 'none' ? 'none' : '');
-    return { effort, room: mine_, all, choices, sent, provider, model };
+    return { effort, room: mine_, all, choices, roomChoices, allChoices, sent, provider, model };
 }
 export async function liveSetReasoning(real, roomId = '', effort = '') {
     const w = liveWorld(mine(real)), v = oldLevel(String(effort || ''));   // (an older screen's words are taken too)

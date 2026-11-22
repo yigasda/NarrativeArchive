@@ -1629,8 +1629,17 @@ test('추론 레벨: 방의 모델이 받는 레벨만 나와요 (마리나라�
     T.sources = [{ id: 'deepseek', name: 'DeepSeek' }];
     await G.liveSetRoomModel(c.real, id, { connectionId: 'source:deepseek', model: 'deepseek-v4-pro' });
     assert.deepEqual(vals(G.liveReasoning(c.real, id)), ['none=null', 'low=low', 'medium=high', 'maximum=max']);
+    // (칩 글자는 실제로 보내는 레벨: 이 모델에는 '보통' 칩이 없어요. 마리나라 화면 그대로)
+    assert.deepEqual(G.liveReasoning(c.real, id).choices.map(x => x.name), ['끔', '낮게', '높게', '최대']);
+    await G.liveSetReasoning(c.real, id, 'high');                                                          // (저장된 값의 칩에 불: 같은 묶음이면 그 값을 칩의 value로)
+    assert.deepEqual(vals({ choices: G.liveReasoning(c.real, id).roomChoices }), ['none=null', 'low=low', 'high=high', 'maximum=max']);
+    assert.deepEqual(vals({ choices: G.liveReasoning(c.real, id).allChoices }), ['none=null', 'low=low', 'medium=high', 'maximum=max']);
+    await G.liveSetReasoning(c.real, id, '');
     assert.deepEqual([G.liveReasoning(c.real, id).provider, G.liveReasoning(c.real, id).model], ['deepseek', 'deepseek-v4-pro']);
     await G.liveSetRoomModel(c.real, id, null);
+    T.slots = { dr: { mode: 'custom', fmt: 'anthropic', model: 'claude-opus-5-5' } };                      // (끔 칩이 없는 모델)
+    assert.ok(!G.liveReasoning(c.real, id).choices.some(x => x.value === 'none'));
+    assert.equal(G.levelName('xhigh'), '매우 높게'); assert.equal(G.levelName('adaptive'), 'Adaptive');
     // (정하기: 방 값이 Orbit 전체 값보다 먼저)
     T.slots = { dr: { mode: 'vertex', vxModel: 'gemini-3.8-flash' } };
     await G.liveSetReasoning(c.real, '', 'medium');
