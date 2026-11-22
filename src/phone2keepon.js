@@ -3,8 +3,6 @@
 
 import { ctx, getMeta, hasChat, setSaveHook } from './core.js';
 import { makeKeep } from './phone2keep.js';
-import { buildKit, putKit } from './phone2kit.js';
-import { liveChatTail } from './phone2snap.js';
 
 const PATH = '/api/plugins/narrative-archive';
 const J = JSON.stringify;
@@ -31,21 +29,14 @@ export const keep = makeKeep({ api, now });
 export const liveReady = () => keep.ready();
 export const keepState = () => keep.state();
 
-// 서버가 실리를 닫은 동안 답장을 만들 때 읽을 묶음(phone2kit.js)을 지금 것으로 → 달라져서 넣었으면 true (저장은 부르는 쪽이).
-// 플러그인에 둔 채팅만: 플러그인이 없으면 서버가 돌릴 일도 없고, 채팅 파일을 키우지 않아요
-export function kitRefresh() {
-    const at = now();
-    if (!at || !keep.kept()) return false;
-    try { return putKit(at.m, buildKit(ctx(), at.m, liveChatTail())); }
-    catch (err) { console.warn('[narrative-archive] Orbit 서버 묶음', err); return false; }
-}
+// 지금 채팅의 Orbit 데이터가 플러그인에 있나 (있어야 서버가 실리를 닫은 동안 돌릴 수 있어요)
+export const keepKept = () => keep.kept();
 
 let started = false;
 export function keepStart() {
     if (started) return;
     started = true;
-    // (the kit goes in just before each save, so what the server reads is never older than the last save)
-    setSaveHook(() => { kitRefresh(); return keep.onSave(); });
+    setSaveHook(() => keep.onSave());
     const c = ctx(), et = c.eventTypes || c.event_types;
     const open = () => { const at = now(); if (at) keep.open(at.m, at.mark); };
     c.eventSource.on(et.CHAT_CHANGED, open);

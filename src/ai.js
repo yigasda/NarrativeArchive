@@ -356,22 +356,21 @@ export async function stLevelPayload(source, model, effort) {
     const data = built && typeof built === 'object' && built.generate_data ? built.generate_data : built;
     return { reasoning_effort: data?.reasoning_effort, include_reasoning: thoughts };
 }
-// one request to a source. effort: '' (the source's own default) | min | low | medium | high | max
-export async function callStSource(t, system, prompt, maxTokens, effort = '', signal = null, temperature = null, topP = null, meta = null) {
+// the request for a source, as SillyTavern's own code builds it (nothing is sent). thoughts: whether its reasoning text is asked for
+async function stSourceData(t, messages, maxTokens, effort, temperature, topP, thoughts) {
     const source = String(t.source || ''), model = String(t.stModel || '').trim();
     if (!source) throw new Error('연결 종류를 골라 주세요 (⚙ 설정 → AI 모델)');
     if (!model) throw new Error('모델을 골라 주세요 (⚙ 설정 → AI 모델 → 모델 불러오기)');
-    // (globalThis.__naStOpenai: the tests' stand-in for SillyTavern's module)
+    // (globalThis.__naStOpenai: the tests' stand-in for SillyTavern's module; the server plugin's too — plugin/work.mjs)
     const O = globalThis.__naStOpenai || await import('/scripts/openai.js');
     if (typeof O.createGenerationParameters !== 'function') throw new Error('이 실리 버전에서는 이 연결 방식을 쓸 수 없어요 (실리를 최신으로 올려 주세요)');
-    const messages = [...(system ? [{ role: 'system', content: system }] : []), ...turnsOf(prompt).map(t => openAiTurn(t, false))];
     // (what this request decides goes in as settings, so SillyTavern's own rules for each source and model still apply to
     // it: some models take no temperature, some want max_completion_tokens. The role-play preset's sampling is not ours)
     const settings = {
         ...O.oai_settings, chat_completion_source: source, stream_openai: false, n: 1, bias_preset_selected: '', seed: -1,
         temp_openai: typeof temperature === 'number' ? temperature : 0.3, top_p_openai: topPOf(topP) ?? 1, openai_max_tokens: maxTokens,
         freq_pen_openai: 0, pres_pen_openai: 0, top_k_openai: 0, min_p_openai: 0, top_a_openai: 0, repetition_penalty_openai: 1,
-        reasoning_effort: stEffort(effort), show_thoughts: effort === 'none' ? false : !!meta, enable_web_search: false, request_images: false, function_calling: false,
+        reasoning_effort: stEffort(effort), show_thoughts: thoughts, enable_web_search: false, request_images: false, function_calling: false,
         assistant_prefill: '', assistant_impersonation: '',
     };
     const built = await O.createGenerationParameters(settings, model, 'quiet', messages);
@@ -381,6 +380,31 @@ export async function callStSource(t, system, prompt, maxTokens, effort = '', si
     // (the role-play's stop strings, token bias and tools are not this request's)
     for (const k of ['stop', 'logit_bias', 'logprobs', 'top_logprobs', 'n', 'tools', 'tool_choice', 'seed']) delete data[k];
     data.stream = false;
+    return { data, key: stTemplateKey(settings, model) };
+}
+// ---- 서버 플러그인이 실리를 닫은 동안 이 연결 방식으로 보낼 수 있게: 요청 틀 (docs/PHONE2-PLAN.md "서버 플러그인" 3-2b)
+// 요청은 실리의 브라우저 코드(createGenerationParameters)가 만들어서 서버에서는 못 만들어요. 그래서 브라우저가 미리
+// "메시지만 빠진 요청"을 만들어 남기고, 서버는 거기에 메시지만 채워 보내요.
+// 어떤 요청의 틀인지 (같은 연결 · 모델 · 길이 · 온도 · 레벨 · 생각 보기일 때만 그 틀을 써요)
+export const stTemplateKey = (settings, model) => JSON.stringify([String(settings?.chat_completion_source || ''), String(model || ''), settings?.openai_max_tokens ?? null, settings?.temp_openai ?? null, settings?.top_p_openai ?? null, settings?.reasoning_effort ?? null, !!settings?.show_thoughts]);
+// (비밀번호가 들 수 있는 칸: 틀에 담지 않고, 서버가 보낼 때 실리의 settings.json에서 읽어 넣어요)
+export const ST_TEMPLATE_SECRETS = ['proxy_password', 'custom_include_headers'];
+const ST_TEMPLATE_FILL = [{ role: 'system', content: '\u0001NA_SYSTEM\u0001' }, { role: 'user', content: '\u0001NA_USER\u0001' }];
+// → { key, data (메시지 · 비밀 칸이 빠진 요청), secrets: [빠진 비밀 칸의 이름] } | null (이 연결 · 모델은 실리가 메시지를 고쳐 보내서 틀로 못 만들어요)
+export async function stSourceTemplate(t, { maxTokens, effort = '', temperature = null, topP = null, thoughts = false } = {}) {
+    const fill = ST_TEMPLATE_FILL.map(x => ({ ...x }));
+    const { data, key } = await stSourceData(t, fill, maxTokens, effort, temperature, topP, thoughts);
+    if (JSON.stringify(data.messages) !== JSON.stringify(ST_TEMPLATE_FILL)) return null;
+    const rest = { ...data }, secrets = [];
+    delete rest.messages;
+    for (const k of ST_TEMPLATE_SECRETS) if (k in rest) { secrets.push(k); delete rest[k]; }
+    return { key, data: JSON.parse(JSON.stringify(rest)), secrets };
+}
+// one request to a source. effort: '' (the source's own default) | min | low | medium | high | max
+export async function callStSource(t, system, prompt, maxTokens, effort = '', signal = null, temperature = null, topP = null, meta = null) {
+    const source = String(t.source || '');
+    const messages = [...(system ? [{ role: 'system', content: system }] : []), ...turnsOf(prompt).map(t => openAiTurn(t, false))];
+    const { data } = await stSourceData(t, messages, maxTokens, effort, temperature, topP, effort === 'none' ? false : !!meta);
     const r = await fetch('/api/backends/chat-completions/generate', { method: 'POST', headers: ctx().getRequestHeaders(), signal, body: JSON.stringify(data) });
     const body = await r.text();
     let j = null;

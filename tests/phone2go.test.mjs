@@ -1813,3 +1813,62 @@ test('캐릭터 명령 스위치 (마리나라의 Commands): 끄면 답장 지�
         assert.equal(G.livePresence(c.real).meta.characterCommands, undefined);
     } finally { delete T.ask; }
 });
+
+// ---- 서버 플러그인이 읽을 묶음 (liveKitRefresh): 플러그인에 둔 채팅만, 실리 연결 방식으로 나가는 방의 요청 틀까지
+test('서버 묶음: 플러그인에 둔 채팅만 만들어요. 달라졌을 때만 넣어요', async () => {
+    const c = world();
+    Object.assign(T, { tail: { lines: ['[#4] Mara: on my way'], first: 4, end: 4 }, characters: [{ name: 'Mara', avatar: 'mara.png', data: { name: 'Mara', description: 'A baker.' } }], st: { name1: 'Ren', powerUserSettings: { persona_description: 'Ren is a student.' } }, kept: false, tpl: [] });
+    try {
+        assert.equal(await G.liveKitRefresh(c.real), false);
+        assert.equal(c.real.live.kit, undefined);
+        T.kept = true;
+        assert.equal(await G.liveKitRefresh(c.real), true);
+        const kit = c.real.live.kit;
+        assert.deepEqual([kit.v, kit.name1, kit.persona, kit.tail.end, kit.characters.map(x => x.avatar), kit.chat.avatar], [1, 'Ren', 'Ren is a student.', 4, ['mara.png'], 'mara.png']);
+        // (초안 모델이 커스텀 API면 요청 틀은 없어요: 서버가 직접 보내요)
+        assert.deepEqual(kit.st, {}); assert.equal(T.tpl.length, 0);
+        assert.equal(await G.liveKitRefresh(c.real), false);
+        T.tail = { lines: ['[#5] Ren: ok'], first: 5, end: 5 };
+        assert.equal(await G.liveKitRefresh(c.real), true);
+        assert.equal(c.real.live.kit.tail.end, 5);
+        // 다른 채팅을 열어 둔 동안에는 안 만들어요
+        T.metadata = { narrative_archive: {} };
+        assert.equal(await G.liveKitRefresh(c.real), false);
+    } finally { for (const k of ['tail', 'characters', 'st', 'kept', 'tpl', 'metadata']) delete T[k]; }
+});
+
+test('서버 묶음: 실리 연결 방식으로 나가는 방마다 요청 틀. 답장이 실제로 보내는 값(길이 4000 · 방의 레벨, 없으면 low · 생각 보기)으로', async () => {
+    const c = world(), id = c.room.id;
+    Object.assign(T, { kept: true, tpl: [], slots: { dr: { mode: 'source', source: 'openrouter', stModel: 'm1' }, ai: { mode: 'custom', model: 'ai-model' } }, sources: [{ id: 'openrouter', name: 'OpenRouter' }, { id: 'claude', name: 'Claude' }] });
+    try {
+        // 방에 아무것도 안 골랐을 때: 초안 모델(실리 연결 방식)의 틀 하나, 레벨은 low
+        assert.equal(await G.liveKitRefresh(c.real), true);
+        assert.equal(Object.keys(c.real.live.kit.st).length, 1);
+        assert.deepEqual(T.tpl.map(x => [x.t.source, x.t.stModel, x.o.maxTokens, x.o.effort, x.o.thoughts]), [['openrouter', 'm1', 4000, 'low', true], ['openrouter', 'm1', 4000, 'low', true]]);
+        assert.deepEqual(Object.values(c.real.live.kit.st)[0].secrets, ['proxy_password']);
+        // 방에 다른 연결 · 모델 · 레벨을 고르면: 그 방의 틀이 하나 더
+        await G.liveSetRoomModel(c.real, id, { connectionId: 'source:claude', model: 'c-1' });
+        await G.liveSetReasoning(c.real, id, 'high');
+        T.tpl = [];
+        assert.equal(await G.liveKitRefresh(c.real), true);
+        assert.equal(Object.keys(c.real.live.kit.st).length, 2);
+        const mine = T.tpl.find(x => x.t.source === 'claude');
+        assert.deepEqual([mine.t.stModel, mine.o.maxTokens, mine.o.thoughts], ['c-1', 4000, true]);
+        // 그 방의 답장이 실제로 보내는 연결과 같아요 (틀의 값이 어긋나면 서버가 틀을 못 찾아요)
+        send(c, '뭐해');
+        T.replies = [{ state: '집', reply: ['응'], does: [] }]; T.conn = [];
+        await G.liveGo(c.real);
+        const sent = T.conn.at(-1);
+        assert.deepEqual([sent.t.mode, sent.t.source, sent.t.stModel], ['source', 'claude', 'c-1']);
+        // (길이 · 레벨 · 생각 보기도 틀을 만든 값 그대로: ai.js는 이 값들로 틀의 열쇠를 만들어요)
+        assert.deepEqual([sent.max, sent.effort, sent.force, sent.effort === 'none' ? false : sent.hasMeta], [mine.o.maxTokens, mine.o.effort, true, mine.o.thoughts]);
+        // 틀을 못 만드는 연결 · 모델(실리가 메시지를 고쳐 보내요)이면 그 틀은 없어요. 만들다 오류가 나도 묶음은 만들어져요
+        T.noTpl = true;
+        await G.liveKitRefresh(c.real);
+        assert.deepEqual(c.real.live.kit.st, {});
+        T.noTpl = false; T.tplFail = true;
+        const warn = console.warn; console.warn = () => {};
+        try { await G.liveKitRefresh(c.real); } finally { console.warn = warn; }
+        assert.deepEqual(c.real.live.kit.st, {});
+    } finally { for (const k of ['kept', 'tpl', 'slots', 'sources', 'noTpl', 'tplFail', 'conn']) delete T[k]; }
+});

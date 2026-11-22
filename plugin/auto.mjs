@@ -24,7 +24,9 @@ const readCharacterIds = value => (Array.isArray(value) ? value.filter(id => typ
 // store: plugin/store.mjs openStore(…)
 // tzOf(real, 이름) → 그 사람의 시간대 | ''   ·   cardsOf(real, room) → { 폰 열쇠: 카드 데이터 } (스케줄이 없는 사람의 수다 정도)
 // generate({ payload, entry, roomId, app }) → { statusCode, payload (마리나라의 SSE 글) }
-export function makeAutoApp({ store, tzOf = () => '', cardsOf = () => ({}), generate = null } = {}) {
+// around(entry, fn) → fn의 답: 그 세계를 읽는 일을 감싸요. 일꾼은 여기서 그 세계의 실리 것을 끼워요 (시간대 · 카드를
+//   브라우저와 같은 코드로 읽으려고). 감싸지 못하는 세계(서버가 읽을 묶음이 없음)는 목록에 안 나와요
+export function makeAutoApp({ store, tzOf = () => '', cardsOf = () => ({}), generate = null, around = (entry, fn) => fn() } = {}) {
     const worlds = new Map(), rooms = new Map(), closers = [];
 
     // 저장 하나를 읽어요 (rev가 그대로면 읽어 둔 것) → { sid, rev, real: { live }, sums } | null
@@ -77,26 +79,26 @@ export function makeAutoApp({ store, tzOf = () => '', cardsOf = () => ({}), gene
             for (const sid of await store.list()) {
                 const e = await open(sid), w = e && liveWorld(e.real);
                 if (!w) continue;
-                for (const room of Object.values(w.messenger?.rooms || {})) {
-                    if (!obj(room) || !charsOf(w, room).length) continue;
-                    const row = rowOf(e, room);
-                    seen.set(row.id, { sid, rid: room.id });
-                    out.push(row);
-                }
+                let rows;
+                try { rows = await around(e, () => Object.values(w.messenger?.rooms || {}).filter(room => obj(room) && charsOf(w, room).length).map(room => [rowOf(e, room), room.id])); }
+                catch { continue; }
+                for (const [row, rid] of rows) { seen.set(row.id, { sid, rid }); out.push(row); }
             }
             rooms.clear();
             for (const [k, v] of seen) rooms.set(k, v);
             return out;
         },
-        async getById(id) { const x = await at(id); return x ? rowOf(x.e, x.room) : null; },
+        async getById(id) { const x = await at(id); return x ? around(x.e, () => rowOf(x.e, x.room)) : null; },
         async resolveConversationPresenceState(id) {
             const x = await at(id);
             if (!x) return { schedules: {}, statusOverrides: {} };
-            const p = obj(x.w.presence) ? x.w.presence : {}, ids = charsOf(x.w, x.room).map(liveKey);
-            return {
-                schedules: schedulesOn(x.e.real) ? Object.fromEntries(ids.filter(k => p.schedules?.[k]).map(k => [k, p.schedules[k]])) : {},
-                statusOverrides: obj(p.overrides) ? p.overrides : {},
-            };
+            return around(x.e, () => {
+                const on = schedulesOn(x.e.real), p = obj(x.w.presence) ? x.w.presence : {}, ids = charsOf(x.w, x.room).map(liveKey);
+                return {
+                    schedules: on ? Object.fromEntries(ids.filter(k => p.schedules?.[k]).map(k => [k, p.schedules[k]])) : {},
+                    statusOverrides: obj(p.overrides) ? p.overrides : {},
+                };
+            });
         },
         // (Marinara's chats.storage.ts markAutonomousUnread: the same three keys, on the room)
         async markAutonomousUnread(id, input) {
@@ -126,10 +128,10 @@ export function makeAutoApp({ store, tzOf = () => '', cardsOf = () => ({}), gene
                 const x = await at(payload?.chatId);
                 if (!x) return { statusCode: 404, payload: JSON.stringify({ error: 'Chat not found' }) };
                 if (url === '/api/conversation/autonomous/check') {
-                    const out = checkProactive(x.e.real, x.room.id, {
+                    const out = await around(x.e, () => checkProactive(x.e.real, x.room.id, {
                         now: new Date(), tzOf: name => tzOf(x.e.real, name) || '', cards: cardsOf(x.e.real, x.room) || {},
                         maxFollowups: payload.maxFollowups, source: payload.source === 'server' ? 'server' : 'client', userStatus: payload.userStatus,
-                    });
+                    }));
                     return { statusCode: 200, payload: JSON.stringify(out) };
                 }
                 if (url === '/api/generate') {

@@ -575,17 +575,26 @@ Orbit이 버벅이는 제일 큰 이유는 저장이에요: Orbit 데이터가 �
     - 안 읽은 먼저 건 말: 마리나라의 열쇠 그대로 방에 적어요(`autonomousUnreadCount` · `autonomousUnreadCharacterIds` · `autonomousUnreadAt`).
     - 쓰기: 바뀐 조각만, 읽은 `rev`를 맞춰서. 그사이 브라우저가 저장했으면 쓰지 않고 다시 읽어요.
     - `app.presence(id, 상태)`: 브라우저가 살아 있다고 알릴 자리(길은 3-3에서).
-  - 3-2b (아직): 답장 만들기. **브라우저와 똑같은 코드를 서버에서 그대로 돌려요** (따로 다시 쓰지 않아요).
-    - 실험으로 확인한 것 (2026-11-22): `src/phone2go.js`와 거기 딸린 166개 파일이 Node에서 그대로 불러와져요. 화면 자리(`document` · `$` · `toastr` …)에 "아무것도 안 하는 것"을 끼우고 `SillyTavern.getContext()`만 서버 것으로 주면 돼요. 그렇게 해서 `liveAutonomous` → `liveGo`가 끝까지 돌았어요: 줄 세우기, 커스텀 API로 모델 부르기(Node의 fetch), 말 넣기, 하루 수 · 이유의 쉬는 시간 적기, 저장 부르기.
-    - 구조: 플러그인이 **일꾼 스레드(worker)** 하나를 띄워요. 가짜 화면은 그 안에만 있어서 실리 서버는 안 건드려요.
-      - 일꾼 안: 마리나라 스케줄러 + `plugin/auto.mjs`의 `app` + 진짜 `src/` 코드. 마리나라가 기억하는 방의 움직임(따라 묻기 수 · 걸고 있는 중 · 창이 살아 있음)이 한 곳에만 있어야 해서 판단과 답장을 같은 곳에서 돌려요.
-      - 플러그인 본체: 길(express) · 저장(`store.mjs`, 하나뿐이어야 rev가 안 꼬여요) · 실리 서버로 가는 다리. 일꾼은 저장과 실리 요청을 본체에 부탁해요.
-    - 일꾼의 `getContext()`가 줄 것: `chatMetadata`(그 세계) · `characters` · `characterId`/`groupId` · `name1` · `powerUserSettings.persona_description` · `chat`(롤플의 끝 메시지) · `extensionSettings` · `chatCompletionSettings` · `saveMetadata`(→ 플러그인 저장에 rev 맞춰 쓰기) · `writeExtensionField`(카드에 스케줄 쓰기) · `getRequestHeaders`.
-      - 브라우저만 아는 것(지금 고른 페르소나, 이 채팅의 캐릭터 · 그룹, 롤플의 끝 메시지)은 브라우저가 저장할 때 같이 남겨요(`live.kit`). 서버는 그걸 읽어요. 카드를 고치고 그 채팅을 다시 안 열면 서버는 예전 카드로 답해요(다음에 열면 맞춰져요).
-      - 설정 · 키는 새로 저장하지 않아요: 일꾼이 사용자 폴더의 `settings.json`을 그때그때 읽고, 실리 연결로 가는 요청은 실리 서버의 처리기를 서버 안에서 불러서 실리가 자기 키를 붙여요.
-    - 실리로 가는 요청: 진짜 `src/ai.js`가 `fetch('/api/backends/chat-completions/generate')`를 그대로 불러요. 일꾼의 `fetch`가 `/api/…`로 시작하는 것만 본체로 넘기고, 본체가 실리의 그 처리기를 불러요. 커스텀 API는 주소가 통째라 Node의 fetch로 바로 가요.
-    - 마리나라의 서버가 보내는 값 맞추기: 그 캐릭터로(`forCharacterId`), 이유(`autonomousIntentKey`), 내 상태 `idle` · 하는 일 `away or offline`, 늦음 없이(`skipPresenceDelay`).
-    - 답: 마리나라 스케줄러가 읽는 모양(SSE 글)으로 돌려줘요: 말이 나왔으면 `message_saved` + `done`, 안 나왔으면 `generation_discarded` + `done`, 실패면 `error`.
+  - 3-2b (됨, 작업 브랜치. 3-3이 될 때까지 메인에 안 올려요): 답장 만들기. **브라우저와 똑같은 코드를 서버에서 그대로 돌려요** (따로 다시 쓰지 않아요).
+    - 구조: 플러그인 본체(`plugin/index.mjs`)가 사용자마다 **일꾼 스레드** 하나를 띄워요(`host.mjs` → `worker.mjs`). 실리 서버 안에서만 켜요.
+      - 일꾼 안: `screen.mjs`(아무것도 안 하는 화면: `document` · `$` · `toastr` …) → `work.mjs`(마리나라 스케줄러 + `auto.mjs`의 `app` + 진짜 `src/phone2go.js`). 가짜 화면은 일꾼 안에만 있어서 실리 서버는 안 건드려요. 마리나라가 기억하는 방의 움직임이 한 곳에만 있도록 판단과 답장을 같은 스레드에서 돌려요.
+      - 본체: 길 · 저장(하나뿐이어야 rev가 안 꼬여요: 일꾼은 저장을 본체에 부탁해요) · 다리.
+    - 실리의 것(`getContext()`)을 서버 것으로 (`work.mjs contextOf`). **서버가 줄 수 없는 값은 읽는 순간 오류예요**: 모자란 채로 답장을 지어내지 않아요.
+      - 브라우저만 아는 것은 브라우저가 남긴 묶음에서 (`src/phone2kit.js`, `m.live.kit`): 이 채팅의 캐릭터 · 그룹(답장 코드가 읽는 칸만, 실리 목록의 순서 그대로), 지금 고른 페르소나의 설명, 롤플의 끝 메시지(`liveChatTail`의 답), 채팅의 용어집 · 날짜 순서 · 화면 주인, 실리 연결 방식의 요청 틀. 브라우저가 30초마다(`phone2tick.js` → `phone2go.js liveKitRefresh`) 달라졌으면 다시 남겨요. 플러그인에 둔 채팅만.
+      - 설정(`extension_settings` · `oai_settings` · `power_user`의 페르소나 목록 · `main_api`)은 사용자 폴더의 `settings.json`을 그때그때 읽어요. 서버는 거기에 쓰지 않아요.
+      - 저장(`saveMetadata`)은 플러그인 저장에 rev를 맞춰서. 그사이 브라우저가 저장했으면 쓰지 않고(그 답장은 버려져요), 실패로 알려요.
+      - 카드 쓰기(`writeExtensionField`): 실리의 `/api/characters/merge-attributes`로.
+    - 어느 연결로 나가는 방을 서버가 돌릴 수 있나 (`phone2go.js liveReplyPlan` → `work.mjs cannot`):
+      - 커스텀 API: 돼요. 서버에서 바로 보내요(키는 `settings.json`의 확장 설정에 있는 것).
+      - Vertex: 돼요. 다리로 실리의 처리기에 보내요(키는 실리가 붙여요).
+      - 실리 연결 방식(source): 요청을 실리의 **브라우저** 코드(`createGenerationParameters`)가 만들어서 서버에서는 못 만들어요. 그래서 브라우저가 "메시지만 빠진 요청"(요청 틀, `ai.js stSourceTemplate`)을 미리 만들어 묶음에 남기고, 서버는 메시지만 채워 보내요. 틀은 같은 요청(연결 · 모델 · 길이 · 온도 · 레벨 · 생각 보기)일 때만 써요. 비밀 칸(`proxy_password` · `custom_include_headers`)은 틀에 안 담고 보낼 때 `settings.json`에서 읽어요. 실리가 메시지를 고쳐 보내는 모델(o1)은 틀을 못 만들어서 안 돼요.
+      - 연결 프로필 · 실리 자신의 연결: **안 돼요** (실리의 브라우저 코드가 보내요). 그런 방은 서버가 건드리지 않고 이유를 알려요(`/auto/status`). 프로필을 고른 방을 "아무것도 안 고른 방"으로 잘못 봐서 초안 모델로 답하지 않게, 서버도 `settings.json`의 프로필 목록을 읽어요.
+    - 다리(`plugin/bridge.mjs`): 진짜 `src/ai.js`가 브라우저에서처럼 `fetch('/api/backends/chat-completions/generate')`를 불러요. 일꾼의 `fetch`가 `/`로 시작하는 주소를 본체가 연 작은 길(127.0.0.1의 아무 포트, 실리를 켤 때마다 새로 만드는 토큰)로 넘기고, 거기에 실리 자신의 처리기(라우터)가 그대로 붙어 있어요. 열린 길은 네 가지뿐: 모델 요청 · 카드 확장 칸 쓰기 · 로어북 읽기 · 보낸 첨부 파일 읽기.
+    - 마리나라의 서버가 보내는 값: 그 캐릭터로(`forCharacterId`), 이유(`autonomousIntentKey`), 내 상태 `idle` · 하는 일 `away or offline`(그 요청에서만: `job.user`), 늦음 없이(`skipPresenceDelay` → `job.timed`).
+    - 답은 마리나라 스케줄러가 읽는 모양(SSE 글)으로: 말이 나왔으면 `message_saved` + `done`, 안 나왔으면 `generation_discarded` + `done`, 실패면 `error`. 그 방에 답장이 이미 줄 서 있거나 실패 뒤 쉬는 중이면 409(스케줄러는 실패로 안 세요). 서버가 못 돌리는 방은 400(스케줄러가 30분씩 쉬어요).
+    - 늦은 답장(우리 것: 바빠서 미뤄 둔 답장, 브라우저의 30초 틱이 하던 일): 일꾼이 30초마다 봐서 때가 된 것을 보내요(`work.mjs sweepDue`). 브라우저가 열어 둔 세계, 서버가 못 보내는 방의 답장이 낀 세계는 안 건드려요.
+    - 서버에서 안 하는 것: 이야기 요약본 만들기 · 늘리기(롤플 채팅이 없어요. 가진 요약본으로 답해요), 스케줄 매주 갱신(마리나라도 브라우저가 시켜요).
+    - 확인: `tests/pluginwork.test.mjs`(일꾼을 실제로 띄워서 9개: 끝까지 · 이야기 폰 · 묶음 없음 · 실리 연결 방식 틀 · 못 돌리는 방 · 실패 · 저장 충돌 · 카드 쓰기 · 늦은 답장) · `tests/phone2kit.test.mjs` · `tests/pluginauto.test.mjs`. 진짜 실리 1.19.1에 꽂아서: 브라우저 없이 스케줄러가 20초 뒤에 캐릭터의 먼저 건 말을 만들었고, 요청이 실리의 chat-completions 처리기를 거쳐 나갔고, 카드 파일에 스케줄 · 상태가 써졌고, 안 읽음 표시 · 하루 수가 적혔어요.
   - 3-3 (아직): 브라우저가 서버가 쓴 것을 받기. 채팅을 열 때 `rev`가 다르면 다시 읽고, 열려 있는 동안에는 저장이 409로 거절되면 다시 읽어서 합쳐요. 브라우저는 30초마다 "살아 있음"을 플러그인에 알려요(마리나라의 `/activity/presence`): 그 방은 서버가 75초 동안 안 건드려요.
   - 3-4 (아직): 다른 실리 채팅의 Orbit (마리나라의 `use-background-autonomous.ts`) · 알림(소리 · 떠 있는 알림 · 브라우저 알림 · 안 읽음 수). 화면은 디자인 세션.
 

@@ -115,3 +115,32 @@ test('실리 연결 방식: 실리가 만든 요청({ generate_data … })을 �
         await assert.rejects(AI.callConn({ mode: 'source', source: 'claude', stModel: 'c' }, 'S', 'hello', 256, '', true, false), /요청을 만들지 못했/);
     } finally { delete globalThis.__naStOpenai; delete globalThis.document; }
 });
+test('실리 연결 방식의 요청 틀 (서버 플러그인용): 메시지와 비밀 칸이 빠진 요청. 같은 요청일 때만 같은 틀이에요', async () => {
+    const seen = [];
+    globalThis.document = { querySelectorAll: () => [] };
+    const build = async (settings, model, type, messages) => { seen.push({ settings, model, messages }); return { generate_data: { chat_completion_source: settings.chat_completion_source, model, messages, max_tokens: settings.openai_max_tokens, temperature: settings.temp_openai, reverse_proxy: settings.reverse_proxy, proxy_password: settings.proxy_password, custom_include_headers: 'Authorization: Bearer SECRET', reasoning_effort: settings.reasoning_effort, include_reasoning: settings.show_thoughts, user_name: 'Ren', stop: ['x'], stream: true } }; };
+    globalThis.__naStOpenai = { oai_settings: { reverse_proxy: 'https://proxy.example', proxy_password: 'PW-SECRET' }, createGenerationParameters: build };
+    globalThis.fetch = async (url, init = {}) => { seen.push({ sent: JSON.parse(init.body) }); return { ok: true, status: 200, text: async () => JSON.stringify({ choices: [{ message: { content: 'hi' } }] }) }; };
+    try {
+        const t = { mode: 'source', source: 'openrouter', stModel: 'fake/model' };
+        const tpl = await AI.stSourceTemplate(t, { maxTokens: 4000, effort: 'low', thoughts: true });
+        assert.deepEqual(tpl.data, { chat_completion_source: 'openrouter', model: 'fake/model', max_tokens: 4000, temperature: 0.3, reverse_proxy: 'https://proxy.example', reasoning_effort: 'low', include_reasoning: true, user_name: 'Ren', stream: false });
+        assert.deepEqual(tpl.secrets, ['proxy_password', 'custom_include_headers']);
+        assert.ok(!JSON.stringify(tpl).includes('SECRET'));
+        // 진짜 요청이 실리에 넘기는 설정으로 만든 열쇠와 같아요 (callConn → callStSource, 답장이 부르는 그대로: force, meta 있음)
+        await AI.callConn(t, 'S', 'hello', 4000, 'low', true, false, null, null, null, {});
+        const real = seen.find(x => x.messages?.[1]?.content === 'hello');
+        assert.equal(AI.stTemplateKey(real.settings, real.model), tpl.key);
+        // 틀 + 메시지 + 비밀 칸 = 진짜 요청
+        const sent = seen.at(-1).sent;
+        assert.deepEqual({ ...tpl.data, messages: sent.messages, proxy_password: 'PW-SECRET', custom_include_headers: 'Authorization: Bearer SECRET' }, sent);
+        // 레벨 · 길이 · 온도 · 모델 · 생각 보기가 다르면 다른 틀
+        const keys = new Set([tpl.key]);
+        for (const o of [{ maxTokens: 4000, effort: 'high', thoughts: true }, { maxTokens: 8000, effort: 'low', thoughts: true }, { maxTokens: 4000, effort: 'low', thoughts: false }, { maxTokens: 4000, effort: 'low', thoughts: true, temperature: 0.9 }]) keys.add((await AI.stSourceTemplate(t, o)).key);
+        keys.add((await AI.stSourceTemplate({ ...t, stModel: 'other' }, { maxTokens: 4000, effort: 'low', thoughts: true })).key);
+        assert.equal(keys.size, 6);
+        // 실리가 메시지를 고쳐 보내는 연결 · 모델(o1: 시스템 → 유저)은 틀로 못 만들어요
+        globalThis.__naStOpenai.createGenerationParameters = async (s, model, type, messages) => ({ generate_data: { chat_completion_source: s.chat_completion_source, model, messages: messages.map(m => (m.role === 'system' ? { ...m, role: 'user' } : m)) } });
+        assert.equal(await AI.stSourceTemplate(t, { maxTokens: 4000, effort: 'low', thoughts: true }), null);
+    } finally { delete globalThis.__naStOpenai; delete globalThis.document; }
+});

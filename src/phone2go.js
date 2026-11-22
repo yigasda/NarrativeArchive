@@ -8,7 +8,9 @@
 import { ctx, saveMeta, MODULE } from './core.js';
 import { applyInjection } from './inject.js';
 import { askDraft, phone2Clock, aroundBlock, ownerZone, cardBlocks } from './phonedata.js';
-import { askAI, askCompress, stripThink, isBlocked, SECTION_GUARD, aiProfiles, callConn, connSettings, stSourceList, stSourceName, stSourceModels, OWN_MODES, apiFormat, stLevelPayload } from './ai.js';
+import { askAI, askCompress, stripThink, isBlocked, SECTION_GUARD, aiProfiles, callConn, connSettings, stSourceList, stSourceName, stSourceModels, OWN_MODES, apiFormat, stLevelPayload, draftSettings, draftReady, stSourceTemplate } from './ai.js';
+import { buildKit, putKit } from './phone2kit.js';
+import { keepKept } from './phone2keepon.js';
 import { stReach, REACH_NAME } from './phone2stlevel.js';
 import { SCENES_SYS, parseScenes } from './scenes.js';
 import { resolvePhoneProfile, ownerProfileBlock, personaBlock } from './phoneprofile.js';
@@ -1061,23 +1063,58 @@ export async function liveSetRoomModel(real, roomId, pick = null) {
     await saveMeta();
     return liveRoomModel(real, roomId);
 }
+// 이 방의 답장 한 번이 나가는 길과 그 요청의 값 (liveGo의 ask가 askRoom에 주는 것 그대로) → { via, t, maxTokens, effort, thoughts }
+//   via: 'custom' · 'vertex' · 'source:<연결>' (t가 있어요: 우리가 직접 보내요) · 'profile:<연결>' · 'st' (t는 null: 실리의 브라우저 코드가 보내요)
+//   서버 플러그인은 t가 있는 방만 돌릴 수 있어요
+export function liveReplyPlan(real, roomId) {
+    const r = replyRoute(real, roomId), effort = r.rs.effort ? r.rs.send : 'low';
+    return { via: r.rs.via, t: r.t, maxTokens: LIVE_GO.replyTokens, effort, thoughts: effort !== 'none' };
+}
+// ---- 서버 플러그인이 실리를 닫은 동안 읽을 묶음 (phone2kit.js): 이 채팅의 캐릭터 · 페르소나 · 롤플 끝 메시지에, 실리 연결 방식으로
+// 나가는 방들의 요청 틀(ai.js stSourceTemplate)을 더해요. 플러그인에 둔 채팅만 → 달라져서 넣었으면 true (저장은 부르는 쪽이)
+//   kit.st = { 틀의 열쇠: { data, secrets } }: 답장 한 번의 요청 (길이 LIVE_GO.replyTokens, 방의 추론 레벨 — 없으면 low, 생각 보기)
+export async function liveKitRefresh(real) {
+    if (!real || !open(real) || !liveWorld(real) || !keepKept()) return false;
+    const kit = buildKit(ctx(), real, liveChatTail());
+    if (!kit) return false;
+    kit.st = {};
+    for (const roomId of ['', ...Object.keys(liveWorld(real).messenger?.rooms || {})]) {
+        const plan = liveReplyPlan(real, roomId);
+        if (plan.t?.mode !== 'source') continue;
+        try { const tpl = await stSourceTemplate(plan.t, plan); if (tpl) kit.st[tpl.key] = { data: tpl.data, secrets: tpl.secrets }; }
+        catch (err) { console.warn('[narrative-archive] live kit template', err); }
+    }
+    if (!open(real) || !liveWorld(real)) return false;
+    return putKit(real, kit);
+}
 // (a turn for a connection profile: SillyTavern's server reads picture parts, not file parts)
 const profileTurn = input => (!Array.isArray(input) ? { role: 'user', content: input } : (t => ({ role: 'user', content: [...(t.content ? [{ type: 'text', text: t.content }] : []), ...(t.images || []).map(url => ({ type: 'image_url', image_url: { url } }))] }))(input[0]));
 // (a reply in a room with a model of its own goes there; with none, to the draft model as before)
-async function askRoom(real, roomId, input, how) {
+// 이 방의 답장이 어느 연결로 나가나 (askRoom이 이대로 보내요) → { id, chat, rs, slot, override, t }
+//   id: 방에 고른 연결 ('' = 안 골랐어요: 초안 모델) · rs: 추론 레벨 (liveReasoning)
+//   t: 우리가 직접 보내는 연결의 설정 (커스텀 API · Vertex · 실리 연결 방식). 연결 프로필 · 실리 자신의 연결이면 null
+function replyRoute(real, roomId) {
     const room = liveWorld(real)?.messenger?.rooms?.[roomId], chat = room ? roomChat(room) : null;
     const id = chat?.connectionId && (sourceOf(chat.connectionId) || liveModelConnections().some(c => c.id === chat.connectionId)) ? chat.connectionId : '';
     // (the thinking level set for this room, or for Orbit as a whole; else what the caller asks for)
     const rs = liveReasoning(real, roomId);
+    const slot = id ? slotOf(id) : null, override = id ? readChatModelOverride(chat) : null;
+    let t = null;
+    // (Marinara's applyChatModelOverride: the override's model on that connection's key and endpoint)
+    if (slot && override && OWN_MODES.includes(slot.mode)) { const conn = applyChatModelOverride({ ...slot, id }, override); t = { ...slot, [modelKey(slot)]: conn.model, ...(conn.maxTokensOverride ? { max: conn.maxTokensOverride } : {}) }; }
+    else if (!id || id === 'dr') t = draftReady() ? draftSettings() : null;
+    else if (id === 'ai') { const a = connSettings('ai'); t = OWN_MODES.includes(a.mode) ? a : null; }
+    return { id, chat, rs, slot, override, t };
+}
+async function askRoom(real, roomId, input, how) {
+    const { id, rs, slot, override, t: own } = replyRoute(real, roomId);
     if (rs.effort) how = { ...how, effort: rs.send };
     // (the request's pictures and files ride on its one turn: ai.js turnsOf)
     const media = how.images?.length || how.files?.length ? { ...(how.images?.length ? { images: how.images } : {}), ...(how.files?.length ? { files: how.files } : {}) } : null;
     if (media) input = [{ role: 'user', content: input, ...media }];
     if (!id) return askDraft(input, how);
-    const slot = slotOf(id), override = readChatModelOverride(chat);
     if (slot && override && OWN_MODES.includes(slot.mode)) {
-        // (Marinara's applyChatModelOverride: the override's model on that connection's key and endpoint)
-        const conn = applyChatModelOverride({ ...slot, id }, override), t = { ...slot, [modelKey(slot)]: conn.model, ...(conn.maxTokensOverride ? { max: conn.maxTokensOverride } : {}) };
+        const t = own;
         const out = await callConn(t, how.system || '', input, Math.max(256, Number(how.maxTokens) || Number(t.max) || 16000), how.effort || '', true, false, how.signal || null, how.temperature ?? null, how.topP ?? null, how.meta || null);
         if (!out) throw new Error('모델이 빈 답을 돌려줬어요');
         return out;

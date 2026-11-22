@@ -90,11 +90,15 @@ test('플러그인: 실리가 요구하는 모양(info · init)이고, 길마다
     const routes = {}, router = { get: (p, h) => { routes[`GET ${p}`] = h; }, post: (p, h) => { routes[`POST ${p}`] = h; } };
     const log = console.log; console.log = () => {};
     try { await plugin.init(router); } finally { console.log = log; }
-    assert.deepEqual(Object.keys(routes).sort(), ['GET /ping', 'POST /store/drop', 'POST /store/fork', 'POST /store/load', 'POST /store/rev', 'POST /store/save']);
+    assert.deepEqual(Object.keys(routes).sort(), ['GET /ping', 'POST /auto/presence', 'POST /auto/status', 'POST /store/drop', 'POST /store/fork', 'POST /store/load', 'POST /store/rev', 'POST /store/save']);
     const a = await fresh(), b = await fresh();
     const call = async (route, root, body) => { const res = { code: 200, status(c) { this.code = c; return this; }, json(v) { this.body = v; return this; } }; await routes[route]({ body, user: root ? { directories: { root } } : undefined }, res); return res; };
     try {
         assert.equal((await call('GET /ping', a.root)).body.ok, true);
+        // (실리 서버 안이 아니면 일꾼은 안 켜져요)
+        assert.equal((await call('GET /ping', a.root)).body.auto, false);
+        assert.deepEqual((await call('POST /auto/presence', a.root, { id: 'w', status: 'active' })).body, { on: false, rooms: 0 });
+        assert.deepEqual((await call('POST /auto/status', a.root, { id: 'w' })).body, { on: false, rooms: [] });
         assert.deepEqual((await call('POST /store/save', a.root, { id: 'w', parts: { core: 'A' }, chat: 'c' })).body, { rev: 1 });
         assert.deepEqual((await call('POST /store/load', a.root, { id: 'w' })).body, { rev: 1, chat: 'c', parts: { core: 'A' } });
         // 다른 사용자는 못 봐요
