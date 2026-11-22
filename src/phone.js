@@ -280,10 +280,10 @@ export async function openPhone(who = null) {
     const OB_PROV = { google_vertex: 'Google Vertex AI', custom: '커스텀 API', anthropic: 'Anthropic', openai: 'OpenAI', sillytavern: 'SillyTavern' };
     // 빠른 전환기의 "실리태번 연결": 지금 실리 연결 + OpenAI · Google AI Studio · Google Vertex AI · Claude만 (소망: 25줄은 필요 없어요. 나머지는 폰 설정 › 초안 모델에서)
     //   연결 종류마다 불러온 모델(obSrc.models) · 즐겨찾기한 모델 · 지금 방의 모델을 줄로 만들어요. 줄의 id는 'source:<종류>|<모델>'
-    const SW_SRC = ['openai', 'makersuite', 'vertexai', 'claude'];
+    const SW_SRC = ['custom', 'openai', 'makersuite', 'vertexai', 'claude'];   // + 맨 위에 "지금 실리 연결" 한 줄(실리에서 지금 고른 종류. 아래 다섯과 겹쳐도 따로 둬요, 소망) → 여섯 줄
     const swChoice = id => { const i = String(id).indexOf('|'); return i > 0 && String(id).startsWith('source:') ? { connectionId: id.slice(0, i), model: id.slice(i + 1) } : { connectionId: id }; };
     const swSrcAll = () => Object.fromEntries(liveSources().map(s => [s.id, stKo(s.name)]));
-    const swSrcList = () => { const all = swSrcAll(), now = document.querySelector('#chat_completion_source')?.value || ''; return [...new Set([now, ...SW_SRC])].filter(id => all[id]).map(id => ({ id, name: all[id], now: id === now })); };
+    const swSrcList = () => { const all = swSrcAll(), now = document.querySelector('#chat_completion_source')?.value || ''; return [...(all[now] ? [{ id: now, name: '지금 실리 연결', real: all[now], now: true }] : []), ...SW_SRC.filter(id => all[id]).map(id => ({ id, name: all[id], real: all[id], now: false }))]; };
     const swSrcRows = M => { const names = swSrcAll(), rows = new Map(), add = (src, model, name) => { if (src && model && names[src] && !rows.has(`source:${src}|${model}`)) rows.set(`source:${src}|${model}`, { id: `source:${src}|${model}`, name: name || model, sub: `실리태번 · ${names[src]}`, roles: [], src }); };
         for (const [src, list] of Object.entries(obSrc.models)) for (const x of list) add(src, x.id, x.name);
         for (const c of liveStars()) if (c.model && String(c.connectionId).startsWith('source:')) add(c.connectionId.slice(7), c.model, c.name);
