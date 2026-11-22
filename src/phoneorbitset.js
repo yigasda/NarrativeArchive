@@ -192,7 +192,7 @@ export function orbitSetPage(T, face) {
                 //   '이 채팅' 줄은 T.rs.roomChoices, 'Orbit 전체' 줄은 T.rs.allChoices. 맨 앞 칩(값 '')은 안 정함. 모델이 레벨을 안 받으면(choices가 []) 칩을 그리지 않아요
                 + (T.rs ? cap('추론 레벨') + (T.rs.choices.length ? cd(...[['rsRoom', '이 채팅', T.rs.room, '전체 값 따름', T.rs.roomChoices], ['rsAll', 'Orbit 전체', T.rs.all, '안 정함', T.rs.allChoices]].map(([k, l, cur, none0, list]) => pad(`<div class="os_d oc_rl">${l}</div><div class="ot_r ot_w oc_pk oc_rs">${[{ value: '', name: none0 }, ...(list || [])].map(c => `<button type="button" class="ot_chip${c.value === cur ? ' strong' : ''} na_os_rs" data-k="${k}" data-v="${esc(c.value)}" aria-pressed="${c.value === cur}"${c.title ? ` title="${esc(c.title)}"` : ''}>${esc(c.name)}</button>`).join('')}</div>`)))
                     + hp(T.rs.effort ? `지금 이 채팅은 <b>${esc(T.rs.choices.find(c => c.value === T.rs.effort)?.name || T.rs.effort)}</b>을(를) 씁니다.` : '아직 정하지 않았습니다.')
-                    : hp(`${T.rs.model ? `<b>${esc(T.rs.model)}</b>은(는)` : '이 모델은'} 추론 레벨을 받지 않습니다.`)) : '')
+                    : hp(T.rs.why === 'st' ? '실리가 이 연결 · 모델에는 추론 레벨을 보내지 않습니다.' : T.rs.why === 'main' ? '실리의 지금 연결을 그대로 쓰는 방입니다. 추론 레벨은 실리에서 정합니다.' : `${T.rs.model ? `<b>${esc(T.rs.model)}</b>은(는)` : '이 모델은'} 추론 레벨을 받지 않습니다.`)) : '')   // (칩이 없는 이유: T.rs.why = 'model' | 'st' | 'main')
                 + cap('연결 설정') + cd(nav('stconn', 'API 연결', '키 · 주소 · 모델 · 연결 · 테스트 메시지', 'chevron-right')); },
         // 실리의 API 연결 (1-7): src/phonestconn.js가 실리의 진짜 칸을 읽어 준 목록(T.st)을 실리 순서대로 그려요. 소스마다 화면을 따로 짜지 않아요
         stconn: () => (T.st ? hp('실리의 API 연결 창을 그대로 조종합니다. 여기서 바꾸면 실리의 연결이 바뀝니다(롤플레이도 같은 연결을 씁니다). 키는 실리에만 저장됩니다.') + scGroup(T, T.st, false) : none('실리의 API 연결 창을 찾지 못했어요.')),
