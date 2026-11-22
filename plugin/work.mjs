@@ -41,6 +41,7 @@ export async function startWork({ root, store, st = null, schedule = true }) {
     const { kitOf, kitContext } = await import('../src/phone2kit.js');
     const { intentWhy, chatIdOf } = await import('../src/phone2sched.js');
     const AI = await import('../src/ai.js');
+    const { VERSION } = await import('../src/core.js');
     const { getRecentAutonomousClientPresence } = await import('../src/marinara/autonomous.service.js');
 
     const readSettings = async () => { try { const v = JSON.parse(await fs.readFile(path.join(root, 'settings.json'), 'utf8')); return obj(v) ? v : {}; } catch (err) { if (err?.code === 'ENOENT') return {}; throw err; } };
@@ -111,12 +112,29 @@ export async function startWork({ root, store, st = null, schedule = true }) {
             },
         };
     }
+    // 이 세계를 서버가 돌려도 되나 → '' | 안 되는 이유
+    //   - 묶음이 있어야 해요
+    //   - 확장과 플러그인이 같은 버전이어야 해요: 플러그인은 실리 plugins 폴더의 것, 확장은 실리 확장 폴더의 것이라 따로 올라가요.
+    //     다르면 서버가 브라우저와 다른 코드로 답하게 돼요 (실리를 다시 켜면 플러그인이 저절로 올라가요)
+    //   - 실리의 그 채팅 파일이 있어야 해요: 채팅을 지웠는데 Orbit에 계속 말을 걸지 않게
+    const safeName = s => typeof s === 'string' && !!s && !/[\\/]|\.\./.test(s);
+    async function blocked(real) {
+        const kit = kitOf(real);
+        if (!kit) return '서버가 읽을 묶음이 없어요. 실리에서 이 채팅을 한 번 열어 두면 만들어져요';
+        if (kit.ver !== VERSION) return `확장(${kit.ver || '?'})과 서버 플러그인(${VERSION})의 버전이 달라요. 실리를 다시 켜면 플러그인이 맞춰져요`;
+        const f = kit.chat?.file;
+        if (!obj(f) || !safeName(f.id) || (!f.group && !safeName(f.dir))) return '이 Orbit의 실리 채팅을 알 수 없어요. 실리에서 이 채팅을 한 번 열어 주세요';
+        const file = f.group ? path.join(root, 'group chats', `${f.id}.jsonl`) : path.join(root, 'chats', f.dir, `${f.id}.jsonl`);
+        try { await fs.access(file); } catch { return '실리에 이 채팅이 없어요 (지웠거나 이름을 바꿨어요). 실리에서 이 채팅을 열면 다시 돌아요'; }
+        return '';
+    }
     // 한 번에 하나: 그 세계의 실리 것을 끼우고 일을 해요
     let line = Promise.resolve(), app = null;
     function withWorld(entry, job) {
         const run = line.then(async () => {
+            const no = await blocked(entry.real);
+            if (no) throw refuse(400, no);
             const kit = kitOf(entry.real);
-            if (!kit) throw refuse(400, '서버가 읽을 묶음이 없어요. 실리에서 이 채팅을 한 번 열어 두면 만들어져요');
             const settings = await readSettings();
             setContext(contextOf(entry, kit, settings, app));
             globalThis.__naStOpenai = stStandIn(kit, settings);
@@ -201,7 +219,7 @@ export async function startWork({ root, store, st = null, schedule = true }) {
         let ran = 0;
         for (const sid of await store.list()) {
             const e = await app.open(sid), w = e && liveWorld(e.real);
-            if (!w || !kitOf(e.real) || watched(e)) continue;
+            if (!w || watched(e) || await blocked(e.real)) continue;
             const due = () => w.queue.jobs.filter(j => j.kind === 'reply' && j.state === 'waiting' && !(j.notBefore > Date.now()));
             if (!due().length) continue;
             try {
@@ -221,7 +239,8 @@ export async function startWork({ root, store, st = null, schedule = true }) {
         const e = await app.open(String(sid)), w = e && liveWorld(e.real);
         if (!w) return [];
         const rooms = Object.keys(w.messenger?.rooms || {});
-        if (!kitOf(e.real)) return rooms.map(room => ({ id: chatIdOf(e.real, room), room, can: false, why: '서버가 읽을 묶음이 아직 없어요' }));
+        const no = await blocked(e.real);
+        if (no) return rooms.map(room => ({ id: chatIdOf(e.real, room), room, can: false, why: no }));
         return withWorld(e, async () => { const out = []; for (const room of rooms) { const why = await cannot(e.real, room); out.push({ id: chatIdOf(e.real, room), room, can: !why, why }); } return out; });
     }
     // 브라우저가 이 저장을 열어 두고 있어요 (30초마다): 그 방들은 서버가 75초 동안 안 건드려요

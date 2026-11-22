@@ -4,7 +4,7 @@ process.env.NA_SCREEN_ANYWHERE = '1';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { openStore } from '../plugin/store.mjs';
@@ -21,11 +21,12 @@ const bodyOf = req => new Promise(ok => { let b = ''; req.on('data', c => (b += 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const week = blocks => ({ weekStart: new Date(Date.now() - 86400000).toISOString(), days: Object.fromEntries(DAYS.map(d => [d, blocks.map(b => ({ ...b }))])), inactivityThresholdMinutes: 60, talkativeness: 50 });
 const card = name => ({ name, avatar: `${name.toLowerCase()}.png`, description: `${name} is a baker.`, data: { name, description: `${name} is a baker.`, personality: 'warm', extensions: { talkativeness: 0.5 } } });
-const BROWSER = () => ({ name1: 'Ren', characterId: 0, characters: ['Mara', 'Ivo'].map(card), powerUserSettings: { persona_description: 'Ren is a student.' } });
+const BROWSER = () => ({ name1: 'Ren', chatId: 'Mara - 2026-11-22', characterId: 0, characters: ['Mara', 'Ivo'].map(card), powerUserSettings: { persona_description: 'Ren is a student.' } });
+const { VERSION } = await import('../src/core.js');
 const TAIL = { lines: ['[#4] Mara: on my way', '[#5 · USER] Ren: ok'], first: 4, end: 5 };
 
 // 세계 하나: Ren(나)과 Mara의 방. Ren이 7시간 전에 말했고 Mara가 바로 답했어요. 먼저 말 걸기 켬
-function world({ story = false, schedule = null, kit = true, st = null, members = ['Mara'], hoursAgo = 7 } = {}) {
+function world({ story = false, schedule = null, kit = true, st = null, members = ['Mara'], hoursAgo = 7, version = VERSION, browser = BROWSER() } = {}) {
     const m = {};
     if (story) { startFromStory(m, { persona: 'Ren', upto: 3, now: Date.now() - 10 * 3600_000 }); liveWorld(m).snap = { v: 1, at: 1, upto: 3, text: '## #0–#3 — start\n- they met at the bakery\n', recent: ['[#3] Mara: see you'], made: { from: 0, to: 3, count: 4, parts: 1 } }; }
     else startFresh(m, { persona: 'Ren', now: Date.now() - 10 * 3600_000 });
@@ -34,7 +35,7 @@ function world({ story = false, schedule = null, kit = true, st = null, members 
     sendLive(m, room.id, 'hey', at);
     room.messages.push({ id: 't2', n: 2, from: members[0], text: 'hi', at: at + 60_000 });
     w.presence = { on: true, schedules: schedule ? { mara: schedule } : {}, overrides: {}, meta: {}, user: {} };
-    if (kit) { const k = buildKit(BROWSER(), m, TAIL); k.st = st || {}; putKit(m, k); }
+    if (kit) { const k = buildKit(browser, m, TAIL, { version }); k.st = st || {}; putKit(m, k); }
     return { m, w, room, id: `${w.id}:${room.id}` };
 }
 
@@ -55,6 +56,8 @@ async function stage(t, { settings = {}, reply = () => ({ reply: ['you there?'],
     }) : null;
     const url = `http://127.0.0.1:${model.address().port}/v1`;
     await writeFile(path.join(root, 'settings.json'), JSON.stringify({ main_api: 'openai', power_user: {}, oai_settings: { reverse_proxy: 'https://proxy.example', proxy_password: 'PW-SECRET' }, extension_settings: { connectionManager: { profiles: [{ id: 'p1', name: 'My profile', api: 'openai', model: 'x' }] }, narrative_archive: { draftConn: { mode: 'custom', url, key: 'MODEL-KEY', model: 'fake-model' }, ...settings } } }));
+    // (SillyTavern's chat file of the example chat: the server runs an Orbit only while its chat is there)
+    await mkdir(path.join(root, 'chats', 'mara'), { recursive: true }); await writeFile(path.join(root, 'chats', 'mara', 'Mara - 2026-11-22.jsonl'), '{}\n');
     const store = openStore(root);
     const auto = startAuto({ root, store, bridge: br ? { url: `http://127.0.0.1:${br.address().port}`, token: TOKEN } : null, schedule: false });
     t.after(async () => { await auto.stop(); model.close(); br?.close(); await rm(root, { recursive: true, force: true }); });
@@ -116,7 +119,7 @@ test('일꾼: 서버가 읽을 묶음이 없는 세계는 목록에 없고, 만�
     assert.deepEqual((await S.auto.list()).map(r => r.id), [b.id]);
     assert.equal((await S.gen(a.id)).statusCode, 404);
     assert.equal(S.asked.length, 0);
-    assert.deepEqual((await S.auto.status('sa')).map(x => [x.can, x.why]), [[false, '서버가 읽을 묶음이 아직 없어요']]);
+    assert.deepEqual((await S.auto.status('sa')).map(x => [x.can, /묶음이 없어요/.test(x.why)]), [[false, true]]);
     assert.deepEqual((await S.auto.status('sb')).map(x => [x.id, x.can, x.why]), [[b.id, true, '']]);
 });
 
@@ -216,4 +219,19 @@ test('일꾼: 때가 된 늦은 답장을 보내요. 브라우저가 열어 둔 
     assert.equal(S.asked.length, 1);
     // (늦은 답장은 내가 자리에 없다고 적지 않아요: 먼저 건 말이 아니에요)
     assert.doesNotMatch(textOf(S.asked[0].body), /away or offline|\[WHY NOW\]\n/);
+});
+
+test('일꾼: 확장과 플러그인의 버전이 다르면 · 실리에서 그 채팅을 지웠으면 안 돌려요 (이유를 알려요)', async t => {
+    const S = await stage(t), old = world({ version: '0.0.1' }), gone = world({ browser: { ...BROWSER(), chatId: 'Mara - deleted' } }), odd = world({ browser: { ...BROWSER(), chatId: '../../settings' } }), fine = world();
+    await S.put('s1', old.m); await S.put('s2', gone.m); await S.put('s3', odd.m); await S.put('s4', fine.m);
+    assert.deepEqual((await S.auto.list()).map(r => r.id), [fine.id]);
+    assert.match((await S.auto.status('s1'))[0].why, /버전이 달라요/);
+    assert.match((await S.auto.status('s2'))[0].why, /이 채팅이 없어요/);
+    assert.match((await S.auto.status('s3'))[0].why, /채팅을 알 수 없어요/);
+    assert.equal((await S.auto.status('s4'))[0].can, true);
+    // 늦은 답장도 안 보내요
+    for (const x of [old, gone]) { const j = enqueueJob(x.m, { kind: 'reply', owner: 'Mara', room: x.room.id, at: Date.now() - 600_000 }); Object.assign(j, { timed: true, notBefore: Date.now() - 1000 }); }
+    await S.put('s5', old.m); await S.put('s6', gone.m);
+    assert.equal(await S.auto.sweep(), 0);
+    assert.equal(S.asked.length, 0);
 });

@@ -5,7 +5,7 @@ process.env.NA_SCREEN_ANYWHERE = '1';
 import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { openStore, StoreError } from '../plugin/store.mjs';
@@ -32,6 +32,7 @@ test('브라우저와 서버 일꾼이 번갈아: 가려진 동안 서버가 건
     const model = await listen(async (req, res) => { asked.push(await bodyOf(req)); res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ choices: [{ message: { content: JSON.stringify({ reply: ['you there?'], status: '' }) }, finish_reason: 'stop' }] })); });
     const conn = { mode: 'custom', url: `http://127.0.0.1:${model.address().port}/v1`, key: 'K', model: 'fake-model' };
     await writeFile(path.join(root, 'settings.json'), JSON.stringify({ power_user: {}, extension_settings: { narrative_archive: { draftConn: conn } } }));
+    await mkdir(path.join(root, 'chats', 'mara'), { recursive: true }); await writeFile(path.join(root, 'chats', 'mara', 'chat-1.jsonl'), '{}\n');
     const store = openStore(root), auto = startAuto({ root, store, schedule: false });
     t.after(async () => { await auto.stop(); model.close(); await rm(root, { recursive: true, force: true }); });
     await auto.ready;

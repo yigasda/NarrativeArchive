@@ -6,7 +6,10 @@
 //     name1                         페르소나 이름 (실리의 name1)
 //     persona                       지금 고른 페르소나의 설명 (powerUserSettings.persona_description)
 //     characters: [ … ]             필요한 캐릭터 카드만, 실리 목록의 순서 그대로 (이름으로 찾을 때 같은 카드가 먼저 나와요)
-//     chat: { avatar | null, group: { id, members: [avatar…] } | null }   이 채팅이 누구의 것인지
+//     ver                           확장의 버전 (서버 플러그인의 코드가 같은 버전일 때만 서버가 돌려요: 다른 버전의 코드로 답하지 않게)
+//     chat: { avatar | null, group: { id, members: [avatar…] } | null, file }   이 채팅이 누구의 것인지
+//       file: { group: 그룹 채팅인가, dir: 캐릭터 채팅 폴더 이름 | null, id: 채팅 파일 이름(확장자 없이) } | null
+//             실리의 채팅 파일. 서버는 이 파일이 있는 동안만 돌려요: 실리에서 채팅을 지웠는데 Orbit에 계속 말을 걸지 않게
 //     tail: { lines, first, end }   롤플의 끝 메시지 (phone2snap.js liveChatTail이 그 순간 읽은 것)
 //     meta: { glossary, glossaryPeople, dateOrder, phoneScreenHolder }  실시간 폰이 채팅에서 읽는 칸 (phone2store.js LIVE_SHARED + 화면 주인)
 //   }
@@ -29,8 +32,8 @@ function slim(ch) {
     return out;
 }
 
-// c: 실리의 getContext() 것 · real: 이 채팅의 우리 메타 · tail: liveChatTail()의 답 → 묶음 | null (실시간 폰이 없으면)
-export function buildKit(c, real, tail) {
+// c: 실리의 getContext() 것 · real: 이 채팅의 우리 메타 · tail: liveChatTail()의 답 · version: 확장의 버전 → 묶음 | null (실시간 폰이 없으면)
+export function buildKit(c, real, tail, { version = '' } = {}) {
     const w = liveWorld(real);
     if (!w || !obj(c)) return null;
     const list = Array.isArray(c.characters) ? c.characters : [];
@@ -48,12 +51,16 @@ export function buildKit(c, real, tail) {
     const characters = list.filter(ch => ch && (ch === own || avatars.has(ch.avatar) || names.has(liveKey(ch.name)))).map(slim);
     const meta = {};
     for (const k of [...LIVE_SHARED, 'phoneScreenHolder']) if (real[k] !== undefined) meta[k] = real[k];
+    // (SillyTavern's chat file: <chats>/<avatar without .png>/<chat id>.jsonl, a group's <group chats>/<chat id>.jsonl)
+    const chatId = String(c.chatId ?? c.getCurrentChatId?.() ?? '');
+    const file = chatId && (group || own?.avatar) ? { group: !!group, dir: group ? null : String(own.avatar).replace(/\.png$/i, ''), id: chatId } : null;
     return {
         v: KIT.v,
+        ver: String(version || ''),
         name1: String(c.name1 || ''),
         persona: String(c.powerUserSettings?.persona_description || ''),
         characters,
-        chat: { avatar: own?.avatar || null, group: group ? { id: group.id, members: Array.isArray(group.members) ? [...group.members] : [] } : null },
+        chat: { avatar: own?.avatar || null, group: group ? { id: group.id, members: Array.isArray(group.members) ? [...group.members] : [] } : null, file },
         tail: { lines: Array.isArray(tail?.lines) ? tail.lines.map(String) : [], first: Number.isInteger(tail?.first) ? tail.first : null, end: Number.isInteger(tail?.end) ? tail.end : 0 },
         meta,
     };

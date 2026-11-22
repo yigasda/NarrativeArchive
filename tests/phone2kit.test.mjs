@@ -26,7 +26,9 @@ test('묶음: 필요한 카드만, 실리 목록의 순서 그대로. 읽는 칸
     assert.deepEqual(mara.data.extensions, { talkativeness: 0.7, narrative_archive_convo: { conversationSchedule: { days: {} } } });
     // data가 없는 카드는 data 없이 (읽는 쪽이 카드 자신의 칸으로 내려가요)
     assert.deepEqual(kit.characters[4], { name: 'Ivo', avatar: 'ivo.png', description: 'v1 card', extensions: { talkativeness: 30 } });
-    assert.deepEqual(kit.chat, { avatar: 'mara.png', group: null });
+    assert.deepEqual(kit.chat, { avatar: 'mara.png', group: null, file: null });   // (채팅 이름을 모르면 파일도 몰라요)
+    const named = buildKit(ctxOf({ chatId: 'Mara - 2026-11-22' }), m, TAIL, { version: '9.9.9' });
+    assert.deepEqual(named.chat.file, { group: false, dir: 'mara', id: 'Mara - 2026-11-22' }); assert.equal(named.ver, '9.9.9');
     assert.equal(kit.name1, 'Ren'); assert.equal(kit.persona, 'Ren is a student.');
     assert.deepEqual(kit.tail, TAIL);
     assert.deepEqual(kit.meta, { glossary: [{ src: 'Mara', ko: '마라' }], dateOrder: 'mdy' });
@@ -37,7 +39,8 @@ test('묶음: 필요한 카드만, 실리 목록의 순서 그대로. 읽는 칸
 
 test('묶음: 그룹 채팅이면 그룹의 사람들을 담아요', () => {
     const m = world(), kit = buildKit(ctxOf({ characterId: undefined, groupId: 'g1', groups: [{ id: 'g0', members: ['zed.png'] }, { id: 'g1', members: ['zed.png', 'mara.png'] }] }), m, TAIL);
-    assert.deepEqual(kit.chat, { avatar: null, group: { id: 'g1', members: ['zed.png', 'mara.png'] } });
+    assert.deepEqual(kit.chat, { avatar: null, group: { id: 'g1', members: ['zed.png', 'mara.png'] }, file: null });
+    assert.deepEqual(buildKit(ctxOf({ characterId: undefined, groupId: 'g1', getCurrentChatId: () => 'grp-1', groups: [{ id: 'g1', members: ['mara.png'] }] }), m, TAIL).chat.file, { group: true, dir: null, id: 'grp-1' });
     assert.ok(kit.characters.some(c => c.avatar === 'zed.png'));
 });
 

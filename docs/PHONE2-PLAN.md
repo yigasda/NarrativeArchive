@@ -593,6 +593,10 @@ Orbit이 버벅이는 제일 큰 이유는 저장이에요: Orbit 데이터가 �
     - 마리나라의 서버가 보내는 값: 그 캐릭터로(`forCharacterId`), 이유(`autonomousIntentKey`), 내 상태 `idle` · 하는 일 `away or offline`(그 요청에서만: `job.user`), 늦음 없이(`skipPresenceDelay` → `job.timed`).
     - 답은 마리나라 스케줄러가 읽는 모양(SSE 글)으로: 말이 나왔으면 `message_saved` + `done`, 안 나왔으면 `generation_discarded` + `done`, 실패면 `error`. 그 방에 답장이 이미 줄 서 있거나 실패 뒤 쉬는 중이면 409(스케줄러는 실패로 안 세요). 서버가 못 돌리는 방은 400(스케줄러가 30분씩 쉬어요).
     - 늦은 답장(우리 것: 바빠서 미뤄 둔 답장, 브라우저의 30초 틱이 하던 일): 일꾼이 30초마다 봐서 때가 된 것을 보내요(`work.mjs sweepDue`). 브라우저가 열어 둔 세계, 서버가 못 보내는 방의 답장이 낀 세계는 안 건드려요.
+    - 서버가 그 세계를 아예 안 돌리는 때 (`work.mjs blocked`, 이유는 `/auto/status`로 알려요):
+      - 묶음이 없을 때 (그 채팅을 새 확장으로 한 번도 안 열었어요).
+      - **확장과 플러그인의 버전이 다를 때.** 플러그인은 실리 `plugins` 폴더의 것, 확장은 실리 확장 폴더의 것이라 따로 올라가요. 다르면 서버가 브라우저와 다른 코드로 답하게 돼서 안 돌려요. 실리를 다시 켜면 플러그인이 저절로 올라가요(`enableServerPluginsAutoUpdate`).
+      - **실리에서 그 채팅을 지웠을 때** (묶음에 적힌 채팅 파일이 없어요). 지운 채팅의 Orbit에 계속 말을 걸면 모델 비용이 계속 나가요. 채팅 이름을 바꾸고 다시 안 열었을 때도 같아요: 그 채팅을 열면 다시 돌아요.
     - 서버에서 안 하는 것: 이야기 요약본 만들기 · 늘리기(롤플 채팅이 없어요. 가진 요약본으로 답해요), 스케줄 매주 갱신(마리나라도 브라우저가 시켜요).
     - 확인: `tests/pluginwork.test.mjs`(일꾼을 실제로 띄워서 9개: 끝까지 · 이야기 폰 · 묶음 없음 · 실리 연결 방식 틀 · 못 돌리는 방 · 실패 · 저장 충돌 · 카드 쓰기 · 늦은 답장) · `tests/phone2kit.test.mjs` · `tests/pluginauto.test.mjs`. 진짜 실리 1.19.1에 꽂아서: 브라우저 없이 스케줄러가 20초 뒤에 캐릭터의 먼저 건 말을 만들었고, 요청이 실리의 chat-completions 처리기를 거쳐 나갔고, 카드 파일에 스케줄 · 상태가 써졌고, 안 읽음 표시 · 하루 수가 적혔어요.
   - 3-3 (됨, 작업 브랜치): 브라우저와 서버 일꾼이 번갈아 돌기. 둘이 같이 돌면 말이 두 번 나와요.
@@ -610,6 +614,7 @@ Orbit이 버벅이는 제일 큰 이유는 저장이에요: Orbit 데이터가 �
     - 마리나라의 소리 · 브라우저 알림 파일을 가져왔어요: `src/marinara/notification-sound.js`(`playConfiguredNotificationPing(켰나, 창이 뒤에 있을 때만)`) · `src/marinara/local-notifications.js`(`requestLocalNotificationPermission()` · `showLocalMessageNotification({ enabled, characterName, title, tag })`).
     - 마리나라가 하는 것(`use-background-autonomous.ts` 270~340줄 · `ConversationAutonomousEffects.tsx`): 소리 → 그 방을 안 보고 있으면 안 읽음 수 올리기 → 떠 있는 알림("○○ messaged you", 5초) → 브라우저 알림. 이 순서와 설정 스위치는 화면이 정해요.
     - 다른 실리 채팅의 Orbit: 브라우저는 그 채팅을 열어야 그 데이터를 읽어요. 그래서 다른 채팅에서 온 말의 알림은 그 채팅을 열었을 때 떠요(서버가 건 말은 방에 "안 읽은 먼저 건 말"로 적혀 있어요). 열지 않은 채팅의 알림을 지금 채팅에서 띄우는 것은 아직 없어요.
+    - 다시 확인하는 법: `tools/plugin/stsmoke.mjs <실리 폴더> <이 저장소>`(브라우저 없이 서버만) · `tools/plugin/stbrowser.cjs <실리 폴더>`(진짜 브라우저까지). 실리의 `plugins/` · 확장 폴더에 이 저장소가 연결돼 있어야 하고, 가짜 모델 서버를 스스로 띄워요(진짜 모델을 안 불러요).
     - 진짜 브라우저 + 진짜 실리 1.19.1 확인 (2026-11-22): 브라우저가 묶음을 남기고(요청 틀은 실리의 `createGenerationParameters`가 만든 것) → 탭을 가린 동안 일꾼이 실리의 "custom" 연결로 먼저 건 말을 만들고 → 탭이 다시 보일 때 브라우저가 받고(안 읽음 표시 · 하루 수 포함) → 브라우저가 또 걸지 않았어요. 진짜 모델로는 아직 안 봤어요.
 
 ## 말 · 방 다루기 (마리나라에서 가져옴)

@@ -5,7 +5,7 @@
 // 쌓인 대화를 한 번에 읽어요. 잘게 나눠 읽으면 같은 날 일기 · 같은 상황이 여러 번 생기고 호출도 메시지마다 3번이 돼요.
 // 폰 1은 이 파일을 안 불러요.
 
-import { ctx, saveMeta, MODULE } from './core.js';
+import { ctx, saveMeta, MODULE, VERSION } from './core.js';
 import { applyInjection } from './inject.js';
 import { askDraft, phone2Clock, aroundBlock, ownerZone, cardBlocks } from './phonedata.js';
 import { askAI, askCompress, stripThink, isBlocked, SECTION_GUARD, aiProfiles, callConn, connSettings, stSourceList, stSourceName, stSourceModels, OWN_MODES, apiFormat, stLevelPayload, draftSettings, draftReady, stSourceTemplate } from './ai.js';
@@ -1099,7 +1099,7 @@ export function liveAutonomousUnread(real) {
 //   kit.st = { 틀의 열쇠: { data, secrets } }: 답장 한 번의 요청 (길이 LIVE_GO.replyTokens, 방의 추론 레벨 — 없으면 low, 생각 보기)
 export async function liveKitRefresh(real) {
     if (!real || !open(real) || !liveWorld(real) || !keepKept()) return false;
-    const kit = buildKit(ctx(), real, liveChatTail());
+    const kit = buildKit(ctx(), real, liveChatTail(), { version: VERSION });
     if (!kit) return false;
     kit.st = {};
     for (const roomId of ['', ...Object.keys(liveWorld(real).messenger?.rooms || {})]) {

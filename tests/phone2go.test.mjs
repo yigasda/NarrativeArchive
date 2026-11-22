@@ -1824,7 +1824,7 @@ test('서버 묶음: 플러그인에 둔 채팅만 만들어요. 달라졌을 �
         T.kept = true;
         assert.equal(await G.liveKitRefresh(c.real), true);
         const kit = c.real.live.kit;
-        assert.deepEqual([kit.v, kit.name1, kit.persona, kit.tail.end, kit.characters.map(x => x.avatar), kit.chat.avatar], [1, 'Ren', 'Ren is a student.', 4, ['mara.png'], 'mara.png']);
+        assert.deepEqual([kit.v, kit.ver, kit.name1, kit.persona, kit.tail.end, kit.characters.map(x => x.avatar), kit.chat.avatar], [1, '0.0.0-test', 'Ren', 'Ren is a student.', 4, ['mara.png'], 'mara.png']);
         // (초안 모델이 커스텀 API면 요청 틀은 없어요: 서버가 직접 보내요)
         assert.deepEqual(kit.st, {}); assert.equal(T.tpl.length, 0);
         assert.equal(await G.liveKitRefresh(c.real), false);
