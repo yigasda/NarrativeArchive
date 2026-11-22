@@ -575,11 +575,17 @@ Orbit이 버벅이는 제일 큰 이유는 저장이에요: Orbit 데이터가 �
     - 안 읽은 먼저 건 말: 마리나라의 열쇠 그대로 방에 적어요(`autonomousUnreadCount` · `autonomousUnreadCharacterIds` · `autonomousUnreadAt`).
     - 쓰기: 바뀐 조각만, 읽은 `rev`를 맞춰서. 그사이 브라우저가 저장했으면 쓰지 않고 다시 읽어요.
     - `app.presence(id, 상태)`: 브라우저가 살아 있다고 알릴 자리(길은 3-3에서).
-  - 3-2b (아직): 답장 만들기.
-    - 답장 만들기: 브라우저의 `liveGo`와 같은 코드(`src/phone2go.js`)를 서버에서 돌려요. 그러려면 그 파일이 기대는 것 가운데 브라우저에만 있는 것을 서버 것으로 바꿔 끼워야 해요: `core.js`(실리의 채팅 · 캐릭터 카드 · 페르소나 · 확장 설정 → 사용자 폴더의 파일에서 읽기), `ai.js`(모델 부르기 → 커스텀 API는 서버에서 바로, Vertex · 실리 연결 방식 · 연결 프로필은 실리 서버의 `/api/backends/chat-completions/generate` 처리기를 서버 안에서 부르기), 저장(`saveMeta` → 플러그인 저장에 `rev`를 맞춰 쓰기). 테스트 로더(`tests/phone2reflect.load.mjs`)가 같은 방식으로 이미 Node에서 돌리고 있어요.
-    - 서버가 쓰는 것: 그 방의 말 · 줄(queue) · 하루 센 수 · 이유의 쉬는 시간. 캐릭터가 상태를 바꾸면(`schedule_update`) 카드에도 써야 해요.
-    - 이야기 요약본(`keepUpStory`)은 서버에서 늘리지 않아요: 실리가 닫혀 있으면 롤플 채팅이 안 움직였어요. 저장된 요약본을 그대로 써요.
-    - 키: 새로 저장하지 않아요. 실리의 것(`secrets.json`)과 확장 설정의 것을 그대로 읽어요.
+  - 3-2b (아직): 답장 만들기. **브라우저와 똑같은 코드를 서버에서 그대로 돌려요** (따로 다시 쓰지 않아요).
+    - 실험으로 확인한 것 (2026-11-22): `src/phone2go.js`와 거기 딸린 166개 파일이 Node에서 그대로 불러와져요. 화면 자리(`document` · `$` · `toastr` …)에 "아무것도 안 하는 것"을 끼우고 `SillyTavern.getContext()`만 서버 것으로 주면 돼요. 그렇게 해서 `liveAutonomous` → `liveGo`가 끝까지 돌았어요: 줄 세우기, 커스텀 API로 모델 부르기(Node의 fetch), 말 넣기, 하루 수 · 이유의 쉬는 시간 적기, 저장 부르기.
+    - 구조: 플러그인이 **일꾼 스레드(worker)** 하나를 띄워요. 가짜 화면은 그 안에만 있어서 실리 서버는 안 건드려요.
+      - 일꾼 안: 마리나라 스케줄러 + `plugin/auto.mjs`의 `app` + 진짜 `src/` 코드. 마리나라가 기억하는 방의 움직임(따라 묻기 수 · 걸고 있는 중 · 창이 살아 있음)이 한 곳에만 있어야 해서 판단과 답장을 같은 곳에서 돌려요.
+      - 플러그인 본체: 길(express) · 저장(`store.mjs`, 하나뿐이어야 rev가 안 꼬여요) · 실리 서버로 가는 다리. 일꾼은 저장과 실리 요청을 본체에 부탁해요.
+    - 일꾼의 `getContext()`가 줄 것: `chatMetadata`(그 세계) · `characters` · `characterId`/`groupId` · `name1` · `powerUserSettings.persona_description` · `chat`(롤플의 끝 메시지) · `extensionSettings` · `chatCompletionSettings` · `saveMetadata`(→ 플러그인 저장에 rev 맞춰 쓰기) · `writeExtensionField`(카드에 스케줄 쓰기) · `getRequestHeaders`.
+      - 브라우저만 아는 것(지금 고른 페르소나, 이 채팅의 캐릭터 · 그룹, 롤플의 끝 메시지)은 브라우저가 저장할 때 같이 남겨요(`live.kit`). 서버는 그걸 읽어요. 카드를 고치고 그 채팅을 다시 안 열면 서버는 예전 카드로 답해요(다음에 열면 맞춰져요).
+      - 설정 · 키는 새로 저장하지 않아요: 일꾼이 사용자 폴더의 `settings.json`을 그때그때 읽고, 실리 연결로 가는 요청은 실리 서버의 처리기를 서버 안에서 불러서 실리가 자기 키를 붙여요.
+    - 실리로 가는 요청: 진짜 `src/ai.js`가 `fetch('/api/backends/chat-completions/generate')`를 그대로 불러요. 일꾼의 `fetch`가 `/api/…`로 시작하는 것만 본체로 넘기고, 본체가 실리의 그 처리기를 불러요. 커스텀 API는 주소가 통째라 Node의 fetch로 바로 가요.
+    - 마리나라의 서버가 보내는 값 맞추기: 그 캐릭터로(`forCharacterId`), 이유(`autonomousIntentKey`), 내 상태 `idle` · 하는 일 `away or offline`, 늦음 없이(`skipPresenceDelay`).
+    - 답: 마리나라 스케줄러가 읽는 모양(SSE 글)으로 돌려줘요: 말이 나왔으면 `message_saved` + `done`, 안 나왔으면 `generation_discarded` + `done`, 실패면 `error`.
   - 3-3 (아직): 브라우저가 서버가 쓴 것을 받기. 채팅을 열 때 `rev`가 다르면 다시 읽고, 열려 있는 동안에는 저장이 409로 거절되면 다시 읽어서 합쳐요. 브라우저는 30초마다 "살아 있음"을 플러그인에 알려요(마리나라의 `/activity/presence`): 그 방은 서버가 75초 동안 안 건드려요.
   - 3-4 (아직): 다른 실리 채팅의 Orbit (마리나라의 `use-background-autonomous.ts`) · 알림(소리 · 떠 있는 알림 · 브라우저 알림 · 안 읽음 수). 화면은 디자인 세션.
 
