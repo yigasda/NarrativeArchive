@@ -158,7 +158,7 @@ export function routerCandidates(m) {
 
 export function routerReady() {
     const a = connSettings('ai');
-    return a.mode === 'custom' || a.mode === 'vertex' || !!globalSettings().aiProfile;
+    return a.mode === 'custom' || a.mode === 'vertex' || a.mode === 'source' || !!globalSettings().aiProfile;
 }
 
 // 'lift' (AI 없이 빠르게): no model call before a reply, and no common words either. A section is called in only on a sure

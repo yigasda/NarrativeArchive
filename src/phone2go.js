@@ -8,7 +8,7 @@
 import { ctx, saveMeta, MODULE } from './core.js';
 import { applyInjection } from './inject.js';
 import { askDraft, phone2Clock, aroundBlock, ownerZone, cardBlocks } from './phonedata.js';
-import { askAI, askCompress, stripThink, isBlocked, SECTION_GUARD, aiProfiles, callConn, connSettings } from './ai.js';
+import { askAI, askCompress, stripThink, isBlocked, SECTION_GUARD, aiProfiles, callConn, connSettings, stSourceList, stSourceName, stSourceModels, OWN_MODES } from './ai.js';
 import { SCENES_SYS, parseScenes } from './scenes.js';
 import { resolvePhoneProfile, ownerProfileBlock, personaBlock } from './phoneprofile.js';
 import { parseJson } from './phoneparse.js';
@@ -1007,6 +1007,7 @@ export async function liveBranchRoom(real, roomId, messageId = '') { const room 
 //   id: 'dr' · 'ai' (확장에 넣어 둔 두 연결) · 'profile:<id>' (실리 연결 프로필). 안쪽에서만 쓰는 값이에요
 const connRow = id => {
     const t = connSettings(id);
+    if (t.mode === 'source') return { id, name: String(t.stModel || ''), model: String(t.stModel || ''), provider: stSourceName(t.source) };
     if (t.mode === 'vertex') return { id, name: String(t.vxModel || ''), model: String(t.vxModel || ''), provider: 'google_vertex' };
     if (t.mode === 'custom') return { id, name: String(t.model || ''), model: String(t.model || ''), provider: t.fmt === 'anthropic' ? 'anthropic' : 'custom' };
     // (SillyTavern's own connection: the model it is set to now)
@@ -1021,7 +1022,10 @@ export function liveRoomModel(real, roomId) {
     const chat = roomChat(room);
     return { current: chat.connectionId ? (readChatModelOverride(chat) ?? { connectionId: chat.connectionId }) : null, recent: readChatRecentModels(chat), followsMain: !chat.connectionId };
 }
-const slotOf = id => (id === 'dr' || id === 'ai' ? connSettings(id) : null);
+// (a connection id 'source:<id>': that SillyTavern source itself, with SillyTavern's key for it; it always carries a model)
+const sourceOf = id => (String(id).startsWith('source:') ? String(id).slice(7) : '');
+const slotOf = id => (id === 'dr' || id === 'ai' ? connSettings(id) : sourceOf(id) ? { mode: 'source', source: sourceOf(id), stModel: '' } : null);
+const modelKey = slot => (slot.mode === 'vertex' ? 'vxModel' : slot.mode === 'source' ? 'stModel' : 'model');
 export async function liveSetRoomModel(real, roomId, pick = null) {
     const room = liveWorld(mine(real)).messenger?.rooms?.[roomId];
     if (!room) throw new Error('없는 방이에요');
@@ -1030,10 +1034,12 @@ export async function liveSetRoomModel(real, roomId, pick = null) {
         const parsed = chatModelChoiceSchema.safeParse(pick);
         if (!parsed.success) throw new Error('모델 고름을 읽지 못했어요');
         choice = parsed.data;
-        if (!liveModelConnections().some(c => c.id === choice.connectionId)) throw new Error('없는 연결이에요 (Model not found)');
-        const slot = slotOf(choice.connectionId), own = slot ? String((slot.mode === 'vertex' ? slot.vxModel : slot.model) || '') : '';
-        // (a model of its own needs a connection whose key and address we hold: a custom API or Vertex slot)
-        if (choice.model && !(slot && ['custom', 'vertex'].includes(slot.mode))) throw new Error('이 연결에서는 모델을 따로 고를 수 없어요 (A chat needs a chat Model to run on.)');
+        const src = sourceOf(choice.connectionId);
+        if (src ? !stSourceList().some(x => x.id === src) : !liveModelConnections().some(c => c.id === choice.connectionId)) throw new Error('없는 연결이에요 (Model not found)');
+        const slot = slotOf(choice.connectionId), own = slot ? String(slot[modelKey(slot)] || '') : '';
+        if (src && !choice.model) throw new Error('모델을 골라 주세요');
+        // (a model of its own needs a connection we can name a model on: a SillyTavern source, a custom API or Vertex)
+        if (choice.model && !(slot && OWN_MODES.includes(slot.mode))) throw new Error('이 연결에서는 모델을 따로 고를 수 없어요 (A chat needs a chat Model to run on.)');
         if (choice.model && own === choice.model) choice = { connectionId: choice.connectionId };
     }
     const chat = roomChat(room), previous = chat.connectionId ? (readChatModelOverride(chat) ?? { connectionId: chat.connectionId }) : null;
@@ -1045,12 +1051,15 @@ export async function liveSetRoomModel(real, roomId, pick = null) {
 // (a reply in a room with a model of its own goes there; with none, to the draft model as before)
 async function askRoom(real, roomId, input, how) {
     const room = liveWorld(real)?.messenger?.rooms?.[roomId], chat = room ? roomChat(room) : null;
-    const id = chat?.connectionId && liveModelConnections().some(c => c.id === chat.connectionId) ? chat.connectionId : '';
+    const id = chat?.connectionId && (sourceOf(chat.connectionId) || liveModelConnections().some(c => c.id === chat.connectionId)) ? chat.connectionId : '';
+    // (the thinking level set for this room, or for Orbit as a whole; else what the caller asks for)
+    const level = liveReasoning(real, roomId).effort;
+    if (level) how = { ...how, effort: level === 'auto' ? '' : level };
     if (!id) return askDraft(input, how);
     const slot = slotOf(id), override = readChatModelOverride(chat);
-    if (slot && override && ['custom', 'vertex'].includes(slot.mode)) {
+    if (slot && override && OWN_MODES.includes(slot.mode)) {
         // (Marinara's applyChatModelOverride: the override's model on that connection's key and endpoint)
-        const conn = applyChatModelOverride({ ...slot, id }, override), t = { ...slot, [slot.mode === 'vertex' ? 'vxModel' : 'model']: conn.model, ...(conn.maxTokensOverride ? { max: conn.maxTokensOverride } : {}) };
+        const conn = applyChatModelOverride({ ...slot, id }, override), t = { ...slot, [modelKey(slot)]: conn.model, ...(conn.maxTokensOverride ? { max: conn.maxTokensOverride } : {}) };
         const out = await callConn(t, how.system || '', input, Math.max(256, Number(how.maxTokens) || Number(t.max) || 16000), how.effort || '', true, false, how.signal || null, how.temperature ?? null, how.topP ?? null, how.meta || null);
         if (!out) throw new Error('모델이 빈 답을 돌려줬어요');
         return out;
@@ -1092,4 +1101,32 @@ export async function liveSwitchPersona(avatarId) {
     const P = await import('/scripts/personas.js');
     await P.setUserAvatar(id);
     return true;
+}
+
+// ---- 연결 종류와 모델 불러오기 (실리태번이 가진 모든 연결 종류를, 실리태번에 넣어 둔 키와 설정 그대로)
+//   liveSources() → [{ id, name }] (실리태번의 API 고르기에 있는 것 전부) · liveSourceModels(연결 종류 id) → [{ id, name }] (모델을 불러와요)
+//   방의 모델로 고를 때: liveSetRoomModel(real, 방 id, { connectionId: 'source:<연결 종류 id>', model: '<모델 id>', name? })
+export const liveSources = () => stSourceList();
+export const liveSourceModels = source => stSourceModels(source);
+// ---- 추론 레벨 (모델이 생각하는 정도): 방마다 정하거나 Orbit 전체에 정해요. 마리나라의 chatParameters.reasoningEffort 자리
+//   값: '' (안 정함: 방은 Orbit 전체 값을, Orbit 전체는 원래대로 'low'를 써요) · 'auto' (모델의 기본값) · 'min' · 'low' · 'medium' · 'high' · 'max'
+//   liveReasoning(real, 방 id '') → { effort (실제로 쓰는 값), room (방에 정한 값), all (Orbit 전체 값), options }
+//   liveSetReasoning(real, 방 id | '' (Orbit 전체), 값)
+export const REASONING_LEVELS = ['auto', 'min', 'low', 'medium', 'high', 'max'];
+export function liveReasoning(real, roomId = '') {
+    const w = liveWorld(real), room = roomId ? w?.messenger?.rooms?.[roomId] : null;
+    const ok = v => (REASONING_LEVELS.includes(v) ? v : ''), mine_ = ok(room?.chatParameters?.reasoningEffort), all = ok(w?.presence?.meta?.reasoningEffort);
+    return { effort: mine_ || all, room: mine_, all, options: REASONING_LEVELS };
+}
+export async function liveSetReasoning(real, roomId = '', effort = '') {
+    const w = liveWorld(mine(real)), v = String(effort || '');
+    if (v && !REASONING_LEVELS.includes(v)) throw new Error('추론 레벨은 auto · min · low · medium · high · max 가운데 하나예요');
+    if (roomId) {
+        const room = w.messenger?.rooms?.[roomId];
+        if (!room) throw new Error('없는 방이에요');
+        if (v) room.chatParameters = { ...(room.chatParameters || {}), reasoningEffort: v };
+        else if (room.chatParameters) { delete room.chatParameters.reasoningEffort; if (!Object.keys(room.chatParameters).length) delete room.chatParameters; }
+    } else { const meta = presenceOf(real).meta; if (v) meta.reasoningEffort = v; else delete meta.reasoningEffort; }
+    await saveMeta();
+    return liveReasoning(real, roomId);
 }

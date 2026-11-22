@@ -1602,3 +1602,32 @@ test('연결 목록: 이름은 모델 이름이에요. 확장 안쪽의 칸 이�
     assert.deepEqual(rows, [{ id: 'dr', name: 'draft-model', model: 'draft-model', provider: 'custom' }, { id: 'ai', name: 'ai-model', model: 'ai-model', provider: 'custom' }]);
     assert.doesNotMatch(JSON.stringify([rows, G.liveConnections()]), /초안|기능/);
 });
+test('실리태번의 연결 종류를 그대로: 종류 · 모델을 불러와서 방의 모델로 고르고, 그 연결로 답장이 가요', async () => {
+    const c = world(), id = c.room.id;
+    assert.deepEqual(G.liveSources().map(x => x.id), ['openrouter', 'claude']);
+    assert.deepEqual(await G.liveSourceModels('claude'), [{ id: 'claude-a', name: 'claude A' }]);
+    await assert.rejects(G.liveSetRoomModel(c.real, id, { connectionId: 'source:claude' }), /모델을 골라/);
+    await assert.rejects(G.liveSetRoomModel(c.real, id, { connectionId: 'source:nope', model: 'x' }), /없는 연결/);
+    assert.deepEqual((await G.liveSetRoomModel(c.real, id, { connectionId: 'source:claude', model: 'claude-a' })).current, { connectionId: 'source:claude', model: 'claude-a' });
+    send(c, '일어났냐'); T.conn = []; T.replies = [{ state: '집', reply: ['방금'], does: [] }];
+    await G.liveGo(c.real);
+    assert.deepEqual([T.conn[0].t.mode, T.conn[0].t.source, T.conn[0].t.stModel], ['source', 'claude', 'claude-a']);
+    assert.equal(c.room.messages.at(-1).text, '방금');
+});
+test('추론 레벨: 방마다 정하거나 Orbit 전체에 정해요. 정하면 답장 요청이 그 레벨로 가요', async () => {
+    const c = world(), id = c.room.id;
+    assert.deepEqual(G.liveReasoning(c.real, id), { effort: '', room: '', all: '', options: ['auto', 'min', 'low', 'medium', 'high', 'max'] });
+    await G.liveSetReasoning(c.real, '', 'medium');
+    assert.equal(G.liveReasoning(c.real, id).effort, 'medium');
+    await G.liveSetReasoning(c.real, id, 'high');
+    assert.deepEqual([G.liveReasoning(c.real, id).effort, G.liveReasoning(c.real, id).room, G.liveReasoning(c.real, id).all], ['high', 'high', 'medium']);
+    await assert.rejects(G.liveSetReasoning(c.real, id, 'huge'), /추론 레벨/);
+    const seen = [];
+    T.ask = async (input, o) => { seen.push(o.effort); return JSON.stringify({ state: '집', reply: ['응'], does: [] }); };
+    try {
+        send(c, '하나'); await G.liveGo(c.real);
+        await G.liveSetReasoning(c.real, id, 'auto'); send(c, '둘'); await G.liveGo(c.real);
+        await G.liveSetReasoning(c.real, id, ''); await G.liveSetReasoning(c.real, '', ''); send(c, '셋'); await G.liveGo(c.real);
+    } finally { delete T.ask; }
+    assert.deepEqual(seen, ['high', '', 'low']);
+});

@@ -17,6 +17,8 @@ export function connSettings(which) {
     t.fmt ??= '';    // custom API wire format: '' = guess from the address, 'openai', 'anthropic'
     t.effort ??= ''; // thinking effort the user fixed for this connection: '' = whatever the job asks for
     t.vxLocation ??= ''; t.vxModel ??= 'gemini-2.5-flash';
+    // mode 'source': any chat-completion source SillyTavern has, with SillyTavern's own keys and settings for it
+    t.source ??= ''; t.stModel ??= '';
     delete t.vxJson; // keys now live in SillyTavern only
     // the old default was us-central1; move untouched settings to global once
     if (!t.vxLocV2) { if (t.vxLocation === 'us-central1') t.vxLocation = 'global'; t.vxLocV2 = true; }
@@ -37,9 +39,10 @@ export const apiFormat = t => t.fmt === 'anthropic' || t.fmt === 'openai' ? t.fm
 //     temperature, maxTokens, reasoningEffort, usage: { promptTokens, completionTokens, reasoningTokens, cachedPromptTokens }, finishReason, durationMs }
 // (none: what each API used before — 0.3, or the API's own for the Anthropic format)
 export async function callConn(t, system, prompt, maxTokens, effort = '', force = false, keepSystem = false, signal = null, temperature = null, topP = null, meta = null) {
-    const began = Date.now(), note = raw => { if (meta) Object.assign(meta, { raw: String(raw ?? ''), model: String((t.mode === 'vertex' ? t.vxModel : t.model) || meta.model || ''), provider: t.mode === 'vertex' ? 'vertex' : apiFormat(t) === 'anthropic' ? 'anthropic' : 'openai-compatible', temperature: typeof temperature === 'number' ? temperature : null, maxTokens, reasoningEffort: e || null, durationMs: Date.now() - began }); return raw; };
+    const began = Date.now(), note = raw => { if (meta) Object.assign(meta, { raw: String(raw ?? ''), model: String((t.mode === 'vertex' ? t.vxModel : t.mode === 'source' ? t.stModel : t.model) || meta.model || ''), provider: t.mode === 'vertex' ? 'vertex' : t.mode === 'source' ? String(t.source || '') : apiFormat(t) === 'anthropic' ? 'anthropic' : 'openai-compatible', temperature: typeof temperature === 'number' ? temperature : null, maxTokens, reasoningEffort: e || null, durationMs: Date.now() - began }); return raw; };
     const e = force ? effort : (t.effort || effort);
     if (t.mode === 'vertex') return stripThink(note(await callVertex(t, system, prompt, maxTokens, e, signal, temperature, topP, meta)));
+    if (t.mode === 'source') return stripThink(note(await callStSource(t, system, prompt, maxTokens, e, signal, temperature, topP, meta)));
     // the instructions go at the top of the first message instead of the system part: some relays drop the system part
     // without a word, and the model then answers the bare request (a digest taken for "write the next section").
     // keepSystem: 규칙은 시스템 메시지로 is on, so the user asked for the real system part
@@ -47,7 +50,9 @@ export async function callConn(t, system, prompt, maxTokens, effort = '', force 
         const turns = turnsOf(prompt);
         if (turns.length) { turns[0] = { ...turns[0], content: `[INSTRUCTIONS]\n${system}\n[/INSTRUCTIONS]\n\n${turns[0].content}` }; prompt = turns; system = ''; }
     }
-    return stripThink(note(apiFormat(t) === 'anthropic' ? await callAnthropic(t, system, prompt, maxTokens, e, signal, temperature, topP, meta) : await callOpenAICompat(t, system, prompt, maxTokens, e, signal, temperature, topP, meta)));
+    // (the levels SillyTavern names — auto · min · low · medium · high · max — in each API's own words)
+    const own = apiFormat(t) === 'anthropic' ? ({ auto: '', min: 'low' }[e] ?? e) : ({ auto: '', min: 'minimal', max: 'high' }[e] ?? e);
+    return stripThink(note(apiFormat(t) === 'anthropic' ? await callAnthropic(t, system, prompt, maxTokens, own, signal, temperature, topP, meta) : await callOpenAICompat(t, system, prompt, maxTokens, own, signal, temperature, topP, meta)));
 }
 
 // prompt: one user message, or a whole conversation [{ role: 'user' | 'assistant', content }] (압축 작업실).
@@ -275,6 +280,75 @@ async function callVertexAt(t, loc, system, prompt, maxTokens, job = '', signal 
     return String(j?.choices?.[0]?.message?.content || '');
 }
 
+// --- Any chat-completion source SillyTavern has (OpenAI, Claude, OpenRouter, Google AI Studio, DeepSeek, …), through
+// SillyTavern's own server with the key and the settings SillyTavern holds for that source. Nothing is asked again here:
+// the request is built by SillyTavern's own createGenerationParameters (its proxy, custom URL, Azure, Vertex and
+// provider fields as they are set there), and only what this request decides is put over it.
+
+// the sources SillyTavern lists in its own API picker → [{ id, name }]
+export function stSourceList() {
+    return [...document.querySelectorAll('#chat_completion_source option')].map(o => ({ id: o.value, name: String(o.textContent || o.value).trim() })).filter(x => x.id);
+}
+export const stSourceName = id => stSourceList().find(x => x.id === id)?.name || String(id || '');
+// what SillyTavern's own status call sends for a source (openai.js getStatusOpen)
+function stStatusBody(source, o) {
+    const data = { reverse_proxy: o.reverse_proxy, proxy_password: o.proxy_password, chat_completion_source: source };
+    if (source === 'custom') { data.custom_url = o.custom_url; data.custom_include_headers = o.custom_include_headers; }
+    if (source === 'azure_openai') { data.azure_base_url = o.azure_base_url; data.azure_deployment_name = o.azure_deployment_name; data.azure_api_version = o.azure_api_version; }
+    if (source === 'siliconflow') data.siliconflow_endpoint = o.siliconflow_endpoint;
+    if (source === 'minimax') data.minimax_endpoint = o.minimax_endpoint;
+    if (source === 'workers_ai') data.workers_ai_account_id = o.workers_ai_account_id;
+    if (source === 'pollinations') data.pollinations_endpoint = o.pollinations_endpoint;
+    return data;
+}
+// the models of a source → [{ id, name }]: asked from the provider through SillyTavern (its /status call); a source that
+// has no list call (Claude, Vertex, …) gives the models SillyTavern lists in its own picker for it
+const ST_SELECT = { makersuite: 'google' };
+export async function stSourceModels(source) {
+    const src = String(source || '');
+    if (!src) throw new Error('연결 종류를 골라 주세요');
+    const fromPage = () => [...document.querySelectorAll(`#model_${ST_SELECT[src] || src}_select option`)].map(o => ({ id: o.value, name: String(o.textContent || o.value).trim() })).filter(x => x.id);
+    const noList = ['claude', 'ai21', 'vertexai', 'perplexity', 'zai', 'minimax'];
+    let rows = [];
+    if (!noList.includes(src)) {
+        try {
+            const r = await fetch('/api/backends/chat-completions/status', { method: 'POST', headers: ctx().getRequestHeaders(), body: JSON.stringify(stStatusBody(src, ctx().chatCompletionSettings || {})) });
+            const j = r.ok ? await r.json() : null, list = Array.isArray(j?.data) ? j.data : Array.isArray(j?.data?.data) ? j.data.data : [];
+            rows = list.map(m => ({ id: String(m?.id || ''), name: String(m?.name || m?.id || '') })).filter(x => x.id);
+        } catch { /* the picker's own list below */ }
+    }
+    if (!rows.length) rows = fromPage();
+    if (!rows.length) throw new Error('모델 목록을 받지 못했어요. 실리태번의 API 연결에서 이 연결의 키를 넣었는지 확인해 주세요');
+    return [...new Map(rows.map(x => [x.id, x])).values()];
+}
+// one request to a source. effort: '' (the source's own default) | min | low | medium | high | max
+export async function callStSource(t, system, prompt, maxTokens, effort = '', signal = null, temperature = null, topP = null, meta = null) {
+    const source = String(t.source || ''), model = String(t.stModel || '').trim();
+    if (!source) throw new Error('연결 종류를 골라 주세요 (⚙ 설정 → AI 모델)');
+    if (!model) throw new Error('모델을 골라 주세요 (⚙ 설정 → AI 모델 → 모델 불러오기)');
+    const O = await import('/scripts/openai.js');
+    if (typeof O.createGenerationParameters !== 'function') throw new Error('이 실리태번 버전에서는 이 연결 방식을 쓸 수 없어요 (실리태번을 최신으로 올려 주세요)');
+    const messages = [...(system ? [{ role: 'system', content: system }] : []), ...turnsOf(prompt)];
+    const data = await O.createGenerationParameters({ ...O.oai_settings, chat_completion_source: source, stream_openai: false, n: 1, bias_preset_selected: '', enable_web_search: false, request_images: false, function_calling: false }, model, 'quiet', messages);
+    // (what the role-play preset tunes is not this request's: only the connection's own fields stay)
+    for (const k of ['frequency_penalty', 'presence_penalty', 'top_k', 'min_p', 'repetition_penalty', 'top_a', 'stop', 'logit_bias', 'logprobs', 'assistant_prefill', 'n', 'tools', 'tool_choice', 'verbosity', 'seed', 'top_p']) delete data[k];
+    Object.assign(data, { stream: false, max_tokens: maxTokens, temperature: typeof temperature === 'number' ? temperature : 0.3, reasoning_effort: effort || 'auto', include_reasoning: !!meta, ...(topPOf(topP) !== undefined ? { top_p: topPOf(topP) } : {}) });
+    const r = await fetch('/api/backends/chat-completions/generate', { method: 'POST', headers: ctx().getRequestHeaders(), signal, body: JSON.stringify(data) });
+    const body = await r.text();
+    let j = null;
+    try { j = JSON.parse(body); } catch { /* not JSON */ }
+    const msg = j?.error?.message || j?.message || (typeof j?.error === 'string' ? j.error : '') || body.slice(0, 200);
+    if (!r.ok || j?.error) throw new Error(`${stSourceName(source)} 오류 ${r.status}${msg && msg !== 'true' ? `: ${String(msg).slice(0, 200)}` : ' · 실리태번 서버 창에 자세한 내용이 있어요'}`);
+    // (SillyTavern's server hands most sources back in the OpenAI shape; Claude's own and Google's own are read too)
+    const m = j?.choices?.[0]?.message, parts = Array.isArray(j?.content) ? j.content : [];
+    const out = typeof m?.content === 'string' ? m.content : Array.isArray(m?.content) ? m.content.map(p => p?.text || '').join('')
+        : parts.length ? parts.filter(b => b?.type === 'text').map(b => b.text || '').join('')
+            : String(j?.candidates?.[0]?.content?.parts?.filter(p => !p?.thought).map(p => p?.text || '').join('') || j?.choices?.[0]?.text || '');
+    if (meta) Object.assign(meta, { thinking: [m?.reasoning_content, m?.reasoning, parts.filter(b => b?.type === 'thinking').map(b => b.thinking || '').join('\n\n')].find(v => typeof v === 'string' && v.trim()) || '', finishReason: j?.choices?.[0]?.finish_reason || j?.stop_reason || null, usage: j?.usage ? { promptTokens: j.usage.prompt_tokens ?? j.usage.input_tokens ?? null, completionTokens: j.usage.completion_tokens ?? j.usage.output_tokens ?? null, reasoningTokens: j.usage.completion_tokens_details?.reasoning_tokens ?? null, cachedPromptTokens: null } : null });
+    if (!String(out).trim()) throw new Error('모델이 빈 답을 돌려줬어요');
+    return String(out);
+}
+
 // ---- refusals and blocks: a refusal is never saved as a section; a blocked request goes to the stand-in model
 
 // a stop by the provider shows in the errors our own calls throw (Vertex's finish or block reason, Anthropic's refusal,
@@ -319,7 +393,8 @@ async function viaFallback(e, from, prompt, opts) {
 
 // the draft model writes text that may go into the archive (compression drafts); 'same' = not set
 export const draftSettings = () => connSettings('dr');
-export const draftReady = () => ['custom', 'vertex'].includes(draftSettings().mode);
+export const OWN_MODES = ['custom', 'vertex', 'source'];
+export const draftReady = () => OWN_MODES.includes(draftSettings().mode);
 // timeout (ms, optional): a request that hasn't answered by then is given up (its late answer is not used), so a stuck call
 // doesn't hold the phone's work for good. Not passed by compression, which may think for long
 export async function askDraft(prompt, opts = {}) {
@@ -342,11 +417,11 @@ export const askCompress = (prompt, { system = '', guard = null, keepSystem = fa
     const e = compressEffort(), t = draftSettings();
     return askDraft(prompt, { system, guard, keepSystem, maxTokens: Math.max(32000, Number(t.max) || 0), effort: e === 'conn' ? '' : e, force: e !== 'conn' });
 };
-export const drLabel = () => { const t = draftSettings(); return t.mode === 'custom' ? (t.model || '커스텀 API') : t.mode === 'vertex' ? (t.vxModel || 'Vertex') : '없음'; };
+export const drLabel = () => { const t = draftSettings(); return t.mode === 'source' ? (t.stModel || stSourceName(t.source)) : t.mode === 'custom' ? (t.model || '커스텀 API') : t.mode === 'vertex' ? (t.vxModel || 'Vertex') : '없음'; };
 
 export const trLabel = () => {
     const t = trSettings();
-    return t.mode === 'custom' ? `커스텀 · ${t.model || '모델 없음'}` : t.mode === 'vertex' ? `Vertex · ${t.vxModel || '모델 없음'}` : aiLabel();
+    return t.mode === 'source' ? `${stSourceName(t.source)} · ${t.stModel || '모델 없음'}` : t.mode === 'custom' ? `커스텀 · ${t.model || '모델 없음'}` : t.mode === 'vertex' ? `Vertex · ${t.vxModel || '모델 없음'}` : aiLabel();
 };
 
 // Everything AI here only drafts or checks: results land in a box or a form, never straight in the archive.
@@ -370,7 +445,7 @@ async function askAIOnce(prompt, { system = '', maxTokens = 0, effort = '', forc
     const max = Math.max(64, Number(maxTokens) || Number(g.aiMaxTokens) || 8192);
     let out;
     const a = connSettings('ai');
-    if (a.mode === 'custom' || a.mode === 'vertex') {
+    if (OWN_MODES.includes(a.mode)) {
         out = await callConn(a, system, prompt, max, effort, force, keepSystem, signal, temperature, topP, meta);
     } else if (g.aiProfile) {
         const p = aiProfiles().find(x => x.id === g.aiProfile);
@@ -395,6 +470,7 @@ export const askFix = (prompt, { system = '', maxTokens = 16000 } = {}) => askAI
 export const aiLabel = () => {
     const g = globalSettings();
     const a = connSettings('ai');
+    if (a.mode === 'source') return `${stSourceName(a.source)} · ${a.stModel || '모델 없음'}`;
     if (a.mode === 'custom') return `커스텀 · ${a.model || '모델 없음'}`;
     if (a.mode === 'vertex') return `Vertex · ${a.vxModel || '모델 없음'}`;
     const p = g.aiProfile && aiProfiles().find(x => x.id === g.aiProfile);
