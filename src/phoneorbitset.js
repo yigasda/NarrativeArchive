@@ -97,7 +97,7 @@ const HELP = {
 };
 // 대화 명령(마리나라 CONVERSATION_COMMANDS 중 패키지 없이 늘 뜨는 것. 패키지가 있어야 뜨는 것은 docs/MARINARA-PORT.md)
 const COMMANDS = [['schedule', '스케줄 갱신', '캐릭터가 자신의 현재 상태와 활동을 바꿀 수 있게 합니다.'], ['crosspost', '교차 게시', '캐릭터가 메시지를 다른 공유 채팅으로 돌릴 수 있게 합니다.'], ['memories', '기억', '캐릭터가 다른 캐릭터를 위한 기억을 만들 수 있게 합니다.'], ['scenes', '장면', '캐릭터가 대화에서 몰입형 장면을 시작할 수 있게 합니다.'], ['influence', '영향', '캐릭터가 연결된 채팅에 일회성 영향을 보낼 수 있게 합니다.'], ['notes', '노트', '캐릭터가 연결된 채팅에 오래 남는 노트를 저장할 수 있게 합니다.'], ['reactions', '반응', '캐릭터가 이모지 배지로 메시지에 반응할 수 있게 합니다.']];
-const RS = { auto: '자동 (모델의 기본값)', min: '최소', low: '낮게', medium: '보통', high: '높게', max: '최대' }, RSO = Object.entries(RS);   // 추론 레벨 (liveReasoning의 값)
+const RS = { none: '끔', low: '낮게', medium: '보통', high: '높게', xhigh: '매우 높게', maximum: '최대' };   // 추론 레벨 (liveReasoning의 value → 화면 이름)
 const HOURS = Array.from({ length: 12 }, (_, h) => [String(h), h ? `오전 ${h}시` : '오전 12시 (자정)']);
 
 // 실리 칸 목록(src/phonestconn.js) → 시트 부품. API 연결 화면과 실리 팝업이 같이 써요. T: { open (펼친 고르기), v (펼친 서랍), scQ (고르기 검색) }
@@ -171,9 +171,9 @@ export function orbitSetPage(T, face) {
             + `<div class="ot_g3">${[['upload', 'JSONL', 'JSONL로 내보내기'], ['file-text', '텍스트', '텍스트로 내보내기'], ['download', '가져오기', '분기 가져오기 (.jsonl)'], ['hash', 'Markdown', 'Markdown으로 내보내기'], ['book-open', '스토리', '열고, 공유하고, 인쇄할 수 있는 꾸민 HTML 스토리로 내보내기'], ['chart-column', '통계', '채팅 통계']].map(([k, l, a]) => soon(l, k, 'ot_gb', { aria: a, size: 14 })).join('')}${soon('범위 내보내기', 'list-checks', 'ot_gb w3', { aria: '첫 메시지와 마지막 메시지를 골라 그 부분만 내보내기', size: 14 })}</div>`
             + cd(`<div class="os_pp"><span class="ot_tile">${li('check', 15, 2.4)}</span><span class="ot_x"><span class="os_l">${esc(T.title)}</span><span class="os_d">현재 분기</span></span>${ib('pencil', '분기 이름 변경')}${ib('trash-2', '분기 삭제')}</div>`),
         // 연결 (ConnectionSection + 고르는 창의 문)
-        conn: () => { const M = T.conns[0] || { name: '', sub: '' }, has = !!M.name && M.name !== '모델 없음';
-            return H + cap('모델') + cd(`<div role="button" tabindex="0" class="os_rw ot_t na_os_sel" data-k="connOpen" aria-label="모델"><span class="ot_x"><span class="os_l">${has ? esc(M.name) : '설정된 모델 없음'}</span><span class="os_d">${has ? `메인을 따름${M.sub ? ` · ${esc(M.sub)}` : ''}` : '아직 메인 모델이 없습니다'}</span></span><i class="os_ch">${li('chevron-down', 16)}</i></div>`)
-                + (has ? hp('메인을 바꾸면 이 채팅도 바뀝니다.') : '')
+        conn: () => { const M = T.cur || T.conns[0] || { name: '', sub: '' }, has = !!M.name && M.name !== '모델 없음';   // T.cur: 이 방이 지금 쓰는 모델 { name, sub, own (이 채팅만 따로 고름) }
+            return H + cap('모델') + cd(`<div role="button" tabindex="0" class="os_rw ot_t na_os_sel" data-k="connOpen" aria-label="모델"><span class="ot_x"><span class="os_l">${has ? esc(M.name) : '설정된 모델 없음'}</span><span class="os_d">${has ? `${M.own ? '이 채팅만' : '메인을 따름'}${M.sub ? ` · ${esc(M.sub)}` : ''}` : '아직 메인 모델이 없습니다'}</span></span><i class="os_ch">${li('chevron-down', 16)}</i></div>`)
+                + (has ? hp(M.own ? '이 채팅만 따로 고른 모델입니다. 빠른 전환기의 \'기본값 사용\'으로 메인을 다시 따릅니다.' : '메인을 바꾸면 이 채팅도 바뀝니다.') : '')
                 + (T.open === 'connOpen' ? cap('지금 · 메인을 따름') + cd(pad(`<div class="ot_r">${soon('기본값 사용', 'house')}<i class="os_sp"></i>${ib('refresh-cw', '모델 목록 새로 고침')}</div>`), pad(`<div class="os_q ot_q0">${li('search', 16)}<div class="os_qi na_os_in" data-k="connQ" contenteditable="true" role="textbox" enterkeyhint="search" spellcheck="false" data-ph="모델 검색 또는 ID 붙여넣기…" aria-label="모든 모델 검색 또는 모델 ID 붙여넣기">${esc(g('connQ', ''))}</div></div>`))
                     + cap('모든 모델') + ((l => (l.length ? cd(...l.map((c, i) => `<div role="button" tabindex="0" class="os_rw ot_t na_ob_soon" aria-label="${esc(c.name)}"><span class="ot_x"><span class="os_l">${esc(c.name)}</span>${c.sub ? `<span class="os_d">${esc(c.sub)}</span>` : ''}</span>${i === 0 && !g('connQ', '') ? li('check', 16, 2.4) : ''}${ib('star', `${c.name} 즐겨찾기`)}</div>`)) : none(T.conns.some(c => c.name && c.name !== '모델 없음') ? '여기에는 아직 모델이 없습니다.' : '아직 모델이 없습니다. 계정을 추가하면 생깁니다.')))(T.conns.filter(c => c.name && c.name !== '모델 없음' && (!g('connQ', '') || `${c.name} ${c.sub}`.toLowerCase().includes(String(g('connQ', '')).toLowerCase())))))
                     + cd(`<button type="button" class="os_rw na_ob_soon" aria-label="계정 추가">${li('plus', 18)}<span class="os_l">계정 추가</span></button>`) : '')
@@ -189,7 +189,10 @@ export function orbitSetPage(T, face) {
                         S.mode === 'vertex' ? inp(`vxLocation:${k}`, '지역', S.vxLocation, '비우면 실리 설정 따라', o()) : '',
                         model, S.on ? pad(load) : '']))
                         + (!open ? '' : S.mode === 'source' ? hp('키와 주소는 실리의 API 연결에 넣어 둔 것을 그대로 씁니다.') : S.mode === 'custom' ? hp('키는 이 기기에만 저장됩니다.') : ''); }).join('')
-                + (T.rs ? cap('추론 레벨') + cd(sel('rsRoom', '이 채팅', [['', `Orbit 전체 값 따름 (${RS[T.rs.all || 'low']})`], ...RSO], '', 'na_os_rs', T.rs.room), sel('rsAll', 'Orbit 전체', [['', '안 정함 (낮게)'], ...RSO], '', 'na_os_rs', T.rs.all)) + hp(`모델이 답하기 전에 생각하는 정도입니다. 지금 이 채팅은 <b>${RS[T.rs.effort || 'low']}</b>을(를) 씁니다.`) : '')
+                // 추론 레벨: 이 방의 모델이 받는 레벨만 칩으로 (T.rs.choices, 마리나라의 규칙). 모델이 레벨을 안 받으면 칩을 그리지 않아요
+                + (T.rs ? cap('추론 레벨') + (T.rs.choices.length ? cd(...[['rsRoom', '이 채팅', T.rs.room, `전체 값 따름`], ['rsAll', 'Orbit 전체', T.rs.all, '안 정함']].map(([k, l, cur, none0]) => pad(`<div class="os_d oc_rl">${l}</div><div class="ot_r ot_w oc_pk oc_rs">${[['', none0], ...T.rs.choices.map(c => [c.value, RS[c.value] || c.label || c.value])].map(([v, t]) => `<button type="button" class="ot_chip${v === cur ? ' strong' : ''} na_os_rs" data-k="${k}" data-v="${esc(v)}" aria-pressed="${v === cur}">${esc(t)}</button>`).join('')}</div>`)))
+                    + hp(T.rs.effort ? `지금 이 채팅은 <b>${RS[T.rs.effort] || esc(T.rs.effort)}</b>을(를) 씁니다${T.rs.sent && T.rs.sent !== T.rs.effort ? ` (모델에는 ${esc(T.rs.sent)}(으)로 보냅니다)` : ''}.` : '아직 정하지 않았습니다.')
+                    : hp(`${T.rs.model ? `<b>${esc(T.rs.model)}</b>은(는)` : '이 모델은'} 추론 레벨을 받지 않습니다.`)) : '')
                 + cap('연결 설정') + cd(nav('stconn', 'API 연결', '키 · 주소 · 모델 · 연결 · 테스트 메시지', 'chevron-right')); },
         // 실리의 API 연결 (1-7): src/phonestconn.js가 실리의 진짜 칸을 읽어 준 목록(T.st)을 실리 순서대로 그려요. 소스마다 화면을 따로 짜지 않아요
         stconn: () => (T.st ? hp('실리의 API 연결 창을 그대로 조종합니다. 여기서 바꾸면 실리의 연결이 바뀝니다(롤플레이도 같은 연결을 씁니다). 키는 실리에만 저장됩니다.') + scGroup(T, T.st, false) : none('실리의 API 연결 창을 찾지 못했어요.')),
