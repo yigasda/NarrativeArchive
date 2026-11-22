@@ -1646,7 +1646,7 @@ test('추론 레벨: 칩은 실제로 되는 것만. 우리 커스텀 호출은 
     T.slots = { dr: { mode: 'vertex', vxModel: 'gemini-2.5-pro' } };
     assert.deepEqual(names(R()), ['최소', '낮게', '보통', '높게', '최대']);                                  // (끌 수 없어요: 가장 낮은 것은 최소)
     T.slots = { dr: { mode: 'vertex', vxModel: 'gemini-3.1-pro' } };
-    assert.deepEqual(vals(R()), ['none=low', 'high=high']);                                                  // (실리는 Gemini 3 Pro에 low · high 둘만 보내요)
+    assert.deepEqual(vals(R()), ['low=low', 'high=high']);                                                   // (실리는 Gemini 3 Pro에 low · high 둘만 보내요)
     T.slots = { dr: { mode: 'vertex', vxModel: 'gemini-3.8-flash' } };
     assert.deepEqual(names(R()), ['최소', '낮게', '보통', '높게']);
     for (const m of ['gemini-4-carbon', 'gemini-4-neon', 'gemini-2.0-flash']) {                              // (실리 1.19.1은 이 모델들에 레벨을 안 보내요)
@@ -1658,6 +1658,11 @@ test('추론 레벨: 칩은 실제로 되는 것만. 우리 커스텀 호출은 
     // ── 실리 연결 방식: 연결 종류마다 달라요
     const src = (source, stModel) => { T.slots = { dr: { mode: 'source', source, stModel } }; return R(); };
     assert.deepEqual(names(src('claude', 'claude-opus-4-8')), ['낮게', '보통', '높게', '최대']);              // (Claude는 끔이 없어요)
+    await G.liveSetReasoning(c.real, id, 'none');                                                            // (끔으로 저장해 둔 방: 실리는 Claude에 끔을 낮게로 보내지만, '낮게'가 켜져 보이면 안 돼요. 안 정함이에요)
+    assert.deepEqual((({ effort, room, send }) => [effort, room, send])(src('claude', 'claude-opus-4-8')), ['', '', '']);
+    assert.ok(!src('claude', 'claude-opus-4-8').roomChoices.some(x => x.value === 'none'));
+    assert.deepEqual((({ effort, send }) => [effort, send])(src('openai', 'gpt-5.5')), ['none', 'none']);    // (꺼지는 연결에서는 그대로 끔)
+    await G.liveSetReasoning(c.real, id, '');
     assert.deepEqual(names(src('claude', 'claude-sonnet-4-6')), ['최소', '낮게', '보통', '높게', '최대']);
     assert.deepEqual([src('claude', 'claude-haiku-5-5').choices, src('claude', 'claude-haiku-5-5').why], [[], 'st']);
     assert.deepEqual(names(src('openai', 'gpt-5.5')), ['끔', '낮게', '보통', '높게']);                        // (실리의 OpenAI 연결은 끔을 "none"으로 보내요)

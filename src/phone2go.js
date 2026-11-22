@@ -1278,9 +1278,13 @@ export function liveReasoning(real, roomId = '') {
         const reach = v => stReach({ via, model, level: v === 'maximum' ? 'max' : v });
         chips = sel => {
             const out = [], at = new Map();
+            // (Off stands for itself only: where it turns thinking off, or where it is a lowest level nothing else gives.
+            //  Where SillyTavern sends it as some other level — Claude: low — it is not that level's chip: an Off stored
+            //  earlier then reads as not set, not as "low")
+            const others = new Set(REASONING_LEVELS.filter(v => v !== 'none').map(reach));
             for (const v of REASONING_LEVELS) {
                 const r = reach(v);
-                if (r === null) continue;
+                if (r === null || (v === 'none' && r !== 'off' && others.has(r))) continue;
                 if (at.has(r)) { if (v === sel) out[at.get(r)].value = v; continue; }
                 at.set(r, out.length); out.push({ value: v, label: r, name: REACH_NAME[r] || r });
             }
