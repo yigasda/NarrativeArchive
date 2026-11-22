@@ -1,4 +1,4 @@
-// Ported from Marinara Engine (https://github.com/Pasta-Devs/Marinara-Engine), at fc0333c:
+// Ported from Marinara Engine (https://github.com/Pasta-Devs/Marinara-Engine), at 32c47a1 (staging, 2026-11-20):
 //   packages/shared/src/constants/providers.ts (the whole file)
 // Copyright (C) 2025-2026 Spicy Marinara. Licensed under the GNU Affero General Public License v3.0 (see /LICENSE).
 // Changes for NarrativeArchive:
@@ -189,7 +189,8 @@ export const PROVIDERS = {
     protocol: "openai_chat",
     name: "OpenRouter",
     defaultBaseUrl: "https://openrouter.ai/api/v1",
-    modelsEndpoint: "/models",
+    // Also lists its decision models (output `decisions`), which the Decision picker offers.
+    modelsEndpoint: "/models?output_modalities=text,decisions",
     supportsStreaming: true,
     usesAuthHeader: true,
     apiKeyHeader: null,
@@ -202,7 +203,7 @@ export const PROVIDERS = {
     name: "NanoGPT",
     defaultBaseUrl: "https://nano-gpt.com/api/v1",
     // Detailed catalog: the plain one omits context_length and max_output_tokens.
-    modelsEndpoint: "/models?detailed=true",
+    modelsEndpoint: "/models?detailed=true&output_modalities=text,decisions",
     supportsStreaming: true,
     usesAuthHeader: true,
     apiKeyHeader: null,

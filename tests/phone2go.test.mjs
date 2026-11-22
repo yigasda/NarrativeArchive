@@ -1618,9 +1618,19 @@ test('추론 레벨: 방의 모델이 받는 레벨만 나와요 (마리나라�
     const c = world(), id = c.room.id, vals = r => r.choices.map(x => `${x.value}=${x.label}`);
     // (모델마다 다른 칩)
     T.slots = { dr: { mode: 'vertex', vxModel: 'gemini-3.8-flash' } };
-    assert.deepEqual(vals(G.liveReasoning(c.real, id)), ['none=null', 'low=low', 'medium=medium', 'high=high']);
-    T.slots = { dr: { mode: 'vertex', vxModel: 'gemini-4-argon' } };
     assert.deepEqual(vals(G.liveReasoning(c.real, id)), ['low=low', 'medium=medium', 'high=high']);       // (끌 수 없는 모델)
+    for (const m of ['gemini-4-argon', 'gemini-4-carbon']) {
+        T.slots = { dr: { mode: 'vertex', vxModel: m } };
+        assert.deepEqual(vals(G.liveReasoning(c.real, id)), ['low=low', 'medium=medium', 'high=high'], m);
+    }
+    for (const m of ['gemini-4-hydrogen', 'gemini-4-neon']) {
+        T.slots = { dr: { mode: 'vertex', vxModel: m } };
+        assert.deepEqual(G.liveReasoning(c.real, id).choices.map(x => x.name), ['낮게', '보통', '높게', '매우 높게'], m);
+    }
+    T.slots = { dr: { mode: 'vertex', vxModel: 'gemini-2.5-flash' } };
+    assert.deepEqual(vals(G.liveReasoning(c.real, id)), ['none=null', 'low=low', 'medium=medium', 'high=high']);
+    T.slots = { dr: { mode: 'vertex', vxModel: 'gemini-3.5-flash-lite' } };                                // (끔 대신 '기본': 제공자의 기본 레벨을 그대로 둬요)
+    assert.deepEqual(G.liveReasoning(c.real, id).choices.map(x => [x.name, x.title || '']), [['기본', '제공자 기본값: Minimal'], ['낮게', ''], ['보통', ''], ['높게', '']]);
     T.slots = { dr: { mode: 'custom', fmt: 'anthropic', model: 'claude-opus-4-7' } };
     assert.deepEqual(vals(G.liveReasoning(c.real, id)), ['none=null', 'low=low', 'medium=medium', 'high=high', 'xhigh=xhigh', 'maximum=max']);
     T.slots = { dr: { mode: 'source', source: 'openai', stModel: 'gpt-4o' } };
@@ -1655,5 +1665,5 @@ test('추론 레벨: 방의 모델이 받는 레벨만 나와요 (마리나라�
         await G.liveSetReasoning(c.real, id, 'none'); send(c, '둘'); await G.liveGo(c.real);
         await G.liveSetReasoning(c.real, id, ''); await G.liveSetReasoning(c.real, '', ''); send(c, '셋'); await G.liveGo(c.real);
     } finally { delete T.ask; delete T.slots; delete T.sources; }
-    assert.deepEqual(seen, ['high', 'none', 'low']);                                                       // (안 정하면 전처럼 low)
+    assert.deepEqual(seen, ['high', 'medium', 'low']);                                                     // (이 모델은 끌 수 없어서 끔은 보통으로 가요. 안 정하면 전처럼 low)
 });
