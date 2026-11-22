@@ -170,7 +170,9 @@ const restOf = m => sumOf(JSON.stringify(m));
 // api: { ping() → { ok }, load(id) → { rev, chat, parts } | null, rev(id) → 수 | null, save(id, { base, chat, parts: { 이름: JSON 글 | null } }) → { rev }
 //        (그사이 다른 곳에서 저장했으면 code 409인 오류), fork(from, to, { chat }) → { rev }, drop(id) }
 // now(): 지금 열린 채팅의 { m (우리 메타), mark (실리가 채팅마다 주는 표시: 분기하면 달라져요) } | null
-export function makeKeep({ api, now }) {
+// synced: { before(m) → 표, after(m, 표) } 플러그인의 것을 받아 m.live에 맞춘 때마다 (받기 · 저장하다 부딪혀 합친 때 둘 다):
+//   before는 맞추기 전에, after는 맞춘 뒤에 불러요 (화면에 알리기 · 먼저 건 말 알림)
+export function makeKeep({ api, now, synced = null }) {
     let cur = null;
     // (채팅을 열 때마다 물어봐요: 잠깐 끊겼다가 돌아올 수 있어요)
     const plugin = () => Promise.resolve().then(() => api.ping()).then(x => !!x?.ok, () => false);
@@ -255,7 +257,8 @@ export function makeKeep({ api, now }) {
         if (!got) return false;
         const server = joinLive(got.parts), mine = new Map(Object.entries(splitLive(m.live)).map(([k, v]) => [k, JSON.stringify(v)]));
         const dirty = mine.size !== st.texts.size || [...mine].some(([k, s]) => st.texts.get(k) !== s);
-        let next = server;
+        let next = server, mark;
+        try { mark = synced?.before?.(m); } catch (err) { console.warn('[narrative-archive] Orbit 맞추기 전', err); }
         if (dirty) {
             // (the same world on both sides: merged against what the two last agreed on. Another world — I began a new
             //  Orbit here meanwhile —: mine is kept whole and goes up over the plugin's)
@@ -267,6 +270,7 @@ export function makeKeep({ api, now }) {
         if (next) into(m.live, next);
         st.rev = got.rev; st.sums = new Map(); st.texts = new Map();
         for (const [name, v] of Object.entries(got.parts)) { const s = JSON.stringify(v); st.sums.set(name, sumOf(s)); st.texts.set(name, s); }
+        if (next) { try { synced?.after?.(m, mark); } catch (err) { console.warn('[narrative-archive] Orbit 맞춘 뒤', err); } }
         return true;
     }
     // (in the same line as the saves: never in the middle of one)

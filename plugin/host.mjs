@@ -34,6 +34,9 @@ export function startAuto({ root, store, bridge = null, schedule = true } = {}) 
         presence: (sid, status) => ask('presence', { sid, status }),
         // 방마다 서버가 돌릴 수 있나
         status: sid => ask('status', { sid }),
+        // 세계 자물쇠: 브라우저 탭이 이 저장에서 답장을 만들려고 해요 → { ok } | { ok: false, by } (일꾼이 쥐고 있어요) · 다 했어요
+        claim: (sid, by) => ask('claim', { sid, by }),
+        release: (sid, by) => ask('release', { sid, by }),
         // 브라우저가 저장했어요 (스케줄러의 "그사이 바뀐 것 없음" 판단이 따라가요)
         wrote: () => { if (live) worker.postMessage({ cmd: 'wrote' }); },
         // (one step at a time, for the tests and for checking by hand: what the scheduler does by itself)

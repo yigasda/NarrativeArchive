@@ -11,7 +11,7 @@ import { askDraft, phone2Clock, aroundBlock, ownerZone, cardBlocks } from './pho
 import { askAI, askCompress, stripThink, isBlocked, SECTION_GUARD, aiProfiles, aiProfileFor, callConn, connSettings, stSourceList, stSourceName, stSourceModels, OWN_MODES, apiFormat, stLevelPayload, draftSettings, draftReady, stSourceTemplate } from './ai.js';
 import { buildKit, putKit } from './phone2kit.js';
 import { profileTemplates, ptWhyKey, levelKey } from './stprofile.js';
-import { keepKept, keepAutoStatus, keepServes } from './phone2keepon.js';
+import { keepKept, keepAutoStatus, keepServes, keepClaim, keepRenew, keepSync } from './phone2keepon.js';
 import { stReach, REACH_NAME } from './phone2stlevel.js';
 import { SCENES_SYS, parseScenes } from './scenes.js';
 import { resolvePhoneProfile, ownerProfileBlock, personaBlock } from './phoneprofile.js';
@@ -43,7 +43,8 @@ import { AI_SYS_DIGEST } from './digest.js';
 import { DIGEST_STATE, digestDue, digestRaw, digestSize, digestHalves, scenesSystem, scenesInput, scenesNote, takeDigest, failDigest, foldChunk, foldRequest, takeFold, failFold } from './phone2digest.js';
 
 // rounds of reflection after one reply at most (messages piled up while only talking: 100 a round)
-export const LIVE_GO = { rounds: 3, replyTokens: 4000, digests: 2 };
+// retryMs: 서버 플러그인의 일꾼이 이 Orbit의 답장을 만드는 중일 때 다시 해 보는 간격
+export const LIVE_GO = { rounds: 3, replyTokens: 4000, digests: 2, retryMs: 5000 };
 const tzOf = p => ownerZone(p)?.tz || 'UTC';
 // the time it is now on a 폰 2 phone: the story's date (the world's dayShift) and the real clock where the owner is.
 // Given to liveMeta as `now`, so the phone's screens and app requests go by a clock that runs
@@ -126,7 +127,25 @@ export function saveLine(save = saveMeta) {
         done: async () => { while (running) await running; if (failed) { const e = failed; failed = null; throw e; } },
     };
 }
+// 세계 자물쇠 (phone2keepon.js keepClaim: 마리나라의 채팅마다 하나뿐인 생성 자물쇠). 서버 플러그인의 일꾼이 이 Orbit에서 답장을
+// 만드는 중이면 브라우저는 만들지 않고 LIVE_GO.retryMs 뒤에 다시 해요(일꾼이 끝내면 그 답장까지 받고 나서). 잡았으면 일꾼이 그사이
+// 쓴 것을 먼저 받아요: 오래된 사본으로 답하지 않아요 (2026-11-22: 화면을 켜자마자 일꾼이 이미 답한 말에 또 답했어요)
+const retrying = new WeakMap();
+function retrySoon(real, onChange) {
+    if (retrying.has(real)) return;
+    const t = setTimeout(() => { retrying.delete(real); if (open(real)) liveGo(real, { onChange }).catch(err => console.warn('[narrative-archive] live go again', err)); }, LIVE_GO.retryMs);
+    t?.unref?.();
+    retrying.set(real, t);
+}
 export async function liveGo(real, { onChange = () => {} } = {}) {
+    const lease = keepKept() && open(real) ? await keepClaim() : null;
+    if (lease && !lease.ok) { retrySoon(real, onChange); return { ran: 0, failed: null, busy: true, server: true }; }
+    try {
+        if (lease) await keepSync();
+        return await goNow(real, onChange, !!lease);
+    } finally { lease?.release(); }
+}
+async function goNow(real, onChange, held) {
     followSchedule(real); await pickResponders(real); holdReplies(real);
     for (const id of Object.keys(liveWorld(real)?.messenger?.rooms || {})) syncUser(real, id);
     const tell = () => { try { onChange(); } catch (err) { console.error('[narrative-archive] live draw', err); } };
@@ -139,7 +158,8 @@ export async function liveGo(real, { onChange = () => {} } = {}) {
         // (what was sent and what came with the answer, kept for the reply it becomes: Marinara's cachedPrompt · thinking · generationInfo)
         // (the room's own model, when one was picked for it in the quick switcher: else the draft model, as before)
         ask: (input, { system, req }) => { asked = { system, input, meta: {} }; return askRoom(real, req?.room, input, { force: true, system, maxTokens: LIVE_GO.replyTokens, effort: 'low', meta: asked.meta, images: req?.images, files: req?.files }); },
-        gather: async job => { await keepUpStory(real, tell); return gatherJob(real, job); },
+        // (a long go keeps the world's lock: the worker lets go of a browser that has said nothing for 5 minutes)
+        gather: async job => { if (held) await keepRenew(); await keepUpStory(real, tell); return gatherJob(real, job); },
         took: (job, got) => { const w = liveWorld(real); if (w && w.id === job.world && got?.said && asked) keepAsked(w, w.messenger?.rooms?.[job.room], job, asked); asked = null; },
         // (an owner with a schedule: the texts carry the schedule's state, not one the model wrote)
         stateFor: job => { if (!activeSchedule(real, job.owner)) return undefined; const p = livePhone(real, job.owner); return stateNow(real, job.owner, { tz: p ? zoneOf(real, p) : '' })?.text || ''; },
@@ -629,8 +649,15 @@ export async function liveAutonomous(real, { now = Date.now() } = {}) {
 const reflecting = new WeakSet();
 export async function liveReflect(real, owner, o = {}) {
     const out = await reflectTalk(real, owner, o);
-    // (then the old talk of the owner's rooms, when it is time: phone2digest.js)
-    try { await liveDigest(real, owner); } catch (err) { console.error('[narrative-archive] live digest', err); }
+    // (then the old talk of the owner's rooms, when it is time: phone2digest.js. The server plugin's worker summarizes after
+    //  its replies too: only one of them at a time, on what the other wrote — the world's lock, then the latest)
+    const lease = keepKept() && open(real) ? await keepClaim() : null;
+    if (lease && !lease.ok) return out;
+    try {
+        if (lease) await keepSync();
+        await liveDigest(real, owner);
+    } catch (err) { console.error('[narrative-archive] live digest', err); }
+    finally { lease?.release(); }
     return out;
 }
 async function reflectTalk(real, owner, { onChange = () => {}, force = false } = {}) {

@@ -33,6 +33,8 @@ const work = await (await import('./work.mjs')).startWork({ root, store, st, sch
 const cmds = {
     presence: ({ sid, status }) => work.presence(sid, status),
     status: ({ sid }) => work.status(sid),
+    claim: ({ sid, by }) => work.claim(sid, by),
+    release: ({ sid, by }) => { work.release(sid, by); return true; },
     wrote: () => { writes += 1; return writes; },
     stop: () => work.stop(),
     // (for the tests and for checking by hand: one step at a time)

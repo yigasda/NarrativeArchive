@@ -7,9 +7,13 @@ import { reseedActivity } from './phone2sched.js';
 
 const PATH = '/api/plugins/narrative-archive';
 const J = JSON.stringify;
-async function http(path, body) {
+// 요청마다 시간 제한: 화면이 꺼질 때 걸린 요청이 끝나지 않고 남아서, 화면을 다시 켰을 때 다음 받기 · 알리기를 막지 않게.
+// 저장 조각을 오가는 요청은 크고 폰에서 느려서 길게 (넘으면 오류: 저장은 다음 저장 때 다시, 서버가 그사이 받았으면 합쳐요)
+export const KEEP_LIMIT = { short: 15_000, store: 60_000 };
+async function http(path, body, ms = KEEP_LIMIT.short) {
     const headers = ctx().getRequestHeaders();
-    const r = await fetch(PATH + path, body === undefined ? { headers } : { method: 'POST', headers, body });
+    const signal = typeof globalThis.AbortSignal?.timeout === 'function' ? globalThis.AbortSignal.timeout(ms) : undefined;
+    const r = await fetch(PATH + path, body === undefined ? { headers, signal } : { method: 'POST', headers, body, signal });
     if (r.ok) return r.json();
     const err = new Error((await r.json().catch(() => ({})))?.error || `Orbit 저장 서버 오류 (${r.status})`);
     err.code = r.status;
@@ -17,16 +21,35 @@ async function http(path, body) {
 }
 const api = {
     ping: () => http('/ping'),
-    load: id => http('/store/load', J({ id })).catch(err => { if (err.code === 404) return null; throw err; }),
+    load: id => http('/store/load', J({ id }), KEEP_LIMIT.store).catch(err => { if (err.code === 404) return null; throw err; }),
     rev: id => http('/store/rev', J({ id })).then(r => (Number.isInteger(r?.rev) ? r.rev : null)),
     // (the parts are JSON texts already: they go into the body as they are)
-    save: (id, { base, chat, parts }) => http('/store/save', `{"id":${J(id)},"base":${J(base ?? null)},"chat":${J(chat || '')},"parts":{${Object.entries(parts).map(([k, s]) => `${J(k)}:${s ?? 'null'}`).join(',')}}}`),
-    fork: (from, to, { chat }) => http('/store/fork', J({ from, to, chat })),
-    drop: id => http('/store/drop', J({ id })),
+    save: (id, { base, chat, parts }) => http('/store/save', `{"id":${J(id)},"base":${J(base ?? null)},"chat":${J(chat || '')},"parts":{${Object.entries(parts).map(([k, s]) => `${J(k)}:${s ?? 'null'}`).join(',')}}}`, KEEP_LIMIT.store),
+    fork: (from, to, { chat }) => http('/store/fork', J({ from, to, chat }), KEEP_LIMIT.store),
+    drop: id => http('/store/drop', J({ id }), KEEP_LIMIT.store),
 };
 const now = () => (hasChat() ? { m: getMeta(), mark: ctx().chatMetadata?.integrity || '' } : null);
 
-export const keep = makeKeep({ api, now });
+// 플러그인의 것을 받아 맞췄을 때마다 (받기 · 저장하다 부딪혀 합친 때 둘 다): 마리나라가 기억하는 방의 움직임을 다시 읽고, 화면에 알려요
+//   'na-live-change' (다시 그리기) · 그사이 캐릭터가 먼저 건 말이 들어왔으면 'na-live-auto', detail: { from: 'server', rooms: [{ room, by: [이름], added, count }] }
+const unseenOf = m => new Map(Object.values(m?.live?.world?.messenger?.rooms || {}).map(r => [r.id, r.autonomousUnreadCount > 0 ? Math.floor(r.autonomousUnreadCount) : 0]));
+const synced = {
+    // (how many messages a character wrote first were unseen in each room before: what the server added shows after)
+    before: m => unseenOf(m),
+    after(m, before = new Map()) {
+        // (what Marinara's tracker remembers of the rooms is read from the rooms again: the messages the server's characters wrote first)
+        for (const roomId of Object.keys(m.live?.world?.messenger?.rooms || {})) { try { reseedActivity(m, roomId); } catch { /* a room gone meanwhile */ } }
+        try { globalThis.document?.dispatchEvent(new globalThis.CustomEvent('na-live-change')); } catch { /* no screen */ }
+        const rooms = [];
+        for (const r of Object.values(m.live?.world?.messenger?.rooms || {})) {
+            const count = r.autonomousUnreadCount > 0 ? Math.floor(r.autonomousUnreadCount) : 0, added = count - (before.get(r.id) || 0);
+            if (added > 0) rooms.push({ room: r.id, by: (Array.isArray(r.autonomousUnreadCharacterIds) ? r.autonomousUnreadCharacterIds : []).map(k => (r.members || []).find(n => String(n || '').trim().toLowerCase() === k) || k), added, count });
+        }
+        if (rooms.length) { try { globalThis.document?.dispatchEvent(new globalThis.CustomEvent('na-live-auto', { detail: { from: 'server', rooms } })); } catch { /* no screen */ } }
+    },
+};
+
+export const keep = makeKeep({ api, now, synced });
 // 지금 채팅의 Orbit 데이터를 다 읽었을 때 끝나는 약속 (플러그인이 없으면 바로)
 export const liveReady = () => keep.ready();
 export const keepState = () => keep.state();
@@ -53,29 +76,46 @@ export async function keepPing() {
     catch { serves = false; }   // (an older plugin without this route, or the plugin gone: as before, the browser does it all)
     return serves;
 }
-// 일꾼이 쓴 것을 받아요 → 바뀌었으면 true (화면에 알려요: 'na-live-change')
+// 일꾼이 쓴 것을 받아요 → 바뀌었으면 true (화면에 알리는 것은 synced.after)
 export async function keepSync() {
     const m = hasChat() ? getMeta() : null;
     if (!m || !keep.kept()) return false;
-    let changed = false;
-    // (how many messages a character wrote first were unseen in each room before: what the server added shows after)
-    const unseen = () => new Map(Object.values(m.live?.world?.messenger?.rooms || {}).map(r => [r.id, r.autonomousUnreadCount > 0 ? Math.floor(r.autonomousUnreadCount) : 0]));
-    const before = unseen();
-    try { changed = await keep.sync(); }
+    try { return await keep.sync(); }
     catch (err) { console.warn('[narrative-archive] Orbit 맞추기', err); return false; }
-    if (!changed) return false;
-    // (what Marinara's tracker remembers of the rooms is read from the rooms again: the messages the server's characters wrote first)
-    for (const roomId of Object.keys(m.live?.world?.messenger?.rooms || {})) { try { reseedActivity(m, roomId); } catch { /* a room gone meanwhile */ } }
-    try { globalThis.document?.dispatchEvent(new globalThis.CustomEvent('na-live-change')); } catch { /* no screen */ }
-    // 그사이 캐릭터가 먼저 건 말이 들어왔어요: 화면이 알림(소리 · 떠 있는 알림 · 브라우저 알림)을 띄울 신호
-    //   'na-live-auto', detail: { from: 'server', rooms: [{ room, by: [이름], added, count }] }
-    const rooms = [];
-    for (const r of Object.values(m.live?.world?.messenger?.rooms || {})) {
-        const now = r.autonomousUnreadCount > 0 ? Math.floor(r.autonomousUnreadCount) : 0, added = now - (before.get(r.id) || 0);
-        if (added > 0) rooms.push({ room: r.id, by: (Array.isArray(r.autonomousUnreadCharacterIds) ? r.autonomousUnreadCharacterIds : []).map(k => (r.members || []).find(n => String(n || '').trim().toLowerCase() === k) || k), added, count: now });
-    }
-    if (rooms.length) { try { globalThis.document?.dispatchEvent(new globalThis.CustomEvent('na-live-auto', { detail: { from: 'server', rooms } })); } catch { /* no screen */ } }
-    return true;
+}
+
+// ---- 세계 자물쇠 (마리나라의 채팅마다 하나뿐인 생성 자물쇠: generate.routes.ts activeGenerations, 둘째 요청은 409)
+// 이 채팅의 Orbit에서 답장을 만들 수 있는 것은 한 번에 하나: 이 브라우저 아니면 서버 플러그인의 일꾼. 자물쇠는 일꾼이 갖고 있어요.
+// 브라우저는 일하기 전에 받고(keepClaim), 일하는 동안 이어 잡고(keepRenew: 5분 동안 소식이 없으면 일꾼이 풀어요 — 탭이 닫혔을 때),
+// 끝나면 놓아요. 일꾼이 쥐고 있으면 { ok: false }: 그 일은 일꾼이 끝낸 뒤에 해요.
+// 플러그인이 없거나 옛것이거나 답하지 않으면 { ok: true } (전처럼 브라우저가 다 해요: 저장이 rev로 부딪힘을 막아요)
+const TAB = `browser:${Math.random().toString(36).slice(2, 12)}`;
+const holding = new Map();   // (저장 id → 이 페이지가 겹쳐 잡은 수: 안쪽에서 다시 잡아도 바깥이 놓을 때 놓아요)
+export async function keepClaim() {
+    const id = keep.id();
+    if (!id) return { ok: true, release: () => {} };
+    let r = null;
+    try { r = await http('/auto/claim', J({ id, by: TAB })); } catch { r = null; }
+    if (r && r.ok === false) return { ok: false, by: String(r.by || ''), release: () => {} };
+    holding.set(id, (holding.get(id) || 0) + 1);
+    let done = false;
+    return {
+        ok: true,
+        release: () => {
+            if (done) return;
+            done = true;
+            const n = (holding.get(id) || 1) - 1;
+            if (n > 0) { holding.set(id, n); return; }
+            holding.delete(id);
+            http('/auto/release', J({ id, by: TAB })).catch(() => {});
+        },
+    };
+}
+// 잡고 있는 자물쇠를 이어 잡아요 (일이 길 때 답장 하나마다)
+export async function keepRenew() {
+    const id = keep.id();
+    if (!id || !holding.has(id)) return;
+    try { await http('/auto/claim', J({ id, by: TAB })); } catch { /* the next one tries again */ }
 }
 let beating = null;
 // 30초마다 · 탭이 다시 보일 때 · 채팅을 열 때
