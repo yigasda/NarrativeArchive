@@ -97,7 +97,6 @@ const HELP = {
 };
 // 대화 명령(마리나라 CONVERSATION_COMMANDS 중 패키지 없이 늘 뜨는 것. 패키지가 있어야 뜨는 것은 docs/MARINARA-PORT.md)
 const COMMANDS = [['schedule', '스케줄 갱신', '캐릭터가 자신의 현재 상태와 활동을 바꿀 수 있게 합니다.'], ['crosspost', '교차 게시', '캐릭터가 메시지를 다른 공유 채팅으로 돌릴 수 있게 합니다.'], ['memories', '기억', '캐릭터가 다른 캐릭터를 위한 기억을 만들 수 있게 합니다.'], ['scenes', '장면', '캐릭터가 대화에서 몰입형 장면을 시작할 수 있게 합니다.'], ['influence', '영향', '캐릭터가 연결된 채팅에 일회성 영향을 보낼 수 있게 합니다.'], ['notes', '노트', '캐릭터가 연결된 채팅에 오래 남는 노트를 저장할 수 있게 합니다.'], ['reactions', '반응', '캐릭터가 이모지 배지로 메시지에 반응할 수 있게 합니다.']];
-const RS = { none: '끔', low: '낮게', medium: '보통', high: '높게', xhigh: '매우 높게', maximum: '최대' };   // 추론 레벨 (liveReasoning의 value → 화면 이름)
 const HOURS = Array.from({ length: 12 }, (_, h) => [String(h), h ? `오전 ${h}시` : '오전 12시 (자정)']);
 
 // 실리 칸 목록(src/phonestconn.js) → 시트 부품. API 연결 화면과 실리 팝업이 같이 써요. T: { open (펼친 고르기), v (펼친 서랍), scQ (고르기 검색) }
@@ -189,9 +188,10 @@ export function orbitSetPage(T, face) {
                         S.mode === 'vertex' ? inp(`vxLocation:${k}`, '지역', S.vxLocation, '비우면 실리 설정 따라', o()) : '',
                         model, S.on ? pad(load) : '']))
                         + (!open ? '' : S.mode === 'source' ? hp('키와 주소는 실리의 API 연결에 넣어 둔 것을 그대로 씁니다.') : S.mode === 'custom' ? hp('키는 이 기기에만 저장됩니다.') : ''); }).join('')
-                // 추론 레벨: 이 방의 모델이 받는 레벨만 칩으로 (T.rs.choices, 마리나라의 규칙). 모델이 레벨을 안 받으면 칩을 그리지 않아요
-                + (T.rs ? cap('추론 레벨') + (T.rs.choices.length ? cd(...[['rsRoom', '이 채팅', T.rs.room, `전체 값 따름`], ['rsAll', 'Orbit 전체', T.rs.all, '안 정함']].map(([k, l, cur, none0]) => pad(`<div class="os_d oc_rl">${l}</div><div class="ot_r ot_w oc_pk oc_rs">${[['', none0], ...T.rs.choices.map(c => [c.value, RS[c.value] || c.label || c.value])].map(([v, t]) => `<button type="button" class="ot_chip${v === cur ? ' strong' : ''} na_os_rs" data-k="${k}" data-v="${esc(v)}" aria-pressed="${v === cur}">${esc(t)}</button>`).join('')}</div>`)))
-                    + hp(T.rs.effort ? `지금 이 채팅은 <b>${RS[T.rs.effort] || esc(T.rs.effort)}</b>을(를) 씁니다${T.rs.sent && T.rs.sent !== T.rs.effort ? ` (모델에는 ${esc(T.rs.sent)}(으)로 보냅니다)` : ''}.` : '아직 정하지 않았습니다.')
+                // 추론 레벨: 이 방의 모델이 받는 레벨만 칩으로 (마리나라의 규칙). 칩 글자는 반영이 준 name(모델에 실제로 보내는 레벨의 이름 · '끔' · '기본')을 그대로 써요.
+                //   '이 채팅' 줄은 T.rs.roomChoices, 'Orbit 전체' 줄은 T.rs.allChoices. 맨 앞 칩(값 '')은 안 정함. 모델이 레벨을 안 받으면(choices가 []) 칩을 그리지 않아요
+                + (T.rs ? cap('추론 레벨') + (T.rs.choices.length ? cd(...[['rsRoom', '이 채팅', T.rs.room, '전체 값 따름', T.rs.roomChoices], ['rsAll', 'Orbit 전체', T.rs.all, '안 정함', T.rs.allChoices]].map(([k, l, cur, none0, list]) => pad(`<div class="os_d oc_rl">${l}</div><div class="ot_r ot_w oc_pk oc_rs">${[{ value: '', name: none0 }, ...(list || [])].map(c => `<button type="button" class="ot_chip${c.value === cur ? ' strong' : ''} na_os_rs" data-k="${k}" data-v="${esc(c.value)}" aria-pressed="${c.value === cur}"${c.title ? ` title="${esc(c.title)}"` : ''}>${esc(c.name)}</button>`).join('')}</div>`)))
+                    + hp(T.rs.effort ? `지금 이 채팅은 <b>${esc(T.rs.choices.find(c => c.value === T.rs.effort)?.name || T.rs.effort)}</b>을(를) 씁니다.` : '아직 정하지 않았습니다.')
                     : hp(`${T.rs.model ? `<b>${esc(T.rs.model)}</b>은(는)` : '이 모델은'} 추론 레벨을 받지 않습니다.`)) : '')
                 + cap('연결 설정') + cd(nav('stconn', 'API 연결', '키 · 주소 · 모델 · 연결 · 테스트 메시지', 'chevron-right')); },
         // 실리의 API 연결 (1-7): src/phonestconn.js가 실리의 진짜 칸을 읽어 준 목록(T.st)을 실리 순서대로 그려요. 소스마다 화면을 따로 짜지 않아요
