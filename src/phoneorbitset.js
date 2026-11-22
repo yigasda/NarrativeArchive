@@ -99,6 +99,47 @@ const HELP = {
 const COMMANDS = [['schedule', '스케줄 갱신', '캐릭터가 자신의 현재 상태와 활동을 바꿀 수 있게 합니다.'], ['crosspost', '교차 게시', '캐릭터가 메시지를 다른 공유 채팅으로 돌릴 수 있게 합니다.'], ['memories', '기억', '캐릭터가 다른 캐릭터를 위한 기억을 만들 수 있게 합니다.'], ['scenes', '장면', '캐릭터가 대화에서 몰입형 장면을 시작할 수 있게 합니다.'], ['influence', '영향', '캐릭터가 연결된 채팅에 일회성 영향을 보낼 수 있게 합니다.'], ['notes', '노트', '캐릭터가 연결된 채팅에 오래 남는 노트를 저장할 수 있게 합니다.'], ['reactions', '반응', '캐릭터가 이모지 배지로 메시지에 반응할 수 있게 합니다.']];
 const HOURS = Array.from({ length: 12 }, (_, h) => [String(h), h ? `오전 ${h}시` : '오전 12시 (자정)']);
 
+// 실리 칸 목록(src/phonestconn.js) → 시트 부품. API 연결 화면과 실리 팝업이 같이 써요. T: { open (펼친 고르기), v (펼친 서랍), scQ (고르기 검색) }
+function scGroup(T, list, inner) {
+    const cd = (...r) => `<div class="os_cd">${r.join('')}</div>`, pad = h => `<div class="ot_p">${h}</div>`, none = t => `<div class="os_no">${t}</div>`;
+    const A = p => ` data-p="${esc(p)}"`, lk = l => `<button type="button" class="os_go na_sc_link" data-h="${esc(l.href)}">${li('external-link', 13, 2.2)}${esc(l.text || '열기')}</button>`, Q = String(T.scQ || '').trim().toLowerCase();
+    const btn = b => b.text ? `<button type="button" class="${b.ok ? 'os_ok' : b.cancel ? 'os_go oc_x' : 'os_go'} na_sc_btn"${A(b.p)}${b.off ? ' disabled' : ''}${b.title ? ` title="${esc(b.title)}"` : ''}>${b.icon ? li(b.icon, 13, 2.2) : ''}${esc(b.text)}</button>` : `<button type="button" class="os_ib na_sc_btn"${A(b.p)}${b.off ? ' disabled' : ''} aria-label="${esc(b.title)}" title="${esc(b.title)}">${li(b.icon || 'circle-help', 16)}</button>`;
+    const one = n => {
+        if (n.t === 'note') return n.warn ? `<div class="ot_box warn">${li('triangle-alert', 15)}<span>${esc(n.text)}</span></div>` : pad(`<div class="os_d oc_nt">${esc(n.text)}</div>${n.links.length ? `<div class="ot_r ot_w oc_lk">${n.links.map(lk).join('')}</div>` : ''}`);
+        if (n.t === 'link') return pad(`<div class="ot_r">${lk(n)}</div>`);
+        if (n.t === 'status') return `<div class="os_rw oc_st"><i class="ot_dot ${n.ok ? 'on' : 'off'}"></i><span class="os_l">${esc(n.text)}</span></div>`;
+        if (n.t === 'tg') return `<div role="button" tabindex="0" class="os_rw ot_t na_sc_tg"${A(n.p)} data-on="${n.on ? 1 : 0}" aria-label="${esc(n.label)}" aria-pressed="${n.on}"><span class="ot_x"><span class="os_l oc_wr">${esc(n.label)}</span>${n.title ? `<span class="os_d">${esc(n.title)}</span>` : ''}</span><i class="ot_sw${n.on ? ' on' : ''}"></i></div>`;
+        if (n.t === 'key') return `<div class="os_pp oc_key${n.on ? ' on' : ''}"><span class="ot_tile">${li(n.on ? 'check' : 'key-round', 15, 2.2)}</span><span class="ot_x"><span class="os_l">${esc(n.label || '이름 없음')}</span><span class="os_d">${esc(n.value)}${n.on ? ' · 쓰는 중' : ''}</span>${n.idp ? `<button type="button" class="os_d oc_id na_sc_btn"${A(n.idp)} title="ID 복사">ID ${esc(n.id)}</button>` : ''}</span><span class="oc_kb">${n.btns.map(b => btn({ ...b, text: '' })).join('')}</span></div>`;
+        if (n.t === 'in') { const open = T.open === `l:${n.p}`;
+            return pad(`<div class="ot_r${n.area ? ' oc_ar' : ''}"><div class="os_q ot_q0 oc_q"><div class="os_qi na_sc_in${n.masked ? ' oc_mask' : ''}${n.area ? ' oc_area' : ''}"${A(n.p)} contenteditable="true" role="textbox" enterkeyhint="${n.area ? 'enter' : 'done'}" spellcheck="false" autocapitalize="off" data-ph="${esc(n.ph)}" aria-label="${esc(n.ph.split('\n')[0] || '값')}">${esc(n.value)}</div></div>${n.list.length ? `<button type="button" class="os_ib na_os_sel" data-k="l:${esc(n.p)}" aria-label="고를 수 있는 값 ${n.list.length}개" title="고를 수 있는 값">${li('chevron-down', 16)}</button>` : ''}${n.key ? `<button type="button" class="os_ib na_sc_btn"${A(n.key)} aria-label="API 키 관리" title="API 키 관리">${li('key-round', 16)}</button>` : ''}</div>${open ? `<div class="ot_r ot_w oc_pk">${n.list.map(o => `<button type="button" class="ot_chip na_sc_pick"${A(n.p)} data-v="${esc(o.v)}">${esc(o.l)}</button>`).join('')}</div>` : ''}`); }
+        if (n.t === 'sel' || n.t === 'multi') { const k = `s:${n.p}`, open = T.open === k, multi = n.t === 'multi', picked = multi ? n.options.filter(o => o.on) : [];
+            const val = multi ? (picked.length ? picked.map(o => o.l).join(', ') : '고른 것 없음') : (n.text || '고르기');
+            const hit = open ? n.options.filter(o => !Q || `${o.l} ${o.v} ${o.g}`.toLowerCase().includes(Q)) : [], cut = hit.slice(0, 80); let grp = null;
+            return `<div role="button" tabindex="0" class="os_rw na_os_sel oc_sel${n.off ? ' off' : ''}" data-k="${esc(k)}" aria-label="${esc(val)}" aria-expanded="${open}"><span class="os_l">${esc(val)}</span>${multi && picked.length ? `<span class="ot_chip">${picked.length}</span>` : ''}<i class="os_ch">${li('chevron-down', 16)}</i></div>`
+                + (open ? (n.options.length > 12 ? pad(`<div class="os_q ot_q0">${li('search', 16)}<div class="os_qi na_sc_q" contenteditable="true" role="textbox" enterkeyhint="search" spellcheck="false" data-ph="검색" aria-label="검색">${esc(T.scQ || '')}</div></div>`) : '')
+                    + (cut.length ? cut.map(o => { const h = o.g && o.g !== grp ? `<div class="oc_g">${esc(o.g)}</div>` : ''; grp = o.g; const on = multi ? o.on : o.v === n.value;
+                        return `${h}<div role="button" tabindex="0" class="os_rw ot_o ${multi ? 'na_sc_mopt' : 'na_sc_opt'}${o.off ? ' off' : ''}"${A(n.p)} data-v="${esc(o.v)}" aria-pressed="${on}"><span class="os_l">${esc(o.l || o.v)}</span>${on ? li('check', 16, 2.4) : ''}</div>`; }).join('') : none('맞는 것이 없어요.'))
+                    + (hit.length > cut.length ? pad(`<div class="os_d">${hit.length - cut.length}개가 더 있어요. 검색해서 좁혀요.</div>`) : '') : ''); }
+        if (n.t === 'drawer') { const k = `d:${n.p}`, open = !!T.v[k];
+            return `<div role="button" tabindex="0" class="os_rw na_sc_dr" data-k="${esc(k)}" aria-expanded="${open}"><span class="os_l">${esc(n.title)}</span><i class="os_ch${open ? ' up' : ''}">${li('chevron-down', 16)}</i></div>` + (open ? `<div class="oc_in">${scGroup(T, n.kids, true)}</div>` : ''); }
+        return '';
+    };
+    // 줄 → 카드: 머리글(cap)마다 새 카드. 잇닿은 단추는 한 줄로 모아요
+    let out = '', card = [], run = [];
+    const flushRun = () => { if (run.length) { card.push(pad(`<div class="ot_r ot_w oc_bt">${run.map(btn).join('')}</div>`)); run = []; } };
+    const flush = () => { flushRun(); if (card.length) { out += inner ? card.join('') : cd(...card); card = []; } };
+    for (const n of list) {
+        if (n.t === 'btn') { run.push(n); continue; } flushRun();
+        if (n.t === 'cap') { flush(); out += inner ? `<div class="oc_g">${esc(n.text)}</div>` : `<div class="os_cap oc_cap"><span>${esc(n.text)}</span>${n.link ? `<button type="button" class="os_ib na_sc_link" data-h="${esc(n.link)}" aria-label="${esc(n.text)} 도움말" title="도움말">${li('circle-help', 14)}</button>` : ''}</div>`; continue; }
+        card.push(one(n));
+    }
+    flush(); return out;
+}
+// 실리 팝업을 우리 시트로 (src/phonestpop.js가 실리 팝업 위에 얹어요). P: { title, nodes, controls, close, dark, open, v, scQ }
+export function orbitStPop(P) {
+    const ctl = P.controls.map(b => `<button type="button" class="${b.ok ? 'os_ok' : 'os_go'} na_sc_btn" data-p="${esc(b.p)}"${b.off ? ' disabled' : ''}>${esc(b.text)}</button>`).join('');
+    return `<div class="ob_bg${P.dark ? ' dk' : ''} oc_bg"></div><div class="ob_shade na_scp_x"></div><div class="ob_sheet os_sh oc_pop"><i class="ob_grab"></i><div class="os_hd"><b>${esc(P.title || '실리태번')}</b>${P.close ? `<button type="button" class="os_ib na_sc_btn" data-p="${esc(P.close)}" aria-label="닫기">${li('x', 20)}</button>` : ''}</div><div class="os_bd">${scGroup(P, P.nodes, false)}${ctl ? `<div class="oc_ctl">${ctl}</div>` : ''}</div></div>`;
+}
 // T: { page, v, open, dark, title, roomId, me, members, more, group, auto: { on, cap, ex }, sched: { any, list: [{ n, days }], zone, device, differs, busy }, tzQ, tzList }
 export function orbitSetPage(T, face) {
     const g = (k, d) => (k in T.v ? T.v[k] : d);
@@ -136,39 +177,7 @@ export function orbitSetPage(T, face) {
                     + cd(`<button type="button" class="os_rw na_ob_soon" aria-label="계정 추가">${li('plus', 18)}<span class="os_l">계정 추가</span></button>`) : '')
                 + cap('연결 설정') + cd(nav('stconn', 'API 연결', '키 · 주소 · 모델 · 연결 · 테스트 메시지', 'chevron-right')); },
         // 실리태번의 API 연결 (1-7): src/phonestconn.js가 실리의 진짜 칸을 읽어 준 목록(T.st)을 실리 순서대로 그려요. 소스마다 화면을 따로 짜지 않아요
-        stconn: () => { const N = T.st; if (!N) return none('실리태번의 API 연결 창을 찾지 못했어요.');
-            const A = p => ` data-p="${esc(p)}"`, lk = l => `<button type="button" class="os_go na_sc_link" data-h="${esc(l.href)}">${li('external-link', 13, 2.2)}${esc(l.text || '열기')}</button>`, Q = String(T.scQ || '').trim().toLowerCase();
-            const one = n => {
-                if (n.t === 'note') return n.warn ? `<div class="ot_box warn">${li('triangle-alert', 15)}<span>${esc(n.text)}</span></div>` : pad(`<div class="os_d">${esc(n.text)}</div>${n.links.length ? `<div class="ot_r ot_w oc_lk">${n.links.map(lk).join('')}</div>` : ''}`);
-                if (n.t === 'link') return pad(`<div class="ot_r">${lk(n)}</div>`);
-                if (n.t === 'status') return `<div class="os_rw oc_st"><i class="ot_dot ${n.ok ? 'on' : 'off'}"></i><span class="os_l">${esc(n.text)}</span></div>`;
-                if (n.t === 'tg') return `<div role="button" tabindex="0" class="os_rw ot_t na_sc_tg"${A(n.p)} data-on="${n.on ? 1 : 0}" aria-label="${esc(n.label)}" aria-pressed="${n.on}"><span class="ot_x"><span class="os_l">${esc(n.label)}</span>${n.title ? `<span class="os_d">${esc(n.title)}</span>` : ''}</span><i class="ot_sw${n.on ? ' on' : ''}"></i></div>`;
-                if (n.t === 'in') { const open = T.open === `l:${n.p}`;
-                    return pad(`<div class="ot_r"><div class="os_q ot_q0 oc_q"><div class="os_qi na_sc_in${n.masked ? ' oc_mask' : ''}"${A(n.p)} contenteditable="true" role="textbox" enterkeyhint="done" spellcheck="false" autocapitalize="off" data-ph="${esc(n.ph)}" aria-label="${esc(n.ph || '값')}">${esc(n.value)}</div></div>${n.list.length ? `<button type="button" class="os_ib na_os_sel" data-k="l:${esc(n.p)}" aria-label="고를 수 있는 값 ${n.list.length}개" title="고를 수 있는 값">${li('chevron-down', 16)}</button>` : ''}${n.key ? `<button type="button" class="os_ib na_sc_btn"${A(n.key)} aria-label="API 키 관리" title="API 키 관리">${li('key-round', 16)}</button>` : ''}</div>${open ? `<div class="ot_r ot_w oc_pk">${n.list.map(o => `<button type="button" class="ot_chip na_sc_pick"${A(n.p)} data-v="${esc(o.v)}">${esc(o.l)}</button>`).join('')}</div>` : ''}`); }
-                if (n.t === 'sel' || n.t === 'multi') { const k = `s:${n.p}`, open = T.open === k, multi = n.t === 'multi', picked = multi ? n.options.filter(o => o.on) : [];
-                    const val = multi ? (picked.length ? picked.map(o => o.l).join(', ') : '고른 것 없음') : (n.text || '고르기');
-                    const hit = open ? n.options.filter(o => !Q || `${o.l} ${o.v} ${o.g}`.toLowerCase().includes(Q)) : [], cut = hit.slice(0, 80); let grp = null;
-                    return `<div role="button" tabindex="0" class="os_rw na_os_sel oc_sel${n.off ? ' off' : ''}" data-k="${esc(k)}" aria-label="${esc(val)}" aria-expanded="${open}"><span class="os_l">${esc(val)}</span>${multi && picked.length ? `<span class="ot_chip">${picked.length}</span>` : ''}<i class="os_ch">${li('chevron-down', 16)}</i></div>`
-                        + (open ? (n.options.length > 12 ? pad(`<div class="os_q ot_q0">${li('search', 16)}<div class="os_qi na_sc_q" contenteditable="true" role="textbox" enterkeyhint="search" spellcheck="false" data-ph="검색" aria-label="검색">${esc(T.scQ || '')}</div></div>`) : '')
-                            + (cut.length ? cut.map(o => { const h = o.g && o.g !== grp ? `<div class="oc_g">${esc(o.g)}</div>` : ''; grp = o.g; const on = multi ? o.on : o.v === n.value;
-                                return `${h}<div role="button" tabindex="0" class="os_rw ot_o ${multi ? 'na_sc_mopt' : 'na_sc_opt'}${o.off ? ' off' : ''}"${A(n.p)} data-v="${esc(o.v)}" aria-pressed="${on}"><span class="os_l">${esc(o.l || o.v)}</span>${on ? li('check', 16, 2.4) : ''}</div>`; }).join('') : none('맞는 것이 없어요.'))
-                            + (hit.length > cut.length ? pad(`<div class="os_d">${hit.length - cut.length}개가 더 있어요. 검색해서 좁혀요.</div>`) : '') : ''); }
-                if (n.t === 'drawer') { const k = `d:${n.p}`, open = !!T.v[k];
-                    return `<div role="button" tabindex="0" class="os_rw na_sc_dr" data-k="${esc(k)}" aria-expanded="${open}"><span class="os_l">${esc(n.title)}</span><i class="os_ch${open ? ' up' : ''}">${li('chevron-down', 16)}</i></div>` + (open ? `<div class="oc_in">${group(n.kids, true)}</div>` : ''); }
-                return '';
-            };
-            const btn = b => b.text ? `<button type="button" class="${b.cancel ? 'os_go oc_x' : 'os_go'} na_sc_btn"${A(b.p)}${b.off ? ' disabled' : ''}${b.title ? ` title="${esc(b.title)}"` : ''}>${b.icon ? li(b.icon, 13, 2.2) : ''}${esc(b.text)}</button>` : `<button type="button" class="os_ib na_sc_btn"${A(b.p)}${b.off ? ' disabled' : ''} aria-label="${esc(b.title)}" title="${esc(b.title)}">${li(b.icon || 'circle-help', 16)}</button>`;
-            // 줄 → 카드: 머리글(cap)마다 새 카드. 잇닿은 단추는 한 줄로 모아요
-            const group = (list, inner) => { let out = '', card = [], run = [];
-                const flushRun = () => { if (run.length) { card.push(pad(`<div class="ot_r ot_w oc_bt">${run.map(btn).join('')}</div>`)); run = []; } };
-                const flush = () => { flushRun(); if (card.length) { out += inner ? card.join('') : cd(...card); card = []; } };
-                for (const n of list) {
-                    if (n.t === 'btn') { run.push(n); continue; } flushRun();
-                    if (n.t === 'cap') { flush(); out += inner ? `<div class="oc_g">${esc(n.text)}</div>` : `<div class="os_cap oc_cap"><span>${esc(n.text)}</span>${n.link ? `<button type="button" class="os_ib na_sc_link" data-h="${esc(n.link)}" aria-label="${esc(n.text)} 도움말" title="도움말">${li('circle-help', 14)}</button>` : ''}</div>`; continue; }
-                    card.push(one(n));
-                }
-                flush(); return out; };
-            return hp('실리태번의 API 연결 창을 그대로 조종합니다. 여기서 바꾸면 실리태번의 연결이 바뀝니다(롤플레이도 같은 연결을 씁니다). 키는 실리태번에만 저장됩니다.') + group(N, false); },
+        stconn: () => (T.st ? hp('실리태번의 API 연결 창을 그대로 조종합니다. 여기서 바꾸면 실리태번의 연결이 바뀝니다(롤플레이도 같은 연결을 씁니다). 키는 실리태번에만 저장됩니다.') + scGroup(T, T.st, false) : none('실리태번의 API 연결 창을 찾지 못했어요.')),
         // 프롬프트 프리셋 (ConversationPromptSection)
         preset: () => H + cd(sel('presetSrc', '프롬프트 소스', [['', '기본 대화 프롬프트']], ''))
             + area('presetText', '대화 프롬프트', '', '사용자 지정 대화 프롬프트를 입력하세요...', { rows: 6, mono: true, tail: `<span class="ot_chip">${g('presetText', '') ? '사용자 지정' : '기본값'}</span><i class="os_sp"></i>${g('presetText', '') ? ib('rotate-ccw', '기본 프롬프트로 초기화') : ''}${ib('maximize-2', '편집기 확장')}${ib('book-open', '매크로 참조')}`, hint: `~${Math.ceil(String(g('presetText', '')).length / 4)} 토큰` }),

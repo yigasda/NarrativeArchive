@@ -15,6 +15,7 @@ import { ctx, getMeta, globalSettings, phoneMeta, saveGlobal, saveMeta, setPhone
 import { applyInjection } from './inject.js';
 import { faceHtml, faceOf, stFace, stPersonaList, nameKey, peopleList, shrinkFace } from './people.js';
 import { stConnNodes, stConnSet, stConnToggleOption, stConnClick, stConnWatch } from './phonestconn.js';
+import { stPopWatch } from './phonestpop.js';
 import { drafting, drawing, drawPhoto, drawPost, filling, paging, retranslate, retranslating, recording, searching, searchPage, shooting, webPage, writing } from './phoneai.js';
 import { setDraft, setDraftModels, setLang, setSnap, setVoice, setVoiceAdd, voiceList, voicePeople, ax, axFind, groupInfo, APPS, AXB, AXB_C, busyHtml, setDate, setScreenHolderView, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, mapTowns, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setOwnerProfile, setWho, snsPost, snsScreen, statusBar, threadScreen, setPlace, prepScreen } from './phoneapps.js';
 import { phoneMaking, dropStretch, chatStamp, koGaps, savedName, ensureIds, hasDatedRecords, noArchive, koOn, loreOff, tidyKo, markAfter, phoneLore, REMAKE, restoreRounds, showNow, syncLeft, syncRows, syncState, tidyJournal, undoRound } from './phonedata.js';
@@ -241,7 +242,7 @@ export async function openPhone(who = null) {
     // 어두운 방(⋯ 메뉴의 어둡게 · 밝게): 확장 설정에 남아요. 그릴 때마다 읽으니 설정을 그대로 읽어요(koOn과 같은 까닭)
     const obDark = () => (ctx().extensionSettings?.narrative_archive ?? globalSettings()).orbitDark === true;
     let obSet = '', obFindTab = 'marks', obFindQ = '', obJump = null, obSetUi = { v: {}, open: '', tzQ: '', busy: false }, obSw = null, obAtt = [], obThink = null, obPeek = null, scStop = null, scDown = false, scPend = false, scT = 0;
-    const scWatch = on => { if (on && !scStop) scStop = stConnWatch(() => scDraw()); else if (!on && scStop) { scStop(); scStop = null; scPend = false; } };   // 실리 API 연결 화면이 떠 있는 동안만 실리 칸을 지켜봐요   // obAtt: 붙여 둔 파일 [{ name, type, img }] · obThink: 생각 보기 { text, copied } · obPeek: 프롬프트 보기 · obSw: 빠른 전환기 { tab, q, pq, drilled, pane, order, stars, limit } · obSetUi: 채팅 설정 화면들의 아직 안 이어진 조작 값(시트가 열린 동안만) · 펼친 고르기 · 시간대 검색   // 방 설정 시트: obSet = '' | 'main' | 'find' | 'name' | 'people', obJump = 찾아갈 말의 id
+    const scWatch = on => { if (on && !scStop) { const a = stConnWatch(() => scDraw()), b = stPopWatch({ canvas: () => $root.find('.ax_canvas')[0], dark: () => obDark() }); scStop = () => { a(); b(); }; } else if (!on && scStop) { scStop(); scStop = null; scPend = false; } };   // 실리 API 연결 화면이 떠 있는 동안만 실리 칸을 지켜봐요   // obAtt: 붙여 둔 파일 [{ name, type, img }] · obThink: 생각 보기 { text, copied } · obPeek: 프롬프트 보기 · obSw: 빠른 전환기 { tab, q, pq, drilled, pane, order, stars, limit } · obSetUi: 채팅 설정 화면들의 아직 안 이어진 조작 값(시트가 열린 동안만) · 펼친 고르기 · 시간대 검색   // 방 설정 시트: obSet = '' | 'main' | 'find' | 'name' | 'people', obJump = 찾아갈 말의 id
     // 이모지 판: obEmo = { tab: 'emoji' | 'kao', cat, q } | null. 목록 · 검색(마리나라 것, 130KB)은 처음 열 때 불러와요
     let obEmo = null, obEmoLib = null;
     const EMO_KO = { 'Smileys & Emotion': '스마일리 및 감정', 'People & Body': '사람 및 신체', 'Animals & Nature': '동물 및 자연', 'Food & Drink': '음식 및 음료', 'Travel & Places': '여행 및 장소', Activities: '활동', Objects: '사물', Symbols: '기호', Flags: '깃발',
@@ -1209,6 +1210,7 @@ export async function openPhone(who = null) {
     const scLater = () => { clearTimeout(scT); scT = setTimeout(() => { if (scPend || obSet === 'stconn') scDraw(); }, 60); };
     $root.on('pointerdown', '.os_sh', () => { scDown = true; }); $(document).on('pointerup.naSc pointercancel.naSc', () => { if (!scDown) return; scDown = false; if (scPend) scLater(); });
     const scVal = el => el.innerText.replace(/\n/g, '');
+    $root.on('input', '.na_sc_in', function () { stConnSet(this.dataset.p, scVal(this), true); });   // (치는 대로 실리 칸에: 바로 단추를 눌러도 값이 들어가 있어요)
     $root.on('click', '.na_sc_opt', function (e) { e.stopPropagation(); if (this.classList.contains('off')) return; obSetUi.open = ''; obSetUi.scQ = ''; stConnSet(this.dataset.p, this.dataset.v); scLater(); });
     $root.on('click', '.na_sc_mopt', function (e) { e.stopPropagation(); if (this.classList.contains('off')) return; stConnToggleOption(this.dataset.p, this.dataset.v); scLater(); });
     $root.on('click', '.na_sc_tg', function (e) { e.stopPropagation(); stConnSet(this.dataset.p, this.dataset.on !== '1'); scLater(); });
@@ -1217,7 +1219,7 @@ export async function openPhone(who = null) {
     $root.on('click', '.na_sc_link', function (e) { e.stopPropagation(); if (/^https?:/i.test(this.dataset.h || '')) window.open(this.dataset.h, '_blank', 'noopener'); });
     $root.on('click', '.na_sc_dr', function (e) { e.stopPropagation(); const k = this.dataset.k; obSetUi.v[k] = !obSetUi.v[k]; drawPhone(true); });
     $root.on('keydown', '.na_sc_in, .na_sc_q', function (e) { if (e.key === 'Enter') { e.preventDefault(); this.blur(); } });
-    $root.on('focusout', '.na_sc_in', function () { const v = scVal(this), p = this.dataset.p, real = document.querySelector(p); if (real && String(real.value ?? '') !== v) stConnSet(p, v); scLater(); });
+    $root.on('focusout', '.na_sc_in', function () { stConnSet(this.dataset.p, scVal(this)); scLater(); });
     $root.on('input', '.na_sc_q', function () { obSetUi.scQ = this.innerText; clearTimeout(this._t); this._t = setTimeout(() => { if (phoneClosed || !stillHere() || obSet !== 'stconn') return; drawPhone(true); const el = $root.find('.na_sc_q')[0]; if (el) { el.focus({ preventScroll: true }); const s = window.getSelection(); s.selectAllChildren(el); s.collapseToEnd(); } }, 250); });
     $root.on('focusout', '.na_sc_q', () => scLater());
     $root.on('click', '.na_ob_sback', e => { e.stopPropagation(); obSet = OB_SET_UP[obSet] || 'main'; obSetUi.open = ''; drawPhone(true); });
