@@ -96,7 +96,8 @@ const HELP = {
     sum: '요청을 작게 유지하려고 대화가 스스로 요약됩니다. 하루마다 일간 요약이 만들어지고, 여러 날은 주간 요약으로 합쳐집니다. AI는 주간 요약, 이번 주의 일간 요약, 오늘의 메시지를 봅니다. 아직 끌 수 없습니다.',
 };
 // 대화 명령(마리나라 CONVERSATION_COMMANDS 중 패키지 없이 늘 뜨는 것. 패키지가 있어야 뜨는 것은 docs/MARINARA-PORT.md)
-const COMMANDS = [['schedule', '스케줄 갱신', '캐릭터가 자신의 현재 상태와 활동을 바꿀 수 있게 합니다.'], ['crosspost', '교차 게시', '캐릭터가 메시지를 다른 공유 채팅으로 돌릴 수 있게 합니다.'], ['memories', '기억', '캐릭터가 다른 캐릭터를 위한 기억을 만들 수 있게 합니다.'], ['scenes', '장면', '캐릭터가 대화에서 몰입형 장면을 시작할 수 있게 합니다.'], ['influence', '영향', '캐릭터가 연결된 채팅에 일회성 영향을 보낼 수 있게 합니다.'], ['notes', '노트', '캐릭터가 연결된 채팅에 오래 남는 노트를 저장할 수 있게 합니다.'], ['reactions', '반응', '캐릭터가 이모지 배지로 메시지에 반응할 수 있게 합니다.']];
+// (id는 마리나라의 이름: liveCommands().options의 id. 화면 글은 우리 한국어, 줄을 그릴지는 반영이 주는 works로 정해요)
+const COMMANDS = { schedule_update: ['스케줄 갱신', '캐릭터가 자신의 현재 상태와 활동을 바꿀 수 있게 합니다.'], cross_post: ['교차 게시', '캐릭터가 메시지를 다른 공유 채팅으로 돌릴 수 있게 합니다.'], memory: ['기억', '캐릭터가 다른 캐릭터를 위한 기억을 만들 수 있게 합니다.'], scene: ['장면', '캐릭터가 대화에서 몰입형 장면을 시작할 수 있게 합니다.'], influence: ['영향', '캐릭터가 연결된 채팅에 일회성 영향을 보낼 수 있게 합니다.'], note: ['노트', '캐릭터가 연결된 채팅에 오래 남는 노트를 저장할 수 있게 합니다.'], react: ['반응', '캐릭터가 이모지 배지로 메시지에 반응할 수 있게 합니다.'] };
 const HOURS = Array.from({ length: 12 }, (_, h) => [String(h), h ? `오전 ${h}시` : '오전 12시 (자정)']);
 
 // 실리 칸 목록(src/phonestconn.js) → 시트 부품. API 연결 화면과 실리 팝업이 같이 써요. T: { open (펼친 고르기), v (펼친 서랍), scQ (고르기 검색) }
@@ -231,7 +232,7 @@ export function orbitSetPage(T, face) {
                 + (C.skipped ? `<div class="ot_box warn">${li('triangle-alert', 15)}<span>일치하는 로어 항목 ${C.skipped}개가 토큰 예산으로 건너뛰어졌습니다</span></div>` : '')
                 + (loc.length ? cap('현재 위치') + cd(...loc.map(x => row(x, ix(x)))) : '') + (rest.length ? (loc.length ? cap('그 밖의 활성 로어') : '<div class="os_cap"></div>') + cd(...rest.map(x => row(x, ix(x)))) : '') : none('이 채팅에 활성 항목이 없습니다')); },
         // 에이전트 (대화 화면 7130–7532): 명령 카드 + 스케줄 생성 환경설정. 패키지가 있어야 뜨는 카드는 docs/MARINARA-PORT.md
-        agents: () => H + cap('명령') + cd(tg('cmds', '명령', '모델이 스케줄, 장면, 미디어, 반응 등 설치된 명령으로 나와 상호작용할 수 있게 합니다.', true), ...(g('cmds', true) ? COMMANDS.map(([k, l, d]) => tg(`cmd:${k}`, l, d, true)) : []))
+        agents: () => H + cap('명령') + cd(tg('cmds', '명령', '모델이 스케줄, 장면, 미디어, 반응 등 설치된 명령으로 나와 상호작용할 수 있게 합니다.', true, 'na_os_cmd', !!T.cmds?.enabled), ...(T.cmds?.enabled ? T.cmds.options.filter(c => c.works !== false).map(c => tg(c.id, COMMANDS[c.id]?.[0] || c.label, COMMANDS[c.id]?.[1] || c.description, true, 'na_os_cmd', !!c.on)) : []))
             + area('schedPrefs', '스케줄 생성 환경설정', '', '예: 모두 자정 전에 자게 해 주세요. 캐릭터에게 오전 10시~정오에 자유 시간을 주세요. 저는 평일 9시~5시에 일합니다.', { rows: 4, hint: '전역 설정입니다. 모든 대화 채팅의 다음 스케줄 재생성(수동 또는 주간 자동)에 적용됩니다.' })
             + hp('캐릭터 스케줄을 생성하는 방식을 이끄는 자유 형식 지침입니다. 지시(\'자정 넘어서는 아무도 깨어 있지 않게\')와 사실 조건(\'나는 9시~5시에 일함\') 모두 됩니다.')
             + (String(g('schedPrefs', '')).trim() ? `<div class="ot_box"><b>스케줄 생성 환경설정 활성</b><span>“${esc(String(g('schedPrefs', '')).trim().slice(0, 120))}”</span><span>다음에 스케줄을 재생성할 때 적용됩니다.</span></div>` : ''),
