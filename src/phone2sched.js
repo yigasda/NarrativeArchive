@@ -22,7 +22,7 @@ import { buildConversationCurrentContextBlock } from './marinara/conversation-co
 import { checkAutonomous, checkExchange, forgetAutonomousSeed } from './marinara/autonomous-check.js';
 import { clearChatActivity, clearGenerationInProgress, buildAutonomousDailyBudgetPatch, sharesAutonomousDailyBudget, isAutonomousDailyBudgetExhausted, getAutonomousDailyBudget, dailyCapForCharacter, getActivityState, recordUserActivity, recordAssistantActivity, recordUserReaction } from './marinara/autonomous.service.js';
 import { buildIntentCooldownPatch, isMessageIntent } from './marinara/intent.service.js';
-import { applyCharacterStatusCommand } from './marinara/schedule-command.js';
+import { applyCharacterStatusCommand, applyRoomScheduleCommand } from './marinara/schedule-command.js';
 import { restoreAvailableAfterUserMessage } from './marinara/idle-detection.js';
 import { isMessageHiddenFromAI } from './marinara/message-hidden.js';
 import { formatSmartGroupCandidates, parseSmartGroupSelectionIds, selectFallbackSmartGroupResponder, buildSmartGroupRecentTranscript, buildSmartGroupSelectionPrompt, getExplicitlyMentionedCharacterIds, resolveRespondingCharacterIds, routeMentionsAfterReply, orderConversationRespondersByDelay, normalizeGroupChatMode, SMART_GROUP_SELECTOR_DEFAULTS, GROUP_MENTION_INVITE_LINE } from './marinara/group-responders.js';
@@ -273,8 +273,14 @@ export function stateNow(m, owner, { now = new Date(), tz = '' } = {}) {
     const at = blockNow(m, owner, { now, tz });
     return at ? { key: at.key, text: at.text, place: one(at.block.place) } : null;
 }
-// 캐릭터가 답장에서 스스로 상태를 바꿨어요 (마리나라의 schedule_update 명령: 임시 상태로 두고, 시간이 지나면 스케줄로 돌아가요)
-//   cmd: { status, activity, duration ("1h"), place (우리 칸: 어디서) } → 새 임시 상태 | null (안 바뀜: 손으로 준 상태가 있거나 빈 명령)
+// 캐릭터가 답장에서 스스로 상태를 바꿨어요 (마리나라의 schedule_update 명령)
+//   cmd: { status, activity, duration ("1h"), place (우리 칸: 어디서) }
+//   → 바뀐 것 | null (안 바뀜: 손으로 준 상태가 있거나, 빈 명령이거나, 지금 상태와 같은 말)
+//   1) 스케줄 표에서 지금 시간에 걸린 칸을 고쳐요 (소망, 2026-11-22: 마리나라가 공유 방에서 하는 것을 캐릭터 방에서도).
+//      하는 일 · 상태가 그 칸에 적히고, 시간을 줬고 그게 칸이 끝나기 전이면 칸을 둘로 쪼개요 (뒤는 free time · online).
+//      표에 남아요: 그 사람이 나오는 모든 채팅에서, 다음 주에도 (매주 갱신을 켜 두면 새 표로 바뀌어요). → { block: true, … }
+//   2) 지금 시간에 걸린 칸이 없으면 (스케줄이 없거나, 칸이 자정을 넘어가는 칸이거나) 마리나라의 캐릭터 방 그대로:
+//      임시 상태로 두고, 시간이 지나면 스케줄로 돌아가요. → 임시 상태
 export function takeStatus(m, owner, cmd, { now = new Date(), tz = '' } = {}) {
     if (!obj(cmd)) return null;
     const p = presenceOf(m), k = liveKey(owner), status = STATUSES.includes(String(cmd.status || '').toLowerCase()) ? String(cmd.status).toLowerCase() : undefined;
@@ -290,7 +296,25 @@ export function takeStatus(m, owner, cmd, { now = new Date(), tz = '' } = {}) {
         if (!status || status === eff.status) return null;
         if (cur?.expiresAt) { p.overrides[k] = { ...cur, status, ...(place ? { place } : {}) }; toCard(owner, { conversationStatusOverride: p.overrides[k] }); return p.overrides[k]; }
     }
-    const got = applyCharacterStatusCommand({ command: { type: 'schedule_update', status, activity: activity || undefined, duration: one(cmd.duration) || undefined }, current: p.overrides[k], schedule: activeSchedule(m, owner) || undefined, now, scheduleNow: toZonedWallClockDate(now, tz || undefined) });
+    const command = { type: 'schedule_update', status, activity: activity || undefined, duration: one(cmd.duration) || undefined };
+    if (!command.status && !command.activity) return null;
+    // (a status the user set by hand has no end time, and it stays in charge: Marinara's rule, for the block edit too)
+    if (getActiveStatusOverride(p.overrides[k], now) && !p.overrides[k]?.expiresAt) return null;
+    const scheduleNow = toZonedWallClockDate(now, tz || undefined), week = activeSchedule(m, owner);
+    if (week) {
+        const next = JSON.parse(JSON.stringify(week));
+        if (applyRoomScheduleCommand({ command, schedule: next, nowDate: scheduleNow })) {
+            // (our own field: where the new activity puts them, on the block that now holds this minute)
+            const at = getAdjacentScheduleBlocks(next, scheduleNow).current;
+            if (at) { if (place) at.place = place; else delete at.place; }
+            p.schedules[k] = next;
+            toCard(owner, { conversationSchedule: next });
+            // (a temporary status from before would hide the block just written)
+            if (p.overrides[k]) { delete p.overrides[k]; toCard(owner, { conversationStatusOverride: null }); }
+            return { block: true, status: at?.status || status, activity: at?.activity || activity, time: at?.time || '', ...(place ? { place } : {}) };
+        }
+    }
+    const got = applyCharacterStatusCommand({ command, current: p.overrides[k], schedule: week || undefined, now, scheduleNow });
     if (!got) return null;
     p.overrides[k] = { ...got, place: place || null };
     toCard(owner, { conversationStatusOverride: p.overrides[k] });
