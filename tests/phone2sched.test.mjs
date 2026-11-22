@@ -268,6 +268,11 @@ test('스케줄이 있는 사람의 답장 지시문: state를 안 묻고, 마�
     assert.ok(s.includes('\n{ "reply": the words you type now'));
     assert.ok(s.endsWith('}],\n  "status": "" }'));
     assert.equal(s.match(/"status"/g).length, 4);
+    // (명령 스위치를 끄면 그 명령은 지시문에 아예 없어요: 스케줄 갱신 · 반응)
+    const off = RP.phone2ReplySystem({ owner: 'Mara', persona: 'Ren', scheduled: true, statusCommand: false });
+    assert.doesNotMatch(off, /STATUS|"status"|STATE FIRST|"state"/); assert.match(off, /\n\nTEXTING\n/); assert.ok(off.includes('\n{ "reply": the words you type now'));
+    const quiet = RP.phone2ReplySystem({ owner: 'Mara', persona: 'Ren', react: false });
+    assert.doesNotMatch(quiet, /"react"|An emoji on the last text/); assert.match(quiet, /\nSTATE FIRST\n/); assert.equal(plain.length - quiet.length > 100, true);
 });
 test('캐릭터가 방금 들은 자기 상태를 그대로 되돌려 쓴 것은 바꾼 게 아니에요: 임시 상태가 다시 걸리지 않고, 시간이 지나면 스케줄로 돌아가요', () => {
     const { m } = world(), t = Date.parse('2026-11-23T03:00:00Z'), now = new Date(t), later = ms => new Date(t + ms), H = 3600_000;
