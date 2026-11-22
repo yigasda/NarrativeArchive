@@ -75,7 +75,7 @@ const LI = {
 const li = (k, s = 18, w = 2) => `<svg aria-hidden="true" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round">${LI[k] || ''}</svg>`;
 
 // 맨 화면의 줄: [화면, 아이콘, 이름]. 값은 orbitSetRows가 붙여요
-export const ORBIT_SET_TITLES = { profile: '설정 프로필', branches: '채팅 분기', conn: '연결', stconn: 'API 연결', preset: '프롬프트 프리셋', persona: '페르소나', people: '캐릭터', group: '단체 채팅', linked: '연결된 채팅', lore: '로어북', ctx: '활성 컨텍스트', agents: '에이전트', gallery: '갤러리', memory: '기억 회상', memlist: '이 채팅의 기억', trans: '번역', auto: '자율 메시지', tz: '스케줄 시간대', sum: '자동 요약', sumedit: '요약 편집', name: '채팅 제목' };
+export const ORBIT_SET_TITLES = { profile: '설정 프로필', branches: '채팅 분기', conn: '연결', stconn: 'API 연결', caption: '그림 설명', preset: '프롬프트 프리셋', persona: '페르소나', people: '캐릭터', group: '단체 채팅', linked: '연결된 채팅', lore: '로어북', ctx: '활성 컨텍스트', agents: '에이전트', gallery: '갤러리', memory: '기억 회상', memlist: '이 채팅의 기억', trans: '번역', auto: '자율 메시지', tz: '스케줄 시간대', sum: '자동 요약', sumedit: '요약 편집', name: '채팅 제목' };
 const HELP = {
     profile: '설정 프로필은 이 채팅의 제공자, 프롬프트, 에이전트, 번역, 기억 등의 설정을 저장해 다시 쓸 수 있게 합니다. 캐릭터, 스프라이트, 요약, 태그, 장면 프롬프트는 바꾸지 않습니다. 프로필의 페르소나, 로어북, 배경은 적용할 때 채팅으로 복사됩니다. 별표를 누르면 이 모드의 새 채팅에 사용됩니다.',
     name: '이 이름은 나에게만 보입니다. AI에게 전송되지 않으며 대화에 아무 영향도 주지 않습니다.',
@@ -196,6 +196,11 @@ export function orbitSetPage(T, face) {
                 + cap('연결 설정') + cd(nav('stconn', 'API 연결', '키 · 주소 · 모델 · 연결 · 테스트 메시지', 'chevron-right')); },
         // 실리의 API 연결 (1-7): src/phonestconn.js가 실리의 진짜 칸을 읽어 준 목록(T.st)을 실리 순서대로 그려요. 소스마다 화면을 따로 짜지 않아요
         stconn: () => (T.st ? hp('실리의 API 연결 창을 그대로 조종합니다. 여기서 바꾸면 실리의 연결이 바뀝니다(롤플레이도 같은 연결을 씁니다). 키는 실리에만 저장됩니다.') + scGroup(T, T.st, false) : none('실리의 API 연결 창을 찾지 못했어요.')),
+        // 그림 설명 (마리나라의 Image captioning): 켜기 · 설명할 연결 · 설명 지시문. T.caption = liveCaptioning()
+        caption: () => { const C = T.caption || { enabled: false, connectionId: '', prompt: '', defaultPrompt: '', connections: [] };
+            return hp('켜면 그림을 그대로 보내지 않고, 글로 설명해서 보냅니다. 그림을 못 읽는 모델을 쓸 때 켜세요.')
+                + cd(tg('capOn', '그림 설명', '', false, 'na_os_capon', C.enabled), ...(C.enabled ? [sel('capConn', '설명할 연결', [['', '이 방의 모델'], ...C.connections.filter(c => c.id).map(c => [c.id, c.name || c.model || c.id])], '', 'na_os_capconn', C.connectionId)] : []))
+                + (C.enabled ? `<div class="ot_a"><div class="ot_al"><span>설명 지시문</span></div><div class="os_q ot_aq"><div class="os_qi na_os_capp" contenteditable="true" role="textbox" spellcheck="false" data-ph="${esc(C.defaultPrompt)}" aria-label="설명 지시문" style="min-height:95px">${esc(C.prompt)}</div></div>${hp('비워 두면 기본 지시문을 씁니다.')}</div>` : ''); },
         // 프롬프트 프리셋 (ConversationPromptSection)
         preset: () => H + cd(sel('presetSrc', '프롬프트 소스', [['', '기본 대화 프롬프트']], ''))
             + area('presetText', '대화 프롬프트', '', '사용자 지정 대화 프롬프트를 입력하세요...', { rows: 6, mono: true, tail: `<span class="ot_chip">${g('presetText', '') ? '사용자 지정' : '기본값'}</span><i class="os_sp"></i>${g('presetText', '') ? ib('rotate-ccw', '기본 프롬프트로 초기화') : ''}${ib('maximize-2', '편집기 확장')}${ib('book-open', '매크로 참조')}`, hint: `~${Math.ceil(String(g('presetText', '')).length / 4)} 토큰` }),
