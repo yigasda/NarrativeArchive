@@ -2,7 +2,8 @@
 // 실리 창이 열려 있는 동안만 돌아요. index.js가 tickStart()를 한 번 불러요.
 // 화면은 document의 'na-live-change' 소식을 듣고 다시 그려요.
 
-import { getMeta, hasChat } from './core.js';
+import { getMeta, hasChat, saveMeta } from './core.js';
+import { kitRefresh } from './phone2keepon.js';
 import { startIdleDetection } from './marinara/idle-detection.js';
 import { userStore } from './phone2sched.js';
 
@@ -12,6 +13,8 @@ export async function tickOnce() {
     if (busy || !hasChat()) return 0;
     const m = getMeta(), w = m?.live?.world;
     if (!w) return 0;
+    // (the role-play moved on, a card or the persona changed: what the server plugin reads while SillyTavern is closed follows)
+    if (kitRefresh()) await saveMeta().catch(err => console.warn('[narrative-archive] live kit', err));
     const waiting = !!w.queue?.jobs?.some(j => j.kind === 'reply' && j.state === 'waiting');
     if (!w.presence?.on && !waiting && !Object.keys(w.presence?.schedules || {}).length) return 0;
     busy = true;

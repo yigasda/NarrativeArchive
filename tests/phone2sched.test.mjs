@@ -59,6 +59,11 @@ test('상황 글: 마리나라의 줄 그대로 답장 요청의 CONTEXT에 항�
     // 스케줄이 없어도 마리나라처럼 항상 들어가요: "online"
     assert.match(S.contextBlock(m, 'Mara', a.id, { now: NOW, tzOf: () => 'UTC' }), /^Your current status: online\.\nRen's status: online\.\nThe current time and date: 03:00, /);
     assert.equal(S.contextBlock(m, 'Nobody', a.id, { now: NOW }), '');
+    // 이 요청에서만 쓸 내 상태 (서버가 실리를 닫은 동안 만드는 답장)
+    assert.match(S.contextBlock(m, 'Mara', a.id, { now: NOW, tzOf: () => 'UTC', user: { status: 'idle', activity: 'away or offline' } }), /\nRen's status: idle \/ away from the computer - away or offline\.\n/);
+    assert.equal(S.intentWhy(m, 'after_busy'), 'You just wrapped up a busy stretch. You have some breathing room now.');
+    assert.match(S.intentWhy(m, 'check_in'), /Ren has been quiet/);
+    assert.equal(S.intentWhy(m, 'nope'), '');
     S.setSchedule(m, 'Mara', all('dnd', 'working'), NOW);
     S.setUserStatus(m, { status: 'idle', activity: '  cooking   dinner ' });
     const t = S.contextBlock(m, 'Mara', a.id, { now: NOW, tzOf: () => 'Asia/Seoul', lastRole: 'user', said: true });

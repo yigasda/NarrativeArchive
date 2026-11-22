@@ -756,6 +756,24 @@ test('롤플이 끝 메시지들에 다 안 담길 만큼 진행됐으면: 답�
     delete T.metadata;
 });
 
+test('서버 플러그인에서 도는 답장(naServer): 요약본을 늘리지 않고 가진 것으로 가요. 내 상태는 그 요청에 준 것(job.user)으로', async () => {
+    const c = snapWorld();
+    said(c, '어디야');
+    T.st = { naServer: true };
+    try {
+        const job = c.w.queue.jobs.find(j => j.kind === 'reply' && j.state === 'waiting');
+        job.user = { status: 'idle', activity: 'away or offline' };
+        await G.liveGo(c.real);
+        assert.equal(T.extends, 0);
+        assert.deepEqual(c.w.snap, SNAP0);
+        assert.equal(c.w.snapTried, undefined);
+        assert.ok(T.replyInput.includes('[LAST MESSAGES]\nMara: hurry\n\nRen: the train is late'));
+        assert.match(T.replyInput, /Ren's status: idle \/ away from the computer - away or offline\./);
+        // (폰에 적힌 내 상태는 그대로)
+        assert.notEqual(c.w.presence?.user?.status, 'idle');
+    } finally { delete T.st; delete T.metadata; }
+});
+
 test('끝 메시지들에 다 담기면 · 롤플이 그대로면 · 새로 시작한 폰이면 안 늘려요', async () => {
     for (const set of [c => { T.tail = { lines: ['[#4] Ren: hi', '[#5] Mara: hey'], first: 4, end: 5 }; }, c => { T.tail = { lines: ['[#3] Mara: see you'], first: 3, end: 3 }; }, c => { T.tail = { lines: ['[#1] Ren: x'], first: 1, end: 1 }; },
         c => { c.w.from = 'fresh'; }]) {

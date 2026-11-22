@@ -78,6 +78,9 @@ async function keepUpStory(real, tell = () => {}) {
     if (extending.has(real)) return extending.get(real);
     const w = liveWorld(real);
     if (!w || w.from !== 'story' || !open(real)) return null;
+    // (the server plugin never makes or lengthens the story: it has no role-play chat to read. A reply there goes with the
+    //  snapshot the phone has; a phone with none is refused by the request itself, as in the browser)
+    if (ctx().naServer) return null;
     const snapOf = () => (isSnap(w.snap) ? w.snap : null);
     const tail = liveChatTail(), had = snapOf();
     if (had && (w.snapTried === tail.end || !liveSnapBehind(had, tail))) return null;
@@ -266,7 +269,7 @@ async function gatherJob(real, job) {
         before: () => (open(real) ? liveChatTail().lines : []),
     } });
     // (Marinara's status · schedule lines: always there, as in Marinara; an owner with no schedule reads "online")
-    if (d) { const room = w.messenger.rooms[job.room], last = [...(room?.messages || [])].reverse().find(x => x.text || x.call || x.extra?.attachments?.length); d.context = contextBlock(real, job.owner, job.room, { tzOf: n => zoneOf(real, livePhone(real, n) || p), lastRole: last && liveKey(last.from) === liveKey(w.persona) ? 'user' : 'assistant', said: !job.why, intentKey: job.intent || '', mentions: job.auto ? [] : mentionsIn(real, job.room) });
+    if (d) { const room = w.messenger.rooms[job.room], last = [...(room?.messages || [])].reverse().find(x => x.text || x.call || x.extra?.attachments?.length); d.context = contextBlock(real, job.owner, job.room, { tzOf: n => zoneOf(real, livePhone(real, n) || p), lastRole: last && liveKey(last.from) === liveKey(w.persona) ? 'user' : 'assistant', said: !job.why, intentKey: job.intent || '', mentions: job.auto ? [] : mentionsIn(real, job.room), user: job.user });
         // (a group room: each responder is told it may hand the turn on with @Name — Marinara's line, as it is)
         if (d.context && isGroupRoom(real, job.room) && groupTurnPrompt(real)) d.context += `\n${GROUP_MENTION_INVITE_LINE}`; }
     return d ? { room: job.room, system: phone2ReplySystem({ owner: d.owner, persona: d.persona, scheduled: !!activeSchedule(real, job.owner), statusCommand: commandOn(real, 'schedule_update'), react: commandOn(real, 'react') }), input: replyInput(d), images: att.images, files: att.files } : null;
@@ -313,7 +316,7 @@ async function gatherMerged(real, job, { card, d0, att = null }) {
     } });
     if (!d) return null;
     const last = [...(room.messages || [])].reverse().find(x => x.text || x.call || x.extra?.attachments?.length), called = (job.called || []).map(k => chars.find(n => liveKey(n) === k)).filter(Boolean);
-    const context = contextBlock(real, job.owner, job.room, { tzOf: n => zoneOf(real, livePhone(real, n) || p), lastRole: last && liveKey(last.from) === P ? 'user' : 'assistant', said: true, mentions: called, merged: true });
+    const context = contextBlock(real, job.owner, job.room, { tzOf: n => zoneOf(real, livePhone(real, n) || p), lastRole: last && liveKey(last.from) === P ? 'user' : 'assistant', said: true, mentions: called, merged: true, user: job.user });
     const cards = [];
     for (const n of chars) { const body = String(liveKey(n) === liveKey(job.owner) ? card : await cardOf(livePhone(real, n)) ?? '').trim(); if (body) cards.push(`[${n}'s card]\n${body}`); }
     const input = [

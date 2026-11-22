@@ -322,7 +322,8 @@ test('app + 스케줄러: 켠 방이 때가 되면 답장 만들기를 부르고
     t.after(async () => { sched.stop(); await app.close(); for (const x of [a, b, c]) clearChatActivity(x.id); });
     t.mock.timers.tick(20_000);
     // (진짜 파일을 읽고 쓰는 일이 끼어 있어요: 끝날 때까지 기다려요)
-    for (let i = 0; i < 200 && made.length < 1; i++) await new Promise(r => setImmediate(r));
+    const unread = async () => (await store.load('sa')).parts[`room/${a.room.id}`].room.autonomousUnreadCount;
+    for (let i = 0; i < 5000 && !(made.length && await unread()); i++) await new Promise(r => setImmediate(r));
     for (let i = 0; i < 50; i++) await new Promise(r => setImmediate(r));
     // (스케줄이 없는 사람: 왜 거는지는 물어본 답만 알아요 → 그 이유를 그대로 넘겨요)
     assert.deepEqual(made, [[a.id, 'mara', a.room.id, 'idle', 'away or offline', 'check_in']]);

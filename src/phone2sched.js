@@ -21,7 +21,7 @@ import { parseCharacterScheduleImport, createCharacterScheduleExport } from './m
 import { buildConversationCurrentContextBlock } from './marinara/conversation-context-block.js';
 import { checkAutonomous, checkExchange, forgetAutonomousSeed } from './marinara/autonomous-check.js';
 import { clearChatActivity, clearGenerationInProgress, buildAutonomousDailyBudgetPatch, sharesAutonomousDailyBudget, isAutonomousDailyBudgetExhausted, getAutonomousDailyBudget, dailyCapForCharacter, getActivityState, recordUserActivity, recordAssistantActivity, recordUserReaction } from './marinara/autonomous.service.js';
-import { buildIntentCooldownPatch, isMessageIntent } from './marinara/intent.service.js';
+import { buildIntentCooldownPatch, isMessageIntent, getIntentHint } from './marinara/intent.service.js';
 import { applyCharacterStatusCommand, applyRoomScheduleCommand } from './marinara/schedule-command.js';
 import { restoreAvailableAfterUserMessage } from './marinara/idle-detection.js';
 import { isMessageHiddenFromAI } from './marinara/message-hidden.js';
@@ -148,7 +148,8 @@ export function mentionsIn(m, roomId) {
 
 // 답장 요청에 넣는 마리나라의 상황 글 (상태 · 내 상태 · 오늘 스케줄 · 지금 시각). 마리나라처럼 항상 넣어요: 스케줄이 없는 사람은 "online"
 // tzOf(이름) → 그 사람의 시간대; lastRole: 방의 마지막 말이 'user'(나) | 'assistant'; said: 내가 새로 한 말이 있나
-export function contextBlock(m, owner, roomId, { now = new Date(), tzOf = () => '', lastRole = 'user', said = true, intentKey = '', mentions = [], merged = false } = {}) {
+//   user: { status, activity } 이 요청에서만 쓸 내 상태 (서버가 실리를 닫은 동안 만드는 답장: 마리나라의 서버는 'idle' · 'away or offline'로 보내요). 없으면 폰에 적힌 내 상태
+export function contextBlock(m, owner, roomId, { now = new Date(), tzOf = () => '', lastRole = 'user', said = true, intentKey = '', mentions = [], merged = false, user = null } = {}) {
     const w = liveWorld(m), room = w?.messenger?.rooms?.[roomId], p = peek(m);
     if (!w || !room) return '';
     const info = room.members.filter(n => liveKey(n) !== liveKey(w.persona)).map(n => {
@@ -159,7 +160,7 @@ export function contextBlock(m, owner, roomId, { now = new Date(), tzOf = () => 
     if (!info.some(c => c.charId === liveKey(owner))) return '';
     return named(buildConversationCurrentContextBlock({
         nowInstant: now, promptTimeZone: tzOf(owner) || undefined, convoCharInfo: info, finalMessages: [{ role: lastRole }], personaName: w.persona,
-        userMessage: said ? 'said' : '', userStatus: p.user?.status || 'active', userActivity: p.user?.activity || '',
+        userMessage: said ? 'said' : '', userStatus: (user || p.user)?.status || 'active', userActivity: (user || p.user)?.activity || '',
         mentionedCharacterNames: mentions,
         autonomousIntentKey: isMessageIntent(intentKey) ? intentKey : undefined, primaryCharacterId: merged ? undefined : liveKey(owner), wrapFormat: 'none',
     }), w.persona);
@@ -200,6 +201,8 @@ export function checkProactive(m, roomId, { now = new Date(), tzOf = () => '', c
     });
     return out.autonomousIntent ? { ...out, autonomousIntent: named(out.autonomousIntent, w.persona), autonomousIntentPrompt: named(out.autonomousIntentPrompt, w.persona) } : out;
 }
+// 먼저 거는 이유의 문장 (마리나라의 것, "the user"는 페르소나 이름으로): 판단의 답(autonomousIntent)과 같은 글이에요. 모르는 이유면 ''
+export const intentWhy = (m, intentKey) => (isMessageIntent(intentKey) ? named(getIntentHint(intentKey), liveWorld(m)?.persona) : '');
 // 먼저 말 걸기를 줄 세웠어요: 오늘 센 수 · 그 이유의 쉬는 시간을 적어요 (마리나라가 채팅 메타에 적는 것 그대로)
 export function noteProactive(m, roomId, characterId, intentKey, now = new Date()) {
     const p = presenceOf(m);
