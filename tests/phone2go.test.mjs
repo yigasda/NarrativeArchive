@@ -1765,3 +1765,33 @@ test('첨부 보내기: 올리고 → 글 없이도 보내고 → 답장 요청�
         assert.match(G.LIVE_ATTACH_ACCEPT, /image\/\*/);
     } finally { globalThis.fetch = old; delete T.ask; }
 });
+
+test('캐릭터 명령 스위치 (마리나라의 Commands): 끄면 답장 지시문에서 그 명령이 빠지고, 답에 들어 있어도 안 받아요', async () => {
+    const c = world(), id = c.room.id, S = await import(new URL('../src/phone2sched.js', import.meta.url).href).catch(() => null);
+    // (마리나라의 목록에서 패키지 없이 뜨는 것. 이 확장에 있는 명령만 works)
+    const list = G.liveCommands(c.real);
+    assert.equal(list.enabled, true);
+    assert.deepEqual(list.options.map(o => o.id), ['schedule_update', 'cross_post', 'memory', 'scene', 'influence', 'note', 'react']);
+    assert.deepEqual(list.options.filter(o => o.works).map(o => o.id), ['schedule_update', 'react']);
+    assert.ok(list.options.every(o => o.on));
+    assert.equal(list.options[0].description, 'Let characters change their current status and activity.');
+    await assert.rejects(G.liveSetCommands(c.real, { toggles: { nope: false } }), /없는 명령/);
+    const seen = [];
+    T.ask = async (input, o) => { seen.push(o.system); return JSON.stringify({ reply: ['응'], react: { to: 'Ren', emoji: '❤️' }, does: [] }); };
+    try {
+        send(c, '하나'); await G.liveGo(c.real);
+        assert.match(seen[0], /"react": "" or/); assert.equal(c.room.messages.find(x => x.text === '하나').reacts?.length, 1);
+        // (반응 끄기: 지시문에서 빠지고, 답에 있어도 안 달려요. 저장은 마리나라의 이름으로)
+        assert.equal((await G.liveSetCommands(c.real, { toggles: { react: false } })).options.find(o => o.id === 'react').on, false);
+        assert.deepEqual(G.livePresence(c.real).meta.conversationCommandToggles, { react: false });
+        send(c, '둘'); await G.liveGo(c.real);
+        assert.doesNotMatch(seen[1], /"react"/); assert.equal(c.room.messages.find(x => x.text === '둘').reacts, undefined);
+        // (명령 전체 끄기: 모든 명령이 꺼져요. 낱낱의 스위치 값은 그대로)
+        await G.liveSetCommands(c.real, { toggles: { react: true }, enabled: false });
+        assert.equal(G.livePresence(c.real).meta.characterCommands, false);
+        send(c, '셋'); await G.liveGo(c.real);
+        assert.doesNotMatch(seen[2], /"react"/);
+        assert.deepEqual((({ enabled, options }) => [enabled, options.find(o => o.id === 'react').on])(await G.liveSetCommands(c.real, { enabled: true })), [true, true]);
+        assert.equal(G.livePresence(c.real).meta.characterCommands, undefined);
+    } finally { delete T.ask; }
+});

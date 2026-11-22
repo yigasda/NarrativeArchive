@@ -22,7 +22,7 @@ import { buildConversationCurrentContextBlock } from './marinara/conversation-co
 import { checkAutonomous, checkExchange, forgetAutonomousSeed } from './marinara/autonomous-check.js';
 import { clearChatActivity, clearGenerationInProgress, buildAutonomousDailyBudgetPatch, sharesAutonomousDailyBudget, isAutonomousDailyBudgetExhausted, getAutonomousDailyBudget, dailyCapForCharacter, getActivityState, recordUserActivity, recordAssistantActivity, recordUserReaction } from './marinara/autonomous.service.js';
 import { buildIntentCooldownPatch, isMessageIntent } from './marinara/intent.service.js';
-import { applyCharacterStatusCommand } from './marinara/schedule-command.js';
+import { applyCharacterStatusCommand, applyRoomScheduleCommand } from './marinara/schedule-command.js';
 import { restoreAvailableAfterUserMessage } from './marinara/idle-detection.js';
 import { isMessageHiddenFromAI } from './marinara/message-hidden.js';
 import { formatSmartGroupCandidates, parseSmartGroupSelectionIds, selectFallbackSmartGroupResponder, buildSmartGroupRecentTranscript, buildSmartGroupSelectionPrompt, getExplicitlyMentionedCharacterIds, resolveRespondingCharacterIds, routeMentionsAfterReply, orderConversationRespondersByDelay, normalizeGroupChatMode, SMART_GROUP_SELECTOR_DEFAULTS, GROUP_MENTION_INVITE_LINE } from './marinara/group-responders.js';
@@ -104,7 +104,9 @@ export function setStatusOverride(m, owner, { status, activity = '', minutes = 0
     const p = presenceOf(m), k = liveKey(owner);
     if (!status) { delete p.overrides[k]; toCard(owner, { conversationStatusOverride: null }); return null; }
     if (!STATUSES.includes(status)) throw new Error('상태는 online · idle · dnd · offline 가운데 하나예요');
-    p.overrides[k] = { status, activity: String(activity || '').trim().slice(0, 120) || null, createdAt: now.toISOString(), ...(minutes > 0 ? { expiresAt: new Date(now.getTime() + minutes * 60_000).toISOString() } : {}) };
+    // (expiresAt: null and place: null are written out, as Marinara's card does: SillyTavern's server merges a card's
+    //  extension field key by key, so a key left out would keep the end time or place of the status before this one)
+    p.overrides[k] = { status, activity: String(activity || '').trim().slice(0, 120) || null, createdAt: now.toISOString(), expiresAt: minutes > 0 ? new Date(now.getTime() + minutes * 60_000).toISOString() : null, place: null };
     toCard(owner, { conversationStatusOverride: p.overrides[k] });
     return p.overrides[k];
 }
@@ -271,15 +273,50 @@ export function stateNow(m, owner, { now = new Date(), tz = '' } = {}) {
     const at = blockNow(m, owner, { now, tz });
     return at ? { key: at.key, text: at.text, place: one(at.block.place) } : null;
 }
-// 캐릭터가 답장에서 스스로 상태를 바꿨어요 (마리나라의 schedule_update 명령: 임시 상태로 두고, 시간이 지나면 스케줄로 돌아가요)
-//   cmd: { status, activity, duration ("1h"), place (우리 칸: 어디서) } → 새 임시 상태 | null (안 바뀜: 손으로 준 상태가 있거나 빈 명령)
+// 캐릭터가 답장에서 스스로 상태를 바꿨어요 (마리나라의 schedule_update 명령)
+//   cmd: { status, activity, duration ("1h"), place (우리 칸: 어디서) }
+//   → 바뀐 것 | null (안 바뀜: 손으로 준 상태가 있거나, 빈 명령이거나, 지금 상태와 같은 말)
+//   1) 스케줄 표에서 지금 시간에 걸린 칸을 고쳐요 (소망, 2026-11-22: 마리나라가 공유 방에서 하는 것을 캐릭터 방에서도).
+//      하는 일 · 상태가 그 칸에 적히고, 시간을 줬고 그게 칸이 끝나기 전이면 칸을 둘로 쪼개요 (뒤는 free time · online).
+//      표에 남아요: 그 사람이 나오는 모든 채팅에서, 다음 주에도 (매주 갱신을 켜 두면 새 표로 바뀌어요). → { block: true, … }
+//   2) 지금 시간에 걸린 칸이 없으면 (스케줄이 없거나, 칸이 자정을 넘어가는 칸이거나) 마리나라의 캐릭터 방 그대로:
+//      임시 상태로 두고, 시간이 지나면 스케줄로 돌아가요. → 임시 상태
 export function takeStatus(m, owner, cmd, { now = new Date(), tz = '' } = {}) {
     if (!obj(cmd)) return null;
     const p = presenceOf(m), k = liveKey(owner), status = STATUSES.includes(String(cmd.status || '').toLowerCase()) ? String(cmd.status).toLowerCase() : undefined;
-    const got = applyCharacterStatusCommand({ command: { type: 'schedule_update', status, activity: one(cmd.activity).slice(0, 120) || undefined, duration: one(cmd.duration) || undefined }, current: p.overrides[k], schedule: activeSchedule(m, owner) || undefined, now, scheduleNow: toZonedWallClockDate(now, tz || undefined) });
+    const activity = one(cmd.activity).slice(0, 120), place = one(cmd.place).slice(0, 80);
+    // 우리 것: 방금 들은 자기 상태를 그대로 되돌려 쓴 것은 "바꾼 것"이 아니에요.
+    //   마리나라에서 이 명령은 캐릭터가 바꿀 때만 붙이는 꼬리표예요. 우리는 답장 JSON의 칸이라, 모델이 답장마다 요청의
+    //   CONTEXT에서 읽은 지금 상태("Your current status: …")를 그대로 채워 넣는 일이 잦아요. 그걸 새 명령으로 받으면
+    //   임시 상태가 답장마다 다시 걸려서 끝나지 않고, 스케줄이 영영 안 보여요 (밤에 쓴 "into the night"가 다음 날 낮에도 남음).
+    //   - 지금 상태와 하는 일 · 상태가 같으면: 아무것도 안 바꿔요
+    //   - 하는 일은 그대로인데 상태만 다르면: 상태만 바꾸고, 끝나는 때는 그대로 둬요 (늘리지 않아요)
+    const cur = getActiveStatusOverride(p.overrides[k], now), eff = statusNow(m, owner, { now, tz }), same = (x, y) => one(x).toLowerCase() === one(y).toLowerCase();
+    if (eff && (!activity || same(activity, eff.activity))) {
+        if (!status || status === eff.status) return null;
+        if (cur?.expiresAt) { p.overrides[k] = { ...cur, status, ...(place ? { place } : {}) }; toCard(owner, { conversationStatusOverride: p.overrides[k] }); return p.overrides[k]; }
+    }
+    const command = { type: 'schedule_update', status, activity: activity || undefined, duration: one(cmd.duration) || undefined };
+    if (!command.status && !command.activity) return null;
+    // (a status the user set by hand has no end time, and it stays in charge: Marinara's rule, for the block edit too)
+    if (getActiveStatusOverride(p.overrides[k], now) && !p.overrides[k]?.expiresAt) return null;
+    const scheduleNow = toZonedWallClockDate(now, tz || undefined), week = activeSchedule(m, owner);
+    if (week) {
+        const next = JSON.parse(JSON.stringify(week));
+        if (applyRoomScheduleCommand({ command, schedule: next, nowDate: scheduleNow })) {
+            // (our own field: where the new activity puts them, on the block that now holds this minute)
+            const at = getAdjacentScheduleBlocks(next, scheduleNow).current;
+            if (at) { if (place) at.place = place; else delete at.place; }
+            p.schedules[k] = next;
+            toCard(owner, { conversationSchedule: next });
+            // (a temporary status from before would hide the block just written)
+            if (p.overrides[k]) { delete p.overrides[k]; toCard(owner, { conversationStatusOverride: null }); }
+            return { block: true, status: at?.status || status, activity: at?.activity || activity, time: at?.time || '', ...(place ? { place } : {}) };
+        }
+    }
+    const got = applyCharacterStatusCommand({ command, current: p.overrides[k], schedule: week || undefined, now, scheduleNow });
     if (!got) return null;
-    const place = one(cmd.place).slice(0, 80);
-    p.overrides[k] = { ...got, ...(place ? { place } : {}) };
+    p.overrides[k] = { ...got, place: place || null };
     toCard(owner, { conversationStatusOverride: p.overrides[k] });
     return p.overrides[k];
 }

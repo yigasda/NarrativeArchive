@@ -1,13 +1,18 @@
-// Ported from Marinara Engine (https://github.com/Pasta-Devs/Marinara-Engine), at fc0333c:
+// Ported from Marinara Engine (https://github.com/Pasta-Devs/Marinara-Engine), at 32c47a1 (staging, 2026-11-20; the same
+// as fc0333c for these parts):
 //   packages/server/src/services/generation/conversation-schedule-command-runtime.ts (the status command: its limits,
-//   parseDuration and applyCharacterStatusCommand) and packages/server/src/services/generation/conversation-command-runtime.ts
-//   (the prompt line that tells the character about the command), and parseDuration from
-//   packages/server/src/services/conversation/character-commands.ts.
+//   applyCharacterStatusCommand; and the schedule-block edit: DAYS_LIST, the updateSchedule step of
+//   handleConversationScheduleCommand, updateCurrentScheduleBlock) and
+//   packages/server/src/services/generation/conversation-command-runtime.ts (the prompt line that tells the character
+//   about the command), and parseDuration from packages/server/src/services/conversation/character-commands.ts.
 // Copyright (C) 2025-2026 Spicy Marinara. Licensed under the GNU Affero General Public License v3.0 (see /LICENSE).
 // Changes for NarrativeArchive:
-//   - parseDuration and the limits are as they are, TypeScript types removed;
+//   - parseDuration, the limits and updateCurrentScheduleBlock are as they are, TypeScript types removed;
 //   - applyCharacterStatusCommand takes the character's current override and schedule as arguments instead of reading
 //     the Marinara database, and returns the new override instead of saving it on the character card;
+//   - applyRoomScheduleCommand is the updateSchedule step of handleConversationScheduleCommand: it takes the week and
+//     the wall-clock now as arguments instead of reading the chat's metadata, and says whether a block changed. In
+//     Marinara that step runs in shared rooms only; here the caller decides (src/phone2sched.js takeStatus);
 //   - SCHEDULE_UPDATE_PROMPT_LINE is the prompt line as it is.
 import { getActiveStatusOverride, getEffectiveCurrentStatus } from "./conversation-presence.js";
 
@@ -56,4 +61,57 @@ function parseDuration(duration) {
 
   total = Math.round(total);
   return total > 0 ? total : null;
+}
+
+const DAYS_LIST = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+/**
+ * The command edits the current schedule block (Marinara: "the command edits the room's current schedule block").
+ *   schedule: the week, changed in place; nowDate: now on the schedule's wall clock  → whether a block was changed
+ */
+export function applyRoomScheduleCommand({ command, schedule, nowDate }) {
+  if (!schedule) return false;
+  const dayName = DAYS_LIST[(nowDate.getDay() + 6) % 7];
+  const daySchedule = schedule.days?.[dayName] ?? [];
+  if (!updateCurrentScheduleBlock(daySchedule, nowDate.getHours() * 60 + nowDate.getMinutes(), command)) return false;
+  schedule.days = { ...(schedule.days ?? {}), [dayName]: daySchedule };
+  return true;
+}
+
+function updateCurrentScheduleBlock(
+  daySchedule,
+  currentMinutes,
+  command,
+) {
+  for (const block of daySchedule) {
+    const [startStr, endStr] = block.time.split("-");
+    if (!startStr || !endStr) continue;
+    const [sh, sm] = startStr.split(":").map(Number);
+    const [eh, em] = endStr.split(":").map(Number);
+    if (![sh, sm, eh, em].every((part) => Number.isFinite(part))) continue;
+    const startMin = (sh ?? 0) * 60 + (sm ?? 0);
+    const endMin = (eh ?? 0) * 60 + (em ?? 0);
+    if (startMin > currentMinutes || currentMinutes >= endMin) continue;
+
+    if (command.status) block.status = command.status;
+    if (command.activity) block.activity = command.activity;
+
+    if (command.duration) {
+      const durationMin = parseDuration(command.duration);
+      if (durationMin && currentMinutes + durationMin < endMin) {
+        const splitTime = currentMinutes + durationMin;
+        const splitH = String(Math.floor(splitTime / 60)).padStart(2, "0");
+        const splitM = String(splitTime % 60).padStart(2, "0");
+        block.time = `${startStr}-${splitH}:${splitM}`;
+        const idx = daySchedule.indexOf(block);
+        daySchedule.splice(idx + 1, 0, {
+          time: `${splitH}:${splitM}-${endStr}`,
+          activity: "free time",
+          status: "online",
+        });
+      }
+    }
+    return true;
+  }
+  return false;
 }

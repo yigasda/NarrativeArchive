@@ -263,8 +263,77 @@ test('스케줄이 있는 사람의 답장 지시문: state를 안 묻고, 마�
     assert.doesNotMatch(s, /STATE FIRST|"state"/);
     const said = CMD.SCHEDULE_UPDATE_PROMPT_LINE.split('] - ')[1];
     assert.equal(said, "only if you change your own status/activity, for example, if the user asks you to stop what you're doing or if you decide to change them yourself.");
-    assert.ok(s.includes(`\nSTATUS\n- "status": ${said} With "place": where that puts you. Else "".\n\nTEXTING\n`));
-    assert.ok(s.includes('\n{ "status": "" or { "status": "online|idle|dnd|offline", "activity": "activity name", "duration": "number of hours (e.g., 1h)", "place": "where" },\n  "reply": '));
+    // (상태는 맨 끝 칸이고 기본이 "": 첫 칸에 채운 예시로 두면 모델이 답장마다 상태를 써서 스케줄이 가려져요)
+    assert.ok(s.includes(`\nSTATUS\n- Your status and what you are doing come from your schedule in CONTEXT, by themselves. "status" stays "".\n- Write a new one ${said} Then "status": { "status": "online|idle|dnd|offline", "activity": "activity name", "duration": "number of hours (e.g., 1h)", "place": "where that puts you" }.\n\nTEXTING\n`));
+    assert.ok(s.includes('\n{ "reply": the words you type now'));
+    assert.ok(s.endsWith('}],\n  "status": "" }'));
+    assert.equal(s.match(/"status"/g).length, 4);
+    // (명령 스위치를 끄면 그 명령은 지시문에 아예 없어요: 스케줄 갱신 · 반응)
+    const off = RP.phone2ReplySystem({ owner: 'Mara', persona: 'Ren', scheduled: true, statusCommand: false });
+    assert.doesNotMatch(off, /STATUS|"status"|STATE FIRST|"state"/); assert.match(off, /\n\nTEXTING\n/); assert.ok(off.includes('\n{ "reply": the words you type now'));
+    const quiet = RP.phone2ReplySystem({ owner: 'Mara', persona: 'Ren', react: false });
+    assert.doesNotMatch(quiet, /"react"|An emoji on the last text/); assert.match(quiet, /\nSTATE FIRST\n/); assert.equal(plain.length - quiet.length > 100, true);
+});
+test('캐릭터가 하는 일을 바꾸면 스케줄 표의 지금 칸이 고쳐져요 (마리나라의 updateCurrentScheduleBlock 그대로): 시간을 주면 칸을 쪼개고, 표에 남아요', () => {
+    const { m, w } = world(), p = w.phones.mara;
+    // (2026-11-23은 월요일. 14:20 UTC)
+    const t = Date.parse('2026-11-23T14:20:00Z'), now = new Date(t), opt = { now, tz: 'UTC' };
+    const blocks = () => S.scheduleOf(m, 'Mara').days.Monday.map(b => [b.time, b.activity, b.status, b.place || '']);
+    S.setSchedule(m, 'Mara', week([{ time: '09:00-13:00', activity: 'work', status: 'dnd' }, { time: '13:00-18:00', activity: 'desk work', status: 'dnd' }, { time: '18:00-23:00', activity: 'free time', status: 'online' }]), NOW);
+    // (시간 없이: 지금 칸의 하는 일 · 상태만 바뀌어요)
+    const a = S.takeStatus(m, 'Mara', { status: 'idle', activity: 'coffee break', place: 'the canteen' }, opt);
+    assert.deepEqual(a, { block: true, status: 'idle', activity: 'coffee break', time: '13:00-18:00', place: 'the canteen' });
+    assert.deepEqual(blocks()[1], ['13:00-18:00', 'coffee break', 'idle', 'the canteen']);
+    assert.equal(S.statusNow(m, 'Mara', opt).override, undefined);                      // (임시 상태가 아니에요: 표가 바뀐 거예요)
+    assert.deepEqual((({ status, activity }) => [status, activity])(S.statusNow(m, 'Mara', opt)), ['idle', 'coffee break']);
+    // (시간을 주고 그게 칸이 끝나기 전이면: 칸을 쪼개요. 뒤는 free time · online)
+    const b = S.takeStatus(m, 'Mara', { status: 'dnd', activity: 'call with the client', duration: '1h' }, opt);
+    assert.equal(b.time, '13:00-15:20');
+    assert.deepEqual(blocks(), [['09:00-13:00', 'work', 'dnd', ''], ['13:00-15:20', 'call with the client', 'dnd', ''], ['15:20-18:00', 'free time', 'online', ''], ['18:00-23:00', 'free time', 'online', '']]);
+    // (칸이 끝난 뒤까지 가는 시간이면 쪼개지 않아요)
+    S.takeStatus(m, 'Mara', { activity: 'long call', duration: '9h' }, opt);
+    assert.deepEqual(blocks()[1], ['13:00-15:20', 'long call', 'dnd', '']);
+    // (다른 요일 · 다른 칸은 그대로, 표에 남아요: 다음 주 같은 시간에도)
+    assert.deepEqual(S.scheduleOf(m, 'Mara').days.Tuesday.map(x => x.activity), ['work', 'desk work', 'free time']);
+    assert.equal(S.statusNow(m, 'Mara', { now: new Date(t + 7 * 86400_000), tz: 'UTC' }).activity, 'long call');
+    // (전에 걸려 있던 임시 상태는 풀려요: 새로 적은 칸을 가리면 안 돼요)
+    const late = { now: new Date(Date.parse('2026-11-23T23:30:00Z')), tz: 'UTC' };
+    const o = S.takeStatus(m, 'Mara', { activity: 'night walk', duration: '30h' }, late);   // (지금 칸이 없는 시간: 마리나라의 캐릭터 방 그대로 임시 상태)
+    assert.equal(o.block, undefined); assert.ok(o.expiresAt);
+    const next = { now: new Date(Date.parse('2026-11-24T14:20:00Z')), tz: 'UTC' };
+    assert.equal(S.statusNow(m, 'Mara', next).activity, 'night walk');
+    assert.equal(S.takeStatus(m, 'Mara', { status: 'online', activity: 'lunch out' }, next).block, true);
+    assert.deepEqual((({ activity, override }) => [activity, override])(S.statusNow(m, 'Mara', next)), ['lunch out', undefined]);
+    // (내가 손으로 준 상태가 있으면 표도 안 고쳐요)
+    S.setStatusOverride(m, 'Mara', { status: 'dnd', activity: 'do not disturb her' }, next.now);
+    assert.equal(S.takeStatus(m, 'Mara', { activity: 'something else' }, next), null);
+    assert.equal(S.scheduleOf(m, 'Mara').days.Tuesday[1].activity, 'lunch out');
+    // (지금 칸과 같은 말을 되돌려 쓴 것은 아무것도 안 바꿔요)
+    S.setStatusOverride(m, 'Mara', {});
+    assert.equal(S.takeStatus(m, 'Mara', { status: 'online', activity: 'Lunch out', duration: '2h' }, next), null);
+    assert.equal(S.scheduleOf(m, 'Mara').days.Tuesday.length, 3);
+    assert.equal(G.followSchedule(m, next.now.getTime()) >= 0, true); assert.ok(p);
+});
+test('캐릭터가 방금 들은 자기 상태를 그대로 되돌려 쓴 것은 바꾼 게 아니에요: 임시 상태가 다시 걸리지 않고, 시간이 지나면 스케줄로 돌아가요', () => {
+    const { m } = world(), t = Date.parse('2026-11-23T03:00:00Z'), now = new Date(t), later = ms => new Date(t + ms), H = 3600_000;
+    S.setSchedule(m, 'Mara', all('online', 'free time'), NOW);
+    // (스케줄대로인 상태를 그대로 적어 보낸 답: 임시 상태를 만들지 않아요)
+    assert.equal(S.takeStatus(m, 'Mara', { status: 'online', activity: 'Free Time', duration: '8h' }, { now, tz: 'UTC' }), null);
+    assert.equal(S.statusNow(m, 'Mara', { now, tz: 'UTC' }).override, undefined);
+    // (밤에 스스로 바꿈: 2시간짜리)
+    const o = S.takeStatus(m, 'Mara', { status: 'dnd', activity: 'prolonged classical piano playing into the night', duration: '2h' }, { now, tz: 'UTC' });
+    assert.equal(Date.parse(o.expiresAt) - t, 2 * H);
+    // (다음 답장들이 그 상태를 그대로 되돌려 써도 — 긴 시간을 붙여서도 — 끝나는 때는 그대로)
+    assert.equal(S.takeStatus(m, 'Mara', { status: 'dnd', activity: 'prolonged classical piano playing into the night', duration: '12h' }, { now: later(H), tz: 'UTC' }), null);
+    assert.equal(S.takeStatus(m, 'Mara', { activity: ' Prolonged classical piano playing into the night ' }, { now: later(H), tz: 'UTC' }), null);
+    // (하는 일은 그대로인데 상태만 다르면: 상태만 바뀌고 끝나는 때는 안 늘어나요)
+    const s2 = S.takeStatus(m, 'Mara', { status: 'online', activity: 'prolonged classical piano playing into the night', duration: '12h' }, { now: later(H), tz: 'UTC' });
+    assert.deepEqual([s2.status, s2.expiresAt, s2.createdAt], ['online', o.expiresAt, o.createdAt]);
+    // (끝나면 스케줄로)
+    assert.deepEqual((({ status, activity, override }) => [status, activity, override])(S.statusNow(m, 'Mara', { now: later(2 * H + 1000), tz: 'UTC' })), ['online', 'free time', undefined]);
+    // (진짜로 바꾼 것은 전처럼 받아요)
+    const n = S.takeStatus(m, 'Mara', { status: 'idle', activity: 'taking a shower', duration: '30m' }, { now: later(H), tz: 'UTC' });
+    assert.deepEqual([n.status, n.activity, Date.parse(n.expiresAt) - (t + H)], ['idle', 'taking a shower', 30 * 60_000]);
 });
 test('캐릭터가 스스로 상태를 바꾸면: 임시 상태가 되고(시간이 지나면 스케줄로), 장소도 따라가요. 손으로 준 상태는 못 바꿔요', () => {
     const { m, w } = world(), p = w.phones.mara, t = Date.parse('2026-11-23T03:00:00Z'), now = new Date(t);

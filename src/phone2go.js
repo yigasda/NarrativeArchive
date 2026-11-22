@@ -27,7 +27,7 @@ import { BACK, backLeft, backInput, phone2BackSystem, takeBack, backMessage, mar
 import { liveWall } from './phone2clock.js';
 import { gatherReply, LIVE_ASK } from './phone2live.js';
 import { presenceOf, scheduleOf, setSchedule, setStatusOverride, setUserStatus, setAutonomous, statusNow, replyDelay, contextBlock, makeSchedule, checkProactive, noteProactive, fillPlaces, stateNow, takeStatus, scheduleZone, setScheduleZone, draftSchedule, summarizeSchedule, repairSchedule, setAutoRenew, autoRenewOf, needsRefresh, renewSchedules, setAutonomousOptions, autonomousOptions, checkExchangeFor, mentionsIn, activeSchedule, schedulesOn, setSchedulesOn, exportSchedule, importSchedule, syncUser, noteAssistant, noteReaction, forgetActivity, setCardStore, setZoneStore, flushCards, clearProgress, groupOrder, groupTurnPrompt, isGroupRoom, groupResponders, groupHandoff, GROUP_MENTION_INVITE_LINE, orderConversationRespondersByDelay, groupMode, mergedDelay, groupCandidates } from './phone2sched.js';
-import { buildMergedConversationSystemPrompt, formatConversationGroupOutputFormat, mergedRespondersLine, mergedMentionLine, extractLeadingThinkingBlocks, buildGenerationInfoExtra, chatModelChoiceSchema, readChatModelOverride, readChatRecentModels, applyChatModelPatch, applyChatModelOverride, reorderStars, CHAT_RECENT_MODELS_KEY, MAX_PINNED_MODELS, relevantGenerationParameters, reasoningEffortChoices, resolveProviderReasoningEffort, generationLevelLabel } from './phone2merged.js';
+import { buildMergedConversationSystemPrompt, formatConversationGroupOutputFormat, mergedRespondersLine, mergedMentionLine, extractLeadingThinkingBlocks, buildGenerationInfoExtra, chatModelChoiceSchema, readChatModelOverride, readChatRecentModels, applyChatModelPatch, applyChatModelOverride, reorderStars, CHAT_RECENT_MODELS_KEY, MAX_PINNED_MODELS, relevantGenerationParameters, reasoningEffortChoices, CONVERSATION_COMMAND_TOGGLE_OPTIONS, readConversationCommandToggles, isConversationCommandEnabled, conversationCommandsOn, buildConversationCommandToggleOptions, resolveProviderReasoningEffort, generationLevelLabel } from './phone2merged.js';
 import { replyInput, messengerBlock } from './phone2ask.js';
 import { readChatAttachments, toPendingAttachments, storeAttachments, attachmentInputs, DISABLED_IMAGE_CAPTIONING, DEFAULT_IMAGE_CAPTIONING_PROMPT, normalizePromptAttachments, CHAT_ATTACHMENT_ACCEPT } from './phone2attach.js';
 import { askRows } from './phone2room.js';
@@ -128,7 +128,8 @@ export async function liveGo(real, { onChange = () => {} } = {}) {
     let asked = null;
     const out = await runLive(real, {
         save: line.save, alive: () => open(real),
-        parse: s => parseJson(s, { salvage: true }),
+        // (a command switched off for this chat is not taken, even if the answer carries it: Marinara's filterEnabledConversationCommands)
+        parse: s => { const o = parseJson(s, { salvage: true }); if (o && typeof o === 'object') { if (!commandOn(real, 'schedule_update')) delete o.status; if (!commandOn(real, 'react')) delete o.react; } return o; },
         // (what was sent and what came with the answer, kept for the reply it becomes: Marinara's cachedPrompt · thinking · generationInfo)
         // (the room's own model, when one was picked for it in the quick switcher: else the draft model, as before)
         ask: (input, { system, req }) => { asked = { system, input, meta: {} }; return askRoom(real, req?.room, input, { force: true, system, maxTokens: LIVE_GO.replyTokens, effort: 'low', meta: asked.meta, images: req?.images, files: req?.files }); },
@@ -268,7 +269,7 @@ async function gatherJob(real, job) {
     if (d) { const room = w.messenger.rooms[job.room], last = [...(room?.messages || [])].reverse().find(x => x.text || x.call || x.extra?.attachments?.length); d.context = contextBlock(real, job.owner, job.room, { tzOf: n => zoneOf(real, livePhone(real, n) || p), lastRole: last && liveKey(last.from) === liveKey(w.persona) ? 'user' : 'assistant', said: !job.why, intentKey: job.intent || '', mentions: job.auto ? [] : mentionsIn(real, job.room) });
         // (a group room: each responder is told it may hand the turn on with @Name — Marinara's line, as it is)
         if (d.context && isGroupRoom(real, job.room) && groupTurnPrompt(real)) d.context += `\n${GROUP_MENTION_INVITE_LINE}`; }
-    return d ? { room: job.room, system: phone2ReplySystem({ owner: d.owner, persona: d.persona, scheduled: !!activeSchedule(real, job.owner) }), input: replyInput(d), images: att.images, files: att.files } : null;
+    return d ? { room: job.room, system: phone2ReplySystem({ owner: d.owner, persona: d.persona, scheduled: !!activeSchedule(real, job.owner), statusCommand: commandOn(real, 'schedule_update'), react: commandOn(real, 'react') }), input: replyInput(d), images: att.images, files: att.files } : null;
 }
 // 답장을 받은 뒤: 그 답의 마지막 말에 마리나라가 남기는 값을 남겨요 (generate.routes.ts "Persist thinking/reasoning and generation info")
 //   extra.thinking: 모델의 생각 (제공자가 따로 준 것 + 답 맨 앞의 <think> 같은 블록; 없으면 null)
@@ -1121,6 +1122,30 @@ export async function liveSwitchPersona(avatarId) {
     return true;
 }
 
+// ---- 캐릭터 명령 스위치 (마리나라의 Commands: 채팅 설정의 characterCommands · conversationCommandToggles 그대로 presence.meta에)
+//   liveCommands(real) → { enabled (명령 전체 스위치), options: [{ id, label, description, on, works }] }
+//     id: 마리나라의 명령 이름. works: 이 확장에 그 명령이 있나 (없는 명령은 켜도 아무 일도 없어요: 화면에 안 그리는 게 맞아요)
+//     지금 되는 것: schedule_update (캐릭터가 자기 상태 · 하는 일을 바꿈) · react (캐릭터가 이모지로 반응)
+//   liveSetCommands(real, { enabled?, toggles?: { 명령 이름: true|false } })
+//   끄면: 답장 지시문에서 그 명령이 빠지고, 답에 들어 있어도 안 받아요 (마리나라: 명령 줄을 안 넣고, 온 명령은 걸러요)
+const COMMANDS_HERE = ['schedule_update', 'react'];
+const commandOn = (real, key) => { const meta = liveWorld(real)?.presence?.meta || {}; return conversationCommandsOn(meta) && isConversationCommandEnabled(meta, key); };
+export function liveCommands(real) {
+    const meta = liveWorld(real)?.presence?.meta || {}, toggles = readConversationCommandToggles(meta.conversationCommandToggles);
+    // (Marinara lists the built-in commands whose package is installed; no package is installed here)
+    return { enabled: conversationCommandsOn(meta), options: buildConversationCommandToggleOptions(new Set(), []).map(o => ({ id: o.id, label: o.label, description: o.description, on: toggles[o.id] !== false, works: COMMANDS_HERE.includes(o.id) })) };
+}
+export async function liveSetCommands(real, { enabled, toggles } = {}) {
+    const meta = presenceOf(mine(real)).meta;
+    if (enabled !== undefined) { if (enabled) delete meta.characterCommands; else meta.characterCommands = false; }
+    if (toggles && typeof toggles === 'object') {
+        const now = readConversationCommandToggles(meta.conversationCommandToggles);
+        for (const [k, v] of Object.entries(toggles)) { if (!CONVERSATION_COMMAND_TOGGLE_OPTIONS.some(o => o.id === k)) throw new Error('없는 명령이에요'); now[k] = !!v; }
+        meta.conversationCommandToggles = now;
+    }
+    await saveMeta();
+    return liveCommands(real);
+}
 // ---- 첨부 보내기 (마리나라의 첨부 기능: src/phone2attach.js · src/marinara/)
 //   받는 파일: 그림 · PDF · 글 파일(txt · md · markdown · json · jsonl · csv · log · xml · yaml · yml), 하나에 20MB까지
 //   1) 고른 파일 읽기: await liveReadFiles(파일들, { onError(이유, 이름), onRead() }) → [{ type, data, name }]

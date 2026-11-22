@@ -10,3 +10,4 @@ export { chatModelChoiceSchema, readChatModelOverride, readChatRecentModels, rea
 export { relevantGenerationParameters, reasoningEffortChoices } from './marinara/generation-parameter-relevance.js';
 export { resolveProviderReasoningEffort, isClaudeOpus55Model } from './marinara/model-lists.js';
 export { generationLevelLabel } from './marinara/generation-level-label.js';
+export { CONVERSATION_COMMAND_TOGGLE_OPTIONS, CONVERSATION_COMMAND_AGENT_IDS, readConversationCommandToggles, isConversationCommandEnabled, conversationCommandsOn, buildConversationCommandToggleOptions } from './marinara/conversation-command-toggles.js';
