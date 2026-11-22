@@ -1,12 +1,13 @@
 // The ⚙ settings page: AI model connections, the group cards and tiles, embedding rows, and the 압축 tab's method rows.
 
-import { aiLabel, aiProfiles, apiFormat, compressEffort, connSettings, draftReady, draftSettings, drLabel, trLabel, trSettings, vxModelList } from './ai.js';
+import { aiLabel, aiProfiles, apiFormat, compressEffort, connSettings, draftReady, draftSettings, drLabel, OWN_MODES, stSourceList, trLabel, trSettings, vxModelList } from './ai.js';
 import { ctx, getMeta, globalSettings, hasChat } from './core.js';
 import { EMBED_DEFAULT_MODEL, EMBED_MODELS, embedCfg, embedError, embedLabel, embedState, routerUsesEmbed } from './embed.js';
 import { guessMode } from './guess.js';
 import { ICO_A, svgA } from './theme.js';
 import { glossaryEntries } from './translate.js';
 import { esc, timeLabel } from './util.js';
+import { stKo } from './phonestconnko.js';
 import { compressMode } from './wizard.js';
 
 // custom-API / Vertex fields for one connection ('ai' = the AI 기능 model, 'tr' = the translation model)
@@ -31,6 +32,14 @@ export function connCfgHtml(p) {
                   </div>
                   <div class="na_cc_models" id="na_${p}_vxmodels" role="listbox" hidden></div>
                 </div>
+                <div class="na_tr_cfg na_cc" id="na_${p}_source" hidden>
+                  <div class="na_cc_box">
+                    <div class="na_cc_row"><span class="na_cc_lbl">키 · 주소</span><span class="na_cc_note">실리태번의 API 연결에 넣어 둔 것 그대로</span></div>
+                    <label class="na_cc_row"><span class="na_cc_lbl">연결 종류</span><select class="text_pole na_cc_sel" id="na_${p}_src"></select></label>
+                    <div class="na_cc_row"><span class="na_cc_lbl">모델</span><input type="text" class="text_pole na_cc_model" id="na_${p}_stmodel" placeholder="불러와서 고르거나 직접 입력" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="na_${p}_stmodels"><button type="button" class="na_cc_load" id="na_${p}_stload" title="이 연결 종류의 모델 목록 불러오기">${svgA(ICO_A.redo, 15)}<span>불러오기</span></button></div>
+                  </div>
+                  <div class="na_cc_models" id="na_${p}_stmodels" role="listbox" hidden></div>
+                </div>
                 <div class="na_tr_test_row" id="na_${p}_test_row" hidden>
                   <button type="button" class="na_btn na_small" id="na_${p}_test"><i class="fa-solid fa-plug"></i> 연결 테스트</button>
                 </div>`;
@@ -38,7 +47,9 @@ export function connCfgHtml(p) {
 
 export function renderConn(p) {
     const t = connSettings(p);
-    const own = t.mode === 'custom' || t.mode === 'vertex';
+    const own = OWN_MODES.includes(t.mode);
+    $(`#na_${p}_source`).prop('hidden', t.mode !== 'source');
+    if (t.mode === 'source') { const src = stSourceList(); $(`#na_${p}_src`).html(['<option value="">고르기</option>', ...src.map(x => `<option value="${esc(x.id)}">${esc(stKo(x.name))}</option>`), ...(t.source && !src.some(x => x.id === t.source) ? [`<option value="${esc(t.source)}">${esc(t.source)}</option>`] : [])].join('')).val(t.source); $(`#na_${p}_stmodel`).val(t.stModel); }
     $(`#na_${p}_custom`).prop('hidden', t.mode !== 'custom');
     $(`#na_${p}_vertex`).prop('hidden', t.mode !== 'vertex');
     $(`#na_${p}_test_row`).prop('hidden', !own);
@@ -60,10 +71,10 @@ export function renderConn(p) {
 // the model list under a custom API's model box: everything, or what matches the typed text
 // vx: the Vertex model box, listing the models SillyTavern offers for Vertex
 export function drawModels(p, open, vx = false) {
-    const t = connSettings(p), $l = $(`#na_${p}_${vx ? 'vxmodels' : 'models'}`), $in = $(`#na_${p}_${vx ? 'vxmodel' : 'model'}`);
-    const ids = vx ? vxModelList() : Array.isArray(t.models) ? t.models : [];
+    const st = vx === 'st', t = connSettings(p), $l = $(`#na_${p}_${st ? 'stmodels' : vx ? 'vxmodels' : 'models'}`), $in = $(`#na_${p}_${st ? 'stmodel' : vx ? 'vxmodel' : 'model'}`);   // st: 실리태번 연결 종류의 모델(불러온 목록)
+    const ids = st ? (t.stModelsOf === t.source && Array.isArray(t.stModels) ? t.stModels : []) : vx ? vxModelList() : Array.isArray(t.models) ? t.models : [];
     if (!open || !ids.length) { $l.prop('hidden', true); $in.attr('aria-expanded', 'false'); return; }
-    const q = String($in.val() || '').trim().toLowerCase(), cur = vx ? t.vxModel : t.model;
+    const q = String($in.val() || '').trim().toLowerCase(), cur = st ? t.stModel : vx ? t.vxModel : t.model;
     const list = q && q !== cur.toLowerCase() ? ids.filter(x => x.toLowerCase().includes(q)) : ids;
     $l.html(list.length
         ? list.slice(0, 400).map(x => `<button type="button" role="option" class="na_cc_opt ${x === cur ? 'on' : ''}" data-id="${esc(x)}" aria-selected="${x === cur}"><span>${esc(x)}</span>${x === cur ? svgA(ICO_A.check, 15, 2.4) : ''}</button>`).join('')
@@ -83,7 +94,7 @@ export function renderAiSettings() {
     const profiles = aiProfiles();
     const opts = [`<option value="">지금 연결된 모델</option>`, ...profiles.map(p => `<option value="${esc(p.id)}">프로필: ${esc(p.name)}</option>`)];
     if (g.aiProfile && !profiles.some(p => p.id === g.aiProfile)) opts.push(`<option value="${esc(g.aiProfile)}">(없어진 프로필)</option>`);
-    opts.push('<option value="__custom">커스텀 API (OpenAI 호환)</option>', '<option value="__vertex">Gemini · Vertex AI</option>');
+    opts.push('<option value="__source">실리태번 연결</option>', '<option value="__custom">커스텀 API (OpenAI 호환)</option>', '<option value="__vertex">Gemini · Vertex AI</option>');
     $('#na_ai_profile').html(opts.join('')).val(a.mode === 'st' ? (g.aiProfile || '') : `__${a.mode}`);
     $('#na_ai_max').val(g.aiMaxTokens || 8192);
     const trm = trSettings().mode;
@@ -150,7 +161,7 @@ function cfgTiles(g) {
         const tr = trSettings().mode;
         return [
             ['AI 기능 모델', a1, a2 || '질문 · 점검 · 라우터', true, 'ai'],
-            ['초안 모델', draftReady() ? (draftSettings().mode === 'vertex' ? 'Vertex' : '커스텀') : '없음', draftReady() ? drLabel() : '압축 초안 · 짧은 버전', draftReady(), 'dr'],
+            ['초안 모델', draftReady() ? ({ vertex: 'Vertex', source: '실리태번' }[draftSettings().mode] || '커스텀') : '없음', draftReady() ? drLabel() : '압축 초안 · 짧은 버전', draftReady(), 'dr'],
             ['번역 모델', tr === 'same' ? '같이' : split2(trLabel())[0], tr === 'same' ? 'AI 기능 모델' : split2(trLabel())[1], tr !== 'same', 'ai'],
             ['답 최대 길이', `${Number(val('na_ai_max') || 0).toLocaleString()}`, '토큰 · 잘리면 늘려요', true, 'ai'],
         ];

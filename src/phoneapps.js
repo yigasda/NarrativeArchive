@@ -908,10 +908,11 @@ export function prepScreen(p, now, m, ui = {}) {
 // test that answered), 연결 테스트, then what to change — the same values as 확장 설정 › AI 모델 › 초안 모델. d from phone.js
 export function setDraft(p, now, d = {}, back = 'prep') {
     const row = (n, v, k) => `<div role="button" tabindex="0" class="ax_rw ax_rwn na_ph_drset" data-k="${k}"><span class="ax_tx"><span class="ax_n">${n}</span></span><span class="ax_v">${esc(v)}</span>${axChev}</div>`;
-    const way = { custom: '커스텀 API', vertex: 'Gemini · Vertex AI' }[d.mode] || '쓰지 않음', on = d.mode === 'custom' || d.mode === 'vertex';
-    const sub = d.mode === 'custom' ? [way, d.host].filter(Boolean).join(' · ') : d.mode === 'vertex' ? [way, d.vxLocation].filter(Boolean).join(' · ') : '정하면 폰을 채우고 반영할 수 있어요';
+    const way = { custom: '커스텀 API', vertex: 'Gemini · Vertex AI', source: '실리태번 연결' }[d.mode] || '쓰지 않음', on = ['custom', 'vertex', 'source'].includes(d.mode);
+    const sub = d.mode === 'custom' ? [way, d.host].filter(Boolean).join(' · ') : d.mode === 'vertex' ? [way, d.vxLocation].filter(Boolean).join(' · ') : d.mode === 'source' ? [way, d.sourceName].filter(Boolean).join(' · ') : '정하면 폰을 채우고 반영할 수 있어요';
     const fields = d.mode === 'custom' ? `${row('모델', d.model || '불러와서 고르기', 'model')}${row('주소', d.url || '정하기', 'url')}${row('API 키', d.keyTail || '없음', 'key')}${row('형식', { openai: 'OpenAI 호환', anthropic: 'Anthropic' }[d.fmt] || '주소 보고 자동', 'fmt')}`
-        : d.mode === 'vertex' ? `${row('모델', d.vxModel || '불러와서 고르기', 'vxModel')}${row('지역', d.vxLocation || '실리태번 설정 따라', 'vxLocation')}` : '';
+        : d.mode === 'vertex' ? `${row('모델', d.vxModel || '불러와서 고르기', 'vxModel')}${row('지역', d.vxLocation || '실리태번 설정 따라', 'vxLocation')}`
+        : d.mode === 'source' ? `${row('연결 종류', d.sourceName || '고르기', 'source')}${row('모델', d.stModel || '불러와서 고르기', 'stModel')}` : '';   // 실리태번 연결: 키 · 주소는 실리태번에 넣어 둔 것을 써요
     return `${axBar(p, now)}
       ${axTop(axCb(back))}
       <div class="ax_scroll">${axH1('초안 모델')}
@@ -919,18 +920,20 @@ export function setDraft(p, now, d = {}, back = 'prep') {
         ${on ? `<div class="ax_card"><div role="button" tabindex="0" class="ax_rw ax_rwn na_ph_drtest"><span class="ax_tx"><span class="ax_n ax_blue">연결 테스트</span></span></div></div>` : ''}
         <div class="ax_sec">바꾸기</div>
         <div class="ax_card">${row('방식', way, 'mode')}${fields}</div>
-        <div class="ax_foot">폰을 채우고 반영하는 모델이에요. 확장 설정 › AI 모델 › 초안 모델과 같은 값이에요.</div>
+        <div class="ax_foot">폰을 채우고 반영하는 모델이에요. 확장 설정 › AI 모델 › 초안 모델과 같은 값이에요.${d.mode === 'source' ? ' 키와 주소는 실리태번의 API 연결에 넣어 둔 것을 써요.' : ''}</div>
         <i class="ax_pad"></i>
       </div>
       ${axInd()}`;
 }
 // 초안 모델 › 모델: the models the address (or SillyTavern's Vertex) lists, one to pick — never typed
-export function setDraftModels(p, now, ids = [], cur = '', reload = false) {
+// ids: 모델 id들, 또는 [{ id, l }] (연결 종류처럼 이름이 따로 있는 것) · title: 화면 이름
+export function setDraftModels(p, now, ids = [], cur = '', reload = false, title = '모델') {
+    ids = ids.map(x => (typeof x === 'string' ? { id: x, l: x } : x));
     return `${axBar(p, now)}
       ${axTop(axCb('setdraft'))}
-      <div class="ax_scroll">${axH1('모델', ids.length ? `${ids.length}개` : '')}
+      <div class="ax_scroll">${axH1(title, ids.length ? `${ids.length}개` : '')}
         ${reload ? '<div class="ax_card"><div role="button" tabindex="0" class="ax_rw ax_rwn na_ph_drload"><span class="ax_tx"><span class="ax_n ax_blue">목록 다시 불러오기</span></span></div></div>' : ''}
-        <div class="ax_card">${ids.length ? ids.map(id => `<div role="button" tabindex="0" class="ax_rw ax_rwn na_ph_drpick" data-id="${esc(id)}"><span class="ax_tx"><span class="ax_n">${esc(id)}</span></span>${id === cur ? `<span class="ax_radio on">${ax('check', 14, '#fff', 3.4)}</span>` : ''}</div>`).join('') : '<div class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_p ax_kvp">불러온 모델이 없어요</span></span></div>'}</div>
+        <div class="ax_card">${ids.length ? ids.map(({ id, l }) => `<div role="button" tabindex="0" class="ax_rw ax_rwn na_ph_drpick" data-id="${esc(id)}"><span class="ax_tx"><span class="ax_n">${esc(l)}</span></span>${id === cur ? `<span class="ax_radio on">${ax('check', 14, '#fff', 3.4)}</span>` : ''}</div>`).join('') : `<div class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_p ax_kvp">${title === '모델' ? '불러온 모델이 없어요' : '고를 것이 없어요'}</span></span></div>`}</div>
         <i class="ax_pad"></i>
       </div>
       ${axInd()}`;

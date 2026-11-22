@@ -327,13 +327,14 @@ export function renderPanel() {
                 <div class="na_cfg_label"><i class="fa-solid fa-robot"></i> AI 모델</div>
                 <div class="na_cfg_box">
                 <div class="na_set_list">
-                  <label class="na_set_row" title="연결 프로필 · 커스텀 API · Vertex를 고르면 RP 모델과 따로 쓸 수 있어요"><span><span>AI 기능 모델</span><small>질문 · 점검 · 라우터 · 온도 · 지문</small></span><span class="na_cfg_val"><select id="na_ai_profile" class="text_pole"></select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
+                  <label class="na_set_row" title="연결 프로필 · 실리태번 연결 · 커스텀 API · Vertex를 고르면 RP 모델과 따로 쓸 수 있어요"><span><span>AI 기능 모델</span><small>질문 · 점검 · 라우터 · 온도 · 지문</small></span><span class="na_cfg_val"><select id="na_ai_profile" class="text_pole"></select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                 </div>
                 ${connCfgHtml('ai')}
                 <div class="na_set_list">
                   <label class="na_set_row" title="번역(한국어로 보기 · 한국어로 읽기 · 용어집)은 보통 이 모델로 해요 · 양이 많아서 싸고 빠른 모델로 따로 돌리고 싶을 때만 켜요"><span><span>번역은 다른 모델로</span><small>끄면 위 AI 기능 모델로 번역해요</small></span><input type="checkbox" id="na_tr_own" class="na_toggle"></label>
                   <label class="na_set_row" id="na_tr_mode_row" hidden><span><span>번역 모델</span><small>한국어로 보기 · 읽기 · 용어집</small></span>
                     <span class="na_cfg_val"><select id="na_tr_mode" class="text_pole">
+                      <option value="source">실리태번 연결</option>
                       <option value="custom">커스텀 API</option>
                       <option value="vertex">Gemini · Vertex AI</option>
                     </select>${svgA(ICO_A.right, 15, 2.2)}</span>
@@ -344,6 +345,7 @@ export function renderPanel() {
                   <label class="na_set_row" title="압축 초안처럼 아카이브에 들어갈 글을 써 주는 모델이에요 (예: Opus). 정하지 않으면 초안 버튼이 안 보여요"><span><span>초안 모델</span><small>압축 초안 · 섹션 짧은 버전</small></span>
                     <span class="na_cfg_val"><select id="na_dr_mode" class="text_pole">
                       <option value="same">쓰지 않음</option>
+                      <option value="source">실리태번 연결</option>
                       <option value="custom">커스텀 API</option>
                       <option value="vertex">Gemini · Vertex AI</option>
                     </select>${svgA(ICO_A.right, 15, 2.2)}</span>

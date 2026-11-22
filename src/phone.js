@@ -10,12 +10,13 @@ import { profileEntries, resolvePhoneProfile, currentPersonaBinding } from './ph
 import { investmentScreen } from './investui.js';
 import { validDate } from './investdata.js';
 import { migrateBank, selectPrice } from './finance.js';
-import { askDraft, draftReady, draftSettings, drLabel, listModels, vxModelList, withSpinner, connSettings, aiLabel, aiProfiles } from './ai.js';
+import { askDraft, draftReady, draftSettings, drLabel, listModels, stSourceList, stSourceModels, stSourceName, vxModelList, withSpinner, connSettings, aiLabel, aiProfiles } from './ai.js';
 import { ctx, getMeta, globalSettings, phoneMeta, saveGlobal, saveMeta, setPhoneMeta } from './core.js';
 import { applyInjection } from './inject.js';
 import { faceHtml, faceOf, stFace, stPersonaList, nameKey, peopleList, shrinkFace } from './people.js';
 import { stConnNodes, stConnSet, stConnToggleOption, stConnClick, stConnWatch } from './phonestconn.js';
 import { stPopWatch, stToastKo } from './phonestpop.js';
+import { stKo } from './phonestconnko.js';
 import { drafting, drawing, drawPhoto, drawPost, filling, paging, retranslate, retranslating, recording, searching, searchPage, shooting, webPage, writing } from './phoneai.js';
 import { setDraft, setDraftModels, setLang, setSnap, setVoice, setVoiceAdd, voiceList, voicePeople, ax, axFind, groupInfo, APPS, AXB, AXB_C, busyHtml, setDate, setScreenHolderView, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, mapTowns, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setOwnerProfile, setWho, snsPost, snsScreen, statusBar, threadScreen, setPlace, prepScreen } from './phoneapps.js';
 import { phoneMaking, dropStretch, chatStamp, koGaps, savedName, ensureIds, hasDatedRecords, noArchive, koOn, loreOff, tidyKo, markAfter, phoneLore, REMAKE, restoreRounds, showNow, syncLeft, syncRows, syncState, tidyJournal, undoRound } from './phonedata.js';
@@ -45,7 +46,7 @@ import { liveReady, keepState } from './phone2keepon.js';
 import { orbitList, orbitRoom, orbitNew, orbitHomeWidget, liveStart, whoScreen, orbitFace, dayIcon } from './phoneorbit.js';
 import { beginFromStory, liveBranched, adoptChat, rebeginFromStory, rebeginKeepingChats } from './phone2story.js';
 import { liveSnapNow, snapParts } from './phone2snap.js';
-import { livePeekPrompt, liveBranchRoom, liveSchedulesOn, liveSetSchedulesOn, liveModelConnections, liveRoomModel, liveSetRoomModel, liveStars, liveToggleStar, liveMoveStar, liveSwitchPersona, liveReplyTo, liveReplyDraft, liveCancelReply, liveEditMessage, liveReact, liveReactQuick, liveGo, liveReflect, liveCanUndo, liveUndo, liveUnreflected, liveNowOf, liveSnapBusy, liveBackCount, liveBackDraft, liveBackPut, liveImportPlan, liveImportFilePlan, liveImportChat, liveImportFile, liveDropMessages, liveSwipeInfo, liveSwipe, liveSwipeDrop, liveRetranslate, liveSwipeList, liveSwipeDropMany, liveSwipeDropOthers, liveMark, liveMarked, liveTrash, liveRestore, liveEmptyTrash, liveDropRoom, liveAddMember, liveRemoveMember, liveStatus, liveSchedule, livePresence, liveSetSchedule, liveSetStatus, liveReplyWait, liveScheduleZone, liveSetScheduleZone, liveTimeZone, liveScheduleSummary, liveConnections, liveScheduleConnection, liveSetScheduleConnection, liveDraftSchedule, liveRepairSchedule, liveReplyNow, liveSetAutoRenew, liveScheduleInfo, liveRenewSchedules, liveAutonomousOptions, liveSetAutonomous, liveSetAutonomousOptions, liveAway } from './phone2go.js';
+import { liveSources, liveSourceModels, liveReasoning, liveSetReasoning, livePeekPrompt, liveBranchRoom, liveSchedulesOn, liveSetSchedulesOn, liveModelConnections, liveRoomModel, liveSetRoomModel, liveStars, liveToggleStar, liveMoveStar, liveSwitchPersona, liveReplyTo, liveReplyDraft, liveCancelReply, liveEditMessage, liveReact, liveReactQuick, liveGo, liveReflect, liveCanUndo, liveUndo, liveUnreflected, liveNowOf, liveSnapBusy, liveBackCount, liveBackDraft, liveBackPut, liveImportPlan, liveImportFilePlan, liveImportChat, liveImportFile, liveDropMessages, liveSwipeInfo, liveSwipe, liveSwipeDrop, liveRetranslate, liveSwipeList, liveSwipeDropMany, liveSwipeDropOthers, liveMark, liveMarked, liveTrash, liveRestore, liveEmptyTrash, liveDropRoom, liveAddMember, liveRemoveMember, liveStatus, liveSchedule, livePresence, liveSetSchedule, liveSetStatus, liveReplyWait, liveScheduleZone, liveSetScheduleZone, liveTimeZone, liveScheduleSummary, liveConnections, liveScheduleConnection, liveSetScheduleConnection, liveDraftSchedule, liveRepairSchedule, liveReplyNow, liveSetAutoRenew, liveScheduleInfo, liveRenewSchedules, liveAutonomousOptions, liveSetAutonomous, liveSetAutonomousOptions, liveAway } from './phone2go.js';
 import { liveYearsNow } from './phone2year.js';
 import { P } from './phone2api.js';
 import { morph } from './morph.js';
@@ -55,10 +56,11 @@ export const phoneBlock = m => P.phoneBlock(m, Object.values(liveWorld(m)?.phone
 
 // what 초안 모델's screen shows (the key only by its last four)
 const draftUi = () => { const t = draftSettings(); let host = ''; try { host = t.url ? new URL(t.url).host : ''; } catch { host = t.url; }
-    return { mode: t.mode, label: drLabel(), model: t.model, url: t.url, host, keyTail: t.key ? `…${String(t.key).slice(-4)}` : '', fmt: t.fmt, effort: t.effort, vxModel: t.vxModel, vxLocation: t.vxLocation, okAt: t.okAt }; };
+    return { mode: t.mode, label: drLabel(), model: t.model, url: t.url, host, keyTail: t.key ? `…${String(t.key).slice(-4)}` : '', fmt: t.fmt, effort: t.effort, vxModel: t.vxModel, vxLocation: t.vxLocation, okAt: t.okAt, source: t.source, sourceName: t.source ? stKo(stSourceName(t.source)) : '', stModel: t.stModel }; };
 // 초안 모델 › 모델: which setting the list fills, and the list (the address's, loaded; or SillyTavern's Vertex models)
-const draftKey = () => (draftSettings().mode === 'vertex' ? 'vxModel' : 'model');
-const draftIds = () => (draftSettings().mode === 'vertex' ? vxModelList() : draftSettings().models || []);
+let draftPick = 'model';   // 초안 모델의 목록 화면이 지금 무엇을 고르는지: 'model' | 'source' (실리태번 연결 종류: 25개라 알림창이 아니라 목록 화면으로)
+const draftKey = () => ({ vertex: 'vxModel', source: 'stModel' }[draftSettings().mode] || 'model');
+const draftIds = () => { const t = draftSettings(); return t.mode === 'vertex' ? vxModelList() : t.mode === 'source' ? (t.stModelsOf === t.source ? t.stModels || [] : []) : t.models || []; };
 // a make that ends tells every phone open now (one shut and opened again mid-make draws the phone it made)
 const madeWatch = new Set();
 function screen(p, view, m, roster, ui) {
@@ -78,7 +80,7 @@ function screen(p, view, m, roster, ui) {
         : v === 'note' ? noteScreen(p, now) : v === 'noteone' ? noteOne(p, now, Number(i)) : v === 'search' ? searchScreen(p, now) : v === 'page' ? pageView(p, now, i || '', paging.has(`${nameKey(p.owner)}:${i}`)) : v === 'tabs' ? tabsScreen(p, now) : v === 'marks' || v === 'history' ? marksScreen(p, now, v === 'history') : v === 'searchone' ? searchOne(p, now, Number(i), searching.has(`${nameKey(p.owner)}:${i}`))
         : v === 'cal' ? calScreen(p, now, m, i || '') : v === 'calone' ? calOne(p, now, Number(i), m) : v === 'map' ? (mapTowns(p, m).groups.length ? mapScreen(p, now, m, i || '') : mapEmptyScreen(p, now, m)) : v === 'mapq' ? mapSearchScreen(p, now, m, i || '', ui.mapQ || '') : v === 'mapc' ? mapCityScreen(p, now, m, i || '')
         : v === 'sns' ? snsScreen(p, now) : v === 'snspost' ? snsPost(p, now, Number(i)) : v === 'mail' ? mailScreen(p, now, i) : v === 'mailone' ? mailOne(p, now, Number(i))
-        : v === 'diary' ? diaryScreen(p, now, i || '') : v === 'diaryone' ? diaryOne(p, now, Number(i)) : v === 'setsync' ? syncSettings(p, now, ui) : v === 'setsyncpick' ? syncPick(p, now, ui) : v === 'set' ? setScreen(p, now, m, ui) : v === 'stime' ? screenTimeScreen(p, now, i || '') : v === 'settheme' ? setTheme(p, now) : v === 'setscreenholder' ? setScreenHolderView(p, now, m, ui.holderBack) : v === 'setdate' ? setDate(p, now, m, ui) : v === 'setplace' ? setPlace(p, now, m, ui) : v === 'setdraft' ? setDraft(p, now, draftUi(), ui.draftBack || 'set') : v === 'setdraftmodel' ? setDraftModels(p, now, draftIds(), draftSettings()[draftKey()] || '', draftSettings().mode === 'custom') : v === 'setvoice' ? setVoice(p, now, ui.voicePick, ui.voiceBusy) : v === 'setsnap' ? setSnap(p, now, phoneMeta()?.phoneSnap, snapParts(phoneMeta()?.phoneSnap)) : v === 'setlang' ? setLang(p, now, i) : v === 'setvoiceadd' ? setVoiceAdd(p, now, ui.voiceAdd, ui.voiceBusy) : v === 'prep' ? prepScreen(p, now, m, ui.prep) : v === 'setremake' ? setRemake(p, now, ui, m) : v === 'setprofile' ? setOwnerProfile(p,now,ui.profileState,!!ui.phones?.live) : v === 'setwho' ? setWho(p, now, m, ui) : v === 'setlore' ? setLore(p, now, m, ui)
+        : v === 'diary' ? diaryScreen(p, now, i || '') : v === 'diaryone' ? diaryOne(p, now, Number(i)) : v === 'setsync' ? syncSettings(p, now, ui) : v === 'setsyncpick' ? syncPick(p, now, ui) : v === 'set' ? setScreen(p, now, m, ui) : v === 'stime' ? screenTimeScreen(p, now, i || '') : v === 'settheme' ? setTheme(p, now) : v === 'setscreenholder' ? setScreenHolderView(p, now, m, ui.holderBack) : v === 'setdate' ? setDate(p, now, m, ui) : v === 'setplace' ? setPlace(p, now, m, ui) : v === 'setdraft' ? setDraft(p, now, draftUi(), ui.draftBack || 'set') : v === 'setdraftmodel' ? (draftPick === 'source' ? setDraftModels(p, now, stSourceList().map(x => ({ id: x.id, l: stKo(x.name) })), draftSettings().source || '', false, '연결 종류') : setDraftModels(p, now, draftIds(), draftSettings()[draftKey()] || '', ['custom', 'source'].includes(draftSettings().mode))) : v === 'setvoice' ? setVoice(p, now, ui.voicePick, ui.voiceBusy) : v === 'setsnap' ? setSnap(p, now, phoneMeta()?.phoneSnap, snapParts(phoneMeta()?.phoneSnap)) : v === 'setlang' ? setLang(p, now, i) : v === 'setvoiceadd' ? setVoiceAdd(p, now, ui.voiceAdd, ui.voiceBusy) : v === 'prep' ? prepScreen(p, now, m, ui.prep) : v === 'setremake' ? setRemake(p, now, ui, m) : v === 'setprofile' ? setOwnerProfile(p,now,ui.profileState,!!ui.phones?.live) : v === 'setwho' ? setWho(p, now, m, ui) : v === 'setlore' ? setLore(p, now, m, ui)
         : v === 'cam' ? camScreen(p, now, i === undefined ? -1 : Number(i), shooting.has(nameKey(p.owner))) : v === 'livestart' || v === 'liveimport' ? liveStart(p, now, ui.start) : v === 'orbit' ? orbitList(p, now, ui.orbit) : v === 'orbitroom' ? orbitRoom(p, now, ui.orbit) : v === 'orbitnew' ? orbitNew(p, now, ui.orbit) : v === 'orbitface' ? orbitFace(p, now, ui.orbit) : homeScreen(p, now, m, 1, '', ui.orbitHome || '');
     // the home is the design board itself, at its own size, scaled to the screen (--k)
     // every app: drawn at the boards' size too, each its own app look
@@ -241,7 +243,7 @@ export async function openPhone(who = null) {
     const startPlan = startPlanOf;
     // 어두운 방(⋯ 메뉴의 어둡게 · 밝게): 확장 설정에 남아요. 그릴 때마다 읽으니 설정을 그대로 읽어요(koOn과 같은 까닭)
     const obDark = () => (ctx().extensionSettings?.narrative_archive ?? globalSettings()).orbitDark === true;
-    let obSet = '', obFindTab = 'marks', obFindQ = '', obJump = null, obSetUi = { v: {}, open: '', tzQ: '', busy: false }, obSw = null, obAtt = [], obThink = null, obPeek = null, scStop = null, scToast = null, scDown = false, scPend = false, scT = 0;
+    let obSet = '', obFindTab = 'marks', obFindQ = '', obJump = null, obSetUi = { v: {}, open: '', tzQ: '', busy: false }, obSw = null, obAtt = [], obThink = null, obPeek = null, obSrc = { models: {}, busy: '' }, scStop = null, scToast = null, scDown = false, scPend = false, scT = 0;
     const scWatch = on => { if (on) scToast ||= stToastKo();   // (알림은 화면을 나간 뒤에도 뜰 수 있어서(테스트 메시지 답), 폰을 닫을 때까지 봐요)
         if (on && !scStop) { const a = stConnWatch(() => scDraw()), b = stPopWatch({ canvas: () => $root.find('.ax_canvas')[0], dark: () => obDark() }); scStop = () => { a(); b(); }; } else if (!on && scStop) { scStop(); scStop = null; scPend = false; } };   // 실리 API 연결 화면이 떠 있는 동안만 실리 칸을 지켜봐요   // obAtt: 붙여 둔 파일 [{ name, type, img }] · obThink: 생각 보기 { text, copied } · obPeek: 프롬프트 보기 · obSw: 빠른 전환기 { tab, q, pq, drilled, pane, order, stars, limit } · obSetUi: 채팅 설정 화면들의 아직 안 이어진 조작 값(시트가 열린 동안만) · 펼친 고르기 · 시간대 검색   // 방 설정 시트: obSet = '' | 'main' | 'find' | 'name' | 'people', obJump = 찾아갈 말의 id
     // 이모지 판: obEmo = { tab: 'emoji' | 'kao', cat, q } | null. 목록 · 검색(마리나라 것, 130KB)은 처음 열 때 불러와요
@@ -276,6 +278,18 @@ export async function openPhone(who = null) {
     const schBlank = () => ({ days: Object.fromEntries(SCH_DAYS.map(d => [d, []])), talkativeness: 50, inactivityThresholdMinutes: 120 });
     // 고를 수 있는 연결을 마리나라처럼 모델 이름 + 제공자로 (소망: 우리 설정의 칸 이름을 화면에 쓰지 않아요). id는 liveConnections 것 그대로
     const OB_PROV = { google_vertex: 'Google Vertex AI', custom: '커스텀 API', anthropic: 'Anthropic', openai: 'OpenAI', sillytavern: 'SillyTavern' };
+    // 빠른 전환기의 "실리태번 연결": 연결 종류마다 불러온 모델(obSrc.models) · 즐겨찾기한 모델 · 지금 방의 모델을 줄로 만들어요. 줄의 id는 'source:<종류>|<모델>'
+    const swChoice = id => { const i = String(id).indexOf('|'); return i > 0 && String(id).startsWith('source:') ? { connectionId: id.slice(0, i), model: id.slice(i + 1) } : { connectionId: id }; };
+    const swSrcList = () => liveSources().map(s => ({ id: s.id, name: stKo(s.name) }));   // (이름은 API 연결 화면과 같은 한국어로)
+    const swSrcRows = M => { const names = Object.fromEntries(swSrcList().map(s => [s.id, s.name])), rows = new Map(), add = (src, model, name) => { if (src && model && names[src] && !rows.has(`source:${src}|${model}`)) rows.set(`source:${src}|${model}`, { id: `source:${src}|${model}`, name: name || model, sub: `실리태번 · ${names[src]}`, roles: [], src }); };
+        for (const [src, list] of Object.entries(obSrc.models)) for (const x of list) add(src, x.id, x.name);
+        for (const c of liveStars()) if (c.model && String(c.connectionId).startsWith('source:')) add(c.connectionId.slice(7), c.model, c.name);
+        if (M?.current?.model && String(M.current.connectionId).startsWith('source:')) add(M.current.connectionId.slice(7), M.current.model, M.current.name);
+        return [...rows.values()]; };
+    const swSources = () => swSrcList().map(s => ({ id: s.id, name: s.name, n: obSrc.models[s.id] ? obSrc.models[s.id].length : null, busy: obSrc.busy === s.id }));
+    const swSrcLoad = async (src, open) => { if (obSrc.busy) return; obSrc.busy = src; drawPhone(true);
+        try { obSrc.models[src] = await liveSourceModels(src); if (open && obSw) { obSw.pane = `실리태번 · ${swSrcList().find(s => s.id === src)?.name || src}`; obSw.drilled = true; obSw.order = false; obSw.q = ''; } } catch (err) { obWarn(err); }
+        obSrc.busy = ''; if (!phoneClosed && stillHere()) drawPhone(true); };
     const obConns = (sched = false) => (sched ? liveConnections() : liveModelConnections()).map(c => ({ id: c.id, name: c.name || '모델 없음', sub: [c.model && c.model !== c.name ? c.model : '', OB_PROV[c.provider] || c.provider || ''].filter(Boolean).join(' · '), roles: c.id === 'dr' || c.id === '' ? ['메인'] : c.id === 'ai' ? ['기능'] : [] }));
     const schOpen = (owner, day = null) => { const had = liveSchedule(realM, owner); obSch = { owner, draft: structuredClone(had || schBlank()), page: 'main', open: SCH_DAYS.includes(day) ? day : null, mode: had ? 'adjust' : 'rewrite', gen: 'week', guide: '', dguide: {}, menu: null, busy: '', busyText: '', ctl: null, err: null, stale: false, tzQ: '', dirty: false };
         for (const d of SCH_DAYS) if (!Array.isArray(obSch.draft.days?.[d])) (obSch.draft.days ||= {})[d] = []; };
@@ -331,7 +345,7 @@ export async function openPhone(who = null) {
                 if (obSet === 'find') { t.tab = obFindTab;
                     t.items = obFindTab === 'marks' ? liveMarked(realM, r.id).map(k => ({ ...row(k.x), note: k.note || '', pin: !!k.x.extra?.pinnedToContext })).reverse()
                         : liveTrash(realM, r.id).map(k => ({ ...row(k.x), when: `${Math.max(0, Math.ceil((k.until - Date.now()) / 864e5))}일 남음` })); }
-                t.v = obSetUi.v; t.open = obSetUi.open; if (obSet === 'conn') t.conns = obConns(); if (obSet === 'stconn') { t.st = stConnNodes(); t.scQ = obSetUi.scQ || ''; } t.roomId = r.id; t.members = os; t.auto.ind = A.groupChatMode === 'individual'; t.auto.order = A.groupResponseOrder || 'sequential'; t.auto.turn = A.groupTurnPromptEnabled !== false;
+                t.v = obSetUi.v; t.open = obSetUi.open; if (obSet === 'conn') { t.conns = obConns(); t.rs = liveReasoning(realM, r.id); } if (obSet === 'stconn') { t.st = stConnNodes(); t.scQ = obSetUi.scQ || ''; } t.roomId = r.id; t.members = os; t.auto.ind = A.groupChatMode === 'individual'; t.auto.order = A.groupResponseOrder || 'sequential'; t.auto.turn = A.groupTurnPromptEnabled !== false;
                 if (obSet === 'name') { t.name = r.name || ''; t.autoName = [...os].join(', '); }
                 if (obSet === 'auto' || obSet === 'tz') { const zone = liveScheduleZone(realM), dev = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', q = obSetUi.tzQ.trim().toLowerCase();
                     t.sched = { on: liveSchedulesOn(realM), any: os.some(n => SCH_DAYS.some(d => liveSchedule(realM, n)?.days?.[d]?.length)), list: os.map(n => ({ n, days: SCH_DAYS.filter(d => liveSchedule(realM, n)?.days?.[d]?.length).length })), zone: schTzLabel(zone || dev), device: dev, differs: !!zone && zone !== dev, busy: obSetUi.busy };
@@ -370,7 +384,7 @@ export async function openPhone(who = null) {
                     days: SCH_DAYS.map(d => ({ key: d, name: SCH_KO[d], open: S.open === d, guide: S.dguide[d] || '', now: d === now.day ? now.min : null, segs: (D.days[d] || []).flatMap(b => schSpan(b.time).map(([a, e]) => ({ st: b.status, a, b: e }))),
                         blocks: (D.days[d] || []).map((b, i) => ({ st: b.status, time: String(b.time || ''), act: String(b.activity || ''), menu: !!S.menu && S.menu.d === d && S.menu.i === i })) })) }; };
             out.orbit = { id: r.id, dark: obDark(), menu: obMenu, set: setUi(), emo: ro ? null : obEmoUi(), pres: presUi(), sch: schUi(),
-                notes: ro ? [] : [...liveReplyWait(realM).filter(j => j.room === r.id).map(j => `${j.owner}: 바쁨 (돌아오면 응답합니다)`), ...liveAway(realM, r.id).map(j => `${j.owner}: 오프라인`)], att: ro ? [] : obAtt, think: ro ? null : obThink, peek: ro ? null : obPeek, reply: ro ? null : (d => (d ? { name: d.name, content: d.content } : null))(liveReplyDraft(realM, r.id)), sw: !ro && obSw ? (M => ({ ...obSw, conns: obConns(), cur: M.current?.model ? '' : (M.current?.connectionId || 'dr'), curName: M.current?.model ? (M.current.name || M.current.model) : '', follows: M.followsMain, stars: liveStars().filter(c => !c.model).map(c => c.connectionId), personas: stPersonaList(), ctx: null }))(liveRoomModel(realM, r.id)) : null, heldSub: obSub, note: !ro && obNote ? { text: obNote.text, had: !!obNote.had } : null, fixing: !ro && !!obFix, quick: !ro && obHeld ? liveReactQuick(realM) : [], title: V.titleOf(r), group, there: thereAt, faceOf: !group && !ro ? os[0] : '', sub: group ? [...os, '나'].join(' · ') : state, chips, asOwner: ro, msgs, draft: obDraft, typing, snapBusy: typing && liveSnapBusy(realM), fail: fail ? { id: fail.id } : null, swipe: sw && !sw.coming ? { at: sw.at, count: sw.count } : null, picking: !ro && obPicks ? obPicks.size : null,
+                notes: ro ? [] : [...liveReplyWait(realM).filter(j => j.room === r.id).map(j => `${j.owner}: 바쁨 (돌아오면 응답합니다)`), ...liveAway(realM, r.id).map(j => `${j.owner}: 오프라인`)], att: ro ? [] : obAtt, think: ro ? null : obThink, peek: ro ? null : obPeek, reply: ro ? null : (d => (d ? { name: d.name, content: d.content } : null))(liveReplyDraft(realM, r.id)), sw: !ro && obSw ? (M => { const isSrc = !!M.current?.model && String(M.current.connectionId).startsWith('source:'); return { ...obSw, conns: [...obConns(), ...swSrcRows(M)], sources: swSources(), cur: isSrc ? `${M.current.connectionId}|${M.current.model}` : M.current?.model ? '' : (M.current?.connectionId || 'dr'), curName: M.current?.model && !isSrc ? (M.current.name || M.current.model) : '', follows: M.followsMain, stars: liveStars().filter(c => !c.model || String(c.connectionId).startsWith('source:')).map(c => (c.model ? `${c.connectionId}|${c.model}` : c.connectionId)), personas: stPersonaList(), ctx: null }; })(liveRoomModel(realM, r.id)) : null, heldSub: obSub, note: !ro && obNote ? { text: obNote.text, had: !!obNote.had } : null, fixing: !ro && !!obFix, quick: !ro && obHeld ? liveReactQuick(realM) : [], title: V.titleOf(r), group, there: thereAt, faceOf: !group && !ro ? os[0] : '', sub: group ? [...os, '나'].join(' · ') : state, chips, asOwner: ro, msgs, draft: obDraft, typing, snapBusy: typing && liveSnapBusy(realM), fail: fail ? { id: fail.id } : null, swipe: sw && !sw.coming ? { at: sw.at, count: sw.count } : null, picking: !ro && obPicks ? obPicks.size : null,
                 list: !ro && obList ? (items => ({ items, picks: [...obList].filter(n => items.some(x => x.no === n)), busy: !!sw?.coming }))(liveSwipeList(realM, r.id)) : null };
         }
         if (v === 'orbitface') { if (!obFc) { view = 'orbit'; return orbitUi(); } out.orbit = { name: obFc.who, back: obFc.back, src: obFc.src, album: obFc.album.map((url, i) => ({ url, on: i === obFc.sel })), busy: obFc.busy }; }
@@ -1193,13 +1207,15 @@ export async function openPhone(who = null) {
     $root.on('click', '.na_ow_pane', function (e) { e.stopPropagation(); if (obSw) { obSw.pane = this.dataset.v; obSw.drilled = true; obSw.order = false; drawPhone(true); } });
     $root.on('click', '.na_ow_qall', e => { e.stopPropagation(); if (obSw) { obSw.pane = null; obSw.drilled = false; drawPhone(true); swFocus('.na_ow_q'); } });
     $root.on('click', '.na_ow_order', e => { e.stopPropagation(); if (obSw) { obSw.order = !obSw.order; drawPhone(true); } });
-    $root.on('click', '.na_ow_star', function (e) { e.stopPropagation(); if (!obSw) return; try { liveToggleStar({ connectionId: this.dataset.id }); } catch (err) { obWarn(err); } drawPhone(true); });
-    $root.on('click', '.na_ow_mv', function (e) { e.stopPropagation(); if (!obSw) return; try { liveMoveStar({ connectionId: this.dataset.id }, Number(this.dataset.by)); } catch (err) { obWarn(err); } drawPhone(true); });
+    $root.on('click', '.na_ow_star', function (e) { e.stopPropagation(); if (!obSw) return; try { const c = swChoice(this.dataset.id); liveToggleStar(c.model ? { ...c, name: $(this).closest('.ow_row').find('.na_ow_pick').attr('aria-label') || c.model } : c); } catch (err) { obWarn(err); } drawPhone(true); });
+    $root.on('click', '.na_ow_mv', function (e) { e.stopPropagation(); if (!obSw) return; try { liveMoveStar(swChoice(this.dataset.id), Number(this.dataset.by)); } catch (err) { obWarn(err); } drawPhone(true); });
     $root.on('click', '.na_ow_more', e => { e.stopPropagation(); if (obSw) { obSw.limit += 50; drawPhone(true); } });
     // 모델 고르기: 이 방만 바꿔요(지금 것을 누르면 닫기만). 기본값 사용 = 메인을 다시 따름. 친 글자를 모델 ID로 쓰기는 커스텀 API · Vertex 연결에서만 돼요
     const swPick = async (pick, said) => { const rid = obRoomId(); if (!rid || !obCanEdit()) return; try { await liveSetRoomModel(realM, rid, pick); obSw = null; toastr.success(said, '캐릭터 휴대폰'); } catch (err) { obWarn(err); } if (!phoneClosed && stillHere()) drawPhone(true); };
-    $root.on('click', '.na_ow_pick', function (e) { e.stopPropagation(); if (this.getAttribute('aria-current') === 'true') { obSw = null; return drawPhone(true); } swPick({ connectionId: this.dataset.id }, `이 채팅은 이제 ${this.getAttribute('aria-label')}을(를) 사용합니다`); });
-    $root.on('click', '.na_ow_use', function (e) { e.stopPropagation(); swPick({ connectionId: this.dataset.id, model: this.dataset.m }, `이 채팅은 이제 ${this.dataset.m}을(를) 사용합니다`); });
+    $root.on('click', '.na_ow_pick', function (e) { e.stopPropagation(); if (this.getAttribute('aria-current') === 'true') { obSw = null; return drawPhone(true); } const c = swChoice(this.dataset.id); swPick(c.model ? { ...c, name: this.getAttribute('aria-label') } : c, `이 채팅은 이제 ${this.getAttribute('aria-label')}을(를) 사용합니다`); });
+    $root.on('click', '.na_ow_src', function (e) { e.stopPropagation(); if (!obSw) return; const src = this.dataset.v; if (obSrc.models[src]?.length) { obSw.pane = `실리태번 · ${this.getAttribute('aria-label')}`; obSw.drilled = true; obSw.order = false; return drawPhone(true); } swSrcLoad(src, true); });
+    $root.on('click', '.na_ow_srcload', function (e) { e.stopPropagation(); swSrcLoad(this.dataset.v, false); });
+    $root.on('click', '.na_ow_use', function (e) { e.stopPropagation(); swPick({ connectionId: swChoice(this.dataset.id).connectionId, model: this.dataset.m }, `이 채팅은 이제 ${this.dataset.m}을(를) 사용합니다`); });
     $root.on('click', '.na_ow_default', e => { e.stopPropagation(); swPick(null, '이 채팅은 이제 메인 모델을 따릅니다'); });
     $root.on('click', '.na_ow_persona', async function (e) { e.stopPropagation(); if (this.getAttribute('aria-current') === 'true') { obSw = null; return drawPhone(true); } if (!this.dataset.id) return obNotYet(this);
         try { await liveSwitchPersona(this.dataset.id); obSw = null; } catch (err) { obWarn(err); } if (!phoneClosed && stillHere()) drawPhone(true); });
@@ -1239,6 +1255,7 @@ export async function openPhone(who = null) {
     $root.on('click', '.na_os_gorder', function (e) { e.stopPropagation(); obAuto({ groupResponseOrder: this.dataset.v }); });
     $root.on('click', '.na_os_gturn', e => { e.stopPropagation(); obAuto({ groupTurnPromptEnabled: liveAutonomousOptions(realM)?.groupTurnPromptEnabled === false }); });
     $root.on('click', '.na_os_schon', e => { e.stopPropagation(); if (obCanEdit()) obSetGo(liveSetSchedulesOn(realM, !liveSchedulesOn(realM))); });
+    $root.on('click', '.na_os_rs', function (e) { e.stopPropagation(); obSetUi.open = ''; obSetGo(liveSetReasoning(realM, this.dataset.k === 'rsRoom' ? obRoomId() : '', this.dataset.v)); });   // 추론 레벨: 이 채팅 / Orbit 전체
     $root.on('click', '.na_os_capm', function (e) { e.stopPropagation(); obSetUi.open = ''; obAuto({ autonomousDailyCapOverride: this.dataset.v === 'numeric' ? (liveAutonomousOptions(realM)?.autonomousDailyCapOverride ?? 8) : null }); });
     $root.on('click', '.na_os_regen', async e => { e.stopPropagation(); const rid = obRoomId(), r = rid && liveWorld(realM)?.messenger?.rooms?.[rid]; if (!r || !obCanEdit() || obSetUi.busy) return; const owners = r.members.filter(n => liveKey(n) !== liveKey(liveWorld(realM)?.persona));
         obSetUi.busy = true; drawPhone(true); try { await liveRenewSchedules(realM, { owners, forceRefresh: true, connectionId: liveScheduleConnection(realM) }); toastr.success('스케줄이 준비됐어요', '캐릭터 휴대폰'); } catch (err) { obWarn(err); } obSetUi.busy = false; if (!phoneClosed && stillHere()) drawPhone(true); });
@@ -1988,17 +2005,21 @@ export async function openPhone(who = null) {
     $root.on('click', '.na_ph_drset', async function (e) {
         e.stopPropagation(); const t = draftSettings(), k = this.dataset.k;
         if (k === 'mode') {
-            const v = await askChoice('방식', '', [{ v: 'same', label: '쓰지 않음' }, { v: 'custom', label: '커스텀 API' }, { v: 'vertex', label: 'Gemini · Vertex AI' }], '취소');
+            const v = await askChoice('방식', '', [{ v: 'same', label: '쓰지 않음' }, { v: 'source', label: '실리태번 연결' }, { v: 'custom', label: '커스텀 API' }, { v: 'vertex', label: 'Gemini · Vertex AI' }], '취소');
             if (!v || v === true) return; t.mode = v; return draftDone();
         }
         if (k === 'fmt') {
             const v = await askChoice('형식', '', [{ v: 'auto', label: '주소 보고 자동' }, { v: 'openai', label: 'OpenAI 호환' }, { v: 'anthropic', label: 'Anthropic' }], '취소');
             if (!v || v === true) return; t.fmt = v === 'auto' ? '' : v; delete t.models; delete t.noEffort; delete t.leanHeaders; return draftDone();
         }
+        if (k === 'source') {
+            draftPick = 'source'; view = 'setdraftmodel'; return drawPhone();
+        }
+        if (k === 'stModel') { if (!(await draftLoad($(this).find('.ax_v')))) return; draftPick = 'model'; view = 'setdraftmodel'; return drawPhone(); }
         if (k === 'model' || k === 'vxModel') {
             if (k === 'model' && !(await draftLoad($(this).find('.ax_v')))) return;
             if (k === 'vxModel' && !vxModelList().length) return toastr.warning('실리태번의 Vertex 모델 목록을 못 찾았어요', '초안 모델');
-            view = 'setdraftmodel'; return drawPhone();
+            draftPick = 'model'; view = 'setdraftmodel'; return drawPhone();
         }
         const ask = { url: ['주소', 'https://api.example.com/v1 처럼 적어요.', t.url], key: ['API 키', t.key ? `지금 키는 …${String(t.key).slice(-4)}예요. 새 키를 적어요.` : 'API 키를 적어요.', ''], vxLocation: ['지역', '비우면 실리태번 설정을 따라요.', t.vxLocation] }[k];
         if (!ask) return;
@@ -2010,13 +2031,17 @@ export async function openPhone(who = null) {
     // the address's models, loaded (needs the address); false when there are none
     const draftLoad = async $at => {
         const t = draftSettings();
+        if (t.mode === 'source') { if (!t.source) { toastr.warning('연결 종류를 먼저 골라 주세요', '초안 모델'); return false; }
+            const rows = await withSpinner($at, '불러오는 중', () => stSourceModels(t.source)); if (!rows?.length) return false; t.stModels = rows.map(x => x.id); t.stModelsOf = t.source; saveGlobal(); return true; }
         if (!t.url) { toastr.warning('주소를 먼저 적어 주세요', '초안 모델'); return false; }
         const got = await withSpinner($at, '불러오는 중', () => listModels(t));
         if (!got?.length) { if (got) toastr.warning('이 주소에서 모델을 못 불러왔어요', '초안 모델'); return false; }
         t.models = got; saveGlobal(); return true;
     };
     $root.on('click', '.na_ph_drload', async function (e) { e.stopPropagation(); if (await draftLoad($(this).find('.ax_n'))) drawPhone(true); });
-    $root.on('click', '.na_ph_drpick', async function (e) { e.stopPropagation(); draftSettings()[draftKey()] = this.dataset.id; view = 'setdraft'; await draftDone(); });
+    $root.on('click', '.na_ph_drpick', async function (e) { e.stopPropagation(); const t = draftSettings(), id = this.dataset.id;
+        if (draftPick === 'source') { if (id !== t.source) { t.source = id; t.stModel = ''; delete t.stModels; delete t.stModelsOf; } draftPick = 'model'; } else t[draftKey()] = id;
+        view = 'setdraft'; await draftDone(); });
     $root.on('click', '.na_ph_drtest', async function (e) {
         e.stopPropagation();
         const out = await withSpinner($(this).find('.ax_n'), '확인하는 중', () => askDraft('Reply with one short sentence: which model are you?', { maxTokens: 300 }));

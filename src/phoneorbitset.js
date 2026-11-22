@@ -97,6 +97,7 @@ const HELP = {
 };
 // 대화 명령(마리나라 CONVERSATION_COMMANDS 중 패키지 없이 늘 뜨는 것. 패키지가 있어야 뜨는 것은 docs/MARINARA-PORT.md)
 const COMMANDS = [['schedule', '스케줄 갱신', '캐릭터가 자신의 현재 상태와 활동을 바꿀 수 있게 합니다.'], ['crosspost', '교차 게시', '캐릭터가 메시지를 다른 공유 채팅으로 돌릴 수 있게 합니다.'], ['memories', '기억', '캐릭터가 다른 캐릭터를 위한 기억을 만들 수 있게 합니다.'], ['scenes', '장면', '캐릭터가 대화에서 몰입형 장면을 시작할 수 있게 합니다.'], ['influence', '영향', '캐릭터가 연결된 채팅에 일회성 영향을 보낼 수 있게 합니다.'], ['notes', '노트', '캐릭터가 연결된 채팅에 오래 남는 노트를 저장할 수 있게 합니다.'], ['reactions', '반응', '캐릭터가 이모지 배지로 메시지에 반응할 수 있게 합니다.']];
+const RS = { auto: '자동 (모델의 기본값)', min: '최소', low: '낮게', medium: '보통', high: '높게', max: '최대' }, RSO = Object.entries(RS);   // 추론 레벨 (liveReasoning의 값)
 const HOURS = Array.from({ length: 12 }, (_, h) => [String(h), h ? `오전 ${h}시` : '오전 12시 (자정)']);
 
 // 실리 칸 목록(src/phonestconn.js) → 시트 부품. API 연결 화면과 실리 팝업이 같이 써요. T: { open (펼친 고르기), v (펼친 서랍), scQ (고르기 검색) }
@@ -176,6 +177,7 @@ export function orbitSetPage(T, face) {
                 + (T.open === 'connOpen' ? cap('지금 · 메인을 따름') + cd(pad(`<div class="ot_r">${soon('기본값 사용', 'house')}<i class="os_sp"></i>${ib('refresh-cw', '모델 목록 새로 고침')}</div>`), pad(`<div class="os_q ot_q0">${li('search', 16)}<div class="os_qi na_os_in" data-k="connQ" contenteditable="true" role="textbox" enterkeyhint="search" spellcheck="false" data-ph="모델 검색 또는 ID 붙여넣기…" aria-label="모든 모델 검색 또는 모델 ID 붙여넣기">${esc(g('connQ', ''))}</div></div>`))
                     + cap('모든 모델') + ((l => (l.length ? cd(...l.map((c, i) => `<div role="button" tabindex="0" class="os_rw ot_t na_ob_soon" aria-label="${esc(c.name)}"><span class="ot_x"><span class="os_l">${esc(c.name)}</span>${c.sub ? `<span class="os_d">${esc(c.sub)}</span>` : ''}</span>${i === 0 && !g('connQ', '') ? li('check', 16, 2.4) : ''}${ib('star', `${c.name} 즐겨찾기`)}</div>`)) : none(T.conns.some(c => c.name && c.name !== '모델 없음') ? '여기에는 아직 모델이 없습니다.' : '아직 모델이 없습니다. 계정을 추가하면 생깁니다.')))(T.conns.filter(c => c.name && c.name !== '모델 없음' && (!g('connQ', '') || `${c.name} ${c.sub}`.toLowerCase().includes(String(g('connQ', '')).toLowerCase())))))
                     + cd(`<button type="button" class="os_rw na_ob_soon" aria-label="계정 추가">${li('plus', 18)}<span class="os_l">계정 추가</span></button>`) : '')
+                + (T.rs ? cap('추론 레벨') + cd(sel('rsRoom', '이 채팅', [['', `Orbit 전체 값 따름 (${RS[T.rs.all || 'low']})`], ...RSO], '', 'na_os_rs', T.rs.room), sel('rsAll', 'Orbit 전체', [['', '안 정함 (낮게)'], ...RSO], '', 'na_os_rs', T.rs.all)) + hp(`모델이 답하기 전에 생각하는 정도입니다. 지금 이 채팅은 <b>${RS[T.rs.effort || 'low']}</b>을(를) 씁니다.`) : '')
                 + cap('연결 설정') + cd(nav('stconn', 'API 연결', '키 · 주소 · 모델 · 연결 · 테스트 메시지', 'chevron-right')); },
         // 실리태번의 API 연결 (1-7): src/phonestconn.js가 실리의 진짜 칸을 읽어 준 목록(T.st)을 실리 순서대로 그려요. 소스마다 화면을 따로 짜지 않아요
         stconn: () => (T.st ? hp('실리태번의 API 연결 창을 그대로 조종합니다. 여기서 바꾸면 실리태번의 연결이 바뀝니다(롤플레이도 같은 연결을 씁니다). 키는 실리태번에만 저장됩니다.') + scGroup(T, T.st, false) : none('실리태번의 API 연결 창을 찾지 못했어요.')),
@@ -280,7 +282,7 @@ export function orbitSwitcher(W) {
         const all = W.conns.filter(c => c.name && c.name !== '모델 없음'), cur = W.curName ? null : (all.find(c => c.id === W.cur) || null), nowLabel = W.follows ? '지금 · 메인을 따름' : '지금 · 이 채팅만', stars = new Set(W.stars), q = W.q.trim().toLowerCase();
         const groups = []; for (const c of all) { const k = c.sub || c.name; let g = groups.find(x => x.key === k); if (!g) groups.push(g = { key: k, name: k, rows: [] }); g.rows.push(c); }
         const groupOf = c => groups.find(g => g.rows.includes(c)), starred = W.stars.map(id => all.find(c => c.id === id)).filter(Boolean);
-        const paneGroup = W.drilled ? groups.find(g => g.key === W.pane) : null, paneKey = paneGroup?.key;   // (즐겨찾기 화면은 따로 없어요: 맨 화면 맨 위에 있어요, 소망)
+        const paneGroup = W.drilled ? groups.find(g => g.key === W.pane) : null, paneKey = paneGroup?.key, paneSrc = paneGroup?.rows[0]?.src || '';   // paneSrc: 실리태번 연결 종류의 화면이면 그 종류의 id   // (즐겨찾기 화면은 따로 없어요: 맨 화면 맨 위에 있어요, 소망)
         const tile = () => '';   // (제공자 글자 타일은 소망이 뺐어요)
         // 모델 한 줄 (ModelRow): 타일 · 이름 · 둘째 줄(어디서 도는지) · 역할 알약 · 지금 것이면 ✓ · [순서 ↑↓ | 설정 · 즐겨찾기]
         const row = (c, o = {}) => { const st = stars.has(c.id), is = c === cur, ord = W.order && o.order, sub = o.away ? (groupOf(c)?.name || '') : (o.sub ?? '');
@@ -303,10 +305,11 @@ export function orbitSwitcher(W) {
         else if (!paneGroup) body = now + search   // 맨 화면: 즐겨찾기(맨 위) · 계정들 · 계정 추가
             + `<div class="ow_ttl"><b>즐겨찾기</b><span>모델 ${starred.length}개 · 계정 ${new Set(starred.map(c => groupOf(c).key)).size}개</span></div>`
             + (starred.length > 1 ? orderBtn : '') + (starred.length ? cd(...starred.map(c => row(c, { away: true, order: starred.length > 1 }))) : none('아직 즐겨찾기한 모델이 없습니다. 계정을 고르고 쓰는 모델을 즐겨찾기하세요.'))
-            + cap('계정') + cd(...groups.map(g => `<div role="button" tabindex="0" class="os_rw ot_t na_ow_pane" data-v="${esc(g.key)}"><span class="ot_x"><span class="os_l">${esc(g.name)}</span><span class="os_d">모델 ${g.rows.length}개</span></span><i class="os_ch">${li('chevron-right', 16)}</i></div>`)) + add;
+            + cap('계정') + cd(...groups.filter(g => !g.rows[0].src).map(g => `<div role="button" tabindex="0" class="os_rw ot_t na_ow_pane" data-v="${esc(g.key)}"><span class="ot_x"><span class="os_l">${esc(g.name)}</span><span class="os_d">모델 ${g.rows.length}개</span></span><i class="os_ch">${li('chevron-right', 16)}</i></div>`))
+            + ((W.sources || []).length ? cap('실리태번 연결') + cd(...W.sources.map(s => `<div role="button" tabindex="0" class="os_rw ot_t na_ow_src" data-v="${esc(s.id)}" aria-label="${esc(s.name)}"><span class="ot_x"><span class="os_l">${esc(s.name)}</span><span class="os_d">${s.busy ? '모델을 불러오는 중…' : s.n === null ? '눌러서 모델 불러오기' : `모델 ${s.n}개`}</span></span><i class="os_ch">${li('chevron-right', 16)}</i></div>`)) + `<div class="os_hp">실리태번의 API 연결에 넣어 둔 키와 주소를 그대로 씁니다.</div>` : '') + add;
         else { const back = `<button type="button" class="ow_back na_ow_back">${li('chevron-left', 16)}모든 연결</button>`;   // 한 계정의 화면: 그 계정의 즐겨찾기 · 모든 모델
             const st = paneGroup.rows.filter(c => stars.has(c.id)).sort((a, b) => W.stars.indexOf(a.id) - W.stars.indexOf(b.id)), rest = paneGroup.rows.filter(c => !stars.has(c.id));
-            body = search + back + `<div class="os_pp ow_hd"><span class="ot_x"><span class="os_l">${esc(paneGroup.name)}</span><span class="os_d">모델 ${paneGroup.rows.length}개 · ${st.length ? `즐겨찾기 ${st.length}개` : '즐겨찾기 없음'}</span></span><button type="button" class="os_ib na_ob_soon" aria-label="모델 목록 새로 고침">${li('refresh-cw', 15)}</button></div>`
+            body = search + back + `<div class="os_pp ow_hd"><span class="ot_x"><span class="os_l">${esc(paneGroup.name)}</span><span class="os_d">모델 ${paneGroup.rows.length}개 · ${st.length ? `즐겨찾기 ${st.length}개` : '즐겨찾기 없음'}</span></span><button type="button" class="os_ib ${paneSrc ? 'na_ow_srcload' : 'na_ob_soon'}"${paneSrc ? ` data-v="${esc(paneSrc)}"` : ''} aria-label="모델 목록 새로 고침">${li('refresh-cw', 15)}</button></div>`
                 + (st.length ? cap('즐겨찾기', st.length) + cd(...st.map(c => row(c))) : '') + (rest.length ? cap('모든 모델', rest.length) + cd(...rest.map(c => row(c))) : '') + (st.length + rest.length ? '' : none('여기에는 아직 모델이 없습니다.')); }
         if (W.ctx) body = `<div class="ow_ctx"><div><span>컨텍스트</span><b class="cg_num">${esc(W.ctx.used)} / ${esc(W.ctx.max)} 토큰</b></div><i><i style="width:${Math.max(0, Math.min(100, W.ctx.pct))}%"></i></i></div>` + body;
     } else {   // 페르소나 (CharacterPickerList kind="persona"): 검색 · 없음 · 페르소나 줄(지금 것에 ✓) · 50개씩 더 보기

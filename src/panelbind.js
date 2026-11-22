@@ -1,6 +1,6 @@
 // The side panel's event wiring (bindPanel).
 
-import { aiLabel, askAI, askDraft, connSettings, draftReady, draftSettings, drLabel, listModels, trLabel, trSettings, vxModelList, withSpinner } from './ai.js';
+import { aiLabel, askAI, askDraft, connSettings, draftReady, draftSettings, drLabel, listModels, OWN_MODES, stSourceModels, trLabel, trSettings, vxModelList, withSpinner } from './ai.js';
 import { openAppend } from './append.js';
 import { openAsk } from './ask.js';
 import { openBranches } from './branches.js';
@@ -110,7 +110,7 @@ export function bindPanel() {
     $('#na_ed_ask').on('click', needChat(openAsk));
     $('#na_ai_profile').on('change', function () {
         const a = connSettings('ai');
-        if (this.value === '__custom' || this.value === '__vertex') a.mode = this.value.slice(2);
+        if (['__custom', '__vertex', '__source'].includes(this.value)) a.mode = this.value.slice(2);
         else { a.mode = 'st'; globalSettings().aiProfile = this.value; }
         saveGlobal(); renderAiSettings();
     });
@@ -126,7 +126,7 @@ export function bindPanel() {
     // off = translate with the AI model; on = its own connection, back to whatever was set there before
     $('#na_tr_own').on('change', function () {
         const t = trSettings();
-        if (this.checked) t.mode = ['custom', 'vertex'].includes(t.lastMode) ? t.lastMode : 'custom';
+        if (this.checked) t.mode = OWN_MODES.includes(t.lastMode) ? t.lastMode : 'custom';
         else { if (t.mode !== 'same') t.lastMode = t.mode; t.mode = 'same'; }
         saveGlobal(); renderAiSettings();
     });
@@ -172,6 +172,23 @@ export function bindPanel() {
         $(`#na_${p}_vxmodels`).on('mousedown', e => e.preventDefault()).on('click', '.na_cc_opt', function () {
             connSettings(p).vxModel = this.dataset.id; saveGlobal();
             drawModels(p, false, true); renderAiSettings();
+        });
+        // 실리태번 연결: 연결 종류를 고르고 → 모델 불러오기 → 모델 고르기 (키 · 주소는 실리태번에 넣어 둔 것)
+        $(`#na_${p}_src`).on('change', function () { const t = connSettings(p); if (t.source !== this.value) { t.source = this.value; t.stModel = ''; delete t.stModels; delete t.stModelsOf; } saveGlobal(); renderAiSettings(); });
+        $(`#na_${p}_stmodel`).on('change', function () { connSettings(p).stModel = this.value.trim(); saveGlobal(); renderAiSettings(); })
+            .on('focus click', () => drawModels(p, true, 'st')).on('input', () => drawModels(p, true, 'st'))
+            .on('blur', () => setTimeout(() => { if (!$(`#na_${p}_stmodels`).is(':hover')) drawModels(p, false, 'st'); }, 150))
+            .on('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); drawModels(p, false, 'st'); } });
+        $(`#na_${p}_stmodels`).on('mousedown', e => e.preventDefault()).on('click', '.na_cc_opt', function () { connSettings(p).stModel = this.dataset.id; saveGlobal(); drawModels(p, false, 'st'); renderAiSettings(); });
+        $(`#na_${p}_stload`).on('click', async function () {
+            const t = connSettings(p);
+            const rows = await withSpinner($(this), '불러오는 중', () => stSourceModels(t.source));
+            if (!rows) return;
+            t.stModels = rows.map(x => x.id); t.stModelsOf = t.source;
+            if (!t.stModel && rows.length === 1) t.stModel = rows[0].id;
+            saveGlobal(); renderAiSettings();
+            toastr.success(`모델 ${rows.length}개를 불러왔어요`);
+            $(`#na_${p}_stmodel`).val(''); drawModels(p, true, 'st'); $(`#na_${p}_stmodel`).val(connSettings(p).stModel).trigger('focus');
         });
         $(`#na_${p}_vxload`).on('click', () => {
             const n = vxModelList().length;
