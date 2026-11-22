@@ -96,7 +96,7 @@ const HELP = {
     sum: '요청을 작게 유지하려고 대화가 스스로 요약됩니다. 하루마다 일간 요약이 만들어지고, 여러 날은 주간 요약으로 합쳐집니다. AI는 주간 요약, 이번 주의 일간 요약, 오늘의 메시지를 봅니다. 아직 끌 수 없습니다.',
 };
 // 대화 명령(마리나라 CONVERSATION_COMMANDS 중 패키지 없이 늘 뜨는 것. 패키지가 있어야 뜨는 것은 docs/MARINARA-PORT.md)
-// (id는 마리나라의 이름: liveCommands().options의 id. 화면 글은 우리 한국어, 줄을 그릴지는 반영이 주는 works로 정해요)
+// (id는 마리나라의 이름: liveCommands().options의 id. 화면 글은 우리 한국어. works가 false인 줄도 그리고, 누르면 '아직 연결되지 않았어요')
 const COMMANDS = { schedule_update: ['스케줄 갱신', '캐릭터가 자신의 현재 상태와 활동을 바꿀 수 있게 합니다.'], cross_post: ['교차 게시', '캐릭터가 메시지를 다른 공유 채팅으로 돌릴 수 있게 합니다.'], memory: ['기억', '캐릭터가 다른 캐릭터를 위한 기억을 만들 수 있게 합니다.'], scene: ['장면', '캐릭터가 대화에서 몰입형 장면을 시작할 수 있게 합니다.'], influence: ['영향', '캐릭터가 연결된 채팅에 일회성 영향을 보낼 수 있게 합니다.'], note: ['노트', '캐릭터가 연결된 채팅에 오래 남는 노트를 저장할 수 있게 합니다.'], react: ['반응', '캐릭터가 이모지 배지로 메시지에 반응할 수 있게 합니다.'] };
 const HOURS = Array.from({ length: 12 }, (_, h) => [String(h), h ? `오전 ${h}시` : '오전 12시 (자정)']);
 
@@ -197,11 +197,17 @@ export function orbitSetPage(T, face) {
                 + cap('연결 설정') + cd(nav('stconn', 'API 연결', '키 · 주소 · 모델 · 연결 · 테스트 메시지', 'chevron-right')); },
         // 실리의 API 연결 (1-7): src/phonestconn.js가 실리의 진짜 칸을 읽어 준 목록(T.st)을 실리 순서대로 그려요. 소스마다 화면을 따로 짜지 않아요
         stconn: () => (T.st ? hp('실리의 API 연결 창을 그대로 조종합니다. 여기서 바꾸면 실리의 연결이 바뀝니다(롤플레이도 같은 연결을 씁니다). 키는 실리에만 저장됩니다.') + scGroup(T, T.st, false) : none('실리의 API 연결 창을 찾지 못했어요.')),
-        // 알림 (마리나라의 ConversationSoundSetting 중 대화 모드에서 되는 것): 알림음 · 백그라운드 알림(브라우저). T.notify = { sound, unfocused, browser, perm }
+        // 알림 (마리나라의 ConversationSoundSetting 전부. 게임 모드는 소망이 게임을 다 뺐어요): 되는 것 = 대화 모드 알림음 · 창이 뒤에 있을 때만 · 미리 듣기 · 백그라운드 브라우저 알림.
+        //   나머지(롤플레이 모드 알림음 · 사용자 지정 알림음 · 모바일 앱 알림 · 생성 완료 알림)는 그려 두고 누르면 '아직 연결되지 않았어요'. T.notify = { sound, unfocused, browser, perm }
         notify: () => { const N = T.notify || {}, help = N.perm === 'insecure' ? '브라우저 알림은 HTTPS나 localhost에서만 됩니다.' : N.perm === 'denied' ? '브라우저 알림이 막혀 있습니다. 이 사이트의 알림 권한을 초기화한 뒤 다시 해 보세요.' : N.perm === 'unsupported' ? '이 환경에서는 브라우저 알림을 쓸 수 없습니다.' : '브라우저의 알림 권한을 사용합니다.';
-            return cap('알림음') + cd(tg('sound', '알림음', '캐릭터가 먼저 메시지를 보내면 알림음을 냅니다.', true, 'na_os_nt', !!N.sound), ...(N.sound ? [tg('unfocused', '창이 뒤에 있을 때만', '실리를 보고 있을 때는 알림음을 내지 않습니다.', false, 'na_os_nt', !!N.unfocused), pad(`<div class="ot_r"><button type="button" class="os_go na_os_ntplay">${li('refresh-cw', 13, 2.2)}미리 듣기</button></div>`)] : []))
-                + cap('백그라운드 알림') + cd(tg('browser', '브라우저', help, false, 'na_os_nt', !!N.browser && N.perm === 'granted'))
-                + hp('실리가 앞에 있지 않을 때 캐릭터가 먼저 건 메시지가 오면 운영체제 알림을 띄웁니다. 메시지 내용은 보이지 않습니다.'); },
+            const mob = '업데이트된 마리나라 안드로이드 앱에서 쓸 수 있습니다. 브라우저와 PWA는 위의 브라우저 알림을 사용합니다.';
+            return cap('알림음') + hp('다른 채팅에 있을 때 새 메시지를 받으면 알림음을 냅니다.')
+                + cd(tg('sound', '대화 모드', '', true, 'na_os_nt', !!N.sound), tg('ntRp', '롤플레이 모드', '', true), tg('unfocused', '창이 뒤에 있을 때만', '', false, 'na_os_nt', !!N.unfocused),
+                    pad(`<div class="ot_r ot_w"><span class="os_l">사용자 지정 알림음</span><span class="ot_chip">기본</span></div><div class="os_d" style="margin:6px 0 8px">내장 알림음 대신 짧은 소리 파일을 씁니다.</div><div class="os_d" style="margin-bottom:8px">MP3 · WAV · OGG · M4A · MP4 · WebM, 10MB까지</div><div class="ot_r ot_w"><button type="button" class="os_go na_os_ntplay">${li('refresh-cw', 13, 2.2)}미리 듣기</button>${soon('고르기', 'upload')}</div>`))
+                + cap('백그라운드 알림') + hp('실리가 앞에 있지 않을 때 캐릭터가 먼저 건 메시지가 오면 운영체제 알림을 띄웁니다. 메시지 내용은 보이지 않습니다.')
+                + cd(tg('browser', '브라우저', help, false, 'na_os_nt', !!N.browser && N.perm === 'granted'), tg('ntMobA', '모바일 앱', mob, false))
+                + cap('생성 완료 알림') + hp('직접 시작한 답장이 끝났을 때 실리가 앞에 있지 않으면 운영체제 알림을 띄웁니다. 메시지 내용은 보이지 않습니다.')
+                + cd(tg('ntGenB', '브라우저', help, false), tg('ntGenM', '모바일 앱', mob, false)); },
         // 그림 설명 (마리나라의 Image captioning): 켜기 · 설명할 연결 · 설명 지시문. T.caption = liveCaptioning()
         caption: () => { const C = T.caption || { enabled: false, connectionId: '', prompt: '', defaultPrompt: '', connections: [] };
             return hp('켜면 그림을 그대로 보내지 않고, 글로 설명해서 보냅니다. 그림을 못 읽는 모델을 쓸 때 켜세요.')
@@ -236,8 +242,9 @@ export function orbitSetPage(T, face) {
             return H + (C.items.length ? `<div class="ot_r"><span class="ot_cnt"><b>${C.items.length}</b>개 활성 • ~${esc(String(C.tokens || 0))} 토큰</span></div>`
                 + (C.skipped ? `<div class="ot_box warn">${li('triangle-alert', 15)}<span>일치하는 로어 항목 ${C.skipped}개가 토큰 예산으로 건너뛰어졌습니다</span></div>` : '')
                 + (loc.length ? cap('현재 위치') + cd(...loc.map(x => row(x, ix(x)))) : '') + (rest.length ? (loc.length ? cap('그 밖의 활성 로어') : '<div class="os_cap"></div>') + cd(...rest.map(x => row(x, ix(x)))) : '') : none('이 채팅에 활성 항목이 없습니다')); },
+        // (명령은 아직 없는 것도 다 그려요: works가 false면 누르면 '아직 연결되지 않았어요', 소망)
         // 에이전트 (대화 화면 7130–7532): 명령 카드 + 스케줄 생성 환경설정. 패키지가 있어야 뜨는 카드는 docs/MARINARA-PORT.md
-        agents: () => H + cap('명령') + cd(tg('cmds', '명령', '모델이 스케줄, 장면, 미디어, 반응 등 설치된 명령으로 나와 상호작용할 수 있게 합니다.', true, 'na_os_cmd', !!T.cmds?.enabled), ...(T.cmds?.enabled ? T.cmds.options.filter(c => c.works !== false).map(c => tg(c.id, COMMANDS[c.id]?.[0] || c.label, COMMANDS[c.id]?.[1] || c.description, true, 'na_os_cmd', !!c.on)) : []))
+        agents: () => H + cap('명령') + cd(tg('cmds', '명령', '모델이 스케줄, 장면, 미디어, 반응 등 설치된 명령으로 나와 상호작용할 수 있게 합니다.', true, 'na_os_cmd', !!T.cmds?.enabled), ...(T.cmds?.enabled ? T.cmds.options.map(c => (c.works === false ? tg(`cmd:${c.id}`, COMMANDS[c.id]?.[0] || c.label, COMMANDS[c.id]?.[1] || c.description, !!c.on) : tg(c.id, COMMANDS[c.id]?.[0] || c.label, COMMANDS[c.id]?.[1] || c.description, true, 'na_os_cmd', !!c.on))) : []))
             + area('schedPrefs', '스케줄 생성 환경설정', '', '예: 모두 자정 전에 자게 해 주세요. 캐릭터에게 오전 10시~정오에 자유 시간을 주세요. 저는 평일 9시~5시에 일합니다.', { rows: 4, hint: '전역 설정입니다. 모든 대화 채팅의 다음 스케줄 재생성(수동 또는 주간 자동)에 적용됩니다.' })
             + hp('캐릭터 스케줄을 생성하는 방식을 이끄는 자유 형식 지침입니다. 지시(\'자정 넘어서는 아무도 깨어 있지 않게\')와 사실 조건(\'나는 9시~5시에 일함\') 모두 됩니다.')
             + (String(g('schedPrefs', '')).trim() ? `<div class="ot_box"><b>스케줄 생성 환경설정 활성</b><span>“${esc(String(g('schedPrefs', '')).trim().slice(0, 120))}”</span><span>다음에 스케줄을 재생성할 때 적용됩니다.</span></div>` : ''),
