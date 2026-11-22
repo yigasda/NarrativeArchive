@@ -36,7 +36,8 @@ export function startAuto({ root, store, bridge = null, schedule = true } = {}) 
         status: sid => ask('status', { sid }),
         // 브라우저가 저장했어요 (스케줄러의 "그사이 바뀐 것 없음" 판단이 따라가요)
         wrote: () => { if (live) worker.postMessage({ cmd: 'wrote' }); },
-        list: () => ask('list'), inject: (url, payload) => ask('inject', { url, payload }), sweep: () => ask('sweep'),
+        // (one step at a time, for the tests and for checking by hand: what the scheduler does by itself)
+        list: () => ask('list'), inject: (url, payload) => ask('inject', { url, payload }), sweep: () => ask('sweep'), unread: (id, characterId) => ask('unread', { id, characterId }),
         async stop() {
             if (!live) return;
             try { await Promise.race([ask('stop'), new Promise(r => setTimeout(r, 3000))]); } catch { /* going away anyway */ }

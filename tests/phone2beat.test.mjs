@@ -12,7 +12,7 @@ import { openStore, StoreError } from '../plugin/store.mjs';
 import { startAuto } from '../plugin/host.mjs';
 const { setContext } = await import('../plugin/screen.mjs');
 // (the browser's page: whether the tab is hidden is ours to say here)
-const page = { hidden: false, events: [], addEventListener() {}, dispatchEvent(e) { this.events.push(e?.type); return true; }, querySelectorAll: () => [] };
+const page = { hidden: false, events: [], details: [], addEventListener() {}, dispatchEvent(e) { this.events.push(e?.type); if (e?.detail) this.details.push(e.detail); return true; }, querySelectorAll: () => [] };
 globalThis.document = page;
 const { startFresh, putLivePhone, ensureRoom, sendLive, readLive, liveWorld } = await import('../src/phone2store.js');
 const KO = await import('../src/phone2keepon.js');
@@ -91,9 +91,8 @@ test('브라우저와 서버 일꾼이 번갈아: 가려진 동안 서버가 건
     const made = await auto.inject('/api/generate', { chatId, forCharacterId: 'mara', userStatus: 'idle', userActivity: 'away or offline', autonomous: true, skipPresenceDelay: true, autonomousIntentKey: due.autonomousIntentKey });
     assert.match(made.payload, /"message_saved"/);
     assert.equal(asked.length, 1);
-    await auto.inject('/api/conversation/autonomous/check', { chatId, userStatus: 'idle', maxFollowups: 2, source: 'server' });
-    // (스케줄러가 하는 안 읽음 표시)
-    const { makeAutoApp } = await import('../plugin/auto.mjs'); void makeAutoApp;
+    // (스케줄러가 말이 나온 뒤에 하는 안 읽음 표시)
+    await auto.unread(chatId, 'mara');
     // 브라우저는 아직 몰라요
     assert.equal(room.messages.length, 2);
 
@@ -105,16 +104,21 @@ test('브라우저와 서버 일꾼이 번갈아: 가려진 동안 서버가 건
     assert.equal(liveWorld(m).messenger.rooms[room.id], room); assert.equal(room.messages, list); assert.equal(room.messages[0], first);
     assert.deepEqual(room.messages.map(x => [x.from, x.text, x.extra?.autonomous]), [['Ren', 'hey', undefined], ['Mara', 'hi', undefined], ['Mara', 'you there?', true]]);
     assert.ok(page.events.includes('na-live-change'));
+    // (알림을 띄울 신호: 서버가 그사이 건 말)
+    assert.deepEqual(page.details.filter(d => d.from === 'server'), [{ from: 'server', rooms: [{ room: room.id, by: ['Mara'], added: 1, count: 1 }] }]);
     assert.equal(Object.values(w.presence.meta.autonomousDailyBudget.counts)[0], 1);
     // 브라우저의 판단: 서버가 방금 걸었으니 또 걸지 않아요 (표시로 알아요)
     assert.equal(await G.liveAutonomous(m), 0);
     assert.equal(asked.length, 1);
-    // 받은 뒤의 저장은 부딪히지 않아요. 내가 방을 읽고 답하면 그대로 올라가요
+    assert.deepEqual(G.liveAutonomousUnread(m), [{ room: room.id, count: 1, by: ['Mara'], at: room.autonomousUnreadAt }]);
+    // 받은 뒤의 저장은 부딪히지 않아요. 내가 방을 읽고(안 읽음 표시가 지워져요) 답하면 그대로 올라가요
     readLive(m, room.id, 'Ren');
+    assert.deepEqual(G.liveAutonomousUnread(m), []);
     sendLive(m, room.id, 'im here');
     await core.saveMeta();
     const got = await store.load(sid);
     assert.equal(got.parts[`room/${room.id}/0`].at(-1).text, 'im here');
+    assert.equal(got.parts[`room/${room.id}`].room.autonomousUnreadCount, undefined);
 
     // ---- 가려져 있는 동안 때가 된 늦은 답장: 브라우저의 틱은 안 돌려요 (일꾼의 몫). 일꾼이 없으면(알렸을 때 꺼져 있었으면) 전처럼 브라우저가 돌려요
     const { enqueueJob } = await import('../src/phone2store.js');

@@ -605,7 +605,12 @@ Orbit이 버벅이는 제일 큰 이유는 저장이에요: Orbit 데이터가 �
     - 화면이 부를 것: `liveServerStatus(real)`(방마다 닫아도 오나 · 안 되면 이유) · `liveServerOn()` · `liveAutonomousUnread(real)`.
     - 확인: `tests/phone2beat.test.mjs`(브라우저 쪽 진짜 파일 + 진짜 일꾼을 한 저장에: 가려진 동안 서버가 건 말을 받고, 또 안 걸고, 가려진 틱이 쉬고), `tests/phone2keep.test.mjs`(합치기 · 제자리 맞추기 · 퍼즈 400판: 어느 쪽 말도 안 없어지고 id · 번호가 안 겹침), `tests/phone2sched.test.mjs`(표시로 되살리기).
     - 아직 진짜 브라우저 화면에서는 안 봤어요(테스트는 Node에서 화면 없이 돌려요).
-  - 3-4 (아직): 알림(소리 · 떠 있는 알림 · 브라우저 알림 · 다른 채팅의 안 읽음 수: 마리나라의 `use-background-autonomous.ts` · `local-notifications.ts` · `notification-sound.ts`). 화면은 디자인 세션.
+  - 3-4 (코드는 됨, 화면은 디자인 세션): 알림.
+    - 신호: 캐릭터가 먼저 건 말이 들어오면 `document`에 `na-live-auto`를 보내요. `detail: { from: 'browser' | 'server', rooms: [{ room, by: [이름], added, count }] }`. 브라우저가 만든 것은 그 말이 저장된 직후(`phone2go.js`), 서버 일꾼이 만든 것은 브라우저가 받았을 때(`phone2keepon.js keepSync`).
+    - 마리나라의 소리 · 브라우저 알림 파일을 가져왔어요: `src/marinara/notification-sound.js`(`playConfiguredNotificationPing(켰나, 창이 뒤에 있을 때만)`) · `src/marinara/local-notifications.js`(`requestLocalNotificationPermission()` · `showLocalMessageNotification({ enabled, characterName, title, tag })`).
+    - 마리나라가 하는 것(`use-background-autonomous.ts` 270~340줄 · `ConversationAutonomousEffects.tsx`): 소리 → 그 방을 안 보고 있으면 안 읽음 수 올리기 → 떠 있는 알림("○○ messaged you", 5초) → 브라우저 알림. 이 순서와 설정 스위치는 화면이 정해요.
+    - 다른 실리 채팅의 Orbit: 브라우저는 그 채팅을 열어야 그 데이터를 읽어요. 그래서 다른 채팅에서 온 말의 알림은 그 채팅을 열었을 때 떠요(서버가 건 말은 방에 "안 읽은 먼저 건 말"로 적혀 있어요). 열지 않은 채팅의 알림을 지금 채팅에서 띄우는 것은 아직 없어요.
+    - 진짜 브라우저 + 진짜 실리 1.19.1 확인 (2026-11-22): 브라우저가 묶음을 남기고(요청 틀은 실리의 `createGenerationParameters`가 만든 것) → 탭을 가린 동안 일꾼이 실리의 "custom" 연결로 먼저 건 말을 만들고 → 탭이 다시 보일 때 브라우저가 받고(안 읽음 표시 · 하루 수 포함) → 브라우저가 또 걸지 않았어요. 진짜 모델로는 아직 안 봤어요.
 
 ## 말 · 방 다루기 (마리나라에서 가져옴)
 

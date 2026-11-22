@@ -1873,8 +1873,11 @@ test('서버 묶음: 실리 연결 방식으로 나가는 방마다 요청 틀. 
     } finally { for (const k of ['kept', 'tpl', 'slots', 'sources', 'noTpl', 'tplFail', 'conn']) delete T[k]; }
 });
 
-test('먼저 건 말에는 표시가 남아요 (extra.autonomous). 내 말에 대한 답장에는 없어요', async () => {
+test('먼저 건 말에는 표시가 남아요 (extra.autonomous). 내 말에 대한 답장에는 없어요', async t => {
     const c = world(), w = L.liveWorld(c.real);
+    const cues = [], hadDoc = globalThis.document, hadEv = globalThis.CustomEvent;
+    globalThis.document = { dispatchEvent: e => { if (e.type === 'na-live-auto') cues.push(e.detail); return true; } }; globalThis.CustomEvent = class { constructor(type, init) { this.type = type; this.detail = init?.detail; } };
+    t.after(() => { if (hadDoc === undefined) delete globalThis.document; else globalThis.document = hadDoc; if (hadEv === undefined) delete globalThis.CustomEvent; else globalThis.CustomEvent = hadEv; });
     send(c, '뭐해'); T.replies = [{ state: '집', reply: ['그냥'], does: [] }];
     await G.liveGo(c.real);
     assert.equal(c.room.messages.at(-1).extra?.autonomous, undefined);
@@ -1884,5 +1887,7 @@ test('먼저 건 말에는 표시가 남아요 (extra.autonomous). 내 말에 �
     await G.liveGo(c.real);
     const mine = c.room.messages.filter(x => x.from === 'Mara').slice(-2);
     assert.deepEqual(mine.map(x => [x.text, x.extra?.autonomous]), [['자?', undefined], ['아직 안 자지', true]]);
+    // (화면에 알림을 띄울 신호: 내 말에 대한 답장에는 안 가요)
+    assert.deepEqual(cues, [{ from: 'browser', rooms: [{ room: c.room.id, by: ['Mara'], added: 1, count: 1 }] }]);
     void w;
 });

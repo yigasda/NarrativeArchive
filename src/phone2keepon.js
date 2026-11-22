@@ -58,12 +58,23 @@ export async function keepSync() {
     const m = hasChat() ? getMeta() : null;
     if (!m || !keep.kept()) return false;
     let changed = false;
+    // (how many messages a character wrote first were unseen in each room before: what the server added shows after)
+    const unseen = () => new Map(Object.values(m.live?.world?.messenger?.rooms || {}).map(r => [r.id, r.autonomousUnreadCount > 0 ? Math.floor(r.autonomousUnreadCount) : 0]));
+    const before = unseen();
     try { changed = await keep.sync(); }
     catch (err) { console.warn('[narrative-archive] Orbit 맞추기', err); return false; }
     if (!changed) return false;
     // (what Marinara's tracker remembers of the rooms is read from the rooms again: the messages the server's characters wrote first)
     for (const roomId of Object.keys(m.live?.world?.messenger?.rooms || {})) { try { reseedActivity(m, roomId); } catch { /* a room gone meanwhile */ } }
     try { globalThis.document?.dispatchEvent(new globalThis.CustomEvent('na-live-change')); } catch { /* no screen */ }
+    // 그사이 캐릭터가 먼저 건 말이 들어왔어요: 화면이 알림(소리 · 떠 있는 알림 · 브라우저 알림)을 띄울 신호
+    //   'na-live-auto', detail: { from: 'server', rooms: [{ room, by: [이름], added, count }] }
+    const rooms = [];
+    for (const r of Object.values(m.live?.world?.messenger?.rooms || {})) {
+        const now = r.autonomousUnreadCount > 0 ? Math.floor(r.autonomousUnreadCount) : 0, added = now - (before.get(r.id) || 0);
+        if (added > 0) rooms.push({ room: r.id, by: (Array.isArray(r.autonomousUnreadCharacterIds) ? r.autonomousUnreadCharacterIds : []).map(k => (r.members || []).find(n => String(n || '').trim().toLowerCase() === k) || k), added, count: now });
+    }
+    if (rooms.length) { try { globalThis.document?.dispatchEvent(new globalThis.CustomEvent('na-live-auto', { detail: { from: 'server', rooms } })); } catch { /* no screen */ } }
     return true;
 }
 let beating = null;

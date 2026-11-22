@@ -39,6 +39,7 @@ const cmds = {
     list: () => work.app.chats.list(),
     inject: ({ url, payload }) => work.app.inject({ method: 'POST', url, payload }),
     sweep: () => work.sweepDue(),
+    unread: ({ id, characterId }) => work.app.chats.markAutonomousUnread(id, { characterId }).then(() => true),
 };
 parentPort.on('message', async m => {
     if (m && m.id && waiting.has(m.id)) {

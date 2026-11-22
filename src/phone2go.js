@@ -171,6 +171,9 @@ export async function liveGo(real, { onChange = () => {} } = {}) {
                 const room = w.messenger?.rooms?.[job.room];
                 if (room) { delete room.autoFail; const last = [...(room.messages || [])].reverse().find(x => liveKey(x.from) === liveKey(job.owner)); if (last) last.extra = { ...(last.extra || {}), autonomous: true }; }
                 await line.save();
+                // (a character wrote first: the screen's cue for its notification — Marinara's onAutonomousMessage. The same
+                //  cue the browser gets for the ones the server plugin wrote, phone2keepon.js keepSync)
+                try { globalThis.document?.dispatchEvent(new globalThis.CustomEvent('na-live-auto', { detail: { from: 'browser', rooms: [{ room: job.room, by: [job.owner], added: 1, count: 1 }] } })); } catch { /* no screen */ }
             }
             // (a group room: whoever this reply called with @Name answers next — Marinara's mention routing)
             if (w && w.id === job.world && got?.said && !job.regen && handOff(real, job)) await line.save();
