@@ -350,6 +350,8 @@ export async function stSourceModels(source) {
 // is what turns thinking off. → { reasoning_effort (undefined = SillyTavern sends none), include_reasoning }
 export async function stLevelPayload(source, model, effort) {
     const O = globalThis.__naStOpenai || await import('/scripts/openai.js');
+    // (the server plugin has no createGenerationParameters: it gives the value the browser worked out with it — plugin/work.mjs)
+    if (typeof O.levelPayload === 'function') return O.levelPayload(source, model, effort);
     if (typeof O.createGenerationParameters !== 'function') throw new Error('이 실리 버전에서는 연결 프로필에 추론 레벨을 실을 수 없어요 (실리를 최신으로 올려 주세요)');
     const thoughts = effort !== 'none';
     const built = await O.createGenerationParameters({ ...O.oai_settings, chat_completion_source: source, stream_openai: false, n: 1, bias_preset_selected: '', function_calling: false, reasoning_effort: stEffort(effort), show_thoughts: thoughts }, model, 'quiet', []);
@@ -487,9 +489,9 @@ export async function askDraft(prompt, opts = {}) {
 // room for that thinking (32,000 tokens, or the draft limit if that is larger). 'conn' = the connection's own setting.
 export const compressEffort = () => { const v = draftSettings().cEffort; return v === undefined || v === null || v === '' ? 'high' : v; };
 export const SECTION_GUARD = /^#{1,3} |^\s*[-*•] |PLOT:/m;
-export const askCompress = (prompt, { system = '', guard = null, keepSystem = false } = {}) => {
+export const askCompress = (prompt, { system = '', guard = null, keepSystem = false, profileNow = false } = {}) => {
     const e = compressEffort(), t = draftSettings();
-    return askDraft(prompt, { system, guard, keepSystem, maxTokens: Math.max(32000, Number(t.max) || 0), effort: e === 'conn' ? '' : e, force: e !== 'conn' });
+    return askDraft(prompt, { system, guard, keepSystem, maxTokens: Math.max(32000, Number(t.max) || 0), effort: e === 'conn' ? '' : e, force: e !== 'conn', profileNow });
 };
 export const drLabel = () => { const t = draftSettings(); return t.mode === 'source' ? (t.stModel || stSourceName(t.source)) : t.mode === 'custom' ? (t.model || '커스텀 API') : t.mode === 'vertex' ? (t.vxModel || 'Vertex') : '없음'; };
 
@@ -509,25 +511,38 @@ export function aiProfiles() {
 export const stripThink = t => String(t ?? '').replace(/<(think|thinking|reasoning|scenes)[^>]*>[\s\S]*?<\/\1>/gi, '').trim();
 
 // Sends one request: to the chosen Connection Manager profile, or to whatever is connected now.
+// profileNow (Orbit's requests): with no profile chosen here, the profile picked in SillyTavern's Connection Manager now — so
+// the server plugin can send the same request while SillyTavern is closed (it cannot run SillyTavern's own generateRaw)
 export async function askAI(prompt, opts = {}) {
     try { return await askAIOnce(prompt, opts); }
     catch (e) { if (opts.signal?.aborted) throw e; return viaFallback(e, 'ai', prompt, opts); }
 }
-async function askAIOnce(prompt, { system = '', maxTokens = 0, effort = '', force = false, guard = null, keepSystem = false, signal = null, temperature = null, topP = null, meta = null } = {}) {
+// AI 기능 모델이 실리 쪽('st')일 때 보내는 연결 프로필 → { id, profile (없으면 null: 고른 프로필이 지워졌어요) } | null (실리의 지금 연결: generateRaw)
+//   여기서 고른 프로필이 먼저, 없으면 profileNow일 때 실리의 연결 관리자에서 지금 고른 프로필 (실리가 /profile-genstream에 쓰는 것과 같은 칸)
+export function aiProfileFor({ profileNow = false } = {}) {
+    const g = globalSettings();
+    if (g.aiProfile) return { id: g.aiProfile, profile: aiProfiles().find(x => x.id === g.aiProfile) || null };
+    if (!profileNow) return null;
+    const id = String(ctx().extensionSettings?.connectionManager?.selectedProfile || ''), p = id ? aiProfiles().find(x => x.id === id) : null;
+    return p ? { id, profile: p } : null;
+}
+async function askAIOnce(prompt, { system = '', maxTokens = 0, effort = '', force = false, guard = null, keepSystem = false, signal = null, temperature = null, topP = null, meta = null, profileNow = false } = {}) {
     const c = ctx();
     const g = globalSettings();
     const max = Math.max(64, Number(maxTokens) || Number(g.aiMaxTokens) || 8192);
     let out;
-    const a = connSettings('ai');
+    const a = connSettings('ai'), via = OWN_MODES.includes(a.mode) ? null : aiProfileFor({ profileNow });
     if (OWN_MODES.includes(a.mode)) {
         out = await callConn(a, system, prompt, max, effort, force, keepSystem, signal, temperature, topP, meta);
-    } else if (g.aiProfile) {
-        const p = aiProfiles().find(x => x.id === g.aiProfile);
+    } else if (via) {
+        const p = via.profile;
         if (!p) throw new Error('고른 연결 프로필을 찾을 수 없어요. ⚙ 설정 → AI 모델에서 다시 골라 주세요.');
         const msgs = [...(system ? [{ role: 'system', content: system }] : []), ...turnsOf(prompt).map(t => openAiTurn(t, false))];
         const r = await c.ConnectionManagerRequestService.sendRequest(p.id, msgs, max, { stream: false, extractData: true, includePreset: true, includeInstruct: true, ...(signal ? { signal } : {}) });
         out = typeof r === 'string' ? r : r?.content;
     } else {
+        // (the server plugin: SillyTavern's own connection is its browser code. A profile picked in SillyTavern goes through above)
+        if (c.naServer) throw new Error('실리를 닫은 동안에는 실리에서 고른 연결 프로필로 보내요. 실리의 연결 관리자에서 프로필을 하나 골라 주세요');
         if (typeof c.generateRaw !== 'function') throw new Error('이 실리 버전에서는 AI 호출을 쓸 수 없어요');
         out = await c.generateRaw({ prompt: Array.isArray(prompt) ? turnsOf(prompt).map(x => x.content).join('\n\n') : prompt, systemPrompt: system, responseLength: max });
     }

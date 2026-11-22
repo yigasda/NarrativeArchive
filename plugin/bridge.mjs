@@ -3,10 +3,11 @@
 // 브라우저의 로그인 · CSRF가 없어서, 실리 자신의 처리기(라우터)를 이 컴퓨터 안에서만 들리는 작은 길에 그대로 붙여 줘요:
 //   - 127.0.0.1의 아무 포트. 밖에서는 못 들어와요
 //   - 요청마다 이 플러그인만 아는 토큰(실리를 켤 때마다 새로 만들어요)이 있어야 해요
-//   - 아래 네 가지 길만 열어요. 나머지는 404
+//   - 아래 다섯 가지 길만 열어요. 나머지는 404
 //   - 요청의 사용자(req.user)는 그 일꾼의 사용자예요: 실리가 자기 키(secrets.json)를 그 사용자 것으로 붙여요
 // 실리의 처리기를 고치거나 흉내 내지 않아요: 실리가 브라우저의 요청을 받을 때와 같은 코드가 돌아요.
-//   POST /api/backends/chat-completions/generate   모델 요청 (Vertex · 실리 연결 방식)
+//   POST /api/backends/chat-completions/generate   모델 요청 (Vertex · 실리 연결 방식 · 채팅 완성 연결 프로필)
+//   POST /api/backends/text-completions/generate   모델 요청 (글 완성 연결 프로필)
 //   POST /api/characters/merge-attributes          카드의 확장 칸 쓰기 (스케줄 · 상태)
 //   POST /api/worldinfo/get                        로어북 읽기 (폰 프로필로 고른 로어 항목)
 //   GET  /user/files/…                             보낸 첨부 파일 읽기
@@ -16,7 +17,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 
-const POSTS = new Set(['/api/backends/chat-completions/generate', '/api/characters/merge-attributes', '/api/worldinfo/get']);
+const POSTS = new Set(['/api/backends/chat-completions/generate', '/api/backends/text-completions/generate', '/api/characters/merge-attributes', '/api/worldinfo/get']);
 export const allowed = (method, url) => { const p = String(url || '').split('?')[0]; return method === 'POST' ? POSTS.has(p) : method === 'GET' ? p.startsWith('/user/files/') && !p.includes('..') : false; };
 
 // stRoot: 실리 서버의 폴더 · userOf(root) → 그 사용자 폴더의 req.user ({ profile, directories }) | null
@@ -25,8 +26,8 @@ export async function startBridge({ stRoot = process.cwd(), userOf } = {}) {
     const need = createRequire(path.join(stRoot, 'package.json'));
     const express = need('express');
     const st = file => import(pathToFileURL(path.join(stRoot, 'src', file)).href);
-    const [chat, chars, world, users] = await Promise.all([st('endpoints/backends/chat-completions.js'), st('endpoints/characters.js'), st('endpoints/worldinfo.js'), st('users.js')]);
-    for (const [name, m] of [['chat-completions', chat], ['characters', chars], ['worldinfo', world], ['users', users]]) if (typeof m?.router !== 'function') throw new Error(`실리의 ${name} 처리기를 찾지 못했어요 (실리 버전이 달라졌을 수 있어요)`);
+    const [chat, text, chars, world, users] = await Promise.all([st('endpoints/backends/chat-completions.js'), st('endpoints/backends/text-completions.js'), st('endpoints/characters.js'), st('endpoints/worldinfo.js'), st('users.js')]);
+    for (const [name, m] of [['chat-completions', chat], ['text-completions', text], ['characters', chars], ['worldinfo', world], ['users', users]]) if (typeof m?.router !== 'function') throw new Error(`실리의 ${name} 처리기를 찾지 못했어요 (실리 버전이 달라졌을 수 있어요)`);
     const token = crypto.randomBytes(24).toString('hex'), want = Buffer.from(token);
     const app = express();
     app.disable('x-powered-by');
@@ -43,6 +44,7 @@ export async function startBridge({ stRoot = process.cwd(), userOf } = {}) {
     });
     app.use(express.json({ limit: '500mb' }));
     app.use('/api/backends/chat-completions', chat.router);
+    app.use('/api/backends/text-completions', text.router);
     app.use('/api/characters', chars.router);
     app.use('/api/worldinfo', world.router);
     app.use('/', users.router);

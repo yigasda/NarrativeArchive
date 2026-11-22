@@ -1873,6 +1873,49 @@ test('서버 묶음: 실리 연결 방식으로 나가는 방마다 요청 틀. 
     } finally { for (const k of ['kept', 'tpl', 'slots', 'sources', 'noTpl', 'tplFail', 'conn']) delete T[k]; }
 });
 
+test('서버 묶음: 연결 프로필로 나가는 요청마다 틀 (방에 고른 프로필 · 레벨을 얹은 것 · 실리에서 지금 고른 프로필 · 스케줄 연결). 못 만든 것은 이유', async () => {
+    const { fakeSt } = await import('./stfake.mjs'), SP = await import('../src/stprofile.js');
+    const c = world(), id = c.room.id;
+    const profiles = [{ id: 'p1', name: 'One', api: 'openrouter', model: 'or/m', preset: 'Quiet' }, { id: 'p2', name: 'Two', api: 'openrouter', model: 'or/n' }, { id: 'p3', name: 'Rand', api: 'openrouter', model: 'or/r', preset: 'Quiet' }];
+    const set = { profiles, presets: { Quiet: { chat_completion_source: 'openrouter', temp_openai: 0.5, openai_max_tokens: 700 } } };
+    const st = fakeSt(set), rand = fakeSt({ ...set, random: true });
+    const sendRequest = (pid, ...a) => (pid === 'p3' ? rand : st).sendRequest(pid, ...a);
+    Object.assign(T, { kept: true, profiles, selectedProfile: 'p2', slots: { dr: { mode: 'custom', fmt: '', model: 'draft-model' }, ai: { mode: 'st' } }, st: { extensionSettings: { connectionManager: { profiles } }, ConnectionManagerRequestService: { getSupportedProfiles: () => profiles, sendRequest } } });
+    globalThis.__naStPresets = { getPresetManager: api => ({ getCompletionPresetByName: n => st.find.preset(api, n) }) };
+    globalThis.__naStOpenai = { proxies: [], oai_settings: {} };
+    try {
+        await G.liveSetRoomModel(c.real, id, { connectionId: 'profile:p1' });
+        await G.liveSetReasoning(c.real, id, 'high');
+        await G.liveSetScheduleConnection(c.real, 'profile:p3');
+        const over = { reasoning_effort: 'st:high', include_reasoning: true };
+        assert.deepEqual(G.liveReplyPlan(c.real, id).profile, { id: 'p1', missing: false, level: { source: 'openrouter', model: 'or/m', effort: 'high' } });
+        assert.equal(await G.liveKitRefresh(c.real), true);
+        const kit = c.real.live.kit;
+        // (방의 프로필 + 레벨, 실리에서 지금 고른 프로필 — AI 기능 모델이 실리 쪽: 대화 요약의 장면 나누기도 그리로 가요)
+        assert.deepEqual(Object.keys(kit.pt).sort(), [SP.ptKey('p1', over, '*'), SP.ptKey('p2', null, '*')].sort());
+        assert.deepEqual(kit.levels, { [SP.levelKey('openrouter', 'or/m', 'high')]: over });
+        assert.deepEqual(kit.pt[SP.ptKey('p1', over, '*')].data.reasoning_effort, 'st:high');
+        // (스케줄 연결의 프로필은 요청마다 값이 달라서 틀이 없어요: 그 이유가 남아요)
+        assert.match(kit.ptWhy[SP.ptWhyKey('p3', null)], /요청마다 값이 달라져서/);
+        assert.equal(await G.liveKitRefresh(c.real), false);                                    // (같으면 다시 안 넣어요)
+        // 방이 실리 쪽(AI 기능 모델)이면: 실리에서 지금 고른 프로필. 고른 게 없으면 실리의 지금 연결 그대로(raw)
+        await G.liveSetReasoning(c.real, id, ''); await G.liveSetRoomModel(c.real, id, { connectionId: 'ai' });
+        assert.deepEqual([G.liveReplyPlan(c.real, id).profile, G.liveReplyPlan(c.real, id).raw], [{ id: 'p2', missing: false, level: null }, false]);
+        const seen = [];
+        T.ask = async (input, o) => { seen.push(o); return JSON.stringify({ state: '집', reply: ['응'], does: [] }); };
+        send(c, '뭐해'); await G.liveGo(c.real);
+        assert.equal(seen[0].profileNow, true);                                                 // (Orbit의 요청은 지금 고른 프로필로)
+        T.selectedProfile = null;
+        assert.deepEqual([G.liveReplyPlan(c.real, id).profile, G.liveReplyPlan(c.real, id).raw], [null, true]);
+        await G.liveKitRefresh(c.real);
+        assert.deepEqual(Object.keys(c.real.live.kit.pt), []);                                   // (p3은 여전히 이유만)
+        // 방에 고른 프로필이 실리에서 지워졌으면: 브라우저처럼 안 고른 방(초안 모델)으로 — 서버도 같은 길이에요
+        await G.liveSetRoomModel(c.real, id, { connectionId: 'profile:p1' });
+        T.profiles = profiles.slice(1);
+        assert.deepEqual([G.liveReplyPlan(c.real, id).profile, G.liveReplyPlan(c.real, id).t?.model], [null, 'draft-model']);
+    } finally { for (const k of ['kept', 'profiles', 'selectedProfile', 'slots', 'st', 'ask']) delete T[k]; delete globalThis.__naStPresets; delete globalThis.__naStOpenai; }
+});
+
 test('먼저 건 말에는 표시가 남아요 (extra.autonomous). 내 말에 대한 답장에는 없어요', async t => {
     const c = world(), w = L.liveWorld(c.real);
     const cues = [], hadDoc = globalThis.document, hadEv = globalThis.CustomEvent;

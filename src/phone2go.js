@@ -8,8 +8,9 @@
 import { ctx, saveMeta, MODULE, VERSION } from './core.js';
 import { applyInjection } from './inject.js';
 import { askDraft, phone2Clock, aroundBlock, ownerZone, cardBlocks } from './phonedata.js';
-import { askAI, askCompress, stripThink, isBlocked, SECTION_GUARD, aiProfiles, callConn, connSettings, stSourceList, stSourceName, stSourceModels, OWN_MODES, apiFormat, stLevelPayload, draftSettings, draftReady, stSourceTemplate } from './ai.js';
+import { askAI, askCompress, stripThink, isBlocked, SECTION_GUARD, aiProfiles, aiProfileFor, callConn, connSettings, stSourceList, stSourceName, stSourceModels, OWN_MODES, apiFormat, stLevelPayload, draftSettings, draftReady, stSourceTemplate } from './ai.js';
 import { buildKit, putKit } from './phone2kit.js';
+import { profileTemplates, ptWhyKey, levelKey } from './stprofile.js';
 import { keepKept, keepAutoStatus, keepServes } from './phone2keepon.js';
 import { stReach, REACH_NAME } from './phone2stlevel.js';
 import { SCENES_SYS, parseScenes } from './scenes.js';
@@ -485,7 +486,7 @@ const askVia = (real, connectionId) => async (messages, o) => {
     // (a request with pictures — the caption request — keeps them on its one turn)
     const images = messages.flatMap(x => x.images || []), input = images.length ? [{ role: 'user', content: text, images }] : text;
     // (what Marinara asks for with each request: its temperature (0.45 repair … 0.9 vary) and, for the routine summary, low reasoning)
-    const how = { force: true, system, maxTokens: o?.maxTokens, effort: o?.reasoningEffort || '', signal: o?.signal || null, temperature: typeof o?.temperature === 'number' ? o.temperature : null, topP: typeof o?.topP === 'number' ? o.topP : null };
+    const how = { force: true, system, maxTokens: o?.maxTokens, effort: o?.reasoningEffort || '', signal: o?.signal || null, temperature: typeof o?.temperature === 'number' ? o.temperature : null, topP: typeof o?.topP === 'number' ? o.topP : null, profileNow: true };
     if (!id) return askDraft(input, how);
     if (id === 'ai') return askAI(input, { ...how, noFallback: true });
     const p = aiProfiles().find(x => `profile:${x.id}` === id);
@@ -688,7 +689,7 @@ export const digestAsk = (w, chunk, tz, story = '', size = '') => { const raw = 
 export async function digestScenes(w, chunk, tz) {
     const sys = scenesSystem(SCENES_SYS);
     if (!sys) return '';
-    try { return scenesNote(chunk, parseScenes(await askAI(scenesInput(chunk, digestRaw(w, chunk.rows, tz)), { system: sys, maxTokens: 4000 }), chunk.from, chunk.to)) || ''; }
+    try { return scenesNote(chunk, parseScenes(await askAI(scenesInput(chunk, digestRaw(w, chunk.rows, tz)), { system: sys, maxTokens: 4000, profileNow: true }), chunk.from, chunk.to)) || ''; }
     catch (err) { console.warn('[narrative-archive] live digest scenes', err); return ''; }
 }
 const digesting = new WeakSet();
@@ -704,7 +705,7 @@ export async function liveDigest(real, owner) {
             const { room, chunk } = next, story = liveStoryText(real, w);
             // (asked as the archive's compression asks: the request put together the same way, the same thinking level,
             // room and refusal check; a stretch refused whole goes again as two halves, as a blocked part does there)
-            const ask = async c => { const q = digestAsk(w, c, tzOf(p), story, await digestScenes(w, c, tzOf(p))); return stripThink(await askCompress(q.prompt, { system: q.system, keepSystem: !!q.system, guard: SECTION_GUARD })); };
+            const ask = async c => { const q = digestAsk(w, c, tzOf(p), story, await digestScenes(w, c, tzOf(p))); return stripThink(await askCompress(q.prompt, { system: q.system, keepSystem: !!q.system, guard: SECTION_GUARD, profileNow: true })); };
             let answer;
             try {
                 try { answer = await ask(chunk); }
@@ -743,7 +744,7 @@ export async function liveDigest(real, owner) {
             let answer;
             try {
                 const story = liveStoryText(real, w);
-                answer = stripThink(await askCompress(foldRequest(long.chunk, story ? langBlock(story, { tail: false, src: '' }) : ''), { system: AI_SYS_DIGEST }));
+                answer = stripThink(await askCompress(foldRequest(long.chunk, story ? langBlock(story, { tail: false, src: '' }) : ''), { system: AI_SYS_DIGEST, profileNow: true }));
             } catch (err) { console.error('[narrative-archive] live fold', err); if (here(real, w)) { failFold(long.room, err?.message || err); await saveMeta(); } return done; }
             if (here(real, w)) { takeFold(long.room, long.chunk, answer); await saveMeta(); }
         }
@@ -768,7 +769,7 @@ export async function liveBackDraft(real) {
     let room = BACK.tail.chars;
     for (const t of liveChatTail().lines.slice(-BACK.tail.lines).reverse()) { if (t.length > room) break; tail.unshift(t); room -= t.length; }
     const input = backInput(w, left, { wall: ms => liveWall(tz, w.dayShift, ms).at, tail });
-    const answer = await askDraft(input, { force: true, system: phone2BackSystem({ persona: w.persona }), maxTokens: BACK.tokens, effort: 'low' });
+    const answer = await askDraft(input, { force: true, system: phone2BackSystem({ persona: w.persona }), maxTokens: BACK.tokens, effort: 'low', profileNow: true });
     return { world: w.id, left, text: backMessage(takeBack(answer, x => parseJson(x, { salvage: true }))), count: left.count, more: left.more };
 }
 // 2) 넣기: 롤플 채팅 맨 끝에 해설 메시지 하나로 (실리의 /sys가 넣는 것과 같은 모양), 실었던 말에 전했다고 표시.
@@ -1073,12 +1074,13 @@ export async function liveSetRoomModel(real, roomId, pick = null) {
     await saveMeta();
     return liveRoomModel(real, roomId);
 }
-// 이 방의 답장 한 번이 나가는 길과 그 요청의 값 (liveGo의 ask가 askRoom에 주는 것 그대로) → { via, t, maxTokens, effort, thoughts }
-//   via: 'custom' · 'vertex' · 'source:<연결>' (t가 있어요: 우리가 직접 보내요) · 'profile:<연결>' · 'st' (t는 null: 실리의 브라우저 코드가 보내요)
-//   서버 플러그인은 t가 있는 방만 돌릴 수 있어요
+// 이 방의 답장 한 번이 나가는 길과 그 요청의 값 (liveGo의 ask가 askRoom에 주는 것 그대로) → { via, t, profile, raw, maxTokens, effort, thoughts }
+//   via: 'custom' · 'vertex' · 'source:<연결>' (t가 있어요: 우리가 직접 보내요) · 'profile:<연결>' · 'st'
+//   t: 우리가 직접 보내는 연결 · profile: 연결 프로필로 나가요 (replyRoute) · raw: 실리의 지금 연결 그대로 (고른 프로필이 없어요)
+//   서버 플러그인은 t가 있는 방과, 브라우저가 요청 틀을 남긴 프로필 방을 돌려요 (raw는 못 돌려요: 실리의 브라우저 코드예요)
 export function liveReplyPlan(real, roomId) {
     const r = replyRoute(real, roomId), effort = r.rs.effort ? r.rs.send : 'low';
-    return { via: r.rs.via, t: r.t, maxTokens: LIVE_GO.replyTokens, effort, thoughts: effort !== 'none' };
+    return { via: r.rs.via, t: r.t, profile: r.profile, raw: r.raw, maxTokens: LIVE_GO.replyTokens, effort, thoughts: effort !== 'none' };
 }
 // 실리를 닫아도 먼저 말 걸기 · 늦은 답장이 오는 방인가 (서버 플러그인의 일꾼에 물어요) → { on: 일꾼이 도나, rooms: { 방 id: { can, why } } }
 //   can이 false면 why에 이유 (연결 프로필 · 실리 자신의 연결로 나가는 방, 요청 틀이 아직 없는 실리 연결 방식, 묶음이 아직 없음)
@@ -1094,19 +1096,58 @@ export function liveAutonomousUnread(real) {
     const w = liveWorld(real);
     return Object.values(w?.messenger?.rooms || {}).filter(r => r.autonomousUnreadCount > 0).map(r => ({ room: r.id, count: Math.floor(r.autonomousUnreadCount), by: (Array.isArray(r.autonomousUnreadCharacterIds) ? r.autonomousUnreadCharacterIds : []).map(k => r.members.find(n => liveKey(n) === k) || k), at: r.autonomousUnreadAt || '' }));
 }
-// ---- 서버 플러그인이 실리를 닫은 동안 읽을 묶음 (phone2kit.js): 이 채팅의 캐릭터 · 페르소나 · 롤플 끝 메시지에, 실리 연결 방식으로
-// 나가는 방들의 요청 틀(ai.js stSourceTemplate)을 더해요. 플러그인에 둔 채팅만 → 달라져서 넣었으면 true (저장은 부르는 쪽이)
-//   kit.st = { 틀의 열쇠: { data, secrets } }: 답장 한 번의 요청 (길이 LIVE_GO.replyTokens, 방의 추론 레벨 — 없으면 low, 생각 보기)
+// ---- 서버 플러그인이 실리를 닫은 동안 읽을 묶음 (phone2kit.js): 이 채팅의 캐릭터 · 페르소나 · 롤플 끝 메시지에, 실리를 거쳐 나가는
+// 요청들의 틀을 더해요. 플러그인에 둔 채팅만 → 달라져서 넣었으면 true (저장은 부르는 쪽이)
+//   kit.st = { 틀의 열쇠: { data, secrets } }: 실리 연결 방식으로 나가는 방의 답장 한 번 (ai.js stSourceTemplate.
+//            길이 LIVE_GO.replyTokens, 방의 추론 레벨 — 없으면 low, 생각 보기)
+//   kit.pt = { 틀의 열쇠: 틀 }: 연결 프로필로 나가는 요청 (stprofile.js profileTemplates: 실리 자신의 sendRequest가 만든 것).
+//            서버가 그 채팅에서 보낼 수 있는 연결 프로필 모두: 방마다 고른 프로필(방의 추론 레벨을 얹은 것), AI 기능 모델의 프로필 ·
+//            실리에서 지금 고른 프로필(실리 쪽 방 · 대화 요약의 장면 나누기), 스케줄 연결 · 그림 설명 연결로 고른 프로필
+//   kit.ptWhy = { [프로필, 얹는 값]: 틀을 못 만든 이유 } (서버가 그 방을 못 돌리는 이유로 화면에 가요)
+//   kit.levels = { [연결, 모델, 레벨]: 프로필 요청에 얹는 값 } (ai.js stLevelPayload가 실리 코드로 만든 것: 서버에는 그 코드가 없어요)
 export async function liveKitRefresh(real) {
     if (!real || !open(real) || !liveWorld(real) || !keepKept()) return false;
     const kit = buildKit(ctx(), real, liveChatTail(), { version: VERSION });
     if (!kit) return false;
-    kit.st = {};
+    kit.st = {}; kit.pt = {}; kit.ptWhy = {}; kit.levels = {};
+    const wanted = new Map(), want = (id, over) => { if (id) wanted.set(ptWhyKey(id, over), { id, over }); };
     for (const roomId of ['', ...Object.keys(liveWorld(real).messenger?.rooms || {})]) {
         const plan = liveReplyPlan(real, roomId);
-        if (plan.t?.mode !== 'source') continue;
-        try { const tpl = await stSourceTemplate(plan.t, plan); if (tpl) kit.st[tpl.key] = { data: tpl.data, secrets: tpl.secrets }; }
-        catch (err) { console.warn('[narrative-archive] live kit template', err); }
+        if (plan.t?.mode === 'source') {
+            try { const tpl = await stSourceTemplate(plan.t, plan); if (tpl) kit.st[tpl.key] = { data: tpl.data, secrets: tpl.secrets }; }
+            catch (err) { console.warn('[narrative-archive] live kit template', err); }
+        }
+        if (!plan.profile || plan.profile.missing) continue;
+        const lv = plan.profile.level;
+        if (!lv) { want(plan.profile.id, null); continue; }
+        // (a level SillyTavern's code could not turn into a request value: kept as the reason, which the server gives back)
+        try { const over = await stLevelPayload(lv.source, lv.model, lv.effort); kit.levels[levelKey(lv.source, lv.model, lv.effort)] = over; want(plan.profile.id, over); }
+        catch (err) { kit.levels[levelKey(lv.source, lv.model, lv.effort)] = { why: String(err?.message || err) }; }
+    }
+    // (the other requests the server makes in a go: the AI 기능 model's profile, the schedule connection's — a group room's smart
+    //  pick —, the captioning connection's. Read without presenceOf: nothing is written here)
+    const ai = aiProfileFor({ profileNow: true }), meta = liveWorld(real).presence?.meta || {};
+    if (ai?.profile) want(ai.id, null);
+    for (const cid of [liveScheduleConnection(real), meta.imageCaptioningEnabled === true ? String(meta.imageCaptioningConnectionId || '').trim() : '']) {
+        if (cid === 'ai' && ai?.profile) want(ai.id, null);
+        const p = String(cid || '').startsWith('profile:') ? aiProfiles().find(x => `profile:${x.id}` === cid) : null;
+        if (p) want(p.id, null);
+    }
+    if (wanted.size) {
+        const O = globalThis.__naStOpenai || await import('/scripts/openai.js'), PM = globalThis.__naStPresets || await import('/scripts/preset-manager.js');
+        const find = {
+            proxy: name => (Array.isArray(O.proxies) ? O.proxies.find(p => p.name === name) : null) || null,
+            preset: (api, name) => PM.getPresetManager(api)?.getCompletionPresetByName(name),
+            instruct: name => PM.getPresetManager('instruct')?.getCompletionPresetByName(name),
+            oai: O.oai_settings,
+        };
+        for (const [k, { id, over }] of wanted) {
+            const profile = (ctx().extensionSettings?.connectionManager?.profiles || []).find(p => p?.id === id);
+            // (the same call as askRoom · askVia · askAI make — only the messages and the length are stand-ins)
+            const send = (messages, max) => ctx().ConnectionManagerRequestService.sendRequest(id, messages, max, { stream: false, extractData: true, includePreset: true, includeInstruct: true }, ...(over ? [over] : []));
+            try { Object.assign(kit.pt, await profileTemplates({ send, profile, over, find })); }
+            catch (err) { kit.ptWhy[k] = String(err?.message || err); if (!err?.refusal) console.warn('[narrative-archive] live kit profile template', err); }
+        }
     }
     if (!open(real) || !liveWorld(real)) return false;
     return putKit(real, kit);
@@ -1117,21 +1158,33 @@ const profileTurn = input => (!Array.isArray(input) ? { role: 'user', content: i
 // 이 방의 답장이 어느 연결로 나가나 (askRoom이 이대로 보내요) → { id, chat, rs, slot, override, t }
 //   id: 방에 고른 연결 ('' = 안 골랐어요: 초안 모델) · rs: 추론 레벨 (liveReasoning)
 //   t: 우리가 직접 보내는 연결의 설정 (커스텀 API · Vertex · 실리 연결 방식). 연결 프로필 · 실리 자신의 연결이면 null
+//   profile: 연결 프로필로 나가면 { id, missing (그 프로필이 없어요), level: { source, model, effort } (방의 추론 레벨을 얹어요) | null }
+//     방에 고른 프로필, 또는 AI 기능 모델이 실리 쪽이면 거기서 고른 프로필 · 실리에서 지금 고른 프로필 (ai.js aiProfileFor)
+//   raw: 실리의 지금 연결 그대로 (실리의 generateRaw: 프로필이 하나도 안 골라져 있어요)
 function replyRoute(real, roomId) {
     const room = liveWorld(real)?.messenger?.rooms?.[roomId], chat = room ? roomChat(room) : null;
     const id = chat?.connectionId && (sourceOf(chat.connectionId) || liveModelConnections().some(c => c.id === chat.connectionId)) ? chat.connectionId : '';
     // (the thinking level set for this room, or for Orbit as a whole; else what the caller asks for)
     const rs = liveReasoning(real, roomId);
     const slot = id ? slotOf(id) : null, override = id ? readChatModelOverride(chat) : null;
-    let t = null;
+    let t = null, profile = null, raw = false;
     // (Marinara's applyChatModelOverride: the override's model on that connection's key and endpoint)
     if (slot && override && OWN_MODES.includes(slot.mode)) { const conn = applyChatModelOverride({ ...slot, id }, override); t = { ...slot, [modelKey(slot)]: conn.model, ...(conn.maxTokensOverride ? { max: conn.maxTokensOverride } : {}) }; }
     else if (!id || id === 'dr') t = draftReady() ? draftSettings() : null;
-    else if (id === 'ai') { const a = connSettings('ai'); t = OWN_MODES.includes(a.mode) ? a : null; }
-    return { id, chat, rs, slot, override, t };
+    else if (id === 'ai') {
+        const a = connSettings('ai');
+        if (OWN_MODES.includes(a.mode)) t = a;
+        else { const r = aiProfileFor({ profileNow: true }); if (r) profile = { id: r.id, missing: !r.profile, level: null }; else raw = true; }
+    } else {
+        const p = aiProfiles().find(x => `profile:${x.id}` === id);
+        profile = { id: p ? p.id : String(id).replace(/^profile:/, ''), missing: !p, level: p && rs.effort && rs.via.startsWith('profile:') ? { source: rs.via.slice(8), model: String(p.model || ''), effort: rs.send } : null };
+    }
+    return { id, chat, rs, slot, override, t, profile, raw };
 }
 async function askRoom(real, roomId, input, how) {
     const { id, rs, slot, override, t: own } = replyRoute(real, roomId);
+    // (SillyTavern's own connection: the profile picked there now — the server plugin can send that one too)
+    how = { ...how, profileNow: true };
     if (rs.effort) how = { ...how, effort: rs.send };
     // (the request's pictures and files ride on its one turn: ai.js turnsOf)
     const media = how.images?.length || how.files?.length ? { ...(how.images?.length ? { images: how.images } : {}), ...(how.files?.length ? { files: how.files } : {}) } : null;

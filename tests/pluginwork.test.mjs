@@ -12,6 +12,8 @@ import { startAuto } from '../plugin/host.mjs';
 import { splitLive, joinLive } from '../src/phone2keep.js';
 import { startFresh, startFromStory, putLivePhone, ensureRoom, sendLive, liveWorld, enqueueJob } from '../src/phone2store.js';
 import { buildKit, putKit } from '../src/phone2kit.js';
+import * as SP from '../src/stprofile.js';
+import { fakeSt } from './stfake.mjs';
 // (the request template is made by the real ai.js, as the browser makes it: that file needs the do-nothing screen to load)
 await import('../plugin/screen.mjs');
 const AI = await import('../src/ai.js');
@@ -26,7 +28,7 @@ const { VERSION } = await import('../src/core.js');
 const TAIL = { lines: ['[#4] Mara: on my way', '[#5 · USER] Ren: ok'], first: 4, end: 5 };
 
 // 세계 하나: Ren(나)과 Mara의 방. Ren이 7시간 전에 말했고 Mara가 바로 답했어요. 먼저 말 걸기 켬
-function world({ story = false, schedule = null, kit = true, st = null, members = ['Mara'], hoursAgo = 7, version = VERSION, browser = BROWSER() } = {}) {
+function world({ story = false, schedule = null, kit = true, st = null, pt = null, levels = null, members = ['Mara'], hoursAgo = 7, version = VERSION, browser = BROWSER() } = {}) {
     const m = {};
     if (story) { startFromStory(m, { persona: 'Ren', upto: 3, now: Date.now() - 10 * 3600_000 }); liveWorld(m).snap = { v: 1, at: 1, upto: 3, text: '## #0–#3 — start\n- they met at the bakery\n', recent: ['[#3] Mara: see you'], made: { from: 0, to: 3, count: 4, parts: 1 } }; }
     else startFresh(m, { persona: 'Ren', now: Date.now() - 10 * 3600_000 });
@@ -35,12 +37,12 @@ function world({ story = false, schedule = null, kit = true, st = null, members 
     sendLive(m, room.id, 'hey', at);
     room.messages.push({ id: 't2', n: 2, from: members[0], text: 'hi', at: at + 60_000 });
     w.presence = { on: true, schedules: schedule ? { mara: schedule } : {}, overrides: {}, meta: {}, user: {} };
-    if (kit) { const k = buildKit(browser, m, TAIL, { version }); k.st = st || {}; putKit(m, k); }
+    if (kit) { const k = buildKit(browser, m, TAIL, { version }); k.st = st || {}; if (pt) k.pt = pt; if (levels) k.levels = levels; putKit(m, k); }
     return { m, w, room, id: `${w.id}:${room.id}` };
 }
 
 // 한 판: 임시 사용자 폴더 + 저장 + 가짜 모델 + 가짜 다리 + 일꾼
-async function stage(t, { settings = {}, reply = () => ({ reply: ['you there?'], status: '' }), bridge = true } = {}) {
+async function stage(t, { settings = {}, cm = null, more = {}, files = {}, reply = () => ({ reply: ['you there?'], status: '' }), bridge = true } = {}) {
     const root = await mkdtemp(path.join(tmpdir(), 'na-work-'));
     const asked = [], st = [];
     const model = await listen(async (req, res) => { const body = await bodyOf(req); asked.push({ url: req.url, auth: req.headers.authorization, body }); const a = await reply(body); if (a?.httpStatus) { res.statusCode = a.httpStatus; res.end(JSON.stringify({ error: { message: a.error || 'no' } })); return; } res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ choices: [{ message: { content: typeof a === 'string' ? a : JSON.stringify(a) }, finish_reason: 'stop' }], usage: { prompt_tokens: 1, completion_tokens: 1 } })); });
@@ -51,11 +53,14 @@ async function stage(t, { settings = {}, reply = () => ({ reply: ['you there?'],
         if (req.headers['x-na-token'] !== TOKEN) { res.statusCode = 403; res.end('{}'); return; }
         res.setHeader('content-type', 'application/json');
         if (req.url === '/api/backends/chat-completions/generate') { res.end(JSON.stringify({ choices: [{ message: { content: JSON.stringify(await reply(body)) }, finish_reason: 'stop' }] })); return; }
+        // (a text-completion backend that runs on past its answer: SillyTavern cuts the stop sequence off — custom-request.js 331–382)
+        if (req.url === '/api/backends/text-completions/generate') { res.end(JSON.stringify({ choices: [{ text: `${JSON.stringify(await reply(body))}\n### Instruction: and more` }] })); return; }
         if (req.url === '/api/characters/merge-attributes') { res.end('{}'); return; }
         res.statusCode = 404; res.end('{}');
     }) : null;
     const url = `http://127.0.0.1:${model.address().port}/v1`;
-    await writeFile(path.join(root, 'settings.json'), JSON.stringify({ main_api: 'openai', power_user: {}, oai_settings: { reverse_proxy: 'https://proxy.example', proxy_password: 'PW-SECRET' }, extension_settings: { connectionManager: { profiles: [{ id: 'p1', name: 'My profile', api: 'openai', model: 'x' }] }, narrative_archive: { draftConn: { mode: 'custom', url, key: 'MODEL-KEY', model: 'fake-model' }, ...settings } } }));
+    await writeFile(path.join(root, 'settings.json'), JSON.stringify({ main_api: 'openai', power_user: {}, oai_settings: { reverse_proxy: 'https://proxy.example', proxy_password: 'PW-SECRET' }, extension_settings: { connectionManager: cm || { profiles: [{ id: 'p1', name: 'My profile', api: 'openai', model: 'x' }] }, narrative_archive: { draftConn: { mode: 'custom', url, key: 'MODEL-KEY', model: 'fake-model' }, ...settings } }, ...more }));
+    for (const [f, v] of Object.entries(files)) { await mkdir(path.dirname(path.join(root, f)), { recursive: true }); await writeFile(path.join(root, f), JSON.stringify(v)); }
     // (SillyTavern's chat file of the example chat: the server runs an Orbit only while its chat is there)
     await mkdir(path.join(root, 'chats', 'mara'), { recursive: true }); await writeFile(path.join(root, 'chats', 'mara', 'Mara - 2026-11-22.jsonl'), '{}\n');
     const store = openStore(root);
@@ -154,10 +159,106 @@ test('일꾼: 요청 틀이 없는 실리 연결 방식 · 연결 프로필 방�
     const ra = await S.gen(a.id);
     assert.equal(ra.statusCode, 400); assert.match(ra.payload, /요청 틀이 없어요/);
     const rb = await S.gen(b.id);
-    assert.equal(rb.statusCode, 400, rb.payload); assert.match(rb.payload, /연결 프로필/);
+    assert.equal(rb.statusCode, 400, rb.payload); assert.match(rb.payload, /연결 프로필의 요청 틀이 아직 없어요/);
     assert.match((await S.auto.status('sa'))[0].why, /요청 틀이 없어요/);
     assert.equal(S.asked.length + S.st.filter(x => x.url.includes('generate')).length, 0);
     for (const [sid, x] of [['sa', a], ['sb', b]]) { const w = await S.get(sid); assert.equal(w.messenger.rooms[x.room.id].messages.length, 2); assert.equal(w.queue.jobs.length, 0); }
+});
+
+// ---- 연결 프로필 (docs/PHONE2-PLAN.md 3-2c): 브라우저가 실리 자신의 sendRequest로 떠 둔 틀 → 서버가 실리 서버의 처리기로
+const PROFILE = { id: 'p1', name: 'My profile', api: 'openrouter', model: 'or/model', preset: 'Quiet', proxy: 'Home', 'secret-id': 'sec-1' };
+const ST_SET = () => ({
+    profiles: [PROFILE],
+    oai: { reverse_proxy: '', proxy_password: 'OAI-PW', chat_completion_source: 'openrouter', temp_openai: 1, openai_max_tokens: 300 },
+    presets: { Quiet: { temp_openai: 0.7, openai_max_tokens: 900, chat_completion_source: 'openrouter', show_thoughts: true, reverse_proxy: 'https://preset.proxy', proxy_password: 'PRESET-PW' } },
+    proxies: [{ name: 'Home', url: 'https://home.proxy', password: 'PROXY-PW' }],
+});
+// (the browser's part: SillyTavern — here its stand-in, tests/stfake.mjs — builds the request; src/stprofile.js keeps it)
+const templatesOf = async (st, profile, over = null) => SP.profileTemplates({ send: (messages, max) => st.sendRequest(profile.id, messages, max, { stream: false, extractData: true, includePreset: true, includeInstruct: true }, ...(over ? [over] : [])), profile, over, find: st.find });
+// (SillyTavern's settings files as the browser left them: the profiles, the proxies, the preset file)
+const stageOf = (t, set, more = {}) => stage(t, { cm: { profiles: set.profiles, ...(more.selected ? { selectedProfile: more.selected } : {}) }, more: { oai_settings: set.oai, proxies: set.proxies }, files: Object.fromEntries(Object.entries(set.presets).map(([n, v]) => [`OpenAI Settings/${n}.json`, v])), ...(more.stage || {}) });
+
+test('일꾼: 연결 프로필 방 — 실리가 브라우저에서 보낼 것과 똑같은 요청을 실리 서버의 처리기로. 비밀번호는 실리 설정에서', async t => {
+    const set = ST_SET(), st = fakeSt(set), pt = await templatesOf(st, PROFILE);
+    assert.doesNotMatch(JSON.stringify(pt), /PW/);
+    const S = await stageOf(t, set), a = world({ pt });
+    liveWorld(a.m).messenger.rooms[a.room.id].connectionId = 'profile:p1';
+    await S.put('sa', a.m); await S.auto.list();
+    assert.deepEqual((await S.auto.status('sa')).map(x => [x.can, x.why]), [[true, '']]);
+    const r = await S.gen(a.id);
+    assert.match(r.payload, /"message_saved"/, r.payload);
+    assert.equal(S.asked.length, 0);                                       // (초안 모델로는 안 갔어요)
+    const sent = S.st.filter(x => x.url === '/api/backends/chat-completions/generate');
+    assert.equal(sent.length, 1);
+    assert.equal(sent[0].token, 'tok-123');
+    // 실리가 이 메시지로 보낼 몸통과 같아요 (답 길이: 답장 한 번의 값)
+    assert.deepEqual(sent[0].body, st.build('p1', sent[0].body.messages, 4000).body);
+    assert.equal(sent[0].body.proxy_password, 'PROXY-PW');
+    assert.deepEqual(sent[0].body.messages.map(m => m.role), ['system', 'user']);
+    assert.match(sent[0].body.messages[0].content, /^GOAL\nYou are Mara\./);
+    assert.equal((await S.get('sa')).messenger.rooms[a.room.id].messages.at(-1).text, 'you there?');
+});
+
+test('일꾼: 실리 쪽 방(AI 기능 모델이 실리) — 실리에서 지금 고른 프로필로. 고른 프로필이 없으면 이유를 알려요', async t => {
+    const set = ST_SET(), st = fakeSt(set), pt = await templatesOf(st, PROFILE);
+    const S = await stageOf(t, set, { selected: 'p1', stage: { settings: { aiConn: { mode: 'st' } } } }), a = world({ pt });
+    liveWorld(a.m).messenger.rooms[a.room.id].connectionId = 'ai';
+    await S.put('sa', a.m); await S.auto.list();
+    assert.match((await S.gen(a.id)).payload, /"message_saved"/);
+    const sent = S.st.find(x => x.url === '/api/backends/chat-completions/generate');
+    assert.deepEqual(sent.body, st.build('p1', sent.body.messages, 4000).body);
+    // (고른 프로필이 없는 실리: 서버는 실리의 지금 연결로는 못 보내요)
+    const S2 = await stageOf(t, set, { stage: { settings: { aiConn: { mode: 'st' } } } }), b = world({ pt });
+    liveWorld(b.m).messenger.rooms[b.room.id].connectionId = 'ai';
+    await S2.put('sb', b.m); await S2.auto.list();
+    assert.match((await S2.auto.status('sb'))[0].why, /실리에서 고른 연결 프로필이 없어요/);
+    assert.equal((await S2.gen(b.id)).statusCode, 400);
+    assert.equal(S2.st.length + S2.asked.length, 0);
+});
+
+test('일꾼: 방의 추론 레벨을 얹은 프로필 요청 — 브라우저가 실리 코드로 만든 값 그대로. 그 값이 없으면 안 보내요', async t => {
+    const set = ST_SET(), st = fakeSt(set), over = { reasoning_effort: 'high', include_reasoning: true }, pt = await templatesOf(st, PROFILE, over);
+    const levels = { [SP.levelKey('openrouter', 'or/model', 'high')]: over };
+    const S = await stageOf(t, set), a = world({ pt, levels }), b = world({ pt });
+    for (const x of [a, b]) { const room = liveWorld(x.m).messenger.rooms[x.room.id]; room.connectionId = 'profile:p1'; room.chatParameters = { reasoningEffort: 'high' }; }
+    await S.put('sa', a.m); await S.put('sb', b.m); await S.auto.list();
+    assert.match((await S.gen(a.id)).payload, /"message_saved"/);
+    const sent = S.st.find(x => x.url === '/api/backends/chat-completions/generate');
+    assert.deepEqual(sent.body, st.build('p1', sent.body.messages, 4000, over).body);
+    assert.equal(sent.body.reasoning_effort, 'high');
+    assert.match((await S.auto.status('sb'))[0].why, /추론 레벨의 요청 값이 아직 없어요/);
+});
+
+test('일꾼: 실리에서 프로필이 바뀌었거나 프리셋 파일이 없으면 예전 틀로 보내지 않아요', async t => {
+    const set = ST_SET(), pt = await templatesOf(fakeSt(set), PROFILE);
+    const changed = { ...set, profiles: [{ ...PROFILE, model: 'or/other' }] };
+    const S = await stageOf(t, changed), a = world({ pt });
+    liveWorld(a.m).messenger.rooms[a.room.id].connectionId = 'profile:p1';
+    await S.put('sa', a.m); await S.auto.list();
+    assert.match((await S.auto.status('sa'))[0].why, /연결 프로필이 바뀌었어요/);
+    assert.equal((await S.gen(a.id)).statusCode, 400);
+    const S2 = await stageOf(t, { ...set, presets: {} }), b = world({ pt });
+    liveWorld(b.m).messenger.rooms[b.room.id].connectionId = 'profile:p1';
+    await S2.put('sb', b.m); await S2.auto.list();
+    const r = await S2.gen(b.id);
+    assert.match(r.payload, /"type":"error"/);
+    assert.equal(S.st.length + S2.st.length, 0);
+    assert.match((await S2.get('sb')).messenger.rooms[b.room.id].autoFail.lastError, /프리셋 "Quiet"을 찾을 수 없어요/);
+});
+
+test('일꾼: 글 완성 프로필 방 — 지시 형식이 감싼 글로 실리 서버의 글 완성 처리기에, 답은 실리처럼 멈춤 글을 잘라서', async t => {
+    const ins = { system_sequence: '### System:', input_sequence: '### Instruction:', output_sequence: '### Response:', stop_sequence: '</s>', last_output_sequence: '' };
+    const TC = { id: 't1', mode: 'tc', api: 'koboldcpp', model: 'k', 'api-url': 'http://127.0.0.1:5001', instruct: 'Alpaca' };
+    const set = { ...ST_SET(), profiles: [TC], instructs: { Alpaca: ins } }, st = fakeSt(set), pt = await templatesOf(st, TC);
+    const S = await stageOf(t, set), a = world({ pt });
+    liveWorld(a.m).messenger.rooms[a.room.id].connectionId = 'profile:t1';
+    await S.put('sa', a.m); await S.auto.list();
+    assert.match((await S.gen(a.id)).payload, /"message_saved"/);
+    const sent = S.st.find(x => x.url === '/api/backends/text-completions/generate');
+    assert.ok(sent);
+    assert.match(sent.body.prompt, /^### System:\nGOAL\nYou are Mara\.[\s\S]*\n### Instruction:\n\[MESSENGER\][\s\S]*### Response:\n$/);
+    assert.equal(sent.body.max_tokens, 4000);
+    assert.equal((await S.get('sa')).messenger.rooms[a.room.id].messages.at(-1).text, 'you there?');
 });
 
 test('일꾼: 모델이 실패하면 말이 안 들어가고, 실패로 알려요. 그 방은 쉬어요', async t => {
@@ -212,7 +313,7 @@ test('일꾼: 때가 된 늦은 답장을 보내요. 브라우저가 열어 둔 
     assert.equal((await S.get('sa')).messenger.rooms[a.room.id].messages.at(-1).text, 'sorry, was busy');
     for (const [sid, x] of [['sb', b], ['sc', c], ['sd', d]]) { const w = await S.get(sid); assert.equal(w.messenger.rooms[x.room.id].messages.length, 2, sid); assert.equal(w.queue.jobs.filter(j => j.state === 'waiting').length, 1, sid); }
     assert.equal(S.asked.length, 1);
-    // (연결 프로필을 고른 방은 초안 모델이 커스텀 API여도 서버가 대신 답하지 않아요: 다른 모델로 답하게 돼요)
+    // (연결 프로필을 고른 방은 그 요청 틀이 없으면, 초안 모델이 커스텀 API여도 서버가 대신 답하지 않아요: 다른 모델로 답하게 돼요)
     await S.auto.list();
     const rc = await S.gen(c.id);
     assert.equal(rc.statusCode, 400); assert.match(rc.payload, /연결 프로필/);
