@@ -223,7 +223,7 @@ export async function openWorlds() {
                 ${review.has(w.id) ? reviewHtml(w, review.get(w.id)) : ''}
                 <div class="na_wd_foot">
                   ${ck ? `<label class="na_wd_bindchip ${bound ? 'on' : ''}" title="${esc(cn)}의 새 채팅에서 저절로 ${bound ? '켜져요' : '켜지게 해요'}${others > 0 ? ` · 다른 캐릭터 ${others}명에도 묶여 있어요` : ''}"><input type="checkbox" class="na_wd_bind" ${bound ? 'checked' : ''}>${faceHtml(cn, 20)}<span>캐릭터 연동${others > 0 ? ` · +${others}` : ''}</span></label>` : '<span class="na_spacer"></span>'}
-                  <button type="button" class="na_wd_lore" title="실리태번 로어북(월드 인포)으로 내보내요 · 장소 · 소속 · 용어는 이름이 나올 때만, 사정 · 규칙과 이전 이야기는 늘 들어가는 항목으로">${svgA('M12 3v12M7 8l5-5 5 5M5 21h14', 15, 2)}<span>로어북</span></button>
+                  <button type="button" class="na_wd_lore" title="실리 로어북(월드 인포)으로 내보내요 · 장소 · 소속 · 용어는 이름이 나올 때만, 사정 · 규칙과 이전 이야기는 늘 들어가는 항목으로">${svgA('M12 3v12M7 8l5-5 5 5M5 21h14', 15, 2)}<span>로어북</span></button>
                   <button type="button" class="na_wd_del" title="이 세계관 지우기" aria-label="이 세계관 지우기">${svgA(ICO_A.trash, 15, 2)}</button>
                 </div>
               </div>` : ''}
@@ -393,7 +393,7 @@ export async function openWorlds() {
         if (!worldBody(w).trim()) return toastr.info('내보낼 내용이 없어요.');
         const name = await exportLorebook(w);
         if (!name) return;
-        toastr.success(`실리태번 월드 인포에서 캐릭터나 채팅에 붙여 주세요.`, `로어북 "${name}"을 만들었어요`, { timeOut: 8000 });
+        toastr.success(`실리 월드 인포에서 캐릭터나 채팅에 붙여 주세요.`, `로어북 "${name}"을 만들었어요`, { timeOut: 8000 });
         // the same text would go in twice: from the lorebook and from here
         if (worldIsOn(m, w) && await confirm('세계관 주입 끄기', `로어북을 붙이면 같은 내용이 두 번 들어가요. 이 채팅에서 "${esc(w.name || '세계관')}" 주입을 끌까요?`, '끄기')) {
             m.worldOn = { ...(m.worldOn || {}), [w.id]: false };

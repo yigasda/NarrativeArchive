@@ -33,7 +33,7 @@ export async function resolvePhoneProfile(c, binding) {
     return {label:String(label),text:body};
 }
 // Keep financeProfile as the saved binding key for backward compatibility.
-// the user's character (실리태번의 페르소나 설명), word for word, with how to read it: the one the owner texts and meets
+// the user's character (실리의 페르소나 설명), word for word, with how to read it: the one the owner texts and meets
 // most, so every request that writes a phone knows who they are (where they live, their work) and makes none of it up.
 // None when: there is no persona text, or the owner's own profile is that same text (it is OWNER PROFILE already)
 export function personaBlock(c, owner, profileText = '') {

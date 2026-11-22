@@ -190,7 +190,7 @@ export function renderPanel() {
                   <div class="na_cp_row na_off_row" id="na_off_fold" title="켠 것은 압축 · 원문 뽑기 · 이탈 감지 · 말투 지문에서 빠져요"><span class="na_cp_txt"><span>OOC 빼기</span><small id="na_off_sub"></small></span>
                     <span class="na_off_chips">${Object.entries(OFF_KINDS).map(([k, [name, sub, chip]]) => `<button type="button" class="na_off_chip" data-k="${k}" title="${name} · ${sub}" aria-pressed="false">${chip}</button>`).join('')}</span></div>
                   <details class="na_cp_fold" id="na_cmp_settings">
-                    <summary class="na_cp_row"><span class="na_cp_txt"><span>압축 지시문</span><small id="na_plib_sum">이 기기의 실리태번 설정에만 저장돼요</small></span><span class="na_cp_more">편집</span><span class="na_cp_chev">${svgA(ICO_A.right, 16, 2.2)}</span></summary>
+                    <summary class="na_cp_row"><span class="na_cp_txt"><span>압축 지시문</span><small id="na_plib_sum">이 기기의 실리 설정에만 저장돼요</small></span><span class="na_cp_more">편집</span><span class="na_cp_chev">${svgA(ICO_A.right, 16, 2.2)}</span></summary>
                     <div class="na_cp_sub"><div class="na_plib" id="na_plib"></div></div>
                   </details>
                   <label class="na_cp_row" data-m="quick" title="지시문의 규칙은 시스템 메시지에, 원문 · 메모 · 마지막 점검은 요청에"><span class="na_cp_txt"><span>규칙은 시스템 메시지로</span><small>중계 서버가 버리면 끄세요</small></span><input type="checkbox" class="na_toggle" id="na_rules_sys"></label>
@@ -269,7 +269,7 @@ export function renderPanel() {
                   <label class="na_set_row"><span>역할</span>
                     <span class="na_cfg_val"><select id="na_role" class="text_pole">${Object.entries(ROLES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>${svgA(ICO_A.right, 15, 2.2)}</span>
                   </label>
-                  <label class="na_set_row" title="아카이브는 답마다 똑같이 두고, 그 답에만 필요한 것(키워드 · 라우터가 불러온 섹션, 지금 나오는 인물의 노트)은 마지막 메시지 두 개 바로 위에 따로 넣어요 · 앞부분이 늘 같아서 Claude · Gemini의 프롬프트 캐시가 덜 깨지고 싸져요 · Claude는 실리태번 config.yaml의 claude.cachingAtDepth를 켜야 해요"><span><span>캐시 아끼기</span><small>바뀌는 것만 대화 끝 가까이 따로</small></span><input type="checkbox" id="na_cache_save" class="na_toggle"></label>
+                  <label class="na_set_row" title="아카이브는 답마다 똑같이 두고, 그 답에만 필요한 것(키워드 · 라우터가 불러온 섹션, 지금 나오는 인물의 노트)은 마지막 메시지 두 개 바로 위에 따로 넣어요 · 앞부분이 늘 같아서 Claude · Gemini의 프롬프트 캐시가 덜 깨지고 싸져요 · Claude는 실리 config.yaml의 claude.cachingAtDepth를 켜야 해요"><span><span>캐시 아끼기</span><small>바뀌는 것만 대화 끝 가까이 따로</small></span><input type="checkbox" id="na_cache_save" class="na_toggle"></label>
                 </div>
                 </div>
               </div>
@@ -306,11 +306,11 @@ export function renderPanel() {
                   </div>
                   <label class="na_set_row" title="&quot;그날 밤&quot;처럼 지난 일을 돌려 말하면, AI 기능 모델이 그때 장면을 짐작해 적고 그 말로 섹션 본문까지 찾아요 · 제목에 없는 장면도 찾게 · 답할 때마다 짧게 한 번 더 불러요"><span><span>지난 장면 짐작하기</span><small id="na_guess_sub">돌려 말한 지난 일도 찾게</small></span>
                     <span class="na_cfg_val"><select id="na_guess" class="text_pole">${Object.entries(GUESS_MODES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
-                  <label class="na_set_row" title="섹션을 뜻으로도 찾아요 · 라우터가 단어가 안 겹쳐도 비슷한 뜻이면 찾고, 한국어 채팅으로 영어 아카이브도 찾아요 · 실리태번 서버의 벡터 저장소를 써요"><span><span>임베딩</span><small>라우터가 비슷한 뜻도 찾게</small></span>
+                  <label class="na_set_row" title="섹션을 뜻으로도 찾아요 · 라우터가 단어가 안 겹쳐도 비슷한 뜻이면 찾고, 한국어 채팅으로 영어 아카이브도 찾아요 · 실리 서버의 벡터 저장소를 써요"><span><span>임베딩</span><small>라우터가 비슷한 뜻도 찾게</small></span>
                     <span class="na_cfg_val"><select id="na_emb_src" class="text_pole">${Object.entries(EMBED_SOURCES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <label class="na_set_row" id="na_emb_pick_row" hidden><span><span>임베딩 모델</span><small id="na_emb_pick_sub"></small></span><span class="na_cfg_val"><select id="na_emb_pick" class="text_pole"></select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <label class="na_set_row" id="na_emb_model_row" hidden><span><span>모델 이름</span><small>직접 입력</small></span><span class="na_cfg_val"><input type="text" id="na_emb_model" class="text_pole" spellcheck="false">${svgA(ICO_A.right, 15, 2.2)}</span></label>
-                  <label class="na_set_row" id="na_emb_region_row" hidden title="Vertex 임베딩 모델은 지역마다 다르게 있어요 · global에서 500이 나면 us-central1"><span><span>임베딩 지역</span><small id="na_emb_region_sub">비우면 실리태번 Vertex 설정 지역</small></span><span class="na_cfg_val"><input type="text" id="na_emb_region" class="text_pole" spellcheck="false" placeholder="us-central1">${svgA(ICO_A.right, 15, 2.2)}</span></label>
+                  <label class="na_set_row" id="na_emb_region_row" hidden title="Vertex 임베딩 모델은 지역마다 다르게 있어요 · global에서 500이 나면 us-central1"><span><span>임베딩 지역</span><small id="na_emb_region_sub">비우면 실리 Vertex 설정 지역</small></span><span class="na_cfg_val"><input type="text" id="na_emb_region" class="text_pole" spellcheck="false" placeholder="us-central1">${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <label class="na_set_row" id="na_emb_url_row" hidden><span><span>Ollama 주소</span></span><span class="na_cfg_val"><input type="text" id="na_emb_url" class="text_pole" spellcheck="false" placeholder="http://127.0.0.1:11434">${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <button type="button" class="na_set_row na_cfg_go" id="na_emb_build" hidden><span><span>임베딩 색인 만들기</span><small id="na_emb_sub">처음 한 번 · 이 채팅의 섹션</small></span>${svgA(ICO_A.right, 15, 2.2)}</button>
                   <label class="na_set_row"><span><span>키워드 연동</span><small>최근 메시지에서 찾을 범위 · 연동 <span id="na_linked_n">0</span>개</small></span><span class="na_cfg_val"><span>최근&nbsp;</span><input type="number" id="na_link_depth" class="text_pole" min="1" max="50"><span>개</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
@@ -327,14 +327,14 @@ export function renderPanel() {
                 <div class="na_cfg_label"><i class="fa-solid fa-robot"></i> AI 모델</div>
                 <div class="na_cfg_box">
                 <div class="na_set_list">
-                  <label class="na_set_row" title="연결 프로필 · 실리태번 연결 · 커스텀 API · Vertex를 고르면 RP 모델과 따로 쓸 수 있어요"><span><span>AI 기능 모델</span><small>질문 · 점검 · 라우터 · 온도 · 지문</small></span><span class="na_cfg_val"><select id="na_ai_profile" class="text_pole"></select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
+                  <label class="na_set_row" title="연결 프로필 · 실리 연결 · 커스텀 API · Vertex를 고르면 RP 모델과 따로 쓸 수 있어요"><span><span>AI 기능 모델</span><small>질문 · 점검 · 라우터 · 온도 · 지문</small></span><span class="na_cfg_val"><select id="na_ai_profile" class="text_pole"></select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                 </div>
                 ${connCfgHtml('ai')}
                 <div class="na_set_list">
                   <label class="na_set_row" title="번역(한국어로 보기 · 한국어로 읽기 · 용어집)은 보통 이 모델로 해요 · 양이 많아서 싸고 빠른 모델로 따로 돌리고 싶을 때만 켜요"><span><span>번역은 다른 모델로</span><small>끄면 위 AI 기능 모델로 번역해요</small></span><input type="checkbox" id="na_tr_own" class="na_toggle"></label>
                   <label class="na_set_row" id="na_tr_mode_row" hidden><span><span>번역 모델</span><small>한국어로 보기 · 읽기 · 용어집</small></span>
                     <span class="na_cfg_val"><select id="na_tr_mode" class="text_pole">
-                      <option value="source">실리태번 연결</option>
+                      <option value="source">실리 연결</option>
                       <option value="custom">커스텀 API</option>
                       <option value="vertex">Gemini · Vertex AI</option>
                     </select>${svgA(ICO_A.right, 15, 2.2)}</span>
@@ -345,7 +345,7 @@ export function renderPanel() {
                   <label class="na_set_row" title="압축 초안처럼 아카이브에 들어갈 글을 써 주는 모델이에요 (예: Opus). 정하지 않으면 초안 버튼이 안 보여요"><span><span>초안 모델</span><small>압축 초안 · 섹션 짧은 버전</small></span>
                     <span class="na_cfg_val"><select id="na_dr_mode" class="text_pole">
                       <option value="same">쓰지 않음</option>
-                      <option value="source">실리태번 연결</option>
+                      <option value="source">실리 연결</option>
                       <option value="custom">커스텀 API</option>
                       <option value="vertex">Gemini · Vertex AI</option>
                     </select>${svgA(ICO_A.right, 15, 2.2)}</span>
@@ -380,8 +380,8 @@ export function renderPanel() {
               <div class="na_cfg_grp" data-g="theme">
                 <div class="na_cfg_label"><i class="fa-solid fa-palette"></i> 테마</div>
                 <div class="na_cfg_box na_theme_pick" role="radiogroup" aria-label="테마">
-                  <label class="na_theme_opt" title="실리태번 테마와 상관없이 크림색 배색"><input type="radio" name="na_ui_theme" value="light"><span class="na_theme_sw light" aria-hidden="true"></span><span class="na_theme_txt"><b>라이트</b><small>크림 · 갈색 글씨</small></span></label>
-                  <label class="na_theme_opt" title="실리태번 테마와 상관없이 짙은 밤색 배색"><input type="radio" name="na_ui_theme" value="dark"><span class="na_theme_sw dark" aria-hidden="true"></span><span class="na_theme_txt"><b>다크</b><small>밤색 · 크림 글씨</small></span></label>
+                  <label class="na_theme_opt" title="실리 테마와 상관없이 크림색 배색"><input type="radio" name="na_ui_theme" value="light"><span class="na_theme_sw light" aria-hidden="true"></span><span class="na_theme_txt"><b>라이트</b><small>크림 · 갈색 글씨</small></span></label>
+                  <label class="na_theme_opt" title="실리 테마와 상관없이 짙은 밤색 배색"><input type="radio" name="na_ui_theme" value="dark"><span class="na_theme_sw dark" aria-hidden="true"></span><span class="na_theme_txt"><b>다크</b><small>밤색 · 크림 글씨</small></span></label>
                 </div>
               </div>
               <div class="na_cfg_grp" data-g="alert">

@@ -1,4 +1,4 @@
-// 실리태번 API 연결 화면 · 팝업의 한국어 (docs/design/orbit-marinara.md 1-7). 낱말은 소망 실리의 한국어 화면(2026-11-22 캡처)을 따라요.
+// 실리 API 연결 화면 · 팝업의 한국어 (docs/design/orbit-marinara.md 1-7). 낱말은 소망 실리의 한국어 화면(2026-11-22 캡처)을 따라요.
 // 실리가 이미 한국어로 보여 주는 글은 그대로 두고(한글이 들어 있으면 손대지 않아요), 영어로 남은 글만 바꿔요. 모델 이름 · 소스 이름 같은 고유한 이름은 그대로예요.
 const D = {
     '<None>': '없음', 'None': '없음', 'API': 'API', 'Auto': '자동', 'OK': '확인', 'Save': '저장', 'Yes': '예', 'No': '아니오', 'Cancel': '취소', 'Close': '닫기', 'Delete': '삭제', 'Close popup': '닫기', 'Key': '키', 'Value': '값', '<Empty>': '(비어 있음)',
@@ -51,7 +51,7 @@ const R = [
     [/^Missing fields: (.*)$/, '빠진 항목: $1'], [/^Missing required fields: (.*)$/, '빠진 필수 항목: $1'], [/^Could not find proxy with name '(.*)'$/, "'$1' 이름의 프록시를 찾지 못했어요"], [/^Proxy preset '(.*)' not found$/, "'$1' 프록시 프리셋을 찾지 못했어요"], [/^Connection profile not found: (.*)$/, '연결 프로필을 찾지 못했어요: $1'],
     [/^Could not retrieve the secret value for key: (.*?)\. Key exposure might be disabled\.$/, '$1 키의 값을 가져오지 못했어요. 키 보기가 꺼져 있을 수 있어요.'], [/^No saved secrets found for the key: (.*)$/, '$1에 저장된 키가 없어요'], [/^No active secret found for the key: (.*)$/, '$1에 쓰는 중인 키가 없어요'], [/^No secret found with ID: (.*) for the key: (.*)$/, '$2에서 ID $1 키를 찾지 못했어요'], [/^No value provided for the secret key: (.*)$/, '$1의 값을 넣지 않았어요'], [/^No new label provided for the secret key: (.*)$/, '$1의 새 이름을 넣지 않았어요'],
     [/^Secret has been written for the key: (.*)$/, '$1 키를 저장했어요'], [/^Secret with ID: (.*) has been deleted for the key: (.*)$/, '$2에서 ID $1 키를 삭제했어요'], [/^Secret with ID: (.*) has been renamed to "(.*)" for the key: (.*)$/, '$3의 ID $1 키 이름을 "$2"(으)로 바꿨어요'], [/^Secret with ID: (.*) is now active for the key: (.*)$/, '$2에서 ID $1 키를 쓰기 시작했어요'], [/^Project: (.*), Email: (.*)$/, '프로젝트: $1, 이메일: $2'], [/^Delete Secret: (.*)$/, '키 삭제: $1'], [/^Hint:\s*Click on the setting name.*$/, '도움말: 설정 이름을 누르면 프로필에서 빠져요.'],
-    [/^To view your API keys here.*$/, '여기서 API 키를 보려면 config.yaml에서 allowKeysExposure를 true로 바꾸고 실리태번 서버를 다시 시작하세요.'],
+    [/^To view your API keys here.*$/, '여기서 API 키를 보려면 config.yaml에서 allowKeysExposure를 true로 바꾸고 실리 서버를 다시 시작하세요.'],
     [/^Parameters to be included in the Chat Completion request body[\s\S]*$/, 'Chat Completion 요청 본문에 넣을 매개변수 (YAML 객체)\n\n예:\ntop_k: 20\nrepetition_penalty: 1.1'], [/^Parameters to be excluded from the Chat Completion request body[\s\S]*$/, 'Chat Completion 요청 본문에서 뺄 매개변수 (YAML 배열)\n\n예:\n- frequency_penalty\n- presence_penalty'], [/^Additional headers for Chat Completion requests[\s\S]*$/, 'Chat Completion 요청에 더할 헤더 (YAML 객체)\n\n예:\nCustomHeader: custom-value\nAnotherHeader: custom-value'],
     [/^(.+?) API [Kk]ey$/, '$1 API 키'], [/^(.+?) Model$/, '$1 모델'], [/^(.+?) Endpoint$/, '$1 엔드포인트'], [/^(.*) \((\d{4}, )?deprecated\)$/i, '$1 (지원 종료 예정)'],
 ];

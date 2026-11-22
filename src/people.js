@@ -53,11 +53,11 @@ export function peopleList(m) {
 }
 
 // SillyTavern's avatar: the small thumbnail, or (big) the full picture so a large face isn't blown up from a thumbnail
-// 지금 고른 페르소나의 사진 파일 (실리태번 personas.js의 user_avatar: 바뀔 때마다 따라와요). 이름이 같은 페르소나가 여럿이면
+// 지금 고른 페르소나의 사진 파일 (실리 personas.js의 user_avatar: 바뀔 때마다 따라와요). 이름이 같은 페르소나가 여럿이면
 // 이름으로 찾은 첫 사진이 나와서, 페르소나를 바꿔도 프사가 그대로였어요(소망). 브라우저에서만 읽어요
 let stPersonas = null;
-if (typeof window !== 'undefined') import('/scripts/personas.js').then(m => { stPersonas = m; }).catch(() => { /* (옛 실리태번: 이름으로 찾아요) */ });
-// 실리태번의 페르소나 목록 (빠른 전환기의 페르소나 탭): [{ id (사진 파일), name, title, src, cur (지금 고른 것) }], 이름순
+if (typeof window !== 'undefined') import('/scripts/personas.js').then(m => { stPersonas = m; }).catch(() => { /* (옛 실리: 이름으로 찾아요) */ });
+// 실리의 페르소나 목록 (빠른 전환기의 페르소나 탭): [{ id (사진 파일), name, title, src, cur (지금 고른 것) }], 이름순
 export function stPersonaList() {
     const c = ctx(), per = c.powerUserSettings?.personas || {}, des = c.powerUserSettings?.persona_descriptions || {}, cur = stPersonas?.user_avatar;
     return Object.keys(per).map(f => ({ id: f, name: String(per[f] || ''), title: String(des[f]?.title || ''), src: `/thumbnail?type=persona&file=${encodeURIComponent(f)}`, cur: f === cur })).sort((a, b) => a.name.localeCompare(b.name));
@@ -450,7 +450,7 @@ export async function openPeople() {
                 : line ? `<button type="button" class="na_pb_quote" title="한 줄 대사 바꾸기">“${esc(line)}”</button>`
                 : '<button type="button" class="na_linkbtn na_pb_quote_add">+ 한 줄 대사</button>'}
               <span class="na_pb_faceacts">
-                ${stFace(sel) && st ? '<button type="button" class="na_linkbtn na_face_st">실리태번 아바타로</button>' : ''}
+                ${stFace(sel) && st ? '<button type="button" class="na_linkbtn na_face_st">실리 아바타로</button>' : ''}
                 ${st !== 'none' && faceOf(sel) ? '<button type="button" class="na_linkbtn na_face_none">얼굴 빼기</button>' : ''}
                 ${extra ? '<button type="button" class="na_linkbtn na_person_del">목록에서 빼기</button>' : ''}
               </span>

@@ -105,7 +105,7 @@ const mix = (a, b, t) => `#${[1, 3, 5].map(i => Math.round(parseInt(a.slice(i, i
 export const dayIcon = hhmm => { const h = Number(String(hhmm || '').slice(0, 2)); return h >= 5 && h < 17 ? 'sun' : h >= 17 && h < 21 ? 'set' : 'moon'; };
 
 // 얼굴: 그 사람 색 동그라미 + 첫 글자
-// 얼굴: 인물 도감에서 정한 프사(없으면 실리태번 아바타)가 있으면 그 그림, 없으면 색 동그라미 + 첫 글자. 단체방은 늘 보라 동그라미
+// 얼굴: 인물 도감에서 정한 프사(없으면 실리 아바타)가 있으면 그 그림, 없으면 색 동그라미 + 첫 글자. 단체방은 늘 보라 동그라미
 // (그림이 안 불러와지면 작은 그림 → 글자로 물러나요)
 const faceUrl = (name, s) => { try { const big = s * (globalThis.devicePixelRatio || 1) > 96, url = faceOf(name, big); return { url, fb: big && url && !url.startsWith('data:') ? stFace(name) : '' }; } catch { return { url: '', fb: '' }; } };
 const face = (name, s = 48, group = false) => { const f = group ? { url: '' } : faceUrl(name, s); return `<span class="ob_face" style="width:${s}px;height:${s}px;font-size:${Math.round(s * 0.38)}px"><span class="ob_blob" style="background:${orbitBg(name, group)}"></span><b>${esc([...String(name || '?')][0] || '?')}</b>${f.url ? `<img src="${esc(f.url)}"${f.fb && f.fb !== f.url ? ` data-fb="${esc(f.fb)}"` : ''} alt="" loading="lazy" decoding="async">` : ''}</span>`; };

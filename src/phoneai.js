@@ -1,4 +1,4 @@
-// 캐릭터 휴대폰 · AI 기능 모델: 사진 그리기 (실리태번 이미지 생성 or AutoPic), 카메라, 메모 · 일기 새로 쓰기, 검색 결과 페이지.
+// 캐릭터 휴대폰 · AI 기능 모델: 사진 그리기 (실리 이미지 생성 or AutoPic), 카메라, 메모 · 일기 새로 쓰기, 검색 결과 페이지.
 
 import { ownerProfileBlock } from './phoneprofile.js';
 import { askAI } from './ai.js';
@@ -109,10 +109,10 @@ const shownTags = a => [`PHOTO: ${a.scene.join(', ')}`, ...a.people.map(x => `[$
 
 async function drawWithST(tags, neg) {
     const c = ctx();
-    if (!c.SlashCommandParser?.commands?.imagine) throw new Error('실리태번 이미지 생성 확장이 꺼져 있어요. 확장 → 이미지 생성에서 NovelAI를 연결해 주세요');
+    if (!c.SlashCommandParser?.commands?.imagine) throw new Error('실리 이미지 생성 확장이 꺼져 있어요. 확장 → 이미지 생성에서 NovelAI를 연결해 주세요');
     const r = await c.executeSlashCommandsWithOptions(`/imagine quiet=true gallery=false extend=false negative="${neg}" ${tags}`);
     const url = String(r?.pipe || '').trim();
-    if (!url || r?.isError) throw new Error('그림을 받지 못했어요. 실리태번 이미지 생성 설정을 확인해 주세요');
+    if (!url || r?.isError) throw new Error('그림을 받지 못했어요. 실리 이미지 생성 설정을 확인해 주세요');
     return url;
 }
 // AutoPic 직접 생성: each person in the photo as a NovelAI character prompt (registered looks first), nobody else.
@@ -162,7 +162,7 @@ async function drawCaption(m, p, ph, caption, time) {
         try { url = await drawWithAutopic(a, ap); via = 'autopic'; }
         catch (e) {
             console.warn('[narrative-archive] AutoPic direct', e);
-            toastr.warning(`오토픽으로 못 그려서 실리태번 이미지 생성으로 그려요 (${String(e?.message || e).slice(0, 80)})`, '캐릭터 휴대폰', { timeOut: 6000 });
+            toastr.warning(`오토픽으로 못 그려서 실리 이미지 생성으로 그려요 (${String(e?.message || e).slice(0, 80)})`, '캐릭터 휴대폰', { timeOut: 6000 });
         }
     }
     if (!url) { const one = onePrompt(a, ap); url = await drawWithST(one.tags, one.neg); }

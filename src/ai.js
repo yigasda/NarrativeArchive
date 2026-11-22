@@ -271,10 +271,10 @@ async function callVertexAt(t, loc, system, prompt, maxTokens, job = '', signal 
     try { j = JSON.parse(body); } catch { /* not JSON */ }
     const msg = j?.error?.message || j?.message || (typeof j?.error === 'string' ? j.error : '') || body.slice(0, 200);
     if (!r.ok || j?.error) {
-        if (/service account|Service Account/i.test(msg)) throw new Error('실리태번에 Vertex 서비스 계정 JSON이 없어요. API 연결 → Chat Completion → Google Vertex AI → 서비스 계정에서 넣어 주세요.');
+        if (/service account|Service Account/i.test(msg)) throw new Error('실리에 Vertex 서비스 계정 JSON이 없어요. API 연결 → Chat Completion → Google Vertex AI → 서비스 계정에서 넣어 주세요.');
         if (/404|NOT_FOUND|not found/i.test(msg)) throw new Error(`Vertex 오류 404: ${msg.slice(0, 160)}`);
         if (/blocked|SAFETY|PROHIBITED|RECITATION|candidate/i.test(msg)) throw new Error(`Vertex가 답을 막았어요 (${msg.slice(0, 120)})`);
-        throw new Error(`Vertex 오류 ${r.status}${msg && msg !== 'true' ? `: ${msg.slice(0, 200)}` : ' · 실리태번 서버 창에 자세한 내용이 있어요'}`);
+        throw new Error(`Vertex 오류 ${r.status}${msg && msg !== 'true' ? `: ${msg.slice(0, 200)}` : ' · 실리 서버 창에 자세한 내용이 있어요'}`);
     }
     if (meta) Object.assign(meta, { thinking: [j?.choices?.[0]?.message?.reasoning_content, j?.choices?.[0]?.message?.reasoning].find(v => typeof v === 'string' && v.trim()) || '', finishReason: j?.choices?.[0]?.finish_reason || null, usage: j?.usage ? { promptTokens: j.usage.prompt_tokens ?? null, completionTokens: j.usage.completion_tokens ?? null, reasoningTokens: j.usage.completion_tokens_details?.reasoning_tokens ?? null, cachedPromptTokens: null } : null });
     return String(j?.choices?.[0]?.message?.content || '');
@@ -318,7 +318,7 @@ export async function stSourceModels(source) {
         } catch { /* the picker's own list below */ }
     }
     if (!rows.length) rows = fromPage();
-    if (!rows.length) throw new Error('모델 목록을 받지 못했어요. 실리태번의 API 연결에서 이 연결의 키를 넣었는지 확인해 주세요');
+    if (!rows.length) throw new Error('모델 목록을 받지 못했어요. 실리의 API 연결에서 이 연결의 키를 넣었는지 확인해 주세요');
     return [...new Map(rows.map(x => [x.id, x])).values()];
 }
 // one request to a source. effort: '' (the source's own default) | min | low | medium | high | max
@@ -327,7 +327,7 @@ export async function callStSource(t, system, prompt, maxTokens, effort = '', si
     if (!source) throw new Error('연결 종류를 골라 주세요 (⚙ 설정 → AI 모델)');
     if (!model) throw new Error('모델을 골라 주세요 (⚙ 설정 → AI 모델 → 모델 불러오기)');
     const O = await import('/scripts/openai.js');
-    if (typeof O.createGenerationParameters !== 'function') throw new Error('이 실리태번 버전에서는 이 연결 방식을 쓸 수 없어요 (실리태번을 최신으로 올려 주세요)');
+    if (typeof O.createGenerationParameters !== 'function') throw new Error('이 실리 버전에서는 이 연결 방식을 쓸 수 없어요 (실리를 최신으로 올려 주세요)');
     const messages = [...(system ? [{ role: 'system', content: system }] : []), ...turnsOf(prompt)];
     const data = await O.createGenerationParameters({ ...O.oai_settings, chat_completion_source: source, stream_openai: false, n: 1, bias_preset_selected: '', enable_web_search: false, request_images: false, function_calling: false }, model, 'quiet', messages);
     // (what the role-play preset tunes is not this request's: only the connection's own fields stay)
@@ -338,7 +338,7 @@ export async function callStSource(t, system, prompt, maxTokens, effort = '', si
     let j = null;
     try { j = JSON.parse(body); } catch { /* not JSON */ }
     const msg = j?.error?.message || j?.message || (typeof j?.error === 'string' ? j.error : '') || body.slice(0, 200);
-    if (!r.ok || j?.error) throw new Error(`${stSourceName(source)} 오류 ${r.status}${msg && msg !== 'true' ? `: ${String(msg).slice(0, 200)}` : ' · 실리태번 서버 창에 자세한 내용이 있어요'}`);
+    if (!r.ok || j?.error) throw new Error(`${stSourceName(source)} 오류 ${r.status}${msg && msg !== 'true' ? `: ${String(msg).slice(0, 200)}` : ' · 실리 서버 창에 자세한 내용이 있어요'}`);
     // (SillyTavern's server hands most sources back in the OpenAI shape; Claude's own and Google's own are read too)
     const m = j?.choices?.[0]?.message, parts = Array.isArray(j?.content) ? j.content : [];
     const out = typeof m?.content === 'string' ? m.content : Array.isArray(m?.content) ? m.content.map(p => p?.text || '').join('')
@@ -454,7 +454,7 @@ async function askAIOnce(prompt, { system = '', maxTokens = 0, effort = '', forc
         const r = await c.ConnectionManagerRequestService.sendRequest(p.id, msgs, max, { stream: false, extractData: true, includePreset: true, includeInstruct: true, ...(signal ? { signal } : {}) });
         out = typeof r === 'string' ? r : r?.content;
     } else {
-        if (typeof c.generateRaw !== 'function') throw new Error('이 실리태번 버전에서는 AI 호출을 쓸 수 없어요');
+        if (typeof c.generateRaw !== 'function') throw new Error('이 실리 버전에서는 AI 호출을 쓸 수 없어요');
         out = await c.generateRaw({ prompt: Array.isArray(prompt) ? turnsOf(prompt).map(x => x.content).join('\n\n') : prompt, systemPrompt: system, responseLength: max });
     }
     out = stripThink(out);

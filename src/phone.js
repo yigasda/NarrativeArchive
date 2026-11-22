@@ -58,7 +58,7 @@ export const phoneBlock = m => P.phoneBlock(m, Object.values(liveWorld(m)?.phone
 const draftUi = () => { const t = draftSettings(); let host = ''; try { host = t.url ? new URL(t.url).host : ''; } catch { host = t.url; }
     return { mode: t.mode, label: drLabel(), model: t.model, url: t.url, host, keyTail: t.key ? `…${String(t.key).slice(-4)}` : '', fmt: t.fmt, effort: t.effort, vxModel: t.vxModel, vxLocation: t.vxLocation, okAt: t.okAt, source: t.source, sourceName: t.source ? stKo(stSourceName(t.source)) : '', stModel: t.stModel }; };
 // 초안 모델 › 모델: which setting the list fills, and the list (the address's, loaded; or SillyTavern's Vertex models)
-let draftPick = 'model';   // 초안 모델의 목록 화면이 지금 무엇을 고르는지: 'model' | 'source' (실리태번 연결 종류: 25개라 알림창이 아니라 목록 화면으로)
+let draftPick = 'model';   // 초안 모델의 목록 화면이 지금 무엇을 고르는지: 'model' | 'source' (실리 연결 종류: 25개라 알림창이 아니라 목록 화면으로)
 const draftKey = () => ({ vertex: 'vxModel', source: 'stModel' }[draftSettings().mode] || 'model');
 const draftIds = () => { const t = draftSettings(); return t.mode === 'vertex' ? vxModelList() : t.mode === 'source' ? (t.stModelsOf === t.source ? t.stModels || [] : []) : t.models || []; };
 // a make that ends tells every phone open now (one shut and opened again mid-make draws the phone it made)
@@ -278,20 +278,20 @@ export async function openPhone(who = null) {
     const schBlank = () => ({ days: Object.fromEntries(SCH_DAYS.map(d => [d, []])), talkativeness: 50, inactivityThresholdMinutes: 120 });
     // 고를 수 있는 연결을 마리나라처럼 모델 이름 + 제공자로 (소망: 우리 설정의 칸 이름을 화면에 쓰지 않아요). id는 liveConnections 것 그대로
     const OB_PROV = { google_vertex: 'Google Vertex AI', custom: '커스텀 API', anthropic: 'Anthropic', openai: 'OpenAI', sillytavern: 'SillyTavern' };
-    // 빠른 전환기의 "실리태번 연결": 지금 실리 연결 + OpenAI · Google AI Studio · Google Vertex AI · Claude만 (소망: 25줄은 필요 없어요. 나머지는 폰 설정 › 초안 모델에서)
+    // 빠른 전환기의 "실리 연결": 지금 실리 연결 + OpenAI · Google AI Studio · Google Vertex AI · Claude만 (소망: 25줄은 필요 없어요. 나머지는 폰 설정 › 초안 모델에서)
     //   연결 종류마다 불러온 모델(obSrc.models) · 즐겨찾기한 모델 · 지금 방의 모델을 줄로 만들어요. 줄의 id는 'source:<종류>|<모델>'
     const SW_SRC = ['custom', 'openai', 'makersuite', 'vertexai', 'claude'];   // + 맨 위에 "지금 실리 연결" 한 줄(실리에서 지금 고른 종류. 아래 다섯과 겹쳐도 따로 둬요, 소망) → 여섯 줄
     const swChoice = id => { const i = String(id).indexOf('|'); return i > 0 && String(id).startsWith('source:') ? { connectionId: id.slice(0, i), model: id.slice(i + 1) } : { connectionId: id }; };
     const swSrcAll = () => Object.fromEntries(liveSources().map(s => [s.id, stKo(s.name)]));
     const swSrcList = () => { const all = swSrcAll(), now = document.querySelector('#chat_completion_source')?.value || ''; return [...(all[now] ? [{ id: now, name: '지금 실리 연결', real: all[now], now: true }] : []), ...SW_SRC.filter(id => all[id]).map(id => ({ id, name: all[id], real: all[id], now: false }))]; };
-    const swSrcRows = M => { const names = swSrcAll(), rows = new Map(), add = (src, model, name) => { if (src && model && names[src] && !rows.has(`source:${src}|${model}`)) rows.set(`source:${src}|${model}`, { id: `source:${src}|${model}`, name: name || model, sub: `실리태번 · ${names[src]}`, roles: [], src }); };
+    const swSrcRows = M => { const names = swSrcAll(), rows = new Map(), add = (src, model, name) => { if (src && model && names[src] && !rows.has(`source:${src}|${model}`)) rows.set(`source:${src}|${model}`, { id: `source:${src}|${model}`, name: name || model, sub: `실리 · ${names[src]}`, roles: [], src }); };
         for (const [src, list] of Object.entries(obSrc.models)) for (const x of list) add(src, x.id, x.name);
         for (const c of liveStars()) if (c.model && String(c.connectionId).startsWith('source:')) add(c.connectionId.slice(7), c.model, c.name);
         if (M?.current?.model && String(M.current.connectionId).startsWith('source:')) add(M.current.connectionId.slice(7), M.current.model, M.current.name);
         return [...rows.values()]; };
     const swSources = () => swSrcList().map(s => ({ ...s, n: obSrc.models[s.id] ? obSrc.models[s.id].length : null, busy: obSrc.busy === s.id }));
     const swSrcLoad = async (src, open) => { if (obSrc.busy) return; obSrc.busy = src; drawPhone(true);
-        try { obSrc.models[src] = await liveSourceModels(src); if (open && obSw) { obSw.pane = `실리태번 · ${swSrcAll()[src] || src}`; obSw.drilled = true; obSw.order = false; obSw.q = ''; } } catch (err) { obWarn(err); }
+        try { obSrc.models[src] = await liveSourceModels(src); if (open && obSw) { obSw.pane = `실리 · ${swSrcAll()[src] || src}`; obSw.drilled = true; obSw.order = false; obSw.q = ''; } } catch (err) { obWarn(err); }
         obSrc.busy = ''; if (!phoneClosed && stillHere()) drawPhone(true); };
     const obConns = (sched = false) => (sched ? liveConnections() : liveModelConnections()).map(c => ({ id: c.id, name: c.name || '모델 없음', sub: [c.model && c.model !== c.name ? c.model : '', OB_PROV[c.provider] || stKo(c.provider || '')].filter(Boolean).join(' · '), roles: c.id === 'dr' || c.id === '' ? ['메인'] : c.id === 'ai' ? ['기능'] : [] }));
     const schOpen = (owner, day = null) => { const had = liveSchedule(realM, owner); obSch = { owner, draft: structuredClone(had || schBlank()), page: 'main', open: SCH_DAYS.includes(day) ? day : null, mode: had ? 'adjust' : 'rewrite', gen: 'week', guide: '', dguide: {}, menu: null, busy: '', busyText: '', ctl: null, err: null, stale: false, tzQ: '', dirty: false };
@@ -1216,14 +1216,14 @@ export async function openPhone(who = null) {
     // 모델 고르기: 이 방만 바꿔요(지금 것을 누르면 닫기만). 기본값 사용 = 메인을 다시 따름. 친 글자를 모델 ID로 쓰기는 커스텀 API · Vertex 연결에서만 돼요
     const swPick = async (pick, said) => { const rid = obRoomId(); if (!rid || !obCanEdit()) return; try { await liveSetRoomModel(realM, rid, pick); obSw = null; toastr.success(said, '캐릭터 휴대폰'); } catch (err) { obWarn(err); } if (!phoneClosed && stillHere()) drawPhone(true); };
     $root.on('click', '.na_ow_pick', function (e) { e.stopPropagation(); if (this.getAttribute('aria-current') === 'true') { obSw = null; return drawPhone(true); } const c = swChoice(this.dataset.id); swPick(c.model ? { ...c, name: this.getAttribute('aria-label') } : c, `이 채팅은 이제 ${this.getAttribute('aria-label')}을(를) 사용합니다`); });
-    $root.on('click', '.na_ow_src', function (e) { e.stopPropagation(); if (!obSw) return; const src = this.dataset.v; if (obSrc.models[src]?.length) { obSw.pane = `실리태번 · ${swSrcAll()[src] || src}`; obSw.drilled = true; obSw.order = false; return drawPhone(true); } swSrcLoad(src, true); });
+    $root.on('click', '.na_ow_src', function (e) { e.stopPropagation(); if (!obSw) return; const src = this.dataset.v; if (obSrc.models[src]?.length) { obSw.pane = `실리 · ${swSrcAll()[src] || src}`; obSw.drilled = true; obSw.order = false; return drawPhone(true); } swSrcLoad(src, true); });
     $root.on('click', '.na_ow_srcload', function (e) { e.stopPropagation(); swSrcLoad(this.dataset.v, false); });
     $root.on('click', '.na_ow_use', function (e) { e.stopPropagation(); swPick({ connectionId: swChoice(this.dataset.id).connectionId, model: this.dataset.m }, `이 채팅은 이제 ${this.dataset.m}을(를) 사용합니다`); });
     $root.on('click', '.na_ow_default', e => { e.stopPropagation(); swPick(null, '이 채팅은 이제 메인 모델을 따릅니다'); });
     $root.on('click', '.na_ow_persona', async function (e) { e.stopPropagation(); if (this.getAttribute('aria-current') === 'true') { obSw = null; return drawPhone(true); } if (!this.dataset.id) return obNotYet(this);
         try { await liveSwitchPersona(this.dataset.id); obSw = null; } catch (err) { obWarn(err); } if (!phoneClosed && stillHere()) drawPhone(true); });
     const OB_SET_UP = { memlist: 'memory', sumedit: 'sum', tz: 'auto', stconn: 'conn' };
-    // 실리태번 API 연결 화면 (src/phonestconn.js): 폰에서 누른 것을 실리의 진짜 칸에 그대로 넣어요. 실리 쪽이 바뀌면(상태 · 모델 목록 · 보이는 칸) 다시 그려요
+    // 실리 API 연결 화면 (src/phonestconn.js): 폰에서 누른 것을 실리의 진짜 칸에 그대로 넣어요. 실리 쪽이 바뀌면(상태 · 모델 목록 · 보이는 칸) 다시 그려요
     //   글을 치는 중이거나 손가락이 내려가 있는 동안에는 다시 그리지 않아요(치던 글이 사라지거나, 누르던 단추가 바뀌어 눌림이 사라져요). 끝나면 그려요
     const scBusy = () => scDown || !!document.activeElement?.closest?.('.na_sc_in, .na_sc_q');
     const scDraw = () => { if (phoneClosed || !stillHere() || obSet !== 'stconn') return; if (scBusy()) { scPend = true; return; } scPend = false; drawPhone(true); };
@@ -1259,7 +1259,7 @@ export async function openPhone(who = null) {
     $root.on('click', '.na_os_gturn', e => { e.stopPropagation(); obAuto({ groupTurnPromptEnabled: liveAutonomousOptions(realM)?.groupTurnPromptEnabled === false }); });
     $root.on('click', '.na_os_schon', e => { e.stopPropagation(); if (obCanEdit()) obSetGo(liveSetSchedulesOn(realM, !liveSchedulesOn(realM))); });
 // 메인 모델(dr) · 기능 모델(ai)을 채팅 설정 › 연결에서 바꾸기 (소망: Orbit을 나가지 않고). 값은 확장 설정 › AI 모델과 같은 것이에요(connSettings)
-    const OC_WAY = { same: '쓰지 않음', st: '지금 연결된 모델', source: '실리태번 연결', custom: '커스텀 API', vertex: 'Gemini · Vertex AI' };
+    const OC_WAY = { same: '쓰지 않음', st: '지금 연결된 모델', source: '실리 연결', custom: '커스텀 API', vertex: 'Gemini · Vertex AI' };
     const ocModelKey = t => ({ vertex: 'vxModel', source: 'stModel' }[t.mode] || 'model');
     const ocSlot = k => { const t = connSettings(k), g = globalSettings(), on = OWN_MODES.includes(t.mode), profs = k === 'ai' ? aiProfiles() : [];
         const way = k === 'ai' && t.mode === 'st' ? (g.aiProfile ? `profile:${g.aiProfile}` : 'st') : t.mode;
@@ -1280,7 +1280,7 @@ export async function openPhone(who = null) {
         if (!['url', 'key', 'model', 'stModel', 'vxModel', 'vxLocation'].includes(f) || (f === 'key' && !v) || String(t[f] ?? '') === v) return;   // (키 칸은 비워 두면 그대로)
         if (f === 'url') { delete t.models; delete t.noEffort; delete t.leanHeaders; } t[f] = v; ocDone(k); });
     $root.on('click', '.na_oc_load', async function (e) { e.stopPropagation(); const k = this.dataset.k, t = connSettings(k); if (ocBusy) return;
-        if (t.mode === 'vertex') return toastr.info(`실리태번의 Vertex 모델 ${vxModelList().length}개`, '캐릭터 휴대폰');
+        if (t.mode === 'vertex') return toastr.info(`실리의 Vertex 모델 ${vxModelList().length}개`, '캐릭터 휴대폰');
         if (t.mode === 'source' && !t.source) return toastr.warning('연결 종류를 먼저 골라 주세요', '캐릭터 휴대폰');
         if (t.mode === 'custom' && !t.url) return toastr.warning('주소를 먼저 적어 주세요', '캐릭터 휴대폰');
         ocBusy = `load:${k}`; drawPhone(true);
@@ -1489,8 +1489,8 @@ export async function openPhone(who = null) {
         f.min = FACE_V / Math.min(f.W, f.H); f.scale = f.min; f.tx = FACE_M + (FACE_V - f.W * f.scale) / 2; f.ty = FACE_M + (FACE_V - f.H * f.scale) * 0.25;
         if (!phoneClosed && view === 'orbitface') { const top = $root.find('.of_scroll').scrollTop(); drawPhone(true); $root.find('.of_scroll').scrollTop(top); fcPaint(); }
     };
-    // (지금 쓰는 프사는 늘 맨 앞 칸에 있어요. 실리태번 아바타면 주소 그대로 — 이번에 열어 둔 동안만, 저장은 안 해요)
-    const fcAlbum = who => { const g = globalSettings(), k = nameKey(who), a = Array.isArray(g.faceAlbum?.[k]) ? g.faceAlbum[k].filter(x => typeof x === 'string' && x.startsWith('data:')) : [], cur = faceOf(who, true), st = stFace(who, true), out = cur && !a.includes(cur) ? [cur, ...a] : a; return st && !out.includes(st) ? [...out, st] : out; };   // (실리태번 아바타는 따로 정한 프사를 쓰는 중에도 맨 끝 칸에 남아요: 그걸로 되돌릴 수 있게)
+    // (지금 쓰는 프사는 늘 맨 앞 칸에 있어요. 실리 아바타면 주소 그대로 — 이번에 열어 둔 동안만, 저장은 안 해요)
+    const fcAlbum = who => { const g = globalSettings(), k = nameKey(who), a = Array.isArray(g.faceAlbum?.[k]) ? g.faceAlbum[k].filter(x => typeof x === 'string' && x.startsWith('data:')) : [], cur = faceOf(who, true), st = stFace(who, true), out = cur && !a.includes(cur) ? [cur, ...a] : a; return st && !out.includes(st) ? [...out, st] : out; };   // (실리 아바타는 따로 정한 프사를 쓰는 중에도 맨 끝 칸에 남아요: 그걸로 되돌릴 수 있게)
     const fcKeep = (who, album) => { const g = globalSettings(); g.faceAlbum = g.faceAlbum || {}; g.faceAlbum[nameKey(who)] = album.filter(x => x.startsWith('data:')).slice(0, FACE_KEEP); saveGlobal(); };
     $root.on('click', '.na_ob_face', function (e) {
         e.stopPropagation(); const who = this.dataset.n; if (!who) return;
@@ -1552,7 +1552,7 @@ export async function openPhone(who = null) {
             // (모아 둔 사진을 손대지 않고 그대로 쓰면 그 그림 그대로: 다시 줄여 새 칸을 만들지 않아요)
             const asIs = !f.file && f.sel >= 0 && Math.abs(f.scale - f.min) < 1e-6 && (f.W === f.H || !f.album[f.sel].startsWith('data:'));
             const url = asIs ? f.album[f.sel] : await shrinkFace(blob, { sx: (FACE_M - f.tx) / f.scale, sy: (FACE_M - f.ty) / f.scale, ss: FACE_V / f.scale });
-            // (실리태번 아바타를 그대로 고르면: 따로 정한 프사를 지워서 그 아바타가 다시 나오게)
+            // (실리 아바타를 그대로 고르면: 따로 정한 프사를 지워서 그 아바타가 다시 나오게)
             const g = globalSettings(); g.faces = g.faces || {}; if (url.startsWith('data:')) g.faces[nameKey(f.who)] = url; else delete g.faces[nameKey(f.who)];
             if (f.file) f.album[0] = url; else if (!f.album.includes(url)) f.album = [url, ...f.album];
             fcKeep(f.who, f.album);
@@ -2040,7 +2040,7 @@ export async function openPhone(who = null) {
     $root.on('click', '.na_ph_drset', async function (e) {
         e.stopPropagation(); const t = draftSettings(), k = this.dataset.k;
         if (k === 'mode') {
-            const v = await askChoice('방식', '', [{ v: 'same', label: '쓰지 않음' }, { v: 'source', label: '실리태번 연결' }, { v: 'custom', label: '커스텀 API' }, { v: 'vertex', label: 'Gemini · Vertex AI' }], '취소');
+            const v = await askChoice('방식', '', [{ v: 'same', label: '쓰지 않음' }, { v: 'source', label: '실리 연결' }, { v: 'custom', label: '커스텀 API' }, { v: 'vertex', label: 'Gemini · Vertex AI' }], '취소');
             if (!v || v === true) return; t.mode = v; return draftDone();
         }
         if (k === 'fmt') {
@@ -2053,10 +2053,10 @@ export async function openPhone(who = null) {
         if (k === 'stModel') { if (!(await draftLoad($(this).find('.ax_v')))) return; draftPick = 'model'; view = 'setdraftmodel'; return drawPhone(); }
         if (k === 'model' || k === 'vxModel') {
             if (k === 'model' && !(await draftLoad($(this).find('.ax_v')))) return;
-            if (k === 'vxModel' && !vxModelList().length) return toastr.warning('실리태번의 Vertex 모델 목록을 못 찾았어요', '초안 모델');
+            if (k === 'vxModel' && !vxModelList().length) return toastr.warning('실리의 Vertex 모델 목록을 못 찾았어요', '초안 모델');
             draftPick = 'model'; view = 'setdraftmodel'; return drawPhone();
         }
-        const ask = { url: ['주소', 'https://api.example.com/v1 처럼 적어요.', t.url], key: ['API 키', t.key ? `지금 키는 …${String(t.key).slice(-4)}예요. 새 키를 적어요.` : 'API 키를 적어요.', ''], vxLocation: ['지역', '비우면 실리태번 설정을 따라요.', t.vxLocation] }[k];
+        const ask = { url: ['주소', 'https://api.example.com/v1 처럼 적어요.', t.url], key: ['API 키', t.key ? `지금 키는 …${String(t.key).slice(-4)}예요. 새 키를 적어요.` : 'API 키를 적어요.', ''], vxLocation: ['지역', '비우면 실리 설정을 따라요.', t.vxLocation] }[k];
         if (!ask) return;
         const v = await askInput(ask[0], ask[1], String(ask[2] || ''));
         if (!v) return;
@@ -2695,8 +2695,8 @@ export async function openPhone(who = null) {
     cgFonts();
     const dlg = document.createElement('dialog');
     dlg.className = 'popup na_phl';
-    // (실리태번이 팝업에 주는 둥근 모서리는 여기서 직접 없애요: 화면을 통째로 덮는 창이라 모서리가 둥글면 진한 화면에서만 귀퉁이가 깎여 보여요.
-    //  css의 border-radius: 0은 좁은 화면에서 실리태번 규칙에 밀렸어요)
+    // (실리가 팝업에 주는 둥근 모서리는 여기서 직접 없애요: 화면을 통째로 덮는 창이라 모서리가 둥글면 진한 화면에서만 귀퉁이가 깎여 보여요.
+    //  css의 border-radius: 0은 좁은 화면에서 실리 규칙에 밀렸어요)
     dlg.style.setProperty('border-radius', '0', 'important');
     dlg.id = 'na_phl';
     dlg.append($root[0]);
@@ -2800,7 +2800,7 @@ export async function openPhone(who = null) {
     dlg.remove();
 }
 // 기기의 상단바 · 하단바를 폰 화면 색으로 (소망 폰에서 바가 끊어져 보였어요). 웹페이지는 바를 직접 못 그려서
-//   상단바: <meta name="theme-color">를 화면 위쪽 색으로 (크롬은 주소창 · 상단바, 앱처럼 연 실리태번은 상단바)
+//   상단바: <meta name="theme-color">를 화면 위쪽 색으로 (크롬은 주소창 · 상단바, 앱처럼 연 실리는 상단바)
 //   바깥: 폰 창 바깥 바탕을 같은 한 색으로 (반으로 나눠 칠하면 띠 한가운데에 경계선이 생겼어요)
 //   하단바: 페이지 맨 바깥 바탕(html · body)을 화면 아래쪽 색으로 — 크롬은 하단바 색을 여기서 가져오는 것 같아요(블루레몬에이드가 그렇게 칠해요)
 // 위아래가 한 덩어리 색인 화면(BARS_ON: 잠금 · 홈 · 은행)에서만 해요. 흰 앱 화면은 둥근 모서리 · 띠가 오히려 드러나서 원래대로 둬요(소망).
@@ -2845,7 +2845,7 @@ function barsPaint(dlg, view) {
     if (!top) return barsUndo(dlg);
     if (BARS.had === undefined) { BARS.meta = document.querySelector('meta[name="theme-color"]'); BARS.had = BARS.meta ? BARS.meta.content : null; if (!BARS.meta) { BARS.meta = document.createElement('meta'); BARS.meta.name = 'theme-color'; document.head.append(BARS.meta); } }
     BARS.meta.content = top;
-    // (실리태번 팝업 · 테마 규칙이 !important라 인라인으로 덮어요)
+    // (실리 팝업 · 테마 규칙이 !important라 인라인으로 덮어요)
     dlg.style.setProperty('background', top, 'important');
     if (!BARS.root) BARS.root = [document.documentElement, document.body].map(el => [el, el.style.getPropertyValue('background') ? { value: el.style.getPropertyValue('background'), prio: el.style.getPropertyPriority('background') } : null]);
     for (const el of [document.documentElement, document.body]) el.style.setProperty('background', bot, 'important');

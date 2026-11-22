@@ -10,8 +10,8 @@ import { shortHash } from './translate.js';
 // '' = off, 'st' = whatever the Vector Storage extension is set to, else a source of our own
 export const EMBED_SOURCES = {
     '': '끄기',
-    st: '실리태번 설정 따라',
-    transformers: '로컬 (실리태번 안에서)',
+    st: '실리 설정 따라',
+    transformers: '로컬 (실리 안에서)',
     palm: 'Gemini · AI Studio',
     vertexai: 'Gemini · Vertex AI',
     openai: 'OpenAI',

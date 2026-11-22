@@ -19,24 +19,24 @@ export function connCfgHtml(p) {
                     <label class="na_cc_row"><span class="na_cc_lbl">API 키</span><input type="password" class="text_pole" id="na_${p}_key" placeholder="sk-…" autocomplete="off" spellcheck="false"><button type="button" class="na_cc_eye" aria-label="키 보기" title="키 보기">${svgA(ICO_A.eye, 17)}</button></label>
                     <label class="na_cc_row"><span class="na_cc_lbl">형식</span><select class="text_pole na_cc_sel" id="na_${p}_fmt"><option value="">주소 보고 자동</option><option value="openai">OpenAI 호환 (chat/completions)</option><option value="anthropic">Anthropic (Claude Messages API)</option></select></label>
                     <label class="na_cc_row"><span class="na_cc_lbl">생각</span><select class="text_pole na_cc_sel" id="na_${p}_effort"><option value="">작업마다 알아서</option><option value="low">낮게 (low) · 가장 싸요</option><option value="medium">보통 (medium)</option><option value="high">높게 (high)</option></select></label>
-                    <div class="na_cc_row"><span class="na_cc_lbl">모델</span><input type="text" class="text_pole na_cc_model" id="na_${p}_model" placeholder="불러와서 고르거나 직접 입력" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="na_${p}_models"><button type="button" class="na_cc_load" id="na_${p}_load" title="주소와 키로 모델 목록 불러오기">${svgA(ICO_A.redo, 15)}<span>불러오기</span></button></div>
+                    <div class="na_cc_row"><span class="na_cc_lbl">모델</span><input type="text" class="text_pole na_cc_model" id="na_${p}_model" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="na_${p}_models"><button type="button" class="na_cc_load" id="na_${p}_load" title="주소와 키로 모델 목록 불러오기">${svgA(ICO_A.redo, 15)}<span>불러오기</span></button></div>
                   </div>
                   <div class="na_cc_models" id="na_${p}_models" role="listbox" hidden></div>
                   <small class="na_cc_hint" id="na_${p}_cchint" hidden></small>
                 </div>
                 <div class="na_tr_cfg na_cc" id="na_${p}_vertex" hidden>
                   <div class="na_cc_box">
-                    <div class="na_cc_row"><span class="na_cc_lbl">키</span><span class="na_cc_note" id="na_${p}_vxinfo">실리태번에 저장한 서비스 계정 JSON</span></div>
-                    <label class="na_cc_row"><span class="na_cc_lbl">지역</span><input type="text" class="text_pole" id="na_${p}_vxloc" placeholder="비우면 실리태번 설정 따라" autocomplete="off" spellcheck="false"></label>
-                    <div class="na_cc_row"><span class="na_cc_lbl">모델</span><input type="text" class="text_pole na_cc_model" id="na_${p}_vxmodel" placeholder="불러와서 고르거나 직접 입력" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="na_${p}_vxmodels"><button type="button" class="na_cc_load" id="na_${p}_vxload" title="실리태번의 Vertex 모델 목록 불러오기">${svgA(ICO_A.redo, 15)}<span>불러오기</span></button></div>
+                    <div class="na_cc_row"><span class="na_cc_lbl">키</span><span class="na_cc_note" id="na_${p}_vxinfo">실리에 저장한 서비스 계정 JSON</span></div>
+                    <label class="na_cc_row"><span class="na_cc_lbl">지역</span><input type="text" class="text_pole" id="na_${p}_vxloc" placeholder="비우면 실리 설정 따라" autocomplete="off" spellcheck="false"></label>
+                    <div class="na_cc_row"><span class="na_cc_lbl">모델</span><input type="text" class="text_pole na_cc_model" id="na_${p}_vxmodel" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="na_${p}_vxmodels"><button type="button" class="na_cc_load" id="na_${p}_vxload" title="실리의 Vertex 모델 목록 불러오기">${svgA(ICO_A.redo, 15)}<span>불러오기</span></button></div>
                   </div>
                   <div class="na_cc_models" id="na_${p}_vxmodels" role="listbox" hidden></div>
                 </div>
                 <div class="na_tr_cfg na_cc" id="na_${p}_source" hidden>
                   <div class="na_cc_box">
-                    <div class="na_cc_row"><span class="na_cc_lbl">키 · 주소</span><span class="na_cc_note">실리태번의 API 연결에 넣어 둔 것 그대로</span></div>
+                    <div class="na_cc_row"><span class="na_cc_lbl">키 · 주소</span><span class="na_cc_note">실리의 API 연결에 넣어 둔 것 그대로</span></div>
                     <label class="na_cc_row"><span class="na_cc_lbl">연결 종류</span><select class="text_pole na_cc_sel" id="na_${p}_src"></select></label>
-                    <div class="na_cc_row"><span class="na_cc_lbl">모델</span><input type="text" class="text_pole na_cc_model" id="na_${p}_stmodel" placeholder="불러와서 고르거나 직접 입력" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="na_${p}_stmodels"><button type="button" class="na_cc_load" id="na_${p}_stload" title="이 연결 종류의 모델 목록 불러오기">${svgA(ICO_A.redo, 15)}<span>불러오기</span></button></div>
+                    <div class="na_cc_row"><span class="na_cc_lbl">모델</span><input type="text" class="text_pole na_cc_model" id="na_${p}_stmodel" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="na_${p}_stmodels"><button type="button" class="na_cc_load" id="na_${p}_stload" title="이 연결 종류의 모델 목록 불러오기">${svgA(ICO_A.redo, 15)}<span>불러오기</span></button></div>
                   </div>
                   <div class="na_cc_models" id="na_${p}_stmodels" role="listbox" hidden></div>
                 </div>
@@ -63,7 +63,7 @@ export function renderConn(p) {
         : t.noEffort && t.effort ? '이 주소는 생각 강도를 받지 않아서 빼고 보내고 있어요.'
         : t.effort ? '휴대폰은 이 설정과 상관없이 작업마다 정해 둔 강도를 써요.' : '';
     $(`#na_${p}_cchint`).text(hint).prop('hidden', !hint);
-    $(`#na_${p}_vxloc`).val(t.vxLocation).attr('placeholder', `비우면 실리태번 설정 따라 (${ctx().chatCompletionSettings?.vertexai_region || 'global'})`);
+    $(`#na_${p}_vxloc`).val(t.vxLocation).attr('placeholder', `비우면 실리 설정 따라 (${ctx().chatCompletionSettings?.vertexai_region || 'global'})`);
     $(`#na_${p}_vxmodel`).val(t.vxModel);
     return own;
 }
@@ -71,7 +71,7 @@ export function renderConn(p) {
 // the model list under a custom API's model box: everything, or what matches the typed text
 // vx: the Vertex model box, listing the models SillyTavern offers for Vertex
 export function drawModels(p, open, vx = false) {
-    const st = vx === 'st', t = connSettings(p), $l = $(`#na_${p}_${st ? 'stmodels' : vx ? 'vxmodels' : 'models'}`), $in = $(`#na_${p}_${st ? 'stmodel' : vx ? 'vxmodel' : 'model'}`);   // st: 실리태번 연결 종류의 모델(불러온 목록)
+    const st = vx === 'st', t = connSettings(p), $l = $(`#na_${p}_${st ? 'stmodels' : vx ? 'vxmodels' : 'models'}`), $in = $(`#na_${p}_${st ? 'stmodel' : vx ? 'vxmodel' : 'model'}`);   // st: 실리 연결 종류의 모델(불러온 목록)
     const ids = st ? (t.stModelsOf === t.source && Array.isArray(t.stModels) ? t.stModels : []) : vx ? vxModelList() : Array.isArray(t.models) ? t.models : [];
     if (!open || !ids.length) { $l.prop('hidden', true); $in.attr('aria-expanded', 'false'); return; }
     const q = String($in.val() || '').trim().toLowerCase(), cur = st ? t.stModel : vx ? t.vxModel : t.model;
@@ -94,7 +94,7 @@ export function renderAiSettings() {
     const profiles = aiProfiles();
     const opts = [`<option value="">지금 연결된 모델</option>`, ...profiles.map(p => `<option value="${esc(p.id)}">프로필: ${esc(p.name)}</option>`)];
     if (g.aiProfile && !profiles.some(p => p.id === g.aiProfile)) opts.push(`<option value="${esc(g.aiProfile)}">(없어진 프로필)</option>`);
-    opts.push('<option value="__source">실리태번 연결</option>', '<option value="__custom">커스텀 API (OpenAI 호환)</option>', '<option value="__vertex">Gemini · Vertex AI</option>');
+    opts.push('<option value="__source">실리 연결</option>', '<option value="__custom">커스텀 API (OpenAI 호환)</option>', '<option value="__vertex">Gemini · Vertex AI</option>');
     $('#na_ai_profile').html(opts.join('')).val(a.mode === 'st' ? (g.aiProfile || '') : `__${a.mode}`);
     $('#na_ai_max').val(g.aiMaxTokens || 8192);
     const trm = trSettings().mode;
@@ -152,7 +152,7 @@ function cfgTiles(g) {
         return [
             ['AI 라우터', rm === 'off' ? '끔' : rm === 'lift' ? '빠르게' : rm === 'old' ? 'AI가 전부' : '키워드 + AI', rm === 'off' ? '키워드만' : `한 번에 ${val('na_router_max')}개`, rm !== 'off', 'router'],
             ['장면 짐작', guessMode() === 'off' ? '끔' : '켬', '돌려 말한 지난 일', guessMode() !== 'off', 'router'],
-            ['임베딩', e.source ? ({ st: '실리태번', vertexai: 'Vertex', palm: 'AI Studio', transformers: '로컬' }[e.source] || split2(embedLabel())[0]) : '끔', e.source ? (st?.synced ? `섹션 ${st.secs}` : '색인 아직') : '단어로만 찾아요', !!e.source, 'emb'],
+            ['임베딩', e.source ? ({ st: '실리', vertexai: 'Vertex', palm: 'AI Studio', transformers: '로컬' }[e.source] || split2(embedLabel())[0]) : '끔', e.source ? (st?.synced ? `섹션 ${st.secs}` : '색인 아직') : '단어로만 찾아요', !!e.source, 'emb'],
             ['키워드 연동', `${$('#na_linked_n').text() || 0}개`, `고정 ${$('#na_pinned_n').text() || 0} · 꺼짐 ${$('#na_muted_n').text() || 0}`, Number($('#na_linked_n').text()) > 0, 'kw'],
         ];
     }
@@ -161,7 +161,7 @@ function cfgTiles(g) {
         const tr = trSettings().mode;
         return [
             ['AI 기능 모델', a1, a2 || '질문 · 점검 · 라우터', true, 'ai'],
-            ['초안 모델', draftReady() ? ({ vertex: 'Vertex', source: '실리태번' }[draftSettings().mode] || '커스텀') : '없음', draftReady() ? stKo(drLabel()) : '압축 초안 · 짧은 버전', draftReady(), 'dr'],
+            ['초안 모델', draftReady() ? ({ vertex: 'Vertex', source: '실리' }[draftSettings().mode] || '커스텀') : '없음', draftReady() ? stKo(drLabel()) : '압축 초안 · 짧은 버전', draftReady(), 'dr'],
             ['번역 모델', tr === 'same' ? '같이' : split2(trLabel())[0], tr === 'same' ? 'AI 기능 모델' : split2(trLabel())[1], tr !== 'same', 'ai'],
             ['답 최대 길이', `${Number(val('na_ai_max') || 0).toLocaleString()}`, '토큰 · 잘리면 늘려요', true, 'ai'],
         ];
@@ -264,7 +264,7 @@ export function syncEmbedRows() {
     $('#na_emb_region_row').prop('hidden', e.source !== 'vertexai');
     $('#na_emb_region').val(e.region);
     const stRegion = String(ctx().chatCompletionSettings?.vertexai_region || '').trim();
-    $('#na_emb_region_sub').text(e.region ? '임베딩만 이 지역으로' : `비우면 실리태번 Vertex 설정 지역${stRegion ? ` (${stRegion})` : ''}`);
+    $('#na_emb_region_sub').text(e.region ? '임베딩만 이 지역으로' : `비우면 실리 Vertex 설정 지역${stRegion ? ` (${stRegion})` : ''}`);
     $('#na_emb_url').val(e.url);
     $('#na_emb_build').prop('hidden', !e.source);
     if ($('#na_emb_build').hasClass('na_busy')) return;

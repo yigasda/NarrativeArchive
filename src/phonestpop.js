@@ -1,4 +1,4 @@
-// 실리태번 팝업(키 관리 · 연결 프로필 만들기/편집 · 추가 매개변수 · 확인 창)을 우리 시트로 보여 줘요 (docs/design/orbit-marinara.md 1-7).
+// 실리 팝업(키 관리 · 연결 프로필 만들기/편집 · 추가 매개변수 · 확인 창)을 우리 시트로 보여 줘요 (docs/design/orbit-marinara.md 1-7).
 // 실리 팝업은 그대로 열려 있고(실리 코드가 그 칸 · 단추를 읽어요), 우리는 그 안의 것을 안 보이게 하고 같은 팝업 안에 우리 시트를 얹어요. 시트에서 누르면 실리의 진짜 칸 · 단추를 눌러요.
 // 실리 팝업은 화면 전체를 막는 창이라 폰 화면에 그릴 수 없어요(폰이 눌리지 않아요). 그래서 팝업 안에, 폰 자리에 딱 맞춰 그려요.
 import { stPopNodes, stConnSet, stConnToggleOption, stConnClick, stConnWatch } from './phonestconn.js';

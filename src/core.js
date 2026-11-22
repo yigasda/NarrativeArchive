@@ -12,7 +12,7 @@ import { parseSections } from './sections.js';
 
 export const MODULE = 'narrative_archive';
 export const PROMPT_KEY = 'narrative_archive_injection';
-export const VERSION = '3.227.2';
+export const VERSION = '3.227.3';
 export const SNAPSHOT_MAX = 5;
 export const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -94,11 +94,11 @@ let phoneMetaNow = null;
 export const phoneMeta = () => { const m = getMeta(); return phoneMetaNow && phoneMetaNow.m === m ? phoneMetaNow.d : m; };
 export const setPhoneMeta = v => { phoneMetaNow = v ? { d: v, m: getMeta() } : null; };
 
-// 채팅 저장. 실리태번은 다른 저장이 도는 중이면 1초만 기다리다가 **저장하지 않고 조용히 돌아와요**(script.js saveChatConditional).
+// 채팅 저장. 실리는 다른 저장이 도는 중이면 1초만 기다리다가 **저장하지 않고 조용히 돌아와요**(script.js saveChatConditional).
 // 폰에서는 저장 한 번이 몇 초라, 겹쳐서 부른 저장이 통째로 빠졌어요: 보낸 말을 저장하는 중에 온 답장이 저장이 안 돼서,
 // 바로 새로고침하면 답장이 없었어요(tools/dev에서 저장을 4초로 늦춰 확인). 그래서 줄을 세워요:
 //   - 우리 저장이 도는 중에 또 부르면, 그게 끝난 뒤에 한 번 더 저장해요. 그사이 부른 것들은 그 한 번을 같이 써요(가장 나중 상태가 저장돼요)
-//   - 실리태번 자기 저장이 도는 중이면 끝날 때까지(최대 20초) 기다렸다가 저장해요
+//   - 실리 자기 저장이 도는 중이면 끝날 때까지(최대 20초) 기다렸다가 저장해요
 // 돌려주는 약속은 "부른 뒤의 상태가 저장됐을 때" 끝나요(실패하면 그 오류)
 let stScript = null;
 if (typeof window !== 'undefined') import('/script.js').then(m => { stScript = m; }).catch(() => { /* (못 읽으면 기다리지 않고 저장해요) */ });

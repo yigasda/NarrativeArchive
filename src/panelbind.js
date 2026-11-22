@@ -173,7 +173,7 @@ export function bindPanel() {
             connSettings(p).vxModel = this.dataset.id; saveGlobal();
             drawModels(p, false, true); renderAiSettings();
         });
-        // 실리태번 연결: 연결 종류를 고르고 → 모델 불러오기 → 모델 고르기 (키 · 주소는 실리태번에 넣어 둔 것)
+        // 실리 연결: 연결 종류를 고르고 → 모델 불러오기 → 모델 고르기 (키 · 주소는 실리에 넣어 둔 것)
         $(`#na_${p}_src`).on('change', function () { const t = connSettings(p); if (t.source !== this.value) { t.source = this.value; t.stModel = ''; delete t.stModels; delete t.stModelsOf; } saveGlobal(); renderAiSettings(); });
         $(`#na_${p}_stmodel`).on('change', function () { connSettings(p).stModel = this.value.trim(); saveGlobal(); renderAiSettings(); })
             .on('focus click', () => drawModels(p, true, 'st')).on('input', () => drawModels(p, true, 'st'))
@@ -192,8 +192,8 @@ export function bindPanel() {
         });
         $(`#na_${p}_vxload`).on('click', () => {
             const n = vxModelList().length;
-            if (!n) return toastr.warning('실리태번의 Vertex 모델 목록을 못 찾았어요. 모델 이름을 직접 넣어 주세요.');
-            toastr.success(`실리태번의 Vertex 모델 ${n}개`);
+            if (!n) return toastr.warning('실리의 Vertex 모델 목록을 못 찾았어요. 모델 이름을 직접 넣어 주세요.');
+            toastr.success(`실리의 Vertex 모델 ${n}개`);
             $(`#na_${p}_vxmodel`).val('');
             drawModels(p, true, true);
             $(`#na_${p}_vxmodel`).val(connSettings(p).vxModel).trigger('focus');
@@ -588,7 +588,7 @@ export function bindPanel() {
         } catch (err) {
             // a 5xx that survived the retries is the service's quota or an outage; what went in so far is kept
             const e = embedCfg(), m = e.model || EMBED_DEFAULT_MODEL[e.source] || '';
-            const hint = err.status >= 500 ? ` · 만든 데까지는 남아 있어서 다시 누르면 이어서 해요${e.source === 'vertexai' ? `. 계속 안 되면 ① 실리태번 API 연결 → Vertex AI에서 인증(Express 키 또는 서비스 계정)과 프로젝트가 맞는지 ② 임베딩 지역을 us-central1로${/^gemini-embedding/.test(m) ? ' ③ 모델을 text-multilingual-embedding-002로(한 번에 10개씩)' : ''} 확인해 보세요. 자세한 이유는 실리태번 서버 콘솔 창에 찍혀요` : ''}` : '';
+            const hint = err.status >= 500 ? ` · 만든 데까지는 남아 있어서 다시 누르면 이어서 해요${e.source === 'vertexai' ? `. 계속 안 되면 ① 실리 API 연결 → Vertex AI에서 인증(Express 키 또는 서비스 계정)과 프로젝트가 맞는지 ② 임베딩 지역을 us-central1로${/^gemini-embedding/.test(m) ? ' ③ 모델을 text-multilingual-embedding-002로(한 번에 10개씩)' : ''} 확인해 보세요. 자세한 이유는 실리 서버 콘솔 창에 찍혀요` : ''}` : '';
             toastr.error(`${String(err.message || err)}${hint}`, '임베딩 색인을 못 만들었어요', { timeOut: 15000 });
         }
         finally { $b.removeClass('na_busy'); syncEmbedRows(); }
