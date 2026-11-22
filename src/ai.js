@@ -326,13 +326,26 @@ export async function callStSource(t, system, prompt, maxTokens, effort = '', si
     const source = String(t.source || ''), model = String(t.stModel || '').trim();
     if (!source) throw new Error('연결 종류를 골라 주세요 (⚙ 설정 → AI 모델)');
     if (!model) throw new Error('모델을 골라 주세요 (⚙ 설정 → AI 모델 → 모델 불러오기)');
-    const O = await import('/scripts/openai.js');
+    // (globalThis.__naStOpenai: the tests' stand-in for SillyTavern's module)
+    const O = globalThis.__naStOpenai || await import('/scripts/openai.js');
     if (typeof O.createGenerationParameters !== 'function') throw new Error('이 실리 버전에서는 이 연결 방식을 쓸 수 없어요 (실리를 최신으로 올려 주세요)');
     const messages = [...(system ? [{ role: 'system', content: system }] : []), ...turnsOf(prompt)];
-    const data = await O.createGenerationParameters({ ...O.oai_settings, chat_completion_source: source, stream_openai: false, n: 1, bias_preset_selected: '', enable_web_search: false, request_images: false, function_calling: false }, model, 'quiet', messages);
-    // (what the role-play preset tunes is not this request's: only the connection's own fields stay)
-    for (const k of ['frequency_penalty', 'presence_penalty', 'top_k', 'min_p', 'repetition_penalty', 'top_a', 'stop', 'logit_bias', 'logprobs', 'assistant_prefill', 'n', 'tools', 'tool_choice', 'verbosity', 'seed', 'top_p']) delete data[k];
-    Object.assign(data, { stream: false, max_tokens: maxTokens, temperature: typeof temperature === 'number' ? temperature : 0.3, reasoning_effort: effort || 'auto', include_reasoning: !!meta, ...(topPOf(topP) !== undefined ? { top_p: topPOf(topP) } : {}) });
+    // (what this request decides goes in as settings, so SillyTavern's own rules for each source and model still apply to
+    // it: some models take no temperature, some want max_completion_tokens. The role-play preset's sampling is not ours)
+    const settings = {
+        ...O.oai_settings, chat_completion_source: source, stream_openai: false, n: 1, bias_preset_selected: '', seed: -1,
+        temp_openai: typeof temperature === 'number' ? temperature : 0.3, top_p_openai: topPOf(topP) ?? 1, openai_max_tokens: maxTokens,
+        freq_pen_openai: 0, pres_pen_openai: 0, top_k_openai: 0, min_p_openai: 0, top_a_openai: 0, repetition_penalty_openai: 1,
+        reasoning_effort: effort || 'auto', show_thoughts: !!meta, enable_web_search: false, request_images: false, function_calling: false,
+        assistant_prefill: '', assistant_impersonation: '',
+    };
+    const built = await O.createGenerationParameters(settings, model, 'quiet', messages);
+    // (SillyTavern hands back { generate_data, stream, canMultiSwipe }; an older one handed back the request itself)
+    const data = built && typeof built === 'object' && built.generate_data ? built.generate_data : built;
+    if (!data || !data.chat_completion_source) throw new Error('이 실리 버전에서는 이 연결 방식을 쓸 수 없어요 (요청을 만들지 못했어요)');
+    // (the role-play's stop strings, token bias and tools are not this request's)
+    for (const k of ['stop', 'logit_bias', 'logprobs', 'top_logprobs', 'n', 'tools', 'tool_choice', 'seed']) delete data[k];
+    data.stream = false;
     const r = await fetch('/api/backends/chat-completions/generate', { method: 'POST', headers: ctx().getRequestHeaders(), signal, body: JSON.stringify(data) });
     const body = await r.text();
     let j = null;
@@ -341,7 +354,9 @@ export async function callStSource(t, system, prompt, maxTokens, effort = '', si
     if (!r.ok || j?.error) throw new Error(`${stSourceName(source)} 오류 ${r.status}${msg && msg !== 'true' ? `: ${String(msg).slice(0, 200)}` : ' · 실리 서버 창에 자세한 내용이 있어요'}`);
     // (SillyTavern's server hands most sources back in the OpenAI shape; Claude's own and Google's own are read too)
     const m = j?.choices?.[0]?.message, parts = Array.isArray(j?.content) ? j.content : [];
-    const out = typeof m?.content === 'string' ? m.content : Array.isArray(m?.content) ? m.content.map(p => p?.text || '').join('')
+    // (SillyTavern's own reader when it is there; else the same shapes read by hand)
+    const read = ctx().extractMessageFromData;
+    const out = typeof read === 'function' ? String(read(j, 'openai') ?? '') : typeof m?.content === 'string' ? m.content : Array.isArray(m?.content) ? m.content.map(p => p?.text || '').join('')
         : parts.length ? parts.filter(b => b?.type === 'text').map(b => b.text || '').join('')
             : String(j?.candidates?.[0]?.content?.parts?.filter(p => !p?.thought).map(p => p?.text || '').join('') || j?.choices?.[0]?.text || '');
     if (meta) Object.assign(meta, { thinking: [m?.reasoning_content, m?.reasoning, parts.filter(b => b?.type === 'thinking').map(b => b.thinking || '').join('\n\n')].find(v => typeof v === 'string' && v.trim()) || '', finishReason: j?.choices?.[0]?.finish_reason || j?.stop_reason || null, usage: j?.usage ? { promptTokens: j.usage.prompt_tokens ?? j.usage.input_tokens ?? null, completionTokens: j.usage.completion_tokens ?? j.usage.output_tokens ?? null, reasoningTokens: j.usage.completion_tokens_details?.reasoning_tokens ?? null, cachedPromptTokens: null } : null });

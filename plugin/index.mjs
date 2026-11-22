@@ -1,4 +1,4 @@
-// NarrativeArchive의 실리태번 서버 플러그인. 실리 서버 안에서 돌아요(브라우저를 닫아도 돌아요).
+// NarrativeArchive의 실리 서버 플러그인. 실리 서버 안에서 돌아요(브라우저를 닫아도 돌아요).
 // 지금 하는 일: Orbit(실시간 폰) 데이터를 실리 채팅 파일 밖에 조각으로 저장하기 (plugin/store.mjs).
 // 깔기: 이 저장소를 실리의 plugins 폴더에 받고(git clone), 실리 config.yaml에서 enableServerPlugins: true.
 // 길은 /api/plugins/narrative-archive/… 이고, 실리의 로그인 · CSRF 확인을 지난 요청만 와요(req.user가 그 사용자).

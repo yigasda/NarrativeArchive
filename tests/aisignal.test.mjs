@@ -56,3 +56,30 @@ test('topP: 준 값이 실려 가요 (1까지, 음수 · 안 준 것은 안 실�
     await AI.callConn(an, 'S', 'hello', 256, '', true, false, null, 0.2, 0.8);
     assert.deepEqual(bodies.map(b => b.top_p), [1, 1, undefined, undefined, undefined, 0.8, undefined]);
 });
+test('실리 연결 방식: 실리가 만든 요청({ generate_data … })을 그대로 보내고, 이 요청이 정한 값은 설정으로 넣어요', async () => {
+    const seen = [], bodies = [];
+    globalThis.document = { querySelectorAll: () => [] };
+    globalThis.__naStOpenai = {
+        oai_settings: { temp_openai: 1.2, top_p_openai: 0.5, openai_max_tokens: 9, freq_pen_openai: 0.7, reverse_proxy: 'p', custom_url: 'u', stream_openai: true },
+        // (실리 1.19: 통을 돌려줘요. 모델에 따라 실리가 값을 빼기도 해요)
+        createGenerationParameters: async (settings, model, type, messages) => { seen.push({ settings, model, type }); return { generate_data: { chat_completion_source: settings.chat_completion_source, model, messages, max_completion_tokens: settings.openai_max_tokens, custom_url: settings.custom_url, stop: ['x'], logit_bias: { a: 1 }, reasoning_effort: settings.reasoning_effort, include_reasoning: settings.show_thoughts, stream: true }, stream: false, canMultiSwipe: false }; },
+    };
+    globalThis.fetch = async (url, init = {}) => { bodies.push({ url, body: JSON.parse(init.body) }); return { ok: true, status: 200, text: async () => JSON.stringify({ choices: [{ message: { content: 'hi', reasoning_content: 'hm' }, finish_reason: 'stop' }], usage: { prompt_tokens: 3, completion_tokens: 2 } }) }; };
+    try {
+        const meta = {};
+        const out = await AI.callConn({ mode: 'source', source: 'custom', stModel: 'fake-mini' }, 'S', 'hello', 256, 'high', true, false, null, 0.9, null, meta);
+        assert.equal(out, 'hi');
+        const b = bodies[0].body, st = seen[0].settings;
+        assert.equal(bodies[0].url, '/api/backends/chat-completions/generate');
+        assert.deepEqual([b.chat_completion_source, b.model, b.custom_url, b.max_completion_tokens, b.reasoning_effort, b.include_reasoning, b.stream], ['custom', 'fake-mini', 'u', 256, 'high', true, false]);
+        assert.deepEqual([b.stop, b.logit_bias, b.max_tokens, b.temperature], [undefined, undefined, undefined, undefined]);   // (실리가 뺀 값을 다시 넣지 않아요)
+        assert.deepEqual([st.temp_openai, st.top_p_openai, st.openai_max_tokens, st.freq_pen_openai, st.stream_openai, st.reverse_proxy, seen[0].type], [0.9, 1, 256, 0, false, 'p', 'quiet']);
+        assert.deepEqual([meta.model, meta.provider, meta.thinking, meta.finishReason, meta.usage.promptTokens], ['fake-mini', 'custom', 'hm', 'stop', 3]);
+        // (옛 실리: 요청 자체를 돌려줘도 돼요; 요청을 못 만들면 알려요)
+        globalThis.__naStOpenai.createGenerationParameters = async (settings, model, type, messages) => ({ chat_completion_source: settings.chat_completion_source, model, messages });
+        assert.equal(await AI.callConn({ mode: 'source', source: 'claude', stModel: 'c' }, 'S', 'hello', 256, '', true, false), 'hi');
+        assert.equal(bodies[1].body.chat_completion_source, 'claude');
+        globalThis.__naStOpenai.createGenerationParameters = async () => ({ stream: false });
+        await assert.rejects(AI.callConn({ mode: 'source', source: 'claude', stModel: 'c' }, 'S', 'hello', 256, '', true, false), /요청을 만들지 못했/);
+    } finally { delete globalThis.__naStOpenai; delete globalThis.document; }
+});

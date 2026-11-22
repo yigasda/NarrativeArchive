@@ -67,7 +67,7 @@ function koOf(display, texts) {
     return pairs.length === texts.length && pairs.every((p, i) => p.orig === texts[i]) ? pairs.map((p, i) => (p.ko && p.ko !== texts[i] ? p.ko : '')) : texts.map(() => '');
 }
 
-// 채팅에서 가져올 말. chat: 실리태번 채팅(메시지 목록); after: 이 번호 뒤의 메시지만; order: 날짜 순서('md' · 'dm');
+// 채팅에서 가져올 말. chat: 실리 채팅(메시지 목록); after: 이 번호 뒤의 메시지만; order: 날짜 순서('md' · 'dm');
 // clock: 글의 시간이 적힌 시계 (기본: 이 브라우저의 시계); shift: 글의 시간이 하나도 없는 묶음을 옮길 만큼 (같은 채팅을
 // 전에 가져올 때 옮긴 만큼: 그때와 같은 시계에 놓여요)
 //   → [{ i (채팅의 번호), user, name, at (보낸 순간 ms), off (기록된 순간에서 옮긴 만큼 | null), bubbles: [{ text, ko }] }]
@@ -117,7 +117,7 @@ export function importRows(chat, { after = -1, order = 'md', clock = LOCAL, shif
 
 // 이 채팅(key)을 전에 가져온 기록: { room, upto (채팅의 어느 번호까지), shift (글의 시간으로 옮긴 만큼), count, at } | null
 export const importedOf = (w, key) => { const r = w?.imports?.[String(key || '')]; return r && typeof r === 'object' && Number.isInteger(r.upto) ? r : null; };
-// 어느 채팅인지 가리는 표시: 실리태번이 채팅마다 주는 표시(integrity), 없으면 첫 메시지의 보낸 때와 이름
+// 어느 채팅인지 가리는 표시: 실리가 채팅마다 주는 표시(integrity), 없으면 첫 메시지의 보낸 때와 이름
 export const chatKey = (integrity, chat) => { const k = String(integrity || '').trim(), x = (Array.isArray(chat) ? chat : []).find(m => m && typeof m === 'object'); return k || (x ? `first:${String(x.send_date ?? '')}|${flat(x.name)}` : ''); };
 // 내보낸 채팅 파일(.jsonl)의 글 → { chat: [메시지], key }. 줄마다 JSON 하나: 첫 줄은 채팅 정보(chat_metadata), 나머지가 메시지.
 // 읽을 수 없는 줄은 건너뛰어요. 메시지가 하나도 없으면 오류

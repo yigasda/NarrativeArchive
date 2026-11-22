@@ -92,7 +92,7 @@ async function keepUpStory(real, tell = () => {}) {
     } finally { extending.delete(real); done(); tell(); }
     return null;
 }
-// 실리태번에서 페르소나를 바꿨으면 실시간 폰의 "나"도 그 이름으로 (열어 둔 채팅의 폰만). 바꿨으면 저장하고 true.
+// 실리에서 페르소나를 바꿨으면 실시간 폰의 "나"도 그 이름으로 (열어 둔 채팅의 폰만). 바꿨으면 저장하고 true.
 // 실시간 서랍이 생길 때마다(폰을 열 때 · 답장을 돌릴 때) 저절로 불려요
 export function liveFollowPersona(real) {
     if (!real || !liveWorld(real) || !ctx().chatMetadata || !open(real)) return false;
@@ -445,7 +445,7 @@ export function followSchedule(real, now = Date.now()) {
 }
 // ---- 마리나라의 스케줄 편집 창이 부르던 요청들 (phone2sched.js → src/marinara/schedule-routes.js)
 // 생성 연결 (마리나라의 connectionId): 스케줄을 만들 때 쓸 연결을 골라요. 목록은 liveModelConnections와 같아요 (이름은 모델 이름). '' = 기본 연결,
-// 'profile:<id>' = 실리태번 연결 프로필. 고른 것은 w.presence.meta.scheduleConnectionId에 남아요
+// 'profile:<id>' = 실리 연결 프로필. 고른 것은 w.presence.meta.scheduleConnectionId에 남아요
 export const liveConnections = () => liveModelConnections().map(c => ({ ...c, id: c.id === 'dr' ? '' : c.id }));
 export const liveScheduleConnection = real => { const id = String(liveWorld(real)?.presence?.meta?.scheduleConnectionId || ''); return liveConnections().some(c => c.id === id) ? id : ''; };
 export async function liveSetScheduleConnection(real, id = '') {
@@ -746,14 +746,14 @@ export async function liveBackDraft(real) {
     const answer = await askDraft(input, { force: true, system: phone2BackSystem({ persona: w.persona }), maxTokens: BACK.tokens, effort: 'low' });
     return { world: w.id, left, text: backMessage(takeBack(answer, x => parseJson(x, { salvage: true }))), count: left.count, more: left.more };
 }
-// 2) 넣기: 롤플 채팅 맨 끝에 해설 메시지 하나로 (실리태번의 /sys가 넣는 것과 같은 모양), 실었던 말에 전했다고 표시.
+// 2) 넣기: 롤플 채팅 맨 끝에 해설 메시지 하나로 (실리의 /sys가 넣는 것과 같은 모양), 실었던 말에 전했다고 표시.
 //    text: 사람이 고친 글 (안 주면 받은 글 그대로). 그사이 다른 채팅이 열렸거나 실시간 폰이 바뀌었으면 아무것도 안 해요
 //   → 넣은 메시지의 번호
 export async function liveBackPut(real, draft, text = draft?.text) {
     const w = liveWorld(real), c = ctx(), words = String(text ?? '').trim();
     if (!w || !open(real) || w.id !== draft?.world) throw new Error('그사이 채팅이나 실시간 폰이 바뀌었어요. 다시 해 주세요');
     if (!words) throw new Error('넣을 글이 비어 있어요');
-    if (!Array.isArray(c.chat) || typeof c.addOneMessage !== 'function' || typeof c.saveChat !== 'function') throw new Error('이 실리태번에서는 롤플 채팅에 넣을 수 없어요');
+    if (!Array.isArray(c.chat) || typeof c.addOneMessage !== 'function' || typeof c.saveChat !== 'function') throw new Error('이 실리에서는 롤플 채팅에 넣을 수 없어요');
     const message = { name: c.chatMetadata?.narrator_name || 'System', is_user: false, is_system: false,
         send_date: typeof c.humanizedDateTime === 'function' ? c.humanizedDateTime() : new Date().toISOString(),
         mes: words, force_avatar: 'img/five.png', extra: { type: 'narrator', gen_id: Date.now(), api: 'manual', model: 'narrative-archive' } };
@@ -1002,7 +1002,7 @@ export async function liveBranchRoom(real, roomId, messageId = '') { const room 
 //      model: 그 연결의 키 · 주소로 다른 모델을 이 방에서만 돌려요 (마리나라의 catalog pick). 커스텀 API · Vertex 연결에서만 돼요
 //    liveRoomModel(real, 방 id) → { current: 고름 | null (기본값을 따름), recent: [고름, 고름] (새것 먼저), followsMain }
 //    liveSetRoomModel(real, 방 id, 고름 | null) → 위와 같은 값. null: 기본값으로 돌아가요 (마리나라의 "Use default")
-// 연결 목록 (마리나라의 연결 줄 모양: { id, name, model, provider }). 키는 새로 받지 않아요: 확장에 넣어 둔 것과 실리태번의 것을 그대로 써요
+// 연결 목록 (마리나라의 연결 줄 모양: { id, name, model, provider }). 키는 새로 받지 않아요: 확장에 넣어 둔 것과 실리의 것을 그대로 써요
 //   이름은 모델 이름이에요 (확장 안쪽의 칸 이름은 화면에 내지 않아요 — 소망, 2026-11-21). 실리 연결 프로필은 그 프로필의 이름
 //   id: 'dr' · 'ai' (확장에 넣어 둔 두 연결) · 'profile:<id>' (실리 연결 프로필). 안쪽에서만 쓰는 값이에요
 const connRow = id => {
@@ -1094,7 +1094,7 @@ export function liveMoveStar(choice, by) {
     ctx().saveSettingsDebounced?.();
     return true;
 }
-// 3) 페르소나 바꾸기: 실리태번의 페르소나를 바꿔요 (people.js stPersonaList()의 id). 실시간 폰의 "나"는 우리 쪽이 이름을 따라 바꿔요
+// 3) 페르소나 바꾸기: 실리의 페르소나를 바꿔요 (people.js stPersonaList()의 id). 실시간 폰의 "나"는 우리 쪽이 이름을 따라 바꿔요
 export async function liveSwitchPersona(avatarId) {
     const id = String(avatarId || '');
     if (!id || !Object.hasOwn(ctx().powerUserSettings?.personas || {}, id)) throw new Error('없는 페르소나예요');
@@ -1103,8 +1103,8 @@ export async function liveSwitchPersona(avatarId) {
     return true;
 }
 
-// ---- 연결 종류와 모델 불러오기 (실리태번이 가진 모든 연결 종류를, 실리태번에 넣어 둔 키와 설정 그대로)
-//   liveSources() → [{ id, name }] (실리태번의 API 고르기에 있는 것 전부) · liveSourceModels(연결 종류 id) → [{ id, name }] (모델을 불러와요)
+// ---- 연결 종류와 모델 불러오기 (실리가 가진 모든 연결 종류를, 실리에 넣어 둔 키와 설정 그대로)
+//   liveSources() → [{ id, name }] (실리의 API 고르기에 있는 것 전부) · liveSourceModels(연결 종류 id) → [{ id, name }] (모델을 불러와요)
 //   방의 모델로 고를 때: liveSetRoomModel(real, 방 id, { connectionId: 'source:<연결 종류 id>', model: '<모델 id>', name? })
 export const liveSources = () => stSourceList();
 export const liveSourceModels = source => stSourceModels(source);
