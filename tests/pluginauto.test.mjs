@@ -213,3 +213,120 @@ test('둘러보기 건너뛰기 판단 · 후보 거르기 (마리나라 것 그
     assert.equal(hasRoleplayDmThreadMarkers({ dmOriginChatId: 'x' }), true);
     assert.equal(hasRoleplayDmThreadMarkers({}), false);
 });
+
+// ---- 진짜 app (plugin/auto.mjs): 플러그인 저장 위에서. 임시 폴더, 예시 캐릭터
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { openStore } from '../plugin/store.mjs';
+import { makeAutoApp } from '../plugin/auto.mjs';
+import { splitLive } from '../src/phone2keep.js';
+import { startFresh, putLivePhone, ensureRoom, sendLive, liveWorld } from '../src/phone2store.js';
+
+// 세계 하나: Ren(나)과 Mara의 방. Ren이 hoursAgo 시간 전에 말했고 Mara가 바로 답했어요
+function liveOf({ on = true, hoursAgo = 3, now = Date.now(), schedule = null, extra = w => w } = {}) {
+    const m = {};
+    startFresh(m, { persona: 'Ren', now: now - 10 * 3600_000 });
+    putLivePhone(m, { owner: 'Mara' });
+    const room = ensureRoom(m, ['Mara']), w = liveWorld(m), at = now - hoursAgo * 3600_000;
+    sendLive(m, room.id, 'hey', at);
+    room.messages.push({ id: 't2', n: 2, from: 'Mara', text: 'hi', at: at + 60_000 });
+    w.presence = { on, schedules: schedule ? { mara: schedule } : {}, overrides: {}, meta: {}, user: {} };
+    extra(w, room);
+    return { m, w, room, id: `${w.id}:${room.id}` };
+}
+const tempStore = async t => { const root = await mkdtemp(path.join(tmpdir(), 'na-auto-')); t.after(() => rm(root, { recursive: true, force: true })); return openStore(root); };
+const put = (store, sid, m) => store.save(sid, { parts: JSON.parse(JSON.stringify(splitLive(m.live))), chat: 'chat-1' });
+
+test('app: 저장을 훑어 방을 내놓아요. 켠 세계만 스케줄러가 봐요. 저장이 그대로면 다시 안 읽어요', async t => {
+    const store = await tempStore(t), a = liveOf(), b = liveOf({ on: false });
+    await put(store, 'sa', a.m); await put(store, 'sb', b.m);
+    const app = makeAutoApp({ store, tzOf: () => 'Asia/Seoul' });
+    const rows = await app.chats.list();
+    assert.deepEqual(rows.map(r => [r.id, r.mode, r.metadata.autonomousMessages, r.metadata.conversationTimeZone]), [[a.id, 'conversation', true, 'Asia/Seoul'], [b.id, 'conversation', false, 'Asia/Seoul']]);
+    assert.deepEqual((await app.chats.getById(a.id)).metadata.autonomousMessages, true);
+    assert.equal(await app.chats.getById('nope:x'), null);
+    // (읽어 둔 것: rev가 그대로면 같은 것)
+    const e1 = await app.open('sa'), e2 = await app.open('sa');
+    assert.equal(e1, e2);
+    assert.equal(app.db._fileStore.getTableWriteGeneration('chats'), 2);
+    // 방에 폰 가진 사람이 없으면 방이 안 나와요
+    const c = liveOf({ extra: w => { delete w.phones.mara; } });
+    await put(store, 'sc', c.m);
+    assert.equal((await app.chats.list()).length, 2);
+});
+
+test('app: 때가 됐나 — 브라우저와 같은 판단(checkProactive)을 서버 값(idle · 후속 2번 · server)으로 물어요', async t => {
+    const store = await tempStore(t), a = liveOf({ hoursAgo: 3 }), b = liveOf({ hoursAgo: 0.2 });
+    await put(store, 'sa', a.m); await put(store, 'sb', b.m);
+    const app = makeAutoApp({ store });
+    await app.chats.list();
+    const ask = async id => { const r = await app.inject({ method: 'POST', url: '/api/conversation/autonomous/check', payload: { chatId: id, userStatus: 'idle', maxFollowups: 2, source: 'server' } }); return { code: r.statusCode, ...JSON.parse(r.payload) }; };
+    const due = await ask(a.id);
+    assert.equal(due.code, 200); assert.equal(due.shouldTrigger, true); assert.deepEqual(due.characterIds, ['mara']);
+    assert.equal(typeof due.generationStartedAt, 'number');
+    // (걸고 있는 중이라 다시 물으면 안 걸어요)
+    assert.equal((await ask(a.id)).reason, 'generation_in_progress');
+    const not = await ask(b.id);
+    assert.equal(not.shouldTrigger, false);
+    assert.equal((await ask('nope:x')).code, 404);
+    // 서버가 물은 것은 "창이 살아 있음"으로 안 적혀요
+    assert.equal(getActivityState(a.id).clientPresence, undefined);
+    app.presence(a.id, 'active');
+    assert.equal(getActivityState(a.id).clientPresence.status, 'active');
+    clearChatActivity(a.id); clearChatActivity(b.id);
+});
+
+test('app: 스케줄 · 손으로 준 상태를 내놓아요. 스케줄을 꺼 두면 스케줄은 없는 것으로', async t => {
+    const store = await tempStore(t), sch = week(FREE);
+    const a = liveOf({ schedule: sch, extra: w => { w.presence.overrides.mara = { status: 'dnd', activity: 'gym', createdAt: 'x', expiresAt: null }; } });
+    const b = liveOf({ schedule: sch, extra: w => { w.presence.meta.conversationSchedulesEnabled = false; } });
+    await put(store, 'sa', a.m); await put(store, 'sb', b.m);
+    const app = makeAutoApp({ store });
+    await app.chats.list();
+    const pa = await app.chats.resolveConversationPresenceState(a.id);
+    assert.deepEqual(Object.keys(pa.schedules), ['mara']); assert.equal(pa.statusOverrides.mara.status, 'dnd');
+    assert.deepEqual((await app.chats.resolveConversationPresenceState(b.id)).schedules, {});
+});
+
+test('app: 안 읽은 먼저 건 말을 방에 적어요(마리나라의 열쇠). 그사이 브라우저가 저장했으면 쓰지 않고 다시 읽어요', async t => {
+    const store = await tempStore(t), a = liveOf();
+    await put(store, 'sa', a.m);
+    const app = makeAutoApp({ store });
+    await app.chats.list();
+    await app.chats.markAutonomousUnread(a.id, { characterId: 'mara' });
+    await app.chats.markAutonomousUnread(a.id, { characterId: 'mara', count: 2 });
+    const saved = (await store.load('sa'));
+    const room = saved.parts[`room/${a.room.id}`].room;
+    assert.equal(room.autonomousUnreadCount, 3); assert.deepEqual(room.autonomousUnreadCharacterIds, ['mara']); assert.equal(typeof room.autonomousUnreadAt, 'string');
+    assert.equal(saved.rev, 3);
+    // (말 조각은 다시 안 썼어요: 방 조각만 바뀌었어요)
+    // 브라우저가 그사이 저장
+    const e = await app.open('sa');
+    await store.save('sa', { base: 3, parts: { live: saved.parts.live } });
+    liveWorld(e.real).messenger.rooms[a.room.id].autonomousUnreadCount = 99;
+    await assert.rejects(app.write(e), err => err.code === 409);
+    assert.equal((await store.load('sa')).parts[`room/${a.room.id}`].room.autonomousUnreadCount, 3);
+    assert.notEqual(await app.open('sa'), e);
+});
+
+test('app + 스케줄러: 켠 방이 때가 되면 답장 만들기를 부르고, 나오면 안 읽음 표시. 브라우저가 살아 있다고 알린 방은 안 건드려요', async t => {
+    t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: T0 });
+    const store = await tempStore(t), a = liveOf({ now: T0 }), b = liveOf({ now: T0 }), c = liveOf({ now: T0, on: false });
+    await put(store, 'sa', a.m); await put(store, 'sb', b.m); await put(store, 'sc', c.m);
+    const made = [];
+    const app = makeAutoApp({ store, generate: async ({ payload, roomId }) => { made.push([payload.chatId, payload.forCharacterId, roomId, payload.userStatus, payload.userActivity, payload.autonomousIntentKey]); return { statusCode: 200, payload: SSE_SAVED }; } });
+    await app.chats.list();
+    app.presence(b.id, 'active');
+    const sched = startServerAutonomousScheduler(app);
+    t.after(async () => { sched.stop(); await app.close(); for (const x of [a, b, c]) clearChatActivity(x.id); });
+    t.mock.timers.tick(20_000);
+    // (진짜 파일을 읽고 쓰는 일이 끼어 있어요: 끝날 때까지 기다려요)
+    for (let i = 0; i < 200 && made.length < 1; i++) await new Promise(r => setImmediate(r));
+    for (let i = 0; i < 50; i++) await new Promise(r => setImmediate(r));
+    // (스케줄이 없는 사람: 왜 거는지는 물어본 답만 알아요 → 그 이유를 그대로 넘겨요)
+    assert.deepEqual(made, [[a.id, 'mara', a.room.id, 'idle', 'away or offline', 'check_in']]);
+    const room = (await store.load('sa')).parts[`room/${a.room.id}`].room;
+    assert.equal(room.autonomousUnreadCount, 1);
+    assert.equal((await store.load('sb')).parts[`room/${b.room.id}`].room.autonomousUnreadCount, undefined);
+});

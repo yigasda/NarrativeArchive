@@ -184,7 +184,8 @@ export async function makeSchedule(m, owner, { ask, name = owner, description = 
 
 // 지금 이 방에서 누가 먼저 말 걸 때인가 (마리나라의 판단 그대로) → 마리나라의 답 { shouldTrigger, characterIds, reason, autonomousIntent, autonomousIntentKey … }
 //   cards: { 폰 열쇠: 카드 데이터 } (스케줄이 없는 사람의 수다 정도); tzOf(이름); owners: 폰이 있는 사람만 말을 걸어요
-export function checkProactive(m, roomId, { now = new Date(), tzOf = () => '', cards = {}, maxFollowups, source = 'client' } = {}) {
+//   userStatus: 서버가 물을 때만 줘요 (마리나라의 서버는 창이 없으니 내 상태를 모르고 'idle'로 물어요). 안 주면 폰에 적힌 내 상태
+export function checkProactive(m, roomId, { now = new Date(), tzOf = () => '', cards = {}, maxFollowups, source = 'client', userStatus } = {}) {
     const w = need(m), room = w.messenger?.rooms?.[roomId], p = presenceOf(m);
     if (!room) throw new Error('없는 방이에요');
     const P = liveKey(w.persona), ids = room.members.map(liveKey).filter(k => k !== P && w.phones?.[k]), chatId = chatIdOf(m, roomId);
@@ -195,7 +196,7 @@ export function checkProactive(m, roomId, { now = new Date(), tzOf = () => '', c
         chatId, meta: { ...p.meta, autonomousMessages: !!p.on }, characterIds: ids,
         schedules: schedulesOn(m) ? Object.fromEntries(ids.filter(k => p.schedules[k]).map(k => [k, p.schedules[k]])) : {}, statusOverrides: p.overrides, cards,
         messages: () => (room.messages || []).filter(x => x.text || x.call).map(x => ({ role: liveKey(x.from) === P ? 'user' : 'assistant', characterId: liveKey(x.from) === P ? null : liveKey(x.from), createdAt: new Date(x.at || 0).toISOString() })),
-        userStatus: p.user?.status === 'invisible' ? 'active' : p.user?.status, maxFollowups, source, promptTimeZone: tzOf(name) || undefined, nowInstant: now,
+        userStatus: userStatus ?? (p.user?.status === 'invisible' ? 'active' : p.user?.status), maxFollowups, source, promptTimeZone: tzOf(name) || undefined, nowInstant: now,
     });
     return out.autonomousIntent ? { ...out, autonomousIntent: named(out.autonomousIntent, w.persona), autonomousIntentPrompt: named(out.autonomousIntentPrompt, w.persona) } : out;
 }

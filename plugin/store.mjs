@@ -43,6 +43,8 @@ const readJson = async file => { try { return JSON.parse(await fs.readFile(file,
 
 export function openStore(root) {
     const base = path.join(String(root), 'NarrativeArchive', 'orbit');
+    // 이 저장에 쓴 횟수 (저장 · 복사 · 지우기마다 1): 먼저 말 걸기 스케줄러가 "그사이 바뀐 것이 없으면 다시 훑지 않기"에 써요
+    let writes = 0;
     const dirOf = id => path.join(base, idOf(id));
     const indexOf = async id => { const x = await readJson(path.join(dirOf(id), 'index.json')); return x && x.v === STORE.v && Number.isInteger(x.rev) && x.parts && typeof x.parts === 'object' ? x : null; };
 
@@ -84,6 +86,7 @@ export function openStore(root) {
             if (typeof chat === 'string') next.chat = chat.slice(0, 200);
             // (the index last: what it names is all on disk; a part no longer named goes after it)
             await writeWhole(path.join(dir, 'index.json'), JSON.stringify(next));
+            writes += 1;
             for (const f of gone) await fs.rm(path.join(dir, f), { force: true });
             return { rev: next.rev };
         });
@@ -100,12 +103,21 @@ export function openStore(root) {
             for (const file of Object.values(ix.parts)) await fs.copyFile(path.join(src, file), path.join(dst, file));
             const next = { ...ix, rev: 1, at: Date.now(), ...(typeof chat === 'string' ? { chat: chat.slice(0, 200) } : {}) };
             await writeWhole(path.join(dst, 'index.json'), JSON.stringify(next));
+            writes += 1;
             return { rev: next.rev };
         }));
     }
     // 통째로 지우기 → 있었으면 true
     async function drop(id) {
-        return inLine(dirOf(id), async () => { const had = !!(await indexOf(id)); await fs.rm(dirOf(id), { recursive: true, force: true }); return had; });
+        return inLine(dirOf(id), async () => { const had = !!(await indexOf(id)); await fs.rm(dirOf(id), { recursive: true, force: true }); writes += 1; return had; });
     }
-    return { load, revOf, save, fork, drop, dir: base };
+    // 있는 저장들의 이름 → [id]
+    async function list() {
+        let names;
+        try { names = await fs.readdir(base); } catch (err) { if (err?.code === 'ENOENT') return []; throw err; }
+        const out = [];
+        for (const n of names.sort()) if (ID.test(n) && await revOf(n) !== null) out.push(n);
+        return out;
+    }
+    return { load, revOf, save, fork, drop, list, generation: () => writes, dir: base };
 }

@@ -569,9 +569,13 @@ Orbit이 버벅이는 제일 큰 이유는 저장이에요: Orbit 데이터가 �
   - 폰을 여는 쪽(`phone.js openPhone`, 3.216.2): 맨 처음에 `await liveReady()`, `keepState()`가 `'off'`면 알림 한 줄("이 채팅의 Orbit 데이터는 서버 플러그인에 있어요. 플러그인을 켜 주세요"). 실제 실리에서 확인: 플러그인을 켠 채 새로고침 → 채팅을 열자마자 폰을 열어도 실시간 폰, 끈 실리에서는 알림 + 타임라인 폰.
 - 3단계 (하는 중, 2026-11-22): 스케줄 · 먼저 말 걸기를 플러그인에서 돌리기. 마리나라의 서버 스케줄러를 그대로 써요.
   - 3-1 (됨): 스케줄러 가져오기. `plugin/marinara/server-autonomous-scheduler.service.js`(마리나라 파일 통째) · `autonomous-candidates.js` · `plugin/log.mjs`. 스케줄러는 `app`이라는 것 하나만 알아요: `app.chats`(목록 · 읽기 · 상태 · 안 읽음 표시) · `app.inject`(때가 됐나 묻기 `/api/conversation/autonomous/check`, 답장 만들기 `/api/generate`) · `app.activeGenerations`. 테스트 `tests/pluginauto.test.mjs`는 가짜 `app`으로 돌려요.
-  - 3-2 (아직): 진짜 `app` 만들기 (`plugin/auto.mjs`). 마리나라의 "채팅" = 우리 방 하나(`<저장 id>/<방 id>`).
-    - 목록: 플러그인 저장을 전부 훑어서, 먼저 말 걸기를 켠(`w.presence.on`) 세계의 방들.
-    - 때가 됐나: `src/phone2sched.js checkProactive`를 서버에서 그대로 불러요(`source: 'server'`, 후속 2번까지). 이 파일은 실리 · 화면을 몰라서 Node에서 그대로 돌아요.
+  - 3-2a (됨): 진짜 `app`의 저장 쪽 (`plugin/auto.mjs`, `plugin/store.mjs`에 `list` · `generation`). 마리나라의 "채팅" = 우리 방 하나(id는 브라우저의 `chatIdOf`와 같은 `<세계 id>:<방 id>`).
+    - 목록: 플러그인 저장을 전부 훑어서 폰 가진 사람이 있는 방들. 먼저 말 걸기를 켠(`w.presence.on`) 세계의 방만 스케줄러가 봐요. 저장의 `rev`가 그대로면 다시 안 읽어요.
+    - 때가 됐나: `src/phone2sched.js checkProactive`를 서버에서 그대로 불러요(내 상태 `idle`, `source: 'server'`, 후속 2번까지: 마리나라의 서버가 보내는 값). 이 파일은 실리 · 화면을 몰라서 Node에서 그대로 돌아요.
+    - 안 읽은 먼저 건 말: 마리나라의 열쇠 그대로 방에 적어요(`autonomousUnreadCount` · `autonomousUnreadCharacterIds` · `autonomousUnreadAt`).
+    - 쓰기: 바뀐 조각만, 읽은 `rev`를 맞춰서. 그사이 브라우저가 저장했으면 쓰지 않고 다시 읽어요.
+    - `app.presence(id, 상태)`: 브라우저가 살아 있다고 알릴 자리(길은 3-3에서).
+  - 3-2b (아직): 답장 만들기.
     - 답장 만들기: 브라우저의 `liveGo`와 같은 코드(`src/phone2go.js`)를 서버에서 돌려요. 그러려면 그 파일이 기대는 것 가운데 브라우저에만 있는 것을 서버 것으로 바꿔 끼워야 해요: `core.js`(실리의 채팅 · 캐릭터 카드 · 페르소나 · 확장 설정 → 사용자 폴더의 파일에서 읽기), `ai.js`(모델 부르기 → 커스텀 API는 서버에서 바로, Vertex · 실리 연결 방식 · 연결 프로필은 실리 서버의 `/api/backends/chat-completions/generate` 처리기를 서버 안에서 부르기), 저장(`saveMeta` → 플러그인 저장에 `rev`를 맞춰 쓰기). 테스트 로더(`tests/phone2reflect.load.mjs`)가 같은 방식으로 이미 Node에서 돌리고 있어요.
     - 서버가 쓰는 것: 그 방의 말 · 줄(queue) · 하루 센 수 · 이유의 쉬는 시간. 캐릭터가 상태를 바꾸면(`schedule_update`) 카드에도 써야 해요.
     - 이야기 요약본(`keepUpStory`)은 서버에서 늘리지 않아요: 실리가 닫혀 있으면 롤플 채팅이 안 움직였어요. 저장된 요약본을 그대로 써요.
