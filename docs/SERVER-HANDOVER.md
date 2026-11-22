@@ -164,6 +164,7 @@ kit = { v: 1, ver (확장 버전), name1, persona (지금 고른 페르소나의
 - 두 번 떠서 비교해요(자리표시 · 그 길이 · 답 길이를 바꿔서). 답 길이만 다른 칸은 자리를 적고(`max`), 다른 것이 다르면 틀을 안 만들어요(이유는 `kit.ptWhy` → `cannot`).
 - 비밀 칸(`PT_SECRETS`)은 빼고, 브라우저에서 실리 설정의 값과 같은지 확인해요(다르면 매크로: 안 만들어요). 서버는 `profileSecret`(프로필의 프록시 → 프리셋 → `oai_settings`, 실리 코드의 순서)으로 `settings.json` · `OpenAI Settings/<프리셋>.json`에서 읽어요.
 - 틀에 그때의 프로필(`of`)이 있어요. 서버는 `settings.json`의 프로필이 그것과 다르면 안 보내요.
+- 서버의 프로필 목록은 브라우저가 남긴 `kit.profiles`(실리의 `getSupportedProfiles`: 실리가 보낼 수 있는 종류만)로 걸러요. 브라우저와 같은 목록이라 "고른 프로필 없음"도 같아요.
 - 열쇠는 `[프로필 id, 얹는 값(JSON), 모양]`. 채팅 완성은 모양 `'*'`(메시지를 통째로 바꿔 넣어요), 글 완성은 `'su'` · `'u'`(지시 형식이 역할마다 감싸요).
 - 방의 추론 레벨을 얹는 프로필 요청: `askRoom`이 `stLevelPayload`를 불러요. 서버에는 `createGenerationParameters`가 없어서 브라우저가 만든 값(`kit.levels`)을 `stStandIn.levelPayload`가 돌려줘요.
 - 서버의 `sendRequest` 대역은 실리 것처럼 프로필을 찾고(`Profile not found`), 보낸 뒤의 오류는 `API request failed`로 감싸요(원인은 `cause`). 틀이 없거나 프로필이 바뀐 것은 감싸지 않고 이유 그대로 던져요.

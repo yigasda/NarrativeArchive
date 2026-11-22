@@ -1110,6 +1110,8 @@ export async function liveKitRefresh(real) {
     const kit = buildKit(ctx(), real, liveChatTail(), { version: VERSION });
     if (!kit) return false;
     kit.st = {}; kit.pt = {}; kit.ptWhy = {}; kit.levels = {};
+    // (the profiles SillyTavern can send — its getSupportedProfiles: the server lists the same ones)
+    kit.profiles = aiProfiles().map(p => p.id);
     const wanted = new Map(), want = (id, over) => { if (id) wanted.set(ptWhyKey(id, over), { id, over }); };
     for (const roomId of ['', ...Object.keys(liveWorld(real).messenger?.rooms || {})]) {
         const plan = liveReplyPlan(real, roomId);

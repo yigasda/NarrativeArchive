@@ -214,6 +214,11 @@ test('일꾼: 실리 쪽 방(AI 기능 모델이 실리) — 실리에서 지금
     assert.match((await S2.auto.status('sb'))[0].why, /실리에서 고른 연결 프로필이 없어요/);
     assert.equal((await S2.gen(b.id)).statusCode, 400);
     assert.equal(S2.st.length + S2.asked.length, 0);
+    // (실리가 보낼 수 없는 종류의 프로필을 골라 뒀으면 — 브라우저가 남긴 목록에 없어요 — 브라우저처럼 "고른 프로필 없음")
+    const c = world({ pt }), k = liveWorld(c.m) && c.m.live.kit; k.profiles = [];
+    liveWorld(c.m).messenger.rooms[c.room.id].connectionId = 'ai';
+    await S.put('sc', c.m);
+    assert.match((await S.auto.status('sc'))[0].why, /실리에서 고른 연결 프로필이 없어요/);
 });
 
 test('일꾼: 방의 추론 레벨을 얹은 프로필 요청 — 브라우저가 실리 코드로 만든 값 그대로. 그 값이 없으면 안 보내요', async t => {

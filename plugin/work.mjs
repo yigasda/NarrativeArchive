@@ -100,9 +100,11 @@ export async function startWork({ root, store, st = null, schedule = true }) {
     function contextOf(entry, kit, settings, app) {
         const real = entry.real, k = kitContext(kit), power = obj(settings.power_user) ? settings.power_user : {};
         const ext = obj(settings.extension_settings) ? settings.extension_settings : {};
-        // (the connection profiles there are: SillyTavern lists only the profiles of a kind it can send — getSupportedProfiles;
-        //  here all of them, so a room that picked one is known as such and is never taken for one with nothing picked)
-        const profiles = Array.isArray(ext.connectionManager?.profiles) ? ext.connectionManager.profiles.filter(p => obj(p) && typeof p.id === 'string') : [];
+        // (the connection profiles there are, so a room that picked one is known as such and is never taken for one with nothing
+        //  picked. SillyTavern lists only the profiles of a kind it can send — getSupportedProfiles: the ones the browser listed,
+        //  kit.profiles; a kit from before that list holds all of them)
+        const listed = Array.isArray(kit.profiles) ? new Set(kit.profiles) : null;
+        const profiles = Array.isArray(ext.connectionManager?.profiles) ? ext.connectionManager.profiles.filter(p => obj(p) && typeof p.id === 'string' && (!listed || listed.has(p.id))) : [];
         // (the chat's own keys the live phone reads — phone2store.js LIVE_SHARED and 화면 주인 — as the browser left them. Only real.live is saved)
         for (const [key, v] of Object.entries(kit.meta || {})) real[key] = structuredClone(v);
         const base = {

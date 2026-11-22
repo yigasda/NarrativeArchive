@@ -1894,6 +1894,7 @@ test('서버 묶음: 연결 프로필로 나가는 요청마다 틀 (방에 고�
         // (방의 프로필 + 레벨, 실리에서 지금 고른 프로필 — AI 기능 모델이 실리 쪽: 대화 요약의 장면 나누기도 그리로 가요)
         assert.deepEqual(Object.keys(kit.pt).sort(), [SP.ptKey('p1', over, '*'), SP.ptKey('p2', null, '*')].sort());
         assert.deepEqual(kit.levels, { [SP.levelKey('openrouter', 'or/m', 'high')]: over });
+        assert.deepEqual(kit.profiles, ['p1', 'p2', 'p3']);                                       // (실리가 보낼 수 있는 프로필: 서버도 이 목록으로)
         assert.deepEqual(kit.pt[SP.ptKey('p1', over, '*')].data.reasoning_effort, 'st:high');
         // (스케줄 연결의 프로필은 요청마다 값이 달라서 틀이 없어요: 그 이유가 남아요)
         assert.match(kit.ptWhy[SP.ptWhyKey('p3', null)], /요청마다 값이 달라져서/);
