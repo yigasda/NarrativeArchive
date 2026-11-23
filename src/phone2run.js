@@ -15,9 +15,9 @@ export const REPLY_MAX = { bubbles: 8, chars: 2000, does: 6, what: 300, state: 2
 function objectOf(answer, parse) {
     if (answer && typeof answer === 'object' && !Array.isArray(answer)) return answer;
     const t = String(answer ?? ''), a = t.indexOf('{'), b = t.lastIndexOf('}');
-    if (a < 0 || b <= a) throw new Error('답장을 읽지 못했어요 (JSON이 아니에요)');
+    if (a < 0 || b <= a) throw new Error('답장을 읽을 수 없습니다: JSON이 아닙니다.');
     try { const o = (parse || JSON.parse)(t.slice(a, b + 1)); if (!o || typeof o !== 'object' || Array.isArray(o)) throw new Error('not an object'); return o; }
-    catch { throw new Error('답장을 읽지 못했어요 (JSON이 깨졌어요)'); }
+    catch { throw new Error('답장을 읽을 수 없습니다: 잘못된 JSON입니다.'); }
 }
 // "14:05 · office · desk · ~15:00" without its clock (the request carries the real time): "office · desk · ~15:00"
 export const stateRest = s => one(s).replace(/^\d{1,2}:\d{2}\s*[·•|,-]\s*/, '').slice(0, REPLY_MAX.state);
@@ -33,9 +33,9 @@ const appOf = a => PHONE2_APPS.find(x => x.toLowerCase() === one(a).toLowerCase(
 export function takeReply(m, owner, roomId, answer, opts = {}) {
     const { now = Date.now(), parse = null } = opts;
     const w = liveWorld(m), room = w?.messenger?.rooms?.[roomId];
-    if (!w || !room || !room.members.some(n => same(n, owner))) throw new Error('답장을 넣을 방이 없어요');
+    if (!w || !room || !room.members.some(n => same(n, owner))) throw new Error('답장을 넣을 채팅방이 없습니다.');
     const o = objectOf(answer, parse);
-    if (o.reply !== undefined && !Array.isArray(o.reply)) throw new Error('답장을 읽지 못했어요 (reply가 목록이 아니에요)');
+    if (o.reply !== undefined && !Array.isArray(o.reply)) throw new Error('답장을 읽을 수 없습니다: reply가 목록이 아닙니다.');
     const name = room.members.find(n => same(n, owner));
     const had = new Set((room.messages || []).filter(x => same(x.from, name)).slice(-12).map(x => one(x.text)));
     const raw = (o.reply || []).map(x => (typeof x === 'string' ? x.trim() : '')).slice(0, REPLY_MAX.bubbles), ko = phone2Ko(raw, o.ko);
@@ -64,9 +64,9 @@ export function takeReply(m, owner, roomId, answer, opts = {}) {
 // Returns { said, speakers: [name] }. Throws when the answer is empty.
 export function takeMerged(m, roomId, answer, { names = [], lead = '', now = Date.now(), stateOf = () => '' } = {}) {
     const w = liveWorld(m), room = w?.messenger?.rooms?.[roomId];
-    if (!w || !room) throw new Error('답장을 넣을 방이 없어요');
+    if (!w || !room) throw new Error('답장을 넣을 채팅방이 없습니다.');
     const content = stripLeadingMessageTimestamps(String(answer ?? ''));
-    if (!content) throw new Error('답장을 읽지 못했어요 (빈 답)');
+    if (!content) throw new Error('답장을 읽을 수 없습니다: 빈 응답입니다.');
     const known = new Set(names.map(n => normalizeTextForMatch(n))), nameOf = s => names.find(n => normalizeTextForMatch(n) === normalizeTextForMatch(s || '')) || lead;
     const groups = parseGroupedSpeakerSegments(content, known, lead) || [{ speaker: lead, lines: [content] }];
     const out = [], speakers = [];
@@ -78,7 +78,7 @@ export function takeMerged(m, roomId, answer, { names = [], lead = '', now = Dat
         }
         if (!speakers.includes(name)) speakers.push(name);
     }
-    if (!out.length) throw new Error('답장을 읽지 못했어요 (빈 답)');
+    if (!out.length) throw new Error('답장을 읽을 수 없습니다: 빈 응답입니다.');
     room.messages.push(...out);
     for (const name of speakers) readLive(m, roomId, name, now + out.length);
     return { said: out.length, speakers, does: 0, state: '', react: '' };
@@ -122,7 +122,7 @@ export async function runLive(m, { gather, ask, save = async () => {}, now = () 
         // (alive: false once the chat this is for is no longer the open one; the jobs left wait for it to come back)
         for (let job = await next(); job; job = await next()) {
             try {
-                if (job.kind !== 'reply') throw new Error(`아직 할 수 없는 일이에요: ${job.kind}`);
+                if (job.kind !== 'reply') throw new Error(`지원하지 않는 작업입니다: ${job.kind}`);
                 const req = await gather(job);
                 let got = null;
                 if (req) {

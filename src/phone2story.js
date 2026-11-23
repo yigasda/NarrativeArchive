@@ -12,7 +12,7 @@ export const liveStoryText = (m, w) => (w?.from === 'story' && isSnap(w.snap) ? 
 // snap: the story as it stands now, taken by phone2snap.js liveSnapDraft for this same message (`upto`). With it 폰 2
 // never reads the chat or the archive again: its story is that text
 export function beginFromStory(m, { persona, upto, scope = '', dayShift = 0, now = Date.now(), chat = null, fp = null, snap = null } = {}) {
-    if (snap != null && (!isSnap(snap) || snap.upto !== upto)) throw new Error('이야기 요약본이 이 시작 자리의 것이 아니에요. 다시 만들어 주세요');
+    if (snap != null && (!isSnap(snap) || snap.upto !== upto)) throw new Error('이 시작 지점의 이야기 요약이 아닙니다. 다시 만드세요.');
     const w = startFromStory(m, { persona, upto, scope, dayShift, now });
     if (chat) w.chat = String(chat);
     if (fp) w.storyFp = String(fp);
@@ -41,7 +41,7 @@ export function adoptChat(w, chat) { if (w && chat) w.chat = String(chat); retur
 // (persona left out: the one it had). 폰 1 with no phone: there is nothing to begin from, 폰 2 is taken off (returns null)
 export function rebeginFromStory(m, opts = {}) {
     const old = liveWorld(m);
-    if (!old) throw new Error('아직 폰 2가 없어요');
+    if (!old) throw new Error('폰 2가 없습니다.');
     const live = m.live, keep = { world: live.world, mode: live.mode };
     if (!Object.values(m.phones || {}).some(p => p?.owner)) { live.world = null; live.mode = 'story'; return null; }
     live.world = null;
@@ -58,7 +58,7 @@ export function rebeginFromStory(m, opts = {}) {
 // the one it had). 폰 1 with no phone: there is nothing to begin from, 폰 2 is left as it is (returns null)
 export function rebeginKeepingChats(m, opts = {}) {
     const old = liveWorld(m);
-    if (!old) throw new Error('아직 폰 2가 없어요');
+    if (!old) throw new Error('폰 2가 없습니다.');
     if (!Object.values(m.phones || {}).some(p => p?.owner)) return null;
     const live = m.live, keep = { world: live.world, mode: live.mode, archive: live.archive };
     live.world = null;

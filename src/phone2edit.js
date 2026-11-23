@@ -17,8 +17,8 @@ export const EDIT = { lines: 60, chars: 9000, max: 240 };
 const one = v => String(v ?? '').replace(/\s+/g, ' ').trim();
 function roomOf(m, id) {
     const w = liveWorld(m), room = w?.messenger?.rooms?.[id];
-    if (!w) throw new Error('아직 폰 2가 없어요');
-    if (!room) throw new Error('없는 방이에요');
+    if (!w) throw new Error('폰 2가 없습니다.');
+    if (!room) throw new Error('채팅방을 찾을 수 없습니다.');
     return { w, room };
 }
 const idSet = ids => new Set((Array.isArray(ids) ? ids : [ids]).map(x => String(x ?? '')).filter(Boolean));
@@ -42,11 +42,11 @@ export function dropMessages(m, roomId, ids) {
 // 번호 · 시간 · 반응 · 표시는 그대로예요. 고친 때를 x.edited에 적어요  → 바뀐 그 말, 바뀐 게 없으면 null
 export function editMessage(m, roomId, msgId, { text, ko } = {}, at = Date.now()) {
     const { room } = roomOf(m, roomId), x = room.messages.find(y => String(y.id) === String(msgId));
-    if (!x) throw new Error('없는 말이에요');
-    if (x.act || x.call) throw new Error('고칠 수 없는 말이에요');
+    if (!x) throw new Error('메시지를 찾을 수 없습니다.');
+    if (x.act || x.call) throw new Error('편집할 수 없는 메시지입니다.');
     const body = t => String(t ?? '').replace(/\r\n?/g, '\n').trim().slice(0, 4000);
     const next = text === undefined ? x.text : body(text);
-    if (!one(next)) throw new Error('빈 글로는 바꿀 수 없어요. 지우기를 써 주세요');
+    if (!one(next)) throw new Error('빈 내용으로 바꿀 수 없습니다. 삭제를 사용하세요.');
     const said = next !== x.text, tr = ko === undefined ? (said ? '' : x.ko || '') : body(ko), kept = one(tr) && one(tr) !== one(next) ? tr : '';
     if (!said && kept === (x.ko || '')) return null;
     x.text = next;
@@ -102,13 +102,13 @@ export function swipeInfo(m, roomId) {
 // 넘기기 (dir: -1 앞 · +1 뒤). 맨 뒤에서 한 번 더 넘기면 새 답장 자리를 만들어요(fresh: true — 부르는 쪽이 답장을 줄 세워요).
 // 못 넘길 때는 이유를 말하고 아무것도 안 바꿔요  → { at, count, fresh }
 export function swipeTo(m, roomId, dir) {
-    if (replyComing(m, roomId)) throw new Error('답장이 오는 중이에요. 온 뒤에 넘겨 주세요');
+    if (replyComing(m, roomId)) throw new Error('답장을 생성 중입니다. 완료된 뒤 넘기세요.');
     const { w, room, i, anchor, tail, rec: had } = endOf(m, roomId);
-    if (!tail.length) throw new Error('넘길 답장이 없어요');
+    if (!tail.length) throw new Error('넘길 답장이 없습니다.');
     const rec = had || { list: [null], at: 0 }, k = rec.at + (Number(dir) < 0 ? -1 : 1), fresh = k >= rec.list.length;
-    if (k < 0) throw new Error('첫 번째 답장이에요');
-    if (fresh && !answerers(w, room).length) throw new Error('이 방에는 답장할 폰이 없어요');
-    if (fresh && rec.list.length >= SWIPE.max) throw new Error(`받아 둔 답장이 ${SWIPE.max}개예요. 몇 개 지운 뒤 다시 받아 주세요`);
+    if (k < 0) throw new Error('첫 번째 답장입니다.');
+    if (fresh && !answerers(w, room).length) throw new Error('이 채팅방에는 답장할 폰이 없습니다.');
+    if (fresh && rec.list.length >= SWIPE.max) throw new Error(`답장은 ${SWIPE.max}개까지 받을 수 있습니다. 일부를 삭제한 뒤 다시 시도하세요.`);
     rec.list[rec.at] = tail;
     // (the reactions that answer put on the others' messages go out with it, and the ones of the answer shown come back)
     liftReacts(room, tail);
@@ -131,9 +131,9 @@ export function swipeList(m, roomId) {
 // 고른 답장들 지우기 (nos: 번호 하나 또는 여럿, 1부터). 보이는 답장을 지우면 남은 것 중 앞의 것(없으면 다음 것)이 보여요.
 // 전부 지우면 답장이 없어져요. 없는 번호는 건너뛰어요  → { dropped (지운 답장 수), at, count (남은 수: 0이면 답장이 없어요) }
 export function dropSwipes(m, roomId, nos) {
-    if (replyComing(m, roomId)) throw new Error('답장이 오는 중이에요. 온 뒤에 지워 주세요');
+    if (replyComing(m, roomId)) throw new Error('답장을 생성 중입니다. 완료된 뒤 삭제하세요.');
     const { room, i, anchor, tail, rec } = endOf(m, roomId);
-    if (!tail.length) throw new Error('지울 답장이 없어요');
+    if (!tail.length) throw new Error('삭제할 답장이 없습니다.');
     const list = rec ? rec.list : [null], at = rec ? rec.at : 0;
     const gone = new Set((Array.isArray(nos) ? nos : [nos]).map(Number).filter(n => Number.isInteger(n) && n >= 1 && n <= list.length).map(n => n - 1));
     if (!gone.size) return { dropped: 0, at: at + 1, count: list.length };
@@ -149,9 +149,9 @@ export function dropSwipes(m, roomId, nos) {
 export const dropSwipe = (m, roomId) => dropSwipes(m, roomId, [(endOf(m, roomId).rec?.at ?? 0) + 1]);
 // 지금 보이는 답장만 남기고 받아 둔 다른 답장을 모두 지워요  → { dropped, at, count }
 export function dropOtherSwipes(m, roomId) {
-    if (replyComing(m, roomId)) throw new Error('답장이 오는 중이에요. 온 뒤에 지워 주세요');
+    if (replyComing(m, roomId)) throw new Error('답장을 생성 중입니다. 완료된 뒤 삭제하세요.');
     const { tail, rec } = endOf(m, roomId);
-    if (!tail.length) throw new Error('남길 답장이 없어요');
+    if (!tail.length) throw new Error('남길 답장이 없습니다.');
     return dropSwipes(m, roomId, (rec ? rec.list : [null]).map((v, k) => k + 1).filter(n => n !== (rec ? rec.at : 0) + 1));
 }
 

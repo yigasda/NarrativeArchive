@@ -47,7 +47,7 @@ function keepSituations(p, list) {
 export async function updateLive(real, m, owner, { tz = 'UTC', save = async () => {}, profile = '', world = '', alive = () => true } = {}) {
     return exclusive('sync', async () => {
         const w = liveWorld(real), key = nameKey(owner), p = m.phones?.[key], scope = liveScope(w?.scope || 'live', real), P = w?.persona;
-        if (!w || !p || !scope) throw new Error('실시간 폰이 없어요');
+        if (!w || !p || !scope) throw new Error('실시간 폰이 없습니다.');
         const worldId = w.id;
         // (a phone that never read anything: its reading begins where the story ended)
         const s = (p.sync ||= newSync(scope));
@@ -112,8 +112,8 @@ export async function updateLive(real, m, owner, { tz = 'UTC', save = async () =
         homeScreens(core0, !!homeCountry(p) && homeCountry(p) !== 'KR', p.life?.health?.usual?.screen);
         // the answer is for the 폰 2 and the messages it was asked about
         // (alive: false once another chat was opened while this was asked; nothing more is asked or put in)
-        const check = () => (!alive() ? '반영하는 사이 다른 채팅을 열었어요' : liveWorld(real)?.id !== worldId || m.phones?.[key] !== p ? '반영하는 사이 실시간 폰이 바뀌었어요' : p.money?.at !== made.money || p.investment?.at !== made.invest ? '반영하는 사이 은행이나 투자가 새로 만들어졌어요' : '');
-        if (check()) throw new Error(`${check()}. 다시 해 주세요`);
+        const check = () => (!alive() ? '반영 중 다른 채팅이 열렸습니다' : liveWorld(real)?.id !== worldId || m.phones?.[key] !== p ? '반영 중 실시간 폰이 변경되었습니다' : p.money?.at !== made.money || p.investment?.at !== made.invest ? '반영하는 사이 은행이나 투자가 새로 만들어졌어요' : '');
+        if (check()) throw new Error(`${check()}. 다시 시도하세요.`);
         if (p.life !== made.life || p.delivery !== made.delivery) throw new Error('반영하는 사이 생활 앱이나 배달 앱이 새로 만들어졌어요. 다시 해 주세요');
         if (!core0 || !Array.isArray(core0.events)) throw new Error('모델 답에서 반영할 내용을 찾지 못했어요. 다시 해 주세요');
         // (the owner reaches the persona on the messenger only: a text or call to them in the phone's own apps goes)
@@ -227,7 +227,7 @@ export async function updateLive(real, m, owner, { tz = 'UTC', save = async () =
 export async function undoLive(real, m, owner, { save = async () => {} } = {}) {
     return exclusive('sync', async () => {
         const w = liveWorld(real), p = m.phones?.[nameKey(owner)], scope = liveScope(w?.scope || 'live', real);
-        if (!w || !p) throw new Error('실시간 폰이 없어요');
+        if (!w || !p) throw new Error('실시간 폰이 없습니다.');
         const u = p.syncUndo, s = p.sync;
         if (!u || !u.live || s?.rounds?.[s.rounds.length - 1] !== u.round) throw new Error('되돌릴 반영이 없어요');
         if (!canUndo(p)) throw new Error('그 뒤에 은행이나 투자를 다시 만들어서 되돌릴 수 없어요');

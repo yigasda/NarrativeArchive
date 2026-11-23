@@ -97,7 +97,7 @@ test('답에서 글 꺼내기: 없거나 비었으면 오류; 넣을 글은 첫 
     // (실험 2에서 나온 답 모양: 코드 틀 안에, 앞뒤에 말이 붙어서)
     assert.equal(B.takeBack('```json\n{ "note": "Mara agreed to come." }\n```'), 'Mara agreed to come.');
     assert.equal(B.takeBack('Here is the note:\n```\n{ "note": "Mara agreed {once} to come." }\n```\nDone.'), 'Mara agreed {once} to come.');
-    for (const bad of ['', '{}', '{ "note": "  " }', 'not json', null, '```json\n```', '} {']) assert.throws(() => B.takeBack(bad), /전할 글을 찾지 못했어요/);
+    for (const bad of ['', '{}', '{ "note": "  " }', 'not json', null, '```json\n```', '} {']) assert.throws(() => B.takeBack(bad), /모델 응답에서 전할 내용을 찾을 수 없습니다/);
     assert.equal(B.backMessage(' Mara agreed to come on Friday. '), '*(Meanwhile, on the messenger)*\n\nMara agreed to come on Friday.');
     assert.equal(B.backMessage('마라는 금요일에 오기로 했다. Ren에게 열쇠를 부탁했다.'), '*(그동안 메신저에서)*\n\n마라는 금요일에 오기로 했다. Ren에게 열쇠를 부탁했다.');
 });

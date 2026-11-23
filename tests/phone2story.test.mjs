@@ -38,7 +38,7 @@ test('이야기 글: 요약본의 글만. 요약본이 아직 없는 폰 · 처�
     assert.equal(S.liveStoryText(m, { from: 'story', storyUpto: 3, snap: { text: 'x', recent: 'no', upto: 3 } }), '');
     assert.equal(S.liveStoryText(m, { ...L.startFresh(meta(), { persona: 'Lio' }), snap: SNAP }), '');
     assert.equal(S.liveStoryText(m, null), '');
-    assert.throws(() => S.beginFromStory(meta(), { persona: 'Lio', upto: -1 }), /어느 메시지까지/);
+    assert.throws(() => S.beginFromStory(meta(), { persona: 'Lio', upto: -1 }), /이야기의 끝 메시지가 필요합니다/);
 });
 
 test('서랍의 text: 요약본의 글 (채팅의 아카이브가 아니에요), 쓰면 서랍에만', () => {
@@ -80,7 +80,7 @@ test('요약본으로 시작한 폰 2: 요약본을 복사해 두고, 이야기 
     // 모양이 틀렸거나 다른 자리의 요약본이면 시작하지 않아요 (폰 2는 안 생겨요)
     for (const bad of [{ ...w.snap, upto: 149 }, { text: 'x', recent: 'not a list', upto: 150 }, { recent: [], upto: 150 }, 'text']) {
         const m2 = meta();
-        assert.throws(() => S.beginFromStory(m2, { persona: 'Lio', upto: 150, snap: bad }), /이야기 요약본이 이 시작 자리의 것이 아니에요/);
+        assert.throws(() => S.beginFromStory(m2, { persona: 'Lio', upto: 150, snap: bad }), /이 시작 지점의 이야기 요약이 아닙니다\. 다시 만드세요/);
         assert.equal(L.liveWorld(m2), null);
     }
     // 요약본 없이 시작한 폰 2 (분기한 방에서 저절로 다시 시작한 폰): 요약본 자리가 없고, 처음 움직일 때 받아요

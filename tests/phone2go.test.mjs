@@ -522,8 +522,8 @@ test('폰 1의 연도 바꾸기(phonedata.js setStoryYear)는 폰 2 전 줄 그�
     assert.ok(body.includes('const scope = phoneChatScope(ctx()), owners'));
     // 실시간 것: 폰 1의 메타나 서랍 흉내로는 멈춰요 (폰 1의 기록 · 폰을 옮기지 않게)
     const real = { text: '', phones: { mara: { ...phone(), year: 2026 } } }, was = JSON.stringify(real);
-    assert.throws(() => Y.liveSetStoryYear(real, real.phones.mara, 2030), /실시간 폰의 서랍이 아니에요/);
-    assert.throws(() => Y.liveSetStoryYear({ ...real, phoneUpto: 3, phoneJournal: 'test' }, real.phones.mara, 2030), /실시간 폰의 서랍이 아니에요/);
+    assert.throws(() => Y.liveSetStoryYear(real, real.phones.mara, 2030), /실시간 폰의 서랍이 아닙니다/);
+    assert.throws(() => Y.liveSetStoryYear({ ...real, phoneUpto: 3, phoneJournal: 'test' }, real.phones.mara, 2030), /실시간 폰의 서랍이 아닙니다/);
     assert.equal(JSON.stringify(real), was);
 });
 
@@ -593,7 +593,7 @@ test('실시간 화면을 열 때 연도 맞추기(liveYearsNow): 폰의 연도�
     // 시계가 없는 서랍: 아무것도 안 바꿔요. 서랍이 아니면 멈춰요
     p.year = 2020;
     assert.equal(Y.liveYearsNow(L.liveMeta(c.real)), false); assert.equal(p.year, 2020);
-    assert.throws(() => Y.liveYearsNow(c.real), /실시간 폰의 서랍이 아니에요/);
+    assert.throws(() => Y.liveYearsNow(c.real), /실시간 폰의 서랍이 아닙니다/);
 });
 
 test('화면에 보이는 연도(liveShownYear): 흐르는 시계의 연도 + 고른 차이; 끈 폰은 폰에 있는 것, 시계 없는 서랍 · 막 가져온 폰은 저장된 시각의 연도에서', () => {
@@ -841,7 +841,7 @@ test('요약본 없이 시작해 둔 폰: 첫 답장 전에 지금 이야기의 
     assert.equal(T.replyCalls, asked);
     assert.ok(!('snap' in d.w) && !('snapTried' in d.w));
     assert.equal(d.room.messages.at(-1).text, '어디야');
-    assert.match(r.failed.error, /이야기 요약본을 만들지 못했어요/);
+    assert.match(r.failed.error, /이야기 요약을 만들지 못했습니다\. 잠시 후 다시 시도하세요/);
     // 다시 (롤플이 그대로여도): 다시 만들어요
     T.start = { snap: structuredClone(SNAP1) }; T.replies = [{ state: '집', reply: ['응'], does: [] }];
     L.seeFailure(d.real, r.failed.job.id); L.enqueueReplies(d.real, d.room.id);   // (방의 "다시" 버튼이 하는 일)
@@ -904,7 +904,7 @@ test('롤플에 전하기 1) 글 받기: 아직 안 전한 메신저 대화와 �
         assert.deepEqual([c.st.shown.length, c.st.saves], [0, 0]);
         // 모델이 글을 안 주면 오류 (아무것도 안 바뀜)
         T.ask = async () => '{}';
-        await assert.rejects(() => G.liveBackDraft(c.real), /전할 글을 찾지 못했어요/);
+        await assert.rejects(() => G.liveBackDraft(c.real), /모델 응답에서 전할 내용을 찾을 수 없습니다/);
         assert.equal(JSON.stringify([c.real, T.chat]), was);
     } finally { backDone(); }
 });
@@ -943,16 +943,16 @@ test('롤플에 전하기: 그사이 실시간 폰이 바뀌었거나 · 글이 
         T.ask = async () => '{ "note": "Mara agreed to come on Friday." }';
         const d = await G.liveBackDraft(c.real);
         const clean = () => { assert.equal(T.chat.length, 2); assert.ok(c.room.messages.every(x => !x.told)); assert.equal(c.st.saves, 0); };
-        await assert.rejects(() => G.liveBackPut(c.real, d, '   '), /넣을 글이 비어 있어요/); clean();
+        await assert.rejects(() => G.liveBackPut(c.real, d, '   '), /넣을 내용이 없습니다/); clean();
         await assert.rejects(() => G.liveBackPut(c.real, { ...d, world: 'other' }), /채팅이나 실시간 폰이 바뀌었어요/); clean();
         await assert.rejects(() => G.liveBackPut(c.real, null), /채팅이나 실시간 폰이 바뀌었어요/); clean();
         const add = T.st.addOneMessage; delete T.st.addOneMessage;
-        await assert.rejects(() => G.liveBackPut(c.real, d), /롤플 채팅에 넣을 수 없어요/); clean();
+        await assert.rejects(() => G.liveBackPut(c.real, d), /이 실리에서는 롤플 채팅에 넣을 수 없습니다/); clean();
         T.st.addOneMessage = add;
         // 다른 채팅이 열려 있으면
         T.metadata = { narrative_archive: {} };
         await assert.rejects(() => G.liveBackPut(c.real, d), /채팅이나 실시간 폰이 바뀌었어요/); clean();
-        await assert.rejects(() => G.liveBackDraft(c.real), /이 채팅의 실시간 폰이 아니에요/);
+        await assert.rejects(() => G.liveBackDraft(c.real), /이 채팅의 실시간 폰이 아닙니다/);
         T.metadata = { narrative_archive: c.real };
         // 이벤트를 받는 쪽이 실패해도 메시지는 들어가요
         T.st.eventSource.emit = async () => { throw new Error('listener'); };
@@ -1024,13 +1024,13 @@ test('채팅 가져오기: 가져올 게 없거나 · 메신저 모양 메시지
     try {
         const real = importChat();
         const none = async (set, re) => { set(); await assert.rejects(() => G.liveImportChat(real), re); assert.equal(real.live, undefined); assert.equal(T.saves, 0); };
-        await none(() => { T.chat = [{ name: 'Ren', is_user: true, send_date: '2026-11-20T07:27:59.000Z', mes: 'only me' }]; }, /메신저 모양으로 쓴 메시지가 없어요/);
+        await none(() => { T.chat = [{ name: 'Ren', is_user: true, send_date: '2026-11-20T07:27:59.000Z', mes: 'only me' }]; }, /메신저 형식의 메시지가 없습니다\. 맨 위에 시간이 있는 캐릭터 메시지만 가져옵니다/);
         // 보통 장면만 있는 채팅 (시간 칸이 없는 캐릭터 메시지): 메신저가 아니에요
-        await none(() => { T.chat = [{ name: 'Ren', is_user: true, send_date: '2026-11-20T07:27:59.000Z', mes: 'I walked in.' }, { name: 'Mara', is_user: false, send_date: '2026-11-20T07:28:07.000Z', mes: 'She looked up.\n\n"You are late."' }]; }, /메신저 모양으로 쓴 메시지가 없어요/);
+        await none(() => { T.chat = [{ name: 'Ren', is_user: true, send_date: '2026-11-20T07:27:59.000Z', mes: 'I walked in.' }, { name: 'Mara', is_user: false, send_date: '2026-11-20T07:28:07.000Z', mes: 'She looked up.\n\n"You are late."' }]; }, /메신저 형식의 메시지가 없습니다\. 맨 위에 시간이 있는 캐릭터 메시지만 가져옵니다/);
         assert.deepEqual(G.liveImportPlan(real), { messages: 0, bubbles: 0, again: false });
         await none(() => { T.chat = [{ name: 'Mara', is_user: false, is_system: true, mes: 'hidden' }]; }, /가져올 메시지가 없어요/);
-        await none(() => { importChat(); Object.assign(real, { phones: {} }); T.metadata.narrative_archive = real; delete T.st.name1; }, /페르소나 이름이 필요해요/);
-        await none(() => { T.st.name1 = 'Ren'; T.metadata.narrative_archive = {}; }, /이 채팅이 열려 있지 않아요/);
+        await none(() => { importChat(); Object.assign(real, { phones: {} }); T.metadata.narrative_archive = real; delete T.st.name1; }, /페르소나 이름이 필요합니다/);
+        await none(() => { T.st.name1 = 'Ren'; T.metadata.narrative_archive = {}; }, /이 채팅이 열려 있지 않습니다/);
         assert.deepEqual(G.liveImportPlan(real), { messages: 0, bubbles: 0, again: false });
         // 이미 있는 실시간 폰에 가져오다 실패해도 그 폰은 그대로
         T.metadata.narrative_archive = real;
@@ -1038,7 +1038,7 @@ test('채팅 가져오기: 가져올 게 없거나 · 메신저 모양 메시지
         const was = JSON.stringify(real.live);
         T.chat.push({ name: 'Ren', is_user: true, send_date: '2026-11-20T09:00:00.000Z', mes: 'x' });
         const save = T.saves; T.metadata.integrity = 'chat-9'; T.chat = [{ name: 'Ren', is_user: true, send_date: '2026-11-20T09:00:00.000Z', mes: 'only me again' }];
-        await assert.rejects(() => G.liveImportChat(real), /메신저 모양으로 쓴 메시지가 없어요/);
+        await assert.rejects(() => G.liveImportChat(real), /메신저 형식의 메시지가 없습니다\. 맨 위에 시간이 있는 캐릭터 메시지만 가져옵니다/);
         assert.equal(JSON.stringify(real.live), was); assert.equal(T.saves, save);
     } finally { importDone(); }
 });
@@ -1084,11 +1084,11 @@ test('파일에서 가져오기: 채팅 파일이 아니거나 메시지가 없�
     try {
         const real = importChat();
         for (const bad of ['', 'not a chat file', '{"chat_metadata":{}}\n', '[1,2,3]\n{broken']) {
-            await assert.rejects(() => G.liveImportFile(real, bad), /메시지를 찾지 못했어요/);
-            assert.throws(() => G.liveImportFilePlan(real, bad), /메시지를 찾지 못했어요/);
+            await assert.rejects(() => G.liveImportFile(real, bad), /채팅 파일\(\.jsonl\)에서 메시지를 찾을 수 없습니다/);
+            assert.throws(() => G.liveImportFilePlan(real, bad), /채팅 파일\(\.jsonl\)에서 메시지를 찾을 수 없습니다/);
             assert.equal(real.live, undefined);
         }
-        await assert.rejects(() => G.liveImportFile(real, jsonl({}, [{ name: 'Ren', is_user: true, send_date: '2026-11-18T10:00:00.000Z', mes: 'only me' }])), /캐릭터가 한 말이 없어서/);
+        await assert.rejects(() => G.liveImportFile(real, jsonl({}, [{ name: 'Ren', is_user: true, send_date: '2026-11-18T10:00:00.000Z', mes: 'only me' }])), /캐릭터 메시지가 없어 채팅방을 만들 수 없습니다/);
         assert.equal(real.live, undefined);
         // (표시가 없는 옛 파일: 첫 메시지로 가려요)
         const old = jsonl({}, [{ name: 'Ivo', is_user: false, send_date: '2026-11-18T10:00:00.000Z', mes: 'Hi' }]);
@@ -1114,7 +1114,7 @@ test('말 지우기: 메신저에서만 지우고 저장해요. 이미 반영된
     // 지울 게 없으면 저장도 안 해요; 다른 채팅이 열려 있으면 아무것도 안 해요
     assert.equal(await G.liveDropMessages(c.real, c.room.id, ['none']), 0); assert.equal(T.saves, saves + 1);
     T.metadata = { narrative_archive: {} };
-    try { await assert.rejects(() => G.liveDropMessages(c.real, c.room.id, [b.id]), /이 채팅이 열려 있지 않아요/); } finally { delete T.metadata; }
+    try { await assert.rejects(() => G.liveDropMessages(c.real, c.room.id, [b.id]), /이 채팅이 열려 있지 않습니다/); } finally { delete T.metadata; }
     assert.deepEqual(c.room.messages, [mine, b]);
 });
 
@@ -1134,7 +1134,7 @@ test('답장 넘기기: 맨 뒤에서 넘기면 새 답장을 줄 세우고(그 
     assert.equal(T.replyCalls, calls); assert.equal(T.saves, saves + 1);
     assert.deepEqual(c.room.messages.map(x => ({ ...x })), kept);
     assert.deepEqual(G.liveSwipeInfo(c.real, c.room.id), { at: 2, count: 2, coming: true, prev: false, next: false });
-    await assert.rejects(() => G.liveSwipe(c.real, c.room.id, -1), /답장이 오는 중이에요/);
+    await assert.rejects(() => G.liveSwipe(c.real, c.room.id, -1), /답장을 생성 중입니다\. 완료된 뒤/);
     T.replies = [{ state: '집', reply: ['먹었지'], does: [] }];
     const r = await G.liveGo(c.real);
     assert.equal(r.ran, 1); assert.equal(T.replyCalls, calls + 1);
@@ -1187,9 +1187,9 @@ test('답장 넘기기: 맨 뒤에서 넘기면 새 답장을 줄 세우고(그 
     assert.deepEqual(c.room.messages.map(x => x.text), ['일어났냐', '방금', '밥은']);
     assert.deepEqual(G.liveSwipeList(c.real, c.room.id), []);
     assert.equal(G.liveSwipeInfo(c.real, c.room.id), null);
-    await assert.rejects(() => G.liveSwipe(c.real, c.room.id, 1), /넘길 답장이 없어요/);
+    await assert.rejects(() => G.liveSwipe(c.real, c.room.id, 1), /넘길 답장이 없습니다/);
     T.metadata = { narrative_archive: {} };
-    try { assert.equal(G.liveSwipeInfo(c.real, c.room.id), null); await assert.rejects(() => G.liveSwipe(c.real, c.room.id, 1), /이 채팅이 열려 있지 않아요/); await assert.rejects(() => G.liveSwipeDrop(c.real, c.room.id), /이 채팅이 열려 있지 않아요/); await assert.rejects(() => G.liveSwipeDropMany(c.real, c.room.id, [1]), /이 채팅이 열려 있지 않아요/); await assert.rejects(() => G.liveSwipeDropOthers(c.real, c.room.id), /이 채팅이 열려 있지 않아요/); assert.deepEqual(G.liveSwipeList(c.real, c.room.id), []); } finally { delete T.metadata; }
+    try { assert.equal(G.liveSwipeInfo(c.real, c.room.id), null); await assert.rejects(() => G.liveSwipe(c.real, c.room.id, 1), /이 채팅이 열려 있지 않습니다/); await assert.rejects(() => G.liveSwipeDrop(c.real, c.room.id), /이 채팅이 열려 있지 않습니다/); await assert.rejects(() => G.liveSwipeDropMany(c.real, c.room.id, [1]), /이 채팅이 열려 있지 않습니다/); await assert.rejects(() => G.liveSwipeDropOthers(c.real, c.room.id), /이 채팅이 열려 있지 않습니다/); assert.deepEqual(G.liveSwipeList(c.real, c.room.id), []); } finally { delete T.metadata; }
 });
 
 test('한국어 다시 받기: 번역 모델에 그 말만 다시 물어서 한국어만 바꿔요. 실패하면 그대로', async () => {
@@ -1216,14 +1216,14 @@ test('한국어 다시 받기: 번역 모델에 그 말만 다시 물어서 한�
         T.tr = [new Error('번역 모델이 빈 답을 돌려줬어요')];
         await assert.rejects(() => G.liveRetranslate(c.real, c.room.id, a.id), /빈 답/);
         T.tr = ['not json'];
-        await assert.rejects(() => G.liveRetranslate(c.real, c.room.id, a.id), /번역을 받지 못했어요/);
-        await assert.rejects(() => G.liveRetranslate(c.real, c.room.id, ['none']), /번역할 말이 없어요/);
+        await assert.rejects(() => G.liveRetranslate(c.real, c.room.id, a.id), /번역을 받지 못했습니다/);
+        await assert.rejects(() => G.liveRetranslate(c.real, c.room.id, ['none']), /번역할 메시지가 없습니다/);
         assert.equal(T.trCalls, 4); assert.equal(T.saves, kept); assert.deepEqual([mine.ko, a.ko, b.ko], ['일어났어?', '겨우 일어났어.', '왜?']);
         // 답을 기다리는 사이 실시간 폰이 새로 시작됐으면 안 넣어요
         T.tr = [{ lines: [{ n: 1, ko: '늦은 답' }] }];
         const going = G.liveRetranslate(c.real, c.room.id, a.id);
         L.resetLive(c.real); L.startFresh(c.real, { persona: 'Ren', scope: 'test' });
-        await assert.rejects(() => going, /그사이 실시간 폰이 바뀌었어요/);
+        await assert.rejects(() => going, /실시간 폰이 변경되었습니다/);
         assert.equal(a.ko, '겨우 일어났어.'); assert.equal(T.saves, kept);
     } finally { delete T.tr; delete T.gloss; delete T.trCalls; }
 });
@@ -1253,19 +1253,19 @@ test('반응 달기: 달고 · 바꾸고 · 같은 걸 다시 달면 지우고 �
     assert.equal((await G.liveReact(c.real, c.room.id, mine.id, 'Ren', null)).reacts, undefined);
     // 못 달 때: 아무것도 안 바뀌고 저장도 안 해요
     const kept = T.saves, was = JSON.stringify(c.room);
-    await assert.rejects(() => G.liveReact(c.real, c.room.id, hers.id, 'Ren', 'lol'), /이모지 하나만 달 수 있어요/);
-    await assert.rejects(() => G.liveReact(c.real, c.room.id, hers.id, 'Ren', '😂😂'), /이모지 하나만 달 수 있어요/);
-    await assert.rejects(() => G.liveReact(c.real, c.room.id, hers.id, 'Lio', '😂'), /이 방에 없는 사람이에요/);
-    await assert.rejects(() => G.liveReact(c.real, c.room.id, 'none', 'Ren', '😂'), /없는 말이에요/);
-    await assert.rejects(() => G.liveReact(c.real, 'nope', hers.id, 'Ren', '😂'), /없는 방이에요/);
+    await assert.rejects(() => G.liveReact(c.real, c.room.id, hers.id, 'Ren', 'lol'), /이모지는 하나만 달 수 있습니다/);
+    await assert.rejects(() => G.liveReact(c.real, c.room.id, hers.id, 'Ren', '😂😂'), /이모지는 하나만 달 수 있습니다/);
+    await assert.rejects(() => G.liveReact(c.real, c.room.id, hers.id, 'Lio', '😂'), /이 채팅방에 없는 멤버입니다/);
+    await assert.rejects(() => G.liveReact(c.real, c.room.id, 'none', 'Ren', '😂'), /메시지를 찾을 수 없습니다/);
+    await assert.rejects(() => G.liveReact(c.real, 'nope', hers.id, 'Ren', '😂'), /채팅방을 찾을 수 없습니다/);
     c.room.messages.push({ id: 'act', n: 999, from: 'Mara', text: '', at: Date.now(), act: true });
-    await assert.rejects(() => G.liveReact(c.real, c.room.id, 'act', 'Ren', '😂'), /반응을 달 수 없는 말이에요/);
+    await assert.rejects(() => G.liveReact(c.real, c.room.id, 'act', 'Ren', '😂'), /반응을 달 수 없는 메시지입니다/);
     c.room.messages.pop();
     // (지울 게 없으면 저장 안 해요)
     await G.liveReact(c.real, c.room.id, hers.id, 'Ren', null);
     assert.equal(T.saves, kept); assert.equal(JSON.stringify(c.room), was);
     T.metadata = { narrative_archive: {} };
-    try { await assert.rejects(() => G.liveReact(c.real, c.room.id, hers.id, 'Ren', '😂'), /이 채팅이 열려 있지 않아요/); } finally { delete T.metadata; }
+    try { await assert.rejects(() => G.liveReact(c.real, c.room.id, hers.id, 'Ren', '😂'), /이 채팅이 열려 있지 않습니다/); } finally { delete T.metadata; }
 });
 
 test('캐릭터의 반응: 답장의 "react"가 내 말에 달려요; 반응만 한 답장은 말이 안 생겨요', async () => {
@@ -1377,13 +1377,13 @@ test('말 고치기: 글을 바꾸고 저장해요. 다음 답장 요청에는 �
     // (바뀐 게 없으면 저장 안 해요)
     const kept = T.saves;
     assert.equal(await G.liveEditMessage(c.real, c.room.id, mine.id, { text: '타르트 사 와' }), null); assert.equal(T.saves, kept);
-    await assert.rejects(() => G.liveEditMessage(c.real, c.room.id, mine.id, { text: ' ' }), /빈 글로는 바꿀 수 없어요/); assert.equal(T.saves, kept);
+    await assert.rejects(() => G.liveEditMessage(c.real, c.room.id, mine.id, { text: ' ' }), /빈 내용으로 바꿀 수 없습니다\. 삭제를 사용하세요/); assert.equal(T.saves, kept);
     send(c, '몇 시에 와');
     T.replies = [{ state: '집', reply: ['곧'], does: [] }];
     await G.liveGo(c.real);
     assert.ok(T.replyInput.includes('타르트 사 와') && T.replyInput.includes('Bring Torte mit') && !T.replyInput.includes('케이크 사 와') && !T.replyInput.includes('Kuchen'));
     T.metadata = { narrative_archive: {} };
-    try { await assert.rejects(() => G.liveEditMessage(c.real, c.room.id, mine.id, { text: 'x' }), /이 채팅이 열려 있지 않아요/); } finally { delete T.metadata; }
+    try { await assert.rejects(() => G.liveEditMessage(c.real, c.room.id, mine.id, { text: 'x' }), /이 채팅이 열려 있지 않습니다/); } finally { delete T.metadata; }
 });
 
 test('내가 캐릭터의 최근 말에 이모지만 달아도 캐릭터가 봐요: 답장을 줄 세우고, 왜 지금인지와 새 반응 표시를 같이 보내요', async () => {
@@ -1571,7 +1571,7 @@ test('답장에 남는 것: 모델 생각 · 보낸 요청 그대로 · 생성 �
     assert.deepEqual(peek.messages, x.extra.cachedPrompt);
     assert.equal((await G.livePeekPrompt(c.real, c.room.id, { messageId: x.id })).agentNote, 'This is the exact cached text prompt sent for the selected turn.');
     assert.equal((await G.livePeekPrompt(c.real, c.room.id, { current: true })).source, 'live_preview');
-    await assert.rejects(G.livePeekPrompt(c.real, c.room.id, { messageId: c.room.messages[0].id }), /저장된 요청이 없/);
+    await assert.rejects(G.livePeekPrompt(c.real, c.room.id, { messageId: c.room.messages[0].id }), /이 턴에는 저장된 프롬프트가 없습니다/);
     // (마지막 두 답에만 남아요)
     for (const t of ['둘', '셋']) { send(c, t); T.replies = [{ state: '집', reply: [`답 ${t}`], does: [] }]; await G.liveGo(c.real); }
     assert.equal(c.room.messages.filter(y => y.extra?.cachedPrompt).length, 2);
@@ -1588,8 +1588,8 @@ test('빠른 전환기: 이 방이 쓸 모델 (마리나라의 PUT /chats/:id/mo
     // (그 연결이 이미 쓰는 모델을 고르면 그 연결 그대로)
     assert.deepEqual((await G.liveSetRoomModel(c.real, id, { connectionId: 'dr', model: 'draft-model' })).current, { connectionId: 'dr' });
     assert.deepEqual(G.liveRoomModel(c.real, id).recent, [{ connectionId: 'dr', model: 'other-model', name: 'Other' }, { connectionId: 'ai' }]);
-    await assert.rejects(G.liveSetRoomModel(c.real, id, { connectionId: 'nope' }), /없는 연결/);
-    await assert.rejects(G.liveSetRoomModel(c.real, id, { connectionId: 'dr', model: '' }), /읽지 못했/);
+    await assert.rejects(G.liveSetRoomModel(c.real, id, { connectionId: 'nope' }), /모델을 찾을 수 없습니다/);
+    await assert.rejects(G.liveSetRoomModel(c.real, id, { connectionId: 'dr', model: '' }), /모델 선택을 읽을 수 없습니다/);
     // (고른 모델로 답장을 받아요: 그 연결의 키 · 주소에 모델만 바꿔서)
     await G.liveSetRoomModel(c.real, id, { connectionId: 'dr', model: 'other-model' });
     send(c, '일어났냐');
@@ -1629,8 +1629,8 @@ test('실리태번의 연결 종류를 그대로: 종류 · 모델을 불러와�
     const c = world(), id = c.room.id;
     assert.deepEqual(G.liveSources().map(x => x.id), ['openrouter', 'claude']);
     assert.deepEqual(await G.liveSourceModels('claude'), [{ id: 'claude-a', name: 'claude A' }]);
-    await assert.rejects(G.liveSetRoomModel(c.real, id, { connectionId: 'source:claude' }), /모델을 골라/);
-    await assert.rejects(G.liveSetRoomModel(c.real, id, { connectionId: 'source:nope', model: 'x' }), /없는 연결/);
+    await assert.rejects(G.liveSetRoomModel(c.real, id, { connectionId: 'source:claude' }), /모델을 선택하세요/);
+    await assert.rejects(G.liveSetRoomModel(c.real, id, { connectionId: 'source:nope', model: 'x' }), /모델을 찾을 수 없습니다/);
     assert.deepEqual((await G.liveSetRoomModel(c.real, id, { connectionId: 'source:claude', model: 'claude-a' })).current, { connectionId: 'source:claude', model: 'claude-a' });
     send(c, '일어났냐'); T.conn = []; T.replies = [{ state: '집', reply: ['방금'], does: [] }];
     await G.liveGo(c.real);
@@ -1752,8 +1752,8 @@ test('첨부 보내기: 올리고 → 글 없이도 보내고 → 답장 요청�
     try {
         const kept = await G.liveStoreAttachments([{ type: 'image/png', data: PNG, name: 'cat.png' }, { type: 'text/plain', data: `data:text/plain;base64,${Buffer.from('메모').toString('base64')}`, name: 'm.txt' }]);
         assert.deepEqual(kept.map(a => [a.type, a.filename, a.name, 'data' in a]), [['image/png', 'cat.png', 'cat.png', false], ['text/plain', 'm.txt', 'm.txt', false]]);
-        assert.throws(() => L.sendLive(c.real, id, ''), /보낼 말이 없어요/);
-        assert.throws(() => L.sendLive(c.real, id, '봐', undefined, { attachments: [{ type: 'image/png' }] }), /첨부 파일을 읽지 못했어요/);
+        assert.throws(() => L.sendLive(c.real, id, ''), /보낼 메시지가 없습니다/);
+        assert.throws(() => L.sendLive(c.real, id, '봐', undefined, { attachments: [{ type: 'image/png' }] }), /첨부 파일을 읽을 수 없습니다/);
         const x = L.sendLive(c.real, id, '', undefined, { attachments: kept }); L.enqueueReplies(c.real, id);   // (글 없이 첨부만)
         assert.equal(x.text, ''); assert.deepEqual(x.extra.attachments, kept);
         assert.doesNotMatch(JSON.stringify(c.real), /iVBORw0KGgo/);                                   // (그림 자체는 채팅 기록에 안 들어가요)
@@ -1766,7 +1766,7 @@ test('첨부 보내기: 올리고 → 글 없이도 보내고 → 답장 요청�
         assert.match(sent[0].content, /· Ren: \n<attached_file name="m\.txt" type="text\/plain">\n메모\n<\/attached_file>\n\n<attached_image name="cat\.png" type="image\/png">\n\(image 1 attached to this request\)\n<\/attached_image>/);
         // (그림 설명을 켜면: 설명 요청이 먼저 가고, 답장 요청에는 그림 대신 설명이 들어가요. 설명은 말에 남아요)
         assert.equal(G.liveCaptioning(c.real).enabled, false);
-        await assert.rejects(G.liveSetCaptioning(c.real, { connectionId: 'nope' }), /없는 연결/);
+        await assert.rejects(G.liveSetCaptioning(c.real, { connectionId: 'nope' }), /연결을 찾을 수 없습니다/);
         assert.deepEqual((({ enabled, connectionId, prompt }) => [enabled, connectionId, prompt])(await G.liveSetCaptioning(c.real, { enabled: true })), [true, '', '']);
         send(c, '뭐 같아?'); seen.length = 0; answers.push('창가의 고양이.', JSON.stringify({ state: '집', reply: ['고양이네'], does: [] }));
         await G.liveGo(c.real);
@@ -1784,7 +1784,7 @@ test('첨부 보내기: 올리고 → 글 없이도 보내고 → 답장 요청�
         assert.equal(x.extra.attachments.length, 1); assert.equal(store.has(url), false);
         await G.liveRemoveAttachment(c.real, id, x.id, 0);
         assert.equal(x.extra, undefined);
-        await assert.rejects(G.liveRemoveAttachment(c.real, id, x.id, 0), /없는 첨부/);
+        await assert.rejects(G.liveRemoveAttachment(c.real, id, x.id, 0), /첨부 파일을 찾을 수 없습니다/);
         assert.match(G.LIVE_ATTACH_ACCEPT, /image\/\*/);
     } finally { globalThis.fetch = old; delete T.ask; }
 });

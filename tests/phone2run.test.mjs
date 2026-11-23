@@ -37,8 +37,8 @@ test('글로 온 답도 읽어요(앞뒤 말 · 코드 울타리), 못 읽으면
     R.takeReply(m, 'Mara', r.id, 'Here you go:\n```json\n{ "state": "home", "reply": ["ok"], "ko": ["응"], "does": [] }\n```', { now: T0 + 1 });
     assert.deepEqual(r.messages.slice(1).map(x => [x.text, x.ko, x.state]), [['ok', '응', 'home']]);
     const was = JSON.stringify(m);
-    for (const bad of ['no json here', '{ "reply": "not a list" }', '{ broken', null, [1]]) assert.throws(() => R.takeReply(m, 'Mara', r.id, bad, { now: T0 + 2 }), /답장을 읽지 못했어요/);
-    assert.throws(() => R.takeReply(m, 'Lio', r.id, ANSWER), /방이 없어요/);
+    for (const bad of ['no json here', '{ "reply": "not a list" }', '{ broken', null, [1]]) assert.throws(() => R.takeReply(m, 'Mara', r.id, bad, { now: T0 + 2 }), /답장을 읽을 수 없습니다:/);
+    assert.throws(() => R.takeReply(m, 'Lio', r.id, ANSWER), /답장을 넣을 채팅방이 없습니다/);
     assert.equal(JSON.stringify(m), was);
 });
 
@@ -62,7 +62,7 @@ test('보내면 방의 다른 사람마다 답장 일이 하나씩 (같은 방 �
     assert.deepEqual(L.enqueueReplies(m, r.id).map(j => [j.kind, j.owner, j.room]), [['reply', 'Mara', r.id]]);
     assert.deepEqual(L.enqueueReplies(m, r.id), []);
     assert.deepEqual(L.enqueueReplies(m, g.id).map(j => j.owner), ['Mara', 'Ivo']);
-    assert.throws(() => L.enqueueReplies(m, 'nope'), /없는 방/);
+    assert.throws(() => L.enqueueReplies(m, 'nope'), /채팅방을 찾을 수 없습니다/);
 });
 
 const runner = (x, answers, log = []) => ({ gather: async job => ({ system: `SYS ${job.owner}`, input: `IN ${job.owner} ${job.room}` }), ask: async (input, o) => { log.push([input, o.system]); const a = answers.shift(); if (a instanceof Error) throw a; return a; }, save: async () => { log.push('save'); }, now: () => T0 + 1000 + log.length });
@@ -96,7 +96,7 @@ test('일의 줄: 실패하면 거기서 멈추고, 본 뒤에야 다음 것이 
     // (an answer that can't be read is a failure too, nothing put in)
     L.enqueueReplies(x.m, x.r.id);
     const bad = await R.runLive(x.m, runner(x, ['not json']));
-    assert.match(bad.failed.error, /답장을 읽지 못했어요/);
+    assert.match(bad.failed.error, /답장을 읽을 수 없습니다:/);
     assert.equal(x.r.messages.length, 1);
 });
 

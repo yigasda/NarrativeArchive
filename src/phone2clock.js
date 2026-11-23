@@ -34,7 +34,7 @@ export function liveWall(tz, dayShift = 0, realMs = Date.now()) {
 // storyAt: "MM-DD HH:MM" on the owner's clock, storyYear: its year; tz: where the owner is
 export function startShift({ storyAt, storyYear, tz, realMs = Date.now() } = {}) {
     const mt = /^(\d{2})-(\d{2}) (\d{2}):(\d{2})$/.exec(String(storyAt || ''));
-    if (!mt || !Number.isInteger(Number(storyYear))) throw new Error('이야기 시각(MM-DD HH:MM)과 연도가 필요해요');
+    if (!mt || !Number.isInteger(Number(storyYear))) throw new Error('이야기 시각(MM-DD HH:MM)과 연도가 필요합니다.');
     const [, mo, d, h, mi] = mt.map(Number), y = Number(storyYear), w = wallAt(tz, realMs);
     const later = w.h * 60 + w.mi < h * 60 + mi ? 1 : 0;
     return dayNo(y, mo, d) + later - dayNo(w.y, w.mo, w.d);

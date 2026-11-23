@@ -125,7 +125,7 @@ export function importFile(text) {
     const lines = [];
     for (const l of String(text ?? '').split(/\r?\n/)) { if (!l.trim()) continue; try { const o = JSON.parse(l); if (o && typeof o === 'object' && !Array.isArray(o)) lines.push(o); } catch { /* not a line of the chat */ } }
     const meta = lines.find(o => o.chat_metadata && typeof o.chat_metadata === 'object'), chat = lines.filter(o => typeof o.mes === 'string');
-    if (!chat.length) throw new Error('채팅 파일(.jsonl)에서 메시지를 찾지 못했어요');
+    if (!chat.length) throw new Error('채팅 파일(.jsonl)에서 메시지를 찾을 수 없습니다.');
     return { chat, key: chatKey(meta?.chat_metadata?.integrity, chat) };
 }
 
@@ -135,7 +135,7 @@ export function importFile(text) {
 //   → { room, count (말풍선 수), messages (채팅 메시지 수), from, to (채팅의 번호) }
 export function importInto(m, rows, { now = Date.now(), chat = '' } = {}) {
     const w = liveWorld(m);
-    if (!w) throw new Error('아직 폰 2가 없어요');
+    if (!w) throw new Error('폰 2가 없습니다.');
     const list = (Array.isArray(rows) ? rows : []).filter(r => r?.bubbles?.length);
     if (!list.length) throw new Error('가져올 메시지가 없어요');
     const P = liveKey(w.persona), names = [...new Map(list.filter(r => !r.user && r.name && liveKey(r.name) !== P).map(r => [liveKey(r.name), r.name])).values()];
@@ -143,7 +143,7 @@ export function importInto(m, rows, { now = Date.now(), chat = '' } = {}) {
     // words alone still has its room)
     const key = String(chat || ''), had = importedOf(w, key), before = had ? w.messenger?.rooms?.[had.room] : null;
     const fits = !!before && names.every(n => before.members.some(x => liveKey(x) === liveKey(n)));
-    if (!names.length && !fits) throw new Error('캐릭터가 한 말이 없어서 방을 만들 수 없어요');
+    if (!names.length && !fits) throw new Error('캐릭터 메시지가 없어 채팅방을 만들 수 없습니다.');
     const room = fits ? before : ensureRoom(m, names), msgs = room.messages;
     let first = null, top = null, count = 0, topAt = 0;
     for (const r of list) r.bubbles.forEach((b, k) => {

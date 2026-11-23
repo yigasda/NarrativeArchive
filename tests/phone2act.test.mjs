@@ -58,7 +58,7 @@ test('흐르는 시계를 못 읽으면 폰에 저장된 시각; 서랍이 아�
         // 폰 1의 메타(서랍 아님), 서랍 흉내만 낸 것: 모델을 부르기 전에 멈춰요
         const n = asked.length;
         for (const m of [real, { ...real, phoneUpto: 2, phoneRecent: () => 'x', phoneNow: () => '01-01 00:00' }]) {
-            for (const run of [() => ACT.liveTakePhoto(m, p), () => ACT.liveWriteEntry(m, p, 'note'), () => ACT.liveMakeDraft(m, p, 0), () => ACT.liveRecordVoice(m, p)]) await assert.rejects(run, /실시간 폰의 서랍이 아니에요/);
+            for (const run of [() => ACT.liveTakePhoto(m, p), () => ACT.liveWriteEntry(m, p, 'note'), () => ACT.liveMakeDraft(m, p, 0), () => ACT.liveRecordVoice(m, p)]) await assert.rejects(run, /실시간 폰의 서랍이 아닙니다/);
         }
         assert.equal(asked.length, n);
     } finally { done(); }
@@ -95,8 +95,8 @@ test('창구(P): 실시간 서랍이면 폰 2 것, 아니면 폰 1 것을 같은
     // (갈림 글자 그대로: 서랍이면 폰 2 것 — 타임라인의 폰이면 멈춤 — 아니면 실시간 폰은 멈추고 폰 1 것)
     assert.ok(api.includes(`const split = (one, two, at = 1) => async (...a) => {
     // (서랍인데 폰이 타임라인의 폰이면 — 화면을 바꾸는 틈에 걸린 요청 — 폰 2 함수가 폰 1의 폰에 쓰게 돼요: 멈춰요)
-    if (isLiveMeta(a[0])) { if (isStoryPhone(a[0], a[at])) throw new Error('타임라인 폰은 타임라인 화면에서만 돼요'); return two(...a); }
-    if (a[at]?.[LIVE_PHONE]) throw new Error('실시간 폰은 실시간 화면에서만 돼요');
+    if (isLiveMeta(a[0])) { if (isStoryPhone(a[0], a[at])) throw new Error('타임라인 폰은 타임라인 화면에서만 사용할 수 있습니다.'); return two(...a); }
+    if (a[at]?.[LIVE_PHONE]) throw new Error('실시간 폰은 실시간 화면에서만 사용할 수 있습니다.');
     return one(...a);
 };`));
     for (const [one, two] of [['takePhoto', 'liveTakePhoto'], ['writeEntry', 'liveWriteEntry'], ['makeDraft', 'liveMakeDraft'], ['recordVoice', 'liveRecordVoice']]) assert.ok(api.includes(`${one}: split(${one}, ${two})`), one);

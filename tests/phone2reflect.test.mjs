@@ -105,7 +105,7 @@ test('반영하는 사이 폰 2가 바뀌면 아무것도 안 넣어요', async 
     const c = world();
     T.answers = [answer(c.first + 1)]; T.moneyAnswers = pay(c.first + 1);
     T.beforeCore = () => { L.resetLive(c.real, 'all'); };
-    try { await assert.rejects(R.updateLive(c.real, c.m, 'Mara', { tz: 'Asia/Seoul' }), /실시간 폰이 바뀌었어요/); } finally { delete T.beforeCore; }
+    try { await assert.rejects(R.updateLive(c.real, c.m, 'Mara', { tz: 'Asia/Seoul' }), /실시간 폰이 변경되었습니다/); } finally { delete T.beforeCore; }
     assert.equal(c.p.notes.length, 0);
 });
 

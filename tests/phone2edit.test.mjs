@@ -33,8 +33,8 @@ test('지우기: 고른 말만 지우고 나머지는 번호 · 순서 · 표시
     assert.equal(w.messenger.seq, seq);
     assert.equal(L.sendLive(m, a.id, 'next', 9000).n, seq + 1);
     assert.equal(E.dropMessages(m, a.id, []), 0); assert.equal(E.dropMessages(m, a.id, null), 0);
-    assert.throws(() => E.dropMessages(m, 'nope', ['x']), /없는 방이에요/);
-    assert.throws(() => E.dropMessages({ phones: {} }, a.id, ['x']), /아직 폰 2가 없어요/);
+    assert.throws(() => E.dropMessages(m, 'nope', ['x']), /채팅방을 찾을 수 없습니다/);
+    assert.throws(() => E.dropMessages({ phones: {} }, a.id, ['x']), /폰 2가 없습니다/);
 });
 
 test('글 고치기: 원문을 바꾸면 한국어는 지워지고, 한국어만도 고쳐요. 번호 · 시간 · 반응은 그대로; 빈 글 · 말 없는 메시지는 안 돼요', () => {
@@ -56,10 +56,10 @@ test('글 고치기: 원문을 바꾸면 한국어는 지워지고, 한국어만
     assert.equal(E.editMessage(m, a.id, mine.id, { text: 'You up?' }, 81), null); assert.equal(E.editMessage(m, a.id, mine.id, {}, 82), null); assert.equal(mine.edited, 80);
     // 못 고칠 때: 아무것도 안 바뀌어요
     const still = JSON.stringify(w.messenger.rooms);
-    for (const t of ['', '   ', '\n']) assert.throws(() => E.editMessage(m, a.id, hers.id, { text: t }), /빈 글로는 바꿀 수 없어요/);
-    assert.throws(() => E.editMessage(m, a.id, act.id, { text: 'x' }), /고칠 수 없는 말이에요/);
-    assert.throws(() => E.editMessage(m, a.id, 'none', { text: 'x' }), /없는 말이에요/);
-    assert.throws(() => E.editMessage(m, 'nope', hers.id, { text: 'x' }), /없는 방이에요/);
+    for (const t of ['', '   ', '\n']) assert.throws(() => E.editMessage(m, a.id, hers.id, { text: t }), /빈 내용으로 바꿀 수 없습니다\. 삭제를 사용하세요/);
+    assert.throws(() => E.editMessage(m, a.id, act.id, { text: 'x' }), /편집할 수 없는 메시지입니다/);
+    assert.throws(() => E.editMessage(m, a.id, 'none', { text: 'x' }), /메시지를 찾을 수 없습니다/);
+    assert.throws(() => E.editMessage(m, 'nope', hers.id, { text: 'x' }), /채팅방을 찾을 수 없습니다/);
     assert.equal(JSON.stringify(w.messenger.rooms), still);
     assert.equal(E.editMessage(m, a.id, hers.id, { text: 'x'.repeat(5000) }).text.length, 4000);
 });
@@ -73,7 +73,7 @@ test('맨 끝 답장: 방의 맨 끝, 내 마지막 말 뒤에 온 말들 (폰�
     say(g, 'Ivo', 'anyone here', 100);
     assert.deepEqual(E.replyTail(m, g.id), []); assert.equal(E.swipeInfo(m, g.id), null);
     assert.equal(E.swipeInfo(m, 'nope'), null);
-    assert.throws(() => E.swipeTo(m, g.id, 1), /넘길 답장이 없어요/);
+    assert.throws(() => E.swipeTo(m, g.id, 1), /넘길 답장이 없습니다/);
 });
 
 test('넘기기: 맨 뒤에서 넘기면 새 답장 자리, 받아 둔 답장 사이는 바로 오가요. 받아 둔 답장은 버리지 않아요', () => {
@@ -88,7 +88,7 @@ test('넘기기: 맨 뒤에서 넘기면 새 답장 자리, 받아 둔 답장 �
     // 앞으로 · 뒤로: 그 답장의 말이 그대로(번호 · 시간 · 번역 · 표시까지) 돌아와요
     assert.deepEqual(E.swipeTo(m, a.id, -1), { at: 1, count: 2, fresh: false });
     assert.deepEqual(a.messages, [...head, ...first]);
-    assert.throws(() => E.swipeTo(m, a.id, -1), /첫 번째 답장이에요/);
+    assert.throws(() => E.swipeTo(m, a.id, -1), /첫 번째 답장입니다/);
     assert.deepEqual(E.swipeTo(m, a.id, 1), { at: 2, count: 2, fresh: false });
     assert.deepEqual(a.messages, [...head, ...second]);
     assert.deepEqual(E.swipeTo(m, a.id, 1), { at: 3, count: 3, fresh: true });
@@ -117,7 +117,7 @@ test('못 넘길 때: 답장이 오는 중 · 답장할 폰이 없는 방(새로
     assert.deepEqual(E.swipeInfo(m, a.id), { at: 1, count: 1, coming: true, prev: false, next: false });
     for (const st of ['waiting', 'running']) {
         job.state = st;
-        assert.throws(() => E.swipeTo(m, a.id, 1), /답장이 오는 중이에요/); assert.throws(() => E.dropSwipe(m, a.id), /답장이 오는 중이에요/);
+        assert.throws(() => E.swipeTo(m, a.id, 1), /답장을 생성 중입니다\. 완료된 뒤/); assert.throws(() => E.dropSwipe(m, a.id), /답장을 생성 중입니다\. 완료된 뒤/);
     }
     assert.equal(JSON.stringify(w.messenger.rooms), was);
     // (다른 방의 답장 · 끝난 답장은 상관없어요)
@@ -129,7 +129,7 @@ test('못 넘길 때: 답장이 오는 중 · 답장할 폰이 없는 방(새로
         E.swipeTo(m, a.id, 1); say(a, 'Mara', 'two', 6000);
         assert.equal(E.swipeInfo(m, a.id).next, false);
         const full = JSON.stringify(a);
-        assert.throws(() => E.swipeTo(m, a.id, 1), /받아 둔 답장이 2개예요/);
+        assert.throws(() => E.swipeTo(m, a.id, 1), /답장은 2개까지 받을 수 있습니다/);
         assert.equal(JSON.stringify(a), full);
         assert.equal(E.swipeTo(m, a.id, -1).at, 1); assert.equal(E.swipeInfo(m, a.id).next, true);
     } finally { E.SWIPE.max = keep; }
@@ -138,7 +138,7 @@ test('못 넘길 때: 답장이 오는 중 · 답장할 폰이 없는 방(새로
     assert.equal(E.swipeTo(m, a.id, 1).at, 2);
     assert.deepEqual(E.swipeInfo(m, a.id), { at: 2, count: 2, coming: false, prev: true, next: false });
     const still = JSON.stringify(a);
-    assert.throws(() => E.swipeTo(m, a.id, 1), /답장할 폰이 없어요/);
+    assert.throws(() => E.swipeTo(m, a.id, 1), /이 채팅방에는 답장할 폰이 없습니다/);
     assert.equal(JSON.stringify(a), still);
 });
 
@@ -164,7 +164,7 @@ test('보이는 답장 지우기 · 새 답장을 못 받았을 때: 앞의 답�
     // 하나뿐인 답장을 지우면 답장이 없어져요 (받아 둔 기록도)
     assert.deepEqual(E.dropSwipe(m, a.id), { dropped: 1, at: 0, count: 0 });
     assert.deepEqual(a.messages, head); assert.equal(a.swipes, undefined); assert.equal(E.swipeInfo(m, a.id), null);
-    assert.throws(() => E.dropSwipe(m, a.id), /지울 답장이 없어요/);
+    assert.throws(() => E.dropSwipe(m, a.id), /삭제할 답장이 없습니다/);
     // 망가진 기록은 버려요
     say(a, 'Mara', 'again', 8000);
     a.swipes = { [head[2].id]: { list: [null, null], at: 0 } };
@@ -216,10 +216,10 @@ test('받아 둔 답장 목록 · 골라 지우기 · 지금 것만 남기기', 
     assert.deepEqual(E.dropSwipes(m, a.id, [1, 2]), { dropped: 2, at: 0, count: 0 });
     assert.deepEqual(a.messages, head); assert.equal(a.swipes, undefined); assert.deepEqual(E.swipeList(m, a.id), []);
     // 답장이 오는 중 · 답장이 없을 때는 아무것도 안 바꿔요
-    assert.throws(() => E.dropSwipes(m, a.id, [1]), /지울 답장이 없어요/); assert.throws(() => E.dropOtherSwipes(m, a.id), /남길 답장이 없어요/);
+    assert.throws(() => E.dropSwipes(m, a.id, [1]), /삭제할 답장이 없습니다/); assert.throws(() => E.dropOtherSwipes(m, a.id), /남길 답장이 없습니다/);
     say(a, 'Mara', 'nine', 13000); L.enqueueReplies(m, a.id);
     const still = JSON.stringify(w.messenger.rooms);
-    assert.throws(() => E.dropSwipes(m, a.id, [1]), /답장이 오는 중이에요/); assert.throws(() => E.dropOtherSwipes(m, a.id), /답장이 오는 중이에요/);
+    assert.throws(() => E.dropSwipes(m, a.id, [1]), /답장을 생성 중입니다\. 완료된 뒤/); assert.throws(() => E.dropOtherSwipes(m, a.id), /답장을 생성 중입니다\. 완료된 뒤/);
     assert.equal(JSON.stringify(w.messenger.rooms), still);
     assert.deepEqual(E.swipeList(m, 'nope'), []);
 });

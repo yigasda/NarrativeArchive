@@ -31,11 +31,11 @@ const newId = (p = '') => `${p}${Date.now().toString(36)}${Math.random().toStrin
 // reading never adds m.live: a chat that never opens 폰 2 keeps its metadata as it was
 export const liveOf = m => (obj(m?.live) && m.live.v === 1 ? m.live : null);
 function ensureLive(m) {
-    if (!obj(m)) throw new Error('채팅 정보가 없어요');
+    if (!obj(m)) throw new Error('채팅 정보가 없습니다.');
     if (!liveOf(m)) {
         // (kept in the server plugin and not read yet, or the plugin is off: a new one would hide the kept one)
-        if (m.live === undefined && m.liveRef) throw new Error('Orbit 데이터를 아직 못 읽었어요. 서버 플러그인이 켜져 있는지 봐 주세요');
-        if (m.live !== undefined) throw new Error('폰 2 저장 자리를 읽을 수 없어요');
+        if (m.live === undefined && m.liveRef) throw new Error('Orbit 데이터를 불러오지 못했습니다. 서버 플러그인이 켜져 있는지 확인하세요.');
+        if (m.live !== undefined) throw new Error('폰 2 저장 위치를 읽을 수 없습니다.');
         m.live = { v: 1, mode: 'story', world: null, archive: [] };
     }
     return m.live;
@@ -44,8 +44,8 @@ export const liveWorld = m => liveOf(m)?.world || null;
 export const liveMode = m => (liveOf(m)?.mode === 'live' && liveWorld(m) ? 'live' : 'story');
 // 폰 2 is shown only when there is one; 폰 1 is always there to go back to
 export function setLiveMode(m, mode) {
-    if (mode !== 'story' && mode !== 'live') throw new Error('모드는 story 또는 live예요');
-    if (mode === 'live' && !liveWorld(m)) throw new Error('아직 폰 2가 없어요');
+    if (mode !== 'story' && mode !== 'live') throw new Error('모드는 story 또는 live여야 합니다.');
+    if (mode === 'live' && !liveWorld(m)) throw new Error('폰 2가 없습니다.');
     if (mode === 'story' && !liveOf(m)) return 'story';
     ensureLive(m).mode = mode;
     return mode;
@@ -53,9 +53,9 @@ export function setLiveMode(m, mode) {
 
 // a new 폰 2: the one there goes to the archive first (the two newest are kept); the jobs waiting for it are dropped there
 export function newWorld(m, { from = 'fresh', persona = '', dayShift = 0, scope = '', storyUpto = null, now = Date.now() } = {}) {
-    if (from !== 'story' && from !== 'fresh') throw new Error('시작은 story 또는 fresh예요');
-    if (!String(persona || '').trim()) throw new Error('페르소나 이름이 필요해요');
-    if (from === 'story' && !(Number.isInteger(storyUpto) && storyUpto >= 0)) throw new Error('이야기의 어느 메시지까지인지 필요해요');
+    if (from !== 'story' && from !== 'fresh') throw new Error('시작은 story 또는 fresh여야 합니다.');
+    if (!String(persona || '').trim()) throw new Error('페르소나 이름이 필요합니다.');
+    if (from === 'story' && !(Number.isInteger(storyUpto) && storyUpto >= 0)) throw new Error('이야기의 끝 메시지가 필요합니다.');
     const live = ensureLive(m);
     if (live.world) archiveWorld(m, now);
     const name = String(persona).trim();
@@ -70,7 +70,7 @@ export const STORY_COPY = { phones: 'phones', finance: 'finance', phoneProfiles:
 // 이야기에서 시작: a new 폰 2 from 폰 1 as it is now, nothing shared with it (폰 1 is only read)
 // upto: the story's last message then. 폰 2's messenger numbers go on from it; the chat is not read by it
 export function startFromStory(m, { persona, upto, scope = '', dayShift = 0, now = Date.now() } = {}) {
-    if (!(Number.isInteger(upto) && upto >= 0)) throw new Error('이야기의 어느 메시지까지인지 필요해요');
+    if (!(Number.isInteger(upto) && upto >= 0)) throw new Error('이야기의 끝 메시지가 필요합니다.');
     const copy = Object.fromEntries(Object.keys(STORY_COPY).filter(k => m?.[k] !== undefined && m[k] !== null).map(k => [k, structuredClone(m[k])]));
     const w = newWorld(m, { from: 'story', persona, dayShift, scope, storyUpto: upto, now });
     for (const [k, to] of Object.entries(STORY_COPY)) if (k in copy) w[to] = copy[k];
@@ -115,7 +115,7 @@ export const archivedWorlds = m => [...(liveOf(m)?.archive || [])];
 // Either way the phone shows 타임라인 again. An m.live this version can't read is left as it is.
 // Returns what was done: 'none' (there was no 폰 2), 'all' or 'chats'.
 export function resetLive(m, how = 'chats') {
-    if (how !== 'all' && how !== 'chats') throw new Error('비우기는 all 또는 chats예요');
+    if (how !== 'all' && how !== 'chats') throw new Error('비우기는 all 또는 chats여야 합니다.');
     const live = liveOf(m);
     if (!live) return 'none';
     const w = live.world, rooms = Object.keys(w?.messenger?.rooms || {}).length;
@@ -136,9 +136,9 @@ const tagLive = phones => { for (const x of Object.values(phones || {})) if (x &
 export const livePhone = (m, owner) => tagLive(liveWorld(m)?.phones)?.[liveKey(owner)] || null;
 export function putLivePhone(m, p) {
     const w = liveWorld(m);
-    if (!w) throw new Error('아직 폰 2가 없어요');
-    if (!obj(p) || !String(p.owner || '').trim()) throw new Error('폰 주인이 필요해요');
-    if (Object.values(m.phones || {}).includes(p)) throw new Error('폰 1의 폰은 폰 2에 넣을 수 없어요');
+    if (!w) throw new Error('폰 2가 없습니다.');
+    if (!obj(p) || !String(p.owner || '').trim()) throw new Error('폰 주인이 필요합니다.');
+    if (Object.values(m.phones || {}).includes(p)) throw new Error('폰 1의 폰은 폰 2에 넣을 수 없습니다.');
     w.phones[liveKey(p.owner)] = p;
     return p;
 }
@@ -193,7 +193,7 @@ const drawerSeeds = [];
 export const setDrawerSeed = fn => { if (typeof fn === 'function' && !drawerSeeds.includes(fn)) drawerSeeds.push(fn); };
 export function liveMeta(m, { now = null } = {}) {
     const w = liveWorld(m);
-    if (!w) throw new Error('아직 폰 2가 없어요');
+    if (!w) throw new Error('폰 2가 없습니다.');
     const own = k => typeof k === 'string' && Object.hasOwn(LIVE_OWN, k), shared = k => typeof k === 'string' && LIVE_SHARED.includes(k);
     const drawer = {}, copies = {};
     // (a copy of a shared key: taken again when the chat's own has changed since — the glossary edited on its screen,
@@ -297,15 +297,15 @@ export function readLiveOwner(m, scope, storage = globalThis.localStorage) {
 // 메신저: every room has the persona in it (the persona's own rooms only); people get an account when they first join
 export function ensureAccount(m, name) {
     const w = liveWorld(m), n = String(name || '').trim();
-    if (!w) throw new Error('아직 폰 2가 없어요');
-    if (!n) throw new Error('이름이 필요해요');
+    if (!w) throw new Error('폰 2가 없습니다.');
+    if (!n) throw new Error('이름이 필요합니다.');
     return (w.messenger.accounts[liveKey(n)] ||= { name: n });
 }
 export function ensureRoom(m, members) {
     const w = liveWorld(m);
-    if (!w) throw new Error('아직 폰 2가 없어요');
+    if (!w) throw new Error('폰 2가 없습니다.');
     const names = [...new Map([w.persona, ...(members || [])].map(n => String(n || '').trim()).filter(Boolean).map(n => [liveKey(n), n])).values()];
-    if (names.length < 2) throw new Error('방에는 페르소나 말고 한 사람 이상이 필요해요');
+    if (names.length < 2) throw new Error('채팅방에는 페르소나 외에 멤버가 한 명 이상 필요합니다.');
     const keys = names.map(liveKey).sort().join('|');
     // (a branch of a room has the same people: the room itself comes first, never its branch)
     const same = Object.values(w.messenger.rooms).filter(r => r.members.map(liveKey).sort().join('|') === keys), room = same.find(r => !r.branch) || same[0];
@@ -351,7 +351,7 @@ export function renamePersona(m, name) {
     return true;
 }
 export const liveRooms = m => Object.values(liveWorld(m)?.messenger?.rooms || {});
-const roomOf = (m, id) => { const r = liveWorld(m)?.messenger?.rooms?.[id]; if (!r) throw new Error('없는 방이에요'); return r; };
+const roomOf = (m, id) => { const r = liveWorld(m)?.messenger?.rooms?.[id]; if (!r) throw new Error('채팅방을 찾을 수 없습니다.'); return r; };
 // every messenger message has a number of its own, one count for the whole world (the order they were said in; after
 // the story's numbers when 폰 2 began from the story): the
 // reflection names a message by it, as 폰 1's names a chat message by its place. Messages from before numbers: numbered
@@ -380,12 +380,12 @@ export function sendLive(m, id, text, at = Date.now(), opts = {}) {
     //  phone2attach.js storeAttachments — or its data. A message may be attachments alone, as in Marinara)
     const str = (v, max) => typeof v === 'string' && v.length >= 1 && v.length <= max;
     const files = Array.isArray(opts?.attachments) ? opts.attachments : [];
-    if (!files.every(a => obj(a) && typeof a.type === 'string' && (str(a.url, 2000) || typeof a.data === 'string') && (a.filename === undefined || typeof a.filename === 'string') && (a.name === undefined || typeof a.name === 'string'))) throw new Error('첨부 파일을 읽지 못했어요');
-    if (!t && !files.length) throw new Error('보낼 말이 없어요');
+    if (!files.every(a => obj(a) && typeof a.type === 'string' && (str(a.url, 2000) || typeof a.data === 'string') && (a.filename === undefined || typeof a.filename === 'string') && (a.name === undefined || typeof a.name === 'string'))) throw new Error('첨부 파일을 읽을 수 없습니다.');
+    if (!t && !files.length) throw new Error('보낼 메시지가 없습니다.');
     // (Marinara's messageReplySchema, by hand: this file imports nothing)
     const q = opts?.replyTo;
     const reply = q ? { success: obj(q) && str(q.messageId, 200) && str(q.name, 200) && str(q.content, 16000), data: obj(q) ? { messageId: q.messageId, name: q.name, content: q.content } : null } : null;
-    if (reply && !reply.success) throw new Error('답장을 다는 말을 읽지 못했어요');
+    if (reply && !reply.success) throw new Error('답장할 메시지를 읽을 수 없습니다.');
     const extra = { ...(files.length ? { attachments: files.map(a => ({ type: a.type, ...(a.url ? { url: a.url } : { data: a.data }), ...(a.filename ? { filename: a.filename } : {}), ...(a.name ? { name: a.name } : {}) })) } : {}), ...(reply ? { replyTo: reply.data } : {}) };
     const msg = { id: newId('t'), n: liveNo(w), from: w.persona, text: t.slice(0, 4000), at, ...(Object.keys(extra).length ? { extra } : {}) };
     r.messages.push(msg);
@@ -413,8 +413,8 @@ export const unreadBy = (room, msg) => (room?.members || []).filter(n => liveKey
 // why: for a reply nobody texted for (the persona only put an emoji on a text): what it answers, one line
 export function enqueueJob(m, { kind, owner = '', room = '', at = Date.now(), why = '' } = {}) {
     const w = liveWorld(m);
-    if (!w) throw new Error('아직 폰 2가 없어요');
-    if (!['reply', 'reflect', 'first'].includes(kind)) throw new Error('일 종류는 reply · reflect · first예요');
+    if (!w) throw new Error('폰 2가 없습니다.');
+    if (!['reply', 'reflect', 'first'].includes(kind)) throw new Error('작업 종류는 reply, reflect, first 중 하나여야 합니다.');
     const job = { id: newId('j'), world: w.id, round: ++w.queue.round, kind, owner: String(owner || ''), ...(room ? { room: String(room) } : {}), ...(String(why || '').trim() ? { why: String(why).replace(/\s+/g, ' ').trim().slice(0, 400) } : {}), at, state: 'waiting' };
     w.queue.jobs.push(job);
     // (the line keeps its newest finished jobs only; waiting, running and failed ones always stay)
@@ -427,7 +427,7 @@ export const JOBS_KEPT = 20;
 // answers these words too (it reads the room when it runs), so no second one is lined up. Returns the jobs lined up
 export function enqueueReplies(m, roomId, at = Date.now()) {
     const w = liveWorld(m), room = w?.messenger?.rooms?.[roomId];
-    if (!room) throw new Error('없는 방이에요');
+    if (!room) throw new Error('채팅방을 찾을 수 없습니다.');
     const out = [];
     for (const n of room.members) {
         if (liveKey(n) === liveKey(w.persona) || !w.phones?.[liveKey(n)]) continue;

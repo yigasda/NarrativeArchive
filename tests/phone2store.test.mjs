@@ -32,7 +32,7 @@ test('폰 2 저장: reading and going back to 폰 1 never add m.live', () => {
     assert.equal(L.nextJob(m), null);
     assert.equal(L.archiveWorld(m), null);
     assert.deepEqual(m, before);
-    assert.throws(() => L.setLiveMode(m, 'live'), /아직 폰 2가 없어요/);
+    assert.throws(() => L.setLiveMode(m, 'live'), /폰 2가 없습니다/);
     assert.deepEqual(m, before);
 });
 
@@ -71,8 +71,8 @@ test('폰 2 저장: its phones are its own; a phone of 폰 1 never goes in', () 
 test('폰 2 메신저: every room has the persona; the same people are the same room', () => {
     const m = phone1();
     L.newWorld(m, { persona: 'Ren' });
-    assert.throws(() => L.ensureRoom(m, []), /한 사람 이상/);
-    assert.throws(() => L.ensureRoom(m, ['ren']), /한 사람 이상/);
+    assert.throws(() => L.ensureRoom(m, []), /채팅방에는 페르소나 외에 멤버가 한 명 이상 필요합니다/);
+    assert.throws(() => L.ensureRoom(m, ['ren']), /채팅방에는 페르소나 외에 멤버가 한 명 이상 필요합니다/);
     const a = L.ensureRoom(m, ['Mara']);
     assert.deepEqual(a.members, ['Ren', 'Mara']);
     assert.equal(L.ensureRoom(m, ['mara', 'Ren']), a);
@@ -85,7 +85,7 @@ test('폰 2 메신저: every room has the persona; the same people are the same 
 test('폰 2 일의 줄: one at a time, in order; a failure stops the line until it is seen; another world\'s job counts for nothing', () => {
     const m = phone1();
     L.newWorld(m, { persona: 'Ren' });
-    assert.throws(() => L.enqueueJob(m, { kind: 'other' }), /일 종류/);
+    assert.throws(() => L.enqueueJob(m, { kind: 'other' }), /작업 종류는 reply, reflect, first 중 하나여야 합니다/);
     const a = L.enqueueJob(m, { kind: 'reply', owner: 'Mara' }), b = L.enqueueJob(m, { kind: 'reflect', owner: 'Mara' });
     assert.deepEqual([a.round, b.round], [1, 2]);
     assert.equal(L.nextJob(m).id, a.id);
@@ -106,7 +106,7 @@ test('폰 2 일의 줄: one at a time, in order; a failure stops the line until 
 test('폰 2 저장: an m.live it can\'t read is left alone, never written over', () => {
     const m = { ...phone1(), live: { v: 99, world: 'x' } };
     assert.equal(L.liveOf(m), null);
-    assert.throws(() => L.newWorld(m, { persona: 'Ren' }), /읽을 수 없어요/);
+    assert.throws(() => L.newWorld(m, { persona: 'Ren' }), /폰 2 저장 위치를 읽을 수 없습니다/);
     assert.deepEqual(m.live, { v: 99, world: 'x' });
 });
 
@@ -118,7 +118,7 @@ const objects = (v, out = new Set()) => { if (v && typeof v === 'object' && !out
 
 test('폰 2 이야기에서 시작: a deep copy of 폰 1\'s story keys, none of its objects shared, 폰 1 unchanged', () => {
     const m = rich(), before = JSON.stringify(m), mine = objects(Object.fromEntries(Object.keys(m).filter(k => k !== 'live').map(k => [k, m[k]])));
-    assert.throws(() => L.startFromStory(m, { persona: 'Ren' }), /어느 메시지까지/);
+    assert.throws(() => L.startFromStory(m, { persona: 'Ren' }), /이야기의 끝 메시지가 필요합니다/);
     assert.equal(JSON.stringify(m), before);
     const w = L.startFromStory(m, { persona: 'Ren', upto: 482, scope: 's1', now: 5 });
     // (이야기 표시는 더 안 남겨요: 이야기는 요약본에 있어요)
@@ -215,8 +215,8 @@ test('폰 2 메신저: 보내기 · 읽음 · 안 읽음 · 단체방 이름', (
     const m = {};
     L.startFresh(m, { persona: 'Yuna' });
     const r = L.ensureRoom(m, ['Mara']), g = L.ensureRoom(m, ['Mara', 'Ivo']);
-    assert.throws(() => L.sendLive(m, r.id, '  '), /보낼 말/);
-    assert.throws(() => L.sendLive(m, 'nope', 'hi'), /없는 방/);
+    assert.throws(() => L.sendLive(m, r.id, '  '), /보낼 메시지가 없습니다/);
+    assert.throws(() => L.sendLive(m, 'nope', 'hi'), /채팅방을 찾을 수 없습니다/);
     const a = L.sendLive(m, r.id, ' 안녕 ', 1000);
     assert.deepEqual([a.from, a.text, a.at], ['Yuna', '안녕', 1000]);
     assert.equal(L.unreadFor(r, 'Yuna'), 0);

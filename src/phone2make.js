@@ -114,7 +114,7 @@ async function liveMakePhone0(m, owner, { update = false, apps = null } = {}) {
     const run = storyRun(m);
     await ensureScreenHolder(m);
     const key = nameKey(owner);
-    if (update) throw new Error('실시간 폰은 메신저를 나갈 때 반영해요');
+    if (update) throw new Error('실시간 폰은 메신저를 나갈 때 반영됩니다.');
     if (busy.sync || busy.fill) throw new Error('다른 폰 작업이 끝난 뒤 다시 해 주세요');
     // reading starts after the last message there was when this was asked; what comes in while it writes stays unread
     // (or, with more after the archive than one request reads, after the last message it read: the reflection goes on from there)

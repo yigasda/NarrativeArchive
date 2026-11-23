@@ -11,7 +11,7 @@ import { shiftAll } from './phonedata.js';
 import { journalRead, journalWrite } from './phonesync.js';
 import { isLiveMeta, liveNowYear, liveNowText, liveYearAt, liveCross } from './phone2store.js';
 
-const need = m => { if (!isLiveMeta(m)) throw new Error('실시간 폰의 서랍이 아니에요'); return m; };
+const need = m => { if (!isLiveMeta(m)) throw new Error('실시간 폰의 서랍이 아닙니다.'); return m; };
 
 // 실시간 시계의 연도: 서랍이 알려 주는 것, 서랍에 시계가 없으면 브라우저의 올해
 const baseYear = (m, p) => liveNowYear(m, p) || new Date().getFullYear();

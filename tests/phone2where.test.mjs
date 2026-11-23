@@ -72,13 +72,13 @@ test('서랍이 아니면 모델을 부르기 전에 멈춰요; 사본은 폰 1 
         T.ask = async () => { asked++; return '{}'; };
         const p = c.real.phones.mara, was = JSON.stringify(p);
         for (const m of [c.real, { ...c.real, phoneUpto: 2, phoneRecent: () => 'x' }]) {
-            await assert.rejects(() => W2.liveRereadPlaces(m, p), /실시간 폰의 서랍이 아니에요/);
-            await assert.rejects(() => W2.liveReadWhere(m, p), /실시간 폰의 서랍이 아니에요/);
+            await assert.rejects(() => W2.liveRereadPlaces(m, p), /실시간 폰의 서랍이 아닙니다/);
+            await assert.rejects(() => W2.liveReadWhere(m, p), /실시간 폰의 서랍이 아닙니다/);
         }
         assert.equal(asked, 0); assert.equal(JSON.stringify(p), was);
         // 요약본이 아직 없는 폰(요약본 방식 전에 시작해 둔 폰): 요약본을 못 받으면 모델을 부르지 않아요
         const n = world(); delete L.liveWorld(n.real).snap; L.setStoryKeeper(null);
-        await assert.rejects(() => W2.liveReadWhere(n.d, n.p), /이야기 요약본을 만들지 못했어요/);
+        await assert.rejects(() => W2.liveReadWhere(n.d, n.p), /이야기 요약을 만들지 못했습니다\. 잠시 후 다시 시도하세요/);
         assert.equal(asked, 0);
     } finally { done(); }
     const a = await src('phonedata.js'), b = await src('phone2where.js'), api = await src('phone2api.js');

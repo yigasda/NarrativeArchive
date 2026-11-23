@@ -53,8 +53,8 @@ test('올리기: 파일은 실리 저장소로, 말에는 주소만. 다시 읽�
     assert.deepEqual(puts.map(p => p[1]), ['iVBORw0KGgo=', 'JVBERi0=']);
     assert.deepEqual(kept[0], { type: 'image/png', url: `/user/files/${puts[0][0]}`, filename: '사진 1.png', name: '사진 1.png' });
     assert.ok(!('data' in kept[0]));
-    await assert.rejects(A.storeAttachments([{ type: 'image/png', data: 'nope' }], { put: async () => '/x' }), /읽지 못했어요/);
-    await assert.rejects(A.storeAttachments([{ type: 'image/png', data: PNG }], { put: async () => '' }), /올리지 못했어요/);
+    await assert.rejects(A.storeAttachments([{ type: 'image/png', data: 'nope' }], { put: async () => '/x' }), /첨부 파일을 읽을 수 없습니다/);
+    await assert.rejects(A.storeAttachments([{ type: 'image/png', data: PNG }], { put: async () => '' }), /첨부 파일을 업로드하지 못했습니다/);
     // (다른 기기 · 새로 연 뒤: 주소에서 읽어 와요)
     let gets = 0;
     const get = async () => { gets++; return Uint8Array.from(Buffer.from('JVBERi0=', 'base64')).buffer; };

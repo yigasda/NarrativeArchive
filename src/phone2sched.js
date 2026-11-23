@@ -33,7 +33,7 @@ const named = (text, persona) => String(text ?? '').replace(/\b([Tt])he user\b/g
 const obj = v => v && typeof v === 'object' && !Array.isArray(v);
 const STATUSES = ['online', 'idle', 'dnd', 'offline'], USER = ['active', 'idle', 'dnd', 'invisible'];
 
-function need(m) { const w = liveWorld(m); if (!w) throw new Error('아직 폰 2가 없어요'); return w; }
+function need(m) { const w = liveWorld(m); if (!w) throw new Error('폰 2가 없습니다.'); return w; }
 
 // ---- 스케줄의 주인은 캐릭터 카드예요 (마리나라처럼: 그 캐릭터가 나오는 모든 채팅에서 같은 스케줄 · 손으로 준 상태 · 매주 갱신).
 // 채팅의 w.presence.schedules · overrides · autoRenew는 카드에서 읽어 온 사본이에요(마리나라의 "the chat's schedule map is only a cache").
@@ -92,7 +92,7 @@ export const chatIdOf = (m, roomId) => `${liveWorld(m)?.id}:${roomId}`;
 export function setSchedule(m, owner, schedule, now = new Date()) {
     const p = presenceOf(m), k = liveKey(owner);
     if (!schedule) { delete p.schedules[k]; toCard(owner, { conversationSchedule: null }); return null; }
-    if (!obj(schedule.days)) throw new Error('스케줄에 요일이 없어요');
+    if (!obj(schedule.days)) throw new Error('스케줄에 요일이 없습니다.');
     // (a block typed as ending 24:00: Marinara's clock reads 00:00-23:59, so it is kept as 00:00)
     for (const d of Object.values(schedule.days)) for (const b of Array.isArray(d) ? d : []) if (typeof b?.time === 'string' && b.time.endsWith('-24:00')) b.time = `${b.time.slice(0, -5)}00:00`;
     p.schedules[k] = { ...schedule, weekStart: schedule.weekStart || getMonday(now).toISOString() };
@@ -103,7 +103,7 @@ export function setSchedule(m, owner, schedule, now = new Date()) {
 export function setStatusOverride(m, owner, { status, activity = '', minutes = 0 } = {}, now = new Date()) {
     const p = presenceOf(m), k = liveKey(owner);
     if (!status) { delete p.overrides[k]; toCard(owner, { conversationStatusOverride: null }); return null; }
-    if (!STATUSES.includes(status)) throw new Error('상태는 online · idle · dnd · offline 가운데 하나예요');
+    if (!STATUSES.includes(status)) throw new Error('상태는 online, idle, dnd, offline 중 하나여야 합니다.');
     // (expiresAt: null and place: null are written out, as Marinara's card does: SillyTavern's server merges a card's
     //  extension field key by key, so a key left out would keep the end time or place of the status before this one)
     p.overrides[k] = { status, activity: String(activity || '').trim().slice(0, 120) || null, createdAt: now.toISOString(), expiresAt: minutes > 0 ? new Date(now.getTime() + minutes * 60_000).toISOString() : null, place: null };
@@ -112,7 +112,7 @@ export function setStatusOverride(m, owner, { status, activity = '', minutes = 0
 }
 // 내 상태 · 먼저 말 걸기 켜기
 export function setUserStatus(m, { status = 'active', activity = '' } = {}) {
-    if (!USER.includes(status)) throw new Error('내 상태는 active · idle · dnd · invisible 가운데 하나예요');
+    if (!USER.includes(status)) throw new Error('내 상태는 active, idle, dnd, invisible 중 하나여야 합니다.');
     return (presenceOf(m).user = { status, manual: status, activity: String(activity || '').replace(/\s+/g, ' ').trim().slice(0, 120) });
 }
 // 내 상태를 마리나라의 UI 저장소 모양으로 (idle-detection.js가 읽고 써요): 저절로 바뀌는 것은 status만, 손으로 고른 것(manual)은 그대로
@@ -172,8 +172,8 @@ export async function makeSchedule(m, owner, { ask, name = owner, description = 
     const provider = { chatComplete: async (messages, o) => ({ content: await ask(messages, o) }) }, had = scheduleOf(m, owner);
     const opts = { draftMode: mode, timeZone: tz || undefined };
     if (day) {
-        if (!had) throw new Error('먼저 한 주 스케줄을 만들어 주세요');
-        if (!CONVERSATION_SCHEDULE_DAYS.includes(day)) throw new Error('요일이 맞지 않아요');
+        if (!had) throw new Error('먼저 주간 스케줄을 만드세요.');
+        if (!CONVERSATION_SCHEDULE_DAYS.includes(day)) throw new Error('요일이 올바르지 않습니다.');
         const got = await generateCharacterDaySchedule(provider, '', name, description, personality, day, had, undefined, guidance, opts);
         return setSchedule(m, owner, { ...had, days: { ...had.days, [day]: got.blocks } }, now);
     }
@@ -188,7 +188,7 @@ export async function makeSchedule(m, owner, { ask, name = owner, description = 
 //   userStatus: 서버가 물을 때만 줘요 (마리나라의 서버는 창이 없으니 내 상태를 모르고 'idle'로 물어요). 안 주면 폰에 적힌 내 상태
 export function checkProactive(m, roomId, { now = new Date(), tzOf = () => '', cards = {}, maxFollowups, source = 'client', userStatus } = {}) {
     const w = need(m), room = w.messenger?.rooms?.[roomId], p = presenceOf(m);
-    if (!room) throw new Error('없는 방이에요');
+    if (!room) throw new Error('채팅방을 찾을 수 없습니다.');
     const P = liveKey(w.persona), ids = room.members.map(liveKey).filter(k => k !== P && w.phones?.[k]), chatId = chatIdOf(m, roomId);
     if (!ids.length) return { shouldTrigger: false, characterIds: [], reason: 'none', inactivityMs: 0 };
     restoreFollowups(m, roomId);
@@ -242,7 +242,7 @@ export function placeInput(schedule, { owner = '', card = '', places = [] } = {}
 // 답을 블록에 넣어요: 하는 일이 같은 블록은 같은 장소. 답에 없는 일 · ""는 장소 없이 둬요 → 장소가 생긴 블록 수
 export function takePlaces(schedule, answer) {
     const got = obj(answer?.places) ? answer.places : null;
-    if (!got) throw new Error('장소 답을 읽을 수 없어요');
+    if (!got) throw new Error('장소 응답을 읽을 수 없습니다.');
     const by = new Map(Object.entries(got).map(([k, v]) => [one(k).toLowerCase(), one(v).slice(0, 80)]));
     let n = 0;
     for (const d of Object.values(schedule.days || {})) for (const b of Array.isArray(d) ? d : []) {
@@ -254,7 +254,7 @@ export function takePlaces(schedule, answer) {
 // 스케줄의 블록마다 장소 채우기 (모델을 한 번 불러요). ask(messages) → 답 글; parse(글) → 객체
 export async function fillPlaces(m, owner, { ask, parse = JSON.parse, card = '', places = [] } = {}) {
     const schedule = scheduleOf(m, owner);
-    if (!schedule) throw new Error('먼저 스케줄을 만들어 주세요');
+    if (!schedule) throw new Error('먼저 스케줄을 만드세요.');
     if (!activities(schedule).length) return 0;
     const text = await ask([{ role: 'system', content: placeSystem({ owner }) }, { role: 'user', content: placeInput(schedule, { owner, card, places }) }]);
     return takePlaces(schedule, parse(text));
@@ -333,7 +333,7 @@ export function setScheduleZone(m, tz) {
     const p = presenceOf(m);
     if (!tz) { delete p.meta.conversationTimeZone; zones?.set(''); return ''; }
     const z = normalizePromptTimeZone(tz);
-    if (!z) throw new Error('시간대가 맞지 않아요');
+    if (!z) throw new Error('시간대가 올바르지 않습니다.');
     // (Marinara's rememberConversationTimeZone: one zone for every conversation)
     zones?.set(z);
     return (p.meta.conversationTimeZone = z);
@@ -387,12 +387,12 @@ export function setAutonomousOptions(m, o = {}) {
         const v = o.autonomousDailyCapOverride;
         if (v === null || v === '' || v === undefined) delete meta.autonomousDailyCapOverride;
         else if (typeof v === 'number' && Number.isFinite(v) && v >= 1) meta.autonomousDailyCapOverride = Math.floor(v);
-        else throw new Error('하루 상한은 1 이상의 수예요');
+        else throw new Error('하루 상한은 1 이상이어야 합니다.');
     }
     if (Object.hasOwn(o, 'groupChatMode')) { if (o.groupChatMode) meta.groupChatMode = String(o.groupChatMode); else delete meta.groupChatMode; }
     if (Object.hasOwn(o, 'characterExchanges')) { if (o.characterExchanges) meta.characterExchanges = true; else delete meta.characterExchanges; }
     if (Object.hasOwn(o, 'groupResponseOrder')) {
-        if (!GROUP_ORDERS.includes(o.groupResponseOrder)) throw new Error('답하는 순서는 sequential · smart · manual 가운데 하나예요');
+        if (!GROUP_ORDERS.includes(o.groupResponseOrder)) throw new Error('응답 순서는 sequential, smart, manual 중 하나여야 합니다.');
         meta.groupResponseOrder = o.groupResponseOrder;
     }
     if (Object.hasOwn(o, 'groupTurnPromptEnabled')) meta.groupTurnPromptEnabled = !!o.groupTurnPromptEnabled;
@@ -402,7 +402,7 @@ export const autonomousOptions = m => { const meta = peek(m).meta || {}; return 
 // 단체방에서 한 캐릭터가 말한 뒤, 다른 캐릭터가 거기에 답할 때인가 (마리나라의 /autonomous/exchange 그대로) → 마리나라의 답
 export function checkExchangeFor(m, roomId, lastSpeaker, { now = new Date(), tzOf = () => '', cards = {} } = {}) {
     const w = need(m), room = w.messenger?.rooms?.[roomId], p = presenceOf(m);
-    if (!room) throw new Error('없는 방이에요');
+    if (!room) throw new Error('채팅방을 찾을 수 없습니다.');
     const P = liveKey(w.persona), ids = room.members.map(liveKey).filter(k => k !== P && w.phones?.[k]), chatId = chatIdOf(m, roomId);
     syncUser(m, roomId);
     const name = room.members.find(n => liveKey(n) === liveKey(lastSpeaker));
@@ -416,7 +416,7 @@ export function checkExchangeFor(m, roomId, lastSpeaker, { now = new Date(), tzO
 
 // 스케줄 내보내기 · 가져오기 (마리나라의 character-schedule-transfer 그대로)
 //   내보내기 → 파일에 쓸 객체; 가져오기(값) → { ok: true, schedule, format } | { ok: false, reason: 'invalid' | 'unsupported-version' }
-export const exportSchedule = (m, owner) => { const s = scheduleOf(m, owner); if (!s) throw new Error('스케줄이 없어요'); return createCharacterScheduleExport(s, String(owner || '')); };
+export const exportSchedule = (m, owner) => { const s = scheduleOf(m, owner); if (!s) throw new Error('스케줄이 없습니다.'); return createCharacterScheduleExport(s, String(owner || '')); };
 export const importSchedule = value => parseCharacterScheduleImport(value);
 
 // ---- 마리나라가 기억해 두는 방의 움직임 (autonomous.service.js의 activityStates: 페이지가 떠 있는 동안만, 마리나라 서버처럼)
@@ -513,7 +513,7 @@ const roomTurns = (w, room) => { const P = liveKey(w.persona); return (room.mess
 //   ask(messages, { temperature, topP }) → 모델의 답 글 (smart일 때만 불러요). 고르기가 실패하거나 아무도 못 고르면 마리나라처럼 한 사람(방금 말한 사람이 아닌 첫 사람)
 export async function groupResponders(m, roomId, { ask, now = new Date(), tzOf = () => '', cards = {} } = {}) {
     const w = need(m), room = w.messenger?.rooms?.[roomId];
-    if (!room) throw new Error('없는 방이에요');
+    if (!room) throw new Error('채팅방을 찾을 수 없습니다.');
     const available = groupCandidates(m, roomId, { now, tzOf, cards }), order = groupOrder(m), turns = roomTurns(w, room);
     const explicit = mentionsIn(m, roomId).map(liveKey).filter(k => available.some(c => c.id === k));
     let smartQueue = null;

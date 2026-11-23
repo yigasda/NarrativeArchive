@@ -44,9 +44,9 @@ export async function storeAttachments(pending, { put }) {
     const out = [];
     for (const a of pending || []) {
         const b64 = base64Of(a?.data);
-        if (!a || typeof a.type !== 'string' || !b64) throw new Error('첨부 파일을 읽지 못했어요');
+        if (!a || typeof a.type !== 'string' || !b64) throw new Error('첨부 파일을 읽을 수 없습니다.');
         const url = String(await put(storeName(a), b64) || '');
-        if (!url) throw new Error('첨부 파일을 실리에 올리지 못했어요');
+        if (!url) throw new Error('첨부 파일을 업로드하지 못했습니다.');
         loaded.set(url, a.data);
         out.push({ type: a.type, url, ...(a.filename ? { filename: a.filename } : {}), ...(a.name ? { name: a.name } : {}) });
     }

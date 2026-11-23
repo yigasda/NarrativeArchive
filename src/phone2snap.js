@@ -48,17 +48,17 @@ const promptOf = g => (g.prompts || []).find(x => x.id === g.wizPrompt) || activ
 async function summarizedOnto(m, base, u, onStep) {
     if (!u.items.length) return { text: base, parts: 0 };
     const g = globalSettings(), p = promptOf(g);
-    if (!p?.text) throw new Error('압축 지시문이 없어요. 압축 설정을 확인해 주세요');
+    if (!p?.text) throw new Error('압축 프롬프트가 없습니다. 압축 설정을 확인하세요.');
     // (the archive itself when the summary goes onto it; onto a snapshot: the chat's settings with that text as the archive)
     const r = await draftCompress({ m: base === String(m?.text || '') ? m : { ...m, text: base }, g, p, items: u.items, onStep });
-    if (r.error) throw new Error(`이야기 요약을 끝까지 받지 못했어요${Number.isInteger(r.doneTo) ? ` (#${r.doneTo}까지 받음)` : ''}: ${String(r.error?.message || r.error)}`);
+    if (r.error) throw new Error(`이야기 요약을 끝까지 받지 못했습니다${Number.isInteger(r.doneTo) ? ` (#${r.doneTo}까지 받음)` : ''}: ${String(r.error?.message || r.error)}`);
     // the draft as the archive's own 바로 넣기 would place it: the change lists turned into the full STATE · OPEN, the
     // source marks taken off, the sections put after the ones already there
     let add = auFix(String(r.text || '').replace(/\r\n/g, '\n').trim(), m);
-    if (!add) throw new Error('이야기 요약이 비어 있어요. 다시 해 주세요');
+    if (!add) throw new Error('이야기 요약이 비어 있습니다. 다시 시도하세요.');
     if (hasChanges(add)) add = resolveChanges(base, add).text;
     const text = placeAppend(base, stripCites(add), { renumber: true, rewrites: 'skip' }).text;
-    if (!String(text || '').trim() || trimEnd(text) === trimEnd(base)) throw new Error('이야기 요약에 새로 들어온 장면이 없어요. 다시 해 주세요');
+    if (!String(text || '').trim() || trimEnd(text) === trimEnd(base)) throw new Error('이야기 요약에 새 장면이 없습니다. 다시 시도하세요.');
     return { text, parts: r.parts || 1 };
 }
 // a message's head in the chat's lines: "[#12] Mara: …", the user's own "[#12 · USER] Ren: …" (drift.js)
@@ -72,7 +72,7 @@ const finished = (text, upto, u, parts, now) => { const t = String(text || '').r
 // 실패하면 아무것도 남기지 않고 오류를 던져요: 반쪽짜리 요약본으로는 시작하지 않아요.
 //   → { v: 1, at, upto, text, recent, made: { from, to, count, parts } }
 export async function liveSnapDraft(m, { upto, onStep = () => {}, now = Date.now() } = {}) {
-    if (!Number.isInteger(upto) || upto < 0) throw new Error('이야기의 어느 메시지까지인지 필요해요');
+    if (!Number.isInteger(upto) || upto < 0) throw new Error('이야기의 끝 메시지가 필요합니다.');
     const u = unarchived(m, upto), { text, parts } = await summarizedOnto(m, String(m?.text || ''), u, onStep);
     return finished(text, upto, u, parts, now);
 }
@@ -98,14 +98,14 @@ export function liveSnapBehind(snap, tail = liveChatTail()) {
 // 정리하는 동안 채팅이 달라졌으면(다른 채팅 · 끝 메시지가 사라지거나 고쳐짐) 버리고 오류예요.
 //   → 늘린 요약본 (저장은 부르는 쪽이 해요)
 export async function liveSnapExtend(m, snap, { onStep = () => {}, now = Date.now() } = {}) {
-    if (!isSnap(snap)) throw new Error('늘릴 이야기 요약본이 없어요');
+    if (!isSnap(snap)) throw new Error('확장할 이야기 요약이 없습니다.');
     const upto = Math.max(0, (ctx().chat?.length || 1) - 1), from = snap.upto + 1, was = chatStamp(upto);
     if (!(upto >= from)) return snap;
     const bnd = Number.isInteger(m?.boundary) && m.boundary >= 0 ? m.boundary : -1;
     const u = { from, to: upto, ...rangeRaw(ctx(), globalSettings(), from, upto, bnd) };
     const { text, parts } = await summarizedOnto(m, snap.text, u, onStep);
     const is = chatStamp(upto);
-    if (is.chat !== was.chat || is.fp !== was.fp) throw new Error('이야기를 정리하는 동안 채팅이 바뀌었어요');
+    if (is.chat !== was.chat || is.fp !== was.fp) throw new Error('이야기를 정리하는 동안 채팅이 변경되었습니다.');
     return finished(text, upto, u, parts, now);
 }
 
@@ -118,7 +118,7 @@ export async function liveSnapNow(m, { onStep = () => {}, now = Date.now() } = {
     const upto = last(), was = chatStamp(upto);
     const snap = await liveSnapDraft(m, { upto, onStep, now });
     const is = chatStamp(upto);
-    if (last() !== upto || is.chat !== was.chat || is.fp !== was.fp) throw new Error('이야기를 정리하는 동안 채팅이 바뀌었어요. 다시 시작해 주세요');
+    if (last() !== upto || is.chat !== was.chat || is.fp !== was.fp) throw new Error('이야기를 정리하는 동안 채팅이 변경되었습니다. 다시 시작하세요.');
     return { snap, upto, chat: was.chat, fp: was.fp };
 }
 

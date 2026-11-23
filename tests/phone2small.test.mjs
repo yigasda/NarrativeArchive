@@ -91,7 +91,7 @@ test('서랍이 아니면 (폰 1의 메타, 서랍 흉내) 모델을 부르기 �
         for (const m of [c.real, { ...c.real, phoneUpto: 2, phoneRecent: () => 'x' }]) {
             const p = c.real.phones.mara;
             for (const go of [() => I2.liveCollectInvestmentRecords(m, p), () => I2.liveFillChartHistory(m, p, 'SAP'), () => I2.liveRefreshBankFX(m, p, '2026-11-12', 'KRW'), () => V.liveLearnVoices(m, 'Mara', p, { all: true }), () => V.livePickVoices(m, 'Mara', p, ['Ivo'])])
-                await assert.rejects(go, /실시간 폰의 서랍이 아니에요/);
+                await assert.rejects(go, /실시간 폰의 서랍이 아닙니다/);
         }
         assert.equal(asked, 0);
     } finally { done(); }

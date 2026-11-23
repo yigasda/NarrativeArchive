@@ -13,7 +13,7 @@ import { isLiveMeta, liveNowText } from './phone2store.js';
 import { liveRecentText, liveStoryReady } from './phone2req.js';
 
 // 실시간 서랍이 아니면 여기 함수는 안 돌아요 (폰 1 것을 건드리지 않게)
-const need = m => { if (!isLiveMeta(m)) throw new Error('실시간 폰의 서랍이 아니에요'); return m; };
+const need = m => { if (!isLiveMeta(m)) throw new Error('실시간 폰의 서랍이 아닙니다.'); return m; };
 
 export async function liveTakePhoto(m, p) {
     need(m); await liveStoryReady(m);

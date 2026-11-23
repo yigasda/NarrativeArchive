@@ -124,7 +124,7 @@ async function anthropicFetch(t, url, init = {}) {
 }
 
 export async function callAnthropic(t, system, prompt, maxTokens, effort = '', signal = null, temperature = null, topP = null, meta = null) {
-    if (!t.model) throw new Error('모델 이름을 넣어 주세요 (⚙ 설정 → AI 모델)');
+    if (!t.model) throw new Error('모델 이름을 입력하세요.');
     const endpoint = `${anthropicBase(t.url)}/v1/messages`;
     const send = withEffort => anthropicFetch(t, endpoint, { method: 'POST', signal, body: JSON.stringify({
         model: t.model, max_tokens: maxTokens,
@@ -143,17 +143,17 @@ export async function callAnthropic(t, system, prompt, maxTokens, effort = '', s
         if (tryEffort && r.status === 400 && /effort|output_config/i.test(await r.clone().text())) { t.noEffort = true; saveGlobal(); r = await send(false); }
     } catch (e) {
         if (signal?.aborted) throw e;
-        throw new Error(`주소에 연결하지 못했어요. 주소가 맞는지, 이 주소가 Anthropic 형식(/v1/messages)을 받는지 확인해 주세요. (${e.message || e})`);
+        throw new Error(`주소에 연결할 수 없습니다. 주소와 Anthropic 형식(/v1/messages) 지원 여부를 확인하세요 (${e.message || e})`);
     }
     const body = await r.text();
-    if (r.status === 401 || r.status === 403) throw new Error(`키가 맞지 않거나 권한이 없어요 (${r.status})`);
-    if (r.status === 404 || r.status === 405) throw new Error(`이 주소는 Anthropic 형식(/v1/messages)을 안 받는 것 같아요 (${r.status}). 형식을 OpenAI 호환으로 바꿔 주세요.`);
+    if (r.status === 401 || r.status === 403) throw new Error(`키가 올바르지 않거나 권한이 없습니다 (${r.status})`);
+    if (r.status === 404 || r.status === 405) throw new Error(`이 주소는 Anthropic 형식(/v1/messages)을 지원하지 않습니다 (${r.status}). 형식을 OpenAI 호환으로 바꾸세요.`);
     if (!r.ok) throw new Error(`API 오류 ${r.status}: ${body.slice(0, 200)}`);
-    let j; try { j = JSON.parse(body); } catch { throw new Error('API 답을 읽지 못했어요 — 이 주소가 Anthropic 형식을 받는지 확인해 주세요'); }
+    let j; try { j = JSON.parse(body); } catch { throw new Error('API 응답을 읽을 수 없습니다. Anthropic 형식을 지원하는 주소인지 확인하세요.'); }
     const out = (Array.isArray(j?.content) ? j.content : []).filter(b => b?.type === 'text').map(b => b.text || '').join('');
     if (meta) Object.assign(meta, { thinking: (Array.isArray(j?.content) ? j.content : []).filter(b => b?.type === 'thinking').map(b => b.thinking || '').join('\n\n'), finishReason: j?.stop_reason || null, usage: j?.usage ? { promptTokens: j.usage.input_tokens ?? null, completionTokens: j.usage.output_tokens ?? null, reasoningTokens: null, cachedPromptTokens: j.usage.cache_read_input_tokens ?? null } : null });
-    if (j?.stop_reason === 'refusal') throw new Error('모델이 이 요청을 거절했어요 (refusal)');
-    if (!out.trim() && j?.stop_reason === 'max_tokens') throw new Error(`답 길이 한도(${maxTokens} 토큰)를 생각하는 데 다 써서 빈 답이 왔어요 — 생각 강도를 낮추거나 최대 길이를 늘려 주세요`);
+    if (j?.stop_reason === 'refusal') throw new Error('모델이 요청을 거절했습니다.');
+    if (!out.trim() && j?.stop_reason === 'max_tokens') throw new Error(`최대 토큰(${maxTokens})을 추론에 모두 사용해 빈 응답이 반환되었습니다. 추론 강도를 낮추거나 최대 토큰을 늘리세요.`);
     if (j?.usage) console.info('[narrative-archive] tokens', t.model, `in ${j.usage.input_tokens} · out ${j.usage.output_tokens}`, effort ? `· effort ${effort}` : '');
     return out;
 }
@@ -177,28 +177,28 @@ export async function listModels(t) {
     if (apiFormat(t) === 'anthropic') {
         let r;
         try { r = await anthropicFetch(t, `${anthropicBase(url)}/v1/models?limit=100`); }
-        catch (e) { throw new Error(`주소에 연결하지 못했어요. (${e.message || e})`); }
+        catch (e) { throw new Error(`주소에 연결할 수 없습니다 (${e.message || e})`); }
         const body = await r.text();
-        if (r.status === 401 || r.status === 403) throw new Error(`키가 맞지 않거나 권한이 없어요 (${r.status})`);
+        if (r.status === 401 || r.status === 403) throw new Error(`키가 올바르지 않거나 권한이 없습니다 (${r.status})`);
         if (!r.ok) throw new Error(`API 오류 ${r.status}: ${body.slice(0, 200)}`);
         const ids = [...new Set((JSON.parse(body)?.data || []).map(x => x?.id).filter(Boolean))].sort();
-        if (!ids.length) throw new Error('모델 목록이 비어 있어요');
+        if (!ids.length) throw new Error('모델 목록이 비어 있습니다.');
         return ids;
     }
     const endpoint = modelsUrl(url);
-    if (!endpoint) throw new Error('주소를 먼저 넣어 주세요');
+    if (!endpoint) throw new Error('주소를 입력하세요.');
     const headers = {};
     if (key) headers.Authorization = `Bearer ${key}`;
     let r;
     try { r = await fetch(endpoint, { headers }); }
-    catch (e) { throw new Error(`주소에 연결하지 못했어요. 주소가 맞는지, 브라우저에서 바로 부를 수 있는(CORS) API인지 확인해 주세요. (${e.message || e})`); }
+    catch (e) { throw new Error(`주소에 연결할 수 없습니다. 주소와 CORS 지원 여부를 확인하세요 (${e.message || e})`); }
     const body = await r.text();
-    if (r.status === 401 || r.status === 403) throw new Error(`키가 맞지 않거나 권한이 없어요 (${r.status})`);
+    if (r.status === 401 || r.status === 403) throw new Error(`키가 올바르지 않거나 권한이 없습니다 (${r.status})`);
     if (!r.ok) throw new Error(`API 오류 ${r.status}: ${body.slice(0, 200)}`);
-    let j; try { j = JSON.parse(body); } catch { throw new Error('모델 목록을 읽지 못했어요. 주소가 .../v1 까지인지 확인해 주세요.'); }
+    let j; try { j = JSON.parse(body); } catch { throw new Error('모델 목록을 읽을 수 없습니다. 주소가 .../v1로 끝나는지 확인하세요.'); }
     const arr = Array.isArray(j) ? j : Array.isArray(j?.data) ? j.data : Array.isArray(j?.models) ? j.models : [];
     const ids = [...new Set(arr.map(x => typeof x === 'string' ? x : x?.id || x?.name).filter(Boolean).map(String))].sort((a, b) => a.localeCompare(b));
-    if (!ids.length) throw new Error('모델 목록이 비어 있어요');
+    if (!ids.length) throw new Error('모델 목록이 비어 있습니다.');
     return ids;
 }
 
@@ -207,7 +207,7 @@ const topPOf = v => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? Mat
 export async function callOpenAICompat(t, system, prompt, maxTokens, effort = '', signal = null, temperature = null, topP = null, meta = null) {
     const { url, key, model } = t;
     const endpoint = chatCompletionsUrl(url);
-    if (!endpoint || !model) throw new Error('커스텀 API의 URL과 모델 이름을 넣어 주세요 (⚙ 설정 → AI 모델)');
+    if (!endpoint || !model) throw new Error('사용자 지정 API의 URL과 모델 이름을 입력하세요.');
     const headers = { 'Content-Type': 'application/json' };
     if (key) headers.Authorization = `Bearer ${key}`;
     let r;
@@ -227,19 +227,19 @@ export async function callOpenAICompat(t, system, prompt, maxTokens, effort = ''
         }
     } catch (e) {
         if (signal?.aborted) throw e;
-        throw new Error(`주소에 연결하지 못했어요. 브라우저에서 바로 부를 수 없는(CORS) API일 수 있어요. (${e.message || e})`);
+        throw new Error(`주소에 연결할 수 없습니다. CORS를 지원하지 않는 API일 수 있습니다 (${e.message || e})`);
     }
     const body = await r.text();
     if (!r.ok) throw new Error(`API 오류 ${r.status}: ${body.slice(0, 200)}`);
-    let j; try { j = JSON.parse(body); } catch { throw new Error('API 답을 읽지 못했어요'); }
+    let j; try { j = JSON.parse(body); } catch { throw new Error('API 응답을 읽을 수 없습니다.'); }
     const msg = j?.choices?.[0]?.message;
     const out = typeof msg?.content === 'string' ? msg.content
         : Array.isArray(msg?.content) ? msg.content.map(p => p?.text || '').join('') : (j?.choices?.[0]?.text || '');
     // say why an answer is empty: a length cut usually means the model spent the limit thinking
     const why = j?.choices?.[0]?.finish_reason;
     if (meta) Object.assign(meta, { thinking: [msg?.reasoning_content, msg?.reasoning].find(v => typeof v === 'string' && v.trim()) || '', finishReason: why || null, model: String(j?.model || model || ''), usage: j?.usage ? { promptTokens: j.usage.prompt_tokens ?? null, completionTokens: j.usage.completion_tokens ?? null, reasoningTokens: j.usage.completion_tokens_details?.reasoning_tokens ?? null, cachedPromptTokens: j.usage.prompt_tokens_details?.cached_tokens ?? null } : null });
-    if (!String(out).trim() && why === 'length') throw new Error(`답 길이 한도(${maxTokens} 토큰)에 걸려 빈 답이 왔어요. 생각하는 데 다 쓴 것 같아요 — ⚙ 설정 → AI 모델에서 최대 길이를 늘려 주세요`);
-    if (!String(out).trim() && why && why !== 'stop') throw new Error(`모델이 빈 답을 돌려줬어요 (멈춘 이유: ${why})`);
+    if (!String(out).trim() && why === 'length') throw new Error(`최대 토큰(${maxTokens})에 도달해 빈 응답이 반환되었습니다. 최대 토큰을 늘리세요.`);
+    if (!String(out).trim() && why && why !== 'stop') throw new Error(`모델이 빈 응답을 반환했습니다 (종료 이유: ${why})`);
     return out;
 }
 
@@ -274,7 +274,7 @@ export async function callVertex(t, system, prompt, maxTokens, effort = '', sign
 }
 async function callVertexAt(t, loc, system, prompt, maxTokens, job = '', signal = null, temperature = null, topP = null, meta = null) {
     const model = String(t.vxModel || '').trim();
-    if (!model) throw new Error('Vertex 모델을 골라 주세요 (예: gemini-2.5-flash)');
+    if (!model) throw new Error('Vertex 모델을 선택하세요.');
     // callConn already chose between the connection's setting and the job's; nothing chosen: the model decides
     // (none · min · xhigh · max go too, in SillyTavern's words — stEffort: before, only low · medium · high did and the rest fell to auto,
     //  so Off and the top levels never reached a Vertex model)
@@ -294,9 +294,9 @@ async function callVertexAt(t, loc, system, prompt, maxTokens, job = '', signal 
     try { j = JSON.parse(body); } catch { /* not JSON */ }
     const msg = j?.error?.message || j?.message || (typeof j?.error === 'string' ? j.error : '') || body.slice(0, 200);
     if (!r.ok || j?.error) {
-        if (/service account|Service Account/i.test(msg)) throw new Error('실리에 Vertex 서비스 계정 JSON이 없어요. API 연결 → Chat Completion → Google Vertex AI → 서비스 계정에서 넣어 주세요.');
+        if (/service account|Service Account/i.test(msg)) throw new Error('실리에 Vertex 서비스 계정 JSON이 없습니다. API 연결 → Chat Completion → Google Vertex AI에서 서비스 계정을 넣으세요.');
         if (/404|NOT_FOUND|not found/i.test(msg)) throw new Error(`Vertex 오류 404: ${msg.slice(0, 160)}`);
-        if (/blocked|SAFETY|PROHIBITED|RECITATION|candidate/i.test(msg)) throw new Error(`Vertex가 답을 막았어요 (${msg.slice(0, 120)})`);
+        if (/blocked|SAFETY|PROHIBITED|RECITATION|candidate/i.test(msg)) throw new Error(`Vertex가 응답을 차단했습니다 (${msg.slice(0, 120)})`);
         throw new Error(`Vertex 오류 ${r.status}${msg && msg !== 'true' ? `: ${msg.slice(0, 200)}` : ' · 실리 서버 창에 자세한 내용이 있어요'}`);
     }
     if (meta) Object.assign(meta, { thinking: [j?.choices?.[0]?.message?.reasoning_content, j?.choices?.[0]?.message?.reasoning].find(v => typeof v === 'string' && v.trim()) || '', finishReason: j?.choices?.[0]?.finish_reason || null, usage: j?.usage ? { promptTokens: j.usage.prompt_tokens ?? null, completionTokens: j.usage.completion_tokens ?? null, reasoningTokens: j.usage.completion_tokens_details?.reasoning_tokens ?? null, cachedPromptTokens: null } : null });
@@ -329,7 +329,7 @@ function stStatusBody(source, o) {
 const ST_SELECT = { makersuite: 'google' };
 export async function stSourceModels(source) {
     const src = String(source || '');
-    if (!src) throw new Error('연결 종류를 골라 주세요');
+    if (!src) throw new Error('연결 종류를 선택하세요.');
     const fromPage = () => [...document.querySelectorAll(`#model_${ST_SELECT[src] || src}_select option`)].map(o => ({ id: o.value, name: String(o.textContent || o.value).trim() })).filter(x => x.id);
     const noList = ['claude', 'ai21', 'vertexai', 'perplexity', 'zai', 'minimax'];
     let rows = [];
@@ -341,7 +341,7 @@ export async function stSourceModels(source) {
         } catch { /* the picker's own list below */ }
     }
     if (!rows.length) rows = fromPage();
-    if (!rows.length) throw new Error('모델 목록을 받지 못했어요. 실리의 API 연결에서 이 연결의 키를 넣었는지 확인해 주세요');
+    if (!rows.length) throw new Error('모델 목록을 불러오지 못했습니다. 실리의 API 연결에서 키를 확인하세요.');
     return [...new Map(rows.map(x => [x.id, x])).values()];
 }
 // A thinking level for a connection profile's request, in the shape SillyTavern's server expects for that source and
@@ -352,7 +352,7 @@ export async function stLevelPayload(source, model, effort) {
     const O = globalThis.__naStOpenai || await import('/scripts/openai.js');
     // (the server plugin has no createGenerationParameters: it gives the value the browser worked out with it — plugin/work.mjs)
     if (typeof O.levelPayload === 'function') return O.levelPayload(source, model, effort);
-    if (typeof O.createGenerationParameters !== 'function') throw new Error('이 실리 버전에서는 연결 프로필에 추론 레벨을 실을 수 없어요 (실리를 최신으로 올려 주세요)');
+    if (typeof O.createGenerationParameters !== 'function') throw new Error('이 실리 버전에서는 연결 프로필에 추론 레벨을 적용할 수 없습니다. 실리를 업데이트하세요.');
     const thoughts = effort !== 'none';
     const built = await O.createGenerationParameters({ ...O.oai_settings, chat_completion_source: source, stream_openai: false, n: 1, bias_preset_selected: '', function_calling: false, reasoning_effort: stEffort(effort), show_thoughts: thoughts }, model, 'quiet', []);
     const data = built && typeof built === 'object' && built.generate_data ? built.generate_data : built;
@@ -361,11 +361,11 @@ export async function stLevelPayload(source, model, effort) {
 // the request for a source, as SillyTavern's own code builds it (nothing is sent). thoughts: whether its reasoning text is asked for
 async function stSourceData(t, messages, maxTokens, effort, temperature, topP, thoughts) {
     const source = String(t.source || ''), model = String(t.stModel || '').trim();
-    if (!source) throw new Error('연결 종류를 골라 주세요 (⚙ 설정 → AI 모델)');
-    if (!model) throw new Error('모델을 골라 주세요 (⚙ 설정 → AI 모델 → 모델 불러오기)');
+    if (!source) throw new Error('연결 종류를 선택하세요.');
+    if (!model) throw new Error('모델을 선택하세요.');
     // (globalThis.__naStOpenai: the tests' stand-in for SillyTavern's module; the server plugin's too — plugin/work.mjs)
     const O = globalThis.__naStOpenai || await import('/scripts/openai.js');
-    if (typeof O.createGenerationParameters !== 'function') throw new Error('이 실리 버전에서는 이 연결 방식을 쓸 수 없어요 (실리를 최신으로 올려 주세요)');
+    if (typeof O.createGenerationParameters !== 'function') throw new Error('이 실리 버전에서는 이 연결 방식을 사용할 수 없습니다. 실리를 업데이트하세요.');
     // (what this request decides goes in as settings, so SillyTavern's own rules for each source and model still apply to
     // it: some models take no temperature, some want max_completion_tokens. The role-play preset's sampling is not ours)
     const settings = {
@@ -378,7 +378,7 @@ async function stSourceData(t, messages, maxTokens, effort, temperature, topP, t
     const built = await O.createGenerationParameters(settings, model, 'quiet', messages);
     // (SillyTavern hands back { generate_data, stream, canMultiSwipe }; an older one handed back the request itself)
     const data = built && typeof built === 'object' && built.generate_data ? built.generate_data : built;
-    if (!data || !data.chat_completion_source) throw new Error('이 실리 버전에서는 이 연결 방식을 쓸 수 없어요 (요청을 만들지 못했어요)');
+    if (!data || !data.chat_completion_source) throw new Error('이 실리 버전에서는 이 연결 방식을 사용할 수 없습니다.');
     // (the role-play's stop strings, token bias and tools are not this request's)
     for (const k of ['stop', 'logit_bias', 'logprobs', 'top_logprobs', 'n', 'tools', 'tool_choice', 'seed']) delete data[k];
     data.stream = false;
@@ -421,7 +421,7 @@ export async function callStSource(t, system, prompt, maxTokens, effort = '', si
         : parts.length ? parts.filter(b => b?.type === 'text').map(b => b.text || '').join('')
             : String(j?.candidates?.[0]?.content?.parts?.filter(p => !p?.thought).map(p => p?.text || '').join('') || j?.choices?.[0]?.text || '');
     if (meta) Object.assign(meta, { thinking: [m?.reasoning_content, m?.reasoning, parts.filter(b => b?.type === 'thinking').map(b => b.thinking || '').join('\n\n')].find(v => typeof v === 'string' && v.trim()) || '', finishReason: j?.choices?.[0]?.finish_reason || j?.stop_reason || null, usage: j?.usage ? { promptTokens: j.usage.prompt_tokens ?? j.usage.input_tokens ?? null, completionTokens: j.usage.completion_tokens ?? j.usage.output_tokens ?? null, reasoningTokens: j.usage.completion_tokens_details?.reasoning_tokens ?? null, cachedPromptTokens: null } : null });
-    if (!String(out).trim()) throw new Error('모델이 빈 답을 돌려줬어요');
+    if (!String(out).trim()) throw new Error('모델이 빈 응답을 반환했습니다.');
     return String(out);
 }
 
@@ -453,7 +453,7 @@ export const looksRefused = (out, guard) => {
     return REFUSAL_HINTS.some(re => re.test(head));
 };
 export const isBlocked = e => !!e?.refused || BLOCK_HINTS.some(re => re.test(String(e?.message || e || '')));
-const refusedError = who => Object.assign(new Error(`${who}이 요청을 거절했어요. 거절한 답은 넣지 않았어요`), { refused: true });
+const refusedError = who => Object.assign(new Error(`${who}이 요청을 거절했습니다.`), { refused: true });
 
 // the stand-in for a refused or blocked request: '' none, 'ai' the AI 기능 모델, 'dr' the draft model
 export const fallbackOf = () => { const v = globalSettings().fallback; return v === 'ai' || v === 'dr' ? v : ''; };
@@ -476,11 +476,11 @@ export const draftReady = () => OWN_MODES.includes(draftSettings().mode);
 export async function askDraft(prompt, opts = {}) {
     const { system = '', maxTokens = 0, effort = '', force = false, guard = null, keepSystem = false, timeout = 0, signal = null, temperature = null, topP = null, meta = null } = opts;
     const t = draftSettings();
-    if (!draftReady()) throw new Error('초안 모델이 없어요. ⚙ 설정 → AI 모델 → 초안 모델에서 정해 주세요.');
+    if (!draftReady()) throw new Error('연결이 설정되지 않았습니다.');
     try {
         const call = callConn(t, system, prompt, Math.max(256, Number(maxTokens) || Number(t.max) || 16000), effort, force, keepSystem, signal, temperature, topP, meta);
-        const out = timeout > 0 ? await Promise.race([call, new Promise((_, no) => setTimeout(() => no(Object.assign(new Error(`모델이 ${Math.round(timeout / 60000)}분 넘게 답하지 않아서 멈췄어요. 다시 해 주세요`), { timedOut: true })), timeout))]) : await call;
-        if (!out) throw new Error('초안 모델이 빈 답을 돌려줬어요');
+        const out = timeout > 0 ? await Promise.race([call, new Promise((_, no) => setTimeout(() => no(Object.assign(new Error(`모델이 ${Math.round(timeout / 60000)}분 넘게 응답하지 않아 중단했습니다. 다시 시도하세요.`), { timedOut: true })), timeout))]) : await call;
+        if (!out) throw new Error('모델이 빈 응답을 반환했습니다.');
         if (looksRefused(out, guard)) throw refusedError('초안 모델');
         return out;
     } catch (e) { if (e?.timedOut || signal?.aborted) throw e; return viaFallback(e, 'dr', prompt, opts); }
@@ -536,18 +536,18 @@ async function askAIOnce(prompt, { system = '', maxTokens = 0, effort = '', forc
         out = await callConn(a, system, prompt, max, effort, force, keepSystem, signal, temperature, topP, meta);
     } else if (via) {
         const p = via.profile;
-        if (!p) throw new Error('고른 연결 프로필을 찾을 수 없어요. ⚙ 설정 → AI 모델에서 다시 골라 주세요.');
+        if (!p) throw new Error('선택한 연결 프로필을 찾을 수 없습니다. 다른 연결을 선택하세요.');
         const msgs = [...(system ? [{ role: 'system', content: system }] : []), ...turnsOf(prompt).map(t => openAiTurn(t, false))];
         const r = await c.ConnectionManagerRequestService.sendRequest(p.id, msgs, max, { stream: false, extractData: true, includePreset: true, includeInstruct: true, ...(signal ? { signal } : {}) });
         out = typeof r === 'string' ? r : r?.content;
     } else {
         // (the server plugin: SillyTavern's own connection is its browser code. A profile picked in SillyTavern goes through above)
         if (c.naServer) throw new Error('선택된 연결 프로필이 없습니다. 실리의 연결 관리자에서 프로필을 선택하세요.');
-        if (typeof c.generateRaw !== 'function') throw new Error('이 실리 버전에서는 AI 호출을 쓸 수 없어요');
+        if (typeof c.generateRaw !== 'function') throw new Error('이 실리 버전에서는 AI 호출을 사용할 수 없습니다.');
         out = await c.generateRaw({ prompt: Array.isArray(prompt) ? turnsOf(prompt).map(x => x.content).join('\n\n') : prompt, systemPrompt: system, responseLength: max });
     }
     out = stripThink(out);
-    if (!out) throw new Error('모델이 빈 답을 돌려줬어요');
+    if (!out) throw new Error('모델이 빈 응답을 반환했습니다.');
     if (looksRefused(out, guard)) throw refusedError('AI 기능 모델');
     return out;
 }

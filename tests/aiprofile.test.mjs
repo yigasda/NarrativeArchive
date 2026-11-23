@@ -39,7 +39,7 @@ test('Orbit의 요청: 실리에서 지금 고른 프로필로. 그 밖의 요�
     assert.equal(await AI.askAI('hi', { profileNow: true }), 'via p1');
     assert.equal(await AI.askAI('hi'), 'via p1');
     setup({ aiProfile: 'gone', selected: 'p2' });
-    await assert.rejects(AI.askAI('hi', { profileNow: true }), /고른 연결 프로필을 찾을 수 없어요/);
+    await assert.rejects(AI.askAI('hi', { profileNow: true }), /선택한 연결 프로필을 찾을 수 없습니다/);
     assert.deepEqual(AI.aiProfileFor({ profileNow: true }), { id: 'gone', profile: null });
 });
 

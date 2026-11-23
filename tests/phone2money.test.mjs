@@ -82,7 +82,7 @@ test('서랍이 아니면 모델을 부르기 전에 멈춰요; 사본은 폰 1 
     try {
         const c = world(); let asked = 0;
         T.ask = async () => { asked++; return '{}'; };
-        for (const m of [c.real, { ...c.real, phoneUpto: 2, phoneRecent: () => 'x' }]) await assert.rejects(() => M2.liveFillMoney(m, c.real.phones.mara), /실시간 폰의 서랍이 아니에요/);
+        for (const m of [c.real, { ...c.real, phoneUpto: 2, phoneRecent: () => 'x' }]) await assert.rejects(() => M2.liveFillMoney(m, c.real.phones.mara), /실시간 폰의 서랍이 아닙니다/);
         assert.equal(asked, 0); assert.equal(c.real.phones.mara.money, undefined);
     } finally { done(); }
     const a = await src('phonedata.js'), b = await src('phone2money.js'), q = await src('phone2req.js'), api = await src('phone2api.js');

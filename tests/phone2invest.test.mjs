@@ -98,7 +98,7 @@ test('평가 날짜: 실시간은 흐르는 시계의 날 + 폰의 연도; 저�
         // 연도가 없으면 날짜 없음
         delete p.investment; p.noYear = false; delete p.year;
         assert.equal(I2.liveInvestmentDate(d, p), '');
-        assert.throws(() => I2.liveInvestmentDate(real, real.phones.mara), /실시간 폰의 서랍이 아니에요/);
+        assert.throws(() => I2.liveInvestmentDate(real, real.phones.mara), /실시간 폰의 서랍이 아닙니다/);
     } finally { done(); }
     const inv = await src('investdata.js');
     assert.doesNotMatch(inv, /phoneUpto|isLivePhone|phoneNow|live:/);
@@ -109,7 +109,7 @@ test('서랍이 아니면 모델을 부르기 전에 멈춰요; 사본은 폰 1 
     try {
         const c = world(); let asked = 0;
         T.ask = async () => { asked++; return '{}'; };
-        for (const m of [c.real, { ...c.real, phoneUpto: 2, phoneRecent: () => 'x' }]) for (const go of [() => I2.liveFillInvestment(m, c.real.phones.mara, '2026-11-12'), () => I2.liveRefreshMarket(m, c.real.phones.mara, '2026-11-12')]) await assert.rejects(go, /실시간 폰의 서랍이 아니에요/);
+        for (const m of [c.real, { ...c.real, phoneUpto: 2, phoneRecent: () => 'x' }]) for (const go of [() => I2.liveFillInvestment(m, c.real.phones.mara, '2026-11-12'), () => I2.liveRefreshMarket(m, c.real.phones.mara, '2026-11-12')]) await assert.rejects(go, /실시간 폰의 서랍이 아닙니다/);
         assert.equal(asked, 0); assert.equal(c.real.phones.mara.investment, undefined);
     } finally { done(); }
     const a = await src('investdata.js'), b = await src('phone2invest.js'), api = await src('phone2api.js');

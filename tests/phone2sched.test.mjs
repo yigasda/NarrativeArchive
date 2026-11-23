@@ -101,7 +101,7 @@ test('스케줄 만들기: 마리나라의 지시문으로 묻고, 답을 넣어
     const d = await S.makeSchedule(m, 'Mara', { ask: one, day: 'Sunday', now: NOW }).catch(e => e);
     assert.ok(d instanceof Error || d.days.Sunday[0].activity === 'day off');
     await assert.rejects(S.makeSchedule(m, 'Mara', { ask: async () => 'not json', now: NOW }), S.ScheduleDraftError);
-    await assert.rejects(S.makeSchedule(m, 'Ivo', { ask, day: 'Monday' }), /먼저 한 주/);
+    await assert.rejects(S.makeSchedule(m, 'Ivo', { ask, day: 'Monday' }), /먼저 주간 스케줄을 만드세요/);
 });
 test('먼저 말 걸기: 꺼져 있으면 안 하고, 켜면 마리나라의 판단대로. 줄 세우면 오늘 수와 쉬는 시간을 적어요', () => {
     // (마리나라의 판단은 진짜 지금 시각으로 재요)
@@ -211,7 +211,7 @@ test('장소: 블록마다 따로 두고(place), 하는 일 글은 그대로예�
     assert.equal(asked[0][1].content, "[ACTIVITIES]\n- sleeping\n- Working\n- free time\n\n[Mara's card]\na nurse\n\n[PLACES]\n- home");
     const mon = S.scheduleOf(m, 'Mara').days.Monday;
     assert.deepEqual(mon.map(b => [b.activity, b.place]), [['sleeping', 'home'], ['Working', "St. Mary's Hospital"], ['free time', undefined]]);
-    await assert.rejects(S.fillPlaces(m, 'Mara', { ask: async () => '{"nope":1}' }), /장소 답/);
+    await assert.rejects(S.fillPlaces(m, 'Mara', { ask: async () => '{"nope":1}' }), /장소 응답을 읽을 수 없습니다/);
     await assert.rejects(S.fillPlaces(m, 'Ivo', { ask }), /먼저 스케줄/);
     // 마리나라의 상황 글에는 장소가 안 섞여요
     assert.doesNotMatch(S.contextBlock(m, 'Mara', L.ensureRoom(m, ['Mara']).id, { now: NOW }), /Hospital/);
@@ -475,7 +475,7 @@ test('생성 연결(마리나라의 connectionId): 확장에 넣어 둔 연결 �
     assert.equal(await G.liveSetScheduleConnection(m, 'profile:p1'), 'profile:p1');
     assert.equal(G.liveScheduleConnection(m), 'profile:p1');
     assert.equal(S.presenceOf(m).meta.scheduleConnectionId, 'profile:p1');
-    await assert.rejects(G.liveSetScheduleConnection(m, 'profile:gone'), /없는 연결/);
+    await assert.rejects(G.liveSetScheduleConnection(m, 'profile:gone'), /연결을 찾을 수 없습니다/);
     // 프로필이 없어지면 기본으로 돌아가요
     T.profiles = [];
     assert.equal(G.liveScheduleConnection(m), '');
@@ -539,7 +539,7 @@ test('스케줄 내보내기 · 가져오기(마리나라의 파일 모양 그�
     assert.equal(back.ok, true);
     assert.equal(back.schedule.days.Monday[0].activity, 'free');
     assert.deepEqual(S.importSchedule({ kind: 'marinara.character-schedule', version: 9, schedule: {} }), { ok: false, reason: 'unsupported-version' });
-    assert.throws(() => S.exportSchedule(m, 'Ivo'), /스케줄이 없어요/);
+    assert.throws(() => S.exportSchedule(m, 'Ivo'), /스케줄이 없습니다/);
 });
 test('따라 묻기는 마리나라처럼 점점 뜸해지고 세 번에서 멈춰요 (판단할 때마다 기억을 지우지 않아요)', () => {
     const { m, a } = world(), t = Date.now();
@@ -793,7 +793,7 @@ test('Merged: 한 답을 마리나라의 나누기로 사람마다의 말로 넣
     assert.deepEqual([r.said, r.speakers], [4, ['Mara', 'Ivo', 'Varo']]);
     const one = RUN.takeMerged(m, g.id, 'just one line with no name', { names: ['Mara', 'Ivo'], lead: 'Ivo', now: 6000 });
     assert.deepEqual([one.speakers, g.messages.at(-1).from], [['Ivo'], 'Ivo']);
-    assert.throws(() => RUN.takeMerged(m, g.id, '  ', { names: ['Mara'], lead: 'Mara' }), /빈 답/);
+    assert.throws(() => RUN.takeMerged(m, g.id, '  ', { names: ['Mara'], lead: 'Mara' }), /빈 응답입니다/);
 });
 test('Merged 지시문: 마리나라의 글 그대로 (기본 Conversation 지시문 + 단체방 줄 + 되풀이 금지 + Output Format)', () => {
     const sys = MC.buildMergedConversationSystemPrompt({ convoCharNames: ['Mara', 'Ivo'], personaName: 'Ren' });

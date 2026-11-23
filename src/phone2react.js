@@ -88,9 +88,9 @@ export function replyReact(raw, { owner, persona, members = [], messages = [] } 
 // 방의 말 하나 (없는 방 · 없는 말이면 오류)
 export function messageOf(m, roomId, msgId) {
     const w = liveWorld(m), room = w?.messenger?.rooms?.[roomId];
-    if (!w) throw new Error('아직 폰 2가 없어요');
-    if (!room) throw new Error('없는 방이에요');
+    if (!w) throw new Error('폰 2가 없습니다.');
+    if (!room) throw new Error('채팅방을 찾을 수 없습니다.');
     const x = room.messages.find(y => String(y.id) === String(msgId));
-    if (!x) throw new Error('없는 말이에요');
+    if (!x) throw new Error('메시지를 찾을 수 없습니다.');
     return { w, room, x };
 }

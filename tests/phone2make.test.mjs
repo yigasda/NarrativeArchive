@@ -149,7 +149,7 @@ test('폰 만들기 준비 (가져온 채팅뿐이라 폰이 없는 실시간 �
         const n2 = asked.length;
         // 서랍이 아니면 멈춰요
         const was = JSON.stringify(real);
-        await assert.rejects(() => MK.livePreparePhone(real, 'Mara'), /실시간 폰의 서랍이 아니에요/);
+        await assert.rejects(() => MK.livePreparePhone(real, 'Mara'), /실시간 폰의 서랍이 아닙니다/);
         assert.equal(asked.length, n2); assert.equal(JSON.stringify(real), was);
     } finally { Date.now = now; console.warn = warn; done(); }
 });
@@ -170,13 +170,13 @@ test('같은 폰을 만드는 중이면 기다리라고 해요; 반영(update)�
         assert.equal(asked, 1);
         go(); await first;
         assert.equal(PD.phoneMaking(c.d, 'Mara'), false); assert.equal(PD.phoneMaking(again, 'Mara'), false); assert.equal(asked, 1);
-        await assert.rejects(() => MK.liveMakePhone(c.d, 'Mara', { update: true }), /실시간 폰은 메신저를 나갈 때 반영해요/);
+        await assert.rejects(() => MK.liveMakePhone(c.d, 'Mara', { update: true }), /실시간 폰은 메신저를 나갈 때 반영됩니다/);
         const p1 = c.real.phones.mara, was = JSON.stringify(p1);
-        for (const m of [c.real, { ...c.real, phoneUpto: 2, phoneRecent: () => 'x', phoneJournal: 'test' }]) await assert.rejects(() => MK.liveMakePhone(m, 'Mara'), /실시간 폰의 서랍이 아니에요/);
+        for (const m of [c.real, { ...c.real, phoneUpto: 2, phoneRecent: () => 'x', phoneJournal: 'test' }]) await assert.rejects(() => MK.liveMakePhone(m, 'Mara'), /실시간 폰의 서랍이 아닙니다/);
         assert.equal(asked, 1); assert.equal(JSON.stringify(p1), was);
         // 요약본이 아직 없는 폰(요약본 방식 전에 시작해 둔 폰): 요약본을 못 받으면 모델을 부르지 않아요
         const n = world(); delete L.liveWorld(n.real).snap; L.setStoryKeeper(null);
-        await assert.rejects(() => MK.liveMakePhone(n.d, 'Mara', { apps: ['note'] }), /이야기 요약본을 만들지 못했어요/);
+        await assert.rejects(() => MK.liveMakePhone(n.d, 'Mara', { apps: ['note'] }), /이야기 요약을 만들지 못했습니다\. 잠시 후 다시 시도하세요/);
         assert.equal(asked, 1);
     } finally { done(); }
 });
@@ -192,7 +192,7 @@ test('사본은 폰 1 줄과 정해진 곳만 달라요 (한쪽만 고치면 실
     const cutLine = (t, l) => { assert.ok(t.includes(l), l); return t.replace(l, ''); };
     assert.ok(!/[sS]econdTurn|liveTold|soFarHead/.test(b));
     const back = cut(b, '\nasync function liveMakePhone0(').replace('async function liveMakePhone0(', 'async function makePhone0(').replace('    await liveStoryReady(m);\n', '')
-        .replace("    if (update) throw new Error('실시간 폰은 메신저를 나갈 때 반영해요');", '    if (update && m.phones?.[key]) return updatePhone(m, owner);')
+        .replace("    if (update) throw new Error('실시간 폰은 메신저를 나갈 때 반영됩니다.');", '    if (update && m.phones?.[key]) return updatePhone(m, owner);')
         .replace('    // (폰 2, a phone it already has: always with its reading kept — it is made again from the story it began from and the\n    // messenger talk read so far)\n', '')
         .replace('keep = !!(apps && cur) || !!cur?.sync?.marks?.base;', "keep = !!(apps && cur) || !!(cur?.sync?.marks?.base && ['money', 'invest', 'life', 'delivery'].some(g => cur.sync.marks[g]));")
         .replace('const gap = liveWindowOf(m, keep ? cur : null);', 'const gap = keep ? windowOf(m, cur, null, CHAT_TOKENS.phone, false) : windowOf(m, null);').replace('liveReadMark(gap)', 'readMark(gap)')

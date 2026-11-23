@@ -11,7 +11,7 @@ export function phone2ReplySystem({ owner = 'the owner', persona = 'them', sched
     let text = replySystem({ owner, persona });
     if (!react) {
         const cut = text.replace(/\n- An emoji on the last text someone sent[^\n]*/, '').replace(/\n  "react": [^\n]*/, '');
-        if (cut.includes('"react"') || cut.length === text.length) throw new Error('답장 지시문에서 react 자리를 못 찾았어요');
+        if (cut.includes('"react"') || cut.length === text.length) throw new Error('답장 프롬프트에서 react 위치를 찾을 수 없습니다.');
         text = cut;
     }
     if (!scheduled) return text;
@@ -23,7 +23,7 @@ export function phone2ReplySystem({ owner = 'the owner', persona = 'them', sched
         : text.replace(/STATE FIRST\n[^\n]*\n/, `STATUS\n- Your status and what you are doing come from your schedule in CONTEXT, by themselves. "status" stays "".\n- Write a new one ${STATUS_LINE} Then "status": { "status": "online|idle|dnd|offline", "activity": "activity name", "duration": "number of hours (e.g., 1h)", "place": "where that puts you" }.\n`)
             .replace('{ "state": "HH:MM · place · doing · ~until",\n  "reply": ', '{ "reply": ')
             .replace(/(\n  "does": \[[^\n]*\]) \}$/, '$1,\n  "status": "" }');
-    if (out.includes('STATE FIRST') || out.includes('"state"') || (statusCommand ? !out.endsWith(',\n  "status": "" }') : out.includes('"status"'))) throw new Error('답장 지시문에서 state 자리를 못 찾았어요');
+    if (out.includes('STATE FIRST') || out.includes('"state"') || (statusCommand ? !out.endsWith(',\n  "status": "" }') : out.includes('"status"'))) throw new Error('답장 프롬프트에서 state 위치를 찾을 수 없습니다.');
     return out;
 }
 function replySystem({ owner = 'the owner', persona = 'them' } = {}) {

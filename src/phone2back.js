@@ -65,7 +65,7 @@ export function takeBack(answer, parse = JSON.parse) {
     let got = null;
     try { got = a >= 0 && b > a ? parse(t.slice(a, b + 1)) : null; } catch { got = null; }
     const note = String(got?.note ?? '').replace(/\r\n/g, '\n').trim();
-    if (!note) throw new Error('모델 답에서 전할 글을 찾지 못했어요');
+    if (!note) throw new Error('모델 응답에서 전할 내용을 찾을 수 없습니다.');
     return note;
 }
 

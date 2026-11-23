@@ -39,8 +39,8 @@ test('읽는 범위 · 읽은 자리: 롤플 채팅에서 읽는 것은 없음, 
         const f = world({ fresh: true });
         assert.equal(Q.liveWindowOf(f.d, f.p).upto, -1);
         // 서랍이 아니면 멈춰요 (서랍 흉내도)
-        assert.throws(() => Q.liveWindowOf(f.real, f.p), /실시간 폰의 서랍이 아니에요/);
-        assert.throws(() => Q.liveWindowOf({ ...f.real, phoneUpto: 2 }, f.p), /실시간 폰의 서랍이 아니에요/);
+        assert.throws(() => Q.liveWindowOf(f.real, f.p), /실시간 폰의 서랍이 아닙니다/);
+        assert.throws(() => Q.liveWindowOf({ ...f.real, phoneUpto: 2 }, f.p), /실시간 폰의 서랍이 아닙니다/);
     } finally { done(); }
 });
 
@@ -68,7 +68,7 @@ test('요청 글: 요약본의 이야기 + 요약본의 시작 직전 메시지 
         assert.ok(fs.includes('메신저로 한 말') && !fs.includes('이야기'));
         // 폰 1의 폰은 그대로, 서랍이 아니면 멈춰요
         assert.equal(JSON.stringify(real.phones), p1);
-        await assert.rejects(() => Q.liveSideRequest(real, 'Mara', []), /실시간 폰의 서랍이 아니에요/);
+        await assert.rejects(() => Q.liveSideRequest(real, 'Mara', []), /실시간 폰의 서랍이 아닙니다/);
     } finally { done(); }
 });
 
@@ -99,8 +99,8 @@ test('기기 정보 채우기: 요청은 실시간 뼈대로, 답은 실시간 �
         // 이미 있으면 다시 안 물어요
         assert.equal(await F.liveFillDevice(d, p), dev); assert.equal(asked.length, 1);
         assert.equal(JSON.stringify(real.phones), p1);
-        await assert.rejects(() => F.liveFillDevice(real, real.phones.mara), /실시간 폰의 서랍이 아니에요/);
-        assert.throws(() => F.livePrepareWealth(real, real.phones.mara), /실시간 폰의 서랍이 아니에요/);
+        await assert.rejects(() => F.liveFillDevice(real, real.phones.mara), /실시간 폰의 서랍이 아닙니다/);
+        assert.throws(() => F.livePrepareWealth(real, real.phones.mara), /실시간 폰의 서랍이 아닙니다/);
         assert.equal(asked.length, 1);
     } finally { done(); }
 });
@@ -110,10 +110,10 @@ test('요약본이 아직 없는 폰(요약본 방식 전에 시작해 둔 폰):
         // 챙겨 주는 쪽이 없으면 · 못 만들면: 요청 없이 오류
         L.setStoryKeeper(null);
         const a = world({ snap: false });
-        await assert.rejects(() => Q.liveSideRequest(a.d, 'Mara', []), /이야기 요약본을 만들지 못했어요/);
+        await assert.rejects(() => Q.liveSideRequest(a.d, 'Mara', []), /이야기 요약을 만들지 못했습니다\. 잠시 후 다시 시도하세요/);
         let asked = 0;
         L.setStoryKeeper(async () => { asked++; });
-        await assert.rejects(() => Q.liveStoryReady(a.d), /이야기 요약본을 만들지 못했어요/);
+        await assert.rejects(() => Q.liveStoryReady(a.d), /이야기 요약을 만들지 못했습니다\. 잠시 후 다시 시도하세요/);
         assert.equal(asked, 1);
         // 만들어 주면: 그 채팅의 것으로 불리고, 그 요약본으로 요청해요
         L.setStoryKeeper(async real => { assert.equal(real, a.real); asked++; L.liveWorld(real).snap = snapOf(2, '## #0–#2 — 새로 뜬 요약\n- x\n', ['[#2 · USER] Ren: 시작 직전 이야기']); });
@@ -124,7 +124,7 @@ test('요약본이 아직 없는 폰(요약본 방식 전에 시작해 둔 폰):
         // 요약본이 있는 폰 · 처음부터 시작한 폰은 묻지 않아요
         await Q.liveSideRequest(a.d, 'Mara', []); await Q.liveSideRequest(world().d, 'Mara', []); await Q.liveSideRequest(world({ fresh: true }).d, 'Mara', []);
         assert.equal(asked, 2);
-        await assert.rejects(() => Q.liveStoryReady(a.real), /실시간 폰의 서랍이 아니에요/);
+        await assert.rejects(() => Q.liveStoryReady(a.real), /실시간 폰의 서랍이 아닙니다/);
     } finally { L.setStoryKeeper(null); done(); }
 });
 

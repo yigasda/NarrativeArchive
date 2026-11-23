@@ -123,13 +123,13 @@ test('아카이브가 없는 채팅: 처음부터 요약해요', async () => {
 test('요약이 실패 · 비어 있음 · 새 장면 없음: 아무것도 안 남기고 오류', async () => {
     const m = chat(), before = m.text;
     T.draft = { text: '', parts: 2, done: 1, doneTo: 5, error: new Error('429') };
-    await assert.rejects(() => S.liveSnapDraft(m, { upto: 7 }), /이야기 요약을 끝까지 받지 못했어요 \(#5까지 받음\): 429/);
+    await assert.rejects(() => S.liveSnapDraft(m, { upto: 7 }), /이야기 요약을 끝까지 받지 못했습니다 \(#5까지 받음\): 429/);
     T.draft = { text: '   ', parts: 1, doneTo: 7, error: null };
-    await assert.rejects(() => S.liveSnapDraft(m, { upto: 7 }), /이야기 요약이 비어 있어요/);
+    await assert.rejects(() => S.liveSnapDraft(m, { upto: 7 }), /이야기 요약이 비어 있습니다\. 다시 시도하세요/);
     T.g.prompts = []; T.g.activePrompt = '';
-    await assert.rejects(() => S.liveSnapDraft(m, { upto: 7 }), /압축 지시문이 없어요/);
+    await assert.rejects(() => S.liveSnapDraft(m, { upto: 7 }), /압축 프롬프트가 없습니다\. 압축 설정을 확인하세요/);
     T.g.prompts = [{ id: 'short', text: 'PROMPT' }]; T.g.activePrompt = 'short';
-    await assert.rejects(() => S.liveSnapDraft(m, {}), /어느 메시지까지/);
+    await assert.rejects(() => S.liveSnapDraft(m, {}), /이야기의 끝 메시지가 필요합니다/);
     assert.equal(m.text, before);
 });
 
@@ -167,7 +167,7 @@ test('버튼 한 번: 정리하는 동안 채팅이 달라졌으면 요약본을
     for (const change of during) {
         const m = chat(); T.mark = 'c1';
         T.draft = () => { change(); return { text: DRAFT, parts: 1, doneTo: 7, error: null }; };
-        await assert.rejects(() => S.liveSnapNow(m), /정리하는 동안 채팅이 바뀌었어요/);
+        await assert.rejects(() => S.liveSnapNow(m), /이야기를 정리하는 동안 채팅이 변경되었습니다/);
     }
     // 그대로였으면 돼요 (앞쪽 메시지가 고쳐진 건 시작 자리를 안 바꿔요)
     const m = chat(); T.mark = 'c1';
@@ -259,16 +259,16 @@ test('요약본 늘리기: 진행된 게 없으면 그대로 · 실패하면 오
     T.chat.length = 5;
     assert.equal(await S.liveSnapExtend(m, snap), snap);
     assert.equal(T.calls.length, 0);
-    await assert.rejects(() => S.liveSnapExtend(m, null), /요약본이 없어요/);
+    await assert.rejects(() => S.liveSnapExtend(m, null), /확장할 이야기 요약이 없습니다/);
     const again = async during => { const x = await started(); more(); T.mark = 'c1'; T.draft = () => { during(); return { text: DRAFT2, parts: 1, doneTo: 12, error: null }; }; return x; };
     for (const during of [() => T.chat.pop(), () => { T.chat[12] = say('Ren', 'Go home'); }, () => { T.mark = 'c2'; }]) {
         const x = await again(during);
-        await assert.rejects(() => S.liveSnapExtend(x.m, x.snap), /정리하는 동안 채팅이 바뀌었어요/);
+        await assert.rejects(() => S.liveSnapExtend(x.m, x.snap), /이야기를 정리하는 동안 채팅이 변경되었습니다/);
     }
     const y = await again(() => T.chat.push(say('Mara', 'Yes')));
     assert.equal((await S.liveSnapExtend(y.m, y.snap)).upto, 12);
     const z = await again(() => {}); T.draft = { text: '', parts: 0, doneTo: 9, error: new Error('모델 오류') };
-    await assert.rejects(() => S.liveSnapExtend(z.m, z.snap), /끝까지 받지 못했어요 \(#9까지 받음\): 모델 오류/);
+    await assert.rejects(() => S.liveSnapExtend(z.m, z.snap), /끝까지 받지 못했습니다 \(#9까지 받음\): 모델 오류/);
     T.mark = '';
 });
 

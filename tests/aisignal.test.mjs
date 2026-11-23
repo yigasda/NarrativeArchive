@@ -112,7 +112,7 @@ test('실리 연결 방식: 실리가 만든 요청({ generate_data … })을 �
         assert.equal(await AI.callConn({ mode: 'source', source: 'claude', stModel: 'c' }, 'S', 'hello', 256, '', true, false), 'hi');
         assert.equal(bodies.at(-1).body.chat_completion_source, 'claude');
         globalThis.__naStOpenai.createGenerationParameters = async () => ({ stream: false });
-        await assert.rejects(AI.callConn({ mode: 'source', source: 'claude', stModel: 'c' }, 'S', 'hello', 256, '', true, false), /요청을 만들지 못했/);
+        await assert.rejects(AI.callConn({ mode: 'source', source: 'claude', stModel: 'c' }, 'S', 'hello', 256, '', true, false), /이 실리 버전에서는 이 연결 방식을 사용할 수 없습니다/);
     } finally { delete globalThis.__naStOpenai; delete globalThis.document; }
 });
 test('실리 연결 방식의 요청 틀 (서버 플러그인용): 메시지와 비밀 칸이 빠진 요청. 같은 요청일 때만 같은 틀이에요', async () => {

@@ -149,7 +149,7 @@ test('방에 넣기: 채팅 순서 · 원래 시간 · 번역까지, 전한 것�
     // 같은 채팅에서 다시: 내 말뿐이어도 그 방으로 들어가요. 다른 채팅의 내 말뿐인 묶음은 방을 몰라요
     const more = I.importInto(m, I.importRows([...CHAT, me('one more', '2026-11-20T09:00:00.000Z')], { clock, after: 6 }), { now: 888, chat: 'c1' });
     assert.equal(more.room, room.id); assert.equal(room.messages.at(-1).text, 'one more'); assert.equal(w.imports.c1.count, 7);
-    assert.throws(() => I.importInto(m, I.importRows([me('elsewhere', '2026-11-20T10:00:00.000Z')], { clock, gate: false }), { chat: 'c2' }), /캐릭터가 한 말이 없어서/);
+    assert.throws(() => I.importInto(m, I.importRows([me('elsewhere', '2026-11-20T10:00:00.000Z')], { clock, gate: false }), { chat: 'c2' }), /캐릭터 메시지가 없어 채팅방을 만들 수 없습니다/);
 });
 
 test('있던 폰은 가져온 말을 이미 읽은 것으로: 읽던 폰은 읽은 구간으로, 한 번도 안 읽은 폰은 그 뒤부터', () => {
@@ -180,10 +180,10 @@ test('단체 채팅은 단체방으로; 캐릭터 말이 없거나 가져올 게
     assert.deepEqual(w.messenger.rooms[out.room].members, ['Ren', 'Mara', 'Ivo']);
     assert.deepEqual(w.messenger.rooms[out.room].messages.map(x => L.unreadBy(w.messenger.rooms[out.room], x)), [[], [], []]);
     const was = JSON.stringify(m);
-    assert.throws(() => I.importInto(m, I.importRows([me('only me', '2026-11-20T08:00:00.000Z')], { clock, gate: false }), { chat: 'another chat' }), /캐릭터가 한 말이 없어서/);
+    assert.throws(() => I.importInto(m, I.importRows([me('only me', '2026-11-20T08:00:00.000Z')], { clock, gate: false }), { chat: 'another chat' }), /캐릭터 메시지가 없어 채팅방을 만들 수 없습니다/);
     assert.throws(() => I.importInto(m, []), /가져올 메시지가 없어요/);
     assert.equal(JSON.stringify(m), was);
-    assert.throws(() => I.importInto({ phones: {} }, I.importRows(CHAT, { clock })), /아직 폰 2가 없어요/);
+    assert.throws(() => I.importInto({ phones: {} }, I.importRows(CHAT, { clock })), /폰 2가 없습니다/);
 });
 
 test('이 파일은 폰 2 저장 자리만 불러요; 폰 1 파일은 이 파일을 안 불러요', async () => {

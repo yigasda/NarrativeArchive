@@ -79,7 +79,7 @@ test('P의 연도: 타임라인은 폰 1 함수를 받은 인자 그대로, 실�
     assert.equal(P.yearOn(q), q.year);
     assert.deepEqual(P.yearOn(q, d), { fn: 'liveShownYear', a: [d, q] });
     // 실시간 폰 + 폰 1의 메타: 폰 1 함수를 부르지 않고 멈춰요
-    for (const run of [() => P.storyYear(real, q), () => P.ensureYear(real, q), () => P.setStoryYear(real, q, 2030), () => P.investmentDate(real, q)]) assert.throws(run, /실시간 폰은 실시간 화면에서만 돼요/);
+    for (const run of [() => P.storyYear(real, q), () => P.ensureYear(real, q), () => P.setStoryYear(real, q, 2030), () => P.investmentDate(real, q)]) assert.throws(run, /실시간 폰은 실시간 화면에서만 사용할 수 있습니다/);
 });
 
 test('P: 실시간 서랍에 타임라인의 폰을 주면(화면을 바꾸는 틈에 걸린 요청) 폰 2 함수를 부르지 않고 멈춰요', async () => {
@@ -90,9 +90,9 @@ test('P: 실시간 서랍에 타임라인의 폰을 주면(화면을 바꾸는 �
     assert.notEqual(q, p1);
     for (const p of [p1, pre1]) {
         for (const name of ['fillDevice', 'fillMoney', 'fillVoice', 'fillLife', 'fillDelivery', 'fillScreen', 'refreshNearby', 'rereadPlaces', 'takePhoto', 'writeEntry', 'makeDraft', 'recordVoice', 'prepareWealth', 'collectInvestmentRecords', 'fillInvestment', 'fillChartHistory', 'refreshMarket', 'refreshBankFX'])
-            await assert.rejects(() => P[name](d, p), /타임라인 폰은 타임라인 화면에서만 돼요/, name);
-        for (const name of ['learnVoices', 'pickVoices']) await assert.rejects(() => P[name](d, 'Mara', p), /타임라인 폰은 타임라인 화면에서만 돼요/, name);
-        assert.throws(() => P.setStoryYear(d, p, 2030), /타임라인 폰은 타임라인 화면에서만 돼요/);
+            await assert.rejects(() => P[name](d, p), /타임라인 폰은 타임라인 화면에서만 사용할 수 있습니다/, name);
+        for (const name of ['learnVoices', 'pickVoices']) await assert.rejects(() => P[name](d, 'Mara', p), /타임라인 폰은 타임라인 화면에서만 사용할 수 있습니다/, name);
+        assert.throws(() => P.setStoryYear(d, p, 2030), /타임라인 폰은 타임라인 화면에서만 사용할 수 있습니다/);
     }
     assert.equal(JSON.stringify(real.phones), before);
     // 실시간의 폰, 화면이 만든 빈 초안(어느 쪽 것도 아닌 객체), 폰의 복사본은 전처럼 폰 2 함수로
@@ -128,7 +128,7 @@ test('P의 결제 다시 읽기: 폰 1은 폰 1 함수 그대로, 실시간 서�
     const real = { phones: { mara: { owner: 'Mara', now: '10-25 17:42' } }, text: '' };
     L.startFromStory(real, { persona: 'Ren', upto: 2, scope: 'test', story: { ranges: {}, titles: [], rawFrom: 0, own: [''] } });
     assert.deepEqual(await P.retryMoney(real, 'Mara'), { fn: 'retryMoney', a: [real, 'Mara'] });
-    await assert.rejects(() => P.retryMoney(L.liveMeta(real), 'Mara'), /실시간 폰은 다음 반영 때 결제를 다시 읽어요/);
+    await assert.rejects(() => P.retryMoney(L.liveMeta(real), 'Mara'), /실시간 폰은 다음 반영 때 결제를 다시 읽습니다/);
 });
 
 test('P의 폰 만들기 준비: 폰 1은 폰 1 함수 그대로, 실시간 서랍이면 폰 2의 것 (폰 1 함수를 안 불러요)', async () => {

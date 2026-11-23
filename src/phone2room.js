@@ -23,8 +23,8 @@ export const ROOM = { rooms: 5, keep: MESSAGE_TRASH_RETENTION_DAYS * 24 * 60 * 6
 const idSet = ids => new Set((Array.isArray(ids) ? ids : [ids]).map(x => String(x ?? '')).filter(Boolean));
 function roomOf(m, id) {
     const w = liveWorld(m), room = w?.messenger?.rooms?.[id];
-    if (!w) throw new Error('아직 폰 2가 없어요');
-    if (!room) throw new Error('없는 방이에요');
+    if (!w) throw new Error('폰 2가 없습니다.');
+    if (!room) throw new Error('채팅방을 찾을 수 없습니다.');
     return { w, room };
 }
 const setKey = names => names.map(liveKey).sort().join('|');
@@ -52,15 +52,15 @@ const KEYS = ['hiddenFromAI', 'hiddenFromAICharacterIds', ...MESSAGE_MARK_EXTRA_
 export function markMessages(m, roomId, ids, patch = {}) {
     const { room } = roomOf(m, roomId), want = idSet(ids), given = {};
     for (const k of KEYS) if (Object.hasOwn(patch || {}, k)) given[k] = patch[k];
-    if (Object.hasOwn(given, 'hiddenFromAI') && typeof given.hiddenFromAI !== 'boolean') throw new Error('hiddenFromAI는 true 또는 false예요');
+    if (Object.hasOwn(given, 'hiddenFromAI') && typeof given.hiddenFromAI !== 'boolean') throw new Error('hiddenFromAI는 true 또는 false여야 합니다.');
     if (Object.hasOwn(given, 'hiddenFromAICharacterIds')) given.hiddenFromAICharacterIds = [...new Set((Array.isArray(given.hiddenFromAICharacterIds) ? given.hiddenFromAICharacterIds : []).map(liveKey).filter(Boolean))];
-    if (typeof given.privateNoteRecipientId === 'string') { given.privateNoteRecipientId = liveKey(given.privateNoteRecipientId); if (!room.members.some(n => liveKey(n) === given.privateNoteRecipientId)) throw new Error('방에 없는 사람이에요'); }
+    if (typeof given.privateNoteRecipientId === 'string') { given.privateNoteRecipientId = liveKey(given.privateNoteRecipientId); if (!room.members.some(n => liveKey(n) === given.privateNoteRecipientId)) throw new Error('채팅방에 없는 멤버입니다.'); }
     const got = normalizeMessageMarkPatch(given);
     if (got.error) throw new Error(got.error);
     const hits = room.messages.filter(x => want.has(String(x.id)));
     if (got.patch.pinnedToContext === true) {
         const pinned = room.messages.filter(x => isMessagePinnedToContext(x.extra) || hits.includes(x)).length;
-        if (pinned > MAX_PINNED_CONTEXT_MESSAGES) throw new Error(`고정은 방마다 ${MAX_PINNED_CONTEXT_MESSAGES}개까지예요`);
+        if (pinned > MAX_PINNED_CONTEXT_MESSAGES) throw new Error(`고정은 채팅방마다 ${MAX_PINNED_CONTEXT_MESSAGES}개까지 가능합니다.`);
     }
     let n = 0;
     for (const x of hits) {
@@ -102,7 +102,7 @@ export function restoreMessages(m, roomId, ids) {
     const back = list.filter(t => want.has(String(t.x?.id)) && !room.messages.some(y => String(y.id) === String(t.x.id)));
     if (!back.length) return 0;
     // (Marinara: a restore that would go past the pin limit is refused)
-    if (room.messages.filter(x => isMessagePinnedToContext(x.extra)).length + back.filter(t => isMessagePinnedToContext(t.x.extra)).length > MAX_PINNED_CONTEXT_MESSAGES) throw new Error(`되살리면 고정이 ${MAX_PINNED_CONTEXT_MESSAGES}개를 넘어요. 고정을 하나 풀어 주세요`);
+    if (room.messages.filter(x => isMessagePinnedToContext(x.extra)).length + back.filter(t => isMessagePinnedToContext(t.x.extra)).length > MAX_PINNED_CONTEXT_MESSAGES) throw new Error(`복원하면 고정이 ${MAX_PINNED_CONTEXT_MESSAGES}개를 넘습니다. 고정을 하나 해제하세요.`);
     const before = (a, b) => (Number.isInteger(a.n) && Number.isInteger(b.n) ? a.n < b.n : (a.at || 0) < (b.at || 0));
     for (const t of back) {
         const i = room.messages.findIndex(y => before(t.x, y));
@@ -124,7 +124,7 @@ export function emptyTrash(m, roomId, ids = null) {
 // 방 지우기: 방을 휴지통으로. 그 방에 줄 서 있던 답장은 없어져요. 답장을 받는 중이면 못 지워요 → 지운 방
 export function dropRoom(m, roomId, at = Date.now()) {
     const { w, room } = roomOf(m, roomId);
-    if (w.queue?.jobs?.some(j => j.room === roomId && j.state === 'running')) throw new Error('답장을 받는 중이에요. 끝난 뒤에 지워 주세요');
+    if (w.queue?.jobs?.some(j => j.room === roomId && j.state === 'running')) throw new Error('답장을 생성 중입니다. 완료된 뒤 삭제하세요.');
     if (w.queue?.jobs) w.queue.jobs = w.queue.jobs.filter(j => !(j.room === roomId && j.state === 'waiting'));
     delete w.messenger.rooms[roomId];
     w.messenger.trash = [...(Array.isArray(w.messenger.trash) ? w.messenger.trash : []), { room, at }].filter(t => at - (t.at || 0) < ROOM.keep).slice(-ROOM.rooms);
@@ -135,10 +135,10 @@ export const roomTrash = (m, now = Date.now()) => [...(liveWorld(m)?.messenger?.
 // 방 되살리기. 그사이 같은 사람들의 방이 새로 생겼으면 못 해요 → 되살린 방
 export function restoreRoom(m, roomId) {
     const w = liveWorld(m);
-    if (!w) throw new Error('아직 폰 2가 없어요');
+    if (!w) throw new Error('폰 2가 없습니다.');
     const list = Array.isArray(w.messenger.trash) ? w.messenger.trash : [], t = list.find(y => y.room?.id === roomId);
-    if (!t) throw new Error('휴지통에 없는 방이에요');
-    if (w.messenger.rooms[roomId] || Object.values(w.messenger.rooms).some(r => setKey(r.members) === setKey(t.room.members))) throw new Error('같은 사람들의 방이 이미 있어요');
+    if (!t) throw new Error('휴지통에 없는 채팅방입니다.');
+    if (w.messenger.rooms[roomId] || Object.values(w.messenger.rooms).some(r => setKey(r.members) === setKey(t.room.members))) throw new Error('같은 멤버의 채팅방이 이미 있습니다.');
     w.messenger.rooms[roomId] = t.room;
     w.messenger.trash = list.filter(y => y !== t);
     if (!w.messenger.trash.length) delete w.messenger.trash;
@@ -155,10 +155,10 @@ export function emptyRoomTrash(m, roomId = '') {
 // 방에 사람 넣기 → 방
 export function addMember(m, roomId, name) {
     const { w, room } = roomOf(m, roomId), n = String(name || '').trim();
-    if (!n) throw new Error('이름이 필요해요');
+    if (!n) throw new Error('이름이 필요합니다.');
     if (room.members.some(x => liveKey(x) === liveKey(n))) return room;
     const next = [...room.members, n];
-    if (Object.values(w.messenger.rooms).some(r => r !== room && setKey(r.members) === setKey(next))) throw new Error('같은 사람들의 방이 이미 있어요');
+    if (Object.values(w.messenger.rooms).some(r => r !== room && setKey(r.members) === setKey(next))) throw new Error('같은 멤버의 채팅방이 이미 있습니다.');
     ensureAccount(m, n);
     room.members = next;
     return room;
@@ -167,11 +167,11 @@ export function addMember(m, roomId, name) {
 export function removeMember(m, roomId, name) {
     const { w, room } = roomOf(m, roomId), k = liveKey(name);
     if (!room.members.some(x => liveKey(x) === k)) return room;
-    if (k === liveKey(w.persona)) throw new Error('나는 방에서 뺄 수 없어요');
-    if (room.members.length <= 2) throw new Error('둘만 있는 방이에요. 방을 지워 주세요');
-    if (w.queue?.jobs?.some(j => j.room === roomId && liveKey(j.owner) === k && j.state === 'running')) throw new Error('그 사람의 답장을 받는 중이에요. 끝난 뒤에 빼 주세요');
+    if (k === liveKey(w.persona)) throw new Error('나는 채팅방에서 제거할 수 없습니다.');
+    if (room.members.length <= 2) throw new Error('1:1 채팅방입니다. 채팅방을 삭제하세요.');
+    if (w.queue?.jobs?.some(j => j.room === roomId && liveKey(j.owner) === k && j.state === 'running')) throw new Error('이 멤버의 답장을 생성 중입니다. 완료된 뒤 다시 시도하세요.');
     const next = room.members.filter(x => liveKey(x) !== k);
-    if (Object.values(w.messenger.rooms).some(r => r !== room && setKey(r.members) === setKey(next))) throw new Error('같은 사람들의 방이 이미 있어요');
+    if (Object.values(w.messenger.rooms).some(r => r !== room && setKey(r.members) === setKey(next))) throw new Error('같은 멤버의 채팅방이 이미 있습니다.');
     room.members = next;
     if (room.read) delete room.read[k];
     if (w.queue?.jobs) w.queue.jobs = w.queue.jobs.filter(j => !(j.room === roomId && liveKey(j.owner) === k && j.state === 'waiting'));
@@ -210,7 +210,7 @@ export function replyTexts(rows, persona) {
 export const canReply = x => canReplyToMessage({ id: String(x?.id ?? ''), content: String(x?.text ?? '') });
 export function replyDraftOf(m, roomId, messageId, selected = '') {
     const { room } = roomOf(m, roomId), x = (room.messages || []).find(y => String(y.id) === String(messageId));
-    if (!x || !canReply(x)) throw new Error('답장을 달 수 없는 말이에요');
+    if (!x || !canReply(x)) throw new Error('답장할 수 없는 메시지입니다.');
     return buildMessageReplyDraft({ id: String(x.id), content: String(x.text) }, String(x.from || ''), String(selected || '').trim());
 }
 // 내가 마지막에 보낸 말이 답장을 단 사람 (마리나라: 캐릭터의 말에 답장을 달면 @으로 부른 것과 같아요) → 이름 | ''
@@ -231,7 +231,7 @@ export function repliedTo(m, roomId) {
 //   요약(digest)은 복사한 말 안에서 끝난 것만 물려받아요 (마리나라: 잘린 뒤의 말을 담은 요약은 버려요). 휴지통 · 늦은 답 · 없던 사람 표시는 안 가요
 export function branchRoom(m, roomId, upToMessageId = '') {
     const w = liveWorld(m), { room } = roomOf(m, roomId), msgs = room.messages || [];
-    if (upToMessageId && !msgs.some(x => String(x.id) === String(upToMessageId))) throw new Error('그 말이 이 방에 없어요');
+    if (upToMessageId && !msgs.some(x => String(x.id) === String(upToMessageId))) throw new Error('이 채팅방에 없는 메시지입니다.');
     const cut = upToMessageId ? msgs.findIndex(x => String(x.id) === String(upToMessageId)) : msgs.length - 1, copied = msgs.slice(0, cut + 1);
     const ids = new Map(), fresh = () => `t${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
     const copyOne = x => {

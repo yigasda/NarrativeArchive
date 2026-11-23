@@ -145,7 +145,7 @@ test('서랍이 아니면 모델을 부르기 전에 멈춰요; 사본은 폰 1 
         const c = world(); let asked = 0;
         T.ask = async () => { asked++; return '{}'; };
         const p = c.real.phones.mara, was = JSON.stringify(p);
-        for (const m of [c.real, { ...c.real, phoneUpto: 2, phoneRecent: () => 'x' }]) for (const go of [() => F.liveFillVoice(m, p), () => L2.liveFillScreen(m, p), () => L2.liveRefreshNearby(m, p), () => L2.liveFillLife(m, p), () => L2.liveFillDelivery(m, p)]) await assert.rejects(go, /실시간 폰의 서랍이 아니에요/);
+        for (const m of [c.real, { ...c.real, phoneUpto: 2, phoneRecent: () => 'x' }]) for (const go of [() => F.liveFillVoice(m, p), () => L2.liveFillScreen(m, p), () => L2.liveRefreshNearby(m, p), () => L2.liveFillLife(m, p), () => L2.liveFillDelivery(m, p)]) await assert.rejects(go, /실시간 폰의 서랍이 아닙니다/);
         assert.equal(asked, 0); assert.equal(JSON.stringify(p), was);
     } finally { done(); }
     const a = await src('phonedata.js'), lf = await src('phonelife.js'), f = await src('phone2fill.js'), l2 = await src('phone2life.js'), api = await src('phone2api.js');

@@ -32,8 +32,8 @@ const LIVE_PHONE = Symbol.for('narrative-archive.live');
 // (at: 폰이 몇째 인자인지. 대개 둘째(1), 말투 읽기는 (m, owner, p)라 셋째(2))
 const split = (one, two, at = 1) => async (...a) => {
     // (서랍인데 폰이 타임라인의 폰이면 — 화면을 바꾸는 틈에 걸린 요청 — 폰 2 함수가 폰 1의 폰에 쓰게 돼요: 멈춰요)
-    if (isLiveMeta(a[0])) { if (isStoryPhone(a[0], a[at])) throw new Error('타임라인 폰은 타임라인 화면에서만 돼요'); return two(...a); }
-    if (a[at]?.[LIVE_PHONE]) throw new Error('실시간 폰은 실시간 화면에서만 돼요');
+    if (isLiveMeta(a[0])) { if (isStoryPhone(a[0], a[at])) throw new Error('타임라인 폰은 타임라인 화면에서만 사용할 수 있습니다.'); return two(...a); }
+    if (a[at]?.[LIVE_PHONE]) throw new Error('실시간 폰은 실시간 화면에서만 사용할 수 있습니다.');
     return one(...a);
 };
 
@@ -45,19 +45,19 @@ const nowOn = (p, m = null) => (liveP(p, m) ? liveNowText(m, p) : storyNow(p));
 const storyNowP = (...a) => (liveP(a[0], a[2]) ? liveNowText(a[2], a[0]) : storyNow(...a));
 const statusAtP = (...a) => (liveP(a[0], a[2]) ? null : statusAt(...a));
 // 연도 (인자: 서랍 m, 폰 p, …): 실시간 서랍이면 폰 2의 것. 화면이 폰을 복사해서 넘기기도 해서({ ...p, year: 0 }) 서랍으로 갈라요
-const guard = (m, p) => { if (!isLiveMeta(m) && p?.[LIVE_PHONE]) throw new Error('실시간 폰은 실시간 화면에서만 돼요'); };
+const guard = (m, p) => { if (!isLiveMeta(m) && p?.[LIVE_PHONE]) throw new Error('실시간 폰은 실시간 화면에서만 사용할 수 있습니다.'); };
 // 화면에 보이는 연도 (p.year를 화면이 직접 읽던 자리): 타임라인은 폰의 연도 그대로, 실시간 서랍이면 흐르는 시계의 연도
 const yearOn = (p, m = null) => (isLiveMeta(m) ? liveShownYear(m, p) : p?.year);
 const storyYearP = (...a) => (isLiveMeta(a[0]) ? liveStoryYear(a[0], a[1]) : (guard(a[0], a[1]), storyYear(...a)));
 const ensureYearP = (...a) => (isLiveMeta(a[0]) ? liveEnsureYear(a[0], a[1]) : (guard(a[0], a[1]), ensureYear(...a)));
-const setStoryYearP = (...a) => { if (isLiveMeta(a[0]) && isStoryPhone(a[0], a[1])) throw new Error('타임라인 폰은 타임라인 화면에서만 돼요'); return isLiveMeta(a[0]) ? liveSetStoryYear(...a) : (guard(a[0], a[1]), setStoryYear(...a)); };
+const setStoryYearP = (...a) => { if (isLiveMeta(a[0]) && isStoryPhone(a[0], a[1])) throw new Error('타임라인 폰은 타임라인 화면에서만 사용할 수 있습니다.'); return isLiveMeta(a[0]) ? liveSetStoryYear(...a) : (guard(a[0], a[1]), setStoryYear(...a)); };
 // 롤플에 넣기 (m: 채팅의 메타, live: 실시간 폰들): 폰 1의 글은 폰 1 함수 그대로, 그 뒤에 실시간 폰의 글
 const phoneBlockP = (m, live = null) => phoneBlock(m) + liveNote(live);
 // 분기 알아채기는 폰 1의 폰만 해요: 실시간 서랍 · 실시간 폰이면 폰 1 함수를 안 부르고 아무것도 안 해요(null)
 // (실시간 폰의 분기는 phone2story.js liveBranched가 가려요)
 const settleBranchP = async (...a) => (isLiveMeta(a[0]) || a[1]?.[LIVE_PHONE] ? null : settleBranch(...a));
 // 결제 다시 읽기는 폰 1 반영의 것이에요(롤플 메시지를 다시 읽어요). 실시간 폰은 메신저 반영이 다음 차례에 다시 읽어요
-const retryMoneyP = async (...a) => { if (isLiveMeta(a[0])) throw new Error('실시간 폰은 다음 반영 때 결제를 다시 읽어요'); return retryMoney(...a); };
+const retryMoneyP = async (...a) => { if (isLiveMeta(a[0])) throw new Error('실시간 폰은 다음 반영 때 결제를 다시 읽습니다.'); return retryMoney(...a); };
 // 평가 날짜 (m, p): 실시간 서랍이면 폰 2의 것 (흐르는 시계의 날). 화면이 그릴 때마다 물어서 오류 없이 바로 답해요
 const investmentDateP = (...a) => (isLiveMeta(a[0]) ? liveInvestmentDate(...a) : (guard(a[0], a[1]), investmentDate(...a)));
 // 폰 만들기 준비 (m, owner, opts): 위치 · 연도를 먼저 읽어 두기. 실시간 서랍이면 폰 2의 것 (채팅을 가져온 뒤 처음 만드는 폰)

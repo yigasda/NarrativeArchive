@@ -147,14 +147,14 @@ test('방 지우기: 휴지통으로 가고, 줄 선 답장은 없어져요. 받
     const mine = () => w.queue.jobs.filter(j => j.room === a.id).length;
     assert.equal(mine(), 1);
     w.queue.jobs.find(j => j.room === a.id).state = 'running';
-    assert.throws(() => R.dropRoom(m, a.id), /받는 중/);
+    assert.throws(() => R.dropRoom(m, a.id), /답장을 생성 중입니다/);
     w.queue.jobs.find(j => j.room === a.id).state = 'waiting';
     assert.equal(R.dropRoom(m, a.id), a);
     assert.equal(w.messenger.rooms[a.id], undefined);
     assert.equal(mine(), 0);
     assert.equal(w.queue.jobs.filter(j => j.room === g.id).length, 2);
     assert.deepEqual(R.roomTrash(m).map(t => t.room.id), [a.id]);
-    assert.throws(() => R.dropRoom(m, a.id), /없는 방/);
+    assert.throws(() => R.dropRoom(m, a.id), /채팅방을 찾을 수 없습니다/);
     assert.equal(R.restoreRoom(m, a.id), a);
     assert.equal(w.messenger.rooms[a.id].messages.length, 4);
     assert.equal(w.messenger.trash, undefined);
@@ -163,7 +163,7 @@ test('방 지우기: 휴지통으로 가고, 줄 선 답장은 없어져요. 받
     R.dropRoom(m, a.id);
     const fresh = L.ensureRoom(m, ['Mara']);
     assert.notEqual(fresh.id, a.id);
-    assert.throws(() => R.restoreRoom(m, a.id), /이미 있어요/);
+    assert.throws(() => R.restoreRoom(m, a.id), /같은 멤버의 채팅방이 이미 있습니다/);
     assert.equal(R.emptyRoomTrash(m, a.id), 1);
     assert.equal(w.messenger.trash, undefined);
 });
@@ -176,7 +176,7 @@ test('지운 방은 정해진 수만 둬요', () => {
 });
 test('사람 넣기: 계정이 생기고, 같은 사람들의 방이 있으면 안 해요', () => {
     const { m, w, a, g } = world();
-    assert.throws(() => R.addMember(m, a.id, 'Ivo'), /이미 있어요/);       // (Ren · Mara · Ivo 방이 있어요)
+    assert.throws(() => R.addMember(m, a.id, 'Ivo'), /같은 멤버의 채팅방이 이미 있습니다/);       // (Ren · Mara · Ivo 방이 있어요)
     assert.equal(R.addMember(m, g.id, 'Varo'), g);
     assert.deepEqual(g.members, ['Ren', 'Mara', 'Ivo', 'Varo']);
     assert.ok(w.messenger.accounts.varo);
@@ -188,10 +188,10 @@ test('사람 빼기: 나는 못 빼고, 둘만 남은 방에서는 못 빼요. �
     R.addMember(m, g.id, 'Varo');
     L.enqueueReplies(m, g.id);
     L.readLive(m, g.id, 'Ivo', 5000);
-    assert.throws(() => R.removeMember(m, g.id, 'Ren'), /뺄 수 없어요/);
-    assert.throws(() => R.removeMember(m, a.id, 'Mara'), /둘만/);
+    assert.throws(() => R.removeMember(m, g.id, 'Ren'), /나는 채팅방에서 제거할 수 없습니다/);
+    assert.throws(() => R.removeMember(m, a.id, 'Mara'), /1:1 채팅방입니다\. 채팅방을 삭제하세요/);
     w.queue.jobs.find(j => j.owner === 'Ivo').state = 'running';
-    assert.throws(() => R.removeMember(m, g.id, 'Ivo'), /받는 중/);
+    assert.throws(() => R.removeMember(m, g.id, 'Ivo'), /이 멤버의 답장을 생성 중입니다/);
     w.queue.jobs.find(j => j.owner === 'Ivo').state = 'waiting';
     assert.equal(R.removeMember(m, g.id, 'ivo'), g);
     assert.deepEqual(g.members, ['Ren', 'Mara', 'Varo']);
@@ -200,7 +200,7 @@ test('사람 빼기: 나는 못 빼고, 둘만 남은 방에서는 못 빼요. �
     assert.equal('ivo' in (g.read || {}), false);
     // 빼면 다른 방과 같은 사람들이 되는 때는 안 해요 (Ren · Mara 방이 있어요)
     R.removeMember(m, g.id, 'Nobody');
-    assert.throws(() => R.removeMember(m, g.id, 'Varo'), /이미 있어요/);
+    assert.throws(() => R.removeMember(m, g.id, 'Varo'), /같은 멤버의 채팅방이 이미 있습니다/);
 });
 test('이 파일은 폰 2 저장 자리만 불러요; 모델 · 저장은 안 불러요; 폰 1 파일은 이 파일을 안 불러요', async () => {
     const { readFile, readdir } = await import('node:fs/promises'), SRC = new URL('../src/', import.meta.url);
@@ -230,7 +230,7 @@ test('메모를 한 사람에게 보여 주기(마리나라의 privateNoteRecipi
     assert.deepEqual(ask('Ivo'), ["see you at six\n\n[The user's private note on this message, shown only to you]\nshe hates being late\n[End of private note]", 'ok']);
     assert.deepEqual(ask('Mara'), ['see you at six', 'ok']);
     assert.equal(y.text, 'see you at six');
-    assert.throws(() => R.markMessages(m, g.id, y.id, { privateNoteRecipientId: 'Nobody' }), /방에 없는 사람/);
+    assert.throws(() => R.markMessages(m, g.id, y.id, { privateNoteRecipientId: 'Nobody' }), /채팅방에 없는 멤버입니다/);
     // 메모를 지우면 받는 사람도 같이 없어져요
     R.markMessages(m, g.id, y.id, { privateNote: null });
     assert.equal('extra' in y, false);
@@ -241,7 +241,7 @@ test('휴지통에서 되살릴 때 고정이 열 개를 넘으면 막아요(마
     R.markMessages(m, a.id, made[10].id, { pinnedToContext: true });
     E.dropMessages(m, a.id, made[10].id);
     R.markMessages(m, a.id, made.slice(0, 10).map(x => x.id), { pinnedToContext: true });
-    assert.throws(() => R.restoreMessages(m, a.id, made[10].id), /고정이 10개를 넘어요/);
+    assert.throws(() => R.restoreMessages(m, a.id, made[10].id), /고정이 10개를 넘습니다/);
     R.markMessages(m, a.id, made[0].id, { pinnedToContext: false });
     assert.equal(R.restoreMessages(m, a.id, made[10].id), 1);
     // 날짜 지난 것 비우기
@@ -259,12 +259,12 @@ test('답장 달기: 초안은 그 말의 글(또는 골라 둔 글)을 담고, 
     const { m, a } = world(), x = a.messages.find(y => y.text === 'Barely');
     assert.deepEqual(R.replyDraftOf(m, a.id, x.id), { messageId: x.id, name: 'Mara', content: 'Barely' });
     assert.equal(R.replyDraftOf(m, a.id, x.id, ' are ').content, 'are');
-    assert.throws(() => R.replyDraftOf(m, a.id, 'nope'), /달 수 없는/);
+    assert.throws(() => R.replyDraftOf(m, a.id, 'nope'), /답장할 수 없는 메시지입니다/);
     a.messages.push({ id: 'act1', n: 99, from: 'Mara', text: '', act: true, at: 1 });
-    assert.throws(() => R.replyDraftOf(m, a.id, 'act1'), /달 수 없는/);
+    assert.throws(() => R.replyDraftOf(m, a.id, 'act1'), /답장할 수 없는 메시지입니다/);
     const sent = L.sendLive(m, a.id, 'still?', 9000, { replyTo: R.replyDraftOf(m, a.id, x.id) });
     assert.deepEqual(sent.extra, { replyTo: { messageId: x.id, name: 'Mara', content: 'Barely' } });
-    assert.throws(() => L.sendLive(m, a.id, 'x', 9001, { replyTo: { messageId: '', name: 'Mara', content: 'y' } }), /읽지 못했/);
+    assert.throws(() => L.sendLive(m, a.id, 'x', 9001, { replyTo: { messageId: '', name: 'Mara', content: 'y' } }), /답장할 메시지를 읽을 수 없습니다/);
     assert.equal(L.sendLive(m, a.id, 'plain', 9002).extra, undefined);
 });
 test('답장 달기: 요청에는 내 마지막 말에만 인용이 붙고, 캐릭터의 말에 달면 그 사람을 부른 것과 같아요', () => {
@@ -307,7 +307,7 @@ test('분기: 그 말까지를 복사한 새 방. 요청 기록은 안 가고, �
     // (요약이 잘린 뒤의 말까지 담았으면 안 물려받아요; 없는 말로는 못 나눠요)
     a.digest = { upto: a.messages[3].n, parts: ['s'] };
     assert.equal(R.branchRoom(m, a.id, x3.id).digest, undefined);
-    assert.throws(() => R.branchRoom(m, a.id, 'nope'), /이 방에 없/);
+    assert.throws(() => R.branchRoom(m, a.id, 'nope'), /이 채팅방에 없는/);
     assert.equal(R.branchRoom(m, a.id).messages.length, 4);
     assert.equal(Object.keys(w.messenger.rooms).length >= 4, true);
 });

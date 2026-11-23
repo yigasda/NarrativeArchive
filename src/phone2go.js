@@ -93,7 +93,7 @@ async function keepUpStory(real, tell = () => {}) {
     extending.set(real, new Promise(r => { done = r; })); tell();
     try {
         const next = had ? await liveSnapExtend(real, had) : (await liveSnapNow(real))?.snap;
-        if (!isSnap(next)) throw new Error('이야기 요약본을 받지 못했어요');
+        if (!isSnap(next)) throw new Error('이야기 요약을 받지 못했습니다.');
         // (written only to the 폰 2 it was made for, and only if its snapshot is still the one this began from)
         if (here(real, w) && snapOf() === had) { w.snap = next; delete w.snapTried; await saveMeta(); }
     } catch (err) {
@@ -114,7 +114,7 @@ setDrawerSeed((d, w, real) => { liveFollowPersona(real); });
 // (a 폰 2 app request asks through its drawer, and only while there is no snapshot: made here, lengthened only before a reply)
 setStoryKeeper(real => keepUpStory(real));
 // the words a request is refused with while a 폰 2 begun from the story has no snapshot
-const NO_STORY = '이야기 요약본을 만들지 못했어요. 잠시 뒤 다시 해 주세요';
+const NO_STORY = '이야기 요약을 만들지 못했습니다. 잠시 후 다시 시도하세요.';
 // 저장을 줄 세워요. 채팅 저장은 느려요(폰에서는 한 번에 몇 초): 일(답장 하나 · 반영 한 라운드)이 끝날 때마다 저장은 그대로
 // 하되, 화면과 다음 일이 그 저장을 기다리지 않아요.
 //   save(): 저장을 시작하고 바로 돌아와요. 앞의 저장이 아직 돌고 있으면 그것만 기다렸다가 시작해요(한 번에 하나).
@@ -480,7 +480,7 @@ export const livePresence = real => (liveWorld(real) ? presenceOf(real) : null);
 // 스케줄 만들기 (모델을 불러요). opts: { guidance, mode: 'rewrite'|'adjust'|'vary'|'repair', day: 'Monday'… (그날만) } → 스케줄
 export async function liveMakeSchedule(real, owner, opts = {}) {
     const p = livePhone(mine(real), owner);
-    if (!p) throw new Error('그 사람의 폰이 없어요');
+    if (!p) throw new Error('이 인물의 폰이 없습니다.');
     const card = await cardOf(p);
     const ask = askVia(real, opts.connectionId);
     const out = await makeSchedule(real, p.owner, { ...opts, ask, name: p.owner, description: String(card || ''), personality: '', tz: zoneOf(real, p) });
@@ -519,7 +519,7 @@ export function followSchedule(real, now = Date.now()) {
 export const liveConnections = () => liveModelConnections().map(c => ({ ...c, id: c.id === 'dr' ? '' : c.id }));
 export const liveScheduleConnection = real => { const id = String(liveWorld(real)?.presence?.meta?.scheduleConnectionId || ''); return liveConnections().some(c => c.id === id) ? id : ''; };
 export async function liveSetScheduleConnection(real, id = '') {
-    if (!liveConnections().some(c => c.id === id)) throw new Error('없는 연결이에요');
+    if (!liveConnections().some(c => c.id === id)) throw new Error('연결을 찾을 수 없습니다.');
     const meta = presenceOf(mine(real)).meta;
     if (id) meta.scheduleConnectionId = id; else delete meta.scheduleConnectionId;
     await saveMeta();
@@ -536,10 +536,10 @@ const askVia = (real, connectionId) => async (messages, o) => {
     if (!id) return askDraft(input, how);
     if (id === 'ai') return askAI(input, { ...how, noFallback: true });
     const p = aiProfiles().find(x => `profile:${x.id}` === id);
-    if (!p) throw new Error('고른 연결 프로필을 찾을 수 없어요');
+    if (!p) throw new Error('선택한 연결 프로필을 찾을 수 없습니다.');
     const r = await ctx().ConnectionManagerRequestService.sendRequest(p.id, [...(system ? [{ role: 'system', content: system }] : []), profileTurn(input)], Math.max(256, Number(o?.maxTokens) || 8192), { stream: false, extractData: true, includePreset: true, includeInstruct: true, ...(o?.signal ? { signal: o.signal } : {}) });
     const out = stripThink(typeof r === 'string' ? r : r?.content);
-    if (!out) throw new Error('모델이 빈 답을 돌려줬어요');
+    if (!out) throw new Error('모델이 빈 응답을 반환했습니다.');
     return out;
 };
 // (Marinara reads the card's description and personality: SillyTavern's own fields when the character is there, else our card text)
@@ -553,14 +553,14 @@ export const liveTimeZone = (real, owner) => { const p = livePhone(real, owner);
 //   → mode 'week': { schedule } · mode 'day': { day, blocks, weekStart }. 실패한 오류에는 rawResponse(모델의 답 원문)가 있어요
 export async function liveDraftSchedule(real, owner, opts = {}) {
     const p = livePhone(mine(real), owner);
-    if (!p) throw new Error('그 사람의 폰이 없어요');
+    if (!p) throw new Error('이 인물의 폰이 없습니다.');
     const { connectionId, ...rest } = opts;
     return draftSchedule(real, { ...rest, ask: askVia(real, connectionId), charData: await cardData(p), timeZone: zoneOf(real, p) });
 }
 // 루틴 요약: 저장하지 않고 결과만 (마리나라의 /schedule/summary) → { summary, generatedAt }
 export async function liveScheduleSummary(real, owner, { schedule, guidance = '', signal, connectionId } = {}) {
     const p = livePhone(mine(real), owner);
-    if (!p) throw new Error('그 사람의 폰이 없어요');
+    if (!p) throw new Error('이 인물의 폰이 없습니다.');
     return summarizeSchedule(real, { schedule, guidance, signal, ask: askVia(real, connectionId), charData: await cardData(p) });
 }
 // 실패한 답을 손으로 고친 글 → 고쳐진 초안 (못 읽으면 오류). day를 주면 그날만
@@ -837,7 +837,7 @@ export const liveBackCount = real => { const left = backLeft(liveWorld(real)); r
 //   → { world, left (실은 말들: 넣을 때 표시해요), text (넣을 메시지의 글 전체), count, more (이번에 못 실은 말 수) }
 export async function liveBackDraft(real) {
     const w = liveWorld(real);
-    if (!w || !open(real)) throw new Error('이 채팅의 실시간 폰이 아니에요');
+    if (!w || !open(real)) throw new Error('이 채팅의 실시간 폰이 아닙니다.');
     const left = backLeft(w);
     if (!left.count) throw new Error('롤플에 전할 새 메신저 대화가 없어요');
     const first = Object.values(w.phones || {}).find(p => p?.owner), tz = first ? tzOf(first) : 'UTC';
@@ -854,9 +854,9 @@ export async function liveBackDraft(real) {
 //   → 넣은 메시지의 번호
 export async function liveBackPut(real, draft, text = draft?.text) {
     const w = liveWorld(real), c = ctx(), words = String(text ?? '').trim();
-    if (!w || !open(real) || w.id !== draft?.world) throw new Error('그사이 채팅이나 실시간 폰이 바뀌었어요. 다시 해 주세요');
-    if (!words) throw new Error('넣을 글이 비어 있어요');
-    if (!Array.isArray(c.chat) || typeof c.addOneMessage !== 'function' || typeof c.saveChat !== 'function') throw new Error('이 실리에서는 롤플 채팅에 넣을 수 없어요');
+    if (!w || !open(real) || w.id !== draft?.world) throw Object.assign(new Error('그사이 채팅이나 실시간 폰이 바뀌었어요. 다시 해 주세요'), { changed: true });   // (changed: 화면은 이 표시로 알아봐요 — 글은 화면이 이 표시를 보게 된 뒤 바꿔요)
+    if (!words) throw new Error('넣을 내용이 없습니다.');
+    if (!Array.isArray(c.chat) || typeof c.addOneMessage !== 'function' || typeof c.saveChat !== 'function') throw new Error('이 실리에서는 롤플 채팅에 넣을 수 없습니다.');
     const message = { name: c.chatMetadata?.narrator_name || 'System', is_user: false, is_system: false,
         send_date: typeof c.humanizedDateTime === 'function' ? c.humanizedDateTime() : new Date().toISOString(),
         mes: words, force_avatar: 'img/five.png', extra: { type: 'narrator', gen_id: Date.now(), api: 'manual', model: 'narrative-archive' } };
@@ -894,11 +894,11 @@ export function liveImportFilePlan(real, text) {
 }
 // the rows into 폰 2, saved. With no 폰 2 yet, one begun fresh (no story) is made for them; a failure leaves nothing
 async function bringIn(real, f, { persona = '', scope = '' } = {}) {
-    if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않아요');
+    if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않습니다.');
     if (!f.rows.length) throw new Error(f.again ? '새로 가져올 메시지가 없어요' : '가져올 메시지가 없어요');
     const w = liveWorld(real), had = real.live === undefined ? undefined : structuredClone(real.live), name = String(persona || ctx().name1 || '').trim();
     try {
-        if (!w) { if (!name) throw new Error('페르소나 이름이 필요해요'); startFresh(real, { persona: name, scope }); }
+        if (!w) { if (!name) throw new Error('페르소나 이름이 필요합니다.'); startFresh(real, { persona: name, scope }); }
         const out = importInto(real, f.rows, { chat: f.key });
         await saveMeta();
         return { ...out, started: !w };
@@ -908,16 +908,16 @@ async function bringIn(real, f, { persona = '', scope = '' } = {}) {
 // scope: 이 채팅). 모델은 부르지 않아요
 //   → { room, count (말풍선 수), messages, from, to, started (실시간 폰을 새로 만들었는지) }
 export async function liveImportChat(real, opts = {}) {
-    if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않아요');
+    if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않습니다.');
     const f = openChat(real);
     // (messages there, but none the messenger's: a chat of scenes, not of texts)
-    if (!f.rows.length && f.any) throw new Error('메신저 모양으로 쓴 메시지가 없어요 (맨 위에 시간 칸이 있는 캐릭터 메시지를 가져와요)');
+    if (!f.rows.length && f.any) throw new Error('메신저 형식의 메시지가 없습니다. 맨 위에 시간이 있는 캐릭터 메시지만 가져옵니다.');
     return bringIn(real, f, opts);
 }
 // 내보낸 채팅 파일(.jsonl)에서 가져오기: 그 파일의 메시지 전부(숨긴 것 · 해설만 빼고)를 지금 열어 둔 채팅의 실시간 폰으로.
 // text: 파일의 글 (브라우저에서 읽은 것; 어디로도 안 보내요)
 export async function liveImportFile(real, text, opts = {}) {
-    if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않아요');
+    if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않습니다.');
     const file = importFile(text);
     return bringIn(real, importFrom(real, file.chat, file.key, false), opts);
 }
@@ -925,7 +925,7 @@ export async function liveImportFile(real, text, opts = {}) {
 // ---- 메신저의 말 고치기 (phone2edit.js). 사람이 눌렀을 때만 해요.
 // 말 지우기 (ids: 말의 id 하나 또는 여럿) → 지운 수. 메신저에서만 지워요: 이미 폰에 반영된 것 · 롤플에 전한 것은 그대로예요
 export async function liveDropMessages(real, roomId, ids) {
-    if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않아요');
+    if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않습니다.');
     const n = dropMessages(real, roomId, ids);
     if (n) forgetActivity(real, roomId);
     // (the answer shown is gone, every bubble of it: another one kept for that message shows)
@@ -933,7 +933,7 @@ export async function liveDropMessages(real, roomId, ids) {
     return n;
 }
 // ---- 말 · 방 다루기 (phone2room.js). 사람이 눌렀을 때만 해요. 바뀐 것이 있으면 저장까지 해요.
-const mine = real => { if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않아요'); return real; };
+const mine = real => { if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않습니다.'); return real; };
 const kept = async v => { if (v) { await flushCards(); await saveMeta(); } return v; };
 // 말의 표시 (마리나라의 열쇠 그대로, 준 것만 바꿔요) → 바뀐 말의 수
 //   { hiddenFromAI: true|false, hiddenFromAICharacterIds: [이름] | null, pinnedToContext: true|false, bookmark: true | { label } | null, privateNote: 글 | null }
@@ -956,7 +956,7 @@ export const liveRemoveMember = async (real, roomId, name) => kept(removeMember(
 // 말 고치기: 내 말이든 캐릭터 말이든 글을 바꿔요 ({ text } 원문, { ko } 한국어만, 둘 다도 돼요). 원문을 바꾸면 그 말의
 // 한국어는 지워져요(다시 받으려면 liveRetranslate). 답장을 다시 받지는 않아요. 저장까지 해요  → 바뀐 그 말 (바뀐 게 없으면 null)
 export async function liveEditMessage(real, roomId, msgId, change = {}) {
-    if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않아요');
+    if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않습니다.');
     const x = editMessage(real, roomId, msgId, change);
     if (x) await saveMeta();
     return x;
@@ -972,7 +972,7 @@ export function liveSwipeInfo(real, roomId) {
 // 답장은 여기서 안 받아요: fresh면 화면이 말을 보낸 뒤처럼 liveGo를 불러요. 받아 둔 답장은 버리지 않아요.
 //   → { at, count, fresh, jobs (줄 세운 답장 수) }
 export async function liveSwipe(real, roomId, dir) {
-    if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않아요');
+    if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않습니다.');
     settleSwipes(real, roomId);
     // (a new answer asked for by hand: no waiting, and an owner who is offline answers too — Marinara's regenerate)
     const out = swipeTo(real, roomId, dir), made = out.fresh ? enqueueReplies(real, roomId) : [], jobs = made.length;
@@ -983,7 +983,7 @@ export async function liveSwipe(real, roomId, dir) {
 // 받아 둔 답장을 지우는 세 가지. 모두 { dropped (지운 답장 수), at, count (남은 수: 0이면 답장이 없어요) }를 돌려주고 저장해요.
 // 보이는 답장을 지우면 남은 것 중 앞의 것(없으면 다음 것)이 보여요. 답장이 오는 중에는 못 지워요
 async function swipeDrop(real, roomId, drop) {
-    if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않아요');
+    if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않습니다.');
     settleSwipes(real, roomId);
     const out = drop();
     if (out.dropped) await saveMeta();
@@ -1005,22 +1005,22 @@ export function liveSwipeList(real, roomId) {
 // 그대로, 그 방 캐릭터의 말투 표 · 주변 인물 · 용어집을 같이 보내요. 실패하면 있던 한국어가 그대로예요.
 //   → { count (바뀐 수), left (한 번에 다 못 해서 남은 수) }
 export async function liveRetranslate(real, roomId, ids) {
-    if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않아요');
+    if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않습니다.');
     const w = liveWorld(real), { owner, rows, left } = koRows(real, roomId, ids);
-    if (!rows.length) throw new Error('번역할 말이 없어요');
+    if (!rows.length) throw new Error('번역할 메시지가 없습니다.');
     const p = livePhone(real, owner), voices = p ? voiceRows(p).map(v => ({ who: voiceWho(v), style: v.style })) : [], entries = glossaryEntries(real);
     let count = 0;
     for (const chunk of koChunks(rows)) {
         const input = koInput(chunk.rows, { owner, around: p ? aroundBlock(p) : '', voices, gloss: glossaryIn(entries, chunk.rows.map(r => r.x.text).join('\n')) });
         const out = await askTranslator(input, { system: AI_SYS_PHONE_KO, maxTokens: Math.min(16384, 1500 + chunk.size * 3) });
         // (the 폰 2 a request began with is gone: its answer is not put anywhere)
-        if (!here(real, w)) throw new Error('그사이 실시간 폰이 바뀌었어요');
+        if (!here(real, w)) throw new Error('실시간 폰이 변경되었습니다.');
         // (the object is the first { … } of the answer; an answer that can't be read changes nothing)
         let got = null;
         try { got = parseJson(String(out).replace(/^[^{]*/, '').replace(/[^}]*$/, ''), { salvage: true }); } catch { got = null; }
         count += takeKo(chunk.rows, got);
     }
-    if (!count) throw new Error('번역을 받지 못했어요');
+    if (!count) throw new Error('번역을 받지 못했습니다.');
     await saveMeta();
     return { count, left };
 }
@@ -1031,12 +1031,12 @@ export async function liveRetranslate(real, roomId, ids) {
 // 내가 캐릭터의 최근 말(내 마지막 말 뒤에 온 말)에 달면 그 캐릭터의 답장을 줄 세워요: 화면이 이어서 liveGo를 불러요.
 // 캐릭터는 말로 받거나, 이모지로 받거나, 그냥 넘겨요
 export async function liveReact(real, roomId, msgId, by, e = null) {
-    if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않아요');
+    if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않습니다.');
     const { w, room, x } = messageOf(real, roomId, msgId);
-    if (!room.members.some(n => liveKey(n) === liveKey(by))) throw new Error('이 방에 없는 사람이에요');
-    if (x.act) throw new Error('반응을 달 수 없는 말이에요');
+    if (!room.members.some(n => liveKey(n) === liveKey(by))) throw new Error('이 채팅방에 없는 멤버입니다.');
+    if (x.act) throw new Error('반응을 달 수 없는 메시지입니다.');
     const want = e === null || e === undefined || e === '' ? '' : emojiOf(e);
-    if (!want && e) throw new Error('이모지 하나만 달 수 있어요');
+    if (!want && e) throw new Error('이모지는 하나만 달 수 있습니다.');
     const had = reactOf(x, by)?.e || '', next = want && want !== had ? want : '';
     if (putReact(x, by, next)) {
         const mine = liveKey(by) === liveKey(w.persona);
@@ -1068,10 +1068,10 @@ export const liveCancelReply = (real, roomId) => replyDrafts.delete(draftKey(rea
 //   → { messages: [{ role, content }], chatMode, parameters, source: 'cached' | 'live_preview', exact, characterId, generationInfo, agentNote }
 export async function livePeekPrompt(real, roomId, { messageId = '', current = false } = {}) {
     const w = liveWorld(mine(real)), room = w.messenger?.rooms?.[roomId];
-    if (!room) throw new Error('없는 방이에요');
+    if (!room) throw new Error('채팅방을 찾을 수 없습니다.');
     const P = liveKey(w.persona), id = !current && typeof messageId === 'string' ? messageId.trim() : '';
     const requested = id ? (room.messages || []).find(x => String(x.id) === id) || null : null;
-    if (id && !requested) throw new Error('이 방에 없는 말이에요');
+    if (id && !requested) throw new Error('이 채팅방에 없는 메시지입니다.');
     const latestVisible = [...(room.messages || [])].reverse().find(x => !x.extra?.hiddenFromAI) || null, source = requested ?? latestVisible;
     if (source && liveKey(source.from) !== P && !current) {
         const cached = (Array.isArray(source.extra?.cachedPrompt) ? source.extra.cachedPrompt : []).filter(e => e && typeof e.role === 'string' && typeof e.content === 'string').map(e => ({ role: e.role, content: e.content }));
@@ -1081,10 +1081,10 @@ export async function livePeekPrompt(real, roomId, { messageId = '', current = f
             agentNote: requested ? 'This is the exact cached text prompt sent for the selected turn.' : 'This is the cached text prompt saved after provider preparation for the active assistant swipe.',
         };
     }
-    if (requested) throw new Error('이 말에는 저장된 요청이 없어요 (No exact saved prompt is available for this turn)');
+    if (requested) throw new Error('이 턴에는 저장된 프롬프트가 없습니다.');
     // (the live preview: what the next reply here would be sent with. Whoever would answer first; a Merged group as one request)
     const chars = room.members.filter(n => liveKey(n) !== P && w.phones?.[liveKey(n)]);
-    if (!chars.length) throw new Error('이 방에는 답할 사람이 없어요');
+    if (!chars.length) throw new Error('이 채팅방에는 답할 멤버가 없습니다.');
     const merged = chars.length > 1 && groupMode(real) === 'merged';
     const req = await gatherJob(real, { world: w.id, kind: 'reply', owner: chars[0], room: roomId, ...(merged ? { merged: chars.map(liveKey) } : {}) });
     return {
@@ -1121,7 +1121,7 @@ export const liveModelConnections = () => [connRow('dr'), connRow('ai'), ...aiPr
 const roomChat = room => ({ connectionId: room.connectionId || null, metadata: room.model || {} });
 export function liveRoomModel(real, roomId) {
     const room = liveWorld(real)?.messenger?.rooms?.[roomId];
-    if (!room) throw new Error('없는 방이에요');
+    if (!room) throw new Error('채팅방을 찾을 수 없습니다.');
     const chat = roomChat(room);
     return { current: chat.connectionId ? (readChatModelOverride(chat) ?? { connectionId: chat.connectionId }) : null, recent: readChatRecentModels(chat), followsMain: !chat.connectionId };
 }
@@ -1131,18 +1131,18 @@ const slotOf = id => (id === 'dr' || id === 'ai' ? connSettings(id) : sourceOf(i
 const modelKey = slot => (slot.mode === 'vertex' ? 'vxModel' : slot.mode === 'source' ? 'stModel' : 'model');
 export async function liveSetRoomModel(real, roomId, pick = null) {
     const room = liveWorld(mine(real)).messenger?.rooms?.[roomId];
-    if (!room) throw new Error('없는 방이에요');
+    if (!room) throw new Error('채팅방을 찾을 수 없습니다.');
     let choice = null;
     if (pick && pick.connectionId !== null) {
         const parsed = chatModelChoiceSchema.safeParse(pick);
-        if (!parsed.success) throw new Error('모델 고름을 읽지 못했어요');
+        if (!parsed.success) throw new Error('모델 선택을 읽을 수 없습니다.');
         choice = parsed.data;
         const src = sourceOf(choice.connectionId);
-        if (src ? !stSourceList().some(x => x.id === src) : !liveModelConnections().some(c => c.id === choice.connectionId)) throw new Error('없는 연결이에요 (Model not found)');
+        if (src ? !stSourceList().some(x => x.id === src) : !liveModelConnections().some(c => c.id === choice.connectionId)) throw new Error('모델을 찾을 수 없습니다.');
         const slot = slotOf(choice.connectionId), own = slot ? String(slot[modelKey(slot)] || '') : '';
-        if (src && !choice.model) throw new Error('모델을 골라 주세요');
+        if (src && !choice.model) throw new Error('모델을 선택하세요.');
         // (a model of its own needs a connection we can name a model on: a SillyTavern source, a custom API or Vertex)
-        if (choice.model && !(slot && OWN_MODES.includes(slot.mode))) throw new Error('이 연결에서는 모델을 따로 고를 수 없어요 (A chat needs a chat Model to run on.)');
+        if (choice.model && !(slot && OWN_MODES.includes(slot.mode))) throw new Error('이 연결에서는 모델을 따로 선택할 수 없습니다.');
         if (choice.model && own === choice.model) choice = { connectionId: choice.connectionId };
     }
     const chat = roomChat(room), previous = chat.connectionId ? (readChatModelOverride(chat) ?? { connectionId: chat.connectionId }) : null;
@@ -1272,13 +1272,13 @@ async function askRoom(real, roomId, input, how) {
     if (slot && override && OWN_MODES.includes(slot.mode)) {
         const t = own;
         const out = await callConn(t, how.system || '', input, Math.max(256, Number(how.maxTokens) || Number(t.max) || 16000), how.effort || '', true, false, how.signal || null, how.temperature ?? null, how.topP ?? null, how.meta || null);
-        if (!out) throw new Error('모델이 빈 답을 돌려줬어요');
+        if (!out) throw new Error('모델이 빈 응답을 반환했습니다.');
         return out;
     }
     if (id === 'dr') return askDraft(input, how);
     if (id === 'ai') return askAI(input, { ...how, noFallback: true });
     const p = aiProfiles().find(x => `profile:${x.id}` === id);
-    if (!p) throw new Error('고른 연결 프로필을 찾을 수 없어요');
+    if (!p) throw new Error('선택한 연결 프로필을 찾을 수 없습니다.');
     // (a level picked for this room rides on the profile's request, over its preset's: SillyTavern's own
     //  createGenerationParameters turns it into what its server expects for this source and model — ai.js stLevelPayload.
     //  Nothing picked: the preset's level, as before)
@@ -1286,7 +1286,7 @@ async function askRoom(real, roomId, input, how) {
     const r = await ctx().ConnectionManagerRequestService.sendRequest(p.id, [...(how.system ? [{ role: 'system', content: how.system }] : []), profileTurn(input)], Math.max(256, Number(how.maxTokens) || 8192), { stream: false, extractData: true, includePreset: true, includeInstruct: true, ...(how.signal ? { signal: how.signal } : {}) }, ...(over ? [over] : []));
     const raw = typeof r === 'string' ? r : r?.content, out = stripThink(raw);
     if (how.meta) Object.assign(how.meta, { raw: String(raw ?? ''), model: String(p.model || p.name || ''), provider: String(p.api || 'profile') });
-    if (!out) throw new Error('모델이 빈 답을 돌려줬어요');
+    if (!out) throw new Error('모델이 빈 응답을 반환했습니다.');
     return out;
 }
 // 2) 즐겨찾기 (마리나라의 별: 순서가 있는 목록, 위 · 아래로 옮기기). 채팅과 상관없이 확장 설정에 남아요
@@ -1296,7 +1296,7 @@ const starStore = () => { const s = (ctx().extensionSettings[MODULE] ||= {}); if
 export const liveStars = () => starStore().orbitStars.map(c => chatModelChoiceSchema.safeParse(c)).filter(r => r.success).map(r => r.data);
 export function liveToggleStar(choice) {
     const parsed = chatModelChoiceSchema.safeParse(choice);
-    if (!parsed.success) throw new Error('모델 고름을 읽지 못했어요');
+    if (!parsed.success) throw new Error('모델 선택을 읽을 수 없습니다.');
     const s = starStore(), all = liveStars(), had = all.some(c => starKey(c) === starKey(parsed.data));
     s.orbitStars = (had ? all.filter(c => starKey(c) !== starKey(parsed.data)) : [...all, parsed.data]).slice(0, MAX_PINNED_MODELS);
     ctx().saveSettingsDebounced?.();
@@ -1312,7 +1312,7 @@ export function liveMoveStar(choice, by) {
 // 3) 페르소나 바꾸기: 실리의 페르소나를 바꿔요 (people.js stPersonaList()의 id). 실시간 폰의 "나"는 우리 쪽이 이름을 따라 바꿔요
 export async function liveSwitchPersona(avatarId) {
     const id = String(avatarId || '');
-    if (!id || !Object.hasOwn(ctx().powerUserSettings?.personas || {}, id)) throw new Error('없는 페르소나예요');
+    if (!id || !Object.hasOwn(ctx().powerUserSettings?.personas || {}, id)) throw new Error('페르소나를 찾을 수 없습니다.');
     const P = await import('/scripts/personas.js');
     await P.setUserAvatar(id);
     return true;
@@ -1336,7 +1336,7 @@ export async function liveSetCommands(real, { enabled, toggles } = {}) {
     if (enabled !== undefined) { if (enabled) delete meta.characterCommands; else meta.characterCommands = false; }
     if (toggles && typeof toggles === 'object') {
         const now = readConversationCommandToggles(meta.conversationCommandToggles);
-        for (const [k, v] of Object.entries(toggles)) { if (!CONVERSATION_COMMAND_TOGGLE_OPTIONS.some(o => o.id === k)) throw new Error('없는 명령이에요'); now[k] = !!v; }
+        for (const [k, v] of Object.entries(toggles)) { if (!CONVERSATION_COMMAND_TOGGLE_OPTIONS.some(o => o.id === k)) throw new Error('알 수 없는 명령입니다.'); now[k] = !!v; }
         meta.conversationCommandToggles = now;
     }
     await saveMeta();
@@ -1356,15 +1356,15 @@ export const LIVE_ATTACH_ACCEPT = CHAT_ATTACHMENT_ACCEPT;
 export const liveReadFiles = (files, on = {}) => readChatAttachments(files, on);
 const stPut = async (name, data) => {
     const r = await fetch('/api/files/upload', { method: 'POST', headers: ctx().getRequestHeaders(), body: JSON.stringify({ name, data }) });
-    if (!r.ok) throw new Error(`첨부 파일을 실리에 올리지 못했어요 (${r.status})`);
+    if (!r.ok) throw new Error(`첨부 파일을 업로드하지 못했습니다 (${r.status})`);
     return (await r.json())?.path;
 };
-const stGet = async url => { const r = await fetch(url); if (!r.ok) throw new Error(`첨부 파일을 불러오지 못했어요 (${r.status}): 실리의 파일 저장소에서 지워졌을 수 있어요`); return r.arrayBuffer(); };
+const stGet = async url => { const r = await fetch(url); if (!r.ok) throw new Error(`첨부 파일을 불러오지 못했습니다 (${r.status}). 실리 파일 저장소에서 삭제되었을 수 있습니다.`); return r.arrayBuffer(); };
 export const liveStoreAttachments = attachments => storeAttachments(toPendingAttachments(attachments || []), { put: stPut });
 export async function liveRemoveAttachment(real, roomId, messageId, index) {
     const w = liveWorld(mine(real)), x = (w.messenger?.rooms?.[roomId]?.messages || []).find(y => String(y.id) === String(messageId));
     const list = x && normalizePromptAttachments(x.extra);
-    if (!list || !list[index]) throw new Error('없는 첨부예요');
+    if (!list || !list[index]) throw new Error('첨부 파일을 찾을 수 없습니다.');
     const gone = list[index], left = list.filter((_, i) => i !== index);
     // (Marinara: the message stays, with the attachments that are left)
     if (left.length) x.extra.attachments = left; else { delete x.extra.attachments; if (!Object.keys(x.extra).length) delete x.extra; }
@@ -1389,7 +1389,7 @@ export async function liveSetCaptioning(real, patch = {}) {
     if ('enabled' in patch) { if (patch.enabled) meta.imageCaptioningEnabled = true; else delete meta.imageCaptioningEnabled; }
     if ('connectionId' in patch) {
         const id = String(patch.connectionId || '').trim();
-        if (id && !liveConnections().some(c => c.id === id)) throw new Error('없는 연결이에요');
+        if (id && !liveConnections().some(c => c.id === id)) throw new Error('연결을 찾을 수 없습니다.');
         if (id) meta.imageCaptioningConnectionId = id; else delete meta.imageCaptioningConnectionId;
     }
     if ('prompt' in patch) { const t = String(patch.prompt || ''); if (t.trim()) meta.imageCaptioningPrompt = t; else delete meta.imageCaptioningPrompt; }
@@ -1526,10 +1526,10 @@ export function liveReasoning(real, roomId = '') {
 }
 export async function liveSetReasoning(real, roomId = '', effort = '') {
     const w = liveWorld(mine(real)), v = oldLevel(String(effort || ''));   // (an older screen's words are taken too)
-    if (v && !REASONING_LEVELS.includes(v)) throw new Error('추론 레벨은 none · low · medium · high · xhigh · maximum 가운데 하나예요');
+    if (v && !REASONING_LEVELS.includes(v)) throw new Error('추론 레벨은 none, low, medium, high, xhigh, maximum 중 하나여야 합니다.');
     if (roomId) {
         const room = w.messenger?.rooms?.[roomId];
-        if (!room) throw new Error('없는 방이에요');
+        if (!room) throw new Error('채팅방을 찾을 수 없습니다.');
         if (v) room.chatParameters = { ...(room.chatParameters || {}), reasoningEffort: v };
         else if (room.chatParameters) { delete room.chatParameters.reasoningEffort; if (!Object.keys(room.chatParameters).length) delete room.chatParameters; }
     } else { const meta = presenceOf(real).meta; if (v) meta.reasoningEffort = v; else delete meta.reasoningEffort; }

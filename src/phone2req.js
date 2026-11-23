@@ -13,7 +13,7 @@ import { phoneAt, nowAt, markAfter, loreFor, archiveFor, blindBlock, namesBlock,
 import { isLiveMeta, liveAtYear } from './phone2store.js';
 import { liveStoryYear } from './phone2year.js';
 
-export const needLive = m => { if (!isLiveMeta(m)) throw new Error('실시간 폰의 서랍이 아니에요'); return m; };
+export const needLive = m => { if (!isLiveMeta(m)) throw new Error('실시간 폰의 서랍이 아닙니다.'); return m; };
 
 // 실시간 폰의 이야기 요약본 (phone2snap.js): 이야기에서 시작한 폰이 가진 것. 처음부터 시작한 폰은 없어요(null)
 export const liveSnapOf = m => { const s = m?.phoneSnap; return s && typeof s === 'object' ? s : null; };
@@ -23,7 +23,7 @@ export async function liveStoryReady(m) {
     needLive(m);
     if (!(m.phoneUpto >= 0) || liveSnapOf(m)) return;
     if (typeof m.phoneStoryReady === 'function') await m.phoneStoryReady();
-    if (!liveSnapOf(m)) throw new Error('이야기 요약본을 만들지 못했어요. 잠시 뒤 다시 해 주세요');
+    if (!liveSnapOf(m)) throw new Error('이야기 요약을 만들지 못했습니다. 잠시 후 다시 시도하세요.');
 }
 // 최근 대화: 메신저 대화, 줄 수와 글자 수가 남으면 그 앞에 요약본에 든 이야기의 마지막 메시지
 export function liveRecentText(m, owner, n, o = {}) {
