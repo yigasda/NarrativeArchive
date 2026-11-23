@@ -55,7 +55,7 @@ export async function startWork({ root, store, st = null, schedule = true, from 
     };
 
     const readSettings = async () => { try { const v = JSON.parse(await fs.readFile(path.join(root, 'settings.json'), 'utf8')); return obj(v) ? v : {}; } catch (err) { if (err?.code === 'ENOENT') return {}; throw err; } };
-    // ---- 브라우저의 시간대 · 언어 (src/phone2keepon.js keepDevice가 확장 설정에 적어요: { timeZone, locale, intl })
+    // ---- 브라우저의 시간대 · 언어 (src/phone2keepon.js keepDevice가 확장 설정에 적어요: { timeZone, locale, intl, isMobile })
     //   실리 브라우저 코드와 우리 코드는 그 페이지처럼 그 시간대 · 언어로 돌아요(plugin/zone.mjs: 이 스레드만). 아직 안 적었으면 서버 컴퓨터의 것(전과 같아요)
     //   timeZone: Intl의 시간대 · locale: 실리 i18n.js의 localeFile(getCurrentLocale) · intl: Intl의 기본 언어
     //   기기가 둘이면 마지막으로 설정을 저장한 브라우저의 것이에요(settings.json이 하나라서)

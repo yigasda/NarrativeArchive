@@ -183,4 +183,17 @@ test('다리 · 매크로의 길: GET /api/extensions/discover · POST /api/extr
     const ok = await ask(open, 'GET', '/api/extensions/discover');
     assert.deepEqual([ok.status, ok.headers.get('x-na-bridge'), await ok.json()], [200, '1', [{ type: 'system', name: 'memory' }]]);
     assert.deepEqual(seen, ['GET /discover']);
+    // (the classify router likewise gets POST /labels only — never its classify way, which runs the model on any text)
+    fs.writeFileSync(path.join(st2, 'src/endpoints/classify.js'), "export const seen = []; export function router(req, res, next) { seen.push(req.method + ' ' + req.url); if (req.method === 'POST' && req.url === '/labels') return res.send({ labels: ['calm'] }); return res.send({ classification: [req.url] }); }\n");
+    const open2 = await startBridge({ stRoot: st2, userOf, allow: () => true });
+    t.after(() => open2.close());
+    const { seen: seenC } = await import(pathToFileURL(path.join(st2, 'src/endpoints/classify.js')).href);
+    for (const [method, url] of [['POST', '/api/extra/classify'], ['POST', '/api/extra/classify/'], ['GET', '/api/extra/classify/labels'], ['POST', '/api/extra/classify/labels/x']]) {
+        const x = await ask(open2, method, url);
+        assert.equal(x.status, 404, `${method} ${url}`);
+    }
+    assert.deepEqual(seenC, []);
+    const lab = await ask(open2, 'POST', '/api/extra/classify/labels');
+    assert.deepEqual([lab.status, await lab.json()], [200, { labels: ['calm'] }]);
+    assert.deepEqual(seenC, ['POST /labels']);
 });

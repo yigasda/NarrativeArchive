@@ -114,7 +114,18 @@ export async function startBridge({ stRoot = process.cwd(), userOf, allow = allo
         request.baseUrl = '/api/extensions';
         return extensions.router(request, response, (err) => { request.url = url; request.baseUrl = baseUrl; next(err); });
     });
-    if (typeof classify?.router === 'function') app.use('/api/extra/classify', classify.router);
+    // (SillyTavern's classify router — /api/extra/classify, src/server-startup.js — given POST /labels only, the same way: its other way runs the
+    //  classifier on any text and is never reached through the bridge, even with a wrong allow list)
+    if (typeof classify?.router === 'function') {
+        app.use('/api/extra/classify/labels', (request, response, next) => {
+            const p = String(request.url || '').split('?')[0];
+            if (request.method !== 'POST' || p !== '/') return response.sendStatus(404);
+            const url = request.url, baseUrl = request.baseUrl;
+            request.url = '/labels';
+            request.baseUrl = '/api/extra/classify';
+            return classify.router(request, response, (err) => { request.url = url; request.baseUrl = baseUrl; next(err); });
+        });
+    }
     app.use('/', users.router);
     const server = await new Promise((ok, no) => { const s = app.listen(0, '127.0.0.1', () => ok(s)); s.once('error', no); });
     server.unref?.();
