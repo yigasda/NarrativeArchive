@@ -19,13 +19,17 @@ import { confirm, esc, fmt, timeLabel } from './util.js';
 // after earlier parent messages are edited or swiped. A branch made before that list existed: the last message the
 // two still share. When the parent can't be read, no number is guessed: the 분기 window asks for it.
 // Only sections that are also in the parent's archive count as the parent's future: a section this branch wrote
-// itself after going on past the branch point is its own story (keys: the parent's section titles, when it has any).
+// itself after going on past the branch point is its own story (keys: the parent's section titles). A parent with no
+// archive gave the branch none, so nothing in the branch's archive is the parent's (a long chat whose archive was
+// started in the branch, long after branching, had every section past the branch point taken for the parent's).
 export const branchPointOf = (m, parent) => (parent && m.branchAt?.parent === parent && Number.isFinite(m.branchAt.at) ? m.branchAt.at : null);
 let branchSeeking = '';
 export async function findBranchPoint() {
     if (!hasChat()) return;
     const c = ctx(), m = getMeta(), parent = c.chatMetadata?.main_chat || null;
-    if (!parent || branchPointOf(m, parent) !== null || branchSeeking === parent) return;
+    // kept from a read of the parent, or typed: done. Read before the parent's titles were kept (no keys): read again
+    const kept = branchPointOf(m, parent) !== null && (Array.isArray(m.branchAt.keys) || m.branchAt.how === 'user');
+    if (!parent || kept || branchSeeking === parent) return;
     branchSeeking = parent;
     const mine = c.chat || [];
     let at = mine.length - 1, how = 'end';
@@ -33,7 +37,7 @@ export async function findBranchPoint() {
     try {
         const got = await fetchOtherChat(parent), theirs = got.messages || [];
         const ptext = String(got.meta?.[MODULE]?.text || '');
-        if (ptext.trim()) keys = parseSections(ptext).filter(x => !x.group).map(sectionKey);
+        keys = ptext.trim() ? parseSections(ptext).filter(x => !x.group).map(sectionKey) : [];
         // a chat that isn't there comes back empty rather than failing
         read = theirs.length > 0;
         const name = currentChatId();
@@ -50,7 +54,7 @@ export async function findBranchPoint() {
     // the chat may have changed while the parent was read
     if (ctx().chatMetadata?.main_chat !== parent || getMeta() !== m) return;
     // not read (renamed or deleted): no number is guessed; the 분기 window asks for it, and the next open tries again
-    m.branchAt = read ? { parent, at, how, ...(keys ? { keys } : {}) } : { parent, at: null, how: 'missing' };
+    m.branchAt = read ? { parent, at, how, keys: keys || [] } : { parent, at: null, how: 'missing' };
     await saveMeta();
     syncPanel();
 }
@@ -81,7 +85,9 @@ export function branchState(m) {
     const cur = ranges.length ? ranges[ranges.length - 1].prefix : '';
     const secs = parseSections(m.text).filter(x => !x.group);
     const fromParent = m.branchAt?.parent === parent && Array.isArray(m.branchAt.keys) ? new Set(m.branchAt.keys) : null;
-    const ahead = !parent || missing ? [] : secs.map(x => ({ s: x, r: x.title.match(RANGE_HEAD) }))
+    // read from the parent before its titles were kept: nothing is called the parent's until it is read again
+    const unread = m.branchAt?.parent === parent && m.branchAt.how !== 'user' && m.branchAt.how !== 'missing' && !fromParent;
+    const ahead = !parent || missing || unread ? [] : secs.map(x => ({ s: x, r: x.title.match(RANGE_HEAD) }))
         .filter(x => x.r && (x.r[1] || '').trim() === cur && Math.max(+x.r[2], +x.r[4]) > last && (!fromParent || fromParent.has(sectionKey(x.s))))
         .map(x => ({ s: x.s, from: Math.min(+x.r[2], +x.r[4]), to: Math.max(+x.r[2], +x.r[4]) }));
     // the newest restore point whose numbers stop inside this branch
