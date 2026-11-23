@@ -162,13 +162,16 @@ export const KEEP_BEAT_MS = 30_000;
 // 이 채팅의 페르소나 (실리 personas.js의 user_avatar: 아바타 파일 이름)를 채팅에 적어 둬요: 서버는 실리를 닫은 동안에도 그 채팅에서
 // 마지막으로 쓴 페르소나로 답해요 (plugin/work.mjs). 빠른 전환기로 바꿀 때(PERSONA_CHANGED)와, 채팅을 열 때 실리가 고른 것
 // (실리의 CHAT_CHANGED 처리 loadPersonaForCurrentChat이 먼저 끝나요: 실리의 이벤트는 차례로 기다려요)
-// Orbit이 있는 채팅만. 달라졌을 때만 저장해요
+// 플러그인에 둔 Orbit이 이 탭에서 다 열린 채팅만(keep.kept): 채팅을 여는 중에 실리가 페르소나를 바꾸면(PERSONA_CHANGED가 우리
+// CHAT_CHANGED보다 먼저 와요) 그때는 안 적어요 — 그 저장이 Orbit을 한 번 더 열어 저장이 둘 생길 수 있었어요. 열고 나면
+// keepBeat가 적어요. 달라졌을 때만 저장해요
 let stPersonas = null;
 const personasModule = async () => { if (!stPersonas && typeof window !== 'undefined') { try { stPersonas = await import('/scripts/personas.js'); } catch { stPersonas = null; } } return stPersonas; };
 export async function keepPersona(avatar = null) {
     if (!hasChat()) return false;
+    if (!keep.kept()) return false;
     const m = getMeta();
-    if (!m || !(m.live?.world || m.liveRef)) return false;
+    if (!m) return false;
     const a = typeof avatar === 'string' && avatar ? avatar : (await personasModule())?.user_avatar;
     if (typeof a !== 'string' || !a || m.stPersona === a) return false;
     m.stPersona = a;
@@ -184,7 +187,7 @@ export function keepStart() {
     setSaveHook(() => keep.onSave());
     const c = ctx(), et = c.eventTypes || c.event_types;
     const open = () => { const at = now(); if (at) keep.open(at.m, at.mark); };
-    c.eventSource.on(et.CHAT_CHANGED, () => { open(); serves = false; keepBeat(); notePersona(); });
+    c.eventSource.on(et.CHAT_CHANGED, () => { open(); serves = false; keepBeat(); });
     if (et.PERSONA_CHANGED) c.eventSource.on(et.PERSONA_CHANGED, avatar => notePersona(avatar));
     open();
     keepBeat();

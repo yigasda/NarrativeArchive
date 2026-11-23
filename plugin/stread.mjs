@@ -14,10 +14,11 @@ const obj = v => v && typeof v === 'object' && !Array.isArray(v);
 const tryParse = s => { try { return JSON.parse(s); } catch { return undefined; } };
 const onlyUnique = (v, i, a) => a.indexOf(v) === i;
 
-// 채팅 파일 → 줄마다 읽은 것 (못 읽는 줄은 빼요). 없거나 비었으면 []
+// 채팅 파일 → 줄마다 읽은 것 (못 읽는 줄은 빼요). 없거나 비었으면 []. 그 밖에 못 읽으면(권한 · 너무 큼) 오류: 실리는 빈 채팅으로
+// 보지만(tryReadFileSync), 서버는 롤플 없이 답장을 지어내지 않아요
 export async function chatData(file) {
     let text = '';
-    try { text = await fs.readFile(file, 'utf8'); } catch { text = ''; }
+    try { text = await fs.readFile(file, 'utf8'); } catch (err) { if (err?.code !== 'ENOENT') throw err; text = ''; }
     if (!text.length) return [];
     return text.split('\n').map(line => tryParse(line)).filter(x => x);
 }

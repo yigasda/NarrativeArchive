@@ -60,7 +60,7 @@ function deleteValueByPath(object, keyPath) {
 // from: 'extension' (실리의 확장 폴더의 코드: plugin/code.mjs) · 'plugin' (이 플러그인 폴더의 코드)
 export async function startWork({ root, store, st = null, schedule = true, from = 'plugin' }) {
     const G = await import('../src/phone2go.js');
-    const { liveWorld, liveKey, enqueueJob, LIVE_SHARED } = await import('../src/phone2store.js');
+    const { liveWorld, liveKey, enqueueJob, LIVE_SHARED, renamePersona } = await import('../src/phone2store.js');
     const { kitOf, cardsFor } = await import('../src/phone2kit.js');
     const { intentWhy, chatIdOf } = await import('../src/phone2sched.js');
     const AI = await import('../src/ai.js');
@@ -121,9 +121,35 @@ export async function startWork({ root, store, st = null, schedule = true, from 
     // ---- 실리의 것을 답장마다 새로 (실리 브라우저가 이 채팅을 열면 들고 있을 것을, 실리 파일과 실리 서버의 처리기에서)
     //   → { chat, metadata, characters, characterId, groupId, groups, name1, persona }
     const chatFileOf = f => (f.group ? path.join(root, 'group chats', `${f.id}.jsonl`) : path.join(root, 'chats', f.dir, `${f.id}.jsonl`));
+    // (read again only when the file changed: the chat file by its time and size, the card list by its folder's — the names,
+    //  times and sizes of the .png files, as SillyTavern's own card cache is keyed. The scheduler asks many times a minute,
+    //  and SillyTavern's /api/characters/all reads every card and every chat folder)
+    const chats = new Map();
+    async function chatNow(file) {
+        let st = null;
+        try { st = await fs.stat(file); } catch (err) { if (err?.code !== 'ENOENT') throw err; }
+        const sig = st ? `${st.mtimeMs}:${st.size}` : '';
+        const had = chats.get(file);
+        if (had && had.sig === sig) return had.data;
+        const data = await chatData(file);
+        chats.set(file, { sig, data });
+        if (chats.size > 32) chats.delete(chats.keys().next().value);
+        return data;
+    }
+    let cardsHad = null;
+    const whole = new Map();
+    async function cardsSig() {
+        const dir = path.join(root, 'characters');
+        let names = [];
+        try { names = (await fs.readdir(dir)).filter(n => n.endsWith('.png')).sort(); } catch { return ''; }
+        const parts = await Promise.all(names.map(async n => { try { const s = await fs.stat(path.join(dir, n)); return `${n}:${s.mtimeMs}:${s.size}`; } catch { return `${n}:?`; } }));
+        return parts.join('|');
+    }
     async function stNow(real, kit, settings) {
         const f = kit.chat.file;
-        const { metadata, chat } = chatParts(await chatData(chatFileOf(f)), f.group);
+        let data;
+        try { data = await chatNow(chatFileOf(f)); } catch (err) { logger.warn(err instanceof Error ? err : {}, '채팅 파일을 읽지 못했습니다'); throw refuse(400, '채팅 파일을 읽을 수 없습니다.'); }
+        const { metadata, chat } = chatParts(data, f.group);
         // (the card list, as SillyTavern's getCharacters reads it — /api/characters/all —, and a card that came shallow read whole
         //  as its unshallowCharacter does — /api/characters/get. With no bridge — SillyTavern's handlers could not be put
         //  on it —: the cards read from the characters folder the way that handler reads them, plugin/stread.mjs)
@@ -131,8 +157,14 @@ export async function startWork({ root, store, st = null, schedule = true, from 
         //  SillyTavern starts, an extension update does not change them —: read from the folder too, so the extension's
         //  update is enough)
         const viaSt = async (url, own) => { const r = st ? await askSt(url, {}) : null; return r && r.status !== 404 ? r : { ok: true, json: await own() }; };
-        const all = await viaSt('/api/characters/all', () => readCards(root));
-        if (!all.ok || !Array.isArray(all.json)) throw refuse(400, '캐릭터 목록을 읽을 수 없습니다.');
+        const sig = await cardsSig();
+        if (!cardsHad || cardsHad.sig !== sig || !sig) {
+            const got = await viaSt('/api/characters/all', () => readCards(root));
+            if (!got.ok || !Array.isArray(got.json)) throw refuse(400, '캐릭터 목록을 읽을 수 없습니다.');
+            cardsHad = { sig, list: got.json };
+            whole.clear();
+        }
+        const all = { json: cardsHad.list };
         let group = null;
         if (f.group) {
             let raw = null;
@@ -142,19 +174,29 @@ export async function startWork({ root, store, st = null, schedule = true, from 
         }
         const own = group ? null : kit.chat.avatar;
         const characters = cardsFor(all.json, real, { own, members: group?.members || [] }).map(ch => structuredClone(ch));
+        // (a shallow card read whole, as SillyTavern does when the chat opens: this chat's character — getChat's
+        //  unshallowCharacter — and a group's members — unshallowGroupMembers. Other cards stay as the list has them, as in
+        //  the browser)
+        const opened = new Set(group ? group.members : own ? [own] : []);
         for (const [i, ch] of characters.entries()) {
-            if (!ch.shallow) continue;
-            const r = await askSt('/api/characters/get', { avatar_url: ch.avatar });
-            if (!r.ok || !obj(r.json)) throw refuse(400, '캐릭터 카드를 읽을 수 없습니다.');
-            characters[i] = { ...r.json, chat: String(r.json.chat) };
+            if (!ch.shallow || !opened.has(ch.avatar)) continue;
+            if (!whole.has(ch.avatar)) {
+                const r = await askSt('/api/characters/get', { avatar_url: ch.avatar });
+                if (!r.ok || !obj(r.json)) throw refuse(400, '캐릭터 카드를 읽을 수 없습니다.');
+                whole.set(ch.avatar, { ...r.json, chat: String(r.json.chat) });
+            }
+            characters[i] = structuredClone(whole.get(ch.avatar));
         }
         // (the persona: the one last used in this chat — the browser keeps it, phone2keepon.js —, else the one SillyTavern
         //  picks when it opens the chat)
+        //  A persona deleted in SillyTavern since — no name for it any more —: picked as SillyTavern does)
         const na = obj(metadata.narrative_archive) ? metadata.narrative_archive : {};
-        let avatar = typeof na.stPersona === 'string' ? na.stPersona : '';
+        const named = obj(settings.power_user?.personas) ? settings.power_user.personas : {};
+        let avatar = typeof na.stPersona === 'string' && Object.hasOwn(named, na.stPersona) ? na.stPersona : '';
         if (!avatar) {
             const list = await viaSt('/api/avatars/get', () => readImages(root));
-            avatar = personaFor(settings, { lock: metadata.persona, key: group ? group.id : own, avatars: list.ok && Array.isArray(list.json) ? list.json : [] });
+            if (!list.ok || !Array.isArray(list.json)) throw refuse(400, '페르소나 목록을 읽을 수 없습니다.');
+            avatar = personaFor(settings, { lock: metadata.persona, key: group ? group.id : own, avatars: list.json });
         }
         const { name1, description } = personaOf(settings, avatar);
         const at = own ? characters.findIndex(ch => ch.avatar === own) : -1;
@@ -275,10 +317,12 @@ export async function startWork({ root, store, st = null, schedule = true, from 
             const now = await stNow(entry.real, kit, settings);
             setContext(contextOf(entry, kit, settings, app, now));
             globalThis.__naStOpenai = stStandIn(kit, settings);
-            // (the persona's name changed in SillyTavern: the live phone's "me" follows before anything is judged — the browser
-            //  does it when the phone opens)
-            G.liveFollowPersona(entry.real);
-            try { return await job(); }
+            try {
+                // (the persona's name changed in SillyTavern: the live phone's "me" follows before anything is judged, saved
+                //  before the job goes on — the browser does it when the phone opens, phone2go.js liveFollowPersona)
+                if (renamePersona(entry.real, now.name1)) await app.write(entry);
+                return await job();
+            }
             finally { setContext(null); delete globalThis.__naStOpenai; }
         });
         line = run.catch(() => {});

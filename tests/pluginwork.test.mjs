@@ -47,7 +47,7 @@ function world({ story = false, schedule = null, kit = true, st = null, pt = nul
 }
 
 // 한 판: 임시 사용자 폴더 + 저장 + 가짜 모델 + 가짜 다리 + 일꾼
-async function stage(t, { settings = {}, cm = null, more = {}, files = {}, reply = () => ({ reply: ['you there?'], status: '' }), bridge = true, schedule = false, code = null, merge = 200, oldBridge = false } = {}) {
+async function stage(t, { settings = {}, cm = null, more = {}, files = {}, reply = () => ({ reply: ['you there?'], status: '' }), bridge = true, schedule = false, code = null, merge = 200, oldBridge = false, avatarsStatus = 200 } = {}) {
     const root = await mkdtemp(path.join(tmpdir(), 'na-work-'));
     const asked = [];
     const model = await listen(async (req, res) => { const body = await bodyOf(req); asked.push({ url: req.url, auth: req.headers.authorization, body }); const a = await reply(body); if (a?.httpStatus) { res.statusCode = a.httpStatus; res.end(JSON.stringify({ error: { message: a.error || 'no' } })); return; } res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ choices: [{ message: { content: typeof a === 'string' ? a : JSON.stringify(a) }, finish_reason: 'stop' }], usage: { prompt_tokens: 1, completion_tokens: 1 } })); });
@@ -55,6 +55,7 @@ async function stage(t, { settings = {}, cm = null, more = {}, files = {}, reply
     const br = bridge ? await fakeBridge({ cards: () => cards, avatars: () => ['ren.png', 'varo.png'], more: async (req, body, res) => {
         if (req.url === '/api/backends/chat-completions/generate') { res.end(JSON.stringify({ choices: [{ message: { content: JSON.stringify(await reply(body)) }, finish_reason: 'stop' }] })); return true; }
         if (req.url === '/api/characters/merge-attributes' && merge !== 200) { res.statusCode = merge; res.end('{}'); return true; }
+        if (req.url === '/api/avatars/get' && avatarsStatus !== 200) { res.statusCode = avatarsStatus; res.end('{}'); return true; }
         // (an older plugin's bridge: these ways are not open — plugin/bridge.mjs allowed() answers 404)
         if (oldBridge && ['/api/characters/all', '/api/characters/get', '/api/avatars/get'].includes(req.url)) { res.statusCode = 404; res.end('{}'); return true; }
         // (a text-completion backend that runs on past its answer: SillyTavern cuts the stop sequence off — custom-request.js 331–382)
@@ -505,10 +506,15 @@ test('일꾼 · 실리에서 바로: 페르소나 — 그 채팅에서 마지막
     await S.writeChat({ persona: 'varo.png' });
     assert.match((await S.gen(b.id)).payload, /"message_saved"/);
     assert.match(textOf(S.asked[1].body), /\[PERSONA — Varo\]\nVaro is a pilot\./);
+    // (적어 둔 페르소나를 실리에서 지웠으면: 실리 순서로 — 여기서는 settings.json의 지금 페르소나)
+    const d = world(); await S.put('sd', d.m); await S.auto.list();
+    await S.writeChat({ narrative_archive: { stPersona: 'gone.png' } });
+    assert.match((await S.gen(d.id)).payload, /"message_saved"/);
+    assert.match(textOf(S.asked.at(-1).body), /\[PERSONA — Ren\]\nRen is a student\./);
     // (잠금도 없으면 settings.json의 지금 페르소나)
     await S.writeChat({});
     assert.match((await S.gen(c.id)).payload, /"message_saved"/);
-    text = textOf(S.asked[2].body);
+    text = textOf(S.asked.at(-1).body);
     assert.match(text, /\[PERSONA — Ren\]\nRen is a student\./);
 });
 
@@ -567,4 +573,47 @@ test('일꾼 · 플러그인을 안 받은 옛 다리(카드 길이 막혀 있�
     assert.match(text, /\[Mara's card\]\n\[description\]\nMara from the folder\./);
     assert.match(text, /\[PERSONA — Ren\]\nRen is a student\./);
     assert.ok(S.st.some(x => x.url === '/api/characters/all'));
+});
+
+test('일꾼 · 실리에서 바로: 간단한 카드는 실리처럼 이 채팅의 캐릭터 · 그룹 사람만 통째로 읽어요 (나머지는 목록의 것 그대로)', async t => {
+    const S = await stage(t), a = world({ members: ['Mara', 'Ivo'] });
+    S.cards[0].shallow = true; S.cards[1].shallow = true;
+    await S.put('sa', a.m); await S.auto.list();
+    assert.match((await S.gen(a.id)).payload, /"message_saved"/);
+    const got = S.st.filter(x => x.url === '/api/characters/get').map(x => x.body.avatar_url);
+    assert.ok(got.includes('mara.png')); assert.ok(!got.includes('ivo.png'));
+});
+
+test('일꾼 · 실리에서 바로: 카드 폴더 · 채팅 파일이 그대로면 다시 안 읽어요. 바뀌면 바로 다시', async t => {
+    const S = await stage(t), a = world(), b = world();
+    await mkdir(path.join(S.root, 'characters'), { recursive: true });
+    await writeFile(path.join(S.root, 'characters', 'mara.png'), 'x');
+    await S.put('sa', a.m); await S.put('sb', b.m);
+    const all = () => S.st.filter(x => x.url === '/api/characters/all').length;
+    await S.auto.list(); const once = all();
+    await S.auto.status('sa'); await S.auto.status('sb'); await S.auto.list();
+    assert.equal(all(), once);
+    // (실리에서 카드를 고쳤어요: 그 파일의 시각이 바뀌어요)
+    Object.assign(S.cards[0], { description: 'Mara is a pilot now.', data: { ...S.cards[0].data, description: 'Mara is a pilot now.' } });
+    await new Promise(r => setTimeout(r, 20));
+    await writeFile(path.join(S.root, 'characters', 'mara.png'), 'xy');
+    assert.match((await S.gen(a.id)).payload, /"message_saved"/);
+    assert.equal(all(), once + 1);
+    assert.match(textOf(S.asked[0].body), /Mara is a pilot now\./);
+    // (롤플에 새 메시지: 채팅 파일이 바뀌어서 다시 읽어요)
+    await S.writeChat({}, [...MESSAGES(), said('Mara', 'at the door now')]);
+    const c = world({ story: true }); await S.put('sc', c.m); await S.auto.list();
+    assert.match((await S.gen(c.id)).payload, /"message_saved"/);
+    assert.match(textOf(S.asked.at(-1).body), /Mara: at the door now/);
+});
+
+test('일꾼 · 실리에서 못 읽으면 답하지 않아요 (지어내지 않아요): 채팅 파일을 못 읽음 · 페르소나 목록을 못 받음', async t => {
+    const S = await stage(t, { avatarsStatus: 500 }), a = world();
+    await S.put('sa', a.m);
+    // (적어 둔 페르소나가 없는 채팅: 실리 순서로 고르려면 그림 목록이 있어야 해요)
+    assert.deepEqual((await S.auto.status('sa')).map(x => [x.can, x.why]), [[false, '페르소나 목록을 읽을 수 없습니다.']]);
+    const at = path.join(S.root, 'chats', 'mara', 'Mara - 2026-11-22.jsonl');
+    await rm(at); await mkdir(at);
+    assert.deepEqual((await S.auto.status('sa')).map(x => [x.can, x.why]), [[false, '채팅 파일을 읽을 수 없습니다.']]);
+    assert.equal(S.asked.length, 0);
 });
