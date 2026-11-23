@@ -49,7 +49,26 @@
 | 첨부 보내기에 딸린 줄: ConversationInput.tsx(87~140 · 262~296 · 560~572 · 655~830 · 855~950 · 1027~1245 · 1356~1452 · 1804~1830 · 2168~2200 · 2242~2254), generate.routes.ts(1376~1385 · 1595~1697 · 2118~2198 · 2629~2759 · 12094~12095), generate-route-utils.ts(1204~1228), chat.schema.ts(123~133), types/chat.ts(969~984), slash-commands.ts(115~148), base-provider.ts(302~321 · 362~376), openai.provider.ts(492~512 · 2045~2082 · 2881~2890), anthropic.provider.ts(362~390 · 893~912), google.provider.ts(502~530), ConversationMessage.tsx(497~530), ConversationMessageShared.tsx(558~645), use-generate.ts(1321 · 1359~1360 · 1426 · 1517), chat-resource-drag.ts(141~143) | 예 (그 줄들만. 파일 전체는 아니오) |
 | 먼저 건 말의 알림 — 화면 (2026-11-23, 압축 뒤 처음부터 다시, staging 32c47a1): hooks/use-presence-clock.ts(52줄) · components/chat/ConversationAutonomousEffects.tsx(113줄) · components/chat/ChatNotificationBubbles.tsx(328줄) · hooks/use-background-autonomous.ts(400줄) · hooks/use-autonomous-messaging.ts(303줄) · lib/notification-sound.ts(106줄) · lib/local-notifications.ts(177줄) · components/panels/settings/SettingControls.tsx(740줄) · stores/chat.store.ts(1140줄) · components/layout/ChatSidebar.tsx(2471줄) · hooks/use-custom-notification-sound.ts(46줄) · server routes/notification-sound.routes.ts(217줄) | 예 (전부) |
 | 알림에 딸린 줄 (그 줄들만): SettingsPanel.tsx(2246~2420 알림 칸 · 알림 위치), App.tsx(485~600 · 1325~1389 토스트 위치 · 사용자 지정 소리), AppShell.tsx(250~262 · 1495~1520), ChatArea.tsx(1215~1330 1분 시계), ConversationView.tsx(1085~1260 열린 방 알림음 · 1555~1575), ChatRoleplaySurface.tsx(1525~1545), use-generate.ts(475~495 · 1350~1380 · 2490~2545 · 3620~3700 · 3785~3840), ui.store.ts(1150~1165 · 1540~1551 · 2420~2432 알림 설정 기본값), localization/locales/en.json의 알림 글 | 예 (그 줄들만. 파일 전체는 아니오: SettingsPanel 8324줄 · ChatArea 4550줄 · use-generate 4644줄 · ui.store 4345줄 · ConversationView 1654줄 · ChatRoleplaySurface 2473줄 · AppShell 1707줄 · App 1389줄) |
+| 서버 · 늦은 답장 대 보기 (2026-11-23, staging 32c47a1): routes/generate/conversation-presence-runtime.ts(492줄) · services/conversation/server-autonomous-scheduler.service.ts(507줄) · services/conversation/autonomous.service.ts(591줄) · routes/conversation.routes.ts(1354줄) · client/hooks/use-autonomous-messaging.ts(303줄) · use-background-autonomous.ts(400줄) | 예 (여섯 파일 모두 처음부터 끝까지). 우리 쪽 plugin/*.mjs 전부 · phone2tick.js · phone2keepon.js · src/marinara/autonomous-check.js · phone2go.js 150~280 · 400~680 · phone2sched.js 160~490도 끝까지 읽고 대 봄. 결과는 아래 "서버 · 늦은 답장: 마리나라와 다른 것" |
+| 위에 딸린 generate.routes.ts 줄: 1505~1544(생성 자물쇠) · 1915~1954(연결이 끊겨도 계속) · 4325~4384(늦음 기다리기 부르는 곳) | 아니오 (그 줄만. 파일 전체 16262줄은 아니오) |
 | 나머지 "아직" 파일 전부 | 아니오 |
+
+## 서버 · 늦은 답장: 마리나라와 다른 것 (2026-11-23, 대 본 결과)
+
+가져온 파일 두 개는 마리나라와 같아요(타입을 지우고 대 봄: `plugin/marinara/server-autonomous-scheduler.service.js`는 `app.chats` 한 줄 · 안드로이드 머리 한 줄, `src/marinara/autonomous.service.js`는 다른 줄 없음). 다른 것은 우리가 새로 짠 곳에 있어요.
+
+| # | 무엇 | 마리나라 | 우리 | 어디 |
+|---|---|---|---|---|
+| 1 | 내 메시지에 대한 늦은 답장(바쁨 · 자리 비움) | 서버가 그 요청 안에서 기다렸다가 때가 되면 바로 만듦(`conversation-presence-runtime.ts` 254~321). 브라우저 연결이 끊겨도 계속함(`generate.routes.ts` 1924~1934: "A closed stream is not a Stop"). 브라우저가 보고 있는지는 안 봄 | 답장을 줄에 넣고, 브라우저(보일 때만)나 서버가 돌림. 서버는 브라우저가 75초 안에 "보고 있어요"를 알렸으면 안 돌림(`sweepDue`의 `watched`). 그래서 화면을 끄고 조금 뒤에 돌아오면 그때 브라우저가 만들기 시작해서 "입력 중" 뒤에 옴 | plugin/work.mjs `watched` · `sweepDue` |
+| 2 | 때가 된 뒤 도는 시각 | 정확히 그 시각(`setTimeout`) | 30초마다 봐서 최대 30초 늦음 | plugin/work.mjs `DUE_MS` · phone2tick.js `TICK_MS` |
+| 3 | 가려진 탭의 "보고 있어요" | 가려지면 안 알림(`use-autonomous-messaging.ts` 98~101) | 가려져 있어도 답장을 받는 중이면 알림 | phone2keepon.js `keepBeat`의 `busy` |
+| 4 | 서버가 보낼 수 없는 방 | 없음(서버가 다 보냄) | 그런 방이 하나라도 있으면 그 저장의 늦은 답장을 전부 안 돌림 | plugin/work.mjs `sweepDue`의 `cannot` → `throw` |
+| 5 | 캐릭터끼리 주고받기 | 브라우저에서 먼저 건 말 뒤에만(`use-autonomous-messaging.ts` 232~262). 서버 스케줄러는 안 함 | 서버에서 먼저 건 말 뒤에도 함 | plugin/work.mjs `runSoon` · phone2go.js `exchangeAfter`(서버도 같은 코드) |
+| 6 | 먼저 건 말이 실패한 뒤 쉬기 | 서버 스케줄러만, 메모리에(`failureBackoffByChat`) | 방에 적어 두고(`room.autoFail`) 브라우저 · 서버 둘 다 봄 | phone2go.js 232~241 · 656 · plugin/work.mjs `generate` |
+| 7 | 서버의 먼저 건 말 요청을 거절(409)하는 때 | 그 채팅이 생성 중일 때만(`activeGenerations`) | 그 방에 답장이 줄 서 있을 때 · 실패 뒤 쉬는 중일 때도 | plugin/work.mjs `generate` |
+| 8 | `/autonomous/check`에서 카드의 상태 맞추기 | 함(`conversation.routes.ts` 1040~1053) | 안 함. 가져온 파일 머리에도 안 적혀 있었음 | src/marinara/autonomous-check.js |
+| 9 | 늦음을 기다리는 동안 새 메시지를 보낼 때 | 확인 못 함(`use-generate.ts`의 보내기 · 끊기를 안 읽음) | 그 사람의 답장이 이미 줄에 있으면 새로 안 서고, 처음 정한 때 그대로 | phone2run.js `enqueueReplies` |
+| 10 | 틀린 기록 | — | `phone2keepon.js` 51~52 주석 "Marinara has no such reply: its server answers only while the page asks"는 틀림. 이 표의 75줄 ⑤ "마리나라에 없는 것: 늦은 답장을 서버가 보내요"도 틀림(마리나라 서버도 보냄) | phone2keepon.js · 이 파일 |
 
 ## 스케줄 · 상태 · 먼저 말 걸기
 
