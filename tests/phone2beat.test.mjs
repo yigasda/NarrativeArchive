@@ -10,6 +10,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { openStore, StoreError } from '../plugin/store.mjs';
 import { startAuto } from '../plugin/host.mjs';
+import { fakeBridge, stCard, chatFile } from './stbridge.mjs';
 const { setContext } = await import('../plugin/screen.mjs');
 // (the browser's page: whether the tab is hidden is ours to say here)
 const page = { hidden: false, events: [], details: [], addEventListener() {}, dispatchEvent(e) { this.events.push(e?.type); if (e?.detail) this.details.push(e.detail); return true; }, querySelectorAll: () => [] };
@@ -31,10 +32,12 @@ test('브라우저와 서버 일꾼이 번갈아: 가려진 동안 서버가 건
     const asked = [];
     const model = await listen(async (req, res) => { asked.push(await bodyOf(req)); res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ choices: [{ message: { content: JSON.stringify({ reply: ['you there?'], status: '' }) }, finish_reason: 'stop' }] })); });
     const conn = { mode: 'custom', url: `http://127.0.0.1:${model.address().port}/v1`, key: 'K', model: 'fake-model' };
-    await writeFile(path.join(root, 'settings.json'), JSON.stringify({ power_user: {}, extension_settings: { narrative_archive: { draftConn: conn } } }));
-    await mkdir(path.join(root, 'chats', 'mara'), { recursive: true }); await writeFile(path.join(root, 'chats', 'mara', 'chat-1.jsonl'), '{}\n');
-    const store = openStore(root), auto = startAuto({ root, store, schedule: false });
-    t.after(async () => { await auto.stop(); model.close(); await rm(root, { recursive: true, force: true }); });
+    // (SillyTavern's own: the persona in settings.json, the chat file, the card list through the bridge — read each reply)
+    await writeFile(path.join(root, 'settings.json'), JSON.stringify({ user_avatar: 'ren.png', power_user: { personas: { 'ren.png': 'Ren' }, persona_descriptions: { 'ren.png': { description: 'Ren is a student.' } } }, extension_settings: { narrative_archive: { draftConn: conn } } }));
+    await mkdir(path.join(root, 'chats', 'mara'), { recursive: true }); await writeFile(path.join(root, 'chats', 'mara', 'chat-1.jsonl'), chatFile());
+    const br = await fakeBridge({ cards: () => [stCard('Mara')], avatars: () => ['ren.png'] });
+    const store = openStore(root), auto = startAuto({ root, store, schedule: false, bridge: { url: br.url, token: br.token } });
+    t.after(async () => { await auto.stop(); model.close(); br.close(); await rm(root, { recursive: true, force: true }); });
     await auto.ready;
     // 브라우저의 요청 → 플러그인의 길 (plugin/index.mjs가 하는 일 그대로)
     const routes = {

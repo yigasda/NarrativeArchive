@@ -1,7 +1,8 @@
 // 일꾼 스레드 안에서 도는 것 (docs/PHONE2-PLAN.md "서버 플러그인" 3-2b): 마리나라의 서버 스케줄러 + 진짜 답장 코드(src/).
 // plugin/worker.mjs가 plugin/screen.mjs(아무것도 안 하는 화면)를 끼운 뒤에 이 파일을 불러요.
 // 브라우저의 답장 코드를 그대로 돌려요: 다시 쓴 것은 없고, 실리의 것(getContext)만 서버 것으로 줘요.
-//   - 브라우저만 아는 것(이 채팅의 캐릭터 · 페르소나 · 롤플 끝 메시지 · 실리 연결 방식의 요청 틀)은 브라우저가 남긴 묶음에서 (src/phone2kit.js)
+//   - 이 채팅의 캐릭터 카드 · 그룹 · 페르소나 · 롤플 메시지 · 채팅에 저장된 값은 답장마다 실리 파일에서 새로 (stNow, plugin/stread.mjs)
+//   - 브라우저만 아는 것(이 Orbit이 어느 채팅인지 · 실리 연결 방식의 요청 틀)은 브라우저가 남긴 묶음에서 (src/phone2kit.js)
 //   - 설정은 사용자 폴더의 settings.json에서 그때그때 (키를 새로 저장하지 않아요)
 //   - 저장은 플러그인 저장에 rev를 맞춰서 (그사이 브라우저가 저장했으면 쓰지 않아요)
 //   - 실리 서버로 가는 요청(/api/…)은 다리(plugin/bridge.mjs)로 — worker.mjs의 fetch가 넘겨요
@@ -15,6 +16,7 @@ import { makeAutoApp } from './auto.mjs';
 import { makeLocks, lockKey } from './lock.mjs';
 import { startServerAutonomousScheduler } from './marinara/server-autonomous-scheduler.service.js';
 import { logger } from './log.mjs';
+import { chatData, chatParts, groupOf, personaFor, personaOf } from './stread.mjs';
 
 // (Marinara's server scheduler reads the answer of its /api/generate as these events)
 const SSE = {
@@ -30,6 +32,27 @@ export const DUE_MS = 30_000;
 const OPTIONAL = new Set(['generateRaw', 'CONNECT_API_MAP', 'getChatCompletionModel', 'onlineStatus', 'extractMessageFromData', 'getCurrentChatId', 'eventSource', 'eventTypes', 'event_types', 'saveMetadataDebounced']);
 const obj = v => v && typeof v === 'object' && !Array.isArray(v);
 const refuse = (statusCode, text) => Object.assign(new Error(text), { statusCode });
+// (SillyTavern's public/scripts/extensions.js UNSET_VALUE · public/scripts/utils.js setValueByPath · deleteValueByPath)
+const UNSET_VALUE = '__@@UNSET@@__';
+function setValueByPath(object, keyPath, value) {
+    const keyParts = keyPath.split('.');
+    let currentObject = object;
+    for (let i = 0; i < keyParts.length - 1; i++) {
+        const part = keyParts[i];
+        if (!Object.hasOwn(currentObject, part)) currentObject[part] = {};
+        currentObject = currentObject[part];
+    }
+    currentObject[keyParts[keyParts.length - 1]] = value;
+}
+function deleteValueByPath(object, keyPath) {
+    const keyParts = keyPath.split('.');
+    let current = object;
+    for (let i = 0; i < keyParts.length - 1; i++) {
+        if (!current || typeof current !== 'object') return;
+        current = current[keyParts[i]];
+    }
+    if (current && typeof current === 'object') delete current[keyParts[keyParts.length - 1]];
+}
 
 // root: 사용자 폴더 · store: 플러그인 저장 (plugin/store.mjs의 것, 또는 그것을 부르는 것)
 // st(path, body) → { ok, status, json } : 실리 서버의 /api/… 처리기를 불러요 (없으면 null: 실리 연결로는 못 보내요)
@@ -37,8 +60,8 @@ const refuse = (statusCode, text) => Object.assign(new Error(text), { statusCode
 // from: 'extension' (실리의 확장 폴더의 코드: plugin/code.mjs) · 'plugin' (이 플러그인 폴더의 코드)
 export async function startWork({ root, store, st = null, schedule = true, from = 'plugin' }) {
     const G = await import('../src/phone2go.js');
-    const { liveWorld, liveKey, enqueueJob } = await import('../src/phone2store.js');
-    const { kitOf, kitContext } = await import('../src/phone2kit.js');
+    const { liveWorld, liveKey, enqueueJob, LIVE_SHARED } = await import('../src/phone2store.js');
+    const { kitOf, cardsFor } = await import('../src/phone2kit.js');
     const { intentWhy, chatIdOf } = await import('../src/phone2sched.js');
     const AI = await import('../src/ai.js');
     const SP = await import('../src/stprofile.js');
@@ -95,20 +118,61 @@ export async function startWork({ root, store, st = null, schedule = true, from 
         };
     }
 
+    // ---- 실리의 것을 답장마다 새로 (실리 브라우저가 이 채팅을 열면 들고 있을 것을, 실리 파일과 실리 서버의 처리기에서)
+    //   → { chat, metadata, characters, characterId, groupId, groups, name1, persona }
+    const chatFileOf = f => (f.group ? path.join(root, 'group chats', `${f.id}.jsonl`) : path.join(root, 'chats', f.dir, `${f.id}.jsonl`));
+    async function stNow(real, kit, settings) {
+        if (!st) throw refuse(400, '실리 서버에 연결할 수 없습니다.');
+        const f = kit.chat.file;
+        const { metadata, chat } = chatParts(await chatData(chatFileOf(f)), f.group);
+        // (the card list, as SillyTavern's getCharacters reads it — /api/characters/all —, and a card that came shallow read whole
+        //  as its unshallowCharacter does — /api/characters/get)
+        const all = await askSt('/api/characters/all', {});
+        if (!all.ok || !Array.isArray(all.json)) throw refuse(400, '캐릭터 목록을 읽을 수 없습니다.');
+        let group = null;
+        if (f.group) {
+            let raw = null;
+            try { raw = JSON.parse(await fs.readFile(path.join(root, 'groups', `${kit.chat.group.id}.json`), 'utf8')); } catch { raw = null; }
+            group = groupOf(raw, all.json);
+            if (!group) throw refuse(400, '채팅을 찾을 수 없습니다.');
+        }
+        const own = group ? null : kit.chat.avatar;
+        const characters = cardsFor(all.json, real, { own, members: group?.members || [] }).map(ch => structuredClone(ch));
+        for (const [i, ch] of characters.entries()) {
+            if (!ch.shallow) continue;
+            const r = await askSt('/api/characters/get', { avatar_url: ch.avatar });
+            if (!r.ok || !obj(r.json)) throw refuse(400, '캐릭터 카드를 읽을 수 없습니다.');
+            characters[i] = { ...r.json, chat: String(r.json.chat) };
+        }
+        // (the persona: the one last used in this chat — the browser keeps it, phone2keepon.js —, else the one SillyTavern
+        //  picks when it opens the chat)
+        const na = obj(metadata.narrative_archive) ? metadata.narrative_archive : {};
+        let avatar = typeof na.stPersona === 'string' ? na.stPersona : '';
+        if (!avatar) {
+            const list = await askSt('/api/avatars/get', {});
+            avatar = personaFor(settings, { lock: metadata.persona, key: group ? group.id : own, avatars: list.ok && Array.isArray(list.json) ? list.json : [] });
+        }
+        const { name1, description } = personaOf(settings, avatar);
+        const at = own ? characters.findIndex(ch => ch.avatar === own) : -1;
+        return { chat, metadata, characters, characterId: at >= 0 ? at : undefined, groupId: group ? group.id : null, groups: group ? [group] : [], name1, persona: description, shared: na };
+    }
+
     // ---- 실리의 것을 서버 것으로
-    function contextOf(entry, kit, settings, app) {
-        const real = entry.real, k = kitContext(kit), power = obj(settings.power_user) ? settings.power_user : {};
+    function contextOf(entry, kit, settings, app, k) {
+        const real = entry.real, power = obj(settings.power_user) ? settings.power_user : {};
         const ext = obj(settings.extension_settings) ? settings.extension_settings : {};
         // (the connection profiles there are, so a room that picked one is known as such and is never taken for one with nothing
         //  picked. SillyTavern lists only the profiles of a kind it can send — getSupportedProfiles: the ones the browser listed,
         //  kit.profiles; a kit from before that list holds all of them)
         const listed = Array.isArray(kit.profiles) ? new Set(kit.profiles) : null;
         const profiles = Array.isArray(ext.connectionManager?.profiles) ? ext.connectionManager.profiles.filter(p => obj(p) && typeof p.id === 'string' && (!listed || listed.has(p.id))) : [];
-        // (the chat's own keys the live phone reads — phone2store.js LIVE_SHARED and 화면 주인 — as the browser left them. Only real.live is saved)
-        for (const [key, v] of Object.entries(kit.meta || {})) real[key] = structuredClone(v);
+        // (the chat's own keys the live phone reads — phone2store.js LIVE_SHARED and 화면 주인 —, as the chat file has them now.
+        //  Only real.live is saved)
+        for (const key of [...LIVE_SHARED, 'phoneScreenHolder']) { if (k.shared[key] !== undefined) real[key] = structuredClone(k.shared[key]); else delete real[key]; }
         const base = {
-            naServer: true, naTail: kit.tail,
-            chatMetadata: { narrative_archive: real }, chatId: entry.sid,
+            naServer: true,
+            chat: k.chat,
+            chatMetadata: { ...k.metadata, narrative_archive: real }, chatId: entry.sid,
             characters: k.characters, characterId: k.characterId, groupId: k.groupId, groups: k.groups, name1: k.name1,
             powerUserSettings: { personas: obj(power.personas) ? power.personas : {}, persona_descriptions: obj(power.persona_descriptions) ? power.persona_descriptions : {}, persona_description: k.persona },
             extensionSettings: ext,
@@ -120,13 +184,20 @@ export async function startWork({ root, store, st = null, schedule = true, from 
             saveSettingsDebounced: () => {},
             setExtensionPrompt: () => {},
             getRequestHeaders: () => ({ 'Content-Type': 'application/json' }),
-            // (SillyTavern's writeExtensionField: the card in memory, then its file through SillyTavern's own merge-attributes)
+            // (SillyTavern's writeExtensionField — public/scripts/extensions.js 2070~2120 —: the card in memory, then its file
+            //  through SillyTavern's own merge-attributes. A failed save is logged, not thrown, as there)
             writeExtensionField: async (index, key, value) => {
-                const ch = k.characters[index], kept = kit.characters?.[index];
-                if (!ch) return;
-                for (const c of [ch, kept]) if (c) { c.data = obj(c.data) ? c.data : {}; c.data.extensions = obj(c.data.extensions) ? c.data.extensions : {}; c.data.extensions[key] = structuredClone(value); }
-                const r = await askSt('/api/characters/merge-attributes', { avatar: ch.avatar, data: { extensions: { [key]: value } } });
-                if (!r.ok) throw new Error(`캐릭터 카드를 저장하지 못했습니다 (${r.status})`);
+                const character = k.characters[index];
+                if (!character) { logger.warn('캐릭터를 찾을 수 없습니다: %s', index); return; }
+                const extensionPath = `data.extensions.${key}`, isUnset = value === UNSET_VALUE;
+                if (isUnset) deleteValueByPath(character, extensionPath); else setValueByPath(character, extensionPath, value);
+                if (character.json_data) {
+                    const jsonData = JSON.parse(character.json_data);
+                    if (isUnset) deleteValueByPath(jsonData, extensionPath); else setValueByPath(jsonData, extensionPath, value);
+                    character.json_data = JSON.stringify(jsonData);
+                }
+                const r = await askSt('/api/characters/merge-attributes', { avatar: character.avatar, data: { extensions: { [key]: value } } });
+                if (!r.ok) logger.error('확장 필드를 저장하지 못했습니다. %s', r.status);
             },
             loadWorldInfo: async name => { const r = await askSt('/api/worldinfo/get', { name }); return r.ok ? r.json : null; },
         };
@@ -177,9 +248,9 @@ export async function startWork({ root, store, st = null, schedule = true, from 
         //  there is, and a page not reloaded yet does not stop it. Only the plugin folder's own code may be older than the extension)
         if (from !== 'extension' && kit.ver !== VERSION) return `확장(${kit.ver || '?'})과 서버 플러그인(${VERSION}) 버전이 다릅니다. 서버 플러그인을 업데이트하고 실리를 다시 시작하세요.`;
         const f = kit.chat?.file;
-        if (!obj(f) || !safeName(f.id) || (!f.group && !safeName(f.dir))) return '연결된 실리 채팅을 찾을 수 없습니다. 실리에서 이 채팅을 다시 여세요.';
-        const file = f.group ? path.join(root, 'group chats', `${f.id}.jsonl`) : path.join(root, 'chats', f.dir, `${f.id}.jsonl`);
-        try { await fs.access(file); } catch { return '채팅을 찾을 수 없습니다.'; }
+        if (!obj(f) || !safeName(f.id) || (f.group ? !safeName(String(kit.chat.group?.id ?? '')) : !safeName(f.dir))) return '연결된 실리 채팅을 찾을 수 없습니다. 실리에서 이 채팅을 다시 여세요.';
+        try { await fs.access(chatFileOf(f)); } catch { return '채팅을 찾을 수 없습니다.'; }
+        if (f.group) { try { await fs.access(path.join(root, 'groups', `${kit.chat.group.id}.json`)); } catch { return '채팅을 찾을 수 없습니다.'; } }
         return '';
     }
     // ---- 방 자물쇠 (plugin/lock.mjs: 마리나라의 채팅마다 하나뿐인 생성 자물쇠). 일꾼은 그 방의 답장을 만드는 동안 쥐어요.
@@ -197,8 +268,12 @@ export async function startWork({ root, store, st = null, schedule = true, from 
             if (no) throw refuse(400, no);
             const kit = kitOf(entry.real);
             const settings = await readSettings();
-            setContext(contextOf(entry, kit, settings, app));
+            const now = await stNow(entry.real, kit, settings);
+            setContext(contextOf(entry, kit, settings, app, now));
             globalThis.__naStOpenai = stStandIn(kit, settings);
+            // (the persona's name changed in SillyTavern: the live phone's "me" follows before anything is judged — the browser
+            //  does it when the phone opens)
+            G.liveFollowPersona(entry.real);
             try { return await job(); }
             finally { setContext(null); delete globalThis.__naStOpenai; }
         });
@@ -207,7 +282,8 @@ export async function startWork({ root, store, st = null, schedule = true, from 
     }
 
     // (the profiles of the world being run: what its context lists — withWorld put it in)
-    const ctxProfiles = () => { try { return globalThis.SillyTavern.getContext().ConnectionManagerRequestService.getSupportedProfiles(); } catch { return []; } };
+    const ctxNow = () => { try { return globalThis.SillyTavern.getContext(); } catch { return null; } };
+    const ctxProfiles = () => { try { return ctxNow().ConnectionManagerRequestService.getSupportedProfiles(); } catch { return []; } };
     // 이 방의 답장을 서버가 보낼 수 있나 → '' (돼요) | 안 되는 이유. withWorld 안에서 불러요
     async function cannot(real, roomId) {
         const plan = G.liveReplyPlan(real, roomId);
@@ -279,7 +355,8 @@ export async function startWork({ root, store, st = null, schedule = true, from 
         store,
         // (the schedule's zone as the browser reads it: the one set for all schedules, else that person's phone's)
         tzOf: (real, name) => { try { return G.liveTimeZone(real, name) || ''; } catch { return ''; } },
-        cardsOf: (real, room) => { const kit = kitOf(real), cards = {}; if (!kit) return cards; for (const n of room.members || []) { const c = (kit.characters || []).find(x => liveKey(x?.name) === liveKey(n)); if (c) cards[liveKey(n)] = c.data || c; } return cards; },
+        // (read inside around: the cards withWorld just read from SillyTavern)
+        cardsOf: (real, room) => { const cards = {}, list = ctxNow()?.characters || []; for (const n of room.members || []) { const c = list.find(x => liveKey(x?.name) === liveKey(n)); if (c) cards[liveKey(n)] = c.data || c; } return cards; },
         generate,
         around: (entry, fn) => withWorld(entry, fn),
     });
@@ -321,7 +398,8 @@ export async function startWork({ root, store, st = null, schedule = true, from 
         const rooms = Object.keys(w.messenger?.rooms || {});
         const no = await blocked(e.real);
         if (no) return rooms.map(room => ({ id: chatIdOf(e.real, room), room, can: false, why: no }));
-        return withWorld(e, async () => { const out = []; for (const room of rooms) { const why = await cannot(e.real, room); out.push({ id: chatIdOf(e.real, room), room, can: !why, why }); } return out; });
+        try { return await withWorld(e, async () => { const out = []; for (const room of rooms) { const why = await cannot(e.real, room); out.push({ id: chatIdOf(e.real, room), room, can: !why, why }); } return out; }); }
+        catch (err) { if (err?.statusCode === 400) return rooms.map(room => ({ id: chatIdOf(e.real, room), room, can: false, why: String(err.message) })); throw err; }
     }
     // 브라우저가 이 저장을 열어 두고 있어요 (30초마다): 그 방들에는 스케줄러가 75초 동안 먼저 말을 걸지 않아요 (마리나라의 /activity/presence)
     async function presence(sid, state) {

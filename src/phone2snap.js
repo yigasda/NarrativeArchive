@@ -81,9 +81,7 @@ export async function liveSnapDraft(m, { upto, onStep = () => {}, now = Date.now
 // 지금 롤플의 끝 메시지들: 끝에서부터 통째로, SNAP_RECENT까지 → { lines: ["[#n] 이름: 말", …], first: 맨 앞 메시지 번호 |
 // null(없음), end: 채팅의 마지막 메시지 번호 }. 읽은 자리를 기억하지 않아요: 그 순간 채팅에 있는 것을 그대로 읽어요.
 export function liveChatTail() {
-    // (the server plugin has no role-play chat: it gives the tail the browser left for it — phone2kit.js. Never set in the browser)
-    const kept = ctx().naTail;
-    if (kept) return { lines: [...kept.lines], first: kept.first, end: kept.end };
+    // (the server plugin reads SillyTavern's chat file each time and gives it as the chat: the same lines as in the browser)
     const said = lastSaid(null), lines = said.length > 1 && !HEAD.test(said[0]) ? said.slice(1) : said;   // (a first one cut in the middle: left out)
     const n = HEAD.exec(lines[0] || '')?.[1];
     return { lines, first: n == null ? null : Number(n), end: Math.max(0, (ctx().chat?.length || 1) - 1) };

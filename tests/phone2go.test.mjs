@@ -1829,13 +1829,15 @@ test('서버 묶음: 플러그인에 둔 채팅만 만들어요. 달라졌을 �
         T.kept = true;
         assert.equal(await G.liveKitRefresh(c.real), true);
         const kit = c.real.live.kit;
-        assert.deepEqual([kit.v, kit.ver, kit.name1, kit.persona, kit.tail.end, kit.characters.map(x => x.avatar), kit.chat.avatar], [1, '0.0.0-test', 'Ren', 'Ren is a student.', 4, ['mara.png'], 'mara.png']);
+        assert.deepEqual([kit.v, kit.ver, kit.chat.avatar], [1, '0.0.0-test', 'mara.png']);
+        // (카드 · 페르소나 · 롤플 메시지는 묶음에 없어요: 서버가 답장마다 실리에서 새로 읽어요 — plugin/work.mjs)
+        for (const k of ['name1', 'persona', 'tail', 'characters', 'meta']) assert.equal(kit[k], undefined, k);
         // (초안 모델이 커스텀 API면 요청 틀은 없어요: 서버가 직접 보내요)
         assert.deepEqual(kit.st, {}); assert.equal(T.tpl.length, 0);
         assert.equal(await G.liveKitRefresh(c.real), false);
+        // (롤플이 진행돼도 묶음은 그대로: 저장하지 않아요)
         T.tail = { lines: ['[#5] Ren: ok'], first: 5, end: 5 };
-        assert.equal(await G.liveKitRefresh(c.real), true);
-        assert.equal(c.real.live.kit.tail.end, 5);
+        assert.equal(await G.liveKitRefresh(c.real), false);
         // 다른 채팅을 열어 둔 동안에는 안 만들어요
         T.metadata = { narrative_archive: {} };
         assert.equal(await G.liveKitRefresh(c.real), false);

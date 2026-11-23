@@ -14,6 +14,7 @@ import { startFresh, startFromStory, putLivePhone, ensureRoom, sendLive, liveWor
 import { buildKit, putKit } from '../src/phone2kit.js';
 import * as SP from '../src/stprofile.js';
 import { fakeSt } from './stfake.mjs';
+import { fakeBridge, stCard, chatFile } from './stbridge.mjs';
 // (the request template is made by the real ai.js, as the browser makes it: that file needs the do-nothing screen to load)
 await import('../plugin/screen.mjs');
 const AI = await import('../src/ai.js');
@@ -22,10 +23,14 @@ const listen = handler => new Promise(ok => { const s = http.createServer(handle
 const bodyOf = req => new Promise(ok => { let b = ''; req.on('data', c => (b += c)); req.on('end', () => { try { ok(JSON.parse(b || 'null')); } catch { ok(b); } }); });
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const week = blocks => ({ weekStart: new Date(Date.now() - 86400000).toISOString(), days: Object.fromEntries(DAYS.map(d => [d, blocks.map(b => ({ ...b }))])), inactivityThresholdMinutes: 60, talkativeness: 50 });
-const card = name => ({ name, avatar: `${name.toLowerCase()}.png`, description: `${name} is a baker.`, data: { name, description: `${name} is a baker.`, personality: 'warm', extensions: { talkativeness: 0.5 } } });
+const card = stCard;
 const BROWSER = () => ({ name1: 'Ren', chatId: 'Mara - 2026-11-22', characterId: 0, characters: ['Mara', 'Ivo'].map(card), powerUserSettings: { persona_description: 'Ren is a student.' } });
 const { VERSION } = await import('../src/core.js');
-const TAIL = { lines: ['[#4] Mara: on my way', '[#5 · USER] Ren: ok'], first: 4, end: 5 };
+// (SillyTavern's chat file of the example chat: the role-play messages the server reads each reply)
+const said = (name, mes, user = false) => ({ name, is_user: user, mes, send_date: '2026-11-22' });
+const MESSAGES = () => [said('Mara', 'hello there'), said('Ren', 'hi', true), said('Mara', 'want bread?'), said('Mara', 'see you'), said('Mara', 'on my way'), said('Ren', 'ok', true)];
+// (SillyTavern's settings.json: the persona Ren, and Varo for the tests that switch)
+const PERSONAS = { personas: { 'ren.png': 'Ren', 'varo.png': 'Varo' }, persona_descriptions: { 'ren.png': { description: 'Ren is a student.' }, 'varo.png': { description: 'Varo is a pilot.' } } };
 
 // 세계 하나: Ren(나)과 Mara의 방. Ren이 7시간 전에 말했고 Mara가 바로 답했어요. 먼저 말 걸기 켬
 function world({ story = false, schedule = null, kit = true, st = null, pt = null, levels = null, members = ['Mara'], hoursAgo = 7, version = VERSION, browser = BROWSER() } = {}) {
@@ -37,41 +42,38 @@ function world({ story = false, schedule = null, kit = true, st = null, pt = nul
     sendLive(m, room.id, 'hey', at);
     room.messages.push({ id: 't2', n: 2, from: members[0], text: 'hi', at: at + 60_000 });
     w.presence = { on: true, schedules: schedule ? { mara: schedule } : {}, overrides: {}, meta: {}, user: {} };
-    if (kit) { const k = buildKit(browser, m, TAIL, { version }); k.st = st || {}; if (pt) k.pt = pt; if (levels) k.levels = levels; putKit(m, k); }
+    if (kit) { const k = buildKit(browser, m, { version }); k.st = st || {}; if (pt) k.pt = pt; if (levels) k.levels = levels; putKit(m, k); }
     return { m, w, room, id: `${w.id}:${room.id}` };
 }
 
 // 한 판: 임시 사용자 폴더 + 저장 + 가짜 모델 + 가짜 다리 + 일꾼
 async function stage(t, { settings = {}, cm = null, more = {}, files = {}, reply = () => ({ reply: ['you there?'], status: '' }), bridge = true, schedule = false, code = null } = {}) {
     const root = await mkdtemp(path.join(tmpdir(), 'na-work-'));
-    const asked = [], st = [];
+    const asked = [];
     const model = await listen(async (req, res) => { const body = await bodyOf(req); asked.push({ url: req.url, auth: req.headers.authorization, body }); const a = await reply(body); if (a?.httpStatus) { res.statusCode = a.httpStatus; res.end(JSON.stringify({ error: { message: a.error || 'no' } })); return; } res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ choices: [{ message: { content: typeof a === 'string' ? a : JSON.stringify(a) }, finish_reason: 'stop' }], usage: { prompt_tokens: 1, completion_tokens: 1 } })); });
-    const TOKEN = 'tok-123';
-    const br = bridge ? await listen(async (req, res) => {
-        const body = await bodyOf(req);
-        st.push({ url: req.url, token: req.headers['x-na-token'], root: decodeURIComponent(String(req.headers['x-na-root'] || '')), body });
-        if (req.headers['x-na-token'] !== TOKEN) { res.statusCode = 403; res.end('{}'); return; }
-        res.setHeader('content-type', 'application/json');
-        if (req.url === '/api/backends/chat-completions/generate') { res.end(JSON.stringify({ choices: [{ message: { content: JSON.stringify(await reply(body)) }, finish_reason: 'stop' }] })); return; }
+    const cards = [card('Mara'), card('Ivo')];
+    const br = bridge ? await fakeBridge({ cards: () => cards, avatars: () => ['ren.png', 'varo.png'], more: async (req, body, res) => {
+        if (req.url === '/api/backends/chat-completions/generate') { res.end(JSON.stringify({ choices: [{ message: { content: JSON.stringify(await reply(body)) }, finish_reason: 'stop' }] })); return true; }
         // (a text-completion backend that runs on past its answer: SillyTavern cuts the stop sequence off — custom-request.js 331–382)
-        if (req.url === '/api/backends/text-completions/generate') { res.end(JSON.stringify({ choices: [{ text: `${JSON.stringify(await reply(body))}\n### Instruction: and more` }] })); return; }
-        if (req.url === '/api/characters/merge-attributes') { res.end('{}'); return; }
-        res.statusCode = 404; res.end('{}');
-    }) : null;
+        if (req.url === '/api/backends/text-completions/generate') { res.end(JSON.stringify({ choices: [{ text: `${JSON.stringify(await reply(body))}\n### Instruction: and more` }] })); return true; }
+        return false;
+    } }) : null;
+    const st = br ? br.seen : [];
     const url = `http://127.0.0.1:${model.address().port}/v1`;
-    await writeFile(path.join(root, 'settings.json'), JSON.stringify({ main_api: 'openai', power_user: {}, oai_settings: { reverse_proxy: 'https://proxy.example', proxy_password: 'PW-SECRET' }, extension_settings: { connectionManager: cm || { profiles: [{ id: 'p1', name: 'My profile', api: 'openai', model: 'x' }] }, narrative_archive: { draftConn: { mode: 'custom', url, key: 'MODEL-KEY', model: 'fake-model' }, ...settings } }, ...more }));
+    await writeFile(path.join(root, 'settings.json'), JSON.stringify({ main_api: 'openai', user_avatar: 'ren.png', power_user: { ...PERSONAS }, oai_settings: { reverse_proxy: 'https://proxy.example', proxy_password: 'PW-SECRET' }, extension_settings: { connectionManager: cm || { profiles: [{ id: 'p1', name: 'My profile', api: 'openai', model: 'x' }] }, narrative_archive: { draftConn: { mode: 'custom', url, key: 'MODEL-KEY', model: 'fake-model' }, ...settings } }, ...more }));
     for (const [f, v] of Object.entries(files)) { await mkdir(path.dirname(path.join(root, f)), { recursive: true }); await writeFile(path.join(root, f), JSON.stringify(v)); }
     // (SillyTavern's chat file of the example chat: the server runs an Orbit only while its chat is there)
-    await mkdir(path.join(root, 'chats', 'mara'), { recursive: true }); await writeFile(path.join(root, 'chats', 'mara', 'Mara - 2026-11-22.jsonl'), '{}\n');
+    const chatAt = path.join(root, 'chats', 'mara', 'Mara - 2026-11-22.jsonl'), writeChat = (meta = {}, messages = MESSAGES()) => writeFile(chatAt, chatFile(meta, messages));
+    await mkdir(path.join(root, 'chats', 'mara'), { recursive: true }); await writeChat();
     const store = openStore(root);
-    const auto = startAuto({ root, store, bridge: br ? { url: `http://127.0.0.1:${br.address().port}`, token: TOKEN } : null, schedule, code });
+    const auto = startAuto({ root, store, bridge: br ? { url: br.url, token: br.token } : null, schedule, code });
     t.after(async () => { await auto.stop(); model.close(); br?.close(); await rm(root, { recursive: true, force: true }); });
     await auto.ready;
     const put = (sid, m) => store.save(sid, { parts: JSON.parse(JSON.stringify(splitLive(m.live))), chat: 'chat-1' });
     const get = async sid => liveWorld({ live: joinLive((await store.load(sid)).parts) });
     const check = id => auto.inject('/api/conversation/autonomous/check', { chatId: id, userStatus: 'idle', maxFollowups: 2, source: 'server' });
     const gen = (id, more = {}) => auto.inject('/api/generate', { chatId: id, connectionId: null, forCharacterId: 'mara', streaming: false, userStatus: 'idle', userActivity: 'away or offline', autonomous: true, skipPresenceDelay: true, autonomousIntentKey: 'check_in', ...more });
-    return { root, store, auto, asked, st, put, get, check, gen, url };
+    return { root, store, auto, asked, st, put, get, check, gen, url, cards, writeChat };
 }
 const textOf = body => body.messages.map(x => (typeof x.content === 'string' ? x.content : x.content.map(p => p.text || '').join(''))).join('\n');
 
@@ -107,13 +109,13 @@ test('일꾼: 먼저 건 말 하나가 끝까지 — 브라우저와 같은 요�
     assert.equal(JSON.parse((await S.check(a.id)).payload).shouldTrigger, false);
 });
 
-test('일꾼: 이야기에서 시작한 폰 — 이야기 요약본과 브라우저가 남긴 롤플 끝 메시지가 들어가요 (요약본을 늘리지 않아요)', async t => {
+test('일꾼: 이야기에서 시작한 폰 — 이야기 요약본과 실리 채팅 파일의 롤플 끝 메시지가 들어가요 (요약본을 늘리지 않아요)', async t => {
     const S = await stage(t), a = world({ story: true });
     await S.put('sa', a.m); await S.auto.list();
     assert.match((await S.gen(a.id)).payload, /"message_saved"/);
     const text = textOf(S.asked[0].body);
     assert.match(text, /\[STORY\]\n## #0–#3 — start\n- they met at the bakery/);
-    assert.match(text, /\[LAST MESSAGES\]\nMara: on my way\n\nRen: ok/);
+    assert.match(text, /\[LAST MESSAGES\]\nMara: hello there\n\nRen: hi\n\nMara: want bread\?\n\nMara: see you\n\nMara: on my way\n\nRen: ok\n/);
     assert.equal(S.asked.length, 1);
     assert.deepEqual((await S.get('sa')).snap.upto, 3);
 });
@@ -213,7 +215,7 @@ test('일꾼: 실리 쪽 방(AI 기능 모델이 실리) — 실리에서 지금
     await S2.put('sb', b.m); await S2.auto.list();
     assert.match((await S2.auto.status('sb'))[0].why, /선택된 연결 프로필이 없습니다/);
     assert.equal((await S2.gen(b.id)).statusCode, 400);
-    assert.equal(S2.st.length + S2.asked.length, 0);
+    assert.equal(S2.st.filter(x => x.url.includes('generate')).length + S2.asked.length, 0);
     // (실리가 보낼 수 없는 종류의 프로필을 골라 뒀으면 — 브라우저가 남긴 목록에 없어요 — 브라우저처럼 "고른 프로필 없음")
     const c = world({ pt }), k = liveWorld(c.m) && c.m.live.kit; k.profiles = [];
     liveWorld(c.m).messenger.rooms[c.room.id].connectionId = 'ai';
@@ -252,7 +254,7 @@ test('일꾼: 실리에서 프로필이 바뀌었거나 프리셋 파일이 없�
     await S2.put('sb', b.m); await S2.auto.list();
     const r = await S2.gen(b.id);
     assert.match(r.payload, /"type":"error"[^\n]*프리셋을 찾을 수 없습니다: Quiet/);
-    assert.equal(S.st.length + S2.st.length, 0);
+    assert.equal([...S.st, ...S2.st].filter(x => x.url.includes('generate')).length, 0);
 });
 
 test('일꾼: 글 완성 프로필 방 — 지시 형식이 감싼 글로 실리 서버의 글 완성 처리기에, 답은 실리처럼 멈춤 글을 잘라서', async t => {
@@ -455,4 +457,74 @@ test('일꾼: 확장 폴더의 코드로 돌 때는 페이지가 옛 버전이�
     assert.deepEqual((await S.auto.status('s1')).map(r => [r.can, r.why]), [[true, '']]);
     assert.equal(await S.auto.sweep(), 1);
     assert.equal((await S.get('s1')).messenger.rooms[old.room.id].messages.at(-1).text, 'sorry, was busy');
+});
+
+// ---- 실리에서 고친 것이 바로 (docs/SERVER-HANDOVER.md): 서버는 답장마다 실리 파일과 실리 서버의 처리기에서 새로 읽어요
+test('일꾼 · 실리에서 바로: 카드를 고치면 다음 답장부터 새 카드로. 간단한 카드로 온 것은 그 카드를 따로 읽어요', async t => {
+    const S = await stage(t), a = world({ hoursAgo: 0.2 });
+    const j = enqueueJob(a.m, { kind: 'reply', owner: 'Mara', room: a.room.id, at: Date.now() - 600_000 }); Object.assign(j, { timed: true, notBefore: Date.now() - 1000 });
+    await S.put('sa', a.m);
+    // (실리에서 카드를 고쳤어요: 브라우저는 아무것도 안 했어요)
+    Object.assign(S.cards[0], { description: 'Mara is a pilot now.', data: { ...S.cards[0].data, description: 'Mara is a pilot now.' } });
+    assert.equal(await S.auto.sweep(), 1);
+    assert.match(textOf(S.asked[0].body), /\[Mara's card\]\n\[description\]\nMara is a pilot now\./);
+    // (실리가 목록을 간단한 카드로 줄 때 — lazyLoadCharacters —: 그 카드를 /api/characters/get으로 통째로)
+    S.cards[0].shallow = true;
+    const b = world();
+    await S.put('sb', b.m); await S.auto.list();
+    assert.match((await S.gen(b.id)).payload, /"message_saved"/);
+    assert.match(textOf(S.asked[1].body), /Mara is a pilot now\./);
+    assert.ok(S.st.some(x => x.url === '/api/characters/get' && x.body.avatar_url === 'mara.png'));
+});
+
+test('일꾼 · 실리에서 바로: 롤플에 새 메시지가 생기면 다음 답장의 LAST MESSAGES에', async t => {
+    const S = await stage(t), a = world({ story: true });
+    await S.put('sa', a.m); await S.auto.list();
+    await S.writeChat({}, [...MESSAGES(), said('Mara', 'at the door now')]);
+    assert.match((await S.gen(a.id)).payload, /"message_saved"/);
+    assert.match(textOf(S.asked[0].body), /\[LAST MESSAGES\]\n[\s\S]*Ren: ok\n\nMara: at the door now\n/);
+});
+
+test('일꾼 · 실리에서 바로: 페르소나 — 그 채팅에서 마지막으로 쓴 것, 없으면 실리가 그 채팅을 열 때 고를 것(채팅 잠금 · 연결 · 기본 페르소나)', async t => {
+    const S = await stage(t), a = world(), b = world(), c = world();
+    await S.put('sa', a.m); await S.put('sb', b.m); await S.put('sc', c.m); await S.auto.list();
+    // (브라우저가 이 채팅에 적어 둔 페르소나: 빠른 전환기로 Varo로 바꿨어요)
+    await S.writeChat({ narrative_archive: { stPersona: 'varo.png' } });
+    assert.match((await S.gen(a.id)).payload, /"message_saved"/);
+    let text = textOf(S.asked[0].body);
+    assert.match(text, /\[PERSONA — Varo\]\nVaro is a pilot\./);
+    assert.match(text, /Varo is texting you on MESSENGER/);
+    // (적어 둔 게 없는 옛 채팅: 실리 순서 — 채팅에 잠근 페르소나)
+    // (실시간 폰의 "나"도 그 이름으로: 브라우저에서 페르소나를 바꿨을 때처럼)
+    assert.equal((await S.get('sa')).persona, 'Varo');
+    await S.writeChat({ persona: 'varo.png' });
+    assert.match((await S.gen(b.id)).payload, /"message_saved"/);
+    assert.match(textOf(S.asked[1].body), /\[PERSONA — Varo\]\nVaro is a pilot\./);
+    // (잠금도 없으면 settings.json의 지금 페르소나)
+    await S.writeChat({});
+    assert.match((await S.gen(c.id)).payload, /"message_saved"/);
+    text = textOf(S.asked[2].body);
+    assert.match(text, /\[PERSONA — Ren\]\nRen is a student\./);
+});
+
+test('일꾼 · 실리에서 바로: 그룹 채팅 — 그룹 파일의 사람들로. 실리에서 그룹을 지우면 안 돌려요', async t => {
+    const browser = { ...BROWSER(), characterId: undefined, groupId: 'g1', groups: [{ id: 'g1', members: ['mara.png'] }], chatId: 'grp-1' };
+    const S = await stage(t, { files: { 'groups/g1.json': { id: 'g1', members: ['mara.png', 'gone.png'], chat_id: 'grp-1', chats: ['grp-1'] } } }), a = world({ browser });
+    await mkdir(path.join(S.root, 'group chats'), { recursive: true }); await writeFile(path.join(S.root, 'group chats', 'grp-1.jsonl'), chatFile({}, MESSAGES()));
+    assert.deepEqual(a.m.live.kit.chat, { avatar: null, group: { id: 'g1' }, file: { group: true, dir: null, id: 'grp-1' } });
+    await S.put('sa', a.m); await S.auto.list();
+    assert.deepEqual((await S.auto.status('sa')).map(x => [x.can, x.why]), [[true, '']]);
+    assert.match((await S.gen(a.id)).payload, /"message_saved"/);
+    assert.match(textOf(S.asked[0].body), /\[Mara's card\]\n\[description\]\nMara is a baker\./);
+    await rm(path.join(S.root, 'groups', 'g1.json'));
+    assert.deepEqual((await S.auto.status('sa')).map(x => [x.can, x.why]), [[false, '채팅을 찾을 수 없습니다.']]);
+});
+
+test('일꾼 · 실리에서 바로: 카드의 확장 칸 쓰기는 실리처럼 — 실패해도 답장은 그대로(기록만 남겨요)', async t => {
+    const S = await stage(t, { reply: () => ({ reply: ['brb'], status: { status: 'dnd', activity: 'in a meeting', duration: '30m' } }) });
+    const a = world({ schedule: week([{ time: '00:00-23:59', activity: 'free time', status: 'online' }]) });
+    S.cards.length = 0;   // (그사이 실리에서 카드를 지웠어요: 쓸 카드가 없어요)
+    await S.put('sa', a.m); await S.auto.list();
+    assert.match((await S.gen(a.id)).payload, /"message_saved"/);
+    assert.equal(S.st.filter(x => x.url === '/api/characters/merge-attributes').length, 0);
 });

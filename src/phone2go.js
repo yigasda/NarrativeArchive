@@ -82,8 +82,9 @@ async function keepUpStory(real, tell = () => {}) {
     if (extending.has(real)) return extending.get(real);
     const w = liveWorld(real);
     if (!w || w.from !== 'story' || !open(real)) return null;
-    // (the server plugin never makes or lengthens the story: it has no role-play chat to read. A reply there goes with the
-    //  snapshot the phone has; a phone with none is refused by the request itself, as in the browser)
+    // (the server plugin never makes or lengthens the story: it reads the role-play chat, but not the archive the summary is
+    //  made onto. A reply there goes with the snapshot the phone has and the chat's newest messages; a phone with none is
+    //  refused by the request itself, as in the browser)
     if (ctx().naServer) return null;
     const snapOf = () => (isSnap(w.snap) ? w.snap : null);
     const tail = liveChatTail(), had = snapOf();
@@ -1192,7 +1193,7 @@ export function liveAutonomousUnread(real) {
 //   kit.levels = { [연결, 모델, 레벨]: 프로필 요청에 얹는 값 } (ai.js stLevelPayload가 실리 코드로 만든 것: 서버에는 그 코드가 없어요)
 export async function liveKitRefresh(real) {
     if (!real || !open(real) || !liveWorld(real) || !keepKept()) return false;
-    const kit = buildKit(ctx(), real, liveChatTail(), { version: VERSION });
+    const kit = buildKit(ctx(), real, { version: VERSION });
     if (!kit) return false;
     kit.st = {}; kit.pt = {}; kit.ptWhy = {}; kit.levels = {};
     // (the profiles SillyTavern can send — its getSupportedProfiles: the server lists the same ones)

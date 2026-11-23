@@ -1,7 +1,7 @@
 // phone2keep.js를 실리에 잇기: 플러그인으로 가는 요청, 채팅이 바뀔 때 읽기, core.js saveMeta 앞에 끼우기.
 // index.js가 keepStart()를 한 번 불러요.
 
-import { ctx, getMeta, hasChat, setSaveHook } from './core.js';
+import { ctx, getMeta, hasChat, saveMeta, setSaveHook } from './core.js';
 import { makeKeep } from './phone2keep.js';
 import { reseedActivity } from './phone2sched.js';
 
@@ -145,6 +145,8 @@ export function keepBeat() {
         if (hidden()) return;
         await keepPing();
         await keepSync();
+        // (an Orbit begun since the chat was opened: its persona is written too)
+        await keepPersona();
     })().catch(err => console.warn('[narrative-archive] Orbit 서버 알리기', err)).finally(() => { beating = null; });
     return beating;
 }
@@ -157,6 +159,24 @@ export async function keepAutoStatus() {
 }
 export const KEEP_BEAT_MS = 30_000;
 
+// 이 채팅의 페르소나 (실리 personas.js의 user_avatar: 아바타 파일 이름)를 채팅에 적어 둬요: 서버는 실리를 닫은 동안에도 그 채팅에서
+// 마지막으로 쓴 페르소나로 답해요 (plugin/work.mjs). 빠른 전환기로 바꿀 때(PERSONA_CHANGED)와, 채팅을 열 때 실리가 고른 것
+// (실리의 CHAT_CHANGED 처리 loadPersonaForCurrentChat이 먼저 끝나요: 실리의 이벤트는 차례로 기다려요)
+// Orbit이 있는 채팅만. 달라졌을 때만 저장해요
+let stPersonas = null;
+const personasModule = async () => { if (!stPersonas && typeof window !== 'undefined') { try { stPersonas = await import('/scripts/personas.js'); } catch { stPersonas = null; } } return stPersonas; };
+export async function keepPersona(avatar = null) {
+    if (!hasChat()) return false;
+    const m = getMeta();
+    if (!m || !(m.live?.world || m.liveRef)) return false;
+    const a = typeof avatar === 'string' && avatar ? avatar : (await personasModule())?.user_avatar;
+    if (typeof a !== 'string' || !a || m.stPersona === a) return false;
+    m.stPersona = a;
+    await saveMeta();
+    return true;
+}
+const notePersona = avatar => { keepPersona(avatar).catch(err => console.warn('[narrative-archive] persona', err)); };
+
 let started = false;
 export function keepStart() {
     if (started) return;
@@ -164,7 +184,8 @@ export function keepStart() {
     setSaveHook(() => keep.onSave());
     const c = ctx(), et = c.eventTypes || c.event_types;
     const open = () => { const at = now(); if (at) keep.open(at.m, at.mark); };
-    c.eventSource.on(et.CHAT_CHANGED, () => { open(); serves = false; keepBeat(); });
+    c.eventSource.on(et.CHAT_CHANGED, () => { open(); serves = false; keepBeat(); notePersona(); });
+    if (et.PERSONA_CHANGED) c.eventSource.on(et.PERSONA_CHANGED, avatar => notePersona(avatar));
     open();
     keepBeat();
     // (.unref: only there in Node — the tests — so the timer does not keep the process up; a browser's timer is a number)
