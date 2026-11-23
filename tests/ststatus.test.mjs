@@ -73,6 +73,7 @@ async function job(settings, b, t, o = {}) {
     return naStatus({ send: b.send, now: () => t, ...o });
 }
 const MIN = 60 * 1000, HOUR = 60 * MIN;
+const AZ = { chat_completion_source: 'azure_openai', azure_base_url: 'https://ren.example', azure_deployment_name: 'ren-dep', azure_api_version: '2024-10-21', azure_openai_model: 'ren-saved' };
 // (a promise that never settles unless let go: a backend that hangs)
 const hanging = () => { let release; const p = new Promise(ok => { release = ok; }); return { p, release }; };
 const within = (p, ms, what) => Promise.race([p, new Promise((_, no) => { const t = setTimeout(() => no(new Error(`${what}: ${ms}ms 넘게 걸렸어요`)), ms); t.unref?.(); })]);
@@ -163,6 +164,32 @@ test('캐시 열쇠(다리가 키 상태를 줘요): 그 소스의 키를 바꾸
     assert.equal(b.secretCalls.length, 3);
 });
 
+test('캐시 열쇠(글 완성 · Kobold): 그 종류가 쓰는 키만 (실리 서버 additional-headers.js 230~245의 표). 다른 공급자의 키를 저장해도 다시 묻지 않아요', async () => {
+    __naStatusReset();
+    const root = tmpRoot();
+    let state = { api_key_ooba: [{ id: 'o1', active: true }], api_key_openrouter: null, api_key_mancer: null };
+    const b = bridge({ body: { result: 'ren-tg' } }, { secrets: () => state });
+    const save = () => fs.writeFileSync(path.join(root, 'secrets.json'), JSON.stringify({ n: b.secretCalls.length, pad: 'x'.repeat(b.secretCalls.length + 3) }));
+    const ooba = tgSettings({ type: 'ooba', server_urls: { ooba: 'http://127.0.0.1:5000' } });
+    const ollama = tgSettings({ type: 'ollama', server_urls: { ollama: 'http://127.0.0.1:11434' } });
+    const kobold = { main_api: 'kobold', api_server: 'http://127.0.0.1:5001/api' };
+    const all = async t => { for (const s of [ooba, ollama, kobold]) await job(s, b, t, { root }); };
+    save();
+    await all(0);
+    const n = b.calls.length;
+    assert.ok(n >= 3, String(n));
+    state = { ...state, api_key_openrouter: [{ id: 'r1', active: true }], api_key_mancer: [{ id: 'm1', active: true }] };
+    save();
+    await all(1);
+    assert.equal(b.calls.length, n);
+    // (the key ooba uses: asked again — ollama and Kobold read no key)
+    state = { ...state, api_key_ooba: [{ id: 'o1', active: false }, { id: 'o2', active: true }] };
+    save();
+    await all(2);
+    assert.equal(b.calls.length, n + 1);
+    assert.equal(b.calls.at(-1).url, '/api/backends/text-completions/status');
+});
+
 test('실패는 1분 · 2분 · 4분 … 30분 뒤에 다시 물어요 (꺼진 백엔드를 매분 두드리지 않아요). 실리 창에는 한 번만', async () => {
     __naStatusReset();
     const logs = [];
@@ -205,27 +232,144 @@ test('다시 물을 때는 기다리지 않아요: 백엔드가 멈춰도 일은
     assert.deepEqual(OAI.model_list.map(m => m.id), ['ren-new']);
 });
 
-test('Azure는 설정이 바뀔 때만 한 번 물어요 — 성공이든 실패 · 시간 초과든 (상태 확인이 진짜 생성 요청이라 돈이 들어요). 모델은 목록의 것', async () => {
+test('Azure는 설정이 바뀔 때만 한 번 물어요 — 성공이든, 유료 확인 뒤의 500이든 (상태 확인이 진짜 생성 요청이라 돈이 들어요). 모델은 목록의 것', async () => {
     __naStatusReset();
-    const az = { chat_completion_source: 'azure_openai', azure_base_url: 'https://ren.example', azure_deployment_name: 'ren-dep', azure_api_version: '2024-10-21', azure_openai_model: 'ren-saved' };
     const b = bridge({ body: { data: [{ id: 'ren-azure-4' }] } });
-    const s = ccSettings(az);
+    const s = ccSettings(AZ);
     await job(s, b, 0);
     await job(s, b, 5 * 24 * HOUR);
     await __naStatusIdle();
     assert.equal(b.calls.length, 1);
     assert.equal(OAI.oai_settings.azure_openai_model, 'ren-azure-4');
-    await job(ccSettings({ ...az, azure_deployment_name: 'ren-dep-2' }), b, 5 * 24 * HOUR + 1);
+    await job(ccSettings({ ...AZ, azure_deployment_name: 'ren-dep-2' }), b, 5 * 24 * HOUR + 1);
     assert.equal(b.calls.length, 2);
-    // (SillyTavern answers 500 after the paid probe — chat-completions.js 2009~2011 —, or our time limit ran out while it still runs)
-    for (const [what, answer, o] of [['500', { status: 500, body: { error: true, message: 'Failed to connect to the Azure endpoint.' } }, {}], ['시간 초과', (url, init) => new Promise((ok, no) => init.signal.addEventListener('abort', () => no(new Error('aborted')))), { timeoutMs: 20 }]]) {
+    // (SillyTavern answers 500 from the catch after the paid probe — chat-completions.js 2008~2011)
+    __naStatusReset();
+    const root = tmpRoot();
+    const logs = [];
+    const f = bridge({ status: 500, body: { error: true, message: 'Failed to connect to the Azure endpoint.' } });
+    for (let i = 0; i < 5; i++) { await job(s, f, i * 3 * HOUR, { root, log: t => logs.push(t) }); await __naStatusIdle(); }
+    assert.equal(f.calls.length, 1);
+    assert.deepEqual(logs, ['상태를 가져오는 중 오류가 발생했습니다: Azure 엔드포인트에 연결하지 못했습니다.']);
+    __naStatusReset();
+    await job(s, f, 0, { root });
+    assert.equal(f.calls.length, 1, '디스크에 둔 답');
+});
+
+test('Azure: 15초가 지나도 다리 요청을 끊지 않아요. 일은 연결 안 됨으로 하고, 실리의 답이 오면 그 답을 둬요(디스크에도). 그동안 다시 묻지 않아요', async () => {
+    __naStatusReset();
+    const root = tmpRoot();
+    const hang = hanging();
+    let aborted = false;
+    const b = bridge((url, init) => { init.signal?.addEventListener('abort', () => { aborted = true; }); return hang.p.then(() => ({ body: { data: [{ id: 'ren-late' }] } })); });
+    const s = ccSettings(AZ);
+    const logs = [];
+    const r = await within(job(s, b, 0, { root, timeoutMs: 20, log: t => logs.push(t) }), 2000, 'Azure를 끝까지 기다렸어요');
+    assert.deepEqual([r.waited, r.ok], [true, false]);
+    assert.equal(SCRIPT.online_status, 'no_connection');
+    assert.deepEqual(logs, ['상태를 가져오는 중 오류가 발생했습니다: 시간이 초과되었습니다.']);
+    // (still asking: no second paid check)
+    for (let m = 1; m <= 90; m += 7) await within(job(s, b, m * MIN, { root, timeoutMs: 20 }), 2000, '묻는 중인 Azure를 기다렸어요');
+    assert.equal(b.calls.length, 1);
+    hang.release();
+    await __naStatusIdle();
+    assert.equal(aborted, false, '다리 요청을 끊었어요');
+    await job(s, b, 2 * HOUR, { root });
+    assert.equal(SCRIPT.online_status, 'Valid');
+    assert.equal(OAI.oai_settings.azure_openai_model, 'ren-late');
+    await job(s, b, 5 * 24 * HOUR, { root });
+    await __naStatusIdle();
+    assert.equal(b.calls.length, 1);
+    // (a new worker: the late answer is on disk)
+    __naStatusReset();
+    await job(s, b, 0, { root });
+    assert.equal(b.calls.length, 1);
+    assert.equal(OAI.oai_settings.azure_openai_model, 'ren-late');
+});
+
+test('Azure: 유료 확인 앞에서 끝난 실패(설정 없음 · GET /models의 401 · 429 · 503 · 200 {error} · 다리 오류)는 다른 실패처럼 1분 · 2분 · 4분 … 뒤에 다시 물어요. 디스크에 두지 않아요', async () => {
+    const FREE = [
+        ['400 설정 없음', { status: 400, body: { error: true, message: 'Azure configuration is incomplete.' } }],
+        ['401', { status: 401, body: { error: true, message: 'Invalid API key or insufficient permissions.' } }],
+        ['429', { status: 429, body: { error: true, message: 'Azure Models endpoint error: Too Many Requests' } }],
+        ['503', { status: 503, body: { error: true, message: 'Azure Models endpoint error: Service Unavailable' } }],
+        ['200 {error}', { body: { error: true } }],
+        ['다리 오류', new Error('fetch failed')],
+    ];
+    for (const [what, fail] of FREE) {
         __naStatusReset();
-        const logs = [];
-        const f = bridge(answer);
-        for (let i = 0; i < 5; i++) { await job(s, f, i * 3 * HOUR, { ...o, log: t => logs.push(t) }); await __naStatusIdle(); }
-        assert.equal(f.calls.length, 1, what);
-        assert.equal(logs.length, 1, what);
+        const root = tmpRoot();
+        let up = false;
+        const b = bridge(() => (up ? { body: { data: [{ id: 'ren-azure-ok' }] } } : fail));
+        const at = [];
+        for (let m = 0; m <= 40; m++) {
+            const before = b.calls.length;
+            await job(ccSettings(AZ), b, m * MIN, { root, log: () => {} });
+            await __naStatusIdle();
+            if (b.calls.length > before) at.push(m);
+        }
+        assert.deepEqual(at, [0, 1, 3, 7, 15, 31], what);
+        assert.ok(!fs.existsSync(path.join(root, 'NarrativeArchive', 'status-azure.json')), `${what}: 디스크에 뒀어요`);
+        // (a new worker asks again too)
+        __naStatusReset();
+        await job(ccSettings(AZ), b, 0, { root, log: () => {} });
+        assert.equal(b.calls.length, at.length + 1, what);
+        // (then it answers: kept for good)
+        up = true;
+        await job(ccSettings(AZ), b, 2 * MIN, { root });
+        await __naStatusIdle();
+        await job(ccSettings(AZ), b, 3 * MIN, { root });
+        assert.equal(SCRIPT.online_status, 'Valid', what);
+        const n = b.calls.length;
+        for (let d = 1; d <= 3; d++) { await job(ccSettings(AZ), b, d * 24 * HOUR, { root }); await __naStatusIdle(); }
+        assert.equal(b.calls.length, n, what);
     }
+    // (a free failure that comes behind a timed-out job: asked again later too)
+    __naStatusReset();
+    const hang = hanging();
+    let late = true;
+    const b = bridge(() => (late ? hang.p.then(() => FREE[3][1]) : { body: { data: [{ id: 'ren-azure-ok' }] } }));
+    await job(ccSettings(AZ), b, 0, { timeoutMs: 20, log: () => {} });
+    hang.release();
+    await __naStatusIdle();
+    late = false;
+    await job(ccSettings(AZ), b, 1, { log: () => {} });
+    await job(ccSettings(AZ), b, 30 * MIN, { log: () => {} });
+    await __naStatusIdle();
+    assert.equal(b.calls.length, 2);
+});
+
+test('Azure 디스크: 전 버전이 둔 돈 안 든 실패는 쓰지 않고 다시 물어요. 저장 전에 파일을 다시 읽어서 다른 일꾼이 넣은 칸을 지우지 않아요', async () => {
+    __naStatusReset();
+    const root = tmpRoot();
+    const file = path.join(root, 'NarrativeArchive', 'status-azure.json');
+    const b = bridge(() => ({ body: { data: [{ id: 'ren-x' }] } }));
+    const az = n => ccSettings({ ...AZ, azure_deployment_name: `d${n}` });
+    await job(az(1), b, 0, { root });
+    // (the file an older version wrote: a free 503 kept as if for good)
+    const one = JSON.parse(fs.readFileSync(file, 'utf8'));
+    const [id] = Object.keys(one.entries);
+    fs.writeFileSync(file, JSON.stringify({ v: 1, entries: { [id]: { reply: { status: 503, statusText: '', headers: { 'content-type': 'application/json' }, text: JSON.stringify({ error: true, message: 'Azure Models endpoint error: Service Unavailable' }) } } } }));
+    __naStatusReset();
+    await job(az(1), b, 0, { root });
+    assert.equal(b.calls.length, 2);
+    assert.equal(SCRIPT.online_status, 'Valid');
+    const kept1 = fs.readFileSync(file, 'utf8');
+    // (two workers of one SillyTavern, the next starting while the last stops: this one read the file before the other wrote d2)
+    __naStatusReset();
+    await job(az(2), b, 0, { root });
+    const kept12 = fs.readFileSync(file, 'utf8');
+    __naStatusReset();
+    fs.writeFileSync(file, kept1);
+    await job(ccSettings({ chat_completion_source: 'custom', custom_url: 'http://127.0.0.1:9/v1' }), b, 0, { root });
+    fs.writeFileSync(file, kept12);
+    await job(az(3), b, 1, { root });
+    assert.equal(Object.keys(JSON.parse(fs.readFileSync(file, 'utf8')).entries).length, 3);
+    assert.deepEqual(fs.readdirSync(path.dirname(file)), ['status-azure.json']);
+    __naStatusReset();
+    const n = b.calls.length;
+    for (const k of [1, 2, 3]) await job(az(k), b, 0, { root });
+    assert.equal(b.calls.length, n);
 });
 
 test('Azure 답은 밀려나지 않고(다른 열쇠가 많아도), 일꾼을 다시 띄워도 다시 묻지 않아요 (사용자 폴더에 둬요). 자주 쓰는 열쇠도 밀려나지 않아요', async () => {

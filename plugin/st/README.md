@@ -59,9 +59,12 @@ await naStatus({ skip: true });                     // 실리 연결을 쓰지 �
   - 열쇠 = 사용자 폴더 · `main_api` · 길 · 실리 코드가 만든 몸통(`custom_include_headers`는 매크로를 풀기 전의 글 + 그때의 `{{user}}`) · 그 소스의 키 상태
     (옛 다리면 secrets.json의 파일 번호 · 시각 · 크기. 없는 파일과 `{}`는 같아요).
   - 다시 묻는 때: 로컬 백엔드(글 완성의 집 백엔드 · Kobold · 사용자 지정 주소 · 프록시) 30분, 클라우드 목록 24시간, 실패는 1분부터 두 배씩 30분까지.
-    Azure는 결과와 상관없이 다시 묻지 않아요(진짜 생성 요청이라 돈이 들어요). 사용자 폴더의 `NarrativeArchive/status-azure.json`에 둬서 일꾼을 다시 띄워도 그대로예요.
+    Azure는 유료 확인까지 갔을 수 있는 답(2xx · 500 `Failed to connect to the Azure endpoint.`)이면 다시 묻지 않아요(진짜 생성 요청이라 돈이 들어요).
+    그 답은 사용자 폴더의 `NarrativeArchive/status-azure.json`에 둬서 일꾼을 다시 띄워도 그대로예요. 그 앞에서 끝난 실패(설정 없음 · GET /models 실패 · 다리 오류)는 다른 실패처럼 다시 물어요.
     Azure 칸은 캐시에서 밀려나지 않아요(나머지는 오래 안 쓴 것부터 32개).
+  - 열쇠의 키 상태: 채팅 완성은 그 소스의 키, 글 완성은 그 종류의 키(실리 서버 `src/additional-headers.js` 230~245의 표), Kobold는 없음.
   - 다시 물을 때는 기다리지 않아요: 그 일은 둔 답으로 하고 뒤에서 물어요. 처음 묻는 열쇠만 기다려요(시간 제한 15초, 열쇠마다 한 번).
+    Azure는 15초가 지나도 다리 요청을 끊지 않아요: 그 일은 연결 안 됨으로 하고, 실리의 답이 오면 그 답을 둬요.
 - 화면이 섞인 `saveModelList`의 값 부분을 실리 줄 번호를 적어 따라 해요. 고르기 칸의 change가 부르는 `onModelChange`는 모델 값 · 가드를 따라 하고,
   가드를 지나면 그 뒷부분(문맥 · 온도 · 벌점 칸 고치기, 5695~6011)을 옮긴 그대로 불러요(`openai.js __naModelChangeRest`, 범위 칸 대역 `$`가 브라우저처럼 min · max · step으로 값을 고쳐요).
   NanoGPT는 그 모델의 공급자 고르기(`syncNanoGptProvidersForModel` 417~460의 값 부분, 다리의 `/api/nanogpt/models/providers`)도.
@@ -124,3 +127,5 @@ await naStatus({ skip: true });                     // 실리 연결을 쓰지 �
   - Mancer 서버 주소는 늘 기본 주소예요(실리는 브라우저 localStorage의 `mancer_server`).
   - 페이지를 열 때 화면이 모델 칸에 change를 일으켜 고치는 문맥 · 온도(소스를 바꿨을 때 · 처음 열 때의 `onModelChange`)는 서버가 하지 않아요. 연결할 때의 것만 해요.
   - `online_status` 글은 영어예요(브라우저는 그 언어로 번역).
+  - 서버는 일마다 모델에 맞춰 문맥 · 온도를 깎아요(`onModelChange` 뒷부분). 연결한 뒤 프리셋을 불러온 브라우저(`bind_preset_to_connection` 꺼짐 · 연결 프로필)는 깎지 않은 값을 그대로 보내요.
+  - 소스 목록은 실리 1.19.1의 것이에요. 더 새 실리의 새 소스는 서버에서 `'undefined'`가 돼요(연결 · `{{model}}`). 'source' 방 · 프로필 요청은 자기 소스를 넣어서 괜찮아요.

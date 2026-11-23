@@ -79,7 +79,9 @@ export async function startBridge({ stRoot = process.cwd(), userOf } = {}) {
                 for (const [key, list] of Object.entries(state)) out[key] = Array.isArray(list) ? list.map(x => ({ id: x?.id, active: x?.active })) : null;
                 return response.send(out);
             } catch (error) {
-                console.error('Error reading secret state:', error);
+                // (SillyTavern writes the whole error there — secrets.js 535 —: for a broken secrets.json, JSON.parse's message holds a piece of the file,
+                //  so a piece of a key. Only the error's name here)
+                console.error('Error reading secret state:', error?.name || 'Error');
                 return response.send({});
             }
         });

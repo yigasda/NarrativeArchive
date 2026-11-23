@@ -27,6 +27,10 @@ const RUN = await import(path.join(REPO, 'tests/ststatus.run.mjs'));
 const PORT = 8129, base = `http://127.0.0.1:${PORT}`, dataRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'na-oracle-status-'));
 const userRoot = path.join(dataRoot, 'default-user');
 fs.mkdirSync(userRoot, { recursive: true });
+// (the key state comes from the server plugin's own bridge — plugin/bridge.mjs, on SillyTavern's handlers in this process, the same user folder —,
+//  as the worker gets it: ids only, no masked key text in the fixture)
+(await import(pathToFileURL(path.join(ST, 'src/util.js')).href)).setConfigFilePath(path.join(ST, 'config.yaml'));
+const bridge = await (await import(pathToFileURL(path.join(REPO, 'plugin/bridge.mjs')).href)).startBridge({ stRoot: ST, userOf: r => (r === userRoot ? { profile: { handle: 'default-user' }, directories: { root: userRoot } } : null) });
 fs.writeFileSync(path.join(userRoot, 'settings.json'), JSON.stringify({ ...JSON.parse(fs.readFileSync(path.join(ST, 'default/content/settings.json'), 'utf8')), firstRun: false }, null, 4));
 
 // ---- the fake provider ----
@@ -188,8 +192,14 @@ try {
 
         // (the server's way to SillyTavern's own handlers — the bridge — here through the page, with its session, to the same fake provider)
         const calls = [];
+        const viaBridge = async (url, init) => {
+            const x = await fetch(bridge.url + url, { method: init?.method || 'POST', headers: { 'Content-Type': 'application/json', 'x-na-token': bridge.token, 'x-na-root': encodeURIComponent(userRoot) }, body: init?.body ?? null });
+            const headers = {};
+            for (const h of ['content-type', 'x-supports-tokenization']) { const v = x.headers.get(h); if (v != null) headers[h] = v; }
+            return { status: x.status, statusText: x.statusText, headers, text: await x.text() };
+        };
         const send = async (url, init) => {
-            const r = await page.evaluate(async ({ url, method, body }) => {
+            const r = url === '/api/secrets/read' ? await viaBridge(url, init) : await page.evaluate(async ({ url, method, body }) => {
                 const x = await fetch(url, { method, headers: SillyTavern.getContext().getRequestHeaders(), body });
                 const headers = {};
                 for (const h of ['content-type', 'x-supports-tokenization']) { const v = x.headers.get(h); if (v != null) headers[h] = v; }
@@ -213,6 +223,7 @@ try {
 finally {
     await browser?.close(); st.kill('SIGTERM'); await new Promise(r => setTimeout(r, 1000));
     fake.close(); fake.closeAllConnections?.();
+    bridge.close();
     fs.rmSync(dataRoot, { recursive: true, force: true });
     fs.rmSync(hookDir, { recursive: true, force: true });
     console.log(fail ? `FAILED ${fail} (of ${C.CASES.length})` : `ALL OK (${C.CASES.length} cases)`); process.exit(fail ? 1 : 0);

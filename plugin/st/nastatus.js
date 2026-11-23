@@ -8,10 +8,12 @@
 //      - 열쇠 = 사용자 폴더 + main_api + 길 + 실리 코드가 만든 몸통(custom_include_headers는 매크로를 풀기 전의 글 + 그때의 {{user}}) +
 //        그 소스가 쓰는 키의 저장 상태(키 글 없이 id · 쓰는 것: 다리의 /api/secrets/read. 옛 다리면 secrets.json의 파일 번호 · 시각 · 크기)
 //      - 다시 묻는 때: 로컬 백엔드(글 완성 · Kobold · 사용자 지정 주소 · 프록시)는 30분(설정 없이 모델을 바꿀 수 있어요), 클라우드 목록은 24시간
-//        (수 MB예요. 브라우저는 페이지를 열 때 한 번). 실패는 1분 · 2분 · 4분 … 30분. Azure는 다시 묻지 않아요(결과와 상관없이): 실리의 Azure 상태
-//        확인은 진짜 생성 요청이라 돈이 들어요(소망 결정 2026-11-23). 사용자 폴더의 NarrativeArchive/status-azure.json에 둬서 다시 켜도 묻지 않아요
+//        (수 MB예요. 브라우저는 페이지를 열 때 한 번). 실패는 1분 · 2분 · 4분 … 30분. Azure는 유료 확인까지 갔을 수 있는 답(2xx · 500
+//        'Failed to connect to the Azure endpoint.')이면 다시 묻지 않아요: 실리의 Azure 상태 확인은 진짜 생성 요청이라 돈이 들어요(소망 결정 2026-11-23).
+//        그 답은 사용자 폴더의 NarrativeArchive/status-azure.json에 둬서 다시 켜도 묻지 않아요. 그 앞에서 끝난 실패(설정 없음 · GET /models 실패 · 다리 오류)는 다른 실패처럼
 //      - 다시 물을 때는 기다리지 않아요: 일은 둔 답으로 하고, 다리에는 뒤에서 물어요(다음 일부터 새 답). 처음 묻는 열쇠만 답을 기다려요(시간 제한 15초):
-//        브라우저도 연결을 마친 뒤에 보내고, 답 없이 만든 요청은 브라우저 것과 달라서예요. 열쇠마다 처음 한 번뿐이에요
+//        브라우저도 연결을 마친 뒤에 보내고, 답 없이 만든 요청은 브라우저 것과 달라서예요. 열쇠마다 처음 한 번뿐이에요.
+//        Azure는 15초가 지나도 다리 요청을 끊지 않아요: 일은 연결 안 됨으로 하고, 실리의 답이 오면 그 답을 둬요(다음 일부터)
 //      - 받은 원래 답을 둬요: 실리 코드(목록 · 거르기 · 정렬 · 모델 보정)는 일마다 그 답으로 다시 돌아요(naLoad가 일마다 설정을 새로 읽어요)
 //      - 다시 물었는데 실패하면: 실리 브라우저처럼 상태는 no_connection, 목록은 그 열쇠로 전에 받은 것(브라우저는 전 목록을 버리지 않아요)
 //      - 옛 다리(그 길이 404): 실패와 같아요. 요청은 지금처럼 보내요(막지 않아요). 실리 창에 열쇠마다 한 번만 알려요
@@ -286,7 +288,7 @@ const TOLD_MAX = 64;
 const tell = (set, k) => { if (set.has(k)) return false; if (set.size >= TOLD_MAX) set.delete(set.values().next().value); set.add(k); return true; };
 // 사용자 폴더마다: secrets.json의 시각 → 그때 다리에서 읽은 키 저장 상태
 const secretsHad = new Map();
-// 사용자 폴더마다: 디스크에 둔 Azure 답 (NarrativeArchive/status-azure.json)
+// 사용자 폴더마다: 디스크에 둔 Azure 답 (NarrativeArchive/status-azure.json. 유료 확인까지 갔을 수 있는 답만)
 const azureDisk = new Map();
 const AZURE_FILE = path.join('NarrativeArchive', 'status-azure.json');
 const AZURE_KEEP = 50;
@@ -339,6 +341,25 @@ async function secretsNow(root, send, now, timeoutMs) {
 }
 // 열쇠에 들어가는 키 상태: 그 소스가 쓰는 키만(알 때), 아니면 전부
 const secretsPart = (s, keys) => (s.state ? JSON.stringify(keys ? keys.map(k => [k, s.state[k] ?? null]) : s.state) : `file:${s.sig}`);
+// 글 완성의 상태 길이 읽는 키: 실리 서버 src/additional-headers.js setAdditionalHeadersByType 230~245의 표(몸통의 api_type → 그 함수가 읽는 SECRET_KEYS,
+// 11~200. 몸통에 secret_id가 없어서 쓰는 키). 표에 없는 종류(ollama)는 키를 읽지 않아요. Kobold는 몸통에 api_type이 없어서(kai-settings.js 419~422) 읽지 않아요.
+// (실리 브라우저 RossAscends-mods.js RA_autoconnect 374~382가 클라우드 종류에 보는 키도 이 표의 것과 같아요)
+const TEXTGEN_SECRETS = {
+    [TG.textgen_types.MANCER]: SECRETS.SECRET_KEYS.MANCER,
+    [TG.textgen_types.VLLM]: SECRETS.SECRET_KEYS.VLLM,
+    [TG.textgen_types.APHRODITE]: SECRETS.SECRET_KEYS.APHRODITE,
+    [TG.textgen_types.TABBY]: SECRETS.SECRET_KEYS.TABBY,
+    [TG.textgen_types.TOGETHERAI]: SECRETS.SECRET_KEYS.TOGETHERAI,
+    [TG.textgen_types.OOBA]: SECRETS.SECRET_KEYS.OOBA,
+    [TG.textgen_types.INFERMATICAI]: SECRETS.SECRET_KEYS.INFERMATICAI,
+    [TG.textgen_types.DREAMGEN]: SECRETS.SECRET_KEYS.DREAMGEN,
+    [TG.textgen_types.OPENROUTER]: SECRETS.SECRET_KEYS.OPENROUTER,
+    [TG.textgen_types.KOBOLDCPP]: SECRETS.SECRET_KEYS.KOBOLDCPP,
+    [TG.textgen_types.LLAMACPP]: SECRETS.SECRET_KEYS.LLAMACPP,
+    [TG.textgen_types.FEATHERLESS]: SECRETS.SECRET_KEYS.FEATHERLESS,
+    [TG.textgen_types.HUGGINGFACE]: SECRETS.SECRET_KEYS.HUGGINGFACE,
+    [TG.textgen_types.GENERIC]: SECRETS.SECRET_KEYS.GENERIC,
+};
 
 // (the page's state before it connects: script.js 601 online_status, openai.js model_list, textgen-models.js 12~21, kai-settings.js 57~65.
 //  Set before every check: nothing of the last job's connection stays)
@@ -380,15 +401,25 @@ function okAge(api, body) {
     return STATUS_OK_MS;
 }
 const backoff = fails => Math.min(STATUS_FAIL_MS * 2 ** Math.max(0, fails - 1), STATUS_FAIL_MAX_MS);
-// (Azure: never asked again for the same key, whatever came back — its check is a paid generation, chat-completions.js 1984~2003.
-//  An answer that came behind the last job and is not used yet: the next job uses it — and counts a failure — first)
-const fresh = (e, t) => e.azure || !e.judged || (e.ok || e.okLike ? t - e.at < e.ttl : t - e.at < backoff(e.fails));
+// (Azure: an answer that may have come from the paid check is never asked again for the same key. An answer that came behind the last job and
+//  is not used yet: the next job uses it — and counts a failure — first)
+const fresh = (e, t) => (e.azure && paid(e.reply)) || !e.judged || (e.ok || e.okLike ? t - e.at < e.ttl : t - e.at < backoff(e.fails));
+// Azure의 답 중 유료 확인(chat-completions.js 1976~2003: 5토큰 생성)까지 갔을 수 있는 것: 2xx(2000 · 2004), 그 catch의 500(2008~2011. GET /models에
+// 닿지 못했을 때도 같은 답이라 못 가려요). 나머지는 그 앞에서 끝나서 돈이 들지 않아요: 1939~1942 400 설정 없음 · 1965~1974 GET /models 실패(그 상태 그대로) ·
+// 바깥 catch 2147~2154의 200 { error: true } · 다리 오류
+function paid(reply) {
+    if (!reply || reply.error !== undefined) return false;
+    const json = readJson(reply);
+    const body = json.ok && json.json && typeof json.json === 'object' ? json.json : null;
+    if (reply.status >= 200 && reply.status <= 299) return !(body && 'error' in body);
+    return reply.status === 500 && body?.message === 'Failed to connect to the Azure endpoint.';
+}
 
-// 다리로 한 번 (시간 제한) → { status, statusText, headers, text } | { error, timeout }
+// 다리로 한 번 (시간 제한. null이면 끊지 않아요: Azure) → { status, statusText, headers, text } | { error, timeout }
 async function ask(send, url, init, timeoutMs) {
     if (typeof send !== 'function') return { error: '실리 서버에 연결할 수 없습니다.' };
     const ctl = new AbortController();
-    const timer = setTimeout(() => ctl.abort(), timeoutMs);
+    const timer = timeoutMs == null ? null : setTimeout(() => ctl.abort(), timeoutMs);
     // (SillyTavern's own signal — abortStatusCheck — still stops it too)
     const stop = () => ctl.abort();
     init.signal?.addEventListener?.('abort', stop);
@@ -400,10 +431,16 @@ async function ask(send, url, init, timeoutMs) {
     } catch (err) {
         return { error: String(err?.message || err), timeout: ctl.signal.aborted };
     } finally {
-        clearTimeout(timer);
+        if (timer) clearTimeout(timer);
         init.signal?.removeEventListener?.('abort', stop);
     }
 }
+// 기다리기만 끝내요 (요청은 그대로): 시간 안에 오면 그 답, 아니면 null
+function waitAtMost(p, ms) {
+    let timer;
+    return Promise.race([p, new Promise(ok => { timer = setTimeout(() => ok(null), ms); })]).finally(() => clearTimeout(timer));
+}
+const TIMED_OUT = () => ({ error: '시간이 초과되었습니다.', timeout: true });
 // (a reply that could not be had at all: the browser's fetch rejects)
 function answer(reply) {
     if (reply.error !== undefined) throw new Error(reply.error);
@@ -452,22 +489,28 @@ function cachePut(key, e) {
 }
 // Azure 답을 디스크에 (일꾼을 다시 띄워도 다시 묻지 않게). 열쇠는 해시로: 다리 주소 · 키 글은 들어 있지 않아요
 const azureId = key => crypto.createHash('sha256').update(key).digest('hex');
+// (the file as it is now. Only answers that may have come from the paid check: an older file may hold free failures too)
+async function azureRead(root) {
+    try {
+        const x = JSON.parse(await fs.readFile(path.join(root, AZURE_FILE), 'utf8'));
+        if (x && typeof x === 'object' && x.v === 1 && x.entries && typeof x.entries === 'object') return Object.fromEntries(Object.entries(x.entries).filter(([, v]) => paid(v?.reply)));
+    } catch { /* none, or broken: asked again and written anew */ }
+    return {};
+}
 async function azureLoad(root) {
     if (!root) return {};
-    if (!azureDisk.has(root)) {
-        let v = {};
-        try { const x = JSON.parse(await fs.readFile(path.join(root, AZURE_FILE), 'utf8')); if (x && typeof x === 'object' && x.v === 1 && x.entries && typeof x.entries === 'object') v = x.entries; } catch { v = {}; }
-        azureDisk.set(root, v);
-    }
+    if (!azureDisk.has(root)) azureDisk.set(root, await azureRead(root));
     return azureDisk.get(root);
 }
 async function azureSave(root, key, reply) {
-    if (!root) return;
-    const all = await azureLoad(root);
+    if (!root || !paid(reply)) return;
+    // (read again first: another worker of this SillyTavern — the next one starts while the last one stops — may have put its own)
+    const all = { ...(await azureLoad(root)), ...(await azureRead(root)) };
     delete all[azureId(key)];
     all[azureId(key)] = { reply };
     for (const k of Object.keys(all)) { if (Object.keys(all).length <= AZURE_KEEP) break; delete all[k]; }
-    const file = path.join(root, AZURE_FILE), tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
+    azureDisk.set(root, all);
+    const file = path.join(root, AZURE_FILE), tmp = `${file}.${process.pid}.${crypto.randomUUID()}.tmp`;
     try {
         await fs.mkdir(path.dirname(file), { recursive: true });
         await fs.writeFile(tmp, JSON.stringify({ v: 1, entries: all }));
@@ -524,6 +567,8 @@ export async function naStatus({ root = '', send = null, now = () => performance
             for (const k of [...toldNoKey]) if (JSON.parse(k)[0] === root) toldNoKey.delete(k);
             if (gate.key) secretKeys = [gate.key];
         }
+        if (api === 'textgenerationwebui') secretKeys = [TEXTGEN_SECRETS[TG.textgenerationwebui_settings.type]].filter(Boolean);
+        if (api === 'kobold') secretKeys = [];
         const secretsKey = secretsPart(secrets, secretKeys);
         const keyOf = (url, body) => {
             let b = body ?? null;
@@ -536,15 +581,19 @@ export async function naStatus({ root = '', send = null, now = () => performance
             return JSON.stringify([root, api, url, b, secretsKey]);
         };
         const disk = await azureLoad(root);
+        // (an answer that came behind a job: the next job uses it. Azure's, when it may have come from the paid check, also on disk)
+        const took = (e, key, reply) => {
+            Object.assign(e, { at: now(), reply, judged: false });
+            if (e.url !== route) judgeSide(e);
+            if (e.azure) return azureSave(root, key, reply);
+        };
+        const behind = (e, key, asking) => { e.pending = asking.then(reply => took(e, key, reply)).finally(() => { e.pending = null; }); };
         // (a refresh: asked behind the job — this job uses what is kept —, one at a time per key)
-        const refresh = e => {
+        const refresh = (e, key) => {
             if (e.pending) return;
             out.fetched = true;
             out.refreshed = true;
-            e.pending = ask(send, e.url, e.init, timeoutMs).then(reply => {
-                Object.assign(e, { at: now(), reply, judged: false });
-                if (e.url !== route) judgeSide(e);
-            }).finally(() => { e.pending = null; });
+            behind(e, key, ask(send, e.url, e.init, e.azure ? null : timeoutMs));
         };
         // (a way the check calls besides the status route — the NanoGPT providers —: good when 2xx)
         const judgeSide = e => { e.judged = true; e.ok = !broken(e.reply); e.good = e.reply; e.fails = e.ok ? 0 : e.fails + 1; };
@@ -563,7 +612,8 @@ export async function naStatus({ root = '', send = null, now = () => performance
                     // (SillyTavern's own signal stays with this job: a refresh behind it has its own time limit)
                     const plain = { ...init };
                     delete plain.signal;
-                    if (!e && isAzure(api, u, route, init.body) && disk[azureId(key)]) {
+                    const azure = isAzure(api, u, route, init.body);
+                    if (!e && azure && paid(disk[azureId(key)]?.reply)) {
                         // (asked before this worker started: kept on disk)
                         e = cachePut(key, { url: u, init: plain, at: now(), reply: disk[azureId(key)].reply, judged: false, ok: false, okLike: false, fails: 0, ttl: okAge(api, parse(init.body)), azure: true, pending: null, told: null });
                     }
@@ -571,13 +621,16 @@ export async function naStatus({ root = '', send = null, now = () => performance
                         // (the first time for this key: waited for, as the browser waits for its connect)
                         out.fetched = true;
                         out.waited = true;
-                        const reply = await ask(send, u, plain, timeoutMs);
-                        e = cachePut(key, { url: u, init: plain, at: now(), reply, judged: false, ok: false, okLike: false, fails: 0, ttl: okAge(api, parse(init.body)), azure: isAzure(api, u, route, init.body), pending: null, told: null });
+                        // (Azure: not cut off at the time limit — SillyTavern may be in the paid check —: this job goes on without it, the answer is kept when it comes)
+                        const asking = ask(send, u, plain, azure ? null : timeoutMs);
+                        const reply = azure ? await waitAtMost(asking, timeoutMs) : await asking;
+                        e = cachePut(key, { url: u, init: plain, at: now(), reply: reply ?? TIMED_OUT(), judged: false, ok: false, okLike: false, fails: 0, ttl: okAge(api, parse(init.body)), azure, pending: null, told: null });
                         if (u !== route) judgeSide(e);
-                        if (e.azure) await azureSave(root, key, reply);
+                        if (azure && !reply) behind(e, key, asking);
+                        else if (azure) await azureSave(root, key, reply);
                     } else {
                         e.init = plain;
-                        if (!fresh(e, now())) refresh(e);
+                        if (!fresh(e, now())) refresh(e, key);
                     }
                 }
                 const reply = mode === 'good' && u === route ? e?.good : e?.reply;
