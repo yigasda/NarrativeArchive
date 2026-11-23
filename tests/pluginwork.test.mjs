@@ -12,12 +12,10 @@ import { startAuto } from '../plugin/host.mjs';
 import { splitLive, joinLive } from '../src/phone2keep.js';
 import { startFresh, startFromStory, putLivePhone, ensureRoom, sendLive, liveWorld, enqueueJob } from '../src/phone2store.js';
 import { buildKit, putKit } from '../src/phone2kit.js';
-import * as SP from '../src/stprofile.js';
-import { fakeSt } from './stfake.mjs';
-import { fakeBridge, stCard, chatFile, cardPng } from './stbridge.mjs';
-// (the request template is made by the real ai.js, as the browser makes it: that file needs the do-nothing screen to load)
+import { stProfileRequest, stGenerationParameters, REPLY_CUSTOM } from './stfake.mjs';
+import { fakeBridge, stCard, chatFile, cardPng, stUserDirs } from './stbridge.mjs';
+// (the same do-nothing screen the worker runs under: the expected requests — tests/stfake.mjs — are made in the same globals)
 await import('../plugin/screen.mjs');
-const AI = await import('../src/ai.js');
 
 const listen = handler => new Promise(ok => { const s = http.createServer(handler); s.listen(0, '127.0.0.1', () => ok(s)); });
 const bodyOf = req => new Promise(ok => { let b = ''; req.on('data', c => (b += c)); req.on('end', () => { try { ok(JSON.parse(b || 'null')); } catch { ok(b); } }); });
@@ -33,7 +31,7 @@ const MESSAGES = () => [said('Mara', 'hello there'), said('Ren', 'hi', true), sa
 const PERSONAS = { personas: { 'ren.png': 'Ren', 'varo.png': 'Varo' }, persona_descriptions: { 'ren.png': { description: 'Ren is a student.' }, 'varo.png': { description: 'Varo is a pilot.' } } };
 
 // 세계 하나: Ren(나)과 Mara의 방. Ren이 7시간 전에 말했고 Mara가 바로 답했어요. 먼저 말 걸기 켬
-function world({ story = false, schedule = null, kit = true, st = null, pt = null, levels = null, members = ['Mara'], hoursAgo = 7, version = VERSION, browser = BROWSER() } = {}) {
+function world({ story = false, schedule = null, kit = true, members = ['Mara'], hoursAgo = 7, version = VERSION, browser = BROWSER() } = {}) {
     const m = {};
     if (story) { startFromStory(m, { persona: 'Ren', upto: 3, now: Date.now() - 10 * 3600_000 }); liveWorld(m).snap = { v: 1, at: 1, upto: 3, text: '## #0–#3 — start\n- they met at the bakery\n', recent: ['[#3] Mara: see you'], made: { from: 0, to: 3, count: 4, parts: 1 } }; }
     else startFresh(m, { persona: 'Ren', now: Date.now() - 10 * 3600_000 });
@@ -42,30 +40,38 @@ function world({ story = false, schedule = null, kit = true, st = null, pt = nul
     sendLive(m, room.id, 'hey', at);
     room.messages.push({ id: 't2', n: 2, from: members[0], text: 'hi', at: at + 60_000 });
     w.presence = { on: true, schedules: schedule ? { mara: schedule } : {}, overrides: {}, meta: {}, user: {} };
-    if (kit) { const k = buildKit(browser, m, { version }); k.st = st || {}; if (pt) k.pt = pt; if (levels) k.levels = levels; putKit(m, k); }
+    if (kit) putKit(m, buildKit(browser, m, { version }));
     return { m, w, room, id: `${w.id}:${room.id}` };
 }
 
 // 한 판: 임시 사용자 폴더 + 저장 + 가짜 모델 + 가짜 다리 + 일꾼
-async function stage(t, { settings = {}, cm = null, more = {}, files = {}, reply = () => ({ reply: ['you there?'], status: '' }), bridge = true, schedule = false, code = null, merge = 200, oldBridge = false, avatarsStatus = 200 } = {}) {
+//   routes(req, body, res) → true면 다리의 그 요청은 거기서 끝 (로짓 바이어스 · 토크나이저 같은 실리 서버의 길)
+async function stage(t, { settings = {}, cm = null, more = {}, files = {}, reply = () => ({ reply: ['you there?'], status: '' }), bridge = true, schedule = false, code = null, merge = 200, oldBridge = false, avatarsStatus = 200, routes = null } = {}) {
     const root = await mkdtemp(path.join(tmpdir(), 'na-work-'));
+    // (SillyTavern's user folders, as it makes them for a user: the worker reads the preset folders each job)
+    await stUserDirs(root);
     const asked = [];
     const model = await listen(async (req, res) => { const body = await bodyOf(req); asked.push({ url: req.url, auth: req.headers.authorization, body }); const a = await reply(body); if (a?.httpStatus) { res.statusCode = a.httpStatus; res.end(JSON.stringify({ error: { message: a.error || 'no' } })); return; } res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ choices: [{ message: { content: typeof a === 'string' ? a : JSON.stringify(a) }, finish_reason: 'stop' }], usage: { prompt_tokens: 1, completion_tokens: 1 } })); });
     const cards = [card('Mara'), card('Ivo')];
     const br = bridge ? await fakeBridge({ cards: () => cards, avatars: () => ['ren.png', 'varo.png'], more: async (req, body, res) => {
+        if (routes && await routes(req, body, res)) return true;
         if (req.url === '/api/backends/chat-completions/generate') { res.end(JSON.stringify({ choices: [{ message: { content: JSON.stringify(await reply(body)) }, finish_reason: 'stop' }] })); return true; }
         if (req.url === '/api/characters/merge-attributes' && merge !== 200) { res.statusCode = merge; res.end('{}'); return true; }
         if (req.url === '/api/avatars/get' && avatarsStatus !== 200) { res.statusCode = avatarsStatus; res.end('{}'); return true; }
         // (an older plugin's bridge: these ways are not open — plugin/bridge.mjs allowed() answers 404)
         if (oldBridge && ['/api/characters/all', '/api/characters/get', '/api/avatars/get'].includes(req.url)) { res.statusCode = 404; res.end('{}'); return true; }
         // (a text-completion backend that runs on past its answer: SillyTavern cuts the stop sequence off — custom-request.js 331–382)
-        if (req.url === '/api/backends/text-completions/generate') { res.end(JSON.stringify({ choices: [{ text: `${JSON.stringify(await reply(body))}\n### Instruction: and more` }] })); return true; }
+        if (req.url === '/api/backends/text-completions/generate') { res.end(JSON.stringify({ choices: [{ text: tcText(await reply(body)) }] })); return true; }
         return false;
     } }) : null;
     const st = br ? br.seen : [];
     const url = `http://127.0.0.1:${model.address().port}/v1`;
-    await writeFile(path.join(root, 'settings.json'), JSON.stringify({ main_api: 'openai', user_avatar: 'ren.png', power_user: { ...PERSONAS }, oai_settings: { reverse_proxy: 'https://proxy.example', proxy_password: 'PW-SECRET' }, extension_settings: { connectionManager: cm || { profiles: [{ id: 'p1', name: 'My profile', api: 'openai', model: 'x' }] }, narrative_archive: { draftConn: { mode: 'custom', url, key: 'MODEL-KEY', model: 'fake-model' }, ...settings } }, ...more }));
-    for (const [f, v] of Object.entries(files)) { await mkdir(path.dirname(path.join(root, f)), { recursive: true }); await writeFile(path.join(root, f), JSON.stringify(v)); }
+    // (SillyTavern's settings.json: written again by a test that changes something in SillyTavern between two jobs)
+    const stSettings = { main_api: 'openai', user_avatar: 'ren.png', power_user: { ...PERSONAS }, oai_settings: { reverse_proxy: 'https://proxy.example', proxy_password: 'PW-SECRET' }, extension_settings: { connectionManager: cm || { profiles: [{ id: 'p1', name: 'My profile', api: 'openai', model: 'x' }] }, narrative_archive: { draftConn: { mode: 'custom', url, key: 'MODEL-KEY', model: 'fake-model' }, ...settings } }, ...more };
+    const writeSettings = (v = stSettings) => writeFile(path.join(root, 'settings.json'), JSON.stringify(v, null, 4));
+    await writeSettings();
+    const writeFiles = async fs => { for (const [f, v] of Object.entries(fs)) { await mkdir(path.dirname(path.join(root, f)), { recursive: true }); if (v === null) await rm(path.join(root, f), { force: true }); else await writeFile(path.join(root, f), JSON.stringify(v, null, 4)); } };
+    await writeFiles(files);
     // (SillyTavern's chat file of the example chat: the server runs an Orbit only while its chat is there)
     const chatAt = path.join(root, 'chats', 'mara', 'Mara - 2026-11-22.jsonl'), writeChat = (meta = {}, messages = MESSAGES()) => writeFile(chatAt, chatFile(meta, messages));
     await mkdir(path.join(root, 'chats', 'mara'), { recursive: true }); await writeChat();
@@ -80,7 +86,7 @@ async function stage(t, { settings = {}, cm = null, more = {}, files = {}, reply
     const get = async sid => liveWorld({ live: joinLive((await store.load(sid)).parts) });
     const check = id => auto.inject('/api/conversation/autonomous/check', { chatId: id, userStatus: 'idle', maxFollowups: 2, source: 'server' });
     const gen = (id, more = {}) => auto.inject('/api/generate', { chatId: id, connectionId: null, forCharacterId: 'mara', streaming: false, userStatus: 'idle', userActivity: 'away or offline', autonomous: true, skipPresenceDelay: true, autonomousIntentKey: 'check_in', ...more });
-    return { root, store, auto, asked, st, put, get, check, gen, url, cards, writeChat, closeBridge: done => (br ? br.close(done) : done()) };
+    return { root, store, auto, asked, st, put, get, check, gen, url, cards, writeChat, stSettings, writeSettings, writeFiles, closeBridge: done => (br ? br.close(done) : done()) };
 }
 const textOf = body => body.messages.map(x => (typeof x.content === 'string' ? x.content : x.content.map(p => p.text || '').join(''))).join('\n');
 

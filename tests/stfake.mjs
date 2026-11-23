@@ -1,62 +1,59 @@
-// 테스트용 실리 대역: 연결 프로필의 요청을 실리 코드가 만드는 순서 그대로 만들어요 (실리 1.19.1:
-//   shared.js ConnectionManagerRequestService.sendRequest 423–492 → custom-request.js createRequestData · processRequest ·
-//   presetToGeneratePayload → openai.js createGenerationParameters의 일부 · instruct-mode.js formatInstructModeChat · formatInstructModePrompt).
-// 진짜 실리 코드로는 tools/plugin/stbrowser.cjs가 확인해요. 여기서는 src/stprofile.js가 받아 두는 것 · 서버가 채우는 것을 대 봐요.
-//   random: 요청마다 달라지는 값 · mangle: 실리가 메시지를 고쳐 보내는 모델 (o1) · counted: 글의 길이가 들어간 글 완성 요청
-import { PT_URL, extractMessageFromData } from '../src/stprofile.js';
+// 테스트용 실리 쪽 (기대값): 서버 일꾼이 쓰는 옮긴 실리 코드(plugin/st, 실리 1.19.1 브라우저 코드 그대로)를 이 프로세스에서 일꾼과 같은 상태로 돌려서,
+// 실리 브라우저가 이 채팅을 열고 보낼 요청을 만들어요. 일꾼은 다른 스레드라 모듈이 따로예요: 여기서 채운 것이 일꾼에 새지 않아요.
+//   상태: 사용자 폴더의 settings.json · 프리셋 폴더(실리처럼 그때 읽어요) + 이 채팅의 이름 · 채팅 값(chat_metadata) · 페르소나 설명
+//   보내는 것은 잡기만 해요(다리 없음). 생성 요청이 아닌 길(로짓 바이어스 · 토크나이저)은 answer(url, init) → Response
+// 실리 코드 자체가 실리 브라우저와 같은지는 tests/stprofile2.test.mjs · tests/stopenai.test.mjs가 진짜 실리 브라우저의 기록(tests/fixtures)으로 봐요.
+// 예시 캐릭터만 써요.
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+// (naload.js first: it loads power-user.js before script.js, SillyTavern's own order)
+import { naLoad, naLoadPresets, naSendRequest } from '../plugin/st/naload.js';
+import * as SCRIPT from '../plugin/st/public/script.js';
+import * as GROUPS from '../plugin/st/public/scripts/group-chats.js';
+import { power_user } from '../plugin/st/public/scripts/power-user.js';
+import * as OAI from '../plugin/st/public/scripts/openai.js';
+import { variables } from '../plugin/st/public/scripts/st-context.js';
+import { __naSetFetch, naFetchFailures } from '../plugin/st/public/naFetch.js';
 
-const clean = o => { for (const k of Object.keys(o)) if (o[k] === undefined) delete o[k]; return o; };
-const SRC = { openrouter: 'openrouter', custom: 'custom', claude: 'claude', deepseek: 'deepseek' };
+export const GENERATE = ['/api/backends/chat-completions/generate', '/api/backends/text-completions/generate'];
+// (what a reply's request asks of a connection profile: phone2go.js askRoom → ConnectionManagerRequestService.sendRequest)
+export const REPLY_CUSTOM = { stream: false, extractData: true, includePreset: true, includeInstruct: true };
 
-export function fakeSt({ profiles = [], oai = {}, presets = {}, tcPresets = {}, instructs = {}, proxies = [], name1 = 'Ren', name2 = 'Mara', random = false, mangle = false, counted = false } = {}) {
-    const sub = s => String(s ?? '').replaceAll('{{user}}', name1).replaceAll('{{char}}', name2);
-    // (instruct-mode.js formatInstructModeChat · formatInstructModePrompt, for wrap: true, names never, no macros)
-    const chat = (role, mes, ins) => { const pre = role === 'system' ? ins.system_sequence : role === 'user' ? ins.input_sequence : ins.output_sequence; const suf = (role === 'system' ? ins.system_suffix : role === 'user' ? ins.input_suffix : ins.output_suffix) || '\n'; return [pre, mes + suf].filter(x => x).join('\n'); };
-    const last = ins => `${ins.output_sequence}\n`;
-    function build(profileId, prompt, maxTokens, over = {}) {
-        const profile = profiles.find(p => p.id === profileId);
-        if (!profile) throw new Error(`Profile not found (ID: ${profileId})`);
-        if (profile.mode !== 'tc') {
-            const proxy = proxies.find(p => p.name === profile.proxy);
-            const messages = Array.isArray(prompt) ? prompt : [{ role: 'user', content: prompt }];
-            let req = clean({ stream: false, messages, max_tokens: maxTokens, model: profile.model, chat_completion_source: SRC[profile.api], secret_id: profile['secret-id'], custom_url: profile['api-url'], reverse_proxy: proxy?.url, proxy_password: proxy?.password, custom_prompt_post_processing: profile['prompt-post-processing'], ...over });
-            req = clean({ use_sysprompt: true, ...req });
-            const preset = profile.preset ? presets[profile.preset] : undefined;
-            if (preset) {
-                const s = { ...oai, ...preset };
-                for (const f of ['custom_url', 'vertexai_region']) req[f] = req[f] || s[f] || oai[f];
-                const gd = { type: 'quiet', messages: req.messages, model: req.model, temperature: Number(s.temp_openai), max_tokens: s.openai_max_tokens, stream: false, chat_completion_source: s.chat_completion_source, user_name: name1, char_name: name2, include_reasoning: !!s.show_thoughts, reasoning_effort: s.reasoning_effort };
-                if (s.reverse_proxy) { gd.reverse_proxy = s.reverse_proxy; gd.proxy_password = s.proxy_password; }
-                if (s.chat_completion_source === 'custom') { gd.custom_url = s.custom_url; gd.custom_include_headers = sub(s.custom_include_headers); }
-                if (random) gd.seed = Math.floor(Math.random() * 1e9);
-                if (mangle) gd.messages = gd.messages.map(m => (m.role === 'system' ? { ...m, role: 'user' } : m));
-                req = clean({ use_sysprompt: true, ...gd, ...req, messages: gd.messages });
-            }
-            return { url: PT_URL.cc, body: req };
-        }
-        const ins = profile.instruct ? instructs[profile.instruct] : undefined;
-        let text = prompt, stops;
-        if (Array.isArray(prompt)) {
-            if (ins) { text = prompt.map(m => chat(m.role, m.content, ins)).join('') + last(ins); stops = [`\n${ins.stop_sequence}`, `\n${ins.input_sequence}`]; }
-            else text = prompt.map(x => x.content).join('\n\n');
-        }
-        if (counted) text = `[${text.length} chars]\n${text}`;   // (a prompt that changes with the text's length)
-        let req = clean({ stream: false, prompt: text, max_tokens: maxTokens, max_new_tokens: maxTokens, model: profile.model, api_type: profile.api, api_server: profile['api-url'], secret_id: profile['secret-id'], ...over });
-        if (stops) { req.stop = stops; req.stopping_strings = stops; }
-        const preset = profile.preset ? tcPresets[profile.preset] : undefined;
-        if (preset) req = clean({ prompt: text, model: req.model, max_new_tokens: preset.genamt, max_tokens: preset.genamt, temperature: preset.temp, stopping_strings: [`\n${name1}:`], stop: [`\n${name1}:`], n_predict: preset.genamt, truncation_length: 8192, api_type: profile.api, ...(random ? { seed: Math.random() } : {}), ...req });
-        return { url: PT_URL.tc, body: req };
-    }
-    // SillyTavern's sendRequest, non-streaming, extractData (what our code calls)
-    async function sendRequest(profileId, prompt, maxTokens, custom = {}, over = {}) {
-        const { url, body } = build(profileId, prompt, maxTokens, over);
-        try {
-            const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, cache: 'no-cache', body: JSON.stringify(body), signal: custom.signal ?? new AbortController().signal });
-            const json = await r.json();
-            if (!r.ok || json.error) throw new Error(String(json.error?.message || 'Response not OK'));
-            return { content: extractMessageFromData(json, url === PT_URL.cc ? 'openai' : 'textgenerationwebui'), reasoning: '' };
-        } catch (error) { throw new Error('API request failed', { cause: error }); }
-    }
-    const find = { proxy: name => proxies.find(p => p.name === name) || null, preset: (api, name) => (api === 'openai' ? presets : tcPresets)[name], instruct: name => instructs[name], oai };
-    return { build, sendRequest, find };
+// state: { name1, name2, chat_metadata, persona } — SillyTavern's page with this chat open (plugin/work.mjs withWorld sets the same)
+async function load(root, { name1 = 'Ren', name2 = 'Mara', chat_metadata = {}, persona = '' } = {}) {
+    const settings = JSON.parse(await readFile(path.join(root, 'settings.json'), 'utf8'));
+    naLoad(settings, await naLoadPresets(root));
+    SCRIPT.__naSet({ name1, name2, characters: [], this_chid: undefined, chat: [], chat_metadata: structuredClone(chat_metadata) });
+    GROUPS.__naSet({ groups: [], selected_group: null });
+    power_user.persona_description = persona;
+}
+// reply: the generate route's answer (a JSON object) · answer(url, init) → Response for the other routes (none: 404)
+async function capture({ reply = null, answer = null } = {}, fn) {
+    const sent = [];
+    __naSetFetch(async (url, init = {}) => {
+        let body = init.body;
+        try { body = JSON.parse(init.body); } catch { /* not JSON */ }
+        sent.push({ url, body });
+        if (GENERATE.includes(url)) return new Response(JSON.stringify(reply ?? { choices: [{ message: { content: '' } }] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        return answer ? answer(url, init) : new Response('{}', { status: 404 });
+    });
+    // (the variable macros {{.x}} · {{$x}} read SillyTavern.getContext().variables while running — in the worker, its context)
+    const had = globalThis.SillyTavern;
+    globalThis.SillyTavern = { getContext: () => ({ variables }) };
+    try {
+        const out = await fn();
+        return { sent, generate: sent.filter(x => GENERATE.includes(x.url)), out, failures: naFetchFailures.map(f => ({ ...f })) };
+    } finally { globalThis.SillyTavern = had; __naSetFetch(null); }
+}
+
+/** 연결 프로필 요청: 실리 ConnectionManagerRequestService.sendRequest (plugin/st/naload.js naSendRequest) → { sent, generate, out, failures } */
+export async function stProfileRequest(root, state, { profileId, messages, maxTokens = 4000, custom = REPLY_CUSTOM, over = undefined, reply = null, answer = null }) {
+    await load(root, state);
+    return capture({ reply, answer }, () => naSendRequest(profileId, structuredClone(messages), maxTokens, { ...custom }, over === undefined ? undefined : structuredClone(over)));
+}
+
+/** 실리 연결 방식 요청: 실리 openai.js createGenerationParameters(settingsOf(oai_settings), model, 'quiet', messages) → { generate_data, … } */
+export async function stGenerationParameters(root, state, { settingsOf, model, messages, answer = null }) {
+    await load(root, state);
+    return capture({ answer }, () => OAI.createGenerationParameters(settingsOf(structuredClone(OAI.oai_settings)), model, 'quiet', structuredClone(messages)));
 }

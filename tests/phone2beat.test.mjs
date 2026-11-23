@@ -10,7 +10,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { openStore, StoreError } from '../plugin/store.mjs';
 import { startAuto } from '../plugin/host.mjs';
-import { fakeBridge, stCard, chatFile } from './stbridge.mjs';
+import { fakeBridge, stCard, chatFile, stUserDirs } from './stbridge.mjs';
 const { setContext } = await import('../plugin/screen.mjs');
 // (the browser's page: whether the tab is hidden is ours to say here)
 const page = { hidden: false, events: [], details: [], addEventListener() {}, dispatchEvent(e) { this.events.push(e?.type); if (e?.detail) this.details.push(e.detail); return true; }, querySelectorAll: () => [] };
@@ -29,6 +29,7 @@ const bodyOf = req => new Promise(ok => { let b = ''; req.on('data', c => (b += 
 
 test('브라우저와 서버 일꾼이 번갈아: 가려진 동안 서버가 건 말을 다시 보일 때 받고, 또 걸지 않아요. 읽으면 안 읽음 표시가 지워져요', async t => {
     const root = await mkdtemp(path.join(tmpdir(), 'na-beat-'));
+    await stUserDirs(root);   // (SillyTavern's user folders: the worker reads the preset folders each job)
     const asked = [];
     const model = await listen(async (req, res) => { asked.push(await bodyOf(req)); res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ choices: [{ message: { content: JSON.stringify({ reply: ['you there?'], status: '' }) }, finish_reason: 'stop' }] })); });
     const conn = { mode: 'custom', url: `http://127.0.0.1:${model.address().port}/v1`, key: 'K', model: 'fake-model' };

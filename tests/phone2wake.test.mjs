@@ -10,7 +10,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { openStore, StoreError } from '../plugin/store.mjs';
 import { startAuto } from '../plugin/host.mjs';
-import { fakeBridge, stCard, chatFile } from './stbridge.mjs';
+import { fakeBridge, stCard, chatFile, stUserDirs } from './stbridge.mjs';
 import { soundStore, SoundError } from '../plugin/sound.mjs';
 const { setContext } = await import('../plugin/screen.mjs');
 const page = { hidden: false, events: [], details: [], addEventListener() {}, dispatchEvent(e) { this.events.push(e?.type); if (e?.detail) this.details.push(e.detail); return true; }, querySelectorAll: () => [] };
@@ -32,6 +32,7 @@ const until = async (f, ms = 5000) => { const end = Date.now() + ms; while (!f()
 // 한 판: 실리 폴더 · 저장 · 일꾼 · 가짜 모델 · 브라우저의 채팅 하나 (Ren과 Mara, 먼저 말 걸기 꺼짐: 늦은 답장만 봐요)
 async function stage(t, { hoursAgo = 1 } = {}) {
     const root = await mkdtemp(path.join(tmpdir(), 'na-wake-'));
+    await stUserDirs(root);   // (SillyTavern's user folders: the worker reads the preset folders each job)
     const asked = [];
     let gate = null;
     const model = await listen(async (req, res) => {

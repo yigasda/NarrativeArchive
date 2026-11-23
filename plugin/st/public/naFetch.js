@@ -2,6 +2,7 @@
 // 실리 브라우저가 그 길로 보내는 것과 같은 요청이 실리 서버 자신의 처리기로 가요(예: 로짓 바이어스의 /api/backends/chat-completions/bias).
 // 실리 코드가 실패를 삼키는 자리가 있어서(openai.js calculateLogitBias는 실패하면 바이어스 없이 보내요) 실패한 길은 적어 둬요: 일꾼이 그 요청을 보내지 않고 이유를 알려요.
 let send = null;
+const GENERATE = ['/api/backends/chat-completions/generate', '/api/backends/text-completions/generate'];
 export const naFetchFailures = [];
 export function __naSetFetch(fn) { send = typeof fn === 'function' ? fn : null; naFetchFailures.length = 0; ajaxAnswers.clear(); naAjaxPending.length = 0; }
 // 실패는 모두 naFetchFailures에 적어요(실리 코드가 그 자리에서 삼켜도 일꾼이 보고 요청을 멈출 수 있게):
@@ -11,6 +12,9 @@ export async function naFetch(url, init = {}) {
     const u = String(url);
     if (naAjaxPending.length) { naFetchFailures.push({ url: u, status: 0, reason: 'wait' }); throw new NaAjaxWait(); }
     if (!send) { naFetchFailures.push({ url: u, status: 0 }); throw new Error('실리 서버에 연결할 수 없습니다.'); }
+    // (a model request after a failure the SillyTavern code swallowed — the bias or banned tokens could not be had —: not sent at all.
+    //  The browser never gets that far without them: the request would differ from SillyTavern's and still cost a model call)
+    if (GENERATE.some(g => u.startsWith(g)) && naFetchFailures.length) throw new Error('실리 서버 요청에 실패해서 모델 요청을 보내지 않았습니다.');
     let r;
     try { r = await send(u, init); } catch (err) { naFetchFailures.push({ url: u, status: 0, reason: String(err?.message || err) }); throw err; }
     if (!r.ok) naFetchFailures.push({ url: u, status: r.status });

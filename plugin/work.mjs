@@ -70,7 +70,15 @@ export async function startWork({ root, store, st = null, schedule = true, from 
     }
     const stProfiles = {
         getSupportedProfiles: () => STL.ConnectionManagerRequestService.getSupportedProfiles(),
-        async sendRequest(...args) { STP.fetch.naFetchFailures.length = 0; const out = await STL.naSendRequest(...args); stFailed(); return out; },
+        async sendRequest(...args) {
+            // (streaming: SillyTavern would send the model request and read it as it comes — the server reads whole answers only.
+            //  Refused before anything is sent. Our callers never ask for it)
+            if (args[3]?.stream) throw new Error('서버에서는 스트리밍을 지원하지 않습니다.');
+            STP.fetch.naFetchFailures.length = 0;
+            const out = await STL.naSendRequest(...args);
+            stFailed();
+            return out;
+        },
     };
     // (src/ai.js reads SillyTavern's openai.js through globalThis.__naStOpenai: its oai_settings and createGenerationParameters)
     const stOpenai = {

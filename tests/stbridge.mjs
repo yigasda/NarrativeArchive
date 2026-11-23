@@ -30,6 +30,15 @@ export async function fakeBridge({ cards = () => [], avatars = () => [], more = 
     });
     return { url: `http://127.0.0.1:${server.address().port}`, token: TOKEN, seen, close: done => { server.close(done); server.closeAllConnections?.(); } };
 }
+// 실리 사용자 폴더의 폴더들 (실리 1.19.1 src/constants.js USER_DIRECTORY_TEMPLATE: 실리가 사용자를 만들 때 다 만들어 둬요).
+// 일꾼은 일마다 프리셋 폴더를 실리처럼 읽어요(plugin/st/naload.js naLoadPresets): 실리 서버처럼 폴더가 없으면 오류예요
+export const ST_USER_DIRS = ['thumbnails', 'thumbnails/bg', 'thumbnails/avatar', 'thumbnails/persona', 'worlds', 'user', 'User Avatars', 'user/images', 'groups', 'group chats', 'chats', 'characters', 'backgrounds',
+    'NovelAI Settings', 'KoboldAI Settings', 'OpenAI Settings', 'TextGen Settings', 'themes', 'movingUI', 'extensions', 'instruct', 'context', 'QuickReplies', 'assets', 'user/workflows', 'user/files', 'vectors', 'backups', 'sysprompt', 'reasoning'];
+export async function stUserDirs(root) {
+    const { mkdir } = await import('node:fs/promises');
+    const { join } = await import('node:path');
+    for (const d of ST_USER_DIRS) await mkdir(join(root, d), { recursive: true });
+}
 // 실리 채팅 파일의 글: 헤더 줄 + 메시지 줄들 (chat_metadata: 헤더의 것)
 export const chatFile = (chat_metadata = {}, messages = []) => [{ chat_metadata, user_name: 'unused', character_name: 'unused' }, ...messages].map(x => JSON.stringify(x)).join('\n');
 // 실리가 쓰는 카드 PNG: tEXt 조각마다 이름, 0, JSON의 base64 (다리 없이 카드 폴더를 읽는 테스트용)

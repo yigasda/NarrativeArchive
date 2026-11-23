@@ -28,6 +28,8 @@ import { uuidv4 } from './public/scripts/utils.js';
 
 export { ConnectionManagerRequestService };
 
+// script.js의 max_context 처음 값 (settings.json에 없을 때 실리 페이지가 쓰는 값)
+const MAX_CONTEXT_START = SCRIPT.max_context;
 const obj = v => !!v && typeof v === 'object' && !Array.isArray(v);
 
 // 페이지를 열 때 한 번 하는 것 (실리 script.js firstLoadInit 694~):
@@ -400,7 +402,8 @@ export function naLoad(settings, data) {
     // script.js 7935: accountStorage.init(settings?.accountStorage)
     ACC.__naSet({ accountStorage: settings.accountStorage });
     // script.js 7943~7945: amount_gen · max_context
-    SCRIPT.__naSet({ amount_gen: settings.amount_gen, ...(settings.max_context !== undefined ? { max_context: parseInt(settings.max_context) } : {}) });
+    // (max_context: kept as it was when settings.json has none — on the server, as the page starts: SillyTavern's own starting value, not the last job's)
+    SCRIPT.__naSet({ amount_gen: settings.amount_gen, max_context: settings.max_context !== undefined ? parseInt(settings.max_context) : MAX_CONTEXT_START });
 
     if (data) {
         // script.js 7952 loadKoboldSettings · 7955 loadNovelSettings의 프리셋 목록 부분 (kai-settings.js 98~110, nai-settings.js 216~229)

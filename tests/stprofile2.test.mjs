@@ -29,12 +29,12 @@ for (const c of CASES) {
     });
 }
 
-test('토큰 답을 받는 길이 실패하면(옛 다리 404) 적어 두고, 실리처럼 그 토큰 없이 만들어요 (일꾼이 보내지 않게)', async () => {
+test('토큰 답을 받는 길이 실패하면(옛 다리 404) 적어 두고, 모델 요청은 아예 보내지 않아요 (실리는 그 토큰 없이 보내지만, 그건 실리 브라우저와 다른 요청이에요)', async () => {
     const c = CASES.find(x => x.id === 'tc-banned-global');
     const got = await runCase(c, async () => new Response('Not Found', { status: 404 }));
-    // (SillyTavern's jQuery.ajax calls success only for a 2xx JSON answer: without it the tokens are just missing)
-    assert.equal(got.gen.length, 1);
-    assert.equal(got.gen[0].body.custom_token_bans, '7,8');
+    // (SillyTavern's jQuery.ajax calls success only for a 2xx JSON answer: without it the tokens would just be missing — naFetch stops the model request)
+    assert.equal(got.gen.length, 0);
+    assert.match(String(got.ret?.cause || got.ret?.error || ''), /모델 요청을 보내지 않았습니다/);
     assert.deepEqual(failures().map(f => [f.url, f.status]), [['/api/tokenizers/llama/encode', 404]]);
 });
 
