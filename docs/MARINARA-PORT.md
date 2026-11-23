@@ -149,7 +149,7 @@
 | services/conversation/impersonate-prompt.ts | 107 | 아직 | | 내 답 대신 써 주기 |
 | services/conversation/conversation-profiles.ts | 186 | 아직 | | 표시 이름 · 소개글 · 메신저 말투 |
 | services/conversation/awareness.service.ts | 349 | 아직 | | 다른 방 일 알기 |
-| services/conversation/auto-summary.service.ts | 593 | 아직 | (우리 대화 요약: src/phone2digest.js) | |
+| services/conversation/auto-summary.service.ts | 593 | 아직 | (우리 대화 요약: src/phone2digest.js) | 소망 2026-11-23: 마리나라 것으로 통째로 바꿔요("꼭 할 것") |
 | routes/generate/conversation-connected-context.ts | 246 | 아직 | (우리: 롤플에 전하기 src/phone2back.js) | 롤플 채팅과 잇기 |
 
 ## 그림 · 소리 · 스티커
@@ -183,6 +183,8 @@
 - 생성 연결 고르기, 생성 중지가 요청을 끊기, 방 전체 설정(하루 상한 · 상한 같이 쓰기 · 캐릭터끼리 주고받기)
 
 ## 꼭 할 것 (소망이 "나중에 꼭 하셈"이라고 한 것, 2026-11-21)
+
+- [ ] **채팅 요약을 마리나라 것으로 통째로 바꾸기 (코드 · 지시문 다, 우리 `phone2digest.js`는 안 써요).** (소망, 2026-11-23: "마리나라 채팅 요약 기능 꽤 좋더라 걍 마리나라 채팅 요약 관련 코드랑 지시문 통째로 가져오는 게 나을 듯 우리꺼 쓰지 말고".) 마리나라 쪽: `services/conversation/auto-summary.service.ts`(593) · 그걸 부르는 `routes/chats.routes.ts` · `routes/conversation.routes.ts` · `routes/generate.routes.ts` · `routes/generate/conversation-history-runtime.ts` · 저장 모양(`shared/types/chat.ts` · `chat-preset.ts` · `schemas/chat.schema.ts`) · 화면(`ChatSettingsDrawer.tsx` · `SummariesEditorModal.tsx` · `use-chats.ts`: 디자인 세션). 먼저 이 기능에 딸린 코드를 다 찾아 끝까지 읽고, 다른 데 · 빠진 데를 이 표에 적어요. 서버 일꾼에서도 같은 코드가 돌게(브라우저 · 서버 같은 코드). 순서: 6~9(서버가 실리 요청을 직접 만들기) 다음.
 
 - [ ] **실리태번의 연결 종류를 그대로 쓰는 방식을 확장의 모든 모델 칸에 넣기 (화면).** (소망, 2026-11-22: "지금 실리연결이 뭐든간에 그대로 가져오되 모델 불러오고 연결하는 기능 이 확장의 모든 모델관련 구간에 넣으셈 폰이든 아카이브든".) 코드는 됐어요(`src/ai.js`: 연결 방식 `source` — `stSourceList` · `stSourceModels` · `callStSource`, 키와 설정은 실리태번 것 그대로). 남은 것은 화면이에요: 확장 패널 · 폰 설정의 AI 모델 · 초안 모델 · 번역 모델 칸에 "연결 종류 고르기 + 모델 불러오기"를 붙이는 것(디자인 세션). 실제 실리태번에서 종류마다 돌려 보는 것도 남았어요.
 - [x] **추론 레벨을 폰에서 정하기.** (소망, 2026-11-22.) `liveReasoning` · `liveSetReasoning`: 방마다 또는 Orbit 전체. 화면은 디자인 세션.
