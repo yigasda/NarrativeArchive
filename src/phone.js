@@ -53,8 +53,7 @@ if (typeof document !== 'undefined' && !globalThis.__naAutoHeard) { globalThis._
         playConfiguredNotificationPing(N.sound, N.unfocused);
         for (const r of rooms) { const name = r.by?.[0] || '누군가';
             nbAdd(r.room, name);
-            void showLocalMessageNotification({ enabled: N.browser, characterName: name, title: `${name}님의 새 메시지`, tag: `na-orbit-${r.room}` });
-            if (!phonesOpen) toastr.info(`${name}님이 메시지를 보냈습니다`, '캐릭터 휴대폰'); } }); }
+            void showLocalMessageNotification({ enabled: N.browser, characterName: name, title: `${name}님의 새 메시지`, tag: `na-orbit-${r.room}` }); } }); }   // (떠 있는 글은 띄우지 않아요: 소망)
 import { drafting, drawing, drawPhoto, drawPost, filling, paging, retranslate, retranslating, recording, searching, searchPage, shooting, webPage, writing } from './phoneai.js';
 import { setDraft, setDraftModels, setLang, setSnap, setVoice, setVoiceAdd, voiceList, voicePeople, ax, axFind, groupInfo, APPS, AXB, AXB_C, busyHtml, setDate, setScreenHolderView, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, mapTowns, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setOwnerProfile, setWho, snsPost, snsScreen, statusBar, threadScreen, setPlace, prepScreen } from './phoneapps.js';
 import { phoneMaking, dropStretch, chatStamp, koGaps, savedName, ensureIds, hasDatedRecords, noArchive, koOn, loreOff, tidyKo, markAfter, phoneLore, REMAKE, restoreRounds, showNow, syncLeft, syncRows, syncState, tidyJournal, undoRound } from './phonedata.js';
@@ -354,15 +353,12 @@ export async function openPhone(who = null) {
         const roomsOf = k => liveRooms(realM).filter(r => r.members.some(n => liveKey(n) === liveKey(k))).map(r => ({ r, last: [...r.messages].reverse().find(seen) })).sort((a, b) => (b.last?.at || 0) - (a.last?.at || 0));
         const view4 = k => {
             const others = r => r.members.filter(n => liveKey(n) !== liveKey(k)), titleOf = r => r.name || others(r).join(', ');
-            // 목록 줄의 둘째 줄 (마리나라 ChatSidebar의 Row liveness): 한 줄만, 입력 중 > 생성 중 > 알림 > 초안. 내 계정의 방만.
-            //   알림 글은 방울이 떠 있는 동안만(방울은 8초 뒤 사라지고 안 읽음 수는 남아요: 수가 오래 남는 신호, 이 글은 누가인지 덧붙임). 보고 있는 방은 알림 · 초안 없음
-            let nbs = null;
+            // 목록 줄의 둘째 줄 (마리나라 ChatSidebar의 Row liveness): 한 줄만, 입력 중 > 생성 중 > 초안. 내 계정의 방만. 보고 있는 방은 초안 없음
+            //   (마리나라의 "○○ replied"는 소망이 뺐어요: 그 자리엔 받은 말을 그대로 보이고, 옆에 안 읽음 수)
             const liveSub = r => { if (liveKey(k) !== liveKey(me)) return null; const active = view === `orbitroom:${r.id}`, jobs = (w.queue?.jobs || []).filter(j => j.room === r.id);
                 const run = jobs.find(j => j.state === 'running'), wait = jobs.find(j => j.state === 'waiting' && !(j.notBefore > Date.now()));
                 if (run) return { t: `${run.owner}님이 입력 중…`, spin: true };
                 if (wait) return { t: '생성 중…', spin: true };
-                const nb = !active && (nbs ||= new Map(obBubUi().map(b => [b.id, b]))).get(r.id);
-                if (nb) return { t: `${nb.name}님이 답장했습니다` };
                 if (!active && draftGet(obDraftKey(r.id)).trim()) return { t: '보내지 않은 초안' };
                 return null; };
             const brief = ({ r, last }) => ({ id: r.id, live: liveSub(r), title: titleOf(r), group: others(r).length > 1, last: last?.text || ((l => (l.length ? (l.every(a => String(a?.type || '').startsWith('image/')) ? '사진' : '파일') + (l.length > 1 ? ` ${l.length}개` : '') : ''))(last?.extra?.attachments || [])), lastWho: last ? (liveKey(last.from) === liveKey(k) ? '나' : others(r).length > 1 ? last.from : '') : '', time: last ? shortAt(last.at) : '', unread: liveKey(k) === liveKey(me) ? unreadOf(r, me) : 0 });
@@ -1250,9 +1246,9 @@ export async function openPhone(who = null) {
         return [...out.values()].filter(b => b.id !== skip && b.id !== obNb.viewing && rooms[b.id]); };
     $(document).off('na-live-auto.naob').on('na-live-auto.naob', e => { if (phoneClosed || !stillHere()) return; const rooms = (e.originalEvent?.detail?.rooms || []).filter(r => r && r.added !== 0); if (!rooms.length) return;
         for (const r of rooms) { const name = r.by?.[0] || '누군가';
-            // (보고 있는 방: 오른쪽 위 띠 5초 — ConversationAutonomousEffects. 다른 방: 방울은 파일 맨 위에서 이미 더했고, 떠 있는 글 — use-background-autonomous의 toast)
-            if (view === `orbitroom:${r.room}` && !document.hidden) { clearTimeout(obBandT); obBand = { name }; obBandT = setTimeout(() => { obBand = null; if (!phoneClosed && stillHere() && String(view).startsWith('orbit')) drawPhone(true); }, 5000); }
-            else toastr.info(`${name}님이 메시지를 보냈습니다`, '캐릭터 휴대폰'); }
+            // (보고 있는 방: 오른쪽 위 띠 5초 — ConversationAutonomousEffects. 다른 방: 방울은 파일 맨 위에서 이미 더했어요.
+            //  마리나라는 떠 있는 글(toast)도 띄우지만 소망이 뺐어요: 하나하나 뜨면 화면을 가려요)
+            if (view === `orbitroom:${r.room}` && !document.hidden) { clearTimeout(obBandT); obBand = { name }; obBandT = setTimeout(() => { obBand = null; if (!phoneClosed && stillHere() && String(view).startsWith('orbit')) drawPhone(true); }, 5000); } }
         if (String(view).startsWith('orbit') && !obBusyUi()) drawPhone(true); });
     // 방울이 8초 지나 저절로 사라졌어요: 다시 그려요
     $(document).off('na-orbit-nb.naob').on('na-orbit-nb.naob', () => obRedraw());
