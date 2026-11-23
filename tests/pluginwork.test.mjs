@@ -69,6 +69,9 @@ async function stage(t, { settings = {}, cm = null, more = {}, files = {}, reply
     // (SillyTavern's chat file of the example chat: the server runs an Orbit only while its chat is there)
     const chatAt = path.join(root, 'chats', 'mara', 'Mara - 2026-11-22.jsonl'), writeChat = (meta = {}, messages = MESSAGES()) => writeFile(chatAt, chatFile(meta, messages));
     await mkdir(path.join(root, 'chats', 'mara'), { recursive: true }); await writeChat();
+    // (SillyTavern's persona pictures: the same as the bridge lists)
+    await mkdir(path.join(root, 'User Avatars'), { recursive: true });
+    for (const f of ['ren.png', 'varo.png']) await writeFile(path.join(root, 'User Avatars', f), 'x');
     const store = openStore(root);
     const auto = startAuto({ root, store, bridge: br ? { url: br.url, token: br.token } : null, schedule, code });
     t.after(async () => { await auto.stop(); model.close(); br?.close(); await rm(root, { recursive: true, force: true }); });
@@ -518,15 +521,22 @@ test('일꾼 · 실리에서 바로: 페르소나 — 그 채팅에서 마지막
     assert.match(text, /\[PERSONA — Ren\]\nRen is a student\./);
 });
 
-test('일꾼 · 실리에서 바로: 그룹 채팅 — 그룹 파일의 사람들로. 실리에서 그룹을 지우면 안 돌려요', async t => {
+test('일꾼 · 실리에서 바로: 그룹 채팅 — 그룹 파일의 사람들 · 그룹에 연결한 페르소나. 실리에서 그룹을 지우면 안 돌려요', async t => {
     const browser = { ...BROWSER(), characterId: undefined, groupId: 'g1', groups: [{ id: 'g1', members: ['mara.png'] }], chatId: 'grp-1' };
-    const S = await stage(t, { files: { 'groups/g1.json': { id: 'g1', members: ['mara.png', 'gone.png'], chat_id: 'grp-1', chats: ['grp-1'] } } }), a = world({ browser });
+    // (그룹 파일에는 Ivo도 있어요: 방에도 없고 폰도 없어요. 그룹에 연결한 페르소나는 Varo)
+    const varo = { description: 'Varo is a pilot.', connections: [{ type: 'group', id: 'g1' }] };
+    const S = await stage(t, { more: { power_user: { ...PERSONAS, persona_descriptions: { ...PERSONAS.persona_descriptions, 'varo.png': varo } } }, files: { 'groups/g1.json': { id: 'g1', members: ['mara.png', 'ivo.png', 'gone.png'], chat_id: 'grp-1', chats: ['grp-1'] } } }), a = world({ browser });
+    S.cards[1].shallow = true;
     await mkdir(path.join(S.root, 'group chats'), { recursive: true }); await writeFile(path.join(S.root, 'group chats', 'grp-1.jsonl'), chatFile({}, MESSAGES()));
     assert.deepEqual(a.m.live.kit.chat, { avatar: null, group: { id: 'g1' }, file: { group: true, dir: null, id: 'grp-1' } });
     await S.put('sa', a.m); await S.auto.list();
     assert.deepEqual((await S.auto.status('sa')).map(x => [x.can, x.why]), [[true, '']]);
     assert.match((await S.gen(a.id)).payload, /"message_saved"/);
-    assert.match(textOf(S.asked[0].body), /\[Mara's card\]\n\[description\]\nMara is a baker\./);
+    const text = textOf(S.asked[0].body);
+    assert.match(text, /\[Mara's card\]\n\[description\]\nMara is a baker\./);
+    assert.match(text, /\[PERSONA — Varo\]\nVaro is a pilot\./);
+    // (그룹 파일의 사람이라서 Ivo의 간단한 카드를 통째로 읽었어요: 실리가 그룹 채팅을 열 때처럼)
+    assert.ok(S.st.some(x => x.url === '/api/characters/get' && x.body.avatar_url === 'ivo.png'));
     await rm(path.join(S.root, 'groups', 'g1.json'));
     assert.deepEqual((await S.auto.status('sa')).map(x => [x.can, x.why]), [[false, '채팅을 찾을 수 없습니다.']]);
 });
@@ -616,4 +626,17 @@ test('일꾼 · 실리에서 못 읽으면 답하지 않아요 (지어내지 않
     await rm(at); await mkdir(at);
     assert.deepEqual((await S.auto.status('sa')).map(x => [x.can, x.why]), [[false, '채팅 파일을 읽을 수 없습니다.']]);
     assert.equal(S.asked.length, 0);
+});
+
+test('일꾼 · 실리에서 바로: 이 채팅의 캐릭터 카드를 지웠으면(채팅 파일은 남음) 답하지 않아요 · 다리 없이 카드 폴더를 못 읽어도', async t => {
+    const S = await stage(t), a = world();
+    await S.put('sa', a.m);
+    S.cards.splice(0, 1);   // (Mara를 지웠어요)
+    assert.deepEqual((await S.auto.status('sa')).map(x => [x.can, x.why]), [[false, '이 채팅의 캐릭터를 더 이상 사용할 수 없습니다.']]);
+    await S.auto.list();
+    assert.equal((await S.gen(a.id)).statusCode, 404);
+    const N = await stage(t, { bridge: false }), b = world();
+    await N.put('sb', b.m);
+    assert.deepEqual((await N.auto.status('sb')).map(x => [x.can, x.why]), [[false, '캐릭터 목록을 읽을 수 없습니다.']]);
+    assert.equal(S.asked.length + N.asked.length, 0);
 });

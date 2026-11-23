@@ -128,7 +128,9 @@ export async function startWork({ root, store, st = null, schedule = true, from 
     async function chatNow(file) {
         let st = null;
         try { st = await fs.stat(file); } catch (err) { if (err?.code !== 'ENOENT') throw err; }
-        const sig = st ? `${st.mtimeMs}:${st.size}` : '';
+        // (SillyTavern writes its files whole, to a new file renamed into place: the inode tells a save apart even where the
+        //  file system's times are coarse)
+        const sig = st ? `${st.ino}:${st.mtimeMs}:${st.size}` : '';
         const had = chats.get(file);
         if (had && had.sig === sig) return had.data;
         const data = await chatData(file);
@@ -142,7 +144,7 @@ export async function startWork({ root, store, st = null, schedule = true, from 
         const dir = path.join(root, 'characters');
         let names = [];
         try { names = (await fs.readdir(dir)).filter(n => n.endsWith('.png')).sort(); } catch { return ''; }
-        const parts = await Promise.all(names.map(async n => { try { const s = await fs.stat(path.join(dir, n)); return `${n}:${s.mtimeMs}:${s.size}`; } catch { return `${n}:?`; } }));
+        const parts = await Promise.all(names.map(async n => { try { const s = await fs.stat(path.join(dir, n)); return `${n}:${s.ino}:${s.mtimeMs}:${s.size}`; } catch { return `${n}:?`; } }));
         return parts.join('|');
     }
     async function stNow(real, kit, settings) {
@@ -156,7 +158,11 @@ export async function startWork({ root, store, st = null, schedule = true, from 
         // (a bridge of an older plugin that does not open these ways yet — 404: the plugin's own files are read once when
         //  SillyTavern starts, an extension update does not change them —: read from the folder too, so the extension's
         //  update is enough)
-        const viaSt = async (url, own) => { const r = st ? await askSt(url, {}) : null; return r && r.status !== 404 ? r : { ok: true, json: await own() }; };
+        const viaSt = async (url, own) => {
+            const r = st ? await askSt(url, {}) : null;
+            if (r && r.status !== 404) return r;
+            try { return { ok: true, json: await own() }; } catch (err) { logger.warn(err instanceof Error ? err : {}, '%s: 실리 폴더를 읽지 못했습니다', url); return { ok: false }; }
+        };
         const sig = await cardsSig();
         if (!cardsHad || cardsHad.sig !== sig || !sig) {
             const got = await viaSt('/api/characters/all', () => readCards(root));
@@ -200,6 +206,9 @@ export async function startWork({ root, store, st = null, schedule = true, from 
         }
         const { name1, description } = personaOf(settings, avatar);
         const at = own ? characters.findIndex(ch => ch.avatar === own) : -1;
+        // (the chat's own card was deleted in SillyTavern — its chat files are kept by default —: SillyTavern cannot open this
+        //  chat any more, and the server does not write as a character it has no card for)
+        if (own && at < 0) throw refuse(400, '이 채팅의 캐릭터를 더 이상 사용할 수 없습니다.');
         return { chat, metadata, characters, characterId: at >= 0 ? at : undefined, groupId: group ? group.id : null, groups: group ? [group] : [], name1, persona: description, shared: na };
     }
 

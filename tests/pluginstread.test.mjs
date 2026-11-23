@@ -87,7 +87,7 @@ test('카드 읽기 (다리 없을 때): PNG의 ccv3 먼저, 없으면 chara · 
     const ivo = by['ivo.png'];
     assert.deepEqual([ivo.spec, ivo.name, ivo.description, ivo.data.description, ivo.data.extensions.talkativeness, ivo.chat, ivo.avatar], ['chara_card_v2', 'Ivo', 'Ivo v1', 'Ivo v1', '0.3', 'Ivo - 1', 'ivo.png']);
     assert.throws(() => readCardText(cardPng({ other: {} })), /No PNG metadata/);
-    assert.deepEqual(await readCards(path.join(root, 'none')), []);
+    await assert.rejects(readCards(path.join(root, 'none')));
 });
 
 test('페르소나 그림 목록 (다리 없을 때): 파일만, 그림만, 이름 순', async t => {
@@ -96,5 +96,5 @@ test('페르소나 그림 목록 (다리 없을 때): 파일만, 그림만, 이�
     await mkdir(path.join(root, 'User Avatars', 'folder.png'), { recursive: true });
     for (const f of ['varo.png', 'Ren.jpg', 'lio.webp', 'notes.txt']) await writeFile(path.join(root, 'User Avatars', f), 'x');
     assert.deepEqual(await readImages(root), ['lio.webp', 'Ren.jpg', 'varo.png']);
-    assert.deepEqual(await readImages(path.join(root, 'none')), []);
+    await assert.rejects(readImages(path.join(root, 'none')));
 });

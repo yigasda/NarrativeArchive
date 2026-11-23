@@ -207,11 +207,11 @@ function readFromV2(char) {
 }
 const getCharaCardV2 = json => (json.spec === undefined ? convertToV2(json) : readFromV2(json));
 
-// <root>/characters의 카드들 → 실리 서버의 /api/characters/all과 같은 목록 (읽지 못한 카드는 빠져요)
+// <root>/characters의 카드들 → 실리 서버의 /api/characters/all과 같은 목록 (읽지 못한 카드는 빠져요. 폴더를 못 읽으면 오류:
+// 실리의 readdirSync처럼 — 그 처리기는 500이에요)
 export async function readCards(root) {
     const dir = path.join(root, 'characters');
-    let files = [];
-    try { files = await fs.readdir(dir); } catch { return []; }
+    const files = await fs.readdir(dir);
     const out = await Promise.all(files.filter(file => file.endsWith('.png')).map(async item => {
         try {
             const imgData = readCardText(await fs.readFile(path.join(dir, item)));
@@ -229,9 +229,8 @@ const IMAGE_EXT = new Set(['apng', 'avif', 'bmp', 'gif', 'heic', 'heif', 'ico', 
 let mime = null;
 try { mime = createRequire(path.join(process.cwd(), 'package.json'))('mime-types'); } catch { mime = null; }
 const isImage = file => { const t = mime?.lookup?.(file); return t ? String(t).startsWith('image/') : !mime && IMAGE_EXT.has(path.extname(file).slice(1).toLowerCase()); };
-// <root>/User Avatars의 그림들 → 실리 서버의 /api/avatars/get과 같은 목록
+// <root>/User Avatars의 그림들 → 실리 서버의 /api/avatars/get과 같은 목록 (폴더를 못 읽으면 오류: 실리의 readdirSync처럼)
 export async function readImages(root) {
-    let entries = [];
-    try { entries = await fs.readdir(path.join(root, 'User Avatars'), { withFileTypes: true }); } catch { return []; }
+    const entries = await fs.readdir(path.join(root, 'User Avatars'), { withFileTypes: true });
     return entries.filter(d => d.isFile()).map(d => d.name).filter(isImage).sort(new Intl.Collator().compare);
 }
