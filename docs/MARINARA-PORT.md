@@ -47,6 +47,8 @@
 | 먼저 말 걸기에 딸린 줄: chats.routes.ts(1240~1262 후보 목록 · 2103~2110 · 2160~2166 안 읽음 표시), chats.storage.ts(2085~2122 markAutonomousUnread · clearAutonomousUnread), chat.schema.ts(155~158), app.ts(400~406 스케줄러 켜기), AppShell.tsx(284~285 · 796~881 안 읽음 지우기), use-chats.ts(1317~1338), generate.routes.ts(1450~1455 · 1936~1959 · 11297~11305 세기 · 쉬는 시간 적기) | 아니오 (그 줄만. 파일 전체는 아니오) |
 | 첨부 보내기 (2026-11-22, 마리나라 staging 32c47a1): client/lib/chat-attachment-images.ts(284줄) · services/generation/prompt-attachments.ts(194줄) · shared/constants/image-captioning-prompt.ts · services/generation/image-captioning-runtime.ts(712줄) · routes/generate/conversation-prompt-formatting.ts(317줄) | 예 (다섯 파일 모두 처음부터 끝까지) |
 | 첨부 보내기에 딸린 줄: ConversationInput.tsx(87~140 · 262~296 · 560~572 · 655~830 · 855~950 · 1027~1245 · 1356~1452 · 1804~1830 · 2168~2200 · 2242~2254), generate.routes.ts(1376~1385 · 1595~1697 · 2118~2198 · 2629~2759 · 12094~12095), generate-route-utils.ts(1204~1228), chat.schema.ts(123~133), types/chat.ts(969~984), slash-commands.ts(115~148), base-provider.ts(302~321 · 362~376), openai.provider.ts(492~512 · 2045~2082 · 2881~2890), anthropic.provider.ts(362~390 · 893~912), google.provider.ts(502~530), ConversationMessage.tsx(497~530), ConversationMessageShared.tsx(558~645), use-generate.ts(1321 · 1359~1360 · 1426 · 1517), chat-resource-drag.ts(141~143) | 예 (그 줄들만. 파일 전체는 아니오) |
+| 먼저 건 말의 알림 — 화면 (2026-11-23, 압축 뒤 처음부터 다시, staging 32c47a1): hooks/use-presence-clock.ts(52줄) · components/chat/ConversationAutonomousEffects.tsx(113줄) · components/chat/ChatNotificationBubbles.tsx(328줄) · hooks/use-background-autonomous.ts(400줄) · hooks/use-autonomous-messaging.ts(303줄) · lib/notification-sound.ts(106줄) · lib/local-notifications.ts(177줄) · components/panels/settings/SettingControls.tsx(740줄) · stores/chat.store.ts(1140줄) · components/layout/ChatSidebar.tsx(2471줄) · hooks/use-custom-notification-sound.ts(46줄) · server routes/notification-sound.routes.ts(217줄) | 예 (전부) |
+| 알림에 딸린 줄 (그 줄들만): SettingsPanel.tsx(2246~2420 알림 칸 · 알림 위치), App.tsx(485~600 · 1325~1389 토스트 위치 · 사용자 지정 소리), AppShell.tsx(250~262 · 1495~1520), ChatArea.tsx(1215~1330 1분 시계), ConversationView.tsx(1085~1260 열린 방 알림음 · 1555~1575), ChatRoleplaySurface.tsx(1525~1545), use-generate.ts(475~495 · 1350~1380 · 2490~2545 · 3620~3700 · 3785~3840), ui.store.ts(1150~1165 · 1540~1551 · 2420~2432 알림 설정 기본값), localization/locales/en.json의 알림 글 | 예 (그 줄들만. 파일 전체는 아니오: SettingsPanel 8324줄 · ChatArea 4550줄 · use-generate 4644줄 · ui.store 4345줄 · ConversationView 1654줄 · ChatRoleplaySurface 2473줄 · AppShell 1707줄 · App 1389줄) |
 | 나머지 "아직" 파일 전부 | 아니오 |
 
 ## 스케줄 · 상태 · 먼저 말 걸기
@@ -320,25 +322,38 @@
 확인(실제 폰 틀): 반응 끄기 · 켜기, 전체 스위치를 끄면 아래 줄이 사라지고 켜면 다시 뜸, "아직 연결되지 않았어요" 알림이 안 뜸.
 
 
-## 먼저 건 말의 알림 (3.230.0, 반영 23dec1b의 신호 · 함수에 화면을 붙임)
+## 먼저 건 말의 알림 (3.230.0, 반영 23dec1b의 신호 · 함수에 화면을 붙임 · 3.231.2에 다시 읽고 채움)
 
-끝까지 읽은 마리나라 코드: `hooks/use-background-autonomous.ts`(전부) · `components/chat/ConversationAutonomousEffects.tsx`(전부) · `components/chat/ChatNotificationBubbles.tsx`(전부) · `stores/chat.store.ts`의 incrementUnread · hydrateUnread · clearUnread · addNotification · `components/layout/ChatSidebar.tsx` 616~650(안 읽음 수) · `components/panels/settings/SettingControls.tsx`의 ConversationSoundSetting · CustomNotificationSoundSetting(전부) · `lib/notification-sound.ts` · `lib/local-notifications.ts`(반영이 가져온 것).
+읽은 마리나라 코드: 위 "끝까지 읽었나" 표의 "먼저 건 말의 알림 — 화면" 두 줄. 3.230.0 때 이 칸에 "끝까지 읽은 코드"로 적었던 것 중 `SettingControls.tsx` · `chat.store.ts` · `ChatSidebar.tsx`는 사실 일부만 읽었어요(소망이 잡음). 2026-11-23에 처음부터 끝까지 다시 읽고 빠진 것을 넣었어요.
 
 | 마리나라 | 우리 화면 | 상태 |
 |---|---|---|
 | 알림음 (playConfiguredNotificationPing) | 'na-live-auto'가 오면 `src/phone.js` 맨 위에서. 폰이 닫혀 있어도 울려요 | 됨 |
+| 열린 방에 새 말이 나타나면 알림음 (ConversationView: 처음 불러온 말 · 이미 본 말 · 15초보다 오래된 말은 소리 없이) | 방을 그릴 때 이미 본 말(`obSeen`)과 대 봐요 | 됨 (3.231.2) |
 | 지금 보는 방의 띠 "○○ messaged you" (5초, ✕) | 방 안 오른쪽 위 `ob_band` "○○님이 메시지를 보냈습니다" | 됨 |
-| 다른 방의 프사 방울 (누르면 그 방으로, ✕, 수) | 오른쪽 가장자리 `ob_nb` (Orbit의 목록 · 방 화면에서) | 됨. 여럿일 때 하나로 접는 것(모바일)은 없고 넷까지 세로로 |
+| 다른 방의 프사 방울 (누르면 그 방으로, ✕, 수) | 오른쪽 가장자리 `ob_nb` (Orbit의 목록 · 방 화면에서) | 됨 |
+| 방울이 8초 뒤 저절로 사라짐 (이 화면 몫만, NOTIFICATION_AUTODISMISS_MS) | `src/phone.js` 맨 위 `obNb` · `nbAdd` | 됨 (3.231.2) |
+| ✕로 지운 방은 그 방을 열 때까지 다시 안 뜸 (dismissedNotifications), 방을 열면 방울 · 지운 표시를 지움 (setActiveChatId) | `nbDismiss` · `nbOpen` (방을 여는 모든 길: 목록 · 방울 · 새 대화 · 분기 · 가져오기 · 주인 방) | 됨 (3.231.2) |
+| 서버 몫 방울 (hydrateUnread: 실리를 닫은 동안 온 말, 저절로 안 사라짐, 이 화면 몫이 있으면 그것이 먼저) | `liveAutonomousUnread`를 그릴 때마다 더해요 | 됨 (3.231.2) |
+| 방울이 여럿이면 하나로 묶기 (모바일: 프사 3개 겹침 + 합계, 누르면 펼침, 하나 남으면 다시 접힘) | `ob_nbg` (폰은 늘 모바일 모양) | 됨 (3.231.2) |
 | 떠 있는 글 "○○ sent you a message" | toastr "○○님이 메시지를 보냈습니다" (그 방을 보고 있지 않을 때, 폰이 닫혀 있을 때도) | 됨 |
 | 브라우저 알림 (showLocalMessageNotification) | 설정에서 켜고 권한을 받은 뒤. 제목 "○○님의 새 메시지" | 됨 (권한을 받은 상태는 확인 못 함) |
-| 안 읽음 수 (incrementUnread · hydrateUnread) | 우리 방 목록의 안 읽음 수는 읽은 자리로 세서 그대로 늘어요. `liveAutonomousUnread`는 안 써요 | 됨(따로 만들지 않음) |
-| 알림 설정: Conversation 알림음 · 창이 뒤에 있을 때만 · 미리 듣기 | 채팅 설정 › 알림 | 됨 |
-| 알림 설정: 브라우저 (권한 흐름 · 도움말 넷) | 채팅 설정 › 알림 › 백그라운드 알림 | 됨 |
-| 롤플레이 모드 알림음, 사용자 지정 알림음(미리 듣기 · 고르기), 백그라운드 알림의 모바일 앱, 생성 완료 알림(브라우저 · 모바일 앱) | 채팅 설정 › 알림에 그려 둠 | 아직 연결 안 됨: 누르면 "아직 연결되지 않았어요" (3.230.0에는 뺐다가 3.230.1에 되돌림). 미리 듣기는 내장 알림음으로 됨 |
+| 안 읽음 수 (incrementUnread · hydrateUnread) | 우리 방 목록의 안 읽음 수는 읽은 자리로 세서 그대로 늘어요 | 됨(따로 만들지 않음) |
+| 목록 줄의 둘째 줄 (Row liveness): 입력 중 > 생성 중 > "○○ replied" > "Unsent draft", 입력 중 · 생성 중은 도는 아이콘 | 마지막 말 미리보기 자리에: "○○님이 입력 중…"(답장 일이 도는 중) · "생성 중…"(차례가 된 일) · "○○님이 답장했습니다"(방울이 떠 있는 동안) · "보내지 않은 초안" | 됨 (3.231.2). 다른 것: 마리나라는 미리보기 줄이 없고 이 줄만 있어요. 우리는 이 줄이 없을 때 미리보기 |
+| 방마다 보내지 않은 초안 (inputDrafts, localStorage) | `draftGet` · `draftSet` (열쇠 '세계 id\|방 id'), 방을 열면 되돌림, 보내면 지움 | 됨 (3.231.2). 전에는 방을 바꾸면 사라졌어요 |
+| 1분 시계 (usePresenceClock) | `obClock` (3.231.1) | 됨. 다른 것: 마리나라는 바뀐 게 없으면 안 그리고, 우리는 폰을 통째로 다시 그려요 |
+| 알림 설정: 대화 모드 알림음(켜면 한 번 들려줌) · 실리가 앞에 있지 않을 때만 · 미리 듣기 | 채팅 설정 › 알림 | 됨 |
+| 알림 설정: 브라우저 (권한 흐름 · 도움말 넷 · 성공/실패 알림) | 채팅 설정 › 알림 › 백그라운드 알림 | 됨 |
+| 알림 위치 (위 · 아래, "오류 메시지와 다른 알림이 뜨는 곳") | 채팅 설정 › 알림 맨 위. 실리의 알림 위치(`#toastr_position`)에 넣고 실리가 저장해요(위 = 위 가운데, 아래 = 아래 가운데). 폰 안으로 옮겨 둔 알림 칸도 그 자리로 | 됨 (3.231.2). 실리에서 왼쪽 · 오른쪽을 골라 두었으면 위 · 아래만 보여요 |
+| 모바일 앱 (백그라운드 · 생성 완료) | 그려 두고 흐리게 막음 + 도움말 "마리나라 안드로이드 앱에서" | 마리나라와 같음: 마리나라도 그 앱의 다리가 없으면 막아요(여기는 늘 없음) |
+| 사용자 지정 알림음 카드 (이름 · 기본/사용자 지정 · 설명 · 형식 · 미리 듣기 · 고르기/바꾸기 · 지우기) | 채팅 설정 › 알림 | 그림은 다 있음. 미리 듣기는 됨(아이콘을 마리나라처럼 ▶로 고침). 고르기 · 바꾸기 · 지우기는 아직 연결 안 됨: 소리 파일을 서버에 두는 일(`notification-sound.routes.ts`)이 반영 몫이라 반영에 부탁. 형식 줄의 "백업에 포함"은 저장이 생기면 넣어요 |
+| 생성 완료 알림 (손으로 보낸 답이 끝났을 때 창이 뒤에 있으면 브라우저 알림. 제목 "New message from ○○"/"New message is ready") · 다른 방에서 끝나면 안 읽음 · 방울 · 알림음 (use-generate) | 생성 완료 브라우저 토글은 그려 둠 | 아직 연결 안 됨: 답이 끝났다는 신호가 반영 쪽에 없어요(먼저 건 말만 'na-live-auto'). 반영에 'na-live-reply' 신호를 부탁 |
+| 롤플레이 모드 알림음 | 그려 둠 | 아직 연결 안 됨: Orbit에 롤플레이 모드 방이 없어요 |
 | 게임 모드 알림음 | 없음 | 소망이 게임 관련을 다 뺐어요 |
-| 알림 위치(위 · 아래) | 없음 | 마리나라의 일반 설정 화면(SettingsPanel) 것이라 이 화면 것이 아니에요. 아직 안 읽음 |
-| 전화 알림 (addCallNotification) | 없음 | 안 가져옴 (전화 기능이 없어요) |
+| 전화 알림 (addCallNotification · 방울의 받기/거절) | 없음 | 안 가져옴 (전화 기능이 없어요) |
+| 여러 조각 말을 1.5초마다 하나씩 보이며 조각마다 알림음 (ConversationView) | 없음 | 우리 답장은 조각마다 따로 된 말이라 한꺼번에 보여요. 새 말이 생기면 한 번 울려요 |
 
 "실리를 닫아도 와요" 표시: 채팅 설정 › 자율 메시지에 한 줄. `liveServerStatus`의 on이 false면 아무 표시도 없고, 그 방의 can이 true면 "실리를 닫아도 옵니다", false면 why를 보여 줘요. 답이 늦을 수 있어서 화면을 막지 않고 오면 다시 그려요.
 확인(실제 폰 틀, 신호를 손으로 쏨): 띠가 뜨고 5초 뒤 사라짐, 목록에서 방울 + 떠 있는 글, 방울을 누르면 그 방으로 · ✕로 지움, 알림음 켬/끔 · 창이 뒤에 있을 때만 · 미리 듣기, 브라우저 알림이 막힌 환경에서 안 켜지고 이유가 뜸, 플러그인이 없을 때 서버 줄이 안 뜸.
 확인 못 함: 서버 플러그인이 도는 상태(can true / false 줄), 진짜로 먼저 건 말, 브라우저 알림 권한을 받은 상태, 폰이 닫혀 있을 때의 떠 있는 글.
+3.231.2 확인(실제 폰 틀, 신호를 손으로 쏨): 보는 방에는 띠만 · 방울 없음, 방울 하나 → 둘째 방이 오면 묶음(합계) → 펼침 → ✕ 하나 지우면 하나만, 지운 방은 다시 와도 안 뜸, 8초 뒤 사라짐(목록의 "답장했습니다"도 같이), 그 방을 열고 나오면 다시 뜸, 서버 몫은 8초 뒤에도 남음, 목록 줄 "보내지 않은 초안" · "Lio님이 입력 중…", 방에 돌아가면 초안이 되돌아옴, 열린 방의 새 말에 알림음 한 번 · 1분 지난 말은 소리 없음, 알림 위치 아래 → 실리 칸 · 알림 칸이 아래 가운데로, 위로 되돌림, 모바일 앱 줄은 눌러도 아무 일 없음.

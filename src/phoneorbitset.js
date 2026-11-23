@@ -71,6 +71,7 @@ const LI = {
     'bookmark': '<path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />',
     'pin': '<path d="M12 17v5" /> <path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z" />',
     'key-round': '<path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z" /> <circle cx="16.5" cy="7.5" r=".5" fill="currentColor" />',
+    'play': '<polygon points="6 3 20 12 6 21 6 3" />',
 };
 const li = (k, s = 18, w = 2) => `<svg aria-hidden="true" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round">${LI[k] || ''}</svg>`;
 
@@ -200,14 +201,20 @@ export function orbitSetPage(T, face) {
         // 알림 (마리나라의 ConversationSoundSetting 전부. 게임 모드는 소망이 게임을 다 뺐어요): 되는 것 = 대화 모드 알림음 · 창이 뒤에 있을 때만 · 미리 듣기 · 백그라운드 브라우저 알림.
         //   나머지(롤플레이 모드 알림음 · 사용자 지정 알림음 · 모바일 앱 알림 · 생성 완료 알림)는 그려 두고 누르면 '아직 연결되지 않았어요'. T.notify = { sound, unfocused, browser, perm }
         notify: () => { const N = T.notify || {}, help = N.perm === 'insecure' ? '브라우저 알림은 HTTPS나 localhost에서만 됩니다.' : N.perm === 'denied' ? '브라우저 알림이 막혀 있습니다. 이 사이트의 알림 권한을 초기화한 뒤 다시 해 보세요.' : N.perm === 'unsupported' ? '이 환경에서는 브라우저 알림을 쓸 수 없습니다.' : '브라우저의 알림 권한을 사용합니다.';
+            // (모바일 앱: 마리나라 안드로이드 앱의 다리가 있을 때만 켤 수 있어요. 여기에는 그 앱이 없어서 마리나라처럼 흐리게 막아 둬요)
             const mob = '업데이트된 마리나라 안드로이드 앱에서 쓸 수 있습니다. 브라우저와 PWA는 위의 브라우저 알림을 사용합니다.';
-            return cap('알림음') + hp('다른 채팅에 있을 때 새 메시지를 받으면 알림음을 냅니다.')
-                + cd(tg('sound', '대화 모드', '', true, 'na_os_nt', !!N.sound), tg('ntRp', '롤플레이 모드', '', true), tg('unfocused', '창이 뒤에 있을 때만', '', false, 'na_os_nt', !!N.unfocused),
-                    pad(`<div class="ot_r ot_w"><span class="os_l">사용자 지정 알림음</span><span class="ot_chip">기본</span></div><div class="os_d" style="margin:6px 0 8px">내장 알림음 대신 짧은 소리 파일을 씁니다.</div><div class="os_d" style="margin-bottom:8px">MP3 · WAV · OGG · M4A · MP4 · WebM, 10MB까지</div><div class="ot_r ot_w"><button type="button" class="os_go na_os_ntplay">${li('refresh-cw', 13, 2.2)}미리 듣기</button>${soon('고르기', 'upload')}</div>`))
+            const dis = (k, l, d) => `<div class="os_rw ot_t ot_dis" data-k="${k}" aria-label="${l}" aria-disabled="true"><span class="ot_x"><span class="os_l">${l}</span>${d ? `<span class="os_d">${d}</span>` : ''}</span><i class="ot_sw"></i></div>`;
+            // 알림 위치 (마리나라 GeneralSettings의 Notification position): 실리의 알림 위치(#toastr_position)에 넣어요. 위 = 위 가운데, 아래 = 아래 가운데
+            return hp('모드별 알림음과 백그라운드 알림입니다.')
+                + cd(sel('ntPos', '알림 위치', [['top', '위'], ['bottom', '아래']], 'top', 'na_os_ntpos', N.pos || 'top')) + hp('오류 메시지와 다른 알림이 뜨는 곳을 고릅니다.')
+                + cap('알림음') + hp('다른 채팅에 있을 때 새 메시지를 받으면 알림음을 냅니다.')
+                + cd(tg('sound', '대화 모드', '', true, 'na_os_nt', !!N.sound), tg('ntRp', '롤플레이 모드', '', true), tg('unfocused', '실리가 앞에 있지 않을 때만', '', false, 'na_os_nt', !!N.unfocused),
+                    // 사용자 지정 알림음 (마리나라 CustomNotificationSoundSetting): 이름 + 상태(기본 · 사용자 지정) · 설명 · 형식 · 미리 듣기 · 고르기(있으면 바꾸기) · (있으면) 지우기
+                    pad(`<div class="ot_r ot_w"><span class="os_l">사용자 지정 알림음</span><span class="ot_chip">${N.custom ? '사용자 지정' : '기본'}</span></div><div class="os_d" style="margin:6px 0 4px">이 실리에 연결된 모든 기기에서 위의 알림음 스위치가 이 소리를 씁니다.</div><div class="os_d" style="margin-bottom:8px">MP3, WAV, OGG, M4A/MP4, WebM · 10MB까지</div><div class="ot_r ot_w"><button type="button" class="os_go na_os_ntplay">${li('play', 13, 2.2)}미리 듣기</button>${soon(N.custom ? '바꾸기' : '고르기', 'upload')}${N.custom ? soon('지우기', 'trash-2', 'os_go', { cls: 'red' }) : ''}</div>`))
                 + cap('백그라운드 알림') + hp('실리가 앞에 있지 않을 때 캐릭터가 먼저 건 메시지가 오면 운영체제 알림을 띄웁니다. 메시지 내용은 보이지 않습니다.')
-                + cd(tg('browser', '브라우저', help, false, 'na_os_nt', !!N.browser && N.perm === 'granted'), tg('ntMobA', '모바일 앱', mob, false))
-                + cap('생성 완료 알림') + hp('직접 시작한 답장이 끝났을 때 실리가 앞에 있지 않으면 운영체제 알림을 띄웁니다. 메시지 내용은 보이지 않습니다.')
-                + cd(tg('ntGenB', '브라우저', help, false), tg('ntGenM', '모바일 앱', mob, false)); },
+                + cd(tg('browser', '브라우저', help, false, 'na_os_nt', !!N.browser && N.perm === 'granted'), dis('ntMobA', '모바일 앱', mob))
+                + cap('생성 완료 알림') + hp('직접 시작한 답장이 실리가 앞에 있지 않을 때 끝나면 운영체제 알림을 띄웁니다. 메시지 내용은 보이지 않습니다.')
+                + cd(tg('ntGenB', '브라우저', help, false), dis('ntGenM', '모바일 앱', mob)); },
         // 그림 설명 (마리나라의 Image captioning): 켜기 · 설명할 연결 · 설명 지시문. T.caption = liveCaptioning()
         caption: () => { const C = T.caption || { enabled: false, connectionId: '', prompt: '', defaultPrompt: '', connections: [] };
             return hp('켜면 그림을 그대로 보내지 않고, 글로 설명해서 보냅니다. 그림을 못 읽는 모델을 쓸 때 켜세요.')
