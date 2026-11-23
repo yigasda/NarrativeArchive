@@ -1,13 +1,14 @@
-// real SillyTavern 1.19.1 + real browser + the plugin: the browser leaves the kit (with a request template made by
-// SillyTavern's own createGenerationParameters), the tab is hidden, the server's worker makes the character write first
-// through SillyTavern's "custom" source, and the browser takes it in when the tab shows again
+// real SillyTavern 1.19.1 + real browser + the plugin: the browser leaves the kit (which chat this is: nothing else), the tab
+// is hidden, the server's worker makes the character write first through SillyTavern's "custom" source — the request built on
+// the server by SillyTavern's own createGenerationParameters (plugin/st) from settings.json —, that request is the same as the
+// one SillyTavern sends from the browser for the same messages, and the browser takes the message in when the tab shows again
 const http = require('node:http'), { spawn } = require('node:child_process'), fs = require('node:fs'), path = require('node:path');
 const { chromium } = require('playwright');
 const [,, ST] = process.argv;
 const log = (...a) => console.log(...a);
 (async () => {
     const asked = [];
-    const model = http.createServer((req, res) => { let b = ''; req.on('data', c => (b += c)); req.on('end', () => { let body = null; try { body = JSON.parse(b); } catch { body = b; } asked.push({ url: req.url, body }); res.setHeader('content-type', 'application/json'); if (req.url.endsWith('/models')) { res.end(JSON.stringify({ data: [{ id: 'fake-model' }] })); return; } res.end(JSON.stringify({ choices: [{ message: { content: JSON.stringify({ reply: ['written by the server while the tab was hidden'], status: '' }) }, finish_reason: 'stop' }] })); }); });
+    const model = http.createServer((req, res) => { let b = ''; req.on('data', c => (b += c)); req.on('end', () => { let body = null; try { body = JSON.parse(b); } catch { body = b; } asked.push({ url: req.url, headers: req.headers, body }); res.setHeader('content-type', 'application/json'); if (req.url.endsWith('/models')) { res.end(JSON.stringify({ data: [{ id: 'fake-model' }] })); return; } res.end(JSON.stringify({ choices: [{ message: { content: JSON.stringify({ reply: ['written by the server while the tab was hidden'], status: '' }) }, finish_reason: 'stop' }] })); }); });
     await new Promise(r => model.listen(0, '127.0.0.1', r));
     const custom_url = `http://127.0.0.1:${model.address().port}/v1`, PORT = 8124, base = `http://127.0.0.1:${PORT}`;
     const st = spawn(process.execPath, ['server.js', '--port', String(PORT)], { cwd: ST });
@@ -35,6 +36,8 @@ const log = (...a) => console.log(...a);
             const c = SillyTavern.getContext();
             // the draft model: SillyTavern's own "custom" source, pointed at the fake provider
             O.oai_settings.custom_url = url;
+            // (a SillyTavern macro in a field SillyTavern fills when it builds the request: the server fills it the same way)
+            O.oai_settings.custom_include_headers = 'x-na-user: "{{user}}"';
             (c.extensionSettings.narrative_archive ||= {}).draftConn = { mode: 'source', source: 'custom', stModel: 'fake-model' };
             c.saveSettingsDebounced();
             await KO.liveReady();
@@ -50,13 +53,13 @@ const log = (...a) => console.log(...a);
             await core.saveMeta();
             const again = await G.liveKitRefresh(m);
             window.__na = { core, S, G, KO, m, room };
-            const kit = m.live.kit, tpl = Object.values(kit?.st || {})[0];
-            return { again, ver: kit?.ver, file: kit?.chat?.file, coreVer: core.VERSION, state: KO.keepState(), ref: m.liveRef?.id || '', serves: KO.keepServes(), made, kitAvatar: kit?.chat?.avatar, templates: Object.keys(kit?.st || {}).length, tplKeys: tpl ? Object.keys(tpl.data).sort() : [], tplSecrets: tpl?.secrets, hasPw: JSON.stringify(kit).includes('proxy_password'), status: await G.liveServerStatus(m) };
+            const kit = m.live.kit;
+            return { again, ver: kit?.ver, file: kit?.chat?.file, coreVer: core.VERSION, state: KO.keepState(), ref: m.liveRef?.id || '', serves: KO.keepServes(), made, kitAvatar: kit?.chat?.avatar, keys: Object.keys(kit || {}).sort(), name1: c.name1, status: await G.liveServerStatus(m) };
         }, custom_url);
         log(JSON.stringify(r1));
         ok('browser: Orbit kept in the plugin, worker on', r1.state === 'ok' && !!r1.ref && r1.serves === true);
-        ok('browser: kit left, with one request template made by SillyTavern itself', r1.made === true && r1.templates === 1 && /Seraphina/.test(String(r1.kitAvatar)), JSON.stringify(r1.tplKeys));
-        ok('browser: the template holds no messages', !r1.tplKeys.includes('messages'));
+        ok('browser: kit left — which chat this is, nothing else (no request templates: the server builds each request)', r1.made === true && JSON.stringify(r1.keys) === '["chat","v","ver"]' && /Seraphina/.test(String(r1.kitAvatar)), JSON.stringify(r1.keys));
+        ok('browser: nothing reached the provider while the kit was made', asked.length === 0, JSON.stringify(asked.map(a => a.url)));
         ok('browser: the kit does not change when nothing changed (no save every 30 s)', r1.again === false);
         ok('browser: the kit names the version and the chat file, and that file is there', r1.ver === r1.coreVer && !!r1.file && fs.existsSync(path.join(ST, 'data', 'default-user', 'chats', r1.file.dir, r1.file.id + '.jsonl')), JSON.stringify(r1.file));
         await page.waitForTimeout(2500);   // (settings.json: SillyTavern saves a moment later)
@@ -70,8 +73,18 @@ const log = (...a) => console.log(...a);
         let got = false;
         for (let i = 0; i < 200 && !got; i++) { await page.waitForTimeout(1000); got = asked.some(a => a.url.endsWith('/chat/completions')); }
         ok('the server asked the provider through SillyTavern while the tab was hidden', got, out.split('\n').filter(l => /narrative-archive|autonomous/i.test(l)).slice(-6).join(' | '));
-        const b = asked.find(a => a.url.endsWith('/chat/completions'))?.body;
-        if (b) ok('the request: our messages on the template', b.model === 'fake-model' && b.messages?.[0]?.role === 'system' && /^GOAL\nYou are Seraphina/.test(b.messages[0].content) && /\[WHY NOW\]/.test(b.messages[1].content), JSON.stringify({ model: b.model, max_tokens: b.max_tokens, temperature: b.temperature, keys: Object.keys(b).sort() }));
+        const a0 = asked.find(a => a.url.endsWith('/chat/completions')), b = a0?.body;
+        if (b) {
+            ok('the request: our messages, the reply\'s values', b.model === 'fake-model' && b.messages?.[0]?.role === 'system' && /^GOAL\nYou are Seraphina/.test(b.messages[0].content) && /\[WHY NOW\]/.test(b.messages[1].content) && (b.max_tokens ?? b.max_completion_tokens) === 4000 && b.temperature === 0.3, JSON.stringify({ model: b.model, max_tokens: b.max_tokens, temperature: b.temperature, keys: Object.keys(b).sort() }));
+            ok('the macro in the header field filled on the server with this chat\'s persona', a0.headers['x-na-user'] === r1.name1, JSON.stringify([a0.headers['x-na-user'], r1.name1]));
+            // the same messages, sent by the browser itself (ai.js callConn → SillyTavern's createGenerationParameters there): the same request
+            const at = asked.length;
+            await page.evaluate(async ([sys, user]) => { const AI = await import('/scripts/extensions/third-party/NarrativeArchive/src/ai.js'); await AI.callConn({ mode: 'source', source: 'custom', stModel: 'fake-model' }, sys, user, 4000, 'low', true, false, null, null, null, {}); }, [b.messages[0].content, b.messages[1].content]);
+            const fromBrowser = asked[at];
+            const diff = fromBrowser ? Object.keys({ ...b, ...fromBrowser.body }).filter(k => JSON.stringify(b[k]) !== JSON.stringify(fromBrowser.body[k])) : ['none'];
+            ok('the same request as the browser sends for the same messages (body and the macro header)', diff.length === 0 && fromBrowser.headers['x-na-user'] === a0.headers['x-na-user'], JSON.stringify(diff));
+            asked.splice(at);
+        }
         await page.waitForTimeout(2500);
         const r2 = await page.evaluate(async () => {
             const { G, KO, m, room } = window.__na, before = room.messages.length;

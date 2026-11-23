@@ -1859,7 +1859,7 @@ test('서버 묶음: 실리 연결 방식으로 나가는 방도 묶음에는 �
         await G.liveSetReasoning(c.real, id, 'high');
         assert.equal(await G.liveKitRefresh(c.real), false);
         const plan = G.liveReplyPlan(c.real, id);
-        assert.deepEqual([plan.t.mode, plan.t.source, plan.t.stModel, plan.maxTokens, plan.effort, plan.thoughts], ['source', 'claude', 'c-1', 4000, 'high', true]);
+        assert.deepEqual([plan.t.mode, plan.t.source, plan.t.stModel, plan.maxTokens, plan.thoughts], ['source', 'claude', 'c-1', 4000, true]);
         // 그 방의 답장이 실제로 보내는 연결 · 값과 같아요 (서버의 cannot은 이 값으로 그 방을 보낼 수 있나 봐요)
         send(c, '뭐해');
         T.replies = [{ state: '집', reply: ['응'], does: [] }]; T.conn = [];

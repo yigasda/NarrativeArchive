@@ -12,7 +12,7 @@ import { startAuto } from '../plugin/host.mjs';
 import { splitLive, joinLive } from '../src/phone2keep.js';
 import { startFresh, startFromStory, putLivePhone, ensureRoom, sendLive, liveWorld, enqueueJob } from '../src/phone2store.js';
 import { buildKit, putKit } from '../src/phone2kit.js';
-import { stProfileRequest, stGenerationParameters, REPLY_CUSTOM } from './stfake.mjs';
+import { stProfileRequest, stGenerationParameters } from './stfake.mjs';
 import { fakeBridge, stCard, chatFile, cardPng, stUserDirs } from './stbridge.mjs';
 // (the same do-nothing screen the worker runs under: the expected requests — tests/stfake.mjs — are made in the same globals)
 await import('../plugin/screen.mjs');
@@ -331,9 +331,8 @@ test('일꾼 · 로짓 바이어스 프리셋: 실리 서버의 /bias 길로 토
     assert.equal(await lastText(S2, 'sb', b), 'you there?');
 });
 
-// (버그, plugin/work.mjs stProfiles.sendRequest: naFetch가 삼킨 실패 뒤의 모델 요청을 막으면 실리의 sendRequest가 "API request failed"로 감싸 던져서,
-//  stFailed()가 불리지 않아요 — 화면 · 실리 창의 이유가 "API request failed"뿐이에요. 금지 토큰의 토크나이저 길(글 완성)도 같아요)
-test.todo('일꾼 · (버그) 바이어스 길을 못 쓰면 이유는 stFailed의 글: "실리 서버의 /api/backends/chat-completions/bias를 쓸 수 없습니다. …" (지금은 "API request failed")', async t => {
+// (실리의 sendRequest는 오류를 "API request failed"로 감싸요: 삼킨 실패가 모델 요청을 막았으면 그 실패가 이유예요)
+test('일꾼 · 바이어스 길을 못 쓰면 이유는 그 길: "실리 서버의 /api/backends/chat-completions/bias를 쓸 수 없습니다. …" ("API request failed"가 아니라)', async t => {
     const S = await stageOf(t, { profiles: [BIAS], oai: BIAS_OAI, files: BIAS_FILES }), a = world();
     useRoom(a, 'profile:b1');
     await S.put('sa', a.m); await S.auto.list();
@@ -361,13 +360,6 @@ test('일꾼 · 실리에서 연결 관리자를 끄거나 고른 프로필이 �
     assert.deepEqual((await S.auto.status('sa')).map(x => [x.can, x.why]), [[false, '선택한 연결을 사용할 수 없습니다. 다른 연결을 선택하세요.']]);
     assert.equal((await S.gen(a.id)).statusCode, 400);
     assert.equal(sentTo(S).length, 0);
-});
-
-test.todo('일꾼 · (확인할 것) 연결 관리자를 끄면 이유가 "Connection Manager is not available"이어야 하나: work.mjs cannot()의 getSupportedProfiles catch는 닿지 않아요 (replyRoute의 aiProfiles()가 먼저 그 오류를 삼켜서 "선택한 연결을 사용할 수 없습니다"가 나와요)', async t => {
-    const S = await stageOf(t, { settings: { aiConn: { mode: 'st' }, aiProfile: 'p1' }, ext: { disabledExtensions: ['connection-manager'] } }), a = world();
-    useRoom(a, 'ai');
-    await S.put('sa', a.m);
-    assert.deepEqual((await S.auto.status('sa')).map(x => x.why), ['Connection Manager is not available']);
 });
 
 test('일꾼 · 실리에서 바꾸면 바로 (브라우저 없이): settings.json의 프록시 · 프리셋 파일의 온도를 바꾸면 다음 요청이 새 값으로. 프리셋 파일을 지우면 실리처럼 프리셋 없이', async t => {

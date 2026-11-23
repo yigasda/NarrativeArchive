@@ -1,8 +1,11 @@
-// real SillyTavern 1.19.1 + real browser + the plugin, with real connection profiles (docs/PHONE2-PLAN.md 3-2c):
-//   1) the browser leaves the profiles' request templates — made by SillyTavern's own sendRequest — and sends nothing doing it
+// real SillyTavern 1.19.1 + real browser + the plugin, with real connection profiles (docs/SERVER-HANDOVER.md 3-3 · 4장):
+//   1) the browser leaves the kit — which chat this is, nothing else — and sends nothing doing it: the server builds each request
+//      itself with SillyTavern's own code (plugin/st: ConnectionManagerRequestService.sendRequest) from settings.json and the
+//      preset files, read for every job
 //   2) the tab is hidden: the server's worker writes first through a chat-completion profile (SillyTavern's "openai" source on a
-//      proxy preset: the proxy password must come from settings.json), answers late through the profile picked in SillyTavern now
-//      (the room follows the AI 기능 model, which is SillyTavern's), and through a text-completion profile (generic, Alpaca instruct)
+//      proxy preset: the proxy password comes from settings.json), then the proxy password is changed in SillyTavern (its settings
+//      saved by the page) and the server answers late through the profile picked in SillyTavern now (the room follows the AI 기능
+//      model, which is SillyTavern's) with the new password, and through a text-completion profile (generic, Alpaca instruct)
 //   3) each request the provider got from the server is the same as the one SillyTavern itself sends from the browser for the
 //      same messages
 // Run: node tools/plugin/stprofile.cjs <SillyTavern folder>. It backs up and puts back settings.json and the Seraphina card,
@@ -75,13 +78,13 @@ const restore = () => { fs.writeFileSync(sfile, keep.settings); fs.writeFileSync
             const made = await G.liveKitRefresh(m); await core.saveMeta();
             window.__na = { core, S, G, KO, m, room };
             const kit = m.live.kit;
-            return { made, serves: KO.keepServes(), map: Object.keys(c.CONNECT_API_MAP || {}).filter(k => ['openai', 'generic'].includes(k)), pt: Object.keys(kit.pt || {}), why: kit.ptWhy, hasPw: JSON.stringify(kit).includes('NA-PROXY-PW'), plan: G.liveReplyPlan(m, room.id).profile };
+            return { made, serves: KO.keepServes(), keys: Object.keys(kit).sort(), hasPw: JSON.stringify(kit).includes('NA-PROXY-PW'), plan: G.liveReplyPlan(m, room.id).profile };
         });
         log(JSON.stringify(r1));
-        ok('browser: the worker is on, the profile templates are left', r1.serves === true && r1.made === true && r1.pt.length >= 1, JSON.stringify(r1.pt));
-        ok('browser: no request reached the provider while the templates were made', asked.length === 0, JSON.stringify(asked.map(a => a.url)));
-        ok('browser: the template holds no proxy password', r1.hasPw === false);
-        ok('browser: nothing refused', !r1.why || Object.keys(r1.why).length === 0, JSON.stringify(r1.why));
+        ok('browser: the worker is on, the kit is left — which chat this is, no request templates', r1.serves === true && r1.made === true && JSON.stringify(r1.keys) === '["chat","v","ver"]', JSON.stringify(r1.keys));
+        ok('browser: no request reached the provider while the kit was made', asked.length === 0, JSON.stringify(asked.map(a => a.url)));
+        ok('browser: the kit holds no proxy password', r1.hasPw === false);
+        ok('browser: the room goes through the profile picked for it', r1.plan?.id === 'na-cc' && r1.plan.missing === false, JSON.stringify(r1.plan));
         await page.waitForTimeout(2500);
         const status = await page.evaluate(async () => window.__na.G.liveServerStatus(window.__na.m));
         ok('server: the profile room can be served while SillyTavern is closed', Object.values(status.rooms)[0]?.can === true, JSON.stringify(status));
@@ -97,9 +100,13 @@ const restore = () => { fs.writeFileSync(sfile, keep.settings); fs.writeFileSync
             ok('the same request as SillyTavern sends from the browser', !!b1 && same(a1.body, b1.body) && a1.auth === b1.auth, b1 ? JSON.stringify(Object.keys(a1.body).filter(k => !same(a1.body[k], b1.body[k]))) : 'none');
         }
 
-        // ── 2) a late reply in a room that follows the AI 기능 model (SillyTavern's side): the profile picked in SillyTavern now
+        // ── 2) the proxy password changed in SillyTavern (the page saves its settings), and a late reply in a room that follows the
+        //       AI 기능 model (SillyTavern's side): the profile picked in SillyTavern now, with the new password — no browser part
         const r2 = await page.evaluate(async () => {
             const { core, S, G, KO, m, room } = window.__na;
+            const O = await import('/scripts/openai.js'), main = await import('/script.js');
+            O.proxies.find(p => p.name === 'NA proxy').password = 'NA-PROXY-PW2';
+            await main.saveSettings();
             await KO.keepSync();
             room.connectionId = 'ai';
             const job = S.enqueueJob(m, { kind: 'reply', owner: 'Seraphina', room: room.id, at: Date.now() - 600_000 }); Object.assign(job, { timed: true, notBefore: Date.now() + 1000 });
@@ -110,8 +117,8 @@ const restore = () => { fs.writeFileSync(sfile, keep.settings); fs.writeFileSync
         const since2 = asked.length;
         log('waiting for the server (the profile picked now) …');
         const a2 = await waitServer(since2, a => a.url.endsWith('/chat/completions'));
-        ok('server: the late reply went through the picked profile', !!a2 && a2.body.model === 'gpt-4o-mini' && a2.auth === 'Bearer NA-PROXY-PW');
-        if (a2) { const b2 = await browserSends('na-cc', a2.body.messages); ok('the same request as SillyTavern sends from the browser (picked profile)', !!b2 && same(a2.body, b2.body)); }
+        ok('server: the late reply went through the picked profile, with the password changed in SillyTavern', !!a2 && a2.body.model === 'gpt-4o-mini' && a2.auth === 'Bearer NA-PROXY-PW2', a2 ? a2.auth : '');
+        if (a2) { const b2 = await browserSends('na-cc', a2.body.messages); ok('the same request as SillyTavern sends from the browser (picked profile)', !!b2 && same(a2.body, b2.body) && a2.auth === b2.auth); }
 
         // ── 3) a late reply through the text-completion profile
         const r3 = await page.evaluate(async () => {
@@ -120,19 +127,20 @@ const restore = () => { fs.writeFileSync(sfile, keep.settings); fs.writeFileSync
             room.connectionId = 'profile:na-tc';
             const job = S.enqueueJob(m, { kind: 'reply', owner: 'Seraphina', room: room.id, at: Date.now() - 600_000 }); Object.assign(job, { timed: true, notBefore: Date.now() + 1000 });
             await G.liveKitRefresh(m); await core.saveMeta();
-            const kit = m.live.kit, tc = Object.entries(kit.pt || {}).find(([k]) => k.includes('na-tc'));
-            return { plan: G.liveReplyPlan(m, room.id).profile, tc: tc ? { key: tc[0], prompt: tc[1].prompt, instruct: tc[1].instruct } : null, why: kit.ptWhy };
+            // (how SillyTavern's own code wraps a system part and a text for this profile: only to read the server's prompt back)
+            const prompt = SillyTavern.getContext().ConnectionManagerRequestService.constructPrompt([{ role: 'system', content: '\u0001NA_SYSTEM\u0001' }, { role: 'user', content: '\u0001NA_USER\u0001' }], 'na-tc');
+            return { plan: G.liveReplyPlan(m, room.id).profile, tc: { prompt } };
         });
-        ok('browser: the text-completion template, in the instruct format', !!r3.tc && r3.tc.prompt.includes('\u0001NA_USER\u0001') && /### Instruction/.test(r3.tc.prompt), JSON.stringify(r3.tc || r3.why));
+        ok('browser: SillyTavern wraps the text-completion profile\'s request in its instruct format', r3.plan?.id === 'na-tc' && r3.tc.prompt.includes('\u0001NA_USER\u0001') && /### Instruction/.test(r3.tc.prompt), JSON.stringify(r3));
         const since3 = asked.length;
         log('waiting for the server (text-completion profile) …');
         const a3 = await waitServer(since3, a => /\/completions$/.test(a.url) && !a.url.endsWith('/chat/completions'));
         ok('server: the late reply went through the text-completion profile', !!a3 && a3.body.model === 'fake-tc', a3 ? JSON.stringify({ url: a3.url, keys: Object.keys(a3.body).sort() }) : '');
         if (a3 && r3.tc) {
-            // (the system part and the texts the server put in, read back from the prompt through the template)
+            // (the system part and the texts the server put in, read back from the prompt through SillyTavern's format)
             const esc = x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), re = new RegExp(`^${r3.tc.prompt.split(/(\u0001NA_SYSTEM\u0001|\u0001NA_USER\u0001)/).map(p => (p === '\u0001NA_SYSTEM\u0001' || p === '\u0001NA_USER\u0001' ? '([\\s\\S]*)' : esc(p))).join('')}$`);
             const m3 = re.exec(a3.body.prompt), hasSys = r3.tc.prompt.includes('\u0001NA_SYSTEM\u0001');
-            ok('server: the prompt is the template with our texts in it', !!m3);
+            ok('server: the prompt is in SillyTavern\'s instruct format with our texts in it', !!m3);
             if (m3) { const msgs = [...(hasSys ? [{ role: 'system', content: m3[1] }] : []), { role: 'user', content: m3[hasSys ? 2 : 1] }]; const b3 = await browserSends('na-tc', msgs); ok('the same request as SillyTavern sends from the browser (text completion)', !!b3 && same(a3.body, b3.body), b3 ? JSON.stringify(Object.keys(a3.body).filter(k => !same(a3.body[k], b3.body[k]))) : 'none'); }
         }
         // the browser takes the three in

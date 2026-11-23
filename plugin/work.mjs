@@ -59,15 +59,19 @@ export async function startWork({ root, store, st = null, schedule = true, from 
     //   연결 프로필: 실리의 ConnectionManagerRequestService.sendRequest (extensions/shared.js 423~492) 그대로 · 실리 연결 방식: createGenerationParameters 그대로
     //   보내는 곳은 실리 서버 자신의 처리기예요(다리: worker.mjs의 fetch). 실리 코드가 실패를 삼키는 자리(로짓 바이어스 · 금지 토큰의 토큰 요청)는
     //   naFetchFailures에 적혀요: 그러면 바이어스 없이 보내지 않고 이유를 알려요(브라우저는 그 요청이 실패하지 않아요)
+    const safeName = s => typeof s === 'string' && !!s && !/[\\/]|\.\./.test(s);
     const stFetch = (url, init = {}) => { const headers = {}; for (const [k, v] of Object.entries(init.headers || {})) if (v !== undefined) headers[k] = v; return globalThis.fetch(url, { ...init, headers }); };
-    function stFailed() {
-        const f = STP.fetch.naFetchFailures[0];
+    // (cause: SillyTavern's own error, when it threw one)
+    function stFailed(cause) {
+        // (a failed model request itself: SillyTavern's own error says why — the provider's message —, not ours)
+        const f = STP.fetch.naFetchFailures.find(x => !GENERATE_ROUTES.some(g => String(x.url).startsWith(g)));
         if (!f) return;
-        const where = String(f.url).split('?')[0];
-        if (f.status === 404) throw new Error(`실리 서버의 ${where}를 쓸 수 없습니다. 서버 플러그인을 업데이트하고 실리를 다시 시작하세요.`);
-        if (!f.status) throw new Error('실리 서버에 연결할 수 없습니다.');
-        throw new Error(`실리 서버 요청에 실패했습니다: ${where} (${f.status})`);
+        const where = String(f.url).split('?')[0], more = cause ? { cause } : undefined;
+        if (f.status === 404) throw new Error(`실리 서버의 ${where}를 쓸 수 없습니다. 서버 플러그인을 업데이트하고 실리를 다시 시작하세요.`, more);
+        if (!f.status) throw new Error('실리 서버에 연결할 수 없습니다.', more);
+        throw new Error(`실리 서버 요청에 실패했습니다: ${where} (${f.status})`, more);
     }
+    const GENERATE_ROUTES = ['/api/backends/chat-completions/generate', '/api/backends/text-completions/generate'];
     const stProfiles = {
         getSupportedProfiles: () => STL.ConnectionManagerRequestService.getSupportedProfiles(),
         async sendRequest(...args) {
@@ -75,7 +79,10 @@ export async function startWork({ root, store, st = null, schedule = true, from 
             //  Refused before anything is sent. Our callers never ask for it)
             if (args[3]?.stream) throw new Error('서버에서는 스트리밍을 지원하지 않습니다.');
             STP.fetch.naFetchFailures.length = 0;
-            const out = await STL.naSendRequest(...args);
+            // (SillyTavern's sendRequest wraps any error as "API request failed": when a failure it swallowed stopped the model request,
+            //  that failure is the reason — the screen and the window show it)
+            let out;
+            try { out = await STL.naSendRequest(...args); } catch (err) { stFailed(err); throw err; }
             stFailed();
             return out;
         },
@@ -83,7 +90,13 @@ export async function startWork({ root, store, st = null, schedule = true, from 
     // (src/ai.js reads SillyTavern's openai.js through globalThis.__naStOpenai: its oai_settings and createGenerationParameters)
     const stOpenai = {
         get oai_settings() { return STP.oai.oai_settings; },
-        async createGenerationParameters(...args) { STP.fetch.naFetchFailures.length = 0; const out = await STP.oai.createGenerationParameters(...args); stFailed(); return out; },
+        async createGenerationParameters(...args) {
+            STP.fetch.naFetchFailures.length = 0;
+            let out;
+            try { out = await STP.oai.createGenerationParameters(...args); } catch (err) { stFailed(err); throw err; }
+            stFailed();
+            return out;
+        },
     };
 
     // ---- 실리의 것을 답장마다 새로 (실리 브라우저가 이 채팅을 열면 들고 있을 것을, 실리 파일과 실리 서버의 처리기에서)
