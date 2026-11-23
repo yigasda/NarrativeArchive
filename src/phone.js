@@ -56,7 +56,7 @@ if (typeof document !== 'undefined' && !globalThis.__naAutoHeard) { globalThis._
             nbAdd(r.room, name);
             void showLocalMessageNotification({ enabled: N.browser, characterName: name, title: `${name}님의 새 메시지`, tag: `na-orbit-${r.room}` }); } });   // (떠 있는 글은 띄우지 않아요: 소망)
     // 답장이 끝났어요 (반영의 'na-live-reply', 마리나라 use-generate.ts의 completedReply 뒤): 그 방을 보고 있지 않으면 방울 + 알림음,
-    //   다른 탭 · 창을 보고 있으면 생성 완료 브라우저 알림. 먼저 건 말(auto)은 위의 'na-live-auto'가 다 해서 여기서는 건너뛰어요.
+    //   백그라운드면 생성 완료 브라우저 알림. 먼저 건 말(auto)은 위의 'na-live-auto'가 다 해서 여기서는 건너뛰어요.
     //   보고 있는 방의 알림음은 방을 그릴 때 새 말을 보고 울려요(마리나라 ConversationView)
     document.addEventListener('na-live-reply', e => { const d = e.detail || {}; if (!d.room || d.auto) return; const N = orbitNotify(), name = String(d.by?.[0] || '').trim();
         if (obNb.viewing !== d.room) { nbAdd(d.room, name || '누군가'); playConfiguredNotificationPing(N.sound, N.unfocused); }
