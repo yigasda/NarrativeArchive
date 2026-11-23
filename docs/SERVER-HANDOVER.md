@@ -332,6 +332,7 @@ node tools/st/portcheck.mjs <실리 폴더>                   # plugin/st의 `//
 `stprofile.cjs`는 `settings.json` · 카드를 스스로 복사해 두고 되돌려요. 서버가 보낸 요청과 실리가 브라우저에서 같은 메시지로 보낸 요청이 글자까지 같은지 봐요.
 준비: 실리 1.19.1을 받아 `npm install`, `config.yaml`에서 `enableServerPlugins: true`,
 `plugins/NarrativeArchive`와 `data/default-user/extensions/NarrativeArchive`를 이 저장소로 잇기(`ln -s`).
+새 실리면 한 번 켜서 기본 데이터를 만들고, `data/default-user/settings.json`의 `firstRun`을 `false`로 해요(처음 켤 때의 안내 창이 페이지를 막아요). 2026-11-23: 오래 쓴 테스트 실리에서 `stcheck`가 3개 실패했지만, 이렇게 새로 만든 실리에서는 `stcheck` · `--lazy` 둘 다 ALL OK였어요(테스트 데이터가 꼬였던 것).
 둘 다 `settings.json`과 `default_Seraphina.png`를 바꿔요: 돌리기 전에 복사해 두고 끝나면 되돌려요. `data/default-user/NarrativeArchive/orbit`도 지워요.
 `stbrowser.cjs`의 페이지 오류 가운데 `Internal S…`는 실리의 Horde 요청(인터넷이 없어서)이라 걸러요.
 
