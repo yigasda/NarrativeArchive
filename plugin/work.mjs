@@ -318,9 +318,11 @@ export async function startWork({ root, store, st = null, schedule = true, from 
             setContext(contextOf(entry, kit, settings, app, now));
             globalThis.__naStOpenai = stStandIn(kit, settings);
             try {
-                // (the persona's name changed in SillyTavern: the live phone's "me" follows before anything is judged, saved
-                //  before the job goes on — the browser does it when the phone opens, phone2go.js liveFollowPersona)
-                if (renamePersona(entry.real, now.name1)) await app.write(entry);
+                // (the persona's name changed in SillyTavern: the live phone's "me" follows before anything is judged — the
+                //  browser does it when the phone opens, phone2go.js liveFollowPersona. Only in memory here: it goes into the
+                //  store with the job's own save, a reply. A save of its own could meet the browser's — 409 — and fail a
+                //  look that only reads; each reading of the Orbit renames it again the same way)
+                renamePersona(entry.real, now.name1);
                 return await job();
             }
             finally { setContext(null); delete globalThis.__naStOpenai; }

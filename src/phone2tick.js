@@ -24,7 +24,8 @@ export async function tickOnce() {
         if (keepKept()) await keepSync();
         const w = m.live?.world;
         if (!w) return 0;
-        // (the role-play moved on, a card or the persona changed: what the server plugin reads while SillyTavern is closed follows)
+        // (the request templates the server plugin sends with while SillyTavern is closed: made again when a connection changed.
+        //  The cards, the persona, the role-play and the chat's values the server reads from SillyTavern itself)
         try { if (await (await import('./phone2go.js')).liveKitRefresh(m)) await saveMeta(); } catch (err) { console.warn('[narrative-archive] live kit', err); }
         const waiting = !!w.queue?.jobs?.some(j => j.kind === 'reply' && j.state === 'waiting');
         if (!w.presence?.on && !waiting && !Object.keys(w.presence?.schedules || {}).length) return 0;
