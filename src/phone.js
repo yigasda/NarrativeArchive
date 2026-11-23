@@ -1265,7 +1265,7 @@ export async function openPhone(who = null) {
     const obSrvAsk = () => { if (Date.now() - obSrvAt < 30000) return; obSrvAt = Date.now(); getLocalNotificationPermission().then(p => { obPerm = p; }).catch(() => {});
         liveServerStatus(realM).then(x => { const was = JSON.stringify(obSrv); obSrv = x || null; if (JSON.stringify(obSrv) !== was && !phoneClosed && stillHere() && obSet === 'auto') drawPhone(true); }).catch(() => { obSrv = null; }); };
     // 다시 그리기: 바깥 소식('na-live-change') · 1분마다 시계 · 탭이 다시 보일 때. 무언가 고치는 중이거나 입력칸에 커서가 있으면 미뤄 두었다가(obPendDraw),
-    //   그게 끝나면(커서가 빠짐 · 시트가 닫힘) 한 번 그려요. 시계는 마리나라 hooks/use-presence-clock.ts 그대로: 탭이 보이는 동안 60초마다, 가려지면 멈추고, 다시 보이면 곧바로 한 번 + 다시 켜기
+    //   그게 끝나면(커서가 빠짐 · 시트가 닫힘) 한 번 그려요. 시계는 마리나라 hooks/use-presence-clock.ts의 켜고 끄기 그대로(탭이 보이는 동안만, 가려지면 멈추고, 다시 보이면 곧바로 한 번 + 다시 켜기). 다만 분이 바뀌는 때에 맞춰 그려요(마리나라엔 화면 시계가 없어요)
     //   메시지 입력칸(.na_ob_in)은 예외: 보낸 뒤에도 커서가 남아 있어서(obFocus) 미루면 아무것도 안 바뀌었어요. 그때는 obGo의 onChange처럼
     //   그리고 → 맨 아래였으면 맨 아래로 → 커서를 되돌려요. 한글을 조합하는 중에만 미뤘다가 조합이 끝나면 그려요
     const obInMsg = () => !!document.activeElement?.classList?.contains('na_ob_in') && !!$root[0]?.contains(document.activeElement);
@@ -1280,8 +1280,9 @@ export async function openPhone(who = null) {
     $root.on('compositionend', '.na_ob_in', () => { obComposing = false; setTimeout(() => { if (obPendDraw && !obQuiet()) obRedraw(false); }, 60); });
     $(document).off('na-live-change.naob').on('na-live-change.naob', () => obRedraw());
     let obClock = null;
-    const obClockStart = () => { if (obClock == null) obClock = setInterval(() => obRedraw(false), 60_000); };
-    const obClockStop = () => { if (obClock != null) { clearInterval(obClock); obClock = null; } };
+    // (분이 바뀌는 때에 맞춰요: 다음 분이 시작될 때 한 번, 그 뒤로 60초마다. 폰을 연 때부터 60초면 상단 시계 · 상대 시각이 최대 1분 늦었어요)
+    const obClockStart = () => { if (obClock == null) obClock = setTimeout(() => { obRedraw(false); obClock = setInterval(() => obRedraw(false), 60_000); }, 60_000 - (Date.now() % 60_000) + 50); };
+    const obClockStop = () => { if (obClock != null) { clearTimeout(obClock); clearInterval(obClock); obClock = null; } };
     const obVis = () => { if (document.hidden) obClockStop(); else { obRedraw(false); obClockStart(); } };
     if (!document.hidden) obClockStart();
     document.addEventListener('visibilitychange', obVis);
