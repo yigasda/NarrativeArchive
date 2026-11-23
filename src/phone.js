@@ -257,7 +257,7 @@ export async function openPhone(who = null) {
     const startPlan = startPlanOf;
     // 어두운 방(⋯ 메뉴의 어둡게 · 밝게): 확장 설정에 남아요. 그릴 때마다 읽으니 설정을 그대로 읽어요(koOn과 같은 까닭)
     const obDark = () => (ctx().extensionSettings?.narrative_archive ?? globalSettings()).orbitDark === true;
-    let obSet = '', obFindTab = 'marks', obFindQ = '', obJump = null, obSetUi = { v: {}, open: '', tzQ: '', busy: false }, obSw = null, obAtt = [], obThink = null, obPeek = null, obSrc = { models: {}, busy: '' }, ocBusy = '', obReading = 0, obSending = false, obView = '', obBand = null, obBandT = 0, obBubs = new Map(), obSrv = null, obSrvAt = 0, obPerm = 'default',   // obBand: 방 안의 알림 띠 { name } · obBubs: 다른 방의 알림 방울 방 id → { name, count } · obSrv: 서버 일꾼의 답 { on, rooms }
+    let obSet = '', obFindTab = 'marks', obFindQ = '', obJump = null, obSetUi = { v: {}, open: '', tzQ: '', busy: false }, obSw = null, obAtt = [], obThink = null, obPeek = null, obSrc = { models: {}, busy: '' }, ocBusy = '', obReading = 0, obSending = false, obView = '', obBand = null, obBandT = 0, obPendDraw = false, obBubs = new Map(), obSrv = null, obSrvAt = 0, obPerm = 'default',   // obBand: 방 안의 알림 띠 { name } · obBubs: 다른 방의 알림 방울 방 id → { name, count } · obSrv: 서버 일꾼의 답 { on, rooms }
         obReading0 = 0,   // obReading: 읽는 중인 첨부 묶음 수 · obView: 크게 보는 그림의 주소
          scStop = null, scToast = null, scDown = false, scPend = false, scT = 0;
     const scWatch = on => { if (on) scToast ||= stToastKo();   // (알림은 화면을 나간 뒤에도 뜰 수 있어서(테스트 메시지 답), 폰을 닫을 때까지 봐요)
@@ -608,7 +608,7 @@ export async function openPhone(who = null) {
     let ptrDown = false, ptrAt = 0, drawWait = null;
     const drawPhone = (keep = false) => {
         if (ptrDown && Date.now() - ptrAt < 3000) { drawWait = drawWait === null ? keep : drawWait && keep; return; }
-        ptrDown = false; drawWait = null; drawNow(keep);
+        ptrDown = false; drawWait = null; obPendDraw = false; drawNow(keep);   // (다시 그리면 미뤄 둔 다시 그리기도 끝나요)
     };
     const ptrUp = () => { ptrDown = false; if (drawWait !== null) setTimeout(() => { if (drawWait !== null && !ptrDown && !phoneClosed) { const k = drawWait; drawWait = null; drawNow(k); } }, 60); };
     $root[0].addEventListener('pointerdown', () => { ptrDown = true; ptrAt = Date.now(); }, true);
@@ -1207,7 +1207,18 @@ export async function openPhone(who = null) {
     // 서버 플러그인의 일꾼에게 "실리를 닫아도 오는 방인가"를 물어요. 답이 1분쯤 늦을 수 있어서 화면을 막지 않고, 오면 다시 그려요 (30초 안에 다시 묻지 않아요)
     const obSrvAsk = () => { if (Date.now() - obSrvAt < 30000) return; obSrvAt = Date.now(); getLocalNotificationPermission().then(p => { obPerm = p; }).catch(() => {});
         liveServerStatus(realM).then(x => { const was = JSON.stringify(obSrv); obSrv = x || null; if (JSON.stringify(obSrv) !== was && !phoneClosed && stillHere() && obSet === 'auto') drawPhone(true); }).catch(() => { obSrv = null; }); };
-    $(document).off('na-live-change.naob').on('na-live-change.naob', () => { if (phoneClosed || !live() || !String(view).startsWith('orbit') || obSch || obBusyUi() || document.activeElement?.isContentEditable) return; drawPhone(true); });
+    // 다시 그리기: 바깥 소식('na-live-change') · 1분마다 시계 · 탭이 다시 보일 때. 무언가 고치는 중이거나 입력칸에 커서가 있으면 미뤄 두었다가(obPendDraw),
+    //   그게 끝나면(커서가 빠짐 · 시트가 닫힘) 한 번 그려요. 시계는 마리나라 hooks/use-presence-clock.ts 그대로: 탭이 보이는 동안 60초마다, 가려지면 멈추고, 다시 보이면 곧바로 한 번 + 다시 켜기
+    const obQuiet = () => !!(obSch || obBusyUi() || document.activeElement?.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '') && $root[0]?.contains(document.activeElement));
+    const obRedraw = (orbitOnly = true) => { if (phoneClosed || !stillHere() || !live() || (orbitOnly && !String(view).startsWith('orbit'))) return; if (obQuiet()) { obPendDraw = true; return; } drawPhone(true); };
+    $(document).off('na-live-change.naob').on('na-live-change.naob', () => obRedraw());
+    let obClock = null;
+    const obClockStart = () => { if (obClock == null) obClock = setInterval(() => obRedraw(false), 60_000); };
+    const obClockStop = () => { if (obClock != null) { clearInterval(obClock); obClock = null; } };
+    const obVis = () => { if (document.hidden) obClockStop(); else { obRedraw(false); obClockStart(); } };
+    if (!document.hidden) obClockStart();
+    document.addEventListener('visibilitychange', obVis);
+    $root.on('focusout', () => setTimeout(() => { if (obPendDraw && !obQuiet()) obRedraw(false); }, 60));
     // 방 설정 시트 (시안 orbit-top S1~S3): 머리의 설정 단추로 열고, 줄을 누르면 시트 안에서 그 화면으로
     const obSetGo = async (pr, after) => { try { await pr; } catch (err) { obWarn(err); } if (after) after(); if (!phoneClosed && stillHere()) drawPhone(true); };
     $root.on('click', '.na_ob_set', e => { e.stopPropagation(); if (obFix || obHeld || obPicks || obList || !obCanEdit()) return; obMenu = false; obSet = 'main'; drawPhone(true); });
@@ -2841,7 +2852,7 @@ export async function openPhone(who = null) {
             return 1;
         };
         dlg.addEventListener('close', () => { if (window.NAShell) window.__naBack = backWas; for (const ev of ['pointerup', 'pointercancel']) window.removeEventListener(ev, ptrUp, true); }, { once: true });
-        dlg.addEventListener('close', () => { phoneClosed = true; phonesOpen = Math.max(0, phonesOpen - 1); clearTimeout(obBandT); $(document).off('na-live-auto.naob'); scWatch(false); scToast?.(); scToast = null; $(document).off('.naSc'); setPhoneMeta(null); if (liveMode(realM) === 'live' && stillHere()) obReflect(); ask?.done(false); done(); }, { once: true });
+        dlg.addEventListener('close', () => { phoneClosed = true; phonesOpen = Math.max(0, phonesOpen - 1); obClockStop(); document.removeEventListener('visibilitychange', obVis); clearTimeout(obBandT); $(document).off('na-live-auto.naob'); scWatch(false); scToast?.(); scToast = null; $(document).off('.naSc'); setPhoneMeta(null); if (liveMode(realM) === 'live' && stillHere()) obReflect(); ask?.done(false); done(); }, { once: true });
     });
     window.visualViewport?.removeEventListener('resize', kbSoon); window.visualViewport?.removeEventListener('scroll', kbSoon); window.removeEventListener('resize', kbSoon);
     barsUndo(dlg);
