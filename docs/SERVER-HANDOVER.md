@@ -48,7 +48,7 @@ src/phone2tick.js 30초 틱                       플러그인 본체 (plugin/in
 | `host.mjs` | 52 | 본체 쪽. 사용자마다 일꾼 스레드 하나를 띄우고 말을 주고받아요(`code.dir`의 `plugin/worker.mjs`). 일꾼이 부탁하는 저장 일(`list` · `revOf` · `load` · `save`)을 대신 해요. `list` · `inject` · `sweep` · `unread`는 테스트와 손 확인용 |
 | `worker.mjs` | 57 | 일꾼 스레드의 들머리. **순서가 중요해요**: `screen.mjs`를 먼저 불러야 해요. 전역 `fetch`를 바꿔서 `/`로 시작하는 주소를 다리로 넘겨요 |
 | `screen.mjs` | 37 | 아무것도 안 하는 화면: `document` · `$` · `toastr` 등에 "뭘 시켜도 자기 자신을 돌려주는 것"을 둬요. `SillyTavern.getContext()`는 `setContext()`로 그때그때 바꿔 끼워요. 일꾼 스레드에서만 불러요(본체에서 부르면 오류. 테스트는 `NA_SCREEN_ANYWHERE=1`) |
-| `stread.mjs` (새, 2026-11-23) | 85 | 실리 파일을 실리가 읽는 그대로(실리 코드를 옮긴 것): 채팅 파일(`getChatData`) · 헤더와 메시지(`getChat` · `getGroupChat`) · 그룹(`getGroups` · `validateGroup`) · 채팅을 열 때 고를 페르소나(`loadPersonaForCurrentChat`) · 그 페르소나의 이름과 설명(`selectCurrentPersona`). 3-3 |
+| `stread.mjs` (새, 2026-11-23) | 236 | 실리 파일을 실리가 읽는 그대로(실리 코드를 옮긴 것): 채팅 파일(`getChatData`) · 헤더와 메시지(`getChat` · `getGroupChat`) · 그룹(`getGroups` · `validateGroup`) · 채팅을 열 때 고를 페르소나(`loadPersonaForCurrentChat`) · 그 페르소나의 이름과 설명(`selectCurrentPersona`). 다리가 없을 때: 카드 폴더(`readCards`: `character-card-parser.js read` · `getCharaCardV2` · `convertToV2` · `readFromV2` · `charaFormatData`, PNG 조각 읽기는 png-chunks-extract · png-chunk-text MIT) · 페르소나 그림 목록(`readImages`: `getImages`). 3-3 |
 | `work.mjs` | 400 | 핵심. 실리의 것을 답장마다 새로(`stNow`, 3-3), 방 자물쇠(`claim` · `renew` · `release`, `liveGo`에 주는 `serverLock`), 실리의 것을 서버 것으로(`contextOf`), 연결 프로필 요청의 대역(`profileService`: `sendRequest`), 실리 연결 방식 · 추론 레벨의 대역(`stStandIn`), 한 번에 한 세계(`withWorld`), 돌려도 되나(`blocked` · `cannot`), 먼저 건 말 만들기(`generate`), 늦은 답장(`sweepDue`), 화면용 상태(`status`), 보고 있음(`presence`) |
 | `sound.mjs` (새) | 184 | 사용자 지정 알림음(마리나라 `notification-sound.routes.ts`). `<사용자 폴더>/NarrativeArchive/notification-sounds/notification.<확장자>` 하나. 올리기는 실리의 multer가 `avatar` 칸을 받아 둔 임시 파일을 읽고 지워요(실리 `server-main.js` 269줄: 플러그인 길도 그 뒤에 붙어요) |
 | `lock.mjs` (새) | 40 | 방 자물쇠 `makeLocks` · `lockKey(저장 id, 방 id)` (3-5) |
@@ -115,7 +115,7 @@ src/phone2tick.js 30초 틱                       플러그인 본체 (plugin/in
 - `cardsOf`(마리나라 스케줄러의 수다 정도)도 `around` 안에서 지금 읽은 카드에서 찾아요.
 - 페르소나 이름이 바뀌었으면 `withWorld`가 곧바로 `liveFollowPersona`: 실시간 폰의 "나"도 그 이름으로(브라우저는 폰을 열 때 해요).
 - `writeExtensionField`는 실리 `extensions.js` 2070~2120 그대로: `UNSET_VALUE`면 지우기, `json_data`도 같이, 저장이 실패해도 던지지 않고 기록만(`확장 필드를 저장하지 못했습니다.`).
-- 다리가 없으면(실리 버전이 달라 다리가 안 열림) 이제 아무 방도 못 돌려요: 카드를 실리에서 읽어야 해서요. 이유는 "실리 서버에 연결할 수 없습니다."
+- 다리가 없으면(실리 버전이 달라 다리가 안 열림) 카드와 페르소나 그림 목록은 실리 폴더에서 직접 읽어요(`stread.mjs readCards` · `readImages`: 실리 서버의 `/api/characters/all` · `/api/avatars/get`이 하는 것을 옮긴 것, PNG의 `ccv3` → `chara`). 그래서 커스텀 API 방은 다리 없이도 전처럼 돌고, 고친 카드도 바로 들어가요. 진짜 실리의 `/all`과 글자까지 같은지 대 봤어요(통계 칸 빼고).
 
 **실리와 다른 점**
 - 페르소나: 실리는 채팅을 **열 때 한 번** 고르고, 손으로 바꾼 페르소나(잠그지 않은 것)는 새로 고치면 기본 페르소나로 돌아가요. 우리 서버는 **그 채팅에서 마지막으로 쓴 페르소나**로 답해요(소망이 정함: 빠른 전환기로 자주 바꾸고, 그게 안 남으면 안 돼요). 브라우저가 `m.stPersona`에 적어 두고(`phone2keepon.js keepPersona`), 적어 둔 게 없는 옛 채팅만 실리 순서로 골라요.
@@ -280,7 +280,7 @@ kit = { v: 1, ver (확장 버전),
 S = 이 세션의 scratch 폴더(세션마다 달라요. 없어졌으면 다시 만들어야 해요: 아래).
 
 ```
-timeout 580 node --test tests/*.test.mjs                 # 1323개. "# fail 0"과 "# cancelled 0"
+timeout 580 node --test tests/*.test.mjs                 # 1326개. "# fail 0"과 "# cancelled 0"
 for f in tests/fuzz/*.mjs; do node $f | tail -1; done     # runs 5113 / 8663, problems 0
 PHONE2_POISON=1 node --test tests/phonesyncdrop.test.mjs tests/archivedread.test.mjs tests/afterarchive.test.mjs tests/phonebranch.test.mjs   # 359
 node $S/cmp.mjs                                           # "checked 328 diff 0" (scratch에 있어요)
@@ -290,8 +290,8 @@ npx eslint --no-config-lookup -c $S/lint/eslint.config.mjs src/phone2*.js src/ai
 서버 쪽 테스트:
 - `tests/pluginstore.test.mjs` 저장 · 길. `tests/plugincode.test.mjs` 일꾼이 불러올 코드(확장 폴더 찾기 · 판 · 버전이 바뀌면 다시 띄우기).
 - `tests/pluginauto.test.mjs` 스케줄러(가짜 app 13개) + 진짜 저장 위의 app 5개.
-- `tests/pluginwork.test.mjs` **일꾼을 실제로 띄워서** 27개(가짜 모델 HTTP 서버 · 가짜 다리 `tests/stbridge.mjs`: 카드 목록 · 카드 하나 · 페르소나 그림 목록). "실리에서 바로" 다섯 개가 카드 고침 · 간단한 카드 · 롤플 새 메시지 · 페르소나(적어 둔 것 · 채팅 잠금 · 지금 것) · 그룹 · 확장 칸 쓰기 실패를 봐요. 연결 프로필은 `tests/stfake.mjs`(실리의 `sendRequest`를 실리 코드의 순서대로 흉내 낸 것)로 틀을 떠요.
-- `tests/pluginstread.test.mjs` 실리 파일 읽기(채팅 파일 · 헤더 · 그룹 · 페르소나 고르기 · 이름과 설명).
+- `tests/pluginwork.test.mjs` **일꾼을 실제로 띄워서** 28개(가짜 모델 HTTP 서버 · 가짜 다리 `tests/stbridge.mjs`: 카드 목록 · 카드 하나 · 페르소나 그림 목록). "실리에서 바로" 다섯 개가 카드 고침 · 간단한 카드 · 롤플 새 메시지 · 페르소나(적어 둔 것 · 채팅 잠금 · 지금 것) · 그룹 · 확장 칸 쓰기 실패를 봐요. 연결 프로필은 `tests/stfake.mjs`(실리의 `sendRequest`를 실리 코드의 순서대로 흉내 낸 것)로 틀을 떠요.
+- `tests/pluginstread.test.mjs` 실리 파일 읽기(채팅 파일 · 헤더 · 그룹 · 페르소나 고르기 · 이름과 설명 · 다리가 없을 때의 카드 PNG · 페르소나 그림 목록).
 - `tests/stprofile.test.mjs` 프로필 틀 · 채우기 · 답 읽기. `tests/aiprofile.test.mjs` 지금 고른 프로필.
 - `tests/phone2beat.test.mjs` 브라우저 쪽 진짜 파일 + 진짜 일꾼을 한 저장에.
 - `tests/phone2wake.test.mjs` 2026-11-22에 생긴 일 그대로(화면이 꺼진 동안 서버가 답함 → 켜자마자 틱 → 또 답하지 않음), 서버가 만드는 중에 깨어남, 브라우저가 만드는 중의 서버, 먼저 건 말이 겹침, 걸린 요청의 시간 제한.
@@ -337,7 +337,7 @@ node tools/plugin/stwake.cjs <실리 폴더>                  # 그날의 순서
 - 화면이 꺼진 폰을 깨우는 푸시 알림은 없어요.
 - 서버는 이야기 요약본을 늘리지 않고(롤플 메시지는 읽지만, 요약을 얹을 아카이브 글은 안 읽어요), 스케줄 매주 갱신도 안 해요.
 - 요청 틀(실리 연결 방식 · 연결 프로필 · 추론 레벨)은 아직 브라우저가 떠 둔 것이에요. 프리셋 · 실리의 채팅 완성 설정을 바꾸고 곧바로 실리를 닫으면 예전 틀로 가요(6~9에서 서버가 직접 만들게 할 일).
-- 실리 버전이 올라가 `src/endpoints/…`의 자리가 바뀌면 다리가 안 열려요. 그때는 아무 방도 못 돌리고(카드를 실리에서 읽어야 해요), 실리 서버 창에 한 줄이 찍혀요.
+- 실리 버전이 올라가 `src/endpoints/…`의 자리가 바뀌면 다리가 안 열려요. 그때는 커스텀 API 방만 돌고(카드는 카드 폴더에서 직접 읽어요), 실리 서버 창에 한 줄이 찍혀요.
 - 실리 연결 방식의 답 읽기: 서버에는 실리의 `extractMessageFromData`가 없어서 `ai.js`가 OpenAI · Claude · Google 모양을 손으로 읽어요. (연결 프로필 길은 `stprofile.js`에 옮겨 둔 실리 것을 써요.)
 - 연결 프로필: 틀을 뜬 뒤 30초 안에 프리셋 · 실리의 채팅 완성 설정을 바꾸고 곧바로 실리를 닫으면 서버는 예전 틀로 보내요(프로필 자체가 바뀐 것은 알아채요). 실리가 메시지를 고쳐 보내는 모델 · 요청마다 값이 달라지는 연결 · 글 완성 프로필로 그림이 든 요청 · 사용자 헤더의 매크로는 서버에서 못 보내요(이유를 알려요).
 - 실리 쪽 방이 실리에서 고른 프로필로 가면서, 실리의 `generateRaw`가 하던 것(우리 글의 `{{char}}` 같은 매크로 바꾸기, 정규식 확장 등으로 답 고치기)은 Orbit의 요청에서 빠졌어요. 방에 프로필을 고른 방은 원래 이랬어요.

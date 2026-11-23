@@ -16,7 +16,7 @@ import { makeAutoApp } from './auto.mjs';
 import { makeLocks, lockKey } from './lock.mjs';
 import { startServerAutonomousScheduler } from './marinara/server-autonomous-scheduler.service.js';
 import { logger } from './log.mjs';
-import { chatData, chatParts, groupOf, personaFor, personaOf } from './stread.mjs';
+import { chatData, chatParts, groupOf, personaFor, personaOf, readCards, readImages } from './stread.mjs';
 
 // (Marinara's server scheduler reads the answer of its /api/generate as these events)
 const SSE = {
@@ -122,12 +122,12 @@ export async function startWork({ root, store, st = null, schedule = true, from 
     //   → { chat, metadata, characters, characterId, groupId, groups, name1, persona }
     const chatFileOf = f => (f.group ? path.join(root, 'group chats', `${f.id}.jsonl`) : path.join(root, 'chats', f.dir, `${f.id}.jsonl`));
     async function stNow(real, kit, settings) {
-        if (!st) throw refuse(400, '실리 서버에 연결할 수 없습니다.');
         const f = kit.chat.file;
         const { metadata, chat } = chatParts(await chatData(chatFileOf(f)), f.group);
         // (the card list, as SillyTavern's getCharacters reads it — /api/characters/all —, and a card that came shallow read whole
-        //  as its unshallowCharacter does — /api/characters/get)
-        const all = await askSt('/api/characters/all', {});
+        //  as its unshallowCharacter does — /api/characters/get. With no bridge — SillyTavern's handlers could not be put
+        //  on it —: the cards read from the characters folder the way that handler reads them, plugin/stread.mjs)
+        const all = st ? await askSt('/api/characters/all', {}) : { ok: true, json: await readCards(root) };
         if (!all.ok || !Array.isArray(all.json)) throw refuse(400, '캐릭터 목록을 읽을 수 없습니다.');
         let group = null;
         if (f.group) {
@@ -149,7 +149,7 @@ export async function startWork({ root, store, st = null, schedule = true, from 
         const na = obj(metadata.narrative_archive) ? metadata.narrative_archive : {};
         let avatar = typeof na.stPersona === 'string' ? na.stPersona : '';
         if (!avatar) {
-            const list = await askSt('/api/avatars/get', {});
+            const list = st ? await askSt('/api/avatars/get', {}) : { ok: true, json: await readImages(root) };
             avatar = personaFor(settings, { lock: metadata.persona, key: group ? group.id : own, avatars: list.ok && Array.isArray(list.json) ? list.json : [] });
         }
         const { name1, description } = personaOf(settings, avatar);

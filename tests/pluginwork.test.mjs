@@ -14,7 +14,7 @@ import { startFresh, startFromStory, putLivePhone, ensureRoom, sendLive, liveWor
 import { buildKit, putKit } from '../src/phone2kit.js';
 import * as SP from '../src/stprofile.js';
 import { fakeSt } from './stfake.mjs';
-import { fakeBridge, stCard, chatFile } from './stbridge.mjs';
+import { fakeBridge, stCard, chatFile, cardPng } from './stbridge.mjs';
 // (the request template is made by the real ai.js, as the browser makes it: that file needs the do-nothing screen to load)
 await import('../plugin/screen.mjs');
 const AI = await import('../src/ai.js');
@@ -530,4 +530,25 @@ test('일꾼 · 실리에서 바로: 카드의 확장 칸 쓰기는 실리처럼
     assert.match((await S.gen(a.id)).payload, /"message_saved"/);
     assert.ok(S.st.some(x => x.url === '/api/characters/merge-attributes'));
     assert.equal((await S.get('sa')).messenger.rooms[a.room.id].messages.at(-1).text, 'brb');
+});
+
+test('일꾼 · 다리가 없어도(실리 버전이 달라 실리 서버의 처리기를 못 붙임): 커스텀 API 방은 돌아요 — 카드는 카드 폴더에서 직접, 고친 것도 바로', async t => {
+    const S = await stage(t, { bridge: false }), a = world({ hoursAgo: 0.2 }), b = world({ hoursAgo: 0.2 });
+    await mkdir(path.join(S.root, 'characters'), { recursive: true });
+    const save = desc => writeFile(path.join(S.root, 'characters', 'mara.png'), cardPng({ chara: { spec: 'chara_card_v2', spec_version: '2.0', name: 'Mara', data: { name: 'Mara', description: desc, personality: 'warm', extensions: { talkativeness: 0.5 } } } }));
+    await save('Mara is a baker.');
+    for (const x of [a, b]) { const j = enqueueJob(x.m, { kind: 'reply', owner: 'Mara', room: x.room.id, at: Date.now() - 600_000 }); Object.assign(j, { timed: true, notBefore: Date.now() - 1000 }); }
+    await S.put('sa', a.m);
+    assert.deepEqual((await S.auto.status('sa')).map(x => [x.can, x.why]), [[true, '']]);
+    assert.equal(await S.auto.sweep(), 1);
+    let text = textOf(S.asked[0].body);
+    assert.match(text, /\[Mara's card\]\n\[description\]\nMara is a baker\./);
+    assert.match(text, /\[PERSONA — Ren\]\nRen is a student\./);
+    // (실리에서 카드를 고쳤어요)
+    await save('Mara is a pilot now.');
+    await S.put('sb', b.m);
+    assert.equal(await S.auto.sweep(), 1);
+    text = textOf(S.asked[1].body);
+    assert.match(text, /Mara is a pilot now\./);
+    assert.equal(S.asked.length, 2);
 });

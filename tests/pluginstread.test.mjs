@@ -62,3 +62,39 @@ test('그 페르소나의 이름과 설명 (selectCurrentPersona): 이름이 있
     assert.deepEqual(personaOf(s, 'gone.png'), { name1: 'Old', description: 'kept' });
     assert.deepEqual(personaOf({}, ''), { name1: 'User', description: '' });
 });
+
+// ---- 다리가 없을 때: 카드 · 페르소나 그림을 실리 폴더에서 직접 (실리 서버의 /api/characters/all · /api/avatars/get을 옮긴 것)
+import { mkdir } from 'node:fs/promises';
+import { readCards, readImages, readCardText } from '../plugin/stread.mjs';
+import { cardPng } from './stbridge.mjs';
+
+test('카드 읽기 (다리 없을 때): PNG의 ccv3 먼저, 없으면 chara · v1 카드는 v2로 · 못 읽는 카드는 빠져요', async t => {
+    const root = await mkdtemp(path.join(tmpdir(), 'na-cards-'));
+    t.after(() => rm(root, { recursive: true, force: true }));
+    await mkdir(path.join(root, 'characters'));
+    const v2 = { spec: 'chara_card_v2', spec_version: '2.0', name: 'old', data: { name: 'Mara', description: 'Mara is a baker.', personality: 'warm', scenario: '', first_mes: 'hi', mes_example: '', tags: ['a'], extensions: { talkativeness: 0.7, narrative_archive_convo: { x: 1 } } } };
+    await writeFile(path.join(root, 'characters', 'mara.png'), cardPng({ chara: { ...v2, data: { ...v2.data, description: 'older' } }, ccv3: v2 }));
+    await writeFile(path.join(root, 'characters', 'ivo.png'), cardPng({ chara: { name: 'Ivo', description: 'Ivo v1', talkativeness: '0.3', chat: 'Ivo - 1' } }));
+    await writeFile(path.join(root, 'characters', 'bad.png'), Buffer.from('not a png'));
+    await writeFile(path.join(root, 'characters', 'notes.txt'), 'x');
+    const cards = await readCards(root), by = Object.fromEntries(cards.map(c => [c.avatar, c]));
+    assert.deepEqual(Object.keys(by).sort(), ['ivo.png', 'mara.png']);
+    // (readFromV2: data의 칸을 위로. 없는 talkativeness · fav는 실리처럼 결국 undefined)
+    assert.deepEqual([by['mara.png'].name, by['mara.png'].description, by['mara.png'].talkativeness, by['mara.png'].fav, by['mara.png'].tags], ['Mara', 'Mara is a baker.', 0.7, undefined, ['a']]);
+    assert.deepEqual(by['mara.png'].data.extensions.narrative_archive_convo, { x: 1 });
+    assert.equal(JSON.parse(by['mara.png'].json_data).data.description, 'Mara is a baker.');
+    // (convertToV2: v1 카드)
+    const ivo = by['ivo.png'];
+    assert.deepEqual([ivo.spec, ivo.name, ivo.description, ivo.data.description, ivo.data.extensions.talkativeness, ivo.chat, ivo.avatar], ['chara_card_v2', 'Ivo', 'Ivo v1', 'Ivo v1', '0.3', 'Ivo - 1', 'ivo.png']);
+    assert.throws(() => readCardText(cardPng({ other: {} })), /No PNG metadata/);
+    assert.deepEqual(await readCards(path.join(root, 'none')), []);
+});
+
+test('페르소나 그림 목록 (다리 없을 때): 파일만, 그림만, 이름 순', async t => {
+    const root = await mkdtemp(path.join(tmpdir(), 'na-avatars-'));
+    t.after(() => rm(root, { recursive: true, force: true }));
+    await mkdir(path.join(root, 'User Avatars', 'folder.png'), { recursive: true });
+    for (const f of ['varo.png', 'Ren.jpg', 'lio.webp', 'notes.txt']) await writeFile(path.join(root, 'User Avatars', f), 'x');
+    assert.deepEqual(await readImages(root), ['lio.webp', 'Ren.jpg', 'varo.png']);
+    assert.deepEqual(await readImages(path.join(root, 'none')), []);
+});

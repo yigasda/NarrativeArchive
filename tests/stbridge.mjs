@@ -4,6 +4,7 @@
 //   more(req, body, res) → true면 그 요청은 거기서 끝 (모델 요청 등)
 // 예시 캐릭터만 써요.
 import http from 'node:http';
+import { crc32 } from 'node:zlib';
 
 const bodyOf = req => new Promise(ok => { let b = ''; req.on('data', c => (b += c)); req.on('end', () => { try { ok(JSON.parse(b || 'null')); } catch { ok(b); } }); });
 export const TOKEN = 'tok-123';
@@ -31,3 +32,6 @@ export async function fakeBridge({ cards = () => [], avatars = () => [], more = 
 }
 // 실리 채팅 파일의 글: 헤더 줄 + 메시지 줄들 (chat_metadata: 헤더의 것)
 export const chatFile = (chat_metadata = {}, messages = []) => [{ chat_metadata, user_name: 'unused', character_name: 'unused' }, ...messages].map(x => JSON.stringify(x)).join('\n');
+// 실리가 쓰는 카드 PNG: tEXt 조각마다 이름, 0, JSON의 base64 (다리 없이 카드 폴더를 읽는 테스트용)
+const pngChunk = (name, data) => { const len = Buffer.alloc(4); len.writeUInt32BE(data.length); const body = Buffer.concat([Buffer.from(name, 'latin1'), data]); const crc = Buffer.alloc(4); crc.writeUInt32BE(crc32(body)); return Buffer.concat([len, body, crc]); };
+export const cardPng = texts => Buffer.concat([Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]), pngChunk('IHDR', Buffer.alloc(13)), ...Object.entries(texts).map(([k, v]) => pngChunk('tEXt', Buffer.from(`${k}\0${Buffer.from(JSON.stringify(v)).toString('base64')}`, 'latin1'))), pngChunk('IEND', Buffer.alloc(0))]);
