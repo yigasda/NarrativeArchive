@@ -15,6 +15,16 @@ export function isObject(item) {
     return (item && typeof item === 'object' && !Array.isArray(item));
 }
 
+// 실리 public/scripts/utils.js 173~180
+export function isValidUrl(value) {
+    try {
+        new URL(value);
+        return true;
+    } catch (_) {
+        return false;
+    }
+}
+
 // 실리 public/scripts/utils.js 202~268
 /**
  * Converts string to a value of a given type. Includes pythonista-friendly aliases.
@@ -325,6 +335,17 @@ export function arraysEqual(a, b) {
         if (a[i] !== b[i]) return false;
     }
     return true;
+}
+
+// 실리 public/scripts/utils.js 2892~2900
+/**
+ * Compares two version numbers, returning true if srcVersion >= minVersion
+ * @param {string} srcVersion The current version.
+ * @param {string} minVersion The target version number to test against
+ * @returns {boolean} True if srcVersion >= minVersion, false if not
+ */
+export function versionCompare(srcVersion, minVersion) {
+    return (srcVersion || '0.0.0').localeCompare(minVersion, undefined, { numeric: true, sensitivity: 'base' }) > -1;
 }
 
 // 실리 public/scripts/utils.js 3056~3056

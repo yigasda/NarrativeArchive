@@ -410,6 +410,11 @@ export function naLoad(settings, data) {
         KAI.__naSet({ koboldai_settings: data.koboldai_settings.map(item => JSON.parse(item)), koboldai_setting_names: nameIndex(data.koboldai_setting_names) });
         NAI.__naSet({ novelai_settings: data.novelai_settings.map(item => JSON.parse(item)), novelai_setting_names: nameIndex(data.novelai_setting_names) });
     }
+    // script.js 7952 loadKoboldSettings(data, settings.kai_settings ?? settings, settings) 114: Kobold 주소 (연결 확인 getStatusKobold가 써요, plugin/st/nastatus.js)
+    {
+        const preset = settings.kai_settings ?? settings;
+        KAI.kai_settings.api_server = preset.api_server ?? settings.api_server;
+    }
 
     // script.js 7958 loadTextGenSettings(data, settings)
     loadTextGenSettingsValues(data, settings);

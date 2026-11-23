@@ -1,6 +1,6 @@
 // 실리 1.19.1 public/scripts/openai.js의 일부를 그대로 옮긴 것 (서버 플러그인이 실리 브라우저 없이 같은 요청을 만들게). SillyTavern, AGPL-3.0 (NOTICE.md).
-// 바꾼 것: 서버가 실리 요청을 만드는 데 쓰는 것만 옮김. 옮긴 줄마다 위에 `// 실리 <경로> <시작줄>~<끝줄>`. 그 밖의 줄은 우리 것: import, `__naSet`(일꾼이 전역 값을 채움), 대역(DOMPurify · toastr · setOnlineStatus · resultCheckStatus · renderTemplateAsync).
-import { name1, name2, substituteParams, getCurrentChatId, getRequestHeaders } from '../script.js';
+// 바꾼 것: 서버가 실리 요청을 만드는 데 쓰는 것만 옮김. 옮긴 줄마다 위에 `// 실리 <경로> <시작줄>~<끝줄>`. 그 밖의 줄은 우리 것: import, `__naSet`(일꾼이 전역 값을 채움), 대역(DOMPurify · toastr · renderTemplateAsync · updateFeatureSupportFlags · saveModelList(값 부분은 plugin/st/nastatus.js)).
+import { name1, name2, substituteParams, getCurrentChatId, getRequestHeaders, abortStatusCheck, setOnlineStatus, resultCheckStatus } from '../script.js';
 import { getGroupNames, selected_group } from './group-chats.js';
 import { chatCompletionDefaultPrompts, promptManagerDefaultPromptOrders } from './PromptManager.js';
 import { getCustomStoppingStrings, power_user } from './power-user.js';
@@ -9,15 +9,23 @@ import { Popup } from './popup.js';
 import { t } from './i18n.js';
 import { ToolManager } from './tool-calling.js';
 import { accountStorage } from './util/AccountStorage.js';
-import { getStringHash, clamp } from './utils.js';
+import { getStringHash, clamp, isValidUrl } from './utils.js';
 import { naFetch as fetch } from '../naFetch.js';
 
-// 대역: 브라우저 화면 것들 (validateReverseProxy가 불러요). 서버에는 화면이 없어요
+// 대역: 브라우저 화면 것들 (validateReverseProxy · getStatusOpen이 불러요). 서버에는 화면이 없어요
 const DOMPurify = { sanitize: x => x };
 const toastr = { error: (...a) => console.warn('[narrative-archive plugin]', ...a) };
-const setOnlineStatus = () => {};
-const resultCheckStatus = () => {};
 const renderTemplateAsync = async () => '';
+// 대역: 실리 updateFeatureSupportFlags(6741~6755)는 화면의 data-cc-toggle 표시만 바꿔요. 서버에서는 아무것도 안 해요.
+const updateFeatureSupportFlags = () => {};
+// 대역: 실리 saveModelList(2025~2407)는 받은 모델 목록으로 화면의 모델 고르기 칸을 채우고, 그 칸의 change가 onModelChange(5472~)를 불러요.
+// 값을 정하는 부분(목록 · 거르기 · 정렬 · 모델 보정)은 plugin/st/nastatus.js saveModelListValues예요(실리 줄 번호를 적어 따라 했어요).
+// nastatus.js를 부르면 __naSet({ saveModelList })로 끼워요.
+let saveModelList = () => { throw new Error('saveModelList: plugin/st/nastatus.js를 불러오지 않았습니다.'); };
+// 실리 index.html 3068~3162 #model_openai_select · 3313~3362 #model_google_select의 <option value> (화면에 박혀 있는 고정 목록:
+// saveModelList 2063 · 2239~2241이 이 칸의 옵션을 읽어요). tools/st/gen.mjs가 그 줄에서 뽑아요.
+export const __naOpenAISelectOptions = ["gpt-6-astra","gpt-5.6","gpt-5.6-sol","gpt-5.6-terra","gpt-5.6-luna","gpt-5.5","gpt-5.5-2026-04-23","gpt-5.4","gpt-5.4-2026-03-05","gpt-5.4-mini","gpt-5.4-mini-2026-03-17","gpt-5.4-nano","gpt-5.4-nano-2026-03-17","gpt-5.3-chat-latest","gpt-5.2","gpt-5.2-2025-12-11","gpt-5.2-chat-latest","gpt-5.1","gpt-5.1-2025-11-13","gpt-5.1-chat-latest","gpt-5","gpt-5-2025-08-07","gpt-5-chat-latest","gpt-5-mini","gpt-5-mini-2025-08-07","gpt-5-nano","gpt-5-nano-2025-08-07","gpt-4.1","gpt-4.1-2025-04-14","gpt-4.1-mini","gpt-4.1-mini-2025-04-14","gpt-4.1-nano","gpt-4.1-nano-2025-04-14","o4-mini","o4-mini-2025-04-16","o3","o3-2025-04-16","o3-mini","o3-mini-2025-01-31","o1","o1-2024-12-17","gpt-4o","gpt-4o-2024-11-20","gpt-4o-2024-08-06","gpt-4o-2024-05-13","gpt-4o-mini","gpt-4o-mini-2024-07-18","gpt-4-turbo","gpt-4-turbo-2024-04-09","gpt-4","gpt-4-0613","gpt-3.5-turbo","gpt-3.5-turbo-0125","gpt-3.5-turbo-1106","gpt-3.5-turbo-instruct","babbage-002","davinci-002"];
+export const __naGoogleSelectOptions = ["gemini-3.7-flash","gemini-3.6-flash","gemini-3.5-flash","gemini-3.5-flash-lite","gemini-3.1-pro-preview","gemini-3.1-flash-lite","gemini-3.1-flash-image","gemini-3-pro-image","gemini-3-flash-preview","gemini-2.5-pro","gemini-2.5-flash","gemini-2.5-flash-lite","gemini-2.5-flash-image","gemini-2.0-flash-001","gemini-2.0-flash","gemini-2.0-flash-lite-001","gemini-2.0-flash-lite","gemma-4-31b-it","gemma-4-26b-a4b-it","gemma-3n-e4b-it","gemma-3n-e2b-it","gemma-3-27b-it","gemma-3-12b-it","gemma-3-4b-it","gemma-3-1b-it","learnlm-2.0-flash-experimental","gemini-robotics-er-1.5-preview"];
 
 // 실리 public/scripts/openai.js 102~124
 const default_main_prompt = 'Write {{char}}\'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.';
@@ -574,6 +582,138 @@ export function getChatCompletionModel(settings = null) {
         default:
             console.error(`Unknown chat completion source: ${source}`);
             return '';
+    }
+}
+
+// 실리 public/scripts/openai.js 2409~2478
+/**
+ * Sorts models by the specified property for the given source.
+ * @param {object[]} data - Array of model objects
+ * @param {string} property - Sort property ('alphabetically', 'context_length', 'pricing.prompt', 'pricing.completion')
+ * @param {string} source - Chat Completion source (e.g., 'openrouter', 'chutes', 'electronhub', 'nanogpt')
+ * @returns {object[]} Sorted array of model objects
+ */
+function sortModelsBy(data, property, source) {
+    switch (source) {
+        case chat_completion_sources.OPENROUTER:
+            return data.sort((a, b) => {
+                if (property === 'context_length') {
+                    return (b.context_length || 0) - (a.context_length || 0);
+                } else if (property === 'pricing.input' || property === 'pricing.prompt') {
+                    return parseFloat(a.pricing?.prompt || 0) - parseFloat(b.pricing?.prompt || 0);
+                } else if (property === 'pricing.output' || property === 'pricing.completion') {
+                    return parseFloat(a.pricing?.completion || 0) - parseFloat(b.pricing?.completion || 0);
+                } else {
+                    return a?.name && b?.name ? a.name.localeCompare(b.name) : 0;
+                }
+            });
+        case chat_completion_sources.CHUTES:
+            return data.sort((a, b) => {
+                if (property === 'context_length') {
+                    return (b.context_length || 0) - (a.context_length || 0);
+                } else if (property === 'pricing.input' || property === 'pricing.prompt') {
+                    return parseFloat(a.pricing?.input || 0) - parseFloat(b.pricing?.input || 0);
+                } else if (property === 'pricing.output' || property === 'pricing.completion') {
+                    return parseFloat(a.pricing?.output || 0) - parseFloat(b.pricing?.output || 0);
+                } else {
+                    return a?.id && b?.id ? a.id.localeCompare(b.id) : 0;
+                }
+            });
+        case chat_completion_sources.ELECTRONHUB:
+            return data.sort((a, b) => {
+                if (property === 'context_length') {
+                    return (b.tokens || 0) - (a.tokens || 0);
+                } else if (property === 'pricing.input' || property === 'pricing.prompt') {
+                    return parseFloat(a.pricing?.input || 0) - parseFloat(b.pricing?.input || 0);
+                } else if (property === 'pricing.output' || property === 'pricing.completion') {
+                    return parseFloat(a.pricing?.output || 0) - parseFloat(b.pricing?.output || 0);
+                } else {
+                    return a?.name && b?.name ? a.name.localeCompare(b.name) : 0;
+                }
+            });
+        case chat_completion_sources.NANOGPT:
+            return data.sort((a, b) => {
+                if (property === 'context_length') {
+                    return (b.context_length || 0) - (a.context_length || 0);
+                } else if (property === 'pricing.input' || property === 'pricing.prompt') {
+                    return parseFloat(a.pricing?.prompt || 0) - parseFloat(b.pricing?.prompt || 0);
+                } else if (property === 'pricing.output' || property === 'pricing.completion') {
+                    return parseFloat(a.pricing?.completion || 0) - parseFloat(b.pricing?.completion || 0);
+                } else {
+                    return a?.name && b?.name ? a.name.localeCompare(b.name) : 0;
+                }
+            });
+        case chat_completion_sources.AIMLAPI:
+            return data.sort((a, b) => {
+                if (property === 'context_length') {
+                    return (b.info?.contextLength || 0) - (a.info?.contextLength || 0);
+                } else {
+                    // No pricing information on the API. Sort alphabetically by name.
+                    return a?.info?.name && b?.info?.name ? a.info.name.localeCompare(b.info.name) : 0;
+                }
+            });
+        default:
+            return data;
+    }
+}
+
+// 실리 public/scripts/openai.js 2480~2537
+/**
+ * Groups models by vendor for the given source. If not supported, returns a map with a single entry containing all models.
+ * @param {object[]} array Array of model objects
+ * @param {string} source Chat Completion source (e.g., 'openrouter')
+ * @returns {Map<string, object[]>} Map of vendor to array of models
+ */
+function groupModelsByVendor(array, source) {
+    switch (source) {
+        case chat_completion_sources.OPENROUTER:
+            return array.reduce((acc, curr) => {
+                const vendor = curr.id.split('/')[0];
+                if (!acc.has(vendor)) {
+                    acc.set(vendor, []);
+                }
+                acc.get(vendor).push(curr);
+                return acc;
+            }, new Map());
+        case chat_completion_sources.ELECTRONHUB:
+            return array.reduce((acc, curr) => {
+                const vendor = String(curr?.name || curr?.id || 'Other').split(':')[0].trim() || 'Other';
+                if (!acc.has(vendor)) {
+                    acc.set(vendor, []);
+                }
+                acc.get(vendor).push(curr);
+                return acc;
+            }, new Map());
+        case chat_completion_sources.NANOGPT:
+            return array.reduce((acc, curr) => {
+                const vendorPart = /\//.test(curr.id) ? curr.id.split('/')[0] : curr.id.split('-')[0];
+                const vendor = String(vendorPart?.trim()?.toLowerCase() || 'Other');
+                if (!acc.has(vendor)) {
+                    acc.set(vendor, []);
+                }
+                acc.get(vendor).push(curr);
+                return acc;
+            }, new Map());
+        case chat_completion_sources.CHUTES:
+            return array.reduce((acc, curr) => {
+                const vendor = curr.id.split('/')[0];
+                if (!acc.has(vendor)) {
+                    acc.set(vendor, []);
+                }
+                acc.get(vendor).push(curr);
+                return acc;
+            }, new Map());
+        case chat_completion_sources.AIMLAPI:
+            return array.reduce((acc, curr) => {
+                const vendor = curr.info?.developer || 'Other';
+                if (!acc.has(vendor)) {
+                    acc.set(vendor, []);
+                }
+                acc.get(vendor).push(curr);
+                return acc;
+            }, new Map());
+        default:
+            return new Map([['', array]]);
     }
 }
 
@@ -1212,12 +1352,136 @@ function migrateChatCompletionSettings(settings) {
     }
 }
 
-export { oai_settings, default_settings, migrateChatCompletionSettings, continue_postfix_types, biasCache };
+// 실리 public/scripts/openai.js 4459~4475
+async function getStatusOpen() {
+    const noValidateSources = [
+        chat_completion_sources.CLAUDE,
+        chat_completion_sources.AI21,
+        chat_completion_sources.VERTEXAI,
+        chat_completion_sources.PERPLEXITY,
+        chat_completion_sources.ZAI,
+        chat_completion_sources.MINIMAX,
+    ];
+    if (noValidateSources.includes(oai_settings.chat_completion_source)) {
+        let status = t`Key saved; press \"Test Message\" to verify.`;
+        setOnlineStatus(status);
+        updateFeatureSupportFlags();
+        return resultCheckStatus();
+    }
+
+    if (oai_settings.chat_completion_source === chat_completion_sources.CUSTOM && !isValidUrl(oai_settings.custom_url)) {
+        // (실리 4476 console.debug: 서버는 남기지 않아요)
+// 실리 public/scripts/openai.js 4477~4481
+        setOnlineStatus(t`Invalid endpoint URL. Requests may fail.`);
+        return resultCheckStatus();
+    }
+
+    if (oai_settings.chat_completion_source === chat_completion_sources.AZURE_OPENAI && !isValidUrl(oai_settings.azure_base_url)) {
+        // (실리 4482 console.debug: 서버는 남기지 않아요)
+// 실리 public/scripts/openai.js 4483~4508
+        setOnlineStatus(t`Invalid Azure endpoint URL. Requests may fail.`);
+        return resultCheckStatus();
+    }
+
+    let data = {
+        reverse_proxy: oai_settings.reverse_proxy,
+        proxy_password: oai_settings.proxy_password,
+        chat_completion_source: oai_settings.chat_completion_source,
+    };
+
+    const validateProxySources = [
+        chat_completion_sources.CLAUDE,
+        chat_completion_sources.OPENAI,
+        chat_completion_sources.MISTRALAI,
+        chat_completion_sources.MAKERSUITE,
+        chat_completion_sources.VERTEXAI,
+        chat_completion_sources.DEEPSEEK,
+        chat_completion_sources.XAI,
+        chat_completion_sources.ZAI,
+        chat_completion_sources.MOONSHOT,
+    ];
+    if (oai_settings.reverse_proxy && validateProxySources.includes(oai_settings.chat_completion_source)) {
+        await validateReverseProxy();
+    }
+
+    if (oai_settings.chat_completion_source === chat_completion_sources.CUSTOM) {
+        // (실리 4509: 화면의 .model_custom_select 비우기)
+// 실리 public/scripts/openai.js 4510~4565
+        data.custom_url = oai_settings.custom_url;
+        data.custom_include_headers = substituteParams(oai_settings.custom_include_headers);
+    }
+
+    if (oai_settings.chat_completion_source === chat_completion_sources.AZURE_OPENAI) {
+        data.azure_base_url = oai_settings.azure_base_url;
+        data.azure_deployment_name = oai_settings.azure_deployment_name;
+        data.azure_api_version = oai_settings.azure_api_version;
+    }
+
+    if (oai_settings.chat_completion_source === chat_completion_sources.SILICONFLOW) {
+        data.siliconflow_endpoint = oai_settings.siliconflow_endpoint;
+    }
+
+    if (oai_settings.chat_completion_source === chat_completion_sources.MINIMAX) {
+        data.minimax_endpoint = oai_settings.minimax_endpoint;
+    }
+
+    if (oai_settings.chat_completion_source === chat_completion_sources.WORKERS_AI) {
+        data.workers_ai_account_id = oai_settings.workers_ai_account_id;
+    }
+
+    if (oai_settings.chat_completion_source === chat_completion_sources.POLLINATIONS) {
+        data.pollinations_endpoint = oai_settings.pollinations_endpoint || POLLINATIONS_ENDPOINT.AUTHENTICATED;
+    }
+
+    const canBypass = (oai_settings.chat_completion_source === chat_completion_sources.OPENAI && oai_settings.bypass_status_check) || oai_settings.chat_completion_source === chat_completion_sources.CUSTOM;
+    if (canBypass) {
+        setOnlineStatus(t`Status check bypassed`);
+    }
+
+    try {
+        const response = await fetch('/api/backends/chat-completions/status', {
+            method: 'POST',
+            headers: getRequestHeaders(),
+            body: JSON.stringify(data),
+            signal: abortStatusCheck.signal,
+            cache: 'no-cache',
+        });
+
+        if (!response.ok) {
+            throw new Error(response.statusText);
+        }
+
+        const responseData = await response.json();
+
+        if ('data' in responseData && Array.isArray(responseData.data)) {
+            saveModelList(responseData.data);
+        }
+        if (!('error' in responseData)) {
+            setOnlineStatus(t`Valid`);
+        }
+        if (responseData.bypass) {
+            setOnlineStatus(t`Status check bypassed`);
+        }
+    } catch (error) {
+        // (실리 4566 console.error(error): 서버는 plugin/st/nastatus.js가 한 번만 "상태를 가져오는 중 오류가 발생했습니다.")
+// 실리 public/scripts/openai.js 4567~4575
+
+        if (!canBypass) {
+            setOnlineStatus('no_connection');
+        }
+    }
+
+    updateFeatureSupportFlags();
+    return resultCheckStatus();
+}
+
+export { oai_settings, default_settings, migrateChatCompletionSettings, continue_postfix_types, biasCache, getStatusOpen, sortModelsBy, groupModelsByVendor, openrouter_website_model };
 
 /**
  * 일꾼이 모듈 전역 값을 채워요. v에 있는 키만 바꿔요.
  * openai_settings · openai_setting_names는 실리 loadOpenAISettings 4321~4336의 값(프리셋 객체 배열 · {이름: 번호}).
- * @param {{model_list?: object[], proxies?: object[], selected_proxy?: object, biasCache?: object, openai_settings?: object[], openai_setting_names?: object}} v
+ * saveModelList는 plugin/st/nastatus.js의 saveModelListValues(실리 saveModelList의 값 부분).
+ * @param {{model_list?: object[], proxies?: object[], selected_proxy?: object, biasCache?: object, openai_settings?: object[], openai_setting_names?: object, saveModelList?: function}} v
  */
 export function __naSet(v) {
     if (Object.hasOwn(v, 'model_list')) model_list = v.model_list;
@@ -1226,4 +1490,5 @@ export function __naSet(v) {
     if (Object.hasOwn(v, 'biasCache')) biasCache = v.biasCache;
     if (Object.hasOwn(v, 'openai_settings')) openai_settings = v.openai_settings;
     if (Object.hasOwn(v, 'openai_setting_names')) openai_setting_names = v.openai_setting_names;
+    if (Object.hasOwn(v, 'saveModelList')) saveModelList = v.saveModelList;
 }

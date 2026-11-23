@@ -1,5 +1,5 @@
 // 실리 1.19.1 public/script.js의 일부를 그대로 옮긴 것 (서버 플러그인이 실리 브라우저 없이 같은 요청을 만들게). SillyTavern, AGPL-3.0 (NOTICE.md).
-// 바꾼 것: 서버가 실리 요청을 만드는 데 쓰는 것만 옮김. 옮긴 줄마다 위에 `// 실리 <경로> <시작줄>~<끝줄>`. 그 밖의 줄은 우리 것: import, `__naSet`(일꾼이 전역 값을 채움), 대역(saveSettingsDebounced).
+// 바꾼 것: 서버가 실리 요청을 만드는 데 쓰는 것만 옮김. 옮긴 줄마다 위에 `// 실리 <경로> <시작줄>~<끝줄>`. 그 밖의 줄은 우리 것: import, `__naSet`(일꾼이 전역 값을 채움), 대역(saveSettingsDebounced · displayOnlineStatus · stopStatusLoading).
 import { power_user, collapseNewlines } from './scripts/power-user.js';
 import { groups, selected_group, getGroupCharacterCardsLazy } from './scripts/group-chats.js';
 import { formatInstructModeExamples } from './scripts/instruct-mode.js';
@@ -42,6 +42,9 @@ export let this_chid;
 // 실리 public/script.js 453~454
 /** @type {ChatMetadata} */
 export let chat_metadata = {};
+
+// 실리 public/script.js 461~461
+export let abortStatusCheck = new AbortController();
 
 // 대역: 실리 saveSettingsDebounced(470줄)는 브라우저 설정을 저장해요. 서버는 변수를 저장하지 않아서 아무것도 안 해요.
 export const saveSettingsDebounced = () => {};
@@ -102,6 +105,16 @@ export function getRequestHeaders({ omitContentType = false } = {}) {
     }
 
     return headers;
+}
+
+// 대역: 실리 displayOnlineStatus(812~820) · stopStatusLoading(855~858)은 화면(연결 표시 · 연결 버튼)만 바꿔요. 서버에는 화면이 없어서 아무것도 안 해요.
+function displayOnlineStatus() {}
+function stopStatusLoading() {}
+
+// 실리 public/script.js 860~863
+export function resultCheckStatus() {
+    displayOnlineStatus();
+    stopStatusLoading();
 }
 
 // 실리 public/script.js 2831~2961
@@ -664,6 +677,20 @@ export function getGeneratingModel(mes) {
             break;
     }
     return model;
+}
+
+// 실리 public/script.js 7147~7158
+/**
+ * Sets the API connection status of the application
+ * @param {string|'no_connection'} value Connection status value
+ */
+export function setOnlineStatus(value) {
+    const previousStatus = online_status;
+    online_status = value;
+    displayOnlineStatus();
+    if (previousStatus !== online_status) {
+        eventSource.emitAndWait(event_types.ONLINE_STATUS_CHANGED, online_status);
+    }
 }
 
 /**

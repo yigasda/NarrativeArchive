@@ -43,12 +43,26 @@ if (naFetchFailures.length) { /* 실리 서버 길 하나가 실패했어요(토
   `naSendRequest`가 다리로 받아 온 뒤 다시 해요.
 - 스트리밍(`stream: true`)은 서버에서 안 해요(오류).
 
+## 쓰는 법 (연결 확인)
+
+```js
+import { naStatus } from './nastatus.js';
+naLoad(settings, await naLoadPresets(userRoot));
+await naStatus({ root: userRoot, send: bridge });   // 실리 브라우저의 연결 버튼과 같은 것: online_status · model_list · 글 완성 모델 목록 · 모델 보정
+```
+
+- 연결 확인은 옮긴 실리 함수 그대로예요(`openai.js getStatusOpen` · `textgen-settings.js getStatusTextgen` · `kai-settings.js getStatusKobold`, `main_api`의 것 하나).
+  `nastatus.js`(우리 것)는 그 함수가 부르는 실리 서버의 상태 길 답을 캐시하고(열쇠 = 사용자 폴더 · `main_api` · 길 · 실리 코드가 만든 몸통 그대로 · secrets.json의 파일 번호 · 시각 · 크기.
+  성공은 30분 · Azure는 다시 안 물음 · 실패는 1분 · 시간 제한 15초), 화면이 섞인 `saveModelList`의 값 부분을 실리 줄 번호를 적어 따라 해요.
+- 실패(꺼진 백엔드 · 옛 다리의 404 · 시간 초과)는 던지지 않아요: 상태는 `no_connection`, 목록은 그 열쇠로 전에 받은 좋은 답의 것(실리 브라우저처럼). 실리 창에는 열쇠마다 한 번.
+- 옮기지 않은 것: 지시 형식 · 문맥 프리셋 자동 고르기(`autoSelectInstructPreset`), koboldcpp · llama.cpp `/props`, `onModelChange`의 온도 · 문맥 깎기 — 브라우저가 그 자리에서 settings.json에 저장해서 서버는 그 값을 써요.
+
 ## 파일
 
 | 파일 | 실리 원본 | 어떻게 |
 |---|---|---|
 | `public/lib.js` | `public/lib.js` | 우리 것: 같은 이름(chevrotain · moment · seedrandom · droll · Handlebars · lodash)을 실리 서버 폴더 node_modules에서 먼저, 없으면 확장 node_modules에서 |
-| `public/script.js` | `public/script.js` | 일부 (이름 · 캐릭터 · 채팅 전역 값, substituteParams · substituteParamsLegacy, 카드 칸, getMax*Tokens, getGeneratingModel …). 대역: saveSettingsDebounced |
+| `public/script.js` | `public/script.js` | 일부 (이름 · 캐릭터 · 채팅 전역 값, substituteParams · substituteParamsLegacy, 카드 칸, getMax*Tokens, getGeneratingModel, setOnlineStatus · resultCheckStatus · abortStatusCheck …). 대역: saveSettingsDebounced · displayOnlineStatus · stopStatusLoading |
 | `public/scripts/macros.js` | 같음 | 통째로 (옛 엔진) |
 | `public/scripts/macros/macro-system.js` | 같음 | 통째로 |
 | `public/scripts/macros/engine/*.js` (MacroBrowser.js 빼고 9개) | 같음 | 통째로. MacroCstWalker · MacroEnvBuilder · MacroDiagnostics는 절대 경로 import만 상대 경로로 |
@@ -58,9 +72,9 @@ if (naFetchFailures.length) { /* 실리 서버 길 하나가 실패했어요(토
 | `public/scripts/power-user.js` | 같음 | 일부 (power_user 기본값, collapseNewlines). 대역: document · getComputedStyle(색 기본값은 빈 글자) |
 | `public/scripts/group-chats.js` | 같음 | 일부 (groups, selected_group, getGroupNames, getGroupCharacterCardsLazy) |
 | `public/scripts/instruct-mode.js` | 같음 | 일부 (instruct_presets, migrateInstructModeSettings, getInstructStoppingSequences, formatInstructModeChat · Prompt · SystemPrompt · Examples, getInstructMacros) |
-| `public/scripts/openai.js` | 같음 | 일부 (chat_completion_sources, parseExampleIntoIndividual, getChatCompletionModel). oai_settings는 기본값 없이 `__naSet`으로 |
+| `public/scripts/openai.js` | 같음 | 일부 (chat_completion_sources, parseExampleIntoIndividual, getChatCompletionModel, 연결 확인 getStatusOpen(화면 · 로그 줄 빼고) · sortModelsBy · groupModelsByVendor). oai_settings는 기본값 없이 `__naSet`으로. 대역: updateFeatureSupportFlags · saveModelList(값 부분은 `nastatus.js`). index.html의 고정 모델 칸 옵션(#model_openai_select · #model_google_select)을 gen.mjs가 뽑아 둬요 |
 | `public/scripts/nai-settings.js` | 같음 | 일부 (nai_settings, getKayraMaxContextTokens) |
-| `public/scripts/textgen-settings.js` | 같음 | 일부 (createTextGenGenerationData와 딸린 것 · 금지 토큰 · 로짓 바이어스 · 서버 주소). 대역: localStorage(Mancer 기본 주소) · document(index.html 1503 dynatemp 종류) · toastr |
+| `public/scripts/textgen-settings.js` | 같음 | 일부 (createTextGenGenerationData와 딸린 것 · 금지 토큰 · 로짓 바이어스 · 서버 주소 · 연결 확인 getStatusTextgen(프리셋 자동 고르기 · /props · 화면 · 로그 줄 빼고)). 대역: localStorage(Mancer 기본 주소) · document(index.html 1503 dynatemp 종류) · toastr · sessionStorage(tokenizers.js의 것) |
 | `public/scripts/extensions.js` | 같음 | 일부 (extension_settings, extensionNames, findExtension). 대역: saveMetadataDebounced |
 | `public/scripts/variables.js` | 같음 | 일부 (지역 · 전역 변수 get/set/add/inc/dec/has/del, getVariableMacros) |
 | `public/scripts/st-context.js` | 같음 | 일부 (getContext()의 `variables` 객체만, `variables`로 내보냄) |
@@ -75,7 +89,9 @@ if (naFetchFailures.length) { /* 실리 서버 길 하나가 실패했어요(토
 | `public/scripts/custom-request.js` | 같음 | 일부 (9~607 통째로, import만 우리 것). 대역: 스트리밍 셋(닿으면 오류) |
 | `public/scripts/preset-manager.js` | 같음 | 일부 (getPresetManager, PresetManager의 getPresetList · getCompletionPresetByName). 대역: registerPresetManagers(index.html의 select 차례) |
 | `public/scripts/slash-commands.js` | 같음 | 일부 (CONNECT_API_MAP · setupConnectAPIMap) |
-| `public/scripts/logit-bias.js` · `kai-settings.js` · `sysprompt.js` | 같음 | 일부 (BIAS_CACHE · getLogitBiasListResult / 프리셋 목록 · kai_flags / system_prompts) |
+| `public/scripts/logit-bias.js` · `kai-settings.js` · `sysprompt.js` | 같음 | 일부 (BIAS_CACHE · getLogitBiasListResult / 프리셋 목록 · kai_flags · 연결 확인 getStatusKobold · setKoboldFlags(화면 · 로그 줄 빼고) / system_prompts) |
+| `public/scripts/textgen-models.js` | 같음 | 일부 (공급자 목록, 모델 목록 전역 10개, 연결 확인이 부르는 로더의 값 줄(목록 · 정렬 · 목록에 없으면 첫 모델), 토크나이저 고르기) |
+| `nastatus.js` | 우리 것 | 연결 확인의 상태 답 캐시 · `saveModelList` 값 부분 · 실리 창 한 줄 (위 "연결 확인") |
 | `public/scripts/util/AccountStorage.js` | 같음 | 대역 (getItem은 늘 null) |
 | `public/scripts/RossAscends-mods.js` | 같음 | 대역 (isMobile은 늘 false) |
 | `public/scripts/slash-commands/SlashCommandClosure.js` | 같음 | 대역 (빈 클래스, convertValueType의 instanceof에만) |

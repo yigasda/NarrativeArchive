@@ -12,6 +12,10 @@
 //   POST /api/tokenizers/<토크나이저>/encode · /api/tokenizers/remote/textgenerationwebui/encode · /api/tokenizers/remote/kobold/count
 //                                                   금지 토큰 · 로짓 바이어스의 토큰 (글 완성: 실리 tokenizers.js getTextTokens)
 //   (이 길들이 없는 옛 다리면 404: 일꾼은 그 요청을 보내지 않고 이유를 알려요. plugin/st/public/naFetch.js naFetchFailures)
+//   POST /api/backends/chat-completions/status     연결 확인 (실리 openai.js getStatusOpen: 연결 상태 · 모델 목록)
+//   POST /api/backends/text-completions/status     연결 확인 (실리 textgen-settings.js getStatusTextgen: 연결 상태 · 모델 목록 · API 토크나이저)
+//   POST /api/backends/kobold/status               연결 확인 (실리 kai-settings.js getStatusKobold: {{model}} · Kobold 기능)
+//   (이 셋이 없는 옛 다리면 404: 일꾼은 연결 안 됨으로 보고 지금처럼 요청을 보내요. 막지 않아요. plugin/st/nastatus.js)
 //   POST /api/characters/all                       캐릭터 목록 (답장마다 카드를 새로 읽어요)
 //   POST /api/characters/get                       카드 하나 (목록이 간단한 카드로 왔을 때)
 //   POST /api/characters/merge-attributes          카드의 확장 칸 쓰기 (스케줄 · 상태)
@@ -25,7 +29,8 @@ import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 
 const TOKENIZERS = ['llama', 'llama3', 'mistral', 'yi', 'gemma', 'jamba', 'qwen2', 'command-r', 'command-a', 'nemo', 'deepseek', 'openai', 'claude', 'gpt2'].map(t => `/api/tokenizers/${t}/encode`);
-const POSTS = new Set(['/api/backends/chat-completions/generate', '/api/backends/chat-completions/bias', '/api/backends/text-completions/generate', ...TOKENIZERS, '/api/tokenizers/remote/textgenerationwebui/encode', '/api/tokenizers/remote/kobold/count', '/api/characters/all', '/api/characters/get', '/api/characters/merge-attributes', '/api/avatars/get', '/api/worldinfo/get']);
+const STATUS = ['/api/backends/chat-completions/status', '/api/backends/text-completions/status', '/api/backends/kobold/status'];
+const POSTS = new Set(['/api/backends/chat-completions/generate', '/api/backends/chat-completions/bias', '/api/backends/text-completions/generate', ...STATUS, ...TOKENIZERS, '/api/tokenizers/remote/textgenerationwebui/encode', '/api/tokenizers/remote/kobold/count', '/api/characters/all', '/api/characters/get', '/api/characters/merge-attributes', '/api/avatars/get', '/api/worldinfo/get']);
 export const allowed = (method, url) => { const p = String(url || '').split('?')[0]; return method === 'POST' ? POSTS.has(p) : method === 'GET' ? p.startsWith('/user/files/') && !p.includes('..') : false; };
 
 // stRoot: 실리 서버의 폴더 · userOf(root) → 그 사용자 폴더의 req.user ({ profile, directories }) | null
@@ -34,8 +39,8 @@ export async function startBridge({ stRoot = process.cwd(), userOf } = {}) {
     const need = createRequire(path.join(stRoot, 'package.json'));
     const express = need('express');
     const st = file => import(pathToFileURL(path.join(stRoot, 'src', file)).href);
-    const [chat, text, chars, avatars, world, users, tokenizers] = await Promise.all([st('endpoints/backends/chat-completions.js'), st('endpoints/backends/text-completions.js'), st('endpoints/characters.js'), st('endpoints/avatars.js'), st('endpoints/worldinfo.js'), st('users.js'), st('endpoints/tokenizers.js')]);
-    for (const [name, m] of [['chat-completions', chat], ['text-completions', text], ['characters', chars], ['avatars', avatars], ['worldinfo', world], ['users', users], ['tokenizers', tokenizers]]) if (typeof m?.router !== 'function') throw new Error(`실리 ${name} 엔드포인트를 찾을 수 없습니다. 실리 버전이 다를 수 있습니다.`);
+    const [chat, text, kobold, chars, avatars, world, users, tokenizers] = await Promise.all([st('endpoints/backends/chat-completions.js'), st('endpoints/backends/text-completions.js'), st('endpoints/backends/kobold.js'), st('endpoints/characters.js'), st('endpoints/avatars.js'), st('endpoints/worldinfo.js'), st('users.js'), st('endpoints/tokenizers.js')]);
+    for (const [name, m] of [['chat-completions', chat], ['text-completions', text], ['kobold', kobold], ['characters', chars], ['avatars', avatars], ['worldinfo', world], ['users', users], ['tokenizers', tokenizers]]) if (typeof m?.router !== 'function') throw new Error(`실리 ${name} 엔드포인트를 찾을 수 없습니다. 실리 버전이 다를 수 있습니다.`);
     const token = crypto.randomBytes(24).toString('hex'), want = Buffer.from(token);
     const app = express();
     app.disable('x-powered-by');
@@ -53,6 +58,7 @@ export async function startBridge({ stRoot = process.cwd(), userOf } = {}) {
     app.use(express.json({ limit: '500mb' }));
     app.use('/api/backends/chat-completions', chat.router);
     app.use('/api/backends/text-completions', text.router);
+    app.use('/api/backends/kobold', kobold.router);
     app.use('/api/characters', chars.router);
     app.use('/api/avatars', avatars.router);
     app.use('/api/worldinfo', world.router);

@@ -44,6 +44,9 @@ export async function startWork({ root, store, st = null, schedule = true, from 
     const { VERSION } = await import('../src/core.js');
     // 실리 브라우저의 요청 코드를 옮긴 것 (plugin/st: 실리 1.19.1 그대로). naload.js가 먼저예요: power-user.js를 script.js보다 먼저 불러요(실리의 차례)
     const STL = await import('./st/naload.js');
+    // (SillyTavern's connection check — online_status, the model lists, the chosen model's correction —, its replies kept while the
+    //  settings stay the same: plugin/st/nastatus.js)
+    const STS = await import('./st/nastatus.js');
     const STP = {
         script: await import('./st/public/script.js'), groups: await import('./st/public/scripts/group-chats.js'), power: await import('./st/public/scripts/power-user.js'),
         oai: await import('./st/public/scripts/openai.js'), context: await import('./st/public/scripts/st-context.js'), ext: await import('./st/public/scripts/extensions.js'), fetch: await import('./st/public/naFetch.js'),
@@ -274,6 +277,10 @@ export async function startWork({ root, store, st = null, schedule = true, from 
             //  files read now — plugin/st/naload.js, SillyTavern's own loading —, then this chat's names, cards, group, messages,
             //  metadata and persona. Set again for every job: nothing of the one before stays)
             STL.naLoad(settings, await STL.naLoadPresets(root));
+            // (the connection SillyTavern's page makes with these settings — its getStatusOpen · getStatusTextgen · getStatusKobold —, from the
+            //  replies kept for them, asked again through the bridge when the settings, the keys or the time say so. It never throws: without
+            //  a status — an older bridge, a backend that is down — the request is built as before, with no connection)
+            try { await STS.naStatus({ root, send: stFetch, log: text => logger.warn('%s', text) }); } catch (err) { logger.warn(err instanceof Error ? err : {}, '상태를 가져오는 중 오류가 발생했습니다'); }
             // (a copy: the chat file's read is frozen, and SillyTavern's code may write into its metadata — {{setvar}} — as the page's)
             now.chatMetadata = { ...structuredClone(now.metadata), narrative_archive: entry.real };
             STP.script.__naSet({ name1: now.name1, name2: now.groupId ? '' : String(now.characters[now.characterId]?.name ?? ''), characters: now.characters, this_chid: now.characterId, chat: now.chat, chat_metadata: now.chatMetadata });

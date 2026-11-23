@@ -1,0 +1,4185 @@
+{
+ "cases": {
+  "cc-openai-proxy-default": {
+   "phases": [
+    {
+     "online_status": "Valid",
+     "model_list": [
+      {
+       "id": "ren-model-a"
+      },
+      {
+       "id": "ren-model-b"
+      }
+     ],
+     "oai": {
+      "ai21_model": "jamba-large",
+      "aimlapi_model": "chatgpt-4o-latest",
+      "azure_openai_model": "",
+      "chutes_model": "deepseek-ai/DeepSeek-V3-0324",
+      "claude_model": "claude-sonnet-5",
+      "cohere_model": "command-r-plus",
+      "cometapi_model": "gpt-4o",
+      "custom_model": "",
+      "deepseek_model": "deepseek-v4-flash",
+      "electronhub_model": "gpt-4o-mini",
+      "fireworks_model": "accounts/fireworks/models/kimi-k2-instruct",
+      "google_model": "gemini-3.7-flash",
+      "groq_model": "llama-3.3-70b-versatile",
+      "minimax_model": "MiniMax-M2.7",
+      "mistralai_model": "mistral-large-latest",
+      "moonshot_model": "kimi-latest",
+      "nanogpt_model": "gpt-4o-mini",
+      "openai_model": "gpt-5.6-terra",
+      "openrouter_model": "OR_Website",
+      "perplexity_model": "sonar-pro",
+      "pollinations_model": "openai",
+      "siliconflow_model": "deepseek-ai/DeepSeek-V3",
+      "vertexai_model": "gemini-3.7-flash",
+      "workers_ai_model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "xai_model": "grok-3-beta",
+      "zai_model": "glm-4.6"
+     },
+     "tg": {
+      "aphrodite_model": "",
+      "custom_model": "",
+      "dreamgen_model": "lucid-v1-extra-large/text",
+      "featherless_model": "",
+      "generic_model": "",
+      "infermaticai_model": "",
+      "llamacpp_model": "",
+      "mancer_model": "mytholite",
+      "ollama_model": "",
+      "openrouter_model": "openrouter/auto",
+      "tabby_model": "",
+      "togetherai_model": "Gryphe/MythoMax-L2-13b",
+      "vllm_model": ""
+     },
+     "openRouterModels": [],
+     "tok": null,
+     "kai_flags": {
+      "can_use_tokenization": false,
+      "can_use_stop_sequence": false,
+      "can_use_streaming": false,
+      "can_use_default_badwordsids": false,
+      "can_use_mirostat": false,
+      "can_use_grammar": false,
+      "can_use_min_p": false
+     },
+     "model": "gpt-5.6-terra"
+    }
+   ],
+   "request": {
+    "generate_data": {
+     "type": "quiet",
+     "messages": [
+      {
+       "role": "system",
+       "content": "You are {{char}}. Talk to {{user}}."
+      },
+      {
+       "role": "user",
+       "content": "hi"
+      }
+     ],
+     "model": "gpt-5.6-terra",
+     "stream": false,
+     "chat_completion_source": "openai",
+     "user_name": "Ren",
+     "char_name": "Mara",
+     "group_names": [],
+     "include_reasoning": true,
+     "enable_web_search": false,
+     "request_images": false,
+     "request_image_resolution": "",
+     "request_image_aspect_ratio": "",
+     "custom_prompt_post_processing": "",
+     "reverse_proxy": "http://127.0.0.1:8131/oai/v1",
+     "proxy_password": "pw",
+     "max_completion_tokens": 300
+    },
+    "stream": false,
+    "canMultiSwipe": false
+   }
+  },
+  "cc-openai-proxy-kept": {
+   "phases": [
+    {
+     "online_status": "Valid",
+     "model_list": [
+      {
+       "id": "ren-model-a"
+      },
+      {
+       "id": "ren-model-b"
+      }
+     ],
+     "oai": {
+      "ai21_model": "jamba-large",
+      "aimlapi_model": "chatgpt-4o-latest",
+      "azure_openai_model": "",
+      "chutes_model": "deepseek-ai/DeepSeek-V3-0324",
+      "claude_model": "claude-sonnet-5",
+      "cohere_model": "command-r-plus",
+      "cometapi_model": "gpt-4o",
+      "custom_model": "",
+      "deepseek_model": "deepseek-v4-flash",
+      "electronhub_model": "gpt-4o-mini",
+      "fireworks_model": "accounts/fireworks/models/kimi-k2-instruct",
+      "google_model": "gemini-3.7-flash",
+      "groq_model": "llama-3.3-70b-versatile",
+      "minimax_model": "MiniMax-M2.7",
+      "mistralai_model": "mistral-large-latest",
+      "moonshot_model": "kimi-latest",
+      "nanogpt_model": "gpt-4o-mini",
+      "openai_model": "ren-model-b",
+      "openrouter_model": "OR_Website",
+      "perplexity_model": "sonar-pro",
+      "pollinations_model": "openai",
+      "siliconflow_model": "deepseek-ai/DeepSeek-V3",
+      "vertexai_model": "gemini-3.7-flash",
+      "workers_ai_model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "xai_model": "grok-3-beta",
+      "zai_model": "glm-4.6"
+     },
+     "tg": {
+      "aphrodite_model": "",
+      "custom_model": "",
+      "dreamgen_model": "lucid-v1-extra-large/text",
+      "featherless_model": "",
+      "generic_model": "",
+      "infermaticai_model": "",
+      "llamacpp_model": "",
+      "mancer_model": "mytholite",
+      "ollama_model": "",
+      "openrouter_model": "openrouter/auto",
+      "tabby_model": "",
+      "togetherai_model": "Gryphe/MythoMax-L2-13b",
+      "vllm_model": ""
+     },
+     "openRouterModels": [],
+     "tok": null,
+     "kai_flags": {
+      "can_use_tokenization": false,
+      "can_use_stop_sequence": false,
+      "can_use_streaming": false,
+      "can_use_default_badwordsids": false,
+      "can_use_mirostat": false,
+      "can_use_grammar": false,
+      "can_use_min_p": false
+     },
+     "model": "ren-model-b"
+    }
+   ],
+   "request": {
+    "generate_data": {
+     "type": "quiet",
+     "messages": [
+      {
+       "role": "system",
+       "content": "You are {{char}}. Talk to {{user}}."
+      },
+      {
+       "role": "user",
+       "content": "hi"
+      }
+     ],
+     "model": "ren-model-b",
+     "temperature": 1,
+     "frequency_penalty": 0,
+     "presence_penalty": 0,
+     "top_p": 1,
+     "max_tokens": 300,
+     "stream": false,
+     "stop": [
+      "ren-model-b",
+      "END"
+     ],
+     "chat_completion_source": "openai",
+     "user_name": "Ren",
+     "char_name": "Mara",
+     "group_names": [],
+     "include_reasoning": true,
+     "enable_web_search": false,
+     "request_images": false,
+     "request_image_resolution": "",
+     "request_image_aspect_ratio": "",
+     "custom_prompt_post_processing": "",
+     "reverse_proxy": "http://127.0.0.1:8131/oai/v1",
+     "proxy_password": "pw"
+    },
+    "stream": false,
+    "canMultiSwipe": false
+   }
+  },
+  "cc-openai-no-external": {
+   "phases": [
+    {
+     "online_status": "Valid",
+     "model_list": [
+      {
+       "id": "ren-model-a"
+      }
+     ],
+     "oai": {
+      "ai21_model": "jamba-large",
+      "aimlapi_model": "chatgpt-4o-latest",
+      "azure_openai_model": "",
+      "chutes_model": "deepseek-ai/DeepSeek-V3-0324",
+      "claude_model": "claude-sonnet-5",
+      "cohere_model": "command-r-plus",
+      "cometapi_model": "gpt-4o",
+      "custom_model": "",
+      "deepseek_model": "deepseek-v4-flash",
+      "electronhub_model": "gpt-4o-mini",
+      "fireworks_model": "accounts/fireworks/models/kimi-k2-instruct",
+      "google_model": "gemini-3.7-flash",
+      "groq_model": "llama-3.3-70b-versatile",
+      "minimax_model": "MiniMax-M2.7",
+      "mistralai_model": "mistral-large-latest",
+      "moonshot_model": "kimi-latest",
+      "nanogpt_model": "gpt-4o-mini",
+      "openai_model": "gpt-5.6-terra",
+      "openrouter_model": "OR_Website",
+      "perplexity_model": "sonar-pro",
+      "pollinations_model": "openai",
+      "siliconflow_model": "deepseek-ai/DeepSeek-V3",
+      "vertexai_model": "gemini-3.7-flash",
+      "workers_ai_model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "xai_model": "grok-3-beta",
+      "zai_model": "glm-4.6"
+     },
+     "tg": {
+      "aphrodite_model": "",
+      "custom_model": "",
+      "dreamgen_model": "lucid-v1-extra-large/text",
+      "featherless_model": "",
+      "generic_model": "",
+      "infermaticai_model": "",
+      "llamacpp_model": "",
+      "mancer_model": "mytholite",
+      "ollama_model": "",
+      "openrouter_model": "openrouter/auto",
+      "tabby_model": "",
+      "togetherai_model": "Gryphe/MythoMax-L2-13b",
+      "vllm_model": ""
+     },
+     "openRouterModels": [],
+     "tok": null,
+     "kai_flags": {
+      "can_use_tokenization": false,
+      "can_use_stop_sequence": false,
+      "can_use_streaming": false,
+      "can_use_default_badwordsids": false,
+      "can_use_mirostat": false,
+      "can_use_grammar": false,
+      "can_use_min_p": false
+     },
+     "model": "gpt-5.6-terra"
+    }
+   ],
+   "request": {
+    "generate_data": {
+     "type": "quiet",
+     "messages": [
+      {
+       "role": "system",
+       "content": "You are {{char}}. Talk to {{user}}."
+      },
+      {
+       "role": "user",
+       "content": "hi"
+      }
+     ],
+     "model": "gpt-5.6-terra",
+     "stream": false,
+     "chat_completion_source": "openai",
+     "user_name": "Ren",
+     "char_name": "Mara",
+     "group_names": [],
+     "include_reasoning": true,
+     "enable_web_search": false,
+     "request_images": false,
+     "request_image_resolution": "",
+     "request_image_aspect_ratio": "",
+     "custom_prompt_post_processing": "",
+     "reverse_proxy": "http://127.0.0.1:8131/oai/v1",
+     "proxy_password": "pw",
+     "max_completion_tokens": 300
+    },
+    "stream": false,
+    "canMultiSwipe": false
+   }
+  },
+  "cc-openai-bypass-down": {
+   "phases": [
+    {
+     "online_status": "Status check bypassed",
+     "model_list": [],
+     "oai": {
+      "ai21_model": "jamba-large",
+      "aimlapi_model": "chatgpt-4o-latest",
+      "azure_openai_model": "",
+      "chutes_model": "deepseek-ai/DeepSeek-V3-0324",
+      "claude_model": "claude-sonnet-5",
+      "cohere_model": "command-r-plus",
+      "cometapi_model": "gpt-4o",
+      "custom_model": "",
+      "deepseek_model": "deepseek-v4-flash",
+      "electronhub_model": "gpt-4o-mini",
+      "fireworks_model": "accounts/fireworks/models/kimi-k2-instruct",
+      "google_model": "gemini-3.7-flash",
+      "groq_model": "llama-3.3-70b-versatile",
+      "minimax_model": "MiniMax-M2.7",
+      "mistralai_model": "mistral-large-latest",
+      "moonshot_model": "kimi-latest",
+      "nanogpt_model": "gpt-4o-mini",
+      "openai_model": "gpt-5.6-terra",
+      "openrouter_model": "OR_Website",
+      "perplexity_model": "sonar-pro",
+      "pollinations_model": "openai",
+      "siliconflow_model": "deepseek-ai/DeepSeek-V3",
+      "vertexai_model": "gemini-3.7-flash",
+      "workers_ai_model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "xai_model": "grok-3-beta",
+      "zai_model": "glm-4.6"
+     },
+     "tg": {
+      "aphrodite_model": "",
+      "custom_model": "",
+      "dreamgen_model": "lucid-v1-extra-large/text",
+      "featherless_model": "",
+      "generic_model": "",
+      "infermaticai_model": "",
+      "llamacpp_model": "",
+      "mancer_model": "mytholite",
+      "ollama_model": "",
+      "openrouter_model": "openrouter/auto",
+      "tabby_model": "",
+      "togetherai_model": "Gryphe/MythoMax-L2-13b",
+      "vllm_model": ""
+     },
+     "openRouterModels": [],
+     "tok": null,
+     "kai_flags": {
+      "can_use_tokenization": false,
+      "can_use_stop_sequence": false,
+      "can_use_streaming": false,
+      "can_use_default_badwordsids": false,
+      "can_use_mirostat": false,
+      "can_use_grammar": false,
+      "can_use_min_p": false
+     },
+     "model": "gpt-5.6-terra"
+    }
+   ],
+   "request": {
+    "generate_data": {
+     "type": "quiet",
+     "messages": [
+      {
+       "role": "system",
+       "content": "You are {{char}}. Talk to {{user}}."
+      },
+      {
+       "role": "user",
+       "content": "hi"
+      }
+     ],
+     "model": "gpt-5.6-terra",
+     "stream": false,
+     "chat_completion_source": "openai",
+     "user_name": "Ren",
+     "char_name": "Mara",
+     "group_names": [],
+     "include_reasoning": true,
+     "enable_web_search": false,
+     "request_images": false,
+     "request_image_resolution": "",
+     "request_image_aspect_ratio": "",
+     "custom_prompt_post_processing": "",
+     "reverse_proxy": "http://127.0.0.1:8131/oai/v1",
+     "proxy_password": "pw",
+     "max_completion_tokens": 300
+    },
+    "stream": false,
+    "canMultiSwipe": false
+   }
+  },
+  "cc-openrouter-llama3-bias": {
+   "phases": [
+    {
+     "online_status": "Valid",
+     "model_list": [
+      {
+       "id": "ren/model-m",
+       "name": "Ivo M",
+       "context_length": 32768,
+       "architecture": {
+        "tokenizer": "Mistral"
+       },
+       "pricing": {
+        "prompt": "0.0000005",
+        "completion": "0.000001"
+       }
+      },
+      {
+       "id": "ren/model-q",
+       "name": "Lio Q",
+       "context_length": 16384,
+       "architecture": {
+        "tokenizer": "Qwen"
+       },
+       "pricing": {
+        "prompt": "0.000002",
+        "completion": "0.000003"
+       }
+      },
+      {
+       "id": "ren/model-l3",
+       "name": "Ren L3",
+       "context_length": 8192,
+       "architecture": {
+        "tokenizer": "Llama3"
+       },
+       "pricing": {
+        "prompt": "0.000001",
+        "completion": "0.000002"
+       }
+      }
+     ],
+     "oai": {
+      "ai21_model": "jamba-large",
+      "aimlapi_model": "chatgpt-4o-latest",
+      "azure_openai_model": "",
+      "chutes_model": "deepseek-ai/DeepSeek-V3-0324",
+      "claude_model": "claude-sonnet-5",
+      "cohere_model": "command-r-plus",
+      "cometapi_model": "gpt-4o",
+      "custom_model": "",
+      "deepseek_model": "deepseek-v4-flash",
+      "electronhub_model": "gpt-4o-mini",
+      "fireworks_model": "accounts/fireworks/models/kimi-k2-instruct",
+      "google_model": "gemini-3.7-flash",
+      "groq_model": "llama-3.3-70b-versatile",
+      "minimax_model": "MiniMax-M2.7",
+      "mistralai_model": "mistral-large-latest",
+      "moonshot_model": "kimi-latest",
+      "nanogpt_model": "gpt-4o-mini",
+      "openai_model": "gpt-5.6-terra",
+      "openrouter_model": "ren/model-l3",
+      "perplexity_model": "sonar-pro",
+      "pollinations_model": "openai",
+      "siliconflow_model": "deepseek-ai/DeepSeek-V3",
+      "vertexai_model": "gemini-3.7-flash",
+      "workers_ai_model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "xai_model": "grok-3-beta",
+      "zai_model": "glm-4.6"
+     },
+     "tg": {
+      "aphrodite_model": "",
+      "custom_model": "",
+      "dreamgen_model": "lucid-v1-extra-large/text",
+      "featherless_model": "",
+      "generic_model": "",
+      "infermaticai_model": "",
+      "llamacpp_model": "",
+      "mancer_model": "mytholite",
+      "ollama_model": "",
+      "openrouter_model": "openrouter/auto",
+      "tabby_model": "",
+      "togetherai_model": "Gryphe/MythoMax-L2-13b",
+      "vllm_model": ""
+     },
+     "openRouterModels": [],
+     "tok": null,
+     "kai_flags": {
+      "can_use_tokenization": false,
+      "can_use_stop_sequence": false,
+      "can_use_streaming": false,
+      "can_use_default_badwordsids": false,
+      "can_use_mirostat": false,
+      "can_use_grammar": false,
+      "can_use_min_p": false
+     },
+     "model": "ren/model-l3"
+    }
+   ],
+   "request": {
+    "generate_data": {
+     "type": "quiet",
+     "messages": [
+      {
+       "role": "system",
+       "content": "You are {{char}}. Talk to {{user}}."
+      },
+      {
+       "role": "user",
+       "content": "hi"
+      }
+     ],
+     "model": "ren/model-l3",
+     "temperature": 1,
+     "frequency_penalty": 0,
+     "presence_penalty": 0,
+     "top_p": 1,
+     "max_tokens": 300,
+     "stream": false,
+     "logit_bias": {
+      "358": -50,
+      "3415": -50
+     },
+     "stop": [
+      "ren/model-l3",
+      "END"
+     ],
+     "chat_completion_source": "openrouter",
+     "user_name": "Ren",
+     "char_name": "Mara",
+     "group_names": [],
+     "include_reasoning": true,
+     "enable_web_search": false,
+     "request_images": false,
+     "request_image_resolution": "",
+     "request_image_aspect_ratio": "",
+     "custom_prompt_post_processing": "",
+     "top_k": 0,
+     "min_p": 0,
+     "repetition_penalty": 1,
+     "top_a": 0,
+     "use_fallback": false,
+     "provider": [],
+     "quantizations": [],
+     "allow_fallbacks": true,
+     "middleout": "on"
+    },
+    "stream": false,
+    "canMultiSwipe": false
+   }
+  },
+  "cc-openrouter-not-in-list-grouped": {
+   "phases": [
+    {
+     "online_status": "Valid",
+     "model_list": [
+      {
+       "id": "ren/model-m",
+       "name": "Ivo M",
+       "context_length": 32768,
+       "architecture": {
+        "tokenizer": "Mistral"
+       },
+       "pricing": {
+        "prompt": "0.0000005",
+        "completion": "0.000001"
+       }
+      },
+      {
+       "id": "ren/model-q",
+       "name": "Lio Q",
+       "context_length": 16384,
+       "architecture": {
+        "tokenizer": "Qwen"
+       },
+       "pricing": {
+        "prompt": "0.000002",
+        "completion": "0.000003"
+       }
+      },
+      {
+       "id": "ren/model-l3",
+       "name": "Ren L3",
+       "context_length": 8192,
+       "architecture": {
+        "tokenizer": "Llama3"
+       },
+       "pricing": {
+        "prompt": "0.000001",
+        "completion": "0.000002"
+       }
+      }
+     ],
+     "oai": {
+      "ai21_model": "jamba-large",
+      "aimlapi_model": "chatgpt-4o-latest",
+      "azure_openai_model": "",
+      "chutes_model": "deepseek-ai/DeepSeek-V3-0324",
+      "claude_model": "claude-sonnet-5",
+      "cohere_model": "command-r-plus",
+      "cometapi_model": "gpt-4o",
+      "custom_model": "",
+      "deepseek_model": "deepseek-v4-flash",
+      "electronhub_model": "gpt-4o-mini",
+      "fireworks_model": "accounts/fireworks/models/kimi-k2-instruct",
+      "google_model": "gemini-3.7-flash",
+      "groq_model": "llama-3.3-70b-versatile",
+      "minimax_model": "MiniMax-M2.7",
+      "mistralai_model": "mistral-large-latest",
+      "moonshot_model": "kimi-latest",
+      "nanogpt_model": "gpt-4o-mini",
+      "openai_model": "gpt-5.6-terra",
+      "openrouter_model": "ren/gone",
+      "perplexity_model": "sonar-pro",
+      "pollinations_model": "openai",
+      "siliconflow_model": "deepseek-ai/DeepSeek-V3",
+      "vertexai_model": "gemini-3.7-flash",
+      "workers_ai_model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "xai_model": "grok-3-beta",
+      "zai_model": "glm-4.6"
+     },
+     "tg": {
+      "aphrodite_model": "",
+      "custom_model": "",
+      "dreamgen_model": "lucid-v1-extra-large/text",
+      "featherless_model": "",
+      "generic_model": "",
+      "infermaticai_model": "",
+      "llamacpp_model": "",
+      "mancer_model": "mytholite",
+      "ollama_model": "",
+      "openrouter_model": "openrouter/auto",
+      "tabby_model": "",
+      "togetherai_model": "Gryphe/MythoMax-L2-13b",
+      "vllm_model": ""
+     },
+     "openRouterModels": [],
+     "tok": null,
+     "kai_flags": {
+      "can_use_tokenization": false,
+      "can_use_stop_sequence": false,
+      "can_use_streaming": false,
+      "can_use_default_badwordsids": false,
+      "can_use_mirostat": false,
+      "can_use_grammar": false,
+      "can_use_min_p": false
+     },
+     "model": "ren/gone"
+    }
+   ],
+   "request": {
+    "generate_data": {
+     "type": "quiet",
+     "messages": [
+      {
+       "role": "system",
+       "content": "You are {{char}}. Talk to {{user}}."
+      },
+      {
+       "role": "user",
+       "content": "hi"
+      }
+     ],
+     "model": "ren/gone",
+     "temperature": 1,
+     "frequency_penalty": 0,
+     "presence_penalty": 0,
+     "top_p": 1,
+     "max_tokens": 300,
+     "stream": false,
+     "stop": [
+      "ren/gone",
+      "END"
+     ],
+     "chat_completion_source": "openrouter",
+     "user_name": "Ren",
+     "char_name": "Mara",
+     "group_names": [],
+     "include_reasoning": true,
+     "enable_web_search": false,
+     "request_images": false,
+     "request_image_resolution": "",
+     "request_image_aspect_ratio": "",
+     "custom_prompt_post_processing": "",
+     "top_k": 0,
+     "min_p": 0,
+     "repetition_penalty": 1,
+     "top_a": 0,
+     "use_fallback": false,
+     "provider": [],
+     "quantizations": [],
+     "allow_fallbacks": true,
+     "middleout": "on"
+    },
+    "stream": false,
+    "canMultiSwipe": false
+   }
+  },
+  "cc-electronhub-reasoning": {
+   "phases": [
+    {
+     "online_status": "Valid",
+     "model_list": [
+      {
+       "id": "ren-eh-1",
+       "name": "Mara EH",
+       "endpoints": [
+        "/v1/chat/completions"
+       ],
+       "metadata": {
+        "supported_reasoning_efforts": [
+         "low",
+         "high"
+        ]
+       }
+      },
+      {
+       "id": "ren-eh-2",
+       "name": "Varo EH",
+       "endpoints": [
+        "/v1/chat/completions"
+       ],
+       "metadata": {
+        "supported_reasoning_efforts": [
+         "low"
+        ]
+       }
+      }
+     ],
+     "oai": {
+      "ai21_model": "jamba-large",
+      "aimlapi_model": "chatgpt-4o-latest",
+      "azure_openai_model": "",
+      "chutes_model": "deepseek-ai/DeepSeek-V3-0324",
+      "claude_model": "claude-sonnet-5",
+      "cohere_model": "command-r-plus",
+      "cometapi_model": "gpt-4o",
+      "custom_model": "",
+      "deepseek_model": "deepseek-v4-flash",
+      "electronhub_model": "ren-eh-1",
+      "fireworks_model": "accounts/fireworks/models/kimi-k2-instruct",
+      "google_model": "gemini-3.7-flash",
+      "groq_model": "llama-3.3-70b-versatile",
+      "minimax_model": "MiniMax-M2.7",
+      "mistralai_model": "mistral-large-latest",
+      "moonshot_model": "kimi-latest",
+      "nanogpt_model": "gpt-4o-mini",
+      "openai_model": "gpt-5.6-terra",
+      "openrouter_model": "OR_Website",
+      "perplexity_model": "sonar-pro",
+      "pollinations_model": "openai",
+      "siliconflow_model": "deepseek-ai/DeepSeek-V3",
+      "vertexai_model": "gemini-3.7-flash",
+      "workers_ai_model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "xai_model": "grok-3-beta",
+      "zai_model": "glm-4.6"
+     },
+     "tg": {
+      "aphrodite_model": "",
+      "custom_model": "",
+      "dreamgen_model": "lucid-v1-extra-large/text",
+      "featherless_model": "",
+      "generic_model": "",
+      "infermaticai_model": "",
+      "llamacpp_model": "",
+      "mancer_model": "mytholite",
+      "ollama_model": "",
+      "openrouter_model": "openrouter/auto",
+      "tabby_model": "",
+      "togetherai_model": "Gryphe/MythoMax-L2-13b",
+      "vllm_model": ""
+     },
+     "openRouterModels": [],
+     "tok": null,
+     "kai_flags": {
+      "can_use_tokenization": false,
+      "can_use_stop_sequence": false,
+      "can_use_streaming": false,
+      "can_use_default_badwordsids": false,
+      "can_use_mirostat": false,
+      "can_use_grammar": false,
+      "can_use_min_p": false
+     },
+     "model": "ren-eh-1"
+    }
+   ],
+   "request": {
+    "generate_data": {
+     "type": "quiet",
+     "messages": [
+      {
+       "role": "system",
+       "content": "You are {{char}}. Talk to {{user}}."
+      },
+      {
+       "role": "user",
+       "content": "hi"
+      }
+     ],
+     "model": "ren-eh-1",
+     "temperature": 1,
+     "frequency_penalty": 0,
+     "presence_penalty": 0,
+     "top_p": 1,
+     "max_tokens": 300,
+     "stream": false,
+     "stop": [
+      "ren-eh-1",
+      "END"
+     ],
+     "chat_completion_source": "electronhub",
+     "user_name": "Ren",
+     "char_name": "Mara",
+     "group_names": [],
+     "include_reasoning": true,
+     "reasoning_effort": "high",
+     "enable_web_search": false,
+     "request_images": false,
+     "request_image_resolution": "",
+     "request_image_aspect_ratio": "",
+     "custom_prompt_post_processing": "",
+     "top_k": 0
+    },
+    "stream": false,
+    "canMultiSwipe": false
+   }
+  },
+  "cc-electronhub-first": {
+   "phases": [
+    {
+     "online_status": "Valid",
+     "model_list": [
+      {
+       "id": "ren-eh-1",
+       "name": "Mara EH",
+       "endpoints": [
+        "/v1/chat/completions"
+       ],
+       "metadata": {
+        "supported_reasoning_efforts": [
+         "low",
+         "high"
+        ]
+       }
+      },
+      {
+       "id": "ren-eh-2",
+       "name": "Varo EH",
+       "endpoints": [
+        "/v1/chat/completions"
+       ],
+       "metadata": {
+        "supported_reasoning_efforts": [
+         "low"
+        ]
+       }
+      }
+     ],
+     "oai": {
+      "ai21_model": "jamba-large",
+      "aimlapi_model": "chatgpt-4o-latest",
+      "azure_openai_model": "",
+      "chutes_model": "deepseek-ai/DeepSeek-V3-0324",
+      "claude_model": "claude-sonnet-5",
+      "cohere_model": "command-r-plus",
+      "cometapi_model": "gpt-4o",
+      "custom_model": "",
+      "deepseek_model": "deepseek-v4-flash",
+      "electronhub_model": "ren-eh-1",
+      "fireworks_model": "accounts/fireworks/models/kimi-k2-instruct",
+      "google_model": "gemini-3.7-flash",
+      "groq_model": "llama-3.3-70b-versatile",
+      "minimax_model": "MiniMax-M2.7",
+      "mistralai_model": "mistral-large-latest",
+      "moonshot_model": "kimi-latest",
+      "nanogpt_model": "gpt-4o-mini",
+      "openai_model": "gpt-5.6-terra",
+      "openrouter_model": "OR_Website",
+      "perplexity_model": "sonar-pro",
+      "pollinations_model": "openai",
+      "siliconflow_model": "deepseek-ai/DeepSeek-V3",
+      "vertexai_model": "gemini-3.7-flash",
+      "workers_ai_model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "xai_model": "grok-3-beta",
+      "zai_model": "glm-4.6"
+     },
+     "tg": {
+      "aphrodite_model": "",
+      "custom_model": "",
+      "dreamgen_model": "lucid-v1-extra-large/text",
+      "featherless_model": "",
+      "generic_model": "",
+      "infermaticai_model": "",
+      "llamacpp_model": "",
+      "mancer_model": "mytholite",
+      "ollama_model": "",
+      "openrouter_model": "openrouter/auto",
+      "tabby_model": "",
+      "togetherai_model": "Gryphe/MythoMax-L2-13b",
+      "vllm_model": ""
+     },
+     "openRouterModels": [],
+     "tok": null,
+     "kai_flags": {
+      "can_use_tokenization": false,
+      "can_use_stop_sequence": false,
+      "can_use_streaming": false,
+      "can_use_default_badwordsids": false,
+      "can_use_mirostat": false,
+      "can_use_grammar": false,
+      "can_use_min_p": false
+     },
+     "model": "ren-eh-1"
+    }
+   ],
+   "request": {
+    "generate_data": {
+     "type": "quiet",
+     "messages": [
+      {
+       "role": "system",
+       "content": "You are {{char}}. Talk to {{user}}."
+      },
+      {
+       "role": "user",
+       "content": "hi"
+      }
+     ],
+     "model": "ren-eh-1",
+     "temperature": 1,
+     "frequency_penalty": 0,
+     "presence_penalty": 0,
+     "top_p": 1,
+     "max_tokens": 300,
+     "stream": false,
+     "stop": [
+      "ren-eh-1",
+      "END"
+     ],
+     "chat_completion_source": "electronhub",
+     "user_name": "Ren",
+     "char_name": "Mara",
+     "group_names": [],
+     "include_reasoning": true,
+     "reasoning_effort": "low",
+     "enable_web_search": false,
+     "request_images": false,
+     "request_image_resolution": "",
+     "request_image_aspect_ratio": "",
+     "custom_prompt_post_processing": "",
+     "top_k": 0
+    },
+    "stream": false,
+    "canMultiSwipe": false
+   }
+  },
+  "cc-azure-model": {
+   "phases": [
+    {
+     "online_status": "Valid",
+     "model_list": [
+      {
+       "id": "ren-azure-4"
+      }
+     ],
+     "oai": {
+      "ai21_model": "jamba-large",
+      "aimlapi_model": "chatgpt-4o-latest",
+      "azure_openai_model": "ren-azure-4",
+      "chutes_model": "deepseek-ai/DeepSeek-V3-0324",
+      "claude_model": "claude-sonnet-5",
+      "cohere_model": "command-r-plus",
+      "cometapi_model": "gpt-4o",
+      "custom_model": "",
+      "deepseek_model": "deepseek-v4-flash",
+      "electronhub_model": "gpt-4o-mini",
+      "fireworks_model": "accounts/fireworks/models/kimi-k2-instruct",
+      "google_model": "gemini-3.7-flash",
+      "groq_model": "llama-3.3-70b-versatile",
+      "minimax_model": "MiniMax-M2.7",
+      "mistralai_model": "mistral-large-latest",
+      "moonshot_model": "kimi-latest",
+      "nanogpt_model": "gpt-4o-mini",
+      "openai_model": "gpt-5.6-terra",
+      "openrouter_model": "OR_Website",
+      "perplexity_model": "sonar-pro",
+      "pollinations_model": "openai",
+      "siliconflow_model": "deepseek-ai/DeepSeek-V3",
+      "vertexai_model": "gemini-3.7-flash",
+      "workers_ai_model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "xai_model": "grok-3-beta",
+      "zai_model": "glm-4.6"
+     },
+     "tg": {
+      "aphrodite_model": "",
+      "custom_model": "",
+      "dreamgen_model": "lucid-v1-extra-large/text",
+      "featherless_model": "",
+      "generic_model": "",
+      "infermaticai_model": "",
+      "llamacpp_model": "",
+      "mancer_model": "mytholite",
+      "ollama_model": "",
+      "openrouter_model": "openrouter/auto",
+      "tabby_model": "",
+      "togetherai_model": "Gryphe/MythoMax-L2-13b",
+      "vllm_model": ""
+     },
+     "openRouterModels": [],
+     "tok": null,
+     "kai_flags": {
+      "can_use_tokenization": false,
+      "can_use_stop_sequence": false,
+      "can_use_streaming": false,
+      "can_use_default_badwordsids": false,
+      "can_use_mirostat": false,
+      "can_use_grammar": false,
+      "can_use_min_p": false
+     },
+     "model": "ren-azure-4"
+    }
+   ],
+   "request": {
+    "generate_data": {
+     "type": "quiet",
+     "messages": [
+      {
+       "role": "system",
+       "content": "You are {{char}}. Talk to {{user}}."
+      },
+      {
+       "role": "user",
+       "content": "hi"
+      }
+     ],
+     "model": "ren-azure-4",
+     "temperature": 1,
+     "frequency_penalty": 0,
+     "presence_penalty": 0,
+     "top_p": 1,
+     "max_tokens": 300,
+     "stream": false,
+     "stop": [
+      "ren-azure-4",
+      "END"
+     ],
+     "chat_completion_source": "azure_openai",
+     "user_name": "Ren",
+     "char_name": "Mara",
+     "group_names": [],
+     "include_reasoning": true,
+     "enable_web_search": false,
+     "request_images": false,
+     "request_image_resolution": "",
+     "request_image_aspect_ratio": "",
+     "custom_prompt_post_processing": "",
+     "azure_base_url": "http://127.0.0.1:8131",
+     "azure_deployment_name": "ren-dep",
+     "azure_api_version": "2024-10-21"
+    },
+    "stream": false,
+    "canMultiSwipe": false
+   }
+  },
+  "cc-makersuite-static-kept": {
+   "phases": [
+    {
+     "online_status": "Valid",
+     "model_list": [
+      {
+       "name": "models/gemini-2.5-pro",
+       "supportedGenerationMethods": [
+        "generateContent"
+       ],
+       "id": "gemini-2.5-pro"
+      },
+      {
+       "name": "models/ren-g-1",
+       "supportedGenerationMethods": [
+        "generateContent"
+       ],
+       "id": "ren-g-1"
+      },
+      {
+       "id": "gemini-3.7-flash"
+      },
+      {
+       "id": "gemini-3.6-flash"
+      },
+      {
+       "id": "gemini-3.5-flash"
+      },
+      {
+       "id": "gemini-3.5-flash-lite"
+      },
+      {
+       "id": "gemini-3.1-pro-preview"
+      },
+      {
+       "id": "gemini-3.1-flash-lite"
+      },
+      {
+       "id": "gemini-3.1-flash-image"
+      },
+      {
+       "id": "gemini-3-pro-image"
+      },
+      {
+       "id": "gemini-3-flash-preview"
+      },
+      {
+       "id": "gemini-2.5-flash"
+      },
+      {
+       "id": "gemini-2.5-flash-lite"
+      },
+      {
+       "id": "gemini-2.5-flash-image"
+      },
+      {
+       "id": "gemini-2.0-flash-001"
+      },
+      {
+       "id": "gemini-2.0-flash"
+      },
+      {
+       "id": "gemini-2.0-flash-lite-001"
+      },
+      {
+       "id": "gemini-2.0-flash-lite"
+      },
+      {
+       "id": "gemma-4-31b-it"
+      },
+      {
+       "id": "gemma-4-26b-a4b-it"
+      },
+      {
+       "id": "gemma-3n-e4b-it"
+      },
+      {
+       "id": "gemma-3n-e2b-it"
+      },
+      {
+       "id": "gemma-3-27b-it"
+      },
+      {
+       "id": "gemma-3-12b-it"
+      },
+      {
+       "id": "gemma-3-4b-it"
+      },
+      {
+       "id": "gemma-3-1b-it"
+      },
+      {
+       "id": "learnlm-2.0-flash-experimental"
+      },
+      {
+       "id": "gemini-robotics-er-1.5-preview"
+      }
+     ],
+     "oai": {
+      "ai21_model": "jamba-large",
+      "aimlapi_model": "chatgpt-4o-latest",
+      "azure_openai_model": "",
+      "chutes_model": "deepseek-ai/DeepSeek-V3-0324",
+      "claude_model": "claude-sonnet-5",
+      "cohere_model": "command-r-plus",
+      "cometapi_model": "gpt-4o",
+      "custom_model": "",
+      "deepseek_model": "deepseek-v4-flash",
+      "electronhub_model": "gpt-4o-mini",
+      "fireworks_model": "accounts/fireworks/models/kimi-k2-instruct",
+      "google_model": "gemini-2.5-flash",
+      "groq_model": "llama-3.3-70b-versatile",
+      "minimax_model": "MiniMax-M2.7",
+      "mistralai_model": "mistral-large-latest",
+      "moonshot_model": "kimi-latest",
+      "nanogpt_model": "gpt-4o-mini",
+      "openai_model": "gpt-5.6-terra",
+      "openrouter_model": "OR_Website",
+      "perplexity_model": "sonar-pro",
+      "pollinations_model": "openai",
+      "siliconflow_model": "deepseek-ai/DeepSeek-V3",
+      "vertexai_model": "gemini-3.7-flash",
+      "workers_ai_model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "xai_model": "grok-3-beta",
+      "zai_model": "glm-4.6"
+     },
+     "tg": {
+      "aphrodite_model": "",
+      "custom_model": "",
+      "dreamgen_model": "lucid-v1-extra-large/text",
+      "featherless_model": "",
+      "generic_model": "",
+      "infermaticai_model": "",
+      "llamacpp_model": "",
+      "mancer_model": "mytholite",
+      "ollama_model": "",
+      "openrouter_model": "openrouter/auto",
+      "tabby_model": "",
+      "togetherai_model": "Gryphe/MythoMax-L2-13b",
+      "vllm_model": ""
+     },
+     "openRouterModels": [],
+     "tok": null,
+     "kai_flags": {
+      "can_use_tokenization": false,
+      "can_use_stop_sequence": false,
+      "can_use_streaming": false,
+      "can_use_default_badwordsids": false,
+      "can_use_mirostat": false,
+      "can_use_grammar": false,
+      "can_use_min_p": false
+     },
+     "model": "gemini-2.5-flash"
+    }
+   ],
+   "request": {
+    "generate_data": {
+     "type": "quiet",
+     "messages": [
+      {
+       "role": "system",
+       "content": "You are {{char}}. Talk to {{user}}."
+      },
+      {
+       "role": "user",
+       "content": "hi"
+      }
+     ],
+     "model": "gemini-2.5-flash",
+     "temperature": 1,
+     "frequency_penalty": 0,
+     "presence_penalty": 0,
+     "top_p": 1,
+     "max_tokens": 300,
+     "stream": false,
+     "stop": [
+      "gemini-2.5-flash",
+      "END"
+     ],
+     "chat_completion_source": "makersuite",
+     "user_name": "Ren",
+     "char_name": "Mara",
+     "group_names": [],
+     "include_reasoning": true,
+     "reasoning_effort": "auto",
+     "enable_web_search": false,
+     "request_images": false,
+     "request_image_resolution": "",
+     "request_image_aspect_ratio": "",
+     "custom_prompt_post_processing": "",
+     "reverse_proxy": "http://127.0.0.1:8131/google",
+     "proxy_password": "pw",
+     "top_k": 0,
+     "use_sysprompt": false
+    },
+    "stream": false,
+    "canMultiSwipe": false
+   }
+  },
+  "cc-makersuite-replaced": {
+   "phases": [
+    {
+     "online_status": "Valid",
+     "model_list": [
+      {
+       "name": "models/gemini-2.5-pro",
+       "supportedGenerationMethods": [
+        "generateContent"
+       ],
+       "id": "gemini-2.5-pro"
+      },
+      {
+       "name": "models/ren-g-1",
+       "supportedGenerationMethods": [
+        "generateContent"
+       ],
+       "id": "ren-g-1"
+      },
+      {
+       "id": "gemini-3.7-flash"
+      },
+      {
+       "id": "gemini-3.6-flash"
+      },
+      {
+       "id": "gemini-3.5-flash"
+      },
+      {
+       "id": "gemini-3.5-flash-lite"
+      },
+      {
+       "id": "gemini-3.1-pro-preview"
+      },
+      {
+       "id": "gemini-3.1-flash-lite"
+      },
+      {
+       "id": "gemini-3.1-flash-image"
+      },
+      {
+       "id": "gemini-3-pro-image"
+      },
+      {
+       "id": "gemini-3-flash-preview"
+      },
+      {
+       "id": "gemini-2.5-flash"
+      },
+      {
+       "id": "gemini-2.5-flash-lite"
+      },
+      {
+       "id": "gemini-2.5-flash-image"
+      },
+      {
+       "id": "gemini-2.0-flash-001"
+      },
+      {
+       "id": "gemini-2.0-flash"
+      },
+      {
+       "id": "gemini-2.0-flash-lite-001"
+      },
+      {
+       "id": "gemini-2.0-flash-lite"
+      },
+      {
+       "id": "gemma-4-31b-it"
+      },
+      {
+       "id": "gemma-4-26b-a4b-it"
+      },
+      {
+       "id": "gemma-3n-e4b-it"
+      },
+      {
+       "id": "gemma-3n-e2b-it"
+      },
+      {
+       "id": "gemma-3-27b-it"
+      },
+      {
+       "id": "gemma-3-12b-it"
+      },
+      {
+       "id": "gemma-3-4b-it"
+      },
+      {
+       "id": "gemma-3-1b-it"
+      },
+      {
+       "id": "learnlm-2.0-flash-experimental"
+      },
+      {
+       "id": "gemini-robotics-er-1.5-preview"
+      }
+     ],
+     "oai": {
+      "ai21_model": "jamba-large",
+      "aimlapi_model": "chatgpt-4o-latest",
+      "azure_openai_model": "",
+      "chutes_model": "deepseek-ai/DeepSeek-V3-0324",
+      "claude_model": "claude-sonnet-5",
+      "cohere_model": "command-r-plus",
+      "cometapi_model": "gpt-4o",
+      "custom_model": "",
+      "deepseek_model": "deepseek-v4-flash",
+      "electronhub_model": "gpt-4o-mini",
+      "fireworks_model": "accounts/fireworks/models/kimi-k2-instruct",
+      "google_model": "gemini-2.5-pro",
+      "groq_model": "llama-3.3-70b-versatile",
+      "minimax_model": "MiniMax-M2.7",
+      "mistralai_model": "mistral-large-latest",
+      "moonshot_model": "kimi-latest",
+      "nanogpt_model": "gpt-4o-mini",
+      "openai_model": "gpt-5.6-terra",
+      "openrouter_model": "OR_Website",
+      "perplexity_model": "sonar-pro",
+      "pollinations_model": "openai",
+      "siliconflow_model": "deepseek-ai/DeepSeek-V3",
+      "vertexai_model": "gemini-3.7-flash",
+      "workers_ai_model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "xai_model": "grok-3-beta",
+      "zai_model": "glm-4.6"
+     },
+     "tg": {
+      "aphrodite_model": "",
+      "custom_model": "",
+      "dreamgen_model": "lucid-v1-extra-large/text",
+      "featherless_model": "",
+      "generic_model": "",
+      "infermaticai_model": "",
+      "llamacpp_model": "",
+      "mancer_model": "mytholite",
+      "ollama_model": "",
+      "openrouter_model": "openrouter/auto",
+      "tabby_model": "",
+      "togetherai_model": "Gryphe/MythoMax-L2-13b",
+      "vllm_model": ""
+     },
+     "openRouterModels": [],
+     "tok": null,
+     "kai_flags": {
+      "can_use_tokenization": false,
+      "can_use_stop_sequence": false,
+      "can_use_streaming": false,
+      "can_use_default_badwordsids": false,
+      "can_use_mirostat": false,
+      "can_use_grammar": false,
+      "can_use_min_p": false
+     },
+     "model": "gemini-2.5-pro"
+    }
+   ],
+   "request": {
+    "generate_data": {
+     "type": "quiet",
+     "messages": [
+      {
+       "role": "system",
+       "content": "You are {{char}}. Talk to {{user}}."
+      },
+      {
+       "role": "user",
+       "content": "hi"
+      }
+     ],
+     "model": "gemini-2.5-pro",
+     "temperature": 1,
+     "frequency_penalty": 0,
+     "presence_penalty": 0,
+     "top_p": 1,
+     "max_tokens": 300,
+     "stream": false,
+     "stop": [
+      "gemini-2.5-pro",
+      "END"
+     ],
+     "chat_completion_source": "makersuite",
+     "user_name": "Ren",
+     "char_name": "Mara",
+     "group_names": [],
+     "include_reasoning": true,
+     "reasoning_effort": "auto",
+     "enable_web_search": false,
+     "request_images": false,
+     "request_image_resolution": "",
+     "request_image_aspect_ratio": "",
+     "custom_prompt_post_processing": "",
+     "reverse_proxy": "http://127.0.0.1:8131/google",
+     "proxy_password": "pw",
+     "top_k": 0,
+     "use_sysprompt": false
+    },
+    "stream": false,
+    "canMultiSwipe": false
+   }
+  },
+  "cc-custom-first": {
+   "phases": [
+    {
+     "online_status": "Valid",
+     "model_list": [
+      {
+       "id": "ren-c-1"
+      },
+      {
+       "id": "ren-c-2"
+      }
+     ],
+     "oai": {
+      "ai21_model": "jamba-large",
+      "aimlapi_model": "chatgpt-4o-latest",
+      "azure_openai_model": "",
+      "chutes_model": "deepseek-ai/DeepSeek-V3-0324",
+      "claude_model": "claude-sonnet-5",
+      "cohere_model": "command-r-plus",
+      "cometapi_model": "gpt-4o",
+      "custom_model": "ren-c-1",
+      "deepseek_model": "deepseek-v4-flash",
+      "electronhub_model": "gpt-4o-mini",
+      "fireworks_model": "accounts/fireworks/models/kimi-k2-instruct",
+      "google_model": "gemini-3.7-flash",
+      "groq_model": "llama-3.3-70b-versatile",
+      "minimax_model": "MiniMax-M2.7",
+      "mistralai_model": "mistral-large-latest",
+      "moonshot_model": "kimi-latest",
+      "nanogpt_model": "gpt-4o-mini",
+      "openai_model": "gpt-5.6-terra",
+      "openrouter_model": "OR_Website",
+      "perplexity_model": "sonar-pro",
+      "pollinations_model": "openai",
+      "siliconflow_model": "deepseek-ai/DeepSeek-V3",
+      "vertexai_model": "gemini-3.7-flash",
+      "workers_ai_model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "xai_model": "grok-3-beta",
+      "zai_model": "glm-4.6"
+     },
+     "tg": {
+      "aphrodite_model": "",
+      "custom_model": "",
+      "dreamgen_model": "lucid-v1-extra-large/text",
+      "featherless_model": "",
+      "generic_model": "",
+      "infermaticai_model": "",
+      "llamacpp_model": "",
+      "mancer_model": "mytholite",
+      "ollama_model": "",
+      "openrouter_model": "openrouter/auto",
+      "tabby_model": "",
+      "togetherai_model": "Gryphe/MythoMax-L2-13b",
+      "vllm_model": ""
+     },
+     "openRouterModels": [],
+     "tok": null,
+     "kai_flags": {
+      "can_use_tokenization": false,
+      "can_use_stop_sequence": false,
+      "can_use_streaming": false,
+      "can_use_default_badwordsids": false,
+      "can_use_mirostat": false,
+      "can_use_grammar": false,
+      "can_use_min_p": false
+     },
+     "model": "ren-c-1"
+    }
+   ],
+   "request": {
+    "generate_data": {
+     "type": "quiet",
+     "messages": [
+      {
+       "role": "system",
+       "content": "You are {{char}}. Talk to {{user}}."
+      },
+      {
+       "role": "user",
+       "content": "hi"
+      }
+     ],
+     "model": "ren-c-1",
+     "temperature": 1,
+     "frequency_penalty": 0,
+     "presence_penalty": 0,
+     "top_p": 1,
+     "max_tokens": 300,
+     "stream": false,
+     "stop": [
+      "ren-c-1",
+      "END"
+     ],
+     "chat_completion_source": "custom",
+     "user_name": "Ren",
+     "char_name": "Mara",
+     "group_names": [],
+     "include_reasoning": true,
+     "enable_web_search": false,
+     "request_images": false,
+     "request_image_resolution": "",
+     "request_image_aspect_ratio": "",
+     "custom_prompt_post_processing": "",
+     "custom_url": "http://127.0.0.1:8131/custom/v1",
+     "custom_include_body": "",
+     "custom_exclude_body": "",
+     "custom_include_headers": ""
+    },
+    "stream": false,
+    "canMultiSwipe": false
+   }
+  },
+  "cc-backend-down": {
+   "phases": [
+    {
+     "online_status": "no_connection",
+     "model_list": [],
+     "oai": {
+      "ai21_model": "jamba-large",
+      "aimlapi_model": "chatgpt-4o-latest",
+      "azure_openai_model": "",
+      "chutes_model": "deepseek-ai/DeepSeek-V3-0324",
+      "claude_model": "claude-sonnet-5",
+      "cohere_model": "command-r-plus",
+      "cometapi_model": "gpt-4o",
+      "custom_model": "",
+      "deepseek_model": "deepseek-v4-flash",
+      "electronhub_model": "gpt-4o-mini",
+      "fireworks_model": "accounts/fireworks/models/kimi-k2-instruct",
+      "google_model": "gemini-3.7-flash",
+      "groq_model": "llama-3.3-70b-versatile",
+      "minimax_model": "MiniMax-M2.7",
+      "mistralai_model": "mistral-large-latest",
+      "moonshot_model": "kimi-latest",
+      "nanogpt_model": "gpt-4o-mini",
+      "openai_model": "gpt-5.6-terra",
+      "openrouter_model": "ren/model-l3",
+      "perplexity_model": "sonar-pro",
+      "pollinations_model": "openai",
+      "siliconflow_model": "deepseek-ai/DeepSeek-V3",
+      "vertexai_model": "gemini-3.7-flash",
+      "workers_ai_model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "xai_model": "grok-3-beta",
+      "zai_model": "glm-4.6"
+     },
+     "tg": {
+      "aphrodite_model": "",
+      "custom_model": "",
+      "dreamgen_model": "lucid-v1-extra-large/text",
+      "featherless_model": "",
+      "generic_model": "",
+      "infermaticai_model": "",
+      "llamacpp_model": "",
+      "mancer_model": "mytholite",
+      "ollama_model": "",
+      "openrouter_model": "openrouter/auto",
+      "tabby_model": "",
+      "togetherai_model": "Gryphe/MythoMax-L2-13b",
+      "vllm_model": ""
+     },
+     "openRouterModels": [],
+     "tok": null,
+     "kai_flags": {
+      "can_use_tokenization": false,
+      "can_use_stop_sequence": false,
+      "can_use_streaming": false,
+      "can_use_default_badwordsids": false,
+      "can_use_mirostat": false,
+      "can_use_grammar": false,
+      "can_use_min_p": false
+     },
+     "model": "ren/model-l3"
+    }
+   ],
+   "request": {
+    "generate_data": {
+     "type": "quiet",
+     "messages": [
+      {
+       "role": "system",
+       "content": "You are {{char}}. Talk to {{user}}."
+      },
+      {
+       "role": "user",
+       "content": "hi"
+      }
+     ],
+     "model": "ren/model-l3",
+     "temperature": 1,
+     "frequency_penalty": 0,
+     "presence_penalty": 0,
+     "top_p": 1,
+     "max_tokens": 300,
+     "stream": false,
+     "logit_bias": {
+      "358": -50,
+      "3415": -50
+     },
+     "stop": [
+      "ren/model-l3",
+      "END"
+     ],
+     "chat_completion_source": "openrouter",
+     "user_name": "Ren",
+     "char_name": "Mara",
+     "group_names": [],
+     "include_reasoning": true,
+     "enable_web_search": false,
+     "request_images": false,
+     "request_image_resolution": "",
+     "request_image_aspect_ratio": "",
+     "custom_prompt_post_processing": "",
+     "top_k": 0,
+     "min_p": 0,
+     "repetition_penalty": 1,
+     "top_a": 0,
+     "use_fallback": false,
+     "provider": [],
+     "quantizations": [],
+     "allow_fallbacks": true,
+     "middleout": "on"
+    },
+    "stream": false,
+    "canMultiSwipe": false
+   }
+  },
+  "cc-down-after-good": {
+   "phases": [
+    {
+     "online_status": "Valid",
+     "model_list": [
+      {
+       "id": "ren-eh-1",
+       "name": "Mara EH",
+       "endpoints": [
+        "/v1/chat/completions"
+       ],
+       "metadata": {
+        "supported_reasoning_efforts": [
+         "low",
+         "high"
+        ]
+       }
+      },
+      {
+       "id": "ren-eh-2",
+       "name": "Varo EH",
+       "endpoints": [
+        "/v1/chat/completions"
+       ],
+       "metadata": {
+        "supported_reasoning_efforts": [
+         "low"
+        ]
+       }
+      }
+     ],
+     "oai": {
+      "ai21_model": "jamba-large",
+      "aimlapi_model": "chatgpt-4o-latest",
+      "azure_openai_model": "",
+      "chutes_model": "deepseek-ai/DeepSeek-V3-0324",
+      "claude_model": "claude-sonnet-5",
+      "cohere_model": "command-r-plus",
+      "cometapi_model": "gpt-4o",
+      "custom_model": "",
+      "deepseek_model": "deepseek-v4-flash",
+      "electronhub_model": "ren-eh-1",
+      "fireworks_model": "accounts/fireworks/models/kimi-k2-instruct",
+      "google_model": "gemini-3.7-flash",
+      "groq_model": "llama-3.3-70b-versatile",
+      "minimax_model": "MiniMax-M2.7",
+      "mistralai_model": "mistral-large-latest",
+      "moonshot_model": "kimi-latest",
+      "nanogpt_model": "gpt-4o-mini",
+      "openai_model": "gpt-5.6-terra",
+      "openrouter_model": "OR_Website",
+      "perplexity_model": "sonar-pro",
+      "pollinations_model": "openai",
+      "siliconflow_model": "deepseek-ai/DeepSeek-V3",
+      "vertexai_model": "gemini-3.7-flash",
+      "workers_ai_model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "xai_model": "grok-3-beta",
+      "zai_model": "glm-4.6"
+     },
+     "tg": {
+      "aphrodite_model": "",
+      "custom_model": "",
+      "dreamgen_model": "lucid-v1-extra-large/text",
+      "featherless_model": "",
+      "generic_model": "",
+      "infermaticai_model": "",
+      "llamacpp_model": "",
+      "mancer_model": "mytholite",
+      "ollama_model": "",
+      "openrouter_model": "openrouter/auto",
+      "tabby_model": "",
+      "togetherai_model": "Gryphe/MythoMax-L2-13b",
+      "vllm_model": ""
+     },
+     "openRouterModels": [],
+     "tok": null,
+     "kai_flags": {
+      "can_use_tokenization": false,
+      "can_use_stop_sequence": false,
+      "can_use_streaming": false,
+      "can_use_default_badwordsids": false,
+      "can_use_mirostat": false,
+      "can_use_grammar": false,
+      "can_use_min_p": false
+     },
+     "model": "ren-eh-1"
+    },
+    {
+     "online_status": "Valid",
+     "model_list": [
+      {
+       "id": "ren-eh-1",
+       "name": "Mara EH",
+       "endpoints": [
+        "/v1/chat/completions"
+       ],
+       "metadata": {
+        "supported_reasoning_efforts": [
+         "low",
+         "high"
+        ]
+       }
+      },
+      {
+       "id": "ren-eh-2",
+       "name": "Varo EH",
+       "endpoints": [
+        "/v1/chat/completions"
+       ],
+       "metadata": {
+        "supported_reasoning_efforts": [
+         "low"
+        ]
+       }
+      }
+     ],
+     "oai": {
+      "ai21_model": "jamba-large",
+      "aimlapi_model": "chatgpt-4o-latest",
+      "azure_openai_model": "",
+      "chutes_model": "deepseek-ai/DeepSeek-V3-0324",
+      "claude_model": "claude-sonnet-5",
+      "cohere_model": "command-r-plus",
+      "cometapi_model": "gpt-4o",
+      "custom_model": "",
+      "deepseek_model": "deepseek-v4-flash",
+      "electronhub_model": "ren-eh-1",
+      "fireworks_model": "accounts/fireworks/models/kimi-k2-instruct",
+      "google_model": "gemini-3.7-flash",
+      "groq_model": "llama-3.3-70b-versatile",
+      "minimax_model": "MiniMax-M2.7",
+      "mistralai_model": "mistral-large-latest",
+      "moonshot_model": "kimi-latest",
+      "nanogpt_model": "gpt-4o-mini",
+      "openai_model": "gpt-5.6-terra",
+      "openrouter_model": "OR_Website",
+      "perplexity_model": "sonar-pro",
+      "pollinations_model": "openai",
+      "siliconflow_model": "deepseek-ai/DeepSeek-V3",
+      "vertexai_model": "gemini-3.7-flash",
+      "workers_ai_model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "xai_model": "grok-3-beta",
+      "zai_model": "glm-4.6"
+     },
+     "tg": {
+      "aphrodite_model": "",
+      "custom_model": "",
+      "dreamgen_model": "lucid-v1-extra-large/text",
+      "featherless_model": "",
+      "generic_model": "",
+      "infermaticai_model": "",
+      "llamacpp_model": "",
+      "mancer_model": "mytholite",
+      "ollama_model": "",
+      "openrouter_model": "openrouter/auto",
+      "tabby_model": "",
+      "togetherai_model": "Gryphe/MythoMax-L2-13b",
+      "vllm_model": ""
+     },
+     "openRouterModels": [],
+     "tok": null,
+     "kai_flags": {
+      "can_use_tokenization": false,
+      "can_use_stop_sequence": false,
+      "can_use_streaming": false,
+      "can_use_default_badwordsids": false,
+      "can_use_mirostat": false,
+      "can_use_grammar": false,
+      "can_use_min_p": false
+     },
+     "model": "ren-eh-1"
+    }
+   ],
+   "request": {
+    "generate_data": {
+     "type": "quiet",
+     "messages": [
+      {
+       "role": "system",
+       "content": "You are {{char}}. Talk to {{user}}."
+      },
+      {
+       "role": "user",
+       "content": "hi"
+      }
+     ],
+     "model": "ren-eh-1",
+     "temperature": 1,
+     "frequency_penalty": 0,
+     "presence_penalty": 0,
+     "top_p": 1,
+     "max_tokens": 300,
+     "stream": false,
+     "stop": [
+      "ren-eh-1",
+      "END"
+     ],
+     "chat_completion_source": "electronhub",
+     "user_name": "Ren",
+     "char_name": "Mara",
+     "group_names": [],
+     "include_reasoning": true,
+     "reasoning_effort": "high",
+     "enable_web_search": false,
+     "request_images": false,
+     "request_image_resolution": "",
+     "request_image_aspect_ratio": "",
+     "custom_prompt_post_processing": "",
+     "top_k": 0
+    },
+    "stream": false,
+    "canMultiSwipe": false
+   }
+  },
+  "cc-claude-no-check": {
+   "phases": [
+    {
+     "online_status": "Key saved; press \"Test Message\" to verify.",
+     "model_list": [],
+     "oai": {
+      "ai21_model": "jamba-large",
+      "aimlapi_model": "chatgpt-4o-latest",
+      "azure_openai_model": "",
+      "chutes_model": "deepseek-ai/DeepSeek-V3-0324",
+      "claude_model": "claude-sonnet-5",
+      "cohere_model": "command-r-plus",
+      "cometapi_model": "gpt-4o",
+      "custom_model": "",
+      "deepseek_model": "deepseek-v4-flash",
+      "electronhub_model": "gpt-4o-mini",
+      "fireworks_model": "accounts/fireworks/models/kimi-k2-instruct",
+      "google_model": "gemini-3.7-flash",
+      "groq_model": "llama-3.3-70b-versatile",
+      "minimax_model": "MiniMax-M2.7",
+      "mistralai_model": "mistral-large-latest",
+      "moonshot_model": "kimi-latest",
+      "nanogpt_model": "gpt-4o-mini",
+      "openai_model": "gpt-5.6-terra",
+      "openrouter_model": "OR_Website",
+      "perplexity_model": "sonar-pro",
+      "pollinations_model": "openai",
+      "siliconflow_model": "deepseek-ai/DeepSeek-V3",
+      "vertexai_model": "gemini-3.7-flash",
+      "workers_ai_model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "xai_model": "grok-3-beta",
+      "zai_model": "glm-4.6"
+     },
+     "tg": {
+      "aphrodite_model": "",
+      "custom_model": "",
+      "dreamgen_model": "lucid-v1-extra-large/text",
+      "featherless_model": "",
+      "generic_model": "",
+      "infermaticai_model": "",
+      "llamacpp_model": "",
+      "mancer_model": "mytholite",
+      "ollama_model": "",
+      "openrouter_model": "openrouter/auto",
+      "tabby_model": "",
+      "togetherai_model": "Gryphe/MythoMax-L2-13b",
+      "vllm_model": ""
+     },
+     "openRouterModels": [],
+     "tok": null,
+     "kai_flags": {
+      "can_use_tokenization": false,
+      "can_use_stop_sequence": false,
+      "can_use_streaming": false,
+      "can_use_default_badwordsids": false,
+      "can_use_mirostat": false,
+      "can_use_grammar": false,
+      "can_use_min_p": false
+     },
+     "model": "claude-sonnet-5"
+    }
+   ],
+   "request": {
+    "generate_data": {
+     "type": "quiet",
+     "messages": [
+      {
+       "role": "system",
+       "content": "You are {{char}}. Talk to {{user}}."
+      },
+      {
+       "role": "user",
+       "content": "hi"
+      }
+     ],
+     "model": "claude-sonnet-5",
+     "max_tokens": 300,
+     "stream": false,
+     "stop": [
+      "claude-sonnet-5",
+      "END"
+     ],
+     "chat_completion_source": "claude",
+     "user_name": "Ren",
+     "char_name": "Mara",
+     "group_names": [],
+     "include_reasoning": true,
+     "reasoning_effort": "auto",
+     "enable_web_search": false,
+     "request_images": false,
+     "request_image_resolution": "",
+     "request_image_aspect_ratio": "",
+     "custom_prompt_post_processing": "",
+     "use_sysprompt": false
+    },
+    "stream": false,
+    "canMultiSwipe": false
+   }
+  },
+  "tc-ooba-api-tokenizer": {
+   "phases": [
+    {
+     "online_status": "ren-ooba-loaded",
+     "model_list": [],
+     "oai": {
+      "ai21_model": "jamba-large",
+      "aimlapi_model": "chatgpt-4o-latest",
+      "azure_openai_model": "",
+      "chutes_model": "deepseek-ai/DeepSeek-V3-0324",
+      "claude_model": "claude-sonnet-5",
+      "cohere_model": "command-r-plus",
+      "cometapi_model": "gpt-4o",
+      "custom_model": "",
+      "deepseek_model": "deepseek-v4-flash",
+      "electronhub_model": "gpt-4o-mini",
+      "fireworks_model": "accounts/fireworks/models/kimi-k2-instruct",
+      "google_model": "gemini-3.7-flash",
+      "groq_model": "llama-3.3-70b-versatile",
+      "minimax_model": "MiniMax-M2.7",
+      "mistralai_model": "mistral-large-latest",
+      "moonshot_model": "kimi-latest",
+      "nanogpt_model": "gpt-4o-mini",
+      "openai_model": "gpt-5.6-terra",
+      "openrouter_model": "OR_Website",
+      "perplexity_model": "sonar-pro",
+      "pollinations_model": "openai",
+      "siliconflow_model": "deepseek-ai/DeepSeek-V3",
+      "vertexai_model": "gemini-3.7-flash",
+      "workers_ai_model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "xai_model": "grok-3-beta",
+      "zai_model": "glm-4.6"
+     },
+     "tg": {
+      "aphrodite_model": "",
+      "custom_model": "",
+      "dreamgen_model": "lucid-v1-extra-large/text",
+      "featherless_model": "",
+      "generic_model": "",
+      "infermaticai_model": "",
+      "llamacpp_model": "",
+      "mancer_model": "mytholite",
+      "ollama_model": "",
+      "openrouter_model": "openrouter/auto",
+      "tabby_model": "",
+      "togetherai_model": "Gryphe/MythoMax-L2-13b",
+      "vllm_model": ""
+     },
+     "openRouterModels": [],
+     "tok": "true",
+     "kai_flags": {
+      "can_use_tokenization": false,
+      "can_use_stop_sequence": false,
+      "can_use_streaming": false,
+      "can_use_default_badwordsids": false,
+      "can_use_mirostat": false,
+      "can_use_grammar": false,
+      "can_use_min_p": false
+     },
+     "model": "ren-ooba-loaded"
+    }
+   ],
+   "request": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "You are {{char}}. Talk to {{user}}.\n\nhi",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "api_type": "ooba",
+      "api_server": "http://127.0.0.1:8131/ooba",
+      "temperature": 0.8,
+      "min_p": 0.05,
+      "top_p": 0.9,
+      "typical_p": 0.95,
+      "typical": 0.95,
+      "sampler_seed": 3,
+      "repetition_penalty": 1.1,
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_k": 20,
+      "skew": 0,
+      "min_length": 0,
+      "min_tokens": 0,
+      "num_beams": 1,
+      "length_penalty": 1,
+      "early_stopping": false,
+      "add_bos_token": true,
+      "smoothing_factor": 0,
+      "smoothing_curve": 1,
+      "dry_allowed_length": 2,
+      "dry_multiplier": 0,
+      "dry_base": 1.75,
+      "dry_sequence_breakers": "[\"\\n\",\"Mara:\"]",
+      "dry_penalty_last_n": 0,
+      "max_tokens_second": 0,
+      "sampler_priority": [
+       "temperature",
+       "top_k",
+       "top_p"
+      ],
+      "stopping_strings": [
+       "\nRen:",
+       "\n***",
+       "ren-ooba-loaded",
+       "END"
+      ],
+      "stop": [
+       "\nRen:",
+       "\n***",
+       "ren-ooba-loaded",
+       "END"
+      ],
+      "truncation_length": 8192,
+      "ban_eos_token": false,
+      "skip_special_tokens": true,
+      "include_reasoning": true,
+      "top_a": 0,
+      "tfs": 1,
+      "epsilon_cutoff": 0,
+      "eta_cutoff": 0,
+      "mirostat_mode": 0,
+      "mirostat_tau": 5,
+      "mirostat_eta": 0.1,
+      "custom_token_bans": "77,97,114",
+      "banned_strings": [
+       "Ren"
+      ],
+      "xtc_threshold": 0.1,
+      "xtc_probability": 0,
+      "nsigma": 0,
+      "top_n_sigma": 0,
+      "min_keep": 0,
+      "adaptive_target": -0.01,
+      "adaptive_decay": 0.9,
+      "rep_pen": 1.1,
+      "rep_pen_range": 64,
+      "repetition_penalty_range": 64,
+      "encoder_repetition_penalty": 1,
+      "no_repeat_ngram_size": 0,
+      "penalty_alpha": 0,
+      "temperature_last": true,
+      "do_sample": true,
+      "seed": 3,
+      "guidance_scale": 1,
+      "negative_prompt": "not Ren",
+      "repeat_penalty": 1.1,
+      "repeat_last_n": 64,
+      "n_predict": 250,
+      "num_predict": 250,
+      "num_ctx": 8192,
+      "mirostat": 0,
+      "ignore_eos": false,
+      "rep_pen_slope": 1
+     }
+    }
+   ]
+  },
+  "tc-ooba-no-info": {
+   "phases": [
+    {
+     "online_status": "ren-llama-3-8b",
+     "model_list": [],
+     "oai": {
+      "ai21_model": "jamba-large",
+      "aimlapi_model": "chatgpt-4o-latest",
+      "azure_openai_model": "",
+      "chutes_model": "deepseek-ai/DeepSeek-V3-0324",
+      "claude_model": "claude-sonnet-5",
+      "cohere_model": "command-r-plus",
+      "cometapi_model": "gpt-4o",
+      "custom_model": "",
+      "deepseek_model": "deepseek-v4-flash",
+      "electronhub_model": "gpt-4o-mini",
+      "fireworks_model": "accounts/fireworks/models/kimi-k2-instruct",
+      "google_model": "gemini-3.7-flash",
+      "groq_model": "llama-3.3-70b-versatile",
+      "minimax_model": "MiniMax-M2.7",
+      "mistralai_model": "mistral-large-latest",
+      "moonshot_model": "kimi-latest",
+      "nanogpt_model": "gpt-4o-mini",
+      "openai_model": "gpt-5.6-terra",
+      "openrouter_model": "OR_Website",
+      "perplexity_model": "sonar-pro",
+      "pollinations_model": "openai",
+      "siliconflow_model": "deepseek-ai/DeepSeek-V3",
+      "vertexai_model": "gemini-3.7-flash",
+      "workers_ai_model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "xai_model": "grok-3-beta",
+      "zai_model": "glm-4.6"
+     },
+     "tg": {
+      "aphrodite_model": "",
+      "custom_model": "",
+      "dreamgen_model": "lucid-v1-extra-large/text",
+      "featherless_model": "",
+      "generic_model": "",
+      "infermaticai_model": "",
+      "llamacpp_model": "",
+      "mancer_model": "mytholite",
+      "ollama_model": "",
+      "openrouter_model": "openrouter/auto",
+      "tabby_model": "",
+      "togetherai_model": "Gryphe/MythoMax-L2-13b",
+      "vllm_model": ""
+     },
+     "openRouterModels": [],
+     "tok": null,
+     "kai_flags": {
+      "can_use_tokenization": false,
+      "can_use_stop_sequence": false,
+      "can_use_streaming": false,
+      "can_use_default_badwordsids": false,
+      "can_use_mirostat": false,
+      "can_use_grammar": false,
+      "can_use_min_p": false
+     },
+     "model": "ren-llama-3-8b"
+    }
+   ],
+   "request": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "You are {{char}}. Talk to {{user}}.\n\nhi",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "api_type": "ooba",
+      "api_server": "http://127.0.0.1:8131/ooba",
+      "temperature": 0.8,
+      "min_p": 0.05,
+      "top_p": 0.9,
+      "typical_p": 0.95,
+      "typical": 0.95,
+      "sampler_seed": 3,
+      "repetition_penalty": 1.1,
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_k": 20,
+      "skew": 0,
+      "min_length": 0,
+      "min_tokens": 0,
+      "num_beams": 1,
+      "length_penalty": 1,
+      "early_stopping": false,
+      "add_bos_token": true,
+      "smoothing_factor": 0,
+      "smoothing_curve": 1,
+      "dry_allowed_length": 2,
+      "dry_multiplier": 0,
+      "dry_base": 1.75,
+      "dry_sequence_breakers": "[\"\\n\",\"Mara:\"]",
+      "dry_penalty_last_n": 0,
+      "max_tokens_second": 0,
+      "sampler_priority": [
+       "temperature",
+       "top_k",
+       "top_p"
+      ],
+      "stopping_strings": [
+       "\nRen:",
+       "\n***",
+       "ren-llama-3-8b",
+       "END"
+      ],
+      "stop": [
+       "\nRen:",
+       "\n***",
+       "ren-llama-3-8b",
+       "END"
+      ],
+      "truncation_length": 8192,
+      "ban_eos_token": false,
+      "skip_special_tokens": true,
+      "include_reasoning": true,
+      "top_a": 0,
+      "tfs": 1,
+      "epsilon_cutoff": 0,
+      "eta_cutoff": 0,
+      "mirostat_mode": 0,
+      "mirostat_tau": 5,
+      "mirostat_eta": 0.1,
+      "custom_token_bans": "1085,29874",
+      "banned_strings": [
+       "Ren"
+      ],
+      "xtc_threshold": 0.1,
+      "xtc_probability": 0,
+      "nsigma": 0,
+      "top_n_sigma": 0,
+      "min_keep": 0,
+      "adaptive_target": -0.01,
+      "adaptive_decay": 0.9,
+      "rep_pen": 1.1,
+      "rep_pen_range": 64,
+      "repetition_penalty_range": 64,
+      "encoder_repetition_penalty": 1,
+      "no_repeat_ngram_size": 0,
+      "penalty_alpha": 0,
+      "temperature_last": true,
+      "do_sample": true,
+      "seed": 3,
+      "guidance_scale": 1,
+      "negative_prompt": "not Ren",
+      "repeat_penalty": 1.1,
+      "repeat_last_n": 64,
+      "n_predict": 250,
+      "num_predict": 250,
+      "num_ctx": 8192,
+      "mirostat": 0,
+      "ignore_eos": false,
+      "rep_pen_slope": 1
+     }
+    }
+   ]
+  },
+  "tc-ooba-bypass": {
+   "phases": [
+    {
+     "online_status": "Status check bypassed",
+     "model_list": [],
+     "oai": {
+      "ai21_model": "jamba-large",
+      "aimlapi_model": "chatgpt-4o-latest",
+      "azure_openai_model": "",
+      "chutes_model": "deepseek-ai/DeepSeek-V3-0324",
+      "claude_model": "claude-sonnet-5",
+      "cohere_model": "command-r-plus",
+      "cometapi_model": "gpt-4o",
+      "custom_model": "",
+      "deepseek_model": "deepseek-v4-flash",
+      "electronhub_model": "gpt-4o-mini",
+      "fireworks_model": "accounts/fireworks/models/kimi-k2-instruct",
+      "google_model": "gemini-3.7-flash",
+      "groq_model": "llama-3.3-70b-versatile",
+      "minimax_model": "MiniMax-M2.7",
+      "mistralai_model": "mistral-large-latest",
+      "moonshot_model": "kimi-latest",
+      "nanogpt_model": "gpt-4o-mini",
+      "openai_model": "gpt-5.6-terra",
+      "openrouter_model": "OR_Website",
+      "perplexity_model": "sonar-pro",
+      "pollinations_model": "openai",
+      "siliconflow_model": "deepseek-ai/DeepSeek-V3",
+      "vertexai_model": "gemini-3.7-flash",
+      "workers_ai_model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "xai_model": "grok-3-beta",
+      "zai_model": "glm-4.6"
+     },
+     "tg": {
+      "aphrodite_model": "",
+      "custom_model": "",
+      "dreamgen_model": "lucid-v1-extra-large/text",
+      "featherless_model": "",
+      "generic_model": "",
+      "infermaticai_model": "",
+      "llamacpp_model": "",
+      "mancer_model": "mytholite",
+      "ollama_model": "",
+      "openrouter_model": "openrouter/auto",
+      "tabby_model": "",
+      "togetherai_model": "Gryphe/MythoMax-L2-13b",
+      "vllm_model": ""
+     },
+     "openRouterModels": [],
+     "tok": null,
+     "kai_flags": {
+      "can_use_tokenization": false,
+      "can_use_stop_sequence": false,
+      "can_use_streaming": false,
+      "can_use_default_badwordsids": false,
+      "can_use_mirostat": false,
+      "can_use_grammar": false,
+      "can_use_min_p": false
+     },
+     "model": "Status check bypassed"
+    }
+   ],
+   "request": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "You are {{char}}. Talk to {{user}}.\n\nhi",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "api_type": "ooba",
+      "api_server": "http://127.0.0.1:8131/ooba",
+      "temperature": 0.8,
+      "min_p": 0.05,
+      "top_p": 0.9,
+      "typical_p": 0.95,
+      "typical": 0.95,
+      "sampler_seed": 3,
+      "repetition_penalty": 1.1,
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_k": 20,
+      "skew": 0,
+      "min_length": 0,
+      "min_tokens": 0,
+      "num_beams": 1,
+      "length_penalty": 1,
+      "early_stopping": false,
+      "add_bos_token": true,
+      "smoothing_factor": 0,
+      "smoothing_curve": 1,
+      "dry_allowed_length": 2,
+      "dry_multiplier": 0,
+      "dry_base": 1.75,
+      "dry_sequence_breakers": "[\"\\n\",\"Mara:\"]",
+      "dry_penalty_last_n": 0,
+      "max_tokens_second": 0,
+      "sampler_priority": [
+       "temperature",
+       "top_k",
+       "top_p"
+      ],
+      "stopping_strings": [
+       "\nRen:",
+       "\n***",
+       "Status check bypassed",
+       "END"
+      ],
+      "stop": [
+       "\nRen:",
+       "\n***",
+       "Status check bypassed",
+       "END"
+      ],
+      "truncation_length": 8192,
+      "ban_eos_token": false,
+      "skip_special_tokens": true,
+      "include_reasoning": true,
+      "top_a": 0,
+      "tfs": 1,
+      "epsilon_cutoff": 0,
+      "eta_cutoff": 0,
+      "mirostat_mode": 0,
+      "mirostat_tau": 5,
+      "mirostat_eta": 0.1,
+      "custom_token_bans": "1085,29874",
+      "banned_strings": [
+       "Ren"
+      ],
+      "xtc_threshold": 0.1,
+      "xtc_probability": 0,
+      "nsigma": 0,
+      "top_n_sigma": 0,
+      "min_keep": 0,
+      "adaptive_target": -0.01,
+      "adaptive_decay": 0.9,
+      "rep_pen": 1.1,
+      "rep_pen_range": 64,
+      "repetition_penalty_range": 64,
+      "encoder_repetition_penalty": 1,
+      "no_repeat_ngram_size": 0,
+      "penalty_alpha": 0,
+      "temperature_last": true,
+      "do_sample": true,
+      "seed": 3,
+      "guidance_scale": 1,
+      "negative_prompt": "not Ren",
+      "repeat_penalty": 1.1,
+      "repeat_last_n": 64,
+      "n_predict": 250,
+      "num_predict": 250,
+      "num_ctx": 8192,
+      "mirostat": 0,
+      "ignore_eos": false,
+      "rep_pen_slope": 1
+     }
+    }
+   ]
+  },
+  "tc-koboldcpp-api-tokenizer": {
+   "phases": [
+    {
+     "online_status": "koboldcpp/ren-k",
+     "model_list": [],
+     "oai": {
+      "ai21_model": "jamba-large",
+      "aimlapi_model": "chatgpt-4o-latest",
+      "azure_openai_model": "",
+      "chutes_model": "deepseek-ai/DeepSeek-V3-0324",
+      "claude_model": "claude-sonnet-5",
+      "cohere_model": "command-r-plus",
+      "cometapi_model": "gpt-4o",
+      "custom_model": "",
+      "deepseek_model": "deepseek-v4-flash",
+      "electronhub_model": "gpt-4o-mini",
+      "fireworks_model": "accounts/fireworks/models/kimi-k2-instruct",
+      "google_model": "gemini-3.7-flash",
+      "groq_model": "llama-3.3-70b-versatile",
+      "minimax_model": "MiniMax-M2.7",
+      "mistralai_model": "mistral-large-latest",
+      "moonshot_model": "kimi-latest",
+      "nanogpt_model": "gpt-4o-mini",
+      "openai_model": "gpt-5.6-terra",
+      "openrouter_model": "OR_Website",
+      "perplexity_model": "sonar-pro",
+      "pollinations_model": "openai",
+      "siliconflow_model": "deepseek-ai/DeepSeek-V3",
+      "vertexai_model": "gemini-3.7-flash",
+      "workers_ai_model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "xai_model": "grok-3-beta",
+      "zai_model": "glm-4.6"
+     },
+     "tg": {
+      "aphrodite_model": "",
+      "custom_model": "",
+      "dreamgen_model": "lucid-v1-extra-large/text",
+      "featherless_model": "",
+      "generic_model": "",
+      "infermaticai_model": "",
+      "llamacpp_model": "",
+      "mancer_model": "mytholite",
+      "ollama_model": "",
+      "openrouter_model": "openrouter/auto",
+      "tabby_model": "",
+      "togetherai_model": "Gryphe/MythoMax-L2-13b",
+      "vllm_model": ""
+     },
+     "openRouterModels": [],
+     "tok": null,
+     "kai_flags": {
+      "can_use_tokenization": false,
+      "can_use_stop_sequence": false,
+      "can_use_streaming": false,
+      "can_use_default_badwordsids": false,
+      "can_use_mirostat": false,
+      "can_use_grammar": false,
+      "can_use_min_p": false
+     },
+     "model": "koboldcpp/ren-k"
+    }
+   ],
+   "request": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "You are {{char}}. Talk to {{user}}.\n\nhi",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "api_type": "koboldcpp",
+      "api_server": "http://127.0.0.1:8131/kcpp",
+      "temperature": 0.8,
+      "min_p": 0.05,
+      "top_p": 0.9,
+      "typical_p": 0.95,
+      "typical": 0.95,
+      "sampler_seed": 3,
+      "repetition_penalty": 1.1,
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_k": 20,
+      "skew": 0,
+      "min_tokens": 0,
+      "add_bos_token": true,
+      "smoothing_factor": 0,
+      "smoothing_curve": 1,
+      "dry_allowed_length": 2,
+      "dry_multiplier": 0,
+      "dry_base": 1.75,
+      "dry_sequence_breakers": [
+       "\n",
+       "Mara:"
+      ],
+      "dry_penalty_last_n": 0,
+      "max_tokens_second": 0,
+      "stopping_strings": [
+       "\nRen:",
+       "\n***",
+       "koboldcpp/ren-k",
+       "END"
+      ],
+      "stop": [
+       "\nRen:",
+       "\n***",
+       "koboldcpp/ren-k",
+       "END"
+      ],
+      "truncation_length": 8192,
+      "ban_eos_token": false,
+      "skip_special_tokens": true,
+      "include_reasoning": true,
+      "top_a": 0,
+      "tfs": 1,
+      "mirostat_mode": 0,
+      "mirostat_tau": 5,
+      "mirostat_eta": 0.1,
+      "custom_token_bans": "77,97,114",
+      "banned_strings": [
+       "Ren"
+      ],
+      "sampler_order": [
+       6,
+       0,
+       1,
+       3,
+       4,
+       2,
+       5
+      ],
+      "xtc_threshold": 0.1,
+      "xtc_probability": 0,
+      "nsigma": 0,
+      "top_n_sigma": 0,
+      "min_keep": 0,
+      "adaptive_target": -0.01,
+      "adaptive_decay": 0.9,
+      "trim_stop": true,
+      "rep_pen": 1.1,
+      "rep_pen_range": 64,
+      "repetition_penalty_range": 64,
+      "seed": 3,
+      "guidance_scale": 1,
+      "negative_prompt": "not Ren",
+      "repeat_penalty": 1.1,
+      "repeat_last_n": 64,
+      "n_predict": 250,
+      "num_predict": 250,
+      "num_ctx": 8192,
+      "mirostat": 0,
+      "ignore_eos": false,
+      "rep_pen_slope": 1
+     }
+    }
+   ]
+  },
+  "tc-llamacpp-not-in-list": {
+   "phases": [
+    {
+     "online_status": "ren-l-b",
+     "model_list": [],
+     "oai": {
+      "ai21_model": "jamba-large",
+      "aimlapi_model": "chatgpt-4o-latest",
+      "azure_openai_model": "",
+      "chutes_model": "deepseek-ai/DeepSeek-V3-0324",
+      "claude_model": "claude-sonnet-5",
+      "cohere_model": "command-r-plus",
+      "cometapi_model": "gpt-4o",
+      "custom_model": "",
+      "deepseek_model": "deepseek-v4-flash",
+      "electronhub_model": "gpt-4o-mini",
+      "fireworks_model": "accounts/fireworks/models/kimi-k2-instruct",
+      "google_model": "gemini-3.7-flash",
+      "groq_model": "llama-3.3-70b-versatile",
+      "minimax_model": "MiniMax-M2.7",
+      "mistralai_model": "mistral-large-latest",
+      "moonshot_model": "kimi-latest",
+      "nanogpt_model": "gpt-4o-mini",
+      "openai_model": "gpt-5.6-terra",
+      "openrouter_model": "OR_Website",
+      "perplexity_model": "sonar-pro",
+      "pollinations_model": "openai",
+      "siliconflow_model": "deepseek-ai/DeepSeek-V3",
+      "vertexai_model": "gemini-3.7-flash",
+      "workers_ai_model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "xai_model": "grok-3-beta",
+      "zai_model": "glm-4.6"
+     },
+     "tg": {
+      "aphrodite_model": "",
+      "custom_model": "",
+      "dreamgen_model": "lucid-v1-extra-large/text",
+      "featherless_model": "",
+      "generic_model": "",
+      "infermaticai_model": "",
+      "llamacpp_model": "",
+      "mancer_model": "mytholite",
+      "ollama_model": "",
+      "openrouter_model": "openrouter/auto",
+      "tabby_model": "",
+      "togetherai_model": "Gryphe/MythoMax-L2-13b",
+      "vllm_model": ""
+     },
+     "openRouterModels": [],
+     "tok": null,
+     "kai_flags": {
+      "can_use_tokenization": false,
+      "can_use_stop_sequence": false,
+      "can_use_streaming": false,
+      "can_use_default_badwordsids": false,
+      "can_use_mirostat": false,
+      "can_use_grammar": false,
+      "can_use_min_p": false
+     },
+     "model": "ren-l-b"
+    }
+   ],
+   "request": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "You are {{char}}. Talk to {{user}}.\n\nhi",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "api_type": "llamacpp",
+      "api_server": "http://127.0.0.1:8131/llama",
+      "temperature": 0.8,
+      "min_p": 0.05,
+      "top_p": 0.9,
+      "typical_p": 0.95,
+      "typical": 0.95,
+      "sampler_seed": 3,
+      "repetition_penalty": 1.1,
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_k": 20,
+      "skew": 0,
+      "min_tokens": 0,
+      "add_bos_token": true,
+      "smoothing_factor": 0,
+      "smoothing_curve": 1,
+      "dry_allowed_length": 2,
+      "dry_multiplier": 0,
+      "dry_base": 1.75,
+      "dry_sequence_breakers": [
+       "\n",
+       "Mara:"
+      ],
+      "dry_penalty_last_n": 0,
+      "max_tokens_second": 0,
+      "samplers": [
+       "top_k",
+       "temperature"
+      ],
+      "stopping_strings": [
+       "\nRen:",
+       "\n***",
+       "ren-l-b",
+       "END"
+      ],
+      "stop": [
+       "\nRen:",
+       "\n***",
+       "ren-l-b",
+       "END"
+      ],
+      "truncation_length": 8192,
+      "ban_eos_token": false,
+      "skip_special_tokens": true,
+      "include_reasoning": true,
+      "top_a": 0,
+      "tfs": 1,
+      "mirostat_mode": 0,
+      "mirostat_tau": 5,
+      "mirostat_eta": 0.1,
+      "custom_token_bans": "77,97,114",
+      "banned_strings": [
+       "Ren"
+      ],
+      "xtc_threshold": 0.1,
+      "xtc_probability": 0,
+      "nsigma": 0,
+      "top_n_sigma": 0,
+      "min_keep": 0,
+      "adaptive_target": -0.01,
+      "adaptive_decay": 0.9,
+      "n": 1,
+      "rep_pen": 1.1,
+      "rep_pen_range": 64,
+      "repetition_penalty_range": 64,
+      "seed": 3,
+      "guidance_scale": 1,
+      "negative_prompt": "not Ren",
+      "repeat_penalty": 1.1,
+      "repeat_last_n": 64,
+      "n_predict": 250,
+      "num_predict": 250,
+      "num_ctx": 8192,
+      "mirostat": 0,
+      "ignore_eos": false,
+      "rep_pen_slope": 1,
+      "logit_bias": [
+       [
+        77,
+        false
+       ],
+       [
+        97,
+        false
+       ],
+       [
+        114,
+        false
+       ]
+      ],
+      "grammar": "",
+      "cache_prompt": true
+     }
+    }
+   ]
+  },
+  "tc-openrouter-tokenizer": {
+   "phases": [
+    {
+     "online_status": "ren/model-m",
+     "model_list": [],
+     "oai": {
+      "ai21_model": "jamba-large",
+      "aimlapi_model": "chatgpt-4o-latest",
+      "azure_openai_model": "",
+      "chutes_model": "deepseek-ai/DeepSeek-V3-0324",
+      "claude_model": "claude-sonnet-5",
+      "cohere_model": "command-r-plus",
+      "cometapi_model": "gpt-4o",
+      "custom_model": "",
+      "deepseek_model": "deepseek-v4-flash",
+      "electronhub_model": "gpt-4o-mini",
+      "fireworks_model": "accounts/fireworks/models/kimi-k2-instruct",
+      "google_model": "gemini-3.7-flash",
+      "groq_model": "llama-3.3-70b-versatile",
+      "minimax_model": "MiniMax-M2.7",
+      "mistralai_model": "mistral-large-latest",
+      "moonshot_model": "kimi-latest",
+      "nanogpt_model": "gpt-4o-mini",
+      "openai_model": "gpt-5.6-terra",
+      "openrouter_model": "OR_Website",
+      "perplexity_model": "sonar-pro",
+      "pollinations_model": "openai",
+      "siliconflow_model": "deepseek-ai/DeepSeek-V3",
+      "vertexai_model": "gemini-3.7-flash",
+      "workers_ai_model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "xai_model": "grok-3-beta",
+      "zai_model": "glm-4.6"
+     },
+     "tg": {
+      "aphrodite_model": "",
+      "custom_model": "",
+      "dreamgen_model": "lucid-v1-extra-large/text",
+      "featherless_model": "",
+      "generic_model": "",
+      "infermaticai_model": "",
+      "llamacpp_model": "",
+      "mancer_model": "mytholite",
+      "ollama_model": "",
+      "openrouter_model": "ren/model-m",
+      "tabby_model": "",
+      "togetherai_model": "Gryphe/MythoMax-L2-13b",
+      "vllm_model": ""
+     },
+     "openRouterModels": [
+      {
+       "id": "ren/model-m",
+       "name": "Ivo M",
+       "context_length": 32768,
+       "architecture": {
+        "tokenizer": "Mistral"
+       },
+       "pricing": {
+        "prompt": "0.0000005",
+        "completion": "0.000001"
+       }
+      },
+      {
+       "id": "ren/model-q",
+       "name": "Lio Q",
+       "context_length": 16384,
+       "architecture": {
+        "tokenizer": "Qwen"
+       },
+       "pricing": {
+        "prompt": "0.000002",
+        "completion": "0.000003"
+       }
+      },
+      {
+       "id": "ren/model-l3",
+       "name": "Ren L3",
+       "context_length": 8192,
+       "architecture": {
+        "tokenizer": "Llama3"
+       },
+       "pricing": {
+        "prompt": "0.000001",
+        "completion": "0.000002"
+       }
+      }
+     ],
+     "tok": null,
+     "kai_flags": {
+      "can_use_tokenization": false,
+      "can_use_stop_sequence": false,
+      "can_use_streaming": false,
+      "can_use_default_badwordsids": false,
+      "can_use_mirostat": false,
+      "can_use_grammar": false,
+      "can_use_min_p": false
+     },
+     "model": "ren/model-m"
+    }
+   ],
+   "request": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "You are {{char}}. Talk to {{user}}.\n\nhi",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "model": "ren/model-m",
+      "api_type": "openrouter",
+      "api_server": "https://openrouter.ai/api",
+      "temperature": 0.8,
+      "min_p": 0.05,
+      "top_p": 0.9,
+      "typical_p": 0.95,
+      "typical": 0.95,
+      "sampler_seed": 3,
+      "repetition_penalty": 1.1,
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_k": 20,
+      "skew": 0,
+      "min_tokens": 0,
+      "add_bos_token": true,
+      "smoothing_factor": 0,
+      "smoothing_curve": 1,
+      "dry_allowed_length": 2,
+      "dry_multiplier": 0,
+      "dry_base": 1.75,
+      "dry_sequence_breakers": "[\"\\n\",\"Mara:\"]",
+      "dry_penalty_last_n": 0,
+      "max_tokens_second": 0,
+      "stopping_strings": [
+       "\nRen:",
+       "\n***",
+       "ren/model-m",
+       "END"
+      ],
+      "stop": [
+       "\nRen:",
+       "\n***",
+       "ren/model-m",
+       "END"
+      ],
+      "truncation_length": 8192,
+      "ban_eos_token": false,
+      "skip_special_tokens": true,
+      "include_reasoning": true,
+      "top_a": 0,
+      "tfs": 1,
+      "mirostat_mode": 0,
+      "mirostat_tau": 5,
+      "mirostat_eta": 0.1,
+      "custom_token_bans": "1471,28708",
+      "banned_strings": [
+       "Ren"
+      ],
+      "xtc_threshold": 0.1,
+      "xtc_probability": 0,
+      "nsigma": 0,
+      "top_n_sigma": 0,
+      "min_keep": 0,
+      "adaptive_target": -0.01,
+      "adaptive_decay": 0.9,
+      "provider": [],
+      "quantizations": [],
+      "allow_fallbacks": true,
+      "rep_pen": 1.1,
+      "rep_pen_range": 64,
+      "repetition_penalty_range": 64,
+      "seed": 3,
+      "guidance_scale": 1,
+      "negative_prompt": "not Ren",
+      "repeat_penalty": 1.1,
+      "repeat_last_n": 64,
+      "n_predict": 250,
+      "num_predict": 250,
+      "num_ctx": 8192,
+      "mirostat": 0,
+      "ignore_eos": false,
+      "rep_pen_slope": 1
+     }
+    }
+   ]
+  },
+  "tc-dreamgen": {
+   "phases": [
+    {
+     "online_status": "lucid-v1-extra-large-ren",
+     "model_list": [],
+     "oai": {
+      "ai21_model": "jamba-large",
+      "aimlapi_model": "chatgpt-4o-latest",
+      "azure_openai_model": "",
+      "chutes_model": "deepseek-ai/DeepSeek-V3-0324",
+      "claude_model": "claude-sonnet-5",
+      "cohere_model": "command-r-plus",
+      "cometapi_model": "gpt-4o",
+      "custom_model": "",
+      "deepseek_model": "deepseek-v4-flash",
+      "electronhub_model": "gpt-4o-mini",
+      "fireworks_model": "accounts/fireworks/models/kimi-k2-instruct",
+      "google_model": "gemini-3.7-flash",
+      "groq_model": "llama-3.3-70b-versatile",
+      "minimax_model": "MiniMax-M2.7",
+      "mistralai_model": "mistral-large-latest",
+      "moonshot_model": "kimi-latest",
+      "nanogpt_model": "gpt-4o-mini",
+      "openai_model": "gpt-5.6-terra",
+      "openrouter_model": "OR_Website",
+      "perplexity_model": "sonar-pro",
+      "pollinations_model": "openai",
+      "siliconflow_model": "deepseek-ai/DeepSeek-V3",
+      "vertexai_model": "gemini-3.7-flash",
+      "workers_ai_model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "xai_model": "grok-3-beta",
+      "zai_model": "glm-4.6"
+     },
+     "tg": {
+      "aphrodite_model": "",
+      "custom_model": "",
+      "dreamgen_model": "lucid-v1-extra-large-ren",
+      "featherless_model": "",
+      "generic_model": "",
+      "infermaticai_model": "",
+      "llamacpp_model": "",
+      "mancer_model": "mytholite",
+      "ollama_model": "",
+      "openrouter_model": "openrouter/auto",
+      "tabby_model": "",
+      "togetherai_model": "Gryphe/MythoMax-L2-13b",
+      "vllm_model": ""
+     },
+     "openRouterModels": [],
+     "tok": null,
+     "kai_flags": {
+      "can_use_tokenization": false,
+      "can_use_stop_sequence": false,
+      "can_use_streaming": false,
+      "can_use_default_badwordsids": false,
+      "can_use_mirostat": false,
+      "can_use_grammar": false,
+      "can_use_min_p": false
+     },
+     "model": "lucid-v1-extra-large-ren"
+    }
+   ],
+   "request": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "You are {{char}}. Talk to {{user}}.\n\nhi",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "model": "lucid-v1-extra-large-ren",
+      "api_type": "dreamgen",
+      "api_server": "https://dreamgen.com",
+      "temperature": 0.8,
+      "min_p": 0.05,
+      "top_p": 0.9,
+      "typical_p": 0.95,
+      "typical": 0.95,
+      "sampler_seed": 3,
+      "repetition_penalty": 1.1,
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_k": 20,
+      "skew": 0,
+      "minimum_message_content_tokens": 0,
+      "min_tokens": 0,
+      "add_bos_token": true,
+      "smoothing_factor": 0,
+      "smoothing_curve": 1,
+      "dry_allowed_length": 2,
+      "dry_multiplier": 0,
+      "dry_base": 1.75,
+      "dry_sequence_breakers": "[\"\\n\",\"Mara:\"]",
+      "dry_penalty_last_n": 0,
+      "max_tokens_second": 0,
+      "stopping_strings": [
+       "\nRen:",
+       "\n***",
+       "lucid-v1-extra-large-ren",
+       "END"
+      ],
+      "stop": [
+       "\nRen:",
+       "\n***",
+       "lucid-v1-extra-large-ren",
+       "END"
+      ],
+      "truncation_length": 8192,
+      "ban_eos_token": false,
+      "skip_special_tokens": true,
+      "include_reasoning": true,
+      "top_a": 0,
+      "tfs": 1,
+      "mirostat_mode": 0,
+      "mirostat_tau": 5,
+      "mirostat_eta": 0.1,
+      "custom_token_bans": "44,5169",
+      "banned_strings": [
+       "Ren"
+      ],
+      "xtc_threshold": 0.1,
+      "xtc_probability": 0,
+      "nsigma": 0,
+      "top_n_sigma": 0,
+      "min_keep": 0,
+      "adaptive_target": -0.01,
+      "adaptive_decay": 0.9,
+      "rep_pen": 1.1,
+      "rep_pen_range": 64,
+      "repetition_penalty_range": 64,
+      "seed": 3,
+      "guidance_scale": 1,
+      "negative_prompt": "not Ren",
+      "repeat_penalty": 1.1,
+      "repeat_last_n": 64,
+      "n_predict": 250,
+      "num_predict": 250,
+      "num_ctx": 8192,
+      "mirostat": 0,
+      "ignore_eos": false,
+      "rep_pen_slope": 1
+     }
+    }
+   ]
+  },
+  "tc-generic-kept": {
+   "phases": [
+    {
+     "online_status": "ren-free-text",
+     "model_list": [],
+     "oai": {
+      "ai21_model": "jamba-large",
+      "aimlapi_model": "chatgpt-4o-latest",
+      "azure_openai_model": "",
+      "chutes_model": "deepseek-ai/DeepSeek-V3-0324",
+      "claude_model": "claude-sonnet-5",
+      "cohere_model": "command-r-plus",
+      "cometapi_model": "gpt-4o",
+      "custom_model": "",
+      "deepseek_model": "deepseek-v4-flash",
+      "electronhub_model": "gpt-4o-mini",
+      "fireworks_model": "accounts/fireworks/models/kimi-k2-instruct",
+      "google_model": "gemini-3.7-flash",
+      "groq_model": "llama-3.3-70b-versatile",
+      "minimax_model": "MiniMax-M2.7",
+      "mistralai_model": "mistral-large-latest",
+      "moonshot_model": "kimi-latest",
+      "nanogpt_model": "gpt-4o-mini",
+      "openai_model": "gpt-5.6-terra",
+      "openrouter_model": "OR_Website",
+      "perplexity_model": "sonar-pro",
+      "pollinations_model": "openai",
+      "siliconflow_model": "deepseek-ai/DeepSeek-V3",
+      "vertexai_model": "gemini-3.7-flash",
+      "workers_ai_model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "xai_model": "grok-3-beta",
+      "zai_model": "glm-4.6"
+     },
+     "tg": {
+      "aphrodite_model": "",
+      "custom_model": "",
+      "dreamgen_model": "lucid-v1-extra-large/text",
+      "featherless_model": "",
+      "generic_model": "ren-free-text",
+      "infermaticai_model": "",
+      "llamacpp_model": "",
+      "mancer_model": "mytholite",
+      "ollama_model": "",
+      "openrouter_model": "openrouter/auto",
+      "tabby_model": "",
+      "togetherai_model": "Gryphe/MythoMax-L2-13b",
+      "vllm_model": ""
+     },
+     "openRouterModels": [],
+     "tok": null,
+     "kai_flags": {
+      "can_use_tokenization": false,
+      "can_use_stop_sequence": false,
+      "can_use_streaming": false,
+      "can_use_default_badwordsids": false,
+      "can_use_mirostat": false,
+      "can_use_grammar": false,
+      "can_use_min_p": false
+     },
+     "model": "ren-free-text"
+    }
+   ],
+   "request": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "You are {{char}}. Talk to {{user}}.\n\nhi",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "model": "ren-free-text",
+      "api_type": "generic",
+      "api_server": "http://127.0.0.1:8131/generic/v1",
+      "temperature": 0.8,
+      "min_p": 0.05,
+      "top_p": 0.9,
+      "typical_p": 0.95,
+      "typical": 0.95,
+      "sampler_seed": 3,
+      "repetition_penalty": 1.1,
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_k": 20,
+      "skew": 0,
+      "min_tokens": 0,
+      "add_bos_token": true,
+      "smoothing_factor": 0,
+      "smoothing_curve": 1,
+      "dry_allowed_length": 2,
+      "dry_multiplier": 0,
+      "dry_base": 1.75,
+      "dry_sequence_breakers": "[\"\\n\",\"Mara:\"]",
+      "dry_penalty_last_n": 0,
+      "max_tokens_second": 0,
+      "stopping_strings": [
+       "\nRen:",
+       "\n***",
+       "ren-free-text",
+       "END"
+      ],
+      "stop": [
+       "\nRen:",
+       "\n***",
+       "ren-free-text",
+       "END"
+      ],
+      "truncation_length": 8192,
+      "ban_eos_token": false,
+      "skip_special_tokens": true,
+      "include_reasoning": true,
+      "top_a": 0,
+      "tfs": 1,
+      "mirostat_mode": 0,
+      "mirostat_tau": 5,
+      "mirostat_eta": 0.1,
+      "custom_token_bans": "1085,29874",
+      "banned_strings": [
+       "Ren"
+      ],
+      "xtc_threshold": 0.1,
+      "xtc_probability": 0,
+      "nsigma": 0,
+      "top_n_sigma": 0,
+      "min_keep": 0,
+      "adaptive_target": -0.01,
+      "adaptive_decay": 0.9,
+      "rep_pen": 1.1,
+      "rep_pen_range": 64,
+      "repetition_penalty_range": 64,
+      "seed": 3,
+      "guidance_scale": 1,
+      "negative_prompt": "not Ren",
+      "repeat_penalty": 1.1,
+      "repeat_last_n": 64,
+      "n_predict": 250,
+      "num_predict": 250,
+      "num_ctx": 8192,
+      "mirostat": 0,
+      "ignore_eos": false,
+      "rep_pen_slope": 1
+     }
+    }
+   ]
+  },
+  "tc-backend-down": {
+   "phases": [
+    {
+     "online_status": "no_connection",
+     "model_list": [],
+     "oai": {
+      "ai21_model": "jamba-large",
+      "aimlapi_model": "chatgpt-4o-latest",
+      "azure_openai_model": "",
+      "chutes_model": "deepseek-ai/DeepSeek-V3-0324",
+      "claude_model": "claude-sonnet-5",
+      "cohere_model": "command-r-plus",
+      "cometapi_model": "gpt-4o",
+      "custom_model": "",
+      "deepseek_model": "deepseek-v4-flash",
+      "electronhub_model": "gpt-4o-mini",
+      "fireworks_model": "accounts/fireworks/models/kimi-k2-instruct",
+      "google_model": "gemini-3.7-flash",
+      "groq_model": "llama-3.3-70b-versatile",
+      "minimax_model": "MiniMax-M2.7",
+      "mistralai_model": "mistral-large-latest",
+      "moonshot_model": "kimi-latest",
+      "nanogpt_model": "gpt-4o-mini",
+      "openai_model": "gpt-5.6-terra",
+      "openrouter_model": "OR_Website",
+      "perplexity_model": "sonar-pro",
+      "pollinations_model": "openai",
+      "siliconflow_model": "deepseek-ai/DeepSeek-V3",
+      "vertexai_model": "gemini-3.7-flash",
+      "workers_ai_model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "xai_model": "grok-3-beta",
+      "zai_model": "glm-4.6"
+     },
+     "tg": {
+      "aphrodite_model": "",
+      "custom_model": "",
+      "dreamgen_model": "lucid-v1-extra-large/text",
+      "featherless_model": "",
+      "generic_model": "",
+      "infermaticai_model": "",
+      "llamacpp_model": "",
+      "mancer_model": "mytholite",
+      "ollama_model": "",
+      "openrouter_model": "openrouter/auto",
+      "tabby_model": "",
+      "togetherai_model": "Gryphe/MythoMax-L2-13b",
+      "vllm_model": ""
+     },
+     "openRouterModels": [],
+     "tok": null,
+     "kai_flags": {
+      "can_use_tokenization": false,
+      "can_use_stop_sequence": false,
+      "can_use_streaming": false,
+      "can_use_default_badwordsids": false,
+      "can_use_mirostat": false,
+      "can_use_grammar": false,
+      "can_use_min_p": false
+     },
+     "model": "no_connection"
+    }
+   ],
+   "request": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "You are {{char}}. Talk to {{user}}.\n\nhi",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "api_type": "ooba",
+      "api_server": "http://127.0.0.1:8131/ooba",
+      "temperature": 0.8,
+      "min_p": 0.05,
+      "top_p": 0.9,
+      "typical_p": 0.95,
+      "typical": 0.95,
+      "sampler_seed": 3,
+      "repetition_penalty": 1.1,
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_k": 20,
+      "skew": 0,
+      "min_length": 0,
+      "min_tokens": 0,
+      "num_beams": 1,
+      "length_penalty": 1,
+      "early_stopping": false,
+      "add_bos_token": true,
+      "smoothing_factor": 0,
+      "smoothing_curve": 1,
+      "dry_allowed_length": 2,
+      "dry_multiplier": 0,
+      "dry_base": 1.75,
+      "dry_sequence_breakers": "[\"\\n\",\"Mara:\"]",
+      "dry_penalty_last_n": 0,
+      "max_tokens_second": 0,
+      "sampler_priority": [
+       "temperature",
+       "top_k",
+       "top_p"
+      ],
+      "stopping_strings": [
+       "\nRen:",
+       "\n***",
+       "no_connection",
+       "END"
+      ],
+      "stop": [
+       "\nRen:",
+       "\n***",
+       "no_connection",
+       "END"
+      ],
+      "truncation_length": 8192,
+      "ban_eos_token": false,
+      "skip_special_tokens": true,
+      "include_reasoning": true,
+      "top_a": 0,
+      "tfs": 1,
+      "epsilon_cutoff": 0,
+      "eta_cutoff": 0,
+      "mirostat_mode": 0,
+      "mirostat_tau": 5,
+      "mirostat_eta": 0.1,
+      "custom_token_bans": "1085,29874",
+      "banned_strings": [
+       "Ren"
+      ],
+      "xtc_threshold": 0.1,
+      "xtc_probability": 0,
+      "nsigma": 0,
+      "top_n_sigma": 0,
+      "min_keep": 0,
+      "adaptive_target": -0.01,
+      "adaptive_decay": 0.9,
+      "rep_pen": 1.1,
+      "rep_pen_range": 64,
+      "repetition_penalty_range": 64,
+      "encoder_repetition_penalty": 1,
+      "no_repeat_ngram_size": 0,
+      "penalty_alpha": 0,
+      "temperature_last": true,
+      "do_sample": true,
+      "seed": 3,
+      "guidance_scale": 1,
+      "negative_prompt": "not Ren",
+      "repeat_penalty": 1.1,
+      "repeat_last_n": 64,
+      "n_predict": 250,
+      "num_predict": 250,
+      "num_ctx": 8192,
+      "mirostat": 0,
+      "ignore_eos": false,
+      "rep_pen_slope": 1
+     }
+    }
+   ]
+  },
+  "tc-down-after-good": {
+   "phases": [
+    {
+     "online_status": "ren/model-m",
+     "model_list": [],
+     "oai": {
+      "ai21_model": "jamba-large",
+      "aimlapi_model": "chatgpt-4o-latest",
+      "azure_openai_model": "",
+      "chutes_model": "deepseek-ai/DeepSeek-V3-0324",
+      "claude_model": "claude-sonnet-5",
+      "cohere_model": "command-r-plus",
+      "cometapi_model": "gpt-4o",
+      "custom_model": "",
+      "deepseek_model": "deepseek-v4-flash",
+      "electronhub_model": "gpt-4o-mini",
+      "fireworks_model": "accounts/fireworks/models/kimi-k2-instruct",
+      "google_model": "gemini-3.7-flash",
+      "groq_model": "llama-3.3-70b-versatile",
+      "minimax_model": "MiniMax-M2.7",
+      "mistralai_model": "mistral-large-latest",
+      "moonshot_model": "kimi-latest",
+      "nanogpt_model": "gpt-4o-mini",
+      "openai_model": "gpt-5.6-terra",
+      "openrouter_model": "OR_Website",
+      "perplexity_model": "sonar-pro",
+      "pollinations_model": "openai",
+      "siliconflow_model": "deepseek-ai/DeepSeek-V3",
+      "vertexai_model": "gemini-3.7-flash",
+      "workers_ai_model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "xai_model": "grok-3-beta",
+      "zai_model": "glm-4.6"
+     },
+     "tg": {
+      "aphrodite_model": "",
+      "custom_model": "",
+      "dreamgen_model": "lucid-v1-extra-large/text",
+      "featherless_model": "",
+      "generic_model": "",
+      "infermaticai_model": "",
+      "llamacpp_model": "",
+      "mancer_model": "mytholite",
+      "ollama_model": "",
+      "openrouter_model": "ren/model-m",
+      "tabby_model": "",
+      "togetherai_model": "Gryphe/MythoMax-L2-13b",
+      "vllm_model": ""
+     },
+     "openRouterModels": [
+      {
+       "id": "ren/model-m",
+       "name": "Ivo M",
+       "context_length": 32768,
+       "architecture": {
+        "tokenizer": "Mistral"
+       },
+       "pricing": {
+        "prompt": "0.0000005",
+        "completion": "0.000001"
+       }
+      },
+      {
+       "id": "ren/model-q",
+       "name": "Lio Q",
+       "context_length": 16384,
+       "architecture": {
+        "tokenizer": "Qwen"
+       },
+       "pricing": {
+        "prompt": "0.000002",
+        "completion": "0.000003"
+       }
+      },
+      {
+       "id": "ren/model-l3",
+       "name": "Ren L3",
+       "context_length": 8192,
+       "architecture": {
+        "tokenizer": "Llama3"
+       },
+       "pricing": {
+        "prompt": "0.000001",
+        "completion": "0.000002"
+       }
+      }
+     ],
+     "tok": null,
+     "kai_flags": {
+      "can_use_tokenization": false,
+      "can_use_stop_sequence": false,
+      "can_use_streaming": false,
+      "can_use_default_badwordsids": false,
+      "can_use_mirostat": false,
+      "can_use_grammar": false,
+      "can_use_min_p": false
+     },
+     "model": "ren/model-m"
+    },
+    {
+     "online_status": "no_connection",
+     "model_list": [],
+     "oai": {
+      "ai21_model": "jamba-large",
+      "aimlapi_model": "chatgpt-4o-latest",
+      "azure_openai_model": "",
+      "chutes_model": "deepseek-ai/DeepSeek-V3-0324",
+      "claude_model": "claude-sonnet-5",
+      "cohere_model": "command-r-plus",
+      "cometapi_model": "gpt-4o",
+      "custom_model": "",
+      "deepseek_model": "deepseek-v4-flash",
+      "electronhub_model": "gpt-4o-mini",
+      "fireworks_model": "accounts/fireworks/models/kimi-k2-instruct",
+      "google_model": "gemini-3.7-flash",
+      "groq_model": "llama-3.3-70b-versatile",
+      "minimax_model": "MiniMax-M2.7",
+      "mistralai_model": "mistral-large-latest",
+      "moonshot_model": "kimi-latest",
+      "nanogpt_model": "gpt-4o-mini",
+      "openai_model": "gpt-5.6-terra",
+      "openrouter_model": "OR_Website",
+      "perplexity_model": "sonar-pro",
+      "pollinations_model": "openai",
+      "siliconflow_model": "deepseek-ai/DeepSeek-V3",
+      "vertexai_model": "gemini-3.7-flash",
+      "workers_ai_model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "xai_model": "grok-3-beta",
+      "zai_model": "glm-4.6"
+     },
+     "tg": {
+      "aphrodite_model": "",
+      "custom_model": "",
+      "dreamgen_model": "lucid-v1-extra-large/text",
+      "featherless_model": "",
+      "generic_model": "",
+      "infermaticai_model": "",
+      "llamacpp_model": "",
+      "mancer_model": "mytholite",
+      "ollama_model": "",
+      "openrouter_model": "ren/model-m",
+      "tabby_model": "",
+      "togetherai_model": "Gryphe/MythoMax-L2-13b",
+      "vllm_model": ""
+     },
+     "openRouterModels": [
+      {
+       "id": "ren/model-m",
+       "name": "Ivo M",
+       "context_length": 32768,
+       "architecture": {
+        "tokenizer": "Mistral"
+       },
+       "pricing": {
+        "prompt": "0.0000005",
+        "completion": "0.000001"
+       }
+      },
+      {
+       "id": "ren/model-q",
+       "name": "Lio Q",
+       "context_length": 16384,
+       "architecture": {
+        "tokenizer": "Qwen"
+       },
+       "pricing": {
+        "prompt": "0.000002",
+        "completion": "0.000003"
+       }
+      },
+      {
+       "id": "ren/model-l3",
+       "name": "Ren L3",
+       "context_length": 8192,
+       "architecture": {
+        "tokenizer": "Llama3"
+       },
+       "pricing": {
+        "prompt": "0.000001",
+        "completion": "0.000002"
+       }
+      }
+     ],
+     "tok": null,
+     "kai_flags": {
+      "can_use_tokenization": false,
+      "can_use_stop_sequence": false,
+      "can_use_streaming": false,
+      "can_use_default_badwordsids": false,
+      "can_use_mirostat": false,
+      "can_use_grammar": false,
+      "can_use_min_p": false
+     },
+     "model": "no_connection"
+    }
+   ],
+   "request": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "You are {{char}}. Talk to {{user}}.\n\nhi",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "model": "ren/model-m",
+      "api_type": "openrouter",
+      "api_server": "https://openrouter.ai/api",
+      "temperature": 0.8,
+      "min_p": 0.05,
+      "top_p": 0.9,
+      "typical_p": 0.95,
+      "typical": 0.95,
+      "sampler_seed": 3,
+      "repetition_penalty": 1.1,
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_k": 20,
+      "skew": 0,
+      "min_tokens": 0,
+      "add_bos_token": true,
+      "smoothing_factor": 0,
+      "smoothing_curve": 1,
+      "dry_allowed_length": 2,
+      "dry_multiplier": 0,
+      "dry_base": 1.75,
+      "dry_sequence_breakers": "[\"\\n\",\"Mara:\"]",
+      "dry_penalty_last_n": 0,
+      "max_tokens_second": 0,
+      "stopping_strings": [
+       "\nRen:",
+       "\n***",
+       "no_connection",
+       "END"
+      ],
+      "stop": [
+       "\nRen:",
+       "\n***",
+       "no_connection",
+       "END"
+      ],
+      "truncation_length": 8192,
+      "ban_eos_token": false,
+      "skip_special_tokens": true,
+      "include_reasoning": true,
+      "top_a": 0,
+      "tfs": 1,
+      "mirostat_mode": 0,
+      "mirostat_tau": 5,
+      "mirostat_eta": 0.1,
+      "custom_token_bans": "1471,28708",
+      "banned_strings": [
+       "Ren"
+      ],
+      "xtc_threshold": 0.1,
+      "xtc_probability": 0,
+      "nsigma": 0,
+      "top_n_sigma": 0,
+      "min_keep": 0,
+      "adaptive_target": -0.01,
+      "adaptive_decay": 0.9,
+      "provider": [],
+      "quantizations": [],
+      "allow_fallbacks": true,
+      "rep_pen": 1.1,
+      "rep_pen_range": 64,
+      "repetition_penalty_range": 64,
+      "seed": 3,
+      "guidance_scale": 1,
+      "negative_prompt": "not Ren",
+      "repeat_penalty": 1.1,
+      "repeat_last_n": 64,
+      "n_predict": 250,
+      "num_predict": 250,
+      "num_ctx": 8192,
+      "mirostat": 0,
+      "ignore_eos": false,
+      "rep_pen_slope": 1
+     }
+    }
+   ]
+  },
+  "kobold-model": {
+   "phases": [
+    {
+     "online_status": "koboldcpp/ren-kai",
+     "model_list": [],
+     "oai": {
+      "ai21_model": "jamba-large",
+      "aimlapi_model": "chatgpt-4o-latest",
+      "azure_openai_model": "",
+      "chutes_model": "deepseek-ai/DeepSeek-V3-0324",
+      "claude_model": "claude-sonnet-5",
+      "cohere_model": "command-r-plus",
+      "cometapi_model": "gpt-4o",
+      "custom_model": "",
+      "deepseek_model": "deepseek-v4-flash",
+      "electronhub_model": "gpt-4o-mini",
+      "fireworks_model": "accounts/fireworks/models/kimi-k2-instruct",
+      "google_model": "gemini-3.7-flash",
+      "groq_model": "llama-3.3-70b-versatile",
+      "minimax_model": "MiniMax-M2.7",
+      "mistralai_model": "mistral-large-latest",
+      "moonshot_model": "kimi-latest",
+      "nanogpt_model": "gpt-4o-mini",
+      "openai_model": "gpt-5.6-terra",
+      "openrouter_model": "OR_Website",
+      "perplexity_model": "sonar-pro",
+      "pollinations_model": "openai",
+      "siliconflow_model": "deepseek-ai/DeepSeek-V3",
+      "vertexai_model": "gemini-3.7-flash",
+      "workers_ai_model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "xai_model": "grok-3-beta",
+      "zai_model": "glm-4.6"
+     },
+     "tg": {
+      "aphrodite_model": "",
+      "custom_model": "",
+      "dreamgen_model": "lucid-v1-extra-large/text",
+      "featherless_model": "",
+      "generic_model": "",
+      "infermaticai_model": "",
+      "llamacpp_model": "",
+      "mancer_model": "mytholite",
+      "ollama_model": "",
+      "openrouter_model": "openrouter/auto",
+      "tabby_model": "",
+      "togetherai_model": "Gryphe/MythoMax-L2-13b",
+      "vllm_model": ""
+     },
+     "openRouterModels": [],
+     "tok": null,
+     "kai_flags": {
+      "can_use_tokenization": true,
+      "can_use_stop_sequence": true,
+      "can_use_streaming": true,
+      "can_use_default_badwordsids": true,
+      "can_use_mirostat": true,
+      "can_use_grammar": true,
+      "can_use_min_p": true
+     },
+     "model": "koboldcpp/ren-kai"
+    }
+   ],
+   "request": {
+    "model": "koboldcpp/ren-kai"
+   }
+  }
+ },
+ "calls": {
+  "cc-openai-proxy-default": [
+   {
+    "key": "/api/backends/chat-completions/status\n{\"reverse_proxy\":\"http://127.0.0.1:8131/oai/v1\",\"proxy_password\":\"pw\",\"chat_completion_source\":\"openai\"}",
+    "status": 200,
+    "statusText": "OK",
+    "headers": {
+     "content-type": "application/json; charset=utf-8"
+    },
+    "text": "{\"data\":[{\"id\":\"ren-model-b\"},{\"id\":\"ren-model-a\"}]}"
+   }
+  ],
+  "cc-openai-proxy-kept": [
+   {
+    "key": "/api/backends/chat-completions/status\n{\"reverse_proxy\":\"http://127.0.0.1:8131/oai/v1\",\"proxy_password\":\"pw\",\"chat_completion_source\":\"openai\"}",
+    "status": 200,
+    "statusText": "OK",
+    "headers": {
+     "content-type": "application/json; charset=utf-8"
+    },
+    "text": "{\"data\":[{\"id\":\"ren-model-b\"},{\"id\":\"ren-model-a\"}]}"
+   }
+  ],
+  "cc-openai-no-external": [
+   {
+    "key": "/api/backends/chat-completions/status\n{\"reverse_proxy\":\"http://127.0.0.1:8131/oai/v1\",\"proxy_password\":\"pw\",\"chat_completion_source\":\"openai\"}",
+    "status": 200,
+    "statusText": "OK",
+    "headers": {
+     "content-type": "application/json; charset=utf-8"
+    },
+    "text": "{\"data\":[{\"id\":\"ren-model-a\"}]}"
+   }
+  ],
+  "cc-openai-bypass-down": [
+   {
+    "key": "/api/backends/chat-completions/status\n{\"reverse_proxy\":\"http://127.0.0.1:8131/oai/v1\",\"proxy_password\":\"pw\",\"chat_completion_source\":\"openai\"}",
+    "status": 200,
+    "statusText": "OK",
+    "headers": {
+     "content-type": "application/json; charset=utf-8"
+    },
+    "text": "{\"error\":true,\"data\":{\"data\":[]}}"
+   }
+  ],
+  "cc-openrouter-llama3-bias": [
+   {
+    "key": "/api/backends/chat-completions/status\n{\"reverse_proxy\":\"\",\"proxy_password\":\"\",\"chat_completion_source\":\"openrouter\"}",
+    "status": 200,
+    "statusText": "OK",
+    "headers": {
+     "content-type": "application/json; charset=utf-8"
+    },
+    "text": "{\"data\":[{\"id\":\"ren/model-l3\",\"name\":\"Ren L3\",\"context_length\":8192,\"architecture\":{\"tokenizer\":\"Llama3\"},\"pricing\":{\"prompt\":\"0.000001\",\"completion\":\"0.000002\"}},{\"id\":\"ren/model-m\",\"name\":\"Ivo M\",\"context_length\":32768,\"architecture\":{\"tokenizer\":\"Mistral\"},\"pricing\":{\"prompt\":\"0.0000005\",\"completion\":\"0.000001\"}},{\"id\":\"ren/model-q\",\"name\":\"Lio Q\",\"context_length\":16384,\"architecture\":{\"tokenizer\":\"Qwen\"},\"pricing\":{\"prompt\":\"0.000002\",\"completion\":\"0.000003\"}}]}"
+   },
+   {
+    "key": "/api/backends/chat-completions/bias?model=llama3\n[{\"text\":\" Ivo\",\"value\":-50}]",
+    "status": 200,
+    "statusText": "OK",
+    "headers": {
+     "content-type": "application/json; charset=utf-8"
+    },
+    "text": "{\"358\":-50,\"3415\":-50}"
+   }
+  ],
+  "cc-openrouter-not-in-list-grouped": [
+   {
+    "key": "/api/backends/chat-completions/status\n{\"reverse_proxy\":\"\",\"proxy_password\":\"\",\"chat_completion_source\":\"openrouter\"}",
+    "status": 200,
+    "statusText": "OK",
+    "headers": {
+     "content-type": "application/json; charset=utf-8"
+    },
+    "text": "{\"data\":[{\"id\":\"ren/model-l3\",\"name\":\"Ren L3\",\"context_length\":8192,\"architecture\":{\"tokenizer\":\"Llama3\"},\"pricing\":{\"prompt\":\"0.000001\",\"completion\":\"0.000002\"}},{\"id\":\"ren/model-m\",\"name\":\"Ivo M\",\"context_length\":32768,\"architecture\":{\"tokenizer\":\"Mistral\"},\"pricing\":{\"prompt\":\"0.0000005\",\"completion\":\"0.000001\"}},{\"id\":\"ren/model-q\",\"name\":\"Lio Q\",\"context_length\":16384,\"architecture\":{\"tokenizer\":\"Qwen\"},\"pricing\":{\"prompt\":\"0.000002\",\"completion\":\"0.000003\"}}]}"
+   }
+  ],
+  "cc-electronhub-reasoning": [
+   {
+    "key": "/api/backends/chat-completions/status\n{\"reverse_proxy\":\"\",\"proxy_password\":\"\",\"chat_completion_source\":\"electronhub\"}",
+    "status": 200,
+    "statusText": "OK",
+    "headers": {
+     "content-type": "application/json; charset=utf-8"
+    },
+    "text": "{\"data\":[{\"id\":\"ren-eh-2\",\"name\":\"Varo EH\",\"endpoints\":[\"/v1/chat/completions\"],\"metadata\":{\"supported_reasoning_efforts\":[\"low\"]}},{\"id\":\"ren-eh-1\",\"name\":\"Mara EH\",\"endpoints\":[\"/v1/chat/completions\"],\"metadata\":{\"supported_reasoning_efforts\":[\"low\",\"high\"]}},{\"id\":\"ren-eh-img\",\"name\":\"Aaa EH image\",\"endpoints\":[\"/v1/images/generations\"]}]}"
+   }
+  ],
+  "cc-electronhub-first": [
+   {
+    "key": "/api/backends/chat-completions/status\n{\"reverse_proxy\":\"\",\"proxy_password\":\"\",\"chat_completion_source\":\"electronhub\"}",
+    "status": 200,
+    "statusText": "OK",
+    "headers": {
+     "content-type": "application/json; charset=utf-8"
+    },
+    "text": "{\"data\":[{\"id\":\"ren-eh-2\",\"name\":\"Varo EH\",\"endpoints\":[\"/v1/chat/completions\"],\"metadata\":{\"supported_reasoning_efforts\":[\"low\"]}},{\"id\":\"ren-eh-1\",\"name\":\"Mara EH\",\"endpoints\":[\"/v1/chat/completions\"],\"metadata\":{\"supported_reasoning_efforts\":[\"low\",\"high\"]}},{\"id\":\"ren-eh-img\",\"name\":\"Aaa EH image\",\"endpoints\":[\"/v1/images/generations\"]}]}"
+   }
+  ],
+  "cc-azure-model": [
+   {
+    "key": "/api/backends/chat-completions/status\n{\"reverse_proxy\":\"\",\"proxy_password\":\"\",\"chat_completion_source\":\"azure_openai\",\"azure_base_url\":\"http://127.0.0.1:8131\",\"azure_deployment_name\":\"ren-dep\",\"azure_api_version\":\"2024-10-21\"}",
+    "status": 200,
+    "statusText": "OK",
+    "headers": {
+     "content-type": "application/json; charset=utf-8"
+    },
+    "text": "{\"data\":[{\"id\":\"ren-azure-4\"}]}"
+   }
+  ],
+  "cc-makersuite-static-kept": [
+   {
+    "key": "/api/backends/chat-completions/status\n{\"reverse_proxy\":\"http://127.0.0.1:8131/google\",\"proxy_password\":\"pw\",\"chat_completion_source\":\"makersuite\"}",
+    "status": 200,
+    "statusText": "OK",
+    "headers": {
+     "content-type": "application/json; charset=utf-8"
+    },
+    "text": "{\"data\":[{\"name\":\"models/ren-g-1\",\"supportedGenerationMethods\":[\"generateContent\"],\"id\":\"ren-g-1\"},{\"name\":\"models/gemini-2.5-pro\",\"supportedGenerationMethods\":[\"generateContent\"],\"id\":\"gemini-2.5-pro\"}]}"
+   }
+  ],
+  "cc-makersuite-replaced": [
+   {
+    "key": "/api/backends/chat-completions/status\n{\"reverse_proxy\":\"http://127.0.0.1:8131/google\",\"proxy_password\":\"pw\",\"chat_completion_source\":\"makersuite\"}",
+    "status": 200,
+    "statusText": "OK",
+    "headers": {
+     "content-type": "application/json; charset=utf-8"
+    },
+    "text": "{\"data\":[{\"name\":\"models/ren-g-1\",\"supportedGenerationMethods\":[\"generateContent\"],\"id\":\"ren-g-1\"},{\"name\":\"models/gemini-2.5-pro\",\"supportedGenerationMethods\":[\"generateContent\"],\"id\":\"gemini-2.5-pro\"}]}"
+   }
+  ],
+  "cc-custom-first": [
+   {
+    "key": "/api/backends/chat-completions/status\n{\"reverse_proxy\":\"\",\"proxy_password\":\"\",\"chat_completion_source\":\"custom\",\"custom_url\":\"http://127.0.0.1:8131/custom/v1\",\"custom_include_headers\":\"\"}",
+    "status": 200,
+    "statusText": "OK",
+    "headers": {
+     "content-type": "application/json; charset=utf-8"
+    },
+    "text": "{\"data\":[{\"id\":\"ren-c-2\"},{\"id\":\"ren-c-1\"}]}"
+   }
+  ],
+  "cc-backend-down": [
+   {
+    "key": "/api/backends/chat-completions/status\n{\"reverse_proxy\":\"\",\"proxy_password\":\"\",\"chat_completion_source\":\"openrouter\"}",
+    "status": 200,
+    "statusText": "OK",
+    "headers": {
+     "content-type": "application/json; charset=utf-8"
+    },
+    "text": "{\"error\":true,\"data\":{\"data\":[]}}"
+   },
+   {
+    "key": "/api/backends/chat-completions/bias?model=gpt-3.5-turbo\n[{\"text\":\" Ivo\",\"value\":-50}]",
+    "status": 200,
+    "statusText": "OK",
+    "headers": {
+     "content-type": "application/json; charset=utf-8"
+    },
+    "text": "{\"358\":-50,\"3415\":-50}"
+   }
+  ],
+  "cc-down-after-good": [
+   {
+    "key": "/api/backends/chat-completions/status\n{\"reverse_proxy\":\"\",\"proxy_password\":\"\",\"chat_completion_source\":\"electronhub\"}",
+    "status": 200,
+    "statusText": "OK",
+    "headers": {
+     "content-type": "application/json; charset=utf-8"
+    },
+    "text": "{\"data\":[{\"id\":\"ren-eh-2\",\"name\":\"Varo EH\",\"endpoints\":[\"/v1/chat/completions\"],\"metadata\":{\"supported_reasoning_efforts\":[\"low\"]}},{\"id\":\"ren-eh-1\",\"name\":\"Mara EH\",\"endpoints\":[\"/v1/chat/completions\"],\"metadata\":{\"supported_reasoning_efforts\":[\"low\",\"high\"]}},{\"id\":\"ren-eh-img\",\"name\":\"Aaa EH image\",\"endpoints\":[\"/v1/images/generations\"]}]}"
+   },
+   {
+    "key": "/api/backends/chat-completions/status\n{\"reverse_proxy\":\"\",\"proxy_password\":\"\",\"chat_completion_source\":\"electronhub\"}",
+    "status": 200,
+    "statusText": "OK",
+    "headers": {
+     "content-type": "application/json; charset=utf-8"
+    },
+    "text": "{\"error\":true,\"data\":{\"data\":[]}}"
+   }
+  ],
+  "cc-claude-no-check": [],
+  "tc-ooba-api-tokenizer": [
+   {
+    "key": "/api/backends/text-completions/status\n{\"api_server\":\"http://127.0.0.1:8131/ooba\",\"api_type\":\"ooba\"}",
+    "status": 200,
+    "statusText": "OK",
+    "headers": {
+     "content-type": "application/json; charset=utf-8",
+     "x-supports-tokenization": "true"
+    },
+    "text": "{\"result\":\"ren-ooba-loaded\",\"data\":[{\"id\":\"ren-ooba-a\"}]}"
+   },
+   {
+    "key": "/api/tokenizers/remote/textgenerationwebui/encode\n{\"text\":\"Mara\",\"api_type\":\"ooba\",\"url\":\"http://127.0.0.1:8131/ooba\"}",
+    "status": 200,
+    "statusText": "OK",
+    "headers": {
+     "content-type": "application/json; charset=utf-8"
+    },
+    "text": "{\"count\":4,\"ids\":[77,97,114,97]}"
+   }
+  ],
+  "tc-ooba-no-info": [
+   {
+    "key": "/api/backends/text-completions/status\n{\"api_server\":\"http://127.0.0.1:8131/ooba\",\"api_type\":\"ooba\"}",
+    "status": 200,
+    "statusText": "OK",
+    "headers": {
+     "content-type": "application/json; charset=utf-8"
+    },
+    "text": "{\"result\":\"ren-llama-3-8b\",\"data\":[{\"id\":\"ren-llama-3-8b\"},{\"id\":\"ren-b\"}]}"
+   },
+   {
+    "key": "/api/tokenizers/llama/encode\n{\"text\":\"Mara\"}",
+    "status": 200,
+    "statusText": "OK",
+    "headers": {
+     "content-type": "application/json; charset=utf-8"
+    },
+    "text": "{\"ids\":[1085,29874],\"count\":2,\"chunks\":[\"▁Mar\",\"a\"]}"
+   }
+  ],
+  "tc-ooba-bypass": [
+   {
+    "key": "/api/tokenizers/llama/encode\n{\"text\":\"Mara\"}",
+    "status": 200,
+    "statusText": "OK",
+    "headers": {
+     "content-type": "application/json; charset=utf-8"
+    },
+    "text": "{\"ids\":[1085,29874],\"count\":2,\"chunks\":[\"▁Mar\",\"a\"]}"
+   }
+  ],
+  "tc-koboldcpp-api-tokenizer": [
+   {
+    "key": "/api/backends/text-completions/status\n{\"api_server\":\"http://127.0.0.1:8131/kcpp\",\"api_type\":\"koboldcpp\"}",
+    "status": 200,
+    "statusText": "OK",
+    "headers": {
+     "content-type": "application/json; charset=utf-8"
+    },
+    "text": "{\"result\":\"koboldcpp/ren-k\",\"data\":[{\"id\":\"koboldcpp/ren-k\"}]}"
+   },
+   {
+    "key": "/api/tokenizers/remote/textgenerationwebui/encode\n{\"text\":\"Mara\",\"api_type\":\"koboldcpp\",\"url\":\"http://127.0.0.1:8131/kcpp\"}",
+    "status": 200,
+    "statusText": "OK",
+    "headers": {
+     "content-type": "application/json; charset=utf-8"
+    },
+    "text": "{\"count\":4,\"ids\":[77,97,114,97]}"
+   }
+  ],
+  "tc-llamacpp-not-in-list": [
+   {
+    "key": "/api/backends/text-completions/status\n{\"api_server\":\"http://127.0.0.1:8131/llama\",\"api_type\":\"llamacpp\"}",
+    "status": 200,
+    "statusText": "OK",
+    "headers": {
+     "content-type": "application/json; charset=utf-8"
+    },
+    "text": "{\"result\":\"ren-l-b\",\"data\":[{\"id\":\"ren-l-b\"},{\"id\":\"ren-l-a\"}]}"
+   },
+   {
+    "key": "/api/tokenizers/remote/textgenerationwebui/encode\n{\"text\":\"Mara\",\"api_type\":\"llamacpp\",\"url\":\"http://127.0.0.1:8131/llama\"}",
+    "status": 200,
+    "statusText": "OK",
+    "headers": {
+     "content-type": "application/json; charset=utf-8"
+    },
+    "text": "{\"count\":4,\"ids\":[77,97,114,97]}"
+   }
+  ],
+  "tc-openrouter-tokenizer": [
+   {
+    "key": "/api/backends/text-completions/status\n{\"api_server\":\"https://openrouter.ai/api\",\"api_type\":\"openrouter\"}",
+    "status": 200,
+    "statusText": "OK",
+    "headers": {
+     "content-type": "application/json; charset=utf-8"
+    },
+    "text": "{\"result\":\"ren/model-l3\",\"data\":[{\"id\":\"ren/model-l3\",\"name\":\"Ren L3\",\"context_length\":8192,\"architecture\":{\"tokenizer\":\"Llama3\"},\"pricing\":{\"prompt\":\"0.000001\",\"completion\":\"0.000002\"}},{\"id\":\"ren/model-m\",\"name\":\"Ivo M\",\"context_length\":32768,\"architecture\":{\"tokenizer\":\"Mistral\"},\"pricing\":{\"prompt\":\"0.0000005\",\"completion\":\"0.000001\"}},{\"id\":\"ren/model-q\",\"name\":\"Lio Q\",\"context_length\":16384,\"architecture\":{\"tokenizer\":\"Qwen\"},\"pricing\":{\"prompt\":\"0.000002\",\"completion\":\"0.000003\"}}]}"
+   },
+   {
+    "key": "/api/tokenizers/mistral/encode\n{\"text\":\"Mara\"}",
+    "status": 200,
+    "statusText": "OK",
+    "headers": {
+     "content-type": "application/json; charset=utf-8"
+    },
+    "text": "{\"ids\":[1471,28708],\"count\":2,\"chunks\":[\"▁Mar\",\"a\"]}"
+   }
+  ],
+  "tc-dreamgen": [
+   {
+    "key": "/api/backends/text-completions/status\n{\"api_server\":\"https://dreamgen.com\",\"api_type\":\"dreamgen\"}",
+    "status": 200,
+    "statusText": "OK",
+    "headers": {
+     "content-type": "application/json; charset=utf-8"
+    },
+    "text": "{\"result\":\"lucid-v1-medium-ren\",\"data\":[{\"id\":\"lucid-v1-medium-ren\"},{\"id\":\"lucid-v1-extra-large-ren\"}]}"
+   },
+   {
+    "key": "/api/tokenizers/llama3/encode\n{\"text\":\"Mara\"}",
+    "status": 200,
+    "statusText": "OK",
+    "headers": {
+     "content-type": "application/json; charset=utf-8"
+    },
+    "text": "{\"ids\":[44,5169],\"count\":2,\"chunks\":[\"M\",\"ara\"]}"
+   }
+  ],
+  "tc-generic-kept": [
+   {
+    "key": "/api/backends/text-completions/status\n{\"api_server\":\"http://127.0.0.1:8131/generic/v1\",\"api_type\":\"generic\"}",
+    "status": 200,
+    "statusText": "OK",
+    "headers": {
+     "content-type": "application/json; charset=utf-8"
+    },
+    "text": "{\"result\":\"ren-g-b\",\"data\":[{\"id\":\"ren-g-b\"},{\"id\":\"ren-g-a\"}]}"
+   },
+   {
+    "key": "/api/tokenizers/llama/encode\n{\"text\":\"Mara\"}",
+    "status": 200,
+    "statusText": "OK",
+    "headers": {
+     "content-type": "application/json; charset=utf-8"
+    },
+    "text": "{\"ids\":[1085,29874],\"count\":2,\"chunks\":[\"▁Mar\",\"a\"]}"
+   }
+  ],
+  "tc-backend-down": [
+   {
+    "key": "/api/backends/text-completions/status\n{\"api_server\":\"http://127.0.0.1:8131/ooba\",\"api_type\":\"ooba\"}",
+    "status": 400,
+    "statusText": "Bad Request",
+    "headers": {
+     "content-type": "text/plain; charset=utf-8"
+    },
+    "text": "Bad Request"
+   },
+   {
+    "key": "/api/tokenizers/llama/encode\n{\"text\":\"Mara\"}",
+    "status": 200,
+    "statusText": "OK",
+    "headers": {
+     "content-type": "application/json; charset=utf-8"
+    },
+    "text": "{\"ids\":[1085,29874],\"count\":2,\"chunks\":[\"▁Mar\",\"a\"]}"
+   }
+  ],
+  "tc-down-after-good": [
+   {
+    "key": "/api/backends/text-completions/status\n{\"api_server\":\"https://openrouter.ai/api\",\"api_type\":\"openrouter\"}",
+    "status": 200,
+    "statusText": "OK",
+    "headers": {
+     "content-type": "application/json; charset=utf-8"
+    },
+    "text": "{\"result\":\"ren/model-l3\",\"data\":[{\"id\":\"ren/model-l3\",\"name\":\"Ren L3\",\"context_length\":8192,\"architecture\":{\"tokenizer\":\"Llama3\"},\"pricing\":{\"prompt\":\"0.000001\",\"completion\":\"0.000002\"}},{\"id\":\"ren/model-m\",\"name\":\"Ivo M\",\"context_length\":32768,\"architecture\":{\"tokenizer\":\"Mistral\"},\"pricing\":{\"prompt\":\"0.0000005\",\"completion\":\"0.000001\"}},{\"id\":\"ren/model-q\",\"name\":\"Lio Q\",\"context_length\":16384,\"architecture\":{\"tokenizer\":\"Qwen\"},\"pricing\":{\"prompt\":\"0.000002\",\"completion\":\"0.000003\"}}]}"
+   },
+   {
+    "key": "/api/backends/text-completions/status\n{\"api_server\":\"https://openrouter.ai/api\",\"api_type\":\"openrouter\"}",
+    "status": 400,
+    "statusText": "Bad Request",
+    "headers": {
+     "content-type": "text/plain; charset=utf-8"
+    },
+    "text": "Bad Request"
+   },
+   {
+    "key": "/api/tokenizers/mistral/encode\n{\"text\":\"Mara\"}",
+    "status": 200,
+    "statusText": "OK",
+    "headers": {
+     "content-type": "application/json; charset=utf-8"
+    },
+    "text": "{\"ids\":[1471,28708],\"count\":2,\"chunks\":[\"▁Mar\",\"a\"]}"
+   }
+  ],
+  "kobold-model": [
+   {
+    "key": "/api/backends/kobold/status\n{\"main_api\":\"kobold\",\"api_server\":\"http://127.0.0.1:8131/api\"}",
+    "status": 200,
+    "statusText": "OK",
+    "headers": {
+     "content-type": "application/json; charset=utf-8"
+    },
+    "text": "{\"koboldUnitedVersion\":\"1.2.5\",\"koboldCppVersion\":\"KoboldCpp\",\"model\":\"koboldcpp/ren-kai\"}"
+   }
+  ]
+ }
+}
