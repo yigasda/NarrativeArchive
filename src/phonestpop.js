@@ -17,7 +17,10 @@ export function stPopWatch({ canvas, dark }) {
         dlg.classList.add('na_scp_d');
         imp(dlg, { position: 'fixed', inset: '0', width: '100vw', height: '100dvh', 'max-width': 'none', 'max-height': 'none', margin: '0', padding: '0', border: '0', background: 'transparent', 'box-shadow': 'none', overflow: 'hidden', 'backdrop-filter': 'none', filter: 'none' });
         for (const c of dlg.children) imp(c, { position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', opacity: '0', 'pointer-events': 'none' });   // (display는 건드리지 않아요: 실리가 숨긴 칸인지 그걸로 읽어요)
-        const host = document.createElement('div'); host.className = 'na_popup na_phone na_scp';   // (na_phone: 우리 확장의 다른 팝업용 스킨이 시트 단추 바탕을 지우지 않게) host.style.cssText = `position:fixed;left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;overflow:hidden;`;
+        // (실리 팝업의 여닫는 애니메이션은 창을 세로로 늘였다 줄여요(scaleY): 그 안의 우리 시트까지 찌그러져서 꺼요. 애니메이션이 없으면 실리는 기다리지 않고 바로 열고 닫아요)
+        imp(dlg, { animation: 'none', transform: 'none', 'backface-visibility': 'visible' });
+        const host = document.createElement('div'); host.className = 'na_popup na_phone na_scp';   // (na_phone: 우리 확장의 다른 팝업용 스킨이 시트 단추 바탕을 지우지 않게)
+        host.style.cssText = `position:fixed;left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;overflow:hidden;`;   // (폰 화면 자리에 딱 맞춰요)
         host.innerHTML = `<div class="ax ax_orbitroom"><div class="ax_canvas na_scp_c" style="position:absolute;left:0;top:0;width:${cv.offsetWidth}px;height:${cv.offsetHeight}px;transform:scale(${k});transform-origin:0 0;background:transparent;"></div></div>`;
         dlg.appendChild(host); const cvs = host.querySelector('.na_scp_c'), ui = { open: '', v: {}, scQ: '' }, x = { host, t: 0, stop: () => {} }; live.set(dlg, x);
         const typing = () => !!host.querySelector('.na_sc_in:focus, .na_sc_q:focus');
