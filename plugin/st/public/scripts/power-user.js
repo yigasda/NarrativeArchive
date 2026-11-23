@@ -1,6 +1,6 @@
 // 실리 1.19.1 public/scripts/power-user.js의 일부를 그대로 옮긴 것 (서버 플러그인이 실리 브라우저 없이 같은 요청을 만들게). SillyTavern, AGPL-3.0 (NOTICE.md).
-// 바꾼 것: 매크로 계산에 쓰는 것만 옮김. 옮긴 줄마다 위에 `// 실리 <경로> <시작줄>~<끝줄>`. 그 밖의 줄은 우리 것: import, `__naSet`(일꾼이 전역 값을 채움), 대역(document · getComputedStyle).
-import { extension_prompt_types, extension_prompt_roles } from '../script.js';
+// 바꾼 것: 서버가 실리 요청을 만드는 데 쓰는 것만 옮김. 옮긴 줄마다 위에 `// 실리 <경로> <시작줄>~<끝줄>`. 그 밖의 줄은 우리 것: import, `__naSet`(일꾼이 전역 값을 채움), 대역(document · getComputedStyle).
+import { extension_prompt_types, extension_prompt_roles, substituteParams } from '../script.js';
 import { names_behavior_types } from './instruct-mode.js';
 import { tag_import_setting, tag_sort_mode } from './tags.js';
 import { tokenizers } from './tokenizers.js';
@@ -284,6 +284,54 @@ const __naDefault_power_user = structuredClone(power_user);
  */
 export function collapseNewlines(x) {
     return x.replaceAll(/\n+/g, '\n');
+}
+
+// 실리 public/scripts/power-user.js 3011~3011
+const EPHEMERAL_STOPPING_STRINGS = [];
+
+// 실리 public/scripts/power-user.js 3078~3120
+export function getCustomStoppingStrings(limit = undefined) {
+    function getPermanent() {
+        try {
+            // If there's no custom stopping strings, return an empty array
+            if (!power_user.custom_stopping_strings) {
+                return [];
+            }
+
+            // Parse the JSON string
+            let strings = JSON.parse(power_user.custom_stopping_strings);
+
+            // Make sure it's an array
+            if (!Array.isArray(strings)) {
+                return [];
+            }
+
+            // Make sure all the elements are strings and non-empty.
+            strings = strings.filter(s => typeof s === 'string' && s.length > 0);
+
+            // Substitute params if necessary
+            if (power_user.custom_stopping_strings_macro) {
+                strings = strings.map(x => substituteParams(x));
+            }
+
+            return strings;
+        } catch (error) {
+            // If there's an error, return an empty array
+            console.warn('Error parsing custom stopping strings:', error);
+            return [];
+        }
+    }
+
+    const permanent = getPermanent();
+    const ephemeral = EPHEMERAL_STOPPING_STRINGS;
+    const strings = [...permanent, ...ephemeral];
+
+    // Apply the limit. If limit is 0, return all strings.
+    if (limit > 0) {
+        return strings.slice(0, limit);
+    }
+
+    return strings;
 }
 
 /**

@@ -1,5 +1,5 @@
 // 실리 1.19.1 public/scripts/utils.js의 일부를 그대로 옮긴 것 (서버 플러그인이 실리 브라우저 없이 같은 요청을 만들게). SillyTavern, AGPL-3.0 (NOTICE.md).
-// 바꾼 것: 매크로 계산에 쓰는 것만 옮김. 옮긴 줄마다 위에 `// 실리 <경로> <시작줄>~<끝줄>`. 그 밖의 줄은 우리 것: import, `__naSet`(일꾼이 전역 값을 채움).
+// 바꾼 것: 서버가 실리 요청을 만드는 데 쓰는 것만 옮김. 옮긴 줄마다 위에 `// 실리 <경로> <시작줄>~<끝줄>`. 그 밖의 줄은 우리 것: import, `__naSet`(일꾼이 전역 값을 채움).
 import { moment } from '../lib.js';
 import { SlashCommandClosure } from './slash-commands/SlashCommandClosure.js';
 import { getCurrentLocale } from './i18n.js';
@@ -277,3 +277,6 @@ export function compareIgnoreCaseAndAccents(a, b, comparisonFunction) {
 export function equalsIgnoreCaseAndAccents(a, b) {
     return compareIgnoreCaseAndAccents(a, b, (a, b) => a === b);
 }
+
+// 실리 public/scripts/utils.js 3056~3056
+export const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
