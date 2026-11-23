@@ -57,6 +57,7 @@ src/phone2tick.js 30초 틱                       플러그인 본체 (plugin/in
 | `log.mjs` | 30 | 마리나라 파일이 부르는 `logger` · `logRateLimited` |
 | `marinara/server-autonomous-scheduler.service.js` | 488 | 마리나라 파일 **통째**. 고친 것은 맨 위 머리말에 적힌 네 가지뿐. 다시 만들 때는 스크립트로(아래 8장) |
 | `marinara/autonomous-candidates.js` | 40 | 마리나라 파일 통째. 지금 부르는 곳은 테스트뿐 |
+| `st/` | 실리 1.19.1의 요청 코드를 서버로 옮긴 것(매크로 · 채팅 완성 · 연결 프로필 · 글 완성 · 지시 형식). `st/naload.js`가 settings.json · 프리셋 폴더를 실리 차례로 채워요. 3-3b · `st/README.md` |
 
 ### 브라우저 쪽 (`src/`, 서버 때문에 생기거나 바뀐 것)
 
@@ -141,13 +142,27 @@ src/phone2tick.js 30초 틱                       플러그인 본체 (plugin/in
 
 ```
 kit = { v: 1, ver (확장 버전),
-        chat: { avatar, group: { id }, file: { group, dir, id } },   // 이 Orbit이 실리의 어느 채팅인지
-        st: { 틀의 열쇠: { data, secrets } },   // 실리 연결 방식의 요청 틀
-        pt: { 틀의 열쇠: 틀 }, ptWhy: { [프로필, 얹는 값]: 못 만든 이유 },   // 연결 프로필의 요청 틀 (4장)
-        levels: { [연결, 모델, 레벨]: 프로필 요청에 얹는 값 }, profiles: [실리가 보낼 수 있는 프로필 id] }
+        chat: { avatar, group: { id }, file: { group, dir, id } } }   // 이 Orbit이 실리의 어느 채팅인지 — 이것뿐이에요
 ```
-- 전의 `name1` · `persona` · `characters` · `tail` · `meta` · `chat.group.members`는 없어요(옛 묶음에 남아 있어도 서버가 안 읽어요).
-- 요청 틀(`st` · `pt` · `levels`)은 아직 브라우저가 떠 둔 것이에요: 실리의 요청 만드는 코드가 브라우저 코드라서요. 이것도 서버에서 새로 만드는 것이 다음 일이에요(6~9).
+- 전의 `name1` · `persona` · `characters` · `tail` · `meta` · `chat.group.members`, 그리고 요청 틀 `st` · `pt` · `ptWhy` · `levels` · `profiles`는 없어요(옛 묶음에 남아 있어도 서버가 안 읽어요).
+
+### 3-3b. 실리에 보내는 요청도 서버가 실리 코드로 그때그때 (2026-11-23, 6~9)
+전에는 브라우저가 실리 자신의 코드로 "메시지만 빠진 요청 틀"을 떠 두고 서버가 채웠어요(실리 연결 방식 · 연결 프로필 · 추론 레벨 · 프로필 목록). 그래서 실리에서 프리셋 · 프록시 · 프로필을 바꾸면 틀이 옛것이 되어 "실리에서 이 채팅을 다시 여세요"였어요.
+지금은 **실리 1.19.1의 요청 코드를 서버로 그대로 옮겨서(`plugin/st/`)** 일마다 실리 브라우저와 같은 요청을 만들어요:
+- **옮긴 것**: `plugin/st/public/`이 실리 `public/`과 같은 경로예요. 통째로 가져온 파일(매크로 엔진 등)은 머리 주석과 import 경로만 달라요. 일부만 가져온 파일은 함수마다 `// 실리 <경로> <줄>` 표시. `tools/st/gen.mjs`가 실리 폴더에서 만들고(손으로 고치지 않아요), `tools/st/portcheck.mjs <실리>`가 표시 아래 줄이 원본과 글자 그대로인지 봐요. 목록은 `plugin/st/README.md`.
+  - 매크로(`substituteParams`: 새 엔진 · 옛 엔진, 변수), 채팅 완성(`createGenerationParameters` · 추론 레벨 · 프록시 확인 · 멈춤 글 · 로짓 바이어스), 연결 프로필(`ConnectionManagerRequestService.sendRequest` · `getSupportedProfiles` · `CONNECT_API_MAP`, `custom-request.js`의 채팅 완성 · 글 완성 처리, 프리셋 적용), 글 완성(`createTextGenGenerationData` · 지시 형식 · 금지 토큰), 답 읽기(`extractMessageFromData` · `extractReasoningFromData`).
+- **불러오기**(`plugin/st/naload.js`, 우리 것): `naLoad(settings, await naLoadPresets(사용자 폴더))`가 실리 `script.js getSettings`(7911~8048)의 차례로 settings.json과 프리셋 폴더(`OpenAI Settings` · `TextGen Settings` · `instruct` · `context` · `sysprompt` · `reasoning` …, 실리 서버 `settings.js`가 읽는 규칙 그대로)를 옮긴 실리 코드의 전역 값에 채워요. 화면(DOM)이 섞인 실리 함수는 값을 정하는 줄만 따라 했고 줄 번호를 적었어요.
+- **일꾼에서**(`work.mjs withWorld`): 일마다 `naLoad` → 이 채팅의 `name1` · `name2`(그룹이면 '') · 카드 · `this_chid` · 메시지 · `chat_metadata`(복사본: `{{setvar}}`가 쓸 수 있게) · 그룹 · `selected_group` · 페르소나 설명 → `__naSetFetch(stFetch)`(실리 서버 처리기로: 다리). 문맥(`getContext`)의 `ConnectionManagerRequestService`는 옮긴 것(`stProfiles`), `variables`는 실리 `st-context.js`의 것, `globalThis.__naStOpenai`는 옮긴 `openai.js`(`stOpenai`: `ai.js`의 실리 연결 방식 · `stLevelPayload`가 써요).
+- **실리가 삼키는 실패**: 로짓 바이어스(`/api/backends/chat-completions/bias`) · 금지 토큰의 토큰(`/api/tokenizers/…`)을 못 받으면 실리 코드는 그것 없이 보내요. 서버는 `naFetchFailures`에 적고 **모델 요청을 아예 보내지 않아요**(`naFetch`), 이유는 그 길(`stFailed`: 404면 "실리 서버의 <길>를 쓸 수 없습니다. 서버 플러그인을 업데이트하고 실리를 다시 시작하세요."). 이 길들은 3.232.16에 다리에 열었어요: 옛 플러그인은 바이어스 · 금지 토큰을 쓰는 요청만 막혀요(나머지는 확장 업데이트만으로 돼요).
+- **동기 요청 흉내**: 실리 `tokenizers.js getTextTokens`는 브라우저에서 동기 XHR이에요. 서버는 처음엔 필요한 토큰 요청만 적고 멈춘 뒤(`NaAjaxWait`) 다리로 답을 받아 두고 바뀐 전역 값을 되돌려 다시 해요(`naSendRequest`, 최대 3번).
+- **확인**: `tools/st/oracle-cc.mjs` · `oracle-profile.mjs`가 진짜 실리를 임시 데이터 폴더로 띄워(첫 실행 창 끔) 브라우저 자신의 함수가 만든 몸통 · 돌려준 값과 서버 것을 글자 단위로 대 봐요(채팅 완성 43경우 · 프로필 66경우, 검토자가 따로 25 · 29 · 34경우 더). 기대값은 `tests/fixtures/`에 두고 `tests/stopenai.test.mjs` · `stprofile2.test.mjs` · `stmacros.test.mjs`가 실리 없이 다시 봐요.
+- **실리와 다른 점 (알려진 것)**:
+  - 연결 상태: 실리 브라우저는 백엔드에 연결하면서 모델 이름(`online_status`) · 모델 목록(`model_list`)을 받아 둬요. 서버는 안 받아서 글 완성의 `{{model}}`, 금지 토큰의 토크나이저(API 토크나이저), ElectronHub 추론 레벨, OpenRouter 바이어스의 토크나이저, 도구 판단이 다를 수 있어요. **다음 일**: 실리 상태 확인(`getStatusTextgen` · `getStatusOpen`)을 옮겨 다리로.
+  - 실리가 `initMacros` 밖에서 등록하는 매크로(작가 노트 · 추론 앞뒤 글 · 요약 · 표정 · 다른 확장의 것)는 서버에 없어요(글 그대로 남아요). 우리 요청의 실리 쪽 글(멈춤 글 · 지시 형식 · 사용자 헤더 · 미리 채우기)에 그것을 넣었을 때만 달라요.
+  - 시간 매크로는 서버 시간대 · moment 영어. `{{pick}}`은 실리처럼 그 카드 · 그룹의 마지막 채팅 id로. 변수 쓰기(`{{setvar}}`)는 저장하지 않아요(소망 결정). `{{isMobile}}` 늘 false, `{{input}}` · `{{firstDisplayedMessageId}}`는 화면 것이라 없어요.
+  - 실리가 불러올 때 화면이 고치는 값(슬라이더 최대값 · 목록에 없는 모델 이름 등)은 서버가 안 고쳐요. 실리는 불러온 뒤 1~4초 안에 다시 저장해서, 페이지를 한 번 열었으면 같아요.
+  - 실리 브라우저가 페이지 내내 두는 것(로짓 바이어스 결과 · `{{banned}}` 목록)은 서버가 일마다 새로 만들어요.
+  - 실리 버전이 1.19.1이 아니면 서버 요청이 실리 브라우저와 다를 수 있어요(아직 막지 않아요).
 
 ### 3-4. 서버가 그 세계를 안 돌리는 때 (`work.mjs blocked`)
 1. 묶음이 없음. 묶음에 있는 그룹 id · 채팅 이름이 이상함.
@@ -201,28 +216,12 @@ kit = { v: 1, ver (확장 버전),
 |---|---|---|
 | 커스텀 API (`mode: 'custom'`) | 됨 | 진짜 `ai.js`가 Node의 fetch로 바로 보내요. 키는 `settings.json`의 확장 설정 |
 | Vertex (`mode: 'vertex'`) | 됨 | 다리로 실리의 처리기에. 키는 실리가 붙여요 |
-| 실리 연결 방식 (`mode: 'source'`) | 됨 (틀이 있을 때) | 아래 |
-| 연결 프로필 (`profile:<id>`) | 됨 (틀이 있을 때) | 아래 "연결 프로필의 요청 틀" |
+| 실리 연결 방식 (`mode: 'source'`) | 됨 | 옮긴 실리 `createGenerationParameters`로 그때그때(3-3b). 다리로 실리의 처리기에 |
+| 연결 프로필 (`profile:<id>`) | 됨 | 옮긴 실리 `ConnectionManagerRequestService.sendRequest`로 그때그때(3-3b): 프리셋 · 지시 형식 · 프록시 · 추론 레벨 다 실리 코드 그대로 |
 | 실리 쪽 (`'ai'` 칸이 `st` 방식) | 됨 (실리에서 고른 프로필이 있을 때) | ⚙ 설정에서 고른 프로필, 없으면 실리의 연결 관리자에서 지금 고른 프로필로 보내요 (`ai.js aiProfileFor`). 고른 프로필이 하나도 없으면 안 됨: 실리의 `generateRaw`는 브라우저 코드예요 |
 
-**실리 연결 방식의 요청 틀**: 요청을 실리의 **브라우저** 코드 `createGenerationParameters`(`public/scripts/openai.js` 2691~3128)가 만들어요.
-서버에는 그 코드가 없어서, 브라우저가 미리 "메시지만 빠진 요청"을 만들어 `kit.st`에 남겨요(`ai.js stSourceTemplate`).
-
-- 열쇠(`stTemplateKey`): 연결 · 모델 · 길이 · 온도 · top_p · 레벨 · 생각 보기. **같은 요청일 때만** 그 틀을 써요. 값이 하나라도 다르면 틀을 못 찾고 오류(지어내지 않음).
-- 틀을 만드는 값은 `liveReplyPlan` 하나에서 나와요: `maxTokens = LIVE_GO.replyTokens(4000)`, `effort = 방의 레벨 || 'low'`, `thoughts = effort !== 'none'`. `askRoom`도 같은 `replyRoute`를 봐요. **둘이 어긋나면 서버가 틀을 못 찾아요**: `tests/phone2go.test.mjs`의 "실리 연결 방식으로 나가는 방마다 요청 틀" 테스트가 실제 보낸 값과 대 봐요.
-- 채워 넣은 메시지가 그대로 나오는지(`\u0001NA_SYSTEM\u0001` · `\u0001NA_USER\u0001`) 확인해요. 실리가 메시지를 고쳐 보내는 모델(o1: 시스템 → 유저)은 틀을 안 만들어요.
-- 비밀 칸(`proxy_password` · `custom_include_headers`)은 틀에 안 담고, 서버가 보낼 때 `settings.json`의 `oai_settings`에서 읽어요. 그 값에 `{{`가 있으면 서버는 못 보내요(실리가 브라우저에서 매크로를 채우는 칸).
-- 서버 쪽 대역: `work.mjs stStandIn`이 `globalThis.__naStOpenai`에 `{ oai_settings, createGenerationParameters }`를 둬요. 진짜 `ai.js`는 이 전역이 있으면 `/scripts/openai.js` 대신 이걸 써요(테스트도 같은 자리를 써요).
-
-**연결 프로필의 요청 틀** (`src/stprofile.js`, `PHONE2-PLAN.md` 3-2c에 자세히):
-- 브라우저(`liveKitRefresh` → `profileTemplates`)가 실리 자신의 `ConnectionManagerRequestService.sendRequest`를 답장 코드와 **같은 인자**로, 메시지 · 답 길이만 자리표시로 바꿔 불러요. `fetch`를 한 번 감싸 두고(풀지 않아요) 몸통에 자리표시의 표시가 든 요청만 받아 두고 빈 답을 돌려줘요. 실리의 다른 요청은 그대로 나가요.
-- 두 번 떠서 비교해요(자리표시 · 그 길이 · 답 길이를 바꿔서). 답 길이만 다른 칸은 자리를 적고(`max`), 다른 것이 다르면 틀을 안 만들어요(이유는 `kit.ptWhy` → `cannot`).
-- 비밀 칸(`PT_SECRETS`)은 빼고, 브라우저에서 실리 설정의 값과 같은지 확인해요(다르면 매크로: 안 만들어요). 서버는 `profileSecret`(프로필의 프록시 → 프리셋 → `oai_settings`, 실리 코드의 순서)으로 `settings.json` · `OpenAI Settings/<프리셋>.json`에서 읽어요.
-- 틀에 그때의 프로필(`of`)이 있어요. 서버는 `settings.json`의 프로필이 그것과 다르면 안 보내요.
-- 서버의 프로필 목록은 브라우저가 남긴 `kit.profiles`(실리의 `getSupportedProfiles`: 실리가 보낼 수 있는 종류만)로 걸러요. 브라우저와 같은 목록이라 "고른 프로필 없음"도 같아요.
-- 열쇠는 `[프로필 id, 얹는 값(JSON), 모양]`. 채팅 완성은 모양 `'*'`(메시지를 통째로 바꿔 넣어요), 글 완성은 `'su'` · `'u'`(지시 형식이 역할마다 감싸요).
-- 방의 추론 레벨을 얹는 프로필 요청: `askRoom`이 `stLevelPayload`를 불러요. 서버에는 `createGenerationParameters`가 없어서 브라우저가 만든 값(`kit.levels`)을 `stStandIn.levelPayload`가 돌려줘요.
-- 서버의 `sendRequest` 대역은 실리 것처럼 프로필을 찾고(`Profile not found`), 보낸 뒤의 오류는 `API request failed`로 감싸요(원인은 `cause`). 틀이 없거나 프로필이 바뀐 것은 감싸지 않고 이유 그대로 던져요.
+- 서버가 보낼 수 없는 방(`cannot`): 프로필이 없어졌거나 실리가 보낼 수 없는 종류(`getSupportedProfiles`에 없음, 연결 관리자 꺼짐) · 다리가 없음. 바이어스 · 금지 토큰의 길이 막힌 옛 다리는 보낼 때 막혀요(`stFailed`).
+- 2026-11-23 전에는 브라우저가 요청 틀(`kit.st` · `kit.pt` · `kit.levels` · `kit.profiles`, `src/stprofile.js`)을 떠 두었어요. 지금은 없어요: 그 설명은 git 기록(5740c5c 전)에 있어요.
 
 **프로필 방을 초안 모델로 답하지 않게**: `replyRoute`는 방의 `connectionId`가 목록에 없으면 "안 고른 방"으로 봐요. 서버에서는 프로필 목록이 비어서, 프로필 방이 초안 모델로 답할 뻔했어요. 그래서 `contextOf`가 `settings.json`의 `extension_settings.connectionManager.profiles`로 `getSupportedProfiles()`를 줘요. **이 줄을 빼면 다른 모델로 답해요**(테스트가 지켜요).
 
@@ -320,6 +319,10 @@ node tools/plugin/stfresh.cjs <실리 폴더>                 # 실리에서 사
 node tools/plugin/stcheck.cjs <실리 폴더> [--lazy]        # 실리에서 읽는 것이 잘 깨지는 경우: 연결된 페르소나가 있는 채팅을 다시 열 때(Orbit 저장 하나 · 그 채팅이 Ren을 기억 · Orbit 없는 채팅은 안 건드림 · 서버가 Ren · 고친 카드 · 보낸 메시지로) · 그 채팅의 분기(복사 하나) · 그룹 채팅(그룹에 연결한 페르소나) · 카드를 지운 채팅(답하지 않음). --lazy는 lazyLoadCharacters를 켜고. 약 2분. 설정 · config.yaml · 카드 · 채팅 · 그룹 · 페르소나 그림을 되돌려요. 3.232.12(고치기 전)에서는 "그 채팅이 Ren을 기억"과 "카드를 지운 채팅"이 실패해요
 node tools/plugin/stwake.cjs <실리 폴더>                  # 그날의 순서 그대로(가려진 동안 서버의 늦은 답장이 그 시각에 → 보이자마자 틱) + 보이는 동안의 늦은 답장(한 번, 그 시각 바로 뒤) + 실리 라우터를 거친 방 자물쇠 · 알림음 올리기(실리의 multer) · 서버 답장 신호 · 일꾼이 확장 폴더의 코드로 도는지, 약 1분
 node tools/plugin/stfreeze.cjs <실리 폴더>                # 폰처럼 탭을 뒤로 보내 얼려요(크롬 Page.setWebLifecycleState frozen: 타이머까지 멈춤) → 서버가 그 시각에 늦은 답장 → 40초 뒤 깨움: 서버 답장이 보이고 · 다시 묻지 않고 · 일이 끝났는지, 약 1분
+node tools/st/oracle-cc.mjs <실리 폴더>                  # 채팅 완성 요청 몸통: 실리 브라우저 자신의 createGenerationParameters와 서버(plugin/st) 것을 글자 단위로 (43경우) → tests/fixtures/stopenai-expected.json
+node tools/st/oracle-profile.mjs <실리 폴더>             # 연결 프로필 요청: 실리 브라우저 자신의 sendRequest가 보내려던 것 · 돌려준 값과 서버 것 (66경우) → tests/fixtures/stprofile2-expected.json
+node tools/st/gen.mjs <실리 폴더> .                       # plugin/st/public을 실리 코드에서 다시 만들어요 (손으로 고치지 않아요)
+node tools/st/portcheck.mjs <실리 폴더>                   # plugin/st의 `// 실리 <경로> <줄>` 아래가 원본과 글자 그대로인지
 ```
 `stprofile.cjs`는 `settings.json` · 카드를 스스로 복사해 두고 되돌려요. 서버가 보낸 요청과 실리가 브라우저에서 같은 메시지로 보낸 요청이 글자까지 같은지 봐요.
 준비: 실리 1.19.1을 받아 `npm install`, `config.yaml`에서 `enableServerPlugins: true`,
