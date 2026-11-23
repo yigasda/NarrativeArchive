@@ -1737,7 +1737,7 @@ export async function openPhone(who = null) {
         if (t) b.text = t.innerText;
         backing = snapping = true;
         try { await liveBackPut(realM, b.draft, b.text); obBack = null; toastr.success('롤플에 넣었어요', '캐릭터 휴대폰'); }
-        catch (err) { console.warn('[narrative-archive] live back put', err); toastr.warning(String(err?.message || err), '캐릭터 휴대폰'); if (/바뀌었어요/.test(String(err?.message))) obBack = null; }
+        catch (err) { console.warn('[narrative-archive] live back put', err); toastr.warning(String(err?.message || err), '캐릭터 휴대폰'); if (err?.changed) obBack = null; }
         finally { backing = snapping = false; }
         if (!phoneClosed) drawPhone(true);
     });
