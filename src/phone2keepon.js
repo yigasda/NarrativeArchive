@@ -33,10 +33,12 @@ const now = () => (hasChat() ? { m: getMeta(), mark: ctx().chatMetadata?.integri
 // 플러그인의 것을 받아 맞췄을 때마다 (받기 · 저장하다 부딪혀 합친 때 둘 다): 마리나라가 기억하는 방의 움직임을 다시 읽고, 화면에 알려요
 //   'na-live-change' (다시 그리기) · 그사이 캐릭터가 먼저 건 말이 들어왔으면 'na-live-auto', detail: { from: 'server', rooms: [{ room, by: [이름], added, count }] }
 const unseenOf = m => new Map(Object.values(m?.live?.world?.messenger?.rooms || {}).map(r => [r.id, r.autonomousUnreadCount > 0 ? Math.floor(r.autonomousUnreadCount) : 0]));
+const seenOf = m => new Map(Object.values(m?.live?.world?.messenger?.rooms || {}).map(r => [r.id, new Set((r.messages || []).map(x => x.id))]));
 const synced = {
-    // (how many messages a character wrote first were unseen in each room before: what the server added shows after)
-    before: m => unseenOf(m),
-    after(m, before = new Map()) {
+    // (how many messages a character wrote first were unseen in each room before, and which messages were there: what the server added shows after)
+    before: m => ({ unseen: unseenOf(m), seen: seenOf(m) }),
+    after(m, mark = {}) {
+        const before = mark.unseen || new Map(), seen = mark.seen || new Map();
         // (what Marinara's tracker remembers of the rooms is read from the rooms again: the messages the server's characters wrote first)
         for (const roomId of Object.keys(m.live?.world?.messenger?.rooms || {})) { try { reseedActivity(m, roomId); } catch { /* a room gone meanwhile */ } }
         try { globalThis.document?.dispatchEvent(new globalThis.CustomEvent('na-live-change')); } catch { /* no screen */ }
@@ -46,6 +48,17 @@ const synced = {
             if (added > 0) rooms.push({ room: r.id, by: (Array.isArray(r.autonomousUnreadCharacterIds) ? r.autonomousUnreadCharacterIds : []).map(k => (r.members || []).find(n => String(n || '').trim().toLowerCase() === k) || k), added, count });
         }
         if (rooms.length) { try { globalThis.document?.dispatchEvent(new globalThis.CustomEvent('na-live-auto', { detail: { from: 'server', rooms } })); } catch { /* no screen */ } }
+        // (a reply the server wrote while I was away — a late reply, not one written first: the same cue as the browser's own
+        //  finished reply, 'na-live-reply' from the reply loop. Marinara has no such reply: its server answers only while the page asks)
+        const persona = String(m.live?.world?.persona || '').trim().toLowerCase();
+        for (const r of Object.values(m.live?.world?.messenger?.rooms || {})) {
+            const had = seen.get(r.id);
+            if (!had) continue;
+            const fresh = (r.messages || []).filter(x => !had.has(x.id) && String(x.from || '').trim().toLowerCase() !== persona && String(x.text || '').trim() && !x.extra?.autonomous);
+            if (!fresh.length) continue;
+            const by = [...new Set(fresh.map(x => x.from))];
+            try { globalThis.document?.dispatchEvent(new globalThis.CustomEvent('na-live-reply', { detail: { from: 'server', room: r.id, by, auto: false, regen: false } })); } catch { /* no screen */ }
+        }
     },
 };
 

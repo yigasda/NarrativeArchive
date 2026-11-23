@@ -1527,8 +1527,11 @@ test('단체방: 답에서 @이름으로 부른 사람이 다음에 답하고, �
     assert.deepEqual(g.turn.spoke, ['mara', 'varo']);
 });
 
-test('Merged 단체방: 한 요청으로 여럿이 답해요. 지시문은 마리나라의 것, 끝에 Output Format', async () => {
+test('Merged 단체방: 한 요청으로 여럿이 답해요. 지시문은 마리나라의 것, 끝에 Output Format', async t => {
     const c = world(), m = L.liveMeta(c.real);
+    const cues = [], hadDoc = globalThis.document, hadEv = globalThis.CustomEvent;
+    globalThis.document = { dispatchEvent: e => { if (e.type === 'na-live-reply') cues.push(e.detail); return true; } }; globalThis.CustomEvent = class { constructor(type, init) { this.type = type; this.detail = init?.detail; } };
+    t.after(() => { if (hadDoc === undefined) delete globalThis.document; else globalThis.document = hadDoc; if (hadEv === undefined) delete globalThis.CustomEvent; else globalThis.CustomEvent = hadEv; });
     m.phones.ivo = { ...phone(), owner: 'Ivo' }; migrateBank(m, m.phones.ivo);
     const g = L.ensureRoom(c.real, ['Mara', 'Ivo']);
     L.sendLive(c.real, g.id, 'dinner?'); L.enqueueReplies(c.real, g.id);
@@ -1544,6 +1547,8 @@ test('Merged 단체방: 한 요청으로 여럿이 답해요. 지시문은 마�
     assert.deepEqual(g.messages.filter(x => x.from !== 'Ren').map(x => [x.from, x.text]), [['Mara', 'sure'], ['Ivo', 'where'], ['Ivo', 'at mine?']]);
     assert.deepEqual(g.turn.spoke, ['mara', 'ivo']);
     assert.equal(L.liveWorld(c.real).queue.jobs.filter(j => j.state === 'waiting').length, 0);
+    // (답이 끝났다는 신호는 한 번: 마리나라처럼 첫 사람의 이름이 먼저)
+    assert.deepEqual(cues, [{ from: 'browser', room: g.id, by: ['Mara', 'Ivo'], auto: false, regen: false }]);
 });
 
 test('답장에 남는 것: 모델 생각 · 보낸 요청 그대로 · 생성 정보 (마리나라의 thinking · cachedPrompt · generationInfo). 프롬프트 보기', async () => {
@@ -1915,6 +1920,48 @@ test('서버 묶음: 연결 프로필로 나가는 요청마다 틀 (방에 고�
         T.profiles = profiles.slice(1);
         assert.deepEqual([G.liveReplyPlan(c.real, id).profile, G.liveReplyPlan(c.real, id).t?.model], [null, 'draft-model']);
     } finally { for (const k of ['kept', 'profiles', 'selectedProfile', 'slots', 'st', 'ask']) delete T[k]; delete globalThis.__naStPresets; delete globalThis.__naStOpenai; }
+});
+
+test("답이 끝났다는 신호(na-live-reply): 말을 저장한 답마다 — 내 말의 답 · 먼저 건 말 · 다시 받은 답. 말 없이 한 일만 · 실패 · 버린 답에는 안 가요", async t => {
+    const c = world();
+    const cues = [], hadDoc = globalThis.document, hadEv = globalThis.CustomEvent;
+    globalThis.document = { dispatchEvent: e => { if (e.type === 'na-live-reply') cues.push(e.detail); return true; } }; globalThis.CustomEvent = class { constructor(type, init) { this.type = type; this.detail = init?.detail; } };
+    t.after(() => { if (hadDoc === undefined) delete globalThis.document; else globalThis.document = hadDoc; if (hadEv === undefined) delete globalThis.CustomEvent; else globalThis.CustomEvent = hadEv; delete T.replies; });
+    const cue = o => ({ from: 'browser', room: c.room.id, by: ['Mara'], auto: false, regen: false, ...o });
+    // 내 말의 답
+    send(c, '뭐해'); T.replies = [{ state: '집', reply: ['그냥'], does: [] }];
+    await G.liveGo(c.real);
+    assert.deepEqual(cues, [cue()]);
+    // 말 없이 한 일만 (읽고 답 안 함): 안 가요
+    cues.length = 0;
+    send(c, '자?'); T.replies = [{ state: '집', reply: [], does: [{ app: 'Notes', what: 'writes' }] }];
+    await G.liveGo(c.real);
+    assert.deepEqual(cues, []);
+    // 실패: 안 가요
+    send(c, '야'); T.replies = [new Error('boom')];
+    const warn = console.error; console.error = () => {};
+    try { await G.liveGo(c.real); } finally { console.error = warn; }
+    assert.deepEqual(cues, []);
+    for (const j of L.liveWorld(c.real).queue.jobs.filter(x => x.state === 'failed')) L.seeFailure(c.real, j.id);
+    // 먼저 건 말
+    const job = L.enqueueJob(c.real, { kind: 'reply', owner: 'Mara', room: c.room.id, why: 'You have a free moment.' });
+    Object.assign(job, { auto: true, timed: true });
+    T.replies = [{ state: '집', reply: ['심심해'], does: [] }];
+    await G.liveGo(c.real);
+    assert.deepEqual(cues, [cue({ auto: true })]);
+    // 줄 선 뒤 그 방에 캐릭터가 이미 말한 먼저 건 말(버린 답): 안 가요
+    cues.length = 0;
+    const late = L.enqueueJob(c.real, { kind: 'reply', owner: 'Mara', room: c.room.id, at: Date.now() - 60_000 });
+    Object.assign(late, { auto: true, timed: true });
+    const calls = T.replyCalls || 0;
+    await G.liveGo(c.real);
+    assert.deepEqual(cues, []);
+    assert.equal(T.replyCalls || 0, calls);
+    // 다시 받은 답
+    T.replies = [{ state: '집', reply: ['다시'], does: [] }];
+    await G.liveSwipe(c.real, c.room.id, 1);
+    await G.liveGo(c.real);
+    assert.deepEqual(cues, [cue({ regen: true })]);
 });
 
 test('먼저 건 말에는 표시가 남아요 (extra.autonomous). 내 말에 대한 답장에는 없어요', async t => {

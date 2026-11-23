@@ -48,6 +48,8 @@ const log = (...a) => console.log(...a);
             await KO.keepBeat();
             await G.liveKitRefresh(m); await core.saveMeta();
             window.__na = { core, S, G, KO, TICK, m, room };
+            window.__naReplies = [];
+            document.addEventListener('na-live-reply', e => window.__naReplies.push(e.detail));
             return { state: KO.keepState(), ref: m.liveRef?.id || '', serves: KO.keepServes() };
         }, custom_url);
         ok('browser: Orbit kept in the plugin, worker on', r1.state === 'ok' && !!r1.ref && r1.serves === true, JSON.stringify(r1));
@@ -72,6 +74,25 @@ const log = (...a) => console.log(...a);
         });
         ok('room lock through SillyTavern: taken, refused to another tab, renewed, let go', lk.a.ok === true && lk.again.ok === false && /^browser:check$/.test(lk.again.by) && lk.renew.ok === true && lk.rel.ok === true && lk.after.ok === true, JSON.stringify(lk));
         ok('room lock: a tab cannot claim as the server (the name is always browser:…)', lk.named.ok === true && lk.same.ok === true && lk.blocked.ok === false && lk.blocked.by === 'browser:server', JSON.stringify([lk.named, lk.same, lk.blocked]));
+        // the custom notification sound through SillyTavern's own upload (its multer takes the 'avatar' field for every route)
+        const snd = await page.evaluate(async () => {
+            const SOUND = await import('/scripts/extensions/third-party/NarrativeArchive/src/phone2sound.js');
+            const before = await SOUND.soundStatus();
+            const wav = new Uint8Array([...new TextEncoder().encode('RIFF'), 0, 0, 0, 0, ...new TextEncoder().encode('WAVE'), ...new Array(40).fill(7)]);
+            const up = await SOUND.soundUpload(new File([wav], 'ding.wav', { type: 'audio/wav' }));
+            const r = await fetch(up.url);
+            const bytes = new Uint8Array(await r.arrayBuffer());
+            let bad = '';
+            try { await SOUND.soundUpload(new File([wav], 'ding.mp3')); } catch (e) { bad = String(e.message); }
+            const after = await SOUND.soundStatus();
+            const gone = await SOUND.soundRemove();
+            const last = await SOUND.soundStatus();
+            return { before, up, type: r.headers.get('content-type'), same: bytes.length === wav.length && bytes.every((b, i) => b === wav[i]), bad, after, gone, last };
+        });
+        ok('sound: uploaded through SillyTavern, served back the same bytes as audio/wav', snd.before.configured === false && snd.up.configured === true && snd.type === 'audio/wav' && snd.same && snd.after.url === snd.up.url, JSON.stringify(snd));
+        ok('sound: a wrong file is refused with its reason, then removed back to the default', /받는 소리 형식이 아니에요/.test(snd.bad) && snd.gone.configured === false && snd.last.configured === false);
+        const leftUploads = fs.readdirSync(path.join(ST, 'data', '_uploads')).length;
+        ok('sound: SillyTavern\'s temp upload files are gone', leftUploads === 0, String(leftUploads));
         // I send a message; the character is busy: a reply for later (in 5 s). Then the tab is hidden
         const r2 = await page.evaluate(async () => {
             const { core, S, m, room } = window.__na;
@@ -99,12 +120,13 @@ const log = (...a) => console.log(...a);
             const shown = room.messages.map(x => [x.from, x.text]);
             await G.liveGo(m);
             await TICK.tickOnce();
-            return { shown, state: S.liveWorld(m).queue.jobs.find(j => j.id === job.id)?.state, after: room.messages.map(x => [x.from, x.text]) };
+            return { shown, state: S.liveWorld(m).queue.jobs.find(j => j.id === job.id)?.state, after: room.messages.map(x => [x.from, x.text]), replies: window.__naReplies };
         });
         log(JSON.stringify(r3));
         ok('woken: the server\'s reply is there at once', r3.shown.length === 4 && r3.shown[3][0] === 'Seraphina' && r3.shown[3][1] === 'answer 1');
         ok('woken: the same message is not answered twice', completions() === 1 && r3.after.length === 4, `asked ${completions()}`);
         ok('woken: the job is done in the browser too', r3.state === 'done');
+        ok('woken: the screen heard that the server\'s reply finished (na-live-reply from the server)', JSON.stringify(r3.replies) === JSON.stringify([{ from: 'server', room: r3.replies[0]?.room, by: ['Seraphina'], auto: false, regen: false }]) && !!r3.replies[0]?.room, JSON.stringify(r3.replies));
         ok('no errors from the extension on the page', errors.filter(e => !/Internal S/.test(e)).length === 0, errors.join(' || '));
     } catch (e) { fail++; log('THREW', String(e?.stack || e).slice(0, 600)); log(errors.join(' || ')); }
     finally {

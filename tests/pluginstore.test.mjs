@@ -90,7 +90,7 @@ test('플러그인: 실리가 요구하는 모양(info · init)이고, 길마다
     const routes = {}, router = { get: (p, h) => { routes[`GET ${p}`] = h; }, post: (p, h) => { routes[`POST ${p}`] = h; } };
     const log = console.log; console.log = () => {};
     try { await plugin.init(router); } finally { console.log = log; }
-    assert.deepEqual(Object.keys(routes).sort(), ['GET /ping', 'POST /auto/claim', 'POST /auto/presence', 'POST /auto/release', 'POST /auto/status', 'POST /store/drop', 'POST /store/fork', 'POST /store/load', 'POST /store/rev', 'POST /store/save']);
+    assert.deepEqual(Object.keys(routes).sort(), ['GET /ping', 'GET /sound', 'GET /sound/file', 'POST /auto/claim', 'POST /auto/presence', 'POST /auto/release', 'POST /auto/status', 'POST /sound/delete', 'POST /sound/upload', 'POST /store/drop', 'POST /store/fork', 'POST /store/load', 'POST /store/rev', 'POST /store/save']);
     const a = await fresh(), b = await fresh();
     const call = async (route, root, body) => { const res = { code: 200, status(c) { this.code = c; return this; }, json(v) { this.body = v; return this; } }; await routes[route]({ body, user: root ? { directories: { root } } : undefined }, res); return res; };
     try {
