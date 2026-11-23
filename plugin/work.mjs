@@ -12,6 +12,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { setContext } from './screen.mjs';
 import { makeAutoApp } from './auto.mjs';
+import { makeLocks, lockKey } from './lock.mjs';
 import { startServerAutonomousScheduler } from './marinara/server-autonomous-scheduler.service.js';
 import { logger } from './log.mjs';
 
@@ -181,6 +182,13 @@ export async function startWork({ root, store, st = null, schedule = true }) {
         try { await fs.access(file); } catch { return '실리에 이 채팅이 없어요 (지웠거나 이름을 바꿨어요). 실리에서 이 채팅을 열면 다시 돌아요'; }
         return '';
     }
+    // ---- 방 자물쇠 (plugin/lock.mjs: 마리나라의 채팅마다 하나뿐인 생성 자물쇠). 일꾼은 그 방의 답장을 만드는 동안 쥐어요.
+    // 브라우저 탭은 /auto/claim으로 잡아요: 탭이 쥐고 있는 방은 일꾼이 이번엔 건너뛰어요 (먼저 건 말은 409: 마리나라 스케줄러는 실패로 안 세요)
+    const locks = makeLocks();
+    const claim = (sid, room, by) => locks.claim(lockKey(sid, room), by), renew = (sid, room, by) => locks.renew(lockKey(sid, room), by), release = (sid, room, by) => locks.release(lockKey(sid, room), by);
+    // phone2go.js liveGo의 lock: 일꾼이 그 방에 들어가요 → 놓기 | null (브라우저가 쥐고 있어요). 일꾼의 것은 시간 제한이 없어서 이어 잡지 않아요
+    const serverLock = sid => ({ enter: async room => (claim(sid, room, 'server').ok ? () => release(sid, room, 'server') : null), renew: async () => {} });
+
     // 한 번에 하나: 그 세계의 실리 것을 끼우고 일을 해요
     let line = Promise.resolve(), app = null;
     function withWorld(entry, job) {
@@ -225,23 +233,26 @@ export async function startWork({ root, store, st = null, schedule = true }) {
     const charSaid = (w, room) => { const P = liveKey(w.persona); return (room.messages || []).filter(x => liveKey(x.from) !== P).length; };
     const sleep = ms => new Promise(r => { const t = setTimeout(r, ms); t.unref?.(); });
     // 곧 나갈 답장(먼저 건 말에 다른 캐릭터가 이어 답하기: 2~5초 뒤)이 있으면 그때까지 기다렸다가 돌려요
-    async function runSoon(real) {
+    async function runSoon(real, sid) {
         for (let i = 0; i < 6; i++) {
             const w = liveWorld(real), now = Date.now();
             const next = (w?.queue?.jobs || []).filter(j => j.kind === 'reply' && j.state === 'waiting' && j.notBefore > now && j.notBefore - now <= 6000).map(j => j.notBefore).sort((a, b) => a - b)[0];
             if (!next) return;
             await sleep(next - now + 50);
-            await G.liveGo(real);
+            await G.liveGo(real, { lock: serverLock(sid) });
         }
     }
 
     // 마리나라 스케줄러의 /api/generate: 그 캐릭터가 먼저 거는 말 하나 → { statusCode, payload (SSE 글) }
-    async function generate({ payload, entry, roomId }) {
-        const real = entry.real, w = liveWorld(real), room = w?.messenger?.rooms?.[roomId];
-        const name = room?.members?.find(n => liveKey(n) === payload.forCharacterId);
-        if (!room || !name || !w.phones?.[liveKey(name)]) return { statusCode: 200, payload: SSE.discarded };
-        const chatId = chatIdOf(real, roomId);
+    async function generate({ payload, entry: had, roomId }) {
+        // (the browser is writing in this room now: not now — Marinara's 409 for a chat with a generation running.
+        //  Held, the Orbit is read again: what the browser saved before it let go is what this reply is judged on)
+        if (!claim(had.sid, roomId, 'server').ok) return { statusCode: 409, payload: 'the browser is writing in this room now' };
         try {
+            const entry = await app.open(had.sid);
+            const real = entry?.real, w = real && liveWorld(real), room = w?.messenger?.rooms?.[roomId];
+            const name = room?.members?.find(n => liveKey(n) === payload.forCharacterId);
+            if (!room || !name || !w.phones?.[liveKey(name)]) return { statusCode: 200, payload: SSE.discarded };
             return await withWorld(entry, async () => {
                 const no = await cannot(real, roomId);
                 if (no) throw refuse(400, no);
@@ -249,22 +260,27 @@ export async function startWork({ root, store, st = null, schedule = true }) {
                 // (a reply already on its way in this room, or the room resting after a failure: not now — as the browser's own check)
                 if (w.queue.jobs.some(j => j.room === roomId && j.kind === 'reply' && (j.state === 'waiting' || j.state === 'running'))) return { statusCode: 409, payload: 'a reply is already queued in this room' };
                 if (room.autoFail?.nextAllowedAt > now) return { statusCode: 409, payload: 'this room is resting after a failure' };
-                const job = enqueueJob(real, { kind: 'reply', owner: name, room: roomId, at: now, why: intentWhy(real, payload.autonomousIntentKey) || 'You have a free moment.' });
-                // (Marinara's server: no presence delay — the scheduler waited it out already —, and the user is away)
-                Object.assign(job, { auto: true, timed: true, user: { status: payload.userStatus === 'dnd' ? 'dnd' : payload.userStatus === 'active' ? 'active' : 'idle', activity: String(payload.userActivity || '') } });
-                if (payload.autonomousIntentKey) job.intent = payload.autonomousIntentKey;
-                room.turn = { spoke: [] };
-                const before = charSaid(w, room), fails = room.autoFail?.attempts || 0;
-                app.activeGenerations.set(chatId, true);
-                let out;
-                try { out = await G.liveGo(real); await runSoon(real); }
-                finally { app.activeGenerations.delete(chatId); }
-                if ((room.autoFail?.attempts || 0) > fails) return { statusCode: 200, payload: SSE.error(room.autoFail.lastError) };
-                if (out?.saveError) return { statusCode: 200, payload: SSE.error(`저장하지 못했어요: ${out.saveError}`) };
-                return { statusCode: 200, payload: charSaid(w, room) > before ? SSE.saved : SSE.discarded };
+                return await writeFirst(real, w, room, name);
             });
         } catch (err) {
             return { statusCode: err?.statusCode || 500, payload: String(err?.message || err).slice(0, 300) };
+        } finally { release(had.sid, roomId, 'server'); }
+        async function writeFirst(real, w, room, name) {
+            const chatId = chatIdOf(real, roomId);
+            const now = Date.now();
+            const job = enqueueJob(real, { kind: 'reply', owner: name, room: roomId, at: now, why: intentWhy(real, payload.autonomousIntentKey) || 'You have a free moment.' });
+            // (Marinara's server: no presence delay — the scheduler waited it out already —, and the user is away)
+            Object.assign(job, { auto: true, timed: true, user: { status: payload.userStatus === 'dnd' ? 'dnd' : payload.userStatus === 'active' ? 'active' : 'idle', activity: String(payload.userActivity || '') } });
+            if (payload.autonomousIntentKey) job.intent = payload.autonomousIntentKey;
+            room.turn = { spoke: [] };
+            const before = charSaid(w, room), fails = room.autoFail?.attempts || 0;
+            app.activeGenerations.set(chatId, true);
+            let out;
+            try { out = await G.liveGo(real, { lock: serverLock(had.sid) }); await runSoon(real, had.sid); }
+            finally { app.activeGenerations.delete(chatId); }
+            if ((room.autoFail?.attempts || 0) > fails) return { statusCode: 200, payload: SSE.error(room.autoFail.lastError) };
+            if (out?.saveError) return { statusCode: 200, payload: SSE.error(`저장하지 못했어요: ${out.saveError}`) };
+            return { statusCode: 200, payload: charSaid(w, room) > before ? SSE.saved : SSE.discarded };
         }
     }
 
@@ -283,17 +299,18 @@ export async function startWork({ root, store, st = null, schedule = true }) {
     async function sweepDue() {
         let ran = 0;
         for (const sid of await store.list()) {
-            const e = await app.open(sid), w = e && liveWorld(e.real);
-            if (!w || watched(e) || await blocked(e.real)) continue;
-            const due = () => w.queue.jobs.filter(j => j.kind === 'reply' && j.state === 'waiting' && !(j.notBefore > Date.now()));
-            if (!due().length) continue;
+            // (a room the browser is writing in now: liveGo leaves it for the next sweep — serverLock)
             try {
+                const e = await app.open(sid), w = e && liveWorld(e.real);
+                if (!w || watched(e) || await blocked(e.real)) continue;
+                const due = () => w.queue.jobs.filter(j => j.kind === 'reply' && j.state === 'waiting' && !(j.notBefore > Date.now()));
+                if (!due().length) continue;
                 await withWorld(e, async () => {
                     for (const roomId of new Set(due().map(j => j.room))) { const no = await cannot(e.real, roomId); if (no) throw refuse(400, no); }
                     if (watched(e) || !due().length) return;
-                    await G.liveGo(e.real);
-                    await runSoon(e.real);
-                    ran += 1;
+                    const out = await G.liveGo(e.real, { lock: serverLock(sid) });
+                    await runSoon(e.real, sid);
+                    if (out?.ran) ran += 1;
                 });
             } catch (err) { if (err?.statusCode !== 400) logger.warn(err instanceof Error ? err : {}, '[due-replies] %s: %s', sid, String(err?.message || err)); }
         }
@@ -327,5 +344,5 @@ export async function startWork({ root, store, st = null, schedule = true }) {
         await app.close();
         await line.catch(() => {});
     }
-    return { app, generate, sweepDue, status, presence, stop };
+    return { app, generate, sweepDue, status, presence, claim, renew, release, stop };
 }

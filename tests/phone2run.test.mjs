@@ -125,6 +125,44 @@ test('일의 줄: 답을 기다리는 사이 폰 2가 바뀌면 그 답은 버�
     assert.equal(asked, 0);
 });
 
+test('일의 줄 · 방 자물쇠(enter): 방마다 처음 한 번 들어가요. 다른 쪽이 쓰고 있는 방은 이번엔 건너뛰고(일은 기다려요), 다른 방은 돌아요. 끝나면 다 놓아요', async () => {
+    const x = world(), g = L.ensureRoom(x.m, ['Mara', 'Ivo']), log = [];
+    L.enqueueReplies(x.m, x.r.id); L.enqueueReplies(x.m, g.id);
+    const entered = [], let_go = [];
+    const enter = async room => { entered.push(room); return room === x.r.id ? null : () => let_go.push(room); };
+    const res = await R.runLive(x.m, { ...runner(x, [{ reply: ['b'] }, { reply: ['c'] }], log), enter });
+    assert.deepEqual(res, { ran: 2, failed: null, skipped: [x.r.id] });
+    assert.deepEqual(entered, [x.r.id, g.id]);
+    assert.deepEqual(let_go, [g.id]);
+    assert.deepEqual(x.w.queue.jobs.map(j => [j.room, j.state]), [[x.r.id, 'waiting'], [g.id, 'done'], [g.id, 'done']]);
+    assert.deepEqual(g.messages.map(y => [y.from, y.text]), [['Mara', 'b'], ['Ivo', 'c']]);
+    assert.equal(x.r.messages.length, 1);
+    // 다음에 들어갈 수 있으면 그 방도 돌아요
+    entered.length = 0;
+    assert.deepEqual(await R.runLive(x.m, { ...runner(x, [{ reply: ['a'] }]), enter: async room => { entered.push(room); return () => {}; } }), { ran: 1, failed: null });
+    assert.deepEqual(entered, [x.r.id]);
+    assert.deepEqual(x.r.messages.map(y => y.text), ['점심 먹었어?', 'a']);
+});
+
+test('일의 줄 · 방 자물쇠: 들어가면서 받은 것(다른 쪽이 그사이 끝낸 일)을 보고 다시 골라요 — 이미 끝난 일은 또 안 해요. 실패해도 놓아요', async () => {
+    const x = world(), log = [];
+    const [job] = L.enqueueReplies(x.m, x.r.id);
+    // (들어가는 사이에: 다른 쪽이 그 답장을 이미 했어요 — phone2keepon.js keepSync가 들여오는 것)
+    const enter = async () => { job.state = 'done'; x.r.messages.push({ id: 's1', n: 2, from: 'Mara', text: 'from the server', at: T0 + 5 }); return () => log.push('let go'); };
+    assert.deepEqual(await R.runLive(x.m, { ...runner(x, [{ reply: ['twice'] }], log), enter }), { ran: 0, failed: null });
+    assert.deepEqual(x.r.messages.map(y => y.text), ['점심 먹었어?', 'from the server']);
+    assert.deepEqual(log, ['let go']);
+    // 실패: 그래도 놓아요
+    const y = world(), out = [];
+    L.enqueueReplies(y.m, y.r.id);
+    const res = await R.runLive(y.m, { ...runner(y, [new Error('boom')]), enter: async () => () => out.push('let go') });
+    assert.equal(res.failed.error, 'boom');
+    assert.deepEqual(out, ['let go']);
+    // (enter가 없으면 전과 같아요)
+    const z = world(); L.enqueueReplies(z.m, z.r.id);
+    assert.deepEqual(await R.runLive(z.m, runner(z, [{ reply: ['ok'] }])), { ran: 1, failed: null });
+});
+
 test('끝난 일은 최근 것만 남겨요 (기다리는 것 · 실패한 것은 늘 남아요)', () => {
     const { m, w } = world();
     for (let i = 0; i < 30; i++) { const j = L.enqueueJob(m, { kind: 'reply', owner: 'Mara', room: 'r' }); j.state = i === 3 ? 'failed' : 'done'; }

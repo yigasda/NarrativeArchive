@@ -42,12 +42,13 @@ src/phone2tick.js 30초 틱                       플러그인 본체 (plugin/in
 
 | 파일 | 줄 | 하는 일 |
 |---|---|---|
-| `index.mjs` | 84 | 실리가 부르는 들머리(`info` · `init(router)` · `exit`). 길: `/ping`, `/store/load·rev·save·fork·drop`, `/auto/presence`, `/auto/status`. `globalThis.DATA_ROOT`가 있을 때만(=실리 서버 안) 일꾼을 켜요. 실리를 켰을 때 `src/users.js`로 사용자를 찾아, Orbit 저장이 있는 사람의 일꾼을 미리 켜요. `VERSION = 2`는 플러그인의 길 버전(확장 버전과 다른 것) |
+| `index.mjs` | 96 | 실리가 부르는 들머리(`info` · `init(router)` · `exit`). 길: `/ping`, `/store/load·rev·save·fork·drop`, `/auto/presence`, `/auto/status`, `/auto/claim` · `/auto/release`(방 자물쇠: 3-5). 탭의 이름은 늘 `browser:…`로 바꿔요(탭이 일꾼 이름 `server`로 잡지 못하게). `globalThis.DATA_ROOT`가 있을 때만(=실리 서버 안) 일꾼을 켜요. 실리를 켰을 때 `src/users.js`로 사용자를 찾아, Orbit 저장이 있는 사람의 일꾼을 미리 켜요. `VERSION = 2`는 플러그인의 길 버전(확장 버전과 다른 것) |
 | `store.mjs` | 123 | 조각 저장. `rev`가 저장마다 1씩 올라가고, 보낸 쪽이 본 `rev`(base)가 다르면 409. `list()` · `generation()`(쓴 횟수). 실리 · 익스프레스를 몰라요 |
-| `host.mjs` | 48 | 본체 쪽. 사용자마다 일꾼 스레드 하나를 띄우고 말을 주고받아요. 일꾼이 부탁하는 저장 일(`list` · `revOf` · `load` · `save`)을 대신 해요. `list` · `inject` · `sweep` · `unread`는 테스트와 손 확인용 |
-| `worker.mjs` | 54 | 일꾼 스레드의 들머리. **순서가 중요해요**: `screen.mjs`를 먼저 불러야 해요. 전역 `fetch`를 바꿔서 `/`로 시작하는 주소를 다리로 넘겨요 |
+| `host.mjs` | 52 | 본체 쪽. 사용자마다 일꾼 스레드 하나를 띄우고 말을 주고받아요. 일꾼이 부탁하는 저장 일(`list` · `revOf` · `load` · `save`)을 대신 해요. `list` · `inject` · `sweep` · `unread`는 테스트와 손 확인용 |
+| `worker.mjs` | 57 | 일꾼 스레드의 들머리. **순서가 중요해요**: `screen.mjs`를 먼저 불러야 해요. 전역 `fetch`를 바꿔서 `/`로 시작하는 주소를 다리로 넘겨요 |
 | `screen.mjs` | 37 | 아무것도 안 하는 화면: `document` · `$` · `toastr` 등에 "뭘 시켜도 자기 자신을 돌려주는 것"을 둬요. `SillyTavern.getContext()`는 `setContext()`로 그때그때 바꿔 끼워요. 일꾼 스레드에서만 불러요(본체에서 부르면 오류. 테스트는 `NA_SCREEN_ANYWHERE=1`) |
-| `work.mjs` | 329 | 핵심. 실리의 것을 서버 것으로(`contextOf`), 연결 프로필 요청의 대역(`profileService`: `sendRequest`), 실리 연결 방식 · 추론 레벨의 대역(`stStandIn`), 한 번에 한 세계(`withWorld`), 돌려도 되나(`blocked` · `cannot`), 먼저 건 말 만들기(`generate`), 늦은 답장(`sweepDue`), 화면용 상태(`status`), 보고 있음(`presence`) |
+| `work.mjs` | 348 | 핵심. 방 자물쇠(`claim` · `renew` · `release`, `liveGo`에 주는 `serverLock`), 실리의 것을 서버 것으로(`contextOf`), 연결 프로필 요청의 대역(`profileService`: `sendRequest`), 실리 연결 방식 · 추론 레벨의 대역(`stStandIn`), 한 번에 한 세계(`withWorld`), 돌려도 되나(`blocked` · `cannot`), 먼저 건 말 만들기(`generate`), 늦은 답장(`sweepDue`), 화면용 상태(`status`), 보고 있음(`presence`) |
+| `lock.mjs` (새) | 40 | 방 자물쇠 `makeLocks` · `lockKey(저장 id, 방 id)` (3-5) |
 | `auto.mjs` | 151 | 마리나라 스케줄러가 아는 `app`을 플러그인 저장 위에 만들어요. `chats.list/getById/resolveConversationPresenceState/markAutonomousUnread`, `inject`(때가 됐나 · 답장 만들기), 읽어 둔 세계(`open`: rev가 그대로면 다시 안 읽음), 쓰기(`write`: 바뀐 조각만) |
 | `bridge.mjs` | 54 | 127.0.0.1의 아무 포트에 실리 **자신의** 라우터를 붙여요. 실리를 켤 때마다 새로 만드는 토큰이 있어야 하고, 다섯 길만 열어요: `POST /api/backends/chat-completions/generate`, `POST /api/backends/text-completions/generate`, `POST /api/characters/merge-attributes`, `POST /api/worldinfo/get`, `GET /user/files/…` |
 | `log.mjs` | 30 | 마리나라 파일이 부르는 `logger` · `logRateLimited` |
@@ -61,9 +62,10 @@ src/phone2tick.js 30초 틱                       플러그인 본체 (plugin/in
 | `phone2kit.js` (새) | 서버가 읽을 묶음. `buildKit(c, real, tail, { version })` · `putKit` · `kitOf` · `kitContext`. 실리 · 화면을 몰라요 |
 | `stprofile.js` (새) | 연결 프로필의 요청 틀. 브라우저: `profileTemplates`(실리 자신의 `sendRequest`가 보내려는 요청을 받아 두기). 서버: `fillProfileRequest` · `readProfileAnswer` · `profileSecret`. 실리에서 옮긴 `extractMessageFromData` · `extractReasoningFromData` · `trimTextCompletion`. 열쇠: `ptKey` · `ptFind` · `ptWhyKey` · `levelKey` (4장) |
 | `phone2keep.js` | 원래의 조각 저장에 더해: `merge3`(셋 비교 합치기) · `settleRooms`(순서 · 번호) · `into`(제자리 맞추기) · `sync` · 저장이 409면 합쳐서 다시(세 번째는 오류) |
-| `phone2keepon.js` | `keepBeat`(30초마다 · 다시 보일 때 · 채팅 열 때) · `keepPing` · `keepSync` · `keepServes` · `keepAutoStatus` · `keepKept` |
-| `phone2tick.js` | 가려져 있고 일꾼이 돌면 쉬어요. 30초마다 `liveKitRefresh` |
-| `phone2go.js` | `replyRoute` · `liveReplyPlan`(`profile` · `raw`) · `liveKitRefresh`(`kit.st` · `kit.pt` · `kit.ptWhy` · `kit.levels`) · `liveServerStatus` · `liveServerOn` · `liveAutonomousUnread`. Orbit의 모델 요청에 `profileNow`. 먼저 건 말에 `extra.autonomous` 표시와 `na-live-auto` 신호. `keepUpStory`는 `ctx().naServer`면 안 해요. `gatherJob`이 `job.user`를 넘겨요 |
+| `phone2keepon.js` | `keepBeat`(30초마다 · 다시 보일 때 · 채팅 열 때) · `keepPing` · `keepSync` · `keepServes` · `keepAutoStatus` · `keepKept` · `keepClaim(방)` · `keepRenew`(방 자물쇠) · 맞춘 뒤의 화면 신호(`synced`) · 요청마다 시간 제한(`KEEP_LIMIT`) |
+| `phone2tick.js` | 가려져 있고 일꾼이 돌면 쉬어요. 무엇이든 판단하기 전에 `keepSync`(플러그인의 최신 것). 30초마다 `liveKitRefresh` |
+| `phone2run.js` | `runLive`의 `enter(방)`: 방마다 처음 한 번 그 방의 자물쇠를 받아요. 못 받은 방의 일은 이번엔 건너뛰고 기다려요 |
+| `phone2go.js` | `liveGo(real, { lock })` · `browserLock`(들어가면 `keepSync`) · `retrySoon` · 먼저 건 말을 줄 세운 뒤 그 방에 다른 쪽이 말했으면 버리기(`wroteSince`) · `liveAutonomous`는 방마다 자물쇠 → 받기 → 판단 · `liveDigest(…, { lock })`. `replyRoute` · `liveReplyPlan`(`profile` · `raw`) · `liveKitRefresh`(`kit.st` · `kit.pt` · `kit.ptWhy` · `kit.levels`) · `liveServerStatus` · `liveServerOn` · `liveAutonomousUnread`. Orbit의 모델 요청에 `profileNow`. 먼저 건 말에 `extra.autonomous` 표시와 `na-live-auto` 신호. `keepUpStory`는 `ctx().naServer`면 안 해요. `gatherJob`이 `job.user`를 넘겨요 |
 | `phone2sched.js` | `checkProactive(…, { userStatus })` · `contextBlock(…, { user })` · `intentWhy` · `restoreFollowups` · `reseedActivity` |
 | `phone2snap.js` | `liveChatTail`: `ctx().naTail`이 있으면 그걸 줘요(서버만) |
 | `phone2store.js` | `readLive`: 페르소나가 읽으면 `autonomousUnread*` 세 칸을 지워요 |
@@ -125,6 +127,17 @@ kit = { v: 1, ver (확장 버전), name1, persona (지금 고른 페르소나의
 - 가려진 탭: 일꾼이 돌면(`keepServes`) 브라우저 틱이 쉬어요. 일꾼이 없으면 전처럼 브라우저가 다 해요.
 - 다시 보이면: 알리고 → 서버가 쓴 것을 받아요(`keepSync`).
 
+**방 자물쇠 (2026-11-22, `plugin/lock.mjs`).** 그날 생긴 일: 화면이 꺼진 동안 서버가 07:18에 늦은 답장을 보냈는데, 화면을 켜자마자 브라우저의 30초 틱이 서버 것을 받기 전의 사본으로 같은 말에 또 답했어요(07:26). 알림(`presence`)만으로는 깨어나는 순간을 못 막아요.
+- 마리나라: 답장을 만드는 곳이 서버 하나. 채팅마다 자물쇠 하나(`generate.routes.ts activeGenerations`: 만들기 시작할 때 걸고, 끝나면 자기 것일 때만 풀고, 걸려 있으면 둘째 요청은 409). 스케줄러는 자물쇠가 걸린 채팅을 건너뛰고, 409는 실패로 안 세요. 시간 제한은 없어요.
+- 우리: 브라우저도 답장을 만들어서, 자물쇠를 일꾼 안에 두고 **둘 다** 받아요. 열쇠는 `저장 id/방 id`(마리나라의 채팅 하나 = 우리 방 하나).
+  - 일꾼: 먼저 건 말(`generate`)은 그 방을 먼저 잡고(못 잡으면 409), 잡은 뒤 저장을 다시 읽어요. `liveGo`에는 `serverLock`을 줘서 늦은 답장 · 주고받기 · 오래된 대화 요약도 방마다 잡아요. 브라우저가 쥔 방은 이번엔 건너뛰어요(그 일은 기다려요).
+  - 브라우저: `liveGo`의 `browserLock` → `runLive`의 `enter(방)`: 방마다 처음 한 번 `/auto/claim`, 받으면 곧바로 `keepSync`(일꾼이 그사이 쓴 것이 먼저 들어와요), 못 받으면 그 방은 건너뛰고 `LIVE_GO.retryMs`(5초) 뒤 다시. 답장 하나마다 `renew`. 끝나면 다 놓아요. 먼저 말 걸기 판단(`liveAutonomous`)도 방마다 잡고 → 받고 → 판단하고 → 줄 세운 것을 저장한 뒤에 놓아요. 30초 틱은 무엇이든 판단하기 전에 `keepSync`.
+  - 먼저 건 말을 줄 세운 뒤 그 방을 기다리는 사이에 다른 쪽이 먼저 걸었으면(그 방에 캐릭터의 말이 `job.at` 뒤에 있으면) 버려요(`wroteSince`). 마리나라는 판단하는 순간 서버 한 곳에 "만드는 중" 표시를 남겨서 둘째가 아예 안 생기지만, 우리는 그 표시가 브라우저와 일꾼에 **따로** 있어서 서로 안 보여요.
+  - **마리나라와 다른 점**: 탭이 쥔 자물쇠는 5분 동안 소식(잡기 · 이어 잡기)이 없으면 풀려요. 탭은 일하다 닫힐 수 있어서예요(5분은 마리나라의 "만드는 중" 표시가 풀리는 시간 `GENERATION_TIMEOUT_MS`). 일꾼의 것은 마리나라처럼 시간 제한이 없어요(일꾼이 멈추면 같이 사라져요).
+  - 플러그인이 없거나 옛것이거나 답하지 않으면 `keepClaim`은 늘 받은 것으로 해요: 전처럼 브라우저가 다 하고, 저장의 rev가 부딪힘을 막아요.
+- 플러그인 요청마다 시간 제한(`KEEP_LIMIT`: 15초, 저장 조각은 60초). 화면이 꺼질 때 걸린 요청이 남아서 다시 켰을 때 받기 · 알리기를 막지 않게요.
+- 저장하다 부딪혀 합친 경우에도(`pushNow` → `syncNow`) 받은 경우와 같이 화면 신호(`na-live-change`, 늘어난 먼저 건 말이 있으면 `na-live-auto`)가 가요(`phone2keepon.js synced`).
+
 ### 3-6. 합치기 (`phone2keep.js merge3`)
 "마지막으로 맞았던 것(base) · 서버 것 · 브라우저 것" 셋을 비교해요. base는 `st.texts`(조각마다의 JSON 글)에 있어요.
 
@@ -179,15 +192,16 @@ kit = { v: 1, ver (확장 버전), name1, persona (지금 고른 페르소나의
 3. 75초 안에 브라우저 알림이 있던 방 · 답장을 만들고 있는 방은 건너뛰어요.
 4. `/api/conversation/autonomous/check` → `auto.mjs inject` → `phone2sched.js checkProactive`(내 상태 `idle` · 후속 2번 · `source: 'server'`).
 5. 오프라인이면 그만. 바쁘면 그 늦음만큼 타이머. 꺼 둔 이유 · 쉬는 시간이면 그만.
-6. `/api/generate` → `work.mjs generate`: `cannot` 확인 → 방에 답장이 이미 줄 서 있거나 실패 뒤 쉬는 중이면 409 → 줄 세우기(`auto` · `timed` · `user: { status: 'idle', activity: 'away or offline' }` · `intent` · `why`) → `G.liveGo(real)` → 곧 나갈 주고받기 답장이 있으면 기다렸다가 한 번 더(`runSoon`).
+6. `/api/generate` → `work.mjs generate`: 그 방의 자물쇠(브라우저가 쥐고 있으면 409) → 저장을 다시 읽기 → `cannot` 확인 → 방에 답장이 이미 줄 서 있거나 실패 뒤 쉬는 중이면 409 → 줄 세우기(`auto` · `timed` · `user: { status: 'idle', activity: 'away or offline' }` · `intent` · `why`) → `G.liveGo(real)` → 곧 나갈 주고받기 답장이 있으면 기다렸다가 한 번 더(`runSoon`).
 7. 답: 말이 나왔으면 `message_saved` + `done`, 안 나왔으면 `generation_discarded` + `done`, 실패면 `error`. 서버가 못 돌리는 방은 400(스케줄러가 30분씩 쉼).
 8. 스케줄러가 `markAutonomousUnread`: 방에 `autonomousUnreadCount` · `autonomousUnreadCharacterIds` · `autonomousUnreadAt`.
 
 ### 늦은 답장 (서버, 우리 것)
-`work.mjs sweepDue`가 30초마다. 때가 된 `waiting` 답장이 있는 세계를 `liveGo`로 돌려요. 브라우저가 보고 있는 세계, 서버가 못 보내는 방의 답장이 낀 세계는 **통째로** 안 건드려요(실패한 답장으로 남기지 않으려고).
+`work.mjs sweepDue`가 30초마다. 때가 된 `waiting` 답장이 있는 세계를 `liveGo`(`serverLock`)로 돌려요. 브라우저가 쥔 방은 건너뛰어요. 브라우저가 보고 있는 세계, 서버가 못 보내는 방의 답장이 낀 세계는 **통째로** 안 건드려요(실패한 답장으로 남기지 않으려고).
 
 ### 브라우저가 다시 보일 때
 `keepBeat` → `keepPing` → `keepSync` → 바뀌었으면 방마다 `reseedActivity` → `na-live-change` → 안 읽음이 늘어난 방이 있으면 `na-live-auto`(`from: 'server'`).
+틱이 알림보다 먼저 돌아도(그날의 순서) 틱이 먼저 `keepSync`하고, 방마다 자물쇠를 받은 뒤 또 받아요(3-5). 서버가 그 방에서 만드는 중이면 브라우저는 5초 뒤 다시 해요.
 
 ## 6. (됐어요, 2026-11-22) 연결 프로필 · 실리 쪽 방을 서버에서 되게 (소망: "이 루트를 제일 자주 씀")
 
@@ -234,7 +248,7 @@ kit = { v: 1, ver (확장 버전), name1, persona (지금 고른 페르소나의
 S = 이 세션의 scratch 폴더(세션마다 달라요. 없어졌으면 다시 만들어야 해요: 아래).
 
 ```
-timeout 580 node --test tests/*.test.mjs                 # 1264개. "# fail 0"과 "# cancelled 0"
+timeout 580 node --test tests/*.test.mjs                 # 1294개. "# fail 0"과 "# cancelled 0"
 for f in tests/fuzz/*.mjs; do node $f | tail -1; done     # runs 5113 / 8663, problems 0
 PHONE2_POISON=1 node --test tests/phonesyncdrop.test.mjs tests/archivedread.test.mjs tests/afterarchive.test.mjs tests/phonebranch.test.mjs   # 359
 node $S/cmp.mjs                                           # "checked 328 diff 0" (scratch에 있어요)
@@ -247,6 +261,8 @@ npx eslint --no-config-lookup -c $S/lint/eslint.config.mjs src/phone2*.js src/ai
 - `tests/pluginwork.test.mjs` **일꾼을 실제로 띄워서** 15개(가짜 모델 HTTP 서버 · 가짜 다리). 연결 프로필은 `tests/stfake.mjs`(실리의 `sendRequest`를 실리 코드의 순서대로 흉내 낸 것)로 틀을 떠요.
 - `tests/stprofile.test.mjs` 프로필 틀 · 채우기 · 답 읽기. `tests/aiprofile.test.mjs` 지금 고른 프로필.
 - `tests/phone2beat.test.mjs` 브라우저 쪽 진짜 파일 + 진짜 일꾼을 한 저장에.
+- `tests/phone2wake.test.mjs` 2026-11-22에 생긴 일 그대로(화면이 꺼진 동안 서버가 답함 → 켜자마자 틱 → 또 답하지 않음), 서버가 만드는 중에 깨어남, 브라우저가 만드는 중의 서버, 먼저 건 말이 겹침, 걸린 요청의 시간 제한.
+- `tests/pluginlock.test.mjs` 방 자물쇠. `tests/phone2run.test.mjs`의 `enter`.
 - `tests/phone2keep.test.mjs` 합치기 · 퍼즈. `tests/phone2kit.test.mjs` 묶음.
 
 진짜 실리에서 (가짜 모델 서버를 스스로 띄워요. 진짜 모델을 안 불러요):
@@ -254,6 +270,7 @@ npx eslint --no-config-lookup -c $S/lint/eslint.config.mjs src/phone2*.js src/ai
 node tools/plugin/stsmoke.mjs <실리 폴더> <이 저장소>     # 브라우저 없이, 약 30초
 node tools/plugin/stbrowser.cjs <실리 폴더>               # 진짜 브라우저(Playwright)까지, 약 3분
 node tools/plugin/stprofile.cjs <실리 폴더>               # 진짜 연결 프로필 셋(채팅 완성 + 프록시 · 지금 고른 프로필 · 글 완성), 약 5분
+node tools/plugin/stwake.cjs <실리 폴더>                  # 그날의 순서 그대로(가려진 동안 서버의 늦은 답장 → 보이자마자 틱) + 실리 라우터를 거친 방 자물쇠, 약 3분
 ```
 `stprofile.cjs`는 `settings.json` · 카드를 스스로 복사해 두고 되돌려요. 서버가 보낸 요청과 실리가 브라우저에서 같은 메시지로 보낸 요청이 글자까지 같은지 봐요.
 준비: 실리 1.19.1을 받아 `npm install`, `config.yaml`에서 `enableServerPlugins: true`,
@@ -271,6 +288,7 @@ node tools/plugin/stprofile.cjs <실리 폴더>               # 진짜 연결 �
 - **가짜 타이머 + 진짜 파일 읽기**가 섞인 테스트는 `performance.now()`로 기다려요(`Date` · `setTimeout`은 가짜).
 - 마리나라 파일을 다시 가져올 때: scratch의 `port12.mjs`(스케줄러) · `port13.mjs`(알림) 방식. `node:module`의 `stripTypeScriptTypes`로 타입만 떼고, 바꾼 것은 `must(…)`로 한 줄씩 바꿔서 머리말에 적어요. 마리나라는 staging `32c47a1`(2026-11-20)이에요.
 - `plugin/index.mjs`의 `/ping`이 일꾼을 켜요. 테스트에서 일꾼이 안 켜지는 것은 `globalThis.DATA_ROOT`가 없어서예요.
+- 방 자물쇠는 일꾼 안에 있어요: 일꾼이 다시 뜨면 비어요. `generate`가 잡은 방을 `liveGo`의 `serverLock`이 또 잡아요(같은 쪽이라 겹쳐 잡기: 센 만큼 놓아요).
 - 일꾼은 한 번에 한 세계만 돌려요(`withWorld`의 줄). `withWorld` 안에서 `withWorld`를 다시 부르면 멈춰요. `/auto/status`는 서버가 답장을 만드는 중이면 1분쯤 늦을 수 있어요.
 - `auto.mjs open()`은 rev가 바뀌었을 때(브라우저가 저장) 그 세계의 방을 `reseedActivity`해요.
 - 서버는 `settings.json`에 쓰지 않아요. 브라우저에서 설정을 바꾼 직후 1초쯤은 서버가 예전 설정을 봐요(실리가 늦게 저장해요).

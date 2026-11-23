@@ -617,6 +617,7 @@ Orbit이 버벅이는 제일 큰 이유는 저장이에요: Orbit 데이터가 �
     - 화면이 부를 것: `liveServerStatus(real)`(방마다 닫아도 오나 · 안 되면 이유) · `liveServerOn()` · `liveAutonomousUnread(real)`.
     - 확인: `tests/phone2beat.test.mjs`(브라우저 쪽 진짜 파일 + 진짜 일꾼을 한 저장에: 가려진 동안 서버가 건 말을 받고, 또 안 걸고, 가려진 틱이 쉬고), `tests/phone2keep.test.mjs`(합치기 · 제자리 맞추기 · 퍼즈 400판: 어느 쪽 말도 안 없어지고 id · 번호가 안 겹침), `tests/phone2sched.test.mjs`(표시로 되살리기).
     - 아직 진짜 브라우저 화면에서는 안 봤어요(테스트는 Node에서 화면 없이 돌려요).
+    - **방 자물쇠 (2026-11-22)**: 화면이 꺼진 동안 서버가 늦은 답장을 보냈는데, 화면을 켜자마자 브라우저의 틱이 서버 것을 받기 전의 사본으로 같은 말에 또 답했어요. 마리나라의 채팅마다 하나뿐인 생성 자물쇠(`activeGenerations`)를 방마다 하나로 플러그인의 일꾼 안에 두고(`plugin/lock.mjs`), 일꾼과 브라우저가 둘 다 받아요. 브라우저는 그 방에 들어가면 곧바로 플러그인의 최신 것을 받고(`keepSync`), 일꾼이 쥔 방은 5초 뒤 다시 해요. 30초 틱은 무엇이든 판단하기 전에 받아요. 플러그인 요청마다 시간 제한, 저장하다 합친 경우에도 화면 신호. 자세한 것은 `docs/SERVER-HANDOVER.md` 3-5. 확인: `tests/phone2wake.test.mjs`(그날의 순서 그대로) · `tests/pluginlock.test.mjs` · `tools/plugin/stwake.cjs`(진짜 실리 + 진짜 브라우저: 가려진 동안 서버가 답함 → 보이자마자 틱 → 모델에 한 번만 물었고 서버의 답이 바로 보였어요).
   - 3-4 (코드는 됨, 화면은 디자인 세션): 알림.
     - 신호: 캐릭터가 먼저 건 말이 들어오면 `document`에 `na-live-auto`를 보내요. `detail: { from: 'browser' | 'server', rooms: [{ room, by: [이름], added, count }] }`. 브라우저가 만든 것은 그 말이 저장된 직후(`phone2go.js`), 서버 일꾼이 만든 것은 브라우저가 받았을 때(`phone2keepon.js keepSync`).
     - 마리나라의 소리 · 브라우저 알림 파일을 가져왔어요: `src/marinara/notification-sound.js`(`playConfiguredNotificationPing(켰나, 창이 뒤에 있을 때만)`) · `src/marinara/local-notifications.js`(`requestLocalNotificationPermission()` · `showLocalMessageNotification({ enabled, characterName, title, tag })`).

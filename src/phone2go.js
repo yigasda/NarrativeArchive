@@ -11,7 +11,7 @@ import { askDraft, phone2Clock, aroundBlock, ownerZone, cardBlocks } from './pho
 import { askAI, askCompress, stripThink, isBlocked, SECTION_GUARD, aiProfiles, aiProfileFor, callConn, connSettings, stSourceList, stSourceName, stSourceModels, OWN_MODES, apiFormat, stLevelPayload, draftSettings, draftReady, stSourceTemplate } from './ai.js';
 import { buildKit, putKit } from './phone2kit.js';
 import { profileTemplates, ptWhyKey, levelKey } from './stprofile.js';
-import { keepKept, keepAutoStatus, keepServes } from './phone2keepon.js';
+import { keepKept, keepAutoStatus, keepServes, keepClaim, keepRenew, keepSync } from './phone2keepon.js';
 import { stReach, REACH_NAME } from './phone2stlevel.js';
 import { SCENES_SYS, parseScenes } from './scenes.js';
 import { resolvePhoneProfile, ownerProfileBlock, personaBlock } from './phoneprofile.js';
@@ -43,7 +43,8 @@ import { AI_SYS_DIGEST } from './digest.js';
 import { DIGEST_STATE, digestDue, digestRaw, digestSize, digestHalves, scenesSystem, scenesInput, scenesNote, takeDigest, failDigest, foldChunk, foldRequest, takeFold, failFold } from './phone2digest.js';
 
 // rounds of reflection after one reply at most (messages piled up while only talking: 100 a round)
-export const LIVE_GO = { rounds: 3, replyTokens: 4000, digests: 2 };
+// retryMs: 서버 플러그인의 일꾼이 이 Orbit의 답장을 만드는 중일 때 다시 해 보는 간격
+export const LIVE_GO = { rounds: 3, replyTokens: 4000, digests: 2, retryMs: 5000 };
 const tzOf = p => ownerZone(p)?.tz || 'UTC';
 // the time it is now on a 폰 2 phone: the story's date (the world's dayShift) and the real clock where the owner is.
 // Given to liveMeta as `now`, so the phone's screens and app requests go by a clock that runs
@@ -126,20 +127,55 @@ export function saveLine(save = saveMeta) {
         done: async () => { while (running) await running; if (failed) { const e = failed; failed = null; throw e; } },
     };
 }
-export async function liveGo(real, { onChange = () => {} } = {}) {
+// 방 자물쇠 (phone2keepon.js keepClaim · plugin/lock.mjs: 마리나라의 채팅마다 하나뿐인 생성 자물쇠). 서버 플러그인의 일꾼이 그 방에서
+// 답장을 만드는 중이면 브라우저는 그 방의 일을 하지 않고 LIVE_GO.retryMs 뒤에 다시 해요(일꾼이 끝내면 그 답장까지 받고 나서).
+// 들어가면 일꾼이 그사이 쓴 것을 먼저 받아요: 오래된 사본으로 답하지 않아요 (2026-11-22: 화면을 켜자마자 일꾼이 이미 답한 말에 또 답했어요)
+const retrying = new WeakMap();
+function retrySoon(real, onChange) {
+    if (retrying.has(real)) return;
+    const t = setTimeout(() => { retrying.delete(real); if (open(real)) liveGo(real, { onChange }).catch(err => console.warn('[narrative-archive] live go again', err)); }, LIVE_GO.retryMs);
+    t?.unref?.();
+    retrying.set(real, t);
+}
+// 그 일이 줄 선 뒤에 그 방에서 캐릭터가 말했나 (나 말고 누구든)
+const wroteSince = (real, job) => { const w = liveWorld(real), P = liveKey(w?.persona), room = w?.messenger?.rooms?.[job.room]; return !!room && (room.messages || []).some(x => liveKey(x.from) !== P && x.at > job.at); };
+// 브라우저의 방 자물쇠 → { enter(방) → 놓기 | null, renew() } | null (플러그인에 둔 채팅이 아니면: 전처럼 혼자 해요)
+// refused(방): 일꾼이 그 방에서 쓰고 있었어요
+function browserLock(real, refused = () => {}) {
+    if (!keepKept() || !open(real)) return null;
+    return {
+        enter: async room => { const l = await keepClaim(room); if (!l.ok) { refused(room); return null; } await keepSync(); return l.release; },
+        renew: () => keepRenew(),
+    };
+}
+// lock: 방 자물쇠 (빼면 브라우저의 것. 서버 플러그인의 일꾼은 자기 것을 줘요: plugin/work.mjs serverLock. null: 자물쇠 없이)
+export async function liveGo(real, { onChange = () => {}, lock } = {}) {
+    if (lock === undefined) lock = browserLock(real, () => retrySoon(real, onChange));
+    return goNow(real, onChange, lock);
+}
+async function goNow(real, onChange, lock) {
     followSchedule(real); await pickResponders(real); holdReplies(real);
     for (const id of Object.keys(liveWorld(real)?.messenger?.rooms || {})) syncUser(real, id);
     const tell = () => { try { onChange(); } catch (err) { console.error('[narrative-archive] live draw', err); } };
     const line = saveLine();
     let asked = null;
     const out = await runLive(real, {
-        save: line.save, alive: () => open(real),
+        save: line.save, alive: () => open(real), enter: lock ? room => lock.enter(room) : null,
         // (a command switched off for this chat is not taken, even if the answer carries it: Marinara's filterEnabledConversationCommands)
         parse: s => { const o = parseJson(s, { salvage: true }); if (o && typeof o === 'object') { if (!commandOn(real, 'schedule_update')) delete o.status; if (!commandOn(real, 'react')) delete o.react; } return o; },
         // (what was sent and what came with the answer, kept for the reply it becomes: Marinara's cachedPrompt · thinking · generationInfo)
         // (the room's own model, when one was picked for it in the quick switcher: else the draft model, as before)
         ask: (input, { system, req }) => { asked = { system, input, meta: {} }; return askRoom(real, req?.room, input, { force: true, system, maxTokens: LIVE_GO.replyTokens, effort: 'low', meta: asked.meta, images: req?.images, files: req?.files }); },
-        gather: async job => { await keepUpStory(real, tell); return gatherJob(real, job); },
+        // (a long go keeps its rooms' locks: the worker lets go of a tab that has said nothing for 5 minutes)
+        gather: async job => {
+            if (lock) await lock.renew();
+            // (a message to write first, and a character wrote in that room since it was queued — the other side wrote first
+            //  while this one waited for the room: nothing to write now. Marinara's server marks the chat in progress when it
+            //  decides, so a second is never queued there; here the two sides each decide, so the second is dropped here)
+            if (job.auto && wroteSince(real, job)) { clearProgress(real, job.room); return null; }
+            await keepUpStory(real, tell);
+            return gatherJob(real, job);
+        },
         took: (job, got) => { const w = liveWorld(real); if (w && w.id === job.world && got?.said && asked) keepAsked(w, w.messenger?.rooms?.[job.room], job, asked); asked = null; },
         // (an owner with a schedule: the texts carry the schedule's state, not one the model wrote)
         stateFor: job => { if (!activeSchedule(real, job.owner)) return undefined; const p = livePhone(real, job.owner); return stateNow(real, job.owner, { tz: p ? zoneOf(real, p) : '' })?.text || ''; },
@@ -203,7 +239,7 @@ export async function liveGo(real, { onChange = () => {} } = {}) {
     if (out.ran && w && open(real)) {
         for (const ph of Object.values(w.phones || {})) {
             if (!ph?.owner || !digestDue(real, ph.owner).length) continue;
-            try { await liveDigest(real, ph.owner); } catch (err) { console.error('[narrative-archive] live digest', err); }
+            try { await liveDigest(real, ph.owner, { lock }); } catch (err) { console.error('[narrative-archive] live digest', err); }
         }
         tell();
     }
@@ -606,19 +642,30 @@ export async function liveAutonomous(real, { now = Date.now() } = {}) {
     if (followSchedule(real, now) + purgeTrash(real, now)) await saveMeta();
     if (!w.presence?.on) return 0;
     let n = 0;
-    for (const room of Object.values(w.messenger?.rooms || {})) {
-        if (w.queue.jobs.some(j => j.room === room.id && j.kind === 'reply' && (j.state === 'waiting' || j.state === 'running'))) continue;
-        if (room.autoFail?.nextAllowedAt > now) continue;
-        const cards = cardsOf(room);
-        const r = checkProactive(real, room.id, { now: new Date(now), tzOf: name => { const p = livePhone(real, name); return p ? zoneOf(real, p) : ''; }, cards });
-        const k = r.shouldTrigger ? r.characterIds?.[0] : null, name = k && room.members.find(x => liveKey(x) === k);
-        if (!name) continue;
-        const job = enqueueJob(real, { kind: 'reply', owner: name, room: room.id, at: now, why: r.autonomousIntent || 'You have a free moment.' });
-        job.auto = true; room.turn = { spoke: [] };
-        if (r.autonomousIntentKey) job.intent = r.autonomousIntentKey;
-        n++;
+    // (not now in this room: a reply already on its way, or the room resting after a failure)
+    const notNow = (w, room) => !room || w.queue.jobs.some(j => j.room === room.id && j.kind === 'reply' && (j.state === 'waiting' || j.state === 'running')) || room.autoFail?.nextAllowedAt > now;
+    for (const id of Object.keys(w.messenger?.rooms || {})) {
+        if (notNow(w, w.messenger.rooms[id])) continue;
+        // (the room's lock first, and what the server plugin's worker wrote there since: the check is made on the latest —
+        //  Marinara makes it on the server, which holds the one copy. The worker writing there now: that room waits this time)
+        const lease = keepKept() ? await keepClaim(id) : null;
+        if (lease && !lease.ok) continue;
+        try {
+            if (lease) await keepSync();
+            const now2 = liveWorld(real), room = now2?.messenger?.rooms?.[id];
+            if (!now2 || now2.id !== w.id || !open(real) || notNow(now2, room)) continue;
+            const cards = cardsOf(room);
+            const r = checkProactive(real, room.id, { now: new Date(now), tzOf: name => { const p = livePhone(real, name); return p ? zoneOf(real, p) : ''; }, cards });
+            const k = r.shouldTrigger ? r.characterIds?.[0] : null, name = k && room.members.find(x => liveKey(x) === k);
+            if (!name) continue;
+            const job = enqueueJob(real, { kind: 'reply', owner: name, room: room.id, at: now, why: r.autonomousIntent || 'You have a free moment.' });
+            job.auto = true; room.turn = { spoke: [] };
+            if (r.autonomousIntentKey) job.intent = r.autonomousIntentKey;
+            n++;
+            // (saved before the room is let go: the worker sees this one is on its way — "a reply is already queued in this room")
+            await saveMeta();
+        } finally { lease?.release(); }
     }
-    if (n) await saveMeta();
     return n;
 }
 
@@ -629,8 +676,9 @@ export async function liveAutonomous(real, { now = Date.now() } = {}) {
 const reflecting = new WeakSet();
 export async function liveReflect(real, owner, o = {}) {
     const out = await reflectTalk(real, owner, o);
-    // (then the old talk of the owner's rooms, when it is time: phone2digest.js)
-    try { await liveDigest(real, owner); } catch (err) { console.error('[narrative-archive] live digest', err); }
+    // (then the old talk of the owner's rooms, when it is time: phone2digest.js. The server plugin's worker summarizes after
+    //  its replies too: a room at a time, by whoever holds that room's lock, on what the other wrote there)
+    try { await liveDigest(real, owner, { lock: browserLock(real) }); } catch (err) { console.error('[narrative-archive] live digest', err); }
     return out;
 }
 async function reflectTalk(real, owner, { onChange = () => {}, force = false } = {}) {
@@ -693,15 +741,28 @@ export async function digestScenes(w, chunk, tz) {
     catch (err) { console.warn('[narrative-archive] live digest scenes', err); return ''; }
 }
 const digesting = new WeakSet();
-export async function liveDigest(real, owner) {
+// lock: the rooms' locks (liveGo): a room is summarized by whoever holds it, on what the other side wrote there. A room the
+// other side is writing in now waits for the next time
+export async function liveDigest(real, owner, { lock = null } = {}) {
     const w = liveWorld(real), p = livePhone(real, owner);
     if (!w || !p || digesting.has(real)) return 0;
     let done = 0, failures = 0;
     digesting.add(real);
+    const skip = new Set(), inside = new Map();
+    // → true (this room may be summarized now; entered, what the other side wrote came in) | false (it waits)
+    const enter = async id => {
+        if (!lock || inside.has(id)) return true;
+        const out = await lock.enter(id);
+        if (typeof out === 'function') { inside.set(id, out); return true; }
+        skip.add(id);
+        return false;
+    };
     try {
         for (; done < LIVE_GO.digests; ) {
-            const next = digestDue(real, owner)[0];
+            const next = digestDue(real, owner).find(x => !skip.has(x.room.id));
             if (!next || !here(real, w)) break;
+            // (entered first; then looked at again: what came in may have changed the stretch)
+            if (lock && !inside.has(next.room.id)) { await enter(next.room.id); continue; }
             const { room, chunk } = next, story = liveStoryText(real, w);
             // (asked as the archive's compression asks: the request put together the same way, the same thinking level,
             // room and refusal check; a stretch refused whole goes again as two halves, as a blocked part does there)
@@ -739,7 +800,10 @@ export async function liveDigest(real, owner) {
             done++;
         }
         // 요약의 요약: one room whose summary has grown long has its older half made short (one a go)
-        const long = here(real, w) ? Object.values(w.messenger?.rooms || {}).filter(r => r.members.some(n => liveKey(n) === liveKey(owner))).map(room => ({ room, chunk: foldChunk(room) })).find(x => x.chunk) : null;
+        const foldable = () => (here(real, w) ? Object.values(w.messenger?.rooms || {}).filter(r => !skip.has(r.id) && r.members.some(n => liveKey(n) === liveKey(owner))).map(room => ({ room, chunk: foldChunk(room) })).find(x => x.chunk) : null);
+        let long = foldable();
+        if (long && lock && !inside.has(long.room.id)) long = (await enter(long.room.id)) ? foldable() : null;
+        if (long && lock && !inside.has(long.room.id)) long = null;
         if (long) {
             let answer;
             try {
@@ -748,7 +812,10 @@ export async function liveDigest(real, owner) {
             } catch (err) { console.error('[narrative-archive] live fold', err); if (here(real, w)) { failFold(long.room, err?.message || err); await saveMeta(); } return done; }
             if (here(real, w)) { takeFold(long.room, long.chunk, answer); await saveMeta(); }
         }
-    } finally { digesting.delete(real); }
+    } finally {
+        digesting.delete(real);
+        for (const out of inside.values()) { try { out(); } catch { /* let go either way */ } }
+    }
     return done;
 }
 
