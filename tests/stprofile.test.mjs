@@ -62,8 +62,8 @@ test('비밀 칸을 채우는 순서: 프로필의 프록시 → 프리셋 → �
 
 test('틀을 안 만드는 때: 요청마다 값이 달라짐 · 실리가 메시지를 고침 · 사용자 헤더의 매크로 · 요청을 못 만듦 (이유를 알려요)', async () => {
     const run = async (more, profile = CC) => { const st = fakeSt({ ...base(), ...more }); return SP.profileTemplates({ send: sendOf(st, profile.id), profile, find: st.find }); };
-    await assert.rejects(run({ random: true }), e => e.refusal && /요청마다 값이 달라져서/.test(e.message));
-    await assert.rejects(run({ mangle: true }), e => e.refusal && /메시지를 고쳐 보내서/.test(e.message));
+    await assert.rejects(run({ random: true }), e => e.refusal && /요청마다 값이 달라/.test(e.message));
+    await assert.rejects(run({ mangle: true }), e => e.refusal && /이 모델은 서버에서 보낼 수 없습니다/.test(e.message));
     const custom = { id: 'c1', api: 'custom', model: 'm', preset: 'Custom' };
     await assert.rejects(run({ profiles: [custom], presets: { Custom: { chat_completion_source: 'custom', custom_url: 'http://x', custom_include_headers: 'X-Who: {{user}}' } } }, custom), e => e.refusal && /custom_include_headers에 매크로/.test(e.message));
     // (매크로가 없는 사용자 헤더는 틀에서 빼고 서버가 채워요)
@@ -72,8 +72,8 @@ test('틀을 안 만드는 때: 요청마다 값이 달라짐 · 실리가 메�
     assert.deepEqual(tpl.secrets, ['custom_include_headers']); assert.doesNotMatch(JSON.stringify(tpl), /SECRET/);
     assert.deepEqual(SP.fillProfileRequest(tpl, { messages: MSG, maxTokens: 5, secret: secretOf(st, tpl) }), st.build('c1', MSG, 5).body);
     assert.throws(() => SP.fillProfileRequest(tpl, { messages: MSG, maxTokens: 5, secret: () => 'X: {{char}}' }), /매크로/);
-    await assert.rejects(SP.profileTemplates({ send: async () => { throw new Error('API request failed', { cause: new Error('Preset broke') }); }, profile: CC, find: {} }), e => e.refusal && /요청을 만들지 못했어요 \(Preset broke\)/.test(e.message));
-    await assert.rejects(SP.profileTemplates({ send: async () => 'nothing sent', profile: CC, find: {} }), e => e.refusal && /요청을 보내지 않았어요/.test(e.message));
+    await assert.rejects(SP.profileTemplates({ send: async () => { throw new Error('API request failed', { cause: new Error('Preset broke') }); }, profile: CC, find: {} }), e => e.refusal && /요청을 만들지 못했습니다 \(Preset broke\)/.test(e.message));
+    await assert.rejects(SP.profileTemplates({ send: async () => 'nothing sent', profile: CC, find: {} }), e => e.refusal && /요청을 만들지 못했습니다\./.test(e.message));
 });
 
 test('글 완성 프로필: 지시 형식이 감싼 글 속 자리 · 모양마다 틀. 답은 실리처럼 멈춤 글을 잘라요', async () => {
@@ -104,7 +104,7 @@ test('글 완성 프로필: 지시 형식이 감싼 글 속 자리 · 모양마�
     assert.throws(() => SP.readProfileAnswer(su, body, {}, { ok: false }), /Response not OK/);
     // (글의 길이가 요청에 들어가는 연결: 서버가 다른 길이의 글로 채우면 달라지니 틀을 안 만들어요)
     const st2 = fakeSt({ profiles: [TC], instructs: { Alpaca: ins }, counted: true });
-    await assert.rejects(SP.profileTemplates({ send: sendOf(st2, 't1'), profile: TC, find: st2.find }), e => e.refusal && /글의 길이에 따라/.test(e.message));
+    await assert.rejects(SP.profileTemplates({ send: sendOf(st2, 't1'), profile: TC, find: st2.find }), e => e.refusal && /글 길이에 따라/.test(e.message));
 });
 
 test('실리에서 옮긴 답 읽기: 채팅 완성 · 글 완성의 모양, 생각 글은 실리의 지금 연결의 모양으로', () => {

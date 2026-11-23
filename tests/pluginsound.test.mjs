@@ -74,12 +74,12 @@ test('알림음: 올리면 사용자 폴더에 하나만, 상태 · 주소가 �
 test('알림음: 안 받는 것 — 10MB 넘음(413) · 받지 않는 확장자 · 이름과 머리가 다름 · 소리가 아님 · 파일 없음(400). 임시 파일은 늘 지워요', async t => {
     const R = await rig(t);
     const tryUp = async (name, buf, size = buf.length) => { try { await R.s.upload({ name, tmp: await R.tmp(buf), size }); return null; } catch (e) { assert.ok(e instanceof SoundError); return [e.code, e.message]; } };
-    assert.deepEqual(await tryUp('a.wav', WAV, MAX_NOTIFICATION_SOUND_BYTES + 1), [413, '알림음은 10MB 이하여야 해요.']);
+    assert.deepEqual(await tryUp('a.wav', WAV, MAX_NOTIFICATION_SOUND_BYTES + 1), [413, '알림음은 10MB 이하여야 합니다.']);
     assert.equal((await tryUp('a.wav', Buffer.concat([WAV, Buffer.alloc(MAX_NOTIFICATION_SOUND_BYTES)]), 10)) [0], 413);
-    assert.deepEqual(await tryUp('a.flac', WAV), [400, 'MP3 · WAV · OGG · M4A · MP4 · WebM 소리 파일을 골라 주세요.']);
-    assert.deepEqual(await tryUp('a.mp3', WAV), [400, '올린 파일이 받는 소리 형식이 아니에요.']);
-    assert.deepEqual(await tryUp('a.wav', WEBP), [400, '올린 파일이 받는 소리 형식이 아니에요.']);
-    assert.deepEqual(await tryUp('noext', WAV), [400, 'MP3 · WAV · OGG · M4A · MP4 · WebM 소리 파일을 골라 주세요.']);
+    assert.deepEqual(await tryUp('a.flac', WAV), [400, 'MP3, WAV, OGG, M4A, MP4 또는 WebM 오디오 파일을 사용하세요.']);
+    assert.deepEqual(await tryUp('a.mp3', WAV), [400, '업로드한 파일은 지원되는 오디오 형식이 아닙니다.']);
+    assert.deepEqual(await tryUp('a.wav', WEBP), [400, '업로드한 파일은 지원되는 오디오 형식이 아닙니다.']);
+    assert.deepEqual(await tryUp('noext', WAV), [400, 'MP3, WAV, OGG, M4A, MP4 또는 WebM 오디오 파일을 사용하세요.']);
     await assert.rejects(R.s.upload({ name: 'a.wav', tmp: '', size: 0 }), e => e.code === 400);
     assert.deepEqual(await readdir(R.uploads), []);
     assert.deepEqual(await R.s.status(), { configured: false, url: null, updatedAt: null });
@@ -127,7 +127,7 @@ test('알림음 길: 실리가 받아 둔 avatar 파일로 올리고 · 상태 �
     assert.equal((await call('GET /sound/file', B.root)).code, 404);
     // 안 받는 것: 그 이유로
     const bad = await call('POST /sound/upload', A.root, { file: { originalname: 'x.flac', destination: path.dirname(up), filename: path.basename(await A.tmp(WAV)), size: 1 } });
-    assert.deepEqual([bad.code, bad.body.error], [400, 'MP3 · WAV · OGG · M4A · MP4 · WebM 소리 파일을 골라 주세요.']);
+    assert.deepEqual([bad.code, bad.body.error], [400, 'MP3, WAV, OGG, M4A, MP4 또는 WebM 오디오 파일을 사용하세요.']);
     assert.equal((await call('POST /sound/upload', A.root, {})).code, 400);
     assert.equal((await call('GET /sound', null)).code, 401);
     // 지우기

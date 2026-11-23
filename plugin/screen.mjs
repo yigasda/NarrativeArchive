@@ -7,7 +7,7 @@
 
 import { isMainThread } from 'node:worker_threads';
 
-if (isMainThread && !process.env.NA_SCREEN_ANYWHERE) throw new Error('plugin/screen.mjs는 일꾼 스레드에서만 불러요');
+if (isMainThread && !process.env.NA_SCREEN_ANYWHERE) throw new Error('plugin/screen.mjs는 작업 스레드에서만 불러야 합니다.');
 
 // anything asked of it gives itself back; awaited, it is not a promise; as text it is ''; looped over, it is empty
 function nothing() {

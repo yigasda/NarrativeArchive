@@ -47,7 +47,7 @@ test('서버 플러그인: 고른 프로필이 있으면 그것으로, 없으면
     let calls = setup({ selected: 'p1', server: true });
     assert.equal(await AI.askAI('hi', { profileNow: true }), 'via p1');
     calls = setup({ server: true });
-    await assert.rejects(AI.askAI('hi', { profileNow: true }), /실리의 연결 관리자에서 프로필을 하나 골라 주세요/);
+    await assert.rejects(AI.askAI('hi', { profileNow: true }), /실리의 연결 관리자에서 프로필을 선택하세요/);
     assert.equal(calls.length, 0);
 });
 

@@ -18,7 +18,7 @@ export class StoreError extends Error {
     constructor(code, message, extra = {}) { super(message); this.code = code; Object.assign(this, extra); }
 }
 const bad = (msg) => new StoreError(400, msg);
-const idOf = id => { const s = String(id ?? ''); if (!ID.test(s)) throw bad('저장 이름이 맞지 않아요'); return s; };
+const idOf = id => { const s = String(id ?? ''); if (!ID.test(s)) throw bad('잘못된 저장 이름입니다.'); return s; };
 // a part's file: its name hashed (any name is a safe file name, the same name the same file)
 const fileOf = name => `p_${crypto.createHash('sha1').update(String(name)).digest('hex').slice(0, 24)}.json`;
 const nameOk = name => typeof name === 'string' && name.length > 0 && name.length <= STORE.nameMax;
@@ -65,12 +65,12 @@ export function openStore(root) {
     // chat: 이 저장이 어느 채팅의 것인지 (실리가 채팅마다 주는 표시) → { rev }
     // 그사이 다른 쪽이 저장했으면 StoreError 409 (rev: 지금 것), 아무것도 안 바꿔요
     async function save(id, { base = null, parts = {}, chat = undefined } = {}) {
-        if (!parts || typeof parts !== 'object' || Array.isArray(parts)) throw bad('조각이 없어요');
+        if (!parts || typeof parts !== 'object' || Array.isArray(parts)) throw bad('저장할 조각이 없습니다.');
         const names = Object.keys(parts);
-        if (!names.every(nameOk)) throw bad('조각 이름이 맞지 않아요');
+        if (!names.every(nameOk)) throw bad('잘못된 조각 이름입니다.');
         return inLine(dirOf(id), async () => {
             const dir = dirOf(id), ix = await indexOf(id);
-            if ((ix ? ix.rev : null) !== (base === undefined ? null : base)) throw new StoreError(409, '그사이 다른 곳에서 저장했어요', { rev: ix ? ix.rev : null });
+            if ((ix ? ix.rev : null) !== (base === undefined ? null : base)) throw new StoreError(409, '다른 곳에서 먼저 저장되었습니다.', { rev: ix ? ix.rev : null });
             const next = ix ? { ...ix, parts: { ...ix.parts } } : { v: STORE.v, rev: 0, chat: '', parts: {} };
             await fs.mkdir(dir, { recursive: true });
             const gone = [];
@@ -81,7 +81,7 @@ export function openStore(root) {
                 await writeWhole(path.join(dir, file), JSON.stringify(v));
                 next.parts[name] = file;
             }
-            if (Object.keys(next.parts).length > STORE.parts) throw bad('조각이 너무 많아요');
+            if (Object.keys(next.parts).length > STORE.parts) throw bad('조각이 너무 많습니다.');
             next.rev += 1; next.at = Date.now();
             if (typeof chat === 'string') next.chat = chat.slice(0, 200);
             // (the index last: what it names is all on disk; a part no longer named goes after it)
@@ -94,11 +94,11 @@ export function openStore(root) {
     // 갈라진 채팅(분기)의 몫: from을 to로 통째로 복사해요 (to가 이미 있으면 안 해요) → { rev }
     async function fork(from, to, { chat = undefined } = {}) {
         const src = dirOf(from), dst = dirOf(to);
-        if (src === dst) throw bad('같은 저장이에요');
+        if (src === dst) throw bad('같은 저장입니다.');
         return inLine(src, () => inLine(dst, async () => {
             const ix = await indexOf(from);
-            if (!ix) throw new StoreError(404, '없는 저장이에요');
-            if (await indexOf(to)) throw new StoreError(409, '이미 있는 저장이에요');
+            if (!ix) throw new StoreError(404, '저장을 찾을 수 없습니다.');
+            if (await indexOf(to)) throw new StoreError(409, '이미 있는 저장입니다.');
             await fs.mkdir(dst, { recursive: true });
             for (const file of Object.values(ix.parts)) await fs.copyFile(path.join(src, file), path.join(dst, file));
             const next = { ...ix, rev: 1, at: Date.now(), ...(typeof chat === 'string' ? { chat: chat.slice(0, 200) } : {}) };

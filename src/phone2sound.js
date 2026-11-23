@@ -20,7 +20,7 @@ const timeout = ms => (typeof globalThis.AbortSignal?.timeout === 'function' ? g
 async function answer(r) {
     if (r.ok) return r.json();
     const body = await r.json().catch(() => null);
-    const err = new Error(body?.error || (r.status === 404 ? '알림음은 서버 플러그인이 있어야 저장돼요' : `알림음 서버 오류 (${r.status})`));
+    const err = new Error(body?.error || (r.status === 404 ? '서버 플러그인이 없습니다.' : `서버 오류 (${r.status})`));
     err.code = r.status;
     throw err;
 }
@@ -32,8 +32,8 @@ export async function soundStatus() {
 }
 // 소리 파일 하나 올리기 → 상태. 실리의 업로드 칸 이름('avatar')으로 보내요(실리 src/server-main.js 269줄의 multer)
 export async function soundUpload(file) {
-    if (!file) throw new Error('올릴 소리 파일이 없어요');
-    if (file.size > SOUND_MAX_BYTES) throw new Error('알림음은 10MB 이하여야 해요.');
+    if (!file) throw new Error('업로드된 알림음이 없습니다.');
+    if (file.size > SOUND_MAX_BYTES) throw new Error('알림음은 10MB 이하여야 합니다.');
     const form = new globalThis.FormData();
     form.append('avatar', file, file.name);
     const r = await fetch(`${PATH}/upload`, { method: 'POST', headers: ctx().getRequestHeaders({ omitContentType: true }), body: form, signal: timeout(120_000) });

@@ -309,7 +309,7 @@ test('맞추기: 계속 부딪히면(세 번째) 오류로 알려요. 서버 것
     // (저장하려 할 때마다 서버가 먼저 써요)
     o.store.save = async (sid, body) => { if (body.base !== undefined && n < 5 && !body.__server) { n++; const got = await o.store.load(sid), live = joinLive(got.parts); live.world.queue.round += 100; await real.call(o.store, sid, { base: got.rev, parts: copy(splitLive(live)) }); } return real.call(o.store, sid, body); };
     m.live.world.messenger.rooms.r1.name = 'mine';
-    await assert.rejects(o.save(), /다시 열어/);
+    await assert.rejects(o.save(), /다시 여세요/);
     o.store.save = real; void save;
     assert.equal((await stored(o, id)).messenger.rooms.r1.name, undefined);
     // 그다음엔 돼요

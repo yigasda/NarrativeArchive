@@ -27,7 +27,7 @@ export async function startBridge({ stRoot = process.cwd(), userOf } = {}) {
     const express = need('express');
     const st = file => import(pathToFileURL(path.join(stRoot, 'src', file)).href);
     const [chat, text, chars, world, users] = await Promise.all([st('endpoints/backends/chat-completions.js'), st('endpoints/backends/text-completions.js'), st('endpoints/characters.js'), st('endpoints/worldinfo.js'), st('users.js')]);
-    for (const [name, m] of [['chat-completions', chat], ['text-completions', text], ['characters', chars], ['worldinfo', world], ['users', users]]) if (typeof m?.router !== 'function') throw new Error(`실리의 ${name} 처리기를 찾지 못했어요 (실리 버전이 달라졌을 수 있어요)`);
+    for (const [name, m] of [['chat-completions', chat], ['text-completions', text], ['characters', chars], ['worldinfo', world], ['users', users]]) if (typeof m?.router !== 'function') throw new Error(`실리 ${name} 엔드포인트를 찾을 수 없습니다. 실리 버전이 다를 수 있습니다.`);
     const token = crypto.randomBytes(24).toString('hex'), want = Buffer.from(token);
     const app = express();
     app.disable('x-powered-by');

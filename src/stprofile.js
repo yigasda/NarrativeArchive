@@ -80,9 +80,9 @@ async function catchOnce(send, shape, n) {
     hook();
     catching.set(mark, got);
     try { await send(JSON.parse(JSON.stringify(messages)), MAX[n]); }
-    catch (err) { throw refusal(`이 연결 프로필로 요청을 만들지 못했어요 (${String(err?.cause?.message || err?.message || err).slice(0, 160)})`); }
+    catch (err) { throw refusal(`연결 프로필로 요청을 만들지 못했습니다 (${String(err?.cause?.message || err?.message || err).slice(0, 160)})`); }
     finally { catching.delete(mark); }
-    if (got.length !== 1) throw refusal(got.length ? '실리가 이 연결 프로필로 요청을 여러 번 보내요' : '실리가 이 연결 프로필의 요청을 보내지 않았어요');
+    if (got.length !== 1) throw refusal(got.length ? '이 연결 프로필은 요청을 여러 번 보내 서버에서 보낼 수 없습니다.' : '이 연결 프로필의 요청을 만들지 못했습니다.');
     return { req: got[0], messages, parts, mark };
 }
 const refusal = why => Object.assign(new Error(why), { refusal: true });
@@ -107,29 +107,29 @@ export async function profileTemplates({ send, profile, over = null, find = {} }
     const out = {}, shapes = ['su'];
     for (let i = 0; i < shapes.length; i++) {
         const shape = shapes[i], a = await catchOnce(send, shape, 0), b = await catchOnce(send, shape, 1);
-        if (a.req.url !== b.req.url) throw refusal('실리가 이 연결 프로필의 요청을 매번 다른 곳으로 보내요');
+        if (a.req.url !== b.req.url) throw refusal('이 연결 프로필은 요청 주소가 매번 달라 서버에서 보낼 수 없습니다.');
         const api = a.req.url === PT_URL.cc ? 'cc' : a.req.url === PT_URL.tc ? 'tc' : '';
-        if (!api) throw refusal('이 연결 프로필은 서버에서 보낼 수 없는 길로 보내요');
+        if (!api) throw refusal('이 연결 프로필의 요청 경로는 서버에서 보낼 수 없습니다.');
         const A = JSON.parse(a.req.body), B = JSON.parse(b.req.body);
         // (the order of SillyTavern's fields, so the server's request is the same text, not only the same fields)
         const tpl = { v: PT.v, api, url: a.req.url, keys: Object.keys(A) };
         if (api === 'cc') {
             // (the messages must go out as they were given: SillyTavern changes them for some models — o1: system → user)
-            if (!same(A.messages, a.messages) || !same(B.messages, b.messages)) throw refusal('이 연결 · 모델은 실리가 메시지를 고쳐 보내서 서버에서는 못 보내요');
+            if (!same(A.messages, a.messages) || !same(B.messages, b.messages)) throw refusal('이 모델은 서버에서 보낼 수 없습니다.');
             delete A.messages; delete B.messages;
         } else {
             for (const [x, y] of [[A, a], [B, b]]) {
-                if (!Object.values(y.parts).every(p => (y.messages.some(m => m.content === p) ? once(x.prompt, p) : !String(x.prompt).includes(p)))) throw refusal('이 글 완성 프로필은 실리가 글을 고쳐 보내서 서버에서는 못 보내요');
+                if (!Object.values(y.parts).every(p => (y.messages.some(m => m.content === p) ? once(x.prompt, p) : !String(x.prompt).includes(p)))) throw refusal('이 텍스트 완성 프로필은 서버에서 보낼 수 없습니다.');
                 x.prompt = String(x.prompt).split(y.parts.system).join(PT_TOKEN.system).split(y.parts.user).join(PT_TOKEN.user);
             }
-            if (A.prompt !== B.prompt) throw refusal('이 글 완성 프로필은 글의 길이에 따라 요청이 달라져서 서버에서는 못 보내요');
+            if (A.prompt !== B.prompt) throw refusal('이 텍스트 완성 프로필은 글 길이에 따라 요청이 달라 서버에서 보낼 수 없습니다.');
             tpl.prompt = A.prompt;
             delete A.prompt; delete B.prompt;
         }
-        if (JSON.stringify(A).includes(a.mark) || JSON.stringify(B).includes(b.mark)) throw refusal('실리가 이 연결 프로필의 요청에 글을 다른 칸에도 넣어서 서버에서는 못 보내요');
+        if (JSON.stringify(A).includes(a.mark) || JSON.stringify(B).includes(b.mark)) throw refusal('이 연결 프로필은 메시지를 다른 필드에도 넣어 서버에서 보낼 수 없습니다.');
         const max = [];
-        if (!compare(A, B, [], max)) throw refusal('이 연결 프로필은 요청마다 값이 달라져서 서버에서 똑같이 보낼 수 없어요');
-        if (!max.length) throw refusal('이 연결 프로필의 요청에서 답 길이를 찾지 못했어요');
+        if (!compare(A, B, [], max)) throw refusal('이 연결 프로필은 요청마다 값이 달라 서버에서 보낼 수 없습니다.');
+        if (!max.length) throw refusal('이 연결 프로필의 요청에서 최대 토큰을 찾을 수 없습니다.');
         tpl.max = max;
         // (the secret fields: left out, and checked to be what SillyTavern's settings files hold — so the server, reading them, sends the same)
         const proxyName = typeof profile?.proxy === 'string' && profile.proxy ? profile.proxy : null, presetName = typeof profile?.preset === 'string' && profile.preset ? profile.preset : null;
@@ -141,7 +141,7 @@ export async function profileTemplates({ send, profile, over = null, find = {} }
             if (!Object.hasOwn(A, key)) continue;
             const want = profileSecret(key, { proxy, preset: api === 'cc' ? preset : null, oai: find.oai });
             // (custom_include_headers: SillyTavern fills {{macros}} in it in the browser — the server cannot)
-            if (A[key] !== (key === 'custom_include_headers' ? String(want ?? '') : want)) throw refusal(`실리 설정의 ${key}에 매크로({{…}})가 있어서 서버에서는 못 보내요`);
+            if (A[key] !== (key === 'custom_include_headers' ? String(want ?? '') : want)) throw refusal(`${key}에 매크로가 있어 서버에서 보낼 수 없습니다.`);
             tpl.secrets.push(key);
             delete A[key];
         }
@@ -161,7 +161,7 @@ export async function profileTemplates({ send, profile, over = null, find = {} }
 // ---- 2) 서버: 틀로 요청 만들기 · 답 읽기
 // → 실리 서버로 보낼 요청의 몸통. secret(key) → 그 비밀 칸의 값 (profileSecret으로)
 export function fillProfileRequest(tpl, { messages, maxTokens, secret = () => undefined }) {
-    if (!obj(tpl) || tpl.v !== PT.v || !obj(tpl.data)) throw new Error('이 연결 프로필의 요청 틀을 읽을 수 없어요');
+    if (!obj(tpl) || tpl.v !== PT.v || !obj(tpl.data)) throw new Error('연결 프로필의 요청 템플릿을 읽을 수 없습니다.');
     const data = JSON.parse(JSON.stringify(tpl.data));
     for (const path of tpl.max || []) {
         let at = data;
@@ -173,7 +173,7 @@ export function fillProfileRequest(tpl, { messages, maxTokens, secret = () => un
         const v = secret(key);
         if (key === 'custom_include_headers') {
             const s = String(v ?? '');
-            if (s.includes('{{')) throw new Error(`실리 설정의 ${key}에 매크로({{…}})가 있어서 서버에서는 못 보내요`);
+            if (s.includes('{{')) throw new Error(`${key}에 매크로가 있어 서버에서 보낼 수 없습니다.`);
             data[key] = s;
         } else if (v !== undefined) data[key] = v;
     }

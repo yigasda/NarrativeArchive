@@ -13,7 +13,7 @@ export const VERSION = 2;
 
 const stores = new Map();
 const storeAt = root => stores.get(root) || stores.set(root, openStore(root)).get(root);
-const storeFor = req => { const root = req.user?.directories?.root; if (!root) throw new StoreError(401, '사용자 폴더를 알 수 없어요'); return storeAt(root); };
+const storeFor = req => { const root = req.user?.directories?.root; if (!root) throw new StoreError(401, '사용자 폴더를 찾을 수 없습니다.'); return storeAt(root); };
 const run = job => async (req, res) => {
     try { res.json(await job(req.body || {}, storeFor(req), req)); }
     catch (err) {
@@ -29,7 +29,7 @@ const users = new Map(), autos = new Map();
 let bridge = null, bridging = null, inside = false;
 const userOf = root => users.get(root) || null;
 async function bridgeOnce() {
-    if (!bridging) bridging = import('./bridge.mjs').then(m => m.startBridge({ userOf })).then(b => { bridge = b; return b; }, err => { console.warn('[narrative-archive plugin] 실리 서버에 잇는 다리를 못 열었어요 (커스텀 API로 나가는 방만 돌아요):', String(err?.message || err)); return null; });
+    if (!bridging) bridging = import('./bridge.mjs').then(m => m.startBridge({ userOf })).then(b => { bridge = b; return b; }, err => { console.warn('[narrative-archive plugin] 실리 서버 연결을 열지 못했습니다. 사용자 지정 API 방만 실행합니다:', String(err?.message || err)); return null; });
     return bridging;
 }
 // 그 사용자의 일꾼 (없으면 띄워요) → 일꾼 | null (실리 서버 안이 아니면)
@@ -45,7 +45,7 @@ async function autoFor(user) {
     const { startAuto } = await import('./host.mjs');
     const auto = startAuto({ root, store: storeAt(root), bridge: b ? { url: b.url, token: b.token } : null });
     autos.set(root, auto);
-    auto.ready.then(() => console.log('[narrative-archive plugin] 먼저 말 걸기 일꾼을 켰어요:', path.basename(root)), err => console.error('[narrative-archive plugin] 일꾼을 못 켰어요', err));
+    auto.ready.then(() => {}, err => console.error('[narrative-archive plugin] 자율 메시지 스케줄러를 시작하지 못했습니다', err));
     return auto;
 }
 const wrote = req => { const a = autos.get(req.user?.directories?.root); if (a?.alive()) a.wrote(); };
@@ -58,12 +58,12 @@ async function startAll() {
             if (!directories?.root) continue;
             if ((await storeAt(directories.root).list()).length) await autoFor({ profile, directories });
         }
-    } catch (err) { console.warn('[narrative-archive plugin] 실리의 사용자를 못 읽었어요 (브라우저가 열리면 켜요):', String(err?.message || err)); }
+    } catch (err) { console.warn('[narrative-archive plugin] 실리 사용자를 읽지 못했습니다:', String(err?.message || err)); }
 }
 
 export async function init(router) {
     router.get('/ping', (req, res) => { autoFor(req.user).catch(() => {}); res.json({ ok: true, version: VERSION, store: STORE.v, auto: inside }); });
-    router.post('/store/load', run(async ({ id }, s) => { const got = await s.load(id); if (!got) throw new StoreError(404, '없는 저장이에요'); return got; }));
+    router.post('/store/load', run(async ({ id }, s) => { const got = await s.load(id); if (!got) throw new StoreError(404, '저장을 찾을 수 없습니다.'); return got; }));
     router.post('/store/rev', run(async ({ id }, s) => ({ rev: await s.revOf(id) })));
     router.post('/store/save', run(async ({ id, base, parts, chat }, s, req) => { const out = await s.save(id, { base, parts, chat }); wrote(req); return out; }));
     router.post('/store/fork', run(async ({ from, to, chat }, s, req) => { const out = await s.fork(from, to, { chat }); wrote(req); return out; }));
@@ -87,7 +87,7 @@ export async function init(router) {
     // 사용자 지정 알림음 (plugin/sound.mjs: 마리나라 notification-sound.routes.ts). 소리 파일 하나를 사용자 폴더에.
     //   GET /sound → { configured, url, updatedAt } · POST /sound/upload ('avatar' 칸의 파일: 실리의 multer가 받아 둔 것) → 같은 모양
     //   POST /sound/delete → 같은 모양(없음) · GET /sound/file → 그 소리 (마리나라는 DELETE / 와 204예요)
-    const soundOf = req => { const root = req.user?.directories?.root; if (!root) throw new SoundError(401, '사용자 폴더를 알 수 없어요'); return soundStore(root); };
+    const soundOf = req => { const root = req.user?.directories?.root; if (!root) throw new SoundError(401, '사용자 폴더를 찾을 수 없습니다.'); return soundStore(root); };
     const soundRun = job => async (req, res) => {
         try { res.json(await job(soundOf(req), req)); }
         catch (err) {
@@ -104,8 +104,8 @@ export async function init(router) {
     router.post('/sound/delete', soundRun(async s => { await s.remove(); return { configured: false, url: null, updatedAt: null }; }));
     router.get('/sound/file', async (req, res) => {
         let got = null;
-        try { got = await soundOf(req).file(); } catch (err) { console.error('[narrative-archive plugin]', err); res.status(500).json({ error: '알림음을 읽지 못했어요' }); return; }
-        if (!got) { res.status(404).json({ error: '사용자 지정 알림음이 없어요' }); return; }
+        try { got = await soundOf(req).file(); } catch (err) { console.error('[narrative-archive plugin]', err); res.status(500).json({ error: '알림음을 읽을 수 없습니다.' }); return; }
+        if (!got) { res.status(404).json({ error: '사용자 지정 알림음이 없습니다.' }); return; }
         res.set({ 'Content-Type': got.mimeType, 'Content-Length': String(got.size), 'Content-Disposition': 'inline', 'Cache-Control': 'no-cache', 'X-Content-Type-Options': 'nosniff' });
         const stream = got.handle.createReadStream();
         stream.on('error', () => { if (!res.headersSent) res.status(500).end(); else res.end(); });

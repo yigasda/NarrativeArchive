@@ -15,7 +15,7 @@ async function http(path, body, ms = KEEP_LIMIT.short) {
     const signal = typeof globalThis.AbortSignal?.timeout === 'function' ? globalThis.AbortSignal.timeout(ms) : undefined;
     const r = await fetch(PATH + path, body === undefined ? { headers, signal } : { method: 'POST', headers, body, signal });
     if (r.ok) return r.json();
-    const err = new Error((await r.json().catch(() => ({})))?.error || `Orbit 저장 서버 오류 (${r.status})`);
+    const err = new Error((await r.json().catch(() => ({})))?.error || `서버 오류 (${r.status})`);
     err.code = r.status;
     throw err;
 }

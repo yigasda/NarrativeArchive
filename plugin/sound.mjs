@@ -134,19 +134,19 @@ export function soundStore(root) {
         // name: 올린 파일의 이름 · tmp: 실리가 받아 둔 임시 파일(읽고 나면 지워요) · size: 그 크기
         async upload({ name, tmp, size }) {
             try {
-                if (!tmp) throw new SoundError(400, '올린 알림음이 없어요.');
-                if (Number(size) > MAX_NOTIFICATION_SOUND_BYTES) throw new SoundError(413, '알림음은 10MB 이하여야 해요.');
+                if (!tmp) throw new SoundError(400, '업로드된 알림음이 없습니다.');
+                if (Number(size) > MAX_NOTIFICATION_SOUND_BYTES) throw new SoundError(413, '알림음은 10MB 이하여야 합니다.');
                 const uploadedExtension = ALLOWED_UPLOAD_EXTENSIONS.get(extname(String(name || '')).toLowerCase());
-                if (!uploadedExtension) throw new SoundError(400, 'MP3 · WAV · OGG · M4A · MP4 · WebM 소리 파일을 골라 주세요.');
+                if (!uploadedExtension) throw new SoundError(400, 'MP3, WAV, OGG, M4A, MP4 또는 WebM 오디오 파일을 사용하세요.');
                 let buffer;
-                try { buffer = await readFile(tmp); } catch { throw new SoundError(400, '알림음을 읽지 못했어요.'); }
-                if (buffer.byteLength > MAX_NOTIFICATION_SOUND_BYTES) throw new SoundError(413, '알림음은 10MB 이하여야 해요.');
+                try { buffer = await readFile(tmp); } catch { throw new SoundError(400, '알림음을 읽을 수 없습니다.'); }
+                if (buffer.byteLength > MAX_NOTIFICATION_SOUND_BYTES) throw new SoundError(413, '알림음은 10MB 이하여야 합니다.');
                 const format = detectNotificationSoundFormat(buffer);
                 const extensionMatches =
                     format &&
                     (uploadedExtension === format.extension ||
                         ((uploadedExtension === '.mp4' || uploadedExtension === '.m4a') && format.mimeType === 'audio/mp4'));
-                if (!format || !extensionMatches) throw new SoundError(400, '올린 파일이 받는 소리 형식이 아니에요.');
+                if (!format || !extensionMatches) throw new SoundError(400, '업로드한 파일은 지원되는 오디오 형식이 아닙니다.');
 
                 const finalPath = soundPath(uploadedExtension);
                 try {
@@ -158,8 +158,8 @@ export function soundStore(root) {
                         return soundStatus({ extension: uploadedExtension, mimeType: format.mimeType, path: finalPath, updatedAt: details.mtime.toISOString() });
                     });
                 } catch (error) {
-                    console.error('[narrative-archive plugin] 알림음을 저장하지 못했어요', error);
-                    throw new SoundError(500, '알림음을 저장하지 못했어요.');
+                    console.error('[narrative-archive plugin] 사용자 지정 알림음을 저장하지 못했습니다', error);
+                    throw new SoundError(500, '알림음을 저장하지 못했습니다.');
                 }
             } finally {
                 if (tmp) await unlink(tmp).catch(() => {});

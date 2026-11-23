@@ -258,7 +258,7 @@ test('사용자 지정 알림음: 상태 읽기 · 올리기 · 지우기 — �
     PING.playNotificationPing();
     assert.deepEqual(played, [st.url, st.url]);
     // 안 받는 파일: 그 이유
-    await assert.rejects(SOUND.soundUpload(new File([wav], 'ding.mp3')), /받는 소리 형식이 아니에요/);
+    await assert.rejects(SOUND.soundUpload(new File([wav], 'ding.mp3')), /지원되는 오디오 형식이 아닙니다/);
     // 지우기
     assert.deepEqual(await SOUND.soundRemove(), { configured: false, url: null, updatedAt: null });
     PING.playNotificationPing();
@@ -269,6 +269,6 @@ test('사용자 지정 알림음: 상태 읽기 · 올리기 · 지우기 — �
     globalThis.fetch = async () => ({ ok: false, status: 404, json: async () => { throw new Error('html'); } });
     try {
         assert.deepEqual(await SOUND.soundStatus(), { configured: false, url: null, updatedAt: null });
-        await assert.rejects(SOUND.soundUpload(new File([wav], 'ding.wav')), /서버 플러그인이 있어야/);
+        await assert.rejects(SOUND.soundUpload(new File([wav], 'ding.wav')), /서버 플러그인이 없습니다/);
     } finally { globalThis.fetch = realFetch; }
 });

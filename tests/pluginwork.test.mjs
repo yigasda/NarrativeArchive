@@ -124,7 +124,7 @@ test('일꾼: 서버가 읽을 묶음이 없는 세계는 목록에 없고, 만�
     assert.deepEqual((await S.auto.list()).map(r => r.id), [b.id]);
     assert.equal((await S.gen(a.id)).statusCode, 404);
     assert.equal(S.asked.length, 0);
-    assert.deepEqual((await S.auto.status('sa')).map(x => [x.can, /묶음이 없어요/.test(x.why)]), [[false, true]]);
+    assert.deepEqual((await S.auto.status('sa')).map(x => [x.can, /서버 데이터가 없습니다/.test(x.why)]), [[false, true]]);
     assert.deepEqual((await S.auto.status('sb')).map(x => [x.id, x.can, x.why]), [[b.id, true, '']]);
 });
 
@@ -157,10 +157,10 @@ test('일꾼: 요청 틀이 없는 실리 연결 방식 · 연결 프로필 방�
     liveWorld(b.m).messenger.rooms[b.room.id].connectionId = 'profile:p1';
     await S.put('sa', a.m); await S.put('sb', b.m); await S.auto.list();
     const ra = await S.gen(a.id);
-    assert.equal(ra.statusCode, 400); assert.match(ra.payload, /요청 틀이 없어요/);
+    assert.equal(ra.statusCode, 400); assert.match(ra.payload, /요청 템플릿이 없습니다/);
     const rb = await S.gen(b.id);
     assert.equal(rb.statusCode, 400, rb.payload); assert.match(rb.payload, /연결 프로필의 요청 틀이 아직 없어요/);
-    assert.match((await S.auto.status('sa'))[0].why, /요청 틀이 없어요/);
+    assert.match((await S.auto.status('sa'))[0].why, /요청 템플릿이 없습니다/);
     assert.equal(S.asked.length + S.st.filter(x => x.url.includes('generate')).length, 0);
     for (const [sid, x] of [['sa', a], ['sb', b]]) { const w = await S.get(sid); assert.equal(w.messenger.rooms[x.room.id].messages.length, 2); assert.equal(w.queue.jobs.length, 0); }
 });
@@ -211,14 +211,14 @@ test('일꾼: 실리 쪽 방(AI 기능 모델이 실리) — 실리에서 지금
     const S2 = await stageOf(t, set, { stage: { settings: { aiConn: { mode: 'st' } } } }), b = world({ pt });
     liveWorld(b.m).messenger.rooms[b.room.id].connectionId = 'ai';
     await S2.put('sb', b.m); await S2.auto.list();
-    assert.match((await S2.auto.status('sb'))[0].why, /실리에서 고른 연결 프로필이 없어요/);
+    assert.match((await S2.auto.status('sb'))[0].why, /선택된 연결 프로필이 없습니다/);
     assert.equal((await S2.gen(b.id)).statusCode, 400);
     assert.equal(S2.st.length + S2.asked.length, 0);
     // (실리가 보낼 수 없는 종류의 프로필을 골라 뒀으면 — 브라우저가 남긴 목록에 없어요 — 브라우저처럼 "고른 프로필 없음")
     const c = world({ pt }), k = liveWorld(c.m) && c.m.live.kit; k.profiles = [];
     liveWorld(c.m).messenger.rooms[c.room.id].connectionId = 'ai';
     await S.put('sc', c.m);
-    assert.match((await S.auto.status('sc'))[0].why, /실리에서 고른 연결 프로필이 없어요/);
+    assert.match((await S.auto.status('sc'))[0].why, /선택된 연결 프로필이 없습니다/);
 });
 
 test('일꾼: 방의 추론 레벨을 얹은 프로필 요청 — 브라우저가 실리 코드로 만든 값 그대로. 그 값이 없으면 안 보내요', async t => {
@@ -231,7 +231,7 @@ test('일꾼: 방의 추론 레벨을 얹은 프로필 요청 — 브라우저�
     const sent = S.st.find(x => x.url === '/api/backends/chat-completions/generate');
     assert.deepEqual(sent.body, st.build('p1', sent.body.messages, 4000, over).body);
     assert.equal(sent.body.reasoning_effort, 'high');
-    assert.match((await S.auto.status('sb'))[0].why, /추론 레벨의 요청 값이 아직 없어요/);
+    assert.match((await S.auto.status('sb'))[0].why, /추론 레벨의 요청 값이 없습니다/);
     // (브라우저에서 실리 코드가 그 레벨을 못 만들었으면: 그 이유가 그대로)
     const c = world({ pt, levels: { [SP.levelKey('openrouter', 'or/model', 'high')]: { why: '이 실리 버전에서는 연결 프로필에 추론 레벨을 실을 수 없어요' } } });
     Object.assign(liveWorld(c.m).messenger.rooms[c.room.id], { connectionId: 'profile:p1', chatParameters: { reasoningEffort: 'high' } });
@@ -245,7 +245,7 @@ test('일꾼: 실리에서 프로필이 바뀌었거나 프리셋 파일이 없�
     const S = await stageOf(t, changed), a = world({ pt });
     liveWorld(a.m).messenger.rooms[a.room.id].connectionId = 'profile:p1';
     await S.put('sa', a.m); await S.auto.list();
-    assert.match((await S.auto.status('sa'))[0].why, /연결 프로필이 바뀌었어요/);
+    assert.match((await S.auto.status('sa'))[0].why, /연결 프로필이 변경되었습니다/);
     assert.equal((await S.gen(a.id)).statusCode, 400);
     const S2 = await stageOf(t, { ...set, presets: {} }), b = world({ pt });
     liveWorld(b.m).messenger.rooms[b.room.id].connectionId = 'profile:p1';
@@ -253,7 +253,7 @@ test('일꾼: 실리에서 프로필이 바뀌었거나 프리셋 파일이 없�
     const r = await S2.gen(b.id);
     assert.match(r.payload, /"type":"error"/);
     assert.equal(S.st.length + S2.st.length, 0);
-    assert.match((await S2.get('sb')).messenger.rooms[b.room.id].autoFail.lastError, /프리셋 "Quiet"을 찾을 수 없어요/);
+    assert.match((await S2.get('sb')).messenger.rooms[b.room.id].autoFail.lastError, /프리셋을 찾을 수 없습니다: Quiet/);
 });
 
 test('일꾼: 글 완성 프로필 방 — 지시 형식이 감싼 글로 실리 서버의 글 완성 처리기에, 답은 실리처럼 멈춤 글을 잘라서', async t => {
@@ -388,9 +388,9 @@ test('일꾼: 확장과 플러그인의 버전이 다르면 · 실리에서 그 
     const S = await stage(t), old = world({ version: '0.0.1' }), gone = world({ browser: { ...BROWSER(), chatId: 'Mara - deleted' } }), odd = world({ browser: { ...BROWSER(), chatId: '../../settings' } }), fine = world();
     await S.put('s1', old.m); await S.put('s2', gone.m); await S.put('s3', odd.m); await S.put('s4', fine.m);
     assert.deepEqual((await S.auto.list()).map(r => r.id), [fine.id]);
-    assert.match((await S.auto.status('s1'))[0].why, /버전이 달라요/);
-    assert.match((await S.auto.status('s2'))[0].why, /이 채팅이 없어요/);
-    assert.match((await S.auto.status('s3'))[0].why, /채팅을 알 수 없어요/);
+    assert.match((await S.auto.status('s1'))[0].why, /버전이 다릅니다/);
+    assert.match((await S.auto.status('s2'))[0].why, /^채팅을 찾을 수 없습니다\.$/);
+    assert.match((await S.auto.status('s3'))[0].why, /연결된 실리 채팅을 찾을 수 없습니다/);
     assert.equal((await S.auto.status('s4'))[0].can, true);
     // 늦은 답장도 안 보내요
     for (const x of [old, gone]) { const j = enqueueJob(x.m, { kind: 'reply', owner: 'Mara', room: x.room.id, at: Date.now() - 600_000 }); Object.assign(j, { timed: true, notBefore: Date.now() - 1000 }); }

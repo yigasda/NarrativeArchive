@@ -23,10 +23,10 @@ export function startAuto({ root, store, bridge = null, schedule = true } = {}) 
         catch (err) { worker.postMessage({ id: m.id, ok: false, error: { message: String(err?.message || err), code: err?.code, rev: err?.rev } }); }
     });
     const gone = err => { live = false; readyNo(err); for (const p of pending.values()) p.no(err); pending.clear(); };
-    worker.on('error', err => { console.error('[narrative-archive plugin] 일꾼이 멈췄어요', err); gone(err instanceof Error ? err : new Error(String(err))); });
-    worker.on('exit', code => { if (live) gone(new Error(`일꾼이 끝났어요 (${code})`)); });
+    worker.on('error', err => { console.error('[narrative-archive plugin] 작업 스레드 오류', err); gone(err instanceof Error ? err : new Error(String(err))); });
+    worker.on('exit', code => { if (live) gone(new Error(`작업 스레드가 종료되었습니다 (${code})`)); });
     // 일꾼에 시키고 답을 기다려요
-    const ask = (cmd, more = {}) => ready.then(() => new Promise((ok, no) => { if (!live) { no(new Error('일꾼이 없어요')); return; } const rid = ++seq; pending.set(rid, { ok, no }); worker.postMessage({ cmd, rid, ...more }); }));
+    const ask = (cmd, more = {}) => ready.then(() => new Promise((ok, no) => { if (!live) { no(new Error('작업 스레드가 없습니다.')); return; } const rid = ++seq; pending.set(rid, { ok, no }); worker.postMessage({ cmd, rid, ...more }); }));
     return {
         ready,
         alive: () => live,

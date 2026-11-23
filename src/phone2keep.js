@@ -56,8 +56,8 @@ export function splitLive(live) {
 }
 // 조각들 → m.live (빠진 조각이 있으면 오류: 모자란 채로 쓰지 않아요)
 export function joinLive(parts) {
-    const head = parts?.live, need = name => { if (!(name in parts)) throw new Error('Orbit 저장 조각이 빠졌어요'); return parts[name]; };
-    if (!obj(head) || !obj(head.live)) throw new Error('Orbit 저장을 읽을 수 없어요');
+    const head = parts?.live, need = name => { if (!(name in parts)) throw new Error('Orbit 저장 조각이 없습니다.'); return parts[name]; };
+    if (!obj(head) || !obj(head.live)) throw new Error('Orbit 저장을 읽을 수 없습니다.');
     const live = { ...head.live };
     if ('world' in head) {
         let w = head.world;
@@ -68,10 +68,10 @@ export function joinLive(parts) {
                 w.messenger = { ...w.messenger, rooms: {} };
                 for (const id of head.rooms) {
                     const got = need(`room/${id}`);
-                    if (!obj(got)) throw new Error('Orbit 저장을 읽을 수 없어요');
+                    if (!obj(got)) throw new Error('Orbit 저장을 읽을 수 없습니다.');
                     if (!Number.isInteger(got.chunks)) { w.messenger.rooms[id] = got.room; continue; }
                     const messages = [];
-                    for (let k = 0; k < got.chunks; k++) { const c = need(`room/${id}/${k}`); if (!Array.isArray(c)) throw new Error('Orbit 저장을 읽을 수 없어요'); messages.push(...c); }
+                    for (let k = 0; k < got.chunks; k++) { const c = need(`room/${id}/${k}`); if (!Array.isArray(c)) throw new Error('Orbit 저장을 읽을 수 없습니다.'); messages.push(...c); }
                     w.messenger.rooms[id] = { ...got.room, messages };
                 }
             }
@@ -236,7 +236,7 @@ export function makeKeep({ api, now, synced = null }) {
             try { got = await api.save(id, { base: st.id ? st.rev : null, chat: st.mark, parts: send }); }
             catch (err) {
                 if (err?.code !== 409) throw err;
-                if (!st.id || tries >= 2 || !await syncNow(st)) throw new Error('Orbit 데이터가 다른 곳에서 바뀌었어요. 채팅을 다시 열어 주세요');
+                if (!st.id || tries >= 2 || !await syncNow(st)) throw new Error('Orbit 데이터가 다른 곳에서 변경되었습니다. 채팅을 다시 여세요.');
                 continue;
             }
             st.id = id; st.rev = got.rev; st.sums = sums; st.texts = texts;

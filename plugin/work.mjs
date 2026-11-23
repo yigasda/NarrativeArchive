@@ -48,7 +48,7 @@ export async function startWork({ root, store, st = null, schedule = true }) {
 
     const readSettings = async () => { try { const v = JSON.parse(await fs.readFile(path.join(root, 'settings.json'), 'utf8')); return obj(v) ? v : {}; } catch (err) { if (err?.code === 'ENOENT') return {}; throw err; } };
     const askSt = async (url, body) => {
-        if (!st) throw new Error('실리 서버에 요청을 넘길 길이 없어요');
+        if (!st) throw new Error('실리 서버에 연결할 수 없습니다.');
         return st(url, body);
     };
 
@@ -57,16 +57,16 @@ export async function startWork({ root, store, st = null, schedule = true }) {
     const safeName = s => typeof s === 'string' && !!s && !/[\\/]|\.\./.test(s);
     // (a chat-completion preset as SillyTavern's browser has it: its file in the user's "OpenAI Settings" folder, named as the preset)
     const readPreset = async name => {
-        if (!safeName(name)) throw new Error('프리셋 이름을 읽을 수 없어요');
+        if (!safeName(name)) throw new Error('잘못된 프리셋 이름입니다.');
         try { const v = JSON.parse(await fs.readFile(path.join(root, 'OpenAI Settings', `${name}.json`), 'utf8')); return obj(v) ? v : null; }
-        catch (err) { if (err?.code === 'ENOENT') throw new Error(`실리의 프리셋 "${name}"을 찾을 수 없어요. 실리에서 이 채팅을 한 번 열어 주세요`); throw err; }
+        catch (err) { if (err?.code === 'ENOENT') throw new Error(`프리셋을 찾을 수 없습니다: ${name}. 실리에서 이 채팅을 다시 여세요.`); throw err; }
     };
     // 이 프로필 요청의 틀 → 틀 | 오류 (이유)
     function profileTemplate(kit, profiles, profileId, over, messages) {
         const tpl = SP.ptFind(kit.pt, profileId, over, messages);
         if (!tpl) throw new Error(kit.ptWhy?.[SP.ptWhyKey(profileId, over)] || '이 연결 프로필의 요청 틀이 아직 없어요. 실리에서 이 채팅을 한 번 열어 두면 만들어져요');
         // (the profile changed in SillyTavern since the template was made: not sent with the old one)
-        if (JSON.stringify(tpl.of) !== JSON.stringify(profiles.find(p => p.id === profileId) ?? null)) throw new Error('실리에서 이 연결 프로필이 바뀌었어요. 실리에서 이 채팅을 한 번 열어 두면 맞춰져요');
+        if (JSON.stringify(tpl.of) !== JSON.stringify(profiles.find(p => p.id === profileId) ?? null)) throw new Error('연결 프로필이 변경되었습니다. 실리에서 이 채팅을 다시 여세요.');
         return tpl;
     }
     function profileService(kit, settings, ext, all) {
@@ -81,7 +81,7 @@ export async function startWork({ root, store, st = null, schedule = true }) {
                 const profile = all.find(p => p.id === profileId);
                 if (!profile) throw new Error(`Profile not found (ID: ${profileId})`);
                 if (!profile.api) throw new Error('Select a connection profile that has an API');
-                if (stream) throw new Error('서버에서는 연결 프로필로 흘려 받지 않아요');
+                if (stream) throw new Error('서버에서는 스트리밍을 지원하지 않습니다.');
                 const messages = Array.isArray(prompt) ? prompt : [{ role: 'user', content: prompt }];
                 const tpl = profileTemplate(kit, all, profileId, overridePayload, messages);
                 const proxy = tpl.proxy ? proxies.find(p => obj(p) && p.name === tpl.proxy) || null : null, preset = tpl.preset && tpl.api === 'cc' ? await readPreset(tpl.preset) : null;
@@ -128,7 +128,7 @@ export async function startWork({ root, store, st = null, schedule = true }) {
                 if (!ch) return;
                 for (const c of [ch, kept]) if (c) { c.data = obj(c.data) ? c.data : {}; c.data.extensions = obj(c.data.extensions) ? c.data.extensions : {}; c.data.extensions[key] = structuredClone(value); }
                 const r = await askSt('/api/characters/merge-attributes', { avatar: ch.avatar, data: { extensions: { [key]: value } } });
-                if (!r.ok) throw new Error(`카드에 쓰지 못했어요 (${r.status})`);
+                if (!r.ok) throw new Error(`캐릭터 카드를 저장하지 못했습니다 (${r.status})`);
             },
             loadWorldInfo: async name => { const r = await askSt('/api/worldinfo/get', { name }); return r.ok ? r.json : null; },
         };
@@ -136,7 +136,7 @@ export async function startWork({ root, store, st = null, schedule = true }) {
             get(t, key) {
                 if (typeof key !== 'string' || key in t) return t[key];
                 if (OPTIONAL.has(key) || key === 'then') return undefined;
-                throw new Error(`서버에서는 실리의 이 값을 못 써요: ${key}`);
+                throw new Error(`서버에서 사용할 수 없는 값입니다: ${key}`);
             },
         });
     }
@@ -147,13 +147,13 @@ export async function startWork({ root, store, st = null, schedule = true }) {
             oai_settings: oai,
             createGenerationParameters: async (wanted, model, type, messages) => {
                 const tpl = obj(kit.st) ? kit.st[AI.stTemplateKey(wanted, model)] : null;
-                if (!obj(tpl) || !obj(tpl.data)) throw new Error('이 연결 · 모델의 요청 틀이 없어요. 실리에서 이 채팅을 한 번 열어 두면 만들어져요');
+                if (!obj(tpl) || !obj(tpl.data)) throw new Error('이 연결의 요청 템플릿이 없습니다. 실리에서 이 채팅을 다시 여세요.');
                 const data = { ...structuredClone(tpl.data), messages };
                 for (const key of Array.isArray(tpl.secrets) ? tpl.secrets : []) {
                     if (!AI.ST_TEMPLATE_SECRETS.includes(key)) continue;
                     const v = oai[key];
                     // (SillyTavern fills {{macros}} in this field in the browser: the server cannot)
-                    if (typeof v === 'string' && v.includes('{{')) throw new Error(`실리 설정의 ${key}에 매크로({{…}})가 있어서 서버에서는 못 보내요`);
+                    if (typeof v === 'string' && v.includes('{{')) throw new Error(`${key}에 매크로가 있어 서버에서 보낼 수 없습니다.`);
                     data[key] = v;
                 }
                 return { generate_data: data };
@@ -161,7 +161,7 @@ export async function startWork({ root, store, st = null, schedule = true }) {
             // (ai.js stLevelPayload: a level on a profile's request, as the browser worked it out with SillyTavern's code — kit.levels)
             levelPayload: (source, model, effort) => {
                 const v = obj(kit.levels) ? kit.levels[SP.levelKey(source, model, effort)] : null;
-                if (!obj(v)) throw new Error('이 추론 레벨의 요청 값이 아직 없어요. 실리에서 이 채팅을 한 번 열어 두면 만들어져요');
+                if (!obj(v)) throw new Error('이 추론 레벨의 요청 값이 없습니다. 실리에서 이 채팅을 다시 여세요.');
                 if (typeof v.why === 'string') throw new Error(v.why);
                 return { ...v };
             },
@@ -174,12 +174,12 @@ export async function startWork({ root, store, st = null, schedule = true }) {
     //   - 실리의 그 채팅 파일이 있어야 해요: 채팅을 지웠는데 Orbit에 계속 말을 걸지 않게
     async function blocked(real) {
         const kit = kitOf(real);
-        if (!kit) return '서버가 읽을 묶음이 없어요. 실리에서 이 채팅을 한 번 열어 두면 만들어져요';
-        if (kit.ver !== VERSION) return `확장(${kit.ver || '?'})과 서버 플러그인(${VERSION})의 버전이 달라요. 실리를 다시 켜면 플러그인이 맞춰져요`;
+        if (!kit) return '서버 데이터가 없습니다. 실리에서 이 채팅을 다시 여세요.';
+        if (kit.ver !== VERSION) return `확장(${kit.ver || '?'})과 서버 플러그인(${VERSION}) 버전이 다릅니다. 실리를 다시 시작하세요.`;
         const f = kit.chat?.file;
-        if (!obj(f) || !safeName(f.id) || (!f.group && !safeName(f.dir))) return '이 Orbit의 실리 채팅을 알 수 없어요. 실리에서 이 채팅을 한 번 열어 주세요';
+        if (!obj(f) || !safeName(f.id) || (!f.group && !safeName(f.dir))) return '연결된 실리 채팅을 찾을 수 없습니다. 실리에서 이 채팅을 다시 여세요.';
         const file = f.group ? path.join(root, 'group chats', `${f.id}.jsonl`) : path.join(root, 'chats', f.dir, `${f.id}.jsonl`);
-        try { await fs.access(file); } catch { return '실리에 이 채팅이 없어요 (지웠거나 이름을 바꿨어요). 실리에서 이 채팅을 열면 다시 돌아요'; }
+        try { await fs.access(file); } catch { return '채팅을 찾을 수 없습니다.'; }
         return '';
     }
     // ---- 방 자물쇠 (plugin/lock.mjs: 마리나라의 채팅마다 하나뿐인 생성 자물쇠). 일꾼은 그 방의 답장을 만드는 동안 쥐어요.
@@ -212,8 +212,8 @@ export async function startWork({ root, store, st = null, schedule = true }) {
     async function cannot(real, roomId) {
         const plan = G.liveReplyPlan(real, roomId);
         if (plan.profile) {
-            if (plan.profile.missing) return '이 방에 고른 연결 프로필을 실리에서 찾을 수 없어요';
-            if (!st) return '실리 서버에 요청을 넘길 길이 없어요';
+            if (plan.profile.missing) return '선택한 연결을 사용할 수 없습니다. 다른 연결을 선택하세요.';
+            if (!st) return '실리 서버에 연결할 수 없습니다.';
             const kit = kitOf(real), all = ctxProfiles();
             let over = null;
             if (plan.profile.level) { try { over = await AI.stLevelPayload(plan.profile.level.source, plan.profile.level.model, plan.profile.level.effort); } catch (err) { return String(err?.message || err); } }
@@ -221,11 +221,11 @@ export async function startWork({ root, store, st = null, schedule = true }) {
             try { profileTemplate(kit, all, plan.profile.id, over, [{ role: 'system', content: '' }, { role: 'user', content: '' }]); } catch (err) { return String(err?.message || err); }
             return '';
         }
-        if (!plan.t) return plan.raw ? '실리에서 고른 연결 프로필이 없어요. 실리의 연결 관리자에서 프로필을 하나 골라 두면 실리를 닫아도 와요' : '초안 모델이 없어요 (⚙ 설정 → AI 모델 → 초안 모델)';
+        if (!plan.t) return plan.raw ? '선택된 연결 프로필이 없습니다. 실리의 연결 관리자에서 프로필을 선택하세요.' : '연결이 설정되지 않았습니다.';
         if (plan.t.mode === 'custom') return '';
-        if (!st) return '실리 서버에 요청을 넘길 길이 없어요';
+        if (!st) return '실리 서버에 연결할 수 없습니다.';
         if (plan.t.mode === 'source') {
-            try { if (!await AI.stSourceTemplate(plan.t, plan)) return '이 연결 · 모델은 실리가 메시지를 고쳐 보내서 서버에서는 못 보내요'; }
+            try { if (!await AI.stSourceTemplate(plan.t, plan)) return '이 모델은 서버에서 보낼 수 없습니다.'; }
             catch (err) { return String(err?.message || err); }
         }
         return '';
@@ -335,7 +335,7 @@ export async function startWork({ root, store, st = null, schedule = true }) {
     }
 
     let scheduler = null, dueTimer = null, stopped = false;
-    const dueLoop = () => { if (stopped) return; dueTimer = setTimeout(() => { sweepDue().catch(err => logger.warn(err instanceof Error ? err : {}, '[due-replies] sweep failed')).finally(dueLoop); }, DUE_MS); dueTimer.unref?.(); };
+    const dueLoop = () => { if (stopped) return; dueTimer = setTimeout(() => { sweepDue().catch(err => logger.warn(err instanceof Error ? err : {}, '[due-replies] 확인하지 못했습니다')).finally(dueLoop); }, DUE_MS); dueTimer.unref?.(); };
     if (schedule) { scheduler = startServerAutonomousScheduler(app); dueLoop(); }
     async function stop() {
         stopped = true;

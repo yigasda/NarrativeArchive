@@ -19,7 +19,7 @@ const store = {
 const out = globalThis.fetch;
 globalThis.fetch = (input, init) => {
     if (typeof input !== 'string' || !input.startsWith('/')) return out(input, init);
-    if (!bridge) return Promise.reject(new Error('실리 서버에 요청을 넘길 길이 없어요'));
+    if (!bridge) return Promise.reject(new Error('실리 서버에 연결할 수 없습니다.'));
     return out(bridge.url + input, { ...(init || {}), headers: { ...(init?.headers || {}), 'x-na-token': bridge.token, 'x-na-root': encodeURIComponent(root) } });
 };
 const st = bridge ? async (url, body) => {

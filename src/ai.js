@@ -542,7 +542,7 @@ async function askAIOnce(prompt, { system = '', maxTokens = 0, effort = '', forc
         out = typeof r === 'string' ? r : r?.content;
     } else {
         // (the server plugin: SillyTavern's own connection is its browser code. A profile picked in SillyTavern goes through above)
-        if (c.naServer) throw new Error('실리를 닫은 동안에는 실리에서 고른 연결 프로필로 보내요. 실리의 연결 관리자에서 프로필을 하나 골라 주세요');
+        if (c.naServer) throw new Error('선택된 연결 프로필이 없습니다. 실리의 연결 관리자에서 프로필을 선택하세요.');
         if (typeof c.generateRaw !== 'function') throw new Error('이 실리 버전에서는 AI 호출을 쓸 수 없어요');
         out = await c.generateRaw({ prompt: Array.isArray(prompt) ? turnsOf(prompt).map(x => x.content).join('\n\n') : prompt, systemPrompt: system, responseLength: max });
     }

@@ -108,7 +108,7 @@ test('플러그인: 실리가 요구하는 모양(info · init)이고, 길마다
         assert.equal((await call('POST /store/load', b.root, { id: 'w' })).code, 404);
         // 거절은 상태 코드와 이유로, rev도 같이
         const late = await call('POST /store/save', a.root, { id: 'w', base: 7, parts: { core: 'B' } });
-        assert.deepEqual([late.code, late.body.rev], [409, 1]); assert.match(late.body.error, /다른 곳에서 저장/);
+        assert.deepEqual([late.code, late.body.rev], [409, 1]); assert.match(late.body.error, /다른 곳에서 먼저 저장/);
         assert.equal((await call('POST /store/save', a.root, { id: '../x', parts: {} })).code, 400);
         assert.equal((await call('POST /store/load', null, { id: 'w' })).code, 401);
         assert.deepEqual((await call('POST /store/rev', a.root, { id: 'w' })).body, { rev: 1 });
