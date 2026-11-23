@@ -312,6 +312,7 @@ node tools/plugin/stsmoke.mjs <실리 폴더> <이 저장소>     # 브라우저
 node tools/plugin/stbrowser.cjs <실리 폴더>               # 진짜 브라우저(Playwright)까지, 약 3분   (2026-11-23: "a toast for the message the server wrote" 하나는 3.232.10에서도 실패해요. 화면 알림이 방울로 바뀐 뒤의 옛 확인이에요: 디자인 세션 몫)
 node tools/plugin/stprofile.cjs <실리 폴더>               # 진짜 연결 프로필 셋(채팅 완성 + 프록시 · 지금 고른 프로필 · 글 완성), 약 5분
 node tools/plugin/stfresh.cjs <실리 폴더>                 # 실리에서 사람이 하듯 페르소나 바꾸기(setUserAvatar) · 카드 설명 고치기(편집 칸) · 롤플 메시지(/send) → 가린 탭에서 서버의 다음 답장 요청에 셋 다 들어가는지, 약 1분. 설정 · 카드 · 채팅 파일 · 페르소나 그림을 스스로 되돌려요
+node tools/plugin/stcheck.cjs <실리 폴더> [--lazy]        # 실리에서 읽는 것이 잘 깨지는 경우: 연결된 페르소나가 있는 채팅을 다시 열 때(Orbit 저장 하나 · 그 채팅이 Ren을 기억 · Orbit 없는 채팅은 안 건드림 · 서버가 Ren · 고친 카드 · 보낸 메시지로) · 그 채팅의 분기(복사 하나) · 그룹 채팅(그룹에 연결한 페르소나) · 카드를 지운 채팅(답하지 않음). --lazy는 lazyLoadCharacters를 켜고. 약 2분. 설정 · config.yaml · 카드 · 채팅 · 그룹 · 페르소나 그림을 되돌려요. 3.232.12(고치기 전)에서는 "그 채팅이 Ren을 기억"과 "카드를 지운 채팅"이 실패해요
 node tools/plugin/stwake.cjs <실리 폴더>                  # 그날의 순서 그대로(가려진 동안 서버의 늦은 답장이 그 시각에 → 보이자마자 틱) + 보이는 동안의 늦은 답장(한 번, 그 시각 바로 뒤) + 실리 라우터를 거친 방 자물쇠 · 알림음 올리기(실리의 multer) · 서버 답장 신호 · 일꾼이 확장 폴더의 코드로 도는지, 약 1분
 ```
 `stprofile.cjs`는 `settings.json` · 카드를 스스로 복사해 두고 되돌려요. 서버가 보낸 요청과 실리가 브라우저에서 같은 메시지로 보낸 요청이 글자까지 같은지 봐요.
