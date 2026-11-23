@@ -98,3 +98,25 @@ test('페르소나 그림 목록 (다리 없을 때): 파일만, 그림만, 이�
     assert.deepEqual(await readImages(root), ['lio.webp', 'Ren.jpg', 'varo.png']);
     await assert.rejects(readImages(path.join(root, 'none')));
 });
+
+// ---- 실리의 writeExtensionField (public/scripts/extensions.js 2070~2120)
+import { writeExtensionField, UNSET_VALUE } from '../plugin/stread.mjs';
+test('카드 확장 칸 쓰기 (실리 그대로): 메모리의 카드와 json_data를 같이, UNSET이면 지우기, merge-attributes로 저장. 실패해도 던지지 않고 기록만', async () => {
+    const card = { name: 'Mara', avatar: 'mara.png', data: { extensions: { talkativeness: 0.5 } }, json_data: JSON.stringify({ data: { extensions: { talkativeness: 0.5 } } }) };
+    const asked = [], logs = [];
+    const log = { warn: (...a) => logs.push(['warn', ...a]), error: (...a) => logs.push(['error', ...a]) };
+    await writeExtensionField([card], 0, 'narrative_archive_convo', { x: 1 }, async (url, body) => { asked.push([url, body]); return { ok: true }; }, log);
+    assert.deepEqual(card.data.extensions.narrative_archive_convo, { x: 1 });
+    assert.deepEqual(JSON.parse(card.json_data).data.extensions.narrative_archive_convo, { x: 1 });
+    assert.deepEqual(asked, [['/api/characters/merge-attributes', { avatar: 'mara.png', data: { extensions: { narrative_archive_convo: { x: 1 } } } }]]);
+    // (UNSET: gone from the card and its json_data; the value itself goes to SillyTavern, which deletes it there)
+    await writeExtensionField([card], 0, 'narrative_archive_convo', UNSET_VALUE, async (url, body) => { asked.push([url, body]); return { ok: false, status: 500 }; }, log);
+    assert.equal('narrative_archive_convo' in card.data.extensions, false);
+    assert.equal('narrative_archive_convo' in JSON.parse(card.json_data).data.extensions, false);
+    assert.deepEqual(asked[1][1].data.extensions, { narrative_archive_convo: '__@@UNSET@@__' });
+    assert.deepEqual(logs, [['error', '확장 필드를 저장하지 못했습니다. %s', 500]]);
+    // (no such card: a note, nothing sent)
+    await writeExtensionField([card], 3, 'k', 1, async () => { throw new Error('not called'); }, log);
+    assert.equal(logs.at(-1)[0], 'warn');
+    assert.equal(asked.length, 2);
+});

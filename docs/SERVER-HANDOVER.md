@@ -122,13 +122,17 @@ src/phone2tick.js 30초 틱                       플러그인 본체 (plugin/in
 - 카드 고르기는 전에 묶음이 고르던 것과 같아요(`phone2kit.js cardsFor`): 이 채팅의 캐릭터 · 그룹의 사람들 · 폰이 있거나 방에 있는 사람(이름으로) · 폰 프로필로 고른 카드, 실리 목록의 순서 그대로(이름이 같은 카드가 둘일 때 같은 카드가 먼저 나와요). 카드는 실리가 준 것 통째예요.
 - `cardsOf`(마리나라 스케줄러의 수다 정도)도 `around` 안에서 지금 읽은 카드에서 찾아요.
 - 페르소나 이름이 바뀌었으면 `withWorld`가 일보다 먼저 `renamePersona`: 실시간 폰의 "나"도 그 이름으로(브라우저는 폰을 열 때 `liveFollowPersona`). **메모리에서만** 바꾸고, 저장은 그 일의 저장(답장)에 같이 들어가요. 따로 저장하면 브라우저의 저장과 부딪혀(409) 읽기만 하는 일(목록 · 상태)이 실패할 수 있었어요. Orbit을 다시 읽을 때마다 같은 이름으로 다시 바꿔요.
-- `writeExtensionField`는 실리 `extensions.js` 2070~2120 그대로: `UNSET_VALUE`면 지우기, `json_data`도 같이, 저장이 실패해도 던지지 않고 기록만(`확장 필드를 저장하지 못했습니다.`).
+- `writeExtensionField`는 실리 `extensions.js` 2070~2120 그대로(`stread.mjs`에 옮겨 두고 `tests/pluginstread.test.mjs`가 지켜요): `UNSET_VALUE`면 지우기, `json_data`도 같이, 저장이 실패해도 던지지 않고 기록만(`확장 필드를 저장하지 못했습니다.`).
+- 실리 서버에 아예 닿지 않으면(다리의 요청 자체가 실패) 다른 실패처럼 이유를 화면에 알리고 답하지 않아요.
+- 캐시에서 주는 채팅(메시지 · 첫 줄)은 얼려서 줘요: 서버 코드가 그걸 고치면 조용히 다음 일이 읽는 것을 바꾸지 않고 바로 오류가 나요. 지금은 고치는 곳이 없어요(전체 테스트 · 진짜 실리로 확인).
 - 다리가 없거나 옛 다리라 그 길이 막혀 있으면(404: 플러그인 폴더를 안 받음) 카드와 페르소나 그림 목록은 실리 폴더에서 직접 읽어요(`stread.mjs readCards` · `readImages`: 실리 서버의 `/api/characters/all` · `/api/avatars/get`이 하는 것을 옮긴 것, PNG의 `ccv3` → `chara`). 그래서 커스텀 API 방은 다리 없이도 전처럼 돌고, 고친 카드도 바로 들어가요. 진짜 실리의 `/all`과 글자까지 같은지 대 봤어요(통계 칸 빼고).
 
 **실리와 다른 점**
 - 페르소나: 실리는 채팅을 **열 때 한 번** 고르고, 손으로 바꾼 페르소나(잠그지 않은 것)는 새로 고치면 기본 페르소나로 돌아가요. 우리 서버는 **그 채팅에서 마지막으로 쓴 페르소나**로 답해요(소망이 정함: 빠른 전환기로 자주 바꾸고, 그게 안 남으면 안 돼요). 브라우저가 `m.stPersona`에 적어 두고(`phone2keepon.js keepPersona`), 적어 둔 게 없는 옛 채팅만 실리 순서로 골라요.
 - 한 캐릭터에 페르소나가 여럿 연결돼 있고 `persona_allow_multi_connections`가 켜져 있으면 실리는 묻는 창을 띄워요. 서버는 첫 번째를 써요(소망은 그렇게 안 써요).
 - 실리 브라우저는 카드 이름에 `DOMPurify.sanitize`를 하고, 비어 있는 `chat` 칸을 채워요. 서버에는 DOMPurify가 없어서 이름을 그대로 써요(`chat` 칸은 답장 코드가 안 읽어요).
+- 간단한 카드를 통째로 못 읽으면(`/api/characters/get` 실패) 실리는 간단한 카드 그대로 두지만, 서버는 답하지 않아요("캐릭터 카드를 읽을 수 없습니다."): 모자란 채로 답장을 지어내지 않아요(3-2).
+- 실리는 카드에 `create_date`가 없으면 파일 시각으로 채워요. 다리 없이 읽을 때는 비워 둬요(답장 코드가 안 읽어요).
 - 실리 브라우저는 메시지의 그림 칸을 목록으로 고쳐요(`ensureMessageMediaIsArray`). 답장 코드는 그림 칸을 안 읽어서 서버는 안 고쳐요.
 - 읽기만 해요: 실리가 채팅을 열 때 하는 쓰기(잠금 풀기 · 없는 기본 페르소나 지우기 · 그룹에서 없는 사람 빼고 저장)는 안 해요.
 - 실리가 1초 뒤에 저장하는 것(카드 편집 · 설정 · 그룹 · 채팅 값)은 그 1초 동안은 서버가 예전 것을 봐요.
@@ -304,7 +308,7 @@ npx eslint --no-config-lookup -c $S/lint/eslint.config.mjs src/phone2*.js src/ai
 - `tests/phone2beat.test.mjs` 브라우저 쪽 진짜 파일 + 진짜 일꾼을 한 저장에.
 - `tests/phone2wake.test.mjs` 2026-11-22에 생긴 일 그대로(화면이 꺼진 동안 서버가 답함 → 켜자마자 틱 → 또 답하지 않음), 서버가 만드는 중에 깨어남, 브라우저가 만드는 중의 서버, 먼저 건 말이 겹침, 걸린 요청의 시간 제한.
 - `tests/pluginlock.test.mjs` 방 자물쇠. `tests/pluginsound.test.mjs` 알림음 저장 · 길. `tests/phone2run.test.mjs`의 `enter`.
-- `tests/phone2keep.test.mjs` 합치기 · 퍼즈. `tests/phone2kit.test.mjs` 묶음 · 카드 고르기. `tests/phone2wake.test.mjs` 끝의 `keepPersona`.
+- `tests/phone2keep.test.mjs` 합치기 · 퍼즈. `tests/phone2kit.test.mjs` 묶음 · 카드 고르기. `tests/phone2wake.test.mjs` 끝의 `keepPersona`. `tests/phone2persona.test.mjs` 분기 채팅을 여는 중에 실리가 페르소나를 바꿔도 Orbit 복사는 하나(예전 조건이면 둘).
 
 진짜 실리에서 (가짜 모델 서버를 스스로 띄워요. 진짜 모델을 안 불러요):
 ```

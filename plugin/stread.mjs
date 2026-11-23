@@ -86,6 +86,45 @@ export function personaOf(settings, avatar) {
     return { name1: was === '' ? 'User' : was, description: String(power.persona_description ?? '') };
 }
 
+// (SillyTavern's public/scripts/extensions.js UNSET_VALUE · public/scripts/utils.js setValueByPath · deleteValueByPath)
+export const UNSET_VALUE = '__@@UNSET@@__';
+function setValueByPath(object, keyPath, value) {
+    const keyParts = keyPath.split('.');
+    let currentObject = object;
+    for (let i = 0; i < keyParts.length - 1; i++) {
+        const part = keyParts[i];
+        if (!Object.hasOwn(currentObject, part)) currentObject[part] = {};
+        currentObject = currentObject[part];
+    }
+    currentObject[keyParts[keyParts.length - 1]] = value;
+}
+function deleteValueByPath(object, keyPath) {
+    const keyParts = keyPath.split('.');
+    let current = object;
+    for (let i = 0; i < keyParts.length - 1; i++) {
+        if (!current || typeof current !== 'object') return;
+        current = current[keyParts[i]];
+    }
+    if (current && typeof current === 'object') delete current[keyParts[keyParts.length - 1]];
+}
+
+// SillyTavern's writeExtensionField (public/scripts/extensions.js 2070~2120): the card in memory — data.extensions.<key>,
+// deleted for UNSET_VALUE, and its json_data the same —, then its file through SillyTavern's own merge-attributes. A failed
+// save is logged, not thrown, as there. characters: the context's list · ask(url, body) → { ok, status } · log: logger
+export async function writeExtensionField(characters, characterId, key, value, ask, log) {
+    const character = characters[characterId];
+    if (!character) { log.warn('캐릭터를 찾을 수 없습니다: %s', characterId); return; }
+    const extensionPath = `data.extensions.${key}`, isUnset = value === UNSET_VALUE;
+    if (isUnset) deleteValueByPath(character, extensionPath); else setValueByPath(character, extensionPath, value);
+    if (character.json_data) {
+        const jsonData = JSON.parse(character.json_data);
+        if (isUnset) deleteValueByPath(jsonData, extensionPath); else setValueByPath(jsonData, extensionPath, value);
+        character.json_data = JSON.stringify(jsonData);
+    }
+    const r = await ask('/api/characters/merge-attributes', { avatar: character.avatar, data: { extensions: { [key]: value } } });
+    if (!r.ok) log.error('확장 필드를 저장하지 못했습니다. %s', r.status);
+}
+
 // ---- 다리가 없을 때(실리 버전이 달라 실리 서버의 처리기를 못 붙였을 때): 카드 · 페르소나 그림을 실리 폴더에서 직접
 // 실리 서버가 /api/characters/all · /api/avatars/get에서 하는 것을 옮긴 것이에요:
 //   readCards    src/endpoints/characters.js /all 1467~1479 · processCharacter 406~441 (통계 칸 — date_added · chat_size … — 은 빼요:

@@ -80,7 +80,7 @@ async function stage(t, { settings = {}, cm = null, more = {}, files = {}, reply
     const get = async sid => liveWorld({ live: joinLive((await store.load(sid)).parts) });
     const check = id => auto.inject('/api/conversation/autonomous/check', { chatId: id, userStatus: 'idle', maxFollowups: 2, source: 'server' });
     const gen = (id, more = {}) => auto.inject('/api/generate', { chatId: id, connectionId: null, forCharacterId: 'mara', streaming: false, userStatus: 'idle', userActivity: 'away or offline', autonomous: true, skipPresenceDelay: true, autonomousIntentKey: 'check_in', ...more });
-    return { root, store, auto, asked, st, put, get, check, gen, url, cards, writeChat };
+    return { root, store, auto, asked, st, put, get, check, gen, url, cards, writeChat, closeBridge: done => (br ? br.close(done) : done()) };
 }
 const textOf = body => body.messages.map(x => (typeof x.content === 'string' ? x.content : x.content.map(p => p.text || '').join(''))).join('\n');
 
@@ -639,4 +639,31 @@ test('일꾼 · 실리에서 바로: 이 채팅의 캐릭터 카드를 지웠으
     await N.put('sb', b.m);
     assert.deepEqual((await N.auto.status('sb')).map(x => [x.can, x.why]), [[false, '캐릭터 목록을 읽을 수 없습니다.']]);
     assert.equal(S.asked.length + N.asked.length, 0);
+});
+
+test('일꾼 · 실리에서 바로: 간단한 카드(lazyLoadCharacters)를 실리에서 고치면 다음 답장에 새 카드로 (통째로 읽어 둔 것을 버려요)', async t => {
+    const S = await stage(t), a = world({ hoursAgo: 0.2 }), b = world({ hoursAgo: 0.2 });
+    await mkdir(path.join(S.root, 'characters'), { recursive: true });
+    await writeFile(path.join(S.root, 'characters', 'mara.png'), 'x');
+    S.cards[0].shallow = true;
+    for (const x of [a, b]) { const j = enqueueJob(x.m, { kind: 'reply', owner: 'Mara', room: x.room.id, at: Date.now() - 600_000 }); Object.assign(j, { timed: true, notBefore: Date.now() - 1000 }); }
+    await S.put('sa', a.m);
+    assert.equal(await S.auto.sweep(), 1);
+    assert.match(textOf(S.asked[0].body), /Mara is a baker\./);
+    // (실리에서 고쳤어요: 카드 파일이 바뀌어요)
+    Object.assign(S.cards[0], { description: 'Mara is a pilot now.', data: { ...S.cards[0].data, description: 'Mara is a pilot now.' } });
+    await new Promise(r => setTimeout(r, 20));
+    await writeFile(path.join(S.root, 'characters', 'mara.png'), 'xy');
+    await S.put('sb', b.m);
+    assert.equal(await S.auto.sweep(), 1);
+    assert.match(textOf(S.asked[1].body), /Mara is a pilot now\./);
+});
+
+test('일꾼 · 실리 서버에 아예 닿지 않으면(다리가 끊김): 화면에 이유를 알리고 답하지 않아요', async t => {
+    const S = await stage(t), a = world();
+    await S.put('sa', a.m);
+    assert.deepEqual((await S.auto.status('sa')).map(x => x.can), [true]);
+    await new Promise(r => S.closeBridge(r));
+    assert.deepEqual((await S.auto.status('sa')).map(x => [x.can, x.why]), [[false, '캐릭터 목록을 읽을 수 없습니다.']]);
+    assert.equal(S.asked.length, 0);
 });

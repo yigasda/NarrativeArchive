@@ -16,7 +16,7 @@ import { makeAutoApp } from './auto.mjs';
 import { makeLocks, lockKey } from './lock.mjs';
 import { startServerAutonomousScheduler } from './marinara/server-autonomous-scheduler.service.js';
 import { logger } from './log.mjs';
-import { chatData, chatParts, groupOf, personaFor, personaOf, readCards, readImages } from './stread.mjs';
+import { chatData, chatParts, groupOf, personaFor, personaOf, readCards, readImages, writeExtensionField } from './stread.mjs';
 
 // (Marinara's server scheduler reads the answer of its /api/generate as these events)
 const SSE = {
@@ -32,28 +32,6 @@ export const DUE_MS = 30_000;
 const OPTIONAL = new Set(['generateRaw', 'CONNECT_API_MAP', 'getChatCompletionModel', 'onlineStatus', 'extractMessageFromData', 'getCurrentChatId', 'eventSource', 'eventTypes', 'event_types', 'saveMetadataDebounced']);
 const obj = v => v && typeof v === 'object' && !Array.isArray(v);
 const refuse = (statusCode, text) => Object.assign(new Error(text), { statusCode });
-// (SillyTavern's public/scripts/extensions.js UNSET_VALUE · public/scripts/utils.js setValueByPath · deleteValueByPath)
-const UNSET_VALUE = '__@@UNSET@@__';
-function setValueByPath(object, keyPath, value) {
-    const keyParts = keyPath.split('.');
-    let currentObject = object;
-    for (let i = 0; i < keyParts.length - 1; i++) {
-        const part = keyParts[i];
-        if (!Object.hasOwn(currentObject, part)) currentObject[part] = {};
-        currentObject = currentObject[part];
-    }
-    currentObject[keyParts[keyParts.length - 1]] = value;
-}
-function deleteValueByPath(object, keyPath) {
-    const keyParts = keyPath.split('.');
-    let current = object;
-    for (let i = 0; i < keyParts.length - 1; i++) {
-        if (!current || typeof current !== 'object') return;
-        current = current[keyParts[i]];
-    }
-    if (current && typeof current === 'object') delete current[keyParts[keyParts.length - 1]];
-}
-
 // root: 사용자 폴더 · store: 플러그인 저장 (plugin/store.mjs의 것, 또는 그것을 부르는 것)
 // st(path, body) → { ok, status, json } : 실리 서버의 /api/… 처리기를 불러요 (없으면 null: 실리 연결로는 못 보내요)
 // schedule: false면 스케줄러 · 늦은 답장 보기를 켜지 않아요 (테스트가 손으로 돌려요)
@@ -133,11 +111,14 @@ export async function startWork({ root, store, st = null, schedule = true, from 
         const sig = st ? `${st.ino}:${st.mtimeMs}:${st.size}` : '';
         const had = chats.get(file);
         if (had && had.sig === sig) return had.data;
-        const data = await chatData(file);
+        // (handed out to every look and reply that follows: frozen, so code that changed it would fail loudly instead of
+        //  changing what the next one reads)
+        const data = deepFreeze(await chatData(file));
         chats.set(file, { sig, data });
         if (chats.size > 32) chats.delete(chats.keys().next().value);
         return data;
     }
+    const deepFreeze = v => { if (v && typeof v === 'object' && !Object.isFrozen(v)) { Object.freeze(v); for (const x of Object.values(v)) deepFreeze(x); } return v; };
     let cardsHad = null;
     const whole = new Map();
     async function cardsSig() {
@@ -158,8 +139,10 @@ export async function startWork({ root, store, st = null, schedule = true, from 
         // (a bridge of an older plugin that does not open these ways yet — 404: the plugin's own files are read once when
         //  SillyTavern starts, an extension update does not change them —: read from the folder too, so the extension's
         //  update is enough)
+        // (a bridge that cannot be reached at all — its fetch throws —: the same as one answering an error, a reason on the screen)
+        const reach = async (url, body) => { try { return await askSt(url, body); } catch (err) { logger.warn(err instanceof Error ? err : {}, '%s: 실리 서버에 연결할 수 없습니다', url); return { ok: false, status: 0 }; } };
         const viaSt = async (url, own) => {
-            const r = st ? await askSt(url, {}) : null;
+            const r = st ? await reach(url, {}) : null;
             if (r && r.status !== 404) return r;
             try { return { ok: true, json: await own() }; } catch (err) { logger.warn(err instanceof Error ? err : {}, '%s: 실리 폴더를 읽지 못했습니다', url); return { ok: false }; }
         };
@@ -187,7 +170,7 @@ export async function startWork({ root, store, st = null, schedule = true, from 
         for (const [i, ch] of characters.entries()) {
             if (!ch.shallow || !opened.has(ch.avatar)) continue;
             if (!whole.has(ch.avatar)) {
-                const r = await askSt('/api/characters/get', { avatar_url: ch.avatar });
+                const r = await reach('/api/characters/get', { avatar_url: ch.avatar });
                 if (!r.ok || !obj(r.json)) throw refuse(400, '캐릭터 카드를 읽을 수 없습니다.');
                 whole.set(ch.avatar, { ...r.json, chat: String(r.json.chat) });
             }
@@ -241,19 +224,7 @@ export async function startWork({ root, store, st = null, schedule = true, from 
             getRequestHeaders: () => ({ 'Content-Type': 'application/json' }),
             // (SillyTavern's writeExtensionField — public/scripts/extensions.js 2070~2120 —: the card in memory, then its file
             //  through SillyTavern's own merge-attributes. A failed save is logged, not thrown, as there)
-            writeExtensionField: async (index, key, value) => {
-                const character = k.characters[index];
-                if (!character) { logger.warn('캐릭터를 찾을 수 없습니다: %s', index); return; }
-                const extensionPath = `data.extensions.${key}`, isUnset = value === UNSET_VALUE;
-                if (isUnset) deleteValueByPath(character, extensionPath); else setValueByPath(character, extensionPath, value);
-                if (character.json_data) {
-                    const jsonData = JSON.parse(character.json_data);
-                    if (isUnset) deleteValueByPath(jsonData, extensionPath); else setValueByPath(jsonData, extensionPath, value);
-                    character.json_data = JSON.stringify(jsonData);
-                }
-                const r = await askSt('/api/characters/merge-attributes', { avatar: character.avatar, data: { extensions: { [key]: value } } });
-                if (!r.ok) logger.error('확장 필드를 저장하지 못했습니다. %s', r.status);
-            },
+            writeExtensionField: (index, key, value) => writeExtensionField(k.characters, index, key, value, askSt, logger),
             loadWorldInfo: async name => { const r = await askSt('/api/worldinfo/get', { name }); return r.ok ? r.json : null; },
         };
         return new Proxy(base, {

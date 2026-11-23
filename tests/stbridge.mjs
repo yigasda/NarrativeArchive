@@ -28,7 +28,7 @@ export async function fakeBridge({ cards = () => [], avatars = () => [], more = 
         });
         s.listen(0, '127.0.0.1', () => ok(s));
     });
-    return { url: `http://127.0.0.1:${server.address().port}`, token: TOKEN, seen, close: () => server.close() };
+    return { url: `http://127.0.0.1:${server.address().port}`, token: TOKEN, seen, close: done => { server.close(done); server.closeAllConnections?.(); } };
 }
 // 실리 채팅 파일의 글: 헤더 줄 + 메시지 줄들 (chat_metadata: 헤더의 것)
 export const chatFile = (chat_metadata = {}, messages = []) => [{ chat_metadata, user_name: 'unused', character_name: 'unused' }, ...messages].map(x => JSON.stringify(x)).join('\n');
