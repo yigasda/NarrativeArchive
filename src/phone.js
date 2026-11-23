@@ -1266,8 +1266,18 @@ export async function openPhone(who = null) {
         liveServerStatus(realM).then(x => { const was = JSON.stringify(obSrv); obSrv = x || null; if (JSON.stringify(obSrv) !== was && !phoneClosed && stillHere() && obSet === 'auto') drawPhone(true); }).catch(() => { obSrv = null; }); };
     // 다시 그리기: 바깥 소식('na-live-change') · 1분마다 시계 · 탭이 다시 보일 때. 무언가 고치는 중이거나 입력칸에 커서가 있으면 미뤄 두었다가(obPendDraw),
     //   그게 끝나면(커서가 빠짐 · 시트가 닫힘) 한 번 그려요. 시계는 마리나라 hooks/use-presence-clock.ts 그대로: 탭이 보이는 동안 60초마다, 가려지면 멈추고, 다시 보이면 곧바로 한 번 + 다시 켜기
-    const obQuiet = () => !!(obSch || obBusyUi() || document.activeElement?.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '') && $root[0]?.contains(document.activeElement));
-    const obRedraw = (orbitOnly = true) => { if (phoneClosed || !stillHere() || !live() || (orbitOnly && !String(view).startsWith('orbit'))) return; if (obQuiet()) { obPendDraw = true; return; } drawPhone(true); };
+    //   메시지 입력칸(.na_ob_in)은 예외: 보낸 뒤에도 커서가 남아 있어서(obFocus) 미루면 아무것도 안 바뀌었어요. 그때는 obGo의 onChange처럼
+    //   그리고 → 맨 아래였으면 맨 아래로 → 커서를 되돌려요. 한글을 조합하는 중에만 미뤘다가 조합이 끝나면 그려요
+    const obInMsg = () => !!document.activeElement?.classList?.contains('na_ob_in') && !!$root[0]?.contains(document.activeElement);
+    let obComposing = false;
+    const obQuiet = () => !!(obSch || obBusyUi() || (obInMsg() ? obComposing : document.activeElement?.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '') && $root[0]?.contains(document.activeElement)));
+    const obRedraw = (orbitOnly = true) => { if (phoneClosed || !stillHere() || !live() || (orbitOnly && !String(view).startsWith('orbit'))) return; if (obQuiet()) { obPendDraw = true; return; }
+        const typingNow = obInMsg(), atEnd = (e => !e || e.scrollHeight - e.scrollTop - e.clientHeight < 40)($root.find('.ob_msgs')[0]);
+        drawPhone(true);
+        if (view.startsWith('orbitroom') && atEnd) obBottom();
+        if (typingNow) obFocus(); };
+    $root.on('compositionstart', '.na_ob_in', () => { obComposing = true; });
+    $root.on('compositionend', '.na_ob_in', () => { obComposing = false; setTimeout(() => { if (obPendDraw && !obQuiet()) obRedraw(false); }, 60); });
     $(document).off('na-live-change.naob').on('na-live-change.naob', () => obRedraw());
     let obClock = null;
     const obClockStart = () => { if (obClock == null) obClock = setInterval(() => obRedraw(false), 60_000); };
