@@ -54,7 +54,7 @@ export async function ownerProfileBlock(c,binding,owner,{money=false,persona=tru
 Background for who the owner is: personality, voice, body, relationships, interests, work${money ? ' and means' : ''}.
 - It gives no events: nothing happened just because the profile makes it likely.
 - Where the story says otherwise, the story wins.
-- What the profile keeps secret, other people don't know.${money ? '\n- Company and family money are not the owner\'s own.' : ''}${who ? `\n\n${who}` : ''}`;
+- What the profile keeps secret, other people don't know.${money ? '\n- Company accounts are not the owner\'s own; money the family gives them (an allowance, trust payouts, gifts, an inheritance) is.' : ''}${who ? `\n\n${who}` : ''}`;
 }
 
 // Empty arrays are valid generated app data; absent fields are not generated.

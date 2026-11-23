@@ -7,18 +7,32 @@ import { saveMeta } from './core.js';
 import { currency, finite, fx, price, positions, cash, addPrice, finance, quoteKey } from './finance.js';
 
 export const WEALTH_SYS = `GOAL
-Set a compact personal financial scale for this fictional phone owner before bank and investment generation.
+Decide how much money this fictional phone owner has in their own bank accounts and investments, before the bank and investment apps are written.
 
 YOU GET
-Story, selected owner profile, country and account currencies. Old generated balances are not evidence of wealth.
+- ARCHIVE, RECENT CHAT, OWNER, and sometimes STORY YEAR, WORLD, LOREBOOK, PERSONA, OWNER PROFILE and OWNER DOESN'T KNOW. Nothing on the phone may show what the owner doesn't know.
+- OWNER COUNTRY: where the owner lives.
+- ACCOUNT CURRENCIES: the currencies of the owner's bank accounts so far (sometimes empty).
 
-RULES
-- Infer the order of magnitude first from personal ownership, business reach, accumulated wealth, access and lifestyle; a job title alone is not ownership. Financial assets may be very large when supported. Do not default every owner to a retail savings portfolio.
-- Set separate ranges for current bank deposits and ordinary investments INCLUDING brokerage cash. Exclude credit-card spending, company assets and family stakes; do not count them twice. Their exclusion does not imply small personal reserves.
-- Explicit current personal amounts win; exact totals use min=max. Otherwise estimate plausible app-only ranges, not new RP facts. Explain evidence and inference briefly, including ownership/access uncertainty. Convert ranges to one currency; no prose analysis.
+BASIS FIRST
+Write basis before the numbers: who the owner is (work, level, years in it, where and how they live), where their money comes from (pay, a business they own, family money, an inheritance), and any amount the story gives.
 
-ANSWER — one JSON object, nothing else:
-{"currency":"EUR","deposits":{"min":number,"max":number},"investments":{"min":number,"max":number},"basis":"short evidence and inferred scale"}`;
+SCALE
+- deposits: the money in the owner's own bank accounts now. investments: the owner's own shares, funds and bonds, with the cash in their brokerage accounts.
+- Not counted: homes and other property, company accounts, family holdings the owner doesn't control, credit-card spending.
+- Counted: money the family gives the owner (an allowance, trust payouts, gifts, an inheritance received). It is the owner's own.
+- Judge the amounts a real person in that country and role would hold after their years of income, in their way of life. A high earner or a rich family's child holds a lot; an ordinary worker holds an ordinary amount.
+- Examples (deposits / investments):
+  - a junior office worker in Seoul, three years in: 10–30 million KRW / 0–20 million KRW
+  - a senior doctor in Oslo, fifteen years in, living in Frogner: 1.5–3 million NOK / 2–5 million NOK
+  - the heir of a global conglomerate, living on family money: 2–10 billion KRW / 5–30 billion KRW
+- An amount the story states wins; an exact total gives min = max.
+- Balances an earlier phone showed are not evidence.
+- Each range: max at most three times min. Both ranges in one currency, the owner's main account currency.
+
+JSON (one object, nothing before or after it)
+{"basis":"short evidence and the scale it gives","currency":"NOK","deposits":{"min":number,"max":number},"investments":{"min":number,"max":number}}
+Numbers are plain JSON numbers.`;
 export function readWealth(out) {
     const s=String(out).replace(/```(?:json)?/gi,'');
     const x=parseJson(s.slice(s.indexOf('{'),s.lastIndexOf('}')+1));
