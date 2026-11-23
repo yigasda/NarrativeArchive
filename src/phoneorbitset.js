@@ -200,19 +200,19 @@ export function orbitSetPage(T, face) {
         stconn: () => (T.st ? hp('실리의 API 연결 창을 그대로 조종합니다. 여기서 바꾸면 실리의 연결이 바뀝니다(롤플레이도 같은 연결을 씁니다). 키는 실리에만 저장됩니다.') + scGroup(T, T.st, false) : none('실리의 API 연결 창을 찾지 못했어요.')),
         // 알림 (마리나라의 ConversationSoundSetting 전부. 게임 모드는 소망이 게임을 다 뺐어요): 마리나라의 Only when unfocused는 '백그라운드에서만'(소망: 풀어 쓰지 말고 짧게).
         //   알림 위치 · 대화 모드 알림음 · 사용자 지정 알림음 · 백그라운드(브라우저) · 생성 완료(브라우저). T.notify = { sound, unfocused, browser, genBrowser, snd, perm, pos }
-        notify: () => { const N = T.notify || {}, help = N.perm === 'insecure' ? '브라우저 알림은 HTTPS나 localhost에서만 됩니다.' : N.perm === 'denied' ? '브라우저 알림이 막혀 있습니다. 이 사이트의 알림 권한을 초기화한 뒤 다시 해 보세요.' : N.perm === 'unsupported' ? '이 환경에서는 브라우저 알림을 쓸 수 없습니다.' : '브라우저의 알림 권한을 사용합니다.';
+        notify: () => { const N = T.notify || {}, help = N.perm === 'insecure' ? '브라우저 알림은 HTTPS 또는 localhost가 필요합니다.' : N.perm === 'denied' ? '브라우저 알림이 차단되어 있습니다. 사이트 알림 권한을 초기화한 뒤 다시 시도하세요.' : N.perm === 'unsupported' ? '이 환경에서는 브라우저 알림을 사용할 수 없습니다.' : '브라우저 알림 권한을 사용합니다.';
             // (마리나라의 모바일 앱 줄 · 롤플레이 모드 알림음은 소망이 뺐어요: 안드로이드 앱 · 롤플레이 방이 여기엔 없어요)
             // 알림 위치 (마리나라 GeneralSettings의 Notification position): 실리의 알림 위치(#toastr_position)에 넣어요. 위 = 위 가운데, 아래 = 아래 가운데
-            return hp('모드별 알림음과 백그라운드 알림입니다.')
-                + cd(sel('ntPos', '알림 위치', [['top', '위'], ['bottom', '아래']], 'top', 'na_os_ntpos', N.pos || 'top')) + hp('오류 메시지와 다른 알림이 뜨는 곳을 고릅니다.')
-                + cap('알림음') + hp('다른 채팅에 있을 때 새 메시지를 받으면 알림음을 냅니다.')
+            return hp('모드별 알림음 및 백그라운드 알림.')
+                + cd(sel('ntPos', '알림 위치', [['top', '위'], ['bottom', '아래']], 'top', 'na_os_ntpos', N.pos || 'top')) + hp('오류 메시지 등 알림이 표시될 위치를 선택합니다.')
+                + cap('알림음') + hp('다른 채팅에 있을 때 새 메시지를 받으면 알림음을 재생합니다.')
                 + cd(tg('sound', '대화 모드', '', true, 'na_os_nt', !!N.sound), tg('unfocused', '백그라운드에서만', '', false, 'na_os_nt', !!N.unfocused),
-                    // 사용자 지정 알림음 (마리나라 CustomNotificationSoundSetting): 이름 + 상태(기본 · 사용자 지정) · 설명 · 형식 · 미리 듣기 · 고르기(있으면 바꾸기) · (있으면) 지우기
+                    // 사용자 지정 알림음 (마리나라 CustomNotificationSoundSetting): 이름 + 상태(기본값 · 사용자 지정) · 설명 · 형식 · 미리 듣기 · 소리 선택(있으면 교체) · (있으면) 삭제
                     //   T.notify.snd = { loading, configured, busy: 'up' | 'rm' | '' } (반영 src/phone2sound.js)
-                    (S => pad(`<input type="file" class="na_os_sndfile" hidden accept="audio/*,video/mp4,.mp3,.wav,.ogg,.oga,.m4a,.mp4,.webm" aria-label="소리 고르기"><div class="ot_r ot_w"><span class="os_l">사용자 지정 알림음</span><span class="ot_chip">${S.loading ? '확인 중…' : S.configured ? '사용자 지정' : '기본'}</span></div><div class="os_d" style="margin:6px 0 4px">이 실리에 연결된 모든 기기에서 위의 알림음 스위치가 이 소리를 씁니다.</div><div class="os_d" style="margin-bottom:8px">MP3, WAV, OGG, M4A/MP4, WebM · 10MB까지</div><div class="ot_r ot_w"><button type="button" class="os_go na_os_ntplay"${S.loading ? ' disabled' : ''}>${li('play', 13, 2.2)}미리 듣기</button><button type="button" class="os_go na_os_sndup"${S.busy ? ' disabled' : ''}>${S.busy === 'up' ? '<i class="fa-solid fa-spinner fa-spin"></i>' : li('upload', 13, 2.2)}${S.configured ? '바꾸기' : '고르기'}</button>${S.configured ? `<button type="button" class="os_go red na_os_sndrm"${S.busy ? ' disabled' : ''}>${S.busy === 'rm' ? '<i class="fa-solid fa-spinner fa-spin"></i>' : li('trash-2', 13, 2.2)}지우기</button>` : ''}</div>`))(N.snd || {}))
-                + cap('백그라운드 알림') + hp('캐릭터가 먼저 보낸 메시지를 백그라운드에서 알림으로 띄웁니다. 내용은 숨깁니다.')
+                    (S => pad(`<input type="file" class="na_os_sndfile" hidden accept="audio/*,video/mp4,.mp3,.wav,.ogg,.oga,.m4a,.mp4,.webm" aria-label="소리 선택"><div class="ot_r ot_w"><span class="os_l">사용자 지정 알림음</span><span class="ot_chip">${S.loading ? '확인 중…' : S.configured ? '사용자 지정' : '기본값'}</span></div><div class="os_d" style="margin:6px 0 4px">이 서버에 연결된 모든 기기의 알림음에 사용됩니다.</div><div class="os_d" style="margin-bottom:8px">MP3, WAV, OGG, M4A/MP4, WebM · 최대 10MB</div><div class="ot_r ot_w"><button type="button" class="os_go na_os_ntplay"${S.loading ? ' disabled' : ''}>${li('play', 13, 2.2)}미리 듣기</button><button type="button" class="os_go na_os_sndup"${S.busy ? ' disabled' : ''}>${S.busy === 'up' ? '<i class="fa-solid fa-spinner fa-spin"></i>' : li('upload', 13, 2.2)}${S.configured ? '교체' : '소리 선택'}</button>${S.configured ? `<button type="button" class="os_go red na_os_sndrm"${S.busy ? ' disabled' : ''}>${S.busy === 'rm' ? '<i class="fa-solid fa-spinner fa-spin"></i>' : li('trash-2', 13, 2.2)}삭제</button>` : ''}</div>`))(N.snd || {}))
+                + cap('백그라운드 알림') + hp('백그라운드에서 자율 메시지가 오면 알림을 표시합니다. 메시지 내용은 숨겨집니다.')
                 + cd(tg('browser', '브라우저', help, false, 'na_os_nt', !!N.browser && N.perm === 'granted'))
-                + cap('생성 완료 알림') + hp('직접 보낸 메시지의 답장을 백그라운드에서 알림으로 띄웁니다. 내용은 숨깁니다.')
+                + cap('생성 완료 알림') + hp('직접 시작한 답장이 백그라운드에서 완료되면 알림을 표시합니다. 메시지 내용은 숨겨집니다.')
                 + cd(tg('genBrowser', '브라우저', help, false, 'na_os_nt', !!N.genBrowser && N.perm === 'granted')); },
         // 그림 설명 (마리나라의 Image captioning): 켜기 · 설명할 연결 · 설명 지시문. T.caption = liveCaptioning()
         caption: () => { const C = T.caption || { enabled: false, connectionId: '', prompt: '', defaultPrompt: '', connections: [] };

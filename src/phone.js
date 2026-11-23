@@ -1394,7 +1394,7 @@ export async function openPhone(who = null) {
     // 알림 화면 (마리나라의 ConversationSoundSetting): 알림음을 켜면 한 번 들려주고, 브라우저 알림은 권한을 받은 뒤에만 켜져요
     $root.on('click', '.na_os_nt', async function (e) { e.stopPropagation(); const k = this.dataset.k, on = this.dataset.on !== '1', g = globalSettings(), n = g.orbitNotify = { ...orbitNotify() };
         if ((k === 'browser' || k === 'genBrowser') && on) { const perm = obPerm = await requestLocalNotificationPermission(); n[k] = perm === 'granted';
-            if (n[k]) toastr.success(k === 'browser' ? '캐릭터가 먼저 건 메시지에 브라우저 알림을 켰습니다.' : '생성 완료에 브라우저 알림을 켰습니다.', '캐릭터 휴대폰'); else toastr.error(perm === 'insecure' ? '브라우저 알림은 HTTPS나 localhost에서만 됩니다.' : perm === 'unsupported' ? '이 환경에서는 브라우저 알림을 쓸 수 없습니다.' : perm === 'denied' ? '브라우저 알림이 막혀 있습니다. 이 사이트의 알림 권한을 초기화한 뒤 다시 해 보세요.' : '브라우저 알림 권한을 받지 못했습니다.', '캐릭터 휴대폰'); }
+            if (n[k]) toastr.success(k === 'browser' ? '자율 메시지 브라우저 알림을 켰습니다.' : '생성 완료 브라우저 알림을 켰습니다.', '캐릭터 휴대폰'); else toastr.error(perm === 'insecure' ? '브라우저 알림은 HTTPS 또는 localhost가 필요합니다. 보안 주소로 실리를 연 뒤 다시 시도하세요.' : perm === 'unsupported' ? '이 환경에서는 브라우저 알림을 사용할 수 없습니다.' : perm === 'denied' ? '브라우저 알림이 차단되어 있습니다. 사이트 알림 권한을 초기화한 뒤 다시 시도하세요.' : '브라우저 알림 권한이 허용되지 않았습니다.', '캐릭터 휴대폰'); }
         else { n[k] = on; if (k === 'sound' && on) playNotificationPing(); }
         saveGlobal(); if (!phoneClosed && stillHere()) drawPhone(true); });
     $root.on('click', '.na_os_ntplay', e => { e.stopPropagation(); playNotificationPing(); });
@@ -1403,12 +1403,12 @@ export async function openPhone(who = null) {
     $root.on('change', '.na_os_sndfile', async function () { const file = this.files?.[0]; this.value = ''; if (!file) return;
         if (file.size > SOUND_MAX_BYTES) return toastr.error('알림음은 10MB 이하여야 합니다.', '캐릭터 휴대폰');
         obSnd.busy = 'up'; drawPhone(true);
-        try { const x = await soundUpload(file); obSnd.configured = x.configured; obSnd.loading = false; toastr.success('사용자 지정 알림음을 저장했습니다.', '캐릭터 휴대폰'); playNotificationPing(); }
+        try { const x = await soundUpload(file); obSnd.configured = x.configured; obSnd.loading = false; toastr.success('사용자 지정 알림음이 저장되었습니다.', '캐릭터 휴대폰'); playNotificationPing(); }
         catch (err) { toastr.error(`사용자 지정 알림음을 저장하지 못했습니다.${err?.message ? ` (${err.message})` : ''}`, '캐릭터 휴대폰'); }
         obSnd.busy = ''; if (!phoneClosed && stillHere()) drawPhone(true); });
     $root.on('click', '.na_os_sndrm', async e => { e.stopPropagation(); if (obSnd.busy) return; obSnd.busy = 'rm'; drawPhone(true);
-        try { const x = await soundRemove(); obSnd.configured = x.configured; toastr.success('사용자 지정 알림음을 지웠습니다.', '캐릭터 휴대폰'); }
-        catch (err) { toastr.error(`사용자 지정 알림음을 지우지 못했습니다.${err?.message ? ` (${err.message})` : ''}`, '캐릭터 휴대폰'); }
+        try { const x = await soundRemove(); obSnd.configured = x.configured; toastr.success('사용자 지정 알림음이 삭제되었습니다.', '캐릭터 휴대폰'); }
+        catch (err) { toastr.error(`사용자 지정 알림음을 삭제하지 못했습니다.${err?.message ? ` (${err.message})` : ''}`, '캐릭터 휴대폰'); }
         obSnd.busy = ''; if (!phoneClosed && stillHere()) drawPhone(true); });
     // 알림 위치: 실리의 알림 위치 칸에 넣고 실리가 저장해요 (power-user.js의 #toastr_position change). 폰 안으로 옮겨 둔 알림 칸도 그 자리로
     $root.on('click', '.na_os_ntpos', function (e) { e.stopPropagation(); const v = this.dataset.v === 'bottom' ? 'toast-bottom-center' : 'toast-top-center', el = $('#toastr_position');
