@@ -307,3 +307,17 @@ test('답장이 기다리는 시각에 틱이 한 번 더 돌아요 (30초를 �
     assert.ok(waits[0] >= 3900 && waits[0] <= 4100 && waits[1] >= 1900 && waits[1] <= 2100);
     job.state = 'done';
 });
+
+test('이 채팅의 페르소나를 채팅에 적어 둬요 (서버가 실리를 닫은 동안 그 페르소나로 답해요): Orbit이 있는 채팅만, 달라졌을 때만', async t => {
+    const S = await stage(t);
+    assert.equal(await KO.keepPersona('varo.png'), true);
+    assert.equal(S.m.stPersona, 'varo.png');
+    assert.equal(await KO.keepPersona('varo.png'), false);
+    assert.equal(await KO.keepPersona('ren.png'), true);
+    assert.equal(S.m.stPersona, 'ren.png');
+    // (Orbit이 없는 채팅에는 안 적어요: 그 채팅 파일을 건드리지 않아요)
+    const other = { narrative_archive: {} };
+    setContext({ ...globalThis.SillyTavern.getContext(), chatMetadata: other });
+    assert.equal(await KO.keepPersona('varo.png'), false);
+    assert.equal(other.narrative_archive.stPersona, undefined);
+});

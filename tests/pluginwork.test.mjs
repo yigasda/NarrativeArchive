@@ -47,13 +47,14 @@ function world({ story = false, schedule = null, kit = true, st = null, pt = nul
 }
 
 // 한 판: 임시 사용자 폴더 + 저장 + 가짜 모델 + 가짜 다리 + 일꾼
-async function stage(t, { settings = {}, cm = null, more = {}, files = {}, reply = () => ({ reply: ['you there?'], status: '' }), bridge = true, schedule = false, code = null } = {}) {
+async function stage(t, { settings = {}, cm = null, more = {}, files = {}, reply = () => ({ reply: ['you there?'], status: '' }), bridge = true, schedule = false, code = null, merge = 200 } = {}) {
     const root = await mkdtemp(path.join(tmpdir(), 'na-work-'));
     const asked = [];
     const model = await listen(async (req, res) => { const body = await bodyOf(req); asked.push({ url: req.url, auth: req.headers.authorization, body }); const a = await reply(body); if (a?.httpStatus) { res.statusCode = a.httpStatus; res.end(JSON.stringify({ error: { message: a.error || 'no' } })); return; } res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ choices: [{ message: { content: typeof a === 'string' ? a : JSON.stringify(a) }, finish_reason: 'stop' }], usage: { prompt_tokens: 1, completion_tokens: 1 } })); });
     const cards = [card('Mara'), card('Ivo')];
     const br = bridge ? await fakeBridge({ cards: () => cards, avatars: () => ['ren.png', 'varo.png'], more: async (req, body, res) => {
         if (req.url === '/api/backends/chat-completions/generate') { res.end(JSON.stringify({ choices: [{ message: { content: JSON.stringify(await reply(body)) }, finish_reason: 'stop' }] })); return true; }
+        if (req.url === '/api/characters/merge-attributes' && merge !== 200) { res.statusCode = merge; res.end('{}'); return true; }
         // (a text-completion backend that runs on past its answer: SillyTavern cuts the stop sequence off — custom-request.js 331–382)
         if (req.url === '/api/backends/text-completions/generate') { res.end(JSON.stringify({ choices: [{ text: `${JSON.stringify(await reply(body))}\n### Instruction: and more` }] })); return true; }
         return false;
@@ -494,6 +495,8 @@ test('일꾼 · 실리에서 바로: 페르소나 — 그 채팅에서 마지막
     let text = textOf(S.asked[0].body);
     assert.match(text, /\[PERSONA — Varo\]\nVaro is a pilot\./);
     assert.match(text, /Varo is texting you on MESSENGER/);
+    // (먼저 거는 까닭도 그 이름으로: 무엇이든 정하기 전에 "나"가 따라가요)
+    assert.match(text, /\[WHY NOW\]\nYou have a free moment and Varo has been quiet\./);
     // (적어 둔 게 없는 옛 채팅: 실리 순서 — 채팅에 잠근 페르소나)
     // (실시간 폰의 "나"도 그 이름으로: 브라우저에서 페르소나를 바꿨을 때처럼)
     assert.equal((await S.get('sa')).persona, 'Varo');
@@ -520,11 +523,11 @@ test('일꾼 · 실리에서 바로: 그룹 채팅 — 그룹 파일의 사람�
     assert.deepEqual((await S.auto.status('sa')).map(x => [x.can, x.why]), [[false, '채팅을 찾을 수 없습니다.']]);
 });
 
-test('일꾼 · 실리에서 바로: 카드의 확장 칸 쓰기는 실리처럼 — 실패해도 답장은 그대로(기록만 남겨요)', async t => {
-    const S = await stage(t, { reply: () => ({ reply: ['brb'], status: { status: 'dnd', activity: 'in a meeting', duration: '30m' } }) });
+test('일꾼 · 실리에서 바로: 카드의 확장 칸 쓰기는 실리처럼 — 저장이 실패해도 답장은 그대로(기록만 남겨요)', async t => {
+    const S = await stage(t, { merge: 500, reply: () => ({ reply: ['brb'], status: { status: 'dnd', activity: 'in a meeting', duration: '30m' } }) });
     const a = world({ schedule: week([{ time: '00:00-23:59', activity: 'free time', status: 'online' }]) });
-    S.cards.length = 0;   // (그사이 실리에서 카드를 지웠어요: 쓸 카드가 없어요)
     await S.put('sa', a.m); await S.auto.list();
     assert.match((await S.gen(a.id)).payload, /"message_saved"/);
-    assert.equal(S.st.filter(x => x.url === '/api/characters/merge-attributes').length, 0);
+    assert.ok(S.st.some(x => x.url === '/api/characters/merge-attributes'));
+    assert.equal((await S.get('sa')).messenger.rooms[a.room.id].messages.at(-1).text, 'brb');
 });

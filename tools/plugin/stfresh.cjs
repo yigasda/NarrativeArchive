@@ -14,6 +14,8 @@ const log = (...a) => console.log(...a);
     const settingsFile = path.join(user, 'settings.json'), backup = fs.readFileSync(settingsFile);
     const cardFile = path.join(user, 'characters', 'default_Seraphina.png'), cardBackup = fs.readFileSync(cardFile);
     // (a second persona, Ren: a picture in User Avatars and its name and description in settings.json)
+    // (the role-play chats get a message and our persona note: put back as they were)
+    const chatsDir = path.join(user, 'chats', 'default_Seraphina'), chatsBackup = new Map(fs.readdirSync(chatsDir).map(n => [n, fs.readFileSync(path.join(chatsDir, n))]));
     const renPic = path.join(user, 'User Avatars', 'ren.png');
     fs.copyFileSync(path.join(user, 'User Avatars', 'user-default.png'), renPic);
     const s = JSON.parse(backup.toString());
@@ -77,7 +79,7 @@ const log = (...a) => console.log(...a);
         });
         ok('browser: the persona is Ren now', r2.name1 === 'Ren', JSON.stringify(r2));
         await page.waitForTimeout(3500);   // (SillyTavern saves the card, the chat and the settings a moment later)
-        const header = JSON.parse(fs.readFileSync(path.join(user, 'chats', 'Seraphina', fs.readdirSync(path.join(user, 'chats', 'Seraphina')).sort().at(-1)), 'utf8').split('\n')[0]);
+        const f = r1.kit.chat.file, header = JSON.parse(fs.readFileSync(path.join(user, 'chats', f.dir, `${f.id}.jsonl`), 'utf8').split('\n')[0]);
         ok('the chat file remembers this chat\'s persona (stPersona)', header.chat_metadata?.narrative_archive?.stPersona === 'ren.png', JSON.stringify(header.chat_metadata?.narrative_archive?.stPersona));
         // the tab is hidden; a reply for later (in 2 s): the server sends it
         await page.evaluate(async () => {
@@ -99,6 +101,9 @@ const log = (...a) => console.log(...a);
     finally {
         await browser.close(); st.kill('SIGTERM'); model.close(); await new Promise(r => setTimeout(r, 1500));
         fs.writeFileSync(settingsFile, backup); fs.writeFileSync(cardFile, cardBackup); fs.rmSync(renPic, { force: true });
+        for (const n of fs.readdirSync(chatsDir)) if (!chatsBackup.has(n)) fs.rmSync(path.join(chatsDir, n), { force: true });
+        for (const [n, b] of chatsBackup) fs.writeFileSync(path.join(chatsDir, n), b);
+        fs.rmSync(path.join(user, 'NarrativeArchive', 'orbit'), { recursive: true, force: true });
         log(fail ? `FAILED ${fail}` : 'ALL OK'); process.exit(fail ? 1 : 0);
     }
 })();
