@@ -41,7 +41,9 @@ try {
         const { oai, pu } = RUN.loadCase(c);
         const acc = RUN.hashed(c).settings.accountStorage || {};
         const got = await page.evaluate(async ({ c, oai, pu, acc, NAME1, NAME2 }) => {
-            const S = await import('/script.js'), O = await import('/scripts/openai.js'), PU = await import('/scripts/power-user.js'), A = await import('/scripts/util/AccountStorage.js');
+            const S = await import('/script.js'), O = await import('/scripts/openai.js'), PU = await import('/scripts/power-user.js'), A = await import('/scripts/util/AccountStorage.js'), P = await import('/scripts/popup.js');
+            // (a proxy not confirmed yet: SillyTavern asks in a popup. Here nobody answers it — as the server, which cannot ask: cancelled)
+            P.Popup.show.confirm = async () => P.POPUP_RESULT.CANCELLED;
             for (const k of Object.keys(O.oai_settings)) delete O.oai_settings[k];
             Object.assign(O.oai_settings, structuredClone(oai));
             for (const k of Object.keys(PU.power_user)) delete PU.power_user[k];
@@ -52,8 +54,11 @@ try {
             try { return JSON.parse(JSON.stringify(await O.createGenerationParameters(structuredClone(O.oai_settings), c.model, c.type, structuredClone(c.messages)))); }
             catch (err) { return { error: String(err?.message || err) }; }
         }, { c, oai, pu, acc, NAME1, NAME2 });
-        const mine = await RUN.runCase(c);
-        const same = JSON.stringify(mine) === JSON.stringify(got);
+        // (the server's way to SillyTavern's own handlers — the bridge — here through the page, with its session)
+        const send = async (url, init) => { const r = await page.evaluate(async ({ url, body }) => { const x = await fetch(url, { method: 'POST', headers: SillyTavern.getContext().getRequestHeaders(), body }); return { status: x.status, text: await x.text() }; }, { url, body: init?.body ?? null }); return new Response(r.text, { status: r.status, headers: { 'Content-Type': 'application/json' } }); };
+        const mine = await RUN.runCase(c, send);
+        // (an error thrown by the JavaScript engine itself — new URL('not a url') — is worded by Chrome in the browser and by Node on the server)
+        const same = JSON.stringify(mine) === JSON.stringify(got) || (!!mine.error && !!got.error && c.id === 'proxy-bad-url');
         if (!same) fail++;
         console.log(same ? 'OK  ' : 'DIFF', c.id, same ? '' : `\n  browser ${JSON.stringify(got)}\n  server  ${JSON.stringify(mine)}`);
         if (!c.bias) expected[c.id] = got;

@@ -6,8 +6,23 @@ import * as PU from './public/scripts/power-user.js';
 import * as ACC from './public/scripts/util/AccountStorage.js';
 import * as SCRIPT from './public/script.js';
 import * as OAI from './public/scripts/openai.js';
+import * as SC from './public/scripts/st-context.js';
+import { initMacros } from './public/scripts/macros.js';
 
 const obj = v => !!v && typeof v === 'object' && !Array.isArray(v);
+
+// 매크로 등록 (실리 initMacros, macros.js 719~747: 페이지를 열 때 한 번, power_user를 읽은 뒤). 변수 매크로는 등록할 때
+// SillyTavern.getContext()를 잡아 둬요(variable-macros.js 10): 그때만 변수 묶음을 주는 getContext를 끼워요.
+// 실리는 옛 엔진(experimental_macro_engine 꺼짐)일 때만 옛 매크로 두 개(isMobile · lastGenerationType)를 더 등록해요. 서버도 처음 읽은
+// 설정대로 한 번만 해요: 실리를 켜 둔 채 그 설정을 바꾼 것과 같아요(실리도 다시 열 때까지 그대로예요).
+let inited = false;
+export function naInit() {
+    if (inited) return;
+    inited = true;
+    const had = globalThis.SillyTavern;
+    globalThis.SillyTavern = { getContext: () => ({ variables: SC.variables }) };
+    try { initMacros(); } finally { globalThis.SillyTavern = had; }
+}
 
 /**
  * settings.json(실리 /api/settings/get의 settings)을 옮긴 실리 코드에 채워요.
@@ -35,6 +50,7 @@ export function naLoad(settings) {
 
     // script.js 7966: loadPowerUserSettings — 기본값 위에 저장된 값
     PU.__naSet({ power_user: obj(settings.power_user) ? settings.power_user : {} });
+    naInit();
 
     // openai.js loadProxyPresets(settings) 6487~6507 · setProxyPreset 6509~6527 — script.js 7979 (loadOpenAISettings 뒤)
     let proxies = [{ name: 'None', url: '', password: '' }];

@@ -38,6 +38,8 @@ export let chat_metadata = {};
 
 // 대역: 실리 saveSettingsDebounced(470줄)는 브라우저 설정을 저장해요. 서버는 변수를 저장하지 않아서 아무것도 안 해요.
 export const saveSettingsDebounced = () => {};
+// 대역: 실리 token(브라우저 세션의 CSRF 토큰)은 서버에 없어요. 서버가 보내는 요청은 다리가 자기 토큰을 붙여요(plugin/bridge.mjs).
+let token;
 
 // 실리 public/script.js 484~498
 export const extension_prompt_types = {
@@ -80,6 +82,20 @@ export let main_api;// = "kobold";
 
 // 실리 public/script.js 635~635
 var kobold_horde_model = '';
+
+// 실리 public/script.js 647~658
+export function getRequestHeaders({ omitContentType = false } = {}) {
+    const headers = {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': token,
+    };
+
+    if (omitContentType) {
+        delete headers['Content-Type'];
+    }
+
+    return headers;
+}
 
 // 실리 public/script.js 2831~2961
 export function substituteParamsLegacy(content, _name1, _name2, _original, _group, _replaceCharacterCard = true, additionalMacro = {}, postProcessFn = (x) => x) {

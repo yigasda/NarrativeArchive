@@ -1,0 +1,1410 @@
+{
+ "openai-basic": {
+  "generate_data": {
+   "type": "quiet",
+   "messages": [
+    {
+     "role": "system",
+     "content": "You are {{char}}."
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ],
+   "model": "gpt-4o",
+   "temperature": 0.3,
+   "frequency_penalty": 0,
+   "presence_penalty": 0,
+   "top_p": 1,
+   "max_tokens": 4000,
+   "stream": false,
+   "chat_completion_source": "openai",
+   "user_name": "Ren",
+   "char_name": "Mara",
+   "group_names": [],
+   "include_reasoning": true,
+   "enable_web_search": false,
+   "request_images": false,
+   "request_image_resolution": "",
+   "request_image_aspect_ratio": "",
+   "custom_prompt_post_processing": ""
+  },
+  "stream": false,
+  "canMultiSwipe": false
+ },
+ "openai-o3": {
+  "generate_data": {
+   "type": "quiet",
+   "messages": [
+    {
+     "role": "system",
+     "content": "You are {{char}}."
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ],
+   "model": "o3",
+   "stream": false,
+   "chat_completion_source": "openai",
+   "user_name": "Ren",
+   "char_name": "Mara",
+   "group_names": [],
+   "include_reasoning": true,
+   "reasoning_effort": "high",
+   "enable_web_search": false,
+   "request_images": false,
+   "request_image_resolution": "",
+   "request_image_aspect_ratio": "",
+   "custom_prompt_post_processing": "",
+   "max_completion_tokens": 300
+  },
+  "stream": false,
+  "canMultiSwipe": false
+ },
+ "openai-o1-system": {
+  "generate_data": {
+   "type": "quiet",
+   "messages": [
+    {
+     "role": "user",
+     "content": "You are {{char}}."
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ],
+   "model": "o1",
+   "stream": false,
+   "chat_completion_source": "openai",
+   "user_name": "Ren",
+   "char_name": "Mara",
+   "group_names": [],
+   "include_reasoning": true,
+   "enable_web_search": false,
+   "request_images": false,
+   "request_image_resolution": "",
+   "request_image_aspect_ratio": "",
+   "custom_prompt_post_processing": "",
+   "max_completion_tokens": 300
+  },
+  "stream": false,
+  "canMultiSwipe": false
+ },
+ "openai-gpt5-min": {
+  "generate_data": {
+   "type": "quiet",
+   "messages": [
+    {
+     "role": "system",
+     "content": "You are {{char}}."
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ],
+   "model": "gpt-5",
+   "stream": false,
+   "chat_completion_source": "openai",
+   "user_name": "Ren",
+   "char_name": "Mara",
+   "group_names": [],
+   "include_reasoning": true,
+   "reasoning_effort": "min",
+   "enable_web_search": false,
+   "request_images": false,
+   "request_image_resolution": "",
+   "request_image_aspect_ratio": "",
+   "custom_prompt_post_processing": "",
+   "max_completion_tokens": 300
+  },
+  "stream": false,
+  "canMultiSwipe": false
+ },
+ "openai-gpt5.4-min": {
+  "generate_data": {
+   "type": "quiet",
+   "messages": [
+    {
+     "role": "system",
+     "content": "You are {{char}}."
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ],
+   "model": "gpt-5.4",
+   "stream": false,
+   "chat_completion_source": "openai",
+   "user_name": "Ren",
+   "char_name": "Mara",
+   "group_names": [],
+   "include_reasoning": true,
+   "reasoning_effort": "none",
+   "enable_web_search": false,
+   "request_images": false,
+   "request_image_resolution": "",
+   "request_image_aspect_ratio": "",
+   "custom_prompt_post_processing": "",
+   "max_completion_tokens": 300
+  },
+  "stream": false,
+  "canMultiSwipe": false
+ },
+ "openai-gpt5.6-max": {
+  "generate_data": {
+   "type": "quiet",
+   "messages": [
+    {
+     "role": "system",
+     "content": "You are {{char}}."
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ],
+   "model": "gpt-5.6",
+   "stream": false,
+   "chat_completion_source": "openai",
+   "user_name": "Ren",
+   "char_name": "Mara",
+   "group_names": [],
+   "include_reasoning": true,
+   "reasoning_effort": "xhigh",
+   "enable_web_search": false,
+   "request_images": false,
+   "request_image_resolution": "",
+   "request_image_aspect_ratio": "",
+   "custom_prompt_post_processing": "",
+   "max_completion_tokens": 300
+  },
+  "stream": false,
+  "canMultiSwipe": false
+ },
+ "openai-gpt5.2-auto": {
+  "generate_data": {
+   "type": "quiet",
+   "messages": [
+    {
+     "role": "system",
+     "content": "You are {{char}}."
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ],
+   "model": "gpt-5.2",
+   "temperature": 1,
+   "top_p": 1,
+   "stream": false,
+   "chat_completion_source": "openai",
+   "user_name": "Ren",
+   "char_name": "Mara",
+   "group_names": [],
+   "include_reasoning": true,
+   "enable_web_search": false,
+   "request_images": false,
+   "request_image_resolution": "",
+   "request_image_aspect_ratio": "",
+   "custom_prompt_post_processing": "",
+   "max_completion_tokens": 300
+  },
+  "stream": false,
+  "canMultiSwipe": false
+ },
+ "openai-vision": {
+  "generate_data": {
+   "type": "quiet",
+   "messages": [
+    {
+     "role": "system",
+     "content": "You are {{char}}."
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ],
+   "model": "gpt-4-vision-preview",
+   "temperature": 1,
+   "frequency_penalty": 0,
+   "presence_penalty": 0,
+   "top_p": 1,
+   "max_tokens": 300,
+   "stream": false,
+   "chat_completion_source": "openai",
+   "user_name": "Ren",
+   "char_name": "Mara",
+   "group_names": [],
+   "include_reasoning": true,
+   "enable_web_search": false,
+   "request_images": false,
+   "request_image_resolution": "",
+   "request_image_aspect_ratio": "",
+   "custom_prompt_post_processing": ""
+  },
+  "stream": false,
+  "canMultiSwipe": false
+ },
+ "openai-n": {
+  "generate_data": {
+   "type": "normal",
+   "messages": [
+    {
+     "role": "system",
+     "content": "You are {{char}}."
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ],
+   "model": "gpt-4o",
+   "temperature": 1,
+   "frequency_penalty": 0,
+   "presence_penalty": 0,
+   "top_p": 1,
+   "max_tokens": 300,
+   "stream": false,
+   "chat_completion_source": "openai",
+   "n": 3,
+   "user_name": "Ren",
+   "char_name": "Mara",
+   "group_names": [],
+   "include_reasoning": true,
+   "enable_web_search": false,
+   "request_images": false,
+   "request_image_resolution": "",
+   "request_image_aspect_ratio": "",
+   "custom_prompt_post_processing": ""
+  },
+  "stream": false,
+  "canMultiSwipe": true
+ },
+ "openai-stream-quiet": {
+  "generate_data": {
+   "type": "quiet",
+   "messages": [
+    {
+     "role": "system",
+     "content": "You are {{char}}."
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ],
+   "model": "gpt-4o",
+   "temperature": 1,
+   "frequency_penalty": 0,
+   "presence_penalty": 0,
+   "top_p": 1,
+   "max_tokens": 300,
+   "stream": false,
+   "chat_completion_source": "openai",
+   "user_name": "Ren",
+   "char_name": "Mara",
+   "group_names": [],
+   "include_reasoning": true,
+   "enable_web_search": false,
+   "request_images": false,
+   "request_image_resolution": "",
+   "request_image_aspect_ratio": "",
+   "custom_prompt_post_processing": ""
+  },
+  "stream": false,
+  "canMultiSwipe": false
+ },
+ "openai-stream-normal": {
+  "generate_data": {
+   "type": "normal",
+   "messages": [
+    {
+     "role": "system",
+     "content": "You are {{char}}."
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ],
+   "model": "gpt-4o",
+   "temperature": 1,
+   "frequency_penalty": 0,
+   "presence_penalty": 0,
+   "top_p": 1,
+   "max_tokens": 300,
+   "stream": true,
+   "chat_completion_source": "openai",
+   "user_name": "Ren",
+   "char_name": "Mara",
+   "group_names": [],
+   "include_reasoning": true,
+   "enable_web_search": false,
+   "request_images": false,
+   "request_image_resolution": "",
+   "request_image_aspect_ratio": "",
+   "custom_prompt_post_processing": ""
+  },
+  "stream": true,
+  "canMultiSwipe": false
+ },
+ "claude-prefill-quiet": {
+  "generate_data": {
+   "type": "quiet",
+   "messages": [
+    {
+     "role": "system",
+     "content": "You are {{char}}."
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ],
+   "model": "claude-3-7-sonnet",
+   "temperature": 1,
+   "frequency_penalty": 0,
+   "presence_penalty": 0,
+   "top_p": 1,
+   "max_tokens": 300,
+   "stream": false,
+   "chat_completion_source": "claude",
+   "user_name": "Ren",
+   "char_name": "Mara",
+   "group_names": [],
+   "include_reasoning": true,
+   "reasoning_effort": "auto",
+   "enable_web_search": false,
+   "request_images": false,
+   "request_image_resolution": "",
+   "request_image_aspect_ratio": "",
+   "custom_prompt_post_processing": "",
+   "top_k": 0,
+   "use_sysprompt": false,
+   "stop": []
+  },
+  "stream": false,
+  "canMultiSwipe": false
+ },
+ "claude-prefill-normal": {
+  "generate_data": {
+   "type": "normal",
+   "messages": [
+    {
+     "role": "system",
+     "content": "You are {{char}}."
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ],
+   "model": "claude-3-7-sonnet",
+   "temperature": 1,
+   "frequency_penalty": 0,
+   "presence_penalty": 0,
+   "top_p": 1,
+   "max_tokens": 300,
+   "stream": false,
+   "chat_completion_source": "claude",
+   "user_name": "Ren",
+   "char_name": "Mara",
+   "group_names": [],
+   "include_reasoning": true,
+   "reasoning_effort": "auto",
+   "enable_web_search": false,
+   "request_images": false,
+   "request_image_resolution": "",
+   "request_image_aspect_ratio": "",
+   "custom_prompt_post_processing": "",
+   "top_k": 40,
+   "use_sysprompt": true,
+   "stop": [],
+   "assistant_prefill": "Sure, Mara:"
+  },
+  "stream": false,
+  "canMultiSwipe": false
+ },
+ "claude-impersonate": {
+  "generate_data": {
+   "type": "impersonate",
+   "messages": [
+    {
+     "role": "system",
+     "content": "You are {{char}}."
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ],
+   "model": "claude-3-7-sonnet",
+   "temperature": 1,
+   "frequency_penalty": 0,
+   "presence_penalty": 0,
+   "top_p": 1,
+   "max_tokens": 300,
+   "stream": false,
+   "chat_completion_source": "claude",
+   "user_name": "Ren",
+   "char_name": "Mara",
+   "group_names": [],
+   "include_reasoning": true,
+   "reasoning_effort": "auto",
+   "enable_web_search": false,
+   "request_images": false,
+   "request_image_resolution": "",
+   "request_image_aspect_ratio": "",
+   "custom_prompt_post_processing": "",
+   "top_k": 0,
+   "use_sysprompt": false,
+   "stop": [],
+   "assistant_prefill": "As Ren:"
+  },
+  "stream": false,
+  "canMultiSwipe": false
+ },
+ "claude5": {
+  "generate_data": {
+   "type": "quiet",
+   "messages": [
+    {
+     "role": "system",
+     "content": "You are {{char}}."
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ],
+   "model": "x-claude-opus-5-test",
+   "max_tokens": 300,
+   "stream": false,
+   "chat_completion_source": "claude",
+   "user_name": "Ren",
+   "char_name": "Mara",
+   "group_names": [],
+   "include_reasoning": true,
+   "reasoning_effort": "high",
+   "enable_web_search": false,
+   "request_images": false,
+   "request_image_resolution": "",
+   "request_image_aspect_ratio": "",
+   "custom_prompt_post_processing": "",
+   "use_sysprompt": false,
+   "stop": []
+  },
+  "stream": false,
+  "canMultiSwipe": false
+ },
+ "makersuite": {
+  "generate_data": {
+   "type": "quiet",
+   "messages": [
+    {
+     "role": "system",
+     "content": "You are {{char}}."
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ],
+   "model": "gemini-2.5-pro",
+   "temperature": 1,
+   "frequency_penalty": 0,
+   "presence_penalty": 0,
+   "top_p": 1,
+   "max_tokens": 300,
+   "stream": false,
+   "chat_completion_source": "makersuite",
+   "user_name": "Ren",
+   "char_name": "Mara",
+   "group_names": [],
+   "include_reasoning": true,
+   "reasoning_effort": "low",
+   "enable_web_search": false,
+   "request_images": false,
+   "request_image_resolution": "",
+   "request_image_aspect_ratio": "",
+   "custom_prompt_post_processing": "",
+   "top_k": 0,
+   "stop": [],
+   "use_sysprompt": false
+  },
+  "stream": false,
+  "canMultiSwipe": false
+ },
+ "vertexai": {
+  "generate_data": {
+   "type": "quiet",
+   "messages": [
+    {
+     "role": "system",
+     "content": "You are {{char}}."
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ],
+   "model": "gemini-2.5-flash",
+   "temperature": 1,
+   "frequency_penalty": 0,
+   "presence_penalty": 0,
+   "top_p": 1,
+   "max_tokens": 300,
+   "stream": false,
+   "chat_completion_source": "vertexai",
+   "user_name": "Ren",
+   "char_name": "Mara",
+   "group_names": [],
+   "include_reasoning": true,
+   "reasoning_effort": "medium",
+   "enable_web_search": false,
+   "request_images": false,
+   "request_image_resolution": "",
+   "request_image_aspect_ratio": "",
+   "custom_prompt_post_processing": "",
+   "top_k": 0,
+   "stop": [],
+   "use_sysprompt": false,
+   "vertexai_auth_mode": "express",
+   "vertexai_region": "us-central1",
+   "vertexai_express_project_id": ""
+  },
+  "stream": false,
+  "canMultiSwipe": false
+ },
+ "openrouter": {
+  "generate_data": {
+   "type": "quiet",
+   "messages": [
+    {
+     "role": "system",
+     "content": "You are {{char}}."
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ],
+   "model": "openai/o3",
+   "stream": false,
+   "chat_completion_source": "openrouter",
+   "user_name": "Ren",
+   "char_name": "Mara",
+   "group_names": [],
+   "include_reasoning": false,
+   "reasoning_effort": "none",
+   "enable_web_search": false,
+   "request_images": false,
+   "request_image_resolution": "",
+   "request_image_aspect_ratio": "",
+   "custom_prompt_post_processing": "",
+   "top_k": 0,
+   "min_p": 0,
+   "repetition_penalty": 1,
+   "top_a": 0,
+   "use_fallback": false,
+   "provider": [
+    "A"
+   ],
+   "quantizations": [],
+   "allow_fallbacks": true,
+   "middleout": "on",
+   "max_completion_tokens": 300
+  },
+  "stream": false,
+  "canMultiSwipe": false
+ },
+ "openrouter-thoughts": {
+  "generate_data": {
+   "type": "quiet",
+   "messages": [
+    {
+     "role": "system",
+     "content": "You are {{char}}."
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ],
+   "model": "anthropic/x-claude-sonnet-5-test",
+   "max_tokens": 300,
+   "stream": false,
+   "chat_completion_source": "openrouter",
+   "user_name": "Ren",
+   "char_name": "Mara",
+   "group_names": [],
+   "include_reasoning": true,
+   "enable_web_search": false,
+   "request_images": false,
+   "request_image_resolution": "",
+   "request_image_aspect_ratio": "",
+   "custom_prompt_post_processing": "",
+   "min_p": 0,
+   "repetition_penalty": 1,
+   "top_a": 0,
+   "use_fallback": false,
+   "provider": [],
+   "quantizations": [],
+   "allow_fallbacks": true,
+   "middleout": "on"
+  },
+  "stream": false,
+  "canMultiSwipe": false
+ },
+ "custom-macros": {
+  "generate_data": {
+   "type": "quiet",
+   "messages": [
+    {
+     "role": "system",
+     "content": "You are {{char}}."
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ],
+   "model": "m",
+   "temperature": 1,
+   "frequency_penalty": 0,
+   "presence_penalty": 0,
+   "top_p": 1,
+   "max_tokens": 300,
+   "stream": false,
+   "chat_completion_source": "custom",
+   "user_name": "Ren",
+   "char_name": "Mara",
+   "group_names": [],
+   "include_reasoning": true,
+   "enable_web_search": false,
+   "request_images": false,
+   "request_image_resolution": "",
+   "request_image_aspect_ratio": "",
+   "custom_prompt_post_processing": "",
+   "custom_url": "http://127.0.0.1:9/v1",
+   "custom_include_body": "who: Mara",
+   "custom_exclude_body": "",
+   "custom_include_headers": "X-User: Ren"
+  },
+  "stream": false,
+  "canMultiSwipe": false
+ },
+ "custom-kobold-max": {
+  "generate_data": {
+   "type": "quiet",
+   "messages": [
+    {
+     "role": "system",
+     "content": "You are {{char}}."
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ],
+   "model": "koboldcpp/x",
+   "temperature": 1,
+   "frequency_penalty": 0,
+   "presence_penalty": 0,
+   "top_p": 1,
+   "max_tokens": 300,
+   "stream": false,
+   "chat_completion_source": "custom",
+   "user_name": "Ren",
+   "char_name": "Mara",
+   "group_names": [],
+   "include_reasoning": true,
+   "reasoning_effort": "xhigh",
+   "enable_web_search": false,
+   "request_images": false,
+   "request_image_resolution": "",
+   "request_image_aspect_ratio": "",
+   "custom_prompt_post_processing": "",
+   "custom_url": "",
+   "custom_include_body": "",
+   "custom_exclude_body": "",
+   "custom_include_headers": ""
+  },
+  "stream": false,
+  "canMultiSwipe": false
+ },
+ "deepseek": {
+  "generate_data": {
+   "type": "quiet",
+   "messages": [
+    {
+     "role": "system",
+     "content": "You are {{char}}."
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ],
+   "model": "deepseek-v4-flash",
+   "temperature": 1,
+   "frequency_penalty": 0,
+   "presence_penalty": 0,
+   "top_p": 2.220446049250313e-16,
+   "max_tokens": 300,
+   "stream": false,
+   "chat_completion_source": "deepseek",
+   "user_name": "Ren",
+   "char_name": "Mara",
+   "group_names": [],
+   "include_reasoning": true,
+   "reasoning_effort": "high",
+   "enable_web_search": false,
+   "request_images": false,
+   "request_image_resolution": "",
+   "request_image_aspect_ratio": "",
+   "custom_prompt_post_processing": ""
+  },
+  "stream": false,
+  "canMultiSwipe": false
+ },
+ "xai-mini": {
+  "generate_data": {
+   "type": "quiet",
+   "messages": [
+    {
+     "role": "system",
+     "content": "You are {{char}}."
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ],
+   "model": "grok-3-mini",
+   "temperature": 1,
+   "top_p": 1,
+   "max_tokens": 300,
+   "stream": false,
+   "chat_completion_source": "xai",
+   "user_name": "Ren",
+   "char_name": "Mara",
+   "group_names": [],
+   "include_reasoning": true,
+   "reasoning_effort": "high",
+   "enable_web_search": false,
+   "request_images": false,
+   "request_image_resolution": "",
+   "request_image_aspect_ratio": "",
+   "custom_prompt_post_processing": ""
+  },
+  "stream": false,
+  "canMultiSwipe": false
+ },
+ "xai-4": {
+  "generate_data": {
+   "type": "quiet",
+   "messages": [
+    {
+     "role": "system",
+     "content": "You are {{char}}."
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ],
+   "model": "grok-4",
+   "temperature": 1,
+   "top_p": 1,
+   "max_tokens": 300,
+   "stream": false,
+   "chat_completion_source": "xai",
+   "user_name": "Ren",
+   "char_name": "Mara",
+   "group_names": [],
+   "include_reasoning": true,
+   "enable_web_search": false,
+   "request_images": false,
+   "request_image_resolution": "",
+   "request_image_aspect_ratio": "",
+   "custom_prompt_post_processing": ""
+  },
+  "stream": false,
+  "canMultiSwipe": false
+ },
+ "mistral": {
+  "generate_data": {
+   "type": "quiet",
+   "messages": [
+    {
+     "role": "system",
+     "content": "You are {{char}}."
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ],
+   "model": "mistral-large-latest",
+   "temperature": 1,
+   "frequency_penalty": 0,
+   "presence_penalty": 0,
+   "top_p": 1,
+   "max_tokens": 300,
+   "stream": false,
+   "chat_completion_source": "mistralai",
+   "user_name": "Ren",
+   "char_name": "Mara",
+   "group_names": [],
+   "include_reasoning": true,
+   "reasoning_effort": "auto",
+   "enable_web_search": false,
+   "request_images": false,
+   "request_image_resolution": "",
+   "request_image_aspect_ratio": "",
+   "custom_prompt_post_processing": "",
+   "safe_prompt": false,
+   "stop": []
+  },
+  "stream": false,
+  "canMultiSwipe": false
+ },
+ "cohere": {
+  "generate_data": {
+   "type": "quiet",
+   "messages": [
+    {
+     "role": "system",
+     "content": "You are {{char}}."
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ],
+   "model": "command-a",
+   "temperature": 1,
+   "frequency_penalty": 1,
+   "presence_penalty": 0,
+   "top_p": 0.99,
+   "max_tokens": 300,
+   "stream": false,
+   "chat_completion_source": "cohere",
+   "user_name": "Ren",
+   "char_name": "Mara",
+   "group_names": [],
+   "include_reasoning": true,
+   "reasoning_effort": "auto",
+   "enable_web_search": false,
+   "request_images": false,
+   "request_image_resolution": "",
+   "request_image_aspect_ratio": "",
+   "custom_prompt_post_processing": "",
+   "top_k": 0,
+   "stop": []
+  },
+  "stream": false,
+  "canMultiSwipe": false
+ },
+ "groq": {
+  "generate_data": {
+   "type": "quiet",
+   "messages": [
+    {
+     "role": "system",
+     "content": "You are {{char}}."
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ],
+   "model": "llama-3.3-70b",
+   "temperature": 1,
+   "frequency_penalty": 0,
+   "presence_penalty": 0,
+   "top_p": 1,
+   "max_tokens": 300,
+   "stream": false,
+   "chat_completion_source": "groq",
+   "user_name": "Ren",
+   "char_name": "Mara",
+   "group_names": [],
+   "include_reasoning": true,
+   "reasoning_effort": "auto",
+   "enable_web_search": false,
+   "request_images": false,
+   "request_image_resolution": "",
+   "request_image_aspect_ratio": "",
+   "custom_prompt_post_processing": ""
+  },
+  "stream": false,
+  "canMultiSwipe": false
+ },
+ "zai": {
+  "generate_data": {
+   "type": "quiet",
+   "messages": [
+    {
+     "role": "system",
+     "content": "You are {{char}}."
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ],
+   "model": "glm-4.6",
+   "temperature": 1,
+   "top_p": 1,
+   "max_tokens": 300,
+   "stream": false,
+   "chat_completion_source": "zai",
+   "user_name": "Ren",
+   "char_name": "Mara",
+   "group_names": [],
+   "include_reasoning": true,
+   "reasoning_effort": "auto",
+   "enable_web_search": false,
+   "request_images": false,
+   "request_image_resolution": "",
+   "request_image_aspect_ratio": "",
+   "custom_prompt_post_processing": "",
+   "stop": [],
+   "zai_endpoint": "common"
+  },
+  "stream": false,
+  "canMultiSwipe": false
+ },
+ "minimax-temp0": {
+  "generate_data": {
+   "type": "quiet",
+   "messages": [
+    {
+     "role": "system",
+     "content": "You are {{char}}."
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ],
+   "model": "MiniMax-M2",
+   "temperature": 2.220446049250313e-16,
+   "frequency_penalty": 0,
+   "presence_penalty": 0,
+   "top_p": 1,
+   "max_tokens": 300,
+   "stream": false,
+   "chat_completion_source": "minimax",
+   "user_name": "Ren",
+   "char_name": "Mara",
+   "group_names": [],
+   "include_reasoning": true,
+   "reasoning_effort": "auto",
+   "enable_web_search": false,
+   "request_images": false,
+   "request_image_resolution": "",
+   "request_image_aspect_ratio": "",
+   "custom_prompt_post_processing": "",
+   "minimax_endpoint": "global"
+  },
+  "stream": false,
+  "canMultiSwipe": false
+ },
+ "seed": {
+  "generate_data": {
+   "type": "quiet",
+   "messages": [
+    {
+     "role": "system",
+     "content": "You are {{char}}."
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ],
+   "model": "gpt-4o",
+   "temperature": 1,
+   "frequency_penalty": 0,
+   "presence_penalty": 0,
+   "top_p": 1,
+   "max_tokens": 300,
+   "stream": false,
+   "chat_completion_source": "openai",
+   "user_name": "Ren",
+   "char_name": "Mara",
+   "group_names": [],
+   "include_reasoning": true,
+   "enable_web_search": false,
+   "request_images": false,
+   "request_image_resolution": "",
+   "request_image_aspect_ratio": "",
+   "custom_prompt_post_processing": "",
+   "seed": 7
+  },
+  "stream": false,
+  "canMultiSwipe": false
+ },
+ "verbosity": {
+  "generate_data": {
+   "type": "quiet",
+   "messages": [
+    {
+     "role": "system",
+     "content": "You are {{char}}."
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ],
+   "model": "gpt-4o",
+   "temperature": 1,
+   "frequency_penalty": 0,
+   "presence_penalty": 0,
+   "top_p": 1,
+   "max_tokens": 300,
+   "stream": false,
+   "chat_completion_source": "openai",
+   "user_name": "Ren",
+   "char_name": "Mara",
+   "group_names": [],
+   "include_reasoning": true,
+   "enable_web_search": false,
+   "request_images": false,
+   "request_image_resolution": "",
+   "request_image_aspect_ratio": "",
+   "custom_prompt_post_processing": "",
+   "verbosity": "low"
+  },
+  "stream": false,
+  "canMultiSwipe": false
+ },
+ "stops": {
+  "generate_data": {
+   "type": "quiet",
+   "messages": [
+    {
+     "role": "system",
+     "content": "You are {{char}}."
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ],
+   "model": "gpt-4o",
+   "temperature": 1,
+   "frequency_penalty": 0,
+   "presence_penalty": 0,
+   "top_p": 1,
+   "max_tokens": 300,
+   "stream": false,
+   "stop": [
+    "\nRen:",
+    "Mara:",
+    "x",
+    "y"
+   ],
+   "chat_completion_source": "openai",
+   "user_name": "Ren",
+   "char_name": "Mara",
+   "group_names": [],
+   "include_reasoning": true,
+   "enable_web_search": false,
+   "request_images": false,
+   "request_image_resolution": "",
+   "request_image_aspect_ratio": "",
+   "custom_prompt_post_processing": ""
+  },
+  "stream": false,
+  "canMultiSwipe": false
+ },
+ "stops-claude": {
+  "generate_data": {
+   "type": "quiet",
+   "messages": [
+    {
+     "role": "system",
+     "content": "You are {{char}}."
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ],
+   "model": "claude-3-7-sonnet",
+   "temperature": 1,
+   "frequency_penalty": 0,
+   "presence_penalty": 0,
+   "top_p": 1,
+   "max_tokens": 300,
+   "stream": false,
+   "stop": [
+    "a",
+    "b",
+    "c",
+    "d",
+    "e",
+    "f"
+   ],
+   "chat_completion_source": "claude",
+   "user_name": "Ren",
+   "char_name": "Mara",
+   "group_names": [],
+   "include_reasoning": true,
+   "reasoning_effort": "auto",
+   "enable_web_search": false,
+   "request_images": false,
+   "request_image_resolution": "",
+   "request_image_aspect_ratio": "",
+   "custom_prompt_post_processing": "",
+   "top_k": 0,
+   "use_sysprompt": false
+  },
+  "stream": false,
+  "canMultiSwipe": false
+ },
+ "stops-gemini": {
+  "generate_data": {
+   "type": "quiet",
+   "messages": [
+    {
+     "role": "system",
+     "content": "You are {{char}}."
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ],
+   "model": "gemini-2.5-pro",
+   "temperature": 1,
+   "frequency_penalty": 0,
+   "presence_penalty": 0,
+   "top_p": 1,
+   "max_tokens": 300,
+   "stream": false,
+   "stop": [
+    "short",
+    "c",
+    "d",
+    "e"
+   ],
+   "chat_completion_source": "makersuite",
+   "user_name": "Ren",
+   "char_name": "Mara",
+   "group_names": [],
+   "include_reasoning": true,
+   "reasoning_effort": "auto",
+   "enable_web_search": false,
+   "request_images": false,
+   "request_image_resolution": "",
+   "request_image_aspect_ratio": "",
+   "custom_prompt_post_processing": "",
+   "top_k": 0,
+   "use_sysprompt": false
+  },
+  "stream": false,
+  "canMultiSwipe": false
+ },
+ "logprobs": {
+  "generate_data": {
+   "type": "quiet",
+   "messages": [
+    {
+     "role": "system",
+     "content": "You are {{char}}."
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ],
+   "model": "gpt-4o",
+   "temperature": 1,
+   "frequency_penalty": 0,
+   "presence_penalty": 0,
+   "top_p": 1,
+   "max_tokens": 300,
+   "stream": false,
+   "chat_completion_source": "openai",
+   "user_name": "Ren",
+   "char_name": "Mara",
+   "group_names": [],
+   "include_reasoning": true,
+   "enable_web_search": false,
+   "request_images": false,
+   "request_image_resolution": "",
+   "request_image_aspect_ratio": "",
+   "custom_prompt_post_processing": "",
+   "logprobs": 5
+  },
+  "stream": false,
+  "canMultiSwipe": false
+ },
+ "tools-quiet": {
+  "generate_data": {
+   "type": "quiet",
+   "messages": [
+    {
+     "role": "system",
+     "content": "You are {{char}}."
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ],
+   "model": "gpt-4o",
+   "temperature": 1,
+   "frequency_penalty": 0,
+   "presence_penalty": 0,
+   "top_p": 1,
+   "max_tokens": 300,
+   "stream": false,
+   "chat_completion_source": "openai",
+   "user_name": "Ren",
+   "char_name": "Mara",
+   "group_names": [],
+   "include_reasoning": true,
+   "enable_web_search": false,
+   "request_images": false,
+   "request_image_resolution": "",
+   "request_image_aspect_ratio": "",
+   "custom_prompt_post_processing": ""
+  },
+  "stream": false,
+  "canMultiSwipe": false
+ },
+ "tools-normal": {
+  "generate_data": {
+   "type": "normal",
+   "messages": [
+    {
+     "role": "system",
+     "content": "You are {{char}}."
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ],
+   "model": "gpt-4o",
+   "temperature": 1,
+   "frequency_penalty": 0,
+   "presence_penalty": 0,
+   "top_p": 1,
+   "max_tokens": 300,
+   "stream": false,
+   "chat_completion_source": "openai",
+   "user_name": "Ren",
+   "char_name": "Mara",
+   "group_names": [],
+   "include_reasoning": true,
+   "enable_web_search": false,
+   "request_images": false,
+   "request_image_resolution": "",
+   "request_image_aspect_ratio": "",
+   "custom_prompt_post_processing": ""
+  },
+  "stream": false,
+  "canMultiSwipe": false
+ },
+ "proxy-confirmed": {
+  "generate_data": {
+   "type": "quiet",
+   "messages": [
+    {
+     "role": "system",
+     "content": "You are {{char}}."
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ],
+   "model": "gpt-4o",
+   "temperature": 1,
+   "frequency_penalty": 0,
+   "presence_penalty": 0,
+   "top_p": 1,
+   "max_tokens": 300,
+   "stream": false,
+   "chat_completion_source": "openai",
+   "user_name": "Ren",
+   "char_name": "Mara",
+   "group_names": [],
+   "include_reasoning": true,
+   "enable_web_search": false,
+   "request_images": false,
+   "request_image_resolution": "",
+   "request_image_aspect_ratio": "",
+   "custom_prompt_post_processing": "",
+   "reverse_proxy": "https://proxy.example/v1",
+   "proxy_password": "PW"
+  },
+  "stream": false,
+  "canMultiSwipe": false
+ },
+ "proxy-not-confirmed": {
+  "error": "Proxy connection denied."
+ },
+ "proxy-bad-url": {
+  "error": "Failed to construct 'URL': Invalid URL"
+ },
+ "proxy-unsupported-source": {
+  "generate_data": {
+   "type": "quiet",
+   "messages": [
+    {
+     "role": "system",
+     "content": "You are {{char}}."
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ],
+   "model": "openai/gpt-4o",
+   "temperature": 1,
+   "frequency_penalty": 0,
+   "presence_penalty": 0,
+   "top_p": 1,
+   "max_tokens": 300,
+   "stream": false,
+   "chat_completion_source": "openrouter",
+   "user_name": "Ren",
+   "char_name": "Mara",
+   "group_names": [],
+   "include_reasoning": true,
+   "enable_web_search": false,
+   "request_images": false,
+   "request_image_resolution": "",
+   "request_image_aspect_ratio": "",
+   "custom_prompt_post_processing": "",
+   "top_k": 0,
+   "min_p": 0,
+   "repetition_penalty": 1,
+   "top_a": 0,
+   "use_fallback": false,
+   "provider": [],
+   "quantizations": [],
+   "allow_fallbacks": true,
+   "middleout": "on"
+  },
+  "stream": false,
+  "canMultiSwipe": false
+ }
+}

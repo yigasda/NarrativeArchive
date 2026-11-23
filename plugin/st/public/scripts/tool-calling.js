@@ -3,13 +3,24 @@
 import { main_api } from '../script.js';
 import { chat_completion_sources, custom_prompt_post_processing_types, getChatCompletionModel, model_list, oai_settings } from './openai.js';
 
-// 실리 public/scripts/tool-calling.js 242~247
+// 실리 public/scripts/tool-calling.js 242~248
 export class ToolManager {
     /**
      * A map of tool names to tool definitions.
      * @type {Map<string, ToolDefinition>}
      */
     static #tools = new Map();
+
+
+// 실리 public/scripts/tool-calling.js 256~263
+
+    /**
+     * Returns an Array of all tools that have been registered.
+     * @type {ToolDefinition[]}
+     */
+    static get tools() {
+        return Array.from(this.#tools.values());
+    }
 
 // 실리 public/scripts/tool-calling.js 400~418
     static async registerFunctionToolsOpenAI(data) {
