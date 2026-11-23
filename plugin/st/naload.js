@@ -413,6 +413,8 @@ export function naLoad(settings, data) {
 
     // script.js 7958 loadTextGenSettings(data, settings)
     loadTextGenSettingsValues(data, settings);
+    // ({{banned "…"}} words: SillyTavern empties the list after each generation — a page starts with none. A job starts with none too)
+    TG.__naSet({ textgenerationwebui_banned_in_macros: [] });
 
     // openai.js loadOpenAISettings(data, settings.oai_settings ?? settings) — script.js 7961. 프리셋 목록(4321~4336), 그리고 값을 정하는 줄 (4338~4341):
     //   migrateChatCompletionSettings(settings); for (const key of Object.keys(default_settings)) oai_settings[key] = settings[key] ?? default_settings[key];

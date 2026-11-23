@@ -61,9 +61,3 @@ test('초안 모델이 막혀 AI 기능 모델로 다시 보낼 때도 Orbit의 
     } finally { console.warn = warn; }
     assert.deepEqual(calls.map(c => [c[0], c[1] === 'p2' ? 'p2' : '']), [['profile', 'p2'], ['raw', '']]);
 });
-
-test('프로필 요청에 얹는 추론 레벨: 서버에서는 브라우저가 실리 코드로 만든 값을 받아요 (levelPayload)', async () => {
-    globalThis.__naStOpenai = { levelPayload: (s, m, e) => ({ reasoning_effort: `${s}/${m}/${e}`, include_reasoning: true }), createGenerationParameters: () => { throw new Error('not here'); } };
-    try { assert.deepEqual(await AI.stLevelPayload('claude', 'c-1', 'high'), { reasoning_effort: 'claude/c-1/high', include_reasoning: true }); }
-    finally { delete globalThis.__naStOpenai; }
-});

@@ -1819,10 +1819,11 @@ test('캐릭터 명령 스위치 (마리나라의 Commands): 끄면 답장 지�
     } finally { delete T.ask; }
 });
 
-// ---- 서버 플러그인이 읽을 묶음 (liveKitRefresh): 플러그인에 둔 채팅만, 실리 연결 방식으로 나가는 방의 요청 틀까지
+// ---- 서버 플러그인이 읽을 묶음 (liveKitRefresh): 플러그인에 둔 채팅만, 이 Orbit이 실리의 어느 채팅인지 · 확장 버전만.
+// 실리에 보내는 요청은 서버가 옮긴 실리 코드(plugin/st)로 그때그때 만들어요(tests/pluginwork.test.mjs): 브라우저는 요청을 떠 두지 않아요
 test('서버 묶음: 플러그인에 둔 채팅만 만들어요. 달라졌을 때만 넣어요', async () => {
     const c = world();
-    Object.assign(T, { tail: { lines: ['[#4] Mara: on my way'], first: 4, end: 4 }, characters: [{ name: 'Mara', avatar: 'mara.png', data: { name: 'Mara', description: 'A baker.' } }], st: { name1: 'Ren', powerUserSettings: { persona_description: 'Ren is a student.' } }, kept: false, tpl: [] });
+    Object.assign(T, { tail: { lines: ['[#4] Mara: on my way'], first: 4, end: 4 }, characters: [{ name: 'Mara', avatar: 'mara.png', data: { name: 'Mara', description: 'A baker.' } }], st: { name1: 'Ren', powerUserSettings: { persona_description: 'Ren is a student.' } }, kept: false });
     try {
         assert.equal(await G.liveKitRefresh(c.real), false);
         assert.equal(c.real.live.kit, undefined);
@@ -1832,8 +1833,8 @@ test('서버 묶음: 플러그인에 둔 채팅만 만들어요. 달라졌을 �
         assert.deepEqual([kit.v, kit.ver, kit.chat.avatar], [1, '0.0.0-test', 'mara.png']);
         // (카드 · 페르소나 · 롤플 메시지는 묶음에 없어요: 서버가 답장마다 실리에서 새로 읽어요 — plugin/work.mjs)
         for (const k of ['name1', 'persona', 'tail', 'characters', 'meta']) assert.equal(kit[k], undefined, k);
-        // (초안 모델이 커스텀 API면 요청 틀은 없어요: 서버가 직접 보내요)
-        assert.deepEqual(kit.st, {}); assert.equal(T.tpl.length, 0);
+        // (묶음은 어느 채팅인지 · 확장 버전만: 요청 틀 · 프로필 목록 같은 실리 쪽 값은 없어요)
+        assert.deepEqual(Object.keys(kit).sort(), ['chat', 'v', 'ver']);
         assert.equal(await G.liveKitRefresh(c.real), false);
         // (롤플이 진행돼도 묶음은 그대로: 저장하지 않아요)
         T.tail = { lines: ['[#5] Ren: ok'], first: 5, end: 5 };
@@ -1841,70 +1842,49 @@ test('서버 묶음: 플러그인에 둔 채팅만 만들어요. 달라졌을 �
         // 다른 채팅을 열어 둔 동안에는 안 만들어요
         T.metadata = { narrative_archive: {} };
         assert.equal(await G.liveKitRefresh(c.real), false);
-    } finally { for (const k of ['tail', 'characters', 'st', 'kept', 'tpl', 'metadata']) delete T[k]; }
+    } finally { for (const k of ['tail', 'characters', 'st', 'kept', 'metadata']) delete T[k]; }
 });
 
-test('서버 묶음: 실리 연결 방식으로 나가는 방마다 요청 틀. 답장이 실제로 보내는 값(길이 4000 · 방의 레벨, 없으면 low · 생각 보기)으로', async () => {
+test('서버 묶음: 실리 연결 방식으로 나가는 방도 묶음에는 어느 채팅인지만. liveReplyPlan(서버가 그 방을 볼 때 쓰는 값)은 그 방의 답장이 실제로 나가는 길 · 값 그대로', async () => {
     const c = world(), id = c.room.id;
-    Object.assign(T, { kept: true, tpl: [], slots: { dr: { mode: 'source', source: 'openrouter', stModel: 'm1' }, ai: { mode: 'custom', model: 'ai-model' } }, sources: [{ id: 'openrouter', name: 'OpenRouter' }, { id: 'claude', name: 'Claude' }] });
+    Object.assign(T, { kept: true, slots: { dr: { mode: 'source', source: 'openrouter', stModel: 'm1' }, ai: { mode: 'custom', model: 'ai-model' } }, sources: [{ id: 'openrouter', name: 'OpenRouter' }, { id: 'claude', name: 'Claude' }] });
     try {
-        // 방에 아무것도 안 골랐을 때: 초안 모델(실리 연결 방식)의 틀 하나, 레벨은 low
         assert.equal(await G.liveKitRefresh(c.real), true);
-        assert.equal(Object.keys(c.real.live.kit.st).length, 1);
-        assert.deepEqual(T.tpl.map(x => [x.t.source, x.t.stModel, x.o.maxTokens, x.o.effort, x.o.thoughts]), [['openrouter', 'm1', 4000, 'low', true], ['openrouter', 'm1', 4000, 'low', true]]);
-        assert.deepEqual(Object.values(c.real.live.kit.st)[0].secrets, ['proxy_password']);
-        // 방에 다른 연결 · 모델 · 레벨을 고르면: 그 방의 틀이 하나 더
+        assert.deepEqual(Object.keys(c.real.live.kit).sort(), ['chat', 'v', 'ver']);
+        // 방에 아무것도 안 골랐을 때: 초안 모델(실리 연결 방식), 레벨은 low
+        const p0 = G.liveReplyPlan(c.real, id);
+        assert.deepEqual([p0.t.mode, p0.t.source, p0.t.stModel, p0.maxTokens, p0.effort, p0.thoughts, p0.profile, p0.raw], ['source', 'openrouter', 'm1', 4000, 'low', true, null, false]);
+        // 방에 다른 연결 · 모델 · 레벨을 고르면: 묶음은 그대로(방의 연결은 묶음에 없어요), 그 방의 길이 바뀌어요
         await G.liveSetRoomModel(c.real, id, { connectionId: 'source:claude', model: 'c-1' });
         await G.liveSetReasoning(c.real, id, 'high');
-        T.tpl = [];
-        assert.equal(await G.liveKitRefresh(c.real), true);
-        assert.equal(Object.keys(c.real.live.kit.st).length, 2);
-        const mine = T.tpl.find(x => x.t.source === 'claude');
-        assert.deepEqual([mine.t.stModel, mine.o.maxTokens, mine.o.thoughts], ['c-1', 4000, true]);
-        // 그 방의 답장이 실제로 보내는 연결과 같아요 (틀의 값이 어긋나면 서버가 틀을 못 찾아요)
+        assert.equal(await G.liveKitRefresh(c.real), false);
+        const plan = G.liveReplyPlan(c.real, id);
+        assert.deepEqual([plan.t.mode, plan.t.source, plan.t.stModel, plan.maxTokens, plan.effort, plan.thoughts], ['source', 'claude', 'c-1', 4000, 'high', true]);
+        // 그 방의 답장이 실제로 보내는 연결 · 값과 같아요 (서버의 cannot은 이 값으로 그 방을 보낼 수 있나 봐요)
         send(c, '뭐해');
         T.replies = [{ state: '집', reply: ['응'], does: [] }]; T.conn = [];
         await G.liveGo(c.real);
         const sent = T.conn.at(-1);
         assert.deepEqual([sent.t.mode, sent.t.source, sent.t.stModel], ['source', 'claude', 'c-1']);
-        // (길이 · 레벨 · 생각 보기도 틀을 만든 값 그대로: ai.js는 이 값들로 틀의 열쇠를 만들어요)
-        assert.deepEqual([sent.max, sent.effort, sent.force, sent.effort === 'none' ? false : sent.hasMeta], [mine.o.maxTokens, mine.o.effort, true, mine.o.thoughts]);
-        // 틀을 못 만드는 연결 · 모델(실리가 메시지를 고쳐 보내요)이면 그 틀은 없어요. 만들다 오류가 나도 묶음은 만들어져요
-        T.noTpl = true;
-        await G.liveKitRefresh(c.real);
-        assert.deepEqual(c.real.live.kit.st, {});
-        T.noTpl = false; T.tplFail = true;
-        const warn = console.warn; console.warn = () => {};
-        try { await G.liveKitRefresh(c.real); } finally { console.warn = warn; }
-        assert.deepEqual(c.real.live.kit.st, {});
-    } finally { for (const k of ['kept', 'tpl', 'slots', 'sources', 'noTpl', 'tplFail', 'conn']) delete T[k]; }
+        assert.deepEqual([sent.max, sent.effort, sent.force, sent.effort === 'none' ? false : sent.hasMeta], [plan.maxTokens, plan.effort, true, plan.thoughts]);
+    } finally { for (const k of ['kept', 'slots', 'sources', 'conn']) delete T[k]; }
 });
 
-test('서버 묶음: 연결 프로필로 나가는 요청마다 틀 (방에 고른 프로필 · 레벨을 얹은 것 · 실리에서 지금 고른 프로필 · 스케줄 연결). 못 만든 것은 이유', async () => {
-    const { fakeSt } = await import('./stfake.mjs'), SP = await import('../src/stprofile.js');
+test('서버 묶음: 연결 프로필로 나가는 방도 묶음에는 어느 채팅인지만 — 브라우저는 실리의 sendRequest · 레벨 값을 부르지 않아요. liveReplyPlan은 그 방이 나가는 프로필(방에 고른 것 · 레벨 · 실리에서 지금 고른 것)', async () => {
     const c = world(), id = c.room.id;
-    const profiles = [{ id: 'p1', name: 'One', api: 'openrouter', model: 'or/m', preset: 'Quiet' }, { id: 'p2', name: 'Two', api: 'openrouter', model: 'or/n' }, { id: 'p3', name: 'Rand', api: 'openrouter', model: 'or/r', preset: 'Quiet' }];
-    const set = { profiles, presets: { Quiet: { chat_completion_source: 'openrouter', temp_openai: 0.5, openai_max_tokens: 700 } } };
-    const st = fakeSt(set), rand = fakeSt({ ...set, random: true });
-    const sendRequest = (pid, ...a) => (pid === 'p3' ? rand : st).sendRequest(pid, ...a);
-    Object.assign(T, { kept: true, profiles, selectedProfile: 'p2', slots: { dr: { mode: 'custom', fmt: '', model: 'draft-model' }, ai: { mode: 'st' } }, st: { extensionSettings: { connectionManager: { profiles } }, ConnectionManagerRequestService: { getSupportedProfiles: () => profiles, sendRequest } } });
-    globalThis.__naStPresets = { getPresetManager: api => ({ getCompletionPresetByName: n => st.find.preset(api, n) }) };
-    globalThis.__naStOpenai = { proxies: [], oai_settings: {} };
+    const profiles = [{ id: 'p1', name: 'One', api: 'openrouter', model: 'or/m', preset: 'Quiet' }, { id: 'p2', name: 'Two', api: 'openrouter', model: 'or/n' }, { id: 'p3', name: 'Three', api: 'openrouter', model: 'or/r', preset: 'Quiet' }];
+    const asked = [];
+    const sendRequest = async (...a) => { asked.push(a); throw new Error('not here'); };
+    Object.assign(T, { kept: true, profiles, selectedProfile: 'p2', levelCalls: [], slots: { dr: { mode: 'custom', fmt: '', model: 'draft-model' }, ai: { mode: 'st' } }, st: { extensionSettings: { connectionManager: { profiles } }, ConnectionManagerRequestService: { getSupportedProfiles: () => profiles, sendRequest } } });
     try {
         await G.liveSetRoomModel(c.real, id, { connectionId: 'profile:p1' });
         await G.liveSetReasoning(c.real, id, 'high');
         await G.liveSetScheduleConnection(c.real, 'profile:p3');
-        const over = { reasoning_effort: 'st:high', include_reasoning: true };
         assert.deepEqual(G.liveReplyPlan(c.real, id).profile, { id: 'p1', missing: false, level: { source: 'openrouter', model: 'or/m', effort: 'high' } });
         assert.equal(await G.liveKitRefresh(c.real), true);
-        const kit = c.real.live.kit;
-        // (방의 프로필 + 레벨, 실리에서 지금 고른 프로필 — AI 기능 모델이 실리 쪽: 대화 요약의 장면 나누기도 그리로 가요)
-        assert.deepEqual(Object.keys(kit.pt).sort(), [SP.ptKey('p1', over, '*'), SP.ptKey('p2', null, '*')].sort());
-        assert.deepEqual(kit.levels, { [SP.levelKey('openrouter', 'or/m', 'high')]: over });
-        assert.deepEqual(kit.profiles, ['p1', 'p2', 'p3']);                                       // (실리가 보낼 수 있는 프로필: 서버도 이 목록으로)
-        assert.deepEqual(kit.pt[SP.ptKey('p1', over, '*')].data.reasoning_effort, 'st:high');
-        // (스케줄 연결의 프로필은 요청마다 값이 달라서 틀이 없어요: 그 이유가 남아요)
-        assert.match(kit.ptWhy[SP.ptWhyKey('p3', null)], /요청마다 값이 달라/);
+        assert.deepEqual(Object.keys(c.real.live.kit).sort(), ['chat', 'v', 'ver']);
+        // (전에는 브라우저가 실리의 sendRequest로 요청 틀을 떠 두고 레벨 값을 만들었어요. 이제 서버가 그 요청을 그때 실리 코드로 만들어요)
+        assert.deepEqual([asked.length, T.levelCalls.length], [0, 0]);
         assert.equal(await G.liveKitRefresh(c.real), false);                                    // (같으면 다시 안 넣어요)
         // 방이 실리 쪽(AI 기능 모델)이면: 실리에서 지금 고른 프로필. 고른 게 없으면 실리의 지금 연결 그대로(raw)
         await G.liveSetReasoning(c.real, id, ''); await G.liveSetRoomModel(c.real, id, { connectionId: 'ai' });
@@ -1915,13 +1895,13 @@ test('서버 묶음: 연결 프로필로 나가는 요청마다 틀 (방에 고�
         assert.equal(seen[0].profileNow, true);                                                 // (Orbit의 요청은 지금 고른 프로필로)
         T.selectedProfile = null;
         assert.deepEqual([G.liveReplyPlan(c.real, id).profile, G.liveReplyPlan(c.real, id).raw], [null, true]);
-        await G.liveKitRefresh(c.real);
-        assert.deepEqual(Object.keys(c.real.live.kit.pt), []);                                   // (p3은 여전히 이유만)
+        assert.equal(await G.liveKitRefresh(c.real), false);
         // 방에 고른 프로필이 실리에서 지워졌으면: 브라우저처럼 안 고른 방(초안 모델)으로 — 서버도 같은 길이에요
         await G.liveSetRoomModel(c.real, id, { connectionId: 'profile:p1' });
         T.profiles = profiles.slice(1);
         assert.deepEqual([G.liveReplyPlan(c.real, id).profile, G.liveReplyPlan(c.real, id).t?.model], [null, 'draft-model']);
-    } finally { for (const k of ['kept', 'profiles', 'selectedProfile', 'slots', 'st', 'ask']) delete T[k]; delete globalThis.__naStPresets; delete globalThis.__naStOpenai; }
+        assert.equal(asked.length, 0);
+    } finally { for (const k of ['kept', 'profiles', 'selectedProfile', 'slots', 'st', 'ask', 'levelCalls']) delete T[k]; }
 });
 
 test("답이 끝났다는 신호(na-live-reply): 말을 저장한 답마다 — 내 말의 답 · 먼저 건 말 · 다시 받은 답. 말 없이 한 일만 · 실패 · 버린 답에는 안 가요", async t => {

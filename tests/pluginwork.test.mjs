@@ -46,7 +46,7 @@ function world({ story = false, schedule = null, kit = true, members = ['Mara'],
 
 // 한 판: 임시 사용자 폴더 + 저장 + 가짜 모델 + 가짜 다리 + 일꾼
 //   routes(req, body, res) → true면 다리의 그 요청은 거기서 끝 (로짓 바이어스 · 토크나이저 같은 실리 서버의 길)
-async function stage(t, { settings = {}, cm = null, more = {}, files = {}, reply = () => ({ reply: ['you there?'], status: '' }), bridge = true, schedule = false, code = null, merge = 200, oldBridge = false, avatarsStatus = 200, routes = null } = {}) {
+async function stage(t, { settings = {}, cm = null, more = {}, files = {}, reply = () => ({ reply: ['you there?'], status: '' }), bridge = true, schedule = false, code = null, merge = 200, oldBridge = false, avatarsStatus = 200, routes = null, ext = {} } = {}) {
     const root = await mkdtemp(path.join(tmpdir(), 'na-work-'));
     // (SillyTavern's user folders, as it makes them for a user: the worker reads the preset folders each job)
     await stUserDirs(root);
@@ -67,7 +67,7 @@ async function stage(t, { settings = {}, cm = null, more = {}, files = {}, reply
     const st = br ? br.seen : [];
     const url = `http://127.0.0.1:${model.address().port}/v1`;
     // (SillyTavern's settings.json: written again by a test that changes something in SillyTavern between two jobs)
-    const stSettings = { main_api: 'openai', user_avatar: 'ren.png', power_user: { ...PERSONAS }, oai_settings: { reverse_proxy: 'https://proxy.example', proxy_password: 'PW-SECRET' }, extension_settings: { connectionManager: cm || { profiles: [{ id: 'p1', name: 'My profile', api: 'openai', model: 'x' }] }, narrative_archive: { draftConn: { mode: 'custom', url, key: 'MODEL-KEY', model: 'fake-model' }, ...settings } }, ...more };
+    const stSettings = { main_api: 'openai', user_avatar: 'ren.png', power_user: { ...PERSONAS }, oai_settings: { reverse_proxy: 'https://proxy.example', proxy_password: 'PW-SECRET' }, extension_settings: { connectionManager: cm || { profiles: [{ id: 'p1', name: 'My profile', api: 'openai', model: 'x' }] }, narrative_archive: { draftConn: { mode: 'custom', url, key: 'MODEL-KEY', model: 'fake-model' }, ...settings }, ...ext }, ...more };
     const writeSettings = (v = stSettings) => writeFile(path.join(root, 'settings.json'), JSON.stringify(v, null, 4));
     await writeSettings();
     const writeFiles = async fs => { for (const [f, v] of Object.entries(fs)) { await mkdir(path.dirname(path.join(root, f)), { recursive: true }); if (v === null) await rm(path.join(root, f), { force: true }); else await writeFile(path.join(root, f), JSON.stringify(v, null, 4)); } };
@@ -88,6 +88,8 @@ async function stage(t, { settings = {}, cm = null, more = {}, files = {}, reply
     const gen = (id, more = {}) => auto.inject('/api/generate', { chatId: id, connectionId: null, forCharacterId: 'mara', streaming: false, userStatus: 'idle', userActivity: 'away or offline', autonomous: true, skipPresenceDelay: true, autonomousIntentKey: 'check_in', ...more });
     return { root, store, auto, asked, st, put, get, check, gen, url, cards, writeChat, stSettings, writeSettings, writeFiles, closeBridge: done => (br ? br.close(done) : done()) };
 }
+// (a text-completion backend that runs on past its answer, in ChatML: what follows the stop sequence is not JSON — left in, the reply could not be read)
+const tcText = a => `${typeof a === 'string' ? a : JSON.stringify(a)}<|im_end|>\n<|im_start|>user\nand {more}`;
 const textOf = body => body.messages.map(x => (typeof x.content === 'string' ? x.content : x.content.map(p => p.text || '').join(''))).join('\n');
 
 test('일꾼: 먼저 건 말 하나가 끝까지 — 브라우저와 같은 요청, 방에 들어가고 저장되고, 하루 수 · 이유의 쉬는 시간이 적혀요', async t => {
@@ -143,146 +145,297 @@ test('일꾼: 서버가 읽을 묶음이 없는 세계는 목록에 없고, 만�
     assert.deepEqual((await S.auto.status('sb')).map(x => [x.id, x.can, x.why]), [[b.id, true, '']]);
 });
 
-test('일꾼: 실리 연결 방식 — 브라우저가 남긴 요청 틀에 메시지와 비밀 칸을 채워서 실리 서버의 처리기로 보내요', async t => {
-    // (the browser's part: SillyTavern's own builder makes the request; here a stand-in for it)
-    globalThis.__naStOpenai = { oai_settings: { reverse_proxy: 'https://proxy.example', proxy_password: 'PW-SECRET' }, createGenerationParameters: async (s, model, type, messages) => ({ generate_data: { chat_completion_source: s.chat_completion_source, model, messages, max_tokens: s.openai_max_tokens, temperature: s.temp_openai, reasoning_effort: s.reasoning_effort, include_reasoning: s.show_thoughts, reverse_proxy: s.reverse_proxy, proxy_password: s.proxy_password, user_name: 'Ren', stream: true } }) };
-    const slot = { mode: 'source', source: 'openrouter', stModel: 'fake/model' };
-    const tpl = await AI.stSourceTemplate(slot, { maxTokens: 4000, effort: 'low', thoughts: true });
-    delete globalThis.__naStOpenai;
-    assert.ok(!JSON.stringify(tpl).includes('PW-SECRET'));
-    const S = await stage(t, { settings: { draftConn: slot } }), a = world({ st: { [tpl.key]: { data: tpl.data, secrets: tpl.secrets } } });
-    await S.put('sa', a.m); await S.auto.list();
-    assert.deepEqual((await S.auto.status('sa')).map(x => x.can), [true]);
-    const r = await S.gen(a.id);
-    assert.match(r.payload, /"message_saved"/);
-    assert.equal(S.asked.length, 0);   // (우리 커스텀 API로는 안 갔어요)
-    const sent = S.st.find(x => x.url === '/api/backends/chat-completions/generate');
-    assert.equal(sent.token, 'tok-123'); assert.equal(sent.root, S.root);
-    assert.deepEqual([sent.body.chat_completion_source, sent.body.model, sent.body.max_tokens, sent.body.temperature, sent.body.reasoning_effort, sent.body.include_reasoning, sent.body.stream, sent.body.user_name], ['openrouter', 'fake/model', 4000, 0.3, 'low', true, false, 'Ren']);
-    // (비밀 칸은 실리의 settings.json에서)
-    assert.equal(sent.body.proxy_password, 'PW-SECRET');
-    assert.deepEqual(sent.body.messages.map(m => m.role), ['system', 'user']);
-    assert.match(sent.body.messages[0].content, /^GOAL\nYou are Mara\./);
-    assert.match(sent.body.messages[1].content, /\[WHY NOW\]/);
-    assert.equal((await S.get('sa')).messenger.rooms[a.room.id].messages.at(-1).text, 'you there?');
-});
-
-test('일꾼: 요청 틀이 없는 실리 연결 방식 · 연결 프로필 방은 안 돌려요 (이유를 알려요). 지어내지 않아요', async t => {
-    const S = await stage(t, { settings: { draftConn: { mode: 'source', source: 'claude', stModel: 'c-1' } } }), a = world(), b = world();
-    liveWorld(b.m).messenger.rooms[b.room.id].connectionId = 'profile:p1';
-    await S.put('sa', a.m); await S.put('sb', b.m); await S.auto.list();
-    const ra = await S.gen(a.id);
-    assert.equal(ra.statusCode, 400); assert.match(ra.payload, /요청 템플릿이 없습니다/);
-    const rb = await S.gen(b.id);
-    assert.equal(rb.statusCode, 400, rb.payload); assert.match(rb.payload, /연결 프로필의 요청 틀이 아직 없어요/);
-    assert.match((await S.auto.status('sa'))[0].why, /요청 템플릿이 없습니다/);
-    assert.equal(S.asked.length + S.st.filter(x => x.url.includes('generate')).length, 0);
-    for (const [sid, x] of [['sa', a], ['sb', b]]) { const w = await S.get(sid); assert.equal(w.messenger.rooms[x.room.id].messages.length, 2); assert.equal(w.queue.jobs.length, 0); }
-});
-
-// ---- 연결 프로필 (docs/PHONE2-PLAN.md 3-2c): 브라우저가 실리 자신의 sendRequest로 떠 둔 틀 → 서버가 실리 서버의 처리기로
+// ---- 실리에 보내는 요청 (docs/SERVER-HANDOVER.md 3-3 · 4장): 일꾼은 옮긴 실리 코드(plugin/st)로 일마다 settings.json · 프리셋 파일을 새로 읽어 만들어요.
+// 브라우저는 요청을 떠 두지 않아요(묶음은 어느 채팅인지만). 기대값은 같은 실리 코드를 이 프로세스에서 같은 상태로 돌린 것 (tests/stfake.mjs)
 const PROFILE = { id: 'p1', name: 'My profile', api: 'openrouter', model: 'or/model', preset: 'Quiet', proxy: 'Home', 'secret-id': 'sec-1' };
-const ST_SET = () => ({
-    profiles: [PROFILE],
-    oai: { reverse_proxy: '', proxy_password: 'OAI-PW', chat_completion_source: 'openrouter', temp_openai: 1, openai_max_tokens: 300 },
-    presets: { Quiet: { temp_openai: 0.7, openai_max_tokens: 900, chat_completion_source: 'openrouter', show_thoughts: true, reverse_proxy: 'https://preset.proxy', proxy_password: 'PRESET-PW' } },
-    proxies: [{ name: 'Home', url: 'https://home.proxy', password: 'PROXY-PW' }],
-});
-// (the browser's part: SillyTavern — here its stand-in, tests/stfake.mjs — builds the request; src/stprofile.js keeps it)
-const templatesOf = async (st, profile, over = null) => SP.profileTemplates({ send: (messages, max) => st.sendRequest(profile.id, messages, max, { stream: false, extractData: true, includePreset: true, includeInstruct: true }, ...(over ? [over] : [])), profile, over, find: st.find });
-// (SillyTavern's settings files as the browser left them: the profiles, the proxies, the preset file)
-const stageOf = (t, set, more = {}) => stage(t, { cm: { profiles: set.profiles, ...(more.selected ? { selectedProfile: more.selected } : {}) }, more: { oai_settings: set.oai, proxies: set.proxies }, files: Object.fromEntries(Object.entries(set.presets).map(([n, v]) => [`OpenAI Settings/${n}.json`, v])), ...(more.stage || {}) });
+// (SillyTavern's files: the preset file in "OpenAI Settings" — the keys SillyTavern saves a preset with —, the proxy presets and the
+//  chat-completion settings in settings.json)
+const QUIET = { temperature: 0.7, openai_max_tokens: 900, chat_completion_source: 'openrouter', show_thoughts: true, reasoning_effort: 'medium' };
+const PROXIES = [{ name: 'None', url: '', password: '' }, { name: 'Home', url: 'https://home.proxy', password: 'PROXY-PW' }];
+const OAI_SET = { chat_completion_source: 'openrouter', temp_openai: 1, openai_max_tokens: 300 };
+const stageOf = (t, { profiles = [PROFILE], selected = null, oai = OAI_SET, files = {}, more = {}, ...rest } = {}) => stage(t, { cm: { profiles, ...(selected ? { selectedProfile: selected } : {}) }, more: { oai_settings: oai, proxies: PROXIES, ...more }, files: { 'OpenAI Settings/Quiet.json': QUIET, ...files }, ...rest });
+// (this chat as SillyTavern's page holds it: Ren with Mara)
+const ME = { name1: 'Ren', name2: 'Mara', persona: 'Ren is a student.' };
+const CC = '/api/backends/chat-completions/generate', TC = '/api/backends/text-completions/generate';
+const sentTo = (S, url = CC) => S.st.filter(x => x.url === url);
+const lastText = async (S, sid, x) => (await S.get(sid)).messenger.rooms[x.room.id].messages.at(-1).text;
+// (a different answer each time: the same words twice in a row are not saved again — a reply that only repeats is dropped)
+const pings = () => { let n = 0; return () => ({ reply: [`ping ${++n}`], status: '' }); };
+const useRoom = (x, more) => Object.assign(liveWorld(x.m).messenger.rooms[x.room.id], typeof more === 'string' ? { connectionId: more } : more);
 
-test('일꾼: 연결 프로필 방 — 실리가 브라우저에서 보낼 것과 똑같은 요청을 실리 서버의 처리기로. 비밀번호는 실리 설정에서', async t => {
-    const set = ST_SET(), st = fakeSt(set), pt = await templatesOf(st, PROFILE);
-    assert.doesNotMatch(JSON.stringify(pt), /PW/);
-    const S = await stageOf(t, set), a = world({ pt });
-    liveWorld(a.m).messenger.rooms[a.room.id].connectionId = 'profile:p1';
+test('일꾼 · 연결 프로필 방: 옮긴 실리 코드가 settings.json · 프리셋 파일 · 프록시로 만든 요청 그대로 다리로 실리 서버의 처리기에. 답은 방에', async t => {
+    const S = await stageOf(t), a = world();
+    useRoom(a, 'profile:p1');
     await S.put('sa', a.m); await S.auto.list();
     assert.deepEqual((await S.auto.status('sa')).map(x => [x.can, x.why]), [[true, '']]);
     const r = await S.gen(a.id);
     assert.match(r.payload, /"message_saved"/, r.payload);
     assert.equal(S.asked.length, 0);                                       // (초안 모델로는 안 갔어요)
-    const sent = S.st.filter(x => x.url === '/api/backends/chat-completions/generate');
+    const sent = sentTo(S);
     assert.equal(sent.length, 1);
-    assert.equal(sent[0].token, 'tok-123');
-    // 실리가 이 메시지로 보낼 몸통과 같아요 (답 길이: 답장 한 번의 값)
-    assert.deepEqual(sent[0].body, st.build('p1', sent[0].body.messages, 4000).body);
-    assert.equal(sent[0].body.proxy_password, 'PROXY-PW');
-    assert.deepEqual(sent[0].body.messages.map(m => m.role), ['system', 'user']);
-    assert.match(sent[0].body.messages[0].content, /^GOAL\nYou are Mara\./);
-    assert.equal((await S.get('sa')).messenger.rooms[a.room.id].messages.at(-1).text, 'you there?');
+    assert.deepEqual([sent[0].token, sent[0].root], ['tok-123', S.root]);
+    // 실리 코드가 이 메시지로 만드는 몸통 그대로 (답 길이: 답장 한 번의 값)
+    const b = sent[0].body, want = await stProfileRequest(S.root, ME, { profileId: 'p1', messages: b.messages });
+    assert.deepEqual(b, want.generate[0].body);
+    assert.deepEqual(want.generate.length, 1);
+    // (프로필 · 프리셋 파일 · 프로필의 프록시 · 이 채팅의 이름이 들어갔어요)
+    assert.deepEqual([b.model, b.chat_completion_source, b.temperature, b.max_tokens, b.reverse_proxy, b.proxy_password, b.secret_id, b.user_name, b.char_name, b.stream], ['or/model', 'openrouter', 0.7, 4000, 'https://home.proxy', 'PROXY-PW', 'sec-1', 'Ren', 'Mara', false]);
+    assert.deepEqual(b.messages.map(m => m.role), ['system', 'user']);
+    assert.match(b.messages[0].content, /^GOAL\nYou are Mara\./);
+    assert.match(b.messages[1].content, /\[WHY NOW\]/);
+    assert.equal(await lastText(S, 'sa', a), 'you there?');
 });
 
-test('일꾼: 실리 쪽 방(AI 기능 모델이 실리) — 실리에서 지금 고른 프로필로. 고른 프로필이 없으면 이유를 알려요', async t => {
-    const set = ST_SET(), st = fakeSt(set), pt = await templatesOf(st, PROFILE);
-    const S = await stageOf(t, set, { selected: 'p1', stage: { settings: { aiConn: { mode: 'st' } } } }), a = world({ pt });
-    liveWorld(a.m).messenger.rooms[a.room.id].connectionId = 'ai';
+test('일꾼 · 실리 쪽 방(AI 기능 모델이 실리): 실리에서 지금 고른 프로필로. 고른 프로필이 없거나 실리가 보낼 수 없는 종류면 이유를 알려요', async t => {
+    const S = await stageOf(t, { selected: 'p1', settings: { aiConn: { mode: 'st' } } }), a = world();
+    useRoom(a, 'ai');
     await S.put('sa', a.m); await S.auto.list();
     assert.match((await S.gen(a.id)).payload, /"message_saved"/);
-    const sent = S.st.find(x => x.url === '/api/backends/chat-completions/generate');
-    assert.deepEqual(sent.body, st.build('p1', sent.body.messages, 4000).body);
+    const b = sentTo(S)[0].body;
+    assert.deepEqual(b, (await stProfileRequest(S.root, ME, { profileId: 'p1', messages: b.messages })).generate[0].body);
     // (고른 프로필이 없는 실리: 서버는 실리의 지금 연결로는 못 보내요)
-    const S2 = await stageOf(t, set, { stage: { settings: { aiConn: { mode: 'st' } } } }), b = world({ pt });
-    liveWorld(b.m).messenger.rooms[b.room.id].connectionId = 'ai';
-    await S2.put('sb', b.m); await S2.auto.list();
-    assert.match((await S2.auto.status('sb'))[0].why, /선택된 연결 프로필이 없습니다/);
-    assert.equal((await S2.gen(b.id)).statusCode, 400);
-    assert.equal(S2.st.filter(x => x.url.includes('generate')).length + S2.asked.length, 0);
-    // (실리가 보낼 수 없는 종류의 프로필을 골라 뒀으면 — 브라우저가 남긴 목록에 없어요 — 브라우저처럼 "고른 프로필 없음")
-    const c = world({ pt }), k = liveWorld(c.m) && c.m.live.kit; k.profiles = [];
-    liveWorld(c.m).messenger.rooms[c.room.id].connectionId = 'ai';
-    await S.put('sc', c.m);
-    assert.match((await S.auto.status('sc'))[0].why, /선택된 연결 프로필이 없습니다/);
+    const S2 = await stageOf(t, { settings: { aiConn: { mode: 'st' } } }), c = world();
+    useRoom(c, 'ai');
+    await S2.put('sc', c.m); await S2.auto.list();
+    assert.match((await S2.auto.status('sc'))[0].why, /선택된 연결 프로필이 없습니다/);
+    assert.equal((await S2.gen(c.id)).statusCode, 400);
+    // (실리가 보낼 수 없는 종류의 프로필을 골라 뒀으면 — 실리 getSupportedProfiles에 없어요 —: 브라우저처럼 "고른 프로필 없음")
+    const S3 = await stageOf(t, { profiles: [PROFILE, { id: 'n1', name: 'Novel', api: 'novel', model: 'n-model' }], selected: 'n1', settings: { aiConn: { mode: 'st' } } }), d = world();
+    useRoom(d, 'ai');
+    await S3.put('sd', d.m);
+    assert.match((await S3.auto.status('sd'))[0].why, /선택된 연결 프로필이 없습니다/);
+    assert.equal(sentTo(S2).length + sentTo(S3).length + S2.asked.length + S3.asked.length, 0);
 });
 
-test('일꾼: 방의 추론 레벨을 얹은 프로필 요청 — 브라우저가 실리 코드로 만든 값 그대로. 그 값이 없으면 안 보내요', async t => {
-    const set = ST_SET(), st = fakeSt(set), over = { reasoning_effort: 'high', include_reasoning: true }, pt = await templatesOf(st, PROFILE, over);
-    const levels = { [SP.levelKey('openrouter', 'or/model', 'high')]: over };
-    const S = await stageOf(t, set), a = world({ pt, levels }), b = world({ pt });
-    for (const x of [a, b]) { const room = liveWorld(x.m).messenger.rooms[x.room.id]; room.connectionId = 'profile:p1'; room.chatParameters = { reasoningEffort: 'high' }; }
+test('일꾼 · 방의 추론 레벨을 얹은 프로필 요청: 얹는 값도 실리 createGenerationParameters가 만들어요 (ai.js stLevelPayload) — 프리셋의 레벨 위에', async t => {
+    const S = await stageOf(t), a = world(), plain = world();
+    useRoom(a, { connectionId: 'profile:p1', chatParameters: { reasoningEffort: 'high' } });
+    useRoom(plain, 'profile:p1');
+    await S.put('sa', a.m); await S.put('sp', plain.m); await S.auto.list();
+    assert.deepEqual((await S.auto.status('sa')).map(x => [x.can, x.why]), [[true, '']]);
+    assert.match((await S.gen(a.id)).payload, /"message_saved"/);
+    assert.match((await S.gen(plain.id)).payload, /"message_saved"/);
+    const [b, p] = sentTo(S).map(x => x.body);
+    // (ai.js stLevelPayload: SillyTavern's createGenerationParameters for that source · model · level, nothing else of the room's)
+    const lv = await stGenerationParameters(S.root, ME, { settingsOf: o => ({ ...o, chat_completion_source: 'openrouter', stream_openai: false, n: 1, bias_preset_selected: '', function_calling: false, reasoning_effort: 'high', show_thoughts: true }), model: 'or/model', messages: [] });
+    const over = { reasoning_effort: lv.out.generate_data.reasoning_effort, include_reasoning: true };
+    assert.deepEqual(b, (await stProfileRequest(S.root, ME, { profileId: 'p1', messages: b.messages, over })).generate[0].body);
+    assert.deepEqual([b.reasoning_effort, b.include_reasoning], ['high', true]);
+    // (레벨을 안 고른 방: 얹는 값 없이 — 프리셋의 레벨)
+    assert.deepEqual(p, (await stProfileRequest(S.root, ME, { profileId: 'p1', messages: p.messages })).generate[0].body);
+    assert.equal(p.reasoning_effort, 'medium');
+});
+
+// (SillyTavern 1.19.1's default instruct template ChatML — default/content/presets/instruct/ChatML.json — and a text-completion preset)
+const CHATML = {
+    input_sequence: '<|im_start|>user', output_sequence: '<|im_start|>assistant', last_output_sequence: '', system_sequence: '<|im_start|>system', stop_sequence: '<|im_end|>',
+    wrap: true, macro: true, names_behavior: 'force', activation_regex: '', first_output_sequence: '', skip_examples: false, output_suffix: '<|im_end|>\n', input_suffix: '<|im_end|>\n',
+    system_suffix: '<|im_end|>\n', user_alignment_message: '', system_same_as_user: false, last_system_sequence: '', first_input_sequence: '', last_input_sequence: '',
+    sequences_as_stop_strings: true, story_string_prefix: '<|im_start|>system', story_string_suffix: '<|im_end|>\n', name: 'ChatML',
+};
+const REN_TC = { temp: 0.8, top_p: 0.9, top_k: 20, genamt: 250, rep_pen: 1.1 };
+
+test('일꾼 · 글 완성 프로필 방: 지시 형식(instruct 폴더)이 감싼 글로 실리 서버의 글 완성 처리기에. 답은 실리처럼 멈춤 글에서 잘라요', async t => {
+    const TCP = { id: 't1', name: 'Text', api: 'koboldcpp', model: 'k', 'api-url': 'http://127.0.0.1:5001', instruct: 'ChatML', preset: 'Ren TC' };
+    const S = await stageOf(t, { profiles: [TCP], files: { 'instruct/ChatML.json': CHATML, 'TextGen Settings/Ren TC.json': REN_TC } }), a = world();
+    useRoom(a, 'profile:t1');
+    await S.put('sa', a.m); await S.auto.list();
+    assert.match((await S.gen(a.id)).payload, /"message_saved"/);
+    const sent = sentTo(S, TC);
+    assert.deepEqual([sent.length, sentTo(S).length, S.asked.length], [1, 0, 0]);
+    const b = sent[0].body;
+    // (보낸 글에서 메시지 둘을 읽어 같은 실리 코드에 다시 넣어요: 지시 형식이 감싼 모양이 실리 것과 글자 그대로여야 같은 몸통이 나와요)
+    const m = /^<\|im_start\|>system\n([\s\S]*)<\|im_end\|>\n<\|im_start\|>user\n([\s\S]*)<\|im_end\|>\n<\|im_start\|>assistant\n$/.exec(b.prompt);
+    assert.ok(m, b.prompt.slice(0, 300));
+    assert.match(m[1], /^GOAL\nYou are Mara\./); assert.match(m[2], /\[MESSENGER\]/);
+    const answer = { reply: ['you there?'], status: '' };
+    const want = await stProfileRequest(S.root, ME, { profileId: 't1', messages: [{ role: 'system', content: m[1] }, { role: 'user', content: m[2] }], reply: { choices: [{ text: tcText(answer) }] } });
+    assert.deepEqual(b, want.generate[0].body);
+    assert.deepEqual([b.max_tokens, b.temperature, b.top_k, b.api_server, b.stop], [4000, 0.8, 20, 'http://127.0.0.1:5001', ['\n<|im_end|>', '\n<|im_start|>user', '\n<|im_start|>assistant', '\n<|im_start|>system']]);
+    // 실리는 답을 멈춤 글에서 잘라 돌려줘요 (custom-request.js processRequest): 그 답으로 방에
+    assert.equal(want.out.content, JSON.stringify(answer));
+    assert.equal(await lastText(S, 'sa', a), 'you there?');
+});
+
+// (ai.js stSourceData: what a reply asks of SillyTavern's createGenerationParameters — the length LIVE_GO.replyTokens, temperature 0.3,
+//  the room's level (low when none), thoughts on — over SillyTavern's chat-completion settings; then the role-play's own keys out)
+const SOURCE = { mode: 'source', source: 'custom', stModel: 'mara-model' };
+const SOURCE_OAI = { chat_completion_source: 'custom', custom_url: 'http://127.0.0.1:9/v1', custom_include_headers: 'X-User: {{user}}\nX-Char: {{char}}' };
+const sourceSettings = o => ({
+    ...o, chat_completion_source: 'custom', stream_openai: false, n: 1, bias_preset_selected: '', seed: -1, temp_openai: 0.3, top_p_openai: 1, openai_max_tokens: 4000,
+    freq_pen_openai: 0, pres_pen_openai: 0, top_k_openai: 0, min_p_openai: 0, top_a_openai: 0, repetition_penalty_openai: 1, reasoning_effort: 'low', show_thoughts: true,
+    enable_web_search: false, request_images: false, function_calling: false, assistant_prefill: '', assistant_impersonation: '',
+});
+async function sourceBody(S, state, messages) {
+    const d = (await stGenerationParameters(S.root, state, { settingsOf: sourceSettings, model: 'mara-model', messages })).out.generate_data;
+    for (const k of ['stop', 'logit_bias', 'logprobs', 'top_logprobs', 'n', 'tools', 'tool_choice', 'seed']) delete d[k];
+    d.stream = false;
+    return JSON.parse(JSON.stringify(d));
+}
+
+test('일꾼 · 실리 연결 방식 방: 실리 createGenerationParameters가 답장의 값(길이 4000 · 온도 0.3 · 레벨 low · 생각 보기)과 settings.json으로 만든 요청 그대로. 매크로 칸도 실리처럼. 바꾸면 다음 답장부터', async t => {
+    const S = await stage(t, { settings: { draftConn: SOURCE }, more: { oai_settings: SOURCE_OAI }, reply: pings() }), a = world();
+    await S.put('sa', a.m); await S.auto.list();
+    assert.deepEqual((await S.auto.status('sa')).map(x => [x.can, x.why]), [[true, '']]);
+    assert.match((await S.gen(a.id)).payload, /"message_saved"/);
+    assert.equal(S.asked.length, 0);                                       // (우리 커스텀 API로는 안 갔어요)
+    const sent = sentTo(S);
+    assert.deepEqual([sent.length, sent[0].token, sent[0].root], [1, 'tok-123', S.root]);
+    const b = sent[0].body;
+    assert.deepEqual(b, await sourceBody(S, ME, b.messages));
+    assert.deepEqual([b.chat_completion_source, b.model, b.custom_url, b.temperature, b.max_tokens ?? b.max_completion_tokens, b.reasoning_effort, b.include_reasoning, b.stream, b.user_name, b.char_name], ['custom', 'mara-model', 'http://127.0.0.1:9/v1', 0.3, 4000, 'low', true, false, 'Ren', 'Mara']);
+    // (매크로가 든 칸: 실리 브라우저처럼 이 채팅의 이름으로 채워요)
+    assert.equal(b.custom_include_headers, 'X-User: Ren\nX-Char: Mara');
+    assert.deepEqual(b.messages.map(m => m.role), ['system', 'user']);
+    assert.match(b.messages[0].content, /^GOAL\nYou are Mara\./);
+    assert.equal(await lastText(S, 'sa', a), 'ping 1');
+    // 실리에서 연결 설정을 바꾸면 다음 답장부터 (settings.json을 일마다 읽어요: 브라우저는 아무것도 안 했어요)
+    S.stSettings.oai_settings = { ...SOURCE_OAI, custom_url: 'http://127.0.0.1:10/v1', custom_include_headers: 'X-Who: {{user}}' };
+    await S.writeSettings();
+    assert.match((await S.gen(a.id)).payload, /"message_saved"/);
+    const b2 = sentTo(S)[1].body;
+    assert.deepEqual(b2, await sourceBody(S, ME, b2.messages));
+    assert.deepEqual([b2.custom_url, b2.custom_include_headers], ['http://127.0.0.1:10/v1', 'X-Who: Ren']);
+    assert.equal(await lastText(S, 'sa', a), 'ping 2');
+});
+
+const BIAS = { id: 'b1', name: 'Bias', api: 'custom', model: 'mara-model', 'api-url': 'http://127.0.0.1:9/v1', preset: 'Mara Bias' };
+// (bias_presets is not a preset key SillyTavern takes — settingsToUpdate —: the tokens asked for are the chat-completion settings' list's)
+const BIAS_OAI = { chat_completion_source: 'custom', bias_preset_selected: 'Ivo bias', bias_presets: { 'Default (none)': [], 'Ivo bias': [{ text: ' Ivo', value: -50 }] } };
+// (a preset takes its bias pick only with a bias list beside it — custom-request.js presetToGeneratePayload)
+const BIAS_FILES = { 'OpenAI Settings/Mara Bias.json': { temperature: 0.6, bias_preset_selected: 'Ivo bias', bias_presets: { 'Ivo bias': [{ text: ' Ivo', value: -50 }] } } };
+const isBias = url => String(url).startsWith('/api/backends/chat-completions/bias');
+
+test('일꾼 · 로짓 바이어스 프리셋: 실리 서버의 /bias 길로 토큰을 받아 요청에. 그 길을 못 쓰면(옛 다리: 404) 모델 요청을 보내지 않아요 (실패로 알려요)', async t => {
+    // 옛 다리: 그 길이 없어요 (plugin/bridge.mjs allowed → 404)
+    const S = await stageOf(t, { profiles: [BIAS], oai: BIAS_OAI, files: BIAS_FILES }), a = world();
+    useRoom(a, 'profile:b1');
+    await S.put('sa', a.m); await S.auto.list();
+    const r = await S.gen(a.id);
+    assert.match(r.payload, /"type":"error"/, r.payload);
+    assert.ok(S.st.some(x => isBias(x.url)));
+    assert.equal(sentTo(S).length, 0);                                     // (모델 요청은 안 나갔어요: 바이어스 없는 요청은 실리 것과 달라요)
+    assert.equal((await S.get('sa')).messenger.rooms[a.room.id].messages.length, 2);
+    // 다리가 그 길을 열면: 실리 서버가 준 토큰으로
+    const TOKENS = { 1234: -50 };
+    const S2 = await stageOf(t, { profiles: [BIAS], oai: BIAS_OAI, files: BIAS_FILES, routes: async (req, body, res) => { if (!isBias(req.url)) return false; res.end(JSON.stringify(TOKENS)); return true; } }), b = world();
+    useRoom(b, 'profile:b1');
+    await S2.put('sb', b.m); await S2.auto.list();
+    assert.match((await S2.gen(b.id)).payload, /"message_saved"/);
+    const body = sentTo(S2)[0].body, want = await stProfileRequest(S2.root, ME, { profileId: 'b1', messages: body.messages, answer: async () => new Response(JSON.stringify(TOKENS), { status: 200 }) });
+    assert.deepEqual(body, want.generate[0].body);
+    assert.deepEqual(body.logit_bias, { 1234: -50 });
+    // (실리 서버에 물은 것도 실리 코드가 물을 것 그대로. 항목의 id는 실리가 읽을 때 무작위로 채워요: 실리 서버는 안 써요)
+    const noId = x => ({ url: x.url, body: x.body.map(({ id, ...rest }) => rest) });
+    assert.deepEqual(noId(S2.st.find(x => isBias(x.url))), noId(want.sent.find(x => isBias(x.url))));
+    assert.equal(await lastText(S2, 'sb', b), 'you there?');
+});
+
+// (버그, plugin/work.mjs stProfiles.sendRequest: naFetch가 삼킨 실패 뒤의 모델 요청을 막으면 실리의 sendRequest가 "API request failed"로 감싸 던져서,
+//  stFailed()가 불리지 않아요 — 화면 · 실리 창의 이유가 "API request failed"뿐이에요. 금지 토큰의 토크나이저 길(글 완성)도 같아요)
+test.todo('일꾼 · (버그) 바이어스 길을 못 쓰면 이유는 stFailed의 글: "실리 서버의 /api/backends/chat-completions/bias를 쓸 수 없습니다. …" (지금은 "API request failed")', async t => {
+    const S = await stageOf(t, { profiles: [BIAS], oai: BIAS_OAI, files: BIAS_FILES }), a = world();
+    useRoom(a, 'profile:b1');
+    await S.put('sa', a.m); await S.auto.list();
+    const r = await S.gen(a.id);
+    assert.match(r.payload, /"type":"error","data":"실리 서버의 \/api\/backends\/chat-completions\/bias를 쓸 수 없습니다\. 서버 플러그인을 업데이트하고 실리를 다시 시작하세요\."/, r.payload);
+});
+
+test('일꾼 · 실리에서 연결 관리자를 끄거나 고른 프로필이 없어지면: 프로필로 보내지 않고 이유를 알려요 (프로필 방은 실리처럼 고른 연결이 없는 방)', async t => {
+    const off = { disabledExtensions: ['connection-manager'] };
+    const S = await stageOf(t, { settings: { aiConn: { mode: 'st' }, aiProfile: 'p1' }, ext: off }), a = world(), b = world();
+    useRoom(a, 'ai'); useRoom(b, 'profile:p1');
+    await S.put('sa', a.m); await S.put('sb', b.m); await S.auto.list();
+    assert.deepEqual((await S.auto.status('sa')).map(x => [x.can, x.why]), [[false, '선택한 연결을 사용할 수 없습니다. 다른 연결을 선택하세요.']]);
+    assert.equal((await S.gen(a.id)).statusCode, 400);
+    // (실리가 프로필 목록을 주지 않아요 — getSupportedProfiles: "Connection Manager is not available" —: 그 방은 브라우저처럼 초안 모델로)
+    assert.match((await S.gen(b.id)).payload, /"message_saved"/);
+    assert.deepEqual([S.asked.length, sentTo(S).length], [1, 0]);
+    // 다시 켜면 그 프로필로 (settings.json을 일마다 읽어요)
+    S.stSettings.extension_settings.disabledExtensions = [];
+    await S.writeSettings();
+    assert.deepEqual((await S.auto.status('sa')).map(x => [x.can, x.why]), [[true, '']]);
+    // 없는 프로필을 골라 뒀으면 (실리에서 지웠어요)
+    S.stSettings.extension_settings.narrative_archive.aiProfile = 'gone';
+    await S.writeSettings();
+    assert.deepEqual((await S.auto.status('sa')).map(x => [x.can, x.why]), [[false, '선택한 연결을 사용할 수 없습니다. 다른 연결을 선택하세요.']]);
+    assert.equal((await S.gen(a.id)).statusCode, 400);
+    assert.equal(sentTo(S).length, 0);
+});
+
+test.todo('일꾼 · (확인할 것) 연결 관리자를 끄면 이유가 "Connection Manager is not available"이어야 하나: work.mjs cannot()의 getSupportedProfiles catch는 닿지 않아요 (replyRoute의 aiProfiles()가 먼저 그 오류를 삼켜서 "선택한 연결을 사용할 수 없습니다"가 나와요)', async t => {
+    const S = await stageOf(t, { settings: { aiConn: { mode: 'st' }, aiProfile: 'p1' }, ext: { disabledExtensions: ['connection-manager'] } }), a = world();
+    useRoom(a, 'ai');
+    await S.put('sa', a.m);
+    assert.deepEqual((await S.auto.status('sa')).map(x => x.why), ['Connection Manager is not available']);
+});
+
+test('일꾼 · 실리에서 바꾸면 바로 (브라우저 없이): settings.json의 프록시 · 프리셋 파일의 온도를 바꾸면 다음 요청이 새 값으로. 프리셋 파일을 지우면 실리처럼 프리셋 없이', async t => {
+    const S = await stageOf(t, { reply: pings() }), a = world();
+    useRoom(a, 'profile:p1');
+    await S.put('sa', a.m); await S.auto.list();
+    const kitNow = async () => JSON.stringify(joinLive((await S.store.load('sa')).parts).kit), kit = await kitNow();
+    assert.ok(kit.includes('"file"'));
+    assert.match((await S.gen(a.id)).payload, /"message_saved"/);
+    const b1 = sentTo(S)[0].body;
+    assert.deepEqual([b1.temperature, b1.reverse_proxy, b1.proxy_password], [0.7, 'https://home.proxy', 'PROXY-PW']);
+    // 실리에서: 프록시 주소 · 비밀번호, 프리셋의 온도를 바꿔요 (브라우저는 아무것도 안 했어요: 저장은 그대로)
+    S.stSettings.proxies = [PROXIES[0], { name: 'Home', url: 'https://home2.proxy', password: 'PROXY-PW2' }];
+    await S.writeSettings();
+    await S.writeFiles({ 'OpenAI Settings/Quiet.json': { ...QUIET, temperature: 0.2 } });
+    assert.match((await S.gen(a.id)).payload, /"message_saved"/);
+    const b2 = sentTo(S)[1].body;
+    assert.deepEqual(b2, (await stProfileRequest(S.root, ME, { profileId: 'p1', messages: b2.messages })).generate[0].body);
+    assert.deepEqual([b2.temperature, b2.reverse_proxy, b2.proxy_password], [0.2, 'https://home2.proxy', 'PROXY-PW2']);
+    // 프리셋 파일을 지우면: 실리는 그 프리셋 없이 보내요 (custom-request.js: "Preset ... not found, continuing with default settings")
+    await S.writeFiles({ 'OpenAI Settings/Quiet.json': null });
+    assert.match((await S.gen(a.id)).payload, /"message_saved"/);
+    const b3 = sentTo(S)[2].body;
+    assert.deepEqual(b3, (await stProfileRequest(S.root, ME, { profileId: 'p1', messages: b3.messages })).generate[0].body);
+    assert.deepEqual([b3.temperature, b3.reasoning_effort, b3.reverse_proxy], [undefined, undefined, 'https://home2.proxy']);
+    assert.equal(await lastText(S, 'sa', a), 'ping 3');
+    // (그동안 묶음은 그대로예요: 바뀐 것은 실리 파일뿐)
+    assert.equal(await kitNow(), kit);
+});
+
+test('일꾼 · 세계마다 실리 상태를 새로: 다른 캐릭터 · 페르소나의 채팅을 번갈아 돌려도 이름 · {{user}} · {{char}}가 그 일의 것 (앞 일의 것이 안 남아요)', async t => {
+    const S = await stage(t, { settings: { draftConn: SOURCE }, more: { oai_settings: SOURCE_OAI }, reply: pings() });
+    // (Ivo의 채팅: 이 채팅에서 마지막으로 쓴 페르소나는 Varo)
+    await mkdir(path.join(S.root, 'chats', 'ivo'), { recursive: true });
+    await writeFile(path.join(S.root, 'chats', 'ivo', 'Ivo - 2026-11-22.jsonl'), chatFile({ narrative_archive: { stPersona: 'varo.png' } }, [said('Ivo', 'yo'), said('Varo', 'hey', true)]));
+    const a = world(), b = world({ browser: { ...BROWSER(), characterId: 1, chatId: 'Ivo - 2026-11-22' }, members: ['Ivo'] });
     await S.put('sa', a.m); await S.put('sb', b.m); await S.auto.list();
     assert.match((await S.gen(a.id)).payload, /"message_saved"/);
-    const sent = S.st.find(x => x.url === '/api/backends/chat-completions/generate');
-    assert.deepEqual(sent.body, st.build('p1', sent.body.messages, 4000, over).body);
-    assert.equal(sent.body.reasoning_effort, 'high');
-    assert.match((await S.auto.status('sb'))[0].why, /추론 레벨의 요청 값이 없습니다/);
-    // (브라우저에서 실리 코드가 그 레벨을 못 만들었으면: 그 이유가 그대로)
-    const c = world({ pt, levels: { [SP.levelKey('openrouter', 'or/model', 'high')]: { why: '이 실리 버전에서는 연결 프로필에 추론 레벨을 적용할 수 없습니다. 실리를 업데이트하세요.' } } });
-    Object.assign(liveWorld(c.m).messenger.rooms[c.room.id], { connectionId: 'profile:p1', chatParameters: { reasoningEffort: 'high' } });
-    await S.put('sc', c.m);
-    assert.match((await S.auto.status('sc'))[0].why, /이 실리 버전에서는 연결 프로필에 추론 레벨을 적용할 수 없습니다\. 실리를 업데이트하세요/);
-});
-
-test('일꾼: 실리에서 프로필이 바뀌었거나 프리셋 파일이 없으면 예전 틀로 보내지 않아요', async t => {
-    const set = ST_SET(), pt = await templatesOf(fakeSt(set), PROFILE);
-    const changed = { ...set, profiles: [{ ...PROFILE, model: 'or/other' }] };
-    const S = await stageOf(t, changed), a = world({ pt });
-    liveWorld(a.m).messenger.rooms[a.room.id].connectionId = 'profile:p1';
-    await S.put('sa', a.m); await S.auto.list();
-    assert.match((await S.auto.status('sa'))[0].why, /연결 프로필이 변경되었습니다/);
-    assert.equal((await S.gen(a.id)).statusCode, 400);
-    const S2 = await stageOf(t, { ...set, presets: {} }), b = world({ pt });
-    liveWorld(b.m).messenger.rooms[b.room.id].connectionId = 'profile:p1';
-    await S2.put('sb', b.m); await S2.auto.list();
-    const r = await S2.gen(b.id);
-    assert.match(r.payload, /"type":"error"[^\n]*프리셋을 찾을 수 없습니다: Quiet/);
-    assert.equal([...S.st, ...S2.st].filter(x => x.url.includes('generate')).length, 0);
-});
-
-test('일꾼: 글 완성 프로필 방 — 지시 형식이 감싼 글로 실리 서버의 글 완성 처리기에, 답은 실리처럼 멈춤 글을 잘라서', async t => {
-    const ins = { system_sequence: '### System:', input_sequence: '### Instruction:', output_sequence: '### Response:', stop_sequence: '</s>', last_output_sequence: '' };
-    const TC = { id: 't1', mode: 'tc', api: 'koboldcpp', model: 'k', 'api-url': 'http://127.0.0.1:5001', instruct: 'Alpaca' };
-    const set = { ...ST_SET(), profiles: [TC], instructs: { Alpaca: ins } }, st = fakeSt(set), pt = await templatesOf(st, TC);
-    const S = await stageOf(t, set), a = world({ pt });
-    liveWorld(a.m).messenger.rooms[a.room.id].connectionId = 'profile:t1';
-    await S.put('sa', a.m); await S.auto.list();
+    assert.match((await S.gen(b.id, { forCharacterId: 'ivo' })).payload, /"message_saved"/);
     assert.match((await S.gen(a.id)).payload, /"message_saved"/);
-    const sent = S.st.find(x => x.url === '/api/backends/text-completions/generate');
-    assert.ok(sent);
-    assert.match(sent.body.prompt, /^### System:\nGOAL\nYou are Mara\.[\s\S]*\n### Instruction:\n\[MESSENGER\][\s\S]*### Response:\n$/);
-    assert.equal(sent.body.max_tokens, 4000);
-    assert.equal((await S.get('sa')).messenger.rooms[a.room.id].messages.at(-1).text, 'you there?');
+    const bodies = sentTo(S).map(x => x.body);
+    assert.deepEqual(bodies.map(x => [x.user_name, x.char_name, x.custom_include_headers]), [['Ren', 'Mara', 'X-User: Ren\nX-Char: Mara'], ['Varo', 'Ivo', 'X-User: Varo\nX-Char: Ivo'], ['Ren', 'Mara', 'X-User: Ren\nX-Char: Mara']]);
+    assert.match(bodies[1].messages[0].content, /^GOAL\nYou are Ivo\./);
+    assert.match(textOf(bodies[1]), /\[PERSONA — Varo\]\nVaro is a pilot\./);
+    // (하나하나 실리 코드가 그 채팅의 상태로 만드는 것 그대로)
+    assert.deepEqual(bodies[1], await sourceBody(S, { name1: 'Varo', name2: 'Ivo', persona: 'Varo is a pilot.' }, bodies[1].messages));
+    assert.deepEqual(bodies[2], await sourceBody(S, ME, bodies[2].messages));
+});
+
+test('일꾼 · 변수 매크로: 실리 채팅 파일의 chat_metadata.variables({{getvar::x}} · {{.x}})와 settings.json의 전역 변수({{$x}})로 — 멈춤 글 · 몸통 칸에. 채팅 파일이 바뀌면 다음 요청에', async t => {
+    const VAR = { id: 'v1', name: 'Vars', api: 'custom', model: 'mara-model', 'api-url': 'http://127.0.0.1:9/v1', preset: 'Vars' };
+    const files = { 'OpenAI Settings/Vars.json': { temperature: 0.5, chat_completion_source: 'custom', custom_include_body: '{"mood": "{{getvar::mood}}", "place": "{{.place}}", "season": "{{$season}}"}' } };
+    const power = { ...PERSONAS, custom_stopping_strings: '["{{getvar::mood}}", "{{.place}}!"]', custom_stopping_strings_macro: true };
+    const S = await stageOf(t, { profiles: [VAR], oai: { chat_completion_source: 'custom' }, files, ext: { variables: { global: { season: 'winter' } } }, more: { power_user: power }, reply: pings() }), a = world();
+    useRoom(a, 'profile:v1');
+    await S.put('sa', a.m); await S.auto.list();
+    const vars = { mood: 'sleepy', place: 'bakery' };
+    await S.writeChat({ variables: vars });
+    assert.match((await S.gen(a.id)).payload, /"message_saved"/);
+    const b = sentTo(S)[0].body;
+    assert.deepEqual(b, (await stProfileRequest(S.root, { ...ME, chat_metadata: { variables: vars } }, { profileId: 'v1', messages: b.messages })).generate[0].body);
+    assert.deepEqual(b.stop, ['sleepy', 'bakery!']);
+    assert.deepEqual(JSON.parse(b.custom_include_body), { mood: 'sleepy', place: 'bakery', season: 'winter' });
+    // (실리에서 변수가 바뀌었어요: 채팅 파일의 것)
+    await S.writeChat({ variables: { mood: 'awake', place: 'park' } });
+    assert.match((await S.gen(a.id)).payload, /"message_saved"/);
+    const b2 = sentTo(S)[1].body;
+    assert.deepEqual([b2.stop, JSON.parse(b2.custom_include_body)], [['awake', 'park!'], { mood: 'awake', place: 'park', season: 'winter' }]);
 });
 
 test('일꾼: 모델이 실패하면 말이 안 들어가고, 실패로 알려요. 쉬는 것은 스케줄러가 해요 (마리나라처럼: 방에는 안 적어요)', async t => {
@@ -374,14 +527,15 @@ test('일꾼: 늦은 답장을 못 보내면 실리 창에 이유를 한 번 적
     process.stderr.write = function (c, ...a) { lines.push(String(c)); return keep.err.call(this, c, ...a); };
     t.after(() => { process.stdout.write = keep.out; process.stderr.write = keep.err; });
     const mk = more => { const x = world({ hoursAgo: 0.2 }); const j = enqueueJob(x.m, { kind: 'reply', owner: 'Mara', room: x.room.id, at: Date.now() - 600_000 }); Object.assign(j, { timed: true, notBefore: Date.now() - 1000 }); more?.(x); return x; };
-    const held = mk(), noTpl = mk(x => { liveWorld(x.m).messenger.rooms[x.room.id].connectionId = 'profile:p1'; }), old = world({ version: '0.0.1' }), fine = mk();
+    // (noProfile: 실리 쪽 방인데 실리에서 고른 프로필이 없어요 — 서버는 실리의 지금 연결로 못 보내요)
+    const held = mk(), noProfile = mk(x => { liveWorld(x.m).messenger.rooms[x.room.id].connectionId = 'ai'; }), old = world({ version: '0.0.1' }), fine = mk();
     { const j = enqueueJob(old.m, { kind: 'reply', owner: 'Mara', room: old.room.id, at: Date.now() - 600_000 }); Object.assign(j, { timed: true, notBefore: Date.now() - 1000 }); }
-    for (const [sid, x] of [['sh', held], ['sn', noTpl], ['so', old], ['sf', fine]]) await S.put(sid, x.m);
+    for (const [sid, x] of [['sh', held], ['sn', noProfile], ['so', old], ['sf', fine]]) await S.put(sid, x.m);
     assert.deepEqual(await S.auto.claim('sh', held.room.id, 'browser:tab1'), { ok: true });
     await S.auto.sweep(); await S.auto.sweep();
     const why = id => lines.filter(l => l.includes(`[due-replies] Mara (${id}): 늦은 답장을 보내지 않았습니다.`));
     assert.equal(why(held.room.id).length, 1, lines.join('\n')); assert.match(why(held.room.id)[0], /브라우저 탭이 이 방에서 답장을 만들고 있습니다\./);
-    assert.equal(why(noTpl.room.id).length, 1); assert.match(why(noTpl.room.id)[0], /연결 프로필/);
+    assert.equal(why(noProfile.room.id).length, 1); assert.match(why(noProfile.room.id)[0], /선택된 연결 프로필이 없습니다\. 실리의 연결 관리자에서 프로필을 선택하세요\./);
     assert.equal(why(old.room.id).length, 1); assert.match(why(old.room.id)[0], /버전이 다릅니다/);
     assert.equal(lines.filter(l => l.includes(`[due-replies] Mara (${fine.room.id}): 늦은 답장을 보냈습니다.`)).length, 1);
 });
@@ -403,17 +557,17 @@ test('일꾼: 캐릭터가 상태를 바꾸면 카드에도 써요 (실리의 me
 test('일꾼: 때가 된 늦은 답장을 보내요 — 브라우저가 보고 있어도(마리나라처럼). 서버가 못 보내는 방 · 아직 때가 아닌 것은 기다려요', async t => {
     const S = await stage(t, { reply: () => ({ reply: ['sorry, was busy'], status: '' }) });
     const mk = (more = () => {}) => { const x = world({ hoursAgo: 0.2 }); const j = enqueueJob(x.m, { kind: 'reply', owner: 'Mara', room: x.room.id, at: Date.now() - 600_000 }); Object.assign(j, { timed: true, notBefore: Date.now() - 1000 }); more(x, j); return x; };
-    const a = mk(), b = mk(), c = mk(x => { liveWorld(x.m).messenger.rooms[x.room.id].connectionId = 'profile:p1'; }), d = mk((x, j) => { j.notBefore = Date.now() + 3600_000; });
+    const a = mk(), b = mk(), c = mk(x => { liveWorld(x.m).messenger.rooms[x.room.id].connectionId = 'ai'; }), d = mk((x, j) => { j.notBefore = Date.now() + 3600_000; });
     await S.put('sa', a.m); await S.put('sb', b.m); await S.put('sc', c.m); await S.put('sd', d.m);
     await S.auto.presence('sb', 'active');
     assert.equal(await S.auto.sweep(), 2);
     for (const [sid, x] of [['sa', a], ['sb', b]]) assert.equal((await S.get(sid)).messenger.rooms[x.room.id].messages.at(-1).text, 'sorry, was busy', sid);
     for (const [sid, x] of [['sc', c], ['sd', d]]) { const w = await S.get(sid); assert.equal(w.messenger.rooms[x.room.id].messages.length, 2, sid); assert.equal(w.queue.jobs.filter(j => j.state === 'waiting').length, 1, sid); }
     assert.equal(S.asked.length, 2);
-    // (연결 프로필을 고른 방은 그 요청 틀이 없으면, 초안 모델이 커스텀 API여도 서버가 대신 답하지 않아요: 다른 모델로 답하게 돼요)
+    // (실리 쪽 방인데 실리에서 고른 프로필이 없으면, 초안 모델이 커스텀 API여도 서버가 대신 답하지 않아요: 다른 모델로 답하게 돼요)
     await S.auto.list();
     const rc = await S.gen(c.id);
-    assert.equal(rc.statusCode, 400); assert.match(rc.payload, /연결 프로필/);
+    assert.equal(rc.statusCode, 400); assert.match(rc.payload, /선택된 연결 프로필이 없습니다/);
     assert.equal(S.asked.length, 2);
     // (늦은 답장은 내가 자리에 없다고 적지 않아요: 먼저 건 말이 아니에요)
     assert.doesNotMatch(textOf(S.asked[0].body), /away or offline|\[WHY NOW\]\n/);
@@ -461,7 +615,7 @@ test('일꾼: 서버가 못 보내는 방은 그 방만 건너뛰고, 같은 Orb
     const a = world({ hoursAgo: 0.2 }), other = ensureRoom(a.m, ['Mara', 'Ivo']);
     putLivePhone(a.m, { owner: 'Ivo' });
     sendLive(a.m, other.id, 'anyone?', Date.now() - 600_000);
-    liveWorld(a.m).messenger.rooms[other.id].connectionId = 'profile:p1';
+    liveWorld(a.m).messenger.rooms[other.id].connectionId = 'ai';
     for (const room of [a.room.id, other.id]) { const j = enqueueJob(a.m, { kind: 'reply', owner: 'Mara', room, at: Date.now() - 600_000 }); Object.assign(j, { timed: true, notBefore: Date.now() - 1000 }); }
     await S.put('sa', a.m);
     assert.equal(await S.auto.sweep(), 1);
@@ -662,6 +816,7 @@ test('일꾼 · 실리에서 바로: 이 채팅의 캐릭터 카드를 지웠으
     await S.auto.list();
     assert.equal((await S.gen(a.id)).statusCode, 404);
     const N = await stage(t, { bridge: false }), b = world();
+    await rm(path.join(N.root, 'characters'), { recursive: true });   // (카드 폴더를 못 읽어요)
     await N.put('sb', b.m);
     assert.deepEqual((await N.auto.status('sb')).map(x => [x.can, x.why]), [[false, '캐릭터 목록을 읽을 수 없습니다.']]);
     assert.equal(S.asked.length + N.asked.length, 0);
