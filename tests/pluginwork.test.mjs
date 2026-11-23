@@ -447,9 +447,12 @@ test('일꾼: 먼저 건 말 뒤에 캐릭터끼리 주고받기를 안 해요 (
     assert.equal(S.asked.length, 1);
 });
 
-test('일꾼: 확장 폴더의 코드로 돌 때 버전이 다르면 "새로 고치세요" (확장은 이미 새것: 페이지만 아직 옛것)', async t => {
+test('일꾼: 확장 폴더의 코드로 돌 때는 페이지가 옛 버전이어도 멈추지 않아요 (그 코드가 지금 설치된 확장)', async t => {
     const { OWN_DIR } = await import('../plugin/code.mjs');
-    const S = await stage(t, { code: { dir: OWN_DIR, version: VERSION, from: 'extension' } }), old = world({ version: '0.0.1' });
+    const S = await stage(t, { reply: () => ({ reply: ['sorry, was busy'], status: '' }), code: { dir: OWN_DIR, version: VERSION, from: 'extension' } }), old = world({ version: '0.0.1', hoursAgo: 0.2 });
+    const j = enqueueJob(old.m, { kind: 'reply', owner: 'Mara', room: old.room.id, at: Date.now() - 600_000 }); Object.assign(j, { timed: true, notBefore: Date.now() - 1000 });
     await S.put('s1', old.m);
-    assert.match((await S.auto.status('s1'))[0].why, /확장\(0\.0\.1\)과 서버\([^)]+\) 버전이 다릅니다\. 실리 페이지를 새로 고치세요\./);
+    assert.deepEqual((await S.auto.status('s1')).map(r => [r.can, r.why]), [[true, '']]);
+    assert.equal(await S.auto.sweep(), 1);
+    assert.equal((await S.get('s1')).messenger.rooms[old.room.id].messages.at(-1).text, 'sorry, was busy');
 });

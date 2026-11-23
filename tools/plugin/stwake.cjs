@@ -145,7 +145,7 @@ const log = (...a) => console.log(...a);
         for (let i = 0; i < 60 && !seen; i++) { await page.waitForTimeout(500); seen = await page.evaluate(() => { const r = window.__na.room.messages.at(-1); return r.from === 'Seraphina' ? Date.now() : null; }); }
         ok('shown: the reply came soon after its time', !!seen && seen - r4.at < 15000, seen ? `${seen - r4.at} ms after its time` : 'not seen');
         ok('shown: once', completions() === 2, `asked ${completions()}`);
-        // the worker runs the extension folder's code (plugin/code.mjs): a page with an older version is told to reload
+        // the worker runs the extension folder's code (plugin/code.mjs): a page with an older version does not stop it
         const r5 = await page.evaluate(async () => {
             const { core, G, KO, m } = window.__na, k = m.live.kit, was = k.ver;
             k.ver = '0.0.1'; await core.saveMeta();
@@ -153,7 +153,7 @@ const log = (...a) => console.log(...a);
             k.ver = was; await core.saveMeta(); await G.liveKitRefresh(m);
             return { why };
         });
-        ok('the worker runs the extension\'s own code (a page not reloaded yet is told to reload)', /실리 페이지를 새로 고치세요/.test(r5.why), r5.why);
+        ok('the worker runs the extension\'s own code (a page not reloaded yet does not stop it)', r5.why === '', r5.why);
         ok('no errors from the extension on the page', errors.filter(e => !/Internal S/.test(e)).length === 0, errors.join(' || '));
     } catch (e) { fail++; log('THREW', String(e?.stack || e).slice(0, 600)); log(errors.join(' || ')); }
     finally {

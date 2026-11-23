@@ -167,14 +167,15 @@ export async function startWork({ root, store, st = null, schedule = true, from 
     }
     // 이 세계를 서버가 돌려도 되나 → '' | 안 되는 이유
     //   - 묶음이 있어야 해요
-    //   - 확장과 플러그인이 같은 버전이어야 해요: 플러그인은 실리 plugins 폴더의 것, 확장은 실리 확장 폴더의 것이라 따로 올라가요.
-    //     다르면 서버가 브라우저와 다른 코드로 답하게 돼요 (실리를 다시 켜면 플러그인이 저절로 올라가요)
+    //   - 일꾼이 플러그인 폴더의 코드로 돌 때만: 확장과 같은 버전이어야 해요 (그 코드는 확장보다 옛것일 수 있어요).
+    //     확장 폴더의 코드로 돌 때는 그 코드가 지금 설치된 확장이에요: 페이지가 아직 옛것이어도 멈추지 않아요 (plugin/code.mjs)
     //   - 실리의 그 채팅 파일이 있어야 해요: 채팅을 지웠는데 Orbit에 계속 말을 걸지 않게
     async function blocked(real) {
         const kit = kitOf(real);
         if (!kit) return '서버 데이터가 없습니다. 실리에서 이 채팅을 다시 여세요.';
-        // (the worker runs the extension's own code when it can — plugin/code.mjs —: a different version there is a page not reloaded yet)
-        if (kit.ver !== VERSION) return from === 'extension' ? `확장(${kit.ver || '?'})과 서버(${VERSION}) 버전이 다릅니다. 실리 페이지를 새로 고치세요.` : `확장(${kit.ver || '?'})과 서버 플러그인(${VERSION}) 버전이 다릅니다. 서버 플러그인을 업데이트하고 실리를 다시 시작하세요.`;
+        // (the worker runs the extension's own code when it can — plugin/code.mjs —: that code is the installed extension, the newest
+        //  there is, and a page not reloaded yet does not stop it. Only the plugin folder's own code may be older than the extension)
+        if (from !== 'extension' && kit.ver !== VERSION) return `확장(${kit.ver || '?'})과 서버 플러그인(${VERSION}) 버전이 다릅니다. 서버 플러그인을 업데이트하고 실리를 다시 시작하세요.`;
         const f = kit.chat?.file;
         if (!obj(f) || !safeName(f.id) || (!f.group && !safeName(f.dir))) return '연결된 실리 채팅을 찾을 수 없습니다. 실리에서 이 채팅을 다시 여세요.';
         const file = f.group ? path.join(root, 'group chats', `${f.id}.jsonl`) : path.join(root, 'chats', f.dir, `${f.id}.jsonl`);

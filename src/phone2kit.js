@@ -6,7 +6,7 @@
 //     name1                         페르소나 이름 (실리의 name1)
 //     persona                       지금 고른 페르소나의 설명 (powerUserSettings.persona_description)
 //     characters: [ … ]             필요한 캐릭터 카드만, 실리 목록의 순서 그대로 (이름으로 찾을 때 같은 카드가 먼저 나와요)
-//     ver                           확장의 버전 (서버 플러그인의 코드가 같은 버전일 때만 서버가 돌려요: 다른 버전의 코드로 답하지 않게)
+//     ver                           확장의 버전 (서버가 플러그인 폴더의 코드로 돌 때만, 같은 버전이어야 돌려요: plugin/code.mjs)
 //     chat: { avatar | null, group: { id, members: [avatar…] } | null, file }   이 채팅이 누구의 것인지
 //       file: { group: 그룹 채팅인가, dir: 캐릭터 채팅 폴더 이름 | null, id: 채팅 파일 이름(확장자 없이) } | null
 //             실리의 채팅 파일. 서버는 이 파일이 있는 동안만 돌려요: 실리에서 채팅을 지웠는데 Orbit에 계속 말을 걸지 않게
