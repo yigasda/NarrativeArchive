@@ -23,9 +23,13 @@ SCALE
 - Counted: money the family gives the owner (an allowance, trust payouts, gifts, an inheritance received). It is the owner's own.
 - Judge the amounts a real person in that country and role would hold after their years of income, in their way of life. A high earner or a rich family's child holds a lot; an ordinary worker holds an ordinary amount.
 - Examples (deposits / investments):
-  - a junior office worker in Seoul, three years in: 10–30 million KRW / 0–20 million KRW
-  - a senior doctor in Oslo, fifteen years in, living in Frogner: 1.5–3 million NOK / 2–5 million NOK
-  - the heir of a global conglomerate, living on family money: 2–10 billion KRW / 5–30 billion KRW
+  - a university student in Seoul with a part-time job: 1–5 million KRW / 0–2 million KRW
+  - a café worker in Berlin, three years in: 2,000–8,000 EUR / 0–3,000 EUR
+  - an office worker at a small company in Seoul, two years in: 10–30 million KRW / 0–10 million KRW
+  - an office worker at a large company in Seoul, five years in: 100–200 million KRW / 50–200 million KRW
+  - a lawyer at a large Seoul firm, ten years in: 300–800 million KRW / 0.5–1.5 billion KRW
+  - a specialist with their own practice in Zurich, fifteen years in: 0.8–2 million CHF / 1.5–4 million CHF
+  - the heir of a major conglomerate, living on family money: 10–50 billion KRW / 100 billion–1 trillion KRW
 - An amount the story states wins; an exact total gives min = max.
 - Balances an earlier phone showed are not evidence.
 - Each range: max at most three times min. Both ranges in one currency, the owner's main account currency.
