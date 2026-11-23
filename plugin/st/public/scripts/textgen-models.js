@@ -102,6 +102,231 @@ const OPENROUTER_PROVIDERS = [
     'Z.AI',
 ];
 
+// 실리 public/scripts/textgen-models.js 115~337
+/**
+ * List of NanoGPT providers.
+ * Providers endpoint: https://nano-gpt.com/api/models/providers
+ * @type {{id: string, label: string}[]}
+ */
+const NANOGPT_PROVIDERS = [
+    {
+        'id': 'akash',
+        'label': 'Akash',
+    },
+    {
+        'id': 'alibaba',
+        'label': 'Alibaba',
+    },
+    {
+        'id': 'ambient',
+        'label': 'Ambient',
+    },
+    {
+        'id': 'arliai',
+        'label': 'ArliAI',
+    },
+    {
+        'id': 'atlascloud',
+        'label': 'AtlasCloud',
+    },
+    {
+        'id': 'azure',
+        'label': 'Azure',
+    },
+    {
+        'id': 'awsbedrock',
+        'label': 'Amazon Bedrock',
+    },
+    {
+        'id': 'baidu',
+        'label': 'Baidu',
+    },
+    {
+        'id': 'baseten',
+        'label': 'BaseTen',
+    },
+    {
+        'id': 'cerebras',
+        'label': 'Cerebras',
+    },
+    {
+        'id': 'chutes',
+        'label': 'Chutes',
+    },
+    {
+        'id': 'clarifai',
+        'label': 'Clarifai',
+    },
+    {
+        'id': 'cloudflare',
+        'label': 'Cloudflare',
+    },
+    {
+        'id': 'crusoe',
+        'label': 'Crusoe',
+    },
+    {
+        'id': 'dekallm',
+        'label': 'DekaLLM',
+    },
+    {
+        'id': 'deepinfra',
+        'label': 'DeepInfra',
+    },
+    {
+        'id': 'deepseek',
+        'label': 'DeepSeek',
+    },
+    {
+        'id': 'fireworks',
+        'label': 'Fireworks',
+    },
+    {
+        'id': 'friendli',
+        'label': 'Friendli',
+    },
+    {
+        'id': 'gmicloud',
+        'label': 'GMICloud',
+    },
+    {
+        'id': 'lilac',
+        'label': 'Lilac',
+    },
+    {
+        'id': 'google',
+        'label': 'Google',
+    },
+    {
+        'id': 'groq',
+        'label': 'Groq',
+    },
+    {
+        'id': 'hyperbolic',
+        'label': 'Hyperbolic',
+    },
+    {
+        'id': 'ionet',
+        'label': 'io.net',
+    },
+    {
+        'id': 'inceptron',
+        'label': 'Inceptron',
+    },
+    {
+        'id': 'mancer',
+        'label': 'Mancer',
+    },
+    {
+        'id': 'mara',
+        'label': 'Mara',
+    },
+    {
+        'id': 'meganova',
+        'label': 'MegaNova',
+    },
+    {
+        'id': 'minimax',
+        'label': 'MiniMax',
+    },
+    {
+        'id': 'modelrun',
+        'label': 'ModelRun',
+    },
+    {
+        'id': 'moonshot',
+        'label': 'Moonshot',
+    },
+    {
+        'id': 'morph',
+        'label': 'Morph',
+    },
+    {
+        'id': 'ncompass',
+        'label': 'NCompass',
+    },
+    {
+        'id': 'nebius',
+        'label': 'Nebius',
+    },
+    {
+        'id': 'neuralwatt',
+        'label': 'NeuralWatt',
+    },
+    {
+        'id': 'tensorix',
+        'label': 'Tensorix',
+    },
+    {
+        'id': 'nextbit',
+        'label': 'NextBit',
+    },
+    {
+        'id': 'novita',
+        'label': 'Novita',
+    },
+    {
+        'id': 'parasail',
+        'label': 'Parasail',
+    },
+    {
+        'id': 'phala',
+        'label': 'Phala',
+    },
+    {
+        'id': 'redpill',
+        'label': 'Redpill',
+    },
+    {
+        'id': 'sambanova',
+        'label': 'SambaNova',
+    },
+    {
+        'id': 'sambanova-high-throughput',
+        'label': 'SambaNova (High Throughput)',
+    },
+    {
+        'id': 'siliconflow',
+        'label': 'SiliconFlow',
+    },
+    {
+        'id': 'streamlake',
+        'label': 'StreamLake',
+    },
+    {
+        'id': 'tinfoil',
+        'label': 'Tinfoil',
+    },
+    {
+        'id': 'together',
+        'label': 'Together',
+    },
+    {
+        'id': 'uomi',
+        'label': 'UOMI',
+    },
+    {
+        'id': 'venice',
+        'label': 'Venice',
+    },
+    {
+        'id': 'wafer',
+        'label': 'Wafer',
+    },
+    {
+        'id': 'wandb',
+        'label': 'Weights & Biases',
+    },
+    {
+        'id': 'xiaomi',
+        'label': 'Xiaomi',
+    },
+    {
+        'id': 'zai',
+        'label': 'Z.AI',
+    },
+];
+
 // 실리 public/scripts/textgen-models.js 1347~1385
 export function getCurrentOpenRouterModelTokenizer() {
     const modelId = textgen_settings.openrouter_model;
@@ -143,8 +368,9 @@ export function getCurrentDreamGenModelTokenizer() {
     }
 }
 
-// (실리 initTextGenModels 1403~1409가 이 목록으로 화면의 공급자 칸(.openrouter_providers)을 채워요. 일꾼이 loadTextGenSettings 594의 값 부분에 써요)
-export { OPENROUTER_PROVIDERS };
+// (실리 initTextGenModels 1403~1416이 이 목록으로 화면의 공급자 칸(.openrouter_providers · #nanogpt_provider)을 채워요.
+// 일꾼이 loadTextGenSettings 594 · loadOpenAISettings 4401~4403의 값 부분에 써요, plugin/st/naload.js)
+export { OPENROUTER_PROVIDERS, NANOGPT_PROVIDERS };
 
 /**
  * @param {{openRouterModels?: object[]}} v

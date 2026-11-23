@@ -519,9 +519,10 @@ partial('scripts/textgen-models.js', [
     `import { textgenerationwebui_settings as textgen_settings } from './textgen-settings.js';
 import { tokenizers } from './tokenizers.js';
 `,
-    [15, 15], '', [21, 21], '', [23, 113], '', [1347, 1385], '',
-    `// (실리 initTextGenModels 1403~1409가 이 목록으로 화면의 공급자 칸(.openrouter_providers)을 채워요. 일꾼이 loadTextGenSettings 594의 값 부분에 써요)
-export { OPENROUTER_PROVIDERS };
+    [15, 15], '', [21, 21], '', [23, 113], '', [115, 337], '', [1347, 1385], '',
+    `// (실리 initTextGenModels 1403~1416이 이 목록으로 화면의 공급자 칸(.openrouter_providers · #nanogpt_provider)을 채워요.
+// 일꾼이 loadTextGenSettings 594 · loadOpenAISettings 4401~4403의 값 부분에 써요, plugin/st/naload.js)
+export { OPENROUTER_PROVIDERS, NANOGPT_PROVIDERS };
 
 /**
  * @param {{openRouterModels?: object[]}} v

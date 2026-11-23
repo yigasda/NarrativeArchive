@@ -24,6 +24,7 @@ import { __naRegisterPresetManagers } from './public/scripts/preset-manager.js';
 import { ConnectionManagerRequestService } from './public/scripts/extensions/shared.js';
 import { NaAjaxWait, naAjaxFill } from './public/naFetch.js';
 import { initMacros } from './public/scripts/macros.js';
+import { uuidv4 } from './public/scripts/utils.js';
 
 export { ConnectionManagerRequestService };
 
@@ -350,7 +351,38 @@ function loadPowerUserValues(data) {
     }
 }
 
-// 실리 extensions/connection-manager/index.js 27~30
+// openai.js loadOpenAISettings 4340~4404 중 화면 칸을 거쳐 값이 바뀌는 것. 4340~4367은 settingsToUpdate의 칸마다 값을 넣기만 하고,
+// 4378~4394 · 4401~4403이 칸 몇 개에 change를 일으켜서 그 칸에서 고른 것을 다시 oai_settings에 써요.
+function loadOpenAISettingsValues(oai_settings) {
+    // 4378~4393: 바이어스 항목에 id가 없으면 채우고(무작위: 실리 서버의 /bias는 id를 안 써요), 옵션마다 selected = (이름 === 고른 이름)
+    for (const preset of Object.keys(oai_settings.bias_presets)) {
+        if (Array.isArray(oai_settings.bias_presets[preset])) {
+            oai_settings.bias_presets[preset].forEach((bias) => {
+                if (bias && !bias.id) {
+                    bias.id = uuidv4();
+                }
+            });
+        }
+    }
+    // 4394 → onLogitBiasPresetChange 4634~4643: 고른 옵션의 값. 고른 옵션이 없으면 브라우저는 하나 고르기 칸의 첫 옵션을 골라요(옵션이 없으면 'undefined')
+    const biasNames = Object.keys(oai_settings.bias_presets);
+    const value = String(biasNames.includes(oai_settings.bias_preset_selected) ? oai_settings.bias_preset_selected : biasNames[0]);
+    if (!Array.isArray(oai_settings.bias_presets[value])) {
+        console.error('Preset not found');
+    } else {
+        oai_settings.bias_preset_selected = value;
+    }
+    // 4401~4402 → 7263~7286: 여러 고르기 칸(공급자: index.html 3242, 옵션은 textgen-models.js 1403~1409 OPENROUTER_PROVIDERS · 양자화: index.html 3255~3265)
+    oai_settings.openrouter_providers = multiSelectValue(TGM.OPENROUTER_PROVIDERS, oai_settings.openrouter_providers);
+    oai_settings.openrouter_quantizations = multiSelectValue(OPENROUTER_QUANTIZATION_OPTIONS, oai_settings.openrouter_quantizations);
+    // 4403 → 7290~7294: 하나 고르기 칸(index.html 3662 'Auto' = '' 다음에 textgen-models.js 1411~1416 NANOGPT_PROVIDERS의 id). 맞는 옵션이 없으면 .val()이 null → ''
+    const nanoValue = oai_settings.nanogpt_provider;
+    const nanoText = nanoValue == null ? '' : (typeof nanoValue === 'number' ? nanoValue + '' : nanoValue);
+    oai_settings.nanogpt_provider = String(['', ...TGM.NANOGPT_PROVIDERS.map(p => p.id)].includes(nanoText) ? nanoText : '');
+    // 4404 → 6967~6977: #chat_completion_source의 고른 값(저장된 소스가 옵션에 있으면 그대로). 그 밖의 줄은 화면 · 상태 확인
+}
+
+// 실리 extensions/connection-manager/index.js 27~30의 DEFAULT_SETTINGS
 const CONNECTION_MANAGER_DEFAULT_SETTINGS = {
     profiles: [],
     selectedProfile: null,
@@ -392,6 +424,7 @@ export function naLoad(settings, data) {
     for (const key of Object.keys(OAI.default_settings)) OAI.oai_settings[key] = s[key] ?? structuredClone(OAI.default_settings[key]);
     // setContinuePostfixControls 4427~4451: 정해진 값이 아니면 SPACE ("Prevent preset value abuse")
     if (!Object.values(OAI.continue_postfix_types).includes(OAI.oai_settings.continue_postfix)) OAI.oai_settings.continue_postfix = OAI.continue_postfix_types.SPACE;
+    loadOpenAISettingsValues(OAI.oai_settings);
     // (로짓 바이어스 결과는 실리가 프리셋을 바꿀 때 비워요(biasCache = undefined). 서버는 일마다 새로)
     OAI.__naSet({ biasCache: undefined, model_list: [] });
 
