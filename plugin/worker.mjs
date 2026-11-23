@@ -10,7 +10,7 @@ const { root, bridge = null, schedule = true, from = 'plugin' } = workerData;
 //  Written to SillyTavern's window instead, once for the same text, and the worker goes on. Only the first line: an error may carry a reply's body)
 const uncaught = new Set();
 process.on('unhandledRejection', err => {
-    const why = String(err?.stack || err?.message || err);
+    const why = String(err?.stack || err?.message || err).split('\n')[0];
     if (uncaught.has(why)) return;
     if (uncaught.size >= 100) uncaught.delete(uncaught.values().next().value);
     uncaught.add(why);
