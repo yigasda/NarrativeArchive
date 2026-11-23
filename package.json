@@ -3,5 +3,13 @@
     "private": true,
     "type": "module",
     "main": "plugin/index.mjs",
-    "description": "NarrativeArchive: SillyTavern 확장(index.js · src) + 서버 플러그인(plugin)"
+    "description": "NarrativeArchive: SillyTavern 확장(index.js · src) + 서버 플러그인(plugin)",
+    "devDependencies": {
+        "chevrotain": "11.2.0",
+        "droll": "0.2.1",
+        "handlebars": "4.7.9",
+        "lodash": "4.18.1",
+        "moment": "2.30.1",
+        "seedrandom": "3.0.5"
+    }
 }
