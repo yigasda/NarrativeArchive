@@ -164,11 +164,10 @@ export function orbitList(p, now, o) {
 
 // 캐릭터가 먼저 건 말의 알림 (마리나라의 ConversationAutonomousEffects · ChatNotificationBubbles):
 //   band: { name } 지금 보는 방에 왔을 때 오른쪽 위에 5초 뜨는 띠 · bubs: [{ id, name, count }] 다른 방에 왔을 때 오른쪽 가장자리의 프사 방울(누르면 그 방으로, ✕는 지우기)
-//   방울이 2개 이상이면 마리나라의 모바일 모양대로 하나로 묶어요: 프사 3개까지 겹치고 합계 배지, 누르면 펼쳐요(nbOpen)
-const orbitAlerts = o => { const bs = o.bubs || [], sum = bs.reduce((n, b) => n + b.count, 0), num = n => (n > 99 ? '99+' : n);
-    const one = b => `<span class="ob_nbi"><button type="button" class="ob_nbf na_ob_nb" data-id="${esc(b.id)}" aria-label="${esc(b.name)}님이 메시지를 보냈습니다" title="${esc(b.name)}님이 메시지를 보냈습니다">${face(b.name, 44)}</button><b class="cg_num">${num(b.count)}</b><button type="button" class="ob_nbx na_ob_nbx" data-id="${esc(b.id)}" aria-label="알림 지우기">${lu('x', 11, 2.6)}</button></span>`;
-    const group = `<button type="button" class="ob_nbg na_ob_nbg" aria-label="대화 ${bs.length}개" title="대화 ${bs.length}개">${bs.slice(0, 3).map((b, i) => `<span class="ob_nbs" style="top:${i * 5}px;right:${i * 5}px;z-index:${3 - i}">${face(b.name, 40)}</span>`).join('')}<b class="cg_num">${num(sum)}</b></button>`;
-    return `${o.band ? `<div class="ob_band" role="status"><span>${esc(o.band.name)}님이 메시지를 보냈습니다</span><button type="button" class="na_ob_bandx" aria-label="닫기">${lu('x', 13, 2.4)}</button></div>` : ''}${bs.length ? `<div class="ob_nb">${bs.length === 1 || o.nbOpen ? bs.map(one).join('') : group}</div>` : ''}`; };
+//   방울은 묶지 않고 하나씩 세로로 넷까지 (마리나라의 모바일은 2개부터 하나로 묶지만, 소망이 하나씩 보이는 이 모양으로 정했어요)
+const orbitAlerts = o => { const bs = (o.bubs || []).slice(0, 4);
+    const one = b => `<span class="ob_nbi"><button type="button" class="ob_nbf na_ob_nb" data-id="${esc(b.id)}" aria-label="${esc(b.name)}님이 메시지를 보냈습니다" title="${esc(b.name)}님이 메시지를 보냈습니다">${face(b.name, 44)}</button><b class="cg_num">${b.count > 99 ? '99+' : b.count}</b><button type="button" class="ob_nbx na_ob_nbx" data-id="${esc(b.id)}" aria-label="알림 지우기">${lu('x', 11, 2.6)}</button></span>`;
+    return `${o.band ? `<div class="ob_band" role="status"><span>${esc(o.band.name)}님이 메시지를 보냈습니다</span><button type="button" class="na_ob_bandx" aria-label="닫기">${lu('x', 13, 2.4)}</button></div>` : ''}${bs.length ? `<div class="ob_nb">${bs.map(one).join('')}</div>` : ''}`; };
 
 // 방 안 (시안 C): 그 사람 색 바탕, 유리 머리줄 · 말풍선 · 입력칸
 // o: { id, title, group, sub, there: { icon, time } (1:1 상대의 현지 시각이 내 시각과 다를 때: 이름 바로 옆에 낮 · 저녁 · 밤 그림 + 시각, 시안 sheetCut2의 6), chips: [{ icon, text }], asOwner (주인 계정: 읽기만), draft, clock, faceOf (1:1 · 내 계정: 머리줄 얼굴을 누르면 그 사람 프사 바꾸기),

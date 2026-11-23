@@ -28,8 +28,8 @@ let phonesOpen = 0;   // (열려 있는 폰이 있으면 떠 있는 글은 그 �
 // 알림 방울 (마리나라 stores/chat.store.ts의 chatNotifications · dismissedNotifications를 옮긴 것: 방 id로)
 //   client: 이 화면이 띄운 방울 { name, count } — 8초 뒤 저절로 사라져요(NOTIFICATION_AUTODISMISS_MS). 서버 몫(실리를 닫은 동안 온 말,
 //   liveAutonomousUnread)은 폰이 그릴 때 더하고, 저절로 사라지지 않아요. 한 방에 둘 다 있으면 이 화면 것이 먼저(mergedChatNotification)
-//   dismissed: ✕로 지운 방 — 그 방을 열 때까지 다시 뜨지 않아요 · viewing: 지금 폰이 보고 있는 방(그 방에는 방울을 띄우지 않아요) · open: 묶음을 펼쳤나
-export const obNb = { client: new Map(), timers: new Map(), dismissed: new Set(), viewing: '', open: false };
+//   dismissed: ✕로 지운 방 — 그 방을 열 때까지 다시 뜨지 않아요 · viewing: 지금 폰이 보고 있는 방(그 방에는 방울을 띄우지 않아요)
+export const obNb = { client: new Map(), timers: new Map(), dismissed: new Set(), viewing: '' };
 const NB_AUTODISMISS_MS = 8000;
 const nbTell = () => { try { document.dispatchEvent(new CustomEvent('na-orbit-nb')); } catch { /* no screen */ } };
 const nbClearTimer = id => { const t = obNb.timers.get(id); if (t) { clearTimeout(t); obNb.timers.delete(id); } };
@@ -371,7 +371,7 @@ export async function openPhone(who = null) {
         const accts = [me, ...(owner && liveKey(owner) !== liveKey(me) ? [owner] : [])].map(n => ({ name: n, sub: livePhone(realM, n)?.profile?.handle || liveKey(n), on: liveKey(n) === liveKey(who) }));
         if (v === 'orbit') {
             const hn = rooms.map(x => V.others(x.r).find(n => tzOf(n))).find(Boolean);
-            out.orbit = { bubs: obBubUi(), nbOpen: obNb.open, tab: obTab, back: ro ? null : { n: liveBackCount(realM), busy: backing, sheet: obBack ? { text: obBack.text, count: obBack.draft.count, more: obBack.draft.more } : null }, acct: { name: who, ro, sheet: obSheet && accts.length > 1, list: accts }, hero: hn ? { name: hn, city: cityOf(hn), local: liveWall(tzOf(hn), sh).at.slice(6) } : null, rooms: rooms.map(V.brief) };
+            out.orbit = { bubs: obBubUi(), tab: obTab, back: ro ? null : { n: liveBackCount(realM), busy: backing, sheet: obBack ? { text: obBack.text, count: obBack.draft.count, more: obBack.draft.more } : null }, acct: { name: who, ro, sheet: obSheet && accts.length > 1, list: accts }, hero: hn ? { name: hn, city: cityOf(hn), local: liveWall(tzOf(hn), sh).at.slice(6) } : null, rooms: rooms.map(V.brief) };
         } else if (v === 'orbitnew') {
             if (ro) { view = 'orbit'; return orbitUi(); }
             const names = [...new Map([...Object.values(w.phones || {}).map(p => p?.owner), ...Object.values(w.messenger?.accounts || {}).map(a => a?.name)].filter(n => n && liveKey(n) !== liveKey(me)).map(n => [liveKey(n), n])).values()];
@@ -446,7 +446,7 @@ export async function openPhone(who = null) {
                     days: SCH_DAYS.map(d => ({ key: d, name: SCH_KO[d], open: S.open === d, guide: S.dguide[d] || '', now: d === now.day ? now.min : null, segs: (D.days[d] || []).flatMap(b => schSpan(b.time).map(([a, e]) => ({ st: b.status, a, b: e }))),
                         blocks: (D.days[d] || []).map((b, i) => ({ st: b.status, time: String(b.time || ''), act: String(b.activity || ''), menu: !!S.menu && S.menu.d === d && S.menu.i === i })) })) }; };
             out.orbit = { id: r.id, dark: obDark(), menu: obMenu, set: setUi(), emo: ro ? null : obEmoUi(), pres: presUi(), sch: schUi(),
-                notes: ro ? [] : [...liveReplyWait(realM).filter(j => j.room === r.id).map(j => `${j.owner}: 바쁨 (돌아오면 응답합니다)`), ...liveAway(realM, r.id).map(j => `${j.owner}: 오프라인`)], band: obBand, bubs: obBubUi(r.id), nbOpen: obNb.open, st: group ? '' : (liveStatus(realM, os[0])?.status || ''),   // 머리줄 프사의 상태 점: 지금 상태(스케줄 · 수동 재정의)대로 색이 바뀌어요
+                notes: ro ? [] : [...liveReplyWait(realM).filter(j => j.room === r.id).map(j => `${j.owner}: 바쁨 (돌아오면 응답합니다)`), ...liveAway(realM, r.id).map(j => `${j.owner}: 오프라인`)], band: obBand, bubs: obBubUi(r.id), st: group ? '' : (liveStatus(realM, os[0])?.status || ''),   // 머리줄 프사의 상태 점: 지금 상태(스케줄 · 수동 재정의)대로 색이 바뀌어요
                 att: ro ? [] : obAtt.map(a => ({ name: a.name, img: String(a.type).startsWith('image/') })), reading: !ro && obReading > 0, accept: LIVE_ATTACH_ACCEPT, view: obView, think: ro ? null : obThink, peek: ro ? null : obPeek, reply: ro ? null : (d => (d ? { name: d.name, content: d.content } : null))(liveReplyDraft(realM, r.id)), sw: !ro && obSw ? (M => { const isSrc = !!M.current?.model && String(M.current.connectionId).startsWith('source:'); return { ...obSw, conns: [...obConns(), ...swSrcRows(M)], sources: swSources(), cur: isSrc ? `${M.current.connectionId}|${M.current.model}` : M.current?.model ? '' : (M.current?.connectionId || 'dr'), curName: M.current?.model && !isSrc ? (M.current.name || M.current.model) : '', follows: M.followsMain, stars: liveStars().filter(c => !c.model || String(c.connectionId).startsWith('source:')).map(c => (c.model ? `${c.connectionId}|${c.model}` : c.connectionId)), personas: stPersonaList(), ctx: null }; })(liveRoomModel(realM, r.id)) : null, heldSub: obSub, note: !ro && obNote ? { text: obNote.text, had: !!obNote.had } : null, fixing: !ro && !!obFix, quick: !ro && obHeld ? liveReactQuick(realM) : [], title: V.titleOf(r), group, there: thereAt, faceOf: !group && !ro ? os[0] : '', sub: group ? [...os, '나'].join(' · ') : state, chips, asOwner: ro, msgs, draft: (obDraftRoom !== r.id ? (obDraftRoom = r.id, obDraft = obDraftOf(r.id)) : obDraft), typing, snapBusy: typing && liveSnapBusy(realM), fail: fail ? { id: fail.id } : null, swipe: sw && !sw.coming ? { at: sw.at, count: sw.count } : null, picking: !ro && obPicks ? obPicks.size : null,
                 list: !ro && obList ? (items => ({ items, picks: [...obList].filter(n => items.some(x => x.no === n)), busy: !!sw?.coming }))(liveSwipeList(realM, r.id)) : null };
         }
@@ -1397,10 +1397,8 @@ export async function openPhone(who = null) {
         drawPhone(true); });
     // 알림의 띠 · 방울: 누르면 그 방으로, ✕는 지우기
     $root.on('click', '.na_ob_bandx', e => { e.stopPropagation(); clearTimeout(obBandT); obBand = null; drawPhone(true); });
-    $root.on('click', '.na_ob_nbx', function (e) { e.stopPropagation(); nbDismiss(this.dataset.id); if (obBubUi().length <= 1) obNb.open = false; drawPhone(true); });
-    // 방울이 여럿이면 하나로 묶여 있어요 (마리나라의 모바일 모양): 누르면 펼쳐요
-    $root.on('click', '.na_ob_nbg', e => { e.stopPropagation(); obNb.open = true; drawPhone(true); });
-    $root.on('click', '.na_ob_nb', function (e) { e.stopPropagation(); const id = this.dataset.id, w = liveWorld(realM); nbOpen(id); obNb.open = false; if (!w?.messenger?.rooms?.[id]) return drawPhone(true);
+    $root.on('click', '.na_ob_nbx', function (e) { e.stopPropagation(); nbDismiss(this.dataset.id); drawPhone(true); });
+    $root.on('click', '.na_ob_nb', function (e) { e.stopPropagation(); const id = this.dataset.id, w = liveWorld(realM); nbOpen(id); if (!w?.messenger?.rooms?.[id]) return drawPhone(true);
         obDraft = obDraftOf(id); if (obAcct() === w.persona) readLive(realM, id, w.persona); view = `orbitroom:${id}`; drawPhone(); obBottom(); });
     // 캐릭터 명령 스위치 (에이전트 화면): 맨 위 '명령' 전체 스위치(data-k = cmds)와 명령마다의 스위치(data-k = 마리나라의 id)
     $root.on('click', '.na_os_cmd', function (e) { e.stopPropagation(); const k = this.dataset.k, on = this.dataset.on !== '1'; obSetGo(liveSetCommands(realM, k === 'cmds' ? { enabled: on } : { toggles: { [k]: on } })); });
