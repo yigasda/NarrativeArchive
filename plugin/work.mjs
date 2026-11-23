@@ -41,9 +41,13 @@ export async function startWork({ root, store, st = null, schedule = true, from 
     const { liveWorld, liveKey, enqueueJob, LIVE_SHARED, renamePersona } = await import('../src/phone2store.js');
     const { kitOf, cardsFor } = await import('../src/phone2kit.js');
     const { intentWhy, chatIdOf } = await import('../src/phone2sched.js');
-    const AI = await import('../src/ai.js');
-    const SP = await import('../src/stprofile.js');
     const { VERSION } = await import('../src/core.js');
+    // 실리 브라우저의 요청 코드를 옮긴 것 (plugin/st: 실리 1.19.1 그대로). naload.js가 먼저예요: power-user.js를 script.js보다 먼저 불러요(실리의 차례)
+    const STL = await import('./st/naload.js');
+    const STP = {
+        script: await import('./st/public/script.js'), groups: await import('./st/public/scripts/group-chats.js'), power: await import('./st/public/scripts/power-user.js'),
+        oai: await import('./st/public/scripts/openai.js'), context: await import('./st/public/scripts/st-context.js'), ext: await import('./st/public/scripts/extensions.js'), fetch: await import('./st/public/naFetch.js'),
+    };
 
     const readSettings = async () => { try { const v = JSON.parse(await fs.readFile(path.join(root, 'settings.json'), 'utf8')); return obj(v) ? v : {}; } catch (err) { if (err?.code === 'ENOENT') return {}; throw err; } };
     const askSt = async (url, body) => {
@@ -51,50 +55,28 @@ export async function startWork({ root, store, st = null, schedule = true, from 
         return st(url, body);
     };
 
-    // ---- 연결 프로필로 보내기: 실리의 ConnectionManagerRequestService.sendRequest (public/scripts/extensions/shared.js 423–492)를,
-    // 브라우저가 실리 자신의 코드로 떠 둔 요청 틀(kit.pt: src/stprofile.js)로. 실리 서버 자신의 처리기로 보내요 (다리)
-    const safeName = s => typeof s === 'string' && !!s && !/[\\/]|\.\./.test(s);
-    // (a chat-completion preset as SillyTavern's browser has it: its file in the user's "OpenAI Settings" folder, named as the preset)
-    const readPreset = async name => {
-        if (!safeName(name)) throw new Error('잘못된 프리셋 이름입니다.');
-        try { const v = JSON.parse(await fs.readFile(path.join(root, 'OpenAI Settings', `${name}.json`), 'utf8')); return obj(v) ? v : null; }
-        catch (err) { if (err?.code === 'ENOENT') throw new Error(`프리셋을 찾을 수 없습니다: ${name}. 실리에서 이 채팅을 다시 여세요.`); throw err; }
+    // ---- 실리에 보내는 요청: 실리 브라우저 코드를 옮긴 것으로 (plugin/st). settings.json · 프리셋 파일은 일마다 새로 읽어요 (withWorld)
+    //   연결 프로필: 실리의 ConnectionManagerRequestService.sendRequest (extensions/shared.js 423~492) 그대로 · 실리 연결 방식: createGenerationParameters 그대로
+    //   보내는 곳은 실리 서버 자신의 처리기예요(다리: worker.mjs의 fetch). 실리 코드가 실패를 삼키는 자리(로짓 바이어스 · 금지 토큰의 토큰 요청)는
+    //   naFetchFailures에 적혀요: 그러면 바이어스 없이 보내지 않고 이유를 알려요(브라우저는 그 요청이 실패하지 않아요)
+    const stFetch = (url, init = {}) => { const headers = {}; for (const [k, v] of Object.entries(init.headers || {})) if (v !== undefined) headers[k] = v; return globalThis.fetch(url, { ...init, headers }); };
+    function stFailed() {
+        const f = STP.fetch.naFetchFailures[0];
+        if (!f) return;
+        const where = String(f.url).split('?')[0];
+        if (f.status === 404) throw new Error(`실리 서버의 ${where}를 쓸 수 없습니다. 서버 플러그인을 업데이트하고 실리를 다시 시작하세요.`);
+        if (!f.status) throw new Error('실리 서버에 연결할 수 없습니다.');
+        throw new Error(`실리 서버 요청에 실패했습니다: ${where} (${f.status})`);
+    }
+    const stProfiles = {
+        getSupportedProfiles: () => STL.ConnectionManagerRequestService.getSupportedProfiles(),
+        async sendRequest(...args) { STP.fetch.naFetchFailures.length = 0; const out = await STL.naSendRequest(...args); stFailed(); return out; },
     };
-    // 이 프로필 요청의 틀 → 틀 | 오류 (이유)
-    function profileTemplate(kit, profiles, profileId, over, messages) {
-        const tpl = SP.ptFind(kit.pt, profileId, over, messages);
-        if (!tpl) throw new Error(kit.ptWhy?.[SP.ptWhyKey(profileId, over)] || '이 연결 프로필의 요청 틀이 아직 없어요. 실리에서 이 채팅을 한 번 열어 두면 만들어져요');
-        // (the profile changed in SillyTavern since the template was made: not sent with the old one)
-        if (JSON.stringify(tpl.of) !== JSON.stringify(profiles.find(p => p.id === profileId) ?? null)) throw new Error('연결 프로필이 변경되었습니다. 실리에서 이 채팅을 다시 여세요.');
-        return tpl;
-    }
-    function profileService(kit, settings, ext, all) {
-        const disabled = () => Array.isArray(ext.disabledExtensions) && ext.disabledExtensions.includes('connection-manager');
-        const oai = obj(settings.oai_settings) ? settings.oai_settings : {}, proxies = Array.isArray(settings.proxies) ? settings.proxies : [];
-        return {
-            getSupportedProfiles: () => { if (disabled()) throw new Error('Connection Manager is not available'); return all; },
-            async sendRequest(profileId, prompt, maxTokens, custom = {}, overridePayload = {}) {
-                const { stream, signal, extractData } = { stream: false, signal: null, extractData: true, ...custom };
-                if (disabled()) throw new Error('Connection Manager is not available');
-                // (SillyTavern's getProfile · validateProfile)
-                const profile = all.find(p => p.id === profileId);
-                if (!profile) throw new Error(`Profile not found (ID: ${profileId})`);
-                if (!profile.api) throw new Error('Select a connection profile that has an API');
-                if (stream) throw new Error('서버에서는 스트리밍을 지원하지 않습니다.');
-                const messages = Array.isArray(prompt) ? prompt : [{ role: 'user', content: prompt }];
-                const tpl = profileTemplate(kit, all, profileId, overridePayload, messages);
-                const proxy = tpl.proxy ? proxies.find(p => obj(p) && p.name === tpl.proxy) || null : null, preset = tpl.preset && tpl.api === 'cc' ? await readPreset(tpl.preset) : null;
-                const body = SP.fillProfileRequest(tpl, { messages, maxTokens, secret: key => SP.profileSecret(key, { proxy, preset, oai }) });
-                try {
-                    const r = await fetch(tpl.url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, cache: 'no-cache', body: JSON.stringify(body), signal: signal ?? new AbortController().signal });
-                    const json = await r.json();
-                    return SP.readProfileAnswer(tpl, body, json, { ok: r.ok, extractData, oaiSource: oai.chat_completion_source });
-                } catch (error) {
-                    throw new Error('API request failed', { cause: error });
-                }
-            },
-        };
-    }
+    // (src/ai.js reads SillyTavern's openai.js through globalThis.__naStOpenai: its oai_settings and createGenerationParameters)
+    const stOpenai = {
+        get oai_settings() { return STP.oai.oai_settings; },
+        async createGenerationParameters(...args) { STP.fetch.naFetchFailures.length = 0; const out = await STP.oai.createGenerationParameters(...args); stFailed(); return out; },
+    };
 
     // ---- 실리의 것을 답장마다 새로 (실리 브라우저가 이 채팅을 열면 들고 있을 것을, 실리 파일과 실리 서버의 처리기에서)
     //   → { chat, metadata, characters, characterId, groupId, groups, name1, persona }
@@ -198,25 +180,24 @@ export async function startWork({ root, store, st = null, schedule = true, from 
     // ---- 실리의 것을 서버 것으로
     function contextOf(entry, kit, settings, app, k) {
         const real = entry.real, power = obj(settings.power_user) ? settings.power_user : {};
-        const ext = obj(settings.extension_settings) ? settings.extension_settings : {};
-        // (the connection profiles there are, so a room that picked one is known as such and is never taken for one with nothing
-        //  picked. SillyTavern lists only the profiles of a kind it can send — getSupportedProfiles: the ones the browser listed,
-        //  kit.profiles; a kit from before that list holds all of them)
-        const listed = Array.isArray(kit.profiles) ? new Set(kit.profiles) : null;
-        const profiles = Array.isArray(ext.connectionManager?.profiles) ? ext.connectionManager.profiles.filter(p => obj(p) && typeof p.id === 'string' && (!listed || listed.has(p.id))) : [];
+        // (SillyTavern's extension_settings as its browser holds it — defaults, the connection manager's own, its profiles sorted by
+        //  name —: plugin/st/naload.js, read from settings.json for this job)
+        const ext = STP.ext.extension_settings;
         // (the chat's own keys the live phone reads — phone2store.js LIVE_SHARED and 화면 주인 —, as the chat file has them now.
         //  Only real.live is saved)
         for (const key of [...LIVE_SHARED, 'phoneScreenHolder']) { if (k.shared[key] !== undefined) real[key] = structuredClone(k.shared[key]); else delete real[key]; }
         const base = {
             naServer: true,
             chat: k.chat,
-            chatMetadata: { ...k.metadata, narrative_archive: real }, chatId: entry.sid,
+            chatMetadata: k.chatMetadata, chatId: entry.sid,
             characters: k.characters, characterId: k.characterId, groupId: k.groupId, groups: k.groups, name1: k.name1,
             powerUserSettings: { personas: obj(power.personas) ? power.personas : {}, persona_descriptions: obj(power.persona_descriptions) ? power.persona_descriptions : {}, persona_description: k.persona },
             extensionSettings: ext,
-            ConnectionManagerRequestService: profileService(kit, settings, ext, profiles),
-            chatCompletionSettings: obj(settings.oai_settings) ? settings.oai_settings : {},
-            mainApi: typeof settings.main_api === 'string' ? settings.main_api : '',
+            ConnectionManagerRequestService: stProfiles,
+            chatCompletionSettings: STP.oai.oai_settings,
+            mainApi: STP.script.main_api,
+            // (SillyTavern's getContext().variables — st-context.js 258~277: the variable macros' {{.x}} · {{$x}} read them while running)
+            variables: STP.context.variables,
             saveMetadata: () => app.write(entry),
             // (the browser owns settings.json: nothing the server changes in memory is written there)
             saveSettingsDebounced: () => {},
@@ -234,33 +215,6 @@ export async function startWork({ root, store, st = null, schedule = true, from 
                 throw new Error(`서버에서 사용할 수 없는 값입니다: ${key}`);
             },
         });
-    }
-    // 실리 연결 방식의 요청: 실리의 브라우저 코드 대신, 브라우저가 남긴 틀에 메시지와 비밀 칸을 채워요 (src/ai.js stSourceTemplate)
-    function stStandIn(kit, settings) {
-        const oai = obj(settings.oai_settings) ? settings.oai_settings : {};
-        return {
-            oai_settings: oai,
-            createGenerationParameters: async (wanted, model, type, messages) => {
-                const tpl = obj(kit.st) ? kit.st[AI.stTemplateKey(wanted, model)] : null;
-                if (!obj(tpl) || !obj(tpl.data)) throw new Error('이 연결의 요청 템플릿이 없습니다. 실리에서 이 채팅을 다시 여세요.');
-                const data = { ...structuredClone(tpl.data), messages };
-                for (const key of Array.isArray(tpl.secrets) ? tpl.secrets : []) {
-                    if (!AI.ST_TEMPLATE_SECRETS.includes(key)) continue;
-                    const v = oai[key];
-                    // (SillyTavern fills {{macros}} in this field in the browser: the server cannot)
-                    if (typeof v === 'string' && v.includes('{{')) throw new Error(`${key}에 매크로가 있어 서버에서 보낼 수 없습니다.`);
-                    data[key] = v;
-                }
-                return { generate_data: data };
-            },
-            // (ai.js stLevelPayload: a level on a profile's request, as the browser worked it out with SillyTavern's code — kit.levels)
-            levelPayload: (source, model, effort) => {
-                const v = obj(kit.levels) ? kit.levels[SP.levelKey(source, model, effort)] : null;
-                if (!obj(v)) throw new Error('이 추론 레벨의 요청 값이 없습니다. 실리에서 이 채팅을 다시 여세요.');
-                if (typeof v.why === 'string') throw new Error(v.why);
-                return { ...v };
-            },
-        };
     }
     // 이 세계를 서버가 돌려도 되나 → '' | 안 되는 이유
     //   - 묶음이 있어야 해요
@@ -295,8 +249,18 @@ export async function startWork({ root, store, st = null, schedule = true, from 
             const kit = kitOf(entry.real);
             const settings = await readSettings();
             const now = await stNow(entry.real, kit, settings);
+            // (SillyTavern's browser state for this job, as its page would hold it with this chat open: settings.json and the preset
+            //  files read now — plugin/st/naload.js, SillyTavern's own loading —, then this chat's names, cards, group, messages,
+            //  metadata and persona. Set again for every job: nothing of the one before stays)
+            STL.naLoad(settings, await STL.naLoadPresets(root));
+            // (a copy: the chat file's read is frozen, and SillyTavern's code may write into its metadata — {{setvar}} — as the page's)
+            now.chatMetadata = { ...structuredClone(now.metadata), narrative_archive: entry.real };
+            STP.script.__naSet({ name1: now.name1, name2: now.groupId ? '' : String(now.characters[now.characterId]?.name ?? ''), characters: now.characters, this_chid: now.characterId, chat: now.chat, chat_metadata: now.chatMetadata });
+            STP.groups.__naSet({ groups: now.groups, selected_group: now.groupId });
+            STP.power.power_user.persona_description = now.persona;
+            STP.fetch.__naSetFetch(stFetch);
             setContext(contextOf(entry, kit, settings, app, now));
-            globalThis.__naStOpenai = stStandIn(kit, settings);
+            globalThis.__naStOpenai = stOpenai;
             try {
                 // (the persona's name changed in SillyTavern: the live phone's "me" follows before anything is judged — the
                 //  browser does it when the phone opens, phone2go.js liveFollowPersona. Only in memory here: it goes into the
@@ -305,7 +269,7 @@ export async function startWork({ root, store, st = null, schedule = true, from 
                 renamePersona(entry.real, now.name1);
                 return await job();
             }
-            finally { setContext(null); delete globalThis.__naStOpenai; }
+            finally { setContext(null); delete globalThis.__naStOpenai; STP.fetch.__naSetFetch(null); }
         });
         line = run.catch(() => {});
         return run;
@@ -313,27 +277,22 @@ export async function startWork({ root, store, st = null, schedule = true, from 
 
     // (the profiles of the world being run: what its context lists — withWorld put it in)
     const ctxNow = () => { try { return globalThis.SillyTavern.getContext(); } catch { return null; } };
-    const ctxProfiles = () => { try { return ctxNow().ConnectionManagerRequestService.getSupportedProfiles(); } catch { return []; } };
     // 이 방의 답장을 서버가 보낼 수 있나 → '' (돼요) | 안 되는 이유. withWorld 안에서 불러요
     async function cannot(real, roomId) {
         const plan = G.liveReplyPlan(real, roomId);
         if (plan.profile) {
             if (plan.profile.missing) return '선택한 연결을 사용할 수 없습니다. 다른 연결을 선택하세요.';
             if (!st) return '실리 서버에 연결할 수 없습니다.';
-            const kit = kitOf(real), all = ctxProfiles();
-            let over = null;
-            if (plan.profile.level) { try { over = await AI.stLevelPayload(plan.profile.level.source, plan.profile.level.model, plan.profile.level.effort); } catch (err) { return String(err?.message || err); } }
-            // (a reply's request: a system part and the texts)
-            try { profileTemplate(kit, all, plan.profile.id, over, [{ role: 'system', content: '' }, { role: 'user', content: '' }]); } catch (err) { return String(err?.message || err); }
+            // (the profile must be one SillyTavern can send — its getSupportedProfiles, with the connection manager on; it throws
+            //  "Connection Manager is not available" when that extension is off)
+            let all = [];
+            try { all = stProfiles.getSupportedProfiles(); } catch (err) { return String(err?.message || err); }
+            if (!all.some(p => p?.id === plan.profile.id)) return '선택한 연결을 사용할 수 없습니다. 다른 연결을 선택하세요.';
             return '';
         }
         if (!plan.t) return plan.raw ? '선택된 연결 프로필이 없습니다. 실리의 연결 관리자에서 프로필을 선택하세요.' : '연결이 설정되지 않았습니다.';
         if (plan.t.mode === 'custom') return '';
         if (!st) return '실리 서버에 연결할 수 없습니다.';
-        if (plan.t.mode === 'source') {
-            try { if (!await AI.stSourceTemplate(plan.t, plan)) return '이 모델은 서버에서 보낼 수 없습니다.'; }
-            catch (err) { return String(err?.message || err); }
-        }
         return '';
     }
     const charSaid = (w, room) => { const P = liveKey(w.persona); return (room.messages || []).filter(x => liveKey(x.from) !== P).length; };

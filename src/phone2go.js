@@ -8,9 +8,8 @@
 import { ctx, saveMeta, MODULE, VERSION } from './core.js';
 import { applyInjection } from './inject.js';
 import { askDraft, phone2Clock, aroundBlock, ownerZone, cardBlocks } from './phonedata.js';
-import { askAI, askCompress, stripThink, isBlocked, SECTION_GUARD, aiProfiles, aiProfileFor, callConn, connSettings, stSourceList, stSourceName, stSourceModels, OWN_MODES, apiFormat, stLevelPayload, draftSettings, draftReady, stSourceTemplate } from './ai.js';
+import { askAI, askCompress, stripThink, isBlocked, SECTION_GUARD, aiProfiles, aiProfileFor, callConn, connSettings, stSourceList, stSourceName, stSourceModels, OWN_MODES, apiFormat, stLevelPayload, draftSettings, draftReady } from './ai.js';
 import { buildKit, putKit } from './phone2kit.js';
-import { profileTemplates, ptWhyKey, levelKey } from './stprofile.js';
 import { keepKept, keepAutoStatus, keepServes, keepClaim, keepRenew, keepSync } from './phone2keepon.js';
 import { stReach, REACH_NAME } from './phone2stlevel.js';
 import { SCENES_SYS, parseScenes } from './scenes.js';
@@ -1182,62 +1181,12 @@ export function liveAutonomousUnread(real) {
     const w = liveWorld(real);
     return Object.values(w?.messenger?.rooms || {}).filter(r => r.autonomousUnreadCount > 0).map(r => ({ room: r.id, count: Math.floor(r.autonomousUnreadCount), by: (Array.isArray(r.autonomousUnreadCharacterIds) ? r.autonomousUnreadCharacterIds : []).map(k => r.members.find(n => liveKey(n) === k) || k), at: r.autonomousUnreadAt || '' }));
 }
-// ---- 서버 플러그인이 실리를 닫은 동안 읽을 묶음 (phone2kit.js): 이 채팅의 캐릭터 · 페르소나 · 롤플 끝 메시지에, 실리를 거쳐 나가는
-// 요청들의 틀을 더해요. 플러그인에 둔 채팅만 → 달라져서 넣었으면 true (저장은 부르는 쪽이)
-//   kit.st = { 틀의 열쇠: { data, secrets } }: 실리 연결 방식으로 나가는 방의 답장 한 번 (ai.js stSourceTemplate.
-//            길이 LIVE_GO.replyTokens, 방의 추론 레벨 — 없으면 low, 생각 보기)
-//   kit.pt = { 틀의 열쇠: 틀 }: 연결 프로필로 나가는 요청 (stprofile.js profileTemplates: 실리 자신의 sendRequest가 만든 것).
-//            서버가 그 채팅에서 보낼 수 있는 연결 프로필 모두: 방마다 고른 프로필(방의 추론 레벨을 얹은 것), AI 기능 모델의 프로필 ·
-//            실리에서 지금 고른 프로필(실리 쪽 방 · 대화 요약의 장면 나누기), 스케줄 연결 · 그림 설명 연결로 고른 프로필
-//   kit.ptWhy = { [프로필, 얹는 값]: 틀을 못 만든 이유 } (서버가 그 방을 못 돌리는 이유로 화면에 가요)
-//   kit.levels = { [연결, 모델, 레벨]: 프로필 요청에 얹는 값 } (ai.js stLevelPayload가 실리 코드로 만든 것: 서버에는 그 코드가 없어요)
+// ---- 서버 플러그인이 실리를 닫은 동안 읽을 묶음 (phone2kit.js): 이 Orbit이 실리의 어느 채팅인지 · 확장 버전. 플러그인에 둔 채팅만 →
+// 달라져서 넣었으면 true (저장은 부르는 쪽이). 실리에 보내는 요청은 서버가 실리 코드를 옮긴 것(plugin/st)으로 그때그때 만들어요: 틀을 떠 두지 않아요
 export async function liveKitRefresh(real) {
     if (!real || !open(real) || !liveWorld(real) || !keepKept()) return false;
     const kit = buildKit(ctx(), real, { version: VERSION });
     if (!kit) return false;
-    kit.st = {}; kit.pt = {}; kit.ptWhy = {}; kit.levels = {};
-    // (the profiles SillyTavern can send — its getSupportedProfiles: the server lists the same ones)
-    kit.profiles = aiProfiles().map(p => p.id);
-    const wanted = new Map(), want = (id, over) => { if (id) wanted.set(ptWhyKey(id, over), { id, over }); };
-    for (const roomId of ['', ...Object.keys(liveWorld(real).messenger?.rooms || {})]) {
-        const plan = liveReplyPlan(real, roomId);
-        if (plan.t?.mode === 'source') {
-            try { const tpl = await stSourceTemplate(plan.t, plan); if (tpl) kit.st[tpl.key] = { data: tpl.data, secrets: tpl.secrets }; }
-            catch (err) { console.warn('[narrative-archive] live kit template', err); }
-        }
-        if (!plan.profile || plan.profile.missing) continue;
-        const lv = plan.profile.level;
-        if (!lv) { want(plan.profile.id, null); continue; }
-        // (a level SillyTavern's code could not turn into a request value: kept as the reason, which the server gives back)
-        try { const over = await stLevelPayload(lv.source, lv.model, lv.effort); kit.levels[levelKey(lv.source, lv.model, lv.effort)] = over; want(plan.profile.id, over); }
-        catch (err) { kit.levels[levelKey(lv.source, lv.model, lv.effort)] = { why: String(err?.message || err) }; }
-    }
-    // (the other requests the server makes in a go: the AI 기능 model's profile, the schedule connection's — a group room's smart
-    //  pick —, the captioning connection's. Read without presenceOf: nothing is written here)
-    const ai = aiProfileFor({ profileNow: true }), meta = liveWorld(real).presence?.meta || {};
-    if (ai?.profile) want(ai.id, null);
-    for (const cid of [liveScheduleConnection(real), meta.imageCaptioningEnabled === true ? String(meta.imageCaptioningConnectionId || '').trim() : '']) {
-        if (cid === 'ai' && ai?.profile) want(ai.id, null);
-        const p = String(cid || '').startsWith('profile:') ? aiProfiles().find(x => `profile:${x.id}` === cid) : null;
-        if (p) want(p.id, null);
-    }
-    if (wanted.size) {
-        const O = globalThis.__naStOpenai || await import('/scripts/openai.js'), PM = globalThis.__naStPresets || await import('/scripts/preset-manager.js');
-        const find = {
-            proxy: name => (Array.isArray(O.proxies) ? O.proxies.find(p => p.name === name) : null) || null,
-            preset: (api, name) => PM.getPresetManager(api)?.getCompletionPresetByName(name),
-            instruct: name => PM.getPresetManager('instruct')?.getCompletionPresetByName(name),
-            oai: O.oai_settings,
-        };
-        for (const [k, { id, over }] of wanted) {
-            const profile = (ctx().extensionSettings?.connectionManager?.profiles || []).find(p => p?.id === id);
-            // (the same call as askRoom · askVia · askAI make — only the messages and the length are stand-ins)
-            const send = (messages, max) => ctx().ConnectionManagerRequestService.sendRequest(id, messages, max, { stream: false, extractData: true, includePreset: true, includeInstruct: true }, ...(over ? [over] : []));
-            try { Object.assign(kit.pt, await profileTemplates({ send, profile, over, find })); }
-            catch (err) { kit.ptWhy[k] = String(err?.message || err); if (!err?.refusal) console.warn('[narrative-archive] live kit profile template', err); }
-        }
-    }
-    if (!open(real) || !liveWorld(real)) return false;
     return putKit(real, kit);
 }
 // (a turn for a connection profile: SillyTavern's server reads picture parts, not file parts)

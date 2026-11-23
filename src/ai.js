@@ -349,9 +349,8 @@ export async function stSourceModels(source) {
 // it follows whatever SillyTavern version is running. Off also switches "show thoughts" off: on some sources that
 // is what turns thinking off. → { reasoning_effort (undefined = SillyTavern sends none), include_reasoning }
 export async function stLevelPayload(source, model, effort) {
+    // (globalThis.__naStOpenai: the server plugin's SillyTavern code — plugin/st, the same createGenerationParameters — and the tests')
     const O = globalThis.__naStOpenai || await import('/scripts/openai.js');
-    // (the server plugin has no createGenerationParameters: it gives the value the browser worked out with it — plugin/work.mjs)
-    if (typeof O.levelPayload === 'function') return O.levelPayload(source, model, effort);
     if (typeof O.createGenerationParameters !== 'function') throw new Error('이 실리 버전에서는 연결 프로필에 추론 레벨을 적용할 수 없습니다. 실리를 업데이트하세요.');
     const thoughts = effort !== 'none';
     const built = await O.createGenerationParameters({ ...O.oai_settings, chat_completion_source: source, stream_openai: false, n: 1, bias_preset_selected: '', function_calling: false, reasoning_effort: stEffort(effort), show_thoughts: thoughts }, model, 'quiet', []);
@@ -382,25 +381,7 @@ async function stSourceData(t, messages, maxTokens, effort, temperature, topP, t
     // (the role-play's stop strings, token bias and tools are not this request's)
     for (const k of ['stop', 'logit_bias', 'logprobs', 'top_logprobs', 'n', 'tools', 'tool_choice', 'seed']) delete data[k];
     data.stream = false;
-    return { data, key: stTemplateKey(settings, model) };
-}
-// ---- 서버 플러그인이 실리를 닫은 동안 이 연결 방식으로 보낼 수 있게: 요청 틀 (docs/PHONE2-PLAN.md "서버 플러그인" 3-2b)
-// 요청은 실리의 브라우저 코드(createGenerationParameters)가 만들어서 서버에서는 못 만들어요. 그래서 브라우저가 미리
-// "메시지만 빠진 요청"을 만들어 남기고, 서버는 거기에 메시지만 채워 보내요.
-// 어떤 요청의 틀인지 (같은 연결 · 모델 · 길이 · 온도 · 레벨 · 생각 보기일 때만 그 틀을 써요)
-export const stTemplateKey = (settings, model) => JSON.stringify([String(settings?.chat_completion_source || ''), String(model || ''), settings?.openai_max_tokens ?? null, settings?.temp_openai ?? null, settings?.top_p_openai ?? null, settings?.reasoning_effort ?? null, !!settings?.show_thoughts]);
-// (비밀번호가 들 수 있는 칸: 틀에 담지 않고, 서버가 보낼 때 실리의 settings.json에서 읽어 넣어요)
-export const ST_TEMPLATE_SECRETS = ['proxy_password', 'custom_include_headers'];
-const ST_TEMPLATE_FILL = [{ role: 'system', content: '\u0001NA_SYSTEM\u0001' }, { role: 'user', content: '\u0001NA_USER\u0001' }];
-// → { key, data (메시지 · 비밀 칸이 빠진 요청), secrets: [빠진 비밀 칸의 이름] } | null (이 연결 · 모델은 실리가 메시지를 고쳐 보내서 틀로 못 만들어요)
-export async function stSourceTemplate(t, { maxTokens, effort = '', temperature = null, topP = null, thoughts = false } = {}) {
-    const fill = ST_TEMPLATE_FILL.map(x => ({ ...x }));
-    const { data, key } = await stSourceData(t, fill, maxTokens, effort, temperature, topP, thoughts);
-    if (JSON.stringify(data.messages) !== JSON.stringify(ST_TEMPLATE_FILL)) return null;
-    const rest = { ...data }, secrets = [];
-    delete rest.messages;
-    for (const k of ST_TEMPLATE_SECRETS) if (k in rest) { secrets.push(k); delete rest[k]; }
-    return { key, data: JSON.parse(JSON.stringify(rest)), secrets };
+    return { data };
 }
 // one request to a source. effort: '' (the source's own default) | min | low | medium | high | max
 export async function callStSource(t, system, prompt, maxTokens, effort = '', signal = null, temperature = null, topP = null, meta = null) {
