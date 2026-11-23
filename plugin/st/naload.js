@@ -22,7 +22,7 @@ import { BIAS_CACHE } from './public/scripts/logit-bias.js';
 import { setupConnectAPIMap } from './public/scripts/slash-commands.js';
 import { __naRegisterPresetManagers } from './public/scripts/preset-manager.js';
 import { ConnectionManagerRequestService } from './public/scripts/extensions/shared.js';
-import { NaAjaxWait, naAjaxFill } from './public/naFetch.js';
+import { NaAjaxWait, naAjaxFill, naFetchFailures } from './public/naFetch.js';
 import { initMacros } from './public/scripts/macros.js';
 import { uuidv4 } from './public/scripts/utils.js';
 
@@ -481,6 +481,7 @@ function naKeep() {
     return {
         banned: [...TG.textgenerationwebui_banned_in_macros],
         bias: [...BIAS_CACHE.entries()],
+        oaiBias: OAI.biasCache,
         chatMetadata: structuredClone(SCRIPT.chat_metadata),
         variables: structuredClone(EXT.extension_settings.variables),
     };
@@ -489,6 +490,7 @@ function naRestore(k) {
     TG.__naSet({ textgenerationwebui_banned_in_macros: k.banned });
     BIAS_CACHE.clear();
     for (const [key, value] of k.bias) BIAS_CACHE.set(key, value);
+    OAI.__naSet({ biasCache: k.oaiBias });
     const meta = SCRIPT.chat_metadata;
     for (const key of Object.keys(meta)) delete meta[key];
     Object.assign(meta, k.chatMetadata);
@@ -511,6 +513,8 @@ export async function naSendRequest(profileId, prompt, maxTokens, custom, overri
         } catch (err) {
             const wait = err instanceof NaAjaxWait || err?.cause instanceof NaAjaxWait;
             if (!wait || pass >= 3) throw err;
+            // (기다림은 실패가 아니에요: 다시 하기 전에 그 표시를 지워요. 세 번째에도 기다리면 남겨요)
+            for (let i = naFetchFailures.length - 1; i >= 0; i--) if (naFetchFailures[i].reason === 'wait') naFetchFailures.splice(i, 1);
             naRestore(keep);
             await naAjaxFill();
         }

@@ -1212,7 +1212,7 @@ function migrateChatCompletionSettings(settings) {
     }
 }
 
-export { oai_settings, default_settings, migrateChatCompletionSettings, continue_postfix_types };
+export { oai_settings, default_settings, migrateChatCompletionSettings, continue_postfix_types, biasCache };
 
 /**
  * 일꾼이 모듈 전역 값을 채워요. v에 있는 키만 바꿔요.

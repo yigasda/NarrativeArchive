@@ -479,7 +479,7 @@ const renderTemplateAsync = async () => '';
     [2545, 2664], '', [2671, 2680], '', [2691, 3127], '',
     [3401, 3418], '',
     [4274, 4313], '',
-    `export { oai_settings, default_settings, migrateChatCompletionSettings, continue_postfix_types };
+    `export { oai_settings, default_settings, migrateChatCompletionSettings, continue_postfix_types, biasCache };
 
 /**
  * 일꾼이 모듈 전역 값을 채워요. v에 있는 키만 바꿔요.
@@ -636,13 +636,20 @@ write('naFetch.js', `// 우리 것 (실리 파일 아님): 옮긴 실리 코드�
 let send = null;
 export const naFetchFailures = [];
 export function __naSetFetch(fn) { send = typeof fn === 'function' ? fn : null; naFetchFailures.length = 0; ajaxAnswers.clear(); naAjaxPending.length = 0; }
+// 실패는 모두 naFetchFailures에 적어요(실리 코드가 그 자리에서 삼켜도 일꾼이 보고 요청을 멈출 수 있게):
+//  - 다리가 없음 · 다리가 던짐: status 0 · 답이 2xx가 아님: 그 status · 2xx인데 JSON으로 못 읽음(response.json()): reason 'json'
+//  - 실리 브라우저가 동기로 받았을 답(naAjax)이 아직 없음: reason 'wait' (그때는 아무것도 보내지 않아요: 그 답 없이 만든 요청은 실리 것과 달라요)
 export async function naFetch(url, init = {}) {
     const u = String(url);
-    // (실리 브라우저가 동기로 받았을 답(naAjax)이 아직 없으면 아무것도 보내지 않아요: 그 답 없이 만든 요청은 실리 것과 달라요)
-    if (naAjaxPending.length) throw new NaAjaxWait();
+    if (naAjaxPending.length) { naFetchFailures.push({ url: u, status: 0, reason: 'wait' }); throw new NaAjaxWait(); }
     if (!send) { naFetchFailures.push({ url: u, status: 0 }); throw new Error('실리 서버에 연결할 수 없습니다.'); }
-    const r = await send(u, init);
+    let r;
+    try { r = await send(u, init); } catch (err) { naFetchFailures.push({ url: u, status: 0, reason: String(err?.message || err) }); throw err; }
     if (!r.ok) naFetchFailures.push({ url: u, status: r.status });
+    const json = r.json.bind(r);
+    r.json = async () => {
+        try { return await json(); } catch (err) { if (r.ok) naFetchFailures.push({ url: u, status: r.status, reason: 'json' }); throw err; }
+    };
     return r;
 }
 
@@ -672,8 +679,8 @@ export async function naAjaxFill() {
         let ok = false, data = null;
         try {
             const r = await naFetch(p.url, { method: p.type, headers: { 'Content-Type': p.contentType || 'application/json' }, body: p.data });
-            // (jQuery dataType 'json': 2xx이고 JSON으로 읽혀야 success)
-            if (r.ok) { data = JSON.parse(await r.text()); ok = true; }
+            // (jQuery dataType 'json': 2xx이고 JSON으로 읽혀야 success. 2xx가 아니면 naFetch가 적었고, JSON이 아니면 r.json이 적어요)
+            if (r.ok) { data = await r.json(); ok = true; }
         } catch { ok = false; }
         ajaxAnswers.set(p.key, { ok, data });
     }

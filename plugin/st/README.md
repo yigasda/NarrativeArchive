@@ -26,6 +26,23 @@ S.__naSet({ name1, name2, characters, this_chid, chat, chat_metadata, main_api }
 S.substituteParams('{{char}} …', { /* 실리와 같은 옵션 */ });
 ```
 
+## 쓰는 법 (연결 프로필 요청)
+
+```js
+import { naLoad, naLoadPresets, naSendRequest, ConnectionManagerRequestService } from './naload.js';
+import * as S from './public/script.js';
+import { __naSetFetch, naFetchFailures } from './public/naFetch.js';
+naLoad(settings, await naLoadPresets(userRoot));   // 일마다: settings.json을 읽은 것 + 사용자 폴더의 프리셋 파일
+S.__naSet({ name1, name2 /* , chat, characters, this_chid, chat_metadata … */ });
+__naSetFetch(bridge);                              // (url, init) → Response: 실리 서버 자신의 처리기로
+const out = await naSendRequest(profileId, messages, maxTokens, { stream: false, extractData: true, includePreset: true, includeInstruct: true }, overridePayload);
+if (naFetchFailures.length) { /* 실리 서버 길 하나가 실패했어요(토큰 · 바이어스): 실리는 그 값 없이 보내요. 일꾼이 정해요 */ }
+```
+
+- 실리 브라우저의 동기 요청(토크나이저 jQuery.ajax async:false)은 `naAjax`가 받아 둔 답으로 대신해요. 답이 없으면 아무것도 보내지 않고 멈추고(`NaAjaxWait`),
+  `naSendRequest`가 다리로 받아 온 뒤 다시 해요.
+- 스트리밍(`stream: true`)은 서버에서 안 해요(오류).
+
 ## 파일
 
 | 파일 | 실리 원본 | 어떻게 |
@@ -40,10 +57,10 @@ S.substituteParams('{{char}} …', { /* 실리와 같은 옵션 */ });
 | `public/scripts/util/SimpleMutex.js` | 같음 | 통째로 |
 | `public/scripts/power-user.js` | 같음 | 일부 (power_user 기본값, collapseNewlines). 대역: document · getComputedStyle(색 기본값은 빈 글자) |
 | `public/scripts/group-chats.js` | 같음 | 일부 (groups, selected_group, getGroupNames, getGroupCharacterCardsLazy) |
-| `public/scripts/instruct-mode.js` | 같음 | 일부 (names_behavior_types, formatInstructModeExamples, getInstructMacros) |
+| `public/scripts/instruct-mode.js` | 같음 | 일부 (instruct_presets, migrateInstructModeSettings, getInstructStoppingSequences, formatInstructModeChat · Prompt · SystemPrompt · Examples, getInstructMacros) |
 | `public/scripts/openai.js` | 같음 | 일부 (chat_completion_sources, parseExampleIntoIndividual, getChatCompletionModel). oai_settings는 기본값 없이 `__naSet`으로 |
 | `public/scripts/nai-settings.js` | 같음 | 일부 (nai_settings, getKayraMaxContextTokens) |
-| `public/scripts/textgen-settings.js` | 같음 | 일부 (textgenerationwebui_banned_in_macros) |
+| `public/scripts/textgen-settings.js` | 같음 | 일부 (createTextGenGenerationData와 딸린 것 · 금지 토큰 · 로짓 바이어스 · 서버 주소). 대역: localStorage(Mancer 기본 주소) · document(index.html 1503 dynatemp 종류) · toastr |
 | `public/scripts/extensions.js` | 같음 | 일부 (extension_settings, extensionNames, findExtension). 대역: saveMetadataDebounced |
 | `public/scripts/variables.js` | 같음 | 일부 (지역 · 전역 변수 get/set/add/inc/dec/has/del, getVariableMacros) |
 | `public/scripts/st-context.js` | 같음 | 일부 (getContext()의 `variables` 객체만, `variables`로 내보냄) |
@@ -51,7 +68,14 @@ S.substituteParams('{{char}} …', { /* 실리와 같은 옵션 */ });
 | `public/scripts/i18n.js` | 같음 | 일부 (t, translate, getCurrentLocale). 대역: localeFile(`__naSet`, 기본 `'en'`) |
 | `public/scripts/events.js` | 같음 | 일부 (event_types). 대역: eventSource |
 | `public/scripts/popup.js` | 같음 | 일부 (POPUP_RESULT). 대역: Popup(늘 취소) |
-| `public/scripts/tokenizers.js` · `tags.js` · `reasoning.js` · `personas.js` · `autocomplete/AutoComplete.js` | 같음 | 일부 (power_user 기본값에 쓰는 상수만) |
+| `public/scripts/tokenizers.js` | 같음 | 일부 (getTokenizerModel, getTokenizerBestMatch, getTextTokens와 서버 길). 대역: jQuery.ajax(naAjax) · sessionStorage · getTokenCount(닿지 않음) |
+| `public/scripts/reasoning.js` | 같음 | 일부 (reasoning_templates, extractReasoningFromData, removeReasoningFromString · parseReasoningFromString) |
+| `public/scripts/tags.js` · `personas.js` · `autocomplete/AutoComplete.js` | 같음 | 일부 (power_user 기본값에 쓰는 상수만) |
+| `public/scripts/extensions/shared.js` | 같음 | 일부 (ConnectionManagerRequestService: getProfileIcon · handleDropdown 빼고). 대역: SillyTavern.getContext |
+| `public/scripts/custom-request.js` | 같음 | 일부 (9~607 통째로, import만 우리 것). 대역: 스트리밍 셋(닿으면 오류) |
+| `public/scripts/preset-manager.js` | 같음 | 일부 (getPresetManager, PresetManager의 getPresetList · getCompletionPresetByName). 대역: registerPresetManagers(index.html의 select 차례) |
+| `public/scripts/slash-commands.js` | 같음 | 일부 (CONNECT_API_MAP · setupConnectAPIMap) |
+| `public/scripts/logit-bias.js` · `kai-settings.js` · `sysprompt.js` | 같음 | 일부 (BIAS_CACHE · getLogitBiasListResult / 프리셋 목록 · kai_flags / system_prompts) |
 | `public/scripts/util/AccountStorage.js` | 같음 | 대역 (getItem은 늘 null) |
 | `public/scripts/RossAscends-mods.js` | 같음 | 대역 (isMobile은 늘 false) |
 | `public/scripts/slash-commands/SlashCommandClosure.js` | 같음 | 대역 (빈 클래스, convertValueType의 instanceof에만) |

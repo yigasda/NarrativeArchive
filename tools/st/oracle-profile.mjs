@@ -23,8 +23,21 @@ const RUN = await import(path.join(REPO, 'tests/stprofile2.run.mjs'));
 
 const PORT = 8128, base = `http://127.0.0.1:${PORT}`, dataRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'na-oracle-profile-'));
 const userRoot = path.join(dataRoot, 'default-user');
+// (a new data folder gets SillyTavern's default settings.json with firstRun: true: the page then waits in the onboarding popup and never finishes
+//  loading its settings. The default settings with firstRun: false are written first; SillyTavern does not copy over a file that is there)
+fs.mkdirSync(path.join(dataRoot, 'default-user'), { recursive: true });
+fs.writeFileSync(path.join(dataRoot, 'default-user', 'settings.json'), JSON.stringify({ ...JSON.parse(fs.readFileSync(path.join(ST, 'default/content/settings.json'), 'utf8')), firstRun: false }, null, 4));
 const st = spawn(process.execPath, ['server.js', '--port', String(PORT), '--listen', 'false', '--dataRoot', dataRoot], { cwd: ST });
 let out = ''; st.stdout.on('data', d => (out += d)); st.stderr.on('data', d => (out += d));
+// (finished loading: settings read to the end (script.js settingsReady), tokenizers set up after them (initTokenizers), loader gone)
+const ready = async (page) => {
+    for (let i = 0; i < 360; i++) {
+        const ok = await page.evaluate(async () => { try { const S = await import('/script.js'), T = await import('/scripts/tokenizers.js'); return S.settingsReady === true && T.TEXTGEN_TOKENIZERS.length > 0 && document.querySelector('#preloader') === null; } catch { return false; } });
+        if (ok) return;
+        await page.waitForTimeout(500);
+    }
+    throw new Error('the SillyTavern page did not finish loading');
+};
 let browser, fail = 0;
 const expected = { cases: {}, calls: {} };
 try {
@@ -43,6 +56,7 @@ try {
         fs.writeFileSync(path.join(userRoot, 'settings.json'), JSON.stringify(RUN.settingsOf(c), null, 4));
         await page.goto(base, { waitUntil: 'domcontentloaded' });
         await page.waitForFunction(() => typeof window.SillyTavern?.getContext === 'function' && document.querySelector('#preloader') === null && !!window.SillyTavern.getContext().ConnectionManagerRequestService, null, { timeout: 180000 });
+        await ready(page);
         const disabled = (RUN.settingsOf(c).extension_settings?.disabledExtensions || []).includes('connection-manager');
         if (!disabled) await page.waitForFunction(() => !!document.getElementById('connection_profiles'), null, { timeout: 60000 });
         await page.waitForTimeout(1500);
