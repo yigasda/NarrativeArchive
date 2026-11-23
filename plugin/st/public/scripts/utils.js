@@ -3,6 +3,17 @@
 import { moment } from '../lib.js';
 import { SlashCommandClosure } from './slash-commands/SlashCommandClosure.js';
 import { getCurrentLocale } from './i18n.js';
+import { power_user } from './power-user.js';
+
+// 실리 public/scripts/utils.js 104~111
+/**
+ * Determines if a value is an object.
+ * @param {any} item The item to check.
+ * @returns {boolean} True if the item is an object, false otherwise.
+ */
+export function isObject(item) {
+    return (item && typeof item === 'object' && !Array.isArray(item));
+}
 
 // 실리 public/scripts/utils.js 202~268
 /**
@@ -73,6 +84,18 @@ export function convertValueType(value, type) {
     }
 }
 
+// 실리 public/scripts/utils.js 301~310
+/**
+ * Determines if a value is unique in an array.
+ * @param {any} value Current value.
+ * @param {number} index Current index.
+ * @param {any} array The array being processed.
+ * @returns {boolean} True if the value is unique, false otherwise.
+ */
+export function onlyUnique(value, index, array) {
+    return array.indexOf(value) === index;
+}
+
 // 실리 public/scripts/utils.js 346~356
 /**
  * Checks if a string only contains digits.
@@ -114,6 +137,14 @@ export function getStringHash(str, seed = 0) {
     h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
 
     return 4294967296 * (2097151 & h2) + (h1 >>> 0);
+}
+
+// 실리 public/scripts/utils.js 868~873
+export function trimSpaces(input) {
+    if (!input || typeof input !== 'string') {
+        return input;
+    }
+    return power_user.trim_spaces ? input.trim() : input;
 }
 
 // 실리 public/scripts/utils.js 1005~1021
@@ -276,6 +307,24 @@ export function compareIgnoreCaseAndAccents(a, b, comparisonFunction) {
  */
 export function equalsIgnoreCaseAndAccents(a, b) {
     return compareIgnoreCaseAndAccents(a, b, (a, b) => a === b);
+}
+
+// 실리 public/scripts/utils.js 2767~2782
+/**
+ * Compares two arrays for equality
+ * @param {any[]} a - The first array
+ * @param {any[]} b - The second array
+ * @returns {boolean} True if the arrays are equal, false otherwise
+ */
+export function arraysEqual(a, b) {
+    if (a === b) return true;
+    if (a == null || b == null) return false;
+    if (a.length !== b.length) return false;
+
+    for (let i = 0; i < a.length; i++) {
+        if (a[i] !== b[i]) return false;
+    }
+    return true;
 }
 
 // 실리 public/scripts/utils.js 3056~3056

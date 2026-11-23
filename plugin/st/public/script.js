@@ -9,10 +9,17 @@ import { MacroEngine } from './scripts/macros/engine/MacroEngine.js';
 import { onboardingExperimentalMacroEngine } from './scripts/macros/engine/MacroDiagnostics.js';
 import { accountStorage } from './scripts/util/AccountStorage.js';
 import { nai_settings, getKayraMaxContextTokens } from './scripts/nai-settings.js';
-import { oai_settings, getChatCompletionModel } from './scripts/openai.js';
+import { oai_settings, getChatCompletionModel, chat_completion_sources } from './scripts/openai.js';
 import { event_types, eventSource } from './scripts/events.js';
+import { getCustomStoppingStrings } from './scripts/power-user.js';
+import { getInstructStoppingSequences } from './scripts/instruct-mode.js';
+import { onlyUnique } from './scripts/utils.js';
+import { removeReasoningFromString } from './scripts/reasoning.js';
+import { CONNECT_API_MAP } from './scripts/slash-commands.js';
 
 export { event_types, eventSource };
+// (실리 script.js 321: slash-commands.js의 CONNECT_API_MAP을 다시 내보냄)
+export { CONNECT_API_MAP };
 
 // 실리 public/script.js 405~405
 export const systemUserName = 'SillyTavern System';
@@ -267,6 +274,57 @@ export function substituteParams(content, options = {}) {
     return result;
 }
 
+// 실리 public/script.js 3018~3066
+/**
+ * Gets stopping sequences for the prompt.
+ * @param {boolean} isImpersonate A request is made to impersonate a user
+ * @param {boolean} isContinue A request is made to continue the message
+ * @param {string} [api] Optional API name to get API-specific stopping sequences for
+ * @returns {string[]} Array of stopping strings
+ */
+export function getStoppingStrings(isImpersonate, isContinue, api = main_api) {
+    // Only custom stop strings apply to Chat Completion
+    if (api === 'openai') {
+        return getCustomStoppingStrings();
+    }
+
+    const result = [];
+
+    if (power_user.context.names_as_stop_strings) {
+        const charString = `\n${name2}:`;
+        const userString = `\n${name1}:`;
+        result.push(isImpersonate ? charString : userString);
+
+        result.push(userString);
+
+        if (isContinue && Array.isArray(chat) && chat[chat.length - 1]?.is_user) {
+            result.push(charString);
+        }
+
+        // Add group members as stopping strings if generating for a specific group member or user. (Allow slash commands to work around name stopping string restrictions)
+        if (selected_group && (name2 || isImpersonate)) {
+            const group = groups.find(x => x.id === selected_group);
+
+            if (group && Array.isArray(group.members)) {
+                const names = group.members
+                    .map(x => characters.find(y => y.avatar == x))
+                    .filter(x => x && x.name && x.name !== name2)
+                    .map(x => `\n${x.name}:`);
+                result.push(...names);
+            }
+        }
+    }
+
+    result.push(...getInstructStoppingSequences());
+    result.push(...getCustomStoppingStrings());
+
+    if (power_user.single_line) {
+        result.unshift('\n');
+    }
+
+    return result.filter(x => x).filter(onlyUnique);
+}
+
 // 실리 public/script.js 3341~3352
 export function baseChatReplace(value, name1Override = null, name2Override = null) {
     if (typeof value === 'string' && value.length > 0) {
@@ -461,6 +519,128 @@ export function getMaxPromptTokens(overrideResponseLength = null) {
     }
 
     return getMaxContextTokens() - (overrideResponseLength || getMaxResponseTokens());
+}
+
+// 실리 public/script.js 6166~6185
+/**
+ * Gets the generation endpoint URL for the specified API.
+ * @param {string} api API name
+ * @returns {string} Generation URL
+ * @throws {Error} If the API is unknown
+ */
+export function getGenerateUrl(api) {
+    switch (api) {
+        case 'kobold':
+            return '/api/backends/kobold/generate';
+        case 'koboldhorde':
+            return '/api/backends/koboldhorde/generate';
+        case 'textgenerationwebui':
+            return '/api/backends/text-completions/generate';
+        case 'novel':
+            return '/api/novelai/generate';
+        default:
+            throw new Error(`Unknown API: ${api}`);
+    }
+}
+
+// 실리 public/script.js 6270~6300
+/**
+ * Extracts the message from the response data.
+ * @param {object} data Response data
+ * @param {string} activeApi If it's set, ignores active API
+ * @returns {string} Extracted message
+ */
+export function extractMessageFromData(data, activeApi = null) {
+    function getResult() {
+        if (typeof data === 'string') {
+            return data;
+        }
+
+        switch (activeApi ?? main_api) {
+            case 'kobold':
+                return data.results[0].text;
+            case 'koboldhorde':
+                return data.text;
+            case 'textgenerationwebui':
+                return data.choices?.[0]?.text ?? data.choices?.[0]?.message?.content ?? data.content ?? data.response ?? data[0]?.content ?? '';
+            case 'novel':
+                return data.output;
+            case 'openai':
+                return data?.content?.filter(p => p.type === 'text')?.map(p => p.text)?.join('\n\n') ?? data?.choices?.[0]?.message?.content ?? data?.choices?.[0]?.text ?? data?.text ?? data?.message?.content?.[0]?.text ?? data?.message?.tool_plan ?? '';
+            default:
+                return '';
+        }
+    }
+
+    const result = getResult();
+    return Array.isArray(result) ? result.map(x => x.text).filter(x => x).join('') : result;
+}
+
+// 실리 public/script.js 6302~6366
+/**
+ * Extracts JSON from the response data.
+ * @param {object} data Response data
+ * @param {object} [options] Extraction options
+ * @param {string} [options.mainApi] Main API to use
+ * @param {string} [options.chatCompletionSource] Chat completion source
+ * @param {boolean} [options.returnInvalidJson=false] Whether to return the raw JSON string even if it fails to parse
+ * @returns {string} Extracted JSON string from the response data
+ */
+export function extractJsonFromData(data, { mainApi = null, chatCompletionSource = null, returnInvalidJson = false } = {}) {
+    mainApi = mainApi ?? main_api;
+    chatCompletionSource = chatCompletionSource ?? oai_settings.chat_completion_source;
+
+    const tryParse = (/** @type {string} */ value) => {
+        try {
+            return JSON.parse(value);
+        } catch (e) {
+            console.debug('Failed to parse content as JSON.', e);
+        }
+    };
+
+    let result = {};
+
+    switch (mainApi) {
+        case 'openai': {
+            const text = extractMessageFromData(data, mainApi);
+            switch (chatCompletionSource) {
+                case chat_completion_sources.CLAUDE:
+                    result = data?.content?.find(x => x.type === 'tool_use')?.input;
+                    break;
+                case chat_completion_sources.PERPLEXITY:
+                    result = tryParse(removeReasoningFromString(text));
+                    if (!result && returnInvalidJson) {
+                        return text;
+                    }
+                    break;
+                case chat_completion_sources.VERTEXAI:
+                case chat_completion_sources.MAKERSUITE:
+                case chat_completion_sources.DEEPSEEK:
+                case chat_completion_sources.AI21:
+                case chat_completion_sources.GROQ:
+                case chat_completion_sources.POLLINATIONS:
+                case chat_completion_sources.AIMLAPI:
+                case chat_completion_sources.OPENAI:
+                case chat_completion_sources.OPENROUTER:
+                case chat_completion_sources.MISTRALAI:
+                case chat_completion_sources.CUSTOM:
+                case chat_completion_sources.COHERE:
+                case chat_completion_sources.XAI:
+                case chat_completion_sources.ELECTRONHUB:
+                case chat_completion_sources.CHUTES:
+                case chat_completion_sources.AZURE_OPENAI:
+                case chat_completion_sources.ZAI:
+                default:
+                    result = tryParse(text);
+                    if (!result && returnInvalidJson) {
+                        return text;
+                    }
+                    break;
+            }
+        } break;
+    }
+
+    return JSON.stringify(result ?? {});
 }
 
 // 실리 public/script.js 7050~7070

@@ -4,6 +4,10 @@
 const default_preamble = '[ Style: chat, complex, sensory, visceral ]';
 const default_order = [1, 5, 0, 2, 3, 4];
 
+// 실리 public/scripts/nai-settings.js 33~34
+export let novelai_settings;
+export let novelai_setting_names;
+
 // 실리 public/scripts/nai-settings.js 36~62
 export const nai_settings = {
     temperature: 1.5,
@@ -53,7 +57,8 @@ export function getKayraMaxContextTokens() {
 const __naDefault_nai_settings = structuredClone(nai_settings);
 
 /**
- * @param {{nai_settings?: object, novel_data?: object|null}} v
+ * novelai_settings · novelai_setting_names는 실리 loadNovelSettings 216~229의 값(프리셋 객체 배열 · {이름: 번호}).
+ * @param {{nai_settings?: object, novel_data?: object|null, novelai_settings?: object[], novelai_setting_names?: object}} v
  */
 export function __naSet(v) {
     if (Object.hasOwn(v, 'nai_settings')) {
@@ -61,4 +66,6 @@ export function __naSet(v) {
         Object.assign(nai_settings, structuredClone(__naDefault_nai_settings), v.nai_settings);
     }
     if (Object.hasOwn(v, 'novel_data')) novel_data = v.novel_data;
+    if (Object.hasOwn(v, 'novelai_settings')) novelai_settings = v.novelai_settings;
+    if (Object.hasOwn(v, 'novelai_setting_names')) novelai_setting_names = v.novelai_setting_names;
 }

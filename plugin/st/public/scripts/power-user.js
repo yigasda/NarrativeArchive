@@ -274,6 +274,28 @@ export const power_user = {
 
 const __naDefault_power_user = structuredClone(power_user);
 
+// 실리 public/scripts/power-user.js 347~348
+/** @type {ContextSettings[]} */
+export let context_presets = [];
+
+// 실리 public/scripts/power-user.js 354~369
+const contextControls = [
+    // Power user context scoped settings
+    { id: 'context_story_string', property: 'story_string', isCheckbox: false, isGlobalSetting: false },
+    { id: 'context_example_separator', property: 'example_separator', isCheckbox: false, isGlobalSetting: false },
+    { id: 'context_chat_start', property: 'chat_start', isCheckbox: false, isGlobalSetting: false },
+    { id: 'context_use_stop_strings', property: 'use_stop_strings', isCheckbox: true, isGlobalSetting: false, defaultValue: false },
+    { id: 'context_names_as_stop_strings', property: 'names_as_stop_strings', isCheckbox: true, isGlobalSetting: false, defaultValue: true },
+    { id: 'context_story_string_position', property: 'story_string_position', isCheckbox: false, isGlobalSetting: false, defaultValue: extension_prompt_types.IN_PROMPT, trigger: true },
+    { id: 'context_story_string_depth', property: 'story_string_depth', isCheckbox: false, isGlobalSetting: false, defaultValue: 1 },
+    { id: 'context_story_string_role', property: 'story_string_role', isCheckbox: false, isGlobalSetting: false, defaultValue: extension_prompt_roles.SYSTEM },
+
+    // Existing power user settings
+    { id: 'always-force-name2-checkbox', property: 'always_force_name2', isCheckbox: true, isGlobalSetting: true, defaultValue: true },
+    { id: 'trim_sentences_checkbox', property: 'trim_sentences', isCheckbox: true, isGlobalSetting: true, defaultValue: false },
+    { id: 'single_line', property: 'single_line', isCheckbox: true, isGlobalSetting: true, defaultValue: false },
+];
+
 // 실리 public/scripts/power-user.js 401~410
 /**
  * Replaces consecutive newlines with a single newline.
@@ -285,6 +307,42 @@ const __naDefault_power_user = structuredClone(power_user);
 export function collapseNewlines(x) {
     return x.replaceAll(/\n+/g, '\n');
 }
+
+// (실리에서는 loadContextSettings(1944~) 안의 함수예요. 일꾼이 그 값 부분을 따라 하려고 같은 줄을 밖에 둬요: plugin/st/naload.js)
+// 실리 public/scripts/power-user.js 1949~1981
+    function autoFixStoryString(contextSettings) {
+        // Already migrated, no need to fix
+        if (!contextSettings || Object.hasOwn(contextSettings, 'story_string_position')) {
+            return;
+        }
+
+        let storyString = contextSettings.story_string || '';
+
+        /**
+         * @param {string} field Missing field name
+         * @param {'start'|'end'} position Position of auto-fix
+         */
+        function autoFixMissingField(field, position) {
+            if (storyString.includes(`{{${field}}}`)) {
+                return;
+            }
+
+            console.warn(`[Story String Validation] Story String is missing a field: ${field}. Adding it at the ${position}.`);
+            const fieldTemplate = `{{#if ${field}}}{{${field}}}\n{{/if}}`;
+            const firstCurlyPosition = storyString.includes('{{') ? storyString.indexOf('{{') : 0;
+            const lastCurlyPosition = storyString.includes('}}') ? storyString.lastIndexOf('}}') + '}}'.length : storyString.length;
+            const lastTrimPosition = storyString.includes('{{trim}}') ? storyString.lastIndexOf('{{trim}}') : storyString.length;
+            const endPosition = Math.min(lastTrimPosition, lastCurlyPosition);
+            storyString = position === 'start'
+                ? storyString.substring(0, firstCurlyPosition) + fieldTemplate + storyString.substring(firstCurlyPosition)
+                : storyString.substring(0, endPosition) + fieldTemplate + storyString.substring(endPosition);
+        }
+
+        autoFixMissingField('anchorBefore', 'start');
+        autoFixMissingField('anchorAfter', 'end');
+
+        contextSettings.story_string = storyString;
+    }
 
 // 실리 public/scripts/power-user.js 3011~3011
 const EPHEMERAL_STOPPING_STRINGS = [];
@@ -334,13 +392,17 @@ export function getCustomStoppingStrings(limit = undefined) {
     return strings;
 }
 
+export { contextControls, autoFixStoryString };
+
 /**
  * 일꾼이 실리 설정의 power_user를 채워요(실리 loadPowerUserSettings처럼 기본값 위에 Object.assign). v에 있는 키만 바꿔요.
- * @param {{power_user?: object}} v
+ * context_presets는 실리 1613~1615(data.context, /api/settings/get의 context 폴더).
+ * @param {{power_user?: object, context_presets?: object[]}} v
  */
 export function __naSet(v) {
     if (Object.hasOwn(v, 'power_user')) {
         for (const key of Object.keys(power_user)) delete power_user[key];
         Object.assign(power_user, structuredClone(__naDefault_power_user), v.power_user);
     }
+    if (Object.hasOwn(v, 'context_presets')) context_presets = v.context_presets;
 }

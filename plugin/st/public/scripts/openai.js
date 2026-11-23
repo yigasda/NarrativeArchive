@@ -409,6 +409,10 @@ export let proxies = [
 ];
 export let selected_proxy = proxies[0];
 
+// 실리 public/scripts/openai.js 531~532
+export let openai_setting_names;
+export let openai_settings;
+
 // 실리 public/scripts/openai.js 537~563
 async function validateReverseProxy() {
     if (!oai_settings.reverse_proxy) {
@@ -1212,11 +1216,14 @@ export { oai_settings, default_settings, migrateChatCompletionSettings, continue
 
 /**
  * 일꾼이 모듈 전역 값을 채워요. v에 있는 키만 바꿔요.
- * @param {{model_list?: object[], proxies?: object[], selected_proxy?: object, biasCache?: object}} v
+ * openai_settings · openai_setting_names는 실리 loadOpenAISettings 4321~4336의 값(프리셋 객체 배열 · {이름: 번호}).
+ * @param {{model_list?: object[], proxies?: object[], selected_proxy?: object, biasCache?: object, openai_settings?: object[], openai_setting_names?: object}} v
  */
 export function __naSet(v) {
     if (Object.hasOwn(v, 'model_list')) model_list = v.model_list;
     if (Object.hasOwn(v, 'proxies')) proxies = v.proxies;
     if (Object.hasOwn(v, 'selected_proxy')) selected_proxy = v.selected_proxy;
     if (Object.hasOwn(v, 'biasCache')) biasCache = v.biasCache;
+    if (Object.hasOwn(v, 'openai_settings')) openai_settings = v.openai_settings;
+    if (Object.hasOwn(v, 'openai_setting_names')) openai_setting_names = v.openai_setting_names;
 }

@@ -95,10 +95,17 @@ import { MacroEngine } from './scripts/macros/engine/MacroEngine.js';
 import { onboardingExperimentalMacroEngine } from './scripts/macros/engine/MacroDiagnostics.js';
 import { accountStorage } from './scripts/util/AccountStorage.js';
 import { nai_settings, getKayraMaxContextTokens } from './scripts/nai-settings.js';
-import { oai_settings, getChatCompletionModel } from './scripts/openai.js';
+import { oai_settings, getChatCompletionModel, chat_completion_sources } from './scripts/openai.js';
 import { event_types, eventSource } from './scripts/events.js';
+import { getCustomStoppingStrings } from './scripts/power-user.js';
+import { getInstructStoppingSequences } from './scripts/instruct-mode.js';
+import { onlyUnique } from './scripts/utils.js';
+import { removeReasoningFromString } from './scripts/reasoning.js';
+import { CONNECT_API_MAP } from './scripts/slash-commands.js';
 
 export { event_types, eventSource };
+// (실리 script.js 321: slash-commands.js의 CONNECT_API_MAP을 다시 내보냄)
+export { CONNECT_API_MAP };
 `,
     [405, 405], [407, 411], '', [426, 432], '', [453, 454], '',
     `// 대역: 실리 saveSettingsDebounced(470줄)는 브라우저 설정을 저장해요. 서버는 변수를 저장하지 않아서 아무것도 안 해요.
@@ -107,8 +114,8 @@ export const saveSettingsDebounced = () => {};
 let token;
 `,
     [484, 498], '', [541, 547], '', [601, 601], '', [616, 617], '', [627, 627], '', [629, 629], '', [635, 635], '', [647, 658], '',
-    [2831, 2961], '', [2981, 3015], '', [3341, 3352], '', [3375, 3393], '', [3402, 3468], '', [3476, 3494], '', [3501, 3515], '',
-    [5929, 5960], '', [5966, 5974], '', [5981, 5987], '', [7050, 7070], '',
+    [2831, 2961], '', [2981, 3015], '', [3018, 3066], '', [3341, 3352], '', [3375, 3393], '', [3402, 3468], '', [3476, 3494], '', [3501, 3515], '',
+    [5929, 5960], '', [5966, 5974], '', [5981, 5987], '', [6166, 6185], '', [6270, 6300], '', [6302, 6366], '', [7050, 7070], '',
     `/**
  * 일꾼이 실리 전역 값을 채워요. v에 있는 키만 바꿔요.
  * @param {{name1?: string, name2?: string, chat?: object[], characters?: object[], this_chid?: string|number|undefined, chat_metadata?: object, online_status?: string, amount_gen?: number, max_context?: number, extension_prompts?: object, main_api?: string, kobold_horde_model?: string}} v
@@ -136,26 +143,186 @@ const getComputedStyle = () => ({ getPropertyValue: () => '' });
     [90, 93], '', [95, 100], '', [102, 112], '', [114, 343], '',
     `const __naDefault_power_user = structuredClone(power_user);
 `,
-    [401, 410], '', [3011, 3011], '', [3078, 3120], '',
-    `/**
+    [347, 348], '', [354, 369], '',
+    [401, 410], '',
+    `// (실리에서는 loadContextSettings(1944~) 안의 함수예요. 일꾼이 그 값 부분을 따라 하려고 같은 줄을 밖에 둬요: plugin/st/naload.js)`,
+    [1949, 1981], '', [3011, 3011], '', [3078, 3120], '',
+    `export { contextControls, autoFixStoryString };
+
+/**
  * 일꾼이 실리 설정의 power_user를 채워요(실리 loadPowerUserSettings처럼 기본값 위에 Object.assign). v에 있는 키만 바꿔요.
- * @param {{power_user?: object}} v
+ * context_presets는 실리 1613~1615(data.context, /api/settings/get의 context 폴더).
+ * @param {{power_user?: object, context_presets?: object[]}} v
  */
 export function __naSet(v) {
 ${resetAssign('power_user')}
+${rebind('context_presets')}
 }`,
 ], { stub: 'document · getComputedStyle' });
 
 partial('scripts/tokenizers.js', [
-    `import { main_api } from '../script.js';
+    `import { main_api, online_status } from '../script.js';
+import { power_user } from './power-user.js';
 import { chat_completion_sources, model_list, oai_settings } from './openai.js';
-import { textgen_types, textgenerationwebui_settings as textgen_settings } from './textgen-settings.js';
-import { openRouterModels } from './textgen-models.js';
+import { nai_settings } from './nai-settings.js';
+import { kai_flags, kai_settings } from './kai-settings.js';
+import { textgen_types, textgenerationwebui_settings as textgen_settings, getTextGenServer, getTextGenModel } from './textgen-settings.js';
+import { getCurrentDreamGenModelTokenizer, getCurrentOpenRouterModelTokenizer, openRouterModels } from './textgen-models.js';
+import { naAjax } from '../naFetch.js';
+
+// 대역: 실리는 jQuery.ajax({ async: false })로 실리 서버에 동기 요청(XHR)을 보내고 그 자리에서 답을 받아요(getTextTokensFromServer 등).
+// Node에는 동기 요청이 없어요. naAjax(plugin/st/public/naFetch.js)는 미리 받아 둔 실리 서버의 답을 그 자리에서 돌려주고, 없으면 적어 둬요:
+// 일꾼(plugin/st/naload.js naSendRequest)이 다리로 받아 온 뒤 같은 일을 다시 해요. 그래서 토큰 id는 실리 서버가 브라우저에 주는 것과 같아요.
+const jQuery = { ajax: naAjax };
+// 대역: 실리 sessionStorage(브라우저 탭 저장). 서버는 이 모듈 안에만 둬요. 서버는 백엔드에 연결 확인을 하지 않아서(online_status 'no_connection')
+// getTokenizerBestMatch가 이 값을 묻는 갈래(연결됐을 때)에는 가지 않아요.
+const __naSession = new Map();
+const sessionStorage = {
+    getItem: (k) => (__naSession.has(k) ? __naSession.get(k) : null),
+    setItem: (k, v) => { __naSession.set(k, String(v)); },
+    removeItem: (k) => { __naSession.delete(k); },
+};
+// 대역: 실리 getTokenCount(492~546). apiFailureTokenCount가 부르는 것은 API 토크나이저(연결됐을 때)를 쓰다 실패했을 때뿐이라 서버에서는 닿지 않아요.
+function getTokenCount() {
+    throw new Error('getTokenCount: 서버에는 없습니다.');
+}
 `,
-    [16, 38], '', [569, 790],
-]);
+    [12, 14], '', [16, 38], '', [40, 56], '', [58, 63], '', [65, 154], '', [156, 156], '', [161, 169], '', [280, 365], '', [367, 377], '',
+    [569, 790], '', [979, 986], '', [1019, 1122], '', [1151, 1184],
+], { stub: 'jQuery.ajax · sessionStorage · getTokenCount' });
 partial('scripts/tags.js', [[245, 258]]);
-partial('scripts/reasoning.js', [[34, 34]]);
+partial('scripts/reasoning.js', [
+    `import { main_api } from '../script.js';
+import { chat_completion_sources, oai_settings } from './openai.js';
+import { power_user } from './power-user.js';
+import { textgen_types, textgenerationwebui_settings } from './textgen-settings.js';
+import { escapeRegex, trimSpaces } from './utils.js';
+`,
+    [29, 32], '', [34, 34], '', [107, 168], '', [1424, 1436], '', [1450, 1490],
+]);
+
+// public/scripts/logit-bias.js
+partial('scripts/logit-bias.js', [
+    `import { getTextTokens } from './tokenizers.js';
+`,
+    [5, 5], '', [97, 142],
+]);
+
+// public/scripts/kai-settings.js (preset-manager.js getPresetList · tokenizers.js getTokenizerBestMatch가 묻는 것)
+partial('scripts/kai-settings.js', [
+    [25, 26], '', [28, 50], '', [52, 65], '',
+    `/**
+ * koboldai_settings · koboldai_setting_names는 실리 loadKoboldSettings 98~110의 값(프리셋 객체 배열 · {이름: 번호}).
+ * @param {{koboldai_settings?: object[], koboldai_setting_names?: object}} v
+ */
+export function __naSet(v) {
+${rebind('koboldai_settings')}
+${rebind('koboldai_setting_names')}
+}`,
+]);
+
+// public/scripts/sysprompt.js (preset-manager.js getPresetList가 묻는 것)
+partial('scripts/sysprompt.js', [
+    [15, 15], '',
+    `/**
+ * system_prompts는 실리 loadSystemPrompts 50~53(data.sysprompt, /api/settings/get의 sysprompt 폴더).
+ * @param {{system_prompts?: object[]}} v
+ */
+export function __naSet(v) {
+${rebind('system_prompts')}
+}`,
+]);
+
+// public/scripts/slash-commands.js (CONNECT_API_MAP: 실리는 페이지를 열 때 initDefaultSlashCommands 228에서 만들어요. 일꾼은 naInit에서 한 번)
+partial('scripts/slash-commands.js', [
+    `import { chat_completion_sources } from './openai.js';
+import { textgen_types } from './textgen-settings.js';
+`,
+    [133, 145], '', [147, 224], '',
+    `export { setupConnectAPIMap };`,
+]);
+
+// public/scripts/preset-manager.js (getPresetManager → getCompletionPresetByName)
+partial('scripts/preset-manager.js', [
+    `import { main_api } from '../script.js';
+import { instruct_presets } from './instruct-mode.js';
+import { kai_settings, koboldai_settings, koboldai_setting_names } from './kai-settings.js';
+import { nai_settings, novelai_settings, novelai_setting_names } from './nai-settings.js';
+import { oai_settings, openai_setting_names, openai_settings } from './openai.js';
+import { context_presets, power_user } from './power-user.js';
+import { reasoning_templates } from './reasoning.js';
+import { system_prompts } from './sysprompt.js';
+import {
+    textgenerationwebui_settings as textgen_settings,
+    textgenerationwebui_preset_names,
+    textgenerationwebui_presets,
+} from './textgen-settings.js';
+`,
+    [44, 44], '', [78, 96], '',
+    [111, 116],
+    `    // (실리 117~525: 가져오기 · 내보내기 · 화면 고르기 · 저장 · 이름 바꾸기. 서버에서는 안 써요)
+`,
+    [526, 602],
+    `
+    // (실리 604~751: 화면 목록 · 저장할 값 만들기. 서버에서는 안 써요)
+`,
+    [752, 779],
+    `
+    // (실리 780~908: 지우기 · 되돌리기 · 확장 칸. 서버에서는 안 써요)`,
+    [909, 909], '',
+    `// 대역: 실리 registerPresetManagers(101~109)는 화면의 select[data-preset-manager-for]마다 new PresetManager($(select), apiId)를 만들어요.
+// 실리 initPresetManager(991~)가 페이지를 열 때 한 번 불러요. 서버에는 화면이 없어서 index.html의 그 select들과 같은 차례 · 같은 apiId로 만들어요
+// (index.html 110 kobold · 152 novel · 198 openai · 235 textgenerationwebui · 4139 context · 4278 instruct · 4461 sysprompt · 4597 reasoning). select 자리는 null.
+export function __naRegisterPresetManagers() {
+    for (const apiId of ['kobold', 'novel', 'openai', 'textgenerationwebui', 'context', 'instruct', 'sysprompt', 'reasoning']) {
+        presetManagers[apiId] = new PresetManager(null, apiId);
+    }
+}`,
+], { stub: 'registerPresetManagers' });
+
+// public/scripts/custom-request.js (TextCompletionService · ChatCompletionService 통째로, 파일 머리 import만 우리 것)
+partial('scripts/custom-request.js', [
+    `import { getPresetManager } from './preset-manager.js';
+import { extractJsonFromData, extractMessageFromData, getGenerateUrl, getRequestHeaders, name1, name2 } from '../script.js';
+import { getTextGenServer, createTextGenGenerationData, setting_names, textgenerationwebui_settings } from './textgen-settings.js';
+import { extractReasoningFromData } from './reasoning.js';
+import { formatInstructModeChat, formatInstructModePrompt, getInstructStoppingSequences } from './instruct-mode.js';
+import { createGenerationParameters, settingsToUpdate, oai_settings } from './openai.js';
+import { naFetch as fetch } from '../naFetch.js';
+
+// 대역: 스트리밍(stream: true) 갈래가 쓰는 것들(실리 openai.js getStreamingReply 3222~ · tryParseStreamingError 1648~, sse-stream.js EventSourceStream).
+// 서버는 스트리밍 요청을 보내지 않아요(일꾼은 늘 stream: false). 닿으면 오류로 멈춰요.
+const __naNoStream = () => { throw new Error('서버는 스트리밍 요청을 지원하지 않습니다.'); };
+const getStreamingReply = __naNoStream;
+const tryParseStreamingError = __naNoStream;
+class EventSourceStream { constructor() { __naNoStream(); } }
+`,
+    [9, 607],
+], { stub: 'getStreamingReply · tryParseStreamingError · EventSourceStream(스트리밍)' });
+
+// public/scripts/extensions/shared.js (ConnectionManagerRequestService: 화면 것(getProfileIcon · handleDropdown) 빼고)
+partial('scripts/extensions/shared.js', [
+    `import { CONNECT_API_MAP } from '../../script.js';
+import { extension_settings } from '../extensions.js';
+import { t } from '../i18n.js';
+import { proxies } from '../openai.js';
+import { ChatCompletionService, TextCompletionService } from '../custom-request.js';
+
+// 대역: 실리 SillyTavern.getContext()는 브라우저 전역(st-context.js getContext 115~)이에요. 이 클래스가 묻는 네 가지만 같은 값으로:
+// st-context.js 201 extensionSettings: extension_settings · 285 CONNECT_API_MAP · 292 ChatCompletionService · 293 TextCompletionService.
+const SillyTavern = {
+    getContext: () => ({ extensionSettings: extension_settings, CONNECT_API_MAP, ChatCompletionService, TextCompletionService }),
+};
+`,
+    [389, 550],
+    `
+    // (실리 552~573 getProfileIcon: 화면 아이콘. 서버에서는 안 써요)
+`,
+    [575, 623],
+    `
+    // (실리 625~787 handleDropdown: 화면 고르기 칸. 서버에서는 안 써요)`,
+    [788, 788],
+], { stub: 'SillyTavern.getContext' });
 partial('scripts/personas.js', [[88, 98]]);
 partial('scripts/autocomplete/AutoComplete.js', [[9, 30]]);
 
@@ -241,9 +408,10 @@ partial('scripts/utils.js', [
     `import { moment } from '../lib.js';
 import { SlashCommandClosure } from './slash-commands/SlashCommandClosure.js';
 import { getCurrentLocale } from './i18n.js';
+import { power_user } from './power-user.js';
 `,
-    [202, 268], '', [346, 356], '', [512, 539], '', [1005, 1021], '', [1070, 1146], '', [1370, 1379], '', [1954, 1969], '',
-    [2234, 2252], '', [2266, 2276], '', [3056, 3056],
+    [104, 111], '', [202, 268], '', [301, 310], '', [346, 356], '', [512, 539], '', [868, 873], '', [1005, 1021], '', [1070, 1146], '', [1370, 1379], '', [1954, 1969], '',
+    [2234, 2252], '', [2266, 2276], '', [2767, 2782], '', [3056, 3056],
 ]);
 
 // public/scripts/group-chats.js
@@ -264,12 +432,22 @@ ${rebind('selected_group')}
 
 // public/scripts/instruct-mode.js
 partial('scripts/instruct-mode.js', [
-    `import { substituteParams } from '../script.js';
+    `import { name1, name2, substituteParams } from '../script.js';
 import { selected_group } from './group-chats.js';
 import { parseExampleIntoIndividual } from './openai.js';
 import { power_user } from './power-user.js';
+import { onlyUnique } from './utils.js';
 `,
-    [17, 21], '', [504, 579], '', [667, 785],
+    [12, 15], '', [17, 21], '', [50, 105], '', [294, 372], '', [374, 468], '', [504, 579], '', [581, 651], '', [667, 785], '',
+    `export { migrateInstructModeSettings };
+
+/**
+ * 일꾼이 채워요. instruct_presets는 실리 loadInstructMode 112~114(data.instruct, /api/settings/get의 instruct 폴더).
+ * @param {{instruct_presets?: object[]}} v
+ */
+export function __naSet(v) {
+${rebind('instruct_presets')}
+}`,
 ]);
 
 // public/scripts/openai.js (keep ST line order)
@@ -295,7 +473,7 @@ const renderTemplateAsync = async () => '';
 `,
     [102, 124], '', [126, 144], '',
     [174, 175], '', [177, 204], '', [206, 218], '', [220, 237], '', [239, 253], '', [255, 259], '', [267, 285], '',
-    [305, 409], '', [411, 518], '', [520, 520], '', [522, 529], '',
+    [305, 409], '', [411, 518], '', [520, 520], '', [522, 529], '', [531, 532], '',
     [537, 563], '',
     [723, 787], '', [1717, 1782], '',
     [2545, 2664], '', [2671, 2680], '', [2691, 3127], '',
@@ -305,13 +483,16 @@ const renderTemplateAsync = async () => '';
 
 /**
  * 일꾼이 모듈 전역 값을 채워요. v에 있는 키만 바꿔요.
- * @param {{model_list?: object[], proxies?: object[], selected_proxy?: object, biasCache?: object}} v
+ * openai_settings · openai_setting_names는 실리 loadOpenAISettings 4321~4336의 값(프리셋 객체 배열 · {이름: 번호}).
+ * @param {{model_list?: object[], proxies?: object[], selected_proxy?: object, biasCache?: object, openai_settings?: object[], openai_setting_names?: object}} v
  */
 export function __naSet(v) {
 ${rebind('model_list')}
 ${rebind('proxies')}
 ${rebind('selected_proxy')}
 ${rebind('biasCache')}
+${rebind('openai_settings')}
+${rebind('openai_setting_names')}
 }`,
 ], { stub: 'DOMPurify · toastr · setOnlineStatus · resultCheckStatus · renderTemplateAsync' });
 
@@ -335,8 +516,14 @@ import { chat_completion_sources, custom_prompt_post_processing_types, getChatCo
 
 // public/scripts/textgen-models.js
 partial('scripts/textgen-models.js', [
-    [21, 21], '',
-    `/**
+    `import { textgenerationwebui_settings as textgen_settings } from './textgen-settings.js';
+import { tokenizers } from './tokenizers.js';
+`,
+    [15, 15], '', [21, 21], '', [23, 113], '', [1347, 1385], '',
+    `// (실리 initTextGenModels 1403~1409가 이 목록으로 화면의 공급자 칸(.openrouter_providers)을 채워요. 일꾼이 loadTextGenSettings 594의 값 부분에 써요)
+export { OPENROUTER_PROVIDERS };
+
+/**
  * @param {{openRouterModels?: object[]}} v
  */
 export function __naSet(v) {
@@ -346,31 +533,58 @@ ${rebind('openRouterModels')}
 
 // public/scripts/nai-settings.js
 partial('scripts/nai-settings.js', [
-    [24, 25], '', [36, 62], '', [84, 84], '', [92, 103], '',
+    [24, 25], '', [33, 34], '', [36, 62], '', [84, 84], '', [92, 103], '',
     `const __naDefault_nai_settings = structuredClone(nai_settings);
 
 /**
- * @param {{nai_settings?: object, novel_data?: object|null}} v
+ * novelai_settings · novelai_setting_names는 실리 loadNovelSettings 216~229의 값(프리셋 객체 배열 · {이름: 번호}).
+ * @param {{nai_settings?: object, novel_data?: object|null, novelai_settings?: object[], novelai_setting_names?: object}} v
  */
 export function __naSet(v) {
 ${resetAssign('nai_settings')}
 ${rebind('novel_data')}
+${rebind('novelai_settings')}
+${rebind('novelai_setting_names')}
 }`,
 ]);
 
 // public/scripts/textgen-settings.js
 partial('scripts/textgen-settings.js', [
-    [31, 65], '', [67, 117], '', [143, 237], '', [243, 243], '',
-    `const __naDefault_textgenerationwebui_settings = structuredClone(textgenerationwebui_settings);
+    `import { getStoppingStrings, main_api, max_context, substituteParams } from '../script.js';
+import { t } from './i18n.js';
+import { BIAS_CACHE, getLogitBiasListResult } from './logit-bias.js';
+import { power_user } from './power-user.js';
+import { getCurrentDreamGenModelTokenizer, getCurrentOpenRouterModelTokenizer } from './textgen-models.js';
+import { ENCODE_TOKENIZERS, TEXTGEN_TOKENIZERS, getTextTokens, getTokenizerBestMatch, tokenizers } from './tokenizers.js';
+import { onlyUnique, arraysEqual, isObject } from './utils.js';
+
+// 대역: 실리 localStorage(브라우저 저장). 실리 124줄 MANCER_SERVER는 거기 'mancer_server'(디버그 메뉴 'change-mancer-url'로만 바꿈)가 없으면
+// 기본 주소예요. 서버에서는 그 브라우저 값을 읽을 수 없어서 늘 기본 주소(MANCER_SERVER_DEFAULT)예요.
+const localStorage = { getItem: () => null };
+// 대역: 실리 325줄 DYNATEMP_BLOCK은 화면의 #dynatemp_block_ooba예요. isDynamicTemperatureSupported는 그 data-tg-type만 읽어요.
+// 그 값은 실리 index.html 1503줄 그대로: <div data-tg-type="ooba, mancer, koboldcpp, tabby, llamacpp, aphrodite" ... id="dynatemp_block_ooba">
+const document = { getElementById: (id) => (id === 'dynatemp_block_ooba' ? { dataset: { tgType: 'ooba, mancer, koboldcpp, tabby, llamacpp, aphrodite' } } : null) };
+// 대역: 실리 toastr(화면 알림). 서버는 실리 창 로그로만.
+const toastr = { error: (...a) => console.warn('[narrative-archive plugin]', ...a) };
+`,
+    [31, 65], '', [67, 117], '', [118, 130], '', [131, 141], '', [143, 237], '', [243, 246], '', [248, 323], '', [325, 325], '',
+    [346, 369], '', [404, 499], '', [513, 550], '', [1180, 1197], '', [1447, 1458], '', [1460, 1545], '', [1547, 1842], '',
+    `// (실리 파일 안에서만 쓰는 이름들: 일꾼이 loadTextGenSettings 552~608의 값 부분을 따라 할 때 써요, plugin/st/naload.js)
+export { KOBOLDCPP_ORDER, OOBA_DEFAULT_ORDER, LLAMACPP_DEFAULT_ORDER, BIAS_KEY, MANCER, convertPresets, insertMissingArrayItems };
+
+const __naDefault_textgenerationwebui_settings = structuredClone(textgenerationwebui_settings);
 
 /**
- * @param {{textgenerationwebui_banned_in_macros?: string[], textgenerationwebui_settings?: object}} v
+ * textgenerationwebui_presets · textgenerationwebui_preset_names는 실리 loadTextGenSettings 554~555의 값(프리셋 객체 배열 · 이름 배열).
+ * @param {{textgenerationwebui_banned_in_macros?: string[], textgenerationwebui_settings?: object, textgenerationwebui_presets?: object[], textgenerationwebui_preset_names?: string[]}} v
  */
 export function __naSet(v) {
 ${rebind('textgenerationwebui_banned_in_macros')}
 ${resetAssign('textgenerationwebui_settings')}
+${rebind('textgenerationwebui_presets')}
+${rebind('textgenerationwebui_preset_names')}
 }`,
-]);
+], { stub: 'localStorage · document(dynatemp_block_ooba) · toastr' });
 
 // public/scripts/extensions.js
 partial('scripts/extensions.js', [
@@ -420,13 +634,48 @@ write('naFetch.js', `// 우리 것 (실리 파일 아님): 옮긴 실리 코드�
 // 실리 코드가 실패를 삼키는 자리가 있어서(openai.js calculateLogitBias는 실패하면 바이어스 없이 보내요) 실패한 길은 적어 둬요: 일꾼이 그 요청을 보내지 않고 이유를 알려요.
 let send = null;
 export const naFetchFailures = [];
-export function __naSetFetch(fn) { send = typeof fn === 'function' ? fn : null; naFetchFailures.length = 0; }
+export function __naSetFetch(fn) { send = typeof fn === 'function' ? fn : null; naFetchFailures.length = 0; ajaxAnswers.clear(); naAjaxPending.length = 0; }
 export async function naFetch(url, init = {}) {
     const u = String(url);
+    // (실리 브라우저가 동기로 받았을 답(naAjax)이 아직 없으면 아무것도 보내지 않아요: 그 답 없이 만든 요청은 실리 것과 달라요)
+    if (naAjaxPending.length) throw new NaAjaxWait();
     if (!send) { naFetchFailures.push({ url: u, status: 0 }); throw new Error('실리 서버에 연결할 수 없습니다.'); }
     const r = await send(u, init);
     if (!r.ok) naFetchFailures.push({ url: u, status: r.status });
     return r;
+}
+
+// 실리 tokenizers.js의 jQuery.ajax({ async: false, type, url, data, dataType: 'json', contentType, success }) 자리.
+// 실리 브라우저는 그 자리에서 실리 서버에 동기 요청(XHR)을 보내고, 성공하면 success(답)를 그 자리에서 불러요(실패면 부르지 않아요).
+// Node에는 동기 요청이 없어요: 처음에는 필요한 요청을 naAjaxPending에 적기만 하고(success를 부르지 않음), 그 뒤 naFetch는 NaAjaxWait로 멈춰요.
+// 일꾼(plugin/st/naload.js naSendRequest)이 naAjaxFill()로 다리를 거쳐 실리 서버의 답을 받아 두고 같은 일을 다시 하면, 이번에는 받아 둔 답으로
+// success를 그 자리에서 불러요. 실리 서버가 같은 요청에 주는 같은 답이라 결과가 실리 브라우저와 같아요.
+export class NaAjaxWait extends Error {
+    constructor() { super('실리 서버의 토큰 답을 기다립니다.'); this.name = 'NaAjaxWait'; }
+}
+const ajaxAnswers = new Map();
+export const naAjaxPending = [];
+const ajaxKey = (o) => JSON.stringify([String(o.type ?? 'GET'), String(o.url), o.data ?? null]);
+export function naAjax(o) {
+    const key = ajaxKey(o);
+    if (ajaxAnswers.has(key)) {
+        const a = ajaxAnswers.get(key);
+        if (a.ok) o.success?.(a.data);
+        return;
+    }
+    if (!naAjaxPending.some(p => p.key === key)) naAjaxPending.push({ key, type: String(o.type ?? 'GET'), url: String(o.url), data: o.data ?? null, contentType: o.contentType });
+}
+export async function naAjaxFill() {
+    const todo = naAjaxPending.splice(0);
+    for (const p of todo) {
+        let ok = false, data = null;
+        try {
+            const r = await naFetch(p.url, { method: p.type, headers: { 'Content-Type': p.contentType || 'application/json' }, body: p.data });
+            // (jQuery dataType 'json': 2xx이고 JSON으로 읽혀야 success)
+            if (r.ok) { data = JSON.parse(await r.text()); ok = true; }
+        } catch { ok = false; }
+        ajaxAnswers.set(p.key, { ok, data });
+    }
 }
 `);
 
