@@ -43,8 +43,8 @@ import { AI_SYS_DIGEST } from './digest.js';
 import { DIGEST_STATE, digestDue, digestRaw, digestSize, digestHalves, scenesSystem, scenesInput, scenesNote, takeDigest, failDigest, foldChunk, foldRequest, takeFold, failFold } from './phone2digest.js';
 
 // rounds of reflection after one reply at most (messages piled up while only talking: 100 a round)
-// retryMs: 서버 플러그인의 일꾼이 이 Orbit의 답장을 만드는 중일 때 다시 해 보는 간격
-export const LIVE_GO = { rounds: 3, replyTokens: 4000, digests: 2, retryMs: 5000 };
+// retryMs: 서버 플러그인의 일꾼이 이 Orbit의 답장을 만드는 중일 때 다시 해 보는 간격 (끝나면 곧 보이게: 마리나라는 끝나는 순간 보여요)
+export const LIVE_GO = { rounds: 3, replyTokens: 4000, digests: 2, retryMs: 1000 };
 const tzOf = p => ownerZone(p)?.tz || 'UTC';
 // the time it is now on a 폰 2 phone: the story's date (the world's dayShift) and the real clock where the owner is.
 // Given to liveMeta as `now`, so the phone's screens and app requests go by a clock that runs
@@ -144,6 +144,11 @@ function retrySoon(real, onChange) {
 function replied(job, by) {
     try { globalThis.document?.dispatchEvent(new globalThis.CustomEvent('na-live-reply', { detail: { from: 'browser', room: job.room, by, auto: !!job.auto, regen: !!job.regen } })); } catch { /* no screen */ }
 }
+// 답장이 그때까지 기다려요 (늦은 답장 · @ 부름 · 주고받기). 마리나라는 그 시각에 바로 돌려요(setTimeout): 브라우저는 30초 틱을 기다리지 않고
+// 그 시각에 다시 보게 알려요 (phone2tick.js가 setDueHook으로 받아요. 서버 플러그인의 일꾼은 그 시각을 스스로 봐요: plugin/work.mjs)
+let dueHook = null;
+export const setDueHook = fn => { dueHook = typeof fn === 'function' ? fn : null; };
+function dueAt(job, at) { job.notBefore = at; try { dueHook?.(at); } catch (err) { console.warn('[narrative-archive] due', err); } }
 // 그 일이 줄 선 뒤에 그 방에서 캐릭터가 말했나 (나 말고 누구든)
 const wroteSince = (real, job) => { const w = liveWorld(real), P = liveKey(w?.persona), room = w?.messenger?.rooms?.[job.room]; return !!room && (room.messages || []).some(x => liveKey(x.from) !== P && x.at > job.at); };
 // 브라우저의 방 자물쇠 → { enter(방) → 놓기 | null, renew() } | null (플러그인에 둔 채팅이 아니면: 전처럼 혼자 해요)
@@ -156,11 +161,14 @@ function browserLock(real, refused = () => {}) {
     };
 }
 // lock: 방 자물쇠 (빼면 브라우저의 것. 서버 플러그인의 일꾼은 자기 것을 줘요: plugin/work.mjs serverLock. null: 자물쇠 없이)
-export async function liveGo(real, { onChange = () => {}, lock } = {}) {
+// server: 서버 플러그인의 일꾼이 돌려요. 마리나라의 서버처럼: 캐릭터끼리 주고받기는 안 하고(마리나라는 브라우저만 해요:
+//   use-autonomous-messaging.ts 232~262), 먼저 건 말이 실패하면 "걸고 있는 중" 표시만 풀어요(server-autonomous-scheduler.service.ts).
+//   브라우저는 마리나라의 브라우저처럼 실패하면 /activity/assistant를 불러요(use-autonomous-messaging.ts 225~227)
+export async function liveGo(real, { onChange = () => {}, lock, server = false } = {}) {
     if (lock === undefined) lock = browserLock(real, () => retrySoon(real, onChange));
-    return goNow(real, onChange, lock);
+    return goNow(real, onChange, lock, server);
 }
-async function goNow(real, onChange, lock) {
+async function goNow(real, onChange, lock, server = false) {
     followSchedule(real); await pickResponders(real); holdReplies(real);
     for (const id of Object.keys(liveWorld(real)?.messenger?.rooms || {})) syncUser(real, id);
     const tell = () => { try { onChange(); } catch (err) { console.error('[narrative-archive] live draw', err); } };
@@ -215,7 +223,7 @@ async function goNow(real, onChange, lock) {
             if (w && w.id === job.world && job.auto && got?.said) {
                 noteProactive(real, job.room, liveKey(job.owner), job.intent || '');
                 const room = w.messenger?.rooms?.[job.room];
-                if (room) { delete room.autoFail; const last = [...(room.messages || [])].reverse().find(x => liveKey(x.from) === liveKey(job.owner)); if (last) last.extra = { ...(last.extra || {}), autonomous: true }; }
+                if (room) { const last = [...(room.messages || [])].reverse().find(x => liveKey(x.from) === liveKey(job.owner)); if (last) last.extra = { ...(last.extra || {}), autonomous: true }; }
                 await line.save();
                 // (a character wrote first: the screen's cue for its notification — Marinara's onAutonomousMessage. The same
                 //  cue the browser gets for the ones the server plugin wrote, phone2keepon.js keepSync)
@@ -224,18 +232,20 @@ async function goNow(real, onChange, lock) {
             // (a group room: whoever this reply called with @Name answers next — Marinara's mention routing)
             if (w && w.id === job.world && got?.said && !job.regen && handOff(real, job)) await line.save();
             // (a group room, after a message a character wrote first: another may answer it, as Marinara's loop does)
-            if (w && p && w.id === job.world && job.auto && got?.said && exchangeAfter(real, job)) await line.save();
+            if (!server && w && p && w.id === job.world && job.auto && got?.said && exchangeAfter(real, job)) await line.save();
             if (w && w.id === job.world && got?.said) replied(job, [job.owner]);
             tell();
         },
     });
     if (out.failed?.job?.auto) {
-        const w = liveWorld(real), room = w?.messenger?.rooms?.[out.failed.job.room];
+        const w = liveWorld(real);
         if (w) w.queue.jobs = w.queue.jobs.filter(j => j.id !== out.failed.job.id);
-        if (room) { const attempts = (room.autoFail?.attempts || 0) + 1; room.autoFail = { attempts, nextAllowedAt: Date.now() + Math.min(AUTO_FAIL.max, AUTO_FAIL.base * 2 ** Math.max(0, attempts - 1)), lastError: String(out.failed.error || '').slice(0, 200) }; }
-        // (Marinara: on a failed or empty autonomous generation the in-progress flag is cleared, so polling does not get stuck)
-        clearProgress(real, out.failed.job.room);
+        // (Marinara's browser: a failed autonomous generation records assistant activity, which clears the in-progress flag —
+        //  use-autonomous-messaging.ts 222~227. Its server scheduler clears the flag and pauses that chat itself: the error goes
+        //  back to it as autoError — server-autonomous-scheduler.service.ts 277~283)
+        if (server) clearProgress(real, out.failed.job.room); else noteAssistant(real, out.failed.job.room, '');
         console.warn('[narrative-archive] live autonomous', out.failed.error);
+        out.autoError = String(out.failed.error || 'Generation failed');
         out.failed = null;
         try { await line.save(); } catch { /* told below */ }
     }
@@ -412,7 +422,7 @@ function mergeTurn(real, room, jobs, { regen = false, now = Date.now() } = {}) {
     const names = can.map(k => chars.find(n => liveKey(n) === k)), job = enqueueJob(real, { kind: 'reply', owner: names[0], room: room.id, at: now });
     Object.assign(job, { merged: can, timed: true, picked: true, ...(called.length ? { called } : {}), ...(regen ? { regen: true } : {}) });
     const delay = regen ? 0 : mergedDelay(real, names, { mention: called.length > 0, now: new Date(now), tzOf: tz });
-    if (delay > 0) job.notBefore = now + delay;
+    if (delay > 0) dueAt(job, now + delay);
     return gone.size - 1;
 }
 // 단체방에서 한 사람이 답한 뒤: 그 답이 @이름으로 부른 사람이 다음에 답해요 (이번 차례에 이미 말한 사람은 빼고) → 줄 세우거나 앞당긴 수
@@ -432,7 +442,7 @@ function handOff(real, job, now = Date.now()) {
         if (jobs.has(k)) continue;
         const j = enqueueJob(real, { kind: 'reply', owner: room.members.find(x => liveKey(x) === k), room: room.id, at: now, ...(job.auto ? { why: `No new message from ${w.persona} was sent in this request; this is a proactive/autonomous turn. Do not write ${w.persona}'s side of the conversation.` } : {}) });
         j.timed = true; j.picked = true; if (job.auto) j.auto = true;
-        if (r.delays[k] > 0) j.notBefore = now + r.delays[k];
+        if (r.delays[k] > 0) dueAt(j, now + r.delays[k]);
         jobs.set(k, j);
     }
     // (the line for this room, in the new order; a queued reply that no longer fits the day's limit leaves it)
@@ -457,7 +467,7 @@ export function holdReplies(real, now = Date.now()) {
         // characters may write first)
         if (delay === null) { gone.add(j); if (j.auto) clearProgress(real, j.room); else if (room) (room.away ||= {})[liveKey(j.owner)] = now; continue; }
         j.timed = true;
-        if (delay > 0) { j.notBefore = (j.at || now) + delay; if (j.notBefore > now) held++; } else delete j.notBefore;
+        if (delay > 0) { dueAt(j, (j.at || now) + delay); if (j.notBefore > now) held++; } else delete j.notBefore;
         if (!j.auto) { if (!timed.has(j.room)) timed.set(j.room, new Map()); timed.get(j.room).set(j.id, { delayMs: delay }); }
     }
     if (gone.size) w.queue.jobs = w.queue.jobs.filter(j => !gone.has(j));
@@ -639,11 +649,9 @@ function exchangeAfter(real, job) {
     if (!name) return '';
     const next = enqueueJob(real, { kind: 'reply', owner: name, room: room.id, why: `No new message from ${w.persona} was sent in this request; this is a proactive/autonomous turn. Do not write ${w.persona}'s side of the conversation.` });
     // (Marinara: a short delay to feel natural, then the exchange; no presence delay on it)
-    next.auto = true; next.timed = true; next.notBefore = Date.now() + 2000 + Math.random() * 3000;
+    next.auto = true; next.timed = true; dueAt(next, Date.now() + 2000 + Math.random() * 3000);
     return name;
 }
-// (Marinara's server-autonomous-scheduler: AUTONOMOUS_FAILURE_BASE_BACKOFF_MS · AUTONOMOUS_FAILURE_MAX_BACKOFF_MS)
-const AUTO_FAIL = { base: 5 * 60_000, max: 60 * 60_000 };
 // 30초마다: 먼저 말 걸 때가 된 방이 있으면 그 답장을 줄 세워요 → 줄 세운 수. 그 뒤 liveGo가 돌려요
 export async function liveAutonomous(real, { now = Date.now() } = {}) {
     const w = liveWorld(real);
@@ -652,8 +660,8 @@ export async function liveAutonomous(real, { now = Date.now() } = {}) {
     if (followSchedule(real, now) + purgeTrash(real, now)) await saveMeta();
     if (!w.presence?.on) return 0;
     let n = 0;
-    // (not now in this room: a reply already on its way, or the room resting after a failure)
-    const notNow = (w, room) => !room || w.queue.jobs.some(j => j.room === room.id && j.kind === 'reply' && (j.state === 'waiting' || j.state === 'running')) || room.autoFail?.nextAllowedAt > now;
+    // (not now in this room: a reply already on its way — Marinara's poll skips a chat that is generating)
+    const notNow = (w, room) => !room || w.queue.jobs.some(j => j.room === room.id && j.kind === 'reply' && (j.state === 'waiting' || j.state === 'running'));
     for (const id of Object.keys(w.messenger?.rooms || {})) {
         if (notNow(w, w.messenger.rooms[id])) continue;
         // (the room's lock first, and what the server plugin's worker wrote there since: the check is made on the latest —

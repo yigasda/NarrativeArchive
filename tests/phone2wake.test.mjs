@@ -272,3 +272,35 @@ test('사용자 지정 알림음: 상태 읽기 · 올리기 · 지우기 — �
         await assert.rejects(SOUND.soundUpload(new File([wav], 'ding.wav')), /서버 플러그인이 없습니다/);
     } finally { globalThis.fetch = realFetch; }
 });
+
+test('가려진 탭은 "보고 있어요"를 안 알려요 — 답장을 받는 중이어도 (마리나라의 폴링은 가려지면 쉬어요). 보이면 알려요', async t => {
+    const S = await stage(t);
+    const job = enqueueJob(S.m, { kind: 'reply', owner: 'Mara', room: S.room.id }); job.state = 'running';
+    page.hidden = true; S.calls.length = 0;
+    await KO.keepBeat();
+    assert.equal(S.calls.filter(c => c[0] === '/auto/presence').length, 0);
+    page.hidden = false;
+    await KO.keepBeat();
+    assert.equal(S.calls.filter(c => c[0] === '/auto/presence').length, 1);
+    job.state = 'done';
+});
+
+test('답장이 기다리는 시각에 틱이 한 번 더 돌아요 (30초를 기다리지 않아요). 줄 세울 때 그 시각을 알려 줘요', async t => {
+    const S = await stage(t);
+    let at = null;
+    G.setDueHook(x => { at = x; });
+    t.after(() => G.setDueHook(TICK.tickAt));
+    sendLive(S.m, S.room.id, 'busy?');
+    const job = enqueueJob(S.m, { kind: 'reply', owner: 'Mara', room: S.room.id });
+    S.w.presence = { on: false, schedules: { mara: { weekStart: new Date(Date.now() - 86400000).toISOString(), days: Object.fromEntries(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(d => [d, [{ time: '00:00-00:00', activity: 'gym', status: 'dnd' }]])), inactivityThresholdMinutes: 60, talkativeness: 50, dndResponseDelayMinutes: 1 } }, overrides: {}, meta: {}, user: {} };
+    G.holdReplies(S.m);
+    assert.ok(job.notBefore > Date.now());
+    assert.equal(at, job.notBefore);
+    // (틱: 그 시각에 tickOnce)
+    const realSet = globalThis.setTimeout, waits = [];
+    globalThis.setTimeout = (fn, ms) => { waits.push(ms); return realSet(() => {}, 0); };
+    try { TICK.tickAt(Date.now() + 4000); TICK.tickAt(Date.now() + 9000); TICK.tickAt(Date.now() + 2000); } finally { globalThis.setTimeout = realSet; }
+    assert.equal(waits.length, 2);
+    assert.ok(waits[0] >= 3900 && waits[0] <= 4100 && waits[1] >= 1900 && waits[1] <= 2100);
+    job.state = 'done';
+});

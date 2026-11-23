@@ -49,7 +49,8 @@ const synced = {
         }
         if (rooms.length) { try { globalThis.document?.dispatchEvent(new globalThis.CustomEvent('na-live-auto', { detail: { from: 'server', rooms } })); } catch { /* no screen */ } }
         // (a reply the server wrote while I was away — a late reply, not one written first: the same cue as the browser's own
-        //  finished reply, 'na-live-reply' from the reply loop. Marinara has no such reply: its server answers only while the page asks)
+        //  finished reply, 'na-live-reply' from the reply loop. Marinara's server writes it too: a closed page does not stop a
+        //  reply — generate.routes.ts 1924~1934 — and the page gets it when it reads the chat again)
         const persona = String(m.live?.world?.persona || '').trim().toLowerCase();
         for (const r of Object.values(m.live?.world?.messenger?.rooms || {})) {
             const had = seen.get(r.id);
@@ -71,9 +72,12 @@ export const keepState = () => keep.state();
 export const keepKept = () => keep.kept();
 
 // ---- 서버 플러그인과 번갈아 돌기 (docs/PHONE2-PLAN.md "서버 플러그인" 3-3)
-// 플러그인의 일꾼은 실리를 닫은 동안 · 탭을 가려 둔 동안 먼저 말 걸기와 늦은 답장을 돌려요. 둘이 같이 돌면 말이 두 번 나오니까:
-//   - 브라우저는 보이는 동안 30초마다 "내가 보고 있어요"를 알려요 (keepBeat). 일꾼은 그 뒤 75초 동안 이 채팅을 안 건드려요
-//     (가려져 있어도 브라우저가 답장을 받고 있는 중이면 알려요: 그 답장이 들어갈 때까지 일꾼이 기다려요)
+// 플러그인의 일꾼은 마리나라의 서버처럼 돌아요:
+//   - 늦은 답장은 때가 되면 일꾼이 바로 보내요. 브라우저가 보고 있어도요 (마리나라는 서버가 그 요청 안에서 기다렸다가 보내요:
+//     conversation-presence-runtime.ts 254~321, 연결이 끊겨도 계속 — generate.routes.ts 1924~1934). 한 방에 둘이 같이 쓰지 않게
+//     방 자물쇠를 잡아요 (아래)
+//   - 먼저 말 걸기: 브라우저는 보이는 동안 30초마다 "내가 보고 있어요"를 알려요 (keepBeat). 일꾼의 스케줄러는 그 뒤 75초 동안
+//     이 채팅에 먼저 말을 걸지 않아요 (마리나라의 RECENT_CLIENT_PRESENCE_MS). 가려지면 알리지 않아요 (마리나라의 폴링도 가려지면 쉬어요)
 //   - 가려져 있고 일꾼이 돌고 있으면 브라우저의 30초 틱은 쉬어요 (keepServes: phone2tick.js가 봐요)
 //   - 다시 보이면 · 30초마다, 일꾼이 그사이 쓴 것을 받아요 (keepSync). 브라우저에만 있는 것과는 합쳐요 (phone2keep.js merge3)
 let serves = false;
@@ -138,10 +142,9 @@ export function keepBeat() {
     if (beating) return beating;
     beating = (async () => {
         await keep.ready();
-        const busy = !!(hasChat() && getMeta()?.live?.world?.queue?.jobs?.some(j => j.state === 'running'));
-        if (hidden() && !busy) return;
+        if (hidden()) return;
         await keepPing();
-        if (!hidden()) await keepSync();
+        await keepSync();
     })().catch(err => console.warn('[narrative-archive] Orbit 서버 알리기', err)).finally(() => { beating = null; });
     return beating;
 }

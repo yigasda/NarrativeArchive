@@ -40,9 +40,20 @@ async function work(m, waiting) {
     if (n || waiting) await G.liveGo(m, { onChange: tell });
     return n;
 }
+const run = () => { tickOnce().catch(err => console.warn('[narrative-archive] live tick', err)); };
+// 답장이 기다리는 시각에 한 번 더 (마리나라는 늦음이 끝나는 그 시각에 돌려요: setTimeout). 가장 이른 것 하나만 기다려요.
+// 그때 틱이 돌고 있으면 1초 뒤에 다시 봐요
+let soon = null, soonAt = Infinity;
+export function tickAt(at) {
+    if (!Number.isFinite(at) || (soon && soonAt <= at)) return;
+    globalThis.clearTimeout(soon);
+    soonAt = at;
+    soon = globalThis.setTimeout(() => { soon = null; soonAt = Infinity; if (busy) tickAt(Date.now() + 1000); else run(); }, Math.max(0, at - Date.now()) + 50);
+    soon?.unref?.();
+}
 export function tickStart() {
     if (timer) return;
-    const run = () => { tickOnce().catch(err => console.warn('[narrative-archive] live tick', err)); };
+    import('./phone2go.js').then(G => G.setDueHook(tickAt)).catch(err => console.warn('[narrative-archive] live tick', err));
     timer = globalThis.setInterval(run, TICK_MS);
     globalThis.setTimeout(run, TICK_FIRST_MS);
     // (10 minutes without a touch: my status reads idle, until I move or send — Marinara's idle detection, on the open chat)

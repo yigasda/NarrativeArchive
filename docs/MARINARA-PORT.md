@@ -57,18 +57,20 @@
 
 가져온 파일 두 개는 마리나라와 같아요(타입을 지우고 대 봄: `plugin/marinara/server-autonomous-scheduler.service.js`는 `app.chats` 한 줄 · 안드로이드 머리 한 줄, `src/marinara/autonomous.service.js`는 다른 줄 없음). 다른 것은 우리가 새로 짠 곳에 있어요.
 
+**고침 (2026-11-23, 소망 "똑같이")**: 1 · 2 · 3 · 5 · 6 · 8 · 10은 마리나라처럼 고쳤어요. 4는 그 방만 건너뛰게(서버가 못 보내는 연결이 있어서 완전히 같게는 못 해요). 7은 다시 보니 같아요(아래). 9는 마리나라도 같아요(아래). 줄마다 "지금"에 적었어요.
+
 | # | 무엇 | 마리나라 | 우리 | 어디 |
 |---|---|---|---|---|
-| 1 | 내 메시지에 대한 늦은 답장(바쁨 · 자리 비움) | 서버가 그 요청 안에서 기다렸다가 때가 되면 바로 만듦(`conversation-presence-runtime.ts` 254~321). 브라우저 연결이 끊겨도 계속함(`generate.routes.ts` 1924~1934: "A closed stream is not a Stop"). 브라우저가 보고 있는지는 안 봄 | 답장을 줄에 넣고, 브라우저(보일 때만)나 서버가 돌림. 서버는 브라우저가 75초 안에 "보고 있어요"를 알렸으면 안 돌림(`sweepDue`의 `watched`). 그래서 화면을 끄고 조금 뒤에 돌아오면 그때 브라우저가 만들기 시작해서 "입력 중" 뒤에 옴 | plugin/work.mjs `watched` · `sweepDue` |
-| 2 | 때가 된 뒤 도는 시각 | 정확히 그 시각(`setTimeout`) | 30초마다 봐서 최대 30초 늦음 | plugin/work.mjs `DUE_MS` · phone2tick.js `TICK_MS` |
-| 3 | 가려진 탭의 "보고 있어요" | 가려지면 안 알림(`use-autonomous-messaging.ts` 98~101) | 가려져 있어도 답장을 받는 중이면 알림 | phone2keepon.js `keepBeat`의 `busy` |
-| 4 | 서버가 보낼 수 없는 방 | 없음(서버가 다 보냄) | 그런 방이 하나라도 있으면 그 저장의 늦은 답장을 전부 안 돌림 | plugin/work.mjs `sweepDue`의 `cannot` → `throw` |
-| 5 | 캐릭터끼리 주고받기 | 브라우저에서 먼저 건 말 뒤에만(`use-autonomous-messaging.ts` 232~262). 서버 스케줄러는 안 함 | 서버에서 먼저 건 말 뒤에도 함 | plugin/work.mjs `runSoon` · phone2go.js `exchangeAfter`(서버도 같은 코드) |
-| 6 | 먼저 건 말이 실패한 뒤 쉬기 | 서버 스케줄러만, 메모리에(`failureBackoffByChat`) | 방에 적어 두고(`room.autoFail`) 브라우저 · 서버 둘 다 봄 | phone2go.js 232~241 · 656 · plugin/work.mjs `generate` |
-| 7 | 서버의 먼저 건 말 요청을 거절(409)하는 때 | 그 채팅이 생성 중일 때만(`activeGenerations`) | 그 방에 답장이 줄 서 있을 때 · 실패 뒤 쉬는 중일 때도 | plugin/work.mjs `generate` |
-| 8 | `/autonomous/check`에서 카드의 상태 맞추기 | 함(`conversation.routes.ts` 1040~1053) | 안 함. 가져온 파일 머리에도 안 적혀 있었음 | src/marinara/autonomous-check.js |
-| 9 | 늦음을 기다리는 동안 새 메시지를 보낼 때 | 확인 못 함(`use-generate.ts`의 보내기 · 끊기를 안 읽음) | 그 사람의 답장이 이미 줄에 있으면 새로 안 서고, 처음 정한 때 그대로 | phone2run.js `enqueueReplies` |
-| 10 | 틀린 기록 | — | `phone2keepon.js` 51~52 주석 "Marinara has no such reply: its server answers only while the page asks"는 틀림. 이 표의 75줄 ⑤ "마리나라에 없는 것: 늦은 답장을 서버가 보내요"도 틀림(마리나라 서버도 보냄) | phone2keepon.js · 이 파일 |
+| 1 | 내 메시지에 대한 늦은 답장(바쁨 · 자리 비움) | 서버가 그 요청 안에서 기다렸다가 때가 되면 바로 만듦(`conversation-presence-runtime.ts` 254~321). 브라우저 연결이 끊겨도 계속함(`generate.routes.ts` 1924~1934: "A closed stream is not a Stop"). 브라우저가 보고 있는지는 안 봄 | 답장을 줄에 넣고, 브라우저(보일 때만)나 서버가 돌림. 서버는 브라우저가 75초 안에 "보고 있어요"를 알렸으면 안 돌림(`sweepDue`의 `watched`). 그래서 화면을 끄고 조금 뒤에 돌아오면 그때 브라우저가 만들기 시작해서 "입력 중" 뒤에 옴 | plugin/work.mjs `watched` · `sweepDue`. **지금: 고침.** `watched`를 뺐어요. 때가 되면 일꾼이 바로 보내요(브라우저가 보고 있어도). 브라우저도 그 시각에 돌아요(아래 2). 한 방에 둘이 같이 쓰지 않게 방 자물쇠. 일꾼이 쥐고 만드는 동안 브라우저는 1초마다 다시 봐서(`LIVE_GO.retryMs`), 끝나면 곧 보여요 |
+| 2 | 때가 된 뒤 도는 시각 | 정확히 그 시각(`setTimeout`) | 30초마다 봐서 최대 30초 늦음 | plugin/work.mjs `DUE_MS` · phone2tick.js `TICK_MS`. **지금: 고침.** 일꾼은 기다리는 답장 가운데 가장 이른 시각에 다시 보고(`nextDue`), 브라우저가 저장하면 1초 뒤에 봐요(`poke`). 브라우저는 줄 세울 때 그 시각을 알려(`phone2go.js dueAt` → `setDueHook`) 그 시각에 틱이 한 번 더 돌아요(`phone2tick.js tickAt`). @ 부름 · 주고받기(2~5초)도 같아요 |
+| 3 | 가려진 탭의 "보고 있어요" | 가려지면 안 알림(`use-autonomous-messaging.ts` 98~101) | 가려져 있어도 답장을 받는 중이면 알림 | phone2keepon.js `keepBeat`의 `busy`. **지금: 고침.** 가려지면 안 알려요 |
+| 4 | 서버가 보낼 수 없는 방 | 없음(서버가 다 보냄) | 그런 방이 하나라도 있으면 그 저장의 늦은 답장을 전부 안 돌림 | plugin/work.mjs `sweepDue`의 `cannot` → `throw`. **지금: 그 방만 건너뛰어요**(그 방은 브라우저가 보내요). 나머지 방은 보내요 |
+| 5 | 캐릭터끼리 주고받기 | 브라우저에서 먼저 건 말 뒤에만(`use-autonomous-messaging.ts` 232~262). 서버 스케줄러는 안 함 | 서버에서 먼저 건 말 뒤에도 함 | plugin/work.mjs `runSoon` · phone2go.js `exchangeAfter`(서버도 같은 코드). **지금: 고침.** 일꾼은 `liveGo(…, { server: true })`로 돌려서 주고받기를 줄 세우지 않아요. `runSoon`은 뺐어요 |
+| 6 | 먼저 건 말이 실패한 뒤 쉬기 | 서버 스케줄러만, 메모리에(`failureBackoffByChat`) | 방에 적어 두고(`room.autoFail`) 브라우저 · 서버 둘 다 봄 | phone2go.js 232~241 · 656 · plugin/work.mjs `generate`. **지금: 고침.** `room.autoFail`을 안 써요. 브라우저: 실패하면 마리나라 브라우저처럼 `/activity/assistant`(`noteAssistant`). 서버: "걸고 있는 중" 표시만 풀고 오류를 스케줄러에 돌려줘요(`autoError` → `SSE.error`): 쉬는 것은 스케줄러의 `recordFailureBackoff` |
+| 7 | 서버의 먼저 건 말 요청을 거절(409)하는 때 | 그 채팅이 생성 중일 때만(`activeGenerations`) | 그 방에 답장이 줄 서 있을 때 · 실패 뒤 쉬는 중일 때도 | plugin/work.mjs `generate`. **지금: 같아요.** 다시 보니 마리나라는 답장을 달라는 순간부터 늦음을 기다리는 동안까지 생성 자물쇠를 쥐고 있어요(`generate.routes.ts` 1514~1536 · `conversation-presence-runtime.ts` 254~265): 줄 서 있는 답장 = 생성 중이에요. "실패 뒤 쉬는 중"은 6과 함께 뺐어요 |
+| 8 | `/autonomous/check`에서 카드의 상태 맞추기 | 함(`conversation.routes.ts` 1040~1053) | 안 함. 가져온 파일 머리에도 안 적혀 있었음 | src/marinara/autonomous-check.js. **지금: 고침.** 같은 줄을 넣었어요. 카드는 우리 칸(`narrative_archive_convo`의 `conversationStatus`)이에요 |
+| 9 | 늦음을 기다리는 동안 새 메시지를 보낼 때 | 늦음을 기다리는 동안 보낸 말은 저장만 하고 새로 만들지 않아요. 기다리던 요청이 이어지면 그 말까지 다 읽어요(`ConversationInput.tsx` 1187~1198, 2026-11-23 읽음) | 그 사람의 답장이 이미 줄에 있으면 새로 안 서고, 처음 정한 때 그대로 | phone2run.js `enqueueReplies`. **같아요** |
+| 10 | 틀린 기록 | — | `phone2keepon.js` 51~52 주석 "Marinara has no such reply: its server answers only while the page asks"는 틀림. 이 표의 75줄 ⑤ "마리나라에 없는 것: 늦은 답장을 서버가 보내요"도 틀림(마리나라 서버도 보냄) | phone2keepon.js · 이 파일. **지금: 고침** |
 
 ## 스케줄 · 상태 · 먼저 말 걸기
 
@@ -82,8 +84,8 @@
 | services/conversation/autonomous-candidates.ts | 35 | 다 (코드). 부르는 곳은 아직 | plugin/marinara/autonomous-candidates.js | 다른 채팅의 후보 목록 길(`/chats/autonomous-candidates`)은 아직 |
 | routes/conversation.routes.ts | 1353 | 일부 | src/marinara/autonomous-check.js · schedule-routes.js | /status(마지막 연락 · 상태 맞추기), /activity/* 는 우리 방의 말에서 다시 읽는 것으로 대신함. /busy-delay는 replyDelay('auto')로. 나머지 길은 가져옴 |
 | client/lib/character-schedule-transfer.ts | 171 | 다 | src/marinara/character-schedule-transfer.js | (스케줄 내보내기 · 가져오기 함수도 들어 있음: 화면에서 부르면 됨) |
-| client/hooks/use-autonomous-messaging.ts | 303 | 일부 | src/phone2tick.js · phone2go.js liveAutonomous | 순서 · 주기(30초) · 늦음 · 주고받기(2~5초 뒤) · 세는 때(말이 실제로 나온 뒤) · 실패하면 쉬었다 다시(5분부터 두 배, 1시간까지)는 맞춤. 코드는 우리 줄(queue)에 맞춰 다시 짬. 안 맞춘 것: 실패 종류에 따라 더 길게 쉬기(hard failure) |
-| client/hooks/use-background-autonomous.ts | 400 | 일부 (끝까지 읽음. 코드는 안 가져옴: 아래 이유) | plugin/ (서버 일꾼) · src/phone2keepon.js | 마리나라의 "채팅"은 우리 방 하나예요. **지금 열린 실리 채팅 안의 방은 안 보고 있어도 브라우저가 다 봐요**(`liveAutonomous`가 방마다 물어요). **다른 실리 채팅의 Orbit**은 브라우저가 못 읽어요(그 채팅의 데이터는 그 채팅을 열어야 메모리에 있어요): 마리나라처럼 브라우저가 돌리지 않고, **서버 일꾼이 돌려요**(브라우저가 그 채팅을 안 보고 있으면 75초 뒤부터 서버 몫). 그래서 다른 것: 그런 방은 서버의 값으로 돌아요(후속 2번까지 · 내 상태는 `idle` · 연결 프로필 방은 안 됨). **아직 없는 것: 알림**(소리 · 떠 있는 알림 · 브라우저 알림 · 다른 채팅의 안 읽음 수 올리기). 안 읽은 먼저 건 말은 방에 적혀 있고(`liveAutonomousUnread`) 방을 읽으면 지워져요 |
+| client/hooks/use-autonomous-messaging.ts | 303 | 일부 | src/phone2tick.js · phone2go.js liveAutonomous | 순서 · 주기(30초) · 늦음 · 주고받기(2~5초 뒤, 그 시각에) · 세는 때(말이 실제로 나온 뒤) · 가려지면 쉬기는 맞춤. 실패하면 마리나라처럼 `/activity/assistant`만(쉬기는 없어요: 2026-11-23에 뺐어요, 위 "서버 · 늦은 답장" 6). 코드는 우리 줄(queue)에 맞춰 다시 짬 |
+| client/hooks/use-background-autonomous.ts | 400 | 일부 (끝까지 읽음. 코드는 안 가져옴: 아래 이유) | plugin/ (서버 일꾼) · src/phone2keepon.js | 마리나라의 "채팅"은 우리 방 하나예요. **지금 열린 실리 채팅 안의 방은 안 보고 있어도 브라우저가 다 봐요**(`liveAutonomous`가 방마다 물어요). **다른 실리 채팅의 Orbit**은 브라우저가 못 읽어요(그 채팅의 데이터는 그 채팅을 열어야 메모리에 있어요): 마리나라처럼 브라우저가 돌리지 않고, **서버 일꾼이 돌려요**(먼저 말 걸기는 브라우저가 그 채팅을 안 보고 있으면 75초 뒤부터 서버 몫. 늦은 답장은 때가 되면 늘 서버가: 위 "서버 · 늦은 답장" 1). 그래서 다른 것: 그런 방은 서버의 값으로 돌아요(후속 2번까지 · 내 상태는 `idle` · 연결 프로필 방은 안 됨). **아직 없는 것: 알림**(소리 · 떠 있는 알림 · 브라우저 알림 · 다른 채팅의 안 읽음 수 올리기). 안 읽은 먼저 건 말은 방에 적혀 있고(`liveAutonomousUnread`) 방을 읽으면 지워져요 |
 | client/lib/notification-sound.ts | 106 | 다 (코드). 부르는 곳은 화면(디자인 세션) | src/marinara/notification-sound.js | 알림 소리(합성음 · 내 소리 파일 · 창이 앞에 있을 때는 안 울리기) |
 | server/routes/notification-sound.routes.ts | 212 | 다 (2026-11-23, 끝까지 읽음) | plugin/sound.mjs · plugin/index.mjs `/sound*` | 형식 알아보기 · 10MB · 확장자 · 한 줄 세우기 · 가장 새 파일 · 파일 주기 머리 그대로. **다른 것**: 둘 곳은 실리 사용자 폴더, 올리기는 실리의 multer(`avatar` 칸) 임시 파일, 지우기는 `POST /sound/delete`(마리나라 `DELETE /`, 204), 오류 글은 한국어(뜻은 그대로). 백업에는 안 들어가요(마리나라는 `backup.routes.ts` 122줄에서 넣어요: 우리 백업은 채팅마다의 아카이브라 이 파일이 들어갈 자리가 없음) |
 | client/hooks/use-custom-notification-sound.ts | 46 | 다 (2026-11-23, 끝까지 읽음) | src/phone2sound.js | 상태 · 올리기 · 지우기와 `setCustomNotificationSoundUrl`(App.tsx 545 · 573~575 · SettingControls.tsx 380~420) 그대로. react-query의 30초 기억 대신 부를 때마다 물어요 |
@@ -91,7 +93,7 @@
 | client/lib/local-notifications.ts | 177 | 다 (코드). 부르는 곳은 화면(디자인 세션) | src/marinara/local-notifications.js | 브라우저 알림(권한 묻기 · 띄우기). 알림의 글 · 그림만 실리 것으로(`MESSAGE_NOTIFICATION`). 마리나라 안드로이드 앱의 다리는 우리에게 없어서 늘 "unsupported" |
 | client/components/chat/ConversationAutonomousEffects.tsx | 113 | 일부 | phone2go.js · phone2keepon.js의 `na-live-auto` 신호 | 캐릭터가 먼저 건 말이 들어오면 화면에 신호를 보내요(브라우저가 만든 것 · 서버가 만든 것 둘 다). 소리 · "○○ messaged you" 띠 · 안 읽음 수는 화면 몫(디자인 세션) |
 | client/lib/user-status.ts · user-presence-activity.ts · hooks/use-idle-detection.ts | 110 | 다 | src/marinara/idle-detection.js · phone2sched.js userStore | |
-| services/conversation/server-autonomous-scheduler.service.ts | 507 | 다 (작업 브랜치. 브라우저 쪽 3-3이 될 때까지 메인에 안 올려요) | plugin/marinara/server-autonomous-scheduler.service.js · plugin/auto.mjs · work.mjs · worker.mjs · host.mjs · bridge.mjs · screen.mjs · log.mjs · src/phone2kit.js | 파일은 통째로 가져왔고, 부르는 두 길(때가 됐나 · 답장 만들기)을 서버에서 브라우저와 같은 코드로 돌려요. **마리나라와 다른 것**: ① 연결 프로필 · 실리 쪽 방(실리에서 지금 고른 프로필)은 브라우저가 실리 자신의 코드로 떠 둔 요청 틀로 서버가 보내요. 실리에서 프로필을 하나도 안 고른 방은 서버가 못 돌려요(실리의 `generateRaw`는 브라우저 코드라서). ② 실리 연결 방식 · 연결 프로필은 브라우저가 미리 남긴 요청 틀이 있어야 해요(그 채팅을 한 번 열어 두면 생겨요). ③ 서버는 이야기 요약본을 늘리지 않아요. ④ 카드 · 페르소나 · 롤플 끝 메시지는 브라우저가 마지막으로 남긴 것을 읽어요(그 뒤에 실리에서 고쳤어도 그 채팅을 다시 열기 전에는 예전 것). ⑤ 마리나라에 없는 것: 늦은 답장을 서버가 보내요(우리 줄 방식). 자세한 것은 `docs/PHONE2-PLAN.md` 3-2b |
+| services/conversation/server-autonomous-scheduler.service.ts | 507 | 다 (작업 브랜치. 브라우저 쪽 3-3이 될 때까지 메인에 안 올려요) | plugin/marinara/server-autonomous-scheduler.service.js · plugin/auto.mjs · work.mjs · worker.mjs · host.mjs · bridge.mjs · screen.mjs · log.mjs · src/phone2kit.js | 파일은 통째로 가져왔고, 부르는 두 길(때가 됐나 · 답장 만들기)을 서버에서 브라우저와 같은 코드로 돌려요. **마리나라와 다른 것**: ① 연결 프로필 · 실리 쪽 방(실리에서 지금 고른 프로필)은 브라우저가 실리 자신의 코드로 떠 둔 요청 틀로 서버가 보내요. 실리에서 프로필을 하나도 안 고른 방은 서버가 못 돌려요(실리의 `generateRaw`는 브라우저 코드라서). ② 실리 연결 방식 · 연결 프로필은 브라우저가 미리 남긴 요청 틀이 있어야 해요(그 채팅을 한 번 열어 두면 생겨요). ③ 서버는 이야기 요약본을 늘리지 않아요. ④ 카드 · 페르소나 · 롤플 끝 메시지는 브라우저가 마지막으로 남긴 것을 읽어요(그 뒤에 실리에서 고쳤어도 그 채팅을 다시 열기 전에는 예전 것). ⑤ 늦은 답장: 마리나라도 서버가 보내요(그 요청 안에서 기다렸다가. 2026-11-23에 고침: 전에 "마리나라에 없는 것"이라고 틀리게 적었어요). 우리는 줄에 있는 답장을 때가 되면 일꾼이 보내요. 자세한 것은 `docs/PHONE2-PLAN.md` 3-2b |
 | routes/generate/conversation-context-block.ts | 162 | 다 | src/marinara/conversation-context-block.js | |
 | routes/generate/conversation-presence-runtime.ts | 492 | 다 | phone2go.js holdReplies · pickResponders · handOff | 늦음 · 오프라인 · @ 부름 · 늦음이 짧은 사람부터 · 답한 뒤 부른 사람의 늦음(mentionResponderDelays). 장면 · 게임 중인 사람 빼기는 그 기능이 없어서 없음 |
 | services/generation/smart-group-decision.ts | 104 | 일부 | src/marinara/group-responders.js | `smartOrderQuestions` · `chooseSmartResponders`는 그대로. `smartOrderState`와 그걸 부르는 길(Decision 모델로 고르기)은 아직: 마리나라의 Decision 모델(`services/decision/`)이 우리에게 없음. 그래서 smart는 항상 채팅 모델에게 물음(마리나라에서 Decision 모델을 꺼 둔 것과 같음) |
@@ -169,7 +171,7 @@
 
 - 메모를 한 사람에게 보여 주기, 되살릴 때 고정 수 막기, 날짜 지난 휴지통 비우기
 - 스케줄 쓰기 켜고 끄기(`conversationSchedulesEnabled`), 스케줄 내보내기 · 가져오기
-- 먼저 건 말을 세는 때 · 이유의 쉬는 시간(말이 실제로 나온 뒤), 실패하면 쉬었다 다시
+- 먼저 건 말을 세는 때 · 이유의 쉬는 시간(말이 실제로 나온 뒤). 실패하면 쉬는 것은 서버 스케줄러만(2026-11-23)
 - 상황 글(CONTEXT)을 마리나라처럼 항상 넣기: 스케줄이 없는 사람은 "online". 내 상태 · @ 부름 · 먼저 거는 차례 줄이 스케줄 없는 사람에게도 가요
 - 따라 묻기가 마리나라처럼 점점 뜸해지고(두 배, 네 배) 세 번에서 멈추기, 이모지만 달면 첫 번째가 빨라지기: 방의 움직임을 기억해 두고(`syncUser` · `noteAssistant` · `noteReaction` · `forgetActivity`) 마리나라가 적는 때에 적어요
 - 스케줄의 주인을 캐릭터 카드로(마리나라처럼, 소망 2026-11-21): 스케줄 · 손으로 준 상태 · 매주 갱신이 실리 카드의 `data.extensions.narrative_archive_convo`에 있고 그 캐릭터가 나오는 모든 채팅에서 같아요. 채팅의 `w.presence`는 사본. 실리에 카드가 없는 사람은 채팅의 것만 써요. 예전에 채팅에만 있던 것은 카드로 올라가요

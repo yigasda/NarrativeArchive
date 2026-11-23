@@ -853,3 +853,21 @@ test('다른 쪽이 방을 바꾼 뒤(reseedActivity): 방에서 다시 읽어�
     assert.equal(A.getActivityState(id).autonomousMessages.get('mara').count, 1);
     assert.equal(A.getActivityState(id).clientPresence.updatedAt, seen);
 });
+test('먼저 말 걸 때인지 볼 때 카드의 상태를 지금 스케줄의 상태로 맞춰요 (마리나라의 /autonomous/check 1040~1053). 카드가 없는 사람 · 스케줄이 없는 사람은 그대로', async () => {
+    const card = { mara: { conversationStatus: 'online' } }, wrote = [];
+    S.setCardStore({ get: n => card[String(n).toLowerCase()] || null, set: async (n, patch) => { wrote.push([n, patch]); Object.assign(card[String(n).toLowerCase()], patch); } });
+    try {
+        const { m } = world(), g = L.ensureRoom(m, ['Mara', 'Ivo']);
+        S.setSchedule(m, 'Mara', all('dnd', 'working'), NOW);
+        S.setSchedule(m, 'Ivo', all('idle', 'nap'), NOW);
+        await S.flushCards(); wrote.length = 0;
+        S.setAutonomous(m, true);
+        S.checkProactive(m, g.id, { now: NOW });
+        await S.flushCards();
+        assert.deepEqual(wrote, [['Mara', { conversationStatus: 'dnd' }]]);
+        // (같으면 안 써요)
+        S.checkProactive(m, g.id, { now: NOW });
+        await S.flushCards();
+        assert.equal(wrote.length, 1);
+    } finally { S.setCardStore(null); }
+});

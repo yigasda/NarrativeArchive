@@ -22,9 +22,7 @@ const SSE = {
     discarded: 'data: {"type":"generation_discarded"}\n\ndata: {"type":"done"}\n\n',
     error: text => `data: ${JSON.stringify({ type: 'error', data: String(text || 'Generation failed') })}\n\n`,
 };
-// (Marinara's server scheduler: a chat a browser reported on within this long is left to the browser)
-const RECENT_CLIENT_PRESENCE_MS = 75_000;
-// 늦은 답장을 보는 주기 (브라우저의 phone2tick.js와 같아요)
+// 늦은 답장을 보는 주기 (브라우저의 phone2tick.js와 같아요). 기다리는 답장이 있으면 그 시각에 바로 봐요
 export const DUE_MS = 30_000;
 // 실리의 것 가운데 서버에 없어도 되는 칸 (읽으면 undefined: 읽는 쪽이 없을 때의 길을 가요)
 //   generateRaw: 실리 자신의 연결로 보내는 함수 (브라우저 코드) · CONNECT_API_MAP · getChatCompletionModel · onlineStatus: 실리 연결의 이름표
@@ -44,7 +42,6 @@ export async function startWork({ root, store, st = null, schedule = true }) {
     const AI = await import('../src/ai.js');
     const SP = await import('../src/stprofile.js');
     const { VERSION } = await import('../src/core.js');
-    const { getRecentAutonomousClientPresence } = await import('../src/marinara/autonomous.service.js');
 
     const readSettings = async () => { try { const v = JSON.parse(await fs.readFile(path.join(root, 'settings.json'), 'utf8')); return obj(v) ? v : {}; } catch (err) { if (err?.code === 'ENOENT') return {}; throw err; } };
     const askSt = async (url, body) => {
@@ -231,17 +228,6 @@ export async function startWork({ root, store, st = null, schedule = true }) {
         return '';
     }
     const charSaid = (w, room) => { const P = liveKey(w.persona); return (room.messages || []).filter(x => liveKey(x.from) !== P).length; };
-    const sleep = ms => new Promise(r => { const t = setTimeout(r, ms); t.unref?.(); });
-    // 곧 나갈 답장(먼저 건 말에 다른 캐릭터가 이어 답하기: 2~5초 뒤)이 있으면 그때까지 기다렸다가 돌려요
-    async function runSoon(real, sid) {
-        for (let i = 0; i < 6; i++) {
-            const w = liveWorld(real), now = Date.now();
-            const next = (w?.queue?.jobs || []).filter(j => j.kind === 'reply' && j.state === 'waiting' && j.notBefore > now && j.notBefore - now <= 6000).map(j => j.notBefore).sort((a, b) => a - b)[0];
-            if (!next) return;
-            await sleep(next - now + 50);
-            await G.liveGo(real, { lock: serverLock(sid) });
-        }
-    }
 
     // 마리나라 스케줄러의 /api/generate: 그 캐릭터가 먼저 거는 말 하나 → { statusCode, payload (SSE 글) }
     async function generate({ payload, entry: had, roomId }) {
@@ -257,9 +243,10 @@ export async function startWork({ root, store, st = null, schedule = true }) {
                 const no = await cannot(real, roomId);
                 if (no) throw refuse(400, no);
                 const now = Date.now();
-                // (a reply already on its way in this room, or the room resting after a failure: not now — as the browser's own check)
+                // (a reply already on its way in this room: Marinara's generation lock is held from the moment a reply is asked
+                //  for, through its presence delay — generate.routes.ts 1514~1536, conversation-presence-runtime.ts 254~265 —, so
+                //  a reply waiting here is a generation running there: 409)
                 if (w.queue.jobs.some(j => j.room === roomId && j.kind === 'reply' && (j.state === 'waiting' || j.state === 'running'))) return { statusCode: 409, payload: 'a reply is already queued in this room' };
-                if (room.autoFail?.nextAllowedAt > now) return { statusCode: 409, payload: 'this room is resting after a failure' };
                 return await writeFirst(real, w, room, name);
             });
         } catch (err) {
@@ -273,12 +260,13 @@ export async function startWork({ root, store, st = null, schedule = true }) {
             Object.assign(job, { auto: true, timed: true, user: { status: payload.userStatus === 'dnd' ? 'dnd' : payload.userStatus === 'active' ? 'active' : 'idle', activity: String(payload.userActivity || '') } });
             if (payload.autonomousIntentKey) job.intent = payload.autonomousIntentKey;
             room.turn = { spoke: [] };
-            const before = charSaid(w, room), fails = room.autoFail?.attempts || 0;
+            const before = charSaid(w, room);
             app.activeGenerations.set(chatId, true);
             let out;
-            try { out = await G.liveGo(real, { lock: serverLock(had.sid) }); await runSoon(real, had.sid); }
+            try { out = await G.liveGo(real, { lock: serverLock(had.sid), server: true }); }
             finally { app.activeGenerations.delete(chatId); }
-            if ((room.autoFail?.attempts || 0) > fails) return { statusCode: 200, payload: SSE.error(room.autoFail.lastError) };
+            // (the scheduler pauses this chat itself on an error: server-autonomous-scheduler.service.ts recordFailureBackoff)
+            if (out?.autoError) return { statusCode: 200, payload: SSE.error(out.autoError) };
             if (out?.saveError) return { statusCode: 200, payload: SSE.error(`저장하지 못했어요: ${out.saveError}`) };
             return { statusCode: 200, payload: charSaid(w, room) > before ? SSE.saved : SSE.discarded };
         }
@@ -293,27 +281,34 @@ export async function startWork({ root, store, st = null, schedule = true }) {
         around: (entry, fn) => withWorld(entry, fn),
     });
 
-    // 그 세계를 브라우저가 보고 있나 (어느 방이든 75초 안에 알렸으면)
-    const watched = e => { const w = liveWorld(e.real); return Object.keys(w?.messenger?.rooms || {}).some(id => getRecentAutonomousClientPresence(chatIdOf(e.real, id), RECENT_CLIENT_PRESENCE_MS)); };
-    // 때가 된 늦은 답장 (바빠서 미뤄 둔 답장: 브라우저의 30초 틱이 하던 일). 서버가 못 보내는 방의 것이 섞여 있으면 그 세계는 안 건드려요
+    // 때가 된 늦은 답장 (마리나라: 서버가 그 요청 안에서 늦음을 기다렸다가 바로 만들어요. 브라우저가 보고 있는지는 안 봐요 —
+    // conversation-presence-runtime.ts 254~321. 브라우저 연결이 끊겨도 계속해요 — generate.routes.ts 1924~1934).
+    // 우리는 답장이 줄에 있어서, 때가 되면 일꾼이 그 줄을 돌려요. 브라우저가 쥔 방은 이번엔 건너뛰고(그 방은 브라우저가 쓰는 중),
+    // 서버가 보낼 수 없는 방(cannot)도 건너뛰어요(그 방은 브라우저가 보내요). 다음에 볼 시각은 nextDue에
+    let nextDue = Infinity;
     async function sweepDue() {
-        let ran = 0;
+        let ran = 0, next = Infinity;
+        const waiting = w => w.queue.jobs.filter(j => j.kind === 'reply' && j.state === 'waiting');
         for (const sid of await store.list()) {
-            // (a room the browser is writing in now: liveGo leaves it for the next sweep — serverLock)
             try {
                 const e = await app.open(sid), w = e && liveWorld(e.real);
-                if (!w || watched(e) || await blocked(e.real)) continue;
-                const due = () => w.queue.jobs.filter(j => j.kind === 'reply' && j.state === 'waiting' && !(j.notBefore > Date.now()));
-                if (!due().length) continue;
-                await withWorld(e, async () => {
-                    for (const roomId of new Set(due().map(j => j.room))) { const no = await cannot(e.real, roomId); if (no) throw refuse(400, no); }
-                    if (watched(e) || !due().length) return;
-                    const out = await G.liveGo(e.real, { lock: serverLock(sid) });
-                    await runSoon(e.real, sid);
-                    if (out?.ran) ran += 1;
-                });
+                if (!w || await blocked(e.real)) continue;
+                const due = () => waiting(w).filter(j => !(j.notBefore > Date.now()));
+                if (due().length) {
+                    await withWorld(e, async () => {
+                        const skip = new Set();
+                        for (const roomId of new Set(due().map(j => j.room))) if (await cannot(e.real, roomId)) skip.add(roomId);
+                        if (due().every(j => skip.has(j.room))) return;
+                        const lock = serverLock(sid);
+                        const out = await G.liveGo(e.real, { lock: { enter: async room => (skip.has(room) ? null : lock.enter(room)), renew: lock.renew }, server: true });
+                        if (out?.ran) ran += 1;
+                    });
+                }
+                const w2 = liveWorld(e.real);
+                for (const j of w2 ? waiting(w2) : []) if (j.notBefore > Date.now()) next = Math.min(next, j.notBefore);
             } catch (err) { if (err?.statusCode !== 400) logger.warn(err instanceof Error ? err : {}, '[due-replies] %s: %s', sid, String(err?.message || err)); }
         }
+        nextDue = next;
         return ran;
     }
     // 화면에 보여 줄 것: 이 저장의 방마다 서버가 돌릴 수 있나 → [{ id, room, can, why }]
@@ -325,7 +320,7 @@ export async function startWork({ root, store, st = null, schedule = true }) {
         if (no) return rooms.map(room => ({ id: chatIdOf(e.real, room), room, can: false, why: no }));
         return withWorld(e, async () => { const out = []; for (const room of rooms) { const why = await cannot(e.real, room); out.push({ id: chatIdOf(e.real, room), room, can: !why, why }); } return out; });
     }
-    // 브라우저가 이 저장을 열어 두고 있어요 (30초마다): 그 방들은 서버가 75초 동안 안 건드려요
+    // 브라우저가 이 저장을 열어 두고 있어요 (30초마다): 그 방들에는 스케줄러가 75초 동안 먼저 말을 걸지 않아요 (마리나라의 /activity/presence)
     async function presence(sid, state) {
         const e = await app.open(String(sid)), w = e && liveWorld(e.real);
         if (!w) return 0;
@@ -334,8 +329,16 @@ export async function startWork({ root, store, st = null, schedule = true }) {
         return ids.length;
     }
 
-    let scheduler = null, dueTimer = null, stopped = false;
-    const dueLoop = () => { if (stopped) return; dueTimer = setTimeout(() => { sweepDue().catch(err => logger.warn(err instanceof Error ? err : {}, '[due-replies] 확인하지 못했습니다')).finally(dueLoop); }, DUE_MS); dueTimer.unref?.(); };
+    let scheduler = null, dueTimer = null, stopped = false, sweeping = false;
+    // (30초마다, 기다리는 답장이 그보다 먼저면 그 시각에)
+    const dueLoop = (wait = Math.max(0, Math.min(DUE_MS, nextDue - Date.now()))) => {
+        if (stopped) return;
+        clearTimeout(dueTimer);
+        dueTimer = setTimeout(() => { sweeping = true; sweepDue().catch(err => logger.warn(err instanceof Error ? err : {}, '[due-replies] 확인하지 못했습니다')).finally(() => { sweeping = false; dueLoop(); }); }, wait + 50);
+        dueTimer.unref?.();
+    };
+    // 브라우저가 저장했어요: 새로 기다리는 답장이 있을 수 있어서 곧 다시 봐요
+    const poke = () => { if (schedule && !stopped && !sweeping) dueLoop(1000); };
     if (schedule) { scheduler = startServerAutonomousScheduler(app); dueLoop(); }
     async function stop() {
         stopped = true;
@@ -344,5 +347,5 @@ export async function startWork({ root, store, st = null, schedule = true }) {
         await app.close();
         await line.catch(() => {});
     }
-    return { app, generate, sweepDue, status, presence, claim, renew, release, stop };
+    return { app, generate, sweepDue, status, presence, claim, renew, release, stop, poke };
 }

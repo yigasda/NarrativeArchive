@@ -36,7 +36,7 @@ const cmds = {
     claim: ({ sid, room, by }) => work.claim(sid, room, by),
     renew: ({ sid, room, by }) => work.renew(sid, room, by),
     release: ({ sid, room, by }) => { work.release(sid, room, by); return true; },
-    wrote: () => { writes += 1; return writes; },
+    wrote: () => { writes += 1; work.poke(); return writes; },
     stop: () => work.stop(),
     // (for the tests and for checking by hand: one step at a time)
     list: () => work.app.chats.list(),

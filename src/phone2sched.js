@@ -45,6 +45,8 @@ export const setCardStore = s => { cards = s && typeof s.get === 'function' ? s 
 export const setZoneStore = s => { zones = s && typeof s.get === 'function' ? s : null; };
 // 카드에 쓰는 일이 다 끝났을 때 (저장하기 전에 기다려요)
 export async function flushCards() { const w = writes; writes = []; await Promise.all(w); }
+// 그 사람 카드의 우리 칸 | null (카드 없음)
+const cardExt = owner => (cards ? cards.get(owner) : null);
 function toCard(owner, patch) {
     if (!cards || !cards.get(owner)) return;
     try { writes.push(Promise.resolve(cards.set(owner, patch)).catch(err => console.warn('[narrative-archive] card schedule', err))); } catch (err) { console.warn('[narrative-archive] card schedule', err); }
@@ -199,6 +201,8 @@ export function checkProactive(m, roomId, { now = new Date(), tzOf = () => '', c
         schedules: schedulesOn(m) ? Object.fromEntries(ids.filter(k => p.schedules[k]).map(k => [k, p.schedules[k]])) : {}, statusOverrides: p.overrides, cards,
         messages: () => activityRows(w, room),
         userStatus: userStatus ?? (p.user?.status === 'invisible' ? 'active' : p.user?.status), maxFollowups, source, promptTimeZone: tzOf(name) || undefined, nowInstant: now,
+        // (Marinara keeps each character's status on the card as the check sees it: the card here is ours, narrative_archive_convo)
+        cardStatus: { get: k => { const n = room.members.find(x => liveKey(x) === k); return n ? cardExt(n) : null; }, set: (k, status) => { const n = room.members.find(x => liveKey(x) === k); if (n) toCard(n, { conversationStatus: status }); } },
     });
     return out.autonomousIntent ? { ...out, autonomousIntent: named(out.autonomousIntent, w.persona), autonomousIntentPrompt: named(out.autonomousIntentPrompt, w.persona) } : out;
 }

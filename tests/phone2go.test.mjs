@@ -1982,3 +1982,36 @@ test('먼저 건 말에는 표시가 남아요 (extra.autonomous). 내 말에 �
     assert.deepEqual(cues, [{ from: 'browser', rooms: [{ room: c.room.id, by: ['Mara'], added: 1, count: 1 }] }]);
     void w;
 });
+
+test('먼저 건 말 뒤 캐릭터끼리 주고받기는 브라우저만 해요 (마리나라: 서버 스케줄러는 안 해요). 실패하면 브라우저는 /activity/assistant, 서버는 표시만 풀어요', async t => {
+    const A = await import('../src/marinara/autonomous.service.js'), S = await import('../src/phone2sched.js');
+    const rnd = Math.random; Math.random = () => 0; t.after(() => { Math.random = rnd; });
+    const make = () => {
+        const c = world(), m = L.liveMeta(c.real);
+        m.phones.ivo = { ...phone(), owner: 'Ivo' }; migrateBank(m, m.phones.ivo);
+        const g = L.ensureRoom(c.real, ['Mara', 'Ivo']);
+        L.sendLive(c.real, g.id, 'hi', Date.now() - 3600_000);
+        const j = L.enqueueJob(c.real, { kind: 'reply', owner: 'Mara', room: g.id, at: Date.now() - 1000, why: 'x' }); j.auto = true; j.timed = true;
+        return { c, g, w: L.liveWorld(c.real) };
+    };
+    for (const server of [false, true]) {
+        const { c, g, w } = make();
+        await G.liveSetAutonomous(c.real, true); await G.liveSetAutonomousOptions(c.real, { characterExchanges: true });
+        T.replies = [{ state: '집', reply: ['anyone up?'], does: [] }];
+        await G.liveGo(c.real, { server, lock: null });
+        const waiting = w.queue.jobs.filter(x => x.state === 'waiting');
+        if (server) assert.equal(waiting.length, 0, 'server');
+        else assert.deepEqual(waiting.map(x => [x.owner, x.auto, x.notBefore > Date.now()]), [['Ivo', true, true]]);
+        assert.equal(g.messages.at(-1).text, 'anyone up?');
+    }
+    for (const server of [false, true]) {
+        const { c, g } = make(), id = S.chatIdOf(c.real, g.id);
+        A.recordUserActivity(id, { occurredAt: Date.now() - 3600_000 }); A.markGenerationInProgress(id);
+        T.replies = [];
+        const r = await G.liveGo(c.real, { server, lock: null });
+        assert.equal(r.failed, null); assert.ok(r.autoError);
+        const st = A.getActivityState(id);
+        assert.equal(st.generationInProgressSince, null);
+        assert.equal(st.lastAssistantMessageAt > 0, !server, server ? 'server' : 'browser');
+    }
+});

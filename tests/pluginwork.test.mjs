@@ -42,7 +42,7 @@ function world({ story = false, schedule = null, kit = true, st = null, pt = nul
 }
 
 // 한 판: 임시 사용자 폴더 + 저장 + 가짜 모델 + 가짜 다리 + 일꾼
-async function stage(t, { settings = {}, cm = null, more = {}, files = {}, reply = () => ({ reply: ['you there?'], status: '' }), bridge = true } = {}) {
+async function stage(t, { settings = {}, cm = null, more = {}, files = {}, reply = () => ({ reply: ['you there?'], status: '' }), bridge = true, schedule = false } = {}) {
     const root = await mkdtemp(path.join(tmpdir(), 'na-work-'));
     const asked = [], st = [];
     const model = await listen(async (req, res) => { const body = await bodyOf(req); asked.push({ url: req.url, auth: req.headers.authorization, body }); const a = await reply(body); if (a?.httpStatus) { res.statusCode = a.httpStatus; res.end(JSON.stringify({ error: { message: a.error || 'no' } })); return; } res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ choices: [{ message: { content: typeof a === 'string' ? a : JSON.stringify(a) }, finish_reason: 'stop' }], usage: { prompt_tokens: 1, completion_tokens: 1 } })); });
@@ -64,7 +64,7 @@ async function stage(t, { settings = {}, cm = null, more = {}, files = {}, reply
     // (SillyTavern's chat file of the example chat: the server runs an Orbit only while its chat is there)
     await mkdir(path.join(root, 'chats', 'mara'), { recursive: true }); await writeFile(path.join(root, 'chats', 'mara', 'Mara - 2026-11-22.jsonl'), '{}\n');
     const store = openStore(root);
-    const auto = startAuto({ root, store, bridge: br ? { url: `http://127.0.0.1:${br.address().port}`, token: TOKEN } : null, schedule: false });
+    const auto = startAuto({ root, store, bridge: br ? { url: `http://127.0.0.1:${br.address().port}`, token: TOKEN } : null, schedule });
     t.after(async () => { await auto.stop(); model.close(); br?.close(); await rm(root, { recursive: true, force: true }); });
     await auto.ready;
     const put = (sid, m) => store.save(sid, { parts: JSON.parse(JSON.stringify(splitLive(m.live))), chat: 'chat-1' });
@@ -251,9 +251,8 @@ test('일꾼: 실리에서 프로필이 바뀌었거나 프리셋 파일이 없�
     liveWorld(b.m).messenger.rooms[b.room.id].connectionId = 'profile:p1';
     await S2.put('sb', b.m); await S2.auto.list();
     const r = await S2.gen(b.id);
-    assert.match(r.payload, /"type":"error"/);
+    assert.match(r.payload, /"type":"error"[^\n]*프리셋을 찾을 수 없습니다: Quiet/);
     assert.equal(S.st.length + S2.st.length, 0);
-    assert.match((await S2.get('sb')).messenger.rooms[b.room.id].autoFail.lastError, /프리셋을 찾을 수 없습니다: Quiet/);
 });
 
 test('일꾼: 글 완성 프로필 방 — 지시 형식이 감싼 글로 실리 서버의 글 완성 처리기에, 답은 실리처럼 멈춤 글을 잘라서', async t => {
@@ -271,17 +270,18 @@ test('일꾼: 글 완성 프로필 방 — 지시 형식이 감싼 글로 실리
     assert.equal((await S.get('sa')).messenger.rooms[a.room.id].messages.at(-1).text, 'you there?');
 });
 
-test('일꾼: 모델이 실패하면 말이 안 들어가고, 실패로 알려요. 그 방은 쉬어요', async t => {
+test('일꾼: 모델이 실패하면 말이 안 들어가고, 실패로 알려요. 쉬는 것은 스케줄러가 해요 (마리나라처럼: 방에는 안 적어요)', async t => {
     const S = await stage(t, { reply: () => ({ httpStatus: 500, error: 'boom' }) }), a = world();
     await S.put('sa', a.m); await S.auto.list();
     const r = await S.gen(a.id);
     assert.equal(r.statusCode, 200); assert.match(r.payload, /"type":"error"/);
     const w = await S.get('sa'), room = w.messenger.rooms[a.room.id];
-    assert.equal(room.messages.length, 2); assert.equal(room.autoFail.attempts, 1);
+    assert.equal(room.messages.length, 2); assert.equal(room.autoFail, undefined);
     assert.equal(w.presence.meta.autonomousDailyBudget, undefined);
-    // 쉬는 동안 다시 시키면 안 만들어요 (409: 스케줄러는 이걸 실패로 세지 않아요)
-    assert.equal((await S.gen(a.id)).statusCode, 409);
-    assert.equal(S.asked.length, 1);
+    assert.equal(w.queue.jobs.length, 0);
+    // (다시 시키면 다시 만들어요: 그 채팅을 쉬게 하는 것은 스케줄러의 recordFailureBackoff — tests/pluginauto.test.mjs)
+    assert.match((await S.gen(a.id)).payload, /"type":"error"/);
+    assert.equal(S.asked.length, 2);
 });
 
 test('일꾼: 그사이 브라우저가 저장했으면 덮어쓰지 않아요', async t => {
@@ -365,21 +365,21 @@ test('일꾼: 캐릭터가 상태를 바꾸면 카드에도 써요 (실리의 me
     assert.equal(w.messenger.rooms[a.room.id].messages.at(-1).text, 'brb');
 });
 
-test('일꾼: 때가 된 늦은 답장을 보내요. 브라우저가 열어 둔 세계 · 서버가 못 보내는 방이 낀 세계는 안 건드려요', async t => {
+test('일꾼: 때가 된 늦은 답장을 보내요 — 브라우저가 보고 있어도(마리나라처럼). 서버가 못 보내는 방 · 아직 때가 아닌 것은 기다려요', async t => {
     const S = await stage(t, { reply: () => ({ reply: ['sorry, was busy'], status: '' }) });
     const mk = (more = () => {}) => { const x = world({ hoursAgo: 0.2 }); const j = enqueueJob(x.m, { kind: 'reply', owner: 'Mara', room: x.room.id, at: Date.now() - 600_000 }); Object.assign(j, { timed: true, notBefore: Date.now() - 1000 }); more(x, j); return x; };
     const a = mk(), b = mk(), c = mk(x => { liveWorld(x.m).messenger.rooms[x.room.id].connectionId = 'profile:p1'; }), d = mk((x, j) => { j.notBefore = Date.now() + 3600_000; });
     await S.put('sa', a.m); await S.put('sb', b.m); await S.put('sc', c.m); await S.put('sd', d.m);
     await S.auto.presence('sb', 'active');
-    assert.equal(await S.auto.sweep(), 1);
-    assert.equal((await S.get('sa')).messenger.rooms[a.room.id].messages.at(-1).text, 'sorry, was busy');
-    for (const [sid, x] of [['sb', b], ['sc', c], ['sd', d]]) { const w = await S.get(sid); assert.equal(w.messenger.rooms[x.room.id].messages.length, 2, sid); assert.equal(w.queue.jobs.filter(j => j.state === 'waiting').length, 1, sid); }
-    assert.equal(S.asked.length, 1);
+    assert.equal(await S.auto.sweep(), 2);
+    for (const [sid, x] of [['sa', a], ['sb', b]]) assert.equal((await S.get(sid)).messenger.rooms[x.room.id].messages.at(-1).text, 'sorry, was busy', sid);
+    for (const [sid, x] of [['sc', c], ['sd', d]]) { const w = await S.get(sid); assert.equal(w.messenger.rooms[x.room.id].messages.length, 2, sid); assert.equal(w.queue.jobs.filter(j => j.state === 'waiting').length, 1, sid); }
+    assert.equal(S.asked.length, 2);
     // (연결 프로필을 고른 방은 그 요청 틀이 없으면, 초안 모델이 커스텀 API여도 서버가 대신 답하지 않아요: 다른 모델로 답하게 돼요)
     await S.auto.list();
     const rc = await S.gen(c.id);
     assert.equal(rc.statusCode, 400); assert.match(rc.payload, /연결 프로필/);
-    assert.equal(S.asked.length, 1);
+    assert.equal(S.asked.length, 2);
     // (늦은 답장은 내가 자리에 없다고 적지 않아요: 먼저 건 말이 아니에요)
     assert.doesNotMatch(textOf(S.asked[0].body), /away or offline|\[WHY NOW\]\n/);
 });
@@ -397,4 +397,52 @@ test('일꾼: 확장과 플러그인의 버전이 다르면 · 실리에서 그 
     await S.put('s5', old.m); await S.put('s6', gone.m);
     assert.equal(await S.auto.sweep(), 0);
     assert.equal(S.asked.length, 0);
+});
+
+test('일꾼: 늦은 답장은 그 시각에 바로 보내요 (마리나라의 setTimeout). 브라우저가 새로 저장한 것도 곧 봐요', async t => {
+    const S = await stage(t, { reply: () => ({ reply: ['sorry, was busy'], status: '' }), schedule: true });
+    const x = world({ hoursAgo: 0.2 }), j = enqueueJob(x.m, { kind: 'reply', owner: 'Mara', room: x.room.id, at: Date.now() - 600_000 });
+    Object.assign(j, { timed: true, notBefore: Date.now() + 60_000 });
+    await S.put('sa', x.m);
+    S.auto.wrote();
+    // (브라우저가 저장한 뒤 1초 안에 보고, 그때는 아직 아니라서 그 시각을 기억해요)
+    await new Promise(r => setTimeout(r, 1600));
+    assert.equal(S.asked.length, 0);
+    // 브라우저가 시각을 당겨 저장해요: 저장 뒤 1초에 한 번 보고(아직 아님), 그 시각에 다시 봐요. 30초를 기다리지 않아요
+    const again = await S.store.load('sa'), live = joinLive(again.parts), due = Date.now() + 3000;
+    live.world.queue.jobs[0].notBefore = due;
+    await S.store.save('sa', { base: again.rev, parts: JSON.parse(JSON.stringify(splitLive(live))) });
+    S.auto.wrote();
+    const until = Date.now() + 9000;
+    while (!S.asked.length && Date.now() < until) await new Promise(r => setTimeout(r, 50));
+    assert.equal(S.asked.length, 1);
+    assert.ok(Date.now() >= due - 100 && Date.now() < due + 3000, String(Date.now() - due));
+    while (Date.now() < until && (await S.get('sa')).messenger.rooms[x.room.id].messages.at(-1).text !== 'sorry, was busy') await new Promise(r => setTimeout(r, 100));
+    assert.equal((await S.get('sa')).messenger.rooms[x.room.id].messages.at(-1).text, 'sorry, was busy');
+});
+
+test('일꾼: 서버가 못 보내는 방은 그 방만 건너뛰고, 같은 Orbit의 다른 방은 보내요', async t => {
+    const S = await stage(t, { reply: () => ({ reply: ['sorry, was busy'], status: '' }) });
+    const a = world({ hoursAgo: 0.2 }), other = ensureRoom(a.m, ['Mara', 'Ivo']);
+    putLivePhone(a.m, { owner: 'Ivo' });
+    sendLive(a.m, other.id, 'anyone?', Date.now() - 600_000);
+    liveWorld(a.m).messenger.rooms[other.id].connectionId = 'profile:p1';
+    for (const room of [a.room.id, other.id]) { const j = enqueueJob(a.m, { kind: 'reply', owner: 'Mara', room, at: Date.now() - 600_000 }); Object.assign(j, { timed: true, notBefore: Date.now() - 1000 }); }
+    await S.put('sa', a.m);
+    assert.equal(await S.auto.sweep(), 1);
+    const w = await S.get('sa');
+    assert.equal(w.messenger.rooms[a.room.id].messages.at(-1).text, 'sorry, was busy');
+    assert.equal(w.messenger.rooms[other.id].messages.at(-1).text, 'anyone?');
+    assert.deepEqual(w.queue.jobs.filter(j => j.state === 'waiting').map(j => j.room), [other.id]);
+});
+
+test('일꾼: 먼저 건 말 뒤에 캐릭터끼리 주고받기를 안 해요 (마리나라의 서버 스케줄러처럼: 주고받기는 브라우저만)', async t => {
+    const S = await stage(t, { reply: () => ({ reply: ['hey all'], status: '' }) });
+    const a = world({ members: ['Mara', 'Ivo'] });
+    liveWorld(a.m).presence.meta.characterExchanges = true;
+    await S.put('sa', a.m); await S.auto.list();
+    assert.match((await S.gen(a.id)).payload, /"message_saved"/);
+    const w = await S.get('sa');
+    assert.equal(w.queue.jobs.filter(j => j.state === 'waiting').length, 0);
+    assert.equal(S.asked.length, 1);
 });

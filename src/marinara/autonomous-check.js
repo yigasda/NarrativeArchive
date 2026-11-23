@@ -5,7 +5,9 @@
 //   - checkAutonomous is the POST /autonomous/check handler: the chat's metadata, characters, schedules, overrides,
 //     card data and messages come as arguments instead of the Marinara database, it returns the answer instead of
 //     sending it, and the multiplayer, scene and turn-game branches are left out (NarrativeArchive has none of them);
-//   - checkExchange is the POST /autonomous/exchange handler, adapted the same way.
+//   - checkExchange is the POST /autonomous/exchange handler, adapted the same way;
+//   - the card's conversationStatus is read and written through args.cardStatus ({ get(characterId) → the card's
+//     extensions or null when there is no card, set(characterId, status) }) instead of chars.getById · chars.update.
 import {
   buildAutonomousDailyBudgetPatch,
   checkAutonomousMessaging,
@@ -215,6 +217,18 @@ export function checkAutonomous(args) {
   const hasRoutineSchedules = hasSchedules(schedules);
 
   const autonomySchedules = withSchedulelessAutonomySchedules(characterIds, schedules, userStatus, args.cards);
+
+  for (const cid of characterIds) {
+    const schedule = schedules[cid];
+    if (!schedule) continue;
+    const { status } = getEffectiveCurrentStatus(schedule, statusOverrides[cid], nowInstant, "free time", promptNow);
+    const extensions = args.cardStatus ? args.cardStatus.get(cid) : null;
+    if (!extensions) continue;
+    const currentStatus = extensions.conversationStatus;
+    if (currentStatus !== status) {
+      args.cardStatus.set(cid, status);
+    }
+  }
 
   // Initialize activity state from the chat's messages once per page load.
   if (!seededAutonomousActivityChats.has(chatId)) {
