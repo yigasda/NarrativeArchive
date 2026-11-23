@@ -115,7 +115,7 @@ src/phone2tick.js 30초 틱                       플러그인 본체 (plugin/in
 - `cardsOf`(마리나라 스케줄러의 수다 정도)도 `around` 안에서 지금 읽은 카드에서 찾아요.
 - 페르소나 이름이 바뀌었으면 `withWorld`가 곧바로 `liveFollowPersona`: 실시간 폰의 "나"도 그 이름으로(브라우저는 폰을 열 때 해요).
 - `writeExtensionField`는 실리 `extensions.js` 2070~2120 그대로: `UNSET_VALUE`면 지우기, `json_data`도 같이, 저장이 실패해도 던지지 않고 기록만(`확장 필드를 저장하지 못했습니다.`).
-- 다리가 없으면(실리 버전이 달라 다리가 안 열림) 카드와 페르소나 그림 목록은 실리 폴더에서 직접 읽어요(`stread.mjs readCards` · `readImages`: 실리 서버의 `/api/characters/all` · `/api/avatars/get`이 하는 것을 옮긴 것, PNG의 `ccv3` → `chara`). 그래서 커스텀 API 방은 다리 없이도 전처럼 돌고, 고친 카드도 바로 들어가요. 진짜 실리의 `/all`과 글자까지 같은지 대 봤어요(통계 칸 빼고).
+- 다리가 없거나 옛 다리라 그 길이 막혀 있으면(404: 플러그인 폴더를 안 받음) 카드와 페르소나 그림 목록은 실리 폴더에서 직접 읽어요(`stread.mjs readCards` · `readImages`: 실리 서버의 `/api/characters/all` · `/api/avatars/get`이 하는 것을 옮긴 것, PNG의 `ccv3` → `chara`). 그래서 커스텀 API 방은 다리 없이도 전처럼 돌고, 고친 카드도 바로 들어가요. 진짜 실리의 `/all`과 글자까지 같은지 대 봤어요(통계 칸 빼고).
 
 **실리와 다른 점**
 - 페르소나: 실리는 채팅을 **열 때 한 번** 고르고, 손으로 바꾼 페르소나(잠그지 않은 것)는 새로 고치면 기본 페르소나로 돌아가요. 우리 서버는 **그 채팅에서 마지막으로 쓴 페르소나**로 답해요(소망이 정함: 빠른 전환기로 자주 바꾸고, 그게 안 남으면 안 돼요). 브라우저가 `m.stPersona`에 적어 두고(`phone2keepon.js keepPersona`), 적어 둔 게 없는 옛 채팅만 실리 순서로 골라요.
@@ -141,7 +141,7 @@ kit = { v: 1, ver (확장 버전),
 1. 묶음이 없음. 묶음에 있는 그룹 id · 채팅 이름이 이상함.
 2. **플러그인 폴더의 코드로 돌 때만: 확장과 버전이 다름** (`kit.ver !== src/core.js VERSION`) → "서버 플러그인을 업데이트하고 실리를 다시 시작하세요". 2026-11-23부터 일꾼은 **실리의 확장 폴더의 코드**를 돌려요(`code.mjs`): 실리가 확장을 업데이트하면 일꾼도 그 버전으로 다시 떠요. 그 코드가 지금 설치된 확장이라, 페이지가 아직 옛것이어도 멈추지 않아요(소망: 새로 고치라고 하지 말 것).
    - 그 전에는 플러그인 폴더의 코드를 돌려서, 확장을 올릴 때마다(화면 파일만 바뀌어도) `plugins/NarrativeArchive`에서 `git pull` 하고 실리를 다시 켜야 했어요. 안 하면 서버가 아무것도 안 보냈어요(2026-11-23, 3.232.6).
-   - 지금도 플러그인 폴더에서 `git pull`이 필요한 때: 본체 쪽 파일(`index.mjs` · `host.mjs` · `code.mjs` · `store.mjs` · `sound.mjs` · `bridge.mjs`)이 바뀌었을 때. 일꾼과 본체의 말을 바꾸면 `WORKER_PROTO`를 올려요(다른 판의 일꾼은 안 써요).
+   - 지금도 플러그인 폴더에서 `git pull`이 필요한 때: 본체 쪽 파일(`index.mjs` · `host.mjs` · `code.mjs` · `store.mjs` · `sound.mjs` · `bridge.mjs`)이 바뀌었을 때. **소망: 확장 업데이트만으로 돌아야 해요.** 그래서 다리에 새 길을 열면 일꾼은 옛 다리(그 길이 404)에서도 돌게 만들어요. 예: 3.232.11의 카드 목록 · 페르소나 그림 목록 길은 404면 실리 폴더에서 직접 읽어요(`work.mjs stNow`의 `viaSt`). 진짜 실리에서 플러그인 폴더만 3.232.10으로 끼우고 `stfresh.cjs`로 확인했어요. 일꾼과 본체의 말을 바꾸면 `WORKER_PROTO`를 올려요(다른 판의 일꾼은 안 써요).
 3. **실리의 그 채팅 파일이 없음** (`<root>/chats/<dir>/<id>.jsonl`, 그룹은 `<root>/group chats/<id>.jsonl`) · 그룹 채팅인데 그룹 파일(`<root>/groups/<id>.json`)이 없음. 지운 채팅의 Orbit에 계속 말을 걸어 모델 비용이 나가지 않게.
 4. 실리에서 읽지 못함(`stNow`: 다리가 없음 · 캐릭터 목록을 못 읽음). `/auto/status`는 그 이유를 방마다 돌려줘요.
 
@@ -280,7 +280,7 @@ kit = { v: 1, ver (확장 버전),
 S = 이 세션의 scratch 폴더(세션마다 달라요. 없어졌으면 다시 만들어야 해요: 아래).
 
 ```
-timeout 580 node --test tests/*.test.mjs                 # 1326개. "# fail 0"과 "# cancelled 0"
+timeout 580 node --test tests/*.test.mjs                 # 1327개. "# fail 0"과 "# cancelled 0"
 for f in tests/fuzz/*.mjs; do node $f | tail -1; done     # runs 5113 / 8663, problems 0
 PHONE2_POISON=1 node --test tests/phonesyncdrop.test.mjs tests/archivedread.test.mjs tests/afterarchive.test.mjs tests/phonebranch.test.mjs   # 359
 node $S/cmp.mjs                                           # "checked 328 diff 0" (scratch에 있어요)
@@ -290,7 +290,7 @@ npx eslint --no-config-lookup -c $S/lint/eslint.config.mjs src/phone2*.js src/ai
 서버 쪽 테스트:
 - `tests/pluginstore.test.mjs` 저장 · 길. `tests/plugincode.test.mjs` 일꾼이 불러올 코드(확장 폴더 찾기 · 판 · 버전이 바뀌면 다시 띄우기).
 - `tests/pluginauto.test.mjs` 스케줄러(가짜 app 13개) + 진짜 저장 위의 app 5개.
-- `tests/pluginwork.test.mjs` **일꾼을 실제로 띄워서** 28개(가짜 모델 HTTP 서버 · 가짜 다리 `tests/stbridge.mjs`: 카드 목록 · 카드 하나 · 페르소나 그림 목록). "실리에서 바로" 다섯 개가 카드 고침 · 간단한 카드 · 롤플 새 메시지 · 페르소나(적어 둔 것 · 채팅 잠금 · 지금 것) · 그룹 · 확장 칸 쓰기 실패를 봐요. 연결 프로필은 `tests/stfake.mjs`(실리의 `sendRequest`를 실리 코드의 순서대로 흉내 낸 것)로 틀을 떠요.
+- `tests/pluginwork.test.mjs` **일꾼을 실제로 띄워서** 29개(가짜 모델 HTTP 서버 · 가짜 다리 `tests/stbridge.mjs`: 카드 목록 · 카드 하나 · 페르소나 그림 목록). "실리에서 바로" 다섯 개가 카드 고침 · 간단한 카드 · 롤플 새 메시지 · 페르소나(적어 둔 것 · 채팅 잠금 · 지금 것) · 그룹 · 확장 칸 쓰기 실패를 봐요. 연결 프로필은 `tests/stfake.mjs`(실리의 `sendRequest`를 실리 코드의 순서대로 흉내 낸 것)로 틀을 떠요.
 - `tests/pluginstread.test.mjs` 실리 파일 읽기(채팅 파일 · 헤더 · 그룹 · 페르소나 고르기 · 이름과 설명 · 다리가 없을 때의 카드 PNG · 페르소나 그림 목록).
 - `tests/stprofile.test.mjs` 프로필 틀 · 채우기 · 답 읽기. `tests/aiprofile.test.mjs` 지금 고른 프로필.
 - `tests/phone2beat.test.mjs` 브라우저 쪽 진짜 파일 + 진짜 일꾼을 한 저장에.

@@ -47,7 +47,7 @@ function world({ story = false, schedule = null, kit = true, st = null, pt = nul
 }
 
 // 한 판: 임시 사용자 폴더 + 저장 + 가짜 모델 + 가짜 다리 + 일꾼
-async function stage(t, { settings = {}, cm = null, more = {}, files = {}, reply = () => ({ reply: ['you there?'], status: '' }), bridge = true, schedule = false, code = null, merge = 200 } = {}) {
+async function stage(t, { settings = {}, cm = null, more = {}, files = {}, reply = () => ({ reply: ['you there?'], status: '' }), bridge = true, schedule = false, code = null, merge = 200, oldBridge = false } = {}) {
     const root = await mkdtemp(path.join(tmpdir(), 'na-work-'));
     const asked = [];
     const model = await listen(async (req, res) => { const body = await bodyOf(req); asked.push({ url: req.url, auth: req.headers.authorization, body }); const a = await reply(body); if (a?.httpStatus) { res.statusCode = a.httpStatus; res.end(JSON.stringify({ error: { message: a.error || 'no' } })); return; } res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ choices: [{ message: { content: typeof a === 'string' ? a : JSON.stringify(a) }, finish_reason: 'stop' }], usage: { prompt_tokens: 1, completion_tokens: 1 } })); });
@@ -55,6 +55,8 @@ async function stage(t, { settings = {}, cm = null, more = {}, files = {}, reply
     const br = bridge ? await fakeBridge({ cards: () => cards, avatars: () => ['ren.png', 'varo.png'], more: async (req, body, res) => {
         if (req.url === '/api/backends/chat-completions/generate') { res.end(JSON.stringify({ choices: [{ message: { content: JSON.stringify(await reply(body)) }, finish_reason: 'stop' }] })); return true; }
         if (req.url === '/api/characters/merge-attributes' && merge !== 200) { res.statusCode = merge; res.end('{}'); return true; }
+        // (an older plugin's bridge: these ways are not open — plugin/bridge.mjs allowed() answers 404)
+        if (oldBridge && ['/api/characters/all', '/api/characters/get', '/api/avatars/get'].includes(req.url)) { res.statusCode = 404; res.end('{}'); return true; }
         // (a text-completion backend that runs on past its answer: SillyTavern cuts the stop sequence off — custom-request.js 331–382)
         if (req.url === '/api/backends/text-completions/generate') { res.end(JSON.stringify({ choices: [{ text: `${JSON.stringify(await reply(body))}\n### Instruction: and more` }] })); return true; }
         return false;
@@ -551,4 +553,18 @@ test('일꾼 · 다리가 없어도(실리 버전이 달라 실리 서버의 처
     text = textOf(S.asked[1].body);
     assert.match(text, /Mara is a pilot now\./);
     assert.equal(S.asked.length, 2);
+});
+
+test('일꾼 · 플러그인을 안 받은 옛 다리(카드 길이 막혀 있음)여도: 카드를 카드 폴더에서 읽어 답해요 — 확장 업데이트만으로 돼요', async t => {
+    const S = await stage(t, { oldBridge: true }), a = world({ hoursAgo: 0.2 });
+    await mkdir(path.join(S.root, 'characters'), { recursive: true });
+    await writeFile(path.join(S.root, 'characters', 'mara.png'), cardPng({ chara: { spec: 'chara_card_v2', spec_version: '2.0', name: 'Mara', data: { name: 'Mara', description: 'Mara from the folder.', extensions: {} } } }));
+    const j = enqueueJob(a.m, { kind: 'reply', owner: 'Mara', room: a.room.id, at: Date.now() - 600_000 }); Object.assign(j, { timed: true, notBefore: Date.now() - 1000 });
+    await S.put('sa', a.m);
+    assert.deepEqual((await S.auto.status('sa')).map(x => [x.can, x.why]), [[true, '']]);
+    assert.equal(await S.auto.sweep(), 1);
+    const text = textOf(S.asked[0].body);
+    assert.match(text, /\[Mara's card\]\n\[description\]\nMara from the folder\./);
+    assert.match(text, /\[PERSONA — Ren\]\nRen is a student\./);
+    assert.ok(S.st.some(x => x.url === '/api/characters/all'));
 });

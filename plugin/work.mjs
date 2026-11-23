@@ -127,7 +127,11 @@ export async function startWork({ root, store, st = null, schedule = true, from 
         // (the card list, as SillyTavern's getCharacters reads it — /api/characters/all —, and a card that came shallow read whole
         //  as its unshallowCharacter does — /api/characters/get. With no bridge — SillyTavern's handlers could not be put
         //  on it —: the cards read from the characters folder the way that handler reads them, plugin/stread.mjs)
-        const all = st ? await askSt('/api/characters/all', {}) : { ok: true, json: await readCards(root) };
+        // (a bridge of an older plugin that does not open these ways yet — 404: the plugin's own files are read once when
+        //  SillyTavern starts, an extension update does not change them —: read from the folder too, so the extension's
+        //  update is enough)
+        const viaSt = async (url, own) => { const r = st ? await askSt(url, {}) : null; return r && r.status !== 404 ? r : { ok: true, json: await own() }; };
+        const all = await viaSt('/api/characters/all', () => readCards(root));
         if (!all.ok || !Array.isArray(all.json)) throw refuse(400, '캐릭터 목록을 읽을 수 없습니다.');
         let group = null;
         if (f.group) {
@@ -149,7 +153,7 @@ export async function startWork({ root, store, st = null, schedule = true, from 
         const na = obj(metadata.narrative_archive) ? metadata.narrative_archive : {};
         let avatar = typeof na.stPersona === 'string' ? na.stPersona : '';
         if (!avatar) {
-            const list = st ? await askSt('/api/avatars/get', {}) : { ok: true, json: await readImages(root) };
+            const list = await viaSt('/api/avatars/get', () => readImages(root));
             avatar = personaFor(settings, { lock: metadata.persona, key: group ? group.id : own, avatars: list.ok && Array.isArray(list.json) ? list.json : [] });
         }
         const { name1, description } = personaOf(settings, avatar);
