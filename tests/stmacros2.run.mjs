@@ -18,8 +18,9 @@ export async function runVariant(v, { ext, send }) {
         const chid = s.group ? undefined : s.character;
         SCRIPT.__naSet({ name1: NAME1, name2: s.group ? '' : CHARACTERS[chid].name, characters: structuredClone(CHARACTERS), this_chid: chid, chat: structuredClone(s.chat), chat_metadata: structuredClone(s.meta) });
         G.__naSet(s.group ? { groups: [structuredClone(GROUP)], selected_group: GROUP.id } : { groups: [], selected_group: null });
+        // (the bridge for the expression list, then for the job: plugin/work.mjs withWorld's order)
+        await naMacrosJob({ send });
         __naSetFetch(send);
-        await naMacrosJob();
         for (const t of TEXTS) out[`${s.id}:${t.id}`] = SCRIPT.substituteParams(t.text, {});
         __naSetFetch(null);
     }

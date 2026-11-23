@@ -9,6 +9,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { startBridge } from '../plugin/bridge.mjs';
 
 const EXPRESS = String.raw`
@@ -166,4 +167,20 @@ test('다리 · 매크로의 길: GET /api/extensions/discover · POST /api/extr
         const x = await ask(b, method, url);
         assert.deepEqual([x.status, x.headers.get('x-na-bridge')], [404, null], `${method} ${url}`);
     }
+    // (even with an allow list that lets everything through: SillyTavern's extensions router gets GET /discover only — never install · update · delete)
+    // (another SillyTavern folder: its modules are loaded afresh)
+    const st2 = fakeSt();
+    t.after(() => fs.rmSync(st2, { recursive: true, force: true }));
+    fs.writeFileSync(path.join(st2, 'src/endpoints/extensions.js'), "export const seen = []; export function router(req, res, next) { seen.push(req.method + ' ' + req.url); if (req.method === 'GET' && req.url === '/discover') return res.send([{ type: 'system', name: 'memory' }]); return res.send({ installed: req.url }); }\n");
+    const open = await startBridge({ stRoot: st2, userOf, allow: () => true });
+    t.after(() => open.close());
+    const { seen } = await import(pathToFileURL(path.join(st2, 'src/endpoints/extensions.js')).href);
+    for (const [method, url] of [['POST', '/api/extensions/install'], ['GET', '/api/extensions/install'], ['POST', '/api/extensions/update'], ['POST', '/api/extensions/delete'], ['POST', '/api/extensions/discover'], ['GET', '/api/extensions/discover/x'], ['GET', '/api/extensions/version']]) {
+        const x = await ask(open, method, url);
+        assert.equal(x.status, 404, `${method} ${url}`);
+    }
+    assert.deepEqual(seen, []);
+    const ok = await ask(open, 'GET', '/api/extensions/discover');
+    assert.deepEqual([ok.status, ok.headers.get('x-na-bridge'), await ok.json()], [200, '1', [{ type: 'system', name: 'memory' }]]);
+    assert.deepEqual(seen, ['GET /discover']);
 });

@@ -136,8 +136,9 @@ export async function keepClaim(room) {
 export async function keepRenew() {
     await Promise.all([...holding.values()].map(h => http('/auto/claim', J({ id: h.id, room: h.room, by: TAB, renew: true })).catch(() => {})));
 }
-// 이 브라우저의 시간대 · 언어를 확장 설정에 적어요 (extension_settings.narrative_archive.device: { timeZone, locale, intl }).
+// 이 브라우저의 시간대 · 언어를 확장 설정에 적어요 (extension_settings.narrative_archive.device: { timeZone, locale, intl, isMobile }).
 // 서버 플러그인의 일꾼이 그 시간대 · 언어로 돌아요(plugin/work.mjs useDevice · plugin/zone.mjs): 실리 매크로 {{time}} · {{date}} …가 이 페이지와 같게.
+// isMobile: 실리 isMobile()(RossAscends-mods.js 143~147, getContext().isMobile) — 서버의 {{isMobile}}이 이 값이에요(plugin/st/namacros.js). 실리에 없으면 안 적어요.
 // 바뀌었을 때만 저장해요(실리 saveSettingsDebounced → settings.json). 확장 설정이 아직 없으면(처음 켠 때) 다음 번에
 export function keepDevice() {
     try {
@@ -145,8 +146,9 @@ export function keepDevice() {
         if (!g || typeof g !== 'object') return false;
         const o = Intl.DateTimeFormat().resolvedOptions();
         const now = { timeZone: String(o.timeZone || ''), locale: String(c.getCurrentLocale?.() || ''), intl: String(o.locale || '') };
+        if (typeof c.isMobile === 'function') now.isMobile = c.isMobile() === true;
         const had = g.device;
-        if (had && typeof had === 'object' && had.timeZone === now.timeZone && had.locale === now.locale && had.intl === now.intl) return false;
+        if (had && typeof had === 'object' && had.timeZone === now.timeZone && had.locale === now.locale && had.intl === now.intl && had.isMobile === now.isMobile) return false;
         g.device = now;
         c.saveSettingsDebounced?.();
         return true;

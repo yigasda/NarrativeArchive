@@ -27,9 +27,11 @@
 //   POST /api/worldinfo/get                        로어북 읽기 (폰 프로필로 고른 로어 항목)
 //   GET  /user/files/…                             보낸 첨부 파일 읽기
 //   GET  /api/extensions/discover                  실리 페이지가 찾는 확장 (실리 extensions.js loadExtensionSettings: {{hasExtension}} · 켜진 기본 확장의 매크로).
-//                                                   config.yaml의 extensions.enabled가 꺼져 있으면 실리의 그 길이 404예요(실리 페이지는 확장을 안 불러요)
+//                                                   config.yaml의 extensions.enabled가 꺼져 있으면 실리의 그 길이 404예요(실리 페이지는 확장을 안 불러요).
+//                                                   실리의 확장 라우터에는 이 길만 넘겨요(설치 · 업데이트 · 지우기 길은 다리로 닿지 않아요)
 //   POST /api/extra/classify/labels                표정 목록 (표정 분류가 로컬일 때 {{availableExpressions}}: 실리 expressions getExpressionsList)
-//   (이 두 길이 없는 옛 다리면 404: 일꾼은 확장 폴더를 직접 읽고 · 기본 표정 목록으로(실리가 그 요청에 실패했을 때처럼) 지금처럼 보내요. 막지 않아요. plugin/st/namacros.js)
+//   (이 두 길이 없는 옛 다리면 404: 일꾼은 확장 폴더를 직접 읽고(config.yaml · 환경 변수의 extensions.enabled도) · 기본 표정 목록으로(실리가 그 요청에 실패했을 때처럼)
+//    지금처럼 보내요. 막지 않아요. 실리 창에는 길마다 많아야 한 줄. plugin/st/namacros.js)
 //   다리가 답한 것에는 x-na-bridge 머리를 붙여요: 실리 처리기의 404와 옛 다리의 404(길이 없음)를 일꾼이 나눠 봐요
 
 import crypto from 'node:crypto';
@@ -44,8 +46,9 @@ const GETS = new Set(['/api/extensions/discover']);
 export const allowed = (method, url) => { const p = String(url || '').split('?')[0]; return method === 'POST' ? POSTS.has(p) : method === 'GET' ? GETS.has(p) || (p.startsWith('/user/files/') && !p.includes('..')) : false; };
 
 // stRoot: 실리 서버의 폴더 · userOf(root) → 그 사용자 폴더의 req.user ({ profile, directories }) | null
+// allow: 여는 길 (테스트용: 허용 목록이 잘못돼도 실리의 확장 라우터는 /discover GET만 받는지)
 // → { url, token, close() }
-export async function startBridge({ stRoot = process.cwd(), userOf } = {}) {
+export async function startBridge({ stRoot = process.cwd(), userOf, allow = allowed } = {}) {
     const need = createRequire(path.join(stRoot, 'package.json'));
     const express = need('express');
     const st = file => import(pathToFileURL(path.join(stRoot, 'src', file)).href);
@@ -61,7 +64,7 @@ export async function startBridge({ stRoot = process.cwd(), userOf } = {}) {
     app.use((req, res, next) => {
         const got = Buffer.from(String(req.headers['x-na-token'] || ''));
         if (got.length !== want.length || !crypto.timingSafeEqual(got, want)) return res.sendStatus(403);
-        if (!allowed(req.method, req.url)) return res.sendStatus(404);
+        if (!allow(req.method, req.url)) return res.sendStatus(404);
         res.setHeader('x-na-bridge', '1');
         let root = '';
         try { root = decodeURIComponent(String(req.headers['x-na-root'] || '')); } catch { root = ''; }
@@ -96,11 +99,21 @@ export async function startBridge({ stRoot = process.cwd(), userOf } = {}) {
         });
     }
     if (typeof nanogpt?.router === 'function') app.use('/api/nanogpt', nanogpt.router);
-    // (SillyTavern's own routers, mounted where its server mounts them — src/server-startup.js 157 · 173. Its extensions router answers 404 itself
-    //  when extensions are off in config.yaml: src/endpoints/extensions.js 72~81)
-    if (typeof extensions?.router === 'function') app.use('/api/extensions', extensions.router);
-    // (a SillyTavern without that router: answered as an older bridge does — no mark —, so the worker reads the folders itself)
-    else app.use('/api/extensions/discover', (request, response) => { response.removeHeader('x-na-bridge'); response.sendStatus(404); });
+    // (SillyTavern's own extensions router — mounted at /api/extensions by its server, src/server-startup.js 157 — given GET /discover only: its
+    //  install · update · delete ways — git clone — are never reached through the bridge, even with a wrong allow list. The request goes through the
+    //  whole router as SillyTavern's server sends it: its guard answers 404 itself when extensions are off in config.yaml, src/endpoints/extensions.js 72~81)
+    app.use('/api/extensions/discover', (request, response, next) => {
+        const p = String(request.url || '').split('?')[0];
+        if (request.method !== 'GET' || p !== '/' || typeof extensions?.router !== 'function') {
+            // (a SillyTavern without that router: answered as an older bridge does — no mark —, so the worker reads the folders itself)
+            if (typeof extensions?.router !== 'function') response.removeHeader('x-na-bridge');
+            return response.sendStatus(404);
+        }
+        const url = request.url, baseUrl = request.baseUrl;
+        request.url = '/discover';
+        request.baseUrl = '/api/extensions';
+        return extensions.router(request, response, (err) => { request.url = url; request.baseUrl = baseUrl; next(err); });
+    });
     if (typeof classify?.router === 'function') app.use('/api/extra/classify', classify.router);
     app.use('/', users.router);
     const server = await new Promise((ok, no) => { const s = app.listen(0, '127.0.0.1', () => ok(s)); s.once('error', no); });

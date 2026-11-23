@@ -34,6 +34,23 @@ test('브라우저의 시간대 · 실리 화면 언어 · Intl 언어를 적고
     assert.equal(c.saves, 3);
 });
 
+test('실리의 isMobile()도 적어요(서버의 {{isMobile}}). 실리 문맥에 없으면 칸을 두지 않아요. 바뀌면 저장해요', () => {
+    const c = page();
+    let mobile = true;
+    c.isMobile = () => mobile;
+    assert.equal(KO.keepDevice(), true);
+    assert.deepEqual(c.extensionSettings.narrative_archive.device, { timeZone: o.timeZone, locale: 'ko-kr', intl: o.locale, isMobile: true });
+    assert.equal(KO.keepDevice(), false);
+    mobile = false;
+    assert.equal(KO.keepDevice(), true);
+    assert.equal(c.extensionSettings.narrative_archive.device.isMobile, false);
+    assert.equal(c.saves, 2);
+    // (a device written before isMobile was: written once more with it)
+    c.extensionSettings.narrative_archive.device = { timeZone: o.timeZone, locale: 'ko-kr', intl: o.locale };
+    assert.equal(KO.keepDevice(), true);
+    assert.equal(c.extensionSettings.narrative_archive.device.isMobile, false);
+});
+
 test('확장 설정이 아직 없거나 실리 문맥에 없으면 적지 않고 오류도 없어요', () => {
     const none = page({ es: {} });
     assert.equal(KO.keepDevice(), false);

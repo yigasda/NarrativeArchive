@@ -3,8 +3,12 @@
 // 이 스레드의 Date · Intl만 바꿔요: 실리 서버 본체(본체 스레드)와 다른 사용자의 일꾼은 그대로예요(스레드마다 전역이 따로예요).
 //   setZone('Asia/Seoul') → ICU가 쓰는 이름 · setZone(null): 서버 컴퓨터의 시간대. 모르는 시간대는 RangeError
 //   setLocale('ko-KR') → 정리한 이름 · setLocale(null): 서버의 기본 언어. 잘못된 이름은 RangeError
+//   atServer(fn): fn이 도는 동안만(동기로) 서버 컴퓨터의 시간대 · 언어 — 실리 서버의 코드를 옮긴 것(plugin/work.mjs)
 // 오프셋은 Intl의 tz 데이터(ICU)로 계산해요: DST · 하루를 건너뛴 날까지. 건너뛴 · 겹친 로컬 시각은 ECMAScript 규칙(바뀌기 전 오프셋)대로.
-// moment는 Date의 로컬 메서드만 써서 그대로 따라와요. 둘 다 null이면 바꾼 것을 모두 되돌려요.
+// moment는 Date의 로컬 메서드만 써서 그대로 따라와요.
+// 규칙: 작업 스레드에서는 불러온 때 한 번 끼우고(worker.mjs가 맨 먼저 불러요) 되돌리지 않아요. 그 뒤에 만든 Date 하위 클래스도 이 Date를 따라요.
+//   null이면 끼운 것이 원래 것과 같은 값을 줘요. 시간대 · 언어는 알게 되면 스레드 내내 그 값이에요: 일과 일 사이(스케줄러 · 늦은 답장 보기)도.
+//   서버 컴퓨터의 것이 필요한 곳은 atServer 안에서만, 동기로: 그사이 다른 코드가 끼어들 수 없어요.
 // 확인: tests/pluginzone.test.mjs (TZ · LC_ALL로 띄운 진짜 Node와), tests/sttz.test.mjs (진짜 실리 브라우저와: tools/st/oracle-tz.mjs)
 
 import { isMainThread } from 'node:worker_threads';
@@ -80,7 +84,8 @@ function local(t) {
 }
 
 // ---- 글 → 순간. 엔진이 로컬 시각으로 읽는 글(시간대가 없는 것)만 이 시간대로
-const ISO = /^([+-]\d{6}|\d{4})(-\d\d(-\d\d)?)?(T\d\d:\d\d(:\d\d(\.\d+)?)?)?(Z|[+-]\d\d:\d\d)?$/;
+//  (as V8's ISO reader: T and Z in either case, no space before or after — a text with one goes to the legacy reader, local time)
+const ISO = /^([+-]\d{6}|\d{4})(-\d\d(-\d\d)?)?(T\d\d:\d\d(:\d\d(\.\d+)?)?)?(Z|[+-]\d\d:\d\d)?$/i;
 function isLocal(s) {
     const m = ISO.exec(s);
     if (m) return !!m[4] && !m[7];
@@ -92,9 +97,9 @@ function isLocal(s) {
 function parse(v) {
     const s = String(v);
     const t = natParse(s);
-    if (zone === null || Number.isNaN(t) || !isLocal(s.trim())) return t;
+    if (zone === null || Number.isNaN(t) || !isLocal(s)) return t;
     // (the wall time in the text, read as UTC: a zone added to a text that has none wins, with no host zone in between)
-    const w = ISO.test(s.trim()) ? natParse(s.trim() + 'Z') : natParse(s + ' GMT');
+    const w = ISO.test(s) ? natParse(s + 'Z') : natParse(s + ' GMT');
     return Number.isNaN(w) ? t : clip(fromWall(w));
 }
 
@@ -114,6 +119,15 @@ function toPrimitive(v) {
     for (const k of ['valueOf', 'toString']) { const f = v[k]; if (typeof f === 'function') { const r = f.call(v); if (!isObj(r)) return r; } }
     throw new TypeError('Cannot convert object to primitive value');
 }
+// 로컬 칸(생성자의 둘 이상의 인자) → 로컬 시각을 UTC로 읽은 값. Date 범위 끝을 조금 넘는 로컬 시각은 400년 가까이에서 세고 되돌려요(local()처럼)
+function wallFields(a) {
+    const n = a.map(x => +x);   // (ToNumber, in order, once: as the engine)
+    const w = natUTC(...n);
+    if (!Number.isNaN(w) || !n.every(Number.isFinite)) return w;
+    const yi = Math.trunc(n[0]), y = yi >= 0 && yi <= 99 ? 1900 + yi : n[0];
+    for (const k of [1, -1]) { const s = natUTC(y - 400 * k, ...n.slice(1)); if (!Number.isNaN(s)) return s + k * CYCLE; }
+    return NaN;
+}
 function ZDate(...a) {
     if (!new.target) return zone === null ? N() : P.toString.call(new N(N.now()));
     let t;
@@ -122,7 +136,7 @@ function ZDate(...a) {
         const had = isObj(a[0]) ? timeOf(a[0]) : undefined;
         if (had !== undefined) t = had;
         else { const p = toPrimitive(a[0]); t = typeof p === 'string' ? parse(p) : clip(+p); }
-    } else t = zone === null ? nat.getTime.call(new N(...a)) : clip(fromWall(natUTC(...a)));
+    } else t = zone === null ? nat.getTime.call(new N(...a)) : clip(fromWall(wallFields(a)));
     return Reflect.construct(N, [t], new.target);
 }
 Object.defineProperties(ZDate, {
@@ -153,15 +167,22 @@ for (const [l, u] of [['setFullYear', 'setUTCFullYear'], ['setMonth', 'setUTCMon
         if (zone === null) return nat[l].apply(this, a);
         const t = nat.getTime.call(this);
         // (setFullYear on an invalid date starts from +0 local; the others stay invalid)
-        const tmp = new N(Number.isNaN(t) ? (l === 'setFullYear' ? 0 : NaN) : wallOf(t));
-        const out = clip(fromWall(nat[u].apply(tmp, a)));
+        const w = Number.isNaN(t) ? (l === 'setFullYear' ? 0 : NaN) : wallOf(t);
+        const n = a.map(x => +x);   // (ToNumber, in order, once: as the engine)
+        // (near the end of Date's range — a wall time or a result past ±8.64e15 —: the setter on the wall time counted k·400 years nearer, moved
+        //  back, as local(). setFullYear: the year it sets counted so, the date it starts from only inside the range — its year is replaced)
+        const full = l === 'setFullYear', j = Math.abs(w) > LIM ? Math.sign(w) : 0;
+        const at = k => { const r = nat[u].apply(new N(w - (full ? j : k) * CYCLE), full && n.length ? [n[0] - 400 * k, ...n.slice(1)] : n); return Number.isNaN(r) ? r : r + k * CYCLE; };
+        let r = NaN;
+        for (const k of j && !full ? [j] : [0, 1, -1]) { r = at(k); if (!Number.isNaN(r) || !Number.isFinite(w)) break; }
+        const out = clip(fromWall(r));
         nat.setTime.call(this, out);
         return out;
     });
 }
 def('setYear', function (y) {
     if (zone === null) return nat.setYear.call(this, y);
-    y = Number(y);
+    y = +y;   // (ToNumber: a BigInt throws, as the engine's)
     if (Number.isNaN(y)) { nat.setTime.call(this, NaN); return NaN; }
     const yi = Math.trunc(y);
     return this.setFullYear(yi >= 0 && yi <= 99 ? 1900 + yi : y);
@@ -216,10 +237,11 @@ const protoMine = PROTOS.map(([, k], i) => {
     // (localeCompare(that, locales, options) · toLocaleString(locales, options))
     return k === 'localeCompare' ? function localeCompare(that, l, o) { return f.call(this, that, locOf(l), o); } : function (l, ...rest) { return f.call(this, locOf(l), ...rest); };
 });
-for (const [i, [, k]] of PROTOS.entries()) Object.defineProperty(protoMine[i], 'name', { value: k });
-for (const [k, f] of Object.entries(mine)) Object.defineProperty(f, 'name', { value: k });
+// (the original's name and length: the wrappers look like the engine's own)
+for (const [i, [, k]] of PROTOS.entries()) Object.defineProperties(protoMine[i], { name: { value: k }, length: { value: protoDesc[i].value.length } });
+for (const [k, f] of Object.entries(mine)) Object.defineProperties(f, { name: { value: k }, length: { value: natDesc[k].value.length } });
 
-// ---- 끼우기 · 되돌리기
+// ---- 끼우기 (한 번, 되돌리지 않아요: 위의 규칙)
 let on = false;
 function install() {
     if (on) return;
@@ -227,23 +249,21 @@ function install() {
     for (const [k, f] of Object.entries(mine)) Object.defineProperty(P, k, { ...natDesc[k], value: f });
     Object.defineProperty(P, 'constructor', { ...natDesc.constructor, value: ZDate });
     Object.defineProperty(globalThis, 'Date', { ...globalDesc, value: ZDate });
-    for (const k of INTL) Object.defineProperty(Intl, k, { ...intlDesc[k], value: intlMine[k] });
+    for (const k of INTL) {
+        Object.defineProperty(Intl, k, { ...intlDesc[k], value: intlMine[k] });
+        // (new Intl.X().constructor === Intl.X, as Date's above)
+        Object.defineProperty(intlMine[k].prototype, 'constructor', { ...Object.getOwnPropertyDescriptor(intlMine[k].prototype, 'constructor'), value: intlMine[k] });
+    }
     for (const [i, [o, k]] of PROTOS.entries()) Object.defineProperty(o, k, { ...protoDesc[i], value: protoMine[i] });
     on = true;
 }
-function uninstall() {
-    if (!on) return;
-    for (const k of [...Object.keys(mine), 'constructor']) Object.defineProperty(P, k, natDesc[k]);
-    Object.defineProperty(globalThis, 'Date', globalDesc);
-    for (const k of INTL) Object.defineProperty(Intl, k, intlDesc[k]);
-    for (const [i, [o, k]] of PROTOS.entries()) Object.defineProperty(o, k, protoDesc[i]);
-    on = false;
-}
-// (the new values are kept only once they are in: a refused one changes nothing)
+// (the new values are kept only once they are in: a refused one changes nothing. The main thread — tests only — is not changed for null)
 function settle(z, l) {
-    if (z === null && l === null) uninstall(); else install();
+    if (z !== null || l !== null) install();
     zone = z; LOC = l;
 }
+// (a worker thread: in from the start)
+if (!isMainThread) install();
 
 // 이 스레드의 시간대 → ICU가 쓰는 이름 | null (서버 컴퓨터의 것)
 export function setZone(tz) {
@@ -254,6 +274,13 @@ export function setZone(tz) {
 export function setLocale(locale) {
     settle(zone, locale === null || locale === undefined || locale === '' ? null : Intl.getCanonicalLocales(String(locale))[0]);
     return LOC;
+}
+// 실리 서버의 코드를 옮긴 것을 실리 서버처럼 서버 컴퓨터의 시간대 · 언어로: fn이 도는 동안만 → fn의 값.
+// 동기로만 써요: fn이 돌려준 promise의 await 뒤(남은 부분)는 이 스레드의 것으로 돌아요. 동기라서 그사이 다른 코드가 끼어들지 않아요
+export function atServer(fn) {
+    const z = zone, l = LOC;
+    zone = null; LOC = null;
+    try { return fn(); } finally { zone = z; LOC = l; }
 }
 export const getZone = () => zone;
 export const getLocale = () => LOC;

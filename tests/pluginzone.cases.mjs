@@ -1,17 +1,20 @@
 // tests/pluginzone.test.mjs가 띄우는 것: Date · moment · Intl 값 목록을 JSON으로 써요.
 //   node pluginzone.cases.mjs native              → 이 프로세스의 TZ · LC_ALL 그대로 (진짜 Node)
 //   node pluginzone.cases.mjs shim <zone> <locale> → 작업 스레드에서 plugin/zone.mjs로 그 시간대 · 언어 (프로세스의 TZ · LC_ALL은 다른 것)
+//   node pluginzone.cases.mjs shim - -             → 작업 스레드에서 끼우기만 (시간대 · 언어는 null: 서버 컴퓨터의 것. 진짜 Node와 같아야 해요)
+//   node pluginzone.cases.mjs shim <zone> <locale> server → 그 시간대 · 언어를 두고 atServer 안에서 (서버 컴퓨터의 것: 진짜 Node와 같아야 해요)
 import { Worker, isMainThread, workerData, parentPort } from 'node:worker_threads';
 import { createRequire } from 'node:module';
 
-const [mode, zoneArg, localeArg] = isMainThread ? process.argv.slice(2) : [workerData.mode, workerData.zone, workerData.locale];
+const [mode, zoneArg, localeArg, how] = isMainThread ? process.argv.slice(2) : [workerData.mode, workerData.zone, workerData.locale, workerData.how];
 if (isMainThread && mode === 'shim') {
-    const w = new Worker(new URL(import.meta.url), { workerData: { mode, zone: zoneArg, locale: localeArg } });
+    const w = new Worker(new URL(import.meta.url), { workerData: { mode, zone: zoneArg, locale: localeArg, how } });
     w.on('message', m => { process.stdout.write(m); });
     w.on('error', e => { console.error(e); process.exit(1); });
 } else {
-    if (mode === 'shim') { const Z = await import('../plugin/zone.mjs'); Z.setZone(zoneArg); if (localeArg && localeArg !== '-') Z.setLocale(localeArg); }
-    const out = JSON.stringify(run());
+    let Z = null;
+    if (mode === 'shim') { Z = await import('../plugin/zone.mjs'); if (zoneArg !== '-') Z.setZone(zoneArg); if (localeArg && localeArg !== '-') Z.setLocale(localeArg); }
+    const out = JSON.stringify(how === 'server' ? Z.atServer(run) : run());
     if (isMainThread) process.stdout.write(out); else parentPort.postMessage(out);
 }
 
@@ -44,10 +47,19 @@ function run() {
         }
     }
     for (const a of [[99, 0, 1], [0, 0], [2024, 13, 40, 25, 61, 61, 1001], [-5, 0, 1], [275760, 8, 13], [NaN, 0], ['2026', '3']]) put(`c ${a}`, () => new Date(...a).getTime());
+    // (the ends of Date's range: a local time just past ±8.64e15 can be an instant inside it. A two-digit year with a month that carries it there)
+    for (const a of [[275760, 8, 13, 5], [275760, 8, 13, 13, 59], [275760, 8, 12, 23, 59], [275760, 8, 14], [-271821, 3, 19, 1], [-271821, 3, 19, 23], [-271821, 3, 20, 0], [-271821, 3, 18, 23], [99, 3285140, 13, 5], [0, -3286668, 19, 1]])
+        put(`c ${a}`, () => new Date(...a).getTime());
     // setters
     for (const t of inst.slice(0, 160)) {
         const one = f => { const d = new Date(t); const r = f(d); return [r, d.getTime()].join('/'); };
         put(`set ${t}`, () => [one(d => d.setHours(2, 30)), one(d => d.setDate(0)), one(d => d.setMonth(2, 29)), one(d => d.setFullYear(2026, 2, 8)), one(d => d.setMinutes(-1)), one(d => d.setSeconds(3600)), one(d => d.setMilliseconds(-1)), one(d => d.setYear(95))].join(' '));
+    }
+    for (const t of [8.64e15, 8.64e15 - 36e5, 8.64e15 - 864e5, 8.64e15 - 2 * 864e5, -8.64e15, -8.64e15 + 36e5, -8.64e15 + 864e5]) {
+        const one = f => { const d = new Date(t); const r = f(d); return [r, d.getTime()].join('/'); };
+        put(`set edge ${t}`, () => [one(d => d.setHours(5)), one(d => d.setHours(23, 59)), one(d => d.setHours(-20)), one(d => d.setMinutes(30)), one(d => d.setDate(13)), one(d => d.setDate(20)), one(d => d.setMonth(8)), one(d => d.setMonth(3, 19)),
+            one(d => d.setFullYear(275760, 8, 13)), one(d => d.setFullYear(275760)), one(d => d.setFullYear(-271821, 3, 19)), one(d => d.setFullYear(2026)), one(d => d.setYear(99)), one(d => d.setMilliseconds(5)), one(d => d.setSeconds(-1))].join(' '));
+        put(`m edge ${t}`, () => { const m = moment(t); return [m.clone().add(1, 'hour').valueOf(), m.clone().subtract(1, 'hour').valueOf(), m.clone().add(1, 'day').valueOf(), m.clone().subtract(1, 'day').valueOf(), m.clone().startOf('day').valueOf(), m.isDST()].join('|'); });
     }
     put('setNaN', () => { const d = new Date(NaN); return [d.setFullYear(2020), d.getTime(), new Date(NaN).setHours(1)].join(','); });
     // texts
@@ -55,7 +67,10 @@ function run() {
         '2026-03-08T02:30:00', '2026-11-01T01:30:00', '2026-03-29T02:30:00', '2026-10-25T02:30:00', '2026-04-05T02:30:00', '2024-01-01 10:00:00', '2024-01-01 10:00:00Z', '2024-01-01 10:00:00 GMT', '2024-01-01 10:00:00 +0300',
         'June 19, 2023 2:20 pm', 'June 19, 2023 14:20', 'Jan 1 2024 10:00 GMT+0100', 'Jan 1 2024 10:00 UTC', 'Jan 1 2024 10:00 EST', '1 January 2024', '1 January 2024 10:00 pm', '2024/01/01 10:00', '2024/1/1',
         'Thu Jan 15 2026 13:00:00 GMT+0100 (Central European Standard Time)', 'Thu Jan 15 2026 13:00:00', 'Mon, 23 Nov 2026 17:52:34 GMT', 'Mon, 23 Nov 2026 17:52:34', '12/31/2024', '12/31/2024 23:59', 'Nov 1 2026 1:30', 'Mar 8 2026 2:30',
-        '2023-01-01 12:00:00', 'yesterday', '', '10:00', 'Sat Dec 31 1910', '1950-06-01T00:00:00', '2024-07-12T01:31:37', '2024-07-12T01:31:37.123Z', '2026-3-7@21h10m00s000ms', 'March 7, 2026 9:10pm']) {
+        '2023-01-01 12:00:00', 'yesterday', '', '10:00', 'Sat Dec 31 1910', '1950-06-01T00:00:00', '2024-07-12T01:31:37', '2024-07-12T01:31:37.123Z', '2026-3-7@21h10m00s000ms', 'March 7, 2026 9:10pm',
+        // (a space before or after · a lowercase t or z: V8's ISO reader takes none of these, its legacy reader reads them as local time)
+        ' 2026-11-23', '2026-11-23 ', '  2024-01-01', '2024-01-01\n', '\t2024-01-01T10:00', '2026-11-23t15:30', '2024-01-01t10:00:00.5', '+002024-01-01t00:00', '2024-01-01T10:00:00.5z', '2024-01-01t10:00Z',
+        '2024-01-01T10:00:00Z ', ' 2024-01-01T10:00:00+09:00', '2024-01-01T10:00+0900', ' 2026-03-08T02:30:00', '2026-11-01T01:30:00 ', '2026-03-29t02:30']) {
         put(`p ${s}`, () => [Date.parse(s), new Date(s).getTime()].join(','));
         put(`mp ${s}`, () => { const m = moment(s); return m.isValid() ? m.valueOf() : 'invalid'; });
     }
@@ -66,6 +81,12 @@ function run() {
     put('timeDiff', () => moment.duration(moment('2026-03-08 01:00:00').diff(moment('2026-03-08 04:00:00'))).humanize(true));
     put('Date()', () => typeof Date() + ' ' + (Date() === new Date().toString()));
     put('kind', () => [new Date() instanceof Date, Object.prototype.toString.call(new Date()), structuredClone(new Date(5)).getTime(), JSON.stringify(new Date(5)), Date.length, Date.name, new Date(new Date(7)).getTime(), new Date({ valueOf: () => 9 }).getTime(), new Date({ [Symbol.toPrimitive]: () => '2024-01-01T10:00' }).getTime(), `${new Date(0)}` === new Date(0).toString()].join(','));
+    // (the wrappers look like the engine's own: name · length · constructor. ToNumber of a BigInt throws)
+    put('shape', () => [...Object.getOwnPropertyNames(Date.prototype).filter(k => typeof Date.prototype[k] === 'function').map(k => `${k}:${Date.prototype[k].name}:${Date.prototype[k].length}`),
+        `parse:${Date.parse.name}:${Date.parse.length}`, `now:${Date.now.name}:${Date.now.length}`, `UTC:${Date.UTC.name}:${Date.UTC.length}`, `ctor:${new Date(0).constructor === Date}`,
+        ...[[String.prototype, 'localeCompare'], [Number.prototype, 'toLocaleString'], [BigInt.prototype, 'toLocaleString']].map(([o, k]) => `${k}:${o[k].name}:${o[k].length}`),
+        ...['DateTimeFormat', 'Collator', 'NumberFormat', 'PluralRules', 'RelativeTimeFormat', 'ListFormat', 'Segmenter', 'DisplayNames'].map(k => `${k}:${Intl[k].name}:${Intl[k].length}:${new Intl[k](undefined, k === 'DisplayNames' ? { type: 'region' } : undefined).constructor === Intl[k]}:${Intl[k].prototype.constructor === Intl[k]}`)].join(','));
+    put('bigint', () => [() => new Date(0).setYear(1n), () => new Date(0).setHours(1n), () => new Date(NaN).setFullYear(1n), () => new Date(2020, 1n), () => new Date(1n, 0)].map(f => { try { return String(f()); } catch (e) { return e.constructor.name; } }).join(','));
     put('throws', () => [() => new Date(1n), () => new Date(Symbol('x')), () => Date.prototype.getHours.call({}), () => new Date(0).toLocaleString('en', null)].map(f => { try { f(); return 'ok'; } catch (e) { return e.constructor.name; } }).join(','));
     // the default language
     const words = ['b', 'a', 'ä', 'z', '가', 'Z', 'ö', 'o', 'ch', 'c', 'h', 'i', 'ı', 'İ', 'é', 'e', '日', 'あ', 'ア'];

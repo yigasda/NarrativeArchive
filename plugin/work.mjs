@@ -17,7 +17,7 @@ import { makeLocks, lockKey } from './lock.mjs';
 import { startServerAutonomousScheduler } from './marinara/server-autonomous-scheduler.service.js';
 import { logger } from './log.mjs';
 import { chatData, chatParts, groupOf, personaFor, personaOf, readCards, readImages, writeExtensionField } from './stread.mjs';
-import { setZone, setLocale } from './zone.mjs';
+import { setZone, setLocale, atServer } from './zone.mjs';
 
 // (Marinara's server scheduler reads the answer of its /api/generate as these events)
 const SSE = {
@@ -59,11 +59,14 @@ export async function startWork({ root, store, st = null, schedule = true, from 
     //   실리 브라우저 코드와 우리 코드는 그 페이지처럼 그 시간대 · 언어로 돌아요(plugin/zone.mjs: 이 스레드만). 아직 안 적었으면 서버 컴퓨터의 것(전과 같아요)
     //   timeZone: Intl의 시간대 · locale: 실리 i18n.js의 localeFile(getCurrentLocale) · intl: Intl의 기본 언어
     //   기기가 둘이면 마지막으로 설정을 저장한 브라우저의 것이에요(settings.json이 하나라서)
+    //   규칙: 일마다 settings.json에서 다시 넣고(바뀌면 다음 일부터), 일이 끝나도 되돌리지 않아요 — 일과 일 사이(스케줄러 · 늦은 답장 보기)도 그 시간대예요.
+    //   서버 컴퓨터의 시간대 · 언어는 실리 서버의 코드를 옮긴 것만, zone.mjs atServer 안에서 동기로(그사이 다른 코드가 끼어들지 않아요): withWorld
     const STI = await import('./st/public/scripts/i18n.js');
     const badZones = new Set();
     function useDevice(settings) {
         const d = settings.extension_settings?.narrative_archive?.device, dev = obj(d) ? d : {};
-        const tz = typeof dev.timeZone === 'string' ? dev.timeZone : '';
+        // (Chrome writes Etc/Unknown when it cannot tell the computer's zone, and runs in UTC then)
+        const raw = typeof dev.timeZone === 'string' ? dev.timeZone : '', tz = raw === 'Etc/Unknown' ? 'UTC' : raw;
         try { setZone(tz || null); } catch (err) {
             if (!(err instanceof RangeError)) throw err;
             setZone(null);
@@ -291,16 +294,17 @@ export async function startWork({ root, store, st = null, schedule = true, from 
             if (no) throw refuse(400, no);
             const kit = kitOf(entry.real);
             const settings = await readSettings();
-            // (SillyTavern's server code ported here — stNow's reads of its files: the persona pictures' order, a card's chat name;
-            //  naLoadPresets' order of the preset files — in the server's own zone and language, as SillyTavern's server runs it. Its
-            //  browser code and ours, from naLoad on, in the browser's: useDevice)
-            setZone(null); setLocale(null);
+            // (the browser's zone and language, for this job and kept after it: SillyTavern's browser code and ours run in them. Only SillyTavern's
+            //  server code ported here runs in the server's own, as its server does — inside zone.mjs atServer, synchronously, so no other code
+            //  runs in the server's zone in between: stNow's folder reads — stread.mjs readCards' chat name, readImages' order — and naLoadPresets)
+            useDevice(settings);
             const now = await stNow(entry.real, kit, settings);
             // (SillyTavern's browser state for this job, as its page would hold it with this chat open: settings.json and the preset
             //  files read now — plugin/st/naload.js, SillyTavern's own loading —, then this chat's names, cards, group, messages,
             //  metadata and persona. Set again for every job: nothing of the one before stays)
-            const presets = await STL.naLoadPresets(root);
-            useDevice(settings);
+            // (SillyTavern's server code: the preset files' order by localeCompare, in the server's language. Its body is synchronous —
+            //  readdirSync · readFileSync, no await —: all of it runs inside atServer)
+            const presets = await atServer(() => STL.naLoadPresets(root));
             // (with the extensions SillyTavern's page finds — its /api/extensions/discover through the bridge —: the macros of the built-in ones it turns on)
             STL.naLoad(settings, presets, await STL.naDiscover({ root, send: st ? stFetch : null }));
             // (a copy: the chat file's read is frozen, and SillyTavern's code may write into its metadata — {{setvar}} — as the page's)
@@ -319,10 +323,11 @@ export async function startWork({ root, store, st = null, schedule = true, from 
                 STP.script.__naSet({ name1: now.name1, name2: now.groupId ? '' : String(now.characters[now.characterId]?.name ?? ''), characters: now.characters, this_chid: now.characterId, chat: now.chat, chat_metadata: now.chatMetadata });
                 STP.groups.__naSet({ groups: now.groups, selected_group: now.groupId });
                 STP.power.power_user.persona_description = now.persona;
-                STP.fetch.__naSetFetch(stFetch);
                 // (what the page does when it opens the chat for the macros: the author's note's default into this job's metadata copy, no last
-                //  expression yet, the expression list — plugin/st/namacros.js)
-                await STL.naMacrosJob();
+                //  expression yet, the expression list — plugin/st/namacros.js. A local classifier's list is asked of SillyTavern through the bridge,
+                //  waited for at most 15 seconds and only for a world that uses SillyTavern's connection: skip. Before the bridge is given below)
+                await STL.naMacrosJob({ root, send: st ? stFetch : null, skip });
+                STP.fetch.__naSetFetch(stFetch);
                 // (the persona's name changed in SillyTavern: the live phone's "me" follows before anything is judged — the
                 //  browser does it when the phone opens, phone2go.js liveFollowPersona. Only in memory here: it goes into the
                 //  store with the job's own save, a reply. A save of its own could meet the browser's — 409 — and fail a

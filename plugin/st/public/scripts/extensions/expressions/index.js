@@ -363,7 +363,9 @@ export function __naRegister() {
     }
 }
 
-export { EXPRESSION_API, migrateSettings };
+export { EXPRESSION_API, migrateSettings, getLastCharacterMessage, getSpriteFolderName };
+/** 일꾼이 읽어요: 받아 둔 표정 목록 (null이면 아직 없음: 실리 페이지가 받기 전) */
+export const __naExpressionsList = () => expressionsList;
 
 /**
  * 일꾼이 채워요. lastExpression: 실리는 채팅을 열 때 {}로 비워요(2349). expressionsList: null이면 getExpressionsList가 다시 받아요(실리는 표정 API를 바꿀 때 null, 1835).

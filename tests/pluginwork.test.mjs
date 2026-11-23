@@ -864,7 +864,7 @@ test('일꾼 · 연결 확인은 실리 연결을 쓰는 세계만: 커스텀 AP
     assert.deepEqual(statusSeen(Q), ['/api/secrets/read', '/api/backends/chat-completions/status']);
 });
 
-test('일꾼 · 브라우저의 시간대: 확장 설정의 device(src/phone2keepon.js keepDevice)대로 실리 매크로가 그 시각. 모르는 시간대 · 없으면 서버의 것, 모르는 것은 실리 창에 한 번', async t => {
+test('일꾼 · 브라우저의 시간대: 확장 설정의 device(src/phone2keepon.js keepDevice)대로 실리 매크로가 그 시각. 모르는 시간대 · 없으면 서버의 것, 모르는 것은 실리 창에 한 번 · 크롬의 Etc/Unknown은 UTC', async t => {
     const lines = [], keep = { out: process.stdout.write, err: process.stderr.write };
     process.stdout.write = function (c, ...a) { lines.push(String(c)); return keep.out.call(this, c, ...a); };
     process.stderr.write = function (c, ...a) { lines.push(String(c)); return keep.err.call(this, c, ...a); };
@@ -886,6 +886,11 @@ test('일꾼 · 브라우저의 시간대: 확장 설정의 device(src/phone2kee
     await S.writeSettings();
     const chatham = new Intl.DateTimeFormat('en-US', { timeZone: 'Pacific/Chatham', timeZoneName: 'longOffset' }).formatToParts(new Date()).find(p => p.type === 'timeZoneName').value.slice(3);
     assert.equal(await header(), `X-Z: ${chatham}`);
+    // (Chrome's Etc/Unknown — it could not tell the computer's zone —: UTC, as Chrome runs then. Not an unknown zone: no line)
+    S.stSettings.extension_settings.narrative_archive.device = { ...device, timeZone: 'Etc/Unknown' };
+    await S.writeSettings();
+    assert.equal(await header(), 'X-Z: +00:00');
+    assert.equal(lines.filter(l => l.includes('Etc/Unknown')).length, 0);
     delete S.stSettings.extension_settings.narrative_archive.device;
     await S.writeSettings();
     assert.equal(await header(), mine);

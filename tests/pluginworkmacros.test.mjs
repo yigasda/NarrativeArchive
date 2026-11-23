@@ -31,13 +31,14 @@ process.once('exit', () => fs.rmSync(ST, { recursive: true, force: true }));
 const said = (name, mes, user = false, extra = {}) => ({ name, is_user: user, mes, send_date: '2026-11-22', extra });
 const PERSONAS = { personas: { 'ren.png': 'Ren' }, persona_descriptions: { 'ren.png': { description: 'Ren is a student.' } } };
 const PROFILE = { id: 'm1', name: 'Macros', api: 'custom', model: 'mara-model', 'api-url': 'http://127.0.0.1:9/v1', preset: 'Macros' };
-const BODY = '{"note": "{{authorsNote}}", "def": "{{defaultAuthorsNote}}", "sum": "{{summary}}", "has": "{{hasExtension::memory}}/{{hasExtension::tts}}", "think": "{{reasoningPrefix}}", "exp": "{{defaultExpression}}", "other": "{{naThirdParty}}"}';
+const BODY = '{"note": "{{authorsNote}}", "def": "{{defaultAuthorsNote}}", "sum": "{{summary}}", "has": "{{hasExtension::memory}}/{{hasExtension::tts}}", "think": "{{reasoningPrefix}}", "exp": "{{defaultExpression}}", "other": "{{naThirdParty}}", "mob": "{{isMobile}}", "list": "{{availableExpressions}}"}';
 const pings = () => { let n = 0; return () => ({ reply: [`ping ${++n}`], status: '' }); };
 
 async function stage(t, { ext = {}, discover = 'new' } = {}) {
     const root = await mkdtemp(path.join(tmpdir(), 'na-work-'));
     await stUserDirs(root);
     const reply = pings();
+    const labels = [];
     const br = await fakeBridge({ cards: () => [stCard('Mara')], avatars: () => ['ren.png'], more: async (req, body, res) => {
         // (SillyTavern's own /api/extensions/discover through the bridge — the bridge's mark on its answer; an older bridge: 404 with none)
         if (req.url === '/api/extensions/discover') {
@@ -47,6 +48,8 @@ async function stage(t, { ext = {}, discover = 'new' } = {}) {
             res.end(JSON.stringify([{ type: 'system', name: 'expressions' }, { type: 'system', name: 'memory' }, { type: 'system', name: 'regex' }, { type: 'system', name: 'stable-diffusion' }]));
             return true;
         }
+        // (SillyTavern's own local classifier labels: asked of SillyTavern only for a local classifier)
+        if (req.url === '/api/extra/classify/labels') { labels.push(req.method); res.setHeader('x-na-bridge', '1'); res.end(JSON.stringify({ labels: ['calm', 'joy'] })); return true; }
         if (req.url === '/api/backends/chat-completions/generate') { res.end(JSON.stringify({ choices: [{ message: { content: JSON.stringify(reply(body)) }, finish_reason: 'stop' }] })); return true; }
         return false;
     } });
@@ -75,13 +78,15 @@ async function stage(t, { ext = {}, discover = 'new' } = {}) {
     await auto.list();
     const gen = () => auto.inject('/api/generate', { chatId: `${w.id}:${room.id}`, connectionId: null, forCharacterId: 'mara', streaming: false, userStatus: 'idle', userActivity: 'away or offline', autonomous: true, skipPresenceDelay: true, autonomousIntentKey: 'check_in' });
     const sent = () => br.seen.filter(x => x.url === '/api/backends/chat-completions/generate').map(x => JSON.parse(x.body.custom_include_body));
-    return { gen, sent, seen: br.seen };
+    return { gen, sent, seen: br.seen, labels };
 }
 
 test('일꾼 · initMacros 밖의 매크로: 작가 노트(노트 없는 채팅은 기본 노트) · 요약 · {{hasExtension}} · 추론 · 표정 — 실리 페이지처럼. 다른 확장의 매크로는 글 그대로', async t => {
     const S = await stage(t);
     assert.match((await S.gen()).payload, /"message_saved"/);
-    assert.deepEqual(S.sent()[0], { note: 'Default note for {{char}}', def: 'Default note for {{char}}', sum: 'Mara met Ren at the bakery.', has: 'true/false', think: '<think-na>', exp: 'joy', other: '{{naThirdParty}}' });
+    const { list, ...rest } = S.sent()[0];
+    assert.ok(list.startsWith('admiration, amusement'), list);
+    assert.deepEqual(rest, { note: 'Default note for {{char}}', def: 'Default note for {{char}}', sum: 'Mara met Ren at the bakery.', has: 'true/false', think: '<think-na>', exp: 'joy', other: '{{naThirdParty}}', mob: 'false' });
     assert.ok(S.seen.some(x => x.url === '/api/extensions/discover'));
 });
 
@@ -99,4 +104,19 @@ test('일꾼 · config.yaml에서 확장을 끈 실리(다리의 /discover가 �
     const old = await stage(t, { discover: 'old' });
     assert.match((await old.gen()).payload, /"message_saved"/);
     assert.deepEqual([old.sent()[0].sum, old.sent()[0].has], ['Mara met Ren at the bakery.', 'true/false']);
+});
+
+test('일꾼 · 표정 설정이 null인 settings.json: 실리 init처럼 표정 매크로 없이 보내요(일은 멈추지 않아요) · {{isMobile}}은 브라우저가 적은 값', async t => {
+    const S = await stage(t, { ext: { expressions: null, narrative_archive: { device: { isMobile: true } } } });
+    assert.match((await S.gen()).payload, /"message_saved"/);
+    const b = S.sent()[0];
+    assert.deepEqual([b.exp, b.sum, b.note, b.mob], ['{{defaultExpression}}', 'Mara met Ren at the bakery.', 'Default note for {{char}}', 'true']);
+});
+
+test('일꾼 · 로컬 표정 분류: {{availableExpressions}}는 다리의 실리 /api/extra/classify/labels 목록. 다음 일은 다시 묻지 않아요', async t => {
+    const S = await stage(t, { ext: { expressions: { api: 0, custom: ['smug'] } } });
+    assert.match((await S.gen()).payload, /"message_saved"/);
+    assert.match((await S.gen()).payload, /"message_saved"/);
+    assert.deepEqual(S.sent().map(b => b.list), ['calm, joy, smug', 'calm, joy, smug']);
+    assert.deepEqual(S.labels, ['POST']);
 });

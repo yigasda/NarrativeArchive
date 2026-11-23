@@ -23,9 +23,18 @@ const PAIRS = [
     ['UTC', 'ko-KR', 'Asia/Seoul', 'en_US.UTF-8'],
 ];
 // 알려진 차이 (매크로 · 우리 코드가 쓰지 않는 것):
-//  - moment의 add가 Date 범위 끝(±8.64e15)을 넘는 것 하나
-//  - Lord Howe의 1970년대: V8은 toString 괄호 안에 오늘의 이름("Lord Howe Standard Time"), Intl은 그때의 이름(호주 동부 표준시)
-const known = (zone, key) => /^m (-)?8640000000000000$/.test(key) || (zone === 'Australia/Lord_Howe' && /^(s|ds) /.test(key) && Number(key.split(' ')[1]) >= 0 && Number(key.split(' ')[1]) < Date.UTC(1981, 0, 1));
+//  - toString 괄호 안의 시간대 이름: V8은 오늘의 이름, Intl은 그 시각의 이름. 이름이 바뀐 시간대에서 달라요 — 여기서는 Lord Howe의 1970년대
+//    ("Lord Howe Standard Time" / 호주 동부 표준시). 다른 곳: Casablanca 2019년부터 · Nuuk 2023년 전 · Pyongyang 2015~2018년 · 옛 LMT 시각 (plugin/st/README.md)
+const known = (zone, key) => zone === 'Australia/Lord_Howe' && /^(s|ds) /.test(key) && Number(key.split(' ')[1]) >= 0 && Number(key.split(' ')[1]) < Date.UTC(1981, 0, 1);
+const differ = (zone, real, mine, ok = known) => {
+    assert.equal(mine.length, real.length);
+    const diffs = [];
+    for (let i = 0; i < real.length; i++) {
+        assert.equal(mine[i][0], real[i][0]);
+        if (JSON.stringify(mine[i][1]) !== JSON.stringify(real[i][1]) && !ok(zone, real[i][0])) diffs.push(`${zone} ${real[i][0]}\n  real ${JSON.stringify(real[i][1])}\n  mine ${JSON.stringify(mine[i][1])}`);
+    }
+    return { zone, n: real.length, diffs };
+};
 
 test('작업 스레드의 시간대 · 언어: TZ · LC_ALL로 띄운 진짜 Node와 같아요 (DST 앞뒤 · 건너뛴 시각 · 하루를 건너뛴 Apia · 45분 Chatham · 30분 Lord Howe · 기본 언어)', { timeout: 120_000 }, async () => {
     const results = await Promise.all(PAIRS.map(async ([zone, locale, host, hostLocale]) => {
@@ -33,13 +42,21 @@ test('작업 스레드의 시간대 · 언어: TZ · LC_ALL로 띄운 진짜 Nod
             runCases({ TZ: zone, LC_ALL: `${locale.replace('-', '_')}.UTF-8`, LANG: '' }, ['native']),
             runCases({ TZ: host, LC_ALL: hostLocale, LANG: '' }, ['shim', zone, locale]),
         ]);
-        assert.equal(mine.length, real.length);
-        const diffs = [];
-        for (let i = 0; i < real.length; i++) {
-            assert.equal(mine[i][0], real[i][0]);
-            if (JSON.stringify(mine[i][1]) !== JSON.stringify(real[i][1]) && !known(zone, real[i][0])) diffs.push(`${zone} ${real[i][0]}\n  real ${JSON.stringify(real[i][1])}\n  mine ${JSON.stringify(mine[i][1])}`);
-        }
-        return { zone, n: real.length, diffs };
+        return differ(zone, real, mine);
+    }));
+    for (const r of results) assert.ok(r.n > 8000, r.zone);
+    assert.deepEqual(results.flatMap(r => r.diffs.slice(0, 5)), []);
+});
+
+// (the worker puts it in once and keeps it: before the browser's zone is known — null — and inside atServer it must be the engine's own)
+test('끼운 채 null · atServer 안이면 서버 컴퓨터의 시간대 · 언어로 띄운 진짜 Node와 같아요 (다른 것 없이)', { timeout: 120_000 }, async () => {
+    const HOSTS = [['Asia/Seoul', 'ko_KR.UTF-8', 'America/New_York', 'en-US'], ['America/St_Johns', 'fr_CA.UTF-8', 'Asia/Kolkata', 'hi-IN'], ['Australia/Lord_Howe', 'ja_JP.UTF-8', 'Pacific/Chatham', 'tr-TR']];
+    const results = await Promise.all(HOSTS.flatMap(([host, hostLocale, zone, locale]) => {
+        const env = { TZ: host, LC_ALL: hostLocale, LANG: '' }, real = runCases(env, ['native']);
+        return [
+            Promise.all([real, runCases(env, ['shim', '-', '-'])]).then(([r, m]) => differ(`${host} null`, r, m, () => false)),
+            Promise.all([real, runCases(env, ['shim', zone, locale, 'server'])]).then(([r, m]) => differ(`${host} atServer (${zone})`, r, m, () => false)),
+        ];
     }));
     for (const r of results) assert.ok(r.n > 8000, r.zone);
     assert.deepEqual(results.flatMap(r => r.diffs.slice(0, 5)), []);
@@ -82,42 +99,53 @@ test('작업 스레드 넷이 같이 돌아도 저마다 자기 시간대예요.
     assert.equal(Intl.DateTimeFormat().resolvedOptions().timeZone, hostZone);
 });
 
-const RESTORE = `
+const KEEP = `
 const { workerData, parentPort } = require('node:worker_threads');
 (async () => {
     const kept = () => ({ Date: globalThis.Date, proto: Object.getOwnPropertyNames(Date.prototype).map(k => [k, Object.getOwnPropertyDescriptor(Date.prototype, k)]),
         intl: Object.getOwnPropertyNames(Intl).map(k => [k, Intl[k]]), lc: String.prototype.localeCompare, nl: Number.prototype.toLocaleString, bl: BigInt.prototype.toLocaleString });
     const same = (a, b) => a.Date === b.Date && a.lc === b.lc && a.nl === b.nl && a.bl === b.bl && a.intl.every(([k, v], i) => b.intl[i][0] === k && b.intl[i][1] === v)
         && a.proto.every(([k, d], i) => b.proto[i][0] === k && ['value', 'writable', 'enumerable', 'configurable'].every(x => d[x] === b.proto[i][1][x]));
-    const was = kept();
+    const T = ${Date.UTC(2026, 10, 23, 20, 0)}, sort = () => ['b', '가', 'a'].sort((x, y) => x.localeCompare(y)).join('');
+    const was = kept(), wasHours = new Date(T).getHours(), wasSorted = sort();
     const Z = await import(workerData.zone);
-    const out = { loaded: same(was, kept()) };
+    const out = { loaded: !same(was, kept()), loadedSame: [Z.getZone(), Z.getLocale(), new Date(T).getHours() === wasHours, sort() === wasSorted] };
+    const inst = kept();
+    // (a subclass made after the import, before any zone: it follows the zone set later)
+    class Later extends Date {}
     out.names = [Z.setZone('asia/seoul'), Z.setLocale('ko-kr'), Z.getZone(), Z.getLocale()];
-    out.on = !same(was, kept());
-    out.hours = new Date(${Date.UTC(2026, 10, 23, 20, 0)}).getHours();
-    out.sorted = ['b', '가', 'a'].sort((x, y) => x.localeCompare(y)).join('');
+    out.hours = new Date(T).getHours();
+    out.sorted = sort();
+    out.later = new Later(2026, 10, 24, 5).getTime() === T;
     for (const bad of [() => Z.setZone('Mars/Base'), () => Z.setLocale('not a locale!')]) { try { bad(); out.bad = (out.bad || '') + 'none,'; } catch (e) { out.bad = (out.bad || '') + e.constructor.name + ','; } }
-    out.afterBad = [Z.getZone(), Z.getLocale(), new Date(${Date.UTC(2026, 10, 23, 20, 0)}).getHours()];
+    out.afterBad = [Z.getZone(), Z.getLocale(), new Date(T).getHours()];
+    // (the server's own, only inside: its value back, and the thread's again after — a throw too)
+    out.server = Z.atServer(() => [Z.getZone(), Z.getLocale(), new Date(T).getHours() === wasHours, sort() === wasSorted, new Intl.DateTimeFormat().resolvedOptions().timeZone]);
+    try { Z.atServer(() => { throw new Error('x'); }); } catch { /* thrown on */ }
+    out.afterServer = [Z.getZone(), Z.getLocale(), new Date(T).getHours(), sort()];
     Z.setZone(null);
-    out.localeOnly = [!same(was, kept()), ['b', '가', 'a'].sort((x, y) => x.localeCompare(y)).join('')];
+    out.localeOnly = [new Date(T).getHours() === wasHours, sort()];
     Z.setLocale(null);
-    out.back = same(was, kept());
-    out.backSorted = ['b', '가', 'a'].sort((x, y) => x.localeCompare(y)).join('');
+    // (both null: still in — never taken out —, giving the engine's own values)
+    out.back = [same(inst, kept()), new Date(T).getHours() === wasHours, sort() === wasSorted, new Intl.DateTimeFormat().resolvedOptions().timeZone];
+    out.hostZone = Intl.DateTimeFormat('en-US', {}).resolvedOptions().timeZone;
     parentPort.postMessage(out);
 })();`;
 
-test('setZone · setLocale: 이름을 정리하고, 잘못된 것은 RangeError(그대로 둬요). 둘 다 null이면 Date · Intl · 문자열 메서드가 원래 것 그대로', async () => {
-    const out = await new Promise((ok, no) => { const w = new Worker(RESTORE, { eval: true, workerData: { zone: ZONE }, env: { ...process.env, LC_ALL: 'en_US.UTF-8' } }); w.on('error', no); w.on('message', m => { w.terminate(); ok(m); }); });
-    assert.equal(out.loaded, true);                    // (불러오기만 해서는 아무것도 안 바꿔요)
+test('작업 스레드: 불러오면 끼우고 되돌리지 않아요(null이면 원래 값). setZone · setLocale은 이름을 정리하고, 잘못된 것은 RangeError(그대로 둬요). atServer 안에서만 서버의 것', async () => {
+    const out = await new Promise((ok, no) => { const w = new Worker(KEEP, { eval: true, workerData: { zone: ZONE }, env: { ...process.env, LC_ALL: 'en_US.UTF-8' } }); w.on('error', no); w.on('message', m => { w.terminate(); ok(m); }); });
+    assert.equal(out.loaded, true);                    // (불러오면 끼워요)
+    assert.deepEqual(out.loadedSame, [null, null, true, true]);   // (아직 null: 원래 값)
     assert.deepEqual(out.names, ['Asia/Seoul', 'ko-KR', 'Asia/Seoul', 'ko-KR']);
-    assert.equal(out.on, true);
     assert.equal(out.hours, 5);                        // (20:00Z = 서울 05:00)
     assert.equal(out.sorted, '가ab');                  // (한국어 정렬: 한글이 먼저)
+    assert.equal(out.later, true);
     assert.equal(out.bad, 'RangeError,RangeError,');
     assert.deepEqual(out.afterBad, ['Asia/Seoul', 'ko-KR', 5]);
+    assert.deepEqual(out.server, [null, null, true, true, out.hostZone]);
+    assert.deepEqual(out.afterServer, ['Asia/Seoul', 'ko-KR', 5, '가ab']);
     assert.deepEqual(out.localeOnly, [true, '가ab']);
-    assert.equal(out.back, true);
-    assert.equal(out.backSorted, ['b', '가', 'a'].sort((x, y) => x.localeCompare(y, 'en-US')).join(''));
+    assert.deepEqual(out.back, [true, true, true, out.hostZone]);
 });
 
 test('본체 스레드에서는 시간대 · 언어를 바꾸지 않아요 (실리 서버 자신의 것): 오류이고 그대로예요', async () => {

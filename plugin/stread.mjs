@@ -5,9 +5,12 @@
 //   groupOf     public/scripts/group-chats.js getGroups 758~790 · validateGroup 218~232 (고친 것을 저장하지 않아요)
 //   personaFor  public/scripts/personas.js loadPersonaForCurrentChat 1543~1640 · getConnectedPersonas 1674~1680 (읽기만)
 //   personaOf   public/scripts/personas.js selectCurrentPersona 897~ · public/script.js setUserName 7873 · getSettings
+// 실리 서버의 코드를 옮긴 것(readCards의 채팅 이름 시각 · readImages의 차례)은 실리 서버처럼 서버 컴퓨터의 시간대 · 언어로: 일꾼 스레드는
+// 브라우저의 것이라(plugin/zone.mjs) 그 동기 부분만 atServer 안에서 돌려요
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createRequire } from 'node:module';
+import { atServer } from './zone.mjs';
 
 const obj = v => v && typeof v === 'object' && !Array.isArray(v);
 // (src/util.js tryParse)
@@ -178,12 +181,14 @@ export function readCardText(image) {
     throw new Error('No PNG metadata.');
 }
 
-// (util.js humanizedDateTime)
+// (util.js humanizedDateTime. In the server's zone: atServer)
 function humanizedDateTime(timestamp = Date.now()) {
-    const date = new Date(timestamp);
-    const dt = { year: date.getFullYear(), month: date.getMonth() + 1, day: date.getDate(), hour: date.getHours(), minute: date.getMinutes(), second: date.getSeconds(), millisecond: date.getMilliseconds() };
-    for (const key in dt) dt[key] = dt[key].toString().padStart(key === 'millisecond' ? 3 : 2, '0');
-    return `${dt.year}-${dt.month}-${dt.day}@${dt.hour}h${dt.minute}m${dt.second}s${dt.millisecond}ms`;
+    return atServer(() => {
+        const date = new Date(timestamp);
+        const dt = { year: date.getFullYear(), month: date.getMonth() + 1, day: date.getDate(), hour: date.getHours(), minute: date.getMinutes(), second: date.getSeconds(), millisecond: date.getMilliseconds() };
+        for (const key in dt) dt[key] = dt[key].toString().padStart(key === 'millisecond' ? 3 : 2, '0');
+        return `${dt.year}-${dt.month}-${dt.day}@${dt.hour}h${dt.minute}m${dt.second}s${dt.millisecond}ms`;
+    });
 }
 // (lodash _.get / _.set on a dotted path, as these functions use them)
 const getPath = (o, p) => p.split('.').reduce((v, k) => (v == null ? undefined : v[k]), o);
@@ -271,5 +276,6 @@ const isImage = file => { const t = mime?.lookup?.(file); return t ? String(t).s
 // <root>/User Avatars의 그림들 → 실리 서버의 /api/avatars/get과 같은 목록 (폴더를 못 읽으면 오류: 실리의 readdirSync처럼)
 export async function readImages(root) {
     const entries = await fs.readdir(path.join(root, 'User Avatars'), { withFileTypes: true });
-    return entries.filter(d => d.isFile()).map(d => d.name).filter(isImage).sort(new Intl.Collator().compare);
+    // (the server's language: atServer)
+    return atServer(() => entries.filter(d => d.isFile()).map(d => d.name).filter(isImage).sort(new Intl.Collator().compare));
 }

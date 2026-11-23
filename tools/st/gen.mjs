@@ -444,9 +444,15 @@ export function __naSet(v) {
 
 // public/scripts/RossAscends-mods.js — stub only
 write('scripts/RossAscends-mods.js', `// 실리 1.19.1 public/scripts/RossAscends-mods.js 대역 ${why}
-// 바꾼 것: 통째로 대역. 실리 isMobile(143~147줄)은 브라우저 UA를 봐요. 서버에서는 늘 false.
+// 바꾼 것: 통째로 대역. 실리 isMobile(143~147줄)은 브라우저 UA를 봐요. 서버에서는 브라우저가 확장 설정에 적은 값(src/phone2keepon.js keepDevice의 device.isMobile:
+// 실리 getContext().isMobile())을 일꾼이 \`__naSet\`으로 채워요(plugin/st/namacros.js). 아직 안 적었으면 false.
+let mobile = false;
 export function isMobile() {
-    return false;
+    return mobile;
+}
+/** @param {{isMobile?: boolean}} v */
+export function __naSet(v) {
+    if (Object.hasOwn(v, 'isMobile')) mobile = v.isMobile === true;
 }
 `);
 
@@ -1021,7 +1027,9 @@ export function __naRegister() {`,
     [2653, 2720],
     `}
 
-export { EXPRESSION_API, migrateSettings };
+export { EXPRESSION_API, migrateSettings, getLastCharacterMessage, getSpriteFolderName };
+/** 일꾼이 읽어요: 받아 둔 표정 목록 (null이면 아직 없음: 실리 페이지가 받기 전) */
+export const __naExpressionsList = () => expressionsList;
 
 /**
  * 일꾼이 채워요. lastExpression: 실리는 채팅을 열 때 {}로 비워요(2349). expressionsList: null이면 getExpressionsList가 다시 받아요(실리는 표정 API를 바꿀 때 null, 1835).

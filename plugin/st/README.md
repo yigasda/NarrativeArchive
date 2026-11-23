@@ -31,19 +31,27 @@ S.substituteParams('{{char}} …', { /* 실리와 같은 옵션 */ });
 ## 실리가 initMacros 밖에서 등록하는 매크로 (`namacros.js`)
 
 ```js
-const ext = await naDiscover({ root: userRoot, send: bridge }); // 실리 페이지가 찾는 확장 (다리의 /api/extensions/discover, 옛 다리면 폴더를 직접)
+const ext = await naDiscover({ root: userRoot, send: bridge }); // 실리 페이지가 찾는 확장 (다리의 /api/extensions/discover, 옛 다리 · 닿지 못하면 폴더를 직접)
 naLoad(settings, presets, ext);                                  // 엔진 플래그 · 켜진 확장이 바뀌었으면 지우고 실리 차례로 다시 등록
-S.__naSet({ name1, name2, characters, this_chid, chat, chat_metadata }); __naSetFetch(bridge);
-await naMacrosJob();                                             // 채팅을 열 때 하는 것 (작가 노트 기본값 · 표정 · 표정 목록)
+S.__naSet({ name1, name2, characters, this_chid, chat, chat_metadata });
+await naMacrosJob({ root: userRoot, send: bridge, skip });       // 채팅을 열 때 하는 것 (작가 노트 기본값 · 표정 · 표정 목록). skip: 실리 연결을 쓰지 않는 세계
+__naSetFetch(bridge);                                            // (naMacrosJob이 옮긴 코드의 fetch를 쓰고 비워요: 그 뒤에)
 ```
 
 - 등록 차례는 실리 페이지 그대로예요: 옛 매크로 둘(`initMacros`, 옛 엔진만) → 켜진 기본 확장(manifest의 `loading_order` 차례: 표정 → 요약 → 그림 생성) → 작가 노트 → 추론.
   옛 엔진은 이 차례가 글을 바꿔요(한 매크로가 낸 글 안의 다른 매크로가 풀리는지).
-- 켜지는 확장: config `extensions.enabled`(다리의 `/discover`가 실리의 404면 꺼짐) · 찾은 것 중 manifest를 읽을 수 있는 것 · `disabledExtensions`에 없는 것 · `requires`(Extras는 서버가 연결하지 않아요) · `dependencies`.
+- 켜지는 확장: config `extensions.enabled`(다리의 `/discover`가 실리의 404면 꺼짐. 폴더를 직접 읽을 때는 실리 `getConfigValue`처럼 환경 변수 `SILLYTAVERN_EXTENSIONS_ENABLED` → 실리 폴더의 `config.yaml` → 켜짐) · 찾은 것 중 manifest를 읽을 수 있는 것 · `disabledExtensions`에 없는 것 · `requires`(Extras는 서버가 연결하지 않아요) · `dependencies`.
+- 확장 찾기의 답: 실리의 답(2xx · 실리 자신의 404)은 폴더가 바뀔 때까지 둬요. 실리의 500 · 다리에 닿지 못함 · 옛 다리는 둔 값으로 하고 1분 · 2분 … 30분 뒤 다시 물어요.
 - 일마다: 표정 `migrateSettings` · 그림 생성 `loadSettings`의 값 줄(settings.json을 일마다 새로 읽어서), 작가 노트 `loadSettings`(이 일의 `chat_metadata` 복사본에: 저장하지 않아요), `lastExpression = {}`.
-- 표정 목록: 열쇠 · 표정 API가 바뀔 때 다시 받아요. 로컬 분류는 다리의 `/api/extra/classify/labels`. 옛 다리(404)면 실리가 실패했을 때처럼 기본 목록이에요(한 줄 적어요. 모델 요청은 막지 않아요).
-- 서버에서 풀 수 없는 매크로(`naleft.js`): 글은 그대로 보내고, 실리 창에 이름마다 한 번 `[macros] 서버에서 풀 수 없는 매크로가 있습니다: {{이름}}`.
-  매크로를 푼 뒤에 남은 `{{이름` 중 서버에 없는 것(다른 확장의 매크로), 그리고 분류가 있는 표정 API의 `{{lastExpression}}` · Extras의 `{{availableExpressions}}`.
+  값 줄이 던지면(`expressions` · `memory` · `sd`가 `null` 같은 객체가 아닌 값) 실리 init처럼 그 확장의 매크로 없이 가요(`[macros] 확장을 활성화할 수 없습니다: <이름> …` 한 번, 일은 계속).
+- 표정 목록: 열쇠 · 표정 API가 바뀔 때 다시 해요. 로컬 분류만 다리의 `/api/extra/classify/labels`에 물어요. 실리가 처음에 분류 모델을 내려받을 수 있어서 열쇠마다 처음 한 번 15초까지만 기다리고,
+  그 뒤로는 뒤에서 받아요(그동안은 실리 페이지가 목록을 받기 전처럼 `{{availableExpressions}}`가 빈 글자 · 한 줄. 늦게 온 답은 다음 일부터).
+  실리의 답(2xx · 실리의 오류)과 옛 다리의 404만 둬요(오류 · 옛 다리면 실리 코드대로 기본 목록). 다리에 닿지 못하면 1분 · 2분 … 뒤 다시. `skip`(실리 연결을 쓰지 않는 세계)이면 묻지 않아요.
+- 실리 창에는 두 길(`/discover` · `/labels`)마다 많아야 한 줄이에요: 옛 다리(표시 없는 404)면 "서버 플러그인을 업데이트하고…", 닿지 못하면 "실리 서버에 연결할 수 없습니다: <길>", 그 밖의 다리 답은 "실리 서버 요청에 실패했습니다: <길> (<status>)". 모델 요청은 막지 않아요.
+- 서버에서 풀 수 없는 매크로(`naleft.js`): 글은 그대로 보내고, 실리 창에 이름마다 한 번(이름은 64자까지) `[macros] 서버에서 풀 수 없는 매크로가 있습니다: {{이름}}`.
+  - 서버에 없는 이름(다른 확장의 매크로): 새 엔진은 들어간 글의 `{{이름`과 `{{if 이름}}` · `{{if !이름}}`의 이름, 옛 엔진은 맨 바깥 부름이 돌려준 글에 남은 `{{이름`.
+  - 서버가 값을 모르는 것: 아래 "서버에서 다른 것"의 표정 · 화면 매크로.
+  - 적지 않는 것: 실리 페이지도 글 그대로 두는 것 — 꺼진 기본 확장의 매크로, 이스케이프한 `\{\{이름\}\}`, 새 엔진에서 매크로가 낸 값 안의 `{{이름}}`, 옛 엔진이 미리 푼 카드 칸 중 글이 쓰지 않는 것.
 - 확인: `tools/st/oracle-macros.mjs`(진짜 실리 브라우저와 11 variant × 7 채팅 × 6 글) → `tests/fixtures/stmacros2-expected.json`, `tests/stmacros2.test.mjs` · `pluginworkmacros.test.mjs`.
 
 ## 쓰는 법 (연결 프로필 요청)
@@ -136,22 +144,31 @@ await naStatus({ skip: true });                     // 실리 연결을 쓰지 �
 | `public/scripts/textgen-models.js` | 같음 | 일부 (공급자 목록, 모델 목록 전역 10개, 연결 확인이 부르는 로더의 값 줄(목록 · 정렬 · 목록에 없으면 첫 모델), 토크나이저 고르기) |
 | `nastatus.js` | 우리 것 | 연결 확인의 상태 답 캐시 · 키 확인 · `saveModelList` 값 부분 · NanoGPT 공급자 · 실리 창 한 줄 (위 "연결 확인") |
 | `public/scripts/util/AccountStorage.js` | 같음 | 일부 (1~140 그대로. 145 `accountStorage`는 let으로 두고 일꾼이 settings.json의 accountStorage로 init — 실리 script.js 7935. `Proxy_SkipConfirm_*`이 읽혀서 프록시 연결이 돼요) |
-| `public/scripts/RossAscends-mods.js` | 같음 | 대역 (isMobile은 늘 false) |
+| `public/scripts/RossAscends-mods.js` | 같음 | 대역 (isMobile은 브라우저가 적은 `device.isMobile`: 일꾼이 `__naSet`으로. 없으면 false) |
 | `public/scripts/slash-commands/SlashCommandClosure.js` | 같음 | 대역 (빈 클래스, convertValueType의 instanceof에만) |
 
 ## 서버에서 다른 것
 
-- `{{input}}` · `{{firstDisplayedMessageId}}`(새 엔진)와 옛 엔진의 `{{input}}`은 실리 코드가 `document` · `$`를 바로 불러요. 서버에 없으면 그 매크로는 그대로 남아요.
-- `{{lastGenerationType}}`은 eventSource가 대역이라 늘 빈 글자예요. `{{outlet}}`은 `extension_prompts`를 채워야 나와요.
+- `{{input}}` · `{{firstDisplayedMessageId}}`(새 엔진)와 옛 엔진의 `{{input}}`은 실리 코드가 `document` · `$`를 바로 불러요. 일꾼에서는 `screen.mjs`의 대역이라 빈 글자 · `0`이에요
+  (`screen.mjs` 없이 부르면 실리 엔진이 오류 줄을 쓰고 그 매크로는 그대로 남아요: 테스트만). 실리 창에 한 줄.
+- `{{lastGenerationType}}`은 eventSource가 대역이라 늘 빈 글자예요. `{{outlet}}`은 `extension_prompts`를 채워야 나와요(늘 빈 글자). 둘 다 실리 창에 한 줄.
+- `{{isMobile}}`: 브라우저가 확장 설정 `device.isMobile`에 적은 실리 `isMobile()`(`src/phone2keepon.js keepDevice`). 아직 안 적었으면 false · 실리 창에 한 줄.
 - 다른 확장(써드파티)의 매크로는 서버에 없어요: 글 그대로 보내고 실리 창에 한 줄. 다른 확장이 기본 매크로 이름을 덮어쓰거나 엔진의 전처리 · 후처리를 바꾼 것은 서버가 알 수 없어요.
 - `{{lastExpression}}`: 서버는 분류하지 않아서 늘 빈 글자예요(채팅을 연 뒤의 실리와 같아요). 분류가 있는 표정 API(로컬 · Extras · LLM · WebLLM)에서는 실리 페이지가 분류한 표정이라 달라요(실리 창에 한 줄).
-  none이어도 스프라이트가 있거나 기본 이모지를 켰고 마지막 캐릭터 메시지가 비어 있으면 실리는 기본 표정을 넣어요(서버는 빈 글자).
+  none이어도 마지막 캐릭터 메시지가 빈 글 · `...`이고 기본 표정(fallback)이 있고 스프라이트(목록에 있는 라벨의 그림)가 있으면 실리는 2초 뒤 기본 표정을 넣어요(서버는 빈 글자 · 한 줄).
 - Extras 표정 API의 `{{availableExpressions}}`: 실리 페이지는 Extras에 연결되면 Extras의 목록이에요. 서버는 기본 목록이에요(실리 창에 한 줄).
+  로컬 분류의 목록을 아직 받지 못했으면(15초 안에 안 옴 · 다리에 닿지 못함) 빈 글자예요(실리 창에 한 줄).
 - 시각 매크로(`{{time}}` · `{{date}}` …) · 로컬 시각 · 기본 언어(정렬 · 숫자 글)는 브라우저의 것이에요. 브라우저가 확장 설정에 적은 시간대 · 언어(`device`, `src/phone2keepon.js keepDevice`)로
   일꾼 스레드의 Date · Intl을 맞추고(`plugin/zone.mjs`), `i18n.js`의 `localeFile`도 그 값이에요(`plugin/work.mjs useDevice`). 브라우저가 아직 안 적었으면 서버 컴퓨터의 것이에요.
   moment 전역 언어는 브라우저도 늘 `en`이라 같아요. 확인: `tools/st/oracle-tz.mjs`(진짜 실리 브라우저와 9경우) → `tests/sttz.test.mjs`.
+  - 크롬이 OS 시간대를 모를 때 적는 `Etc/Unknown`은 크롬처럼 UTC예요. 서버 Node가 모르는 다른 시간대는 서버 컴퓨터의 것(실리 창에 값마다 한 줄).
+  - 시간대 · 언어는 한 번 알면 그 일꾼 내내 그 값이에요(일과 일 사이도. 되돌리지 않아요). 바뀌면 다음 일부터예요.
   - 남은 차이: 서버 Node와 브라우저의 tz 데이터 판이 다르면 규칙이 막 바뀐 곳에서만 달라요. 기기가 둘이면 마지막으로 설정을 저장한 브라우저의 것이에요.
-  - 실리 서버의 코드를 옮긴 것(`naLoadPresets`, `plugin/stread.mjs`의 폴더 읽기)은 실리 서버처럼 서버 컴퓨터의 시간대 · 언어로 돌아요.
+  - 남은 차이: `toString` · `toTimeString` 괄호 안의 시간대 이름. V8은 오늘의 이름, 서버는 그 시각의 이름이라 이름이 바뀐 곳 · 옛 시각에서 달라요.
+    예: Casablanca 2019년부터(`GMT+01:00` / `Western European Summer Time`), Nuuk 2023년 전, Pyongyang 2015~2018년, Lord Howe 1970년대,
+    London · Dublin · Lisbon · Moscow · Gaza · Asuncion · Adak · Kwajalein · Monrovia의 옛 시각, LMT 시각(`GMT-00:44:30` 모양). 매크로 · 우리 코드는 이 이름을 쓰지 않아요.
+  - 남은 차이: Date 범위 끝(±8.64e15 근처)의 로컬 시각을 글로 parse하면 달라요(생성자 · setter는 같아요).
+  - 실리 서버의 코드를 옮긴 것(`naLoadPresets`, `plugin/stread.mjs`의 폴더 읽기)은 실리 서버처럼 서버 컴퓨터의 시간대 · 언어로 돌아요(`zone.mjs atServer` 안에서 동기로).
 - 변수는 서버에서 바꿔도 저장하지 않아요(saveMetadataDebounced · saveSettingsDebounced는 아무것도 안 함).
 - 연결 확인 (실리 브라우저와 남는 차이):
   - 실리 브라우저는 페이지를 열 때(자동 연결) · 연결 버튼을 누를 때 한 번 받아 두고 다시 묻지 않아요. 서버는 위의 때마다 다시 묻고, 다시 물은 답은 그다음 일부터 써요
