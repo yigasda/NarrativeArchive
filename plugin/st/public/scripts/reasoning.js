@@ -5,6 +5,8 @@ import { chat_completion_sources, oai_settings } from './openai.js';
 import { power_user } from './power-user.js';
 import { textgen_types, textgenerationwebui_settings } from './textgen-settings.js';
 import { escapeRegex, trimSpaces } from './utils.js';
+import { t } from './i18n.js';
+import { macros, MacroCategory } from './macros/macro-system.js';
 
 // 실리 public/scripts/reasoning.js 29~32
 /**
@@ -79,6 +81,26 @@ export function extractReasoningFromData(data, {
     return '';
 }
 
+// (실리 initReasoning 1696~1702가 페이지를 열 때 부르는 매크로 등록. 일꾼은 plugin/st/namacros.js에서 실리 차례로 불러요)
+// 실리 public/scripts/reasoning.js 1190~1206
+function registerReasoningMacros() {
+    macros.register('reasoningPrefix', {
+        category: MacroCategory.PROMPTS,
+        description: t`The prefix string used before reasoning blocks`,
+        handler: () => power_user.reasoning.prefix,
+    });
+    macros.register('reasoningSuffix', {
+        category: MacroCategory.PROMPTS,
+        description: t`The suffix string used after reasoning blocks`,
+        handler: () => power_user.reasoning.suffix,
+    });
+    macros.register('reasoningSeparator', {
+        category: MacroCategory.PROMPTS,
+        description: t`The separator between thinking content and response`,
+        handler: () => power_user.reasoning.separator,
+    });
+}
+
 // 실리 public/scripts/reasoning.js 1424~1436
 /**
  * Removes reasoning from a string if auto-parsing is enabled.
@@ -136,3 +158,5 @@ export function parseReasoningFromString(str, { strict = true } = {}, template =
         return null;
     }
 }
+
+export { registerReasoningMacros };

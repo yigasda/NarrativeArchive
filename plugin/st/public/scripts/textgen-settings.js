@@ -1,12 +1,46 @@
 // 실리 1.19.1 public/scripts/textgen-settings.js의 일부를 그대로 옮긴 것 (서버 플러그인이 실리 브라우저 없이 같은 요청을 만들게). SillyTavern, AGPL-3.0 (NOTICE.md).
-// 바꾼 것: 서버가 실리 요청을 만드는 데 쓰는 것만 옮김. 옮긴 줄마다 위에 `// 실리 <경로> <시작줄>~<끝줄>`. 그 밖의 줄은 우리 것: import, `__naSet`(일꾼이 전역 값을 채움), 대역(localStorage · document(dynatemp_block_ooba) · toastr).
-import { getStoppingStrings, main_api, max_context, substituteParams } from '../script.js';
+// 바꾼 것: 서버가 실리 요청을 만드는 데 쓰는 것만 옮김. 옮긴 줄마다 위에 `// 실리 <경로> <시작줄>~<끝줄>`. 그 밖의 줄은 우리 것: import, `__naSet`(일꾼이 전역 값을 채움), 대역(localStorage · document(dynatemp_block_ooba) · toastr · sessionStorage(tokenizers.js의 대역을 같이 씀), 모델 목록 로더(실패를 실리 창에 적는 같은 이름의 함수)).
+import { abortStatusCheck, getRequestHeaders, getStoppingStrings, main_api, max_context, online_status, resultCheckStatus, setOnlineStatus, substituteParams } from '../script.js';
 import { t } from './i18n.js';
 import { BIAS_CACHE, getLogitBiasListResult } from './logit-bias.js';
 import { power_user } from './power-user.js';
 import { getCurrentDreamGenModelTokenizer, getCurrentOpenRouterModelTokenizer } from './textgen-models.js';
-import { ENCODE_TOKENIZERS, TEXTGEN_TOKENIZERS, getTextTokens, getTokenizerBestMatch, tokenizers } from './tokenizers.js';
+import * as __naModels from './textgen-models.js';
+import { ENCODE_TOKENIZERS, TEXTGEN_TOKENIZERS, TOKENIZER_SUPPORTED_KEY, getTextTokens, getTokenizerBestMatch, tokenizers, __naSessionStorage as sessionStorage } from './tokenizers.js';
 import { onlyUnique, arraysEqual, isObject } from './utils.js';
+import { naFetch as fetch } from '../naFetch.js';
+
+// 우리 것: 실리 getStatusTextgen 691~726은 모델 목록 로더(async)를 await 없이 불러요. 로더 안의 오류(이름 없는 모델의 localeCompare 등)는
+// 브라우저에서는 콘솔의 "Uncaught (in promise)" 한 줄뿐이고 페이지는 그대로 돌아요. Node에서는 처리 안 된 rejection이 일꾼 스레드를 끝내요.
+// 그래서 같은 이름으로 감싸요: 로더는 그대로 부르고 돌려준 것을 그대로 돌려주되, Promise가 실패하면 실리 창에 적어요(같은 글은 한 번).
+// 로더가 오류 전까지 바꾼 값은 실리처럼 그대로 남아요. async가 아닌 로더(loadGenericModels)의 오류는 실리처럼 그 자리에서 던져요(getStatusTextgen이 잡아요).
+const __naTold = new Set();
+/** 테스트용: 실리 창에 적은 글을 잊어요 (일꾼을 새로 띄운 것과 같아요) */
+export const __naLooseReset = () => __naTold.clear();
+const __naLoose = (name) => (...args) => {
+    const p = __naModels[name](...args);
+    if (typeof p?.catch !== 'function') return p;
+    p.catch((err) => {
+        const why = String(err?.message || err);
+        if (__naTold.has(why)) return;
+        if (__naTold.size >= 100) __naTold.delete(__naTold.values().next().value);
+        __naTold.add(why);
+        console.warn('[narrative-archive plugin]', `처리되지 않은 오류가 발생했습니다: ${why}`);
+    });
+    return p;
+};
+const loadAphroditeModels = __naLoose('loadAphroditeModels');
+const loadDreamGenModels = __naLoose('loadDreamGenModels');
+const loadFeatherlessModels = __naLoose('loadFeatherlessModels');
+const loadGenericModels = __naLoose('loadGenericModels');
+const loadInfermaticAIModels = __naLoose('loadInfermaticAIModels');
+const loadLlamaCppModels = __naLoose('loadLlamaCppModels');
+const loadMancerModels = __naLoose('loadMancerModels');
+const loadOllamaModels = __naLoose('loadOllamaModels');
+const loadOpenRouterModels = __naLoose('loadOpenRouterModels');
+const loadTabbyModels = __naLoose('loadTabbyModels');
+const loadTogetherAIModels = __naLoose('loadTogetherAIModels');
+const loadVllmModels = __naLoose('loadVllmModels');
 
 // 대역: 실리 localStorage(브라우저 저장). 실리 124줄 MANCER_SERVER는 거기 'mancer_server'(디버그 메뉴 'change-mancer-url'로만 바꿈)가 없으면
 // 기본 주소예요. 서버에서는 그 브라우저 값을 읽을 수 없어서 늘 기본 주소(MANCER_SERVER_DEFAULT)예요.
@@ -483,6 +517,104 @@ function calculateLogitBias(settings = null) {
     return result;
 }
 
+// 실리 public/scripts/textgen-settings.js 659~664
+async function getStatusTextgen() {
+    const url = '/api/backends/text-completions/status';
+
+    const endpoint = getTextGenServer();
+
+    if (!endpoint) {
+        // (실리 665 console.warn('No endpoint for status check'): 서버는 plugin/st/nastatus.js가 한 번만 "상태를 확인할 주소가 없습니다.")
+// 실리 public/scripts/textgen-settings.js 666~736
+        setOnlineStatus('no_connection');
+        return resultCheckStatus();
+    }
+
+    // Clear logit bias cache
+    BIAS_CACHE.delete(BIAS_KEY);
+
+    if ([textgen_types.GENERIC, textgen_types.OOBA].includes(textgenerationwebui_settings.type) && textgenerationwebui_settings.bypass_status_check) {
+        setOnlineStatus(t`Status check bypassed`);
+        return resultCheckStatus();
+    }
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: getRequestHeaders(),
+            body: JSON.stringify({
+                api_server: endpoint,
+                api_type: textgenerationwebui_settings.type,
+            }),
+            signal: abortStatusCheck.signal,
+        });
+
+        const data = await response.json();
+
+        if (textgenerationwebui_settings.type === textgen_types.MANCER) {
+            loadMancerModels(data?.data);
+            setOnlineStatus(textgenerationwebui_settings.mancer_model);
+        } else if (textgenerationwebui_settings.type === textgen_types.TOGETHERAI) {
+            loadTogetherAIModels(data?.data);
+            setOnlineStatus(textgenerationwebui_settings.togetherai_model);
+        } else if (textgenerationwebui_settings.type === textgen_types.OLLAMA) {
+            loadOllamaModels(data?.data);
+            setOnlineStatus(textgenerationwebui_settings.ollama_model || t`Connected`);
+        } else if (textgenerationwebui_settings.type === textgen_types.INFERMATICAI) {
+            loadInfermaticAIModels(data?.data);
+            setOnlineStatus(textgenerationwebui_settings.infermaticai_model);
+        } else if (textgenerationwebui_settings.type === textgen_types.DREAMGEN) {
+            loadDreamGenModels(data?.data);
+            setOnlineStatus(textgenerationwebui_settings.dreamgen_model);
+        } else if (textgenerationwebui_settings.type === textgen_types.OPENROUTER) {
+            loadOpenRouterModels(data?.data);
+            setOnlineStatus(textgenerationwebui_settings.openrouter_model);
+        } else if (textgenerationwebui_settings.type === textgen_types.VLLM) {
+            loadVllmModels(data?.data);
+            setOnlineStatus(textgenerationwebui_settings.vllm_model);
+        } else if (textgenerationwebui_settings.type === textgen_types.APHRODITE) {
+            loadAphroditeModels(data?.data);
+            setOnlineStatus(textgenerationwebui_settings.aphrodite_model);
+        } else if (textgenerationwebui_settings.type === textgen_types.FEATHERLESS) {
+            loadFeatherlessModels(data?.data);
+            setOnlineStatus(textgenerationwebui_settings.featherless_model);
+        } else if (textgenerationwebui_settings.type === textgen_types.TABBY) {
+            loadTabbyModels(data?.data);
+            setOnlineStatus(textgenerationwebui_settings.tabby_model || data?.result);
+        } else if (textgenerationwebui_settings.type === textgen_types.LLAMACPP) {
+            loadLlamaCppModels(data?.data);
+            setOnlineStatus(textgenerationwebui_settings.llamacpp_model || data?.result || t`Connected`);
+        } else if (textgenerationwebui_settings.type === textgen_types.GENERIC) {
+            loadGenericModels(data?.data);
+            setOnlineStatus(textgenerationwebui_settings.generic_model || data?.result || t`Connected`);
+        } else {
+            setOnlineStatus(data?.result);
+        }
+
+        if (!online_status) {
+            setOnlineStatus('no_connection');
+        }
+
+        power_user.chat_template_hash = '';
+
+        // (실리 737~738 autoSelectInstructPreset: 지시 형식 · 문맥 프리셋 자동 고르기. 브라우저가 고르고 settings.json에 저장해요. 서버는 그 값을 써요)
+// 실리 public/scripts/textgen-settings.js 739~742
+
+        const supportsTokenization = response.headers.get('x-supports-tokenization') === 'true';
+        supportsTokenization ? sessionStorage.setItem(TOKENIZER_SUPPORTED_KEY, 'true') : sessionStorage.removeItem(TOKENIZER_SUPPORTED_KEY);
+
+        // (실리 743~795: koboldcpp · llama.cpp의 /props로 채팅 틀 · 문맥 크기 · 프리셋 고르기. 브라우저가 settings.json에 저장해요. 서버는 그 값을 써요)
+        // (실리 797~800: 화면 알림)
+// 실리 public/scripts/textgen-settings.js 801~801
+    } catch (err) {
+        // (실리 802~806 console.info · console.error: 서버는 plugin/st/nastatus.js가 한 번만 "상태를 가져오는 중 오류가 발생했습니다.")
+// 실리 public/scripts/textgen-settings.js 807~811
+        setOnlineStatus('no_connection');
+    }
+
+    return resultCheckStatus();
+}
+
 // 실리 public/scripts/textgen-settings.js 1180~1197
 /**
  * Inserts missing items from the source array into the target array.
@@ -903,8 +1035,8 @@ export function createTextGenGenerationData(settings, model, finalPrompt = null,
     return params;
 }
 
-// (실리 파일 안에서만 쓰는 이름들: 일꾼이 loadTextGenSettings 552~608의 값 부분을 따라 할 때 써요, plugin/st/naload.js)
-export { KOBOLDCPP_ORDER, OOBA_DEFAULT_ORDER, LLAMACPP_DEFAULT_ORDER, BIAS_KEY, MANCER, convertPresets, insertMissingArrayItems };
+// (실리 파일 안에서만 쓰는 이름들: 일꾼이 loadTextGenSettings 552~608의 값 부분을 따라 할 때 써요, plugin/st/naload.js. getStatusTextgen은 plugin/st/nastatus.js가 불러요)
+export { KOBOLDCPP_ORDER, OOBA_DEFAULT_ORDER, LLAMACPP_DEFAULT_ORDER, BIAS_KEY, MANCER, convertPresets, insertMissingArrayItems, getStatusTextgen };
 
 const __naDefault_textgenerationwebui_settings = structuredClone(textgenerationwebui_settings);
 

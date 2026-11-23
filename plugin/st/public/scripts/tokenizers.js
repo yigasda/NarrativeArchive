@@ -13,15 +13,17 @@ import { naAjax } from '../naFetch.js';
 // Node에는 동기 요청이 없어요. naAjax(plugin/st/public/naFetch.js)는 미리 받아 둔 실리 서버의 답을 그 자리에서 돌려주고, 없으면 적어 둬요:
 // 일꾼(plugin/st/naload.js naSendRequest)이 다리로 받아 온 뒤 같은 일을 다시 해요. 그래서 토큰 id는 실리 서버가 브라우저에 주는 것과 같아요.
 const jQuery = { ajax: naAjax };
-// 대역: 실리 sessionStorage(브라우저 탭 저장). 서버는 이 모듈 안에만 둬요. 서버는 백엔드에 연결 확인을 하지 않아서(online_status 'no_connection')
-// getTokenizerBestMatch가 이 값을 묻는 갈래(연결됐을 때)에는 가지 않아요.
+// 대역: 실리 sessionStorage(브라우저 탭 저장: 페이지를 새로 열어도 그 탭에서는 남아요). 서버는 이 모듈 안에, 일꾼이 떠 있는 동안 둬요.
+// getTokenizerBestMatch(연결됐을 때)가 읽고, textgen-settings.js getStatusTextgen(740~741, 연결 확인)이 TOKENIZER_SUPPORTED_KEY를 써요: 같은 것을 내보내요.
 const __naSession = new Map();
 const sessionStorage = {
     getItem: (k) => (__naSession.has(k) ? __naSession.get(k) : null),
     setItem: (k, v) => { __naSession.set(k, String(v)); },
     removeItem: (k) => { __naSession.delete(k); },
 };
-// 대역: 실리 getTokenCount(492~546). apiFailureTokenCount가 부르는 것은 API 토크나이저(연결됐을 때)를 쓰다 실패했을 때뿐이라 서버에서는 닿지 않아요.
+export { sessionStorage as __naSessionStorage };
+// 대역: 실리 getTokenCount(492~546). apiFailureTokenCount가 부르는 것은 연결된 API 토크나이저가 best match인데 getTextTokens가 encode 길이 없는
+// 토크나이저로 불렸을 때뿐이에요. 서버의 요청 길(textgen-settings.js getTokenizerForTokenIds)이 주는 토크나이저는 모두 encode 길이 있어서 닿지 않아요.
 function getTokenCount() {
     throw new Error('getTokenCount: 서버에는 없습니다.');
 }

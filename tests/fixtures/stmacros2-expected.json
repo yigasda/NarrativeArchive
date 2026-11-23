@@ -1,0 +1,3045 @@
+{
+ "variants": {
+  "new": {
+   "ext": {
+    "enabled": true,
+    "names": [
+     "assets",
+     "attachments",
+     "caption",
+     "connection-manager",
+     "expressions",
+     "gallery",
+     "memory",
+     "quick-reply",
+     "regex",
+     "stable-diffusion",
+     "token-counter",
+     "translate",
+     "tts",
+     "vectors"
+    ],
+    "manifests": {
+     "assets": {
+      "display_name": "Assets",
+      "loading_order": 15,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Keij#6799",
+      "version": "0.1.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "attachments": {
+      "display_name": "Data Bank (Chat Attachments)",
+      "loading_order": 3,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "caption": {
+      "display_name": "Image Captioning",
+      "loading_order": 4,
+      "requires": [],
+      "optional": [
+       "caption"
+      ],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "connection-manager": {
+      "display_name": "Connection Profiles",
+      "loading_order": 1,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "expressions": {
+      "display_name": "Character Expressions",
+      "loading_order": 6,
+      "requires": [],
+      "optional": [
+       "classify"
+      ],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "gallery": {
+      "display_name": "Gallery",
+      "loading_order": 6,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "City-Unit",
+      "version": "1.5.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "memory": {
+      "display_name": "Summarize",
+      "loading_order": 9,
+      "requires": [],
+      "optional": [
+       "summarize"
+      ],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "quick-reply": {
+      "display_name": "Quick Replies",
+      "loading_order": 12,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "RossAscends#1779",
+      "version": "2.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "regex": {
+      "display_name": "Regex",
+      "loading_order": 1,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "kingbri",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "stable-diffusion": {
+      "display_name": "Image Generation",
+      "loading_order": 10,
+      "requires": [],
+      "optional": [
+       "sd"
+      ],
+      "generate_interceptor": "SD_ProcessTriggers",
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "token-counter": {
+      "display_name": "Token Counter",
+      "loading_order": 15,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "translate": {
+      "display_name": "Chat Translation",
+      "loading_order": 1,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "tts": {
+      "display_name": "TTS",
+      "loading_order": 10,
+      "requires": [],
+      "optional": [
+       "silero-tts",
+       "edge-tts",
+       "coqui-tts"
+      ],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Ouoertheo#7264",
+      "version": "1.0.0",
+      "homePage": "None",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "vectors": {
+      "display_name": "Vector Storage",
+      "loading_order": 100,
+      "requires": [],
+      "optional": [
+       "embeddings"
+      ],
+      "generate_interceptor": "vectors_rearrangeChat",
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     }
+    },
+    "version": "1.19.1"
+   },
+   "answers": {},
+   "browserNames": [
+    "assets",
+    "attachments",
+    "caption",
+    "connection-manager",
+    "expressions",
+    "gallery",
+    "memory",
+    "quick-reply",
+    "regex",
+    "stable-diffusion",
+    "token-counter",
+    "translate",
+    "tts",
+    "vectors"
+   ],
+   "out": {
+    "note:all": "[AN for {{char}}][Ren character note][Default for {{char}}][Ren met {{user}} at the pier.][ren from settings][ren card negative][joy][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral, smug][]",
+    "note:reasoning": "[<r>|</r>| | ] [false] []",
+    "note:if": "AN: AN for {{char}} / S",
+    "note:has": "true true true true false false",
+    "note:order": "Default for {{char}} / AN for {{char}}",
+    "note:lastexp-arg": "[][]",
+    "nonote:all": "[Default for {{char}}][Ren character note][Default for {{char}}][][ren from settings][ren card negative][joy][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral, smug][]",
+    "nonote:reasoning": "[<r>|</r>| | ] [false] []",
+    "nonote:if": "AN: Default for {{char}} / no summary",
+    "nonote:has": "true true true true false false",
+    "nonote:order": "Default for {{char}} / Default for {{char}}",
+    "nonote:lastexp-arg": "[][]",
+    "empty-note:all": "[][Ren character note][Default for {{char}}][][ren from settings][ren card negative][joy][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral, smug][]",
+    "empty-note:reasoning": "[<r>|</r>| | ] [false] []",
+    "empty-note:if": "no note / no summary",
+    "empty-note:has": "true true true true false false",
+    "empty-note:order": "Default for {{char}} / ",
+    "empty-note:lastexp-arg": "[][]",
+    "ivo:all": "[Default for {{char}}][][Default for {{char}}][Ivo fixes the radio.][ivo card positive][][joy][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral, smug][]",
+    "ivo:reasoning": "[<r>|</r>| | ] [false] []",
+    "ivo:if": "AN: Default for {{char}} / S",
+    "ivo:has": "true true true true false false",
+    "ivo:order": "Default for {{char}} / Default for {{char}}",
+    "ivo:lastexp-arg": "[][]",
+    "lio:all": "[Lio note][][Default for {{char}}][][][][joy][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral, smug][]",
+    "lio:reasoning": "[<r>|</r>| | ] [false] []",
+    "lio:if": "AN: Lio note / no summary",
+    "lio:has": "true true true true false false",
+    "lio:order": "Default for {{char}} / Lio note",
+    "lio:lastexp-arg": "[][]",
+    "group:all": "[Group note][][Default for {{char}}][][][][joy][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral, smug][]",
+    "group:reasoning": "[<r>|</r>| | ] [false] []",
+    "group:if": "AN: Group note / no summary",
+    "group:has": "true true true true false false",
+    "group:order": "Default for {{char}} / Group note",
+    "group:lastexp-arg": "[][]",
+    "order:all": "[[{{defaultExpression}}|{{summary}}|{{charPrefix}}|{{defaultAuthorsNote}}|{{lastMessage}}|{{user}}|{{availableExpressions}}|{{reasoningPrefix}}]][Ren character note][Default for {{char}}][Ren met {{user}} at the pier.][ren from settings][ren card negative][joy][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral, smug][]",
+    "order:reasoning": "[<r>|</r>| | ] [false] []",
+    "order:if": "AN: [{{defaultExpression}}|{{summary}}|{{charPrefix}}|{{defaultAuthorsNote}}|{{lastMessage}}|{{user}}|{{availableExpressions}}|{{reasoningPrefix}}] / S",
+    "order:has": "true true true true false false",
+    "order:order": "Default for {{char}} / [{{defaultExpression}}|{{summary}}|{{charPrefix}}|{{defaultAuthorsNote}}|{{lastMessage}}|{{user}}|{{availableExpressions}}|{{reasoningPrefix}}]",
+    "order:lastexp-arg": "[][]"
+   }
+  },
+  "legacy": {
+   "ext": {
+    "enabled": true,
+    "names": [
+     "assets",
+     "attachments",
+     "caption",
+     "connection-manager",
+     "expressions",
+     "gallery",
+     "memory",
+     "quick-reply",
+     "regex",
+     "stable-diffusion",
+     "token-counter",
+     "translate",
+     "tts",
+     "vectors"
+    ],
+    "manifests": {
+     "assets": {
+      "display_name": "Assets",
+      "loading_order": 15,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Keij#6799",
+      "version": "0.1.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "attachments": {
+      "display_name": "Data Bank (Chat Attachments)",
+      "loading_order": 3,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "caption": {
+      "display_name": "Image Captioning",
+      "loading_order": 4,
+      "requires": [],
+      "optional": [
+       "caption"
+      ],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "connection-manager": {
+      "display_name": "Connection Profiles",
+      "loading_order": 1,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "expressions": {
+      "display_name": "Character Expressions",
+      "loading_order": 6,
+      "requires": [],
+      "optional": [
+       "classify"
+      ],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "gallery": {
+      "display_name": "Gallery",
+      "loading_order": 6,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "City-Unit",
+      "version": "1.5.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "memory": {
+      "display_name": "Summarize",
+      "loading_order": 9,
+      "requires": [],
+      "optional": [
+       "summarize"
+      ],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "quick-reply": {
+      "display_name": "Quick Replies",
+      "loading_order": 12,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "RossAscends#1779",
+      "version": "2.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "regex": {
+      "display_name": "Regex",
+      "loading_order": 1,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "kingbri",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "stable-diffusion": {
+      "display_name": "Image Generation",
+      "loading_order": 10,
+      "requires": [],
+      "optional": [
+       "sd"
+      ],
+      "generate_interceptor": "SD_ProcessTriggers",
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "token-counter": {
+      "display_name": "Token Counter",
+      "loading_order": 15,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "translate": {
+      "display_name": "Chat Translation",
+      "loading_order": 1,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "tts": {
+      "display_name": "TTS",
+      "loading_order": 10,
+      "requires": [],
+      "optional": [
+       "silero-tts",
+       "edge-tts",
+       "coqui-tts"
+      ],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Ouoertheo#7264",
+      "version": "1.0.0",
+      "homePage": "None",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "vectors": {
+      "display_name": "Vector Storage",
+      "loading_order": 100,
+      "requires": [],
+      "optional": [
+       "embeddings"
+      ],
+      "generate_interceptor": "vectors_rearrangeChat",
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     }
+    },
+    "version": "1.19.1"
+   },
+   "answers": {},
+   "browserNames": [
+    "assets",
+    "attachments",
+    "caption",
+    "connection-manager",
+    "expressions",
+    "gallery",
+    "memory",
+    "quick-reply",
+    "regex",
+    "stable-diffusion",
+    "token-counter",
+    "translate",
+    "tts",
+    "vectors"
+   ],
+   "out": {
+    "note:all": "[AN for {{char}}][Ren character note][Default for {{char}}][Ren met {{user}} at the pier.][ren from settings][ren card negative][joy][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral, smug][]",
+    "note:reasoning": "[{{reasoningPrefix}}|{{reasoningSuffix}}|{{reasoningSeparator}}] [false] []",
+    "note:if": "{{if authorsNote}}AN: AN for {{char}}{{else}}no note{{/if}} / {{if summary}}S{{else}}no summary{{/if}}",
+    "note:has": "{{hasExtension::memory}} {{hasExtension::expressions}} {{hasExtension::stable-diffusion}} {{hasExtension::regex}} {{hasExtension::Summarize}} {{hasExtension::nope}}",
+    "note:order": "Default for {{char}} / AN for {{char}}",
+    "note:lastexp-arg": "[{{lastExpression::Ivo}}][{{lastExpression::Ren}}]",
+    "nonote:all": "[Default for {{char}}][Ren character note][Default for {{char}}][][ren from settings][ren card negative][joy][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral, smug][]",
+    "nonote:reasoning": "[{{reasoningPrefix}}|{{reasoningSuffix}}|{{reasoningSeparator}}] [false] []",
+    "nonote:if": "{{if authorsNote}}AN: Default for {{char}}{{else}}no note{{/if}} / {{if summary}}S{{else}}no summary{{/if}}",
+    "nonote:has": "{{hasExtension::memory}} {{hasExtension::expressions}} {{hasExtension::stable-diffusion}} {{hasExtension::regex}} {{hasExtension::Summarize}} {{hasExtension::nope}}",
+    "nonote:order": "Default for {{char}} / Default for {{char}}",
+    "nonote:lastexp-arg": "[{{lastExpression::Ivo}}][{{lastExpression::Ren}}]",
+    "empty-note:all": "[][Ren character note][Default for {{char}}][][ren from settings][ren card negative][joy][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral, smug][]",
+    "empty-note:reasoning": "[{{reasoningPrefix}}|{{reasoningSuffix}}|{{reasoningSeparator}}] [false] []",
+    "empty-note:if": "{{if authorsNote}}AN: {{else}}no note{{/if}} / {{if summary}}S{{else}}no summary{{/if}}",
+    "empty-note:has": "{{hasExtension::memory}} {{hasExtension::expressions}} {{hasExtension::stable-diffusion}} {{hasExtension::regex}} {{hasExtension::Summarize}} {{hasExtension::nope}}",
+    "empty-note:order": "Default for {{char}} / ",
+    "empty-note:lastexp-arg": "[{{lastExpression::Ivo}}][{{lastExpression::Ren}}]",
+    "ivo:all": "[Default for {{char}}][][Default for {{char}}][Ivo fixes the radio.][ivo card positive][][joy][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral, smug][]",
+    "ivo:reasoning": "[{{reasoningPrefix}}|{{reasoningSuffix}}|{{reasoningSeparator}}] [false] []",
+    "ivo:if": "{{if authorsNote}}AN: Default for {{char}}{{else}}no note{{/if}} / {{if summary}}S{{else}}no summary{{/if}}",
+    "ivo:has": "{{hasExtension::memory}} {{hasExtension::expressions}} {{hasExtension::stable-diffusion}} {{hasExtension::regex}} {{hasExtension::Summarize}} {{hasExtension::nope}}",
+    "ivo:order": "Default for {{char}} / Default for {{char}}",
+    "ivo:lastexp-arg": "[{{lastExpression::Ivo}}][{{lastExpression::Ivo}}]",
+    "lio:all": "[Lio note][][Default for {{char}}][][][][joy][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral, smug][]",
+    "lio:reasoning": "[{{reasoningPrefix}}|{{reasoningSuffix}}|{{reasoningSeparator}}] [false] []",
+    "lio:if": "{{if authorsNote}}AN: Lio note{{else}}no note{{/if}} / {{if summary}}S{{else}}no summary{{/if}}",
+    "lio:has": "{{hasExtension::memory}} {{hasExtension::expressions}} {{hasExtension::stable-diffusion}} {{hasExtension::regex}} {{hasExtension::Summarize}} {{hasExtension::nope}}",
+    "lio:order": "Default for {{char}} / Lio note",
+    "lio:lastexp-arg": "[{{lastExpression::Ivo}}][{{lastExpression::Lio}}]",
+    "group:all": "[Group note][][Default for {{char}}][][][][joy][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral, smug][]",
+    "group:reasoning": "[{{reasoningPrefix}}|{{reasoningSuffix}}|{{reasoningSeparator}}] [false] []",
+    "group:if": "{{if authorsNote}}AN: Group note{{else}}no note{{/if}} / {{if summary}}S{{else}}no summary{{/if}}",
+    "group:has": "{{hasExtension::memory}} {{hasExtension::expressions}} {{hasExtension::stable-diffusion}} {{hasExtension::regex}} {{hasExtension::Summarize}} {{hasExtension::nope}}",
+    "group:order": "Default for {{char}} / Group note",
+    "group:lastexp-arg": "[{{lastExpression::Ivo}}][{{lastExpression::}}]",
+    "order:all": "[[{{defaultExpression}}|{{summary}}|{{charPrefix}}|Default for {{char}}|Rain again.|{{user}}|{{availableExpressions}}|{{reasoningPrefix}}]][Ren character note][Default for {{char}}][Ren met {{user}} at the pier.][ren from settings][ren card negative][joy][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral, smug][]",
+    "order:reasoning": "[{{reasoningPrefix}}|{{reasoningSuffix}}|{{reasoningSeparator}}] [false] []",
+    "order:if": "{{if authorsNote}}AN: [{{defaultExpression}}|{{summary}}|{{charPrefix}}|Default for {{char}}|Rain again.|{{user}}|{{availableExpressions}}|{{reasoningPrefix}}]{{else}}no note{{/if}} / {{if summary}}S{{else}}no summary{{/if}}",
+    "order:has": "{{hasExtension::memory}} {{hasExtension::expressions}} {{hasExtension::stable-diffusion}} {{hasExtension::regex}} {{hasExtension::Summarize}} {{hasExtension::nope}}",
+    "order:order": "Default for {{char}} / [{{defaultExpression}}|{{summary}}|{{charPrefix}}|Default for {{char}}|Rain again.|{{user}}|{{availableExpressions}}|{{reasoningPrefix}}]",
+    "order:lastexp-arg": "[{{lastExpression::Ivo}}][{{lastExpression::Ren}}]"
+   }
+  },
+  "nomem": {
+   "ext": {
+    "enabled": true,
+    "names": [
+     "assets",
+     "attachments",
+     "caption",
+     "connection-manager",
+     "expressions",
+     "gallery",
+     "memory",
+     "quick-reply",
+     "regex",
+     "stable-diffusion",
+     "token-counter",
+     "translate",
+     "tts",
+     "vectors"
+    ],
+    "manifests": {
+     "assets": {
+      "display_name": "Assets",
+      "loading_order": 15,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Keij#6799",
+      "version": "0.1.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "attachments": {
+      "display_name": "Data Bank (Chat Attachments)",
+      "loading_order": 3,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "caption": {
+      "display_name": "Image Captioning",
+      "loading_order": 4,
+      "requires": [],
+      "optional": [
+       "caption"
+      ],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "connection-manager": {
+      "display_name": "Connection Profiles",
+      "loading_order": 1,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "expressions": {
+      "display_name": "Character Expressions",
+      "loading_order": 6,
+      "requires": [],
+      "optional": [
+       "classify"
+      ],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "gallery": {
+      "display_name": "Gallery",
+      "loading_order": 6,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "City-Unit",
+      "version": "1.5.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "memory": {
+      "display_name": "Summarize",
+      "loading_order": 9,
+      "requires": [],
+      "optional": [
+       "summarize"
+      ],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "quick-reply": {
+      "display_name": "Quick Replies",
+      "loading_order": 12,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "RossAscends#1779",
+      "version": "2.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "regex": {
+      "display_name": "Regex",
+      "loading_order": 1,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "kingbri",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "stable-diffusion": {
+      "display_name": "Image Generation",
+      "loading_order": 10,
+      "requires": [],
+      "optional": [
+       "sd"
+      ],
+      "generate_interceptor": "SD_ProcessTriggers",
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "token-counter": {
+      "display_name": "Token Counter",
+      "loading_order": 15,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "translate": {
+      "display_name": "Chat Translation",
+      "loading_order": 1,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "tts": {
+      "display_name": "TTS",
+      "loading_order": 10,
+      "requires": [],
+      "optional": [
+       "silero-tts",
+       "edge-tts",
+       "coqui-tts"
+      ],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Ouoertheo#7264",
+      "version": "1.0.0",
+      "homePage": "None",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "vectors": {
+      "display_name": "Vector Storage",
+      "loading_order": 100,
+      "requires": [],
+      "optional": [
+       "embeddings"
+      ],
+      "generate_interceptor": "vectors_rearrangeChat",
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     }
+    },
+    "version": "1.19.1"
+   },
+   "answers": {},
+   "browserNames": [
+    "assets",
+    "attachments",
+    "caption",
+    "connection-manager",
+    "expressions",
+    "gallery",
+    "memory",
+    "quick-reply",
+    "regex",
+    "stable-diffusion",
+    "token-counter",
+    "translate",
+    "tts",
+    "vectors"
+   ],
+   "out": {
+    "note:all": "[AN for {{char}}][Ren character note][Default for {{char}}][{{summary}}][ren from settings][ren card negative][joy][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral, smug][]",
+    "note:reasoning": "[<r>|</r>| | ] [false] []",
+    "note:if": "AN: AN for {{char}} / S",
+    "note:has": "false true true true false false",
+    "note:order": "Default for {{char}} / AN for {{char}}",
+    "note:lastexp-arg": "[][]",
+    "nonote:all": "[Default for {{char}}][Ren character note][Default for {{char}}][{{summary}}][ren from settings][ren card negative][joy][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral, smug][]",
+    "nonote:reasoning": "[<r>|</r>| | ] [false] []",
+    "nonote:if": "AN: Default for {{char}} / S",
+    "nonote:has": "false true true true false false",
+    "nonote:order": "Default for {{char}} / Default for {{char}}",
+    "nonote:lastexp-arg": "[][]",
+    "empty-note:all": "[][Ren character note][Default for {{char}}][{{summary}}][ren from settings][ren card negative][joy][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral, smug][]",
+    "empty-note:reasoning": "[<r>|</r>| | ] [false] []",
+    "empty-note:if": "no note / S",
+    "empty-note:has": "false true true true false false",
+    "empty-note:order": "Default for {{char}} / ",
+    "empty-note:lastexp-arg": "[][]",
+    "ivo:all": "[Default for {{char}}][][Default for {{char}}][{{summary}}][ivo card positive][][joy][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral, smug][]",
+    "ivo:reasoning": "[<r>|</r>| | ] [false] []",
+    "ivo:if": "AN: Default for {{char}} / S",
+    "ivo:has": "false true true true false false",
+    "ivo:order": "Default for {{char}} / Default for {{char}}",
+    "ivo:lastexp-arg": "[][]",
+    "lio:all": "[Lio note][][Default for {{char}}][{{summary}}][][][joy][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral, smug][]",
+    "lio:reasoning": "[<r>|</r>| | ] [false] []",
+    "lio:if": "AN: Lio note / S",
+    "lio:has": "false true true true false false",
+    "lio:order": "Default for {{char}} / Lio note",
+    "lio:lastexp-arg": "[][]",
+    "group:all": "[Group note][][Default for {{char}}][{{summary}}][][][joy][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral, smug][]",
+    "group:reasoning": "[<r>|</r>| | ] [false] []",
+    "group:if": "AN: Group note / S",
+    "group:has": "false true true true false false",
+    "group:order": "Default for {{char}} / Group note",
+    "group:lastexp-arg": "[][]",
+    "order:all": "[[{{defaultExpression}}|{{summary}}|{{charPrefix}}|{{defaultAuthorsNote}}|{{lastMessage}}|{{user}}|{{availableExpressions}}|{{reasoningPrefix}}]][Ren character note][Default for {{char}}][{{summary}}][ren from settings][ren card negative][joy][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral, smug][]",
+    "order:reasoning": "[<r>|</r>| | ] [false] []",
+    "order:if": "AN: [{{defaultExpression}}|{{summary}}|{{charPrefix}}|{{defaultAuthorsNote}}|{{lastMessage}}|{{user}}|{{availableExpressions}}|{{reasoningPrefix}}] / S",
+    "order:has": "false true true true false false",
+    "order:order": "Default for {{char}} / [{{defaultExpression}}|{{summary}}|{{charPrefix}}|{{defaultAuthorsNote}}|{{lastMessage}}|{{user}}|{{availableExpressions}}|{{reasoningPrefix}}]",
+    "order:lastexp-arg": "[][]"
+   }
+  },
+  "legacy-noexp": {
+   "ext": {
+    "enabled": true,
+    "names": [
+     "assets",
+     "attachments",
+     "caption",
+     "connection-manager",
+     "expressions",
+     "gallery",
+     "memory",
+     "quick-reply",
+     "regex",
+     "stable-diffusion",
+     "token-counter",
+     "translate",
+     "tts",
+     "vectors"
+    ],
+    "manifests": {
+     "assets": {
+      "display_name": "Assets",
+      "loading_order": 15,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Keij#6799",
+      "version": "0.1.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "attachments": {
+      "display_name": "Data Bank (Chat Attachments)",
+      "loading_order": 3,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "caption": {
+      "display_name": "Image Captioning",
+      "loading_order": 4,
+      "requires": [],
+      "optional": [
+       "caption"
+      ],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "connection-manager": {
+      "display_name": "Connection Profiles",
+      "loading_order": 1,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "expressions": {
+      "display_name": "Character Expressions",
+      "loading_order": 6,
+      "requires": [],
+      "optional": [
+       "classify"
+      ],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "gallery": {
+      "display_name": "Gallery",
+      "loading_order": 6,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "City-Unit",
+      "version": "1.5.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "memory": {
+      "display_name": "Summarize",
+      "loading_order": 9,
+      "requires": [],
+      "optional": [
+       "summarize"
+      ],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "quick-reply": {
+      "display_name": "Quick Replies",
+      "loading_order": 12,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "RossAscends#1779",
+      "version": "2.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "regex": {
+      "display_name": "Regex",
+      "loading_order": 1,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "kingbri",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "stable-diffusion": {
+      "display_name": "Image Generation",
+      "loading_order": 10,
+      "requires": [],
+      "optional": [
+       "sd"
+      ],
+      "generate_interceptor": "SD_ProcessTriggers",
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "token-counter": {
+      "display_name": "Token Counter",
+      "loading_order": 15,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "translate": {
+      "display_name": "Chat Translation",
+      "loading_order": 1,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "tts": {
+      "display_name": "TTS",
+      "loading_order": 10,
+      "requires": [],
+      "optional": [
+       "silero-tts",
+       "edge-tts",
+       "coqui-tts"
+      ],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Ouoertheo#7264",
+      "version": "1.0.0",
+      "homePage": "None",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "vectors": {
+      "display_name": "Vector Storage",
+      "loading_order": 100,
+      "requires": [],
+      "optional": [
+       "embeddings"
+      ],
+      "generate_interceptor": "vectors_rearrangeChat",
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     }
+    },
+    "version": "1.19.1"
+   },
+   "answers": {},
+   "browserNames": [
+    "assets",
+    "attachments",
+    "caption",
+    "connection-manager",
+    "expressions",
+    "gallery",
+    "memory",
+    "quick-reply",
+    "regex",
+    "stable-diffusion",
+    "token-counter",
+    "translate",
+    "tts",
+    "vectors"
+   ],
+   "out": {
+    "note:all": "[AN for {{char}}][Ren character note][Default for {{char}}][Ren met {{user}} at the pier.][{{charPrefix}}][{{charNegativePrefix}}][{{defaultExpression}}][{{availableExpressions}}][{{lastExpression}}]",
+    "note:reasoning": "[{{reasoningPrefix}}|{{reasoningSuffix}}|{{reasoningSeparator}}] [false] []",
+    "note:if": "{{if authorsNote}}AN: AN for {{char}}{{else}}no note{{/if}} / {{if summary}}S{{else}}no summary{{/if}}",
+    "note:has": "{{hasExtension::memory}} {{hasExtension::expressions}} {{hasExtension::stable-diffusion}} {{hasExtension::regex}} {{hasExtension::Summarize}} {{hasExtension::nope}}",
+    "note:order": "Default for {{char}} / AN for {{char}}",
+    "note:lastexp-arg": "[{{lastExpression::Ivo}}][{{lastExpression::Ren}}]",
+    "nonote:all": "[Default for {{char}}][Ren character note][Default for {{char}}][][{{charPrefix}}][{{charNegativePrefix}}][{{defaultExpression}}][{{availableExpressions}}][{{lastExpression}}]",
+    "nonote:reasoning": "[{{reasoningPrefix}}|{{reasoningSuffix}}|{{reasoningSeparator}}] [false] []",
+    "nonote:if": "{{if authorsNote}}AN: Default for {{char}}{{else}}no note{{/if}} / {{if summary}}S{{else}}no summary{{/if}}",
+    "nonote:has": "{{hasExtension::memory}} {{hasExtension::expressions}} {{hasExtension::stable-diffusion}} {{hasExtension::regex}} {{hasExtension::Summarize}} {{hasExtension::nope}}",
+    "nonote:order": "Default for {{char}} / Default for {{char}}",
+    "nonote:lastexp-arg": "[{{lastExpression::Ivo}}][{{lastExpression::Ren}}]",
+    "empty-note:all": "[][Ren character note][Default for {{char}}][][{{charPrefix}}][{{charNegativePrefix}}][{{defaultExpression}}][{{availableExpressions}}][{{lastExpression}}]",
+    "empty-note:reasoning": "[{{reasoningPrefix}}|{{reasoningSuffix}}|{{reasoningSeparator}}] [false] []",
+    "empty-note:if": "{{if authorsNote}}AN: {{else}}no note{{/if}} / {{if summary}}S{{else}}no summary{{/if}}",
+    "empty-note:has": "{{hasExtension::memory}} {{hasExtension::expressions}} {{hasExtension::stable-diffusion}} {{hasExtension::regex}} {{hasExtension::Summarize}} {{hasExtension::nope}}",
+    "empty-note:order": "Default for {{char}} / ",
+    "empty-note:lastexp-arg": "[{{lastExpression::Ivo}}][{{lastExpression::Ren}}]",
+    "ivo:all": "[Default for {{char}}][][Default for {{char}}][Ivo fixes the radio.][{{charPrefix}}][{{charNegativePrefix}}][{{defaultExpression}}][{{availableExpressions}}][{{lastExpression}}]",
+    "ivo:reasoning": "[{{reasoningPrefix}}|{{reasoningSuffix}}|{{reasoningSeparator}}] [false] []",
+    "ivo:if": "{{if authorsNote}}AN: Default for {{char}}{{else}}no note{{/if}} / {{if summary}}S{{else}}no summary{{/if}}",
+    "ivo:has": "{{hasExtension::memory}} {{hasExtension::expressions}} {{hasExtension::stable-diffusion}} {{hasExtension::regex}} {{hasExtension::Summarize}} {{hasExtension::nope}}",
+    "ivo:order": "Default for {{char}} / Default for {{char}}",
+    "ivo:lastexp-arg": "[{{lastExpression::Ivo}}][{{lastExpression::Ivo}}]",
+    "lio:all": "[Lio note][][Default for {{char}}][][{{charPrefix}}][{{charNegativePrefix}}][{{defaultExpression}}][{{availableExpressions}}][{{lastExpression}}]",
+    "lio:reasoning": "[{{reasoningPrefix}}|{{reasoningSuffix}}|{{reasoningSeparator}}] [false] []",
+    "lio:if": "{{if authorsNote}}AN: Lio note{{else}}no note{{/if}} / {{if summary}}S{{else}}no summary{{/if}}",
+    "lio:has": "{{hasExtension::memory}} {{hasExtension::expressions}} {{hasExtension::stable-diffusion}} {{hasExtension::regex}} {{hasExtension::Summarize}} {{hasExtension::nope}}",
+    "lio:order": "Default for {{char}} / Lio note",
+    "lio:lastexp-arg": "[{{lastExpression::Ivo}}][{{lastExpression::Lio}}]",
+    "group:all": "[Group note][][Default for {{char}}][][{{charPrefix}}][{{charNegativePrefix}}][{{defaultExpression}}][{{availableExpressions}}][{{lastExpression}}]",
+    "group:reasoning": "[{{reasoningPrefix}}|{{reasoningSuffix}}|{{reasoningSeparator}}] [false] []",
+    "group:if": "{{if authorsNote}}AN: Group note{{else}}no note{{/if}} / {{if summary}}S{{else}}no summary{{/if}}",
+    "group:has": "{{hasExtension::memory}} {{hasExtension::expressions}} {{hasExtension::stable-diffusion}} {{hasExtension::regex}} {{hasExtension::Summarize}} {{hasExtension::nope}}",
+    "group:order": "Default for {{char}} / Group note",
+    "group:lastexp-arg": "[{{lastExpression::Ivo}}][{{lastExpression::}}]",
+    "order:all": "[[{{defaultExpression}}|{{summary}}|{{charPrefix}}|Default for {{char}}|Rain again.|{{user}}|{{availableExpressions}}|{{reasoningPrefix}}]][Ren character note][Default for {{char}}][Ren met {{user}} at the pier.][{{charPrefix}}][{{charNegativePrefix}}][{{defaultExpression}}][{{availableExpressions}}][{{lastExpression}}]",
+    "order:reasoning": "[{{reasoningPrefix}}|{{reasoningSuffix}}|{{reasoningSeparator}}] [false] []",
+    "order:if": "{{if authorsNote}}AN: [{{defaultExpression}}|{{summary}}|{{charPrefix}}|Default for {{char}}|Rain again.|{{user}}|{{availableExpressions}}|{{reasoningPrefix}}]{{else}}no note{{/if}} / {{if summary}}S{{else}}no summary{{/if}}",
+    "order:has": "{{hasExtension::memory}} {{hasExtension::expressions}} {{hasExtension::stable-diffusion}} {{hasExtension::regex}} {{hasExtension::Summarize}} {{hasExtension::nope}}",
+    "order:order": "Default for {{char}} / [{{defaultExpression}}|{{summary}}|{{charPrefix}}|Default for {{char}}|Rain again.|{{user}}|{{availableExpressions}}|{{reasoningPrefix}}]",
+    "order:lastexp-arg": "[{{lastExpression::Ivo}}][{{lastExpression::Ren}}]"
+   }
+  },
+  "raw": {
+   "ext": {
+    "enabled": true,
+    "names": [
+     "assets",
+     "attachments",
+     "caption",
+     "connection-manager",
+     "expressions",
+     "gallery",
+     "memory",
+     "quick-reply",
+     "regex",
+     "stable-diffusion",
+     "token-counter",
+     "translate",
+     "tts",
+     "vectors"
+    ],
+    "manifests": {
+     "assets": {
+      "display_name": "Assets",
+      "loading_order": 15,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Keij#6799",
+      "version": "0.1.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "attachments": {
+      "display_name": "Data Bank (Chat Attachments)",
+      "loading_order": 3,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "caption": {
+      "display_name": "Image Captioning",
+      "loading_order": 4,
+      "requires": [],
+      "optional": [
+       "caption"
+      ],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "connection-manager": {
+      "display_name": "Connection Profiles",
+      "loading_order": 1,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "expressions": {
+      "display_name": "Character Expressions",
+      "loading_order": 6,
+      "requires": [],
+      "optional": [
+       "classify"
+      ],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "gallery": {
+      "display_name": "Gallery",
+      "loading_order": 6,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "City-Unit",
+      "version": "1.5.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "memory": {
+      "display_name": "Summarize",
+      "loading_order": 9,
+      "requires": [],
+      "optional": [
+       "summarize"
+      ],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "quick-reply": {
+      "display_name": "Quick Replies",
+      "loading_order": 12,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "RossAscends#1779",
+      "version": "2.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "regex": {
+      "display_name": "Regex",
+      "loading_order": 1,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "kingbri",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "stable-diffusion": {
+      "display_name": "Image Generation",
+      "loading_order": 10,
+      "requires": [],
+      "optional": [
+       "sd"
+      ],
+      "generate_interceptor": "SD_ProcessTriggers",
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "token-counter": {
+      "display_name": "Token Counter",
+      "loading_order": 15,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "translate": {
+      "display_name": "Chat Translation",
+      "loading_order": 1,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "tts": {
+      "display_name": "TTS",
+      "loading_order": 10,
+      "requires": [],
+      "optional": [
+       "silero-tts",
+       "edge-tts",
+       "coqui-tts"
+      ],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Ouoertheo#7264",
+      "version": "1.0.0",
+      "homePage": "None",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "vectors": {
+      "display_name": "Vector Storage",
+      "loading_order": 100,
+      "requires": [],
+      "optional": [
+       "embeddings"
+      ],
+      "generate_interceptor": "vectors_rearrangeChat",
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     }
+    },
+    "version": "1.19.1"
+   },
+   "answers": {},
+   "browserNames": [
+    "assets",
+    "attachments",
+    "caption",
+    "connection-manager",
+    "expressions",
+    "gallery",
+    "memory",
+    "quick-reply",
+    "regex",
+    "stable-diffusion",
+    "token-counter",
+    "translate",
+    "tts",
+    "vectors"
+   ],
+   "out": {
+    "note:all": "[AN for {{char}}][][][Ren met {{user}} at the pier.][ren card positive][ren card negative][joy][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral][]",
+    "note:reasoning": "[<r>|</r>| | ] [false] []",
+    "note:if": "AN: AN for {{char}} / S",
+    "note:has": "true true true true false false",
+    "note:order": " / AN for {{char}}",
+    "note:lastexp-arg": "[][]",
+    "nonote:all": "[][][][][ren card positive][ren card negative][joy][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral][]",
+    "nonote:reasoning": "[<r>|</r>| | ] [false] []",
+    "nonote:if": "no note / no summary",
+    "nonote:has": "true true true true false false",
+    "nonote:order": " / ",
+    "nonote:lastexp-arg": "[][]",
+    "empty-note:all": "[][][][][ren card positive][ren card negative][joy][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral][]",
+    "empty-note:reasoning": "[<r>|</r>| | ] [false] []",
+    "empty-note:if": "no note / no summary",
+    "empty-note:has": "true true true true false false",
+    "empty-note:order": " / ",
+    "empty-note:lastexp-arg": "[][]",
+    "ivo:all": "[][][][Ivo fixes the radio.][ivo card positive][][joy][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral][]",
+    "ivo:reasoning": "[<r>|</r>| | ] [false] []",
+    "ivo:if": "no note / S",
+    "ivo:has": "true true true true false false",
+    "ivo:order": " / ",
+    "ivo:lastexp-arg": "[][]",
+    "lio:all": "[Lio note][][][][][][joy][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral][]",
+    "lio:reasoning": "[<r>|</r>| | ] [false] []",
+    "lio:if": "AN: Lio note / no summary",
+    "lio:has": "true true true true false false",
+    "lio:order": " / Lio note",
+    "lio:lastexp-arg": "[][]",
+    "group:all": "[Group note][][][][][][joy][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral][]",
+    "group:reasoning": "[<r>|</r>| | ] [false] []",
+    "group:if": "AN: Group note / no summary",
+    "group:has": "true true true true false false",
+    "group:order": " / Group note",
+    "group:lastexp-arg": "[][]",
+    "order:all": "[[{{defaultExpression}}|{{summary}}|{{charPrefix}}|{{defaultAuthorsNote}}|{{lastMessage}}|{{user}}|{{availableExpressions}}|{{reasoningPrefix}}]][][][Ren met {{user}} at the pier.][ren card positive][ren card negative][joy][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral][]",
+    "order:reasoning": "[<r>|</r>| | ] [false] []",
+    "order:if": "AN: [{{defaultExpression}}|{{summary}}|{{charPrefix}}|{{defaultAuthorsNote}}|{{lastMessage}}|{{user}}|{{availableExpressions}}|{{reasoningPrefix}}] / S",
+    "order:has": "true true true true false false",
+    "order:order": " / [{{defaultExpression}}|{{summary}}|{{charPrefix}}|{{defaultAuthorsNote}}|{{lastMessage}}|{{user}}|{{availableExpressions}}|{{reasoningPrefix}}]",
+    "order:lastexp-arg": "[][]"
+   }
+  },
+  "llm": {
+   "ext": {
+    "enabled": true,
+    "names": [
+     "assets",
+     "attachments",
+     "caption",
+     "connection-manager",
+     "expressions",
+     "gallery",
+     "memory",
+     "quick-reply",
+     "regex",
+     "stable-diffusion",
+     "token-counter",
+     "translate",
+     "tts",
+     "vectors"
+    ],
+    "manifests": {
+     "assets": {
+      "display_name": "Assets",
+      "loading_order": 15,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Keij#6799",
+      "version": "0.1.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "attachments": {
+      "display_name": "Data Bank (Chat Attachments)",
+      "loading_order": 3,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "caption": {
+      "display_name": "Image Captioning",
+      "loading_order": 4,
+      "requires": [],
+      "optional": [
+       "caption"
+      ],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "connection-manager": {
+      "display_name": "Connection Profiles",
+      "loading_order": 1,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "expressions": {
+      "display_name": "Character Expressions",
+      "loading_order": 6,
+      "requires": [],
+      "optional": [
+       "classify"
+      ],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "gallery": {
+      "display_name": "Gallery",
+      "loading_order": 6,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "City-Unit",
+      "version": "1.5.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "memory": {
+      "display_name": "Summarize",
+      "loading_order": 9,
+      "requires": [],
+      "optional": [
+       "summarize"
+      ],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "quick-reply": {
+      "display_name": "Quick Replies",
+      "loading_order": 12,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "RossAscends#1779",
+      "version": "2.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "regex": {
+      "display_name": "Regex",
+      "loading_order": 1,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "kingbri",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "stable-diffusion": {
+      "display_name": "Image Generation",
+      "loading_order": 10,
+      "requires": [],
+      "optional": [
+       "sd"
+      ],
+      "generate_interceptor": "SD_ProcessTriggers",
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "token-counter": {
+      "display_name": "Token Counter",
+      "loading_order": 15,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "translate": {
+      "display_name": "Chat Translation",
+      "loading_order": 1,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "tts": {
+      "display_name": "TTS",
+      "loading_order": 10,
+      "requires": [],
+      "optional": [
+       "silero-tts",
+       "edge-tts",
+       "coqui-tts"
+      ],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Ouoertheo#7264",
+      "version": "1.0.0",
+      "homePage": "None",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "vectors": {
+      "display_name": "Vector Storage",
+      "loading_order": 100,
+      "requires": [],
+      "optional": [
+       "embeddings"
+      ],
+      "generate_interceptor": "vectors_rearrangeChat",
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     }
+    },
+    "version": "1.19.1"
+   },
+   "answers": {},
+   "browserNames": [
+    "assets",
+    "attachments",
+    "caption",
+    "connection-manager",
+    "expressions",
+    "gallery",
+    "memory",
+    "quick-reply",
+    "regex",
+    "stable-diffusion",
+    "token-counter",
+    "translate",
+    "tts",
+    "vectors"
+   ],
+   "out": {
+    "note:all": "[AN for {{char}}][Ren character note][Default for {{char}}][Ren met {{user}} at the pier.][ren from settings][ren card negative][#none][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral][]",
+    "note:reasoning": "[<r>|</r>| | ] [false] []",
+    "note:if": "AN: AN for {{char}} / S",
+    "note:has": "true true true true false false",
+    "note:order": "Default for {{char}} / AN for {{char}}",
+    "note:lastexp-arg": "[][]",
+    "nonote:all": "[Default for {{char}}][Ren character note][Default for {{char}}][][ren from settings][ren card negative][#none][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral][]",
+    "nonote:reasoning": "[<r>|</r>| | ] [false] []",
+    "nonote:if": "AN: Default for {{char}} / no summary",
+    "nonote:has": "true true true true false false",
+    "nonote:order": "Default for {{char}} / Default for {{char}}",
+    "nonote:lastexp-arg": "[][]",
+    "empty-note:all": "[][Ren character note][Default for {{char}}][][ren from settings][ren card negative][#none][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral][]",
+    "empty-note:reasoning": "[<r>|</r>| | ] [false] []",
+    "empty-note:if": "no note / no summary",
+    "empty-note:has": "true true true true false false",
+    "empty-note:order": "Default for {{char}} / ",
+    "empty-note:lastexp-arg": "[][]",
+    "ivo:all": "[Default for {{char}}][][Default for {{char}}][Ivo fixes the radio.][ivo card positive][][#none][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral][]",
+    "ivo:reasoning": "[<r>|</r>| | ] [false] []",
+    "ivo:if": "AN: Default for {{char}} / S",
+    "ivo:has": "true true true true false false",
+    "ivo:order": "Default for {{char}} / Default for {{char}}",
+    "ivo:lastexp-arg": "[][]",
+    "lio:all": "[Lio note][][Default for {{char}}][][][][#none][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral][]",
+    "lio:reasoning": "[<r>|</r>| | ] [false] []",
+    "lio:if": "AN: Lio note / no summary",
+    "lio:has": "true true true true false false",
+    "lio:order": "Default for {{char}} / Lio note",
+    "lio:lastexp-arg": "[][]",
+    "group:all": "[Group note][][Default for {{char}}][][][][#none][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral][]",
+    "group:reasoning": "[<r>|</r>| | ] [false] []",
+    "group:if": "AN: Group note / no summary",
+    "group:has": "true true true true false false",
+    "group:order": "Default for {{char}} / Group note",
+    "group:lastexp-arg": "[][]",
+    "order:all": "[[{{defaultExpression}}|{{summary}}|{{charPrefix}}|{{defaultAuthorsNote}}|{{lastMessage}}|{{user}}|{{availableExpressions}}|{{reasoningPrefix}}]][Ren character note][Default for {{char}}][Ren met {{user}} at the pier.][ren from settings][ren card negative][#none][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral][]",
+    "order:reasoning": "[<r>|</r>| | ] [false] []",
+    "order:if": "AN: [{{defaultExpression}}|{{summary}}|{{charPrefix}}|{{defaultAuthorsNote}}|{{lastMessage}}|{{user}}|{{availableExpressions}}|{{reasoningPrefix}}] / S",
+    "order:has": "true true true true false false",
+    "order:order": "Default for {{char}} / [{{defaultExpression}}|{{summary}}|{{charPrefix}}|{{defaultAuthorsNote}}|{{lastMessage}}|{{user}}|{{availableExpressions}}|{{reasoningPrefix}}]",
+    "order:lastexp-arg": "[][]"
+   }
+  },
+  "emoji": {
+   "ext": {
+    "enabled": true,
+    "names": [
+     "assets",
+     "attachments",
+     "caption",
+     "connection-manager",
+     "expressions",
+     "gallery",
+     "memory",
+     "quick-reply",
+     "regex",
+     "stable-diffusion",
+     "token-counter",
+     "translate",
+     "tts",
+     "vectors"
+    ],
+    "manifests": {
+     "assets": {
+      "display_name": "Assets",
+      "loading_order": 15,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Keij#6799",
+      "version": "0.1.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "attachments": {
+      "display_name": "Data Bank (Chat Attachments)",
+      "loading_order": 3,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "caption": {
+      "display_name": "Image Captioning",
+      "loading_order": 4,
+      "requires": [],
+      "optional": [
+       "caption"
+      ],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "connection-manager": {
+      "display_name": "Connection Profiles",
+      "loading_order": 1,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "expressions": {
+      "display_name": "Character Expressions",
+      "loading_order": 6,
+      "requires": [],
+      "optional": [
+       "classify"
+      ],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "gallery": {
+      "display_name": "Gallery",
+      "loading_order": 6,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "City-Unit",
+      "version": "1.5.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "memory": {
+      "display_name": "Summarize",
+      "loading_order": 9,
+      "requires": [],
+      "optional": [
+       "summarize"
+      ],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "quick-reply": {
+      "display_name": "Quick Replies",
+      "loading_order": 12,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "RossAscends#1779",
+      "version": "2.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "regex": {
+      "display_name": "Regex",
+      "loading_order": 1,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "kingbri",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "stable-diffusion": {
+      "display_name": "Image Generation",
+      "loading_order": 10,
+      "requires": [],
+      "optional": [
+       "sd"
+      ],
+      "generate_interceptor": "SD_ProcessTriggers",
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "token-counter": {
+      "display_name": "Token Counter",
+      "loading_order": 15,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "translate": {
+      "display_name": "Chat Translation",
+      "loading_order": 1,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "tts": {
+      "display_name": "TTS",
+      "loading_order": 10,
+      "requires": [],
+      "optional": [
+       "silero-tts",
+       "edge-tts",
+       "coqui-tts"
+      ],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Ouoertheo#7264",
+      "version": "1.0.0",
+      "homePage": "None",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "vectors": {
+      "display_name": "Vector Storage",
+      "loading_order": 100,
+      "requires": [],
+      "optional": [
+       "embeddings"
+      ],
+      "generate_interceptor": "vectors_rearrangeChat",
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     }
+    },
+    "version": "1.19.1"
+   },
+   "answers": {},
+   "browserNames": [
+    "assets",
+    "attachments",
+    "caption",
+    "connection-manager",
+    "expressions",
+    "gallery",
+    "memory",
+    "quick-reply",
+    "regex",
+    "stable-diffusion",
+    "token-counter",
+    "translate",
+    "tts",
+    "vectors"
+   ],
+   "out": {
+    "note:all": "[AN for {{char}}][Ren character note][Default for {{char}}][Ren met {{user}} at the pier.][ren from settings][ren card negative][#emoji][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral, smug][]",
+    "note:reasoning": "[<r>|</r>| | ] [false] []",
+    "note:if": "AN: AN for {{char}} / S",
+    "note:has": "true true true true false false",
+    "note:order": "Default for {{char}} / AN for {{char}}",
+    "note:lastexp-arg": "[][]",
+    "nonote:all": "[Default for {{char}}][Ren character note][Default for {{char}}][][ren from settings][ren card negative][#emoji][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral, smug][]",
+    "nonote:reasoning": "[<r>|</r>| | ] [false] []",
+    "nonote:if": "AN: Default for {{char}} / no summary",
+    "nonote:has": "true true true true false false",
+    "nonote:order": "Default for {{char}} / Default for {{char}}",
+    "nonote:lastexp-arg": "[][]",
+    "empty-note:all": "[][Ren character note][Default for {{char}}][][ren from settings][ren card negative][#emoji][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral, smug][]",
+    "empty-note:reasoning": "[<r>|</r>| | ] [false] []",
+    "empty-note:if": "no note / no summary",
+    "empty-note:has": "true true true true false false",
+    "empty-note:order": "Default for {{char}} / ",
+    "empty-note:lastexp-arg": "[][]",
+    "ivo:all": "[Default for {{char}}][][Default for {{char}}][Ivo fixes the radio.][ivo card positive][][#emoji][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral, smug][]",
+    "ivo:reasoning": "[<r>|</r>| | ] [false] []",
+    "ivo:if": "AN: Default for {{char}} / S",
+    "ivo:has": "true true true true false false",
+    "ivo:order": "Default for {{char}} / Default for {{char}}",
+    "ivo:lastexp-arg": "[][]",
+    "lio:all": "[Lio note][][Default for {{char}}][][][][#emoji][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral, smug][]",
+    "lio:reasoning": "[<r>|</r>| | ] [false] []",
+    "lio:if": "AN: Lio note / no summary",
+    "lio:has": "true true true true false false",
+    "lio:order": "Default for {{char}} / Lio note",
+    "lio:lastexp-arg": "[][]",
+    "group:all": "[Group note][][Default for {{char}}][][][][#emoji][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral, smug][]",
+    "group:reasoning": "[<r>|</r>| | ] [false] []",
+    "group:if": "AN: Group note / no summary",
+    "group:has": "true true true true false false",
+    "group:order": "Default for {{char}} / Group note",
+    "group:lastexp-arg": "[][]",
+    "order:all": "[[{{defaultExpression}}|{{summary}}|{{charPrefix}}|{{defaultAuthorsNote}}|{{lastMessage}}|{{user}}|{{availableExpressions}}|{{reasoningPrefix}}]][Ren character note][Default for {{char}}][Ren met {{user}} at the pier.][ren from settings][ren card negative][#emoji][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral, smug][]",
+    "order:reasoning": "[<r>|</r>| | ] [false] []",
+    "order:if": "AN: [{{defaultExpression}}|{{summary}}|{{charPrefix}}|{{defaultAuthorsNote}}|{{lastMessage}}|{{user}}|{{availableExpressions}}|{{reasoningPrefix}}] / S",
+    "order:has": "true true true true false false",
+    "order:order": "Default for {{char}} / [{{defaultExpression}}|{{summary}}|{{charPrefix}}|{{defaultAuthorsNote}}|{{lastMessage}}|{{user}}|{{availableExpressions}}|{{reasoningPrefix}}]",
+    "order:lastexp-arg": "[][]"
+   }
+  },
+  "local": {
+   "ext": {
+    "enabled": true,
+    "names": [
+     "assets",
+     "attachments",
+     "caption",
+     "connection-manager",
+     "expressions",
+     "gallery",
+     "memory",
+     "quick-reply",
+     "regex",
+     "stable-diffusion",
+     "token-counter",
+     "translate",
+     "tts",
+     "vectors"
+    ],
+    "manifests": {
+     "assets": {
+      "display_name": "Assets",
+      "loading_order": 15,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Keij#6799",
+      "version": "0.1.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "attachments": {
+      "display_name": "Data Bank (Chat Attachments)",
+      "loading_order": 3,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "caption": {
+      "display_name": "Image Captioning",
+      "loading_order": 4,
+      "requires": [],
+      "optional": [
+       "caption"
+      ],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "connection-manager": {
+      "display_name": "Connection Profiles",
+      "loading_order": 1,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "expressions": {
+      "display_name": "Character Expressions",
+      "loading_order": 6,
+      "requires": [],
+      "optional": [
+       "classify"
+      ],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "gallery": {
+      "display_name": "Gallery",
+      "loading_order": 6,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "City-Unit",
+      "version": "1.5.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "memory": {
+      "display_name": "Summarize",
+      "loading_order": 9,
+      "requires": [],
+      "optional": [
+       "summarize"
+      ],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "quick-reply": {
+      "display_name": "Quick Replies",
+      "loading_order": 12,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "RossAscends#1779",
+      "version": "2.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "regex": {
+      "display_name": "Regex",
+      "loading_order": 1,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "kingbri",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "stable-diffusion": {
+      "display_name": "Image Generation",
+      "loading_order": 10,
+      "requires": [],
+      "optional": [
+       "sd"
+      ],
+      "generate_interceptor": "SD_ProcessTriggers",
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "token-counter": {
+      "display_name": "Token Counter",
+      "loading_order": 15,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "translate": {
+      "display_name": "Chat Translation",
+      "loading_order": 1,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "tts": {
+      "display_name": "TTS",
+      "loading_order": 10,
+      "requires": [],
+      "optional": [
+       "silero-tts",
+       "edge-tts",
+       "coqui-tts"
+      ],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Ouoertheo#7264",
+      "version": "1.0.0",
+      "homePage": "None",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "vectors": {
+      "display_name": "Vector Storage",
+      "loading_order": 100,
+      "requires": [],
+      "optional": [
+       "embeddings"
+      ],
+      "generate_interceptor": "vectors_rearrangeChat",
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     }
+    },
+    "version": "1.19.1"
+   },
+   "answers": {
+    "/api/extra/classify/labels": {
+     "status": 200,
+     "body": {
+      "labels": [
+       "calm",
+       "tense",
+       "joy",
+       "smug"
+      ]
+     }
+    }
+   },
+   "browserNames": [
+    "assets",
+    "attachments",
+    "caption",
+    "connection-manager",
+    "expressions",
+    "gallery",
+    "memory",
+    "quick-reply",
+    "regex",
+    "stable-diffusion",
+    "token-counter",
+    "translate",
+    "tts",
+    "vectors"
+   ],
+   "out": {
+    "note:all": "[AN for {{char}}][Ren character note][Default for {{char}}][Ren met {{user}} at the pier.][ren from settings][ren card negative][#none][calm, tense, joy, smug][]",
+    "note:reasoning": "[<r>|</r>| | ] [false] []",
+    "note:if": "AN: AN for {{char}} / S",
+    "note:has": "true true true true false false",
+    "note:order": "Default for {{char}} / AN for {{char}}",
+    "note:lastexp-arg": "[][]",
+    "nonote:all": "[Default for {{char}}][Ren character note][Default for {{char}}][][ren from settings][ren card negative][#none][calm, tense, joy, smug][]",
+    "nonote:reasoning": "[<r>|</r>| | ] [false] []",
+    "nonote:if": "AN: Default for {{char}} / no summary",
+    "nonote:has": "true true true true false false",
+    "nonote:order": "Default for {{char}} / Default for {{char}}",
+    "nonote:lastexp-arg": "[][]",
+    "empty-note:all": "[][Ren character note][Default for {{char}}][][ren from settings][ren card negative][#none][calm, tense, joy, smug][]",
+    "empty-note:reasoning": "[<r>|</r>| | ] [false] []",
+    "empty-note:if": "no note / no summary",
+    "empty-note:has": "true true true true false false",
+    "empty-note:order": "Default for {{char}} / ",
+    "empty-note:lastexp-arg": "[][]",
+    "ivo:all": "[Default for {{char}}][][Default for {{char}}][Ivo fixes the radio.][ivo card positive][][#none][calm, tense, joy, smug][]",
+    "ivo:reasoning": "[<r>|</r>| | ] [false] []",
+    "ivo:if": "AN: Default for {{char}} / S",
+    "ivo:has": "true true true true false false",
+    "ivo:order": "Default for {{char}} / Default for {{char}}",
+    "ivo:lastexp-arg": "[][]",
+    "lio:all": "[Lio note][][Default for {{char}}][][][][#none][calm, tense, joy, smug][]",
+    "lio:reasoning": "[<r>|</r>| | ] [false] []",
+    "lio:if": "AN: Lio note / no summary",
+    "lio:has": "true true true true false false",
+    "lio:order": "Default for {{char}} / Lio note",
+    "lio:lastexp-arg": "[][]",
+    "group:all": "[Group note][][Default for {{char}}][][][][#none][calm, tense, joy, smug][]",
+    "group:reasoning": "[<r>|</r>| | ] [false] []",
+    "group:if": "AN: Group note / no summary",
+    "group:has": "true true true true false false",
+    "group:order": "Default for {{char}} / Group note",
+    "group:lastexp-arg": "[][]",
+    "order:all": "[[{{defaultExpression}}|{{summary}}|{{charPrefix}}|{{defaultAuthorsNote}}|{{lastMessage}}|{{user}}|{{availableExpressions}}|{{reasoningPrefix}}]][Ren character note][Default for {{char}}][Ren met {{user}} at the pier.][ren from settings][ren card negative][#none][calm, tense, joy, smug][]",
+    "order:reasoning": "[<r>|</r>| | ] [false] []",
+    "order:if": "AN: [{{defaultExpression}}|{{summary}}|{{charPrefix}}|{{defaultAuthorsNote}}|{{lastMessage}}|{{user}}|{{availableExpressions}}|{{reasoningPrefix}}] / S",
+    "order:has": "true true true true false false",
+    "order:order": "Default for {{char}} / [{{defaultExpression}}|{{summary}}|{{charPrefix}}|{{defaultAuthorsNote}}|{{lastMessage}}|{{user}}|{{availableExpressions}}|{{reasoningPrefix}}]",
+    "order:lastexp-arg": "[][]"
+   }
+  },
+  "local-old-bridge": {
+   "ext": {
+    "enabled": true,
+    "names": [
+     "assets",
+     "attachments",
+     "caption",
+     "connection-manager",
+     "expressions",
+     "gallery",
+     "memory",
+     "quick-reply",
+     "regex",
+     "stable-diffusion",
+     "token-counter",
+     "translate",
+     "tts",
+     "vectors"
+    ],
+    "manifests": {
+     "assets": {
+      "display_name": "Assets",
+      "loading_order": 15,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Keij#6799",
+      "version": "0.1.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "attachments": {
+      "display_name": "Data Bank (Chat Attachments)",
+      "loading_order": 3,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "caption": {
+      "display_name": "Image Captioning",
+      "loading_order": 4,
+      "requires": [],
+      "optional": [
+       "caption"
+      ],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "connection-manager": {
+      "display_name": "Connection Profiles",
+      "loading_order": 1,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "expressions": {
+      "display_name": "Character Expressions",
+      "loading_order": 6,
+      "requires": [],
+      "optional": [
+       "classify"
+      ],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "gallery": {
+      "display_name": "Gallery",
+      "loading_order": 6,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "City-Unit",
+      "version": "1.5.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "memory": {
+      "display_name": "Summarize",
+      "loading_order": 9,
+      "requires": [],
+      "optional": [
+       "summarize"
+      ],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "quick-reply": {
+      "display_name": "Quick Replies",
+      "loading_order": 12,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "RossAscends#1779",
+      "version": "2.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "regex": {
+      "display_name": "Regex",
+      "loading_order": 1,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "kingbri",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "stable-diffusion": {
+      "display_name": "Image Generation",
+      "loading_order": 10,
+      "requires": [],
+      "optional": [
+       "sd"
+      ],
+      "generate_interceptor": "SD_ProcessTriggers",
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "token-counter": {
+      "display_name": "Token Counter",
+      "loading_order": 15,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "translate": {
+      "display_name": "Chat Translation",
+      "loading_order": 1,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "tts": {
+      "display_name": "TTS",
+      "loading_order": 10,
+      "requires": [],
+      "optional": [
+       "silero-tts",
+       "edge-tts",
+       "coqui-tts"
+      ],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Ouoertheo#7264",
+      "version": "1.0.0",
+      "homePage": "None",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "vectors": {
+      "display_name": "Vector Storage",
+      "loading_order": 100,
+      "requires": [],
+      "optional": [
+       "embeddings"
+      ],
+      "generate_interceptor": "vectors_rearrangeChat",
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     }
+    },
+    "version": "1.19.1"
+   },
+   "answers": {
+    "/api/extra/classify/labels": {
+     "status": 404,
+     "body": "Not Found"
+    }
+   },
+   "browserNames": [
+    "assets",
+    "attachments",
+    "caption",
+    "connection-manager",
+    "expressions",
+    "gallery",
+    "memory",
+    "quick-reply",
+    "regex",
+    "stable-diffusion",
+    "token-counter",
+    "translate",
+    "tts",
+    "vectors"
+   ],
+   "out": {
+    "note:all": "[AN for {{char}}][Ren character note][Default for {{char}}][Ren met {{user}} at the pier.][ren from settings][ren card negative][#none][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral, smug][]",
+    "note:reasoning": "[<r>|</r>| | ] [false] []",
+    "note:if": "AN: AN for {{char}} / S",
+    "note:has": "true true true true false false",
+    "note:order": "Default for {{char}} / AN for {{char}}",
+    "note:lastexp-arg": "[][]",
+    "nonote:all": "[Default for {{char}}][Ren character note][Default for {{char}}][][ren from settings][ren card negative][#none][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral, smug][]",
+    "nonote:reasoning": "[<r>|</r>| | ] [false] []",
+    "nonote:if": "AN: Default for {{char}} / no summary",
+    "nonote:has": "true true true true false false",
+    "nonote:order": "Default for {{char}} / Default for {{char}}",
+    "nonote:lastexp-arg": "[][]",
+    "empty-note:all": "[][Ren character note][Default for {{char}}][][ren from settings][ren card negative][#none][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral, smug][]",
+    "empty-note:reasoning": "[<r>|</r>| | ] [false] []",
+    "empty-note:if": "no note / no summary",
+    "empty-note:has": "true true true true false false",
+    "empty-note:order": "Default for {{char}} / ",
+    "empty-note:lastexp-arg": "[][]",
+    "ivo:all": "[Default for {{char}}][][Default for {{char}}][Ivo fixes the radio.][ivo card positive][][#none][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral, smug][]",
+    "ivo:reasoning": "[<r>|</r>| | ] [false] []",
+    "ivo:if": "AN: Default for {{char}} / S",
+    "ivo:has": "true true true true false false",
+    "ivo:order": "Default for {{char}} / Default for {{char}}",
+    "ivo:lastexp-arg": "[][]",
+    "lio:all": "[Lio note][][Default for {{char}}][][][][#none][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral, smug][]",
+    "lio:reasoning": "[<r>|</r>| | ] [false] []",
+    "lio:if": "AN: Lio note / no summary",
+    "lio:has": "true true true true false false",
+    "lio:order": "Default for {{char}} / Lio note",
+    "lio:lastexp-arg": "[][]",
+    "group:all": "[Group note][][Default for {{char}}][][][][#none][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral, smug][]",
+    "group:reasoning": "[<r>|</r>| | ] [false] []",
+    "group:if": "AN: Group note / no summary",
+    "group:has": "true true true true false false",
+    "group:order": "Default for {{char}} / Group note",
+    "group:lastexp-arg": "[][]",
+    "order:all": "[[{{defaultExpression}}|{{summary}}|{{charPrefix}}|{{defaultAuthorsNote}}|{{lastMessage}}|{{user}}|{{availableExpressions}}|{{reasoningPrefix}}]][Ren character note][Default for {{char}}][Ren met {{user}} at the pier.][ren from settings][ren card negative][#none][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral, smug][]",
+    "order:reasoning": "[<r>|</r>| | ] [false] []",
+    "order:if": "AN: [{{defaultExpression}}|{{summary}}|{{charPrefix}}|{{defaultAuthorsNote}}|{{lastMessage}}|{{user}}|{{availableExpressions}}|{{reasoningPrefix}}] / S",
+    "order:has": "true true true true false false",
+    "order:order": "Default for {{char}} / [{{defaultExpression}}|{{summary}}|{{charPrefix}}|{{defaultAuthorsNote}}|{{lastMessage}}|{{user}}|{{availableExpressions}}|{{reasoningPrefix}}]",
+    "order:lastexp-arg": "[][]"
+   }
+  },
+  "extras": {
+   "ext": {
+    "enabled": true,
+    "names": [
+     "assets",
+     "attachments",
+     "caption",
+     "connection-manager",
+     "expressions",
+     "gallery",
+     "memory",
+     "quick-reply",
+     "regex",
+     "stable-diffusion",
+     "token-counter",
+     "translate",
+     "tts",
+     "vectors"
+    ],
+    "manifests": {
+     "assets": {
+      "display_name": "Assets",
+      "loading_order": 15,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Keij#6799",
+      "version": "0.1.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "attachments": {
+      "display_name": "Data Bank (Chat Attachments)",
+      "loading_order": 3,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "caption": {
+      "display_name": "Image Captioning",
+      "loading_order": 4,
+      "requires": [],
+      "optional": [
+       "caption"
+      ],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "connection-manager": {
+      "display_name": "Connection Profiles",
+      "loading_order": 1,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "expressions": {
+      "display_name": "Character Expressions",
+      "loading_order": 6,
+      "requires": [],
+      "optional": [
+       "classify"
+      ],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "gallery": {
+      "display_name": "Gallery",
+      "loading_order": 6,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "City-Unit",
+      "version": "1.5.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "memory": {
+      "display_name": "Summarize",
+      "loading_order": 9,
+      "requires": [],
+      "optional": [
+       "summarize"
+      ],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "quick-reply": {
+      "display_name": "Quick Replies",
+      "loading_order": 12,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "RossAscends#1779",
+      "version": "2.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "regex": {
+      "display_name": "Regex",
+      "loading_order": 1,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "kingbri",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "stable-diffusion": {
+      "display_name": "Image Generation",
+      "loading_order": 10,
+      "requires": [],
+      "optional": [
+       "sd"
+      ],
+      "generate_interceptor": "SD_ProcessTriggers",
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "token-counter": {
+      "display_name": "Token Counter",
+      "loading_order": 15,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "translate": {
+      "display_name": "Chat Translation",
+      "loading_order": 1,
+      "requires": [],
+      "optional": [],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "tts": {
+      "display_name": "TTS",
+      "loading_order": 10,
+      "requires": [],
+      "optional": [
+       "silero-tts",
+       "edge-tts",
+       "coqui-tts"
+      ],
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Ouoertheo#7264",
+      "version": "1.0.0",
+      "homePage": "None",
+      "hooks": {
+       "activate": "init"
+      }
+     },
+     "vectors": {
+      "display_name": "Vector Storage",
+      "loading_order": 100,
+      "requires": [],
+      "optional": [
+       "embeddings"
+      ],
+      "generate_interceptor": "vectors_rearrangeChat",
+      "js": "index.js",
+      "css": "style.css",
+      "author": "Cohee#1207",
+      "version": "1.0.0",
+      "homePage": "https://github.com/SillyTavern/SillyTavern",
+      "hooks": {
+       "activate": "init"
+      }
+     }
+    },
+    "version": "1.19.1"
+   },
+   "answers": {},
+   "browserNames": [
+    "assets",
+    "attachments",
+    "caption",
+    "connection-manager",
+    "expressions",
+    "gallery",
+    "memory",
+    "quick-reply",
+    "regex",
+    "stable-diffusion",
+    "token-counter",
+    "translate",
+    "tts",
+    "vectors"
+   ],
+   "out": {
+    "note:all": "[AN for {{char}}][Ren character note][Default for {{char}}][Ren met {{user}} at the pier.][ren from settings][ren card negative][#none][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral][]",
+    "note:reasoning": "[<r>|</r>| | ] [false] []",
+    "note:if": "AN: AN for {{char}} / S",
+    "note:has": "true true true true false false",
+    "note:order": "Default for {{char}} / AN for {{char}}",
+    "note:lastexp-arg": "[][]",
+    "nonote:all": "[Default for {{char}}][Ren character note][Default for {{char}}][][ren from settings][ren card negative][#none][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral][]",
+    "nonote:reasoning": "[<r>|</r>| | ] [false] []",
+    "nonote:if": "AN: Default for {{char}} / no summary",
+    "nonote:has": "true true true true false false",
+    "nonote:order": "Default for {{char}} / Default for {{char}}",
+    "nonote:lastexp-arg": "[][]",
+    "empty-note:all": "[][Ren character note][Default for {{char}}][][ren from settings][ren card negative][#none][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral][]",
+    "empty-note:reasoning": "[<r>|</r>| | ] [false] []",
+    "empty-note:if": "no note / no summary",
+    "empty-note:has": "true true true true false false",
+    "empty-note:order": "Default for {{char}} / ",
+    "empty-note:lastexp-arg": "[][]",
+    "ivo:all": "[Default for {{char}}][][Default for {{char}}][Ivo fixes the radio.][ivo card positive][][#none][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral][]",
+    "ivo:reasoning": "[<r>|</r>| | ] [false] []",
+    "ivo:if": "AN: Default for {{char}} / S",
+    "ivo:has": "true true true true false false",
+    "ivo:order": "Default for {{char}} / Default for {{char}}",
+    "ivo:lastexp-arg": "[][]",
+    "lio:all": "[Lio note][][Default for {{char}}][][][][#none][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral][]",
+    "lio:reasoning": "[<r>|</r>| | ] [false] []",
+    "lio:if": "AN: Lio note / no summary",
+    "lio:has": "true true true true false false",
+    "lio:order": "Default for {{char}} / Lio note",
+    "lio:lastexp-arg": "[][]",
+    "group:all": "[Group note][][Default for {{char}}][][][][#none][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral][]",
+    "group:reasoning": "[<r>|</r>| | ] [false] []",
+    "group:if": "AN: Group note / no summary",
+    "group:has": "true true true true false false",
+    "group:order": "Default for {{char}} / Group note",
+    "group:lastexp-arg": "[][]",
+    "order:all": "[[{{defaultExpression}}|{{summary}}|{{charPrefix}}|{{defaultAuthorsNote}}|{{lastMessage}}|{{user}}|{{availableExpressions}}|{{reasoningPrefix}}]][Ren character note][Default for {{char}}][Ren met {{user}} at the pier.][ren from settings][ren card negative][#none][admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral][]",
+    "order:reasoning": "[<r>|</r>| | ] [false] []",
+    "order:if": "AN: [{{defaultExpression}}|{{summary}}|{{charPrefix}}|{{defaultAuthorsNote}}|{{lastMessage}}|{{user}}|{{availableExpressions}}|{{reasoningPrefix}}] / S",
+    "order:has": "true true true true false false",
+    "order:order": "Default for {{char}} / [{{defaultExpression}}|{{summary}}|{{charPrefix}}|{{defaultAuthorsNote}}|{{lastMessage}}|{{user}}|{{availableExpressions}}|{{reasoningPrefix}}]",
+    "order:lastexp-arg": "[][]"
+   }
+  },
+  "config-off": {
+   "ext": {
+    "enabled": false,
+    "names": [],
+    "manifests": {},
+    "version": "1.19.1"
+   },
+   "answers": {},
+   "browserNames": [],
+   "out": {
+    "note:all": "[AN for {{char}}][Ren character note][Default for {{char}}][{{summary}}][{{charPrefix}}][{{charNegativePrefix}}][{{defaultExpression}}][{{availableExpressions}}][{{lastExpression}}]",
+    "note:reasoning": "[<r>|</r>| | ] [false] []",
+    "note:if": "AN: AN for {{char}} / S",
+    "note:has": "false false false false false false",
+    "note:order": "Default for {{char}} / AN for {{char}}",
+    "note:lastexp-arg": "[{{lastExpression::Ivo}}][{{lastExpression::Ren}}]",
+    "nonote:all": "[Default for {{char}}][Ren character note][Default for {{char}}][{{summary}}][{{charPrefix}}][{{charNegativePrefix}}][{{defaultExpression}}][{{availableExpressions}}][{{lastExpression}}]",
+    "nonote:reasoning": "[<r>|</r>| | ] [false] []",
+    "nonote:if": "AN: Default for {{char}} / S",
+    "nonote:has": "false false false false false false",
+    "nonote:order": "Default for {{char}} / Default for {{char}}",
+    "nonote:lastexp-arg": "[{{lastExpression::Ivo}}][{{lastExpression::Ren}}]",
+    "empty-note:all": "[][Ren character note][Default for {{char}}][{{summary}}][{{charPrefix}}][{{charNegativePrefix}}][{{defaultExpression}}][{{availableExpressions}}][{{lastExpression}}]",
+    "empty-note:reasoning": "[<r>|</r>| | ] [false] []",
+    "empty-note:if": "no note / S",
+    "empty-note:has": "false false false false false false",
+    "empty-note:order": "Default for {{char}} / ",
+    "empty-note:lastexp-arg": "[{{lastExpression::Ivo}}][{{lastExpression::Ren}}]",
+    "ivo:all": "[Default for {{char}}][][Default for {{char}}][{{summary}}][{{charPrefix}}][{{charNegativePrefix}}][{{defaultExpression}}][{{availableExpressions}}][{{lastExpression}}]",
+    "ivo:reasoning": "[<r>|</r>| | ] [false] []",
+    "ivo:if": "AN: Default for {{char}} / S",
+    "ivo:has": "false false false false false false",
+    "ivo:order": "Default for {{char}} / Default for {{char}}",
+    "ivo:lastexp-arg": "[{{lastExpression::Ivo}}][{{lastExpression::Ivo}}]",
+    "lio:all": "[Lio note][][Default for {{char}}][{{summary}}][{{charPrefix}}][{{charNegativePrefix}}][{{defaultExpression}}][{{availableExpressions}}][{{lastExpression}}]",
+    "lio:reasoning": "[<r>|</r>| | ] [false] []",
+    "lio:if": "AN: Lio note / S",
+    "lio:has": "false false false false false false",
+    "lio:order": "Default for {{char}} / Lio note",
+    "lio:lastexp-arg": "[{{lastExpression::Ivo}}][{{lastExpression::Lio}}]",
+    "group:all": "[Group note][][Default for {{char}}][{{summary}}][{{charPrefix}}][{{charNegativePrefix}}][{{defaultExpression}}][{{availableExpressions}}][{{lastExpression}}]",
+    "group:reasoning": "[<r>|</r>| | ] [false] []",
+    "group:if": "AN: Group note / S",
+    "group:has": "false false false false false false",
+    "group:order": "Default for {{char}} / Group note",
+    "group:lastexp-arg": "[{{lastExpression::Ivo}}][{{lastExpression::}}]",
+    "order:all": "[[{{defaultExpression}}|{{summary}}|{{charPrefix}}|{{defaultAuthorsNote}}|{{lastMessage}}|{{user}}|{{availableExpressions}}|{{reasoningPrefix}}]][Ren character note][Default for {{char}}][{{summary}}][{{charPrefix}}][{{charNegativePrefix}}][{{defaultExpression}}][{{availableExpressions}}][{{lastExpression}}]",
+    "order:reasoning": "[<r>|</r>| | ] [false] []",
+    "order:if": "AN: [{{defaultExpression}}|{{summary}}|{{charPrefix}}|{{defaultAuthorsNote}}|{{lastMessage}}|{{user}}|{{availableExpressions}}|{{reasoningPrefix}}] / S",
+    "order:has": "false false false false false false",
+    "order:order": "Default for {{char}} / [{{defaultExpression}}|{{summary}}|{{charPrefix}}|{{defaultAuthorsNote}}|{{lastMessage}}|{{user}}|{{availableExpressions}}|{{reasoningPrefix}}]",
+    "order:lastexp-arg": "[{{lastExpression::Ivo}}][{{lastExpression::Ren}}]"
+   }
+  }
+ }
+}

@@ -17,6 +17,7 @@ import { makeLocks, lockKey } from './lock.mjs';
 import { startServerAutonomousScheduler } from './marinara/server-autonomous-scheduler.service.js';
 import { logger } from './log.mjs';
 import { chatData, chatParts, groupOf, personaFor, personaOf, readCards, readImages, writeExtensionField } from './stread.mjs';
+import { setZone, setLocale, atServer } from './zone.mjs';
 
 // (Marinara's server scheduler reads the answer of its /api/generate as these events)
 const SSE = {
@@ -38,18 +39,42 @@ const refuse = (statusCode, text) => Object.assign(new Error(text), { statusCode
 // from: 'extension' (실리의 확장 폴더의 코드: plugin/code.mjs) · 'plugin' (이 플러그인 폴더의 코드)
 export async function startWork({ root, store, st = null, schedule = true, from = 'plugin' }) {
     const G = await import('../src/phone2go.js');
+    const AI = await import('../src/ai.js');
     const { liveWorld, liveKey, enqueueJob, LIVE_SHARED, renamePersona } = await import('../src/phone2store.js');
     const { kitOf, cardsFor } = await import('../src/phone2kit.js');
     const { intentWhy, chatIdOf } = await import('../src/phone2sched.js');
     const { VERSION } = await import('../src/core.js');
     // 실리 브라우저의 요청 코드를 옮긴 것 (plugin/st: 실리 1.19.1 그대로). naload.js가 먼저예요: power-user.js를 script.js보다 먼저 불러요(실리의 차례)
     const STL = await import('./st/naload.js');
+    // (SillyTavern's connection check — online_status, the model lists, the chosen model's correction —, its replies kept while the
+    //  settings stay the same: plugin/st/nastatus.js)
+    const STS = await import('./st/nastatus.js');
     const STP = {
         script: await import('./st/public/script.js'), groups: await import('./st/public/scripts/group-chats.js'), power: await import('./st/public/scripts/power-user.js'),
         oai: await import('./st/public/scripts/openai.js'), context: await import('./st/public/scripts/st-context.js'), ext: await import('./st/public/scripts/extensions.js'), fetch: await import('./st/public/naFetch.js'),
     };
 
     const readSettings = async () => { try { const v = JSON.parse(await fs.readFile(path.join(root, 'settings.json'), 'utf8')); return obj(v) ? v : {}; } catch (err) { if (err?.code === 'ENOENT') return {}; throw err; } };
+    // ---- 브라우저의 시간대 · 언어 (src/phone2keepon.js keepDevice가 확장 설정에 적어요: { timeZone, locale, intl, isMobile })
+    //   실리 브라우저 코드와 우리 코드는 그 페이지처럼 그 시간대 · 언어로 돌아요(plugin/zone.mjs: 이 스레드만). 아직 안 적었으면 서버 컴퓨터의 것(전과 같아요)
+    //   timeZone: Intl의 시간대 · locale: 실리 i18n.js의 localeFile(getCurrentLocale) · intl: Intl의 기본 언어
+    //   기기가 둘이면 마지막으로 설정을 저장한 브라우저의 것이에요(settings.json이 하나라서)
+    //   규칙: 일마다 settings.json에서 다시 넣고(바뀌면 다음 일부터), 일이 끝나도 되돌리지 않아요 — 일과 일 사이(스케줄러 · 늦은 답장 보기)도 그 시간대예요.
+    //   서버 컴퓨터의 시간대 · 언어는 실리 서버의 코드를 옮긴 것만, zone.mjs atServer 안에서 동기로(그사이 다른 코드가 끼어들지 않아요): withWorld
+    const STI = await import('./st/public/scripts/i18n.js');
+    const badZones = new Set();
+    function useDevice(settings) {
+        const d = settings.extension_settings?.narrative_archive?.device, dev = obj(d) ? d : {};
+        // (Chrome writes Etc/Unknown when it cannot tell the computer's zone, and runs in UTC then)
+        const raw = typeof dev.timeZone === 'string' ? dev.timeZone : '', tz = raw === 'Etc/Unknown' ? 'UTC' : raw;
+        try { setZone(tz || null); } catch (err) {
+            if (!(err instanceof RangeError)) throw err;
+            setZone(null);
+            if (!badZones.has(tz)) { if (badZones.size >= 100) badZones.clear(); badZones.add(tz); logger.warn('브라우저 시간대를 알 수 없어 서버 시간대를 사용합니다: %s', tz.slice(0, 64)); }
+        }
+        try { setLocale(typeof dev.intl === 'string' && dev.intl ? dev.intl : null); } catch (err) { if (!(err instanceof RangeError)) throw err; setLocale(null); }
+        STI.__naSet({ localeFile: typeof dev.locale === 'string' && dev.locale ? dev.locale.toLowerCase() : 'en' });
+    }
     const askSt = async (url, body) => {
         if (!st) throw new Error('실리 서버에 연결할 수 없습니다.');
         return st(url, body);
@@ -269,20 +294,40 @@ export async function startWork({ root, store, st = null, schedule = true, from 
             if (no) throw refuse(400, no);
             const kit = kitOf(entry.real);
             const settings = await readSettings();
+            // (the browser's zone and language, for this job and kept after it: SillyTavern's browser code and ours run in them. Only SillyTavern's
+            //  server code ported here runs in the server's own, as its server does — inside zone.mjs atServer, synchronously, so no other code
+            //  runs in the server's zone in between: stNow's folder reads — stread.mjs readCards' chat name, readImages' order — and naLoadPresets)
+            useDevice(settings);
             const now = await stNow(entry.real, kit, settings);
             // (SillyTavern's browser state for this job, as its page would hold it with this chat open: settings.json and the preset
             //  files read now — plugin/st/naload.js, SillyTavern's own loading —, then this chat's names, cards, group, messages,
             //  metadata and persona. Set again for every job: nothing of the one before stays)
-            STL.naLoad(settings, await STL.naLoadPresets(root));
+            // (SillyTavern's server code: the preset files' order by localeCompare, in the server's language. Its body is synchronous —
+            //  readdirSync · readFileSync, no await —: all of it runs inside atServer)
+            const presets = await atServer(() => STL.naLoadPresets(root));
+            // (with the extensions SillyTavern's page finds — its /api/extensions/discover through the bridge —: the macros of the built-in ones it turns on)
+            STL.naLoad(settings, presets, await STL.naDiscover({ root, send: st ? stFetch : null }));
             // (a copy: the chat file's read is frozen, and SillyTavern's code may write into its metadata — {{setvar}} — as the page's)
             now.chatMetadata = { ...structuredClone(now.metadata), narrative_archive: entry.real };
-            STP.script.__naSet({ name1: now.name1, name2: now.groupId ? '' : String(now.characters[now.characterId]?.name ?? ''), characters: now.characters, this_chid: now.characterId, chat: now.chat, chat_metadata: now.chatMetadata });
-            STP.groups.__naSet({ groups: now.groups, selected_group: now.groupId });
-            STP.power.power_user.persona_description = now.persona;
-            STP.fetch.__naSetFetch(stFetch);
             setContext(contextOf(entry, kit, settings, app, now));
             globalThis.__naStOpenai = stOpenai;
             try {
+                // (the connection SillyTavern's page makes with these settings — its getStatusOpen · getStatusTextgen · getStatusKobold —, from the
+                //  replies kept for them, asked again through the bridge when the settings, the keys or the time say so — behind the job, which
+                //  uses what is kept. It never throws: without a status — an older bridge, a backend that is down — the request is built as before,
+                //  with no connection. Only for a world whose jobs can go through SillyTavern's own request code: usesSt)
+                let skip = false;
+                try { skip = !usesSt(entry.real); } catch { skip = false; }
+                try { await STS.naStatus({ root, send: stFetch, log: text => logger.warn('%s', text), skip }); } catch (err) { logger.warn(err instanceof Error ? err : {}, '상태를 가져오는 중 오류가 발생했습니다'); }
+                // (this chat, as the page holds it once the chat is open: after the connection, which the page makes before)
+                STP.script.__naSet({ name1: now.name1, name2: now.groupId ? '' : String(now.characters[now.characterId]?.name ?? ''), characters: now.characters, this_chid: now.characterId, chat: now.chat, chat_metadata: now.chatMetadata });
+                STP.groups.__naSet({ groups: now.groups, selected_group: now.groupId });
+                STP.power.power_user.persona_description = now.persona;
+                // (what the page does when it opens the chat for the macros: the author's note's default into this job's metadata copy, no last
+                //  expression yet, the expression list — plugin/st/namacros.js. A local classifier's list is asked of SillyTavern through the bridge,
+                //  waited for at most 15 seconds and only for a world that uses SillyTavern's connection: skip. Before the bridge is given below)
+                await STL.naMacrosJob({ root, send: st ? stFetch : null, skip });
+                STP.fetch.__naSetFetch(stFetch);
                 // (the persona's name changed in SillyTavern: the live phone's "me" follows before anything is judged — the
                 //  browser does it when the phone opens, phone2go.js liveFollowPersona. Only in memory here: it goes into the
                 //  store with the job's own save, a reply. A save of its own could meet the browser's — 409 — and fail a
@@ -296,6 +341,24 @@ export async function startWork({ root, store, st = null, schedule = true, from 
         return run;
     }
 
+    // 이 세계의 일이 실리 자신의 요청 코드를 지날 수 있나 (연결 프로필: stProfiles.sendRequest · 실리 연결 방식: stOpenai.createGenerationParameters).
+    // 연결 상태 · 모델 목록(naStatus)을 읽는 것은 그 코드뿐이에요: 커스텀 API · Vertex로만 보내는 세계는 연결 확인을 하지 않아요(공급자 호출 · Azure의 돈 · 기다림 없이).
+    // withWorld 안에서(설정을 읽은 뒤) 불러요. 모르면 true
+    //   - AI 기능 모델 · 초안 모델 (ai.js askAIOnce · askDraft → callConn: 요약 · 폰 채우기 · 답장의 기본 연결). 실리 연결 방식('source'),
+    //     또는 AI 기능 모델이 실리 쪽('st')이고 보낼 프로필이 있을 때 (ai.js aiProfileFor. 없으면 서버는 보내지 않아요)
+    //   - 방마다의 답장 (phone2go.js liveReplyPlan · replyRoute: 프로필, 또는 그 방의 연결이 실리 연결 방식)
+    //   - 스케줄 · 그림 설명의 연결 (phone2go.js askVia: 프로필)
+    function usesSt(real) {
+        const a = AI.connSettings('ai'), d = AI.connSettings('dr');
+        if (a.mode === 'source' || d.mode === 'source') return true;
+        if (!AI.OWN_MODES.includes(a.mode) && AI.aiProfileFor({ profileNow: true })) return true;
+        for (const roomId of Object.keys(liveWorld(real)?.messenger?.rooms || {})) {
+            const plan = G.liveReplyPlan(real, roomId);
+            if (plan.profile || plan.t?.mode === 'source') return true;
+        }
+        for (const id of [G.liveScheduleConnection(real), G.liveCaptioning(real)?.connectionId]) if (String(id || '').startsWith('profile:')) return true;
+        return false;
+    }
     // (the profiles of the world being run: what its context lists — withWorld put it in)
     const ctxNow = () => { try { return globalThis.SillyTavern.getContext(); } catch { return null; } };
     // 이 방의 답장을 서버가 보낼 수 있나 → '' (돼요) | 안 되는 이유. withWorld 안에서 불러요

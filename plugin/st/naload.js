@@ -25,11 +25,19 @@ import { ConnectionManagerRequestService } from './public/scripts/extensions/sha
 import { NaAjaxWait, naAjaxFill, naFetchFailures } from './public/naFetch.js';
 import { initMacros } from './public/scripts/macros.js';
 import { uuidv4 } from './public/scripts/utils.js';
+import { naMacros } from './namacros.js';
 
 export { ConnectionManagerRequestService };
+// (실리가 initMacros 밖에서 등록하는 매크로: 확장 찾기 · 일마다 채팅을 열 때 하는 것. plugin/st/namacros.js)
+export { naDiscover, naMacrosJob } from './namacros.js';
 
 // script.js의 max_context 처음 값 (settings.json에 없을 때 실리 페이지가 쓰는 값)
 const MAX_CONTEXT_START = SCRIPT.max_context;
+// script.js 408 name1의 처음 값 (default_user_name)
+const NAME1_START = SCRIPT.name1;
+let pageName1 = NAME1_START;
+/** 마지막 naLoad의 settings.json으로 실리 페이지가 연 뒤의 name1 (script.js getSettings 7929~7932). 채팅을 열기 전의 이름이에요. */
+export const naPageName1 = () => pageName1;
 const obj = v => !!v && typeof v === 'object' && !Array.isArray(v);
 
 // 페이지를 열 때 한 번 하는 것 (실리 script.js firstLoadInit 694~):
@@ -38,7 +46,8 @@ const obj = v => !!v && typeof v === 'object' && !Array.isArray(v);
 //  - 761 initTokenizers → tokenizers.js 1214~1221 TEXTGEN_TOKENIZERS 채우기 (그 뒤 줄은 이벤트 · 브라우저 캐시라 서버에 없음)
 //  - 8019 initMacros (macros.js 719~747: power_user를 읽은 뒤). 변수 매크로는 등록할 때 SillyTavern.getContext()를 잡아 둬요(variable-macros.js 10):
 //    그때만 변수 묶음을 주는 getContext를 끼워요. 실리는 옛 엔진(experimental_macro_engine 꺼짐)일 때만 옛 매크로 두 개(isMobile · lastGenerationType)를
-//    더 등록해요. 서버도 처음 읽은 설정대로 한 번만 해요: 실리를 켜 둔 채 그 설정을 바꾼 것과 같아요(실리도 다시 열 때까지 그대로예요).
+//    더 등록해요(719~743). 서버는 여기서는 새 엔진으로 불러 그 둘을 건너뛰고, 엔진 플래그가 바뀔 때마다 namacros.js가 실리 차례로 다시 해요
+//    (실리 페이지를 새로 연 것과 같아요).
 let inited = false;
 export function naInit() {
     if (inited) return;
@@ -55,7 +64,9 @@ export function naInit() {
     );
     const had = globalThis.SillyTavern;
     globalThis.SillyTavern = { getContext: () => ({ variables: SC.variables }) };
-    try { initMacros(); } finally { globalThis.SillyTavern = had; }
+    const flag = PU.power_user.experimental_macro_engine;
+    PU.power_user.experimental_macro_engine = true;
+    try { initMacros(); } finally { globalThis.SillyTavern = had; PU.power_user.experimental_macro_engine = flag; }
 }
 
 // ---------- 프리셋 파일 (실리 서버 src/endpoints/settings.js의 /api/settings/get 218~296) ----------
@@ -381,7 +392,11 @@ function loadOpenAISettingsValues(oai_settings) {
     const nanoValue = oai_settings.nanogpt_provider;
     const nanoText = nanoValue == null ? '' : (typeof nanoValue === 'number' ? nanoValue + '' : nanoValue);
     oai_settings.nanogpt_provider = String(['', ...TGM.NANOGPT_PROVIDERS.map(p => p.id)].includes(nanoText) ? nanoText : '');
-    // 4404 → 6967~6977: #chat_completion_source의 고른 값(저장된 소스가 옵션에 있으면 그대로). 그 밖의 줄은 화면 · 상태 확인
+    // 4404 → 6967~6969: #chat_completion_source에 넣고 고른 옵션을 다시 읽어요 `String($(this).find(':selected').val())`.
+    // 옵션(index.html 2922~2954, 주석 처리된 CometAPI는 옵션이 아니에요)에 없으면 골라진 것이 없어서 'undefined'. 그 밖의 줄은 화면 · 상태 확인
+    const source = oai_settings.chat_completion_source;
+    const sourceText = source == null ? '' : (typeof source === 'number' ? source + '' : source);
+    oai_settings.chat_completion_source = String(OAI.__naChatCompletionSourceOptions.includes(sourceText) ? sourceText : undefined);
 }
 
 // 실리 extensions/connection-manager/index.js 27~30의 DEFAULT_SETTINGS
@@ -395,10 +410,16 @@ const CONNECTION_MANAGER_DEFAULT_SETTINGS = {
  * data가 없으면 프리셋 목록(OpenAI · TextGen · instruct · context · sysprompt · reasoning · Kobold · NovelAI)은 건드리지 않아요.
  * @param {object} settings settings.json을 읽은 것
  * @param {object} [data] naLoadPresets(사용자 폴더)가 돌려준 것
+ * @param {object} [ext] naDiscover가 돌려준 것(실리 페이지가 찾는 확장). 없으면 확장을 찾지 못한 페이지처럼(작가 노트 · 추론 매크로만)
  */
-export function naLoad(settings, data) {
+export function naLoad(settings, data, ext) {
     settings = obj(settings) ? settings : {};
     data = obj(data) ? data : undefined;
+    // script.js 7929~7932: name1 = settings.username (빈 글자가 아닐 때). 아니면 페이지를 연 그대로(script.js 408 default_user_name).
+    // 실리 페이지는 채팅을 열기 전에 이 이름으로 연결해요(연결 확인의 custom_include_headers 매크로 {{user}}: plugin/st/nastatus.js).
+    // 이 채팅의 이름은 일꾼이 그 뒤에 넣어요(plugin/work.mjs withWorld)
+    pageName1 = settings.username !== undefined && settings.username !== '' ? settings.username : NAME1_START;
+    SCRIPT.__naSet({ name1: pageName1 });
     // script.js 7935: accountStorage.init(settings?.accountStorage)
     ACC.__naSet({ accountStorage: settings.accountStorage });
     // script.js 7943~7945: amount_gen · max_context
@@ -409,6 +430,11 @@ export function naLoad(settings, data) {
         // script.js 7952 loadKoboldSettings · 7955 loadNovelSettings의 프리셋 목록 부분 (kai-settings.js 98~110, nai-settings.js 216~229)
         KAI.__naSet({ koboldai_settings: data.koboldai_settings.map(item => JSON.parse(item)), koboldai_setting_names: nameIndex(data.koboldai_setting_names) });
         NAI.__naSet({ novelai_settings: data.novelai_settings.map(item => JSON.parse(item)), novelai_setting_names: nameIndex(data.novelai_setting_names) });
+    }
+    // script.js 7952 loadKoboldSettings(data, settings.kai_settings ?? settings, settings) 114: Kobold 주소 (연결 확인 getStatusKobold가 써요, plugin/st/nastatus.js)
+    {
+        const preset = settings.kai_settings ?? settings;
+        KAI.kai_settings.api_server = preset.api_server ?? settings.api_server;
     }
 
     // script.js 7958 loadTextGenSettings(data, settings)
@@ -465,7 +491,7 @@ export function naLoad(settings, data) {
     SCRIPT.__naSet({ main_api: api });
 
     // script.js 8021~8031 · extensions.js loadExtensionSettings 1783~1786: 기본값 위에 Object.assign
-    // (data.enable_extensions = 실리 config.yaml extensions.enabled, 기본 true. 서버는 켜진 것으로 봐요)
+    // (data.enable_extensions = 실리 config.yaml extensions.enabled: 매크로를 등록하는 확장은 ext.enabled로 봐요(namacros.js). 연결 관리자는 켜진 것으로 봐요)
     EXT.__naSet({ extension_settings: structuredClone(settings.extension_settings ?? {}) });
     // 그 뒤 activateExtensions: 꺼진 확장 목록에 없으면 connection-manager/index.js init 698~714의 값 부분
     const extension_settings = EXT.extension_settings;
@@ -479,6 +505,8 @@ export function naLoad(settings, data) {
         // 714 renderConnectionProfiles 449: 화면 목록을 만들면서 프로필 배열 자체를 이름 차례로 정렬해요(getSupportedProfiles 차례가 이것)
         extension_settings.connectionManager.profiles.sort((a, b) => a.name.localeCompare(b.name));
     }
+    // extensions.js 1793~1803 extensionNames · activateExtensions의 기본 확장(표정 · 요약 · 그림 생성) · firstLoadInit 763 작가 노트 · 777 추론의 매크로 (plugin/st/namacros.js)
+    naMacros(ext);
 }
 
 // 한 번의 요청 사이에 실리 코드가 바꾸는 전역 값 (naSendRequest가 다시 할 때 되돌려요)

@@ -1,10 +1,23 @@
 // 일꾼 스레드의 들머리 (docs/PHONE2-PLAN.md "서버 플러그인" 3-2b). plugin/host.mjs가 띄워요.
-// 순서가 중요해요: 먼저 "아무것도 안 하는 화면"을 끼우고(screen.mjs), 그다음에 진짜 답장 코드를 불러요(work.mjs).
+// 순서가 중요해요: 맨 먼저 zone.mjs(이 스레드의 시간대 · 언어. 원래 Date · Intl을 잡아 두고 바로 끼워요: 그 뒤에 불러오는 코드는 모두 끼운 것을 써요), 그다음 "아무것도 안 하는 화면"을 끼우고(screen.mjs),
+// 그다음에 진짜 답장 코드를 불러요(work.mjs).
 // 저장은 본체에 부탁해요 (저장이 한 곳에만 있어야 rev가 안 꼬여요). 실리 서버로 가는 요청(/api/… · /user/…)은 다리로 넘겨요.
+import './zone.mjs';
 import './screen.mjs';
 import { parentPort, workerData } from 'node:worker_threads';
 
 const { root, bridge = null, schedule = true, from = 'plugin' } = workerData;
+// (a promise nobody waits for that fails — SillyTavern's own code starts some without await, as its getStatusTextgen does its model list
+//  loaders —: in the browser that is one "Uncaught (in promise)" line in the console and the page goes on. Node would end this thread.
+//  Written to SillyTavern's window instead, once for the same text, and the worker goes on. Only the first line: an error may carry a reply's body)
+const uncaught = new Set();
+process.on('unhandledRejection', err => {
+    const why = String(err?.stack || err?.message || err).split('\n')[0];
+    if (uncaught.has(why)) return;
+    if (uncaught.size >= 100) uncaught.delete(uncaught.values().next().value);
+    uncaught.add(why);
+    console.error('[narrative-archive plugin]', `처리되지 않은 오류가 발생했습니다: ${why}`);
+});
 let seq = 0, writes = 0;
 const waiting = new Map();
 // 본체에 부탁하기 → 답

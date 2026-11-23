@@ -3,10 +3,16 @@
 import { textgenerationwebui_settings as textgen_settings } from './textgen-settings.js';
 import { tokenizers } from './tokenizers.js';
 
-// 실리 public/scripts/textgen-models.js 15~15
+// 실리 public/scripts/textgen-models.js 12~21
+let mancerModels = [];
+let togetherModels = [];
+let infermaticAIModels = [];
 let dreamGenModels = [];
-
-// 실리 public/scripts/textgen-models.js 21~21
+let vllmModels = [];
+let aphroditeModels = [];
+let featherlessModels = [];
+let tabbyModels = [];
+let llamacppModels = [];
 export let openRouterModels = [];
 
 // 실리 public/scripts/textgen-models.js 23~113
@@ -327,6 +333,186 @@ const NANOGPT_PROVIDERS = [
     },
 ];
 
+// 실리 public/scripts/textgen-models.js 484~492
+export async function loadOllamaModels(data) {
+    if (!Array.isArray(data)) {
+        console.error('Invalid Ollama models data', data);
+        return;
+    }
+
+    if (!data.find(x => x.id === textgen_settings.ollama_model)) {
+        textgen_settings.ollama_model = data[0]?.id || '';
+    }
+}
+
+// 실리 public/scripts/textgen-models.js 504~516
+export async function loadTabbyModels(data) {
+    if (!Array.isArray(data)) {
+        console.error('Invalid Tabby models data', data);
+        return;
+    }
+
+    tabbyModels = data;
+    tabbyModels.sort((a, b) => a.id.localeCompare(b.id));
+    tabbyModels.unshift({ id: '' });
+
+    if (!tabbyModels.find(x => x.id === textgen_settings.tabby_model)) {
+        textgen_settings.tabby_model = tabbyModels[0]?.id || '';
+    }
+}
+
+// 실리 public/scripts/textgen-models.js 528~540
+export async function loadLlamaCppModels(data) {
+    if (!Array.isArray(data)) {
+        console.error('Invalid llama.cpp models data', data);
+        return;
+    }
+
+    llamacppModels = data;
+    llamacppModels.sort((a, b) => a.id.localeCompare(b.id));
+    llamacppModels.unshift({ id: '' });
+
+    if (!llamacppModels.find(x => x.id === textgen_settings.llamacpp_model)) {
+        textgen_settings.llamacpp_model = llamacppModels[0]?.id || '';
+    }
+}
+
+// 실리 public/scripts/textgen-models.js 552~563
+export async function loadTogetherAIModels(data) {
+    if (!Array.isArray(data)) {
+        console.error('Invalid Together AI models data', data);
+        return;
+    }
+
+    data.sort((a, b) => a.id.localeCompare(b.id));
+    togetherModels = data;
+
+    if (!data.find(x => x.id === textgen_settings.togetherai_model)) {
+        textgen_settings.togetherai_model = data[0]?.id || '';
+    }
+}
+
+// 실리 public/scripts/textgen-models.js 580~591
+export async function loadInfermaticAIModels(data) {
+    if (!Array.isArray(data)) {
+        console.error('Invalid Infermatic AI models data', data);
+        return;
+    }
+
+    data.sort((a, b) => a.id.localeCompare(b.id));
+    infermaticAIModels = data;
+
+    if (!data.find(x => x.id === textgen_settings.infermaticai_model)) {
+        textgen_settings.infermaticai_model = data[0]?.id || '';
+    }
+}
+
+// (실리 616~644: 화면의 datalist · select만 채워요. generic_model은 바꾸지 않아요)
+// 실리 public/scripts/textgen-models.js 607~615
+export function loadGenericModels(data) {
+    if (!Array.isArray(data)) {
+        console.error('Invalid Generic models data', data);
+        return;
+    }
+
+    const models = data
+        .filter(model => model && typeof model.id === 'string' && model.id.length > 0)
+        .sort((a, b) => a.id.localeCompare(b.id));
+}
+
+// 실리 public/scripts/textgen-models.js 647~657
+export async function loadDreamGenModels(data) {
+    if (!Array.isArray(data)) {
+        console.error('Invalid DreamGen models data', data);
+        return;
+    }
+
+    dreamGenModels = data;
+
+    if (!data.find(x => x.id === textgen_settings.dreamgen_model)) {
+        textgen_settings.dreamgen_model = data[0]?.id || '';
+    }
+}
+
+// 실리 public/scripts/textgen-models.js 673~684
+export async function loadMancerModels(data) {
+    if (!Array.isArray(data)) {
+        console.error('Invalid Mancer models data', data);
+        return;
+    }
+
+    data.sort((a, b) => a.name.localeCompare(b.name));
+    mancerModels = data;
+
+    if (!data.find(x => x.id === textgen_settings.mancer_model)) {
+        textgen_settings.mancer_model = data[0]?.id || '';
+    }
+}
+
+// (실리 709~720: 화면 칸 · 가격(calculateOpenRouterCost) · 공급자 옵션(syncOpenRouterProvidersForModel: 화면 옵션만, /api/openrouter/models/providers)은 안 옮겨요)
+// 실리 public/scripts/textgen-models.js 696~707
+export async function loadOpenRouterModels(data) {
+    if (!Array.isArray(data)) {
+        console.error('Invalid OpenRouter models data', data);
+        return;
+    }
+
+    data.sort((a, b) => a.name.localeCompare(b.name));
+    openRouterModels = data;
+
+    if (!data.find(x => x.id === textgen_settings.openrouter_model)) {
+        textgen_settings.openrouter_model = data[0]?.id || '';
+    }
+}
+
+// 실리 public/scripts/textgen-models.js 723~733
+export async function loadVllmModels(data) {
+    if (!Array.isArray(data)) {
+        console.error('Invalid vLLM models data', data);
+        return;
+    }
+
+    vllmModels = data;
+
+    if (!data.find(x => x.id === textgen_settings.vllm_model)) {
+        textgen_settings.vllm_model = data[0]?.id || '';
+    }
+}
+
+// 실리 public/scripts/textgen-models.js 745~755
+export async function loadAphroditeModels(data) {
+    if (!Array.isArray(data)) {
+        console.error('Invalid Aphrodite models data', data);
+        return;
+    }
+
+    aphroditeModels = data;
+
+    if (!data.find(x => x.id === textgen_settings.aphrodite_model)) {
+        textgen_settings.aphrodite_model = data[0]?.id || '';
+    }
+}
+
+// (실리 769~776: 화면 칸 찾기, 791~: 화면 · 페이지 · 거르기. 서버는 목록 · 모델 보정만)
+// 실리 public/scripts/textgen-models.js 768~768
+export async function loadFeatherlessModels(data) {
+// 실리 public/scripts/textgen-models.js 777~790
+    // Store the original models data for search and filtering
+    let originalModels = [];
+
+    if (!Array.isArray(data)) {
+        console.error('Invalid Featherless models data', data);
+        return;
+    }
+
+    originalModels = data;  // Store the original data for search
+    featherlessModels = data;
+
+    if (!data.find(x => x.id === textgen_settings.featherless_model)) {
+        textgen_settings.featherless_model = data[0]?.id || '';
+    }
+}
+
 // 실리 public/scripts/textgen-models.js 1347~1385
 export function getCurrentOpenRouterModelTokenizer() {
     const modelId = textgen_settings.openrouter_model;
@@ -373,8 +559,18 @@ export function getCurrentDreamGenModelTokenizer() {
 export { OPENROUTER_PROVIDERS, NANOGPT_PROVIDERS };
 
 /**
- * @param {{openRouterModels?: object[]}} v
+ * 모델 목록(실리 12~21: 페이지를 열면 빈 목록, getStatusTextgen의 로더가 채워요). 일꾼이 일마다 비우고(plugin/st/nastatus.js) 연결 확인으로 다시 채워요.
+ * @param {{mancerModels?: object[], togetherModels?: object[], infermaticAIModels?: object[], dreamGenModels?: object[], vllmModels?: object[], aphroditeModels?: object[], featherlessModels?: object[], tabbyModels?: object[], llamacppModels?: object[], openRouterModels?: object[]}} v
  */
 export function __naSet(v) {
+    if (Object.hasOwn(v, 'mancerModels')) mancerModels = v.mancerModels;
+    if (Object.hasOwn(v, 'togetherModels')) togetherModels = v.togetherModels;
+    if (Object.hasOwn(v, 'infermaticAIModels')) infermaticAIModels = v.infermaticAIModels;
+    if (Object.hasOwn(v, 'dreamGenModels')) dreamGenModels = v.dreamGenModels;
+    if (Object.hasOwn(v, 'vllmModels')) vllmModels = v.vllmModels;
+    if (Object.hasOwn(v, 'aphroditeModels')) aphroditeModels = v.aphroditeModels;
+    if (Object.hasOwn(v, 'featherlessModels')) featherlessModels = v.featherlessModels;
+    if (Object.hasOwn(v, 'tabbyModels')) tabbyModels = v.tabbyModels;
+    if (Object.hasOwn(v, 'llamacppModels')) llamacppModels = v.llamacppModels;
     if (Object.hasOwn(v, 'openRouterModels')) openRouterModels = v.openRouterModels;
 }

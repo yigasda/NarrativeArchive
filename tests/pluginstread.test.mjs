@@ -99,6 +99,37 @@ test('페르소나 그림 목록 (다리 없을 때): 파일만, 그림만, 이�
     await assert.rejects(readImages(path.join(root, 'none')));
 });
 
+// (the worker thread runs in the browser's zone and language — plugin/zone.mjs —: these two are SillyTavern's server code, in the server's own)
+import { Worker } from 'node:worker_threads';
+const SERVER_SIDE = `
+const { workerData, parentPort } = require('node:worker_threads');
+(async () => {
+    Date.now = () => workerData.at;
+    const Z = await import(workerData.zone);
+    // (a zone and a language that are not the server computer's: its hour and its sort order differ)
+    Z.setZone(workerData.tz); Z.setLocale(workerData.loc);
+    const R = await import(workerData.stread);
+    const cards = await R.readCards(workerData.root), images = await R.readImages(workerData.root);
+    parentPort.postMessage({ chat: cards.find(c => c.avatar === 'lio.png')?.chat, images, hours: new Date(workerData.at).getHours(), zone: Z.getZone() });
+})();`;
+test('일꾼 스레드에서도 카드의 채팅 이름 시각 · 페르소나 그림 차례는 실리 서버의 것 (브라우저의 시간대 · 언어가 아니라 서버 컴퓨터의 것)', async t => {
+    const root = await mkdtemp(path.join(tmpdir(), 'na-server-side-'));
+    t.after(() => rm(root, { recursive: true, force: true }));
+    await mkdir(path.join(root, 'characters')); await mkdir(path.join(root, 'User Avatars'));
+    // (a v2 card with no chat name: SillyTavern's readFromV2 names one with humanizedDateTime — the server's local time)
+    await writeFile(path.join(root, 'characters', 'lio.png'), cardPng({ chara: { spec: 'chara_card_v2', spec_version: '2.0', name: 'Lio', data: { name: 'Lio', description: 'Lio is a cook.' } } }));
+    for (const f of ['ren.png', '가.png', 'b.png']) await writeFile(path.join(root, 'User Avatars', f), 'x');
+    const at = Date.UTC(2026, 10, 23, 8, 5, 9, 7), here = new Date(at), p = n => String(n).padStart(2, '0');
+    const tz = ['Etc/GMT+12', 'Pacific/Kiritimati'].find(z => new Intl.DateTimeFormat('en-US', { timeZone: z, hourCycle: 'h23', hour: 'numeric' }).format(at) !== String(here.getHours()));
+    const order = loc => ['ren.png', '가.png', 'b.png'].sort(new Intl.Collator(loc).compare);
+    const loc = ['ko-KR', 'en-US'].find(l => order(l).join() !== order().join());
+    const out = await new Promise((ok, no) => { const w = new Worker(SERVER_SIDE, { eval: true, workerData: { zone: new URL('../plugin/zone.mjs', import.meta.url).href, stread: new URL('../plugin/stread.mjs', import.meta.url).href, root, at, tz, loc } }); w.on('error', no); w.on('message', m => { w.terminate(); ok(m); }); });
+    assert.notEqual(out.hours, here.getHours());       // (the worker is in the other zone)
+    assert.equal(out.chat, `Lio - ${here.getFullYear()}-${p(here.getMonth() + 1)}-${p(here.getDate())}@${p(here.getHours())}h${p(here.getMinutes())}m${p(here.getSeconds())}s007ms`);
+    assert.deepEqual(out.images, order());
+    assert.equal(out.zone, tz);                        // (and it stays in it after)
+});
+
 // ---- 실리의 writeExtensionField (public/scripts/extensions.js 2070~2120)
 import { writeExtensionField, UNSET_VALUE } from '../plugin/stread.mjs';
 test('카드 확장 칸 쓰기 (실리 그대로): 메모리의 카드와 json_data를 같이, UNSET이면 지우기, merge-attributes로 저장. 실패해도 던지지 않고 기록만', async () => {
