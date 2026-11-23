@@ -6,6 +6,7 @@
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { openStore, StoreError, STORE } from './store.mjs';
+import { soundStore, SoundError } from './sound.mjs';
 
 export const info = { id: 'narrative-archive', name: 'NarrativeArchive', description: 'Orbit 저장 · 스케줄 (NarrativeArchive 확장의 서버 쪽)' };
 export const VERSION = 2;
@@ -83,6 +84,33 @@ export async function init(router) {
         return a.claim(String(id || ''), String(room || ''), tab(by));
     }));
     router.post('/auto/release', run(async ({ id, room, by }, s, req) => { const a = await autoFor(req.user); if (!a) return { ok: true }; await a.ready; await a.release(String(id || ''), String(room || ''), tab(by)); return { ok: true }; }));
+    // 사용자 지정 알림음 (plugin/sound.mjs: 마리나라 notification-sound.routes.ts). 소리 파일 하나를 사용자 폴더에.
+    //   GET /sound → { configured, url, updatedAt } · POST /sound/upload ('avatar' 칸의 파일: 실리의 multer가 받아 둔 것) → 같은 모양
+    //   POST /sound/delete → 같은 모양(없음) · GET /sound/file → 그 소리 (마리나라는 DELETE / 와 204예요)
+    const soundOf = req => { const root = req.user?.directories?.root; if (!root) throw new SoundError(401, '사용자 폴더를 알 수 없어요'); return soundStore(root); };
+    const soundRun = job => async (req, res) => {
+        try { res.json(await job(soundOf(req), req)); }
+        catch (err) {
+            const code = err instanceof SoundError ? err.code : 500;
+            if (code === 500) console.error('[narrative-archive plugin]', err);
+            res.status(code).json({ error: String(err?.message || err) });
+        }
+    };
+    router.get('/sound', soundRun(s => s.status()));
+    router.post('/sound/upload', soundRun((s, req) => {
+        const f = req.file;
+        return s.upload({ name: f?.originalname, tmp: f ? path.join(f.destination, f.filename) : '', size: f?.size });
+    }));
+    router.post('/sound/delete', soundRun(async s => { await s.remove(); return { configured: false, url: null, updatedAt: null }; }));
+    router.get('/sound/file', async (req, res) => {
+        let got = null;
+        try { got = await soundOf(req).file(); } catch (err) { console.error('[narrative-archive plugin]', err); res.status(500).json({ error: '알림음을 읽지 못했어요' }); return; }
+        if (!got) { res.status(404).json({ error: '사용자 지정 알림음이 없어요' }); return; }
+        res.set({ 'Content-Type': got.mimeType, 'Content-Length': String(got.size), 'Content-Disposition': 'inline', 'Cache-Control': 'no-cache', 'X-Content-Type-Options': 'nosniff' });
+        const stream = got.handle.createReadStream();
+        stream.on('error', () => { if (!res.headersSent) res.status(500).end(); else res.end(); });
+        stream.pipe(res);
+    });
     inside = typeof globalThis.DATA_ROOT === 'string' && !!globalThis.DATA_ROOT;
     if (inside) startAll();
     console.log('[narrative-archive plugin] ready');

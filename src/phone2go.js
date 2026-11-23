@@ -137,6 +137,13 @@ function retrySoon(real, onChange) {
     t?.unref?.();
     retrying.set(real, t);
 }
+// 답장 일이 말을 저장했어요 → 화면에 'na-live-reply' (마리나라 use-generate.ts의 completedReply: 멈추지 않았고 · 사칭이 아니고 ·
+// 내용이 있음 → 그 방을 안 보고 있으면 방울 · 안 읽음 · 알림음, 창이 뒤에 있으면 브라우저 알림. 그건 화면이 해요).
+//   detail: { from: 'browser' | 'server', room, by: [이름 (첫째가 알림에 쓸 이름)], auto: 먼저 건 말 · 주고받기, regen: 다시 받은 답 }
+// 말 없이 한 일만 남긴 답 · 버린 답 · 실패한 답 · 다른 폰 2의 답에는 안 보내요. 서버가 쓴 늦은 답장은 받을 때(phone2keepon.js)
+function replied(job, by) {
+    try { globalThis.document?.dispatchEvent(new globalThis.CustomEvent('na-live-reply', { detail: { from: 'browser', room: job.room, by, auto: !!job.auto, regen: !!job.regen } })); } catch { /* no screen */ }
+}
 // 그 일이 줄 선 뒤에 그 방에서 캐릭터가 말했나 (나 말고 누구든)
 const wroteSince = (real, job) => { const w = liveWorld(real), P = liveKey(w?.persona), room = w?.messenger?.rooms?.[job.room]; return !!room && (room.messages || []).some(x => liveKey(x.from) !== P && x.at > job.at); };
 // 브라우저의 방 자물쇠 → { enter(방) → 놓기 | null, renew() } | null (플러그인에 둔 채팅이 아니면: 전처럼 혼자 해요)
@@ -189,6 +196,8 @@ async function goNow(real, onChange, lock) {
                     if (room.away && !Object.keys(room.away).length) delete room.away;
                     room.turn = { spoke: (got.speakers || []).map(liveKey) };
                     if (!job.regen) noteAssistant(real, job.room, '');
+                    // (Marinara saves a merged reply under its first character, and names that one in the notification)
+                    replied(job, [job.owner, ...(got.speakers || []).filter(n => liveKey(n) !== liveKey(job.owner))]);
                 }
                 tell();
                 return;
@@ -216,6 +225,7 @@ async function goNow(real, onChange, lock) {
             if (w && w.id === job.world && got?.said && !job.regen && handOff(real, job)) await line.save();
             // (a group room, after a message a character wrote first: another may answer it, as Marinara's loop does)
             if (w && p && w.id === job.world && job.auto && got?.said && exchangeAfter(real, job)) await line.save();
+            if (w && w.id === job.world && got?.said) replied(job, [job.owner]);
             tell();
         },
     });

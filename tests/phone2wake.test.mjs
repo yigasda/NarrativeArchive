@@ -10,6 +10,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { openStore, StoreError } from '../plugin/store.mjs';
 import { startAuto } from '../plugin/host.mjs';
+import { soundStore, SoundError } from '../plugin/sound.mjs';
 const { setContext } = await import('../plugin/screen.mjs');
 const page = { hidden: false, events: [], details: [], addEventListener() {}, dispatchEvent(e) { this.events.push(e?.type); if (e?.detail) this.details.push(e.detail); return true; }, querySelectorAll: () => [] };
 globalThis.document = page;
@@ -18,6 +19,8 @@ const KO = await import('../src/phone2keepon.js');
 const core = await import('../src/core.js');
 const G = await import('../src/phone2go.js');
 const TICK = await import('../src/phone2tick.js');
+const SOUND = await import('../src/phone2sound.js');
+const PING = await import('../src/marinara/notification-sound.js');
 after(() => { setTimeout(() => process.exit(process.exitCode || 0), 200).unref(); });
 
 const listen = handler => new Promise(ok => { const s = http.createServer(handler); s.listen(0, '127.0.0.1', () => ok(s)); });
@@ -41,7 +44,7 @@ async function stage(t, { hoursAgo = 1 } = {}) {
     const conn = { mode: 'custom', url: `http://127.0.0.1:${model.address().port}/v1`, key: 'K', model: 'fake-model' };
     await writeFile(path.join(root, 'settings.json'), JSON.stringify({ power_user: {}, extension_settings: { narrative_archive: { draftConn: conn } } }));
     await mkdir(path.join(root, 'chats', 'mara'), { recursive: true }); await writeFile(path.join(root, 'chats', 'mara', 'chat-1.jsonl'), '{}\n');
-    const store = openStore(root), auto = startAuto({ root, store, schedule: false });
+    const store = openStore(root), auto = startAuto({ root, store, schedule: false }), sounds = soundStore(root);
     t.after(async () => { await auto.stop(); model.close(); await rm(root, { recursive: true, force: true }); });
     await auto.ready;
     // 브라우저의 요청 → 플러그인의 길 (plugin/index.mjs가 하는 일 그대로. "보고 있어요"는 일꾼에 안 전해요: 화면이 꺼진 지 75초가 지난 것처럼)
@@ -52,14 +55,18 @@ async function stage(t, { hoursAgo = 1 } = {}) {
         '/auto/presence': async () => ({ on: true, rooms: 1 }), '/auto/status': async ({ id }) => ({ on: true, rooms: await auto.status(id) }),
         '/auto/claim': async ({ id, room, by, renew }) => (renew ? { ok: !!await auto.renew(id, room, by) } : auto.claim(id, room, by)),
         '/auto/release': async ({ id, room, by }) => { await auto.release(id, room, by); return { ok: true }; },
+        // (사용자 지정 알림음: plugin/index.mjs의 길 그대로. 올리기는 실리의 multer처럼 'avatar' 칸의 파일을 임시 파일로 받아요)
+        '/sound': async () => sounds.status(),
+        '/sound/upload': async form => { const f = form.get('avatar'); const tmp = path.join(root, `_up${Date.now()}`); await writeFile(tmp, Buffer.from(await f.arrayBuffer())); return sounds.upload({ name: f.name, tmp, size: f.size }); },
+        '/sound/delete': async () => { await sounds.remove(); return { configured: false, url: null, updatedAt: null }; },
     };
     const realFetch = globalThis.fetch;
     globalThis.fetch = async (url, init = {}) => {
         if (typeof url !== 'string' || !url.startsWith('/api/plugins/narrative-archive')) return realFetch(url, init);
-        const p = url.slice('/api/plugins/narrative-archive'.length), body = init.body ? JSON.parse(init.body) : {};
-        calls.push([p, body]);
+        const p = url.slice('/api/plugins/narrative-archive'.length), body = init.body instanceof FormData ? init.body : init.body ? JSON.parse(init.body) : {};
+        calls.push([p, body, init.headers || {}]);
         try { const json = await routes[p](body); return { ok: true, status: 200, json: async () => json }; }
-        catch (err) { const code = err instanceof StoreError ? err.code : 500; return { ok: false, status: code, json: async () => ({ error: String(err.message), rev: err.rev }) }; }
+        catch (err) { const code = err instanceof StoreError || err instanceof SoundError ? err.code : 500; return { ok: false, status: code, json: async () => ({ error: String(err.message), rev: err.rev }) }; }
     };
     t.after(() => { globalThis.fetch = realFetch; });
 
@@ -70,7 +77,7 @@ async function stage(t, { hoursAgo = 1 } = {}) {
     sendLive(m, room.id, 'hey', at); room.messages.push({ id: 't2', n: 2, from: 'Mara', text: 'hi', at: at + 60_000 });
     w.presence = { on: false, schedules: {}, overrides: {}, meta: {}, user: {} };
     const ctx = { chatId: 'chat-1', chatMetadata: { narrative_archive: m, integrity: 'mark-1' }, chat: [], name1: 'Ren', characterId: 0, characters: [{ name: 'Mara', avatar: 'mara.png', description: 'Mara is a baker.', data: { name: 'Mara', description: 'Mara is a baker.' } }],
-        powerUserSettings: { persona_description: 'Ren is a student.' }, extensionSettings: { narrative_archive: { draftConn: conn } }, saveMetadata: async () => {}, saveSettingsDebounced() {}, getRequestHeaders: () => ({ 'Content-Type': 'application/json' }),
+        powerUserSettings: { persona_description: 'Ren is a student.' }, extensionSettings: { narrative_archive: { draftConn: conn } }, saveMetadata: async () => {}, saveSettingsDebounced() {}, getRequestHeaders: ({ omitContentType = false } = {}) => (omitContentType ? { 'X-CSRF-Token': 't' } : { 'Content-Type': 'application/json', 'X-CSRF-Token': 't' }),
         eventSource: { on() {} }, eventTypes: { CHAT_CHANGED: 'chat' }, setExtensionPrompt() {} };
     setContext(ctx);
     KO.keepStart();
@@ -109,8 +116,9 @@ test('그날 그대로: 화면이 꺼진 동안 서버가 늦은 답장을 보�
     assert.equal(S.asked.length, 1, '같은 말에 두 번 답하면 안 돼요');
     assert.deepEqual(texts(S.room), [['Ren', 'hey'], ['Mara', 'hi'], ['Ren', 'so tired'], ['Mara', 'answer 1']]);
     assert.equal(liveWorld(S.m).queue.jobs.find(j => j.id === job.id).state, 'done');
-    // (화면에 다시 그리라는 신호가 갔어요)
+    // (화면에 다시 그리라는 신호가 갔어요. 서버가 쓴 늦은 답장이 끝났다는 신호도: 화면이 방울 · 알림음을 내요)
     assert.ok(page.events.includes('na-live-change'));
+    assert.deepEqual(page.details.filter(d => d.room && 'regen' in d), [{ from: 'server', room: S.room.id, by: ['Mara'], auto: false, regen: false }]);
     // 그 뒤로도 또 답하지 않아요
     await G.liveGo(S.m);
     await TICK.tickOnce();
@@ -183,7 +191,10 @@ test('먼저 건 말: 브라우저가 줄 세운 뒤 그 방을 기다리는 사
     assert.match(made.payload, /"message_saved"/);
     assert.equal(S.asked.length, 1);
     // 브라우저가 그 방에 들어가요: 서버 것을 받고, 줄 세운 것은 버려요 (모델에 안 물어요)
+    page.details.length = 0;
     const out = await G.liveGo(S.m);
+    // (서버가 먼저 건 말은 '답이 끝났다' 신호가 아니에요: 안 읽음 표시로 알려요. 버린 것에도 신호가 없어요)
+    assert.deepEqual(page.details.filter(d => 'regen' in d), []);
     assert.equal(S.asked.length, 1);
     assert.equal(out.ran, 1);
     assert.deepEqual(texts(S.room), [['Ren', 'hey'], ['Mara', 'hi'], ['Mara', 'answer 1']]);
@@ -222,4 +233,42 @@ test('플러그인 요청이 끝나지 않고 걸려도 시간이 지나면 풀�
     assert.deepEqual(await KO.keepAutoStatus(), { on: false, rooms: [] });
     assert.ok(Date.now() - t0 < 2000);
     assert.ok(seen.length >= 1 && seen.every(s => s instanceof AbortSignal));
+});
+
+test('사용자 지정 알림음: 상태 읽기 · 올리기 · 지우기 — 알림음이 그 소리로 바뀌고, 지우면 기본 소리로. 플러그인이 없으면 기본 소리', async t => {
+    const S = await stage(t);
+    const played = [], hadAudio = globalThis.Audio;
+    globalThis.Audio = class { constructor(url) { played.push(url); } addEventListener() {} play() { return Promise.resolve(); } };
+    t.after(() => { if (hadAudio === undefined) delete globalThis.Audio; else globalThis.Audio = hadAudio; });
+    assert.deepEqual(await SOUND.soundStatus(), { configured: false, url: null, updatedAt: null });
+    // 올리기 (10MB가 넘으면 보내지도 않아요)
+    await assert.rejects(SOUND.soundUpload({ size: SOUND.SOUND_MAX_BYTES + 1, name: 'big.wav' }), /10MB/);
+    const wav = Buffer.concat([Buffer.from('RIFF'), Buffer.alloc(4), Buffer.from('WAVE'), Buffer.alloc(20, 1)]);
+    const st = await SOUND.soundUpload(new File([wav], 'ding.wav', { type: 'audio/wav' }));
+    assert.equal(st.configured, true);
+    assert.match(st.url, /^\/api\/plugins\/narrative-archive\/sound\/file\?v=/);
+    assert.deepEqual(SOUND.soundLast(), st);
+    // (보낼 때 CSRF 머리는 있고, Content-Type은 브라우저가 정하게 비워요: 파일 칸의 경계를 브라우저가 붙여요)
+    assert.deepEqual(S.calls.find(([p]) => p === '/sound/upload')[2], { 'X-CSRF-Token': 't' });
+    PING.playNotificationPing();
+    assert.deepEqual(played, [st.url]);
+    // 앱을 다시 켜면 그 소리로
+    PING.setCustomNotificationSoundUrl(null);
+    assert.deepEqual(await SOUND.soundStart(), st);
+    PING.playNotificationPing();
+    assert.deepEqual(played, [st.url, st.url]);
+    // 안 받는 파일: 그 이유
+    await assert.rejects(SOUND.soundUpload(new File([wav], 'ding.mp3')), /받는 소리 형식이 아니에요/);
+    // 지우기
+    assert.deepEqual(await SOUND.soundRemove(), { configured: false, url: null, updatedAt: null });
+    PING.playNotificationPing();
+    assert.equal(played.length, 2);
+    assert.deepEqual(await SOUND.soundStatus(), { configured: false, url: null, updatedAt: null });
+    // 플러그인이 없으면 (길이 없음): 기본 소리, 올리기는 이유를 알려요
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = async () => ({ ok: false, status: 404, json: async () => { throw new Error('html'); } });
+    try {
+        assert.deepEqual(await SOUND.soundStatus(), { configured: false, url: null, updatedAt: null });
+        await assert.rejects(SOUND.soundUpload(new File([wav], 'ding.wav')), /서버 플러그인이 있어야/);
+    } finally { globalThis.fetch = realFetch; }
 });

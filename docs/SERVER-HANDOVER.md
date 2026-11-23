@@ -42,12 +42,13 @@ src/phone2tick.js 30초 틱                       플러그인 본체 (plugin/in
 
 | 파일 | 줄 | 하는 일 |
 |---|---|---|
-| `index.mjs` | 96 | 실리가 부르는 들머리(`info` · `init(router)` · `exit`). 길: `/ping`, `/store/load·rev·save·fork·drop`, `/auto/presence`, `/auto/status`, `/auto/claim` · `/auto/release`(방 자물쇠: 3-5). 탭의 이름은 늘 `browser:…`로 바꿔요(탭이 일꾼 이름 `server`로 잡지 못하게). `globalThis.DATA_ROOT`가 있을 때만(=실리 서버 안) 일꾼을 켜요. 실리를 켰을 때 `src/users.js`로 사용자를 찾아, Orbit 저장이 있는 사람의 일꾼을 미리 켜요. `VERSION = 2`는 플러그인의 길 버전(확장 버전과 다른 것) |
+| `index.mjs` | 124 | 실리가 부르는 들머리(`info` · `init(router)` · `exit`). 길: `/ping`, `/store/load·rev·save·fork·drop`, `/auto/presence`, `/auto/status`, `/auto/claim` · `/auto/release`(방 자물쇠: 3-5), `/sound` · `/sound/upload` · `/sound/delete` · `/sound/file`(사용자 지정 알림음). 탭의 이름은 늘 `browser:…`로 바꿔요(탭이 일꾼 이름 `server`로 잡지 못하게). `globalThis.DATA_ROOT`가 있을 때만(=실리 서버 안) 일꾼을 켜요. 실리를 켰을 때 `src/users.js`로 사용자를 찾아, Orbit 저장이 있는 사람의 일꾼을 미리 켜요. `VERSION = 2`는 플러그인의 길 버전(확장 버전과 다른 것) |
 | `store.mjs` | 123 | 조각 저장. `rev`가 저장마다 1씩 올라가고, 보낸 쪽이 본 `rev`(base)가 다르면 409. `list()` · `generation()`(쓴 횟수). 실리 · 익스프레스를 몰라요 |
 | `host.mjs` | 52 | 본체 쪽. 사용자마다 일꾼 스레드 하나를 띄우고 말을 주고받아요. 일꾼이 부탁하는 저장 일(`list` · `revOf` · `load` · `save`)을 대신 해요. `list` · `inject` · `sweep` · `unread`는 테스트와 손 확인용 |
 | `worker.mjs` | 57 | 일꾼 스레드의 들머리. **순서가 중요해요**: `screen.mjs`를 먼저 불러야 해요. 전역 `fetch`를 바꿔서 `/`로 시작하는 주소를 다리로 넘겨요 |
 | `screen.mjs` | 37 | 아무것도 안 하는 화면: `document` · `$` · `toastr` 등에 "뭘 시켜도 자기 자신을 돌려주는 것"을 둬요. `SillyTavern.getContext()`는 `setContext()`로 그때그때 바꿔 끼워요. 일꾼 스레드에서만 불러요(본체에서 부르면 오류. 테스트는 `NA_SCREEN_ANYWHERE=1`) |
 | `work.mjs` | 348 | 핵심. 방 자물쇠(`claim` · `renew` · `release`, `liveGo`에 주는 `serverLock`), 실리의 것을 서버 것으로(`contextOf`), 연결 프로필 요청의 대역(`profileService`: `sendRequest`), 실리 연결 방식 · 추론 레벨의 대역(`stStandIn`), 한 번에 한 세계(`withWorld`), 돌려도 되나(`blocked` · `cannot`), 먼저 건 말 만들기(`generate`), 늦은 답장(`sweepDue`), 화면용 상태(`status`), 보고 있음(`presence`) |
+| `sound.mjs` (새) | 184 | 사용자 지정 알림음(마리나라 `notification-sound.routes.ts`). `<사용자 폴더>/NarrativeArchive/notification-sounds/notification.<확장자>` 하나. 올리기는 실리의 multer가 `avatar` 칸을 받아 둔 임시 파일을 읽고 지워요(실리 `server-main.js` 269줄: 플러그인 길도 그 뒤에 붙어요) |
 | `lock.mjs` (새) | 40 | 방 자물쇠 `makeLocks` · `lockKey(저장 id, 방 id)` (3-5) |
 | `auto.mjs` | 151 | 마리나라 스케줄러가 아는 `app`을 플러그인 저장 위에 만들어요. `chats.list/getById/resolveConversationPresenceState/markAutonomousUnread`, `inject`(때가 됐나 · 답장 만들기), 읽어 둔 세계(`open`: rev가 그대로면 다시 안 읽음), 쓰기(`write`: 바뀐 조각만) |
 | `bridge.mjs` | 54 | 127.0.0.1의 아무 포트에 실리 **자신의** 라우터를 붙여요. 실리를 켤 때마다 새로 만드는 토큰이 있어야 하고, 다섯 길만 열어요: `POST /api/backends/chat-completions/generate`, `POST /api/backends/text-completions/generate`, `POST /api/characters/merge-attributes`, `POST /api/worldinfo/get`, `GET /user/files/…` |
@@ -63,6 +64,7 @@ src/phone2tick.js 30초 틱                       플러그인 본체 (plugin/in
 | `stprofile.js` (새) | 연결 프로필의 요청 틀. 브라우저: `profileTemplates`(실리 자신의 `sendRequest`가 보내려는 요청을 받아 두기). 서버: `fillProfileRequest` · `readProfileAnswer` · `profileSecret`. 실리에서 옮긴 `extractMessageFromData` · `extractReasoningFromData` · `trimTextCompletion`. 열쇠: `ptKey` · `ptFind` · `ptWhyKey` · `levelKey` (4장) |
 | `phone2keep.js` | 원래의 조각 저장에 더해: `merge3`(셋 비교 합치기) · `settleRooms`(순서 · 번호) · `into`(제자리 맞추기) · `sync` · 저장이 409면 합쳐서 다시(세 번째는 오류) |
 | `phone2keepon.js` | `keepBeat`(30초마다 · 다시 보일 때 · 채팅 열 때) · `keepPing` · `keepSync` · `keepServes` · `keepAutoStatus` · `keepKept` · `keepClaim(방)` · `keepRenew`(방 자물쇠) · 맞춘 뒤의 화면 신호(`synced`) · 요청마다 시간 제한(`KEEP_LIMIT`) |
+| `phone2sound.js` (새) | 사용자 지정 알림음: `soundStatus` · `soundUpload(File)` · `soundRemove` · `soundStart`(index.js). 부를 때마다 `setCustomNotificationSoundUrl` |
 | `phone2tick.js` | 가려져 있고 일꾼이 돌면 쉬어요. 무엇이든 판단하기 전에 `keepSync`(플러그인의 최신 것). 30초마다 `liveKitRefresh` |
 | `phone2run.js` | `runLive`의 `enter(방)`: 방마다 처음 한 번 그 방의 자물쇠를 받아요. 못 받은 방의 일은 이번엔 건너뛰고 기다려요 |
 | `phone2go.js` | `liveGo(real, { lock })` · `browserLock`(들어가면 `keepSync`) · `retrySoon` · 먼저 건 말을 줄 세운 뒤 그 방에 다른 쪽이 말했으면 버리기(`wroteSince`) · `liveAutonomous`는 방마다 자물쇠 → 받기 → 판단 · `liveDigest(…, { lock })`. `replyRoute` · `liveReplyPlan`(`profile` · `raw`) · `liveKitRefresh`(`kit.st` · `kit.pt` · `kit.ptWhy` · `kit.levels`) · `liveServerStatus` · `liveServerOn` · `liveAutonomousUnread`. Orbit의 모델 요청에 `profileNow`. 먼저 건 말에 `extra.autonomous` 표시와 `na-live-auto` 신호. `keepUpStory`는 `ctx().naServer`면 안 해요. `gatherJob`이 `job.user`를 넘겨요 |
@@ -137,6 +139,7 @@ kit = { v: 1, ver (확장 버전), name1, persona (지금 고른 페르소나의
   - 플러그인이 없거나 옛것이거나 답하지 않으면 `keepClaim`은 늘 받은 것으로 해요: 전처럼 브라우저가 다 하고, 저장의 rev가 부딪힘을 막아요.
 - 플러그인 요청마다 시간 제한(`KEEP_LIMIT`: 15초, 저장 조각은 60초). 화면이 꺼질 때 걸린 요청이 남아서 다시 켰을 때 받기 · 알리기를 막지 않게요.
 - 저장하다 부딪혀 합친 경우에도(`pushNow` → `syncNow`) 받은 경우와 같이 화면 신호(`na-live-change`, 늘어난 먼저 건 말이 있으면 `na-live-auto`)가 가요(`phone2keepon.js synced`).
+- 서버가 쓴 늦은 답장(먼저 건 말이 아닌 것)을 받으면 `na-live-reply`(`from: 'server'`)도 가요. 브라우저가 만든 답에도 같은 신호(`from: 'browser'`, 3-4는 `PHONE2-PLAN.md`).
 
 ### 3-6. 합치기 (`phone2keep.js merge3`)
 "마지막으로 맞았던 것(base) · 서버 것 · 브라우저 것" 셋을 비교해요. base는 `st.texts`(조각마다의 JSON 글)에 있어요.
@@ -248,7 +251,7 @@ kit = { v: 1, ver (확장 버전), name1, persona (지금 고른 페르소나의
 S = 이 세션의 scratch 폴더(세션마다 달라요. 없어졌으면 다시 만들어야 해요: 아래).
 
 ```
-timeout 580 node --test tests/*.test.mjs                 # 1294개. "# fail 0"과 "# cancelled 0"
+timeout 580 node --test tests/*.test.mjs                 # 1301개. "# fail 0"과 "# cancelled 0"
 for f in tests/fuzz/*.mjs; do node $f | tail -1; done     # runs 5113 / 8663, problems 0
 PHONE2_POISON=1 node --test tests/phonesyncdrop.test.mjs tests/archivedread.test.mjs tests/afterarchive.test.mjs tests/phonebranch.test.mjs   # 359
 node $S/cmp.mjs                                           # "checked 328 diff 0" (scratch에 있어요)
@@ -262,7 +265,7 @@ npx eslint --no-config-lookup -c $S/lint/eslint.config.mjs src/phone2*.js src/ai
 - `tests/stprofile.test.mjs` 프로필 틀 · 채우기 · 답 읽기. `tests/aiprofile.test.mjs` 지금 고른 프로필.
 - `tests/phone2beat.test.mjs` 브라우저 쪽 진짜 파일 + 진짜 일꾼을 한 저장에.
 - `tests/phone2wake.test.mjs` 2026-11-22에 생긴 일 그대로(화면이 꺼진 동안 서버가 답함 → 켜자마자 틱 → 또 답하지 않음), 서버가 만드는 중에 깨어남, 브라우저가 만드는 중의 서버, 먼저 건 말이 겹침, 걸린 요청의 시간 제한.
-- `tests/pluginlock.test.mjs` 방 자물쇠. `tests/phone2run.test.mjs`의 `enter`.
+- `tests/pluginlock.test.mjs` 방 자물쇠. `tests/pluginsound.test.mjs` 알림음 저장 · 길. `tests/phone2run.test.mjs`의 `enter`.
 - `tests/phone2keep.test.mjs` 합치기 · 퍼즈. `tests/phone2kit.test.mjs` 묶음.
 
 진짜 실리에서 (가짜 모델 서버를 스스로 띄워요. 진짜 모델을 안 불러요):
@@ -270,7 +273,7 @@ npx eslint --no-config-lookup -c $S/lint/eslint.config.mjs src/phone2*.js src/ai
 node tools/plugin/stsmoke.mjs <실리 폴더> <이 저장소>     # 브라우저 없이, 약 30초
 node tools/plugin/stbrowser.cjs <실리 폴더>               # 진짜 브라우저(Playwright)까지, 약 3분
 node tools/plugin/stprofile.cjs <실리 폴더>               # 진짜 연결 프로필 셋(채팅 완성 + 프록시 · 지금 고른 프로필 · 글 완성), 약 5분
-node tools/plugin/stwake.cjs <실리 폴더>                  # 그날의 순서 그대로(가려진 동안 서버의 늦은 답장 → 보이자마자 틱) + 실리 라우터를 거친 방 자물쇠, 약 3분
+node tools/plugin/stwake.cjs <실리 폴더>                  # 그날의 순서 그대로(가려진 동안 서버의 늦은 답장 → 보이자마자 틱) + 실리 라우터를 거친 방 자물쇠 · 알림음 올리기(실리의 multer) · 서버 답장 신호, 약 3분
 ```
 `stprofile.cjs`는 `settings.json` · 카드를 스스로 복사해 두고 되돌려요. 서버가 보낸 요청과 실리가 브라우저에서 같은 메시지로 보낸 요청이 글자까지 같은지 봐요.
 준비: 실리 1.19.1을 받아 `npm install`, `config.yaml`에서 `enableServerPlugins: true`,
