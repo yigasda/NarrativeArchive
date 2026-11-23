@@ -22,8 +22,8 @@ import { getLocalNotificationPermission, requestLocalNotificationPermission, sho
 
 // 캐릭터가 먼저 건 말의 알림 (반영의 'na-live-auto', 마리나라 use-background-autonomous.ts의 순서: 소리 → 안 읽음 · 방울 → 브라우저 알림 → 떠 있는 글).
 // 폰이 닫혀 있어도 울려야 해서 여기(파일이 읽힐 때 한 번)에서 들어요. 방 안의 띠는 열려 있는 폰이 따로 그려요.
-// 설정(확장 설정에 저장): orbitNotify = { sound (기본 켬), unfocused (기본 끔), browser (기본 끔) }
-export const orbitNotify = () => { const n = globalSettings().orbitNotify || {}; return { sound: n.sound !== false, unfocused: n.unfocused === true, browser: n.browser === true }; };
+// 설정(확장 설정에 저장): orbitNotify = { sound (기본 켬), unfocused (기본 끔), browser: 먼저 건 말의 브라우저 알림 (기본 끔), genBrowser: 생성 완료의 브라우저 알림 (기본 끔) }
+export const orbitNotify = () => { const n = globalSettings().orbitNotify || {}; return { sound: n.sound !== false, unfocused: n.unfocused === true, browser: n.browser === true, genBrowser: n.genBrowser === true }; };
 let phonesOpen = 0;   // (열려 있는 폰이 있으면 떠 있는 글은 그 폰이 띄워요)
 // 알림 방울 (마리나라 stores/chat.store.ts의 chatNotifications · dismissedNotifications를 옮긴 것: 방 id로)
 //   client: 이 화면이 띄운 방울 { name, count } — 8초 뒤 저절로 사라져요(NOTIFICATION_AUTODISMISS_MS). 서버 몫(실리를 닫은 동안 온 말,
@@ -37,6 +37,7 @@ export const nbAdd = (id, name) => {
     if (obNb.viewing === id || obNb.dismissed.has(id)) { nbClearTimer(id); return; }
     const was = obNb.client.get(id); obNb.client.set(id, { name, count: (was?.count || 0) + 1 });
     nbClearTimer(id); obNb.timers.set(id, setTimeout(() => { nbClearTimer(id); if (obNb.client.delete(id)) nbTell(); }, NB_AUTODISMISS_MS));
+    nbTell();   // (열린 폰이 다시 그려요)
 };
 // ✕ (dismissNotification): 방울을 지우고, 그 방을 열 때까지 다시 띄우지 않아요
 export const nbDismiss = id => { nbClearTimer(id); obNb.client.delete(id); obNb.dismissed.add(id); };
@@ -53,7 +54,13 @@ if (typeof document !== 'undefined' && !globalThis.__naAutoHeard) { globalThis._
         playConfiguredNotificationPing(N.sound, N.unfocused);
         for (const r of rooms) { const name = r.by?.[0] || '누군가';
             nbAdd(r.room, name);
-            void showLocalMessageNotification({ enabled: N.browser, characterName: name, title: `${name}님의 새 메시지`, tag: `na-orbit-${r.room}` }); } }); }   // (떠 있는 글은 띄우지 않아요: 소망)
+            void showLocalMessageNotification({ enabled: N.browser, characterName: name, title: `${name}님의 새 메시지`, tag: `na-orbit-${r.room}` }); } });   // (떠 있는 글은 띄우지 않아요: 소망)
+    // 답장이 끝났어요 (반영의 'na-live-reply', 마리나라 use-generate.ts의 completedReply 뒤): 그 방을 보고 있지 않으면 방울 + 알림음,
+    //   실리가 앞에 있지 않으면 생성 완료 브라우저 알림. 먼저 건 말(auto)은 위의 'na-live-auto'가 다 해서 여기서는 건너뛰어요.
+    //   보고 있는 방의 알림음은 방을 그릴 때 새 말을 보고 울려요(마리나라 ConversationView)
+    document.addEventListener('na-live-reply', e => { const d = e.detail || {}; if (!d.room || d.auto) return; const N = orbitNotify(), name = String(d.by?.[0] || '').trim();
+        if (obNb.viewing !== d.room) { nbAdd(d.room, name || '누군가'); playConfiguredNotificationPing(N.sound, N.unfocused); }
+        void showLocalMessageNotification({ enabled: N.genBrowser, characterName: name || null, title: name ? `${name}님의 새 메시지` : '새 메시지가 준비되었습니다', tag: `na-orbit-${d.room}` }); }); }
 import { drafting, drawing, drawPhoto, drawPost, filling, paging, retranslate, retranslating, recording, searching, searchPage, shooting, webPage, writing } from './phoneai.js';
 import { setDraft, setDraftModels, setLang, setSnap, setVoice, setVoiceAdd, voiceList, voicePeople, ax, axFind, groupInfo, APPS, AXB, AXB_C, busyHtml, setDate, setScreenHolderView, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, mapTowns, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setOwnerProfile, setWho, snsPost, snsScreen, statusBar, threadScreen, setPlace, prepScreen } from './phoneapps.js';
 import { phoneMaking, dropStretch, chatStamp, koGaps, savedName, ensureIds, hasDatedRecords, noArchive, koOn, loreOff, tidyKo, markAfter, phoneLore, REMAKE, restoreRounds, showNow, syncLeft, syncRows, syncState, tidyJournal, undoRound } from './phonedata.js';
@@ -83,6 +90,7 @@ import { liveReady, keepState } from './phone2keepon.js';
 import { orbitList, orbitRoom, orbitNew, orbitHomeWidget, liveStart, whoScreen, orbitFace, dayIcon } from './phoneorbit.js';
 import { beginFromStory, liveBranched, adoptChat, rebeginFromStory, rebeginKeepingChats } from './phone2story.js';
 import { liveSnapNow, snapParts } from './phone2snap.js';
+import { soundStatus, soundUpload, soundRemove, soundLast, SOUND_MAX_BYTES } from './phone2sound.js';
 import { liveAutonomousUnread, liveServerStatus, liveCommands, liveSetCommands, liveReadFiles, liveStoreAttachments, liveRemoveAttachment, LIVE_ATTACH_ACCEPT, liveCaptioning, liveSetCaptioning, liveSources, liveSourceModels, liveReasoning, liveSetReasoning, livePeekPrompt, liveBranchRoom, liveSchedulesOn, liveSetSchedulesOn, liveModelConnections, liveRoomModel, liveSetRoomModel, liveStars, liveToggleStar, liveMoveStar, liveSwitchPersona, liveReplyTo, liveReplyDraft, liveCancelReply, liveEditMessage, liveReact, liveReactQuick, liveGo, liveReflect, liveCanUndo, liveUndo, liveUnreflected, liveNowOf, liveSnapBusy, liveBackCount, liveBackDraft, liveBackPut, liveImportPlan, liveImportFilePlan, liveImportChat, liveImportFile, liveDropMessages, liveSwipeInfo, liveSwipe, liveSwipeDrop, liveRetranslate, liveSwipeList, liveSwipeDropMany, liveSwipeDropOthers, liveMark, liveMarked, liveTrash, liveRestore, liveEmptyTrash, liveDropRoom, liveAddMember, liveRemoveMember, liveStatus, liveSchedule, livePresence, liveSetSchedule, liveSetStatus, liveReplyWait, liveScheduleZone, liveSetScheduleZone, liveTimeZone, liveScheduleSummary, liveConnections, liveScheduleConnection, liveSetScheduleConnection, liveDraftSchedule, liveRepairSchedule, liveReplyNow, liveSetAutoRenew, liveScheduleInfo, liveRenewSchedules, liveAutonomousOptions, liveSetAutonomous, liveSetAutonomousOptions, liveAway } from './phone2go.js';
 import { liveYearsNow } from './phone2year.js';
 import { P } from './phone2api.js';
@@ -282,7 +290,7 @@ export async function openPhone(who = null) {
     const startPlan = startPlanOf;
     // 어두운 방(⋯ 메뉴의 어둡게 · 밝게): 확장 설정에 남아요. 그릴 때마다 읽으니 설정을 그대로 읽어요(koOn과 같은 까닭)
     const obDark = () => (ctx().extensionSettings?.narrative_archive ?? globalSettings()).orbitDark === true;
-    let obSet = '', obFindTab = 'marks', obFindQ = '', obJump = null, obSetUi = { v: {}, open: '', tzQ: '', busy: false }, obSw = null, obAtt = [], obThink = null, obPeek = null, obSrc = { models: {}, busy: '' }, ocBusy = '', obReading = 0, obSending = false, obView = '', obBand = null, obBandT = 0, obPendDraw = false, obSeen = { room: '', ids: new Set() }, obSrv = null, obSrvAt = 0, obPerm = 'default',   // obBand: 방 안의 알림 띠 { name } · obSeen: 열린 방에서 이미 본 말(새 말에 알림음, 마리나라 ConversationView) · 방울은 파일 맨 위의 obNb · obSrv: 서버 일꾼의 답 { on, rooms }
+    let obSet = '', obFindTab = 'marks', obFindQ = '', obJump = null, obSetUi = { v: {}, open: '', tzQ: '', busy: false }, obSw = null, obAtt = [], obThink = null, obPeek = null, obSrc = { models: {}, busy: '' }, ocBusy = '', obReading = 0, obSending = false, obView = '', obBand = null, obBandT = 0, obPendDraw = false, obSeen = { room: '', ids: new Set() }, obSnd = { asked: false, loading: true, configured: soundLast().configured, busy: '' }, obSrv = null, obSrvAt = 0, obPerm = 'default',   // obBand: 방 안의 알림 띠 { name } · obSeen: 열린 방에서 이미 본 말(새 말에 알림음, 마리나라 ConversationView) · 방울은 파일 맨 위의 obNb · obSrv: 서버 일꾼의 답 { on, rooms }
         obReading0 = 0,   // obReading: 읽는 중인 첨부 묶음 수 · obView: 크게 보는 그림의 주소
          scStop = null, scToast = null, scDown = false, scPend = false, scT = 0;
     const scWatch = on => { if (on) scToast ||= stToastKo();   // (알림은 화면을 나간 뒤에도 뜰 수 있어서(테스트 메시지 답), 폰을 닫을 때까지 봐요)
@@ -398,7 +406,8 @@ export async function openPhone(who = null) {
                     t.items = obFindTab === 'marks' ? liveMarked(realM, r.id).map(k => ({ ...row(k.x), note: k.note || '', pin: !!k.x.extra?.pinnedToContext })).reverse()
                         : liveTrash(realM, r.id).map(k => ({ ...row(k.x), when: `${Math.max(0, Math.ceil((k.until - Date.now()) / 864e5))}일 남음` })); }
                 t.v = obSetUi.v; t.open = obSetUi.open; if (obSet === 'main' || obSet === 'caption') t.caption = liveCaptioning(realM);
-                if (obSet === 'notify') t.notify = { ...orbitNotify(), perm: obPerm, pos: String($('#toastr_position').val() || toastr.options?.positionClass || '').includes('bottom') ? 'bottom' : 'top' };
+                if (obSet !== 'notify') obSnd.asked = false; else if (!obSnd.asked) { obSnd.asked = true; soundStatus().then(x => { obSnd.loading = false; obSnd.configured = x.configured; if (!phoneClosed && stillHere() && obSet === 'notify') drawPhone(true); }); }
+                if (obSet === 'notify') t.notify = { ...orbitNotify(), snd: { loading: obSnd.loading, configured: obSnd.configured, busy: obSnd.busy }, perm: obPerm, pos: String($('#toastr_position').val() || toastr.options?.positionClass || '').includes('bottom') ? 'bottom' : 'top' };
                 if (obSet === 'auto') { t.srv = obSrv?.on ? (obSrv.rooms?.[r.id] || null) : null; obSrvAsk(); }
                 if (obSet === 'agents') t.cmds = liveCommands(realM);
                 if (obSet === 'conn') { t.conns = obConns(); t.rs = liveReasoning(realM, r.id); { const M = liveRoomModel(realM, r.id).current, c = M && t.conns.find(x => x.id === M.connectionId), src = M && String(M.connectionId).startsWith('source:') ? `실리 · ${stKo(stSourceName(M.connectionId.slice(7)))}` : ''; if (M) t.cur = { name: M.model ? (M.name || M.model) : (c?.name || ''), sub: src || c?.sub || '', own: true }; } t.slots = ['dr', 'ai'].map(ocSlot); } if (obSet === 'stconn') { t.st = stConnNodes(); t.scQ = obSetUi.scQ || ''; } t.roomId = r.id; t.members = os; t.auto.ind = A.groupChatMode === 'individual'; t.auto.order = A.groupResponseOrder || 'sequential'; t.auto.turn = A.groupTurnPromptEnabled !== false;
@@ -1384,11 +1393,23 @@ export async function openPhone(who = null) {
         ocBusy = ''; if (!phoneClosed && stillHere()) drawPhone(true); });
     // 알림 화면 (마리나라의 ConversationSoundSetting): 알림음을 켜면 한 번 들려주고, 브라우저 알림은 권한을 받은 뒤에만 켜져요
     $root.on('click', '.na_os_nt', async function (e) { e.stopPropagation(); const k = this.dataset.k, on = this.dataset.on !== '1', g = globalSettings(), n = g.orbitNotify = { ...orbitNotify() };
-        if (k === 'browser' && on) { const perm = obPerm = await requestLocalNotificationPermission(); n.browser = perm === 'granted';
-            if (n.browser) toastr.success('캐릭터가 먼저 건 메시지에 브라우저 알림을 켰습니다.', '캐릭터 휴대폰'); else toastr.error(perm === 'insecure' ? '브라우저 알림은 HTTPS나 localhost에서만 됩니다.' : perm === 'unsupported' ? '이 환경에서는 브라우저 알림을 쓸 수 없습니다.' : perm === 'denied' ? '브라우저 알림이 막혀 있습니다. 이 사이트의 알림 권한을 초기화한 뒤 다시 해 보세요.' : '브라우저 알림 권한을 받지 못했습니다.', '캐릭터 휴대폰'); }
+        if ((k === 'browser' || k === 'genBrowser') && on) { const perm = obPerm = await requestLocalNotificationPermission(); n[k] = perm === 'granted';
+            if (n[k]) toastr.success(k === 'browser' ? '캐릭터가 먼저 건 메시지에 브라우저 알림을 켰습니다.' : '생성 완료에 브라우저 알림을 켰습니다.', '캐릭터 휴대폰'); else toastr.error(perm === 'insecure' ? '브라우저 알림은 HTTPS나 localhost에서만 됩니다.' : perm === 'unsupported' ? '이 환경에서는 브라우저 알림을 쓸 수 없습니다.' : perm === 'denied' ? '브라우저 알림이 막혀 있습니다. 이 사이트의 알림 권한을 초기화한 뒤 다시 해 보세요.' : '브라우저 알림 권한을 받지 못했습니다.', '캐릭터 휴대폰'); }
         else { n[k] = on; if (k === 'sound' && on) playNotificationPing(); }
         saveGlobal(); if (!phoneClosed && stillHere()) drawPhone(true); });
     $root.on('click', '.na_os_ntplay', e => { e.stopPropagation(); playNotificationPing(); });
+    // 사용자 지정 알림음 (마리나라 CustomNotificationSoundSetting): 고르기 · 바꾸기 → 파일 창, 올리면 한 번 들려줘요. 지우기 → 기본 소리
+    $root.on('click', '.na_os_sndup', e => { e.stopPropagation(); if (obSnd.busy) return; $root.find('.na_os_sndfile')[0]?.click(); });
+    $root.on('change', '.na_os_sndfile', async function () { const file = this.files?.[0]; this.value = ''; if (!file) return;
+        if (file.size > SOUND_MAX_BYTES) return toastr.error('알림음은 10MB 이하여야 합니다.', '캐릭터 휴대폰');
+        obSnd.busy = 'up'; drawPhone(true);
+        try { const x = await soundUpload(file); obSnd.configured = x.configured; obSnd.loading = false; toastr.success('사용자 지정 알림음을 저장했습니다.', '캐릭터 휴대폰'); playNotificationPing(); }
+        catch (err) { toastr.error(`사용자 지정 알림음을 저장하지 못했습니다.${err?.message ? ` (${err.message})` : ''}`, '캐릭터 휴대폰'); }
+        obSnd.busy = ''; if (!phoneClosed && stillHere()) drawPhone(true); });
+    $root.on('click', '.na_os_sndrm', async e => { e.stopPropagation(); if (obSnd.busy) return; obSnd.busy = 'rm'; drawPhone(true);
+        try { const x = await soundRemove(); obSnd.configured = x.configured; toastr.success('사용자 지정 알림음을 지웠습니다.', '캐릭터 휴대폰'); }
+        catch (err) { toastr.error(`사용자 지정 알림음을 지우지 못했습니다.${err?.message ? ` (${err.message})` : ''}`, '캐릭터 휴대폰'); }
+        obSnd.busy = ''; if (!phoneClosed && stillHere()) drawPhone(true); });
     // 알림 위치: 실리의 알림 위치 칸에 넣고 실리가 저장해요 (power-user.js의 #toastr_position change). 폰 안으로 옮겨 둔 알림 칸도 그 자리로
     $root.on('click', '.na_os_ntpos', function (e) { e.stopPropagation(); const v = this.dataset.v === 'bottom' ? 'toast-bottom-center' : 'toast-top-center', el = $('#toastr_position');
         obSetUi.open = '';
