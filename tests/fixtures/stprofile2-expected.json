@@ -1,0 +1,4331 @@
+{
+ "cases": {
+  "cc-basic": {
+   "gen": [
+    {
+     "url": "/api/backends/chat-completions/generate",
+     "body": {
+      "stream": false,
+      "messages": [
+       {
+        "role": "system",
+        "content": "You are {{char}}. Talk to {{user}}."
+       },
+       {
+        "role": "user",
+        "content": "hi"
+       }
+      ],
+      "model": "gpt-4o",
+      "chat_completion_source": "openai",
+      "max_tokens": 300,
+      "use_sysprompt": true
+     }
+    }
+   ],
+   "ret": {
+    "content": "ok {{char}}  \n",
+    "reasoning": ""
+   }
+  },
+  "cc-preset": {
+   "gen": [
+    {
+     "url": "/api/backends/chat-completions/generate",
+     "body": {
+      "stream": false,
+      "messages": [
+       {
+        "role": "system",
+        "content": "You are {{char}}. Talk to {{user}}."
+       },
+       {
+        "role": "user",
+        "content": "hi"
+       }
+      ],
+      "model": "gpt-4o",
+      "chat_completion_source": "openai",
+      "max_tokens": 300,
+      "temperature": 0.4,
+      "custom_url": "",
+      "custom_prompt_post_processing": "",
+      "use_sysprompt": true,
+      "type": "quiet",
+      "frequency_penalty": 0.1,
+      "presence_penalty": 0.2,
+      "top_p": 0.9,
+      "user_name": "Ren",
+      "char_name": "Mara",
+      "group_names": [],
+      "include_reasoning": true,
+      "reasoning_effort": "medium",
+      "enable_web_search": false,
+      "request_images": false,
+      "request_image_resolution": "",
+      "request_image_aspect_ratio": "",
+      "vertexai_region": "us-central1",
+      "zai_endpoint": "common",
+      "siliconflow_endpoint": "global",
+      "minimax_endpoint": "global",
+      "pollinations_endpoint": "authenticated"
+     }
+    }
+   ],
+   "ret": {
+    "content": "ok {{char}}  \n",
+    "reasoning": ""
+   }
+  },
+  "cc-preset-not-included": {
+   "gen": [
+    {
+     "url": "/api/backends/chat-completions/generate",
+     "body": {
+      "stream": false,
+      "messages": [
+       {
+        "role": "system",
+        "content": "You are {{char}}. Talk to {{user}}."
+       },
+       {
+        "role": "user",
+        "content": "hi"
+       }
+      ],
+      "model": "gpt-4o",
+      "chat_completion_source": "openai",
+      "max_tokens": 300,
+      "use_sysprompt": true
+     }
+    }
+   ],
+   "ret": {
+    "content": "ok {{char}}  \n",
+    "reasoning": ""
+   }
+  },
+  "cc-preset-missing": {
+   "gen": [
+    {
+     "url": "/api/backends/chat-completions/generate",
+     "body": {
+      "stream": false,
+      "messages": [
+       {
+        "role": "system",
+        "content": "You are {{char}}. Talk to {{user}}."
+       },
+       {
+        "role": "user",
+        "content": "hi"
+       }
+      ],
+      "model": "gpt-4o",
+      "chat_completion_source": "openai",
+      "max_tokens": 300,
+      "use_sysprompt": true
+     }
+    }
+   ],
+   "ret": {
+    "content": "ok {{char}}  \n",
+    "reasoning": ""
+   }
+  },
+  "cc-bias-preset": {
+   "gen": [
+    {
+     "url": "/api/backends/chat-completions/generate",
+     "body": {
+      "stream": false,
+      "messages": [
+       {
+        "role": "system",
+        "content": "You are {{char}}. Talk to {{user}}."
+       },
+       {
+        "role": "user",
+        "content": "hi"
+       }
+      ],
+      "model": "gpt-4o",
+      "chat_completion_source": "openai",
+      "max_tokens": 300,
+      "temperature": 0.7,
+      "custom_url": "",
+      "custom_prompt_post_processing": "",
+      "use_sysprompt": true,
+      "type": "quiet",
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_p": 1,
+      "logit_bias": {
+       "357": -50,
+       "1190": -50
+      },
+      "user_name": "Ren",
+      "char_name": "Mara",
+      "group_names": [],
+      "include_reasoning": true,
+      "enable_web_search": false,
+      "request_images": false,
+      "request_image_resolution": "",
+      "request_image_aspect_ratio": "",
+      "vertexai_region": "us-central1",
+      "zai_endpoint": "common",
+      "siliconflow_endpoint": "global",
+      "minimax_endpoint": "global",
+      "pollinations_endpoint": "authenticated"
+     }
+    }
+   ],
+   "ret": {
+    "content": "ok {{char}}  \n",
+    "reasoning": ""
+   }
+  },
+  "cc-bias-unknown-selected": {
+   "gen": [
+    {
+     "url": "/api/backends/chat-completions/generate",
+     "body": {
+      "stream": false,
+      "messages": [
+       {
+        "role": "system",
+        "content": "You are {{char}}. Talk to {{user}}."
+       },
+       {
+        "role": "user",
+        "content": "hi"
+       }
+      ],
+      "model": "gpt-4o",
+      "chat_completion_source": "openai",
+      "max_tokens": 300,
+      "temperature": 0.7,
+      "custom_url": "",
+      "custom_prompt_post_processing": "",
+      "use_sysprompt": true,
+      "type": "quiet",
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_p": 1,
+      "user_name": "Ren",
+      "char_name": "Mara",
+      "group_names": [],
+      "include_reasoning": true,
+      "enable_web_search": false,
+      "request_images": false,
+      "request_image_resolution": "",
+      "request_image_aspect_ratio": "",
+      "vertexai_region": "us-central1",
+      "zai_endpoint": "common",
+      "siliconflow_endpoint": "global",
+      "minimax_endpoint": "global",
+      "pollinations_endpoint": "authenticated"
+     }
+    }
+   ],
+   "ret": {
+    "content": "ok {{char}}  \n",
+    "reasoning": ""
+   }
+  },
+  "cc-profile-proxy": {
+   "gen": [
+    {
+     "url": "/api/backends/chat-completions/generate",
+     "body": {
+      "stream": false,
+      "messages": [
+       {
+        "role": "system",
+        "content": "You are {{char}}. Talk to {{user}}."
+       },
+       {
+        "role": "user",
+        "content": "hi"
+       }
+      ],
+      "model": "claude-3-7-sonnet",
+      "chat_completion_source": "claude",
+      "max_tokens": 300,
+      "temperature": 0.4,
+      "custom_url": "",
+      "reverse_proxy": "https://proxy.example/v1",
+      "proxy_password": "PW",
+      "custom_prompt_post_processing": "",
+      "use_sysprompt": true,
+      "type": "quiet",
+      "frequency_penalty": 0.1,
+      "presence_penalty": 0.2,
+      "top_p": 0.9,
+      "user_name": "Ren",
+      "char_name": "Mara",
+      "group_names": [],
+      "include_reasoning": true,
+      "reasoning_effort": "medium",
+      "enable_web_search": false,
+      "request_images": false,
+      "request_image_resolution": "",
+      "request_image_aspect_ratio": "",
+      "vertexai_region": "us-central1",
+      "zai_endpoint": "common",
+      "siliconflow_endpoint": "global",
+      "minimax_endpoint": "global",
+      "pollinations_endpoint": "authenticated"
+     }
+    }
+   ],
+   "ret": {
+    "content": "ok {{char}}  \n",
+    "reasoning": ""
+   }
+  },
+  "cc-global-proxy-not-confirmed": {
+   "gen": [],
+   "ret": {
+    "error": "API request failed",
+    "cause": "Proxy connection denied."
+   }
+  },
+  "cc-global-proxy-confirmed": {
+   "gen": [
+    {
+     "url": "/api/backends/chat-completions/generate",
+     "body": {
+      "stream": false,
+      "messages": [
+       {
+        "role": "system",
+        "content": "You are {{char}}. Talk to {{user}}."
+       },
+       {
+        "role": "user",
+        "content": "hi"
+       }
+      ],
+      "model": "claude-3-7-sonnet",
+      "chat_completion_source": "claude",
+      "max_tokens": 300,
+      "temperature": 0.4,
+      "custom_url": "",
+      "reverse_proxy": "https://proxy.example/v1",
+      "proxy_password": "PW",
+      "custom_prompt_post_processing": "",
+      "use_sysprompt": true,
+      "type": "quiet",
+      "frequency_penalty": 0.1,
+      "presence_penalty": 0.2,
+      "top_p": 0.9,
+      "user_name": "Ren",
+      "char_name": "Mara",
+      "group_names": [],
+      "include_reasoning": true,
+      "reasoning_effort": "medium",
+      "enable_web_search": false,
+      "request_images": false,
+      "request_image_resolution": "",
+      "request_image_aspect_ratio": "",
+      "vertexai_region": "us-central1",
+      "zai_endpoint": "common",
+      "siliconflow_endpoint": "global",
+      "minimax_endpoint": "global",
+      "pollinations_endpoint": "authenticated"
+     }
+    }
+   ],
+   "ret": {
+    "content": "ok {{char}}  \n",
+    "reasoning": ""
+   }
+  },
+  "cc-reasoning-override": {
+   "gen": [
+    {
+     "url": "/api/backends/chat-completions/generate",
+     "body": {
+      "stream": false,
+      "messages": [
+       {
+        "role": "system",
+        "content": "You are {{char}}. Talk to {{user}}."
+       },
+       {
+        "role": "user",
+        "content": "hi"
+       }
+      ],
+      "model": "gpt-4o",
+      "chat_completion_source": "openai",
+      "max_tokens": 300,
+      "temperature": 0.4,
+      "custom_url": "",
+      "custom_prompt_post_processing": "",
+      "use_sysprompt": true,
+      "type": "quiet",
+      "frequency_penalty": 0.1,
+      "presence_penalty": 0.2,
+      "top_p": 0.9,
+      "user_name": "Ren",
+      "char_name": "Mara",
+      "group_names": [],
+      "include_reasoning": true,
+      "reasoning_effort": "high",
+      "enable_web_search": false,
+      "request_images": false,
+      "request_image_resolution": "",
+      "request_image_aspect_ratio": "",
+      "vertexai_region": "us-central1",
+      "zai_endpoint": "common",
+      "siliconflow_endpoint": "global",
+      "minimax_endpoint": "global",
+      "pollinations_endpoint": "authenticated"
+     }
+    }
+   ],
+   "ret": {
+    "content": "ok {{char}}  \n",
+    "reasoning": ""
+   }
+  },
+  "cc-image": {
+   "gen": [
+    {
+     "url": "/api/backends/chat-completions/generate",
+     "body": {
+      "stream": false,
+      "messages": [
+       {
+        "role": "system",
+        "content": "Describe for {{user}}."
+       },
+       {
+        "role": "user",
+        "content": [
+         {
+          "type": "text",
+          "text": "what is this"
+         },
+         {
+          "type": "image_url",
+          "image_url": {
+           "url": "data:image/png;base64,iVBORw0KGgo="
+          }
+         }
+        ]
+       }
+      ],
+      "model": "gpt-4o",
+      "chat_completion_source": "openai",
+      "max_tokens": 300,
+      "temperature": 0.4,
+      "custom_url": "",
+      "custom_prompt_post_processing": "",
+      "use_sysprompt": true,
+      "type": "quiet",
+      "frequency_penalty": 0.1,
+      "presence_penalty": 0.2,
+      "top_p": 0.9,
+      "user_name": "Ren",
+      "char_name": "Mara",
+      "group_names": [],
+      "include_reasoning": true,
+      "reasoning_effort": "medium",
+      "enable_web_search": false,
+      "request_images": false,
+      "request_image_resolution": "",
+      "request_image_aspect_ratio": "",
+      "vertexai_region": "us-central1",
+      "zai_endpoint": "common",
+      "siliconflow_endpoint": "global",
+      "minimax_endpoint": "global",
+      "pollinations_endpoint": "authenticated"
+     }
+    }
+   ],
+   "ret": {
+    "content": "ok {{char}}  \n",
+    "reasoning": ""
+   }
+  },
+  "cc-custom-url": {
+   "gen": [
+    {
+     "url": "/api/backends/chat-completions/generate",
+     "body": {
+      "stream": false,
+      "messages": [
+       {
+        "role": "system",
+        "content": "You are {{char}}. Talk to {{user}}."
+       },
+       {
+        "role": "user",
+        "content": "hi"
+       }
+      ],
+      "model": "m",
+      "chat_completion_source": "custom",
+      "max_tokens": 300,
+      "temperature": 0.4,
+      "custom_url": "http://127.0.0.1:9/v1",
+      "custom_prompt_post_processing": "merge",
+      "use_sysprompt": true,
+      "type": "quiet",
+      "frequency_penalty": 0.1,
+      "presence_penalty": 0.2,
+      "top_p": 0.9,
+      "user_name": "Ren",
+      "char_name": "Mara",
+      "group_names": [],
+      "include_reasoning": true,
+      "reasoning_effort": "medium",
+      "enable_web_search": false,
+      "request_images": false,
+      "request_image_resolution": "",
+      "request_image_aspect_ratio": "",
+      "secret_id": "sec-1",
+      "vertexai_region": "http://127.0.0.1:9/v1",
+      "zai_endpoint": "http://127.0.0.1:9/v1",
+      "siliconflow_endpoint": "http://127.0.0.1:9/v1",
+      "minimax_endpoint": "http://127.0.0.1:9/v1",
+      "pollinations_endpoint": "http://127.0.0.1:9/v1"
+     }
+    }
+   ],
+   "ret": {
+    "content": "ok {{char}}  \n",
+    "reasoning": ""
+   }
+  },
+  "cc-deepseek-reasoning": {
+   "gen": [
+    {
+     "url": "/api/backends/chat-completions/generate",
+     "body": {
+      "stream": false,
+      "messages": [
+       {
+        "role": "system",
+        "content": "You are {{char}}. Talk to {{user}}."
+       },
+       {
+        "role": "user",
+        "content": "hi"
+       }
+      ],
+      "model": "deepseek-chat",
+      "chat_completion_source": "deepseek",
+      "max_tokens": 300,
+      "use_sysprompt": true
+     }
+    }
+   ],
+   "ret": {
+    "content": "ok {{char}}  \n",
+    "reasoning": "because"
+   }
+  },
+  "cc-deepseek-global-openai": {
+   "gen": [
+    {
+     "url": "/api/backends/chat-completions/generate",
+     "body": {
+      "stream": false,
+      "messages": [
+       {
+        "role": "system",
+        "content": "You are {{char}}. Talk to {{user}}."
+       },
+       {
+        "role": "user",
+        "content": "hi"
+       }
+      ],
+      "model": "deepseek-chat",
+      "chat_completion_source": "deepseek",
+      "max_tokens": 300,
+      "use_sysprompt": true
+     }
+    }
+   ],
+   "ret": {
+    "content": "ok {{char}}  \n",
+    "reasoning": ""
+   }
+  },
+  "cc-google-alias": {
+   "gen": [
+    {
+     "url": "/api/backends/chat-completions/generate",
+     "body": {
+      "stream": false,
+      "messages": [
+       {
+        "role": "system",
+        "content": "You are {{char}}. Talk to {{user}}."
+       },
+       {
+        "role": "user",
+        "content": "hi"
+       }
+      ],
+      "model": "gemini-2.5-pro",
+      "chat_completion_source": "makersuite",
+      "max_tokens": 300,
+      "temperature": 0.4,
+      "custom_url": "",
+      "custom_prompt_post_processing": "",
+      "use_sysprompt": true,
+      "type": "quiet",
+      "frequency_penalty": 0.1,
+      "presence_penalty": 0.2,
+      "top_p": 0.9,
+      "user_name": "Ren",
+      "char_name": "Mara",
+      "group_names": [],
+      "include_reasoning": true,
+      "reasoning_effort": "medium",
+      "enable_web_search": false,
+      "request_images": false,
+      "request_image_resolution": "",
+      "request_image_aspect_ratio": "",
+      "vertexai_region": "us-central1",
+      "zai_endpoint": "common",
+      "siliconflow_endpoint": "global",
+      "minimax_endpoint": "global",
+      "pollinations_endpoint": "authenticated"
+     }
+    }
+   ],
+   "ret": {
+    "content": "g",
+    "reasoning": ""
+   }
+  },
+  "cc-openrouter-preset": {
+   "gen": [
+    {
+     "url": "/api/backends/chat-completions/generate",
+     "body": {
+      "stream": false,
+      "messages": [
+       {
+        "role": "system",
+        "content": "You are {{char}}. Talk to {{user}}."
+       },
+       {
+        "role": "user",
+        "content": "hi"
+       }
+      ],
+      "model": "openai/gpt-4o",
+      "chat_completion_source": "openrouter",
+      "max_tokens": 300,
+      "temperature": 1,
+      "custom_url": "",
+      "custom_prompt_post_processing": "",
+      "use_sysprompt": true,
+      "type": "quiet",
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_p": 1,
+      "user_name": "Ren",
+      "char_name": "Mara",
+      "group_names": [],
+      "include_reasoning": true,
+      "enable_web_search": false,
+      "request_images": false,
+      "request_image_resolution": "",
+      "request_image_aspect_ratio": "",
+      "top_k": 0,
+      "min_p": 0,
+      "repetition_penalty": 1,
+      "top_a": 0,
+      "use_fallback": false,
+      "provider": [
+       "Anthropic",
+       "Nope"
+      ],
+      "quantizations": [
+       "int4",
+       "fp8"
+      ],
+      "allow_fallbacks": false,
+      "middleout": "on",
+      "vertexai_region": "us-central1",
+      "zai_endpoint": "common",
+      "siliconflow_endpoint": "global",
+      "minimax_endpoint": "global",
+      "pollinations_endpoint": "authenticated"
+     }
+    }
+   ],
+   "ret": {
+    "content": "ok {{char}}  \n",
+    "reasoning": "because"
+   }
+  },
+  "cc-extract-false": {
+   "gen": [
+    {
+     "url": "/api/backends/chat-completions/generate",
+     "body": {
+      "stream": false,
+      "messages": [
+       {
+        "role": "system",
+        "content": "You are {{char}}. Talk to {{user}}."
+       },
+       {
+        "role": "user",
+        "content": "hi"
+       }
+      ],
+      "model": "gpt-4o",
+      "chat_completion_source": "openai",
+      "max_tokens": 300,
+      "use_sysprompt": true
+     }
+    }
+   ],
+   "ret": {
+    "choices": [
+     {
+      "message": {
+       "content": "ok {{char}}  \n",
+       "reasoning_content": "because"
+      }
+     }
+    ]
+   }
+  },
+  "cc-error-reply": {
+   "gen": [
+    {
+     "url": "/api/backends/chat-completions/generate",
+     "body": {
+      "stream": false,
+      "messages": [
+       {
+        "role": "system",
+        "content": "You are {{char}}. Talk to {{user}}."
+       },
+       {
+        "role": "user",
+        "content": "hi"
+       }
+      ],
+      "model": "gpt-4o",
+      "chat_completion_source": "openai",
+      "max_tokens": 300,
+      "use_sysprompt": true
+     }
+    }
+   ],
+   "ret": {
+    "error": "API request failed",
+    "cause": "Lio says no"
+   }
+  },
+  "cc-string-prompt": {
+   "gen": [
+    {
+     "url": "/api/backends/chat-completions/generate",
+     "body": {
+      "stream": false,
+      "messages": [
+       {
+        "role": "user",
+        "content": "hi {{char}}"
+       }
+      ],
+      "model": "gpt-4o",
+      "chat_completion_source": "openai",
+      "max_tokens": 300,
+      "use_sysprompt": true
+     }
+    }
+   ],
+   "ret": {
+    "content": "ok {{char}}  \n",
+    "reasoning": ""
+   }
+  },
+  "cc-max-tokens-preset-wins": {
+   "gen": [
+    {
+     "url": "/api/backends/chat-completions/generate",
+     "body": {
+      "stream": false,
+      "messages": [
+       {
+        "role": "system",
+        "content": "You are {{char}}. Talk to {{user}}."
+       },
+       {
+        "role": "user",
+        "content": "hi"
+       }
+      ],
+      "model": "gpt-4o",
+      "chat_completion_source": "openai",
+      "max_tokens": 77,
+      "temperature": 0.11,
+      "custom_url": "",
+      "custom_prompt_post_processing": "",
+      "use_sysprompt": true,
+      "type": "quiet",
+      "frequency_penalty": 0.1,
+      "presence_penalty": 0.2,
+      "top_p": 0.9,
+      "user_name": "Ren",
+      "char_name": "Mara",
+      "group_names": [],
+      "include_reasoning": true,
+      "reasoning_effort": "medium",
+      "enable_web_search": false,
+      "request_images": false,
+      "request_image_resolution": "",
+      "request_image_aspect_ratio": "",
+      "vertexai_region": "us-central1",
+      "zai_endpoint": "common",
+      "siliconflow_endpoint": "global",
+      "minimax_endpoint": "global",
+      "pollinations_endpoint": "authenticated"
+     }
+    }
+   ],
+   "ret": {
+    "content": "ok {{char}}  \n",
+    "reasoning": ""
+   }
+  },
+  "tc-ooba-chatml": {
+   "gen": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "<|im_start|>system\nYou are {{char}}. Talk to {{user}}.<|im_end|>\n<|im_start|>user\nhi<|im_end|>\n<|im_start|>assistant\n",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "api_type": "ooba",
+      "api_server": "http://127.0.0.1:5000",
+      "temperature": 0.8,
+      "min_p": 0.05,
+      "top_p": 0.9,
+      "typical_p": 0.95,
+      "typical": 0.95,
+      "sampler_seed": 3,
+      "repetition_penalty": 1.1,
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_k": 20,
+      "skew": 0,
+      "min_length": 0,
+      "min_tokens": 0,
+      "num_beams": 1,
+      "length_penalty": 1,
+      "early_stopping": false,
+      "add_bos_token": true,
+      "smoothing_factor": 0,
+      "smoothing_curve": 1,
+      "dry_allowed_length": 2,
+      "dry_multiplier": 0,
+      "dry_base": 1.75,
+      "dry_sequence_breakers": "[\"\\n\",\"Mara:\"]",
+      "dry_penalty_last_n": 0,
+      "max_tokens_second": 0,
+      "sampler_priority": [
+       "temperature",
+       "top_k",
+       "top_p"
+      ],
+      "stopping_strings": [
+       "\n<|im_end|>",
+       "\n<|im_start|>user",
+       "\n<|im_start|>assistant",
+       "\n<|im_start|>system"
+      ],
+      "stop": [
+       "\n<|im_end|>",
+       "\n<|im_start|>user",
+       "\n<|im_start|>assistant",
+       "\n<|im_start|>system"
+      ],
+      "truncation_length": 8192,
+      "ban_eos_token": false,
+      "skip_special_tokens": true,
+      "include_reasoning": true,
+      "top_a": 0,
+      "tfs": 1,
+      "epsilon_cutoff": 0,
+      "eta_cutoff": 0,
+      "mirostat_mode": 0,
+      "mirostat_tau": 5,
+      "mirostat_eta": 0.1,
+      "custom_token_bans": "",
+      "banned_strings": [],
+      "xtc_threshold": 0.1,
+      "xtc_probability": 0,
+      "nsigma": 0,
+      "top_n_sigma": 0,
+      "min_keep": 0,
+      "adaptive_target": -0.01,
+      "adaptive_decay": 0.9,
+      "rep_pen": 1.1,
+      "rep_pen_range": 64,
+      "repetition_penalty_range": 64,
+      "encoder_repetition_penalty": 1,
+      "no_repeat_ngram_size": 0,
+      "penalty_alpha": 0,
+      "temperature_last": true,
+      "do_sample": true,
+      "seed": 3,
+      "guidance_scale": 1,
+      "negative_prompt": "not Ren",
+      "repeat_penalty": 1.1,
+      "repeat_last_n": 64,
+      "n_predict": 250,
+      "num_predict": 250,
+      "num_ctx": 8192,
+      "mirostat": 0,
+      "ignore_eos": false,
+      "rep_pen_slope": 1
+     }
+    }
+   ],
+   "ret": {
+    "content": "Hello there\nRen: next",
+    "reasoning": ""
+   }
+  },
+  "tc-ooba-plain": {
+   "gen": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "You are {{char}}. Talk to {{user}}.\n\nhi",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "api_type": "ooba",
+      "api_server": "http://127.0.0.1:5000"
+     }
+    }
+   ],
+   "ret": {
+    "content": "Hello there\nRen: next<|im_end|>\n<|im_start|>user",
+    "reasoning": ""
+   }
+  },
+  "tc-ooba-preset-names-stop": {
+   "gen": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "You are {{char}}. Talk to {{user}}.\n\nhi",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "api_type": "ooba",
+      "api_server": "http://127.0.0.1:5000",
+      "temperature": 0.8,
+      "min_p": 0.05,
+      "top_p": 0.9,
+      "typical_p": 0.95,
+      "typical": 0.95,
+      "sampler_seed": 3,
+      "repetition_penalty": 1.1,
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_k": 20,
+      "skew": 0,
+      "min_length": 0,
+      "min_tokens": 0,
+      "num_beams": 1,
+      "length_penalty": 1,
+      "early_stopping": false,
+      "add_bos_token": true,
+      "smoothing_factor": 0,
+      "smoothing_curve": 1,
+      "dry_allowed_length": 2,
+      "dry_multiplier": 0,
+      "dry_base": 1.75,
+      "dry_sequence_breakers": "[\"\\n\",\"Mara:\"]",
+      "dry_penalty_last_n": 0,
+      "max_tokens_second": 0,
+      "sampler_priority": [
+       "temperature",
+       "top_k",
+       "top_p"
+      ],
+      "stopping_strings": [
+       "\nRen:",
+       "\n***"
+      ],
+      "stop": [
+       "\nRen:",
+       "\n***"
+      ],
+      "truncation_length": 8192,
+      "ban_eos_token": false,
+      "skip_special_tokens": true,
+      "include_reasoning": true,
+      "top_a": 0,
+      "tfs": 1,
+      "epsilon_cutoff": 0,
+      "eta_cutoff": 0,
+      "mirostat_mode": 0,
+      "mirostat_tau": 5,
+      "mirostat_eta": 0.1,
+      "custom_token_bans": "",
+      "banned_strings": [],
+      "xtc_threshold": 0.1,
+      "xtc_probability": 0,
+      "nsigma": 0,
+      "top_n_sigma": 0,
+      "min_keep": 0,
+      "adaptive_target": -0.01,
+      "adaptive_decay": 0.9,
+      "rep_pen": 1.1,
+      "rep_pen_range": 64,
+      "repetition_penalty_range": 64,
+      "encoder_repetition_penalty": 1,
+      "no_repeat_ngram_size": 0,
+      "penalty_alpha": 0,
+      "temperature_last": true,
+      "do_sample": true,
+      "seed": 3,
+      "guidance_scale": 1,
+      "negative_prompt": "not Ren",
+      "repeat_penalty": 1.1,
+      "repeat_last_n": 64,
+      "n_predict": 250,
+      "num_predict": 250,
+      "num_ctx": 8192,
+      "mirostat": 0,
+      "ignore_eos": false,
+      "rep_pen_slope": 1
+     }
+    }
+   ],
+   "ret": {
+    "content": "Hello there\nRen: next<|im_end|>\n<|im_start|>user",
+    "reasoning": ""
+   }
+  },
+  "tc-kcpp-llama3": {
+   "gen": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "<|start_header_id|>system<|end_header_id|>\n\nYou are {{char}}. Talk to {{user}}.<|eot_id|><|start_header_id|>user<|end_header_id|>\n\nhi<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "api_type": "koboldcpp",
+      "api_server": "http://127.0.0.1:5001",
+      "temperature": 0.8,
+      "min_p": 0.05,
+      "top_p": 0.9,
+      "typical_p": 0.95,
+      "typical": 0.95,
+      "sampler_seed": 3,
+      "repetition_penalty": 1.1,
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_k": 20,
+      "skew": 0,
+      "min_length": 0,
+      "min_tokens": 0,
+      "num_beams": 1,
+      "length_penalty": 1,
+      "early_stopping": false,
+      "add_bos_token": true,
+      "smoothing_factor": 0,
+      "smoothing_curve": 1,
+      "dry_allowed_length": 2,
+      "dry_multiplier": 0,
+      "dry_base": 1.75,
+      "dry_sequence_breakers": "[\"\\n\",\"Mara:\"]",
+      "dry_penalty_last_n": 0,
+      "max_tokens_second": 0,
+      "sampler_priority": [
+       "temperature",
+       "top_k",
+       "top_p"
+      ],
+      "stopping_strings": [
+       "<|eot_id|>",
+       "<|start_header_id|>user<|end_header_id|>",
+       "<|start_header_id|>assistant<|end_header_id|>",
+       "<|start_header_id|>system<|end_header_id|>"
+      ],
+      "stop": [
+       "<|eot_id|>",
+       "<|start_header_id|>user<|end_header_id|>",
+       "<|start_header_id|>assistant<|end_header_id|>",
+       "<|start_header_id|>system<|end_header_id|>"
+      ],
+      "truncation_length": 8192,
+      "ban_eos_token": false,
+      "skip_special_tokens": true,
+      "include_reasoning": true,
+      "top_a": 0,
+      "tfs": 1,
+      "epsilon_cutoff": 0,
+      "eta_cutoff": 0,
+      "mirostat_mode": 0,
+      "mirostat_tau": 5,
+      "mirostat_eta": 0.1,
+      "custom_token_bans": "",
+      "banned_strings": [],
+      "xtc_threshold": 0.1,
+      "xtc_probability": 0,
+      "nsigma": 0,
+      "top_n_sigma": 0,
+      "min_keep": 0,
+      "adaptive_target": -0.01,
+      "adaptive_decay": 0.9,
+      "rep_pen": 1.1,
+      "rep_pen_range": 64,
+      "repetition_penalty_range": 64,
+      "encoder_repetition_penalty": 1,
+      "no_repeat_ngram_size": 0,
+      "penalty_alpha": 0,
+      "temperature_last": true,
+      "do_sample": true,
+      "seed": 3,
+      "guidance_scale": 1,
+      "negative_prompt": "not Ren",
+      "repeat_penalty": 1.1,
+      "repeat_last_n": 64,
+      "n_predict": 250,
+      "num_predict": 250,
+      "num_ctx": 8192,
+      "mirostat": 0,
+      "ignore_eos": false,
+      "rep_pen_slope": 1
+     }
+    }
+   ],
+   "ret": {
+    "content": "Sure.",
+    "reasoning": ""
+   }
+  },
+  "tc-kcpp-dyna": {
+   "gen": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "You are {{char}}. Talk to {{user}}.\n\nhi",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "api_type": "koboldcpp",
+      "api_server": "http://127.0.0.1:5001",
+      "temperature": 1,
+      "min_p": 0.05,
+      "top_p": 0.9,
+      "typical_p": 0.95,
+      "typical": 0.95,
+      "sampler_seed": 3,
+      "repetition_penalty": 1.1,
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_k": 20,
+      "skew": 0,
+      "min_tokens": 0,
+      "add_bos_token": true,
+      "dynamic_temperature": true,
+      "dynatemp_low": 0.5,
+      "dynatemp_high": 1.5,
+      "dynatemp_range": 0.5,
+      "dynatemp_exponent": 1,
+      "smoothing_factor": 0,
+      "smoothing_curve": 1,
+      "dry_allowed_length": 2,
+      "dry_multiplier": 0,
+      "dry_base": 1.75,
+      "dry_sequence_breakers": [
+       "\n",
+       "Mara:"
+      ],
+      "dry_penalty_last_n": 0,
+      "max_tokens_second": 0,
+      "stopping_strings": [
+       "\nRen:",
+       "\n***"
+      ],
+      "stop": [
+       "\nRen:",
+       "\n***"
+      ],
+      "truncation_length": 8192,
+      "ban_eos_token": false,
+      "skip_special_tokens": true,
+      "include_reasoning": true,
+      "top_a": 0,
+      "tfs": 1,
+      "mirostat_mode": 0,
+      "mirostat_tau": 5,
+      "mirostat_eta": 0.1,
+      "custom_token_bans": "",
+      "banned_strings": [],
+      "sampler_order": [
+       6,
+       0,
+       1,
+       3,
+       4,
+       2,
+       5
+      ],
+      "xtc_threshold": 0.1,
+      "xtc_probability": 0,
+      "nsigma": 0,
+      "top_n_sigma": 0,
+      "min_keep": 0,
+      "adaptive_target": -0.01,
+      "adaptive_decay": 0.9,
+      "trim_stop": true,
+      "rep_pen": 1.1,
+      "rep_pen_range": 64,
+      "repetition_penalty_range": 64,
+      "seed": 3,
+      "guidance_scale": 1,
+      "negative_prompt": "not Ren",
+      "repeat_penalty": 1.1,
+      "repeat_last_n": 64,
+      "n_predict": 250,
+      "num_predict": 250,
+      "num_ctx": 8192,
+      "mirostat": 0,
+      "ignore_eos": false,
+      "rep_pen_slope": 1
+     }
+    }
+   ],
+   "ret": {
+    "content": "Hello there\nRen: next<|im_end|>\n<|im_start|>user",
+    "reasoning": ""
+   }
+  },
+  "tc-llamacpp-alpaca-bias": {
+   "gen": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "### Input:\nYou are {{char}}. Talk to {{user}}.\n\n### Instruction:\nhi\n\n### Response:\n",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "api_type": "llamacpp",
+      "api_server": "http://127.0.0.1:8080",
+      "temperature": 0.8,
+      "min_p": 0.05,
+      "top_p": 0.9,
+      "typical_p": 0.95,
+      "typical": 0.95,
+      "sampler_seed": 3,
+      "repetition_penalty": 1.1,
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_k": 20,
+      "skew": 0,
+      "min_tokens": 0,
+      "add_bos_token": true,
+      "smoothing_factor": 0,
+      "smoothing_curve": 1,
+      "dry_allowed_length": 2,
+      "dry_multiplier": 0,
+      "dry_base": 1.75,
+      "dry_sequence_breakers": [
+       "\n",
+       "Mara:"
+      ],
+      "dry_penalty_last_n": 0,
+      "max_tokens_second": 0,
+      "samplers": [
+       "top_k",
+       "temperature"
+      ],
+      "stopping_strings": [
+       "\n### Instruction:",
+       "\n### Response:",
+       "\n### Input:"
+      ],
+      "stop": [
+       "\n### Instruction:",
+       "\n### Response:",
+       "\n### Input:"
+      ],
+      "truncation_length": 8192,
+      "ban_eos_token": false,
+      "skip_special_tokens": true,
+      "include_reasoning": true,
+      "top_a": 0,
+      "tfs": 1,
+      "mirostat_mode": 0,
+      "mirostat_tau": 5,
+      "mirostat_eta": 0.1,
+      "custom_token_bans": "365,601,42",
+      "banned_strings": [
+       "Varo"
+      ],
+      "xtc_threshold": 0.1,
+      "xtc_probability": 0,
+      "nsigma": 0,
+      "top_n_sigma": 0,
+      "min_keep": 0,
+      "adaptive_target": -0.01,
+      "adaptive_decay": 0.9,
+      "n": 1,
+      "rep_pen": 1.1,
+      "rep_pen_range": 64,
+      "repetition_penalty_range": 64,
+      "seed": 3,
+      "guidance_scale": 1,
+      "negative_prompt": "not Ren",
+      "repeat_penalty": 1.1,
+      "repeat_last_n": 64,
+      "n_predict": 250,
+      "num_predict": 250,
+      "num_ctx": 8192,
+      "mirostat": 0,
+      "ignore_eos": false,
+      "rep_pen_slope": 1,
+      "logit_bias": [
+       [
+        15,
+        -2
+       ],
+       [
+        16,
+        -2
+       ],
+       [
+        3186,
+        3
+       ],
+       [
+        22172,
+        5
+       ],
+       [
+        29871,
+        3
+       ],
+       [
+        365,
+        false
+       ],
+       [
+        601,
+        false
+       ],
+       [
+        42,
+        false
+       ]
+      ],
+      "grammar": "",
+      "cache_prompt": true
+     }
+    }
+   ],
+   "ret": {
+    "content": "Hi  there\n",
+    "reasoning": ""
+   }
+  },
+  "tc-ollama": {
+   "gen": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "You are {{char}}. Talk to {{user}}.\n\nhi",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "model": "x-local-model",
+      "api_type": "ollama",
+      "api_server": "http://127.0.0.1:11434",
+      "temperature": 0.8,
+      "min_p": 0.05,
+      "top_p": 0.9,
+      "typical_p": 0.95,
+      "typical": 0.95,
+      "sampler_seed": 3,
+      "repetition_penalty": 1.1,
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_k": 20,
+      "skew": 0,
+      "min_tokens": 0,
+      "add_bos_token": true,
+      "smoothing_factor": 0,
+      "smoothing_curve": 1,
+      "dry_allowed_length": 2,
+      "dry_multiplier": 0,
+      "dry_base": 1.75,
+      "dry_sequence_breakers": [
+       "\n",
+       "Mara:"
+      ],
+      "dry_penalty_last_n": 0,
+      "max_tokens_second": 0,
+      "stopping_strings": [
+       "\nRen:",
+       "\n***"
+      ],
+      "stop": [
+       "\nRen:",
+       "\n***"
+      ],
+      "truncation_length": 8192,
+      "ban_eos_token": false,
+      "skip_special_tokens": true,
+      "include_reasoning": true,
+      "top_a": 0,
+      "tfs": 1,
+      "mirostat_mode": 0,
+      "mirostat_tau": 5,
+      "mirostat_eta": 0.1,
+      "custom_token_bans": "",
+      "banned_strings": [],
+      "xtc_threshold": 0.1,
+      "xtc_probability": 0,
+      "nsigma": 0,
+      "top_n_sigma": 0,
+      "min_keep": 0,
+      "adaptive_target": -0.01,
+      "adaptive_decay": 0.9,
+      "rep_pen": 1.1,
+      "rep_pen_range": 64,
+      "repetition_penalty_range": 64,
+      "seed": 3,
+      "guidance_scale": 1,
+      "negative_prompt": "not Ren",
+      "repeat_penalty": 1.1,
+      "repeat_last_n": 64,
+      "n_predict": 250,
+      "num_predict": 250,
+      "num_ctx": 8192,
+      "mirostat": 0,
+      "ignore_eos": false,
+      "rep_pen_slope": 1,
+      "logit_bias": [],
+      "grammar": "",
+      "cache_prompt": true
+     }
+    }
+   ],
+   "ret": {
+    "content": "from ollama",
+    "reasoning": "hmm"
+   }
+  },
+  "tc-ollama-no-model": {
+   "gen": [],
+   "ret": {
+    "error": "API request failed",
+    "cause": "No Ollama model selected"
+   }
+  },
+  "tc-vllm-chatml": {
+   "gen": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "<|im_start|>system\nYou are {{char}}. Talk to {{user}}.<|im_end|>\n<|im_start|>user\nhi<|im_end|>\n<|im_start|>assistant\n",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "model": "x-vllm-model",
+      "api_type": "vllm",
+      "api_server": "http://127.0.0.1:8000",
+      "temperature": 0.8,
+      "min_p": 0.05,
+      "top_p": 0.9,
+      "typical_p": 0.95,
+      "typical": 0.95,
+      "sampler_seed": 3,
+      "repetition_penalty": 1.1,
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_k": 20,
+      "skew": 0,
+      "min_tokens": 0,
+      "add_bos_token": true,
+      "smoothing_factor": 0,
+      "smoothing_curve": 1,
+      "dry_allowed_length": 2,
+      "dry_multiplier": 0,
+      "dry_base": 1.75,
+      "dry_sequence_breakers": "[\"\\n\",\"Mara:\"]",
+      "dry_penalty_last_n": 0,
+      "max_tokens_second": 0,
+      "stopping_strings": [
+       "\n<|im_end|>",
+       "\n<|im_start|>user",
+       "\n<|im_start|>assistant",
+       "\n<|im_start|>system"
+      ],
+      "stop": [
+       "\n<|im_end|>",
+       "\n<|im_start|>user",
+       "\n<|im_start|>assistant",
+       "\n<|im_start|>system"
+      ],
+      "truncation_length": 8192,
+      "ban_eos_token": false,
+      "skip_special_tokens": true,
+      "include_reasoning": true,
+      "top_a": 0,
+      "tfs": 1,
+      "mirostat_mode": 0,
+      "mirostat_tau": 5,
+      "mirostat_eta": 0.1,
+      "custom_token_bans": "",
+      "banned_strings": [],
+      "xtc_threshold": 0.1,
+      "xtc_probability": 0,
+      "nsigma": 0,
+      "top_n_sigma": 0,
+      "min_keep": 0,
+      "adaptive_target": -0.01,
+      "adaptive_decay": 0.9,
+      "n": 1,
+      "ignore_eos": false,
+      "spaces_between_special_tokens": true,
+      "seed": 3
+     }
+    }
+   ],
+   "ret": {
+    "content": "Hello there\nRen: next",
+    "reasoning": ""
+   }
+  },
+  "tc-tabby-json": {
+   "gen": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "You are {{char}}. Talk to {{user}}.\n\nhi",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "api_type": "tabby",
+      "api_server": "http://127.0.0.1:5005",
+      "temperature": 0.8,
+      "min_p": 0.05,
+      "top_p": 0.9,
+      "typical_p": 0.95,
+      "typical": 0.95,
+      "sampler_seed": 3,
+      "repetition_penalty": 1.1,
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_k": 20,
+      "skew": 0,
+      "min_tokens": 0,
+      "add_bos_token": true,
+      "smoothing_factor": 0,
+      "smoothing_curve": 1,
+      "dry_allowed_length": 2,
+      "dry_multiplier": 0,
+      "dry_base": 1.75,
+      "dry_sequence_breakers": "[\"\\n\",\"Mara:\"]",
+      "dry_penalty_last_n": 0,
+      "max_tokens_second": 0,
+      "stopping_strings": [
+       "\nRen:",
+       "\n***"
+      ],
+      "stop": [
+       "\nRen:",
+       "\n***"
+      ],
+      "truncation_length": 8192,
+      "ban_eos_token": false,
+      "skip_special_tokens": true,
+      "include_reasoning": true,
+      "top_a": 0,
+      "tfs": 1,
+      "mirostat_mode": 0,
+      "mirostat_tau": 5,
+      "mirostat_eta": 0.1,
+      "custom_token_bans": "",
+      "banned_strings": [],
+      "xtc_threshold": 0.1,
+      "xtc_probability": 0,
+      "nsigma": 0,
+      "top_n_sigma": 0,
+      "min_keep": 0,
+      "adaptive_target": -0.01,
+      "adaptive_decay": 0.9,
+      "n": 1,
+      "rep_pen": 1.1,
+      "rep_pen_range": 64,
+      "repetition_decay": 0,
+      "repetition_penalty_range": 64,
+      "temperature_last": true,
+      "speculative_ngram": false,
+      "seed": 3,
+      "guidance_scale": 1,
+      "negative_prompt": "not Ren",
+      "grammar_string": "root ::= \"x\"",
+      "json_schema": {
+       "type": "object",
+       "properties": {
+        "a": {
+         "type": "string"
+        }
+       }
+      },
+      "repeat_penalty": 1.1,
+      "repeat_last_n": 64,
+      "n_predict": 250,
+      "num_predict": 250,
+      "num_ctx": 8192,
+      "mirostat": 0,
+      "ignore_eos": false,
+      "rep_pen_slope": 1
+     }
+    }
+   ],
+   "ret": {
+    "content": "Hello there\nRen: next<|im_end|>\n<|im_start|>user",
+    "reasoning": ""
+   }
+  },
+  "tc-openrouter-global-type": {
+   "gen": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "You are {{char}}. Talk to {{user}}.\n\nhi",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "model": "x/y",
+      "api_type": "openrouter",
+      "api_server": "https://openrouter.ai/api",
+      "temperature": 0.8,
+      "min_p": 0.05,
+      "top_p": 0.9,
+      "typical_p": 0.95,
+      "typical": 0.95,
+      "sampler_seed": 3,
+      "repetition_penalty": 1.1,
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_k": 20,
+      "skew": 0,
+      "min_tokens": 0,
+      "add_bos_token": true,
+      "smoothing_factor": 0,
+      "smoothing_curve": 1,
+      "dry_allowed_length": 2,
+      "dry_multiplier": 0,
+      "dry_base": 1.75,
+      "dry_sequence_breakers": "[\"\\n\",\"Mara:\"]",
+      "dry_penalty_last_n": 0,
+      "max_tokens_second": 0,
+      "stopping_strings": [
+       "\nRen:",
+       "\n***"
+      ],
+      "stop": [
+       "\nRen:",
+       "\n***"
+      ],
+      "truncation_length": 8192,
+      "ban_eos_token": false,
+      "skip_special_tokens": true,
+      "include_reasoning": true,
+      "top_a": 0,
+      "tfs": 1,
+      "mirostat_mode": 0,
+      "mirostat_tau": 5,
+      "mirostat_eta": 0.1,
+      "custom_token_bans": "",
+      "banned_strings": [],
+      "xtc_threshold": 0.1,
+      "xtc_probability": 0,
+      "nsigma": 0,
+      "top_n_sigma": 0,
+      "min_keep": 0,
+      "adaptive_target": -0.01,
+      "adaptive_decay": 0.9,
+      "provider": [
+       "AI21",
+       "Anthropic"
+      ],
+      "quantizations": [
+       "fp8"
+      ],
+      "allow_fallbacks": true,
+      "rep_pen": 1.1,
+      "rep_pen_range": 64,
+      "repetition_penalty_range": 64,
+      "seed": 3,
+      "guidance_scale": 1,
+      "negative_prompt": "not Ren",
+      "repeat_penalty": 1.1,
+      "repeat_last_n": 64,
+      "n_predict": 250,
+      "num_predict": 250,
+      "num_ctx": 8192,
+      "mirostat": 0,
+      "ignore_eos": false,
+      "rep_pen_slope": 1
+     }
+    }
+   ],
+   "ret": {
+    "content": "Hello there\nRen: next<|im_end|>\n<|im_start|>user",
+    "reasoning": "r1"
+   }
+  },
+  "tc-openrouter-global-ooba": {
+   "gen": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "You are {{char}}. Talk to {{user}}.\n\nhi",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "model": "x/y",
+      "api_type": "openrouter",
+      "api_server": "https://openrouter.ai/api",
+      "temperature": 0.8,
+      "min_p": 0.05,
+      "top_p": 0.9,
+      "typical_p": 0.95,
+      "typical": 0.95,
+      "sampler_seed": 3,
+      "repetition_penalty": 1.1,
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_k": 20,
+      "skew": 0,
+      "min_length": 0,
+      "min_tokens": 0,
+      "num_beams": 1,
+      "length_penalty": 1,
+      "early_stopping": false,
+      "add_bos_token": true,
+      "smoothing_factor": 0,
+      "smoothing_curve": 1,
+      "dry_allowed_length": 2,
+      "dry_multiplier": 0,
+      "dry_base": 1.75,
+      "dry_sequence_breakers": "[\"\\n\",\"Mara:\"]",
+      "dry_penalty_last_n": 0,
+      "max_tokens_second": 0,
+      "sampler_priority": [
+       "temperature",
+       "top_k",
+       "top_p"
+      ],
+      "stopping_strings": [
+       "\nRen:",
+       "\n***"
+      ],
+      "stop": [
+       "\nRen:",
+       "\n***"
+      ],
+      "truncation_length": 8192,
+      "ban_eos_token": false,
+      "skip_special_tokens": true,
+      "include_reasoning": true,
+      "top_a": 0,
+      "tfs": 1,
+      "epsilon_cutoff": 0,
+      "eta_cutoff": 0,
+      "mirostat_mode": 0,
+      "mirostat_tau": 5,
+      "mirostat_eta": 0.1,
+      "custom_token_bans": "",
+      "banned_strings": [],
+      "xtc_threshold": 0.1,
+      "xtc_probability": 0,
+      "nsigma": 0,
+      "top_n_sigma": 0,
+      "min_keep": 0,
+      "adaptive_target": -0.01,
+      "adaptive_decay": 0.9,
+      "rep_pen": 1.1,
+      "rep_pen_range": 64,
+      "repetition_penalty_range": 64,
+      "encoder_repetition_penalty": 1,
+      "no_repeat_ngram_size": 0,
+      "penalty_alpha": 0,
+      "temperature_last": true,
+      "do_sample": true,
+      "seed": 3,
+      "guidance_scale": 1,
+      "negative_prompt": "not Ren",
+      "repeat_penalty": 1.1,
+      "repeat_last_n": 64,
+      "n_predict": 250,
+      "num_predict": 250,
+      "num_ctx": 8192,
+      "mirostat": 0,
+      "ignore_eos": false,
+      "rep_pen_slope": 1
+     }
+    }
+   ],
+   "ret": {
+    "content": "Hello there\nRen: next<|im_end|>\n<|im_start|>user",
+    "reasoning": "r1"
+   }
+  },
+  "tc-generic-chatml": {
+   "gen": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "<|im_start|>system\nYou are {{char}}. Talk to {{user}}.<|im_end|>\n<|im_start|>user\nhi<|im_end|>\n<|im_start|>assistant\n",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "model": "x-gen",
+      "api_type": "generic",
+      "api_server": "http://127.0.0.1:9000/v1",
+      "temperature": 0.8,
+      "min_p": 0.05,
+      "top_p": 0.9,
+      "typical_p": 0.95,
+      "typical": 0.95,
+      "sampler_seed": 3,
+      "repetition_penalty": 1.1,
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_k": 20,
+      "skew": 0,
+      "min_tokens": 0,
+      "add_bos_token": true,
+      "smoothing_factor": 0,
+      "smoothing_curve": 1,
+      "dry_allowed_length": 2,
+      "dry_multiplier": 0,
+      "dry_base": 1.75,
+      "dry_sequence_breakers": "[\"\\n\",\"Mara:\"]",
+      "dry_penalty_last_n": 0,
+      "max_tokens_second": 0,
+      "stopping_strings": [
+       "\n<|im_end|>",
+       "\n<|im_start|>user",
+       "\n<|im_start|>assistant",
+       "\n<|im_start|>system"
+      ],
+      "stop": [
+       "\n<|im_end|>",
+       "\n<|im_start|>user",
+       "\n<|im_start|>assistant",
+       "\n<|im_start|>system"
+      ],
+      "truncation_length": 8192,
+      "ban_eos_token": false,
+      "skip_special_tokens": true,
+      "include_reasoning": true,
+      "top_a": 0,
+      "tfs": 1,
+      "mirostat_mode": 0,
+      "mirostat_tau": 5,
+      "mirostat_eta": 0.1,
+      "custom_token_bans": "",
+      "banned_strings": [],
+      "xtc_threshold": 0.1,
+      "xtc_probability": 0,
+      "nsigma": 0,
+      "top_n_sigma": 0,
+      "min_keep": 0,
+      "adaptive_target": -0.01,
+      "adaptive_decay": 0.9,
+      "rep_pen": 1.1,
+      "rep_pen_range": 64,
+      "repetition_penalty_range": 64,
+      "seed": 3,
+      "guidance_scale": 1,
+      "negative_prompt": "not Ren",
+      "repeat_penalty": 1.1,
+      "repeat_last_n": 64,
+      "n_predict": 250,
+      "num_predict": 250,
+      "num_ctx": 8192,
+      "mirostat": 0,
+      "ignore_eos": false,
+      "rep_pen_slope": 1
+     }
+    }
+   ],
+   "ret": {
+    "content": "Hello there\nRen: next",
+    "reasoning": ""
+   }
+  },
+  "tc-mancer-dyna": {
+   "gen": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "You are {{char}}. Talk to {{user}}.\n\nhi",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "model": "mytholite",
+      "api_type": "mancer",
+      "api_server": "https://neuro.mancer.tech",
+      "temperature": 1,
+      "min_p": 0.05,
+      "top_p": 0.9,
+      "typical_p": 0.95,
+      "typical": 0.95,
+      "sampler_seed": 3,
+      "repetition_penalty": 1.1,
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_k": 20,
+      "skew": 0,
+      "min_tokens": 0,
+      "add_bos_token": true,
+      "dynamic_temperature": true,
+      "dynatemp_range": 0.5,
+      "dynatemp_exponent": 1,
+      "smoothing_factor": 0,
+      "smoothing_curve": 1,
+      "dry_allowed_length": 2,
+      "dry_multiplier": 0,
+      "dry_base": 1.75,
+      "dry_sequence_breakers": [
+       "\n",
+       "Mara:"
+      ],
+      "dry_penalty_last_n": 0,
+      "max_tokens_second": 0,
+      "stopping_strings": [
+       "\nRen:",
+       "\n***"
+      ],
+      "stop": [
+       "\nRen:",
+       "\n***"
+      ],
+      "truncation_length": 8192,
+      "ban_eos_token": false,
+      "skip_special_tokens": true,
+      "include_reasoning": true,
+      "top_a": 0,
+      "tfs": 1,
+      "epsilon_cutoff": 0.003,
+      "eta_cutoff": 0.002,
+      "mirostat_mode": 0,
+      "mirostat_tau": 5,
+      "mirostat_eta": 0.1,
+      "custom_token_bans": [],
+      "banned_strings": [],
+      "xtc_threshold": 0.1,
+      "xtc_probability": 0,
+      "nsigma": 0,
+      "top_n_sigma": 0,
+      "min_keep": 0,
+      "adaptive_target": -0.01,
+      "adaptive_decay": 0.9,
+      "n": 1,
+      "dynatemp_mode": 1,
+      "dynatemp_min": 0.5,
+      "dynatemp_max": 1.5,
+      "rep_pen": 1.1,
+      "rep_pen_range": 64,
+      "repetition_penalty_range": 64,
+      "seed": 3,
+      "guidance_scale": 1,
+      "negative_prompt": "not Ren",
+      "repeat_penalty": 1.1,
+      "repeat_last_n": 64,
+      "n_predict": 250,
+      "num_predict": 250,
+      "num_ctx": 8192,
+      "mirostat": 0,
+      "ignore_eos": false,
+      "rep_pen_slope": 1
+     }
+    }
+   ],
+   "ret": {
+    "content": "Hello there\nRen: next<|im_end|>\n<|im_start|>user",
+    "reasoning": ""
+   }
+  },
+  "tc-hf-seed": {
+   "gen": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "You are {{char}}. Talk to {{user}}.\n\nhi",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "model": "tgi",
+      "api_type": "huggingface",
+      "api_server": "http://127.0.0.1:8081",
+      "temperature": 0.8,
+      "min_p": 0.05,
+      "top_p": 0.999,
+      "typical_p": 0.95,
+      "typical": 0.95,
+      "sampler_seed": 5,
+      "repetition_penalty": 1.1,
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_k": 20,
+      "skew": 0,
+      "min_tokens": 0,
+      "add_bos_token": true,
+      "smoothing_factor": 0,
+      "smoothing_curve": 1,
+      "dry_allowed_length": 2,
+      "dry_multiplier": 0,
+      "dry_base": 1.75,
+      "dry_sequence_breakers": "[\"\\n\",\"Mara:\"]",
+      "dry_penalty_last_n": 0,
+      "max_tokens_second": 0,
+      "stopping_strings": [
+       "\nRen:",
+       "\n***"
+      ],
+      "stop": [
+       "\nRen:",
+       "\n***"
+      ],
+      "truncation_length": 8192,
+      "ban_eos_token": false,
+      "skip_special_tokens": true,
+      "include_reasoning": true,
+      "top_a": 0,
+      "tfs": 1,
+      "mirostat_mode": 0,
+      "mirostat_tau": 5,
+      "mirostat_eta": 0.1,
+      "custom_token_bans": "",
+      "banned_strings": [],
+      "xtc_threshold": 0.1,
+      "xtc_probability": 0,
+      "nsigma": 0,
+      "top_n_sigma": 0,
+      "min_keep": 0,
+      "adaptive_target": -0.01,
+      "adaptive_decay": 0.9,
+      "rep_pen": 1.1,
+      "rep_pen_range": 64,
+      "repetition_penalty_range": 64,
+      "seed": 5,
+      "guidance_scale": 1,
+      "negative_prompt": "not Ren",
+      "repeat_penalty": 1.1,
+      "repeat_last_n": 64,
+      "n_predict": 250,
+      "num_predict": 250,
+      "num_ctx": 8192,
+      "mirostat": 0,
+      "ignore_eos": false,
+      "rep_pen_slope": 1
+     }
+    }
+   ],
+   "ret": {
+    "content": "Hello there\nRen: next<|im_end|>\n<|im_start|>user",
+    "reasoning": ""
+   }
+  },
+  "tc-aphrodite-json": {
+   "gen": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "You are {{char}}. Talk to {{user}}.\n\nhi",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "model": "",
+      "api_type": "aphrodite",
+      "api_server": "http://127.0.0.1:2242",
+      "temperature": 0.8,
+      "min_p": 0.05,
+      "top_p": 0.9,
+      "typical_p": 0.95,
+      "typical": 0.95,
+      "sampler_seed": 3,
+      "repetition_penalty": 1.1,
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_k": 20,
+      "skew": 0,
+      "min_tokens": 0,
+      "early_stopping": false,
+      "add_bos_token": true,
+      "smoothing_factor": 0,
+      "smoothing_curve": 1,
+      "dry_allowed_length": 2,
+      "dry_multiplier": 0,
+      "dry_base": 1.75,
+      "dry_sequence_breakers": "[\"\\n\",\"Mara:\"]",
+      "dry_penalty_last_n": 0,
+      "max_tokens_second": 0,
+      "stopping_strings": [
+       "\nRen:",
+       "\n***"
+      ],
+      "stop": [
+       "\nRen:",
+       "\n***"
+      ],
+      "truncation_length": 8192,
+      "ban_eos_token": false,
+      "skip_special_tokens": true,
+      "include_reasoning": true,
+      "top_a": 0,
+      "tfs": 1,
+      "epsilon_cutoff": 0,
+      "eta_cutoff": 0,
+      "mirostat_mode": 0,
+      "mirostat_tau": 5,
+      "mirostat_eta": 0.1,
+      "custom_token_bans": [],
+      "banned_strings": [],
+      "xtc_threshold": 0.1,
+      "xtc_probability": 0,
+      "nsigma": 0,
+      "top_n_sigma": 0,
+      "min_keep": 0,
+      "adaptive_target": -0.01,
+      "adaptive_decay": 0.9,
+      "n": 1,
+      "seed": 3,
+      "temperature_last": true,
+      "ignore_eos": false,
+      "spaces_between_special_tokens": true,
+      "guided_json": {
+       "type": "object",
+       "properties": {
+        "a": {
+         "type": "string"
+        }
+       }
+      },
+      "include_stop_str_in_output": false,
+      "no_repeat_ngram_size": 0
+     }
+    }
+   ],
+   "ret": {
+    "content": "Hello there\nRen: next<|im_end|>\n<|im_start|>user",
+    "reasoning": ""
+   }
+  },
+  "tc-custom-stops-macros": {
+   "gen": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "You are {{char}}. Talk to {{user}}.\n\nhi",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "api_type": "ooba",
+      "api_server": "http://127.0.0.1:5000",
+      "temperature": 0.8,
+      "min_p": 0.05,
+      "top_p": 0.9,
+      "typical_p": 0.95,
+      "typical": 0.95,
+      "sampler_seed": 3,
+      "repetition_penalty": 1.1,
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_k": 20,
+      "skew": 0,
+      "min_length": 0,
+      "min_tokens": 0,
+      "num_beams": 1,
+      "length_penalty": 1,
+      "early_stopping": false,
+      "add_bos_token": true,
+      "smoothing_factor": 0,
+      "smoothing_curve": 1,
+      "dry_allowed_length": 2,
+      "dry_multiplier": 0,
+      "dry_base": 1.75,
+      "dry_sequence_breakers": "[\"\\n\",\"Mara:\"]",
+      "dry_penalty_last_n": 0,
+      "max_tokens_second": 0,
+      "sampler_priority": [
+       "temperature",
+       "top_k",
+       "top_p"
+      ],
+      "stopping_strings": [
+       "\nRen:",
+       "\n***",
+       "Mara says"
+      ],
+      "stop": [
+       "\nRen:",
+       "\n***",
+       "Mara says"
+      ],
+      "truncation_length": 8192,
+      "ban_eos_token": false,
+      "skip_special_tokens": true,
+      "include_reasoning": true,
+      "top_a": 0,
+      "tfs": 1,
+      "epsilon_cutoff": 0,
+      "eta_cutoff": 0,
+      "mirostat_mode": 0,
+      "mirostat_tau": 5,
+      "mirostat_eta": 0.1,
+      "custom_token_bans": "",
+      "banned_strings": [],
+      "xtc_threshold": 0.1,
+      "xtc_probability": 0,
+      "nsigma": 0,
+      "top_n_sigma": 0,
+      "min_keep": 0,
+      "adaptive_target": -0.01,
+      "adaptive_decay": 0.9,
+      "rep_pen": 1.1,
+      "rep_pen_range": 64,
+      "repetition_penalty_range": 64,
+      "encoder_repetition_penalty": 1,
+      "no_repeat_ngram_size": 0,
+      "penalty_alpha": 0,
+      "temperature_last": true,
+      "do_sample": true,
+      "seed": 3,
+      "guidance_scale": 1,
+      "negative_prompt": "not Ren",
+      "repeat_penalty": 1.1,
+      "repeat_last_n": 64,
+      "n_predict": 250,
+      "num_predict": 250,
+      "num_ctx": 8192,
+      "mirostat": 0,
+      "ignore_eos": false,
+      "rep_pen_slope": 1
+     }
+    }
+   ],
+   "ret": {
+    "content": "Hello there\nRen: next<|im_end|>\n<|im_start|>user",
+    "reasoning": ""
+   }
+  },
+  "tc-custom-stops-no-macros": {
+   "gen": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "<|im_start|>system\nYou are {{char}}. Talk to {{user}}.<|im_end|>\n<|im_start|>user\nhi<|im_end|>\n<|im_start|>assistant\n",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "api_type": "ooba",
+      "api_server": "http://127.0.0.1:5000",
+      "temperature": 0.8,
+      "min_p": 0.05,
+      "top_p": 0.9,
+      "typical_p": 0.95,
+      "typical": 0.95,
+      "sampler_seed": 3,
+      "repetition_penalty": 1.1,
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_k": 20,
+      "skew": 0,
+      "min_length": 0,
+      "min_tokens": 0,
+      "num_beams": 1,
+      "length_penalty": 1,
+      "early_stopping": false,
+      "add_bos_token": true,
+      "smoothing_factor": 0,
+      "smoothing_curve": 1,
+      "dry_allowed_length": 2,
+      "dry_multiplier": 0,
+      "dry_base": 1.75,
+      "dry_sequence_breakers": "[\"\\n\",\"Mara:\"]",
+      "dry_penalty_last_n": 0,
+      "max_tokens_second": 0,
+      "sampler_priority": [
+       "temperature",
+       "top_k",
+       "top_p"
+      ],
+      "stopping_strings": [
+       "\n<|im_end|>",
+       "\n<|im_start|>user",
+       "\n<|im_start|>assistant",
+       "\n<|im_start|>system"
+      ],
+      "stop": [
+       "\n<|im_end|>",
+       "\n<|im_start|>user",
+       "\n<|im_start|>assistant",
+       "\n<|im_start|>system"
+      ],
+      "truncation_length": 8192,
+      "ban_eos_token": false,
+      "skip_special_tokens": true,
+      "include_reasoning": true,
+      "top_a": 0,
+      "tfs": 1,
+      "epsilon_cutoff": 0,
+      "eta_cutoff": 0,
+      "mirostat_mode": 0,
+      "mirostat_tau": 5,
+      "mirostat_eta": 0.1,
+      "custom_token_bans": "",
+      "banned_strings": [],
+      "xtc_threshold": 0.1,
+      "xtc_probability": 0,
+      "nsigma": 0,
+      "top_n_sigma": 0,
+      "min_keep": 0,
+      "adaptive_target": -0.01,
+      "adaptive_decay": 0.9,
+      "rep_pen": 1.1,
+      "rep_pen_range": 64,
+      "repetition_penalty_range": 64,
+      "encoder_repetition_penalty": 1,
+      "no_repeat_ngram_size": 0,
+      "penalty_alpha": 0,
+      "temperature_last": true,
+      "do_sample": true,
+      "seed": 3,
+      "guidance_scale": 1,
+      "negative_prompt": "not Ren",
+      "repeat_penalty": 1.1,
+      "repeat_last_n": 64,
+      "n_predict": 250,
+      "num_predict": 250,
+      "num_ctx": 8192,
+      "mirostat": 0,
+      "ignore_eos": false,
+      "rep_pen_slope": 1
+     }
+    }
+   ],
+   "ret": {
+    "content": "Hello there\nRen: next",
+    "reasoning": ""
+   }
+  },
+  "tc-single-line": {
+   "gen": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "You are {{char}}. Talk to {{user}}.\n\nhi",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "api_type": "ooba",
+      "api_server": "http://127.0.0.1:5000",
+      "temperature": 0.8,
+      "min_p": 0.05,
+      "top_p": 0.9,
+      "typical_p": 0.95,
+      "typical": 0.95,
+      "sampler_seed": 3,
+      "repetition_penalty": 1.1,
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_k": 20,
+      "skew": 0,
+      "min_length": 0,
+      "min_tokens": 0,
+      "num_beams": 1,
+      "length_penalty": 1,
+      "early_stopping": false,
+      "add_bos_token": true,
+      "smoothing_factor": 0,
+      "smoothing_curve": 1,
+      "dry_allowed_length": 2,
+      "dry_multiplier": 0,
+      "dry_base": 1.75,
+      "dry_sequence_breakers": "[\"\\n\",\"Mara:\"]",
+      "dry_penalty_last_n": 0,
+      "max_tokens_second": 0,
+      "sampler_priority": [
+       "temperature",
+       "top_k",
+       "top_p"
+      ],
+      "stopping_strings": [
+       "\n",
+       "\nRen:",
+       "\n***"
+      ],
+      "stop": [
+       "\n",
+       "\nRen:",
+       "\n***"
+      ],
+      "truncation_length": 8192,
+      "ban_eos_token": false,
+      "skip_special_tokens": true,
+      "include_reasoning": true,
+      "top_a": 0,
+      "tfs": 1,
+      "epsilon_cutoff": 0,
+      "eta_cutoff": 0,
+      "mirostat_mode": 0,
+      "mirostat_tau": 5,
+      "mirostat_eta": 0.1,
+      "custom_token_bans": "",
+      "banned_strings": [],
+      "xtc_threshold": 0.1,
+      "xtc_probability": 0,
+      "nsigma": 0,
+      "top_n_sigma": 0,
+      "min_keep": 0,
+      "adaptive_target": -0.01,
+      "adaptive_decay": 0.9,
+      "rep_pen": 1.1,
+      "rep_pen_range": 64,
+      "repetition_penalty_range": 64,
+      "encoder_repetition_penalty": 1,
+      "no_repeat_ngram_size": 0,
+      "penalty_alpha": 0,
+      "temperature_last": true,
+      "do_sample": true,
+      "seed": 3,
+      "guidance_scale": 1,
+      "negative_prompt": "not Ren",
+      "repeat_penalty": 1.1,
+      "repeat_last_n": 64,
+      "n_predict": 250,
+      "num_predict": 250,
+      "num_ctx": 8192,
+      "mirostat": 0,
+      "ignore_eos": false,
+      "rep_pen_slope": 1
+     }
+    }
+   ],
+   "ret": {
+    "content": "Hello there\nRen: next<|im_end|>\n<|im_start|>user",
+    "reasoning": ""
+   }
+  },
+  "tc-context-saved": {
+   "gen": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "You are {{char}}. Talk to {{user}}.\n\nhi",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "api_type": "ooba",
+      "api_server": "http://127.0.0.1:5000",
+      "temperature": 0.8,
+      "min_p": 0.05,
+      "top_p": 0.9,
+      "typical_p": 0.95,
+      "typical": 0.95,
+      "sampler_seed": 3,
+      "repetition_penalty": 1.1,
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_k": 20,
+      "skew": 0,
+      "min_length": 0,
+      "min_tokens": 0,
+      "num_beams": 1,
+      "length_penalty": 1,
+      "early_stopping": false,
+      "add_bos_token": true,
+      "smoothing_factor": 0,
+      "smoothing_curve": 1,
+      "dry_allowed_length": 2,
+      "dry_multiplier": 0,
+      "dry_base": 1.75,
+      "dry_sequence_breakers": "[\"\\n\",\"Mara:\"]",
+      "dry_penalty_last_n": 0,
+      "max_tokens_second": 0,
+      "sampler_priority": [
+       "temperature",
+       "top_k",
+       "top_p"
+      ],
+      "stopping_strings": [],
+      "stop": [],
+      "truncation_length": 8192,
+      "ban_eos_token": false,
+      "skip_special_tokens": true,
+      "include_reasoning": true,
+      "top_a": 0,
+      "tfs": 1,
+      "epsilon_cutoff": 0,
+      "eta_cutoff": 0,
+      "mirostat_mode": 0,
+      "mirostat_tau": 5,
+      "mirostat_eta": 0.1,
+      "custom_token_bans": "",
+      "banned_strings": [],
+      "xtc_threshold": 0.1,
+      "xtc_probability": 0,
+      "nsigma": 0,
+      "top_n_sigma": 0,
+      "min_keep": 0,
+      "adaptive_target": -0.01,
+      "adaptive_decay": 0.9,
+      "rep_pen": 1.1,
+      "rep_pen_range": 64,
+      "repetition_penalty_range": 64,
+      "encoder_repetition_penalty": 1,
+      "no_repeat_ngram_size": 0,
+      "penalty_alpha": 0,
+      "temperature_last": true,
+      "do_sample": true,
+      "seed": 3,
+      "guidance_scale": 1,
+      "negative_prompt": "not Ren",
+      "repeat_penalty": 1.1,
+      "repeat_last_n": 64,
+      "n_predict": 250,
+      "num_predict": 250,
+      "num_ctx": 8192,
+      "mirostat": 0,
+      "ignore_eos": false,
+      "rep_pen_slope": 1
+     }
+    }
+   ],
+   "ret": {
+    "content": "Hello there\nRen: next<|im_end|>\n<|im_start|>user",
+    "reasoning": ""
+   }
+  },
+  "tc-context-use-stop": {
+   "gen": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "You are {{char}}. Talk to {{user}}.\n\nhi",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "api_type": "ooba",
+      "api_server": "http://127.0.0.1:5000",
+      "temperature": 0.8,
+      "min_p": 0.05,
+      "top_p": 0.9,
+      "typical_p": 0.95,
+      "typical": 0.95,
+      "sampler_seed": 3,
+      "repetition_penalty": 1.1,
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_k": 20,
+      "skew": 0,
+      "min_length": 0,
+      "min_tokens": 0,
+      "num_beams": 1,
+      "length_penalty": 1,
+      "early_stopping": false,
+      "add_bos_token": true,
+      "smoothing_factor": 0,
+      "smoothing_curve": 1,
+      "dry_allowed_length": 2,
+      "dry_multiplier": 0,
+      "dry_base": 1.75,
+      "dry_sequence_breakers": "[\"\\n\",\"Mara:\"]",
+      "dry_penalty_last_n": 0,
+      "max_tokens_second": 0,
+      "sampler_priority": [
+       "temperature",
+       "top_k",
+       "top_p"
+      ],
+      "stopping_strings": [
+       "\nRen:",
+       "\n*** Mara",
+       "\n---"
+      ],
+      "stop": [
+       "\nRen:",
+       "\n*** Mara",
+       "\n---"
+      ],
+      "truncation_length": 8192,
+      "ban_eos_token": false,
+      "skip_special_tokens": true,
+      "include_reasoning": true,
+      "top_a": 0,
+      "tfs": 1,
+      "epsilon_cutoff": 0,
+      "eta_cutoff": 0,
+      "mirostat_mode": 0,
+      "mirostat_tau": 5,
+      "mirostat_eta": 0.1,
+      "custom_token_bans": "",
+      "banned_strings": [],
+      "xtc_threshold": 0.1,
+      "xtc_probability": 0,
+      "nsigma": 0,
+      "top_n_sigma": 0,
+      "min_keep": 0,
+      "adaptive_target": -0.01,
+      "adaptive_decay": 0.9,
+      "rep_pen": 1.1,
+      "rep_pen_range": 64,
+      "repetition_penalty_range": 64,
+      "encoder_repetition_penalty": 1,
+      "no_repeat_ngram_size": 0,
+      "penalty_alpha": 0,
+      "temperature_last": true,
+      "do_sample": true,
+      "seed": 3,
+      "guidance_scale": 1,
+      "negative_prompt": "not Ren",
+      "repeat_penalty": 1.1,
+      "repeat_last_n": 64,
+      "n_predict": 250,
+      "num_predict": 250,
+      "num_ctx": 8192,
+      "mirostat": 0,
+      "ignore_eos": false,
+      "rep_pen_slope": 1
+     }
+    }
+   ],
+   "ret": {
+    "content": "Hello there\nRen: next<|im_end|>\n<|im_start|>user",
+    "reasoning": ""
+   }
+  },
+  "tc-global-instruct": {
+   "gen": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "You are {{char}}. Talk to {{user}}.\n\nhi",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "api_type": "ooba",
+      "api_server": "http://127.0.0.1:5000",
+      "temperature": 0.8,
+      "min_p": 0.05,
+      "top_p": 0.9,
+      "typical_p": 0.95,
+      "typical": 0.95,
+      "sampler_seed": 3,
+      "repetition_penalty": 1.1,
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_k": 20,
+      "skew": 0,
+      "min_length": 0,
+      "min_tokens": 0,
+      "num_beams": 1,
+      "length_penalty": 1,
+      "early_stopping": false,
+      "add_bos_token": true,
+      "smoothing_factor": 0,
+      "smoothing_curve": 1,
+      "dry_allowed_length": 2,
+      "dry_multiplier": 0,
+      "dry_base": 1.75,
+      "dry_sequence_breakers": "[\"\\n\",\"Mara:\"]",
+      "dry_penalty_last_n": 0,
+      "max_tokens_second": 0,
+      "sampler_priority": [
+       "temperature",
+       "top_k",
+       "top_p"
+      ],
+      "stopping_strings": [
+       "\nRen:",
+       "\n<|im_end|>",
+       "\n<|im_start|>user",
+       "\n<|im_start|>assistant",
+       "\n<|im_start|>system",
+       "\n***"
+      ],
+      "stop": [
+       "\nRen:",
+       "\n<|im_end|>",
+       "\n<|im_start|>user",
+       "\n<|im_start|>assistant",
+       "\n<|im_start|>system",
+       "\n***"
+      ],
+      "truncation_length": 8192,
+      "ban_eos_token": false,
+      "skip_special_tokens": true,
+      "include_reasoning": true,
+      "top_a": 0,
+      "tfs": 1,
+      "epsilon_cutoff": 0,
+      "eta_cutoff": 0,
+      "mirostat_mode": 0,
+      "mirostat_tau": 5,
+      "mirostat_eta": 0.1,
+      "custom_token_bans": "",
+      "banned_strings": [],
+      "xtc_threshold": 0.1,
+      "xtc_probability": 0,
+      "nsigma": 0,
+      "top_n_sigma": 0,
+      "min_keep": 0,
+      "adaptive_target": -0.01,
+      "adaptive_decay": 0.9,
+      "rep_pen": 1.1,
+      "rep_pen_range": 64,
+      "repetition_penalty_range": 64,
+      "encoder_repetition_penalty": 1,
+      "no_repeat_ngram_size": 0,
+      "penalty_alpha": 0,
+      "temperature_last": true,
+      "do_sample": true,
+      "seed": 3,
+      "guidance_scale": 1,
+      "negative_prompt": "not Ren",
+      "repeat_penalty": 1.1,
+      "repeat_last_n": 64,
+      "n_predict": 250,
+      "num_predict": 250,
+      "num_ctx": 8192,
+      "mirostat": 0,
+      "ignore_eos": false,
+      "rep_pen_slope": 1
+     }
+    }
+   ],
+   "ret": {
+    "content": "Hello there\nRen: next<|im_end|>",
+    "reasoning": ""
+   }
+  },
+  "tc-banned-global": {
+   "gen": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "You are {{char}}. Talk to {{user}}.\n\nhi",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "api_type": "ooba",
+      "api_server": "http://127.0.0.1:5000",
+      "temperature": 0.8,
+      "min_p": 0.05,
+      "top_p": 0.9,
+      "typical_p": 0.95,
+      "typical": 0.95,
+      "sampler_seed": 3,
+      "repetition_penalty": 1.1,
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_k": 20,
+      "skew": 0,
+      "min_length": 0,
+      "min_tokens": 0,
+      "num_beams": 1,
+      "length_penalty": 1,
+      "early_stopping": false,
+      "add_bos_token": true,
+      "smoothing_factor": 0,
+      "smoothing_curve": 1,
+      "dry_allowed_length": 2,
+      "dry_multiplier": 0,
+      "dry_base": 1.75,
+      "dry_sequence_breakers": "[\"\\n\",\"Mara:\"]",
+      "dry_penalty_last_n": 0,
+      "max_tokens_second": 0,
+      "sampler_priority": [
+       "temperature",
+       "top_k",
+       "top_p"
+      ],
+      "stopping_strings": [
+       "\nRen:",
+       "\n***"
+      ],
+      "stop": [
+       "\nRen:",
+       "\n***"
+      ],
+      "truncation_length": 8192,
+      "ban_eos_token": false,
+      "skip_special_tokens": true,
+      "include_reasoning": true,
+      "top_a": 0,
+      "tfs": 1,
+      "epsilon_cutoff": 0,
+      "eta_cutoff": 0,
+      "mirostat_mode": 0,
+      "mirostat_tau": 5,
+      "mirostat_eta": 0.1,
+      "custom_token_bans": "1085,29874,7,8",
+      "banned_strings": [
+       "Ren"
+      ],
+      "xtc_threshold": 0.1,
+      "xtc_probability": 0,
+      "nsigma": 0,
+      "top_n_sigma": 0,
+      "min_keep": 0,
+      "adaptive_target": -0.01,
+      "adaptive_decay": 0.9,
+      "rep_pen": 1.1,
+      "rep_pen_range": 64,
+      "repetition_penalty_range": 64,
+      "encoder_repetition_penalty": 1,
+      "no_repeat_ngram_size": 0,
+      "penalty_alpha": 0,
+      "temperature_last": true,
+      "do_sample": true,
+      "seed": 3,
+      "guidance_scale": 1,
+      "negative_prompt": "not Ren",
+      "repeat_penalty": 1.1,
+      "repeat_last_n": 64,
+      "n_predict": 250,
+      "num_predict": 250,
+      "num_ctx": 8192,
+      "mirostat": 0,
+      "ignore_eos": false,
+      "rep_pen_slope": 1
+     }
+    }
+   ],
+   "ret": {
+    "content": "Hello there\nRen: next<|im_end|>\n<|im_start|>user",
+    "reasoning": ""
+   }
+  },
+  "tc-banned-off": {
+   "gen": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "You are {{char}}. Talk to {{user}}.\n\nhi",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "api_type": "ooba",
+      "api_server": "http://127.0.0.1:5000",
+      "temperature": 0.8,
+      "min_p": 0.05,
+      "top_p": 0.9,
+      "typical_p": 0.95,
+      "typical": 0.95,
+      "sampler_seed": 3,
+      "repetition_penalty": 1.1,
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_k": 20,
+      "skew": 0,
+      "min_length": 0,
+      "min_tokens": 0,
+      "num_beams": 1,
+      "length_penalty": 1,
+      "early_stopping": false,
+      "add_bos_token": true,
+      "smoothing_factor": 0,
+      "smoothing_curve": 1,
+      "dry_allowed_length": 2,
+      "dry_multiplier": 0,
+      "dry_base": 1.75,
+      "dry_sequence_breakers": "[\"\\n\",\"Mara:\"]",
+      "dry_penalty_last_n": 0,
+      "max_tokens_second": 0,
+      "sampler_priority": [
+       "temperature",
+       "top_k",
+       "top_p"
+      ],
+      "stopping_strings": [
+       "\nRen:",
+       "\n***"
+      ],
+      "stop": [
+       "\nRen:",
+       "\n***"
+      ],
+      "truncation_length": 8192,
+      "ban_eos_token": false,
+      "skip_special_tokens": true,
+      "include_reasoning": true,
+      "top_a": 0,
+      "tfs": 1,
+      "epsilon_cutoff": 0,
+      "eta_cutoff": 0,
+      "mirostat_mode": 0,
+      "mirostat_tau": 5,
+      "mirostat_eta": 0.1,
+      "custom_token_bans": "",
+      "banned_strings": [],
+      "xtc_threshold": 0.1,
+      "xtc_probability": 0,
+      "nsigma": 0,
+      "top_n_sigma": 0,
+      "min_keep": 0,
+      "adaptive_target": -0.01,
+      "adaptive_decay": 0.9,
+      "rep_pen": 1.1,
+      "rep_pen_range": 64,
+      "repetition_penalty_range": 64,
+      "encoder_repetition_penalty": 1,
+      "no_repeat_ngram_size": 0,
+      "penalty_alpha": 0,
+      "temperature_last": true,
+      "do_sample": true,
+      "seed": 3,
+      "guidance_scale": 1,
+      "negative_prompt": "not Ren",
+      "repeat_penalty": 1.1,
+      "repeat_last_n": 64,
+      "n_predict": 250,
+      "num_predict": 250,
+      "num_ctx": 8192,
+      "mirostat": 0,
+      "ignore_eos": false,
+      "rep_pen_slope": 1
+     }
+    }
+   ],
+   "ret": {
+    "content": "Hello there\nRen: next<|im_end|>\n<|im_start|>user",
+    "reasoning": ""
+   }
+  },
+  "tc-banned-tokenizer-llama3": {
+   "gen": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "You are {{char}}. Talk to {{user}}.\n\nhi",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "api_type": "ooba",
+      "api_server": "http://127.0.0.1:5000",
+      "temperature": 0.8,
+      "min_p": 0.05,
+      "top_p": 0.9,
+      "typical_p": 0.95,
+      "typical": 0.95,
+      "sampler_seed": 3,
+      "repetition_penalty": 1.1,
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_k": 20,
+      "skew": 0,
+      "min_length": 0,
+      "min_tokens": 0,
+      "num_beams": 1,
+      "length_penalty": 1,
+      "early_stopping": false,
+      "add_bos_token": true,
+      "smoothing_factor": 0,
+      "smoothing_curve": 1,
+      "dry_allowed_length": 2,
+      "dry_multiplier": 0,
+      "dry_base": 1.75,
+      "dry_sequence_breakers": "[\"\\n\",\"Mara:\"]",
+      "dry_penalty_last_n": 0,
+      "max_tokens_second": 0,
+      "sampler_priority": [
+       "temperature",
+       "top_k",
+       "top_p"
+      ],
+      "stopping_strings": [
+       "\nRen:",
+       "\n***"
+      ],
+      "stop": [
+       "\nRen:",
+       "\n***"
+      ],
+      "truncation_length": 8192,
+      "ban_eos_token": false,
+      "skip_special_tokens": true,
+      "include_reasoning": true,
+      "top_a": 0,
+      "tfs": 1,
+      "epsilon_cutoff": 0,
+      "eta_cutoff": 0,
+      "mirostat_mode": 0,
+      "mirostat_tau": 5,
+      "mirostat_eta": 0.1,
+      "custom_token_bans": "44,5169",
+      "banned_strings": [],
+      "xtc_threshold": 0.1,
+      "xtc_probability": 0,
+      "nsigma": 0,
+      "top_n_sigma": 0,
+      "min_keep": 0,
+      "adaptive_target": -0.01,
+      "adaptive_decay": 0.9,
+      "rep_pen": 1.1,
+      "rep_pen_range": 64,
+      "repetition_penalty_range": 64,
+      "encoder_repetition_penalty": 1,
+      "no_repeat_ngram_size": 0,
+      "penalty_alpha": 0,
+      "temperature_last": true,
+      "do_sample": true,
+      "seed": 3,
+      "guidance_scale": 1,
+      "negative_prompt": "not Ren",
+      "repeat_penalty": 1.1,
+      "repeat_last_n": 64,
+      "n_predict": 250,
+      "num_predict": 250,
+      "num_ctx": 8192,
+      "mirostat": 0,
+      "ignore_eos": false,
+      "rep_pen_slope": 1
+     }
+    }
+   ],
+   "ret": {
+    "content": "Hello there\nRen: next<|im_end|>\n<|im_start|>user",
+    "reasoning": ""
+   }
+  },
+  "tc-main-api-openai": {
+   "gen": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "You are {{char}}. Talk to {{user}}.\n\nhi",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "api_type": "ooba",
+      "api_server": "http://127.0.0.1:5000",
+      "temperature": 0.8,
+      "min_p": 0.05,
+      "top_p": 0.9,
+      "typical_p": 0.95,
+      "typical": 0.95,
+      "sampler_seed": 3,
+      "repetition_penalty": 1.1,
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_k": 20,
+      "skew": 0,
+      "min_length": 0,
+      "min_tokens": 0,
+      "num_beams": 1,
+      "length_penalty": 1,
+      "early_stopping": false,
+      "add_bos_token": true,
+      "smoothing_factor": 0,
+      "smoothing_curve": 1,
+      "dry_allowed_length": 2,
+      "dry_multiplier": 0,
+      "dry_base": 1.75,
+      "dry_sequence_breakers": "[\"\\n\",\"Mara:\"]",
+      "dry_penalty_last_n": 0,
+      "max_tokens_second": 0,
+      "sampler_priority": [
+       "temperature",
+       "top_k",
+       "top_p"
+      ],
+      "stopping_strings": [
+       "END"
+      ],
+      "stop": [
+       "END"
+      ],
+      "truncation_length": 8192,
+      "ban_eos_token": false,
+      "skip_special_tokens": true,
+      "include_reasoning": true,
+      "top_a": 0,
+      "tfs": 1,
+      "epsilon_cutoff": 0,
+      "eta_cutoff": 0,
+      "mirostat_mode": 0,
+      "mirostat_tau": 5,
+      "mirostat_eta": 0.1,
+      "custom_token_bans": "",
+      "banned_strings": [],
+      "xtc_threshold": 0.1,
+      "xtc_probability": 0,
+      "nsigma": 0,
+      "top_n_sigma": 0,
+      "min_keep": 0,
+      "adaptive_target": -0.01,
+      "adaptive_decay": 0.9,
+      "rep_pen": 1.1,
+      "rep_pen_range": 64,
+      "repetition_penalty_range": 64,
+      "encoder_repetition_penalty": 1,
+      "no_repeat_ngram_size": 0,
+      "penalty_alpha": 0,
+      "temperature_last": true,
+      "do_sample": true,
+      "seed": 3,
+      "guidance_scale": 1,
+      "negative_prompt": "not Ren",
+      "repeat_penalty": 1.1,
+      "repeat_last_n": 64,
+      "n_predict": 250,
+      "num_predict": 250,
+      "num_ctx": 8192,
+      "mirostat": 0,
+      "ignore_eos": false,
+      "rep_pen_slope": 1
+     }
+    }
+   ],
+   "ret": {
+    "content": "Hello there\nRen: next<|im_end|>\n<|im_start|>user",
+    "reasoning": ""
+   }
+  },
+  "tc-missing-instruct-preset": {
+   "gen": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "You are {{char}}. Talk to {{user}}.\n\nhi",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "api_type": "ooba",
+      "api_server": "http://127.0.0.1:5000"
+     }
+    }
+   ],
+   "ret": {
+    "content": "Hello there\nRen: next<|im_end|>\n<|im_start|>user",
+    "reasoning": ""
+   }
+  },
+  "tc-prefill": {
+   "gen": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "<|im_start|>system\nYou are {{char}}. Talk to {{user}}.<|im_end|>\n<|im_start|>user\nhi<|im_end|>\n<|im_start|>assistant\nSure, {{user}}",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "api_type": "ooba",
+      "api_server": "http://127.0.0.1:5000",
+      "temperature": 0.8,
+      "min_p": 0.05,
+      "top_p": 0.9,
+      "typical_p": 0.95,
+      "typical": 0.95,
+      "sampler_seed": 3,
+      "repetition_penalty": 1.1,
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_k": 20,
+      "skew": 0,
+      "min_length": 0,
+      "min_tokens": 0,
+      "num_beams": 1,
+      "length_penalty": 1,
+      "early_stopping": false,
+      "add_bos_token": true,
+      "smoothing_factor": 0,
+      "smoothing_curve": 1,
+      "dry_allowed_length": 2,
+      "dry_multiplier": 0,
+      "dry_base": 1.75,
+      "dry_sequence_breakers": "[\"\\n\",\"Mara:\"]",
+      "dry_penalty_last_n": 0,
+      "max_tokens_second": 0,
+      "sampler_priority": [
+       "temperature",
+       "top_k",
+       "top_p"
+      ],
+      "stopping_strings": [
+       "\n<|im_end|>",
+       "\n<|im_start|>user",
+       "\n<|im_start|>assistant",
+       "\n<|im_start|>system"
+      ],
+      "stop": [
+       "\n<|im_end|>",
+       "\n<|im_start|>user",
+       "\n<|im_start|>assistant",
+       "\n<|im_start|>system"
+      ],
+      "truncation_length": 8192,
+      "ban_eos_token": false,
+      "skip_special_tokens": true,
+      "include_reasoning": true,
+      "top_a": 0,
+      "tfs": 1,
+      "epsilon_cutoff": 0,
+      "eta_cutoff": 0,
+      "mirostat_mode": 0,
+      "mirostat_tau": 5,
+      "mirostat_eta": 0.1,
+      "custom_token_bans": "",
+      "banned_strings": [],
+      "xtc_threshold": 0.1,
+      "xtc_probability": 0,
+      "nsigma": 0,
+      "top_n_sigma": 0,
+      "min_keep": 0,
+      "adaptive_target": -0.01,
+      "adaptive_decay": 0.9,
+      "rep_pen": 1.1,
+      "rep_pen_range": 64,
+      "repetition_penalty_range": 64,
+      "encoder_repetition_penalty": 1,
+      "no_repeat_ngram_size": 0,
+      "penalty_alpha": 0,
+      "temperature_last": true,
+      "do_sample": true,
+      "seed": 3,
+      "guidance_scale": 1,
+      "negative_prompt": "not Ren",
+      "repeat_penalty": 1.1,
+      "repeat_last_n": 64,
+      "n_predict": 250,
+      "num_predict": 250,
+      "num_ctx": 8192,
+      "mirostat": 0,
+      "ignore_eos": false,
+      "rep_pen_slope": 1
+     }
+    }
+   ],
+   "ret": {
+    "content": "Hello there\nRen: next",
+    "reasoning": ""
+   }
+  },
+  "tc-ignore-instruct-message": {
+   "gen": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "raw<|im_start|>user\nhi<|im_end|>\n<|im_start|>assistant\n",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "api_type": "ooba",
+      "api_server": "http://127.0.0.1:5000",
+      "temperature": 0.8,
+      "min_p": 0.05,
+      "top_p": 0.9,
+      "typical_p": 0.95,
+      "typical": 0.95,
+      "sampler_seed": 3,
+      "repetition_penalty": 1.1,
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_k": 20,
+      "skew": 0,
+      "min_length": 0,
+      "min_tokens": 0,
+      "num_beams": 1,
+      "length_penalty": 1,
+      "early_stopping": false,
+      "add_bos_token": true,
+      "smoothing_factor": 0,
+      "smoothing_curve": 1,
+      "dry_allowed_length": 2,
+      "dry_multiplier": 0,
+      "dry_base": 1.75,
+      "dry_sequence_breakers": "[\"\\n\",\"Mara:\"]",
+      "dry_penalty_last_n": 0,
+      "max_tokens_second": 0,
+      "sampler_priority": [
+       "temperature",
+       "top_k",
+       "top_p"
+      ],
+      "stopping_strings": [
+       "\n<|im_end|>",
+       "\n<|im_start|>user",
+       "\n<|im_start|>assistant",
+       "\n<|im_start|>system"
+      ],
+      "stop": [
+       "\n<|im_end|>",
+       "\n<|im_start|>user",
+       "\n<|im_start|>assistant",
+       "\n<|im_start|>system"
+      ],
+      "truncation_length": 8192,
+      "ban_eos_token": false,
+      "skip_special_tokens": true,
+      "include_reasoning": true,
+      "top_a": 0,
+      "tfs": 1,
+      "epsilon_cutoff": 0,
+      "eta_cutoff": 0,
+      "mirostat_mode": 0,
+      "mirostat_tau": 5,
+      "mirostat_eta": 0.1,
+      "custom_token_bans": "",
+      "banned_strings": [],
+      "xtc_threshold": 0.1,
+      "xtc_probability": 0,
+      "nsigma": 0,
+      "top_n_sigma": 0,
+      "min_keep": 0,
+      "adaptive_target": -0.01,
+      "adaptive_decay": 0.9,
+      "rep_pen": 1.1,
+      "rep_pen_range": 64,
+      "repetition_penalty_range": 64,
+      "encoder_repetition_penalty": 1,
+      "no_repeat_ngram_size": 0,
+      "penalty_alpha": 0,
+      "temperature_last": true,
+      "do_sample": true,
+      "seed": 3,
+      "guidance_scale": 1,
+      "negative_prompt": "not Ren",
+      "repeat_penalty": 1.1,
+      "repeat_last_n": 64,
+      "n_predict": 250,
+      "num_predict": 250,
+      "num_ctx": 8192,
+      "mirostat": 0,
+      "ignore_eos": false,
+      "rep_pen_slope": 1
+     }
+    }
+   ],
+   "ret": {
+    "content": "Hello there\nRen: next",
+    "reasoning": ""
+   }
+  },
+  "tc-instruct-settings": {
+   "gen": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "<|im_start|>systemYou are {{char}}. Talk to {{user}}.<|im_end|>\n<|im_start|>useruser: hi<|im_end|>\n<|im_start|>assistant",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "api_type": "ooba",
+      "api_server": "http://127.0.0.1:5000",
+      "temperature": 0.8,
+      "min_p": 0.05,
+      "top_p": 0.9,
+      "typical_p": 0.95,
+      "typical": 0.95,
+      "sampler_seed": 3,
+      "repetition_penalty": 1.1,
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_k": 20,
+      "skew": 0,
+      "min_length": 0,
+      "min_tokens": 0,
+      "num_beams": 1,
+      "length_penalty": 1,
+      "early_stopping": false,
+      "add_bos_token": true,
+      "smoothing_factor": 0,
+      "smoothing_curve": 1,
+      "dry_allowed_length": 2,
+      "dry_multiplier": 0,
+      "dry_base": 1.75,
+      "dry_sequence_breakers": "[\"\\n\",\"Mara:\"]",
+      "dry_penalty_last_n": 0,
+      "max_tokens_second": 0,
+      "sampler_priority": [
+       "temperature",
+       "top_k",
+       "top_p"
+      ],
+      "stopping_strings": [
+       "\n<|im_end|>",
+       "\n<|im_start|>user",
+       "\n<|im_start|>assistant",
+       "\n<|im_start|>system"
+      ],
+      "stop": [
+       "\n<|im_end|>",
+       "\n<|im_start|>user",
+       "\n<|im_start|>assistant",
+       "\n<|im_start|>system"
+      ],
+      "truncation_length": 8192,
+      "ban_eos_token": false,
+      "skip_special_tokens": true,
+      "include_reasoning": true,
+      "top_a": 0,
+      "tfs": 1,
+      "epsilon_cutoff": 0,
+      "eta_cutoff": 0,
+      "mirostat_mode": 0,
+      "mirostat_tau": 5,
+      "mirostat_eta": 0.1,
+      "custom_token_bans": "",
+      "banned_strings": [],
+      "xtc_threshold": 0.1,
+      "xtc_probability": 0,
+      "nsigma": 0,
+      "top_n_sigma": 0,
+      "min_keep": 0,
+      "adaptive_target": -0.01,
+      "adaptive_decay": 0.9,
+      "rep_pen": 1.1,
+      "rep_pen_range": 64,
+      "repetition_penalty_range": 64,
+      "encoder_repetition_penalty": 1,
+      "no_repeat_ngram_size": 0,
+      "penalty_alpha": 0,
+      "temperature_last": true,
+      "do_sample": true,
+      "seed": 3,
+      "guidance_scale": 1,
+      "negative_prompt": "not Ren",
+      "repeat_penalty": 1.1,
+      "repeat_last_n": 64,
+      "n_predict": 250,
+      "num_predict": 250,
+      "num_ctx": 8192,
+      "mirostat": 0,
+      "ignore_eos": false,
+      "rep_pen_slope": 1
+     }
+    }
+   ],
+   "ret": {
+    "content": "Hello there\nRen: next",
+    "reasoning": ""
+   }
+  },
+  "tc-include-instruct-false": {
+   "gen": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "You are {{char}}. Talk to {{user}}.\n\nhi",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "api_type": "ooba",
+      "api_server": "http://127.0.0.1:5000",
+      "temperature": 0.8,
+      "min_p": 0.05,
+      "top_p": 0.9,
+      "typical_p": 0.95,
+      "typical": 0.95,
+      "sampler_seed": 3,
+      "repetition_penalty": 1.1,
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_k": 20,
+      "skew": 0,
+      "min_length": 0,
+      "min_tokens": 0,
+      "num_beams": 1,
+      "length_penalty": 1,
+      "early_stopping": false,
+      "add_bos_token": true,
+      "smoothing_factor": 0,
+      "smoothing_curve": 1,
+      "dry_allowed_length": 2,
+      "dry_multiplier": 0,
+      "dry_base": 1.75,
+      "dry_sequence_breakers": "[\"\\n\",\"Mara:\"]",
+      "dry_penalty_last_n": 0,
+      "max_tokens_second": 0,
+      "sampler_priority": [
+       "temperature",
+       "top_k",
+       "top_p"
+      ],
+      "stopping_strings": [
+       "\nRen:",
+       "\n***"
+      ],
+      "stop": [
+       "\nRen:",
+       "\n***"
+      ],
+      "truncation_length": 8192,
+      "ban_eos_token": false,
+      "skip_special_tokens": true,
+      "include_reasoning": true,
+      "top_a": 0,
+      "tfs": 1,
+      "epsilon_cutoff": 0,
+      "eta_cutoff": 0,
+      "mirostat_mode": 0,
+      "mirostat_tau": 5,
+      "mirostat_eta": 0.1,
+      "custom_token_bans": "",
+      "banned_strings": [],
+      "xtc_threshold": 0.1,
+      "xtc_probability": 0,
+      "nsigma": 0,
+      "top_n_sigma": 0,
+      "min_keep": 0,
+      "adaptive_target": -0.01,
+      "adaptive_decay": 0.9,
+      "rep_pen": 1.1,
+      "rep_pen_range": 64,
+      "repetition_penalty_range": 64,
+      "encoder_repetition_penalty": 1,
+      "no_repeat_ngram_size": 0,
+      "penalty_alpha": 0,
+      "temperature_last": true,
+      "do_sample": true,
+      "seed": 3,
+      "guidance_scale": 1,
+      "negative_prompt": "not Ren",
+      "repeat_penalty": 1.1,
+      "repeat_last_n": 64,
+      "n_predict": 250,
+      "num_predict": 250,
+      "num_ctx": 8192,
+      "mirostat": 0,
+      "ignore_eos": false,
+      "rep_pen_slope": 1
+     }
+    }
+   ],
+   "ret": {
+    "content": "Hello there\nRen: next<|im_end|>\n<|im_start|>user",
+    "reasoning": ""
+   }
+  },
+  "tc-legacy-server-url": {
+   "gen": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "You are {{char}}. Talk to {{user}}.\n\nhi",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "api_type": "ooba",
+      "api_server": "http://127.0.0.1:7777",
+      "temperature": 0.8,
+      "min_p": 0.05,
+      "top_p": 0.9,
+      "typical_p": 0.95,
+      "typical": 0.95,
+      "sampler_seed": 3,
+      "repetition_penalty": 1.1,
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_k": 20,
+      "skew": 0,
+      "min_length": 0,
+      "min_tokens": 0,
+      "num_beams": 1,
+      "length_penalty": 1,
+      "early_stopping": false,
+      "add_bos_token": true,
+      "smoothing_factor": 0,
+      "smoothing_curve": 1,
+      "dry_allowed_length": 2,
+      "dry_multiplier": 0,
+      "dry_base": 1.75,
+      "dry_sequence_breakers": "[\"\\n\",\"Mara:\"]",
+      "dry_penalty_last_n": 0,
+      "max_tokens_second": 0,
+      "sampler_priority": [
+       "temperature",
+       "top_k",
+       "top_p"
+      ],
+      "stopping_strings": [
+       "\nRen:",
+       "\n***"
+      ],
+      "stop": [
+       "\nRen:",
+       "\n***"
+      ],
+      "truncation_length": 8192,
+      "ban_eos_token": false,
+      "skip_special_tokens": true,
+      "include_reasoning": true,
+      "top_a": 0,
+      "tfs": 1,
+      "epsilon_cutoff": 0,
+      "eta_cutoff": 0,
+      "mirostat_mode": 0,
+      "mirostat_tau": 5,
+      "mirostat_eta": 0.1,
+      "custom_token_bans": "",
+      "banned_strings": [],
+      "xtc_threshold": 0.1,
+      "xtc_probability": 0,
+      "nsigma": 0,
+      "top_n_sigma": 0,
+      "min_keep": 0,
+      "adaptive_target": -0.01,
+      "adaptive_decay": 0.9,
+      "rep_pen": 1.1,
+      "rep_pen_range": 64,
+      "repetition_penalty_range": 64,
+      "encoder_repetition_penalty": 1,
+      "no_repeat_ngram_size": 0,
+      "penalty_alpha": 0,
+      "temperature_last": true,
+      "do_sample": true,
+      "seed": 3,
+      "guidance_scale": 1,
+      "negative_prompt": "not Ren",
+      "repeat_penalty": 1.1,
+      "repeat_last_n": 64,
+      "n_predict": 250,
+      "num_predict": 250,
+      "num_ctx": 8192,
+      "mirostat": 0,
+      "ignore_eos": false,
+      "rep_pen_slope": 1
+     }
+    }
+   ],
+   "ret": {
+    "content": "Hello there\nRen: next<|im_end|>\n<|im_start|>user",
+    "reasoning": ""
+   }
+  },
+  "tc-sampler-arrays": {
+   "gen": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "You are {{char}}. Talk to {{user}}.\n\nhi",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "api_type": "ooba",
+      "api_server": "http://127.0.0.1:5000",
+      "temperature": 0.8,
+      "min_p": 0.05,
+      "top_p": 0.9,
+      "typical_p": 0.95,
+      "typical": 0.95,
+      "sampler_seed": 3,
+      "repetition_penalty": 1.1,
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_k": 20,
+      "skew": 0,
+      "min_length": 0,
+      "min_tokens": 0,
+      "num_beams": 1,
+      "length_penalty": 1,
+      "early_stopping": false,
+      "add_bos_token": true,
+      "smoothing_factor": 0,
+      "smoothing_curve": 1,
+      "dry_allowed_length": 2,
+      "dry_multiplier": 0,
+      "dry_base": 1.75,
+      "dry_sequence_breakers": "[\"\\n\",\"Mara:\"]",
+      "dry_penalty_last_n": 0,
+      "max_tokens_second": 0,
+      "sampler_priority": [
+       "temperature",
+       "top_k",
+       "top_p"
+      ],
+      "stopping_strings": [
+       "\nRen:",
+       "\n***"
+      ],
+      "stop": [
+       "\nRen:",
+       "\n***"
+      ],
+      "truncation_length": 8192,
+      "ban_eos_token": false,
+      "skip_special_tokens": true,
+      "include_reasoning": true,
+      "top_a": 0,
+      "tfs": 1,
+      "epsilon_cutoff": 0,
+      "eta_cutoff": 0,
+      "mirostat_mode": 0,
+      "mirostat_tau": 5,
+      "mirostat_eta": 0.1,
+      "custom_token_bans": "",
+      "banned_strings": [],
+      "xtc_threshold": 0.1,
+      "xtc_probability": 0,
+      "nsigma": 0,
+      "top_n_sigma": 0,
+      "min_keep": 0,
+      "adaptive_target": -0.01,
+      "adaptive_decay": 0.9,
+      "rep_pen": 1.1,
+      "rep_pen_range": 64,
+      "repetition_penalty_range": 64,
+      "encoder_repetition_penalty": 1,
+      "no_repeat_ngram_size": 0,
+      "penalty_alpha": 0,
+      "temperature_last": true,
+      "do_sample": true,
+      "seed": 3,
+      "guidance_scale": 1,
+      "negative_prompt": "not Ren",
+      "repeat_penalty": 1.1,
+      "repeat_last_n": 64,
+      "n_predict": 250,
+      "num_predict": 250,
+      "num_ctx": 8192,
+      "mirostat": 0,
+      "ignore_eos": false,
+      "rep_pen_slope": 1
+     }
+    }
+   ],
+   "ret": {
+    "content": "Hello there\nRen: next<|im_end|>\n<|im_start|>user",
+    "reasoning": ""
+   }
+  },
+  "tc-string-prompt": {
+   "gen": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "just {{char}}",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "api_type": "ooba",
+      "api_server": "http://127.0.0.1:5000",
+      "temperature": 0.8,
+      "min_p": 0.05,
+      "top_p": 0.9,
+      "typical_p": 0.95,
+      "typical": 0.95,
+      "sampler_seed": 3,
+      "repetition_penalty": 1.1,
+      "frequency_penalty": 0,
+      "presence_penalty": 0,
+      "top_k": 20,
+      "skew": 0,
+      "min_length": 0,
+      "min_tokens": 0,
+      "num_beams": 1,
+      "length_penalty": 1,
+      "early_stopping": false,
+      "add_bos_token": true,
+      "smoothing_factor": 0,
+      "smoothing_curve": 1,
+      "dry_allowed_length": 2,
+      "dry_multiplier": 0,
+      "dry_base": 1.75,
+      "dry_sequence_breakers": "[\"\\n\",\"Mara:\"]",
+      "dry_penalty_last_n": 0,
+      "max_tokens_second": 0,
+      "sampler_priority": [
+       "temperature",
+       "top_k",
+       "top_p"
+      ],
+      "stopping_strings": [
+       "\nRen:",
+       "\n***"
+      ],
+      "stop": [
+       "\nRen:",
+       "\n***"
+      ],
+      "truncation_length": 8192,
+      "ban_eos_token": false,
+      "skip_special_tokens": true,
+      "include_reasoning": true,
+      "top_a": 0,
+      "tfs": 1,
+      "epsilon_cutoff": 0,
+      "eta_cutoff": 0,
+      "mirostat_mode": 0,
+      "mirostat_tau": 5,
+      "mirostat_eta": 0.1,
+      "custom_token_bans": "",
+      "banned_strings": [],
+      "xtc_threshold": 0.1,
+      "xtc_probability": 0,
+      "nsigma": 0,
+      "top_n_sigma": 0,
+      "min_keep": 0,
+      "adaptive_target": -0.01,
+      "adaptive_decay": 0.9,
+      "rep_pen": 1.1,
+      "rep_pen_range": 64,
+      "repetition_penalty_range": 64,
+      "encoder_repetition_penalty": 1,
+      "no_repeat_ngram_size": 0,
+      "penalty_alpha": 0,
+      "temperature_last": true,
+      "do_sample": true,
+      "seed": 3,
+      "guidance_scale": 1,
+      "negative_prompt": "not Ren",
+      "repeat_penalty": 1.1,
+      "repeat_last_n": 64,
+      "n_predict": 250,
+      "num_predict": 250,
+      "num_ctx": 8192,
+      "mirostat": 0,
+      "ignore_eos": false,
+      "rep_pen_slope": 1
+     }
+    }
+   ],
+   "ret": {
+    "content": "Hello there\nRen: next<|im_end|>\n<|im_start|>user",
+    "reasoning": ""
+   }
+  },
+  "tc-error-reply": {
+   "gen": [
+    {
+     "url": "/api/backends/text-completions/generate",
+     "body": {
+      "stream": false,
+      "prompt": "You are {{char}}. Talk to {{user}}.\n\nhi",
+      "max_tokens": 300,
+      "max_new_tokens": 300,
+      "api_type": "ooba",
+      "api_server": "http://127.0.0.1:5000"
+     }
+    }
+   ],
+   "ret": {
+    "error": "API request failed",
+    "cause": "Varo is offline"
+   }
+  },
+  "x-novel-unsupported": {
+   "gen": [],
+   "ret": {
+    "error": "API type novel is not supported. Supported types: Chat Completion, Text Completion",
+    "cause": null
+   }
+  },
+  "x-kobold-unsupported": {
+   "gen": [],
+   "ret": {
+    "error": "API type kobold is not supported. Supported types: Chat Completion, Text Completion",
+    "cause": null
+   }
+  },
+  "x-missing-id": {
+   "gen": [],
+   "ret": {
+    "error": "Profile not found (ID: no-such-id)",
+    "cause": null
+   }
+  },
+  "x-no-api": {
+   "gen": [],
+   "ret": {
+    "error": "Select a connection profile that has an API",
+    "cause": null
+   }
+  },
+  "x-unknown-api": {
+   "gen": [],
+   "ret": {
+    "error": "Unknown API type nonsense",
+    "cause": null
+   }
+  },
+  "x-disabled": {
+   "gen": [],
+   "ret": {
+    "error": "Connection Manager is not available",
+    "cause": null
+   }
+  },
+  "x-supported": {
+   "gen": [],
+   "ret": {
+    "allowed": {
+     "openai": "Chat Completion",
+     "textgenerationwebui": "Text Completion"
+    },
+    "map": {
+     "kobold": {
+      "selected": "kobold",
+      "button": "#api_button"
+     },
+     "horde": {
+      "selected": "koboldhorde"
+     },
+     "novel": {
+      "selected": "novel",
+      "button": "#api_button_novel"
+     },
+     "koboldcpp": {
+      "selected": "textgenerationwebui",
+      "button": "#api_button_textgenerationwebui",
+      "type": "koboldcpp"
+     },
+     "kcpp": {
+      "selected": "textgenerationwebui",
+      "button": "#api_button_textgenerationwebui",
+      "type": "koboldcpp"
+     },
+     "openai": {
+      "selected": "openai",
+      "button": "#api_button_openai",
+      "source": "openai"
+     },
+     "oai": {
+      "selected": "openai",
+      "button": "#api_button_openai",
+      "source": "openai"
+     },
+     "google": {
+      "selected": "openai",
+      "button": "#api_button_openai",
+      "source": "makersuite"
+     },
+     "openrouter": {
+      "selected": "openai",
+      "button": "#api_button_openai",
+      "source": "openrouter"
+     },
+     "openrouter-text": {
+      "selected": "textgenerationwebui",
+      "button": "#api_button_textgenerationwebui",
+      "type": "openrouter"
+     },
+     "ooba": {
+      "selected": "textgenerationwebui",
+      "button": "#api_button_textgenerationwebui",
+      "type": "ooba"
+     },
+     "mancer": {
+      "selected": "textgenerationwebui",
+      "button": "#api_button_textgenerationwebui",
+      "type": "mancer"
+     },
+     "vllm": {
+      "selected": "textgenerationwebui",
+      "button": "#api_button_textgenerationwebui",
+      "type": "vllm"
+     },
+     "aphrodite": {
+      "selected": "textgenerationwebui",
+      "button": "#api_button_textgenerationwebui",
+      "type": "aphrodite"
+     },
+     "tabby": {
+      "selected": "textgenerationwebui",
+      "button": "#api_button_textgenerationwebui",
+      "type": "tabby"
+     },
+     "togetherai": {
+      "selected": "textgenerationwebui",
+      "button": "#api_button_textgenerationwebui",
+      "type": "togetherai"
+     },
+     "llamacpp": {
+      "selected": "textgenerationwebui",
+      "button": "#api_button_textgenerationwebui",
+      "type": "llamacpp"
+     },
+     "ollama": {
+      "selected": "textgenerationwebui",
+      "button": "#api_button_textgenerationwebui",
+      "type": "ollama"
+     },
+     "infermaticai": {
+      "selected": "textgenerationwebui",
+      "button": "#api_button_textgenerationwebui",
+      "type": "infermaticai"
+     },
+     "dreamgen": {
+      "selected": "textgenerationwebui",
+      "button": "#api_button_textgenerationwebui",
+      "type": "dreamgen"
+     },
+     "featherless": {
+      "selected": "textgenerationwebui",
+      "button": "#api_button_textgenerationwebui",
+      "type": "featherless"
+     },
+     "huggingface": {
+      "selected": "textgenerationwebui",
+      "button": "#api_button_textgenerationwebui",
+      "type": "huggingface"
+     },
+     "generic": {
+      "selected": "textgenerationwebui",
+      "button": "#api_button_textgenerationwebui",
+      "type": "generic"
+     },
+     "claude": {
+      "selected": "openai",
+      "button": "#api_button_openai",
+      "source": "claude"
+     },
+     "ai21": {
+      "selected": "openai",
+      "button": "#api_button_openai",
+      "source": "ai21"
+     },
+     "makersuite": {
+      "selected": "openai",
+      "button": "#api_button_openai",
+      "source": "makersuite"
+     },
+     "vertexai": {
+      "selected": "openai",
+      "button": "#api_button_openai",
+      "source": "vertexai"
+     },
+     "mistralai": {
+      "selected": "openai",
+      "button": "#api_button_openai",
+      "source": "mistralai"
+     },
+     "custom": {
+      "selected": "openai",
+      "button": "#api_button_openai",
+      "source": "custom"
+     },
+     "cohere": {
+      "selected": "openai",
+      "button": "#api_button_openai",
+      "source": "cohere"
+     },
+     "perplexity": {
+      "selected": "openai",
+      "button": "#api_button_openai",
+      "source": "perplexity"
+     },
+     "groq": {
+      "selected": "openai",
+      "button": "#api_button_openai",
+      "source": "groq"
+     },
+     "electronhub": {
+      "selected": "openai",
+      "button": "#api_button_openai",
+      "source": "electronhub"
+     },
+     "chutes": {
+      "selected": "openai",
+      "button": "#api_button_openai",
+      "source": "chutes"
+     },
+     "nanogpt": {
+      "selected": "openai",
+      "button": "#api_button_openai",
+      "source": "nanogpt"
+     },
+     "deepseek": {
+      "selected": "openai",
+      "button": "#api_button_openai",
+      "source": "deepseek"
+     },
+     "aimlapi": {
+      "selected": "openai",
+      "button": "#api_button_openai",
+      "source": "aimlapi"
+     },
+     "xai": {
+      "selected": "openai",
+      "button": "#api_button_openai",
+      "source": "xai"
+     },
+     "pollinations": {
+      "selected": "openai",
+      "button": "#api_button_openai",
+      "source": "pollinations"
+     },
+     "moonshot": {
+      "selected": "openai",
+      "button": "#api_button_openai",
+      "source": "moonshot"
+     },
+     "fireworks": {
+      "selected": "openai",
+      "button": "#api_button_openai",
+      "source": "fireworks"
+     },
+     "cometapi": {
+      "selected": "openai",
+      "button": "#api_button_openai",
+      "source": "cometapi"
+     },
+     "azure_openai": {
+      "selected": "openai",
+      "button": "#api_button_openai",
+      "source": "azure_openai"
+     },
+     "zai": {
+      "selected": "openai",
+      "button": "#api_button_openai",
+      "source": "zai"
+     },
+     "siliconflow": {
+      "selected": "openai",
+      "button": "#api_button_openai",
+      "source": "siliconflow"
+     },
+     "workers_ai": {
+      "selected": "openai",
+      "button": "#api_button_openai",
+      "source": "workers_ai"
+     },
+     "minimax": {
+      "selected": "openai",
+      "button": "#api_button_openai",
+      "source": "minimax"
+     }
+    },
+    "each": [
+     [
+      "cc-basic",
+      true
+     ],
+     [
+      "cc-bias",
+      true
+     ],
+     [
+      "cc-custom",
+      true
+     ],
+     [
+      "cc-deepseek",
+      true
+     ],
+     [
+      "cc-google",
+      true
+     ],
+     [
+      "cc-missing-preset",
+      true
+     ],
+     [
+      "cc-openrouter",
+      true
+     ],
+     [
+      "cc-preset",
+      true
+     ],
+     [
+      "cc-proxy",
+      true
+     ],
+     [
+      "tc-aphrodite",
+      true
+     ],
+     [
+      "tc-generic",
+      true
+     ],
+     [
+      "tc-hf",
+      true
+     ],
+     [
+      "tc-kcpp",
+      true
+     ],
+     [
+      "tc-kcpp-dyna",
+      true
+     ],
+     [
+      "tc-llamacpp",
+      true
+     ],
+     [
+      "tc-mancer",
+      true
+     ],
+     [
+      "tc-missing",
+      true
+     ],
+     [
+      "tc-ollama",
+      true
+     ],
+     [
+      "tc-ollama-nomodel",
+      true
+     ],
+     [
+      "tc-ooba",
+      true
+     ],
+     [
+      "tc-ooba-plain",
+      true
+     ],
+     [
+      "tc-ooba-preset",
+      true
+     ],
+     [
+      "tc-openrouter",
+      true
+     ],
+     [
+      "tc-tabby",
+      true
+     ],
+     [
+      "tc-vllm",
+      true
+     ],
+     [
+      "x-kobold",
+      false
+     ],
+     [
+      "x-noapi",
+      false
+     ],
+     [
+      "x-novel",
+      false
+     ]
+    ],
+    "supported": [
+     "cc-basic",
+     "cc-bias",
+     "cc-custom",
+     "cc-deepseek",
+     "cc-google",
+     "cc-missing-preset",
+     "cc-openrouter",
+     "cc-preset",
+     "cc-proxy",
+     "tc-aphrodite",
+     "tc-generic",
+     "tc-hf",
+     "tc-kcpp",
+     "tc-kcpp-dyna",
+     "tc-llamacpp",
+     "tc-mancer",
+     "tc-missing",
+     "tc-ollama",
+     "tc-ollama-nomodel",
+     "tc-ooba",
+     "tc-ooba-plain",
+     "tc-ooba-preset",
+     "tc-openrouter",
+     "tc-tabby",
+     "tc-vllm"
+    ]
+   }
+  },
+  "x-supported-unknown-api": {
+   "gen": [],
+   "ret": {
+    "error": "Cannot read properties of undefined (reading 'selected')",
+    "cause": null
+   }
+  },
+  "x-supported-disabled": {
+   "gen": [],
+   "ret": {
+    "error": "Connection Manager is not available",
+    "cause": null
+   }
+  },
+  "x-construct-tc": {
+   "gen": [],
+   "ret": "<|start_header_id|>system<|end_header_id|>\n\nYou are {{char}}. Talk to {{user}}.<|eot_id|><|start_header_id|>user<|end_header_id|>\n\nhi<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
+  },
+  "x-construct-cc": {
+   "gen": [],
+   "ret": [
+    {
+     "role": "system",
+     "content": "You are {{char}}. Talk to {{user}}."
+    },
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ]
+  }
+ },
+ "calls": {
+  "cc-bias-preset": [
+   {
+    "key": "/api/backends/chat-completions/bias?model=gpt-5.6-terra\n[{\"text\":\" Ivo\",\"value\":-50}]",
+    "status": 200,
+    "text": "{\"357\":-50,\"1190\":-50}"
+   }
+  ],
+  "tc-llamacpp-alpaca-bias": [
+   {
+    "key": "/api/tokenizers/llama/encode\n{\"text\":\"Lio\"}",
+    "status": 200,
+    "text": "{\"ids\":[365,601],\"count\":2,\"chunks\":[\"▁L\",\"io\"]}"
+   },
+   {
+    "key": "/api/tokenizers/llama/encode\n{\"text\":\" hello\"}",
+    "status": 200,
+    "text": "{\"ids\":[29871,22172],\"count\":2,\"chunks\":[\"▁\",\"▁hello\"]}"
+   },
+   {
+    "key": "/api/tokenizers/llama/encode\n{\"text\":\" world\"}",
+    "status": 200,
+    "text": "{\"ids\":[29871,3186],\"count\":2,\"chunks\":[\"▁\",\"▁world\"]}"
+   }
+  ],
+  "tc-banned-global": [
+   {
+    "key": "/api/tokenizers/llama/encode\n{\"text\":\"Mara\"}",
+    "status": 200,
+    "text": "{\"ids\":[1085,29874],\"count\":2,\"chunks\":[\"▁Mar\",\"a\"]}"
+   }
+  ],
+  "tc-banned-tokenizer-llama3": [
+   {
+    "key": "/api/tokenizers/llama3/encode\n{\"text\":\"Mara\"}",
+    "status": 200,
+    "text": "{\"ids\":[44,5169],\"count\":2,\"chunks\":[\"M\",\"ara\"]}"
+   }
+  ]
+ }
+}

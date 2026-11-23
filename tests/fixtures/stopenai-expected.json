@@ -616,7 +616,7 @@
    "top_a": 0,
    "use_fallback": false,
    "provider": [
-    "A"
+    "Anthropic"
    ],
    "quantizations": [],
    "allow_fallbacks": true,
