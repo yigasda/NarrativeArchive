@@ -4,7 +4,7 @@
 import './screen.mjs';
 import { parentPort, workerData } from 'node:worker_threads';
 
-const { root, bridge = null, schedule = true } = workerData;
+const { root, bridge = null, schedule = true, from = 'plugin' } = workerData;
 let seq = 0, writes = 0;
 const waiting = new Map();
 // 본체에 부탁하기 → 답
@@ -29,7 +29,7 @@ const st = bridge ? async (url, body) => {
     return { ok: r.ok, status: r.status, json };
 } : null;
 
-const work = await (await import('./work.mjs')).startWork({ root, store, st, schedule });
+const work = await (await import('./work.mjs')).startWork({ root, store, st, schedule, from });
 const cmds = {
     presence: ({ sid, status }) => work.presence(sid, status),
     status: ({ sid }) => work.status(sid),
@@ -54,4 +54,5 @@ parentPort.on('message', async m => {
     try { const value = await (cmds[m.cmd] ? cmds[m.cmd](m) : Promise.reject(new Error(`unknown command ${m.cmd}`))); if (m.rid) parentPort.postMessage({ reply: m.rid, ok: true, value }); }
     catch (err) { if (m.rid) parentPort.postMessage({ reply: m.rid, ok: false, error: { message: String(err?.message || err), statusCode: err?.statusCode } }); }
 });
-parentPort.postMessage({ ready: true });
+// (the version of these messages: plugin/code.mjs WORKER_PROTO. The host uses no worker of another one)
+parentPort.postMessage({ ready: true, proto: 1 });

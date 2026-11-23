@@ -7,6 +7,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { openStore, StoreError, STORE } from './store.mjs';
 import { soundStore, SoundError } from './sound.mjs';
+import { makeAutoFor } from './code.mjs';
 
 export const info = { id: 'narrative-archive', name: 'NarrativeArchive', description: 'Orbit 저장 · 스케줄 (NarrativeArchive 확장의 서버 쪽)' };
 export const VERSION = 2;
@@ -33,21 +34,11 @@ async function bridgeOnce() {
     return bridging;
 }
 // 그 사용자의 일꾼 (없으면 띄워요) → 일꾼 | null (실리 서버 안이 아니면)
-async function autoFor(user) {
-    const root = user?.directories?.root;
-    if (!inside || !root) return null;
-    users.set(root, user);
-    const had = autos.get(root);
-    if (had?.alive()) return had;
-    const b = await bridgeOnce();
-    const again = autos.get(root);
-    if (again?.alive()) return again;
-    const { startAuto } = await import('./host.mjs');
-    const auto = startAuto({ root, store: storeAt(root), bridge: b ? { url: b.url, token: b.token } : null });
-    autos.set(root, auto);
-    auto.ready.then(() => {}, err => console.error('[narrative-archive plugin] 자율 메시지 스케줄러를 시작하지 못했습니다', err));
-    return auto;
-}
+const autoFor = makeAutoFor({
+    on: () => inside, autos, users,
+    start: async (root, code) => { const b = await bridgeOnce(); const { startAuto } = await import('./host.mjs'); return startAuto({ root, store: storeAt(root), bridge: b ? { url: b.url, token: b.token } : null, code }); },
+    log: err => console.error('[narrative-archive plugin] 자율 메시지 스케줄러를 시작하지 못했습니다', err),
+});
 const wrote = req => { const a = autos.get(req.user?.directories?.root); if (a?.alive()) a.wrote(); };
 // 실리를 켰을 때: 브라우저가 한 번도 안 열려도 돌게, 실리의 사용자들을 찾아서 Orbit 저장이 있는 사람의 일꾼을 켜요
 async function startAll() {

@@ -34,7 +34,8 @@ const refuse = (statusCode, text) => Object.assign(new Error(text), { statusCode
 // root: 사용자 폴더 · store: 플러그인 저장 (plugin/store.mjs의 것, 또는 그것을 부르는 것)
 // st(path, body) → { ok, status, json } : 실리 서버의 /api/… 처리기를 불러요 (없으면 null: 실리 연결로는 못 보내요)
 // schedule: false면 스케줄러 · 늦은 답장 보기를 켜지 않아요 (테스트가 손으로 돌려요)
-export async function startWork({ root, store, st = null, schedule = true }) {
+// from: 'extension' (실리의 확장 폴더의 코드: plugin/code.mjs) · 'plugin' (이 플러그인 폴더의 코드)
+export async function startWork({ root, store, st = null, schedule = true, from = 'plugin' }) {
     const G = await import('../src/phone2go.js');
     const { liveWorld, liveKey, enqueueJob } = await import('../src/phone2store.js');
     const { kitOf, kitContext } = await import('../src/phone2kit.js');
@@ -172,7 +173,8 @@ export async function startWork({ root, store, st = null, schedule = true }) {
     async function blocked(real) {
         const kit = kitOf(real);
         if (!kit) return '서버 데이터가 없습니다. 실리에서 이 채팅을 다시 여세요.';
-        if (kit.ver !== VERSION) return `확장(${kit.ver || '?'})과 서버 플러그인(${VERSION}) 버전이 다릅니다. 실리를 다시 시작하세요.`;
+        // (the worker runs the extension's own code when it can — plugin/code.mjs —: a different version there is a page not reloaded yet)
+        if (kit.ver !== VERSION) return from === 'extension' ? `확장(${kit.ver || '?'})과 서버(${VERSION}) 버전이 다릅니다. 실리 페이지를 새로 고치세요.` : `확장(${kit.ver || '?'})과 서버 플러그인(${VERSION}) 버전이 다릅니다. 서버 플러그인을 업데이트하고 실리를 다시 시작하세요.`;
         const f = kit.chat?.file;
         if (!obj(f) || !safeName(f.id) || (!f.group && !safeName(f.dir))) return '연결된 실리 채팅을 찾을 수 없습니다. 실리에서 이 채팅을 다시 여세요.';
         const file = f.group ? path.join(root, 'group chats', `${f.id}.jsonl`) : path.join(root, 'chats', f.dir, `${f.id}.jsonl`);

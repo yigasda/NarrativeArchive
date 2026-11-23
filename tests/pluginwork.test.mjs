@@ -42,7 +42,7 @@ function world({ story = false, schedule = null, kit = true, st = null, pt = nul
 }
 
 // 한 판: 임시 사용자 폴더 + 저장 + 가짜 모델 + 가짜 다리 + 일꾼
-async function stage(t, { settings = {}, cm = null, more = {}, files = {}, reply = () => ({ reply: ['you there?'], status: '' }), bridge = true, schedule = false } = {}) {
+async function stage(t, { settings = {}, cm = null, more = {}, files = {}, reply = () => ({ reply: ['you there?'], status: '' }), bridge = true, schedule = false, code = null } = {}) {
     const root = await mkdtemp(path.join(tmpdir(), 'na-work-'));
     const asked = [], st = [];
     const model = await listen(async (req, res) => { const body = await bodyOf(req); asked.push({ url: req.url, auth: req.headers.authorization, body }); const a = await reply(body); if (a?.httpStatus) { res.statusCode = a.httpStatus; res.end(JSON.stringify({ error: { message: a.error || 'no' } })); return; } res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ choices: [{ message: { content: typeof a === 'string' ? a : JSON.stringify(a) }, finish_reason: 'stop' }], usage: { prompt_tokens: 1, completion_tokens: 1 } })); });
@@ -64,7 +64,7 @@ async function stage(t, { settings = {}, cm = null, more = {}, files = {}, reply
     // (SillyTavern's chat file of the example chat: the server runs an Orbit only while its chat is there)
     await mkdir(path.join(root, 'chats', 'mara'), { recursive: true }); await writeFile(path.join(root, 'chats', 'mara', 'Mara - 2026-11-22.jsonl'), '{}\n');
     const store = openStore(root);
-    const auto = startAuto({ root, store, bridge: br ? { url: `http://127.0.0.1:${br.address().port}`, token: TOKEN } : null, schedule });
+    const auto = startAuto({ root, store, bridge: br ? { url: `http://127.0.0.1:${br.address().port}`, token: TOKEN } : null, schedule, code });
     t.after(async () => { await auto.stop(); model.close(); br?.close(); await rm(root, { recursive: true, force: true }); });
     await auto.ready;
     const put = (sid, m) => store.save(sid, { parts: JSON.parse(JSON.stringify(splitLive(m.live))), chat: 'chat-1' });
@@ -388,7 +388,7 @@ test('일꾼: 확장과 플러그인의 버전이 다르면 · 실리에서 그 
     const S = await stage(t), old = world({ version: '0.0.1' }), gone = world({ browser: { ...BROWSER(), chatId: 'Mara - deleted' } }), odd = world({ browser: { ...BROWSER(), chatId: '../../settings' } }), fine = world();
     await S.put('s1', old.m); await S.put('s2', gone.m); await S.put('s3', odd.m); await S.put('s4', fine.m);
     assert.deepEqual((await S.auto.list()).map(r => r.id), [fine.id]);
-    assert.match((await S.auto.status('s1'))[0].why, /버전이 다릅니다/);
+    assert.match((await S.auto.status('s1'))[0].why, /버전이 다릅니다\. 서버 플러그인을 업데이트하고 실리를 다시 시작하세요/);
     assert.match((await S.auto.status('s2'))[0].why, /^채팅을 찾을 수 없습니다\.$/);
     assert.match((await S.auto.status('s3'))[0].why, /연결된 실리 채팅을 찾을 수 없습니다/);
     assert.equal((await S.auto.status('s4'))[0].can, true);
@@ -445,4 +445,11 @@ test('일꾼: 먼저 건 말 뒤에 캐릭터끼리 주고받기를 안 해요 (
     const w = await S.get('sa');
     assert.equal(w.queue.jobs.filter(j => j.state === 'waiting').length, 0);
     assert.equal(S.asked.length, 1);
+});
+
+test('일꾼: 확장 폴더의 코드로 돌 때 버전이 다르면 "새로 고치세요" (확장은 이미 새것: 페이지만 아직 옛것)', async t => {
+    const { OWN_DIR } = await import('../plugin/code.mjs');
+    const S = await stage(t, { code: { dir: OWN_DIR, version: VERSION, from: 'extension' } }), old = world({ version: '0.0.1' });
+    await S.put('s1', old.m);
+    assert.match((await S.auto.status('s1'))[0].why, /확장\(0\.0\.1\)과 서버\([^)]+\) 버전이 다릅니다\. 실리 페이지를 새로 고치세요\./);
 });

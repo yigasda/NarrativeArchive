@@ -44,7 +44,8 @@ src/phone2tick.js 30초 틱                       플러그인 본체 (plugin/in
 |---|---|---|
 | `index.mjs` | 124 | 실리가 부르는 들머리(`info` · `init(router)` · `exit`). 길: `/ping`, `/store/load·rev·save·fork·drop`, `/auto/presence`, `/auto/status`, `/auto/claim` · `/auto/release`(방 자물쇠: 3-5), `/sound` · `/sound/upload` · `/sound/delete` · `/sound/file`(사용자 지정 알림음). 탭의 이름은 늘 `browser:…`로 바꿔요(탭이 일꾼 이름 `server`로 잡지 못하게). `globalThis.DATA_ROOT`가 있을 때만(=실리 서버 안) 일꾼을 켜요. 실리를 켰을 때 `src/users.js`로 사용자를 찾아, Orbit 저장이 있는 사람의 일꾼을 미리 켜요. `VERSION = 2`는 플러그인의 길 버전(확장 버전과 다른 것) |
 | `store.mjs` | 123 | 조각 저장. `rev`가 저장마다 1씩 올라가고, 보낸 쪽이 본 `rev`(base)가 다르면 409. `list()` · `generation()`(쓴 횟수). 실리 · 익스프레스를 몰라요 |
-| `host.mjs` | 52 | 본체 쪽. 사용자마다 일꾼 스레드 하나를 띄우고 말을 주고받아요. 일꾼이 부탁하는 저장 일(`list` · `revOf` · `load` · `save`)을 대신 해요. `list` · `inject` · `sweep` · `unread`는 테스트와 손 확인용 |
+| `code.mjs` (새, 2026-11-23) | 76 | 일꾼이 불러올 코드가 있는 곳. **실리의 확장 폴더**(사용자의 것 → 모든 사용자의 것, manifest의 이름 · 주소로 찾고 `plugin/worker.mjs`가 있어야 해요)를 먼저, 없으면 이 플러그인 폴더. `makeAutoFor`: 사용자마다 일꾼 하나, 확장의 버전이 바뀌면 다시 띄우고, 그 코드로 못 뜨면 그 판은 버리고 플러그인 폴더의 것으로. `WORKER_PROTO`: 일꾼과 본체가 주고받는 말의 판 |
+| `host.mjs` | 52 | 본체 쪽. 사용자마다 일꾼 스레드 하나를 띄우고 말을 주고받아요(`code.dir`의 `plugin/worker.mjs`). 일꾼이 부탁하는 저장 일(`list` · `revOf` · `load` · `save`)을 대신 해요. `list` · `inject` · `sweep` · `unread`는 테스트와 손 확인용 |
 | `worker.mjs` | 57 | 일꾼 스레드의 들머리. **순서가 중요해요**: `screen.mjs`를 먼저 불러야 해요. 전역 `fetch`를 바꿔서 `/`로 시작하는 주소를 다리로 넘겨요 |
 | `screen.mjs` | 37 | 아무것도 안 하는 화면: `document` · `$` · `toastr` 등에 "뭘 시켜도 자기 자신을 돌려주는 것"을 둬요. `SillyTavern.getContext()`는 `setContext()`로 그때그때 바꿔 끼워요. 일꾼 스레드에서만 불러요(본체에서 부르면 오류. 테스트는 `NA_SCREEN_ANYWHERE=1`) |
 | `work.mjs` | 348 | 핵심. 방 자물쇠(`claim` · `renew` · `release`, `liveGo`에 주는 `serverLock`), 실리의 것을 서버 것으로(`contextOf`), 연결 프로필 요청의 대역(`profileService`: `sendRequest`), 실리 연결 방식 · 추론 레벨의 대역(`stStandIn`), 한 번에 한 세계(`withWorld`), 돌려도 되나(`blocked` · `cannot`), 먼저 건 말 만들기(`generate`), 늦은 답장(`sweepDue`), 화면용 상태(`status`), 보고 있음(`presence`) |
@@ -116,7 +117,9 @@ kit = { v: 1, ver (확장 버전), name1, persona (지금 고른 페르소나의
 
 ### 3-4. 서버가 그 세계를 안 돌리는 때 (`work.mjs blocked`)
 1. 묶음이 없음.
-2. **확장과 플러그인의 버전이 다름** (`kit.ver !== src/core.js VERSION`). 플러그인은 실리 `plugins/` 폴더의 것, 확장은 확장 폴더의 것이라 따로 올라가요. 소망은 플러그인 자동 업데이트를 꺼 뒀어요: 확장을 올릴 때마다 `plugins/NarrativeArchive`에서 `git pull` 하고 실리를 다시 켜야 해요.
+2. **확장과 일꾼의 버전이 다름** (`kit.ver !== src/core.js VERSION`). 2026-11-23부터 일꾼은 **실리의 확장 폴더의 코드**를 돌려요(`code.mjs`): 실리가 확장을 업데이트하면 일꾼도 그 버전으로 다시 떠요. 그래서 다르면 보통 페이지가 아직 옛것이에요("실리 페이지를 새로 고치세요"). 확장 폴더를 못 찾아 플러그인 폴더의 코드로 돌 때만 "서버 플러그인을 업데이트하고 실리를 다시 시작하세요".
+   - 그 전에는 플러그인 폴더의 코드를 돌려서, 확장을 올릴 때마다(화면 파일만 바뀌어도) `plugins/NarrativeArchive`에서 `git pull` 하고 실리를 다시 켜야 했어요. 안 하면 서버가 아무것도 안 보냈어요(2026-11-23, 3.232.6).
+   - 지금도 플러그인 폴더에서 `git pull`이 필요한 때: 본체 쪽 파일(`index.mjs` · `host.mjs` · `code.mjs` · `store.mjs` · `sound.mjs` · `bridge.mjs`)이 바뀌었을 때. 일꾼과 본체의 말을 바꾸면 `WORKER_PROTO`를 올려요(다른 판의 일꾼은 안 써요).
 3. **실리의 그 채팅 파일이 없음** (`<root>/chats/<dir>/<id>.jsonl`, 그룹은 `<root>/group chats/<id>.jsonl`). 지운 채팅의 Orbit에 계속 말을 걸어 모델 비용이 나가지 않게.
 
 방마다 안 되는 때는 `cannot`(4장)이에요. 이유는 `/auto/status`로 화면에 가요.
@@ -262,9 +265,9 @@ npx eslint --no-config-lookup -c $S/lint/eslint.config.mjs src/phone2*.js src/ai
 ```
 
 서버 쪽 테스트:
-- `tests/pluginstore.test.mjs` 저장 · 길.
+- `tests/pluginstore.test.mjs` 저장 · 길. `tests/plugincode.test.mjs` 일꾼이 불러올 코드(확장 폴더 찾기 · 판 · 버전이 바뀌면 다시 띄우기).
 - `tests/pluginauto.test.mjs` 스케줄러(가짜 app 13개) + 진짜 저장 위의 app 5개.
-- `tests/pluginwork.test.mjs` **일꾼을 실제로 띄워서** 21개(가짜 모델 HTTP 서버 · 가짜 다리). 연결 프로필은 `tests/stfake.mjs`(실리의 `sendRequest`를 실리 코드의 순서대로 흉내 낸 것)로 틀을 떠요.
+- `tests/pluginwork.test.mjs` **일꾼을 실제로 띄워서** 22개(가짜 모델 HTTP 서버 · 가짜 다리). 연결 프로필은 `tests/stfake.mjs`(실리의 `sendRequest`를 실리 코드의 순서대로 흉내 낸 것)로 틀을 떠요.
 - `tests/stprofile.test.mjs` 프로필 틀 · 채우기 · 답 읽기. `tests/aiprofile.test.mjs` 지금 고른 프로필.
 - `tests/phone2beat.test.mjs` 브라우저 쪽 진짜 파일 + 진짜 일꾼을 한 저장에.
 - `tests/phone2wake.test.mjs` 2026-11-22에 생긴 일 그대로(화면이 꺼진 동안 서버가 답함 → 켜자마자 틱 → 또 답하지 않음), 서버가 만드는 중에 깨어남, 브라우저가 만드는 중의 서버, 먼저 건 말이 겹침, 걸린 요청의 시간 제한.
@@ -276,7 +279,7 @@ npx eslint --no-config-lookup -c $S/lint/eslint.config.mjs src/phone2*.js src/ai
 node tools/plugin/stsmoke.mjs <실리 폴더> <이 저장소>     # 브라우저 없이, 약 30초
 node tools/plugin/stbrowser.cjs <실리 폴더>               # 진짜 브라우저(Playwright)까지, 약 3분
 node tools/plugin/stprofile.cjs <실리 폴더>               # 진짜 연결 프로필 셋(채팅 완성 + 프록시 · 지금 고른 프로필 · 글 완성), 약 5분
-node tools/plugin/stwake.cjs <실리 폴더>                  # 그날의 순서 그대로(가려진 동안 서버의 늦은 답장이 그 시각에 → 보이자마자 틱) + 보이는 동안의 늦은 답장(한 번, 그 시각 바로 뒤) + 실리 라우터를 거친 방 자물쇠 · 알림음 올리기(실리의 multer) · 서버 답장 신호, 약 1분
+node tools/plugin/stwake.cjs <실리 폴더>                  # 그날의 순서 그대로(가려진 동안 서버의 늦은 답장이 그 시각에 → 보이자마자 틱) + 보이는 동안의 늦은 답장(한 번, 그 시각 바로 뒤) + 실리 라우터를 거친 방 자물쇠 · 알림음 올리기(실리의 multer) · 서버 답장 신호 · 일꾼이 확장 폴더의 코드로 도는지, 약 1분
 ```
 `stprofile.cjs`는 `settings.json` · 카드를 스스로 복사해 두고 되돌려요. 서버가 보낸 요청과 실리가 브라우저에서 같은 메시지로 보낸 요청이 글자까지 같은지 봐요.
 준비: 실리 1.19.1을 받아 `npm install`, `config.yaml`에서 `enableServerPlugins: true`,
@@ -294,6 +297,7 @@ node tools/plugin/stwake.cjs <실리 폴더>                  # 그날의 순서
 - **가짜 타이머 + 진짜 파일 읽기**가 섞인 테스트는 `performance.now()`로 기다려요(`Date` · `setTimeout`은 가짜).
 - 마리나라 파일을 다시 가져올 때: scratch의 `port12.mjs`(스케줄러) · `port13.mjs`(알림) 방식. `node:module`의 `stripTypeScriptTypes`로 타입만 떼고, 바꾼 것은 `must(…)`로 한 줄씩 바꿔서 머리말에 적어요. 마리나라는 staging `32c47a1`(2026-11-20)이에요.
 - `plugin/index.mjs`의 `/ping`이 일꾼을 켜요. 테스트에서 일꾼이 안 켜지는 것은 `globalThis.DATA_ROOT`가 없어서예요.
+- 일꾼은 확장 폴더의 코드로 떠요(`code.mjs`). 일꾼 쪽 파일(`worker.mjs` · `work.mjs` · `auto.mjs` · `screen.mjs` · `lock.mjs` · `log.mjs` · `marinara/` · `src/`)은 확장 업데이트로 바뀌어요. 본체 쪽 파일과 말이 안 맞게 바꾸지 마세요(바꾸면 `WORKER_PROTO`).
 - 방 자물쇠는 일꾼 안에 있어요: 일꾼이 다시 뜨면 비어요. `generate`가 잡은 방을 `liveGo`의 `serverLock`이 또 잡아요(같은 쪽이라 겹쳐 잡기: 센 만큼 놓아요).
 - 일꾼은 한 번에 한 세계만 돌려요(`withWorld`의 줄). `withWorld` 안에서 `withWorld`를 다시 부르면 멈춰요. `/auto/status`는 서버가 답장을 만드는 중이면 1분쯤 늦을 수 있어요.
 - `auto.mjs open()`은 rev가 바뀌었을 때(브라우저가 저장) 그 세계의 방을 `reseedActivity`해요.
