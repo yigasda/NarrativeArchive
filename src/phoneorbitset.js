@@ -200,6 +200,7 @@ export function orbitSetPage(T, face) {
         stconn: () => (T.st ? hp('실리의 API 연결 창을 그대로 조종합니다. 여기서 바꾸면 실리의 연결이 바뀝니다(롤플레이도 같은 연결을 씁니다). 키는 실리에만 저장됩니다.') + scGroup(T, T.st, false) : none('실리의 API 연결 창을 찾지 못했어요.')),
         // 알림 (마리나라의 ConversationSoundSetting 전부. 게임 모드는 소망이 게임을 다 뺐어요): 마리나라의 Only when unfocused는 '백그라운드에서만'(소망: 풀어 쓰지 말고 짧게).
         //   알림 위치 · 대화 모드 알림음 · 사용자 지정 알림음 · 백그라운드(브라우저) · 생성 완료(브라우저). T.notify = { sound, unfocused, browser, genBrowser, snd, perm, pos }
+        // (T.notify.perm: 브라우저 알림 권한. null = 아직 안 읽음 → 저장된 값대로, 읽은 뒤엔 마리나라처럼 granted일 때만 켜짐)
         notify: () => { const N = T.notify || {}, help = N.perm === 'insecure' ? '브라우저 알림은 HTTPS 또는 localhost가 필요합니다.' : N.perm === 'denied' ? '브라우저 알림이 차단되어 있습니다. 사이트 알림 권한을 초기화한 뒤 다시 시도하세요.' : N.perm === 'unsupported' ? '이 환경에서는 브라우저 알림을 사용할 수 없습니다.' : '브라우저 알림 권한을 사용합니다.';
             // (마리나라의 모바일 앱 줄 · 롤플레이 모드 알림음은 소망이 뺐어요: 안드로이드 앱 · 롤플레이 방이 여기엔 없어요)
             // 알림 위치 (마리나라 GeneralSettings의 Notification position): 실리의 알림 위치(#toastr_position)에 넣어요. 위 = 위 가운데, 아래 = 아래 가운데
@@ -211,9 +212,9 @@ export function orbitSetPage(T, face) {
                     //   T.notify.snd = { loading, configured, busy: 'up' | 'rm' | '' } (반영 src/phone2sound.js)
                     (S => pad(`<input type="file" class="na_os_sndfile" hidden accept="audio/*,video/mp4,.mp3,.wav,.ogg,.oga,.m4a,.mp4,.webm" aria-label="소리 선택"><div class="ot_r ot_w"><span class="os_l">사용자 지정 알림음</span><span class="ot_chip">${S.loading ? '확인 중…' : S.configured ? '사용자 지정' : '기본값'}</span></div><div class="os_d" style="margin:6px 0 4px">이 서버에 연결된 모든 기기의 알림음에 사용됩니다.</div><div class="os_d" style="margin-bottom:8px">MP3, WAV, OGG, M4A/MP4, WebM · 최대 10MB</div><div class="ot_r ot_w"><button type="button" class="os_go na_os_ntplay"${S.loading ? ' disabled' : ''}>${li('play', 13, 2.2)}미리 듣기</button><button type="button" class="os_go na_os_sndup"${S.busy ? ' disabled' : ''}>${S.busy === 'up' ? '<i class="fa-solid fa-spinner fa-spin"></i>' : li('upload', 13, 2.2)}${S.configured ? '교체' : '소리 선택'}</button>${S.configured ? `<button type="button" class="os_go red na_os_sndrm"${S.busy ? ' disabled' : ''}>${S.busy === 'rm' ? '<i class="fa-solid fa-spinner fa-spin"></i>' : li('trash-2', 13, 2.2)}삭제</button>` : ''}</div>`))(N.snd || {}))
                 + cap('백그라운드 알림') + hp('백그라운드에서 자율 메시지가 오면 알림을 표시합니다. 메시지 내용은 숨겨집니다.')
-                + cd(tg('browser', '브라우저', help, false, 'na_os_nt', !!N.browser && N.perm === 'granted'))
+                + cd(tg('browser', '브라우저', help, false, 'na_os_nt', !!N.browser && (N.perm == null || N.perm === 'granted')))
                 + cap('생성 완료 알림') + hp('직접 시작한 답장이 백그라운드에서 완료되면 알림을 표시합니다. 메시지 내용은 숨겨집니다.')
-                + cd(tg('genBrowser', '브라우저', help, false, 'na_os_nt', !!N.genBrowser && N.perm === 'granted')); },
+                + cd(tg('genBrowser', '브라우저', help, false, 'na_os_nt', !!N.genBrowser && (N.perm == null || N.perm === 'granted'))); },
         // 그림 설명 (마리나라의 Image captioning): 켜기 · 설명할 연결 · 설명 지시문. T.caption = liveCaptioning()
         caption: () => { const C = T.caption || { enabled: false, connectionId: '', prompt: '', defaultPrompt: '', connections: [] };
             return hp('켜면 그림을 그대로 보내지 않고, 글로 설명해서 보냅니다. 그림을 못 읽는 모델을 쓸 때 켜세요.')
@@ -332,7 +333,8 @@ export function orbitSwitcher(W) {
                     : `${st ? `<button type="button" class="os_ib na_ob_soon" aria-label="${esc(c.name)} 설정">${li('sliders-horizontal', 15)}</button>` : ''}<button type="button" class="os_ib ow_st na_ow_star${st ? ' on' : ''}" data-id="${esc(c.id)}" aria-pressed="${st}" aria-label="${esc(c.name)} 즐겨찾기">${li('star', 16)}</button>`) + '</div>'; };
         const orderBtn = `<div class="ot_r ot_end ow_ord"><button type="button" class="os_go na_ow_order" aria-pressed="${!!W.order}">${W.order ? '완료' : '순서 편집'}</button></div>`;
         const dflt = W.follows ? '' : `<button type="button" class="os_go na_ow_default" aria-label="기본값 사용">${li('house', 13, 2.2)}기본값 사용</button>`;
-        const now = `<div class="ow_now${dflt ? ' d' : ''}">${cur ? row(cur, { now: true, sub: [nowLabel, groupOf(cur)?.name].filter(Boolean).join(' · ') }) : `<div class="ow_nn"><div class="os_cap ow_cap"><span>${nowLabel}</span></div><div class="ow_nx">${W.curName ? esc(W.curName) : '모델 선택'}</div></div>`}${dflt}</div>`;
+        // (목록에 없는 모델(ID를 직접 넣은 것)도 지금 줄과 같은 모양: 이름 위, '지금 · …' 아래)
+        const now = `<div class="ow_now${dflt ? ' d' : ''}">${cur ? row(cur, { now: true, sub: [nowLabel, groupOf(cur)?.name].filter(Boolean).join(' · ') }) : `<div class="os_pp ow_row"><div class="ow_pick"><span class="ot_x"><span class="os_l">${W.curName ? esc(W.curName) : '모델 선택'}</span><span class="os_d">${nowLabel}</span></span></div></div>`}${dflt}</div>`;
         const search = `<div class="os_q ow_q">${li('search', 16)}<div class="os_qi na_ow_q" contenteditable="true" role="textbox" enterkeyhint="go" spellcheck="false" autocapitalize="off" data-ph="${paneGroup ? `${esc(paneGroup.name)} 검색...` : '모델 검색 또는 ID 붙여넣기…'}" aria-label="모든 모델 검색 또는 모델 ID 붙여넣기">${esc(W.q)}</div>${W.q ? `<button type="button" class="os_ib na_ow_qx" aria-label="검색 지우기">${li('x', 15)}</button>` : ''}</div>`;
         const add = cd(`<button type="button" class="os_rw na_ob_soon" aria-label="계정 추가">${li('plus', 18)}<span class="os_l">계정 추가</span></button>`);
         if (!all.length) body = now + none('아직 모델이 없습니다. 계정을 추가하면 생깁니다.') + add;
