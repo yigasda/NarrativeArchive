@@ -26,6 +26,26 @@ S.__naSet({ name1, name2, characters, this_chid, chat, chat_metadata, main_api }
 S.substituteParams('{{char}} …', { /* 실리와 같은 옵션 */ });
 ```
 
+- 일꾼은 이렇게 하지 않고 `naLoad`를 써요(아래). `naLoad`가 `initMacros`와 그 밖의 등록(아래 "실리가 initMacros 밖에서 등록하는 매크로")까지 해요.
+
+## 실리가 initMacros 밖에서 등록하는 매크로 (`namacros.js`)
+
+```js
+const ext = await naDiscover({ root: userRoot, send: bridge }); // 실리 페이지가 찾는 확장 (다리의 /api/extensions/discover, 옛 다리면 폴더를 직접)
+naLoad(settings, presets, ext);                                  // 엔진 플래그 · 켜진 확장이 바뀌었으면 지우고 실리 차례로 다시 등록
+S.__naSet({ name1, name2, characters, this_chid, chat, chat_metadata }); __naSetFetch(bridge);
+await naMacrosJob();                                             // 채팅을 열 때 하는 것 (작가 노트 기본값 · 표정 · 표정 목록)
+```
+
+- 등록 차례는 실리 페이지 그대로예요: 옛 매크로 둘(`initMacros`, 옛 엔진만) → 켜진 기본 확장(manifest의 `loading_order` 차례: 표정 → 요약 → 그림 생성) → 작가 노트 → 추론.
+  옛 엔진은 이 차례가 글을 바꿔요(한 매크로가 낸 글 안의 다른 매크로가 풀리는지).
+- 켜지는 확장: config `extensions.enabled`(다리의 `/discover`가 실리의 404면 꺼짐) · 찾은 것 중 manifest를 읽을 수 있는 것 · `disabledExtensions`에 없는 것 · `requires`(Extras는 서버가 연결하지 않아요) · `dependencies`.
+- 일마다: 표정 `migrateSettings` · 그림 생성 `loadSettings`의 값 줄(settings.json을 일마다 새로 읽어서), 작가 노트 `loadSettings`(이 일의 `chat_metadata` 복사본에: 저장하지 않아요), `lastExpression = {}`.
+- 표정 목록: 열쇠 · 표정 API가 바뀔 때 다시 받아요. 로컬 분류는 다리의 `/api/extra/classify/labels`. 옛 다리(404)면 실리가 실패했을 때처럼 기본 목록이에요(한 줄 적어요. 모델 요청은 막지 않아요).
+- 서버에서 풀 수 없는 매크로(`naleft.js`): 글은 그대로 보내고, 실리 창에 이름마다 한 번 `[macros] 서버에서 풀 수 없는 매크로가 있습니다: {{이름}}`.
+  매크로를 푼 뒤에 남은 `{{이름` 중 서버에 없는 것(다른 확장의 매크로), 그리고 분류가 있는 표정 API의 `{{lastExpression}}` · Extras의 `{{availableExpressions}}`.
+- 확인: `tools/st/oracle-macros.mjs`(진짜 실리 브라우저와 11 variant × 7 채팅 × 6 글) → `tests/fixtures/stmacros2-expected.json`, `tests/stmacros2.test.mjs` · `pluginworkmacros.test.mjs`.
+
 ## 쓰는 법 (연결 프로필 요청)
 
 ```js
@@ -78,7 +98,7 @@ await naStatus({ skip: true });                     // 실리 연결을 쓰지 �
 | 파일 | 실리 원본 | 어떻게 |
 |---|---|---|
 | `public/lib.js` | `public/lib.js` | 우리 것: 같은 이름(chevrotain · moment · seedrandom · droll · Handlebars · lodash)을 실리 서버 폴더 node_modules에서 먼저, 없으면 확장 node_modules에서 |
-| `public/script.js` | `public/script.js` | 일부 (이름 · 캐릭터 · 채팅 전역 값, substituteParams · substituteParamsLegacy, 카드 칸, getMax*Tokens, getGeneratingModel, setOnlineStatus · resultCheckStatus · abortStatusCheck …). 대역: saveSettingsDebounced · displayOnlineStatus · stopStatusLoading |
+| `public/script.js` | `public/script.js` | 일부 (이름 · 캐릭터 · 채팅 전역 값, substituteParams · substituteParamsLegacy, 카드 칸, getMax*Tokens, getGeneratingModel, setOnlineStatus · resultCheckStatus · abortStatusCheck …). 대역: saveSettingsDebounced · displayOnlineStatus · stopStatusLoading. 두 엔진의 부름(evaluateMacros · MacroEngine.evaluate)은 `naleft.js`로 감싸요(결과는 그대로) |
 | `public/scripts/macros.js` | 같음 | 통째로 (옛 엔진) |
 | `public/scripts/macros/macro-system.js` | 같음 | 통째로 |
 | `public/scripts/macros/engine/*.js` (MacroBrowser.js 빼고 9개) | 같음 | 통째로. MacroCstWalker · MacroEnvBuilder · MacroDiagnostics는 절대 경로 import만 상대 경로로 |
@@ -92,15 +112,21 @@ await naStatus({ skip: true });                     // 실리 연결을 쓰지 �
 | `public/scripts/nai-settings.js` | 같음 | 일부 (nai_settings, getKayraMaxContextTokens) |
 | `public/scripts/textgen-settings.js` | 같음 | 일부 (createTextGenGenerationData와 딸린 것 · 금지 토큰 · 로짓 바이어스 · 서버 주소 · 연결 확인 getStatusTextgen(프리셋 자동 고르기 · /props · 화면 · 로그 줄 빼고)). 대역: localStorage(Mancer 기본 주소) · document(index.html 1503 dynatemp 종류) · toastr · sessionStorage(tokenizers.js의 것) · 모델 목록 로더(실리 것을 그대로 부르고, 처리 안 된 실패를 실리 창에 한 번) |
 | `public/scripts/secrets.js` | 같음 | 일부 (SECRET_KEYS, secret_state: 키 확인에 씀. 값은 일꾼이 다리의 /api/secrets/read로 채워요 — 키 글 없이) |
-| `public/scripts/extensions.js` | 같음 | 일부 (extension_settings, extensionNames, findExtension). 대역: saveMetadataDebounced |
+| `public/scripts/extensions.js` | 같음 | 일부 (extension_settings, extensionNames, modules, getApiUrl, sortManifestsByOrder, findExtension, getContext 다시 내보내기). 대역: saveMetadataDebounced · doExtrasFetch(닿지 않음) |
 | `public/scripts/variables.js` | 같음 | 일부 (지역 · 전역 변수 get/set/add/inc/dec/has/del, getVariableMacros) |
-| `public/scripts/st-context.js` | 같음 | 일부 (getContext()의 `variables` 객체만, `variables`로 내보냄) |
-| `public/scripts/utils.js` | 같음 | 일부 (convertValueType, isDigitsOnly, getStringHash, isTrueBoolean · isFalseBoolean, timestampToMoment, escapeRegex, uuidv4, equalsIgnoreCaseAndAccents …) |
+| `public/scripts/st-context.js` | 같음 | 일부 (getContext()의 앞 칸들(chat · characters · groups · 이름 · characterId · groupId · chatId), `variables` 객체는 `variables`로 내보냄) |
+| `public/scripts/utils.js` | 같음 | 일부 (convertValueType, isDigitsOnly, getStringHash, isTrueBoolean · isFalseBoolean, timestampToMoment, escapeRegex, uuidv4, equalsIgnoreCaseAndAccents, isSubsetOf, getCharaFilename, findChar …). 대역: getTagsList · toastr(findChar가 부르지만 닿지 않음) |
 | `public/scripts/i18n.js` | 같음 | 일부 (t, translate, getCurrentLocale). 대역: localeFile(`__naSet`, 기본 `'en'`) |
 | `public/scripts/events.js` | 같음 | 일부 (event_types). 대역: eventSource |
 | `public/scripts/popup.js` | 같음 | 일부 (POPUP_RESULT). 대역: Popup(늘 취소) |
 | `public/scripts/tokenizers.js` | 같음 | 일부 (getTokenizerModel, getTokenizerBestMatch, getTextTokens와 서버 길). 대역: jQuery.ajax(naAjax) · sessionStorage · getTokenCount(닿지 않음) |
-| `public/scripts/reasoning.js` | 같음 | 일부 (reasoning_templates, extractReasoningFromData, removeReasoningFromString · parseReasoningFromString) |
+| `public/scripts/reasoning.js` | 같음 | 일부 (reasoning_templates, extractReasoningFromData, removeReasoningFromString · parseReasoningFromString, 추론 매크로 등록 registerReasoningMacros) |
+| `public/scripts/authors-note.js` | 같음 | 일부 (metadata_keys, 채팅을 열 때의 loadSettings 값 부분, 매크로 등록 registerAuthorsNoteMacros) |
+| `public/scripts/extensions/memory/index.js` | 같음 | 일부 (getLatestMemoryFromChat, init의 `{{summary}}` 등록). 대역: `$`(요약 칸은 늘 빈 글자: 실리는 채팅을 열 때 같은 함수 값을 넣어요) |
+| `public/scripts/extensions/stable-diffusion/index.js` | 같음 | 일부 (loadSettings의 캐릭터 프롬프트 칸, init의 `{{charPrefix}}` · `{{charNegativePrefix}}` 등록) |
+| `public/scripts/extensions/expressions/index.js` | 같음 | 일부 (표정 목록 · 기본 표정 · 마지막 표정을 읽는 함수, migrateSettings, init의 매크로 셋 등록). fetch는 다리(`naFetch`) |
+| `public/scripts/system-messages.js` | 같음 | 일부 (system_message_types) |
+| `namacros.js` · `naleft.js` | 우리 것 | 확장 찾기 · 켜지는 확장 · 등록 차례 · 일마다의 값 / 서버에서 풀 수 없는 매크로 한 줄 (위 "실리가 initMacros 밖에서 등록하는 매크로") |
 | `public/scripts/tags.js` · `personas.js` · `autocomplete/AutoComplete.js` | 같음 | 일부 (power_user 기본값에 쓰는 상수만) |
 | `public/scripts/extensions/shared.js` | 같음 | 일부 (ConnectionManagerRequestService: getProfileIcon · handleDropdown 빼고). 대역: SillyTavern.getContext |
 | `public/scripts/custom-request.js` | 같음 | 일부 (9~607 통째로, import만 우리 것). 대역: 스트리밍 셋(닿으면 오류) |
@@ -117,13 +143,21 @@ await naStatus({ skip: true });                     // 실리 연결을 쓰지 �
 
 - `{{input}}` · `{{firstDisplayedMessageId}}`(새 엔진)와 옛 엔진의 `{{input}}`은 실리 코드가 `document` · `$`를 바로 불러요. 서버에 없으면 그 매크로는 그대로 남아요.
 - `{{lastGenerationType}}`은 eventSource가 대역이라 늘 빈 글자예요. `{{outlet}}`은 `extension_prompts`를 채워야 나와요.
-- 시각 매크로(`{{time}}` · `{{date}}` …)는 서버의 시간대와 moment 언어를 따라요.
+- 다른 확장(써드파티)의 매크로는 서버에 없어요: 글 그대로 보내고 실리 창에 한 줄. 다른 확장이 기본 매크로 이름을 덮어쓰거나 엔진의 전처리 · 후처리를 바꾼 것은 서버가 알 수 없어요.
+- `{{lastExpression}}`: 서버는 분류하지 않아서 늘 빈 글자예요(채팅을 연 뒤의 실리와 같아요). 분류가 있는 표정 API(로컬 · Extras · LLM · WebLLM)에서는 실리 페이지가 분류한 표정이라 달라요(실리 창에 한 줄).
+  none이어도 스프라이트가 있거나 기본 이모지를 켰고 마지막 캐릭터 메시지가 비어 있으면 실리는 기본 표정을 넣어요(서버는 빈 글자).
+- Extras 표정 API의 `{{availableExpressions}}`: 실리 페이지는 Extras에 연결되면 Extras의 목록이에요. 서버는 기본 목록이에요(실리 창에 한 줄).
+- 시각 매크로(`{{time}}` · `{{date}}` …) · 로컬 시각 · 기본 언어(정렬 · 숫자 글)는 브라우저의 것이에요. 브라우저가 확장 설정에 적은 시간대 · 언어(`device`, `src/phone2keepon.js keepDevice`)로
+  일꾼 스레드의 Date · Intl을 맞추고(`plugin/zone.mjs`), `i18n.js`의 `localeFile`도 그 값이에요(`plugin/work.mjs useDevice`). 브라우저가 아직 안 적었으면 서버 컴퓨터의 것이에요.
+  moment 전역 언어는 브라우저도 늘 `en`이라 같아요. 확인: `tools/st/oracle-tz.mjs`(진짜 실리 브라우저와 9경우) → `tests/sttz.test.mjs`.
+  - 남은 차이: 서버 Node와 브라우저의 tz 데이터 판이 다르면 규칙이 막 바뀐 곳에서만 달라요. 기기가 둘이면 마지막으로 설정을 저장한 브라우저의 것이에요.
+  - 실리 서버의 코드를 옮긴 것(`naLoadPresets`, `plugin/stread.mjs`의 폴더 읽기)은 실리 서버처럼 서버 컴퓨터의 시간대 · 언어로 돌아요.
 - 변수는 서버에서 바꿔도 저장하지 않아요(saveMetadataDebounced · saveSettingsDebounced는 아무것도 안 함).
 - 연결 확인 (실리 브라우저와 남는 차이):
   - 실리 브라우저는 페이지를 열 때(자동 연결) · 연결 버튼을 누를 때 한 번 받아 두고 다시 묻지 않아요. 서버는 위의 때마다 다시 묻고, 다시 물은 답은 그다음 일부터 써요
     (다시 묻는 일 자체는 둔 답으로 해요). 자동 연결이 꺼져 있고 버튼을 누르지 않은 브라우저는 연결 안 됨이지만, 서버는 늘 지금 설정으로 연결한 것처럼 해요.
   - 처음 묻는 열쇠는 15초까지 기다리고, 그래도 답이 없으면 실패로 봐요(연결 안 됨). 브라우저는 답이 올 때까지 전 상태를 들고 있어요.
-  - 정렬의 `localeCompare`는 서버 Node의 언어(LANG)를 따라요. 브라우저는 그 브라우저 언어예요: 한글 · 악센트가 든 모델 이름이면 "첫 모델"이 다를 수 있어요(ASCII id는 같아요).
+  - 정렬의 `localeCompare`는 브라우저 언어예요(위 시각 매크로 줄). 브라우저가 아직 안 적었으면 서버 Node의 언어(LANG)라서, 한글 · 악센트가 든 모델 이름이면 "첫 모델"이 다를 수 있어요(ASCII id는 같아요).
   - Mancer 서버 주소는 늘 기본 주소예요(실리는 브라우저 localStorage의 `mancer_server`).
   - 페이지를 열 때 화면이 모델 칸에 change를 일으켜 고치는 문맥 · 온도(소스를 바꿨을 때 · 처음 열 때의 `onModelChange`)는 서버가 하지 않아요. 연결할 때의 것만 해요.
   - `online_status` 글은 영어예요(브라우저는 그 언어로 번역).

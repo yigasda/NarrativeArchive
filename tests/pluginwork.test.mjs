@@ -863,3 +863,50 @@ test('일꾼 · 연결 확인은 실리 연결을 쓰는 세계만: 커스텀 AP
     await Q.auto.status('sc');
     assert.deepEqual(statusSeen(Q), ['/api/secrets/read', '/api/backends/chat-completions/status']);
 });
+
+test('일꾼 · 브라우저의 시간대: 확장 설정의 device(src/phone2keepon.js keepDevice)대로 실리 매크로가 그 시각. 모르는 시간대 · 없으면 서버의 것, 모르는 것은 실리 창에 한 번', async t => {
+    const lines = [], keep = { out: process.stdout.write, err: process.stderr.write };
+    process.stdout.write = function (c, ...a) { lines.push(String(c)); return keep.out.call(this, c, ...a); };
+    process.stderr.write = function (c, ...a) { lines.push(String(c)); return keep.err.call(this, c, ...a); };
+    t.after(() => { process.stdout.write = keep.out; process.stderr.write = keep.err; });
+    const device = { timeZone: 'Asia/Kathmandu', locale: 'ko-kr', intl: 'ko-KR' };
+    const S = await stage(t, { settings: { draftConn: SOURCE, device }, more: { oai_settings: { ...SOURCE_OAI, custom_include_headers: 'X-Z: {{datetimeformat::Z}}' } }, reply: pings() }), a = world();
+    await S.put('sa', a.m); await S.auto.list();
+    const header = async () => { assert.match((await S.gen(a.id)).payload, /"message_saved"/); return sentTo(S).at(-1).body.custom_include_headers; };
+    // (the server computer's own offset, as moment writes it: this process runs in it)
+    const o = -new Date().getTimezoneOffset(), mine = `X-Z: ${o < 0 ? '-' : '+'}${String(Math.floor(Math.abs(o) / 60)).padStart(2, '0')}:${String(Math.abs(o) % 60).padStart(2, '0')}`;
+    assert.equal(await header(), 'X-Z: +05:45');
+    S.stSettings.extension_settings.narrative_archive.device = { ...device, timeZone: 'Mars/Base' };
+    await S.writeSettings();
+    assert.equal(await header(), mine);
+    assert.equal(await header(), mine);
+    const told = () => lines.filter(l => l.includes('브라우저 시간대를 알 수 없어 서버 시간대를 사용합니다: Mars/Base'));
+    assert.equal(told().length, 1, lines.join('\n'));
+    S.stSettings.extension_settings.narrative_archive.device = { ...device, timeZone: 'Pacific/Chatham' };
+    await S.writeSettings();
+    const chatham = new Intl.DateTimeFormat('en-US', { timeZone: 'Pacific/Chatham', timeZoneName: 'longOffset' }).formatToParts(new Date()).find(p => p.type === 'timeZoneName').value.slice(3);
+    assert.equal(await header(), `X-Z: ${chatham}`);
+    delete S.stSettings.extension_settings.narrative_archive.device;
+    await S.writeSettings();
+    assert.equal(await header(), mine);
+    assert.equal(told().length, 1);
+});
+
+test('일꾼 · 실리 서버의 코드를 옮긴 것(사용자 폴더 읽기)은 서버의 언어로: 페르소나 그림 차례가 실리 서버와 같아요 — 브라우저 언어가 달라도, 앞 일 뒤에도', async t => {
+    const first = loc => ['ren.png', '가.png'].sort(new Intl.Collator(loc).compare)[0];
+    const server = first(undefined), intl = ['ko-KR', 'en-US'].find(l => first(l) !== server);
+    const personas = { ...PERSONAS.personas, '가.png': 'Lio' }, descs = { ...PERSONAS.persona_descriptions, '가.png': { description: 'Lio is a cook.' } };
+    // (no persona picked that is there: SillyTavern takes the first picture of its list — stread.mjs personaFor)
+    const S = await stage(t, { bridge: false, settings: { device: { timeZone: 'Asia/Seoul', locale: intl.toLowerCase(), intl } }, more: { user_avatar: 'gone.png', power_user: { personas, persona_descriptions: descs } } });
+    await writeFile(path.join(S.root, 'User Avatars', '가.png'), 'x');
+    await mkdir(path.join(S.root, 'characters'), { recursive: true });
+    await writeFile(path.join(S.root, 'characters', 'mara.png'), cardPng({ chara: { spec: 'chara_card_v2', spec_version: '2.0', name: 'Mara', data: { name: 'Mara', description: 'Mara is a baker.', personality: 'warm', extensions: { talkativeness: 0.5 } } } }));
+    const a = world({ hoursAgo: 0.2 }), b = world({ hoursAgo: 0.2 });
+    for (const x of [a, b]) { const j = enqueueJob(x.m, { kind: 'reply', owner: 'Mara', room: x.room.id, at: Date.now() - 600_000 }); Object.assign(j, { timed: true, notBefore: Date.now() - 1000 }); }
+    await S.put('sa', a.m);
+    assert.equal(await S.auto.sweep(), 1);
+    await S.put('sb', b.m);
+    assert.equal(await S.auto.sweep(), 1);
+    for (const x of S.asked) assert.match(textOf(x.body), new RegExp(`\\[PERSONA — ${personas[server]}\\]`));
+    assert.equal(S.asked.length, 2);
+});

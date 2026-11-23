@@ -140,3 +140,30 @@ test('다리 /api/secrets/read: 키마다 [{ id, active }] | null만 줘요 — 
     fs.rmSync(file);
     assert.deepEqual(await (await post('/api/secrets/read')).json(), { api_key_openai: null, api_key_claude: null, libre_url: null });
 });
+
+test('다리 · 매크로의 길: GET /api/extensions/discover · POST /api/extra/classify/labels는 실리 자신의 처리기로(x-na-bridge 표시). 나머지 확장 · 분류 길은 404(표시 없음). 실리에 그 처리기가 없으면 표시 없는 404', async t => {
+    const st = fakeSt();
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'na-bridge-user-'));
+    t.after(() => { fs.rmSync(st, { recursive: true, force: true }); fs.rmSync(root, { recursive: true, force: true }); });
+    const userOf = r => (r === root ? { profile: { handle: 'ren' }, directories: { root } } : null);
+    const headers = b => ({ 'content-type': 'application/json', 'x-na-token': b.token, 'x-na-root': encodeURIComponent(root) });
+    const ask = (b, method, url) => fetch(b.url + url, { method, headers: headers(b), body: method === 'GET' ? undefined : '{}' });
+    // (SillyTavern without those routers: an older SillyTavern — answered as an older bridge does)
+    const b0 = await startBridge({ stRoot: st, userOf });
+    t.after(() => b0.close());
+    const r0 = await ask(b0, 'GET', '/api/extensions/discover');
+    assert.deepEqual([r0.status, r0.headers.get('x-na-bridge')], [404, null]);
+    // (SillyTavern's own routers: what they answer, with the bridge's mark)
+    fs.writeFileSync(path.join(st, 'src/endpoints/extensions.js'), "export function router(req, res, next) { if (req.method === 'GET' && req.url === '/discover') return res.send([{ type: 'system', name: 'memory' }, { type: 'local', name: 'third-party/Ren-Ext' }]); if (req.url === '/install') return res.send({ installed: true }); next(); }\n");
+    fs.writeFileSync(path.join(st, 'src/endpoints/classify.js'), "export function router(req, res, next) { if (req.method === 'POST' && req.url === '/labels') return res.send({ labels: ['calm', 'joy'] }); if (req.url === '/') return res.send({ classification: [] }); next(); }\n");
+    const b = await startBridge({ stRoot: st, userOf });
+    t.after(() => b.close());
+    const d = await ask(b, 'GET', '/api/extensions/discover');
+    assert.deepEqual([d.status, d.headers.get('x-na-bridge'), await d.json()], [200, '1', [{ type: 'system', name: 'memory' }, { type: 'local', name: 'third-party/Ren-Ext' }]]);
+    const l = await ask(b, 'POST', '/api/extra/classify/labels');
+    assert.deepEqual([l.status, l.headers.get('x-na-bridge'), await l.json()], [200, '1', { labels: ['calm', 'joy'] }]);
+    for (const [method, url] of [['POST', '/api/extensions/discover'], ['POST', '/api/extensions/install'], ['GET', '/api/extensions/install'], ['POST', '/api/extra/classify'], ['GET', '/api/extra/classify/labels'], ['GET', '/api/extensions/discover/']]) {
+        const x = await ask(b, method, url);
+        assert.deepEqual([x.status, x.headers.get('x-na-bridge')], [404, null], `${method} ${url}`);
+    }
+});

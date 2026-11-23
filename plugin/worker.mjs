@@ -1,6 +1,8 @@
 // 일꾼 스레드의 들머리 (docs/PHONE2-PLAN.md "서버 플러그인" 3-2b). plugin/host.mjs가 띄워요.
-// 순서가 중요해요: 먼저 "아무것도 안 하는 화면"을 끼우고(screen.mjs), 그다음에 진짜 답장 코드를 불러요(work.mjs).
+// 순서가 중요해요: 맨 먼저 zone.mjs(이 스레드의 시간대 · 언어. 원래 Date · Intl을 잡아 둬요), 그다음 "아무것도 안 하는 화면"을 끼우고(screen.mjs),
+// 그다음에 진짜 답장 코드를 불러요(work.mjs).
 // 저장은 본체에 부탁해요 (저장이 한 곳에만 있어야 rev가 안 꼬여요). 실리 서버로 가는 요청(/api/… · /user/…)은 다리로 넘겨요.
+import './zone.mjs';
 import './screen.mjs';
 import { parentPort, workerData } from 'node:worker_threads';
 

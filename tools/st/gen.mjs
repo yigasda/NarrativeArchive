@@ -89,9 +89,10 @@ partial('script.js', [
     `import { power_user, collapseNewlines } from './scripts/power-user.js';
 import { groups, selected_group, getGroupCharacterCardsLazy } from './scripts/group-chats.js';
 import { formatInstructModeExamples } from './scripts/instruct-mode.js';
-import { evaluateMacros } from './scripts/macros.js';
+import { evaluateMacros as __naEvaluateMacros } from './scripts/macros.js';
 import { MacroEnvBuilder } from './scripts/macros/engine/MacroEnvBuilder.js';
-import { MacroEngine } from './scripts/macros/engine/MacroEngine.js';
+import { MacroEngine as __naMacroEngine } from './scripts/macros/engine/MacroEngine.js';
+import { naMacroLeft } from '../naleft.js';
 import { onboardingExperimentalMacroEngine } from './scripts/macros/engine/MacroDiagnostics.js';
 import { accountStorage } from './scripts/util/AccountStorage.js';
 import { nai_settings, getKayraMaxContextTokens } from './scripts/nai-settings.js';
@@ -102,10 +103,28 @@ import { getInstructStoppingSequences } from './scripts/instruct-mode.js';
 import { onlyUnique } from './scripts/utils.js';
 import { removeReasoningFromString } from './scripts/reasoning.js';
 import { CONNECT_API_MAP } from './scripts/slash-commands.js';
+import { system_message_types } from './scripts/system-messages.js';
 
 export { event_types, eventSource };
 // (실리 script.js 321: slash-commands.js의 CONNECT_API_MAP을 다시 내보냄)
 export { CONNECT_API_MAP };
+// (실리 script.js 323: system-messages.js의 system_message_types를 다시 내보냄)
+export { system_message_types };
+
+// 우리 것: 실리 substituteParamsLegacy(옛 엔진의 evaluateMacros) · substituteParams(새 엔진의 MacroEngine.evaluate)가 부르는 매크로 엔진을 감싸요.
+// 결과는 실리 것 그대로예요. 서버에서 풀 수 없는 매크로가 글에 있으면 실리 창에 한 줄 적어요(plugin/st/naleft.js).
+const evaluateMacros = (content, env, postProcessFn) => {
+    const out = __naEvaluateMacros(content, env, postProcessFn);
+    naMacroLeft(content, out, { env });
+    return out;
+};
+const MacroEngine = {
+    evaluate(input, env, options) {
+        const out = __naMacroEngine.evaluate(input, env, options);
+        naMacroLeft(input, out, { dynamicMacros: env?.dynamicMacros });
+        return out;
+    },
+};
 `,
     [405, 405], [407, 411], '', [426, 432], '', [453, 454], '', [461, 461], '',
     `// 대역: 실리 saveSettingsDebounced(470줄)는 브라우저 설정을 저장해요. 서버는 변수를 저장하지 않아서 아무것도 안 해요.
@@ -204,8 +223,14 @@ import { chat_completion_sources, oai_settings } from './openai.js';
 import { power_user } from './power-user.js';
 import { textgen_types, textgenerationwebui_settings } from './textgen-settings.js';
 import { escapeRegex, trimSpaces } from './utils.js';
+import { t } from './i18n.js';
+import { macros, MacroCategory } from './macros/macro-system.js';
 `,
-    [29, 32], '', [34, 34], '', [107, 168], '', [1424, 1436], '', [1450, 1490],
+    [29, 32], '', [34, 34], '', [107, 168], '',
+    `// (실리 initReasoning 1696~1702가 페이지를 열 때 부르는 매크로 등록. 일꾼은 plugin/st/namacros.js에서 실리 차례로 불러요)`,
+    [1190, 1206], '',
+    [1424, 1436], '', [1450, 1490], '',
+    `export { registerReasoningMacros };`,
 ]);
 
 // public/scripts/logit-bias.js
@@ -435,12 +460,20 @@ export class SlashCommandClosure {}
 partial('scripts/utils.js', [
     `import { moment } from '../lib.js';
 import { SlashCommandClosure } from './slash-commands/SlashCommandClosure.js';
-import { getCurrentLocale } from './i18n.js';
+import { getCurrentLocale, t } from './i18n.js';
 import { power_user } from './power-user.js';
+import { getContext } from './extensions.js';
+import { characters, this_chid } from '../script.js';
+import { groups, selected_group } from './group-chats.js';
+
+// 대역: 실리 findChar가 부르는 getTagsList(tags.js) · toastr(화면 알림). 서버가 부르는 findChar(표정의 {{lastExpression}})는
+// 태그로 거르지 않고(filteredByTags 없음) quiet라서 둘 다 닿지 않아요.
+const getTagsList = () => [];
+const toastr = { warning: (...a) => console.warn('[narrative-archive plugin]', ...a) };
 `,
-    [104, 111], '', [173, 180], '', [202, 268], '', [301, 310], '', [346, 356], '', [512, 539], '', [868, 873], '', [1005, 1021], '', [1070, 1146], '', [1370, 1379], '', [1954, 1969], '',
-    [2234, 2252], '', [2266, 2276], '', [2767, 2782], '', [2892, 2900], '', [3056, 3056],
-]);
+    [104, 111], '', [173, 180], '', [202, 268], '', [301, 310], '', [346, 356], '', [512, 539], '', [729, 731], '', [868, 873], '', [1005, 1021], '', [1070, 1146], '', [1342, 1347], '', [1370, 1379], '', [1954, 1969], '',
+    [2234, 2252], '', [2266, 2276], '', [2707, 2752], '', [2767, 2782], '', [2892, 2900], '', [3056, 3056],
+], { stub: 'getTagsList · toastr' });
 
 // public/scripts/group-chats.js
 partial('scripts/group-chats.js', [
@@ -841,24 +874,36 @@ ${rebind('textgenerationwebui_preset_names')}
 // public/scripts/extensions.js
 partial('scripts/extensions.js', [
     `import { equalsIgnoreCaseAndAccents } from './utils.js';
+import { getContext } from './st-context.js';
+import { SimpleMutex } from './util/SimpleMutex.js';
 `,
-    [21, 21], '', [62, 62], '',
+    [14, 18], '', [21, 21], '', [34, 34], '', [48, 49], '', [62, 62], '',
     `// 대역: 실리 saveMetadataDebounced(89~113줄)는 채팅 메타데이터를 저장해요. 서버는 변수를 저장하지 않아서 아무것도 안 해요.
 export function saveMetadataDebounced() {}
 `,
     [141, 226], '',
+    `// 대역: 실리 doExtrasFetch(260~280)는 Extras 서버에 요청을 보내요. 서버는 Extras에 연결하지 않아서(connectToApi를 안 옮김) modules가 늘 비어 있고,
+// 옮긴 코드(표정 목록)는 modules에 'classify'가 있을 때만 불러요: 닿지 않아요.
+export async function doExtrasFetch() {
+    throw new Error('서버는 Extras API에 연결하지 않습니다.');
+}
+`,
     `const __naDefault_extension_settings = structuredClone(extension_settings);
 `,
     [502, 515], '',
-    `/**
+    `// (실리 activateExtensions 568~의 확장 차례: plugin/st/namacros.js가 써요)
+export { sortManifestsByOrder };
+
+/**
  * 일꾼이 채워요. extension_settings는 실리 loadExtensionSettings처럼 기본값 위에 Object.assign.
+ * extensionNames는 실리 loadExtensionSettings 1793~1803의 값(찾은 확장 중 manifest.json을 읽을 수 있는 것: plugin/st/namacros.js).
  * @param {{extensionNames?: string[], extension_settings?: object}} v
  */
 export function __naSet(v) {
 ${rebind('extensionNames')}
 ${resetAssign('extension_settings')}
 }`,
-], { stub: 'saveMetadataDebounced' });
+], { stub: 'saveMetadataDebounced · doExtrasFetch' });
 
 // public/scripts/variables.js
 partial('scripts/variables.js', [
@@ -869,15 +914,123 @@ import { convertValueType } from './utils.js';
     [22, 210], '', [234, 261], '', [417, 433], '', [587, 617],
 ]);
 
-// public/scripts/st-context.js — only the `variables` object of getContext()
+// public/scripts/st-context.js — getContext() with the first fields only, and the `variables` object of getContext()
 partial('scripts/st-context.js', [
+    `import { chat, characters, name1, name2, this_chid } from '../script.js';
+import { groups, selected_group } from './group-chats.js';
+import { accountStorage } from './util/AccountStorage.js';
+`,
     [106, 106], '',
+    `// (실리 getContext()의 앞 칸들만: 옮긴 코드(utils.js getCharaFilename · 요약 · 그림 생성 · 표정 매크로)가 묻는 것은 이것뿐이에요.
+//  그 밖의 칸(실리 128~306)은 없어요. 일꾼이 주는 문맥은 plugin/work.mjs contextOf예요)`,
+    [115, 127],
+    `    };
+}
+`,
     `// 실리 getContext()가 돌려주는 객체 중 variables만. 일꾼이 globalThis.SillyTavern.getContext()에 넣어요.
 const __naContext = {`,
     [258, 277],
     `};
 
 export const variables = __naContext.variables;`,
+]);
+
+// ---------- 실리가 initMacros 밖에서 등록하는 매크로 (작가 노트 · 요약 · 그림 생성 · 표정. 추론은 위의 reasoning.js) ----------
+// 등록하는 차례 · 켜진 확장만 · 엔진 플래그는 plugin/st/namacros.js가 실리 페이지처럼 정해요.
+
+// public/scripts/system-messages.js (표정의 getLastCharacterMessage가 묻는 것)
+partial('scripts/system-messages.js', [[18, 32]]);
+
+// public/scripts/authors-note.js (작가 노트: 채팅을 열 때 채우는 값 · 매크로 셋)
+partial('scripts/authors-note.js', [
+    `import { chat_metadata, extension_prompt_roles, this_chid } from '../script.js';
+import { extension_settings } from './extensions.js';
+import { getCharaFilename } from './utils.js';
+import { t } from './i18n.js';
+import { macros, MacroCategory } from './macros/macro-system.js';
+import { MacrosParser } from './macros.js';
+import { power_user } from './power-user.js';
+`,
+    [30, 36], '',
+    `// (실리 onChatChanged 441~가 채팅을 열 때 부르는 loadSettings의 값 부분. 298~321은 화면 칸이라 안 옮겨요)`,
+    [271, 297],
+    `}
+`,
+    `// (실리 initAuthorsNote 476~585가 페이지를 열 때 부르는 매크로 등록)`,
+    [587, 619], '',
+    `export { loadSettings, registerAuthorsNoteMacros };`,
+]);
+
+// public/scripts/extensions/memory/index.js (요약: {{summary}})
+partial('scripts/extensions/memory/index.js', [
+    `import { getContext } from '../../extensions.js';
+import { power_user } from '../../power-user.js';
+import { macros, MacroCategory } from '../../macros/macro-system.js';
+import { MacrosParser } from '../../macros.js';
+
+// 대역: 실리 $('#memory_contents')는 요약 칸(화면)이에요. 실리는 채팅을 열 때 그 칸에 getLatestMemoryFromChat(chat)을 넣어요(onChatChanged 411~415).
+// 서버에는 칸이 없어서 늘 빈 글자예요: 매크로는 그때 같은 함수로 채팅에서 찾아요(1116~1117). 그래서 값이 같아요.
+const $ = () => ({ val: () => '' });
+`,
+    [357, 371], '',
+    `// 우리 것: 실리 init(1066~1131, 확장을 켤 때 activate) 중 매크로 등록만
+export function __naRegister() {`,
+    [1110, 1130],
+    `}`,
+], { stub: '$(요약 칸)' });
+
+// public/scripts/extensions/stable-diffusion/index.js (그림 생성: {{charPrefix}} · {{charNegativePrefix}})
+partial('scripts/extensions/stable-diffusion/index.js', [
+    `import { this_chid } from '../../../script.js';
+import { extension_settings, getContext } from '../../extensions.js';
+import { selected_group } from '../../group-chats.js';
+import { getCharaFilename } from '../../utils.js';
+import { power_user } from '../../power-user.js';
+import { t } from '../../i18n.js';
+import { macros, MacroCategory } from '../../macros/macro-system.js';
+import { MacrosParser } from '../../macros.js';
+`,
+    `// 우리 것: 실리 loadSettings(462~580, init 5952에서 불러요) 중 매크로가 읽는 칸의 값 부분. 그 밖의 줄은 다른 칸 · 화면이에요
+export function __naLoadSettings() {`,
+    [486, 492],
+    `}
+`,
+    `// 우리 것: 실리 init(5487~5998, 확장을 켤 때 activate) 중 loadSettings 뒤의 매크로 등록만
+export function __naRegister() {`,
+    [5955, 5997],
+    `}`,
+]);
+
+// public/scripts/extensions/expressions/index.js (표정: {{defaultExpression}} · {{lastExpression}} · {{availableExpressions}})
+partial('scripts/extensions/expressions/index.js', [
+    `import { characters, getRequestHeaders, saveSettingsDebounced, system_message_types, this_chid } from '../../../script.js';
+import { getContext, getApiUrl, modules, extension_settings, doExtrasFetch } from '../../extensions.js';
+import { power_user } from '../../power-user.js';
+import { onlyUnique, getCharaFilename, findChar } from '../../utils.js';
+import { selected_group } from '../../group-chats.js';
+import { t } from '../../i18n.js';
+import { macros } from '../../macros/macro-system.js';
+import { MacrosParser } from '../../macros.js';
+import { naFetch as fetch } from '../../../naFetch.js';
+`,
+    [44, 79], '', [82, 95], '', [97, 101], '', [105, 106], '', [108, 120], '',
+    [625, 655], '', [1204, 1226], '', [1448, 1454], '', [1456, 1523], '', [1525, 1547], '', [2218, 2252], '',
+    `// 우리 것: 실리 init(2254~2721, 확장을 켤 때 activate) 중 매크로 등록만. 그 앞의 migrateSettings(2338) · 표정 목록(2339 addSettings → getExpressionsList)은
+// 일꾼이 plugin/st/namacros.js에서 불러요
+export function __naRegister() {`,
+    [2653, 2720],
+    `}
+
+export { EXPRESSION_API, migrateSettings };
+
+/**
+ * 일꾼이 채워요. lastExpression: 실리는 채팅을 열 때 {}로 비워요(2349). expressionsList: null이면 getExpressionsList가 다시 받아요(실리는 표정 API를 바꿀 때 null, 1835).
+ * @param {{lastExpression?: object, expressionsList?: string[]|null}} v
+ */
+export function __naSet(v) {
+${rebind('lastExpression')}
+${rebind('expressionsList')}
+}`,
 ]);
 
 // public/lib.js — our loader

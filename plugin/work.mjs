@@ -17,6 +17,7 @@ import { makeLocks, lockKey } from './lock.mjs';
 import { startServerAutonomousScheduler } from './marinara/server-autonomous-scheduler.service.js';
 import { logger } from './log.mjs';
 import { chatData, chatParts, groupOf, personaFor, personaOf, readCards, readImages, writeExtensionField } from './stread.mjs';
+import { setZone, setLocale } from './zone.mjs';
 
 // (Marinara's server scheduler reads the answer of its /api/generate as these events)
 const SSE = {
@@ -54,6 +55,23 @@ export async function startWork({ root, store, st = null, schedule = true, from 
     };
 
     const readSettings = async () => { try { const v = JSON.parse(await fs.readFile(path.join(root, 'settings.json'), 'utf8')); return obj(v) ? v : {}; } catch (err) { if (err?.code === 'ENOENT') return {}; throw err; } };
+    // ---- 브라우저의 시간대 · 언어 (src/phone2keepon.js keepDevice가 확장 설정에 적어요: { timeZone, locale, intl })
+    //   실리 브라우저 코드와 우리 코드는 그 페이지처럼 그 시간대 · 언어로 돌아요(plugin/zone.mjs: 이 스레드만). 아직 안 적었으면 서버 컴퓨터의 것(전과 같아요)
+    //   timeZone: Intl의 시간대 · locale: 실리 i18n.js의 localeFile(getCurrentLocale) · intl: Intl의 기본 언어
+    //   기기가 둘이면 마지막으로 설정을 저장한 브라우저의 것이에요(settings.json이 하나라서)
+    const STI = await import('./st/public/scripts/i18n.js');
+    const badZones = new Set();
+    function useDevice(settings) {
+        const d = settings.extension_settings?.narrative_archive?.device, dev = obj(d) ? d : {};
+        const tz = typeof dev.timeZone === 'string' ? dev.timeZone : '';
+        try { setZone(tz || null); } catch (err) {
+            if (!(err instanceof RangeError)) throw err;
+            setZone(null);
+            if (!badZones.has(tz)) { if (badZones.size >= 100) badZones.clear(); badZones.add(tz); logger.warn('브라우저 시간대를 알 수 없어 서버 시간대를 사용합니다: %s', tz.slice(0, 64)); }
+        }
+        try { setLocale(typeof dev.intl === 'string' && dev.intl ? dev.intl : null); } catch (err) { if (!(err instanceof RangeError)) throw err; setLocale(null); }
+        STI.__naSet({ localeFile: typeof dev.locale === 'string' && dev.locale ? dev.locale.toLowerCase() : 'en' });
+    }
     const askSt = async (url, body) => {
         if (!st) throw new Error('실리 서버에 연결할 수 없습니다.');
         return st(url, body);
@@ -273,11 +291,18 @@ export async function startWork({ root, store, st = null, schedule = true, from 
             if (no) throw refuse(400, no);
             const kit = kitOf(entry.real);
             const settings = await readSettings();
+            // (SillyTavern's server code ported here — stNow's reads of its files: the persona pictures' order, a card's chat name;
+            //  naLoadPresets' order of the preset files — in the server's own zone and language, as SillyTavern's server runs it. Its
+            //  browser code and ours, from naLoad on, in the browser's: useDevice)
+            setZone(null); setLocale(null);
             const now = await stNow(entry.real, kit, settings);
             // (SillyTavern's browser state for this job, as its page would hold it with this chat open: settings.json and the preset
             //  files read now — plugin/st/naload.js, SillyTavern's own loading —, then this chat's names, cards, group, messages,
             //  metadata and persona. Set again for every job: nothing of the one before stays)
-            STL.naLoad(settings, await STL.naLoadPresets(root));
+            const presets = await STL.naLoadPresets(root);
+            useDevice(settings);
+            // (with the extensions SillyTavern's page finds — its /api/extensions/discover through the bridge —: the macros of the built-in ones it turns on)
+            STL.naLoad(settings, presets, await STL.naDiscover({ root, send: st ? stFetch : null }));
             // (a copy: the chat file's read is frozen, and SillyTavern's code may write into its metadata — {{setvar}} — as the page's)
             now.chatMetadata = { ...structuredClone(now.metadata), narrative_archive: entry.real };
             setContext(contextOf(entry, kit, settings, app, now));
@@ -295,6 +320,9 @@ export async function startWork({ root, store, st = null, schedule = true, from 
                 STP.groups.__naSet({ groups: now.groups, selected_group: now.groupId });
                 STP.power.power_user.persona_description = now.persona;
                 STP.fetch.__naSetFetch(stFetch);
+                // (what the page does when it opens the chat for the macros: the author's note's default into this job's metadata copy, no last
+                //  expression yet, the expression list — plugin/st/namacros.js)
+                await STL.naMacrosJob();
                 // (the persona's name changed in SillyTavern: the live phone's "me" follows before anything is judged — the
                 //  browser does it when the phone opens, phone2go.js liveFollowPersona. Only in memory here: it goes into the
                 //  store with the job's own save, a reply. A save of its own could meet the browser's — 409 — and fail a

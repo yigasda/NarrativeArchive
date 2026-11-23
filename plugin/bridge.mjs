@@ -26,6 +26,11 @@
 //   POST /api/avatars/get                          페르소나 그림 목록 (그 채팅의 페르소나 고르기)
 //   POST /api/worldinfo/get                        로어북 읽기 (폰 프로필로 고른 로어 항목)
 //   GET  /user/files/…                             보낸 첨부 파일 읽기
+//   GET  /api/extensions/discover                  실리 페이지가 찾는 확장 (실리 extensions.js loadExtensionSettings: {{hasExtension}} · 켜진 기본 확장의 매크로).
+//                                                   config.yaml의 extensions.enabled가 꺼져 있으면 실리의 그 길이 404예요(실리 페이지는 확장을 안 불러요)
+//   POST /api/extra/classify/labels                표정 목록 (표정 분류가 로컬일 때 {{availableExpressions}}: 실리 expressions getExpressionsList)
+//   (이 두 길이 없는 옛 다리면 404: 일꾼은 확장 폴더를 직접 읽고 · 기본 표정 목록으로(실리가 그 요청에 실패했을 때처럼) 지금처럼 보내요. 막지 않아요. plugin/st/namacros.js)
+//   다리가 답한 것에는 x-na-bridge 머리를 붙여요: 실리 처리기의 404와 옛 다리의 404(길이 없음)를 일꾼이 나눠 봐요
 
 import crypto from 'node:crypto';
 import path from 'node:path';
@@ -34,8 +39,9 @@ import { pathToFileURL } from 'node:url';
 
 const TOKENIZERS = ['llama', 'llama3', 'mistral', 'yi', 'gemma', 'jamba', 'qwen2', 'command-r', 'command-a', 'nemo', 'deepseek', 'openai', 'claude', 'gpt2'].map(t => `/api/tokenizers/${t}/encode`);
 const STATUS = ['/api/backends/chat-completions/status', '/api/backends/text-completions/status', '/api/backends/kobold/status'];
-const POSTS = new Set(['/api/backends/chat-completions/generate', '/api/backends/chat-completions/bias', '/api/backends/text-completions/generate', ...STATUS, '/api/secrets/read', '/api/nanogpt/models/providers', ...TOKENIZERS, '/api/tokenizers/remote/textgenerationwebui/encode', '/api/tokenizers/remote/kobold/count', '/api/characters/all', '/api/characters/get', '/api/characters/merge-attributes', '/api/avatars/get', '/api/worldinfo/get']);
-export const allowed = (method, url) => { const p = String(url || '').split('?')[0]; return method === 'POST' ? POSTS.has(p) : method === 'GET' ? p.startsWith('/user/files/') && !p.includes('..') : false; };
+const POSTS = new Set(['/api/backends/chat-completions/generate', '/api/backends/chat-completions/bias', '/api/backends/text-completions/generate', ...STATUS, '/api/secrets/read', '/api/nanogpt/models/providers', ...TOKENIZERS, '/api/tokenizers/remote/textgenerationwebui/encode', '/api/tokenizers/remote/kobold/count', '/api/characters/all', '/api/characters/get', '/api/characters/merge-attributes', '/api/avatars/get', '/api/worldinfo/get', '/api/extra/classify/labels']);
+const GETS = new Set(['/api/extensions/discover']);
+export const allowed = (method, url) => { const p = String(url || '').split('?')[0]; return method === 'POST' ? POSTS.has(p) : method === 'GET' ? GETS.has(p) || (p.startsWith('/user/files/') && !p.includes('..')) : false; };
 
 // stRoot: 실리 서버의 폴더 · userOf(root) → 그 사용자 폴더의 req.user ({ profile, directories }) | null
 // → { url, token, close() }
@@ -47,6 +53,8 @@ export async function startBridge({ stRoot = process.cwd(), userOf } = {}) {
     for (const [name, m] of [['chat-completions', chat], ['text-completions', text], ['kobold', kobold], ['characters', chars], ['avatars', avatars], ['worldinfo', world], ['users', users], ['tokenizers', tokenizers]]) if (typeof m?.router !== 'function') throw new Error(`실리 ${name} 엔드포인트를 찾을 수 없습니다. 실리 버전이 다를 수 있습니다.`);
     // (only for the connection check: a SillyTavern without them answers 404 there, as an older bridge does — the worker goes on without)
     const [secrets, nanogpt] = await Promise.all([st('endpoints/secrets.js').catch(() => null), st('endpoints/nanogpt.js').catch(() => null)]);
+    // (only for the macros: without them the worker reads the extension folders itself and uses the default expression list — namacros.js)
+    const [extensions, classify] = await Promise.all([st('endpoints/extensions.js').catch(() => null), st('endpoints/classify.js').catch(() => null)]);
     const token = crypto.randomBytes(24).toString('hex'), want = Buffer.from(token);
     const app = express();
     app.disable('x-powered-by');
@@ -54,6 +62,7 @@ export async function startBridge({ stRoot = process.cwd(), userOf } = {}) {
         const got = Buffer.from(String(req.headers['x-na-token'] || ''));
         if (got.length !== want.length || !crypto.timingSafeEqual(got, want)) return res.sendStatus(403);
         if (!allowed(req.method, req.url)) return res.sendStatus(404);
+        res.setHeader('x-na-bridge', '1');
         let root = '';
         try { root = decodeURIComponent(String(req.headers['x-na-root'] || '')); } catch { root = ''; }
         const user = root ? userOf(root) : null;
@@ -87,6 +96,12 @@ export async function startBridge({ stRoot = process.cwd(), userOf } = {}) {
         });
     }
     if (typeof nanogpt?.router === 'function') app.use('/api/nanogpt', nanogpt.router);
+    // (SillyTavern's own routers, mounted where its server mounts them — src/server-startup.js 157 · 173. Its extensions router answers 404 itself
+    //  when extensions are off in config.yaml: src/endpoints/extensions.js 72~81)
+    if (typeof extensions?.router === 'function') app.use('/api/extensions', extensions.router);
+    // (a SillyTavern without that router: answered as an older bridge does — no mark —, so the worker reads the folders itself)
+    else app.use('/api/extensions/discover', (request, response) => { response.removeHeader('x-na-bridge'); response.sendStatus(404); });
+    if (typeof classify?.router === 'function') app.use('/api/extra/classify', classify.router);
     app.use('/', users.router);
     const server = await new Promise((ok, no) => { const s = app.listen(0, '127.0.0.1', () => ok(s)); s.once('error', no); });
     server.unref?.();

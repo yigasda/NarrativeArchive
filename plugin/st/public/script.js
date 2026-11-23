@@ -3,9 +3,10 @@
 import { power_user, collapseNewlines } from './scripts/power-user.js';
 import { groups, selected_group, getGroupCharacterCardsLazy } from './scripts/group-chats.js';
 import { formatInstructModeExamples } from './scripts/instruct-mode.js';
-import { evaluateMacros } from './scripts/macros.js';
+import { evaluateMacros as __naEvaluateMacros } from './scripts/macros.js';
 import { MacroEnvBuilder } from './scripts/macros/engine/MacroEnvBuilder.js';
-import { MacroEngine } from './scripts/macros/engine/MacroEngine.js';
+import { MacroEngine as __naMacroEngine } from './scripts/macros/engine/MacroEngine.js';
+import { naMacroLeft } from '../naleft.js';
 import { onboardingExperimentalMacroEngine } from './scripts/macros/engine/MacroDiagnostics.js';
 import { accountStorage } from './scripts/util/AccountStorage.js';
 import { nai_settings, getKayraMaxContextTokens } from './scripts/nai-settings.js';
@@ -16,10 +17,28 @@ import { getInstructStoppingSequences } from './scripts/instruct-mode.js';
 import { onlyUnique } from './scripts/utils.js';
 import { removeReasoningFromString } from './scripts/reasoning.js';
 import { CONNECT_API_MAP } from './scripts/slash-commands.js';
+import { system_message_types } from './scripts/system-messages.js';
 
 export { event_types, eventSource };
 // (실리 script.js 321: slash-commands.js의 CONNECT_API_MAP을 다시 내보냄)
 export { CONNECT_API_MAP };
+// (실리 script.js 323: system-messages.js의 system_message_types를 다시 내보냄)
+export { system_message_types };
+
+// 우리 것: 실리 substituteParamsLegacy(옛 엔진의 evaluateMacros) · substituteParams(새 엔진의 MacroEngine.evaluate)가 부르는 매크로 엔진을 감싸요.
+// 결과는 실리 것 그대로예요. 서버에서 풀 수 없는 매크로가 글에 있으면 실리 창에 한 줄 적어요(plugin/st/naleft.js).
+const evaluateMacros = (content, env, postProcessFn) => {
+    const out = __naEvaluateMacros(content, env, postProcessFn);
+    naMacroLeft(content, out, { env });
+    return out;
+};
+const MacroEngine = {
+    evaluate(input, env, options) {
+        const out = __naMacroEngine.evaluate(input, env, options);
+        naMacroLeft(input, out, { dynamicMacros: env?.dynamicMacros });
+        return out;
+    },
+};
 
 // 실리 public/script.js 405~405
 export const systemUserName = 'SillyTavern System';

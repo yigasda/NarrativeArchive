@@ -1,9 +1,17 @@
 // 실리 1.19.1 public/scripts/utils.js의 일부를 그대로 옮긴 것 (서버 플러그인이 실리 브라우저 없이 같은 요청을 만들게). SillyTavern, AGPL-3.0 (NOTICE.md).
-// 바꾼 것: 서버가 실리 요청을 만드는 데 쓰는 것만 옮김. 옮긴 줄마다 위에 `// 실리 <경로> <시작줄>~<끝줄>`. 그 밖의 줄은 우리 것: import, `__naSet`(일꾼이 전역 값을 채움).
+// 바꾼 것: 서버가 실리 요청을 만드는 데 쓰는 것만 옮김. 옮긴 줄마다 위에 `// 실리 <경로> <시작줄>~<끝줄>`. 그 밖의 줄은 우리 것: import, `__naSet`(일꾼이 전역 값을 채움), 대역(getTagsList · toastr).
 import { moment } from '../lib.js';
 import { SlashCommandClosure } from './slash-commands/SlashCommandClosure.js';
-import { getCurrentLocale } from './i18n.js';
+import { getCurrentLocale, t } from './i18n.js';
 import { power_user } from './power-user.js';
+import { getContext } from './extensions.js';
+import { characters, this_chid } from '../script.js';
+import { groups, selected_group } from './group-chats.js';
+
+// 대역: 실리 findChar가 부르는 getTagsList(tags.js) · toastr(화면 알림). 서버가 부르는 findChar(표정의 {{lastExpression}})는
+// 태그로 거르지 않고(filteredByTags 없음) quiet라서 둘 다 닿지 않아요.
+const getTagsList = () => [];
+const toastr = { warning: (...a) => console.warn('[narrative-archive plugin]', ...a) };
 
 // 실리 public/scripts/utils.js 104~111
 /**
@@ -149,6 +157,11 @@ export function getStringHash(str, seed = 0) {
     return 4294967296 * (2097151 & h2) + (h1 >>> 0);
 }
 
+// 실리 public/scripts/utils.js 729~731
+export function isSubsetOf(a, b) {
+    return (Array.isArray(a) && Array.isArray(b)) ? b.every(val => a.includes(val)) : false;
+}
+
 // 실리 public/scripts/utils.js 868~873
 export function trimSpaces(input) {
     if (!input || typeof input !== 'string') {
@@ -255,6 +268,14 @@ function parseTimestamp(timestamp) {
     return;
 }
 
+// 실리 public/scripts/utils.js 1342~1347
+export function getCharaFilename(chid = null, { manualAvatarKey = null } = {}) {
+    const context = getContext();
+    const fileName = manualAvatarKey ?? context.characters[chid ?? context.characterId]?.avatar;
+
+    return fileName?.replace(/\.[^/.]+$/, '') ?? null;
+}
+
 // 실리 public/scripts/utils.js 1370~1379
 /**
  * Escapes a string for use in a regular expression.
@@ -317,6 +338,54 @@ export function compareIgnoreCaseAndAccents(a, b, comparisonFunction) {
  */
 export function equalsIgnoreCaseAndAccents(a, b) {
     return compareIgnoreCaseAndAccents(a, b, (a, b) => a === b);
+}
+
+// 실리 public/scripts/utils.js 2707~2752
+export function findChar({ name = null, allowAvatar = true, insensitive = true, filteredByTags = null, preferCurrentChar = true, quiet = false } = {}) {
+    const matches = (char) => !name || (allowAvatar && char.avatar === name) || (insensitive ? equalsIgnoreCaseAndAccents(char.name, name) : char.name === name);
+
+    // Filter characters by tags if provided
+    let filteredCharacters = characters;
+    if (filteredByTags) {
+        filteredCharacters = characters.filter(char => {
+            const charTags = getTagsList(char.avatar, false);
+            return filteredByTags.every(tagName => charTags.some(x => x.name == tagName));
+        });
+    }
+
+    // Get the current character(s)
+    /** @type {any[]} */
+    const currentChars = selected_group ? groups.find(group => group.id === selected_group)?.members.map(member => filteredCharacters.find(char => char.avatar === member))
+        : filteredCharacters.filter(char => characters[this_chid]?.avatar === char.avatar);
+
+    // If we have a current char and prefer it, return that if it matches
+    if (preferCurrentChar) {
+        const preferredCharSearch = currentChars.filter(matches);
+        if (preferredCharSearch.length > 1) {
+            if (!quiet) toastr.warning(t`Multiple characters found for given conditions.`);
+            else console.warn(t`Multiple characters found for given conditions. Returning the first match.`);
+        }
+        if (preferredCharSearch.length) {
+            return preferredCharSearch[0];
+        }
+    }
+
+    // If allowAvatar is true, search by avatar first
+    if (allowAvatar && name) {
+        const characterByAvatar = filteredCharacters.find(char => char.avatar === name || (!name.endsWith('.png') && char.avatar === `${name}.png`));
+        if (characterByAvatar) {
+            return characterByAvatar;
+        }
+    }
+
+    // Search for matching characters by name
+    const matchingCharacters = name ? filteredCharacters.filter(matches) : filteredCharacters;
+    if (matchingCharacters.length > 1) {
+        if (!quiet) toastr.warning('Multiple characters found for given conditions.');
+        else console.warn('Multiple characters found for given conditions. Returning the first match.');
+    }
+
+    return matchingCharacters[0] || null;
 }
 
 // 실리 public/scripts/utils.js 2767~2782

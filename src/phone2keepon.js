@@ -1,7 +1,7 @@
 // phone2keep.js를 실리에 잇기: 플러그인으로 가는 요청, 채팅이 바뀔 때 읽기, core.js saveMeta 앞에 끼우기.
 // index.js가 keepStart()를 한 번 불러요.
 
-import { ctx, getMeta, hasChat, saveMeta, setSaveHook } from './core.js';
+import { MODULE, ctx, getMeta, hasChat, saveMeta, setSaveHook } from './core.js';
 import { makeKeep } from './phone2keep.js';
 import { reseedActivity } from './phone2sched.js';
 
@@ -136,9 +136,26 @@ export async function keepClaim(room) {
 export async function keepRenew() {
     await Promise.all([...holding.values()].map(h => http('/auto/claim', J({ id: h.id, room: h.room, by: TAB, renew: true })).catch(() => {})));
 }
+// 이 브라우저의 시간대 · 언어를 확장 설정에 적어요 (extension_settings.narrative_archive.device: { timeZone, locale, intl }).
+// 서버 플러그인의 일꾼이 그 시간대 · 언어로 돌아요(plugin/work.mjs useDevice · plugin/zone.mjs): 실리 매크로 {{time}} · {{date}} …가 이 페이지와 같게.
+// 바뀌었을 때만 저장해요(실리 saveSettingsDebounced → settings.json). 확장 설정이 아직 없으면(처음 켠 때) 다음 번에
+export function keepDevice() {
+    try {
+        const c = ctx(), es = c.extensionSettings, g = es?.[MODULE];
+        if (!g || typeof g !== 'object') return false;
+        const o = Intl.DateTimeFormat().resolvedOptions();
+        const now = { timeZone: String(o.timeZone || ''), locale: String(c.getCurrentLocale?.() || ''), intl: String(o.locale || '') };
+        const had = g.device;
+        if (had && typeof had === 'object' && had.timeZone === now.timeZone && had.locale === now.locale && had.intl === now.intl) return false;
+        g.device = now;
+        c.saveSettingsDebounced?.();
+        return true;
+    } catch (err) { console.warn('[narrative-archive] device', err); return false; }
+}
 let beating = null;
 // 30초마다 · 탭이 다시 보일 때 · 채팅을 열 때
 export function keepBeat() {
+    keepDevice();
     if (beating) return beating;
     beating = (async () => {
         await keep.ready();
