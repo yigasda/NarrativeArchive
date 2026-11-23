@@ -478,7 +478,22 @@ ${rebind('instruct_presets')}
 }`,
 ]);
 
+// public/scripts/secrets.js (openai.js onConnectButtonClick의 키 확인이 읽는 것: SECRET_KEYS · secret_state)
+partial('scripts/secrets.js', [
+    [19, 82], '',
+    [335, 338], '',
+    `/**
+ * secret_state는 실리 readSecretState 409~425의 값(/api/secrets/read의 답: 키마다 저장된 것이 있으면 배열, 없으면 null).
+ * 일꾼이 채워요(plugin/st/nastatus.js). 키 글은 없어요: 있는지만.
+ * @param {{secret_state?: object}} v
+ */
+export function __naSet(v) {
+${rebind('secret_state')}
+}`,
+]);
+
 // option values of one <select id="…"> in SillyTavern's public/index.html → { a, b, values } (a~b: the lines from <select> to </select>)
+// (HTML comments are no options: index.html 2935~2936 comments CometAPI's out)
 function selectOptions(id) {
     const L = lines('public/index.html');
     const a = L.findIndex(l => l.includes(`<select id="${id}">`));
@@ -486,15 +501,17 @@ function selectOptions(id) {
     const end = L.findIndex((l, i) => i > a && l.includes('</select>'));
     if (end < 0) throw new Error(`index.html: <select id="${id}"> has no </select>`);
     const values = [];
-    for (const l of L.slice(a, end + 1)) for (const m of l.matchAll(/<option\b[^>]*\bvalue="([^"]*)"/g)) values.push(m[1]);
+    const text = L.slice(a, end + 1).join('\n').replace(/<!--[\s\S]*?-->/g, '');
+    for (const m of text.matchAll(/<option\b[^>]*\bvalue="([^"]*)"/g)) values.push(m[1]);
     if (!values.length) throw new Error(`index.html: <select id="${id}"> has no options`);
     return { a: a + 1, b: end + 1, values };
 }
-const openaiStatic = selectOptions('model_openai_select'), googleStatic = selectOptions('model_google_select');
+const openaiStatic = selectOptions('model_openai_select'), googleStatic = selectOptions('model_google_select'), sourceOptions = selectOptions('chat_completion_source');
 
 // public/scripts/openai.js (keep ST line order)
 partial('scripts/openai.js', [
-    `import { name1, name2, substituteParams, getCurrentChatId, getRequestHeaders, abortStatusCheck, setOnlineStatus, resultCheckStatus } from '../script.js';
+    `import { name1, name2, substituteParams, getCurrentChatId, getRequestHeaders, abortStatusCheck, setOnlineStatus, resultCheckStatus, saveSettingsDebounced } from '../script.js';
+import { SECRET_KEYS, secret_state } from './secrets.js';
 import { getGroupNames, selected_group } from './group-chats.js';
 import { chatCompletionDefaultPrompts, promptManagerDefaultPromptOrders } from './PromptManager.js';
 import { getCustomStoppingStrings, power_user } from './power-user.js';
@@ -520,6 +537,70 @@ let saveModelList = () => { throw new Error('saveModelList: plugin/st/nastatus.j
 // saveModelList 2063 · 2239~2241이 이 칸의 옵션을 읽어요). tools/st/gen.mjs가 그 줄에서 뽑아요.
 export const __naOpenAISelectOptions = ${JSON.stringify(openaiStatic.values)};
 export const __naGoogleSelectOptions = ${JSON.stringify(googleStatic.values)};
+// 실리 index.html ${sourceOptions.a}~${sourceOptions.b} #chat_completion_source의 <option value> (주석 안의 것은 옵션이 아니에요). loadOpenAISettings 4404 → 6967~6969가
+// 이 칸에서 고른 것을 다시 읽어요: plugin/st/naload.js
+export const __naChatCompletionSourceOptions = ${JSON.stringify(sourceOptions.values)};
+
+// 대역: 실리 calculateOpenRouterCost(1803~) · calculateElectronHubCost(1861~) · calculateChutesCost(1922~)는 화면의 가격 글만 바꿔요. 서버에서는 아무것도 안 해요.
+const calculateOpenRouterCost = () => {};
+const calculateElectronHubCost = () => {};
+const calculateChutesCost = () => {};
+// 대역: jQuery $. 옮긴 onModelChange 뒷부분(5695~6011)과 그 슬라이더의 input 처리기(6776~6792 · 6824~6831)가 만지는 칸만 있어요:
+// index.html 640 #openai_max_context · 706 #temp_openai · 719 #freq_pen_openai · 732 #pres_pen_openai (<input type="range">, 그 줄의 min · max · step).
+// 브라우저는 범위 칸에 넣은 값을 그 칸의 min · max · step으로 고쳐요(HTML 범위 입력의 값 고치기: 숫자가 아니면 가운데 값, min~max 안으로,
+// min에서 step 단위로 가장 가까운 값 — 반이면 큰 쪽, 그게 max를 넘으면 한 step 아래). 크롬처럼 10진수 그대로 셈해요(0.705 → 0.71).
+// 다른 칸(글 칸 · #openai_reverse_proxy의 placeholder)은 아무것도 안 해요.
+const __naRangeAttrs = { openai_max_context: { min: '512', max: '4095', step: '1' }, temp_openai: { min: '0', max: '2.0', step: '0.01' }, freq_pen_openai: { min: '-2', max: '2', step: '0.01' }, pres_pen_openai: { min: '-2', max: '2', step: '0.01' } };
+// 10진수: { n: BigInt, s: 소수 자리 } (값 = n / 10^s). HTML의 "올바른 부동소수점 수"가 아니면 null
+const __naDec = (text) => {
+    const m = /^(-?)(\\d*)(?:\\.(\\d+))?(?:[eE]([-+]?\\d+))?$/.exec(String(text));
+    if (!m || (m[2] === '' && m[3] === undefined)) return null;
+    const frac = m[3] ?? '', e = Number(m[4] ?? 0);
+    let n = BigInt((m[2] || '0') + frac) * (m[1] ? -1n : 1n), s = frac.length - e;
+    if (s < 0) { n *= 10n ** BigInt(-s); s = 0; }
+    return { n, s };
+};
+const __naAt = (d, s) => d.n * 10n ** BigInt(s - d.s);
+const __naDecText = (n, s) => {
+    const neg = n < 0n, digits = (neg ? -n : n).toString().padStart(s + 1, '0');
+    const text = s ? \`\${digits.slice(0, -s)}.\${digits.slice(-s)}\` : digits;
+    return (neg ? '-' : '') + text;
+};
+// (Chrome RangeInputType::SanitizeValue → StepRange::ClampValue · RoundByStep, Decimal::Round: 반이면 0에서 먼 쪽)
+function __naRangeClean(attrs, raw) {
+    const min = __naDec(attrs.min) ?? { n: 0n, s: 0 };
+    const max = __naDec(attrs.max) ?? { n: 100n, s: 0 };
+    const step = __naDec(attrs.step), got = __naDec(raw);
+    const S = Math.max(min.s, max.s, step?.s ?? 0, got?.s ?? 0) + 1;
+    const lo = __naAt(min, S);
+    let hi = __naAt(max, S), st = step ? __naAt(step, S) : 0n;
+    if (hi < lo) hi = lo;
+    if (!(st > 0n)) st = 10n ** BigInt(S);
+    const v = got ? __naAt(got, S) : lo + (hi - lo) / 2n;
+    const inRange = v < lo ? lo : v > hi ? hi : v;
+    const q = inRange - lo;
+    let r = lo + ((2n * q + st) / (2n * st)) * st;
+    if (r > hi) r -= st; else if (r < lo) r += st;
+    if (r < lo || r > hi) r = inRange;
+    return __naDecText(r, S);
+}
+class __NaRange {
+    constructor(attrs) { this.attrs = { ...attrs }; this.handlers = {}; this.value = __naRangeClean(this.attrs, ''); }
+}
+let __naRanges = new Map();
+const __naQuiet = { attr() { return __naQuiet; }, prop() { return __naQuiet; }, val() { return __naQuiet; }, trigger() { return __naQuiet; }, on() { return __naQuiet; } };
+const $ = (x) => {
+    const el = x instanceof __NaRange ? x : __naRanges.get(String(x).replace(/^#/, ''));
+    if (!el) return __naQuiet;
+    const self = {
+        attr(name, v) { if (v === undefined) return el.attrs[name]; el.attrs[name] = String(v); el.value = __naRangeClean(el.attrs, el.value); return self; },
+        prop(name, v) { return self.attr(name, v); },
+        val(v) { if (v === undefined) return el.value; el.value = __naRangeClean(el.attrs, v == null ? '' : String(v)); return self; },
+        trigger(type) { for (const fn of el.handlers[type] || []) fn.call(el); return self; },
+        on(type, fn) { (el.handlers[type] ||= []).push(fn); return self; },
+    };
+    return self;
+};
 `,
     [102, 124], '', [126, 144], '',
     [174, 175], '', [177, 204], '', [206, 218], '', [220, 237], '', [239, 253], '', [255, 259], '', [267, 285], '',
@@ -541,6 +622,46 @@ export const __naGoogleSelectOptions = ${JSON.stringify(googleStatic.values)};
     [4510, 4565],
     `        // (실리 4566 console.error(error): 서버는 plugin/st/nastatus.js가 한 번만 "상태를 가져오는 중 오류가 발생했습니다.")`,
     [4567, 4575], '',
+    // the max context · temperature of a model (onModelChange's lines below read them)
+    [5083, 5470], '',
+    `/**
+ * 우리 것: 실리 onModelChange(5472~6018)의 뒷부분. 앞부분(고른 칸마다 모델 값 · 가드)은 plugin/st/nastatus.js saveModelListValues가 따라 해요:
+ * 가드를 지나면(실리가 return하지 않으면) 이것을 불러요. value: 5474 \`String($(this).val() || '')\`.
+ * 문맥 · 온도 · 벌점 칸의 최대값과 그 칸의 값 고치기(대역 $: 브라우저의 범위 칸, 그 칸의 input 처리기가 oai_settings에 써요)는 실리 그대로.
+ * 칸은 일마다 index.html 그대로 새로 만들어요(실리의 이 줄들은 쓰기 전에 그 칸의 최대값을 늘 다시 정해요).
+ * 5473 biasCache = undefined: 서버는 일마다 naLoad가 비워요. 6013~6017(화면 · 저장 · 기능 표시 · 이벤트)은 빼요.
+ * 5941 console.log(AI/ML 문맥 크기)는 남기지 않아요: 서버는 일마다 다시 돌아서 같은 줄이 계속 나와요.
+ */
+export function __naModelChangeRest(value) {
+    __naRanges = new Map(Object.entries(__naRangeAttrs).map(([id, attrs]) => [id, new __NaRange(attrs)]));
+    __naRangeInputs();
+    const console = Object.assign(Object.create(globalThis.console), { log: () => {} });`,
+    [5695, 6011],
+    `}`, '',
+    `/**
+ * 우리 것: 실리 onConnectButtonClick(6036~6098)의 값 부분 → { key: 그 소스의 키 이름 | null }: 연결 버튼이 getStatusOpen까지 가요(6095~6097) ·
+ * null: 키가 없어서 가지 않아요(상태는 페이지 그대로).
+ * 6037(화면 이벤트), 6076 toastr · 6090 console.log(서버는 plugin/st/nastatus.js가 한 번만), 6084~6087(입력 칸에 쓴 키 저장: 서버에는 입력 칸이 없어요.
+ * 키는 실리가 secrets.json에 둔 것만: secret_state)은 빼요.
+ */
+export function __naConnectGate() {`,
+    [6039, 6075],
+    `            // (실리 6076 toastr.error: 서비스 계정 JSON이 없어요)
+            return null;`,
+    [6078, 6083],
+    `        // (실리 6084~6087: 입력 칸에 쓴 키 저장)`,
+    [6088, 6089],
+    `            // (실리 6090 console.log: 그 소스의 키가 없어요)
+            return null;`,
+    [6092, 6093],
+    `
+    return { key: config?.key ?? null };
+}`, '',
+    `// 우리 것: 실리 openai.js 초기화의 범위 칸 input 처리기(6776~6792 · 6824~6831)를 대역 $의 칸에 붙여요 (__naModelChangeRest가 칸을 새로 만들 때마다)
+function __naRangeInputs() {`,
+    [6776, 6792],
+    [6824, 6831],
+    `}`, '',
     `export { oai_settings, default_settings, migrateChatCompletionSettings, continue_postfix_types, biasCache, getStatusOpen, sortModelsBy, groupModelsByVendor, openrouter_website_model };
 
 /**
@@ -558,7 +679,7 @@ ${rebind('openai_settings')}
 ${rebind('openai_setting_names')}
 ${rebind('saveModelList')}
 }`,
-], { stub: 'DOMPurify · toastr · renderTemplateAsync · updateFeatureSupportFlags · saveModelList(값 부분은 plugin/st/nastatus.js)' });
+], { stub: 'DOMPurify · toastr · renderTemplateAsync · updateFeatureSupportFlags · saveModelList(값 부분은 plugin/st/nastatus.js) · calculateOpenRouterCost · calculateElectronHubCost · calculateChutesCost · $(범위 칸 넷)' });
 
 // public/scripts/PromptManager.js (default_settings의 기본 지시문)
 partial('scripts/PromptManager.js', [
@@ -638,10 +759,43 @@ partial('scripts/textgen-settings.js', [
 import { t } from './i18n.js';
 import { BIAS_CACHE, getLogitBiasListResult } from './logit-bias.js';
 import { power_user } from './power-user.js';
-import { getCurrentDreamGenModelTokenizer, getCurrentOpenRouterModelTokenizer, loadAphroditeModels, loadDreamGenModels, loadFeatherlessModels, loadGenericModels, loadInfermaticAIModels, loadLlamaCppModels, loadMancerModels, loadOllamaModels, loadOpenRouterModels, loadTabbyModels, loadTogetherAIModels, loadVllmModels } from './textgen-models.js';
+import { getCurrentDreamGenModelTokenizer, getCurrentOpenRouterModelTokenizer } from './textgen-models.js';
+import * as __naModels from './textgen-models.js';
 import { ENCODE_TOKENIZERS, TEXTGEN_TOKENIZERS, TOKENIZER_SUPPORTED_KEY, getTextTokens, getTokenizerBestMatch, tokenizers, __naSessionStorage as sessionStorage } from './tokenizers.js';
 import { onlyUnique, arraysEqual, isObject } from './utils.js';
 import { naFetch as fetch } from '../naFetch.js';
+
+// 우리 것: 실리 getStatusTextgen 691~726은 모델 목록 로더(async)를 await 없이 불러요. 로더 안의 오류(이름 없는 모델의 localeCompare 등)는
+// 브라우저에서는 콘솔의 "Uncaught (in promise)" 한 줄뿐이고 페이지는 그대로 돌아요. Node에서는 처리 안 된 rejection이 일꾼 스레드를 끝내요.
+// 그래서 같은 이름으로 감싸요: 로더는 그대로 부르고 돌려준 것을 그대로 돌려주되, Promise가 실패하면 실리 창에 적어요(같은 글은 한 번).
+// 로더가 오류 전까지 바꾼 값은 실리처럼 그대로 남아요. async가 아닌 로더(loadGenericModels)의 오류는 실리처럼 그 자리에서 던져요(getStatusTextgen이 잡아요).
+const __naTold = new Set();
+/** 테스트용: 실리 창에 적은 글을 잊어요 (일꾼을 새로 띄운 것과 같아요) */
+export const __naLooseReset = () => __naTold.clear();
+const __naLoose = (name) => (...args) => {
+    const p = __naModels[name](...args);
+    if (typeof p?.catch !== 'function') return p;
+    p.catch((err) => {
+        const why = String(err?.message || err);
+        if (__naTold.has(why)) return;
+        if (__naTold.size >= 100) __naTold.delete(__naTold.values().next().value);
+        __naTold.add(why);
+        console.warn('[narrative-archive plugin]', \`처리되지 않은 오류가 발생했습니다: \${why}\`);
+    });
+    return p;
+};
+const loadAphroditeModels = __naLoose('loadAphroditeModels');
+const loadDreamGenModels = __naLoose('loadDreamGenModels');
+const loadFeatherlessModels = __naLoose('loadFeatherlessModels');
+const loadGenericModels = __naLoose('loadGenericModels');
+const loadInfermaticAIModels = __naLoose('loadInfermaticAIModels');
+const loadLlamaCppModels = __naLoose('loadLlamaCppModels');
+const loadMancerModels = __naLoose('loadMancerModels');
+const loadOllamaModels = __naLoose('loadOllamaModels');
+const loadOpenRouterModels = __naLoose('loadOpenRouterModels');
+const loadTabbyModels = __naLoose('loadTabbyModels');
+const loadTogetherAIModels = __naLoose('loadTogetherAIModels');
+const loadVllmModels = __naLoose('loadVllmModels');
 
 // 대역: 실리 localStorage(브라우저 저장). 실리 124줄 MANCER_SERVER는 거기 'mancer_server'(디버그 메뉴 'change-mancer-url'로만 바꿈)가 없으면
 // 기본 주소예요. 서버에서는 그 브라우저 값을 읽을 수 없어서 늘 기본 주소(MANCER_SERVER_DEFAULT)예요.
@@ -682,7 +836,7 @@ ${resetAssign('textgenerationwebui_settings')}
 ${rebind('textgenerationwebui_presets')}
 ${rebind('textgenerationwebui_preset_names')}
 }`,
-], { stub: 'localStorage · document(dynatemp_block_ooba) · toastr · sessionStorage(tokenizers.js의 대역을 같이 씀)' });
+], { stub: 'localStorage · document(dynatemp_block_ooba) · toastr · sessionStorage(tokenizers.js의 대역을 같이 씀), 모델 목록 로더(실패를 실리 창에 적는 같은 이름의 함수)' });
 
 // public/scripts/extensions.js
 partial('scripts/extensions.js', [

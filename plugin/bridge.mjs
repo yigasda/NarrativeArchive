@@ -15,7 +15,11 @@
 //   POST /api/backends/chat-completions/status     연결 확인 (실리 openai.js getStatusOpen: 연결 상태 · 모델 목록)
 //   POST /api/backends/text-completions/status     연결 확인 (실리 textgen-settings.js getStatusTextgen: 연결 상태 · 모델 목록 · API 토크나이저)
 //   POST /api/backends/kobold/status               연결 확인 (실리 kai-settings.js getStatusKobold: {{model}} · Kobold 기능)
-//   (이 셋이 없는 옛 다리면 404: 일꾼은 연결 안 됨으로 보고 지금처럼 요청을 보내요. 막지 않아요. plugin/st/nastatus.js)
+//   POST /api/secrets/read                         키가 저장돼 있나 (실리 openai.js onConnectButtonClick: 키가 없으면 연결하지 않아요).
+//                                                   실리의 같은 길은 키 글의 끝 몇 자(설정에 따라 키 전체)를 줘요. 다리는 실리 SecretManager.getSecretState에서
+//                                                   키 글 · 이름표를 빼고 키마다 [{ id, active }] | null만 줘요 (있는지 · 어느 것이 쓰이는지만)
+//   POST /api/nanogpt/models/providers             NanoGPT 모델의 공급자 고르기 (실리 textgen-models.js syncNanoGptProvidersForModel)
+//   (이 길들이 없는 옛 다리면 404: 일꾼은 연결 안 됨 · 키 확인 없음 · 공급자 그대로로 보고 지금처럼 요청을 보내요. 막지 않아요. plugin/st/nastatus.js)
 //   POST /api/characters/all                       캐릭터 목록 (답장마다 카드를 새로 읽어요)
 //   POST /api/characters/get                       카드 하나 (목록이 간단한 카드로 왔을 때)
 //   POST /api/characters/merge-attributes          카드의 확장 칸 쓰기 (스케줄 · 상태)
@@ -30,7 +34,7 @@ import { pathToFileURL } from 'node:url';
 
 const TOKENIZERS = ['llama', 'llama3', 'mistral', 'yi', 'gemma', 'jamba', 'qwen2', 'command-r', 'command-a', 'nemo', 'deepseek', 'openai', 'claude', 'gpt2'].map(t => `/api/tokenizers/${t}/encode`);
 const STATUS = ['/api/backends/chat-completions/status', '/api/backends/text-completions/status', '/api/backends/kobold/status'];
-const POSTS = new Set(['/api/backends/chat-completions/generate', '/api/backends/chat-completions/bias', '/api/backends/text-completions/generate', ...STATUS, ...TOKENIZERS, '/api/tokenizers/remote/textgenerationwebui/encode', '/api/tokenizers/remote/kobold/count', '/api/characters/all', '/api/characters/get', '/api/characters/merge-attributes', '/api/avatars/get', '/api/worldinfo/get']);
+const POSTS = new Set(['/api/backends/chat-completions/generate', '/api/backends/chat-completions/bias', '/api/backends/text-completions/generate', ...STATUS, '/api/secrets/read', '/api/nanogpt/models/providers', ...TOKENIZERS, '/api/tokenizers/remote/textgenerationwebui/encode', '/api/tokenizers/remote/kobold/count', '/api/characters/all', '/api/characters/get', '/api/characters/merge-attributes', '/api/avatars/get', '/api/worldinfo/get']);
 export const allowed = (method, url) => { const p = String(url || '').split('?')[0]; return method === 'POST' ? POSTS.has(p) : method === 'GET' ? p.startsWith('/user/files/') && !p.includes('..') : false; };
 
 // stRoot: 실리 서버의 폴더 · userOf(root) → 그 사용자 폴더의 req.user ({ profile, directories }) | null
@@ -41,6 +45,8 @@ export async function startBridge({ stRoot = process.cwd(), userOf } = {}) {
     const st = file => import(pathToFileURL(path.join(stRoot, 'src', file)).href);
     const [chat, text, kobold, chars, avatars, world, users, tokenizers] = await Promise.all([st('endpoints/backends/chat-completions.js'), st('endpoints/backends/text-completions.js'), st('endpoints/backends/kobold.js'), st('endpoints/characters.js'), st('endpoints/avatars.js'), st('endpoints/worldinfo.js'), st('users.js'), st('endpoints/tokenizers.js')]);
     for (const [name, m] of [['chat-completions', chat], ['text-completions', text], ['kobold', kobold], ['characters', chars], ['avatars', avatars], ['worldinfo', world], ['users', users], ['tokenizers', tokenizers]]) if (typeof m?.router !== 'function') throw new Error(`실리 ${name} 엔드포인트를 찾을 수 없습니다. 실리 버전이 다를 수 있습니다.`);
+    // (only for the connection check: a SillyTavern without them answers 404 there, as an older bridge does — the worker goes on without)
+    const [secrets, nanogpt] = await Promise.all([st('endpoints/secrets.js').catch(() => null), st('endpoints/nanogpt.js').catch(() => null)]);
     const token = crypto.randomBytes(24).toString('hex'), want = Buffer.from(token);
     const app = express();
     app.disable('x-powered-by');
@@ -63,6 +69,22 @@ export async function startBridge({ stRoot = process.cwd(), userOf } = {}) {
     app.use('/api/avatars', avatars.router);
     app.use('/api/worldinfo', world.router);
     app.use('/api/tokenizers', tokenizers.router);
+    // (SillyTavern's /api/secrets/read — src/endpoints/secrets.js 529~538 — with the key text and labels left out: the worker needs to know only
+    //  whether a key is saved — openai.js onConnectButtonClick 6089 — and which one is used, never the key)
+    if (typeof secrets?.SecretManager === 'function') {
+        app.post('/api/secrets/read', (request, response) => {
+            try {
+                const state = new secrets.SecretManager(request.user.directories).getSecretState();
+                const out = {};
+                for (const [key, list] of Object.entries(state)) out[key] = Array.isArray(list) ? list.map(x => ({ id: x?.id, active: x?.active })) : null;
+                return response.send(out);
+            } catch (error) {
+                console.error('Error reading secret state:', error);
+                return response.send({});
+            }
+        });
+    }
+    if (typeof nanogpt?.router === 'function') app.use('/api/nanogpt', nanogpt.router);
     app.use('/', users.router);
     const server = await new Promise((ok, no) => { const s = app.listen(0, '127.0.0.1', () => ok(s)); s.once('error', no); });
     server.unref?.();

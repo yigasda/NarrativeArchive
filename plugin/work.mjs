@@ -38,6 +38,7 @@ const refuse = (statusCode, text) => Object.assign(new Error(text), { statusCode
 // from: 'extension' (실리의 확장 폴더의 코드: plugin/code.mjs) · 'plugin' (이 플러그인 폴더의 코드)
 export async function startWork({ root, store, st = null, schedule = true, from = 'plugin' }) {
     const G = await import('../src/phone2go.js');
+    const AI = await import('../src/ai.js');
     const { liveWorld, liveKey, enqueueJob, LIVE_SHARED, renamePersona } = await import('../src/phone2store.js');
     const { kitOf, cardsFor } = await import('../src/phone2kit.js');
     const { intentWhy, chatIdOf } = await import('../src/phone2sched.js');
@@ -277,19 +278,23 @@ export async function startWork({ root, store, st = null, schedule = true, from 
             //  files read now — plugin/st/naload.js, SillyTavern's own loading —, then this chat's names, cards, group, messages,
             //  metadata and persona. Set again for every job: nothing of the one before stays)
             STL.naLoad(settings, await STL.naLoadPresets(root));
-            // (the connection SillyTavern's page makes with these settings — its getStatusOpen · getStatusTextgen · getStatusKobold —, from the
-            //  replies kept for them, asked again through the bridge when the settings, the keys or the time say so. It never throws: without
-            //  a status — an older bridge, a backend that is down — the request is built as before, with no connection)
-            try { await STS.naStatus({ root, send: stFetch, log: text => logger.warn('%s', text) }); } catch (err) { logger.warn(err instanceof Error ? err : {}, '상태를 가져오는 중 오류가 발생했습니다'); }
             // (a copy: the chat file's read is frozen, and SillyTavern's code may write into its metadata — {{setvar}} — as the page's)
             now.chatMetadata = { ...structuredClone(now.metadata), narrative_archive: entry.real };
-            STP.script.__naSet({ name1: now.name1, name2: now.groupId ? '' : String(now.characters[now.characterId]?.name ?? ''), characters: now.characters, this_chid: now.characterId, chat: now.chat, chat_metadata: now.chatMetadata });
-            STP.groups.__naSet({ groups: now.groups, selected_group: now.groupId });
-            STP.power.power_user.persona_description = now.persona;
-            STP.fetch.__naSetFetch(stFetch);
             setContext(contextOf(entry, kit, settings, app, now));
             globalThis.__naStOpenai = stOpenai;
             try {
+                // (the connection SillyTavern's page makes with these settings — its getStatusOpen · getStatusTextgen · getStatusKobold —, from the
+                //  replies kept for them, asked again through the bridge when the settings, the keys or the time say so — behind the job, which
+                //  uses what is kept. It never throws: without a status — an older bridge, a backend that is down — the request is built as before,
+                //  with no connection. Only for a world whose jobs can go through SillyTavern's own request code: usesSt)
+                let skip = false;
+                try { skip = !usesSt(entry.real); } catch { skip = false; }
+                try { await STS.naStatus({ root, send: stFetch, log: text => logger.warn('%s', text), skip }); } catch (err) { logger.warn(err instanceof Error ? err : {}, '상태를 가져오는 중 오류가 발생했습니다'); }
+                // (this chat, as the page holds it once the chat is open: after the connection, which the page makes before)
+                STP.script.__naSet({ name1: now.name1, name2: now.groupId ? '' : String(now.characters[now.characterId]?.name ?? ''), characters: now.characters, this_chid: now.characterId, chat: now.chat, chat_metadata: now.chatMetadata });
+                STP.groups.__naSet({ groups: now.groups, selected_group: now.groupId });
+                STP.power.power_user.persona_description = now.persona;
+                STP.fetch.__naSetFetch(stFetch);
                 // (the persona's name changed in SillyTavern: the live phone's "me" follows before anything is judged — the
                 //  browser does it when the phone opens, phone2go.js liveFollowPersona. Only in memory here: it goes into the
                 //  store with the job's own save, a reply. A save of its own could meet the browser's — 409 — and fail a
@@ -303,6 +308,24 @@ export async function startWork({ root, store, st = null, schedule = true, from 
         return run;
     }
 
+    // 이 세계의 일이 실리 자신의 요청 코드를 지날 수 있나 (연결 프로필: stProfiles.sendRequest · 실리 연결 방식: stOpenai.createGenerationParameters).
+    // 연결 상태 · 모델 목록(naStatus)을 읽는 것은 그 코드뿐이에요: 커스텀 API · Vertex로만 보내는 세계는 연결 확인을 하지 않아요(공급자 호출 · Azure의 돈 · 기다림 없이).
+    // withWorld 안에서(설정을 읽은 뒤) 불러요. 모르면 true
+    //   - AI 기능 모델 · 초안 모델 (ai.js askAIOnce · askDraft → callConn: 요약 · 폰 채우기 · 답장의 기본 연결). 실리 연결 방식('source'),
+    //     또는 AI 기능 모델이 실리 쪽('st')이고 보낼 프로필이 있을 때 (ai.js aiProfileFor. 없으면 서버는 보내지 않아요)
+    //   - 방마다의 답장 (phone2go.js liveReplyPlan · replyRoute: 프로필, 또는 그 방의 연결이 실리 연결 방식)
+    //   - 스케줄 · 그림 설명의 연결 (phone2go.js askVia: 프로필)
+    function usesSt(real) {
+        const a = AI.connSettings('ai'), d = AI.connSettings('dr');
+        if (a.mode === 'source' || d.mode === 'source') return true;
+        if (!AI.OWN_MODES.includes(a.mode) && AI.aiProfileFor({ profileNow: true })) return true;
+        for (const roomId of Object.keys(liveWorld(real)?.messenger?.rooms || {})) {
+            const plan = G.liveReplyPlan(real, roomId);
+            if (plan.profile || plan.t?.mode === 'source') return true;
+        }
+        for (const id of [G.liveScheduleConnection(real), G.liveCaptioning(real)?.connectionId]) if (String(id || '').startsWith('profile:')) return true;
+        return false;
+    }
     // (the profiles of the world being run: what its context lists — withWorld put it in)
     const ctxNow = () => { try { return globalThis.SillyTavern.getContext(); } catch { return null; } };
     // 이 방의 답장을 서버가 보낼 수 있나 → '' (돼요) | 안 되는 이유. withWorld 안에서 불러요

@@ -39,6 +39,8 @@ const fake = http.createServer(async (req, res) => {
     hits.push(`${req.method} ${u.pathname}`);
     const r = routes[u.pathname];
     if (!r) { res.statusCode = 404; res.setHeader('content-type', 'application/json'); res.end('{"error":"not found"}'); return; }
+    // (an answer made from the request: the custom header SillyTavern sent, as the model name — tests/ststatus.cases.mjs x-custom-header-macro)
+    if (r === 'echo-who') { res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ data: [{ id: `who-${req.headers['x-who'] || 'none'}` }] })); return; }
     if (typeof r === 'string') {
         let j = {};
         try { j = JSON.parse(body || '{}'); } catch { /* none */ }
@@ -92,8 +94,9 @@ const ready = async (page) => {
 const snapshot = page => page.evaluate(async () => {
     const S = await import('/script.js'), O = await import('/scripts/openai.js'), TG = await import('/scripts/textgen-settings.js'), TGM = await import('/scripts/textgen-models.js'), K = await import('/scripts/kai-settings.js');
     const pickModels = o => Object.fromEntries(Object.keys(o).filter(k => /_model$/.test(k)).sort().map(k => [k, o[k]]));
+    const pickNums = o => Object.fromEntries(['openai_max_context', 'temp_openai', 'freq_pen_openai', 'pres_pen_openai', 'nanogpt_provider'].map(k => [k, o[k]]));
     return JSON.parse(JSON.stringify({
-        online_status: S.online_status, model_list: O.model_list, oai: pickModels(O.oai_settings), tg: pickModels(TG.textgenerationwebui_settings),
+        online_status: S.online_status, model_list: O.model_list, oai: pickModels(O.oai_settings), nums: pickNums(O.oai_settings), tg: pickModels(TG.textgenerationwebui_settings),
         openRouterModels: TGM.openRouterModels, tok: sessionStorage.getItem('tokenizationSupported'), kai_flags: K.kai_flags, model: S.substituteParams('{{model}}'),
     }));
 });
@@ -137,7 +140,9 @@ try {
         }
         await page.close();
     }
-    for (const c of C.CASES) {
+    // (NA_ORACLE_ONLY=a,b: those cases only — the fixture is not written then)
+    const only = process.env.NA_ORACLE_ONLY ? process.env.NA_ORACLE_ONLY.split(',') : null;
+    for (const c of C.CASES.filter(x => !only || only.includes(x.id))) {
         // (a new browser context for every case: SillyTavern keeps the tab's sessionStorage — the API tokenizer mark — across reloads)
         const context = await browser.newContext();
         const page = await context.newPage();
@@ -203,7 +208,7 @@ try {
         expected.calls[c.id] = calls;
         await context.close();
     }
-    if (!fail) fs.writeFileSync(path.join(REPO, 'tests/fixtures/ststatus-expected.json'), JSON.stringify(expected, null, 1) + '\n');
+    if (!fail && !only) fs.writeFileSync(path.join(REPO, 'tests/fixtures/ststatus-expected.json'), JSON.stringify(expected, null, 1) + '\n');
 } catch (e) { fail++; console.log('THREW', String(e?.stack || e).slice(0, 1500)); }
 finally {
     await browser?.close(); st.kill('SIGTERM'); await new Promise(r => setTimeout(r, 1000));

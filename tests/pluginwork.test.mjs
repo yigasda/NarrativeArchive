@@ -840,3 +840,26 @@ test('일꾼 · 실리 서버에 아예 닿지 않으면(다리가 끊김): 화�
     assert.deepEqual((await S.auto.status('sa')).map(x => [x.can, x.why]), [[false, '캐릭터 목록을 읽을 수 없습니다.']]);
     assert.equal(S.asked.length, 0);
 });
+
+// (SillyTavern's connection check — plugin/st/nastatus.js — through the bridge: /api/secrets/read and the status way of the main API)
+const STATUS_WAYS = ['/api/secrets/read', '/api/backends/chat-completions/status', '/api/backends/text-completions/status', '/api/backends/kobold/status'];
+const statusSeen = S => S.st.filter(x => STATUS_WAYS.includes(x.url)).map(x => x.url);
+
+test('일꾼 · 연결 확인은 실리 연결을 쓰는 세계만: 커스텀 API로만 보내는 세계는 묻지 않아요(공급자 호출 · 기다림 없이). 프로필 방이 있으면 묻고, 같은 설정이면 다시 묻지 않아요', async t => {
+    const S = await stage(t), a = world();
+    await S.put('sa', a.m);
+    for (let i = 0; i < 2; i++) assert.deepEqual((await S.auto.status('sa')).map(x => x.can), [true]);
+    assert.deepEqual(statusSeen(S), []);
+    // (a room that sends through a connection profile — SillyTavern's own request code reads the connection then)
+    const P = await stageOf(t), b = world();
+    useRoom(b, 'profile:p1');
+    await P.put('sb', b.m);
+    for (let i = 0; i < 3; i++) assert.deepEqual((await P.auto.status('sb')).map(x => x.can), [true]);
+    // (this fake bridge is an older one: no key state — 404 —, so the status way is asked as before. Once: the same settings)
+    assert.deepEqual(statusSeen(P), ['/api/secrets/read', '/api/backends/chat-completions/status']);
+    // (the AI 기능 모델 on SillyTavern's side with a profile picked there: its digests go through SillyTavern's code too)
+    const Q = await stageOf(t, { selected: 'p1', settings: { aiConn: { mode: 'st' } } }), c = world();
+    await Q.put('sc', c.m);
+    await Q.auto.status('sc');
+    assert.deepEqual(statusSeen(Q), ['/api/secrets/read', '/api/backends/chat-completions/status']);
+});

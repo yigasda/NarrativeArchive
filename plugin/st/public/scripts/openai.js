@@ -1,6 +1,7 @@
 // 실리 1.19.1 public/scripts/openai.js의 일부를 그대로 옮긴 것 (서버 플러그인이 실리 브라우저 없이 같은 요청을 만들게). SillyTavern, AGPL-3.0 (NOTICE.md).
-// 바꾼 것: 서버가 실리 요청을 만드는 데 쓰는 것만 옮김. 옮긴 줄마다 위에 `// 실리 <경로> <시작줄>~<끝줄>`. 그 밖의 줄은 우리 것: import, `__naSet`(일꾼이 전역 값을 채움), 대역(DOMPurify · toastr · renderTemplateAsync · updateFeatureSupportFlags · saveModelList(값 부분은 plugin/st/nastatus.js)).
-import { name1, name2, substituteParams, getCurrentChatId, getRequestHeaders, abortStatusCheck, setOnlineStatus, resultCheckStatus } from '../script.js';
+// 바꾼 것: 서버가 실리 요청을 만드는 데 쓰는 것만 옮김. 옮긴 줄마다 위에 `// 실리 <경로> <시작줄>~<끝줄>`. 그 밖의 줄은 우리 것: import, `__naSet`(일꾼이 전역 값을 채움), 대역(DOMPurify · toastr · renderTemplateAsync · updateFeatureSupportFlags · saveModelList(값 부분은 plugin/st/nastatus.js) · calculateOpenRouterCost · calculateElectronHubCost · calculateChutesCost · $(범위 칸 넷)).
+import { name1, name2, substituteParams, getCurrentChatId, getRequestHeaders, abortStatusCheck, setOnlineStatus, resultCheckStatus, saveSettingsDebounced } from '../script.js';
+import { SECRET_KEYS, secret_state } from './secrets.js';
 import { getGroupNames, selected_group } from './group-chats.js';
 import { chatCompletionDefaultPrompts, promptManagerDefaultPromptOrders } from './PromptManager.js';
 import { getCustomStoppingStrings, power_user } from './power-user.js';
@@ -26,6 +27,70 @@ let saveModelList = () => { throw new Error('saveModelList: plugin/st/nastatus.j
 // saveModelList 2063 · 2239~2241이 이 칸의 옵션을 읽어요). tools/st/gen.mjs가 그 줄에서 뽑아요.
 export const __naOpenAISelectOptions = ["gpt-6-astra","gpt-5.6","gpt-5.6-sol","gpt-5.6-terra","gpt-5.6-luna","gpt-5.5","gpt-5.5-2026-04-23","gpt-5.4","gpt-5.4-2026-03-05","gpt-5.4-mini","gpt-5.4-mini-2026-03-17","gpt-5.4-nano","gpt-5.4-nano-2026-03-17","gpt-5.3-chat-latest","gpt-5.2","gpt-5.2-2025-12-11","gpt-5.2-chat-latest","gpt-5.1","gpt-5.1-2025-11-13","gpt-5.1-chat-latest","gpt-5","gpt-5-2025-08-07","gpt-5-chat-latest","gpt-5-mini","gpt-5-mini-2025-08-07","gpt-5-nano","gpt-5-nano-2025-08-07","gpt-4.1","gpt-4.1-2025-04-14","gpt-4.1-mini","gpt-4.1-mini-2025-04-14","gpt-4.1-nano","gpt-4.1-nano-2025-04-14","o4-mini","o4-mini-2025-04-16","o3","o3-2025-04-16","o3-mini","o3-mini-2025-01-31","o1","o1-2024-12-17","gpt-4o","gpt-4o-2024-11-20","gpt-4o-2024-08-06","gpt-4o-2024-05-13","gpt-4o-mini","gpt-4o-mini-2024-07-18","gpt-4-turbo","gpt-4-turbo-2024-04-09","gpt-4","gpt-4-0613","gpt-3.5-turbo","gpt-3.5-turbo-0125","gpt-3.5-turbo-1106","gpt-3.5-turbo-instruct","babbage-002","davinci-002"];
 export const __naGoogleSelectOptions = ["gemini-3.7-flash","gemini-3.6-flash","gemini-3.5-flash","gemini-3.5-flash-lite","gemini-3.1-pro-preview","gemini-3.1-flash-lite","gemini-3.1-flash-image","gemini-3-pro-image","gemini-3-flash-preview","gemini-2.5-pro","gemini-2.5-flash","gemini-2.5-flash-lite","gemini-2.5-flash-image","gemini-2.0-flash-001","gemini-2.0-flash","gemini-2.0-flash-lite-001","gemini-2.0-flash-lite","gemma-4-31b-it","gemma-4-26b-a4b-it","gemma-3n-e4b-it","gemma-3n-e2b-it","gemma-3-27b-it","gemma-3-12b-it","gemma-3-4b-it","gemma-3-1b-it","learnlm-2.0-flash-experimental","gemini-robotics-er-1.5-preview"];
+// 실리 index.html 2922~2954 #chat_completion_source의 <option value> (주석 안의 것은 옵션이 아니에요). loadOpenAISettings 4404 → 6967~6969가
+// 이 칸에서 고른 것을 다시 읽어요: plugin/st/naload.js
+export const __naChatCompletionSourceOptions = ["openai","custom","ai21","aimlapi","azure_openai","chutes","claude","workers_ai","cohere","deepseek","electronhub","fireworks","groq","makersuite","vertexai","mistralai","minimax","moonshot","nanogpt","openrouter","perplexity","pollinations","siliconflow","xai","zai"];
+
+// 대역: 실리 calculateOpenRouterCost(1803~) · calculateElectronHubCost(1861~) · calculateChutesCost(1922~)는 화면의 가격 글만 바꿔요. 서버에서는 아무것도 안 해요.
+const calculateOpenRouterCost = () => {};
+const calculateElectronHubCost = () => {};
+const calculateChutesCost = () => {};
+// 대역: jQuery $. 옮긴 onModelChange 뒷부분(5695~6011)과 그 슬라이더의 input 처리기(6776~6792 · 6824~6831)가 만지는 칸만 있어요:
+// index.html 640 #openai_max_context · 706 #temp_openai · 719 #freq_pen_openai · 732 #pres_pen_openai (<input type="range">, 그 줄의 min · max · step).
+// 브라우저는 범위 칸에 넣은 값을 그 칸의 min · max · step으로 고쳐요(HTML 범위 입력의 값 고치기: 숫자가 아니면 가운데 값, min~max 안으로,
+// min에서 step 단위로 가장 가까운 값 — 반이면 큰 쪽, 그게 max를 넘으면 한 step 아래). 크롬처럼 10진수 그대로 셈해요(0.705 → 0.71).
+// 다른 칸(글 칸 · #openai_reverse_proxy의 placeholder)은 아무것도 안 해요.
+const __naRangeAttrs = { openai_max_context: { min: '512', max: '4095', step: '1' }, temp_openai: { min: '0', max: '2.0', step: '0.01' }, freq_pen_openai: { min: '-2', max: '2', step: '0.01' }, pres_pen_openai: { min: '-2', max: '2', step: '0.01' } };
+// 10진수: { n: BigInt, s: 소수 자리 } (값 = n / 10^s). HTML의 "올바른 부동소수점 수"가 아니면 null
+const __naDec = (text) => {
+    const m = /^(-?)(\d*)(?:\.(\d+))?(?:[eE]([-+]?\d+))?$/.exec(String(text));
+    if (!m || (m[2] === '' && m[3] === undefined)) return null;
+    const frac = m[3] ?? '', e = Number(m[4] ?? 0);
+    let n = BigInt((m[2] || '0') + frac) * (m[1] ? -1n : 1n), s = frac.length - e;
+    if (s < 0) { n *= 10n ** BigInt(-s); s = 0; }
+    return { n, s };
+};
+const __naAt = (d, s) => d.n * 10n ** BigInt(s - d.s);
+const __naDecText = (n, s) => {
+    const neg = n < 0n, digits = (neg ? -n : n).toString().padStart(s + 1, '0');
+    const text = s ? `${digits.slice(0, -s)}.${digits.slice(-s)}` : digits;
+    return (neg ? '-' : '') + text;
+};
+// (Chrome RangeInputType::SanitizeValue → StepRange::ClampValue · RoundByStep, Decimal::Round: 반이면 0에서 먼 쪽)
+function __naRangeClean(attrs, raw) {
+    const min = __naDec(attrs.min) ?? { n: 0n, s: 0 };
+    const max = __naDec(attrs.max) ?? { n: 100n, s: 0 };
+    const step = __naDec(attrs.step), got = __naDec(raw);
+    const S = Math.max(min.s, max.s, step?.s ?? 0, got?.s ?? 0) + 1;
+    const lo = __naAt(min, S);
+    let hi = __naAt(max, S), st = step ? __naAt(step, S) : 0n;
+    if (hi < lo) hi = lo;
+    if (!(st > 0n)) st = 10n ** BigInt(S);
+    const v = got ? __naAt(got, S) : lo + (hi - lo) / 2n;
+    const inRange = v < lo ? lo : v > hi ? hi : v;
+    const q = inRange - lo;
+    let r = lo + ((2n * q + st) / (2n * st)) * st;
+    if (r > hi) r -= st; else if (r < lo) r += st;
+    if (r < lo || r > hi) r = inRange;
+    return __naDecText(r, S);
+}
+class __NaRange {
+    constructor(attrs) { this.attrs = { ...attrs }; this.handlers = {}; this.value = __naRangeClean(this.attrs, ''); }
+}
+let __naRanges = new Map();
+const __naQuiet = { attr() { return __naQuiet; }, prop() { return __naQuiet; }, val() { return __naQuiet; }, trigger() { return __naQuiet; }, on() { return __naQuiet; } };
+const $ = (x) => {
+    const el = x instanceof __NaRange ? x : __naRanges.get(String(x).replace(/^#/, ''));
+    if (!el) return __naQuiet;
+    const self = {
+        attr(name, v) { if (v === undefined) return el.attrs[name]; el.attrs[name] = String(v); el.value = __naRangeClean(el.attrs, el.value); return self; },
+        prop(name, v) { return self.attr(name, v); },
+        val(v) { if (v === undefined) return el.value; el.value = __naRangeClean(el.attrs, v == null ? '' : String(v)); return self; },
+        trigger(type) { for (const fn of el.handlers[type] || []) fn.call(el); return self; },
+        on(type, fn) { (el.handlers[type] ||= []).push(fn); return self; },
+    };
+    return self;
+};
 
 // 실리 public/scripts/openai.js 102~124
 const default_main_prompt = 'Write {{char}}\'s next reply in a fictional chat between {{charIfNotGroup}} and {{user}}.';
@@ -1473,6 +1538,826 @@ async function getStatusOpen() {
 
     updateFeatureSupportFlags();
     return resultCheckStatus();
+}
+
+// 실리 public/scripts/openai.js 5083~5470
+/**
+ * Get the maximum context size for the OpenAI model
+ * @param {string} value Model identifier
+ * @returns {number} Maximum context size in tokens
+ */
+function getMaxContextOpenAI(value) {
+    if (oai_settings.max_context_unlocked) {
+        return unlocked_max;
+    }
+
+    /** @type {[RegExp, number][]} */
+    const contextMap = [
+        [/^gpt-6-astra/, max_1050k],
+        [/^gpt-5\.6/, max_1050k],
+        [/^gpt-5\.[45]/, max_1mil],
+        [/^gpt-5/, max_400k],
+        [/gpt-4\.1/, max_1mil],
+        [/gpt-audio/, max_128k],
+        [/^o1/, max_128k],
+        [/^o[34]/, max_200k],
+        [/chatgpt-4o-latest|gpt-4-turbo|gpt-4o|gpt-4-1106|gpt-4-0125|gpt-4-vision/, max_128k],
+        [/gpt-3\.5-turbo-1106/, max_16k],
+        [/^(gpt-4|gpt-4-0314|gpt-4-0613)$/, max_8k],
+        [/^(gpt-4-32k|gpt-4-32k-0314|gpt-4-32k-0613)$/, max_32k],
+        [/gpt-realtime/, max_32k],
+        [/^(gpt-3\.5-turbo-16k|gpt-3\.5-turbo-16k-0613)$/, max_16k],
+        [/^code-davinci-002$/, max_8k],
+        [/^(text-curie-001|text-babbage-001|text-ada-001)$/, max_2k],
+        [/gpt-3/, max_4k],
+    ];
+
+    for (const [regex, max] of contextMap) {
+        if (regex.test(value)) {
+            return max;
+        }
+    }
+
+    // Safe default for most modern models
+    return max_128k;
+}
+
+/**
+ * Get the maximum context size for Gemini models based on model identifier and optional model list.
+ * @param {string} model Model identifier
+ * @param {boolean} isUnlocked Whether context limits are unlocked
+ * @returns {number} Maximum context size in tokens
+ */
+function getGeminiMaxContext(model, isUnlocked) {
+    if (isUnlocked) {
+        return unlocked_max;
+    }
+
+    if (Array.isArray(model_list) && model_list.length > 0) {
+        const contextLength = model_list.find((record) => record.id === model)?.inputTokenLimit;
+        if (Number.isFinite(contextLength) && contextLength > 0) {
+            return contextLength;
+        }
+    }
+
+    /** @type {[RegExp, number][]} */
+    const contextMap = [
+        [/gemini-2\.5-flash-image/, max_32k],
+        [/gemini-3\.1-flash-image/, max_128k],
+        [/gemini-3-pro-image/, max_64k],
+        [/gemini-(?:3[.\d]*|2\.(?:5|0))-(pro|flash)/, max_1mil],
+        [/(gemini-exp|learnlm-2\.0-flash|gemini-robotics)/, max_1mil],
+        [/gemma-3-27b-it/, max_128k],
+        [/gemma-3n-e4b-it/, max_8k],
+        [/gemma-3/, max_32k],
+        [/gemma-4/, max_256k],
+    ];
+
+    for (const [regex, max] of contextMap) {
+        if (regex.test(model)) {
+            return max;
+        }
+    }
+
+    return max_128k;
+}
+
+/**
+ * Get the maximum temperature for Gemini models based on model identifier and optional model list.
+ * @param {string} model Model identifier
+ * @returns {number} Maximum temperature for Gemini models
+ */
+function getGeminiMaxTemp(model) {
+    if (Array.isArray(model_list) && model_list.length > 0) {
+        const temp = model_list.find((record) => record.id === model)?.maxTemperature;
+        if (Number.isFinite(temp) && temp > 0) {
+            return temp;
+        }
+    }
+
+    if (/(vision|ultra|gemma)/.test(model)) {
+        return 1.0;
+    }
+
+    return 2.0;
+}
+
+/**
+ * Get the maximum context size for the Mistral model
+ * @param {string} model Model identifier
+ * @param {boolean} isUnlocked Whether context limits are unlocked
+ * @returns {number} Maximum context size in tokens
+ */
+function getMistralMaxContext(model, isUnlocked) {
+    if (isUnlocked) {
+        return unlocked_max;
+    }
+
+    if (Array.isArray(model_list) && model_list.length > 0) {
+        const contextLength = model_list.find((record) => record.id === model)?.max_context_length;
+        if (contextLength) {
+            return contextLength;
+        }
+    }
+
+    // Return context size if model found, otherwise default to 32k
+    return max_32k;
+}
+
+/**
+ * Get the maximum context size for the Groq model
+ * @param {string} model Model identifier
+ * @param {boolean} isUnlocked Whether context limits are unlocked
+ * @returns {number} Maximum context size in tokens
+ */
+function getGroqMaxContext(model, isUnlocked) {
+    if (isUnlocked) {
+        return unlocked_max;
+    }
+
+    if (Array.isArray(model_list) && model_list.length > 0) {
+        const contextLength = model_list.find((record) => record.id === model)?.context_window;
+        if (contextLength) {
+            return contextLength;
+        }
+    }
+
+    const contextMap = {
+        'gemma2-9b-it': max_8k,
+        'llama-3.3-70b-versatile': max_128k,
+        'llama-3.1-8b-instant': max_128k,
+        'llama3-70b-8192': max_8k,
+        'llama3-8b-8192': max_8k,
+        'llama-guard-3-8b': max_8k,
+        'mixtral-8x7b-32768': max_32k,
+        'deepseek-r1-distill-llama-70b': max_128k,
+        'llama-3.3-70b-specdec': max_8k,
+        'llama-3.2-1b-preview': max_128k,
+        'llama-3.2-3b-preview': max_128k,
+        'llama-3.2-11b-vision-preview': max_128k,
+        'llama-3.2-90b-vision-preview': max_128k,
+        'qwen-2.5-32b': max_128k,
+        'deepseek-r1-distill-qwen-32b': max_128k,
+        'deepseek-r1-distill-llama-70b-specdec': max_128k,
+        'mistral-saba-24b': max_32k,
+        'meta-llama/llama-4-scout-17b-16e-instruct': max_128k,
+        'meta-llama/llama-4-maverick-17b-128e-instruct': max_128k,
+        'compound-beta': max_128k,
+        'compound-beta-mini': max_128k,
+        'qwen/qwen3-32b': max_128k,
+    };
+
+    // Return context size if model found, otherwise default to 128k
+    return Object.entries(contextMap).find(([key]) => model.includes(key))?.[1] || max_128k;
+}
+
+/**
+ * Get the maximum context size for the Z.AI model
+ * @param {string} model Model identifier
+ * @param {boolean} isUnlocked If context limits are unlocked
+ * @returns {number} Maximum context size in tokens
+ */
+function getZaiMaxContext(model, isUnlocked) {
+    if (isUnlocked) {
+        return unlocked_max;
+    }
+
+    const contextMap = {
+        'glm-5.2': max_1mil,
+        'glm-5.1': max_200k,
+        'glm-5-turbo': max_200k,
+        'glm-5v-turbo': max_200k,
+        'glm-5': max_200k,
+        'glm-4.7': max_200k,
+        'glm-4.7-flash': max_200k,
+        'glm-4.7-flashx': max_200k,
+        'glm-4.6v': max_128k,
+        'glm-4.6v-flash': max_128k,
+        'glm-4.6v-flashx': max_128k,
+        'glm-4.6': max_200k,
+        'glm-4.5': max_128k,
+        'glm-4-32b-0414-128k': max_128k,
+        'glm-4.5-air': max_128k,
+        'glm-4.5v': max_64k,
+        'autoglm-phone-multilingual': max_64k,
+    };
+
+    // Return context size if model found, otherwise default to 128k
+    return Object.entries(contextMap).find(([key]) => model.includes(key))?.[1] || max_128k;
+}
+
+/**
+ * Get the maximum context size for the SiliconFlow model
+ * @param {string} model Model identifier
+ * @param {boolean} isUnlocked Whether context limits are unlocked
+ * @returns {number} Maximum context size in tokens
+ */
+function getSiliconflowMaxContext(model, isUnlocked) {
+    if (isUnlocked) {
+        return unlocked_max;
+    }
+
+    const contextMap = {
+        'baidu/ERNIE-4.5-300B-A47B': max_128k,
+        'ByteDance-Seed/Seed-OSS-36B-Instruct': max_256k,
+        'deepseek-ai/DeepSeek-R1': max_128k,
+        'deepseek-ai/DeepSeek-V3': max_128k,
+        'deepseek-ai/DeepSeek-V3.1': max_128k,
+        'deepseek-ai/DeepSeek-V3.1-Terminus': max_128k,
+        'deepseek-ai/DeepSeek-V3.2-Exp': max_128k,
+        'deepseek-ai/deepseek-vl2': max_4k,
+        'inclusionAI/Ling-1T': max_128k,
+        'inclusionAI/Ling-flash-2.0': max_128k,
+        'inclusionAI/Ling-mini-2.0': max_128k,
+        'inclusionAI/Ring-1T': max_128k,
+        'inclusionAI/Ring-flash-2.0': max_128k,
+        'meta-llama/Llama-3.3-70B-Instruct': max_32k,
+        'meta-llama/Meta-Llama-3.1-8B-Instruct': max_32k,
+        'MiniMaxAI/MiniMax-M1-80k': max_128k,
+        'MiniMaxAI/MiniMax-M2': max_128k,
+        'moonshotai/Kimi-K2-Instruct': max_128k,
+        'moonshotai/Kimi-K2-Instruct-0905': max_256k,
+        'moonshotai/Kimi-K2-Thinking': max_256k,
+        'openai/gpt-oss-120b': max_128k,
+        'openai/gpt-oss-20b': max_128k,
+        'Qwen/Qwen3-235B-A22B-Instruct-2507': max_256k,
+        'Qwen/Qwen3-235B-A22B-Thinking-2507': max_256k,
+        'Qwen/Qwen3-30B-A3B-Instruct-2507': max_256k,
+        'Qwen/Qwen3-30B-A3B-Thinking-2507': max_256k,
+        'Qwen/Qwen3-VL-235B-A22B-Instruct': max_256k,
+        'Qwen/Qwen3-VL-235B-A22B-Thinking': max_256k,
+        'Qwen/Qwen3-VL-30B-A3B-Instruct': max_256k,
+        'Qwen/Qwen3-VL-30B-A3B-Thinking': max_256k,
+        'Qwen/Qwen3-VL-32B-Instruct': max_256k,
+        'Qwen/Qwen3-VL-32B-Thinking': max_256k,
+        'Qwen/Qwen3-VL-8B-Instruct': max_256k,
+        'Qwen/Qwen3-VL-8B-Thinking': max_256k,
+        'stepfun-ai/step3': max_64k,
+        'tencent/Hunyuan-A13B-Instruct': max_128k,
+        'zai-org/GLM-4.5': max_128k,
+        'zai-org/GLM-4.5-Air': max_128k,
+        'zai-org/GLM-4.5V': max_64k,
+        'zai-org/GLM-4.6': max_200k,
+    };
+
+    // Return context size if model found, otherwise default to 32k
+    return Object.entries(contextMap).find(([key]) => model.includes(key))?.[1] || max_32k;
+}
+
+/**
+ * Get the maximum context size for the Moonshot model
+ * @param {string} model Model identifier
+ * @param {boolean} isUnlocked If context limits are unlocked
+ * @returns {number} Maximum context size in tokens
+ */
+function getMoonshotMaxContext(model, isUnlocked) {
+    if (isUnlocked) {
+        return unlocked_max;
+    }
+
+    if (Array.isArray(model_list) && model_list.length > 0) {
+        const modelInfo = model_list.find((record) => record.id === model);
+        if (modelInfo?.context_length) {
+            return modelInfo.context_length;
+        }
+    }
+
+    const contextMap = {
+        'moonshot-v1-8k': max_8k,
+        'moonshot-v1-32k': max_32k,
+        'moonshot-v1-128k': max_128k,
+        'moonshot-v1-auto': max_128k,
+        'moonshot-v1-8k-vision-preview': max_8k,
+        'moonshot-v1-32k-vision-preview': max_32k,
+        'moonshot-v1-128k-vision-preview': max_128k,
+        'kimi-k2-0711-preview': max_32k,
+        'kimi-latest': max_256k,
+        'kimi-thinking-preview': max_32k,
+        'kimi-k2.5': max_256k,
+        'kimi-k2-0905-preview': max_256k,
+        'kimi-k2-turbo-preview': max_256k,
+        'kimi-k2-thinking': max_256k,
+        'kimi-k2-thinking-turbo': max_256k,
+    };
+
+    // Return context size if model found, otherwise default to 32k
+    return Object.entries(contextMap).find(([key]) => model.includes(key))?.[1] || max_32k;
+}
+
+/**
+ * Get the maximum context size for the Fireworks model
+ * @param {string} model Model identifier
+ * @param {boolean} isUnlocked Whether context limits are unlocked
+ * @returns {number} Maximum context size in tokens
+ */
+function getFireworksMaxContext(model, isUnlocked) {
+    if (isUnlocked) {
+        return unlocked_max;
+    }
+
+    // First check if model info is available from model_list
+    if (Array.isArray(model_list) && model_list.length > 0) {
+        const modelInfo = model_list.find((record) => record.id === model);
+        if (modelInfo?.context_length) {
+            return modelInfo.context_length;
+        }
+        if (modelInfo?.context_window) {
+            return modelInfo.context_window;
+        }
+    }
+
+    return max_32k;
+}
+
+/**
+ * Get the maximum context size for the Chutes model
+ * @param {string} model Model identifier
+ * @param {boolean} isUnlocked Whether context limits are unlocked
+ * @returns {number} Maximum context size in tokens
+ */
+function getChutesMaxContext(model, isUnlocked) {
+    if (isUnlocked) {
+        return unlocked_max;
+    }
+
+    if (Array.isArray(model_list)) {
+        const modelInfo = model_list.find(m => m.id === model);
+        if (modelInfo?.context_length) {
+            return modelInfo.context_length;
+        }
+    }
+    return max_8k;
+}
+
+/**
+ * Get the maximum context size for the ElectronHub model
+ * @param {string} model Model identifier
+ * @param {boolean} isUnlocked Whether context limits are unlocked
+ * @returns {number} Maximum context size in tokens
+ */
+function getElectronHubMaxContext(model, isUnlocked) {
+    if (isUnlocked) {
+        return unlocked_max;
+    }
+
+    if (Array.isArray(model_list)) {
+        const modelInfo = model_list.find(m => m.id === model);
+        if (modelInfo?.tokens) {
+            return modelInfo.tokens;
+        }
+    }
+    return max_128k;
+}
+
+/**
+ * Get the maximum context size for the NanoGPT model
+ * @param {string} model Model identifier
+ * @param {boolean} isUnlocked Whether context limits are unlocked
+ * @returns {number} Maximum context size in tokens
+ */
+function getNanoGptMaxContext(model, isUnlocked) {
+    if (isUnlocked) {
+        return unlocked_max;
+    }
+
+    if (Array.isArray(model_list)) {
+        const modelInfo = model_list.find(m => m.id === model);
+        if (modelInfo?.context_length) {
+            return modelInfo.context_length;
+        }
+    }
+
+    return max_128k;
+}
+
+/**
+ * 우리 것: 실리 onModelChange(5472~6018)의 뒷부분. 앞부분(고른 칸마다 모델 값 · 가드)은 plugin/st/nastatus.js saveModelListValues가 따라 해요:
+ * 가드를 지나면(실리가 return하지 않으면) 이것을 불러요. value: 5474 `String($(this).val() || '')`.
+ * 문맥 · 온도 · 벌점 칸의 최대값과 그 칸의 값 고치기(대역 $: 브라우저의 범위 칸, 그 칸의 input 처리기가 oai_settings에 써요)는 실리 그대로.
+ * 칸은 일마다 index.html 그대로 새로 만들어요(실리의 이 줄들은 쓰기 전에 그 칸의 최대값을 늘 다시 정해요).
+ * 5473 biasCache = undefined: 서버는 일마다 naLoad가 비워요. 6013~6017(화면 · 저장 · 기능 표시 · 이벤트)은 빼요.
+ * 5941 console.log(AI/ML 문맥 크기)는 남기지 않아요: 서버는 일마다 다시 돌아서 같은 줄이 계속 나와요.
+ */
+export function __naModelChangeRest(value) {
+    __naRanges = new Map(Object.entries(__naRangeAttrs).map(([id, attrs]) => [id, new __NaRange(attrs)]));
+    __naRangeInputs();
+    const console = Object.assign(Object.create(globalThis.console), { log: () => {} });
+// 실리 public/scripts/openai.js 5695~6011
+    if ([chat_completion_sources.MAKERSUITE, chat_completion_sources.VERTEXAI].includes(oai_settings.chat_completion_source)) {
+        const contextSize = getGeminiMaxContext(value, oai_settings.max_context_unlocked);
+        const maxTemp = getGeminiMaxTemp(value);
+        $('#openai_max_context').attr('max', contextSize);
+        oai_settings.temp_openai = Math.min(maxTemp, oai_settings.temp_openai);
+        $('#temp_openai').attr('max', maxTemp).val(oai_settings.temp_openai).trigger('input');
+        oai_settings.openai_max_context = Math.min(Number($('#openai_max_context').attr('max')), oai_settings.openai_max_context);
+        $('#openai_max_context').val(oai_settings.openai_max_context).trigger('input');
+    }
+
+    if (oai_settings.chat_completion_source == chat_completion_sources.OPENROUTER) {
+        if (oai_settings.max_context_unlocked) {
+            $('#openai_max_context').attr('max', unlocked_max);
+        } else {
+            const model = model_list.find(m => m.id == oai_settings.openrouter_model);
+            if (model?.context_length) {
+                $('#openai_max_context').attr('max', model.context_length);
+            } else {
+                $('#openai_max_context').attr('max', max_128k);
+            }
+        }
+        oai_settings.openai_max_context = Math.min(Number($('#openai_max_context').attr('max')), oai_settings.openai_max_context);
+        $('#openai_max_context').val(oai_settings.openai_max_context).trigger('input');
+
+        if (value && (value.includes('claude') || value.includes('palm-2'))) {
+            oai_settings.temp_openai = Math.min(claude_max_temp, oai_settings.temp_openai);
+            $('#temp_openai').attr('max', claude_max_temp).val(oai_settings.temp_openai).trigger('input');
+        } else {
+            oai_settings.temp_openai = Math.min(oai_max_temp, oai_settings.temp_openai);
+            $('#temp_openai').attr('max', oai_max_temp).val(oai_settings.temp_openai).trigger('input');
+        }
+
+        calculateOpenRouterCost();
+    }
+
+    if (oai_settings.chat_completion_source == chat_completion_sources.CLAUDE) {
+        if (oai_settings.max_context_unlocked) {
+            $('#openai_max_context').attr('max', unlocked_max);
+        } else if (/^claude-(sonnet-4-5|sonnet-4-6|sonnet-5|opus-4-6|opus-4-7|opus-4-8|opus-5|fable)/.test(value)) {
+            $('#openai_max_context').attr('max', max_1mil);
+        } else if (/^claude-(3|opus|haiku|sonnet)/.test(value)) {
+            $('#openai_max_context').attr('max', max_200k);
+        } else {
+            $('#openai_max_context').attr('max', max_200k);
+        }
+
+        oai_settings.openai_max_context = Math.min(oai_settings.openai_max_context, Number($('#openai_max_context').attr('max')));
+        $('#openai_max_context').val(oai_settings.openai_max_context).trigger('input');
+
+        $('#openai_reverse_proxy').attr('placeholder', 'https://api.anthropic.com/v1');
+
+        oai_settings.temp_openai = Math.min(claude_max_temp, oai_settings.temp_openai);
+        $('#temp_openai').attr('max', claude_max_temp).val(oai_settings.temp_openai).trigger('input');
+    }
+
+    if ([chat_completion_sources.AZURE_OPENAI, chat_completion_sources.OPENAI].includes(oai_settings.chat_completion_source)) {
+        $('#openai_max_context').attr('max', getMaxContextOpenAI(value));
+        oai_settings.openai_max_context = Math.min(oai_settings.openai_max_context, Number($('#openai_max_context').attr('max')));
+        $('#openai_max_context').val(oai_settings.openai_max_context).trigger('input');
+
+        $('#openai_reverse_proxy').attr('placeholder', 'https://api.openai.com/v1');
+
+        oai_settings.temp_openai = Math.min(oai_max_temp, oai_settings.temp_openai);
+        $('#temp_openai').attr('max', oai_max_temp).val(oai_settings.temp_openai).trigger('input');
+    }
+
+    if (oai_settings.chat_completion_source === chat_completion_sources.MISTRALAI) {
+        const maxContext = getMistralMaxContext(oai_settings.mistralai_model, oai_settings.max_context_unlocked);
+        $('#openai_max_context').attr('max', maxContext);
+        oai_settings.openai_max_context = Math.min(oai_settings.openai_max_context, Number($('#openai_max_context').attr('max')));
+        $('#openai_max_context').val(oai_settings.openai_max_context).trigger('input');
+        oai_settings.temp_openai = Math.min(mistral_max_temp, oai_settings.temp_openai);
+        $('#temp_openai').attr('max', mistral_max_temp).val(oai_settings.temp_openai).trigger('input');
+    }
+
+    if (oai_settings.chat_completion_source === chat_completion_sources.COHERE) {
+        if (oai_settings.max_context_unlocked) {
+            $('#openai_max_context').attr('max', unlocked_max);
+        } else if (['command-light-nightly', 'command-light', 'command'].includes(oai_settings.cohere_model)) {
+            $('#openai_max_context').attr('max', max_4k);
+        } else if (oai_settings.cohere_model.includes('command-r') || ['c4ai-aya-23', 'c4ai-aya-expanse-32b', 'command-nightly', 'command-a-vision-07-2025'].includes(oai_settings.cohere_model)) {
+            $('#openai_max_context').attr('max', max_128k);
+        } else if (['command-a-03-2025'].includes(oai_settings.cohere_model)) {
+            $('#openai_max_context').attr('max', max_256k);
+        } else if (['c4ai-aya-23-8b', 'c4ai-aya-expanse-8b'].includes(oai_settings.cohere_model)) {
+            $('#openai_max_context').attr('max', max_8k);
+        } else if (['c4ai-aya-vision-8b', 'c4ai-aya-vision-32b'].includes(oai_settings.cohere_model)) {
+            $('#openai_max_context').attr('max', max_16k);
+        } else {
+            $('#openai_max_context').attr('max', max_4k);
+        }
+        oai_settings.openai_max_context = Math.min(Number($('#openai_max_context').attr('max')), oai_settings.openai_max_context);
+        $('#openai_max_context').val(oai_settings.openai_max_context).trigger('input');
+        $('#temp_openai').attr('max', claude_max_temp).val(oai_settings.temp_openai).trigger('input');
+    }
+
+    if (oai_settings.chat_completion_source === chat_completion_sources.PERPLEXITY) {
+        if (oai_settings.max_context_unlocked) {
+            $('#openai_max_context').attr('max', unlocked_max);
+        } else if (['sonar', 'sonar-reasoning', 'sonar-reasoning-pro', 'r1-1776'].includes(oai_settings.perplexity_model)) {
+            $('#openai_max_context').attr('max', 127000);
+        } else if (['sonar-pro'].includes(oai_settings.perplexity_model)) {
+            $('#openai_max_context').attr('max', 200000);
+        } else if (oai_settings.perplexity_model.includes('llama-3.1')) {
+            const isOnline = oai_settings.perplexity_model.includes('online');
+            const contextSize = isOnline ? 128 * 1024 - 4000 : 128 * 1024;
+            $('#openai_max_context').attr('max', contextSize);
+        } else {
+            $('#openai_max_context').attr('max', max_128k);
+        }
+        oai_settings.openai_max_context = Math.min(Number($('#openai_max_context').attr('max')), oai_settings.openai_max_context);
+        $('#openai_max_context').val(oai_settings.openai_max_context).trigger('input');
+        oai_settings.temp_openai = Math.min(oai_max_temp, oai_settings.temp_openai);
+        $('#temp_openai').attr('max', oai_max_temp).val(oai_settings.temp_openai).trigger('input');
+    }
+
+    if (oai_settings.chat_completion_source == chat_completion_sources.GROQ) {
+        const maxContext = getGroqMaxContext(oai_settings.groq_model, oai_settings.max_context_unlocked);
+        $('#openai_max_context').attr('max', maxContext);
+        oai_settings.openai_max_context = Math.min(Number($('#openai_max_context').attr('max')), oai_settings.openai_max_context);
+        $('#openai_max_context').val(oai_settings.openai_max_context).trigger('input');
+        oai_settings.temp_openai = Math.min(oai_max_temp, oai_settings.temp_openai);
+        $('#temp_openai').attr('max', oai_max_temp).val(oai_settings.temp_openai).trigger('input');
+    }
+
+    if (oai_settings.chat_completion_source == chat_completion_sources.AI21) {
+        if (oai_settings.max_context_unlocked) {
+            $('#openai_max_context').attr('max', unlocked_max);
+        } else if (oai_settings.ai21_model.startsWith('jamba-')) {
+            $('#openai_max_context').attr('max', max_256k);
+        }
+
+        oai_settings.openai_max_context = Math.min(Number($('#openai_max_context').attr('max')), oai_settings.openai_max_context);
+        $('#openai_max_context').val(oai_settings.openai_max_context).trigger('input');
+        $('#temp_openai').attr('max', oai_max_temp).val(oai_settings.temp_openai).trigger('input');
+    }
+
+    if (oai_settings.chat_completion_source == chat_completion_sources.CUSTOM) {
+        $('#openai_max_context').attr('max', unlocked_max);
+        oai_settings.openai_max_context = Math.min(Number($('#openai_max_context').attr('max')), oai_settings.openai_max_context);
+        $('#openai_max_context').val(oai_settings.openai_max_context).trigger('input');
+        $('#temp_openai').attr('max', oai_max_temp).val(oai_settings.temp_openai).trigger('input');
+    }
+
+    if (oai_settings.chat_completion_source == chat_completion_sources.CHUTES) {
+        const maxContext = getChutesMaxContext(oai_settings.chutes_model, oai_settings.max_context_unlocked);
+        $('#openai_max_context').attr('max', maxContext);
+        oai_settings.openai_max_context = Math.min(Number($('#openai_max_context').attr('max')), oai_settings.openai_max_context);
+        $('#openai_max_context').val(oai_settings.openai_max_context).trigger('input');
+        oai_settings.temp_openai = Math.min(oai_max_temp, oai_settings.temp_openai);
+        $('#temp_openai').attr('max', oai_max_temp).val(oai_settings.temp_openai).trigger('input');
+
+        calculateChutesCost();
+    }
+
+    if (oai_settings.chat_completion_source == chat_completion_sources.ELECTRONHUB) {
+        const maxContext = getElectronHubMaxContext(oai_settings.electronhub_model, oai_settings.max_context_unlocked);
+        $('#openai_max_context').attr('max', maxContext);
+        oai_settings.openai_max_context = Math.min(Number($('#openai_max_context').attr('max')), oai_settings.openai_max_context);
+        $('#openai_max_context').val(oai_settings.openai_max_context).trigger('input');
+        oai_settings.temp_openai = Math.min(oai_max_temp, oai_settings.temp_openai);
+        $('#temp_openai').attr('max', oai_max_temp).val(oai_settings.temp_openai).trigger('input');
+
+        calculateElectronHubCost();
+    }
+
+    if (oai_settings.chat_completion_source === chat_completion_sources.NANOGPT) {
+        const maxContext = getNanoGptMaxContext(oai_settings.nanogpt_model, oai_settings.max_context_unlocked);
+        $('#openai_max_context').attr('max', maxContext);
+        oai_settings.openai_max_context = Math.min(Number($('#openai_max_context').attr('max')), oai_settings.openai_max_context);
+        $('#openai_max_context').val(oai_settings.openai_max_context).trigger('input');
+        oai_settings.temp_openai = Math.min(oai_max_temp, oai_settings.temp_openai);
+        $('#temp_openai').attr('max', oai_max_temp).val(oai_settings.temp_openai).trigger('input');
+    }
+
+    if (oai_settings.chat_completion_source === chat_completion_sources.POLLINATIONS) {
+        if (oai_settings.max_context_unlocked) {
+            $('#openai_max_context').attr('max', unlocked_max);
+        } else {
+            $('#openai_max_context').attr('max', max_128k);
+        }
+
+        oai_settings.openai_max_context = Math.min(Number($('#openai_max_context').attr('max')), oai_settings.openai_max_context);
+        $('#openai_max_context').val(oai_settings.openai_max_context).trigger('input');
+        $('#temp_openai').attr('max', oai_max_temp).val(oai_settings.temp_openai).trigger('input');
+    }
+
+    if (oai_settings.chat_completion_source === chat_completion_sources.DEEPSEEK) {
+        const maxContext = oai_settings.max_context_unlocked ? unlocked_max : max_1mil;
+        $('#openai_max_context').attr('max', maxContext);
+        oai_settings.openai_max_context = Math.min(Number($('#openai_max_context').attr('max')), oai_settings.openai_max_context);
+        $('#openai_max_context').val(oai_settings.openai_max_context).trigger('input');
+        $('#temp_openai').attr('max', oai_max_temp).val(oai_settings.temp_openai).trigger('input');
+    }
+
+    if (oai_settings.chat_completion_source === chat_completion_sources.WORKERS_AI) {
+        if (oai_settings.max_context_unlocked) {
+            $('#openai_max_context').attr('max', unlocked_max);
+        } else {
+            const model = model_list.find(m => m.id === oai_settings.workers_ai_model);
+            const ctxProp = Array.isArray(model?.properties) && model.properties.find(p => p.property_id === 'context_window');
+            const contextLength = ctxProp ? Number(ctxProp.value) : max_8k;
+            $('#openai_max_context').attr('max', contextLength || max_8k);
+        }
+        oai_settings.openai_max_context = Math.min(Number($('#openai_max_context').attr('max')), oai_settings.openai_max_context);
+        $('#openai_max_context').val(oai_settings.openai_max_context).trigger('input');
+        const workersAiMaxTemp = 5.0;
+        oai_settings.temp_openai = Math.min(workersAiMaxTemp, oai_settings.temp_openai);
+        $('#temp_openai').attr('max', workersAiMaxTemp).val(oai_settings.temp_openai).trigger('input');
+    }
+
+    if (oai_settings.chat_completion_source === chat_completion_sources.COMETAPI) {
+        $('#openai_max_context').attr('max', oai_settings.max_context_unlocked ? unlocked_max : max_128k);
+        oai_settings.openai_max_context = Math.min(Number($('#openai_max_context').attr('max')), oai_settings.openai_max_context);
+        $('#openai_max_context').val(oai_settings.openai_max_context).trigger('input');
+        $('#temp_openai').attr('max', oai_max_temp).val(oai_settings.temp_openai).trigger('input');
+    }
+
+    if (oai_settings.chat_completion_source === chat_completion_sources.XAI) {
+        if (oai_settings.max_context_unlocked) {
+            $('#openai_max_context').attr('max', unlocked_max);
+        } else if (oai_settings.xai_model.includes('grok-2-vision')) {
+            $('#openai_max_context').attr('max', max_32k);
+        } else if (oai_settings.xai_model.includes('grok-4-fast')) {
+            $('#openai_max_context').attr('max', max_2mil);
+        } else if (oai_settings.xai_model.includes('grok-4')) {
+            $('#openai_max_context').attr('max', max_256k);
+        } else if (oai_settings.xai_model.includes('grok-code')) {
+            $('#openai_max_context').attr('max', max_256k);
+        } else {
+            // grok 2 and grok 3
+            $('#openai_max_context').attr('max', max_128k);
+        }
+
+        oai_settings.openai_max_context = Math.min(Number($('#openai_max_context').attr('max')), oai_settings.openai_max_context);
+        $('#openai_max_context').val(oai_settings.openai_max_context).trigger('input');
+        $('#temp_openai').attr('max', oai_max_temp).val(oai_settings.temp_openai).trigger('input');
+    }
+
+    if (oai_settings.chat_completion_source === chat_completion_sources.AIMLAPI) {
+        let maxContext;
+        if (oai_settings.max_context_unlocked) {
+            maxContext = unlocked_max;
+        } else {
+            const model = model_list.find(m => m.id === oai_settings.aimlapi_model);
+            maxContext = (model?.info?.contextLength ?? model?.context_length) || max_32k;
+            console.log('[AI/ML API] Model CTX:', model?.info?.contextLength);
+        }
+
+        $('#openai_max_context')
+            .prop('max', maxContext)
+            .val(Math.min(Number(oai_settings.openai_max_context), maxContext))
+            .trigger('input');
+
+        $('#temp_openai')
+            .prop('max', oai_max_temp)
+            .val(Number(oai_settings.temp_openai))
+            .trigger('input');
+
+        oai_settings.openai_max_context = Number($('#openai_max_context').val());
+        oai_settings.temp_openai = Number($('#temp_openai').val());
+    }
+
+    if (oai_settings.chat_completion_source === chat_completion_sources.COHERE) {
+        oai_settings.pres_pen_openai = Math.min(Math.max(0, oai_settings.pres_pen_openai), 1);
+        $('#pres_pen_openai').attr('max', 1).attr('min', 0).val(oai_settings.pres_pen_openai).trigger('input');
+        oai_settings.freq_pen_openai = Math.min(Math.max(0, oai_settings.freq_pen_openai), 1);
+        $('#freq_pen_openai').attr('max', 1).attr('min', 0).val(oai_settings.freq_pen_openai).trigger('input');
+    } else {
+        $('#pres_pen_openai').attr('max', 2).attr('min', -2).val(oai_settings.pres_pen_openai).trigger('input');
+        $('#freq_pen_openai').attr('max', 2).attr('min', -2).val(oai_settings.freq_pen_openai).trigger('input');
+    }
+
+    if (oai_settings.chat_completion_source === chat_completion_sources.MOONSHOT) {
+        const maxContext = getMoonshotMaxContext(oai_settings.moonshot_model, oai_settings.max_context_unlocked);
+        $('#openai_max_context').attr('max', maxContext);
+        oai_settings.openai_max_context = Math.min(Number($('#openai_max_context').attr('max')), oai_settings.openai_max_context);
+        $('#openai_max_context').val(oai_settings.openai_max_context).trigger('input');
+        oai_settings.temp_openai = Math.min(claude_max_temp, oai_settings.temp_openai);
+        $('#temp_openai').attr('max', claude_max_temp).val(oai_settings.temp_openai).trigger('input');
+    }
+
+    if (oai_settings.chat_completion_source === chat_completion_sources.FIREWORKS) {
+        const maxContext = getFireworksMaxContext(oai_settings.fireworks_model, oai_settings.max_context_unlocked);
+        $('#openai_max_context').attr('max', maxContext);
+        oai_settings.openai_max_context = Math.min(Number($('#openai_max_context').attr('max')), oai_settings.openai_max_context);
+        $('#openai_max_context').val(oai_settings.openai_max_context).trigger('input');
+        oai_settings.temp_openai = Math.min(oai_max_temp, oai_settings.temp_openai);
+        $('#temp_openai').attr('max', oai_max_temp).val(oai_settings.temp_openai).trigger('input');
+    }
+
+    if (oai_settings.chat_completion_source === chat_completion_sources.SILICONFLOW) {
+        const maxContext = getSiliconflowMaxContext(oai_settings.siliconflow_model, oai_settings.max_context_unlocked);
+        $('#openai_max_context').attr('max', maxContext);
+        oai_settings.openai_max_context = Math.min(Number($('#openai_max_context').attr('max')), oai_settings.openai_max_context);
+        $('#openai_max_context').val(oai_settings.openai_max_context).trigger('input');
+        oai_settings.temp_openai = Math.min(oai_max_temp, oai_settings.temp_openai);
+        $('#temp_openai').attr('max', oai_max_temp).val(oai_settings.temp_openai).trigger('input');
+    }
+
+    if (oai_settings.chat_completion_source === chat_completion_sources.MINIMAX) {
+        const maxContext = oai_settings.minimax_model === 'M2-her' ? 65536 : 204800;
+        $('#openai_max_context').attr('max', maxContext);
+        oai_settings.openai_max_context = Math.min(Number($('#openai_max_context').attr('max')), oai_settings.openai_max_context);
+        $('#openai_max_context').val(oai_settings.openai_max_context).trigger('input');
+        oai_settings.temp_openai = Math.min(claude_max_temp, oai_settings.temp_openai);
+        $('#temp_openai').attr('max', claude_max_temp).val(oai_settings.temp_openai).trigger('input');
+    }
+
+    if (oai_settings.chat_completion_source == chat_completion_sources.ZAI) {
+        const maxContext = getZaiMaxContext(oai_settings.zai_model, oai_settings.max_context_unlocked);
+        $('#openai_max_context').attr('max', maxContext);
+        oai_settings.openai_max_context = Math.min(Number($('#openai_max_context').attr('max')), oai_settings.openai_max_context);
+        $('#openai_max_context').val(oai_settings.openai_max_context).trigger('input');
+        oai_settings.temp_openai = Math.min(claude_max_temp, oai_settings.temp_openai);
+        $('#temp_openai').attr('max', claude_max_temp).val(oai_settings.temp_openai).trigger('input');
+    }
+}
+
+/**
+ * 우리 것: 실리 onConnectButtonClick(6036~6098)의 값 부분 → { key: 그 소스의 키 이름 | null }: 연결 버튼이 getStatusOpen까지 가요(6095~6097) ·
+ * null: 키가 없어서 가지 않아요(상태는 페이지 그대로).
+ * 6037(화면 이벤트), 6076 toastr · 6090 console.log(서버는 plugin/st/nastatus.js가 한 번만), 6084~6087(입력 칸에 쓴 키 저장: 서버에는 입력 칸이 없어요.
+ * 키는 실리가 secrets.json에 둔 것만: secret_state)은 빼요.
+ */
+export function __naConnectGate() {
+// 실리 public/scripts/openai.js 6039~6075
+    /** @type {Object.<string, {key: string, selector: string, proxy?: boolean, keyless?: boolean}>} */
+    const apiSourceConfig = {
+        [chat_completion_sources.OPENROUTER]: { key: SECRET_KEYS.OPENROUTER, selector: '#api_key_openrouter', proxy: false },
+        [chat_completion_sources.MAKERSUITE]: { key: SECRET_KEYS.MAKERSUITE, selector: '#api_key_makersuite', proxy: true },
+        [chat_completion_sources.CLAUDE]: { key: SECRET_KEYS.CLAUDE, selector: '#api_key_claude', proxy: true },
+        [chat_completion_sources.OPENAI]: { key: SECRET_KEYS.OPENAI, selector: '#api_key_openai', proxy: true },
+        [chat_completion_sources.AI21]: { key: SECRET_KEYS.AI21, selector: '#api_key_ai21', proxy: false },
+        [chat_completion_sources.MISTRALAI]: { key: SECRET_KEYS.MISTRALAI, selector: '#api_key_mistralai', proxy: true },
+        [chat_completion_sources.CUSTOM]: { key: SECRET_KEYS.CUSTOM, selector: '#api_key_custom', proxy: false, keyless: true },
+        [chat_completion_sources.COHERE]: { key: SECRET_KEYS.COHERE, selector: '#api_key_cohere', proxy: false },
+        [chat_completion_sources.PERPLEXITY]: { key: SECRET_KEYS.PERPLEXITY, selector: '#api_key_perplexity', proxy: false },
+        [chat_completion_sources.GROQ]: { key: SECRET_KEYS.GROQ, selector: '#api_key_groq', proxy: false },
+        [chat_completion_sources.SILICONFLOW]: { key: SECRET_KEYS.SILICONFLOW, selector: '#api_key_siliconflow', proxy: false },
+        [chat_completion_sources.ELECTRONHUB]: { key: SECRET_KEYS.ELECTRONHUB, selector: '#api_key_electronhub', proxy: false },
+        [chat_completion_sources.NANOGPT]: { key: SECRET_KEYS.NANOGPT, selector: '#api_key_nanogpt', proxy: false },
+        [chat_completion_sources.DEEPSEEK]: { key: SECRET_KEYS.DEEPSEEK, selector: '#api_key_deepseek', proxy: true },
+        [chat_completion_sources.XAI]: { key: SECRET_KEYS.XAI, selector: '#api_key_xai', proxy: true },
+        [chat_completion_sources.AIMLAPI]: { key: SECRET_KEYS.AIMLAPI, selector: '#api_key_aimlapi', proxy: false },
+        [chat_completion_sources.MOONSHOT]: { key: SECRET_KEYS.MOONSHOT, selector: '#api_key_moonshot', proxy: true },
+        [chat_completion_sources.FIREWORKS]: { key: SECRET_KEYS.FIREWORKS, selector: '#api_key_fireworks', proxy: false },
+        [chat_completion_sources.COMETAPI]: { key: SECRET_KEYS.COMETAPI, selector: '#api_key_cometapi', proxy: false },
+        [chat_completion_sources.AZURE_OPENAI]: { key: SECRET_KEYS.AZURE_OPENAI, selector: '#api_key_azure_openai', proxy: false },
+        [chat_completion_sources.ZAI]: { key: SECRET_KEYS.ZAI, selector: '#api_key_zai', proxy: true },
+        [chat_completion_sources.CHUTES]: { key: SECRET_KEYS.CHUTES, selector: '#api_key_chutes', proxy: false },
+        [chat_completion_sources.POLLINATIONS]: { key: SECRET_KEYS.POLLINATIONS, selector: '#api_key_pollinations', proxy: false, keyless: oai_settings.pollinations_endpoint === POLLINATIONS_ENDPOINT.ANONYMOUS },
+        [chat_completion_sources.WORKERS_AI]: { key: SECRET_KEYS.WORKERS_AI, selector: '#api_key_workers_ai', proxy: false },
+        [chat_completion_sources.MINIMAX]: { key: SECRET_KEYS.MINIMAX, selector: '#api_key_minimax', proxy: false },
+    };
+
+    // Vertex AI Express version - use API key
+    if (oai_settings.vertexai_auth_mode === 'express') {
+        apiSourceConfig[chat_completion_sources.VERTEXAI] = { key: SECRET_KEYS.VERTEXAI, selector: '#api_key_vertexai', proxy: true };
+    }
+
+    // Vertex AI Full version - use service account
+    if (oai_settings.chat_completion_source === chat_completion_sources.VERTEXAI && oai_settings.vertexai_auth_mode === 'full') {
+        if (!secret_state[SECRET_KEYS.VERTEXAI_SERVICE_ACCOUNT]) {
+            // (실리 6076 toastr.error: 서비스 계정 JSON이 없어요)
+            return null;
+// 실리 public/scripts/openai.js 6078~6083
+        }
+    }
+
+    // Other generic configs
+    const config = apiSourceConfig[oai_settings.chat_completion_source];
+    if (config) {
+        // (실리 6084~6087: 입력 칸에 쓴 키 저장)
+// 실리 public/scripts/openai.js 6088~6089
+
+        if (!secret_state[config.key] && (!config.proxy || !oai_settings.reverse_proxy) && !config.keyless) {
+            // (실리 6090 console.log: 그 소스의 키가 없어요)
+            return null;
+// 실리 public/scripts/openai.js 6092~6093
+        }
+    }
+
+    return { key: config?.key ?? null };
+}
+
+// 우리 것: 실리 openai.js 초기화의 범위 칸 input 처리기(6776~6792 · 6824~6831)를 대역 $의 칸에 붙여요 (__naModelChangeRest가 칸을 새로 만들 때마다)
+function __naRangeInputs() {
+// 실리 public/scripts/openai.js 6776~6792
+    $('#temp_openai').on('input', function () {
+        oai_settings.temp_openai = Number($(this).val());
+        $('#temp_counter_openai').val(Number($(this).val()).toFixed(2));
+        saveSettingsDebounced();
+    });
+
+    $('#freq_pen_openai').on('input', function () {
+        oai_settings.freq_pen_openai = Number($(this).val());
+        $('#freq_pen_counter_openai').val(Number($(this).val()).toFixed(2));
+        saveSettingsDebounced();
+    });
+
+    $('#pres_pen_openai').on('input', function () {
+        oai_settings.pres_pen_openai = Number($(this).val());
+        $('#pres_pen_counter_openai').val(Number($(this).val()).toFixed(2));
+        saveSettingsDebounced();
+    });
+// 실리 public/scripts/openai.js 6824~6831
+    $('#openai_max_context').on('input', function () {
+        oai_settings.openai_max_context = Number($(this).val());
+        $('#openai_max_context_counter').val(`${$(this).val()}`);
+        calculateOpenRouterCost();
+        calculateElectronHubCost();
+        calculateChutesCost();
+        saveSettingsDebounced();
+    });
 }
 
 export { oai_settings, default_settings, migrateChatCompletionSettings, continue_postfix_types, biasCache, getStatusOpen, sortModelsBy, groupModelsByVendor, openrouter_website_model };

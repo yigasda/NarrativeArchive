@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { naLoad, naLoadPresets, naSendRequest } from '../plugin/st/naload.js';
-import { naStatus, __naStatusReset } from '../plugin/st/nastatus.js';
+import { naStatus, __naStatusReset, __naStatusIdle } from '../plugin/st/nastatus.js';
 import * as SCRIPT from '../plugin/st/public/script.js';
 import * as OAI from '../plugin/st/public/scripts/openai.js';
 import * as TG from '../plugin/st/public/scripts/textgen-settings.js';
@@ -14,7 +14,7 @@ import { TOKENIZER_SUPPORTED_KEY, __naSessionStorage } from '../plugin/st/public
 import { getStringHash } from '../plugin/st/public/scripts/utils.js';
 import { __naSetFetch } from '../plugin/st/public/naFetch.js';
 import { writePresets } from './stprofile2.cases.mjs';
-import { NAME1, NAME2, MESSAGES, TC_CUSTOM, TC_REPLY, GENERATE, settingsOf as settingsWith, pickModels } from './ststatus.cases.mjs';
+import { NAME1, NAME2, MESSAGES, TC_CUSTOM, TC_REPLY, GENERATE, settingsOf as settingsWith, pickModels, pickNums } from './ststatus.cases.mjs';
 
 let presetRoot = null;
 async function presets() {
@@ -35,6 +35,7 @@ export function snapshot() {
         online_status: SCRIPT.online_status,
         model_list: OAI.model_list,
         oai: pickModels(OAI.oai_settings),
+        nums: pickNums(OAI.oai_settings),
         tg: pickModels(TG.textgenerationwebui_settings),
         openRouterModels: TGM.openRouterModels,
         tok: __naSessionStorage.getItem(TOKENIZER_SUPPORTED_KEY),
@@ -50,13 +51,17 @@ export function snapshot() {
  */
 export async function runCase(c, send, { root = '', phase = null, logs = [] } = {}) {
     __naStatusReset();
+    // (a page that never connected with these settings: no Azure answer kept from another case — plugin/st/nastatus.js keeps it in the user folder)
+    if (root) fs.rmSync(path.join(root, 'NarrativeArchive', 'status-azure.json'), { force: true });
     const phases = [];
     const data = await presets();
     for (const [i, ph] of c.phases.entries()) {
         await phase?.(i);
         // (the worker's job: settings.json read again, then the connection — plugin/work.mjs withWorld)
-        naLoad(structuredClone(settingsOf(c)), data);
-        await naStatus({ root, send, now: () => T0 + ph.at, log: t => logs.push(t) });
+        const job = () => { naLoad(structuredClone(settingsOf(c)), data); return naStatus({ root, send, now: () => T0 + ph.at, log: t => logs.push(t) }); };
+        const r = await job();
+        // (asked again behind that job — it used the kept answer —: the job after it has the new one. The browser's connect, one job later)
+        if (r.refreshed) { await __naStatusIdle(); await job(); }
         phases.push(snapshot());
     }
     SCRIPT.__naSet({ name1: NAME1, name2: NAME2 });

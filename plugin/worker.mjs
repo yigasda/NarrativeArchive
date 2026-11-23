@@ -5,6 +5,17 @@ import './screen.mjs';
 import { parentPort, workerData } from 'node:worker_threads';
 
 const { root, bridge = null, schedule = true, from = 'plugin' } = workerData;
+// (a promise nobody waits for that fails — SillyTavern's own code starts some without await, as its getStatusTextgen does its model list
+//  loaders —: in the browser that is one "Uncaught (in promise)" line in the console and the page goes on. Node would end this thread.
+//  Written to SillyTavern's window instead, once for the same text, and the worker goes on)
+const uncaught = new Set();
+process.on('unhandledRejection', err => {
+    const why = String(err?.message || err);
+    if (uncaught.has(why)) return;
+    if (uncaught.size >= 100) uncaught.delete(uncaught.values().next().value);
+    uncaught.add(why);
+    console.error('[narrative-archive plugin]', `처리되지 않은 오류가 발생했습니다: ${why}`, err);
+});
 let seq = 0, writes = 0;
 const waiting = new Map();
 // 본체에 부탁하기 → 답

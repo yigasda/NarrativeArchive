@@ -30,6 +30,11 @@ export { ConnectionManagerRequestService };
 
 // script.js의 max_context 처음 값 (settings.json에 없을 때 실리 페이지가 쓰는 값)
 const MAX_CONTEXT_START = SCRIPT.max_context;
+// script.js 408 name1의 처음 값 (default_user_name)
+const NAME1_START = SCRIPT.name1;
+let pageName1 = NAME1_START;
+/** 마지막 naLoad의 settings.json으로 실리 페이지가 연 뒤의 name1 (script.js getSettings 7929~7932). 채팅을 열기 전의 이름이에요. */
+export const naPageName1 = () => pageName1;
 const obj = v => !!v && typeof v === 'object' && !Array.isArray(v);
 
 // 페이지를 열 때 한 번 하는 것 (실리 script.js firstLoadInit 694~):
@@ -381,7 +386,11 @@ function loadOpenAISettingsValues(oai_settings) {
     const nanoValue = oai_settings.nanogpt_provider;
     const nanoText = nanoValue == null ? '' : (typeof nanoValue === 'number' ? nanoValue + '' : nanoValue);
     oai_settings.nanogpt_provider = String(['', ...TGM.NANOGPT_PROVIDERS.map(p => p.id)].includes(nanoText) ? nanoText : '');
-    // 4404 → 6967~6977: #chat_completion_source의 고른 값(저장된 소스가 옵션에 있으면 그대로). 그 밖의 줄은 화면 · 상태 확인
+    // 4404 → 6967~6969: #chat_completion_source에 넣고 고른 옵션을 다시 읽어요 `String($(this).find(':selected').val())`.
+    // 옵션(index.html 2922~2954, 주석 처리된 CometAPI는 옵션이 아니에요)에 없으면 골라진 것이 없어서 'undefined'. 그 밖의 줄은 화면 · 상태 확인
+    const source = oai_settings.chat_completion_source;
+    const sourceText = source == null ? '' : (typeof source === 'number' ? source + '' : source);
+    oai_settings.chat_completion_source = String(OAI.__naChatCompletionSourceOptions.includes(sourceText) ? sourceText : undefined);
 }
 
 // 실리 extensions/connection-manager/index.js 27~30의 DEFAULT_SETTINGS
@@ -399,6 +408,11 @@ const CONNECTION_MANAGER_DEFAULT_SETTINGS = {
 export function naLoad(settings, data) {
     settings = obj(settings) ? settings : {};
     data = obj(data) ? data : undefined;
+    // script.js 7929~7932: name1 = settings.username (빈 글자가 아닐 때). 아니면 페이지를 연 그대로(script.js 408 default_user_name).
+    // 실리 페이지는 채팅을 열기 전에 이 이름으로 연결해요(연결 확인의 custom_include_headers 매크로 {{user}}: plugin/st/nastatus.js).
+    // 이 채팅의 이름은 일꾼이 그 뒤에 넣어요(plugin/work.mjs withWorld)
+    pageName1 = settings.username !== undefined && settings.username !== '' ? settings.username : NAME1_START;
+    SCRIPT.__naSet({ name1: pageName1 });
     // script.js 7935: accountStorage.init(settings?.accountStorage)
     ACC.__naSet({ accountStorage: settings.accountStorage });
     // script.js 7943~7945: amount_gen · max_context

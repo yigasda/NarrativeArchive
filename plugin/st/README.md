@@ -49,13 +49,26 @@ if (naFetchFailures.length) { /* 실리 서버 길 하나가 실패했어요(토
 import { naStatus } from './nastatus.js';
 naLoad(settings, await naLoadPresets(userRoot));
 await naStatus({ root: userRoot, send: bridge });   // 실리 브라우저의 연결 버튼과 같은 것: online_status · model_list · 글 완성 모델 목록 · 모델 보정
+await naStatus({ skip: true });                     // 실리 연결을 쓰지 않는 세계: 묻지 않고 페이지를 연 그대로만
 ```
 
 - 연결 확인은 옮긴 실리 함수 그대로예요(`openai.js getStatusOpen` · `textgen-settings.js getStatusTextgen` · `kai-settings.js getStatusKobold`, `main_api`의 것 하나).
-  `nastatus.js`(우리 것)는 그 함수가 부르는 실리 서버의 상태 길 답을 캐시하고(열쇠 = 사용자 폴더 · `main_api` · 길 · 실리 코드가 만든 몸통 그대로 · secrets.json의 파일 번호 · 시각 · 크기.
-  성공은 30분 · Azure는 다시 안 물음 · 실패는 1분 · 시간 제한 15초), 화면이 섞인 `saveModelList`의 값 부분을 실리 줄 번호를 적어 따라 해요.
-- 실패(꺼진 백엔드 · 옛 다리의 404 · 시간 초과)는 던지지 않아요: 상태는 `no_connection`, 목록은 그 열쇠로 전에 받은 좋은 답의 것(실리 브라우저처럼). 실리 창에는 열쇠마다 한 번.
-- 옮기지 않은 것: 지시 형식 · 문맥 프리셋 자동 고르기(`autoSelectInstructPreset`), koboldcpp · llama.cpp `/props`, `onModelChange`의 온도 · 문맥 깎기 — 브라우저가 그 자리에서 settings.json에 저장해서 서버는 그 값을 써요.
+  채팅 완성은 그 앞에 연결 버튼의 키 확인(`onConnectButtonClick` 6039~6093의 값 부분, `openai.js __naConnectGate`): 그 소스의 키가 없으면 연결하지 않아요.
+  키가 있는지는 다리의 `/api/secrets/read`가 알려 줘요(키 글 없이 id · 쓰는 것만). 옛 다리(404)면 키 확인 없이 지금까지처럼.
+- `nastatus.js`(우리 것)는 그 함수가 부르는 실리 서버의 상태 길 답을 캐시해요:
+  - 열쇠 = 사용자 폴더 · `main_api` · 길 · 실리 코드가 만든 몸통(`custom_include_headers`는 매크로를 풀기 전의 글 + 그때의 `{{user}}`) · 그 소스의 키 상태
+    (옛 다리면 secrets.json의 파일 번호 · 시각 · 크기. 없는 파일과 `{}`는 같아요).
+  - 다시 묻는 때: 로컬 백엔드(글 완성의 집 백엔드 · Kobold · 사용자 지정 주소 · 프록시) 30분, 클라우드 목록 24시간, 실패는 1분부터 두 배씩 30분까지.
+    Azure는 결과와 상관없이 다시 묻지 않아요(진짜 생성 요청이라 돈이 들어요). 사용자 폴더의 `NarrativeArchive/status-azure.json`에 둬서 일꾼을 다시 띄워도 그대로예요.
+    Azure 칸은 캐시에서 밀려나지 않아요(나머지는 오래 안 쓴 것부터 32개).
+  - 다시 물을 때는 기다리지 않아요: 그 일은 둔 답으로 하고 뒤에서 물어요. 처음 묻는 열쇠만 기다려요(시간 제한 15초, 열쇠마다 한 번).
+- 화면이 섞인 `saveModelList`의 값 부분을 실리 줄 번호를 적어 따라 해요. 고르기 칸의 change가 부르는 `onModelChange`는 모델 값 · 가드를 따라 하고,
+  가드를 지나면 그 뒷부분(문맥 · 온도 · 벌점 칸 고치기, 5695~6011)을 옮긴 그대로 불러요(`openai.js __naModelChangeRest`, 범위 칸 대역 `$`가 브라우저처럼 min · max · step으로 값을 고쳐요).
+  NanoGPT는 그 모델의 공급자 고르기(`syncNanoGptProvidersForModel` 417~460의 값 부분, 다리의 `/api/nanogpt/models/providers`)도.
+- 실패(꺼진 백엔드 · 옛 다리의 404 · 시간 초과 · 200 `{ error: true }`)는 던지지 않아요: 상태는 `no_connection`, 목록은 그 열쇠로 전에 받은 좋은 답의 것(실리 브라우저처럼).
+  실리 창에는 열쇠마다 이유마다 한 번, 실리가 주는 이유(Azure의 message 등)를 옮겨서.
+- 실리 로더(`getStatusTextgen`이 await 없이 부르는 모델 목록 로더)의 처리 안 된 오류는 브라우저 콘솔처럼 실리 창에 한 번 적고 계속해요(`textgen-settings.js`의 같은 이름 함수). 일꾼(`plugin/worker.mjs`)도 처리 안 된 오류에 멈추지 않아요.
+- 옮기지 않은 것: 지시 형식 · 문맥 프리셋 자동 고르기(`autoSelectInstructPreset`), koboldcpp · llama.cpp `/props` — 브라우저가 그 자리에서 settings.json에 저장해서 서버는 그 값을 써요.
 
 ## 파일
 
@@ -72,9 +85,10 @@ await naStatus({ root: userRoot, send: bridge });   // 실리 브라우저의 �
 | `public/scripts/power-user.js` | 같음 | 일부 (power_user 기본값, collapseNewlines). 대역: document · getComputedStyle(색 기본값은 빈 글자) |
 | `public/scripts/group-chats.js` | 같음 | 일부 (groups, selected_group, getGroupNames, getGroupCharacterCardsLazy) |
 | `public/scripts/instruct-mode.js` | 같음 | 일부 (instruct_presets, migrateInstructModeSettings, getInstructStoppingSequences, formatInstructModeChat · Prompt · SystemPrompt · Examples, getInstructMacros) |
-| `public/scripts/openai.js` | 같음 | 일부 (chat_completion_sources, parseExampleIntoIndividual, getChatCompletionModel, 연결 확인 getStatusOpen(화면 · 로그 줄 빼고) · sortModelsBy · groupModelsByVendor). oai_settings는 기본값 없이 `__naSet`으로. 대역: updateFeatureSupportFlags · saveModelList(값 부분은 `nastatus.js`). index.html의 고정 모델 칸 옵션(#model_openai_select · #model_google_select)을 gen.mjs가 뽑아 둬요 |
+| `public/scripts/openai.js` | 같음 | 일부 (chat_completion_sources, parseExampleIntoIndividual, getChatCompletionModel, 연결 확인 getStatusOpen(화면 · 로그 줄 빼고) · sortModelsBy · groupModelsByVendor, 모델의 최대 문맥 · 온도(5083~5470), onModelChange 뒷부분(5695~6011) · 연결 버튼의 키 확인(6039~6093) · 범위 칸 input 처리기(6776~6831)를 우리 함수로 감싼 것). oai_settings는 기본값 없이 `__naSet`으로. 대역: updateFeatureSupportFlags · saveModelList(값 부분은 `nastatus.js`) · 가격 글 셋 · `$`(범위 칸 넷: 브라우저의 값 고치기를 10진수로). index.html의 고정 모델 칸 옵션(#model_openai_select · #model_google_select)과 #chat_completion_source의 옵션(주석 안의 것 빼고)을 gen.mjs가 뽑아 둬요 |
 | `public/scripts/nai-settings.js` | 같음 | 일부 (nai_settings, getKayraMaxContextTokens) |
-| `public/scripts/textgen-settings.js` | 같음 | 일부 (createTextGenGenerationData와 딸린 것 · 금지 토큰 · 로짓 바이어스 · 서버 주소 · 연결 확인 getStatusTextgen(프리셋 자동 고르기 · /props · 화면 · 로그 줄 빼고)). 대역: localStorage(Mancer 기본 주소) · document(index.html 1503 dynatemp 종류) · toastr · sessionStorage(tokenizers.js의 것) |
+| `public/scripts/textgen-settings.js` | 같음 | 일부 (createTextGenGenerationData와 딸린 것 · 금지 토큰 · 로짓 바이어스 · 서버 주소 · 연결 확인 getStatusTextgen(프리셋 자동 고르기 · /props · 화면 · 로그 줄 빼고)). 대역: localStorage(Mancer 기본 주소) · document(index.html 1503 dynatemp 종류) · toastr · sessionStorage(tokenizers.js의 것) · 모델 목록 로더(실리 것을 그대로 부르고, 처리 안 된 실패를 실리 창에 한 번) |
+| `public/scripts/secrets.js` | 같음 | 일부 (SECRET_KEYS, secret_state: 키 확인에 씀. 값은 일꾼이 다리의 /api/secrets/read로 채워요 — 키 글 없이) |
 | `public/scripts/extensions.js` | 같음 | 일부 (extension_settings, extensionNames, findExtension). 대역: saveMetadataDebounced |
 | `public/scripts/variables.js` | 같음 | 일부 (지역 · 전역 변수 get/set/add/inc/dec/has/del, getVariableMacros) |
 | `public/scripts/st-context.js` | 같음 | 일부 (getContext()의 `variables` 객체만, `variables`로 내보냄) |
@@ -91,8 +105,8 @@ await naStatus({ root: userRoot, send: bridge });   // 실리 브라우저의 �
 | `public/scripts/slash-commands.js` | 같음 | 일부 (CONNECT_API_MAP · setupConnectAPIMap) |
 | `public/scripts/logit-bias.js` · `kai-settings.js` · `sysprompt.js` | 같음 | 일부 (BIAS_CACHE · getLogitBiasListResult / 프리셋 목록 · kai_flags · 연결 확인 getStatusKobold · setKoboldFlags(화면 · 로그 줄 빼고) / system_prompts) |
 | `public/scripts/textgen-models.js` | 같음 | 일부 (공급자 목록, 모델 목록 전역 10개, 연결 확인이 부르는 로더의 값 줄(목록 · 정렬 · 목록에 없으면 첫 모델), 토크나이저 고르기) |
-| `nastatus.js` | 우리 것 | 연결 확인의 상태 답 캐시 · `saveModelList` 값 부분 · 실리 창 한 줄 (위 "연결 확인") |
-| `public/scripts/util/AccountStorage.js` | 같음 | 대역 (getItem은 늘 null) |
+| `nastatus.js` | 우리 것 | 연결 확인의 상태 답 캐시 · 키 확인 · `saveModelList` 값 부분 · NanoGPT 공급자 · 실리 창 한 줄 (위 "연결 확인") |
+| `public/scripts/util/AccountStorage.js` | 같음 | 일부 (1~140 그대로. 145 `accountStorage`는 let으로 두고 일꾼이 settings.json의 accountStorage로 init — 실리 script.js 7935. `Proxy_SkipConfirm_*`이 읽혀서 프록시 연결이 돼요) |
 | `public/scripts/RossAscends-mods.js` | 같음 | 대역 (isMobile은 늘 false) |
 | `public/scripts/slash-commands/SlashCommandClosure.js` | 같음 | 대역 (빈 클래스, convertValueType의 instanceof에만) |
 
@@ -102,3 +116,11 @@ await naStatus({ root: userRoot, send: bridge });   // 실리 브라우저의 �
 - `{{lastGenerationType}}`은 eventSource가 대역이라 늘 빈 글자예요. `{{outlet}}`은 `extension_prompts`를 채워야 나와요.
 - 시각 매크로(`{{time}}` · `{{date}}` …)는 서버의 시간대와 moment 언어를 따라요.
 - 변수는 서버에서 바꿔도 저장하지 않아요(saveMetadataDebounced · saveSettingsDebounced는 아무것도 안 함).
+- 연결 확인 (실리 브라우저와 남는 차이):
+  - 실리 브라우저는 페이지를 열 때(자동 연결) · 연결 버튼을 누를 때 한 번 받아 두고 다시 묻지 않아요. 서버는 위의 때마다 다시 묻고, 다시 물은 답은 그다음 일부터 써요
+    (다시 묻는 일 자체는 둔 답으로 해요). 자동 연결이 꺼져 있고 버튼을 누르지 않은 브라우저는 연결 안 됨이지만, 서버는 늘 지금 설정으로 연결한 것처럼 해요.
+  - 처음 묻는 열쇠는 15초까지 기다리고, 그래도 답이 없으면 실패로 봐요(연결 안 됨). 브라우저는 답이 올 때까지 전 상태를 들고 있어요.
+  - 정렬의 `localeCompare`는 서버 Node의 언어(LANG)를 따라요. 브라우저는 그 브라우저 언어예요: 한글 · 악센트가 든 모델 이름이면 "첫 모델"이 다를 수 있어요(ASCII id는 같아요).
+  - Mancer 서버 주소는 늘 기본 주소예요(실리는 브라우저 localStorage의 `mancer_server`).
+  - 페이지를 열 때 화면이 모델 칸에 change를 일으켜 고치는 문맥 · 온도(소스를 바꿨을 때 · 처음 열 때의 `onModelChange`)는 서버가 하지 않아요. 연결할 때의 것만 해요.
+  - `online_status` 글은 영어예요(브라우저는 그 언어로 번역).

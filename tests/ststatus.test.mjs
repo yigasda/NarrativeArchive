@@ -1,7 +1,7 @@
 // 서버의 연결 확인(plugin/st/nastatus.js: 실리 1.19.1 getStatusOpen · getStatusTextgen · getStatusKobold를 옮긴 것 + 상태 답 캐시).
 // 1) 기대값(tests/fixtures/ststatus-expected.json)은 실리 1.19.1 브라우저가 자기 연결 버튼으로 연결한 뒤 들고 있던 것과 그 뒤에 만든 요청이에요:
 //    tools/st/oracle-status.mjs가 진짜 실리 · 가짜 공급자로 만들고 그 자리에서 서버 것과 대 봐요. 실리 서버가 준 답(calls)도 그때 것이에요. 지어낸 값이 아니에요.
-// 2) 캐시 규칙: 가짜 다리(send)와 시계로. 예시 캐릭터만.
+// 2) 캐시 · 키 확인 · 로그 규칙: 가짜 다리(send)와 시계로. 예시 캐릭터만. 고친 것마다 그것을 깨면 실패하는 테스트예요(검토 st1 · st2, 2026-11-23).
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -10,12 +10,13 @@ import path from 'node:path';
 import { CASES, callKey } from './ststatus.cases.mjs';
 import { runCase } from './ststatus.run.mjs';
 import { naLoad } from '../plugin/st/naload.js';
-import { naStatus, __naStatusReset, STATUS_OK_MS, STATUS_FAIL_MS } from '../plugin/st/nastatus.js';
+import { naStatus, __naStatusReset, __naStatusIdle, STATUS_OK_MS, STATUS_CLOUD_MS, STATUS_FAIL_MS, STATUS_FAIL_MAX_MS } from '../plugin/st/nastatus.js';
 import * as SCRIPT from '../plugin/st/public/script.js';
 import * as OAI from '../plugin/st/public/scripts/openai.js';
 import * as TG from '../plugin/st/public/scripts/textgen-settings.js';
 import * as TGM from '../plugin/st/public/scripts/textgen-models.js';
 import { __naSetFetch, naFetchFailures } from '../plugin/st/public/naFetch.js';
+import { getStringHash } from '../plugin/st/public/scripts/utils.js';
 
 const EXPECTED = JSON.parse(fs.readFileSync(new URL('./fixtures/ststatus-expected.json', import.meta.url), 'utf8'));
 const tmpRoot = () => { const d = fs.mkdtempSync(path.join(os.tmpdir(), 'na-ststatus-root-')); process.once('exit', () => fs.rmSync(d, { recursive: true, force: true })); return d; };
@@ -46,27 +47,37 @@ for (const c of CASES) {
 
 // ---------- 캐시 규칙 ----------
 const OR = [{ id: 'ren/b', name: 'B Ren', context_length: 99 }, { id: 'ren/a', name: 'A Ren', context_length: 10 }];
-// a bridge to SillyTavern's own status handler, answering what answer(url, init, n) says
-function bridge(answer) {
-    const calls = [];
+const SECRETS_ROUTE = '/api/secrets/read';
+// a bridge to SillyTavern's own handlers, answering what answer(url, init, n) says. The key state (/api/secrets/read): `secrets` (a value or a
+// function), or 404 when not given — an older bridge: no key check, as before
+function bridge(answer, { secrets } = {}) {
+    const calls = [], secretCalls = [];
+    const json = (body, status = 200, headers = {}) => new Response(typeof body === 'string' ? body : JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', ...headers } });
     const send = async (url, init) => {
+        if (url === SECRETS_ROUTE) {
+            secretCalls.push(url);
+            return secrets === undefined ? json('Not Found', 404) : json(typeof secrets === 'function' ? secrets() : secrets);
+        }
         calls.push({ url, body: init?.body ?? null });
         const a = typeof answer === 'function' ? await answer(url, init, calls.length) : answer;
         if (a instanceof Error) throw a;
-        return new Response(typeof a.body === 'string' ? a.body : JSON.stringify(a.body), { status: a.status ?? 200, headers: { 'Content-Type': 'application/json', ...(a.headers || {}) } });
+        return json(a.body, a.status ?? 200, a.headers);
     };
-    return { send, calls };
+    return { send, calls, secretCalls };
 }
-const ccSettings = oai => ({ main_api: 'openai', oai_settings: { preset_settings_openai: 'Default', ...oai } });
+const ccSettings = (oai, more = {}) => ({ main_api: 'openai', ...more, oai_settings: { preset_settings_openai: 'Default', ...oai } });
 const tgSettings = tg => ({ main_api: 'textgenerationwebui', textgenerationwebui_settings: tg });
 // one worker job: settings.json read, then the connection (plugin/work.mjs withWorld)
 async function job(settings, b, t, o = {}) {
     naLoad(structuredClone(settings));
     return naStatus({ send: b.send, now: () => t, ...o });
 }
-const MIN = 60 * 1000;
+const MIN = 60 * 1000, HOUR = 60 * MIN;
+// (a promise that never settles unless let go: a backend that hangs)
+const hanging = () => { let release; const p = new Promise(ok => { release = ok; }); return { p, release }; };
+const within = (p, ms, what) => Promise.race([p, new Promise((_, no) => { const t = setTimeout(() => no(new Error(`${what}: ${ms}ms 넘게 걸렸어요`)), ms); t.unref?.(); })]);
 
-test('캐시: 설정이 그대로면 30분 동안 다시 묻지 않고, 30분이 지나면 다시 물어요. 정렬은 일마다 받아 둔 답으로', async () => {
+test('캐시: 설정이 그대로면 다시 묻지 않아요 — 클라우드 목록은 24시간, 로컬 백엔드(사용자 지정 주소)는 30분. 정렬은 일마다 받아 둔 답으로', async () => {
     __naStatusReset();
     const b = bridge({ body: { data: OR } });
     const s = ccSettings({ chat_completion_source: 'openrouter', openrouter_model: 'ren/a' });
@@ -75,14 +86,23 @@ test('캐시: 설정이 그대로면 30분 동안 다시 묻지 않고, 30분이
     assert.deepEqual(b.calls[0], { url: '/api/backends/chat-completions/status', body: JSON.stringify({ reverse_proxy: '', proxy_password: '', chat_completion_source: 'openrouter' }) });
     assert.deepEqual(OAI.model_list.map(m => m.id), ['ren/a', 'ren/b']);
     assert.equal(SCRIPT.online_status, 'Valid');
-    await job(s, b, STATUS_OK_MS - 1);
+    await job(s, b, STATUS_CLOUD_MS - 1);
     assert.equal(b.calls.length, 1);
     // (sort_models is not part of the key: the kept reply is sorted again — openai.js sortModelsBy)
     await job({ ...s, oai_settings: { ...s.oai_settings, sort_models: 'context_length' } }, b, 5 * MIN);
     assert.equal(b.calls.length, 1);
     assert.deepEqual(OAI.model_list.map(m => m.id), ['ren/b', 'ren/a']);
-    await job(s, b, STATUS_OK_MS + 1);
+    await job(s, b, STATUS_CLOUD_MS + 1);
+    await __naStatusIdle();
     assert.equal(b.calls.length, 2);
+    // (a backend of one's own: it can change its models without a settings change)
+    const c = ccSettings({ chat_completion_source: 'custom', custom_url: 'http://127.0.0.1:9/v1' });
+    await job(c, b, 0);
+    await job(c, b, STATUS_OK_MS - 1);
+    assert.equal(b.calls.length, 3);
+    await job(c, b, STATUS_OK_MS + 1);
+    await __naStatusIdle();
+    assert.equal(b.calls.length, 4);
 });
 
 test('캐시 열쇠: 상태 몸통이 바뀌면(주소 · 소스) 다시 묻고, 전의 것으로 돌아가면 그 답을 다시 써요. main_api를 바꾸면 그 API의 길로', async () => {
@@ -100,46 +120,142 @@ test('캐시 열쇠: 상태 몸통이 바뀌면(주소 · 소스) 다시 묻고,
     assert.equal(b.calls.at(-1).body, JSON.stringify({ api_server: 'http://127.0.0.1:5000', api_type: 'ooba' }));
 });
 
-test('캐시 열쇠: 그 사용자의 secrets.json이 바뀌면(키를 저장함) 다시 물어요', async () => {
+test('캐시 열쇠(옛 다리: 키 상태를 못 읽어요): secrets.json이 바뀌면(키를 저장함) 다시 물어요. 실리가 빈 파일({})을 만든 것은 바뀐 게 아니에요', async () => {
     __naStatusReset();
     const root = tmpRoot();
     const b = bridge({ body: { data: OR } });
     const s = ccSettings({ chat_completion_source: 'openrouter' });
     await job(s, b, 0, { root });
-    fs.writeFileSync(path.join(root, 'secrets.json'), JSON.stringify({ api_key_openrouter: [{ id: '1', value: 'na-test-not-a-key', active: true }] }));
+    // (SillyTavern makes an empty secrets.json the first time it reads one — secrets.js 127~130)
+    fs.writeFileSync(path.join(root, 'secrets.json'), '{}');
     await job(s, b, 1, { root });
+    assert.equal(b.calls.length, 1);
+    fs.writeFileSync(path.join(root, 'secrets.json'), JSON.stringify({ api_key_openrouter: [{ id: '1', value: 'na-test-not-a-key', active: true }] }));
     await job(s, b, 2, { root });
+    await job(s, b, 3, { root });
     assert.equal(b.calls.length, 2);
     fs.writeFileSync(path.join(root, 'secrets.json.tmp'), JSON.stringify({ api_key_openrouter: [{ id: '2', value: 'na-test-other', active: true }] }));
     fs.renameSync(path.join(root, 'secrets.json.tmp'), path.join(root, 'secrets.json'));
-    await job(s, b, 3, { root });
+    await job(s, b, 4, { root });
     assert.equal(b.calls.length, 3);
 });
 
-test('실패는 1분 뒤에 다시 물어요 (그 사이에는 묻지 않아요). 실리 창에는 한 번만', async () => {
+test('캐시 열쇠(다리가 키 상태를 줘요): 그 소스의 키를 바꾸면 다시 묻고, 다른 공급자의 키를 저장한 것으로는 다시 묻지 않아요 (Azure의 돈)', async () => {
+    __naStatusReset();
+    const root = tmpRoot();
+    let state = { api_key_openrouter: [{ id: 'k1', active: true }], api_key_claude: null };
+    const b = bridge({ body: { data: OR } }, { secrets: () => state });
+    const save = () => fs.writeFileSync(path.join(root, 'secrets.json'), JSON.stringify({ n: b.secretCalls.length, pad: 'x'.repeat(b.secretCalls.length + 3) }));
+    const s = ccSettings({ chat_completion_source: 'openrouter' });
+    save();
+    await job(s, b, 0, { root });
+    state = { ...state, api_key_claude: [{ id: 'c1', active: true }] };
+    save();
+    await job(s, b, 1, { root });
+    assert.equal(b.calls.length, 1);
+    assert.equal(b.secretCalls.length, 2);
+    state = { ...state, api_key_openrouter: [{ id: 'k1', active: false }, { id: 'k2', active: true }] };
+    save();
+    await job(s, b, 2, { root });
+    assert.equal(b.calls.length, 2);
+    // (the key state is read again only when secrets.json changed)
+    await job(s, b, 3, { root });
+    assert.equal(b.secretCalls.length, 3);
+});
+
+test('실패는 1분 · 2분 · 4분 … 30분 뒤에 다시 물어요 (꺼진 백엔드를 매분 두드리지 않아요). 실리 창에는 한 번만', async () => {
     __naStatusReset();
     const logs = [];
     const b = bridge({ status: 500, body: 'Internal Server Error' });
-    const s = ccSettings({ chat_completion_source: 'openrouter' });
-    await job(s, b, 0, { log: t => logs.push(t) });
-    assert.equal(SCRIPT.online_status, 'no_connection');
-    await job(s, b, STATUS_FAIL_MS - 1, { log: t => logs.push(t) });
-    assert.equal(b.calls.length, 1);
-    await job(s, b, STATUS_FAIL_MS + 1, { log: t => logs.push(t) });
-    assert.equal(b.calls.length, 2);
+    const s = ccSettings({ chat_completion_source: 'custom', custom_url: 'http://127.0.0.1:9/v1' });
+    const at = [];
+    for (let m = 0; m <= 240; m++) {
+        const before = b.calls.length;
+        await job(s, b, m * MIN, { log: t => logs.push(t) });
+        await __naStatusIdle();
+        if (b.calls.length > before) at.push(m);
+    }
+    // (Custom: the browser writes "Status check bypassed" even when it fails — getStatusOpen 4539~4542, 4568~4570)
+    assert.equal(SCRIPT.online_status, 'Status check bypassed');
+    const gaps = at.slice(1).map((m, i) => m - at[i]);
+    assert.deepEqual(gaps.slice(0, 6), [1, 2, 4, 8, 16, 30]);
+    assert.ok(gaps.every(g => g <= STATUS_FAIL_MAX_MS / MIN), JSON.stringify(gaps));
     assert.deepEqual(logs, ['상태를 가져오는 중 오류가 발생했습니다: /api/backends/chat-completions/status (500)']);
+    assert.equal(at[1] - at[0], STATUS_FAIL_MS / MIN);
 });
 
-test('Azure는 성공하면 설정이 바뀔 때까지 다시 묻지 않아요 (상태 확인이 진짜 생성 요청이라 돈이 들어요). 모델은 목록의 것', async () => {
+test('다시 물을 때는 기다리지 않아요: 백엔드가 멈춰도 일은 둔 답으로 바로 해요 (뒤에서 물어요). 처음 묻는 열쇠만 답을 기다려요', async () => {
     __naStatusReset();
+    let hang = null;
+    const b = bridge(() => (hang ? hang.p.then(() => ({ body: { data: [{ id: 'ren-new' }] } })) : { body: { data: [{ id: 'ren-old' }] } }));
+    const s = ccSettings({ chat_completion_source: 'custom', custom_url: 'http://127.0.0.1:9/v1' });
+    const first = await job(s, b, 0);
+    assert.equal(first.waited, true);
+    hang = hanging();
+    const r = await within(job(s, b, STATUS_OK_MS + 1), 2000, '멈춘 백엔드를 기다렸어요');
+    assert.deepEqual([r.fetched, r.waited, r.refreshed, r.ok], [true, false, true, true]);
+    assert.equal(SCRIPT.online_status, 'Valid');
+    assert.deepEqual(OAI.model_list.map(m => m.id), ['ren-old']);
+    // (another job while it is still asking: no second call)
+    await within(job(s, b, STATUS_OK_MS + 2), 2000, '멈춘 백엔드를 기다렸어요');
+    assert.equal(b.calls.length, 2);
+    hang.release();
+    await __naStatusIdle();
+    await job(s, b, STATUS_OK_MS + 3);
+    assert.deepEqual(OAI.model_list.map(m => m.id), ['ren-new']);
+});
+
+test('Azure는 설정이 바뀔 때만 한 번 물어요 — 성공이든 실패 · 시간 초과든 (상태 확인이 진짜 생성 요청이라 돈이 들어요). 모델은 목록의 것', async () => {
+    __naStatusReset();
+    const az = { chat_completion_source: 'azure_openai', azure_base_url: 'https://ren.example', azure_deployment_name: 'ren-dep', azure_api_version: '2024-10-21', azure_openai_model: 'ren-saved' };
     const b = bridge({ body: { data: [{ id: 'ren-azure-4' }] } });
-    const s = ccSettings({ chat_completion_source: 'azure_openai', azure_base_url: 'https://ren.example', azure_deployment_name: 'ren-dep', azure_api_version: '2024-10-21', azure_openai_model: 'ren-saved' });
+    const s = ccSettings(az);
     await job(s, b, 0);
-    await job(s, b, 5 * 60 * MIN);
+    await job(s, b, 5 * 24 * HOUR);
+    await __naStatusIdle();
     assert.equal(b.calls.length, 1);
     assert.equal(OAI.oai_settings.azure_openai_model, 'ren-azure-4');
-    await job({ ...s, oai_settings: { ...s.oai_settings, azure_deployment_name: 'ren-dep-2' } }, b, 5 * 60 * MIN + 1);
+    await job(ccSettings({ ...az, azure_deployment_name: 'ren-dep-2' }), b, 5 * 24 * HOUR + 1);
     assert.equal(b.calls.length, 2);
+    // (SillyTavern answers 500 after the paid probe — chat-completions.js 2009~2011 —, or our time limit ran out while it still runs)
+    for (const [what, answer, o] of [['500', { status: 500, body: { error: true, message: 'Failed to connect to the Azure endpoint.' } }, {}], ['시간 초과', (url, init) => new Promise((ok, no) => init.signal.addEventListener('abort', () => no(new Error('aborted')))), { timeoutMs: 20 }]]) {
+        __naStatusReset();
+        const logs = [];
+        const f = bridge(answer);
+        for (let i = 0; i < 5; i++) { await job(s, f, i * 3 * HOUR, { ...o, log: t => logs.push(t) }); await __naStatusIdle(); }
+        assert.equal(f.calls.length, 1, what);
+        assert.equal(logs.length, 1, what);
+    }
+});
+
+test('Azure 답은 밀려나지 않고(다른 열쇠가 많아도), 일꾼을 다시 띄워도 다시 묻지 않아요 (사용자 폴더에 둬요). 자주 쓰는 열쇠도 밀려나지 않아요', async () => {
+    __naStatusReset();
+    const root = tmpRoot();
+    const b = bridge(() => ({ body: { data: [{ id: 'ren-x' }] } }));
+    const az = ccSettings({ chat_completion_source: 'azure_openai', azure_base_url: 'https://ren.example', azure_deployment_name: 'd', azure_api_version: '2024-10-21' });
+    const hot = ccSettings({ chat_completion_source: 'custom', custom_url: 'http://127.0.0.1:9/hot' });
+    // (no user folder here: only the memory cache keeps it)
+    await job(az, b, 0);
+    await job(hot, b, 0);
+    for (let i = 0; i < 40; i++) {
+        await job(ccSettings({ chat_completion_source: 'custom', custom_url: `http://127.0.0.1:9/${i}` }), b, 1 + i);
+        await job(hot, b, 1 + i);
+    }
+    let n = b.calls.length;
+    assert.equal(n, 42);
+    await job(az, b, 100);
+    await job(hot, b, 100);
+    assert.equal(b.calls.length, n);
+    // (a new worker — SillyTavern restarted, or the extension updated —: the answer kept in the user folder)
+    __naStatusReset();
+    await job(az, b, 0, { root });
+    n += 1;
+    assert.equal(b.calls.length, n);
+    __naStatusReset();
+    await job(az, b, 0, { root });
+    assert.equal(b.calls.length, n);
+    assert.equal(OAI.oai_settings.azure_openai_model, 'ren-x');
+    assert.ok(!fs.readFileSync(path.join(root, 'NarrativeArchive', 'status-azure.json'), 'utf8').includes('ren.example'), '열쇠 글은 해시로만');
 });
 
 test('옛 다리(상태 길이 404): 실패와 같아요. 열쇠마다 실리 창에 한 번만, 요청은 지금처럼 만들어요(막지 않아요)', async () => {
@@ -147,9 +263,9 @@ test('옛 다리(상태 길이 404): 실패와 같아요. 열쇠마다 실리 �
     const logs = [];
     const b = bridge({ status: 404, body: 'Not Found' });
     const s = ccSettings({ chat_completion_source: 'openrouter', openrouter_model: 'ren/a' });
-    for (let i = 0; i < 3; i++) await job(s, b, i * 2 * MIN, { log: t => logs.push(t) });
-    await job(tgSettings({ type: 'ooba', server_urls: { ooba: 'http://127.0.0.1:5000' } }), b, 10 * MIN, { log: t => logs.push(t) });
-    await job(tgSettings({ type: 'ooba', server_urls: { ooba: 'http://127.0.0.1:5000' } }), b, 13 * MIN, { log: t => logs.push(t) });
+    for (let i = 0; i < 3; i++) { await job(s, b, i * 2 * HOUR, { log: t => logs.push(t) }); await __naStatusIdle(); }
+    await job(tgSettings({ type: 'ooba', server_urls: { ooba: 'http://127.0.0.1:5000' } }), b, 10 * HOUR, { log: t => logs.push(t) });
+    await job(tgSettings({ type: 'ooba', server_urls: { ooba: 'http://127.0.0.1:5000' } }), b, 13 * HOUR, { log: t => logs.push(t) });
     assert.deepEqual(logs, [
         '실리 서버의 /api/backends/chat-completions/status를 쓸 수 없습니다. 서버 플러그인을 업데이트하고 실리를 다시 시작하세요.',
         '실리 서버의 /api/backends/text-completions/status를 쓸 수 없습니다. 서버 플러그인을 업데이트하고 실리를 다시 시작하세요.',
@@ -157,7 +273,7 @@ test('옛 다리(상태 길이 404): 실패와 같아요. 열쇠마다 실리 �
     assert.equal(SCRIPT.online_status, 'no_connection');
     // (nothing of the failed status stays to stop the request: the same request as before)
     assert.deepEqual(naFetchFailures, []);
-    await job(s, b, 14 * MIN, { log: t => logs.push(t) });
+    await job(s, b, 14 * HOUR, { log: t => logs.push(t) });
     assert.deepEqual(OAI.model_list, []);
     __naSetFetch(async () => new Response('{}', { status: 200 }));
     const body = await OAI.createGenerationParameters(structuredClone(OAI.oai_settings), OAI.getChatCompletionModel(), 'quiet', [{ role: 'user', content: 'hi' }]);
@@ -174,7 +290,10 @@ test('백엔드가 꺼지면: 상태는 no_connection, 목록 · 고친 모델�
     assert.equal(SCRIPT.online_status, 'ren/a');
     assert.deepEqual(TGM.openRouterModels.map(m => m.id), ['ren/a', 'ren/b']);
     up = false;
-    const r = await job(s, b, STATUS_OK_MS + 1);
+    // (that job still uses the kept answer — asked behind it —, the next one has the failed one)
+    await job(s, b, STATUS_CLOUD_MS + 1);
+    await __naStatusIdle();
+    const r = await job(s, b, STATUS_CLOUD_MS + 2);
     assert.equal(b.calls.length, 2);
     assert.equal(r.replayed, true);
     assert.equal(SCRIPT.online_status, 'no_connection');
@@ -199,6 +318,130 @@ test('모델 보정: 고른 모델이 공급자 목록에 없으면 실리처럼
     assert.equal(OAI.oai_settings.electronhub_model, 'ren-2');
 });
 
+test('모델 보정의 문맥 · 온도 칸: onModelChange 뒷부분 그대로 (첫 모델의 문맥 크기로 깎고, 범위 칸이 값을 step 단위로 고쳐요: 0.705 → 0.71)', async () => {
+    __naStatusReset();
+    const w = bridge({ body: { data: [{ id: '@cf/ren/w-a', properties: [{ property_id: 'context_window', value: '4096' }] }, { id: '@cf/ren/w-b' }] } });
+    await job(ccSettings({ chat_completion_source: 'workers_ai', workers_ai_model: 'ren-gone', workers_ai_account_id: 'ren-acct', openai_max_context: 8000, temp_openai: 4.7 }), w, 0);
+    assert.deepEqual([OAI.oai_settings.workers_ai_model, OAI.oai_settings.openai_max_context, OAI.oai_settings.temp_openai], ['@cf/ren/w-a', 4096, 4.7]);
+    const a = bridge({ body: { data: [{ id: 'ren/a1', type: 'chat-completion', info: { name: 'Ren A', contextLength: 900 } }] } });
+    await job(ccSettings({ chat_completion_source: 'aimlapi', aimlapi_model: '', openai_max_context: 4000, temp_openai: 0.705, freq_pen_openai: 0.125, pres_pen_openai: -0.375 }), a, 0);
+    assert.deepEqual([OAI.oai_settings.aimlapi_model, OAI.oai_settings.openai_max_context, OAI.oai_settings.temp_openai, OAI.oai_settings.freq_pen_openai, OAI.oai_settings.pres_pen_openai], ['ren/a1', 900, 0.71, 0.13, -0.37]);
+    // (the slider's min: 512 — index.html 640)
+    const c = bridge({ body: { data: [{ id: 'ren-c-1' }] } });
+    await job(ccSettings({ chat_completion_source: 'custom', custom_url: 'http://127.0.0.1:9/v1', custom_model: '', openai_max_context: 300, temp_openai: 2.5 }), c, 0);
+    assert.deepEqual([OAI.oai_settings.openai_max_context, OAI.oai_settings.temp_openai], [512, 2]);
+    // (OpenRouter's guard: a model not in the list is not taken — onModelChange returns before these lines)
+    await job(ccSettings({ chat_completion_source: 'openrouter', openrouter_model: 'ren/gone', openai_max_context: 300 }), bridge({ body: { data: OR } }), 0);
+    assert.equal(OAI.oai_settings.openai_max_context, 300);
+});
+
+test('NanoGPT 공급자: 그 모델이 공급자 고르기를 못 하면 실리처럼 비워요. 하면 그대로. 그 길이 없는 옛 다리면 그대로', async () => {
+    __naStatusReset();
+    const nano = (providers) => bridge((url) => (url === '/api/nanogpt/models/providers' ? (providers ? { body: providers } : { status: 404, body: 'Not Found' }) : { body: { data: [{ id: 'ren-n-1', name: 'Zed' }] } }));
+    const s = ccSettings({ chat_completion_source: 'nanogpt', nanogpt_model: 'ren-n-1', nanogpt_provider: 'akash' });
+    const no = nano({ supportsProviderSelection: false, providers: [] });
+    await job(s, no, 0);
+    assert.equal(OAI.oai_settings.nanogpt_provider, '');
+    assert.deepEqual(no.calls.at(-1), { url: '/api/nanogpt/models/providers', body: JSON.stringify({ model: 'ren-n-1' }) });
+    // (kept: asked once for the same model)
+    await job(s, no, 1);
+    assert.equal(no.calls.length, 2);
+    assert.equal(OAI.oai_settings.nanogpt_provider, '');
+    __naStatusReset();
+    await job(s, nano({ supportsProviderSelection: true, providers: ['akash'] }), 0);
+    assert.equal(OAI.oai_settings.nanogpt_provider, 'akash');
+    __naStatusReset();
+    await job(s, nano(null), 0);
+    assert.equal(OAI.oai_settings.nanogpt_provider, 'akash');
+});
+
+test('키 확인: 그 소스의 키가 저장돼 있지 않으면 실리 연결 버튼처럼 연결하지 않아요(묻지 않음, 실리 창에 한 번). 키가 생기면 연결해요', async () => {
+    __naStatusReset();
+    const root = tmpRoot();
+    const logs = [];
+    let state = { api_key_openrouter: null };
+    const b = bridge({ body: { data: OR } }, { secrets: () => state });
+    const s = ccSettings({ chat_completion_source: 'openrouter', openrouter_model: 'ren/a' });
+    for (let i = 0; i < 3; i++) { const r = await job(s, b, i, { root, log: t => logs.push(t) }); assert.equal(r.noKey, true); }
+    assert.equal(b.calls.length, 0);
+    assert.equal(SCRIPT.online_status, 'no_connection');
+    assert.deepEqual(OAI.model_list, []);
+    assert.deepEqual(logs, ['openrouter에 저장된 키가 없습니다.']);
+    // (keyless: Custom · Pollinations anonymous. A proxy source with a proxy address — onConnectButtonClick 6089)
+    await job(ccSettings({ chat_completion_source: 'custom', custom_url: 'http://127.0.0.1:9/v1' }), b, 3, { root });
+    await job(ccSettings({ chat_completion_source: 'pollinations', pollinations_endpoint: 'anonymous' }), b, 4, { root });
+    await job(ccSettings({ chat_completion_source: 'openai', reverse_proxy: 'http://127.0.0.1:9/p' }, { proxies: [{ name: 'P', url: 'http://127.0.0.1:9/p', password: '' }], selected_proxy: { name: 'P', url: 'http://127.0.0.1:9/p', password: '' }, accountStorage: { [`Proxy_SkipConfirm_${getStringHash('http://127.0.0.1:9/p')}`]: 'true' } }), b, 5, { root });
+    assert.equal(b.calls.length, 3);
+    state = { api_key_openrouter: [{ id: 'k1', active: true }] };
+    fs.writeFileSync(path.join(root, 'secrets.json'), JSON.stringify({ x: 'a key now' }));
+    await job(s, b, 6, { root, log: t => logs.push(t) });
+    assert.equal(b.calls.length, 4);
+    assert.equal(SCRIPT.online_status, 'Valid');
+    // (an older bridge — no key state —: checked as before)
+    __naStatusReset();
+    const old = bridge({ body: { data: OR } });
+    await job(s, old, 0);
+    assert.equal(old.calls.length, 1);
+});
+
+test('연결할 때의 {{user}}: 실리 페이지처럼 settings.json의 username (채팅을 열기 전이에요). 열쇠는 매크로를 풀기 전의 글이라 {{random}}이 있어도 다시 묻지 않아요', async () => {
+    __naStatusReset();
+    const b = bridge({ body: { data: [{ id: 'ren-c' }] } });
+    const s = ccSettings({ chat_completion_source: 'custom', custom_url: 'http://127.0.0.1:9/v1', custom_include_headers: 'X-Who: "{{user}}"\nX-Req: {{random:1,2,3,4,5,6,7,8,9}}{{random:a,b,c,d,e,f,g}}' }, { username: 'Ren' });
+    for (let i = 0; i < 10; i++) await job(s, b, i * 1000);
+    assert.equal(b.calls.length, 1);
+    assert.match(JSON.parse(b.calls[0].body).custom_include_headers, /^X-Who: "Ren"\nX-Req: \d[a-g]$/);
+    // (the user name is part of what the page connects with: changed, asked again)
+    await job({ ...s, username: 'Varo' }, b, 11 * 1000);
+    assert.equal(b.calls.length, 2);
+    assert.match(JSON.parse(b.calls[1].body).custom_include_headers, /^X-Who: "Varo"/);
+});
+
+test('실리 창 로그: 열쇠마다 이유마다 한 번, 실리가 주는 이유로 — 200 {error:true}(키가 틀렸거나 공급자가 꺼짐) · Azure의 message · JSON이 아닌 답', async () => {
+    __naStatusReset();
+    const logs = [];
+    const e1 = bridge({ body: { error: true, data: { data: [] } } });
+    for (let i = 0; i < 6; i++) { await job(ccSettings({ chat_completion_source: 'openrouter' }), e1, i * HOUR, { log: t => logs.push(t) }); await __naStatusIdle(); }
+    assert.ok(e1.calls.length > 1);
+    const e2 = bridge({ status: 401, body: { error: true, message: 'Invalid API key or insufficient permissions.' } });
+    await job(ccSettings({ chat_completion_source: 'azure_openai', azure_base_url: 'https://ren.example', azure_deployment_name: 'd', azure_api_version: '2024-10-21' }), e2, 0, { log: t => logs.push(t) });
+    const e3 = bridge({ body: '<html>proxy error</html>' });
+    await job(ccSettings({ chat_completion_source: 'custom', custom_url: 'http://127.0.0.1:9/v1' }), e3, 0, { log: t => logs.push(t) });
+    assert.deepEqual(logs, [
+        '상태를 가져오는 중 오류가 발생했습니다: 채팅 완성 상태 확인에 실패했습니다. 액세스 토큰이 올바르지 않거나 API 엔드포인트가 꺼져 있습니다.',
+        '상태를 가져오는 중 오류가 발생했습니다: API 키가 올바르지 않거나 권한이 부족합니다.',
+        '상태를 가져오는 중 오류가 발생했습니다: 응답을 읽을 수 없습니다.',
+    ]);
+});
+
+test('실리 로더의 처리 안 된 오류(이름 없는 모델)가 일꾼을 죽이지 않아요: 브라우저 콘솔처럼 실리 창에 한 번 적고, 값은 실리와 같아요', async () => {
+    __naStatusReset();
+    const unhandled = [], warned = [];
+    const onRejection = err => unhandled.push(err);
+    process.on('unhandledRejection', onRejection);
+    const warn = console.warn;
+    console.warn = (...a) => warned.push(a.join(' '));
+    try {
+        const b = bridge({ body: { data: [{ id: 'ren-mc-1', name: 'Zed' }, { id: 'ren-mc-2' }] } });
+        const s = tgSettings({ type: 'mancer', mancer_model: 'ren-gone' });
+        await job(s, b, 0);
+        await job(s, b, 1);
+        await new Promise(r => setImmediate(r));
+        await new Promise(r => setTimeout(r, 20));
+    } finally {
+        console.warn = warn;
+        process.off('unhandledRejection', onRejection);
+    }
+    assert.deepEqual(unhandled, []);
+    assert.equal(warned.filter(x => x.includes('처리되지 않은 오류가 발생했습니다') && x.includes('localeCompare')).length, 1);
+    // (getStatusTextgen 694: the status is the saved model, as in the browser)
+    assert.equal(SCRIPT.online_status, 'ren-gone');
+    // (a loader that is not async — loadGenericModels 607 —: given back as it is, the status as the browser's)
+    __naStatusReset();
+    await job(tgSettings({ type: 'generic', server_urls: { generic: 'http://127.0.0.1:9/v1' }, generic_model: 'ren-free-text' }), bridge({ body: { data: [{ id: 'ren-g-a' }] } }), 0);
+    assert.equal(SCRIPT.online_status, 'ren-free-text');
+});
+
 test('시간 제한: 다리가 답하지 않으면 끊고 실패로 (1분 뒤에 다시)', async () => {
     __naStatusReset();
     const logs = [];
@@ -217,7 +460,7 @@ test('던지지 않아요: 다리가 없어도 · 다리가 던져도. 주소가
     const b = bridge({ body: {} });
     for (let i = 0; i < 2; i++) await job(tgSettings({ type: 'ooba', server_urls: {} }), b, i, { log: t => logs.push(t) });
     assert.equal(b.calls.length, 0);
-    assert.deepEqual(logs, ['상태를 가져오는 중 오류가 발생했습니다: 실리 서버에 연결할 수 없습니다.', '상태를 가져오는 중 오류가 발생했습니다: socket hang up', '상태를 확인할 주소가 없습니다.']);
+    assert.deepEqual(logs, ['상태를 가져오는 중 오류가 발생했습니다: 실리 서버에 연결할 수 없습니다.', '상태를 가져오는 중 오류가 발생했습니다: 실리 서버에 연결할 수 없습니다.', '상태를 확인할 주소가 없습니다.']);
     assert.equal(SCRIPT.online_status, 'no_connection');
 });
 
@@ -228,4 +471,25 @@ test('채팅 완성 · 글 완성 · Kobold가 아닌 API(NovelAI)는 연결 확
     assert.equal(r.key, null);
     assert.equal(b.calls.length, 0);
     assert.equal(SCRIPT.online_status, 'no_connection');
+});
+
+test('실리 연결을 쓰지 않는 세계(skip): 묻지 않고 페이지를 연 그대로 — 앞 일의 연결이 남지 않아요', async () => {
+    __naStatusReset();
+    const b = bridge({ body: { data: OR } });
+    const s = ccSettings({ chat_completion_source: 'openrouter' });
+    await job(s, b, 0);
+    assert.equal(SCRIPT.online_status, 'Valid');
+    const r = await job(s, b, 1, { skip: true });
+    assert.equal(r.skipped, true);
+    assert.equal(b.calls.length, 1);
+    assert.equal(b.secretCalls.length, 1);
+    assert.equal(SCRIPT.online_status, 'no_connection');
+    assert.deepEqual(OAI.model_list, []);
+});
+
+test('CometAPI(실리 화면에서 주석 처리된 소스): 실리처럼 소스가 "undefined"가 돼요 (loadOpenAISettings 4404 → 6969)', () => {
+    naLoad(ccSettings({ chat_completion_source: 'cometapi' }));
+    assert.equal(OAI.oai_settings.chat_completion_source, 'undefined');
+    naLoad(ccSettings({ chat_completion_source: 'openrouter' }));
+    assert.equal(OAI.oai_settings.chat_completion_source, 'openrouter');
 });
