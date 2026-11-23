@@ -360,6 +360,26 @@ test('일꾼 · 방 자물쇠: 늦은 답장을 돌릴 때 브라우저가 쥔 �
     assert.equal((await S.get('sa')).messenger.rooms[a.room.id].messages.at(-1).text, 'sorry, was busy');
 });
 
+test('일꾼: 늦은 답장을 못 보내면 실리 창에 이유를 한 번 적어요 (30초마다 또 적지 않아요). 보내면 보냈다고 적어요', async t => {
+    const S = await stage(t, { reply: () => ({ reply: ['sorry, was busy'], status: '' }) });
+    // (the worker is a thread: what it writes comes through this process's stdout · stderr)
+    const lines = [], keep = { out: process.stdout.write, err: process.stderr.write };
+    process.stdout.write = function (c, ...a) { lines.push(String(c)); return keep.out.call(this, c, ...a); };
+    process.stderr.write = function (c, ...a) { lines.push(String(c)); return keep.err.call(this, c, ...a); };
+    t.after(() => { process.stdout.write = keep.out; process.stderr.write = keep.err; });
+    const mk = more => { const x = world({ hoursAgo: 0.2 }); const j = enqueueJob(x.m, { kind: 'reply', owner: 'Mara', room: x.room.id, at: Date.now() - 600_000 }); Object.assign(j, { timed: true, notBefore: Date.now() - 1000 }); more?.(x); return x; };
+    const held = mk(), noTpl = mk(x => { liveWorld(x.m).messenger.rooms[x.room.id].connectionId = 'profile:p1'; }), old = world({ version: '0.0.1' }), fine = mk();
+    { const j = enqueueJob(old.m, { kind: 'reply', owner: 'Mara', room: old.room.id, at: Date.now() - 600_000 }); Object.assign(j, { timed: true, notBefore: Date.now() - 1000 }); }
+    for (const [sid, x] of [['sh', held], ['sn', noTpl], ['so', old], ['sf', fine]]) await S.put(sid, x.m);
+    assert.deepEqual(await S.auto.claim('sh', held.room.id, 'browser:tab1'), { ok: true });
+    await S.auto.sweep(); await S.auto.sweep();
+    const why = id => lines.filter(l => l.includes(`[due-replies] Mara (${id}): 늦은 답장을 보내지 않았습니다.`));
+    assert.equal(why(held.room.id).length, 1, lines.join('\n')); assert.match(why(held.room.id)[0], /브라우저 탭이 이 방에서 답장을 만들고 있습니다\./);
+    assert.equal(why(noTpl.room.id).length, 1); assert.match(why(noTpl.room.id)[0], /연결 프로필/);
+    assert.equal(why(old.room.id).length, 1); assert.match(why(old.room.id)[0], /버전이 다릅니다/);
+    assert.equal(lines.filter(l => l.includes(`[due-replies] Mara (${fine.room.id}): 늦은 답장을 보냈습니다.`)).length, 1);
+});
+
 test('일꾼: 캐릭터가 상태를 바꾸면 카드에도 써요 (실리의 merge-attributes로)', async t => {
     const S = await stage(t, { reply: () => ({ reply: ['brb'], status: { status: 'dnd', activity: 'in a meeting', duration: '30m' } }) });
     const a = world({ schedule: week([{ time: '00:00-23:59', activity: 'free time', status: 'online' }]) });

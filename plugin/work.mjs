@@ -396,27 +396,57 @@ export async function startWork({ root, store, st = null, schedule = true, from 
     // 우리는 답장이 줄에 있어서, 때가 되면 일꾼이 그 줄을 돌려요. 브라우저가 쥔 방은 이번엔 건너뛰고(그 방은 브라우저가 쓰는 중),
     // 서버가 보낼 수 없는 방(cannot)도 건너뛰어요(그 방은 브라우저가 보내요). 다음에 볼 시각은 nextDue에
     let nextDue = Infinity;
+    // (why a due reply was not sent, once per reply and reason: the room is then the browser's, and the window says why — 2026-11-23,
+    //  a reply came only when the tab was looked at again, and nothing in the window told why)
+    const told = new Map();
+    const tell = (job, why) => {
+        const k = `${job.id}\u0000${why}`;
+        if (told.has(k)) return;
+        told.set(k, true);
+        if (told.size > 200) told.delete(told.keys().next().value);
+        logger.warn('[due-replies] %s (%s): 늦은 답장을 보내지 않았습니다. %s', job.owner, job.room, why);
+    };
     async function sweepDue() {
         let ran = 0, next = Infinity;
         const waiting = w => w.queue.jobs.filter(j => j.kind === 'reply' && j.state === 'waiting');
         for (const sid of await store.list()) {
             try {
                 const e = await app.open(sid), w = e && liveWorld(e.real);
-                if (!w || await blocked(e.real)) continue;
+                if (!w) continue;
                 const due = () => waiting(w).filter(j => !(j.notBefore > Date.now()));
+                const no = await blocked(e.real);
+                if (no) { for (const j of due()) tell(j, no); continue; }
                 if (due().length) {
                     await withWorld(e, async () => {
-                        const skip = new Set();
-                        for (const roomId of new Set(due().map(j => j.room))) if (await cannot(e.real, roomId)) skip.add(roomId);
+                        const skip = new Map();
+                        for (const roomId of new Set(due().map(j => j.room))) { const why = await cannot(e.real, roomId); if (why) skip.set(roomId, why); }
+                        for (const j of due()) if (skip.has(j.room)) tell(j, skip.get(j.room));
                         if (due().every(j => skip.has(j.room))) return;
                         const lock = serverLock(sid);
-                        const out = await G.liveGo(e.real, { lock: { enter: async room => (skip.has(room) ? null : lock.enter(room)), renew: lock.renew }, server: true });
+                        const enter = async room => {
+                            if (skip.has(room)) return null;
+                            const out = await lock.enter(room);
+                            if (!out) for (const j of due()) if (j.room === room) tell(j, '브라우저 탭이 이 방에서 답장을 만들고 있습니다.');
+                            return out;
+                        };
+                        const before = new Set(due().map(j => j.id));
+                        const out = await G.liveGo(e.real, { lock: { enter, renew: lock.renew }, server: true });
                         if (out?.ran) ran += 1;
+                        for (const j of liveWorld(e.real)?.queue.jobs || []) {
+                            if (!before.has(j.id)) continue;
+                            if (j.state === 'done') logger.info('[due-replies] %s (%s): 늦은 답장을 보냈습니다.', j.owner, j.room);
+                            else if (j.state === 'failed') tell(j, String(j.error || '답장을 만들지 못했습니다.'));
+                        }
                     });
                 }
                 const w2 = liveWorld(e.real);
                 for (const j of w2 ? waiting(w2) : []) if (j.notBefore > Date.now()) next = Math.min(next, j.notBefore);
-            } catch (err) { if (err?.statusCode !== 400) logger.warn(err instanceof Error ? err : {}, '[due-replies] %s: %s', sid, String(err?.message || err)); }
+            } catch (err) {
+                // (a refusal — the chat file cannot be read … — comes back every 30 seconds: written once)
+                const why = String(err?.message || err), k = `${sid}\u0000${why}`;
+                if (err?.statusCode === 400) { if (!told.has(k)) { told.set(k, true); logger.warn('[due-replies] %s: 늦은 답장을 보내지 않았습니다. %s', sid, why); } }
+                else logger.warn(err instanceof Error ? err : {}, '[due-replies] %s: %s', sid, why);
+            }
         }
         nextDue = next;
         return ran;
