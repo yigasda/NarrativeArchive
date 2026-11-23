@@ -944,14 +944,14 @@ test('롤플에 전하기: 그사이 실시간 폰이 바뀌었거나 · 글이 
         const d = await G.liveBackDraft(c.real);
         const clean = () => { assert.equal(T.chat.length, 2); assert.ok(c.room.messages.every(x => !x.told)); assert.equal(c.st.saves, 0); };
         await assert.rejects(() => G.liveBackPut(c.real, d, '   '), /넣을 내용이 없습니다/); clean();
-        await assert.rejects(() => G.liveBackPut(c.real, { ...d, world: 'other' }), /채팅이나 실시간 폰이 바뀌었어요/); clean();
-        await assert.rejects(() => G.liveBackPut(c.real, null), /채팅이나 실시간 폰이 바뀌었어요/); clean();
+        await assert.rejects(() => G.liveBackPut(c.real, { ...d, world: 'other' }), /채팅 또는 실시간 폰이 변경되었습니다/); clean();
+        await assert.rejects(() => G.liveBackPut(c.real, null), e => e.changed === true && /채팅 또는 실시간 폰이 변경되었습니다/.test(e.message)); clean();
         const add = T.st.addOneMessage; delete T.st.addOneMessage;
         await assert.rejects(() => G.liveBackPut(c.real, d), /이 실리에서는 롤플 채팅에 넣을 수 없습니다/); clean();
         T.st.addOneMessage = add;
         // 다른 채팅이 열려 있으면
         T.metadata = { narrative_archive: {} };
-        await assert.rejects(() => G.liveBackPut(c.real, d), /채팅이나 실시간 폰이 바뀌었어요/); clean();
+        await assert.rejects(() => G.liveBackPut(c.real, d), /채팅 또는 실시간 폰이 변경되었습니다/); clean();
         await assert.rejects(() => G.liveBackDraft(c.real), /이 채팅의 실시간 폰이 아닙니다/);
         T.metadata = { narrative_archive: c.real };
         // 이벤트를 받는 쪽이 실패해도 메시지는 들어가요

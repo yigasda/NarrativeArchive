@@ -854,7 +854,7 @@ export async function liveBackDraft(real) {
 //   → 넣은 메시지의 번호
 export async function liveBackPut(real, draft, text = draft?.text) {
     const w = liveWorld(real), c = ctx(), words = String(text ?? '').trim();
-    if (!w || !open(real) || w.id !== draft?.world) throw Object.assign(new Error('그사이 채팅이나 실시간 폰이 바뀌었어요. 다시 해 주세요'), { changed: true });   // (changed: 화면은 이 표시로 알아봐요 — 글은 화면이 이 표시를 보게 된 뒤 바꿔요)
+    if (!w || !open(real) || w.id !== draft?.world) throw Object.assign(new Error('채팅 또는 실시간 폰이 변경되었습니다. 다시 시도하세요.'), { changed: true });   // (changed: 화면은 글이 아니라 이 표시로 알아봐요)
     if (!words) throw new Error('넣을 내용이 없습니다.');
     if (!Array.isArray(c.chat) || typeof c.addOneMessage !== 'function' || typeof c.saveChat !== 'function') throw new Error('이 실리에서는 롤플 채팅에 넣을 수 없습니다.');
     const message = { name: c.chatMetadata?.narrator_name || 'System', is_user: false, is_system: false,
