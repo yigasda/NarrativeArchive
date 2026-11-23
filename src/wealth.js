@@ -15,13 +15,22 @@ YOU GET
 - ACCOUNT CURRENCIES: the currencies of the owner's bank accounts so far (sometimes empty).
 
 BASIS FIRST
-Write basis before the numbers: who the owner is (work, level, years in it, where and how they live), where their money comes from (pay, a business they own, family money, an inheritance), and any amount the story gives.
+Write basis before the numbers, in this order:
+1. Money coming in: what the owner earns or receives (work and rank, a business they own, family money, an inheritance), and how the story shows them living (where they live, what they own, buy, wear and drive, how they travel).
+2. Money habits: even when the profile says nothing about money, read the owner's personality and way of life and work out how they would handle money.
+   - thorough, planning, controlling, cautious, ambitious → saves and invests
+   - impulsive, spontaneous, pleasure-seeking, generous, careless about money → spends freely
+   - mindful of how others see them, showing off → spends big on what is seen
+   Write in one line which traits you read it from.
+3. Any amount the story gives.
 
 SCALE
 - deposits: the money in the owner's own bank accounts now. investments: the owner's own shares, funds and bonds, with the cash in their brokerage accounts.
 - Not counted: homes and other property, company accounts, family holdings the owner doesn't control, credit-card spending.
 - Counted: money the family gives the owner (an allowance, trust payouts, gifts, an inheritance received). It is the owner's own.
-- Judge the amounts a real person in that country and role would hold after their years of income, in their way of life. A high earner or a rich family's child holds a lot; an ordinary worker holds an ordinary amount.
+- The money coming in sets the size. Read it from how the story shows the owner, not from the average person of their age and job: an owner shown living well (a wealthy district, expensive things, no money worries) has the money for that life, from pay or family, even when the story never says where it comes from.
+- The money habits set where it sits: a saver holds much of it in the bank; someone who spends freely holds less in the bank than the money coming in would suggest; someone who invests holds more in investments than in the bank.
+- Age or years in a job alone are no reason to make it small. A young owner with high pay or family money holds a lot.
 - Examples (deposits / investments):
   - a university student in Seoul with a part-time job: 1–5 million KRW / 0–2 million KRW
   - a café worker in Berlin, three years in: 2,000–8,000 EUR / 0–3,000 EUR
