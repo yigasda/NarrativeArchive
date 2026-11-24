@@ -65,3 +65,11 @@
 - 에이전트를 여럿 쓰고 여러 번 검토(소망이 원함). 하지만 지금 일과 상관없는 에이전트는 띄우지 않기.
 - 마리나라 기능은 코드 · 지시문 그대로, 끝까지 읽고. 마리나라에 없는 걸 메신저에 더하지 않기.
 - 소망의 RP 내용 · 캐릭터 이름은 저장소에 넣지 않기(예시 이름 Mara · Ren · Ivo · Varo · Lio).
+
+## 마지막 짧은 검토 (2026-11-24, 05c3ffb) — 다음 세션이 고칠 것 (모두 낮음)
+
+- `src/phone2keep.js:270`: 합칠 때 local만 prep을 안 거쳐요. local이 옮기기 전이고 base · 서버는 옮긴 상태면 표시(`metaPerRoom`)가 한 번 빠진 채 올라가요(다음 읽기에서 다시 옮겨서 값은 안 잃음). 고칠 것: `merge3(base, server, prep(JSON.parse(JSON.stringify(m.live))))` + 테스트.
+- `src/phone2sched.js` ~196 `summaryMaxTokens`: 읽을 때 1~32768로 자르지 않아요 → 마리나라처럼 자르기.
+- `src/phone2sched.js` ~197 `dayRolloverHour`: 숫자가 아니면 NaN → 4.
+- 마리나라와 대 볼 것: `enableMemoryRecall`이 null일 때(마리나라 MemoryRecallSection은 대화 모드 기본 켜짐), `summaryTailMessages`가 숫자가 아닐 때(`normalizeSummaryTailMessages`).
+- 문제 아님: 새 방 첫 값은 브라우저에서만 생겨요(일꾼은 ensureRoom을 안 불러요). 있는 방은 덮어쓰지 않아요. 새 코드에 옛 Orbit 값 읽기는 없어요. 주석의 seed 순서만 반대로 적혀 있어요(결과는 같음).
