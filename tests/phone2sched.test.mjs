@@ -487,12 +487,13 @@ test('생성 연결(마리나라의 connectionId): 저장하지 않아요. 편�
     const old = { phones: {} };
     L.startFresh(old, { persona: 'Ren', scope: 'test' });
     const ow = L.liveWorld(old);
+    delete ow[L.ROOM_META_MARK];                                                       // (2026-11-24 전의 세계: 표시가 없어요)
     ow.messenger.rooms.r1 = { id: 'r1', members: ['Ren', 'Mara'], messages: [] };
     ow.presence = { meta: { scheduleConnectionId: 'profile:p1' } };
     assert.equal(G.liveScheduleConnection(old, 'r1'), '');
     assert.equal(S.moveRoomMeta(old), 1);
     assert.equal(S.moveRoomMeta(old), 0);                                              // (한 번만)
-    assert.equal('scheduleConnectionId' in ow.presence.meta, false);
+    assert.equal(ow.presence.meta.scheduleConnectionId, 'profile:p1');                 // (Orbit의 옛 값은 남아요: 옛 탭 · 옛 일꾼이 읽어요. 새 코드는 안 읽어요)
     assert.equal(ow.messenger.rooms.r1.meta, undefined);
 });
 test('먼저 말 걸기의 방 전체 설정: 마리나라의 열쇠 그대로 (하루 상한 · 단체방 상한 같이 쓰기 · 캐릭터끼리 주고받기)', async () => {
