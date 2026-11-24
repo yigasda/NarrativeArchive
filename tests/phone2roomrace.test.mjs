@@ -76,6 +76,33 @@ test('합치기 전 옮기기가 없으면 (prep 없이) 되돌아갔어요: 이
     const bare = (io, at) => K.makeKeep({ api: io, now: at });
     assert.equal((await race('off', bare)).r1.autonomousMessages, true);
 });
+test('내 쪽만 옮기기 전이어도 (서버 · base는 옮긴 뒤) 합친 저장에 표시와 방 설정이 남아요 (내 쪽도 prep을 거쳐요)', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'na-race-'));
+    try {
+        const store = openStore(root), seed = oldWorld();
+        await store.save('s1', { base: null, parts: K.splitLive(seed.live), chat: 'c1' });
+        const api = {
+            ping: async () => ({ ok: true }), load: async id => store.load(id), rev: async id => store.revOf(id),
+            save: async (id, { base, chat, parts }) => store.save(id, { base, chat, parts: Object.fromEntries(Object.entries(parts).map(([k, s]) => [k, s === null ? null : JSON.parse(s)])) }),
+            fork: async (a, b, o) => store.fork(a, b, o), drop: async id => store.drop(id),
+        };
+        // (the page opens the old save and has not read any room setting yet, so its copy is not moved; then the worker moves and
+        //  writes; then the page saves a change elsewhere. base — what the page loaded — is moved by prep, so mine must be too, or
+        //  the merge reads "mine took the mark and the room settings away")
+        const m = { liveRef: { id: 's1' } }, keep = KO.makeOrbitKeep(api, () => ({ m, mark: 'c1' }));
+        await keep.open(m, 'c1');
+        const app = makeAutoApp({ store }), e = await app.open('s1');
+        S.noteProactive(e.real, 'r2', 'ivo', 'check_in', new Date());
+        await app.write(e);
+        const w = m.live.world;
+        assert.equal(w[L.ROOM_META_MARK], undefined);                                  // (still not moved here)
+        w.messenger.rooms.r1.messages[0].text = 'hi there';
+        const r = await keep.onSave();
+        const world = K.joinLive((await store.load('s1')).parts).world;
+        assert.deepEqual([r?.error?.message || null, world[L.ROOM_META_MARK], world.messenger.rooms.r1.meta?.autonomousMessages, !!world.messenger.rooms.r2.meta?.autonomousDailyBudget, world.messenger.rooms.r1.messages[0].text],
+            [null, 1, true, true, 'hi there']);
+    } finally { await fs.rm(root, { recursive: true, force: true }); }
+});
 test('prep은 받은 것을 고치지 않고, 옮긴 저장은 그대로 돌려줘요', () => {
     const live = oldWorld().live, before = JSON.stringify(live);
     const out = S.moveRoomMetaCopy(live);
