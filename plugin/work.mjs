@@ -28,9 +28,9 @@ const SSE = {
 // 늦은 답장을 보는 주기 (브라우저의 phone2tick.js와 같아요). 기다리는 답장이 있으면 그 시각에 바로 봐요
 export const DUE_MS = 30_000;
 // 실리의 것 가운데 서버에 없어도 되는 칸 (읽으면 undefined: 읽는 쪽이 없을 때의 길을 가요)
-//   generateRaw: 실리 자신의 연결로 보내는 함수 (브라우저 코드) · CONNECT_API_MAP · getChatCompletionModel · onlineStatus: 실리 연결의 이름표
+//   generateRaw: 실리 자신의 연결로 보내는 함수 (브라우저 코드) · CONNECT_API_MAP · onlineStatus: 실리 연결의 이름표
 //   extractMessageFromData: 실리의 답 읽기 (없으면 ai.js가 같은 모양을 손으로 읽어요)
-const OPTIONAL = new Set(['generateRaw', 'CONNECT_API_MAP', 'getChatCompletionModel', 'onlineStatus', 'extractMessageFromData', 'getCurrentChatId', 'eventSource', 'eventTypes', 'event_types', 'saveMetadataDebounced']);
+const OPTIONAL = new Set(['generateRaw', 'CONNECT_API_MAP', 'onlineStatus', 'extractMessageFromData', 'getCurrentChatId', 'eventSource', 'eventTypes', 'event_types', 'saveMetadataDebounced']);
 const obj = v => v && typeof v === 'object' && !Array.isArray(v);
 const refuse = (statusCode, text) => Object.assign(new Error(text), { statusCode });
 // root: 사용자 폴더 · store: 플러그인 저장 (plugin/store.mjs의 것, 또는 그것을 부르는 것)
@@ -54,6 +54,7 @@ export async function startWork({ root, store, st = null, schedule = true, from 
     const STP = {
         script: await import('./st/public/script.js'), groups: await import('./st/public/scripts/group-chats.js'), power: await import('./st/public/scripts/power-user.js'),
         oai: await import('./st/public/scripts/openai.js'), context: await import('./st/public/scripts/st-context.js'), ext: await import('./st/public/scripts/extensions.js'), fetch: await import('./st/public/naFetch.js'),
+        custom: await import('./st/public/scripts/custom-request.js'), textgen: await import('./st/public/scripts/textgen-settings.js'),
     };
 
     const readSettings = async () => { try { const v = JSON.parse(await fs.readFile(path.join(root, 'settings.json'), 'utf8')); return obj(v) ? v : {}; } catch (err) { if (err?.code === 'ENOENT') return {}; throw err; } };
@@ -124,6 +125,14 @@ export async function startWork({ root, store, st = null, schedule = true, from 
             stFailed();
             return out;
         },
+    };
+
+    // (src/phone2translate.js reads SillyTavern's text completion through globalThis.__naStTextgen: the ported TextCompletionService
+    //  and the text-completion settings of this job — the page's /scripts/custom-request.js · textgen-settings.js · power-user.js)
+    const stTextgen = {
+        get TextCompletionService() { return STP.custom.TextCompletionService; },
+        getTextGenModel: (...a) => STP.textgen.getTextGenModel(...a), getTextGenServer: (...a) => STP.textgen.getTextGenServer(...a),
+        settings: () => STP.textgen.textgenerationwebui_settings, powerUser: () => STP.power.power_user,
     };
 
     // ---- 실리의 것을 답장마다 새로 (실리 브라우저가 이 채팅을 열면 들고 있을 것을, 실리 파일과 실리 서버의 처리기에서)
@@ -243,6 +252,8 @@ export async function startWork({ root, store, st = null, schedule = true, from 
             extensionSettings: ext,
             ConnectionManagerRequestService: stProfiles,
             chatCompletionSettings: STP.oai.oai_settings,
+            // (SillyTavern's getContext().getChatCompletionModel — st-context.js 289, openai.js 1722: the chat-completion model of a source)
+            getChatCompletionModel: (...a) => STP.oai.getChatCompletionModel(...a),
             mainApi: STP.script.main_api,
             // (SillyTavern's getContext().variables — st-context.js 258~277: the variable macros' {{.x}} · {{$x}} read them while running)
             variables: STP.context.variables,
@@ -289,21 +300,45 @@ export async function startWork({ root, store, st = null, schedule = true, from 
     const serverLock = sid => ({ enter: async room => (claim(sid, room, 'server').ok ? () => release(sid, room, 'server') : null), renew: async () => {} });
 
     // ---- 답장 뒤의 자동 번역 (마리나라 generate.routes.ts dispatchAutomaticTranslations 1990~2029: 답이 저장된 뒤 서버가, 생성 자물쇠를
-    // 쥐지 않고, 저장된 답의 말을 차례로. 실패는 경고 줄만). phone2go.js liveGo의 translate 자리에 줘요: 그 답의 방 · 말 id들 → 다 끝나면 풀리는 약속.
-    // 말 하나마다 그 세계를 다시 읽은 자리에서 해요(withWorld: 번역 연결이 실리의 것일 수 있어요). 저장이 브라우저와 부딪히면(409) 다시 읽고 받은 번역을
-    // 그대로 넣어요(번역은 다시 묻지 않아요). 그동안 /auto/status의 방마다 translating이 true예요 (마리나라 /generate/status의 translating)
-    const translateAfter = (sid, real) => (roomId, ids) => {
-        const config = TR.translationConfigOf(real, roomId), chatId = chatIdOf(real, roomId);
-        const run = async messageId => {
-            let cached = null;
+    // 쥐지 않고, 저장된 답의 말을 차례로. 실패는 경고 줄만). phone2go.js liveGo의 translate 자리에 줘요: 그 답의 방 · 말 id들 · 답을 만들기 시작할 때의
+    // 번역 설정 → 다 끝나면 풀리는 약속. 그동안 /auto/status의 방마다 translating이 true예요 (마리나라 /generate/status의 translating)
+    // 마리나라의 번역은 아무 자물쇠도 쥐지 않아요: 일꾼의 줄(withWorld)은 모델에 묻는 동안 쥐지 않아요.
+    //   - Google · 우리 커스텀 API(실리의 것이 필요 없음): 줄 밖에서 번역만 받아 오고(말의 사본에: detached), 넣고 저장하는 것만 줄에서(onLine:
+    //     실리의 것은 안 읽어요). 연결은 보낼 때(답장의 일 안: 그 세계의 설정) 찾아 둔 것
+    //   - 실리의 것(연결 프로필 · 실리의 지금 연결 · 실리 연결 방식 · Vertex): 실리의 것을 끼운 자리여야 해서, 답 하나를 withWorld 한 번에
+    // 넣을 때 저장이 브라우저와 부딪히면(409) 다시 읽고 받은 번역을 그대로 넣어요(두 번까지, 번역은 다시 묻지 않아요)
+    const onLine = fn => { const run = line.then(fn); line = run.catch(() => {}); return run; };
+    const translateAfter = (sid, real) => (roomId, ids, config = TR.translationConfigOf(real, roomId)) => {
+        const chatId = chatIdOf(real, roomId);
+        // (found now, inside the reply's job: this world's settings. getWithKey reads them before its first await)
+        const found = config.provider === 'ai' ? Promise.resolve(TR.translationConnections.getWithKey(config.connectionId)).catch(() => null) : Promise.resolve(null);
+        const ask = async (e, messageId, connections) => { let got = null; await TR.translateGenerated(e.real, chatId, messageId, config, { detached: true, connections, keep: t => { got = t; } }); return got; };
+        const put = async (messageId, cached) => {
             for (let attempt = 0; ; attempt++) {
                 const e = await app.open(sid);
                 if (!e) return null;
-                try { return await withWorld(e, () => TR.translateGenerated(e.real, chatId, messageId, config, { save: () => app.write(e), cached, keep: t => { cached = t; } })); }
+                try { return await TR.translateGenerated(e.real, chatId, messageId, config, { save: () => app.write(e), cached }); }
                 catch (err) { if (err?.code === 409 && attempt < 2) continue; throw err; }
             }
         };
-        return TR.dispatchAutomaticTranslations({ chatId, ids, config, run, log: (fmt, id, err) => logger.warn(err instanceof Error ? err : {}, fmt, id) });
+        // (which way is known once the connection is found: wrap waits for it, so the dispatch — and its translating count — starts now)
+        let outside = true, conn = null, e = null;
+        const wrap = async fn => {
+            conn = await found;
+            outside = config.provider === 'google' || !conn || conn.kind === 'custom';
+            if (outside) return fn();
+            e = await app.open(sid);
+            if (e) await withWorld(e, fn);
+        };
+        const fixed = { getWithKey: async () => conn };
+        const run = async messageId => {
+            if (!outside) { const got = await ask(e, messageId, TR.translationConnections); if (got !== null) await put(messageId, got); return; }
+            const now = await app.open(sid);
+            if (!now) return;
+            const got = await ask(now, messageId, fixed);
+            if (got !== null) await onLine(() => put(messageId, got));
+        };
+        return TR.dispatchAutomaticTranslations({ chatId, ids, config, run, wrap, log: (fmt, id, err) => logger.warn(err instanceof Error ? err : {}, fmt, id) });
     };
 
     // 한 번에 하나: 그 세계의 실리 것을 끼우고 일을 해요
@@ -330,7 +365,7 @@ export async function startWork({ root, store, st = null, schedule = true, from 
             // (a copy: the chat file's read is frozen, and SillyTavern's code may write into its metadata — {{setvar}} — as the page's)
             now.chatMetadata = { ...structuredClone(now.metadata), narrative_archive: entry.real };
             setContext(contextOf(entry, kit, settings, app, now));
-            globalThis.__naStOpenai = stOpenai;
+            globalThis.__naStOpenai = stOpenai; globalThis.__naStTextgen = stTextgen;
             try {
                 // (the connection SillyTavern's page makes with these settings — its getStatusOpen · getStatusTextgen · getStatusKobold —, from the
                 //  replies kept for them, asked again through the bridge when the settings, the keys or the time say so — behind the job, which
@@ -355,7 +390,7 @@ export async function startWork({ root, store, st = null, schedule = true, from 
                 renamePersona(entry.real, now.name1);
                 return await job();
             }
-            finally { setContext(null); delete globalThis.__naStOpenai; STP.fetch.__naSetFetch(null); }
+            finally { setContext(null); delete globalThis.__naStOpenai; delete globalThis.__naStTextgen; STP.fetch.__naSetFetch(null); }
         });
         line = run.catch(() => {});
         return run;
@@ -368,10 +403,14 @@ export async function startWork({ root, store, st = null, schedule = true, from 
     //     또는 AI 기능 모델이 실리 쪽('st')이고 보낼 프로필이 있을 때 (ai.js aiProfileFor. 없으면 서버는 보내지 않아요)
     //   - 방마다의 답장 (phone2go.js liveReplyPlan · replyRoute: 프로필, 또는 그 방의 연결이 실리 연결 방식)
     //   - 스케줄 · 그림 설명의 연결 (phone2go.js askVia: 프로필)
+    //   - 자동 번역의 AI 연결 (phone2translate.js translationConnections): 프로필 · 실리의 지금 연결('ai' 칸이 실리 쪽) · 실리 연결 방식인 칸
     function usesSt(real) {
         const a = AI.connSettings('ai'), d = AI.connSettings('dr');
         if (a.mode === 'source' || d.mode === 'source') return true;
         if (!AI.OWN_MODES.includes(a.mode) && AI.aiProfileFor({ profileNow: true })) return true;
+        const tr = TR.autoTranslationConnection(real);
+        if (tr.startsWith('profile:') || (tr === 'ai' && !AI.OWN_MODES.includes(a.mode))) return true;
+        if ((tr === 'tr' || tr === 'dr') && AI.connSettings(tr).mode === 'source') return true;
         for (const roomId of Object.keys(liveWorld(real)?.messenger?.rooms || {})) {
             const plan = G.liveReplyPlan(real, roomId);
             if (plan.profile || plan.t?.mode === 'source') return true;
@@ -514,8 +553,9 @@ export async function startWork({ root, store, st = null, schedule = true, from 
         nextDue = next;
         return ran;
     }
-    // 화면에 보여 줄 것: 이 저장의 방마다 서버가 돌릴 수 있나 → [{ id, room, can, why, translating }]
+    // 화면에 보여 줄 것: 이 저장의 방마다 서버가 돌릴 수 있나 → [{ id, room, can, why, translating, translateWhy }]
     //   translating: 그 방에서 일꾼의 자동 번역이 아직 도는 중 (마리나라 /generate/status의 translating: 브라우저는 그게 끝난 뒤 알려요 — phone2keepon.js)
+    //   translateWhy: 서버가 그 방의 답장을 자동 번역할 수 없는 이유 ('' = 돼요 · 자동 번역 꺼짐: phone2translate.js translationCannot)
     //   (while a translation runs the worker's line is busy with it: the answer comes at once then, with what was last worked out for
     //    can · why — the browser asks every 1.5 seconds, as Marinara's status route answers at once)
     const lastStatus = new Map();
@@ -523,12 +563,12 @@ export async function startWork({ root, store, st = null, schedule = true, from 
         const e = await app.open(String(sid)), w = e && liveWorld(e.real);
         if (!w) return [];
         const rooms = Object.keys(w.messenger?.rooms || {}), tr = room => TR.liveTranslating(e.real, room);
-        if (rooms.some(tr)) { const had = lastStatus.get(String(sid)) || []; return rooms.map(room => ({ ...(had.find(r => r.room === room) || { id: chatIdOf(e.real, room), room, can: true, why: '' }), translating: tr(room) })); }
+        if (rooms.some(tr)) { const had = lastStatus.get(String(sid)) || []; return rooms.map(room => ({ ...(had.find(r => r.room === room) || { id: chatIdOf(e.real, room), room, can: true, why: '', translateWhy: '' }), translating: tr(room) })); }
         const no = await blocked(e.real);
         const keep = rows => { lastStatus.set(String(sid), rows); if (lastStatus.size > 50) lastStatus.delete(lastStatus.keys().next().value); return rows; };
-        if (no) return keep(rooms.map(room => ({ id: chatIdOf(e.real, room), room, can: false, why: no, translating: tr(room) })));
-        try { return keep(await withWorld(e, async () => { const out = []; for (const room of rooms) { const why = await cannot(e.real, room); out.push({ id: chatIdOf(e.real, room), room, can: !why, why, translating: tr(room) }); } return out; })); }
-        catch (err) { if (err?.statusCode === 400) return keep(rooms.map(room => ({ id: chatIdOf(e.real, room), room, can: false, why: String(err.message), translating: tr(room) }))); throw err; }
+        if (no) return keep(rooms.map(room => ({ id: chatIdOf(e.real, room), room, can: false, why: no, translating: tr(room), translateWhy: '' })));
+        try { return keep(await withWorld(e, async () => { const out = []; for (const room of rooms) { const why = await cannot(e.real, room); out.push({ id: chatIdOf(e.real, room), room, can: !why, why, translating: tr(room), translateWhy: await TR.translationCannot(e.real, room) }); } return out; })); }
+        catch (err) { if (err?.statusCode === 400) return keep(rooms.map(room => ({ id: chatIdOf(e.real, room), room, can: false, why: String(err.message), translating: tr(room), translateWhy: '' }))); throw err; }
     }
     // 브라우저가 이 저장을 열어 두고 있어요 (30초마다): 그 방들에는 스케줄러가 75초 동안 먼저 말을 걸지 않아요 (마리나라의 /activity/presence)
     async function presence(sid, state) {

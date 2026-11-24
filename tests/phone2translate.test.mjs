@@ -18,7 +18,7 @@ const aiSrc = (await readFile(new URL('../src/ai.js', import.meta.url), 'utf8'))
 const AI_URL = encoded('const ctx=()=>globalThis.__TR.ctx;const globalSettings=()=>globalThis.__TR.g;const saveGlobal=()=>{};const MODULE="narrative_archive";const toastr={info(){},warning(){},error(){}};' + aiSrc);
 const CORE_URL = encoded(`export const MODULE='narrative_archive';export const ctx=()=>globalThis.__TR.ctx;export const globalSettings=()=>globalThis.__TR.g;export const saveMeta=async()=>{const T=globalThis.__TR;T.saves=(T.saves||0)+1;if(T.saveFail){const e=T.saveFail;T.saveFail=null;throw e;}};`);
 const map = { './core.js': CORE_URL, './ai.js': AI_URL, './phone2store.js': href('phone2store.js'), './phone2sched.js': href('phone2sched.js') };
-for (const f of ['translation.service.js', 'translator-defaults.js', 'translation-prompt.js', 'translation.store.js', 'use-translate.js', 'translate-text.js', 'draft-translation.js', 'use-translator-defaults.js', 'quote-format.js']) map[`./marinara/${f}`] = href(`marinara/${f}`);
+for (const f of ['translation.service.js', 'translator-defaults.js', 'translation-prompt.js', 'translation.store.js', 'use-translate.js', 'translate-text.js', 'draft-translation.js', 'use-translator-defaults.js', 'quote-format.js', 'token-estimator.js']) map[`./marinara/${f}`] = href(`marinara/${f}`);
 const TR = await import(encoded((await readFile(new URL('../src/phone2translate.js', import.meta.url), 'utf8')).replace(/from '([^']+)'/g, (all, k) => `from '${map[k] || k}'`)));
 const { useTranslationStore } = await import(href('marinara/translation.store.js'));
 const UT = await import(href('marinara/use-translate.js'));
@@ -102,6 +102,9 @@ test('Google: 마리나라와 같은 주소 하나(client=gtx · sl=auto · tl �
     await assert.rejects(() => translateText({}, { text: 'x', provider: 'google', targetLanguage: 'ko' }), e => e.message === 'Google 번역이 429을(를) 반환했습니다' && e.statusCode === 502);
     answer = () => { throw Object.assign(new Error('timeout'), { name: 'TimeoutError' }); };
     await assert.rejects(() => translateText({}, { text: 'x', provider: 'google', targetLanguage: 'ko' }), e => e.message === 'Google 번역 요청 시간이 초과되었습니다' && e.statusCode === 502);
+    // (the body read past the time limit: the same timeout error — Marinara's safeFetch reads the body inside the fetch)
+    answer = () => new Response(new ReadableStream({ pull(c) { c.error(Object.assign(new Error('The operation was aborted due to timeout'), { name: 'TimeoutError' })); } }));
+    await assert.rejects(() => translateText({}, { text: 'x', provider: 'google', targetLanguage: 'ko' }), e => e.message === 'Google 번역 요청 시간이 초과되었습니다' && e.statusCode === 502);
     answer = () => new Response('x'.repeat(1024 * 1024 + 1));
     await assert.rejects(() => translateText({}, { text: 'x', provider: 'google', targetLanguage: 'ko' }), /외부 응답이 1048576바이트를 초과했습니다/);
     const n = sent.length;
@@ -164,13 +167,55 @@ test('AI 연결 목록 · 찾기: 번역 모델(자기 연결이 있을 때) · 
     assert.equal(await TR.translationConnections.getWithKey('weird'), null);
     T.g.draftConn = { mode: 'same' };
     assert.equal(await TR.translationConnections.getWithKey('dr'), null);
-    // (SillyTavern's own connection with no profile: its generateRaw — the server has none)
-    const ai = await TR.translationConnections.getWithKey('ai');
-    T.ctx.naServer = true;
-    await assert.rejects(() => ai.chatComplete([{ content: 'S' }, { content: 'U' }], { maxTokens: 10 }), /선택된 연결 프로필이 없습니다/);
-    delete T.ctx.naServer; T.ctx.generateRaw = async o => JSON.stringify(o);
-    assert.equal((await ai.chatComplete([{ content: 'S' }, { content: 'U' }], { maxTokens: 10 })).content, '{"prompt":"U","systemPrompt":"S","responseLength":10}');
     TR.setTranslationConnectionList(() => []);
+});
+
+// (SillyTavern's own connection with no profile picked — 'ai' with the AI 기능 모델 on SillyTavern's side —: the same request in the
+//  browser and on the server, not generateRaw — which is a browser function and takes no temperature)
+test('AI · 실리의 지금 연결(고른 프로필 없음): 채팅 완성은 그 소스 · 모델로 실리 createGenerationParameters에 system + user, 온도 0.3, 최대 토큰. 글 완성은 TextCompletionService + 지시 형식. 그 밖의 API는 이유와 함께 거절', async () => {
+    const { real } = setup({ meta: { autoTranslate: true, translationProvider: 'ai', translationConnectionId: 'ai', translationOutputTargetLang: 'Korean' } });
+    TR.setTranslationConnectionList(() => [{ id: 'ai', name: 'x' }]);
+    T.ctx.generateRaw = async () => assert.fail('generateRaw is not used');
+    // 채팅 완성 (main_api 'openai')
+    const built = [];
+    globalThis.__naStOpenai = { oai_settings: { chat_completion_source: 'openrouter', temp_openai: 1, openai_max_tokens: 300 }, createGenerationParameters: async (settings, model, type, messages) => { built.push({ settings, model, type, messages }); return { generate_data: { chat_completion_source: settings.chat_completion_source, model, messages, temperature: settings.temp_openai, max_tokens: settings.openai_max_tokens, stop: ['x'] } }; } };
+    Object.assign(T.ctx, { mainApi: 'openai', chatCompletionSettings: { chat_completion_source: 'openrouter', openrouter_model: 'or/m' }, getChatCompletionModel: o => o.openrouter_model, getRequestHeaders: () => ({ 'Content-Type': 'application/json' }) });
+    try {
+        sent.length = 0;
+        const out = await translateText({ connections: TR.translationConnections }, { text: 'Hello', provider: 'ai', targetLanguage: 'Korean', connectionId: 'ai' });
+        assert.deepEqual(out, { translatedText: '번역된 글' });
+        assert.equal(sent.length, 1);
+        assert.equal(sent[0].url, '/api/backends/chat-completions/generate');
+        const system = DEFAULT_TRANSLATION_SYSTEM_PROMPT.replace('{{targetLanguage}}', 'Korean');
+        assert.deepEqual(JSON.parse(sent[0].init.body), { chat_completion_source: 'openrouter', model: 'or/m', messages: [{ role: 'system', content: system }, { role: 'user', content: 'Translate the following text to Korean:\n\nHello' }], temperature: 0.3, max_tokens: 8192, stream: false });
+        assert.deepEqual([built[0].settings.temp_openai, built[0].settings.openai_max_tokens, built[0].type], [0.3, 8192, 'quiet']);
+        assert.equal(await TR.translationCannot(real, L.liveWorld(real).messenger.rooms[Object.keys(L.liveWorld(real).messenger.rooms)[0]].id), '');
+        // 글 완성 (main_api 'textgenerationwebui'): 실리의 TextCompletionService.processRequest (연결 프로필이 보내는 길과 같은 것)
+        const calls = [];
+        globalThis.__naStTextgen = { TextCompletionService: { processRequest: async (...a) => { calls.push(a); return { content: ' 글 완성 번역 ', reasoning: '' }; } }, getTextGenModel: tg => tg.koboldcpp_model, getTextGenServer: type => `server-of-${type}`, settings: () => ({ type: 'koboldcpp', koboldcpp_model: 'k-model' }), powerUser: () => ({ instruct: { enabled: true, preset: 'ChatML' } }) };
+        T.ctx.mainApi = 'textgenerationwebui';
+        assert.deepEqual(await translateText({ connections: TR.translationConnections }, { text: 'Hi', provider: 'ai', targetLanguage: 'ja', connectionId: 'ai' }), { translatedText: '글 완성 번역' });
+        assert.deepEqual(calls[0], [{ stream: false, prompt: [{ role: 'system', content: DEFAULT_TRANSLATION_SYSTEM_PROMPT.replace('{{targetLanguage}}', 'ja') }, { role: 'user', content: 'Translate the following text to ja:\n\nHi' }], max_tokens: 8192, model: 'k-model', api_type: 'koboldcpp', api_server: 'server-of-koboldcpp', temperature: 0.3 }, { instructName: 'ChatML' }, true, null]);
+        globalThis.__naStTextgen.powerUser = () => ({ instruct: { enabled: false, preset: 'ChatML' } });
+        await translateText({ connections: TR.translationConnections }, { text: 'Hi', provider: 'ai', targetLanguage: 'ja', connectionId: 'ai' });
+        assert.deepEqual(calls[1][1], { instructName: undefined });
+        // 그 밖의 API (KoboldAI · NovelAI · Horde): 보내지 않고 이유를. 화면의 설정에서도, 서버 상태에서도
+        T.ctx.mainApi = 'novel';
+        const why = '실리의 지금 API(novel)로는 AI 번역을 할 수 없습니다. 다른 연결을 선택하세요.';
+        await assert.rejects(() => translateText({ connections: TR.translationConnections }, { text: 'Hi', provider: 'ai', targetLanguage: 'ja', connectionId: 'ai' }), e => e.message === why);
+        const roomId = Object.keys(L.liveWorld(real).messenger.rooms)[0];
+        assert.equal(await TR.translationCannot(real, roomId), why);
+        const meta = L.liveWorld(real).presence.meta;
+        meta.translationConnectionId = 'dr'; meta.translationProvider = 'google';
+        await assert.rejects(() => TR.liveSetTranslation(real, { translationProvider: 'ai', translationConnectionId: 'ai' }), e => e.message === why);
+        assert.deepEqual([meta.translationProvider, meta.translationConnectionId], ['google', 'dr']);
+        assert.equal(T.saves, 0);
+        // (Google, or another connection: nothing to refuse)
+        await TR.liveSetTranslation(real, { translationConnectionId: 'ai' });
+        assert.equal(meta.translationConnectionId, 'ai');
+        await TR.liveSetTranslation(real, { autoTranslate: false });
+        assert.equal(await TR.translationCannot(real, roomId), '');
+    } finally { delete globalThis.__naStOpenai; delete globalThis.__naStTextgen; TR.setTranslationConnectionList(() => []); }
 });
 
 // ---- 3. 화면이 쓰는 설정 (TranslationSection.tsx)
@@ -266,6 +311,34 @@ test('번역 단추: 번역해서 그 말에 저장(번역 · 원문 · 숨김 f
     assert.equal(TR.liveTranslationView(real, room.id, x).isTranslating, false);
 });
 
+test('번역 단추 + 화면처럼 다시 그리기 (phone.js: onChange가 방을 그려요 → liveTranslationOpen · liveTranslationView): 끝없이 돌지 않고 바로 끝나요. 그리기는 틱마다 한 번', async () => {
+    const { real, room, say } = setup({ meta: { translationOutputTargetLang: 'ko' } });
+    const x = say('Mara', 'Hello', 1), y = say('Mara', 'Saved', 2, { translation: '저장됨', translationSource: 'Saved' });
+    let draws = 0, depth = 0, maxDepth = 0, writes = 0;
+    const off = useTranslationStore.subscribe(() => { writes++; });
+    // (drawing the room as the screen does — and, once, something else on the screen writing to the store while it draws)
+    const redraw = () => { draws++; depth++; maxDepth = Math.max(maxDepth, depth); try { TR.liveTranslationOpen(real, room.id); TR.liveTranslationView(real, room.id, x); TR.liveTranslationView(real, room.id, y); if (draws === 1) useTranslationStore.getState().setTranslating('other', false); } finally { depth--; } };
+    TR.liveTranslationOpen(real, room.id);
+    // (drawing again with nothing changed writes nothing: Marinara does this in effects, when something changed)
+    const w0 = writes;
+    for (let i = 0; i < 5; i++) TR.liveTranslationOpen(real, room.id);
+    assert.equal(writes, w0);
+    const t0 = Date.now();
+    await Promise.race([TR.liveTranslate(real, room.id, x.id, { onChange: redraw }), new Promise((_, no) => setTimeout(() => no(new Error('the translate button did not finish')), 3000))]);
+    await new Promise(r => setTimeout(r, 5));
+    off();
+    assert.ok(Date.now() - t0 < 1000);
+    assert.deepEqual(x.extra, { translation: '<Hello>', translationSource: 'Hello', translationHidden: false });
+    // (translating on · the translation and translating off in one tick · the screen's own write: each tick drawn once, never inside a draw)
+    assert.equal(maxDepth, 1);
+    assert.ok(draws >= 2 && draws <= 3, String(draws));
+    assert.deepEqual(TR.liveTranslationView(real, room.id, x).translationBlock, { text: '<Hello>', translating: false });
+    // (a translation saved since — the server's — is seeded in the next draw)
+    y.extra = { ...y.extra, translation: '서버 것' };
+    TR.liveTranslationOpen(real, room.id);
+    assert.equal(TR.liveTranslationView(real, room.id, y).translatedText, '서버 것');
+});
+
 test('번역만 보이기 (translationDisplayOnly): 번역이 있고 · 번역 중이 아니고 · 그 번역의 원문이 지금 글일 때만 말풍선에 번역만', async () => {
     const { real, room, say } = setup({ meta: { translationDisplayOnly: true } });
     const x = say('Mara', 'Hi', 1, { translation: '안녕', translationSource: 'Hi' }), y = say('Mara', 'Edited', 2, { translation: '옛 번역', translationSource: 'Before' }), z = say('Mara', 'No source', 3, { translation: '출처 없음' });
@@ -339,6 +412,15 @@ test('translateMessage (use-translate.ts): 같은 글이면 기다리던 요청�
     replies.shift()(); await c;
     assert.deepEqual(order.at(-1), 'save:T(three)');
     assert.equal(s().translations.n, undefined);
+    // (Marinara's enqueueTranslationPersistence: valid is asked again after the save, before the cached copy is updated)
+    const cached = [];
+    let valid = true;
+    UT.setTranslateIO({ patchExtra: async (chat, id, extra) => { order.push(`save:${JSON.stringify(extra)}`); valid = false; }, cacheExtra: (chat, id, extra) => cached.push(extra) });
+    await UT.enqueueTranslationPersistence('c', 'm', { translationHidden: true }, () => valid);
+    assert.deepEqual(cached, []);
+    UT.setTranslateIO({ patchExtra: async () => {} });
+    await UT.enqueueTranslationPersistence('c', 'm', { translationHidden: true }, () => true);
+    assert.deepEqual(cached, [{ translationHidden: true }]);
     // (the screen's own io again)
     UT.setTranslateIO(had);
 });
@@ -474,6 +556,81 @@ test('translateGeneratedMessage 그대로: 표시 먼저(묻기 전), 번역 뒤
     assert.equal(await translateGeneratedMessage(store, { chatId: 'c', messageId: 'm1', swipeIndex: 0, mode: 'conversation', config }), null);
 });
 
+test('자동 번역: 설정은 답을 만들기 시작할 때 잡은 것 하나로 표시와 보내기 (마리나라 outputTranslationConfig). 글이 없는 말은 표시하지 않아요', async () => {
+    const { real, room, say } = setup({ meta: { autoTranslate: true, translationOutputTargetLang: 'ko' } });
+    const a = say('Mara', 'one', 1), act = say('Mara', '', 2), b = say('Mara', 'two', 3);
+    const config = TR.translationConfigOf(real, room.id);
+    // (turned off in between: the job began with it on, so its messages are still marked and translated with that config)
+    await TR.liveSetTranslation(real, { autoTranslate: false, translationOutputTargetLang: 'fr' });
+    assert.deepEqual(TR.markAutomaticTranslation(real, room.id, [a.id, act.id, b.id], config), [a.id, b.id]);
+    assert.equal(act.extra, undefined);
+    sent.length = 0;
+    await TR.browserAutoTranslate(real, room.id, [a.id, b.id], config);
+    assert.deepEqual(sent.map(r => new URL(r.url).searchParams.get('tl')), ['ko', 'ko']);
+    assert.deepEqual([a.extra.translation, b.extra.translation], ['<one>', '<two>']);
+    // (begun with it off: nothing)
+    assert.deepEqual(TR.markAutomaticTranslation(real, room.id, [a.id], null), []);
+});
+
+test('브라우저의 자동 번역: 그 채팅이 열려 있지 않으면 묻지 않아요(모델 비용 없이). 표시만 남은 말은 그 Orbit이 다시 돌 때 이어서 해요 (한 페이지에 한 번, 서버가 번역 중인 방은 빼고)', async () => {
+    const { real, room, say } = setup({ meta: { autoTranslate: true, translationOutputTargetLang: 'ko' } });
+    const a = say('Mara', 'one', 1, { automaticTranslationSource: 'one' }), b = say('Mara', 'two', 2, { automaticTranslationSource: 'two' });
+    const warns = [], warn = console.warn; console.warn = (...x) => warns.push(x);
+    // (another chat is open)
+    const md = T.ctx.chatMetadata; T.ctx.chatMetadata = { narrative_archive: { other: true } };
+    sent.length = 0;
+    try { await TR.browserAutoTranslate(real, room.id, [a.id, b.id]); } finally { console.warn = warn; T.ctx.chatMetadata = md; }
+    assert.equal(sent.length, 0);
+    assert.equal(a.extra.translation, undefined);
+    // (the console's format string first: %s is the message id)
+    assert.deepEqual(warns.map(x => [x[0], x[1], x[2]?.message]), [['[narrative-archive] [translate] 메시지 %s의 자동 번역에 실패했습니다', a.id, '이 채팅이 열려 있지 않습니다.'], ['[narrative-archive] [translate] 메시지 %s의 자동 번역에 실패했습니다', b.id, '이 채팅이 열려 있지 않습니다.']]);
+    // 이어서 하기: 표시의 원문이 지금 글 · 번역 없음 · 숨기지 않은 캐릭터의 말
+    const done = say('Mara', 'three', 3, { automaticTranslationSource: 'three', translation: '셋', translationSource: 'three' }), hid = say('Mara', 'four', 4, { automaticTranslationSource: 'four', translationHidden: true });
+    const edited = say('Mara', 'five!', 5, { automaticTranslationSource: 'five' }), mine = say('Ren', 'six', 6, { automaticTranslationSource: 'six' });
+    assert.deepEqual(TR.owedTranslations(real), [{ roomId: room.id, ids: [a.id, b.id] }]);
+    void done; void hid; void edited; void mine;
+    // (a room the server's worker is translating is left to it)
+    const asked = [];
+    await TR.resumeAutomaticTranslations(real, { busy: async () => new Set([room.id]), translate: (r, ids) => asked.push([r, ids]) });
+    assert.deepEqual(asked, []);
+    // (the same messages were sent by this page before — the failed run above —: not again. A message whose text is new is)
+    await TR.resumeAutomaticTranslations(real, { translate: (r, ids) => asked.push([r, ids]) });
+    assert.deepEqual(asked, []);
+    a.text = 'one again'; a.extra.automaticTranslationSource = 'one again';
+    await TR.resumeAutomaticTranslations(real);
+    assert.deepEqual([a.extra.translation, a.extra.translationSource], ['<one again>', 'one again']);
+    assert.deepEqual(TR.owedTranslations(real), [{ roomId: room.id, ids: [b.id] }]);
+});
+
+test('자동 번역 보내기의 wrap (서버 일꾼이 답 하나를 줄 한 번에): 말들을 다 도는 일을 감싸요. 감싸기가 실패하면 남은 말마다 경고 줄', async () => {
+    const order = [], logs = [];
+    await TR.dispatchAutomaticTranslations({ chatId: 'c', ids: ['a', 'b'], config: {}, run: async id => order.push(`run:${id}`), wrap: async fn => { order.push('in'); await fn(); order.push('out'); }, log: () => {} });
+    assert.deepEqual(order, ['in', 'run:a', 'run:b', 'out']);
+    await TR.dispatchAutomaticTranslations({ chatId: 'c', ids: ['a', 'b'], config: {}, run: async () => assert.fail(), wrap: async () => { throw new Error('blocked'); }, log: (...x) => logs.push(x) });
+    assert.deepEqual(logs.map(x => [x[1], x[2].message]), [['a', 'blocked'], ['b', 'blocked']]);
+    assert.equal(TR.liveTranslating({}, 'c'), false);
+});
+
+test('translateGenerated의 detached: 말의 사본에만 (원래 말 · 저장은 그대로) — 번역을 받아 오기만. 그 번역을 cached로 넣어요', async () => {
+    const { real, room, say } = setup({ meta: { autoTranslate: true, translationOutputTargetLang: 'ko' } });
+    const a = say('Mara', 'one', 1);
+    const chatId = `${L.liveWorld(real).id}:${room.id}`, config = TR.translationConfigOf(real, room.id);
+    let got = null, saves = 0;
+    assert.ok(await TR.translateGenerated(real, chatId, a.id, config, { detached: true, save: async () => { saves++; }, keep: t => { got = t; } }));
+    assert.deepEqual([got, a.extra, saves], ['<one>', undefined, 0]);
+    sent.length = 0;
+    await TR.translateGenerated(real, chatId, a.id, config, { cached: got, save: async () => { saves++; } });
+    assert.deepEqual([sent.length, a.extra.translation, saves > 0], [0, '<one>', true]);
+});
+
+test('토큰 어림 (마리나라 estimateTextTokens: 한글 0.5 · 한자 · 가나 0.67 · 나머지 0.25, 올림) → "~N 토큰" (숫자는 toLocaleString)', async () => {
+    const { estimateTextTokens, sliceTextToTokenBudget } = await import(href('marinara/token-estimator.js'));
+    assert.deepEqual([estimateTextTokens(''), estimateTextTokens('abcd'), estimateTextTokens('abcde'), estimateTextTokens('안녕'), estimateTextTokens('漢字'), estimateTextTokens('かな'), estimateTextTokens('😀')], [0, 1, 2, 1, 2, 2, 1]);
+    assert.equal(sliceTextToTokenBudget('안녕하세요', 1), '안녕');
+    assert.equal(TR.liveTokenEstimate(DEFAULT_TRANSLATION_SYSTEM_PROMPT), `~${Math.ceil(DEFAULT_TRANSLATION_SYSTEM_PROMPT.length * 25 / 100)} 토큰`);
+    assert.equal(TR.liveTokenEstimate('a'.repeat(4000 * 4)), `~${(4000).toLocaleString()} 토큰`);
+});
+
 // ---- 7. 옛 한국어 옮기기
 test('옛 한국어(ko) 옮기기: 방의 말 · 받아 둔 답장 · 휴지통의 말, 원문은 그때의 글. 이미 번역이 있으면 그것을 남겨요. 빈 ko는 지우기만', () => {
     const { real, room, say } = setup();
@@ -490,10 +647,18 @@ test('옛 한국어(ko) 옮기기: 방의 말 · 받아 둔 답장 · 휴지통�
     assert.ok(!JSON.stringify(real.live).includes('"ko"'));
     assert.equal(TR.migrateKo(real), 0);
     assert.equal(TR.migrateKo({ phones: {} }), 0);
+    // (a world looked through once is not looked through again — each draw and liveMeta call this —, until old data may have
+    //  come in: a sync from the plugin clears the mark — 'na-live-change' — and the next call moves it)
+    const late = say('Mara', 'Late', 4); late.ko = '늦게';
+    assert.equal(TR.migrateKo(real), 0);
+    assert.equal(late.ko, '늦게');
+    TR.forgetKoMoved();
+    assert.equal(TR.migrateKo(real), 1);
+    assert.deepEqual(late.extra, { translation: '늦게', translationSource: 'Late' });
 });
 
 test('파일마다 어디서 왔고 무엇을 바꿨는지 적혀 있어요 (AGPL). DeepL · DeepLX 코드는 없어요', async () => {
-    for (const f of ['translation.service.js', 'translator-defaults.js', 'translation-prompt.js', 'translation.store.js', 'use-translate.js', 'translate-text.js', 'draft-translation.js', 'use-translator-defaults.js', 'quote-format.js']) {
+    for (const f of ['translation.service.js', 'translator-defaults.js', 'translation-prompt.js', 'translation.store.js', 'use-translate.js', 'translate-text.js', 'draft-translation.js', 'use-translator-defaults.js', 'quote-format.js', 'token-estimator.js']) {
         const s = await readFile(new URL(`../src/marinara/${f}`, import.meta.url), 'utf8');
         assert.match(s, /^\/\/ Ported from Marinara Engine \(https:\/\/github\.com\/Pasta-Devs\/Marinara-Engine\), at cfc726e93/, f);
         assert.match(s, /GNU Affero General Public License v3\.0/, f);

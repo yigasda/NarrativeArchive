@@ -61,7 +61,7 @@ export const liveSnapBehind=(snap,t)=>!!snap&&t.end>snap.upto&&(t.first===null||
 export const liveSnapNow=async m=>{T.starts=(T.starts||0)+1;const a=T.start;if(a instanceof Error)throw a;return typeof a==='function'?a(m):a||null;};
 export const liveSnapExtend=async(m,snap)=>{T.extends=(T.extends||0)+1;T.extendArgs=[m,snap];const a=T.extend;if(a instanceof Error)throw a;return typeof a==='function'?a(m,snap):a;};`);
 // (Marinara's translation, ported, and our glue for it: phone2translate.js with the same stand-ins)
-for (const f of ['translation.service.js', 'translator-defaults.js', 'translation-prompt.js', 'translation.store.js', 'use-translate.js', 'translate-text.js', 'draft-translation.js', 'use-translator-defaults.js', 'quote-format.js']) map[`./marinara/${f}`] = href(`marinara/${f}`);
+for (const f of ['translation.service.js', 'translator-defaults.js', 'translation-prompt.js', 'translation.store.js', 'use-translate.js', 'translate-text.js', 'draft-translation.js', 'use-translator-defaults.js', 'quote-format.js', 'token-estimator.js']) map[`./marinara/${f}`] = href(`marinara/${f}`);
 map['./phone2translate.js'] = encoded(swap(await readFile(new URL('../src/phone2translate.js', import.meta.url), 'utf8')));
 export const TRL = await import(map['./phone2translate.js']);
 export const G = await import(encoded(swap(await readFile(new URL('../src/phone2go.js', import.meta.url), 'utf8'))));

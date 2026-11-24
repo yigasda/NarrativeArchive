@@ -355,3 +355,28 @@ test('서버가 쓴 늦은 답장의 자동 번역: 브라우저의 "답이 끝�
     assert.ok(now.extra.translation);
     await ticking;
 });
+
+test('서버 번역을 기다리는 동안 다른 채팅을 열면: 묻는 저장은 시작할 때의 것 그대로이고, 끝나도 새 채팅의 것을 받지 않아요 · 신호를 보내지 않아요 (false)', async t => {
+    const S = await stage(t);
+    const poll = KO.TRANSLATION_SETTLE.pollMs; KO.TRANSLATION_SETTLE.pollMs = 20;
+    let open;
+    trGate = new Promise(r => { open = r; });
+    const was = globalThis.SillyTavern.getContext();
+    t.after(() => { KO.TRANSLATION_SETTLE.pollMs = poll; open?.(); trGate = null; setContext(was); });
+    S.w.presence.meta = { autoTranslate: true, translationProvider: 'ai', translationConnectionId: 'dr', translationOutputTargetLang: 'Korean' };
+    await busyReply(S, 'so tired');
+    page.hidden = true;
+    await sleep(350);
+    assert.equal(await S.auto.sweep(), 1);
+    assert.equal((await S.auto.status(S.sid))[0].translating, true);
+    S.calls.length = 0;
+    let n = 0;
+    // (another chat is opened while it waits: one with an Orbit of its own, not in the plugin yet)
+    const waiting = KO.waitForServerTranslationToSettle(S.room.id, { wait: async ms => { if (++n === 2) setContext({ ...was, chatMetadata: { narrative_archive: { other: true } } }); if (n === 4) open(); await sleep(ms); } });
+    assert.equal(await waiting, false);
+    const asked = S.calls.filter(c => c[0] === '/auto/status').map(c => c[1].id);
+    assert.ok(asked.length >= 1);
+    assert.deepEqual([...new Set(asked)], [S.sid]);
+    assert.deepEqual(S.calls.filter(c => c[0] !== '/auto/status'), []);
+    page.hidden = false;
+});

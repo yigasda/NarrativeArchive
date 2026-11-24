@@ -9,7 +9,7 @@
 //   [#12] Lio: 오늘 왜 그랬어?
 //   [#13] Ren: …됐어. 나중에 얘기해.
 //   [#13] Ren [Diary]: 방금 들은 말 때문에 속상한 마음을 적음
-// 메시지 하나: { id, n, from, text, at (ms), ko?, state?, does?: [{ app, what }], call?: { min, summary }, act? (말 없이 한 일만) }
+// 메시지 하나: { id, n, from, text, at (ms), state?, does?: [{ app, what }], call?: { min, summary }, act? (말 없이 한 일만) }
 
 import { aiReads } from './phone2room.js';
 import { liveKey, liveWorld, numberLive } from './phone2store.js';

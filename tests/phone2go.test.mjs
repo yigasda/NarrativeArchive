@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import { migrateBank, cash } from '../src/finance.js';
 import * as L from '../src/phone2store.js';
-import { G, T, PD, Y, N, Q, snapFor } from './phone2reflect.load.mjs';
+import { G, T, PD, Y, N, Q, snapFor, TRL } from './phone2reflect.load.mjs';
 // 롤플에 넣는 글, 창구(P.phoneBlock)가 만드는 대로: 폰 1의 글(폰 1 함수) + 실시간 폰의 글(phone2note.js)
 const block = (m, live = null) => PD.phoneBlock(m) + N.liveNote(live);
 import { journalRead, journalWrite } from '../src/phonesync.js';
@@ -1200,6 +1200,9 @@ test('옛 한국어(ko): 답장 지시문이 한국어를 같이 받던 때의 �
     c.room.messages.push(old, same);
     c.room.swipes = { x: { list: [[{ id: 'o3', from: 'Mara', text: 'Later', ko: '나중에' }], null], at: 1 } };
     c.room.trash = [{ x: { id: 'o4', from: 'Mara', text: 'Bye', ko: '잘 가', extra: { bookmark: true } }, at: Date.now() }];
+    // (this world was looked through already — world() read it —: old data that comes in afterwards comes with a sync from the plugin,
+    //  which clears the mark — 'na-live-change'. Here it was put in by hand: the mark is cleared the same way)
+    TRL.forgetKoMoved();
     T.replies = [{ state: 'home', reply: ['Why'], ko: ['왜'], does: [] }];
     await G.liveGo(c.real);
     assert.deepEqual([old.ko, old.extra], [undefined, { translation: '겨우.', translationSource: 'Barely.' }]);
@@ -2025,6 +2028,67 @@ test('자동 번역 (마리나라 dispatchAutomaticTranslations): 켜져 있으�
         for (let i = 0; i < 50 && !cues.length; i++) await new Promise(r => setTimeout(r, 5));
     } finally { console.warn = warn; }
     assert.equal(cues.length, 1);
-    assert.ok(warns.some(a => a.includes('[translate] 메시지 %s의 자동 번역에 실패했습니다')));
+    // (the format string is the first argument: the console fills %s with the message id — not "[narrative-archive]" first)
+    assert.ok(warns.some(a => a[0] === '[narrative-archive] [translate] 메시지 %s의 자동 번역에 실패했습니다' && typeof a[1] === 'string'), JSON.stringify(warns.map(a => a[0])));
     assert.equal(c.room.messages.at(-1).extra.translation, undefined);
+});
+
+test('자동 번역: 답장 뒤 처리 중 오류가 나도 이미 저장된 답은 번역해요 (마리나라의 finally 길). 설정은 답을 만들기 시작할 때 잡은 것 하나 (표시와 보내기 모두). 잡은 설정은 저장되는 일 줄에 안 남아요', async () => {
+    const c = world(), w = L.liveWorld(c.real), sent = [];
+    w.presence = { ...(w.presence || {}), meta: { ...(w.presence?.meta || {}), autoTranslate: true, translationOutputTargetLang: 'ko' } };
+    // (a translation that gets done: what is translated is not owed again)
+    const translate = (roomId, ids, config) => { sent.push({ roomId, ids, lang: config.outputTargetLanguage }); for (const x of c.room.messages) if (ids.includes(x.id)) x.extra = { ...x.extra, translation: `ko:${x.text}`, translationSource: x.text }; return Promise.resolve(); };
+    // (while the model is asked, automatic translation is switched to French and then off: the job began with Korean)
+    send(c, 'hi');
+    T.replies = { shift: () => { w.presence.meta.translationOutputTargetLang = 'fr'; w.presence.meta.autoTranslate = false; return { state: '집', reply: ['one', 'two'], does: [] }; } };
+    await G.liveGo(c.real, { translate });
+    const [one, two] = c.room.messages.slice(-2);
+    assert.deepEqual([one.extra?.automaticTranslationSource, two.extra?.automaticTranslationSource], ['one', 'two']);
+    assert.deepEqual(sent, [{ roomId: c.room.id, ids: [one.id, two.id], lang: 'ko' }]);
+    assert.ok(!JSON.stringify(w.queue.jobs).includes('trIds') && !JSON.stringify(w.queue.jobs).includes('outputTargetLanguage'));
+    // (something after the reply fails — here the phone's contacts cannot be written —: the reply is saved, so it is still translated)
+    w.presence.meta.autoTranslate = true; w.presence.meta.translationOutputTargetLang = 'ko'; sent.length = 0;
+    c.p.contacts = Object.freeze([]);
+    send(c, 'again'); T.replies = [{ state: '집', reply: ['three'], does: [] }];
+    const out = await G.liveGo(c.real, { translate });
+    assert.ok(out.failed, 'the after-reply step failed');
+    const three = c.room.messages.at(-1);
+    assert.equal(three.text, 'three');
+    assert.deepEqual(sent, [{ roomId: c.room.id, ids: [three.id], lang: 'ko' }]);
+    delete T.replies;
+});
+
+test('자동 번역: Merged 단체방의 답도 말마다 번역해요. 표시만 남은 말(번역이 끝나지 못함)은 브라우저의 liveGo가 시작할 때 이어서 (서버가 번역 중인 방은 빼고)', async () => {
+    const c = world(), w = L.liveWorld(c.real), sent = [];
+    w.presence = { ...(w.presence || {}), meta: { ...(w.presence?.meta || {}), autoTranslate: true, translationOutputTargetLang: 'ko' } };
+    const translate = (roomId, ids, config) => { sent.push([roomId, ids, config.outputTargetLanguage]); return Promise.resolve(); };
+    // Merged 단체방: 한 요청의 말들이 다 표시되고, 차례로 번역에
+    const m = L.liveMeta(c.real);
+    m.phones.ivo = { ...phone(), owner: 'Ivo' }; migrateBank(m, m.phones.ivo);
+    const g = L.ensureRoom(c.real, ['Mara', 'Ivo']);
+    L.sendLive(c.real, g.id, 'dinner?'); L.enqueueReplies(c.real, g.id);
+    T.ask = async () => 'Mara: sure\nIvo: where';
+    try { await G.liveGo(c.real, { translate }); } finally { delete T.ask; }
+    const said = g.messages.filter(x => x.from !== 'Ren');
+    assert.deepEqual(said.map(x => x.extra?.automaticTranslationSource), ['sure', 'where']);
+    assert.deepEqual(sent, [[g.id, said.map(x => x.id), 'ko']]);
+    for (const x of said) x.extra.translation = `ko:${x.text}`, x.extra.translationSource = x.text;
+    sent.length = 0;
+    // (a message marked, never translated: the tab was closed while it ran)
+    const left = { id: 'left1', n: L.liveNo(w), from: 'Mara', text: 'left over', at: 1, extra: { automaticTranslationSource: 'left over' } };
+    c.room.messages.push(left);
+    // (the server's worker is translating that room: left to it)
+    T.kept = true; T.autoStatus = { on: true, rooms: [{ room: c.room.id, translating: true }] };
+    await G.liveGo(c.real, { translate });
+    await new Promise(r => setTimeout(r, 5));
+    assert.deepEqual(sent, []);
+    T.autoStatus = { on: true, rooms: [{ room: c.room.id, translating: false }] };
+    await G.liveGo(c.real, { translate });
+    await new Promise(r => setTimeout(r, 5));
+    assert.deepEqual(sent, [[c.room.id, ['left1'], 'ko']]);
+    // (once a page)
+    await G.liveGo(c.real, { translate });
+    await new Promise(r => setTimeout(r, 5));
+    assert.equal(sent.length, 1);
+    delete T.kept; delete T.autoStatus;
 });

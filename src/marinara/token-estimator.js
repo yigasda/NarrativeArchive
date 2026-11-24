@@ -2,20 +2,20 @@
 //   packages/shared/src/utils/token-estimator.ts (the whole file)
 // Copyright (C) 2025-2026 Spicy Marinara. Licensed under the GNU Affero General Public License v3.0 (see /LICENSE).
 // Changes for NarrativeArchive:
-//   - TypeScript types removed (node:module stripTypeScriptTypes: the types' places are left as spaces). Nothing else.
+//   - TypeScript types and the non-null marks (!) removed. Nothing else.
 /** Lightweight, model-agnostic token estimate based on Unicode script. */
-export function estimateTextTokens(text        )         {
+export function estimateTextTokens(text) {
   let hundredthTokens = 0;
 
   for (const character of text) {
-    hundredthTokens += codePointTokenHundredths(character.codePointAt(0) );
+    hundredthTokens += codePointTokenHundredths(character.codePointAt(0));
   }
 
   return Math.ceil(hundredthTokens / 100);
 }
 
 /** Keep a prefix (or suffix) within the same estimate, without splitting Unicode code points. */
-export function sliceTextToTokenBudget(text        , tokenBudget        , fromEnd = false)         {
+export function sliceTextToTokenBudget(text, tokenBudget, fromEnd = false) {
   if (!(tokenBudget > 0)) return "";
   const budget = Math.floor(tokenBudget) * 100;
   let used = 0;
@@ -31,7 +31,7 @@ export function sliceTextToTokenBudget(text        , tokenBudget        , fromEn
       text.charCodeAt(pointIndex - 1) <= 0xdbff
     )
       pointIndex -= 1;
-    const codePoint = text.codePointAt(pointIndex) ;
+    const codePoint = text.codePointAt(pointIndex);
     const next = used + codePointTokenHundredths(codePoint);
     if (next > budget) break;
     used = next;
@@ -40,13 +40,13 @@ export function sliceTextToTokenBudget(text        , tokenBudget        , fromEn
   return fromEnd ? text.slice(index) : text.slice(0, index);
 }
 
-function codePointTokenHundredths(codePoint        )         {
+function codePointTokenHundredths(codePoint) {
   if (isHangul(codePoint)) return 50;
   if (isHan(codePoint) || isKana(codePoint)) return 67;
   return 25;
 }
 
-function isHangul(codePoint        )          {
+function isHangul(codePoint) {
   return (
     (codePoint >= 0x1100 && codePoint <= 0x11ff) ||
     (codePoint >= 0x3130 && codePoint <= 0x318f) ||
@@ -56,7 +56,7 @@ function isHangul(codePoint        )          {
   );
 }
 
-function isHan(codePoint        )          {
+function isHan(codePoint) {
   return (
     (codePoint >= 0x3400 && codePoint <= 0x4dbf) ||
     (codePoint >= 0x4e00 && codePoint <= 0x9fff) ||
@@ -65,7 +65,7 @@ function isHan(codePoint        )          {
   );
 }
 
-function isKana(codePoint        )          {
+function isKana(codePoint) {
   return (
     (codePoint >= 0x3040 && codePoint <= 0x309f) ||
     (codePoint >= 0x30a0 && codePoint <= 0x30ff) ||
@@ -76,7 +76,7 @@ function isKana(codePoint        )          {
 }
 
 /** Serialize the estimator with its private helpers for isolated extension runtimes. */
-export function getSerializedTextTokenEstimator()         {
+export function getSerializedTextTokenEstimator() {
   return `(() => {
     const isHangul = ${isHangul.toString()};
     const isHan = ${isHan.toString()};

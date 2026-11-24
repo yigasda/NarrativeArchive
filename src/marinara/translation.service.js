@@ -19,8 +19,9 @@
 //     resolveDeeplApiKey and translateWithDeepL are not here, and neither are their body keys (deeplApiKey, deeplxUrl).
 //   - The fallback connection (Marinara's connections.getFallbackForMain + withConnectionFallbackProvider) is not here:
 //     this extension has no fallback connection yet (docs/MARINARA-PORT.md "꼭 할 것").
-//   - safeFetch → fetch: the 15-second timeout and the 1 MB answer limit are kept (Marinara's readCappedResponse
-//     error, in Korean). Google answers any page (access-control-allow-origin: *), so the browser calls it itself.
+//   - safeFetch is a few lines over fetch here (its address checks are for a server's own network): the 15-second timeout
+//     and the 1 MB answer limit are kept, the body read inside it as Marinara's readCappedResponse does (its error, in
+//     Korean). Google answers any page (access-control-allow-origin: *), so the browser calls it itself.
 //   - Error and log texts are Marinara's, in Korean (합니다체). statusCode is kept on each error.
 //   - logDebugOverride is our shim (src/marinara/shims.js): there is no debug mode here.
 import { isDebugAgentsEnabled, logDebugOverride } from "./shims.js";
@@ -180,11 +181,13 @@ async function translateWithAI(input, connections, _onFallback) {
   return { translatedText: (result.content ?? "").trim() };
 }
 
-// (safeFetch's buffered answer, at most maxResponseBytes: Marinara's readCappedResponse)
-async function readCapped(response, maxBytes) {
+// (Marinara's safeFetch with its buffered answer, at most maxResponseBytes — readCappedResponse: the body is read inside the
+//  fetch, so a timeout while reading it is the fetch's own error)
+async function safeFetch(url, { maxResponseBytes, ...init }) {
+  const response = await globalThis.fetch(url, init);
   const buf = await response.arrayBuffer();
-  if (buf.byteLength > maxBytes) throw new Error(`외부 응답이 ${maxBytes}바이트를 초과했습니다`);
-  return JSON.parse(new globalThis.TextDecoder().decode(buf));
+  if (buf.byteLength > maxResponseBytes) throw new Error(`외부 응답이 ${maxResponseBytes}바이트를 초과했습니다`);
+  return new globalThis.Response([101, 204, 205, 304].includes(response.status) ? null : buf, { status: response.status, statusText: response.statusText, headers: response.headers });
 }
 
 // ── Google Translate (free API) ──
@@ -205,8 +208,9 @@ async function translateWithGoogle(input) {
   url.searchParams.set("dt", "t");
   url.searchParams.set("q", input.text);
 
-  const response = await globalThis.fetch(url.toString(), {
+  const response = await safeFetch(url.toString(), {
     signal: globalThis.AbortSignal.timeout(15_000),
+    maxResponseBytes: MAX_RESPONSE_BYTES,
   }).catch((err) => {
     if (err.name === "TimeoutError")
       throw Object.assign(new Error("Google 번역 요청 시간이 초과되었습니다"), { statusCode: 502 });
@@ -217,7 +221,7 @@ async function translateWithGoogle(input) {
     throw Object.assign(new Error(`Google 번역이 ${response.status}을(를) 반환했습니다`), { statusCode: 502 });
   }
 
-  const data = await readCapped(response, MAX_RESPONSE_BYTES);
+  const data = await response.json();
 
   // Google returns nested arrays: [[["translated text", "original text", ...], ...], ...]
   let translated = "";

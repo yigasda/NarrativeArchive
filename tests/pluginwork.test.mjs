@@ -161,6 +161,7 @@ const sentTo = (S, url = CC) => S.st.filter(x => x.url === url);
 const lastText = async (S, sid, x) => (await S.get(sid)).messenger.rooms[x.room.id].messages.at(-1).text;
 // (a different answer each time: the same words twice in a row are not saved again — a reply that only repeats is dropped)
 const pings = () => { let n = 0; return () => ({ reply: [`ping ${++n}`], status: '' }); };
+const TR_META = id => ({ autoTranslate: true, translationProvider: 'ai', translationConnectionId: id, translationOutputTargetLang: 'Korean' });
 const useRoom = (x, more) => Object.assign(liveWorld(x.m).messenger.rooms[x.room.id], typeof more === 'string' ? { connectionId: more } : more);
 
 test('일꾼 · 연결 프로필 방: 옮긴 실리 코드가 settings.json · 프리셋 파일 · 프록시로 만든 요청 그대로 다리로 실리 서버의 처리기에. 답은 방에', async t => {
@@ -862,6 +863,18 @@ test('일꾼 · 연결 확인은 실리 연결을 쓰는 세계만: 커스텀 AP
     await Q.put('sc', c.m);
     await Q.auto.status('sc');
     assert.deepEqual(statusSeen(Q), ['/api/secrets/read', '/api/backends/chat-completions/status']);
+    // (a world whose replies go to the custom API but whose automatic translation goes through a profile: asked too)
+    const R = await stageOf(t), d = world();
+    d.w.presence.meta = TR_META('profile:p1');
+    await R.put('sd', d.m);
+    await R.auto.status('sd');
+    assert.deepEqual(statusSeen(R), ['/api/secrets/read', '/api/backends/chat-completions/status']);
+    // (its translation through Google, or turned off: not asked)
+    const U = await stageOf(t), e = world();
+    e.w.presence.meta = { ...TR_META('profile:p1'), autoTranslate: false };
+    await U.put('se', e.m);
+    await U.auto.status('se');
+    assert.deepEqual(statusSeen(U), []);
 });
 
 test('일꾼 · 브라우저의 시간대: 확장 설정의 device(src/phone2keepon.js keepDevice)대로 실리 매크로가 그 시각. 모르는 시간대 · 없으면 서버의 것, 모르는 것은 실리 창에 한 번 · 크롬의 Etc/Unknown은 UTC', async t => {
@@ -955,4 +968,120 @@ test('일꾼 · 자동 번역 (마리나라: 답이 저장된 뒤 서버가, 생
     const tr = S.asked.filter(q => String(q.body.messages[0].content).startsWith('You are a translator'));
     assert.equal(tr.length, 2, 'a translation is not asked again after a save conflict');
     assert.deepEqual([tr[0].body.temperature, tr[0].body.max_tokens, tr[0].body.messages.map(m => m.role), tr[0].body.messages[1].content], [0.3, 4096, ['system', 'user'], 'Translate the following text to Korean:\n\nsorry']);
+});
+
+// ---- 자동 번역의 연결 · 일꾼의 줄 (review 4520363: B2 · S1)
+const isTr = b => String(b?.messages?.[0]?.content || '').startsWith('You are a translator');
+const trSource = b => String(b.messages[1].content).split('\n\n').slice(1).join('\n\n');
+const dueNow = x => { const j = enqueueJob(x.m, { kind: 'reply', owner: 'Mara', room: x.room.id, at: Date.now() - 600_000 }); Object.assign(j, { timed: true, notBefore: Date.now() - 1000 }); };
+const settle = async (S, sid) => { let rows; for (let i = 0; i < 300; i++) { rows = await S.auto.status(sid); if (!rows.some(r => r.translating)) break; await new Promise(r => setTimeout(r, 20)); } return rows; };
+// (ai.js stSourceData for a translation: Marinara's temperature 0.3 and max tokens, no level, no thoughts — over SillyTavern's settings)
+const trSettings = (source, max) => o => ({
+    ...o, chat_completion_source: source, stream_openai: false, n: 1, bias_preset_selected: '', seed: -1, temp_openai: 0.3, top_p_openai: 1, openai_max_tokens: max,
+    freq_pen_openai: 0, pres_pen_openai: 0, top_k_openai: 0, min_p_openai: 0, top_a_openai: 0, repetition_penalty_openai: 1, reasoning_effort: 'auto', show_thoughts: false,
+    enable_web_search: false, request_images: false, function_calling: false, assistant_prefill: '', assistant_impersonation: '',
+});
+
+test('일꾼 · 자동 번역의 연결이 실리의 지금 연결(\'ai\', 고른 프로필 없음 · 채팅 완성): 그 소스 · 모델로 실리 createGenerationParameters가 만든 요청 (system + user, 온도 0.3) — 터묵스에서 브라우저를 닫고 와도 번역돼요', async t => {
+    const S = await stageOf(t, { settings: { aiConn: { mode: 'st' } }, oai: { ...OAI_SET, openrouter_model: 'or/model' }, reply: () => ({ reply: ['sorry', 'was busy'], status: '' }), routes: async (req, body, res) => {
+        if (req.url === CC && isTr(body)) { res.end(JSON.stringify({ choices: [{ message: { content: `  KO:${trSource(body)} ` }, finish_reason: 'stop' }] })); return true; }
+        return false;
+    } }), a = world({ hoursAgo: 0.2 });
+    a.w.presence.meta = TR_META('ai');
+    dueNow(a); await S.put('sa', a.m);
+    assert.deepEqual((await S.auto.status('sa')).map(x => x.translateWhy), ['']);
+    assert.equal(await S.auto.sweep(), 1);
+    await settle(S, 'sa');
+    const msgs = (await S.get('sa')).messenger.rooms[a.room.id].messages.slice(-2);
+    assert.deepEqual(msgs.map(x => [x.text, x.extra?.translation, x.extra?.translationSource]), [['sorry', 'KO:sorry', 'sorry'], ['was busy', 'KO:was busy', 'was busy']]);
+    const tr = sentTo(S).filter(x => isTr(x.body)).map(x => x.body);
+    assert.equal(tr.length, 2);
+    const want = (await stGenerationParameters(S.root, ME, { settingsOf: trSettings('openrouter', 8192), model: 'or/model', messages: tr[0].messages })).out.generate_data;
+    for (const k of ['stop', 'logit_bias', 'logprobs', 'top_logprobs', 'n', 'tools', 'tool_choice', 'seed']) delete want[k];
+    want.stream = false;
+    assert.deepEqual(tr[0], JSON.parse(JSON.stringify(want)));
+    assert.deepEqual([tr[0].chat_completion_source, tr[0].model, tr[0].temperature, tr[0].messages.map(m => m.role), tr[0].messages[1].content], ['openrouter', 'or/model', 0.3, ['system', 'user'], 'Translate the following text to Korean:\n\nsorry']);
+});
+
+test('일꾼 · 자동 번역의 연결이 실리의 지금 연결(글 완성): 실리 TextCompletionService로 지시 형식(ChatML)이 감싼 글 · 온도 0.3. 그 밖의 API(NovelAI)는 보내지 않고 /auto/status에 이유를', async t => {
+    const tcSeen = [];
+    const S = await stage(t, { settings: { aiConn: { mode: 'st' } }, files: { 'instruct/ChatML.json': CHATML }, reply: () => ({ reply: ['sorry', 'was busy'], status: '' }),
+        more: { main_api: 'textgenerationwebui', textgenerationwebui_settings: { type: 'koboldcpp', server_urls: { koboldcpp: 'http://127.0.0.1:5001' } }, power_user: { ...PERSONAS, instruct: { ...CHATML, enabled: true, preset: 'ChatML' } } },
+        routes: async (req, body, res) => {
+            if (req.url !== TC) return false;
+            tcSeen.push(body);
+            const m = /Translate the following text to Korean:\n\n([\s\S]*?)<\|im_end\|>/.exec(body.prompt);
+            res.end(JSON.stringify({ choices: [{ text: `KO:${m?.[1]}<|im_end|>\n<|im_start|>user\nmore` }] }));
+            return true;
+        } }), a = world({ hoursAgo: 0.2 });
+    a.w.presence.meta = TR_META('ai');
+    dueNow(a); await S.put('sa', a.m);
+    assert.equal(await S.auto.sweep(), 1);
+    await settle(S, 'sa');
+    const msgs = (await S.get('sa')).messenger.rooms[a.room.id].messages.slice(-2);
+    assert.deepEqual(msgs.map(x => x.extra?.translation), ['KO:sorry', 'KO:was busy']);
+    assert.equal(tcSeen.length, 2);
+    const sys = 'You are a translator. Translate the given text accurately into Korean, preserving formatting, markdown, and any special characters like *asterisks* for actions. Output ONLY the translated text, nothing else -- no explanations, no extra commentary.';
+    assert.equal(tcSeen[0].prompt, `<|im_start|>system\n${sys}<|im_end|>\n<|im_start|>user\nTranslate the following text to Korean:\n\nsorry<|im_end|>\n<|im_start|>assistant\n`);
+    assert.deepEqual([tcSeen[0].temperature, tcSeen[0].max_tokens, tcSeen[0].api_type, tcSeen[0].api_server, tcSeen[0].stream], [0.3, 8192, 'koboldcpp', 'http://127.0.0.1:5001', false]);
+    // NovelAI: 보내지 않아요 — 이유는 /auto/status에, 실리 창에는 말마다 한 줄
+    S.stSettings.main_api = 'novel'; await S.writeSettings();
+    const b = world({ hoursAgo: 0.2 });
+    b.w.presence.meta = TR_META('ai');
+    dueNow(b); await S.put('sb', b.m);
+    const why = '실리의 지금 API(novel)로는 AI 번역을 할 수 없습니다. 다른 연결을 선택하세요.';
+    assert.deepEqual((await S.auto.status('sb')).map(x => [x.can, x.translateWhy]), [[true, why]]);
+    const n = tcSeen.length;
+    assert.equal(await S.auto.sweep(), 1);
+    await settle(S, 'sb');
+    const got = (await S.get('sb')).messenger.rooms[b.room.id].messages.slice(-2);
+    assert.deepEqual(got.map(x => [x.extra?.automaticTranslationSource, x.extra?.translation]), [['sorry', undefined], ['was busy', undefined]]);
+    assert.equal(tcSeen.length, n);
+});
+
+test('일꾼 · 자동 번역은 일꾼의 줄을 쥐지 않아요 (마리나라: 번역은 자물쇠가 없어요): 커스텀 API 번역이 걸려 있는 동안 다른 세계의 상태 · 늦은 답장이 돌아요', async t => {
+    let open;
+    const gate = new Promise(r => { open = r; }), order = [];
+    const S = await stage(t, { reply: async body => {
+        if (isTr(body)) { order.push(`tr:${trSource(body)}`); await gate; return `KO:${trSource(body)}`; }
+        order.push('reply'); return { reply: ['sorry'], status: '' };
+    } });
+    const a = world({ hoursAgo: 0.2 }), b = world({ hoursAgo: 0.2 });
+    a.w.presence.meta = TR_META('dr');
+    dueNow(a); await S.put('sa', a.m);
+    assert.equal(await S.auto.sweep(), 1);
+    for (let i = 0; i < 100 && !order.includes('tr:sorry'); i++) await new Promise(r => setTimeout(r, 10));
+    dueNow(b); await S.put('sb', b.m);
+    const race = (p, ms) => Promise.race([p.then(() => 'done'), new Promise(r => setTimeout(() => r('timeout'), ms))]);
+    assert.equal(await race(S.auto.status('sb'), 1500), 'done');
+    assert.equal(await race(S.auto.sweep(), 1500), 'done');
+    assert.equal((await S.get('sb')).messenger.rooms[b.room.id].messages.at(-1).text, 'sorry');
+    assert.deepEqual(order, ['reply', 'tr:sorry', 'reply']);
+    open();
+    await settle(S, 'sa');
+    assert.deepEqual((await S.get('sa')).messenger.rooms[a.room.id].messages.at(-1).extra?.translation, 'KO:sorry');
+});
+
+test('일꾼 · 실리 쪽 연결(프로필)로 번역하면 답 하나의 말들을 줄 한 번에: 그사이 다른 세계의 일이 끼어들지 않아요', async t => {
+    let open;
+    const gate = new Promise(r => { open = r; }), order = [];
+    const S = await stageOf(t, { routes: async (req, body, res) => {
+        if (req.url !== CC) return false;
+        if (isTr(body)) { const s = trSource(body); order.push(`tr:${s}`); if (s === 'sorry') await gate; res.end(JSON.stringify({ choices: [{ message: { content: `KO:${s}` }, finish_reason: 'stop' }] })); return true; }
+        return false;
+    }, reply: async () => { order.push('reply'); return { reply: ['sorry', 'was busy'], status: '' }; } });
+    const a = world({ hoursAgo: 0.2 }), b = world({ hoursAgo: 0.2 });
+    a.w.presence.meta = TR_META('profile:p1');
+    dueNow(a); await S.put('sa', a.m);
+    assert.equal(await S.auto.sweep(), 1);
+    for (let i = 0; i < 200 && !order.includes('tr:sorry'); i++) await new Promise(r => setTimeout(r, 10));
+    assert.ok(order.includes('tr:sorry'));
+    dueNow(b); await S.put('sb', b.m);
+    const swept = S.auto.sweep();
+    await new Promise(r => setTimeout(r, 100));
+    open();
+    await swept;
+    await settle(S, 'sa');
+    assert.deepEqual(order, ['reply', 'tr:sorry', 'tr:was busy', 'reply']);
+    assert.deepEqual((await S.get('sa')).messenger.rooms[a.room.id].messages.slice(-2).map(x => x.extra?.translation), ['KO:sorry', 'KO:was busy']);
 });

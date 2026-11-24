@@ -6,9 +6,10 @@
 //     screen draws again from the store instead of re-rendering).
 //   - Marinara's queryClient · api are our Orbit: `io` (src/phone2translate.js setTranslateIO) gives
 //       io.translate(body) → { translatedText }   (Marinara: api.post("/translate", body) → the server's translateText)
-//       io.patchExtra(chatId, messageId, extra)   (Marinara: api.patch(`/chats/${chatId}/messages/${messageId}/extra`)
-//                                                  then the cached message's extra; here one write into the message the
-//                                                  screen draws, and the save)
+//       io.patchExtra(chatId, messageId, extra)   (Marinara: api.patch(`/chats/${chatId}/messages/${messageId}/extra`):
+//                                                  here one write into the message the screen draws, and the save)
+//       io.cacheExtra(chatId, messageId, extra)   (Marinara: then, if still valid, queryClient.setQueryData — the cached
+//                                                  message's extra. Ours draws from the saved message itself: nothing)
 //       io.toastError(text) · io.logError(...args)
 //   - The request body has no deeplxUrl (DeepL and DeepLX are removed, 소망 2026-11-23).
 //   - Error texts are Marinara's, in Korean ("Translation failed" → "번역에 실패했습니다", "Translation failed:" in the log).
@@ -17,6 +18,7 @@ import { useTranslationStore } from "./translation.store.js";
 let io = {
   translate: async () => { throw new Error("번역할 수 없습니다"); },
   patchExtra: async () => {},
+  cacheExtra: () => {},
   toastError: () => {},
   logError: () => {},
 };
@@ -43,6 +45,8 @@ export function enqueueTranslationPersistence(chatId, messageId, extra, isValid 
     .then(async () => {
       if (!isValid()) return;
       await io.patchExtra(chatId, messageId, extra);
+      if (!isValid()) return;
+      io.cacheExtra(chatId, messageId, extra);
     });
   const settled = request.then(
     () => undefined,
