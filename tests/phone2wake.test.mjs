@@ -356,7 +356,7 @@ test('서버가 쓴 늦은 답장의 자동 번역: 브라우저의 "답이 끝�
     await ticking;
 });
 
-test('서버 번역을 기다리는 동안 다른 채팅을 열면: 묻는 저장은 시작할 때의 것 그대로이고, 끝나도 새 채팅의 것을 받지 않아요 · 신호를 보내지 않아요 (false)', async t => {
+test('서버 번역을 기다리는 동안 다른 채팅을 열면: 묻는 저장은 시작할 때의 것 그대로 끝까지 묻고, 끝나도 새 채팅의 것을 받지 않아요 (false)', async t => {
     const S = await stage(t);
     const poll = KO.TRANSLATION_SETTLE.pollMs; KO.TRANSLATION_SETTLE.pollMs = 20;
     let open;
@@ -379,4 +379,31 @@ test('서버 번역을 기다리는 동안 다른 채팅을 열면: 묻는 저�
     assert.deepEqual([...new Set(asked)], [S.sid]);
     assert.deepEqual(S.calls.filter(c => c[0] !== '/auto/status'), []);
     page.hidden = false;
+});
+
+test('서버 번역을 기다리는 동안 다른 채팅을 열어도 그 답의 "답이 끝났다" 신호는 번역이 끝난 뒤 가요 (마리나라: 완료 알림은 기다림이 끝나면 늘 — finally)', async t => {
+    const S = await stage(t);
+    const poll = KO.TRANSLATION_SETTLE.pollMs; KO.TRANSLATION_SETTLE.pollMs = 30;
+    let open;
+    trGate = new Promise(r => { open = r; });
+    const was = globalThis.SillyTavern.getContext();
+    t.after(() => { KO.TRANSLATION_SETTLE.pollMs = poll; open?.(); trGate = null; setContext(was); });
+    S.w.presence.meta = { autoTranslate: true, translationProvider: 'ai', translationConnectionId: 'dr', translationOutputTargetLang: 'Korean' };
+    await busyReply(S, 'so tired');
+    page.hidden = true;
+    await sleep(350);
+    assert.equal(await S.auto.sweep(), 1);
+    page.hidden = false; page.details.length = 0;
+    const ticking = TICK.tickOnce();
+    await until(() => S.room.messages.some(x => x.text === 'answer 1'));
+    await sleep(120);
+    assert.deepEqual(page.details.filter(d => d.room && 'regen' in d), []);
+    // (another chat is opened while the server still translates)
+    setContext({ ...was, chatMetadata: { narrative_archive: { other: true } } });
+    await sleep(100);
+    assert.deepEqual(page.details.filter(d => d.room && 'regen' in d), []);
+    open();
+    await until(() => page.details.some(d => d.room && 'regen' in d));
+    assert.deepEqual(page.details.filter(d => d.room && 'regen' in d), [{ from: 'server', room: S.room.id, by: ['Mara'], auto: false, regen: false }]);
+    await ticking;
 });

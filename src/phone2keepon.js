@@ -61,8 +61,9 @@ const synced = {
             const cue = () => { try { globalThis.document?.dispatchEvent(new globalThis.CustomEvent('na-live-reply', { detail: { from: 'server', room: r.id, by, auto: false, regen: false } })); } catch { /* no screen */ } };
             // (the server translates a reply after it is saved — automatic translation, phone2translate.js —: the completion cue waits
             //  for it and for its save, as Marinara's does — use-generate.ts 3894~3906 waitForServerTranslationToSettle)
-            // (another chat opened meanwhile: the cue is not that chat's)
-            if (fresh.some(translationOwed)) waitForServerTranslationToSettle(r.id).then(same => { if (same) cue(); }, cue); else cue();
+            // (another chat opened meanwhile: the cue still goes, for that room — Marinara's completion notifications always run once
+            //  the wait is over, use-generate.ts 3896~3906 .finally)
+            if (fresh.some(translationOwed)) waitForServerTranslationToSettle(r.id).then(cue, cue); else cue();
         }
     },
 };
@@ -70,12 +71,12 @@ const synced = {
 const translationOwed = x => typeof x.extra?.automaticTranslationSource === 'string' && !(typeof x.extra.translation === 'string' && x.extra.translation && x.extra.translationSource === x.text && x.extra.automaticTranslationSource === x.text);
 // 마리나라 use-generate.ts waitForServerTranslationToSettle (1126~1141): 서버의 그 방 번역이 끝날 때까지(최대 30분) 1.5초마다 물어보고
 // (/auto/status의 translating: plugin/work.mjs), 끝나면 그 저장을 받아요. 묻다가 실패해도 계속 물어요(다시 연결되는 동안)
-//   묻는 저장은 시작할 때의 것 하나예요 (마리나라: 그 채팅의 id). 그사이 다른 채팅을 열었으면 받지 않고 false → 그 채팅이 그대로면 true
+//   묻는 저장은 시작할 때의 것 하나예요 (마리나라: 그 채팅의 id). 그사이 다른 채팅을 열어도 그 저장을 끝까지 물어요(마리나라처럼).
+//   끝나면 그 채팅이 그대로일 때만 받아요(받는 것은 지금 채팅의 것이라서) → 받았으면 true, 다른 채팅이면 false. 알림은 부르는 쪽이 늘 해요
 export const TRANSLATION_SETTLE = { pollMs: 1_500, maxMs: 30 * 60_000 };
 export async function waitForServerTranslationToSettle(room, { wait = ms => new Promise(r => setTimeout(r, ms)), now = () => Date.now() } = {}) {
     const startedAt = now(), id = keep.id();
     while (now() - startedAt < TRANSLATION_SETTLE.maxMs) {
-        if (keep.id() !== id) return false;
         try {
             if (!id) break;
             const status = await http('/auto/status', J({ id }));

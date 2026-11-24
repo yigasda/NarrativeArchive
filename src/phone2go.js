@@ -20,7 +20,7 @@ import { liveWorld, livePhone, liveMeta, liveKey, liveAtYear, isSnap, setStoryKe
 import { emojiOf, reactOf, putReact, quickReacts, noteRecent, messageOf } from './phone2react.js';
 import { branchRoom, replyDraftOf, purgeTrash, markMessages, markedMessages, trashOf, restoreMessages, emptyTrash, dropRoom, roomTrash, restoreRoom, emptyRoomTrash, addMember, removeMember } from './phone2room.js';
 import { dropMessages, editMessage, replyTail, settleSwipes, swipeInfo, swipeTo, swipeList, dropSwipe, dropSwipes, dropOtherSwipes } from './phone2edit.js';
-import { migrateKo, markAutomaticTranslation, autoTranslateOn, translationConfigOf, browserAutoTranslate, resumeAutomaticTranslations, setTranslationConnectionList } from './phone2translate.js';
+import { migrateKo, moveKo, markAutomaticTranslation, autoTranslateOn, translationConfigOf, browserAutoTranslate, resumeAutomaticTranslations, setTranslationConnectionList } from './phone2translate.js';
 // 번역 (마리나라의 번역 기능: phone2translate.js). 화면이 부르는 것:
 //   liveTranslationSettings · liveSetTranslation · liveTranslationConnections (채팅 설정 › 번역) · liveTranslatorDefaults · liveSaveTranslatorDefaults
 //   liveTranslationOpen (방을 그릴 때) · liveTranslationView (말 하나) · liveTranslate (번역 단추) · liveTranslationSubscribe · liveTranslating
@@ -179,12 +179,9 @@ async function goNow(real, onChange, lock, server = false, translate = () => Pro
     followSchedule(real); await pickResponders(real); holdReplies(real);
     for (const id of Object.keys(liveWorld(real)?.messenger?.rooms || {})) syncUser(real, id);
     const tell = () => { try { onChange(); } catch (err) { console.error('[narrative-archive] live draw', err); } };
-    // (the browser: replies whose automatic translation was marked but never saved — the chat was left or the tab closed while it
-    //  ran — are translated now, once a page. A room the server plugin's worker is translating is left to it: phone2translate.js)
-    if (!server) {
-        const busy = async () => (keepKept() ? new Set((await keepAutoStatus()).rooms.filter(r => r?.translating).map(r => r.room)) : new Set());
-        resumeAutomaticTranslations(real, { busy, translate }).catch(err => console.warn('[narrative-archive] live translate again', err)).finally(tell);
-    }
+    // (the browser: its own automatic translations that were cut off — the chat was left or the tab closed while they ran — go
+    //  on now. Failed ones and the server's are not asked again: phone2translate.js. Drawn again only when one ran)
+    if (!server) resumeAutomaticTranslations(real, { translate }).then(ran => { if (ran) tell(); }, err => console.warn('[narrative-archive] live translate again', err));
     const line = saveLine();
     let asked = null;
     // (automatic translation, each job's: the translation settings taken when it began — Marinara's outputTranslationConfig,
@@ -1010,6 +1007,8 @@ export const liveRemoveMember = async (real, roomId, name) => kept(removeMember(
 // 다시 번역해요: liveTranslate). 답장을 다시 받지는 않아요. 저장까지 해요  → 바뀐 그 말 (바뀐 게 없으면 null)
 export async function liveEditMessage(real, roomId, msgId, change = {}) {
     if (!real || !open(real)) throw new Error('이 채팅이 열려 있지 않습니다.');
+    // (an old Korean of that message — the reply prompt's ko — is moved first, with the text it was made for: phone2translate.js)
+    moveKo(liveWorld(real)?.messenger?.rooms?.[roomId]?.messages?.find(y => String(y?.id) === String(msgId)));
     const x = editMessage(real, roomId, msgId, change);
     if (x) await saveMeta();
     return x;

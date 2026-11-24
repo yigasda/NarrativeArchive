@@ -306,18 +306,24 @@ export async function startWork({ root, store, st = null, schedule = true, from 
     //   - Google · 우리 커스텀 API(실리의 것이 필요 없음): 줄 밖에서 번역만 받아 오고(말의 사본에: detached), 넣고 저장하는 것만 줄에서(onLine:
     //     실리의 것은 안 읽어요). 연결은 보낼 때(답장의 일 안: 그 세계의 설정) 찾아 둔 것
     //   - 실리의 것(연결 프로필 · 실리의 지금 연결 · 실리 연결 방식 · Vertex): 실리의 것을 끼운 자리여야 해서, 답 하나를 withWorld 한 번에
-    // 넣을 때 저장이 브라우저와 부딪히면(409) 다시 읽고 받은 번역을 그대로 넣어요(두 번까지, 번역은 다시 묻지 않아요)
+    // 넣을 때 저장이 브라우저와 부딪히면(409) 다시 읽고 받은 번역을 그대로 넣어요(두 번까지, 번역은 다시 묻지 않아요).
+    // 다시 읽은 말의 글이 번역을 물을 때의 글과 다르면(그사이 고쳤어요) 아무것도 넣지 않아요 (마리나라 expectedContent)
     const onLine = fn => { const run = line.then(fn); line = run.catch(() => {}); return run; };
     const translateAfter = (sid, real) => (roomId, ids, config = TR.translationConfigOf(real, roomId)) => {
         const chatId = chatIdOf(real, roomId);
         // (found now, inside the reply's job: this world's settings. getWithKey reads them before its first await)
         const found = config.provider === 'ai' ? Promise.resolve(TR.translationConnections.getWithKey(config.connectionId)).catch(() => null) : Promise.resolve(null);
-        const ask = async (e, messageId, connections) => { let got = null; await TR.translateGenerated(e.real, chatId, messageId, config, { detached: true, connections, keep: t => { got = t; } }); return got; };
-        const put = async (messageId, cached) => {
+        // (→ { source: the text it was asked for, translation } | null)
+        const ask = async (e, messageId, connections) => { let got = null; await TR.translateGenerated(e.real, chatId, messageId, config, { detached: true, connections, keep: (translation, source) => { got = { source, translation }; } }); return got; };
+        // (the message read again: its text edited since the translation was asked — or on a 409, since the last read — writes
+        //  nothing. Marinara's expectedContent: the text read first is the one the translation is saved against)
+        const put = async (messageId, got) => {
             for (let attempt = 0; ; attempt++) {
                 const e = await app.open(sid);
                 if (!e) return null;
-                try { return await TR.translateGenerated(e.real, chatId, messageId, config, { save: () => app.write(e), cached }); }
+                const now = await TR.translationChats(e.real, { detached: true }).getMessage(messageId);
+                if (!now || now.content !== got.source) return null;
+                try { return await TR.translateGenerated(e.real, chatId, messageId, config, { save: () => app.write(e), cached: got.translation }); }
                 catch (err) { if (err?.code === 409 && attempt < 2) continue; throw err; }
             }
         };

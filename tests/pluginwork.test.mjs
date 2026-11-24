@@ -1024,6 +1024,8 @@ test('일꾼 · 자동 번역의 연결이 실리의 지금 연결(글 완성): 
     const sys = 'You are a translator. Translate the given text accurately into Korean, preserving formatting, markdown, and any special characters like *asterisks* for actions. Output ONLY the translated text, nothing else -- no explanations, no extra commentary.';
     assert.equal(tcSeen[0].prompt, `<|im_start|>system\n${sys}<|im_end|>\n<|im_start|>user\nTranslate the following text to Korean:\n\nsorry<|im_end|>\n<|im_start|>assistant\n`);
     assert.deepEqual([tcSeen[0].temperature, tcSeen[0].max_tokens, tcSeen[0].api_type, tcSeen[0].api_server, tcSeen[0].stream], [0.3, 8192, 'koboldcpp', 'http://127.0.0.1:5001', false]);
+    // (the max tokens also as SillyTavern's own quiet request puts them for this type: n_predict · num_predict — llama.cpp · Ollama read those)
+    assert.deepEqual([tcSeen[0].n_predict, tcSeen[0].num_predict, tcSeen[0].max_new_tokens], [8192, 8192, 8192]);
     // NovelAI: 보내지 않아요 — 이유는 /auto/status에, 실리 창에는 말마다 한 줄
     S.stSettings.main_api = 'novel'; await S.writeSettings();
     const b = world({ hoursAgo: 0.2 });
@@ -1084,4 +1086,52 @@ test('일꾼 · 실리 쪽 연결(프로필)로 번역하면 답 하나의 말�
     await settle(S, 'sa');
     assert.deepEqual(order, ['reply', 'tr:sorry', 'tr:was busy', 'reply']);
     assert.deepEqual((await S.get('sa')).messenger.rooms[a.room.id].messages.slice(-2).map(x => x.extra?.translation), ['KO:sorry', 'KO:was busy']);
+});
+
+// (review t4 1: Marinara's expectedContent — the text read when the translation was asked is the one it is saved against)
+test('일꾼 · 서버가 번역하는 동안 말을 고치면 아무것도 넣지 않아요 (마리나라 expectedContent): 옛 글의 번역이 새 글의 번역으로 저장되지 않아요', async t => {
+    let open;
+    const gate = new Promise(r => { open = r; });
+    const S = await stage(t, { reply: async body => {
+        if (isTr(body)) { const s = trSource(body); await gate; return `KO:${s}`; }
+        return { reply: ['sorry'], status: '' };
+    } });
+    const a = world({ hoursAgo: 0.2 });
+    a.w.presence.meta = TR_META('dr');
+    dueNow(a); await S.put('sa', a.m);
+    assert.equal(await S.auto.sweep(), 1);
+    for (let i = 0; i < 100 && !S.asked.some(x => isTr(x.body)); i++) await new Promise(r => setTimeout(r, 10));
+    // (the browser edits the reply while the model translates it)
+    const got = await S.store.load('sa'), live = joinLive(got.parts);
+    liveWorld({ live }).messenger.rooms[a.room.id].messages.at(-1).text = 'sorry, edited';
+    await S.store.save('sa', { base: got.rev, parts: JSON.parse(JSON.stringify(splitLive(live))) });
+    open();
+    await settle(S, 'sa');
+    const y = (await S.get('sa')).messenger.rooms[a.room.id].messages.at(-1);
+    assert.deepEqual([y.text, y.extra?.translation, y.extra?.translationSource, y.extra?.automaticTranslationSource], ['sorry, edited', undefined, undefined, 'sorry']);
+});
+
+test('일꾼 · 번역을 넣다 브라우저와 부딪혀(409) 다시 읽었는데 그사이 글을 고쳤으면: 그때도 아무것도 넣지 않아요', async t => {
+    const S = await stage(t, { reply: async body => (isTr(body) ? `KO:${trSource(body)}` : { reply: ['sorry'], status: '' }) });
+    const a = world({ hoursAgo: 0.2 });
+    a.w.presence.meta = TR_META('dr');
+    dueNow(a); await S.put('sa', a.m);
+    // (the worker's first save with the translation in it: the browser saved an edit just before — the worker's base is old)
+    const save = S.store.save.bind(S.store);
+    let edited = false;
+    S.store.save = async (sid, o) => {
+        if (!edited && JSON.stringify(o?.parts || {}).includes('"translation":"KO:sorry"')) {
+            edited = true;
+            const got = await S.store.load(sid), live = joinLive(got.parts);
+            liveWorld({ live }).messenger.rooms[a.room.id].messages.at(-1).text = 'sorry, edited';
+            await save(sid, { base: got.rev, parts: JSON.parse(JSON.stringify(splitLive(live))) });
+        }
+        return save(sid, o);
+    };
+    t.after(() => { S.store.save = save; });
+    assert.equal(await S.auto.sweep(), 1);
+    await settle(S, 'sa');
+    assert.equal(edited, true);
+    const y = (await S.get('sa')).messenger.rooms[a.room.id].messages.at(-1);
+    assert.deepEqual([y.text, y.extra?.translation, y.extra?.translationSource], ['sorry, edited', undefined, undefined]);
 });

@@ -215,10 +215,11 @@ kit = { v: 1, ver (확장 버전),
 - 번역: 답이 저장된 바로 뒤(`after`의 첫 줄, `startTranslation`), 방 자물쇠를 놓은 채로. 그 뒤 처리가 실패해도 저장된 답은 번역돼요. **일꾼의 줄을 쥐지 않아요**(마리나라의 번역은 자물쇠가 없어요, 2026-11-24 검토 S1): 연결은 보낼 때(답의 일 안) 찾아 두고,
   - Google · 우리 커스텀 API: 줄 **밖에서** `translateGenerated(…, { detached: true })`(말의 사본에: 번역만 받아 와요) → 넣고 저장만 줄에서(`onLine`: 실리의 것은 안 읽어요) `translateGenerated(…, { cached })` → `app.write`.
   - 실리의 것(프로필 · 실리의 지금 연결 · 실리 연결 방식 · Vertex): 실리의 것을 끼운 자리여야 해서 **답 하나를 `withWorld` 한 번에**(`dispatchAutomaticTranslations`의 `wrap`).
-  - 저장이 브라우저와 부딪히면(409) 다시 읽고 **받은 번역을 그대로** 넣어요(두 번까지, 번역은 다시 묻지 않아요). 그사이 글을 고쳤거나 번역을 숨겼으면 안 넣어요.
-- 번역 연결이 'ai'(AI 기능 모델이 실리 쪽)이고 실리에서 고른 프로필이 없으면: 채팅 완성은 실리의 지금 소스 · 모델로(`ai.js stSourceData`, 문맥의 `getChatCompletionModel`), 글 완성은 옮긴 `TextCompletionService.processRequest`로(`globalThis.__naStTextgen`: `withWorld`가 끼워요). KoboldAI · NovelAI · Horde는 못 보내요: `/auto/status`의 방 줄 `translateWhy`에 이유. 번역 연결이 실리의 것을 쓰면 `usesSt`도 참이에요(연결 확인).
+  - 번역은 `ask`가 `{ source, translation }`(물을 때의 글 · 받은 번역)으로 받아 와요. 넣기(`put`)는 그 말을 다시 읽어서, 글이 `source`와 다르면(그사이 고쳤어요) **아무것도 넣지 않아요**(마리나라 `expectedContent`: 처음 읽은 글로 확인). 같으면 `translateGenerated(…, { cached })`가 넣어요(그사이 번역을 숨겼으면 그쪽이 안 넣어요).
+  - 저장이 브라우저와 부딪히면(409) 다시 읽고 **받은 번역을 그대로** 넣어요(두 번까지, 번역은 다시 묻지 않아요). 다시 읽을 때마다 위의 글 확인을 다시 해요. 확인: `tests/pluginwork.test.mjs` 끝의 둘(번역 도중 고침 · 409 뒤 고침).
+- 번역 연결이 'ai'(AI 기능 모델이 실리 쪽)이고 실리에서 고른 프로필이 없으면: 채팅 완성은 실리의 지금 소스 · 모델로(`ai.js stSourceData`, 문맥의 `getChatCompletionModel`), 글 완성은 옮긴 `TextCompletionService.processRequest`로(`globalThis.__naStTextgen`: `withWorld`가 끼워요. 최대 토큰은 `n_predict` · `num_predict`에도, vLLM · InfermaticAI · Aphrodite 빼고: 실리의 조용한 요청과 같게). KoboldAI · NovelAI · Horde는 못 보내요: `/auto/status`의 방 줄 `translateWhy`에 이유. 번역 연결이 실리의 것을 쓰면 `usesSt`도 참이에요(연결 확인).
 - `translating`: 방마다 도는 수(`phone2translate.js dispatchAutomaticTranslations`의 `pending`). `/auto/status`의 방 줄마다 `translating`. 번역이 도는 동안 `/auto/status`는 일꾼의 줄을 기다리지 않고 바로 답해요(can · why는 마지막에 본 것). 길(`index.mjs`)과 본체(`host.mjs`)는 안 바뀌었어요: 확장 업데이트만으로 돼요.
-- 브라우저: 서버가 쓴 답에 번역 표시가 있고 번역이 아직 없으면, 'na-live-reply'를 보내기 전에 `/auto/status`의 translating이 꺼질 때까지 1.5초마다 물어요(최대 30분, 실패해도 계속) → `keepSync` → 신호(`phone2keepon.js waitForServerTranslationToSettle`: 마리나라 `use-generate.ts` 1126~1141). 확인: `tests/phone2wake.test.mjs` 마지막 · `tests/pluginwork.test.mjs` 마지막.
+- 브라우저: 서버가 쓴 답에 번역 표시가 있고 번역이 아직 없으면, 'na-live-reply'를 보내기 전에 `/auto/status`의 translating이 꺼질 때까지 1.5초마다 물어요(최대 30분, 실패해도 계속) → `keepSync` → 신호(`phone2keepon.js waitForServerTranslationToSettle`: 마리나라 `use-generate.ts` 1126~1141). 그사이 다른 채팅을 열어도 시작할 때의 저장을 끝까지 묻고 신호는 늘 가요(마리나라 `.finally`). 받기(`keepSync`)는 그 채팅이 그대로일 때만. 확인: `tests/phone2wake.test.mjs` 마지막 · `tests/pluginwork.test.mjs` 마지막.
 - 실패 줄: `[translate] 메시지 %s의 자동 번역에 실패했습니다` (마리나라 "[translate] Automatic translation failed for message %s").
 
 ### 3-7. 따라 묻기 수를 되살려요 (우리 것)

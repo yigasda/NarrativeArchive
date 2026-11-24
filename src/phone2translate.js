@@ -38,26 +38,29 @@ const roomIdOf = (real, chatId) => { const w = liveWorld(real), s = String(chatI
 
 // ---- 옛 한국어(ko) 옮기기: 답장 지시문이 한국어를 같이 받던 때(ko)의 것을 마리나라의 번역 칸으로. 하나도 버리지 않아요
 //   x.ko → x.extra.translation, 그때의 원문 x.text → x.extra.translationSource (원문을 고치면 ko를 지웠어서, 남은 ko는 지금 원문의
-//   번역이에요). 방의 말 · 받아 둔 답장 · 휴지통의 말 모두 → 옮긴 수
+//   번역이에요. 지금은 말을 고치기 전에 그 말부터 옮겨요: moveKo). 방의 말 · 받아 둔 답장 · 휴지통의 말, 지운 방
+//   (w.messenger.trash: 되살리면 그대로 방이 돼요)의 것까지 모두 → 옮긴 수
 //   세계마다 한 번만 훑어요(방을 그릴 때마다 · liveMeta마다 불려요): 다 옮긴 세계는 표시해 두고(메모리, 저장하지 않아요), 다른 쪽
 //   (옛 페이지 · 옛 플러그인)의 것이 들어올 수 있는 때 — 플러그인에서 받아 맞출 때('na-live-change') — 표시를 지워 다시 훑어요.
 //   서버의 일꾼은 저장이 바뀌면 세계를 새로 읽어서(새 객체) 다시 훑어요
 let koMoved = new WeakSet();
 export const forgetKoMoved = () => { koMoved = new WeakSet(); };
 try { globalThis.document?.addEventListener?.('na-live-change', forgetKoMoved); } catch { /* no screen */ }
+// 말 하나의 ko를 옮겨요 (그 말의 지금 글이 ko가 만들어진 글이어야 해요) → 옮겼거나 지웠으면 true
+export function moveKo(x) {
+    if (!obj(x) || !('ko' in x)) return false;
+    const ko = typeof x.ko === 'string' ? x.ko : '';
+    delete x.ko;
+    if (ko.trim() && !(obj(x.extra) && typeof x.extra.translation === 'string' && x.extra.translation)) x.extra = { ...(obj(x.extra) ? x.extra : {}), translation: ko, translationSource: String(x.text ?? '') };
+    return true;
+}
 export function migrateKo(real) {
     const w = liveWorld(real);
     if (!w || koMoved.has(w)) return 0;
     koMoved.add(w);
     let n = 0;
-    const move = x => {
-        if (!obj(x) || !('ko' in x)) return;
-        const ko = typeof x.ko === 'string' ? x.ko : '';
-        delete x.ko;
-        if (ko.trim() && !(obj(x.extra) && typeof x.extra.translation === 'string' && x.extra.translation)) x.extra = { ...(obj(x.extra) ? x.extra : {}), translation: ko, translationSource: String(x.text ?? '') };
-        n++;
-    };
-    for (const room of Object.values(w.messenger?.rooms || {})) {
+    const move = x => { if (moveKo(x)) n++; };
+    const scan = room => {
         for (const x of room?.messages || []) move(x);
         for (const rec of Object.values(room?.swipes || {})) for (const v of Array.isArray(rec?.list) ? rec.list : []) for (const x of Array.isArray(v) ? v : []) move(x);
         for (const t of Array.isArray(room?.trash) ? room.trash : []) {
@@ -65,7 +68,9 @@ export function migrateKo(real) {
             for (const rec of Array.isArray(t?.swipes) ? t.swipes : []) for (const x of Array.isArray(rec) ? rec : []) move(x);
             for (const v of Array.isArray(t?.swipes?.list) ? t.swipes.list : []) for (const x of Array.isArray(v) ? v : []) move(x);
         }
-    }
+    };
+    for (const room of Object.values(w.messenger?.rooms || {})) scan(room);
+    for (const t of Array.isArray(w.messenger?.trash) ? w.messenger.trash : []) scan(t?.room);
     return n;
 }
 
@@ -169,6 +174,8 @@ function slotConn(id, t, max = savedMax(t.max)) {
     return {
         id, kind: t.mode, baseUrl: t.mode === 'custom' ? String(t.url || '').trim() : '-', model: slotName(t),
         storedMaxTokens: max, maxTokensOverride: null,
+        // (a SillyTavern way with no source or model yet: what its request would throw — ai.js stSourceData —, for /auto/status)
+        missing: t.mode === 'source' ? (!String(t.source || '') ? '연결 종류를 선택하세요.' : !String(t.stModel || '').trim() ? '모델을 선택하세요.' : '') : '',
         // (Marinara's provider.chatComplete: the system message stays a system message, temperature 0.3, no reasoning level of the job)
         chatComplete: async (messages, o) => ({ content: await callConn(t, messages[0].content, messages[1].content, o.maxTokens, '', true, true, null, o.temperature, null, null) }),
     };
@@ -189,7 +196,10 @@ function profileConn(id, p, max = undefined) {
 //     createGenerationParameters with system + user, temperature 0.3 and the max tokens (ai.js stSourceData)
 //   text completion (main_api 'textgenerationwebui') → SillyTavern's TextCompletionService.processRequest (custom-request.js 293~395,
 //     the same its connection profiles send through — extensions/shared.js 465~484) with its type, server and model, the
-//     instruct template when instruct mode is on (the messages formatted by it, its stop strings), temperature 0.3, the max tokens
+//     instruct template when instruct mode is on (the messages formatted by it, its stop strings), temperature 0.3, the max tokens.
+//     The max tokens also in the keys a backend reads them from, as SillyTavern's own quiet request puts them (textgen-settings.js
+//     createTextGenGenerationData: n_predict — llama.cpp — and num_predict — Ollama — = the max tokens, for every type but vLLM ·
+//     InfermaticAI · Aphrodite). No stop strings with instruct mode off: processRequest sends none then (custom-request.js 311~313)
 //   any other (KoboldAI · NovelAI · Horde): refused — `cannot` says why (the settings screen and /auto/status)
 // (SillyTavern's text-completion pieces: the server plugin's ported ones — plugin/work.mjs globalThis.__naStTextgen —, else the page's)
 async function stTextgen() {
@@ -197,6 +207,8 @@ async function stTextgen() {
     const [CR, TG, PU] = await Promise.all([import('/scripts/custom-request.js'), import('/scripts/textgen-settings.js'), import('/scripts/power-user.js')]);
     return { TextCompletionService: CR.TextCompletionService, getTextGenModel: TG.getTextGenModel, getTextGenServer: TG.getTextGenServer, settings: () => TG.textgenerationwebui_settings, powerUser: () => PU.power_user };
 }
+// (textgen-settings.js createTextGenGenerationData: the types whose request takes vllmParams · aphroditeParams, not nonAphroditeParams)
+const PREDICT_OFF = new Set(['vllm', 'infermaticai', 'aphrodite']);
 function stOwnConn(id, max) {
     const c = ctx(), api = String(c.mainApi || '');
     if (api === 'openai') {
@@ -207,7 +219,7 @@ function stOwnConn(id, max) {
         return { id, kind: 'textgen', baseUrl: '-', model: '', storedMaxTokens: max, maxTokensOverride: null, chatComplete: async (messages, o) => {
             const T = await stTextgen(), tg = T.settings(), instruct = T.powerUser()?.instruct;
             const r = await T.TextCompletionService.processRequest(
-                { stream: false, prompt: messages, max_tokens: o.maxTokens, model: T.getTextGenModel(tg), api_type: tg.type, api_server: T.getTextGenServer(tg.type), temperature: o.temperature },
+                { stream: false, prompt: messages, max_tokens: o.maxTokens, model: T.getTextGenModel(tg), api_type: tg.type, api_server: T.getTextGenServer(tg.type), temperature: o.temperature, ...(PREDICT_OFF.has(tg.type) ? {} : { n_predict: o.maxTokens, num_predict: o.maxTokens }) },
                 { instructName: instruct?.enabled ? instruct.preset : undefined }, true, null);
             return { content: typeof r === 'string' ? r : r?.content };
         } };
@@ -312,56 +324,104 @@ export function dispatchAutomaticTranslations({ chatId, ids, config, run, wrap =
     })();
 }
 // 말 하나의 자동 번역 (마리나라 translateGeneratedMessage): 저장된 말을 그 설정으로 → 바뀐 말 | null
-//   cached: 앞서 받은 번역 (그것을 넣기만 해요: 다시 묻지 않아요) · keep(번역): 받은 번역을 알려 줘요
+//   cached: 앞서 받은 번역 (그것을 넣기만 해요: 다시 묻지 않아요) · keep(번역, 원문): 받은 번역과 그때 번역한 글을 알려 줘요
 //   detached: 말의 사본에만 (real은 그대로, 저장 없음: 번역을 받아 오기만) · connections: 연결 찾기 (빼면 지금 설정에서)
 export async function translateGenerated(real, chatId, messageId, config, { save = saveMeta, cached = null, keep = null, detached = false, connections = translationConnections } = {}) {
     const store = { connections, chats: translationChats(real, { save, detached }) };
     if (cached !== null) store.translateText = async () => ({ translatedText: cached });
-    else if (keep) store.translateText = async (s, body, f) => { const out = await translateText(s, body, f); keep(out.translatedText); return out; };
+    else if (keep) store.translateText = async (s, body, f) => { const out = await translateText(s, body, f); keep(out.translatedText, body.text); return out; };
     return translateGeneratedMessage(store, { chatId, messageId, swipeIndex: 0, mode: 'conversation', config });
 }
 // 브라우저의 자동 번역: 답장 일(liveGo)이 끝난 뒤 → 다 끝나면 풀리는 약속. config: 답을 만들기 시작할 때 잡아 둔 것
+//   마리나라는 서버가 번역해서 채팅을 바꾸거나 브라우저를 닫아도 끝까지 해요 ("closing the browser cannot skip translation").
+//   브라우저 길은 그러지 못해서, 묻기 전에 "도는 중"을 적어 두고(localStorage) 끝나면(됐든 실패했든) 지워요. 채팅을 바꾸거나 탭을
+//   닫아 끊긴 것만 남아서, 그 Orbit이 다시 돌 때 이어서 해요(resumeAutomaticTranslations)
 export function browserAutoTranslate(real, roomId, ids, config = translationConfigOf(real, roomId)) {
     const chatId = chatIdOf(real, roomId);
-    for (const id of ids || []) taken.add(owedKey(chatId, id, findMessage(real, roomId, id)?.text));
-    // (the chat it was for is no longer open: nothing can be saved into it here — not asked either. It is asked again when that
-    //  chat's Orbit runs again: resumeAutomaticTranslations)
-    const closed = () => new Error('이 채팅이 열려 있지 않습니다.');
+    for (const id of ids || []) { flightPut(chatId, String(id), String(findMessage(real, roomId, id)?.text ?? ''), config); running.add(flightKey(chatId, id)); }
+    // (the chat it was for is no longer open: nothing can be saved into it here — not asked either. Cut off, not failed: left in
+    //  flight, and asked when that chat's Orbit runs again)
+    const closed = () => Object.assign(new Error('이 채팅이 열려 있지 않습니다.'), { cutOff: true });
     const save = async () => { if (!isOpen(real)) throw closed(); await saveMeta(); };
-    const run = async id => { if (!isOpen(real)) throw closed(); return translateGenerated(real, chatId, id, config, { save }); };
+    const run = async id => {
+        try {
+            if (!isOpen(real)) throw closed();
+            const out = await translateGenerated(real, chatId, id, config, { save });
+            flightDrop(chatId, id);
+            return out;
+        } catch (err) { if (!err?.cutOff) flightDrop(chatId, id); throw err; }
+        finally { running.delete(flightKey(chatId, id)); }
+    };
     return dispatchAutomaticTranslations({ chatId, ids, config, run, log: (fmt, ...a) => console.warn('[narrative-archive] ' + fmt, ...a) });
 }
-// 표시는 있는데 번역이 없는 말 → [{ roomId, ids }]: 자동 번역이 맡았는데 끝나지 못했어요 (브라우저 길에서 그사이 채팅을 바꿨거나 탭을
-// 닫았어요). 마리나라는 서버가 번역하고 저장해서 이런 말이 남지 않아요 ("closing the browser cannot skip translation"):
-// 그 방의 Orbit이 다시 돌 때 이어서 해요. 표시의 원문이 지금 글이고 · 그 글의 번역이 없고 · 숨기지 않은 캐릭터의 말만
-export function owedTranslations(real) {
-    const w = liveWorld(real), P = liveKey(w?.persona), out = [];
-    for (const room of Object.values(w?.messenger?.rooms || {})) {
-        const ids = (room?.messages || []).filter(x => {
-            const e = obj(x?.extra) ? x.extra : null, text = String(x?.text ?? '');
-            return !!e && liveKey(x.from) !== P && !!text.trim() && e.automaticTranslationSource === text && e.translationHidden !== true && e.hiddenFromUser !== true && e.commandOnly !== true
-                && !(e.translationSource === text && typeof e.translation === 'string' && e.translation);
-        }).map(x => String(x.id));
-        if (ids.length) out.push({ roomId: room.id, ids });
-    }
-    return out;
+// ---- 브라우저 길의 "도는 중" (localStorage: 페이지를 다시 열어도 남아요. 못 읽고 못 쓰면 없는 것처럼)
+//   { [채팅 id]: { [말 id]: { text (물을 때의 글), config (그 답의 번역 설정), tab, at } } }
+//   tab: 그 탭 (sessionStorage: 새로 고침해도 같아요) — 다른 탭이 아직 돌리고 있을 수 있어서, 다른 탭의 것은 5분이 지나야 이어서 해요
+const FLIGHT = { key: 'narrative_archive:translation-in-flight', otherTabMs: 5 * 60_000, max: 200 };
+const flightKey = (chatId, id) => `${chatId}\u0000${id}`;
+// (this page's own, running now)
+const running = new Set();
+const tabId = (() => {
+    let id = '';
+    try { id = globalThis.sessionStorage?.getItem(FLIGHT.key) || ''; } catch { id = ''; }
+    if (!id) { id = Math.random().toString(36).slice(2, 12); try { globalThis.sessionStorage?.setItem(FLIGHT.key, id); } catch { /* no storage */ } }
+    return id;
+})();
+function flightRead() {
+    try { const v = JSON.parse(globalThis.localStorage?.getItem(FLIGHT.key) || '{}'); return obj(v) ? v : {}; } catch { return {}; }
 }
-// (the messages this page has sent for automatic translation: not sent again by it)
-const taken = new Set();
-const owedKey = (chatId, id, text) => `${chatId}\u0000${id}\u0000${String(text ?? '')}`;
-// 이어서 하기: 이 페이지가 아직 안 보낸 것만 (한 번씩). busy() → 지금 서버의 일꾼이 번역하고 있는 방 id들 (그 방은 그쪽이 해요)
-//   translate(방 id, 말 id들, 설정) → 약속 (빼면 browserAutoTranslate). 지금의 번역 설정으로 → 다 끝나면 풀리는 약속
-export async function resumeAutomaticTranslations(real, { busy = async () => new Set(), translate = (roomId, ids, config) => browserAutoTranslate(real, roomId, ids, config) } = {}) {
-    const owed = owedTranslations(real).map(r => ({ ...r, ids: r.ids.filter(id => !taken.has(owedKey(chatIdOf(real, r.roomId), id, findMessage(real, r.roomId, id)?.text))) })).filter(r => r.ids.length);
-    if (!owed.length) return;
-    const skip = await busy();
-    const runs = [];
-    for (const r of owed) {
-        if (skip.has(r.roomId)) continue;
-        for (const id of r.ids) taken.add(owedKey(chatIdOf(real, r.roomId), id, findMessage(real, r.roomId, id)?.text));
-        runs.push(Promise.resolve().then(() => translate(r.roomId, r.ids, translationConfigOf(real, r.roomId))).catch(err => console.warn('[narrative-archive] live translate again', err)));
+function flightWrite(all) {
+    try {
+        const ls = globalThis.localStorage;
+        if (!ls) return;
+        // (the oldest go first past the cap: a chat deleted while one was cut off keeps nothing for long)
+        const rows = Object.entries(all).flatMap(([c, m]) => (obj(m) ? Object.entries(m).map(([id, r]) => [c, id, r]) : []));
+        if (rows.length > FLIGHT.max) for (const [c, id] of rows.sort((x, y) => (Number(x[2]?.at) || 0) - (Number(y[2]?.at) || 0)).slice(0, rows.length - FLIGHT.max)) { delete all[c][id]; if (!Object.keys(all[c]).length) delete all[c]; }
+        if (Object.keys(all).length) ls.setItem(FLIGHT.key, JSON.stringify(all)); else ls.removeItem(FLIGHT.key);
+    } catch { /* no storage */ }
+}
+function flightPut(chatId, id, text, config) {
+    const all = flightRead();
+    all[chatId] = { ...(obj(all[chatId]) ? all[chatId] : {}), [id]: { text, config, tab: tabId, at: Date.now() } };
+    flightWrite(all);
+}
+function flightDrop(chatId, id) {
+    const all = flightRead(), m = all[chatId];
+    if (!obj(m) || !(String(id) in m)) return;
+    delete m[String(id)];
+    if (!Object.keys(m).length) delete all[chatId];
+    flightWrite(all);
+}
+// 이어서 하기 (우리 것: 마리나라에서는 서버가 끝까지 해서 필요 없어요): 이 브라우저가 맡았다가 끊긴 것만, 그때의 번역 설정으로,
+// 방마다 차례로 (마리나라 dispatchAutomaticTranslations처럼 하나씩). 실패한 번역은 다시 묻지 않아요(마리나라: "a failed translation stays
+// manually retryable" — 번역 단추로). 서버가 맡은 표시는 서버 몫이에요(적혀 있지 않아요). 자동 번역이 꺼져 있으면 하지 않아요
+//   그 말이 없어졌거나 · 글이 바뀌었거나 · 이미 번역됐거나 · 숨겼으면 적힌 것만 지워요
+//   translate(방 id, 말 id들, 설정) → 약속 (빼면 browserAutoTranslate) → 하나라도 보냈으면 true
+export async function resumeAutomaticTranslations(real, { translate = (roomId, ids, config) => browserAutoTranslate(real, roomId, ids, config) } = {}) {
+    const w = liveWorld(real);
+    if (!w || !autoTranslateOn(real)) return false;
+    const all = flightRead(), runs = [];
+    for (const room of Object.values(w.messenger?.rooms || {})) {
+        const chatId = chatIdOf(real, room.id), rec = all[chatId];
+        if (!obj(rec)) continue;
+        for (const [id, r] of Object.entries(rec)) {
+            if (running.has(flightKey(chatId, id))) continue;
+            if (r?.tab !== tabId && Date.now() - (Number(r?.at) || 0) < FLIGHT.otherTabMs) continue;
+            const x = (room.messages || []).find(y => String(y?.id) === id), e = obj(x?.extra) ? x.extra : {}, text = String(x?.text ?? '');
+            const owed = !!x && !!text.trim() && text === r?.text && e.automaticTranslationSource === text && obj(r?.config) && e.translationHidden !== true && e.hiddenFromUser !== true && e.commandOnly !== true
+                && !(e.translationSource === text && typeof e.translation === 'string' && e.translation);
+            if (!owed) { flightDrop(chatId, id); continue; }
+            // (the messages of one reply, in the room's order, go together: one dispatch, as when it was saved)
+            const config = r.config, last = runs.at(-1);
+            if (last && last.roomId === room.id && sameConfig(last.config, config)) last.ids.push(id); else runs.push({ roomId: room.id, ids: [id], config });
+        }
+        const order = new Map((room.messages || []).map((y, k) => [String(y?.id), k]));
+        for (const r of runs) if (r.roomId === room.id) r.ids.sort((p, q) => order.get(p) - order.get(q));
     }
-    await Promise.all(runs);
+    for (const r of runs) {
+        try { await translate(r.roomId, r.ids, r.config); } catch (err) { console.warn('[narrative-archive] live translate again', err); }
+    }
+    return runs.length > 0;
 }
 // 서버가 이 방의 답장을 자동 번역할 수 없는 이유 → '' | 이유 (plugin/work.mjs /auto/status). 자동 번역이 꺼져 있거나 Google이면 ''
 export async function translationCannot(real, roomId) {
@@ -370,7 +430,7 @@ export async function translationCannot(real, roomId) {
     if (config.provider !== 'ai') return '';
     if (!config.connectionId) return 'AI 번역에는 연결 ID가 필요합니다';
     const c = await translationConnections.getWithKey(config.connectionId);
-    return !c ? 'API 연결을 찾을 수 없습니다' : c.cannot || '';
+    return !c ? 'API 연결을 찾을 수 없습니다' : c.cannot || c.missing || '';
 }
 // 자동 번역이 쓰는 AI 연결 id ('' = 꺼짐 · Google): 서버가 실리의 연결을 확인해야 하나 (plugin/work.mjs usesSt)
 export const autoTranslationConnection = real => { if (!autoTranslateOn(real)) return ''; const c = getChatTranslationConfig('', metaOf(real)); return c.provider === 'ai' ? String(c.connectionId || '') : ''; };
@@ -429,19 +489,41 @@ export function liveTranslationView(real, roomId, x) {
 }
 // 번역 단추 (마리나라 handleTranslate → useTranslate().translate): 번역이 있고 원문이 그대로면 숨기기(숨김을 저장, 번역은 남겨요),
 // 아니면 번역해서 저장. 실패하면 알림만. onChange: 그리기 (번역 중 · 끝)
-//   (onChange는 store가 바뀐 그 틱이 끝난 뒤 한 번: 한 틱에 여러 번 바뀌어도 한 번 그려요. 그리는 중에 store에 쓰는 일이 있어도 거기서 다시 그리지 않아요)
+//   (onChange는 store가 바뀐 그 틱이 끝난 뒤 한 번: 한 틱에 여러 번 바뀌어도, 같은 onChange로 여러 말을 번역해도 한 번 그려요.
+//    그리는 중에 store에 쓰는 일이 있어도 거기서 다시 그리지 않아요)
 export async function liveTranslate(real, roomId, messageId, { onChange = () => {} } = {}) {
     const x = findMessage(real, roomId, messageId);
     if (!x) throw new Error('메시지를 찾을 수 없습니다.');
     liveTranslationOpen(real, roomId);
-    let queued = false;
-    const off = useTranslationStore.subscribe(() => {
-        if (queued) return;
-        queued = true;
-        globalThis.queueMicrotask(() => { queued = false; try { onChange(); } catch { /* the screen's own */ } });
-    });
+    const off = watchDraws(onChange);
     try { await useTranslate().translate(String(x.id), String(x.text ?? ''), chatIdOf(real, roomId), [String(x.text ?? '')]); }
     finally { off(); }
+}
+// (the draws of the translate buttons pressed now, all of them: one store subscription, and each draw once a tick however many
+//  translations share it — 40 picked at once draw once per change, not 40 times)
+const draws = new Map();
+const drawsDue = new Set();
+let drawsOff = null, drawsQueued = false;
+function watchDraws(fn) {
+    draws.set(fn, (draws.get(fn) || 0) + 1);
+    if (!drawsOff) {
+        drawsOff = useTranslationStore.subscribe(() => {
+            for (const f of draws.keys()) drawsDue.add(f);
+            if (drawsQueued) return;
+            drawsQueued = true;
+            globalThis.queueMicrotask(() => {
+                drawsQueued = false;
+                const due = [...drawsDue];
+                drawsDue.clear();
+                for (const f of due) { try { f(); } catch { /* the screen's own */ } }
+            });
+        });
+    }
+    return () => {
+        const n = (draws.get(fn) || 1) - 1;
+        if (n > 0) draws.set(fn, n); else draws.delete(fn);
+        if (!draws.size && drawsOff) { drawsOff(); drawsOff = null; }
+    };
 }
 // 번역 상태가 바뀔 때마다 (다시 그리기) → 끊기
 export const liveTranslationSubscribe = fn => useTranslationStore.subscribe(() => { try { fn(); } catch { /* the screen's own */ } });

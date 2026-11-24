@@ -1192,6 +1192,24 @@ test('답장 넘기기: 맨 뒤에서 넘기면 새 답장을 줄 세우고(그 
     try { assert.equal(G.liveSwipeInfo(c.real, c.room.id), null); await assert.rejects(() => G.liveSwipe(c.real, c.room.id, 1), /이 채팅이 열려 있지 않습니다/); await assert.rejects(() => G.liveSwipeDrop(c.real, c.room.id), /이 채팅이 열려 있지 않습니다/); await assert.rejects(() => G.liveSwipeDropMany(c.real, c.room.id, [1]), /이 채팅이 열려 있지 않습니다/); await assert.rejects(() => G.liveSwipeDropOthers(c.real, c.room.id), /이 채팅이 열려 있지 않습니다/); assert.deepEqual(G.liveSwipeList(c.real, c.room.id), []); } finally { delete T.metadata; }
 });
 
+test('이어서 할 자동 번역이 없으면 liveGo가 그것 때문에 다시 그리지 않아요', async () => {
+    const c = world();
+    let draws = 0;
+    await G.liveGo(c.real, { onChange: () => { draws++; } });
+    await new Promise(r => setTimeout(r, 20));
+    // (the one draw every go ends with — none more for a resume with nothing to do)
+    assert.equal(draws, 1);
+});
+
+test('옛 한국어(ko)가 남은 말을 고치면: 고치기 전에 그때의 글과 함께 옮겨요 (고친 글의 번역처럼 보이지 않아요)', async () => {
+    const c = world();
+    const old = { id: 'e1', n: L.liveNo(L.liveWorld(c.real)), from: 'Mara', text: 'Barely.', at: 1, ko: '겨우.' };
+    c.room.messages.push(old);
+    // (looked through already — world() read it —: this one came in after, as from an old plugin before its sync's rescan)
+    await G.liveEditMessage(c.real, c.room.id, old.id, { text: 'Barely awake.' });
+    assert.deepEqual([old.text, old.ko, old.extra], ['Barely awake.', undefined, { translation: '겨우.', translationSource: 'Barely.' }]);
+});
+
 test('옛 한국어(ko): 답장 지시문이 한국어를 같이 받던 때의 것은 마리나라의 번역 칸으로 옮겨요 (하나도 안 버려요). 새 답의 ko는 안 받아요', async () => {
     const c = world();
     send(c, 'you up?');
@@ -2058,7 +2076,7 @@ test('자동 번역: 답장 뒤 처리 중 오류가 나도 이미 저장된 답
     delete T.replies;
 });
 
-test('자동 번역: Merged 단체방의 답도 말마다 번역해요. 표시만 남은 말(번역이 끝나지 못함)은 브라우저의 liveGo가 시작할 때 이어서 (서버가 번역 중인 방은 빼고)', async () => {
+test('자동 번역: Merged 단체방의 답도 말마다 번역해요. 브라우저 길에서 끊긴 것만 브라우저의 liveGo가 시작할 때 이어서 (표시만 남은 말 — 서버의 것 · 실패한 것 — 은 다시 묻지 않아요)', async () => {
     const c = world(), w = L.liveWorld(c.real), sent = [];
     w.presence = { ...(w.presence || {}), meta: { ...(w.presence?.meta || {}), autoTranslate: true, translationOutputTargetLang: 'ko' } };
     const translate = (roomId, ids, config) => { sent.push([roomId, ids, config.outputTargetLanguage]); return Promise.resolve(); };
@@ -2074,21 +2092,23 @@ test('자동 번역: Merged 단체방의 답도 말마다 번역해요. 표시�
     assert.deepEqual(sent, [[g.id, said.map(x => x.id), 'ko']]);
     for (const x of said) x.extra.translation = `ko:${x.text}`, x.extra.translationSource = x.text;
     sent.length = 0;
-    // (a message marked, never translated: the tab was closed while it ran)
+    // (a message marked, never translated, with no record: the server's, or one that failed — not asked again, Marinara's
+    //  "a failed translation stays manually retryable")
     const left = { id: 'left1', n: L.liveNo(w), from: 'Mara', text: 'left over', at: 1, extra: { automaticTranslationSource: 'left over' } };
     c.room.messages.push(left);
-    // (the server's worker is translating that room: left to it)
-    T.kept = true; T.autoStatus = { on: true, rooms: [{ room: c.room.id, translating: true }] };
-    await G.liveGo(c.real, { translate });
-    await new Promise(r => setTimeout(r, 5));
-    assert.deepEqual(sent, []);
-    T.autoStatus = { on: true, rooms: [{ room: c.room.id, translating: false }] };
-    await G.liveGo(c.real, { translate });
-    await new Promise(r => setTimeout(r, 5));
-    assert.deepEqual(sent, [[c.room.id, ['left1'], 'ko']]);
-    // (once a page)
-    await G.liveGo(c.real, { translate });
-    await new Promise(r => setTimeout(r, 5));
-    assert.equal(sent.length, 1);
-    delete T.kept; delete T.autoStatus;
+    const store = new Map();
+    globalThis.localStorage = { getItem: k => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)), removeItem: k => store.delete(k) };
+    try {
+        await G.liveGo(c.real, { translate });
+        await new Promise(r => setTimeout(r, 5));
+        assert.deepEqual(sent, []);
+        // (cut off on the browser path — the tab was closed while it ran —: its record is left, and the next go takes it, with
+        //  the settings its reply was made with)
+        const config = TRL.translationConfigOf(c.real, c.room.id);
+        store.set('narrative_archive:translation-in-flight', JSON.stringify({ [`${w.id}:${c.room.id}`]: { left1: { text: 'left over', config, tab: 'closed-tab', at: Date.now() - 6 * 60_000 } } }));
+        w.presence.meta.translationOutputTargetLang = 'fr';
+        await G.liveGo(c.real, { translate });
+        await new Promise(r => setTimeout(r, 5));
+        assert.deepEqual(sent, [[c.room.id, ['left1'], 'ko']]);
+    } finally { delete globalThis.localStorage; }
 });
