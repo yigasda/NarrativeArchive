@@ -7,18 +7,45 @@ import { saveMeta } from './core.js';
 import { currency, finite, fx, price, positions, cash, addPrice, finance, quoteKey } from './finance.js';
 
 export const WEALTH_SYS = `GOAL
-Set a compact personal financial scale for this fictional phone owner before bank and investment generation.
+Decide how much money this fictional phone owner has in their own bank accounts and investments, before the bank and investment apps are written.
 
 YOU GET
-Story, selected owner profile, country and account currencies. Old generated balances are not evidence of wealth.
+- ARCHIVE, RECENT CHAT, OWNER, and sometimes STORY YEAR, WORLD, LOREBOOK, PERSONA, OWNER PROFILE and OWNER DOESN'T KNOW. Nothing on the phone may show what the owner doesn't know.
+- OWNER COUNTRY: where the owner lives.
+- ACCOUNT CURRENCIES: the currencies of the owner's bank accounts so far (sometimes empty).
 
-RULES
-- Infer the order of magnitude first from personal ownership, business reach, accumulated wealth, access and lifestyle; a job title alone is not ownership. Financial assets may be very large when supported. Do not default every owner to a retail savings portfolio.
-- Set separate ranges for current bank deposits and ordinary investments INCLUDING brokerage cash. Exclude credit-card spending, company assets and family stakes; do not count them twice. Their exclusion does not imply small personal reserves.
-- Explicit current personal amounts win; exact totals use min=max. Otherwise estimate plausible app-only ranges, not new RP facts. Explain evidence and inference briefly, including ownership/access uncertainty. Convert ranges to one currency; no prose analysis.
+BASIS FIRST
+Write basis before the numbers, in this order:
+1. Money coming in: what the owner earns or receives (work and rank, a business they own, family money, an inheritance), and how the story shows them living (where they live, what they own, buy, wear and drive, how they travel).
+2. Money habits: even when the profile says nothing about money, read the owner's personality and way of life and work out how they would handle money.
+   - thorough, planning, controlling, cautious, ambitious → saves and invests
+   - impulsive, spontaneous, pleasure-seeking, generous, careless about money → spends freely
+   - mindful of how others see them, showing off → spends big on what is seen
+   Write in one line which traits you read it from.
+3. Any amount the story gives.
 
-ANSWER — one JSON object, nothing else:
-{"currency":"EUR","deposits":{"min":number,"max":number},"investments":{"min":number,"max":number},"basis":"short evidence and inferred scale"}`;
+SCALE
+- deposits: the money in the owner's own bank accounts now. investments: the owner's own shares, funds and bonds, with the cash in their brokerage accounts.
+- Not counted: homes and other property, company accounts, family holdings the owner doesn't control, credit-card spending.
+- Counted: money the family gives the owner (an allowance, trust payouts, gifts, an inheritance received). It is the owner's own.
+- The money coming in sets the size. Read it from how the story shows the owner, not from the average person of their age and job: an owner shown living well (a wealthy district, expensive things, no money worries) has the money for that life, from pay or family, even when the story never says where it comes from.
+- The money habits set where it sits: a saver holds much of it in the bank; someone who spends freely holds less in the bank than the money coming in would suggest; someone who invests holds more in investments than in the bank.
+- Age or years in a job alone are no reason to make it small. A young owner with high pay or family money holds a lot.
+- Examples (deposits / investments):
+  - a university student in Seoul with a part-time job: 1–5 million KRW / 0–2 million KRW
+  - a café worker in Berlin, three years in: 2,000–8,000 EUR / 0–3,000 EUR
+  - an office worker at a small company in Seoul, two years in: 10–30 million KRW / 0–10 million KRW
+  - an office worker at a large company in Seoul, five years in: 200–400 million KRW / 50–200 million KRW
+  - a lawyer at a large Seoul firm, ten years in: 0.8–2 billion KRW / 0.5–1.5 billion KRW
+  - a specialist with their own practice in Zurich, fifteen years in: 1.4–3.5 million CHF / 1.5–4 million CHF
+  - the heir of a major conglomerate, living on family money: 10–50 billion KRW / 100 billion–1 trillion KRW
+- An amount the story states wins; an exact total gives min = max.
+- Balances an earlier phone showed are not evidence.
+- Each range: max at most three times min. Both ranges in one currency, the owner's main account currency.
+
+JSON (one object, nothing before or after it)
+{"basis":"short evidence and the scale it gives","currency":"NOK","deposits":{"min":number,"max":number},"investments":{"min":number,"max":number}}
+Numbers are plain JSON numbers.`;
 export function readWealth(out) {
     const s=String(out).replace(/```(?:json)?/gi,'');
     const x=parseJson(s.slice(s.indexOf('{'),s.lastIndexOf('}')+1));
