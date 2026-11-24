@@ -267,7 +267,7 @@ export function makeKeep({ api, now, synced = null, prep = x => x }) {
             //  Orbit here meanwhile —: mine is kept whole and goes up over the plugin's)
             if (obj(server.world) && obj(m.live.world) && server.world.id === m.live.world.id) {
                 const base = prep(joinLive(Object.fromEntries([...st.texts].map(([k, s]) => [k, JSON.parse(s)]))));
-                next = settleRooms(merge3(base, server, JSON.parse(JSON.stringify(m.live))), server);
+                next = settleRooms(merge3(base, server, prep(JSON.parse(JSON.stringify(m.live)))), server);
             } else next = null;
         }
         if (next) into(m.live, next);

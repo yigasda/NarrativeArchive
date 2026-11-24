@@ -191,8 +191,8 @@ export function chatSettingsOf(m, roomId) {
         enableMemoryRecall: meta.enableMemoryRecall !== undefined ? meta.enableMemoryRecall === true : true,
         semanticSummaryRetrievalEnabled: meta.semanticSummaryRetrievalEnabled === true, ...semanticOf(meta),
         summaryConnectionId: typeof meta.summaryConnectionId === 'string' ? meta.summaryConnectionId : '',
-        summaryMaxTokens: typeof meta.summaryMaxTokens === 'number' ? meta.summaryMaxTokens : SUMMARY_MAX_TOKENS.DEFAULT,
-        dayRolloverHour: Math.max(0, Math.min(11, Math.floor(meta.dayRolloverHour ?? 4))), summaryTailMessages: tailOf(meta.summaryTailMessages),
+        summaryMaxTokens: meta.summaryMaxTokens === undefined || meta.summaryMaxTokens === null ? SUMMARY_MAX_TOKENS.DEFAULT : clampSummaryMax(meta.summaryMaxTokens),
+        dayRolloverHour: (h => (Number.isFinite(h) ? Math.max(0, Math.min(11, Math.floor(h))) : 4))(Number(meta.dayRolloverHour ?? 4)), summaryTailMessages: tailOf(meta.summaryTailMessages),
     };
 }
 // 준 것만 바꿔요 (마리나라가 그 칸을 저장할 때 하는 것 그대로) → chatSettingsOf

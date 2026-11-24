@@ -271,6 +271,10 @@ test('화면에만 있던 칸의 값도 방마다 (마리나라의 열쇠 · 기
     assert.deepEqual(g.meta.inactiveCharacterIds, ['ivo']);
     assert.throws(() => S.setChatSettings(m, g.id, { inactiveCharacterIds: ['ivo', 'mara'] }), /캐릭터를 하나 이상 활성 상태로/);
     assert.throws(() => S.setChatSettings(m, g.id, { inactiveCharacterIds: 'ivo' }), /문자열 배열/);
+    // 저장된 값이 틀려도 읽을 때 마리나라의 범위로 (요약 길이 1~32768 · 하루가 바뀌는 시각 0~11, 숫자가 아니면 기본값)
+    for (const [v, want] of [[0, 4096], [-5, 4096], ['x', 4096], [999999, 32768], [12.9, 12], [null, 4096]]) { g.meta.summaryMaxTokens = v; assert.equal(S.chatSettingsOf(m, g.id).summaryMaxTokens, want, `summaryMaxTokens ${v}`); }
+    for (const [v, want] of [['abc', 4], [NaN, 4], [-3, 0], [30, 11], [7.8, 7], [null, 4]]) { g.meta.dayRolloverHour = v; assert.equal(S.chatSettingsOf(m, g.id).dayRolloverHour, want, `dayRolloverHour ${v}`); }
+    delete g.meta.summaryMaxTokens; delete g.meta.dayRolloverHour;
     // 화면 함수 (저장까지)
     assert.equal((await G.liveSetChatSettings(m, g.id, { summaryTailMessages: 7 })).summaryTailMessages, 7);
     assert.equal(G.liveChatSettings(m, g.id).summaryTailMessages, 7);

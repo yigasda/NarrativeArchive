@@ -66,7 +66,7 @@
 - 마리나라 기능은 코드 · 지시문 그대로, 끝까지 읽고. 마리나라에 없는 걸 메신저에 더하지 않기.
 - 소망의 RP 내용 · 캐릭터 이름은 저장소에 넣지 않기(예시 이름 Mara · Ren · Ivo · Varo · Lio).
 
-## 마지막 짧은 검토 (2026-11-24, 05c3ffb) — 다음 세션이 고칠 것 (모두 낮음)
+## 마지막 짧은 검토 (2026-11-24, 05c3ffb) — 다 고침 (다음 커밋). 남은 것: phone2keep.js 270의 local prep에 테스트 하나 더하기 (local은 옮기기 전, base · server는 옮긴 뒤 → 표시가 안 빠지는지). 마리나라와 대 본 결과 enableMemoryRecall · summaryTailMessages는 이미 같았어요.
 
 - `src/phone2keep.js:270`: 합칠 때 local만 prep을 안 거쳐요. local이 옮기기 전이고 base · 서버는 옮긴 상태면 표시(`metaPerRoom`)가 한 번 빠진 채 올라가요(다음 읽기에서 다시 옮겨서 값은 안 잃음). 고칠 것: `merge3(base, server, prep(JSON.parse(JSON.stringify(m.live))))` + 테스트.
 - `src/phone2sched.js` ~196 `summaryMaxTokens`: 읽을 때 1~32768로 자르지 않아요 → 마리나라처럼 자르기.
