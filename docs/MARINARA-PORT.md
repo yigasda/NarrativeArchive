@@ -282,6 +282,7 @@
 
 ## 꼭 할 것 (소망이 "나중에 꼭 하셈"이라고 한 것, 2026-11-21)
 
+- [ ] **번역 설정을 전체에 하나로 (마리나라와 다르게).** (소망, 2026-11-24: "마리나라 방마다 번역 설정 초기화되는 거 존나 불편하더라. 실리 번역 확장들은 챗마다 다르게 하지 않고 실리 하나에 설정을 둔 다음, 챗마다 프롬프트만 다르게 하고 싶으면 써넣을 수 있게 개별 채팅방용 프롬프트 칸이 있거든. 그거 말곤 전체 설정 연동임. 그렇게 하는 게 나을 듯.") 번역 설정은 전체에 하나, 방마다는 그 방용 프롬프트 칸만(비면 전체 프롬프트). 지금은 번역 열쇠가 방마다(`room.meta`)라 옮겨야 해요. 자세한 것은 docs/handover/README.md "다음에 할 일 1".
 - [ ] **마리나라 설정 마법사(ChatSetupWizard)를 통째로 가져오기.** (소망, 2026-11-24: 나중에.) 지금은 새 방이 마법사를 기본값 그대로 Start한 값으로만 시작해요(위 "채팅 설정은 방마다").
 
 - [ ] **채팅 요약을 마리나라 것으로 통째로 바꾸기 (코드 · 지시문 다, 우리 `phone2digest.js`는 안 써요).** (소망, 2026-11-23: "마리나라 채팅 요약 기능 꽤 좋더라 걍 마리나라 채팅 요약 관련 코드랑 지시문 통째로 가져오는 게 나을 듯 우리꺼 쓰지 말고".) 마리나라 쪽: `services/conversation/auto-summary.service.ts`(593) · 그걸 부르는 `routes/chats.routes.ts` · `routes/conversation.routes.ts` · `routes/generate.routes.ts` · `routes/generate/conversation-history-runtime.ts` · 저장 모양(`shared/types/chat.ts` · `chat-preset.ts` · `schemas/chat.schema.ts`) · 화면(`ChatSettingsDrawer.tsx` · `SummariesEditorModal.tsx` · `use-chats.ts`: 디자인 세션). 먼저 이 기능에 딸린 코드를 다 찾아 끝까지 읽고, 다른 데 · 빠진 데를 이 표에 적어요. 서버 일꾼에서도 같은 코드가 돌게(브라우저 · 서버 같은 코드). 순서: 6~9(서버가 실리 요청을 직접 만들기) 다음.
