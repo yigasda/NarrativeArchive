@@ -29,7 +29,8 @@ const m = {}; startFresh(m, { persona: 'Ren', now: Date.now() - 10 * 3600_000 })
 putLivePhone(m, { owner: 'Seraphina' });
 const room = ensureRoom(m, ['Seraphina']), w = liveWorld(m), at = Date.now() - 7 * 3600_000;
 sendLive(m, room.id, 'hey', at); room.messages.push({ id: 't2', n: 2, from: 'Seraphina', text: 'hi', at: at + 60_000 });
-w.presence = { on: true, schedules: { seraphina: { weekStart: new Date(Date.now() - 86400000).toISOString(), days: Object.fromEntries(DAYS.map(d => [d, [{ time: '00:00-23:59', activity: 'free time', status: 'online' }]])), inactivityThresholdMinutes: 60, talkativeness: 50 } }, overrides: {}, meta: {}, user: {} };
+room.meta = { ...(room.meta || {}), autonomousMessages: true };   // (먼저 말 걸기는 방마다: room.meta)
+w.presence = { schedules: { seraphina: { weekStart: new Date(Date.now() - 86400000).toISOString(), days: Object.fromEntries(DAYS.map(d => [d, [{ time: '00:00-23:59', activity: 'free time', status: 'online' }]])), inactivityThresholdMinutes: 60, talkativeness: 50 } }, overrides: {}, meta: {}, user: {} };
 // (core.js reads the screen when it loads: the worker's do-nothing one)
 await import(`${REPO}/plugin/screen.mjs`);
 const { VERSION } = await import(`${REPO}/src/core.js`);
@@ -70,7 +71,7 @@ try {
     }
     if (got) {
         const r = got.messenger.rooms[room.id];
-        ok('unread mark, daily count', r.autonomousUnreadCount === 1 && Object.values(got.presence.meta.autonomousDailyBudget.counts)[0] === 1, JSON.stringify([r.autonomousUnreadCount, got.presence.meta.autonomousDailyBudget]));
+        ok('unread mark, daily count', r.autonomousUnreadCount === 1 && Object.values(r.meta?.autonomousDailyBudget?.counts || {})[0] === 1, JSON.stringify([r.autonomousUnreadCount, r.meta?.autonomousDailyBudget]));
         // the card file: SillyTavern's merge-attributes wrote our extension field
         const png = fs.readFileSync(path.join(userDir, 'characters', 'default_Seraphina.png')).toString('latin1');
         const cardHas = /narrative_archive_convo/.test(Buffer.from((png.match(/chara\0([A-Za-z0-9+/=]+)/) || [])[1] || '', 'base64').toString('utf8')) || /narrative_archive_convo/.test(Buffer.from((png.match(/ccv3\0([A-Za-z0-9+/=]+)/) || [])[1] || '', 'base64').toString('utf8'));

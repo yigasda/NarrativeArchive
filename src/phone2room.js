@@ -262,6 +262,8 @@ export function branchRoom(m, roomId, upToMessageId = '') {
         id, members: [...room.members], messages, ...(room.name ? { name: room.name } : {}),
         ...(room.read ? { read: { ...room.read } } : {}),
         ...(room.connectionId ? { connectionId: room.connectionId } : {}),
+        // (the prompt preset goes too, like the connection: Marinara's branch create, chats.routes.ts 5690~5692. The linked chat does not)
+        ...(room.promptPresetId ? { promptPresetId: room.promptPresetId } : {}),
         ...['model', 'chatParameters', 'meta'].reduce((o, k) => (room[k] && typeof room[k] === 'object' ? { ...o, [k]: JSON.parse(JSON.stringify(room[k])) } : o), {}),
         ...(Object.keys(swipes).length ? { swipes } : {}),
         ...(room.digest && Number.isInteger(room.digest.upto) && room.digest.upto <= lastN ? { digest: JSON.parse(JSON.stringify(room.digest)) } : {}),

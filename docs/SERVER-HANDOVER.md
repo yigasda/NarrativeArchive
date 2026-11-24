@@ -232,7 +232,10 @@ kit = { v: 1, ver (확장 버전),
 ### 3-8. 채팅 설정은 방마다 (2026-11-24, 마리나라의 채팅 하나 = 우리 방 하나)
 마리나라는 채팅 설정을 채팅마다 `chat.metadata`에 둬요. 우리도 방마다 `room.meta`예요(`src/phone2sched.js` 머리 주석 · `docs/MARINARA-PORT.md` "채팅 설정은 방마다"). 전에는 Orbit에 하나(`w.presence.on` · `w.presence.meta`)였어요.
 - **서버가 읽는 곳**: `auto.mjs metaOf`(스케줄러의 방 줄: `roomMeta` + 시간대) · `resolveConversationPresenceState`(그 방의 `schedulesOn`) · `checkProactive`(그 방의 메타로 판단, 하루 수 · 쉬는 시간도 그 방에 적어요: `noteProactive`) · `work.mjs usesSt`(방마다: 그 방의 자동 번역 연결 · 그림 설명 연결이 실리의 것이면 연결 확인) · `translateAfter` · `/auto/status`의 `translateWhy`(그 방의 번역 설정). 스케줄 생성 연결은 이제 저장하지 않아서(마리나라처럼 편집 창의 상태) 서버가 볼 것이 없어요.
-- **옛 저장**: 서버도 브라우저와 같은 코드로 옮겨요(`moveRoomMeta`: 읽는 함수가 먼저 불러요). 옮긴 것은 메모리에서만이고, 그 세계의 다음 저장(답장 · 안 읽음 표시)에 같이 들어가요. 세계에 표시(`w.metaPerRoom`)가 있으면 Orbit의 옛 값은 안 읽어요: 아직 안 고친 옛 탭이 Orbit 값을 다시 써도 되살아나지 않아요.
+- **옛 저장**: 서버도 브라우저와 같은 코드로 옮겨요(`moveRoomMeta`: 읽는 함수가 먼저 불러요). 옮긴 것은 메모리에서만이고, 그 세계의 다음 저장(답장 · 안 읽음 표시)에 같이 들어가요. 세계에 표시(`w.metaPerRoom`)가 있으면 새 코드는 Orbit의 옛 값을 안 읽어요: 아직 안 고친 옛 탭이 Orbit 값을 다시 써도 되살아나지 않아요. 새 세계는 처음부터 표시가 있어요.
+  - **Orbit의 옛 값은 지우지 않아요**(2026-11-24 검토): 옛 탭 · 옛 판의 일꾼(확장 버전이 같아서 다시 안 뜬 일꾼)은 그 값을 읽어요. 지우면 그쪽은 먼저 말 걸기 · 번역이 꺼지고 단체방이 merged로 바뀌었어요.
+  - **처음 옮기는 사이 일꾼이 먼저 쓰면**: 브라우저가 합치기 전에 서버 것 · base에도 같은 옮기기를 해요(`phone2keep.js makeKeep({ prep })`, `phone2keepon.js makeOrbitKeep`). 이게 없으면 그사이 이 탭에서 바꾼 방 설정이 서버 것으로 되돌아갔어요(`tests/phone2roomrace.test.mjs`: 진짜 저장 · 일꾼의 app). 일꾼은 409면 읽은 것을 버리고 다시 읽어서 따로 할 일이 없어요.
+- **새 방의 첫 값**: 마리나라에서 새 대화 채팅을 만들고 설정 마법사를 기본값 그대로 Start한 값(`phone2sched.js NEW_ROOM_SETUP`: 먼저 말 걸기 켬 · 명령 끔 · 스케줄 스위치를 꼭 적음). `ensureRoom`의 seed라서 서버 일꾼이 방을 만들 때도 같아요. 그래서 새 방은 서버가 먼저 말을 걸 수 있어요(모델 비용).
 - **합치기**: `room.meta`는 그 방의 조각(`room/<id>`)에 있어요. `merge3`가 열쇠마다 합쳐서, 브라우저가 방 A의 번역을 켜는 사이 서버가 방 A의 하루 수를 올려도 둘 다 남아요(`tests/phone2roommeta.test.mjs`).
 - **본체 쪽 파일은 안 바뀌었어요**: 확장 업데이트만으로 돼요(`index.mjs` · `host.mjs` · `store.mjs` 그대로, `WORKER_PROTO` 그대로).
 

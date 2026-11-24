@@ -14,7 +14,7 @@
 //   옛 저장 (2026-11-24 전): Orbit에 하나였던 w.presence.on · meta의 채팅 열쇠 · meta.reasoningEffort("Orbit 전체")를 moveRoomMeta가 모든 방
 //   (지운 방까지)에 한 번 복사하고 세계에 표시(ROOM_META_MARK)를 남겨요. 표시가 있으면 새 코드는 Orbit의 옛 값을 안 읽어요(옛 탭이 다시 써도).
 //   Orbit의 옛 값은 지우지 않아요: 아직 새로 고치지 않은 탭 · 옛 일꾼은 그 값을 읽어서, 옮길 때의 설정 그대로 돌아요. 새 세계는 표시를 갖고 태어나요
-//   방 밖에서 쓰는 것 (연락처 · 프로필의 상태, 폰이 스케줄을 따라가기, 답장 NOW의 폰 상태, 매주 갱신): 그 사람이 있는 방 가운데 하나라도
+//   방 밖에서 쓰는 것 (연락처 · 프로필의 상태, 폰이 스케줄을 따라가기, 답장 NOW의 폰 상태, 매주 갱신의 대상 — 묻는 연결은 그 사람의 스케줄을 켠 방의 것): 그 사람이 있는 방 가운데 하나라도
 //   스케줄을 켰으면 스케줄을 따라요 (소망 (가), followsSchedule). 방이 하나도 없는 사람은 방의 기본값처럼 스케줄이 있으면 따라요.
 // 마리나라의 "채팅" = 우리 방 하나 (chatId = 세계 id:방 id), "캐릭터 id" = 폰 열쇠(liveKey).
 // 저장은 부르는 쪽이 해요. 폰 1 · 아카이브는 읽지도 쓰지도 않아요. 폰 1은 이 파일을 부르지 않아요.
@@ -22,6 +22,7 @@
 import { liveWorld, liveKey, setWorldPrep, setRoomSeed, ROOM_META_MARK } from './phone2store.js';
 import { repliedTo } from './phone2room.js';
 import { TRANSLATOR_SETTINGS_KEYS } from './marinara/translator-defaults.js';
+import { readConversationCommandToggles } from './marinara/conversation-command-toggles.js';
 import { generateCharacterSchedule, generateCharacterDaySchedule, getEffectiveCurrentStatus, getTodaySchedule, getDirectMessageDelay, getMentionDelay, getBusyDelay, getMonday, scheduleNeedsRefresh, ScheduleDraftError } from './marinara/schedule.service.js';
 import { normalizeTextForMatch } from './marinara/text-matching.js';
 import { CONVERSATION_SCHEDULE_DAYS, getAdjacentScheduleBlocks, getActiveStatusOverride } from './marinara/conversation-presence.js';
@@ -164,6 +165,65 @@ setRoomSeed((room, w, m) => {
     const had = obj(room.meta) ? room.meta : {}, created = { ...had, ...(roomHasSchedules(m, room) ? { conversationSchedulesEnabled: true } : {}) };
     room.meta = { ...created, ...NEW_ROOM_SETUP, conversationSchedulesEnabled: created.conversationSchedulesEnabled === true, conversationCommandToggles: readConversationCommandToggles(created.conversationCommandToggles) };
 });
+// ---- 화면에만 있고 동작은 아직 없는 채팅 설정 칸의 값 (그 방의 것: 마리나라의 채팅 메타 · 채팅 줄 칸 이름 그대로). 저장만 해요
+//   읽기의 기본값 · 쓰기의 규칙은 마리나라의 것:
+//   appliedChatPresetId (설정 프로필, null) · customSystemPrompt (null = 프리셋의 대화 프롬프트) · inactiveCharacterIds (폰 열쇠 목록, []) ·
+//   crossChatAwareness (`!== false`: ConnectedChatsSection 89) · lorebookTokenBudget (8192: LorebooksSection 48~51 · LIMITS.DEFAULT_LOREBOOK_TOKEN_BUDGET) ·
+//   enableMemoryRecall (대화 모드는 정한 적이 없으면 켜짐: MemoryRecallSection 51~54 · generate.routes.ts 6248) ·
+//   semanticSummaryRetrievalEnabled (`=== true`) · semanticSummaryRecentCount 2 · OlderCount 3 · MinSimilarity 0.15 (semantic-summary-retrieval.ts: 하나라도
+//   틀리면 셋 다 기본값) · summaryConnectionId ('' = 에이전트 기본값) · summaryMaxTokens (4096, 1~32768: CHAT_SUMMARY_OUTPUT_TOKENS) ·
+//   dayRolloverHour (4, 0~11: conversation-history-runtime.ts 243) · summaryTailMessages (10, 0 이상: normalizeSummaryTailMessages) ·
+//   방의 칸 promptPresetId · connectedChatId (마리나라 채팅 줄의 칸: connectionId처럼 방에)
+//   일정 생성 선호(scheduleGenerationPreferences)는 앱 전체예요 (마리나라 ui.store): 확장 설정 (liveScheduleGenerationPreferences)
+export const LOREBOOK_TOKEN_BUDGET = 8192, SUMMARY_MAX_TOKENS = { MIN: 1, MAX: 32768, DEFAULT: 4096 }, SEMANTIC_SUMMARY_DEFAULTS = { semanticSummaryRecentCount: 2, semanticSummaryOlderCount: 3, semanticSummaryMinSimilarity: 0.15 };
+const SEMANTIC_RULES = { semanticSummaryRecentCount: v => Number.isInteger(v) && v >= 0 && v <= 20, semanticSummaryOlderCount: v => Number.isInteger(v) && v >= 0 && v <= 20, semanticSummaryMinSimilarity: v => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 1 };
+// (Marinara's normalizeSemanticSummaryRetrievalSettings: a missing value takes its default; any wrong one gives the defaults for all three)
+const semanticOf = meta => { const out = {}; for (const [k, ok] of Object.entries(SEMANTIC_RULES)) { const v = meta[k] === undefined ? SEMANTIC_SUMMARY_DEFAULTS[k] : meta[k]; if (!ok(v)) return { ...SEMANTIC_SUMMARY_DEFAULTS }; out[k] = v; } return out; };
+const clampSummaryMax = v => { const n = Number(v); return !Number.isFinite(n) || n <= 0 ? SUMMARY_MAX_TOKENS.DEFAULT : Math.max(SUMMARY_MAX_TOKENS.MIN, Math.min(SUMMARY_MAX_TOKENS.MAX, Math.trunc(n))); };
+const tailOf = v => { if (v === undefined || v === null) return 10; const n = Math.floor(Number(v)); return !Number.isFinite(n) || n < 0 ? 0 : n; };
+export function chatSettingsOf(m, roomId) {
+    const meta = roomMeta(m, roomId), r = roomOf(m, roomId) || {}, str = v => (typeof v === 'string' ? v : null);
+    return {
+        appliedChatPresetId: str(meta.appliedChatPresetId), promptPresetId: str(r.promptPresetId), customSystemPrompt: str(meta.customSystemPrompt) || null,
+        inactiveCharacterIds: Array.isArray(meta.inactiveCharacterIds) ? meta.inactiveCharacterIds.filter(x => typeof x === 'string') : [],
+        crossChatAwareness: meta.crossChatAwareness !== false, connectedChatId: str(r.connectedChatId),
+        lorebookTokenBudget: typeof meta.lorebookTokenBudget === 'number' && Number.isFinite(meta.lorebookTokenBudget) ? Math.max(0, Math.floor(meta.lorebookTokenBudget)) : LOREBOOK_TOKEN_BUDGET,
+        enableMemoryRecall: meta.enableMemoryRecall !== undefined ? meta.enableMemoryRecall === true : true,
+        semanticSummaryRetrievalEnabled: meta.semanticSummaryRetrievalEnabled === true, ...semanticOf(meta),
+        summaryConnectionId: typeof meta.summaryConnectionId === 'string' ? meta.summaryConnectionId : '',
+        summaryMaxTokens: typeof meta.summaryMaxTokens === 'number' ? meta.summaryMaxTokens : SUMMARY_MAX_TOKENS.DEFAULT,
+        dayRolloverHour: Math.max(0, Math.min(11, Math.floor(meta.dayRolloverHour ?? 4))), summaryTailMessages: tailOf(meta.summaryTailMessages),
+    };
+}
+// 준 것만 바꿔요 (마리나라가 그 칸을 저장할 때 하는 것 그대로) → chatSettingsOf
+export function setChatSettings(m, roomId, patch = {}) {
+    const meta = roomMetaW(m, roomId), r = roomOf(m, roomId), has = k => Object.hasOwn(patch, k), text = v => (v === null || v === undefined || v === '' ? null : String(v));
+    if (has('appliedChatPresetId')) meta.appliedChatPresetId = text(patch.appliedChatPresetId);
+    // (a new prompt preset drops the chat's own prompt: Marinara's handleModePromptPresetChange, ChatSettingsDrawer 1386~1394)
+    if (has('promptPresetId')) { const v = text(patch.promptPresetId); if (v) r.promptPresetId = v; else delete r.promptPresetId; meta.customSystemPrompt = null; }
+    if (has('customSystemPrompt')) meta.customSystemPrompt = String(patch.customSystemPrompt ?? '').trim() ? String(patch.customSystemPrompt) : null;
+    if (has('inactiveCharacterIds')) {
+        const v = patch.inactiveCharacterIds;
+        if (!Array.isArray(v) || !v.every(x => typeof x === 'string')) throw new Error('inactiveCharacterIds는 문자열 배열이어야 합니다.');
+        // (only this chat's characters, once each: chats.routes.ts 1908~1925)
+        const P = liveKey(liveWorld(m)?.persona), ids = (r.members || []).map(liveKey).filter(k => k !== P), next = [...new Set(v.map(liveKey))].filter(k => ids.includes(k));
+        // (CharactersSection 98~108: the last active character can't be turned off)
+        if (ids.length && ids.every(k => next.includes(k))) throw new Error('채팅에 응답할 캐릭터가 있도록 캐릭터를 하나 이상 활성 상태로 두어야 합니다.');
+        meta.inactiveCharacterIds = next;
+    }
+    if (has('crossChatAwareness')) meta.crossChatAwareness = !!patch.crossChatAwareness;
+    if (has('connectedChatId')) { const v = text(patch.connectedChatId); if (v) r.connectedChatId = v; else delete r.connectedChatId; }
+    // (LorebooksSection commitTokenBudget: Math.max(0, Math.floor(Number(draft) || 0)))
+    if (has('lorebookTokenBudget')) meta.lorebookTokenBudget = Math.max(0, Math.floor(Number(patch.lorebookTokenBudget) || 0));
+    if (has('enableMemoryRecall')) meta.enableMemoryRecall = !!patch.enableMemoryRecall;
+    if (has('semanticSummaryRetrievalEnabled')) meta.semanticSummaryRetrievalEnabled = !!patch.semanticSummaryRetrievalEnabled;
+    for (const [k, ok] of Object.entries(SEMANTIC_RULES)) if (has(k)) { if (!ok(patch[k])) throw new Error('의미 기반 요약 검색 설정이 올바르지 않습니다.'); meta[k] = patch[k]; }
+    if (has('summaryConnectionId')) meta.summaryConnectionId = text(patch.summaryConnectionId);
+    if (has('summaryMaxTokens')) meta.summaryMaxTokens = clampSummaryMax(patch.summaryMaxTokens);
+    if (has('dayRolloverHour')) { const v = Number(patch.dayRolloverHour); if (!Number.isFinite(v)) throw new Error('하루 전환 시각이 올바르지 않습니다.'); meta.dayRolloverHour = v; }
+    if (has('summaryTailMessages')) { const v = Number(patch.summaryTailMessages); if (!Number.isFinite(v)) throw new Error('최근 메시지 꼬리가 올바르지 않습니다.'); meta.summaryTailMessages = v; }
+    return chatSettingsOf(m, roomId);
+}
 // 이 방에서 스케줄을 쓰는가 (마리나라의 conversationSchedulesEnabled: 정한 적이 없으면 그 방의 캐릭터에게 스케줄이 있을 때 켜진 것)
 export const schedulesOn = (m, roomId) => { const meta = roomMeta(m, roomId); return typeof meta.conversationSchedulesEnabled === 'boolean' ? meta.conversationSchedulesEnabled : roomHasSchedules(m, roomOf(m, roomId)); };
 export const setSchedulesOn = (m, roomId, on) => (roomMetaW(m, roomId).conversationSchedulesEnabled = !!on);

@@ -37,6 +37,8 @@
 
 화면이 이미 가진 방 id만 넘겼어요(`setUi` 안의 `r.id`, 그 밖에는 `obRoomId()`). 화면 모양 · 글은 안 바꿨어요. 고치기 전 사본: scratch의 `phone.before-room.js` · `phoneorbitset.before-room.js`.
 - `src/phone.js` (지금 줄 번호): 94(가져오기에서 `liveSetScheduleConnection` 뺌) · 406 · 412 · 418 · 420 · 424 · 447~449 · 455 · 1161 · 1165~1168 · 1170 · 1212~1213(`schConn`) · 1217 · 1222 · 1238 · 1247 · 1372 · 1377 · 1380 · 1384~1385 · 1449 · 1451~1455 · 1457 · 1820.
+- 방 안의 상태 (검토 뒤 더 이은 것): 467(머리줄 프사의 상태 점 `st`: `liveStatus(realM, os[0], r.id)`) · 1175 · 1177 · 1178(대화 상태 카드의 상태 고르기 · Esc · 하는 일 칸: `liveStatus(realM, n, obRoomId())`). 전에는 이 넷이 방 밖 규칙이라, 스케줄을 끈 방에서 점 색과 하는 일 글이 서로 달라질 수 있었어요.
+- 화면에만 있던 칸의 값 (아래 6): 94(가져오기) · 412(`t.v = { ...obRoomVals(r), ...obSetUi.v }`) · 420(번역 화면도 그 위에) · 691(`setViewingRoom`) · 1376~1392(`OB_ROOM` · `obRoomVals` · `obRoomSet`) · 1393 · 1395 · 1397(누르기 · 고르기 · 입력칸이 먼저 `obRoomSet`).
 - `src/phoneorbitset.js` 195: 추론 레벨의 "Orbit 전체" 줄(`rsAll`)을 뺐어요(아래 3).
 - `livePresence`는 가져오기에 남아 있지만 이제 안 써요.
 
@@ -60,3 +62,36 @@
 - 방 밖(연락처 · 프로필)의 상태: 그 사람이 있는 방 가운데 하나라도 스케줄을 켰으면 스케줄을 따라요(소망 (가)). 방이 없는 사람은 스케줄이 있으면 따라요.
 - 새 방은 번역 기본값부터 시작해요(마리나라의 새 채팅). 분기한 방은 원래 방의 설정 · 모델 · 추론 레벨을 그대로 받아요.
 - 화면만 있고 동작이 없는 칸(프리셋 · 로어 예산 · 기억 · 요약 · 연결된 채팅 · 프로필 …)은 이을 때 방마다예요. `schedPrefs`(일정 생성 선호)만 앱 전체예요(마리나라 ui.store).
+
+## 6. 화면에만 있던 칸의 값이 이제 그 방에 저장돼요 (동작은 아직 없어요)
+
+전에는 `obSetUi.v`에만 있어서 시트를 닫으면 사라졌어요. 이제 마리나라 열쇠 그대로 그 방에 저장하고, 화면은 저장된 값을 받아요(`t.v`). 누르면 전처럼 "아직 연결되지 않았어요"도 떠요(동작이 없는 기능이라서).
+
+| 화면 열쇠 | 저장 (마리나라 열쇠) | 화면이 받는 값 |
+|---|---|---|
+| `profile` | `room.meta.appliedChatPresetId` (`''` → null) | `''` · 고른 id |
+| `presetSrc` | 방의 칸 `promptPresetId`. 바꾸면 `customSystemPrompt`를 지워요(마리나라처럼) | `''` · id |
+| `presetText` | `customSystemPrompt` (비면 null) | 글 · `''` |
+| `off:<이름>` | `inactiveCharacterIds` (폰 열쇠). 마지막 한 명은 못 꺼요: "채팅에 응답할 캐릭터가 있도록 캐릭터를 하나 이상 활성 상태로 두어야 합니다." (마리나라 CharactersSection의 알림 글) | true · false |
+| `cross` | `crossChatAwareness` (기본 켜짐) | true · false |
+| `loreBudget` | `lorebookTokenBudget` (기본 8192, 0 이상 정수) | `'8192'` 같은 글 |
+| `cmd:<명령>` (works false) | `conversationCommandToggles[명령]` (`liveSetCommands`) | `c.on` 그대로 |
+| `recall` | `enableMemoryRecall` (대화 모드 기본 켜짐) | true · false |
+| `semOn` · `semRecent` · `semOlder` · `semMin` | `semanticSummaryRetrievalEnabled` · `…RecentCount`(2) · `…OlderCount`(3) · `…MinSimilarity`(0.15). 범위 밖이면 "의미 기반 요약 검색 설정이 올바르지 않습니다." | bool · `'2'` · `'3'` · `'0.15'` |
+| `sumConn` | `summaryConnectionId` (`''` → null) | `''` · id |
+| `sumMax` | `summaryMaxTokens` (기본 4096, 1~32768로 자름) | `'4096'` |
+| `rollHour` | `dayRolloverHour` (기본 4) | `'4'` |
+| `sumTail` | `summaryTailMessages` (기본 10) | `'10'` |
+| `schedPrefs` | **앱 전체** 확장 설정 `scheduleGenerationPreferences` (마리나라 ui.store). 이제 스케줄 생성 · 매주 갱신에 실려요(이건 동작이 있어요) | 글 |
+
+- **화면의 기본값이 마리나라와 달라요:** `phoneorbitset.js` 302의 요약 숫자 칸 기본 `4 · 4 · 0.30`은 마리나라 `semantic-summary-retrieval.ts`의 `2 · 3 · 0.15`예요. 지금은 반영 쪽이 늘 값을 주니까 화면에 2 · 3 · 0.15가 보이지만, 화면 코드의 기본값도 고쳐 주세요. 로어 예산 칸도 이제 빈 칸("기본값") 대신 8192가 보여요(마리나라 화면도 8192를 보여 줘요).
+- **페르소나 제거(`personaOff`)는 그대로 화면 상태예요:** 페르소나는 Orbit에 하나라서(소망 결정) 방마다로 저장하지 않았어요.
+- **연결된 채팅(`connectedChatId`)**: 저장 함수는 있지만(`liveSetChatSettings(real, 방 id, { connectedChatId })`) 화면에 고를 목록이 없어서 아직 안 이었어요.
+- 함수: `liveChatSettings(real, 방 id)` → 위 값 전부(기본값 포함) · `liveSetChatSettings(real, 방 id, { 마리나라 열쇠: 값 })`(준 것만) · `liveScheduleGenerationPreferences()` · `liveSetScheduleGenerationPreferences(글)`.
+- 매주 갱신이 그 사람의 "스케줄을 켠 방" 하나의 연결로 물어요: 보고 있는 방이 먼저예요. 그래서 `drawPhone`에서 `setViewingRoom(() => obNb.viewing)`을 불러요(파일 맨 위에서는 phone2go.js와 서로 불러서 못 불러요).
+
+## 7. 새 방은 마리나라의 설정 마법사를 Start한 값으로 시작해요 (소망 2026-11-24)
+
+- 새 방(새 채팅 · 가져오기): 먼저 말 걸기 **켜짐**, 명령 **꺼짐**, 스케줄 스위치는 그 방 사람의 카드에 스케줄이 있으면 켜짐 · 없으면 꺼짐(꼭 적어요), 대화 프롬프트 없음.
+- 그래서 새 방의 자율 메시지 화면은 켜진 채로, 에이전트 화면의 명령 스위치는 꺼진 채로 보여요. 마법사 화면 자체는 없어요("꼭 할 것").
+

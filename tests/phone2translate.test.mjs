@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import * as L from '../src/phone2store.js';
+import { NEW_ROOM_SETUP } from '../src/phone2sched.js';
 import { normalizeTranslatorSettings, getChatTranslationConfig, TRANSLATOR_SETTINGS_KEYS, TRANSLATOR_DEFAULTS_SETTINGS_KEY } from '../src/marinara/translator-defaults.js';
 import { DEFAULT_TRANSLATION_SYSTEM_PROMPT, resolveTranslationSystemPrompt } from '../src/marinara/translation-prompt.js';
 import { translateText, translateGeneratedMessage, validateTranslateInput } from '../src/marinara/translation.service.js';
@@ -258,6 +259,10 @@ test('채팅 설정 › 번역: 값 읽기 (마리나라 화면의 규칙) · �
 test('새 채팅의 번역 기본값: 이 채팅(방)의 설정을 저장 · 잊기 (마리나라의 알림 글), 새 방은 기본값으로 시작. 프로필은 기본값 위에 자기 것', async () => {
     const { real } = setup({ meta: { translationProvider: 'ai', autoTranslate: true, conversationSchedulesEnabled: true, translationTargetLang: 'ja' } });
     assert.equal(await TR.liveTranslatorDefaults(), false);
+    // (방이 없으면 오류: 빈 설정을 기본값으로 저장하지 않아요 — 2026-11-24 검토)
+    await assert.rejects(TR.liveSaveTranslatorDefaults(real), /채팅방을 찾을 수 없습니다/);
+    await assert.rejects(TR.liveSaveTranslatorDefaults(real, 'nope'), /채팅방을 찾을 수 없습니다/);
+    assert.equal(T.ctx.extensionSettings.narrative_archive['translator-defaults'], undefined);
     assert.equal(await TR.liveSaveTranslatorDefaults(real, rid(real)), true);
     const saved = T.ctx.extensionSettings.narrative_archive['translator-defaults'];
     assert.deepEqual(JSON.parse(saved), { translationProvider: 'ai', translationTargetLang: 'ja', autoTranslate: true, translationInputTargetLang: 'ja', translationOutputTargetLang: 'ja' });
@@ -267,8 +272,10 @@ test('새 채팅의 번역 기본값: 이 채팅(방)의 설정을 저장 · 잊
     const fresh = { phones: {} };
     L.startFresh(fresh, { persona: 'Ren' });
     assert.equal(L.liveWorld(fresh).presence, undefined);
-    assert.deepEqual(L.ensureRoom(fresh, ['Mara']).meta, JSON.parse(saved));
-    assert.deepEqual(L.ensureRoom(real, ['Ivo']).meta, JSON.parse(saved));                 // (the Orbit's other rooms keep theirs)
+    // (그 위에 설정 마법사의 Start 값: phone2sched.js NEW_ROOM_SETUP)
+    const START = { ...NEW_ROOM_SETUP, conversationSchedulesEnabled: false, conversationCommandToggles: {} };
+    assert.deepEqual(L.ensureRoom(fresh, ['Mara']).meta, { ...JSON.parse(saved), ...START });
+    assert.deepEqual(L.ensureRoom(real, ['Ivo']).meta, { ...JSON.parse(saved), ...START });                 // (the Orbit's other rooms keep theirs)
     assert.equal(L.liveWorld(real).messenger.rooms[rid(real)].meta.conversationSchedulesEnabled, true);
     // 잊기
     assert.equal(await TR.liveSaveTranslatorDefaults(null), true);
@@ -277,7 +284,7 @@ test('새 채팅의 번역 기본값: 이 채팅(방)의 설정을 저장 · 잊
     assert.equal(await TR.liveTranslatorDefaults(), false);
     const fresh2 = { phones: {} };
     L.startFresh(fresh2, { persona: 'Ren' });
-    assert.equal(L.ensureRoom(fresh2, ['Mara']).meta, undefined);
+    assert.deepEqual(L.ensureRoom(fresh2, ['Mara']).meta, { ...NEW_ROOM_SETUP, conversationSchedulesEnabled: false, conversationCommandToggles: {} });
     // (a failure: Marinara's failure toast)
     const es = T.ctx.extensionSettings; T.ctx.extensionSettings = null;
     assert.equal(await TR.liveSaveTranslatorDefaults(real, rid(real)), false);

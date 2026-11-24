@@ -71,7 +71,7 @@ const restore = () => { fs.writeFileSync(sfile, keep.settings); fs.writeFileSync
             S.putLivePhone(m, { owner: 'Seraphina' });
             const room = S.ensureRoom(m, ['Seraphina']), w = S.liveWorld(m), at = Date.now() - 7 * 3600_000;
             S.sendLive(m, room.id, 'hey', at); room.messages.push({ id: 't2', n: 2, from: 'Seraphina', text: 'hi', at: at + 60_000 });
-            w.presence = { on: false, schedules: {}, overrides: {}, meta: {}, user: {} };
+            w.presence = { schedules: {}, overrides: {}, meta: {}, user: {} }; room.meta = { ...(room.meta || {}), autonomousMessages: false };   // (먼저 말 걸기는 방마다: room.meta)
             room.connectionId = 'profile:na-cc';
             await core.saveMeta();
             await KO.keepBeat();
@@ -90,7 +90,7 @@ const restore = () => { fs.writeFileSync(sfile, keep.settings); fs.writeFileSync
         ok('server: the profile room can be served while SillyTavern is closed', Object.values(status.rooms)[0]?.can === true, JSON.stringify(status));
 
         // ── 1) the chat-completion profile: the character writes first
-        await page.evaluate(async () => { Object.defineProperty(document, 'hidden', { configurable: true, get: () => true }); const { core, S, m } = window.__na; S.liveWorld(m).presence.on = true; await core.saveMeta(); });
+        await page.evaluate(async () => { Object.defineProperty(document, 'hidden', { configurable: true, get: () => true }); const { core, S, m, room } = window.__na, r = S.liveWorld(m).messenger.rooms[room.id]; r.meta = { ...(r.meta || {}), autonomousMessages: true }; await core.saveMeta(); });
         log('waiting for the server (chat-completion profile) …');
         const a1 = await waitServer(0, a => a.url.endsWith('/chat/completions') && /\[WHY NOW\]/.test(JSON.stringify(a.body)));
         ok('server: wrote first through the profile, on its proxy', !!a1 && a1.url === '/v1/chat/completions' && a1.body.model === 'gpt-4o-mini', a1 ? JSON.stringify({ url: a1.url, model: a1.body.model, keys: Object.keys(a1.body).sort() }) : out.split('\n').filter(l => /narrative-archive|autonomous/i.test(l)).slice(-6).join(' | '));

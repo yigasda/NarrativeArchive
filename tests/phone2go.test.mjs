@@ -11,11 +11,14 @@ import { journalRead, journalWrite } from '../src/phonesync.js';
 
 const phone = () => ({ owner: 'Mara', now: '11-10 22:00', year: 2026, contacts: [{ name: 'Ivo' }], threads: [], calls: [], photos: [], notes: [], searches: [], events: [], posts: [], mails: [], diary: [], voice: [],
     money: { currency: 'KRW', asOf: '2026-11-01', bank: { accounts: [{ id: 'chk', kind: 'checking', name: '입출금', last4: '1111', currency: 'KRW', balance: 100000 }] }, tx: [], orders: [], passes: [] } });
+// (답장 · 명령 · 먼저 말 걸기의 동작을 보는 테스트: 새 방의 첫 값(설정 마법사의 Start, phone2sched.js NEW_ROOM_SETUP) 없이 정한 적이 없는 방으로.
+//  새 방의 첫 값은 tests/phone2roommeta.test.mjs)
+const plain = (real, names) => { const r = L.ensureRoom(real, names); delete r.meta; return r; };
 function world() {
     const real = { phones: { mara: { owner: 'Mara', notes: [{ title: '폰 1' }] } } };
     L.startFresh(real, { persona: 'Ren', scope: 'test' });
     const m = L.liveMeta(real); m.phones = { mara: phone() }; migrateBank(m, m.phones.mara);
-    const room = L.ensureRoom(real, ['Mara']);
+    const room = plain(real, ['Mara']);
     Object.assign(T, { answers: [], moneyAnswers: [], replies: [], calls: 0, replyCalls: 0, saves: 0 });
     return { real, m, room, p: m.phones.mara, bank: () => cash(m.finance.accounts['chk:KRW']) };
 }
@@ -211,7 +214,7 @@ test('전에 시작해 둔 실시간 폰(폰 1의 되돌리기 · 밀린 결제�
     await assert.rejects(G.liveUndo(real, 'Mara'), /되돌릴 반영이 없어요/);
     assert.deepEqual(lp.notes.map(x => x.title), ['이야기 메모']);
     // a live round: the story's owed lunch is neither asked nor booked
-    const room = L.ensureRoom(real, ['Mara']);
+    const room = plain(real, ['Mara']);
     Object.assign(T, { answers: [], moneyAnswers: [], replies: [], calls: 0, moneyInput: '' });
     L.sendLive(real, room.id, '더치페이 보내라'); L.enqueueReplies(real, room.id);
     T.replies = [{ state: '집', reply: ['보낼게'], does: [{ app: 'bank', what: '더치페이 몫 32,000원 Ren에게 송금' }] }];
@@ -309,7 +312,7 @@ test('실시간 폰의 앱 요청은 시작 뒤의 롤플 채팅을 안 읽어�
     try {
         const real = { phones: { mara: phone() }, text: '' };
         L.startFromStory(real, { persona: 'Ren', upto: 2, scope: 'test' }).snap = snapFor(real, 2);
-        const room = L.ensureRoom(real, ['Mara']);
+        const room = plain(real, ['Mara']);
         L.sendLive(real, room.id, '메신저로 한 말');
         const d = L.liveMeta(real), p = d.phones.mara;
         p.now = '11-12 21:30';
@@ -499,7 +502,7 @@ test('실시간 폰 한 대의 연도를 고르면 다른 실시간 폰도 같�
     assert.deepEqual([c.p.year, c.p.liveYearShift, b.year, b.liveYearShift, b.yearShift], [2030, 4, 2030, 4, undefined]);
     assert.equal(b.money.tx[0].time, '2030-11-09 09:00');
     // Ivo's next reflection keeps the year the records are in
-    const room = L.ensureRoom(c.real, ['Ivo']);
+    const room = plain(c.real, ['Ivo']);
     room.messages.push({ id: 'a', n: L.liveNo(L.liveWorld(c.real)), from: 'Ren', text: '안녕', at: Date.parse('2026-11-11T01:00:00Z') });
     T.answers = [{ events: [] }];
     assert.equal((await G.liveReflect(c.real, 'Ivo')).error, '');
@@ -1518,7 +1521,7 @@ test('단체방: 답에서 @이름으로 부른 사람이 다음에 답하고, �
     const c = world(), m = L.liveMeta(c.real);
     m.phones.ivo = { ...phone(), owner: 'Ivo' }; migrateBank(m, m.phones.ivo);
     m.phones.varo = { ...phone(), owner: 'Varo' }; migrateBank(m, m.phones.varo);
-    const g = L.ensureRoom(c.real, ['Mara', 'Ivo', 'Varo']);
+    const g = plain(c.real, ['Mara', 'Ivo', 'Varo']);
     await G.liveSetAutonomousOptions(c.real, g.id, { groupChatMode: 'individual', groupResponseOrder: 'manual' });
     L.sendLive(c.real, g.id, '@Mara dinner?'); L.enqueueReplies(c.real, g.id);
     const answers = [{ state: '집', reply: ['ask @Varo'], does: [] }, { state: '집', reply: ['sure'], does: [] }], inputs = [];
@@ -1535,7 +1538,7 @@ test('단체방: 답에서 @이름으로 부른 사람이 다음에 답하고, �
 test('단체방 smart 고르기의 모델은 마리나라처럼 에이전트 기본 연결(AI 기능 모델), 그게 보낼 데가 없으면 그 방의 연결 (스케줄 생성 연결이 아니에요)', async () => {
     const c = world(), m = L.liveMeta(c.real);
     m.phones.ivo = { ...phone(), owner: 'Ivo' }; migrateBank(m, m.phones.ivo);
-    const g = L.ensureRoom(c.real, ['Mara', 'Ivo']);
+    const g = plain(c.real, ['Mara', 'Ivo']);
     await G.liveSetAutonomousOptions(c.real, g.id, { groupChatMode: 'individual', groupResponseOrder: 'smart' });
     const picks = [];
     const run = async () => {
@@ -1558,7 +1561,7 @@ test('단체방 smart 고르기의 모델은 마리나라처럼 에이전트 기
 test('캐릭터 명령 스위치는 방마다: 답을 읽을 때도 그 답의 방의 스위치로 (runLive의 parse가 일을 받아요)', async () => {
     const c = world(), m = L.liveMeta(c.real);
     m.phones.ivo = { ...phone(), owner: 'Ivo' }; migrateBank(m, m.phones.ivo);
-    const other = L.ensureRoom(c.real, ['Ivo']);
+    const other = plain(c.real, ['Ivo']);
     await G.liveSetCommands(c.real, c.room.id, { toggles: { react: false } });
     assert.deepEqual([G.liveCommands(c.real, c.room.id).options.find(o => o.id === 'react').on, G.liveCommands(c.real, other.id).options.find(o => o.id === 'react').on], [false, true]);
     T.ask = async () => JSON.stringify({ reply: ['응'], react: { to: 'Ren', emoji: '❤️' }, does: [] });
@@ -1572,7 +1575,7 @@ test('캐릭터 명령 스위치는 방마다: 답을 읽을 때도 그 답의 �
 test('먼저 말 걸기는 켠 방만 봐요 (마리나라의 autonomousMessages는 채팅마다)', async () => {
     const c = world(), m = L.liveMeta(c.real);
     m.phones.ivo = { ...phone(), owner: 'Ivo' }; migrateBank(m, m.phones.ivo);
-    const other = L.ensureRoom(c.real, ['Ivo']), t = Date.now();
+    const other = plain(c.real, ['Ivo']), t = Date.now();
     for (const [r, who] of [[c.room, 'Mara'], [other, 'Ivo']]) { L.sendLive(c.real, r.id, 'hey', t - 6 * 3600_000); r.messages.push({ id: `a${r.id}`, n: L.liveNo(L.liveWorld(c.real)), from: who, text: 'hi', at: t - 6 * 3600_000 + 60_000 }); }
     T.metadata = { narrative_archive: c.real };
     try {
@@ -1588,7 +1591,7 @@ test('Merged 단체방: 한 요청으로 여럿이 답해요. 지시문은 마�
     globalThis.document = { dispatchEvent: e => { if (e.type === 'na-live-reply') cues.push(e.detail); return true; } }; globalThis.CustomEvent = class { constructor(type, init) { this.type = type; this.detail = init?.detail; } };
     t.after(() => { if (hadDoc === undefined) delete globalThis.document; else globalThis.document = hadDoc; if (hadEv === undefined) delete globalThis.CustomEvent; else globalThis.CustomEvent = hadEv; });
     m.phones.ivo = { ...phone(), owner: 'Ivo' }; migrateBank(m, m.phones.ivo);
-    const g = L.ensureRoom(c.real, ['Mara', 'Ivo']);
+    const g = plain(c.real, ['Mara', 'Ivo']);
     L.sendLive(c.real, g.id, 'dinner?'); L.enqueueReplies(c.real, g.id);
     const asked = [];
     T.ask = async (input, o) => { asked.push({ input, system: o.system }); return 'Mara: sure\nIvo: where\nat mine?'; };
@@ -2025,7 +2028,7 @@ test('먼저 건 말 뒤 캐릭터끼리 주고받기는 브라우저만 해요 
     const make = () => {
         const c = world(), m = L.liveMeta(c.real);
         m.phones.ivo = { ...phone(), owner: 'Ivo' }; migrateBank(m, m.phones.ivo);
-        const g = L.ensureRoom(c.real, ['Mara', 'Ivo']);
+        const g = plain(c.real, ['Mara', 'Ivo']);
         L.sendLive(c.real, g.id, 'hi', Date.now() - 3600_000);
         const j = L.enqueueJob(c.real, { kind: 'reply', owner: 'Mara', room: g.id, at: Date.now() - 1000, why: 'x' }); j.auto = true; j.timed = true;
         return { c, g, w: L.liveWorld(c.real) };
@@ -2132,7 +2135,7 @@ test('자동 번역: Merged 단체방의 답도 말마다 번역해요. 브라�
     // Merged 단체방: 한 요청의 말들이 다 표시되고, 차례로 번역에
     const m = L.liveMeta(c.real);
     m.phones.ivo = { ...phone(), owner: 'Ivo' }; migrateBank(m, m.phones.ivo);
-    const g = L.ensureRoom(c.real, ['Mara', 'Ivo']);
+    const g = plain(c.real, ['Mara', 'Ivo']);
     g.meta = { ...(g.meta || {}), autoTranslate: true, translationOutputTargetLang: 'ko' };   // (그 방의 설정: 마리나라의 채팅마다)
     L.sendLive(c.real, g.id, 'dinner?'); L.enqueueReplies(c.real, g.id);
     T.ask = async () => 'Mara: sure\nIvo: where';
@@ -2161,4 +2164,68 @@ test('자동 번역: Merged 단체방의 답도 말마다 번역해요. 브라�
         await new Promise(r => setTimeout(r, 5));
         assert.deepEqual(sent, [[c.room.id, ['left1'], 'ko']]);
     } finally { delete globalThis.localStorage; }
+});
+
+test('답장 말의 상태 글은 그 답장의 방의 스케줄 스위치로: 스케줄을 끈 방의 답장에는 스케줄의 상태(장소 · 끝나는 시각)가 안 붙어요 (2026-11-24 검토)', async () => {
+    const S = await import('../src/phone2sched.js'), DAYS = S.CONVERSATION_SCHEDULE_DAYS;
+    const c = world(), other = plain(c.real, ['Mara', 'Varo']);
+    S.setSchedule(c.real, 'Mara', { days: Object.fromEntries(DAYS.map(d => [d, [{ time: '00:00-00:00', activity: 'working', status: 'online', place: 'Hospital' }]])), talkativeness: 80, inactivityThresholdMinutes: 15 });
+    S.setSchedulesOn(c.real, c.room.id, false);
+    S.setSchedulesOn(c.real, other.id, true);
+    // 방 A (스케줄 끔): 모델이 쓴 상태
+    send(c, 'hey');
+    T.replies = [{ state: '집 · 침대', reply: ['응'], does: [] }];
+    await G.liveGo(c.real);
+    assert.equal(c.room.messages.at(-1).state, '집 · 침대');
+    // 방 B (스케줄 켬): 스케줄의 상태
+    L.sendLive(c.real, other.id, 'hey'); L.enqueueReplies(c.real, other.id);
+    T.replies = [{ state: '집 · 침대', reply: ['응'], does: [] }];
+    await G.liveGo(c.real);
+    assert.match(other.messages.at(-1).state, /^Hospital · working/);
+});
+
+test('Merged 단체방의 말에 붙는 상태도 그 방의 스케줄 스위치로 (2026-11-24 검토)', async () => {
+    const S = await import('../src/phone2sched.js'), DAYS = S.CONVERSATION_SCHEDULE_DAYS;
+    const c = world(), m = L.liveMeta(c.real);
+    m.phones.ivo = { ...phone(), owner: 'Ivo' }; migrateBank(m, m.phones.ivo);
+    const g = plain(c.real, ['Mara', 'Ivo']), b = plain(c.real, ['Mara', 'Ivo', 'Varo']);
+    S.setSchedule(c.real, 'Mara', { days: Object.fromEntries(DAYS.map(d => [d, [{ time: '00:00-00:00', activity: 'working', status: 'online', place: 'Hospital' }]])), talkativeness: 80, inactivityThresholdMinutes: 15 });
+    S.setSchedulesOn(c.real, g.id, false);
+    S.setSchedulesOn(c.real, b.id, true);
+    T.ask = async () => 'Mara: sure\nIvo: ok';
+    try {
+        L.sendLive(c.real, g.id, 'dinner?'); L.enqueueReplies(c.real, g.id);
+        await G.liveGo(c.real);
+        L.sendLive(c.real, b.id, 'dinner?'); L.enqueueReplies(c.real, b.id);
+        await G.liveGo(c.real);
+    } finally { delete T.ask; }
+    assert.deepEqual(g.messages.filter(x => x.from === 'Mara').map(x => x.state), [undefined]);
+    assert.match(b.messages.find(x => x.from === 'Mara').state, /^Hospital · working/);
+});
+
+test('매주 갱신: 스케줄을 켠 그 사람의 방 하나에서, 그 방의 연결로 (보고 있는 방이 먼저, 없으면 첫 방). 일정 생성 선호를 실어요 (마리나라 ConversationPresenceCard 313~360 · conversation.routes.ts 704~709)', async () => {
+    const S = await import('../src/phone2sched.js'), DAYS = S.CONVERSATION_SCHEDULE_DAYS;
+    const c = world(), b = plain(c.real, ['Mara', 'Varo']);
+    b.connectionId = 'ai';                                                          // (방 B의 연결: AI 기능 모델. 방 A는 기본 연결)
+    const day = [{ time: '00:00-00:00', activity: 'reading', status: 'online' }], json = JSON.stringify({ talkativeness: 30, inactivityThresholdMinutes: 90, days: Object.fromEntries(DAYS.map(d => [d, day])) });
+    const stale = () => { S.setSchedule(c.real, 'Mara', { days: Object.fromEntries(DAYS.map(d => [d, day])), talkativeness: 30, inactivityThresholdMinutes: 90, weekStart: '2026-01-05T00:00:00.000Z' }); };
+    const asked = [];
+    T.ask = async (input, o) => { asked.push({ input: `${o.system}\n${input}`, viaAi: o.noFallback === true }); return json; };
+    T.st = { extensionSettings: { narrative_archive: { scheduleGenerationPreferences: 'Nobody stays up past midnight.' } } };
+    try {
+        stale(); S.setAutoRenew(c.real, 'Mara', true);
+        S.setSchedulesOn(c.real, c.room.id, true); S.setSchedulesOn(c.real, b.id, true);
+        G.setViewingRoom(() => b.id);
+        assert.deepEqual(await G.liveRenewSchedules(c.real, { automatic: true }), { Mara: 'generated' });
+        assert.equal(asked[0].viaAi, true);                                          // (보고 있는 방 B의 연결)
+        assert.match(asked[0].input, /Nobody stays up past midnight\./);
+        // 보고 있는 방이 없으면 첫 방(A)의 연결
+        asked.length = 0; stale(); G.setViewingRoom(() => '');
+        await G.liveRenewSchedules(c.real, { automatic: true });
+        assert.equal(asked[0].viaAi, false);
+        // 보고 있는 방이라도 스케줄을 끈 방은 아니에요
+        asked.length = 0; stale(); S.setSchedulesOn(c.real, c.room.id, false); G.setViewingRoom(() => c.room.id);
+        await G.liveRenewSchedules(c.real, { automatic: true });
+        assert.equal(asked[0].viaAi, true);
+    } finally { delete T.ask; delete T.st; G.setViewingRoom(() => ''); }
 });

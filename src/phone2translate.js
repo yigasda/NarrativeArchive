@@ -153,7 +153,9 @@ setTranslatorDefaultsIO({
 export const liveTranslatorDefaults = () => useTranslatorDefaults();
 // 이 채팅(방)의 번역 설정을 새 채팅의 기본값으로 저장 (real, 방 id) · 잊기 (null). 알림까지 해요 (마리나라 화면의 알림 글) → 됐으면 true
 let savingFrom = null;
-export async function liveSaveTranslatorDefaults(real, roomId = '') {
+//   방 id가 없거나 없는 방이면 오류예요 (빈 설정을 기본값으로 저장하지 않게: 2026-11-24 검토)
+export async function liveSaveTranslatorDefaults(real, roomId) {
+    if (real && !(roomId && obj(liveWorld(real)?.messenger?.rooms?.[roomId]))) throw new Error('채팅방을 찾을 수 없습니다.');
     savingFrom = real || null;
     try { return await saveTranslatorDefaultsWithToast(real ? chatIdOf(real, roomId) : null); } finally { savingFrom = null; }
 }

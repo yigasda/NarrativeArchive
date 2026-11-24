@@ -46,7 +46,7 @@ const log = (...a) => console.log(...a);
             S.putLivePhone(m, { owner: 'Seraphina' });
             const room = S.ensureRoom(m, ['Seraphina']), w = S.liveWorld(m), at = Date.now() - 7 * 3600_000;
             S.sendLive(m, room.id, 'hey', at); room.messages.push({ id: 't2', n: 2, from: 'Seraphina', text: 'hi', at: at + 60_000 });
-            w.presence = { on: false, schedules: {}, overrides: {}, meta: {}, user: {} };
+            w.presence = { schedules: {}, overrides: {}, meta: {}, user: {} }; room.meta = { ...(room.meta || {}), autonomousMessages: false };   // (먼저 말 걸기는 방마다: room.meta)
             await core.saveMeta();
             await KO.keepBeat();
             const made = await G.liveKitRefresh(m);
@@ -68,7 +68,7 @@ const log = (...a) => console.log(...a);
         const sj = JSON.parse(fs.readFileSync(path.join(ST, 'data', 'default-user', 'settings.json'), 'utf8'));
         ok('settings.json has the draft connection and the custom url', sj.extension_settings?.narrative_archive?.draftConn?.source === 'custom' && sj.oai_settings?.custom_url === custom_url);
         // the tab is hidden; characters may write first from now
-        await page.evaluate(async () => { Object.defineProperty(document, 'hidden', { configurable: true, get: () => true }); const { core, S, m } = window.__na; S.liveWorld(m).presence.on = true; await core.saveMeta(); });
+        await page.evaluate(async () => { Object.defineProperty(document, 'hidden', { configurable: true, get: () => true }); const { core, S, m, room } = window.__na, r = S.liveWorld(m).messenger.rooms[room.id]; r.meta = { ...(r.meta || {}), autonomousMessages: true }; await core.saveMeta(); });
         log('waiting for the server (75 s without the browser, then its next look) …');
         let got = false;
         for (let i = 0; i < 200 && !got; i++) { await page.waitForTimeout(1000); got = asked.some(a => a.url.endsWith('/chat/completions')); }
@@ -92,7 +92,7 @@ const log = (...a) => console.log(...a);
             await KO.keepBeat();
             const queued = await G.liveAutonomous(m);
             const toast = [...document.querySelectorAll('#toast-container .toast-message')].map(x => x.textContent);
-            return { toast, before, after: room.messages.map(x => [x.from, x.text, x.extra?.autonomous === true]), unread: G.liveAutonomousUnread(m), queued, budget: m.live.world.presence.meta.autonomousDailyBudget };
+            return { toast, before, after: room.messages.map(x => [x.from, x.text, x.extra?.autonomous === true]), unread: G.liveAutonomousUnread(m), queued, budget: m.live.world.messenger.rooms[room.id].meta?.autonomousDailyBudget };
         });
         log(JSON.stringify(r2));
         ok('browser had not seen it while hidden', r2.before === 2);

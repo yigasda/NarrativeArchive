@@ -8,12 +8,15 @@ const L = await at('phone2store.js'), S = await at('phone2sched.js'), ASK = awai
 const DAYS = S.CONVERSATION_SCHEDULE_DAYS;
 const week = blocks => ({ days: Object.fromEntries(DAYS.map(d => [d, blocks])), talkativeness: 80, inactivityThresholdMinutes: 15 });
 const all = (status, activity = 'x') => week([{ time: '00:00-00:00', activity, status }]);
+// (스케줄 · 상태 · 먼저 말 걸기의 동작을 보는 테스트: 새 방의 첫 값(설정 마법사의 Start, phone2sched.js NEW_ROOM_SETUP) 없이 정한 적이 없는 방으로.
+//  새 방의 첫 값은 tests/phone2roommeta.test.mjs)
+const plain = (m, names) => { const r = L.ensureRoom(m, names); delete r.meta; return r; };
 function world() {
     const m = { phones: {} };
     L.startFresh(m, { persona: 'Ren', scope: 'test' });
     const w = L.liveWorld(m);
     w.phones = { mara: { owner: 'Mara' }, ivo: { owner: 'Ivo' } };
-    const a = L.ensureRoom(m, ['Mara']);
+    const a = plain(m, ['Mara']);
     return { m, w, a };
 }
 const NOW = new Date('2026-11-23T03:00:00Z');   // (월요일)
@@ -120,7 +123,7 @@ test('먼저 말 걸기: 꺼져 있으면 안 하고, 켜면 마리나라의 판
     S.noteProactive(m, a.id, 'mara', r.autonomousIntentKey, NOW);
     assert.equal(Object.values(a.meta.autonomousDailyBudget.counts)[0], 1);
     // 폰이 없는 사람만 있는 방은 안 해요
-    const b = L.ensureRoom(m, ['Nobody']);
+    const b = plain(m, ['Nobody']);
     assert.equal(S.checkProactive(m, b.id, { now: NOW }).shouldTrigger, false);
     // 오프라인인 사람은 안 걸어요
     S.setSchedule(m, 'Mara', all('offline', 'sleeping'), NOW);
@@ -157,7 +160,7 @@ test('늦은 답 정하기(마리나라의 계산): 바쁘면 그만큼 뒤. 오
 });
 test('@으로 부르면(마리나라의 mention): 부른 사람만 답하고, 바빠도 빨리 와요. 상황 글에 그 줄이 들어가요', async () => {
     const SV = await at('marinara/schedule.service.js');
-    const { m, w } = world(), g = L.ensureRoom(m, ['Mara', 'Ivo']), t = NOW.getTime();
+    const { m, w } = world(), g = plain(m, ['Mara', 'Ivo']), t = NOW.getTime();
     S.setSchedule(m, 'Mara', { ...all('dnd', 'working'), dndResponseDelayMinutes: 30 }, NOW);
     S.setSchedule(m, 'Ivo', all('online', 'free'), NOW);
     g.messages.push({ id: 'u1', n: 1, from: 'Ren', text: 'hey @mara are you there', at: t });
@@ -214,7 +217,7 @@ test('장소: 블록마다 따로 두고(place), 하는 일 글은 그대로예�
     await assert.rejects(S.fillPlaces(m, 'Mara', { ask: async () => '{"nope":1}' }), /장소 응답을 읽을 수 없습니다/);
     await assert.rejects(S.fillPlaces(m, 'Ivo', { ask }), /먼저 스케줄/);
     // 마리나라의 상황 글에는 장소가 안 섞여요
-    assert.doesNotMatch(S.contextBlock(m, 'Mara', L.ensureRoom(m, ['Mara']).id, { now: NOW }), /Hospital/);
+    assert.doesNotMatch(S.contextBlock(m, 'Mara', plain(m, ['Mara']).id, { now: NOW }), /Hospital/);
 });
 test('지금 블록: 열쇠는 블록이 바뀌면 달라지고, 글은 "장소 · 하는 일 · ~끝"이에요. 손으로 준 상태가 있으면 없어요', () => {
     const { m } = world();
@@ -512,7 +515,7 @@ test('먼저 말 걸기의 방 전체 설정: 마리나라의 열쇠 그대로 (
     assert.deepEqual(Object.keys(meta).filter(k => /Cap|groupChat|Exchanges/.test(k)), []);
 });
 test('캐릭터끼리 주고받기(마리나라의 /autonomous/exchange): 켜야 하고, 단체방에서만. 하루 상한을 넘으면 안 해요', () => {
-    const { m, a } = world(), g = L.ensureRoom(m, ['Mara', 'Ivo']), t = Date.now(), now = new Date(t);
+    const { m, a } = world(), g = plain(m, ['Mara', 'Ivo']), t = Date.now(), now = new Date(t);
     for (const r of [a, g]) r.messages.push({ id: `u${r.id}`, n: 1, from: 'Ren', text: 'hi', at: t - 120_000 }, { id: `c${r.id}`, n: 2, from: 'Mara', text: 'hey', at: t - 1000 });
     S.setSchedule(m, 'Mara', { ...all('online', 'free'), talkativeness: 100 }, now);
     S.setSchedule(m, 'Ivo', { ...all('online', 'free'), talkativeness: 100 }, now);
@@ -687,7 +690,7 @@ test('말 거는 이유의 "the user"는 페르소나 이름으로 들어가요'
 // ---- 단체방에서 누가 답하나 (마리나라의 Individual 단체방: src/marinara/group-responders.js)
 const GR = await at('marinara/group-responders.js');
 function group() {
-    const x = world(), g = L.ensureRoom(x.m, ['Mara', 'Ivo']), t = NOW.getTime();
+    const x = world(), g = plain(x.m, ['Mara', 'Ivo']), t = NOW.getTime();
     x.w.phones.varo = { owner: 'Varo' };
     g.members.push('Varo');
     g.messages.push({ id: 'u1', n: 1, from: 'Ren', text: 'anyone up for dinner', at: t });
@@ -871,7 +874,7 @@ test('먼저 말 걸 때인지 볼 때 카드의 상태를 지금 스케줄의 �
     const card = { mara: { conversationStatus: 'online' } }, wrote = [];
     S.setCardStore({ get: n => card[String(n).toLowerCase()] || null, set: async (n, patch) => { wrote.push([n, patch]); Object.assign(card[String(n).toLowerCase()], patch); } });
     try {
-        const { m } = world(), g = L.ensureRoom(m, ['Mara', 'Ivo']);
+        const { m } = world(), g = plain(m, ['Mara', 'Ivo']);
         S.setSchedule(m, 'Mara', all('dnd', 'working'), NOW);
         S.setSchedule(m, 'Ivo', all('idle', 'nap'), NOW);
         await S.flushCards(); wrote.length = 0;

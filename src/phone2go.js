@@ -32,7 +32,7 @@ import { liveStoryText } from './phone2story.js';
 import { BACK, backLeft, backInput, phone2BackSystem, takeBack, backMessage, markTold } from './phone2back.js';
 import { liveWall } from './phone2clock.js';
 import { gatherReply, LIVE_ASK } from './phone2live.js';
-import { presenceOf, scheduleOf, setSchedule, setStatusOverride, setUserStatus, setAutonomous, statusNow, replyDelay, contextBlock, makeSchedule, checkProactive, noteProactive, fillPlaces, stateNow, takeStatus, scheduleZone, setScheduleZone, draftSchedule, summarizeSchedule, repairSchedule, setAutoRenew, autoRenewOf, needsRefresh, renewSchedules, setAutonomousOptions, autonomousOptions, checkExchangeFor, mentionsIn, activeSchedule, schedulesOn, setSchedulesOn, exportSchedule, importSchedule, syncUser, noteAssistant, noteReaction, forgetActivity, setCardStore, setZoneStore, flushCards, clearProgress, groupOrder, groupTurnPrompt, isGroupRoom, groupResponders, groupHandoff, GROUP_MENTION_INVITE_LINE, orderConversationRespondersByDelay, groupMode, mergedDelay, groupCandidates, roomMeta, roomMetaW, followsSchedule } from './phone2sched.js';
+import { presenceOf, scheduleOf, setSchedule, setStatusOverride, setUserStatus, setAutonomous, statusNow, replyDelay, contextBlock, makeSchedule, checkProactive, noteProactive, fillPlaces, stateNow, takeStatus, scheduleZone, setScheduleZone, draftSchedule, summarizeSchedule, repairSchedule, setAutoRenew, autoRenewOf, needsRefresh, renewSchedules, setAutonomousOptions, autonomousOptions, checkExchangeFor, mentionsIn, activeSchedule, schedulesOn, setSchedulesOn, exportSchedule, importSchedule, syncUser, noteAssistant, noteReaction, forgetActivity, setCardStore, setZoneStore, flushCards, clearProgress, groupOrder, groupTurnPrompt, isGroupRoom, groupResponders, groupHandoff, GROUP_MENTION_INVITE_LINE, orderConversationRespondersByDelay, groupMode, mergedDelay, groupCandidates, roomMeta, roomMetaW, followsSchedule, chatSettingsOf, setChatSettings } from './phone2sched.js';
 import { buildMergedConversationSystemPrompt, formatConversationGroupOutputFormat, mergedRespondersLine, mergedMentionLine, extractLeadingThinkingBlocks, buildGenerationInfoExtra, chatModelChoiceSchema, readChatModelOverride, readChatRecentModels, applyChatModelPatch, applyChatModelOverride, reorderStars, CHAT_RECENT_MODELS_KEY, MAX_PINNED_MODELS, relevantGenerationParameters, reasoningEffortChoices, CONVERSATION_COMMAND_TOGGLE_OPTIONS, readConversationCommandToggles, isConversationCommandEnabled, conversationCommandsOn, buildConversationCommandToggleOptions, resolveProviderReasoningEffort, generationLevelLabel } from './phone2merged.js';
 import { replyInput, messengerBlock } from './phone2ask.js';
 import { readChatAttachments, toPendingAttachments, storeAttachments, attachmentInputs, DISABLED_IMAGE_CAPTIONING, DEFAULT_IMAGE_CAPTIONING_PROMPT, normalizePromptAttachments, CHAT_ATTACHMENT_ACCEPT } from './phone2attach.js';
@@ -232,8 +232,9 @@ async function goNow(real, onChange, lock, server = false, translate = () => Pro
             const tr = trOf.get(job);
             if (w && w.id === job.world && got?.ids?.length && tr?.config) tr.ids = markAutomaticTranslation(real, job.room, got.ids, tr.config);
         },
-        // (an owner with a schedule: the texts carry the schedule's state, not one the model wrote)
-        stateFor: job => { if (!activeSchedule(real, job.owner)) return undefined; const p = livePhone(real, job.owner); return stateNow(real, job.owner, { tz: p ? zoneOf(real, p) : '' })?.text || ''; },
+        // (an owner with a schedule: the texts carry the schedule's state, not one the model wrote. The reply's room's switch: a room
+        //  with schedules off keeps the model's state — the schedule's carries the place and end time, 2026-11-24 검토)
+        stateFor: job => { if (!activeSchedule(real, job.owner, job.room)) return undefined; const p = livePhone(real, job.owner); return stateNow(real, job.owner, { tz: p ? zoneOf(real, p) : '', room: job.room })?.text || ''; },
         after: async (job, got) => {
             const translated = startTranslation(job);
             const w = liveWorld(real), p = livePhone(real, job.owner);
@@ -444,7 +445,7 @@ async function gatherMerged(real, job, { card, d0, att = null }) {
     ].filter(Boolean).join('\n\n');
     return {
         room: job.room, system: buildMergedConversationSystemPrompt({ convoCharNames: chars, personaName: w.persona }), input,
-        take: (answer, { now }) => takeMerged(real, job.room, stripThink(answer), { names: chars, lead: job.owner, now, stateOf: name => (activeSchedule(real, name) ? stateNow(real, name, { tz: zoneOf(real, livePhone(real, name) || p) })?.text || '' : '') }),
+        take: (answer, { now }) => takeMerged(real, job.room, stripThink(answer), { names: chars, lead: job.owner, now, stateOf: name => (activeSchedule(real, name, job.room) ? stateNow(real, name, { tz: zoneOf(real, livePhone(real, name) || p), room: job.room })?.text || '' : '') }),
     };
 }
 // Merged 단체방의 한 차례: 방에 줄 서 있던 답장들을 하나로 묶어요 (마리나라: 한 번의 생성이 답할 수 있는 사람 모두의 말을 써요)
@@ -632,27 +633,54 @@ export const liveRepairSchedule = (text, current, day = '') => repairSchedule(te
 // 매주 갱신 켜기 · 끄기, 그 사람의 스케줄 사정 { autoRenew, needsRefresh (이번 주 것이 아님), timeZone }
 export const liveSetAutoRenew = async (real, owner, on) => { const out = setAutoRenew(mine(real), owner, on); await flushCards(); await saveMeta(); return out; };
 export const liveScheduleInfo = (real, owner) => { const p = livePhone(real, owner), tz = p ? zoneOf(real, p) : ''; return { autoRenew: autoRenewOf(real, owner), needsRefresh: needsRefresh(real, owner, { tz }), timeZone: tz }; };
+// 일정 생성 선호 (마리나라 ui.store scheduleGenerationPreferences: 앱 전체 하나, 확장 설정). 스케줄을 만들 때마다 요청에 실어요
+//   (마리나라: 상태 카드의 매주 갱신 · 자율 메시지의 생성 · 설정 마법사의 Start가 모두 /schedule/generate에 실어 보내요)
+const prefsStore = () => (ctx().extensionSettings[MODULE] ||= {});
+export const liveScheduleGenerationPreferences = () => { try { const v = prefsStore().scheduleGenerationPreferences; return typeof v === 'string' ? v : ''; } catch { return ''; } };
+export function liveSetScheduleGenerationPreferences(text) {
+    const s = prefsStore(), v = String(text ?? '');
+    if (v) s.scheduleGenerationPreferences = v; else delete s.scheduleGenerationPreferences;
+    ctx().saveSettingsDebounced?.();
+    return v;
+}
+// 화면이 지금 보고 있는 방 (phone.js가 줘요: setViewingRoom(() => 방 id)). 매주 갱신이 그 방의 연결을 먼저 써요
+let viewingRoom = () => '';
+export const setViewingRoom = fn => { if (typeof fn === 'function') viewingRoom = fn; };
 // 갱신 (마리나라의 /schedule/generate): 지난 스케줄을 이어받아 새 주 것을 만들어 넣어요 (모델을 불러요)
-//   opts: { owners (없으면 스케줄이 있는 사람 전부), automatic: 매주 갱신을 켠 사람만 (갱신이 필요할 때), forceRefresh, guidance, signal,
+//   opts: { owners (없으면 스케줄이 있는 사람 전부), automatic: 매주 갱신을 켠 사람만 (갱신이 필요할 때), forceRefresh, guidance (빼면 일정 생성 선호), signal,
 //     roomId: 그 방에서 (마리나라 /schedule/generate의 chatId: 그 방의 연결로, 만든 것이 있으면 그 방의 스케줄을 켜요) · connectionId: 따로 고른 연결 }
-//   매주 갱신(방 없음)은 기본 연결로, 그 사람이 있는 방 가운데 하나라도 스케줄을 켠 사람만 (소망 (가))
+//   매주 갱신(방을 안 줌): 그 사람이 있는 방 가운데 스케줄을 켠 방 하나에서 해요(화면이 보고 있는 방이 먼저, 없으면 첫 방). 그 방의 연결로 물어요
+//   (마리나라: 매주 갱신은 연 채팅의 상태 카드가 그 채팅 id로 불러요 — ConversationPresenceCard.tsx 313~360, 연결은 그 채팅의 것 ?? 기본:
+//   conversation.routes.ts 704~709). 스케줄을 켠 방이 없는 사람은 안 해요(소망 (가)). 방이 하나도 없는 사람은 기본 연결로
 //   → { 이름: 'generated' | 'fresh' | 'renewal_disabled' | 'error: …' }
-export async function liveRenewSchedules(real, { owners = null, automatic = false, forceRefresh = false, guidance = '', signal, connectionId, roomId = '' } = {}) {
-    const askSched = askVia(real, connectionId ?? liveScheduleConnection(real, roomId));
+export async function liveRenewSchedules(real, { owners = null, automatic = false, forceRefresh = false, guidance, signal, connectionId, roomId = '' } = {}) {
     const w = liveWorld(mine(real)), phones = Object.values(w.phones || {}).filter(p => p?.owner && (owners ? owners.some(n => liveKey(n) === liveKey(p.owner)) : scheduleOf(real, p.owner)));
     // (the weekly renewal: nothing is asked when nobody's week has turned, nor for someone whose rooms all have schedules off)
     const due = automatic ? phones.filter(p => autoRenewOf(real, p.owner) && needsRefresh(real, p.owner, { tz: zoneOf(real, p) }) && (roomId ? true : followsSchedule(real, p.owner))) : phones;
     if (!due.length) return {};
-    const cards = {};
-    for (const p of due) cards[liveKey(p.owner)] = await cardData(p);
-    const out = await renewSchedules(real, { ask: askSched, owners: due.map(p => p.owner), cards, automatic, forceRefresh, guidance, timeZone: scheduleZone(real) || undefined, signal, roomId });
-    const done = {};
-    for (const p of due) {
-        const r = out.results[liveKey(p.owner)];
-        done[p.owner] = r?.status || 'not_found';
-        if (r?.status !== 'generated') continue;
-        try { await fillPlaces(real, p.owner, { ask: askSched, parse: t => parseJson(t, { salvage: true }), card: cards[liveKey(p.owner)].description, places: knownPlaces(p) }); } catch (err) { console.warn('[narrative-archive] schedule places', err); }
-        delete p.schedAt;
+    // (which room each one is renewed in: the one asked for, else — the weekly renewal — a room of theirs with schedules on, the one on screen first)
+    const rooms = Object.values(w.messenger?.rooms || {}), seen = String(viewingRoom() || '');
+    const roomFor = p => {
+        if (roomId) return roomId;
+        const on = rooms.filter(r => (r.members || []).some(n => liveKey(n) === liveKey(p.owner)) && schedulesOn(real, r.id));
+        return (on.find(r => r.id === seen) || on[0])?.id || '';
+    };
+    const groups = new Map();
+    for (const p of due) { const rid = roomFor(p); groups.set(rid, [...(groups.get(rid) || []), p]); }
+    const prefs = guidance ?? liveScheduleGenerationPreferences(), done = {};
+    for (const [rid, list] of groups) {
+        const askSched = askVia(real, connectionId ?? liveScheduleConnection(real, rid));
+        const cards = {};
+        for (const p of list) cards[liveKey(p.owner)] = await cardData(p);
+        const out = await renewSchedules(real, { ask: askSched, owners: list.map(p => p.owner), cards, automatic, forceRefresh, guidance: prefs, timeZone: scheduleZone(real) || undefined, signal, roomId: rid });
+        for (const p of list) {
+            const r = out.results[liveKey(p.owner)];
+            done[p.owner] = r?.status || 'not_found';
+            if (r?.status !== 'generated') continue;
+            try { await fillPlaces(real, p.owner, { ask: askSched, parse: t => parseJson(t, { salvage: true }), card: cards[liveKey(p.owner)].description, places: knownPlaces(p) }); } catch (err) { console.warn('[narrative-archive] schedule places', err); }
+            delete p.schedAt;
+        }
+        if (out.aborted) break;
     }
     await flushCards();
     if (open(real)) { followSchedule(real); await saveMeta(); }
@@ -697,6 +725,11 @@ export const liveImportSchedule = value => importSchedule(value);
 //   { autonomousDailyCapOverride: 하루 상한 (수 · null), groupChatMode: 'individual' (단체방에서 하루 상한을 같이 써요) · null, characterExchanges: 캐릭터끼리 주고받기 }
 export const liveAutonomousOptions = (real, roomId) => autonomousOptions(real, roomId);
 export const liveSetAutonomousOptions = async (real, roomId, o = {}) => { const out = setAutonomousOptions(mine(real), roomId, o); await saveMeta(); return out; };
+// 화면에만 있고 동작은 아직 없는 채팅 설정 칸의 값 (그 방의 것: phone2sched.js chatSettingsOf) → { appliedChatPresetId, promptPresetId, customSystemPrompt,
+//   inactiveCharacterIds, crossChatAwareness, connectedChatId, lorebookTokenBudget, enableMemoryRecall, semanticSummary*, summaryConnectionId, summaryMaxTokens,
+//   dayRolloverHour, summaryTailMessages }. 바꾸기는 준 것만 (마리나라의 저장 규칙). 저장만 하고 아무 동작도 하지 않아요
+export const liveChatSettings = (real, roomId) => chatSettingsOf(real, roomId);
+export const liveSetChatSettings = async (real, roomId, patch = {}) => { const out = setChatSettings(mine(real), roomId, patch); await saveMeta(); return out; };
 const cardsOf = room => { const cards = {}; for (const name of room.members) { const c = ctx().characters?.find(x => liveKey(x?.name) === liveKey(name)); if (c) cards[liveKey(name)] = c.data || c; } return cards; };
 // 단체방에서 한 캐릭터가 답한 뒤: 다른 캐릭터가 거기에 답할 때면(마리나라의 판단) 그 답장을 줄 세워요 → 줄 세운 이름 | ''
 function exchangeAfter(real, job) {
