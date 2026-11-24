@@ -137,6 +137,9 @@ http.createServer((req, res) => {
     // 말투 뽑기 (phonetr.js askVoices): the story's people with the words that show it; anyone else in WHO comes back missing
     const VOICES = { people: [{ who: 'Ren', style: '늘 반말이고 장난스럽게 말끝을 길게 늘이며, 상대가 차갑게 굴면 일부러 더 들러붙고 이모티콘을 섞어 분위기를 풀려고 함', label: '장난 반말 · 능글', evidence: ['Why so cold? Come on, smile a little~'] }, { who: 'Anja', style: '반말, 다정하게, 걱정 많음', label: '다정한 반말', evidence: ['Did you eat? Don\'t skip dinner again'] }, { who: 'Ivo', style: '극도로 절제되고 격식 있는 문어체 존댓말 및 단호하고 간결한 명령형 어조. 문장 끝에 반드시 마침표를 찍음', label: '격식 존댓말 · 단호함', evidence: ['Bitte. Der Schlüssel liegt unter der Matte.'] }] };
     // 이름표 (phonetr.js labelVoices): one short label a numbered line
+    // 마리나라 번역(Orbit 번역 단추 · 초안 번역, src/marinara 번역 지시문): 보낸 글(지시 줄 뒤)을 "번역: …"으로 (1.2초 뒤, "번역 중…"이 보이게)
+    if (b.includes('You are a translator')) { let last = ''; try { const j = JSON.parse(b), m = (j.messages || []).filter(x => x.role === 'user').pop(); last = String(m?.content ?? '').split(/\n\s*\n/).pop().trim().slice(0, 60); } catch { /* not JSON */ }
+      return setTimeout(() => { res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ choices: [{ message: { role: 'assistant', content: `번역: ${last}` } }] })); }, 1200); }
     // 실시간 폰 다시 번역 (AI_SYS_PHONE_KO, 메신저 재번역 · 고친 뒤 번역): [LINES]의 줄마다 "다시 번역한 말 n" (1.2초 뒤, "번역 중"이 보이게)
     if (b.includes('[LINES]') && b.includes('so that all of it reads as one')) { const ns = [...b.slice(b.lastIndexOf('[LINES]')).matchAll(/\\n(\d+): \[text/g)].map(m => +m[1]);
       return setTimeout(() => { res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ choices: [{ message: { role: 'assistant', content: JSON.stringify({ lines: (ns.length ? ns : [1]).map(n => ({ n, ko: `다시 번역한 말 ${n}` })) }) } }] })); }, 1200); }
