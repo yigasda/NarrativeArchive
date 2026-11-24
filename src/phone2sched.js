@@ -12,7 +12,8 @@
 //       손으로 고른 것이 active일 때만 10분 가만히 있으면 status가 idle로 바뀌었다가, 움직이거나 말을 보내면 active로 돌아와요)
 //   }
 //   옛 저장 (2026-11-24 전): Orbit에 하나였던 w.presence.on · meta의 채팅 열쇠 · meta.reasoningEffort("Orbit 전체")를 moveRoomMeta가 모든 방
-//   (지운 방까지)에 한 번 옮기고 세계에 표시(ROOM_META_MARK)를 남겨요. 표시가 있으면 Orbit의 옛 값은 아무도 안 읽어요(옛 탭이 다시 써도).
+//   (지운 방까지)에 한 번 복사하고 세계에 표시(ROOM_META_MARK)를 남겨요. 표시가 있으면 새 코드는 Orbit의 옛 값을 안 읽어요(옛 탭이 다시 써도).
+//   Orbit의 옛 값은 지우지 않아요: 아직 새로 고치지 않은 탭 · 옛 일꾼은 그 값을 읽어서, 옮길 때의 설정 그대로 돌아요. 새 세계는 표시를 갖고 태어나요
 //   방 밖에서 쓰는 것 (연락처 · 프로필의 상태, 폰이 스케줄을 따라가기, 답장 NOW의 폰 상태, 매주 갱신): 그 사람이 있는 방 가운데 하나라도
 //   스케줄을 켰으면 스케줄을 따라요 (소망 (가), followsSchedule). 방이 하나도 없는 사람은 방의 기본값처럼 스케줄이 있으면 따라요.
 // 마리나라의 "채팅" = 우리 방 하나 (chatId = 세계 id:방 id), "캐릭터 id" = 폰 열쇠(liveKey).
@@ -98,11 +99,12 @@ export const scheduleOf = (m, owner) => peek(m).schedules?.[liveKey(owner)] || n
 // 방으로 옮긴 열쇠 (마리나라의 채팅 메타 이름 그대로). 앱 · 폰 전체에 남는 것: 알림 · 번역 기본값 · 시간대 · 연결 · 카드의 스케줄 · 내 상태 · 페르소나
 export const ROOM_META_KEYS = ['autonomousMessages', 'autonomousDailyCapOverride', 'groupChatMode', 'groupResponseOrder', 'groupTurnPromptEnabled', 'characterExchanges', 'conversationSchedulesEnabled', 'characterCommands', 'conversationCommandToggles', 'imageCaptioningEnabled', 'imageCaptioningConnectionId', 'imageCaptioningPrompt', ...TRANSLATOR_SETTINGS_KEYS, 'autonomousDailyBudget', 'intentCooldowns'];
 const copyOf = v => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)));
-// 옛 저장 옮기기 (2026-11-24 전: 채팅 설정이 Orbit에 하나): Orbit의 값을 모든 방(지운 방 w.messenger.trash까지)에 복사하고 Orbit에서는 지워요.
+// 옛 저장 옮기기 (2026-11-24 전: 채팅 설정이 Orbit에 하나): Orbit의 값을 모든 방(지운 방 w.messenger.trash까지)에 복사해요.
+//   Orbit의 값은 지우지 않아요 (옛 탭 · 옛 일꾼이 읽는 자리: 지우면 그쪽은 먼저 말 걸기 · 번역이 꺼지고 단체방 방식이 바뀌어요. 2026-11-24 검토).
 //   w.presence.on → room.meta.autonomousMessages, w.presence.meta의 열쇠 → room.meta (방에 이미 있는 값이 이겨요),
 //   meta.reasoningEffort ("Orbit 전체": 마리나라에 없어요) → 자기 값이 없는 방의 room.chatParameters.reasoningEffort,
 //   meta.scheduleConnectionId → 버려요 (마리나라는 스케줄 생성 연결을 저장하지 않아요: 편집 창의 상태, 기본은 그 방의 연결).
-//   한 번만 해요: 세계에 표시(ROOM_META_MARK)를 남겨요. 그 뒤로 옛 페이지가 Orbit 값을 다시 써도 아무도 안 읽어요.
+//   한 번만 해요: 세계에 표시(ROOM_META_MARK)를 남겨요. 그 뒤로 옛 페이지가 Orbit 값을 다시 써도 새 코드는 안 읽어요.
 //   브라우저와 서버 일꾼이 같은 코드로 (읽는 함수가 먼저 불러요: roomMeta · roomMetaW) → 옮긴 방의 수
 export function moveRoomMeta(m) {
     const w = liveWorld(m);
@@ -120,14 +122,18 @@ export function moveRoomMeta(m) {
         if (effort && !(obj(room.chatParameters) && room.chatParameters.reasoningEffort)) room.chatParameters = { ...(obj(room.chatParameters) ? room.chatParameters : {}), reasoningEffort: effort };
         n++;
     }
-    if (p) {
-        delete p.on;
-        for (const k of [...ROOM_META_KEYS, 'reasoningEffort', 'scheduleConnectionId']) delete meta[k];
-    }
     w[ROOM_META_MARK] = 1;
     return n;
 }
 setWorldPrep(m => moveRoomMeta(m));
+// 저장 조각을 합치기 전에 (phone2keep.js makeKeep의 prep): 옮기기 전의 m.live면 사본을 옮겨서 돌려줘요 (받은 것은 안 고쳐요). 옮긴 것이면 그대로
+export function moveRoomMetaCopy(live) {
+    const w = live && typeof live === 'object' ? live.world : null;
+    if (!obj(w) || w[ROOM_META_MARK]) return live;
+    const copy = JSON.parse(JSON.stringify(live));
+    moveRoomMeta({ live: copy });
+    return copy;
+}
 const roomOf = (m, roomId) => { const r = roomId ? liveWorld(m)?.messenger?.rooms?.[roomId] : null; return obj(r) ? r : null; };
 // 방의 채팅 메타 (읽기: 없으면 {}) · 쓰기 (없으면 만들어요; 방이 없으면 오류)
 export function roomMeta(m, roomId) { moveRoomMeta(m); const r = roomOf(m, roomId); return r && obj(r.meta) ? r.meta : {}; }

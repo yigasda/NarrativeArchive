@@ -3,7 +3,7 @@
 
 import { MODULE, ctx, getMeta, hasChat, saveMeta, setSaveHook } from './core.js';
 import { makeKeep } from './phone2keep.js';
-import { reseedActivity } from './phone2sched.js';
+import { reseedActivity, moveRoomMetaCopy } from './phone2sched.js';
 
 const PATH = '/api/plugins/narrative-archive';
 const J = JSON.stringify;
@@ -92,7 +92,10 @@ export async function waitForServerTranslationToSettle(room, { wait = ms => new 
     return true;
 }
 
-export const keep = makeKeep({ api, now, synced });
+// 합치기 전에 서버 것 · base에도 옛 저장 옮기기를 (브라우저가 읽을 때 메모리에서 하는 것과 같게: phone2sched.js moveRoomMeta).
+// 업데이트 뒤 처음 옮기는 사이 일꾼이 먼저 쓰면, 이게 없을 때 그사이 이 탭에서 바꾼 방 설정이 조용히 되돌아갔어요 (2026-11-24 검토)
+export const makeOrbitKeep = (io, at, done = null) => makeKeep({ api: io, now: at, synced: done, prep: moveRoomMetaCopy });
+export const keep = makeOrbitKeep(api, now, synced);
 // 지금 채팅의 Orbit 데이터를 다 읽었을 때 끝나는 약속 (플러그인이 없으면 바로)
 export const liveReady = () => keep.ready();
 export const keepState = () => keep.state();

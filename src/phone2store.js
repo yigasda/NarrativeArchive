@@ -66,7 +66,9 @@ export function newWorld(m, { from = 'fresh', persona = '', dayShift = 0, scope 
     const name = String(persona).trim();
     live.world = { id: newId('w'), from, startedAt: now, dayShift: Number(dayShift) || 0, scope: String(scope || ''), storyUpto: from === 'story' ? storyUpto : null,
         persona: name, lastOwner: '', phones: {}, finance: null, profiles: {}, pre: {}, lore: [], loreOff: {},
-        messenger: { accounts: { [liveKey(name)]: { name } }, rooms: {} }, queue: { round: 0, jobs: [] } };
+        messenger: { accounts: { [liveKey(name)]: { name } }, rooms: {} }, queue: { round: 0, jobs: [] },
+        // (채팅 설정은 처음부터 방마다: 옛 탭이 이 세계의 Orbit에 채팅 설정을 써도 옮겨지지 않아요 — phone2sched.js moveRoomMeta)
+        [ROOM_META_MARK]: 1 };
     for (const fn of worldSeeds) fn(live.world);
     return live.world;
 }
@@ -337,7 +339,8 @@ export const setRoomSeed = fn => { if (typeof fn === 'function' && !roomSeeds.in
 const preps = [];
 export const setWorldPrep = fn => { if (typeof fn === 'function' && !preps.includes(fn)) preps.push(fn); };
 export const prepWorld = m => { for (const fn of preps) fn(m); };
-// 채팅 설정을 방마다로 옮겼다는 표시 (세계에): 있으면 Orbit 하나의 옛 값(w.presence.on · meta의 채팅 열쇠)은 아무도 안 읽어요
+// 채팅 설정을 방마다로 옮겼다는 표시 (세계에): 있으면 새 코드는 Orbit 하나의 옛 값(w.presence.on · meta의 채팅 열쇠)을 안 읽어요.
+// 옛 값은 남아 있어요(옛 탭 · 옛 일꾼이 읽어요). 새 세계(newWorld)는 처음부터 있어요
 export const ROOM_META_MARK = 'metaPerRoom';
 // 페르소나의 이름이 바뀌었어요 (실리에서 다른 페르소나를 골랐을 때): 실시간 폰의 "나"를 그 이름으로. 같은 사람으로
 // 보고, 방의 사람 · 지난 말 · 읽은 자리 · 반응 · 받아 둔 답장 · 계정과, 폰들의 연락처 · 위치 정보 · 주변 인물 · 말투 줄의

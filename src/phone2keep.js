@@ -172,7 +172,10 @@ const restOf = m => sumOf(JSON.stringify(m));
 // now(): 지금 열린 채팅의 { m (우리 메타), mark (실리가 채팅마다 주는 표시: 분기하면 달라져요) } | null
 // synced: { before(m) → 표, after(m, 표) } 플러그인의 것을 받아 m.live에 맞춘 때마다 (받기 · 저장하다 부딪혀 합친 때 둘 다):
 //   before는 맞추기 전에, after는 맞춘 뒤에 불러요 (화면에 알리기 · 먼저 건 말 알림)
-export function makeKeep({ api, now, synced = null }) {
+// prep(live) → live: 합치기 전에 서버 것과 base(마지막으로 맞았던 것)에 해요 (읽는 쪽이 메모리에서 하는 옛 저장 옮기기를 셋에 똑같이:
+//   안 하면 양쪽이 처음 옮긴 같은 값을 "둘 다 새로 넣었다"고 보고 서버 것을 골라, 그사이 브라우저에서 바꾼 것이 되돌아가요).
+//   받은 값을 고치지 말고 새 값을 돌려줘요. 이 파일은 무엇을 옮기는지 몰라요 (phone2keepon.js가 줘요)
+export function makeKeep({ api, now, synced = null, prep = x => x }) {
     let cur = null;
     // (채팅을 열 때마다 물어봐요: 잠깐 끊겼다가 돌아올 수 있어요)
     const plugin = () => Promise.resolve().then(() => api.ping()).then(x => !!x?.ok, () => false);
@@ -255,7 +258,7 @@ export function makeKeep({ api, now, synced = null }) {
         if (rev === null || rev === st.rev) return false;
         const got = await api.load(st.id);
         if (!got) return false;
-        const server = joinLive(got.parts), mine = new Map(Object.entries(splitLive(m.live)).map(([k, v]) => [k, JSON.stringify(v)]));
+        const server = prep(joinLive(got.parts)), mine = new Map(Object.entries(splitLive(m.live)).map(([k, v]) => [k, JSON.stringify(v)]));
         const dirty = mine.size !== st.texts.size || [...mine].some(([k, s]) => st.texts.get(k) !== s);
         let next = server, mark;
         try { mark = synced?.before?.(m); } catch (err) { console.warn('[narrative-archive] Orbit 맞추기 전', err); }
@@ -263,7 +266,7 @@ export function makeKeep({ api, now, synced = null }) {
             // (the same world on both sides: merged against what the two last agreed on. Another world — I began a new
             //  Orbit here meanwhile —: mine is kept whole and goes up over the plugin's)
             if (obj(server.world) && obj(m.live.world) && server.world.id === m.live.world.id) {
-                const base = joinLive(Object.fromEntries([...st.texts].map(([k, s]) => [k, JSON.parse(s)])));
+                const base = prep(joinLive(Object.fromEntries([...st.texts].map(([k, s]) => [k, JSON.parse(s)]))));
                 next = settleRooms(merge3(base, server, JSON.parse(JSON.stringify(m.live))), server);
             } else next = null;
         }
