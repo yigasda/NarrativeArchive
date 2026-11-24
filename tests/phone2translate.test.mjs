@@ -33,6 +33,8 @@ globalThis.fetch = async (url, init = {}) => { sent.push({ url: String(url), ini
 const toasts = [];
 globalThis.toastr = { error: t => toasts.push(['error', t]), success: t => toasts.push(['success', t]), info() {}, warning() {} };
 
+// the room of a setup() (its only one)
+const rid = real => Object.keys(L.liveWorld(real).messenger.rooms)[0];
 function setup({ meta = {}, g = {}, settings = {} } = {}) {
     const real = { phones: {} };
     T.ctx = { extensionSettings: { narrative_archive: { ...settings } }, saveSettingsDebounced: () => { T.settingsSaves = (T.settingsSaves || 0) + 1; }, chatMetadata: { narrative_archive: real }, ConnectionManagerRequestService: { getSupportedProfiles: () => [], sendRequest: async (...a) => { T.profileCalls = [...(T.profileCalls || []), a]; return { content: 'via profile' }; } } };
@@ -41,8 +43,9 @@ function setup({ meta = {}, g = {}, settings = {} } = {}) {
     L.startFresh(real, { persona: 'Ren', scope: 'test' });
     const w = L.liveWorld(real);
     w.phones = { mara: { owner: 'Mara' } };
-    w.presence = { meta: { ...meta } };
     const room = L.ensureRoom(real, ['Mara']);
+    // (the chat's settings: the room's, as Marinara's are each chat's metadata)
+    room.meta = { ...meta };
     const say = (from, text, at, extra) => { const x = { id: `m${room.messages.length}`, n: L.liveNo(w), from, text, at, ...(extra ? { extra } : {}) }; room.messages.push(x); return x; };
     sent.length = 0; toasts.length = 0; answer = DEFAULT_ANSWER;
     useTranslationStore.getState().clearAll();
@@ -220,15 +223,15 @@ test('AI · 실리의 지금 연결(고른 프로필 없음): 채팅 완성은 �
         await assert.rejects(() => translateText({ connections: TR.translationConnections }, { text: 'Hi', provider: 'ai', targetLanguage: 'ja', connectionId: 'ai' }), e => e.message === why);
         const roomId = Object.keys(L.liveWorld(real).messenger.rooms)[0];
         assert.equal(await TR.translationCannot(real, roomId), why);
-        const meta = L.liveWorld(real).presence.meta;
+        const meta = L.liveWorld(real).messenger.rooms[roomId].meta;
         meta.translationConnectionId = 'dr'; meta.translationProvider = 'google';
-        await assert.rejects(() => TR.liveSetTranslation(real, { translationProvider: 'ai', translationConnectionId: 'ai' }), e => e.message === why);
+        await assert.rejects(() => TR.liveSetTranslation(real, rid(real), { translationProvider: 'ai', translationConnectionId: 'ai' }), e => e.message === why);
         assert.deepEqual([meta.translationProvider, meta.translationConnectionId], ['google', 'dr']);
         assert.equal(T.saves, 0);
         // (Google, or another connection: nothing to refuse)
-        await TR.liveSetTranslation(real, { translationConnectionId: 'ai' });
+        await TR.liveSetTranslation(real, rid(real), { translationConnectionId: 'ai' });
         assert.equal(meta.translationConnectionId, 'ai');
-        await TR.liveSetTranslation(real, { autoTranslate: false });
+        await TR.liveSetTranslation(real, rid(real), { autoTranslate: false });
         assert.equal(await TR.translationCannot(real, roomId), '');
     } finally { delete globalThis.__naStOpenai; delete globalThis.__naStTextgen; TR.setTranslationConnectionList(() => []); }
 });
@@ -237,33 +240,36 @@ test('AI · 실리의 지금 연결(고른 프로필 없음): 채팅 완성은 �
 test('채팅 설정 › 번역: 값 읽기 (마리나라 화면의 규칙) · 바꾸기 (준 열쇠만, 프롬프트는 비었거나 기본과 같으면 null)', async () => {
     const { real, w } = setup({ meta: { translationTargetLang: 'fr', translationPrompt: 'Old {{targetLanguage}}', translationOutputPrompt: null } });
     TR.setTranslationConnectionList(() => [{ id: 'dr', name: 'draft-model' }]);
-    let S = TR.liveTranslationSettings(real);
+    let S = TR.liveTranslationSettings(real, rid(real));
     assert.deepEqual({ ...S, connections: S.connections.map(c => c.id) }, { provider: 'google', inputTargetLanguage: 'fr', outputTargetLanguage: 'fr', connectionId: '', inputPrompt: 'Old {{targetLanguage}}', outputPrompt: '', autoTranslate: false, translateInput: false, showInputTranslateButton: false, translationDisplayOnly: false, defaultPrompt: DEFAULT_TRANSLATION_SYSTEM_PROMPT, connections: ['dr'] });
-    S = await TR.liveSetTranslation(real, { translationProvider: 'ai', translationConnectionId: 'dr', translationInputTargetLang: 'English', translationOutputTargetLang: 'Korean', translationInputPrompt: DEFAULT_TRANSLATION_SYSTEM_PROMPT + '  ', translationOutputPrompt: 'Mine', autoTranslate: true, translateInput: true, showInputTranslateButton: true, translationDisplayOnly: true });
-    assert.deepEqual(w.presence.meta, { translationTargetLang: 'fr', translationPrompt: 'Old {{targetLanguage}}', translationOutputPrompt: 'Mine', translationProvider: 'ai', translationConnectionId: 'dr', translationInputTargetLang: 'English', translationOutputTargetLang: 'Korean', translationInputPrompt: null, autoTranslate: true, translateInput: true, showInputTranslateButton: true, translationDisplayOnly: true });
+    S = await TR.liveSetTranslation(real, rid(real), { translationProvider: 'ai', translationConnectionId: 'dr', translationInputTargetLang: 'English', translationOutputTargetLang: 'Korean', translationInputPrompt: DEFAULT_TRANSLATION_SYSTEM_PROMPT + '  ', translationOutputPrompt: 'Mine', autoTranslate: true, translateInput: true, showInputTranslateButton: true, translationDisplayOnly: true });
+    assert.deepEqual(w.messenger.rooms[rid(real)].meta, { translationTargetLang: 'fr', translationPrompt: 'Old {{targetLanguage}}', translationOutputPrompt: 'Mine', translationProvider: 'ai', translationConnectionId: 'dr', translationInputTargetLang: 'English', translationOutputTargetLang: 'Korean', translationInputPrompt: null, autoTranslate: true, translateInput: true, showInputTranslateButton: true, translationDisplayOnly: true });
     assert.equal(T.saves, 1);
     assert.deepEqual([S.inputPrompt, S.outputPrompt], ['', 'Mine']);
-    await TR.liveSetTranslation(real, { translationOutputPrompt: '   ' });
-    assert.equal(w.presence.meta.translationOutputPrompt, null);
+    await TR.liveSetTranslation(real, rid(real), { translationOutputPrompt: '   ' });
+    assert.equal(w.messenger.rooms[rid(real)].meta.translationOutputPrompt, null);
     for (const [patch, why] of [[{ translationProvider: 'deepl' }, /google 또는 ai/], [{ translationProvider: 'deeplx' }, /google 또는 ai/], [{ translationDeeplApiKey: 'x' }, /알 수 없는 번역 설정입니다/], [{ translationConnectionId: 'nope' }, /연결을 찾을 수 없습니다/]])
-        await assert.rejects(() => TR.liveSetTranslation(real, patch), why);
-    await TR.liveSetTranslation(real, { translationConnectionId: '' });
-    assert.equal(w.presence.meta.translationConnectionId, '');
+        await assert.rejects(() => TR.liveSetTranslation(real, rid(real), patch), why);
+    await TR.liveSetTranslation(real, rid(real), { translationConnectionId: '' });
+    assert.equal(w.messenger.rooms[rid(real)].meta.translationConnectionId, '');
     TR.setTranslationConnectionList(() => []);
 });
 
-test('새 채팅의 번역 기본값: 이 채팅의 설정을 저장 · 잊기 (마리나라의 알림 글), 새 Orbit은 기본값으로 시작. 프로필은 기본값 위에 자기 것', async () => {
+test('새 채팅의 번역 기본값: 이 채팅(방)의 설정을 저장 · 잊기 (마리나라의 알림 글), 새 방은 기본값으로 시작. 프로필은 기본값 위에 자기 것', async () => {
     const { real } = setup({ meta: { translationProvider: 'ai', autoTranslate: true, conversationSchedulesEnabled: true, translationTargetLang: 'ja' } });
     assert.equal(await TR.liveTranslatorDefaults(), false);
-    assert.equal(await TR.liveSaveTranslatorDefaults(real), true);
+    assert.equal(await TR.liveSaveTranslatorDefaults(real, rid(real)), true);
     const saved = T.ctx.extensionSettings.narrative_archive['translator-defaults'];
     assert.deepEqual(JSON.parse(saved), { translationProvider: 'ai', translationTargetLang: 'ja', autoTranslate: true, translationInputTargetLang: 'ja', translationOutputTargetLang: 'ja' });
     assert.deepEqual(toasts.pop(), ['success', '새 채팅용 번역기 기본값을 저장했습니다.']);
     assert.equal(await TR.liveTranslatorDefaults(), true);
-    // (a new Orbit — Marinara's new chat — starts from them)
+    // (a new room — Marinara's new chat, chats.storage.ts create — starts from them. A new Orbit has none: its rooms do)
     const fresh = { phones: {} };
     L.startFresh(fresh, { persona: 'Ren' });
-    assert.deepEqual(L.liveWorld(fresh).presence.meta, JSON.parse(saved));
+    assert.equal(L.liveWorld(fresh).presence, undefined);
+    assert.deepEqual(L.ensureRoom(fresh, ['Mara']).meta, JSON.parse(saved));
+    assert.deepEqual(L.ensureRoom(real, ['Ivo']).meta, JSON.parse(saved));                 // (the Orbit's other rooms keep theirs)
+    assert.equal(L.liveWorld(real).messenger.rooms[rid(real)].meta.conversationSchedulesEnabled, true);
     // 잊기
     assert.equal(await TR.liveSaveTranslatorDefaults(null), true);
     assert.equal(T.ctx.extensionSettings.narrative_archive['translator-defaults'], undefined);
@@ -271,10 +277,10 @@ test('새 채팅의 번역 기본값: 이 채팅의 설정을 저장 · 잊기 (
     assert.equal(await TR.liveTranslatorDefaults(), false);
     const fresh2 = { phones: {} };
     L.startFresh(fresh2, { persona: 'Ren' });
-    assert.equal(L.liveWorld(fresh2).presence, undefined);
+    assert.equal(L.ensureRoom(fresh2, ['Mara']).meta, undefined);
     // (a failure: Marinara's failure toast)
     const es = T.ctx.extensionSettings; T.ctx.extensionSettings = null;
-    assert.equal(await TR.liveSaveTranslatorDefaults(real), false);
+    assert.equal(await TR.liveSaveTranslatorDefaults(real, rid(real)), false);
     assert.deepEqual(toasts.pop(), ['error', '번역기 기본값을 바꾸지 못했습니다. 다시 시도해 주세요.']);
     T.ctx.extensionSettings = es;
     // 프로필: 기본값 위에 프로필의 번역 설정 (채팅의 것은 남지 않아요)
@@ -368,7 +374,7 @@ test('번역만 보이기 (translationDisplayOnly): 번역이 있고 · 번역 �
     v = TR.liveTranslationView(real, room.id, x);
     assert.deepEqual([v.showTranslationOnly, v.displayedContent, v.translationBlock], [false, 'Hi', { text: '', translating: true }]);
     // 꺼져 있으면 늘 원문 + 아래 칸
-    await TR.liveSetTranslation(real, { translationDisplayOnly: false });
+    await TR.liveSetTranslation(real, rid(real), { translationDisplayOnly: false });
     useTranslationStore.getState().setTranslating(x.id, false);
     assert.equal(TR.liveTranslationView(real, room.id, x).showTranslationOnly, false);
     // (another room: the store is cleared, as on Marinara's chat switch)
@@ -446,7 +452,7 @@ test('내 메시지 번역: 켜져 있으면 모델 언어로 (입력 쪽 언어
     TR.setTranslationConnectionList(() => []);
     assert.equal(await TR.livePrepareInput(real, room.id, 'hello'), 'hello');
     assert.equal(sent.length, 0);
-    await TR.liveSetTranslation(real, { translateInput: true });
+    await TR.liveSetTranslation(real, rid(real), { translateInput: true });
     assert.equal(await TR.livePrepareInput(real, room.id, 'hello'), '<hello>');
     assert.equal(new URL(sent[0].url).searchParams.get('tl'), 'fr');
     assert.equal(await TR.livePrepareInput(real, room.id, '   '), '   ');
@@ -487,7 +493,7 @@ test('자동 번역: 켜져 있을 때만 표시(답과 같은 저장). 말마�
     const a = say('Mara', 'one', 1), b = say('Mara', 'two', 2), mine = say('Ren', 'mine', 3);
     assert.deepEqual(TR.markAutomaticTranslation(real, room.id, [a.id, b.id]), []);
     assert.equal(a.extra, undefined);
-    await TR.liveSetTranslation(real, { autoTranslate: true });
+    await TR.liveSetTranslation(real, rid(real), { autoTranslate: true });
     assert.deepEqual(TR.markAutomaticTranslation(real, room.id, [a.id, b.id, 'gone']), [a.id, b.id]);
     assert.deepEqual([a.extra, b.extra], [{ automaticTranslationSource: 'one' }, { automaticTranslationSource: 'two' }]);
     const saves = T.saves;
@@ -576,7 +582,7 @@ test('자동 번역: 설정은 답을 만들기 시작할 때 잡은 것 하나�
     const a = say('Mara', 'one', 1), act = say('Mara', '', 2), b = say('Mara', 'two', 3);
     const config = TR.translationConfigOf(real, room.id);
     // (turned off in between: the job began with it on, so its messages are still marked and translated with that config)
-    await TR.liveSetTranslation(real, { autoTranslate: false, translationOutputTargetLang: 'fr' });
+    await TR.liveSetTranslation(real, rid(real), { autoTranslate: false, translationOutputTargetLang: 'fr' });
     assert.deepEqual(TR.markAutomaticTranslation(real, room.id, [a.id, act.id, b.id], config), [a.id, b.id]);
     assert.equal(act.extra, undefined);
     sent.length = 0;
@@ -633,7 +639,7 @@ test('브라우저의 자동 번역: 그 채팅이 열려 있지 않으면 묻�
     // (a mark with no record — the server's, or one this browser tried and that failed —: not asked again)
     const server = say('Mara', 'three', 3, { automaticTranslationSource: 'three' });
     // (the settings changed since: the cut-off ones go on with the ones their reply was made with — Marinara's server does)
-    await TR.liveSetTranslation(real, { translationOutputTargetLang: 'fr' });
+    await TR.liveSetTranslation(real, rid(real), { translationOutputTargetLang: 'fr' });
     const asked = [];
     assert.equal(await TR.resumeAutomaticTranslations(real, { translate: async (r, ids, c) => { asked.push([r, ids, c.outputTargetLanguage]); } }), true);
     assert.deepEqual(asked, [[room.id, [a.id, b.id], 'ko']]);
@@ -664,10 +670,10 @@ test('브라우저의 자동 번역: 그 채팅이 열려 있지 않으면 묻�
     T.ctx.chatMetadata = { narrative_archive: { other: true } };
     console.warn = () => {};
     try { await TR.browserAutoTranslate(real, room.id, [g.id], config); } finally { console.warn = warn; T.ctx.chatMetadata = md; }
-    await TR.liveSetTranslation(real, { autoTranslate: false });
+    await TR.liveSetTranslation(real, rid(real), { autoTranslate: false });
     assert.equal(await TR.resumeAutomaticTranslations(real, { translate: async () => assert.fail('off') }), false);
     assert.deepEqual(Object.keys(flights()[chatId]), [g.id]);
-    await TR.liveSetTranslation(real, { autoTranslate: true });
+    await TR.liveSetTranslation(real, rid(real), { autoTranslate: true });
     // (another tab's record, fresh: that tab may still be on it. Five minutes on: this page takes it)
     const all = flights(); all[chatId][g.id].tab = 'another-tab'; globalThis.localStorage.setItem(FLIGHT_KEY, JSON.stringify(all));
     assert.equal(await TR.resumeAutomaticTranslations(real, { translate: async () => assert.fail('another tab, fresh') }), false);

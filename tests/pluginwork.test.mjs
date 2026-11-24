@@ -39,7 +39,8 @@ function world({ story = false, schedule = null, kit = true, members = ['Mara'],
     const room = ensureRoom(m, members), w = liveWorld(m), at = Date.now() - hoursAgo * 3600_000;
     sendLive(m, room.id, 'hey', at);
     room.messages.push({ id: 't2', n: 2, from: members[0], text: 'hi', at: at + 60_000 });
-    w.presence = { on: true, schedules: schedule ? { mara: schedule } : {}, overrides: {}, meta: {}, user: {} };
+    w.presence = { schedules: schedule ? { mara: schedule } : {}, overrides: {}, meta: {}, user: {} };
+    room.meta = { autonomousMessages: true };   // (마리나라의 채팅 설정: 방마다)
     if (kit) putKit(m, buildKit(browser, m, { version }));
     return { m, w, room, id: `${w.id}:${room.id}` };
 }
@@ -115,8 +116,8 @@ test('일꾼: 먼저 건 말 하나가 끝까지 — 브라우저와 같은 요�
     // 저장된 것
     const w = await S.get('sa'), room = w.messenger.rooms[a.room.id];
     assert.deepEqual(room.messages.map(x => [x.from, x.text]), [['Ren', 'hey'], ['Mara', 'hi'], ['Mara', 'you there?']]);
-    assert.equal(Object.values(w.presence.meta.autonomousDailyBudget.counts)[0], 1);
-    assert.ok(w.presence.meta.intentCooldowns.mara.check_in);
+    assert.equal(Object.values(room.meta.autonomousDailyBudget.counts)[0], 1);
+    assert.ok(room.meta.intentCooldowns.mara.check_in);
     assert.equal(w.queue.jobs.filter(j => j.state === 'waiting' || j.state === 'running').length, 0);
     // (폰에 적힌 내 상태는 안 바뀌어요)
     assert.notEqual(w.presence.user?.status, 'idle');
@@ -438,7 +439,7 @@ test('일꾼: 모델이 실패하면 말이 안 들어가고, 실패로 알려�
     assert.equal(r.statusCode, 200); assert.match(r.payload, /"type":"error"/);
     const w = await S.get('sa'), room = w.messenger.rooms[a.room.id];
     assert.equal(room.messages.length, 2); assert.equal(room.autoFail, undefined);
-    assert.equal(w.presence.meta.autonomousDailyBudget, undefined);
+    assert.equal(room.meta.autonomousDailyBudget, undefined);
     assert.equal(w.queue.jobs.length, 0);
     // (다시 시키면 다시 만들어요: 그 채팅을 쉬게 하는 것은 스케줄러의 recordFailureBackoff — tests/pluginauto.test.mjs)
     assert.match((await S.gen(a.id)).payload, /"type":"error"/);
@@ -621,7 +622,7 @@ test('일꾼: 서버가 못 보내는 방은 그 방만 건너뛰고, 같은 Orb
 test('일꾼: 먼저 건 말 뒤에 캐릭터끼리 주고받기를 안 해요 (마리나라의 서버 스케줄러처럼: 주고받기는 브라우저만)', async t => {
     const S = await stage(t, { reply: () => ({ reply: ['hey all'], status: '' }) });
     const a = world({ members: ['Mara', 'Ivo'] });
-    liveWorld(a.m).presence.meta.characterExchanges = true;
+    a.room.meta.characterExchanges = true;
     await S.put('sa', a.m); await S.auto.list();
     assert.match((await S.gen(a.id)).payload, /"message_saved"/);
     const w = await S.get('sa');
@@ -865,13 +866,28 @@ test('일꾼 · 연결 확인은 실리 연결을 쓰는 세계만: 커스텀 AP
     assert.deepEqual(statusSeen(Q), ['/api/secrets/read', '/api/backends/chat-completions/status']);
     // (a world whose replies go to the custom API but whose automatic translation goes through a profile: asked too)
     const R = await stageOf(t), d = world();
-    d.w.presence.meta = TR_META('profile:p1');
+    d.room.meta = { ...d.room.meta, ...TR_META('profile:p1') };
     await R.put('sd', d.m);
     await R.auto.status('sd');
     assert.deepEqual(statusSeen(R), ['/api/secrets/read', '/api/backends/chat-completions/status']);
+    // (the translation settings are each room's — Marinara's chat metadata —: a second room's profile counts too, and the
+    //  first room's translation, off, does not hide it. Its image captioning through a profile also)
+    const V = await stageOf(t), f = world();
+    putLivePhone(f.m, { owner: 'Ivo' });
+    const two = ensureRoom(f.m, ['Ivo']);
+    two.meta = { ...TR_META('profile:p1') };
+    await V.put('sf', f.m);
+    await V.auto.status('sf');
+    assert.deepEqual(statusSeen(V), ['/api/secrets/read', '/api/backends/chat-completions/status']);
+    const X = await stageOf(t), h = world();
+    putLivePhone(h.m, { owner: 'Ivo' });
+    ensureRoom(h.m, ['Ivo']).meta = { imageCaptioningEnabled: true, imageCaptioningConnectionId: 'profile:p1' };
+    await X.put('sh', h.m);
+    await X.auto.status('sh');
+    assert.deepEqual(statusSeen(X), ['/api/secrets/read', '/api/backends/chat-completions/status']);
     // (its translation through Google, or turned off: not asked)
     const U = await stageOf(t), e = world();
-    e.w.presence.meta = { ...TR_META('profile:p1'), autoTranslate: false };
+    e.room.meta = { ...e.room.meta, ...TR_META('profile:p1'), autoTranslate: false };
     await U.put('se', e.m);
     await U.auto.status('se');
     assert.deepEqual(statusSeen(U), []);
@@ -938,7 +954,7 @@ test('일꾼 · 자동 번역 (마리나라: 답이 저장된 뒤 서버가, 생
         return { reply: ['sorry', 'was busy'], status: '' };
     } });
     const a = world({ hoursAgo: 0.2 });
-    a.w.presence.meta = { autoTranslate: true, translationProvider: 'ai', translationConnectionId: 'dr', translationOutputTargetLang: 'Korean' };
+    a.room.meta = { ...a.room.meta, autoTranslate: true, translationProvider: 'ai', translationConnectionId: 'dr', translationOutputTargetLang: 'Korean' };
     const j = enqueueJob(a.m, { kind: 'reply', owner: 'Mara', room: a.room.id, at: Date.now() - 600_000 });
     Object.assign(j, { timed: true, notBefore: Date.now() - 1000 });
     await S.put('sa', a.m);
@@ -987,7 +1003,7 @@ test('일꾼 · 자동 번역의 연결이 실리의 지금 연결(\'ai\', 고�
         if (req.url === CC && isTr(body)) { res.end(JSON.stringify({ choices: [{ message: { content: `  KO:${trSource(body)} ` }, finish_reason: 'stop' }] })); return true; }
         return false;
     } }), a = world({ hoursAgo: 0.2 });
-    a.w.presence.meta = TR_META('ai');
+    a.room.meta = { ...a.room.meta, ...TR_META('ai') };
     dueNow(a); await S.put('sa', a.m);
     assert.deepEqual((await S.auto.status('sa')).map(x => x.translateWhy), ['']);
     assert.equal(await S.auto.sweep(), 1);
@@ -1014,7 +1030,7 @@ test('일꾼 · 자동 번역의 연결이 실리의 지금 연결(글 완성): 
             res.end(JSON.stringify({ choices: [{ text: `KO:${m?.[1]}<|im_end|>\n<|im_start|>user\nmore` }] }));
             return true;
         } }), a = world({ hoursAgo: 0.2 });
-    a.w.presence.meta = TR_META('ai');
+    a.room.meta = { ...a.room.meta, ...TR_META('ai') };
     dueNow(a); await S.put('sa', a.m);
     assert.equal(await S.auto.sweep(), 1);
     await settle(S, 'sa');
@@ -1029,7 +1045,7 @@ test('일꾼 · 자동 번역의 연결이 실리의 지금 연결(글 완성): 
     // NovelAI: 보내지 않아요 — 이유는 /auto/status에, 실리 창에는 말마다 한 줄
     S.stSettings.main_api = 'novel'; await S.writeSettings();
     const b = world({ hoursAgo: 0.2 });
-    b.w.presence.meta = TR_META('ai');
+    b.room.meta = { ...b.room.meta, ...TR_META('ai') };
     dueNow(b); await S.put('sb', b.m);
     const why = '실리의 지금 API(novel)로는 AI 번역을 할 수 없습니다. 다른 연결을 선택하세요.';
     assert.deepEqual((await S.auto.status('sb')).map(x => [x.can, x.translateWhy]), [[true, why]]);
@@ -1049,7 +1065,7 @@ test('일꾼 · 자동 번역은 일꾼의 줄을 쥐지 않아요 (마리나라
         order.push('reply'); return { reply: ['sorry'], status: '' };
     } });
     const a = world({ hoursAgo: 0.2 }), b = world({ hoursAgo: 0.2 });
-    a.w.presence.meta = TR_META('dr');
+    a.room.meta = { ...a.room.meta, ...TR_META('dr') };
     dueNow(a); await S.put('sa', a.m);
     assert.equal(await S.auto.sweep(), 1);
     for (let i = 0; i < 100 && !order.includes('tr:sorry'); i++) await new Promise(r => setTimeout(r, 10));
@@ -1073,7 +1089,7 @@ test('일꾼 · 실리 쪽 연결(프로필)로 번역하면 답 하나의 말�
         return false;
     }, reply: async () => { order.push('reply'); return { reply: ['sorry', 'was busy'], status: '' }; } });
     const a = world({ hoursAgo: 0.2 }), b = world({ hoursAgo: 0.2 });
-    a.w.presence.meta = TR_META('profile:p1');
+    a.room.meta = { ...a.room.meta, ...TR_META('profile:p1') };
     dueNow(a); await S.put('sa', a.m);
     assert.equal(await S.auto.sweep(), 1);
     for (let i = 0; i < 200 && !order.includes('tr:sorry'); i++) await new Promise(r => setTimeout(r, 10));
@@ -1097,7 +1113,7 @@ test('일꾼 · 서버가 번역하는 동안 말을 고치면 아무것도 넣�
         return { reply: ['sorry'], status: '' };
     } });
     const a = world({ hoursAgo: 0.2 });
-    a.w.presence.meta = TR_META('dr');
+    a.room.meta = { ...a.room.meta, ...TR_META('dr') };
     dueNow(a); await S.put('sa', a.m);
     assert.equal(await S.auto.sweep(), 1);
     for (let i = 0; i < 100 && !S.asked.some(x => isTr(x.body)); i++) await new Promise(r => setTimeout(r, 10));
@@ -1114,7 +1130,7 @@ test('일꾼 · 서버가 번역하는 동안 말을 고치면 아무것도 넣�
 test('일꾼 · 번역을 넣다 브라우저와 부딪혀(409) 다시 읽었는데 그사이 글을 고쳤으면: 그때도 아무것도 넣지 않아요', async t => {
     const S = await stage(t, { reply: async body => (isTr(body) ? `KO:${trSource(body)}` : { reply: ['sorry'], status: '' }) });
     const a = world({ hoursAgo: 0.2 });
-    a.w.presence.meta = TR_META('dr');
+    a.room.meta = { ...a.room.meta, ...TR_META('dr') };
     dueNow(a); await S.put('sa', a.m);
     // (the worker's first save with the translation in it: the browser saved an edit just before — the worker's base is old)
     const save = S.store.save.bind(S.store);

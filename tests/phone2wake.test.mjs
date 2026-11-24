@@ -81,7 +81,8 @@ async function stage(t, { hoursAgo = 1 } = {}) {
     putLivePhone(m, { owner: 'Mara' });
     const room = ensureRoom(m, ['Mara']), w = liveWorld(m), at = Date.now() - hoursAgo * 3600_000;
     sendLive(m, room.id, 'hey', at); room.messages.push({ id: 't2', n: 2, from: 'Mara', text: 'hi', at: at + 60_000 });
-    w.presence = { on: false, schedules: {}, overrides: {}, meta: {}, user: {} };
+    w.presence = { schedules: {}, overrides: {}, meta: {}, user: {} };
+    room.meta = { autonomousMessages: false };
     const ctx = { chatId: 'chat-1', chatMetadata: { narrative_archive: m, integrity: 'mark-1' }, chat: [], name1: 'Ren', characterId: 0, characters: [{ name: 'Mara', avatar: 'mara.png', description: 'Mara is a baker.', data: { name: 'Mara', description: 'Mara is a baker.' } }],
         powerUserSettings: { persona_description: 'Ren is a student.' }, extensionSettings: { narrative_archive: { draftConn: conn } }, saveMetadata: async () => {}, saveSettingsDebounced() {}, getRequestHeaders: ({ omitContentType = false } = {}) => (omitContentType ? { 'X-CSRF-Token': 't' } : { 'Content-Type': 'application/json', 'X-CSRF-Token': 't' }),
         eventSource: { on() {} }, eventTypes: { CHAT_CHANGED: 'chat' }, setExtensionPrompt() {} };
@@ -209,7 +210,7 @@ test('먼저 건 말: 브라우저가 줄 세운 뒤 그 방을 기다리는 사
 
 test('먼저 말 걸기 판단도 그 방을 잡고 최신 것을 받은 뒤에: 서버가 그 방을 쥐고 있으면 이번엔 안 보고, 서버가 그사이 먼저 걸었으면 또 걸지 않아요', async t => {
     const S = await stage(t, { hoursAgo: 7 });
-    S.w.presence.on = true;
+    S.room.meta = { ...(S.room.meta || {}), autonomousMessages: true };
     await core.saveMeta();
     // 서버가 그 방을 쥐고 있어요: 줄 세우지 않아요
     assert.deepEqual(await S.auto.claim(S.sid, S.room.id, 'server'), { ok: true });
@@ -225,6 +226,16 @@ test('먼저 말 걸기 판단도 그 방을 잡고 최신 것을 받은 뒤에:
     assert.equal(await G.liveAutonomous(S.m), 0);
     assert.equal(S.room.messages.length, 3);
     assert.equal(S.w.queue.jobs.filter(j => j.state === 'waiting').length, 0);
+    assert.equal(S.asked.length, 1);
+});
+
+test('30초 틱은 먼저 말 걸기를 켠 방이 하나라도 있으면 돌아요 (채팅 설정은 방마다: 옛 Orbit 하나의 스위치는 없어요)', async t => {
+    const S = await stage(t, { hoursAgo: 7 });
+    assert.equal(await TICK.tickOnce(), 0);                                        // (켠 방 없음 · 기다리는 답장 없음 · 스케줄 없음)
+    assert.equal(S.asked.length, 0);
+    S.room.meta = { ...(S.room.meta || {}), autonomousMessages: true };
+    await core.saveMeta();
+    assert.equal(await TICK.tickOnce(), 1);                                        // (그 방에 먼저 걸 때예요)
     assert.equal(S.asked.length, 1);
 });
 
@@ -299,7 +310,7 @@ test('답장이 기다리는 시각에 틱이 한 번 더 돌아요 (30초를 �
     t.after(() => G.setDueHook(TICK.tickAt));
     sendLive(S.m, S.room.id, 'busy?');
     const job = enqueueJob(S.m, { kind: 'reply', owner: 'Mara', room: S.room.id });
-    S.w.presence = { on: false, schedules: { mara: { weekStart: new Date(Date.now() - 86400000).toISOString(), days: Object.fromEntries(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(d => [d, [{ time: '00:00-00:00', activity: 'gym', status: 'dnd' }]])), inactivityThresholdMinutes: 60, talkativeness: 50, dndResponseDelayMinutes: 1 } }, overrides: {}, meta: {}, user: {} };
+    S.w.presence = { schedules: { mara: { weekStart: new Date(Date.now() - 86400000).toISOString(), days: Object.fromEntries(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(d => [d, [{ time: '00:00-00:00', activity: 'gym', status: 'dnd' }]])), inactivityThresholdMinutes: 60, talkativeness: 50, dndResponseDelayMinutes: 1 } }, overrides: {}, meta: {}, user: {} };
     G.holdReplies(S.m);
     assert.ok(job.notBefore > Date.now());
     assert.equal(at, job.notBefore);
@@ -332,7 +343,7 @@ test('서버가 쓴 늦은 답장의 자동 번역: 브라우저의 "답이 끝�
     let open;
     trGate = new Promise(r => { open = r; });
     t.after(() => { KO.TRANSLATION_SETTLE.pollMs = poll; open?.(); trGate = null; });
-    S.w.presence.meta = { autoTranslate: true, translationProvider: 'ai', translationConnectionId: 'dr', translationOutputTargetLang: 'Korean' };
+    S.room.meta = { ...S.room.meta, autoTranslate: true, translationProvider: 'ai', translationConnectionId: 'dr', translationOutputTargetLang: 'Korean' };
     await busyReply(S, 'so tired');
     page.hidden = true;
     await sleep(350);
@@ -363,7 +374,7 @@ test('서버 번역을 기다리는 동안 다른 채팅을 열면: 묻는 저�
     trGate = new Promise(r => { open = r; });
     const was = globalThis.SillyTavern.getContext();
     t.after(() => { KO.TRANSLATION_SETTLE.pollMs = poll; open?.(); trGate = null; setContext(was); });
-    S.w.presence.meta = { autoTranslate: true, translationProvider: 'ai', translationConnectionId: 'dr', translationOutputTargetLang: 'Korean' };
+    S.room.meta = { ...S.room.meta, autoTranslate: true, translationProvider: 'ai', translationConnectionId: 'dr', translationOutputTargetLang: 'Korean' };
     await busyReply(S, 'so tired');
     page.hidden = true;
     await sleep(350);
@@ -388,7 +399,7 @@ test('서버 번역을 기다리는 동안 다른 채팅을 열어도 그 답의
     trGate = new Promise(r => { open = r; });
     const was = globalThis.SillyTavern.getContext();
     t.after(() => { KO.TRANSLATION_SETTLE.pollMs = poll; open?.(); trGate = null; setContext(was); });
-    S.w.presence.meta = { autoTranslate: true, translationProvider: 'ai', translationConnectionId: 'dr', translationOutputTargetLang: 'Korean' };
+    S.room.meta = { ...S.room.meta, autoTranslate: true, translationProvider: 'ai', translationConnectionId: 'dr', translationOutputTargetLang: 'Korean' };
     await busyReply(S, 'so tired');
     page.hidden = true;
     await sleep(350);

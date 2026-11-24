@@ -12,7 +12,7 @@
 // 사람: 방에 넣고 빼기. 페르소나는 못 빼요. 같은 사람들의 방이 이미 있으면 안 해요 (방은 사람들로 찾으니까)
 // 이 파일은 방의 것만 바꿔요. 저장은 부르는 쪽이 해요. 폰 1 · 아카이브는 읽지도 쓰지도 않아요. 폰 1은 이 파일을 부르지 않아요.
 
-import { liveWorld, liveKey, ensureAccount } from './phone2store.js';
+import { liveWorld, liveKey, ensureAccount, prepWorld } from './phone2store.js';
 import { MAX_PINNED_CONTEXT_MESSAGES, MESSAGE_TRASH_RETENTION_DAYS, MESSAGE_MARK_EXTRA_KEYS, normalizeMessageMarkPatch, applyContextMessageLimitWithPins, isMessagePinnedToContext, readMessageBookmark, readMessagePrivateNote, readMessagePrivateNoteRecipientId } from './marinara/message-marks.js';
 import { sanitizeBranchedMessageExtra } from './marinara/saved-message-extra.js';
 import { withLatestMessageReply, messageReplySchema, canReplyToMessage, buildMessageReplyDraft } from './marinara/message-reply.js';
@@ -229,7 +229,13 @@ export function repliedTo(m, roomId) {
 //   말은 순서 · 시각 · 번호(n)를 그대로 두고 id만 새로 받아요. 받아 둔 답장(swipes)도 같이 가요. 요청 기록(cachedPrompt · generationInfo …)은 안 가요 (마리나라)
 //   복사한 말은 x.copyOf = 원래 말의 id: 폰 반영 · 롤플에 전하기는 원래 방의 말만 읽어요 (같은 말을 두 번 읽지 않게: 우리 쪽에만 있는 것)
 //   요약(digest)은 복사한 말 안에서 끝난 것만 물려받아요 (마리나라: 잘린 뒤의 말을 담은 요약은 버려요). 휴지통 · 늦은 답 · 없던 사람 표시는 안 가요
+//   채팅 설정은 같이 가요 (마리나라 chats.routes.ts 5672~5692 · 5729~5736: 새 채팅에 연결 · 페르소나 · 프리셋을 주고, 메타는 요약 열쇠
+//   (summary · summaryEntries · lastAutomaticSummaryMessageId · daySummaries · weekSummaries)만 빼고 통째로 — 하루 수 · 쉬는 시간까지):
+//   room.connectionId · room.model (모델 고르기: 마리나라의 modelOverride · recentModels · followsMainModel 메타) · room.chatParameters · room.meta.
+//   페르소나는 우리에겐 Orbit에 하나예요. 우리 요약은 방의 digest라 meta에 없어요(위). 안 읽은 먼저 건 말(autonomousUnread*)은 방의 칸이라 안 가요
 export function branchRoom(m, roomId, upToMessageId = '') {
+    // (an Orbit whose settings were one for all: moved into its rooms first, so the copy carries them)
+    prepWorld(m);
     const w = liveWorld(m), { room } = roomOf(m, roomId), msgs = room.messages || [];
     if (upToMessageId && !msgs.some(x => String(x.id) === String(upToMessageId))) throw new Error('이 채팅방에 없는 메시지입니다.');
     const cut = upToMessageId ? msgs.findIndex(x => String(x.id) === String(upToMessageId)) : msgs.length - 1, copied = msgs.slice(0, cut + 1);
@@ -255,6 +261,8 @@ export function branchRoom(m, roomId, upToMessageId = '') {
     const made = {
         id, members: [...room.members], messages, ...(room.name ? { name: room.name } : {}),
         ...(room.read ? { read: { ...room.read } } : {}),
+        ...(room.connectionId ? { connectionId: room.connectionId } : {}),
+        ...['model', 'chatParameters', 'meta'].reduce((o, k) => (room[k] && typeof room[k] === 'object' ? { ...o, [k]: JSON.parse(JSON.stringify(room[k])) } : o), {}),
         ...(Object.keys(swipes).length ? { swipes } : {}),
         ...(room.digest && Number.isInteger(room.digest.upto) && room.digest.upto <= lastN ? { digest: JSON.parse(JSON.stringify(room.digest)) } : {}),
         branch: { name: 'New Branch', parentRoomId: room.id, parentMessageId: last ? String(last.id) : null, messageId: last ? ids.get(String(last.id)) : null },

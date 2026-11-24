@@ -109,7 +109,7 @@ test('먼저 말 걸기: 꺼져 있으면 안 하고, 켜면 마리나라의 판
     a.messages.push({ id: 'x1', n: 1, from: 'Ren', text: 'hi', at: t - 3 * 3600e3 }, { id: 'x2', n: 2, from: 'Mara', text: 'hey', at: t - 2.9 * 3600e3 });
     S.setSchedule(m, 'Mara', all('online', 'free'), NOW);
     assert.equal(S.checkProactive(m, a.id, { now: NOW }).reason, 'disabled');
-    S.setAutonomous(m, true);
+    S.setAutonomous(m, a.id, true);
     S.setUserStatus(m, { status: 'dnd' });
     assert.equal(S.checkProactive(m, a.id, { now: NOW }).reason, 'user_dnd');
     S.setUserStatus(m, { status: 'idle' });
@@ -118,7 +118,7 @@ test('먼저 말 걸기: 꺼져 있으면 안 하고, 켜면 마리나라의 판
     assert.deepEqual(r.characterIds, ['mara']);
     assert.ok(r.autonomousIntentKey && r.autonomousIntent);
     S.noteProactive(m, a.id, 'mara', r.autonomousIntentKey, NOW);
-    assert.equal(Object.values(w.presence.meta.autonomousDailyBudget.counts)[0], 1);
+    assert.equal(Object.values(a.meta.autonomousDailyBudget.counts)[0], 1);
     // 폰이 없는 사람만 있는 방은 안 해요
     const b = L.ensureRoom(m, ['Nobody']);
     assert.equal(S.checkProactive(m, b.id, { now: NOW }).shouldTrigger, false);
@@ -466,35 +466,48 @@ test('지금 답장: 기다리던 늦은 답을 바로 돌릴 수 있게 풀어�
     assert.equal(G.holdReplies(m, t), 0);                 // (다시 붙잡지 않아요)
     assert.equal(L.nextJob(m, t).id, j.id);
 });
-test('생성 연결(마리나라의 connectionId): 확장에 넣어 둔 연결 · 실리 연결 프로필 가운데 고르고, 고른 것이 남아요. 이름은 모델 이름', async () => {
-    const { m } = world(), T = globalThis.__dropTest;
+test('생성 연결(마리나라의 connectionId): 저장하지 않아요. 편집 창의 처음 값은 그 방의 연결, 없으면 기본 연결. 이름은 모델 이름', async () => {
+    const { m, a } = world(), T = globalThis.__dropTest;
     T.metadata = { narrative_archive: m };
     T.profiles = [{ id: 'p1', name: 'Gemini Pro' }];
     assert.deepEqual(G.liveConnections(), [{ id: '', name: 'draft-model', model: 'draft-model', provider: 'custom' }, { id: 'ai', name: 'ai-model', model: 'ai-model', provider: 'custom' }, { id: 'profile:p1', name: 'Gemini Pro', model: '', provider: '' }]);
-    assert.equal(G.liveScheduleConnection(m), '');
-    assert.equal(await G.liveSetScheduleConnection(m, 'profile:p1'), 'profile:p1');
-    assert.equal(G.liveScheduleConnection(m), 'profile:p1');
-    assert.equal(S.presenceOf(m).meta.scheduleConnectionId, 'profile:p1');
-    await assert.rejects(G.liveSetScheduleConnection(m, 'profile:gone'), /연결을 찾을 수 없습니다/);
-    // 프로필이 없어지면 기본으로 돌아가요
-    T.profiles = [];
-    assert.equal(G.liveScheduleConnection(m), '');
-    await G.liveSetScheduleConnection(m, '');
-    assert.equal('scheduleConnectionId' in S.presenceOf(m).meta, false);
+    assert.equal(G.liveSetScheduleConnection, undefined);                              // (마리나라: 저장하는 길이 없어요)
+    assert.equal(G.liveScheduleConnection(m, a.id), '');                               // (방에 연결이 없으면 기본: 메인)
+    assert.equal(G.liveScheduleConnection(m), '');                                     // (방 밖: 기본)
+    a.connectionId = 'profile:p1';
+    assert.equal(G.liveScheduleConnection(m, a.id), 'profile:p1');
+    a.connectionId = 'dr';
+    assert.equal(G.liveScheduleConnection(m, a.id), '');
+    a.connectionId = 'ai';
+    assert.equal(G.liveScheduleConnection(m, a.id), 'ai');
+    // 그 방의 프로필이 없어지면 기본으로
+    a.connectionId = 'profile:p1'; T.profiles = [];
+    assert.equal(G.liveScheduleConnection(m, a.id), '');
+    // 옛 저장의 Orbit 하나짜리 생성 연결은 옮기지 않고 버려요
+    const old = { phones: {} };
+    L.startFresh(old, { persona: 'Ren', scope: 'test' });
+    const ow = L.liveWorld(old);
+    ow.messenger.rooms.r1 = { id: 'r1', members: ['Ren', 'Mara'], messages: [] };
+    ow.presence = { meta: { scheduleConnectionId: 'profile:p1' } };
+    assert.equal(G.liveScheduleConnection(old, 'r1'), '');
+    assert.equal(S.moveRoomMeta(old), 1);
+    assert.equal(S.moveRoomMeta(old), 0);                                              // (한 번만)
+    assert.equal('scheduleConnectionId' in ow.presence.meta, false);
+    assert.equal(ow.messenger.rooms.r1.meta, undefined);
 });
 test('먼저 말 걸기의 방 전체 설정: 마리나라의 열쇠 그대로 (하루 상한 · 단체방 상한 같이 쓰기 · 캐릭터끼리 주고받기)', async () => {
-    const { m } = world(), A = await at('marinara/autonomous.service.js');
-    assert.deepEqual(S.autonomousOptions(m), { on: false, schedulesEnabled: false, autonomousDailyCapOverride: null, groupChatMode: null, characterExchanges: false, groupResponseOrder: 'sequential', groupTurnPromptEnabled: true });
-    S.setAutonomous(m, true);
-    assert.deepEqual(S.setAutonomousOptions(m, { autonomousDailyCapOverride: 3.9, groupChatMode: 'individual', characterExchanges: true }), { on: true, schedulesEnabled: false, autonomousDailyCapOverride: 3, groupChatMode: 'individual', characterExchanges: true, groupResponseOrder: 'sequential', groupTurnPromptEnabled: true });
-    const meta = S.presenceOf(m).meta;
+    const { m, a } = world(), A = await at('marinara/autonomous.service.js');
+    assert.deepEqual(S.autonomousOptions(m, a.id), { on: false, schedulesEnabled: false, autonomousDailyCapOverride: null, groupChatMode: null, characterExchanges: false, groupResponseOrder: 'sequential', groupTurnPromptEnabled: true });
+    S.setAutonomous(m, a.id, true);
+    assert.deepEqual(S.setAutonomousOptions(m, a.id, { autonomousDailyCapOverride: 3.9, groupChatMode: 'individual', characterExchanges: true }), { on: true, schedulesEnabled: false, autonomousDailyCapOverride: 3, groupChatMode: 'individual', characterExchanges: true, groupResponseOrder: 'sequential', groupTurnPromptEnabled: true });
+    const meta = S.roomMeta(m, a.id);
     assert.equal(A.dailyCapForCharacter({ talkativeness: 90 }, meta), 3);            // (마리나라가 그 열쇠를 읽어요)
     assert.equal(A.sharesAutonomousDailyBudget(meta), true);
-    assert.throws(() => S.setAutonomousOptions(m, { autonomousDailyCapOverride: 0 }), /1 이상/);
-    assert.deepEqual(S.setAutonomousOptions(m, { autonomousDailyCapOverride: null, groupChatMode: null, characterExchanges: false }), { on: true, schedulesEnabled: false, autonomousDailyCapOverride: null, groupChatMode: null, characterExchanges: false, groupResponseOrder: 'sequential', groupTurnPromptEnabled: true });
-    assert.equal(S.setAutonomousOptions(m, { groupResponseOrder: 'smart', groupTurnPromptEnabled: false }).groupResponseOrder, 'smart');
-    assert.equal(S.autonomousOptions(m).groupTurnPromptEnabled, false);
-    assert.throws(() => S.setAutonomousOptions(m, { groupResponseOrder: 'random' }), /sequential/);
+    assert.throws(() => S.setAutonomousOptions(m, a.id, { autonomousDailyCapOverride: 0 }), /1 이상/);
+    assert.deepEqual(S.setAutonomousOptions(m, a.id, { autonomousDailyCapOverride: null, groupChatMode: null, characterExchanges: false }), { on: true, schedulesEnabled: false, autonomousDailyCapOverride: null, groupChatMode: null, characterExchanges: false, groupResponseOrder: 'sequential', groupTurnPromptEnabled: true });
+    assert.equal(S.setAutonomousOptions(m, a.id, { groupResponseOrder: 'smart', groupTurnPromptEnabled: false }).groupResponseOrder, 'smart');
+    assert.equal(S.autonomousOptions(m, a.id).groupTurnPromptEnabled, false);
+    assert.throws(() => S.setAutonomousOptions(m, a.id, { groupResponseOrder: 'random' }), /sequential/);
     assert.deepEqual(Object.keys(meta).filter(k => /Cap|groupChat|Exchanges/.test(k)), []);
 });
 test('캐릭터끼리 주고받기(마리나라의 /autonomous/exchange): 켜야 하고, 단체방에서만. 하루 상한을 넘으면 안 해요', () => {
@@ -503,7 +516,7 @@ test('캐릭터끼리 주고받기(마리나라의 /autonomous/exchange): 켜야
     S.setSchedule(m, 'Mara', { ...all('online', 'free'), talkativeness: 100 }, now);
     S.setSchedule(m, 'Ivo', { ...all('online', 'free'), talkativeness: 100 }, now);
     assert.equal(S.checkExchangeFor(m, g.id, 'Mara', { now }).reason, 'exchanges_disabled');
-    S.setAutonomousOptions(m, { characterExchanges: true });
+    for (const r of [a, g]) S.setAutonomousOptions(m, r.id, { characterExchanges: true });
     assert.equal(S.checkExchangeFor(m, a.id, 'Mara', { now }).reason, 'not_group');
     // (마리나라의 판단에는 운이 섞여 있어요: 여러 번 물으면 걸려요. 걸리면 말한 사람이 아닌 쪽이에요)
     const orig = Math.random; Math.random = () => 0;
@@ -519,15 +532,15 @@ test('캐릭터끼리 주고받기(마리나라의 /autonomous/exchange): 켜야
 });
 test('스케줄 쓰기 끄기(마리나라의 conversationSchedulesEnabled): 스케줄은 남고, 상태 · 늦음 · 먼저 말 걸기가 안 읽어요', () => {
     const { m, a } = world();
-    assert.equal(S.schedulesOn(m), false);                     // 스케줄이 하나도 없으면 꺼진 것
+    assert.equal(S.schedulesOn(m, a.id), false);                     // 스케줄이 하나도 없으면 꺼진 것
     S.setSchedule(m, 'Mara', all('dnd', 'working'), NOW);
-    assert.equal(S.schedulesOn(m), true);                      // 정한 적 없으면 스케줄이 있을 때 켜진 것
-    S.setSchedulesOn(m, false);
+    assert.equal(S.schedulesOn(m, a.id), true);                      // 정한 적 없으면 스케줄이 있을 때 켜진 것
+    S.setSchedulesOn(m, a.id, false);
     assert.equal(S.scheduleOf(m, 'Mara').days.Monday[0].activity, 'working');
     assert.deepEqual([S.activeSchedule(m, 'Mara'), S.statusNow(m, 'Mara', { now: NOW }), S.replyDelay(m, 'Mara', { now: NOW }), S.blockNow(m, 'Mara', { now: NOW })], [null, null, 0, null]);
     assert.match(S.contextBlock(m, 'Mara', a.id, { now: NOW }), /^Your current status: online\.\n/);   // (스케줄이 꺼져 있으면 "online")
-    assert.equal(S.autonomousOptions(m).schedulesEnabled, false);
-    S.setSchedulesOn(m, true);
+    assert.equal(S.autonomousOptions(m, a.id).schedulesEnabled, false);
+    S.setSchedulesOn(m, a.id, true);
     assert.equal(S.statusNow(m, 'Mara', { now: NOW }).status, 'dnd');
 });
 test('스케줄 내보내기 · 가져오기(마리나라의 파일 모양 그대로)', () => {
@@ -545,7 +558,7 @@ test('따라 묻기는 마리나라처럼 점점 뜸해지고 세 번에서 멈�
     const { m, a } = world(), t = Date.now();
     a.messages.push({ id: 'x1', n: 1, from: 'Ren', text: 'hi', at: t - 20 * 60_000 }, { id: 'x2', n: 2, from: 'Mara', text: 'hey', at: t - 19 * 60_000 });
     S.setSchedule(m, 'Mara', { ...all('online', 'free'), inactivityThresholdMinutes: 15, talkativeness: 80 }, new Date(t));
-    S.setAutonomous(m, true);
+    S.setAutonomous(m, a.id, true);
     const ask = () => S.checkProactive(m, a.id, { now: new Date() });
     const fire = r => { S.noteAssistant(m, a.id, 'Mara'); S.noteProactive(m, a.id, 'mara', r.autonomousIntentKey); };
     let r = ask();
@@ -569,7 +582,7 @@ test('이모지만 달면 첫 번째 먼저 걸기가 빨라져요 (마리나라
     const { m, a } = world(), t = Date.now();
     a.messages.push({ id: 'x1', n: 1, from: 'Ren', text: 'hi', at: t - 6 * 60_000 }, { id: 'x2', n: 2, from: 'Mara', text: 'hey', at: t - 5.9 * 60_000 });
     S.setSchedule(m, 'Mara', { ...all('online', 'free'), inactivityThresholdMinutes: 15, talkativeness: 80 }, new Date(t));
-    S.setAutonomous(m, true);
+    S.setAutonomous(m, a.id, true);
     assert.equal(S.checkProactive(m, a.id, { now: new Date() }).shouldTrigger, false);     // 6분: 15분이 안 됐어요
     S.noteReaction(m, a.id);
     assert.equal(S.checkProactive(m, a.id, { now: new Date() }).shouldTrigger, false);     // 반응한 지 얼마 안 됐어요
@@ -605,7 +618,7 @@ test('저절로 자리 비움(마리나라의 idle detection): 손으로 고른 
     S.userStore(m).getState().setUserStatus('idle');
     const t = Date.now();
     a.messages.push({ id: 'x1', n: 1, from: 'Ren', text: 'hi', at: t - 60_000 }, { id: 'x2', n: 2, from: 'Mara', text: 'hey', at: t - 50_000 });
-    S.setAutonomous(m, true);
+    S.setAutonomous(m, a.id, true);
     S.checkProactive(m, a.id, { now: new Date() });                     // (방의 말에서 처음 읽어요)
     S.userStore(m).getState().setUserStatus('idle');
     a.messages.push({ id: 'x3', n: 3, from: 'Ren', text: 'back', at: Date.now() - 1 });
@@ -661,7 +674,7 @@ test('말 거는 이유의 "the user"는 페르소나 이름으로 들어가요'
     const { m, a } = world(), t = Date.now();
     a.messages.push({ id: 'x1', n: 1, from: 'Ren', text: 'hi', at: t - 20 * 60_000 }, { id: 'x2', n: 2, from: 'Mara', text: 'hey', at: t - 19 * 60_000 });
     S.setSchedule(m, 'Mara', all('online', 'free'), new Date(t));
-    S.setAutonomous(m, true);
+    S.setAutonomous(m, a.id, true);
     const r = S.checkProactive(m, a.id, { now: new Date() });
     assert.equal(r.autonomousIntent, 'You have a free moment and Ren has been quiet.');
     assert.equal(r.autonomousIntentPrompt, 'What prompted this message: You have a free moment and Ren has been quiet.');
@@ -684,7 +697,7 @@ test('단체방 순서: sequential은 있는 사람 모두, manual은 아무도,
     assert.deepEqual(await S.groupResponders(m, g.id, { ask, now: NOW }), ['mara', 'ivo', 'varo']);
     S.setSchedule(m, 'Ivo', all('offline', 'sleeping'), NOW);
     assert.deepEqual(await S.groupResponders(m, g.id, { ask, now: NOW }), ['mara', 'varo']);
-    S.setAutonomousOptions(m, { groupResponseOrder: 'manual' });
+    S.setAutonomousOptions(m, g.id, { groupResponseOrder: 'manual' });
     assert.deepEqual(await S.groupResponders(m, g.id, { ask, now: NOW }), []);
     g.messages.push({ id: 'u2', n: 2, from: 'Ren', text: '@Varo you in?', at: NOW.getTime() + 1 });
     assert.deepEqual(await S.groupResponders(m, g.id, { ask, now: NOW }), ['varo']);
@@ -693,7 +706,7 @@ test('단체방 순서: sequential은 있는 사람 모두, manual은 아무도,
 });
 test('단체방 순서 smart: 마리나라의 고르기 요청을 그대로 보내고, 고른 사람만. 못 고르면 방금 말한 사람이 아닌 첫 사람', async () => {
     const { m, g } = group(), seen = [];
-    S.setAutonomousOptions(m, { groupResponseOrder: 'smart' });
+    S.setAutonomousOptions(m, g.id, { groupResponseOrder: 'smart' });
     S.setSchedule(m, 'Mara', { ...all('dnd', 'working'), talkativeness: 30 }, NOW);
     const cards = { ivo: { personality: 'dry', description: 'a mechanic' } };
     const got = await S.groupResponders(m, g.id, { now: NOW, cards, ask: async (messages, o) => { seen.push({ messages, o }); return '```json\n["varo", "Mara", "nobody"]\n```'; } });
@@ -740,14 +753,14 @@ test('마리나라의 단체방 함수: 늦음이 짧은 사람부터, 확률로
 test('단체방 줄: 고르지 않은 사람의 답장은 빠지고, 늦음이 짧은 사람이 앞에 서요', async () => {
     const { m, w, g, t } = group();
     S.setSchedule(m, 'Mara', { ...all('dnd', 'working'), dndResponseDelayMinutes: 30 }, NOW);
-    S.setAutonomousOptions(m, { groupChatMode: 'individual' });
+    S.setAutonomousOptions(m, g.id, { groupChatMode: 'individual' });
     for (const n of ['Mara', 'Ivo', 'Varo']) L.enqueueJob(m, { kind: 'reply', owner: n, room: g.id, at: t });
     assert.equal(await G.pickResponders(m, t), 0);                                 // (sequential: 그대로)
     G.holdReplies(m, t);
     assert.deepEqual(w.queue.jobs.map(j => j.owner), ['Ivo', 'Varo', 'Mara']);
     assert.deepEqual(g.turn, { spoke: [] });
     // (manual: 새로 보낸 말에는 아무도 안 서요; @으로 부르면 그 사람만)
-    S.setAutonomousOptions(m, { groupResponseOrder: 'manual' });
+    S.setAutonomousOptions(m, g.id, { groupResponseOrder: 'manual' });
     w.queue.jobs = [];
     for (const n of ['Mara', 'Ivo', 'Varo']) L.enqueueJob(m, { kind: 'reply', owner: n, room: g.id, at: t });
     assert.equal(await G.pickResponders(m, t), 3);
@@ -762,7 +775,7 @@ test('단체방 줄: 고르지 않은 사람의 답장은 빠지고, 늦음이 �
 const RUN = await at('phone2run.js'), MC = await at('marinara/merged-conversation.js');
 test('Merged: 방의 답장들이 하나로 묶이고, 오프라인은 빠지고, @으로 부르면 그 사람만. 늦음은 마리나라의 계산', async () => {
     const { m, w, g, t } = group();
-    assert.equal(S.groupMode(m), 'merged');                                        // (마리나라: individual이 아니면 merged)
+    assert.equal(S.groupMode(m, g.id), 'merged');                                        // (마리나라: individual이 아니면 merged)
     S.setSchedule(m, 'Ivo', all('offline', 'asleep'), NOW);
     S.setSchedule(m, 'Mara', { ...all('dnd', 'working'), dndResponseDelayMinutes: 30 }, NOW);
     for (const n of ['Mara', 'Ivo', 'Varo']) L.enqueueJob(m, { kind: 'reply', owner: n, room: g.id, at: t });
@@ -809,7 +822,7 @@ test('Merged 지시문: 마리나라의 글 그대로 (기본 Conversation 지�
 test('먼저 건 말의 표시(extra.autonomous): 방을 처음 읽는 쪽도 "이미 걸었다"를 알아요. 표시가 없으면 한 번도 안 건 것으로 봐요', () => {
     const mk = marks => {
         const { m, w, a } = world(), t = Date.now();
-        w.presence = { on: true, schedules: {}, overrides: {}, meta: {}, user: {} };
+        S.setAutonomous(m, a.id, true);
         L.sendLive(m, a.id, 'hey', t - 6 * 3600_000);
         a.messages.push({ id: 'r1', n: 2, from: 'Mara', text: 'hi', at: t - 6 * 3600_000 + 60_000 });
         marks.forEach((on, i) => a.messages.push({ id: `p${i}`, n: 3 + i, from: 'Mara', text: 'you there?', at: t - 120_000 + i * 1000, ...(on ? { extra: { autonomous: true } } : {}) }));
@@ -836,7 +849,7 @@ test('먼저 건 말의 표시(extra.autonomous): 방을 처음 읽는 쪽도 "�
 test('다른 쪽이 방을 바꾼 뒤(reseedActivity): 방에서 다시 읽어요. "브라우저가 보고 있음"은 남아요', async () => {
     const A = await at('marinara/autonomous.service.js');
     const { m, w, a } = world(), t = Date.now(), id = S.chatIdOf(m, a.id);
-    w.presence = { on: true, schedules: {}, overrides: {}, meta: {}, user: {} };
+    S.setAutonomous(m, a.id, true);
     L.sendLive(m, a.id, 'hey', t - 6 * 3600_000);
     a.messages.push({ id: 'r1', n: 2, from: 'Mara', text: 'hi', at: t - 6 * 3600_000 + 60_000 });
     assert.equal(S.checkProactive(m, a.id, { source: 'server', userStatus: 'idle' }).shouldTrigger, true);
@@ -861,7 +874,7 @@ test('먼저 말 걸 때인지 볼 때 카드의 상태를 지금 스케줄의 �
         S.setSchedule(m, 'Mara', all('dnd', 'working'), NOW);
         S.setSchedule(m, 'Ivo', all('idle', 'nap'), NOW);
         await S.flushCards(); wrote.length = 0;
-        S.setAutonomous(m, true);
+        S.setAutonomous(m, g.id, true);
         S.checkProactive(m, g.id, { now: NOW });
         await S.flushCards();
         assert.deepEqual(wrote, [['Mara', { conversationStatus: 'dnd' }]]);

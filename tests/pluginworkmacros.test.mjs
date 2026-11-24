@@ -71,7 +71,7 @@ async function stage(t, { ext = {}, discover = 'new' } = {}) {
     const room = ensureRoom(m, ['Mara']), w = liveWorld(m), at = Date.now() - 7 * 3600_000;
     sendLive(m, room.id, 'hey', at);
     room.messages.push({ id: 't2', n: 2, from: 'Mara', text: 'hi', at: at + 60_000 });
-    w.presence = { on: true, schedules: {}, overrides: {}, meta: {}, user: {} };
+    w.presence = { schedules: {}, overrides: {}, meta: {}, user: {} }; room.meta = { autonomousMessages: true };
     Object.assign(w.messenger.rooms[room.id], { connectionId: 'profile:m1' });
     putKit(m, buildKit({ name1: 'Ren', chatId: 'Mara - 2026-11-22', characterId: 0, characters: ['Mara'].map(stCard), powerUserSettings: { persona_description: 'Ren is a student.' } }, m, { version: VERSION }));
     await store.save('sa', { parts: JSON.parse(JSON.stringify(splitLive(m.live))), chat: 'chat-1' });

@@ -90,6 +90,7 @@ export function takeMerged(m, roomId, answer, { names = [], lead = '', now = Dat
 // put the answer in (only if this 폰 2 is still the one the job was for), save. A failure stops the line (the job says
 // why; the user sees it and lets the line go on). Returns { ran, failed }. One runner a chat at a time: a second call
 // while one runs does nothing ({ ran: 0, busy: true }).
+// parse(text, job): the app's JSON reader, told the job (its room's command switches)
 // enter(roomId) → a function that lets the room go | null: before the first job of a room, the room is entered — the room's
 // lock (Marinara's one generation a chat at a time: the browser and the server plugin's worker take turns), and what the
 // other side wrote there comes in first. null: the other side is writing in that room now; its jobs wait this time
@@ -133,7 +134,7 @@ export async function runLive(m, { gather, ask, save = async () => {}, now = () 
                     // (the chat was left while this was asked: nothing is saved there now; the job is asked again when it is open)
                     if (!alive()) { job.state = 'waiting'; break; }
                     // (a request that brings its own way in — a Merged group turn — is put in that way)
-                    got = req.take ? req.take(answer, { now: now() }) : takeReply(m, job.owner, job.room, answer, { now: now(), parse, state: stateFor ? stateFor(job) : undefined });
+                    got = req.take ? req.take(answer, { now: now() }) : takeReply(m, job.owner, job.room, answer, { now: now(), parse: parse ? t => parse(t, job) : null, state: stateFor ? stateFor(job) : undefined });
                     // (took: what the caller keeps beside the answer, saved with it)
                     if (took) took(job, got);
                 }

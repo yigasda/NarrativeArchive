@@ -14,7 +14,11 @@
 //     phones: { [name key]: phone },              모든 인물의 폰 2
 //     finance, profiles, pre, lore, loreOff:      폰 1의 m.finance · phoneProfiles · phonePre · phoneLore · phoneLoreOff
 //                                                 에 해당하는 폰 2 것 (이야기에서 시작하면 그때의 깊은 복사)
-//     messenger: { accounts: { [name key]: { name } }, rooms: { [id]: { id, members: [name], messages: [], name?, read? } } },
+//     messenger: { accounts: { [name key]: { name } }, rooms: { [id]: { id, members: [name], messages: [], name?, read?, meta?, connectionId?, model?, chatParameters? } } },
+//       방 하나 = 마리나라의 채팅 하나. 채팅 설정은 방마다예요 (마리나라의 chat.metadata → room.meta: 먼저 말 걸기 · 단체방 · 스케줄 켜기 ·
+//       명령 · 그림 설명 · 번역 · 하루 수 · 쉬는 시간, 열쇠 이름은 마리나라의 것 그대로. phone2sched.js roomMeta).
+//       채팅 줄의 칸 connectionId · 모델 고르기(model) · chatParameters도 방에 있어요. 새 방의 첫 값은 setRoomSeed로 넣어요
+//       (마리나라 chats.storage.ts create). 2026-11-24 전의 Orbit 하나의 값(w.presence.on · meta)은 phone2sched.js moveRoomMeta가 옮겨요
 //       messages: [{ id, n (세계 전체의 메시지 번호), from: name, text, at (ms), state? (주인이 답하며 적은 상태), does? [{ app, what }] (답하며 폰으로 한 일),
 //         extra? (마리나라의 메시지 extra: 번역은 translation · translationSource · translationHidden · automaticTranslationSource — phone2translate.js),
 //         act? (말 없이 한 일 · 상태만: 메신저 화면엔 안 그려요), call? }], read: { [name key]: 마지막으로 읽은 시각 (ms) }, name: 단체방 이름
@@ -125,9 +129,11 @@ export function resetLive(m, how = 'chats') {
     if (!live) return 'none';
     const w = live.world, rooms = Object.keys(w?.messenger?.rooms || {}).length;
     if (how === 'all' || !w || !rooms) { delete m.live; return w || live.archive?.length ? 'all' : 'none'; }
+    // (the chat settings are the rooms', and stay with them: the Orbit's old ones are moved into them first)
+    prepWorld(m);
     live.world = { id: newId('w'), from: 'fresh', startedAt: w.startedAt, dayShift: 0, scope: w.scope, storyUpto: null,
         persona: w.persona, lastOwner: '', phones: {}, finance: null, profiles: {}, pre: {}, lore: [], loreOff: {},
-        messenger: w.messenger, queue: { round: (Number(w.queue?.round) || 0) + 1, jobs: [] } };
+        messenger: w.messenger, queue: { round: (Number(w.queue?.round) || 0) + 1, jobs: [] }, ...(w[ROOM_META_MARK] ? { [ROOM_META_MARK]: w[ROOM_META_MARK] } : {}) };
     live.archive = [];
     live.mode = 'story';
     return 'chats';
@@ -315,10 +321,24 @@ export function ensureRoom(m, members) {
     // (a branch of a room has the same people: the room itself comes first, never its branch)
     const same = Object.values(w.messenger.rooms).filter(r => r.members.map(liveKey).sort().join('|') === keys), room = same.find(r => !r.branch) || same[0];
     if (room) return room;
+    // (the Orbit's old settings go into the rooms there first: the new room is not one of them — phone2sched.js moveRoomMeta)
+    prepWorld(m);
     for (const n of names) ensureAccount(m, n);
-    const id = newId('r');
-    return (w.messenger.rooms[id] = { id, members: names, messages: [] });
+    const id = newId('r'), made = { id, members: names, messages: [] };
+    // (the new room's first settings — Marinara's chats.storage.ts create: translator defaults, the card schedules)
+    for (const fn of roomSeeds) fn(made, w, m);
+    return (w.messenger.rooms[id] = made);
 }
+// 새 방이 생길 때 (마리나라의 새 채팅): 부르는 쪽이 채워 넣을 것 (phone2sched.js: 카드 스케줄, phone2translate.js: 번역 기본값).
+// 이 파일은 아무것도 안 불러요. fn(방, 세계, m): 방은 아직 세계에 들어가지 않았어요
+const roomSeeds = [];
+export const setRoomSeed = fn => { if (typeof fn === 'function' && !roomSeeds.includes(fn)) roomSeeds.push(fn); };
+// 세계의 방이 바뀌기 전에 (새 방 · 비우기): 옛 Orbit 하나의 채팅 설정을 방마다로 옮기는 자리 (phone2sched.js moveRoomMeta)
+const preps = [];
+export const setWorldPrep = fn => { if (typeof fn === 'function' && !preps.includes(fn)) preps.push(fn); };
+export const prepWorld = m => { for (const fn of preps) fn(m); };
+// 채팅 설정을 방마다로 옮겼다는 표시 (세계에): 있으면 Orbit 하나의 옛 값(w.presence.on · meta의 채팅 열쇠)은 아무도 안 읽어요
+export const ROOM_META_MARK = 'metaPerRoom';
 // 페르소나의 이름이 바뀌었어요 (실리에서 다른 페르소나를 골랐을 때): 실시간 폰의 "나"를 그 이름으로. 같은 사람으로
 // 보고, 방의 사람 · 지난 말 · 읽은 자리 · 반응 · 받아 둔 답장 · 계정과, 폰들의 연락처 · 위치 정보 · 주변 인물 · 말투 줄의
 // 이름까지 같이 바꿔요. 요약본 · 줄여 둔 옛 대화 · 폰 기록의 글 속 이름은 그대로예요.

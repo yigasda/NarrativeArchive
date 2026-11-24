@@ -7,8 +7,8 @@
 // Changes for NarrativeArchive:
 //   - TypeScript types removed; react-query's hooks become plain async functions.
 //   - Marinara's app setting "translator-defaults" is our extension setting of the same name (`io` from
-//     src/phone2translate.js: readSetting · writeSetting). The chat it is saved from is the Orbit's settings
-//     (io.readChatMetadata). waitForPendingChatMetadataSaves is io.waitForSaves.
+//     src/phone2translate.js: readSetting · writeSetting). The chat it is saved from is that room's settings
+//     (io.readChatMetadata, chatId `<world id>:<room id>`). waitForPendingChatMetadataSaves is io.waitForSaves.
 //   - The server's DeepL key mask (maskTranslatorDefaults · resolveChatMetadataSecretPlaceholders · sealChatMetadataSecrets)
 //     is not here: DeepL is removed (소망, 2026-11-23), so no key is ever in these settings.
 //   - The toasts are the screen's (TranslationSection.tsx): saveTranslatorDefaultsWithToast does what its handler does.

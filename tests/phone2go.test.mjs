@@ -1519,7 +1519,7 @@ test('단체방: 답에서 @이름으로 부른 사람이 다음에 답하고, �
     m.phones.ivo = { ...phone(), owner: 'Ivo' }; migrateBank(m, m.phones.ivo);
     m.phones.varo = { ...phone(), owner: 'Varo' }; migrateBank(m, m.phones.varo);
     const g = L.ensureRoom(c.real, ['Mara', 'Ivo', 'Varo']);
-    await G.liveSetAutonomousOptions(c.real, { groupChatMode: 'individual', groupResponseOrder: 'manual' });
+    await G.liveSetAutonomousOptions(c.real, g.id, { groupChatMode: 'individual', groupResponseOrder: 'manual' });
     L.sendLive(c.real, g.id, '@Mara dinner?'); L.enqueueReplies(c.real, g.id);
     const answers = [{ state: '집', reply: ['ask @Varo'], does: [] }, { state: '집', reply: ['sure'], does: [] }], inputs = [];
     T.ask = async input => { inputs.push(input); return JSON.stringify(answers.shift()); };
@@ -1532,6 +1532,56 @@ test('단체방: 답에서 @이름으로 부른 사람이 다음에 답하고, �
     assert.deepEqual(g.turn.spoke, ['mara', 'varo']);
 });
 
+test('단체방 smart 고르기의 모델은 마리나라처럼 에이전트 기본 연결(AI 기능 모델), 그게 보낼 데가 없으면 그 방의 연결 (스케줄 생성 연결이 아니에요)', async () => {
+    const c = world(), m = L.liveMeta(c.real);
+    m.phones.ivo = { ...phone(), owner: 'Ivo' }; migrateBank(m, m.phones.ivo);
+    const g = L.ensureRoom(c.real, ['Mara', 'Ivo']);
+    await G.liveSetAutonomousOptions(c.real, g.id, { groupChatMode: 'individual', groupResponseOrder: 'smart' });
+    const picks = [];
+    const run = async () => {
+        L.sendLive(c.real, g.id, 'dinner?'); L.enqueueReplies(c.real, g.id);
+        T.ask = async (input, o) => { if (String(o.system || '').startsWith('You are a hidden response orchestrator')) { picks.push(o); return '["ivo"]'; } return JSON.stringify({ state: '집', reply: ['ok'], does: [] }); };
+        try { return await G.liveGo(c.real); } finally { delete T.ask; }
+    };
+    assert.equal((await run()).failed, null);
+    assert.equal(picks.length, 1);
+    assert.equal(picks[0].noFallback, true);                                                   // (askAI: AI 기능 모델)
+    assert.equal(picks[0].temperature, 0.2);
+    // (서버에서 AI 기능 모델이 실리의 지금 연결이고 고른 프로필이 없으면: 그 방의 연결로 — 이 방은 안 골랐으니 초안 모델, 방의 추론 레벨은 안 실어요)
+    T.slots = { ai: { mode: 'st' } }; T.st = { naServer: true };
+    g.chatParameters = { reasoningEffort: 'high' };
+    try { assert.equal((await run()).failed, null); } finally { delete T.slots; delete T.st; }
+    assert.equal(picks.length, 2);
+    assert.equal(picks[1].noFallback, undefined);                                              // (askDraft: 그 방의 연결)
+    assert.notEqual(picks[1].effort, 'high');
+});
+test('캐릭터 명령 스위치는 방마다: 답을 읽을 때도 그 답의 방의 스위치로 (runLive의 parse가 일을 받아요)', async () => {
+    const c = world(), m = L.liveMeta(c.real);
+    m.phones.ivo = { ...phone(), owner: 'Ivo' }; migrateBank(m, m.phones.ivo);
+    const other = L.ensureRoom(c.real, ['Ivo']);
+    await G.liveSetCommands(c.real, c.room.id, { toggles: { react: false } });
+    assert.deepEqual([G.liveCommands(c.real, c.room.id).options.find(o => o.id === 'react').on, G.liveCommands(c.real, other.id).options.find(o => o.id === 'react').on], [false, true]);
+    T.ask = async () => JSON.stringify({ reply: ['응'], react: { to: 'Ren', emoji: '❤️' }, does: [] });
+    try {
+        send(c, '하나'); L.sendLive(c.real, other.id, '둘'); L.enqueueReplies(c.real, other.id);
+        await G.liveGo(c.real);
+    } finally { delete T.ask; }
+    assert.equal(c.room.messages.find(x => x.text === '하나').reacts, undefined);              // (이 방은 꺼 뒀어요)
+    assert.equal(other.messages.find(x => x.text === '둘').reacts?.length, 1);
+});
+test('먼저 말 걸기는 켠 방만 봐요 (마리나라의 autonomousMessages는 채팅마다)', async () => {
+    const c = world(), m = L.liveMeta(c.real);
+    m.phones.ivo = { ...phone(), owner: 'Ivo' }; migrateBank(m, m.phones.ivo);
+    const other = L.ensureRoom(c.real, ['Ivo']), t = Date.now();
+    for (const [r, who] of [[c.room, 'Mara'], [other, 'Ivo']]) { L.sendLive(c.real, r.id, 'hey', t - 6 * 3600_000); r.messages.push({ id: `a${r.id}`, n: L.liveNo(L.liveWorld(c.real)), from: who, text: 'hi', at: t - 6 * 3600_000 + 60_000 }); }
+    T.metadata = { narrative_archive: c.real };
+    try {
+        await G.liveSetAutonomous(c.real, other.id, true);
+        assert.equal(await G.liveAutonomous(c.real), 1);
+        const w = L.liveWorld(c.real);
+        assert.deepEqual(w.queue.jobs.filter(j => j.auto).map(j => [j.owner, j.room]), [['Ivo', other.id]]);
+    } finally { delete T.metadata; }
+});
 test('Merged 단체방: 한 요청으로 여럿이 답해요. 지시문은 마리나라의 것, 끝에 Output Format', async t => {
     const c = world(), m = L.liveMeta(c.real);
     const cues = [], hadDoc = globalThis.document, hadEv = globalThis.CustomEvent;
@@ -1650,7 +1700,7 @@ test('추론 레벨: 칩은 실제로 되는 것만. 우리 커스텀 호출은 
     for (const [fmt, m] of [['anthropic', 'claude-sonnet-5-5'], ['anthropic', 'claude-opus-5'], ['anthropic', 'claude-opus-5-5'], ['anthropic', 'claude-haiku-5-5'], ['openai', 'gpt-5.5'], ['openai', 'some-local-model'], ['openai', 'deepseek-v4-pro']]) {
         T.slots = { dr: { mode: 'custom', fmt, model: m } };
         const r0 = R();
-        assert.ok(r0.choices.length > 0, m); assert.ok(![...r0.choices, ...r0.roomChoices, ...r0.allChoices].some(x => x.value === 'none'), m);
+        assert.ok(r0.choices.length > 0, m); assert.ok(![...r0.choices, ...r0.roomChoices].some(x => x.value === 'none'), m); assert.equal(r0.allChoices, undefined, m);
     }
     T.slots = { dr: { mode: 'custom', fmt: 'openai', model: 'gemini-3.5-flash-lite' } };                    // (커스텀 주소의 모델은 마리나라의 일반 규칙)
     assert.deepEqual(names(R()), ['낮게', '보통', '높게']);
@@ -1725,23 +1775,23 @@ test('추론 레벨: 칩은 실제로 되는 것만. 우리 커스텀 호출은 
     assert.deepEqual((({ choices, why, effort, send }) => [choices, why, effort, send])(R()), [[], 'main', '', '']);
     await G.liveSetReasoning(c.real, id, ''); await G.liveSetRoomModel(c.real, id, null);
 
-    // ── 정하기: 방 값이 Orbit 전체 값보다 먼저. 모델 호출에는 그 길의 낱말로 가요
+    // ── 정하기: 방마다 하나 (마리나라의 chatParameters. 'Orbit 전체' 값은 없어요). 모델 호출에는 그 길의 낱말로 가요
     assert.equal(G.levelName('xhigh'), '매우 높게'); assert.equal(G.levelName('adaptive'), 'Adaptive');
     await assert.rejects(G.liveSetReasoning(c.real, id, 'huge'), /추론 레벨/);
     T.slots = { dr: { mode: 'vertex', vxModel: 'gemini-2.5-flash' } };
-    await G.liveSetReasoning(c.real, '', 'medium');
+    await assert.rejects(G.liveSetReasoning(c.real, '', 'medium'), /채팅방을 찾을 수 없습니다/);
+    await G.liveSetReasoning(c.real, id, 'medium');
     assert.equal(R().effort, 'medium');
     await G.liveSetReasoning(c.real, id, 'maximum');
-    assert.deepEqual((({ effort, room, all, sent, send }) => [effort, room, all, sent, send])(R()), ['maximum', 'maximum', 'medium', 'b:max', 'max']);
+    assert.deepEqual((({ effort, room, all, sent, send }) => [effort, room, all, sent, send])(R()), ['maximum', 'maximum', undefined, 'b:max', 'max']);
     const seen = [];
     T.ask = async (input, o) => { seen.push(o.effort); return JSON.stringify({ state: '집', reply: ['응'], does: [] }); };
     try {
         send(c, '셋'); await G.liveGo(c.real);
         await G.liveSetReasoning(c.real, id, 'none'); send(c, '넷'); await G.liveGo(c.real);
         await G.liveSetReasoning(c.real, id, ''); send(c, '다섯'); await G.liveGo(c.real);
-        await G.liveSetReasoning(c.real, '', ''); send(c, '여섯'); await G.liveGo(c.real);
     } finally { delete T.ask; delete T.slots; delete T.sources; }
-    assert.deepEqual(seen, ['max', 'none', 'medium', 'low']);                                               // (안 정하면 전처럼 low)
+    assert.deepEqual(seen, ['max', 'none', 'low']);                                                         // (안 정하면 전처럼 low)
 });
 
 test('첨부 보내기: 올리고 → 글 없이도 보내고 → 답장 요청에 그림이 실려 가요. 말에는 주소만 남고, 뺄 수 있어요', async () => {
@@ -1770,9 +1820,9 @@ test('첨부 보내기: 올리고 → 글 없이도 보내고 → 답장 요청�
         assert.ok(Array.isArray(sent)); assert.deepEqual(sent[0].images, [PNG]); assert.equal(sent[0].files, undefined);
         assert.match(sent[0].content, /· Ren: \n<attached_file name="m\.txt" type="text\/plain">\n메모\n<\/attached_file>\n\n<attached_image name="cat\.png" type="image\/png">\n\(image 1 attached to this request\)\n<\/attached_image>/);
         // (그림 설명을 켜면: 설명 요청이 먼저 가고, 답장 요청에는 그림 대신 설명이 들어가요. 설명은 말에 남아요)
-        assert.equal(G.liveCaptioning(c.real).enabled, false);
-        await assert.rejects(G.liveSetCaptioning(c.real, { connectionId: 'nope' }), /연결을 찾을 수 없습니다/);
-        assert.deepEqual((({ enabled, connectionId, prompt }) => [enabled, connectionId, prompt])(await G.liveSetCaptioning(c.real, { enabled: true })), [true, '', '']);
+        assert.equal(G.liveCaptioning(c.real, id).enabled, false);
+        await assert.rejects(G.liveSetCaptioning(c.real, id, { connectionId: 'nope' }), /연결을 찾을 수 없습니다/);
+        assert.deepEqual((({ enabled, connectionId, prompt }) => [enabled, connectionId, prompt])(await G.liveSetCaptioning(c.real, id, { enabled: true })), [true, '', '']);
         send(c, '뭐 같아?'); seen.length = 0; answers.push('창가의 고양이.', JSON.stringify({ state: '집', reply: ['고양이네'], does: [] }));
         await G.liveGo(c.real);
         assert.equal(seen.length, 2);
@@ -1782,7 +1832,7 @@ test('첨부 보내기: 올리고 → 글 없이도 보내고 → 답장 요청�
         send(c, '또'); seen.length = 0; answers.push(JSON.stringify({ state: '집', reply: ['응'], does: [] }));
         await G.liveGo(c.real);
         assert.equal(seen.length, 1);                                                                 // (설명을 다시 묻지 않아요)
-        await G.liveSetCaptioning(c.real, { enabled: false });
+        await G.liveSetCaptioning(c.real, id, { enabled: false });
         // (말에서 첨부 빼기: 말은 남고, 실리의 파일도 지워요)
         const url = x.extra.attachments[0].url;
         assert.equal((await G.liveRemoveAttachment(c.real, id, x.id, 0)).length, 1);
@@ -1797,30 +1847,30 @@ test('첨부 보내기: 올리고 → 글 없이도 보내고 → 답장 요청�
 test('캐릭터 명령 스위치 (마리나라의 Commands): 끄면 답장 지시문에서 그 명령이 빠지고, 답에 들어 있어도 안 받아요', async () => {
     const c = world(), id = c.room.id, S = await import(new URL('../src/phone2sched.js', import.meta.url).href).catch(() => null);
     // (마리나라의 목록에서 패키지 없이 뜨는 것. 이 확장에 있는 명령만 works)
-    const list = G.liveCommands(c.real);
+    const list = G.liveCommands(c.real, id);
     assert.equal(list.enabled, true);
     assert.deepEqual(list.options.map(o => o.id), ['schedule_update', 'cross_post', 'memory', 'scene', 'influence', 'note', 'react']);
     assert.deepEqual(list.options.filter(o => o.works).map(o => o.id), ['schedule_update', 'react']);
     assert.ok(list.options.every(o => o.on));
     assert.equal(list.options[0].description, 'Let characters change their current status and activity.');
-    await assert.rejects(G.liveSetCommands(c.real, { toggles: { nope: false } }), /없는 명령/);
+    await assert.rejects(G.liveSetCommands(c.real, id, { toggles: { nope: false } }), /없는 명령/);
     const seen = [];
     T.ask = async (input, o) => { seen.push(o.system); return JSON.stringify({ reply: ['응'], react: { to: 'Ren', emoji: '❤️' }, does: [] }); };
     try {
         send(c, '하나'); await G.liveGo(c.real);
         assert.match(seen[0], /"react": "" or/); assert.equal(c.room.messages.find(x => x.text === '하나').reacts?.length, 1);
         // (반응 끄기: 지시문에서 빠지고, 답에 있어도 안 달려요. 저장은 마리나라의 이름으로)
-        assert.equal((await G.liveSetCommands(c.real, { toggles: { react: false } })).options.find(o => o.id === 'react').on, false);
-        assert.deepEqual(G.livePresence(c.real).meta.conversationCommandToggles, { react: false });
+        assert.equal((await G.liveSetCommands(c.real, id, { toggles: { react: false } })).options.find(o => o.id === 'react').on, false);
+        assert.deepEqual(c.room.meta.conversationCommandToggles, { react: false });
         send(c, '둘'); await G.liveGo(c.real);
         assert.doesNotMatch(seen[1], /"react"/); assert.equal(c.room.messages.find(x => x.text === '둘').reacts, undefined);
         // (명령 전체 끄기: 모든 명령이 꺼져요. 낱낱의 스위치 값은 그대로)
-        await G.liveSetCommands(c.real, { toggles: { react: true }, enabled: false });
-        assert.equal(G.livePresence(c.real).meta.characterCommands, false);
+        await G.liveSetCommands(c.real, id, { toggles: { react: true }, enabled: false });
+        assert.equal(c.room.meta.characterCommands, false);
         send(c, '셋'); await G.liveGo(c.real);
         assert.doesNotMatch(seen[2], /"react"/);
-        assert.deepEqual((({ enabled, options }) => [enabled, options.find(o => o.id === 'react').on])(await G.liveSetCommands(c.real, { enabled: true })), [true, true]);
-        assert.equal(G.livePresence(c.real).meta.characterCommands, undefined);
+        assert.deepEqual((({ enabled, options }) => [enabled, options.find(o => o.id === 'react').on])(await G.liveSetCommands(c.real, id, { enabled: true })), [true, true]);
+        assert.equal(c.room.meta.characterCommands, undefined);
     } finally { delete T.ask; }
 });
 
@@ -1884,7 +1934,6 @@ test('서버 묶음: 연결 프로필로 나가는 방도 묶음에는 어느 �
     try {
         await G.liveSetRoomModel(c.real, id, { connectionId: 'profile:p1' });
         await G.liveSetReasoning(c.real, id, 'high');
-        await G.liveSetScheduleConnection(c.real, 'profile:p3');
         assert.deepEqual(G.liveReplyPlan(c.real, id).profile, { id: 'p1', missing: false, level: { source: 'openrouter', model: 'or/m', effort: 'high' } });
         assert.equal(await G.liveKitRefresh(c.real), true);
         assert.deepEqual(Object.keys(c.real.live.kit).sort(), ['chat', 'v', 'ver']);
@@ -1983,7 +2032,7 @@ test('먼저 건 말 뒤 캐릭터끼리 주고받기는 브라우저만 해요 
     };
     for (const server of [false, true]) {
         const { c, g, w } = make();
-        await G.liveSetAutonomous(c.real, true); await G.liveSetAutonomousOptions(c.real, { characterExchanges: true });
+        await G.liveSetAutonomous(c.real, g.id, true); await G.liveSetAutonomousOptions(c.real, g.id, { characterExchanges: true });
         T.replies = [{ state: '집', reply: ['anyone up?'], does: [] }];
         await G.liveGo(c.real, { server, lock: null });
         const waiting = w.queue.jobs.filter(x => x.state === 'waiting');
@@ -2016,7 +2065,7 @@ test('자동 번역 (마리나라 dispatchAutomaticTranslations): 켜져 있으�
     await G.liveGo(c.real);
     assert.deepEqual([c.room.messages.at(-1).extra?.automaticTranslationSource, asked.length, cues.length], [undefined, 0, 1]);
     // 켜면
-    w.presence = { ...(w.presence || {}), meta: { ...(w.presence?.meta || {}), autoTranslate: true, translationOutputTargetLang: 'ko' } };
+    c.room.meta = { ...(c.room.meta || {}), autoTranslate: true, translationOutputTargetLang: 'ko' };
     cues.length = 0;
     let opened;
     gate = new Promise(r => { opened = r; });
@@ -2053,19 +2102,19 @@ test('자동 번역 (마리나라 dispatchAutomaticTranslations): 켜져 있으�
 
 test('자동 번역: 답장 뒤 처리 중 오류가 나도 이미 저장된 답은 번역해요 (마리나라의 finally 길). 설정은 답을 만들기 시작할 때 잡은 것 하나 (표시와 보내기 모두). 잡은 설정은 저장되는 일 줄에 안 남아요', async () => {
     const c = world(), w = L.liveWorld(c.real), sent = [];
-    w.presence = { ...(w.presence || {}), meta: { ...(w.presence?.meta || {}), autoTranslate: true, translationOutputTargetLang: 'ko' } };
+    c.room.meta = { ...(c.room.meta || {}), autoTranslate: true, translationOutputTargetLang: 'ko' };
     // (a translation that gets done: what is translated is not owed again)
     const translate = (roomId, ids, config) => { sent.push({ roomId, ids, lang: config.outputTargetLanguage }); for (const x of c.room.messages) if (ids.includes(x.id)) x.extra = { ...x.extra, translation: `ko:${x.text}`, translationSource: x.text }; return Promise.resolve(); };
     // (while the model is asked, automatic translation is switched to French and then off: the job began with Korean)
     send(c, 'hi');
-    T.replies = { shift: () => { w.presence.meta.translationOutputTargetLang = 'fr'; w.presence.meta.autoTranslate = false; return { state: '집', reply: ['one', 'two'], does: [] }; } };
+    T.replies = { shift: () => { c.room.meta.translationOutputTargetLang = 'fr'; c.room.meta.autoTranslate = false; return { state: '집', reply: ['one', 'two'], does: [] }; } };
     await G.liveGo(c.real, { translate });
     const [one, two] = c.room.messages.slice(-2);
     assert.deepEqual([one.extra?.automaticTranslationSource, two.extra?.automaticTranslationSource], ['one', 'two']);
     assert.deepEqual(sent, [{ roomId: c.room.id, ids: [one.id, two.id], lang: 'ko' }]);
     assert.ok(!JSON.stringify(w.queue.jobs).includes('trIds') && !JSON.stringify(w.queue.jobs).includes('outputTargetLanguage'));
     // (something after the reply fails — here the phone's contacts cannot be written —: the reply is saved, so it is still translated)
-    w.presence.meta.autoTranslate = true; w.presence.meta.translationOutputTargetLang = 'ko'; sent.length = 0;
+    c.room.meta.autoTranslate = true; c.room.meta.translationOutputTargetLang = 'ko'; sent.length = 0;
     c.p.contacts = Object.freeze([]);
     send(c, 'again'); T.replies = [{ state: '집', reply: ['three'], does: [] }];
     const out = await G.liveGo(c.real, { translate });
@@ -2078,12 +2127,13 @@ test('자동 번역: 답장 뒤 처리 중 오류가 나도 이미 저장된 답
 
 test('자동 번역: Merged 단체방의 답도 말마다 번역해요. 브라우저 길에서 끊긴 것만 브라우저의 liveGo가 시작할 때 이어서 (표시만 남은 말 — 서버의 것 · 실패한 것 — 은 다시 묻지 않아요)', async () => {
     const c = world(), w = L.liveWorld(c.real), sent = [];
-    w.presence = { ...(w.presence || {}), meta: { ...(w.presence?.meta || {}), autoTranslate: true, translationOutputTargetLang: 'ko' } };
+    c.room.meta = { ...(c.room.meta || {}), autoTranslate: true, translationOutputTargetLang: 'ko' };
     const translate = (roomId, ids, config) => { sent.push([roomId, ids, config.outputTargetLanguage]); return Promise.resolve(); };
     // Merged 단체방: 한 요청의 말들이 다 표시되고, 차례로 번역에
     const m = L.liveMeta(c.real);
     m.phones.ivo = { ...phone(), owner: 'Ivo' }; migrateBank(m, m.phones.ivo);
     const g = L.ensureRoom(c.real, ['Mara', 'Ivo']);
+    g.meta = { ...(g.meta || {}), autoTranslate: true, translationOutputTargetLang: 'ko' };   // (그 방의 설정: 마리나라의 채팅마다)
     L.sendLive(c.real, g.id, 'dinner?'); L.enqueueReplies(c.real, g.id);
     T.ask = async () => 'Mara: sure\nIvo: where';
     try { await G.liveGo(c.real, { translate }); } finally { delete T.ask; }
@@ -2106,7 +2156,7 @@ test('자동 번역: Merged 단체방의 답도 말마다 번역해요. 브라�
         //  the settings its reply was made with)
         const config = TRL.translationConfigOf(c.real, c.room.id);
         store.set('narrative_archive:translation-in-flight', JSON.stringify({ [`${w.id}:${c.room.id}`]: { left1: { text: 'left over', config, tab: 'closed-tab', at: Date.now() - 6 * 60_000 } } }));
-        w.presence.meta.translationOutputTargetLang = 'fr';
+        c.room.meta.translationOutputTargetLang = 'fr';
         await G.liveGo(c.real, { translate });
         await new Promise(r => setTimeout(r, 5));
         assert.deepEqual(sent, [[c.room.id, ['left1'], 'ko']]);

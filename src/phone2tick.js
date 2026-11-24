@@ -5,7 +5,7 @@
 import { getMeta, hasChat, saveMeta } from './core.js';
 import { keepServes, keepKept, keepSync } from './phone2keepon.js';
 import { startIdleDetection } from './marinara/idle-detection.js';
-import { userStore } from './phone2sched.js';
+import { userStore, roomMeta } from './phone2sched.js';
 
 export const TICK_MS = 30_000, TICK_FIRST_MS = 10_000;
 let timer = null, busy = false;
@@ -28,7 +28,9 @@ export async function tickOnce() {
         //  The cards, the persona, the role-play and the chat's values the server reads from SillyTavern itself)
         try { if (await (await import('./phone2go.js')).liveKitRefresh(m)) await saveMeta(); } catch (err) { console.warn('[narrative-archive] live kit', err); }
         const waiting = !!w.queue?.jobs?.some(j => j.kind === 'reply' && j.state === 'waiting');
-        if (!w.presence?.on && !waiting && !Object.keys(w.presence?.schedules || {}).length) return 0;
+        // (a room that has characters write first — each room its own switch, Marinara's autonomousMessages —, a reply waiting, or a schedule)
+        const anyOn = Object.keys(w.messenger?.rooms || {}).some(id => roomMeta(m, id).autonomousMessages === true);
+        if (!anyOn && !waiting && !Object.keys(w.presence?.schedules || {}).length) return 0;
         return await work(m, waiting);
     } finally { busy = false; }
 }

@@ -3,7 +3,8 @@
 // 모양에 잇기만 해요 (우리 것):
 //   마리나라의 채팅 = 우리 방 하나 (id: phone2sched.js chatIdOf, `<세계 id>:<방 id>`). 메시지 = 방의 말 하나 (말풍선 하나).
 //     답장 하나가 말풍선 여러 개면 마리나라의 "나뉜 답"처럼 앞 말부터 차례로 번역해요.
-//   마리나라의 채팅 설정(번역 열쇠) = Orbit의 presence.meta (그림 설명 · 명령 스위치와 같은 자리, 마리나라의 열쇠 이름 그대로).
+//   마리나라의 채팅 설정(번역 열쇠) = 그 방의 room.meta (마리나라처럼 채팅마다: phone2sched.js roomMeta, 마리나라의 열쇠 이름 그대로).
+//     새 방은 번역 기본값부터 (마리나라 chats.storage.ts create: setRoomSeed).
 //   메시지의 extra = 말의 x.extra (translation · translationSource · translationHidden · automaticTranslationSource).
 //   마리나라의 연결 = 우리 연결: 'tr' (번역 모델) · 'dr' (초안 모델) · 'ai' (AI 기능 모델) · 'profile:<id>' (실리 연결 프로필).
 //   마리나라의 앱 설정 translator-defaults = 확장 설정의 같은 이름 칸.
@@ -12,8 +13,8 @@
 
 import { ctx, saveMeta, MODULE, globalSettings } from './core.js';
 import { callConn, connSettings, aiProfiles, aiProfileFor, OWN_MODES } from './ai.js';
-import { liveWorld, liveKey, setWorldSeed } from './phone2store.js';
-import { presenceOf, chatIdOf } from './phone2sched.js';
+import { liveWorld, liveKey, setRoomSeed } from './phone2store.js';
+import { chatIdOf, roomMeta, roomMetaW } from './phone2sched.js';
 import { translateText, translateGeneratedMessage } from './marinara/translation.service.js';
 import { getChatTranslationConfig, normalizeTranslatorSettings, TRANSLATOR_DEFAULTS_SETTINGS_KEY, TRANSLATOR_SETTINGS_KEYS } from './marinara/translator-defaults.js';
 import { DEFAULT_TRANSLATION_SYSTEM_PROMPT } from './marinara/translation-prompt.js';
@@ -33,7 +34,8 @@ const openReal = () => { try { const md = ctx().chatMetadata; return md && obj(m
 const isOpen = real => { try { const md = ctx().chatMetadata; return !md || md[MODULE] === real; } catch { return false; } };
 // (the Orbit the screen drew last: liveTranslationOpen)
 let shownReal = null;
-const metaOf = real => { const p = liveWorld(real)?.presence; return obj(p) && obj(p.meta) ? p.meta : {}; };
+// 그 방의 채팅 메타 (마리나라의 chat.metadata)
+const metaOf = (real, roomId) => roomMeta(real, roomId);
 const roomIdOf = (real, chatId) => { const w = liveWorld(real), s = String(chatId || ''), at = s.indexOf(':'); return w && at > 0 && s.slice(0, at) === String(w.id) ? s.slice(at + 1) : null; };
 
 // ---- 옛 한국어(ko) 옮기기: 답장 지시문이 한국어를 같이 받던 때(ko)의 것을 마리나라의 번역 칸으로. 하나도 버리지 않아요
@@ -76,9 +78,9 @@ export function migrateKo(real) {
 
 // ---- 설정 (마리나라 TranslationSection의 값: 채팅 메타의 번역 열쇠)
 // 방의 번역 설정 (마리나라 getChatTranslationConfig: chatId는 그 방) → TranslationConfig
-export const translationConfigOf = (real, roomId) => getChatTranslationConfig(chatIdOf(real, roomId), metaOf(real));
-// (자동 번역: 마리나라 generate.routes.ts — chatMeta.autoTranslate === true일 때만)
-export const autoTranslateOn = real => metaOf(real).autoTranslate === true;
+export const translationConfigOf = (real, roomId) => getChatTranslationConfig(chatIdOf(real, roomId), metaOf(real, roomId));
+// (자동 번역: 마리나라 generate.routes.ts — chatMeta.autoTranslate === true일 때만. 그 방의 것)
+export const autoTranslateOn = (real, roomId) => metaOf(real, roomId).autoTranslate === true;
 
 // 번역에 쓸 연결 목록 (마리나라 ConnectionSelect: 이름은 모델 이름. 우리 칸 이름은 화면에 안 내요)
 //   'tr' (번역 모델: 자기 연결이 있을 때. 'AI 기능 모델과 같음'이면 'ai'와 같아서 안 내요) · 'dr' · 'ai' · 'profile:<id>'
@@ -95,8 +97,9 @@ export function liveTranslationConnections() {
 //   → { provider ('google' | 'ai'), inputTargetLanguage, outputTargetLanguage, connectionId ('' = 연결 선택…), inputPrompt ·
 //       outputPrompt ('' = 기본 지시문: 칸에는 defaultPrompt를 보여 줘요), autoTranslate, translateInput, showInputTranslateButton,
 //       translationDisplayOnly, defaultPrompt, connections }
-export function liveTranslationSettings(real) {
-    const metadata = metaOf(real);
+//   (그 방의 것: liveTranslationSettings(real, 방 id))
+export function liveTranslationSettings(real, roomId) {
+    const metadata = metaOf(real, roomId);
     const provider = metadata.translationProvider ?? 'google';
     const legacyTargetLanguage = metadata.translationTargetLang ?? 'en';
     const legacyPrompt = typeof metadata.translationPrompt === 'string' ? metadata.translationPrompt : '';
@@ -112,10 +115,10 @@ export function liveTranslationSettings(real) {
 //   translationProvider ('google' | 'ai') · translationInputTargetLang · translationOutputTargetLang · translationConnectionId ('' = 연결 선택…) ·
 //   translationInputPrompt · translationOutputPrompt (마리나라 updatePrompt: 비었거나 기본 지시문과 같으면 null = 기본) ·
 //   autoTranslate · translateInput · showInputTranslateButton · translationDisplayOnly (true | false)
-//   save: 저장 (기본 saveMeta) → liveTranslationSettings
-export async function liveSetTranslation(real, patch = {}, { save = saveMeta } = {}) {
+//   save: 저장 (기본 saveMeta) → liveTranslationSettings (그 방의 것: liveSetTranslation(real, 방 id, patch))
+export async function liveSetTranslation(real, roomId, patch = {}, { save = saveMeta } = {}) {
     if (!liveWorld(real)) throw new Error('폰 2가 없습니다.');
-    const meta = presenceOf(real).meta, next = {};
+    const meta = roomMetaW(real, roomId), next = {};
     for (const [k, v] of Object.entries(obj(patch) ? patch : {})) {
         if (!TRANSLATOR_SETTINGS_KEYS.includes(k) || k === 'translationTargetLang' || k === 'translationPrompt') throw new Error(`알 수 없는 번역 설정입니다: ${k}`);
         if (k === 'translationProvider') { if (v !== 'google' && v !== 'ai') throw new Error('번역 서비스는 google 또는 ai여야 합니다.'); next[k] = v; continue; }
@@ -132,9 +135,9 @@ export async function liveSetTranslation(real, patch = {}, { save = saveMeta } =
     Object.assign(meta, next);
     // (the open room's config follows: Marinara's ChatArea sets it again whenever the chat's metadata changes)
     const cur = useTranslationStore.getState().config.chatId, rid = roomIdOf(real, cur);
-    if (rid) useTranslationStore.getState().setConfig(translationConfigOf(real, rid));
+    if (rid === roomId) useTranslationStore.getState().setConfig(translationConfigOf(real, rid));
     await save();
-    return liveTranslationSettings(real);
+    return liveTranslationSettings(real, roomId);
 }
 
 // ---- 새 채팅의 번역 기본값 (마리나라 use-translator-defaults.ts: 확장 설정 'translator-defaults')
@@ -142,23 +145,24 @@ const settingsOf = () => { const es = ctx().extensionSettings; if (!es) return n
 setTranslatorDefaultsIO({
     readSetting: key => { try { const v = settingsOf()?.[key]; return typeof v === 'string' ? v : ''; } catch { return ''; } },
     writeSetting: async (key, value) => { const s = settingsOf(); if (!s) throw new Error('확장 설정을 찾을 수 없습니다.'); if (value) s[key] = value; else delete s[key]; ctx().saveSettingsDebounced?.(); },
-    readChatMetadata: async () => metaOf(savingFrom || openReal()),
+    // (the chat it is saved from: that room's settings — chatId is `<세계 id>:<방 id>`)
+    readChatMetadata: async chatId => { const r = savingFrom, rid = r && roomIdOf(r, chatId); return rid ? metaOf(r, rid) : {}; },
     toastSuccess: text => toast('success', text), toastError: text => toast('error', text),
 });
 // 저장해 둔 기본값이 있나 (마리나라: "기본값 잊기" 단추는 있을 때만)
 export const liveTranslatorDefaults = () => useTranslatorDefaults();
-// 이 채팅의 번역 설정을 새 채팅의 기본값으로 저장 (real) · 잊기 (null). 알림까지 해요 (마리나라 화면의 알림 글) → 됐으면 true
+// 이 채팅(방)의 번역 설정을 새 채팅의 기본값으로 저장 (real, 방 id) · 잊기 (null). 알림까지 해요 (마리나라 화면의 알림 글) → 됐으면 true
 let savingFrom = null;
-export async function liveSaveTranslatorDefaults(real) {
+export async function liveSaveTranslatorDefaults(real, roomId = '') {
     savingFrom = real || null;
-    try { return await saveTranslatorDefaultsWithToast(real ? String(liveWorld(real)?.id || 'orbit') : null); } finally { savingFrom = null; }
+    try { return await saveTranslatorDefaultsWithToast(real ? chatIdOf(real, roomId) : null); } finally { savingFrom = null; }
 }
-// (마리나라 chats.storage.ts 1648: 새 채팅의 메타는 번역 기본값부터. 우리의 새 채팅 = 새 Orbit: phone2store.js newWorld)
-setWorldSeed(w => {
+// (마리나라 chats.storage.ts 1645~1656 create: 새 채팅의 메타는 번역 기본값부터. 우리의 새 채팅 = 새 방: phone2store.js ensureRoom)
+setRoomSeed(room => {
     let raw = '';
     try { raw = settingsOf()?.[TRANSLATOR_DEFAULTS_SETTINGS_KEY] || ''; } catch { raw = ''; }
     const defaults = normalizeTranslatorSettings(raw);
-    if (Object.keys(defaults).length) w.presence = { ...(obj(w.presence) ? w.presence : {}), meta: { ...(obj(w.presence?.meta) ? w.presence.meta : {}), ...defaults } };
+    if (Object.keys(defaults).length) room.meta = { ...defaults, ...(obj(room.meta) ? room.meta : {}) };
 });
 // 설정 프로필을 채팅에 얹을 때의 번역 설정 (마리나라 chat-presets.storage.ts 423~471 · chat-setup-draft.ts 49~59: 프로필의 번역 설정이
 // 그대로, 기본값 위에. 채팅이 갖고 있던 번역 설정은 남지 않아요). 우리에게는 아직 프로필 얹기가 없어요: 그때 이걸 써요 → 번역 열쇠들
@@ -282,7 +286,7 @@ export function translationChats(real, { save = saveMeta, detached = false } = {
 //   (마리나라: 나뉜 답의 앞 조각은 만들 때 extra에, 마지막 조각은 message_saved 전에 updateMessageExtraForSwipe로)
 //   config: 답을 만들기 시작할 때 잡아 둔 번역 설정 (마리나라 generate.routes.ts 1991 outputTranslationConfig: 표시와 보내기가 같은 값).
 //   null이면 자동 번역이 꺼져 있었어요. 글이 없는 말(한 일만)은 표시하지 않아요 (번역할 것이 없어요)
-export function markAutomaticTranslation(real, roomId, ids, config = autoTranslateOn(real) ? translationConfigOf(real, roomId) : null) {
+export function markAutomaticTranslation(real, roomId, ids, config = autoTranslateOn(real, roomId) ? translationConfigOf(real, roomId) : null) {
     if (!config) return [];
     const out = [];
     for (const id of ids || []) {
@@ -399,11 +403,12 @@ function flightDrop(chatId, id) {
 //   translate(방 id, 말 id들, 설정) → 약속 (빼면 browserAutoTranslate) → 하나라도 보냈으면 true
 export async function resumeAutomaticTranslations(real, { translate = (roomId, ids, config) => browserAutoTranslate(real, roomId, ids, config) } = {}) {
     const w = liveWorld(real);
-    if (!w || !autoTranslateOn(real)) return false;
+    if (!w) return false;
     const all = flightRead(), runs = [];
     for (const room of Object.values(w.messenger?.rooms || {})) {
         const chatId = chatIdOf(real, room.id), rec = all[chatId];
-        if (!obj(rec)) continue;
+        // (that room's switch: the translation settings are each chat's)
+        if (!obj(rec) || !autoTranslateOn(real, room.id)) continue;
         for (const [id, r] of Object.entries(rec)) {
             if (running.has(flightKey(chatId, id))) continue;
             if (r?.tab !== tabId && Date.now() - (Number(r?.at) || 0) < FLIGHT.otherTabMs) continue;
@@ -425,15 +430,15 @@ export async function resumeAutomaticTranslations(real, { translate = (roomId, i
 }
 // 서버가 이 방의 답장을 자동 번역할 수 없는 이유 → '' | 이유 (plugin/work.mjs /auto/status). 자동 번역이 꺼져 있거나 Google이면 ''
 export async function translationCannot(real, roomId) {
-    if (!autoTranslateOn(real)) return '';
+    if (!autoTranslateOn(real, roomId)) return '';
     const config = translationConfigOf(real, roomId);
     if (config.provider !== 'ai') return '';
     if (!config.connectionId) return 'AI 번역에는 연결 ID가 필요합니다';
     const c = await translationConnections.getWithKey(config.connectionId);
     return !c ? 'API 연결을 찾을 수 없습니다' : c.cannot || c.missing || '';
 }
-// 자동 번역이 쓰는 AI 연결 id ('' = 꺼짐 · Google): 서버가 실리의 연결을 확인해야 하나 (plugin/work.mjs usesSt)
-export const autoTranslationConnection = real => { if (!autoTranslateOn(real)) return ''; const c = getChatTranslationConfig('', metaOf(real)); return c.provider === 'ai' ? String(c.connectionId || '') : ''; };
+// 그 방의 자동 번역이 쓰는 AI 연결 id ('' = 꺼짐 · Google): 서버가 실리의 연결을 확인해야 하나 (plugin/work.mjs usesSt)
+export const autoTranslationConnection = (real, roomId) => { if (!autoTranslateOn(real, roomId)) return ''; const c = getChatTranslationConfig('', metaOf(real, roomId)); return c.provider === 'ai' ? String(c.connectionId || '') : ''; };
 
 // ---- 화면 (마리나라 ChatArea · ConversationMessage · useTranslate)
 setTranslateIO({
@@ -478,7 +483,7 @@ export function liveTranslationOpen(real, roomId) {
 export function liveTranslationView(real, roomId, x) {
     const s = useTranslationStore.getState(), id = String(x?.id ?? ''), content = String(x?.text ?? '');
     const translatedText = s.translations[id] || null, translationSource = s.translationSources[id], isTranslating = !!s.translating[id];
-    const translationDisplayOnly = metaOf(real).translationDisplayOnly === true;
+    const translationDisplayOnly = metaOf(real, roomId).translationDisplayOnly === true;
     const showTranslationOnly = translationDisplayOnly && !!translatedText && !isTranslating && translationSource === content;
     const shown = showTranslationOnly ? null : translatedText;
     return {
@@ -537,7 +542,7 @@ export const liveInvalidateTranslation = messageId => invalidateTranslation(Stri
 // 내 메시지 번역이 켜져 있으면 모델 언어로 번역한 글, 실패하면 원문 + onTranslationError (기본: 마리나라의 알림)
 export async function livePrepareInput(real, roomId, text, { onTranslationError = () => toast('error', '메시지를 번역하지 못했습니다 — 원문을 보냅니다') } = {}) {
     let message = String(text ?? '');
-    const chatMeta = metaOf(real);
+    const chatMeta = metaOf(real, roomId);
     if (chatMeta.translateInput && message.trim()) {
         useTranslationStore.getState().setConfig(translationConfigOf(real, roomId));
         try {

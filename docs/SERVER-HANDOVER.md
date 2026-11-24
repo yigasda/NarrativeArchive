@@ -229,6 +229,13 @@ kit = { v: 1, ver (확장 버전),
 이게 없으면 실리를 다시 열자마자 캐릭터가 한 번 더 말을 걸어요.
 `reseedActivity`는 "브라우저가 보고 있음"(`clientPresence`)과 "걸고 있는 중"을 **남겨요**. `forgetActivity`를 대신 쓰면 서버가 브라우저가 떠난 줄 알고 끼어들어요.
 
+### 3-8. 채팅 설정은 방마다 (2026-11-24, 마리나라의 채팅 하나 = 우리 방 하나)
+마리나라는 채팅 설정을 채팅마다 `chat.metadata`에 둬요. 우리도 방마다 `room.meta`예요(`src/phone2sched.js` 머리 주석 · `docs/MARINARA-PORT.md` "채팅 설정은 방마다"). 전에는 Orbit에 하나(`w.presence.on` · `w.presence.meta`)였어요.
+- **서버가 읽는 곳**: `auto.mjs metaOf`(스케줄러의 방 줄: `roomMeta` + 시간대) · `resolveConversationPresenceState`(그 방의 `schedulesOn`) · `checkProactive`(그 방의 메타로 판단, 하루 수 · 쉬는 시간도 그 방에 적어요: `noteProactive`) · `work.mjs usesSt`(방마다: 그 방의 자동 번역 연결 · 그림 설명 연결이 실리의 것이면 연결 확인) · `translateAfter` · `/auto/status`의 `translateWhy`(그 방의 번역 설정). 스케줄 생성 연결은 이제 저장하지 않아서(마리나라처럼 편집 창의 상태) 서버가 볼 것이 없어요.
+- **옛 저장**: 서버도 브라우저와 같은 코드로 옮겨요(`moveRoomMeta`: 읽는 함수가 먼저 불러요). 옮긴 것은 메모리에서만이고, 그 세계의 다음 저장(답장 · 안 읽음 표시)에 같이 들어가요. 세계에 표시(`w.metaPerRoom`)가 있으면 Orbit의 옛 값은 안 읽어요: 아직 안 고친 옛 탭이 Orbit 값을 다시 써도 되살아나지 않아요.
+- **합치기**: `room.meta`는 그 방의 조각(`room/<id>`)에 있어요. `merge3`가 열쇠마다 합쳐서, 브라우저가 방 A의 번역을 켜는 사이 서버가 방 A의 하루 수를 올려도 둘 다 남아요(`tests/phone2roommeta.test.mjs`).
+- **본체 쪽 파일은 안 바뀌었어요**: 확장 업데이트만으로 돼요(`index.mjs` · `host.mjs` · `store.mjs` 그대로, `WORKER_PROTO` 그대로).
+
 ## 4. 어느 연결이 서버에서 되나 (`phone2go.js liveReplyPlan` → `work.mjs cannot`)
 
 | 방의 연결 | 서버 | 어떻게 |
@@ -248,7 +255,7 @@ kit = { v: 1, ver (확장 버전),
 
 ### 먼저 건 말 (서버)
 1. 스케줄러: 일꾼이 뜬 지 20초 뒤 첫 판, 그 뒤 60초마다. 한 번에 2방까지, 덜 본 방부터.
-2. `app.chats.list()`: 저장을 전부 훑어요. 켠 세계(`w.presence.on`)만 스케줄러가 봐요. `blocked`인 세계는 목록에 없어요.
+2. `app.chats.list()`: 저장을 전부 훑어요. 방마다 한 줄이고, 그 방의 채팅 메타(`room.meta`: `autonomousMessages` 등, 3-8)에 시간대를 더해 줘요. 켠 방(`autonomousMessages === true`)만 스케줄러가 봐요. `blocked`인 세계는 목록에 없어요.
 3. 75초 안에 브라우저 알림이 있던 방 · 답장을 만들고 있는 방은 건너뛰어요.
 4. `/api/conversation/autonomous/check` → `auto.mjs inject` → `phone2sched.js checkProactive`(내 상태 `idle` · 후속 2번 · `source: 'server'`).
 5. 오프라인이면 그만. 바쁘면 그 늦음만큼 타이머. 꺼 둔 이유 · 쉬는 시간이면 그만.
@@ -311,7 +318,7 @@ kit = { v: 1, ver (확장 버전),
 S = 이 세션의 scratch 폴더(세션마다 달라요. 없어졌으면 다시 만들어야 해요: 아래).
 
 ```
-timeout 580 node --test tests/*.test.mjs                 # 1330개. "# fail 0"과 "# cancelled 0"
+timeout 580 node --test tests/*.test.mjs                 # 1710개 (2026-11-24). "# fail 0"과 "# cancelled 0"
 for f in tests/fuzz/*.mjs; do node $f | tail -1; done     # runs 5113 / 8663, problems 0
 PHONE2_POISON=1 node --test tests/phonesyncdrop.test.mjs tests/archivedread.test.mjs tests/afterarchive.test.mjs tests/phonebranch.test.mjs   # 359
 node $S/cmp.mjs                                           # "checked 328 diff 0" (scratch에 있어요)

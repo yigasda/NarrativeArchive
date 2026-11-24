@@ -32,7 +32,7 @@ import { liveStoryText } from './phone2story.js';
 import { BACK, backLeft, backInput, phone2BackSystem, takeBack, backMessage, markTold } from './phone2back.js';
 import { liveWall } from './phone2clock.js';
 import { gatherReply, LIVE_ASK } from './phone2live.js';
-import { presenceOf, scheduleOf, setSchedule, setStatusOverride, setUserStatus, setAutonomous, statusNow, replyDelay, contextBlock, makeSchedule, checkProactive, noteProactive, fillPlaces, stateNow, takeStatus, scheduleZone, setScheduleZone, draftSchedule, summarizeSchedule, repairSchedule, setAutoRenew, autoRenewOf, needsRefresh, renewSchedules, setAutonomousOptions, autonomousOptions, checkExchangeFor, mentionsIn, activeSchedule, schedulesOn, setSchedulesOn, exportSchedule, importSchedule, syncUser, noteAssistant, noteReaction, forgetActivity, setCardStore, setZoneStore, flushCards, clearProgress, groupOrder, groupTurnPrompt, isGroupRoom, groupResponders, groupHandoff, GROUP_MENTION_INVITE_LINE, orderConversationRespondersByDelay, groupMode, mergedDelay, groupCandidates } from './phone2sched.js';
+import { presenceOf, scheduleOf, setSchedule, setStatusOverride, setUserStatus, setAutonomous, statusNow, replyDelay, contextBlock, makeSchedule, checkProactive, noteProactive, fillPlaces, stateNow, takeStatus, scheduleZone, setScheduleZone, draftSchedule, summarizeSchedule, repairSchedule, setAutoRenew, autoRenewOf, needsRefresh, renewSchedules, setAutonomousOptions, autonomousOptions, checkExchangeFor, mentionsIn, activeSchedule, schedulesOn, setSchedulesOn, exportSchedule, importSchedule, syncUser, noteAssistant, noteReaction, forgetActivity, setCardStore, setZoneStore, flushCards, clearProgress, groupOrder, groupTurnPrompt, isGroupRoom, groupResponders, groupHandoff, GROUP_MENTION_INVITE_LINE, orderConversationRespondersByDelay, groupMode, mergedDelay, groupCandidates, roomMeta, roomMetaW, followsSchedule } from './phone2sched.js';
 import { buildMergedConversationSystemPrompt, formatConversationGroupOutputFormat, mergedRespondersLine, mergedMentionLine, extractLeadingThinkingBlocks, buildGenerationInfoExtra, chatModelChoiceSchema, readChatModelOverride, readChatRecentModels, applyChatModelPatch, applyChatModelOverride, reorderStars, CHAT_RECENT_MODELS_KEY, MAX_PINNED_MODELS, relevantGenerationParameters, reasoningEffortChoices, CONVERSATION_COMMAND_TOGGLE_OPTIONS, readConversationCommandToggles, isConversationCommandEnabled, conversationCommandsOn, buildConversationCommandToggleOptions, resolveProviderReasoningEffort, generationLevelLabel } from './phone2merged.js';
 import { replyInput, messengerBlock } from './phone2ask.js';
 import { readChatAttachments, toPendingAttachments, storeAttachments, attachmentInputs, DISABLED_IMAGE_CAPTIONING, DEFAULT_IMAGE_CAPTIONING_PROMPT, normalizePromptAttachments, CHAT_ATTACHMENT_ACCEPT } from './phone2attach.js';
@@ -208,14 +208,15 @@ async function goNow(real, onChange, lock, server = false, translate = () => Pro
     const out = await runLive(real, {
         save: line.save, alive: () => open(real), enter: lock ? room => lock.enter(room) : null,
         // (a command switched off for this chat is not taken, even if the answer carries it: Marinara's filterEnabledConversationCommands)
-        parse: s => { const o = parseJson(s, { salvage: true }); if (o && typeof o === 'object') { if (!commandOn(real, 'schedule_update')) delete o.status; if (!commandOn(real, 'react')) delete o.react; } return o; },
+        //  (the switches of the job's room: Marinara's chat metadata is the chat's)
+        parse: (s, job) => { const o = parseJson(s, { salvage: true }); if (o && typeof o === 'object') { if (!commandOn(real, 'schedule_update', job?.room)) delete o.status; if (!commandOn(real, 'react', job?.room)) delete o.react; } return o; },
         // (what was sent and what came with the answer, kept for the reply it becomes: Marinara's cachedPrompt · thinking · generationInfo)
         // (the room's own model, when one was picked for it in the quick switcher: else the draft model, as before)
         ask: (input, { system, req }) => { asked = { system, input, meta: {} }; return askRoom(real, req?.room, input, { force: true, system, maxTokens: LIVE_GO.replyTokens, effort: 'low', meta: asked.meta, images: req?.images, files: req?.files }); },
         // (a long go keeps its rooms' locks: the worker lets go of a tab that has said nothing for 5 minutes)
         gather: async job => {
             if (lock) await lock.renew();
-            trOf.set(job, { config: autoTranslateOn(real) ? translationConfigOf(real, job.room) : null, ids: [] });
+            trOf.set(job, { config: autoTranslateOn(real, job.room) ? translationConfigOf(real, job.room) : null, ids: [] });
             // (a message to write first, and a character wrote in that room since it was queued — the other side wrote first
             //  while this one waited for the room: nothing to write now. Marinara's server marks the chat in progress when it
             //  decides, so a second is never queued there; here the two sides each decide, so the second is dropped here)
@@ -253,7 +254,7 @@ async function goNow(real, onChange, lock, server = false, translate = () => Pro
             }
             if (w && p && w.id === job.world) markPersona(p, w.persona);
             // (the owner changed their own status in the answer: a temporary one, and the phone follows it)
-            if (w && p && w.id === job.world && got?.status && activeSchedule(real, job.owner) && takeStatus(real, job.owner, got.status, { tz: zoneOf(real, p) })) { followSchedule(real); await flushCards(); await line.save(); }
+            if (w && p && w.id === job.world && got?.status && activeSchedule(real, job.owner, job.room) && takeStatus(real, job.owner, got.status, { tz: zoneOf(real, p), room: job.room })) { followSchedule(real); await flushCards(); await line.save(); }
             if (w && w.id === job.world && got?.said) { const room = w.messenger?.rooms?.[job.room]; if (room?.away) { delete room.away[liveKey(job.owner)]; if (!Object.keys(room.away).length) delete room.away; } }
             // (Marinara records an assistant message when it is saved, not for a regenerated one; the character only when it wrote first)
             if (w && w.id === job.world && got?.said && !job.regen) noteAssistant(real, job.room, job.auto ? job.owner : '');
@@ -340,16 +341,16 @@ export async function pickResponders(real, now = Date.now()) {
             if (!fresh.length) continue;
             room.turn = { spoke: [] };
             // (Merged: one request writes for everyone who can answer — Marinara's default group mode)
-            if (groupMode(real) === 'merged') { n += mergeTurn(real, room, allOf(room), { regen: fresh.some(j => j.regen), now }); continue; }
+            if (groupMode(real, room.id) === 'merged') { n += mergeTurn(real, room, allOf(room), { regen: fresh.some(j => j.regen), now }); continue; }
             for (const j of allOf(room)) j.picked = true;
             // (a new answer asked for by hand: each one answers again, as they are)
             if (fresh.some(j => j.regen)) continue;
             // (sequential: everyone available, which is what the line holds already; holdReplies takes the offline ones out)
-            if (groupOrder(real) === 'sequential' && !mentionsIn(real, room.id).length) continue;
-            const ids = await groupResponders(real, room.id, { ask: (messages, o) => askVia(real)(messages, o), now: new Date(now), tzOf: name => { const p = livePhone(real, name); return p ? zoneOf(real, p) : ''; }, cards: cardsOf(room) });
+            if (groupOrder(real, room.id) === 'sequential' && !mentionsIn(real, room.id).length) continue;
+            const ids = await groupResponders(real, room.id, { ask: smartAsk(real, room.id), now: new Date(now), tzOf: name => { const p = livePhone(real, name); return p ? zoneOf(real, p) : ''; }, cards: cardsOf(room) });
             if (liveWorld(real) !== w) return n;
             // (nobody can answer now — all offline: the line stays, holdReplies takes them out and keeps who was away)
-            if (!ids.length && (groupOrder(real) !== 'manual' || mentionsIn(real, room.id).length)) continue;
+            if (!ids.length && (groupOrder(real, room.id) !== 'manual' || mentionsIn(real, room.id).length)) continue;
             const out = new Set(mineOf(room).filter(j => !ids.includes(liveKey(j.owner))));
             if (out.size) { w.queue.jobs = w.queue.jobs.filter(j => !out.has(j)); n += out.size; }
         }
@@ -381,8 +382,8 @@ async function gatherJob(real, job) {
     // (Marinara's status · schedule lines: always there, as in Marinara; an owner with no schedule reads "online")
     if (d) { const room = w.messenger.rooms[job.room], last = [...(room?.messages || [])].reverse().find(x => x.text || x.call || x.extra?.attachments?.length); d.context = contextBlock(real, job.owner, job.room, { tzOf: n => zoneOf(real, livePhone(real, n) || p), lastRole: last && liveKey(last.from) === liveKey(w.persona) ? 'user' : 'assistant', said: !job.why, intentKey: job.intent || '', mentions: job.auto ? [] : mentionsIn(real, job.room), user: job.user });
         // (a group room: each responder is told it may hand the turn on with @Name — Marinara's line, as it is)
-        if (d.context && isGroupRoom(real, job.room) && groupTurnPrompt(real)) d.context += `\n${GROUP_MENTION_INVITE_LINE}`; }
-    return d ? { room: job.room, system: phone2ReplySystem({ owner: d.owner, persona: d.persona, scheduled: !!activeSchedule(real, job.owner), statusCommand: commandOn(real, 'schedule_update'), react: commandOn(real, 'react') }), input: replyInput(d), images: att.images, files: att.files } : null;
+        if (d.context && isGroupRoom(real, job.room) && groupTurnPrompt(real, job.room)) d.context += `\n${GROUP_MENTION_INVITE_LINE}`; }
+    return d ? { room: job.room, system: phone2ReplySystem({ owner: d.owner, persona: d.persona, scheduled: !!activeSchedule(real, job.owner, job.room), statusCommand: commandOn(real, 'schedule_update', job.room), react: commandOn(real, 'react', job.room) }), input: replyInput(d), images: att.images, files: att.files } : null;
 }
 // 답장을 받은 뒤: 그 답의 마지막 말에 마리나라가 남기는 값을 남겨요 (generate.routes.ts "Persist thinking/reasoning and generation info")
 //   extra.thinking: 모델의 생각 (제공자가 따로 준 것 + 답 맨 앞의 <think> 같은 블록; 없으면 null)
@@ -463,7 +464,7 @@ function mergeTurn(real, room, jobs, { regen = false, now = Date.now() } = {}) {
     }
     const names = can.map(k => chars.find(n => liveKey(n) === k)), job = enqueueJob(real, { kind: 'reply', owner: names[0], room: room.id, at: now });
     Object.assign(job, { merged: can, timed: true, picked: true, ...(called.length ? { called } : {}), ...(regen ? { regen: true } : {}) });
-    const delay = regen ? 0 : mergedDelay(real, names, { mention: called.length > 0, now: new Date(now), tzOf: tz });
+    const delay = regen ? 0 : mergedDelay(real, names, { mention: called.length > 0, now: new Date(now), tzOf: tz, room: room.id });
     if (delay > 0) dueAt(job, now + delay);
     return gone.size - 1;
 }
@@ -504,7 +505,7 @@ export function holdReplies(real, now = Date.now()) {
         // (I called someone with @: only they answer, sooner than usual — Marinara's mention scope and delay)
         const called = j.auto ? [] : mentionsIn(real, j.room);
         if (called.length && !called.some(n => liveKey(n) === liveKey(j.owner))) { gone.add(j); continue; }
-        const delay = replyDelay(real, j.owner, { now: new Date(now), tz: p ? zoneOf(real, p) : '', kind: j.auto ? 'auto' : called.length ? 'mention' : 'direct' });
+        const delay = replyDelay(real, j.owner, { now: new Date(now), tz: p ? zoneOf(real, p) : '', room: j.room, kind: j.auto ? 'auto' : called.length ? 'mention' : 'direct' });
         // (offline, as Marinara does: no answer now. The room keeps who was away; they catch up when they are back, if
         // characters may write first)
         if (delay === null) { gone.add(j); if (j.auto) clearProgress(real, j.room); else if (room) (room.away ||= {})[liveKey(j.owner)] = now; continue; }
@@ -526,15 +527,16 @@ export const liveReplyWait = (real, now = Date.now()) => (liveWorld(real)?.queue
 // 오프라인이라 답하지 않은 사람들 (마리나라의 "offline" 알림): [{ owner, at }]. 그 사람이 다시 말하면 없어져요
 export const liveAway = (real, roomId) => { const w = liveWorld(real), room = w?.messenger?.rooms?.[roomId]; return Object.entries(room?.away || {}).map(([k, at]) => ({ owner: room.members.find(n => liveKey(n) === k) || k, at })); };
 // 지금 상태 { status, activity } | null · 스케줄 (마리나라의 WeekSchedule) | null
-export const liveStatus = (real, owner) => { const p = livePhone(real, owner); return statusNow(real, owner, { tz: p ? zoneOf(real, p) : '' }); };
+//   roomId: 그 방 안에서 보는 상태 (그 방의 스케줄 스위치). 빼면 방 밖 (연락처 · 프로필): 그 사람이 있는 방 가운데 하나라도 스케줄을 켰으면 스케줄을 따라요
+export const liveStatus = (real, owner, roomId = '') => { const p = livePhone(real, owner); return statusNow(real, owner, { tz: p ? zoneOf(real, p) : '', room: roomId }); };
 export const liveSchedule = (real, owner) => scheduleOf(real, owner);
 export const livePresence = real => (liveWorld(real) ? presenceOf(real) : null);
-// 스케줄 만들기 (모델을 불러요). opts: { guidance, mode: 'rewrite'|'adjust'|'vary'|'repair', day: 'Monday'… (그날만) } → 스케줄
+// 스케줄 만들기 (모델을 불러요). opts: { guidance, mode: 'rewrite'|'adjust'|'vary'|'repair', day: 'Monday'… (그날만), connectionId } → 스케줄
 export async function liveMakeSchedule(real, owner, opts = {}) {
     const p = livePhone(mine(real), owner);
     if (!p) throw new Error('이 인물의 폰이 없습니다.');
     const card = await cardOf(p);
-    const ask = askVia(real, opts.connectionId);
+    const ask = askVia(real, opts.connectionId ?? '');
     const out = await makeSchedule(real, p.owner, { ...opts, ask, name: p.owner, description: String(card || ''), personality: '', tz: zoneOf(real, p) });
     // (where each thing on it happens: asked once here, kept on the blocks. A failure leaves the schedule without places)
     try { await fillPlaces(real, p.owner, { ask, parse: t => parseJson(t, { salvage: true }), card, places: knownPlaces(p) }); } catch (err) { console.warn('[narrative-archive] schedule places', err); }
@@ -566,20 +568,19 @@ export function followSchedule(real, now = Date.now()) {
     return n;
 }
 // ---- 마리나라의 스케줄 편집 창이 부르던 요청들 (phone2sched.js → src/marinara/schedule-routes.js)
-// 생성 연결 (마리나라의 connectionId): 스케줄을 만들 때 쓸 연결을 골라요. 목록은 liveModelConnections와 같아요 (이름은 모델 이름). '' = 기본 연결,
-// 'profile:<id>' = 실리 연결 프로필. 고른 것은 w.presence.meta.scheduleConnectionId에 남아요
+// 생성 연결 (마리나라의 connectionId): 스케줄을 만들 때 쓸 연결. 목록은 liveModelConnections와 같아요 (이름은 모델 이름). '' = 기본 연결 (메인),
+// 'profile:<id>' = 실리 연결 프로필. 마리나라처럼 저장하지 않아요: 편집 창의 상태예요 (CharacterScheduleEditorModal.tsx generationConnectionId).
+// 편집 창의 처음 값 = 그 방의 연결 (chat.connectionId, 없으면 기본 연결): liveScheduleConnection(real, 방 id).
+// 마리나라처럼 방의 연결만 봐요 (빠른 전환기에서 고른 모델은 안 봐요: 마리나라 resolveConversationScheduleConnection은 연결 줄의 모델).
+// 목록에 없는 연결(실리 연결 방식 'source:…')을 고른 방은 기본 연결이에요
 export const liveConnections = () => liveModelConnections().map(c => ({ ...c, id: c.id === 'dr' ? '' : c.id }));
-export const liveScheduleConnection = real => { const id = String(liveWorld(real)?.presence?.meta?.scheduleConnectionId || ''); return liveConnections().some(c => c.id === id) ? id : ''; };
-export async function liveSetScheduleConnection(real, id = '') {
-    if (!liveConnections().some(c => c.id === id)) throw new Error('연결을 찾을 수 없습니다.');
-    const meta = presenceOf(mine(real)).meta;
-    if (id) meta.scheduleConnectionId = id; else delete meta.scheduleConnectionId;
-    await saveMeta();
-    return id;
-}
-// (connectionId: the one asked for with the request, else the one chosen for schedules)
-const askVia = (real, connectionId) => async (messages, o) => {
-    const id = connectionId === undefined || connectionId === null ? liveScheduleConnection(real) : String(connectionId);
+export const liveScheduleConnection = (real, roomId = '') => {
+    const room = roomId ? liveWorld(real)?.messenger?.rooms?.[roomId] : null, raw = String(room?.connectionId || ''), id = raw === 'dr' ? '' : raw;
+    return id && liveConnections().some(c => c.id === id) ? id : '';
+};
+// (connectionId: the one asked for with the request — the schedule editor's pick, or the room's; '' the default connection)
+const askVia = (real, connectionId = '') => async (messages, o) => {
+    const id = String(connectionId ?? '');
     const system = messages.filter(x => x.role === 'system').map(x => x.content).join('\n\n'), text = messages.filter(x => x.role !== 'system').map(x => x.content).join('\n\n');
     // (a request with pictures — the caption request — keeps them on its one turn)
     const images = messages.flatMap(x => x.images || []), input = images.length ? [{ role: 'user', content: text, images }] : text;
@@ -594,6 +595,16 @@ const askVia = (real, connectionId) => async (messages, o) => {
     if (!out) throw new Error('모델이 빈 응답을 반환했습니다.');
     return out;
 };
+// 단체방 smart 고르기의 모델 (마리나라 generate.routes.ts 8819: connections.getDefaultForAgents() ?? conn — 에이전트 기본 연결, 없으면 그 채팅의 연결).
+// 우리의 에이전트 기본 연결은 AI 기능 모델('ai')이에요. 그 칸이 실리 쪽이고 보낼 연결이 없으면(서버에서 실리의 지금 연결: generateRaw는 브라우저 코드)
+// 그 방의 연결로 (방의 모델 고르기까지: 마리나라의 conn은 그 채팅의 모델 고르기가 얹힌 것, 1838). 예비 연결은 없어요 ("꼭 할 것")
+const agentsReady = () => { const a = connSettings('ai'); return OWN_MODES.includes(a.mode) || !!aiProfileFor({ profileNow: true }) || !ctx().naServer; };
+const smartAsk = (real, roomId) => async (messages, o) => {
+    if (agentsReady()) return askVia(real, 'ai')(messages, o);
+    const system = messages.filter(x => x.role === 'system').map(x => x.content).join('\n\n'), text = messages.filter(x => x.role !== 'system').map(x => x.content).join('\n\n');
+    // (the connection's own defaults, not the chat's parameters: Marinara's resolveStoredChatOptions(selectorConnection.defaultParameters))
+    return askRoom(real, roomId, text, { force: true, system, maxTokens: o?.maxTokens, effort: '', temperature: typeof o?.temperature === 'number' ? o.temperature : null, topP: typeof o?.topP === 'number' ? o.topP : null, signal: o?.signal || null, roomLevel: false });
+};
 // (Marinara reads the card's description and personality: SillyTavern's own fields when the character is there, else our card text)
 const cardData = async p => { const c = ctx().characters?.find(x => liveKey(x?.name) === liveKey(p.owner)), d = c?.data || c || {}; return String(d.description || '').trim() ? { name: p.owner, description: String(d.description).trim(), personality: String(d.personality || '').trim() } : { name: p.owner, description: String(await cardOf(p) || ''), personality: '' }; };
 // 스케줄의 시간대 ('' = 사람마다 폰의 시간대) · 바꾸기 (tz '' 이면 풀기) · 그 사람의 스케줄이 쓰는 시간대
@@ -603,17 +614,18 @@ export const liveTimeZone = (real, owner) => { const p = livePhone(real, owner);
 // 초안 만들기: 저장하지 않고 결과만 돌려줘요 (마리나라의 /schedule/draft)
 //   opts: { mode: 'week' | 'day', day, schedule (지금 초안), guidance, dayGuidance, draftMode: 'rewrite'|'adjust'|'vary'|'repair', signal }
 //   → mode 'week': { schedule } · mode 'day': { day, blocks, weekStart }. 실패한 오류에는 rawResponse(모델의 답 원문)가 있어요
+//   connectionId: 편집 창에서 고른 연결 (처음 값은 liveScheduleConnection(real, 방 id)) · roomId: 편집 창을 연 방 (마리나라의 chatId)
 export async function liveDraftSchedule(real, owner, opts = {}) {
     const p = livePhone(mine(real), owner);
     if (!p) throw new Error('이 인물의 폰이 없습니다.');
-    const { connectionId, ...rest } = opts;
-    return draftSchedule(real, { ...rest, ask: askVia(real, connectionId), charData: await cardData(p), timeZone: zoneOf(real, p) });
+    const { connectionId, roomId = '', ...rest } = opts;
+    return draftSchedule(real, { ...rest, roomId, ask: askVia(real, connectionId ?? liveScheduleConnection(real, roomId)), charData: await cardData(p), timeZone: zoneOf(real, p) });
 }
 // 루틴 요약: 저장하지 않고 결과만 (마리나라의 /schedule/summary) → { summary, generatedAt }
-export async function liveScheduleSummary(real, owner, { schedule, guidance = '', signal, connectionId } = {}) {
+export async function liveScheduleSummary(real, owner, { schedule, guidance = '', signal, connectionId, roomId = '' } = {}) {
     const p = livePhone(mine(real), owner);
     if (!p) throw new Error('이 인물의 폰이 없습니다.');
-    return summarizeSchedule(real, { schedule, guidance, signal, ask: askVia(real, connectionId), charData: await cardData(p) });
+    return summarizeSchedule(real, { schedule, guidance, signal, ask: askVia(real, connectionId ?? liveScheduleConnection(real, roomId)), charData: await cardData(p) });
 }
 // 실패한 답을 손으로 고친 글 → 고쳐진 초안 (못 읽으면 오류). day를 주면 그날만
 export const liveRepairSchedule = (text, current, day = '') => repairSchedule(text, current, day);
@@ -621,17 +633,19 @@ export const liveRepairSchedule = (text, current, day = '') => repairSchedule(te
 export const liveSetAutoRenew = async (real, owner, on) => { const out = setAutoRenew(mine(real), owner, on); await flushCards(); await saveMeta(); return out; };
 export const liveScheduleInfo = (real, owner) => { const p = livePhone(real, owner), tz = p ? zoneOf(real, p) : ''; return { autoRenew: autoRenewOf(real, owner), needsRefresh: needsRefresh(real, owner, { tz }), timeZone: tz }; };
 // 갱신 (마리나라의 /schedule/generate): 지난 스케줄을 이어받아 새 주 것을 만들어 넣어요 (모델을 불러요)
-//   opts: { owners (없으면 스케줄이 있는 사람 전부), automatic: 매주 갱신을 켠 사람만 (갱신이 필요할 때), forceRefresh, guidance, signal }
+//   opts: { owners (없으면 스케줄이 있는 사람 전부), automatic: 매주 갱신을 켠 사람만 (갱신이 필요할 때), forceRefresh, guidance, signal,
+//     roomId: 그 방에서 (마리나라 /schedule/generate의 chatId: 그 방의 연결로, 만든 것이 있으면 그 방의 스케줄을 켜요) · connectionId: 따로 고른 연결 }
+//   매주 갱신(방 없음)은 기본 연결로, 그 사람이 있는 방 가운데 하나라도 스케줄을 켠 사람만 (소망 (가))
 //   → { 이름: 'generated' | 'fresh' | 'renewal_disabled' | 'error: …' }
-export async function liveRenewSchedules(real, { owners = null, automatic = false, forceRefresh = false, guidance = '', signal, connectionId } = {}) {
-    const askSched = askVia(real, connectionId);
+export async function liveRenewSchedules(real, { owners = null, automatic = false, forceRefresh = false, guidance = '', signal, connectionId, roomId = '' } = {}) {
+    const askSched = askVia(real, connectionId ?? liveScheduleConnection(real, roomId));
     const w = liveWorld(mine(real)), phones = Object.values(w.phones || {}).filter(p => p?.owner && (owners ? owners.some(n => liveKey(n) === liveKey(p.owner)) : scheduleOf(real, p.owner)));
-    // (the weekly renewal: nothing is asked when nobody's week has turned)
-    const due = automatic ? phones.filter(p => autoRenewOf(real, p.owner) && needsRefresh(real, p.owner, { tz: zoneOf(real, p) })) : phones;
+    // (the weekly renewal: nothing is asked when nobody's week has turned, nor for someone whose rooms all have schedules off)
+    const due = automatic ? phones.filter(p => autoRenewOf(real, p.owner) && needsRefresh(real, p.owner, { tz: zoneOf(real, p) }) && (roomId ? true : followsSchedule(real, p.owner))) : phones;
     if (!due.length) return {};
     const cards = {};
     for (const p of due) cards[liveKey(p.owner)] = await cardData(p);
-    const out = await renewSchedules(real, { ask: askSched, owners: due.map(p => p.owner), cards, automatic, forceRefresh, guidance, timeZone: scheduleZone(real) || undefined, signal });
+    const out = await renewSchedules(real, { ask: askSched, owners: due.map(p => p.owner), cards, automatic, forceRefresh, guidance, timeZone: scheduleZone(real) || undefined, signal, roomId });
     const done = {};
     for (const p of due) {
         const r = out.results[liveKey(p.owner)];
@@ -655,12 +669,13 @@ export async function liveReplyNow(real, roomId, owner = '') {
     return n;
 }
 // 스케줄 손으로 넣기 · 지우기(null), 손으로 상태 주기({ status, activity, minutes } · {} 풀기), 내 상태, 먼저 말 걸기 켜기
-export async function liveSetSchedule(real, owner, schedule) {
+//   liveSetSchedule의 { connectionId }: 장소를 물을 연결 (편집 창에서 고른 생성 연결, 빼면 기본 연결)
+export async function liveSetSchedule(real, owner, schedule, { connectionId = '' } = {}) {
     const out = setSchedule(mine(real), owner, schedule), p = livePhone(real, owner);
     // (things to do that the places were not asked for yet: asked now, once. A failure leaves them without a place)
     const acts = out ? [...new Set(Object.values(out.days).flatMap(d => (Array.isArray(d) ? d : []).map(b => String(b?.activity || '').trim().toLowerCase())).filter(Boolean))].sort().join('|') : '';
     if (out && p && acts && out.placedFor !== acts) {
-        try { await fillPlaces(real, p.owner, { ask: askVia(real), parse: t => parseJson(t, { salvage: true }), card: await cardOf(p), places: knownPlaces(p) }); out.placedFor = acts; } catch (err) { console.warn('[narrative-archive] schedule places', err); }
+        try { await fillPlaces(real, p.owner, { ask: askVia(real, connectionId), parse: t => parseJson(t, { salvage: true }), card: await cardOf(p), places: knownPlaces(p) }); out.placedFor = acts; } catch (err) { console.warn('[narrative-archive] schedule places', err); }
     }
     if (p) delete p.schedAt;
     await flushCards();
@@ -669,22 +684,24 @@ export async function liveSetSchedule(real, owner, schedule) {
 }
 export const liveSetStatus = async (real, owner, o = {}) => { const out = setStatusOverride(mine(real), owner, o); for (const j of liveWorld(real).queue.jobs) if (j.state === 'waiting' && liveKey(j.owner) === liveKey(owner)) { delete j.timed; delete j.notBefore; } await flushCards(); await saveMeta(); return out; };
 export const liveSetUserStatus = async (real, o = {}) => { const out = setUserStatus(mine(real), o); await saveMeta(); return out; };
-export const liveSetAutonomous = async (real, on) => { const out = setAutonomous(mine(real), on); await saveMeta(); return out; };
-// 스케줄 쓰기 켜고 끄기 (마리나라의 conversationSchedulesEnabled): 끄면 스케줄은 남아 있고 상태 · 늦음 · 먼저 말 걸기가 안 읽어요
-export const liveSchedulesOn = real => schedulesOn(real);
-export const liveSetSchedulesOn = async (real, on) => { const out = setSchedulesOn(mine(real), on); for (const p of Object.values(liveWorld(real).phones || {})) delete p.schedAt; followSchedule(real); await saveMeta(); return out; };
+// (이 방: 마리나라의 채팅 설정은 채팅마다)
+export const liveSetAutonomous = async (real, roomId, on) => { const out = setAutonomous(mine(real), roomId, on); await saveMeta(); return out; };
+// 스케줄 쓰기 켜고 끄기 (이 방: 마리나라의 conversationSchedulesEnabled): 끄면 스케줄은 남아 있고 이 방의 상태 · 늦음 · 먼저 말 걸기가 안 읽어요.
+// 폰이 스케줄을 따라가는 것 · 연락처의 상태는 그 사람이 있는 방 가운데 하나라도 켜져 있으면 따라요
+export const liveSchedulesOn = (real, roomId) => schedulesOn(real, roomId);
+export const liveSetSchedulesOn = async (real, roomId, on) => { const out = setSchedulesOn(mine(real), roomId, on); for (const p of Object.values(liveWorld(real).phones || {})) delete p.schedAt; followSchedule(real); await saveMeta(); return out; };
 // 스케줄 내보내기 → 파일에 쓸 객체 · 가져오기(파일에서 읽은 값) → { ok: true, schedule } | { ok: false, reason } (저장은 liveSetSchedule로)
 export const liveExportSchedule = (real, owner) => exportSchedule(real, owner);
 export const liveImportSchedule = value => importSchedule(value);
-// 먼저 말 걸기의 방 전체 설정 (마리나라의 열쇠 그대로, 준 것만 바꿔요) → { on, autonomousDailyCapOverride, groupChatMode, characterExchanges }
+// 먼저 말 걸기의 방 설정 (그 방의 것: 마리나라의 열쇠 그대로, 준 것만 바꿔요) → { on, schedulesEnabled, autonomousDailyCapOverride, groupChatMode, characterExchanges, groupResponseOrder, groupTurnPromptEnabled }
 //   { autonomousDailyCapOverride: 하루 상한 (수 · null), groupChatMode: 'individual' (단체방에서 하루 상한을 같이 써요) · null, characterExchanges: 캐릭터끼리 주고받기 }
-export const liveAutonomousOptions = real => autonomousOptions(real);
-export const liveSetAutonomousOptions = async (real, o = {}) => { const out = setAutonomousOptions(mine(real), o); await saveMeta(); return out; };
+export const liveAutonomousOptions = (real, roomId) => autonomousOptions(real, roomId);
+export const liveSetAutonomousOptions = async (real, roomId, o = {}) => { const out = setAutonomousOptions(mine(real), roomId, o); await saveMeta(); return out; };
 const cardsOf = room => { const cards = {}; for (const name of room.members) { const c = ctx().characters?.find(x => liveKey(x?.name) === liveKey(name)); if (c) cards[liveKey(name)] = c.data || c; } return cards; };
 // 단체방에서 한 캐릭터가 답한 뒤: 다른 캐릭터가 거기에 답할 때면(마리나라의 판단) 그 답장을 줄 세워요 → 줄 세운 이름 | ''
 function exchangeAfter(real, job) {
     const w = liveWorld(real), room = w?.messenger?.rooms?.[job.room];
-    if (!w || !room || !w.presence?.meta?.characterExchanges) return '';
+    if (!w || !room || !roomMeta(real, room.id).characterExchanges) return '';
     if (w.queue.jobs.some(j => j.room === room.id && j.kind === 'reply' && j.state === 'waiting')) return '';
     const r = checkExchangeFor(real, room.id, job.owner, { tzOf: name => { const p = livePhone(real, name); return p ? zoneOf(real, p) : ''; }, cards: cardsOf(room) });
     const k = r.shouldTrigger ? r.characterIds?.[0] : null, name = k && room.members.find(x => liveKey(x) === k);
@@ -700,12 +717,12 @@ export async function liveAutonomous(real, { now = Date.now() } = {}) {
     if (!w || !open(real)) return 0;
     // (a schedule block that began: the phones follow it, whether or not characters write first)
     if (followSchedule(real, now) + purgeTrash(real, now)) await saveMeta();
-    if (!w.presence?.on) return 0;
     let n = 0;
     // (not now in this room: a reply already on its way — Marinara's poll skips a chat that is generating)
     const notNow = (w, room) => !room || w.queue.jobs.some(j => j.room === room.id && j.kind === 'reply' && (j.state === 'waiting' || j.state === 'running'));
     for (const id of Object.keys(w.messenger?.rooms || {})) {
-        if (notNow(w, w.messenger.rooms[id])) continue;
+        // (each room its own switch: Marinara's autonomousMessages is a chat's)
+        if (roomMeta(real, id).autonomousMessages !== true || notNow(w, w.messenger.rooms[id])) continue;
         // (the room's lock first, and what the server plugin's worker wrote there since: the check is made on the latest —
         //  Marinara makes it on the server, which holds the one copy. The worker writing there now: that room waits this time)
         const lease = keepKept() ? await keepClaim(id) : null;
@@ -713,7 +730,7 @@ export async function liveAutonomous(real, { now = Date.now() } = {}) {
         try {
             if (lease) await keepSync();
             const now2 = liveWorld(real), room = now2?.messenger?.rooms?.[id];
-            if (!now2 || now2.id !== w.id || !open(real) || notNow(now2, room)) continue;
+            if (!now2 || now2.id !== w.id || !open(real) || notNow(now2, room) || roomMeta(real, id).autonomousMessages !== true) continue;
             const cards = cardsOf(room);
             const r = checkProactive(real, room.id, { now: new Date(now), tzOf: name => { const p = livePhone(real, name); return p ? zoneOf(real, p) : ''; }, cards });
             const k = r.shouldTrigger ? r.characterIds?.[0] : null, name = k && room.members.find(x => liveKey(x) === k);
@@ -1113,7 +1130,7 @@ export async function livePeekPrompt(real, roomId, { messageId = '', current = f
     // (the live preview: what the next reply here would be sent with. Whoever would answer first; a Merged group as one request)
     const chars = room.members.filter(n => liveKey(n) !== P && w.phones?.[liveKey(n)]);
     if (!chars.length) throw new Error('이 채팅방에는 답할 멤버가 없습니다.');
-    const merged = chars.length > 1 && groupMode(real) === 'merged';
+    const merged = chars.length > 1 && groupMode(real, roomId) === 'merged';
     const req = await gatherJob(real, { world: w.id, kind: 'reply', owner: chars[0], room: roomId, ...(merged ? { merged: chars.map(liveKey) } : {}) });
     return {
         messages: req ? [...(req.system ? [{ role: 'system', content: req.system }] : []), { role: 'user', content: req.input }] : [],
@@ -1223,7 +1240,7 @@ const profileTurn = input => (!Array.isArray(input) ? { role: 'user', content: i
 function replyRoute(real, roomId) {
     const room = liveWorld(real)?.messenger?.rooms?.[roomId], chat = room ? roomChat(room) : null;
     const id = chat?.connectionId && (sourceOf(chat.connectionId) || liveModelConnections().some(c => c.id === chat.connectionId)) ? chat.connectionId : '';
-    // (the thinking level set for this room, or for Orbit as a whole; else what the caller asks for)
+    // (the thinking level set for this room; else what the caller asks for)
     const rs = liveReasoning(real, roomId);
     const slot = id ? slotOf(id) : null, override = id ? readChatModelOverride(chat) : null;
     let t = null, profile = null, raw = false;
@@ -1243,8 +1260,10 @@ function replyRoute(real, roomId) {
 async function askRoom(real, roomId, input, how) {
     const { id, rs, slot, override, t: own } = replyRoute(real, roomId);
     // (SillyTavern's own connection: the profile picked there now — the server plugin can send that one too)
+    // (roomLevel: false — a request that is not the chat's reply keeps the connection's own level: the smart group pick)
+    const level = how.roomLevel !== false && rs.effort;
     how = { ...how, profileNow: true };
-    if (rs.effort) how = { ...how, effort: rs.send };
+    if (level) how = { ...how, effort: rs.send };
     // (the request's pictures and files ride on its one turn: ai.js turnsOf)
     const media = how.images?.length || how.files?.length ? { ...(how.images?.length ? { images: how.images } : {}), ...(how.files?.length ? { files: how.files } : {}) } : null;
     if (media) input = [{ role: 'user', content: input, ...media }];
@@ -1262,7 +1281,7 @@ async function askRoom(real, roomId, input, how) {
     // (a level picked for this room rides on the profile's request, over its preset's: SillyTavern's own
     //  createGenerationParameters turns it into what its server expects for this source and model — ai.js stLevelPayload.
     //  Nothing picked: the preset's level, as before)
-    const over = rs.effort && rs.via.startsWith('profile:') ? await stLevelPayload(rs.via.slice(8), String(p.model || ''), rs.send) : null;
+    const over = level && rs.via.startsWith('profile:') ? await stLevelPayload(rs.via.slice(8), String(p.model || ''), rs.send) : null;
     const r = await ctx().ConnectionManagerRequestService.sendRequest(p.id, [...(how.system ? [{ role: 'system', content: how.system }] : []), profileTurn(input)], Math.max(256, Number(how.maxTokens) || 8192), { stream: false, extractData: true, includePreset: true, includeInstruct: true, ...(how.signal ? { signal: how.signal } : {}) }, ...(over ? [over] : []));
     const raw = typeof r === 'string' ? r : r?.content, out = stripThink(raw);
     if (how.meta) Object.assign(how.meta, { raw: String(raw ?? ''), model: String(p.model || p.name || ''), provider: String(p.api || 'profile') });
@@ -1298,21 +1317,21 @@ export async function liveSwitchPersona(avatarId) {
     return true;
 }
 
-// ---- 캐릭터 명령 스위치 (마리나라의 Commands: 채팅 설정의 characterCommands · conversationCommandToggles 그대로 presence.meta에)
-//   liveCommands(real) → { enabled (명령 전체 스위치), options: [{ id, label, description, on, works }] }
+// ---- 캐릭터 명령 스위치 (마리나라의 Commands: 채팅 설정의 characterCommands · conversationCommandToggles 그대로, 그 방의 room.meta에)
+//   liveCommands(real, 방 id) → { enabled (명령 전체 스위치), options: [{ id, label, description, on, works }] }
 //     id: 마리나라의 명령 이름. works: 이 확장에 그 명령이 있나 (없는 명령은 켜도 아무 일도 없어요: 화면에 안 그리는 게 맞아요)
 //     지금 되는 것: schedule_update (캐릭터가 자기 상태 · 하는 일을 바꿈) · react (캐릭터가 이모지로 반응)
-//   liveSetCommands(real, { enabled?, toggles?: { 명령 이름: true|false } })
+//   liveSetCommands(real, 방 id, { enabled?, toggles?: { 명령 이름: true|false } })
 //   끄면: 답장 지시문에서 그 명령이 빠지고, 답에 들어 있어도 안 받아요 (마리나라: 명령 줄을 안 넣고, 온 명령은 걸러요)
 const COMMANDS_HERE = ['schedule_update', 'react'];
-const commandOn = (real, key) => { const meta = liveWorld(real)?.presence?.meta || {}; return conversationCommandsOn(meta) && isConversationCommandEnabled(meta, key); };
-export function liveCommands(real) {
-    const meta = liveWorld(real)?.presence?.meta || {}, toggles = readConversationCommandToggles(meta.conversationCommandToggles);
+const commandOn = (real, key, roomId) => { const meta = roomMeta(real, roomId); return conversationCommandsOn(meta) && isConversationCommandEnabled(meta, key); };
+export function liveCommands(real, roomId) {
+    const meta = roomMeta(real, roomId), toggles = readConversationCommandToggles(meta.conversationCommandToggles);
     // (Marinara lists the built-in commands whose package is installed; no package is installed here)
     return { enabled: conversationCommandsOn(meta), options: buildConversationCommandToggleOptions(new Set(), []).map(o => ({ id: o.id, label: o.label, description: o.description, on: toggles[o.id] !== false, works: COMMANDS_HERE.includes(o.id) })) };
 }
-export async function liveSetCommands(real, { enabled, toggles } = {}) {
-    const meta = presenceOf(mine(real)).meta;
+export async function liveSetCommands(real, roomId, { enabled, toggles } = {}) {
+    const meta = roomMetaW(mine(real), roomId);
     if (enabled !== undefined) { if (enabled) delete meta.characterCommands; else meta.characterCommands = false; }
     if (toggles && typeof toggles === 'object') {
         const now = readConversationCommandToggles(meta.conversationCommandToggles);
@@ -1320,7 +1339,7 @@ export async function liveSetCommands(real, { enabled, toggles } = {}) {
         meta.conversationCommandToggles = now;
     }
     await saveMeta();
-    return liveCommands(real);
+    return liveCommands(real, roomId);
 }
 // ---- 첨부 보내기 (마리나라의 첨부 기능: src/phone2attach.js · src/marinara/)
 //   받는 파일: 그림 · PDF · 글 파일(txt · md · markdown · json · jsonl · csv · log · xml · yaml · yml), 하나에 20MB까지
@@ -1355,17 +1374,17 @@ export async function liveRemoveAttachment(real, roomId, messageId, index) {
     return left;
 }
 // ---- 그림을 글로 설명해서 넣기 (마리나라의 Image captioning: 채팅마다 켜고 끄는 스위치 · 설명할 연결 · 설명 지시문)
-//   마리나라의 채팅 설정 이름 그대로 presence.meta에 둬요: imageCaptioningEnabled · imageCaptioningConnectionId · imageCaptioningPrompt
-//   liveCaptioning(real) → { enabled, connectionId ('' = 그 방의 모델), prompt ('' = 기본 지시문), defaultPrompt, connections: liveConnections() }
-//   liveSetCaptioning(real, { enabled?, connectionId?, prompt? })
+//   마리나라의 채팅 설정 이름 그대로 그 방의 room.meta에 둬요: imageCaptioningEnabled · imageCaptioningConnectionId · imageCaptioningPrompt
+//   liveCaptioning(real, 방 id) → { enabled, connectionId ('' = 그 방의 모델), prompt ('' = 기본 지시문), defaultPrompt, connections: liveConnections() }
+//   liveSetCaptioning(real, 방 id, { enabled?, connectionId?, prompt? })
 //   켜면: 그림을 그대로 보내지 않고, 설명할 연결이 그림을 글로 설명한 것을 그 말에 붙여 보내요. 설명은 첨부에 저장해 두고 다시 써요
 //   (설명할 연결 · 모델 · 지시문이 바뀌면 새로 만들어요). 설명에 실패하면 답장도 멈춰요 (마리나라: 그림을 몰래 그대로 보내지 않아요)
-export function liveCaptioning(real) {
-    const meta = presenceOf(real).meta || {};
+export function liveCaptioning(real, roomId) {
+    const meta = roomMeta(real, roomId);
     return { enabled: meta.imageCaptioningEnabled === true, connectionId: typeof meta.imageCaptioningConnectionId === 'string' ? meta.imageCaptioningConnectionId.trim() : '', prompt: typeof meta.imageCaptioningPrompt === 'string' ? meta.imageCaptioningPrompt : '', defaultPrompt: DEFAULT_IMAGE_CAPTIONING_PROMPT, connections: liveConnections() };
 }
-export async function liveSetCaptioning(real, patch = {}) {
-    const meta = presenceOf(mine(real)).meta;
+export async function liveSetCaptioning(real, roomId, patch = {}) {
+    const meta = roomMetaW(mine(real), roomId);
     if ('enabled' in patch) { if (patch.enabled) meta.imageCaptioningEnabled = true; else delete meta.imageCaptioningEnabled; }
     if ('connectionId' in patch) {
         const id = String(patch.connectionId || '').trim();
@@ -1374,13 +1393,13 @@ export async function liveSetCaptioning(real, patch = {}) {
     }
     if ('prompt' in patch) { const t = String(patch.prompt || ''); if (t.trim()) meta.imageCaptioningPrompt = t; else delete meta.imageCaptioningPrompt; }
     await saveMeta();
-    return liveCaptioning(real);
+    return liveCaptioning(real, roomId);
 }
 // (Marinara's ImageCaptioningRuntime for a room: the chat's switch; the captioning connection is the chat's choice, else
 //  the room's own model. Its "Automatic" mode — caption only when the chat's model cannot read images — needs the
 //  Engine's model catalogs, which we do not have)
 function captioningOf(real, roomId) {
-    const set = liveCaptioning(real);
+    const set = liveCaptioning(real, roomId);
     if (!set.enabled) return DISABLED_IMAGE_CAPTIONING;
     const row = set.connectionId ? liveModelConnections().find(c => c.id === set.connectionId) : null, own = roomKind(real, roomId);
     if (set.connectionId && !row) return { ...DISABLED_IMAGE_CAPTIONING, enabled: true, unavailableReason: 'the captioning connection was not found' };
@@ -1409,11 +1428,12 @@ async function roomAttachments(real, job) {
 //   방의 모델로 고를 때: liveSetRoomModel(real, 방 id, { connectionId: 'source:<연결 종류 id>', model: '<모델 id>', name? })
 export const liveSources = () => stSourceList();
 export const liveSourceModels = source => stSourceModels(source);
-// ---- 추론 레벨 (모델이 생각하는 정도): 방마다 정하거나 Orbit 전체에 정해요. 마리나라의 chatParameters.reasoningEffort 자리
+// ---- 추론 레벨 (모델이 생각하는 정도): 방마다 정해요 (마리나라의 chatParameters.reasoningEffort: 채팅마다 하나).
+//   2026-11-24까지 있던 "Orbit 전체" 값(w.presence.meta.reasoningEffort)은 마리나라에 없어서 뺐어요: 자기 값이 없는 방으로 옮겼어요 (phone2sched.js moveRoomMeta)
 //   고를 수 있는 레벨은 모델마다 달라요 (마리나라의 규칙 그대로: src/marinara/generation-parameter-relevance.js · model-lists.js)
 //   값(마리나라가 저장하는 이름): '' (안 정함) · 'none' (끔) · 'low' · 'medium' · 'high' · 'xhigh' · 'maximum'
-//   liveReasoning(real, 방 id '') → {
-//     effort (실제로 쓰는 값: 방에 정한 것, 없으면 Orbit 전체 것), room, all,
+//   liveReasoning(real, 방 id) → {
+//     effort (실제로 쓰는 값: 방에 정한 것), room,
 //     칩은 실제로 되는 것만 와요 (소망, 2026-11-22). 보내는 길마다 달라요:
 //       우리 커스텀 API 호출 → 마리나라의 규칙. 끔 칩은 없어요 (끔이면 레벨을 안 보내서 생각이 안 꺼져요)
 //       실리를 거치는 길 (Vertex 방식 · 실리 연결 방식 · 연결 프로필) → 실리가 그 연결 · 모델에 실제로 보내는 것만 (phone2stlevel.js)
@@ -1422,10 +1442,10 @@ export const liveSourceModels = source => stSourceModels(source);
 //     칩이 없으면([]) why: 'model' (이 모델은 레벨을 안 받아요) | 'st' (실리가 이 연결 · 모델에는 레벨을 안 보내요) | 'main' (실리의 지금 연결을 쓰는 방)
 //     choices: [{ value, label, name, title? }] 이 방의 모델이 받는 레벨만 (마리나라 화면 그대로). name이 칩에 쓸 글자예요 (실제로 보내는 레벨의 이름)
 //       value는 저장하는 값이라 칩 글자와 다를 수 있어요 (DeepSeek: 글자 '높게', value 'medium'). 글자를 value로 만들지 않아요
-//     roomChoices · allChoices: '이 채팅' 줄 · 'Orbit 전체' 줄에 그릴 칩 (그 줄에 저장된 값의 칩에 불이 켜지게 맞춘 것)
+//     roomChoices: '이 채팅' 줄에 그릴 칩 (저장된 값의 칩에 불이 켜지게 맞춘 것)
 //       [] 이면 이 모델은 레벨을 안 받아요 (칩을 그리지 않아요)
 //     sent: 지금 값으로 요청에 실제로 보내는 이름 ('' = 안 보냄), provider · model (어느 모델 기준인지) }
-//   liveSetReasoning(real, 방 id | '' (Orbit 전체), 값)
+//   liveSetReasoning(real, 방 id, 값)
 export const REASONING_LEVELS = ['none', 'low', 'medium', 'high', 'xhigh', 'maximum'];
 // (Marinara's generationLevelLabel, with its level words in Korean: Low · Medium · High · Extra high · Max · Maximum)
 const LEVEL_KO = { low: '낮게', medium: '보통', high: '높게', xhigh: '매우 높게', max: '최대', maximum: '최대' };
@@ -1452,17 +1472,19 @@ function roomKind(real, roomId) {
         : { provider: ST_PROVIDER[c.chatCompletionSettings?.chat_completion_source] || 'custom', model: String((c.mainApi === 'openai' ? c.getChatCompletionModel?.() : '') || ''), via: 'st' };
 }
 export function liveReasoning(real, roomId = '') {
+    // (an Orbit not moved to per-room settings yet: its old Orbit-wide level goes into the rooms first)
+    roomMeta(real, roomId);
     const w = liveWorld(real), room = roomId ? w?.messenger?.rooms?.[roomId] : null;
     const ok = v => { const x = oldLevel(String(v || '')); return REASONING_LEVELS.includes(x) ? x : ''; };
     const { provider, model, via } = roomKind(real, roomId);
-    const raw = { room: ok(room?.chatParameters?.reasoningEffort), all: ok(w?.presence?.meta?.reasoningEffort) };
+    const raw = { room: ok(room?.chatParameters?.reasoningEffort) };
     const level = v => (v && v !== 'none' ? v : null);
     let chips, why = '', sendOf;
     if (via === 'custom') {
         // 우리 커스텀 API 호출: 칩은 마리나라의 규칙 그대로 (GenerationParametersEditor: reasoningEffortChoices 에 그 줄의 값을
         // selected 로, Claude Opus 5.5 는 끔 없음, 칩 글자는 실제로 보내는 레벨). 끔 칩만은 없어요: 우리 호출은 끔이면 레벨을
         // 아예 안 보내서 모델이 기본대로 생각해요 (OpenAI 형식 · Anthropic 형식 둘 다). "기본" 칩은 남아요: 말 그대로예요
-        const takes = relevantGenerationParameters({ provider, model, ...(raw.room || raw.all ? { reasoningEffort: level(raw.room || raw.all) } : {}) }).has('reasoningEffort');
+        const takes = relevantGenerationParameters({ provider, model, ...(raw.room ? { reasoningEffort: level(raw.room) } : {}) }).has('reasoningEffort');
         chips = sel => (!takes ? [] : reasoningEffortChoices({ provider, model, selected: level(sel) })
             .filter(c => c.value !== null || c.kind === 'default')
             .map(c => ({ value: c.value === null ? 'none' : c.value, label: c.label, name: c.label !== null ? levelName(c.label) : '기본',
@@ -1498,21 +1520,20 @@ export function liveReasoning(real, roomId = '') {
     // (a stored value this connection has no chip for reads as not set, and goes as not set. The stored value is left
     //  alone: it counts again on a connection that has it)
     const reaches = v => !!v && (via === 'custom' ? chips(v).some(c => c.value === v) : via !== 'st' && chips(v).some(c => c.value === v));
-    const mine_ = reaches(raw.room) ? raw.room : '', all = reaches(raw.all) ? raw.all : '', effort = mine_ || all;
-    const choices = chips(effort), roomChoices = chips(mine_), allChoices = chips(all);
+    const mine_ = reaches(raw.room) ? raw.room : '', effort = mine_;
+    const choices = chips(effort), roomChoices = chips(mine_);
     // (send: the word our model call is given — callConn's effort. sent: what reaches the model, for the screen)
     const send = effort ? sendOf(effort) : '', sent = !effort ? '' : via === 'custom' ? send : choices.find(c => c.value === effort)?.label || '';
-    return { effort, room: mine_, all, choices, roomChoices, allChoices, sent, send, provider, model, via, ...(why ? { why } : {}) };
+    return { effort, room: mine_, choices, roomChoices, sent, send, provider, model, via, ...(why ? { why } : {}) };
 }
-export async function liveSetReasoning(real, roomId = '', effort = '') {
+export async function liveSetReasoning(real, roomId, effort = '') {
     const w = liveWorld(mine(real)), v = oldLevel(String(effort || ''));   // (an older screen's words are taken too)
     if (v && !REASONING_LEVELS.includes(v)) throw new Error('추론 레벨은 none, low, medium, high, xhigh, maximum 중 하나여야 합니다.');
-    if (roomId) {
-        const room = w.messenger?.rooms?.[roomId];
-        if (!room) throw new Error('채팅방을 찾을 수 없습니다.');
-        if (v) room.chatParameters = { ...(room.chatParameters || {}), reasoningEffort: v };
-        else if (room.chatParameters) { delete room.chatParameters.reasoningEffort; if (!Object.keys(room.chatParameters).length) delete room.chatParameters; }
-    } else { const meta = presenceOf(real).meta; if (v) meta.reasoningEffort = v; else delete meta.reasoningEffort; }
+    roomMeta(real, roomId);
+    const room = roomId ? w.messenger?.rooms?.[roomId] : null;
+    if (!room) throw new Error('채팅방을 찾을 수 없습니다.');
+    if (v) room.chatParameters = { ...(room.chatParameters || {}), reasoningEffort: v };
+    else if (room.chatParameters) { delete room.chatParameters.reasoningEffort; if (!Object.keys(room.chatParameters).length) delete room.chatParameters; }
     await saveMeta();
     return liveReasoning(real, roomId);
 }

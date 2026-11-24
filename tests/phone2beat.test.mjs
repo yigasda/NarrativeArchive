@@ -63,7 +63,8 @@ test('브라우저와 서버 일꾼이 번갈아: 가려진 동안 서버가 건
     putLivePhone(m, { owner: 'Mara' });
     const room = ensureRoom(m, ['Mara']), w = liveWorld(m), at = Date.now() - 7 * 3600_000;
     sendLive(m, room.id, 'hey', at); room.messages.push({ id: 't2', n: 2, from: 'Mara', text: 'hi', at: at + 60_000 });
-    w.presence = { on: true, schedules: {}, overrides: {}, meta: {}, user: {} };
+    w.presence = { schedules: {}, overrides: {}, meta: {}, user: {} };
+    room.meta = { autonomousMessages: true };
     let stSaves = 0;
     const ctx = { chatId: 'chat-1', chatMetadata: { narrative_archive: m, integrity: 'mark-1' }, chat: [], name1: 'Ren', characterId: 0, characters: [{ name: 'Mara', avatar: 'mara.png', description: 'Mara is a baker.', data: { name: 'Mara', description: 'Mara is a baker.' } }],
         powerUserSettings: { persona_description: 'Ren is a student.' }, extensionSettings: { narrative_archive: { draftConn: conn } }, saveMetadata: async () => { stSaves++; }, saveSettingsDebounced() {}, getRequestHeaders: () => ({ 'Content-Type': 'application/json' }),
@@ -111,7 +112,7 @@ test('브라우저와 서버 일꾼이 번갈아: 가려진 동안 서버가 건
     assert.ok(page.events.includes('na-live-change'));
     // (알림을 띄울 신호: 서버가 그사이 건 말)
     assert.deepEqual(page.details.filter(d => d.from === 'server'), [{ from: 'server', rooms: [{ room: room.id, by: ['Mara'], added: 1, count: 1 }] }]);
-    assert.equal(Object.values(w.presence.meta.autonomousDailyBudget.counts)[0], 1);
+    assert.equal(Object.values(room.meta.autonomousDailyBudget.counts)[0], 1);
     // 브라우저의 판단: 서버가 방금 걸었으니 또 걸지 않아요 (표시로 알아요)
     assert.equal(await G.liveAutonomous(m), 0);
     assert.equal(asked.length, 1);

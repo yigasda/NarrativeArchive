@@ -221,7 +221,7 @@ import path from 'node:path';
 import { openStore } from '../plugin/store.mjs';
 import { makeAutoApp } from '../plugin/auto.mjs';
 import { splitLive } from '../src/phone2keep.js';
-import { startFresh, putLivePhone, ensureRoom, sendLive, liveWorld } from '../src/phone2store.js';
+import { startFresh, putLivePhone, ensureRoom, sendLive, liveWorld, ROOM_META_MARK } from '../src/phone2store.js';
 
 // 세계 하나: Ren(나)과 Mara의 방. Ren이 hoursAgo 시간 전에 말했고 Mara가 바로 답했어요
 function liveOf({ on = true, hoursAgo = 3, now = Date.now(), schedule = null, extra = w => w } = {}) {
@@ -231,8 +231,9 @@ function liveOf({ on = true, hoursAgo = 3, now = Date.now(), schedule = null, ex
     const room = ensureRoom(m, ['Mara']), w = liveWorld(m), at = now - hoursAgo * 3600_000;
     sendLive(m, room.id, 'hey', at);
     room.messages.push({ id: 't2', n: 2, from: 'Mara', text: 'hi', at: at + 60_000 });
-    w.presence = { on, schedules: schedule ? { mara: schedule } : {}, overrides: {}, meta: {}, user: {} };
-    extra(w, room);
+    w.presence = { schedules: schedule ? { mara: schedule } : {}, overrides: {}, meta: {}, user: {} };
+    room.meta = { autonomousMessages: on };   // (마리나라의 채팅 설정: 방마다)
+    extra(w, room, m);
     return { m, w, room, id: `${w.id}:${room.id}` };
 }
 const tempStore = async t => { const root = await mkdtemp(path.join(tmpdir(), 'na-auto-')); t.after(() => rm(root, { recursive: true, force: true })); return openStore(root); };
@@ -256,6 +257,28 @@ test('app: 저장을 훑어 방을 내놓아요. 켠 세계만 스케줄러가 �
     assert.equal((await app.chats.list()).length, 2);
 });
 
+test('app: 채팅 메타는 방마다 (마리나라의 chat.metadata): 한 세계의 방 둘이 따로 켜지고 따로 스케줄을 써요. 옛 저장은 옮겨서 읽어요', async t => {
+    const store = await tempStore(t), sch = week(FREE);
+    const a = liveOf({ schedule: sch, extra: (w, room, m) => {
+        putLivePhone(m, { owner: 'Ivo' });
+        const two = ensureRoom(m, ['Ivo']);
+        two.messages.push({ id: 'i1', n: 3, from: 'Ivo', text: 'yo', at: Date.now() - 3600_000 });
+        two.meta = { autonomousMessages: false, conversationSchedulesEnabled: false };
+        room.meta.groupChatMode = 'individual';
+        w.presence.schedules.ivo = sch;
+    } });
+    await put(store, 'sa', a.m);
+    const app = makeAutoApp({ store, tzOf: () => 'UTC' });
+    const rows = await app.chats.list(), w = liveWorld(a.m), two = Object.values(w.messenger.rooms).find(r => r.id !== a.room.id);
+    assert.deepEqual(rows.map(r => [r.id, r.metadata.autonomousMessages, r.metadata.groupChatMode ?? null, r.metadata.conversationTimeZone]), [[a.id, true, 'individual', 'UTC'], [`${w.id}:${two.id}`, false, null, 'UTC']]);
+    assert.deepEqual(Object.keys((await app.chats.resolveConversationPresenceState(a.id)).schedules), ['mara']);
+    assert.deepEqual((await app.chats.resolveConversationPresenceState(`${w.id}:${two.id}`)).schedules, {});
+    // (옛 저장: Orbit 하나의 값 — 서버도 같은 코드로 옮겨서 읽어요)
+    const o = liveOf({ extra: (w, room) => { delete room.meta; delete w[ROOM_META_MARK]; w.presence.on = true; w.presence.meta.groupChatMode = 'individual'; } });
+    await put(store, 'so', o.m);
+    const row = (await app.chats.list()).find(r => r.id === o.id);
+    assert.deepEqual([row.metadata.autonomousMessages, row.metadata.groupChatMode], [true, 'individual']);
+});
 test('app: 때가 됐나 — 브라우저와 같은 판단(checkProactive)을 서버 값(idle · 후속 2번 · server)으로 물어요', async t => {
     const store = await tempStore(t), a = liveOf({ hoursAgo: 3 }), b = liveOf({ hoursAgo: 0.2 });
     await put(store, 'sa', a.m); await put(store, 'sb', b.m);
@@ -280,7 +303,7 @@ test('app: 때가 됐나 — 브라우저와 같은 판단(checkProactive)을 �
 test('app: 스케줄 · 손으로 준 상태를 내놓아요. 스케줄을 꺼 두면 스케줄은 없는 것으로', async t => {
     const store = await tempStore(t), sch = week(FREE);
     const a = liveOf({ schedule: sch, extra: w => { w.presence.overrides.mara = { status: 'dnd', activity: 'gym', createdAt: 'x', expiresAt: null }; } });
-    const b = liveOf({ schedule: sch, extra: w => { w.presence.meta.conversationSchedulesEnabled = false; } });
+    const b = liveOf({ schedule: sch, extra: (w, room) => { room.meta.conversationSchedulesEnabled = false; } });
     await put(store, 'sa', a.m); await put(store, 'sb', b.m);
     const app = makeAutoApp({ store });
     await app.chats.list();

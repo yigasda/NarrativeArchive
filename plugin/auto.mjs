@@ -13,7 +13,7 @@
 
 import { joinLive, splitLive, sumOf } from '../src/phone2keep.js';
 import { liveWorld, liveKey } from '../src/phone2store.js';
-import { checkProactive, chatIdOf, schedulesOn, reseedActivity } from '../src/phone2sched.js';
+import { checkProactive, chatIdOf, schedulesOn, reseedActivity, roomMeta } from '../src/phone2sched.js';
 import { recordAutonomousClientPresence } from '../src/marinara/autonomous.service.js';
 
 const obj = v => v && typeof v === 'object' && !Array.isArray(v);
@@ -62,10 +62,11 @@ export function makeAutoApp({ store, tzOf = () => '', cardsOf = () => ({}), gene
         return e.rev;
     }
     const charsOf = (w, room) => { const P = liveKey(w.persona); return (room?.members || []).filter(n => liveKey(n) !== P && w.phones?.[liveKey(n)]); };
+    // (the room's own chat metadata — Marinara's chat.metadata: autonomousMessages and the rest are each room's, phone2sched.js roomMeta —
+    //  and the zone, which is one for every chat)
     const metaOf = (e, room) => {
-        const w = liveWorld(e.real), p = obj(w.presence) ? w.presence : {}, meta = obj(p.meta) ? p.meta : {};
-        const zone = tzOf(e.real, charsOf(w, room)[0]) || '';
-        return { ...meta, autonomousMessages: p.on === true, ...(zone ? { conversationTimeZone: zone } : {}) };
+        const w = liveWorld(e.real), zone = tzOf(e.real, charsOf(w, room)[0]) || '';
+        return { ...roomMeta(e.real, room.id), ...(zone ? { conversationTimeZone: zone } : {}) };
     };
     const rowOf = (e, room) => ({ id: chatIdOf(e.real, room.id), mode: 'conversation', metadata: metaOf(e, room) });
     // 방 id → { e, w, room } (지금 저장된 것) | null
@@ -96,7 +97,7 @@ export function makeAutoApp({ store, tzOf = () => '', cardsOf = () => ({}), gene
             const x = await at(id);
             if (!x) return { schedules: {}, statusOverrides: {} };
             return around(x.e, () => {
-                const on = schedulesOn(x.e.real), p = obj(x.w.presence) ? x.w.presence : {}, ids = charsOf(x.w, x.room).map(liveKey);
+                const on = schedulesOn(x.e.real, x.room.id), p = obj(x.w.presence) ? x.w.presence : {}, ids = charsOf(x.w, x.room).map(liveKey);
                 return {
                     schedules: on ? Object.fromEntries(ids.filter(k => p.schedules?.[k]).map(k => [k, p.schedules[k]])) : {},
                     statusOverrides: obj(p.overrides) ? p.overrides : {},

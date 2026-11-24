@@ -408,20 +408,21 @@ export async function startWork({ root, store, st = null, schedule = true, from 
     //   - AI 기능 모델 · 초안 모델 (ai.js askAIOnce · askDraft → callConn: 요약 · 폰 채우기 · 답장의 기본 연결). 실리 연결 방식('source'),
     //     또는 AI 기능 모델이 실리 쪽('st')이고 보낼 프로필이 있을 때 (ai.js aiProfileFor. 없으면 서버는 보내지 않아요)
     //   - 방마다의 답장 (phone2go.js liveReplyPlan · replyRoute: 프로필, 또는 그 방의 연결이 실리 연결 방식)
-    //   - 스케줄 · 그림 설명의 연결 (phone2go.js askVia: 프로필)
-    //   - 자동 번역의 AI 연결 (phone2translate.js translationConnections): 프로필 · 실리의 지금 연결('ai' 칸이 실리 쪽) · 실리 연결 방식인 칸
+    //   - 그림 설명의 연결 (phone2go.js askVia: 프로필). 방마다예요 (마리나라의 채팅 설정)
+    //   - 자동 번역의 AI 연결 (phone2translate.js translationConnections): 프로필 · 실리의 지금 연결('ai' 칸이 실리 쪽) · 실리 연결 방식인 칸. 방마다예요
+    //   (스케줄 생성 연결은 저장하지 않아요: 편집 창의 것. 서버는 스케줄을 만들지 않아요)
     function usesSt(real) {
         const a = AI.connSettings('ai'), d = AI.connSettings('dr');
         if (a.mode === 'source' || d.mode === 'source') return true;
         if (!AI.OWN_MODES.includes(a.mode) && AI.aiProfileFor({ profileNow: true })) return true;
-        const tr = TR.autoTranslationConnection(real);
-        if (tr.startsWith('profile:') || (tr === 'ai' && !AI.OWN_MODES.includes(a.mode))) return true;
-        if ((tr === 'tr' || tr === 'dr') && AI.connSettings(tr).mode === 'source') return true;
         for (const roomId of Object.keys(liveWorld(real)?.messenger?.rooms || {})) {
             const plan = G.liveReplyPlan(real, roomId);
             if (plan.profile || plan.t?.mode === 'source') return true;
+            const tr = TR.autoTranslationConnection(real, roomId);
+            if (tr.startsWith('profile:') || (tr === 'ai' && !AI.OWN_MODES.includes(a.mode))) return true;
+            if ((tr === 'tr' || tr === 'dr') && AI.connSettings(tr).mode === 'source') return true;
+            if (String(G.liveCaptioning(real, roomId)?.connectionId || '').startsWith('profile:')) return true;
         }
-        for (const id of [G.liveScheduleConnection(real), G.liveCaptioning(real)?.connectionId]) if (String(id || '').startsWith('profile:')) return true;
         return false;
     }
     // (the profiles of the world being run: what its context lists — withWorld put it in)
