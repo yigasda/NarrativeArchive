@@ -97,7 +97,9 @@ export const scheduleOf = (m, owner) => peek(m).schedules?.[liveKey(owner)] || n
 
 // ---- 채팅 설정은 방마다 (마리나라의 채팅 하나 = 우리 방 하나: chat.metadata = room.meta)
 // 방으로 옮긴 열쇠 (마리나라의 채팅 메타 이름 그대로). 앱 · 폰 전체에 남는 것: 알림 · 번역 기본값 · 시간대 · 연결 · 카드의 스케줄 · 내 상태 · 페르소나
-export const ROOM_META_KEYS = ['autonomousMessages', 'autonomousDailyCapOverride', 'groupChatMode', 'groupResponseOrder', 'groupTurnPromptEnabled', 'characterExchanges', 'conversationSchedulesEnabled', 'characterCommands', 'conversationCommandToggles', 'imageCaptioningEnabled', 'imageCaptioningConnectionId', 'imageCaptioningPrompt', ...TRANSLATOR_SETTINGS_KEYS, 'autonomousDailyBudget', 'intentCooldowns'];
+//   (뒤의 줄: 화면에만 있고 동작은 아직 없는 칸의 값 · 설정 마법사가 쓰는 값. 그때는 Orbit에 저장한 적이 없어서 옮길 것은 없어요: chatSettingsOf)
+export const ROOM_META_KEYS = ['autonomousMessages', 'autonomousDailyCapOverride', 'groupChatMode', 'groupResponseOrder', 'groupTurnPromptEnabled', 'characterExchanges', 'conversationSchedulesEnabled', 'characterCommands', 'conversationCommandToggles', 'imageCaptioningEnabled', 'imageCaptioningConnectionId', 'imageCaptioningPrompt', ...TRANSLATOR_SETTINGS_KEYS, 'autonomousDailyBudget', 'intentCooldowns',
+    'appliedChatPresetId', 'customSystemPrompt', 'inactiveCharacterIds', 'crossChatAwareness', 'lorebookTokenBudget', 'enableMemoryRecall', 'semanticSummaryRetrievalEnabled', 'semanticSummaryRecentCount', 'semanticSummaryOlderCount', 'semanticSummaryMinSimilarity', 'summaryConnectionId', 'summaryMaxTokens', 'dayRolloverHour', 'summaryTailMessages', 'conversationSetupComplete', 'imageGenConnectionId'];
 const copyOf = v => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)));
 // 옛 저장 옮기기 (2026-11-24 전: 채팅 설정이 Orbit에 하나): Orbit의 값을 모든 방(지운 방 w.messenger.trash까지)에 복사해요.
 //   Orbit의 값은 지우지 않아요 (옛 탭 · 옛 일꾼이 읽는 자리: 지우면 그쪽은 먼저 말 걸기 · 번역이 꺼지고 단체방 방식이 바뀌어요. 2026-11-24 검토).
@@ -146,8 +148,22 @@ export function roomMetaW(m, roomId) {
 }
 // 그 방의 캐릭터들(나 빼고) 가운데 스케줄이 있는 사람이 있나 (마리나라: 그 채팅의 characterSchedules가 비어 있지 않음)
 const roomHasSchedules = (m, room) => { const P = liveKey(liveWorld(m)?.persona), s = peek(m).schedules || {}; return !!room && (room.members || []).some(n => liveKey(n) !== P && s[liveKey(n)]); };
-// 새 방 (마리나라 chats.storage.ts create): 카드에 스케줄이 있는 사람이 있으면 conversationSchedulesEnabled: true. 번역 기본값은 phone2translate.js
-setRoomSeed((room, w, m) => { if (roomHasSchedules(m, room)) room.meta = { ...(obj(room.meta) ? room.meta : {}), conversationSchedulesEnabled: true }; });
+// 새 방의 첫 값 (소망 2026-11-24: 마리나라에서 새 대화 채팅을 만들고 설정 마법사를 기본값 그대로 Start한 것처럼):
+//   1) 마리나라 chats.storage.ts create (1645~1665): 번역 기본값(phone2translate.js의 seed: 방의 값 아래에 깔아요) · 카드에 스케줄이 있는
+//      사람이 있으면 conversationSchedulesEnabled: true. 우리 방은 사람과 함께 생겨요 = 마리나라에서 캐릭터로 시작한 채팅(characterIds를 create에 실음)
+//   2) 그 위에 ChatSetupWizard.tsx ConversationQuickSetup의 Start(handleStartChatting 1238~1258)가 쓰는 것, 저장한 마법사 기본값 · 별 표시 프로필이 없을 때:
+//      autonomousMessages: true (`autonomousMessages !== false`, 1003) · conversationSchedulesEnabled: 1)의 값 그대로 꼭 적어요 (`=== true`, 1004~1006) ·
+//      characterCommands: false (hasConversationCommands && commandsEnabled: 처음 값은 저장한 기본값 · 마친 설정 · 프로필이 있을 때만 켜짐, 1111~1117) ·
+//      conversationCommandToggles: 채팅의 것 그대로 (readConversationCommandToggles: 새 방은 {}. 셀카는 illustrator 패키지가 있을 때만 · 우리에겐 없어요) ·
+//      conversationSetupComplete: true · chatParameters: null (매개변수 고치기 꺼짐: 우리 room.chatParameters를 안 만들어요) · customSystemPrompt: null ·
+//      imageGenConnectionId: 셀카가 켜졌을 때만 (우리에겐 없어요)
+//   다른 것: 마법사는 Start 때 먼저 말 걸기 · 스케줄이 둘 다 켜져 있으면 /schedule/generate를 바로 불러요(1262~1276: 이번 주 것이 있는 사람은 그대로,
+//   없거나 지난 주 것이면 모델에게 물어요). 새 방을 만들 때는 모델을 부르지 않아요 (docs/MARINARA-PORT.md "채팅 설정은 방마다")
+export const NEW_ROOM_SETUP = { autonomousMessages: true, characterCommands: false, conversationSetupComplete: true, customSystemPrompt: null };
+setRoomSeed((room, w, m) => {
+    const had = obj(room.meta) ? room.meta : {}, created = { ...had, ...(roomHasSchedules(m, room) ? { conversationSchedulesEnabled: true } : {}) };
+    room.meta = { ...created, ...NEW_ROOM_SETUP, conversationSchedulesEnabled: created.conversationSchedulesEnabled === true, conversationCommandToggles: readConversationCommandToggles(created.conversationCommandToggles) };
+});
 // 이 방에서 스케줄을 쓰는가 (마리나라의 conversationSchedulesEnabled: 정한 적이 없으면 그 방의 캐릭터에게 스케줄이 있을 때 켜진 것)
 export const schedulesOn = (m, roomId) => { const meta = roomMeta(m, roomId); return typeof meta.conversationSchedulesEnabled === 'boolean' ? meta.conversationSchedulesEnabled : roomHasSchedules(m, roomOf(m, roomId)); };
 export const setSchedulesOn = (m, roomId, on) => (roomMetaW(m, roomId).conversationSchedulesEnabled = !!on);
