@@ -29,7 +29,7 @@ const m = {}; startFresh(m, { persona: 'Ren', now: Date.now() - 10 * 3600_000 })
 putLivePhone(m, { owner: 'Seraphina' });
 const room = ensureRoom(m, ['Seraphina']), w = liveWorld(m), at = Date.now() - 7 * 3600_000;
 sendLive(m, room.id, 'hey', at); room.messages.push({ id: 't2', n: 2, from: 'Seraphina', text: 'hi', at: at + 60_000 });
-room.meta = { ...(room.meta || {}), autonomousMessages: true };   // (먼저 말 걸기는 방마다: room.meta)
+room.meta = { ...(room.meta || {}), autonomousMessages: true, conversationSchedulesEnabled: true };   // (먼저 말 걸기 · 스케줄 켜기는 방마다: room.meta. 새 방은 마법사 시작 값으로 스케줄 꺼짐을 적어요; 앱에서는 그 방에서 스케줄을 만들면 켜져요)
 w.presence = { schedules: { seraphina: { weekStart: new Date(Date.now() - 86400000).toISOString(), days: Object.fromEntries(DAYS.map(d => [d, [{ time: '00:00-23:59', activity: 'free time', status: 'online' }]])), inactivityThresholdMinutes: 60, talkativeness: 50 } }, overrides: {}, meta: {}, user: {} };
 // (core.js reads the screen when it loads: the worker's do-nothing one)
 await import(`${REPO}/plugin/screen.mjs`);

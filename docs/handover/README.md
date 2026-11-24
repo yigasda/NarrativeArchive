@@ -73,3 +73,10 @@
 - `src/phone2sched.js` ~197 `dayRolloverHour`: 숫자가 아니면 NaN → 4.
 - 마리나라와 대 볼 것: `enableMemoryRecall`이 null일 때(마리나라 MemoryRecallSection은 대화 모드 기본 켜짐), `summaryTailMessages`가 숫자가 아닐 때(`normalizeSummaryTailMessages`).
 - 문제 아님: 새 방 첫 값은 브라우저에서만 생겨요(일꾼은 ensureRoom을 안 불러요). 있는 방은 덮어쓰지 않아요. 새 코드에 옛 Orbit 값 읽기는 없어요. 주석의 seed 순서만 반대로 적혀 있어요(결과는 같음).
+
+## 3.232.25 확인 (2026-11-24, 브랜치 1039231 이후)
+
+- 테스트 1721 (TZ=UTC도) · 퍼즈 0 · POISON 359 · cmp 0 · portcheck 0 · no-undef 7.
+- 진짜 실리: stfresh · stwake · stfreeze · stprofile · stcheck(깨끗한 실리, 한 번은 15분 제한에 걸려 다시 돌려서 ALL OK) · stcheck --lazy 모두 ALL OK.
+- **stsmoke는 2개 실패해요("the character wrote first while no browser was there", "the request went through SillyTavern to the provider"). 메인 3.232.24(0ebbd21)에서도 똑같이 실패해서 이번 변경 때문이 아니에요.** 언제부터인지 · 왜인지는 아직 몰라요(다음 세션이 볼 것). stsmoke는 settings.json을 되돌리지 않으니 돌린 뒤 백업으로 되돌려요.
+- 디자인 세션 메시지(번역 · 방마다 설정)는 소망이 메인 뒤에 디자인 세션에 전달.
