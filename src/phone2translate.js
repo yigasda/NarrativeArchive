@@ -438,7 +438,7 @@ export async function liveTranslate(real, roomId, messageId, { onChange = () => 
     const off = useTranslationStore.subscribe(() => {
         if (queued) return;
         queued = true;
-        queueMicrotask(() => { queued = false; try { onChange(); } catch { /* the screen's own */ } });
+        globalThis.queueMicrotask(() => { queued = false; try { onChange(); } catch { /* the screen's own */ } });
     });
     try { await useTranslate().translate(String(x.id), String(x.text ?? ''), chatIdOf(real, roomId), [String(x.text ?? '')]); }
     finally { off(); }
